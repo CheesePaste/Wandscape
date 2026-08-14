@@ -6,6 +6,8 @@
 
 殖民地建筑管理：建筑配置（JSON 数据驱动）、建造生命周期、每日结算、装饰加成、商店库存、奇观效果、交互界面、建筑扫描器。建筑**没有自定义方块**（除扫描器外），全部状态存于 `BuildingSavedData`。
 
+**防刷怪区**：完好且运营中（未停摆）建筑的包围盒内不自然刷怪（`engine/BuildingNoSpawnZoneHandler` 拦 `MobSpawnEvent.SpawnPlacementCheck`，仅 `NATURAL`；`building.noSpawnInBuildingArea` 可关）。设计细节见 [decisions.md](../decisions.md)。
+
 ## BuildingConfig（JSON → 数据）
 
 `data/BuildingConfig.java` record，从 `data/wandscape/buildings/<id>.json` 解析（默认值见 Deserializer）。顶层字段（完整 JSON 树见 [data/buildings.md](../data/buildings.md)）：
@@ -60,7 +62,7 @@ BuildingConfig JSON → BuildingConfigLoader → BuildingConfig
 
 ### 3. ShopStockManager（商店库存）
 
-库存持久化于 BuildingSavedData。`purchase` 扣库存 + 按 `ceil(元素价值×(1+profitRate))` 入账（**非固定 1.2X**，bakery 0.4 → 1.4X）；`walletPrice` = 各元素 ceil(v×(1+profitRate)) 之和；`purchaseAffordable`：游客预算 0.2–1.0×初始钱包、qty=floor(budget/price)+1；stock<maxStock 触发动态补货 restock，从仓库 consume 物品、可选 ItemTransportManager 运输动画、缺货走 ResourceSupplySystem.enqueueSynthesize（**队首插入**，抢在建材合成前）、pendingRestock 每 100 tick 重试；onDailySettlement 补货全商店。
+库存持久化于 BuildingSavedData。`purchase` 扣库存 + 按 `ceil(元素价值×(1+profitRate))` 入账（**非固定 1.2X**，bakery 0.3 → 1.3X）；`walletPrice` = 各元素 ceil(v×(1+profitRate)) 之和；`purchaseAffordable`：游客预算 0.2–1.0×初始钱包、qty=floor(budget/price)+1；stock<maxStock 触发动态补货 restock，从仓库 consume 物品、可选 ItemTransportManager 运输动画、缺货走 ResourceSupplySystem.enqueueSynthesize（**队首插入**，抢在建材合成前）、pendingRestock 每 100 tick 重试；onDailySettlement 补货全商店。
 
 ### 4. WonderEffectApplier（奇观效果）
 

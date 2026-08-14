@@ -3,9 +3,5 @@
   "build_cost": {
     "metal": 304128,
     "fire": 147456
-  },
-  "decompose_yield": {},
-  "decomposable": false,
-  "synthesize": {},
-  "source": "auto_generated"
+  }
 }

@@ -9,11 +9,7 @@
 ```json
 {
   "block": "minecraft:acacia_log",   // 或 "item": "minecraft:diamond"
-  "build_cost": {"wood": 8},          // 建造该方块/物品的元素成本
-  "decompose_yield": {},              // 分解产出（非空即 decomposable）
-  "decomposable": false,
-  "synthesize": {},                   // SynthesizeMeta{unlock_requirement}，从 mapping 推导
-  "source": "auto_generated"
+  "build_cost": {"wood": 8}           // 建造该方块/物品的元素成本
 }
 ```
 
@@ -47,6 +43,6 @@
 ## 使用路径
 
 - 建造算料：`ElementApi.getBuildCost`（EnqueueHelper 施工用料）。
-- 分解：`getItemElementValue`（decompose_yield → build_cost 回退）× 1/divisor 向下取整（Workstation decompose → colonyResources）；除数默认 5（Config `element.decomposeDivisor`）；count×总价值 < 除数时拒绝分解（防白烧物品）。
-- 合成：`SynthesizeRecipe.fromElementMapping`（cost = buildCost）。
+- 分解：`getItemElementValue`（= build_cost）× 1/divisor 向下取整（Workstation decompose → colonyResources）；除数默认 5（Config `element.decomposeDivisor`）；count×总价值 < 除数时拒绝分解（防白烧物品）。
+- 合成：`SynthesizeRecipe.fromElementMapping`（cost = buildCost；build_cost 非空即可合成）。
 - 审计：`ElementAuditor` + `gametest/ElementAuditRunner`（`wandscape.runAudit=true`）。

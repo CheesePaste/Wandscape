@@ -2,9 +2,5 @@
   "block": "minecraft:blue_ice",
   "build_cost": {
     "water": 648
-  },
-  "decompose_yield": {},
-  "decomposable": false,
-  "synthesize": {},
-  "source": "auto_generated"
+  }
 }

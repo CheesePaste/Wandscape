@@ -1,0 +1,7 @@
+{
+  "block": "minecraft:example_disabled",
+  "build_cost": {
+    "wood": 8
+  },
+  "disabled": true
+}

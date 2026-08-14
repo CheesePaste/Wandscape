@@ -2,9 +2,5 @@
   "block": "minecraft:diamond_block",
   "build_cost": {
     "metal": 9216
-  },
-  "decompose_yield": {},
-  "decomposable": false,
-  "synthesize": {},
-  "source": "auto_generated"
+  }
 }

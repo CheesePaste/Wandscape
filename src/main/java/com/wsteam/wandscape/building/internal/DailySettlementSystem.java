@@ -74,10 +74,16 @@ public final class DailySettlementSystem {
         }
         if (colonyIds.isEmpty()) return;
 
+        int fired = 0;
         for (UUID colonyId : colonyIds) {
+            // 创始人不在线且关闭离线运行 → 冻结殖民地：跳过当日结算（商店补货/统计等）
+            if (!com.wsteam.wandscape.engine.colony.ColonyActivation.isColonyActive(colonyId)) {
+                continue;
+            }
             NeoForge.EVENT_BUS.post(new DailySettlementEvent(
                     new DailySettlementEvent.SettlementReport(colonyId, day)));
+            fired++;
         }
-        Log.info(TAG, "[Settlement] Day {} fired for {} colony(ies)", day, colonyIds.size());
+        Log.info(TAG, "[Settlement] Day {} fired for {}/{} colony(ies)", day, fired, colonyIds.size());
     }
 }

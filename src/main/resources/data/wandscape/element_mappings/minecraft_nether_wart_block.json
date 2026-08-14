@@ -2,9 +2,5 @@
   "block": "minecraft:nether_wart_block",
   "build_cost": {
     "fire": 144
-  },
-  "decompose_yield": {},
-  "decomposable": false,
-  "synthesize": {},
-  "source": "auto_generated"
+  }
 }

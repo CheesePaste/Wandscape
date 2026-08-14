@@ -364,7 +364,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         }
 
         // Decompose returns 1/N of the item's element value (anti item-duplication):
-        // source is decompose_yield, falling back to build_cost — same lookup as shop sale profit.
+        // source is build_cost — same lookup as shop sale profit.
         Map<ElementType, Long> yield = mappings.getItemElementValue(itemId);
 
         if (yield.isEmpty()) {

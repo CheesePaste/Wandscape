@@ -2,9 +2,5 @@
   "block": "minecraft:emerald_block",
   "build_cost": {
     "metal": 2304
-  },
-  "decompose_yield": {},
-  "decomposable": false,
-  "synthesize": {},
-  "source": "auto_generated"
+  }
 }

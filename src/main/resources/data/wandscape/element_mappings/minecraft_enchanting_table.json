@@ -6,9 +6,5 @@
     "wood": 28,
     "fire": 128,
     "metal": 2048
-  },
-  "decompose_yield": {},
-  "decomposable": false,
-  "synthesize": {},
-  "source": "auto_generated"
+  }
 }

@@ -2,9 +2,5 @@
   "item": "minecraft:diamond_chestplate",
   "build_cost": {
     "metal": 8192
-  },
-  "decompose_yield": {},
-  "decomposable": false,
-  "synthesize": {},
-  "source": "auto_generated"
+  }
 }

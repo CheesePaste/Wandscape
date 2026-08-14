@@ -39,6 +39,53 @@
 
 **为什么**：道路是玩家精心建造的基础设施，物流贴路飞行是核心正反馈。彻底剥离方块扫描并收敛为稀疏拓扑图 A*，既完全排除了 O(B²) 卡死风险，又保留并升级了贴路飞行的视觉与功能价值。
 
+## 2026-08-14：殖民地离线冻结（colony.runWhenPlayerOffline）
+
+**需求**（用户指令）：服务器默认没人时小镇也在运行；要求加一个 Config「不在线是否运行」，默认 true，设为 false 后玩家不在线就不运行它的殖民地（全部自动化暂停 + 原地冻结 + 上线恢复）。
+
+**决策**：
+- **Config 开关**：`colony.runWhenPlayerOffline`（默认 `true` = 服务器无人也运行；`false` = 创始人不在线则其殖民地冻结）。
+- **激活判定**：`engine/colony/ColonyActivation.isColonyActive(colonyId)`——配置为 true 恒激活；false 时查 `ColonyApi.getFounder(colonyId)`，创始人玩家在线才激活；**无创始人视为始终激活**（历史/命令创建的殖民地无法判定在线状态，避免被误冻结）。
+- **core 访问边界**：`EntityOps` 增 `isColonyActive(UUID)`，`WandscapeEntityOps` 委托给 `ColonyActivation`——core 的调度/执行系统不 import MC，经边界接口取 engine 判定（同 `isFollowing` 模式）。
+- **冻结范围（全部自动化）**：
+  - NPC 建造/生产：`SchedulerSystem` 跳过冻结殖民地不分配任务；`TaskExecutionSystem` 跳过冻结殖民地 NPC 不推进执行（原地冻结，保留队列/步骤/async future）；`BuildingTaskSource` 不为冻结殖民地建筑发布新任务（排队工作与占地保留）。
+  - 游客经济：`TouristSpawnSystem` 冻结殖民地不生成/不清除游客；`TouristSimSystem` 冻结殖民地 shadow 不 sim/不实体化/不离场/不快进夜。
+  - 每日结算：`DailySettlementSystem` 跳过冻结殖民地（商店补货/统计随之停）。
+- **原地冻结而非清理**：冻结期间游客停留、NPC 任务挂起、占地保留，创始人上线后全部自动恢复继续——不做离场/取消的清理动作。
+
+**为什么**：无人在线时殖民地仍全速运转（游客来逛、NPC 建造、每日结算）会让「挂机党」的殖民地离线也攒钱/升级，且空服持续跑 force-load 造/产白白耗资源。按创始人判定满足「一人一殖民地」模型；无创始人兜底防误冻。
+
+**影响**：关掉开关后，创始人不在线的殖民地完全冻结（不新游客/不建造/不结算），上线瞬间恢复；游客占位/排队、NPC 任务、建筑 footprint lease 全部保留。
+
+## 2026-08-14：玩家睡觉跳过夜晚 → 游客夜间批量快进
+
+**需求**（用户指令）：游客夜晚必须找旅馆睡觉否则消失；玩家睡觉会跳过夜晚（NeoForge `SleepFinishedTimeEvent`，时间瞬间从夜间跳到次晨 dawn），离场窗口 18000–24000 被整体跳过，本应离场的游客滞留、人口每晚只增不减。要求睡觉跳夜那一刻在 sim 状态快速模拟「睡→醒」这一整段。
+
+**决策**：
+- **触发点 = `SleepFinishedTimeEvent`**（`TouristSimSystem` 订阅，已查 `EventHooks.onSleepFinished` post 到 `NeoForge.EVENT_BUS`）：事件在 `ServerLevel.tick` 的 `setDayTime(EventHooks.onSleepFinished(...))` 参数求值阶段触发，此时 `level.getDayTime()` 仍是旧时刻，`getNewTime()` = 次晨 dawn 绝对时刻 → `skipped = getNewTime() - getDayTime()` 即被跳过的夜晚 tick 数。
+- **批量结算，不逐 tick 跑 `simStep`**：`simStep`/`checkDeparture`/`interact`/`selectNextTarget` 都直接读 `level.getDayTime()`，逐 tick 快进需把模拟时钟穿透到共享的 `TouristSimulation`（会侵入实体路径）。改为对影子注册表做一次「夜间结果批量结算」：`nightOutcome` 纯函数判定（到点→离场；满条→当晚离场；住店客→晨起；无旅店→找旅店，有→入住+晨起，无→离场），复用 `findHotelTarget`/`fillBars`/`depart`/`addVisitMemory`，行为与真实夜晚一致。
+- **覆盖所有游客（含观察中实体）**：影子注册表是人口权威源；观察中的活实体快进后 `importToEntity` 推回（否则下一 tick `exportToShadow` 覆盖影子、撤销快进），住店客实体补 `stopSleeping` 解除睡姿。
+- **`/time set day` 等命令跳夜不触发**该事件，不在本次范围。
+
+**为什么**：不快进则「夜晚必须找旅馆否则消失」规则在玩家天天睡觉时完全失效——游客只进不出，人口积压到上限，经济/排队失衡。批量结算保持规则简单（有旅店入住、无旅店离场），避免距离/走位判定。
+
+**影响**：睡觉跳过夜晚后游客处于与真实夜晚过去后一致的终态（离场/入住/晨起照常发生）；观察中游客在醒来瞬间被推到夜间终态位（如回入住前站位），属「一夜过去」效果。
+
+## 2026-08-14：建筑包围盒区域不自然刷怪
+
+**需求**（用户指令）：加一条设计——建筑包围盒区域内不会刷怪。
+
+**决策**：
+- **拦截点 = `MobSpawnEvent.SpawnPlacementCheck`**：自然刷怪每个候选位置做刷怪规则判定（`SpawnPlacements.checkSpawnRules`）时触发。比 `PositionCheck` 更前置——位置一进包围盒即 `setResult(FAIL)`，实体根本不会被创建（已查 NeoForge 21.1.233 `MobSpawnEvent` 源码确认：本版本**没有**旧版 Forge 的 `FinalizeSpawn` 事件，只有 `SpawnPlacementCheck`/`PositionCheck`）。
+- **只拦 `MobSpawnType.NATURAL`**：刷怪笼/结构刷怪/指令/spawn egg 走原版机制；NPC/游客经 `addFreshEntity` 生成，天然不受影响。
+- **建筑过滤 = 完好且运营中**：`BuildingApi.getBuildingAt(pos)` 查到建筑且 `!isShutdown() && isStructureIntact()` 才拦截——建造中/破损/停摆建筑不提供安全区（与守卫/袭击判定一致）。
+- **查询走 `WandscapeApis.getBuildingApi()`**：跨模块事件订阅统一 API + EventBus，不跨包引用 SavedData；`getBuildingAt` 按 chunkIndex 快速命中，无建筑区块 O(1) 返回，刷怪热路径开销可忽略。
+- **Config 开关**：`building.noSpawnInBuildingArea`（默认 true），服主可关。
+
+**为什么**：玩家建起的城镇夜里在建筑内部刷怪很烦（封闭建筑内部黑暗 → 原版怪直接在脚下生成）；让运营中的建筑成为安全区，既保留刷怪笼/结构刷怪等原版机制，又让殖民地「建起来就安全」。
+
+**影响**：完好运营中的建筑包围盒（含 Y）内不再自然刷怪；建造中/破损/停摆建筑照常刷怪；开关关闭即回退原版行为。
+
 ## 2026-08-14：游客长椅/交互点重启恢复与半砖防抖防摔死
 
 **需求**（用户反馈）：重启服务器后为夜晚，三个长椅上都有游客在休息，但仍有新游客试图坐上椅子，随后上下剧烈摇晃并被摔死。

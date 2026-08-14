@@ -53,7 +53,7 @@ public record WorkstationDataPacket(BlockPos stationPos, ListTag items, ListTag 
                 tag.put("nbt", entry.getKey().nbt());
             }
             tag.putLong("count", entry.getValue());
-            // Canonical element value (decompose_yield → build_cost fallback); decompose yields 1/decomposeDivisor of it (Config).
+            // Canonical element value (= build_cost); decompose yields 1/decomposeDivisor of it (Config).
             Map<ElementType, Long> value = itemElementValues.get(entry.getKey().itemId());
             if (value != null && !value.isEmpty()) {
                 CompoundTag yieldTag = new CompoundTag();

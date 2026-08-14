@@ -4,9 +4,5 @@
     "water": 8,
     "metal": 16,
     "earth": 1
-  },
-  "decompose_yield": {},
-  "decomposable": false,
-  "synthesize": {},
-  "source": "auto_generated"
+  }
 }

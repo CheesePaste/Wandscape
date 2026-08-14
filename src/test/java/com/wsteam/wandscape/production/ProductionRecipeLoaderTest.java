@@ -4,7 +4,6 @@ import java.util.List;
 import java.util.Map;
 
 import com.wsteam.wandscape.element.internal.ElementMappingConfig;
-import com.wsteam.wandscape.production.data.RecipeUnlockRequirement;
 import com.wsteam.wandscape.production.data.SynthesizeRecipe;
 import com.wsteam.wandscape.shared.data.ElementType;
 
@@ -24,15 +23,13 @@ class ProductionRecipeLoaderTest {
         return new ElementMappingConfig(
                 null, "minecraft:bread",
                 Map.of(ElementType.WOOD, 12L),
-                Map.of(), false,
-                new ElementMappingConfig.SynthesizeMeta(RecipeUnlockRequirement.NONE));
+                false);
     }
 
     private static ElementMappingConfig nonSynthesizable() {
         return new ElementMappingConfig(
                 null, "minecraft:dirt",
-                Map.of(ElementType.EARTH, 1L),
-                Map.of(), false, null);
+                Map.of(), false);
     }
 
     @Test

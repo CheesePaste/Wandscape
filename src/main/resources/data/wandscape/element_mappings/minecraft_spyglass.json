@@ -4,9 +4,5 @@
     "earth": 32,
     "metal": 16,
     "wind": 32
-  },
-  "decompose_yield": {},
-  "decomposable": false,
-  "synthesize": {},
-  "source": "auto_generated"
+  }
 }

@@ -1,9 +1,12 @@
 package com.wsteam.wandscape.dataconfig.internal;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.BiFunction;
 
 import com.google.gson.Gson;
@@ -28,6 +31,9 @@ import com.wsteam.wandscape.shared.log.Log;
 public class WandscapeDataLoader extends SimpleJsonResourceReloadListener {
     private static final String TAG = "WandscapeDataLoader";
     private static final Gson GSON = new GsonBuilder().create();
+
+    /** Mod 自身命名空间。派生 id 冲突（跨命名空间同名文件）时优先，见 {@link #apply}。 */
+    private static final String MOD_NAMESPACE = "wandscape";
 
     private final Map<String, List<SimpleDataRegistry<?>>> registries = new HashMap<>();
 
@@ -92,8 +98,22 @@ public class WandscapeDataLoader extends SimpleJsonResourceReloadListener {
             }
         }
 
+        // Deterministic load order. Derived ids are filename-only (namespace stripped),
+        // so files from different namespaces can collide on the same id. Rule: the mod's
+        // own namespace wins on collision; other namespaces resolve by sorted key. Overriding
+        // the mod therefore requires the wandscape namespace at equal-or-higher pack priority
+        // (pack layering is already resolved by the ResourceManager before this point).
+        List<Map.Entry<ResourceLocation, JsonElement>> sorted = data.entrySet().stream()
+                .sorted(Comparator
+                        .comparing((Map.Entry<ResourceLocation, JsonElement> e) ->
+                                MOD_NAMESPACE.equals(e.getKey().getNamespace()) ? 0 : 1)
+                        .thenComparing(e -> e.getKey().getNamespace())
+                        .thenComparing(e -> e.getKey().getPath()))
+                .toList();
+
+        Set<String> seenIds = new HashSet<>();
         int loaded = 0;
-        for (var entry : data.entrySet()) {
+        for (var entry : sorted) {
             ResourceLocation loc = entry.getKey();
             String path = loc.getPath();
             int slashIdx = path.indexOf('/');
@@ -101,6 +121,7 @@ public class WandscapeDataLoader extends SimpleJsonResourceReloadListener {
 
             String category = path.substring(0, slashIdx);
             String id = path.substring(slashIdx + 1).replace(".json", "");
+            if (!seenIds.add(category + "/" + id)) continue;
 
             List<SimpleDataRegistry<?>> list = registries.get(category);
             if (list == null) continue;

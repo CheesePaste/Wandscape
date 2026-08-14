@@ -2,9 +2,5 @@
   "block": "minecraft:iron_door",
   "build_cost": {
     "metal": 128
-  },
-  "decompose_yield": {},
-  "decomposable": false,
-  "synthesize": {},
-  "source": "auto_generated"
+  }
 }

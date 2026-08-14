@@ -42,7 +42,7 @@
 
 - sync 动作 toggle/activate/open_gui 立即执行；异步走 channel tick + thenRun。
 - **channel 进度检查点（2026-08）**：异步 channel 的剩余 tick 每 tick 写回所属全局任务（`GlobalTask.channelRemainingTicks`，经 `TaskPoolSavedData` 持久化）。任务被释放（跟随/重分配）或存档重载后，新 NPC 从检查点**续跑**而非从头合成；被释放任务的孤儿 channel 在下一 tick 被取消（epoch 检测），不会重复产出。覆盖 synthesize/decompose/craft_wand/brew_potion/gather 全部 block_interact 异步动作。
-- `executeDecompose`：先校验 count×总价值 ≥ divisor（默认 5，否则拒绝，不扣物品），再扣物品（bank.consume），产出 = `mappings.getItemElementValue(itemId)`（decompose_yield→build_cost 回退，与商店同源）× 1/divisor 向下取整，**加到 colonyResources.addResource(元素名 ResourceId)**（非 ColonyItemBank 元素）。
+- `executeDecompose`：先校验 count×总价值 ≥ divisor（默认 5，否则拒绝，不扣物品），再扣物品（bank.consume），产出 = `mappings.getItemElementValue(itemId)`（= build_cost，与商店同源）× 1/divisor 向下取整，**加到 colonyResources.addResource(元素名 ResourceId)**（非 ColonyItemBank 元素）。
 - `executeSynthesize`：校验 bank.countElement ≥ cost，consumeElement，产出 bank.add。
 - `executeCraftWand`：同样扣元素，产出 ItemStack 写 CUSTOM_DATA=outputNbt，以带 NBT 的 ItemKey 入库。
 - `executeBrewPotion`：校验元素 cost + input_items，同时扣元素与输入物品，产出入仓。

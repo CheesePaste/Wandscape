@@ -2,9 +2,5 @@
   "block": "minecraft:cauldron",
   "build_cost": {
     "metal": 448
-  },
-  "decompose_yield": {},
-  "decomposable": false,
-  "synthesize": {},
-  "source": "auto_generated"
+  }
 }

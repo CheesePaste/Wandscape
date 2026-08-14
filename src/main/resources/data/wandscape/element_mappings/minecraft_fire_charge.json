@@ -2,9 +2,5 @@
   "item": "minecraft:fire_charge",
   "build_cost": {
     "fire": 16
-  },
-  "decompose_yield": {},
-  "decomposable": false,
-  "synthesize": {},
-  "source": "auto_generated"
+  }
 }

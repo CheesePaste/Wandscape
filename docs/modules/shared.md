@@ -13,7 +13,7 @@
 | `BuildingApi` | getBuilding/getBuildingAt/getColonyBuildings/getBuildingBounds；registerBuilding/unregisterBuilding；shutdown/restart；demolishBuilding；getColonySnapshot(→ColonySnapshot 三值)/getColonyComfort/Magic/Wonder；队列操作（enqueueWork/dequeueWork/moveUp/moveDown）；placeBuilding(→PlacementResult)；isFirstFreeClaimed/findBeds/sampleWalkableGround/getTouristInteractionTarget/getEntryPoint/getTouristInteractPoint |
 | `ColonyApi` | createColony(origin[,founder])/getFounder/getColonyByFounder/getColonyId/deleteColony/isColonyOrigin/onBuildingIntact/onBuildingDestroyed/assignColonyIfPossible/getAllColonyIds/rebuildFromSavedData |
 | `ColonyMetricsApi` | getSnapshot + 兜底 getSnapshotSafe |
-| `ElementApi` | fromId/hasElementMapping/getBuildCost/getDecomposeYield/isDecomposable（BlockState + ItemStack 两组重载） |
+| `ElementApi` | fromId/hasElementMapping/isDisabled/getBuildCost（BlockState + ItemStack 两组重载） |
 | `GuideProgressApi` | sendToPlayer(player, colonyId) |
 | `HouseApi` | getAssignedNpc/isOccupied/assignNpc/unassignNpc/getVacantHouses |
 | `NpcApi` | getColonyNpcs/getIdleNpcs/getNpc/assignHouse + 默认 getNpcCount/getIdleNpcCount |

@@ -29,51 +29,34 @@ public class ElementMappingLoader {
 
     public Map<ElementType, Long> getBuildCost(BlockState state) {
         ElementMappingConfig config = findConfig(state);
-        return config != null ? config.buildCost() : Map.of();
-    }
-
-    public Map<ElementType, Long> getDecomposeYield(BlockState state) {
-        ElementMappingConfig config = findConfig(state);
-        return config != null ? config.decomposeYield() : Map.of();
+        return config != null && !config.disabled() ? config.buildCost() : Map.of();
     }
 
     /** Find a representative block ID for an element type (for visual transport). */
     @javax.annotation.Nullable
     public String getRepresentativeBlock(ElementType element) {
-        for (ElementMappingConfig config : registry.getAll().values()) {
-            if (config.decomposeYield().containsKey(element)) {
+        for (ElementMappingConfig config : getAllConfigs()) {
+            if (config.buildCost().containsKey(element)) {
                 return config.blockId();
             }
         }
         return null;
     }
 
-    public boolean isDecomposable(BlockState state) {
-        ElementMappingConfig config = findConfig(state);
-        return config != null && config.decomposable();
-    }
-
-    public Map<ElementType, Long> getItemDecomposeYield(Item item) {
-        ElementMappingConfig config = findConfigByItem(item);
-        return config != null ? config.decomposeYield() : Map.of();
-    }
-
     public Map<ElementType, Long> getItemBuildCost(Item item) {
         ElementMappingConfig config = findConfigByItem(item);
-        return config != null ? config.buildCost() : Map.of();
+        return config != null && !config.disabled() ? config.buildCost() : Map.of();
     }
 
     /**
-     * Canonical element value of an item: decompose_yield preferred, build_cost fallback.
+     * Canonical element value of an item — its build_cost.
      * Shared by shop sale profit and workstation decomposition.
      */
     public Map<ElementType, Long> getItemElementValue(String itemId) {
         ResourceLocation rl = ResourceLocation.tryParse(itemId);
         if (rl == null) return Map.of();
         Item item = BuiltInRegistries.ITEM.get(rl);
-        Map<ElementType, Long> source = getItemDecomposeYield(item);
-        if (source.isEmpty()) source = getItemBuildCost(item);
-        return source;
+        return getItemBuildCost(item);
     }
 
     private ElementMappingConfig findConfig(BlockState state) {
@@ -100,7 +83,14 @@ public class ElementMappingLoader {
     }
 
     public boolean hasMapping(String blockOrItemId) {
-        return findConfigByItemId(blockOrItemId) != null;
+        ElementMappingConfig config = findConfigByItemId(blockOrItemId);
+        return config != null && !config.disabled();
+    }
+
+    /** True when an element mapping exists and is explicitly disabled via {@code "disabled": true}. */
+    public boolean isDisabled(String blockOrItemId) {
+        ElementMappingConfig config = findConfigByItemId(blockOrItemId);
+        return config != null && config.disabled();
     }
 
     // ── Seed values (from element_seeds.json) ──
@@ -132,15 +122,22 @@ public class ElementMappingLoader {
 
     public Map<ElementType, Long> getBuildCostByItemId(String itemId) {
         ElementMappingConfig config = findConfigByItemId(itemId);
-        if (config != null) return config.buildCost();
+        if (config != null && !config.disabled()) return config.buildCost();
         // Try block ID match too
-        for (ElementMappingConfig c : registry.getAll().values()) {
+        for (ElementMappingConfig c : getAllConfigs()) {
             if (itemId.equals(c.blockId())) return c.buildCost();
         }
         return Map.of();
     }
 
+    /**
+     * Active (non-disabled) configs only. Disabled mappings are excluded from the element
+     * economy: no synthesize recipes, no decompose, no representative transport, no audit
+     * coverage. Lookups that need to distinguish "disabled" from "absent" use the raw registry.
+     */
     public Collection<ElementMappingConfig> getAllConfigs() {
-        return registry.getAll().values();
+        return registry.getAll().values().stream()
+                .filter(c -> !c.disabled())
+                .toList();
     }
 }

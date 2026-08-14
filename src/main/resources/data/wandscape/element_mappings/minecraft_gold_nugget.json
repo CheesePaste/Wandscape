@@ -2,9 +2,5 @@
   "item": "minecraft:gold_nugget",
   "build_cost": {
     "metal": 28
-  },
-  "decompose_yield": {},
-  "decomposable": false,
-  "synthesize": {},
-  "source": "auto_generated"
+  }
 }

@@ -1,0 +1,7 @@
+{
+  "item": "minecraft:elytra",
+  "build_cost": {
+    "wind": 2048,
+    "dark": 2048
+  }
+}

@@ -4,6 +4,7 @@ import java.util.*;
 
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.core.ecs.World;
+import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.task.source.TaskSource;
 import com.wsteam.wandscape.task.engine.pool.BuildingTaskPool;
 import com.wsteam.wandscape.task.engine.pool.GlobalTask;
@@ -95,6 +96,14 @@ public class BuildingTaskSource implements TaskSource {
         int budget = Config.MAX_CONCURRENT_BUILDINGS.get();
 
         for (UUID buildingId : buildingIds) {
+            // 创始人不在线且关闭离线运行 → 冻结殖民地：不发布新任务
+            //（建筑的排队工作与占地保留，上线后由下一次 poll 继续处理）
+            com.wsteam.wandscape.shared.data.BuildingData bd = api.getBuilding(buildingId);
+            UUID colonyId = bd != null ? bd.getColonyId() : null;
+            if (colonyId != null && !com.wsteam.wandscape.engine.colony.ColonyActivation.isColonyActive(colonyId)) {
+                continue;
+            }
+
             // Skip if building already has an active head (should already be leased)
             if (btp != null && btp.hasHead(buildingId)) continue;
 
@@ -148,6 +157,38 @@ public class BuildingTaskSource implements TaskSource {
             return WandscapeApis.getBuildingApi();
         } catch (IllegalStateException e) {
             return null;
+        }
+    }
+
+    /**
+     * Immediately cancel a building's active engine tasks (the head task an NPC
+     * is executing, plus any parked/pending) and drop its per-building task-pool
+     * queue. This is the synchronous counterpart of {@link #poll}'s cleanup:
+     * {@code poll} only reacts to a completed head on the next 20-tick cycle,
+     * which is too slow when a building is undone — the NPC would keep placing
+     * blocks. Stops the NPC mid-task, releases the footprint chunk lease, and
+     * clears the {@link BuildingApi} current-task marker.
+     *
+     * <p>The material flow is intentionally left untouched: an in-flight
+     * {@code request_resource} transport finishes and commits on its own, which
+     * matches {@code cancelBuilding}'s existing "materials are charged in one
+     * bulk commit at construction start" refund assumption.
+     *
+     * <p>Idempotent: a building whose queue was already removed returns no task
+     * ids and is a no-op (safe to call from both undo and demolish paths).
+     */
+    public static void cancelBuildingTasks(UUID buildingId) {
+        World world = WandscapeEngine.getWorld();
+        if (world == null || world.taskPool == null || world.buildingTaskPool == null) return;
+
+        for (long taskId : world.buildingTaskPool.removeBuilding(buildingId)) {
+            world.taskPool.cancelTask(taskId, world);
+        }
+
+        ChunkLoadManager.get().releaseBuilding(buildingId);
+        var api = WandscapeApis.getBuildingApiSilently();
+        if (api != null) {
+            api.clearCurrentTask(buildingId);
         }
     }
 

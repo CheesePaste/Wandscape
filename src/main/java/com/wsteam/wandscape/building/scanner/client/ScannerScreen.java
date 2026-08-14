@@ -43,7 +43,6 @@ public class ScannerScreen extends MedievalScreen {
 
     // ── Door offset ──
     private EditBox doorX, doorY, doorZ;
-    private int detectedDoorIndex = -1;
 
     // ── Metadata ──
     private EditBox metaId, metaName, metaCreator;
@@ -189,9 +188,8 @@ public class ScannerScreen extends MedievalScreen {
         doorY = mkEdit(lx + COL2 + FW + 4, doorEditY, FW, loadDoorStr(1), s -> onDoorChanged());
         doorZ = mkEdit(lx + COL2 + (FW + 4) * 2, doorEditY, FW, loadDoorStr(2), s -> onDoorChanged());
         addCustomButton(lx + 218, doorEditY, 44, 20, "清除", () -> {
-            scanner.setDoorOffset(null);
+            scanner.clearDoorOffsets();
             doorX.setValue(""); doorY.setValue(""); doorZ.setValue("");
-            detectedDoorIndex = -1;
             syncToServer();
         });
         addCustomButton(lx + 266, doorEditY, 54, 20, "自动检门", this::onAutoDetectDoor);
@@ -235,13 +233,12 @@ public class ScannerScreen extends MedievalScreen {
             scanResult = Component.literal("未在包围盒内检测到门方块");
             return;
         }
-        detectedDoorIndex = (detectedDoorIndex + 1) % doors.size();
-        BlockOffset target = doors.get(detectedDoorIndex);
-        scanner.setDoorOffset(target);
-        if (doorX != null) doorX.setValue(String.valueOf(target.x()));
-        if (doorY != null) doorY.setValue(String.valueOf(target.y()));
-        if (doorZ != null) doorZ.setValue(String.valueOf(target.z()));
-        scanResult = Component.literal("已选门 #" + (detectedDoorIndex + 1) + "/" + doors.size() + ": (" + target.x() + "," + target.y() + "," + target.z() + ")");
+        scanner.setDoorOffsets(doors);
+        BlockOffset first = doors.get(0);
+        if (doorX != null) doorX.setValue(String.valueOf(first.x()));
+        if (doorY != null) doorY.setValue(String.valueOf(first.y()));
+        if (doorZ != null) doorZ.setValue(String.valueOf(first.z()));
+        scanResult = Component.literal("已检门 " + doors.size() + " 扇，游客从任意一扇门进（编辑框仅改首门）");
         syncToServer();
     }
 
@@ -382,12 +379,12 @@ public class ScannerScreen extends MedievalScreen {
         String ys = doorY.getValue();
         String zs = doorZ.getValue();
         if (xs.isEmpty() || ys.isEmpty() || zs.isEmpty()) {
-            scanner.setDoorOffset(null);
+            scanner.clearDoorOffsets();
             return;
         }
         try {
-            scanner.setDoorOffset(BlockOffset.of(
-                    Integer.parseInt(xs), Integer.parseInt(ys), Integer.parseInt(zs)));
+            scanner.setDoorOffsets(List.of(BlockOffset.of(
+                    Integer.parseInt(xs), Integer.parseInt(ys), Integer.parseInt(zs))));
             syncToServer();
         } catch (NumberFormatException e) {
             // ignore partial input

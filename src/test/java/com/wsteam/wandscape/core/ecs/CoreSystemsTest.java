@@ -769,4 +769,118 @@ public class CoreSystemsTest {
         }
     }
 
+    // ===================================================================
+    // 9. 殖民地冻结 — 创始人不在线时调度不派单、执行不推进，解冻后恢复
+    // ===================================================================
+
+    @Nested
+    class ColonyFreezeTests {
+        private MockBoundary mock;
+        private World world;
+        private UUID colonyId;
+        private GridPos center;
+
+        @BeforeEach
+        void setUp() {
+            mock = new MockBoundary();
+            mock.seedWarehouse(ResourceId.STONE_BRICKS, 200);
+            BlueprintRegistry blueprints = new BlueprintRegistry();
+            CoreBootstrapConfig config = new CoreBootstrapConfig(mock, mock, mock, null, mock, List.of(), blueprints,
+                    new SystemBlueprintRegistry(), false);
+            world = CoreBootstrap.bootstrap(config);
+            DefaultOpExecutors.registerAll(world.opExecutors);
+
+            center = new GridPos(0, 64, 0);
+            colonyId = UUID.randomUUID();
+            CoreBootstrap.createColony(world, center.x(), center.y(), center.z(), 50);
+        }
+
+        @Test
+        void frozenColonyNpcIsNeverAssignedTask() {
+            // 冻结殖民地：唯一 NPC → 任务保持待分派，不被接走
+            long npc = CoreBootstrap.createNpc(world, 1, 64, 0, colonyId, NpcAttributes.defaults());
+            mock.setColonyFrozen(colonyId, true);
+
+            registerSimpleBp("test:freeze_only",
+                    AtomicOp.TransformOp.place(center.add(5, 0, 0), BlockType.STONE));
+            long taskId = world.taskPool.addTask(
+                    makeRequest("test:freeze_only", center, 10));
+
+            tickN(20);
+
+            assertEquals(TaskState.PENDING_ASSIGN, world.taskPool.get(taskId).state,
+                    "冻结殖民地的 NPC 不接任务 → 任务保持待分派");
+            assertNull(world.get(npc, TaskExecutor.class).globalTaskId,
+                    "冻结殖民地的 NPC 始终未被分派");
+        }
+
+        @Test
+        void unfrozenColonyNpcCompletesTask() {
+            // 对照：未冻结 → 正常接取完成
+            long npc = CoreBootstrap.createNpc(world, 1, 64, 0, colonyId, NpcAttributes.defaults());
+
+            registerSimpleBp("test:freeze_off",
+                    AtomicOp.TransformOp.place(center.add(5, 0, 0), BlockType.STONE));
+            long taskId = world.taskPool.addTask(
+                    makeRequest("test:freeze_off", center, 10));
+
+            tickN(20);
+
+            assertEquals(TaskState.COMPLETED, world.taskPool.get(taskId).state,
+                    "未冻结殖民地正常接取完成");
+            assertFalse(mock.isAir(center.add(5, 0, 0)), "任务完成执行放置了方块");
+        }
+
+        @Test
+        void freezingColonyFreezesInHandExecution() {
+            // 手头有已分派任务（IN_PROGRESS）时冻结殖民地 → 执行不推进、块不放置，解冻后恢复完成
+            long npc = CoreBootstrap.createNpc(world, 1, 64, 0, colonyId, NpcAttributes.defaults());
+            TaskExecutor exec = world.get(npc, TaskExecutor.class);
+
+            GlobalTask task = GlobalTask.createSmall(0,
+                    TaskSequence.of("Build",
+                            AtomicOp.TransformOp.place(new GridPos(5, 64, 0), BlockType.STONE)),
+                    10, List.of(), Map.of());
+            long taskId = world.taskPool.addTask(task);
+            world.taskPool.assignLight(taskId, npc, world);
+            GridPos stance = TaskExecutionSystem.computeTaskStance(task.sequence);
+            exec.npcQueue.enqueueNormal(
+                    NpcTaskPackage.of("global:" + taskId, task.sequence, stance, task.priority));
+
+            // 冻结后再 tick：NPC 不执行 → 已分派任务保持 IN_PROGRESS、块不放置
+            mock.setColonyFrozen(colonyId, true);
+            tickN(10);
+            assertEquals(TaskState.IN_PROGRESS, world.taskPool.get(taskId).state,
+                    "冻结殖民地的已分派任务不推进");
+            assertNull(world.get(npc, TaskExecutor.class).globalTaskId,
+                    "冻结殖民地 NPC 未绑定/推进全局任务");
+            assertTrue(mock.isAir(new GridPos(5, 64, 0)), "冻结期间块不被放置");
+
+            // 解冻 → 恢复执行直到完成
+            mock.setColonyFrozen(colonyId, false);
+            tickN(20);
+            assertEquals(TaskState.COMPLETED, world.taskPool.get(taskId).state,
+                    "解冻后任务恢复执行完成");
+            assertFalse(mock.isAir(new GridPos(5, 64, 0)), "解冻后块被放置");
+        }
+
+        // ---- helpers ----
+        private void registerSimpleBp(String id, AtomicOp... steps) {
+            world.blueprintRegistry.register(id, new Blueprint(id,
+                    (BlueprintSteps) p -> new TaskSequence(List.of(steps), id)));
+        }
+
+        private TaskRequest makeRequest(String blueprintId, GridPos pos, int priority) {
+            Map<String, JsonElement> params = new HashMap<>();
+            params.put("x", new JsonPrimitive(pos.x()));
+            params.put("y", new JsonPrimitive(pos.y()));
+            params.put("z", new JsonPrimitive(pos.z()));
+            return new TaskRequest(blueprintId, params, priority);
+        }
+
+        private void tickN(int n) {
+            for (int i = 0; i < n; i++) world.tick(1.0f);
+        }
+    }
+
 }

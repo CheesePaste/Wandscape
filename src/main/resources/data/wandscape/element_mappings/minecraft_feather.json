@@ -2,9 +2,5 @@
   "item": "minecraft:feather",
   "build_cost": {
     "wind": 16
-  },
-  "decompose_yield": {},
-  "decomposable": false,
-  "synthesize": {},
-  "source": "auto_generated"
+  }
 }

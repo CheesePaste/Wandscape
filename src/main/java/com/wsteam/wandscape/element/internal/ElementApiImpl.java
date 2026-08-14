@@ -21,6 +21,11 @@ public class ElementApiImpl implements ElementApi {
     }
 
     @Override
+    public boolean isDisabled(String blockOrItemId) {
+        return mappingLoader.isDisabled(blockOrItemId);
+    }
+
+    @Override
     public ElementType fromId(String id) {
         try {
             return ElementType.valueOf(id.toUpperCase());
@@ -35,28 +40,7 @@ public class ElementApiImpl implements ElementApi {
     }
 
     @Override
-    public Map<ElementType, Long> getDecomposeYield(BlockState block) {
-        return mappingLoader.getDecomposeYield(block);
-    }
-
-    @Override
-    public boolean isDecomposable(BlockState block) {
-        return mappingLoader.isDecomposable(block);
-    }
-
-    @Override
     public Map<ElementType, Long> getBuildCost(ItemStack stack) {
         return mappingLoader.getItemBuildCost(stack.getItem());
-    }
-
-    @Override
-    public Map<ElementType, Long> getDecomposeYield(ItemStack stack) {
-        return mappingLoader.getItemDecomposeYield(stack.getItem());
-    }
-
-    @Override
-    public boolean isDecomposable(ItemStack stack) {
-        var yield = mappingLoader.getItemDecomposeYield(stack.getItem());
-        return !yield.isEmpty();
     }
 }

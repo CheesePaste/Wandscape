@@ -160,6 +160,11 @@ public final class TouristSpawnSystem {
         long dayTime = level.getDayTime() % 24000;
         long day = level.getDayTime() / 24000;
 
+        // 创始人不在线且关闭离线运行 → 冻结殖民地：不生成新游客、不清冻结游客
+        UUID colonyId = getColonyId();
+        boolean colonyFrozen = colonyId != null
+                && !com.wsteam.wandscape.engine.colony.ColonyActivation.isColonyActive(colonyId);
+
         // ── Morning: reset schedule flag + count overnight stayers（每 tick 检查，便宜）──
         if (dayTime < 1000 && scheduleDay != day) {
             scheduleCreated = false;
@@ -174,7 +179,7 @@ public final class TouristSpawnSystem {
         // 每个 pending 的随机 spawnTime 一到就立即生成，窗口内绝不漏。
         boolean inSpawnWindow = dayTime >= Config.TOURIST_SPAWN_WINDOW_START.get()
                 && dayTime < Config.TOURIST_SPAWN_WINDOW_END.get();
-        if (inSpawnWindow) {
+        if (inSpawnWindow && !colonyFrozen) {
             if (!scheduleCreated || scheduleDay != day) {
                 createSchedule(level);
                 scheduleDay = day;
@@ -452,6 +457,12 @@ public final class TouristSpawnSystem {
             if (!t.isAlive()) continue;
             if (t.isPreview()) continue; // 预览假人：不参与生成/离开
 
+            // 创始人不在线 → 冻结殖民地：不清除其游客（原地冻结）
+            UUID cid = t.getColonyId();
+            if (cid != null && !com.wsteam.wandscape.engine.colony.ColonyActivation.isColonyActive(cid)) {
+                continue;
+            }
+
             // Store mage resume instantly when fully satisfied
             if (t.isFullySatisfied() && t.isMage() && !t.isMageResumeStored()) {
                 storeMageResume(t);
@@ -500,6 +511,12 @@ public final class TouristSpawnSystem {
         for (TouristEntity t : TouristSimSystem.getLiveTourists()) {
             if (!t.isAlive()) continue;
             if (t.isPreview()) continue; // 预览假人：不参与生成/离开
+
+            // 创始人不在线 → 冻结殖民地：不安排其游客离场（原地冻结）
+            UUID cid = t.getColonyId();
+            if (cid != null && !com.wsteam.wandscape.engine.colony.ColonyActivation.isColonyActive(cid)) {
+                continue;
+            }
 
             // Store mage resume instantly when fully satisfied
             if (t.isFullySatisfied() && t.isMage() && !t.isMageResumeStored()) {

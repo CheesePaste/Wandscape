@@ -2,9 +2,5 @@
   "block": "minecraft:damaged_anvil",
   "build_cost": {
     "metal": 576
-  },
-  "decompose_yield": {},
-  "decomposable": false,
-  "synthesize": {},
-  "source": "auto_generated"
+  }
 }

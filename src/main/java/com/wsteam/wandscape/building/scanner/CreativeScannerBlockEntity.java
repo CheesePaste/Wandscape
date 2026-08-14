@@ -35,7 +35,8 @@ public class CreativeScannerBlockEntity extends BlockEntity {
     private static final String KEY_MODE = "mode";
     private static final String KEY_BOUNDARY_MIN = "boundary_min";
     private static final String KEY_BOUNDARY_MAX = "boundary_max";
-    private static final String KEY_DOOR_OFFSET = "door_offset";
+    private static final String KEY_DOOR_OFFSETS = "door_offsets";
+    private static final String KEY_DOOR_OFFSET = "door_offset"; // legacy single door
     private static final String KEY_BUILDING_ID = "building_id";
     private static final String KEY_DISPLAY_NAME = "display_name";
     private static final String KEY_CREATOR = "creator";
@@ -83,8 +84,7 @@ public class CreativeScannerBlockEntity extends BlockEntity {
     private ScannerMode mode = ScannerMode.BOUNDARY;
     private BlockOffset boundaryMin = BlockOffset.of(0, 0, 0);
     private BlockOffset boundaryMax = BlockOffset.of(1, 1, 1);
-    @Nullable
-    private BlockOffset doorOffset = null;
+    private final List<BlockOffset> doorOffsets = new ArrayList<>();
     private String buildingId = "";
     private String displayName = "";
     private String creator = "";
@@ -246,12 +246,23 @@ public class CreativeScannerBlockEntity extends BlockEntity {
         return list;
     }
 
-    @Nullable
-    public BlockOffset getDoorOffset() { return doorOffset; }
-    public void setDoorOffset(@Nullable BlockOffset off) {
-        this.doorOffset = off;
+    /** All recorded door offsets (relative to this scanner block). */
+    public List<BlockOffset> getDoorOffsets() { return Collections.unmodifiableList(doorOffsets); }
+
+    public void setDoorOffsets(@Nullable List<BlockOffset> offs) {
+        doorOffsets.clear();
+        if (offs != null) doorOffsets.addAll(offs);
         setChangedAndSync();
     }
+
+    public void clearDoorOffsets() {
+        doorOffsets.clear();
+        setChangedAndSync();
+    }
+
+    /** First door offset, or null when none — single-door convenience for UI/edit boxes. */
+    @Nullable
+    public BlockOffset getDoorOffset() { return doorOffsets.isEmpty() ? null : doorOffsets.get(0); }
 
     public String getBuildingId() { return buildingId; }
     public void setBuildingId(String id) { this.buildingId = id; }
@@ -364,12 +375,12 @@ public class CreativeScannerBlockEntity extends BlockEntity {
         return worldPosition.offset(boundaryMax.x(), boundaryMax.y(), boundaryMax.z());
     }
 
-    /** World-space door position (or null). */
+    /** World-space position of the first door (or null). */
     @Nullable
     public BlockPos getWorldDoor() {
-        return doorOffset != null
-                ? worldPosition.offset(doorOffset.x(), doorOffset.y(), doorOffset.z())
-                : null;
+        return doorOffsets.isEmpty()
+                ? null
+                : worldPosition.offset(doorOffsets.get(0).x(), doorOffsets.get(0).y(), doorOffsets.get(0).z());
     }
 
     // ── NBT ──
@@ -383,8 +394,13 @@ public class CreativeScannerBlockEntity extends BlockEntity {
         tag.putString(KEY_MODE, mode.name());
         writeOffsetArray(tag, KEY_BOUNDARY_MIN, boundaryMin);
         writeOffsetArray(tag, KEY_BOUNDARY_MAX, boundaryMax);
-        if (doorOffset != null) {
-            writeOffsetArray(tag, KEY_DOOR_OFFSET, doorOffset);
+        if (!doorOffsets.isEmpty()) {
+            ListTag doorList = new ListTag();
+            for (BlockOffset off : doorOffsets) {
+                doorList.add(new net.minecraft.nbt.IntArrayTag(
+                        new int[]{off.x(), off.y(), off.z()}));
+            }
+            tag.put(KEY_DOOR_OFFSETS, doorList);
         }
         tag.putString(KEY_BUILDING_ID, buildingId);
         tag.putString(KEY_DISPLAY_NAME, displayName);
@@ -463,10 +479,17 @@ public class CreativeScannerBlockEntity extends BlockEntity {
         }
         boundaryMin = readOffsetArray(tag, KEY_BOUNDARY_MIN);
         boundaryMax = readOffsetArray(tag, KEY_BOUNDARY_MAX);
-        if (tag.contains(KEY_DOOR_OFFSET, Tag.TAG_INT_ARRAY)) {
-            doorOffset = readOffsetArray(tag, KEY_DOOR_OFFSET);
-        } else {
-            doorOffset = null;
+        doorOffsets.clear();
+        if (tag.contains(KEY_DOOR_OFFSETS, Tag.TAG_LIST)) {
+            ListTag doorList = tag.getList(KEY_DOOR_OFFSETS, Tag.TAG_INT_ARRAY);
+            for (int i = 0; i < doorList.size(); i++) {
+                int[] arr = doorList.getIntArray(i);
+                if (arr.length == 3) {
+                    doorOffsets.add(BlockOffset.of(arr[0], arr[1], arr[2]));
+                }
+            }
+        } else if (tag.contains(KEY_DOOR_OFFSET, Tag.TAG_INT_ARRAY)) {
+            doorOffsets.add(readOffsetArray(tag, KEY_DOOR_OFFSET));
         }
         buildingId = tag.getString(KEY_BUILDING_ID);
         displayName = tag.getString(KEY_DISPLAY_NAME);

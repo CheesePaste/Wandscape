@@ -2,9 +2,5 @@
   "item": "minecraft:iron_helmet",
   "build_cost": {
     "metal": 320
-  },
-  "decompose_yield": {},
-  "decomposable": false,
-  "synthesize": {},
-  "source": "auto_generated"
+  }
 }

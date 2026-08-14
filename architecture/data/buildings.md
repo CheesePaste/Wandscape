@@ -52,6 +52,7 @@
 | comfort/magic/wonder | int | 建筑三值。规则因 category 而异(见下方"三值计入规则") |
 | queue | {capacity, task_types} | 建筑内部队列容量和允许的任务类型 |
 | boundary | {min:[x,y,z], max:[x,y,z]} | 建筑 AABB（相对 anchor）。用于重叠检测 |
+| door_offsets | [x,y,z][] | 可选。建筑门偏移列表（相对 anchor），游客进入时优先用门旁的可行走地面做入口点，第一扇可行走的门生效。缺省回退到包围盒外螺旋扫描启发式。旧格式 `door_offset`（单个 [x,y,z]）仍可加载 |
 | blueprint | {id, bind} | DSL 模式。id="build:xxx"，bind 的 $field 引用上方 JSON 字段。无此字段时 fallback 到 DataDrivenSteps 遗留路径 |
 | unlock_requirement | {min_colony_level} | 建造此建筑需要殖民地达到的最低等级。填 1 表示无条件解锁。2026-07-29 从三值门槛改为等级门槛 |
 | decoration | {radius} | **仅 category=decoration**。曼哈顿辐射半径 |
@@ -98,7 +99,7 @@
 ```
 
 - `goods`: 货物种类由 JSON 固定。`maxStock` **不在 JSON 中定义**，玩家通过商店 GUI 的滑动条为每种货物单独调整（0–64，默认 0，需玩家主动拉滑动条才会补货）
-- `restock_cost`: **可选**。每种货物补货 1 件消耗的元素种类和数量。未指定时自动从 `element_mappings` 反查该物品的 `decompose_yield` 作为补货成本。显式指定则覆盖自动推断值
+- `restock_cost`: **可选**。每种货物补货 1 件消耗的元素种类和数量。未指定时自动从 `element_mappings` 反查该物品的 `build_cost` 作为补货成本。显式指定则覆盖自动推断值
 - `comfort`/`magic`/`wonder` (goods 内): 可选，默认 0。有货时该 goods 的三值叠加到商店总三值。货物越丰富商店三值越高
 - `profit_rate`: 利润率。游客购物时殖民地获得 `元素成本 × (1 + profit_rate)` 的元素收入
 - 每日清晨从仓库扣元素补货到 maxStock。未售出货品次日清除

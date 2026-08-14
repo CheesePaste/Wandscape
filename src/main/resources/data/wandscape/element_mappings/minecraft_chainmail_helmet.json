@@ -2,9 +2,5 @@
   "item": "minecraft:chainmail_helmet",
   "build_cost": {
     "metal": 390
-  },
-  "decompose_yield": {},
-  "decomposable": false,
-  "synthesize": {},
-  "source": "manual"
+  }
 }

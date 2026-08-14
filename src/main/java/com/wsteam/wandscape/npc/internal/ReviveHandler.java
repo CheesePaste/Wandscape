@@ -77,14 +77,14 @@ public final class ReviveHandler {
         return true;
     }
 
-    /** 定位殖民地市政厅门口：category=government 建筑优先用 door_offset 的可站入口点。 */
+    /** 定位殖民地市政厅门口：category=government 建筑优先用 door_offsets 的可站入口点。 */
     private static BlockPos resolveTownHallDoorOrAnchor(ServerLevel level, UUID colonyId, BlockPos fallback) {
         BuildingSavedData savedData = BuildingSavedData.get(level);
         if (savedData != null) {
             for (BuildingState b : savedData.getAllBuildings()) {
                 if (!colonyId.equals(b.getColonyId())) continue;
                 if (!WandscapeConstants.BUILDING_CATEGORY_GOVERNMENT.equals(b.getCategory())) continue;
-                // 门口：door_offset 外可站地面（市政厅门口）
+                // 门口：door_offsets 外可站地面（市政厅门口）
                 BlockPos door = savedData.getEntryPoint(b.getBuildingId(), level);
                 if (door != null) return door;
                 // 交互点（interact spot 世界坐标）

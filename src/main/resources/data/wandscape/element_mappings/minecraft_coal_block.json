@@ -2,9 +2,5 @@
   "block": "minecraft:coal_block",
   "build_cost": {
     "fire": 72
-  },
-  "decompose_yield": {},
-  "decomposable": false,
-  "synthesize": {},
-  "source": "auto_generated"
+  }
 }

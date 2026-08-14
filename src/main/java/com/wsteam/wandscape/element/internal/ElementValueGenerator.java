@@ -10,7 +10,6 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import com.google.gson.JsonPrimitive;
 import com.wsteam.wandscape.shared.data.ElementType;
 
 import net.minecraft.core.HolderLookup;
@@ -394,10 +393,6 @@ public class ElementValueGenerator {
             cost.addProperty(entry.getKey().getId(), entry.getValue());
         }
         obj.add("build_cost", cost);
-        obj.add("decompose_yield", new JsonObject());
-        obj.add("decomposable", new JsonPrimitive(false));
-        obj.add("synthesize", new JsonObject());
-        obj.addProperty("source", "auto_generated");
 
         String safeName = iwv.itemId.replace(':', '_') + ".json";
         Path outFile = outputDir.resolve(safeName);

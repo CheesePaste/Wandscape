@@ -2,9 +2,5 @@
   "item": "minecraft:string",
   "build_cost": {
     "dark": 2
-  },
-  "decompose_yield": {},
-  "decomposable": false,
-  "synthesize": {},
-  "source": "auto_generated"
+  }
 }

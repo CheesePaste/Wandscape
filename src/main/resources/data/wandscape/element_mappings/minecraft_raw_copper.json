@@ -2,9 +2,5 @@
   "item": "minecraft:raw_copper",
   "build_cost": {
     "metal": 8
-  },
-  "decompose_yield": {},
-  "decomposable": false,
-  "synthesize": {},
-  "source": "auto_generated"
+  }
 }

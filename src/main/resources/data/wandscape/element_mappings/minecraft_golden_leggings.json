@@ -2,9 +2,5 @@
   "item": "minecraft:golden_leggings",
   "build_cost": {
     "metal": 1792
-  },
-  "decompose_yield": {},
-  "decomposable": false,
-  "synthesize": {},
-  "source": "auto_generated"
+  }
 }

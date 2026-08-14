@@ -86,6 +86,22 @@ public class MockBoundary implements BlockOps, EntityOps, RitualOps, ColonyResou
         return followingNpcs.contains(npcId);
     }
 
+    /** 冻结（创始人不在线）的殖民地 id 集合：默认空 = 全部激活。 */
+    private final Set<UUID> frozenColonies = new HashSet<>();
+
+    public void setColonyFrozen(UUID colonyId, boolean frozen) {
+        if (frozen) {
+            frozenColonies.add(colonyId);
+        } else {
+            frozenColonies.remove(colonyId);
+        }
+    }
+
+    @Override
+    public boolean isColonyActive(UUID colonyId) {
+        return colonyId == null || !frozenColonies.contains(colonyId);
+    }
+
     /** 最近一次 spawnDecoration 调用（测试断言用）。 */
     @Nullable
     public SpawnDecorationCall lastSpawnDecoration;

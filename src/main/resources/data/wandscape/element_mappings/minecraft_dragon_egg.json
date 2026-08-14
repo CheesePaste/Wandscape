@@ -1,0 +1,6 @@
+{
+  "block": "minecraft:dragon_egg",
+  "build_cost": {
+    "dark": 8
+  }
+}

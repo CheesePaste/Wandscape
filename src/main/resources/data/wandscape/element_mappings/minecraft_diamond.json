@@ -2,9 +2,5 @@
   "item": "minecraft:diamond",
   "build_cost": {
     "metal": 1024
-  },
-  "decompose_yield": {},
-  "decomposable": false,
-  "synthesize": {},
-  "source": "auto_generated"
+  }
 }

@@ -313,6 +313,46 @@ public class GlobalTaskPool {
                 taskId, task.sequence.label(), npcId, task.stepIndex);
     }
 
+    /**
+     * Terminally cancel a task (e.g. a building that was undone). The task leaves
+     * the assignable set, its triggers are unsubscribed, and its assigned NPC (if
+     * any) is released from it — the NPC's queued global package is dropped and
+     * any pending navigation is cancelled so it stops executing immediately.
+     * Unlike {@link #completeTask}, no {@link TaskCompleted} is emitted (the work
+     * was not done), so downstream trigger chains are not fired.
+     *
+     * @return the ECS id of the NPC the task was assigned to, or -1 if none
+     */
+    public long cancelTask(long taskId, World world) {
+        GlobalTask task = tasksById.get(taskId);
+        if (task == null) return -1;
+
+        removeFromAssignable(task);
+        task.state = TaskState.COMPLETED;
+
+        long npcId = task.assignedNpcId != null ? task.assignedNpcId : -1;
+        if (npcId >= 0) {
+            releaseNpc(taskId, npcId, world);
+            TaskExecutor exec = world.get(npcId, TaskExecutor.class);
+            if (exec != null) {
+                exec.npcQueue.dropGlobalPackages();
+            }
+            if (world.movementOps != null) {
+                world.movementOps.cancelNavigation(npcId);
+            }
+        }
+        task.assignedNpcId = null;
+
+        for (var sub : task.subscriptions) {
+            eventBus.unsubscribe(sub);
+        }
+        task.subscriptions.clear();
+
+        notifyChanged();
+        Log.info(TAG, "cancel #%d '%s' — task removed (npc=%d)", taskId, task.sequence.label(), npcId);
+        return npcId;
+    }
+
     /** Advance stepIndex on the global task. */
     public void advanceStep(long taskId, int newStepIndex) {
         GlobalTask task = tasksById.get(taskId);

@@ -4,9 +4,5 @@
     "earth": 4,
     "metal": 320,
     "fire": 40
-  },
-  "decompose_yield": {},
-  "decomposable": false,
-  "synthesize": {},
-  "source": "auto_generated"
+  }
 }

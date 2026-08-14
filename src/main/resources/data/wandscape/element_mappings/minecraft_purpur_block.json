@@ -2,9 +2,5 @@
   "block": "minecraft:purpur_block",
   "build_cost": {
     "dark": 4
-  },
-  "decompose_yield": {},
-  "decomposable": false,
-  "synthesize": {},
-  "source": "auto_generated"
+  }
 }

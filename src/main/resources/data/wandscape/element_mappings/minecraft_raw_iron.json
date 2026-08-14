@@ -2,9 +2,5 @@
   "item": "minecraft:raw_iron",
   "build_cost": {
     "metal": 64
-  },
-  "decompose_yield": {},
-  "decomposable": false,
-  "synthesize": {},
-  "source": "auto_generated"
+  }
 }

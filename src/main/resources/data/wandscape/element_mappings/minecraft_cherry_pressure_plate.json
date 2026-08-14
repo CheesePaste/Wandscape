@@ -2,9 +2,5 @@
   "block": "minecraft:cherry_pressure_plate",
   "build_cost": {
     "wood": 4
-  },
-  "decompose_yield": {},
-  "decomposable": false,
-  "synthesize": {},
-  "source": "auto_generated"
+  }
 }

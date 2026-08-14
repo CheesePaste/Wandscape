@@ -2,9 +2,5 @@
   "block": "minecraft:sculk_shrieker",
   "build_cost": {
     "dark": 64
-  },
-  "decompose_yield": {},
-  "decomposable": false,
-  "synthesize": {},
-  "source": "auto_generated"
+  }
 }

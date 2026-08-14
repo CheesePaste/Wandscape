@@ -2,9 +2,5 @@
   "item": "minecraft:iron_nugget",
   "build_cost": {
     "metal": 7
-  },
-  "decompose_yield": {},
-  "decomposable": false,
-  "synthesize": {},
-  "source": "auto_generated"
+  }
 }

@@ -61,6 +61,11 @@ public class WandscapeEntityOps implements EntityOps {
     }
 
     @Override
+    public boolean isColonyActive(java.util.UUID colonyId) {
+        return com.wsteam.wandscape.engine.colony.ColonyActivation.isColonyActive(colonyId);
+    }
+
+    @Override
     public void spawnDecoration(GridPos pos, String entityType, String facing,
                                 @Nullable String nbtBase64) {
         if (nbtBase64 == null || nbtBase64.isEmpty()) return;

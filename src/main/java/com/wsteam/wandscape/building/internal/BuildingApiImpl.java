@@ -11,6 +11,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.engine.service.ParticleService;
+import com.wsteam.wandscape.engine.source.BuildingTaskSource;
 import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.data.BuildingData;
 import com.wsteam.wandscape.shared.data.ItemKey;
@@ -328,6 +329,10 @@ public class BuildingApiImpl implements BuildingApi {
             return;
         }
 
+        // Immediately stop any in-progress construction/production task so an NPC
+        // doesn't keep working on a structure that's being torn down (undo/destroy).
+        BuildingTaskSource.cancelBuildingTasks(buildingId);
+
         // Mark building for demolition and clear any pending work. Also flip
         // structureIntact so tourist filters (which only check intact/shutdown)
         // drop the building immediately, before the NPC dispatch poll picks it up.
@@ -393,6 +398,7 @@ public class BuildingApiImpl implements BuildingApi {
             // Construction started → materials were charged to the warehouse in one
             // bulk commit at construction start, so refund the full material cost,
             // then demolish whatever has been built.
+            BuildingTaskSource.cancelBuildingTasks(buildingId);
             refundMaterials(state);
             demolishBuilding(buildingId);
         } else {
@@ -807,6 +813,12 @@ public class BuildingApiImpl implements BuildingApi {
         if (!BuildingUnlockChecker.isUnlocked(tempColonyId, config)) {
             String reason = BuildingUnlockChecker.getLockReason(tempColonyId, config);
             return PlacementResult.fail(reason != null ? reason : "Building is locked");
+        }
+
+        // A disabled block must not be placed as a free material — refuse the whole build.
+        String disabledBlock = EnqueueHelper.findDisabledBlock(config);
+        if (disabledBlock != null) {
+            return PlacementResult.fail("Building uses a disabled block: " + disabledBlock);
         }
 
         // Register (overlap check happens inside → BuildingSavedData.register).

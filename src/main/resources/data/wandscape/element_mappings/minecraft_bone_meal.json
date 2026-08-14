@@ -2,9 +2,5 @@
   "item": "minecraft:bone_meal",
   "build_cost": {
     "dark": 1
-  },
-  "decompose_yield": {},
-  "decomposable": false,
-  "synthesize": {},
-  "source": "auto_generated"
+  }
 }
