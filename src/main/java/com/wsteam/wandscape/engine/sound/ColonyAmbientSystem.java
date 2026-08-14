@@ -89,10 +89,10 @@ public final class ColonyAmbientSystem {
         playing = false;
     }
 
-    /** 可循环的 2D 环境音实例，走 MASTER 通道（环境通道滑块可能为 0 导致听不到），直接以目标音量播放。 */
+    /** 可循环的 2D 环境音实例，走 AMBIENT 通道（环境音效），直接以目标音量播放。 */
     private static final class AmbientLoop extends AbstractTickableSoundInstance {
         AmbientLoop(SoundEvent sound, float volume) {
-            super(sound, SoundSource.MASTER, SoundInstance.createUnseededRandom());
+            super(sound, SoundSource.AMBIENT, SoundInstance.createUnseededRandom());
             this.looping = true;
             this.relative = true;
             this.volume = volume;
