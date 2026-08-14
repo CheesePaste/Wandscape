@@ -1,5 +1,6 @@
 package com.wsteam.wandscape;
 
+import com.wsteam.wandscape.engine.BuildingNoSpawnZoneHandler;
 import com.wsteam.wandscape.engine.ColonyApiImpl;
 import com.wsteam.wandscape.engine.HostileTargetingHandler;
 import com.wsteam.wandscape.engine.colony.ColonyLevelData;
@@ -402,6 +403,7 @@ public class Wandscape {
 
         NeoForge.EVENT_BUS.register(this);
         NeoForge.EVENT_BUS.register(HostileTargetingHandler.class);
+        NeoForge.EVENT_BUS.register(BuildingNoSpawnZoneHandler.class);
         NeoForge.EVENT_BUS.register(com.wsteam.wandscape.guard.SelfDefenseHandler.class);
         NeoForge.EVENT_BUS.register(com.wsteam.wandscape.guard.NpcSpellPowerHandler.class);
         NeoForge.EVENT_BUS.register(com.wsteam.wandscape.npc.internal.NpcDeathHandler.class);

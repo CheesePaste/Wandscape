@@ -6,6 +6,8 @@
 
 殖民地建筑管理：建筑配置（JSON 数据驱动）、建造生命周期、每日结算、装饰加成、商店库存、奇观效果、交互界面、建筑扫描器。建筑**没有自定义方块**（除扫描器外），全部状态存于 `BuildingSavedData`。
 
+**防刷怪区**：完好且运营中（未停摆）建筑的包围盒内不自然刷怪（`engine/BuildingNoSpawnZoneHandler` 拦 `MobSpawnEvent.SpawnPlacementCheck`，仅 `NATURAL`；`building.noSpawnInBuildingArea` 可关）。设计细节见 [decisions.md](../decisions.md)。
+
 ## BuildingConfig（JSON → 数据）
 
 `data/BuildingConfig.java` record，从 `data/wandscape/buildings/<id>.json` 解析（默认值见 Deserializer）。顶层字段（完整 JSON 树见 [data/buildings.md](../data/buildings.md)）：

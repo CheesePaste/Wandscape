@@ -328,6 +328,13 @@ public class Config {
                     + "NORMAL default, HIGH doubles count.")
             .define("particle.level", "NORMAL");
 
+    // ---- Building no-spawn zone (建筑防刷怪区) ----
+
+    public static final ModConfigSpec.BooleanValue BUILDING_NO_SPAWN_IN_AREA = BUILDER
+            .comment("No natural mob spawns inside intact, operational (non-shutdown) "
+                    + "building bounding boxes.")
+            .define("building.noSpawnInBuildingArea", true);
+
     // ---- Building preview GIF ----
 
     public static final ModConfigSpec.IntValue PREVIEW_RESOLUTION = BUILDER
