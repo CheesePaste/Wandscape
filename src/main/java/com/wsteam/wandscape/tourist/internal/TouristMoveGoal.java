@@ -81,6 +81,11 @@ public class TouristMoveGoal extends Goal {
     private BlockPos navTarget;
     private int stuckTicks;
 
+    // ── Road-network waypoint navigation ──
+    @Nullable
+    private List<BlockPos> outdoorWaypoints = null;
+    private int currentWaypointIndex = 0;
+
     /** 离路行走减速系数（脚下是路面方块 → 全速）。 */
     private static final double OFF_ROAD_SPEED_FACTOR = 0.8;
 
@@ -426,6 +431,22 @@ public class TouristMoveGoal extends Goal {
             return;
         }
 
+        // ── Road-network waypoint progression ──
+        if (outdoorWaypoints != null && currentWaypointIndex < outdoorWaypoints.size()) {
+            BlockPos curWp = outdoorWaypoints.get(currentWaypointIndex);
+            double wpDistSq = (pos.getX() - curWp.getX()) * (pos.getX() - curWp.getX())
+                    + (pos.getZ() - curWp.getZ()) * (pos.getZ() - curWp.getZ());
+            if (wpDistSq <= 9.0) { // Within 3 blocks horizontally
+                currentWaypointIndex++;
+                if (currentWaypointIndex < outdoorWaypoints.size()) {
+                    moveToNext(touristSpeed, outdoorWaypoints.get(currentWaypointIndex));
+                } else {
+                    outdoorWaypoints = null;
+                    moveToNext(touristSpeed, target);
+                }
+            }
+        }
+
         // Check arrival at entry point (fallback if proximity check doesn't fire)
         double distSqr = pos.distSqr(target);
         int interactionRange = getInteractionRange();
@@ -442,11 +463,13 @@ public class TouristMoveGoal extends Goal {
 
         // Stuck recovery
         if (nav.isDone()) {
+            BlockPos curDest = (outdoorWaypoints != null && currentWaypointIndex < outdoorWaypoints.size())
+                    ? outdoorWaypoints.get(currentWaypointIndex) : target;
             if (++stuckTicks > 40) {
                 stuckTicks = 0;
-                moveToNext(touristSpeed, target);
+                moveToNext(touristSpeed, curDest);
             } else if (repathDue()) {
-                moveToNext(touristSpeed, target);
+                moveToNext(touristSpeed, curDest);
             }
         } else {
             stuckTicks = Math.max(0, stuckTicks - 1);
@@ -1467,6 +1490,33 @@ public class TouristMoveGoal extends Goal {
      */
     @Nullable
     private BlockPos pickWanderTarget(BlockPos anchor, int radius) {
+        // 1. Prefer points sampled along structured RoadNetwork edges
+        if (tourist.level() instanceof ServerLevel sl) {
+            var network = com.wsteam.wandscape.road.engine.RoadSavedData.getOrCreate(sl).getNetwork();
+            if (network != null && !network.isEmpty()) {
+                List<BlockPos> edgePoints = new ArrayList<>();
+                for (var edge : network.getEdges().values()) {
+                    if (edge.getStatus() == com.wsteam.wandscape.road.core.RoadEdge.EdgeStatus.COMPLETE) {
+                        for (var pt : edge.getPath()) {
+                            int distSq = (pt.x() - anchor.getX()) * (pt.x() - anchor.getX())
+                                    + (pt.z() - anchor.getZ()) * (pt.z() - anchor.getZ());
+                            if (distSq <= radius * radius) {
+                                BlockPos bp = new BlockPos(pt.x(), pt.y(), pt.z());
+                                if (!isInsideAnyBuilding(bp)) {
+                                    BlockPos stand = roadStandingSpot(bp);
+                                    if (stand != null) edgePoints.add(stand);
+                                }
+                            }
+                        }
+                    }
+                }
+                if (!edgePoints.isEmpty()) {
+                    return edgePoints.get(tourist.getRandom().nextInt(edgePoints.size()));
+                }
+            }
+        }
+
+        // 2. Scan block tag custom_roads in radius
         List<BlockPos> roads = cachedRoadBlocks(anchor, radius);
         List<BlockPos> candidates = new ArrayList<>();
         for (BlockPos r : roads) {
@@ -1854,7 +1904,17 @@ public class TouristMoveGoal extends Goal {
         lastPos = null;
         noMoveTicks = 0;
         totalNavTicks = 0;
-        moveToNext(speed, target);
+
+        // Plan road-assisted waypoints along RoadNetwork if beneficial
+        outdoorWaypoints = com.wsteam.wandscape.engine.nav.RoadWalkPlanner.plan(
+                tourist.level(), tourist.blockPosition(), target);
+        currentWaypointIndex = 0;
+
+        if (outdoorWaypoints != null && !outdoorWaypoints.isEmpty()) {
+            moveToNext(speed, outdoorWaypoints.get(0));
+        } else {
+            moveToNext(speed, target);
+        }
     }
 
     /** True when enough ticks have passed since the last nav re-issue to allow another. */
