@@ -618,5 +618,16 @@
   "gui.wandscape.strategy.toggle.off": "关",
   "magic.wandscape.beam": "光束",
   "magic.wandscape.teleport": "传送",
-  "magic.wandscape.revive": "复活"
+  "magic.wandscape.revive": "复活",
+  "message.wandscape.npc.equip_success": "§a已为 %s 装备：%s",
+  "message.wandscape.npc.swap_success": "§a已为 %s 替换：%s → %s",
+  "message.wandscape.npc.unequip_success": "§e已卸下 %s 的装备：%s",
+  "message.wandscape.npc.inventory_full_drop": "§c（背包已满，物品已掉落于地面）",
+  "message.wandscape.npc.cannot_unequip_default": "§c初始默认法杖无法卸下",
+  "message.wandscape.npc.not_equippable": "§c该物品无法装备给法师",
+  "gui.wandscape.npc.tip.equip_success": "已装备：%s",
+  "gui.wandscape.npc.tip.swap_success": "已替换：%s → %s",
+  "gui.wandscape.npc.tip.unequip_success": "已卸下：%s",
+  "gui.wandscape.npc.tip.cannot_unequip_default": "初始默认法杖无法卸下",
+  "gui.wandscape.npc.tip.not_equippable": "该物品无法装备"
 }

@@ -619,5 +619,16 @@
   "gui.wandscape.strategy.toggle.off": "Off",
   "magic.wandscape.beam": "Beam",
   "magic.wandscape.teleport": "Teleport",
-  "magic.wandscape.revive": "Revive"
+  "magic.wandscape.revive": "Revive",
+  "message.wandscape.npc.equip_success": "§aEquipped on %1$s: %2$s",
+  "message.wandscape.npc.swap_success": "§aSwapped for %1$s: %2$s → %3$s",
+  "message.wandscape.npc.unequip_success": "§eUnequipped from %1$s: %2$s",
+  "message.wandscape.npc.inventory_full_drop": "§c(Inventory full, item dropped on the ground)",
+  "message.wandscape.npc.cannot_unequip_default": "§cCannot unequip default wand",
+  "message.wandscape.npc.not_equippable": "§cThis item cannot be equipped on mages",
+  "gui.wandscape.npc.tip.equip_success": "Equipped: %s",
+  "gui.wandscape.npc.tip.swap_success": "Swapped: %s → %s",
+  "gui.wandscape.npc.tip.unequip_success": "Unequipped: %s",
+  "gui.wandscape.npc.tip.cannot_unequip_default": "Cannot unequip default wand",
+  "gui.wandscape.npc.tip.not_equippable": "Cannot equip this item"
 }
