@@ -1,9 +1,7 @@
 {
   "id": "potion_store",
   "display_name": "Potion Store",
-  "creator": "Wandscape",
   "category": "shop",
-  "first_free": true,
   "pattern": [
     [
       0,
@@ -2166,237 +2164,75 @@
       5
     ]
   ],
-  "block_nbt": {
-    "1,3,3": "H4sIAAAAAAAA/+NiYGBmYKz4////HyBdCaSPA+kqIH2Hg4EpM4VBIDczLzW5KDGtxCopMS8vtYgBAG9tiSYzAAAA",
-    "1,3,4": "H4sIAAAAAAAA/+NiYGBmYKz4////HyBdCaSPA+kqIH2Xg4EpM4VBIDczLzW5KDGtxCopMS8vtYgBAGH9AoMzAAAA",
-    "1,3,5": "H4sIAAAAAAAA/+NiYGBmYKz4////HyBdCaSPA+kqIH2Pg4EpM4VBIDczLzW5KDGtxCopMS8vtYgBADJL77YzAAAA",
-    "1,3,6": "H4sIAAAAAAAA/+NiYGBmYKz4////HyBdCaSPA+kqIH2fg4EpM4VBIDczLzW5KDGtxCopMS8vtYgBADzbZBMzAAAA",
-    "10,2,8": "H4sIAAAAAAAA/+NiYGBmYKxgYGBgBdKV////Pwakq4D0Qw4GpswUBoHczLzU5KLEtBKrpMS8vNQiBgCKLUbrMwAAAA==",
-    "3,1,3": "H4sIAAAAAAAA/+NiYGBkYHErTc1hYGZgrPj///8/IF0JpI9yMrB6lqTmFjOAAFCwCih4h4OBKTOFQTw3My81uSgxrcQqqSi1PDMvPb64JDEvhYmBwwnID8nMTQXqAQAxNMSqXAAAAA==",
-    "3,1,4": "H4sIAAAAAAAA/+NiYGBkYHErTc1hYGZgrPj///8/IF0JpI9yMrB6lqTmFjOAAFCwCih4l4OBKTOFQTw3My81uSgxrcQqqSi1PDMvPb64JDEvhYmBwwnID8nMTQXqAQB9HFIJXAAAAA==",
-    "3,1,5": "H4sIAAAAAAAA/+NiYGBkYHErTc1hYGZgrPj///8/IF0JpI9yMrB6lqTmFjOAAFCwCih4j4OBKTOFQTw3My81uSgxrcQqqSi1PDMvPb64JDEvhYmBwwnID8nMTQXqAQDoYpk2XAAAAA==",
-    "3,1,6": "H4sIAAAAAAAA/+NiYGBkYHErTc1hYGZgrPj///8/IF0JpI9yMrB6lqTmFjOAAFCwCih4n4OBKTOFQTw3My81uSgxrcQqqSi1PDMvPb64JDEvhYmBwwnID8nMTQXqAQCkSg+VXAAAAA==",
-    "7,0,3": "H4sIAAAAAAAA/+NiYGBmYKxgYGBgAtKV////P8LJwOpZkppbzAACQMEqoOAdDgamzBQGgdzMvNTkosS0EqukxKKi1BwGALB7zmBAAAAA",
-    "7,1,3": "H4sIAAAAAAAA/+NiYGBmYKxgYGBgAtKV////P8rJwOpZkppbzAACQMEqoOAdDgamzBQGgdzMvNTkosS0EqukxKKi1BwGACPgBx9AAAAA",
-    "8,0,3": "H4sIAAAAAAAA/+NiYGBmYKxgAFJAuvL///9HOBlYPUtSc4sZQAAoWAUUvMPBwJSZwiCQm5mXmlyUmFZilZRYVJSawwAABtJrYUAAAAA=",
-    "8,0,4": "H4sIAAAAAAAA/+NiYGBmYKxgAFJAuvL///9HOBlYPUtSc4sZQAAoWAUUvMvBwJSZwiCQm5mXmlyUmFZilZRYVJSawwAACELgxEAAAAA=",
-    "8,2,8": "H4sIAAAAAAAA/+NiYGBmYKxgAFJAuvL////HgHQVkH7IwcCUmcIgkJuZl5pclJhWYpWUmJeXWsQAAI9EpPYzAAAA",
-    "9,2,9": "H4sIAAAAAAAA/+NiYGBmYKxgYGBgAdKV////Pwakq4D0Iw4GpswUBoHczLzU5KLEtBKrpMS8vNQiBgB4C7w2MwAAAA=="
-  },
-  "entities": [
-    {
-      "offset": [
-        8,
-        3,
-        3
-      ],
-      "type": "minecraft:painting",
-      "facing": "south",
-      "nbt": "H4sIAAAAAAAA/1WPQQ4BQRBF/0wbmkxE3MDeCawIIVZELLArMz1U0qqlNY5Pi0nE39T7yatKqgMkaFZUsJwi5Ut53K0YT0drkEJN2CfDBHolC+/uUkKhu3Y+kJ06Z0v3FMS0oTcuUGAnWawp6mTI52TtjG+BpDBfVa3drRlJjQdfa5z/zxSNOXvzemm0HuSZJKB3YTGFpyqMnhzOxitkW7Zm/zlU8y6y1ki5RP+nX4klxO9q6fBZwBvWlUCR9wAAAA=="
-    },
-    {
-      "offset": [
-        7,
-        3,
-        8
-      ],
-      "type": "minecraft:item_frame",
-      "facing": "south",
-      "nbt": "H4sIAAAAAAAA/11QS0vDQBD+NmlqGkoR9OJF8O4v8GKlJeLJIh7US1mTrQ5sZsru1nr0n9ddEik4l3l+D6YCFMa1bog/coXpQzDdkwQdSBip56+dZeP0uzXIkN+RU9cK5SPfO9lxixyzlbig7ULEtrJnxJig/CMpYpthiALTWlu7JB80NyaNKoySZoWqkW4rbDj4ChcdsWmc3oSbrSSadSMc0q7EuJ/g7Hjj97QJbLxH9FM00ViI1KpERi1O/3NFG7OkuXSyXXwmI7c/yXO+Ej+OuHx+2dudT4d81ecMo5qcORyiyDNZ85qOh/ol1icKk/gw8pS+1aufH9Upaq43TndmwLxFTKlQ1PRtWuAXlCYRTIwBAAA="
-    },
-    {
-      "offset": [
-        8,
-        3,
-        8
-      ],
-      "type": "minecraft:item_frame",
-      "facing": "south",
-      "nbt": "H4sIAAAAAAAA/11QTUvDQBB9mzQlDaGIePHo3V/gxUpLxJNFPFQvZU227cBmJmy26tF/XndJpOBcdt7svA+mABSmla6J96lC+eRN+yJeexJGxPx5tGyc/rAGCdIHcupWIX/mRydHbpBivhbntV2K2Ea+GKFmyP9EsgATjJWhrLS1K+q95trEUYFJ9CxQ1NJ2woZ9X+C6JTa10zt/10mU2dbCPv7lmA4TXJ53eu8M7/0BIU5Wh1w+KKscCTW4+C8VUsyj5cpJtzzEHPc/MXK6ln4aeOniZki7KMd3xAkmFTlzOgWTV7LmLS6P/Sb0ucIs3It6isca3K/O7hQ8tzunWzNy3gdOVtG3aYBff3P0E4sBAAA="
-    }
-  ],
-  "comfort": 2,
-  "magic": 3,
-  "wonder": 10,
-  "queue": {
-    "capacity": 5,
-    "task_types": [
-      "building"
-    ]
-  },
-  "unlock_requirement": {
-    "min_colony_level": 1
-  },
-  "boundary": {
-    "min": [
-      0,
-      -1,
-      0
-    ],
-    "max": [
-      10,
-      8,
-      9
-    ]
-  },
-  "door_offset": [
-    7,
-    0,
-    7
-  ],
-  "interact_spots": [
-    {
-      "pos": [
-        4,
-        0,
-        9
-      ],
-      "action": "browse",
-      "facing": "north"
-    },
-    {
-      "pos": [
-        4,
-        1,
-        3
-      ],
-      "action": "bathe",
-      "facing": "north"
-    },
-    {
-      "pos": [
-        5,
-        0,
-        9
-      ],
-      "action": "browse",
-      "facing": "north"
-    },
-    {
-      "pos": [
-        6,
-        1,
-        3
-      ],
-      "action": "bathe",
-      "facing": "north"
-    }
-  ],
-  "shop": {
-    "goods": [
-      {
-        "item_id": "minecraft:potion",
-        "comfort": 1,
-        "magic": 0,
-        "wonder": 0
-      },
-      {
-        "item_id": "minecraft:gunpowder",
-        "comfort": 0,
-        "magic": 1,
-        "wonder": 0
-      },
-      {
-        "item_id": "minecraft:bone",
-        "comfort": 0,
-        "magic": 0,
-        "wonder": 1
-      },
-      {
-        "item_id": "minecraft:quartz",
-        "comfort": 0,
-        "magic": 0,
-        "wonder": 2
-      },
-      {
-        "item_id": "minecraft:nether_wart",
-        "comfort": 0,
-        "magic": 0,
-        "wonder": 2
-      }
-    ],
-    "profit_rate": 0.3,
-    "interaction_duration_ticks": 1200
-  },
-  "blueprint": {
-    "id": "build:clear_and_build",
-    "bind": {
-      "offsets": "$pattern",
-      "blocks": "$block_mapping",
-      "blocks_nbt": "$block_nbt",
-      "entities": "$entities",
-      "name": "$display_name"
-    }
-  },
   "palette": [
     "minecraft:grass_block",
     "minecraft:deepslate_bricks",
-    "minecraft:deepslate_brick_stairs[facing=east,half=top,shape=outer_right]",
-    "minecraft:deepslate_brick_stairs[facing=east,half=top]",
-    "minecraft:deepslate_brick_stairs[facing=east,half=top,shape=outer_left]",
-    "minecraft:spruce_trapdoor[facing=west,half=top,open=true]",
-    "minecraft:deepslate_brick_stairs[half=top]",
-    "minecraft:wall_torch[facing=west]",
-    "minecraft:deepslate_brick_stairs[facing=south,half=top]",
-    "minecraft:red_wall_banner[facing=west]",
-    "minecraft:deepslate_tile_stairs[facing=east,half=top,shape=outer_right]",
-    "minecraft:deepslate_tile_stairs[half=top,shape=outer_right]",
-    "minecraft:spruce_fence[east=true,south=true]",
-    "minecraft:spruce_fence[east=true,north=true,south=true]",
-    "minecraft:spruce_fence[east=true,north=true]",
-    "minecraft:deepslate_tile_stairs[facing=south,half=top,shape=outer_left]",
-    "minecraft:deepslate_tile_stairs[facing=east,half=top,shape=outer_left]",
+    "minecraft:deepslate_brick_stairs[facing\u003deast,half\u003dtop,shape\u003douter_right]",
+    "minecraft:deepslate_brick_stairs[facing\u003deast,half\u003dtop]",
+    "minecraft:deepslate_brick_stairs[facing\u003deast,half\u003dtop,shape\u003douter_left]",
+    "minecraft:spruce_trapdoor[facing\u003dwest,half\u003dtop,open\u003dtrue]",
+    "minecraft:deepslate_brick_stairs[half\u003dtop]",
+    "minecraft:wall_torch[facing\u003dwest]",
+    "minecraft:deepslate_brick_stairs[facing\u003dsouth,half\u003dtop]",
+    "minecraft:red_wall_banner[facing\u003dwest]",
+    "minecraft:deepslate_tile_stairs[facing\u003deast,half\u003dtop,shape\u003douter_right]",
+    "minecraft:deepslate_tile_stairs[half\u003dtop,shape\u003douter_right]",
+    "minecraft:spruce_fence[east\u003dtrue,south\u003dtrue]",
+    "minecraft:spruce_fence[east\u003dtrue,north\u003dtrue,south\u003dtrue]",
+    "minecraft:spruce_fence[east\u003dtrue,north\u003dtrue]",
+    "minecraft:deepslate_tile_stairs[facing\u003dsouth,half\u003dtop,shape\u003douter_left]",
+    "minecraft:deepslate_tile_stairs[facing\u003deast,half\u003dtop,shape\u003douter_left]",
     "minecraft:deepslate_tile_slab",
-    "minecraft:deepslate_tile_stairs[facing=south]",
+    "minecraft:deepslate_tile_stairs[facing\u003dsouth]",
     "minecraft:deepslate_tile_stairs",
     "minecraft:spruce_log",
     "minecraft:white_terracotta",
-    "minecraft:spruce_fence[south=true]",
-    "minecraft:spruce_trapdoor[facing=south,open=true]",
-    "minecraft:deepslate_tile_stairs[facing=south,half=top]",
-    "minecraft:deepslate_tile_stairs[half=top]",
+    "minecraft:spruce_fence[south\u003dtrue]",
+    "minecraft:spruce_trapdoor[facing\u003dsouth,open\u003dtrue]",
+    "minecraft:deepslate_tile_stairs[facing\u003dsouth,half\u003dtop]",
+    "minecraft:deepslate_tile_stairs[half\u003dtop]",
     "minecraft:polished_deepslate_slab",
-    "minecraft:polished_deepslate_stairs[facing=south]",
+    "minecraft:polished_deepslate_stairs[facing\u003dsouth]",
     "minecraft:polished_deepslate_stairs",
-    "minecraft:spruce_slab[type=top]",
+    "minecraft:spruce_slab[type\u003dtop]",
     "minecraft:glass",
     "minecraft:brewing_stand",
-    "minecraft:spruce_trapdoor[facing=south,half=top]",
+    "minecraft:spruce_trapdoor[facing\u003dsouth,half\u003dtop]",
     "minecraft:soul_sand",
-    "minecraft:wall_torch[facing=east]",
-    "minecraft:nether_wart[age=3]",
+    "minecraft:wall_torch[facing\u003deast]",
+    "minecraft:nether_wart[age\u003d3]",
     "minecraft:yellow_wool",
-    "minecraft:deepslate_tile_slab[type=top]",
-    "minecraft:lantern[hanging=true]",
+    "minecraft:deepslate_tile_slab[type\u003dtop]",
+    "minecraft:lantern[hanging\u003dtrue]",
     "minecraft:cauldron",
-    "minecraft:wall_torch[facing=south]",
+    "minecraft:wall_torch[facing\u003dsouth]",
     "minecraft:blue_wool",
     "minecraft:crafting_table",
     "minecraft:cyan_wool",
-    "minecraft:deepslate_brick_stairs[facing=west,half=top,shape=outer_right]",
+    "minecraft:deepslate_brick_stairs[facing\u003dwest,half\u003dtop,shape\u003douter_right]",
     "minecraft:purple_wool",
-    "minecraft:barrel[facing=south]",
+    "minecraft:barrel[facing\u003dsouth]",
     "minecraft:bamboo_door",
-    "minecraft:bamboo_door[half=upper]",
-    "minecraft:barrel[facing=west]",
-    "minecraft:bamboo_door[hinge=right]",
-    "minecraft:bamboo_door[half=upper,hinge=right]",
-    "minecraft:lever[face=ceiling,powered=true]",
-    "minecraft:redstone_lamp[lit=true]",
-    "minecraft:red_wall_banner[facing=south]",
-    "minecraft:spruce_fence[north=true]",
-    "minecraft:deepslate_brick_stairs[facing=south,half=top,shape=outer_right]",
-    "minecraft:deepslate_brick_stairs[facing=west,half=top]",
-    "minecraft:spruce_trapdoor[facing=east,half=top,open=true]",
+    "minecraft:bamboo_door[half\u003dupper]",
+    "minecraft:barrel[facing\u003dwest]",
+    "minecraft:bamboo_door[hinge\u003dright]",
+    "minecraft:bamboo_door[half\u003dupper,hinge\u003dright]",
+    "minecraft:lever[face\u003dceiling,powered\u003dtrue]",
+    "minecraft:redstone_lamp[lit\u003dtrue]",
+    "minecraft:red_wall_banner[facing\u003dsouth]",
+    "minecraft:spruce_fence[north\u003dtrue]",
+    "minecraft:deepslate_brick_stairs[facing\u003dsouth,half\u003dtop,shape\u003douter_right]",
+    "minecraft:deepslate_brick_stairs[facing\u003dwest,half\u003dtop]",
+    "minecraft:spruce_trapdoor[facing\u003deast,half\u003dtop,open\u003dtrue]",
     "minecraft:potted_poppy",
-    "minecraft:red_wall_banner[facing=east]",
-    "minecraft:deepslate_tile_stairs[facing=west,half=top,shape=outer_left]",
-    "minecraft:deepslate_tile_stairs[half=top,shape=outer_left]",
-    "minecraft:spruce_fence[south=true,west=true]",
-    "minecraft:spruce_fence[north=true,south=true,west=true]",
-    "minecraft:spruce_fence[north=true,west=true]",
-    "minecraft:deepslate_tile_stairs[facing=south,half=top,shape=outer_right]",
-    "minecraft:deepslate_tile_stairs[facing=west,half=top,shape=outer_right]"
+    "minecraft:red_wall_banner[facing\u003deast]",
+    "minecraft:deepslate_tile_stairs[facing\u003dwest,half\u003dtop,shape\u003douter_left]",
+    "minecraft:deepslate_tile_stairs[half\u003dtop,shape\u003douter_left]",
+    "minecraft:spruce_fence[south\u003dtrue,west\u003dtrue]",
+    "minecraft:spruce_fence[north\u003dtrue,south\u003dtrue,west\u003dtrue]",
+    "minecraft:spruce_fence[north\u003dtrue,west\u003dtrue]",
+    "minecraft:deepslate_tile_stairs[facing\u003dsouth,half\u003dtop,shape\u003douter_right]",
+    "minecraft:deepslate_tile_stairs[facing\u003dwest,half\u003dtop,shape\u003douter_right]"
   ],
   "block_indices": [
     0,
@@ -2831,5 +2667,169 @@
     17,
     18,
     19
-  ]
+  ],
+  "block_nbt": {
+    "1,3,3": "H4sIAAAAAAAA/+NiYGBmYKz4////HyBdCaSPA+kqIH2Hg4EpM4VBIDczLzW5KDGtxCopMS8vtYgBAG9tiSYzAAAA",
+    "1,3,4": "H4sIAAAAAAAA/+NiYGBmYKz4////HyBdCaSPA+kqIH2Xg4EpM4VBIDczLzW5KDGtxCopMS8vtYgBAGH9AoMzAAAA",
+    "1,3,5": "H4sIAAAAAAAA/+NiYGBmYKz4////HyBdCaSPA+kqIH2Pg4EpM4VBIDczLzW5KDGtxCopMS8vtYgBADJL77YzAAAA",
+    "1,3,6": "H4sIAAAAAAAA/+NiYGBmYKz4////HyBdCaSPA+kqIH2fg4EpM4VBIDczLzW5KDGtxCopMS8vtYgBADzbZBMzAAAA",
+    "10,2,8": "H4sIAAAAAAAA/+NiYGBmYKxgYGBgBdKV////Pwakq4D0Qw4GpswUBoHczLzU5KLEtBKrpMS8vNQiBgCKLUbrMwAAAA\u003d\u003d",
+    "3,1,3": "H4sIAAAAAAAA/+NiYGBkYHErTc1hYGZgrPj///8/IF0JpI9yMrB6lqTmFjOAAFCwCih4h4OBKTOFQTw3My81uSgxrcQqqSi1PDMvPb64JDEvhYmBwwnID8nMTQXqAQAxNMSqXAAAAA\u003d\u003d",
+    "3,1,4": "H4sIAAAAAAAA/+NiYGBkYHErTc1hYGZgrPj///8/IF0JpI9yMrB6lqTmFjOAAFCwCih4l4OBKTOFQTw3My81uSgxrcQqqSi1PDMvPb64JDEvhYmBwwnID8nMTQXqAQB9HFIJXAAAAA\u003d\u003d",
+    "3,1,5": "H4sIAAAAAAAA/+NiYGBkYHErTc1hYGZgrPj///8/IF0JpI9yMrB6lqTmFjOAAFCwCih4j4OBKTOFQTw3My81uSgxrcQqqSi1PDMvPb64JDEvhYmBwwnID8nMTQXqAQDoYpk2XAAAAA\u003d\u003d",
+    "3,1,6": "H4sIAAAAAAAA/+NiYGBkYHErTc1hYGZgrPj///8/IF0JpI9yMrB6lqTmFjOAAFCwCih4n4OBKTOFQTw3My81uSgxrcQqqSi1PDMvPb64JDEvhYmBwwnID8nMTQXqAQCkSg+VXAAAAA\u003d\u003d",
+    "7,0,3": "H4sIAAAAAAAA/+NiYGBmYKxgYGBgAtKV////P8LJwOpZkppbzAACQMEqoOAdDgamzBQGgdzMvNTkosS0EqukxKKi1BwGALB7zmBAAAAA",
+    "7,1,3": "H4sIAAAAAAAA/+NiYGBmYKxgYGBgAtKV////P8rJwOpZkppbzAACQMEqoOAdDgamzBQGgdzMvNTkosS0EqukxKKi1BwGACPgBx9AAAAA",
+    "8,0,3": "H4sIAAAAAAAA/+NiYGBmYKxgAFJAuvL///9HOBlYPUtSc4sZQAAoWAUUvMPBwJSZwiCQm5mXmlyUmFZilZRYVJSawwAABtJrYUAAAAA\u003d",
+    "8,0,4": "H4sIAAAAAAAA/+NiYGBmYKxgAFJAuvL///9HOBlYPUtSc4sZQAAoWAUUvMvBwJSZwiCQm5mXmlyUmFZilZRYVJSawwAACELgxEAAAAA\u003d",
+    "8,2,8": "H4sIAAAAAAAA/+NiYGBmYKxgAFJAuvL////HgHQVkH7IwcCUmcIgkJuZl5pclJhWYpWUmJeXWsQAAI9EpPYzAAAA",
+    "9,2,9": "H4sIAAAAAAAA/+NiYGBmYKxgYGBgAdKV////Pwakq4D0Iw4GpswUBoHczLzU5KLEtBKrpMS8vNQiBgB4C7w2MwAAAA\u003d\u003d"
+  },
+  "entities": [
+    {
+      "offset": [
+        8,
+        3,
+        3
+      ],
+      "type": "minecraft:painting",
+      "facing": "south",
+      "nbt": "H4sIAAAAAAAA/1WPQQ4BQRBF/0wbmkxE3MDeCawIIVZELLArMz1U0qqlNY5Pi0nE39T7yatKqgMkaFZUsJwi5Ut53K0YT0drkEJN2CfDBHolC+/uUkKhu3Y+kJ06Z0v3FMS0oTcuUGAnWawp6mTI52TtjG+BpDBfVa3drRlJjQdfa5z/zxSNOXvzemm0HuSZJKB3YTGFpyqMnhzOxitkW7Zm/zlU8y6y1ki5RP+nX4klxO9q6fBZwBvWlUCR9wAAAA\u003d\u003d"
+    },
+    {
+      "offset": [
+        7,
+        3,
+        8
+      ],
+      "type": "minecraft:item_frame",
+      "facing": "south",
+      "nbt": "H4sIAAAAAAAA/11QS0vDQBD+NmlqGkoR9OJF8O4v8GKlJeLJIh7US1mTrQ5sZsru1nr0n9ddEik4l3l+D6YCFMa1bog/coXpQzDdkwQdSBip56+dZeP0uzXIkN+RU9cK5SPfO9lxixyzlbig7ULEtrJnxJig/CMpYpthiALTWlu7JB80NyaNKoySZoWqkW4rbDj4ChcdsWmc3oSbrSSadSMc0q7EuJ/g7Hjj97QJbLxH9FM00ViI1KpERi1O/3NFG7OkuXSyXXwmI7c/yXO+Ej+OuHx+2dudT4d81ecMo5qcORyiyDNZ85qOh/ol1icKk/gw8pS+1aufH9Upaq43TndmwLxFTKlQ1PRtWuAXlCYRTIwBAAA\u003d"
+    },
+    {
+      "offset": [
+        8,
+        3,
+        8
+      ],
+      "type": "minecraft:item_frame",
+      "facing": "south",
+      "nbt": "H4sIAAAAAAAA/11QTUvDQBB9mzQlDaGIePHo3V/gxUpLxJNFPFQvZU227cBmJmy26tF/XndJpOBcdt7svA+mABSmla6J96lC+eRN+yJeexJGxPx5tGyc/rAGCdIHcupWIX/mRydHbpBivhbntV2K2Ea+GKFmyP9EsgATjJWhrLS1K+q95trEUYFJ9CxQ1NJ2woZ9X+C6JTa10zt/10mU2dbCPv7lmA4TXJ53eu8M7/0BIU5Wh1w+KKscCTW4+C8VUsyj5cpJtzzEHPc/MXK6ln4aeOniZki7KMd3xAkmFTlzOgWTV7LmLS6P/Sb0ucIs3It6isca3K/O7hQ8tzunWzNy3gdOVtG3aYBff3P0E4sBAAA\u003d"
+    }
+  ],
+  "comfort": 2,
+  "magic": 3,
+  "wonder": 10,
+  "queue": {
+    "capacity": 5,
+    "task_types": [
+      "building"
+    ]
+  },
+  "unlock_requirement": {
+    "min_colony_level": 1
+  },
+  "boundary": {
+    "min": [
+      0,
+      -1,
+      0
+    ],
+    "max": [
+      10,
+      8,
+      9
+    ]
+  },
+  "door_offsets": [
+    [
+      7,
+      0,
+      7
+    ]
+  ],
+  "interact_spots": [
+    {
+      "pos": [
+        4,
+        0,
+        4
+      ],
+      "action": "read",
+      "facing": "north"
+    },
+    {
+      "pos": [
+        4,
+        0,
+        9
+      ],
+      "action": "browse",
+      "facing": "north"
+    },
+    {
+      "pos": [
+        5,
+        0,
+        9
+      ],
+      "action": "browse",
+      "facing": "north"
+    },
+    {
+      "pos": [
+        6,
+        0,
+        4
+      ],
+      "action": "take",
+      "facing": "north"
+    }
+  ],
+  "shop": {
+    "goods": [
+      {
+        "item_id": "minecraft:potion",
+        "comfort": 1,
+        "magic": 0,
+        "wonder": 0
+      },
+      {
+        "item_id": "minecraft:gunpowder",
+        "comfort": 0,
+        "magic": 1,
+        "wonder": 0
+      },
+      {
+        "item_id": "minecraft:bone",
+        "comfort": 0,
+        "magic": 0,
+        "wonder": 1
+      },
+      {
+        "item_id": "minecraft:quartz",
+        "comfort": 0,
+        "magic": 0,
+        "wonder": 2
+      },
+      {
+        "item_id": "minecraft:nether_wart",
+        "comfort": 0,
+        "magic": 0,
+        "wonder": 2
+      }
+    ],
+    "profit_rate": 30.0,
+    "interaction_duration_ticks": 1200
+  },
+  "blueprint": {
+    "id": "build:clear_and_build",
+    "bind": {
+      "offsets": "$pattern",
+      "blocks": "$block_mapping",
+      "blocks_nbt": "$block_nbt",
+      "entities": "$entities",
+      "name": "$display_name"
+    }
+  }
 }

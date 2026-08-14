@@ -294,14 +294,19 @@ public record ScannerExportPacket(BlockPos pos) implements CustomPacketPayload {
         boundary.add("max", bMax);
         root.add("boundary", boundary);
 
-        // Door offset
-        BlockOffset door = scanner.getDoorOffset();
-        if (door != null) {
-            JsonArray dArr = new JsonArray();
-            dArr.add(door.x());
-            dArr.add(door.y());
-            dArr.add(door.z());
-            root.add("door_offset", dArr);
+        // Door offsets: list of [x,y,z] relative to the scanner block.
+        // Legacy single "door_offset" field is not written on export.
+        List<BlockOffset> doors = scanner.getDoorOffsets();
+        if (!doors.isEmpty()) {
+            JsonArray dList = new JsonArray();
+            for (BlockOffset door : doors) {
+                JsonArray dArr = new JsonArray();
+                dArr.add(door.x());
+                dArr.add(door.y());
+                dArr.add(door.z());
+                dList.add(dArr);
+            }
+            root.add("door_offsets", dList);
         }
 
         // Interact spots: 扫 boundary 内 interact_spot_marker → interact_spots（相对 anchor 偏移 + 动作小写）。

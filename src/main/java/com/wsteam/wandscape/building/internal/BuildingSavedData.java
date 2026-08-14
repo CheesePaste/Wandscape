@@ -251,9 +251,10 @@ public class BuildingSavedData extends SavedData {
      * This is a walkable ground position OUTSIDE the building, suitable as
      * the macro-navigation destination before switching to indoor micro-navigation.
      *
-     * <p>Uses {@code door_offset} from building config if defined — the door's
-     * world position is computed, then the adjacent outside walkable block is returned.
-     * Otherwise falls back to heuristic spiral scan around the outside of the bounding box.
+     * <p>Uses {@code door_offsets} from building config if defined — each door's
+     * world position is computed, then the adjacent outside walkable block is returned
+     * (first walkable door wins). Otherwise falls back to heuristic spiral scan around
+     * the outside of the bounding box.
      *
      * @param buildingId the building to enter
      * @param level      the world level (for block-state queries)
@@ -268,27 +269,34 @@ public class BuildingSavedData extends SavedData {
         BoundingBox bounds = state.getBounds();
         BlockPos anchor = state.getAnchor();
 
-        // 1. Use door_offset if defined
-        if (config != null && config.doorOffset() != null) {
-            BlockOffset off = com.wsteam.wandscape.projection.BuildingRotation
-                    .rotateOffset(config.doorOffset(), state.getRotationSteps());
-            BlockPos doorWorld = anchor.offset(off.x(), off.y(), off.z());
+        // 1. Use door_offsets if defined — first door with a walkable outside neighbor wins
+        if (config != null && config.doorOffsets() != null && !config.doorOffsets().isEmpty()) {
+            for (BlockOffset off : config.doorOffsets()) {
+                BlockOffset rotated = com.wsteam.wandscape.projection.BuildingRotation
+                        .rotateOffset(off, state.getRotationSteps());
+                BlockPos doorWorld = anchor.offset(rotated.x(), rotated.y(), rotated.z());
 
-            // Check all 4 horizontal neighbors; prefer one outside the building
-            for (Direction dir : Direction.Plane.HORIZONTAL) {
-                BlockPos candidate = doorWorld.relative(dir);
-                if (!bounds.isInside(candidate)) {
-                    BlockPos ground = findGroundAt(candidate, level);
-                    if (ground != null && !bounds.isInside(ground)) {
-                        return ground;
+                // Check all 4 horizontal neighbors; prefer one outside the building
+                for (Direction dir : Direction.Plane.HORIZONTAL) {
+                    BlockPos candidate = doorWorld.relative(dir);
+                    if (!bounds.isInside(candidate)) {
+                        BlockPos ground = findGroundAt(candidate, level);
+                        if (ground != null && !bounds.isInside(ground)) {
+                            return ground;
+                        }
                     }
                 }
             }
-            // If no outside neighbor is walkable, try any walkable neighbor
-            for (Direction dir : Direction.Plane.HORIZONTAL) {
-                BlockPos candidate = doorWorld.relative(dir);
-                BlockPos ground = findGroundAt(candidate, level);
-                if (ground != null) return ground;
+            // If no outside neighbor is walkable, try any walkable neighbor of any door
+            for (BlockOffset off : config.doorOffsets()) {
+                BlockOffset rotated = com.wsteam.wandscape.projection.BuildingRotation
+                        .rotateOffset(off, state.getRotationSteps());
+                BlockPos doorWorld = anchor.offset(rotated.x(), rotated.y(), rotated.z());
+                for (Direction dir : Direction.Plane.HORIZONTAL) {
+                    BlockPos candidate = doorWorld.relative(dir);
+                    BlockPos ground = findGroundAt(candidate, level);
+                    if (ground != null) return ground;
+                }
             }
         }
 

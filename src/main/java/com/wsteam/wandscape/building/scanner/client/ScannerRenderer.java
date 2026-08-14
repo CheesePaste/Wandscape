@@ -85,9 +85,8 @@ public class ScannerRenderer implements BlockEntityRenderer<CreativeScannerBlock
                     c[0], c[1], c[2], 60);
         }
 
-        // 3. Door marker (red)
-        BlockOffset door = be.getDoorOffset();
-        if (door != null) {
+        // 3. Door markers (red) — one box per recorded door
+        for (BlockOffset door : be.getDoorOffsets()) {
             renderBox(bufferSource, poseStack.last(),
                     door.x(), door.y(), door.z(),
                     door.x() + 1, door.y() + 1, door.z() + 1,

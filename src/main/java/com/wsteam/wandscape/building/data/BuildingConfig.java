@@ -53,7 +53,7 @@ public record BuildingConfig(
         ServiceConfig service,
         RelaxConfig relax,
         AtmConfig atm,
-        @SerializedName("door_offset") @Nullable BlockOffset doorOffset,
+        @SerializedName("door_offsets") List<BlockOffset> doorOffsets,
         @SerializedName("interact_spots") List<InteractSpot> interactSpots,
         @SerializedName("first_free") boolean firstFree,
         @SerializedName("deprecated") boolean deprecated,
@@ -336,12 +336,21 @@ public record BuildingConfig(
                 atm = context.deserialize(obj.get("atm"), AtmConfig.class);
             }
 
-            // Door offset: position of the building door relative to anchor.
+            // Door offsets: positions of the building doors relative to anchor.
+            // New format "door_offsets" is a list; legacy single "door_offset" still loads.
             // When not specified, entry point is computed via heuristic spiral scan.
-            BlockOffset doorOffset = null;
-            if (obj.has("door_offset")) {
-                doorOffset = new BlockOffset.Deserializer().deserialize(
-                        obj.get("door_offset"), BlockOffset.class, context);
+            List<BlockOffset> doorOffsets = List.of();
+            if (obj.has("door_offsets")) {
+                JsonArray doorsArr = obj.getAsJsonArray("door_offsets");
+                BlockOffset.Deserializer doorDs = new BlockOffset.Deserializer();
+                List<BlockOffset> doors = new ArrayList<>();
+                for (JsonElement el : doorsArr) {
+                    doors.add(doorDs.deserialize(el, BlockOffset.class, context));
+                }
+                doorOffsets = List.copyOf(doors);
+            } else if (obj.has("door_offset")) {
+                doorOffsets = List.of(new BlockOffset.Deserializer().deserialize(
+                        obj.get("door_offset"), BlockOffset.class, context));
             }
 
             // First-free build flag: when true, the first build of this building
@@ -392,7 +401,7 @@ public record BuildingConfig(
                     comfort, magic, wonder,
                     queue, unlockRequirement, boundary, blueprint, nodeConfig,
                     decoration, wonderConfig, shop, service, relax, atm,
-                    doorOffset, interactSpots, firstFree, deprecated, entities);
+                    doorOffsets, interactSpots, firstFree, deprecated, entities);
         }
 
         private static String getString(JsonObject obj, String key, String def) {

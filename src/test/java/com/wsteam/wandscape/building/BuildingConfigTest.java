@@ -325,6 +325,41 @@ class BuildingConfigTest {
     }
 
     @Nested
+    class DoorOffsets {
+        @Test
+        void parseMultiDoorOffsets() {
+            String json = """
+                {"id":"inn","category":"tavern",
+                 "door_offsets":[[1,0,1],[3,0,1]]}
+                """;
+            BuildingConfig cfg = GSON.fromJson(json, BuildingConfig.class);
+            assertEquals(2, cfg.doorOffsets().size());
+            assertEquals(new BlockOffset(1, 0, 1), cfg.doorOffsets().get(0));
+            assertEquals(new BlockOffset(3, 0, 1), cfg.doorOffsets().get(1));
+        }
+
+        @Test
+        void legacySingleDoorOffsetStillLoads() {
+            String json = """
+                {"id":"bakery","category":"shop",
+                 "door_offset":[1,0,1]}
+                """;
+            BuildingConfig cfg = GSON.fromJson(json, BuildingConfig.class);
+            assertEquals(1, cfg.doorOffsets().size());
+            assertEquals(new BlockOffset(1, 0, 1), cfg.doorOffsets().get(0));
+        }
+
+        @Test
+        void missingDoorOffsetsDefaultsEmpty() {
+            String json = """
+                {"id":"plaza","category":"basic"}
+                """;
+            BuildingConfig cfg = GSON.fromJson(json, BuildingConfig.class);
+            assertTrue(cfg.doorOffsets().isEmpty());
+        }
+    }
+
+    @Nested
     class DecorationEntities {
         @Test
         void parseEntitiesArray() {

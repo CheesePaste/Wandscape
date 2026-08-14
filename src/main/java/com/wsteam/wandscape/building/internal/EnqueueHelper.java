@@ -244,15 +244,19 @@ public final class EnqueueHelper {
                     params.put("clear_offsets", rotateOffsetsJson(
                             params.get("clear_offsets").getAsJsonArray(), rotationSteps));
                 }
-                // Rotate door_offset
-                if (params.containsKey("door_offset")) {
-                    JsonArray arr = params.get("door_offset").getAsJsonArray();
-                    if (arr.size() == 3) {
-                        BlockOffset off = new BlockOffset(
-                                arr.get(0).getAsInt(), arr.get(1).getAsInt(), arr.get(2).getAsInt());
-                        BlockOffset rotated = BuildingRotation.rotateOffset(off, rotationSteps);
-                        params.put("door_offset", offsetToJson(rotated));
+                // Rotate door_offsets (list of [x,y,z])
+                if (params.containsKey("door_offsets")) {
+                    JsonArray doorList = params.get("door_offsets").getAsJsonArray();
+                    JsonArray rotatedDoors = new JsonArray();
+                    for (JsonElement el : doorList) {
+                        JsonArray arr = el.getAsJsonArray();
+                        if (arr.size() == 3) {
+                            BlockOffset off = new BlockOffset(
+                                    arr.get(0).getAsInt(), arr.get(1).getAsInt(), arr.get(2).getAsInt());
+                            rotatedDoors.add(offsetToJson(BuildingRotation.rotateOffset(off, rotationSteps)));
+                        }
                     }
+                    params.put("door_offsets", rotatedDoors);
                 }
             }
         } else {
@@ -278,8 +282,15 @@ public final class EnqueueHelper {
             case "wonder" -> new JsonPrimitive(config.wonder());
             case "boundary" -> boundaryToJson(config);
             case "entities" -> entitiesToJson(config);
-            case "door_offset" -> config.doorOffset() != null
-                    ? offsetToJson(config.doorOffset()) : new JsonArray();
+            case "door_offsets" -> {
+                JsonArray arr = new JsonArray();
+                if (config.doorOffsets() != null) {
+                    for (BlockOffset off : config.doorOffsets()) {
+                        arr.add(offsetToJson(off));
+                    }
+                }
+                yield arr;
+            }
             default -> null;
         };
     }

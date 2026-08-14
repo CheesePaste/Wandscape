@@ -161,7 +161,7 @@ public interface BuildingApi {
      * Get the entry point for tourists to approach a building.
      * A walkable ground position OUTSIDE the building, suitable as the
      * macro-navigation destination before switching to indoor micro-navigation.
-     * Uses {@code door_offset} from building config if defined, otherwise
+     * Uses {@code door_offsets} from building config if defined, otherwise
      * heuristic spiral scan around the outside of the bounding box.
      */
     @Nullable

@@ -45,9 +45,25 @@
       4
     ]
   ],
+  "palette": [
+    "minecraft:bamboo_trapdoor[facing\u003dwest,open\u003dtrue]",
+    "minecraft:bamboo_wall_sign",
+    "minecraft:bamboo_slab",
+    "minecraft:bamboo_wall_sign[facing\u003dsouth]"
+  ],
+  "block_indices": [
+    0,
+    0,
+    0,
+    1,
+    2,
+    2,
+    2,
+    3
+  ],
   "block_nbt": {
-    "1,0,0": "H4sIAAAAAAAA/62OQQ7CIBQFH61NKAvjGXoML0MopUikkPBJip7PO7mk6M69i5dJXmYxAhAYZ6XvMpuSGS43RdL6uLtgvxc4Bh19TBhm37wRfDNEyhriAE7opulnDNyR3FUxC3qw8pEaH7XWV+Oz8c3RuQXnzQWjk1rzlZwNAmJNMeS/leAAWua5494AAAA=",
-    "1,0,4": "H4sIAAAAAAAA/62OQQ7CIBQFH61NKAvjGXoML0MopUikkPBJip7PW7mg6M69i5dJXmYxAhAYZ6XvMpuSGS43RdL6uLtgvxc4Bh19TBhm37wRfDNEyhriAE7opulnDNyR3FUxC3qw8pEaH7XWV+Oz8c3RuQXnzQWjk1rzlZwNAmJNMeS/leAAhuK0tN4AAAA="
+    "1,0,0": "H4sIAAAAAAAA/62OQQ7CIBQFH61NKAvjGXoML0MopUikkPBJip7PO7mk6M69i5dJXmYxAhAYZ6XvMpuSGS43RdL6uLtgvxc4Bh19TBhm37wRfDNEyhriAE7opulnDNyR3FUxC3qw8pEaH7XWV+Oz8c3RuQXnzQWjk1rzlZwNAmJNMeS/leAAWua5494AAAA\u003d",
+    "1,0,4": "H4sIAAAAAAAA/62OQQ7CIBQFH61NKAvjGXoML0MopUikkPBJip7PW7mg6M69i5dJXmYxAhAYZ6XvMpuSGS43RdL6uLtgvxc4Bh19TBhm37wRfDNEyhriAE7opulnDNyR3FUxC3qw8pEaH7XWV+Oz8c3RuQXnzQWjk1rzlZwNAmJNMeS/leAAhuK0tN4AAAA\u003d"
   },
   "comfort": 5,
   "magic": 0,
@@ -97,21 +113,5 @@
       "entities": "$entities",
       "name": "$display_name"
     }
-  },
-  "palette": [
-    "minecraft:bamboo_trapdoor[facing=west,open=true]",
-    "minecraft:bamboo_wall_sign",
-    "minecraft:bamboo_slab",
-    "minecraft:bamboo_wall_sign[facing=south]"
-  ],
-  "block_indices": [
-    0,
-    0,
-    0,
-    1,
-    2,
-    2,
-    2,
-    3
-  ]
+  }
 }

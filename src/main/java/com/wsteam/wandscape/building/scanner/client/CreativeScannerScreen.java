@@ -19,6 +19,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.IntArrayTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
@@ -52,7 +53,6 @@ public class CreativeScannerScreen extends MedievalScreen {
 
     // ── Door offset ──
     private EditBox doorX, doorY, doorZ;
-    private int detectedDoorIndex = -1;
 
     // ── Metadata ──
     private EditBox metaId, metaName, metaCreator;
@@ -266,9 +266,8 @@ public class CreativeScannerScreen extends MedievalScreen {
         doorY = mkEdit(lx + COL2 + FW + 4, doorEditY, FW, loadDoorStr(1), s -> onDoorChanged());
         doorZ = mkEdit(lx + COL2 + (FW + 4) * 2, doorEditY, FW, loadDoorStr(2), s -> onDoorChanged());
         addCustomButton(lx + 218, doorEditY, 44, 20, "清除", () -> {
-            scanner.setDoorOffset(null);
+            scanner.clearDoorOffsets();
             doorX.setValue(""); doorY.setValue(""); doorZ.setValue("");
-            detectedDoorIndex = -1;
             syncToServer();
         });
         addCustomButton(lx + 266, doorEditY, 54, 20, "自动检门", this::onAutoDetectDoor);
@@ -547,13 +546,12 @@ public class CreativeScannerScreen extends MedievalScreen {
             scanResult = Component.literal("未在包围盒内检测到门方块");
             return;
         }
-        detectedDoorIndex = (detectedDoorIndex + 1) % doors.size();
-        BlockOffset target = doors.get(detectedDoorIndex);
-        scanner.setDoorOffset(target);
-        if (doorX != null) doorX.setValue(String.valueOf(target.x()));
-        if (doorY != null) doorY.setValue(String.valueOf(target.y()));
-        if (doorZ != null) doorZ.setValue(String.valueOf(target.z()));
-        scanResult = Component.literal("已选门 #" + (detectedDoorIndex + 1) + "/" + doors.size() + ": (" + target.x() + "," + target.y() + "," + target.z() + ")");
+        scanner.setDoorOffsets(doors);
+        BlockOffset first = doors.get(0);
+        if (doorX != null) doorX.setValue(String.valueOf(first.x()));
+        if (doorY != null) doorY.setValue(String.valueOf(first.y()));
+        if (doorZ != null) doorZ.setValue(String.valueOf(first.z()));
+        scanResult = Component.literal("已检门 " + doors.size() + " 扇，游客从任意一扇门进（编辑框仅改首门）");
         syncToServer();
     }
 
@@ -790,12 +788,12 @@ public class CreativeScannerScreen extends MedievalScreen {
         String ys = doorY.getValue();
         String zs = doorZ.getValue();
         if (xs.isEmpty() || ys.isEmpty() || zs.isEmpty()) {
-            scanner.setDoorOffset(null);
+            scanner.clearDoorOffsets();
             return;
         }
         try {
-            scanner.setDoorOffset(BlockOffset.of(
-                    Integer.parseInt(xs), Integer.parseInt(ys), Integer.parseInt(zs)));
+            scanner.setDoorOffsets(List.of(BlockOffset.of(
+                    Integer.parseInt(xs), Integer.parseInt(ys), Integer.parseInt(zs))));
             syncToServer();
         } catch (NumberFormatException e) {
             // ignore partial input
@@ -916,9 +914,12 @@ public class CreativeScannerScreen extends MedievalScreen {
         tag.putIntArray("boundary_min", new int[]{bMin.x(), bMin.y(), bMin.z()});
         tag.putIntArray("boundary_max", new int[]{bMax.x(), bMax.y(), bMax.z()});
 
-        BlockOffset dOff = scanner.getDoorOffset();
-        if (dOff != null) {
-            tag.putIntArray("door_offset", new int[]{dOff.x(), dOff.y(), dOff.z()});
+        if (!scanner.getDoorOffsets().isEmpty()) {
+            ListTag doorList = new ListTag();
+            for (BlockOffset d : scanner.getDoorOffsets()) {
+                doorList.add(new IntArrayTag(new int[]{d.x(), d.y(), d.z()}));
+            }
+            tag.put("door_offsets", doorList);
         }
 
         tag.putString("building_id", scanner.getBuildingId());
@@ -982,11 +983,23 @@ public class CreativeScannerScreen extends MedievalScreen {
         if (tag.contains("wonder")) scanner.setWonder(tag.getInt("wonder"));
         if (tag.contains("unlock_min_level")) scanner.setUnlockMinLevel(tag.getInt("unlock_min_level"));
 
-        if (tag.contains("door_offset", Tag.TAG_INT_ARRAY)) {
+        if (tag.contains("door_offsets", Tag.TAG_LIST)) {
+            ListTag doorList = tag.getList("door_offsets", Tag.TAG_INT_ARRAY);
+            List<BlockOffset> loaded = new ArrayList<>();
+            for (int i = 0; i < doorList.size(); i++) {
+                int[] arr = doorList.getIntArray(i);
+                if (arr.length == 3) loaded.add(BlockOffset.of(arr[0], arr[1], arr[2]));
+            }
+            scanner.setDoorOffsets(loaded);
+        } else if (tag.contains("door_offset", Tag.TAG_INT_ARRAY)) {
             int[] arr = tag.getIntArray("door_offset");
-            if (arr.length == 3) scanner.setDoorOffset(BlockOffset.of(arr[0], arr[1], arr[2]));
+            if (arr.length == 3) {
+                scanner.setDoorOffsets(List.of(BlockOffset.of(arr[0], arr[1], arr[2])));
+            } else {
+                scanner.clearDoorOffsets();
+            }
         } else {
-            scanner.setDoorOffset(null);
+            scanner.clearDoorOffsets();
         }
 
         if (tag.contains("node_config", Tag.TAG_COMPOUND)) {
