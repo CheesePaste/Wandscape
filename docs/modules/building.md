@@ -60,7 +60,7 @@ BuildingConfig JSON → BuildingConfigLoader → BuildingConfig
 
 ### 3. ShopStockManager（商店库存）
 
-库存持久化于 BuildingSavedData。`purchase` 扣库存 + 按 `ceil(元素价值×(1+profitRate))` 入账（**非固定 1.2X**，bakery 0.4 → 1.4X）；`walletPrice` = 各元素 ceil(v×(1+profitRate)) 之和；`purchaseAffordable`：游客预算 0.2–1.0×初始钱包、qty=floor(budget/price)+1；stock<maxStock 触发动态补货 restock，从仓库 consume 物品、可选 ItemTransportManager 运输动画、缺货走 ResourceSupplySystem.enqueueSynthesize（**队首插入**，抢在建材合成前）、pendingRestock 每 100 tick 重试；onDailySettlement 补货全商店。
+库存持久化于 BuildingSavedData。`purchase` 扣库存 + 按 `ceil(元素价值×(1+profitRate))` 入账（**非固定 1.2X**，bakery 0.3 → 1.3X）；`walletPrice` = 各元素 ceil(v×(1+profitRate)) 之和；`purchaseAffordable`：游客预算 0.2–1.0×初始钱包、qty=floor(budget/price)+1；stock<maxStock 触发动态补货 restock，从仓库 consume 物品、可选 ItemTransportManager 运输动画、缺货走 ResourceSupplySystem.enqueueSynthesize（**队首插入**，抢在建材合成前）、pendingRestock 每 100 tick 重试；onDailySettlement 补货全商店。
 
 ### 4. WonderEffectApplier（奇观效果）
 
