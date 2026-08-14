@@ -914,6 +914,7 @@ public class Wandscape {
                 .then(ConsumeWarehouseCommand.node())
                 .then(StressTestCommand.buildNode())
                 .then(TouristCommand.node())
+                .then(com.wsteam.wandscape.command.TavernCommand.node())
                 .then(TransportCommand.node())
                 .then(com.wsteam.wandscape.guard.GuardCommand.node())
                 .then(com.wsteam.wandscape.command.GuideCommand.node())

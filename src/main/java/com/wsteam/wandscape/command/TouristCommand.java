@@ -1,27 +1,40 @@
 package com.wsteam.wandscape.command;
 
 import com.mojang.brigadier.Command;
+import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
+import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.shared.data.BarRatio;
+import com.wsteam.wandscape.shared.data.MageAttributeRoller;
+import com.wsteam.wandscape.shared.data.RecruitmentCandidate;
+import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.tourist.entity.TouristEntity;
 import com.wsteam.wandscape.tourist.internal.TouristCooldownDebug;
+import com.wsteam.wandscape.tourist.internal.TouristSimSystem;
 import com.wsteam.wandscape.tourist.internal.TouristSpawnSystem;
 import com.wsteam.wandscape.tourist.internal.TouristState;
 
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 /**
  * Debug commands for tourist NPC testing.
  *
  * <pre>
  * /wandscape tourist list
  * /wandscape tourist spawn
+ * /wandscape tourist spawn mage [level]
+ * /wandscape tourist spawn_mage [level]
+ * /wandscape tourist recruit [level]
  * /wandscape tourist state &lt;name|all&gt; &lt;state&gt;
  * /wandscape tourist cooldown &lt;visited|all&gt; &lt;on|off&gt;
  * </pre>
@@ -35,7 +48,19 @@ public final class TouristCommand {
                 .then(Commands.literal("list")
                         .executes(TouristCommand::list))
                 .then(Commands.literal("spawn")
-                        .executes(TouristCommand::forceSpawn))
+                        .executes(TouristCommand::forceSpawn)
+                        .then(Commands.literal("mage")
+                                .executes(ctx -> spawnRecruitableMage(ctx, 1))
+                                .then(Commands.argument("level", IntegerArgumentType.integer(1, 10))
+                                        .executes(ctx -> spawnRecruitableMage(ctx, IntegerArgumentType.getInteger(ctx, "level"))))))
+                .then(Commands.literal("spawn_mage")
+                        .executes(ctx -> spawnRecruitableMage(ctx, 1))
+                        .then(Commands.argument("level", IntegerArgumentType.integer(1, 10))
+                                .executes(ctx -> spawnRecruitableMage(ctx, IntegerArgumentType.getInteger(ctx, "level")))))
+                .then(Commands.literal("recruit")
+                        .executes(ctx -> spawnRecruitableMage(ctx, 1))
+                        .then(Commands.argument("level", IntegerArgumentType.integer(1, 10))
+                                .executes(ctx -> spawnRecruitableMage(ctx, IntegerArgumentType.getInteger(ctx, "level")))))
                 .then(Commands.literal("state")
                         .then(Commands.argument("name", StringArgumentType.word())
                                 .then(Commands.argument("state", StringArgumentType.word())
@@ -219,6 +244,96 @@ public final class TouristCommand {
     }
 
     // ── Helpers ──
+
+    public static int spawnRecruitableMage(CommandContext<CommandSourceStack> ctx, int level) {
+        CommandSourceStack src = ctx.getSource();
+        ServerLevel serverLevel = src.getLevel();
+        Vec3 pos = src.getPosition();
+
+        // 1. Resolve colonyId
+        UUID colonyId = null;
+        var colonyApi = WandscapeApis.getColonyApiSilently();
+        if (colonyApi != null) {
+            colonyId = colonyApi.getColonyId(BlockPos.containing(pos));
+            if (colonyId == null) {
+                var ids = colonyApi.getAllColonyIds();
+                if (!ids.isEmpty()) {
+                    colonyId = ids.iterator().next();
+                }
+            }
+        }
+
+        // 2. Roll candidate stats
+        int safeLevel = Math.clamp(level, 1, 10);
+        RecruitmentCandidate candidate = MageAttributeRoller.roll(safeLevel,
+                new java.util.Random(serverLevel.random.nextLong()));
+
+        // 3. Create TouristEntity
+        TouristEntity tourist = new TouristEntity(Wandscape.TOURIST.get(), serverLevel);
+        tourist.setPos(pos.x, pos.y, pos.z);
+        String name = TouristSpawnSystem.generateRandomTouristName();
+        tourist.setTouristName(name);
+        tourist.setLevel(safeLevel);
+        tourist.setAppearance(TouristEntity.Appearance.MAGE);
+        tourist.setSkinVariant(serverLevel.random.nextInt(TouristEntity.WIZARD_SKIN_COUNT));
+        tourist.setColonyId(colonyId);
+        tourist.setArrivalTime(serverLevel.getGameTime());
+        tourist.setDepartureDeadline(serverLevel.getGameTime() + 72000L);
+        tourist.setWallet(500);
+        tourist.setInitialWallet(500);
+        tourist.setTravelFund(1500);
+
+        // 4. 三值全满 (Comfort, Magic, Wonder satisfaction bars 100% full)
+        tourist.setComfortNeed(100);
+        tourist.setComfortSat(100);
+        tourist.setMagicNeed(100);
+        tourist.setMagicSat(100);
+        tourist.setWonderNeed(100);
+        tourist.setWonderSat(100);
+        tourist.setEnergy(100);
+
+        // 5. Set Mage attributes
+        tourist.setMageAttributes(candidate.maxHp(), candidate.moveSpeed(), candidate.spellPower(),
+                candidate.workSpeed(), candidate.spellSpeed(), candidate.armorValue(), candidate.maxMana());
+
+        tourist.applyState(TouristState.VISITING);
+        serverLevel.addFreshEntity(tourist);
+
+        // 6. Adopt by SimSystem
+        TouristSimSystem sim = TouristSimSystem.getActive();
+        if (sim != null) {
+            sim.adoptTourist(tourist);
+        }
+
+        // 7. Store Resume directly to Tavern for immediate recruitment testing
+        if (colonyId != null) {
+            try {
+                var tavernApi = WandscapeApis.getTavernApi();
+                tavernApi.receiveMageResume(colonyId, tourist.getTouristName(), tourist.getLevel(),
+                        tourist.getMaxHp(), tourist.getMoveSpeed(), tourist.getSpellPower(),
+                        tourist.getWorkSpeed(), tourist.getSpellSpeed(), tourist.getArmor(),
+                        tourist.getMaxMana(), tourist.getSkinVariant());
+                tourist.setMageResumeStored(true);
+            } catch (Exception e) {
+                Log.warn("TouristCommand", "TavernApi not available when storing resume: {}", e.getMessage());
+            }
+        }
+
+        String colonyInfo = colonyId != null ? "殖民地 " + colonyId.toString().substring(0, 8) : "无绑定殖民地";
+        String tavernInfo = colonyId != null ? "已录入酒馆「法师简历」列表，可前往酒馆查看与招聘" : "未录入（未找到殖民地）";
+        Component resultMsg = Component.literal(String.format(
+                "[Tourist] 已生成三值全满法师：%s (Lv.%d, %s)\n"
+                + "  满意度三值: 舒适 100%% | 魔法 100%% | 奇观 100%%\n"
+                + "  法师属性: 生命 %.0f, 魔力 %.0f, 强度 %.2f, 工速 %.2f, 施速 %.2f, 护甲 %.1f\n"
+                + "  酒馆简历: %s",
+                tourist.getTouristName(), safeLevel, colonyInfo,
+                candidate.maxHp(), candidate.maxMana(), candidate.spellPower(),
+                candidate.workSpeed(), candidate.spellSpeed(), candidate.armorValue(),
+                tavernInfo));
+        src.sendSuccess(() -> resultMsg, false);
+
+        return Command.SINGLE_SUCCESS;
+    }
 
     private static List<TouristEntity> findTourists(ServerLevel level) {
         List<TouristEntity> result = new ArrayList<>();

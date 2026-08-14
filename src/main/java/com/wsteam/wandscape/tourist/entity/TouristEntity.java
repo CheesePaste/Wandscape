@@ -940,6 +940,18 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
     public float getArmor() { return armorValue; }
     public float getMaxMana() { return maxMana; }
 
+    public void setMageAttributes(float maxHp, float moveSpeed, float spellPower,
+                                  float workSpeed, float spellSpeed, float armorValue,
+                                  float maxMana) {
+        this.maxHp = maxHp;
+        this.moveSpeed = moveSpeed;
+        this.spellPower = spellPower;
+        this.workSpeed = workSpeed;
+        this.spellSpeed = spellSpeed;
+        this.armorValue = armorValue;
+        this.maxMana = maxMana;
+    }
+
     @Nullable public UUID getColonyId() { return colonyId; }
     public void setColonyId(@Nullable UUID id) { this.colonyId = id; }
 
