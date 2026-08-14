@@ -260,6 +260,14 @@ public class CreativeScannerBlockEntity extends BlockEntity {
         setChangedAndSync();
     }
 
+    /** Replace a single door offset in place (keeps the rest). */
+    public void updateDoorOffset(int index, BlockOffset off) {
+        if (index >= 0 && index < doorOffsets.size()) {
+            doorOffsets.set(index, off);
+            setChangedAndSync();
+        }
+    }
+
     /** First door offset, or null when none — single-door convenience for UI/edit boxes. */
     @Nullable
     public BlockOffset getDoorOffset() { return doorOffsets.isEmpty() ? null : doorOffsets.get(0); }

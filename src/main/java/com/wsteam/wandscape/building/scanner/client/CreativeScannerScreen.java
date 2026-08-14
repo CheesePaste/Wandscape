@@ -53,6 +53,7 @@ public class CreativeScannerScreen extends MedievalScreen {
 
     // ── Door offset ──
     private EditBox doorX, doorY, doorZ;
+    private int doorListY;
 
     // ── Metadata ──
     private EditBox metaId, metaName, metaCreator;
@@ -261,6 +262,8 @@ public class CreativeScannerScreen extends MedievalScreen {
         y += 16;
         doorEditY = y + ROW_H - 4;
         y = doorEditY + ROW_H + 8;
+        doorListY = y;
+        y += 26;
 
         doorX = mkEdit(lx + COL2, doorEditY, FW, loadDoorStr(0), s -> onDoorChanged());
         doorY = mkEdit(lx + COL2 + FW + 4, doorEditY, FW, loadDoorStr(1), s -> onDoorChanged());
@@ -788,16 +791,34 @@ public class CreativeScannerScreen extends MedievalScreen {
         String ys = doorY.getValue();
         String zs = doorZ.getValue();
         if (xs.isEmpty() || ys.isEmpty() || zs.isEmpty()) {
-            scanner.clearDoorOffsets();
-            return;
+            return; // 输入不完整时不动门列表，避免误清空
         }
         try {
-            scanner.setDoorOffsets(List.of(BlockOffset.of(
-                    Integer.parseInt(xs), Integer.parseInt(ys), Integer.parseInt(zs))));
+            BlockOffset off = BlockOffset.of(
+                    Integer.parseInt(xs), Integer.parseInt(ys), Integer.parseInt(zs));
+            if (scanner.getDoorOffsets().isEmpty()) {
+                scanner.setDoorOffsets(List.of(off));
+            } else {
+                scanner.updateDoorOffset(0, off); // 就地改首门，保留其余门
+            }
             syncToServer();
         } catch (NumberFormatException e) {
             // ignore partial input
         }
+    }
+
+    /** 门区只读列表：无门提示 / 列出全部已记录门的偏移。 */
+    private void drawDoorList(GuiGraphics gui) {
+        List<BlockOffset> doors = scanner.getDoorOffsets();
+        if (doors.isEmpty()) {
+            gui.drawString(font, "未设门：游客入口走包围盒外扫描", lx + 4, doorListY, MedievalColors.TEXT_MUTED);
+            return;
+        }
+        StringBuilder sb = new StringBuilder(doors.size() + " 扇门: ");
+        for (BlockOffset d : doors) {
+            sb.append("(").append(d.x()).append(",").append(d.y()).append(",").append(d.z()).append(") ");
+        }
+        gui.drawString(font, sb.toString(), lx + 4, doorListY, MedievalColors.TEXT_MUTED);
     }
 
     private void syncServiceElemOutput() {
@@ -1113,10 +1134,11 @@ public class CreativeScannerScreen extends MedievalScreen {
         drawBoundaryLabels(gui);
 
         // Section Headers & Labels
-        drawHdr(gui, "❖ 门偏移 (Door Offset)", lx, doorEditY - 14);
+        drawHdr(gui, "❖ 门偏移 (" + scanner.getDoorOffsets().size() + " 扇)", lx, doorEditY - 14);
         drawLbl(gui, "X", lx + COL2, doorEditY - 10);
         drawLbl(gui, "Y", lx + COL2 + FW + 4, doorEditY - 10);
         drawLbl(gui, "Z", lx + COL2 + (FW + 4) * 2, doorEditY - 10);
+        drawDoorList(gui);
 
         drawHdr(gui, "❖ 交互位 (" + spotMarkerCount + ")", lx, spotHeaderY);
         gui.drawString(font, "放置 marker 标记交互位（面朝游客朝向）；右键循环动作，潜行右键循环朝向，敲掉=移除。",
