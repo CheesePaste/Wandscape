@@ -34,3 +34,4 @@ jobs:
         with:
           name: CI Build
           path: build/libs/*.jar
+          retention-days: 3
