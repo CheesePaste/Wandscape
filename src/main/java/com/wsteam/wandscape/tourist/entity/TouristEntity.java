@@ -461,11 +461,12 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
     @Override
     public boolean shouldBeSaved() { return !previewMode; }
 
-    /** 预览假人免疫伤害（仅站桩演示，不能被炸死/打掉）；游客免疫摔落伤害（防坐标对齐/微操/半砖导致的异常摔死）。 */
+    /** 预览假人免疫伤害（仅站桩演示，不能被炸死/打掉）；游客免疫摔落伤害（防坐标对齐/微操/半砖导致的异常摔死）与窒息伤害（卡墙时撑到防卡死传送触发，避免先窒息死亡）。 */
     @Override
     public boolean hurt(net.minecraft.world.damagesource.DamageSource source, float amount) {
         if (previewMode) return false;
         if (source.is(net.minecraft.world.damagesource.DamageTypes.FALL)) return false;
+        if (source.is(net.minecraft.world.damagesource.DamageTypes.IN_WALL)) return false;
         return super.hurt(source, amount);
     }
 
