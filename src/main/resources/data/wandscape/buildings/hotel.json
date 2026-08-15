@@ -8812,7 +8812,7 @@
     ]
   },
   "unlock_requirement": {
-    "min_colony_level": 10
+    "min_colony_level": 5
   },
   "boundary": {
     "min": [
