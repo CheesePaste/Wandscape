@@ -14,6 +14,7 @@ import java.util.regex.Pattern;
 public final class MarkdownParser {
 
     private static final Pattern IMAGE_PATTERN = Pattern.compile("^!\\[(.*?)\\]\\((.*?)(?:\\s+=(\\d+)x(\\d+))?\\)$");
+    private static final Pattern ORDERED_LIST_PATTERN = Pattern.compile("^(\\d+)[.)]\\s+(.*)$");
 
     private MarkdownParser() {}
 
@@ -76,15 +77,21 @@ public final class MarkdownParser {
                 continue;
             }
 
-            // Headers
+            // Horizontal rule / Divider (---, ***, ___)
+            if (isDivider(trimmed)) {
+                nodes.add(new DividerNode());
+                continue;
+            }
+
+            // Headers (# H1, ## H2, ### H3, ...)
             if (trimmed.startsWith("#")) {
                 int level = 0;
                 while (level < trimmed.length() && trimmed.charAt(level) == '#') {
                     level++;
                 }
-                if (level <= 3 && level < trimmed.length() && trimmed.charAt(level) == ' ') {
+                if (level < trimmed.length() && trimmed.charAt(level) == ' ') {
                     String title = trimmed.substring(level + 1).trim();
-                    nodes.add(new HeaderNode(level, title));
+                    nodes.add(new HeaderNode(Math.min(3, Math.max(1, level)), title));
                     continue;
                 }
             }
@@ -113,6 +120,12 @@ public final class MarkdownParser {
         flushTableBuffer(nodes, tableBuffer);
 
         return nodes;
+    }
+
+    private static boolean isDivider(String line) {
+        if (line.length() < 3) return false;
+        return line.equals("---") || line.equals("***") || line.equals("___")
+                || line.matches("^-{3,}$") || line.matches("^\\*{3,}$") || line.matches("^_{3,}$");
     }
 
     private static boolean isTableLine(String trimmed) {
@@ -155,20 +168,20 @@ public final class MarkdownParser {
     }
 
     private static boolean isListItem(String line) {
-        return line.startsWith("- ") || line.startsWith("* ") || Pattern.matches("^\\d+\\.\\s+.*", line);
+        return line.startsWith("- ") || line.startsWith("* ") || line.startsWith("+ ") || ORDERED_LIST_PATTERN.matcher(line).matches();
     }
 
     private static boolean isOrderedListItem(String line) {
-        return Pattern.matches("^\\d+\\.\\s+.*", line);
+        return ORDERED_LIST_PATTERN.matcher(line).matches();
     }
 
     private static String stripListMarker(String line) {
-        if (line.startsWith("- ") || line.startsWith("* ")) {
+        if (line.startsWith("- ") || line.startsWith("* ") || line.startsWith("+ ")) {
             return line.substring(2).trim();
         }
-        int dot = line.indexOf(". ");
-        if (dot > 0) {
-            return line.substring(dot + 2).trim();
+        Matcher m = ORDERED_LIST_PATTERN.matcher(line);
+        if (m.matches()) {
+            return m.group(2).trim();
         }
         return line;
     }
@@ -212,40 +225,55 @@ public final class MarkdownParser {
         StringBuilder buf = new StringBuilder();
 
         while (cursor < len) {
-            // Action Link [text](action:id) or standard link [text](url)
+            // 1. Inline Image tag ![alt](src) — skip inline so it doesn't break link parser
+            if (cursor + 1 < len && text.charAt(cursor) == '!' && text.charAt(cursor + 1) == '[') {
+                int closeBracket = findMatchingBracket(text, cursor + 1);
+                if (closeBracket > cursor + 1 && closeBracket + 1 < len && text.charAt(closeBracket + 1) == '(') {
+                    int closeParen = findMatchingParen(text, closeBracket + 1);
+                    if (closeParen > closeBracket + 1) {
+                        cursor = closeParen + 1;
+                        continue;
+                    }
+                }
+            }
+
+            // 2. Action Link [text](action:id) or standard link [text](url)
             if (text.charAt(cursor) == '[' && !code) {
-                int closeBracket = text.indexOf(']', cursor);
+                int closeBracket = findMatchingBracket(text, cursor);
                 if (closeBracket > cursor && closeBracket + 1 < len && text.charAt(closeBracket + 1) == '(') {
-                    int closeParen = text.indexOf(')', closeBracket + 2);
-                    if (closeParen > closeBracket + 2) {
+                    int closeParen = findMatchingParen(text, closeBracket + 1);
+                    if (closeParen > closeBracket + 1) {
                         if (buf.length() > 0) {
                             spans.add(new FormattedSpan(buf.toString(), bold, italic, strikethrough, code, null, null));
                             buf.setLength(0);
                         }
 
                         String linkText = text.substring(cursor + 1, closeBracket);
-                        String linkAction = text.substring(closeBracket + 2, closeParen);
+                        String linkAction = text.substring(closeBracket + 2, closeParen).trim();
 
-                        spans.add(new FormattedSpan(linkText, bold, italic, strikethrough, false, null, linkAction));
+                        boolean linkBold = bold;
+                        boolean linkItalic = italic;
+                        boolean linkCode = false;
+                        // Strip and apply inner formatting if link text is wrapped in **bold** or `code`
+                        if (linkText.startsWith("**") && linkText.endsWith("**") && linkText.length() >= 4) {
+                            linkBold = true;
+                            linkText = linkText.substring(2, linkText.length() - 2);
+                        } else if (linkText.startsWith("*") && linkText.endsWith("*") && linkText.length() >= 2) {
+                            linkItalic = true;
+                            linkText = linkText.substring(1, linkText.length() - 1);
+                        } else if (linkText.startsWith("`") && linkText.endsWith("`") && linkText.length() >= 2) {
+                            linkCode = true;
+                            linkText = linkText.substring(1, linkText.length() - 1);
+                        }
+
+                        spans.add(new FormattedSpan(linkText, linkBold, linkItalic, strikethrough, linkCode, null, linkAction));
                         cursor = closeParen + 1;
                         continue;
                     }
                 }
             }
 
-            // Image tag inline ![alt](src)
-            if (cursor + 1 < len && text.charAt(cursor) == '!' && text.charAt(cursor + 1) == '[') {
-                int closeBracket = text.indexOf(']', cursor + 2);
-                if (closeBracket > cursor && closeBracket + 1 < len && text.charAt(closeBracket + 1) == '(') {
-                    int closeParen = text.indexOf(')', closeBracket + 2);
-                    if (closeParen > closeBracket + 2) {
-                        cursor = closeParen + 1;
-                        continue;
-                    }
-                }
-            }
-
-            // Bold **text**
+            // 3. Bold **text**
             if (cursor + 1 < len && text.startsWith("**", cursor) && !code) {
                 if (buf.length() > 0) {
                     spans.add(new FormattedSpan(buf.toString(), bold, italic, strikethrough, code, null, null));
@@ -256,7 +284,7 @@ public final class MarkdownParser {
                 continue;
             }
 
-            // Strikethrough ~~text~~
+            // 4. Strikethrough ~~text~~
             if (cursor + 1 < len && text.startsWith("~~", cursor) && !code) {
                 if (buf.length() > 0) {
                     spans.add(new FormattedSpan(buf.toString(), bold, italic, strikethrough, code, null, null));
@@ -267,7 +295,7 @@ public final class MarkdownParser {
                 continue;
             }
 
-            // Italic *text*
+            // 5. Italic *text*
             if (text.charAt(cursor) == '*' && !code) {
                 if (buf.length() > 0) {
                     spans.add(new FormattedSpan(buf.toString(), bold, italic, strikethrough, code, null, null));
@@ -278,7 +306,7 @@ public final class MarkdownParser {
                 continue;
             }
 
-            // Code `text`
+            // 6. Code `text`
             if (text.charAt(cursor) == '`') {
                 if (buf.length() > 0) {
                     spans.add(new FormattedSpan(buf.toString(), bold, italic, strikethrough, code, null, null));
@@ -298,5 +326,37 @@ public final class MarkdownParser {
         }
 
         return spans;
+    }
+
+    private static int findMatchingBracket(String text, int openPos) {
+        int depth = 0;
+        for (int i = openPos; i < text.length(); i++) {
+            char c = text.charAt(i);
+            if (c == '[') {
+                depth++;
+            } else if (c == ']') {
+                depth--;
+                if (depth == 0) {
+                    return i;
+                }
+            }
+        }
+        return -1;
+    }
+
+    private static int findMatchingParen(String text, int openPos) {
+        int depth = 0;
+        for (int i = openPos; i < text.length(); i++) {
+            char c = text.charAt(i);
+            if (c == '(') {
+                depth++;
+            } else if (c == ')') {
+                depth--;
+                if (depth == 0) {
+                    return i;
+                }
+            }
+        }
+        return -1;
     }
 }

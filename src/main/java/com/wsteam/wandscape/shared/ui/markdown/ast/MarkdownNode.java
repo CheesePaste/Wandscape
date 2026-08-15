@@ -5,7 +5,7 @@ import java.util.List;
 /**
  * Sealed interface for all AST nodes in the Wandscape Markdown parser.
  */
-public sealed interface MarkdownNode permits HeaderNode, TextParagraphNode, ImageNode, QuoteBlockNode, ListNode, TableNode {
+public sealed interface MarkdownNode permits HeaderNode, TextParagraphNode, ImageNode, QuoteBlockNode, ListNode, TableNode, DividerNode {
 
     /**
      * Inline text span containing formatting information (bold, italic, strikethrough, code, color, action link).

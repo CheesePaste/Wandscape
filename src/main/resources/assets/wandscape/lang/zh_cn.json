@@ -1060,6 +1060,7 @@
   "gui.wandscape.imgui.activity": "系统运行度",
   "gui.wandscape.guide.title": "Wandscape 引导系统",
   "gui.wandscape.guide.titlebar": "Wandscape 引导指南",
+  "gui.wandscape.guide.action_tooltip": "⚡ 触发动作: %s",
   "gui.wandscape.doc.notfound": "# 404 文档未找到\n\n无法读取指定文档: `%s`",
   "message.wandscape.guide.toast": "§e[新手引导] §f跟随引导，逐步建设你的魔法小镇！",
   "wandscape.character_name.fantasy.0": "阿庇乌斯",

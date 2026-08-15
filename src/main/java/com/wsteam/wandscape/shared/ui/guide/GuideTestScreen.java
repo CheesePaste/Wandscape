@@ -92,8 +92,9 @@ public class GuideTestScreen extends MedievalScreen {
 
         String target = action.trim();
 
-        // 1. Game action link (action:...) — reserved stub, not yet dispatched
+        // 1. Game action link (action:...)
         if (target.startsWith("action:")) {
+            handleGameAction(target);
             return;
         }
 
@@ -124,6 +125,17 @@ public class GuideTestScreen extends MedievalScreen {
 
         historyStack.navigateTo(docPath);
         loadDocument(docPath);
+    }
+
+    private void handleGameAction(String action) {
+        if ("action:wandscape:overview_mode".equals(action)) {
+            this.onClose();
+            com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.openPanel();
+            com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.enterSubMode(
+                    com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.SubMode.OVERVIEW);
+        } else {
+            Log.info("Guide", "Received game action link: {}", action);
+        }
     }
 
     /** Whether a link target is an external URL with a known scheme (http/https/mailto/ftp/file). */
