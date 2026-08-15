@@ -276,7 +276,7 @@ public final class TouristCommand {
         // 3. Create TouristEntity
         TouristEntity tourist = new TouristEntity(Wandscape.TOURIST.get(), serverLevel);
         tourist.setPos(pos.x, pos.y, pos.z);
-        String name = TouristSpawnSystem.generateRandomTouristName();
+        String name = TouristSpawnSystem.generateRandomTouristName(colonyId);
         tourist.setTouristName(name);
         tourist.setLevel(safeLevel);
         tourist.setAppearance(TouristEntity.Appearance.MAGE);

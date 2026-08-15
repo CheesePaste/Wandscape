@@ -114,9 +114,11 @@ public final class BuildingInteractHandler {
             String founderName = resolveFounderName(player, colonyId);
             boolean canUseWarehouse = com.wsteam.wandscape.shared.registry.WandscapeApis.getBuildingApi()
                     .getBuildingsByCategory(colonyId, "storage").isEmpty();
+            var colonyApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getColonyApiSilently();
+            int namingStyle = colonyApi != null ? colonyApi.getNamingStyle(colonyId).ordinal() : 0;
             PacketDistributor.sendToPlayer(player,
                     new com.wsteam.wandscape.building.network.TownHallOpenPacket(
-                            pos, colonyId, name, lvl, exp, expNext, founderName, canUseWarehouse));
+                            pos, colonyId, name, lvl, exp, expNext, founderName, canUseWarehouse, namingStyle));
             return;
         }
 

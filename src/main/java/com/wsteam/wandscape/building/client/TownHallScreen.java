@@ -2,7 +2,9 @@ package com.wsteam.wandscape.building.client;
 
 import java.util.UUID;
 
+import com.wsteam.wandscape.building.network.TownHallNameStylePacket;
 import com.wsteam.wandscape.building.network.TownHallWarehouseRequestPacket;
+import com.wsteam.wandscape.shared.data.NameStyle;
 import com.wsteam.wandscape.shared.network.ColonyNameUpdatePacket;
 import com.wsteam.wandscape.shared.ui.I18n;
 import com.wsteam.wandscape.shared.ui.component.MedievalButton;
@@ -17,7 +19,8 @@ import net.minecraft.network.chat.Component;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
- * Town Hall info screen — colony name (editable), level, experience bar, and progression.
+ * Town Hall info screen — colony name (editable), level, experience bar, progression
+ * and the character naming rule switcher (western fantasy / Chinese / English).
  * Uses {@link MedievalScreen} MINIMAL theme with {@link MedievalColors}.
  */
 public class TownHallScreen extends MedievalScreen {
@@ -38,10 +41,12 @@ public class TownHallScreen extends MedievalScreen {
     private final boolean canUseWarehouse;
 
     private EditBox nameBox;
+    private NameStyle namingStyle;
+    private final MedievalButton[] styleButtons = new MedievalButton[NameStyle.values().length];
 
     public TownHallScreen(BlockPos buildingPos, UUID colonyId,
                           String colonyName, int level, int experience, int expToNext,
-                          String founderName, boolean canUseWarehouse) {
+                          String founderName, boolean canUseWarehouse, int namingStyleOrdinal) {
         super(I18n.name("gui.wandscape.townhall.title", "Town Hall"), PW, PH);
         setTitleBar(I18n.name("gui.wandscape.townhall.title", "市政厅"));
         this.showCloseButton = true;
@@ -55,6 +60,12 @@ public class TownHallScreen extends MedievalScreen {
         this.expToNext = expToNext;
         this.founderName = founderName;
         this.canUseWarehouse = canUseWarehouse;
+        this.namingStyle = ordinalToStyle(namingStyleOrdinal);
+    }
+
+    private static NameStyle ordinalToStyle(int ordinal) {
+        NameStyle[] values = NameStyle.values();
+        return ordinal >= 0 && ordinal < values.length ? values[ordinal] : NameStyle.FANTASY;
     }
 
     @Override
@@ -62,7 +73,7 @@ public class TownHallScreen extends MedievalScreen {
         super.init();
 
         int cx = leftPos + PW / 2;
-        int ebY = topPos + headerHeight + 13;
+        int ebY = topPos + headerHeight + 11;
 
         nameBox = new EditBox(font, cx - 80, ebY, 160, font.lineHeight + 2,
                 I18n.name("gui.wandscape.townhall.name_hint", "魔法小镇名称"));
@@ -75,6 +86,21 @@ public class TownHallScreen extends MedievalScreen {
         nameBox.setResponder(this::onNameChanged);
         addRenderableWidget(nameBox);
 
+        // Character naming rule switcher (fantasy / chinese / english)
+        int sbW = 64;
+        int sbH = 14;
+        int sbGap = 6;
+        int sbTotal = sbW * styleButtons.length + sbGap * (styleButtons.length - 1);
+        int sbX = leftPos + (PW - sbTotal) / 2;
+        int sbY = ebY + 2 * font.lineHeight + 16;
+        for (int i = 0; i < styleButtons.length; i++) {
+            NameStyle style = NameStyle.values()[i];
+            int x = sbX + i * (sbW + sbGap);
+            styleButtons[i] = new MedievalButton(x, sbY, sbW, sbH,
+                    styleButtonLabel(style), () -> switchNamingStyle(style));
+            addRenderableWidget(styleButtons[i]);
+        }
+
         if (canUseWarehouse) {
             int bw = 120;
             int bh = 16;
@@ -84,6 +110,20 @@ public class TownHallScreen extends MedievalScreen {
                     I18n.name("gui.wandscape.townhall.warehouse", "仓库存取"),
                     this::onWarehouseAccess));
         }
+    }
+
+    private static Component styleButtonLabel(NameStyle style) {
+        return switch (style) {
+            case FANTASY -> I18n.name("gui.wandscape.townhall.style_fantasy", "西幻");
+            case CHINESE -> I18n.name("gui.wandscape.townhall.style_chinese", "中文");
+            case ENGLISH -> I18n.name("gui.wandscape.townhall.style_english", "英文");
+        };
+    }
+
+    private void switchNamingStyle(NameStyle style) {
+        if (style == namingStyle) return;
+        namingStyle = style;
+        PacketDistributor.sendToServer(new TownHallNameStylePacket(colonyId, style.ordinal()));
     }
 
     private void onWarehouseAccess() {
@@ -104,10 +144,25 @@ public class TownHallScreen extends MedievalScreen {
         renderMinimalHeader(g);
         renderCloseButton(g, mouseX, mouseY);
         renderContent(g);
+        renderSelectedStyleHighlight(g);
 
         for (Renderable r : this.renderables) {
             r.render(g, mouseX, mouseY, partialTick);
         }
+    }
+
+    /** Gold border around the currently active naming-rule button. */
+    private void renderSelectedStyleHighlight(GuiGraphics g) {
+        MedievalButton sel = styleButtons[namingStyle.ordinal()];
+        if (sel == null || !sel.visible) return;
+        int bx = sel.getX();
+        int by = sel.getY();
+        int bw = sel.getWidth();
+        int bh = sel.getHeight();
+        g.fill(bx, by, bx + bw, by + 1, MedievalColors.BORDER_GOLD);
+        g.fill(bx, by + bh - 1, bx + bw, by + bh, MedievalColors.BORDER_GOLD);
+        g.fill(bx, by, bx + 1, by + bh, MedievalColors.BORDER_GOLD);
+        g.fill(bx + bw - 1, by, bx + bw, by + bh, MedievalColors.BORDER_GOLD);
     }
 
     private void renderContent(GuiGraphics g) {
@@ -121,8 +176,14 @@ public class TownHallScreen extends MedievalScreen {
         int ebH = font.lineHeight + 6;
         drawInsetField(g, ebX, ebY, ebW, ebH);
 
+        // Naming rule label (buttons are renderables drawn after this)
+        int styleLabelY = ebY + ebH + 6;
+        Component styleLabel = I18n.name("gui.wandscape.townhall.naming_style", "命名风格");
+        g.drawString(font, styleLabel, cx - font.width(styleLabel) / 2, styleLabelY,
+                MedievalColors.TEXT_MUTED);
+
         // Colony founder
-        int y = ebY + ebH + 16;
+        int y = styleLabelY + font.lineHeight + 4 + 14 + 8;
         Component founderText = I18n.name("gui.wandscape.townhall.founder", "创建者：%s",
                 founderName != null && !founderName.isEmpty() ? founderName : "—");
         g.drawString(font, founderText, cx - font.width(founderText) / 2, y,

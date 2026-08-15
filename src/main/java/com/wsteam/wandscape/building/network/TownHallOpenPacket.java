@@ -14,10 +14,12 @@ import static com.wsteam.wandscape.Wandscape.MODID;
  * Server→client packet: opens the Town Hall info screen with colony name, level and experience.
  * {@code canUseWarehouse} is true when the colony has no storage building, so the client
  * shows a "warehouse access" button letting the town hall act as a warehouse.
+ * {@code namingStyle} is the colony's character naming rule ({@link
+ * com.wsteam.wandscape.shared.data.NameStyle} ordinal) for the UI switcher.
  */
 public record TownHallOpenPacket(BlockPos buildingPos, UUID colonyId,
                                  String colonyName, int level, int experience, int expToNext,
-                                 String founderName, boolean canUseWarehouse)
+                                 String founderName, boolean canUseWarehouse, int namingStyle)
         implements CustomPacketPayload {
 
     public static final Type<TownHallOpenPacket> TYPE =
@@ -46,10 +48,11 @@ public record TownHallOpenPacket(BlockPos buildingPos, UUID colonyId,
         buf.writeVarInt(pkt.expToNext);
         buf.writeUtf(pkt.founderName != null ? pkt.founderName : "");
         buf.writeBoolean(pkt.canUseWarehouse);
+        buf.writeVarInt(pkt.namingStyle);
     }
 
     static TownHallOpenPacket read(RegistryFriendlyByteBuf buf) {
-        // Field order MUST match write(): long → UUID → utf → varint×3 → utf → boolean.
+        // Field order MUST match write(): long → UUID → utf → varint×3 → utf → boolean → varint.
         BlockPos buildingPos = BlockPos.of(buf.readLong());
         UUID colonyId = buf.readUUID();
         String colonyName = buf.readUtf();
@@ -58,7 +61,8 @@ public record TownHallOpenPacket(BlockPos buildingPos, UUID colonyId,
         int expToNext = buf.readVarInt();
         String founderName = buf.readUtf();
         boolean canUseWarehouse = buf.readBoolean();
+        int namingStyle = buf.readVarInt();
         return new TownHallOpenPacket(buildingPos, colonyId, colonyName, level, experience, expToNext,
-                founderName.isEmpty() ? null : founderName, canUseWarehouse);
+                founderName.isEmpty() ? null : founderName, canUseWarehouse, namingStyle);
     }
 }

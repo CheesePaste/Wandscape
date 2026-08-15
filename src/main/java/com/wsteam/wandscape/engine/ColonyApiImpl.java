@@ -176,6 +176,21 @@ public final class ColonyApiImpl implements ColonyApi {
     }
 
     @Override
+    public com.wsteam.wandscape.shared.data.NameStyle getNamingStyle(UUID colonyId) {
+        ColonySavedData csd = getColonySavedData();
+        return csd != null ? csd.getNamingStyle(colonyId)
+                : com.wsteam.wandscape.shared.data.NameStyle.FANTASY;
+    }
+
+    @Override
+    public void setNamingStyle(UUID colonyId, com.wsteam.wandscape.shared.data.NameStyle style) {
+        ColonySavedData csd = getColonySavedData();
+        if (csd != null) {
+            csd.setNamingStyle(colonyId, style);
+        }
+    }
+
+    @Override
     public void rebuildFromSavedData() {
         colonyOrigins.clear();
         colonyToOrigin.clear();

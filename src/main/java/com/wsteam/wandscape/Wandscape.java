@@ -710,6 +710,12 @@ public class Wandscape {
                         com.wsteam.wandscape.shared.network.ColonyNameUpdatePacket.STREAM_CODEC,
                         (packet, ctx) -> com.wsteam.wandscape.shared.network.ColonyNameUpdatePacket
                                 .handleServer(packet, (net.minecraft.server.level.ServerPlayer) ctx.player()))
+                // ── Town hall naming rule switch ──
+                .playToServer(
+                        com.wsteam.wandscape.building.network.TownHallNameStylePacket.TYPE,
+                        com.wsteam.wandscape.building.network.TownHallNameStylePacket.STREAM_CODEC,
+                        (packet, ctx) -> com.wsteam.wandscape.building.network.TownHallNameStylePacket
+                                .handleServer(packet, (net.minecraft.server.level.ServerPlayer) ctx.player()))
                 // ── Colony create (town hall naming flow) ──
                 .playToServer(
                         com.wsteam.wandscape.shared.network.ColonyCreateRequestPacket.TYPE,

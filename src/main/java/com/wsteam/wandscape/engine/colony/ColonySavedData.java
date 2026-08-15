@@ -15,6 +15,7 @@ import net.minecraft.nbt.NbtUtils;
 import net.minecraft.nbt.Tag;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.saveddata.SavedData;
+import com.wsteam.wandscape.shared.data.NameStyle;
 import com.wsteam.wandscape.shared.log.Log;
 
 /**
@@ -34,10 +35,13 @@ public class ColonySavedData extends SavedData {
     private static final String KEY_Y = "y";
     private static final String KEY_Z = "z";
     private static final String KEY_FOUNDER = "founder";
+    private static final String KEY_NAMING_STYLE = "namingStyle";
 
     private final Map<UUID, BlockPos> colonies = new ConcurrentHashMap<>();
     /** colonyId → founding player UUID (informational; permissions remain shared). */
     private final Map<UUID, UUID> founders = new ConcurrentHashMap<>();
+    /** colonyId → character naming rule (defaults to FANTASY when absent). */
+    private final Map<UUID, NameStyle> namingStyles = new ConcurrentHashMap<>();
 
     private static final Factory<ColonySavedData> FACTORY = new Factory<>(
             ColonySavedData::new,
@@ -69,6 +73,7 @@ public class ColonySavedData extends SavedData {
     public void removeColony(UUID colonyId) {
         BlockPos removed = colonies.remove(colonyId);
         founders.remove(colonyId);
+        namingStyles.remove(colonyId);
         if (removed != null) {
             setDirty();
             Log.info(TAG, "[Colony] Removed colony {} from persistence", colonyId.toString().substring(0, 8));
@@ -92,6 +97,19 @@ public class ColonySavedData extends SavedData {
             if (entry.getValue().equals(founder)) return entry.getKey();
         }
         return null;
+    }
+
+    /** Naming rule for future tourist/NPC names; defaults to FANTASY. */
+    public NameStyle getNamingStyle(UUID colonyId) {
+        return namingStyles.getOrDefault(colonyId, NameStyle.FANTASY);
+    }
+
+    public void setNamingStyle(UUID colonyId, NameStyle style) {
+        if (style == getNamingStyle(colonyId)) return;
+        namingStyles.put(colonyId, style);
+        setDirty();
+        Log.info(TAG, "[Colony] Naming style for colony {} → {}",
+                colonyId.toString().substring(0, 8), style);
     }
 
     public Map<UUID, BlockPos> getAllColonies() {
@@ -151,6 +169,10 @@ public class ColonySavedData extends SavedData {
             if (founder != null) {
                 entryTag.putUUID(KEY_FOUNDER, founder);
             }
+            NameStyle style = namingStyles.get(entry.getKey());
+            if (style != null) {
+                entryTag.putString(KEY_NAMING_STYLE, style.name());
+            }
             list.add(entryTag);
         }
         tag.put(KEY_COLONIES, list);
@@ -169,6 +191,14 @@ public class ColonySavedData extends SavedData {
             data.colonies.put(id, new BlockPos(x, y, z));
             if (entry.contains(KEY_FOUNDER)) {
                 data.founders.put(id, entry.getUUID(KEY_FOUNDER));
+            }
+            if (entry.contains(KEY_NAMING_STYLE)) {
+                try {
+                    data.namingStyles.put(id, NameStyle.valueOf(entry.getString(KEY_NAMING_STYLE)));
+                } catch (IllegalArgumentException e) {
+                    Log.warn(TAG, "[Colony] Unknown naming style '{}' for colony {}, using FANTASY",
+                            entry.getString(KEY_NAMING_STYLE), id);
+                }
             }
         }
         Log.info(TAG, "Loaded {} colonies from saved data", data.colonies.size());

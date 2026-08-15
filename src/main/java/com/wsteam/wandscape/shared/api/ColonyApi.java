@@ -45,6 +45,12 @@ public interface ColonyApi {
     /** Returns all registered colony UUIDs. Empty if no colonies exist. */
     Collection<UUID> getAllColonyIds();
 
+    /** Character naming rule for future tourist/NPC names (default FANTASY). */
+    com.wsteam.wandscape.shared.data.NameStyle getNamingStyle(UUID colonyId);
+
+    /** Change the colony's character naming rule (only affects future names). */
+    void setNamingStyle(UUID colonyId, com.wsteam.wandscape.shared.data.NameStyle style);
+
     // Rebuild spatial index from saved data (called on server start).
     void rebuildFromSavedData();
 }

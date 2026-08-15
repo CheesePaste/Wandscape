@@ -74,7 +74,7 @@ public final class TavernCommand {
         int safeLevel = Math.clamp(level, 1, 10);
         RecruitmentCandidate candidate = MageAttributeRoller.roll(safeLevel,
                 new java.util.Random(serverLevel.random.nextLong()));
-        String name = TouristSpawnSystem.generateRandomTouristName();
+        String name = TouristSpawnSystem.generateRandomTouristName(colonyId);
         int variant = serverLevel.random.nextInt(TouristEntity.WIZARD_SKIN_COUNT);
 
         try {

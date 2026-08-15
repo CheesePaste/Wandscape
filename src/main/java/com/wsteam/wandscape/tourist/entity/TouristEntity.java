@@ -345,9 +345,6 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
         // tourists already set these before addFreshEntity, so this is a no-op
         // for them. Server-authoritative.
         if (!level().isClientSide) {
-            if (touristName.isEmpty()) {
-                setTouristName(TouristSpawnSystem.generateRandomTouristName());
-            }
             if (colonyId == null) {
                 var colonyApi = WandscapeApis.getColonyApiSilently();
                 if (colonyApi != null) {
@@ -356,6 +353,9 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
                         setColonyId(detected);
                     }
                 }
+            }
+            if (touristName.isEmpty()) {
+                setTouristName(TouristSpawnSystem.generateRandomTouristName(colonyId));
             }
             // Spawn-egg / command tourists bypass applySpawnDefaults — give them the full
             // random-spawn defaults (rolled level, wallet, persona needs, stay window, travel

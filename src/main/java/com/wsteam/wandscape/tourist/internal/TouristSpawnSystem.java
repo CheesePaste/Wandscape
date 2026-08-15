@@ -2,9 +2,11 @@ package com.wsteam.wandscape.tourist.internal;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.UUID;
 
 import com.wsteam.wandscape.Config;
@@ -21,9 +23,7 @@ import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.api.ColonyApi;
 import com.wsteam.wandscape.shared.api.RoadApi;
 import com.wsteam.wandscape.shared.api.TouristApi;
-import com.wsteam.wandscape.shared.data.BarRatio;
-import com.wsteam.wandscape.shared.data.BuildingData;
-import com.wsteam.wandscape.shared.data.NarrativeEvent;
+import com.wsteam.wandscape.shared.data.*;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.tourist.entity.TouristEntity;
 
@@ -128,7 +128,7 @@ public final class TouristSpawnSystem {
                 if (ground == null) continue;
                 TouristEntity tourist = new TouristEntity(
                         com.wsteam.wandscape.Wandscape.TOURIST.get(), level);
-                tourist.setTouristName(generateRandomTouristName());
+                tourist.setTouristName(generateRandomTouristName(target.getColonyId()));
                 tourist.setPos(ground.getX() + 0.5, ground.getY(), ground.getZ() + 0.5);
                 tourist.setLevel(ps.level);
                 tourist.setWallet(startingWallet(ps.level));
@@ -318,7 +318,7 @@ public final class TouristSpawnSystem {
                     if (ground == null) continue;
                     TouristEntity tourist = new TouristEntity(
                             com.wsteam.wandscape.Wandscape.TOURIST.get(), level);
-                    tourist.setTouristName(generateRandomTouristName());
+                    tourist.setTouristName(generateRandomTouristName(target.getColonyId()));
                     tourist.setPos(ground.getX() + 0.5, ground.getY(), ground.getZ() + 0.5);
                     tourist.setLevel(ps.level);
                     tourist.setWallet(startingWallet(ps.level));
@@ -796,8 +796,29 @@ public final class TouristSpawnSystem {
 
     // ── Name generation ──
 
-    public static String generateRandomTouristName() {
-        return com.wsteam.wandscape.shared.data.CharacterNames.generateRandomNameKey();
+    /**
+     * Roll a name key for a tourist of the given colony: the colony's naming
+     * style decides the pool, and display names already in use by the colony's
+     * live tourists are excluded so the single-name fantasy pool avoids dupes.
+     */
+    public static String generateRandomTouristName(UUID colonyId) {
+        NameStyle style = getNamingStyle(colonyId);
+        Set<String> used = new HashSet<>();
+        for (TouristEntity t : TouristSimSystem.getLiveTourists()) {
+            if (t.getColonyId() != null && t.getColonyId().equals(colonyId)) {
+                used.add(t.getTouristName());
+            }
+        }
+        return CharacterNames.generateRandomNameKey(style, used);
+    }
+
+    @Nullable
+    private static NameStyle getNamingStyle(@Nullable UUID colonyId) {
+        ColonyApi colonyApi = WandscapeApis.getColonyApiSilently();
+        if (colonyApi != null && colonyId != null) {
+            return colonyApi.getNamingStyle(colonyId);
+        }
+        return NameStyle.FANTASY;
     }
 
     /** Universal-element starting wallet: base + level × per-level bonus. */

@@ -1013,8 +1013,10 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
             // Give the mage a name if it doesn't have one (spawn egg / colony spawns;
             // tavern-recruited and revived mages already carry a name). Assign once —
             // the custom name persists through save/load, so this is a no-op later.
+            // The colony's naming rule applies when the mage spawns inside one.
             if (!hasCustomName()) {
-                setCustomName(com.wsteam.wandscape.shared.data.CharacterNames.displayComponent(generateRandomNpcName()));
+                setCustomName(com.wsteam.wandscape.shared.data.CharacterNames.displayComponent(
+                        generateRandomNpcName(detectNamingStyle())));
                 setCustomNameVisible(true);
             }
             // P3：默认魔法表（新 NPC / 旧存档迁移），此后玩家可改 spellbook
@@ -1298,12 +1300,25 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
 
     // ── Auto-generated mage names ──
     // Only used when a mage has no custom name (spawn egg / colony spawns).
-    // Tavern-recruited and revived mages keep their own names. Mages and
-    // tourists share one name pool (shared.data.CharacterNames).
+    // Tavern-recruited and revived mages keep their own names. The naming rule
+    // of the colony the mage spawns inside applies; outside any colony the
+    // default style (FANTASY) is used.
 
-    /** Roll a random name key from the shared bilingual character name pool. */
-    public static String generateRandomNpcName() {
-        return com.wsteam.wandscape.shared.data.CharacterNames.generateRandomNameKey();
+    /** Roll a random name key for the given style. */
+    public static String generateRandomNpcName(com.wsteam.wandscape.shared.data.NameStyle style) {
+        return com.wsteam.wandscape.shared.data.CharacterNames.generateRandomNameKey(style);
+    }
+
+    /** The naming rule of the colony this mage is spawning inside, if any. */
+    private com.wsteam.wandscape.shared.data.NameStyle detectNamingStyle() {
+        var colonyApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getColonyApiSilently();
+        if (colonyApi != null) {
+            UUID detected = colonyApi.getColonyId(blockPosition());
+            if (detected != null) {
+                return colonyApi.getNamingStyle(detected);
+            }
+        }
+        return com.wsteam.wandscape.shared.data.NameStyle.FANTASY;
     }
 
     // ============================================================
