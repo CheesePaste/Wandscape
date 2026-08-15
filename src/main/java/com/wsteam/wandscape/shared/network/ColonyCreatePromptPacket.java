@@ -15,7 +15,7 @@ import static com.wsteam.wandscape.Wandscape.MODID;
  * {@link TownHallCreateScreen}, whose confirm button sends a
  * {@link ColonyCreateRequestPacket} back to the server.
  */
-public record ColonyCreatePromptPacket(BlockPos townHallAnchor)
+public record ColonyCreatePromptPacket(BlockPos townHallAnchor, String creator)
         implements CustomPacketPayload {
 
     public static final Type<ColonyCreatePromptPacket> TYPE =
@@ -41,9 +41,10 @@ public record ColonyCreatePromptPacket(BlockPos townHallAnchor)
 
     static void write(RegistryFriendlyByteBuf buf, ColonyCreatePromptPacket pkt) {
         buf.writeLong(pkt.townHallAnchor.asLong());
+        buf.writeUtf(pkt.creator != null ? pkt.creator : "");
     }
 
     static ColonyCreatePromptPacket read(RegistryFriendlyByteBuf buf) {
-        return new ColonyCreatePromptPacket(BlockPos.of(buf.readLong()));
+        return new ColonyCreatePromptPacket(BlockPos.of(buf.readLong()), buf.readUtf());
     }
 }

@@ -21,7 +21,8 @@ import static com.wsteam.wandscape.Wandscape.MODID;
 /**
  * Server→client packet carrying craft_wand recipe data for the crafting station GUI.
  */
-public record CraftingStationPacket(BlockPos stationPos, ListTag recipes) implements CustomPacketPayload {
+public record CraftingStationPacket(BlockPos stationPos, ListTag recipes, String creator)
+        implements CustomPacketPayload {
 
     public static final Type<CraftingStationPacket> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath(MODID, "crafting_station_data"));
@@ -39,7 +40,8 @@ public record CraftingStationPacket(BlockPos stationPos, ListTag recipes) implem
     public static CraftingStationPacket from(BlockPos stationPos,
                                               Collection<CraftWandRecipe> wandRecipes,
                                               Map<ElementType, Long> elementMap,
-                                              @Nullable UUID colonyId) {
+                                              @Nullable UUID colonyId,
+                                              String creator) {
         ListTag list = new ListTag();
         for (CraftWandRecipe r : wandRecipes) {
             // Service-side check only — log but DO NOT filter from the packet.
@@ -81,7 +83,7 @@ public record CraftingStationPacket(BlockPos stationPos, ListTag recipes) implem
             }
             list.add(tag);
         }
-        return new CraftingStationPacket(stationPos, list);
+        return new CraftingStationPacket(stationPos, list, creator);
     }
 
     private static int computeMaxAffordable(Map<ElementType, Long> costPerUnit, Map<ElementType, Long> elements) {
@@ -156,13 +158,15 @@ public record CraftingStationPacket(BlockPos stationPos, ListTag recipes) implem
         CompoundTag wrapper = new CompoundTag();
         wrapper.putLong("pos", pkt.stationPos.asLong());
         wrapper.put("recipes", pkt.recipes);
+        wrapper.putString("creator", pkt.creator != null ? pkt.creator : "");
         buf.writeNbt(wrapper);
     }
 
     static CraftingStationPacket read(RegistryFriendlyByteBuf buf) {
         CompoundTag wrapper = buf.readNbt();
-        if (wrapper == null) return new CraftingStationPacket(BlockPos.ZERO, new ListTag());
+        if (wrapper == null) return new CraftingStationPacket(BlockPos.ZERO, new ListTag(), "");
         BlockPos pos = BlockPos.of(wrapper.getLong("pos"));
-        return new CraftingStationPacket(pos, wrapper.getList("recipes", Tag.TAG_COMPOUND));
+        String creator = wrapper.getString("creator");
+        return new CraftingStationPacket(pos, wrapper.getList("recipes", Tag.TAG_COMPOUND), creator);
     }
 }

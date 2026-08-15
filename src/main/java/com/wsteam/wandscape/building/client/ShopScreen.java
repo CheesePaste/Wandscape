@@ -38,7 +38,6 @@ public class ShopScreen extends MedievalScreen {
     private final BlockPos buildingPos;
     private final UUID colonyId;
     private final UUID buildingId;
-    private final String creator;
     private Map<String, Integer> stock;
     private Map<String, Integer> maxStocks;
     private String[] itemIds;
@@ -55,7 +54,7 @@ public class ShopScreen extends MedievalScreen {
         this.buildingPos = buildingPos;
         this.colonyId = colonyId;
         this.buildingId = buildingId;
-        this.creator = creator;
+        setCreator(creator);
         this.stock = new LinkedHashMap<>(stock);
         this.maxStocks = new LinkedHashMap<>(maxStocks);
         this.itemIds = this.maxStocks.keySet().toArray(new String[0]);
@@ -174,12 +173,6 @@ public class ShopScreen extends MedievalScreen {
             // ×cur/max to the right of [+]
             int rightX = leftPos + SLIDER_X + SLIDER_W + BTN_W + 6;
             g.drawString(font, "×" + cur + "/" + max, rightX, cy - font.lineHeight / 2, textColor);
-        }
-
-        if (creator != null && !creator.isBlank()) {
-            String creatorText = I18n.name("gui.wandscape.common.creator_label", "Creator").getString()
-                    + ": " + creator;
-            g.drawString(font, creatorText, leftPos + 16, topPos + PH - 26, MedievalColors.TEXT_DIM);
         }
     }
 

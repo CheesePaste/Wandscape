@@ -72,6 +72,7 @@ public class ConstructionSiteScreen extends MedievalScreen {
         this.estCompleteTicks = packet.estCompleteTicks();
         this.canEstimate = packet.canEstimate();
         this.completed = packet.completed();
+        setCreator(packet.creator());
         setTitleBar(Component.literal(buildingName));
         if (list != null) {
             list.setItems(materials);
@@ -83,7 +84,7 @@ public class ConstructionSiteScreen extends MedievalScreen {
         super.init();
         int contentX = leftPos + 8;
         int listY = topPos + headerHeight + TIME_STRIP_H + 2;
-        int listH = PH - headerHeight - 4 - TIME_STRIP_H - 4;
+        int listH = PH - headerHeight - 4 - TIME_STRIP_H - 4 - CREATOR_FOOTER_H - 4;
 
         list = new ScrollableList<MaterialEntry>(contentX, listY, PW - 16, listH, 20) {
             @Override

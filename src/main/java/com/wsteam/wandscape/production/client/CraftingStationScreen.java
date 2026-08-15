@@ -57,6 +57,7 @@ public class CraftingStationScreen extends MedievalScreen {
 
     public void updateData(CraftingStationPacket packet) {
         this.stationPos = packet.stationPos();
+        setCreator(packet.creator());
         this.recipes = packet.entries();
         // Re-apply the current search filter to the refreshed data
         applySearch(searchInput != null ? searchInput.getValue() : "");
@@ -141,9 +142,9 @@ public class CraftingStationScreen extends MedievalScreen {
         searchInput.setResponder(this::applySearch);
         addRenderableWidget(searchInput);
 
-        // Recipe list
+        // Recipe list — shrink by the creator footer strip so the slider/submit row stays clear
         int listY = contentY + searchH + 4;
-        int listH = PH - headerHeight - 4 - searchH - 4 - 44;
+        int listH = PH - headerHeight - 4 - searchH - 4 - 44 - CREATOR_FOOTER_H - 4;
         recipeList = new ScrollableList<>(contentX, listY, contentW, listH, 22) {
             @Override
             protected void renderRow(GuiGraphics g, RecipeEntry item, int x, int y, int index,

@@ -32,7 +32,6 @@ public class AltarScreen extends MedievalScreen {
     private final BlockPos buildingPos;
     private final UUID colonyId;
     private final UUID buildingId;
-    private final String creator;
     private final List<AltarSpellInfo> spells;
     /** 本次打开会话中已提交（发布任务）的魔法 id —— 本地锁定反馈。 */
     private final Set<String> submitted = new HashSet<>();
@@ -50,7 +49,7 @@ public class AltarScreen extends MedievalScreen {
         this.buildingPos = buildingPos;
         this.colonyId = colonyId;
         this.buildingId = buildingId;
-        this.creator = creator;
+        setCreator(creator);
         this.spells = List.copyOf(spells);
     }
 
@@ -76,13 +75,6 @@ public class AltarScreen extends MedievalScreen {
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         super.render(g, mouseX, mouseY, partialTick);
-        var font = Minecraft.getInstance().font;
-
-        if (creator != null && !creator.isBlank()) {
-            String creatorText = I18n.name("gui.wandscape.common.creator_label", "Creator").getString()
-                    + ": " + creator;
-            g.drawString(font, creatorText, leftPos + 14, topPos + PH - 24, MedievalColors.TEXT_DIM);
-        }
     }
 
     /** 该魔法当前是否不可提交：服务端锁定（施法中）/ 冷却中 / 本会话已提交。 */

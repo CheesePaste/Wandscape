@@ -44,6 +44,8 @@ public class WarehouseScreen extends MedievalScreen {
     private static final int MAX_QTY = 64;
     private static final int SLOT_SIZE = 18;
     private static final int SCROLLBAR_W = 6;
+    /** Bottom space reserved for the creator footer (content must end above it). */
+    private static final int FOOTER_RESERVE = CREATOR_FOOTER_H + 4;
 
     private BlockPos buildingPos = BlockPos.ZERO;
     private UUID colonyId = new UUID(0, 0);
@@ -78,6 +80,10 @@ public class WarehouseScreen extends MedievalScreen {
     public void updateItems(WarehouseDataPacket packet) {
         this.buildingPos = packet.buildingPos();
         this.colonyId = packet.colonyId();
+        // Refresh packets may carry a blank creator — keep the one from the initial open.
+        if (packet.creator() != null && !packet.creator().isBlank()) {
+            setCreator(packet.creator());
+        }
         this.allItems = new ArrayList<>(packet.itemEntries());
         this.allItems.sort(Comparator.comparing(ItemEntry::itemId));
         this.elements = new LinkedHashMap<>(packet.elementMap());
@@ -102,7 +108,7 @@ public class WarehouseScreen extends MedievalScreen {
     // ── Tab 0: Overview (read-only) ──
 
     private void buildOverviewTab(int contentX, int tabY) {
-        int tabH = topPos + PH - tabY - 6;
+        int tabH = topPos + PH - tabY - 6 - FOOTER_RESERVE;
         int elementPanelW = 130;
 
         elementPanel = new ElementPanel(contentX, tabY, elementPanelW);
@@ -130,7 +136,7 @@ public class WarehouseScreen extends MedievalScreen {
     // ── Tab 1: Exchange (warehouse ↔ player inventory) ──
 
     private void buildExchangeTab(int contentX, int tabY) {
-        int tabH = topPos + PH - tabY - 6;
+        int tabH = topPos + PH - tabY - 6 - FOOTER_RESERVE;
         int rightW = PW - 16;
 
         int invSectionH = 10 + SLOT_SIZE * 4;
@@ -203,7 +209,7 @@ public class WarehouseScreen extends MedievalScreen {
     }
 
     private int getInventoryY() {
-        return topPos + PH - 10 - SLOT_SIZE * 4 - 6;
+        return topPos + PH - 10 - SLOT_SIZE * 4 - 6 - FOOTER_RESERVE;
     }
 
     // ── Tab switching ──
@@ -242,6 +248,8 @@ public class WarehouseScreen extends MedievalScreen {
         if (activeTab == 1) {
             renderPlayerInventory(g, mouseX, mouseY);
         }
+
+        renderCreatorFooter(g);
     }
 
     // ── Tabs ──

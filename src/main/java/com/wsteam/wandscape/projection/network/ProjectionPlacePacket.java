@@ -145,7 +145,8 @@ public record ProjectionPlacePacket(
             var colonyApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getColonyApiSilently();
             if (colonyApi == null || colonyApi.getColonyId(packet.anchorPos) == null) {
                 net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player,
-                        new com.wsteam.wandscape.shared.network.ColonyCreatePromptPacket(packet.anchorPos));
+                        new com.wsteam.wandscape.shared.network.ColonyCreatePromptPacket(
+                                packet.anchorPos, config.creator() != null ? config.creator() : ""));
                 Log.info(TAG, "[Projection] Government building placed at {}, prompting for colony creation", packet.anchorPos);
             }
         }

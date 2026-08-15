@@ -44,7 +44,8 @@ public record ConstructionSiteDataPacket(
         int estStartTicks,
         int estCompleteTicks,
         boolean canEstimate,
-        boolean completed
+        boolean completed,
+        String creator
 ) implements CustomPacketPayload {
 
     public static final int STATUS_READY = 0;     // 已备齐：仓库储量充足
@@ -159,7 +160,7 @@ public record ConstructionSiteDataPacket(
         ConstructionSiteDataPacket packet = new ConstructionSiteDataPacket(
                 buildingId, state.getAnchor(), name,
                 materials, est.startTicks(), est.completeTicks(), est.canEstimate(),
-                state.hasEverCompleted());
+                state.hasEverCompleted(), config != null ? config.creator() : "");
         SNAPSHOT_CACHE.put(buildingId, new CacheEntry(packet, System.currentTimeMillis()));
         return packet;
     }
@@ -197,6 +198,7 @@ public record ConstructionSiteDataPacket(
         buf.writeVarInt(pkt.estCompleteTicks);
         buf.writeBoolean(pkt.canEstimate);
         buf.writeBoolean(pkt.completed);
+        buf.writeUtf(pkt.creator != null ? pkt.creator : "");
     }
 
     static ConstructionSiteDataPacket read(RegistryFriendlyByteBuf buf) {
@@ -213,6 +215,7 @@ public record ConstructionSiteDataPacket(
         int complete = buf.readVarInt();
         boolean can = buf.readBoolean();
         boolean done = buf.readBoolean();
-        return new ConstructionSiteDataPacket(buildingId, pos, name, materials, start, complete, can, done);
+        String creator = buf.readUtf();
+        return new ConstructionSiteDataPacket(buildingId, pos, name, materials, start, complete, can, done, creator);
     }
 }

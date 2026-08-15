@@ -60,6 +60,7 @@ public class NodeScreen extends MedievalScreen {
         this.element = packet.element();
         this.amountPerHarvest = packet.amountPerHarvest();
         this.channelTicks = packet.channelTicks();
+        setCreator(packet.creator());
         setTitleBar(com.wsteam.wandscape.shared.ui.I18n.name(
                 "building.wandscape." + packet.buildingTypeId(), packet.buildingTypeId()));
         if (slider != null) {

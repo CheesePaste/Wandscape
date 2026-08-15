@@ -54,7 +54,7 @@ public class TavernScreen extends MedievalScreen {
     private long toastExpireTick = 0;
 
     public TavernScreen(BlockPos buildingPos, UUID colonyId, int recruitCount,
-                        List<MageResume> mageResumes) {
+                        List<MageResume> mageResumes, String creator) {
         super(Component.literal("Tavern"), PW, PH);
         setTitleBar(I18n.name("gui.wandscape.tavern.title", "Adventurer's Tavern"));
         this.showCloseButton = true;
@@ -64,6 +64,7 @@ public class TavernScreen extends MedievalScreen {
         this.colonyId = colonyId;
         this.recruitCount = recruitCount;
         this.mageResumes.addAll(mageResumes);
+        setCreator(creator);
     }
 
     /** Smoothly update data from server sync packet without reopening screen. */
@@ -181,14 +182,19 @@ public class TavernScreen extends MedievalScreen {
             renderDirectRecruitTab(g, font, contentTop);
         }
 
-        // Bottom status & colony label
+        // Colony label & recruit feedback — top-right, clear of the creator footer
+        String status;
+        int statusColor;
         if (toastMessage != null && System.currentTimeMillis() < toastExpireTick) {
-            g.drawString(font, toastMessage, leftPos + 12, topPos + PH - 16, toastColor);
+            status = toastMessage.getString();
+            statusColor = toastColor;
         } else {
-            String colText = I18n.name("gui.wandscape.common.colony_label", "Colony").getString()
+            status = I18n.name("gui.wandscape.common.colony_label", "Colony").getString()
                     + ": " + colonyId.toString().substring(0, Math.min(8, colonyId.toString().length()));
-            g.drawString(font, colText, leftPos + 12, topPos + PH - 16, MedievalColors.TEXT_DIM);
+            statusColor = MedievalColors.TEXT_DIM;
         }
+        g.drawString(font, status, leftPos + PW - font.width(status) - 12,
+                topPos + headerHeight + 8, statusColor);
     }
 
     private void renderResumesTab(GuiGraphics g, net.minecraft.client.gui.Font font,
@@ -196,7 +202,7 @@ public class TavernScreen extends MedievalScreen {
         int lx = leftPos + 12;
         int ly = contentTop;
         int lw = 126;
-        int lh = 164;
+        int lh = 158;
 
         // ── Left: Candidate Selection Box ──
         drawInsetField(g, lx, ly, lw, lh);
@@ -258,7 +264,7 @@ public class TavernScreen extends MedievalScreen {
         int rx = leftPos + 144;
         int ry = contentTop;
         int rw = 184;
-        int rh = 164;
+        int rh = 158;
 
         drawInsetField(g, rx, ry, rw, rh);
         drawGlowBorder(g, rx, ry, rw, rh, MedievalColors.BORDER_GOLD_DARK);

@@ -69,6 +69,18 @@ public final class BuildingInteractHandler {
                 .orElse(null);
     }
 
+    /** Resolve a building's config creator from its anchor position ("" when unknown). */
+    public static String resolveCreator(Level level, net.minecraft.core.BlockPos pos) {
+        BuildingSavedData data = BuildingSavedData.get(level);
+        UUID id = data.getBuildingIdAt(pos);
+        if (id == null) id = data.getBuildingIdInInteractionZone(pos);
+        if (id == null) return "";
+        BuildingState state = data.getBuilding(id);
+        if (state == null) return "";
+        BuildingConfig config = BuildingConfigLoader.getInstance().get(state.getBuildingTypeId());
+        return config != null ? config.creator() : "";
+    }
+
     /**
      * Central dispatch for building right-click interactions.
      * Called from both {@link #onRightClickBlock} (normal mode) and
@@ -92,8 +104,10 @@ public final class BuildingInteractHandler {
 
         // Town hall with no colony linked → ask the player to name & create one.
         if ("government".equals(category) && colonyId == null) {
+            BuildingConfig promptCfg = BuildingConfigLoader.getInstance().get(state.getBuildingTypeId());
+            String promptCreator = promptCfg != null ? promptCfg.creator() : "";
             PacketDistributor.sendToPlayer(player,
-                    new com.wsteam.wandscape.shared.network.ColonyCreatePromptPacket(pos));
+                    new com.wsteam.wandscape.shared.network.ColonyCreatePromptPacket(pos, promptCreator));
             Log.info(TAG, "[Colony] Town hall at {} right-clicked with no colony — prompting for name", pos);
             return;
         }
@@ -118,7 +132,8 @@ public final class BuildingInteractHandler {
             int namingStyle = colonyApi != null ? colonyApi.getNamingStyle(colonyId).ordinal() : 0;
             PacketDistributor.sendToPlayer(player,
                     new com.wsteam.wandscape.building.network.TownHallOpenPacket(
-                            pos, colonyId, name, lvl, exp, expNext, founderName, canUseWarehouse, namingStyle));
+                            pos, colonyId, name, lvl, exp, expNext, founderName, canUseWarehouse, namingStyle,
+                            creator));
             return;
         }
 
@@ -143,10 +158,10 @@ public final class BuildingInteractHandler {
                 Map<ItemKey, Long> snapshot = bank.getSnapshot(colonyId);
                 Map<ElementType, Long> elemSnapshot = bank.getElementSnapshot(colonyId);
                 PacketDistributor.sendToPlayer(player,
-                        WarehouseDataPacket.from(pos, colonyId, snapshot, elemSnapshot));
+                        WarehouseDataPacket.from(pos, colonyId, snapshot, elemSnapshot, creator));
             }
-            case "workstation" -> openWorkstationGui(level, colonyId, player, pos);
-            case "crafting_station" -> openCraftingStationGui(level, colonyId, player, pos);
+            case "workstation" -> openWorkstationGui(level, colonyId, player, pos, creator);
+            case "crafting_station" -> openCraftingStationGui(level, colonyId, player, pos, creator);
             case "node" -> openNodeGui(level, player, pos, state);
             case "shop" -> {
                 if (shopStockManager != null) {
@@ -171,7 +186,7 @@ public final class BuildingInteractHandler {
                     recruitCount = tavernApi.getRecruitCount(colonyId);
                 } catch (IllegalStateException ignored) {}
                 PacketDistributor.sendToPlayer(player,
-                        new TavernOpenPacket(pos, colonyId, recruitCount, mageResumes));
+                        new TavernOpenPacket(pos, colonyId, recruitCount, mageResumes, creator));
             }
             case "potion_station" -> {
                 player.displayClientMessage(Component.literal(
@@ -259,7 +274,8 @@ public final class BuildingInteractHandler {
     }
 
     private static void openWorkstationGui(Level level, UUID colonyId,
-                                           ServerPlayer player, net.minecraft.core.BlockPos pos) {
+                                           ServerPlayer player, net.minecraft.core.BlockPos pos,
+                                           String creator) {
         ColonyItemBank bank = ColonyItemBank.get(level);
         if (bank == null) return;
 
@@ -281,7 +297,7 @@ public final class BuildingInteractHandler {
                 : java.util.Collections.<com.wsteam.wandscape.production.data.SynthesizeRecipe>emptyList();
 
         Map<ElementType, Long> elemSnapshot = bank.getElementSnapshot(colonyId);
-        var pkt = WorkstationDataPacket.from(pos, decomposableItems, synthRecipes, elemSnapshot, colonyId, itemElementValues);
+        var pkt = WorkstationDataPacket.from(pos, decomposableItems, synthRecipes, elemSnapshot, colonyId, itemElementValues, creator);
         PacketDistributor.sendToPlayer(player, pkt);
     }
 
@@ -297,14 +313,15 @@ public final class BuildingInteractHandler {
         var nc = config.nodeConfig();
         PacketDistributor.sendToPlayer(player,
                 new NodeDataPacket(pos, state.getBuildingTypeId(), nc.element(),
-                        nc.amountPerHarvest(), nc.channelTicks()));
+                        nc.amountPerHarvest(), nc.channelTicks(), config.creator()));
         Log.info(TAG, "[Node] open GUI type={} at={} element={} amount={} ticks={}",
                 state.getBuildingTypeId(), pos, nc.element(),
                 nc.amountPerHarvest(), nc.channelTicks());
     }
 
     private static void openCraftingStationGui(Level level, UUID colonyId,
-                                                ServerPlayer player, net.minecraft.core.BlockPos pos) {
+                                                ServerPlayer player, net.minecraft.core.BlockPos pos,
+                                                String creator) {
         ColonyItemBank bank = ColonyItemBank.get(level);
 
         var prodLoader = Wandscape.PRODUCTION_RECIPE_LOADER;
@@ -314,7 +331,7 @@ public final class BuildingInteractHandler {
 
         Map<ElementType, Long> elemSnapshot = bank != null
                 ? bank.getElementSnapshot(colonyId) : Map.of();
-        var pkt = CraftingStationPacket.from(pos, wandRecipes, elemSnapshot, colonyId);
+        var pkt = CraftingStationPacket.from(pos, wandRecipes, elemSnapshot, colonyId, creator);
         PacketDistributor.sendToPlayer(player, pkt);
     }
 }

@@ -3,6 +3,7 @@ package com.wsteam.wandscape.shared.ui.component;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.wsteam.wandscape.shared.ui.I18n;
 import com.wsteam.wandscape.shared.ui.animation.MedievalAnimation;
 import com.wsteam.wandscape.shared.ui.skin.SkinRender;
 import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
@@ -26,6 +27,25 @@ public abstract class MedievalScreen extends Screen {
     protected Component titleBarText;
     protected int titleXOffset = 10;
     protected final List<MedievalAnimation> animations = new ArrayList<>();
+
+    // ── Building creator footer ──
+    /** Vertical space reserved at the bottom for the creator label (subclasses use it in layout math). */
+    protected static final int CREATOR_FOOTER_H = 24;
+    private String buildingCreator = "";
+
+    /** Set the building designer's name to show at the bottom-left of the panel. */
+    public void setCreator(String creator) {
+        this.buildingCreator = creator != null ? creator : "";
+    }
+
+    /** Draw the creator label at the bottom-left at the default font size. */
+    protected void renderCreatorFooter(GuiGraphics g) {
+        if (buildingCreator.isBlank()) return;
+        String text = I18n.name("gui.wandscape.common.creator_label", "Creator").getString()
+                + ": " + buildingCreator;
+        g.drawString(font, text, leftPos + 16, topPos + panelHeight - CREATOR_FOOTER_H,
+                MedievalColors.TEXT_DIM);
+    }
 
     // ── Built-in close button ──
     protected boolean showCloseButton;
@@ -117,6 +137,8 @@ public abstract class MedievalScreen extends Screen {
         for (MedievalAnimation a : animations) {
             a.render(g, mouseX, mouseY, partialTick);
         }
+
+        renderCreatorFooter(g);
     }
 
     @Override

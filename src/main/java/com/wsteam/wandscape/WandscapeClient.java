@@ -249,7 +249,7 @@ public class WandscapeClient {
                 existing.updateData(packet.recruitCount(), packet.mageResumes());
             } else {
                 mc.setScreen(new TavernScreen(packet.buildingPos(), packet.colonyId(),
-                        packet.recruitCount(), packet.mageResumes()));
+                        packet.recruitCount(), packet.mageResumes(), packet.creator()));
             }
         });
         HotelOpenPacket.setClientHandler(packet -> {
@@ -302,13 +302,13 @@ public class WandscapeClient {
                             packet.buildingPos(), packet.colonyId(),
                             packet.colonyName(), packet.level(), packet.experience(),
                             packet.expToNext(), packet.founderName(), packet.canUseWarehouse(),
-                            packet.namingStyle()));
+                            packet.namingStyle(), packet.creator()));
         });
 
         // Colony create prompt: town hall right-clicked but no colony exists
         com.wsteam.wandscape.shared.network.ColonyCreatePromptPacket.setClientHandler(packet -> {
             net.minecraft.client.Minecraft.getInstance().setScreen(
-                    new com.wsteam.wandscape.building.client.TownHallCreateScreen(packet.townHallAnchor()));
+                    new com.wsteam.wandscape.building.client.TownHallCreateScreen(packet.townHallAnchor(), packet.creator()));
         });
 
         // Guide test screen

@@ -4,6 +4,7 @@ import java.util.Random;
 import java.util.UUID;
 
 import com.wsteam.wandscape.Wandscape;
+import com.wsteam.wandscape.building.internal.BuildingInteractHandler;
 import com.wsteam.wandscape.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.building.internal.BuildingState;
 import com.wsteam.wandscape.core.component.ColonyMember;
@@ -155,7 +156,8 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
                 PacketDistributor.sendToPlayer(sp,
                         new TavernOpenPacket(pkt.buildingPos, colonyId,
                                 tavernApi.getRecruitCount(colonyId),
-                                tavernApi.getMageResumes(colonyId)));
+                                tavernApi.getMageResumes(colonyId),
+                                BuildingInteractHandler.resolveCreator(sp.serverLevel(), pkt.buildingPos)));
             }
         });
     }
@@ -232,7 +234,8 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
                 PacketDistributor.sendToPlayer(sp,
                         new TavernOpenPacket(pkt.buildingPos, colonyId,
                                 tavernApi.getRecruitCount(colonyId),
-                                tavernApi.getMageResumes(colonyId)));
+                                tavernApi.getMageResumes(colonyId),
+                                BuildingInteractHandler.resolveCreator(sp.serverLevel(), pkt.buildingPos)));
             }
         } catch (Exception ignored) {}
     }

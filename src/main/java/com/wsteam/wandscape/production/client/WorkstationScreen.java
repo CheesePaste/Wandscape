@@ -72,6 +72,7 @@ public class WorkstationScreen extends MedievalScreen {
 
     public void updateData(WorkstationDataPacket packet) {
         this.stationPos = packet.stationPos();
+        setCreator(packet.creator());
         this.decomposableItems = packet.decomposableEntries();
         this.synthesizeRecipes = packet.synthesizeEntries();
         // Re-apply the current search filter to the refreshed data
@@ -166,9 +167,9 @@ public class WorkstationScreen extends MedievalScreen {
         searchInput.setResponder(this::applySearch);
         addRenderableWidget(searchInput);
 
-        // Lists
+        // Lists — shrink by the creator footer strip so the slider/submit row stays clear
         int listY = contentY + 20 + searchH + 4;
-        int listH = PH - headerHeight - 4 - (20 + searchH + 4) - 44;
+        int listH = PH - headerHeight - 4 - (20 + searchH + 4) - 44 - CREATOR_FOOTER_H - 4;
 
         decomposeList = new ScrollableList<>(contentX, listY, contentW, listH, 20) {
             @Override

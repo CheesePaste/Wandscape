@@ -28,11 +28,12 @@ public class TownHallCreateScreen extends MedievalScreen {
     private EditBox nameBox;
     private String pendingName = "";
 
-    public TownHallCreateScreen(BlockPos townHallAnchor) {
+    public TownHallCreateScreen(BlockPos townHallAnchor, String creator) {
         super(Component.literal("Create Town"), PW, PH);
         setTitleBar(I18n.name("gui.wandscape.townhall_create.title", "创建魔法小镇"));
         this.showCloseButton = true;
         this.townHallAnchor = townHallAnchor;
+        setCreator(creator);
     }
 
     @Override
@@ -96,6 +97,8 @@ public class TownHallCreateScreen extends MedievalScreen {
         for (Renderable r : this.renderables) {
             r.render(g, mouseX, mouseY, partialTick);
         }
+
+        renderCreatorFooter(g);
     }
 
     private void renderContent(GuiGraphics g, int mouseX, int mouseY) {

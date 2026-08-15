@@ -36,7 +36,6 @@ public class BuildingInfoScreen extends MedievalScreen {
     private final int energyPerUse;
     private final int energyRestore;
     private final int interactionDurationTicks;
-    private final String creator;
 
     public BuildingInfoScreen(BuildingInfoPacket packet) {
         super(Component.literal("Info"), PW, PH);
@@ -48,7 +47,7 @@ public class BuildingInfoScreen extends MedievalScreen {
         this.energyPerUse = packet.energyPerUse();
         this.energyRestore = packet.energyRestore();
         this.interactionDurationTicks = packet.interactionDurationTicks();
-        this.creator = packet.creator();
+        setCreator(packet.creator());
     }
 
     @Override
@@ -73,12 +72,6 @@ public class BuildingInfoScreen extends MedievalScreen {
             case "decoration" -> renderIntro(g, font, x, y, "gui.wandscape.info.decoration_intro");
             case "atm" -> renderIntro(g, font, x, y, "gui.wandscape.info.atm_intro");
             default -> Log.warn(TAG, "Unexpected category '{}' for building {}", category, buildingTypeId);
-        }
-
-        if (creator != null && !creator.isBlank()) {
-            String creatorText = I18n.name("gui.wandscape.common.creator_label", "Creator").getString()
-                    + ": " + creator;
-            g.drawString(font, creatorText, leftPos + 16, topPos + PH - 26, MedievalColors.TEXT_DIM);
         }
     }
 

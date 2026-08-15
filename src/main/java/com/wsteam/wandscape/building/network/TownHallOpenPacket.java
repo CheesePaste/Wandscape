@@ -19,7 +19,8 @@ import static com.wsteam.wandscape.Wandscape.MODID;
  */
 public record TownHallOpenPacket(BlockPos buildingPos, UUID colonyId,
                                  String colonyName, int level, int experience, int expToNext,
-                                 String founderName, boolean canUseWarehouse, int namingStyle)
+                                 String founderName, boolean canUseWarehouse, int namingStyle,
+                                 String creator)
         implements CustomPacketPayload {
 
     public static final Type<TownHallOpenPacket> TYPE =
@@ -49,10 +50,11 @@ public record TownHallOpenPacket(BlockPos buildingPos, UUID colonyId,
         buf.writeUtf(pkt.founderName != null ? pkt.founderName : "");
         buf.writeBoolean(pkt.canUseWarehouse);
         buf.writeVarInt(pkt.namingStyle);
+        buf.writeUtf(pkt.creator != null ? pkt.creator : "");
     }
 
     static TownHallOpenPacket read(RegistryFriendlyByteBuf buf) {
-        // Field order MUST match write(): long → UUID → utf → varint×3 → utf → boolean → varint.
+        // Field order MUST match write(): long → UUID → utf → varint×3 → utf → boolean → varint → utf.
         BlockPos buildingPos = BlockPos.of(buf.readLong());
         UUID colonyId = buf.readUUID();
         String colonyName = buf.readUtf();
@@ -62,7 +64,8 @@ public record TownHallOpenPacket(BlockPos buildingPos, UUID colonyId,
         String founderName = buf.readUtf();
         boolean canUseWarehouse = buf.readBoolean();
         int namingStyle = buf.readVarInt();
+        String creator = buf.readUtf();
         return new TownHallOpenPacket(buildingPos, colonyId, colonyName, level, experience, expToNext,
-                founderName.isEmpty() ? null : founderName, canUseWarehouse, namingStyle);
+                founderName.isEmpty() ? null : founderName, canUseWarehouse, namingStyle, creator);
     }
 }

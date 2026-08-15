@@ -23,7 +23,6 @@ public class HotelScreen extends MedievalScreen {
     private final BlockPos buildingPos;
     private final UUID colonyId;
     private final UUID buildingId;
-    private final String creator;
     private final int maxOccupancy;
     private final int currentOccupancy;
     private final List<String> guestNames;
@@ -38,7 +37,7 @@ public class HotelScreen extends MedievalScreen {
         this.buildingPos = buildingPos;
         this.colonyId = colonyId;
         this.buildingId = buildingId;
-        this.creator = creator;
+        setCreator(creator);
         this.maxOccupancy = maxOccupancy;
         this.currentOccupancy = currentOccupancy;
         this.guestNames = guestNames;
@@ -81,15 +80,8 @@ public class HotelScreen extends MedievalScreen {
                 String line = (i + 1) + ". " + guestNames.get(i);
                 g.drawString(font, line, x, y, MedievalColors.TEXT_WARM_WHITE);
                 y += 12;
-                if (y > topPos + PH - 30) break; // overflow guard
+                if (y > topPos + PH - 42) break; // overflow guard, keep clear of the creator footer
             }
-        }
-
-        // Creator info at bottom
-        if (creator != null && !creator.isBlank()) {
-            String creatorText = I18n.name("gui.wandscape.common.creator_label", "Creator").getString()
-                    + ": " + creator;
-            g.drawString(font, creatorText, leftPos + 16, topPos + PH - 28, MedievalColors.TEXT_DIM);
         }
     }
 }

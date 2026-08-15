@@ -3,6 +3,7 @@ package com.wsteam.wandscape.building.network;
 import java.util.Map;
 import java.util.UUID;
 
+import com.wsteam.wandscape.building.internal.BuildingInteractHandler;
 import com.wsteam.wandscape.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.building.internal.BuildingState;
 import com.wsteam.wandscape.shared.data.ElementType;
@@ -76,7 +77,8 @@ public record TownHallWarehouseRequestPacket(BlockPos buildingPos, UUID colonyId
             Map<ItemKey, Long> itemSnapshot = bank.getSnapshot(colonyId);
             Map<ElementType, Long> elemSnapshot = bank.getElementSnapshot(colonyId);
             PacketDistributor.sendToPlayer(sp,
-                    WarehouseDataPacket.from(pkt.buildingPos(), colonyId, itemSnapshot, elemSnapshot));
+                    WarehouseDataPacket.from(pkt.buildingPos(), colonyId, itemSnapshot, elemSnapshot,
+                            BuildingInteractHandler.resolveCreator(level, pkt.buildingPos())));
         });
     }
 

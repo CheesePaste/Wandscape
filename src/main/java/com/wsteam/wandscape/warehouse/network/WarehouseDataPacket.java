@@ -25,7 +25,8 @@ import static com.wsteam.wandscape.Wandscape.MODID;
  * Sent once when the player opens the warehouse screen.
  */
 public record WarehouseDataPacket(BlockPos buildingPos, UUID colonyId,
-                                   ListTag items, ListTag elements) implements CustomPacketPayload {
+                                   ListTag items, ListTag elements, String creator)
+        implements CustomPacketPayload {
 
     public static final Type<WarehouseDataPacket> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath(MODID, "warehouse_data"));
@@ -38,10 +39,18 @@ public record WarehouseDataPacket(BlockPos buildingPos, UUID colonyId,
         return TYPE;
     }
 
-    /** Build packet from position, colony, and item/element snapshots. */
+    /** Build packet from position, colony, and item/element snapshots (refresh sends use blank creator). */
     public static WarehouseDataPacket from(BlockPos buildingPos, UUID colonyId,
                                             Map<ItemKey, Long> itemSnapshot,
                                             Map<ElementType, Long> elementSnapshot) {
+        return from(buildingPos, colonyId, itemSnapshot, elementSnapshot, "");
+    }
+
+    /** Build packet from position, colony, and item/element snapshots, plus the building creator. */
+    public static WarehouseDataPacket from(BlockPos buildingPos, UUID colonyId,
+                                            Map<ItemKey, Long> itemSnapshot,
+                                            Map<ElementType, Long> elementSnapshot,
+                                            String creator) {
         ListTag itemList = new ListTag();
         for (var entry : itemSnapshot.entrySet()) {
             CompoundTag tag = new CompoundTag();
@@ -61,7 +70,7 @@ public record WarehouseDataPacket(BlockPos buildingPos, UUID colonyId,
             elemList.add(tag);
         }
 
-        return new WarehouseDataPacket(buildingPos, colonyId, itemList, elemList);
+        return new WarehouseDataPacket(buildingPos, colonyId, itemList, elemList, creator);
     }
 
     /** Decode item list for client rendering. */
@@ -121,6 +130,7 @@ public record WarehouseDataPacket(BlockPos buildingPos, UUID colonyId,
         wrapper.putUUID("colony", pkt.colonyId);
         wrapper.put("itms", pkt.items);
         wrapper.put("elems", pkt.elements);
+        wrapper.putString("creator", pkt.creator != null ? pkt.creator : "");
         buf.writeNbt(wrapper);
     }
 
@@ -128,12 +138,13 @@ public record WarehouseDataPacket(BlockPos buildingPos, UUID colonyId,
         CompoundTag wrapper = buf.readNbt();
         if (wrapper == null) {
             return new WarehouseDataPacket(BlockPos.ZERO, new UUID(0, 0),
-                    new ListTag(), new ListTag());
+                    new ListTag(), new ListTag(), "");
         }
         BlockPos buildingPos = BlockPos.of(wrapper.getLong("pos"));
         UUID colonyId = wrapper.contains("colony") ? wrapper.getUUID("colony") : new UUID(0, 0);
         ListTag items = wrapper.getList("itms", Tag.TAG_COMPOUND);
         ListTag elems = wrapper.getList("elems", Tag.TAG_COMPOUND);
-        return new WarehouseDataPacket(buildingPos, colonyId, items, elems);
+        String creator = wrapper.getString("creator");
+        return new WarehouseDataPacket(buildingPos, colonyId, items, elems, creator);
     }
 }

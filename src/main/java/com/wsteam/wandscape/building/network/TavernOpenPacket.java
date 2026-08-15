@@ -20,7 +20,7 @@ import static com.wsteam.wandscape.Wandscape.MODID;
  * Server→client packet: opens the Tavern GUI with recruitment data.
  */
 public record TavernOpenPacket(BlockPos buildingPos, UUID colonyId,
-                                int recruitCount, List<MageResume> mageResumes)
+                                int recruitCount, List<MageResume> mageResumes, String creator)
         implements CustomPacketPayload {
 
     public static final Type<TavernOpenPacket> TYPE =
@@ -72,13 +72,14 @@ public record TavernOpenPacket(BlockPos buildingPos, UUID colonyId,
             resumesTag.add(rt);
         }
         tag.put("resumes", resumesTag);
+        tag.putString("creator", pkt.creator != null ? pkt.creator : "");
         buf.writeNbt(tag);
     }
 
     static TavernOpenPacket read(RegistryFriendlyByteBuf buf) {
         CompoundTag tag = buf.readNbt();
         if (tag == null) {
-            return new TavernOpenPacket(BlockPos.ZERO, new UUID(0, 0), 0, List.of());
+            return new TavernOpenPacket(BlockPos.ZERO, new UUID(0, 0), 0, List.of(), "");
         }
         List<MageResume> resumes = new ArrayList<>();
         ListTag list = tag.getList("resumes", ListTag.TAG_COMPOUND);
@@ -101,6 +102,7 @@ public record TavernOpenPacket(BlockPos buildingPos, UUID colonyId,
                 BlockPos.of(tag.getLong("pos")),
                 tag.getUUID("colony"),
                 tag.getInt("recruitCount"),
-                resumes);
+                resumes,
+                tag.getString("creator"));
     }
 }

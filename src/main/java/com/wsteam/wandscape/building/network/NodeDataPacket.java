@@ -21,7 +21,8 @@ public record NodeDataPacket(
     String buildingTypeId,
     String element,
     int amountPerHarvest,
-    int channelTicks
+    int channelTicks,
+    String creator
 ) implements CustomPacketPayload {
 
     private static final String TAG = "NodeDataPacket";
@@ -57,6 +58,7 @@ public record NodeDataPacket(
         buf.writeUtf(pkt.element);
         buf.writeVarInt(pkt.amountPerHarvest);
         buf.writeVarInt(pkt.channelTicks);
+        buf.writeUtf(pkt.creator != null ? pkt.creator : "");
     }
 
     static NodeDataPacket read(RegistryFriendlyByteBuf buf) {
@@ -65,7 +67,8 @@ public record NodeDataPacket(
                 buf.readUtf(),
                 buf.readUtf(),
                 buf.readVarInt(),
-                buf.readVarInt()
+                buf.readVarInt(),
+                buf.readUtf()
         );
     }
 }

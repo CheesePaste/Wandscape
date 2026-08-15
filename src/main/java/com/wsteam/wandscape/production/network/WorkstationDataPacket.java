@@ -23,7 +23,8 @@ import static com.wsteam.wandscape.Wandscape.MODID;
  * Server→client packet carrying workstation GUI data:
  * decomposable items in warehouse + available synthesize recipes.
  */
-public record WorkstationDataPacket(BlockPos stationPos, ListTag items, ListTag recipes) implements CustomPacketPayload {
+public record WorkstationDataPacket(BlockPos stationPos, ListTag items, ListTag recipes, String creator)
+        implements CustomPacketPayload {
 
     public static final Type<WorkstationDataPacket> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath(MODID, "workstation_data"));
@@ -44,7 +45,8 @@ public record WorkstationDataPacket(BlockPos stationPos, ListTag items, ListTag 
             Collection<SynthesizeRecipe> synthRecipes,
             Map<ElementType, Long> elementMap,
             @Nullable UUID colonyId,
-            Map<String, Map<ElementType, Long>> itemElementValues) {
+            Map<String, Map<ElementType, Long>> itemElementValues,
+            String creator) {
         ListTag itemList = new ListTag();
         for (var entry : decomposableItems.entrySet()) {
             CompoundTag tag = new CompoundTag();
@@ -105,7 +107,7 @@ public record WorkstationDataPacket(BlockPos stationPos, ListTag items, ListTag 
             recipeList.add(tag);
         }
 
-        return new WorkstationDataPacket(stationPos, itemList, recipeList);
+        return new WorkstationDataPacket(stationPos, itemList, recipeList, creator);
     }
 
     private static int computeMaxAffordable(Map<ElementType, Long> costPerUnit, Map<ElementType, Long> elements) {
@@ -208,15 +210,17 @@ public record WorkstationDataPacket(BlockPos stationPos, ListTag items, ListTag 
         wrapper.putLong("pos", pkt.stationPos.asLong());
         wrapper.put("items", pkt.items);
         wrapper.put("recipes", pkt.recipes);
+        wrapper.putString("creator", pkt.creator != null ? pkt.creator : "");
         buf.writeNbt(wrapper);
     }
 
     static WorkstationDataPacket read(RegistryFriendlyByteBuf buf) {
         CompoundTag wrapper = buf.readNbt();
-        if (wrapper == null) return new WorkstationDataPacket(BlockPos.ZERO, new ListTag(), new ListTag());
+        if (wrapper == null) return new WorkstationDataPacket(BlockPos.ZERO, new ListTag(), new ListTag(), "");
         BlockPos pos = BlockPos.of(wrapper.getLong("pos"));
         ListTag items = wrapper.getList("items", Tag.TAG_COMPOUND);
         ListTag recipes = wrapper.getList("recipes", Tag.TAG_COMPOUND);
-        return new WorkstationDataPacket(pos, items, recipes);
+        String creator = wrapper.getString("creator");
+        return new WorkstationDataPacket(pos, items, recipes, creator);
     }
 }
