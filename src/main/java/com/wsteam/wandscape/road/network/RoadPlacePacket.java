@@ -227,6 +227,9 @@ public record RoadPlacePacket(String presetId, BlockPos startPos, BlockPos endPo
             Log.info(TAG, "[Road] Published task #{}: preset={} from={} to={} tiles={}",
                     taskId, packet.presetId(), start.toShortString(), end.toShortString(), tiles.size());
 
+            // Sync the new under-construction road edge to all clients.
+            com.wsteam.wandscape.shared.network.RoadAreaSyncPacket.broadcastToServer(player.serverLevel().getServer());
+
             // Manual road placement counts toward onboarding step 6 — but only once
             // the road is actually built, so register a pending attribution that
             // RoadSegmentListener consumes on road_segment_complete.

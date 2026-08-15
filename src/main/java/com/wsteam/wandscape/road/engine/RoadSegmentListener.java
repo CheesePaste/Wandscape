@@ -106,6 +106,8 @@ public final class RoadSegmentListener {
 
         edge.setStatus(RoadEdge.EdgeStatus.COMPLETE);
         roadData.markChanged();
+        // Broadcast so clients drop this edge from their construction ghost cache.
+        com.wsteam.wandscape.shared.network.RoadAreaSyncPacket.broadcastToServer(level.getServer());
         Log.info(TAG, "[Road] edge {} → COMPLETE", edgeIdStr);
     }
 

@@ -657,6 +657,12 @@ public class Wandscape {
                         com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket.STREAM_CODEC,
                         (packet, ctx) -> com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket
                                 .handleClient(packet))
+                // ── Road construction ghost sync ──
+                .playToClient(
+                        com.wsteam.wandscape.shared.network.RoadAreaSyncPacket.TYPE,
+                        com.wsteam.wandscape.shared.network.RoadAreaSyncPacket.STREAM_CODEC,
+                        (packet, ctx) -> com.wsteam.wandscape.shared.network.RoadAreaSyncPacket
+                                .handleClient(packet))
                 // ── NPC info screen ──
                 .playToClient(
                         NpcDataPacket.TYPE,

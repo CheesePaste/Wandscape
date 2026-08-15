@@ -65,6 +65,9 @@ public record PanelStateTogglePacket(boolean open) implements CustomPacketPayloa
                 }
             }
 
+            // Roads are level-global — sync under-construction roads for the construction ghost.
+            RoadAreaSyncPacket.sendToPlayer(player);
+
             // Seed tutorial progress (recomputed when a colony exists; otherwise
             // only the saved value so a pre-colony dismissal still persists).
             var guideApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getGuideProgressApiSilently();

@@ -14,6 +14,7 @@ import com.wsteam.wandscape.magic.client.MagicCircleDotParticle;
 import com.wsteam.wandscape.magic.client.MagicCircleEmitter;
 import com.wsteam.wandscape.road.client.RoadPlacementController;
 import com.wsteam.wandscape.road.client.RoadPlacementRenderer;
+import com.wsteam.wandscape.road.client.RoadConstructionGhost;
 import com.wsteam.wandscape.projection.client.ProjectionRenderer;
 import com.wsteam.wandscape.projection.client.ProjectionFlightController;
 import com.wsteam.wandscape.projection.client.BuildingDebugController;
@@ -148,6 +149,7 @@ public class WandscapeClient {
         NeoForge.EVENT_BUS.addListener(ClientTickEvent.Post.class, e -> MagicCircleEmitter.tick());
         RoadPlacementController.register();
         RoadPlacementRenderer.register();
+        RoadConstructionGhost.register();
         ProjectionRenderer.register();
         ProjectionFlightController.register();
         com.wsteam.wandscape.projection.client.BuildGizmoController.register();

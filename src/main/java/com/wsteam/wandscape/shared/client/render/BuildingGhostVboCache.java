@@ -38,7 +38,7 @@ import net.neoforged.neoforge.client.model.data.ModelData;
  */
 public final class BuildingGhostVboCache {
 
-    private static final float GHOST_ALPHA = 0.40f;
+    private static final float GHOST_ALPHA = 0.55f;
     private static final int FULL_BRIGHT = 0xF000F0;
 
     private static final Map<BuildingConfig, BakedGhostMesh[]> CACHE = new HashMap<>();

@@ -2,12 +2,15 @@ package com.wsteam.wandscape.road.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.wsteam.wandscape.road.data.RoadPreset;
+import com.wsteam.wandscape.shared.ui.util.BuildingPreviewRenderer;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
@@ -21,7 +24,10 @@ import com.wsteam.wandscape.shared.log.Log;
  * <ul>
  *   <li>Green outline at start position</li>
  *   <li>Red outline at end position</li>
- *   <li>Translucent yellow fill + perimeter outline over the entire rectangle area</li>
+ *   <li>Replace/Destroy: the actual road blocks as translucent 3D ghosts over the
+ *       rectangle area (flat fill fallback for very large selections)</li>
+ *   <li>Fill: a 3D wireframe box with translucent faces</li>
+ *   <li>Spline: a translucent yellow fill + perimeter outline</li>
  * </ul>
  *
  * <p>Surface height determined via {@link Heightmap.Types#MOTION_BLOCKING}
@@ -34,6 +40,10 @@ public final class RoadPlacementRenderer {
     private static final String TAG = "RoadPlacementRenderer";
 
     private static final float LINE_WIDTH = 2.0f;
+    /** Ghost opacity factor for the translucent road block preview (255 * factor). */
+    private static final float ROAD_GHOST_ALPHA = 0.55f;
+    /** Above this many surface cells, fall back to the cheap flat fill. */
+    private static final int ROAD_GHOST_MAX_CELLS = 1024;
 
     private static boolean registered = false;
 
@@ -78,7 +88,8 @@ public final class RoadPlacementRenderer {
             renderBlockOutline(bufferSource, poseStack, endPos, 255, 40, 40);
         }
 
-        // Preview: FILL renders the full 3D cube; Replace/Destroy render the surface rectangle
+        // Preview: FILL renders the full 3D cube; Replace/Destroy render the actual
+        // road blocks as ghost; Spline keeps the flat rectangle approximation.
         BlockPos ghostPos = RoadPlacementState.getGhostPos();
         BlockPos from = startPos;
         BlockPos to = (endPos != null) ? endPos : ghostPos;
@@ -86,12 +97,21 @@ public final class RoadPlacementRenderer {
         if (from != null && to != null) {
             if (RoadPlacementState.isFill()) {
                 renderBoxPreview(bufferSource, poseStack, from, to);
-            } else {
+            } else if (RoadPlacementState.isSpline()) {
                 renderPathPreview(mc.level, bufferSource, poseStack, from, to);
+            } else {
+                renderRoadGhost(mc.level, bufferSource, poseStack, from, to,
+                        RoadPlacementState.getSelectedPreset());
             }
         }
 
         poseStack.popPose();
+
+        // AFTER_TRIPWIRE_BLOCKS fires after the level renderer already flushed the
+        // main buffer source (see LevelRenderer.renderLevel), so vertices added here
+        // would otherwise never be drawn this frame. Flush explicitly.
+        bufferSource.endBatch(RenderType.lines());
+        bufferSource.endBatch(RenderType.translucent());
     }
 
     // ── Block outline ──
@@ -212,9 +232,52 @@ public final class RoadPlacementRenderer {
 
         // Translucent fill at each surface block position
         renderSurfaceFill(bufferSource, poseStack, level, minX, minZ, maxX, maxZ);
+        renderPerimeterOutline(level, bufferSource, poseStack, minX, minZ, maxX, maxZ);
+    }
 
-        // Perimeter outline — sample surface height at each of the four corners
-        // so the outline follows the terrain, avoiding buried segments on slopes.
+    /**
+     * Renders the actual road blocks as translucent 3D ghosts at each surface
+     * position within the rectangle, matching the server-side tiles in
+     * {@code RoadPlacePacket} (same MOTION_BLOCKING surface height and preset
+     * block choice). Mirrors the building ghost so the player sees exactly
+     * which blocks the road will place.
+     *
+     * <p>Large selections fall back to the cheap flat fill to keep per-frame
+     * block-model cost bounded.
+     */
+    private static void renderRoadGhost(Level level, MultiBufferSource.BufferSource bufferSource, PoseStack poseStack,
+                                        BlockPos from, BlockPos to, RoadPreset preset) {
+        int minX = Math.min(from.getX(), to.getX());
+        int maxX = Math.max(from.getX(), to.getX());
+        int minZ = Math.min(from.getZ(), to.getZ());
+        int maxZ = Math.max(from.getZ(), to.getZ());
+
+        renderPerimeterOutline(level, bufferSource, poseStack, minX, minZ, maxX, maxZ);
+
+        int area = (maxX - minX + 1) * (maxZ - minZ + 1);
+        if (area > ROAD_GHOST_MAX_CELLS) {
+            renderSurfaceFill(bufferSource, poseStack, level, minX, minZ, maxX, maxZ);
+            return;
+        }
+
+        MultiBufferSource ghostSource = RoadGhostRenderUtil.ghostSource(bufferSource, ROAD_GHOST_ALPHA);
+
+        for (int x = minX; x <= maxX; x++) {
+            for (int z = minZ; z <= maxZ; z++) {
+                int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z) - 1;
+                BlockState state = BuildingPreviewRenderer.resolveBlockState(preset.pickBlock(x, z));
+                if (state == null) continue;
+
+                RoadGhostRenderUtil.renderGhostBlock(level, state, poseStack, ghostSource, x, y, z);
+            }
+        }
+    }
+
+    /** Draws the yellow perimeter outline of the placement rectangle, following the terrain. */
+    private static void renderPerimeterOutline(Level level, MultiBufferSource bufferSource, PoseStack poseStack,
+                                               int minX, int minZ, int maxX, int maxZ) {
+        // Sample surface height at each of the four corners so the outline follows
+        // the terrain, avoiding buried segments on slopes.
         float yMinZMinX = surfaceHeight(level, minX, minZ) + 0.02f;
         float yMinZMaxX = surfaceHeight(level, maxX, minZ) + 0.02f;
         float yMaxZMinX = surfaceHeight(level, minX, maxZ) + 0.02f;
