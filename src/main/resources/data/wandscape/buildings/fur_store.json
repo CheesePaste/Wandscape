@@ -35575,9 +35575,9 @@
       "nbt": "H4sIAAAAAAAA/0XPsU4CQRAG4H9vvWM1xEQqY2fvAxirUwzESmIslG64W8wk64wse9DyULwfbjgS/mb+Sb4p5gowqJbUsPwYg+GbbLogPtIieBSwzxzNg4F7l2nUTlpYXM80Jgpj1dDqVpBzCfehiRKrlHktXvY4psRwQiG88jqRNL6ndqbrKjdbP+6Oqr7vdX3XzwIXE47+cHAYbCgyScLNL4tvIi3T00K7VeeTRfnJwX/nA3fqX7nfOhTcYnT2f8SS8nsnNM+owj8eeczq+AAAAA=="
     }
   ],
-  "comfort": 17,
-  "magic": 9,
-  "wonder": 9,
+  "comfort": 22,
+  "magic": 12,
+  "wonder": 12,
   "queue": {
     "capacity": 5,
     "task_types": [

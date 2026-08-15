@@ -1,6 +1,7 @@
 {
   "id": "advanced_street_light2",
-  "display_name": "Advanced Street Light2",
+  "display_name": "Advanced Street Light 2",
+  "creator": "CheesePaste",
   "category": "decoration",
   "pattern": [
     [
@@ -173,9 +174,12 @@
     2,
     6
   ],
-  "comfort": 0,
-  "magic": 0,
-  "wonder": 0,
+  "comfort": 2,
+  "magic": 8,
+  "wonder": 2,
+  "decoration": {
+    "radius": 12
+  },
   "queue": {
     "capacity": 5,
     "task_types": [
@@ -183,7 +187,7 @@
     ]
   },
   "unlock_requirement": {
-    "min_colony_level": 1
+    "min_colony_level": 10
   },
   "boundary": {
     "min": [

@@ -1,6 +1,7 @@
 {
   "id": "nodedark",
   "display_name": "暗元素节点",
+  "creator": "CheesePaste",
   "category": "node",
   "first_free": true,
   "pattern": [

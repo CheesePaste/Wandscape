@@ -1,6 +1,7 @@
 {
-  "id": "idk",
-  "display_name": "idk",
+  "id": "bamboo_hall",
+  "display_name": "Bamboo Hall",
+  "creator": "qic",
   "category": "service",
   "pattern": [
     [
@@ -10972,9 +10973,9 @@
     76,
     69
   ],
-  "comfort": 0,
-  "magic": 0,
-  "wonder": 0,
+  "comfort": 7,
+  "magic": 5,
+  "wonder": 5,
   "queue": {
     "capacity": 5,
     "task_types": [
@@ -11039,9 +11040,14 @@
     }
   ],
   "service": {
-    "energy_per_use": 0,
+    "energy_per_use": 20,
+    "element_output": {
+      "wood": 17,
+      "fire": 17,
+      "wind": 17
+    },
     "max_occupancy": 0,
-    "interaction_duration_ticks": 0
+    "interaction_duration_ticks": 1200
   },
   "blueprint": {
     "id": "build:clear_and_build",

@@ -1,6 +1,7 @@
 {
   "id": "potion_store",
   "display_name": "Potion Store",
+  "creator": "CheesePaste",
   "category": "shop",
   "first_free": true,
   "pattern": [

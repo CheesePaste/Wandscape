@@ -1,6 +1,7 @@
 {
   "id": "nodewater",
   "display_name": "水元素节点",
+  "creator": "CheesePaste",
   "category": "node",
   "first_free": true,
   "pattern": [

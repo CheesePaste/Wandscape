@@ -1,6 +1,7 @@
 {
   "id": "youth_hostel",
   "display_name": "Youth Hostel",
+  "creator": "次位神",
   "category": "service",
   "first_free": true,
   "pattern": [

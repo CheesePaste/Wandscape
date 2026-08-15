@@ -1,6 +1,7 @@
 {
   "id": "workstation1",
   "display_name": "工作站",
+  "creator": "CheesePaste",
   "category": "workstation",
   "first_free": true,
   "pattern": [

@@ -1,6 +1,7 @@
 {
   "id": "potionstation1",
   "display_name": "药水工坊",
+  "creator": "CheesePaste",
   "category": "potion_station",
   "first_free": true,
   "pattern": [

@@ -1,6 +1,7 @@
 {
   "id": "redstone_shop",
   "display_name": "Redstone Shop",
+  "creator": "次位神",
   "category": "shop",
   "pattern": [
     [

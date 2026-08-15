@@ -16,7 +16,19 @@ Wandscape 由热爱Minecraft与模拟经营的开发者、建筑师与玩家们�
 
 在这里列出为模组提供了建筑的建筑师们：
 
-- **(开发者名）** —— 贡献建筑：xxx、xxx —— [个人链接](https://example.com)
+- **CheesePaste**
+- [访问他的 Bilibili 个人主页](https://space.bilibili.com/514121566)
+- **次位神**
+- [访问他的 Bilibili 个人主页](https://space.bilibili.com/3494371208988823)
+- **小咸鱼**
+- [访问他的 Bilibili 个人主页](https://m.bilibili.com/space/1217676935)
+- **Silentstsky_星空**
+- [访问他的 Bilibili 个人主页](https://space.bilibili.com/272480941)
+- **西米柚QAQ**
+- [访问他的 Bilibili 个人主页](https://space.bilibili.com/3461582591888090)
+- **仍是异乡人_**
+- [访问他的 Bilibili 个人主页](https://space.bilibili.com/1948778109)
+- **qic**
 
 ## 开发
 

@@ -1,6 +1,7 @@
 {
   "id": "nodeearth",
   "display_name": "土元素节点",
+  "creator": "CheesePaste",
   "category": "node",
   "first_free": true,
   "pattern": [

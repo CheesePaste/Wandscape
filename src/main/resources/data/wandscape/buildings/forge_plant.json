@@ -1,6 +1,7 @@
 {
   "id": "forge_plant",
   "display_name": "Forge Plant",
+  "creator": "qic",
   "category": "shop",
   "pattern": [
     [

@@ -1,6 +1,7 @@
 {
   "id": "nodefire",
   "display_name": "火元素节点",
+  "creator": "CheesePaste",
   "category": "node",
   "first_free": true,
   "pattern": [

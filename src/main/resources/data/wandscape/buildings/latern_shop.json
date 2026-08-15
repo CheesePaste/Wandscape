@@ -1,6 +1,7 @@
 {
   "id": "latern_shop",
   "display_name": "Latern Shop",
+  "creator": "次位神",
   "category": "shop",
   "first_free": true,
   "pattern": [

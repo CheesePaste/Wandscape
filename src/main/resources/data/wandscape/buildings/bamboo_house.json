@@ -1,7 +1,8 @@
 {
   "id": "bamboo_house",
-  "display_name": "bamboo_house",
-  "category": "service",
+  "display_name": "Bamboo Tea House",
+  "creator": "qic",
+  "category": "shop",
   "pattern": [
     [
       0,
@@ -12995,9 +12996,9 @@
     "7,1,13": "H4sIAAAAAAAA/+NiYGBmYKxgYGDgBtKV////P87JwOpZkppbzAACQMEqICXGwcCUmcIgkJuZl5pclJhWYpWUWFSUmsMAAFIInCVAAAAA",
     "8,1,13": "H4sIAAAAAAAA/+NiYGBmYKxgYGDgAdKV////P87JwOpZkppbzAACQMEqICXGwcCUmcIgkJuZl5pclJhWYpWUWFSUmsMAAFBU5CFAAAAA"
   },
-  "comfort": 0,
-  "magic": 0,
-  "wonder": 0,
+  "comfort": 12,
+  "magic": 6,
+  "wonder": 5,
   "queue": {
     "capacity": 5,
     "task_types": [
@@ -13005,7 +13006,7 @@
     ]
   },
   "unlock_requirement": {
-    "min_colony_level": 1
+    "min_colony_level": 10
   },
   "boundary": {
     "min": [
@@ -13074,10 +13075,47 @@
       "facing": "north"
     }
   ],
-  "service": {
-    "energy_per_use": 0,
-    "max_occupancy": 0,
-    "interaction_duration_ticks": 0
+  "shop": {
+    "goods": [
+      {
+        "item_id": "minecraft:experience_bottle",
+        "comfort": 0,
+        "magic": 3,
+        "wonder": 2
+      },
+      {
+        "item_id": "minecraft:dried_kelp_block",
+        "comfort": 1,
+        "magic": 0,
+        "wonder": 1
+      },
+      {
+        "item_id": "minecraft:cooked_salmon",
+        "comfort": 2,
+        "magic": 0,
+        "wonder": 1
+      },
+      {
+        "item_id": "minecraft:sweet_berries",
+        "comfort": 1,
+        "magic": 0,
+        "wonder": 1
+      },
+      {
+        "item_id": "minecraft:glow_berries",
+        "comfort": 1,
+        "magic": 1,
+        "wonder": 0
+      },
+      {
+        "item_id": "minecraft:sugar",
+        "comfort": 1,
+        "magic": 0,
+        "wonder": 0
+      }
+    ],
+    "profit_rate": 0.5,
+    "interaction_duration_ticks": 1200
   },
   "blueprint": {
     "id": "build:clear_and_build",

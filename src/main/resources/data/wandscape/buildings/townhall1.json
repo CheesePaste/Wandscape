@@ -1,6 +1,7 @@
 {
   "id": "townhall1",
   "display_name": "市政厅",
+  "creator": "次位神",
   "category": "government",
   "first_free": true,
   "pattern": [

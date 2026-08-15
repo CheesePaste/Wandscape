@@ -1,6 +1,7 @@
 {
   "id": "nodemetal",
   "display_name": "金元素节点",
+  "creator": "CheesePaste",
   "category": "node",
   "first_free": true,
   "pattern": [

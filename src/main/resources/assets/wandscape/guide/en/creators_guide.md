@@ -16,7 +16,19 @@ Wandscape is grown by developers, architects and players who love Minecraft and 
 
 List the architects who have provided buildings for the mod:
 
-- **(Developer name)** — buildings: xxx, xxx — [personal link](https://example.com)
+- **CheesePaste**
+- [Visit his Bilibili profile](https://space.bilibili.com/514121566)
+- **次位神**
+- [Visit his Bilibili profile](https://space.bilibili.com/3494371208988823)
+- **小咸鱼**
+- [Visit his Bilibili profile](https://m.bilibili.com/space/1217676935)
+- **Silentstsky_星空**
+- [Visit his Bilibili profile](https://space.bilibili.com/272480941)
+- **西米柚QAQ**
+- [Visit his Bilibili profile](https://space.bilibili.com/3461582591888090)
+- **仍是异乡人_**
+- [Visit his Bilibili profile](https://space.bilibili.com/1948778109)
+- **qic**
 
 ## Developers
 

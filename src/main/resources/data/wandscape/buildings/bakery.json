@@ -1,6 +1,7 @@
 {
   "id": "bakery",
   "display_name": "bakery",
+  "creator": "CheesePaste",
   "category": "shop",
   "first_free": true,
   "pattern": [

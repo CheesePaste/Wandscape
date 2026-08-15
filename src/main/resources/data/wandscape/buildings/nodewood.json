@@ -1,6 +1,7 @@
 {
   "id": "nodewood",
   "display_name": "木元素节点",
+  "creator": "CheesePaste",
   "category": "node",
   "first_free": true,
   "pattern": [

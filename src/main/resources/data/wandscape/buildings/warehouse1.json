@@ -1,6 +1,7 @@
 {
   "id": "warehouse1",
   "display_name": "Warehouse1",
+  "creator": "次位神",
   "category": "storage",
   "pattern": [
     [

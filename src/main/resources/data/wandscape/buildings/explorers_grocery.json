@@ -1,6 +1,6 @@
 {
   "id": "explorers_grocery",
-  "display_name": "Explorer's Geocery",
+  "display_name": "Explorer's Grocery",
   "creator": "Silentstsky_星空",
   "category": "shop",
   "pattern": [
@@ -95429,9 +95429,9 @@
       "nbt": "H4sIAAAAAAAA/0WPQWvCQBCFX7JG01Yi+Ce8tJcee0pRLJ4U8WB7myZrGdjOymaTXvvP40ACvsv7HnwwzCOQYHqhiuVHab6TrnViA307ixTmnUPynCDfy0fwrdQwKA4+RHJr713t/wSaB+RHHymyl0xnijEZ5ltybsNNJKnsoJqDb6ZKpnwZrPL1f+jVsFNMthxs3+eYdRSYJGLxy2KrQJf4VuklMchO7Oyn6suRz8pFjpRrLO/2lViiPjdKXyo94QbHGom/9gAAAA=="
     }
   ],
-  "comfort": 24,
-  "magic": 18,
-  "wonder": 18,
+  "comfort": 31,
+  "magic": 23,
+  "wonder": 23,
   "queue": {
     "capacity": 5,
     "task_types": [
@@ -95507,52 +95507,40 @@
   "shop": {
     "goods": [
       {
-        "item_id": "minecraft:bread",
-        "comfort": 1,
-        "magic": 0,
+        "item_id": "minecraft:golden_apple",
+        "comfort": 0,
+        "magic": 4,
+        "wonder": 4
+      },
+      {
+        "item_id": "minecraft:glistering_melon_slice",
+        "comfort": 2,
+        "magic": 2,
+        "wonder": 2
+      },
+      {
+        "item_id": "minecraft:milk_bucket",
+        "comfort": 3,
+        "magic": 1,
         "wonder": 0
       },
       {
-        "item_id": "minecraft:cooked_beef",
+        "item_id": "minecraft:salmon_bucket",
         "comfort": 1,
+        "magic": 1,
+        "wonder": 3
+      },
+      {
+        "item_id": "minecraft:melon",
+        "comfort": 3,
         "magic": 0,
         "wonder": 0
       },
       {
         "item_id": "minecraft:apple",
-        "comfort": 1,
-        "magic": 0,
-        "wonder": 0
-      },
-      {
-        "item_id": "minecraft:baked_potato",
-        "comfort": 1,
-        "magic": 0,
-        "wonder": 0
-      },
-      {
-        "item_id": "minecraft:pumpkin_pie",
         "comfort": 2,
         "magic": 0,
         "wonder": 0
-      },
-      {
-        "item_id": "minecraft:cake",
-        "comfort": 2,
-        "magic": 0,
-        "wonder": 0
-      },
-      {
-        "item_id": "minecraft:golden_carrot",
-        "comfort": 1,
-        "magic": 1,
-        "wonder": 0
-      },
-      {
-        "item_id": "minecraft:golden_apple",
-        "comfort": 0,
-        "magic": 4,
-        "wonder": 4
       }
     ],
     "profit_rate": 0.6,
