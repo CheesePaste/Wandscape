@@ -70,7 +70,7 @@ public final class SelfDefenseHandler {
 
     /**
      * 环境伤害（窒息/岩浆/火烧/溺水等非生物伤害）处理：
-     * 非引导中且非殖民地 NPC 才发起逃生传送；引导期间减伤已生效，不重复逃生、不再免疫取消。
+     * 非引导中且非小镇 NPC 才发起逃生传送；引导期间减伤已生效，不重复逃生、不再免疫取消。
      * 触发本次伤害仍结算一次（保证脱战回血计时正确）。
      */
     private static void handleEnvironmentalDamage(LivingIncomingDamageEvent event, WandscapeNpc npc) {

@@ -8,8 +8,6 @@ public interface GuideServerContext {
 
     boolean hasCategory(String category);
 
-    boolean hasType(String buildingTypeId);
-
     /** Player has deposited at least one item into the colony warehouse (step 3). */
     boolean hasPlayerDeposited();
 

@@ -89,9 +89,9 @@ public class TavernRecruitStorage extends SavedData {
         return resume;
     }
 
-    // ── 招募计数（每殖民地「招募 NPC」次数，首次免费） ──
+    // ── 招募计数（每小镇「招募 NPC」次数，首次免费） ──
 
-    /** 殖民地累计成功招募 NPC 的次数。 */
+    /** 小镇累计成功招募 NPC 的次数。 */
     public int getRecruitCount(UUID colonyId) {
         return recruitCounts.getOrDefault(colonyId, 0);
     }

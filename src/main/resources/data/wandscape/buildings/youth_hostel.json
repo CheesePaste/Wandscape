@@ -2,6 +2,7 @@
   "id": "youth_hostel",
   "display_name": "Youth Hostel",
   "category": "service",
+  "first_free": true,
   "pattern": [
     [
       -1,

@@ -3,9 +3,9 @@ package com.wsteam.wandscape.command;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.tree.CommandNode;
 import com.wsteam.wandscape.shared.network.GuideTestPacket;
+import com.wsteam.wandscape.shared.ui.I18n;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
-import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.PacketDistributor;
 
@@ -29,7 +29,8 @@ public final class GuideCommand {
     private static int executeTest(CommandSourceStack source) {
         ServerPlayer player = source.getPlayer();
         if (player == null) {
-            source.sendFailure(Component.literal("[Wandscape] 该指令只能由玩家在游戏内执行"));
+            source.sendFailure(I18n.name("message.wandscape.command.guide_players_only",
+                    "[Wandscape] 该指令只能由玩家在游戏内执行"));
             return 0;
         }
 
@@ -48,7 +49,8 @@ public final class GuideCommand {
         }
 
         PacketDistributor.sendToPlayer(player, new GuideTestPacket(markdownContent));
-        source.sendSuccess(() -> Component.literal("[Wandscape] 已成功打开 Markdown 引导测试视窗"), false);
+        source.sendSuccess(() -> I18n.name("message.wandscape.command.guide_opened",
+                "[Wandscape] 已成功打开 Markdown 引导测试视窗"), false);
 
         return Command.SINGLE_SUCCESS;
     }

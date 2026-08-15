@@ -160,7 +160,7 @@ public final class TouristSpawnSystem {
         long dayTime = level.getDayTime() % 24000;
         long day = level.getDayTime() / 24000;
 
-        // 创始人不在线且关闭离线运行 → 冻结殖民地：不生成新游客、不清冻结游客
+        // 创始人不在线且关闭离线运行 → 冻结小镇：不生成新游客、不清冻结游客
         UUID colonyId = getColonyId();
         boolean colonyFrozen = colonyId != null
                 && !com.wsteam.wandscape.engine.colony.ColonyActivation.isColonyActive(colonyId);
@@ -247,7 +247,7 @@ public final class TouristSpawnSystem {
             return;
         }
 
-        // 每天固定新增这批游客，不因殖民地已有游客（含住店客）而扣减
+        // 每天固定新增这批游客，不因小镇已有游客（含住店客）而扣减
         int colonyLevel = levelManager != null ? levelManager.getLevel(colonyId) : 1;
         int lower = Config.TOURIST_BASE_SPAWN_COUNT.get()
                 + (colonyLevel - 1) * Config.TOURIST_LEVEL_SPAWN_BONUS.get();
@@ -385,7 +385,7 @@ public final class TouristSpawnSystem {
 
     /**
      * 刷怪蛋/命令生成的游客补齐随机生成默认值，使其等同于随机生成的游客：
-     * 按殖民地等级 roll 等级（无殖民地/等级管理器时按 1）、按等级算随身现金与总旅费、
+     * 按小镇等级 roll 等级（无小镇/等级管理器时按 1）、按等级算随身现金与总旅费、
      * roll 画像三条 need、补 2~4 天停留窗口与 arrivalTime。磁盘加载（有 NBT）的游客不走这里。
      */
     public static void applyRandomSpawnDefaults(TouristEntity tourist, @Nullable UUID colonyId, long gameTime) {
@@ -457,7 +457,7 @@ public final class TouristSpawnSystem {
             if (!t.isAlive()) continue;
             if (t.isPreview()) continue; // 预览假人：不参与生成/离开
 
-            // 创始人不在线 → 冻结殖民地：不清除其游客（原地冻结）
+            // 创始人不在线 → 冻结小镇：不清除其游客（原地冻结）
             UUID cid = t.getColonyId();
             if (cid != null && !com.wsteam.wandscape.engine.colony.ColonyActivation.isColonyActive(cid)) {
                 continue;
@@ -512,7 +512,7 @@ public final class TouristSpawnSystem {
             if (!t.isAlive()) continue;
             if (t.isPreview()) continue; // 预览假人：不参与生成/离开
 
-            // 创始人不在线 → 冻结殖民地：不安排其游客离场（原地冻结）
+            // 创始人不在线 → 冻结小镇：不安排其游客离场（原地冻结）
             UUID cid = t.getColonyId();
             if (cid != null && !com.wsteam.wandscape.engine.colony.ColonyActivation.isColonyActive(cid)) {
                 continue;

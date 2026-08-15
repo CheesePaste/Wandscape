@@ -1,6 +1,7 @@
 package com.wsteam.wandscape.building.scanner;
 
 import com.wsteam.wandscape.shared.data.Activity;
+import com.wsteam.wandscape.shared.ui.I18n;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -103,17 +104,18 @@ public class InteractSpotMarkerBlock extends Block {
         return arr[0];
     }
 
-    private static String actionLabel(Activity a) {
-        return Component.translatable("activity.wandscape." + a.name().toLowerCase()).getString();
+    private static Component actionLabel(Activity a) {
+        return Component.translatable("activity.wandscape." + a.name().toLowerCase());
     }
 
-    private static String facingLabel(Direction d) {
-        return switch (d) {
+    private static Component facingLabel(Direction d) {
+        String fallback = switch (d) {
             case NORTH -> "北";
             case EAST -> "东";
             case SOUTH -> "南";
             default -> "西";
         };
+        return I18n.name("direction.wandscape." + d.getName(), fallback);
     }
 
     /** 供导出读取：只认 7 个交互位动作，非法值回退 BROWSE。 */

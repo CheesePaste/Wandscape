@@ -10,7 +10,7 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 
 /**
- * Server→client packet：通知客户端殖民地环境音状态。
+ * Server→client packet：通知客户端小镇环境音状态。
  * 服务端 {@code ColonyAmbientTracker} 判断玩家是否进入任一建筑包围盒+20 格范围，
  * 进入/离开或昼夜相位切换时发送；客户端驱动循环环境音启停/切相位。
  *

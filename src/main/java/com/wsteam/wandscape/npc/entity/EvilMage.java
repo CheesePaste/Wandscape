@@ -18,11 +18,11 @@ import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
- * 敌对测试生物「邪恶法师」：与殖民地法师外观/属性/施法管线完全一致
+ * 敌对测试生物「邪恶法师」：与小镇法师外观/属性/施法管线完全一致
  * （默认属性、同款皮肤纹理、同一套 MagicState/CD/NBT），但：
  * <ul>
  *   <li>敌对生物（{@link Enemy}）：索敌最近**生存玩家**（创造/旁观玩家免疫）。</li>
- *   <li>不加入 ECS / 不入殖民地（{@link #isColonyNpc()} = false）——不被任务调度、
+ *   <li>不加入 ECS / 不入小镇（{@link #isColonyNpc()} = false）——不被任务调度、
  *       死亡记录/复活、村民索敌增强当普通 NPC 处理。</li>
  *   <li>创造模式右键打开 {@code NpcScreen} 编辑（施法表/策略/法杖颜色），生存玩家不可配置。</li>
  * </ul>
@@ -35,7 +35,7 @@ public class EvilMage extends WandscapeNpc implements Enemy {
     }
 
     // ============================================================
-    // 与殖民地 NPC 的边界
+    // 与小镇 NPC 的边界
     // ============================================================
 
     @Override

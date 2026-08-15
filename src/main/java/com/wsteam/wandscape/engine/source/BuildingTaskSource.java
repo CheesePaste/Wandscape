@@ -96,7 +96,7 @@ public class BuildingTaskSource implements TaskSource {
         int budget = Config.MAX_CONCURRENT_BUILDINGS.get();
 
         for (UUID buildingId : buildingIds) {
-            // 创始人不在线且关闭离线运行 → 冻结殖民地：不发布新任务
+            // 创始人不在线且关闭离线运行 → 冻结小镇：不发布新任务
             //（建筑的排队工作与占地保留，上线后由下一次 poll 继续处理）
             com.wsteam.wandscape.shared.data.BuildingData bd = api.getBuilding(buildingId);
             UUID colonyId = bd != null ? bd.getColonyId() : null;

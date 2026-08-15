@@ -20,6 +20,7 @@ import com.wsteam.wandscape.building.scanner.CreativeScannerBlockEntity;
 import com.wsteam.wandscape.building.scanner.CreativeScannerBlockEntity.ShopGoodData;
 import com.wsteam.wandscape.building.scanner.InteractSpotMarkerBlock;
 import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.shared.ui.I18n;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -416,9 +417,7 @@ public record ScannerExportPacket(BlockPos pos) implements CustomPacketPayload {
             com.wsteam.wandscape.building.internal.BuildingConfigLoader.getInstance().registerFromJson(root);
 
             Log.info(TAG, "Exported building '{}' to {} (runtime-registered)", id, outFile.toAbsolutePath());
-            player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
-                    "§aExported building '" + id + "' to §e" + outFile.toAbsolutePath()
-                    + "§a — 可立即建造，/reload 后依然有效"));
+            player.sendSystemMessage(I18n.name("message.wandscape.scanner.export_building_ok", "§a已导出建筑 '%s' 到 §e%s§a — 可立即建造，/reload 后依然有效", id, outFile.toAbsolutePath()));
         } catch (IOException e) {
             Log.warn(TAG, "Failed to export building '{}'", id, e);
             player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
@@ -464,7 +463,7 @@ public record ScannerExportPacket(BlockPos pos) implements CustomPacketPayload {
         String id = scanner.getBuildingId();
         if (id.isBlank()) id = "custom_road_" + (System.currentTimeMillis() % 1000);
         String name = scanner.getDisplayName();
-        if (name.isBlank()) name = "自定义道路";
+        if (name.isBlank()) name = I18n.name("gui.wandscape.scanner.custom_road", "自定义道路").getString();
 
         java.util.Map<String, Integer> blockCounts = new java.util.HashMap<>();
         for (int x = wMin.getX(); x <= wMax.getX(); x++) {
@@ -512,9 +511,7 @@ public record ScannerExportPacket(BlockPos pos) implements CustomPacketPayload {
             com.wsteam.wandscape.road.data.RoadPresetLoader.getInstance().registerFromJson(root);
 
             Log.info(TAG, "Exported road preset '{}' to {} (runtime-registered)", id, outFile.toAbsolutePath());
-            player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
-                    "§aExported road preset '" + id + "' to §e" + outFile.toAbsolutePath()
-                    + "§a — 可立即使用，/reload 后依然有效"));
+            player.sendSystemMessage(I18n.name("message.wandscape.scanner.export_road_ok", "§a已导出道路预设 '%s' 到 §e%s§a — 可立即使用，/reload 后依然有效", id, outFile.toAbsolutePath()));
         } catch (IOException e) {
             Log.warn(TAG, "Failed to export road preset '{}'", id, e);
             player.sendSystemMessage(net.minecraft.network.chat.Component.literal(

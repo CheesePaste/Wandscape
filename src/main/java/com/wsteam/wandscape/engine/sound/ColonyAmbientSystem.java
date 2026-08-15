@@ -12,7 +12,7 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 
 /**
- * 殖民地昼夜环境音（客户端，包驱动）。
+ * 小镇昼夜环境音（客户端，包驱动）。
  *
  * <p>由服务端 {@code ColonyAmbientTracker} 判断玩家是否在城镇范围内并发送
  * {@link com.wsteam.wandscape.shared.network.ColonyAmbientPacket}，本类据包启停/切相位：

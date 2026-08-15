@@ -11,17 +11,17 @@ import com.wsteam.wandscape.shared.registry.WandscapeConstants;
 import net.minecraft.core.BlockPos;
 
 /**
- * 市政厅定位与"殖民地位于村庄内"判定。
+ * 市政厅定位与"小镇位于村庄内"判定。
  *
  * <p>配合 {@code MixinServerLevel}：让原版 {@code ServerLevel.isVillage} 在市政厅
- * {@code raid.villageRange} 内返回 true，原版 {@code Raid} 因此把殖民地当作村庄——
- * 中心不被挪走、不判 STOP/LOSS、波次刷新在殖民地周边。
+ * {@code raid.villageRange} 内返回 true，原版 {@code Raid} 因此把小镇当作村庄——
+ * 中心不被挪走、不判 STOP/LOSS、波次刷新在小镇周边。
  */
 public final class RaidTownHall {
 
     private RaidTownHall() {}
 
-    /** 某殖民地的市政厅锚点；未建/已拆/损坏返回 null。 */
+    /** 某小镇的市政厅锚点；未建/已拆/损坏返回 null。 */
     @Nullable
     public static BlockPos findTownHall(UUID colonyId) {
         for (BuildingData b : WandscapeApis.getBuildingApi().getColonyBuildings(colonyId)) {
@@ -33,7 +33,7 @@ public final class RaidTownHall {
         return null;
     }
 
-    /** pos 是否在任一殖民地市政厅水平 ±range 内（mixin 的 isVillage 判定）。 */
+    /** pos 是否在任一小镇市政厅水平 ±range 内（mixin 的 isVillage 判定）。 */
     public static boolean isNearTownHall(BlockPos pos, int range) {
         var colonyApi = WandscapeApis.getColonyApiSilently();
         if (colonyApi == null) return false;

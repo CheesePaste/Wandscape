@@ -3,6 +3,7 @@
   "display_name": "flower shop",
   "creator": "Wandscape",
   "category": "shop",
+  "first_free": true,
   "pattern": [
     [
       0,

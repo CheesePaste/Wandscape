@@ -9,15 +9,11 @@ import net.minecraft.core.BlockPos;
 import com.wsteam.wandscape.shared.log.Log;
 
 /**
- * Client-side static state for the simplified road placement mode.
+ * Client-side static state for road placement mode.
  *
- * <p>Two-phase interaction:
- * <ul>
- *   <li>{@link RoadPhase#BAR} — preset selection overlay shown, cursor lifted. Single-click
- *       highlights a preset, double-click confirms and enters PLACING.</li>
- *   <li>{@link RoadPhase#PLACING} — overlay hidden, cursor in game. Right-click set start,
- *       left-click set end, Enter submit.</li>
- * </ul>
+ * <p>Entering the ROAD tab opens the ImGui Road Studio (right panel). Over the 3D world the
+ * player left-click-drags to set start/end; the studio panel holds preset selection and the
+ * submit button that publishes the road task.
  */
 public final class RoadPlacementState {
 

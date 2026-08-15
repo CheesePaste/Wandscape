@@ -25,10 +25,10 @@ public interface TavernApi {
     /** Recruit a mage by resume index. Returns the resume data or null if invalid. */
     MageResume recruitMage(UUID tavernId, UUID colonyId, int index);
 
-    /** 殖民地累计成功「招募 NPC」的次数（首次免费，自第二次起收费）。 */
+    /** 小镇累计成功「招募 NPC」的次数（首次免费，自第二次起收费）。 */
     int getRecruitCount(UUID colonyId);
 
-    /** 能否进行下一次「招募 NPC」：首次免费；之后需殖民地每种元素 ≥ 招募成本。 */
+    /** 能否进行下一次「招募 NPC」：首次免费；之后需小镇每种元素 ≥ 招募成本。 */
     boolean canAffordRecruit(UUID colonyId);
 
     /** 消耗一次「招募 NPC」代价并计数：首次免费；之后每种元素扣招募成本。生成成功后调用，返回是否扣费成功。 */

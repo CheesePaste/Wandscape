@@ -111,7 +111,7 @@ public final class GuardAttackExecutor implements OpExecutor<AtomicOp.AttackMons
             return new CycleResult(-1, 0);
         }
         // 守卫生效到和平模式：立即完成任务并让光束淡出（任务会被 GuardTaskSource 重新发布，
-        // 交给非和平 NPC；全殖民地都和平则不再发布守卫任务）
+        // 交给非和平 NPC；全小镇都和平则不再发布守卫任务）
         if (npc.isPeaceMode()) {
             MagicBeamEntity beam = GuardCombat.findActiveBeam(level, npc);
             if (beam != null) beam.setLifetime(5);

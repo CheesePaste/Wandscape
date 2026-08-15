@@ -295,7 +295,7 @@ public final class TouristSimulation {
         t.setEnergy(t.getEnergy() - 20);
         String what = purchase != null
                 ? (purchase.count() > 1 ? purchase.itemId() + " ×" + purchase.count() : purchase.itemId())
-                : "进去逛了一圈，什么也没买";
+                : "message.wandscape.tourist.what_shop_empty";
         return new InteractionResult(purchase, delta[0], delta[1], delta[2], -20, what);
     }
 
@@ -323,7 +323,7 @@ public final class TouristSimulation {
                 }
             }
         }
-        return new InteractionResult(null, delta[0], delta[1], delta[2], -svc.energyPerUse(), "服务");
+        return new InteractionResult(null, delta[0], delta[1], delta[2], -svc.energyPerUse(), "message.wandscape.tourist.what_service");
     }
 
     /** Relax visit: restore energy (clamped to TOURIST_MAX_ENERGY), fill bars. */
@@ -341,7 +341,7 @@ public final class TouristSimulation {
         // 酒店晨起是唯一可重复的三值来源（grantHotelNightStay，可预测：住几晚加几次）。
         int[] delta = t.getVisitedBuildings().contains(buildingId)
                 ? new int[]{0, 0, 0} : fillBars(level, t, buildingId);
-        return new InteractionResult(null, delta[0], delta[1], delta[2], gained, "歇脚恢复精力");
+        return new InteractionResult(null, delta[0], delta[1], delta[2], gained, "message.wandscape.tourist.what_relax");
     }
 
     /** ATM 单次取现 = 初始钱包的随机 [min, max] 比例（新模型；池子 travelFund 封顶防无限取现）。 */
@@ -368,7 +368,7 @@ public final class TouristSimulation {
         // 三值每建筑只加一次；ATM 重访只取钱，不再加三值（唯一可重复来源是酒店晨起）。
         int[] delta = t.getVisitedBuildings().contains(buildingId)
                 ? new int[]{0, 0, 0} : fillBars(level, t, buildingId);
-        return new InteractionResult(null, delta[0], delta[1], delta[2], 0, "取钱 " + amount);
+        return new InteractionResult(null, delta[0], delta[1], delta[2], 0, "message.wandscape.tourist.what_atm");
     }
 
     /**
@@ -435,9 +435,9 @@ public final class TouristSimulation {
         String bldType = getBuildingTypeId(level, buildingId);
         BuildingConfig cfg = getConfig(level, buildingId);
         String bldName = (cfg != null && cfg.displayName() != null && !cfg.displayName().isEmpty())
-                ? cfg.displayName() : (bldType != null ? bldType : "旅馆");
+                ? cfg.displayName() : (bldType != null ? bldType : "unknown");
         addVisitMemory(t, bldType, bldName, "service", level.getGameTime(),
-                delta[0], delta[1], delta[2], 0, "住宿");
+                delta[0], delta[1], delta[2], 0, "message.wandscape.tourist.what_hotel_stay");
     }
 
     // ── Target selection (Find-Best-Action，视野内；镜像 TouristMoveGoal.planNextBuilding) ──
@@ -629,7 +629,7 @@ public final class TouristSimulation {
     }
 
     /**
-     * 找一个可入住的旅店（实体与 sim 共用）：在殖民地全部 intact 旅店中选**水平距离最近**、
+     * 找一个可入住的旅店（实体与 sim 共用）：在小镇全部 intact 旅店中选**水平距离最近**、
      * 有空位的（需已加载的由 {@code requireLoaded} 把关）。
      * 住店客回**自己**旅店不经过这里（各自在调用方直接解析，需区分「旅店失效解除登记」）。
      *

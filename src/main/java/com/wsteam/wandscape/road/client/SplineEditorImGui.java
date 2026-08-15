@@ -10,6 +10,7 @@ import com.wsteam.wandscape.road.core.SplineModel;
 import com.wsteam.wandscape.road.core.SplinePoint;
 import com.wsteam.wandscape.road.core.SplineVec3;
 import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.shared.ui.I18n;
 
 import imgui.ImGui;
 import imgui.flag.ImGuiCol;
@@ -85,7 +86,7 @@ public final class SplineEditorImGui {
 
         ImGui.pushStyleVar(imgui.flag.ImGuiStyleVar.WindowPadding, 12.0f, 14.0f);
 
-        if (ImGui.begin("道路制作工坊", flags)) {
+        if (ImGui.begin(I18n.name("gui.wandscape.roadstudio.window", "道路制作工坊").getString(), flags)) {
             SplineModel model = SplineEditorClientState.getModel();
 
             // ── 左缘拖柄：按住向左拖加宽 / 向右拖收窄，窗口始终紧贴右缘 ──
@@ -133,15 +134,15 @@ public final class SplineEditorImGui {
                 case SPLINE -> {
                     // ── Main TabBar for Spline Mode ──
                     if (ImGui.beginTabBar("SplineStudioTabBar", imgui.flag.ImGuiTabBarFlags.None)) {
-                        if (ImGui.beginTabItem(ICON_ROAD + " 曲线编辑")) {
+                        if (ImGui.beginTabItem(ICON_ROAD + " " + I18n.name("gui.wandscape.roadstudio.tab_curve", "曲线编辑").getString())) {
                             drawCurveNodesTab(model, mc);
                             ImGui.endTabItem();
                         }
-                        if (ImGui.beginTabItem(ICON_CUBE + " 阵列生成")) {
+                        if (ImGui.beginTabItem(ICON_CUBE + " " + I18n.name("gui.wandscape.roadstudio.tab_array", "阵列生成").getString())) {
                             drawArrayStudioTab();
                             ImGui.endTabItem();
                         }
-                        if (ImGui.beginTabItem(ICON_SAVE + " 模板与工具")) {
+                        if (ImGui.beginTabItem(ICON_SAVE + " " + I18n.name("gui.wandscape.roadstudio.tab_templates", "模板与工具").getString())) {
                             drawTemplatesTab(model, mc);
                             ImGui.endTabItem();
                         }
@@ -159,19 +160,19 @@ public final class SplineEditorImGui {
 
     // ── Tool Mode Switcher ──
     private static void drawToolModeSelector() {
-        WandscapeImGuiTheme.drawSectionHeader(ICON_EDIT, "模式选择");
+        WandscapeImGuiTheme.drawSectionHeader(ICON_EDIT, I18n.name("gui.wandscape.roadstudio.mode_title", "模式选择").getString());
         RoadPlacementState.ToolMode currentTool = RoadPlacementState.getActiveTool();
 
         float availW = ImGui.getContentRegionAvailX();
         float btnW = (availW - 9.0f) / 4.0f;
 
-        drawModeButton("替换", RoadPlacementState.ToolMode.REPLACE, currentTool, btnW);
+        drawModeButton(I18n.name("gui.wandscape.roadstudio.mode_replace", "替换").getString(), RoadPlacementState.ToolMode.REPLACE, currentTool, btnW);
         ImGui.sameLine();
-        drawModeButton("填充", RoadPlacementState.ToolMode.FILL, currentTool, btnW);
+        drawModeButton(I18n.name("gui.wandscape.roadstudio.mode_fill", "填充").getString(), RoadPlacementState.ToolMode.FILL, currentTool, btnW);
         ImGui.sameLine();
-        drawModeButton("铲平", RoadPlacementState.ToolMode.DESTROY_FILL, currentTool, btnW);
+        drawModeButton(I18n.name("gui.wandscape.roadstudio.mode_destroy", "铲平").getString(), RoadPlacementState.ToolMode.DESTROY_FILL, currentTool, btnW);
         ImGui.sameLine();
-        drawModeButton("样条", RoadPlacementState.ToolMode.SPLINE, currentTool, btnW);
+        drawModeButton(I18n.name("gui.wandscape.roadstudio.mode_spline", "样条").getString(), RoadPlacementState.ToolMode.SPLINE, currentTool, btnW);
 
         ImGui.spacing();
     }
@@ -195,14 +196,14 @@ public final class SplineEditorImGui {
     // ── Mode 1: 直线替换 (REPLACE) ──
     private static void drawReplaceModeTab(Minecraft mc) {
         ImGui.spacing();
-        WandscapeImGuiTheme.drawSectionHeader(ICON_ROAD, "铺设方块预设");
+        WandscapeImGuiTheme.drawSectionHeader(ICON_ROAD, I18n.name("gui.wandscape.roadstudio.replace_preset_header", "铺设方块预设").getString());
         drawPresetSelectorCombo();
 
         ImGui.spacing();
-        WandscapeImGuiTheme.drawSectionHeader(ICON_POINT, "铺设路线起终点");
-        drawStartPosLabelControls(mc, "起点坐标 (Start)");
+        WandscapeImGuiTheme.drawSectionHeader(ICON_POINT, I18n.name("gui.wandscape.roadstudio.replace_points_header", "铺设路线起终点").getString());
+        drawStartPosLabelControls(mc, I18n.name("gui.wandscape.roadstudio.start_label", "起点坐标 (Start)").getString());
         ImGui.spacing();
-        drawEndPosLabelControls(mc, "终点坐标 (End)");
+        drawEndPosLabelControls(mc, I18n.name("gui.wandscape.roadstudio.end_label", "终点坐标 (End)").getString());
 
         ImGui.spacing();
         BlockPos start = RoadPlacementState.getStartPos();
@@ -211,11 +212,11 @@ public final class SplineEditorImGui {
             int dx = Math.abs(end.getX() - start.getX()) + 1;
             int dz = Math.abs(end.getZ() - start.getZ()) + 1;
             double dist = Math.sqrt((double)(end.getX() - start.getX()) * (end.getX() - start.getX()) + (double)(end.getZ() - start.getZ()) * (end.getZ() - start.getZ()));
-            WandscapeImGuiTheme.drawSectionHeader(ICON_CUBE, "铺设数据评估");
-            ImGui.text(String.format("覆盖跨度: %d × %d 方块范围", dx, dz));
-            ImGui.text(String.format("直线距离: %.1f 方块", dist));
+            WandscapeImGuiTheme.drawSectionHeader(ICON_CUBE, I18n.name("gui.wandscape.roadstudio.replace_eval_header", "铺设数据评估").getString());
+            ImGui.text(I18n.name("gui.wandscape.roadstudio.replace_span", "覆盖跨度: %d × %d 方块范围", dx, dz).getString());
+            ImGui.text(I18n.name("gui.wandscape.roadstudio.replace_dist", "直线距离: %.1f 方块", dist).getString());
         } else {
-            WandscapeImGuiTheme.textMuted("提示: 请选择起点与终点（可在世界中右键/左键点击）");
+            WandscapeImGuiTheme.textMuted(I18n.name("gui.wandscape.roadstudio.replace_hint", "提示: 请选择起点与终点（可在世界中右键/左键点击）").getString());
         }
 
         ImGui.spacing();
@@ -223,7 +224,7 @@ public final class SplineEditorImGui {
 
         ImGui.pushStyleColor(ImGuiCol.Button, 0.22f, 0.45f, 0.25f, 0.90f);
         ImGui.pushStyleColor(ImGuiCol.ButtonHovered, 0.30f, 0.60f, 0.32f, 1.00f);
-        if (ImGui.button(ICON_CUBE + " 下发直线铺设任务", -1, 36)) {
+        if (ImGui.button(ICON_CUBE + " " + I18n.name("gui.wandscape.roadstudio.replace_submit", "下发直线铺设任务").getString(), -1, 36)) {
             if (RoadPlacementState.isReady()) {
                 String presetId = RoadPlacementState.getSelectedPreset().id();
                 PacketDistributor.sendToServer(new com.wsteam.wandscape.road.network.RoadPlacePacket(presetId, start, end));
@@ -234,21 +235,21 @@ public final class SplineEditorImGui {
                 RoadPlacementState.clearAll();
             }
         }
-        WandscapeImGuiTheme.drawTooltip("下发直线地表道路替换任务给法师 NPC");
+        WandscapeImGuiTheme.drawTooltip(I18n.name("gui.wandscape.roadstudio.replace_submit_tip", "下发直线地表道路替换任务给法师 NPC").getString());
         ImGui.popStyleColor(2);
     }
 
     // ── Mode 2: 立方体填充 (FILL) ──
     private static void drawFillModeTab(Minecraft mc) {
         ImGui.spacing();
-        WandscapeImGuiTheme.drawSectionHeader(ICON_ROAD, "填充方块预设");
+        WandscapeImGuiTheme.drawSectionHeader(ICON_ROAD, I18n.name("gui.wandscape.roadstudio.fill_preset_header", "填充方块预设").getString());
         drawPresetSelectorCombo();
 
         ImGui.spacing();
-        WandscapeImGuiTheme.drawSectionHeader(ICON_POINT, "3D 立方体对角点");
-        drawStartPosLabelControls(mc, "角点 1 (Start)");
+        WandscapeImGuiTheme.drawSectionHeader(ICON_POINT, I18n.name("gui.wandscape.roadstudio.fill_corners_header", "3D 立方体对角点").getString());
+        drawStartPosLabelControls(mc, I18n.name("gui.wandscape.roadstudio.fill_corner1", "角点 1 (Start)").getString());
         ImGui.spacing();
-        drawEndPosLabelControls(mc, "角点 2 (End)");
+        drawEndPosLabelControls(mc, I18n.name("gui.wandscape.roadstudio.fill_corner2", "角点 2 (End)").getString());
 
         ImGui.spacing();
         BlockPos start = RoadPlacementState.getStartPos();
@@ -258,11 +259,11 @@ public final class SplineEditorImGui {
             int dy = Math.abs(end.getY() - start.getY()) + 1;
             int dz = Math.abs(end.getZ() - start.getZ()) + 1;
             long volume = (long) dx * dy * dz;
-            WandscapeImGuiTheme.drawSectionHeader(ICON_CUBE, "立方体体积评估");
-            ImGui.text(String.format("尺寸: %d (宽) × %d (高) × %d (深)", dx, dy, dz));
-            ImGui.text(String.format("总体积: %d 个方块", volume));
+            WandscapeImGuiTheme.drawSectionHeader(ICON_CUBE, I18n.name("gui.wandscape.roadstudio.fill_eval_header", "立方体体积评估").getString());
+            ImGui.text(I18n.name("gui.wandscape.roadstudio.fill_size", "尺寸: %d (宽) × %d (高) × %d (深)", dx, dy, dz).getString());
+            ImGui.text(I18n.name("gui.wandscape.roadstudio.fill_volume", "总体积: %d 个方块", volume).getString());
         } else {
-            WandscapeImGuiTheme.textMuted("提示: 请选择两个对角点（可在世界中右键/左键点击）");
+            WandscapeImGuiTheme.textMuted(I18n.name("gui.wandscape.roadstudio.fill_hint", "提示: 请选择两个对角点（可在世界中右键/左键点击）").getString());
         }
 
         ImGui.spacing();
@@ -270,7 +271,7 @@ public final class SplineEditorImGui {
 
         ImGui.pushStyleColor(ImGuiCol.Button, 0.22f, 0.45f, 0.25f, 0.90f);
         ImGui.pushStyleColor(ImGuiCol.ButtonHovered, 0.30f, 0.60f, 0.32f, 1.00f);
-        if (ImGui.button(ICON_CUBE + " 下发立方体填充任务", -1, 36)) {
+        if (ImGui.button(ICON_CUBE + " " + I18n.name("gui.wandscape.roadstudio.fill_submit", "下发立方体填充任务").getString(), -1, 36)) {
             if (RoadPlacementState.isReady()) {
                 String presetId = RoadPlacementState.getSelectedPreset().id();
                 PacketDistributor.sendToServer(new com.wsteam.wandscape.road.network.FillBoxPacket(presetId, start, end));
@@ -281,7 +282,7 @@ public final class SplineEditorImGui {
                 RoadPlacementState.clearAll();
             }
         }
-        WandscapeImGuiTheme.drawTooltip("下发 3D 立方体填充任务给法师 NPC");
+        WandscapeImGuiTheme.drawTooltip(I18n.name("gui.wandscape.roadstudio.fill_submit_tip", "下发 3D 立方体填充任务给法师 NPC").getString());
         ImGui.popStyleColor(2);
     }
 
@@ -302,15 +303,15 @@ public final class SplineEditorImGui {
     // ── Mode 3: 铲平垫平 (DESTROY_FILL) ──
     private static void drawDestroyFillModeTab(Minecraft mc) {
         ImGui.spacing();
-        WandscapeImGuiTheme.drawSectionHeader(ICON_CUBE, "参照基准方块");
+        WandscapeImGuiTheme.drawSectionHeader(ICON_CUBE, I18n.name("gui.wandscape.roadstudio.destroy_ref_header", "参照基准方块").getString());
         String refBlock = RoadPlacementState.getRefBlockId();
         if (refBlock.isEmpty()) {
-            ImGui.textDisabled("未捕获参照方块 (在世界中右键点击方块捕获)");
+            ImGui.textDisabled(I18n.name("gui.wandscape.roadstudio.destroy_no_ref", "未捕获参照方块 (在世界中右键点击方块捕获)").getString());
         } else {
-            ImGui.textColored(0.40f, 0.85f, 0.40f, 1.00f, "参照方块: " + refBlock);
+            ImGui.textColored(0.40f, 0.85f, 0.40f, 1.00f, I18n.name("gui.wandscape.roadstudio.destroy_ref_fmt", "参照方块: %s", refBlock).getString());
         }
 
-        if (ImGui.button("捕捉脚下方块为参照", -1, 24)) {
+        if (ImGui.button(I18n.name("gui.wandscape.roadstudio.destroy_capture_feet", "捕捉脚下方块为参照").getString(), -1, 24)) {
             BlockPos feet = getCapturedFeetPosition(mc);
             RoadPlacementState.setStartPos(feet);
             if (mc.level != null) {
@@ -321,10 +322,10 @@ public final class SplineEditorImGui {
         }
 
         ImGui.spacing();
-        WandscapeImGuiTheme.drawSectionHeader(ICON_POINT, "平整区域边界");
-        drawStartPosLabelControls(mc, "边界起点 (Start)");
+        WandscapeImGuiTheme.drawSectionHeader(ICON_POINT, I18n.name("gui.wandscape.roadstudio.destroy_area_header", "平整区域边界").getString());
+        drawStartPosLabelControls(mc, I18n.name("gui.wandscape.roadstudio.destroy_start", "边界起点 (Start)").getString());
         ImGui.spacing();
-        drawEndPosLabelControls(mc, "边界终点 (End)");
+        drawEndPosLabelControls(mc, I18n.name("gui.wandscape.roadstudio.destroy_end", "边界终点 (End)").getString());
 
         ImGui.spacing();
         BlockPos start = RoadPlacementState.getStartPos();
@@ -332,11 +333,11 @@ public final class SplineEditorImGui {
         if (start != null && end != null) {
             int dx = Math.abs(end.getX() - start.getX()) + 1;
             int dz = Math.abs(end.getZ() - start.getZ()) + 1;
-            WandscapeImGuiTheme.drawSectionHeader(ICON_ROAD, "平整面积评估");
-            ImGui.text(String.format("底面尺寸: %d × %d 方块", dx, dz));
-            ImGui.text(String.format("平整面积: %d 平方方块", dx * dz));
+            WandscapeImGuiTheme.drawSectionHeader(ICON_ROAD, I18n.name("gui.wandscape.roadstudio.destroy_eval_header", "平整面积评估").getString());
+            ImGui.text(I18n.name("gui.wandscape.roadstudio.destroy_size", "底面尺寸: %d × %d 方块", dx, dz).getString());
+            ImGui.text(I18n.name("gui.wandscape.roadstudio.destroy_area", "平整面积: %d 平方方块", dx * dz).getString());
         } else {
-            WandscapeImGuiTheme.textMuted("提示: 请选择起点与终点以确定平整区域");
+            WandscapeImGuiTheme.textMuted(I18n.name("gui.wandscape.roadstudio.destroy_hint", "提示: 请选择起点与终点以确定平整区域").getString());
         }
 
         ImGui.spacing();
@@ -344,7 +345,7 @@ public final class SplineEditorImGui {
 
         ImGui.pushStyleColor(ImGuiCol.Button, 0.22f, 0.45f, 0.25f, 0.90f);
         ImGui.pushStyleColor(ImGuiCol.ButtonHovered, 0.30f, 0.60f, 0.32f, 1.00f);
-        if (ImGui.button(ICON_TRASH + " 下发地形平整任务", -1, 36)) {
+        if (ImGui.button(ICON_TRASH + " " + I18n.name("gui.wandscape.roadstudio.destroy_submit", "下发地形平整任务").getString(), -1, 36)) {
             if (RoadPlacementState.isReady()) {
                 PacketDistributor.sendToServer(new com.wsteam.wandscape.road.network.DestroyFillPacket(start, end));
                 Log.info(TAG, "[DestroyFill] Published destroy fill: start={} end={}", start, end);
@@ -354,7 +355,7 @@ public final class SplineEditorImGui {
                 RoadPlacementState.clearAll();
             }
         }
-        WandscapeImGuiTheme.drawTooltip("下发地形铲平/垫平任务给法师 NPC");
+        WandscapeImGuiTheme.drawTooltip(I18n.name("gui.wandscape.roadstudio.destroy_submit_tip", "下发地形铲平/垫平任务给法师 NPC").getString());
         ImGui.popStyleColor(2);
     }
 
@@ -362,7 +363,9 @@ public final class SplineEditorImGui {
     private static void drawPresetSelectorCombo() {
         List<RoadPreset> presets = RoadPlacementState.getPresets();
         int currentIdx = RoadPlacementState.getSelectedPresetIndex();
-        String[] presetNames = presets.stream().map(RoadPreset::displayName).toArray(String[]::new);
+        String[] presetNames = presets.stream()
+                .map(p -> I18n.name("gui.wandscape.road.preset." + p.id(), p.displayName()).getString())
+                .toArray(String[]::new);
 
         ImInt selectedPresetInt = new ImInt(currentIdx);
         ImGui.pushItemWidth(-1);
@@ -397,12 +400,12 @@ public final class SplineEditorImGui {
             }
 
             ImGui.sameLine();
-            if (ImGui.button("清除##ClearStart", btnW, 20)) {
+            if (ImGui.button(I18n.name("gui.wandscape.roadstudio.pos_clear", "清除").getString() + "##ClearStart", btnW, 20)) {
                 RoadPlacementState.clearStartPos();
             }
         } else {
-            ImGui.textDisabled("  [未设置点位]");
-            if (ImGui.button("捕捉脚下位点##SetFeetStart", -1, 24)) {
+            ImGui.textDisabled(I18n.name("gui.wandscape.roadstudio.pos_unset", "  [未设置点位]").getString());
+            if (ImGui.button(I18n.name("gui.wandscape.roadstudio.pos_capture", "捕捉脚下位点").getString() + "##SetFeetStart", -1, 24)) {
                 RoadPlacementState.setStartPos(getCapturedFeetPosition(mc));
             }
         }
@@ -433,12 +436,12 @@ public final class SplineEditorImGui {
             }
 
             ImGui.sameLine();
-            if (ImGui.button("清除##ClearEnd", btnW, 20)) {
+            if (ImGui.button(I18n.name("gui.wandscape.roadstudio.pos_clear", "清除").getString() + "##ClearEnd", btnW, 20)) {
                 RoadPlacementState.clearEndPos();
             }
         } else {
-            ImGui.textDisabled("  [未设置点位]");
-            if (ImGui.button("捕捉脚下位点##SetFeetEnd", -1, 24)) {
+            ImGui.textDisabled(I18n.name("gui.wandscape.roadstudio.pos_unset", "  [未设置点位]").getString());
+            if (ImGui.button(I18n.name("gui.wandscape.roadstudio.pos_capture", "捕捉脚下位点").getString() + "##SetFeetEnd", -1, 24)) {
                 RoadPlacementState.setEndPos(getCapturedFeetPosition(mc));
             }
         }
@@ -449,19 +452,22 @@ public final class SplineEditorImGui {
         ImGui.pushStyleColor(ImGuiCol.ChildBg, 0.15f, 0.11f, 0.22f, 0.85f);
         int childFlags = imgui.flag.ImGuiWindowFlags.NoScrollbar | imgui.flag.ImGuiWindowFlags.NoScrollWithMouse;
         if (ImGui.beginChild("HeaderBanner", 0, 66, false, childFlags)) {
-            ImGui.textColored(0.95f, 0.78f, 0.30f, 1.00f, ICON_ROAD + " WANDSCAPE 道路制作工坊");
+            ImGui.textColored(0.95f, 0.78f, 0.30f, 1.00f, ICON_ROAD + " " + I18n.name("gui.wandscape.roadstudio.banner", "WANDSCAPE 道路制作工坊").getString());
             ImGui.sameLine();
             WandscapeImGuiTheme.textMuted("v2.0");
             ImGui.spacing();
 
             String toolName = switch (RoadPlacementState.getActiveTool()) {
-                case REPLACE -> "直线替换";
-                case FILL -> "立方体填充";
-                case DESTROY_FILL -> "铲平垫平";
-                case SPLINE -> "样条曲线";
+                case REPLACE -> I18n.name("gui.wandscape.roadstudio.tool_replace", "直线替换").getString();
+                case FILL -> I18n.name("gui.wandscape.roadstudio.tool_fill", "立方体填充").getString();
+                case DESTROY_FILL -> I18n.name("gui.wandscape.roadstudio.tool_destroy", "铲平垫平").getString();
+                case SPLINE -> I18n.name("gui.wandscape.roadstudio.tool_spline", "样条曲线").getString();
             };
-            String topDownStr = SplineEditorClientState.isTopDown() ? "2D 俯瞰" : "3D 自由";
-            ImGui.textColored(0.40f, 0.75f, 0.95f, 1.00f, String.format("模式: %s  |  视角: %s", toolName, topDownStr));
+            String topDownStr = SplineEditorClientState.isTopDown()
+                    ? I18n.name("gui.wandscape.roadstudio.view_topdown", "2D 俯瞰").getString()
+                    : I18n.name("gui.wandscape.roadstudio.view_free", "3D 自由").getString();
+            ImGui.textColored(0.40f, 0.75f, 0.95f, 1.00f, I18n.name(
+                    "gui.wandscape.roadstudio.mode_format", "模式: %s  |  视角: %s", toolName, topDownStr).getString());
         }
         ImGui.endChild();
         ImGui.popStyleColor(1);
@@ -473,9 +479,9 @@ public final class SplineEditorImGui {
     private static void drawCurveNodesTab(SplineModel model, Minecraft mc) {
         ImGui.spacing();
         
-        // \u6a21\u5f0f\u9009\u62e9\u5668
-        WandscapeImGuiTheme.drawSectionHeader(ICON_EDIT, "\u7f16\u8f91\u6a21\u5f0f\u5207\u6362");
-        
+        // \u7f16\u8f91\u6a21\u5f0f\u5207\u6362
+        WandscapeImGuiTheme.drawSectionHeader(ICON_EDIT, I18n.name("gui.wandscape.roadstudio.curve_edit_mode", "\u7f16\u8f91\u6a21\u5f0f\u5207\u6362").getString());
+
         boolean isAdd = SplineEditorClientState.getEditMode() == SplineEditorClientState.EditMode.ADD;
         float halfW = (ImGui.getContentRegionAvailX() - 8.0f) / 2.0f;
 
@@ -486,10 +492,10 @@ public final class SplineEditorImGui {
             ImGui.pushStyleColor(ImGuiCol.Button, 0.16f, 0.14f, 0.20f, 0.85f);
             ImGui.pushStyleColor(ImGuiCol.Border, 0.40f, 0.35f, 0.25f, 0.40f);
         }
-        if (ImGui.button(ICON_ADD + " \u70b9\u51fb\u6dfb\u52a0\u70b9", halfW, 32)) {
+        if (ImGui.button(ICON_ADD + " " + I18n.name("gui.wandscape.roadstudio.curve_add_point", "\u70b9\u51fb\u6dfb\u52a0\u70b9").getString(), halfW, 32)) {
             SplineEditorClientState.setEditMode(SplineEditorClientState.EditMode.ADD);
         }
-        WandscapeImGuiTheme.drawTooltip("\u3010\u6dfb\u52a0\u6a21\u5f0f\u3011\u5728\u6e38\u620f\u4e16\u754c\u4e2d\u5de6\u952e\u70b9\u51fb\u65b9\u5757\u8868\u9762\uff0c\u53ef\u987a\u5e8f\u653e\u7f6e\u65b0\u7684\u9053\u8def\u63a7\u5236\u70b9\u3002");
+        WandscapeImGuiTheme.drawTooltip(I18n.name("gui.wandscape.roadstudio.curve_add_point_tip", "\u3010\u6dfb\u52a0\u6a21\u5f0f\u3011\u5728\u6e38\u620f\u4e16\u754c\u4e2d\u5de6\u952e\u70b9\u51fb\u65b9\u5757\u8868\u9762\uff0c\u53ef\u987a\u5e8f\u653e\u7f6e\u65b0\u7684\u9053\u8def\u63a7\u5236\u70b9\u3002").getString());
         ImGui.popStyleColor(2);
 
         ImGui.sameLine();
@@ -501,26 +507,26 @@ public final class SplineEditorImGui {
             ImGui.pushStyleColor(ImGuiCol.Button, 0.16f, 0.14f, 0.20f, 0.85f);
             ImGui.pushStyleColor(ImGuiCol.Border, 0.40f, 0.35f, 0.25f, 0.40f);
         }
-        if (ImGui.button(ICON_EDIT + " \u9009\u62e9\u4e0e\u62d6\u62fd", halfW, 32)) {
+        if (ImGui.button(ICON_EDIT + " " + I18n.name("gui.wandscape.roadstudio.curve_select_drag", "\u9009\u62e9\u4e0e\u62d6\u62fd").getString(), halfW, 32)) {
             SplineEditorClientState.setEditMode(SplineEditorClientState.EditMode.EDIT);
         }
-        WandscapeImGuiTheme.drawTooltip("\u3010\u9009\u62e9\u7f16\u8f91\u6a21\u5f0f\u3011\u5728\u4e16\u754c\u4e2d\u6216\u4e0b\u65b9\u5217\u8868\u4e2d\u70b9\u51fb\u63a7\u5236\u70b9\uff0c\u901a\u8fc7 3D \u5750\u6807\u8f74\u624b\u67c4\u62d6\u52a8\u8c03\u63a7\u66f2\u7ebf\u8f68\u8ff9\u3002");
+        WandscapeImGuiTheme.drawTooltip(I18n.name("gui.wandscape.roadstudio.curve_select_drag_tip", "\u3010\u9009\u62e9\u7f16\u8f91\u6a21\u5f0f\u3011\u5728\u4e16\u754c\u4e2d\u6216\u4e0b\u65b9\u5217\u8868\u4e2d\u70b9\u51fb\u63a7\u5236\u70b9\uff0c\u901a\u8fc7 3D \u5750\u6807\u8f74\u624b\u67c4\u62d6\u62fd\u8c03\u63a7\u66f2\u7ebf\u8f68\u8ff9\u3002").getString());
         ImGui.popStyleColor(2);
 
         ImGui.spacing();
         ImGui.spacing();
 
         // \u66f2\u7ebf\u51e0\u4f55\u4e0e\u5e73\u79fb
-        WandscapeImGuiTheme.drawSectionHeader(ICON_ROAD, "\u66f2\u7ebf\u51e0\u4f55\u4e0e\u5e73\u79fb");
-        
+        WandscapeImGuiTheme.drawSectionHeader(ICON_ROAD, I18n.name("gui.wandscape.roadstudio.curve_geom_header", "\u66f2\u7ebf\u51e0\u4f55\u4e0e\u5e73\u79fb").getString());
+
         ImBoolean closed = new ImBoolean(model.isClosed());
-        if (ImGui.checkbox("\u95ed\u5408\u73af\u5f62\u9053\u8def (\u8fde\u63a5\u9996\u5c3e)", closed)) {
+        if (ImGui.checkbox(I18n.name("gui.wandscape.roadstudio.curve_closed", "\u95ed\u5408\u73af\u5f62\u9053\u8def (\u8fde\u63a5\u9996\u5c3e)").getString(), closed)) {
             model.setClosed(closed.get());
         }
-        WandscapeImGuiTheme.drawTooltip("\u52fe\u9009\u540e\u81ea\u52a8\u8fde\u63a5\u9053\u8def\u9996\u5c3e\u70b9\uff0c\u6784\u5efa\u65e0\u7f1d\u95ed\u5408\u7684\u73af\u5f62\u9053\u8def\u3002");
+        WandscapeImGuiTheme.drawTooltip(I18n.name("gui.wandscape.roadstudio.curve_closed_tip", "\u52fe\u9009\u540e\u81ea\u52a8\u8fde\u63a5\u9053\u8def\u9996\u5c3e\u70b9\uff0c\u6784\u5efa\u65e0\u7f1d\u95ed\u5408\u7684\u73af\u5f62\u9053\u8def\u3002").getString());
 
         ImGui.spacing();
-        WandscapeImGuiTheme.textMuted("\u6574\u4f53\u5e73\u79fb\u504f\u79fb\u91cf (X, Y, Z):");
+        WandscapeImGuiTheme.textMuted(I18n.name("gui.wandscape.roadstudio.curve_shift_label", "\u6574\u4f53\u5e73\u79fb\u504f\u79fb\u91cf (X, Y, Z):").getString());
         
         float availShiftW = ImGui.getContentRegionAvailX();
         float shiftBtnW = 68.0f;
@@ -528,17 +534,17 @@ public final class SplineEditorImGui {
 
         ImGui.pushItemWidth(shiftInputW);
         ImGui.inputDouble("##ShiftX", globalShiftX, 0.0, 0.0, "%.1f");
-        WandscapeImGuiTheme.drawTooltip("X \u8f74\u5e73\u79fb\u589e\u91cf (\u65b9\u5757)");
+        WandscapeImGuiTheme.drawTooltip(I18n.name("gui.wandscape.roadstudio.curve_shift_x_tip", "X \u8f74\u5e73\u79fb\u589e\u91cf (\u65b9\u5757)").getString());
         ImGui.sameLine();
         ImGui.inputDouble("##ShiftY", globalShiftY, 0.0, 0.0, "%.1f");
-        WandscapeImGuiTheme.drawTooltip("Y \u8f74\u9ad8\u7a0b\u589e\u91cf (\u65b9\u5757)");
+        WandscapeImGuiTheme.drawTooltip(I18n.name("gui.wandscape.roadstudio.curve_shift_y_tip", "Y \u8f74\u9ad8\u7a0b\u589e\u91cf (\u65b9\u5757)").getString());
         ImGui.sameLine();
         ImGui.inputDouble("##ShiftZ", globalShiftZ, 0.0, 0.0, "%.1f");
-        WandscapeImGuiTheme.drawTooltip("Z \u8f74\u5e73\u79fb\u589e\u91cf (\u65b9\u5757)");
+        WandscapeImGuiTheme.drawTooltip(I18n.name("gui.wandscape.roadstudio.curve_shift_z_tip", "Z \u8f74\u5e73\u79fb\u589e\u91cf (\u65b9\u5757)").getString());
         ImGui.popItemWidth();
 
         ImGui.sameLine();
-        if (ImGui.button("\u6574\u4f53\u5e73\u79fb", shiftBtnW, 24)) {
+        if (ImGui.button(I18n.name("gui.wandscape.roadstudio.curve_shift_btn", "\u6574\u4f53\u5e73\u79fb").getString(), shiftBtnW, 24)) {
             SplineVec3 delta = new SplineVec3(globalShiftX.get(), globalShiftY.get(), globalShiftZ.get());
             model.translateAll(delta);
             globalShiftX.set(0.0);
@@ -546,24 +552,26 @@ public final class SplineEditorImGui {
             globalShiftZ.set(0.0);
             Log.info(TAG, "Translated all points by {}", delta);
         }
-        WandscapeImGuiTheme.drawTooltip("\u5c06\u6574\u6761\u66f2\u7ebf\u4e0a\u7684\u6240\u6709\u63a7\u5236\u70b9\u6309\u7167\u8f93\u5165\u7684 (X, Y, Z) \u504f\u79fb\u91cf\u4e00\u5e76\u5e73\u79fb\u3002");
+        WandscapeImGuiTheme.drawTooltip(I18n.name("gui.wandscape.roadstudio.curve_shift_btn_tip", "\u5c06\u6574\u6761\u66f2\u7ebf\u4e0a\u7684\u6240\u6709\u63a7\u5236\u70b9\u6309\u7167\u8f93\u5165\u7684 (X, Y, Z) \u504f\u79fb\u91cf\u4e00\u5e76\u5e73\u79fb\u3002").getString());
 
         ImGui.spacing();
         ImGui.spacing();
 
         // \u63a7\u5236\u70b9\u5217\u8868
-        WandscapeImGuiTheme.drawSectionHeader(ICON_POINT, "\u63a7\u5236\u70b9\u5217\u8868 (" + model.getPoints().size() + ")");
+        WandscapeImGuiTheme.drawSectionHeader(ICON_POINT, I18n.name("gui.wandscape.roadstudio.curve_list_header", "\u63a7\u5236\u70b9\u5217\u8868 (%d)", model.getPoints().size()).getString());
         
         if (ImGui.beginChild("PointsListChild", 0, 130, true)) {
             if (model.getPoints().isEmpty()) {
                 ImGui.spacing();
-                ImGui.textDisabled("  \u5f53\u524d\u65e0\u63a7\u5236\u70b9\u3002");
-                ImGui.textDisabled("  \u8bf7\u5728\u4e16\u754c\u4e2d\u5de6\u952e\u70b9\u51fb\u65b9\u5757\u6dfb\u52a0\u3002");
+                ImGui.textDisabled(I18n.name("gui.wandscape.roadstudio.curve_list_empty1", "  \u5f53\u524d\u65e0\u63a7\u5236\u70b9\u3002").getString());
+                ImGui.textDisabled(I18n.name("gui.wandscape.roadstudio.curve_list_empty2", "  \u8bf7\u5728\u4e16\u754c\u4e2d\u5de6\u952e\u70b9\u51fb\u65b9\u5757\u6dfb\u52a0\u3002").getString());
             } else {
                 for (int i = 0; i < model.getPoints().size(); i++) {
                     SplinePoint pt = model.getPoints().get(i);
                     SplineVec3 anchor = pt.getAnchor();
-                    String symTag = pt.isLocked() ? "[\u5bf9\u79f0]" : "[\u81ea\u7531]";
+                    String symTag = pt.isLocked()
+                            ? I18n.name("gui.wandscape.roadstudio.curve_sym", "[\u5bf9\u79f0]").getString()
+                            : I18n.name("gui.wandscape.roadstudio.curve_free", "[\u81ea\u7531]").getString();
                     String label = String.format("#%d  (%.1f, %.1f, %.1f) %s", i, anchor.x(), anchor.y(), anchor.z(), symTag);
                     
                     boolean isSelected = SplineEditorClientState.getSelectedPointIndex() == i;
@@ -572,7 +580,7 @@ public final class SplineEditorImGui {
                         SplineEditorClientState.setEditMode(SplineEditorClientState.EditMode.EDIT);
                     }
                     if (isSelected) {
-                        WandscapeImGuiTheme.drawTooltip("\u5f53\u524d\u9009\u4e2d\u7684\u63a7\u5236\u70b9 #" + i + "\u3002\u53ef\u5728\u4e0b\u65b9\u68c0\u67e5\u5668\u4e2d\u7cbe\u51c6\u4fee\u6539\u3002");
+                        WandscapeImGuiTheme.drawTooltip(I18n.name("gui.wandscape.roadstudio.curve_selected_tip", "\u5f53\u524d\u9009\u4e2d\u7684\u63a7\u5236\u70b9 #%d\u3002\u53ef\u5728\u4e0b\u65b9\u68c0\u67e5\u5668\u4e2d\u7cbe\u786e\u4fee\u6539\u3002", i).getString());
                     }
                 }
             }
@@ -587,23 +595,23 @@ public final class SplineEditorImGui {
             SplinePoint pt = model.getPoints().get(selectedIdx);
             
             ImGui.spacing();
-            WandscapeImGuiTheme.drawSectionHeader(ICON_CAM, "\u8282\u70b9\u5c5e\u6027\u68c0\u67e5\u5668 #" + selectedIdx);
+            WandscapeImGuiTheme.drawSectionHeader(ICON_CAM, I18n.name("gui.wandscape.roadstudio.curve_inspector_header", "\u8282\u70b9\u5c5e\u6027\u68c0\u67e5\u5668 #%d", selectedIdx).getString());
 
-            WandscapeImGuiTheme.textMuted("\u8c03\u6574\u53e5\u67c4\u76ee\u6807:");
-            if (ImGui.radioButton("\u4e3b\u951a\u70b9", selectedType == SplineEditorClientState.SelectionType.ANCHOR)) {
+            WandscapeImGuiTheme.textMuted(I18n.name("gui.wandscape.roadstudio.curve_target_label", "\u8c03\u6574\u53e5\u67c4\u76ee\u6807:").getString());
+            if (ImGui.radioButton(I18n.name("gui.wandscape.roadstudio.curve_anchor", "\u4e3b\u951a\u70b9").getString(), selectedType == SplineEditorClientState.SelectionType.ANCHOR)) {
                 SplineEditorClientState.setSelectedPoint(selectedIdx, SplineEditorClientState.SelectionType.ANCHOR);
             }
-            WandscapeImGuiTheme.drawTooltip("\u79fb\u52a8\u63a7\u5236\u70b9\u5728\u4e16\u754c\u4e2d\u7684\u4e3b\u4e2d\u5fc3\u4f4d\u7f6e");
+            WandscapeImGuiTheme.drawTooltip(I18n.name("gui.wandscape.roadstudio.curve_anchor_tip", "\u79fb\u52a8\u63a7\u5236\u70b9\u5728\u4e16\u754c\u4e2d\u7684\u4e3b\u4e2d\u5fc3\u4f4d\u7f6e").getString());
             ImGui.sameLine();
-            if (ImGui.radioButton("\u524d\u624b\u67c4", selectedType == SplineEditorClientState.SelectionType.CONTROL_PREV)) {
+            if (ImGui.radioButton(I18n.name("gui.wandscape.roadstudio.curve_handle_prev", "\u524d\u624b\u67c4").getString(), selectedType == SplineEditorClientState.SelectionType.CONTROL_PREV)) {
                 SplineEditorClientState.setSelectedPoint(selectedIdx, SplineEditorClientState.SelectionType.CONTROL_PREV);
             }
-            WandscapeImGuiTheme.drawTooltip("\u8c03\u6574\u5165\u5411 Bezier \u5207\u7ebf\u63a7\u5236\u70b9");
+            WandscapeImGuiTheme.drawTooltip(I18n.name("gui.wandscape.roadstudio.curve_handle_prev_tip", "\u8c03\u6574\u5165\u5411 Bezier \u5207\u7ebf\u63a7\u5236\u70b9").getString());
             ImGui.sameLine();
-            if (ImGui.radioButton("\u540e\u624b\u67c4", selectedType == SplineEditorClientState.SelectionType.CONTROL_NEXT)) {
+            if (ImGui.radioButton(I18n.name("gui.wandscape.roadstudio.curve_handle_next", "\u540e\u624b\u67c4").getString(), selectedType == SplineEditorClientState.SelectionType.CONTROL_NEXT)) {
                 SplineEditorClientState.setSelectedPoint(selectedIdx, SplineEditorClientState.SelectionType.CONTROL_NEXT);
             }
-            WandscapeImGuiTheme.drawTooltip("\u8c03\u6574\u51fa\u5411 Bezier \u5207\u7ebf\u63a7\u5236\u70b9");
+            WandscapeImGuiTheme.drawTooltip(I18n.name("gui.wandscape.roadstudio.curve_handle_next_tip", "\u8c03\u6574\u51fa\u5411 Bezier \u5207\u7ebf\u63a7\u5236\u70b9").getString());
 
             SplineVec3 targetPos = switch (selectedType) {
                 case ANCHOR -> pt.getAnchor();
@@ -617,7 +625,7 @@ public final class SplineEditorImGui {
                 ImDouble py = new ImDouble(targetPos.y());
                 ImDouble pz = new ImDouble(targetPos.z());
 
-                ImGui.text("\u4e09\u7ef4\u7cbe\u786e\u5750\u6807:");
+                ImGui.text(I18n.name("gui.wandscape.roadstudio.curve_coord_label", "\u4e09\u7ef4\u7cbe\u786e\u5750\u6807:").getString());
                 float availCoordW = ImGui.getContentRegionAvailX();
                 float coordInputW = Math.max(50.0f, (availCoordW - 8.0f) / 3.0f);
                 ImGui.pushItemWidth(coordInputW);
@@ -639,22 +647,22 @@ public final class SplineEditorImGui {
             }
 
             ImBoolean locked = new ImBoolean(pt.isLocked());
-            if (ImGui.checkbox("\u5bf9\u79f0\u5207\u7ebf\u624b\u67c4\u9501\u5b9a", locked)) {
+            if (ImGui.checkbox(I18n.name("gui.wandscape.roadstudio.curve_sym_lock", "\u5bf9\u79f0\u5207\u7ebf\u624b\u67c4\u9501\u5b9a").getString(), locked)) {
                 pt.setLocked(locked.get());
             }
-            WandscapeImGuiTheme.drawTooltip("\u4fdd\u6301\u524d\u540e\u5207\u7ebf\u63a7\u5236\u624b\u67c4\u5bf9\u79f0\u955c\u50cf\u8054\u52a8\uff0c\u786e\u4fdd\u5e73\u6ed1\u8fc7\u6e21\u3002");
+            WandscapeImGuiTheme.drawTooltip(I18n.name("gui.wandscape.roadstudio.curve_sym_lock_tip", "\u4fdd\u6301\u524d\u540e\u5207\u7ebf\u63a7\u5236\u624b\u67c4\u5bf9\u79f0\u955c\u50cf\u8054\u52a8\uff0c\u786e\u4fdd\u5e73\u6ed1\u8fc7\u6e21\u3002").getString());
 
             ImGui.sameLine();
-            if (ImGui.button(ICON_CAM + " \u89c6\u89d2\u805a\u7126")) {
+            if (ImGui.button(ICON_CAM + " " + I18n.name("gui.wandscape.roadstudio.curve_focus", "\u89c6\u89d2\u805a\u7126").getString())) {
                 SplineVec3 pos = pt.getAnchor();
                 SplineEditorClientState.setCamPosition(pos.x(), pos.y() + 3.0, pos.z() + 5.0);
             }
-            WandscapeImGuiTheme.drawTooltip("\u5c06\u81ea\u7531\u89c6\u89d2\u6444\u50cf\u673a\u77ac\u95f4\u79fb\u81f3\u9009\u4e2d\u7684\u63a7\u5236\u70b9\u9644\u8fd1\u3002");
+            WandscapeImGuiTheme.drawTooltip(I18n.name("gui.wandscape.roadstudio.curve_focus_tip", "\u5c06\u81ea\u7531\u89c6\u89d2\u6444\u50cf\u673a\u77ac\u95f4\u79fb\u81f3\u9009\u4e2d\u7684\u63a7\u5236\u70b9\u9644\u8fd1\u3002").getString());
 
             ImGui.spacing();
             ImGui.pushStyleColor(ImGuiCol.Button, 0.55f, 0.15f, 0.15f, 0.85f);
             ImGui.pushStyleColor(ImGuiCol.ButtonHovered, 0.75f, 0.20f, 0.20f, 0.95f);
-            if (ImGui.button(ICON_TRASH + " \u5220\u9664\u8282\u70b9 #" + selectedIdx, -1, 26)) {
+            if (ImGui.button(ICON_TRASH + " " + I18n.name("gui.wandscape.roadstudio.curve_delete_btn", "\u5220\u9664\u8282\u70b9 #%d", selectedIdx).getString(), -1, 26)) {
                 int before = model.getPoints().size();
                 model.removePoint(selectedIdx);
                 // \u50cf\u6808\u4e00\u6837\uff1a\u5220\u9664\u540e\u81ea\u52a8\u9009\u4e2d\u4e0a\u4e00\u4e2a\u70b9\uff1b\u5220\u7684\u662f\u6700\u540e\u4e00\u4e2a\u5219\u9009\u4e2d\u65b0\u7684\u672b\u5c3e
@@ -667,7 +675,7 @@ public final class SplineEditorImGui {
                 }
                 Log.info(TAG, "[SplineEditor] Deleted node #{} ({} \u2192 {} points), selected #{}", selectedIdx, before, after, after > 0 ? Math.min(selectedIdx, after - 1) : -1);
             }
-            WandscapeImGuiTheme.drawTooltip("\u79fb\u9664\u5f53\u524d\u9009\u4e2d\u7684\u63a7\u5236\u8282\u70b9 (\u5feb\u6377\u952e Delete / Backspace)\u3002");
+            WandscapeImGuiTheme.drawTooltip(I18n.name("gui.wandscape.roadstudio.curve_delete_tip", "\u79fb\u9664\u5f53\u524d\u9009\u4e2d\u7684\u63a7\u5236\u8282\u70b9 (\u5feb\u6377\u952e Delete / Backspace)\u3002").getString());
             ImGui.popStyleColor(2);
         }
     }
@@ -677,20 +685,20 @@ public final class SplineEditorImGui {
         ImGui.spacing();
         
         // 1. \u6a21\u677f\u6765\u6e90\u9009\u62e9
-        WandscapeImGuiTheme.drawSectionHeader(ICON_LINK, "\u6a21\u677f\u6765\u6e90\u4e0e V \u9762\u677f\u8054\u52a8");
+        WandscapeImGuiTheme.drawSectionHeader(ICON_LINK, I18n.name("gui.wandscape.roadstudio.array_source_header", "\u6a21\u677f\u6765\u6e90\u4e0e V \u9762\u677f\u8054\u52a8").getString());
 
         var sourceMode = SplineEditorClientState.getTemplateSourceMode();
-        if (ImGui.radioButton("V \u9762\u677f\u65b9\u5757\u9884\u8bbe (\u63a8\u8350)", sourceMode == SplineEditorClientState.TemplateSourceMode.VPANEL_PRESET)) {
+        if (ImGui.radioButton(I18n.name("gui.wandscape.roadstudio.array_source_vpanel", "V \u9762\u677f\u65b9\u5757\u9884\u8bbe (\u63a8\u8350)").getString(), sourceMode == SplineEditorClientState.TemplateSourceMode.VPANEL_PRESET)) {
             SplineEditorClientState.setTemplateSourceMode(SplineEditorClientState.TemplateSourceMode.VPANEL_PRESET);
         }
-        WandscapeImGuiTheme.drawTooltip("\u4e0e\u6982\u89c8 (V) \u9762\u677f\u9009\u4e2d\u7684\u65b9\u5757\u9884\u8bbe\u76f4\u63a5\u8054\u52a8\uff0c\u5e76\u5141\u8bb8\u5b9e\u65f6\u52a8\u6001\u8c03\u8282\u5bbd\u5ea6\u4e0e\u539a\u5ea6\u3002");
+        WandscapeImGuiTheme.drawTooltip(I18n.name("gui.wandscape.roadstudio.array_source_vpanel_tip", "\u4e0e\u6982\u89c8 (V) \u9762\u677f\u9009\u4e2d\u7684\u65b9\u5757\u9884\u8bbe\u76f4\u63a5\u8054\u52a8\uff0c\u5e76\u5141\u8bb8\u5b9e\u65f6\u52a8\u6001\u8c03\u8282\u5bbd\u5ea6\u4e0e\u539a\u5ea6\u3002").getString());
 
         ImGui.sameLine();
 
-        if (ImGui.radioButton("JSON \u9884\u8bbe\u6587\u4ef6", sourceMode == SplineEditorClientState.TemplateSourceMode.JSON_FILE)) {
+        if (ImGui.radioButton(I18n.name("gui.wandscape.roadstudio.array_source_json", "JSON \u9884\u8bbe\u6587\u4ef6").getString(), sourceMode == SplineEditorClientState.TemplateSourceMode.JSON_FILE)) {
             SplineEditorClientState.setTemplateSourceMode(SplineEditorClientState.TemplateSourceMode.JSON_FILE);
         }
-        WandscapeImGuiTheme.drawTooltip("\u4f7f\u7528\u786c\u76d8\u4e2d\u7684 JSON \u7ed3\u6784\u6a21\u677f\u505a\u9635\u5217\u6392\u5e03\u3002");
+        WandscapeImGuiTheme.drawTooltip(I18n.name("gui.wandscape.roadstudio.array_source_json_tip", "\u4f7f\u7528\u786c\u76d8\u4e2d\u7684 JSON \u7ed3\u6784\u6a21\u677f\u505a\u9635\u5217\u6392\u5e03\u3002").getString());
 
         ImGui.spacing();
 
@@ -699,20 +707,22 @@ public final class SplineEditorImGui {
             // V \u9762\u677f\u9009\u62e9\u4e0e\u52a8\u6001\u751f\u6210\u5668
             List<RoadPreset> presets = RoadPlacementState.getPresets();
             int currentIdx = RoadPlacementState.getSelectedPresetIndex();
-            String[] presetNames = presets.stream().map(RoadPreset::displayName).toArray(String[]::new);
+            String[] presetNames = presets.stream()
+                    .map(p -> I18n.name("gui.wandscape.road.preset." + p.id(), p.displayName()).getString())
+                    .toArray(String[]::new);
 
             ImInt selectedPresetInt = new ImInt(currentIdx);
-            ImGui.text("V \u9762\u677f\u9009\u4e2d\u7684\u65b9\u5757:");
+            ImGui.text(I18n.name("gui.wandscape.roadstudio.array_vpanel_label", "V \u9762\u677f\u9009\u4e2d\u7684\u65b9\u5757:").getString());
             ImGui.pushItemWidth(-1);
             if (ImGui.combo("##VPanelPresetCombo", selectedPresetInt, presetNames)) {
                 RoadPlacementState.setSelectedPresetIndex(selectedPresetInt.get());
                 SplineEditorClientState.rebuildDynamicTemplate();
             }
             ImGui.popItemWidth();
-            WandscapeImGuiTheme.drawTooltip("\u5728 ImGui \u91cc\u9009\u62e9\u9053\u8def\u65b9\u5757\u4f1a\u5b9e\u65f6\u540c\u6b65\u66f4\u65b0 V \u9762\u677f\u9009\u4e2d\u7684\u9884\u8bbe\uff01");
+            WandscapeImGuiTheme.drawTooltip(I18n.name("gui.wandscape.roadstudio.array_vpanel_tip", "\u5728 ImGui \u91cc\u9009\u62e9\u9053\u8def\u65b9\u5757\u4f1a\u5b9e\u65f6\u540c\u6b65\u66f4\u65b0 V \u9762\u677f\u9009\u4e2d\u7684\u9884\u8bbe\uff01").getString());
 
             ImGui.spacing();
-            WandscapeImGuiTheme.textMuted("\u52a8\u6001\u9053\u8def\u89c4\u683c\u751f\u6210\u5668:");
+            WandscapeImGuiTheme.textMuted(I18n.name("gui.wandscape.roadstudio.array_dynamic_header", "\u52a8\u6001\u9053\u8def\u89c4\u683c\u751f\u6210\u5668:").getString());
 
             uiDynamicWidth[0] = SplineEditorClientState.getDynamicWidth();
             uiDynamicDepth[0] = SplineEditorClientState.getDynamicDepth();
@@ -720,24 +730,24 @@ public final class SplineEditorImGui {
 
             boolean dynamicChanged = false;
             ImGui.pushItemWidth(-1);
-            if (ImGui.sliderInt("\u9053\u8def\u5bbd\u5ea6 (Width)", uiDynamicWidth, 1, 15, "%d \u683c\u65b9\u5757")) {
+            if (ImGui.sliderInt(I18n.name("gui.wandscape.roadstudio.array_width", "\u9053\u8def\u5bbd\u5ea6 (Width)").getString(), uiDynamicWidth, 1, 15, I18n.name("gui.wandscape.roadstudio.array_width_fmt", "%d \u683c\u65b9\u5757").getString())) {
                 SplineEditorClientState.setDynamicWidth(uiDynamicWidth[0]);
                 dynamicChanged = true;
             }
-            WandscapeImGuiTheme.drawTooltip("\u8c03\u8282\u751f\u6210\u9053\u8def\u6a2a\u5411\u94fa\u8bbe\u7684\u65b9\u5757\u5bbd\u5ea6 (1 ~ 15 \u683c)");
+            WandscapeImGuiTheme.drawTooltip(I18n.name("gui.wandscape.roadstudio.array_width_tip", "\u8c03\u8282\u751f\u6210\u9053\u8def\u6a2a\u5411\u94fa\u8bbe\u7684\u65b9\u5757\u5bbd\u5ea6 (1 ~ 15 \u683c)").getString());
 
-            if (ImGui.sliderInt("\u57fa\u5c42\u539a\u5ea6 (Depth)", uiDynamicDepth, 1, 3, "%d \u5c42\u6df1")) {
+            if (ImGui.sliderInt(I18n.name("gui.wandscape.roadstudio.array_depth", "\u57fa\u5c42\u539a\u5ea6 (Depth)").getString(), uiDynamicDepth, 1, 3, I18n.name("gui.wandscape.roadstudio.array_depth_fmt", "%d \u5c42\u6df1").getString())) {
                 SplineEditorClientState.setDynamicDepth(uiDynamicDepth[0]);
                 dynamicChanged = true;
             }
-            WandscapeImGuiTheme.drawTooltip("\u8c03\u8282\u9053\u8def\u5782\u76f4\u5411\u4e0b\u94fa\u8bbe\u7684\u57fa\u7840\u5c42\u6570 (1 ~ 3 \u5c42)");
+            WandscapeImGuiTheme.drawTooltip(I18n.name("gui.wandscape.roadstudio.array_depth_tip", "\u8c03\u8282\u9053\u8def\u5782\u76f4\u5411\u4e0b\u94fa\u8bbe\u7684\u57fa\u7840\u5c42\u6570 (1 ~ 3 \u5c42)").getString());
             ImGui.popItemWidth();
 
-            if (ImGui.checkbox("\u52a0\u88c5\u8def\u80a9\u77f3\u8fb9 (Side Border)", uiDynamicBorder)) {
+            if (ImGui.checkbox(I18n.name("gui.wandscape.roadstudio.array_border", "\u52a0\u88c5\u8def\u80a9\u77f3\u8fb9 (Side Border)").getString(), uiDynamicBorder)) {
                 SplineEditorClientState.setDynamicHasBorder(uiDynamicBorder.get());
                 dynamicChanged = true;
             }
-            WandscapeImGuiTheme.drawTooltip("\u52fe\u9009\u540e\uff0c\u9053\u8def\u5de6\u53f3\u4e24\u4fa7\u6700\u8fb9\u7f18\u81ea\u52a8\u94fa\u8bbe\u77f3\u7816\u62a4\u680f\u5305\u88f9\u3002");
+            WandscapeImGuiTheme.drawTooltip(I18n.name("gui.wandscape.roadstudio.array_border_tip", "\u52fe\u9009\u540e\uff0c\u9053\u8def\u5de6\u53f3\u4e24\u4fa7\u6700\u8fb9\u7f18\u81ea\u52a8\u94fa\u8bbe\u77f3\u7816\u62a4\u680f\u5305\u88f9\u3002").getString());
 
             if (dynamicChanged) {
                 SplineEditorClientState.rebuildDynamicTemplate();
@@ -752,47 +762,47 @@ public final class SplineEditorImGui {
                 
                 ImInt activeTemplateIdx = new ImInt(idx);
                 String[] templateArray = templateIds.toArray(new String[0]);
-                ImGui.text("\u9009\u62e9 JSON \u6a21\u677f:");
+                ImGui.text(I18n.name("gui.wandscape.roadstudio.array_json_label", "\u9009\u62e9 JSON \u6a21\u677f:").getString());
                 ImGui.pushItemWidth(-1);
                 if (ImGui.combo("##BlueprintCombo", activeTemplateIdx, templateArray)) {
                     SplineEditorClientState.setActiveTemplateId(templateArray[activeTemplateIdx.get()]);
                 }
                 ImGui.popItemWidth();
-                WandscapeImGuiTheme.drawTooltip("\u9009\u62e9\u8bfb\u53d6\u5230\u7684 JSON \u7ed3\u6784\u6587\u4ef6\u8fdb\u884c\u6392\u5e03\u3002");
+                WandscapeImGuiTheme.drawTooltip(I18n.name("gui.wandscape.roadstudio.array_json_tip", "\u9009\u62e9\u8bfb\u53d6\u5230\u7684 JSON \u7ed3\u6784\u6587\u4ef6\u8fdb\u884c\u6392\u5e03\u3002").getString());
             } else {
-                ImGui.textDisabled("\u6682\u65e0\u53ef\u7528\u7684 JSON \u84dd\u56fe\u6a21\u677f\u3002");
+                ImGui.textDisabled(I18n.name("gui.wandscape.roadstudio.array_no_json", "\u6682\u65e0\u53ef\u7528\u7684 JSON \u84dd\u56fe\u6a21\u677f\u3002").getString());
             }
         }
 
         RoadTemplate activeTmpl = SplineEditorClientState.getActiveTemplate();
         if (activeTmpl != null) {
-            WandscapeImGuiTheme.textMuted("\u5f53\u524d\u4f7f\u7528\u6a21\u677f: " + activeTmpl.getId() + " (\u5355\u6bb5\u542b " + activeTmpl.getBlocks().size() + " \u4e2a\u65b9\u5757)");
+            WandscapeImGuiTheme.textMuted(I18n.name("gui.wandscape.roadstudio.array_active_tmpl", "\u5f53\u524d\u4f7f\u7528\u6a21\u677f: %s (\u5355\u6bb5\u542b %d \u4e2a\u65b9\u5757)", activeTmpl.getId(), activeTmpl.getBlocks().size()).getString());
         }
 
         ImGui.spacing();
         ImGui.spacing();
 
         // 3. \u5b9e\u65f6 3D \u9884\u89c8\u4e0e\u91c7\u6837
-        WandscapeImGuiTheme.drawSectionHeader(ICON_EYE, "\u5b9e\u65f6 3D \u9884\u89c8\u4e0e\u8c03\u6574");
+        WandscapeImGuiTheme.drawSectionHeader(ICON_EYE, I18n.name("gui.wandscape.roadstudio.array_preview_header", "\u5b9e\u65f6 3D \u9884\u89c8\u4e0e\u8c03\u6574").getString());
 
         uiArrayPreview.set(SplineEditorClientState.isArrayPreview());
-        if (ImGui.checkbox("\u5f00\u542f\u9635\u5217 3D \u5b9e\u65f6\u9884\u89c8", uiArrayPreview)) {
+        if (ImGui.checkbox(I18n.name("gui.wandscape.roadstudio.array_preview_on", "\u5f00\u542f\u9635\u5217 3D \u5b9e\u65f6\u9884\u89c8").getString(), uiArrayPreview)) {
             SplineEditorClientState.setArrayPreview(uiArrayPreview.get());
         }
-        WandscapeImGuiTheme.drawTooltip("\u5728\u6e38\u620f\u4e16\u754c\u4e2d\u4ee5 3D \u5305\u56f4\u76d2\u7684\u5f62\u5f0f\u5b9e\u65f6\u6e32\u67d3\u6cbf\u66f2\u7ebf\u6392\u5217\u7684\u65b9\u5757\u4f4d\u59ff\u3002");
+        WandscapeImGuiTheme.drawTooltip(I18n.name("gui.wandscape.roadstudio.array_preview_on_tip", "\u5728\u6e38\u620f\u4e16\u754c\u4e2d\u4ee5 3D \u5305\u56f4\u76d2\u7684\u5f62\u5f0f\u5b9e\u65f6\u6e32\u67d3\u6cbf\u66f2\u7ebf\u6392\u5217\u7684\u65b9\u5757\u4f4d\u59ff\u3002").getString());
 
         if (SplineEditorClientState.isArrayPreview()) {
             ImGui.spacing();
             uiStepDistance.set(SplineEditorClientState.getArrayStepDistance());
             ImGui.pushItemWidth(-1);
-            if (ImGui.inputDouble("\u91c7\u6837\u6b65\u8ddd (\u683c)", uiStepDistance, 0.5, 1.0, "%.2f")) {
+            if (ImGui.inputDouble(I18n.name("gui.wandscape.roadstudio.array_step", "\u91c7\u6837\u6b65\u8ddd (\u683c)").getString(), uiStepDistance, 0.5, 1.0, "%.2f")) {
                 SplineEditorClientState.setArrayStepDistance(Math.max(0.1, uiStepDistance.get()));
             }
             ImGui.popItemWidth();
-            WandscapeImGuiTheme.drawTooltip("\u6cbf Bezier \u66f2\u7ebf\u91c7\u6837\u7684\u95f4\u8ddd\uff08\u5355\u4f4d\uff1a\u65b9\u5757\uff09\u3002\u8d8a\u5c0f\u751f\u6210\u8d8a\u5e73\u6ed1\u5bc6\u5b9e\u3002");
+            WandscapeImGuiTheme.drawTooltip(I18n.name("gui.wandscape.roadstudio.array_step_tip", "\u6cbf Bezier \u66f2\u7ebf\u91c7\u6837\u7684\u95f4\u8ddd\uff08\u5355\u4f4d\uff1a\u65b9\u5757\uff09\u3002\u8d8a\u5c0f\u751f\u6210\u8d8a\u5e73\u6ed1\u5bc6\u5b9e\u3002").getString());
 
             ImGui.spacing();
-            WandscapeImGuiTheme.textMuted("3D \u9635\u5217\u59ff\u6001\u65cb\u8f6c\u5fae\u8c03:");
+            WandscapeImGuiTheme.textMuted(I18n.name("gui.wandscape.roadstudio.array_rot_label", "3D \u9635\u5217\u59ff\u6001\u65cb\u8f6c\u5fae\u8c03:").getString());
 
             uiOffsetRoll[0] = (float) SplineEditorClientState.getArrayOffsetRoll();
             uiOffsetPitch[0] = (float) SplineEditorClientState.getArrayOffsetPitch();
@@ -804,19 +814,19 @@ public final class SplineEditorImGui {
 
             boolean rotChanged = false;
             ImGui.pushItemWidth(sliderW);
-            rotChanged |= ImGui.sliderFloat("\u6eda\u8f6c\u89d2 Roll", uiOffsetRoll, -180.0f, 180.0f, "%.1f \u5ea6");
-            rotChanged |= ImGui.sliderFloat("\u4fef\u4ef0\u89d2 Pitch", uiOffsetPitch, -180.0f, 180.0f, "%.1f \u5ea6");
-            rotChanged |= ImGui.sliderFloat("\u504f\u822a\u89d2 Yaw", uiOffsetYaw, -180.0f, 180.0f, "%.1f \u5ea6");
+            rotChanged |= ImGui.sliderFloat(I18n.name("gui.wandscape.roadstudio.array_roll", "\u6eda\u52a8\u89d2 Roll").getString(), uiOffsetRoll, -180.0f, 180.0f, I18n.name("gui.wandscape.roadstudio.array_deg_fmt", "%.1f \u5ea6").getString());
+            rotChanged |= ImGui.sliderFloat(I18n.name("gui.wandscape.roadstudio.array_pitch", "\u4fef\u4ef0\u89d2 Pitch").getString(), uiOffsetPitch, -180.0f, 180.0f, I18n.name("gui.wandscape.roadstudio.array_deg_fmt", "%.1f \u5ea6").getString());
+            rotChanged |= ImGui.sliderFloat(I18n.name("gui.wandscape.roadstudio.array_yaw", "\u504f\u822a\u89d2 Yaw").getString(), uiOffsetYaw, -180.0f, 180.0f, I18n.name("gui.wandscape.roadstudio.array_deg_fmt", "%.1f \u5ea6").getString());
             ImGui.popItemWidth();
 
             ImGui.sameLine();
-            if (ImGui.button("0\u00b0 \u91cd\u7f6e", resetBtnW, 0)) {
+            if (ImGui.button(I18n.name("gui.wandscape.roadstudio.array_reset", "0\u00b0 \u91cd\u7f6e").getString(), resetBtnW, 0)) {
                 uiOffsetRoll[0] = 0;
                 uiOffsetPitch[0] = 0;
                 uiOffsetYaw[0] = 0;
                 rotChanged = true;
             }
-            WandscapeImGuiTheme.drawTooltip("\u5feb\u6377\u91cd\u7f6e\u6240\u6709\u65cb\u8f6c\u89d2\u4e3a 0\u00b0");
+            WandscapeImGuiTheme.drawTooltip(I18n.name("gui.wandscape.roadstudio.array_reset_tip", "\u5feb\u6377\u91cd\u7f6e\u6240\u6709\u65cb\u8f6c\u89d2\u4e3a 0\u00b0").getString());
 
             if (rotChanged) {
                 SplineEditorClientState.setArrayOffsetRoll(uiOffsetRoll[0]);
@@ -830,10 +840,10 @@ public final class SplineEditorImGui {
             ImGui.pushStyleColor(ImGuiCol.Button, 0.22f, 0.45f, 0.25f, 0.90f);
             ImGui.pushStyleColor(ImGuiCol.ButtonHovered, 0.30f, 0.60f, 0.32f, 1.00f);
             ImGui.pushStyleColor(ImGuiCol.ButtonActive, 0.38f, 0.72f, 0.40f, 1.00f);
-            if (ImGui.button(ICON_CUBE + " \u4e0b\u53d1\u9053\u8def\u5efa\u9020\u4efb\u52a1", -1, 36)) {
+            if (ImGui.button(ICON_CUBE + " " + I18n.name("gui.wandscape.roadstudio.array_build", "\u4e0b\u53d1\u9053\u8def\u5efa\u9020\u4efb\u52a1").getString(), -1, 36)) {
                 SplineEditorController.doBuildArray();
             }
-            WandscapeImGuiTheme.drawTooltip("\u5c06\u6253\u5305\u597d\u7684\u9053\u8def\u65b9\u5757\u53d1\u9001\u7ed9\u670d\u52a1\u7aef\uff0c\u7531\u6b96\u6c11\u5730\u5efa\u7b51\u6cd5\u5e08 NPC \u81ea\u52a8\u5efa\u9020\uff01");
+            WandscapeImGuiTheme.drawTooltip(I18n.name("gui.wandscape.roadstudio.array_build_tip", "\u5c06\u6253\u5305\u597d\u7684\u9053\u8def\u65b9\u5757\u53d1\u9001\u7ed9\u670d\u52a1\u5668\uff0c\u7531\u5c0f\u9547\u5efa\u7b51\u6cd5\u5e08 NPC \u81ea\u52a8\u5efa\u9020\uff01").getString());
             ImGui.popStyleColor(3);
         }
     }
@@ -841,29 +851,29 @@ public final class SplineEditorImGui {
     // \u2500\u2500 Tab 3: \u6a21\u677f\u4e0e\u5de5\u5177 \u2500\u2500
     private static void drawTemplatesTab(SplineModel model, Minecraft mc) {
         ImGui.spacing();
-        WandscapeImGuiTheme.drawSectionHeader(ICON_SAVE, "\u6a21\u677f\u6587\u4ef6\u7ba1\u7406");
+        WandscapeImGuiTheme.drawSectionHeader(ICON_SAVE, I18n.name("gui.wandscape.roadstudio.tpl_header", "\u6a21\u677f\u6587\u4ef6\u7ba1\u7406").getString());
 
         ImGui.pushItemWidth(-1);
-        ImGui.inputTextWithHint("##TemplateName", "\u8f93\u5165\u6a21\u677f\u540d\u79f0 (\u4f8b\u5982: main_road)", templateNameInput);
+        ImGui.inputTextWithHint("##TemplateName", I18n.name("gui.wandscape.roadstudio.tpl_name_hint", "\u8f93\u5165\u6a21\u677f\u540d\u79f0 (\u4f8b\u5982: main_road)").getString(), templateNameInput);
         ImGui.popItemWidth();
         ImGui.spacing();
 
         float halfW = (ImGui.getContentRegionAvailX() - 8.0f) / 2.0f;
         
         ImGui.pushStyleColor(ImGuiCol.Button, 0.15f, 0.32f, 0.50f, 0.90f);
-        if (ImGui.button(ICON_SAVE + " \u4fdd\u5b58 JSON \u6a21\u677f", halfW, 28)) {
+        if (ImGui.button(ICON_SAVE + " " + I18n.name("gui.wandscape.roadstudio.tpl_save", "\u4fdd\u5b58 JSON \u6a21\u677f").getString(), halfW, 28)) {
             String name = templateNameInput.get().trim();
             if (!name.isEmpty()) {
                 SplineEditorClientState.saveTemplate(name);
             }
         }
-        WandscapeImGuiTheme.drawTooltip("\u5c06\u5f53\u524d\u7ed8\u5236\u597d\u7684\u66f2\u7ebf\u8282\u70b9\u5bfc\u51fa\u4fdd\u5b58\u81f3 config/wandscape/splines/");
+        WandscapeImGuiTheme.drawTooltip(I18n.name("gui.wandscape.roadstudio.tpl_save_tip", "\u5c06\u5f53\u524d\u7ed8\u5236\u597d\u7684\u66f2\u7ebf\u8282\u70b9\u5bfc\u51fa\u4fdd\u5b58\u81f3 config/wandscape/splines/").getString());
         ImGui.popStyleColor();
 
         ImGui.sameLine();
 
         ImGui.pushStyleColor(ImGuiCol.Button, 0.20f, 0.28f, 0.42f, 0.90f);
-        if (ImGui.button(ICON_LOAD + " \u8bfb\u53d6 JSON \u6a21\u677f", halfW, 28)) {
+        if (ImGui.button(ICON_LOAD + " " + I18n.name("gui.wandscape.roadstudio.tpl_load", "\u8bfb\u53d6 JSON \u6a21\u677f").getString(), halfW, 28)) {
             String name = templateNameInput.get().trim();
             if (!name.isEmpty()) {
                 Vec3 pos = SplineEditorClientState.isEditing()
@@ -873,16 +883,18 @@ public final class SplineEditorImGui {
                 SplineEditorClientState.loadTemplate(name, placementOrigin);
             }
         }
-        WandscapeImGuiTheme.drawTooltip("\u4ece config/wandscape/splines/ \u4e2d\u8bfb\u53d6\u66f2\u7ebf\u6a21\u677f\u5e76\u653e\u7f6e\u5728\u5f53\u524d\u73a9\u5bb6\u4f4d\u7f6e\u3002");
+        WandscapeImGuiTheme.drawTooltip(I18n.name("gui.wandscape.roadstudio.tpl_load_tip", "\u4ece config/wandscape/splines/ \u4e2d\u8bfb\u53d6\u66f2\u7ebf\u6a21\u677f\u5e76\u653e\u7f6e\u5728\u5f53\u524d\u73a9\u5bb6\u4f4d\u7f6e\u3002").getString());
         ImGui.popStyleColor();
 
         ImGui.spacing();
         ImGui.spacing();
-        WandscapeImGuiTheme.drawSectionHeader(ICON_EYE, "\u89c6\u56fe\u4e0e\u5feb\u6377\u5de5\u5177");
+        WandscapeImGuiTheme.drawSectionHeader(ICON_EYE, I18n.name("gui.wandscape.roadstudio.tpl_view_header", "\u89c6\u56fe\u4e0e\u5feb\u6377\u5de5\u5177").getString());
 
         boolean topDown = SplineEditorClientState.isTopDown();
-        String btnText = topDown ? ICON_EYE + " \u9000\u51fa 2D \u4fef\u77b0\u89c6\u89d2 (G)" : ICON_EYE + " \u5207\u6362 2D \u4fef\u77b0\u89c6\u89d2 (G)";
-        
+        String btnText = topDown
+                ? ICON_EYE + " " + I18n.name("gui.wandscape.roadstudio.tpl_exit_topdown", "\u9000\u51fa 2D \u4fef\u77b0\u89c6\u89d2 (G)").getString()
+                : ICON_EYE + " " + I18n.name("gui.wandscape.roadstudio.tpl_enter_topdown", "\u5207\u6362 2D \u4fef\u77b0\u89c6\u89d2 (G)").getString();
+
         if (ImGui.button(btnText, -1, 30)) {
             if (topDown) {
                 SplineEditorClientState.exitTopDown();
@@ -890,33 +902,33 @@ public final class SplineEditorImGui {
                 SplineEditorClientState.enterTopDown();
             }
         }
-        WandscapeImGuiTheme.drawTooltip("\u5728 2D \u9e1f\u77b0\u89c6\u89d2\u4e0e 3D \u81ea\u7531\u89c6\u89d2\u95f4\u5207\u6362 (\u5feb\u6377\u952e G)");
+        WandscapeImGuiTheme.drawTooltip(I18n.name("gui.wandscape.roadstudio.tpl_topdown_tip", "\u5728 2D \u9e1f\u77b0\u89c6\u89d2\u4e0e 3D \u81ea\u7531\u89c6\u89d2\u95f4\u5207\u6362 (\u5feb\u6377\u952e G)").getString());
 
         ImGui.spacing();
 
-        if (ImGui.button(ICON_HELP + " \u6253\u5f00\u64cd\u4f5c\u6307\u5357 (H)", -1, 30)) {
+        if (ImGui.button(ICON_HELP + " " + I18n.name("gui.wandscape.roadstudio.tpl_help", "\u6253\u5f00\u64cd\u4f5c\u6307\u5357 (H)").getString(), -1, 30)) {
             String content = com.wsteam.wandscape.shared.ui.markdown.navigation.DocumentLoader.loadMarkdown("road_spline_guide");
             mc.setScreen(new com.wsteam.wandscape.shared.ui.guide.GuideTestScreen(null, content, "road_spline_guide"));
         }
-        WandscapeImGuiTheme.drawTooltip("\u6253\u5f00\u9053\u8def\u5236\u4f5c\u4e0e Spline \u66f2\u7ebf\u64cd\u4f5c\u8bf4\u660e\u6587\u6863 (\u5feb\u6377\u952e H)");
+        WandscapeImGuiTheme.drawTooltip(I18n.name("gui.wandscape.roadstudio.tpl_help_tip", "\u6253\u5f00\u9053\u8def\u5236\u4f5c\u4e0e Spline \u66f2\u7ebf\u64cd\u4f5c\u8bf4\u660e\u6587\u6863 (\u5feb\u6377\u952e H)").getString());
 
         ImGui.spacing();
 
-        if (ImGui.button("\u6e05\u7a7a\u753b\u5e03", halfW, 28)) {
+        if (ImGui.button(I18n.name("gui.wandscape.roadstudio.tpl_clear", "\u6e05\u7a7a\u753b\u5e03").getString(), halfW, 28)) {
             model.clear();
             SplineEditorClientState.setSelectedPoint(-1, SplineEditorClientState.SelectionType.NONE);
         }
-        WandscapeImGuiTheme.drawTooltip("\u6e05\u7a7a\u5f53\u524d\u753b\u5e03\u4e0a\u7684\u6240\u6709\u63a7\u5236\u8282\u70b9\u3002");
+        WandscapeImGuiTheme.drawTooltip(I18n.name("gui.wandscape.roadstudio.tpl_clear_tip", "\u6e05\u7a7a\u5f53\u524d\u753b\u5e03\u4e0a\u7684\u6240\u6709\u63a7\u5236\u8282\u70b9\u3002").getString());
 
         ImGui.sameLine();
 
         ImGui.pushStyleColor(ImGuiCol.Button, 0.55f, 0.15f, 0.15f, 0.85f);
         ImGui.pushStyleColor(ImGuiCol.ButtonHovered, 0.75f, 0.20f, 0.20f, 0.95f);
-        if (ImGui.button("\u5173\u95ed Studio", halfW, 28)) {
+        if (ImGui.button(I18n.name("gui.wandscape.roadstudio.tpl_close", "\u5173\u95ed Studio").getString(), halfW, 28)) {
             SplineEditorClientState.exitEditMode();
             ImGuiManager.setVisible(false);
         }
-        WandscapeImGuiTheme.drawTooltip("\u9000\u51fa\u9053\u8def\u5236\u4f5c\u5de5\u574a (\u5feb\u6377\u952e ESC)\u3002");
+        WandscapeImGuiTheme.drawTooltip(I18n.name("gui.wandscape.roadstudio.tpl_close_tip", "\u9000\u51fa\u9053\u8def\u5236\u4f5c\u5de5\u574a (\u5feb\u6377\u952e ESC)\u3002").getString());
         ImGui.popStyleColor(2);
     }
 
@@ -924,6 +936,6 @@ public final class SplineEditorImGui {
     private static void drawBottomFooter() {
         ImGui.setCursorPosY(ImGui.getWindowHeight() - 26);
         ImGui.separator();
-        WandscapeImGuiTheme.textMuted(" [\u53f3\u952e\u6309\u4f4f] \u65cb\u8f6c\u89c6\u89d2 | [G] \u4fef\u77b0 | [H] \u6307\u5357 | [ESC] \u9000\u51fa");
+        WandscapeImGuiTheme.textMuted(I18n.name("gui.wandscape.roadstudio.footer", " [\u53f3\u952e\u6309\u4f4f] \u65cb\u8f6c\u89c6\u89d2 | [G] \u4fef\u77b0 | [H] \u6307\u5357 | [ESC] \u9000\u51fa").getString());
     }
 }

@@ -6,6 +6,7 @@ import java.util.UUID;
 import javax.annotation.Nullable;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 
 import com.wsteam.wandscape.shared.data.BuildingData;
@@ -107,13 +108,14 @@ public interface BuildingApi {
     // ---- Placement (unified entry point) ----
 
     /**
-     * Result of a building placement attempt via {@link #placeBuilding}.
+     * Result of a building placement attempt via {@link #placeBuilding}. {@code error} is a
+     * translatable Component resolved on the client (safe to build on the server).
      */
-    record PlacementResult(boolean success, @Nullable UUID buildingId, boolean firstFree, @Nullable String error) {
+    record PlacementResult(boolean success, @Nullable UUID buildingId, boolean firstFree, @Nullable Component error) {
         public static PlacementResult ok(UUID buildingId, boolean firstFree) {
             return new PlacementResult(true, buildingId, firstFree, null);
         }
-        public static PlacementResult fail(String error) {
+        public static PlacementResult fail(Component error) {
             return new PlacementResult(false, null, false, error);
         }
     }

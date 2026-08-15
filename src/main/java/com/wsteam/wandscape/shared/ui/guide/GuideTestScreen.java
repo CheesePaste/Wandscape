@@ -1,6 +1,7 @@
 package com.wsteam.wandscape.shared.ui.guide;
 
 import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.shared.ui.I18n;
 import com.wsteam.wandscape.shared.ui.component.MedievalButton;
 import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
 import com.wsteam.wandscape.shared.ui.markdown.navigation.DocumentHistoryStack;
@@ -32,12 +33,12 @@ public class GuideTestScreen extends MedievalScreen {
     }
 
     public GuideTestScreen(Screen parentScreen, String initialMarkdownContent, String initialDocPath) {
-        super(Component.literal("Wandscape 引导系统"), 320, 230);
+        super(I18n.name("gui.wandscape.guide.title", "Wandscape 引导系统"), 320, 230);
         this.parentScreen = parentScreen;
         this.historyStack = new DocumentHistoryStack(initialDocPath);
         this.showCloseButton = true;
         this.titleXOffset = 52;
-        setTitleBar(Component.literal("Wandscape 引导指南"));
+        setTitleBar(I18n.name("gui.wandscape.guide.titlebar", "Wandscape 引导指南"));
     }
 
     @Override

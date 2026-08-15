@@ -67,7 +67,7 @@ public class TaskExecutionSystem implements System {
 
             NpcTaskQueue queue = exec.npcQueue;
 
-            // ── 0. 跟随模式：释放殖民地全局任务（保留 self_defense 等个人包）──
+            // ── 0. 跟随模式：释放小镇全局任务（保留 self_defense 等个人包）──
             // 放在「无工作→idle」之前：挂起栈里可能还压着被自防御抢断的 global 包，
             // 此时 hasWork()=false 但 hasGlobalPackage()=true，先走 idle 会让该包永驻挂起栈。
             if (world.entityOps != null && world.entityOps.isFollowing(npcId)
@@ -76,7 +76,7 @@ public class TaskExecutionSystem implements System {
                 continue;
             }
 
-            // ── 0.5 殖民地冻结：创始人不在线且关闭离线运行 → NPC 原地冻结，不推进执行 ──
+            // ── 0.5 小镇冻结：创始人不在线且关闭离线运行 → NPC 原地冻结，不推进执行 ──
             // 保留原状态（队列/步骤/async future），创始人上线后由同一路径恢复。
             ColonyMember frozenMember = world.get(npcId, ColonyMember.class);
             if (frozenMember != null && world.entityOps != null
@@ -424,7 +424,7 @@ public class TaskExecutionSystem implements System {
     }
 
     /**
-     * 跟随模式：释放该 NPC 的全部殖民地全局任务（current/pending/挂起栈里的
+     * 跟随模式：释放该 NPC 的全部小镇全局任务（current/pending/挂起栈里的
      * {@code global:*} 包），只保留 {@code self_defense} 等个人包。已绑定的全局任务
      * 按步进归还任务池（{@link GlobalTaskPool#releaseTaskForReassign}），供其他 NPC 接取。
      *

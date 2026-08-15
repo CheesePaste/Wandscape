@@ -17,7 +17,7 @@ import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
- * 殖民地环境音近距门控（服务端）。
+ * 小镇环境音近距门控（服务端）。
  *
  * <p>每 20 tick 评估：玩家是否位于任一建筑包围盒向外延伸 {@link #TOWN_RADIUS} 格
  * 的范围内（视为"在城镇内"）。进入/离开范围或昼夜相位切换时，向该玩家发送

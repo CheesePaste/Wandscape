@@ -119,8 +119,10 @@ public class AltarScreen extends MedievalScreen {
             String name = I18n.name("magic.wandscape." + spell.magicId(), spell.magicId()).getString();
             g.drawString(font, name, x + 2, y + 2, MedievalColors.TEXT_WARM_WHITE);
 
-            String info = "蓝 " + spell.manaCost() + " · CD " + formatSeconds(spell.cooldownTicks())
-                    + " · 时长 " + formatSeconds(spell.durationTicks());
+            String info = I18n.name("gui.wandscape.altar.cost_duration",
+                    "蓝 %d · CD %s · 时长 %s",
+                    spell.manaCost(), formatSeconds(spell.cooldownTicks()),
+                    formatSeconds(spell.durationTicks())).getString();
             g.drawString(font, info, x + 110, y + 2, MedievalColors.TEXT_DIM);
 
             String status;

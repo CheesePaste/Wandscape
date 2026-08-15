@@ -76,7 +76,7 @@ public final class DailySettlementSystem {
 
         int fired = 0;
         for (UUID colonyId : colonyIds) {
-            // 创始人不在线且关闭离线运行 → 冻结殖民地：跳过当日结算（商店补货/统计等）
+            // 创始人不在线且关闭离线运行 → 冻结小镇：跳过当日结算（商店补货/统计等）
             if (!com.wsteam.wandscape.engine.colony.ColonyActivation.isColonyActive(colonyId)) {
                 continue;
             }

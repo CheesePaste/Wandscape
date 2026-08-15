@@ -230,7 +230,7 @@ public final class TouristSimSystem {
 
         int observedCount = 0, simmedCount = 0, stuckCount = 0, frozenCount = 0;
         for (TouristShadow s : new ArrayList<>(shadows.values())) {
-            // 创始人不在线 → 冻结殖民地：游客原地冻结——不 sim、不实体化、不离场、不被清。
+            // 创始人不在线 → 冻结小镇：游客原地冻结——不 sim、不实体化、不离场、不被清。
             // 冻结期间占位/排队保留（shadow 仍在 registry，spot purge 不误清）。
             if (s.getColonyId() != null && !ColonyActivation.isColonyActive(s.getColonyId())) {
                 frozenCount++;
@@ -721,7 +721,7 @@ public final class TouristSimSystem {
                 String bldType = TouristSimulation.getBuildingTypeId(level, buildingId);
                 var bldCfg = TouristSimulation.getConfig(level, buildingId);
                 String bldName = (bldCfg != null && bldCfg.displayName() != null && !bldCfg.displayName().isEmpty())
-                        ? bldCfg.displayName() : (bldType != null ? bldType : "建筑");
+                        ? bldCfg.displayName() : (bldType != null ? bldType : "unknown");
                 TouristSimulation.addVisitMemory(s, bldType, bldName, category,
                         level.getGameTime(), result.comfortDelta(), result.magicDelta(), result.wonderDelta(),
                         result.energyDelta(), result.whatHappened());
@@ -795,7 +795,7 @@ public final class TouristSimSystem {
             if (t.isAlive() && !t.isPreview()) live.put(t.getUUID(), t);
         }
         for (TouristShadow s : new ArrayList<>(registry.getShadows().values())) {
-            // 创始人不在线 → 冻结殖民地：不随夜晚快进（原地冻结，保留当前状态）
+            // 创始人不在线 → 冻结小镇：不随夜晚快进（原地冻结，保留当前状态）
             if (s.getColonyId() != null && !ColonyActivation.isColonyActive(s.getColonyId())) {
                 continue;
             }

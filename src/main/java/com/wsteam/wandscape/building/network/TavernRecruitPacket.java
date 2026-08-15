@@ -30,6 +30,7 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 import static com.wsteam.wandscape.Wandscape.MODID;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.registry.WandscapeConstants;
+import com.wsteam.wandscape.shared.ui.I18n;
 
 /**
  * Client→server packet: player clicks "Recruit NPC" in the tavern GUI.
@@ -85,7 +86,7 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
                 return;
             }
 
-            // 2.5 招募计费门控（仅「招募 NPC」收费）：每殖民地首次免费，之后每次需每种元素 10000
+            // 2.5 招募计费门控（仅「招募 NPC」收费）：每小镇首次免费，之后每次需每种元素 10000
             com.wsteam.wandscape.shared.api.TavernApi tavernApi = null;
             try {
                 tavernApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getTavernApi();
@@ -99,8 +100,8 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
                 return;
             }
 
-            // 3. Roll recruit attributes: random² 偏斜分布 + 殖民地等级加成
-            //    （模拟殖民地等级游客投出的简历——与法师游客掷简历同一公式）
+            // 3. Roll recruit attributes: random² 偏斜分布 + 小镇等级加成
+            //    （模拟小镇等级游客投出的简历——与法师游客掷简历同一公式）
             var levelMgr = WandscapeEngine.getColonyLevelManager();
             int colonyLevel = levelMgr != null ? levelMgr.getLevel(colonyId) : 1;
             var candidate = MageAttributeRoller.roll(colonyLevel,
@@ -144,12 +145,10 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
                     spawnPos.toShortString());
 
             sp.displayClientMessage(
-                    Component.literal("[Wandscape] Mage recruited! Lv." + candidate.level()
-                            + " 强度:" + fmt(candidate.spellPower())
-                            + " 工速:" + fmt(candidate.workSpeed())
-                            + " 施速:" + fmt(candidate.spellSpeed())
-                            + " 护甲:" + fmt(candidate.armorValue())
-                            + " " + spawnPos.toShortString()),
+                    I18n.name("message.wandscape.tavern.recruited_direct",
+                            "[Wandscape] Mage recruited! Lv.%d 强度:%.1f 工速:%.1f 施速:%.1f 护甲:%.1f %s",
+                            candidate.level(), candidate.spellPower(), candidate.workSpeed(),
+                            candidate.spellSpeed(), candidate.armorValue(), spawnPos.toShortString()),
                     false);
 
             if (tavernApi != null) {
@@ -221,12 +220,10 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
                 spawnPos.toShortString());
 
         sp.displayClientMessage(
-                Component.literal("[Wandscape] Mage " + resume.touristName()
-                        + " recruited! Lv." + resume.level()
-                        + " 强度:" + fmt(resume.spellPower())
-                        + " 工速:" + fmt(resume.workSpeed())
-                        + " 施速:" + fmt(resume.spellSpeed())
-                        + " 护甲:" + fmt(resume.armorValue())),
+                I18n.name("message.wandscape.tavern.recruited_resume",
+                        "[Wandscape] Mage %s recruited! Lv.%d 强度:%.1f 工速:%.1f 施速:%.1f 护甲:%.1f",
+                        resume.touristName(), resume.level(), resume.spellPower(),
+                        resume.workSpeed(), resume.spellSpeed(), resume.armorValue()),
                 false);
 
         try {
@@ -238,10 +235,6 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
                                 tavernApi.getMageResumes(colonyId)));
             }
         } catch (Exception ignored) {}
-    }
-
-    private static String fmt(float v) {
-        return String.format("%.1f", v);
     }
 
     /** Find a valid spawn position near the tavern. */

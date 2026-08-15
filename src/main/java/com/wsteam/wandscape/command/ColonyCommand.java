@@ -45,6 +45,7 @@ import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.NeoForge;
 import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.shared.ui.I18n;
 
 /**
  * Colony lifecycle commands.
@@ -63,8 +64,23 @@ public final class ColonyCommand {
 
     private static final String TAG = "ColonyCommand";
     private static final int WAND_RANGE = 8;
-    /** 新建殖民地时生成的初始 builder NPC 数量。 */
+    /** 新建小镇时生成的初始 builder NPC 数量。 */
     private static final int INITIAL_BUILDER_COUNT = 3;
+
+    /**
+     * Outcome of a colony-creation attempt: whether it succeeded and the
+     * message to surface to the player (shared by the command and the
+     * town-hall naming flow).
+     */
+    public record ColonyCreateOutcome(boolean success, Component message) {
+        public static ColonyCreateOutcome success(Component message) {
+            return new ColonyCreateOutcome(true, message);
+        }
+
+        public static ColonyCreateOutcome failure(Component message) {
+            return new ColonyCreateOutcome(false, message);
+        }
+    }
 
     private ColonyCommand() {}
 
@@ -107,13 +123,14 @@ public final class ColonyCommand {
 
         UUID founder = sender instanceof net.minecraft.world.entity.player.Player p
                 ? p.getUUID() : null;
-        String result = createColonyAt(level, origin, name, founder);
-        if (result == null || result.startsWith("[Wandscape] no government")
-                || result.startsWith("[Wandscape] Failed")) {
-            ctx.getSource().sendFailure(Component.literal(result));
+        ColonyCreateOutcome outcome = createColonyAt(level, origin, name, founder);
+        if (outcome == null || !outcome.success()) {
+            ctx.getSource().sendFailure(outcome != null
+                    ? outcome.message()
+                    : Component.literal("[Wandscape] Colony creation failed"));
             return 0;
         }
-        ctx.getSource().sendSuccess(() -> Component.literal(result), true);
+        ctx.getSource().sendSuccess(() -> outcome.message(), true);
         return Command.SINGLE_SUCCESS;
     }
 
@@ -122,23 +139,26 @@ public final class ColonyCommand {
      * and the town-hall naming flow ({@code ColonyCreateRequestPacket}).
      *
      * <p>Creates the colony, spawns the initial builder NPCs, seeds their
-     * inventories and fires {@link ColonyCreatedEvent}. Returns a human-readable
-     * result message (or null on failure — use the provided {@code feedback}
-     * sink to surface the error to the player).
+     * inventories and fires {@link ColonyCreatedEvent}. Returns a
+     * {@link ColonyCreateOutcome} with a player-facing message; on failure the
+     * outcome carries {@code success=false} and the failure message.
      */
-    public static String createColonyAt(ServerLevel level, BlockPos origin, String name,
+    public static ColonyCreateOutcome createColonyAt(ServerLevel level, BlockPos origin, String name,
                                         @Nullable UUID founder) {
-        // 一人一殖民地：玩家已拥有殖民地时拒绝创建第二个（V 面板/市政厅命名/命令共用此入口）
+        // 一人一小镇：玩家已拥有小镇时拒绝创建第二个（V 面板/市政厅命名/命令共用此入口）
         if (founder != null && ColonyApiImpl.get().getColonyByFounder(founder) != null) {
-            return "[Wandscape] Failed: 你已拥有殖民地，不能创建第二个。";
+            return ColonyCreateOutcome.failure(I18n.name(
+                    "message.wandscape.command.colony_already_owned",
+                    "[Wandscape] Failed: 你已拥有小镇，不能创建第二个。"));
         }
 
         // ── Step 1: load config ─────────────────────────────────────────────
         BuildingConfig townHallConfig = BuildingConfigLoader.getInstance()
                 .getByCategory(WandscapeConstants.BUILDING_CATEGORY_GOVERNMENT);
         if (townHallConfig == null) {
-            return "[Wandscape] no government building config found "
-                    + "(need a building JSON with category=government)";
+            return ColonyCreateOutcome.failure(Component.literal(
+                    "[Wandscape] no government building config found "
+                    + "(need a building JSON with category=government)"));
         }
 
         // ── Step 2: create colonyId ─────────────────────────────────────────
@@ -176,7 +196,8 @@ public final class ColonyCommand {
         for (BlockPos spawnPos : spawnPositions) {
             var npc = Wandscape.WANDSCAPE_NPC.get().spawn(level, spawnPos, MobSpawnType.COMMAND);
             if (npc == null) {
-                return "[Wandscape] Failed to spawn NPC at " + spawnPos;
+                return ColonyCreateOutcome.failure(Component.literal(
+                        "[Wandscape] Failed to spawn NPC at " + spawnPos));
             }
             npc.setPersistenceRequired();
             npc.colonyId = colonyId;
@@ -215,7 +236,8 @@ public final class ColonyCommand {
 
         // ── Step 7: reply ───────────────────────────────────────────────────
         int materialTypes = computeUniqueBlockTypes(townHallConfig);
-        return "[Wandscape] Colony '" + name + "' created!\n" +
+        return ColonyCreateOutcome.success(Component.literal(
+                "[Wandscape] Colony '" + name + "' created!\n" +
                 "  ID: " + colonyId.toString().substring(0, 8) + "\n" +
                 "  TownHall: " + origin.toShortString() + "\n" +
                 "  NPC: " + INITIAL_BUILDER_COUNT + " builders at "
@@ -223,7 +245,7 @@ public final class ColonyCommand {
                 "  Inventory: " + starterItems.size() + " stacks (" + materialTypes + " types)\n" +
                 "  Radius: 256 blocks\n" +
                 "\nTip: use /wandscape fill " + townHallConfig.id()
-                        + " 1 1 to queue construction";
+                        + " 1 1 to queue construction"));
     }
 
     /**
@@ -242,7 +264,7 @@ public final class ColonyCommand {
     public static UUID ensureColonyNear(ServerLevel level, BlockPos origin,
                                         String name, @Nullable UUID founder) {
         ColonyApi colonyApi = ColonyApiImpl.get();
-        // 一人一殖民地：玩家已有殖民地时返回它（无论多远），绝不新建第二个
+        // 一人一小镇：玩家已有小镇时返回它（无论多远），绝不新建第二个
         if (founder != null) {
             UUID owned = colonyApi.getColonyByFounder(founder);
             if (owned != null) return owned;
@@ -250,10 +272,10 @@ public final class ColonyCommand {
         UUID existing = colonyApi.getColonyId(origin);
         if (existing != null) return existing;
 
-        String result = createColonyAt(level, origin, name, founder);
-        if (result == null || result.startsWith("[Wandscape] no government")
-                || result.startsWith("[Wandscape] Failed")) {
-            Log.warn(TAG, "[Colony] Auto-create failed at {}: {}", origin, result);
+        ColonyCreateOutcome outcome = createColonyAt(level, origin, name, founder);
+        if (outcome == null || !outcome.success()) {
+            Log.warn(TAG, "[Colony] Auto-create failed at {}: {}", origin,
+                    outcome != null ? outcome.message().getString() : "null");
             return null;
         }
 
@@ -281,20 +303,22 @@ public final class ColonyCommand {
             colonyId = colonyApi.getColonyId(player.blockPosition());
         }
         if (colonyId == null) {
-            ctx.getSource().sendFailure(Component.literal(
-                    "[Wandscape] 你当前没有所属的殖民地，附近 256 格内也没有发现殖民地。"));
+            ctx.getSource().sendFailure(I18n.name(
+                    "message.wandscape.command.colony_none_found",
+                    "[Wandscape] 你当前没有所属的小镇，附近 256 格内也没有发现小镇。"));
             return 0;
         }
 
         final UUID targetColonyId = colonyId;
         colonyApi.deleteColony(targetColonyId);
-        ctx.getSource().sendSuccess(() -> Component.literal(
-                "[Wandscape] 成功销毁殖民地 " + targetColonyId.toString().substring(0, 8)),
-                true);
+        ctx.getSource().sendSuccess(() -> I18n.name(
+                "message.wandscape.command.colony_destroyed",
+                "[Wandscape] 成功销毁小镇 %s",
+                targetColonyId.toString().substring(0, 8)), true);
         return Command.SINGLE_SUCCESS;
     }
 
-    /** 设置殖民地等级到指定值（调试/测试用，如 /wandscape colony level 100）。 */
+    /** 设置小镇等级到指定值（调试/测试用，如 /wandscape colony level 100）。 */
     private static int setColonyLevel(CommandContext<CommandSourceStack> ctx) {
         int level = IntegerArgumentType.getInteger(ctx, "level");
         net.minecraft.server.level.ServerPlayer player = ctx.getSource().getPlayer();

@@ -9,6 +9,7 @@ import com.wsteam.wandscape.building.scanner.CreativeScannerBlockEntity;
 import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
+import com.wsteam.wandscape.shared.ui.I18n;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -51,7 +52,7 @@ public record ScannerValuePacket(BlockPos pos) implements CustomPacketPayload {
         BlockEntity be = level.getBlockEntity(packet.pos);
         if (!(be instanceof CreativeScannerBlockEntity scanner)) {
             Log.warn(TAG, "No scanner BE at {}", packet.pos);
-            player.sendSystemMessage(Component.literal("§c未找到扫描器方块 @ " + packet.pos));
+            player.sendSystemMessage(I18n.name("message.wandscape.scanner.value_no_scanner", "§c未找到扫描器方块 @ %s", packet.pos));
             return;
         }
 
@@ -60,7 +61,7 @@ public record ScannerValuePacket(BlockPos pos) implements CustomPacketPayload {
         BlockPos wMin = scanner.getWorldMin();
         BlockPos wMax = scanner.getWorldMax();
         if (wMin == null || wMax == null) {
-            player.sendSystemMessage(Component.literal("§c未定义 3D 边界"));
+            player.sendSystemMessage(I18n.name("message.wandscape.scanner.value_no_boundary", "§c未定义 3D 边界"));
             return;
         }
 
@@ -93,23 +94,23 @@ public record ScannerValuePacket(BlockPos pos) implements CustomPacketPayload {
         }
 
         if (blockCount == 0) {
-            player.sendSystemMessage(Component.literal("§c区域内无有效方块（已排除扫描器与交互位）"));
+            player.sendSystemMessage(I18n.name("message.wandscape.scanner.value_no_blocks", "§c区域内无有效方块（已排除扫描器与交互位）"));
             return;
         }
 
-        StringBuilder sb = new StringBuilder("§a区域元素价值: ");
-        List<String> parts = new ArrayList<>();
+        var msg = I18n.name("message.wandscape.scanner.value_total_header", "§a区域元素价值: ");
+        List<Component> parts = new ArrayList<>();
         for (var entry : totals.entrySet()) {
-            parts.add("§7" + entry.getKey().getId() + " §f" + entry.getValue());
+            parts.add(Component.literal("§7" + entry.getKey().getId() + " §f" + entry.getValue()));
         }
         if (parts.isEmpty()) {
-            sb.append("§c区域内方块均无元素映射，价值为 0");
+            msg.append(I18n.name("message.wandscape.scanner.value_no_mapping", "§c区域内方块均无元素映射，价值为 0"));
         } else {
-            sb.append(String.join("  ", parts));
-            sb.append("  §6总价值 §e").append(grandTotal);
+            for (Component p : parts) msg.append(p);
+            msg.append(I18n.name("message.wandscape.scanner.value_grand_total", "  §6总价值 §e%s", grandTotal));
         }
-        sb.append("  §8(").append(blockCount).append(" 方块)");
-        player.sendSystemMessage(Component.literal(sb.toString()));
+        msg.append(I18n.name("message.wandscape.scanner.value_block_count", "  §8(%s 方块)", blockCount));
+        player.sendSystemMessage(msg);
     }
 
     private static void write(RegistryFriendlyByteBuf buf, ScannerValuePacket pkt) {

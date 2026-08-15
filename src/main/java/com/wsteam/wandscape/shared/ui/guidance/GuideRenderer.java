@@ -61,17 +61,20 @@ public final class GuideRenderer {
             return new Box(x, y, s, s, 0, 0, 0, 0, 0, 9, 0, "", List.of(), "", true);
         }
 
-        List<String> lines = step.linesFor(buildMode, isPlacing, isBar, isPinned);
-        String hint = step.hint();
+        // GuideStep fields hold i18n keys; resolve them to the client's language here.
+        List<String> lines = step.linesFor(buildMode, isPlacing, isBar, isPinned)
+                .stream().map(GuideRenderer::text).toList();
+        String hint = text(step.hint());
+        String title = text(step.title());
 
         // Layout is in pose space (pre-scale): the font draws at logical size there, so
         // text widths/heights stay logical — the pose scale in render() shrinks everything.
         // Wrap at one consistent logical width, then size the box to the widest wrapped
         // piece so no line spills past the flush-right edge.
-        int wrapW = Math.min(naturalWidth(font, step.title(), lines, hint), MAX_CONTENT_WIDTH);
+        int wrapW = Math.min(naturalWidth(font, title, lines, hint), MAX_CONTENT_WIDTH);
         int maxLogicalW = 0;
         int rows = 0;
-        for (FormattedCharSequence piece : wrap(font, step.title(), wrapW)) {
+        for (FormattedCharSequence piece : wrap(font, title, wrapW)) {
             rows++;
             maxLogicalW = Math.max(maxLogicalW, font.width(piece));
         }
@@ -101,7 +104,12 @@ public final class GuideRenderer {
         int toggleX = closeX - btnS - 6;
         int toggleY = y + 6;
 
-        return new Box(x, y, boxW, boxH, closeX, closeY, btnS, toggleX, toggleY, btnS, wrapW, step.title(), lines, hint, false);
+        return new Box(x, y, boxW, boxH, closeX, closeY, btnS, toggleX, toggleY, btnS, wrapW, title, lines, hint, false);
+    }
+
+    /** Resolve an i18n key to the client's language text (missing keys show the key itself). */
+    private static String text(String key) {
+        return Component.translatable(key).getString();
     }
 
     /** Widest single-line width among the title, lines and hint (logical px). */

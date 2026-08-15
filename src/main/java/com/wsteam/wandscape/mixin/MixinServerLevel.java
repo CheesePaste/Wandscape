@@ -11,7 +11,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
- * 让原版袭击把殖民地当作村庄：{@code ServerLevel.isVillage} 在市政厅
+ * 让原版袭击把小镇当作村庄：{@code ServerLevel.isVillage} 在市政厅
  * {@code raid.villageRange} 内返回 true。
  *
  * <p>原版 {@code Raid.tick()} 每 tick 检查 {@code isVillage(center)}，中心不在村庄则

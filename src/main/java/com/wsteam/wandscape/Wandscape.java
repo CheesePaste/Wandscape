@@ -226,7 +226,7 @@ public class Wandscape {
     public static final ElementMappingLoader ELEMENT_MAPPING_LOADER = new ElementMappingLoader(DATA_LOADER);
     public static final ElementApiImpl ELEMENT_API = new ElementApiImpl(ELEMENT_MAPPING_LOADER);
 
-    // 元素物品（代表一种元素，供 JEI/配方展示；获得后自动存入所在殖民地仓库）
+    // 元素物品（代表一种元素，供 JEI/配方展示；获得后自动存入所在小镇仓库）
     public static final Map<ElementType, DeferredItem<Item>> ELEMENT_ITEMS = createElementItems();
     private static Map<ElementType, DeferredItem<Item>> createElementItems() {
         EnumMap<ElementType, DeferredItem<Item>> map = new EnumMap<>(ElementType.class);

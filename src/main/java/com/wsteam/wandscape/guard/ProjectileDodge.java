@@ -48,7 +48,7 @@ public final class ProjectileDodge {
 
     private ProjectileDodge() {}
 
-    /** 每 server tick 调用：节流侦测所有殖民地 NPC 附近敌对投掷物，命中风险则走位躲开。 */
+    /** 每 server tick 调用：节流侦测所有小镇 NPC 附近敌对投掷物，命中风险则走位躲开。 */
     public static void tick(World world) {
         if (++tickCounter % DETECT_INTERVAL_TICKS != 0) return;
 

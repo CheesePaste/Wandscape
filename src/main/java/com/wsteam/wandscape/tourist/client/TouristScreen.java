@@ -70,7 +70,7 @@ public class TouristScreen extends MedievalScreen {
         super.init();
         addRenderableWidget(new MedievalButton(
                 leftPos + PW - 54, topPos + PH - 22, 46, 16,
-                Component.literal("关闭"), () -> Minecraft.getInstance().setScreen(null)));
+                I18n.name("gui.wandscape.common.close", "Close"), () -> Minecraft.getInstance().setScreen(null)));
     }
 
     @Override
@@ -91,7 +91,7 @@ public class TouristScreen extends MedievalScreen {
         int barW = 100;
 
         // Comfort bar
-        g.drawString(font, "舒适:", leftCol, statY, MedievalColors.TEXT_WARM_WHITE);
+        g.drawString(font, I18n.name("gui.wandscape.touristscreen.comfort", "舒适:").getString(), leftCol, statY, MedievalColors.TEXT_WARM_WHITE);
         drawStatBar(g, leftCol + labelW, statY, barW, 10,
                 ratio(comfortSat, comfortNeed),
                 comfortSat + "/" + comfortNeed,
@@ -99,7 +99,7 @@ public class TouristScreen extends MedievalScreen {
         statY += 11;
 
         // Magic bar
-        g.drawString(font, "魔法:", leftCol, statY, MedievalColors.TEXT_WARM_WHITE);
+        g.drawString(font, I18n.name("gui.wandscape.touristscreen.magic", "魔法:").getString(), leftCol, statY, MedievalColors.TEXT_WARM_WHITE);
         drawStatBar(g, leftCol + labelW, statY, barW, 10,
                 ratio(magicSat, magicNeed),
                 magicSat + "/" + magicNeed,
@@ -107,7 +107,7 @@ public class TouristScreen extends MedievalScreen {
         statY += 11;
 
         // Wonder bar
-        g.drawString(font, "奇观:", leftCol, statY, MedievalColors.TEXT_WARM_WHITE);
+        g.drawString(font, I18n.name("gui.wandscape.touristscreen.wonder", "奇观:").getString(), leftCol, statY, MedievalColors.TEXT_WARM_WHITE);
         drawStatBar(g, leftCol + labelW, statY, barW, 10,
                 ratio(wonderSat, wonderNeed),
                 wonderSat + "/" + wonderNeed,
@@ -115,7 +115,7 @@ public class TouristScreen extends MedievalScreen {
         statY += 11;
 
         // Energy bar
-        g.drawString(font, "精力:", leftCol, statY, MedievalColors.TEXT_WARM_WHITE);
+        g.drawString(font, I18n.name("gui.wandscape.touristscreen.energy", "精力:").getString(), leftCol, statY, MedievalColors.TEXT_WARM_WHITE);
         drawStatBar(g, leftCol + labelW, statY, barW, 10,
                 Math.clamp((float) energy / WandscapeConstants.TOURIST_MAX_ENERGY, 0f, 1f),
                 energy + "/" + WandscapeConstants.TOURIST_MAX_ENERGY,
@@ -123,27 +123,28 @@ public class TouristScreen extends MedievalScreen {
         statY += 11;
 
         // Level text
-        g.drawString(font, "等级:", leftCol, statY, MedievalColors.TEXT_WARM_WHITE);
+        g.drawString(font, I18n.name("gui.wandscape.touristscreen.level", "等级:").getString(), leftCol, statY, MedievalColors.TEXT_WARM_WHITE);
         g.drawString(font, String.valueOf(level), leftCol + labelW, statY, MedievalColors.TEXT_MUTED);
         statY += 11;
 
         // Wallet
-        g.drawString(font, "钱包:", leftCol, statY, MedievalColors.TEXT_WARM_WHITE);
+        g.drawString(font, I18n.name("gui.wandscape.touristscreen.wallet", "钱包:").getString(), leftCol, statY, MedievalColors.TEXT_WARM_WHITE);
         g.drawString(font, String.valueOf(wallet), leftCol + labelW, statY, MedievalColors.TEXT_MUTED);
         statY += 11;
 
         // Stay
-        g.drawString(font, "停留:", leftCol, statY, MedievalColors.TEXT_WARM_WHITE);
-        g.drawString(font, "已住 " + nightsStayed + " 晚 / 共 " + stayDaysTotal + " 天", leftCol + labelW, statY, MedievalColors.TEXT_MUTED);
+        g.drawString(font, I18n.name("gui.wandscape.touristscreen.stay", "停留:").getString(), leftCol, statY, MedievalColors.TEXT_WARM_WHITE);
+        g.drawString(font, I18n.name("gui.wandscape.touristscreen.stay_detail",
+                "已住 %d 晚 / 共 %d 天", nightsStayed, stayDaysTotal).getString(), leftCol + labelW, statY, MedievalColors.TEXT_MUTED);
         statY += 11;
 
         // ── Visits ──
         int visitsTop = statY + 20;
-        g.drawString(font, "行程", leftCol, visitsTop, MedievalColors.ACCENT_GOLD);
+        g.drawString(font, I18n.name("gui.wandscape.touristscreen.visits", "行程").getString(), leftCol, visitsTop, MedievalColors.ACCENT_GOLD);
         g.fill(leftCol, visitsTop + 10, leftPos + PW - 12, visitsTop + 11, MedievalColors.BORDER_GOLD_DARK);
 
         if (recentVisits.isEmpty()) {
-            g.drawString(font, "暂无行程记录", leftCol, visitsTop + 22, MedievalColors.TEXT_MUTED);
+            g.drawString(font, I18n.name("gui.wandscape.touristscreen.no_visits", "暂无行程记录").getString(), leftCol, visitsTop + 22, MedievalColors.TEXT_MUTED);
         } else {
             int visitY = visitsTop + 17;
             int maxLines = (topPos + PH - 24 - visitY) / 10;
@@ -151,10 +152,10 @@ public class TouristScreen extends MedievalScreen {
             for (var visit : recentVisits) {
                 if (count >= maxLines) break;
 
-                String outcomes = "舒适" + formatDelta(visit.comfortDelta())
-                        + " 魔法" + formatDelta(visit.magicDelta())
-                        + " 奇观" + formatDelta(visit.wonderDelta())
-                        + " · 精力" + formatDelta(visit.energyDelta());
+                String outcomes = I18n.name("gui.wandscape.touristscreen.visit_outcomes",
+                        "舒适%s 魔法%s 奇观%s · 精力%s",
+                        formatDelta(visit.comfortDelta()), formatDelta(visit.magicDelta()),
+                        formatDelta(visit.wonderDelta()), formatDelta(visit.energyDelta())).getString();
                 Component building = (visit.buildingTypeId() == null || visit.buildingTypeId().isEmpty())
                         ? Component.literal(visit.buildingName())
                         : I18n.name("building.wandscape." + visit.buildingTypeId(), visit.buildingName());
@@ -172,10 +173,16 @@ public class TouristScreen extends MedievalScreen {
 
     /** 画像标签：need 最高维 = 偏爱；三条相等 = 均衡。 */
     private String personaLabel() {
-        if (comfortNeed == magicNeed && magicNeed == wonderNeed) return "均衡";
-        if (comfortNeed >= magicNeed && comfortNeed >= wonderNeed) return "偏爱舒适";
-        if (magicNeed >= wonderNeed) return "偏爱魔法";
-        return "偏爱奇观";
+        if (comfortNeed == magicNeed && magicNeed == wonderNeed) {
+            return I18n.name("gui.wandscape.touristscreen.persona_balanced", "均衡").getString();
+        }
+        if (comfortNeed >= magicNeed && comfortNeed >= wonderNeed) {
+            return I18n.name("gui.wandscape.touristscreen.persona_comfort", "偏爱舒适").getString();
+        }
+        if (magicNeed >= wonderNeed) {
+            return I18n.name("gui.wandscape.touristscreen.persona_magic", "偏爱魔法").getString();
+        }
+        return I18n.name("gui.wandscape.touristscreen.persona_wonder", "偏爱奇观").getString();
     }
 
     private static float ratio(int sat, int need) {
@@ -187,8 +194,9 @@ public class TouristScreen extends MedievalScreen {
     }
 
     /**
-     * Localize an item registry id (optionally with a " ×N" count suffix) from a
-     * visit log entry, falling back to the raw text for non-item entries (e.g. "服务").
+     * Localize a visit log entry: item registry ids (optionally with a " ×N" count
+     * suffix) resolve to the item name; anything else is treated as a lang key
+     * (e.g. {@code message.wandscape.tourist.what_service}).
      */
     private static Component localizeItemName(String whatHappened) {
         String id = whatHappened;
@@ -202,7 +210,7 @@ public class TouristScreen extends MedievalScreen {
         if (item != null && item != Items.AIR) {
             return new ItemStack(item).getHoverName().copy().append(Component.literal(suffix));
         }
-        return Component.literal(whatHappened);
+        return I18n.name(whatHappened, whatHappened);
     }
 
     /** Draw a compact stat bar. */

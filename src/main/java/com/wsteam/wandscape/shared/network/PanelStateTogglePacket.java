@@ -45,8 +45,8 @@ public record PanelStateTogglePacket(boolean open) implements CustomPacketPayloa
             UUID colonyId = null;
             ColonyApi colonyApi = WandscapeApis.getColonyApiSilently();
             if (colonyApi != null) {
-                // 殖民地与玩家绑定：优先返回玩家自己的殖民地（无论距离），面板永远操作自己的殖民地。
-                // 否则玩家已有殖民地时走空间查找，在远处按 V 会新建第二个殖民地。
+                // 小镇与玩家绑定：优先返回玩家自己的小镇（无论距离），面板永远操作自己的小镇。
+                // 否则玩家已有小镇时走空间查找，在远处按 V 会新建第二个小镇。
                 colonyId = colonyApi.getColonyByFounder(playerId);
                 if (colonyId == null) {
                     colonyId = colonyApi.getColonyId(player.blockPosition());

@@ -3,6 +3,7 @@ package com.wsteam.wandscape.imgui;
 import com.wsteam.wandscape.road.client.SplineEditorClientState;
 import com.wsteam.wandscape.road.client.SplineEditorImGui;
 import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.shared.ui.I18n;
 import com.wsteam.wandscape.shared.ui.panel.WandscapePanelState;
 
 import imgui.ImFont;
@@ -18,6 +19,8 @@ import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.client.event.RenderFrameEvent;
 
 import org.lwjgl.glfw.GLFW;
+
+import java.util.Locale;
 
 public class ImGuiManager {
     private static final ImGuiImplGlfw imGuiGlfw = new ImGuiImplGlfw();
@@ -281,28 +284,31 @@ public class ImGuiManager {
         ImGui.setNextWindowPos(20, 20, ImGuiCond.FirstUseEver);
         ImGui.setNextWindowSize(360, 200, ImGuiCond.FirstUseEver);
 
-        if (ImGui.begin("Wandscape 调试控制台")) {
-            ImGui.text("ImGui 集成测试");
+        if (ImGui.begin(I18n.name("gui.wandscape.imgui.console", "Wandscape 调试控制台").getString())) {
+            ImGui.text(I18n.name("gui.wandscape.imgui.test_title", "ImGui 集成测试").getString());
             ImGui.separator();
 
             var io = ImGui.getIO();
-            ImGui.text(String.format("帧率 FPS: %.1f", io.getFramerate()));
-            ImGui.text(String.format("捕获鼠标: %b", io.getWantCaptureMouse()));
-            ImGui.text(String.format("捕获键盘: %b", io.getWantCaptureKeyboard()));
+            ImGui.text(I18n.name("gui.wandscape.imgui.fps", "帧率 FPS: %s",
+                    String.format(Locale.ROOT, "%.1f", io.getFramerate())).getString());
+            ImGui.text(I18n.name("gui.wandscape.imgui.capture_mouse", "捕获鼠标: %s",
+                    io.getWantCaptureMouse()).getString());
+            ImGui.text(I18n.name("gui.wandscape.imgui.capture_keyboard", "捕获键盘: %s",
+                    io.getWantCaptureKeyboard()).getString());
 
             ImGui.separator();
-            if (ImGui.button("测试按钮")) {
+            if (ImGui.button(I18n.name("gui.wandscape.imgui.test_button", "测试按钮").getString())) {
                 Minecraft.getInstance().player.displayClientMessage(
-                        net.minecraft.network.chat.Component.literal("[ImGui] 按钮被点击!"), true);
+                        I18n.name("message.wandscape.imgui.button_clicked", "[ImGui] 按钮被点击!"), true);
             }
             ImGui.sameLine();
-            if (ImGui.button("关闭")) {
+            if (ImGui.button(I18n.name("gui.wandscape.imgui.close", "关闭").getString())) {
                 toggle();
             }
-            ImGui.text("按 F12 键切换显示");
+            ImGui.text(I18n.name("gui.wandscape.imgui.f12_hint", "按 F12 键切换显示").getString());
 
             var activity = (float) (Math.sin(System.currentTimeMillis() / 1000.0) * 0.5 + 0.5);
-            ImGui.progressBar(activity, 200, 0f, "系统运行度");
+            ImGui.progressBar(activity, 200, 0f, I18n.name("gui.wandscape.imgui.activity", "系统运行度").getString());
         }
         ImGui.end();
     }

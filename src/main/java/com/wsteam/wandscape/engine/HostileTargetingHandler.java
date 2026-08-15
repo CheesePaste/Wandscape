@@ -35,7 +35,7 @@ import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
  * 打玩家（不回归原版），没有玩家竞争时才把 NPC/游客当目标。
  *
  * <p>自身是 {@link PlayerLike} 的敌对生物（如敌对测试法师）不追加玩家级索敌——
- * 它伤不了殖民地 NPC（光束伤害钩子排除），避免它死盯打不死的目标。
+ * 它伤不了小镇 NPC（光束伤害钩子排除），避免它死盯打不死的目标。
  *
  * <p>同一实体可能多次加入世界（维度传送 / chunk 重载），若目标选择器已存在宽类
  * （{@link PathfinderMob}）索敌 goal 则跳过，避免每次 join 叠加重复 goal。

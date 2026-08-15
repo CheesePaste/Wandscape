@@ -18,6 +18,7 @@ import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.shared.data.NarrativeEvent;
 import com.wsteam.wandscape.shared.data.ServiceConfig;
 import com.wsteam.wandscape.shared.registry.WandscapeConstants;
+import com.wsteam.wandscape.shared.ui.I18n;
 import com.wsteam.wandscape.tourist.entity.TouristEntity;
 
 import net.minecraft.core.BlockPos;
@@ -430,7 +431,7 @@ public final class HotelStayHandler {
         if (config != null && config.displayName() != null && !config.displayName().isEmpty()) {
             return config.displayName();
         }
-        return typeId != null ? typeId : "旅馆";
+        return typeId != null ? typeId : I18n.name("message.wandscape.tourist.inn", "旅馆").getString();
     }
 
     private static void emitNarrativeEvent(NarrativeEvent ne) {

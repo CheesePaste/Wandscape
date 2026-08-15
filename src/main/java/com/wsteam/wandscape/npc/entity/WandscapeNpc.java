@@ -161,8 +161,8 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
     /**
      * 该生物当前是否应视为可**索敌**的敌对目标（NPC 目标选择唯一入口，仅用于锁定目标）：
      * 普通敌对生物（{@link Enemy} 且非中立）恒是；中立生物（{@link NeutralMob}——末影人/僵尸猪人
-     * 等既属 Enemy 又属 NeutralMob）仅在**发怒且怒火指向玩家或殖民地成员**（NPC/村民）时才算——
-     * 平时和平状态绝不主动索敌；对其它怪物发怒（如被骷髅打伤）也不算殖民地威胁。
+     * 等既属 Enemy 又属 NeutralMob）仅在**发怒且怒火指向玩家或小镇成员**（NPC/村民）时才算——
+     * 平时和平状态绝不主动索敌；对其它怪物发怒（如被骷髅打伤）也不算小镇威胁。
      * 注意：这只是「索敌」判定。光束/法术伤害仍按 {@link Enemy} 结算（{@link #canBeamHurt}），
      * 战斗中可能误伤到正好在束内/溅射范围内的和平中立生物——这是有意的。
      */
@@ -180,7 +180,7 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
      * 该法师的魔法光束能伤害的目标判定钩子。默认只伤敌对生物（{@link Enemy}）——
      * 与 {@link #isHostileTarget}（索敌判定）分开：战斗中对束内 Enemy 一律结算伤害，
      * 可能误伤正好在束内/溅射范围内的和平中立生物；但 NPC 不会主动索敌锁定它们。
-     * 殖民地 NPC 的光束**永不伤害玩家**、其它 NPC 或村民。敌对法师等子类
+     * 小镇 NPC 的光束**永不伤害玩家**、其它 NPC 或村民。敌对法师等子类
      * 覆盖为「Enemy 或 生存玩家」，用于实战测试。光束伤害（{@code MagicBeamEntity}）、
      * SPELL_POWER 倍率（{@code NpcSpellPowerHandler}）与战斗快照敌数（{@code GuardCombat}）
      * 三处统一走此钩子，保证「NPC 伤不了玩家、邪恶法师能伤生存玩家」的边界唯一且一致。
@@ -1055,7 +1055,7 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
     }
 
     /**
-     * 是否作为殖民地 NPC 注册进 ECS（加入任务调度/属性权威/死亡记录等）。
+     * 是否作为小镇 NPC 注册进 ECS（加入任务调度/属性权威/死亡记录等）。
      * 敌对测试法师等独立实体覆盖为 false：保留外观/魔法表/法杖初始化，但不进 ECS，
      * 也因此在死亡记录与村民索敌增强中被排除（见 NpcDeathHandler / HostileTargetingHandler）。
      */
@@ -1292,7 +1292,7 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
 
     /** In-game display name for the NPC (resolved to the current language). */
     public String getNpcName() {
-        if (!hasCustomName()) return "Wizard";
+        if (!hasCustomName()) return "Mage";
         return com.wsteam.wandscape.shared.data.CharacterNames.localizedString(getCustomName().getString());
     }
 

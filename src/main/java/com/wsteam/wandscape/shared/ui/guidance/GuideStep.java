@@ -3,10 +3,11 @@ package com.wsteam.wandscape.shared.ui.guidance;
 import java.util.List;
 
 /**
- * A single tutorial step (pure content). Three line variants are shown
- * depending on the player's build phase: default (panel idle), building-bar
- * open, or placing a blueprint in world. Step completion is evaluated
- * server-side by {@code GuideProgressService.computeStep}.
+ * A single tutorial step (pure content). All text fields hold i18n keys resolved to the
+ * client's language at render time by {@code GuideRenderer.text}. Three line variants are
+ * shown depending on the player's build phase: default (panel idle), building-bar open, or
+ * placing a blueprint in world. Step completion is evaluated server-side by
+ * {@code GuideProgressService.computeStep}.
  */
 public record GuideStep(
         String id,

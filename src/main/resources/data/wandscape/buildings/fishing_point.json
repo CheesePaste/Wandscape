@@ -4324,6 +4324,5 @@
       "entities": "$entities",
       "name": "$display_name"
     }
-  },
-  "first_free": true
+  }
 }

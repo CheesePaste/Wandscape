@@ -191,7 +191,7 @@ public final class BuildingInteractHandler {
                         state.getTaskQueue().size());
                 BuildingConfig config = BuildingConfigLoader.getInstance().get(state.getBuildingTypeId());
                 if (config != null) {
-                    String lockReason = com.wsteam.wandscape.building.internal.BuildingUnlockChecker
+                    Component lockReason = com.wsteam.wandscape.building.internal.BuildingUnlockChecker
                             .getLockReason(state.getColonyId(), config);
                     if (lockReason != null) {
                         Log.info(TAG, "[Building] {} locked: {}", state.getBuildingTypeId(), lockReason);

@@ -23,13 +23,13 @@ import net.neoforged.neoforge.server.ServerLifecycleHooks;
  * <p>Experience calculation:
  * <ul>
  *   <li>tourist level &lt; colony level → half of {@link Config#COLONY_EXP_EQUAL_LEVEL}
- *       （不再归零：缓解"停留期间殖民地升级导致满条游客经验全流失"的自限效应）</li>
+ *       （不再归零：缓解"停留期间小镇升级导致满条游客经验全流失"的自限效应）</li>
  *   <li>tourist level == colony level → {@link Config#COLONY_EXP_EQUAL_LEVEL}</li>
  *   <li>tourist level &gt; colony level → {@link Config#COLONY_EXP_ABOVE_LEVEL}</li>
  * </ul>
  *
  * <p>Level-up formula: expToNext(level) = 300×(level+1) + 55×(level+1)² —— 二次曲线,
- * 前期便宜后期贵 → 殖民地等级前快后慢（标定：5级≈5天、10级≈12天、15级≈22天、20级≈34天、30级满≈68天）。
+ * 前期便宜后期贵 → 小镇等级前快后慢（标定：5级≈5天、10级≈12天、15级≈22天、20级≈34天、30级满≈68天）。
  * 等级上限见 {@link Config#COLONY_MAX_LEVEL}。
  */
 public final class ColonyLevelManager {
@@ -63,7 +63,7 @@ public final class ColonyLevelManager {
         return data.getName(colonyId);
     }
 
-    /** 直接设置殖民地等级（调试/测试用），经验清零。上限 {@link Config#COLONY_MAX_LEVEL}。 */
+    /** 直接设置小镇等级（调试/测试用），经验清零。上限 {@link Config#COLONY_MAX_LEVEL}。 */
     public void setLevel(UUID colonyId, int level) {
         data.setLevel(colonyId, Math.min(Config.COLONY_MAX_LEVEL.get(), Math.max(1, level)));
         data.setExperience(colonyId, 0);
@@ -100,7 +100,7 @@ public final class ColonyLevelManager {
     public static int computeExpContribution(int colonyLevel, int touristLevel) {
         if (touristLevel == colonyLevel) return Config.COLONY_EXP_EQUAL_LEVEL.get();
         if (touristLevel > colonyLevel) return Config.COLONY_EXP_ABOVE_LEVEL.get();
-        // 低于殖民地等级: 给一半（不再归零）——游客停留期间殖民地常升级 1-2 级，
+        // 低于小镇等级: 给一半（不再归零）——游客停留期间小镇常升级 1-2 级，
         // 若归零则大部分满条游客经验全流失（自限效应），前期升级过慢。
         return Config.COLONY_EXP_EQUAL_LEVEL.get() / 2;
     }
@@ -148,7 +148,7 @@ public final class ColonyLevelManager {
         return true;
     }
 
-    /** 升级庆祝：在殖民地市政厅位置放烟花。粒子纯装饰，API 未就绪时静默跳过。 */
+    /** 升级庆祝：在小镇市政厅位置放烟花。粒子纯装饰，API 未就绪时静默跳过。 */
     private static void fireLevelUpCelebration(UUID colonyId) {
         MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
         if (server == null) return;

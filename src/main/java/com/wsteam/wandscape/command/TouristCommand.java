@@ -10,6 +10,7 @@ import com.wsteam.wandscape.shared.data.MageAttributeRoller;
 import com.wsteam.wandscape.shared.data.RecruitmentCandidate;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
+import com.wsteam.wandscape.shared.ui.I18n;
 import com.wsteam.wandscape.tourist.entity.TouristEntity;
 import com.wsteam.wandscape.tourist.internal.TouristCooldownDebug;
 import com.wsteam.wandscape.tourist.internal.TouristSimSystem;
@@ -20,11 +21,13 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 /**
  * Debug commands for tourist NPC testing.
@@ -82,26 +85,28 @@ public final class TouristCommand {
         ServerLevel level = src.getLevel();
 
         List<TouristEntity> tourists = findTourists(level);
-        List<String> lines = new ArrayList<>();
-        lines.add("=== Tourists: " + tourists.size() + " active ===");
+        MutableComponent msg = Component.literal("=== Tourists: " + tourists.size() + " active ===");
 
         for (TouristEntity t : tourists) {
-            String appearance = t.isMage() ? "法师" : "市民";
+            Component appearance = t.isMage()
+                    ? I18n.name("message.wandscape.command.tourist_role_mage", "法师")
+                    : I18n.name("message.wandscape.command.tourist_role_citizen", "市民");
             BarRatio br = BarRatio.of(t.getComfortSat(), t.getComfortNeed(),
                     t.getMagicSat(), t.getMagicNeed(), t.getWonderSat(), t.getWonderNeed());
-            lines.add(String.format("  %s | %s | %s | Lv.%d | 精力%d | C%d%% M%d%% W%d%%",
-                    t.getTouristName(), appearance,
-                    t.getCurrentState().getDisplayName(),
+            Component state = I18n.name(t.getCurrentState().getDisplayNameKey(),
+                    t.getCurrentState().getDisplayName());
+            msg.append(Component.literal("\n")).append(I18n.name(
+                    "message.wandscape.command.tourist_list_line",
+                    "  %s | %s | %s | Lv.%s | 精力%s | C%s%% M%s%% W%s%%",
+                    t.getTouristName(), appearance, state,
                     t.getLevel(), t.getEnergy(), br.comfort(), br.magic(), br.wonder()));
         }
 
         // Show debug flag state
-        lines.add("");
-        lines.add("--- Debug ---");
-        lines.add("  visited : " + (TouristCooldownDebug.skipVisitedBuildings ? "DISABLED (skip)" : "ENABLED (normal)"));
+        msg.append(Component.literal("\n\n--- Debug ---\n  visited : "
+                + (TouristCooldownDebug.skipVisitedBuildings ? "DISABLED (skip)" : "ENABLED (normal)")));
 
-        String msg = String.join("\n", lines);
-        src.sendSuccess(() -> Component.literal(msg), false);
+        src.sendSuccess(() -> msg, false);
         return Command.SINGLE_SUCCESS;
     }
 
@@ -151,16 +156,16 @@ public final class TouristCommand {
             for (TouristEntity t : tourists) {
                 t.forceMoveMode(targetState);
             }
-            src.sendSuccess(() -> Component.literal(
-                    "[Tourist] All " + tourists.size() + " tourists → " + targetState.getDisplayName()), false);
+            src.sendSuccess(() -> Component.literal("[Tourist] All " + tourists.size() + " tourists → ")
+                    .append(I18n.name(targetState.getDisplayNameKey(), targetState.getDisplayName())), false);
             return Command.SINGLE_SUCCESS;
         }
 
         for (TouristEntity t : tourists) {
             if (t.getTouristName().startsWith(name)) {
                 t.forceMoveMode(targetState);
-                src.sendSuccess(() -> Component.literal(
-                        "[Tourist] " + t.getTouristName() + " → " + targetState.getDisplayName()), false);
+                src.sendSuccess(() -> Component.literal("[Tourist] " + t.getTouristName() + " → ")
+                        .append(I18n.name(targetState.getDisplayNameKey(), targetState.getDisplayName())), false);
                 return Command.SINGLE_SUCCESS;
             }
         }
@@ -319,17 +324,25 @@ public final class TouristCommand {
             }
         }
 
-        String colonyInfo = colonyId != null ? "殖民地 " + colonyId.toString().substring(0, 8) : "无绑定殖民地";
-        String tavernInfo = colonyId != null ? "已录入酒馆「法师简历」列表，可前往酒馆查看与招聘" : "未录入（未找到殖民地）";
-        Component resultMsg = Component.literal(String.format(
-                "[Tourist] 已生成三值全满法师：%s (Lv.%d, %s)\n"
+        Component colonyInfo = colonyId != null
+                ? I18n.name("message.wandscape.command.tourist_spawn_colony", "小镇 %s", colonyId.toString().substring(0, 8))
+                : I18n.name("message.wandscape.command.tourist_spawn_no_colony", "无绑定小镇");
+        Component tavernInfo = colonyId != null
+                ? I18n.name("message.wandscape.command.tourist_spawn_resume_linked", "已录入酒馆「法师简历」列表，可前往酒馆查看与招聘")
+                : I18n.name("message.wandscape.command.tourist_spawn_resume_none", "未录入（未找到小镇）");
+        Component resultMsg = I18n.name("message.wandscape.command.tourist_spawn_result",
+                "[Tourist] 已生成三值全满法师：%s (Lv.%s, %s)\n"
                 + "  满意度三值: 舒适 100%% | 魔法 100%% | 奇观 100%%\n"
-                + "  法师属性: 生命 %.0f, 魔力 %.0f, 强度 %.2f, 工速 %.2f, 施速 %.2f, 护甲 %.1f\n"
+                + "  法师属性: 生命 %s, 魔力 %s, 强度 %s, 工速 %s, 施速 %s, 护甲 %s\n"
                 + "  酒馆简历: %s",
                 tourist.getTouristName(), safeLevel, colonyInfo,
-                candidate.maxHp(), candidate.maxMana(), candidate.spellPower(),
-                candidate.workSpeed(), candidate.spellSpeed(), candidate.armorValue(),
-                tavernInfo));
+                String.format(Locale.ROOT, "%.0f", candidate.maxHp()),
+                String.format(Locale.ROOT, "%.0f", candidate.maxMana()),
+                String.format(Locale.ROOT, "%.2f", candidate.spellPower()),
+                String.format(Locale.ROOT, "%.2f", candidate.workSpeed()),
+                String.format(Locale.ROOT, "%.2f", candidate.spellSpeed()),
+                String.format(Locale.ROOT, "%.1f", candidate.armorValue()),
+                tavernInfo);
         src.sendSuccess(() -> resultMsg, false);
 
         return Command.SINGLE_SUCCESS;

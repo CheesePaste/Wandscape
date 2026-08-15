@@ -24,6 +24,7 @@ import com.wsteam.wandscape.warehouse.ColonyItemBank;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.BlockTags;
@@ -806,19 +807,19 @@ public class BuildingApiImpl implements BuildingApi {
     public PlacementResult placeBuilding(BlockPos anchor, String buildingTypeId, int rotationSteps) {
         BuildingConfig config = BuildingConfigLoader.getInstance().get(buildingTypeId);
         if (config == null) {
-            return PlacementResult.fail("Unknown building type: " + buildingTypeId);
+            return PlacementResult.fail(Component.literal("Unknown building type: " + buildingTypeId));
         }
 
         UUID tempColonyId = com.wsteam.wandscape.engine.ColonyApiImpl.get().getColonyId(anchor);
         if (!BuildingUnlockChecker.isUnlocked(tempColonyId, config)) {
-            String reason = BuildingUnlockChecker.getLockReason(tempColonyId, config);
-            return PlacementResult.fail(reason != null ? reason : "Building is locked");
+            Component reason = BuildingUnlockChecker.getLockReason(tempColonyId, config);
+            return PlacementResult.fail(reason != null ? reason : Component.literal("Building is locked"));
         }
 
         // A disabled block must not be placed as a free material — refuse the whole build.
         String disabledBlock = EnqueueHelper.findDisabledBlock(config);
         if (disabledBlock != null) {
-            return PlacementResult.fail("Building uses a disabled block: " + disabledBlock);
+            return PlacementResult.fail(Component.literal("Building uses a disabled block: " + disabledBlock));
         }
 
         // Register (overlap check happens inside → BuildingSavedData.register).
@@ -827,7 +828,7 @@ public class BuildingApiImpl implements BuildingApi {
         // directly instead of re-locating the building by position.
         BuildingState state = EnqueueHelper.registerIfAbsent(anchor, config, buildingTypeId, rotationSteps);
         if (state == null) {
-            return PlacementResult.fail("Cannot place here — overlaps with an existing building");
+            return PlacementResult.fail(Component.literal("Cannot place here — overlaps with an existing building"));
         }
 
         UUID colonyId = state.getColonyId();

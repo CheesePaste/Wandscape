@@ -56,7 +56,7 @@ public class ColonyLevelData extends SavedData {
             String n = r.name;
             if (n != null && !n.isEmpty()) return n;
         }
-        return "殖民地 " + colonyId.toString().substring(0, 8);
+        return "小镇 " + colonyId.toString().substring(0, 8);
     }
 
     /** Set the level for a colony. */

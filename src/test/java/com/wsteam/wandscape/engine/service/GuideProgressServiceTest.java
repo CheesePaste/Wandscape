@@ -11,7 +11,6 @@ class GuideProgressServiceTest {
 
     private static final class FakeCtx implements GuideServerContext {
         final Set<String> categories = new HashSet<>();
-        final Set<String> types = new HashSet<>();
         boolean deposited;
         boolean synthesized;
         boolean roadPlaced;
@@ -20,7 +19,6 @@ class GuideProgressServiceTest {
         boolean innWithStay;
 
         @Override public boolean hasCategory(String category) { return categories.contains(category); }
-        @Override public boolean hasType(String buildingTypeId) { return types.contains(buildingTypeId); }
         @Override public boolean hasPlayerDeposited() { return deposited; }
         @Override public boolean hasPlayerSynthesized() { return synthesized; }
         @Override public boolean hasPlayerPlacedRoad() { return roadPlaced; }
@@ -45,7 +43,7 @@ class GuideProgressServiceTest {
         c.categories.add("government");
         assertEquals(1, GuideProgressService.computeStep(c));
 
-        c.types.add("warehouse");
+        c.categories.add("storage");
         assertEquals(2, GuideProgressService.computeStep(c));
 
         c.deposited = true;
@@ -60,7 +58,6 @@ class GuideProgressServiceTest {
         c.roadPlaced = true;
         assertEquals(6, GuideProgressService.computeStep(c));
 
-        c.types.add("bakery");
         c.bakeryStocked = true;
         assertEquals(7, GuideProgressService.computeStep(c));
 
@@ -80,7 +77,7 @@ class GuideProgressServiceTest {
     void interactionStepsRequireTheRealAction() {
         FakeCtx c = empty();
         c.categories.add("government");
-        c.types.add("warehouse");
+        c.categories.add("storage");
 
         // Warehouse built but nothing deposited yet → stays on step 3's prerequisite (2).
         assertEquals(2, GuideProgressService.computeStep(c));
@@ -102,7 +99,6 @@ class GuideProgressServiceTest {
         assertEquals(6, GuideProgressService.computeStep(c));
 
         // Bakery built but not yet stocked → stays at 6.
-        c.types.add("bakery");
         assertEquals(6, GuideProgressService.computeStep(c));
 
         c.bakeryStocked = true;
@@ -120,12 +116,11 @@ class GuideProgressServiceTest {
     void bakeryNeedsStockAndInnNeedsOvernightStay() {
         FakeCtx c = empty();
         c.categories.add("government");
-        c.types.add("warehouse");
+        c.categories.add("storage");
         c.deposited = true;
         c.categories.add("workstation");
         c.synthesized = true;
         c.roadPlaced = true;
-        c.types.add("bakery");
         c.bakeryStocked = true;
         c.categories.add("node");
         c.nodeGatherPublished = true;

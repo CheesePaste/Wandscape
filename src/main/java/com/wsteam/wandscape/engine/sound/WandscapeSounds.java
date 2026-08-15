@@ -41,14 +41,14 @@ public final class WandscapeSounds {
     public static final DeferredHolder<SoundEvent, SoundEvent> GUARD_FIRE = register("guard_fire");
 
     // ---- P2 模拟经营 / 全局 ----
-    /** 殖民地升级。 */
+    /** 小镇升级。 */
     public static final DeferredHolder<SoundEvent, SoundEvent> COLONY_LEVEL_UP = register("colony_level_up");
     /** 奇观效果应用/移除。 */
     public static final DeferredHolder<SoundEvent, SoundEvent> WONDER_EFFECT = register("wonder_effect");
     /** 公路铺路。 */
     public static final DeferredHolder<SoundEvent, SoundEvent> ROAD_PLACE = register("road_place");
 
-    // ---- 殖民地环境音（客户端循环，不依赖事件） ----
+    // ---- 小镇环境音（客户端循环，不依赖事件） ----
     /** 白天（游客在城）人群环境音循环。 */
     public static final DeferredHolder<SoundEvent, SoundEvent> COLONY_AMBIENT_DAY = register("colony_ambient_day");
     /** 夜晚（游客离城）森林环境音循环，低音量。 */

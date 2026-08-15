@@ -89,13 +89,13 @@ public class Config {
             .define("general.autoApproveTasks", false);
 
     public static final ModConfigSpec.BooleanValue COLONY_RUN_WHEN_PLAYER_OFFLINE = BUILDER
-            .comment("是否在殖民地创始人玩家不在线时仍运行其殖民地自动化（NPC 建造/生产、游客经济、每日结算）。"
-                    + "默认 true = 服务器无人也在运行；设为 false = 玩家不在线时其殖民地原地冻结，上线后自动恢复。"
-                    + "无创始人的殖民地视为始终运行。")
+            .comment("是否在小镇创始人玩家不在线时仍运行其小镇自动化（NPC 建造/生产、游客经济、每日结算）。"
+                    + "默认 true = 服务器无人也在运行；设为 false = 玩家不在线时其小镇原地冻结，上线后自动恢复。"
+                    + "无创始人的小镇视为始终运行。")
             .define("colony.runWhenPlayerOffline", true);
 
     public static final ModConfigSpec.IntValue INITIAL_ELEMENT_COUNT = BUILDER
-            .comment("每种元素在殖民地仓库首次建立时的初始数量（每殖民地一次，只种一次）。")
+            .comment("每种元素在小镇仓库首次建立时的初始数量（每小镇一次，只种一次）。")
             .defineInRange("colony.initialElementCount", 6000, 0, 1000000);
 
     // ---- Element system ----
@@ -167,7 +167,7 @@ public class Config {
 
     public static final ModConfigSpec.IntValue COLONY_EXP_EQUAL_LEVEL = BUILDER
             .comment("Experience granted when tourist level == colony level (满条离场时)。"
-                    + "700/1400（上调自 250/500）+ 低于殖民地等级给一半 + expToNext 二次曲线，"
+                    + "700/1400（上调自 250/500）+ 低于小镇等级给一半 + expToNext 二次曲线，"
                     + "标定：5级≈5天、10级≈12天、15级≈22天、20级≈34天、30级满≈68天（sim 保守口径）。")
             .defineInRange("colony.expEqualLevel", 700, 0, 10000);
 

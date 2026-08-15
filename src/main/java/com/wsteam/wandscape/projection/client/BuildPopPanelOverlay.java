@@ -1,5 +1,6 @@
 package com.wsteam.wandscape.projection.client;
 
+import com.wsteam.wandscape.shared.ui.I18n;
 import com.wsteam.wandscape.shared.ui.panel.WandscapePanelOverlay;
 import com.wsteam.wandscape.shared.ui.panel.WandscapePanelState;
 import com.wsteam.wandscape.shared.ui.theme.WandscapeTheme;
@@ -76,7 +77,7 @@ public final class BuildPopPanelOverlay {
         // Header: 建筑参数
         int y = panelY + HEADER_Y;
         g.fill(RenderType.guiOverlay(), panelX + 6, y + 12, panelX + PANEL_W - 6, y + 13, 0xFF3A3E47);
-        g.drawString(font, "§6§l建筑参数", panelX + 8, y, 0xFFFFFFFF, false);
+        g.drawString(font, I18n.name("gui.wandscape.buildpop.title", "§6§l建筑参数").getString(), panelX + 8, y, 0xFFFFFFFF, false);
 
         // Position coordinates
         y = panelY + POS_Y;
@@ -87,12 +88,14 @@ public final class BuildPopPanelOverlay {
         } else {
             posStr = "X:-- Y:-- Z:--";
         }
-        g.drawString(font, "§7位置: §f" + posStr, panelX + 8, y, 0xFFFFFFFF, false);
+        g.drawString(font, I18n.name("gui.wandscape.buildpop.position", "§7位置: §f%s", posStr).getString(), panelX + 8, y, 0xFFFFFFFF, false);
 
         // Status & Lock/Unlock Button
         y = panelY + STATUS_Y;
-        String status = isPinned ? "§a[已锁定]" : "§e[瞄准中]";
-        g.drawString(font, "§7状态: " + status, panelX + 8, y + 2, 0xFFFFFFFF, false);
+        String status = isPinned
+                ? I18n.name("gui.wandscape.buildpop.locked", "§a[已锁定]").getString()
+                : I18n.name("gui.wandscape.buildpop.aiming", "§e[瞄准中]").getString();
+        g.drawString(font, I18n.name("gui.wandscape.buildpop.status", "§7状态: %s", status).getString(), panelX + 8, y + 2, 0xFFFFFFFF, false);
 
         int btnLockX = panelX + PANEL_W - BTN_W - BTN_RIGHT_PAD;
         int btnLockY = y;
@@ -101,12 +104,15 @@ public final class BuildPopPanelOverlay {
         int lockAccent = isPinned ? 0xFF28A745 : 0xFFC8A040;
         g.fill(RenderType.guiOverlay(), btnLockX, btnLockY, btnLockX + BTN_W, btnLockY + BTN_H, 0, lockBg);
         g.fill(RenderType.guiOverlay(), btnLockX, btnLockY + BTN_H - 1, btnLockX + BTN_W, btnLockY + BTN_H, 0, lockAccent);
-        g.drawCenteredString(font, isPinned ? "🔓 解锁" : "📌 锁定", btnLockX + BTN_W / 2, btnLockY + 4, hoverLock ? 0xFFFFFFFF : 0xFFCCCCCC);
+        g.drawCenteredString(font, isPinned
+                        ? I18n.name("gui.wandscape.buildpop.unlock", "🔓 解锁").getString()
+                        : I18n.name("gui.wandscape.buildpop.lock", "📌 锁定").getString(),
+                btnLockX + BTN_W / 2, btnLockY + 4, hoverLock ? 0xFFFFFFFF : 0xFFCCCCCC);
 
         // Rotation angle (read-only — rotate the ghost with left-click)
         y = panelY + ROT_Y;
         int rotDeg = ProjectionClientState.getRotationSteps() * 90;
-        g.drawString(font, "§7朝向: §e" + rotDeg + "°", panelX + 8, y + 3, 0xFFFFFFFF, false);
+        g.drawString(font, I18n.name("gui.wandscape.buildpop.rotation", "§7朝向: §e%d°", rotDeg).getString(), panelX + 8, y + 3, 0xFFFFFFFF, false);
 
         // Submit button (always shown — construction does not require pinning first)
         y = panelY + SUBMIT_Y;
@@ -118,7 +124,7 @@ public final class BuildPopPanelOverlay {
         int submitBg = hoverSubmit ? 0xFF1A4D2E : 0xFF14381F;
         g.fill(RenderType.guiOverlay(), submitX, submitY, submitX + submitW, submitY + BTN_H, 0, submitBg);
         g.fill(RenderType.guiOverlay(), submitX, submitY + BTN_H - 1, submitX + submitW, submitY + BTN_H, 0, 0xFF28A745);
-        g.drawCenteredString(font, "✓ 提交施工", submitX + submitW / 2, submitY + 4, hoverSubmit ? 0xFFFFFFFF : 0xFFAADDBB);
+        g.drawCenteredString(font, I18n.name("gui.wandscape.buildpop.submit", "✓ 提交施工").getString(), submitX + submitW / 2, submitY + 4, hoverSubmit ? 0xFFFFFFFF : 0xFFAADDBB);
     }
 
     public static boolean isOverPanel(double mouseX, double mouseY, int screenW) {

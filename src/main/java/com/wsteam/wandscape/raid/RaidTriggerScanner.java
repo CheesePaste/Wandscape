@@ -30,7 +30,7 @@ import net.neoforged.neoforge.common.NeoForge;
  * <p>复用原版 {@link Raid} 全链路（波次/袭击者/Boss 条/号角/村庄英雄/持久化），
  * 这里只写触发：绕过原版 BadOmen→village 链路的村庄判定（见 MixinServerLevel），
  * 以任意建筑为触发源、市政厅为袭击中心。中心放在市政厅是刻意设计——触发点可能
- * 是殖民地边缘的建筑，但袭击围绕核心展开。
+ * 是小镇边缘的建筑，但袭击围绕核心展开。
  */
 public final class RaidTriggerScanner {
     public static final RaidTriggerScanner INSTANCE = new RaidTriggerScanner();
@@ -93,7 +93,7 @@ public final class RaidTriggerScanner {
         return false;
     }
 
-    /** 玩家是否位于殖民地任一非停摆、未损坏建筑 AABB 水平 ±triggerRange（Y 不扩展）内。 */
+    /** 玩家是否位于小镇任一非停摆、未损坏建筑 AABB 水平 ±triggerRange（Y 不扩展）内。 */
     private boolean isNearBuilding(UUID colonyId, BlockPos playerPos) {
         var buildingApi = WandscapeApis.getBuildingApi();
         for (BuildingData b : buildingApi.getColonyBuildings(colonyId)) {

@@ -2,6 +2,7 @@
   "id": "potion_store",
   "display_name": "Potion Store",
   "category": "shop",
+  "first_free": true,
   "pattern": [
     [
       0,

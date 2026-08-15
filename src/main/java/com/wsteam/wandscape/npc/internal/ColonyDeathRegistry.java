@@ -63,7 +63,7 @@ public class ColonyDeathRegistry extends SavedData {
         return DeathRecord.nearest(records, pos.getX(), pos.getY(), pos.getZ(), range);
     }
 
-    /** 某殖民地最近死去的死亡记录（按 deathTime 最新，不限位置）；colonyId 为 null 时不限殖民地；无则 null。祭坛复活用。 */
+    /** 某小镇最近死去的死亡记录（按 deathTime 最新，不限位置）；colonyId 为 null 时不限小镇；无则 null。祭坛复活用。 */
     @Nullable
     public DeathRecord latestInColony(@Nullable UUID colonyId) {
         return DeathRecord.latestInColony(records, colonyId);

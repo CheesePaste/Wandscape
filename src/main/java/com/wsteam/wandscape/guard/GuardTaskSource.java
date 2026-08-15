@@ -57,7 +57,7 @@ public final class GuardTaskSource implements TaskSource {
         LivingEntity threat = findThreat(level);
         if (threat == null) return;
 
-        // 和平模式：殖民地没有会战斗的 NPC → 不发布守卫任务
+        // 和平模式：小镇没有会战斗的 NPC → 不发布守卫任务
         // （否则和平 NPC 反复接任务立即完成，造成每轮轮询的空转）
         if (!hasAggressiveNpc()) {
             Log.info(TAG, "all colony NPCs peaceful — guard task suppressed");
@@ -86,8 +86,8 @@ public final class GuardTaskSource implements TaskSource {
     }
 
     /**
-     * 是否存在未开启和平模式、且不在跟随模式的殖民地 NPC。
-     * 跟随中的 NPC 不会从任务池接取守卫任务（调度器跳过），若全殖民地都跟随，
+     * 是否存在未开启和平模式、且不在跟随模式的小镇 NPC。
+     * 跟随中的 NPC 不会从任务池接取守卫任务（调度器跳过），若全小镇都跟随，
      * 守卫任务发布后无人可接会空挂——与和平模式一样抑制发布。
      */
     private static boolean hasAggressiveNpc() {

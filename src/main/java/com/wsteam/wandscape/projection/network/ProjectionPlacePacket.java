@@ -77,7 +77,7 @@ public record ProjectionPlacePacket(
 
         if (!result.success()) {
             player.displayClientMessage(
-                    Component.literal("[Projection] §c" + result.error()),
+                    Component.literal("[Projection] §c").append(result.error()),
                     false);
             return;
         }

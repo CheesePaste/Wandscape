@@ -1,18 +1,13 @@
 package com.wsteam.wandscape.road.client;
 
-import java.util.List;
 import org.lwjgl.glfw.GLFW;
 
-import com.wsteam.wandscape.road.network.DestroyFillPacket;
-import com.wsteam.wandscape.road.network.FillBoxPacket;
-import com.wsteam.wandscape.road.network.RoadPlacePacket;
 import com.wsteam.wandscape.shared.ui.panel.WandscapePanelState;
 
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.BlockHitResult;
@@ -20,7 +15,6 @@ import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.network.PacketDistributor;
 import com.wsteam.wandscape.shared.log.Log;
 
 /**
@@ -28,15 +22,15 @@ import com.wsteam.wandscape.shared.log.Log;
  *
  * <p>State machine (via RoadPlacementState):
  * <pre>
- *   IDLE       → right-click → PLAN_START (startPos set)
- *   PLAN_START → left-click  → PLAN_END   (endPos set)
- *   PLAN_START → right-click → PLAN_START (overwrite startPos)
- *   PLAN_END   → left-click  → PLAN_END   (overwrite endPos)
- *   PLAN_END   → right-click → IDLE       (clear all)
- *   PLAN_END   → Enter       → publish → IDLE
- *   PLAN_START → Backspace   → IDLE       (clear start)
- *   PLAN_END   → Backspace   → PLAN_START (clear end)
+ *   IDLE       → LMB press over world → PLAN_START (start=end=ghost)
+ *   PLAN_START → LMB drag             → PLAN_END   (end follows ghost)
+ *   PLAN_END   → LMB drag             → PLAN_END   (overwrite end)
+ *   PLAN_END   → Backspace            → PLAN_START (clear end)
+ *   PLAN_START → Backspace            → IDLE       (clear start)
+ *   PLAN_END   → ImGui 面板按钮发包     → IDLE (clearAll)
  * </pre>
+ *
+ * <p>Submission is done through the ImGui Road Studio button, not the keyboard.
  */
 public final class RoadPlacementController {
 
@@ -46,7 +40,6 @@ public final class RoadPlacementController {
 
     // ── Input edge detection ──
     private static boolean wasLeftDown = false;
-    private static boolean wasEnterDown = false;
     private static boolean wasBackspaceDown = false;
     private static boolean wasEscapeDown = false;
 
@@ -106,7 +99,7 @@ public final class RoadPlacementController {
         // Normal world interaction mode (PLACING phase)
         updateGhostPosition(mc);
         handleMouseButtons(mc, window);
-        handleKeyboard(mc, window);
+        handleKeyboard(window);
         drainAttackUse(mc);
     }
 
@@ -199,87 +192,18 @@ public final class RoadPlacementController {
 
     // ── Keyboard handling (no ESC — handled by handleEscapeInput) ──
 
-    private static void handleKeyboard(Minecraft mc, long window) {
-        boolean enterDown = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_ENTER) == GLFW.GLFW_PRESS
-                || GLFW.glfwGetKey(window, GLFW.GLFW_KEY_KP_ENTER) == GLFW.GLFW_PRESS;
+    private static void handleKeyboard(long window) {
         boolean backspaceDown = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_BACKSPACE) == GLFW.GLFW_PRESS;
 
-        boolean enterClicked = enterDown && !wasEnterDown;
         boolean backspaceClicked = backspaceDown && !wasBackspaceDown;
-        wasEnterDown = enterDown;
         wasBackspaceDown = backspaceDown;
 
-        if (enterClicked) {
-            handleEnter(mc);
-        }
         if (backspaceClicked) {
-            handleBackspace(mc);
+            handleBackspace();
         }
     }
 
-    private static void handleEnter(Minecraft mc) {
-        if (!RoadPlacementState.isReady()) {
-            if (mc.player != null) {
-                mc.player.displayClientMessage(
-                        Component.literal(tag() + " §eSet both start and end points first"), true);
-            }
-            return;
-        }
-
-        BlockPos start = RoadPlacementState.getStartPos();
-        BlockPos end = RoadPlacementState.getEndPos();
-
-        if (RoadPlacementState.isFill()) {
-            String presetId = RoadPlacementState.getSelectedPreset().id();
-            PacketDistributor.sendToServer(new FillBoxPacket(presetId, start, end));
-            Log.info(TAG, "[Fill] Published box: preset={} from={} to={}",
-                    presetId, start.toShortString(), end.toShortString());
-            if (mc.player != null) {
-                mc.player.displayClientMessage(
-                        Component.literal("[Fill] §aFill task submitted! NPC will fill the cube."), true);
-            }
-        } else if (RoadPlacementState.isDestroyFill()) {
-            PacketDistributor.sendToServer(new DestroyFillPacket(start, end));
-            Log.info(TAG, "[DestroyFill] Published: ref={} to={}", start.toShortString(), end.toShortString());
-            if (mc.player != null) {
-                mc.player.displayClientMessage(
-                        Component.literal("[Destroy/Fill] §aTerrain flatten task submitted! NPC will flatten the area."), true);
-            }
-        } else if (RoadPlacementState.isSpline()) {
-            String presetId = RoadPlacementState.getSelectedPreset().id();
-            String tilesJson = "[{\"pos\":[" + start.getX() + "," + start.getY() + "," + start.getZ() + "],\"block\":\"" + presetId + "\"},{\"pos\":[" + end.getX() + "," + end.getY() + "," + end.getZ() + "],\"block\":\"" + presetId + "\"}]";
-            String splineJson = "[{\"a\":[" + start.getX() + "," + start.getY() + "," + start.getZ() + "],\"p\":[0,0,0],\"n\":[0,0,0],\"l\":false},{\"a\":[" + end.getX() + "," + end.getY() + "," + end.getZ() + "],\"p\":[0,0,0],\"n\":[0,0,0],\"l\":false}]";
-            PacketDistributor.sendToServer(new com.wsteam.wandscape.road.network.SplineBuildPacket(tilesJson, splineJson));
-            Log.info(TAG, "[Spline] Published spline road: preset={} from={} to={}",
-                    presetId, start.toShortString(), end.toShortString());
-            if (mc.player != null) {
-                mc.player.displayClientMessage(
-                        Component.literal("[Spline Road] §aSpline road task submitted! NPC will pave the curve."), true);
-            }
-        } else {
-            String presetId = RoadPlacementState.getSelectedPreset().id();
-            PacketDistributor.sendToServer(new RoadPlacePacket(presetId, start, end));
-            Log.info(TAG, "[Road] Published road: preset={} from={} to={}",
-                    presetId, start.toShortString(), end.toShortString());
-            if (mc.player != null) {
-                mc.player.displayClientMessage(
-                        Component.literal("[Road] §aRoad task submitted! NPC will pave the path."), true);
-            }
-        }
-
-        // Return to IDLE
-        RoadPlacementState.clearAll();
-    }
-
-    /** Chat prefix for the active tool mode. */
-    private static String tag() {
-        if (RoadPlacementState.isFill()) return "[Fill]";
-        if (RoadPlacementState.isDestroyFill()) return "[Destroy/Fill]";
-        if (RoadPlacementState.isSpline()) return "[Spline Road]";
-        return "[Road]";
-    }
-
-    private static void handleBackspace(Minecraft mc) {
+    private static void handleBackspace() {
         if (RoadPlacementState.hasEnd()) {
             // PLAN_END → clear end, back to PLAN_START
             RoadPlacementState.clearEndPos();

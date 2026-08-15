@@ -46,7 +46,7 @@ public class SchedulerSystem implements System {
         if (tickCounter % heartbeatInterval != 0) return;
 
         // 1. Find all idle NPCs with full component set
-        // 跟随模式：NPC 不接取任何殖民地任务，从空闲候选中排除
+        // 跟随模式：NPC 不接取任何小镇任务，从空闲候选中排除
         List<Long> idleNpcs = new ArrayList<>();
         for (long entity : world.query(Position.class, TaskExecutor.class,
                 EquipmentComponent.class, Inventory.class, ColonyMember.class)) {
@@ -75,7 +75,7 @@ public class SchedulerSystem implements System {
 
         // 3. For each colony, match NPCs to tasks
         for (Map.Entry<UUID, List<Long>> entry : npcsByColony.entrySet()) {
-            // 创始人不在线且关闭离线运行 → 冻结该殖民地：不分配任何任务
+            // 创始人不在线且关闭离线运行 → 冻结该小镇：不分配任何任务
             if (world.entityOps != null && !world.entityOps.isColonyActive(entry.getKey())) {
                 continue;
             }
@@ -97,8 +97,8 @@ public class SchedulerSystem implements System {
                     continue;
                 }
 
-                // 任务可声明殖民地归属 + 魔力门槛（如祭坛施法）：
-                // 只分给指定殖民地的 NPC，且其当前魔力必须 ≥ 任务蓝耗（不足则任务挂起，等回蓝）。
+                // 任务可声明小镇归属 + 魔力门槛（如祭坛施法）：
+                // 只分给指定小镇的 NPC，且其当前魔力必须 ≥ 任务蓝耗（不足则任务挂起，等回蓝）。
                 String taskColony = taskColonyFilter(task);
                 if (taskColony != null && !taskColony.equals(entry.getKey().toString())) {
                     continue;
@@ -187,7 +187,7 @@ public class SchedulerSystem implements System {
         return null;
     }
 
-    /** 任务声明的殖民地归属（params["colony_id"]）；无 = 不限殖民地。 */
+    /** 任务声明的小镇归属（params["colony_id"]）；无 = 不限小镇。 */
     @Nullable
     private static String taskColonyFilter(GlobalTask task) {
         JsonElement el = task.taskParams.get("colony_id");

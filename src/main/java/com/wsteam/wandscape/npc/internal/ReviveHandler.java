@@ -33,7 +33,7 @@ import net.minecraft.world.phys.Vec3;
  * 恢复身份/外观/属性/装备/背包。入口已迁移为**祭坛唯一**（AltarCastExecutor 调用
  * {@link #spawnFromRecordAt}）；shift+右键直接施放已移除（MagicInteractHandler 删除）。
  *
- * <p>全灭保底：当殖民地所有 NPC 均已阵亡时，全灭保底自动在市政厅门口释放复活魔法复活离世成员。
+ * <p>全灭保底：当小镇所有 NPC 均已阵亡时，全灭保底自动在市政厅门口释放复活魔法复活离世成员。
  * 虚弱复活：生成即 1 血 0 蓝，靠脱战回血与魔力回复缓慢恢复。
  */
 public final class ReviveHandler {
@@ -46,8 +46,8 @@ public final class ReviveHandler {
     private ReviveHandler() {}
 
     /**
-     * 检查并执行殖民地全灭自动复活保底。
-     * 当某殖民地存活 NPC 为 0、但存在死亡记录时，自动在市政厅门口释放复活魔法复活最近死亡的一名 NPC。
+     * 检查并执行小镇全灭自动复活保底。
+     * 当某小镇存活 NPC 为 0、但存在死亡记录时，自动在市政厅门口释放复活魔法复活最近死亡的一名 NPC。
      */
     public static boolean checkAndAutoReviveColony(ServerLevel level, UUID colonyId) {
         if (colonyId == null) return false;
@@ -55,7 +55,7 @@ public final class ReviveHandler {
         DeathRecord latestRec = deathReg.latestInColony(colonyId);
         if (latestRec == null) return false;
 
-        // 检查世界上该殖民地活着的 NPC 数量
+        // 检查世界上该小镇活着的 NPC 数量
         World world = WandscapeEngine.getWorld();
         if (world != null) {
             for (var entry : EntityComponentBridge.INSTANCE.allNpcs().entrySet()) {
@@ -72,12 +72,12 @@ public final class ReviveHandler {
         // 确认全灭：定位市政厅门口/入口
         BlockPos townHallPos = resolveTownHallDoorOrAnchor(level, colonyId, new BlockPos(latestRec.x(), latestRec.y(), latestRec.z()));
         spawnFromRecordAt(level, latestRec, townHallPos);
-        Log.info(TAG, "全灭保底触发：殖民地 {} 成员全灭，已自动在市政厅门口 ({}) 释放复活魔法唤醒 {}",
+        Log.info(TAG, "全灭保底触发：小镇 {} 成员全灭，已自动在市政厅门口 ({}) 释放复活魔法唤醒 {}",
                 colonyId.toString().substring(0, 8), townHallPos.toShortString(), latestRec.name());
         return true;
     }
 
-    /** 定位殖民地市政厅门口：category=government 建筑优先用 door_offsets 的可站入口点。 */
+    /** 定位小镇市政厅门口：category=government 建筑优先用 door_offsets 的可站入口点。 */
     private static BlockPos resolveTownHallDoorOrAnchor(ServerLevel level, UUID colonyId, BlockPos fallback) {
         BuildingSavedData savedData = BuildingSavedData.get(level);
         if (savedData != null) {
@@ -132,7 +132,7 @@ public final class ReviveHandler {
                 spawnPos.toShortString(), rec.inventory().size());
     }
 
-    /** spawn() 已用默认属性注册 ECS——这里按死亡快照重新 seed 属性/殖民地/装备/背包（TavernRecruit 同款修正）。 */
+    /** spawn() 已用默认属性注册 ECS——这里按死亡快照重新 seed 属性/小镇/装备/背包（TavernRecruit 同款修正）。 */
     private static void fixEcsAfterSpawn(WandscapeNpc npc, DeathRecord rec) {
         World ecsWorld = WandscapeEngine.getWorld();
         if (ecsWorld == null) return;

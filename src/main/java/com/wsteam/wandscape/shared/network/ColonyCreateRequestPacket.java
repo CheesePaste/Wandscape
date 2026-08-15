@@ -5,9 +5,11 @@ import java.util.UUID;
 import com.wsteam.wandscape.command.ColonyCommand;
 import com.wsteam.wandscape.shared.api.ColonyApi;
 import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.shared.ui.I18n;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
@@ -55,15 +57,17 @@ public record ColonyCreateRequestPacket(BlockPos townHallAnchor, String name)
         UUID existing = colonyApi.getColonyId(packet.townHallAnchor);
         if (existing != null) {
             linkTownHall(colonyApi, packet.townHallAnchor, existing);
-            sendMessage(player, "[Wandscape] 市政厅已关联至现有殖民地。");
+            sendMessage(player, I18n.name("message.wandscape.colony.attached",
+                    "[Wandscape] 市政厅已关联至现有小镇。"));
             return;
         }
 
         // Create new colony at townHallAnchor using ColonyCommand.createColonyAt
-        String result = ColonyCommand.createColonyAt(level, packet.townHallAnchor, name, player.getUUID());
-        if (result == null || result.startsWith("[Wandscape] no government")
-                || result.startsWith("[Wandscape] Failed")) {
-            sendMessage(player, result != null ? result : "[Wandscape] 创建殖民地失败。");
+        ColonyCommand.ColonyCreateOutcome outcome =
+                ColonyCommand.createColonyAt(level, packet.townHallAnchor, name, player.getUUID());
+        if (outcome == null || !outcome.success()) {
+            sendMessage(player, outcome != null ? outcome.message()
+                    : I18n.name("message.wandscape.colony.create_failed", "[Wandscape] 创建小镇失败。"));
             return;
         }
 
@@ -86,7 +90,7 @@ public record ColonyCreateRequestPacket(BlockPos townHallAnchor, String name)
             guideApi.sendToPlayer(player, colonyId);
         }
 
-        sendMessage(player, result);
+        sendMessage(player, outcome.message());
     }
 
     private static void linkTownHall(ColonyApi colonyApi, BlockPos anchor, UUID colonyId) {
@@ -100,9 +104,9 @@ public record ColonyCreateRequestPacket(BlockPos townHallAnchor, String name)
         }
     }
 
-    private static void sendMessage(ServerPlayer player, String message) {
+    private static void sendMessage(ServerPlayer player, Component message) {
         if (player != null) {
-            player.sendSystemMessage(net.minecraft.network.chat.Component.literal(message));
+            player.sendSystemMessage(message);
         }
     }
 

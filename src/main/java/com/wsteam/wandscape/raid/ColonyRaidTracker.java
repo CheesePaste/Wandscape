@@ -16,7 +16,7 @@ import net.minecraft.world.entity.raid.Raid;
 import net.neoforged.neoforge.common.NeoForge;
 
 /**
- * 殖民地↔袭击跟踪：轮询 {@link Raid#isVictory()}，胜利时广播
+ * 小镇↔袭击跟踪：轮询 {@link Raid#isVictory()}，胜利时广播
  * {@link ColonyRaidVictoryEvent}。
  *
  * <p>袭击本体持久化由原版 {@code Raids} SavedData 负责（存档/重进自动恢复）；

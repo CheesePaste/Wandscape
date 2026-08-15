@@ -211,8 +211,12 @@ public class TavernScreen extends MedievalScreen {
             int cx = lx + lw / 2;
             g.drawCenteredString(font, I18n.name("gui.wandscape.tavern.no_resumes", "No Resumes"),
                     cx, ly + 50, MedievalColors.TEXT_MUTED);
-            g.drawCenteredString(font, "满条法师游客离城时", cx, ly + 68, MedievalColors.TEXT_DIM);
-            g.drawCenteredString(font, "会在此留下求职简历", cx, ly + 80, MedievalColors.TEXT_DIM);
+            String[] hintLines = I18n.name("gui.wandscape.tavern.resume_hint",
+                    "满条法师游客离城时\n会在此留下求职简历").getString().split("\n", 2);
+            g.drawCenteredString(font, hintLines[0], cx, ly + 68, MedievalColors.TEXT_DIM);
+            if (hintLines.length > 1) {
+                g.drawCenteredString(font, hintLines[1], cx, ly + 80, MedievalColors.TEXT_DIM);
+            }
         } else {
             int cardH = 26;
             int cardGap = 2;
@@ -277,11 +281,11 @@ public class TavernScreen extends MedievalScreen {
             // Header info next to 3D model
             int hx = rx + 64;
             g.drawString(font, r.touristName(), hx, ry + 8, MedievalColors.ACCENT_GOLD);
-            g.drawString(font, "等阶: Lv." + r.level(), hx, ry + 22, MedievalColors.TEXT_WARM_WHITE);
+            g.drawString(font, I18n.name("gui.wandscape.tavern.rank", "等阶: Lv.%d", r.level()).getString(), hx, ry + 22, MedievalColors.TEXT_WARM_WHITE);
 
             String specialty = getSpecialtyTag(r);
             g.drawString(font, specialty, hx, ry + 36, MedievalColors.SUCCESS_GREEN);
-            g.drawString(font, "状态: 待聘用", hx, ry + 50, MedievalColors.TEXT_MUTED);
+            g.drawString(font, I18n.name("gui.wandscape.tavern.status_pending", "状态: 待聘用").getString(), hx, ry + 50, MedievalColors.TEXT_MUTED);
 
             // Divider
             g.fill(rx + 6, ry + 73, rx + rw - 6, ry + 74, MedievalColors.BORDER_GOLD_DARK);
@@ -292,19 +296,19 @@ public class TavernScreen extends MedievalScreen {
             int col2 = rx + 94;
 
             // Row 1
-            g.drawString(font, "❤️ 生命: " + (int) r.maxHp(), col1, ay, MedievalColors.TEXT_WARM_WHITE);
-            g.drawString(font, "💧 魔力: " + (int) r.maxMana(), col2, ay, MedievalColors.MANA_BLUE);
+            g.drawString(font, I18n.name("gui.wandscape.tavern.attr_hp", "❤️ 生命: %s", (int) r.maxHp()).getString(), col1, ay, MedievalColors.TEXT_WARM_WHITE);
+            g.drawString(font, I18n.name("gui.wandscape.tavern.attr_mana", "💧 魔力: %s", (int) r.maxMana()).getString(), col2, ay, MedievalColors.MANA_BLUE);
 
             // Row 2
-            g.drawString(font, "⚡ 强度: " + fmt(r.spellPower()), col1, ay + 13, MedievalColors.ACCENT_GOLD);
-            g.drawString(font, "⚒️ 工速: " + fmt(r.workSpeed()), col2, ay + 13, MedievalColors.TEXT_WARM_WHITE);
+            g.drawString(font, I18n.name("gui.wandscape.tavern.attr_spell_power", "⚡ 强度: %s", fmt(r.spellPower())).getString(), col1, ay + 13, MedievalColors.ACCENT_GOLD);
+            g.drawString(font, I18n.name("gui.wandscape.tavern.attr_work_speed", "⚒️ 工速: %s", fmt(r.workSpeed())).getString(), col2, ay + 13, MedievalColors.TEXT_WARM_WHITE);
 
             // Row 3
-            g.drawString(font, "⏳ 施速: " + fmt(r.spellSpeed()), col1, ay + 26, MedievalColors.TEXT_WARM_WHITE);
-            g.drawString(font, "🛡️ 护甲: " + fmt(r.armorValue()), col2, ay + 26, MedievalColors.TEXT_MUTED);
+            g.drawString(font, I18n.name("gui.wandscape.tavern.attr_spell_speed", "⏳ 施速: %s", fmt(r.spellSpeed())).getString(), col1, ay + 26, MedievalColors.TEXT_WARM_WHITE);
+            g.drawString(font, I18n.name("gui.wandscape.tavern.attr_armor", "🛡️ 护甲: %s", fmt(r.armorValue())).getString(), col2, ay + 26, MedievalColors.TEXT_MUTED);
 
             // Row 4
-            g.drawString(font, "✦ 速度: " + fmt(r.moveSpeed()), col1, ay + 39, MedievalColors.TEXT_MUTED);
+            g.drawString(font, I18n.name("gui.wandscape.tavern.attr_move_speed", "✦ 速度: %s", fmt(r.moveSpeed())).getString(), col1, ay + 39, MedievalColors.TEXT_MUTED);
         } else {
             int cx = rx + rw / 2;
             g.drawCenteredString(font, I18n.name("gui.wandscape.tavern.no_selection", "Please select a candidate"),
@@ -331,15 +335,25 @@ public class TavernScreen extends MedievalScreen {
         drawGlowBorder(g, bx, by, bw, bh, MedievalColors.BORDER_GOLD);
 
         if (recruitCount == 0) {
-            g.drawCenteredString(font, "✦ 首次招募免费 ✦", cx, by + 14, MedievalColors.SUCCESS_GREEN);
-            g.drawCenteredString(font, "招募后法师将即刻抵达酒馆并加入殖民地", cx, by + 32, MedievalColors.TEXT_WARM_WHITE);
-            g.drawCenteredString(font, "（此后每次招募将消耗 6 种元素各 10,000）", cx, by + 48, MedievalColors.TEXT_DIM);
+            g.drawCenteredString(font, I18n.name("gui.wandscape.tavern.first_free", "✦ 首次招募免费 ✦").getString(),
+                    cx, by + 14, MedievalColors.SUCCESS_GREEN);
+            g.drawCenteredString(font, I18n.name("gui.wandscape.tavern.recruit_arrive",
+                    "招募后法师将即刻抵达酒馆并加入小镇").getString(),
+                    cx, by + 32, MedievalColors.TEXT_WARM_WHITE);
+            g.drawCenteredString(font, I18n.name("gui.wandscape.tavern.recruit_cost_future",
+                    "（此后每次招募将消耗 6 种元素各 %d）",
+                    WandscapeConstants.TAVERN_RECRUIT_COST_PER_ELEMENT).getString(),
+                    cx, by + 48, MedievalColors.TEXT_DIM);
         } else {
-            g.drawCenteredString(font, "招募代价：6 种基础元素各 " + WandscapeConstants.TAVERN_RECRUIT_COST_PER_ELEMENT,
+            g.drawCenteredString(font, I18n.name("gui.wandscape.tavern.recruit_cost_now",
+                    "招募代价：6 种基础元素各 %d",
+                    WandscapeConstants.TAVERN_RECRUIT_COST_PER_ELEMENT).getString(),
                     cx, by + 14, MedievalColors.TEXT_WARM_WHITE);
-            g.drawCenteredString(font, "已累计招募：" + recruitCount + " 位法师",
+            g.drawCenteredString(font, I18n.name("gui.wandscape.tavern.recruit_count",
+                    "已累计招募：%d 位法师", recruitCount).getString(),
                     cx, by + 32, MedievalColors.ACCENT_GOLD);
-            g.drawCenteredString(font, "将自动从殖民地仓库中结算扣除所需元素",
+            g.drawCenteredString(font, I18n.name("gui.wandscape.tavern.recruit_deduct",
+                    "将自动从小镇仓库中结算扣除所需元素").getString(),
                     cx, by + 48, MedievalColors.TEXT_DIM);
         }
     }
@@ -347,13 +361,13 @@ public class TavernScreen extends MedievalScreen {
     private String getSpecialtyTag(MageResume r) {
         float maxVal = Math.max(r.spellPower(), Math.max(r.workSpeed(), r.spellSpeed()));
         if (maxVal == r.spellPower() && r.spellPower() > 1.2f) {
-            return String.format("法术专精 (强度 %.1f)", r.spellPower());
+            return I18n.name("gui.wandscape.tavern.specialty_power", "法术专精 (强度 %.1f)", r.spellPower()).getString();
         } else if (maxVal == r.workSpeed() && r.workSpeed() > 1.2f) {
-            return String.format("建造专精 (工速 %.1f)", r.workSpeed());
+            return I18n.name("gui.wandscape.tavern.specialty_work", "建造专精 (工速 %.1f)", r.workSpeed()).getString();
         } else if (maxVal == r.spellSpeed() && r.spellSpeed() > 1.2f) {
-            return String.format("施法专精 (施速 %.1f)", r.spellSpeed());
+            return I18n.name("gui.wandscape.tavern.specialty_cast", "施法专精 (施速 %.1f)", r.spellSpeed()).getString();
         }
-        return "全能均衡型";
+        return I18n.name("gui.wandscape.tavern.specialty_balanced", "全能均衡型").getString();
     }
 
     @Override
@@ -391,7 +405,7 @@ public class TavernScreen extends MedievalScreen {
         PacketDistributor.sendToServer(new TavernRecruitPacket(buildingPos, "spawn_npc"));
         Minecraft.getInstance().getSoundManager().play(
                 SimpleSoundInstance.forUI(SoundEvents.EXPERIENCE_ORB_PICKUP, 1.1f));
-        setToast(Component.literal("已发布招募令，正在派遣法师..."), MedievalColors.SUCCESS_GREEN);
+        setToast(I18n.name("gui.wandscape.tavern.recruit_published", "已发布招募令，正在派遣法师..."), MedievalColors.SUCCESS_GREEN);
     }
 
     private void onRecruitMage(int index) {
@@ -400,7 +414,7 @@ public class TavernScreen extends MedievalScreen {
         PacketDistributor.sendToServer(new TavernRecruitPacket(buildingPos, "recruit_mage:" + index));
         Minecraft.getInstance().getSoundManager().play(
                 SimpleSoundInstance.forUI(SoundEvents.VILLAGER_YES, 1.0f));
-        setToast(Component.literal("已成功聘用法师：" + r.touristName() + "！"), MedievalColors.SUCCESS_GREEN);
+        setToast(I18n.name("gui.wandscape.tavern.hired_success", "已成功聘用法师：%s！", r.touristName()), MedievalColors.SUCCESS_GREEN);
     }
 
     private static String fmt(float v) {

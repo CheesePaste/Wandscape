@@ -53,7 +53,7 @@ public final class GuideProgressService implements GuideProgressApi {
     public static int computeStep(GuideServerContext ctx) {
         int step = 0;
         if (ctx.hasCategory("government")) step++;        // 1 建造市政厅
-        if (ctx.hasType("warehouse")) step++;             // 2 建造仓库
+        if (ctx.hasCategory("storage")) step++;           // 2 建造仓库
         if (ctx.hasPlayerDeposited()) step++;             // 3 存入一个物品
         if (ctx.hasCategory("workstation")) step++;       // 4 建造工作站
         if (ctx.hasPlayerSynthesized()) step++;           // 5 合成一样物品
@@ -61,7 +61,7 @@ public final class GuideProgressService implements GuideProgressApi {
         if (ctx.hasBakeryStocked()) step++;             // 7 面包店补充货物
         if (ctx.hasNodeGatherPublished()) step++;         // 8 节点发布采集任务
         if (ctx.hasCategory("altar")) step++;             // 9 建造祭坛
-        if (ctx.hasInnWithStay()) step++;                 // 10 旅馆游客入住
+        if (ctx.hasInnWithStay()) step++;                 // 10 青年旅舍游客入住
         return step;
     }
 
@@ -82,14 +82,6 @@ public final class GuideProgressService implements GuideProgressApi {
         public boolean hasCategory(String category) {
             for (BuildingData b : buildings) {
                 if (category.equals(b.getCategory())) return true;
-            }
-            return false;
-        }
-
-        @Override
-        public boolean hasType(String buildingTypeId) {
-            for (BuildingData b : buildings) {
-                if (buildingTypeId.equals(b.getBuildingTypeId())) return true;
             }
             return false;
         }

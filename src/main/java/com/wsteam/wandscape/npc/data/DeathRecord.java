@@ -49,7 +49,7 @@ public record DeathRecord(
         return best;
     }
 
-    /** 某殖民地最近死去的记录（deathTime 最大，不限位置）；colonyId 为 null 时不限殖民地；空表返回 null。纯逻辑，可单测。 */
+    /** 某小镇最近死去的记录（deathTime 最大，不限位置）；colonyId 为 null 时不限小镇；空表返回 null。纯逻辑，可单测。 */
     @Nullable
     public static DeathRecord latestInColony(List<DeathRecord> records, @Nullable UUID colonyId) {
         DeathRecord best = null;

@@ -13,7 +13,6 @@ import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.building.internal.BuildingUnlockChecker;
 import com.wsteam.wandscape.projection.client.ProjectionClientState;
-import com.wsteam.wandscape.road.client.RoadPlacementOverlay;
 import com.wsteam.wandscape.road.client.RoadPlacementState;
 import com.wsteam.wandscape.shared.log.Log;
 

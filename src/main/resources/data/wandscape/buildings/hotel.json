@@ -3,6 +3,7 @@
   "display_name": "hotel",
   "creator": "Wandscape",
   "category": "service",
+  "first_free": true,
   "pattern": [
     [
       -1,

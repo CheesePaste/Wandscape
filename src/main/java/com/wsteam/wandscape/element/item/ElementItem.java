@@ -23,8 +23,8 @@ import net.minecraft.world.level.Level;
 /**
  * 元素代币：一种元素的物品形态（供 JEI/配方展示）。
  *
- * <p>进入玩家背包后立即转化为所在殖民地仓库的对应元素，物品本身消失。
- * 不在任何殖民地范围内时保留物品，等玩家进入殖民地后再转化。
+ * <p>进入玩家背包后立即转化为所在小镇仓库的对应元素，物品本身消失。
+ * 不在任何小镇范围内时保留物品，等玩家进入小镇后再转化。
  */
 public class ElementItem extends Item {
 
@@ -58,7 +58,7 @@ public class ElementItem extends Item {
         WarehouseApi warehouseApi = WandscapeApis.getWarehouseApiSilently();
         if (colonyApi == null || warehouseApi == null) return;
         UUID colonyId = colonyApi.getColonyId(player.blockPosition());
-        if (colonyId == null) return; // 不在殖民地范围，保留物品等待进入殖民地
+        if (colonyId == null) return; // 不在小镇范围，保留物品等待进入小镇
         int count = stack.getCount();
         if (count <= 0) return;
         warehouseApi.addElement(colonyId, elementType, count);

@@ -98,13 +98,13 @@
 | 7 | 建造面包店补充货物 | 有 typeId=bakery 且该商店有库存 `hasShopStock` |
 | 8 | 建造节点发布采集 | 有 category=node 且 `getGatherPublishedCount>0`（RequestGatherTaskPacket 记录） |
 | 9 | 建造祭坛 | 有 category=altar 建筑（只判建造，不需真复活） |
-| 10 | 建造旅馆游客入住 | 有 max_occupancy>0 的 service 建筑且 `getOvernightStayerCount>0` |
+| 10 | 建造青年旅舍游客入住 | 有 max_occupancy>0 的 service 建筑且 `getOvernightStayerCount>0` |
 
 玩家动作计数（存入/合成/铺路/发布采集）持久化在 `ColonyItemBank`（仿 `purchaseCounts` 的 NBT）；存入/合成/发布采集在动作包处理后立即调 `GuideProgressApi.sendToPlayer` 即时推进，铺路例外——发布任务时只登记 `RoadPlaceAttribution`，待 `road_segment_complete`（方块真正落地）后由 `RoadSegmentListener` 记录并推进。
 
 **结构与渲染**：
 
-- `GuideStep(id, title, defaultLines, barLines, aimingLines, pinnedLines, hint)`；`linesFor(buildMode, isPlacing, isBar, isPinned)` 按建造阶段（列表/瞄准/锁定）选文案。
+- `GuideStep(id, title, defaultLines, barLines, aimingLines, pinnedLines, hint)`；`linesFor(buildMode, isPlacing, isBar, isPinned)` 按建造阶段（列表/瞄准/锁定）选文案。**文本字段是 i18n 键**（`guide.wandscape.*`），`GuideRenderer` 渲染时按客户端语言解析；文案存于 `lang/en_us.json`（英文）+ `lang/zh_cn.json`（中文）。
 - 文案全用亮色（§f/§e/§a/§b），**无灰字（§7/§8）**；按键/按钮/建筑名 §e、步骤说明 §b、完成项 §a。
 - 教程教的建造流程（与真实交互一致，操作优先）：按 1 开建造 → 点卡片双击放置 → **按住右键拖动转视角定位** → 左键旋转朝向 → 点右侧面板【提交施工】→ 施工界面【提交】。
 - 建筑交互：V 面板**俯瞰（OVERVIEW）是自由视角**——移动鼠标转视角、WASD 移动、滚轮缩放；准心对准建筑**右键点一下**打开界面。**右键拖动转视角只在建造/道路子模式**，交互步骤不这样写。

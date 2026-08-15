@@ -9,6 +9,7 @@ import com.wsteam.wandscape.shared.data.MageResume;
 import com.wsteam.wandscape.shared.data.RecruitmentCandidate;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
+import com.wsteam.wandscape.shared.ui.I18n;
 import com.wsteam.wandscape.tourist.entity.TouristEntity;
 import com.wsteam.wandscape.tourist.internal.TouristSpawnSystem;
 
@@ -16,10 +17,12 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 /**
@@ -63,7 +66,8 @@ public final class TavernCommand {
 
         UUID colonyId = resolveColonyId(pos);
         if (colonyId == null) {
-            src.sendFailure(Component.literal("[Wandscape] 未检测到殖民地，请在殖民地范围内使用或先创建殖民地"));
+            src.sendFailure(I18n.name("message.wandscape.command.tavern_no_colony_detailed",
+                    "[Wandscape] 未检测到小镇，请在小镇范围内使用或先创建小镇"));
             return 0;
         }
 
@@ -80,17 +84,22 @@ public final class TavernCommand {
                     candidate.workSpeed(), candidate.spellSpeed(), candidate.armorValue(),
                     candidate.maxMana(), variant);
 
-            Component msg = Component.literal(String.format(
-                    "[Tavern] 已向殖民地 %s 酒馆添加法师简历：%s (Lv.%d)\n"
-                    + "  属性: 生命 %.0f, 魔力 %.0f, 强度 %.2f, 工速 %.2f, 施速 %.2f, 护甲 %.1f\n"
+            Component msg = I18n.name("message.wandscape.command.tavern_resume_added",
+                    "[Tavern] 已向小镇 %s 酒馆添加法师简历：%s (Lv.%s)\n"
+                    + "  属性: 生命 %s, 魔力 %s, 强度 %s, 工速 %s, 施速 %s, 护甲 %s\n"
                     + "  可直接前往酒馆打开「法师简历」标签页招聘",
                     colonyId.toString().substring(0, 8), name, safeLevel,
-                    candidate.maxHp(), candidate.maxMana(), candidate.spellPower(),
-                    candidate.workSpeed(), candidate.spellSpeed(), candidate.armorValue()));
+                    String.format(Locale.ROOT, "%.0f", candidate.maxHp()),
+                    String.format(Locale.ROOT, "%.0f", candidate.maxMana()),
+                    String.format(Locale.ROOT, "%.2f", candidate.spellPower()),
+                    String.format(Locale.ROOT, "%.2f", candidate.workSpeed()),
+                    String.format(Locale.ROOT, "%.2f", candidate.spellSpeed()),
+                    String.format(Locale.ROOT, "%.1f", candidate.armorValue()));
             src.sendSuccess(() -> msg, false);
             return Command.SINGLE_SUCCESS;
         } catch (Exception e) {
-            src.sendFailure(Component.literal("[Wandscape] 酒馆系统不可用: " + e.getMessage()));
+            src.sendFailure(I18n.name("message.wandscape.command.tavern_unavailable",
+                    "[Wandscape] 酒馆系统不可用: %s", e.getMessage()));
             return 0;
         }
     }
@@ -101,7 +110,8 @@ public final class TavernCommand {
 
         UUID colonyId = resolveColonyId(pos);
         if (colonyId == null) {
-            src.sendFailure(Component.literal("[Wandscape] 未检测到殖民地"));
+            src.sendFailure(I18n.name("message.wandscape.command.tavern_no_colony",
+                    "[Wandscape] 未检测到小镇"));
             return 0;
         }
 
@@ -109,23 +119,30 @@ public final class TavernCommand {
             var tavernApi = WandscapeApis.getTavernApi();
             List<MageResume> resumes = tavernApi.getMageResumes(colonyId);
             if (resumes.isEmpty()) {
-                Component emptyMsg = Component.literal("[Tavern] 殖民地 " + colonyId.toString().substring(0, 8) + " 当前无待招聘法师简历");
+                Component emptyMsg = I18n.name("message.wandscape.command.tavern_no_resumes",
+                        "[Tavern] 小镇 %s 当前无待招聘法师简历", colonyId.toString().substring(0, 8));
                 src.sendSuccess(() -> emptyMsg, false);
                 return Command.SINGLE_SUCCESS;
             }
 
-            StringBuilder sb = new StringBuilder();
-            sb.append("=== 酒馆法师简历 (").append(resumes.size()).append(" 份) ===\n");
+            MutableComponent listMsg = I18n.name("message.wandscape.command.tavern_resume_header",
+                    "=== 酒馆法师简历 (%s 份) ===\n", resumes.size());
             for (int i = 0; i < resumes.size(); i++) {
                 MageResume r = resumes.get(i);
-                sb.append(String.format("[%d] %s (Lv.%d) - 强度:%.2f 工速:%.2f 施速:%.2f 护甲:%.1f 生命:%.0f\n",
-                        i, r.touristName(), r.level(), r.spellPower(), r.workSpeed(), r.spellSpeed(), r.armorValue(), r.maxHp()));
+                listMsg.append(I18n.name("message.wandscape.command.tavern_resume_line",
+                        "[%s] %s (Lv.%s) - 强度:%s 工速:%s 施速:%s 护甲:%s 生命:%s\n",
+                        i, r.touristName(), r.level(),
+                        String.format(Locale.ROOT, "%.2f", r.spellPower()),
+                        String.format(Locale.ROOT, "%.2f", r.workSpeed()),
+                        String.format(Locale.ROOT, "%.2f", r.spellSpeed()),
+                        String.format(Locale.ROOT, "%.1f", r.armorValue()),
+                        String.format(Locale.ROOT, "%.0f", r.maxHp())));
             }
-            Component listMsg = Component.literal(sb.toString().trim());
             src.sendSuccess(() -> listMsg, false);
             return Command.SINGLE_SUCCESS;
         } catch (Exception e) {
-            src.sendFailure(Component.literal("[Wandscape] 获取酒馆简历失败: " + e.getMessage()));
+            src.sendFailure(I18n.name("message.wandscape.command.tavern_list_failed",
+                    "[Wandscape] 获取酒馆简历失败: %s", e.getMessage()));
             return 0;
         }
     }

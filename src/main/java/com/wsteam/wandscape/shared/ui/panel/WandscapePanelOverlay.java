@@ -4,7 +4,6 @@ import java.util.List;
 import java.util.UUID;
 
 import com.wsteam.wandscape.projection.client.BuildingDebugClientState;
-import com.wsteam.wandscape.road.client.RoadPlacementOverlay;
 import com.wsteam.wandscape.road.client.RoadPlacementState;
 import com.wsteam.wandscape.shared.ui.I18n;
 import com.wsteam.wandscape.shared.ui.theme.WandscapeTheme;
@@ -176,13 +175,13 @@ public final class WandscapePanelOverlay {
 
         int tx = x + 8;
         int ty = y + 6;
-        drawText(g, font, "异常报告 (" + total + ")", tx, ty, WandscapeTheme.COLOR_TEXT_ACTIVE);
+        drawText(g, font, I18n.name("gui.wandscape.panel.anomaly_report", "异常报告 (%s)", total).getString(), tx, ty, WandscapeTheme.COLOR_TEXT_ACTIVE);
         ty += lineH + 4;
 
         int shown = 0;
         int maxPerType = maxLines / 2;
         if (!shutdownNames.isEmpty()) {
-            drawText(g, font, "§c[关闭]", tx + 2, ty, 0xFFB22222);
+            drawText(g, font, I18n.name("gui.wandscape.panel.shutdown_badge", "§c[关闭]").getString(), tx + 2, ty, 0xFFB22222);
             ty += lineH;
             for (int i = 0; i < Math.min(shutdownNames.size(), maxPerType); i++) {
                 drawText(g, font, "  - " + shutdownNames.get(i), tx + 4, ty, WandscapeTheme.COLOR_TEXT_DIM);
@@ -191,7 +190,7 @@ public final class WandscapePanelOverlay {
             }
         }
         if (!brokenNames.isEmpty()) {
-            drawText(g, font, "§e[损坏]", tx + 2, ty, 0xFFB8860B);
+            drawText(g, font, I18n.name("gui.wandscape.panel.broken_badge", "§e[损坏]").getString(), tx + 2, ty, 0xFFB8860B);
             ty += lineH;
             for (int i = 0; i < Math.min(brokenNames.size(), maxPerType); i++) {
                 drawText(g, font, "  - " + brokenNames.get(i), tx + 4, ty, WandscapeTheme.COLOR_TEXT_DIM);
@@ -200,7 +199,7 @@ public final class WandscapePanelOverlay {
             }
         }
         if (shown >= maxLines && total > shown) {
-            drawText(g, font, "... 还有 " + (total - shown) + " 个异常", tx + 4, ty, WandscapeTheme.COLOR_TEXT_DIM);
+            drawText(g, font, I18n.name("gui.wandscape.panel.more_anomalies", "... 还有 %s 个异常", total - shown).getString(), tx + 4, ty, WandscapeTheme.COLOR_TEXT_DIM);
         }
     }
 
@@ -326,7 +325,7 @@ public final class WandscapePanelOverlay {
 
         if (helpHover) {
             String keyName = com.wsteam.wandscape.WandscapeClient.GUIDE_TOGGLE.getTranslatedKeyMessage().getString();
-            g.renderTooltip(font, net.minecraft.network.chat.Component.literal("打开指南 (" + keyName + ")"), (int) mx, (int) my);
+            g.renderTooltip(font, I18n.name("gui.wandscape.panel.open_guide", "打开指南 (%s)", keyName), (int) mx, (int) my);
         }
 
         // ── Row 2: element icons + amounts ──

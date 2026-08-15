@@ -1990,7 +1990,7 @@ public class TouristMoveGoal extends Goal {
 
     /** Get the display name for a building, falling back to its type id. */
     private String getBuildingDisplayName(UUID buildingId, @javax.annotation.Nullable String typeId) {
-        if (typeId == null) return "建筑";
+        if (typeId == null) return "unknown";
         var config = BuildingConfigLoader.getInstance().get(typeId);
         if (config != null && config.displayName() != null && !config.displayName().isEmpty()) {
             return config.displayName();

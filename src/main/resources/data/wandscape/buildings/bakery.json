@@ -2,6 +2,7 @@
   "id": "bakery",
   "display_name": "bakery",
   "category": "shop",
+  "first_free": true,
   "pattern": [
     [
       1,

@@ -64,7 +64,7 @@ public final class SpellcastingApiImpl implements SpellcastingApi {
         Long ecsId = EntityComponentBridge.INSTANCE.getEcsId(npcId);
         if (ecsId != null) return EntityComponentBridge.INSTANCE.getNpc(ecsId);
         // 非 ECS NPC（如敌对测试法师）：按 UUID 查已加载实体。界面编辑/显示是低频路径，
-        // 全量已加载实体查找可接受；普通殖民地 NPC 仍走上面的桥查询。
+        // 全量已加载实体查找可接受；普通小镇 NPC 仍走上面的桥查询。
         MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
         if (server == null) return null;
         for (ServerLevel level : server.getAllLevels()) {

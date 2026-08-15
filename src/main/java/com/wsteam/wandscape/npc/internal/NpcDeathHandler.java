@@ -31,7 +31,7 @@ public final class NpcDeathHandler {
         if (event.getEntity().level().isClientSide) return;
         if (!(event.getEntity() instanceof WandscapeNpc npc)) return;
         if (npc.isRemoved()) return;
-        // 敌对测试法师等非殖民地 NPC 不留死亡记录（不被复活魔法找回）
+        // 敌对测试法师等非小镇 NPC 不留死亡记录（不被复活魔法找回）
         if (!npc.isColonyNpc()) return;
         if (!(npc.level() instanceof ServerLevel level)) return;
 

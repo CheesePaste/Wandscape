@@ -6,6 +6,9 @@ import javax.annotation.Nullable;
 
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.engine.WandscapeEngine;
+import com.wsteam.wandscape.shared.ui.I18n;
+
+import net.minecraft.network.chat.Component;
 
 /**
  * Utility for checking whether a building type is unlocked for a given colony.
@@ -41,13 +44,13 @@ public final class BuildingUnlockChecker {
     }
 
     @Nullable
-    public static String getLockReason(@Nullable UUID colonyId, BuildingConfig config) {
-        if (config == null) return "Invalid building config";
+    public static Component getLockReason(@Nullable UUID colonyId, BuildingConfig config) {
+        if (config == null) return Component.literal("Invalid building config");
 
         boolean isGovernment = "government".equals(config.category());
         if (colonyId == null) {
             if (isGovernment) return null;
-            return "需要先建造市政厅建立殖民地";
+            return I18n.name("message.wandscape.unlock.need_townhall", "需要先建造市政厅建立小镇");
         }
 
         if (isGovernment) return null;
@@ -58,7 +61,8 @@ public final class BuildingUnlockChecker {
         int currentLevel = levelMgr != null ? levelMgr.getLevel(colonyId) : 1;
         int required = req.minColonyLevel();
         if (currentLevel < required) {
-            return "需要殖民地等级 %d (当前: %d)".formatted(required, currentLevel);
+            return I18n.name("message.wandscape.unlock.need_level",
+                    "需要小镇等级 %d (当前: %d)", required, currentLevel);
         }
         return null;
     }

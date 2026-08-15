@@ -1,5 +1,7 @@
 package com.wsteam.wandscape.shared.ui.markdown.navigation;
 
+import com.wsteam.wandscape.shared.ui.I18n;
+
 import net.minecraft.client.Minecraft;
 
 import java.io.InputStream;
@@ -42,7 +44,8 @@ public final class DocumentLoader {
             } catch (Exception ignored) {}
         }
 
-        return "# 404 文档未找到\n\n无法读取指定文档: `" + location + "`";
+        return I18n.name("gui.wandscape.doc.notfound",
+                "# 404 文档未找到\n\n无法读取指定文档: `%s`", location).getString();
     }
 
     /** Resource paths to try for a guide location: current locale first, then the default locale. */

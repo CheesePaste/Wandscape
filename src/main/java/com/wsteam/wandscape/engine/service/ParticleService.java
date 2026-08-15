@@ -138,7 +138,7 @@ public final class ParticleService {
         burstColored(level, new Vec3(bx, by, bz), col[0], col[1], col[2], 18, 0.16f, 30, false);
     }
 
-    /** 单点烟花庆祝：殖民地升级/袭击胜利等在指定点上方放 bursts 发烟花。 */
+    /** 单点烟花庆祝：小镇升级/袭击胜利等在指定点上方放 bursts 发烟花。 */
     public static void celebrateAt(ServerLevel level, Vec3 pos, int bursts) {
         if (!active() || level == null) return;
         for (int i = 0; i < bursts; i++) {

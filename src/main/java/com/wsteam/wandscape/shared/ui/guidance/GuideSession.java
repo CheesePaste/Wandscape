@@ -1,9 +1,9 @@
 package com.wsteam.wandscape.shared.ui.guidance;
 
 import com.wsteam.wandscape.shared.network.GuideProgressUpdatePacket;
+import com.wsteam.wandscape.shared.ui.I18n;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.network.chat.Component;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
@@ -36,7 +36,7 @@ public final class GuideSession {
             Minecraft mc = Minecraft.getInstance();
             if (mc.player != null) {
                 mc.player.displayClientMessage(
-                        Component.literal("§e[新手引导] §f跟随引导，逐步建设你的魔法小镇！"), true);
+                        I18n.name("message.wandscape.guide.toast", "§e[新手引导] §f跟随引导，逐步建设你的魔法小镇！"), true);
             }
         }
     }

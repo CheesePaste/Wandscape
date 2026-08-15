@@ -69,9 +69,9 @@ public final class AmbientTextPools {
                 if (buildingName != null && !buildingName.isEmpty()) {
                     String key = "bubble.wandscape.tourist.building." + emotion.name().toLowerCase()
                             + "." + state.name().toLowerCase() + "." + picked.idx();
-                    Component building = (mem.buildingTypeId() == null || mem.buildingTypeId().isEmpty())
-                            ? Component.literal(buildingName)
-                            : I18n.name("building.wandscape." + mem.buildingTypeId(), buildingName);
+                    String typeKey = mem.buildingTypeId() == null || mem.buildingTypeId().isEmpty()
+                            ? "unknown" : mem.buildingTypeId();
+                    Component building = I18n.name("building.wandscape." + typeKey, buildingName);
                     return bubble(key, picked.text(), building);
                 }
             }
