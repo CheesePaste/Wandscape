@@ -449,11 +449,16 @@ public final class WandscapePanelController {
             return;
         }
 
-        // C key: dedicated raise-cursor key — keeps freeing the cursor for UI even
-        // while the tutorial guide is hijacking Tab (fold/expand) during onboarding.
+        // C key: dedicated cursor-raise key — toggles. First press frees the cursor
+        // for UI; a second press returns it to the game layer (grabbed). Stays
+        // independent of the tutorial guide hijacking Tab (fold/expand) during onboarding.
         if (com.wsteam.wandscape.WandscapeClient.RAISE_CURSOR.matches(key, scanCode)
                 && WandscapePanelState.isPanelOpen()) {
-            WandscapePanelState.liftCursorForUI();
+            if (WandscapePanelState.isCursorLifted()) {
+                WandscapePanelState.releaseCursorToGame();
+            } else {
+                WandscapePanelState.liftCursorForUI();
+            }
             return;
         }
 

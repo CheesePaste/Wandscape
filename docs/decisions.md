@@ -150,7 +150,7 @@
 
 **决策**：
 - **Tab（`GUIDE_FOLD_TOGGLE`，原名 `PANEL_CURSOR_TOGGLE`）**：只在 `GuideSession.shouldShow()`（引导显示期）折叠/展开引导卡片；引导结束后 Tab 不接管，恢复原版玩家列表。`onClientTickPost` 的 `keyPlayerList.setDown(false)` 抑制也门控在引导显示期。
-- **C（`RAISE_CURSOR`）**：专属「抬起光标」键，面板打开时 `liftCursorForUI()`，不再受引导状态影响——欢迎语本就说「按 C 抬起鼠标」，补上后言行一致。
+- **C（`RAISE_CURSOR`）**：专属「抬起光标」键，面板打开时**按一次抬起（`liftCursorForUI()`）、再按一次收回（`releaseCursorToGame()`）**，形成抬/放切换，不再受引导状态影响——欢迎语本就说「按 C 抬起鼠标」，补上后言行一致，且收回不再只能靠 ESC/切子模式。
 - **删除 `WandscapePanelState.toggleCursor()`**：Tab 唯一调用方移除后成死代码，直接删除（建筑条开/关仍由进子模式/双击建筑触发，无功能损失）。
 
 **为什么**：引导占 Tab、Tab 又得管光标，两个功能挤一个键导致引导期「Tab 失灵」的困惑；一个键一个职责，C 抬光标、Tab 折叠引导，互不干扰。
