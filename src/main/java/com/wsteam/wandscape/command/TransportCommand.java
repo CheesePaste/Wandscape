@@ -86,8 +86,24 @@ public final class TransportCommand {
                 .executes(ctx -> spawnDebug(ctx, "minecraft:stone", 5))
                 .then(nodeItemSpawn);
 
+        // Benchmark subcommand: /wandscape transport bench [iterations] [radius]
+        var nodeRadius = Commands.argument("radius", IntegerArgumentType.integer(16, 512))
+                .executes(ctx -> runBenchmark(ctx,
+                        IntegerArgumentType.getInteger(ctx, "iterations"),
+                        IntegerArgumentType.getInteger(ctx, "radius")));
+
+        var nodeIterations = Commands.argument("iterations", IntegerArgumentType.integer(1, 50000))
+                .executes(ctx -> runBenchmark(ctx,
+                        IntegerArgumentType.getInteger(ctx, "iterations"), 96))
+                .then(nodeRadius);
+
+        var nodeBench = Commands.literal("bench")
+                .executes(ctx -> runBenchmark(ctx, 500, 96))
+                .then(nodeIterations);
+
         return Commands.literal("transport")
                 .then(nodeSpawn)
+                .then(nodeBench)
                 .then(nodeFx)
                 .build();
     }
@@ -226,5 +242,108 @@ public final class TransportCommand {
                 IntegerArgumentType.getInteger(ctx, "fx"),
                 IntegerArgumentType.getInteger(ctx, "fy"),
                 IntegerArgumentType.getInteger(ctx, "fz"));
+    }
+
+    private static int runBenchmark(CommandContext<CommandSourceStack> ctx, int iterations, int radius) {
+        CommandSourceStack src = ctx.getSource();
+        var level = src.getLevel();
+        BlockPos center = BlockPos.containing(src.getPosition());
+
+        var roadData = com.wsteam.wandscape.road.engine.RoadSavedData.getOrCreate(level);
+        var network = roadData.getNetwork();
+
+        int totalEdges = network.edgeCount();
+        long completeEdges = network.getEdges().values().stream()
+                .filter(e -> e.getStatus() == com.wsteam.wandscape.road.core.RoadEdge.EdgeStatus.COMPLETE
+                        && e.getSpline() != null && e.getSpline().getSegmentsCount() > 0)
+                .count();
+
+        if (completeEdges == 0) {
+            src.sendFailure(Component.literal("§c[Wandscape Road Bench] 当前世界路网中暂无已建成的道路！请先使用道路工具建造道路。"));
+            return 0;
+        }
+
+        // Random queries within [center - radius, center + radius]
+        java.util.Random rand = new java.util.Random(System.currentTimeMillis());
+        java.util.List<com.wsteam.wandscape.road.core.PathPoint[]> pairs = new java.util.ArrayList<>(iterations);
+        for (int i = 0; i < iterations; i++) {
+            int sx = center.getX() + rand.nextInt(radius * 2 + 1) - radius;
+            int sz = center.getZ() + rand.nextInt(radius * 2 + 1) - radius;
+            int sy = center.getY();
+
+            int ex = center.getX() + rand.nextInt(radius * 2 + 1) - radius;
+            int ez = center.getZ() + rand.nextInt(radius * 2 + 1) - radius;
+            int ey = center.getY();
+
+            pairs.add(new com.wsteam.wandscape.road.core.PathPoint[]{
+                    new com.wsteam.wandscape.road.core.PathPoint(sx, sy, sz),
+                    new com.wsteam.wandscape.road.core.PathPoint(ex, ey, ez)
+            });
+        }
+
+        // Warm-up
+        for (int i = 0; i < Math.min(50, iterations); i++) {
+            com.wsteam.wandscape.road.core.PathPoint[] p = pairs.get(i);
+            com.wsteam.wandscape.road.algorithm.RoadRouter.plan(network, p[0], p[1]);
+        }
+
+        // Benchmark
+        long[] latencies = new long[iterations];
+        int onRoadCount = 0;
+        int directCount = 0;
+        long totalLegs = 0;
+        long totalOnRoadLegs = 0;
+        long totalOffRoadLegs = 0;
+
+        long tStart = System.nanoTime();
+        for (int i = 0; i < iterations; i++) {
+            com.wsteam.wandscape.road.core.PathPoint[] p = pairs.get(i);
+            long t0 = System.nanoTime();
+            com.wsteam.wandscape.road.core.TransportRoute route = com.wsteam.wandscape.road.algorithm.RoadRouter.plan(network, p[0], p[1]);
+            long t1 = System.nanoTime();
+            latencies[i] = t1 - t0;
+
+            int legs = route.legs().size();
+            totalLegs += legs;
+            long onRoadLegs = route.legs().stream().filter(l -> !l.offRoad()).count();
+            long offRoadLegs = route.legs().stream().filter(com.wsteam.wandscape.road.core.SplineLeg::offRoad).count();
+            totalOnRoadLegs += onRoadLegs;
+            totalOffRoadLegs += offRoadLegs;
+
+            if (onRoadLegs > 0) onRoadCount++;
+            else directCount++;
+        }
+        long totalNanos = System.nanoTime() - tStart;
+
+        java.util.Arrays.sort(latencies);
+
+        double totalMs = totalNanos / 1_000_000.0;
+        double avgMicros = (totalNanos / 1000.0) / iterations;
+        double minMicros = latencies[0] / 1000.0;
+        double p50Micros = latencies[(int) (iterations * 0.50)] / 1000.0;
+        double p95Micros = latencies[(int) (iterations * 0.95)] / 1000.0;
+        double maxMicros = latencies[iterations - 1] / 1000.0;
+        double opsPerSec = (iterations / (double) totalNanos) * 1_000_000_000.0;
+
+        double usagePct = (onRoadCount * 100.0) / iterations;
+
+        int finalOnRoad = onRoadCount;
+        int finalDirect = directCount;
+        long finalTotalLegs = totalLegs;
+        long finalTotalOnRoadLegs = totalOnRoadLegs;
+        long finalTotalOffRoadLegs = totalOffRoadLegs;
+
+        src.sendSuccess(() -> Component.literal("§6══════════ §e§lWandscape 路网寻路压力测试报告 §6══════════"), false);
+        src.sendSuccess(() -> Component.literal(String.format("§7• §f路网规模: §a%d §7条道路已建成 (总计 §a%d §7条)", completeEdges, totalEdges)), false);
+        src.sendSuccess(() -> Component.literal(String.format("§7• §f采样范围: §b%d §7次寻路请求 (半径: §e%d 格§7, 耗时: §b%.2f ms§7)", iterations, radius, totalMs)), false);
+        src.sendSuccess(() -> Component.literal(String.format("§7• §f寻路吞吐量: §a%,.0f §7次/秒 (QPS)", opsPerSec)), false);
+        src.sendSuccess(() -> Component.literal(String.format("§7• §f平均延迟: §a%.2f μs §7(%.4f ms)", avgMicros, avgMicros / 1000.0)), false);
+        src.sendSuccess(() -> Component.literal(String.format("§7• §f延迟分布: §7Min §a%.1fμs §7| P50 §a%.1fμs §7| P95 §e%.1fμs §7| Max §c%.1fμs", minMicros, p50Micros, p95Micros, maxMicros)), false);
+        src.sendSuccess(() -> Component.literal(String.format("§7• §f路网利用率: §a%.1f%% §7(走道路: §a%d§7, 直飞: §7%d)", usagePct, finalOnRoad, finalDirect)), false);
+        src.sendSuccess(() -> Component.literal(String.format("§7• §f平均航段数: §f%.2f §7段 (贴路: §a%.2f§7, 野路跳跃: §e%.2f§7)",
+                (double) finalTotalLegs / iterations, (double) finalTotalOnRoadLegs / iterations, (double) finalTotalOffRoadLegs / iterations)), false);
+        src.sendSuccess(() -> Component.literal("§6══════════════════════════════════════════════"), false);
+
+        return 1;
     }
 }

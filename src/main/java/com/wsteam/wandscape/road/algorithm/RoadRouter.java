@@ -111,16 +111,21 @@ public final class RoadRouter {
             return directRoute;
         }
 
+        List<EdgeAABB> aabbs = new ArrayList<>(activeEdges.size());
+        for (RoadEdge edge : activeEdges) {
+            aabbs.add(EdgeAABB.of(edge));
+        }
+
         // Find candidate road projections for start and end
-        List<RoadProjection> startProjs = findCandidateProjections(activeEdges, start, MAX_SNAP_DISTANCE);
-        List<RoadProjection> endProjs = findCandidateProjections(activeEdges, end, MAX_SNAP_DISTANCE);
+        List<RoadProjection> startProjs = findCandidateProjections(activeEdges, aabbs, start, MAX_SNAP_DISTANCE);
+        List<RoadProjection> endProjs = findCandidateProjections(activeEdges, aabbs, end, MAX_SNAP_DISTANCE);
 
         if (startProjs.isEmpty() || endProjs.isEmpty()) {
             return directRoute;
         }
 
         // Multi-segment topology graph search
-        List<SplineLeg> routeLegs = searchRoadPath(activeEdges, startProjs, endProjs, start, end, ticksOnRoad, ticksOffRoad);
+        List<SplineLeg> routeLegs = searchRoadPath(activeEdges, aabbs, startProjs, endProjs, start, end, ticksOnRoad, ticksOffRoad);
         if (routeLegs == null || routeLegs.isEmpty()) {
             return directRoute;
         }
@@ -141,6 +146,7 @@ public final class RoadRouter {
     // ── Topology Search with T-Junctions and Off-Road Hops ──
 
     private static List<SplineLeg> searchRoadPath(List<RoadEdge> edges,
+                                                  List<EdgeAABB> aabbs,
                                                   List<RoadProjection> startProjs,
                                                   List<RoadProjection> endProjs,
                                                   PathPoint start,
@@ -177,25 +183,33 @@ public final class RoadRouter {
             }
         }
 
-        // T-Junction & Cross-Intersection Discovery:
-        // Project endpoints of edge B onto edge A if within MAX_JUNCTION_GAP
+        // T-Junction & Cross-Intersection Discovery with AABB pre-rejection:
         for (int i = 0; i < edges.size(); i++) {
             RoadEdge eA = edges.get(i);
+            EdgeAABB boxA = aabbs.get(i);
+
             for (int j = 0; j < edges.size(); j++) {
                 if (i == j) continue;
                 RoadEdge eB = edges.get(j);
-
-                SplineVec3 p0 = eB.getSpline().evaluate(0.0).position();
-                SplineVec3 p1 = eB.getSpline().evaluate(eB.getSpline().getSegmentsCount()).position();
-
-                EdgeProjection proj0 = projectOntoEdge(eA, p0);
-                if (proj0.dist <= MAX_JUNCTION_GAP) {
-                    edgeSplitMap.get(eA).add(proj0.u);
+                EdgeAABB boxB = aabbs.get(j);
+                if (!boxA.intersectsWithMargin(boxB, MAX_JUNCTION_GAP)) {
+                    continue; // 1ns AABB rejection
                 }
 
-                EdgeProjection proj1 = projectOntoEdge(eA, p1);
-                if (proj1.dist <= MAX_JUNCTION_GAP) {
-                    edgeSplitMap.get(eA).add(proj1.u);
+                SplineVec3 p0 = eB.getSpline().evaluate(0.0).position();
+                if (boxA.intersectsWithMargin(p0, MAX_JUNCTION_GAP)) {
+                    EdgeProjection proj0 = projectOntoEdge(eA, p0);
+                    if (proj0.dist <= MAX_JUNCTION_GAP) {
+                        edgeSplitMap.get(eA).add(proj0.u);
+                    }
+                }
+
+                SplineVec3 p1 = eB.getSpline().evaluate(eB.getSpline().getSegmentsCount()).position();
+                if (boxA.intersectsWithMargin(p1, MAX_JUNCTION_GAP)) {
+                    EdgeProjection proj1 = projectOntoEdge(eA, p1);
+                    if (proj1.dist <= MAX_JUNCTION_GAP) {
+                        edgeSplitMap.get(eA).add(proj1.u);
+                    }
                 }
             }
         }
@@ -244,7 +258,9 @@ public final class RoadRouter {
             }
         }
 
-        // 3. Connect inter-edge nodes: on-road junctions and off-road hops ("野路-road-野路-road")
+        // 3. Connect inter-edge nodes with Sweep-Line X spatial index (O(N log N))
+        allRoadNodes.sort(Comparator.comparingDouble(id -> graph.getNodePos(id).x()));
+
         for (int i = 0; i < allRoadNodes.size(); i++) {
             int nA = allRoadNodes.get(i);
             SplineVec3 posA = graph.getNodePos(nA);
@@ -253,16 +269,26 @@ public final class RoadRouter {
                 int nB = allRoadNodes.get(j);
                 SplineVec3 posB = graph.getNodePos(nB);
 
-                double gap = posA.subtract(posB).length();
-                if (gap <= MAX_JUNCTION_GAP) {
-                    // On-road junction (T-junction or end-to-end junction)
+                double dx = posB.x() - posA.x();
+                if (dx > MAX_ROAD_HOP_GAP) {
+                    break; // Sorted along X — all subsequent nodes are even further, break immediately!
+                }
+
+                double dy = Math.abs(posB.y() - posA.y());
+                if (dy > MAX_ROAD_HOP_GAP) continue;
+                double dz = Math.abs(posB.z() - posA.z());
+                if (dz > MAX_ROAD_HOP_GAP) continue;
+
+                double gapSqr = dx * dx + dy * dy + dz * dz;
+                if (gapSqr <= MAX_JUNCTION_GAP * MAX_JUNCTION_GAP) {
+                    double gap = Math.sqrt(gapSqr);
                     int gapWeight = Math.max(1, (int) Math.round(gap * ticksOnRoad));
                     SplineLeg junctionLeg = createLinearSplineLeg(posA, posB, false);
                     SplineLeg revJunctionLeg = createLinearSplineLeg(posB, posA, false);
                     graph.addEdge(nA, nB, gapWeight, junctionLeg);
                     graph.addEdge(nB, nA, gapWeight, revJunctionLeg);
-                } else if (gap <= MAX_ROAD_HOP_GAP) {
-                    // Off-road hop between disconnected road segments ("野路")
+                } else if (gapSqr <= MAX_ROAD_HOP_GAP * MAX_ROAD_HOP_GAP) {
+                    double gap = Math.sqrt(gapSqr);
                     int hopWeight = Math.max(1, (int) Math.round(gap * ticksOffRoad));
                     SplineLeg hopLeg = createLinearSplineLeg(posA, posB, true);
                     SplineLeg revHopLeg = createLinearSplineLeg(posB, posA, true);
@@ -404,11 +430,47 @@ public final class RoadRouter {
         return new EdgeProjection(bestU, bestPos, bestDist);
     }
 
-    private static List<RoadProjection> findCandidateProjections(List<RoadEdge> edges, PathPoint target, double maxDist) {
+    private record EdgeAABB(double minX, double minY, double minZ, double maxX, double maxY, double maxZ) {
+        static EdgeAABB of(RoadEdge edge) {
+            double minX = Double.MAX_VALUE, minY = Double.MAX_VALUE, minZ = Double.MAX_VALUE;
+            double maxX = -Double.MAX_VALUE, maxY = -Double.MAX_VALUE, maxZ = -Double.MAX_VALUE;
+            for (SplinePoint p : edge.getSpline().getPoints()) {
+                SplineVec3 v = p.getAnchor();
+                if (v.x() < minX) minX = v.x();
+                if (v.x() > maxX) maxX = v.x();
+                if (v.y() < minY) minY = v.y();
+                if (v.y() > maxY) maxY = v.y();
+                if (v.z() < minZ) minZ = v.z();
+                if (v.z() > maxZ) maxZ = v.z();
+            }
+            return new EdgeAABB(minX, minY, minZ, maxX, maxY, maxZ);
+        }
+
+        boolean intersectsWithMargin(SplineVec3 p, double margin) {
+            return p.x() >= minX - margin && p.x() <= maxX + margin
+                    && p.y() >= minY - margin && p.y() <= maxY + margin
+                    && p.z() >= minZ - margin && p.z() <= maxZ + margin;
+        }
+
+        boolean intersectsWithMargin(EdgeAABB other, double margin) {
+            return !(other.maxX < minX - margin || other.minX > maxX + margin
+                    || other.maxY < minY - margin || other.minY > maxY + margin
+                    || other.maxZ < minZ - margin || other.minZ > maxZ + margin);
+        }
+    }
+
+    private static List<RoadProjection> findCandidateProjections(List<RoadEdge> edges, List<EdgeAABB> aabbs,
+                                                                 PathPoint target, double maxDist) {
         List<RoadProjection> list = new ArrayList<>();
         SplineVec3 targetPos = new SplineVec3(target.x() + 0.5, target.y() + 0.5, target.z() + 0.5);
 
-        for (RoadEdge edge : edges) {
+        for (int i = 0; i < edges.size(); i++) {
+            RoadEdge edge = edges.get(i);
+            EdgeAABB box = aabbs.get(i);
+            if (!box.intersectsWithMargin(targetPos, maxDist)) {
+                continue; // 1ns AABB rejection
+            }
+
             EdgeProjection proj = projectOntoEdge(edge, targetPos);
             if (proj.dist <= maxDist) {
                 list.add(new RoadProjection(edge, proj.u, proj.pos, proj.dist));
