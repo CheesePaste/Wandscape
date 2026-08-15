@@ -8,11 +8,7 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
-
-import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.HoverEvent;
-import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.network.chat.Style;
+import net.minecraft.network.chat.*;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
 
@@ -22,6 +18,7 @@ import java.util.function.Consumer;
 
 /**
  * Rich-text & Image Markdown Renderer Widget for Minecraft Wandscape UI.
+ * Uses exact glyph-level character hit detection for interactive markdown links.
  */
 public class MarkdownRenderWidget extends AbstractWidget {
 
@@ -30,9 +27,18 @@ public class MarkdownRenderWidget extends AbstractWidget {
     private int scrollOffset = 0;
     private Consumer<String> actionClickListener;
 
-    private final List<LinkHitBox> linkHitBoxes = new ArrayList<>();
+    /**
+     * Line bounding box and sequence recorded during the render pass for pixel-perfect hit testing.
+     */
+    private record RenderedLine(
+            int x,
+            int y,
+            int width,
+            int height,
+            FormattedCharSequence sequence
+    ) {}
 
-    private record LinkHitBox(int x, int y, int width, int height, String action) {}
+    private final List<RenderedLine> renderedLines = new ArrayList<>();
 
     public MarkdownRenderWidget(int x, int y, int width, int height, String rawMarkdown) {
         super(x, y, width, height, Component.empty());
@@ -78,11 +84,14 @@ public class MarkdownRenderWidget extends AbstractWidget {
 
     private int calculateNodeHeight(MarkdownNode node, Font font, int width) {
         if (node instanceof HeaderNode header) {
-            return (header.level() == 1 ? 16 : header.level() == 2 ? 14 : 12) + 6;
+            MutableComponent comp = Component.literal(header.text()).withStyle(Style.EMPTY.withBold(true));
+            List<FormattedCharSequence> lines = font.split(comp, width);
+            int lineHeight = header.level() == 1 ? 16 : header.level() == 2 ? 14 : 12;
+            return lines.size() * lineHeight + 6;
         } else if (node instanceof TextParagraphNode paragraph) {
             MutableComponent comp = buildComponent(paragraph.spans());
             List<FormattedCharSequence> lines = font.split(comp, width);
-            return (lines.size() * (font.lineHeight + 2)) + 4;
+            return lines.size() * (font.lineHeight + 2) + 4;
         } else if (node instanceof ImageNode img) {
             return (img.height() > 0 ? img.height() : 64) + 8;
         } else if (node instanceof QuoteBlockNode quote) {
@@ -93,8 +102,12 @@ public class MarkdownRenderWidget extends AbstractWidget {
             return qh + 4;
         } else if (node instanceof ListNode list) {
             int lh = 2;
+            int index = 1;
             for (MarkdownNode item : list.items()) {
-                lh += calculateNodeHeight(item, font, width - 12);
+                String prefix = list.ordered() ? index + ". " : "• ";
+                int prefixW = font.width(prefix);
+                lh += calculateNodeHeight(item, font, width - prefixW - 2);
+                index++;
             }
             return lh + 2;
         } else if (node instanceof TableNode table) {
@@ -108,12 +121,15 @@ public class MarkdownRenderWidget extends AbstractWidget {
                 int maxRowLines = 1;
                 for (int c = 0; c < numCols; c++) {
                     String cellText = c < row.size() ? row.get(c) : "";
-                    List<FormattedCharSequence> lines = font.split(Component.literal(cellText), colW - cellPadding * 2);
+                    MutableComponent comp = buildComponent(MarkdownParser.parseInlineSpans(cellText));
+                    List<FormattedCharSequence> lines = font.split(comp, colW - cellPadding * 2);
                     maxRowLines = Math.max(maxRowLines, Math.max(1, lines.size()));
                 }
                 th += maxRowLines * (font.lineHeight + 2) + 4;
             }
             return th + 6;
+        } else if (node instanceof DividerNode) {
+            return 8;
         }
         return 10;
     }
@@ -129,9 +145,9 @@ public class MarkdownRenderWidget extends AbstractWidget {
         int currentY = getY() + 4 - scrollOffset;
         int renderW = Math.max(10, getWidth() - 12);
 
-        linkHitBoxes.clear();
+        renderedLines.clear();
 
-        // Enable scissor clipping
+        // Enable scissor clipping to prevent rendering outside widget frame
         g.enableScissor(getX(), getY(), getX() + getWidth(), getY() + getHeight());
 
         for (MarkdownNode node : nodes) {
@@ -156,6 +172,24 @@ public class MarkdownRenderWidget extends AbstractWidget {
             g.fill(sbX, sbY, sbX + 2, sbY + sbH, 0x40000000);
             g.fill(sbX, thumbY, sbX + 2, thumbY + thumbH, MedievalColors.BORDER_GOLD);
         }
+
+        // Render Hover Tooltip for active link if mouse is hovered over a link
+        if (isMouseOver(mouseX, mouseY)
+                && mouseX >= getX() && mouseX <= getX() + getWidth()
+                && mouseY >= getY() && mouseY <= getY() + getHeight()) {
+            RenderedLine hoveredLine = getLineAt(mouseX, mouseY);
+            if (hoveredLine != null) {
+                int relX = (int) (mouseX - hoveredLine.x());
+                Style style = font.getSplitter().componentStyleAtWidth(hoveredLine.sequence(), relX);
+                if (style != null && style.getClickEvent() != null) {
+                    String action = style.getClickEvent().getValue();
+                    Component tooltip = formatLinkTooltip(action);
+                    if (tooltip != null) {
+                        g.renderTooltip(font, tooltip, mouseX, mouseY);
+                    }
+                }
+            }
+        }
     }
 
     private int renderNode(GuiGraphics g, Font font, MarkdownNode node, int x, int y, int width, int mouseX, int mouseY) {
@@ -163,12 +197,23 @@ public class MarkdownRenderWidget extends AbstractWidget {
             int color = header.level() == 1 ? MedievalColors.BORDER_GOLD : header.level() == 2 ? MedievalColors.ACCENT_GOLD : MedievalColors.TEXT_WARM_WHITE;
             int lineHeight = header.level() == 1 ? 16 : header.level() == 2 ? 14 : 12;
 
-            g.drawString(font, Component.literal(header.text()), x, y + 2, color, true);
-            // Header underline for H1
-            if (header.level() == 1) {
-                g.fill(x, y + lineHeight, x + width, y + lineHeight + 1, MedievalColors.BORDER_GOLD_DARK);
+            MutableComponent comp = Component.literal(header.text()).withStyle(Style.EMPTY.withBold(true));
+            List<FormattedCharSequence> lines = font.split(comp, width);
+            int lineY = y;
+
+            for (FormattedCharSequence line : lines) {
+                if (lineY + font.lineHeight >= getY() && lineY <= getY() + getHeight()) {
+                    g.drawString(font, line, x, lineY + 2, color, true);
+                    renderedLines.add(new RenderedLine(x, lineY + 2, font.width(line), font.lineHeight, line));
+                }
+                lineY += lineHeight;
             }
-            return y + lineHeight + 6;
+
+            // Header underline for H1
+            if (header.level() == 1 && lineY >= getY() && lineY <= getY() + getHeight()) {
+                g.fill(x, lineY, x + width, lineY + 1, MedievalColors.BORDER_GOLD_DARK);
+            }
+            return lineY + 6;
         }
 
         if (node instanceof TextParagraphNode paragraph) {
@@ -179,19 +224,12 @@ public class MarkdownRenderWidget extends AbstractWidget {
             for (FormattedCharSequence line : lines) {
                 if (lineY + font.lineHeight >= getY() && lineY <= getY() + getHeight()) {
                     g.drawString(font, line, x, lineY, MedievalColors.TEXT_WARM_WHITE, true);
+                    renderedLines.add(new RenderedLine(x, lineY, font.width(line), font.lineHeight, line));
                 }
                 lineY += font.lineHeight + 2;
             }
 
-            // Register link hitboxes for action spans
-            for (MarkdownNode.FormattedSpan span : paragraph.spans()) {
-                if (span.linkAction() != null) {
-                    int linkW = font.width(span.text());
-                    linkHitBoxes.add(new LinkHitBox(x, y, linkW, font.lineHeight + 2, span.linkAction()));
-                }
-            }
-
-            return lineY + 2;
+            return lineY + 4;
         }
 
         if (node instanceof ImageNode img) {
@@ -216,19 +254,24 @@ public class MarkdownRenderWidget extends AbstractWidget {
         }
 
         if (node instanceof QuoteBlockNode quote) {
-            int quoteStartY = y;
-            int innerY = y + 4;
+            int quoteInnerH = 0;
+            for (MarkdownNode child : quote.children()) {
+                quoteInnerH += calculateNodeHeight(child, font, width - 16);
+            }
+            int quoteHeight = quoteInnerH + 8;
 
+            // Draw background and left golden indicator bar FIRST
+            if (y + quoteHeight >= getY() && y <= getY() + getHeight()) {
+                g.fill(x + 2, y, x + width, y + quoteHeight, MedievalColors.PARCHMENT_DARK);
+                g.fill(x + 2, y, x + 5, y + quoteHeight, MedievalColors.BORDER_GOLD);
+            }
+
+            // Render quote children text on top of the background
+            int innerY = y + 4;
             for (MarkdownNode child : quote.children()) {
                 innerY = renderNode(g, font, child, x + 12, innerY, width - 16, mouseX, mouseY);
             }
 
-            int quoteHeight = innerY - quoteStartY + 4;
-            if (quoteStartY + quoteHeight >= getY() && quoteStartY <= getY() + getHeight()) {
-                // Background & left bar
-                g.fill(x + 2, quoteStartY, x + width, quoteStartY + quoteHeight, MedievalColors.PARCHMENT_DARK);
-                g.fill(x + 2, quoteStartY, x + 5, quoteStartY + quoteHeight, MedievalColors.BORDER_GOLD);
-            }
             return innerY + 4;
         }
 
@@ -238,10 +281,12 @@ public class MarkdownRenderWidget extends AbstractWidget {
 
             for (MarkdownNode item : list.items()) {
                 String prefix = list.ordered() ? index + ". " : "• ";
+                int prefixW = font.width(prefix);
+
                 if (listY + font.lineHeight >= getY() && listY <= getY() + getHeight()) {
                     g.drawString(font, prefix, x, listY, MedievalColors.BORDER_GOLD, true);
                 }
-                int itemH = renderNode(g, font, item, x + 12, listY, width - 12, mouseX, mouseY);
+                int itemH = renderNode(g, font, item, x + prefixW + 2, listY, width - prefixW - 2, mouseX, mouseY);
                 listY = itemH;
                 index++;
             }
@@ -286,7 +331,8 @@ public class MarkdownRenderWidget extends AbstractWidget {
 
                 for (int c = 0; c < numCols; c++) {
                     String cellText = c < row.size() ? row.get(c) : "";
-                    List<FormattedCharSequence> lines = font.split(Component.literal(cellText), colW - cellPadding * 2);
+                    MutableComponent comp = buildComponent(MarkdownParser.parseInlineSpans(cellText));
+                    List<FormattedCharSequence> lines = font.split(comp, colW - cellPadding * 2);
                     if (lines.isEmpty()) {
                         lines = List.of(Component.literal("").getVisualOrderText());
                     }
@@ -306,6 +352,7 @@ public class MarkdownRenderWidget extends AbstractWidget {
                         int lineY = currentY + 2;
                         for (FormattedCharSequence line : cellLines) {
                             g.drawString(font, line, cellX, lineY, MedievalColors.TEXT_WARM_WHITE, true);
+                            renderedLines.add(new RenderedLine(cellX, lineY, font.width(line), font.lineHeight, line));
                             lineY += font.lineHeight + 2;
                         }
                         if (c > 0) {
@@ -322,6 +369,14 @@ public class MarkdownRenderWidget extends AbstractWidget {
             return currentY + 6;
         }
 
+        if (node instanceof DividerNode) {
+            int divY = y + 3;
+            if (divY >= getY() && divY <= getY() + getHeight()) {
+                g.fill(x, divY, x + width, divY + 1, MedievalColors.BORDER_GOLD_DARK);
+            }
+            return y + 8;
+        }
+
         return y + 10;
     }
 
@@ -333,10 +388,19 @@ public class MarkdownRenderWidget extends AbstractWidget {
                     .withItalic(span.italic())
                     .withStrikethrough(span.strikethrough());
 
+            if (span.color() != null) {
+                style = style.withColor(span.color());
+            }
+
+            if (span.code()) {
+                style = style.withColor(MedievalColors.BORDER_GOLD);
+            }
+
             if (span.linkAction() != null) {
                 style = style.withColor(MedievalColors.BORDER_GOLD)
                         .withUnderlined(true)
-                        .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.literal("Click to execute: " + span.linkAction())));
+                        .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, span.linkAction()))
+                        .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.literal(span.linkAction())));
             }
 
             root.append(Component.literal(span.text()).withStyle(style));
@@ -344,14 +408,47 @@ public class MarkdownRenderWidget extends AbstractWidget {
         return root;
     }
 
+    private RenderedLine getLineAt(double mouseX, double mouseY) {
+        if (mouseX < getX() || mouseX > getX() + getWidth() || mouseY < getY() || mouseY > getY() + getHeight()) {
+            return null;
+        }
+        for (RenderedLine line : renderedLines) {
+            if (mouseY >= line.y() && mouseY < line.y() + line.height() + 2
+                    && mouseX >= line.x() && mouseX <= line.x() + line.width()) {
+                return line;
+            }
+        }
+        return null;
+    }
+
+    private Component formatLinkTooltip(String action) {
+        if (action == null || action.isBlank()) return null;
+        if (action.startsWith("action:")) {
+            return Component.translatable("gui.wandscape.guide.action_tooltip", action.substring(7));
+        } else if (action.startsWith("http://") || action.startsWith("https://")) {
+            return Component.literal("🌐 " + action);
+        } else if (action.endsWith(".md") || action.startsWith("guide:")) {
+            String doc = action.startsWith("guide:") ? action.substring(6) : action;
+            if (doc.endsWith(".md")) {
+                doc = doc.substring(0, doc.length() - 3);
+            }
+            return Component.literal("📖 " + doc);
+        }
+        return Component.literal("🔗 " + action);
+    }
+
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (button == 0 && isMouseOver(mouseX, mouseY)) {
-            for (LinkHitBox box : linkHitBoxes) {
-                if (mouseX >= box.x() && mouseX <= box.x() + box.width()
-                        && mouseY >= box.y() && mouseY <= box.y() + box.height()) {
+            RenderedLine line = getLineAt(mouseX, mouseY);
+            if (line != null) {
+                Font font = Minecraft.getInstance().font;
+                int relX = (int) (mouseX - line.x());
+                Style style = font.getSplitter().componentStyleAtWidth(line.sequence(), relX);
+                if (style != null && style.getClickEvent() != null) {
+                    String action = style.getClickEvent().getValue();
                     if (actionClickListener != null) {
-                        actionClickListener.accept(box.action());
+                        actionClickListener.accept(action);
                         return true;
                     }
                 }

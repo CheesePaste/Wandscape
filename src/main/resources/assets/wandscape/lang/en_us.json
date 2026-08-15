@@ -893,6 +893,7 @@
   "gui.wandscape.imgui.activity": "System load",
   "gui.wandscape.guide.title": "Wandscape Guide",
   "gui.wandscape.guide.titlebar": "Wandscape Guide",
+  "gui.wandscape.guide.action_tooltip": "⚡ Action: %s",
   "gui.wandscape.doc.notfound": "# 404 Document Not Found\n\nCould not read the requested document: `%1$s`",
   "message.wandscape.guide.toast": "§e[Newcomer Guide] §fFollow the guide to build your magic town step by step!",
   "gui.wandscape.roadstudio.window": "Road Studio",

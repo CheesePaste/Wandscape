@@ -47,6 +47,6 @@ MINIMAL 风格：渐变玻璃面板 + 发光边框 + MedievalColors 调色板。
 | util/ | BuildingPreviewRenderer + WandscapeHighlightRenderer + RenderUtil |
 | (根) | ReplayScreenGuard(回放兼容：ReforgedPlay/ReplayMod 播放中取消所有 MedievalScreen 打开) |
 | animation/ | MedievalAnimation |
-| markdown/ | AST节点(Header/Text/Image/Quote/List) + MarkdownParser(纯Java解析) + MarkdownRenderWidget(MC渲染控件) + navigation(DocumentHistoryStack历史栈+DocumentLoader文档读取) + texture(MarkdownTextureManager全能图像管理) |
+| markdown/ | AST节点(Header/Text/Image/Quote/List/Table/Divider) + MarkdownParser(纯Java解析) + MarkdownRenderWidget(MC渲染控件) + navigation(DocumentHistoryStack历史栈+DocumentLoader文档读取) + texture(MarkdownTextureManager全能图像管理) |
 | skin/ | SkinSprite(精灵图坐标) / SkinRender(9-slice/按钮/关闭按钮/进度条/箭头图标) |
 | theme/ | MedievalColors(金色/紫色/文本/功能色) + WandscapeTheme(V面板覆盖层用RTS绘制基元 + 元素图标) |
