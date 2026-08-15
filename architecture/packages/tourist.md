@@ -21,7 +21,7 @@ WandscapeNpc 承载 ECS 桥接、法杖、魔力池、任务执行器等完整�
 - **TouristSpawnSystem** — 生成：roll 画像 → 设三条 need / 停留截止 / travelFund；**出生不指派目标**，出生即闲逛，目标完全由视野内 Find-Best-Action 决定。离开判定 D6（见下）。
 - **TouristSimulation**（共享交互经济）— `fillBars` 填三条、四类交互结算（shop 购物 / service 产元素+耗精力 / relax 回精力 / atm 取钱）、**Find-Best-Action 目标选择**（视野内）、spot 认领/释放。实体路径与影子 sim 路径共用本类，一套逻辑无漂移。
 - **TouristMoveGoal**（实体 AI）— MoveMode 状态机：`VISITING_BUILDING`（spot 单点导航 + 占用/活动/释放 + 排队）/ `EXPLORING_POI` / `WANDERING`。**闲逛目标 = `wandscape:custom_roads` 标签方块**（玩家自铺的路也算），锚点仅站到路上时随动，离闲逛起点 32 格强制折返（详见「与道路系统联动」）。
-- **TouristSimSystem**（影子 sim）— 游客区块卸载后由 shadow 直线移动推进，镜像 `TouristSimulation` 交互与 D6 离场；玩家靠近时实体接管（shadow 胜出 → importToEntity）。
+- **TouristSimSystem**（影子 sim）— 游客区块卸载后由 shadow 直线移动推进，镜像 `TouristSimulation` 交互与 D6 离场；排队超 `TOURIST_QUEUE_WAIT_TOLERANCE_TICKS` 放弃去别处（与实体一致）；玩家靠近时实体接管（shadow 胜出 → importToEntity）。
 - **HotelStayHandler** — 夜晚旅店（`service.maxOccupancy>0`）：入住 → 睡床（视觉）+ 填一次三条 → 清晨退房精力回 100、`nightsStayed++`、回到入住站位。
 - **TouristSpotManager** — spot 占用（buildingId → 占用下标集合）。**spot 数量 = 该建筑同时交互人数上限**；全满 → 排队（在建筑旁等，超 `TOURIST_QUEUE_WAIT_TOLERANCE_TICKS` 放弃去别处）。仅机制，无可见标记。
 - **ActivityVisuals / TouristHumanoidModel**（client）— `Activity → (Pose/骨骼角度/粒子)` 注册表，`setupAnim` 缓动插值；未知动作兜底 `BROWSE`，渲染不崩。

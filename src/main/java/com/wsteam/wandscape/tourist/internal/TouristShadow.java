@@ -83,6 +83,8 @@ public final class TouristShadow implements TouristStateHost {
     private int interactTicksLeft;
     /** sim 排队中的 spot 下标（-1 = 未排队）。sim 专用。 */
     private int queueSpotIndex = -1;
+    /** sim 排队已持续的 tick 数（超 TOURIST_QUEUE_WAIT_TOLERANCE_TICKS 放弃；setQueueSpotIndex 变更即清零）。 */
+    private int queueTicks;
     private int nightsStayed;
     private long departureDeadline = Long.MAX_VALUE;
     private int travelFund;
@@ -232,7 +234,13 @@ public final class TouristShadow implements TouristStateHost {
     public int getInteractTicksLeft() { return interactTicksLeft; }
     public void setInteractTicksLeft(int t) { this.interactTicksLeft = Math.max(0, t); }
     public int getQueueSpotIndex() { return queueSpotIndex; }
-    public void setQueueSpotIndex(int i) { this.queueSpotIndex = i; }
+    public void setQueueSpotIndex(int i) {
+        this.queueSpotIndex = i;
+        // 队改变（新排/离队）→ 排队计时清零，保证超时从本次入队重新起算
+        this.queueTicks = 0;
+    }
+    public int getQueueTicks() { return queueTicks; }
+    public void setQueueTicks(int t) { this.queueTicks = t; }
     public int getNightsStayed() { return nightsStayed; }
     public void setNightsStayed(int n) { this.nightsStayed = Math.max(0, n); }
     public long getDepartureDeadline() { return departureDeadline; }

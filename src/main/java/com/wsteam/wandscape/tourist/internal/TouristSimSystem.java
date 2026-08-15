@@ -506,6 +506,13 @@ public final class TouristSimSystem {
 
         // ── 排队中：仅队首可认领空 spot（与实体一致，spot 串行化限制并发交互）──
         if (s.getQueueSpotIndex() >= 0) {
+            // 排队超时（与实体 tickQueue 一致）：超 TOURIST_QUEUE_WAIT_TOLERANCE_TICKS 放弃去别处
+            s.setQueueTicks(s.getQueueTicks() + 1);
+            if (s.getQueueTicks() > Config.TOURIST_QUEUE_WAIT_TOLERANCE_TICKS.get()) {
+                abandonQueue(level, s);
+                checkDeparture(level, s);
+                return;
+            }
             tryClaimQueuedSpot(level, s);
             checkDeparture(level, s);
             return;
@@ -673,6 +680,25 @@ public final class TouristSimSystem {
             s.setOccupiedSpot(spot);
             s.setInteractTicksLeft(TouristSimulation.interactionDuration(level, buildingId));
         }
+    }
+
+    /** 排队超时放弃（镜像实体 abandonBuildingVisit）：离队、清目标、记 visited，
+     *  下 tick 重新规划去别处（避免超时→重排→再超时死循环）。 */
+    private void abandonQueue(ServerLevel level, TouristShadow s) {
+        UUID buildingId = s.getTargetBuildingId();
+        if (buildingId != null) {
+            TouristSpotManager.getActive().leaveAllQueues(buildingId, s.getTouristId());
+            // 放弃也算「逛过」：本次停留不再尝试该建筑（与实体一致）
+            s.addVisitedBuilding(buildingId);
+            Log.info(TAG, "[Tourist] {} (sim) abandoned queue at {} (wait timeout), re-planning",
+                    s.getTouristName(), shortId(buildingId));
+        }
+        s.setQueueSpotIndex(-1);
+        s.setInteractTicksLeft(0);
+        s.setOccupiedSpot(-1);
+        s.setCommuteTarget(null);
+        s.setTargetBuildingId(null);
+        s.setTargetBuildingCategory(null);
     }
 
     /** 交互时长结束：结算产出/记行程/标记已逛，释放 spot 并清队，重新规划下一目标。 */
