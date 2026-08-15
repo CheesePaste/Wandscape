@@ -444,10 +444,11 @@ public final class TouristSimSystem {
                 return;
             }
             if (dayTime < 1200) {
-                // 清晨晨起：住店晚数 +1、精力回 100、回入住前站位；**保持登记**（名单不删）
+                // 清晨晨起：住店晚数 +1、精力回 100、结算一晚满意值、回入住前站位；**保持登记**（名单不删）
                 s.setHotelCheckinTime(0);
                 s.setNightsStayed(s.getNightsStayed() + 1);
                 s.setEnergy(WandscapeConstants.TOURIST_MAX_ENERGY);
+                TouristSimulation.grantHotelNightStay(level, s, hotel);
                 s.setCommuteTarget(null);
                 BlockPos wake = s.getWakeUpPos();
                 if (wake != null) {
@@ -607,14 +608,7 @@ public final class TouristSimSystem {
                         s.setHotelCheckinTime(s.simTick());
                         s.setWakeUpPos(s.touristPos());
                         s.addVisitedBuilding(buildingId);
-                        // 首次入住：填一次满意值（住宿贡献三条）+ 记行程
-                        String bldType = TouristSimulation.getBuildingTypeId(level, buildingId);
-                        var hotelCfg = TouristSimulation.getConfig(level, buildingId);
-                        String bldName = (hotelCfg != null && hotelCfg.displayName() != null && !hotelCfg.displayName().isEmpty())
-                                ? hotelCfg.displayName() : (bldType != null ? bldType : "旅馆");
-                        int[] delta = TouristSimulation.fillBars(level, s, buildingId);
-                        TouristSimulation.addVisitMemory(s, bldType, bldName, "service",
-                                level.getGameTime(), delta[0], delta[1], delta[2], 0, "入住");
+                        // 满意值不在此结算，改为每晚晨起结算（见 TouristSimulation.grantHotelNightStay）
                         Log.info(TAG, "[Tourist] {} (sim) checked into hotel {}", shortId(s.getTouristId()), shortId(buildingId));
                     }
                     s.setCommuteTarget(null);
@@ -804,10 +798,10 @@ public final class TouristSimSystem {
                     depart(level, s);
                     continue;
                 }
-                case WAKE -> wakeUpShadow(s);
+                case WAKE -> wakeUpShadow(level, s);
                 case CHECKIN_WAKE -> {
-                    checkInAtNight(level, s, hotelTarget.getBuildingId());
-                    wakeUpShadow(s);
+                    checkInAtNight(s, hotelTarget.getBuildingId());
+                    wakeUpShadow(level, s);
                 }
             }
 
@@ -832,8 +826,8 @@ public final class TouristSimSystem {
         return hotelFound ? NightOutcome.CHECKIN_WAKE : NightOutcome.DEPART_NO_HOTEL;
     }
 
-    /** 晨起：精力回 100、住店晚数 +1、回入住前站位、保留登记（镜像 simStep 晨起分支）。 */
-    private void wakeUpShadow(TouristShadow s) {
+    /** 晨起：精力回 100、住店晚数 +1、结算一晚满意值、回入住前站位、保留登记（镜像 simStep 晨起分支）。 */
+    private void wakeUpShadow(ServerLevel level, TouristShadow s) {
         s.setHotelCheckinTime(0);
         s.setNightsStayed(s.getNightsStayed() + 1);
         s.setEnergy(WandscapeConstants.TOURIST_MAX_ENERGY);
@@ -842,21 +836,18 @@ public final class TouristSimSystem {
             s.setPosition(wake.getX() + 0.5, wake.getY(), wake.getZ() + 0.5);
             s.setWakeUpPos(null);
         }
+        UUID hotel = s.getCheckedInBuildingId();
+        if (hotel != null) {
+            TouristSimulation.grantHotelNightStay(level, s, hotel);
+        }
     }
 
-    /** 夜晚入住：登记 + 填一次满意值（住宿贡献三条）+ 记「入住」行程（镜像 simStep.interact 入住分支）。 */
-    private void checkInAtNight(ServerLevel level, TouristShadow s, UUID buildingId) {
+    /** 夜晚入住：登记（满意值不在此结算，改为紧接的晨起结算）。 */
+    private void checkInAtNight(TouristShadow s, UUID buildingId) {
         s.setCheckedInBuildingId(buildingId);
         s.setHotelCheckinTime(s.simTick());
         s.setWakeUpPos(s.touristPos());
         s.addVisitedBuilding(buildingId);
-        String bldType = TouristSimulation.getBuildingTypeId(level, buildingId);
-        var hotelCfg = TouristSimulation.getConfig(level, buildingId);
-        String bldName = (hotelCfg != null && hotelCfg.displayName() != null && !hotelCfg.displayName().isEmpty())
-                ? hotelCfg.displayName() : (bldType != null ? bldType : "旅馆");
-        int[] delta = TouristSimulation.fillBars(level, s, buildingId);
-        TouristSimulation.addVisitMemory(s, bldType, bldName, "service",
-                level.getGameTime(), delta[0], delta[1], delta[2], 0, "入住");
         Log.info(TAG, "[Tourist] {} (快进夜) checked into hotel {}", shortId(s.getTouristId()), shortId(buildingId));
     }
 

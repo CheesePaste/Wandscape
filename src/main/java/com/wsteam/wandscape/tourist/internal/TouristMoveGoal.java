@@ -33,7 +33,6 @@ import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.level.pathfinder.Path;
-import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
@@ -330,14 +329,13 @@ public class TouristMoveGoal extends Goal {
             return;
         }
 
-        // Show arrival narrative on first building visit (journey start)
+        // Emit arrival narrative event on first building visit (journey start), for stats only
         if (tourist.getRecentVisits().isEmpty()) {
             long dayTime = tourist.level().getDayTime() % 24000;
             String dayPhase = dayTime < 6000 ? "morning"
                     : dayTime < Config.TOURIST_NIGHT_START.get() ? "afternoon" : "night";
             NarrativeEvent arrival = NarrativeGenerator.generateArrival(
                     tourist.getTouristName(), dayPhase, tourist.level().getGameTime());
-            showActionBar(arrival.text());
             emitNarrativeEvent(arrival);
         }
 
@@ -994,17 +992,10 @@ public class TouristMoveGoal extends Goal {
 
         boolean alreadyResident = buildingId.equals(tourist.getCheckedInBuildingId());
         if (!alreadyResident) {
-            // 首次入住：登记 + 填一次满意值（住宿贡献三条）+ 记行程 + 叙事
+            // 首次入住：登记 + 叙事（满意值不在此结算，改为每晚晨起结算——见 TouristSimulation.grantHotelNightStay）
             if (!hotel.checkIn(tourist, buildingId, colonyId)) return false;
             tourist.addVisitedBuilding(buildingId);
             String bldName = getBuildingDisplayName(buildingId, bldType);
-            ServerLevel level = serverLevel();
-            if (level != null) {
-                int[] delta = TouristSimulation.fillBars(level, tourist, buildingId);
-                TouristSimulation.addVisitMemory(tourist, bldType, bldName, "service",
-                        level.getGameTime(), delta[0], delta[1], delta[2], 0, "入住");
-            }
-            showActionBar("✨ " + tourist.getTouristName() + " 入住了旅馆 " + (bldType != null ? bldType : "?") + "!");
             NarrativeEvent checkinEvent = NarrativeGenerator.generateHotelCheckin(
                     tourist.getTouristName(), bldType != null ? bldType : "unknown", bldName,
                     tourist.level().getGameTime());
@@ -1745,16 +1736,6 @@ public class TouristMoveGoal extends Goal {
     // Building-visit: planning & interaction
     // (unchanged from original tourist logic)
     // ════════════════════════════════════════════════════════════════
-
-    private void showActionBar(String msg) {
-        if (tourist.level().isClientSide) return;
-        Component comp = Component.literal(msg);
-        for (ServerPlayer p : tourist.level().getEntitiesOfClass(
-                ServerPlayer.class,
-                tourist.getBoundingBox().inflate(32))) {
-            p.sendSystemMessage(comp, true);
-        }
-    }
 
     /** Notify nearby players of a purchase / service bubble event above this tourist. */
     private void sendBubble(int iconKind, @Nullable String iconId, int count) {

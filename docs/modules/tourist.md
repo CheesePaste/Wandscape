@@ -25,7 +25,7 @@
 - **离开**：sat<50 或 sat=100 → 夜晚带 0-1500 tick 随机延迟离开；sat 50-99 → 引导去旅馆，无房则离开。白天/傍晚：能量耗尽、夜晚且空闲、空闲超时 `TOURIST_DESPAWN_TIMEOUT_TICKS=36000`。100% 满意度 → `grantExperience`。
 - **住店客免疫清场**：入住后（`checkedInBuildingId` 常驻）只按停留截止（`departureDeadline`）或**满条当晚开心离场**（用户确认），不被夜晚/闲置清掉——`cleanupTourists`/`processNightDepartures`/sim `checkDeparture` 对住店客只判截止/满条。
 - **清场窗口统一 18000–24000**：未观察的 sim 游客与观察中的实体游客一致，都在离场窗口内清无旅店/满条游客（原 sim 从 13000 起提前清人，已对齐）；夜晚阈值 `tourist.nightStart`（默认 14000）起游客优先旅店/可入住，多逛 40 分钟。
-- **玩家睡觉跳过夜晚 → 夜间快进**：玩家睡觉触发 `SleepFinishedTimeEvent`（夜晚被整体跳过、离场窗口不逐 tick 走）时，`TouristSimSystem` 对**影子注册表批量快进「睡→醒」**——无旅店未满条游客离场、满条游客当晚离场、住店客晨起（精力回满/晚数+1/回入住前站位/保留登记）、有旅店未满条游客自动入住+晨起；观察中的活实体同步推回结果（`importToEntity`）。否则夜晚被跳过 → 本应离场的游客滞留、人口每晚只增不减（见 decisions.md）。
+- **玩家睡觉跳过夜晚 → 夜间快进**：玩家睡觉触发 `SleepFinishedTimeEvent`（夜晚被整体跳过、离场窗口不逐 tick 走）时，`TouristSimSystem` 对**影子注册表批量快进「睡→醒」**——无旅店未满条游客离场、满条游客当晚离场、住店客晨起（精力回满/晚数+1/**结算一晚满意值**/回入住前站位/保留登记）、有旅店未满条游客自动入住+晨起；观察中的活实体同步推回结果（`importToEntity`）。否则夜晚被跳过 → 本应离场的游客滞留、人口每晚只增不减（见 decisions.md）。
 
 ## 影子模拟（TouristSimSystem / TouristSimulation / TouristShadow / TouristSimRegistry）
 
@@ -51,13 +51,14 @@
 
 ## 酒店（HotelStayHandler）——住店客机制
 
-- **住店客（resident）**：游客入住后 `checkedInBuildingId` **常驻**（实体/影子 NBT 持久化）——清晨只「晨起」（`wakeUp`：精力回 100、回入住前站位、住店晚数 +1），**名单不删**；白天照常外出逛街，夜晚回**自己**旅店睡觉。离场（截止/满条当晚/被杀）才 `checkOut` 从名单删除。
+- **住店客（resident）**：游客入住后 `checkedInBuildingId` **常驻**（实体/影子 NBT 持久化）——清晨只「晨起」（`wakeUp`：精力回 100、回入住前站位、住店晚数 +1、**结算一晚三值满意值**），**名单不删**；白天照常外出逛街，夜晚回**自己**旅店睡觉。离场（截止/满条当晚/被杀）才 `checkOut` 从名单删除。
 - **checkIn 条件**（TouristMoveGoal 把关）：夜晚（`tourist.nightStart` ≥14000）且未满条，且 ServiceConfig.maxOccupancy>0；`checkIn` 幂等——已是该旅店住店客（回店/磁盘加载）跳过容量检查，避免被自己占的床位挤掉。
 - **提前入住（入住即时完成）**：游客**进入酒店建筑 bbox** 即 `tryHotelCheckIn`（bbox 外扩 +5 已去掉——大旅店不会在离门老远就入住）——**不占 spot、不等 `interaction_duration_ticks`**，进入即入住躺床；白天条件不满足则按普通服务建筑处理。夜晚意图入住但旅店满员 → 不当 service 逛/排队，放弃重新规划（避免排队拖到被清场）。
 - **夜晚回店**：住店客夜晚（或凌晨 0-1000）空闲时 `returnToOwnHotel` 回自己旅店——已睡着停住、在店旁强制躺床、在路上继续走、否则开始回店；旅店被拆 → 解除登记按无旅店处理；**过远（> `tourist.hotelTeleportDistance` 64）直接传送**（省寻路开销）。
 - **傍晚路由**：`tourist.eveningRoutingStart`（默认 16000）起，无旅店未满条游客**停止当前任务**去旅店（`TouristSimulation.findHotelTarget` 全殖民地找最近可用旅店，实体路径要求区块已加载）。
 - **睡床（纯视觉）**：入住即 `settleIntoBed` **强制躺床**——有空床躺空床；床不够（全被占用）躺**最近一张床**（纯视觉可共用）；旅店一张床都没有 → **卡原地不动**。床判定 = 酒店 bbox 内 `BedBlock`（跳过原版 `OCCUPIED`），`setSleepingPos` + `Pose.SLEEPING`，不改床方块状态 → 无占用泄漏。
 - 入住点存为 `wakeUpPos`（实体与影子 NBT 持久化，`exportToShadow`/`importToEntity` 同步）；清晨窗口 1000-1200 晨起：加载路径 `stopSleeping` 起床并**传送回入住点**，影子路径 simStep 同样恢复位置，发 HOTEL_WAKEUP 叙事。
+- **满意值每晚结算**：**入住不结算满意值**；每晚住宿在次日晨起结算一次（`TouristSimulation.grantHotelNightStay` = `fillBars` 该旅店建筑 comfort/magic/wonder + 记「住宿」行程，与参观一致）。实体 `HotelStayHandler.wakeUp` / sim `simStep` 晨起分支 / 快进夜 `wakeUpShadow` 三处各调一次，一晚一次（满条游客当晚离场，不走到晨起）。
 - 床位占用由 HotelStayHandler 内存 `touristToBed` 跟踪（晨起/强制退房时清除），不依赖床方块 OCCUPIED 标记。
 - 心跳每 20 tick（晨起窗口唤醒住店客；实体未加载但影子仍是住店客时跳过强制退房）；占用数从影子注册表派生。
 

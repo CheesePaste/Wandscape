@@ -114,8 +114,9 @@ public final class HotelStayHandler {
     }
 
     /**
-     * 住店客晨起：回入住前站位、清睡觉姿态、精力回 100、住店晚数 +1；**保持酒店登记**
-     * （游客仍是该旅店住店客，白天外出逛街、夜晚回来睡，名单上不删除）。
+     * 住店客晨起：回入住前站位、清睡觉姿态、精力回 100、住店晚数 +1、**结算一晚满意值**
+     * （用旅店建筑三值，与参观一致）；**保持酒店登记**（游客仍是该旅店住店客，
+     * 白天外出逛街、夜晚回来睡，名单上不删除）。
      *
      * <p>幂等：heartbeat 在晨间窗口（1000-1200）每 20 tick 跑一次，已醒且已回位的游客跳过。
      */
@@ -138,9 +139,10 @@ public final class HotelStayHandler {
         tourist.setNightsStayed(tourist.getNightsStayed() + 1);
         tourist.setEnergy(WandscapeConstants.TOURIST_MAX_ENERGY);
 
-        // Emit HOTEL_WAKEUP narrative
+        // 一晚满意值结算（与参观一致）+ Emit HOTEL_WAKEUP narrative
         UUID buildingId = touristToHotel.get(tourist.getUUID());
         if (buildingId != null) {
+            TouristSimulation.grantHotelNightStay(level, tourist, buildingId);
             String bldType = getBuildingTypeId(buildingId);
             String bldName = getBuildingDisplayName(buildingId, bldType);
             NarrativeEvent wakeupEvent = NarrativeGenerator.generateHotelWakeup(

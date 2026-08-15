@@ -421,6 +421,20 @@ public final class TouristSimulation {
         return memory;
     }
 
+    /**
+     * 住店一晚的满意值结算（每晚晨起触发一次）：与参观一致，用该旅店建筑的三值
+     * {@link #fillBars} 结算并记「住宿」行程。满意值在住店期间按夜结算，入住（checkIn）不再即时结算。
+     */
+    public static void grantHotelNightStay(ServerLevel level, TouristStateHost t, UUID buildingId) {
+        int[] delta = fillBars(level, t, buildingId);
+        String bldType = getBuildingTypeId(level, buildingId);
+        BuildingConfig cfg = getConfig(level, buildingId);
+        String bldName = (cfg != null && cfg.displayName() != null && !cfg.displayName().isEmpty())
+                ? cfg.displayName() : (bldType != null ? bldType : "旅馆");
+        addVisitMemory(t, bldType, bldName, "service", level.getGameTime(),
+                delta[0], delta[1], delta[2], 0, "住宿");
+    }
+
     // ── Target selection (Find-Best-Action，视野内；镜像 TouristMoveGoal.planNextBuilding) ──
 
     /**

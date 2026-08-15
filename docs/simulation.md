@@ -27,7 +27,7 @@
 ### 精力（Energy）
 
 - 范围 0–`TOURIST_MAX_ENERGY(100)`。
-- 交互消耗：shop −20、service −`energyPerUse`（建筑配置）。relax +`energyRestore`（建筑配置）。旅店住宿回精力（清晨退房 +100）。
+- 交互消耗：shop −20、service −`energyPerUse`（建筑配置）。relax +`energyRestore`（建筑配置）。旅店住宿（每晚晨起 `grantHotelNightStay`）：回精力 +100、结算一晚三值满意值（与参观一致）；**入住时不结算满意值**。
 
 ### 钱包与旅费
 
