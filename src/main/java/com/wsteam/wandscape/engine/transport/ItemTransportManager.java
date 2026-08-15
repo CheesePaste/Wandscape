@@ -88,10 +88,12 @@ public class ItemTransportManager {
                 ownerNpcId, totalTicks, 0, ownsItem);
         active.add(t);
 
-        // Send packet to clients
+        // Send packet to clients in this level so players at destination or along the road see flight
         if (level instanceof ServerLevel serverLevel) {
             TransportStartPacket packet = new TransportStartPacket(key, count, from, actualRoute);
-            PacketDistributor.sendToPlayersTrackingChunk(serverLevel, new ChunkPos(from), packet);
+            for (net.minecraft.server.level.ServerPlayer player : serverLevel.players()) {
+                PacketDistributor.sendToPlayer(player, packet);
+            }
         }
 
         return future;

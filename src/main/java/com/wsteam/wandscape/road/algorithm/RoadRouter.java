@@ -17,12 +17,21 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
+import java.util.TreeSet;
 
 /**
- * Plans item transport routes using the colony road network.
+ * Plans item transport and entity walking routes using the colony road network.
  *
  * <p>Pure core calculation with zero Minecraft dependencies.
- * Fast, lightweight, and guaranteed non-blocking (O(V + E) topology-based A* with hard step caps).
+ * Supports:
+ * <ul>
+ *   <li>Single-edge traversal</li>
+ *   <li>End-to-end connected roads</li>
+ *   <li>T-junctions and cross-intersections (attaching to the middle of road edges)</li>
+ *   <li>Multi-segment road hops with off-road gaps ("野路 - road - 野路 - road - 野路")</li>
+ * </ul>
+ *
+ * <p>Fast, lightweight, and guaranteed non-blocking (O(V + E) topology-based Dijkstra with hard step caps).
  */
 public final class RoadRouter {
 
@@ -34,20 +43,23 @@ public final class RoadRouter {
     /** Default ticks per block for off-road flight. */
     public static final int DEFAULT_TICKS_OFF_ROAD = 4;
 
-    /** Maximum distance (blocks) from start/end position to nearest road to consider using road. */
-    public static final double MAX_SNAP_DISTANCE = 32.0;
+    /** Maximum distance (blocks) from start/end position to nearest road to consider snapping. */
+    public static final double MAX_SNAP_DISTANCE = 48.0;
 
     /** Minimum direct distance (blocks) below which we just fly directly. */
     public static final double MIN_ROAD_BENEFIT_DISTANCE = 6.0;
 
-    /** Maximum gap (blocks) between road edge endpoints to connect as a junction. */
+    /** Maximum gap (blocks) between road edge endpoints/intersections to connect as an on-road junction. */
     public static final double MAX_JUNCTION_GAP = 4.0;
+
+    /** Maximum off-road gap (blocks) between disconnected road segments to hop across ("野路"). */
+    public static final double MAX_ROAD_HOP_GAP = 24.0;
 
     /** Max ratio of (road travel time / direct flight time) before rejecting detour in favor of direct. */
     public static final double MAX_DETOUR_FACTOR = 1.8;
 
-    /** Hard cap on A* search steps to guarantee zero performance spikes. */
-    private static final int MAX_SEARCH_STEPS = 300;
+    /** Hard cap on Dijkstra search steps to guarantee zero performance spikes. */
+    private static final int MAX_SEARCH_STEPS = 500;
 
     private RoadRouter() {}
 
@@ -66,7 +78,7 @@ public final class RoadRouter {
      * @param end          destination position
      * @param ticksOnRoad  speed rate on road (ticks per block)
      * @param ticksOffRoad speed rate off road (ticks per block)
-     * @return planned route (falls back to direct line if no road or road is a detour)
+     * @return planned route (falls back to direct line if no road or road is an excessive detour)
      */
     public static TransportRoute plan(RoadNetwork network, PathPoint start, PathPoint end,
                                       int ticksOnRoad, int ticksOffRoad) {
@@ -99,45 +111,21 @@ public final class RoadRouter {
             return directRoute;
         }
 
-        // Find nearest road projection for start and end
-        RoadProjection snapStart = findNearestProjection(activeEdges, start);
-        RoadProjection snapEnd = findNearestProjection(activeEdges, end);
+        // Find candidate road projections for start and end
+        List<RoadProjection> startProjs = findCandidateProjections(activeEdges, start, MAX_SNAP_DISTANCE);
+        List<RoadProjection> endProjs = findCandidateProjections(activeEdges, end, MAX_SNAP_DISTANCE);
 
-        if (snapStart == null || snapEnd == null
-                || snapStart.dist > MAX_SNAP_DISTANCE || snapEnd.dist > MAX_SNAP_DISTANCE) {
+        if (startProjs.isEmpty() || endProjs.isEmpty()) {
             return directRoute;
         }
 
-        List<SplineLeg> legs;
-
-        if (snapStart.edge == snapEnd.edge) {
-            // Both points snap to the same road edge
-            legs = new ArrayList<>();
-            if (snapStart.dist > 0.5) {
-                legs.add(createLinearLeg(start, snapStart.pos, true));
-            }
-            legs.add(new SplineLeg(snapStart.edge.getSpline(), snapStart.u, snapEnd.u, false));
-            if (snapEnd.dist > 0.5) {
-                legs.add(createLinearLeg(snapEnd.pos, end, true));
-            }
-        } else {
-            // Multi-edge topology search
-            List<SplineLeg> onRoadLegs = searchRoadPath(activeEdges, snapStart, snapEnd, ticksOnRoad);
-            if (onRoadLegs == null || onRoadLegs.isEmpty()) {
-                return directRoute;
-            }
-
-            legs = new ArrayList<>();
-            if (snapStart.dist > 0.5) {
-                legs.add(createLinearLeg(start, snapStart.pos, true));
-            }
-            legs.addAll(onRoadLegs);
-            if (snapEnd.dist > 0.5) {
-                legs.add(createLinearLeg(snapEnd.pos, end, true));
-            }
+        // Multi-segment topology graph search
+        List<SplineLeg> routeLegs = searchRoadPath(activeEdges, startProjs, endProjs, start, end, ticksOnRoad, ticksOffRoad);
+        if (routeLegs == null || routeLegs.isEmpty()) {
+            return directRoute;
         }
 
-        List<SplineLeg> simplified = simplifyLegs(legs);
+        List<SplineLeg> simplified = simplifyLegs(routeLegs);
         TransportRoute candidate = new TransportRoute(simplified);
 
         // Detour check: if road route takes much longer than direct flight, prefer direct
@@ -150,94 +138,190 @@ public final class RoadRouter {
         return candidate;
     }
 
-    // ── Topology Search ──
+    // ── Topology Search with T-Junctions and Off-Road Hops ──
 
     private static List<SplineLeg> searchRoadPath(List<RoadEdge> edges,
-                                                  RoadProjection startProj,
-                                                  RoadProjection endProj,
-                                                  int ticksOnRoad) {
-        // Build graph of endpoints + snap points
+                                                  List<RoadProjection> startProjs,
+                                                  List<RoadProjection> endProjs,
+                                                  PathPoint start,
+                                                  PathPoint end,
+                                                  int ticksOnRoad,
+                                                  int ticksOffRoad) {
         Graph graph = new Graph();
         int nodeIdSeq = 0;
 
         int startNode = nodeIdSeq++;
         int endNode = nodeIdSeq++;
-        graph.setNodePos(startNode, startProj.pos);
-        graph.setNodePos(endNode, endProj.pos);
+        SplineVec3 startPos = new SplineVec3(start.x() + 0.5, start.y() + 0.5, start.z() + 0.5);
+        SplineVec3 endPos = new SplineVec3(end.x() + 0.5, end.y() + 0.5, end.z() + 0.5);
+        graph.setNodePos(startNode, startPos);
+        graph.setNodePos(endNode, endPos);
 
-        Map<RoadEdge, int[]> edgeEndpoints = new HashMap<>();
-
+        // 1. Collect split parameters for every edge (endpoints, snap points, T-junction projections)
+        Map<RoadEdge, TreeSet<Double>> edgeSplitMap = new HashMap<>();
         for (RoadEdge edge : edges) {
-            int segCount = edge.getSpline().getSegmentsCount();
-            SplineVec3 p0 = edge.getSpline().evaluate(0.0).position();
-            SplineVec3 p1 = edge.getSpline().evaluate(segCount).position();
-
-            int n0 = nodeIdSeq++;
-            int n1 = nodeIdSeq++;
-            graph.setNodePos(n0, p0);
-            graph.setNodePos(n1, p1);
-            edgeEndpoints.put(edge, new int[]{n0, n1});
-
-            // Edge internal traversal
-            double length = new SplineLeg(edge.getSpline(), 0.0, segCount, false).getApproxLength();
-            int weight = Math.max(1, (int) Math.round(length * ticksOnRoad));
-            graph.addEdge(n0, n1, weight, new SplineLeg(edge.getSpline(), 0.0, segCount, false));
-            graph.addEdge(n1, n0, weight, new SplineLeg(edge.getSpline(), segCount, 0.0, false));
+            TreeSet<Double> splits = new TreeSet<>();
+            splits.add(0.0);
+            splits.add((double) edge.getSpline().getSegmentsCount());
+            edgeSplitMap.put(edge, splits);
         }
 
-        // Connect road junctions (endpoints close to each other)
-        for (int i = 0; i < edges.size(); i++) {
-            RoadEdge e1 = edges.get(i);
-            int[] ep1 = edgeEndpoints.get(e1);
-            for (int j = i + 1; j < edges.size(); j++) {
-                RoadEdge e2 = edges.get(j);
-                int[] ep2 = edgeEndpoints.get(e2);
+        for (RoadProjection sp : startProjs) {
+            if (edgeSplitMap.containsKey(sp.edge)) {
+                edgeSplitMap.get(sp.edge).add(sp.u);
+            }
+        }
+        for (RoadProjection ep : endProjs) {
+            if (edgeSplitMap.containsKey(ep.edge)) {
+                edgeSplitMap.get(ep.edge).add(ep.u);
+            }
+        }
 
-                for (int nA : ep1) {
-                    for (int nB : ep2) {
-                        SplineVec3 posA = graph.getNodePos(nA);
-                        SplineVec3 posB = graph.getNodePos(nB);
-                        double gap = posA.subtract(posB).length();
-                        if (gap <= MAX_JUNCTION_GAP) {
-                            int gapWeight = Math.max(1, (int) Math.round(gap * ticksOnRoad));
-                            SplineLeg junctionLeg = createLinearSplineLeg(posA, posB, false);
-                            SplineLeg revJunctionLeg = createLinearSplineLeg(posB, posA, false);
-                            graph.addEdge(nA, nB, gapWeight, junctionLeg);
-                            graph.addEdge(nB, nA, gapWeight, revJunctionLeg);
-                        }
-                    }
+        // T-Junction & Cross-Intersection Discovery:
+        // Project endpoints of edge B onto edge A if within MAX_JUNCTION_GAP
+        for (int i = 0; i < edges.size(); i++) {
+            RoadEdge eA = edges.get(i);
+            for (int j = 0; j < edges.size(); j++) {
+                if (i == j) continue;
+                RoadEdge eB = edges.get(j);
+
+                SplineVec3 p0 = eB.getSpline().evaluate(0.0).position();
+                SplineVec3 p1 = eB.getSpline().evaluate(eB.getSpline().getSegmentsCount()).position();
+
+                EdgeProjection proj0 = projectOntoEdge(eA, p0);
+                if (proj0.dist <= MAX_JUNCTION_GAP) {
+                    edgeSplitMap.get(eA).add(proj0.u);
+                }
+
+                EdgeProjection proj1 = projectOntoEdge(eA, p1);
+                if (proj1.dist <= MAX_JUNCTION_GAP) {
+                    edgeSplitMap.get(eA).add(proj1.u);
                 }
             }
         }
 
-        // Connect snapStart to startEdge endpoints
-        int[] startEp = edgeEndpoints.get(startProj.edge);
-        if (startEp != null) {
-            double lenTo0 = new SplineLeg(startProj.edge.getSpline(), startProj.u, 0.0, false).getApproxLength();
-            int w0 = Math.max(1, (int) Math.round(lenTo0 * ticksOnRoad));
-            graph.addEdge(startNode, startEp[0], w0, new SplineLeg(startProj.edge.getSpline(), startProj.u, 0.0, false));
+        // 2. Allocate graph nodes for all split parameters on each edge
+        Map<EdgeParamKey, Integer> paramToNodeId = new HashMap<>();
+        List<Integer> allRoadNodes = new ArrayList<>();
 
-            int maxU = startProj.edge.getSpline().getSegmentsCount();
-            double lenTo1 = new SplineLeg(startProj.edge.getSpline(), startProj.u, maxU, false).getApproxLength();
-            int w1 = Math.max(1, (int) Math.round(lenTo1 * ticksOnRoad));
-            graph.addEdge(startNode, startEp[1], w1, new SplineLeg(startProj.edge.getSpline(), startProj.u, maxU, false));
+        for (RoadEdge edge : edges) {
+            TreeSet<Double> splits = edgeSplitMap.get(edge);
+            List<Double> sortedU = new ArrayList<>(splits);
+
+            // Deduplicate parameters that are essentially identical
+            List<Double> cleanU = new ArrayList<>();
+            for (double u : sortedU) {
+                if (cleanU.isEmpty() || Math.abs(u - cleanU.get(cleanU.size() - 1)) > 0.001) {
+                    cleanU.add(u);
+                }
+            }
+
+            List<Integer> edgeNodeIds = new ArrayList<>(cleanU.size());
+            for (double u : cleanU) {
+                int nId = nodeIdSeq++;
+                SplineVec3 pos = edge.getSpline().evaluate(u).position();
+                graph.setNodePos(nId, pos);
+                paramToNodeId.put(new EdgeParamKey(edge, u), nId);
+                edgeNodeIds.add(nId);
+                allRoadNodes.add(nId);
+            }
+
+            // Connect consecutive sub-segments along this edge
+            for (int k = 0; k < cleanU.size() - 1; k++) {
+                double uA = cleanU.get(k);
+                double uB = cleanU.get(k + 1);
+                int nA = edgeNodeIds.get(k);
+                int nB = edgeNodeIds.get(k + 1);
+
+                SplineLeg fwdLeg = new SplineLeg(edge.getSpline(), uA, uB, false);
+                SplineLeg revLeg = new SplineLeg(edge.getSpline(), uB, uA, false);
+
+                double len = fwdLeg.getApproxLength();
+                int weight = Math.max(1, (int) Math.round(len * ticksOnRoad));
+
+                graph.addEdge(nA, nB, weight, fwdLeg);
+                graph.addEdge(nB, nA, weight, revLeg);
+            }
         }
 
-        // Connect endEdge endpoints to snapEnd
-        int[] endEp = edgeEndpoints.get(endProj.edge);
-        if (endEp != null) {
-            double lenFrom0 = new SplineLeg(endProj.edge.getSpline(), 0.0, endProj.u, false).getApproxLength();
-            int w0 = Math.max(1, (int) Math.round(lenFrom0 * ticksOnRoad));
-            graph.addEdge(endEp[0], endNode, w0, new SplineLeg(endProj.edge.getSpline(), 0.0, endProj.u, false));
+        // 3. Connect inter-edge nodes: on-road junctions and off-road hops ("野路-road-野路-road")
+        for (int i = 0; i < allRoadNodes.size(); i++) {
+            int nA = allRoadNodes.get(i);
+            SplineVec3 posA = graph.getNodePos(nA);
 
-            int maxU = endProj.edge.getSpline().getSegmentsCount();
-            double lenFrom1 = new SplineLeg(endProj.edge.getSpline(), maxU, endProj.u, false).getApproxLength();
-            int w1 = Math.max(1, (int) Math.round(lenFrom1 * ticksOnRoad));
-            graph.addEdge(endEp[1], endNode, w1, new SplineLeg(endProj.edge.getSpline(), maxU, endProj.u, false));
+            for (int j = i + 1; j < allRoadNodes.size(); j++) {
+                int nB = allRoadNodes.get(j);
+                SplineVec3 posB = graph.getNodePos(nB);
+
+                double gap = posA.subtract(posB).length();
+                if (gap <= MAX_JUNCTION_GAP) {
+                    // On-road junction (T-junction or end-to-end junction)
+                    int gapWeight = Math.max(1, (int) Math.round(gap * ticksOnRoad));
+                    SplineLeg junctionLeg = createLinearSplineLeg(posA, posB, false);
+                    SplineLeg revJunctionLeg = createLinearSplineLeg(posB, posA, false);
+                    graph.addEdge(nA, nB, gapWeight, junctionLeg);
+                    graph.addEdge(nB, nA, gapWeight, revJunctionLeg);
+                } else if (gap <= MAX_ROAD_HOP_GAP) {
+                    // Off-road hop between disconnected road segments ("野路")
+                    int hopWeight = Math.max(1, (int) Math.round(gap * ticksOffRoad));
+                    SplineLeg hopLeg = createLinearSplineLeg(posA, posB, true);
+                    SplineLeg revHopLeg = createLinearSplineLeg(posB, posA, true);
+                    graph.addEdge(nA, nB, hopWeight, hopLeg);
+                    graph.addEdge(nB, nA, hopWeight, revHopLeg);
+                }
+            }
         }
 
-        // A* / Dijkstra search
+        // 4. Connect startNode to candidate snap nodes
+        for (RoadProjection sp : startProjs) {
+            Integer targetNode = findClosestParamNode(paramToNodeId, sp);
+            if (targetNode != null) {
+                SplineVec3 posSnap = graph.getNodePos(targetNode);
+                double d = startPos.subtract(posSnap).length();
+                int weight = Math.max(1, (int) Math.round(d * ticksOffRoad));
+                SplineLeg leg = createLinearSplineLeg(startPos, posSnap, true);
+                graph.addEdge(startNode, targetNode, weight, leg);
+            }
+        }
+
+        // 5. Connect candidate snap nodes to endNode
+        for (RoadProjection ep : endProjs) {
+            Integer targetNode = findClosestParamNode(paramToNodeId, ep);
+            if (targetNode != null) {
+                SplineVec3 posSnap = graph.getNodePos(targetNode);
+                double d = posSnap.subtract(endPos).length();
+                int weight = Math.max(1, (int) Math.round(d * ticksOffRoad));
+                SplineLeg leg = createLinearSplineLeg(posSnap, endPos, true);
+                graph.addEdge(targetNode, endNode, weight, leg);
+            }
+        }
+
+        // 6. Direct line flight fallback in graph
+        double directDist = startPos.subtract(endPos).length();
+        int directWeight = Math.max(1, (int) Math.round(directDist * ticksOffRoad));
+        SplineLeg directLeg = createLinearSplineLeg(startPos, endPos, true);
+        graph.addEdge(startNode, endNode, directWeight, directLeg);
+
+        // 7. Run Dijkstra
         return dijkstra(graph, startNode, endNode);
+    }
+
+    private record EdgeParamKey(RoadEdge edge, double u) {}
+
+    private static Integer findClosestParamNode(Map<EdgeParamKey, Integer> paramToNodeId, RoadProjection proj) {
+        double bestDiff = Double.MAX_VALUE;
+        Integer bestNode = null;
+        for (var entry : paramToNodeId.entrySet()) {
+            EdgeParamKey key = entry.getKey();
+            if (key.edge() == proj.edge()) {
+                double diff = Math.abs(key.u() - proj.u());
+                if (diff < bestDiff) {
+                    bestDiff = diff;
+                    bestNode = entry.getValue();
+                }
+            }
+        }
+        return bestNode;
     }
 
     private static List<SplineLeg> dijkstra(Graph graph, int startNode, int targetNode) {
@@ -290,45 +374,56 @@ public final class RoadRouter {
 
     private record RoadProjection(RoadEdge edge, double u, SplineVec3 pos, double dist) {}
 
-    private static RoadProjection findNearestProjection(List<RoadEdge> edges, PathPoint target) {
-        RoadProjection best = null;
+    private record EdgeProjection(double u, SplineVec3 pos, double dist) {}
+
+    private static EdgeProjection projectOntoEdge(RoadEdge edge, SplineVec3 targetPos) {
+        SplineModel spline = edge.getSpline();
+        if (spline == null || spline.getPoints().isEmpty()) {
+            return new EdgeProjection(0.0, SplineVec3.ZERO, Double.MAX_VALUE);
+        }
+
+        int segCount = spline.getSegmentsCount();
+        int samples = Math.max(10, segCount * 10);
+        double du = (double) segCount / samples;
+
         double bestDist = Double.MAX_VALUE;
+        double bestU = 0.0;
+        SplineVec3 bestPos = SplineVec3.ZERO;
 
-        SplineVec3 targetPos = new SplineVec3(target.x() + 0.5, target.y() + 0.5, target.z() + 0.5);
-
-        for (RoadEdge edge : edges) {
-            SplineModel spline = edge.getSpline();
-            if (spline == null || spline.getPoints().isEmpty()) continue;
-
-            int segCount = spline.getSegmentsCount();
-            int samples = Math.max(10, segCount * 10);
-            double du = (double) segCount / samples;
-
-            for (int i = 0; i <= samples; i++) {
-                double u = i * du;
-                SplineVec3 pos = spline.evaluate(u).position();
-                double d = targetPos.subtract(pos).length();
-                if (d < bestDist) {
-                    bestDist = d;
-                    best = new RoadProjection(edge, u, pos, d);
-                }
+        for (int i = 0; i <= samples; i++) {
+            double u = i * du;
+            SplineVec3 pos = spline.evaluate(u).position();
+            double d = targetPos.subtract(pos).length();
+            if (d < bestDist) {
+                bestDist = d;
+                bestU = u;
+                bestPos = pos;
             }
         }
 
-        return best;
+        return new EdgeProjection(bestU, bestPos, bestDist);
+    }
+
+    private static List<RoadProjection> findCandidateProjections(List<RoadEdge> edges, PathPoint target, double maxDist) {
+        List<RoadProjection> list = new ArrayList<>();
+        SplineVec3 targetPos = new SplineVec3(target.x() + 0.5, target.y() + 0.5, target.z() + 0.5);
+
+        for (RoadEdge edge : edges) {
+            EdgeProjection proj = projectOntoEdge(edge, targetPos);
+            if (proj.dist <= maxDist) {
+                list.add(new RoadProjection(edge, proj.u, proj.pos, proj.dist));
+            }
+        }
+
+        list.sort(Comparator.comparingDouble(p -> p.dist));
+        // Keep at most top 3 closest edges to keep search graph fast
+        if (list.size() > 3) {
+            return list.subList(0, 3);
+        }
+        return list;
     }
 
     // ── Leg Construction & Simplification ──
-
-    private static SplineLeg createLinearLeg(PathPoint from, SplineVec3 to, boolean offRoad) {
-        SplineVec3 pA = new SplineVec3(from.x() + 0.5, from.y() + 0.5, from.z() + 0.5);
-        return createLinearSplineLeg(pA, to, offRoad);
-    }
-
-    private static SplineLeg createLinearLeg(SplineVec3 from, PathPoint to, boolean offRoad) {
-        SplineVec3 pB = new SplineVec3(to.x() + 0.5, to.y() + 0.5, to.z() + 0.5);
-        return createLinearSplineLeg(from, pB, offRoad);
-    }
 
     private static SplineLeg createLinearSplineLeg(SplineVec3 pA, SplineVec3 pB, boolean offRoad) {
         SplineModel gap = new SplineModel();
@@ -345,6 +440,15 @@ public final class RoadRouter {
 
         for (int i = 1; i < raw.size(); i++) {
             SplineLeg next = raw.get(i);
+            // Skip zero-length micro legs
+            if (next.getApproxLength() < 0.01) {
+                continue;
+            }
+            if (current.getApproxLength() < 0.01) {
+                current = next;
+                continue;
+            }
+
             // Merge if they share the same spline instance and end matches start
             if (current.spline() == next.spline()
                     && current.offRoad() == next.offRoad()
@@ -386,3 +490,4 @@ public final class RoadRouter {
         }
     }
 }
+
