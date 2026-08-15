@@ -8702,9 +8702,9 @@
     "4,-1,24": "H4sIAAAAAAAA/+NiYGBmYKz4////AiBdCaSPAOkqBgYGdw4GpswUBt7czLzU5KLEtBKrpNQUBgDH7svHMAAAAA==",
     "7,-1,5": "H4sIAAAAAAAA/+NiYGBmYKz4////YiBdCaSPcDKwepak5hYzgABQsApImXAwMGWmMPDnZualJhclppVYJWekFpcwAADN8HVLPwAAAA=="
   },
-  "comfort": 15,
+  "comfort": 21,
   "magic": 0,
-  "wonder": 0,
+  "wonder": 5,
   "queue": {
     "capacity": 5,
     "task_types": [

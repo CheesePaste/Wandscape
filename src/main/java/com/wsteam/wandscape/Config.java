@@ -166,12 +166,14 @@ public class Config {
             .defineInRange("tourist.rescuePeripheryRadius", 24, 8, 128);
 
     public static final ModConfigSpec.IntValue COLONY_EXP_EQUAL_LEVEL = BUILDER
-            .comment("Experience granted when tourist level == colony level (满条离场时)")
-            .defineInRange("colony.expEqualLevel", 250, 0, 10000);
+            .comment("Experience granted when tourist level == colony level (满条离场时)。"
+                    + "700/1400（上调自 250/500）+ 低于殖民地等级给一半 + expToNext 二次曲线，"
+                    + "标定：5级≈5天、10级≈12天、15级≈22天、20级≈34天、30级满≈68天（sim 保守口径）。")
+            .defineInRange("colony.expEqualLevel", 700, 0, 10000);
 
     public static final ModConfigSpec.IntValue COLONY_EXP_ABOVE_LEVEL = BUILDER
             .comment("Experience granted when tourist level > colony level")
-            .defineInRange("colony.expAboveLevel", 500, 0, 10000);
+            .defineInRange("colony.expAboveLevel", 1400, 0, 10000);
 
     public static final ModConfigSpec.IntValue COLONY_MAX_LEVEL = BUILDER
             .comment("城镇等级上限：达到后不再累积经验、不再升级")
@@ -210,13 +212,15 @@ public class Config {
 
     public static final ModConfigSpec.IntValue TOURIST_BASE_WALLET = BUILDER
             .comment("Starting universal-element wallet for a level-1 tourist. "
-                    + "Reference prices: bread ~16, cake ~750, golden apple ~2684.")
-            .defineInRange("tourist.baseWallet", 200, 0, 1000000);
+                    + "Wallet = baseWallet + level × walletPerLevel; travelFund = 3×wallet（总消费上限 ≈ 4×钱包）。"
+                    + "参考: 1 级游客总消费 ≈ 3000，20 级 ≈ 22000（外部 sim 标定，防元素产出泛滥）。"
+                    + "参考物价: 面包 ~16, 蛋糕 ~750, 金苹果 ~2684.")
+            .defineInRange("tourist.baseWallet", 500, 0, 1000000);
 
     public static final ModConfigSpec.IntValue TOURIST_WALLET_PER_LEVEL = BUILDER
             .comment("Additional universal-element wallet per tourist level. "
                     + "Wallet = baseWallet + level × walletPerLevel.")
-            .defineInRange("tourist.walletPerLevel", 300, 0, 1000000);
+            .defineInRange("tourist.walletPerLevel", 200, 0, 1000000);
 
     // ── 游客经济改造：三条需求条 / 精力循环 / 停留 / 视野 / ATM（Block 0 新增）──
 
@@ -262,8 +266,9 @@ public class Config {
             .defineInRange("tourist.needBase", 60, 50, 2000);
 
     public static final ModConfigSpec.IntValue TOURIST_NEED_PER_LEVEL = BUILDER
-            .comment("游客每级需求增量。")
-            .defineInRange("tourist.needPerLevel", 20, 0, 500);
+            .comment("游客每级需求增量。默认 10（原 20）——需求增长放缓使高级游客可被喂满，"
+                    + "配合经验上调达到 5级≈5天、10级≈10天、20级≈30-40天、30级满≈60-80天。")
+            .defineInRange("tourist.needPerLevel", 10, 0, 500);
 
     public static final ModConfigSpec.IntValue TOURIST_NIGHT_START = BUILDER
             .comment("游客「夜晚」开始时刻（game time tick）：夜晚后游客优先去旅店、可入住、住店客回店睡觉。"

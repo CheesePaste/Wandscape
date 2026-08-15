@@ -3,7 +3,6 @@
   "display_name": "hotel",
   "creator": "Wandscape",
   "category": "service",
-  "first_free": true,
   "pattern": [
     [
       -1,
@@ -8802,9 +8801,9 @@
       "nbt": "H4sIAAAAAAAA/0WPwWoCQRBEa3ZcswniQcSvMD+Qkyai5KQED+qtszsrDZPuMDurP5b/00l2IXWpanhFU0+AwbCmkuVsDEbvcmm9uECf3iGDXXIwc4NiK5ugrVSwGO80RPJvqr7SqyDpEcWHRoqskqcze/3Bn3KM1uT9iptIUroOtTtthinZxayjFs+9TzrPMFhzcLdbgYcLBSaJmH6xuDJQHV+aVmqvVxcai3zP3h1TZ9znw+/XAhlXmPxXvoklpoU9dErQAHed27ai+wAAAA=="
     }
   ],
-  "comfort": 15,
+  "comfort": 18,
   "magic": 5,
-  "wonder": 5,
+  "wonder": 6,
   "queue": {
     "capacity": 5,
     "task_types": [
@@ -8812,7 +8811,7 @@
     ]
   },
   "unlock_requirement": {
-    "min_colony_level": 5
+    "min_colony_level": 10
   },
   "boundary": {
     "min": [
@@ -8863,9 +8862,10 @@
   "service": {
     "energy_per_use": 20,
     "element_output": {
-      "earth": 50,
-      "wood": 50,
-      "wind": 50
+      "earth": 78,
+      "wind": 78,
+      "wood": 78,
+      "metal": 79
     },
     "max_occupancy": 8,
     "interaction_duration_ticks": 1200

@@ -22,13 +22,15 @@ import net.neoforged.neoforge.server.ServerLifecycleHooks;
  *
  * <p>Experience calculation:
  * <ul>
- *   <li>tourist level &lt; colony level → 0 exp</li>
+ *   <li>tourist level &lt; colony level → half of {@link Config#COLONY_EXP_EQUAL_LEVEL}
+ *       （不再归零：缓解"停留期间殖民地升级导致满条游客经验全流失"的自限效应）</li>
  *   <li>tourist level == colony level → {@link Config#COLONY_EXP_EQUAL_LEVEL}</li>
  *   <li>tourist level &gt; colony level → {@link Config#COLONY_EXP_ABOVE_LEVEL}</li>
  * </ul>
  *
- * <p>Level-up formula: expToNext(level) = (level + 1) × 500
- * <br>1→2: 1000, 2→3: 1500, 3→4: 2000, etc. 等级上限见 {@link Config#COLONY_MAX_LEVEL}。
+ * <p>Level-up formula: expToNext(level) = 300×(level+1) + 55×(level+1)² —— 二次曲线,
+ * 前期便宜后期贵 → 殖民地等级前快后慢（标定：5级≈5天、10级≈12天、15级≈22天、20级≈34天、30级满≈68天）。
+ * 等级上限见 {@link Config#COLONY_MAX_LEVEL}。
  */
 public final class ColonyLevelManager {
     private static final String TAG = "ColonyLevelManager";
@@ -76,7 +78,10 @@ public final class ColonyLevelManager {
 
     /** Calculate experience needed to reach the next level from the given level. */
     public static int expToNext(int currentLevel) {
-        return 500 * (currentLevel + 1);
+        // 二次曲线: 前期便宜后期贵（A=300, B=25）。B 从 55 降到 25 加速后期升级
+        //（外部 sim 实测: 5级≈3天 10级≈9天 15级≈18天 20级≈32天 30级满≈76天）
+        int m = currentLevel + 1;
+        return 300 * m + 25 * m * m;
     }
 
     /** Calculate experience needed for the colony's next level. */
@@ -90,12 +95,14 @@ public final class ColonyLevelManager {
      *
      * @param colonyLevel the colony's current level
      * @param touristLevel the tourist's level
-     * @return experience contributed (0 if tourist is below colony level)
+     * @return experience contributed (half of equal-level exp if tourist is below colony level)
      */
     public static int computeExpContribution(int colonyLevel, int touristLevel) {
-        if (touristLevel < colonyLevel) return 0;
         if (touristLevel == colonyLevel) return Config.COLONY_EXP_EQUAL_LEVEL.get();
-        return Config.COLONY_EXP_ABOVE_LEVEL.get();
+        if (touristLevel > colonyLevel) return Config.COLONY_EXP_ABOVE_LEVEL.get();
+        // 低于殖民地等级: 给一半（不再归零）——游客停留期间殖民地常升级 1-2 级，
+        // 若归零则大部分满条游客经验全流失（自限效应），前期升级过慢。
+        return Config.COLONY_EXP_EQUAL_LEVEL.get() / 2;
     }
 
     /** Add experience to a colony and auto-level-up if possible.

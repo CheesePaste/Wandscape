@@ -2235,8 +2235,8 @@
     }
   ],
   "comfort": 5,
-  "magic": 5,
-  "wonder": 5,
+  "magic": 4,
+  "wonder": 4,
   "queue": {
     "capacity": 5,
     "task_types": [

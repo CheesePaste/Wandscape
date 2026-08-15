@@ -22406,7 +22406,7 @@
     ]
   },
   "unlock_requirement": {
-    "min_colony_level": 15
+    "min_colony_level": 20
   },
   "boundary": {
     "min": [
@@ -22466,10 +22466,10 @@
   "service": {
     "energy_per_use": 20,
     "element_output": {
-      "earth": 500,
-      "metal": 500,
-      "wood": 500,
-      "wind": 500
+      "earth": 225,
+      "wind": 225,
+      "wood": 225,
+      "metal": 225
     },
     "max_occupancy": 0,
     "interaction_duration_ticks": 2400

@@ -161,17 +161,13 @@ public final class BuildingSelectionOverlay {
         return -1;
     }
 
-    private static final List<String> CATEGORY_ORDER = List.of(
-            "All", "government", "storage", "service", "shop", "relax", "atm", "workstation", "node"
-    );
-
-    /** Categories merged into the 生产工坊 (workstation) tab instead of getting their own tab. */
-    private static final Set<String> WORKSHOP_MERGED_CATEGORIES = Set.of(
-            "crafting_station", "potion_station", "tavern"
+    /** 分类标签从左到右：全部 + 基础设施（市政厅/仓库/工作站等未单列者）+ 其余专属标签。 */
+    private static final List<String> CATEGORY_TABS = List.of(
+            "infrastructure", "node", "decoration", "shop", "service", "relax", "atm"
     );
 
     public static String getCategoryDisplayName(String cat) {
-        if (cat == null) return com.wsteam.wandscape.shared.ui.I18n.name("category.wandscape.all", "All").getString();
+        if (cat == null) cat = "infrastructure";
         return com.wsteam.wandscape.shared.ui.I18n.name("category.wandscape." + cat.toLowerCase(), cat).getString();
     }
 
@@ -226,19 +222,16 @@ public final class BuildingSelectionOverlay {
 
     public static List<String> getCategories() {
         Set<String> present = new LinkedHashSet<>();
-        present.add("All");
         for (BuildingSlot slot : ProjectionClientState.getBuildingSlots()) {
-            present.add(slot.category());
+            present.add(BuildingSort.tabOf(slot.category()));
         }
-        present.removeAll(WORKSHOP_MERGED_CATEGORIES);
         List<String> sorted = new ArrayList<>();
-        for (String cat : CATEGORY_ORDER) {
-            if (present.contains(cat)) {
-                sorted.add(cat);
-                present.remove(cat);
+        sorted.add("All");
+        for (String tab : CATEGORY_TABS) {
+            if (present.contains(tab)) {
+                sorted.add(tab);
             }
         }
-        sorted.addAll(present);
         return sorted;
     }
 
@@ -248,13 +241,30 @@ public final class BuildingSelectionOverlay {
         return ProjectionClientState.getBuildingSlots().stream()
                 .filter(s -> "All".equals(cat) || matchesCategory(s.category(), cat))
                 .filter(s -> search.isEmpty() || s.displayName().toLowerCase().contains(search))
+                .sorted(BuildingSelectionOverlay::compareSlots)
                 .toList();
     }
 
-    /** A slot belongs to the selected tab when its category matches, or it's merged into the workstation tab. */
-    private static boolean matchesCategory(String slotCategory, String selectedCategory) {
-        if (selectedCategory.equals(slotCategory)) return true;
-        return "workstation".equals(selectedCategory) && WORKSHOP_MERGED_CATEGORIES.contains(slotCategory);
+    /** A slot belongs to the selected tab when its merged tab matches. */
+    private static boolean matchesCategory(String slotCategory, String selectedTab) {
+        return BuildingSort.tabOf(slotCategory).equals(selectedTab);
+    }
+
+    /** 排序：解锁等级 → 种类 → 显示名（中文按拼音，英文按字母）。 */
+    private static int compareSlots(BuildingSlot a, BuildingSlot b) {
+        return BuildingSort.compare(unlockLevel(a), a.category(), sortName(a),
+                unlockLevel(b), b.category(), sortName(b));
+    }
+
+    private static int unlockLevel(BuildingSlot slot) {
+        BuildingConfig config = BuildingConfigLoader.getInstance().get(slot.id());
+        if (config == null) return 1;
+        return config.unlockRequirement().minColonyLevel();
+    }
+
+    private static String sortName(BuildingSlot slot) {
+        return com.wsteam.wandscape.shared.ui.I18n.name(
+                "building.wandscape." + slot.id(), slot.displayName()).getString();
     }
 
     private static int renderCategoryTabs(GuiGraphics g, Font font, List<String> cats,

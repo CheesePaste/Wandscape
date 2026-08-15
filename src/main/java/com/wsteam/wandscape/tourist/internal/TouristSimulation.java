@@ -337,7 +337,10 @@ public final class TouristSimulation {
         int energyBefore = t.getEnergy();
         t.setEnergy(t.getEnergy() + r.energyRestore());
         int gained = t.getEnergy() - energyBefore;
-        int[] delta = fillBars(level, t, buildingId);
+        // 三值每建筑只加一次（与商店/服务一致）；休闲重访只回精力，不再加三值。
+        // 酒店晨起是唯一可重复的三值来源（grantHotelNightStay，可预测：住几晚加几次）。
+        int[] delta = t.getVisitedBuildings().contains(buildingId)
+                ? new int[]{0, 0, 0} : fillBars(level, t, buildingId);
         return new InteractionResult(null, delta[0], delta[1], delta[2], gained, "歇脚恢复精力");
     }
 
@@ -362,7 +365,9 @@ public final class TouristSimulation {
             t.setTravelFund(t.getTravelFund() - amount);
             t.setLastAtmWithdrawTime(t.timeBase());
         }
-        int[] delta = fillBars(level, t, buildingId);
+        // 三值每建筑只加一次；ATM 重访只取钱，不再加三值（唯一可重复来源是酒店晨起）。
+        int[] delta = t.getVisitedBuildings().contains(buildingId)
+                ? new int[]{0, 0, 0} : fillBars(level, t, buildingId);
         return new InteractionResult(null, delta[0], delta[1], delta[2], 0, "取钱 " + amount);
     }
 
