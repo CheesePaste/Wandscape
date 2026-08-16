@@ -9,7 +9,6 @@ import java.util.List;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.wsteam.wandscape.imgui.ImGuiManager;
 import com.wsteam.wandscape.road.client.modernui.RoadStudioModernUI;
 import com.wsteam.wandscape.road.core.SplineModel;
 import com.wsteam.wandscape.road.core.SplinePoint;
@@ -263,7 +262,6 @@ public final class SplineEditorClientState {
         if (topDown) exitTopDown();
         SplineEditorController.resetInputState();
         RoadStudioModernUI.close();
-        ImGuiManager.setVisible(false);
         Log.info(TAG, "[SplineEditor] Exited edit mode");
     }
 

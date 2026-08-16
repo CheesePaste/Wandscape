@@ -21,6 +21,12 @@ public final class RoadStudioModernUI {
     private static volatile boolean keyboardFocused = false;
     private static volatile RoadStudioFragment currentFragment = null;
 
+    private static volatile boolean panelBoundsValid = false;
+    private static volatile int panelLeft = 0;
+    private static volatile int panelTop = 0;
+    private static volatile int panelRight = 0;
+    private static volatile int panelBottom = 0;
+
     private static final int MIN_PANEL_WIDTH_DP = 340;
     private static final int MAX_PANEL_WIDTH_DP = 640;
 
@@ -33,6 +39,14 @@ public final class RoadStudioModernUI {
         return studioOpen;
     }
 
+    public static void setPanelBounds(int left, int top, int right, int bottom) {
+        panelLeft = left;
+        panelTop = top;
+        panelRight = right;
+        panelBottom = bottom;
+        panelBoundsValid = true;
+    }
+
     /**
      * Opens the ModernUI Road Studio screen.
      */
@@ -42,6 +56,10 @@ public final class RoadStudioModernUI {
 
         mc.execute(() -> {
             try {
+                if (!SplineEditorClientState.isEditing()) {
+                    SplineEditorClientState.enterEditMode();
+                    return;
+                }
                 if (currentFragment == null) {
                     currentFragment = new RoadStudioFragment();
                 }
@@ -65,6 +83,7 @@ public final class RoadStudioModernUI {
         mc.execute(() -> {
             studioOpen = false;
             keyboardFocused = false;
+            panelBoundsValid = false;
             if (mc.screen != null) {
                 mc.setScreen(null);
             }
@@ -89,13 +108,14 @@ public final class RoadStudioModernUI {
         int windowHeight = mc.getWindow().getHeight();
         if (windowWidth <= 0 || windowHeight <= 0) return false;
 
-        double guiScale = mc.getWindow().getGuiScale();
-        if (guiScale <= 0) guiScale = 1.0;
+        if (panelBoundsValid && panelRight > panelLeft) {
+            return mouseX >= panelLeft && mouseX <= panelRight && mouseY >= panelTop && mouseY <= panelBottom;
+        }
 
-        // Panel width in physical window pixels
-        double panelWidthPx = panelWidthDp * (guiScale / 2.0) * 2.0; // scales with GUI scale
-        // In ModernUI dp to px: 1dp is roughly 1 gui scaled unit or dp conversion
-        double panelLeftPx = windowWidth - (panelWidthDp * (windowWidth / (double) mc.getWindow().getGuiScaledWidth()));
+        // Fallback: estimate right dock area
+        double scale = (double) windowWidth / Math.max(1, mc.getWindow().getGuiScaledWidth());
+        double panelWidthPx = panelWidthDp * scale;
+        double panelLeftPx = windowWidth - panelWidthPx;
 
         return mouseX >= panelLeftPx && mouseX <= windowWidth && mouseY >= 0 && mouseY <= windowHeight;
     }

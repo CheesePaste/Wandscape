@@ -491,10 +491,6 @@ public final class OverviewFlightController {
         Minecraft mc = Minecraft.getInstance();
         if (mc.screen != null) return;
 
-        boolean imguiWantsMouse = com.wsteam.wandscape.imgui.ImGuiManager.isInitialized()
-                && imgui.ImGui.getIO().getWantCaptureMouse();
-        if (imguiWantsMouse) return;
-
         double guiScale = mc.getWindow().getGuiScale();
         double mouseX = mc.mouseHandler.xpos() / guiScale;
         double mouseY = mc.mouseHandler.ypos() / guiScale;

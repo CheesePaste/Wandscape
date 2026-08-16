@@ -27,10 +27,10 @@ import com.wsteam.wandscape.shared.log.Log;
  *   PLAN_END   → LMB drag             → PLAN_END   (overwrite end)
  *   PLAN_END   → Backspace            → PLAN_START (clear end)
  *   PLAN_START → Backspace            → IDLE       (clear start)
- *   PLAN_END   → ImGui 面板按钮发包     → IDLE (clearAll)
+ *   PLAN_END   → ModernUI 面板按钮发包   → IDLE (clearAll)
  * </pre>
  *
- * <p>Submission is done through the ImGui Road Studio button, not the keyboard.
+ * <p>Submission is done through the ModernUI Road Studio button, not the keyboard.
  */
 public final class RoadPlacementController {
 
@@ -85,9 +85,7 @@ public final class RoadPlacementController {
         // Cursor lifted → panel UI mode
         boolean cursorLifted = WandscapePanelState.isPanelOpen() && WandscapePanelState.isCursorLifted();
         double[] mx = new double[1], my = new double[1];
-        org.lwjgl.glfw.GLFW.glfwGetCursorPos(window, mx, my);
-        boolean uiWantsMouse = com.wsteam.wandscape.road.client.modernui.RoadStudioModernUI.isMouseOverUI(mx[0], my[0])
-                || (com.wsteam.wandscape.imgui.ImGuiManager.isInitialized() && imgui.ImGui.getIO().getWantCaptureMouse());
+        boolean uiWantsMouse = com.wsteam.wandscape.road.client.modernui.RoadStudioModernUI.isMouseOverUI(mx[0], my[0]);
         if (cursorLifted || com.wsteam.wandscape.road.client.modernui.RoadStudioModernUI.isOpen()) {
             // When cursor is over 3D world (outside UI window), handle world clicks for Replace/Fill/DestroyFill!
             if (!uiWantsMouse && RoadPlacementState.getActiveTool() != RoadPlacementState.ToolMode.SPLINE) {

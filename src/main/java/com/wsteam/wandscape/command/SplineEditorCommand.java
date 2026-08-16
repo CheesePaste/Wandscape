@@ -40,15 +40,7 @@ public final class SplineEditorCommand {
     }
 
     public static int openMuiTest(CommandContext<CommandSourceStack> ctx) {
-        ServerPlayer player = ctx.getSource().getPlayer();
-        if (player == null) {
-            ctx.getSource().sendFailure(Component.literal("§cPlayer-only command"));
-            return 0;
-        }
-
-        PacketDistributor.sendToPlayer(player, new com.wsteam.wandscape.road.network.ModernUITestPacket());
-        ctx.getSource().sendSuccess(() -> Component.literal("§a[ModernUI] Opened Road Studio test screen on client."), true);
-        return 1;
+        return edit(ctx);
     }
 
     private static int edit(CommandContext<CommandSourceStack> ctx) {

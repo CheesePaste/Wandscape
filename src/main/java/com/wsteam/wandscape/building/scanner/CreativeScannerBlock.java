@@ -23,7 +23,7 @@ import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.phys.BlockHitResult;
 
 /**
- * Building Scanner block — replacement for the ImGui-based building editor.
+ * Building Scanner block.
  * Works like the vanilla Structure Block: place, right-click to open GUI,
  * configure boundary/door/interact zones/meta in modes, export building JSON.
  */

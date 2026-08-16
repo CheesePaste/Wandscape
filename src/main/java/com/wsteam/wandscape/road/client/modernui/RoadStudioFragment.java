@@ -132,6 +132,9 @@ public class RoadStudioFragment extends Fragment implements ScreenCallback {
         dockBg.setStroke(dp(1.5f), COLOR_BORDER_DOCK);
         dockPanel.setBackground(dockBg);
         dockPanel.setPadding(dp(14), dp(12), dp(14), dp(10));
+        dockPanel.addOnLayoutChangeListener((v, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) -> {
+            RoadStudioModernUI.setPanelBounds(left, top, right, bottom);
+        });
 
         // 1. Header Banner
         buildHeaderSection();

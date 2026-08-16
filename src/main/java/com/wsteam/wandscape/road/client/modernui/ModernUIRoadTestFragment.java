@@ -481,23 +481,9 @@ public class ModernUIRoadTestFragment extends Fragment {
     }
 
     /**
-     * Helper to open this test fragment in Minecraft client.
+     * Helper to open the ModernUI Road Studio in Minecraft client.
      */
     public static void open() {
-        Minecraft mc = Minecraft.getInstance();
-        if (mc == null) return;
-        Runnable action = () -> {
-            try {
-                MuiModApi.openScreen(new ModernUIRoadTestFragment());
-                Log.info(TAG, "Opened ModernUIRoadTestFragment screen");
-            } catch (Exception e) {
-                Log.error(TAG, "Failed to open ModernUIRoadTestFragment", e);
-            }
-        };
-        if (mc.isSameThread()) {
-            action.run();
-        } else {
-            mc.execute(action);
-        }
+        RoadStudioModernUI.open();
     }
 }

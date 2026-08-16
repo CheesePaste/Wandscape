@@ -11,7 +11,7 @@ import com.wsteam.wandscape.shared.log.Log;
 /**
  * Client-side static state for road placement mode.
  *
- * <p>Entering the ROAD tab opens the ImGui Road Studio (right panel). Over the 3D world the
+ * <p>Entering the ROAD tab opens the ModernUI Road Studio (right panel). Over the 3D world the
  * player left-click-drags to set start/end; the studio panel holds preset selection and the
  * submit button that publishes the road task.
  */
