@@ -30,6 +30,8 @@ public final class SplineEditorCommand {
                 .requires(src -> src.hasPermission(2))
                 .then(Commands.literal("edit")
                         .executes(SplineEditorCommand::edit))
+                .then(Commands.literal("studio")
+                        .executes(SplineEditorCommand::edit))
                 .then(Commands.literal("done")
                         .executes(SplineEditorCommand::done))
                 .then(Commands.literal("mui")

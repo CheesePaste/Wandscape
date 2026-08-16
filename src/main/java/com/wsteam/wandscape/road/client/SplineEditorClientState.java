@@ -10,6 +10,7 @@ import java.util.List;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.wsteam.wandscape.imgui.ImGuiManager;
+import com.wsteam.wandscape.road.client.modernui.RoadStudioModernUI;
 import com.wsteam.wandscape.road.core.SplineModel;
 import com.wsteam.wandscape.road.core.SplinePoint;
 import com.wsteam.wandscape.road.core.SplineVec3;
@@ -249,6 +250,7 @@ public final class SplineEditorClientState {
             camPitch = mc.player.getXRot();
         }
         
+        RoadStudioModernUI.open();
         Log.info(TAG, "[SplineEditor] Entered edit mode");
     }
 
@@ -260,8 +262,7 @@ public final class SplineEditorClientState {
         draggingAxis = AxisDrag.NONE;
         if (topDown) exitTopDown();
         SplineEditorController.resetInputState();
-        // 退出编辑时一并隐藏 ImGui 工作坊。若只 exitEditMode 而忘了 setVisible(false)，
-        // onRenderFramePost 会因 showGui 残留渲染出「调试控制台」测试面板（ESC 退出路径曾中招）。
+        RoadStudioModernUI.close();
         ImGuiManager.setVisible(false);
         Log.info(TAG, "[SplineEditor] Exited edit mode");
     }
@@ -292,6 +293,7 @@ public final class SplineEditorClientState {
         if (type == SelectionType.NONE) {
             selectedPointIndex = -1;
         }
+        RoadStudioModernUI.refreshStudio();
     }
 
     public static AxisDrag getHoveredAxis() {

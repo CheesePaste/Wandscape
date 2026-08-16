@@ -61,28 +61,30 @@ public final class SplineEditorController {
     /**
      * Unity-style right-drag camera: pressing RMB over the world grabs the
      * cursor (vanilla look rotation takes over); releasing RMB restores the
-     * free cursor so the player can click the ImGui panel or the world.
+     * free cursor so the player can click the ModernUI panel or the world.
      */
     static void onMouseButtonPre(InputEvent.MouseButton.Pre event) {
         if (!SplineEditorClientState.isEditing()) return;
-        // A vanilla screen (guide) owns mouse buttons while open — do not
-        // start camera grabbing from the editor's RMB handling.
-        if (Minecraft.getInstance().screen != null) return;
+        if (isSplineGuideOpen(Minecraft.getInstance())) return;
         if (event.getButton() != GLFW.GLFW_MOUSE_BUTTON_RIGHT) return;
 
         Minecraft mc = Minecraft.getInstance();
-        if (mc.mouseHandler == null) return;
+        if (mc.getWindow() == null) return;
+        long window = mc.getWindow().getWindow();
+
+        double[] mx = new double[1], my = new double[1];
+        GLFW.glfwGetCursorPos(window, mx, my);
+        boolean uiWantsMouse = com.wsteam.wandscape.road.client.modernui.RoadStudioModernUI.isMouseOverUI(mx[0], my[0])
+                || (ImGuiManager.isInitialized() && ImGui.getIO().getWantCaptureMouse());
 
         if (event.getAction() == GLFW.GLFW_PRESS) {
-            boolean imguiWantsMouse = ImGuiManager.isInitialized() && ImGui.getIO().getWantCaptureMouse();
-            // Let ImGui keep RMB presses that start over one of its panels.
-            if (!cameraActive && !imguiWantsMouse) {
+            if (!cameraActive && !uiWantsMouse) {
                 cameraActive = true;
-                mc.mouseHandler.grabMouse();
+                GLFW.glfwSetInputMode(window, GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_DISABLED);
             }
         } else if (cameraActive && event.getAction() == GLFW.GLFW_RELEASE) {
             cameraActive = false;
-            mc.mouseHandler.releaseMouse();
+            GLFW.glfwSetInputMode(window, GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_NORMAL);
         }
     }
 
@@ -97,45 +99,44 @@ public final class SplineEditorController {
 
         long window = mc.getWindow().getWindow();
         boolean rightDown = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_RIGHT) == GLFW.GLFW_PRESS;
-        boolean imguiReady = ImGuiManager.isInitialized();
-        boolean imguiWantsKb = imguiReady && ImGui.getIO().getWantCaptureKeyboard();
-        boolean imguiWantsMouse = imguiReady && ImGui.getIO().getWantCaptureMouse();
+        double[] mx = new double[1], my = new double[1];
+        GLFW.glfwGetCursorPos(window, mx, my);
+
+        boolean uiWantsMouse = com.wsteam.wandscape.road.client.modernui.RoadStudioModernUI.isMouseOverUI(mx[0], my[0])
+                || (ImGuiManager.isInitialized() && ImGui.getIO().getWantCaptureMouse());
+        boolean uiWantsKb = com.wsteam.wandscape.road.client.modernui.RoadStudioModernUI.isKeyboardFocused()
+                || (ImGuiManager.isInitialized() && ImGui.getIO().getWantCaptureKeyboard());
 
         // ── Right-click camera rotation ──
-        // Event-driven in onMouseButtonPre; this tick poll is a fallback for
-        // presses that happened before the editor opened or missed events.
-        if (!cameraActive && rightDown && !imguiWantsMouse && mc.screen == null) {
+        if (!cameraActive && rightDown && !uiWantsMouse && !isSplineGuideOpen(mc)) {
             cameraActive = true;
-            mc.mouseHandler.grabMouse();
+            GLFW.glfwSetInputMode(window, GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_DISABLED);
         } else if (cameraActive && !rightDown) {
             cameraActive = false;
-            mc.mouseHandler.releaseMouse();
+            GLFW.glfwSetInputMode(window, GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_NORMAL);
         }
 
-        boolean cursorLifted = WandscapePanelState.isPanelOpen() && WandscapePanelState.isCursorLifted();
-
         if (cameraActive) {
-            // Flight movement while holding right-click
-            if (imguiWantsKb) {
-                mc.player.setDeltaMovement(Vec3.ZERO);
-            }
+            mc.player.setDeltaMovement(Vec3.ZERO);
         } else {
             // Lock movement when not rotating
             mc.player.setDeltaMovement(Vec3.ZERO);
 
             // World clicks belong to the editor when the cursor is over the 3D world
-            // (!imguiWantsMouse) and tool mode is SPLINE; ImGui already consumed anything over its panels.
-            // When a vanilla screen (guide) is open, its widgets own the clicks.
-            if (!imguiWantsMouse && mc.screen == null && RoadPlacementState.getActiveTool() == RoadPlacementState.ToolMode.SPLINE) {
-                SplineEditorInputHandler.handleClicks(mc, window);
+            if (!uiWantsMouse && !isSplineGuideOpen(mc)) {
+                if (RoadPlacementState.getActiveTool() == RoadPlacementState.ToolMode.SPLINE) {
+                    SplineEditorInputHandler.handleClicks(mc, window);
+                } else {
+                    RoadPlacementController.handleMouseButtons(mc, window);
+                }
             }
         }
 
         // ── Keyboard shortcuts ──
-        handleKeyboard(mc, window, imguiWantsKb);
+        handleKeyboard(mc, window, uiWantsKb);
 
         // ── Drain vanilla inputs ──
-        if (!imguiWantsKb) {
+        if (!uiWantsKb) {
             drainVanillaInput(mc);
         }
     }
@@ -287,7 +288,13 @@ public final class SplineEditorController {
 
     static void onMouseScroll(net.neoforged.neoforge.client.event.InputEvent.MouseScrollingEvent event) {
         if (!SplineEditorClientState.isEditing()) return;
-        if (ImGuiManager.isInitialized() && imgui.ImGui.getIO().getWantCaptureMouse()) return;
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.getWindow() == null) return;
+        long window = mc.getWindow().getWindow();
+        double[] mx = new double[1], my = new double[1];
+        GLFW.glfwGetCursorPos(window, mx, my);
+        if (com.wsteam.wandscape.road.client.modernui.RoadStudioModernUI.isMouseOverUI(mx[0], my[0])
+                || (ImGuiManager.isInitialized() && imgui.ImGui.getIO().getWantCaptureMouse())) return;
 
         event.setCanceled(true);
         double delta = event.getScrollDeltaY();
@@ -306,7 +313,7 @@ public final class SplineEditorController {
 
     private static boolean wasHelpDown = false;
 
-    private static void handleKeyboard(Minecraft mc, long window, boolean imguiWantsKb) {
+    private static void handleKeyboard(Minecraft mc, long window, boolean uiWantsKb) {
         boolean escDown = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_ESCAPE) == GLFW.GLFW_PRESS;
         if (escDown && !wasEscapeDown) {
             if (!cameraActive) {
@@ -316,6 +323,7 @@ public final class SplineEditorController {
                 } else {
                     // Exit editor mode
                     SplineEditorClientState.exitEditMode();
+                    com.wsteam.wandscape.road.client.modernui.RoadStudioModernUI.close();
                     ImGuiManager.setVisible(false);
                 }
             }
@@ -323,7 +331,7 @@ public final class SplineEditorController {
         wasEscapeDown = escDown;
 
         // H key (GUIDE_TOGGLE): toggle spline guide document
-        if (!imguiWantsKb && !cameraActive) {
+        if (!uiWantsKb && !cameraActive) {
             int hKey = com.wsteam.wandscape.WandscapeClient.GUIDE_TOGGLE.getKey().getValue();
             boolean helpDown = GLFW.glfwGetKey(window, hKey) == GLFW.GLFW_PRESS;
             if (helpDown && !wasHelpDown) {
@@ -340,7 +348,7 @@ public final class SplineEditorController {
         }
 
         // G key: toggle top-down (bird's eye) view — same as the V-panel overview mode
-        if (!imguiWantsKb && !cameraActive) {
+        if (!uiWantsKb && !cameraActive) {
             boolean gDown = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_G) == GLFW.GLFW_PRESS;
             if (gDown && !wasGDown) {
                 if (SplineEditorClientState.isTopDown()) {
@@ -361,8 +369,8 @@ public final class SplineEditorController {
             wasGDown = gDown;
         }
 
-        // Shortcut for deleting points (Only when ImGui is not focusing typing)
-        if (!imguiWantsKb && !cameraActive) {
+        // Shortcut for deleting points (Only when ModernUI / ImGui is not focusing typing)
+        if (!uiWantsKb && !cameraActive) {
             boolean delDown = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_DELETE) == GLFW.GLFW_PRESS
                     || GLFW.glfwGetKey(window, GLFW.GLFW_KEY_BACKSPACE) == GLFW.GLFW_PRESS;
             boolean delClicked = delDown && !wasDeleteDown;

@@ -73,7 +73,7 @@ public final class RoadPlacementController {
 
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null || mc.player == null) return;
-        if (mc.screen != null) return;
+        if (mc.screen != null && !(mc.screen instanceof icyllis.modernui.mc.MuiScreen)) return;
 
         long window = mc.getWindow().getWindow();
 
@@ -84,11 +84,13 @@ public final class RoadPlacementController {
 
         // Cursor lifted → panel UI mode
         boolean cursorLifted = WandscapePanelState.isPanelOpen() && WandscapePanelState.isCursorLifted();
-        boolean imguiWantsMouse = com.wsteam.wandscape.imgui.ImGuiManager.isInitialized()
-                && imgui.ImGui.getIO().getWantCaptureMouse();
-        if (cursorLifted) {
-            // When cursor is over 3D world (outside ImGui window), handle world clicks for Replace/Fill/DestroyFill!
-            if (!imguiWantsMouse && RoadPlacementState.getActiveTool() != RoadPlacementState.ToolMode.SPLINE) {
+        double[] mx = new double[1], my = new double[1];
+        org.lwjgl.glfw.GLFW.glfwGetCursorPos(window, mx, my);
+        boolean uiWantsMouse = com.wsteam.wandscape.road.client.modernui.RoadStudioModernUI.isMouseOverUI(mx[0], my[0])
+                || (com.wsteam.wandscape.imgui.ImGuiManager.isInitialized() && imgui.ImGui.getIO().getWantCaptureMouse());
+        if (cursorLifted || com.wsteam.wandscape.road.client.modernui.RoadStudioModernUI.isOpen()) {
+            // When cursor is over 3D world (outside UI window), handle world clicks for Replace/Fill/DestroyFill!
+            if (!uiWantsMouse && RoadPlacementState.getActiveTool() != RoadPlacementState.ToolMode.SPLINE) {
                 updateGhostPosition(mc);
                 handleMouseButtons(mc, window);
             }
@@ -159,7 +161,7 @@ public final class RoadPlacementController {
 
     private static boolean isLmbDragging = false;
 
-    private static void handleMouseButtons(Minecraft mc, long window) {
+    public static void handleMouseButtons(Minecraft mc, long window) {
         RoadPlacementState.ToolMode tool = RoadPlacementState.getActiveTool();
         if (tool == RoadPlacementState.ToolMode.SPLINE) return;
 

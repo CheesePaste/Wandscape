@@ -11,7 +11,7 @@
 | `core/` | 纯数据模型（RoadNetwork / RoadNode / RoadEdge / SplineModel 等） |
 | `engine/` | MC 实现（RoadSavedData / RoadApiImpl / RoadSegmentListener / WandscapeTags） |
 | `client/` | 客户端放置渲染 + 交互（RoadPlacementState / RoadPlacementController / RoadPlacementRenderer / RoadConstructionGhost 施工虚影 / RoadGhostRenderUtil 虚影渲染工具 / SplineEditorImGui 统一道路制作工坊 / `modernui/` ModernUI 纯 Java 方案道路编辑器实现）。ROAD 栏工具统一收口至面板：Replace（直线地表替换，走 `road:build_segment`）、Fill（两角点立方体填充，走 `terrain:fill_box`）、Destroy/Fill（铲平/垫平，走 `terrain:flatten`）、Spline（样条曲线编辑器，走 `SplineBuildPacket`）。施工虚影由服务端 `RoadAreaSyncPacket` 同步非 COMPLETE 道路边驱动（镜像建筑 ConstructionGhostRenderer） |
-| `client/modernui/` | ModernUI 纯 Java 方案道路制作工坊界面与组件（ModernUIRoadTestFragment / RoadStudioFragment） |
+| `client/modernui/` | ModernUI 纯 Java 方案道路制作工坊界面与组件（RoadStudioModernUI / RoadStudioFragment / ModernUIRoadTestFragment）。无背景遮罩、无模糊、不暂停游戏，支持视口右键旋转视角与 UI 双向无缝交互 |
 | `network/` | 网络包（全 playToServer：RoadPlacePacket / SplineBuildPacket / SplineEditorEnterPacket / ModernUITestPacket / DestroyFillPacket / FillBoxPacket）。施工同步包 `RoadAreaSyncPacket` 在 `shared/network/`（playToClient，镜像 BuildingAreaSyncPacket） |
 | `server/` | RoadEditorHandler |
 

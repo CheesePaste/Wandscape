@@ -26,6 +26,6 @@ public record ModernUITestPacket() implements CustomPacketPayload {
     }
 
     public static void handleClient(ModernUITestPacket packet, IPayloadContext ctx) {
-        ctx.enqueueWork(ModernUIRoadTestFragment::open);
+        ctx.enqueueWork(com.wsteam.wandscape.road.client.modernui.RoadStudioModernUI::open);
     }
 }
