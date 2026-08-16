@@ -32,7 +32,9 @@ repositories {
         name = "IzzelAliz Maven"
         url = "https://maven.izzel.io/releases/"
     }
-    // Add here additional repositories if required by some of the dependencies below.
+    flatDir {
+        dirs 'libs'
+    }
 }
 
 base {
@@ -131,8 +133,9 @@ configurations {
 }
 
 dependencies {
-    // ModernUI for NeoForge 1.21.1 (Universal Jar: Core + Arc3D + NeoForge Mod Layer)
-    implementation files('libs/ModernUI-NeoForge-1.21.1-3.12.0.2-universal.jar')
+    // ModernUI for NeoForge 1.21.1 (Universal Jar embedded via Jar-in-Jar for standalone execution)
+    implementation name: 'ModernUI-NeoForge-1.21.1', version: '3.12.0.2-universal'
+    jarJar name: 'ModernUI-NeoForge-1.21.1', version: '3.12.0.2-universal'
 
     // Magic Colony core engine test dependencies
     testImplementation platform('org.junit:junit-bom:5.10.0')
