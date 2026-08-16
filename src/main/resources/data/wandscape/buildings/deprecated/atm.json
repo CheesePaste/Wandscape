@@ -3,6 +3,7 @@
   "display_name": "ATM",
   "category": "atm",
   "first_free": true,
+  "deprecated": true,
   "pattern": [
     [
       -1,

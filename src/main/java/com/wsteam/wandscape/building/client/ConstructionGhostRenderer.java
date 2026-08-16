@@ -72,6 +72,12 @@ public final class ConstructionGhostRenderer {
 
             BuildingGhostRenderer.renderGhostVboSkipped(mc, event.getModelViewMatrix(), event.getProjectionMatrix(),
                     camPos, entry.anchor(), config, entry.rotationSteps());
+
+            // Animated blocks (chests etc.) can't bake into the VBO — render them
+            // per-frame via their block-entity item renderer, skipping already-placed cells.
+            BuildingGhostRenderer.renderGhostAnimated(mc, event.getPoseStack(),
+                    mc.renderBuffers().bufferSource(), camPos, entry.anchor(), config,
+                    entry.rotationSteps(), true);
         }
     }
 }

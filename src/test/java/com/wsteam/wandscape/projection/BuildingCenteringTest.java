@@ -37,15 +37,15 @@ class BuildingCenteringTest {
     }
 
     @Test
-    @DisplayName("角点原点建筑：偏移使包围盒中心对准瞄准方块")
+    @DisplayName("角点原点建筑：偏移使包围盒中心对准瞄准方块中心")
     void cornerOriginBuildingCentered() {
         // 类似 bakery：x[1,10] z[1,9]，原点在包围盒外的一角
         BuildingConfig bakery = cfg(new int[][] {
                 {1, 0, 1}, {10, 0, 1}, {1, 0, 9}, {10, 0, 9}
         });
-        assertArrayEquals(new int[] {6, 5},
+        assertArrayEquals(new int[] {5, 5},
                 BuildingCentering.rotatedCenterOffsets(bakery, 0),
-                "x 中心 5.5 取整 6，z 中心 5.0 取整 5");
+                "偶宽 x 中心 5.5 向下取整 5，使包围盒中心落在瞄准方块中心（aim+0.5），建筑围绕瞄准方块对称");
     }
 
     @Test
@@ -65,13 +65,13 @@ class BuildingCenteringTest {
         BuildingConfig bakery = cfg(new int[][] {
                 {1, 0, 1}, {10, 0, 1}, {1, 0, 9}, {10, 0, 9}
         });
-        // 未旋转中心 (5.5, 5.0)；1 步 → (-5.0, 5.5)；2 步 → (-5.5, -5.0)
-        assertArrayEquals(new int[] {-5, 6},
+        // 未旋转中心 (5.5, 5.0)；1 步 → (-5.0, 5.5)；2 步 → (-5.5, -5.0)。floor 取整。
+        assertArrayEquals(new int[] {-5, 5},
                 BuildingCentering.rotatedCenterOffsets(bakery, 1));
-        assertArrayEquals(new int[] {-5, -5},
+        assertArrayEquals(new int[] {-6, -5},
                 BuildingCentering.rotatedCenterOffsets(bakery, 2));
         // 4 步回到原位
-        assertArrayEquals(new int[] {6, 5},
+        assertArrayEquals(new int[] {5, 5},
                 BuildingCentering.rotatedCenterOffsets(bakery, 4));
     }
 
@@ -116,5 +116,23 @@ class BuildingCenteringTest {
         // 转满一圈 anchor 回到起点
         assertEquals(aimX - c0[0], anchorX);
         assertEquals(aimZ - c0[1], anchorZ);
+    }
+
+    @Test
+    @DisplayName("偶宽建筑中心落在瞄准方块中心（修复偶宽偏移）")
+    void evenWidthCenterAtAimBlockCenter() {
+        // warehouse1 型：x[0,9] 宽 10（偶），z[0,8] 宽 9（奇）
+        BuildingConfig warehouse = cfg(new int[][] {
+                {0, 0, 0}, {9, 0, 0}, {0, 0, 8}, {9, 0, 8}
+        });
+        int aimX = 100, aimZ = 100;
+        int[] c = BuildingCentering.rotatedCenterOffsets(warehouse, 0);
+        int anchorX = aimX - c[0];
+        int anchorZ = aimZ - c[1];
+
+        // 偶宽轴：包围盒中心 = anchor + 4.5 必须等于 aim + 0.5（瞄准方块中心），建筑对称
+        assertEquals(aimX + 0.5, anchorX + 4.5, "偶宽 x 轴包围盒中心应落在瞄准方块中心");
+        // 奇宽轴：中心 = anchor + 4.0 = aim（瞄准方块即中心方块）
+        assertEquals((double) aimZ, anchorZ + 4.0, "奇宽 z 轴中心方块应对准瞄准方块");
     }
 }

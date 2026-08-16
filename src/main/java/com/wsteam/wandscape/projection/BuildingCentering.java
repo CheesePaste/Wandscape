@@ -49,6 +49,9 @@ public final class BuildingCentering {
             cx = nx;
         }
 
-        return new int[] { Math.round(cx), Math.round(cz) };
+        // 偶宽建筑（x/z 宽度为偶数）的中心是半格 x.5：整数 anchor 无法让中心精确落在瞄准方块的
+        // 整数坐标上。round 取到 aim-0.5，建筑整体偏向准心负向半格（看起来偏位）；floor 取到
+        // aim+0.5，即瞄准方块的中心，建筑围绕瞄准方块对称。奇宽建筑中心为整数，floor 与 round 相同。
+        return new int[] { (int) Math.floor(cx), (int) Math.floor(cz) };
     }
 }
