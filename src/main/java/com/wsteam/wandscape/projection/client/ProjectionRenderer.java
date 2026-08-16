@@ -59,6 +59,11 @@ public final class ProjectionRenderer {
         BuildingGhostRenderer.renderGhostVbo(mc, event.getModelViewMatrix(), event.getProjectionMatrix(),
                 camPos, ghostPos, config, rotationSteps);
 
+        // 1b. Render animated blocks (chests etc.) that have no static block model and
+        // cannot bake into the VBO — drawn per-frame via their block-entity item renderer.
+        BuildingGhostRenderer.renderGhostAnimated(mc, event.getPoseStack(),
+                mc.renderBuffers().bufferSource(), camPos, ghostPos, config, rotationSteps, false);
+
         // 2. Render Boundary Wireframe
         if (config.boundary() != null) {
             boolean overlap = ProjectionClientState.isOverlapDetected();

@@ -13,11 +13,12 @@ import com.wsteam.wandscape.building.data.BlockOffset;
 class BuildingRotationTest {
 
     @Test
-    @DisplayName("VBO 全局旋转（-90°*steps）与 rotateOffset 同向，防止 90/270 镜像偏位")
+    @DisplayName("模型旋转（-90°*steps）与 rotateOffset 同向")
     void vboRotationMatchesRotateOffset() {
         // BuildingGhostVboCache.bake 用 pose.mulPose(Axis.YP.rotationDegrees(-90*steps))
-        // 作用于块坐标，必须与 BuildingRotation.rotateOffset 结果一致；
-        // 若符号翻回 +90，steps=1/3 时方向相反，ghost 与建造/边界线框错位。
+        // 动画 pass（BuildingGhostRenderer.renderGhostAnimated）用
+        // Axis.YP.rotationDegrees(-90*steps) 绕方块自身中心旋转模型，使朝向跟随建筑旋转；
+        // 该矩阵必须与 BuildingRotation.rotateOffset 同向（x'=-z, z'=x），否则箱子等朝向错位。
         int[][] cases = { {1, 0}, {0, 1}, {-1, 0}, {3, -4}, {5, 2}, {-2, -7} };
         for (int steps = 0; steps < 4; steps++) {
             Matrix4f m = new Matrix4f().rotationY((float) Math.toRadians(-90.0 * steps));

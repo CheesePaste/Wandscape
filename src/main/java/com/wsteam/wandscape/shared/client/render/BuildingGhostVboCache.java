@@ -28,7 +28,7 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.Rotation;
+import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.model.data.ModelData;
@@ -118,7 +118,10 @@ public final class BuildingGhostVboCache {
 
         for (int i = 0; i < n; i++) {
             rotatedOffsets[i] = BuildingRotation.rotateOffset(pattern.get(i), steps);
-            BlockState state = BuildingPreviewRenderer.resolveBlockState(config.blockIdAt(i));
+            // 用旋转后的 BlockState：旋转仅改变偏移与方块朝向（建筑旋转后每格仍占据
+            // 轴对齐单位立方体 [pos,pos+1]），几何体本身不绕原点转。
+            BlockState state = BuildingPreviewRenderer.resolveBlockState(
+                    BuildingRotation.rotateBlockStateString(config.blockIdAt(i), steps));
             cellStates[i] = state;
             cellBlocks[i] = state != null ? state.getBlock() : null;
         }
@@ -135,29 +138,31 @@ public final class BuildingGhostVboCache {
 
         PoseStack pose = new PoseStack();
 
-        // 全局建筑绕 Y 轴旋转（原点 0,0,0）。用 -90°*steps：与 BuildingRotation.rotateOffset
-        // （x'=-z, z'=x）同向，使 ghost 与服务端建造、边界线框、interact/door 偏移一致。
-        // 若用 +90°*steps，对 90/270 步会与 rotateOffset 方向相反，ghost 偏位/镜像。
-        if (steps > 0) {
-            pose.mulPose(com.mojang.math.Axis.YP.rotationDegrees(-90f * steps));
-        }
-
+        // 不再对几何体施加全局旋转：旋转几何体会把每格体积相对构造偏移最多 1 格
+        // （90°/270° 偏 1 格、180° 两方向各偏 1 格）。改为每格平移到旋转后的偏移
+        // （rotatedOffsets）并用旋转后的 BlockState 渲染，与服务端构造逐格一致。
         for (int i = 0; i < n; i++) {
             BlockState state = cellStates[i];
-            if (state == null) {
+            // Skip animated blocks (chests, shulker boxes, signs, banners, ...). They
+            // have no static block model — renderSingleBlock would tessellate them
+            // through the item/BESR path into this BLOCK-format buffer, corrupting
+            // vertex layout and sampling the wrong atlas (chest atlas vs block atlas).
+            // They are drawn by a separate per-frame pass (BuildingGhostRenderer.renderGhostAnimated).
+            if (state == null || state.getRenderShape() == RenderShape.ENTITYBLOCK_ANIMATED) {
                 quadStart[i] = totalQuads;
+                quadCount[i] = 0;
                 continue;
             }
-            BlockOffset origOff = pattern.get(i);
+            BlockOffset rotated = rotatedOffsets[i];
             int before = vertexCount[0];
-            
+
             pose.pushPose();
-            pose.translate(origOff.x(), origOff.y(), origOff.z());
+            pose.translate(rotated.x(), rotated.y(), rotated.z());
 
             mc.getBlockRenderer().renderSingleBlock(
                     state, pose, ghostSource, FULL_BRIGHT, OverlayTexture.NO_OVERLAY,
                     ModelData.EMPTY, RenderType.translucent());
-            
+
             pose.popPose();
 
             quadStart[i] = totalQuads;
