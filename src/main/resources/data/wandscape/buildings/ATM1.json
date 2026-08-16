@@ -2,6 +2,7 @@
   "id": "ATM1",
   "display_name": "ATM",
   "category": "atm",
+  "first_free": true,
   "pattern": [
     [
       1,
