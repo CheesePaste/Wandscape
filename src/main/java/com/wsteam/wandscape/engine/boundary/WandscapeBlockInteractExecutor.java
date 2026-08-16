@@ -708,10 +708,24 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         BuildingApi api = WandscapeApis.getBuildingApi();
         if (api == null) return null;
         var ids = api.getBuildingsByCategory(colonyId, "storage");
-        if (ids == null || ids.isEmpty()) return null;
+        if (ids != null && !ids.isEmpty()) {
+            BlockPos nearest = null;
+            double best = Double.MAX_VALUE;
+            for (UUID id : ids) {
+                BuildingData bd = api.getBuilding(id);
+                if (bd == null || bd.isShutdown()) continue;
+                BlockPos p = bd.getPosition();
+                double d = p.distSqr(npcPos);
+                if (d < best) { best = d; nearest = p; }
+            }
+            if (nearest != null) return nearest;
+        }
+        // Fallback to town hall
+        var govIds = api.getBuildingsByCategory(colonyId, "government");
+        if (govIds == null || govIds.isEmpty()) return null;
         BlockPos nearest = null;
         double best = Double.MAX_VALUE;
-        for (UUID id : ids) {
+        for (UUID id : govIds) {
             BuildingData bd = api.getBuilding(id);
             if (bd == null || bd.isShutdown()) continue;
             BlockPos p = bd.getPosition();
