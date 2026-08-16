@@ -58,6 +58,7 @@ run/
 **/src/generated/**/.cache/
 repo/
 !**/src/**/repo/
+libs/
 .agents
 AGENTS.md
 ref
