@@ -89,7 +89,7 @@ public abstract class ScrollableList<T> extends AbstractWidget {
 
         int relY = (int) mouseY - getY();
         if (relY < 0 || relY >= height) return false;
-        int row = (relY / rowHeight) + (scrollOffset / rowHeight);
+        int row = (relY + scrollOffset) / rowHeight;
         if (row >= 0 && row < items.size()) {
             int prevSelected = selectedIndex;
             selectedIndex = row;
