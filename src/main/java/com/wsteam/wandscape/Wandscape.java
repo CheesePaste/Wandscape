@@ -766,7 +766,12 @@ public class Wandscape {
                 .playToClient(
                         com.wsteam.wandscape.road.network.SplineEditorEnterPacket.TYPE,
                         com.wsteam.wandscape.road.network.SplineEditorEnterPacket.STREAM_CODEC,
-                        com.wsteam.wandscape.road.network.SplineEditorEnterPacket::handleClient);
+                        com.wsteam.wandscape.road.network.SplineEditorEnterPacket::handleClient)
+                // ── ModernUI Test Screen ──
+                .playToClient(
+                        com.wsteam.wandscape.road.network.ModernUITestPacket.TYPE,
+                        com.wsteam.wandscape.road.network.ModernUITestPacket.STREAM_CODEC,
+                        com.wsteam.wandscape.road.network.ModernUITestPacket::handleClient);
     }
 
     private void onEntityAttributeCreation(EntityAttributeCreationEvent event) {
@@ -931,6 +936,9 @@ public class Wandscape {
                 .then(com.wsteam.wandscape.guard.GuardCommand.node())
                 .then(com.wsteam.wandscape.command.GuideCommand.node())
                 .then(com.wsteam.wandscape.command.SplineEditorCommand.node())
+                .then(Commands.literal("mui")
+                        .requires(src -> src.hasPermission(2))
+                        .executes(com.wsteam.wandscape.command.SplineEditorCommand::openMuiTest))
                 .then(com.wsteam.wandscape.command.MagicCommand.node());
         dispatcher.register(root);
     }
