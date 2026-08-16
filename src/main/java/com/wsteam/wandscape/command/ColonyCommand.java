@@ -42,6 +42,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.MobSpawnType;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.NeoForge;
 import com.wsteam.wandscape.shared.log.Log;
@@ -217,6 +219,8 @@ public final class ColonyCommand {
             // shortfill it without needing a storage building (cold-start
             // bootstrap). All initial NPCs are universal workers.
             seedBuilderWand(npc);
+            // 早期法师太脆容易死：给初始法师赠送铁套（仅护甲数值生效，外观不渲染）
+            equipStarterArmor(npc);
             spawnedNpcs.add(npc);
         }
         Log.info(TAG, "[Colony] Spawned {} builder NPCs at {} for colony {}",
@@ -443,6 +447,21 @@ public final class ColonyCommand {
                 net.minecraft.world.item.component.CustomData.of(wandPreset.nbt().copy()));
         npc.inventory.addItem(wandStack);
         Log.info(TAG, "[Colony] Seeded builder_wand into NPC inventory");
+    }
+
+    /**
+     * 给初始法师配一套铁甲（4 件塞 {@code armorInventory}，仅护甲数值生效、外观不渲染）。
+     * 早期法师太脆容易死，赠送铁套提升开局生存。同步 ECS 使护甲值立即计入伤害减免；
+     * 延迟入 ECS 的场景由 {@code onNpcJoinWorld → syncArmorAttributes} 兜底。
+     */
+    private static void equipStarterArmor(WandscapeNpc npc) {
+        npc.setArmorItem(0, new ItemStack(Items.IRON_HELMET));
+        npc.setArmorItem(1, new ItemStack(Items.IRON_CHESTPLATE));
+        npc.setArmorItem(2, new ItemStack(Items.IRON_LEGGINGS));
+        npc.setArmorItem(3, new ItemStack(Items.IRON_BOOTS));
+        npc.syncArmorAttributes();
+        Log.info(TAG, "[Colony] Equipped starter iron armor on NPC {}",
+                npc.getUUID().toString().substring(0, 8));
     }
 
     /** Compute exact material stacks for the NPC's inventory to construct the Town Hall. */
