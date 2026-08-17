@@ -46,7 +46,7 @@
 - `WorkItem(blueprintId, params, priority)`。
 - `GuideProgressSavedData`（`wandscape_guide_progress`）：内嵌 record GuideProgress(stepIndex, dismissed)。
 
-## event/（15 个 NeoForge 事件）
+## event/（16 个 NeoForge 事件）
 
 | 事件 | 触发者 |
 |---|---|
@@ -57,6 +57,7 @@
 | **ColonyLevelUpEvent**（record，非总线） | ColonyLevelManager.levelUpCallback |
 | ColonyRaidStartedEvent / ColonyRaidVictoryEvent | raid/ |
 | DailySettlementEvent(带 SettlementReport(colonyId, day)) | DailySettlementSystem |
+| ElementBalanceChangedEvent(colonyId) | ColonyItemBank（addElement/consumeElement） |
 | ResourceInsufficientEvent | WarehouseManager |
 | ShopRestockedEvent | ShopStockManager |
 | TouristArrivedEvent / TouristDepartedEvent | TouristApiImpl |
@@ -68,7 +69,7 @@
 
 ## network/
 
-`PanelStateTracker`：服务端记录面板打开玩家（ConcurrentHashMap.newKeySet），监听 PlayerLoggedOut/ColonyEvaluationChanged/TouristArrived/Departed → syncHudForColony。其余包（均 record + STREAM_CODEC）：
+`PanelStateTracker`：服务端记录面板打开玩家（ConcurrentHashMap.newKeySet），监听 PlayerLoggedOut/ColonyEvaluationChanged/TouristArrived/Departed/ElementBalanceChanged → syncHudForColony（元素变动按 colony 在 ServerTick.Post 合并推送，实时刷新顶栏元素数值）。其余包（均 record + STREAM_CODEC）：
 - `ColonyStatsSync`（S→C 聚落快照）；`ColonyAmbient`（S→C 环境音开关）；`ColonyCreatePrompt`/`ColonyCreateRequest`/`ColonyNameUpdate`；`GuideProgressSync`/`GuideProgressUpdate`/`GuideTest`；`MagicCircleCast`（S→C 施法动画）；`PanelStateToggle`（C→S 面板开关）；`ParticleBurst`（S→C 染色粒子）；`BuildingAreaSync`（S→C 建筑条目列表，客户端缓存 getCached/findBuildingIdAt）。
 
 ## ui/（UI 组件库）

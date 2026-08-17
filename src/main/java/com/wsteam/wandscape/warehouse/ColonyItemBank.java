@@ -2,11 +2,13 @@ package com.wsteam.wandscape.warehouse;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
 
 import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.data.ItemKey;
+import com.wsteam.wandscape.shared.event.ElementBalanceChangedEvent;
 
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
@@ -14,6 +16,7 @@ import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.saveddata.SavedData;
+import net.neoforged.neoforge.common.NeoForge;
 import com.wsteam.wandscape.shared.log.Log;
 
 /**
@@ -63,6 +66,21 @@ public class ColonyItemBank extends SavedData {
     private final Map<UUID, Long> playerRoadPlaceCounts = new ConcurrentHashMap<>();
     // In-memory reservations (not persisted)
     private final Map<UUID, Map<ItemKey, Long>> reservations = new ConcurrentHashMap<>();
+
+    /**
+     * Signals element balance changes. Defaults to broadcasting the NeoForge
+     * event (drives the V-panel HUD resync); swappable in unit tests because
+     * the NeoForge bus does not dispatch in a bare JVM.
+     */
+    private static Consumer<UUID> elementBalanceNotifier =
+            colonyId -> NeoForge.EVENT_BUS.post(new ElementBalanceChangedEvent(colonyId));
+
+    /** Replace the notifier and return the previous one (test seam). */
+    static Consumer<UUID> setElementBalanceNotifier(Consumer<UUID> notifier) {
+        Consumer<UUID> previous = elementBalanceNotifier;
+        elementBalanceNotifier = notifier;
+        return previous;
+    }
     // ── Factory ──
 
     public static final Factory<ColonyItemBank> FACTORY = new Factory<>(
@@ -163,6 +181,7 @@ public class ColonyItemBank extends SavedData {
         elementStorage.computeIfAbsent(colonyId, k -> new ConcurrentHashMap<>())
                 .merge(type, amount, Long::sum);
         setDirty();
+        elementBalanceNotifier.accept(colonyId);
         Log.info(TAG, "[BANK] AddElement:%s".formatted(type.name()));
     }
 
@@ -210,6 +229,7 @@ public class ColonyItemBank extends SavedData {
             map.put(type, remaining);
         }
         setDirty();
+        elementBalanceNotifier.accept(colonyId);
         Log.info(TAG, "[BANK] consumeElement:%s".formatted(type.name()));
         return true;
     }

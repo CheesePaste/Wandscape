@@ -4,6 +4,7 @@ import com.wsteam.wandscape.shared.api.ColonyApi;
 import com.wsteam.wandscape.shared.api.ColonyMetricsApi;
 import com.wsteam.wandscape.shared.data.ColonyMetricsSnapshot;
 import com.wsteam.wandscape.shared.event.ColonyEvaluationChangedEvent;
+import com.wsteam.wandscape.shared.event.ElementBalanceChangedEvent;
 import com.wsteam.wandscape.shared.event.TouristArrivedEvent;
 import com.wsteam.wandscape.shared.event.TouristDepartedEvent;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
@@ -12,6 +13,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
@@ -23,10 +25,17 @@ import java.util.concurrent.ConcurrentHashMap;
  * Server-side tracker of which players have the Wandscape panel open.
  * Used by {@link com.wsteam.wandscape.building.internal.BuildingInteractHandler}
  * to gate right-click building interactions.
+ *
+ * <p>Pushes {@link ColonyStatsSyncPacket} on colony evaluation change, tourist
+ * arrival/departure, and (once per server tick, coalesced) warehouse element
+ * balance changes so the panel's top-bar numbers stay live.
  */
 public final class PanelStateTracker {
 
     private static final Set<UUID> panelOpenPlayers = ConcurrentHashMap.newKeySet();
+
+    /** Colonies whose element balance changed; flushed once per server tick. */
+    private static final Set<UUID> pendingElementSyncColonies = ConcurrentHashMap.newKeySet();
 
     private PanelStateTracker() {}
 
@@ -65,7 +74,25 @@ public final class PanelStateTracker {
         syncHudForColony(event.getColonyId());
     }
 
+    @SubscribeEvent
+    public static void onElementBalanceChanged(ElementBalanceChangedEvent event) {
+        if (event.getColonyId() != null) {
+            pendingElementSyncColonies.add(event.getColonyId());
+        }
+    }
+
+    @SubscribeEvent
+    public static void onServerTick(ServerTickEvent.Post event) {
+        if (pendingElementSyncColonies.isEmpty()) return;
+        for (UUID colonyId : pendingElementSyncColonies) {
+            syncHudForColony(colonyId);
+        }
+        pendingElementSyncColonies.clear();
+    }
+
     private static void syncHudForColony(UUID colonyId) {
+        if (panelOpenPlayers.isEmpty()) return;
+
         ColonyApi colonyApi = WandscapeApis.getColonyApiSilently();
         if (colonyApi == null) return;
 
