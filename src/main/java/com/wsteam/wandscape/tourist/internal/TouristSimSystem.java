@@ -437,6 +437,11 @@ public final class TouristSimSystem {
         boolean isNight = dayTime >= Config.TOURIST_NIGHT_START.get();
         UUID hotel = s.getCheckedInBuildingId();
 
+        // 白天：解除夜晚「无空闲旅店」闩锁，让下一晚重新尝试找旅店
+        if (dayTime < Config.TOURIST_EVENING_ROUTING_START.get()) {
+            s.getHotelRouteBackoff().clear();
+        }
+
         if (hotel != null) {
             if (dayTime < 1000) {
                 // 深夜：住店客在旅店，不动
@@ -489,7 +494,11 @@ public final class TouristSimSystem {
                 && hotel == null && !s.isFullySatisfied()) {
             UUID cur = s.getTargetBuildingId();
             if (cur == null || !TouristSimulation.isHotelBuilding(level, cur)) {
-                routeToHotelForEvening(level, s); // 打断当前交互/排队并设置去旅店目标
+                // 闩锁中（当晚无空闲旅店）：不每 sim-tick 重扫建筑（与实体一致，避免夜晚全扫卡顿）
+                if (!s.getHotelRouteBackoff().isActive() && !routeToHotelForEvening(level, s)) {
+                    // 无空闲旅店 → 闩锁今晚不再搜索（夜晚无退宿，重扫白费），离场窗口兜底
+                    s.getHotelRouteBackoff().enter();
+                }
             }
             // fall through → 正常移动逻辑（走回旅店）
         }

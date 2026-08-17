@@ -132,6 +132,9 @@ public class TouristMoveGoal extends Goal {
     private static final int REPATH_COOLDOWN_TICKS = 20;
     /** Game tick of the last navigation re-issue; repaths are throttled against this. */
     private int lastRepathTick = Integer.MIN_VALUE;
+    /** 夜晚「无空闲旅店」闩锁：一旦当晚找不到可路由旅店/过远传送失败即闩上，当晚不再搜索
+     *  （夜晚无退宿，重扫白费 CPU），次日白天由 {@link #tick()} 解除。 */
+    private final HotelRouteBackoff hotelRouteBackoff = new HotelRouteBackoff();
     /** Default wander radius (blocks) around the (drifting) anchor. */
     private static final int WANDER_RADIUS = 12;
     /** 闲逛硬上限：离闲逛起点超过该距离强制折返（格）。 */
@@ -250,6 +253,11 @@ public class TouristMoveGoal extends Goal {
         long dayTime = tourist.level().getDayTime() % 24000;
         boolean isNight = dayTime >= Config.TOURIST_NIGHT_START.get();
         UUID hotelId = tourist.getCheckedInBuildingId();
+
+        // 白天：解除夜晚「无空闲旅店」闩锁，让下一晚重新尝试找旅店
+        if (dayTime < Config.TOURIST_EVENING_ROUTING_START.get()) {
+            hotelRouteBackoff.clear();
+        }
 
         // ── 住店客（未满条）：夜晚/凌晨回自己旅店睡觉（空闲即回店；满条住店客夜晚等离场）──
         if ((isNight || dayTime < 1000) && hotelId != null && !tourist.isFullySatisfied()
@@ -1032,7 +1040,8 @@ public class TouristMoveGoal extends Goal {
 
     /**
      * 住店客夜晚回自己旅店：已睡着 → 停住；在旅店旁 → 强制躺床；在路上 → 继续走；
-     * 否则开始回店（过远直接传送）。旅店被拆/停用 → 解除登记，按无旅店游客处理。
+     * 否则开始回店（过远直接传送；传送失败 → 闩锁今晚不再重试，避免每 tick 重扫安全点）。
+     * 旅店被拆/停用 → 解除登记，按无旅店游客处理。
      */
     private ReturnHomeResult returnToOwnHotel() {
         UUID hotel = tourist.getCheckedInBuildingId();
@@ -1069,45 +1078,95 @@ public class TouristMoveGoal extends Goal {
             tourist.getNavigation().stop();
             return ReturnHomeResult.STOP;
         }
-        // 已在回店路上 → 继续走
+
+        // 已在回店路上：近距离 → 继续走；过远（如经普通访问路径选中远处自家旅店）→ 传送，避免长距离寻路
         if (hotel.equals(tourist.getTargetBuildingId())) {
+            BlockPos target = api.getTouristInteractionTarget(hotel);
+            if (target == null) target = data.getPosition();
+            if (target != null && tourist.blockPosition().distSqr(target)
+                    > (long) Config.TOURIST_HOTEL_TELEPORT_DISTANCE.get() * Config.TOURIST_HOTEL_TELEPORT_DISTANCE.get()) {
+                if (!hotelRouteBackoff.isActive() && teleportToHotel(hotel, target)) {
+                    // 传送后重设近距离导航（清掉旧的远距离 waypoint 路径）
+                    routeToHotelBuilding(hotel, target, false);
+                    return ReturnHomeResult.ROUTING;
+                }
+                // 过远但（闩锁中或）传送失败 → 取消当前远距离路由，闩锁今晚不再重试（不强制长距离寻路）
+                clearSpotState();
+                tourist.setCommuteTarget(null);
+                tourist.setTargetBuildingId(null);
+                tourist.setTargetBuildingCategory(null);
+                tourist.getNavigation().stop();
+                hotelRouteBackoff.enter();
+                return ReturnHomeResult.NONE;
+            }
             return ReturnHomeResult.HEADING;
         }
+
         // 旅店区块未加载 → 现在无法寻路回店；保持住店客身份（登记在案，不会被清），等区块加载
         ServerLevel level = serverLevel();
         if (level == null || !level.isLoaded(data.getPosition())) {
             return ReturnHomeResult.NONE;
         }
+        // 闩锁中（当晚过远传送失败）：保持登记不动作（避免每 tick 重扫安全点）
+        if (hotelRouteBackoff.isActive()) {
+            return ReturnHomeResult.NONE;
+        }
 
         BlockPos target = api.getTouristInteractionTarget(hotel);
         if (target == null) target = data.getPosition();
-        routeToHotelBuilding(hotel, target, true);
+        if (!routeToHotelBuilding(hotel, target, true)) {
+            // 过远但传送失败 → 闩锁今晚不再重试（不强制远距离寻路）
+            hotelRouteBackoff.enter();
+            return ReturnHomeResult.NONE;
+        }
         return ReturnHomeResult.ROUTING;
     }
 
     /**
      * 傍晚路由（无旅店游客）：已在去旅店路上 → 交正常派发；否则找最近可用旅店并停止当前任务去旅店
-     * （过远直接传送）。无旅店可用 → 返回 false，正常行为（18000+ 离场窗口兜底）。
+     * （过远直接传送）。无空闲旅店或过远传送失败 → 闩锁今晚不再搜索，其余行为照常（继续逛店/
+     * 闲逛，18000+ 离场窗口兜底）；每 tick 全扫建筑是夜晚 CPU 大头。
      *
      * @return true = 刚设置路由（本 tick 不再派发）
      */
     private boolean eveningRouteToHotel() {
         if (targetingHotel()) return false;
+        // 闩锁中（当晚无空闲旅店/传送失败）：不再搜索，正常行为继续
+        if (hotelRouteBackoff.isActive()) return false;
         BuildingState hotel = TouristSimulation.findHotelTarget(serverLevel(), tourist, true);
-        if (hotel == null) return false;
+        if (hotel == null) {
+            // 无空闲旅店 → 闩锁今晚不再搜索（夜晚无退宿，重扫白费）
+            hotelRouteBackoff.enter();
+            return false;
+        }
         BuildingApi api = getBuildingApi();
         BlockPos target = api != null ? api.getTouristInteractionTarget(hotel.getBuildingId()) : null;
         if (target == null) target = hotel.getAnchor();
-        routeToHotelBuilding(hotel.getBuildingId(), target, true);
+        if (!routeToHotelBuilding(hotel.getBuildingId(), target, true)) {
+            // 过远但传送失败 → 闩锁今晚不再重试（不强制远距离寻路）
+            hotelRouteBackoff.enter();
+            return false;
+        }
         return true;
     }
 
     /**
      * 停止当前任务并设置去旅店的导航（清 spot/队列，过远直接传送到旅店入口附近）。
-     * @return 设置成功
+     * 过远但找不到安全落点 → 返回 false，不强制远距离寻路（调用方闩锁今晚不再重试）。
+     * @return 路由设置成功
      */
     private boolean routeToHotelBuilding(UUID hotelId, BlockPos target, boolean teleportIfFar) {
         if (target == null) return false;
+
+        // 过远 → 先尝试传送（传送失败则放弃本次路由，不强制远距离寻路）
+        if (teleportIfFar) {
+            int max = Config.TOURIST_HOTEL_TELEPORT_DISTANCE.get();
+            if (tourist.blockPosition().distSqr(target) > (long) max * max) {
+                if (!teleportToHotel(hotelId, target)) {
+                    return false;
+                }
+            }
+        }
 
         // 停止当前任务（释放 spot/队列）
         clearSpotState();
@@ -1124,27 +1183,24 @@ public class TouristMoveGoal extends Goal {
         tourist.setTargetBuildingCategory("service");
         tourist.setCommuteTarget(target);
 
-        // 过远 → 直接传送（寻路到远/未加载区块开销大）
-        if (teleportIfFar) {
-            int max = Config.TOURIST_HOTEL_TELEPORT_DISTANCE.get();
-            if (tourist.blockPosition().distSqr(target) > (long) max * max) {
-                BlockPos tp = TouristTeleport.findSafeSpotNearEntry(serverLevel(), target, tourist.getColonyId());
-                if (tp == null) {
-                    tp = TouristTeleport.findSafeSpot(serverLevel(), target, tourist.getColonyId(), hotelId);
-                }
-                if (tp != null) {
-                    Log.info(TAG, "[Tourist] {} teleporting to hotel {} ({} blocks away)",
-                            tourist.getTouristName(), shortId(hotelId),
-                            (int) Math.sqrt(tourist.blockPosition().distSqr(target)));
-                    tourist.setPos(tp.getX() + 0.5, tp.getY(), tp.getZ() + 0.5);
-                    tourist.resetFallDistance();
-                    tourist.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
-                }
-            }
-        }
-
         switchMode(MoveMode.VISITING_BUILDING);
         dispatchStart();
+        return true;
+    }
+
+    /** 传送到旅店入口附近的安全点；找不到安全点返回 false（不动、不传送）。 */
+    private boolean teleportToHotel(UUID hotelId, BlockPos target) {
+        BlockPos tp = TouristTeleport.findSafeSpotNearEntry(serverLevel(), target, tourist.getColonyId());
+        if (tp == null) {
+            tp = TouristTeleport.findSafeSpot(serverLevel(), target, tourist.getColonyId(), hotelId);
+        }
+        if (tp == null) return false;
+        Log.info(TAG, "[Tourist] {} teleporting to hotel {} ({} blocks away)",
+                tourist.getTouristName(), shortId(hotelId),
+                (int) Math.sqrt(tourist.blockPosition().distSqr(target)));
+        tourist.setPos(tp.getX() + 0.5, tp.getY(), tp.getZ() + 0.5);
+        tourist.resetFallDistance();
+        tourist.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
         return true;
     }
 

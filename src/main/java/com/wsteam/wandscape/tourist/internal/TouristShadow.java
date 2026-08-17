@@ -136,6 +136,15 @@ public final class TouristShadow implements TouristStateHost {
     public void markHydrated() { this.hydrated = true; }
     public void markUnhydrated() { this.hydrated = false; }
 
+    // ── Transient night "no free hotel" latch (not persisted) ──
+    // Mirrors the entity's TouristMoveGoal latch: once all hotels are full / a far
+    // teleport fails one night, stop re-scanning every sim tick (SIM_INTERVAL=1) — no
+    // checkouts at night, so a re-scan is wasted CPU. Cleared at day break by the sim.
+
+    private transient HotelRouteBackoff hotelRouteBackoff = new HotelRouteBackoff();
+
+    public HotelRouteBackoff getHotelRouteBackoff() { return hotelRouteBackoff; }
+
     // ── Getters / setters ──
 
     public UUID getTouristId() { return touristId; }
