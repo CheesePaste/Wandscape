@@ -39,7 +39,7 @@ public final class RoadPlacementRenderer {
 
     private static final String TAG = "RoadPlacementRenderer";
 
-    private static final float LINE_WIDTH = 2.0f;
+    private static final float LINE_WIDTH = 5.0f;
     /** Ghost opacity factor for the translucent road block preview (255 * factor). */
     private static final float ROAD_GHOST_ALPHA = 0.55f;
     /** Above this many surface cells, fall back to the cheap flat fill. */
@@ -63,7 +63,7 @@ public final class RoadPlacementRenderer {
     // ═══════════════════════════════════════════════════════════════
 
     static void onRenderLevelStage(RenderLevelStageEvent event) {
-        if (!RoadPlacementState.isProjecting()) return;
+        if (!RoadPlacementState.isProjecting() && !SplineEditorClientState.isEditing() && !com.wsteam.wandscape.road.client.studio.RoadStudioOverlay.isVisible()) return;
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRIPWIRE_BLOCKS) return;
 
         Minecraft mc = Minecraft.getInstance();
@@ -75,6 +75,9 @@ public final class RoadPlacementRenderer {
 
         poseStack.pushPose();
         poseStack.translate(-camPos.x, -camPos.y, -camPos.z);
+
+        // 0. Base terrain grid overlay (semi-transparent gray 1x1 block grid around camera)
+        renderTerrainGrid(mc.level, bufferSource, poseStack, camPos);
 
         // Start marker (green outline)
         BlockPos startPos = RoadPlacementState.getStartPos();
@@ -119,6 +122,83 @@ public final class RoadPlacementRenderer {
         // would otherwise never be drawn this frame. Flush explicitly.
         bufferSource.endBatch(RenderType.lines());
         bufferSource.endBatch(RenderType.translucent());
+    }
+
+    // ── Terrain Grid Overlay ──
+
+    private static final int GRID_RADIUS = 28;
+    private static final float GRID_RADIUS_SQ = GRID_RADIUS * GRID_RADIUS;
+
+    /**
+     * Renders a soft semi-transparent gray grid overlay following the terrain surface around the camera.
+     */
+    private static void renderTerrainGrid(Level level, MultiBufferSource bufferSource, PoseStack poseStack, Vec3 camPos) {
+        int centerX = (int) Math.floor(camPos.x);
+        int centerZ = (int) Math.floor(camPos.z);
+        var pose = poseStack.last();
+        int light = 0xF000F0;
+
+        int minX = centerX - GRID_RADIUS;
+        int maxX = centerX + GRID_RADIUS;
+        int minZ = centerZ - GRID_RADIUS;
+        int maxZ = centerZ + GRID_RADIUS;
+
+        // Pass 1: Soft translucent gray fill quads
+        VertexConsumer vcQuads = bufferSource.getBuffer(RenderType.translucent());
+        for (int x = minX; x <= maxX; x++) {
+            double dx = (x + 0.5) - camPos.x;
+            for (int z = minZ; z <= maxZ; z++) {
+                double dz = (z + 0.5) - camPos.z;
+                double distSq = dx * dx + dz * dz;
+                if (distSq > GRID_RADIUS_SQ) continue;
+
+                float fade = (float) (1.0 - Math.sqrt(distSq) / GRID_RADIUS);
+                fade = Math.max(0f, Math.min(1f, fade));
+                fade = fade * fade;
+
+                int fillAlpha = (int) (50 * fade);
+                if (fillAlpha > 2) {
+                    float y = surfaceHeight(level, x, z) + 0.015f;
+                    float x0 = x, x1 = x + 1.0f;
+                    float z0 = z, z1 = z + 1.0f;
+
+                    vcQuads.addVertex(pose, x0, y, z0).setColor(160, 165, 175, fillAlpha).setUv(0, 0).setLight(light).setNormal(pose, 0, 1, 0);
+                    vcQuads.addVertex(pose, x0, y, z1).setColor(160, 165, 175, fillAlpha).setUv(0, 0).setLight(light).setNormal(pose, 0, 1, 0);
+                    vcQuads.addVertex(pose, x1, y, z1).setColor(160, 165, 175, fillAlpha).setUv(0, 0).setLight(light).setNormal(pose, 0, 1, 0);
+                    vcQuads.addVertex(pose, x1, y, z0).setColor(160, 165, 175, fillAlpha).setUv(0, 0).setLight(light).setNormal(pose, 0, 1, 0);
+                }
+            }
+        }
+
+        // Pass 2: Subtle gray grid lines (Top & Left edges)
+        VertexConsumer vcLines = bufferSource.getBuffer(RenderType.lines());
+        for (int x = minX; x <= maxX; x++) {
+            double dx = (x + 0.5) - camPos.x;
+            for (int z = minZ; z <= maxZ; z++) {
+                double dz = (z + 0.5) - camPos.z;
+                double distSq = dx * dx + dz * dz;
+                if (distSq > GRID_RADIUS_SQ) continue;
+
+                float fade = (float) (1.0 - Math.sqrt(distSq) / GRID_RADIUS);
+                fade = Math.max(0f, Math.min(1f, fade));
+                fade = fade * fade;
+
+                int lineAlpha = (int) (70 * fade);
+                if (lineAlpha > 4) {
+                    float y = surfaceHeight(level, x, z) + 0.015f;
+                    float x0 = x, x1 = x + 1.0f;
+                    float z0 = z, z1 = z + 1.0f;
+
+                    // Edge along X
+                    vcLines.addVertex(pose, x0, y, z0).setColor(190, 195, 205, lineAlpha).setNormal(pose, 0, 1, 0);
+                    vcLines.addVertex(pose, x1, y, z0).setColor(190, 195, 205, lineAlpha).setNormal(pose, 0, 1, 0);
+
+                    // Edge along Z
+                    vcLines.addVertex(pose, x0, y, z0).setColor(190, 195, 205, lineAlpha).setNormal(pose, 0, 1, 0);
+                    vcLines.addVertex(pose, x0, y, z1).setColor(190, 195, 205, lineAlpha).setNormal(pose, 0, 1, 0);
+                }
+            }
+        }
     }
 
     // ── Gizmo Rendering (Start & End corner gizmos) ──
