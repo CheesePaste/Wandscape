@@ -177,6 +177,7 @@ public class WandscapeClient {
         // Spline Road Editor (ImGui visual editor + world interaction)
         com.wsteam.wandscape.road.client.SplineEditorController.register();
         com.wsteam.wandscape.road.client.SplineEditorRenderer.register();
+        com.wsteam.wandscape.road.client.studio.RoadStudioOverlay.register();
         com.wsteam.wandscape.imgui.ImGuiManager.register();
     }
 

@@ -931,7 +931,8 @@ public class Wandscape {
                 .then(com.wsteam.wandscape.guard.GuardCommand.node())
                 .then(com.wsteam.wandscape.command.GuideCommand.node())
                 .then(com.wsteam.wandscape.command.SplineEditorCommand.node())
-                .then(com.wsteam.wandscape.command.MagicCommand.node());
+                .then(com.wsteam.wandscape.command.MagicCommand.node())
+                .then(com.wsteam.wandscape.command.RoadStudioCommand.node());
         dispatcher.register(root);
     }
 
