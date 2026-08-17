@@ -2,7 +2,6 @@ package com.wsteam.wandscape.road.network;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
 
-import com.wsteam.wandscape.imgui.ImGuiManager;
 import com.wsteam.wandscape.road.client.RoadPlacementState;
 import com.wsteam.wandscape.road.client.SplineEditorClientState;
 import com.wsteam.wandscape.road.client.studio.RoadStudioOverlay;
@@ -35,12 +34,10 @@ public record RoadStudioEnterPacket(boolean enter) implements CustomPacketPayloa
                 RoadPlacementState.setActiveTool(RoadPlacementState.ToolMode.SPLINE);
                 RoadPlacementState.enterProjection();
                 SplineEditorClientState.enterEditMode();
-                ImGuiManager.setVisible(false);
                 RoadStudioOverlay.open();
             } else {
                 RoadPlacementState.exitProjection();
                 SplineEditorClientState.exitEditMode();
-                ImGuiManager.setVisible(false);
                 RoadStudioOverlay.close();
             }
         });

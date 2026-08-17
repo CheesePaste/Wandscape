@@ -2,7 +2,6 @@ package com.wsteam.wandscape.road.client;
 
 import org.lwjgl.glfw.GLFW;
 
-import com.wsteam.wandscape.imgui.ImGuiManager;
 import com.wsteam.wandscape.road.client.studio.RoadStudioOverlay;
 import com.wsteam.wandscape.road.core.SplineVec3;
 import com.wsteam.wandscape.shared.log.Log;
@@ -392,7 +391,6 @@ public final class SplineEditorController {
                         RoadStudioOverlay.close();
                     } else {
                         SplineEditorClientState.exitEditMode();
-                        ImGuiManager.setVisible(false);
                     }
                 }
             }

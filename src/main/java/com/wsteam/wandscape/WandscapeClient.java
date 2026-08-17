@@ -174,11 +174,10 @@ public class WandscapeClient {
         OverviewFlightController.register();
         OverviewRenderer.register();
 
-        // Spline Road Editor (ImGui visual editor + world interaction)
+        // Spline Road Editor (Native visual editor + world interaction)
         com.wsteam.wandscape.road.client.SplineEditorController.register();
         com.wsteam.wandscape.road.client.SplineEditorRenderer.register();
         com.wsteam.wandscape.road.client.studio.RoadStudioOverlay.register();
-        com.wsteam.wandscape.imgui.ImGuiManager.register();
     }
 
     @SubscribeEvent

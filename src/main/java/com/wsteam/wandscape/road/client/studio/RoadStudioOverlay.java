@@ -113,7 +113,7 @@ public final class RoadStudioOverlay {
 
     /** True if the mouse cursor is currently over the overlay panel. */
     public static boolean isMouseOverPanel() {
-        if (!visible || !SplineEditorClientState.isEditing()) return false;
+        if (!visible) return false;
         Minecraft mc = Minecraft.getInstance();
         if (mc == null || mc.getWindow() == null) return false;
         updateMousePos();
@@ -133,7 +133,7 @@ public final class RoadStudioOverlay {
     // ════════════════════════════════════════════════════════════════
 
     private static void onMouseScroll(InputEvent.MouseScrollingEvent event) {
-        if (!visible || !SplineEditorClientState.isEditing()) return;
+        if (!visible) return;
         if (Minecraft.getInstance().screen != null) return;
         updateMousePos();
 
@@ -157,7 +157,7 @@ public final class RoadStudioOverlay {
     // ════════════════════════════════════════════════════════════════
 
     private static void onRenderGui(RenderGuiEvent.Post event) {
-        if (!visible || !SplineEditorClientState.isEditing()) return;
+        if (!visible) return;
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null || mc.player == null) return;
         if (mc.screen != null) return;
@@ -181,8 +181,8 @@ public final class RoadStudioOverlay {
 
         // Handle scroll
         if (pendingScroll != 0 && isMouseOverPanel()) {
-            scrollOffset -= (int) (pendingScroll * 14);
-            int maxScroll = Math.max(0, lastContentHeight - panelH + 80);
+            scrollOffset -= (int) (pendingScroll * 24);
+            int maxScroll = Math.max(0, lastContentHeight - (panelH - 60));
             scrollOffset = Math.max(0, Math.min(maxScroll, scrollOffset));
         }
         pendingScroll = 0;

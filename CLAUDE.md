@@ -79,7 +79,7 @@
 shared/  ←  所有包可见（API接口 + 事件 + 数据类型）
 engine/  ←  MC 适配实现，实现 core 边界接口
 building/wand/element/npc/warehouse/production/tourist/
-projection/road/stats/task/standalone/imgui  ←  通过 WandscapeApis + EventBus 通信，互不直接引用
+projection/road/stats/task/standalone  ←  通过 WandscapeApis + EventBus 通信，互不直接引用
 core/  ←  所有包可见，纯 Java 21 零 MC 依赖。不依赖 shared/
 ```
 
