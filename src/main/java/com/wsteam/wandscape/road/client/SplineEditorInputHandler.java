@@ -38,6 +38,7 @@ public final class SplineEditorInputHandler {
     public static void handleClicks(Minecraft mc, long window) {
         if (!SplineEditorClientState.isEditing()) return;
         if (com.wsteam.wandscape.road.client.RoadPlacementState.getActiveTool() != com.wsteam.wandscape.road.client.RoadPlacementState.ToolMode.SPLINE) return;
+        if (RoadEditorInputHelper.wantsMouse()) return;
 
         tickCounter++;
         boolean leftDown = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS;

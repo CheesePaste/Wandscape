@@ -766,7 +766,12 @@ public class Wandscape {
                 .playToClient(
                         com.wsteam.wandscape.road.network.SplineEditorEnterPacket.TYPE,
                         com.wsteam.wandscape.road.network.SplineEditorEnterPacket.STREAM_CODEC,
-                        com.wsteam.wandscape.road.network.SplineEditorEnterPacket::handleClient);
+                        com.wsteam.wandscape.road.network.SplineEditorEnterPacket::handleClient)
+                // ── Native Road Studio ──
+                .playToClient(
+                        com.wsteam.wandscape.road.network.RoadStudioEnterPacket.TYPE,
+                        com.wsteam.wandscape.road.network.RoadStudioEnterPacket.STREAM_CODEC,
+                        com.wsteam.wandscape.road.network.RoadStudioEnterPacket::handleClient);
     }
 
     private void onEntityAttributeCreation(EntityAttributeCreationEvent event) {
