@@ -89,6 +89,7 @@ public final class RoadStudioOverlay {
         visible = true;
         scrollOffset = 0;
         splineTabIndex = 0;
+        SplineEditorController.resetInputState();
         Minecraft mc = Minecraft.getInstance();
         if (mc != null && mc.mouseHandler != null) {
             mc.mouseHandler.releaseMouse();
@@ -102,6 +103,7 @@ public final class RoadStudioOverlay {
         visible = false;
         SplineEditorClientState.exitEditMode();
         RoadPlacementState.exitProjection();
+        SplineEditorController.resetInputState();
         Minecraft mc = Minecraft.getInstance();
         if (mc != null && mc.mouseHandler != null) {
             mc.mouseHandler.grabMouse();
@@ -113,6 +115,8 @@ public final class RoadStudioOverlay {
     public static boolean isMouseOverPanel() {
         if (!visible || !SplineEditorClientState.isEditing()) return false;
         Minecraft mc = Minecraft.getInstance();
+        if (mc == null || mc.getWindow() == null) return false;
+        updateMousePos();
         int screenW = mc.getWindow().getGuiScaledWidth();
         int panelW = (int) (screenW * panelWidthRatio);
         panelW = Math.max(180, Math.min(screenW - 40, panelW));

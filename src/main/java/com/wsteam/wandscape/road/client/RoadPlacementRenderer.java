@@ -105,6 +105,13 @@ public final class RoadPlacementRenderer {
             }
         }
 
+        // Draw Start & End Gizmos when in Replace/Fill/DestroyFill mode and start/end are set
+        if (RoadPlacementState.getActiveTool() != RoadPlacementState.ToolMode.SPLINE && startPos != null && endPos != null) {
+            VertexConsumer vcQuads = bufferSource.getBuffer(SplineEditorRenderer.SplineRenderType.XRAY_QUADS);
+            drawBoxCornerGizmos(vcQuads, poseStack.last(), startPos, endPos);
+            bufferSource.endBatch(SplineEditorRenderer.SplineRenderType.XRAY_QUADS);
+        }
+
         poseStack.popPose();
 
         // AFTER_TRIPWIRE_BLOCKS fires after the level renderer already flushed the
@@ -112,6 +119,120 @@ public final class RoadPlacementRenderer {
         // would otherwise never be drawn this frame. Flush explicitly.
         bufferSource.endBatch(RenderType.lines());
         bufferSource.endBatch(RenderType.translucent());
+    }
+
+    // ── Gizmo Rendering (Start & End corner gizmos) ──
+
+    private static final float GIZMO_SHAFT_LEN = 1.5f;
+    private static final float GIZMO_SHAFT_THICKNESS = 0.05f;
+    private static final float GIZMO_HEAD_LEN = 0.3f;
+    private static final float GIZMO_HEAD_THICKNESS = 0.12f;
+
+    private static final int[] GIZMO_COL_X = {255, 60, 60, 200};
+    private static final int[] GIZMO_COL_Y = {60, 255, 60, 200};
+    private static final int[] GIZMO_COL_Z = {60, 100, 255, 200};
+    private static final int[] GIZMO_COL_XN = {160, 40, 40, 160};
+    private static final int[] GIZMO_COL_YN = {40, 160, 40, 160};
+    private static final int[] GIZMO_COL_ZN = {40, 60, 160, 160};
+
+    private static void drawBoxCornerGizmos(VertexConsumer vc, PoseStack.Pose pose, BlockPos startPos, BlockPos endPos) {
+        RoadPlacementState.GizmoTarget hoveredTarget = RoadPlacementState.getHoveredTarget();
+        RoadPlacementState.AxisDrag hoveredAxis = RoadPlacementState.getHoveredAxis();
+        RoadPlacementState.GizmoTarget draggingTarget = RoadPlacementState.getDraggingTarget();
+        RoadPlacementState.AxisDrag draggingAxis = RoadPlacementState.getDraggingAxis();
+
+        // 1. Start Gizmo (Green center marker)
+        double sx = startPos.getX() + 0.5;
+        double sy = startPos.getY() + 0.5;
+        double sz = startPos.getZ() + 0.5;
+        RoadPlacementState.AxisDrag activeStartAxis = (draggingTarget == RoadPlacementState.GizmoTarget.START) ? draggingAxis
+                : ((hoveredTarget == RoadPlacementState.GizmoTarget.START) ? hoveredAxis : RoadPlacementState.AxisDrag.NONE);
+        drawSingleGizmo(vc, pose, sx, sy, sz, activeStartAxis, true);
+
+        // 2. End Gizmo (Red center marker)
+        double ex = endPos.getX() + 0.5;
+        double ey = endPos.getY() + 0.5;
+        double ez = endPos.getZ() + 0.5;
+        RoadPlacementState.AxisDrag activeEndAxis = (draggingTarget == RoadPlacementState.GizmoTarget.END) ? draggingAxis
+                : ((hoveredTarget == RoadPlacementState.GizmoTarget.END) ? hoveredAxis : RoadPlacementState.AxisDrag.NONE);
+        drawSingleGizmo(vc, pose, ex, ey, ez, activeEndAxis, false);
+    }
+
+    private static void drawSingleGizmo(VertexConsumer vc, PoseStack.Pose pose, double x, double y, double z,
+                                        RoadPlacementState.AxisDrag activeAxis, boolean isStart) {
+        // Center cube: Green for Start, Red for End
+        int[] centerCol = isStart ? new int[]{0, 255, 100, 220} : new int[]{255, 80, 80, 220};
+        net.minecraft.world.phys.AABB centerBox = new net.minecraft.world.phys.AABB(x - 0.12, y - 0.12, z - 0.12, x + 0.12, y + 0.12, z + 0.12);
+        fillAABB(vc, pose, centerBox, centerCol[0], centerCol[1], centerCol[2], centerCol[3]);
+
+        // 6 directional arrows
+        drawGizmoArrow(vc, pose, x, y, z, RoadPlacementState.AxisDrag.X_POS, 1, 0, 0, GIZMO_COL_X, activeAxis == RoadPlacementState.AxisDrag.X_POS);
+        drawGizmoArrow(vc, pose, x, y, z, RoadPlacementState.AxisDrag.X_NEG, -1, 0, 0, GIZMO_COL_XN, activeAxis == RoadPlacementState.AxisDrag.X_NEG);
+        drawGizmoArrow(vc, pose, x, y, z, RoadPlacementState.AxisDrag.Y_POS, 0, 1, 0, GIZMO_COL_Y, activeAxis == RoadPlacementState.AxisDrag.Y_POS);
+        drawGizmoArrow(vc, pose, x, y, z, RoadPlacementState.AxisDrag.Y_NEG, 0, -1, 0, GIZMO_COL_YN, activeAxis == RoadPlacementState.AxisDrag.Y_NEG);
+        drawGizmoArrow(vc, pose, x, y, z, RoadPlacementState.AxisDrag.Z_POS, 0, 0, 1, GIZMO_COL_Z, activeAxis == RoadPlacementState.AxisDrag.Z_POS);
+        drawGizmoArrow(vc, pose, x, y, z, RoadPlacementState.AxisDrag.Z_NEG, 0, 0, -1, GIZMO_COL_ZN, activeAxis == RoadPlacementState.AxisDrag.Z_NEG);
+    }
+
+    private static void drawGizmoArrow(VertexConsumer vc, PoseStack.Pose pose, double x, double y, double z,
+                                        RoadPlacementState.AxisDrag axis, int dx, int dy, int dz, int[] col, boolean highlight) {
+        float bright = highlight ? 1.4f : 1.0f;
+        int r = Math.min(255, (int)(col[0] * bright));
+        int g = Math.min(255, (int)(col[1] * bright));
+        int b = Math.min(255, (int)(col[2] * bright));
+        int a = highlight ? 255 : col[3];
+
+        // 1. Shaft
+        net.minecraft.world.phys.AABB shaft = getGizmoAxisAABB(x, y, z, axis, GIZMO_SHAFT_LEN, GIZMO_SHAFT_THICKNESS);
+        fillAABB(vc, pose, shaft, r, g, b, a);
+
+        // 2. Head
+        double headStart = GIZMO_SHAFT_LEN;
+        double headX = x + dx * headStart;
+        double headY = y + dy * headStart;
+        double headZ = z + dz * headStart;
+        net.minecraft.world.phys.AABB head = getGizmoAxisAABB(headX, headY, headZ, axis, GIZMO_HEAD_LEN, GIZMO_HEAD_THICKNESS);
+        fillAABB(vc, pose, head, r, g, b, a);
+    }
+
+    private static net.minecraft.world.phys.AABB getGizmoAxisAABB(double x, double y, double z, RoadPlacementState.AxisDrag axis, float length, float thickness) {
+        double minX = x - thickness, minY = y - thickness, minZ = z - thickness;
+        double maxX = x + thickness, maxY = y + thickness, maxZ = z + thickness;
+
+        switch (axis) {
+            case X_POS -> maxX = x + length;
+            case X_NEG -> minX = x - length;
+            case Y_POS -> maxY = y + length;
+            case Y_NEG -> minY = y - length;
+            case Z_POS -> maxZ = z + length;
+            case Z_NEG -> minZ = z - length;
+        }
+
+        return new net.minecraft.world.phys.AABB(minX, minY, minZ, maxX, maxY, maxZ);
+    }
+
+    private static void fillAABB(VertexConsumer vc, PoseStack.Pose pose, net.minecraft.world.phys.AABB box, int r, int g, int b, int a) {
+        float x0 = (float)box.minX, y0 = (float)box.minY, z0 = (float)box.minZ;
+        float x1 = (float)box.maxX, y1 = (float)box.maxY, z1 = (float)box.maxZ;
+        
+        quad(vc, pose, x0, y0, z0, x1, y0, z0, x1, y0, z1, x0, y0, z1, r, g, b, a);
+        quad(vc, pose, x0, y1, z0, x0, y1, z1, x1, y1, z1, x1, y1, z0, r, g, b, a);
+        quad(vc, pose, x0, y0, z0, x0, y1, z0, x1, y1, z0, x1, y0, z0, r, g, b, a);
+        quad(vc, pose, x1, y0, z0, x1, y1, z0, x1, y1, z1, x1, y0, z1, r, g, b, a);
+        quad(vc, pose, x0, y0, z1, x1, y0, z1, x1, y1, z1, x0, y1, z1, r, g, b, a);
+        quad(vc, pose, x0, y0, z0, x0, y0, z1, x0, y1, z1, x0, y1, z0, r, g, b, a);
+    }
+
+    private static void quad(VertexConsumer vc, PoseStack.Pose pose,
+                             float x1, float y1, float z1,
+                             float x2, float y2, float z2,
+                             float x3, float y3, float z3,
+                             float x4, float y4, float z4,
+                             int r, int g, int b, int a) {
+        vc.addVertex(pose, x1, y1, z1).setColor(r, g, b, a);
+        vc.addVertex(pose, x2, y2, z2).setColor(r, g, b, a);
+        vc.addVertex(pose, x3, y3, z3).setColor(r, g, b, a);
+        vc.addVertex(pose, x4, y4, z4).setColor(r, g, b, a);
     }
 
     // ── Block outline ──

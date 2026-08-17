@@ -148,12 +148,12 @@ public final class SplineEditorRenderer {
         if (!SplineEditorClientState.isArrayPreview()) return;
 
         double stepDist = SplineEditorClientState.getArrayStepDistance();
+        if (stepDist < 0.2) stepDist = 0.2;
+
         List<CurveSample> samples = model.tessellate(stepDist);
         if (samples.isEmpty()) return;
 
         RoadTemplate template = SplineEditorClientState.getActiveTemplate();
-        // 兜底：静态初始化时 V 面板预设可能还没加载，动态模板未注册导致 getActiveTemplate() 为 null。
-        // 预设可用后立即补建一次，保证预览与下发使用同一模板。
         if (template == null || template.getBlocks().isEmpty()) {
             SplineEditorClientState.rebuildDynamicTemplate();
             template = SplineEditorClientState.getActiveTemplate();
@@ -226,10 +226,6 @@ public final class SplineEditorRenderer {
             poseStack.popPose();
         }
 
-        // 关键：renderSingleBlock 写入的是 Sheets.cutoutBlockSheet() 等方块实体 sheet，
-        // 关卡渲染器的方块实体阶段（早于 AFTER_TRIPWIRE_BLOCKS）已 flush 过这些批次。
-        // 不显式 flush 的话，预览方块在渲染管线里被丢弃，世界里什么都不会显示。
-        // 与 BuildingGhostRenderer 相同的处理方式。
         buf.endBatch(net.minecraft.client.renderer.Sheets.cutoutBlockSheet());
         buf.endBatch(net.minecraft.client.renderer.Sheets.translucentCullBlockSheet());
         buf.endBatch(net.minecraft.client.renderer.Sheets.translucentItemSheet());
@@ -296,7 +292,7 @@ public final class SplineEditorRenderer {
 
     private static void drawGizmoArrow(VertexConsumer vc, PoseStack.Pose pose, double x, double y, double z,
                                         SplineEditorClientState.AxisDrag axis, int dx, int dy, int dz, int[] col, boolean highlight) {
-        float bright = highlight ? 1.3f : 1.0f;
+        float bright = highlight ? 1.4f : 1.0f;
         int r = Math.min(255, (int)(col[0] * bright));
         int g = Math.min(255, (int)(col[1] * bright));
         int b = Math.min(255, (int)(col[2] * bright));
@@ -352,7 +348,7 @@ public final class SplineEditorRenderer {
 
     // ── X-Ray custom shader definitions ──
 
-    private static abstract class SplineRenderType extends RenderType {
+    static abstract class SplineRenderType extends RenderType {
         private SplineRenderType(String name, VertexFormat format, VertexFormat.Mode mode, int bufSize, boolean affectsCrumbling, boolean sortOnUpload, Runnable setupState, Runnable clearState) {
             super(name, format, mode, bufSize, affectsCrumbling, sortOnUpload, setupState, clearState);
         }

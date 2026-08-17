@@ -35,50 +35,53 @@ public final class SplineEditorInputHandler {
 
     private SplineEditorInputHandler() {}
 
-    public static void handleClicks(Minecraft mc, long window) {
+    public static void onLeftPress(Minecraft mc) {
         if (!SplineEditorClientState.isEditing()) return;
         if (com.wsteam.wandscape.road.client.RoadPlacementState.getActiveTool() != com.wsteam.wandscape.road.client.RoadPlacementState.ToolMode.SPLINE) return;
-        if (RoadEditorInputHelper.wantsMouse()) return;
-
-        tickCounter++;
-        boolean leftDown = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS;
-        boolean leftClicked = leftDown && !wasLeftDown;
-        boolean leftReleased = !leftDown && wasLeftDown;
 
         Vec3 rayOrigin = mc.gameRenderer.getMainCamera().getPosition();
         Vec3 rayDir = getMouseWorldRay(mc);
 
-        // 1. Hover check for Axis Gizmo (only if we have a selected point)
-        updateGizmoHover(rayOrigin, rayDir);
+        // 1. Check Gizmo axis hit test first if a point is already selected
+        int selIdx = SplineEditorClientState.getSelectedPointIndex();
+        SplineEditorClientState.SelectionType selType = SplineEditorClientState.getSelectedType();
 
-        if (leftClicked) {
-            // Check if we clicked on the Gizmo axis first
-            if (SplineEditorClientState.getHoveredAxis() != SplineEditorClientState.AxisDrag.NONE) {
-                startGizmoDrag(mc, rayOrigin, rayDir);
-            } else {
-                // Otherwise, try selecting an existing point in the world
-                boolean selected = trySelectPoint(rayOrigin, rayDir);
-                
-                // If we didn't click any point and we are in ADD mode, add a new point on the block surface
-                if (!selected && SplineEditorClientState.getEditMode() == SplineEditorClientState.EditMode.ADD) {
-                    addNewSplinePoint(mc, rayDir);
-                }
+        SplineEditorClientState.AxisDrag hitAxis = SplineEditorClientState.AxisDrag.NONE;
+        if (selIdx != -1 && selType != SplineEditorClientState.SelectionType.NONE) {
+            SplinePoint pt = SplineEditorClientState.getModel().getPoints().get(selIdx);
+            SplineVec3 ptPos = switch (selType) {
+                case ANCHOR -> pt.getAnchor();
+                case CONTROL_PREV -> pt.getControlPrev();
+                case CONTROL_NEXT -> pt.getControlNext();
+                default -> null;
+            };
+            if (ptPos != null) {
+                hitAxis = hitTestGizmo(rayOrigin, rayDir, ptPos);
             }
         }
 
-        // 2. Perform active drag
-        if (leftDown && SplineEditorClientState.isDragging()) {
-            continueGizmoDrag(mc, rayOrigin, rayDir);
+        if (hitAxis != SplineEditorClientState.AxisDrag.NONE) {
+            SplineEditorClientState.setHoveredAxis(hitAxis);
+            startGizmoDrag(mc, rayOrigin, rayDir, hitAxis);
+            return;
         }
 
-        if (leftReleased && SplineEditorClientState.isDragging()) {
-            finishGizmoDrag();
-        }
+        // 2. Otherwise try selecting an existing point / handle in the world
+        boolean selected = trySelectPoint(rayOrigin, rayDir);
 
-        wasLeftDown = leftDown;
+        // 3. If no point clicked and in ADD mode, place a new anchor point
+        if (!selected && SplineEditorClientState.getEditMode() == SplineEditorClientState.EditMode.ADD) {
+            addNewSplinePoint(mc, rayDir);
+        }
     }
 
-    private static Vec3 getMouseWorldRay(Minecraft mc) {
+    public static void onLeftRelease(Minecraft mc) {
+        if (SplineEditorClientState.isDragging()) {
+            finishGizmoDrag();
+        }
+    }
+
+    public static Vec3 getMouseWorldRay(Minecraft mc) {
         long window = mc.getWindow().getWindow();
         double[] mx = new double[1], my = new double[1];
         GLFW.glfwGetCursorPos(window, mx, my);
@@ -108,7 +111,11 @@ public final class SplineEditorInputHandler {
                 .normalize();
     }
 
-    private static void updateGizmoHover(Vec3 rayOrigin, Vec3 rayDir) {
+    public static void updateGizmoHover(Vec3 rayOrigin, Vec3 rayDir) {
+        if (SplineEditorClientState.isDragging()) {
+            return;
+        }
+
         int selIdx = SplineEditorClientState.getSelectedPointIndex();
         SplineEditorClientState.SelectionType selType = SplineEditorClientState.getSelectedType();
         if (selIdx == -1 || selType == SplineEditorClientState.SelectionType.NONE) {
@@ -132,25 +139,23 @@ public final class SplineEditorInputHandler {
         SplineEditorClientState.setHoveredAxis(hitTestGizmo(rayOrigin, rayDir, ptPos));
     }
 
-    private static SplineEditorClientState.AxisDrag hitTestGizmo(Vec3 rayOrigin, Vec3 rayDir, SplineVec3 pos) {
+    public static SplineEditorClientState.AxisDrag hitTestGizmo(Vec3 rayOrigin, Vec3 rayDir, SplineVec3 pos) {
         double px = pos.x();
         double py = pos.y();
         double pz = pos.z();
-        double reachEnd = REACH;
-
-        Vec3 rayEnd = rayOrigin.add(rayDir.scale(reachEnd));
+        Vec3 rayEnd = rayOrigin.add(rayDir.scale(REACH));
 
         SplineEditorClientState.AxisDrag bestAxis = SplineEditorClientState.AxisDrag.NONE;
         double minDistance = Double.MAX_VALUE;
 
-        // Size constants matching renderer
-        float shaftLen = 1.5f;
-        float thickness = 0.08f;
+        // Shaft (1.5) + Head (0.3) + margin = 1.85 length, 0.20 thickness for generous, responsive hit box
+        float totalLen = 1.85f;
+        float thickness = 0.20f;
 
         for (SplineEditorClientState.AxisDrag axis : SplineEditorClientState.AxisDrag.values()) {
             if (axis == SplineEditorClientState.AxisDrag.NONE) continue;
 
-            AABB aabb = getGizmoAxisAABB(px, py, pz, axis, shaftLen, thickness);
+            AABB aabb = getGizmoAxisAABB(px, py, pz, axis, totalLen, thickness);
             Optional<Vec3> hit = aabb.clip(rayOrigin, rayEnd);
             if (hit.isPresent()) {
                 double dist = rayOrigin.distanceTo(hit.get());
@@ -180,7 +185,7 @@ public final class SplineEditorInputHandler {
         return new AABB(minX, minY, minZ, maxX, maxY, maxZ);
     }
 
-    private static boolean trySelectPoint(Vec3 rayOrigin, Vec3 rayDir) {
+    public static boolean trySelectPoint(Vec3 rayOrigin, Vec3 rayDir) {
         SplineModel model = SplineEditorClientState.getModel();
         Vec3 rayEnd = rayOrigin.add(rayDir.scale(REACH));
 
@@ -191,8 +196,8 @@ public final class SplineEditorInputHandler {
         for (int i = 0; i < model.getPoints().size(); i++) {
             SplinePoint pt = model.getPoints().get(i);
 
-            // 1. Anchor (R=0.25)
-            AABB aabbAnchor = getPointAABB(pt.getAnchor(), 0.25);
+            // 1. Anchor (R=0.35)
+            AABB aabbAnchor = getPointAABB(pt.getAnchor(), 0.35);
             Optional<Vec3> hitAnchor = aabbAnchor.clip(rayOrigin, rayEnd);
             if (hitAnchor.isPresent()) {
                 double d = rayOrigin.distanceTo(hitAnchor.get());
@@ -205,8 +210,8 @@ public final class SplineEditorInputHandler {
 
             // Handles are only selectable in EDIT mode
             if (SplineEditorClientState.getEditMode() == SplineEditorClientState.EditMode.EDIT) {
-                // 2. Control Prev (R=0.15)
-                AABB aabbPrev = getPointAABB(pt.getControlPrev(), 0.15);
+                // 2. Control Prev (R=0.22)
+                AABB aabbPrev = getPointAABB(pt.getControlPrev(), 0.22);
                 Optional<Vec3> hitPrev = aabbPrev.clip(rayOrigin, rayEnd);
                 if (hitPrev.isPresent()) {
                     double d = rayOrigin.distanceTo(hitPrev.get());
@@ -217,8 +222,8 @@ public final class SplineEditorInputHandler {
                     }
                 }
 
-                // 3. Control Next (R=0.15)
-                AABB aabbNext = getPointAABB(pt.getControlNext(), 0.15);
+                // 3. Control Next (R=0.22)
+                AABB aabbNext = getPointAABB(pt.getControlNext(), 0.22);
                 Optional<Vec3> hitNext = aabbNext.clip(rayOrigin, rayEnd);
                 if (hitNext.isPresent()) {
                     double d = rayOrigin.distanceTo(hitNext.get());
@@ -261,7 +266,7 @@ public final class SplineEditorInputHandler {
 
     // ── Drag Logic ──
 
-    private static void startGizmoDrag(Minecraft mc, Vec3 rayOrigin, Vec3 rayDir) {
+    private static void startGizmoDrag(Minecraft mc, Vec3 rayOrigin, Vec3 rayDir, SplineEditorClientState.AxisDrag axis) {
         int selIdx = SplineEditorClientState.getSelectedPointIndex();
         SplineEditorClientState.SelectionType selType = SplineEditorClientState.getSelectedType();
         if (selIdx == -1) return;
@@ -276,7 +281,6 @@ public final class SplineEditorInputHandler {
 
         if (ptPos == null) return;
 
-        SplineEditorClientState.AxisDrag axis = SplineEditorClientState.getHoveredAxis();
         SplineEditorClientState.setDraggingAxis(axis);
 
         dragStartPointPos = ptPos;
@@ -287,7 +291,7 @@ public final class SplineEditorInputHandler {
         Log.info(TAG, "[SplineEditor] Start Gizmo Drag axis={}, startVal={}", axis, dragStartAxisValue);
     }
 
-    private static void continueGizmoDrag(Minecraft mc, Vec3 rayOrigin, Vec3 rayDir) {
+    public static void continueGizmoDrag(Minecraft mc, Vec3 rayOrigin, Vec3 rayDir) {
         SplineEditorClientState.AxisDrag axis = SplineEditorClientState.getDraggingAxis();
         if (axis == SplineEditorClientState.AxisDrag.NONE || dragStartPointPos == null || dragStartAxisOrigin == null) return;
 
@@ -327,7 +331,7 @@ public final class SplineEditorInputHandler {
         }
     }
 
-    private static void finishGizmoDrag() {
+    public static void finishGizmoDrag() {
         Log.info(TAG, "[SplineEditor] Finish Gizmo Drag");
         SplineEditorClientState.setDraggingAxis(SplineEditorClientState.AxisDrag.NONE);
         dragStartPointPos = null;
@@ -356,9 +360,6 @@ public final class SplineEditorInputHandler {
 
         double denom = a * c - b * b;
         if (Math.abs(denom) < 1e-6) return 0;
-        // Closest point of the ray to the axis line, parameterized along axisDir:
-        // s = (c*d - b*e) / (a*c - b*b). (b*e - c*d) would be the sign-flipped value,
-        // which inverts the drag direction.
         return (c * d - b * e) / denom;
     }
 

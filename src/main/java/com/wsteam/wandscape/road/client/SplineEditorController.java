@@ -49,52 +49,89 @@ public final class SplineEditorController {
         Log.info(TAG, "[SplineEditor] Controller registered");
     }
 
+    private static double savedCursorX = 0, savedCursorY = 0;
+    private static boolean hasSavedCursor = false;
+
     public static void resetInputState() {
         cameraActive = false;
         skipFrames = 0;
         wasEscapeDown = false;
         wasHelpDown = false;
         wasGDown = false;
+        wasDeleteDown = false;
         topDownWasGrabbed = false;
+        hasSavedCursor = false;
     }
 
     /**
      * Unity-style right-drag camera: pressing RMB over the world grabs the
      * cursor (vanilla look rotation takes over); releasing RMB restores the
      * free cursor so the player can click the studio panel or the world.
+     * Left-clicking in the 3D viewport or panel NEVER auto-captures the mouse.
      */
     static void onMouseButtonPre(InputEvent.MouseButton.Pre event) {
-        if (!SplineEditorClientState.isEditing()) return;
+        if (!SplineEditorClientState.isEditing() && !RoadStudioOverlay.isVisible()) return;
         if (Minecraft.getInstance().screen != null) return;
 
         Minecraft mc = Minecraft.getInstance();
         if (mc.mouseHandler == null) return;
 
         boolean uiWantsMouse = RoadEditorInputHelper.wantsMouse();
+        long window = mc.getWindow().getWindow();
+        int button = event.getButton();
+        int action = event.getAction();
 
-        if (event.getButton() == GLFW.GLFW_MOUSE_BUTTON_RIGHT) {
-            if (event.getAction() == GLFW.GLFW_PRESS) {
+        if (button == GLFW.GLFW_MOUSE_BUTTON_RIGHT) {
+            if (action == GLFW.GLFW_PRESS) {
                 // If over panel, don't grab camera
                 if (!cameraActive && !uiWantsMouse) {
+                    double[] mx = new double[1], my = new double[1];
+                    GLFW.glfwGetCursorPos(window, mx, my);
+                    savedCursorX = mx[0];
+                    savedCursorY = my[0];
+                    hasSavedCursor = true;
+
                     cameraActive = true;
                     mc.mouseHandler.grabMouse();
-                    event.setCanceled(true);
                 }
-            } else if (cameraActive && event.getAction() == GLFW.GLFW_RELEASE) {
+            } else if (cameraActive && action == GLFW.GLFW_RELEASE) {
                 cameraActive = false;
                 mc.mouseHandler.releaseMouse();
-                event.setCanceled(true);
+                if (hasSavedCursor) {
+                    GLFW.glfwSetCursorPos(window, savedCursorX, savedCursorY);
+                }
             }
-        } else if (event.getButton() == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
-            // If over UI panel, cancel vanilla block attack/break
-            if (uiWantsMouse) {
-                event.setCanceled(true);
-            }
+            event.setCanceled(true);
+            return;
         }
+
+        // Left mouse button: immediate viewport interaction
+        if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
+            if (!uiWantsMouse) {
+                if (RoadPlacementState.getActiveTool() == RoadPlacementState.ToolMode.SPLINE) {
+                    if (action == GLFW.GLFW_PRESS) {
+                        SplineEditorInputHandler.onLeftPress(mc);
+                    } else if (action == GLFW.GLFW_RELEASE) {
+                        SplineEditorInputHandler.onLeftRelease(mc);
+                    }
+                } else {
+                    if (action == GLFW.GLFW_PRESS) {
+                        RoadPlacementController.onLeftPress(mc);
+                    } else if (action == GLFW.GLFW_RELEASE) {
+                        RoadPlacementController.onLeftRelease(mc);
+                    }
+                }
+            }
+            event.setCanceled(true);
+            return;
+        }
+
+        // Cancel all other mouse clicks in editor mode to prevent vanilla block attack/use
+        event.setCanceled(true);
     }
 
     static void onClientTickPost(ClientTickEvent.Post event) {
-        if (!SplineEditorClientState.isEditing()) return;
+        if (!SplineEditorClientState.isEditing() && !RoadStudioOverlay.isVisible()) return;
 
         // 面板隐藏时暂停样条编辑器输入（不再锁移动/吞输入），恢复时继续
         if (WandscapePanelState.isPanelHidden()) return;
@@ -107,13 +144,47 @@ public final class SplineEditorController {
         boolean uiWantsKb = RoadEditorInputHelper.wantsKeyboard();
         boolean uiWantsMouse = RoadEditorInputHelper.wantsMouse();
 
+        // Track cursor position while free so we have a reliable restore point
+        if (!cameraActive && mc.screen == null && !mc.mouseHandler.isMouseGrabbed()) {
+            double[] mx = new double[1], my = new double[1];
+            GLFW.glfwGetCursorPos(window, mx, my);
+            savedCursorX = mx[0];
+            savedCursorY = my[0];
+            hasSavedCursor = true;
+        }
+
         // ── Right-click camera rotation fallback ──
         if (!cameraActive && rightDown && !uiWantsMouse && mc.screen == null) {
+            double[] mx = new double[1], my = new double[1];
+            GLFW.glfwGetCursorPos(window, mx, my);
+            savedCursorX = mx[0];
+            savedCursorY = my[0];
+            hasSavedCursor = true;
+
             cameraActive = true;
             mc.mouseHandler.grabMouse();
         } else if (cameraActive && !rightDown) {
             cameraActive = false;
             mc.mouseHandler.releaseMouse();
+            if (hasSavedCursor) {
+                GLFW.glfwSetCursorPos(window, savedCursorX, savedCursorY);
+            }
+        }
+
+        // Defensive: while camera is not active and no screen is open, ensure mouse cursor stays released (free)
+        if (!cameraActive && mc.screen == null && mc.mouseHandler.isMouseGrabbed()) {
+            mc.mouseHandler.releaseMouse();
+            if (hasSavedCursor) {
+                GLFW.glfwSetCursorPos(window, savedCursorX, savedCursorY);
+            }
+        }
+
+        // Defensive: if dragging but LMB is not down, finish drag
+        if (SplineEditorClientState.isDragging() && GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_LEFT) != GLFW.GLFW_PRESS) {
+            SplineEditorInputHandler.onLeftRelease(mc);
+        }
+        if (RoadPlacementState.isDraggingGizmo() && GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_LEFT) != GLFW.GLFW_PRESS) {
+            RoadPlacementController.onLeftRelease(mc);
         }
 
         if (cameraActive) {
@@ -124,11 +195,6 @@ public final class SplineEditorController {
         } else {
             // Lock movement when not rotating
             mc.player.setDeltaMovement(Vec3.ZERO);
-
-            // World clicks belong to the editor when the cursor is over the 3D world (!uiWantsMouse)
-            if (!uiWantsMouse && mc.screen == null && RoadPlacementState.getActiveTool() == RoadPlacementState.ToolMode.SPLINE) {
-                SplineEditorInputHandler.handleClicks(mc, window);
-            }
         }
 
         // ── Keyboard shortcuts ──
@@ -159,6 +225,26 @@ public final class SplineEditorController {
         if (elapsed > 0.05) elapsed = 0.05;
 
         boolean uiWantsKb = RoadEditorInputHelper.wantsKeyboard();
+        boolean uiWantsMouse = RoadEditorInputHelper.wantsMouse();
+
+        // 3D Gizmo hover & drag at full frame rate (60-144+ FPS)
+        if (!cameraActive && !uiWantsMouse && mc.screen == null) {
+            Vec3 rayOrigin = mc.gameRenderer.getMainCamera().getPosition();
+            Vec3 rayDir = SplineEditorInputHandler.getMouseWorldRay(mc);
+            if (RoadPlacementState.getActiveTool() == RoadPlacementState.ToolMode.SPLINE) {
+                if (SplineEditorClientState.isDragging()) {
+                    SplineEditorInputHandler.continueGizmoDrag(mc, rayOrigin, rayDir);
+                } else {
+                    SplineEditorInputHandler.updateGizmoHover(rayOrigin, rayDir);
+                }
+            } else {
+                if (RoadPlacementState.isDraggingGizmo()) {
+                    RoadPlacementController.continueGizmoDrag(mc, rayOrigin, rayDir);
+                } else {
+                    RoadPlacementController.updateGizmoHover(rayOrigin, rayDir);
+                }
+            }
+        }
 
         // Top-down camera control
         if (SplineEditorClientState.isTopDown()) {

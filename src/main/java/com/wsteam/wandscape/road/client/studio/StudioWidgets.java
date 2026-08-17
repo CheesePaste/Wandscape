@@ -244,6 +244,13 @@ public final class StudioWidgets {
                 comboDropId = id;
                 comboOpenTime = System.currentTimeMillis();
             }
+        } else if (id.equals(openCombo)) {
+            // Update dropdown position each frame so it scrolls synchronously with the panel
+            comboDropX = x;
+            comboDropY = y + h;
+            comboDropW = w;
+            comboDropOptions = options;
+            comboDropId = id;
         }
 
         layoutY += h + SPACING;
@@ -259,6 +266,19 @@ public final class StudioWidgets {
         String[] opts = comboDropOptions;
         int itemH = font.lineHeight + 6;
         int totalH = opts.length * itemH + 2;
+
+        int screenH = g.guiHeight();
+
+        // If combo has scrolled far off-screen, auto-close the dropdown
+        if (y < -totalH - 40 || y > screenH + 40) {
+            openCombo = null;
+            return -1;
+        }
+
+        // If dropdown extends below screen bottom, flip above combo button if room available
+        if (y + totalH > screenH - 18 && y - 22 - totalH > 0) {
+            y = comboDropY - 22 - totalH;
+        }
 
         // Background & gold border on top of everything
         g.fill(x, y, x + w, y + totalH, StudioColors.PANEL_BG);
@@ -289,6 +309,11 @@ public final class StudioWidgets {
 
     public static boolean isComboOpen() {
         return openCombo != null;
+    }
+
+    public static void closeCombo() {
+        openCombo = null;
+        comboDropOptions = null;
     }
 
     // ════════════════════════════════════════════════════════════════
