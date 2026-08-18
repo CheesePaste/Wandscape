@@ -34,11 +34,14 @@ import static com.wsteam.wandscape.Wandscape.MODID;
  * <p>Carries the full blueprint material demand (only warehouse-supplied blocks), the
  * warehouse stock per block, the per-block supply status (ready / being synthesized /
  * pending), and the estimated start &amp; completion ticks. Assembly happens on the
- * server in {@link #from(Level, BuildingState)}; the client just renders.
+ * server in {@link #from(Level, BuildingState)}; the client just renders. {@code
+ * buildingTypeId} lets the client resolve the localized building name via
+ * {@code building.wandscape.<id>}; {@code buildingName} is the raw display-name fallback.
  */
 public record ConstructionSiteDataPacket(
         UUID buildingId,
         BlockPos pos,
+        String buildingTypeId,
         String buildingName,
         List<MaterialEntry> materials,
         int estStartTicks,
@@ -158,7 +161,7 @@ public record ConstructionSiteDataPacket(
                 WandscapeConstants.CONSTRUCTION_PLACE_TICKS_PER_UNIT);
 
         ConstructionSiteDataPacket packet = new ConstructionSiteDataPacket(
-                buildingId, state.getAnchor(), name,
+                buildingId, state.getAnchor(), state.getBuildingTypeId(), name,
                 materials, est.startTicks(), est.completeTicks(), est.canEstimate(),
                 state.hasEverCompleted(), config != null ? config.creator() : "");
         SNAPSHOT_CACHE.put(buildingId, new CacheEntry(packet, System.currentTimeMillis()));
@@ -186,6 +189,7 @@ public record ConstructionSiteDataPacket(
     static void write(RegistryFriendlyByteBuf buf, ConstructionSiteDataPacket pkt) {
         buf.writeUUID(pkt.buildingId);
         buf.writeBlockPos(pkt.pos);
+        buf.writeUtf(pkt.buildingTypeId);
         buf.writeUtf(pkt.buildingName);
         buf.writeVarInt(pkt.materials.size());
         for (MaterialEntry e : pkt.materials) {
@@ -204,6 +208,7 @@ public record ConstructionSiteDataPacket(
     static ConstructionSiteDataPacket read(RegistryFriendlyByteBuf buf) {
         UUID buildingId = buf.readUUID();
         BlockPos pos = buf.readBlockPos();
+        String typeId = buf.readUtf();
         String name = buf.readUtf();
         int n = buf.readVarInt();
         List<MaterialEntry> materials = new ArrayList<>(n);
@@ -216,6 +221,6 @@ public record ConstructionSiteDataPacket(
         boolean can = buf.readBoolean();
         boolean done = buf.readBoolean();
         String creator = buf.readUtf();
-        return new ConstructionSiteDataPacket(buildingId, pos, name, materials, start, complete, can, done, creator);
+        return new ConstructionSiteDataPacket(buildingId, pos, typeId, name, materials, start, complete, can, done, creator);
     }
 }

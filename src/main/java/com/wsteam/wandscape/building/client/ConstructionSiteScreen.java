@@ -41,6 +41,7 @@ public class ConstructionSiteScreen extends MedievalScreen {
     private static final int MID_COL_X = 210;
 
     private UUID buildingId;
+    private String buildingTypeId = "";
     private String buildingName = "";
     private List<MaterialEntry> materials = new ArrayList<>();
     private int estStartTicks;
@@ -66,6 +67,7 @@ public class ConstructionSiteScreen extends MedievalScreen {
 
     private void apply(ConstructionSiteDataPacket packet) {
         this.buildingId = packet.buildingId();
+        this.buildingTypeId = packet.buildingTypeId();
         this.buildingName = packet.buildingName();
         this.materials = new ArrayList<>(packet.materials());
         this.estStartTicks = packet.estStartTicks();
@@ -73,7 +75,7 @@ public class ConstructionSiteScreen extends MedievalScreen {
         this.canEstimate = packet.canEstimate();
         this.completed = packet.completed();
         setCreator(packet.creator());
-        setTitleBar(Component.literal(buildingName));
+        setTitleBar(I18n.name("building.wandscape." + buildingTypeId, buildingName));
         if (list != null) {
             list.setItems(materials);
         }
