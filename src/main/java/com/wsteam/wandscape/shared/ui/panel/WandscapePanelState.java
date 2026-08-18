@@ -463,7 +463,7 @@ public final class WandscapePanelState {
                 case ROAD_PROJECTION -> {
                     RoadPlacementState.enterProjection();
                     com.wsteam.wandscape.road.client.SplineEditorClientState.enterEditMode();
-                    com.wsteam.wandscape.imgui.ImGuiManager.setVisible(true);
+                    com.wsteam.wandscape.road.client.studio.RoadStudioOverlay.open();
                     liftCursorForUI();
                 }
             }
@@ -483,7 +483,7 @@ public final class WandscapePanelState {
             case ROAD_PROJECTION -> {
                 RoadPlacementState.enterProjection();
                 com.wsteam.wandscape.road.client.SplineEditorClientState.enterEditMode();
-                com.wsteam.wandscape.imgui.ImGuiManager.setVisible(true);
+                com.wsteam.wandscape.road.client.studio.RoadStudioOverlay.open();
                 liftCursorForUI();
             }
             case OVERVIEW -> com.wsteam.wandscape.overview.client.OverviewFlightController.enter();
@@ -517,7 +517,7 @@ public final class WandscapePanelState {
                 if (RoadPlacementState.isProjecting()) {
                     RoadPlacementState.suspendProjection();
                     com.wsteam.wandscape.road.client.SplineEditorClientState.exitEditMode();
-                    com.wsteam.wandscape.imgui.ImGuiManager.setVisible(false);
+                    com.wsteam.wandscape.road.client.studio.RoadStudioOverlay.close();
                 }
                 // If entered from overview, go back to pure overview
                 if (com.wsteam.wandscape.overview.client.OverviewClientState.isActive()) {

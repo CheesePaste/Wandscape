@@ -24,6 +24,10 @@ public final class RoadPlacementState {
 
     public enum ToolMode { REPLACE, FILL, DESTROY_FILL, SPLINE }
 
+    public enum GizmoTarget { NONE, START, END }
+
+    public enum AxisDrag { NONE, X_POS, X_NEG, Y_POS, Y_NEG, Z_POS, Z_NEG }
+
     private static volatile boolean projecting = false;
     private static volatile RoadPhase roadPhase = RoadPhase.BAR;
     private static volatile ToolMode activeTool = ToolMode.REPLACE;
@@ -31,6 +35,11 @@ public final class RoadPlacementState {
     private static volatile BlockPos startPos = null;
     private static volatile BlockPos endPos = null;
     private static volatile BlockPos ghostPos = null;
+
+    private static volatile GizmoTarget hoveredTarget = GizmoTarget.NONE;
+    private static volatile AxisDrag hoveredAxis = AxisDrag.NONE;
+    private static volatile GizmoTarget draggingTarget = GizmoTarget.NONE;
+    private static volatile AxisDrag draggingAxis = AxisDrag.NONE;
 
     /** The block ID right-clicked as reference in DESTROY_FILL mode. */
     private static volatile String refBlockId = "";
@@ -62,7 +71,15 @@ public final class RoadPlacementState {
         endPos = null;
         ghostPos = null;
         refBlockId = "";
+        resetGizmoState();
         Log.info(TAG, "[RoadPlacement] Exited placement mode");
+    }
+
+    public static void resetGizmoState() {
+        hoveredTarget = GizmoTarget.NONE;
+        hoveredAxis = AxisDrag.NONE;
+        draggingTarget = GizmoTarget.NONE;
+        draggingAxis = AxisDrag.NONE;
     }
 
     /**
@@ -72,6 +89,7 @@ public final class RoadPlacementState {
      */
     public static void suspendProjection() {
         projecting = false;
+        resetGizmoState();
         Log.info(TAG, "[RoadPlacement] Suspended placement mode (selection preserved)");
     }
 
@@ -168,7 +186,24 @@ public final class RoadPlacementState {
     public static void clearAll() {
         startPos = null;
         endPos = null;
+        resetGizmoState();
     }
+
+    // ── Gizmo ──
+
+    public static GizmoTarget getHoveredTarget() { return hoveredTarget; }
+    public static void setHoveredTarget(GizmoTarget target) { hoveredTarget = target; }
+
+    public static AxisDrag getHoveredAxis() { return hoveredAxis; }
+    public static void setHoveredAxis(AxisDrag axis) { hoveredAxis = axis; }
+
+    public static GizmoTarget getDraggingTarget() { return draggingTarget; }
+    public static void setDraggingTarget(GizmoTarget target) { draggingTarget = target; }
+
+    public static AxisDrag getDraggingAxis() { return draggingAxis; }
+    public static void setDraggingAxis(AxisDrag axis) { draggingAxis = axis; }
+
+    public static boolean isDraggingGizmo() { return draggingTarget != GizmoTarget.NONE && draggingAxis != AxisDrag.NONE; }
 
     // ── Ghost ──
 

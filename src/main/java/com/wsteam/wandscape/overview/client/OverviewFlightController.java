@@ -440,7 +440,15 @@ public final class OverviewFlightController {
         Minecraft mc = Minecraft.getInstance();
         // Don't block scroll when a screen is open (allow UI scrolling)
         if (mc.screen != null) return;
-        
+
+        // If spline editor or road placement is active or cursor is over a UI panel, don't intercept scroll!
+        if (com.wsteam.wandscape.road.client.SplineEditorClientState.isEditing()
+                || com.wsteam.wandscape.road.client.RoadPlacementState.isProjecting()
+                || com.wsteam.wandscape.road.client.studio.RoadStudioOverlay.isVisible()
+                || com.wsteam.wandscape.road.client.RoadEditorInputHelper.wantsMouse()) {
+            return;
+        }
+
         event.setCanceled(true);
         double delta = event.getScrollDeltaY();
         if (delta == 0) return;
@@ -491,9 +499,15 @@ public final class OverviewFlightController {
         Minecraft mc = Minecraft.getInstance();
         if (mc.screen != null) return;
 
-        boolean imguiWantsMouse = com.wsteam.wandscape.imgui.ImGuiManager.isInitialized()
-                && imgui.ImGui.getIO().getWantCaptureMouse();
-        if (imguiWantsMouse) return;
+        // If spline editor or road placement is active, don't intercept mouse clicks!
+        if (com.wsteam.wandscape.road.client.SplineEditorClientState.isEditing()
+                || com.wsteam.wandscape.road.client.RoadPlacementState.isProjecting()
+                || com.wsteam.wandscape.road.client.studio.RoadStudioOverlay.isVisible()) {
+            return;
+        }
+
+        boolean uiWantsMouse = com.wsteam.wandscape.road.client.RoadEditorInputHelper.wantsMouse();
+        if (uiWantsMouse) return;
 
         double guiScale = mc.getWindow().getGuiScale();
         double mouseX = mc.mouseHandler.xpos() / guiScale;
