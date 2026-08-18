@@ -152,6 +152,7 @@ public final class TouristSpawnSystem {
 
     @SubscribeEvent
     public void onServerTick(ServerTickEvent.Post event) {
+        try (var span = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("tourist.spawn.on_server_tick")) {
         MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
         if (server == null) return;
         ServerLevel level = server.overworld();
@@ -203,6 +204,7 @@ public final class TouristSpawnSystem {
             processNightDepartures(level);
         } else {
             pendingDepartures.clear(); // not in departure window, clear stale delays
+        }
         }
     }
 

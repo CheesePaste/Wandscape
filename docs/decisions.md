@@ -2,6 +2,25 @@
 
 本文件记录偏离直觉的设计选择及其原因，供后续开发快速理解「为什么这么做」。
 
+## 2026-08-18：TickProfiler 性能分析器与夜间寻路风暴（Pathfinding Storm）优化
+
+**背景与实测**：
+在 `tick rate 1000` 压测下，白天 MSPT < 10ms，而夜晚/傍晚会暴增到 50~64ms。通过新实现的 `TickProfiler`（`/wandscape profile on|off`）对三份采样数据（normal, jump, lot_tourist）分析抓出根因：
+1. **傍晚旅店并发寻路风暴**：未满条且无旅店的游客在 12000 时刻集中并发调用 `moveTo` 同步 A* 寻路（单次 3.5~7.3ms），多游客同时触发导致单 Tick 堆叠 20ms+。
+2. **排队就位/队序推进触发同步寻路**：队列推进 1 格时所有排队者同时调用 `getNavigation().moveTo`，单 Tick 产生 10~20ms 尖峰。
+3. **短距离反复路网规划**：<12 格距离仍调用 `RoadRouter.plan` 产生不必要计算。
+
+**优化决策**：
+- **旅店路由错峰与前置过滤**：
+  - 在 `TouristMoveGoal.tick()` 中增加 `!targetingHotel() && !hotelRouteBackoff.isActive()` 前置过滤。
+  - 增加 `(timeBase + entityId) % 10 == 0` 错峰轮询，将傍晚全镇游客的路由分散在 10 个 tick 内平滑执行。
+- **排队就位与队列推进轻量化**：
+  - 排队站位在 3 格内（`distSq <= 9.0`）时，直接使用 `tourist.getMoveControl().setWantedPosition(...)` 纯物理逼近，完全绕过原版 Pathfinder A* 寻路图（耗时由 3.5ms 降至 0.001ms）。
+  - 队首认领 spot 瞬间直接调用 `startActivityAtSpot()`，移除对 0 距离坐标的冗余 `moveTo` 调用。
+- **RoadWalkPlanner 短距离旁路**：起点与终点 <= 12 格时直接返回空列表（走直线），不走路网拆点计算。
+
+---
+
 ## 2026-08-18：游客通行能力修复——碰撞箱降为玩家身高 + 防卡死只看水平位移
 
 **需求**（用户实测 F3+B）：游客卡在 2 格高通道；碰撞箱 ~2 格、比玩家（1.8）高。且贴墙误寻路时反复跳跃，防卡死系统不触发，要求「x/z 不动即视作卡死，y 不管」。

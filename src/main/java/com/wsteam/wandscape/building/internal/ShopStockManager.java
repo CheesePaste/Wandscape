@@ -492,10 +492,12 @@ public final class ShopStockManager {
     /** Re-attempt restock for shops awaiting produced goods, on a slow heartbeat. */
     @SubscribeEvent
     public void onServerTick(ServerTickEvent.Post event) {
-        if (pendingRestock.isEmpty()) return;
-        if (++restockRetryTicks < RESTOCK_RETRY_INTERVAL_TICKS) return;
-        restockRetryTicks = 0;
-        retryPendingRestocks();
+        try (var span = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("building.shop_stock.on_server_tick")) {
+            if (pendingRestock.isEmpty()) return;
+            if (++restockRetryTicks < RESTOCK_RETRY_INTERVAL_TICKS) return;
+            restockRetryTicks = 0;
+            retryPendingRestocks();
+        }
     }
 
     private void retryPendingRestocks() {

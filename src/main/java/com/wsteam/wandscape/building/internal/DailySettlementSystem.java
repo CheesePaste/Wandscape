@@ -41,6 +41,7 @@ public final class DailySettlementSystem {
 
     @SubscribeEvent
     public void onServerTick(ServerTickEvent.Post event) {
+        try (var span = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("building.settlement.on_server_tick")) {
         MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
         if (server == null) return;
         ServerLevel level = server.overworld();
@@ -59,6 +60,7 @@ public final class DailySettlementSystem {
 
         settledDay = currentDay;
         fireSettlement(level, currentDay);
+        }
     }
 
     // ── Settlement fire ──

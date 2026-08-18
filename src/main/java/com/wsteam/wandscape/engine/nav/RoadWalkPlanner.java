@@ -41,6 +41,11 @@ public final class RoadWalkPlanner {
             return Collections.emptyList();
         }
 
+        // Short distance (<= 12 blocks): direct walking is always better than road network routing
+        if (from.distSqr(to) <= 144) {
+            return Collections.emptyList();
+        }
+
         RoadNetwork network = RoadSavedData.getOrCreate(serverLevel).getNetwork();
         if (network == null || network.isEmpty()) {
             return Collections.emptyList();

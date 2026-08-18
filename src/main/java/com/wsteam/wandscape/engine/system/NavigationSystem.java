@@ -50,6 +50,7 @@ public class NavigationSystem implements System {
 
     @Override
     public void update(World world, float delta) {
+        try (var span = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("ecs.navigation.tick")) {
         tickCounter++;
 
         List<Long> npcs = world.query(NavigationState.class, Position.class);
@@ -105,6 +106,7 @@ public class NavigationSystem implements System {
                 case TELEPORT_WAITING -> tickTeleportWaiting(nav, npcId, world);
                 case TELEPORT_RITUAL -> { /* ritual in private queue; arrival checked at top */ }
             }
+        }
         }
     }
 

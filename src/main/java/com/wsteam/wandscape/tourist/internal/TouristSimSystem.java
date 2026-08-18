@@ -161,6 +161,7 @@ public final class TouristSimSystem {
 
     @SubscribeEvent
     public void onServerTick(ServerTickEvent.Post event) {
+        try (var span = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("tourist.sim.on_server_tick")) {
         MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
         if (server == null) return;
         ServerLevel level = server.overworld();
@@ -180,6 +181,7 @@ public final class TouristSimSystem {
 
         if (++tickCounter % SIM_INTERVAL != 0) return;
         runTick(level);
+        }
     }
 
     // ── 玩家睡觉跳过夜晚：夜间批量快进（睡→醒，让夜晚后果照常发生）──
@@ -197,6 +199,7 @@ public final class TouristSimSystem {
     }
 
     private void runTick(ServerLevel level) {
+        try (var span = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("tourist.sim.run_tick")) {
         Map<UUID, TouristShadow> shadows = registry.getShadows();
         if (shadows.isEmpty()) return;
 
@@ -265,9 +268,10 @@ public final class TouristSimSystem {
                 simStep(level, s);
             }
         }
-        if (tickCounter % 200 == 0) {
-            Log.info(TAG, "[Tourist][diag] runTick shadows={} observed={} (entity-null={}) simmed={} frozen={}",
-                    shadows.size(), observedCount, stuckCount, simmedCount, frozenCount);
+        if (observedCount > 0 || simmedCount > 0 || stuckCount > 0) {
+            Log.info(TAG, "[Tourist] sim tick #{} — observed={}, simmed={}, stuck={}, frozen={}, total={}",
+                    tickCounter / SIM_INTERVAL, observedCount, simmedCount, stuckCount, frozenCount, shadows.size());
+        }
         }
     }
 
@@ -897,6 +901,7 @@ public final class TouristSimSystem {
     // ── Departure ──
 
     private void checkDeparture(ServerLevel level, TouristShadow s) {
+        try (var span = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("tourist.sim.check_departure")) {
         UUID hotel = s.getCheckedInBuildingId();
         long dayTime = level.getDayTime() % 24000;
         // 离场/清场只在 18000-24000 窗口（与实体路径一致，sim 不再 14000 起提前清人）
@@ -939,6 +944,7 @@ public final class TouristSimSystem {
         }
         if (leave) {
             depart(level, s);
+        }
         }
     }
 

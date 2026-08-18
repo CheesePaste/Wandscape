@@ -458,6 +458,7 @@ public final class TouristSimulation {
      */
     @Nullable
     public static BuildingState selectNextTarget(ServerLevel level, TouristStateHost t, boolean requireLoaded) {
+        try (var span = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("tourist.sim.select_next_target")) {
         UUID colonyId = t.getColonyId();
         if (colonyId == null) return null;
         BuildingApi api = getBuildingApi();
@@ -526,6 +527,7 @@ public final class TouristSimulation {
         List<BuildingState> candidates = nightHotel && !hotels.isEmpty() ? hotels : normal;
         if (candidates.isEmpty()) return null;
         return weightedPick(level, t, candidates, cfgCache);
+        }
     }
 
     /** Find-Best-Action 评分：满意度偏好（总三值增益） + 精力/钱包紧急加分 − 排队惩罚。 */
@@ -639,6 +641,7 @@ public final class TouristSimulation {
     @javax.annotation.Nullable
     public static BuildingState findHotelTarget(ServerLevel level, TouristStateHost t,
             boolean requireLoaded) {
+        try (var span = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("tourist.sim.find_hotel_target")) {
         UUID colonyId = t.getColonyId();
         if (colonyId == null) return null;
         BuildingApi api = getBuildingApi();
@@ -664,6 +667,7 @@ public final class TouristSimulation {
             }
         }
         return best;
+        }
     }
 
     // ── Helpers ──

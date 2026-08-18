@@ -42,6 +42,7 @@ public class SchedulerSystem implements System {
 
     @Override
     public void update(World world, float delta) {
+        try (var span = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("ecs.scheduler.tick")) {
         tickCounter++;
         if (tickCounter % heartbeatInterval != 0) return;
 
@@ -174,6 +175,7 @@ public class SchedulerSystem implements System {
                             cm != null ? cm.colonyId().toString().substring(0, 8) : "?");
                 }
             }
+        }
         }
     }
 

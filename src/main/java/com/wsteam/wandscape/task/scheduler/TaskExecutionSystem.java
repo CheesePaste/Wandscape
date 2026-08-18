@@ -55,6 +55,7 @@ public class TaskExecutionSystem implements System {
 
     @Override
     public void update(World world, float delta) {
+        try (var span = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("ecs.task_execution.tick")) {
         OpExecutorRegistry registry = world.opExecutors;
         if (registry == null) return;
 
@@ -100,6 +101,7 @@ public class TaskExecutionSystem implements System {
             }
 
             processNpc(world, npcId, exec, queue, registry);
+        }
         }
     }
 

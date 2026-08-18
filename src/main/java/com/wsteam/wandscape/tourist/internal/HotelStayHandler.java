@@ -83,35 +83,37 @@ public final class HotelStayHandler {
      * @return true if check-in succeeded
      */
     public boolean checkIn(TouristEntity tourist, UUID buildingId, UUID colonyId) {
-        BuildingConfig config = getBuildingConfig(buildingId);
-        if (config == null || config.service() == null) return false;
+        try (var span = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("hotel.check_in")) {
+            BuildingConfig config = getBuildingConfig(buildingId);
+            if (config == null || config.service() == null) return false;
 
-        ServiceConfig svc = config.service();
-        int maxOccupancy = svc.maxOccupancy();
-        if (maxOccupancy <= 0) return false;
+            ServiceConfig svc = config.service();
+            int maxOccupancy = svc.maxOccupancy();
+            if (maxOccupancy <= 0) return false;
 
-        Set<UUID> guests = occupancy.computeIfAbsent(buildingId, k -> ConcurrentHashMap.newKeySet());
-        // 已是该旅店住店客（夜晚回店重上床 / 磁盘加载恢复登记）→ 幂等，跳过容量检查。
-        // 磁盘加载时 occupancy 从空重建，若旅店被其它住店客占满，正常 checkIn 会失败而误清住店登记。
-        if (isResidentAt(tourist.getUUID(), buildingId)) {
+            Set<UUID> guests = occupancy.computeIfAbsent(buildingId, k -> ConcurrentHashMap.newKeySet());
+            // 已是该旅店住店客（夜晚回店重上床 / 磁盘加载恢复登记）→ 幂等，跳过容量检查。
+            // 磁盘加载时 occupancy 从空重建，若旅店被其它住店客占满，正常 checkIn 会失败而误清住店登记。
+            if (isResidentAt(tourist.getUUID(), buildingId)) {
+                guests.add(tourist.getUUID());
+                touristToHotel.put(tourist.getUUID(), buildingId);
+                tourist.setCheckedInBuildingId(buildingId);
+                return true;
+            }
+
+            if (guests.size() >= maxOccupancy) {
+                return false;
+            }
+
             guests.add(tourist.getUUID());
             touristToHotel.put(tourist.getUUID(), buildingId);
             tourist.setCheckedInBuildingId(buildingId);
+            tourist.setHotelCheckinTime(tourist.tickCount);
+
+            Log.info(TAG, "[Tourist] {} checked into {} (occupancy {}/{})",
+                    tourist.getTouristName(), shortId(buildingId), guests.size(), maxOccupancy);
             return true;
         }
-
-        if (guests.size() >= maxOccupancy) {
-            return false;
-        }
-
-        guests.add(tourist.getUUID());
-        touristToHotel.put(tourist.getUUID(), buildingId);
-        tourist.setCheckedInBuildingId(buildingId);
-        tourist.setHotelCheckinTime(tourist.tickCount);
-
-        Log.info(TAG, "[Tourist] {} checked into {} (occupancy {}/{})",
-                tourist.getTouristName(), shortId(buildingId), guests.size(), maxOccupancy);
-        return true;
     }
 
     /**
@@ -122,38 +124,40 @@ public final class HotelStayHandler {
      * <p>幂等：heartbeat 在晨间窗口（1000-1200）每 20 tick 跑一次，已醒且已回位的游客跳过。
      */
     public void wakeUp(TouristEntity tourist, ServerLevel level) {
-        if (!tourist.isSleeping() && tourist.getWakeUpPos() == null) return;
+        try (var span = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("hotel.wake_up")) {
+            if (!tourist.isSleeping() && tourist.getWakeUpPos() == null) return;
 
-        if (tourist.isSleeping()) {
-            tourist.stopSleeping();
-        }
-        BlockPos wakeUp = tourist.getWakeUpPos();
-        if (wakeUp != null) {
-            double floorY = TouristSimulation.getFloorSurfaceY(level, wakeUp);
-            tourist.setPos(wakeUp.getX() + 0.5, floorY, wakeUp.getZ() + 0.5);
-            tourist.resetFallDistance();
-            tourist.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
-            tourist.setWakeUpPos(null);
-        }
-        tourist.applyState(TouristState.IDLE);
-        tourist.setHotelCheckinTime(0);
-        tourist.setNightsStayed(tourist.getNightsStayed() + 1);
-        tourist.setEnergy(WandscapeConstants.TOURIST_MAX_ENERGY);
+            if (tourist.isSleeping()) {
+                tourist.stopSleeping();
+            }
+            BlockPos wakeUp = tourist.getWakeUpPos();
+            if (wakeUp != null) {
+                double floorY = TouristSimulation.getFloorSurfaceY(level, wakeUp);
+                tourist.setPos(wakeUp.getX() + 0.5, floorY, wakeUp.getZ() + 0.5);
+                tourist.resetFallDistance();
+                tourist.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+                tourist.setWakeUpPos(null);
+            }
+            tourist.applyState(TouristState.IDLE);
+            tourist.setHotelCheckinTime(0);
+            tourist.setNightsStayed(tourist.getNightsStayed() + 1);
+            tourist.setEnergy(WandscapeConstants.TOURIST_MAX_ENERGY);
 
-        // 一晚满意值结算（与参观一致）+ Emit HOTEL_WAKEUP narrative
-        UUID buildingId = touristToHotel.get(tourist.getUUID());
-        if (buildingId != null) {
-            TouristSimulation.grantHotelNightStay(level, tourist, buildingId);
-            String bldType = getBuildingTypeId(buildingId);
-            String bldName = getBuildingDisplayName(buildingId, bldType);
-            NarrativeEvent wakeupEvent = NarrativeGenerator.generateHotelWakeup(
-                    tourist.getTouristName(), bldType != null ? bldType : "inn",
-                    bldName, level.getGameTime());
-            emitNarrativeEvent(wakeupEvent);
-        }
+            // 一晚满意值结算（与参观一致）+ Emit HOTEL_WAKEUP narrative
+            UUID buildingId = touristToHotel.get(tourist.getUUID());
+            if (buildingId != null) {
+                TouristSimulation.grantHotelNightStay(level, tourist, buildingId);
+                String bldType = getBuildingTypeId(buildingId);
+                String bldName = getBuildingDisplayName(buildingId, bldType);
+                NarrativeEvent wakeupEvent = NarrativeGenerator.generateHotelWakeup(
+                        tourist.getTouristName(), bldType != null ? bldType : "inn",
+                        bldName, level.getGameTime());
+                emitNarrativeEvent(wakeupEvent);
+            }
 
-        Log.info(TAG, "[Tourist] {} woke up at {} (still resident, energy → 100)",
-                tourist.getTouristName(), tourist.blockPosition().toShortString());
+            Log.info(TAG, "[Tourist] {} woke up at {} (still resident, energy → 100)",
+                    tourist.getTouristName(), tourist.blockPosition().toShortString());
+        }
     }
 
     /**
@@ -161,36 +165,38 @@ public final class HotelStayHandler {
      * {@link #wakeUp} 负责，离场时不再重复计入。
      */
     public void checkOut(TouristEntity tourist, ServerLevel level) {
-        UUID buildingId = touristToHotel.remove(tourist.getUUID());
-        if (buildingId == null) return;
+        try (var span = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("hotel.check_out")) {
+            UUID buildingId = touristToHotel.remove(tourist.getUUID());
+            if (buildingId == null) return;
 
-        Set<UUID> guests = occupancy.get(buildingId);
-        if (guests != null) {
-            guests.remove(tourist.getUUID());
-            if (guests.isEmpty()) occupancy.remove(buildingId);
+            Set<UUID> guests = occupancy.get(buildingId);
+            if (guests != null) {
+                guests.remove(tourist.getUUID());
+                if (guests.isEmpty()) occupancy.remove(buildingId);
+            }
+            touristToBed.remove(tourist.getUUID());
+
+            // Wake up and return to the spot where the tourist stood at check-in,
+            // before it teleported into a bed.
+            if (tourist.isSleeping()) {
+                tourist.stopSleeping();
+            }
+            BlockPos wakeUp = tourist.getWakeUpPos();
+            if (wakeUp != null) {
+                double floorY = TouristSimulation.getFloorSurfaceY(level, wakeUp);
+                tourist.setPos(wakeUp.getX() + 0.5, floorY, wakeUp.getZ() + 0.5);
+                tourist.resetFallDistance();
+                tourist.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+                tourist.setWakeUpPos(null);
+            }
+            tourist.applyState(TouristState.IDLE);
+
+            tourist.setCheckedInBuildingId(null);
+            tourist.setHotelCheckinTime(0);
+
+            Log.info(TAG, "[Tourist] {} checked out of {} (departed)",
+                    tourist.getTouristName(), shortId(buildingId));
         }
-        touristToBed.remove(tourist.getUUID());
-
-        // Wake up and return to the spot where the tourist stood at check-in,
-        // before it teleported into a bed.
-        if (tourist.isSleeping()) {
-            tourist.stopSleeping();
-        }
-        BlockPos wakeUp = tourist.getWakeUpPos();
-        if (wakeUp != null) {
-            double floorY = TouristSimulation.getFloorSurfaceY(level, wakeUp);
-            tourist.setPos(wakeUp.getX() + 0.5, floorY, wakeUp.getZ() + 0.5);
-            tourist.resetFallDistance();
-            tourist.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
-            tourist.setWakeUpPos(null);
-        }
-        tourist.applyState(TouristState.IDLE);
-
-        tourist.setCheckedInBuildingId(null);
-        tourist.setHotelCheckinTime(0);
-
-        Log.info(TAG, "[Tourist] {} checked out of {} (departed)",
-                tourist.getTouristName(), shortId(buildingId));
     }
 
     /**
@@ -199,23 +205,25 @@ public final class HotelStayHandler {
      * 床上睡觉纯视觉（不改床方块占用状态，无占用泄漏），床位分配只记在内存。
      */
     public void settleIntoBed(TouristEntity tourist, ServerLevel level, UUID buildingId) {
-        tourist.setWakeUpPos(tourist.blockPosition());
-        BlockPos bed = findBed(level, buildingId, tourist.blockPosition(), true);
-        if (bed == null) bed = findBed(level, buildingId, tourist.blockPosition(), false); // 床不够 → 躺第一张（最近）
-        if (bed != null) {
-            tourist.setPos(bed.getX() + 0.5, bed.getY() + 0.6875, bed.getZ() + 0.5);
-            tourist.resetFallDistance();
-            tourist.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
-            tourist.setSleepingPos(bed);
-            tourist.applyState(TouristState.SLEEPING);
-            touristToBed.put(tourist.getUUID(), bed);
-            Log.info(TAG, "[Tourist] {} sleeping in bed at {} (hotel {})",
-                    tourist.getTouristName(), bed.toShortString(), shortId(buildingId));
-            return;
+        try (var span = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("hotel.settle_into_bed")) {
+            tourist.setWakeUpPos(tourist.blockPosition());
+            BlockPos bed = findBed(level, buildingId, tourist.blockPosition(), true);
+            if (bed == null) bed = findBed(level, buildingId, tourist.blockPosition(), false); // 床不够 → 躺第一张（最近）
+            if (bed != null) {
+                tourist.setPos(bed.getX() + 0.5, bed.getY() + 0.6875, bed.getZ() + 0.5);
+                tourist.resetFallDistance();
+                tourist.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+                tourist.setSleepingPos(bed);
+                tourist.applyState(TouristState.SLEEPING);
+                touristToBed.put(tourist.getUUID(), bed);
+                Log.info(TAG, "[Tourist] {} sleeping in bed at {} (hotel {})",
+                        tourist.getTouristName(), bed.toShortString(), shortId(buildingId));
+                return;
+            }
+            // 没床 → 卡原地（不动，等清晨晨起）
+            Log.info(TAG, "[Tourist] {} checked into {} but the hotel has no beds — staying put",
+                    tourist.getTouristName(), shortId(buildingId));
         }
-        // 没床 → 卡原地（不动，等清晨晨起）
-        Log.info(TAG, "[Tourist] {} checked into {} but the hotel has no beds — staying put",
-                tourist.getTouristName(), shortId(buildingId));
     }
 
     /**
@@ -224,32 +232,34 @@ public final class HotelStayHandler {
      */
     @Nullable
     private BlockPos findBed(ServerLevel level, UUID buildingId, BlockPos near, boolean requireUnassigned) {
-        BuildingState state = getBuildingState(buildingId);
-        if (state == null) return null;
-        BoundingBox box = state.getBounds();
-        if (box == null) return null;
+        try (var span = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("hotel.find_bed")) {
+            BuildingState state = getBuildingState(buildingId);
+            if (state == null) return null;
+            BoundingBox box = state.getBounds();
+            if (box == null) return null;
 
-        Set<BlockPos> assigned = requireUnassigned ? new HashSet<>(touristToBed.values()) : Set.of();
-        BlockPos best = null;
-        double bestSq = Double.MAX_VALUE;
-        for (int x = box.minX(); x <= box.maxX(); x++) {
-            for (int z = box.minZ(); z <= box.maxZ(); z++) {
-                for (int y = box.minY(); y <= box.maxY(); y++) {
-                    BlockPos p = new BlockPos(x, y, z);
-                    BlockState bs = level.getBlockState(p);
-                    if (!(bs.getBlock() instanceof BedBlock)) continue;
-                    if (bs.getValue(BedBlock.OCCUPIED)) continue;
-                    BlockPos head = bedHeadPos(bs, p);
-                    if (assigned.contains(head)) continue;
-                    double sq = head.distSqr(near);
-                    if (sq < bestSq) {
-                        bestSq = sq;
-                        best = head;
+            Set<BlockPos> assigned = requireUnassigned ? new HashSet<>(touristToBed.values()) : Set.of();
+            BlockPos best = null;
+            double bestSq = Double.MAX_VALUE;
+            for (int x = box.minX(); x <= box.maxX(); x++) {
+                for (int z = box.minZ(); z <= box.maxZ(); z++) {
+                    for (int y = box.minY(); y <= box.maxY(); y++) {
+                        BlockPos p = new BlockPos(x, y, z);
+                        BlockState bs = level.getBlockState(p);
+                        if (!(bs.getBlock() instanceof BedBlock)) continue;
+                        if (bs.getValue(BedBlock.OCCUPIED)) continue;
+                        BlockPos head = bedHeadPos(bs, p);
+                        if (assigned.contains(head)) continue;
+                        double sq = head.distSqr(near);
+                        if (sq < bestSq) {
+                            bestSq = sq;
+                            best = head;
+                        }
                     }
                 }
             }
+            return best;
         }
-        return best;
     }
 
     /** The head half of a bed (where the sleeper lies with its head on the pillow). */
@@ -263,16 +273,18 @@ public final class HotelStayHandler {
     /** Returns the number of currently checked-in tourists in a hotel.
      *  Derived from the shadow registry so unloaded (sim) guests also count. */
     public int getOccupancy(UUID buildingId) {
-        TouristSimSystem sim = TouristSimSystem.getActive();
-        if (sim != null && sim.getRegistry() != null) {
-            int n = 0;
-            for (TouristShadow s : sim.getRegistry().getShadows().values()) {
-                if (buildingId.equals(s.getCheckedInBuildingId())) n++;
+        try (var span = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("hotel.get_occupancy")) {
+            TouristSimSystem sim = TouristSimSystem.getActive();
+            if (sim != null && sim.getRegistry() != null) {
+                int n = 0;
+                for (TouristShadow s : sim.getRegistry().getShadows().values()) {
+                    if (buildingId.equals(s.getCheckedInBuildingId())) n++;
+                }
+                return n;
             }
-            return n;
+            Set<UUID> guests = occupancy.get(buildingId);
+            return guests != null ? guests.size() : 0;
         }
-        Set<UUID> guests = occupancy.get(buildingId);
-        return guests != null ? guests.size() : 0;
     }
 
     /** Returns true if the hotel has vacancy. */
@@ -317,34 +329,36 @@ public final class HotelStayHandler {
 
     @SubscribeEvent
     public void onServerTick(ServerTickEvent.Post event) {
-        tickCounter++;
-        if (tickCounter % 20 != 0) return; // every second
+        try (var span = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("hotel.on_server_tick")) {
+            tickCounter++;
+            if (tickCounter % 20 != 0) return; // every second
 
-        ServerLevel level = getServerLevel();
-        if (level == null) return;
+            ServerLevel level = getServerLevel();
+            if (level == null) return;
 
-        long dayTime = level.getDayTime() % 24000;
-        // Morning wake-up window: 1000-1200 (清晨起床，精力回满；住店客保留登记)
-        boolean isMorning = dayTime >= 1000 && dayTime < 1200;
+            long dayTime = level.getDayTime() % 24000;
+            // Morning wake-up window: 1000-1200 (清晨起床，精力回满；住店客保留登记)
+            boolean isMorning = dayTime >= 1000 && dayTime < 1200;
 
-        for (var entry : touristToHotel.entrySet()) {
-            UUID touristId = entry.getKey();
-            TouristEntity tourist = findTourist(level, touristId);
-            if (tourist == null || !tourist.isAlive()) {
-                // 实体未加载：若影子仍是住店客（sim 驱动），跳过——sim 自己处理晨起与回店；
-                // 实体真没了（被杀/离场已由 onTouristKilled/onTouristDepart 清理）才强制退房。
-                if (shadowStillResident(touristId)) continue;
-                forceCheckOut(touristId);
-                continue;
+            for (var entry : touristToHotel.entrySet()) {
+                UUID touristId = entry.getKey();
+                TouristEntity tourist = findTourist(level, touristId);
+                if (tourist == null || !tourist.isAlive()) {
+                    // 实体未加载：若影子仍是住店客（sim 驱动），跳过——sim 自己处理晨起与回店；
+                    // 实体真没了（被杀/离场已由 onTouristKilled/onTouristDepart 清理）才强制退房。
+                    if (shadowStillResident(touristId)) continue;
+                    forceCheckOut(touristId);
+                    continue;
+                }
+
+                // Morning wake-up: keep the tourist registered as a resident
+                if (isMorning) {
+                    wakeUp(tourist, level);
+                    continue;
+                }
+
+                // No gradual energy recovery — energy restored to 100 at morning wake-up only
             }
-
-            // Morning wake-up: keep the tourist registered as a resident
-            if (isMorning) {
-                wakeUp(tourist, level);
-                continue;
-            }
-
-            // No gradual energy recovery — energy restored to 100 at morning wake-up only
         }
     }
 

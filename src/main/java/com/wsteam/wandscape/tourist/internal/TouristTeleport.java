@@ -50,6 +50,7 @@ public final class TouristTeleport {
     @Nullable
     public static BlockPos findSafeSpot(ServerLevel level, BlockPos origin,
             @Nullable UUID colonyId, @Nullable UUID targetBuildingId) {
+        try (var span = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("tourist.teleport.find_safe_spot")) {
         // 1. Nearest built road within the search radius.
         BlockPos road = nearestRoadSpot(level, origin, colonyId);
         if (road != null) return road;
@@ -62,6 +63,7 @@ public final class TouristTeleport {
         if (here != null) return here;
         Log.warn(TAG, "No safe rescue spot near {}", origin.toShortString());
         return null;
+        }
     }
 
     /**
@@ -72,16 +74,19 @@ public final class TouristTeleport {
     @Nullable
     public static BlockPos findSafeSpotNearEntry(ServerLevel level, BlockPos entry,
             @Nullable UUID colonyId) {
+        try (var span = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("tourist.teleport.find_safe_spot_near_entry")) {
         if (entry == null) return null;
         BlockPos near = walkableOutsideBuilding(level, entry.getX(), entry.getY(), entry.getZ(), colonyId);
         if (near != null) return near;
         return findSafeSpot(level, entry, colonyId, null);
+        }
     }
 
     // ── Priority 1: nearest built road ──
 
     @Nullable
     private static BlockPos nearestRoadSpot(ServerLevel level, BlockPos origin, @Nullable UUID colonyId) {
+        try (var span = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("tourist.teleport.nearest_road")) {
         RoadNetwork net = roadNetwork(colonyId);
         if (net == null || net.isEmpty()) return null;
 
@@ -108,6 +113,7 @@ public final class TouristTeleport {
         if (isFloatingSurface(level, ground)) return null;
         if (isInsideAnyBuilding(level, ground, colonyId)) return null;
         return ground;
+        }
     }
 
     @Nullable
@@ -124,6 +130,7 @@ public final class TouristTeleport {
     @Nullable
     private static BlockPos peripherySpot(ServerLevel level, BlockPos origin,
             @Nullable UUID colonyId, @Nullable UUID targetBuildingId) {
+        try (var span = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("tourist.teleport.periphery")) {
         // 1. The building's documented entry point already sits just outside its bbox.
         if (targetBuildingId != null) {
             BlockPos entry = getEntryPoint(targetBuildingId);
@@ -168,6 +175,7 @@ public final class TouristTeleport {
             }
         }
         return null;
+        }
     }
 
     @Nullable
