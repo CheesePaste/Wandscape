@@ -818,9 +818,7 @@ public class TouristMoveGoal extends Goal {
             tourist.getNavigation().stop();
             return;
         }
-        BlockPos raw = TouristSimulation.queueSlotPos(level, buildingId, queueSpotIndex, slot);
-        BlockPos ground = raw != null ? findGround(raw.getX(), raw.getY(), raw.getZ()) : null;
-        BlockPos target = ground != null ? ground : raw;
+        BlockPos target = TouristSimulation.queueSlotPos(level, buildingId, queueSpotIndex, slot);
         if (target == null) {
             tourist.getNavigation().stop();
             return;
@@ -2122,17 +2120,19 @@ public class TouristMoveGoal extends Goal {
      * and requires two solid blocks below so it never stops on a floating roof or a
      * thin shelf. Returns the block standing ON the ground.
      */
+    /**
+     * Find a safe, walkable ground spot at (x, z) near baseY.
+     * Searches a bounded vertical window (baseY+3 to baseY-6) to avoid scanning the entire 300+ block world height.
+     */
     @Nullable
     private BlockPos findGround(int x, int baseY, int z) {
         var lvl = tourist.level();
-        int topY = Math.max(lvl.getMinBuildHeight(),
-                Math.min(lvl.getMaxBuildHeight() - 1,
-                        lvl.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z)));
-        BlockPos.MutableBlockPos mp = new BlockPos.MutableBlockPos(x, topY, z);
-        while (mp.getY() > lvl.getMinBuildHeight()) {
+        int startY = Math.min(lvl.getMaxBuildHeight() - 1, baseY + 3);
+        int endY = Math.max(lvl.getMinBuildHeight(), baseY - 6);
+        BlockPos.MutableBlockPos mp = new BlockPos.MutableBlockPos(x, startY, z);
+        while (mp.getY() >= endY) {
             if (lvl.getBlockState(mp).isAir()
-                    && lvl.getBlockState(mp.below()).isSolid()
-                    && lvl.getBlockState(mp.below(2)).isSolid()) {
+                    && lvl.getBlockState(mp.below()).isSolid()) {
                 return mp.immutable();
             }
             mp.move(0, -1, 0);
