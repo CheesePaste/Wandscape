@@ -2,11 +2,15 @@ package com.wsteam.wandscape.shared.ui.panel;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.PauseScreen;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.client.event.MovementInputUpdateEvent;
 import net.neoforged.neoforge.client.event.ScreenEvent;
 import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 import org.lwjgl.glfw.GLFW;
 import com.wsteam.wandscape.building.data.BuildingConfig;
@@ -15,6 +19,7 @@ import com.wsteam.wandscape.building.internal.BuildingUnlockChecker;
 import com.wsteam.wandscape.projection.client.ProjectionClientState;
 import com.wsteam.wandscape.road.client.RoadPlacementState;
 import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket;
 
 
 /**
@@ -54,6 +59,7 @@ public final class WandscapePanelController {
         bus.addListener(MovementInputUpdateEvent.class, WandscapePanelController::onMovementInputUpdate);
         bus.addListener(ClientTickEvent.Post.class, WandscapePanelController::onClientTickPost);
         bus.addListener(InputEvent.MouseButton.Pre.class, WandscapePanelController::onMouseButtonPre);
+        bus.addListener(InputEvent.MouseButton.Pre.class, WandscapePanelController::onMouseButtonPreGrabbed);
         bus.addListener(InputEvent.MouseScrollingEvent.class, WandscapePanelController::onMouseScroll);
         bus.addListener(InputEvent.Key.class, WandscapePanelController::onKey);
         bus.addListener(ScreenEvent.Opening.class, WandscapePanelController::onScreenOpening);
@@ -295,6 +301,47 @@ public final class WandscapePanelController {
                 return;
             }
         }
+    }
+
+    /** 准心右键空工地场景的判定距离（格）。 */
+    private static final double GROUND_GHOST_REACH = 8.0;
+
+    /**
+     * Ground（NONE）模式下的准心右键拦截：当射线没命中任何方块、但穿过一个
+     * 未建成建筑边界框（虚影区域）时，视为右键该建筑——一片方块都还没放置的
+     * 工地也能打开其工地 UI。命中后取消本次点击，原版不再消费物品/放置方块。
+     * 俯瞰模式的同类逻辑在 OverviewFlightController.performRaycast 中。
+     */
+    static void onMouseButtonPreGrabbed(InputEvent.MouseButton.Pre event) {
+        if (!WandscapePanelState.isPanelOpen() || WandscapePanelState.isPanelHidden()) return;
+        if (WandscapePanelState.isCursorLifted()) return;   // UI 层 → 由 onMouseButtonPre 处理
+        if (event.getButton() != GLFW.GLFW_MOUSE_BUTTON_RIGHT) return;
+        if (event.getAction() != GLFW.GLFW_PRESS) return;
+
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.screen != null || mc.player == null || mc.level == null) return;
+        if (WandscapePanelState.getActiveSubMode() != WandscapePanelState.SubMode.NONE) return;
+
+        // 与准心（原版物品射线同起点）一致。
+        Vec3 origin = mc.player.getEyePosition();
+        Vec3 end = origin.add(mc.player.getLookAngle().scale(GROUND_GHOST_REACH));
+
+        // 方块命中距离与虚影框入口距离比大小：框更近（俯视时射线先穿虚影顶面、
+        // 后落地形）→ 视为右键该空白工地并接管；否则交回原版/服务端右键方块逻辑。
+        ClipContext ctx = new ClipContext(origin, end, ClipContext.Block.OUTLINE,
+                ClipContext.Fluid.NONE, mc.player);
+        var blockHit = mc.level.clip(ctx);
+        double blockDist = blockHit.getType() == HitResult.Type.BLOCK
+                ? blockHit.getLocation().distanceToSqr(origin) : Double.MAX_VALUE;
+
+        var boxHit = BuildingAreaSyncPacket.raycastUnbuilt(origin, end);
+        if (boxHit == null || boxHit.distSq() >= blockDist) return;
+
+        PacketDistributor.sendToServer(
+                new com.wsteam.wandscape.overview.network.OverviewInteractPacket(boxHit.pos()));
+        Log.info(TAG, "[Panel] Ground right-click on empty construction site → open building UI at {}",
+                boxHit.pos());
+        event.setCanceled(true);
     }
 
     // ── Hit detection ──

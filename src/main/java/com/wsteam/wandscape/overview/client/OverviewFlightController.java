@@ -560,23 +560,31 @@ public final class OverviewFlightController {
                 ProjectionClientState.setGhostPos(null);
                 ProjectionClientState.setOverlapDetected(false);
             }
-        } else if (blockHit.getType() == HitResult.Type.BLOCK) {
-            BlockPos hitPos = blockHit.getBlockPos();
-            UUID buildingId = findBuildingAt(hitPos);
-            OverviewClientState.setTarget(hitPos, buildingId);
-
-            // When build mode is projecting in overview, check overlap for pinned ghost
-            // (Ghost position update is handled per-frame in updateGhostPositionPerFrame)
-            if (ProjectionClientState.isProjecting() && ProjectionClientState.isPinned()) {
-                BlockPos fixed = ProjectionClientState.getGhostPos();
-                if (fixed != null) {
-                    var api = com.wsteam.wandscape.shared.registry.WandscapeApis.getBuildingApi();
-                    ProjectionClientState.setOverlapDetected(api != null && api.getBuildingAt(fixed) != null);
-                }
-            }
         } else {
-            OverviewClientState.clearTarget();
-            OverviewClientState.clearTargetEntity();
+            // 空工地优先于地形方块：俯视时射线会被地形挡住，但若先穿过未建成建筑
+            // 边界框（虚影区域），把射线入口距离和方块命中距离比大小——框顶面更近就
+            // 视为选中该建筑，整片空白工地都能右键打开 UI。
+            var boxHit = BuildingAreaSyncPacket.raycastUnbuilt(origin, end);
+            if (boxHit != null && boxHit.distSq() < blockDist) {
+                OverviewClientState.setTarget(boxHit.pos(), boxHit.buildingId());
+            } else if (blockHit.getType() == HitResult.Type.BLOCK) {
+                BlockPos hitPos = blockHit.getBlockPos();
+                UUID buildingId = findBuildingAt(hitPos);
+                OverviewClientState.setTarget(hitPos, buildingId);
+
+                // When build mode is projecting in overview, check overlap for pinned ghost
+                // (Ghost position update is handled per-frame in updateGhostPositionPerFrame)
+                if (ProjectionClientState.isProjecting() && ProjectionClientState.isPinned()) {
+                    BlockPos fixed = ProjectionClientState.getGhostPos();
+                    if (fixed != null) {
+                        var api = com.wsteam.wandscape.shared.registry.WandscapeApis.getBuildingApi();
+                        ProjectionClientState.setOverlapDetected(api != null && api.getBuildingAt(fixed) != null);
+                    }
+                }
+            } else {
+                OverviewClientState.clearTarget();
+                OverviewClientState.clearTargetEntity();
+            }
         }
     }
 

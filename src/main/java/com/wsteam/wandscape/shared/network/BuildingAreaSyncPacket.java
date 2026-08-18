@@ -2,6 +2,7 @@ package com.wsteam.wandscape.shared.network;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import com.wsteam.wandscape.building.data.BuildingConfig;
@@ -15,6 +16,8 @@ import com.wsteam.wandscape.shared.registry.WandscapeApis;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
@@ -68,11 +71,84 @@ public record BuildingAreaSyncPacket(List<BuildingEntry> buildings) implements C
             if (x >= ax + entry.bMinX() && x <= ax + entry.bMaxX()
                     && y >= ay + entry.bMinY() && y <= ay + entry.bMaxY()
                     && z >= az + entry.bMinZ() && z <= az + entry.bMaxZ()) {
-                return UUID.nameUUIDFromBytes((
-                        entry.buildingTypeId() + "@" + anchor).getBytes());
+                return buildingId(entry);
             }
         }
         return null;
+    }
+
+    /**
+     * Stable per-building UUID derived from type + anchor. Mirrors the derivation
+     * used by {@link #findBuildingIdAt}; only meaningful client-side (the server
+     * resolves the real UUID by position).
+     */
+    public static UUID buildingId(BuildingEntry entry) {
+        return UUID.nameUUIDFromBytes((entry.buildingTypeId() + "@" + entry.anchor()).getBytes());
+    }
+
+    /** World-space AABB for a building entry, or {@code null} when it has no boundary. */
+    @Nullable
+    public static AABB worldBox(BuildingEntry entry) {
+        if (!entry.hasBoundary()) return null;
+        BlockPos a = entry.anchor();
+        return new AABB(
+                a.getX() + entry.bMinX(), a.getY() + entry.bMinY(), a.getZ() + entry.bMinZ(),
+                a.getX() + entry.bMaxX() + 1, a.getY() + entry.bMaxY() + 1, a.getZ() + entry.bMaxZ() + 1);
+    }
+
+    /** A block position guaranteed to lie inside the entry's boundary box (its center). */
+    public static BlockPos interiorBlockPos(BuildingEntry entry) {
+        BlockPos a = entry.anchor();
+        if (!entry.hasBoundary()) return a;
+        return new BlockPos(
+                a.getX() + (entry.bMinX() + entry.bMaxX()) / 2,
+                a.getY() + (entry.bMinY() + entry.bMaxY()) / 2,
+                a.getZ() + (entry.bMinZ() + entry.bMaxZ()) / 2);
+    }
+
+    /**
+     * 判定盒外扩量（格）。俯瞰相机会从上方 45° 斜射，低矮建筑的射线会“擦着”近底角
+     * 入框，入口距离和地形命中几乎相等——外扩一格让入口明确早于地形，俯视也能整片选中。
+     */
+    private static final double RAYCAST_INFLATE = 1.0;
+
+    /**
+     * Raycast against the bounding boxes of all registered-but-not-yet-completed
+     * buildings in the cached area data — the construction ghosts. When the
+     * crosshair ray passes through a ghost area (or the eye is inside it), the
+     * building counts as targeted, so an empty construction site with no placed
+     * blocks can still be selected.
+     *
+     * @return the nearest intersecting unbuilt building, or {@code null}
+     */
+    @Nullable
+    public static BuildingBoxHit raycastUnbuilt(Vec3 origin, Vec3 end) {
+        // Prefer boxes whose surface the ray actually crosses; only when no box is
+        // crossed (but the eye stands inside one) fall back to the contained box —
+        // otherwise a player inside one site but looking at a neighbour's ghost
+        // would wrongly target the site underfoot instead of the one being aimed at.
+        BuildingBoxHit best = null;
+        BuildingBoxHit contained = null;
+        double bestDist = Double.MAX_VALUE;
+        for (BuildingEntry entry : cached) {
+            if (entry.completed()) continue;
+            AABB real = worldBox(entry);
+            if (real == null) continue;
+            AABB box = real.inflate(RAYCAST_INFLATE);
+
+            Optional<Vec3> hit = box.clip(origin, end);
+            if (hit.isPresent()) {
+                double dist = hit.get().distanceToSqr(origin);
+                if (dist < bestDist) {
+                    bestDist = dist;
+                    best = new BuildingBoxHit(buildingId(entry), interiorBlockPos(entry), dist);
+                }
+            } else if (contained == null && box.contains(origin)) {
+                // Eye inside the ghost box (standing inside the empty site) — treat as hit.
+                contained = new BuildingBoxHit(buildingId(entry), interiorBlockPos(entry), 0);
+            }
+        }
+        return best != null ? best : contained;
     }
 
     @Override
@@ -214,4 +290,7 @@ public record BuildingAreaSyncPacket(List<BuildingEntry> buildings) implements C
                                 boolean hasBoundary,
                                 int bMinX, int bMinY, int bMinZ,
                                 int bMaxX, int bMaxY, int bMaxZ) {}
+
+    /** Result of {@link #raycastUnbuilt}: an unbuilt building targeted by a crosshair ray. */
+    public record BuildingBoxHit(UUID buildingId, BlockPos pos, double distSq) {}
 }

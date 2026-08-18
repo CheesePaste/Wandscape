@@ -76,7 +76,7 @@
 
 - `MedievalScreen`（abstract extends Screen）：MINIMAL 风格——renderMinimalHeader/drawMinimalBox/drawGlowBorder；H 键/帮助按钮 → openHelpDocument() 加载 markdown。
 - `MedievalButton` / `TabBar`（下划线高亮）/ `ScrollableList`（抽象泛型行渲染 + 滚轮）/ `TaskQueuePanel`（当前任务行 + 队列 Entry + 上移/下移/删除按钮）/ `ElementPanel`（按 ElementType 显示存量）。
-- 面板：`WandscapePanelController`（MouseButton/Key/MovementInput/ClientTick，ESC 退出管线）、`WandscapePanelOverlay`（RenderGuiEvent.Post 画顶栏 TOP_BAR_H=28/侧栏 3 图标/警告浮层）、`WandscapePanelState`（enum SubMode{NONE,BUILD_PROJECTION,ROAD_PROJECTION,STATS,OVERVIEW}、BuildPhase{BAR,PLACING}、面板开合/游标抬起/聚落统计）。
+- 面板：`WandscapePanelController`（MouseButton/Key/MovementInput/ClientTick，ESC 退出管线；`onMouseButtonPreGrabbed` 在 ground/NONE 抓取态拦截“右键空工地”——射线未中方块但穿过未建成建筑虚影框时发 `OverviewInteractPacket` 打开其 UI 并取消原版点击）、`WandscapePanelOverlay`（RenderGuiEvent.Post 画顶栏 TOP_BAR_H=28/侧栏 3 图标/警告浮层）、`WandscapePanelState`（enum SubMode{NONE,BUILD_PROJECTION,ROAD_PROJECTION,STATS,OVERVIEW}、BuildPhase{BAR,PLACING}、面板开合/游标抬起/聚落统计）。
 - `I18n.name(key, fallback[, args])` → Component.translatableWithFallback。
 - `ReplayScreenGuard`：反射检测 ReplayMod，`ScreenEvent.Opening` 取消任何 MedievalScreen。
 - `WandscapeTheme`（RTS 风格颜色 + 图标 + drawRtsBox）；`MedievalColors`（羊皮纸/金边/紫罗兰配色）；`SkinRender`（9-slice 面板/按钮/箭头/条形图）。
