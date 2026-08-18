@@ -304,7 +304,8 @@ public class Wandscape {
     public static final DeferredHolder<EntityType<?>, EntityType<TouristEntity>> TOURIST =
             ENTITIES.register("tourist", () ->
                     EntityType.Builder.of(TouristEntity::new, MobCategory.CREATURE)
-                            .sized(0.6f, 1.95f)
+                            // 1.95 比玩家(1.8)高，2 格高通道净空不足时游客会卡住；降到玩家身高即与玩家同通行能力
+                            .sized(0.6f, 1.8f)
                             .clientTrackingRange(10)
                             .build("tourist"));
 

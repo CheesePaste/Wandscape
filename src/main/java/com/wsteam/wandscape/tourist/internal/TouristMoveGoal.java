@@ -424,7 +424,7 @@ public class TouristMoveGoal extends Goal {
 
         // ── Real stuck detection & hard fallback ──
         totalNavTicks++;
-        if (lastPos != null && pos.distSqr(lastPos) < 1.0) {
+        if (lastPos != null && sameHorizontal(pos, lastPos)) {
             noMoveTicks++;
         } else {
             noMoveTicks = 0;
@@ -527,7 +527,7 @@ public class TouristMoveGoal extends Goal {
 
         // ── Real stuck detection & hard fallback ──
         totalNavTicks++;
-        if (lastPos != null && pos.distSqr(lastPos) < 1.0) {
+        if (lastPos != null && sameHorizontal(pos, lastPos)) {
             noMoveTicks++;
         } else {
             noMoveTicks = 0;
@@ -1299,7 +1299,7 @@ public class TouristMoveGoal extends Goal {
         // ── Real stuck detection & hard fallback ──
         if (poiPauseTicks <= 0) {
             totalNavTicks++;
-            if (lastPos != null && pos.distSqr(lastPos) < 1.0) {
+            if (lastPos != null && sameHorizontal(pos, lastPos)) {
                 noMoveTicks++;
             } else {
                 noMoveTicks = 0;
@@ -1461,7 +1461,7 @@ public class TouristMoveGoal extends Goal {
                 }
             } else {
                 // No path object but navigator busy (recomputing) → fall back to position.
-                if (lastPos != null && pos.distSqr(lastPos) < 1.0) {
+                if (lastPos != null && sameHorizontal(pos, lastPos)) {
                     noMoveTicks++;
                 } else {
                     noMoveTicks = 0;
@@ -2063,7 +2063,7 @@ public class TouristMoveGoal extends Goal {
         // Never interfere with an active building interaction or POI stand-still.
         if (currentMode == MoveMode.VISITING_BUILDING || poiPauseTicks > 0) return false;
         BlockPos pos = tourist.blockPosition();
-        if (rescueLastPos == null || pos.distSqr(rescueLastPos) >= 1.0) {
+        if (rescueLastPos == null || !sameHorizontal(pos, rescueLastPos)) {
             rescueLastPos = pos;
             roofStuckTicks = 0;
             return false;
@@ -2116,6 +2116,12 @@ public class TouristMoveGoal extends Goal {
             mp.move(0, -1, 0);
         }
         return null;
+    }
+
+    /** 水平原地判定：x/z 相同即视为未前进（y 上下跳动不算移动）。贴墙反复跳时三维 distSqr
+     *  会因 y 波动误判为「在移动」，防卡死永不触发——卡死与否只看 x/z 是否推进。 */
+    static boolean sameHorizontal(BlockPos a, BlockPos b) {
+        return a.getX() == b.getX() && a.getZ() == b.getZ();
     }
 
     private static String shortId(UUID id) {
