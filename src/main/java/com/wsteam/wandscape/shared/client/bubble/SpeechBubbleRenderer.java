@@ -39,6 +39,7 @@ public final class SpeechBubbleRenderer {
     private static final float TRIANGLE_SIZE  = 4.0F;
     private static final int   MAX_DIST_SQ    = 4096;
     private static final int   ELLIPSE_SEGMENTS = 20;
+    private static final float TEXT_Z_OFFSET   = 0.05F;
 
     private static final float[][] FONT_WHITE_UVS = {
         {0.5F, 0.5F}, {0.5625F, 0.4375F}, {0.625F, 0.5F}, {0.5625F, 0.5625F}
@@ -113,11 +114,15 @@ public final class SpeechBubbleRenderer {
         // Draw filled ellipse + pointer using debug quads (POSITION_COLOR, works in entity pipeline)
         drawEllipseBody(buffer, matrix, bubbleW, bubbleH, by, alpha);
 
-        // Text
+        // Text (offset along +Z towards camera and use POLYGON_OFFSET to prevent shader z-fighting)
+        poseStack.pushPose();
+        poseStack.translate(0, 0, TEXT_Z_OFFSET);
+        Matrix4f textMatrix = poseStack.last().pose();
         float textX = -textWidth / 2F;
         float textY = ey - textHeight / 2F;
         font.drawInBatch(textComp, textX, textY, 0xFF000000, false,
-                matrix, buffer, Font.DisplayMode.NORMAL, 0, packedLight);
+                textMatrix, buffer, Font.DisplayMode.POLYGON_OFFSET, 0, packedLight);
+        poseStack.popPose();
 
         poseStack.popPose();
     }
@@ -168,8 +173,12 @@ public final class SpeechBubbleRenderer {
 
         float textX = cx + iconSize / 2F + gap;
         float textY = ey - font.lineHeight / 2F;
+        poseStack.pushPose();
+        poseStack.translate(0, 0, TEXT_Z_OFFSET);
+        Matrix4f textMatrix = poseStack.last().pose();
         font.drawInBatch(Component.literal(countText), textX, textY, 0xFF000000, false,
-                matrix, buffer, Font.DisplayMode.NORMAL, 0, packedLight);
+                textMatrix, buffer, Font.DisplayMode.POLYGON_OFFSET, 0, packedLight);
+        poseStack.popPose();
 
         poseStack.popPose();
     }
@@ -239,7 +248,7 @@ public final class SpeechBubbleRenderer {
         poseStack.pushPose();
         poseStack.translate(0, 0, 0.1F);
         Matrix4f matrix = poseStack.last().pose();
-        VertexConsumer vc = buffer.getBuffer(RenderType.text(WandscapeTheme.elementIcon(elementId)));
+        VertexConsumer vc = buffer.getBuffer(RenderType.textPolygonOffset(WandscapeTheme.elementIcon(elementId)));
         vc.addVertex(matrix, x0, y0, 0).setColor(r, g, b, alpha).setUv(0, 0).setLight(packedLight);
         vc.addVertex(matrix, x1, y0, 0).setColor(r, g, b, alpha).setUv(1, 0).setLight(packedLight);
         vc.addVertex(matrix, x1, y1, 0).setColor(r, g, b, alpha).setUv(1, 1).setLight(packedLight);

@@ -105,7 +105,7 @@ public class TransportItemEntityRenderer extends ItemEntityRenderer {
         int textColor = 0xFFFFFFFF; // Warm white text
         
         font.drawInBatch(text, textX, textY, textColor, false, textMatrix, buffer,
-                Font.DisplayMode.NORMAL, 0, packedLight);
+                Font.DisplayMode.POLYGON_OFFSET, 0, packedLight);
                 
         poseStack.popPose();
     }
