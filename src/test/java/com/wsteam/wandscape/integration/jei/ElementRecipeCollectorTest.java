@@ -1,0 +1,113 @@
+package com.wsteam.wandscape.integration.jei;
+
+import java.util.List;
+import java.util.Map;
+
+import com.wsteam.wandscape.element.internal.ElementMappingConfig;
+import com.wsteam.wandscape.production.data.BrewPotionRecipe;
+import com.wsteam.wandscape.production.data.RecipeUnlockRequirement;
+import com.wsteam.wandscape.shared.data.ElementType;
+
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+class ElementRecipeCollectorTest {
+
+    private static ElementMappingConfig cfg(String blockId, String itemId,
+                                            boolean disabled, Map<ElementType, Long> cost) {
+        return new ElementMappingConfig(blockId, itemId, cost, disabled);
+    }
+
+    @Test
+    void fromElementMappings_validConfig_producesSynthesizeAndDecomposeWithWorkstation() {
+        Map<ElementType, Long> cost = Map.of(ElementType.EARTH, 4L, ElementType.FIRE, 2L);
+        List<ElementRecipe> recipes =
+                ElementRecipeCollector.fromElementMappings(List.of(cfg("minecraft:stone", "minecraft:stone", false, cost)));
+
+        assertEquals(2, recipes.size());
+
+        ElementRecipe syn = recipes.get(0);
+        assertEquals(ElementRecipeKind.SYNTHESIZE, syn.kind());
+        assertEquals(ElementRecipeCollector.STATION_WORKSTATION, syn.stationKey());
+        assertEquals("minecraft:stone", syn.itemId());
+        assertEquals(cost, syn.elements());
+        assertTrue(syn.extraInputs().isEmpty());
+        assertEquals(0, syn.value());
+
+        ElementRecipe dec = recipes.get(1);
+        assertEquals(ElementRecipeKind.DECOMPOSE, dec.kind());
+        assertEquals(ElementRecipeCollector.STATION_WORKSTATION, dec.stationKey());
+        assertEquals(cost, dec.elements());
+        assertEquals(6, dec.value()); // 4 + 2
+    }
+
+    @Test
+    void fromElementMappings_disabledConfig_skipped() {
+        List<ElementRecipe> recipes = ElementRecipeCollector.fromElementMappings(
+                List.of(cfg("minecraft:no", "minecraft:no", true, Map.of(ElementType.EARTH, 4L))));
+        assertTrue(recipes.isEmpty());
+    }
+
+    @Test
+    void fromElementMappings_emptyBuildCost_skipped() {
+        List<ElementRecipe> recipes = ElementRecipeCollector.fromElementMappings(
+                List.of(cfg("minecraft:empty", "minecraft:empty", false, Map.of())));
+        assertTrue(recipes.isEmpty());
+    }
+
+    @Test
+    void fromElementMappings_itemMapping_resolvesItemId() {
+        List<ElementRecipe> recipes = ElementRecipeCollector.fromElementMappings(
+                List.of(cfg(null, "minecraft:diamond", false, Map.of(ElementType.METAL, 1024L))));
+        assertEquals(2, recipes.size());
+        assertTrue(recipes.stream().allMatch(r -> r.itemId().equals("minecraft:diamond")));
+    }
+
+    @Test
+    void fromElementMappings_decomposeValue_sumsAllElements() {
+        List<ElementRecipe> recipes = ElementRecipeCollector.fromElementMappings(
+                List.of(cfg("minecraft:m", "minecraft:m", false,
+                        Map.of(ElementType.EARTH, 2L, ElementType.WOOD, 3L, ElementType.WATER, 5L))));
+        ElementRecipe dec = recipes.get(1);
+        assertEquals(10, dec.value()); // 2+3+5
+    }
+
+    @Test
+    void fromBrewPotionRecipes_producesOnlySynthesize_withExtraInputs() {
+        BrewPotionRecipe potion = new BrewPotionRecipe(
+                "mana_potion", "potion_station", "wandscape:mana_potion",
+                Map.of(ElementType.WATER, 16L, ElementType.WOOD, 4L),
+                List.of("minecraft:glass_bottle"), RecipeUnlockRequirement.NONE);
+
+        List<ElementRecipe> recipes = ElementRecipeCollector.fromBrewPotionRecipes(List.of(potion));
+
+        // 药剂只应生成合成，不生成分解
+        assertEquals(1, recipes.size());
+        ElementRecipe r = recipes.get(0);
+        assertEquals(ElementRecipeKind.SYNTHESIZE, r.kind());
+        assertEquals(ElementRecipeCollector.STATION_POTION, r.stationKey());
+        assertEquals("wandscape:mana_potion", r.itemId());
+        assertEquals(Map.of(ElementType.WATER, 16L, ElementType.WOOD, 4L), r.elements());
+        assertEquals(List.of("minecraft:glass_bottle"), r.extraInputs());
+        assertEquals(0, r.value());
+    }
+
+    @Test
+    void fromBrewPotionRecipes_emptyCost_skipped() {
+        BrewPotionRecipe potion = new BrewPotionRecipe(
+                "empty", "potion_station", "wandscape:empty",
+                Map.of(), List.of(), RecipeUnlockRequirement.NONE);
+        assertTrue(ElementRecipeCollector.fromBrewPotionRecipes(List.of(potion)).isEmpty());
+    }
+
+    @Test
+    void itemIdEquals_ignoresMcPrefix() {
+        assertTrue(ElementRecipeCollector.itemIdEquals("minecraft:bread", "bread"));
+        assertTrue(ElementRecipeCollector.itemIdEquals("bread", "minecraft:bread"));
+        assertTrue(ElementRecipeCollector.itemIdEquals("minecraft:bread", "minecraft:bread"));
+        assertFalse(ElementRecipeCollector.itemIdEquals("minecraft:bread", "minecraft:diamond"));
+        assertFalse(ElementRecipeCollector.itemIdEquals(null, "bread"));
+        assertFalse(ElementRecipeCollector.itemIdEquals("bread", null));
+    }
+}
