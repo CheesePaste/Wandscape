@@ -1,44 +1,24 @@
 package com.wsteam.wandscape.magic.internal;
 
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.Test;
 
 class MagicSpellExecutorsTest {
 
-    // ── distributeMeteors：保底 6 颗陨石按目标数分配 ──
+    // ── meteorIntervalTicks：6 颗按 1/6 持续时长均匀间隔 ──
 
     @Test
-    void totalMeteorsIsAlwaysSixWhenTargetsExist() {
-        assertEquals(6, MagicSpellExecutors.METEOR_TOTAL);
-        assertArrayEquals(new int[]{6}, MagicSpellExecutors.distributeMeteors(1));
-        assertArrayEquals(new int[]{5, 1}, MagicSpellExecutors.distributeMeteors(2));
-        assertArrayEquals(new int[]{4, 1, 1}, MagicSpellExecutors.distributeMeteors(3));
+    void splitsDurationIntoSixEqualIntervals() {
+        assertEquals(20, MagicSpellExecutors.meteorIntervalTicks(120), "120t 持续时长 → 每 20t 落 1 颗");
+        assertEquals(10, MagicSpellExecutors.meteorIntervalTicks(60));
+        assertEquals(1, MagicSpellExecutors.meteorIntervalTicks(6), "恰好 6t → 每 1t 落 1 颗");
     }
 
     @Test
-    void singleEnemyGetsAllSix() {
-        assertArrayEquals(new int[]{6}, MagicSpellExecutors.distributeMeteors(1), "1 敌独占 6 颗");
-    }
-
-    @Test
-    void twoEnemiesStackOnNearest() {
-        assertArrayEquals(new int[]{5, 1}, MagicSpellExecutors.distributeMeteors(2), "2 敌最近 5 颗、次近 1 颗");
-    }
-
-    @Test
-    void moreEnemiesEachGetOne() {
-        assertArrayEquals(new int[]{4, 1, 1}, MagicSpellExecutors.distributeMeteors(3));
-        assertArrayEquals(new int[]{3, 1, 1, 1}, MagicSpellExecutors.distributeMeteors(4));
-        assertArrayEquals(new int[]{2, 1, 1, 1, 1}, MagicSpellExecutors.distributeMeteors(5));
-        assertArrayEquals(new int[]{1, 1, 1, 1, 1, 1}, MagicSpellExecutors.distributeMeteors(6));
-        assertArrayEquals(new int[]{1, 1, 1, 1, 1, 1}, MagicSpellExecutors.distributeMeteors(100), "超过 6 个只砸最近 6 个");
-    }
-
-    @Test
-    void noTargetsYieldsEmpty() {
-        assertArrayEquals(new int[]{}, MagicSpellExecutors.distributeMeteors(0));
-        assertArrayEquals(new int[]{}, MagicSpellExecutors.distributeMeteors(-5), "负数按 0 处理");
+    void floorsToAtLeastOneTick() {
+        assertEquals(1, MagicSpellExecutors.meteorIntervalTicks(5), "不足 6t → 至少 1t 间隔");
+        assertEquals(1, MagicSpellExecutors.meteorIntervalTicks(1));
+        assertEquals(1, MagicSpellExecutors.meteorIntervalTicks(0), "0 持续时长兜底 1t");
     }
 }

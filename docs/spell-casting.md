@@ -92,7 +92,7 @@ L2 兜底层
 | 分类 | 覆盖 | 典型魔法 | 决策要点 |
 |---|---|---|---|
 | `single_target` 单体攻击 | beam、火球、闪电 | 单体高伤/持续伤 | 无条件，有敌即可 |
-| `aoe` 群体攻击 | meteor(陨石)、爆炸、火焰风暴 | 范围伤害 | **敌数 ≥ 1 才施放**（防浪费蓝）；meteor 连落：总量恒 6 颗、按 1/6 持续时长逐颗落下，敌少时集中砸最近目标 |
+| `aoe` 群体攻击 | meteor(陨石)、爆炸、火焰风暴 | 范围伤害 | **敌数 ≥ 1 才施放**（防浪费蓝）；meteor 连落：总量恒 6 颗、按 1/6 持续时长逐颗发射，每颗发射时动态重瞄当时最近目标 |
 | `defense` 防御 | petrification(石化减伤)、护盾、结界 | 保命/免伤 | 自身血量阈值 + **无同类状态**（防叠加）；与治疗的血线竞争靠预设排序+阈值错开 |
 | `support` 支援 | heal(持续治疗)、增益（力量/急速） | 回血/预铺 buff | 治疗响应式（谁血低奶谁）、增益预判式（开战前上），靠 target_mode 区分 |
 | `utility` 杂项 | 传送、复活、召唤、天气 | 非战斗 | L0 硬性路径 / 玩家命令 |
@@ -114,7 +114,7 @@ L2 兜底层
 
 ```jsonc
 "conditions": {
-  "min_enemies": 1,                     // AOE：范围敌人数 ≥ 1 才施放（meteor 实际配 3：总量恒 6 颗、按 1/6 持续时长逐颗落下）
+  "min_enemies": 1,                     // AOE：范围敌人数 ≥ 1 才施放（meteor 实际配 3：总量恒 6 颗、按 1/6 持续时长逐颗发射、发射时动态重瞄最近目标）
   "self_hp_max": 0.6,                   // DEFENSE：自身血量 < 60% 才开盾
   "ally_hp_max": 0.7,                   // SUPPORT 治疗：友方最低血量 < 70% 才奶（heal 实际配 0.7）
   "no_effect": "minecraft:absorption"   // 自身无此状态才施放（防盾/buff 叠加）
@@ -342,7 +342,7 @@ P1/P2 玩家无感知（内部重构），P3 起见 UI。每个阶段完成即�
 | L0 硬性覆盖 | **新增** `GuardCombat.l0EmergencyHeal`：自身**或治疗半径内友方**血比 < **0.5**（2026-08-12 从 0.35 上调，更早开奶保命）且会 heal → 无视玩家策略/conditions 强制施奶 | 落实第四节 L0 设计：落单/受伤法师不再死于攻击循环，玩家把治疗调低也饿不死保命；范围内队友濒死时提前开奶，避免来不及施法 |
 | `MagicDef` | 新增 `effectDamage` 字段（`effect.damage` 可选，负值归 null） | 效果伤害随 mana/CD 一起数据驱动，未来伤害类魔法免改代码 |
 
-> 平衡基准：maxMana 100、回蓝 1 点/10t（0.5s）。beam 单目标约 60 伤/32s 总间隔、meteor 总量恒 6×7.5 伤、6s 法阵持续时长内逐颗落下（按 1/6 持续时长 1 颗，敌少时集中砸最近目标，见第十八节）——单体 beam 依旧最凶，meteor 定位为"廉价清杂"，敌少时也能当单体爆发用。
+> 平衡基准：maxMana 100、回蓝 1 点/10t（0.5s）。beam 单目标约 60 伤/32s 总间隔、meteor 总量恒 6×7.5 伤、6s 法阵持续时长内逐颗发射（按 1/6 持续时长 1 颗，每颗发射时动态重瞄当时最近目标，见第十八节）——单体 beam 依旧最凶，meteor 定位为"廉价清杂"，敌少时也能当单体爆发用。
 
 **施法锁减半（同日）**：所有战斗魔法（beam + heal/meteor/petrification/enfeeble_field/fortification/conversion/desperation）的施法互斥锁时长**减半**（`MagicCaster` 光束 = `(前摇+法阵+收尾)/2`，`MagicSpellExecutors` 其余 = `法阵时长/2`）；施法效果时长（治疗光环/增益/光束伤害）**不变**。锁本只用于防施法重叠，不必覆盖整个法阵/光束动画——锁太长会让守卫长时间站桩、且连危机自奶都放不出，实测极易被打死。减半后：光束 12s→6s、conversion 10s→5s、enfeeble 7s→3.5s、heal/meteor/fortification 6s→3s、petrification 5s→2.5s、desperation 0.75s→0.35s。
 
@@ -368,11 +368,11 @@ P1/P2 玩家无感知（内部重构），P3 起见 UI。每个阶段完成即�
 
 治疗光环的每脉冲治疗量从固定 4 点改为 **基础量 × 施法者 SPELL_POWER**（`MagicSpellExecutors.HEAL_BASE_AMOUNT = 4`，默认 SPELL_POWER=1 → 仍 4 点，强法师奶更多），与伤害加成同源——`castHeal` 施放时取 `npc.getEffectiveAttribute(AttributeType.SPELL_POWER)` 乘入 `HealAura`（L0 紧急奶 / 非战斗自奶 / 常规治疗共用此路径，一并生效）。玩家命令 `castForPlayer` 无 SPELL_POWER，保持基础量 4。
 
-## 十八、meteor 连落 6 颗（2026-08-19）
+## 十八、meteor 连落 6 颗、发射时动态重瞄（2026-08-19）
 
-原「3 颗同时落下」视觉上像一次性爆发、对群性弱；改为法阵持续时长（120t）内**按 1/6 持续时长逐颗落下 6 颗陨石**（间隔 20t，末颗在法阵消失前落地），单颗伤害**减半**（`effect.damage` 15→**7.5**，数据驱动；代码缺省 `METEOR_DEFAULT_DAMAGE` 10→5），**总伤害不变**（3×15=45 → 6×7.5=45）。
+原「3 颗同时落下」视觉上像一次性爆发、对群性弱；改为法阵持续时长（120t）内**按 1/6 持续时长逐颗发射 6 颗陨石**（间隔 20t，末颗在法阵消失前落地），单颗伤害**减半**（`effect.damage` 15→**7.5**，数据驱动；代码缺省 `METEOR_DEFAULT_DAMAGE` 10→5），**总伤害不变**（3×15=45 → 6×7.5=45）。
 
-- **落点分配不变**（保底集中砸，见第十五节，仅总量 3→6）：1 敌 → 独占 6 颗；2 敌 → 最近 5 颗 + 次近 1 颗；3 敌 → 4/1/1；4 敌 → 3/1/1/1；5 敌 → 2/1/1/1/1；≥6 敌 → 最近 6 个各 1 颗。
-- **调度**：`MagicSpellExecutors.buildMeteorShotPositions` 把 `distributeMeteors` 的分配展开为逐颗落点序列；`MagicEventHandler` 新增 `PENDING_METEORS` 延迟落点，到 `fireTick`（施法 tick + i × durationTicks/6）各生成 1 颗（复用 `spawnMeteorsAt`），落地结算仍走 `tickMeteors`（同目标多颗叠伤重置无敌帧逻辑不变）。
-- **不变项**：溅射半径 4、目标扫描 16 格、头顶 14 格坠落高度、`min_enemies` 3（第十五节「3→1」记载已被后续反转，以 meteor.json 为准）、mana_cost 40、CD 300 均不动。
-- 玩家命令 `/wandscape magic cast meteor`（`castForPlayer`）同步连落；0 敌人时保留视线前方 6 格落 1 颗的调试兜底。
+- **发射时动态重瞄**：不再预分配落点——每颗陨石在**自己发射那一刻**以施法者当前位置（已移除则用施法时位置）为基准，扫描 16 格内最近存活敌对生物并砸向它**当时的位置**（`MagicSpellExecutors.fireMeteorAtNearestEnemy`）。敌人移动/被清后自动换最近目标，集火最近敌人的同时对群更跟手（旧 `distributeMeteors` 保底分配已删除）。
+- **调度**：`MagicSpellExecutors` 按 `meteorIntervalTicks(durationTicks)`（= durationTicks/6 = 20t）间隔登记 6 个延迟发射（`MagicEventHandler.PENDING_METEORS`），到期各触发一次重瞄发射；落地结算仍走 `tickMeteors`（同目标叠伤重置无敌帧逻辑不变）。
+- **不变项**：溅射半径 4、发射时扫描半径 16、头顶 14 格坠落高度、`min_enemies` 3（第十五节「3→1」记载已被后续反转，以 meteor.json 为准）、mana_cost 40、CD 300 均不动。
+- 玩家命令 `/wandscape magic cast meteor`（`castForPlayer`）同步连落（以施法瞬间玩家位置为扫描基准）；0 敌人时保留视线前方 6 格落 1 颗的调试兜底。

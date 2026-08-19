@@ -62,9 +62,9 @@ public final class MagicEventHandler {
     private static final List<Shockwave> SHOCKWAVES = new ArrayList<>();
 
     // ── 陨石连落（meteor 6 颗按 1/6 持续时长逐颗落下） ──
-    // 施法时由 MagicSpellExecutors 登记 6 个延迟落点，到 fireTick 生成 1 颗 FallingBlockEntity 并转交 MeteorTracker。
-    private record PendingMeteor(ServerLevel level, Vec3 pos, @Nullable WandscapeNpc caster,
-                                 float damage, double radius, long fireTick) {}
+    // 施法时由 MagicSpellExecutors 登记 6 个延迟发射，到 fireTick 动态重选当时最近敌对目标并砸向它当前位置。
+    private record PendingMeteor(ServerLevel level, Vec3 origin, @Nullable WandscapeNpc caster,
+                                 float damage, double radius, double scanRadius, long fireTick) {}
     private static final List<PendingMeteor> PENDING_METEORS = new ArrayList<>();
 
     // ── 感化 ──
@@ -81,21 +81,22 @@ public final class MagicEventHandler {
         METEORS.add(tracker);
     }
 
-    /** 登记一颗延迟落下的陨石：在 fireTick 时于 pos 处生成 1 颗（meteor 连落 6 颗由施法方按 1/6 持续时长间隔调用）。 */
-    public static synchronized void addPendingMeteor(ServerLevel level, Vec3 pos,
+    /** 登记一颗延迟发射的陨石：在 fireTick 时以 origin 为基准扫描最近敌对目标并砸向它（meteor 连落 6 颗由施法方按 1/6 持续时长间隔调用）。 */
+    public static synchronized void addPendingMeteor(ServerLevel level, Vec3 origin,
                                                      @Nullable WandscapeNpc caster,
-                                                     float damage, double radius, long fireTick) {
-        PENDING_METEORS.add(new PendingMeteor(level, pos, caster, damage, radius, fireTick));
+                                                     float damage, double radius, double scanRadius, long fireTick) {
+        PENDING_METEORS.add(new PendingMeteor(level, origin, caster, damage, radius, scanRadius, fireTick));
     }
 
-    /** 到期（gameTime ≥ fireTick）的延迟陨石生成 FallingBlockEntity，转交 MeteorTracker 落地结算。 */
+    /** 到期（gameTime ≥ fireTick）的延迟陨石动态重瞄最近敌对目标，转交 MeteorTracker 落地结算。 */
     private static synchronized void tickPendingMeteors() {
         if (PENDING_METEORS.isEmpty()) return;
         Iterator<PendingMeteor> it = PENDING_METEORS.iterator();
         while (it.hasNext()) {
             PendingMeteor pm = it.next();
             if (pm.level().getGameTime() >= pm.fireTick()) {
-                MagicSpellExecutors.spawnMeteorsAt(pm.level(), pm.caster(), pm.pos(), 1, pm.damage(), pm.radius());
+                MagicSpellExecutors.fireMeteorAtNearestEnemy(
+                        pm.level(), pm.origin(), pm.caster(), pm.damage(), pm.radius(), pm.scanRadius());
                 it.remove();
             }
         }
