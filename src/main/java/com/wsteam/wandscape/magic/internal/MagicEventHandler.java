@@ -61,6 +61,12 @@ public final class MagicEventHandler {
     private static final List<MeteorTracker> METEORS = new ArrayList<>();
     private static final List<Shockwave> SHOCKWAVES = new ArrayList<>();
 
+    // ── 陨石连落（meteor 6 颗按 1/6 持续时长逐颗落下） ──
+    // 施法时由 MagicSpellExecutors 登记 6 个延迟落点，到 fireTick 生成 1 颗 FallingBlockEntity 并转交 MeteorTracker。
+    private record PendingMeteor(ServerLevel level, Vec3 pos, @Nullable WandscapeNpc caster,
+                                 float damage, double radius, long fireTick) {}
+    private static final List<PendingMeteor> PENDING_METEORS = new ArrayList<>();
+
     // ── 感化 ──
     // 受感化影响的生物 UUID → 到期 tick，用于 ServerTick 每 0.5s 重定向攻击目标。
     // 由 MagicSpellExecutors 在施加效果时写入。
@@ -73,6 +79,26 @@ public final class MagicEventHandler {
 
     public static synchronized void addMeteorTracker(MeteorTracker tracker) {
         METEORS.add(tracker);
+    }
+
+    /** 登记一颗延迟落下的陨石：在 fireTick 时于 pos 处生成 1 颗（meteor 连落 6 颗由施法方按 1/6 持续时长间隔调用）。 */
+    public static synchronized void addPendingMeteor(ServerLevel level, Vec3 pos,
+                                                     @Nullable WandscapeNpc caster,
+                                                     float damage, double radius, long fireTick) {
+        PENDING_METEORS.add(new PendingMeteor(level, pos, caster, damage, radius, fireTick));
+    }
+
+    /** 到期（gameTime ≥ fireTick）的延迟陨石生成 FallingBlockEntity，转交 MeteorTracker 落地结算。 */
+    private static synchronized void tickPendingMeteors() {
+        if (PENDING_METEORS.isEmpty()) return;
+        Iterator<PendingMeteor> it = PENDING_METEORS.iterator();
+        while (it.hasNext()) {
+            PendingMeteor pm = it.next();
+            if (pm.level().getGameTime() >= pm.fireTick()) {
+                MagicSpellExecutors.spawnMeteorsAt(pm.level(), pm.caster(), pm.pos(), 1, pm.damage(), pm.radius());
+                it.remove();
+            }
+        }
     }
 
     /** 注册陨石落地冲击波：一圈一圈向外扩散的红色发光环。 */
@@ -89,6 +115,7 @@ public final class MagicEventHandler {
 
     @SubscribeEvent
     public static void onServerTick(ServerTickEvent.Post event) {
+        tickPendingMeteors();
         tickHealAuras();
         tickMeteors();
         tickShockwaves();

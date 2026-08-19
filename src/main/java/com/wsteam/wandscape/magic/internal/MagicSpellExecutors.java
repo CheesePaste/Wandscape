@@ -110,17 +110,17 @@ public final class MagicSpellExecutors {
 
     // ── 2. 陨石魔法 (Meteor) ──
 
-    /** 陨石伤害缺省值（magic_spells/meteor.json 未配 effect.damage 时兜底）。 */
-    private static final float METEOR_DEFAULT_DAMAGE = 10.0f;
+    /** 陨石单颗伤害缺省值（magic_spells/meteor.json 未配 effect.damage 时兜底；连落 6 颗后为减半值）。 */
+    private static final float METEOR_DEFAULT_DAMAGE = 5.0f;
 
-    /** 陨石总量（保底）：无论敌数多少，一次施放恒砸 3 颗，保证总伤害量不因敌少而缩水。 */
-    static final int METEOR_TOTAL = 3;
+    /** 陨石总量（保底）：一次施放恒 6 颗、按 1/6 持续时长逐颗落下，总伤害 = 6 × 单颗伤害，不因敌少而缩水。 */
+    static final int METEOR_TOTAL = 6;
 
     /** 同目标多颗陨石的水平散开半径（方块），保证视觉上可分辨、且仍在 4 格溅射半径内。 */
     private static final double METEOR_STACK_SPREAD = 0.8;
 
-    /** 3 颗陨石按目标数分配（返回近→远每个目标的陨石颗数）：0→[] 1→[3] 2→[2,1] ≥3→[1,1,1]。
-     *  剩余陨石堆给最近目标（保底：1 敌独占 3 颗、2 敌最近 2 颗次近 1 颗）。 */
+    /** 6 颗陨石按目标数分配（返回近→远每个目标的陨石颗数）：0→[] 1→[6] 2→[5,1] 3→[4,1,1] ≥6→[1,…]。
+     *  剩余陨石堆给最近目标（保底：1 敌独占 6 颗、2 敌最近 5 颗次近 1 颗）。 */
     static int[] distributeMeteors(int targetCount) {
         int n = Math.min(METEOR_TOTAL, Math.max(0, targetCount));
         int[] counts = new int[n];
@@ -129,10 +129,24 @@ public final class MagicSpellExecutors {
         return counts;
     }
 
+    /** 把按目标分配的陨石颗数展开为逐颗落点序列（近→远目标，每目标按分配数连续排；总落点数 = METEOR_TOTAL）。
+     *  由 castMeteor / castForPlayer 生成连落 6 颗的落点，交给 MagicEventHandler 按 1/6 持续时长间隔逐颗生成。 */
+    private static List<Vec3> buildMeteorShotPositions(List<LivingEntity> targets) {
+        int[] counts = distributeMeteors(targets.size());
+        List<Vec3> shots = new ArrayList<>(METEOR_TOTAL);
+        for (int i = 0; i < counts.length; i++) {
+            Vec3 p = targets.get(i).position();
+            for (int k = 0; k < counts[i]; k++) {
+                shots.add(p);
+            }
+        }
+        return shots;
+    }
+
     /** 在目标头顶 14 格生成 count 颗陨石，水平小偏移（≤0.8 格）散开、全部砸向该目标（落在半径 4 内）。
-     *  caster 为空（玩家命令）时陨石不跳过施法者。 */
-    private static void spawnMeteorsAt(ServerLevel level, @Nullable WandscapeNpc caster,
-                                       Vec3 pos, int count, float damage, double radius) {
+     *  caster 为空（玩家命令）时陨石不跳过施法者。包内可见，供 MagicEventHandler 的延迟落点（连落 6 颗）复用。 */
+    static void spawnMeteorsAt(ServerLevel level, @Nullable WandscapeNpc caster,
+                               Vec3 pos, int count, float damage, double radius) {
         for (int j = 0; j < count; j++) {
             double angle = j * (2.0 * Math.PI / Math.max(1, count));
             Vec3 p = new Vec3(pos.x + Math.cos(angle) * METEOR_STACK_SPREAD, pos.y,
@@ -164,7 +178,7 @@ public final class MagicSpellExecutors {
                 new MagicCircleCastPacket(effectId, pos, new Vec3(0, 1, 0), circleId, npc.getUUID()));
 
         // 收集陨石目标：选中的 target + 半径 16 内其他敌对生物，按距施法者近→远排序；
-        // 保底分配 3 颗陨石（敌少集中砸最近目标，总量恒 3 颗，见 distributeMeteors）
+        // 保底分配 6 颗陨石（敌少集中砸最近目标，总量恒 6 颗，见 distributeMeteors）
         List<LivingEntity> targets = new ArrayList<>();
         if (target != null && target.isAlive() && !target.isRemoved()) {
             targets.add(target);
@@ -177,9 +191,13 @@ public final class MagicSpellExecutors {
         }
         targets.sort(Comparator.comparingDouble(t -> npc.distanceToSqr(t)));
 
-        int[] counts = distributeMeteors(targets.size());
-        for (int i = 0; i < counts.length; i++) {
-            spawnMeteorsAt(level, npc, targets.get(i).position(), counts[i], damage, 4.0);
+        // 连落：展开为 6 个落点，按 1/6 持续时长逐颗生成（间隔 = durationTicks/6 = 20t），
+        // 陨石在脚下法阵存续期间均匀落下；溅射半径 4 与施法时目标扫描均不变
+        List<Vec3> shots = buildMeteorShotPositions(targets);
+        int interval = Math.max(1, durationTicks / METEOR_TOTAL);
+        long now = level.getGameTime();
+        for (int i = 0; i < shots.size(); i++) {
+            MagicEventHandler.addPendingMeteor(level, shots.get(i), npc, damage, 4.0, now + (long) i * interval);
         }
 
         level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.FIRECHARGE_USE, SoundSource.NEUTRAL, 1.0f, 0.8f);
@@ -405,7 +423,7 @@ public final class MagicSpellExecutors {
 
                 float damage = def.effectDamage() != null ? def.effectDamage().floatValue() : METEOR_DEFAULT_DAMAGE;
 
-                // 收集陨石目标：16 格内敌对生物按近→远排序，保底分配 3 颗（同 castMeteor）；
+                // 收集陨石目标：16 格内敌对生物按近→远排序，保底分配 6 颗（同 castMeteor）；
                 // 无目标 → 视线前方 6 格落 1 颗（调试命令兜底）
                 List<LivingEntity> enemies = new ArrayList<>();
                 AABB box = player.getBoundingBox().inflate(16.0);
@@ -419,9 +437,13 @@ public final class MagicSpellExecutors {
                     spawnMeteorsAt(level, null, pos.add(look.x * 6, 0, look.z * 6), 1, damage, 4.0);
                 } else {
                     enemies.sort(Comparator.comparingDouble(t -> player.distanceToSqr(t)));
-                    int[] counts = distributeMeteors(enemies.size());
-                    for (int i = 0; i < counts.length; i++) {
-                        spawnMeteorsAt(level, null, enemies.get(i).position(), counts[i], damage, 4.0);
+                    List<Vec3> shots = buildMeteorShotPositions(enemies);
+                    int durationTicks = MagicCircleLoader.getSpec(circleId) != null
+                            ? MagicCircleLoader.getSpec(circleId).durationTicks : 120;
+                    int interval = Math.max(1, durationTicks / METEOR_TOTAL);
+                    long now = level.getGameTime();
+                    for (int i = 0; i < shots.size(); i++) {
+                        MagicEventHandler.addPendingMeteor(level, shots.get(i), null, damage, 4.0, now + (long) i * interval);
                     }
                 }
 
