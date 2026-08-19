@@ -91,10 +91,10 @@ L2 兜底层
 
 | 分类 | 覆盖 | 典型魔法 | 决策要点 |
 |---|---|---|---|
-| `single_target` 单体攻击 | beam、火球、闪电 | 单体高伤/持续伤 | 无条件，有敌即可 |
-| `aoe` 群体攻击 | meteor(陨石)、爆炸、火焰风暴 | 范围伤害 | **敌数 ≥ 1 才施放**（防浪费蓝）；meteor 连落：总量恒 6 颗、按 1/6 持续时长逐颗发射，每颗发射时动态重瞄当时最近目标 |
+| `single_target` 单体攻击 | beam、desperation(背水)、火球、闪电 | 单体高伤/持续伤 | 无条件，有敌即可 |
+| `aoe` 群体攻击 | meteor(陨石)、conversion(感化)、爆炸、火焰风暴 | 范围伤害 | **敌数 ≥ 1 才施放**（防浪费蓝）；meteor 连落：总量恒 6 颗、按 1/6 持续时长逐颗发射，每颗发射时动态重瞄当时最近目标 |
 | `defense` 防御 | petrification(石化减伤)、护盾、结界 | 保命/免伤 | 自身血量阈值 + **无同类状态**（防叠加）；与治疗的血线竞争靠预设排序+阈值错开 |
-| `support` 支援 | heal(持续治疗)、增益（力量/急速） | 回血/预铺 buff | 治疗响应式（谁血低奶谁）、增益预判式（开战前上），靠 target_mode 区分 |
+| `support` 支援 | heal(持续治疗)、fortification(战争赐福)、enfeeble_field(衰弱场)、增益（力量/急速） | 回血/预铺 buff | 治疗响应式（谁血低奶谁）、增益预判式（开战前上），靠 target_mode 区分 |
 | `utility` 杂项 | 传送、复活、召唤、天气 | 非战斗 | L0 硬性路径 / 玩家命令 |
 
 `target_mode` 决定"何时算有有效目标"，与 `category` 解耦：
@@ -382,3 +382,11 @@ P1/P2 玩家无感知（内部重构），P3 起见 UI。每个阶段完成即�
 - **enfeeble_field / fortification 蓝耗 65→40**（`mana_cost` 数据驱动）：两个中等消耗魔法降价，施放机会更多。
 - **desperation 力量削弱并加上限**：力量等级从 A²/48 → **min(10, ⌊A²/100⌋)**（护甲 ≤5 无奖励，最高力量 X）；背水反转护甲加**下限 −16**（护甲 ≥32 反噬封顶，不再无限加深）。
 - **conversion 改为群体魅惑**：不再单目标——施法瞬间**魅惑最近的 3 个敌对生物**（16 格内按距施法者近→远，不中途追加），使它们倒戈攻击附近敌人（`tickConversions` 每 0.5s 重定向不变）；**受伤立即解除魅惑**（`onLivingDamage` 见伤害即移除 CONVERSION 与跟踪表）。法阵改在施法者脚下（跟随 NPC），不再落在目标脚下。
+
+## 二十、NPC 施法清单扩展与策略分类（2026-08-19）
+
+- **默认法术书扩展为 8 个**：`SpellbookComponent.DEFAULT_SPELLS` 从 `[beam, heal, meteor, petrification]` 增补 **conversion / desperation / fortification / enfeeble_field**。新 NPC 开局全都会；已存档 NPC 加入世界时自动补齐（`WandscapeNpc.onAddedToLevel` 遍历 DEFAULT_SPELLS 补缺失）。法术书内顺序决定**同分类内优先级**。
+- **策略分类调整**（`category` 数据驱动，只决定策略预设排序与 UI 分组，不改触发逻辑 target_mode/conditions）：
+  - **desperation → `single_target`**（背水视为单体输出模式：战斗中优先于群攻施放，90s CD + `no_effect` 门控防刷）。
+  - **conversion → `aoe`**（群体魅惑归群攻桶，BALANCED 预设下与 meteor 同桶）。
+  - **fortification / enfeeble_field → `support`**（增益桶，与 heal 同桶，SUPPORT 预设优先）。

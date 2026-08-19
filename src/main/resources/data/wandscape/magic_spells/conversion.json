@@ -1,6 +1,6 @@
 {
   "id": "conversion",
-  "category": "single_target",
+  "category": "aoe",
   "mana_cost": 30,
   "base_cooldown": 900,
   "range": 16,

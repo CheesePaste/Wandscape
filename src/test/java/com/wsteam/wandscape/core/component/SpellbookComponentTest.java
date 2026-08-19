@@ -11,14 +11,18 @@ import org.junit.jupiter.api.Test;
 class SpellbookComponentTest {
 
     @Test
-    void defaultsToEmptyThenSeedsBeam() {
+    void defaultsToEmptyThenSeedsDefaults() {
         SpellbookComponent sb = new SpellbookComponent();
         assertTrue(sb.isEmpty());
         sb.set(SpellbookComponent.DEFAULT_SPELLS);
         assertFalse(sb.isEmpty());
-        assertEquals(List.of("beam", "heal", "meteor", "petrification"), sb.ids());
+        assertEquals(List.of("beam", "heal", "meteor", "petrification", "conversion", "desperation", "fortification", "enfeeble_field"), sb.ids());
         assertTrue(sb.knows("beam"));
         assertTrue(sb.knows("heal"));
+        assertTrue(sb.knows("conversion"));
+        assertTrue(sb.knows("desperation"));
+        assertTrue(sb.knows("fortification"));
+        assertTrue(sb.knows("enfeeble_field"));
         assertFalse(sb.knows("fireball"));
     }
 

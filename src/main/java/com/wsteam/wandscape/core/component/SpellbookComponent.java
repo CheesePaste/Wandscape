@@ -11,8 +11,9 @@ import java.util.List;
  */
 public class SpellbookComponent {
 
-    /** 默认魔法（所有法师开局都会）：beam 基础攻击 + heal 治疗 + meteor 陨石 + petrification 石化。 */
-    public static final List<String> DEFAULT_SPELLS = List.of("beam", "heal", "meteor", "petrification");
+    /** 默认魔法（所有法师开局都会）：beam 单体 + heal 治疗 + meteor/conversion 群攻 + petrification 石化 + desperation 背水 + fortification/enfeeble_field 增益。 */
+    public static final List<String> DEFAULT_SPELLS =
+            List.of("beam", "heal", "meteor", "petrification", "conversion", "desperation", "fortification", "enfeeble_field");
 
     private final List<String> magicIds = new ArrayList<>();
 

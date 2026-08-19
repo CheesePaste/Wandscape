@@ -1,6 +1,6 @@
 {
   "id": "desperation",
-  "category": "defense",
+  "category": "single_target",
   "mana_cost": 80,
   "base_cooldown": 1800,
   "range": 0,
