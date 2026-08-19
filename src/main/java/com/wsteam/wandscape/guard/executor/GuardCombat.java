@@ -156,13 +156,7 @@ public final class GuardCombat {
 
         // 看得见且安全距离：停止移动，面向目标（每轮战斗循环刷新朝向，目标走位时脸跟着转）。
         // 无光束则经 CastBrain 选魔法再施放（CD/蓝/锁在 MagicCaster 内部门控原子复验）
-        // 站定用战斗安全版 cancel：取消导航但**不恢复 wandering**（markInCombat 夺回战斗态，
-        // 否则通用 cancelNavigation 会 setAiWanderingEnabled(true) 放行闲逛）
-        NavigationState nav = world.get(npcId, NavigationState.class);
-        if (nav != null && nav.mode != NavigationState.Mode.IDLE && world.movementOps != null) {
-            world.movementOps.cancelNavigation(npcId);
-            markInCombat(npc);
-        }
+        cancelNpcNavigation(world, npcId, npc); // 战斗安全版：world=null（敌对法师）自动跳过
         npc.faceTarget(BlockPos.containing(target.getBoundingBox().getCenter()));
         if (beam == null) {
             castSelected(level, npc, target, circleId, color);
@@ -629,6 +623,20 @@ public final class GuardCombat {
         NavigationState nav = world.get(npcId, NavigationState.class);
         if (nav != null && nav.mode != NavigationState.Mode.IDLE) {
             world.movementOps.cancelNavigation(npcId);
+        }
+    }
+
+    /**
+     * 站定取消导航（战斗安全版）：取消 ECS 寻路但**不恢复 wandering**——markInCombat 夺回战斗态，
+     * 否则通用 {@link #cancelNavigation} 会 setAiWanderingEnabled(true) 放行闲逛。
+     * {@code world == null}（敌对法师 EvilMageCastGoal 传 null 走原版导航）直接跳过，不 NPE。
+     */
+    static void cancelNpcNavigation(World world, long npcId, WandscapeNpc npc) {
+        if (world == null) return;
+        NavigationState nav = world.get(npcId, NavigationState.class);
+        if (nav != null && nav.mode != NavigationState.Mode.IDLE && world.movementOps != null) {
+            world.movementOps.cancelNavigation(npcId);
+            markInCombat(npc);
         }
     }
 }
