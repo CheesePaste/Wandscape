@@ -11,7 +11,7 @@ import java.util.List;
  */
 public class SpellbookComponent {
 
-    /** 默认魔法（所有法师开局都会）：beam 单体 + heal 治疗 + meteor/conversion 群攻 + petrification 石化 + desperation 背水 + fortification/enfeeble_field 增益。 */
+    /** 默认魔法（所有法师开局都会）：beam 单体 + heal/fortification 治疗增益 + meteor/enfeeble_field 群攻 + petrification/conversion 防御 + desperation 背水一战。 */
     public static final List<String> DEFAULT_SPELLS =
             List.of("beam", "heal", "meteor", "petrification", "conversion", "desperation", "fortification", "enfeeble_field");
 

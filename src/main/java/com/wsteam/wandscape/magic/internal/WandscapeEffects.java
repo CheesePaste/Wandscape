@@ -73,7 +73,7 @@ public final class WandscapeEffects {
      * 护甲公式修正与力量等级均由外部处理：
      * {@link MagicEventHandler#onLivingDamage} 处理护甲反转（下限 −16），
      * {@code MagicSpellExecutors} 施放时按 {@code amplifier = min(10, floor(armor² / 100))}
-     * 计算力量等级（≤5 甲无奖励，二次增长但最高力量 X）。
+     * 计算力量等级（<10 甲无奖励，二次增长但最高力量 X）。
      */
     public static class DesperationEffect extends MobEffect {
         public DesperationEffect() {

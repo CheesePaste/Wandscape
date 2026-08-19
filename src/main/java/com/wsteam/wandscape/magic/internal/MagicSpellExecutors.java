@@ -350,10 +350,10 @@ public final class MagicSpellExecutors {
         return true;
     }
 
-    // ── 8. 背水 (Desperation) ──
+    // ── 8. 背水一战 (Desperation) ──
     // 自我增益：0 前摇，极高代价输出模式。
     // 有效护甲 = −A/2（下限 −16，见 onLivingDamage），力量等级 = min(10, ⌊A²/100⌋)
-    // （二次增长，护甲 ≤5 无奖励；2026-08-19 从 A²/48 削弱并加上限）。
+    // （二次增长，护甲 <10 无奖励；2026-08-19 从 A²/48 削弱并加上限）。
 
     private static final int DESPERATION_BUFF_TICKS = 300; // 15s
 
@@ -361,9 +361,9 @@ public final class MagicSpellExecutors {
     private static final int DESPERATION_MAX_STRENGTH = 10;
 
     /** 根据护甲值计算背水力量等级（amplifier，0 = 力量 I）。
-     *  ≤5 护甲无奖励，6+ 按 A²/100 二次增长，最高力量 X（amplifier 10）。 */
+     *  <10 护甲无奖励，10+ 按 A²/100 二次增长，最高力量 X（amplifier 10）。 */
     public static int desperationStrengthAmplifier(float armor) {
-        if (armor <= 5.0f) return 0;
+        if (armor < 10.0f) return 0;
         return Math.min(DESPERATION_MAX_STRENGTH, (int) (armor * armor / 100.0f));
     }
 
