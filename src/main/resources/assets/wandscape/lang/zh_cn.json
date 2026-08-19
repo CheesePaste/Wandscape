@@ -1681,5 +1681,12 @@
   "gui.wandscape.townhall.naming_style": "命名风格",
   "gui.wandscape.townhall.style_fantasy": "西幻",
   "gui.wandscape.townhall.style_chinese": "中文",
-  "gui.wandscape.townhall.style_english": "英文"
+  "gui.wandscape.townhall.style_english": "英文",
+  "gui.wandscape.jei.title": "魔法小镇",
+  "gui.wandscape.jei.synthesize": "元素合成",
+  "gui.wandscape.jei.decompose": "元素分解",
+  "gui.wandscape.jei.station.workstation": "工作站",
+  "gui.wandscape.jei.station.crafting": "合成站",
+  "gui.wandscape.jei.station.potion": "酿造站",
+  "gui.wandscape.jei.decompose.divide": "÷%s"
 }

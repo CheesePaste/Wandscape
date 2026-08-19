@@ -91,4 +91,6 @@ guide_rewrite_temp/
 
 ### CurseForge description (local only, not part of the mod) ###
 curseforge-description.md
-/libs/ModernUI-NeoForge-1.21.1-3.12.0.2-universal.jar
+
+### 本地 build-only 依赖 jar（如 JEI flatDir，不入库） ###
+/libs/
