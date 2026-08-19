@@ -1679,5 +1679,12 @@
   "gui.wandscape.townhall.naming_style": "Naming Style",
   "gui.wandscape.townhall.style_fantasy": "Fantasy",
   "gui.wandscape.townhall.style_chinese": "Chinese",
-  "gui.wandscape.townhall.style_english": "English"
+  "gui.wandscape.townhall.style_english": "English",
+  "gui.wandscape.jei.title": "Wandscape",
+  "gui.wandscape.jei.synthesize": "Element Synthesize",
+  "gui.wandscape.jei.decompose": "Element Decompose",
+  "gui.wandscape.jei.station.workstation": "Workstation",
+  "gui.wandscape.jei.station.crafting": "Crafting Station",
+  "gui.wandscape.jei.station.potion": "Brewing Station",
+  "gui.wandscape.jei.decompose.divide": "÷%s"
 }

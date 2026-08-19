@@ -28,7 +28,10 @@ sourceSets.main.resources {
 
 repositories {
     mavenCentral()
-    // Add here additional repositories if required by some of the dependencies below.
+    // 本地 JEI jar（可选运行时依赖，compileOnly，不打包）。文件名已去中文方括号以匹配 flatDir 坐标。
+    flatDir {
+        dirs 'libs'
+    }
 }
 
 base {
@@ -132,19 +135,10 @@ dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
-    // Example optional mod dependency with JEI
-    // compileOnly "mezz.jei:jei-${mc_version}-common-api:${jei_version}"
-    // compileOnly "mezz.jei:jei-${mc_version}-neoforge-api:${jei_version}"
-    // We add the full version to localRuntime, not runtimeOnly, so that we do not publish a dependency on it
-    // localRuntime "mezz.jei:jei-${mc_version}-neoforge:${jei_version}"
-
-    // Example mod dependency using a mod jar from ./libs with a flat dir repository
-    // This maps to ./libs/coolmod-${mc_version}-${coolmod_version}.jar
-    // The group id is ignored when searching -- in this case, it is "blank"
-    // implementation "blank:coolmod-${mc_version}:${coolmod_version}"
-
-    // Example mod dependency using a file as dependency
-    // implementation files("libs/coolmod-${mc_version}-${coolmod_version}.jar")
+    // JEI — 可选运行时依赖，compileOnly 不打包；玩家自行装 JEI。无 JEI 时其余功能不受影响。
+    // 注意：不把完整 jar 放上运行时 classpath（其 jei / jei.neoforge 双模块会 split-package 冲突）。
+    // 需要本地调试 JEI 界面时，把 jar 放进 run/mods/ 由模组加载器按常规 mod 挂载。
+    compileOnly "mezz.jei:jei-1.21.1-neoforge:19.27.0.336"
 
     // Example project dependency using a sister or child project:
     // implementation project(":myproject")

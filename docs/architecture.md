@@ -73,6 +73,8 @@ com.wsteam.wandscape
 ├── magic/                  魔法阵粒子 + 光束实体
 ├── guard/                  守卫任务 + 主动索敌 + 自卫反击
 ├── raid/                   袭击触发/胜利跟踪 + MixinServerLevel
+├── integration/            第三方集成兼容（可选依赖，不打包；JEI 元素配方标签页）
+│   └── jei/                 @JeiPlugin + 元素合成/分解/法杖/药剂配方分类（compileOnly）
 ├── stats/                  统计采集/日快照/摘要/同步
 ├── command/                /wandscape 调试命令
 └── gametest/               元素审计 GameTest 入口
