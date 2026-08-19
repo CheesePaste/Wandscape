@@ -376,3 +376,9 @@ P1/P2 玩家无感知（内部重构），P3 起见 UI。每个阶段完成即�
 - **调度**：`MagicSpellExecutors` 按 `meteorIntervalTicks(durationTicks)`（= durationTicks/6 = 20t）间隔登记 6 个延迟发射（`MagicEventHandler.PENDING_METEORS`），到期各触发一次重瞄发射；落地结算仍走 `tickMeteors`（同目标叠伤重置无敌帧逻辑不变）。
 - **不变项**：溅射半径 4、发射时扫描半径 16、头顶 14 格坠落高度、`min_enemies` 3（第十五节「3→1」记载已被后续反转，以 meteor.json 为准）、mana_cost 40、CD 300 均不动。
 - 玩家命令 `/wandscape magic cast meteor`（`castForPlayer`）同步连落（以施法瞬间玩家位置为扫描基准）；0 敌人时保留视线前方 6 格落 1 颗的调试兜底。
+
+## 十九、魔法平衡调整：蓝耗 / 背水 / 感化（2026-08-19）
+
+- **enfeeble_field / fortification 蓝耗 65→40**（`mana_cost` 数据驱动）：两个中等消耗魔法降价，施放机会更多。
+- **desperation 力量削弱并加上限**：力量等级从 A²/48 → **min(10, ⌊A²/100⌋)**（护甲 ≤5 无奖励，最高力量 X）；背水反转护甲加**下限 −16**（护甲 ≥32 反噬封顶，不再无限加深）。
+- **conversion 改为群体魅惑**：不再单目标——施法瞬间**魅惑最近的 3 个敌对生物**（16 格内按距施法者近→远，不中途追加），使它们倒戈攻击附近敌人（`tickConversions` 每 0.5s 重定向不变）；**受伤立即解除魅惑**（`onLivingDamage` 见伤害即移除 CONVERSION 与跟踪表）。法阵改在施法者脚下（跟随 NPC），不再落在目标脚下。

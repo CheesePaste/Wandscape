@@ -1,7 +1,7 @@
 {
   "id": "fortification",
   "category": "defense",
-  "mana_cost": 65,
+  "mana_cost": 40,
   "base_cooldown": 1200,
   "range": 0,
   "target_mode": "self",

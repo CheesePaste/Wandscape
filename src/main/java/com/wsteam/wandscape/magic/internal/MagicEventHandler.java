@@ -114,6 +114,11 @@ public final class MagicEventHandler {
                         entity.level().getGameTime() + durationTicks));
     }
 
+    /** 感化被打破（受伤，见 onLivingDamage）时移出跟踪表，使 tickConversions 不再重定向。 */
+    private static synchronized void removeConversion(UUID entityId) {
+        CONVERSIONS.remove(entityId);
+    }
+
     @SubscribeEvent
     public static void onServerTick(ServerTickEvent.Post event) {
         tickPendingMeteors();
@@ -260,6 +265,9 @@ public final class MagicEventHandler {
     /** 感化处理间隔（tick）。 */
     private static final int CONVERSION_TICK_INTERVAL = 10;
 
+    /** 背水反转护甲的下限：有效护甲不低于 −16（护甲 ≥32 时反噬封顶，见 onLivingDamage）。 */
+    private static final float DESPERATION_MIN_ARMOR = -16.0f;
+
     private static synchronized void tickConversions() {
         if (CONVERSIONS.isEmpty()) return;
 
@@ -321,11 +329,18 @@ public final class MagicEventHandler {
      * 石化 Buff 减伤逻辑：受到伤害 -2，低于 2 彻底无视（归 0）。
      * 护甲削减：有效护甲 = 当前护甲 − shredAmount，可负，负值 = 增伤。
      * 背水：有效护甲 = −当前护甲/2（反转减伤为增伤）。
+     * 感化：怪物一受伤魅惑立即解除。
      */
     @SubscribeEvent
     public static void onLivingDamage(LivingDamageEvent.Pre event) {
         LivingEntity entity = event.getEntity();
         if (entity == null) return;
+
+        // ── 感化：受伤立即解除魅惑（charm 被打断，同时移出跟踪表） ──
+        if (entity.hasEffect(WandscapeEffects.CONVERSION)) {
+            entity.removeEffect(WandscapeEffects.CONVERSION);
+            removeConversion(entity.getUUID());
+        }
 
         // ── 石化减伤 ──
         if (entity.hasEffect(WandscapeEffects.PETRIFICATION)) {
@@ -365,11 +380,11 @@ public final class MagicEventHandler {
             }
         }
 
-        // ── 背水：有效护甲 = −当前护甲/2（护甲反转 → 护甲越高受伤越重） ──
+        // ── 背水：有效护甲 = −当前护甲/2（护甲反转 → 护甲越高受伤越重），下限 −16 ──
         if (entity.hasEffect(WandscapeEffects.DESPERATION)) {
             float armor = entity.getArmorValue();              // 当前护甲（0-30）
             float effectiveArmor = -armor * 0.5f;              // 反转：护甲10 → −5
-            float worst = -armor * 0.5f;                       // 下界 = 反转值（最负）
+            float worst = DESPERATION_MIN_ARMOR;               // 下界 −16：护甲 ≥32 不再加深反噬
 
             float vanillaMultiplier = 1.0f - Math.min(20.0f, Math.max(0.0f, armor)) / 25.0f;
             float desiredMultiplier = 1.0f

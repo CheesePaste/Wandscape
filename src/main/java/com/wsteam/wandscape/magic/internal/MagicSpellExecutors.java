@@ -1,5 +1,8 @@
 package com.wsteam.wandscape.magic.internal;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 import java.util.UUID;
 
 import javax.annotation.Nullable;
@@ -57,7 +60,7 @@ public final class MagicSpellExecutors {
             case "petrification" -> castPetrification(level, npc, def, effCircle);
             case "enfeeble_field" -> castEnfeebleField(level, npc, def, effCircle);
             case "fortification" -> castFortification(level, npc, def, effCircle);
-            case "conversion" -> castConversion(level, npc, target, def, effCircle);
+            case "conversion" -> castConversion(level, npc, def, effCircle);
             case "desperation" -> castDesperation(level, npc, def, effCircle);
             default -> {
                 Log.warn(TAG, "未知魔法执行器 id={}", def.id());
@@ -296,11 +299,14 @@ public final class MagicSpellExecutors {
     }
 
     // ── 7. 感化 (Conversion) ──
-    // 单体控制：长前摇（200t），低消耗，使敌对生物倒戈攻击附近敌人。
+    // 群体控制：施法瞬间魅惑最近的 N 个敌对生物（不中途追加），使其倒戈攻击附近敌人；受伤即解除（见 onLivingDamage）。
 
     private static final int CONVERSION_DEBUFF_TICKS = 400; // 20s
 
-    public static boolean castConversion(ServerLevel level, WandscapeNpc npc, @Nullable LivingEntity target,
+    /** 一次魅惑的敌人数（最近的 N 个，施法瞬间全部命中）。 */
+    private static final int CONVERSION_CHARM_COUNT = 3;
+
+    public static boolean castConversion(ServerLevel level, WandscapeNpc npc,
                                           MagicDef def, String circleId) {
         MagicCircleSpec spec = MagicCircleLoader.getSpec(circleId);
         int durationTicks = spec != null ? spec.durationTicks : 200;
@@ -309,41 +315,56 @@ public final class MagicSpellExecutors {
             return false;
         }
 
-        if (target == null || !target.isAlive()) {
-            Log.warn(TAG, "castConversion 目标无效 caster={}", npc.getUUID().toString().substring(0, 8));
+        // 施法瞬间魅惑最近的 CONVERSION_CHARM_COUNT 个敌对生物（16 格内按距施法者近→远，不中途追加；
+        // 受伤即解除 charm，见 MagicEventHandler.onLivingDamage）
+        AABB box = npc.getBoundingBox().inflate(16.0);
+        List<LivingEntity> enemies = new ArrayList<>();
+        for (Entity e : level.getEntities((Entity) null, box, e -> e instanceof Enemy && e.isAlive())) {
+            if (e instanceof LivingEntity le) enemies.add(le);
+        }
+        enemies.sort(Comparator.comparingDouble(t -> npc.distanceToSqr(t)));
+        if (enemies.isEmpty()) {
+            Log.warn(TAG, "castConversion 无敌人可魅惑 caster={}", npc.getUUID().toString().substring(0, 8));
             return false;
         }
 
-        Vec3 pos = target.position();
+        Vec3 pos = npc.position();
         UUID effectId = UUID.randomUUID();
 
-        // 目标脚下广播感化法阵
-        PacketDistributor.sendToPlayersTrackingEntityAndSelf(target,
-                new MagicCircleCastPacket(effectId, pos, new Vec3(0, 1, 0), circleId));
+        // 施法者脚下广播感化法阵（跟随 NPC，范围覆盖最近几个敌人）
+        PacketDistributor.sendToPlayersTrackingEntityAndSelf(npc,
+                new MagicCircleCastPacket(effectId, pos, new Vec3(0, 1, 0), circleId, npc.getUUID()));
 
-        target.addEffect(new MobEffectInstance(WandscapeEffects.CONVERSION,
-                CONVERSION_DEBUFF_TICKS, 0));
-        MagicEventHandler.addConversion(target, CONVERSION_DEBUFF_TICKS);
+        int count = Math.min(CONVERSION_CHARM_COUNT, enemies.size());
+        for (int i = 0; i < count; i++) {
+            LivingEntity e = enemies.get(i);
+            e.addEffect(new MobEffectInstance(WandscapeEffects.CONVERSION,
+                    CONVERSION_DEBUFF_TICKS, 0));
+            MagicEventHandler.addConversion(e, CONVERSION_DEBUFF_TICKS);
+        }
 
         level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.EVOKER_CAST_SPELL,
                 SoundSource.NEUTRAL, 0.6f, 1.3f);
-        Log.info(TAG, "castConversion caster={} target={} debuffTicks={}",
-                npc.getUUID().toString().substring(0, 8),
-                target.getName().getString(), CONVERSION_DEBUFF_TICKS);
+        Log.info(TAG, "castConversion caster={} charmed={}/{} debuffTicks={}",
+                npc.getUUID().toString().substring(0, 8), count, enemies.size(), CONVERSION_DEBUFF_TICKS);
         return true;
     }
 
     // ── 8. 背水 (Desperation) ──
     // 自我增益：0 前摇，极高代价输出模式。
-    // 有效护甲 = −A/2，力量等级 = floor((A²+55)/55) − 1（二次增长 + 基线补偿）。
+    // 有效护甲 = −A/2（下限 −16，见 onLivingDamage），力量等级 = min(10, ⌊A²/100⌋)
+    // （二次增长，护甲 ≤5 无奖励；2026-08-19 从 A²/48 削弱并加上限）。
 
     private static final int DESPERATION_BUFF_TICKS = 300; // 15s
 
+    /** 背水力量等级上限（amplifier ≤ 10，护甲再高也不超过力量 X）。 */
+    private static final int DESPERATION_MAX_STRENGTH = 10;
+
     /** 根据护甲值计算背水力量等级（amplifier，0 = 力量 I）。
-     *  ≤5 护甲无奖励，6+ 按 A²/48 二次增长。 */
+     *  ≤5 护甲无奖励，6+ 按 A²/100 二次增长，最高力量 X（amplifier 10）。 */
     public static int desperationStrengthAmplifier(float armor) {
         if (armor <= 5.0f) return 0;
-        return (int) (armor * armor / 48.0f);
+        return Math.min(DESPERATION_MAX_STRENGTH, (int) (armor * armor / 100.0f));
     }
 
     public static boolean castDesperation(ServerLevel level, WandscapeNpc npc,
@@ -484,36 +505,27 @@ public final class MagicSpellExecutors {
                 yield true;
             }
             case "conversion" -> {
-                // 玩家感化：搜索视线方向最近敌对生物
-                Vec3 eye = player.getEyePosition();
-                Vec3 look = player.getLookAngle();
-                LivingEntity target = null;
-                double bestDist = Double.MAX_VALUE;
-                for (Entity e : level.getEntities((Entity) null,
-                        player.getBoundingBox().inflate(16.0),
-                        entity -> entity instanceof Enemy && entity.isAlive())) {
-                    Vec3 toTarget = e.position().subtract(eye);
-                    double dist = toTarget.length();
-                    if (dist < bestDist && dist <= 16.0) {
-                        // 粗略视线检查：夹角 < 30°
-                        double dot = look.dot(toTarget.normalize());
-                        if (dot > 0.866) { // cos 30°
-                            target = (LivingEntity) e;
-                            bestDist = dist;
-                        }
-                    }
+                // 玩家感化：施法瞬间魅惑最近的 3 个敌对生物（同 NPC castConversion，受伤即解除）
+                Vec3 pos = player.position();
+                UUID effectId = UUID.randomUUID();
+                PacketDistributor.sendToPlayersTrackingEntityAndSelf(player,
+                        new MagicCircleCastPacket(effectId, pos, new Vec3(0, 1, 0), circleId));
+
+                AABB box = player.getBoundingBox().inflate(16.0);
+                List<LivingEntity> enemies = new ArrayList<>();
+                for (Entity e : level.getEntities((Entity) null, box, entity -> entity instanceof Enemy && entity.isAlive())) {
+                    if (e instanceof LivingEntity le) enemies.add(le);
                 }
-                if (target != null) {
-                    Vec3 pos = target.position();
-                    UUID effectId = UUID.randomUUID();
-                    PacketDistributor.sendToPlayersTrackingEntityAndSelf(target,
-                            new MagicCircleCastPacket(effectId, pos, new Vec3(0, 1, 0), circleId));
-                    target.addEffect(new MobEffectInstance(WandscapeEffects.CONVERSION, 400, 0));
-                    MagicEventHandler.addConversion(target, 400);
-                    level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.EVOKER_CAST_SPELL,
-                            SoundSource.NEUTRAL, 0.6f, 1.3f);
-                    Log.info(TAG, "castConversion player target={}", target.getName().getString());
+                enemies.sort(Comparator.comparingDouble(t -> player.distanceToSqr(t)));
+                int count = Math.min(CONVERSION_CHARM_COUNT, enemies.size());
+                for (int i = 0; i < count; i++) {
+                    LivingEntity e = enemies.get(i);
+                    e.addEffect(new MobEffectInstance(WandscapeEffects.CONVERSION, CONVERSION_DEBUFF_TICKS, 0));
+                    MagicEventHandler.addConversion(e, CONVERSION_DEBUFF_TICKS);
                 }
+                level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.EVOKER_CAST_SPELL,
+                        SoundSource.NEUTRAL, 0.6f, 1.3f);
+                Log.info(TAG, "castConversion player charmed={}", count);
                 yield true;
             }
             case "desperation" -> {

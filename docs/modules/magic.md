@@ -36,7 +36,7 @@
 
 - DEFAULT_CIRCLE=arcane_hexagram、DEFAULT_COLOR=0xFFA8E0FF、BEAM_SPAWN_DELAY=20、BEAM_TAIL=20、BEAM_BASE_CD=400、BEAM_MANA_COST=50。
 - `castNpcAt`（守卫/自防御用）：先过 `npc.tryCastSpell("beam", 400, 50, 锁)` 门控（施法互斥锁 + 光束独立 CD + 50 魔力），成功后面向目标、持杖手中段施法，锁时长 = BEAM_SPAWN_DELAY + spec.durationTicks + BEAM_TAIL（光束全程）；CD 在锁释放后才倒计时（光束结束停 400 tick，总间隔 = 锁 240 + CD 400）。玩家施放入口（法杖右键 / `/wandscape magic` 命令 / shift+右键 NPC）已移除（测试完成）。
-- `MagicCircleCastPacket`（S→C）：(effectId,pos,axis,circleId[,casterUuid])，handler 调 MagicCircleEmitter.add。每次登记施法即发包（NPC 施法）；脚下法阵（heal/meteor/petrification/enfeeble_field/fortification/desperation）带 casterUuid=施法 NPC UUID，客户端法阵跟随 NPC 移动；光束/仪式法阵不带（静态或走 followBeam）。
+- `MagicCircleCastPacket`（S→C）：(effectId,pos,axis,circleId[,casterUuid])，handler 调 MagicCircleEmitter.add。每次登记施法即发包（NPC 施法）；脚下法阵（heal/meteor/petrification/enfeeble_field/fortification/conversion/desperation）带 casterUuid=施法 NPC UUID，客户端法阵跟随 NPC 移动；光束/仪式法阵不带（静态或走 followBeam）。
 
 ## 与其他模块关系
 

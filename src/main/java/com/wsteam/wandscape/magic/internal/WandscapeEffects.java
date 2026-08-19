@@ -69,11 +69,11 @@ public final class WandscapeEffects {
 
     /**
      * 背水效果：增益（BENEFICIAL），深红色粒子。
-     * 有效护甲 = −当前护甲/2（装备越好反噬越重但获得力量补偿）。
+     * 有效护甲 = −当前护甲/2，下限 −16（装备越好反噬越重但获得力量补偿，且反噬封顶）。
      * 护甲公式修正与力量等级均由外部处理：
-     * {@link MagicEventHandler#onLivingDamage} 处理护甲反转，
-     * {@code MagicSpellExecutors} 施放时按 {@code amplifier = floor(armor² / 48)}
-     * 计算力量等级（≤5 甲无奖励，二次增长匹配承伤的指数上升）。
+     * {@link MagicEventHandler#onLivingDamage} 处理护甲反转（下限 −16），
+     * {@code MagicSpellExecutors} 施放时按 {@code amplifier = min(10, floor(armor² / 100))}
+     * 计算力量等级（≤5 甲无奖励，二次增长但最高力量 X）。
      */
     public static class DesperationEffect extends MobEffect {
         public DesperationEffect() {
