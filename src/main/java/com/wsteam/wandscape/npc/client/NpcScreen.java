@@ -67,17 +67,6 @@ public class NpcScreen extends MedievalScreen {
     /** 客户端 3D 展示克隆（不入世界，仅用于面板渲染）。 */
     private WandscapeNpc displayNpc;
 
-    // ── 装备操作即时提示 ──
-    private Component statusTip;
-    private int statusTipColor = MedievalColors.ACCENT_GOLD;
-    private long statusTipExpireTick = 0;
-
-    public void setStatusTip(Component tip, int color) {
-        this.statusTip = tip;
-        this.statusTipColor = color;
-        this.statusTipExpireTick = System.currentTimeMillis() + 3000L;
-    }
-
     // Layout positions (computed in render, used for click detection)
     private int wandSlotX, wandSlotY;
     private final int[] armorSlotX = new int[4];
@@ -371,14 +360,6 @@ public class NpcScreen extends MedievalScreen {
         g.drawString(font, I18n.name("gui.wandscape.npc.inventory", "Inventory"),
                 leftCol, invLabelY, MedievalColors.ACCENT_GOLD);
 
-        if (statusTip != null) {
-            if (System.currentTimeMillis() > statusTipExpireTick) {
-                statusTip = null;
-            } else {
-                g.drawString(font, statusTip, leftCol + 45, invLabelY, statusTipColor);
-            }
-        }
-
         int gridX = leftCol + 2;
         int gridY = divY + 12;
         int cols = 9;
@@ -469,7 +450,7 @@ public class NpcScreen extends MedievalScreen {
             if (!stack.isEmpty()
                     && mouseX >= armorSlotX[i] && mouseX < armorSlotX[i] + SLOT_SIZE
                     && mouseY >= armorSlotY[i] && mouseY < armorSlotY[i] + SLOT_SIZE) {
-                setStatusTip(Component.translatable("gui.wandscape.npc.tip.unequip_success", stack.getHoverName()),
+                showFeedback(Component.translatable("gui.wandscape.npc.tip.unequip_success", stack.getHoverName()),
                         MedievalColors.TEXT_WARM_WHITE);
                 Minecraft.getInstance().getSoundManager().play(
                         SimpleSoundInstance.forUI(SoundEvents.ITEM_PICKUP, 1.0f));
@@ -483,12 +464,12 @@ public class NpcScreen extends MedievalScreen {
         if (mouseX >= wandSlotX && mouseX < wandSlotX + SLOT_SIZE
                 && mouseY >= wandSlotY && mouseY < wandSlotY + SLOT_SIZE) {
             if (isDefaultWand || wandStack.isEmpty()) {
-                setStatusTip(Component.translatable("gui.wandscape.npc.tip.cannot_unequip_default"),
+                showFeedback(Component.translatable("gui.wandscape.npc.tip.cannot_unequip_default"),
                         MedievalColors.DANGER_RED);
                 Minecraft.getInstance().getSoundManager().play(
                         SimpleSoundInstance.forUI(SoundEvents.DISPENSER_FAIL, 1.2f));
             } else {
-                setStatusTip(Component.translatable("gui.wandscape.npc.tip.unequip_success", wandStack.getHoverName()),
+                showFeedback(Component.translatable("gui.wandscape.npc.tip.unequip_success", wandStack.getHoverName()),
                         MedievalColors.TEXT_WARM_WHITE);
                 Minecraft.getInstance().getSoundManager().play(
                         SimpleSoundInstance.forUI(SoundEvents.ITEM_PICKUP, 1.0f));
@@ -516,10 +497,10 @@ public class NpcScreen extends MedievalScreen {
 
                     if (stack.getItem() instanceof WandItem) {
                         if (!isDefaultWand && !wandStack.isEmpty()) {
-                            setStatusTip(Component.translatable("gui.wandscape.npc.tip.swap_success",
+                            showFeedback(Component.translatable("gui.wandscape.npc.tip.swap_success",
                                     wandStack.getHoverName(), stack.getHoverName()), MedievalColors.ACCENT_GOLD);
                         } else {
-                            setStatusTip(Component.translatable("gui.wandscape.npc.tip.equip_success",
+                            showFeedback(Component.translatable("gui.wandscape.npc.tip.equip_success",
                                     stack.getHoverName()), MedievalColors.SUCCESS_GREEN);
                         }
                         Minecraft.getInstance().getSoundManager().play(
@@ -533,10 +514,10 @@ public class NpcScreen extends MedievalScreen {
                     if (armorIdx >= 0) {
                         ItemStack oldArmor = armorIdx < armorStacks.size() ? armorStacks.get(armorIdx) : ItemStack.EMPTY;
                         if (!oldArmor.isEmpty()) {
-                            setStatusTip(Component.translatable("gui.wandscape.npc.tip.swap_success",
+                            showFeedback(Component.translatable("gui.wandscape.npc.tip.swap_success",
                                     oldArmor.getHoverName(), stack.getHoverName()), MedievalColors.ACCENT_GOLD);
                         } else {
-                            setStatusTip(Component.translatable("gui.wandscape.npc.tip.equip_success",
+                            showFeedback(Component.translatable("gui.wandscape.npc.tip.equip_success",
                                     stack.getHoverName()), MedievalColors.SUCCESS_GREEN);
                         }
                         Minecraft.getInstance().getSoundManager().play(
@@ -547,7 +528,7 @@ public class NpcScreen extends MedievalScreen {
                     }
 
                     // Clicked non-equippable item in inventory
-                    setStatusTip(Component.translatable("gui.wandscape.npc.tip.not_equippable"),
+                    showFeedback(Component.translatable("gui.wandscape.npc.tip.not_equippable"),
                             MedievalColors.DANGER_RED);
                     Minecraft.getInstance().getSoundManager().play(
                             SimpleSoundInstance.forUI(SoundEvents.DISPENSER_FAIL, 1.2f));

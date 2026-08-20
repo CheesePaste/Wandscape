@@ -22,6 +22,8 @@ import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.data.ItemKey;
 import com.wsteam.wandscape.warehouse.ColonyItemBank;
 import com.wsteam.wandscape.warehouse.network.WarehouseDataPacket;
+import com.wsteam.wandscape.shared.network.ScreenFeedbackPacket;
+import com.wsteam.wandscape.shared.ui.I18n;
 
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -189,8 +191,9 @@ public final class BuildingInteractHandler {
                         new TavernOpenPacket(pos, colonyId, recruitCount, mageResumes, creator));
             }
             case "potion_station" -> {
-                player.displayClientMessage(Component.literal(
-                        "[Wandscape] Potion Station — not yet implemented"), false);
+                ScreenFeedbackPacket.send(player, I18n.name(
+                        "message.wandscape.building.potion_station_unimplemented",
+                        "[Wandscape] Potion Station — not yet implemented"), true);
             }
             case "altar" -> {
                 if (level instanceof net.minecraft.server.level.ServerLevel sl) {
@@ -306,8 +309,9 @@ public final class BuildingInteractHandler {
         BuildingConfig config = BuildingConfigLoader.getInstance().get(state.getBuildingTypeId());
         if (config == null || config.nodeConfig() == null) {
             Log.warn(TAG, "[Node] building {} has no node_config", state.getBuildingTypeId());
-            player.displayClientMessage(Component.literal(
-                    "[Wandscape] " + state.getBuildingTypeId() + " — no node_config"), false);
+            ScreenFeedbackPacket.send(player, I18n.name(
+                    "message.wandscape.building.no_node_config",
+                    "[Wandscape] %s — no node_config", state.getBuildingTypeId()), true);
             return;
         }
         var nc = config.nodeConfig();

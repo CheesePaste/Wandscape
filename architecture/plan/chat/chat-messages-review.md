@@ -18,86 +18,86 @@
 
 | # | 位置 | 触发 | 当前文案 | 通道 | 决定 |
 |---|---|---|---|---|---|
-| 1 | :75 | 酒馆未关联殖民地 | `[Wandscape] This tavern is not assigned to any colony.` | 聊天 |  |
-| 2 | :93 | 元素不足 | `[Wandscape] Insufficient elements: recruiting costs 10000 of every element (first recruit free).`（含数值） | 聊天 |  |
-| 3 | :114 | NPC 生成失败 | `[Wandscape] Failed to recruit NPC.` | 聊天 |  |
-| 4 | :145 | 招募成功 | `[Wandscape] Mage recruited! Lv.X 强度:Y 工速:Z 施速:W 护甲:V (坐标)`（中英混排，多参数） | 聊天 |  |
-| 5 | :172 | 系统不可用 | `[Wandscape] Tavern system not available.` | 聊天 |  |
-| 6 | :179 | 无效选择 | `[Wandscape] Invalid mage selection.` | 聊天 |  |
-| 7 | :188 | 简历法师生成失败 | `[Wandscape] Failed to recruit mage.` | 聊天 |  |
-| 8 | :215 | 简历法师招募成功 | `[Wandscape] Mage {name} recruited! Lv.X 强度:Y 工速:Z 施速:W 护甲:V`（中英混排，多参数） | 聊天 |  |
+| 1 | :75 | 酒馆未关联殖民地 | `[Wandscape] This tavern is not assigned to any colony.` | 聊天 | 改→UI（补键） |
+| 2 | :93 | 元素不足 | `[Wandscape] Insufficient elements: recruiting costs 10000 of every element (first recruit free).`（含数值） | 聊天 | 改→UI（补键） |
+| 3 | :114 | NPC 生成失败 | `[Wandscape] Failed to recruit NPC.` | 聊天 | 改→UI（补键） |
+| 4 | :145 | 招募成功 | `[Wandscape] Mage recruited! Lv.X 强度:Y 工速:Z 施速:W 护甲:V (坐标)`（中英混排，多参数） | 聊天 | 改→UI |
+| 5 | :172 | 系统不可用 | `[Wandscape] Tavern system not available.` | 聊天 | 改→UI（补键） |
+| 6 | :179 | 无效选择 | `[Wandscape] Invalid mage selection.` | 聊天 | 改→UI（补键） |
+| 7 | :188 | 简历法师生成失败 | `[Wandscape] Failed to recruit mage.` | 聊天 | 改→UI（补键） |
+| 8 | :215 | 简历法师招募成功 | `[Wandscape] Mage {name} recruited! Lv.X 强度:Y 工速:Z 施速:W 护甲:V`（中英混排，多参数） | 聊天 | 改→UI |
 
 ### 1.2 仓库
 
 | # | 位置 | 触发 | 当前文案 | 通道 | 决定 |
 |---|---|---|---|---|---|
-| 9 | `warehouse/network/WarehouseActionPacket.java:141` | 手中无物存仓 | `[Wandscape] Nothing in hand to deposit` | 聊天 |  |
-| 10 | `warehouse/WarehouseNotificationHandler.java:27` | 资源不足（由 `shared/event/ResourceInsufficientEvent.java:31` 生成） | `[Wandscape] ⚠ Colony is short on {resource}: needs {n}, has {n}` —— **广播给所有在线玩家** | 聊天 |  |
+| 9 | `warehouse/network/WarehouseActionPacket.java:141` | 手中无物存仓 | `[Wandscape] Nothing in hand to deposit` | 聊天 | 改→UI（补键） |
+| 10 | `warehouse/WarehouseNotificationHandler.java:27` | 资源不足（由 `shared/event/ResourceInsufficientEvent.java:31` 生成） | `[Wandscape] ⚠ Colony is short on {resource}: needs {n}, has {n}` —— **广播给所有在线玩家** | 聊天 | 删（已移除上屏，只留订阅） |
 
 ### 1.3 投影建造 `projection/network/ProjectionPlacePacket.java`
 
 | # | 位置 | 触发 | 当前文案 | 通道 | 决定 |
 |---|---|---|---|---|---|
-| 11 | :58 | 未知建筑类型 | `[Projection] §cUnknown building type: {id}` | 聊天 |  |
-| 12 | :69 | 建筑 API 不可用 | `[Projection] §cBuilding API unavailable` | 聊天 |  |
-| 13 | :79 | 建造失败 | `[Projection] §c{error}`（透传建造错误） | 聊天 |  |
-| 14 | :93 | 首免成功 | `[Projection] §a{buildingName} §fplaced at ({pos}) — §eFREE first build, no materials consumed` | 聊天 |  |
-| 15 | :100 | 常规建造成功 | `[Projection] §a{buildingName} §fplaced at ({pos}) — §aNPC will construct` | 聊天 |  |
+| 11 | :58 | 未知建筑类型 | `[Projection] §cUnknown building type: {id}` | 聊天 | 改→屏幕（补键） |
+| 12 | :69 | 建筑 API 不可用 | `[Projection] §cBuilding API unavailable` | 聊天 | 改→屏幕（补键） |
+| 13 | :79 | 建造失败 | `[Projection] §c{error}`（透传建造错误） | 聊天 | 改→屏幕（补键） |
+| 14 | :93 | 首免成功 | `[Projection] §a{buildingName} §fplaced at ({pos}) — §eFREE first build, no materials consumed` | 聊天 | 删 |
+| 15 | :100 | 常规建造成功 | `[Projection] §a{buildingName} §fplaced at ({pos}) — §aNPC will construct` | 聊天 | 删 |
 
 ### 1.4 祭坛施法 `building/internal/AltarCastHandler.java`（纯中文）
 
 | # | 位置 | 触发 | 当前文案 | 通道 | 决定 |
 |---|---|---|---|---|---|
-| 16 | :74 | 魔法不可在祭坛施放 | `该魔法不可在祭坛施放` | 聊天 |  |
-| 17 | :79 | 建筑系统未就绪 | `建筑系统未就绪` | 聊天 |  |
-| 18 | :85 | 祭坛不存在或未完工 | `祭坛不存在或未完工` | 聊天 |  |
-| 19 | :92 | 冷却中 | `祭坛冷却中（剩余 X 秒）`（数值） | 聊天 |  |
-| 20 | :98 | 施法进行中 | `该祭坛正在施法中` | 聊天 |  |
-| 21 | :104 | 无复活记录 | `该殖民地没有可复活的死亡记录` | 聊天 |  |
-| 22 | :108 | 法师魔力不足 | `没有魔力足够（≥X）的法师 NPC`（数值） | 聊天 |  |
-| 23 | :126 | 任务系统未就绪 | `任务系统未就绪` | 聊天 |  |
-| 24 | :133 | 施法已安排 | `已安排祭坛施法：{magicId}`（参数） | 聊天 |  |
+| 16 | :74 | 魔法不可在祭坛施放 | `该魔法不可在祭坛施放` | 聊天 | 改→UI（键已有） |
+| 17 | :79 | 建筑系统未就绪 | `建筑系统未就绪` | 聊天 | 改→UI（键已有） |
+| 18 | :85 | 祭坛不存在或未完工 | `祭坛不存在或未完工` | 聊天 | 改→UI（键已有） |
+| 19 | :92 | 冷却中 | `祭坛冷却中（剩余 X 秒）`（数值） | 聊天 | 改→UI（键已有） |
+| 20 | :98 | 施法进行中 | `该祭坛正在施法中` | 聊天 | 改→UI（键已有） |
+| 21 | :104 | 无复活记录 | `该殖民地没有可复活的死亡记录` | 聊天 | 改→UI（键已有） |
+| 22 | :108 | 法师魔力不足 | `没有魔力足够（≥X）的法师 NPC`（数值） | 聊天 | 改→UI（键已有） |
+| 23 | :126 | 任务系统未就绪 | `任务系统未就绪` | 聊天 | 改→UI（键已有） |
+| 24 | :133 | 施法已安排 | `已安排祭坛施法：{magicId}`（参数） | 聊天 | 改→UI（键已有） |
 
 ### 1.5 殖民地自动创建 / 面板
 
 | # | 位置 | 触发 | 当前文案 | 通道 | 决定 |
 |---|---|---|---|---|---|
-| 25 | `shared/network/PanelStateTogglePacket.java:63` | 面板打开时自动建殖民地 | `殖民地尚未建立，已自动创建「{name}的殖民地」——放置市政厅后自动关联。` | 聊天 |  |
-| 26 | `shared/network/ColonyCreateRequestPacket.java:58` | 市政厅关联已有殖民地 | `市政厅已关联至现有殖民地。` | 聊天 |  |
-| 27 | `shared/network/ColonyCreateRequestPacket.java:66` | 创建失败 | `创建殖民地失败。` | 聊天 |  |
+| 25 | `shared/network/PanelStateTogglePacket.java:63` | 面板打开时自动建殖民地 | `殖民地尚未建立，已自动创建「{name}的殖民地」——放置市政厅后自动关联。` | 聊天 | 删（该自动创建消息已随 PanelStateTogglePacket 重构移除，现不再提示） |
+| 26 | `shared/network/ColonyCreateRequestPacket.java:58` | 市政厅关联已有殖民地 | `市政厅已关联至现有殖民地。` | 聊天 | 保留 |
+| 27 | `shared/network/ColonyCreateRequestPacket.java:66` | 创建失败 | `创建殖民地失败。` | 聊天 | 保留 |
 
 ### 1.6 建筑交互 `building/internal/BuildingInteractHandler.java`
 
 | # | 位置 | 触发 | 当前文案 | 通道 | 决定 |
 |---|---|---|---|---|---|
-| 28 | :160 | 药水站未实现 | `[Wandscape] Potion Station — not yet implemented`（占位） | 聊天 |  |
-| 29 | :247 | 建筑无 node_config | `[Wandscape] {type} — no node_config`（内部错误外漏） | 聊天 |  |
+| 28 | :160 | 药水站未实现 | `[Wandscape] Potion Station — not yet implemented`（占位） | 聊天 | 改→屏幕（补键） |
+| 29 | :247 | 建筑无 node_config | `[Wandscape] {type} — no node_config`（内部错误外漏） | 聊天 | 改→屏幕（补键） |
 
 ### 1.7 建筑/道路扫描导出 `building/scanner/network/BuildingScannerExportPacket.java`（纯英文）
 
 | # | 位置 | 触发 | 当前文案 | 通道 | 决定 |
 |---|---|---|---|---|---|
-| 30 | :65 | 找不到扫描仪 | `§cNo scanner found at {pos}` | 聊天 |  |
-| 31 | :72 | 未设建筑 ID | `§cSet a building ID before exporting` | 聊天 |  |
-| 32 | :80 | 未定义边界 | `§cNo boundary defined` | 聊天 |  |
-| 33 | :316 | 建筑导出成功 | `§aExported building '{id}' to §e{path}` | 聊天 |  |
-| 34 | :321 | 建筑导出失败 | `§cFailed to export: {msg}` | 聊天 |  |
-| 35 | :382 | 边界内无道路方块 | `§cNo road blocks found inside boundary box` | 聊天 |  |
-| 36 | :412 | 道路预设导出成功 | `§aExported road preset '{id}' to §e{path}` | 聊天 |  |
-| 37 | :417 | 道路预设导出失败 | `§cFailed to export road preset: {msg}` | 聊天 |  |
+| 30 | :65 | 找不到扫描仪 | `§cNo scanner found at {pos}` | 聊天 | 保留（补键） |
+| 31 | :72 | 未设建筑 ID | `§cSet a building ID before exporting` | 聊天 | 保留（补键） |
+| 32 | :80 | 未定义边界 | `§cNo boundary defined` | 聊天 | 保留（补键） |
+| 33 | :316 | 建筑导出成功 | `§aExported building '{id}' to §e{path}` | 聊天 | 保留（键已有） |
+| 34 | :321 | 建筑导出失败 | `§cFailed to export: {msg}` | 聊天 | 保留（补键） |
+| 35 | :382 | 边界内无道路方块 | `§cNo road blocks found inside boundary box` | 聊天 | 保留（补键） |
+| 36 | :412 | 道路预设导出成功 | `§aExported road preset '{id}' to §e{path}` | 聊天 | 保留（键已有） |
+| 37 | :417 | 道路预设导出失败 | `§cFailed to export road preset: {msg}` | 聊天 | 保留（补键） |
 
 ### 1.8 投影模式进入
 
 | # | 位置 | 触发 | 当前文案 | 通道 | 决定 |
 |---|---|---|---|---|---|
-| 38 | `projection/network/ProjectionEnterPacket.java:46` | 进入失败 | `[Projection] {error}` | 聊天 |  |
+| 38 | `projection/network/ProjectionEnterPacket.java:46` | 进入失败 | `[Projection] {error}` | 聊天 | 保留（补键） |
 | 39 | `projection/network/ProjectionEnterResponsePacket.java:61` | 无法进入投影模式 | `[Projection] §eCannot enter projection mode` | 动作栏 |  |
 
 ### 1.9 欢迎语（已有翻译键 ✓）
 
 | # | 位置 | 触发 | 当前文案 | 通道 | 决定 |
 |---|---|---|---|---|---|
-| 40 | `WandscapeClient.java:329` | 进入城镇 | `Component.translatable("message.wandscape.town.welcome")` ✅ 已走翻译键 | 聊天 | 保留 |
+| 40 | `WandscapeClient.java:329` | 进入城镇 | `Component.translatable("message.wandscape.town.welcome")` ✅ 已走翻译键 | 聊天 | 保留（聊天，用户改回） |
 
 ---
 
@@ -164,10 +164,10 @@
 
 ## 待你逐条决定的要点提示
 
-1. **必改（混排/硬编码）**：#4、#8 酒馆招募成功中英混排；#2 费用数值硬编码。
-2. **建议降级 Log**：#29（node_config 内部错误）、#57（config 缺失）、#34/#37（导出错误细节）。
-3. **广播注意**：#10 资源不足发给所有在线玩家，若加键须服务端发键、客户端渲染。
-4. **已有翻译键，无需处理**：#40、#50、#51。
-5. **纯命令反馈（三）**：默认保留英文，除非你要求统一本地化。
+1. **统一反馈通道（本次落地）**：新增 `shared/network/ScreenFeedbackPacket` —— 有 `MedievalScreen` 打开时显示屏内顶部 toast（不改面板尺寸），无 UI 时落动作栏。祭坛/酒馆/仓库/NPC/建筑交互/道路禁用块/放置建筑错误全部走此通道，不再进聊天区。
+2. **聊天区只保留**：#26/#27（殖民地）、#30-37（扫描导出）、#38（投影进入）、#40（欢迎语，用户改回聊天）。
+3. **NPC 装备**：成功消息已删（只留音效 + NpcScreen 本地提示）；`not_equippable`/`cannot_unequip_default` 服务端消息删除（客户端 NpcScreen 已有同款提示，防重复）；`inventory_full_drop` 走 ScreenFeedbackPacket（防物品静默丢失）。对应 lang 键 `equip_success`/`swap_success`/`unequip_success`/`not_equippable`/`cannot_unequip_default` 已删。
+4. **补键落地**：本次新增 ~22 把 `message.wandscape.*` 键（tavern 6 / warehouse 1 / projection 4 / road·fill·spline 3 / building 2 / scanner 6），zh_cn + en_us 双语。
+5. **#29 node_config、#34/#37 导出错误**：按用户决定改为「显示在屏幕 / 保留聊天」，不再仅 Log。
 
 > 决定后请在对应「决定」列填 `保留/删/加键/改`，我再逐条落地并 commit。

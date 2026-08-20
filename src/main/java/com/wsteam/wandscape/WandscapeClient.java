@@ -424,6 +424,19 @@ public class WandscapeClient {
         com.wsteam.wandscape.building.network.BuildingConfigSyncChunkPacket.setClientHandler(
                 com.wsteam.wandscape.building.client.BuildingConfigSyncReceiver::onChunk);
 
+        // Transient feedback: show on the open MedievalScreen if any, else the action bar.
+        com.wsteam.wandscape.shared.network.ScreenFeedbackPacket.setClientHandler(packet -> {
+            var mc = Minecraft.getInstance();
+            if (mc.screen instanceof com.wsteam.wandscape.shared.ui.component.MedievalScreen ms) {
+                ms.showFeedback(packet.message(),
+                        packet.isError()
+                                ? com.wsteam.wandscape.shared.ui.theme.MedievalColors.DANGER_RED
+                                : com.wsteam.wandscape.shared.ui.theme.MedievalColors.ACCENT_GOLD);
+            } else if (mc.player != null) {
+                mc.player.displayClientMessage(packet.message(), true);
+            }
+        });
+
         Log.info("Wandscape", "Wandscape client setup complete");
     }
 

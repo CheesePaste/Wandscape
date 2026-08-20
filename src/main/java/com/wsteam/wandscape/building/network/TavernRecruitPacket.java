@@ -30,6 +30,7 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
 import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.shared.network.ScreenFeedbackPacket;
 import com.wsteam.wandscape.shared.registry.WandscapeConstants;
 import com.wsteam.wandscape.shared.ui.I18n;
 
@@ -75,9 +76,8 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
             }
             UUID colonyId = state.getColonyId();
             if (colonyId == null) {
-                sp.displayClientMessage(
-                        Component.literal("[Wandscape] This tavern is not assigned to any colony."),
-                        false);
+                ScreenFeedbackPacket.send(sp, I18n.name("message.wandscape.tavern.no_colony",
+                        "[Wandscape] This tavern is not assigned to any colony."), true);
                 return;
             }
 
@@ -93,11 +93,10 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
                 tavernApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getTavernApi();
             } catch (IllegalStateException ignored) {}
             if (tavernApi != null && !tavernApi.canAffordRecruit(colonyId)) {
-                sp.displayClientMessage(
-                        Component.literal("[Wandscape] Insufficient elements: recruiting costs "
-                                + WandscapeConstants.TAVERN_RECRUIT_COST_PER_ELEMENT
-                                + " of every element (first recruit free)."),
-                        false);
+                ScreenFeedbackPacket.send(sp, I18n.name("message.wandscape.tavern.insufficient_elements",
+                        "[Wandscape] Insufficient elements: recruiting costs %d of every element "
+                                + "(first recruit free).",
+                        WandscapeConstants.TAVERN_RECRUIT_COST_PER_ELEMENT), true);
                 return;
             }
 
@@ -114,9 +113,8 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
             // 5. Spawn NPC
             var npc = Wandscape.WANDSCAPE_NPC.get().spawn(level, spawnPos, MobSpawnType.COMMAND);
             if (npc == null) {
-                sp.displayClientMessage(
-                        Component.literal("[Wandscape] Failed to recruit NPC."),
-                        false);
+                ScreenFeedbackPacket.send(sp, I18n.name("message.wandscape.tavern.recruit_failed",
+                        "[Wandscape] Failed to recruit NPC."), true);
                 return;
             }
             npc.setPersistenceRequired();
@@ -145,7 +143,7 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
                     colonyId.toString().substring(0, 8),
                     spawnPos.toShortString());
 
-            sp.displayClientMessage(
+            ScreenFeedbackPacket.send(sp,
                     I18n.name("message.wandscape.tavern.recruited_direct",
                             "[Wandscape] Mage recruited! Lv.%d 强度:%.1f 工速:%.1f 施速:%.1f 护甲:%.1f %s",
                             candidate.level(), candidate.spellPower(), candidate.workSpeed(),
@@ -178,25 +176,22 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
             var tavernApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getTavernApi();
             resume = tavernApi.recruitMage(buildingId, colonyId, index);
         } catch (IllegalStateException e) {
-            sp.displayClientMessage(
-                    Component.literal("[Wandscape] Tavern system not available."),
-                    false);
+            ScreenFeedbackPacket.send(sp, I18n.name("message.wandscape.tavern.system_unavailable",
+                    "[Wandscape] Tavern system not available."), true);
             return;
         }
 
         if (resume == null) {
-            sp.displayClientMessage(
-                    Component.literal("[Wandscape] Invalid mage selection."),
-                    false);
+            ScreenFeedbackPacket.send(sp, I18n.name("message.wandscape.tavern.invalid_selection",
+                    "[Wandscape] Invalid mage selection."), true);
             return;
         }
 
         BlockPos spawnPos = findSpawnPos(level, pkt.buildingPos);
         var npc = Wandscape.WANDSCAPE_NPC.get().spawn(level, spawnPos, MobSpawnType.COMMAND);
         if (npc == null) {
-            sp.displayClientMessage(
-                    Component.literal("[Wandscape] Failed to recruit mage."),
-                    false);
+            ScreenFeedbackPacket.send(sp, I18n.name("message.wandscape.tavern.recruit_mage_failed",
+                    "[Wandscape] Failed to recruit mage."), true);
             return;
         }
         npc.setPersistenceRequired();
@@ -221,7 +216,7 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
                 colonyId.toString().substring(0, 8),
                 spawnPos.toShortString());
 
-        sp.displayClientMessage(
+        ScreenFeedbackPacket.send(sp,
                 I18n.name("message.wandscape.tavern.recruited_resume",
                         "[Wandscape] Mage %s recruited! Lv.%d 强度:%.1f 工速:%.1f 施速:%.1f 护甲:%.1f",
                         resume.touristName(), resume.level(), resume.spellPower(),

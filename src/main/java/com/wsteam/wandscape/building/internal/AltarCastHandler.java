@@ -23,6 +23,7 @@ import com.wsteam.wandscape.shared.data.AltarSpellInfo;
 import com.wsteam.wandscape.shared.data.BuildingData;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.shared.registry.WandscapeConstants;
+import com.wsteam.wandscape.shared.network.ScreenFeedbackPacket;
 import com.wsteam.wandscape.task.engine.pool.TaskRequest;
 
 import net.minecraft.core.BlockPos;
@@ -71,47 +72,47 @@ public final class AltarCastHandler {
         ServerLevel level = player.serverLevel();
         MagicDef def = SpellbookLoader.getSpec(magicId);
         if (def == null || !def.altarOnly()) {
-            player.displayClientMessage(I18n.name("message.wandscape.altar.not_altar_only",
-                    "[Wandscape] 该魔法不可在祭坛施放"), false);
+            ScreenFeedbackPacket.send(player, I18n.name("message.wandscape.altar.not_altar_only",
+                    "[Wandscape] 该魔法不可在祭坛施放"), true);
             return;
         }
         var buildingApi = WandscapeApis.getBuildingApiSilently();
         if (buildingApi == null) {
-            player.displayClientMessage(I18n.name("message.wandscape.altar.build_system_not_ready",
-                    "[Wandscape] 建筑系统未就绪"), false);
+            ScreenFeedbackPacket.send(player, I18n.name("message.wandscape.altar.build_system_not_ready",
+                    "[Wandscape] 建筑系统未就绪"), true);
             return;
         }
         BuildingData building = buildingApi.getBuilding(buildingId);
         BoundingBox bounds = buildingApi.getBuildingBounds(buildingId);
         if (building == null || bounds == null) {
-            player.displayClientMessage(I18n.name("message.wandscape.altar.not_found",
-                    "[Wandscape] 祭坛不存在或未完工"), false);
+            ScreenFeedbackPacket.send(player, I18n.name("message.wandscape.altar.not_found",
+                    "[Wandscape] 祭坛不存在或未完工"), true);
             return;
         }
 
         AltarCastState state = AltarCastState.get(level);
         int cd = state.getCooldown(buildingId, magicId);
         if (cd > 0) {
-            player.displayClientMessage(I18n.name("message.wandscape.altar.on_cooldown",
-                    "[Wandscape] 祭坛冷却中（剩余 %.1f 秒）", cd / 20.0), false);
+            ScreenFeedbackPacket.send(player, I18n.name("message.wandscape.altar.on_cooldown",
+                    "[Wandscape] 祭坛冷却中（剩余 %.1f 秒）", cd / 20.0), true);
             return;
         }
         if (isAltarCastLocked(buildingId, magicId)) {
             // 已发布未施放 / 正在施法 —— 发布即锁定，直到施放结束
-            player.displayClientMessage(I18n.name("message.wandscape.altar.already_casting",
-                    "[Wandscape] 该祭坛正在施法中"), false);
+            ScreenFeedbackPacket.send(player, I18n.name("message.wandscape.altar.already_casting",
+                    "[Wandscape] 该祭坛正在施法中"), true);
             return;
         }
         UUID colonyId = building.getColonyId();
         if (ReviveHandler.REVIVE_MAGIC_ID.equals(magicId)
                 && ColonyDeathRegistry.get(level).latestInColony(colonyId) == null) {
-            player.displayClientMessage(I18n.name("message.wandscape.altar.no_revive_record",
-                    "[Wandscape] 该小镇没有可复活的死亡记录"), false);
+            ScreenFeedbackPacket.send(player, I18n.name("message.wandscape.altar.no_revive_record",
+                    "[Wandscape] 该小镇没有可复活的死亡记录"), true);
             return;
         }
         if (!hasAdequateMage(level, colonyId, def.manaCost())) {
-            player.displayClientMessage(I18n.name("message.wandscape.altar.no_adequate_mage",
-                    "[Wandscape] 没有魔力足够（≥%d）的法师 NPC", def.manaCost()), false);
+            ScreenFeedbackPacket.send(player, I18n.name("message.wandscape.altar.no_adequate_mage",
+                    "[Wandscape] 没有魔力足够（≥%d）的法师 NPC", def.manaCost()), true);
             return;
         }
 
@@ -128,15 +129,15 @@ public final class AltarCastHandler {
 
         var source = WandscapeEngine.getPlayerManualSource();
         if (source == null) {
-            player.displayClientMessage(I18n.name("message.wandscape.altar.task_system_not_ready",
-                    "[Wandscape] 任务系统未就绪"), false);
+            ScreenFeedbackPacket.send(player, I18n.name("message.wandscape.altar.task_system_not_ready",
+                    "[Wandscape] 任务系统未就绪"), true);
             return;
         }
         source.publish(new TaskRequest(TASK_BLUEPRINT, params, WandscapeConstants.QUEUE_RITUAL_ALTAR));
         Log.info(TAG, "player={} requested altar cast: altar={} magic={} manaCost={}",
                 player.getName().getString(), buildingId.toString().substring(0, 8),
                 magicId, def.manaCost());
-        player.displayClientMessage(I18n.name("message.wandscape.altar.cast_scheduled",
+        ScreenFeedbackPacket.send(player, I18n.name("message.wandscape.altar.cast_scheduled",
                 "[Wandscape] 已安排祭坛施法：%s", magicId), false);
     }
 

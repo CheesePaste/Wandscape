@@ -15,6 +15,8 @@ import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.service.SoundService;
 import com.wsteam.wandscape.engine.sound.WandscapeSounds;
 import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.shared.network.ScreenFeedbackPacket;
+import com.wsteam.wandscape.shared.ui.I18n;
 import com.wsteam.wandscape.task.engine.pool.TaskRequest;
 import com.wsteam.wandscape.task.source.PlayerManualSource;
 import com.wsteam.wandscape.road.core.PathPoint;
@@ -65,7 +67,8 @@ public record SplineBuildPacket(String tilesJson, String splineJson) implements 
                     String pureId = tileObj.get("block").getAsString().replaceAll("\\[.*?\\]", "").trim();
                     if (elementApi.isDisabled(pureId)) {
                         Log.warn(TAG, "[Spline] Refuse — block {} disabled by element mapping", pureId);
-                        player.sendSystemMessage(net.minecraft.network.chat.Component.literal("§cSpline road contains a disabled block: " + pureId));
+                        ScreenFeedbackPacket.send(player, I18n.name("message.wandscape.spline.disabled_block",
+                                "§cSpline road contains a disabled block: %s", pureId), true);
                         return;
                     }
                 }

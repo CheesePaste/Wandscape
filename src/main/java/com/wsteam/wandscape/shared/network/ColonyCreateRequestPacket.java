@@ -89,8 +89,6 @@ public record ColonyCreateRequestPacket(BlockPos townHallAnchor, String name)
         if (guideApi != null) {
             guideApi.sendToPlayer(player, colonyId);
         }
-
-        sendMessage(player, outcome.message());
     }
 
     private static void linkTownHall(ColonyApi colonyApi, BlockPos anchor, UUID colonyId) {

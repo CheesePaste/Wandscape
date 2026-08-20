@@ -18,6 +18,8 @@ import com.wsteam.wandscape.engine.sound.WandscapeSounds;
 import com.wsteam.wandscape.task.source.PlayerManualSource;
 import com.wsteam.wandscape.task.engine.pool.TaskRequest;
 import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.shared.network.ScreenFeedbackPacket;
+import com.wsteam.wandscape.shared.ui.I18n;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -125,7 +127,8 @@ public record RoadPlacePacket(String presetId, BlockPos startPos, BlockPos endPo
                 String pureId = tileObj.get("block").getAsString().replaceAll("\\[.*?\\]", "").trim();
                 if (elementApi.isDisabled(pureId)) {
                     Log.warn(TAG, "[Road] Refuse — block {} disabled by element mapping", pureId);
-                    player.sendSystemMessage(net.minecraft.network.chat.Component.literal("§cRoad contains a disabled block: " + pureId));
+                    ScreenFeedbackPacket.send(player, I18n.name("message.wandscape.road.disabled_block",
+                            "§cRoad contains a disabled block: %s", pureId), true);
                     return;
                 }
             }

@@ -664,6 +664,12 @@ public class Wandscape {
                         com.wsteam.wandscape.shared.network.RoadAreaSyncPacket.STREAM_CODEC,
                         (packet, ctx) -> com.wsteam.wandscape.shared.network.RoadAreaSyncPacket
                                 .handleClient(packet))
+                // ── Transient action feedback (screen toast or action bar) ──
+                .playToClient(
+                        com.wsteam.wandscape.shared.network.ScreenFeedbackPacket.TYPE,
+                        com.wsteam.wandscape.shared.network.ScreenFeedbackPacket.STREAM_CODEC,
+                        (packet, ctx) -> com.wsteam.wandscape.shared.network.ScreenFeedbackPacket
+                                .handleClient(packet))
                 // ── NPC info screen ──
                 .playToClient(
                         NpcDataPacket.TYPE,

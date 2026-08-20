@@ -9,12 +9,12 @@ import com.wsteam.wandscape.projection.data.BuildingSlot;
 import com.wsteam.wandscape.engine.service.SoundService;
 import com.wsteam.wandscape.engine.sound.WandscapeSounds;
 import com.wsteam.wandscape.shared.api.BuildingApi;
+import com.wsteam.wandscape.shared.network.ScreenFeedbackPacket;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.shared.ui.I18n;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
@@ -52,12 +52,11 @@ public record ProjectionPlacePacket(
     // ── Server handler ──
 
     public static void handleServer(ProjectionPlacePacket packet, ServerPlayer player) {
-        // 1. Validate building type exists (needed for display name in messages)
+        // 1. Validate building type exists
         BuildingConfig config = BuildingConfigLoader.getInstance().get(packet.buildingTypeId);
         if (config == null) {
-            player.displayClientMessage(
-                    Component.literal("[Projection] §cUnknown building type: " + packet.buildingTypeId),
-                    false);
+            ScreenFeedbackPacket.send(player, I18n.name("message.wandscape.projection.unknown_type",
+                    "[Projection] §cUnknown building type: %s", packet.buildingTypeId), true);
             Log.warn(TAG, "[Projection] Unknown building type '{}' from player {}",
                     packet.buildingTypeId, player.getGameProfile().getName());
             return;
@@ -66,9 +65,8 @@ public record ProjectionPlacePacket(
         // 2. Unified placement — validates, registers, handles first-free, enqueues WorkItem
         BuildingApi api = WandscapeApis.getBuildingApi();
         if (api == null) {
-            player.displayClientMessage(
-                    Component.literal("[Projection] §cBuilding API unavailable"),
-                    false);
+            ScreenFeedbackPacket.send(player, I18n.name("message.wandscape.projection.api_unavailable",
+                    "[Projection] §cBuilding API unavailable"), true);
             return;
         }
 
@@ -76,35 +74,13 @@ public record ProjectionPlacePacket(
                 packet.anchorPos, packet.buildingTypeId, packet.rotationSteps);
 
         if (!result.success()) {
-            player.displayClientMessage(
-                    Component.literal("[Projection] §c").append(result.error()),
-                    false);
+            ScreenFeedbackPacket.send(player, I18n.name("message.wandscape.projection.place_failed",
+                    "[Projection] §c%s", result.error()), true);
             return;
         }
 
-        // 3. Success — notify player. Building name resolves against the client locale
-        // via building.wandscape.<id>; displayName stays as the fallback (D4).
-        String posStr = packet.anchorPos.getX() + ", " +
-                packet.anchorPos.getY() + ", " +
-                packet.anchorPos.getZ();
-        Component buildingName = I18n.name("building.wandscape." + config.id(), config.displayName());
-
-        if (result.firstFree()) {
-            player.displayClientMessage(
-                    Component.literal("[Projection] §a")
-                            .append(buildingName)
-                            .append(Component.literal(" §fplaced at (" + posStr +
-                                    ") — §eFREE first build, no materials consumed")),
-                    false);
-        } else {
-            player.displayClientMessage(
-                    Component.literal("[Projection] §a")
-                            .append(buildingName)
-                            .append(Component.literal(" §fplaced at (" + posStr +
-                                    ") — §aNPC will construct")),
-                    false);
-        }
-
+        // 3. Success — construction task enqueued. No chat feedback: the construction
+        // ghost on the client shows the result, and placement is its own confirmation.
         Log.info(TAG, "[Projection] '{}' placed at {} by {} firstFree={}",
                 config.displayName(), packet.anchorPos,
                 player.getGameProfile().getName(), result.firstFree());

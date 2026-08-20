@@ -12,6 +12,7 @@ import com.wsteam.wandscape.core.types.ModifierOperation;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.shared.network.ScreenFeedbackPacket;
 import com.wsteam.wandscape.wand.item.WandItem;
 
 import net.minecraft.core.component.DataComponents;
@@ -96,20 +97,12 @@ public record NpcEquipPacket(int entityId, int action, int slotIndex, int armorS
         }
     }
 
-    private static void sendFeedback(ServerPlayer player, Component message) {
-        if (player != null && !player.isRemoved()) {
-            player.sendSystemMessage(message, true);
-            player.sendSystemMessage(message, false);
-        }
-    }
-
     private static void handleEquip(NpcEquipPacket packet, ServerPlayer player, WandscapeNpc npc) {
         int slot = packet.slotIndex();
         if (slot < 0 || slot >= player.getInventory().items.size()) return;
 
         ItemStack newWandStack = player.getInventory().getItem(slot);
         if (newWandStack.isEmpty() || !(newWandStack.getItem() instanceof WandItem)) {
-            sendFeedback(player, Component.translatable("message.wandscape.npc.not_equippable"));
             return;
         }
 
@@ -142,10 +135,8 @@ public record NpcEquipPacket(int entityId, int action, int slotIndex, int armorS
             player.getInventory().setItem(slot, ItemStack.EMPTY);
         }
 
-        boolean swapped = false;
         boolean dropped = false;
         if (!oldWand.isEmpty()) {
-            swapped = true;
             if (player.getInventory().getItem(slot).isEmpty()) {
                 player.getInventory().setItem(slot, oldWand);
             } else {
@@ -171,27 +162,18 @@ public record NpcEquipPacket(int entityId, int action, int slotIndex, int armorS
         // ── Send updated screen data ──
         PacketDistributor.sendToPlayer(player, NpcDataPacket.from(npc));
 
-        // ── Sound & Feedback ──
+        // ── Sound & Feedback (no chat spam on success; warn only if the old
+        // item was dropped because the inventory was full) ──
         player.serverLevel().playSound(null, npc.getX(), npc.getY(), npc.getZ(),
                 SoundEvents.ENCHANTMENT_TABLE_USE, SoundSource.PLAYERS, 1.0f, 1.2f);
-        if (swapped) {
-            Component msg = Component.translatable("message.wandscape.npc.swap_success",
-                    npc.getDisplayName(), oldWand.getHoverName(), equippedWand.getHoverName());
-            if (dropped) {
-                msg = Component.literal("").append(msg).append(" ")
-                        .append(Component.translatable("message.wandscape.npc.inventory_full_drop"));
-            }
-            sendFeedback(player, msg);
-        } else {
-            sendFeedback(player, Component.translatable("message.wandscape.npc.equip_success",
-                    npc.getDisplayName(), equippedWand.getHoverName()));
+        if (dropped) {
+            ScreenFeedbackPacket.send(player, Component.translatable("message.wandscape.npc.inventory_full_drop"), true);
         }
     }
 
     private static void handleUnequip(ServerPlayer player, WandscapeNpc npc) {
         if (npc.hasDefaultWand()) {
             Log.warn(TAG, "Cannot unequip default wand from NPC {}", npc.getUUID());
-            sendFeedback(player, Component.translatable("message.wandscape.npc.cannot_unequip_default"));
             player.serverLevel().playSound(null, npc.getX(), npc.getY(), npc.getZ(),
                     SoundEvents.DISPENSER_FAIL, SoundSource.PLAYERS, 1.0f, 1.2f);
             return;
@@ -224,16 +206,13 @@ public record NpcEquipPacket(int entityId, int action, int slotIndex, int armorS
         // ── Send updated screen data ──
         PacketDistributor.sendToPlayer(player, NpcDataPacket.from(npc));
 
-        // ── Sound & Feedback ──
+        // ── Sound & Feedback (no chat spam on success; warn only if the
+        // unequipped item was dropped because the inventory was full) ──
         player.serverLevel().playSound(null, npc.getX(), npc.getY(), npc.getZ(),
                 SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 1.0f, 1.0f);
-        Component msg = Component.translatable("message.wandscape.npc.unequip_success",
-                npc.getDisplayName(), currentWand.getHoverName());
         if (dropped) {
-            msg = Component.literal("").append(msg).append(" ")
-                    .append(Component.translatable("message.wandscape.npc.inventory_full_drop"));
+            ScreenFeedbackPacket.send(player, Component.translatable("message.wandscape.npc.inventory_full_drop"), true);
         }
-        sendFeedback(player, msg);
     }
 
     // ── Armor equip/unequip ──
@@ -256,7 +235,6 @@ public record NpcEquipPacket(int entityId, int action, int slotIndex, int armorS
         // 按物品自身判定盔甲槽（不信任客户端），非盔甲直接拒绝
         int armorIdx = armorIndexFor(npc.getEquipmentSlotForItem(newArmor));
         if (armorIdx < 0) {
-            sendFeedback(player, Component.translatable("message.wandscape.npc.not_equippable"));
             player.serverLevel().playSound(null, npc.getX(), npc.getY(), npc.getZ(),
                     SoundEvents.DISPENSER_FAIL, SoundSource.PLAYERS, 1.0f, 1.2f);
             return;
@@ -272,10 +250,8 @@ public record NpcEquipPacket(int entityId, int action, int slotIndex, int armorS
             player.getInventory().setItem(slot, ItemStack.EMPTY);
         }
 
-        boolean swapped = false;
         boolean dropped = false;
         if (!oldArmor.isEmpty()) {
-            swapped = true;
             if (player.getInventory().getItem(slot).isEmpty()) {
                 player.getInventory().setItem(slot, oldArmor);
             } else {
@@ -292,20 +268,12 @@ public record NpcEquipPacket(int entityId, int action, int slotIndex, int armorS
         // ── Send updated screen data ──
         PacketDistributor.sendToPlayer(player, NpcDataPacket.from(npc));
 
-        // ── Sound & Feedback ──
+        // ── Sound & Feedback (no chat spam on success; warn only if the old
+        // armor was dropped because the inventory was full) ──
         player.serverLevel().playSound(null, npc.getX(), npc.getY(), npc.getZ(),
                 SoundEvents.ARMOR_EQUIP_GENERIC.value(), SoundSource.PLAYERS, 1.0f, 1.0f);
-        if (swapped) {
-            Component msg = Component.translatable("message.wandscape.npc.swap_success",
-                    npc.getDisplayName(), oldArmor.getHoverName(), equippedArmor.getHoverName());
-            if (dropped) {
-                msg = Component.literal("").append(msg).append(" ")
-                        .append(Component.translatable("message.wandscape.npc.inventory_full_drop"));
-            }
-            sendFeedback(player, msg);
-        } else {
-            sendFeedback(player, Component.translatable("message.wandscape.npc.equip_success",
-                    npc.getDisplayName(), equippedArmor.getHoverName()));
+        if (dropped) {
+            ScreenFeedbackPacket.send(player, Component.translatable("message.wandscape.npc.inventory_full_drop"), true);
         }
     }
 
@@ -328,15 +296,12 @@ public record NpcEquipPacket(int entityId, int action, int slotIndex, int armorS
         // ── Send updated screen data ──
         PacketDistributor.sendToPlayer(player, NpcDataPacket.from(npc));
 
-        // ── Sound & Feedback ──
+        // ── Sound & Feedback (no chat spam on success; warn only if the
+        // unequipped armor was dropped because the inventory was full) ──
         player.serverLevel().playSound(null, npc.getX(), npc.getY(), npc.getZ(),
                 SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 1.0f, 1.0f);
-        Component msg = Component.translatable("message.wandscape.npc.unequip_success",
-                npc.getDisplayName(), stack.getHoverName());
         if (dropped) {
-            msg = Component.literal("").append(msg).append(" ")
-                    .append(Component.translatable("message.wandscape.npc.inventory_full_drop"));
+            ScreenFeedbackPacket.send(player, Component.translatable("message.wandscape.npc.inventory_full_drop"), true);
         }
-        sendFeedback(player, msg);
     }
 }

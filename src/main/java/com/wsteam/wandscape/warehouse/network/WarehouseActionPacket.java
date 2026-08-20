@@ -13,14 +13,15 @@ import com.wsteam.wandscape.engine.sound.WandscapeSounds;
 import com.wsteam.wandscape.shared.api.WarehouseApi;
 import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.data.ItemKey;
+import com.wsteam.wandscape.shared.network.ScreenFeedbackPacket;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
+import com.wsteam.wandscape.shared.ui.I18n;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
@@ -140,8 +141,8 @@ public record WarehouseActionPacket(
         // Security: use the server-side hand item, NOT the client's claim
         ItemStack handStack = sp.getMainHandItem();
         if (handStack.isEmpty()) {
-            sp.displayClientMessage(
-                    Component.literal("[Wandscape] Nothing in hand to deposit"), false);
+            ScreenFeedbackPacket.send(sp, I18n.name("message.wandscape.warehouse.nothing_in_hand",
+                    "[Wandscape] Nothing in hand to deposit"), true);
             return;
         }
 

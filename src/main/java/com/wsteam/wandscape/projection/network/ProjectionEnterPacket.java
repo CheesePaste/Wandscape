@@ -5,10 +5,10 @@ import java.util.UUID;
 
 import com.wsteam.wandscape.projection.data.BuildingSlot;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
+import com.wsteam.wandscape.shared.ui.I18n;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
@@ -43,7 +43,8 @@ public record ProjectionEnterPacket() implements CustomPacketPayload {
         // Validate
         String error = ProjectionNetwork.validateEntry(player);
         if (error != null) {
-            player.displayClientMessage(Component.literal("[Projection] " + error), false);
+            player.displayClientMessage(I18n.name("message.wandscape.projection.enter_failed",
+                    "[Projection] %s", error), false);
             return;
         }
 

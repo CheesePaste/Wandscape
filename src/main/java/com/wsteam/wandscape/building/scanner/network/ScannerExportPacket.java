@@ -76,14 +76,14 @@ public record ScannerExportPacket(BlockPos pos) implements CustomPacketPayload {
         BlockEntity be = level.getBlockEntity(packet.pos);
         if (!(be instanceof CreativeScannerBlockEntity scanner)) {
             Log.warn(TAG, "No scanner BE at {}", packet.pos);
-            player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
-                    "§cNo scanner found at " + packet.pos));
+            player.sendSystemMessage(I18n.name("message.wandscape.scanner.no_scanner",
+                    "§cNo scanner found at %s", packet.pos));
             return;
         }
 
         String id = scanner.getBuildingId();
         if (id.isBlank()) {
-            player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+            player.sendSystemMessage(I18n.name("message.wandscape.scanner.set_building_id",
                     "§cSet a building ID before exporting"));
             return;
         }
@@ -91,7 +91,7 @@ public record ScannerExportPacket(BlockPos pos) implements CustomPacketPayload {
         BlockPos wMin = scanner.getWorldMin();
         BlockPos wMax = scanner.getWorldMax();
         if (wMin == null || wMax == null) {
-            player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+            player.sendSystemMessage(I18n.name("message.wandscape.scanner.no_boundary",
                     "§cNo boundary defined"));
             return;
         }
@@ -420,8 +420,8 @@ public record ScannerExportPacket(BlockPos pos) implements CustomPacketPayload {
             player.sendSystemMessage(I18n.name("message.wandscape.scanner.export_building_ok", "§a已导出建筑 '%s' 到 §e%s§a — 可立即建造，/reload 后依然有效", id, outFile.toAbsolutePath()));
         } catch (IOException e) {
             Log.warn(TAG, "Failed to export building '{}'", id, e);
-            player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
-                    "§cFailed to export: " + e.getMessage()));
+            player.sendSystemMessage(I18n.name("message.wandscape.scanner.export_building_fail",
+                    "§cFailed to export: %s", e.getMessage()));
         }
     }
 
@@ -481,7 +481,7 @@ public record ScannerExportPacket(BlockPos pos) implements CustomPacketPayload {
         }
 
         if (blockCounts.isEmpty()) {
-            player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+            player.sendSystemMessage(I18n.name("message.wandscape.scanner.no_road_blocks",
                     "§cNo road blocks found inside boundary box"));
             return;
         }
@@ -514,8 +514,8 @@ public record ScannerExportPacket(BlockPos pos) implements CustomPacketPayload {
             player.sendSystemMessage(I18n.name("message.wandscape.scanner.export_road_ok", "§a已导出道路预设 '%s' 到 §e%s§a — 可立即使用，/reload 后依然有效", id, outFile.toAbsolutePath()));
         } catch (IOException e) {
             Log.warn(TAG, "Failed to export road preset '{}'", id, e);
-            player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
-                    "§cFailed to export road preset: " + e.getMessage()));
+            player.sendSystemMessage(I18n.name("message.wandscape.scanner.export_road_fail",
+                    "§cFailed to export road preset: %s", e.getMessage()));
         }
     }
 

@@ -63,6 +63,19 @@ public abstract class MedievalScreen extends Screen {
     private static final int GLASS_BOX_TOP    = 0xBB423020;
     private static final int GLASS_BOX_BOTTOM = 0xBB1C1008;
 
+    // ── Transient feedback toast (drawn over the screen, does not resize the panel) ──
+    private static final long FEEDBACK_DURATION_MS = 3000L;
+    private Component feedback;
+    private int feedbackColor;
+    private long feedbackExpireTick;
+
+    /** Show a transient message at the top-center of the screen for ~3s. */
+    public void showFeedback(Component message, int color) {
+        this.feedback = message;
+        this.feedbackColor = color;
+        this.feedbackExpireTick = System.currentTimeMillis() + FEEDBACK_DURATION_MS;
+    }
+
     protected MedievalScreen(Component title, int panelWidth, int panelHeight) {
         super(title);
         this.panelWidth = panelWidth;
@@ -139,6 +152,21 @@ public abstract class MedievalScreen extends Screen {
         }
 
         renderCreatorFooter(g);
+        renderFeedback(g);
+    }
+
+    /** Draw the transient feedback toast, if any, at the top-center of the screen. */
+    private void renderFeedback(GuiGraphics g) {
+        if (feedback == null) return;
+        if (System.currentTimeMillis() > feedbackExpireTick) {
+            feedback = null;
+            return;
+        }
+        int w = font.width(feedback) + 8;
+        int x = (this.width - w) / 2;
+        int y = 8;
+        g.fill(x, y, x + w, y + 12, 0xAA000000);
+        g.drawString(font, feedback, x + 4, y + 2, feedbackColor);
     }
 
     @Override

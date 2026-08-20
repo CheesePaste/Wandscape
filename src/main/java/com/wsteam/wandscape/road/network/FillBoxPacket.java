@@ -14,6 +14,8 @@ import com.wsteam.wandscape.engine.sound.WandscapeSounds;
 import com.wsteam.wandscape.task.source.PlayerManualSource;
 import com.wsteam.wandscape.task.engine.pool.TaskRequest;
 import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.shared.network.ScreenFeedbackPacket;
+import com.wsteam.wandscape.shared.ui.I18n;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -125,7 +127,8 @@ public record FillBoxPacket(String presetId, BlockPos startPos, BlockPos endPos)
                 String pureId = tileObj.get("block").getAsString().replaceAll("\\[.*?\\]", "").trim();
                 if (elementApi.isDisabled(pureId)) {
                     Log.warn(TAG, "[Fill] Refuse — block {} disabled by element mapping", pureId);
-                    player.sendSystemMessage(net.minecraft.network.chat.Component.literal("§cFill contains a disabled block: " + pureId));
+                    ScreenFeedbackPacket.send(player, I18n.name("message.wandscape.fill.disabled_block",
+                            "§cFill contains a disabled block: %s", pureId), true);
                     return;
                 }
             }
