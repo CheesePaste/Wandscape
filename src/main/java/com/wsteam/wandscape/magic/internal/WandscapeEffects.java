@@ -26,6 +26,9 @@ public final class WandscapeEffects {
     public static final DeferredHolder<MobEffect, DesperationEffect> DESPERATION =
             Wandscape.MOB_EFFECTS.register("desperation", DesperationEffect::new);
 
+    public static final DeferredHolder<MobEffect, MagicEnhanceEffect> MAGIC_ENHANCE =
+            Wandscape.MOB_EFFECTS.register("magic_enhance", MagicEnhanceEffect::new);
+
     public static class PetrificationEffect extends MobEffect {
         public PetrificationEffect() {
             super(MobEffectCategory.BENEFICIAL, 0x7F8C8D);
@@ -78,6 +81,19 @@ public final class WandscapeEffects {
     public static class DesperationEffect extends MobEffect {
         public DesperationEffect() {
             super(MobEffectCategory.BENEFICIAL, 0xDC2626);
+        }
+    }
+
+    /**
+     * 魔力强化效果：增益（BENEFICIAL），靛蓝粒子。
+     * 纯标记效果：倍率 = 1 + 0.2 × 等级（I 级 +20%，独立乘区，与 SPELL_POWER 各自乘算）
+     * 在魔法伤害/治疗核算入口手动乘（{@link MagicSpellExecutors#magicEnhanceMultiplier}）。
+     * SPELL_POWER 是 ECS 自定义属性（非 vanilla Attribute），MobEffect 的 attribute modifier
+     * 挂不上，故不走属性修饰符。
+     */
+    public static class MagicEnhanceEffect extends MobEffect {
+        public MagicEnhanceEffect() {
+            super(MobEffectCategory.BENEFICIAL, 0x6366F1);
         }
     }
 }

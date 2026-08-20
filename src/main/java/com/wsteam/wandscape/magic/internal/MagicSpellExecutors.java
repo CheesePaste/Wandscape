@@ -44,9 +44,26 @@ public final class MagicSpellExecutors {
 
     private MagicSpellExecutors() {}
 
-    /**
-     * 根据 MagicDef id 分发到对应的魔法逻辑实现。
-     */
+    // ── 魔力强化独立乘区 ──
+    // 魔法输出（伤害/治疗）除 SPELL_POWER 外再乘魔力强化倍率，两倍率各自乘算。
+    // SPELL_POWER 是 ECS 自定义属性（非 vanilla Attribute），MobEffect 的 attribute modifier
+    // 挂不上，故在核算入口手动乘：伤害走 NpcSpellPowerHandler（guard），治疗走下方 castHeal。
+
+    /** 魔力强化每级加成：1 级 +20%、2 级 +40%（独立乘区，每级 +0.2）。 */
+    public static final float MAGIC_ENHANCE_PER_LEVEL = 0.2f;
+
+    /** 魔力强化倍率（纯函数）：amplifier 0（I 级）= 1.2，每级 +0.2。 */
+    public static float magicEnhanceMultiplier(int amplifier) {
+        return 1f + MAGIC_ENHANCE_PER_LEVEL * (amplifier + 1);
+    }
+
+    /** 施法者身上的魔力强化倍率；无施法者或无该效果时 = 1。 */
+    public static float magicEnhanceMultiplier(@Nullable LivingEntity caster) {
+        if (caster == null || !caster.hasEffect(WandscapeEffects.MAGIC_ENHANCE)) return 1f;
+        return magicEnhanceMultiplier(caster.getEffect(WandscapeEffects.MAGIC_ENHANCE).getAmplifier());
+    }
+
+    /** 根据 MagicDef id 分发到对应的魔法逻辑实现。 */
     public static boolean dispatch(ServerLevel level, WandscapeNpc npc, @Nullable LivingEntity target,
                                    MagicDef def, String circleId, int color) {
         if (def == null) return false;
@@ -95,11 +112,12 @@ public final class MagicSpellExecutors {
         PacketDistributor.sendToPlayersTrackingEntityAndSelf(npc,
                 new MagicCircleCastPacket(effectId, pos, new Vec3(0, 1, 0), circleId, npc.getUUID()));
 
-        // 注册持续治疗任务（6秒=120t，每20t治疗 HEAL_BASE_AMOUNT × SPELL_POWER 生命）：
-        // 治疗量与伤害同源走 SPELL_POWER 加成（默认 1.0 → 每脉冲 4 点，强法师奶更多；
-        // 玩家命令 castForPlayer 走基础量，玩家无 SPELL_POWER）
+        // 注册持续治疗任务（6秒=120t，每20t治疗 HEAL_BASE_AMOUNT × SPELL_POWER × 魔力强化 生命）：
+        // 治疗量与伤害同源走 SPELL_POWER 加成（默认 1.0 → 每脉冲 4 点，强法师奶更多），
+        // 再乘魔力强化独立乘区（I 级 +20%）；玩家命令 castForPlayer 走基础量，玩家无 SPELL_POWER
         float healAmount = HEAL_BASE_AMOUNT
-                * Math.max(0f, npc.getEffectiveAttribute(AttributeType.SPELL_POWER));
+                * Math.max(0f, npc.getEffectiveAttribute(AttributeType.SPELL_POWER))
+                * magicEnhanceMultiplier(npc);
         MagicEventHandler.addHealAura(new MagicEventHandler.HealAura(
                 level, pos, npc, level.getGameTime() + durationTicks, healAmount, HEAL_RADIUS));
 
@@ -284,10 +302,12 @@ public final class MagicSpellExecutors {
         PacketDistributor.sendToPlayersTrackingEntityAndSelf(npc,
                 new MagicCircleCastPacket(effectId, pos, new Vec3(0, 1, 0), circleId, npc.getUUID()));
 
+        // 护甲 +4 + 魔力强化 I（+20% 魔法伤害）+ 迅捷 I（30 秒）。
+        // 原 vanilla 力量（DAMAGE_BOOST）只加成近战攻击力，对纯法师无效，替换为魔力强化。
         npc.addEffect(new MobEffectInstance(WandscapeEffects.FORTIFICATION,
                 FORTIFICATION_BUFF_TICKS, 0));                     // 护甲 +4
-        npc.addEffect(new MobEffectInstance(MobEffects.DAMAGE_BOOST,
-                FORTIFICATION_BUFF_TICKS, 0));                     // 力量 I
+        npc.addEffect(new MobEffectInstance(WandscapeEffects.MAGIC_ENHANCE,
+                FORTIFICATION_BUFF_TICKS, 0));                     // 魔力强化 I
         npc.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED,
                 FORTIFICATION_BUFF_TICKS, 0));                     // 迅捷 I
 
@@ -352,19 +372,20 @@ public final class MagicSpellExecutors {
 
     // ── 8. 背水一战 (Desperation) ──
     // 自我增益：0 前摇，极高代价输出模式。
-    // 有效护甲 = −A/2（下限 −16，见 onLivingDamage），力量等级 = min(10, ⌊A²/100⌋)
-    // （二次增长，护甲 <10 无奖励；2026-08-19 从 A²/48 削弱并加上限）。
+    // 有效护甲 = −A/2（下限 −16，见 onLivingDamage），魔力强化等级 = min(10, ⌊A²/100⌋)
+    // （二次增长，护甲 <10 无奖励；2026-08-19 从 A²/48 削弱并加上限。原为力量等级，
+    // 力量对纯法师无效，改作魔力强化——护甲越高魔法伤害加成越多）。
 
     private static final int DESPERATION_BUFF_TICKS = 300; // 15s
 
-    /** 背水力量等级上限（amplifier ≤ 10，护甲再高也不超过力量 X）。 */
-    private static final int DESPERATION_MAX_STRENGTH = 10;
+    /** 背水魔力强化等级上限（amplifier ≤ 10，护甲再高也不超过强化 X）。 */
+    private static final int DESPERATION_MAX_ENHANCE_AMPLIFIER = 10;
 
-    /** 根据护甲值计算背水力量等级（amplifier，0 = 力量 I）。
-     *  <10 护甲无奖励，10+ 按 A²/100 二次增长，最高力量 X（amplifier 10）。 */
-    public static int desperationStrengthAmplifier(float armor) {
+    /** 根据护甲值计算背水魔力强化等级（amplifier，0 = 强化 I）。
+     *  <10 护甲无奖励，10+ 按 A²/100 二次增长，最高强化 X（amplifier 10）。 */
+    public static int desperationEnhanceAmplifier(float armor) {
         if (armor < 10.0f) return 0;
-        return Math.min(DESPERATION_MAX_STRENGTH, (int) (armor * armor / 100.0f));
+        return Math.min(DESPERATION_MAX_ENHANCE_AMPLIFIER, (int) (armor * armor / 100.0f));
     }
 
     public static boolean castDesperation(ServerLevel level, WandscapeNpc npc,
@@ -384,17 +405,17 @@ public final class MagicSpellExecutors {
                 new MagicCircleCastPacket(effectId, pos, new Vec3(0, 1, 0), circleId, npc.getUUID()));
 
         float armor = npc.getArmorValue();
-        int strengthAmp = desperationStrengthAmplifier(armor);
+        int enhanceAmp = desperationEnhanceAmplifier(armor);
 
         npc.addEffect(new MobEffectInstance(WandscapeEffects.DESPERATION,
                 DESPERATION_BUFF_TICKS, 0));
-        npc.addEffect(new MobEffectInstance(MobEffects.DAMAGE_BOOST,
-                DESPERATION_BUFF_TICKS, strengthAmp));
+        npc.addEffect(new MobEffectInstance(WandscapeEffects.MAGIC_ENHANCE,
+                DESPERATION_BUFF_TICKS, enhanceAmp));
 
         level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.WITHER_SPAWN,
                 SoundSource.NEUTRAL, 0.4f, 0.8f);
-        Log.info(TAG, "castDesperation caster={} armor={} strengthAmp={} buffTicks={}",
-                npc.getUUID().toString().substring(0, 8), armor, strengthAmp, DESPERATION_BUFF_TICKS);
+        Log.info(TAG, "castDesperation caster={} armor={} enhanceAmp={} buffTicks={}",
+                npc.getUUID().toString().substring(0, 8), armor, enhanceAmp, DESPERATION_BUFF_TICKS);
         return true;
     }
 
@@ -497,7 +518,7 @@ public final class MagicSpellExecutors {
                 PacketDistributor.sendToPlayersTrackingEntityAndSelf(player,
                         new MagicCircleCastPacket(effectId, pos, new Vec3(0, 1, 0), circleId));
                 player.addEffect(new MobEffectInstance(WandscapeEffects.FORTIFICATION, 300, 0));
-                player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_BOOST, 300, 0));
+                player.addEffect(new MobEffectInstance(WandscapeEffects.MAGIC_ENHANCE, 300, 0)); // 魔力强化 I（玩家暂无施法入口，仅显示；不保留力量）
                 player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, 300, 0));
                 level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.BELL_RESONATE,
                         SoundSource.NEUTRAL, 0.7f, 1.0f);
@@ -534,12 +555,12 @@ public final class MagicSpellExecutors {
                 PacketDistributor.sendToPlayersTrackingEntityAndSelf(player,
                         new MagicCircleCastPacket(effectId, pos, new Vec3(0, 1, 0), circleId));
                 float armor = player.getArmorValue();
-                int strengthAmp = desperationStrengthAmplifier(armor);
+                int enhanceAmp = desperationEnhanceAmplifier(armor);
                 player.addEffect(new MobEffectInstance(WandscapeEffects.DESPERATION, 300, 0));
-                player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_BOOST, 300, strengthAmp));
+                player.addEffect(new MobEffectInstance(WandscapeEffects.MAGIC_ENHANCE, 300, enhanceAmp)); // 魔力强化（玩家暂无施法入口，仅显示；不保留力量）
                 level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.WITHER_SPAWN,
                         SoundSource.NEUTRAL, 0.4f, 0.8f);
-                Log.info(TAG, "castDesperation player armor={} strengthAmp={}", armor, strengthAmp);
+                Log.info(TAG, "castDesperation player armor={} enhanceAmp={}", armor, enhanceAmp);
                 yield true;
             }
             default -> {

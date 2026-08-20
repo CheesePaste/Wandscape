@@ -94,7 +94,7 @@ L2 兜底层
 | `single_target` 单体攻击 | beam、desperation(背水一战)、火球、闪电 | 单体高伤/持续伤 | 无条件，有敌即可 |
 | `aoe` 群体攻击 | meteor(陨石)、enfeeble_field(虚弱力场)、爆炸、火焰风暴 | 范围伤害 | **敌数 ≥ 1 才施放**（防浪费蓝）；meteor 连落：总量恒 6 颗、按 1/6 持续时长逐颗发射，每颗发射时动态重瞄当时最近目标 |
 | `defense` 防御 | petrification(石化减伤)、conversion(魅惑)、护盾、结界 | 保命/免伤 | 自身血量阈值 + **无同类状态**（防叠加）；与治疗的血线竞争靠预设排序+阈值错开 |
-| `support` 支援 | heal(持续治疗)、fortification(战争赐福)、增益（力量/急速） | 回血/预铺 buff | 治疗响应式（谁血低奶谁）、增益预判式（开战前上），靠 target_mode 区分 |
+| `support` 支援 | heal(持续治疗)、fortification(战争赐福)、增益（魔力强化/急速） | 回血/预铺 buff | 治疗响应式（谁血低奶谁）、增益预判式（开战前上），靠 target_mode 区分 |
 | `utility` 杂项 | 传送、复活、召唤、天气 | 非战斗 | L0 硬性路径 / 玩家命令 |
 
 `target_mode` 决定"何时算有有效目标"，与 `category` 解耦：
@@ -204,7 +204,7 @@ npc/internal/ReviveHandler.java     ✅ 复活效果：spawnFromRecordAt（指�
       ├─ L0 硬性覆盖：血量危机/LOS/互斥锁 → 硬性魔法 或 直接返回"不施放"
       ├─ L1 按 priority 列表从上往下扫：
       │     MagicState.canCast(magicId) && 蓝够 && 快照目标规则命中 && conditions 满足 → 选中
-      └─ L2 兜底：普通攻击（GuardCombat.normalAttack，物理/5伤×SPELL_POWER/2s/不耗蓝）/走位/待命
+      └─ L2 兜底：普通攻击（GuardCombat.normalAttack，物理/5伤×SPELL_POWER×魔力强化/2s/不耗蓝）/走位/待命
   → 选出魔法 → 按 id 分发（当前仅 beam → MagicCaster/MagicCastManager/MagicBeamEntity；
       未来 TeleportOp→WandscapeRitualOps、ReviveOp→仪式系统）
   → 门控仍走 npc.tryCastSpell（MagicState 不变）
@@ -391,3 +391,17 @@ P1/P2 玩家无感知（内部重构），P3 起见 UI。每个阶段完成即�
   - **conversion → `defense`**（群体魅惑归防御桶：倒戈控场当保命用）。
   - **enfeeble_field → `aoe`**（群体虚弱归群攻桶，与 meteor 同桶）。
   - **fortification → `support`**（增益桶，与 heal 同桶，SUPPORT 预设优先）。
+
+## 二十一、魔力强化：独立魔法输出乘区（2026-08-20）
+
+**背景**：赐福/背水此前给 vanilla 力量（`DAMAGE_BOOST`），但 NPC 伤害全部走 `hurt()` 自定义伤害类型、只读 SPELL_POWER，力量对纯法师完全无效（L2 普攻兜底也是自定义 `melee` 类型）。
+
+**新增效果 `magic_enhance`（魔力强化）**：纯标记 MobEffect（`WandscapeEffects.MAGIC_ENHANCE`，靛蓝），倍率 = `1 + 0.2 × 等级`（I 级 +20%，每级 +20%，独立乘区，与 SPELL_POWER 各自乘算）。SPELL_POWER 是 ECS 自定义属性（非 vanilla Attribute），挂不了 attribute modifier，故在核算入口手动乘（`MagicSpellExecutors.magicEnhanceMultiplier`，纯函数可单测）。
+
+**应用范围**（所有乘 SPELL_POWER 处都额外乘魔力强化，治疗也吃）：
+- 伤害：`NpcSpellPowerHandler`（`LivingIncomingDamageEvent`）在 SPELL_POWER 倍率后乘——光束/陨石/未来魔法自动生效；**L2 物理普攻兜底也走此钩子，一并被放大**（既定行为）。
+- 治疗：`castHeal` 每脉冲治疗量 = `HEAL_BASE × SPELL_POWER × 魔力强化`。
+- **玩家暂不生效**：玩家施放入口已移除，`castForPlayer` 会给玩家上魔力强化 buff（buff 栏可见）但无实际效果，等玩家施法入口回归后自动生效。
+
+**赐福/背水改用魔力强化**：NPC 与玩家路径一致——vanilla 力量（`DAMAGE_BOOST`）从两魔法中移除，替换为 `MAGIC_ENHANCE`。赐福 = 魔力强化 I；背水 = `min(10, ⌊护甲²/100⌋)` 等级（沿用原力量公式，护甲越高加成越多，10 级 = +200% 魔法伤害）。
+

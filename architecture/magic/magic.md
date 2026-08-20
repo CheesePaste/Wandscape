@@ -58,7 +58,7 @@ data/wandscape/magic_circles/*.json    ← Web 编辑器导出
   → 光束粗细随寿命动画 getWidthFactor：慢变宽 → PEAK_T=0.86 后快变窄
 ```
 
-**光束造成伤害**：`MagicBeamEntity.damageTargets` 每 tick 对束内 Enemy 造成 magic 伤害（`BEAM_DAMAGE=2.0`，伤害 ∝ 宽度因子），重置 invulnerableTime，无击退；NPC 施法用 `indirectMagic(casterNpc, this)` 让怪记仇反击，否则 `magic()`。NPC 施法伤害另经 `NpcSpellPowerHandler`（guard 模块）按 SPELL_POWER 放大。
+**光束造成伤害**：`MagicBeamEntity.damageTargets` 每 tick 对束内 Enemy 造成 magic 伤害（`BEAM_DAMAGE=2.0`，伤害 ∝ 宽度因子），重置 invulnerableTime，无击退；NPC 施法用 `indirectMagic(casterNpc, this)` 让怪记仇反击，否则 `magic()`。NPC 施法伤害另经 `NpcSpellPowerHandler`（guard 模块）按 SPELL_POWER 放大，再乘魔力强化独立乘区（每级 +20%，`MagicSpellExecutors.magicEnhanceMultiplier`）。
 
 光束寿命与法阵时长对齐（`spec.durationTicks + 尾部`），同步到客户端；长度固定 200 格（穿透地形，壮观）。默认色浅蓝 `0xFFA8E0FF`。
 

@@ -763,6 +763,19 @@
 
 **为什么**：玩家痛点本质是「临时离开」与「真正结束」被当成同一回事。suspend/exit 二分让切模式/切相位成为无损操作，全清只在登出或显式提交/撤销发生——符合「会话内连续作业」心智模型。光标每 tick reconcile 是状态机自愈，比「在某个转换点打补丁」更鲁棒，避免遗漏新的转换路径。
 
+## 2026-08：魔力强化（magic_enhance）独立魔法输出乘区
+
+**需求**：赐福/背水此前给 vanilla 力量（`DAMAGE_BOOST`），但 NPC 伤害全部走 `hurt()` 自定义伤害类型（光束 `wandscape:beam`、陨石 `indirectMagic`、L2 普攻 `wandscape:melee`），vanilla 力量只改 `ATTACK_DAMAGE` 属性、对纯法师完全无效。玩家实测后发现「给了力量却没加伤害」。
+
+**决策**：
+- 新增 MobEffect `magic_enhance`（魔力强化）：纯标记，倍率 = `1 + 0.2 × 等级`（I 级 +20%，独立乘区）。
+- **为什么不用 attribute modifier**：SPELL_POWER 是 ECS 自定义属性（`EquipmentComponent`，非 vanilla `Attribute`），MobEffect 的 `addAttributeModifier` 挂不上；故在核算入口手动乘（`MagicSpellExecutors.magicEnhanceMultiplier`）。
+- **应用范围 = 所有乘 SPELL_POWER 处**：伤害统一钩子 `NpcSpellPowerHandler`（光束/陨石/未来魔法自动生效；L2 物理普攻兜底也走此钩子，一并被放大——既定行为）+ 治疗 `castHeal`（治疗也吃）。
+- 赐福/背水把 vanilla 力量替换为魔力强化（NPC 与玩家一致）；玩家暂无施法入口，`castForPlayer` 只给 buff 栏显示、无实际效果，等玩家施法回归后自动生效。
+
+**为什么**：魔力强化作为第二独立乘区（`基础 × SPELL_POWER × 魔力强化`），与 SPELL_POWER 各自乘算，数值语义清晰；挂在统一伤害钩子保证任何未来魔法自动生效，不在单个魔法里写乘算（沿用 SPELL_POWER 的同款架构决策）。
+
+
 **约束保留**：ConstructionScreen 的 Close 按钮语义不变（保留 pin + 回准星复查）；`exitProjection` / `clearAll` / `reset()` 三个全清入口行为不变，只是调用方收紧。
 
 ## 2026-08：空中视角——相机位置缓存 + 玩家旋转冻结 + 第三人称渲染 + 受伤退出
