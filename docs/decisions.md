@@ -2,6 +2,23 @@
 
 本文件记录偏离直觉的设计选择及其原因，供后续开发快速理解「为什么这么做」。
 
+## 2026-08-20：WorldReloader 地形改造功能迁移至 Wandscape
+
+**需求**（用户指令）：将 `worldreloader` 模组的基本地形改造功能迁移到 Wandscape，配置屏幕可有可无，迁移前两个模式（STANDARD 完整 3D 地形与 SURFACE 地表地形），不包含直线/路径（LINE）变换模式。
+
+**决策**：
+- 在 `com.wsteam.wandscape.worldreloader` 包下实现：
+  - `WorldReloaderConfig`：支持 JSON 持久化（`config/wandscape_worldreloader.json`），配置生物群系与结构映射表（如草方块->平原、丛林原木->丛林、标靶->雪地村庄、圆石->掠夺者前哨站等）、方块需求（下界之星等）、半径、步数与高度。
+  - `WorldReloaderTask`（抽象基类）：同心圆扩散调度、异步分步执行、临时区块强制加载与释放、生物群系按高度层切片填充（`FillBiomeCommand.fill`）、掉落物实体清理。
+  - `TerrainTransformationTask`（STANDARD 完整 3D 模式）：3D 地形高度结构分析与复制、信标金字塔保护（半径 8 内）、外围边缘渐变融合（padding transition）与悬空方块清理。
+  - `SurfaceTransformationTask`（SURFACE 地表模式）：相对地表高度（depth / height）自上而下替换，避免改动深层洞穴，性能更轻量。
+  - `WorldReloaderBuilder`：流畅构建器模式，支持生物群系查找（`findClosestBiome3d`）、结构查找（`findNearestMapStructure`）、随机地表坐标探测与直接坐标指定。
+  - `WorldReloaderManager`：全局单例，监听信标右键交互事件并消耗配置物品，统一驱动每 tick 任务更新与服务器停止时的清理。
+  - `WorldReloaderCommand`：指令接入 `/wandscape transform <x> <y> <z> ...` 与 `/wandscape transform here ...`。
+- 排除直线/路径变换（`LineTransformationTask`）。
+
+---
+
 ## 2026-08-18：TickProfiler 性能分析器与夜间寻路风暴（Pathfinding Storm）优化
 
 **背景与实测**：

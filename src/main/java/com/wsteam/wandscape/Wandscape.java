@@ -421,6 +421,7 @@ public class Wandscape {
         HotelStayHandler.register();
         MarkerPreviewManager.register();
         WarehouseNotificationHandler.register();
+        com.wsteam.wandscape.worldreloader.WorldReloaderManager.register();
 
         modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
 
@@ -901,6 +902,7 @@ public class Wandscape {
         ChunkLoadManager.get().reset();
         TouristSimSystem.reset();
         TouristSpotManager.getActive().clear(); // 静态单例跨世界存活，需清空幽灵占位/排队
+        com.wsteam.wandscape.worldreloader.WorldReloaderManager.get().stopAll();
         WandscapeEngine.reset();
         EntityComponentBridge.INSTANCE.clear();
     }
@@ -939,6 +941,7 @@ public class Wandscape {
                 .then(com.wsteam.wandscape.command.SplineEditorCommand.node())
                 .then(com.wsteam.wandscape.command.MagicCommand.node())
                 .then(com.wsteam.wandscape.command.RoadStudioCommand.node())
+                .then(com.wsteam.wandscape.worldreloader.WorldReloaderCommand.node())
                 .then(com.wsteam.wandscape.command.ProfileCommand.node());
         dispatcher.register(root);
     }
@@ -968,6 +971,11 @@ public class Wandscape {
             // Altar: 每 tick 推进所有祭坛的魔法冷却（SavedData，按祭坛独立）
             try (var s = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("tick.altar_cast")) {
                 com.wsteam.wandscape.building.internal.AltarCastHandler.tick(event.getServer().overworld());
+            }
+
+            // WorldReloader: 推进地形改造异步任务
+            try (var s = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("tick.world_reloader")) {
+                com.wsteam.wandscape.worldreloader.WorldReloaderManager.get().tickAll();
             }
 
             var world = WandscapeEngine.getWorld();
