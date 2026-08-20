@@ -28,6 +28,14 @@ sourceSets.main.resources {
 
 repositories {
     mavenCentral()
+    maven {
+        name = "Jared's maven"
+        url = "https://maven.blamejared.com/"
+    }
+    maven {
+        name = "ModMaven"
+        url = "https://modmaven.dev"
+    }
     // 本地 JEI jar（可选运行时依赖，compileOnly，不打包）。文件名已去中文方括号以匹配 flatDir 坐标。
     flatDir {
         dirs 'libs'
