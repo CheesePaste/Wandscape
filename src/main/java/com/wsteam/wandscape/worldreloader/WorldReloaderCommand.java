@@ -95,26 +95,11 @@ public final class WorldReloaderCommand {
         }
 
         ServerLevel level = ctx.getSource().getLevel();
-        BlockPos feetPos = player.blockPosition();
-        BlockPos pos = feetPos;
-
-        // Snap to ground surface below player's feet if standing or hovering
-        if (level.getBlockState(feetPos).isAir() || level.getBlockState(feetPos).canBeReplaced()) {
-            if (!level.getBlockState(feetPos.below()).isAir() && !level.getBlockState(feetPos.below()).canBeReplaced()) {
-                pos = feetPos.below();
-            } else {
-                int groundY = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, feetPos.getX(), feetPos.getZ());
-                if (groundY > level.getMinBuildHeight()) {
-                    pos = new BlockPos(feetPos.getX(), groundY - 1, feetPos.getZ());
-                }
-            }
-        }
-
-        BlockPos finalPos = pos;
-        ctx.getSource().sendSuccess(() -> Component.literal(String.format("§6[WorldReloader] 开始在玩家位置 (%d, %d, %d) 执行地形改造...", finalPos.getX(), finalPos.getY(), finalPos.getZ())), false);
+        BlockPos pos = player.blockPosition();
+        ctx.getSource().sendSuccess(() -> Component.literal(String.format("§6[WorldReloader] 开始在玩家位置 (%d, %d, %d) 执行地形改造...", pos.getX(), pos.getY(), pos.getZ())), false);
 
         level.getServer().execute(() -> {
-            WorldReloaderManager.get().startTransformationAt(level, finalPos, player, mode, target);
+            WorldReloaderManager.get().startTransformationAt(level, pos, player, mode, target);
         });
 
         return 1;

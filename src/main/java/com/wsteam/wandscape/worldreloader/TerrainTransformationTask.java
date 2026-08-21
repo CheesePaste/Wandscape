@@ -103,7 +103,7 @@ public class TerrainTransformationTask extends WorldReloaderTask {
             if (currentRadius <= 8 && shouldPreserveCenterArea(targetPos)) {
                 continue;
             }
-            if (y > referenceCenter.getY() + yMax) {
+            if (y > center.getY() + yMax) {
                 continue;
             }
             BlockState currentState = world.getBlockState(targetPos);
@@ -170,7 +170,7 @@ public class TerrainTransformationTask extends WorldReloaderTask {
     private void copyWithCenterPreservation(int targetX, int targetZ, ReferenceTerrainInfo reference) {
         for (int i = 0; i < reference.blocks.length; i++) {
             int targetY = reference.heights[i] + center.getY() - this.referenceCenter.getY();
-            if (targetY > referenceCenter.getY() + yMax) {
+            if (targetY > center.getY() + yMax) {
                 continue;
             }
             BlockPos targetPos = new BlockPos(targetX, targetY, targetZ);
@@ -192,7 +192,7 @@ public class TerrainTransformationTask extends WorldReloaderTask {
     private void copyWithoutPreservation(int targetX, int targetZ, ReferenceTerrainInfo reference) {
         for (int i = 0; i < reference.blocks.length; i++) {
             int targetY = reference.heights[i] + center.getY() - this.referenceCenter.getY();
-            if (targetY > referenceCenter.getY() + yMax) {
+            if (targetY > center.getY() + yMax) {
                 continue;
             }
             BlockPos targetPos = new BlockPos(targetX, targetY, targetZ);

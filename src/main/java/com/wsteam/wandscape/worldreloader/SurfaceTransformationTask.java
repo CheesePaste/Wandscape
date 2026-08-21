@@ -125,7 +125,7 @@ public class SurfaceTransformationTask extends WorldReloaderTask {
         int endY = surfaceY + height;
 
         for (int y = startY; y <= endY; y++) {
-            if (y > referenceCenter.getY() + height) {
+            if (y > center.getY() + height) {
                 continue;
             }
             BlockPos targetPos = new BlockPos(targetX, y, targetZ);

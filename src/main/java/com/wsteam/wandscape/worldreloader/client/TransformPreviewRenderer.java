@@ -123,21 +123,17 @@ public final class TransformPreviewRenderer {
 
         double prevX = center.getX() + 0.5 + radius;
         double prevZ = center.getZ() + 0.5;
-        int surfaceY0 = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, (int) Math.floor(prevX), (int) Math.floor(prevZ));
-        float prevY = (float) surfaceY0 + 0.02f;
+        float ringY = (float) center.getY() + 0.05f;
 
         for (int i = 1; i <= segments; i++) {
             double angle = (2 * Math.PI * i) / segments;
             double currX = center.getX() + 0.5 + Math.cos(angle) * radius;
             double currZ = center.getZ() + 0.5 + Math.sin(angle) * radius;
-            int surfaceY = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, (int) Math.floor(currX), (int) Math.floor(currZ));
-            float currY = (float) surfaceY + 0.02f;
 
-            vc.addVertex(pose, (float) prevX, prevY, (float) prevZ).setColor(r, g, b, a).setNormal(pose, 0, 1, 0);
-            vc.addVertex(pose, (float) currX, currY, (float) currZ).setColor(r, g, b, a).setNormal(pose, 0, 1, 0);
+            vc.addVertex(pose, (float) prevX, ringY, (float) prevZ).setColor(r, g, b, a).setNormal(pose, 0, 1, 0);
+            vc.addVertex(pose, (float) currX, ringY, (float) currZ).setColor(r, g, b, a).setNormal(pose, 0, 1, 0);
 
             prevX = currX;
-            prevY = currY;
             prevZ = currZ;
         }
     }
