@@ -234,6 +234,7 @@ public class ScannerScreen extends MedievalScreen {
         if (minecraft == null || minecraft.level == null) return;
         List<BlockOffset> doors = scanner.detectDoors(minecraft.level);
         if (doors.isEmpty()) {
+            showFeedback(Component.literal("§e⚠ 未在包围盒内检测到门方块"), 0xFFFFAA00);
             scanResult = I18n.name("gui.wandscape.scanner.result_no_door_found", "未在包围盒内检测到门方块");
             return;
         }
@@ -242,6 +243,7 @@ public class ScannerScreen extends MedievalScreen {
         if (doorX != null) doorX.setValue(String.valueOf(first.x()));
         if (doorY != null) doorY.setValue(String.valueOf(first.y()));
         if (doorZ != null) doorZ.setValue(String.valueOf(first.z()));
+        showFeedback(Component.literal(String.format("§a✓ 已在包围盒内自动检出 %d 扇门", doors.size())), 0xFF55FF55);
         scanResult = I18n.name("gui.wandscape.scanner.result_doors_found", "已检门 %s 扇，游客从任意一扇门进（编辑框仅改首门）", doors.size());
         syncToServer();
     }
@@ -416,6 +418,7 @@ public class ScannerScreen extends MedievalScreen {
         BlockPos wMin = scanner.getWorldMin();
         BlockPos wMax = scanner.getWorldMax();
         if (wMin == null || wMax == null) {
+            showFeedback(Component.literal("§c⚠ 未定义 3D 边界范围"), 0xFFFF5555);
             scanResult = I18n.name("gui.wandscape.scanner.result_no_boundary", "未定义 3D 边界");
             return;
         }
@@ -437,16 +440,19 @@ public class ScannerScreen extends MedievalScreen {
                 }
             }
         }
+        showFeedback(Component.literal(String.format("§a✓ 扫描完成！共 %,d 个有效方块", count)), 0xFF55FF55);
         scanResult = I18n.name("gui.wandscape.scanner.result_scanned", "已扫描 %s 个有效方块 (不含扫描器)", count);
     }
 
     private void doExport() {
         String id = scanner.getBuildingId();
         if (id.isBlank()) {
+            showFeedback(Component.literal("§c⚠ 请先设置建筑 ID"), 0xFFFF5555);
             scanResult = I18n.name("gui.wandscape.scanner.result_need_id", "请先设置 ID");
             return;
         }
         PacketDistributor.sendToServer(new ScannerExportPacket(scanner.getBlockPos()));
+        showFeedback(Component.literal("§a✓ 已发起导出: " + id), 0xFF55FF55);
         scanResult = I18n.name("gui.wandscape.scanner.result_export_started", "已发起导出: %s", id);
     }
 

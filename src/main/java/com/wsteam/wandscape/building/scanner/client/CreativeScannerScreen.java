@@ -33,6 +33,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
  * Completely refactored Creative Building Scanner Screen.
  * Uses a clean 4-tab medieval architecture (Bounds, Properties, Presets, Export)
  * with robust multi-line wrapping, paged lists, and zero text overlap.
+ * Features immediate visual toast feedback for all side-effect actions.
  */
 public class CreativeScannerScreen extends MedievalScreen {
 
@@ -175,6 +176,7 @@ public class CreativeScannerScreen extends MedievalScreen {
         addBtn(lx, topY, 90, 18, "模式: CORNER ▾", () -> {
             scanner.setBlockMode(BlockMode.SAVE);
             syncToServer();
+            showFeedback(Component.literal("§e已切换到 SAVE 主扫描模式"), 0xFFD4A840);
             rebuild();
         });
 
@@ -199,6 +201,7 @@ public class CreativeScannerScreen extends MedievalScreen {
         addBtn(lx, y, 78, 18, "模式: SAVE ▾", () -> {
             scanner.setBlockMode(BlockMode.CORNER);
             syncToServer();
+            showFeedback(Component.literal("§e已切换到 CORNER 辅角点模式"), 0xFFD4A840);
             rebuild();
         });
 
@@ -207,6 +210,7 @@ public class CreativeScannerScreen extends MedievalScreen {
             TargetMode next = scanner.getTargetMode() == TargetMode.BUILDING ? TargetMode.ROAD : TargetMode.BUILDING;
             scanner.setTargetMode(next);
             syncToServer();
+            showFeedback(Component.literal("§e已切换为 " + (next == TargetMode.BUILDING ? "建筑模式" : "道路模式")), 0xFFD4A840);
             rebuild();
         });
 
@@ -219,9 +223,16 @@ public class CreativeScannerScreen extends MedievalScreen {
             if (minecraft != null && minecraft.level != null) {
                 boolean matched = scanner.detectBoundaryFromCorners(minecraft.level);
                 if (matched) {
-                    scanResult = Component.literal("§a已匹配角点并更新边界！");
+                    BlockOffset bMin = scanner.getBoundaryMin();
+                    BlockOffset bMax = scanner.getBoundaryMax();
+                    int dx = Math.abs(bMax.x() - bMin.x()) + 1;
+                    int dy = Math.abs(bMax.y() - bMin.y()) + 1;
+                    int dz = Math.abs(bMax.z() - bMin.z()) + 1;
+                    showFeedback(Component.literal(String.format("§a✓ 匹配成功！已更新 3D 边界 (%d×%d×%d)", dx, dy, dz)), 0xFF55FF55);
+                    scanResult = Component.literal(String.format("§a已匹配角点并更新边界！尺寸: %d×%d×%d", dx, dy, dz));
                 } else {
-                    scanResult = Component.literal("§e未找到同名暗号的 CORNER 扫描器。");
+                    showFeedback(Component.literal("§c⚠ 未找到同名暗号的 CORNER 扫描器 (需在 64 格内)"), 0xFFFF5555);
+                    scanResult = Component.literal("§e未找到同名暗号的 CORNER 扫描器。请确认暗号是否一致。");
                 }
             }
             syncToServer();
@@ -256,6 +267,8 @@ public class CreativeScannerScreen extends MedievalScreen {
             if (doorY != null) doorY.setValue("0");
             if (doorZ != null) doorZ.setValue("0");
             syncToServer();
+            showFeedback(Component.literal("§6✓ 已清除全部门偏移记录 (默认走外围入口)"), 0xFFFFAA00);
+            scanResult = Component.literal("§7已清除全部门偏移记录。");
             rebuild();
         });
     }
@@ -285,6 +298,7 @@ public class CreativeScannerScreen extends MedievalScreen {
             addBtn(lx + 248, y + 86, 110, 18, "切换为建筑模式", () -> {
                 scanner.setTargetMode(TargetMode.BUILDING);
                 syncToServer();
+                showFeedback(Component.literal("§e已切换为建筑模式"), 0xFFD4A840);
                 rebuild();
             });
             return;
@@ -315,6 +329,7 @@ public class CreativeScannerScreen extends MedievalScreen {
         addBtn(lx + 256, y, 108, 18, "切换为道路模式", () -> {
             scanner.setTargetMode(TargetMode.ROAD);
             syncToServer();
+            showFeedback(Component.literal("§e已切换为道路模式"), 0xFFD4A840);
             rebuild();
         });
         y += 22;
@@ -370,6 +385,7 @@ public class CreativeScannerScreen extends MedievalScreen {
             scanner.addShopGood(new ShopGoodData("minecraft:apple", 5, 0, 0));
             syncToServer();
             shopGoodsPage = Math.max(0, (scanner.getShopGoods().size() - 1) / GOODS_PER_PAGE);
+            showFeedback(Component.literal("§a✓ 已上架新商品行 (请编辑物品ID)"), 0xFF55FF55);
             rebuild();
         });
 
@@ -391,6 +407,7 @@ public class CreativeScannerScreen extends MedievalScreen {
             addBtn(lx + 300, rowY, 16, 16, "×", () -> {
                 scanner.removeShopGood(idx);
                 syncToServer();
+                showFeedback(Component.literal("§6✓ 已移除该商品条目"), 0xFFFFAA00);
                 rebuild();
             });
             rowY += 20;
@@ -432,7 +449,10 @@ public class CreativeScannerScreen extends MedievalScreen {
             if (el != null) {
                 scanner.addServiceElementOutput(el, 1);
                 syncToServer();
+                showFeedback(Component.literal("§a✓ 已添加元素产出"), 0xFF55FF55);
                 rebuild();
+            } else {
+                showFeedback(Component.literal("§e⚠ 所有 7 种元素已全部添加完毕"), 0xFFFFAA00);
             }
         });
 
@@ -458,6 +478,7 @@ public class CreativeScannerScreen extends MedievalScreen {
             addBtn(lx + 182, rowY, 16, 16, "×", () -> {
                 scanner.removeServiceElementOutput(elem);
                 syncToServer();
+                showFeedback(Component.literal("§6✓ 已移除该元素产出"), 0xFFFFAA00);
                 rebuild();
             });
             rowY += 20;
@@ -479,6 +500,8 @@ public class CreativeScannerScreen extends MedievalScreen {
         scanner.removeServiceElementOutput(oldElem);
         scanner.addServiceElementOutput(nextElem, amount);
         syncToServer();
+        ElementDef elDef = getElementDef(nextElem);
+        showFeedback(Component.literal("§e产出元素切换为: " + elDef.symbol() + " " + elDef.label()), 0xFFD4A840);
         rebuild();
     }
 
@@ -486,8 +509,11 @@ public class CreativeScannerScreen extends MedievalScreen {
         ElementDef elDef = getElementDef(scanner.getNodeElement());
         addBtn(lx + 70, y + 6, 150, 20, "元素: " + elDef.symbol() + " " + elDef.label() + " ▾", () -> {
             int idx = getElementIndex(scanner.getNodeElement());
-            scanner.setNodeElement(ELEMENTS.get((idx + 1) % ELEMENTS.size()).id());
+            String nextElem = ELEMENTS.get((idx + 1) % ELEMENTS.size()).id();
+            scanner.setNodeElement(nextElem);
             syncToServer();
+            ElementDef nextDef = getElementDef(nextElem);
+            showFeedback(Component.literal("§e采集元素切换为: " + nextDef.symbol() + " " + nextDef.label()), 0xFFD4A840);
             rebuild();
         });
 
@@ -591,6 +617,7 @@ public class CreativeScannerScreen extends MedievalScreen {
         if (scanner.getBlockMode() == BlockMode.CORNER) {
             renderCornerMode(gui, mx, my, lx);
             renderWidgetsAndButtons(gui, mx, my, pt);
+            renderFeedback(gui);
             return;
         }
 
@@ -607,6 +634,7 @@ public class CreativeScannerScreen extends MedievalScreen {
         }
 
         renderWidgetsAndButtons(gui, mx, my, pt);
+        renderFeedback(gui);
     }
 
     private void renderTabBar(GuiGraphics gui, int mx, int my, int lx) {
@@ -1019,6 +1047,7 @@ public class CreativeScannerScreen extends MedievalScreen {
         if (minecraft == null || minecraft.level == null) return;
         List<BlockOffset> doors = scanner.detectDoors(minecraft.level);
         if (doors.isEmpty()) {
+            showFeedback(Component.literal("§e⚠ 未在当前 3D 包围盒内检测到门方块"), 0xFFFFAA00);
             scanResult = Component.literal("§e未在包围盒内检测到门方块。");
             return;
         }
@@ -1027,7 +1056,8 @@ public class CreativeScannerScreen extends MedievalScreen {
         if (doorX != null) doorX.setValue(String.valueOf(first.x()));
         if (doorY != null) doorY.setValue(String.valueOf(first.y()));
         if (doorZ != null) doorZ.setValue(String.valueOf(first.z()));
-        scanResult = Component.literal(String.format("§a已自动检门 %d 扇！", doors.size()));
+        showFeedback(Component.literal(String.format("§a✓ 已在包围盒内自动检出 %d 扇门", doors.size())), 0xFF55FF55);
+        scanResult = Component.literal(String.format("§a已自动检门 %d 扇，游客可从任意一扇门进入", doors.size()));
         syncToServer();
         rebuild();
     }
@@ -1037,6 +1067,8 @@ public class CreativeScannerScreen extends MedievalScreen {
         int next = (idx + dir + CATEGORIES.size()) % CATEGORIES.size();
         scanner.setCategory(CATEGORIES.get(next).id());
         syncToServer();
+        CategoryDef curCat = CATEGORIES.get(next);
+        showFeedback(Component.literal("§e分类已切换为: " + curCat.icon() + " " + curCat.label()), 0xFFD4A840);
         rebuild();
     }
 
@@ -1044,10 +1076,12 @@ public class CreativeScannerScreen extends MedievalScreen {
         if (presetNameEdit == null) return;
         String name = presetNameEdit.getValue().trim();
         if (name.isEmpty()) {
+            showFeedback(Component.literal("§c⚠ 请先输入预设名称"), 0xFFFF5555);
             scanResult = Component.literal("§c请先输入预设名称。");
             return;
         }
         ScannerPresetStore.savePreset(name, capturePresetData());
+        showFeedback(Component.literal("§a✓ 预设已成功保存: " + name), 0xFF55FF55);
         scanResult = Component.literal("§a预设已成功保存: " + name);
         rebuild();
     }
@@ -1055,17 +1089,20 @@ public class CreativeScannerScreen extends MedievalScreen {
     private void loadPresetByName(String name) {
         CompoundTag tag = ScannerPresetStore.loadPreset(name);
         if (tag == null) {
+            showFeedback(Component.literal("§c⚠ 未找到预设模板: " + name), 0xFFFF5555);
             scanResult = Component.literal("§c未找到预设: " + name);
             return;
         }
         applyPresetData(tag);
         syncToServer();
+        showFeedback(Component.literal("§a✓ 预设已成功加载: " + name), 0xFF55FF55);
         scanResult = Component.literal("§a预设已成功加载: " + name);
         rebuild();
     }
 
     private void deletePresetByName(String name) {
         ScannerPresetStore.deletePreset(name);
+        showFeedback(Component.literal("§6✓ 预设模板已删除: " + name), 0xFFFFAA00);
         scanResult = Component.literal("§e预设已删除: " + name);
         rebuild();
     }
@@ -1074,6 +1111,7 @@ public class CreativeScannerScreen extends MedievalScreen {
         BlockPos wMin = scanner.getWorldMin();
         BlockPos wMax = scanner.getWorldMax();
         if (wMin == null || wMax == null) {
+            showFeedback(Component.literal("§c⚠ 未定义 3D 边界范围"), 0xFFFF5555);
             scanResult = Component.literal("§c未定义 3D 边界范围。");
             return;
         }
@@ -1094,16 +1132,19 @@ public class CreativeScannerScreen extends MedievalScreen {
                 }
             }
         }
+        showFeedback(Component.literal(String.format("§a✓ 扫描完成！共 %,d 个有效方块", count)), 0xFF55FF55);
         scanResult = Component.literal(String.format("§a已扫描区域有效方块: %,d 个 (已排除扫描器)", count));
     }
 
     private void doExport() {
         String id = scanner.getBuildingId();
         if (id == null || id.isBlank()) {
+            showFeedback(Component.literal("§c⚠ 请先在属性配置页设置建筑/道路 ID！"), 0xFFFF5555);
             scanResult = Component.literal("§c导出失败: 请先在属性配置页设置建筑 ID！");
             return;
         }
         PacketDistributor.sendToServer(new ScannerExportPacket(scanner.getBlockPos()));
+        showFeedback(Component.literal("§a✓ 已发起导出与热注册: " + id + "！"), 0xFF55FF55);
         scanResult = Component.literal("§a已发起导出与热注册: " + id + " (详见游戏聊天区)");
     }
 
@@ -1111,10 +1152,12 @@ public class CreativeScannerScreen extends MedievalScreen {
         BlockPos wMin = scanner.getWorldMin();
         BlockPos wMax = scanner.getWorldMax();
         if (wMin == null || wMax == null) {
+            showFeedback(Component.literal("§c⚠ 未定义 3D 边界范围"), 0xFFFF5555);
             scanResult = Component.literal("§c未定义 3D 边界。");
             return;
         }
         PacketDistributor.sendToServer(new ScannerValuePacket(scanner.getBlockPos()));
+        showFeedback(Component.literal("§a✓ 已发起价值估算，请查看聊天区"), 0xFF55FF55);
         scanResult = Component.literal("§a已发起区域元素价值计算，结果已输出到聊天区。");
     }
 
