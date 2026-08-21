@@ -251,6 +251,10 @@ public class CreativeScannerScreen extends MedievalScreen {
         bMaxY = mkCoordEdit(colMin + cw + 4, y + 36, cw, 16, scanner.getBoundaryMax().y(), this::onBoundaryEdit);
         bMaxZ = mkCoordEdit(colMin + (cw + 4) * 2, y + 36, cw, 16, scanner.getBoundaryMax().z(), this::onBoundaryEdit);
 
+        addBtn(lx + 270, y + 16, 86, 36, "🎮 可视化调整", () -> {
+            com.wsteam.wandscape.building.scanner.client.gizmo.ScannerGizmoState.enter(scanner);
+        });
+
         y += 62;
 
         // ── Card 2: 门偏移与交互位 ──
@@ -687,11 +691,10 @@ public class CreativeScannerScreen extends MedievalScreen {
         int dz = Math.abs(bMax.z() - bMin.z()) + 1;
         long vol = (long) dx * dy * dz;
 
-        int infoX = lx + 185;
-        gui.drawString(font, String.format("尺寸: %d × %d × %d", dx, dy, dz), infoX, card1Y + 16, MedievalColors.BORDER_GOLD);
-        gui.drawString(font, String.format("体积: %,d 方块格", vol), infoX, card1Y + 28, MedievalColors.TEXT_WARM_WHITE);
-        gui.drawString(font, String.format("X(%d~%d) Y(%d~%d) Z(%d~%d)", bMin.x(), bMax.x(), bMin.y(), bMax.y(), bMin.z(), bMax.z()),
-                infoX, card1Y + 40, MedievalColors.TEXT_DIM);
+        int infoX = lx + 180;
+        gui.drawString(font, String.format("尺寸: %d×%d×%d", dx, dy, dz), infoX, card1Y + 16, MedievalColors.BORDER_GOLD);
+        gui.drawString(font, String.format("体积: %,d格", vol), infoX, card1Y + 28, MedievalColors.TEXT_WARM_WHITE);
+        gui.drawString(font, String.format("X%d Y%d Z%d", dx, dy, dz), infoX, card1Y + 40, MedievalColors.TEXT_DIM);
 
         // Card 2: Doors & Spots
         int card2Y = card1Y + 62;

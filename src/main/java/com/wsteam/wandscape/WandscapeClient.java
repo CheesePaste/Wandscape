@@ -178,6 +178,11 @@ public class WandscapeClient {
         com.wsteam.wandscape.road.client.SplineEditorController.register();
         com.wsteam.wandscape.road.client.SplineEditorRenderer.register();
         com.wsteam.wandscape.road.client.studio.RoadStudioOverlay.register();
+
+        // Building Scanner 3D Gizmo Visual Adjuster
+        com.wsteam.wandscape.building.scanner.client.gizmo.ScannerGizmoController.register();
+        com.wsteam.wandscape.building.scanner.client.gizmo.ScannerGizmoRenderer.register();
+        com.wsteam.wandscape.building.scanner.client.gizmo.ScannerGizmoOverlay.register();
     }
 
     @SubscribeEvent
