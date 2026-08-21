@@ -77,7 +77,7 @@ public record ScannerExportPacket(BlockPos pos) implements CustomPacketPayload {
         if (!(be instanceof CreativeScannerBlockEntity scanner)) {
             Log.warn(TAG, "No scanner BE at {}", packet.pos);
             player.sendSystemMessage(I18n.name("message.wandscape.scanner.no_scanner",
-                    "§cNo scanner found at %s", packet.pos));
+                    "§cNo scanner found at %s", packet.pos.toShortString()));
             return;
         }
 

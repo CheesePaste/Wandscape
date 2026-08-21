@@ -2,6 +2,20 @@
 
 本文件记录偏离直觉的设计选择及其原因，供后续开发快速理解「为什么这么做」。
 
+## 2026-08-21：聊天组件跨网参数消毒——translatable 参数只允许原始类型或 Component
+
+**需求**（用户实测 1.9.2）：托管服务器上导出建筑（`export_building_ok`）崩出 `EncoderException: Failed to encode: This value needs to be parsed as component translation{...}`，直接断线。1.8 用时聊天区直出 String 无问题，1.9.2 换成翻译键后触发。
+
+**根因**：1.9.2 的 i18n 重构把所有聊天消息从纯 String 换成 `Component.translatableWithFallback(key, fallback, args)`。MC 1.21.1 将聊天组件打包跨网（`ClientboundSystemChatPacket` 的 `ComponentSerialization.TRUSTED_STREAM_CODEC`）时，`TranslatableContents.ARG_CODEC` 里 `filterAllowedArguments` 只认 **Number / Boolean / String / Component** 四种参数，其余（`Path`、`BlockPos` 等）`DataResult` 直接报错 → 服务端编码抛 `EncoderException` → 连接被关。`ScreenFeedbackPacket`（同为 `ComponentSerialization` 编码）同样受影响。
+
+**决策**：
+- `I18n.name(key, fallback, args)` 作为全部聊天消息的唯一工厂，统一走 `sanitize`：任何非原始类型/非 Component 参数包成 `Component.literal(String.valueOf(arg))`。通用兜底，覆盖所有现在与未来的调用点，不逐个调用点修补。
+- 仅 `export_building_ok`/`export_road_ok` 传 `Path`、`no_scanner`/`value_no_scanner` 传 `BlockPos` 会崩；后两处以 `toShortString()` 传参，聊天显示为 `x, y, z` 而非 `BlockPos{...}`。
+
+**为什么**：聊天参数合法类型是 MC 网络编解码的硬约束而非本模组业务规则，把约束收敛到消息工厂一处即可「不允许静默失败或崩溃」，避免以后新增调用点再踩。
+
+**影响**：任意原始对象参数不再炸编码；`I18nTest` 覆盖 `sanitize` 的参数类型转换。
+
 ## 2026-08-18：TickProfiler 性能分析器与夜间寻路风暴（Pathfinding Storm）优化
 
 **背景与实测**：
