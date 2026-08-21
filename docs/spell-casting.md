@@ -166,7 +166,7 @@ magic/internal/CastBrain.java       ✅ 统一施法脑：L1 优先级扫描 + �
 magic/data/WorldSnapshot.java       ✅ 决策输入快照（纯数据 record，已实现）
 magic/data/SpellConditions.java     ✅ 魔法内置触发条件（conditions JSON 镜像 + matches，已实现）
 shared/api/SpellcastingApi.java     ✅ 决策层对外接口（getKnownSpells/getStrategyPreset/getPriority/setStrategy，已实现）
-core/component/SpellbookComponent.java   ✅ NPC 会哪些魔法（magicId 列表，已实现）
+core/component/EquippedMagicComponent.java   ✅ NPC 已装备魔法容器（4 分类桶 × 每桶 ≤3，桶内=类内优先级，默认 beam+heal，已实现）
 core/component/CastStrategyComponent.java ✅ 策略预设 + 优先级列表（已实现）
 magic/internal/MagicOp.java         （延后）魔法效果分发注册表——有第二个战斗魔法时再建
 npc/data/DeathRecord.java           ✅ 死亡留存记录（纯数据 record + nearest 纯逻辑）
@@ -191,15 +191,15 @@ npc/internal/ReviveHandler.java     ✅ 复活效果：spawnFromRecordAt（指�
 - **纯决策函数**，不是新的任务系统：`select(known, castable, snapshot) → MagicDef?`，纯 Java 可单测。
 - 调用方（守卫/自防御）在 ~10 tick 战斗循环里构造 `castable` 判定（互斥锁 + CD + 蓝）与 `WorldSnapshot`（敌数/自血/友方最低血/状态）喂入；拿到结果后按魔法 id 分发执行。
 - **P3 扩展（已实现）**：快照驱动目标规则（HOSTILE 需敌数>0、ALLY 需有受伤友方、DEAD_ALLY 祭坛专属永不自选）+ conditions 门控（5.2/5.3）。
-- **`resolvePriority(strategy, known)`**：未配置（`configured=false`）→ 按预设分类级排序（类内按 spellbook 顺序，UTILITY 不进表）；已配置 → 用显式 magicId 列表（空 = 全部停用，不兜底）。CUSTOM 仅旧存档兼容。
-- P3 起 `known` 来自 NPC 的 `SpellbookComponent`（默认 [beam]）经玩家策略解析，替代硬编码。
+- **`resolvePriority(strategy, known)`**：未配置（`configured=false`）→ 按预设分类级排序（类内按装备槽位序，UTILITY 不进表）；已配置 → 用显式 magicId 列表（空 = 全部停用，不兜底）。CUSTOM 仅旧存档兼容。
+- P3 起 `known` 来自 NPC 的 `EquippedMagicComponent`（已装备载荷）经玩家策略解析，替代硬编码。
 
 ## 七、决策流程（数据流）
 
 ```
 触发源：守卫任务循环 / 自防御循环 / 导航回退
   → 构造 WorldSnapshot（敌数/自身血/友方最低血/状态）
-  → known = 玩家策略（SpellbookComponent + CastStrategyComponent）经 CastBrain.resolvePriority 解析
+  → known = 玩家策略（EquippedMagicComponent + CastStrategyComponent）经 CastBrain.resolvePriority 解析
   → CastBrain.select()
       ├─ L0 硬性覆盖：血量危机/LOS/互斥锁 → 硬性魔法 或 直接返回"不施放"
       ├─ L1 按 priority 列表从上往下扫：
@@ -232,14 +232,14 @@ npc/internal/ReviveHandler.java     ✅ 复活效果：spawnFromRecordAt（指�
 
 ### 9.2 玩家策略（已实现）
 
-- **`SpellbookComponent`**（`core/component/`）：NPC 会哪些魔法（magicId 列表，默认 `[beam]`），仿 `MagicState` 实体持有 + NBT 持久。
-- **`CastStrategyComponent`**（`core/component/`）：预设（balanced/offensive/support/defensive，custom 仅旧存档）+ 显式优先级列表 + `configured` 标记（区分「从未配置 → 按预设推导」与「配置过但全关 → 空列表生效」）。
-- **`CastBrain.resolvePriority(strategy, known)`**：未配置 → 按预设分类级排序（类内按 spellbook 顺序，UTILITY 不进表）；已配置 → 显式 magicId 列表（空 = 全部停用）。CUSTOM 仅旧存档兼容。
-- **`SpellcastingApi`**（`shared/api/`，实现 `magic/internal/SpellcastingApiImpl`）：查/改魔法表与策略；`NpcDataPacket` 携带策略数据，`NpcStrategyPacket`（client→server）改策略后回发刷新。
+- **`EquippedMagicComponent`**（`core/component/`）：NPC 已装备魔法容器（B 阶段起替代 SpellbookComponent）——按 4 分类分桶、每桶 ≤3、桶内 = 类内优先级（槽位序），NBT 持久（`spellbookEquip`）。默认装备 **beam + heal**（新 NPC / 旧存档无字段时由 `onAddedToLevel` 数据驱动种入）。UTILITY 魔法不存此容器（teleport 导航回退 / revive 祭坛，系统固有）。服务端权威重算入口 `fromFlat(flat, categoryOf)`：未知/UTILITY 丢、每类 ≤3、去重。
+- **`CastStrategyComponent`**（`core/component/`）：预设（balanced/offensive/support/defensive，custom 仅旧存档）+ 显式优先级列表（保留作覆盖）+ `configured` 标记。装备 UI 只写预设（未配置 → 按预设分类排序推导）；`setEquippedAndStrategy` 之外仍可经 API 设显式列表作精确覆盖。
+- **`CastBrain.resolvePriority(strategy, known)`**：未配置 → 按预设分类级排序（类内按装备槽位序，UTILITY 不进表）；已配置 → 显式 magicId 列表（空 = 全部停用）。CUSTOM 仅旧存档兼容。
+- **`SpellcastingApi`**（`shared/api/`，实现 `magic/internal/SpellcastingApiImpl`）：查/改装备载荷与策略；`setEquippedAndStrategy(uuid, preset, equipped)` 服务端按真实分类装桶校验。`NpcDataPacket` 携带策略数据 + 战斗魔法目录（`magicCatalog`，id→分类）；`NpcStrategyPacket`（client→server，携带装备扁平态 + 本次消耗的卷轴槽）改完回发刷新。
 
-### 9.3 策略 UI（已实现）
+### 9.3 策略 UI（已实现，B 阶段装备制）
 
-- NpcScreen 加「策略」按钮 → **NpcStrategyScreen**（两层）：顶部 4 总体策略按钮（均衡/火力/支援/防御，当前预设金框高亮，管分类优先级）+ 一排 4 分类按钮（单体攻击/群体攻击/防御/增益，当前分类金框高亮）+ 所选分类魔法列表（滚轮滚动，每行右侧 ↑/↓/开关，样式参考 Workstation Queue 面板）。启用在优先级序在前、停用按 spellbook 序在后；↑/↓ 调整分类内顺序、开关控制启停，点总体策略只重排分类先后（保留分类内手动调整）。任意改动客户端重排完整扁平列表发 `NpcStrategyPacket`。lang 键 `gui.wandscape.strategy.*` + `magic.wandscape.*`。
+- NpcScreen 加「策略」按钮 → **NpcStrategyScreen**（装备制）：顶部 4 总体策略按钮（均衡/火力/支援/防御，管跨类施法先后）+ 中部 **4 分类 × 3 槽位**面板（槽位序 = 类内优先级，点已占槽卸载，悬停提示）+ 右侧**玩家背包卷轴源列表**（点卷轴装备到该魔法所属分类首空槽；本地预校验已装/满，服务端权威复核 ≤3/去重/UTILITY 排除并消耗卷轴）。任意改动客户端重排完整扁平装备态（分类固定序 × 槽位序）连同 `consumeSlot` 发 `NpcStrategyPacket`。lang 键 `gui.wandscape.strategy.*` + `magic.wandscape.*`。
 
 ## 十、复活与死亡留存（✅ 已实现）
 
@@ -326,7 +326,7 @@ P1/P2 玩家无感知（内部重构），P3 起见 UI。每个阶段完成即�
 ## 十三、依赖与边界
 
 - `MagicDef` 是纯数据 record → 放 `magic/data/`（仿 `MagicCircleSpec` 同在 magic/data）；`CastStrategy`（P3）与 `DeathRecord`（P4）是纯数据 → `core/` 或 `npc/data/`。
-- `SpellbookComponent` / `CastStrategyComponent` → `core/component/`（纯 Java 零 MC，仿 `MagicState`）。
+- `EquippedMagicComponent` / `CastStrategyComponent` → `core/component/`（纯 Java 零 MC，仿 `MagicState`）。
 - 效果实现 → `magic/internal/`（beam）、`engine/boundary/`（teleport）、`npc/internal/`（复活），`MagicOp` 只做分发。
 - 模块间通过 `SpellcastingApi` + 事件，不跨包 new 类（铁律 1）。
 - **不做全条件脚本**（FFXII 式）：触发器是 `target_mode` + 内置 `conditions` 阈值，不是玩家可写的判定——避免翻译与理解负担。
@@ -386,6 +386,7 @@ P1/P2 玩家无感知（内部重构），P3 起见 UI。每个阶段完成即�
 ## 二十、NPC 施法清单扩展与策略分类（2026-08-19）
 
 - **默认法术书扩展为 8 个**：`SpellbookComponent.DEFAULT_SPELLS` 从 `[beam, heal, meteor, petrification]` 增补 **conversion / desperation / fortification / enfeeble_field**。新 NPC 开局全都会；已存档 NPC 加入世界时自动补齐（`WandscapeNpc.onAddedToLevel` 遍历 DEFAULT_SPELLS 补缺失）。法术书内顺序决定**同分类内优先级**。
+  > **B 阶段（2026-08）已废弃此设计**：`SpellbookComponent` 移除，改 `EquippedMagicComponent`（每类 ≤3 装备容器，默认仅 beam+heal）；"开局全会 8 个"不再是默认——见 `docs/plan-magic-items.md`。
 - **策略分类调整**（`category` 数据驱动，只决定策略预设排序与 UI 分组，不改触发逻辑 target_mode/conditions）：
   - **desperation → `single_target`**（背水一战视为单体输出模式：战斗中优先于群攻施放，90s CD + `no_effect` 门控防刷）。
   - **conversion → `defense`**（群体魅惑归防御桶：倒戈控场当保命用）。

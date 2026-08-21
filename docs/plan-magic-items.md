@@ -13,7 +13,13 @@
 | A4 tooltip（蓝/冷/施法时间） | ✅ | `appendHoverText` 读 MagicDef：魔法名 + 耗蓝 / 冷却(s) / 施法时间(s) / 创造施法提示；8 个魔法 json 已配 `cast_time`（前摇+法阵+收尾，取 magic_circles duration）；lang 键 zh/en 各 12 条 |
 | A5 创造右键施法 | ✅ | `use()` 走 `MagicSpellExecutors.castForPlayer`（服务端）；生存/未绑定/UTILITY 拒绝并提示 |
 | A6 注册/贴图/lang | ✅ | model `spell_scroll.json` + 16×16 占位贴图（待美术替换）；`./gradlew test` 全绿；无单测（涉及 ItemStack/MC 运行时留待集成测试）。⚠️ 游戏内视觉/施法待用户 runClient 实测 |
-| 阶段 B/C/D | ⏳ | |
+| B1 装备数据模型 | ✅ | `core/component/EquippedMagicComponent`（替代 SpellbookComponent）：按分类名 4 桶 × 每桶 ≤3、桶内=槽位序；`equip/unequip/moveUp/moveDown/list/flattened/knows/isEmpty/fromFlat(纯校验)`；`DEFAULT_EQUIP=beam+heal`；NBT=`spellbookEquip`。SpellbookComponent + 其测试已删除；新组件配 14 单测 |
+| B2 NPC 接入 | ✅ | `WandscapeNpc` 字段 `spellbook`→`equippedMagic`；`onAddedToLevel`：`!spellbookLoaded && isEmpty()` 时数据驱动种 beam+heal（分类取 MagicDef）；CastBrain/GuardCombat/SpellcastingApiImpl 改取 `equippedMagic.flattened()`；`SpellcastingApi` 用 `setEquippedAndStrategy` 替代 setKnownSpells/setStrategy |
+| B3 策略页 UI 改装备制 | ✅ | `NpcStrategyScreen` 重构：顶部 4 预设按钮（保留）+ 中部 4 分类×3 槽位面板（点已占槽卸载）+ 右侧背包卷轴源列表（点卷轴装备到对应分类首空槽，本地预校验已装/满）；改动发完整扁平装备态 + `consumeSlot`。`NpcDataPacket` 增 `magicCatalog`（战斗魔法 id→分类）供客户端识别卷轴归属 |
+| B4 服务端校验 | ✅ | `NpcStrategyPacket(entityId, preset, equipped, consumeSlot)`；`SpellcastingApiImpl.setEquippedAndStrategy` 走 `fromFlat`（未知/UTILITY 丢、每类 ≤3、去重）；handleServer 校验后仅当卷轴魔法"新增装备"才扣一张、回发 NpcDataPacket 对账 |
+| B5 UTILITY 不装备 | ✅ | teleport/revive 不进装备：`fromFlat` 分类解析对 UTILITY 返 null 丢弃、`resolvePreset` 天然排除、SpellItem 不绑定；导航回退/祭坛逻辑不变 |
+| B6 旧存档兼容 | ✅ | `readAdditionalSaveData` 丢弃旧 `spellbookIds`/`castStrategyPriority`；仅读 `spellbookEquip`；`spellbookLoaded` 标记区分"有意清空载荷"（不重种）与"从未拥有"（种默认）。旧存档 NPC 收敛为默认 beam+heal |
+| 阶段 C/D | ⏳ | |
 
 ## 一、需求摘要
 
@@ -109,11 +115,9 @@ A 阶段全部完成即可独立提交（物品形态本身是可用成果）；
 
 ## 六、剩余待确认问题（做到对应阶段时确认）
 
-✅ 已确认：1) 四种类型=策略页 4 分类、每类 ≤3、UTILITY（teleport/revive）不物品化不占槽、revive 仅祭坛可用；2) 物品形态=通用 SpellItem+DataComponent 存 magicId；3) 新 NPC 默认装备 beam+heal。
+✅ 已确认：1) 四种类型=策略页 4 分类、每类 ≤3、UTILITY（teleport/revive）不物品化不占槽、revive 仅祭坛可用；2) 物品形态=通用 SpellItem+DataComponent 存 magicId；3) 新 NPC 默认装备 beam+heal；**4) 阶段 B 追加确认（grill-me 2026-08-21）**：装备语义=消耗式教学（装卷轴即消耗，卸载不返还，需多张卷轴教多人）；策略页 UI=背包物品选择器（背包卷轴源列表，ColonyItemBank 只存元素不存物品）；preset 保留（跨类先后）+ customPriority 保留作覆盖（装备 UI 只写预设，未配置走预设推导，覆盖机制保留在 API）；旧存档 spellbookIds 丢弃（不迁移）。
 
-❓ 剩余：
-1. 施法策略页装备的 UI 形态（背包物品选择器 vs 仓库物品列表 vs 殖民地已有物品）？→ 阶段 B3 前
-2. 旧 mana/stamina potion 配方与"药水功能"是否保留在 magic_station（改 craft_station 指向）？→ 阶段 C5
-3. 魔法合成是否要输入物品（仅元素 or 元素+空卷轴）？→ 阶段 C3
-4. 合成产物去处（玩家背包 / 殖民地仓库）？→ 阶段 C4
-5. 已存档 NPC 旧 Spellbook 数据是否迁移？→ 阶段 B6
+❓ 剩余（阶段 C 相关）：
+1. 旧 mana/stamina potion 配方与"药水功能"是否保留在 magic_station（改 craft_station 指向）？→ 阶段 C5
+2. 魔法合成是否要输入物品（仅元素 or 元素+空卷轴）？→ 阶段 C3
+3. 合成产物去处（玩家背包 / 殖民地仓库）？→ 阶段 C4

@@ -1,7 +1,9 @@
 package com.wsteam.wandscape.npc.network;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
 import java.util.function.Consumer;
 
@@ -50,7 +52,8 @@ public record NpcDataPacket(
         int skinVariant,
         int hatColor,
         boolean peaceMode,
-        boolean followMode
+        boolean followMode,
+        Map<String, String> magicCatalog
 ) implements CustomPacketPayload {
 
     public static final Type<NpcDataPacket> TYPE =
@@ -106,6 +109,7 @@ public record NpcDataPacket(
         buf.writeInt(pkt.hatColor);
         buf.writeBoolean(pkt.peaceMode);
         buf.writeBoolean(pkt.followMode);
+        buf.writeMap(pkt.magicCatalog, (b, s) -> b.writeUtf(s), (b, s) -> b.writeUtf(s));
     }
 
     private static void writeStringList(RegistryFriendlyByteBuf buf, List<String> list) {
@@ -142,11 +146,12 @@ public record NpcDataPacket(
         int hatColor = buf.readInt();
         boolean peaceMode = buf.readBoolean();
         boolean followMode = buf.readBoolean();
+        Map<String, String> magicCatalog = buf.readMap(HashMap::new, b -> b.readUtf(), b -> b.readUtf());
         return new NpcDataPacket(entityId, npcName, currentHealth, maxHealth,
                 currentMana, maxMana, moveSpeed, spellPower, workSpeed, spellSpeed,
                 armorValue, wandStack, isDefaultWand, strategyPreset, knownSpells,
                 spellCategories, priority, armorStacks, skinVariant, hatColor,
-                peaceMode, followMode);
+                peaceMode, followMode, magicCatalog);
     }
 
     private static List<String> readStringList(RegistryFriendlyByteBuf buf) {
@@ -208,6 +213,14 @@ public record NpcDataPacket(
             armorStacks.add(npc.getArmorItem(i).copy());
         }
 
+        // 战斗魔法目录（id → 分类小写）：策略/装备 UI 识别玩家背包卷轴的归属分类；UTILITY 不进（不可装备）
+        Map<String, String> magicCatalog = new HashMap<>();
+        for (Map.Entry<String, MagicDef> e : SpellbookLoader.getAllSpecs().entrySet()) {
+            if (e.getValue().category() != MagicDef.Category.UTILITY) {
+                magicCatalog.put(e.getKey(), e.getValue().category().name().toLowerCase(Locale.ROOT));
+            }
+        }
+
         return new NpcDataPacket(
                 npc.getId(),
                 npc.getNpcName(),
@@ -230,7 +243,8 @@ public record NpcDataPacket(
                 npc.getSkinVariant(),
                 npc.getHatColor(),
                 npc.isPeaceMode(),
-                npc.isFollowMode()
+                npc.isFollowMode(),
+                magicCatalog
         );
     }
 }

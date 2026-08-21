@@ -16,8 +16,10 @@ import com.wsteam.wandscape.magic.data.WorldSnapshot;
  * 可施放、目标规则命中且条件满足的魔法；全部不满足返回 null（调用方走兜底：基础攻击/走位/待命）。
  *
  * <p>L1 优先级扫描（docs/spell-casting.md 三层决策）。L0 硬性覆盖（血量危机/LOS/互斥锁）
- * 由调用方（守卫/自防御战斗循环）在调用前处理。P3 起已知魔法来自 NPC 的
- * {@code SpellbookComponent} 与玩家策略（{@link #resolvePriority}），替代硬编码 {@code [beam]}。
+ * 由调用方（守卫/自防御战斗循环）在调用前处理。已知魔法来自 NPC 的
+ * {@code EquippedMagicComponent}（已装备载荷，分 4 类、每类 ≤3，桶内=类内优先级）
+ * 与玩家策略（{@link #resolvePriority}），替代硬编码 {@code [beam]}。UTILITY 魔法
+ * （teleport/revive）不在装备载荷中——导航回退/祭坛属系统固有，由 L0/独立路径处理。
  */
 public final class CastBrain {
 
@@ -40,7 +42,7 @@ public final class CastBrain {
 
     /**
      * 把魔法 id 列表解析为魔法定义列表（SpellbookLoader 查表，缺失跳过）。
-     * 供调用方把 NPC 的 {@code SpellbookComponent.ids()} 转成 {@code known}。
+     * 供调用方把 NPC 的 {@code EquippedMagicComponent.flattened()} 转成 {@code known}。
      */
     public static List<MagicDef> knownSpells(List<String> ids) {
         List<MagicDef> out = new ArrayList<>();
