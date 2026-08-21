@@ -21,25 +21,26 @@ import net.neoforged.neoforge.common.NeoForge;
 
 /**
  * 3D World Renderer for the Building Scanner Gizmo Visual Adjuster.
- * Renders X-Ray translucent bounding box, glowing corner anchors, and 3D translation Gizmo arrows.
+ * Uses dedicated X-Ray depth-disabled render passes and distance-compensated scaling
+ * to ensure the Gizmo is always drawn strictly ON TOP of solid blocks, entities, and the bounding box.
  */
 public final class ScannerGizmoRenderer {
     private static final String TAG = "ScannerGizmoRenderer";
     private static boolean registered = false;
 
-    // Gizmo arrow dimensions
-    public static final float SHAFT_LEN = 1.4f;
-    public static final float SHAFT_THICKNESS = 0.05f;
-    public static final float HEAD_LEN = 0.35f;
-    public static final float HEAD_THICKNESS = 0.12f;
+    // Base Gizmo arrow dimensions (multiplied by dynamic distance scale)
+    public static final float BASE_SHAFT_LEN = 1.5f;
+    public static final float BASE_SHAFT_THICKNESS = 0.06f;
+    public static final float BASE_HEAD_LEN = 0.38f;
+    public static final float BASE_HEAD_THICKNESS = 0.14f;
 
     // Colors
-    private static final int[] COL_X = {255, 60, 60, 220};
-    private static final int[] COL_XN = {180, 40, 40, 160};
-    private static final int[] COL_Y = {60, 255, 60, 220};
-    private static final int[] COL_YN = {40, 180, 40, 160};
-    private static final int[] COL_Z = {60, 120, 255, 220};
-    private static final int[] COL_ZN = {40, 60, 180, 160};
+    private static final int[] COL_X = {255, 60, 60, 240};
+    private static final int[] COL_XN = {180, 40, 40, 180};
+    private static final int[] COL_Y = {60, 255, 60, 240};
+    private static final int[] COL_YN = {40, 180, 40, 180};
+    private static final int[] COL_Z = {60, 130, 255, 240};
+    private static final int[] COL_ZN = {40, 70, 180, 180};
 
     private ScannerGizmoRenderer() {}
 
@@ -48,6 +49,11 @@ public final class ScannerGizmoRenderer {
         registered = true;
         NeoForge.EVENT_BUS.addListener(RenderLevelStageEvent.class, ScannerGizmoRenderer::onRenderLevelStage);
         Log.info(TAG, "ScannerGizmoRenderer registered");
+    }
+
+    public static float getDistanceScale(Vec3 camPos, Vec3 anchorPos) {
+        double dist = camPos.distanceTo(anchorPos);
+        return (float) Math.max(0.6, dist * 0.09);
     }
 
     private static void onRenderLevelStage(RenderLevelStageEvent event) {
@@ -78,65 +84,67 @@ public final class ScannerGizmoRenderer {
         double maxZ = bePos.getZ() + Math.max(bMin.z(), bMax.z()) + 1.0;
 
         AABB box = new AABB(minX, minY, minZ, maxX, maxY, maxZ);
+        List<BlockOffset> doors = scanner.getDoorOffsets();
 
-        // ── PASS 1: XRAY QUADS (Faces & Anchor Cubes & Gizmo Arrows) ──
-        VertexConsumer vcQuads = buf.getBuffer(GizmoRenderType.XRAY_QUADS);
+        // ── PASS 1: Translucent Bounding Box Faces & Door markers ──
+        VertexConsumer vcBoxQuads = buf.getBuffer(GizmoRenderType.XRAY_BOX_QUADS);
+        fillAABB(vcBoxQuads, pose, box, 255, 150, 50, 35);
 
-        // Translucent bounding box fill
-        fillAABB(vcQuads, pose, box, 255, 150, 50, 40);
+        for (BlockOffset d : doors) {
+            double dx = bePos.getX() + d.x();
+            double dy = bePos.getY() + d.y();
+            double dz = bePos.getZ() + d.z();
+            AABB doorBox = new AABB(dx, dy, dz, dx + 1.0, dy + 1.0, dz + 1.0);
+            fillAABB(vcBoxQuads, pose, doorBox, 255, 50, 50, 60);
+        }
+        buf.endBatch(GizmoRenderType.XRAY_BOX_QUADS);
+
+        // ── PASS 2: Bounding Box Wireframe Edges ──
+        VertexConsumer vcBoxLines = buf.getBuffer(GizmoRenderType.XRAY_BOX_LINES);
+        drawBoxLines(vcBoxLines, pose, box, 255, 180, 50, 230);
+
+        for (BlockOffset d : doors) {
+            double dx = bePos.getX() + d.x();
+            double dy = bePos.getY() + d.y();
+            double dz = bePos.getZ() + d.z();
+            AABB doorBox = new AABB(dx, dy, dz, dx + 1.0, dy + 1.0, dz + 1.0);
+            drawBoxLines(vcBoxLines, pose, doorBox, 255, 80, 80, 200);
+        }
+        buf.endBatch(GizmoRenderType.XRAY_BOX_LINES);
+
+        // ── PASS 3: ANCHOR CORNER CUBES & 3D GIZMO ARROWS (Rendered LAST on top of everything) ──
+        VertexConsumer vcGizmoQuads = buf.getBuffer(GizmoRenderType.XRAY_GIZMO_QUADS);
 
         // Min anchor corner cube (Cyan)
         boolean minSelected = ScannerGizmoState.getSelectedAnchor() == ScannerGizmoState.Anchor.MIN;
-        int minA = minSelected ? 255 : 160;
         Vec3 minAnchorPos = ScannerGizmoState.getWorldAnchorPos(ScannerGizmoState.Anchor.MIN);
-        AABB minCube = new AABB(minAnchorPos.x - 0.2, minAnchorPos.y - 0.2, minAnchorPos.z - 0.2,
-                minAnchorPos.x + 0.2, minAnchorPos.y + 0.2, minAnchorPos.z + 0.2);
-        fillAABB(vcQuads, pose, minCube, 0, 229, 255, minA);
+        float minScale = getDistanceScale(camPos, minAnchorPos);
+        double minCubeRadius = 0.22 * minScale;
+        AABB minCube = new AABB(minAnchorPos.x - minCubeRadius, minAnchorPos.y - minCubeRadius, minAnchorPos.z - minCubeRadius,
+                minAnchorPos.x + minCubeRadius, minAnchorPos.y + minCubeRadius, minAnchorPos.z + minCubeRadius);
+        int minA = minSelected ? 255 : 180;
+        fillAABB(vcGizmoQuads, pose, minCube, 0, 229, 255, minA);
 
         // Max anchor corner cube (Gold)
         boolean maxSelected = ScannerGizmoState.getSelectedAnchor() == ScannerGizmoState.Anchor.MAX;
-        int maxA = maxSelected ? 255 : 160;
         Vec3 maxAnchorPos = ScannerGizmoState.getWorldAnchorPos(ScannerGizmoState.Anchor.MAX);
-        AABB maxCube = new AABB(maxAnchorPos.x - 0.2, maxAnchorPos.y - 0.2, maxAnchorPos.z - 0.2,
-                maxAnchorPos.x + 0.2, maxAnchorPos.y + 0.2, maxAnchorPos.z + 0.2);
-        fillAABB(vcQuads, pose, maxCube, 255, 215, 0, maxA);
+        float maxScale = getDistanceScale(camPos, maxAnchorPos);
+        double maxCubeRadius = 0.22 * maxScale;
+        AABB maxCube = new AABB(maxAnchorPos.x - maxCubeRadius, maxAnchorPos.y - maxCubeRadius, maxAnchorPos.z - maxCubeRadius,
+                maxAnchorPos.x + maxCubeRadius, maxAnchorPos.y + maxCubeRadius, maxAnchorPos.z + maxCubeRadius);
+        int maxA = maxSelected ? 255 : 180;
+        fillAABB(vcGizmoQuads, pose, maxCube, 255, 215, 0, maxA);
 
-        // Draw Gizmo Arrows at selected anchor
+        // Active anchor 3D Translation Gizmo
         Vec3 activePos = ScannerGizmoState.getWorldAnchorPos(ScannerGizmoState.getSelectedAnchor());
-        drawGizmoArrows(vcQuads, pose, activePos);
+        float activeScale = getDistanceScale(camPos, activePos);
+        drawGizmoArrows(vcGizmoQuads, pose, activePos, activeScale);
 
-        // Door indicators
-        List<BlockOffset> doors = scanner.getDoorOffsets();
-        for (BlockOffset d : doors) {
-            double dx = bePos.getX() + d.x();
-            double dy = bePos.getY() + d.y();
-            double dz = bePos.getZ() + d.z();
-            AABB doorBox = new AABB(dx, dy, dz, dx + 1.0, dy + 1.0, dz + 1.0);
-            fillAABB(vcQuads, pose, doorBox, 255, 50, 50, 70);
-        }
-
-        buf.endBatch(GizmoRenderType.XRAY_QUADS);
-
-        // ── PASS 2: XRAY LINES (Bounding Box Wireframe & Grid Edges) ──
-        VertexConsumer vcLines = buf.getBuffer(GizmoRenderType.XRAY_LINES);
-
-        // Outer box wireframe
-        drawBoxLines(vcLines, pose, box, 255, 180, 50, 255);
-
-        // Door box wireframes
-        for (BlockOffset d : doors) {
-            double dx = bePos.getX() + d.x();
-            double dy = bePos.getY() + d.y();
-            double dz = bePos.getZ() + d.z();
-            AABB doorBox = new AABB(dx, dy, dz, dx + 1.0, dy + 1.0, dz + 1.0);
-            drawBoxLines(vcLines, pose, doorBox, 255, 80, 80, 240);
-        }
-
-        buf.endBatch(GizmoRenderType.XRAY_LINES);
+        buf.endBatch(GizmoRenderType.XRAY_GIZMO_QUADS);
         poseStack.popPose();
     }
 
-    private static void drawGizmoArrows(VertexConsumer vc, PoseStack.Pose pose, Vec3 pos) {
+    private static void drawGizmoArrows(VertexConsumer vc, PoseStack.Pose pose, Vec3 pos, float scale) {
         ScannerGizmoState.AxisDrag hovering = ScannerGizmoState.getHoveredAxis();
         ScannerGizmoState.AxisDrag dragging = ScannerGizmoState.getDraggingAxis();
         ScannerGizmoState.AxisDrag activeAxis = (dragging != ScannerGizmoState.AxisDrag.NONE) ? dragging : hovering;
@@ -146,35 +154,40 @@ public final class ScannerGizmoRenderer {
         double z = pos.z;
 
         // X Axis (+ / -)
-        drawGizmoArrow(vc, pose, x, y, z, ScannerGizmoState.AxisDrag.X_POS, 1, 0, 0, COL_X, activeAxis == ScannerGizmoState.AxisDrag.X_POS);
-        drawGizmoArrow(vc, pose, x, y, z, ScannerGizmoState.AxisDrag.X_NEG, -1, 0, 0, COL_XN, activeAxis == ScannerGizmoState.AxisDrag.X_NEG);
+        drawGizmoArrow(vc, pose, x, y, z, ScannerGizmoState.AxisDrag.X_POS, 1, 0, 0, COL_X, activeAxis == ScannerGizmoState.AxisDrag.X_POS, scale);
+        drawGizmoArrow(vc, pose, x, y, z, ScannerGizmoState.AxisDrag.X_NEG, -1, 0, 0, COL_XN, activeAxis == ScannerGizmoState.AxisDrag.X_NEG, scale);
 
         // Y Axis (+ / -)
-        drawGizmoArrow(vc, pose, x, y, z, ScannerGizmoState.AxisDrag.Y_POS, 0, 1, 0, COL_Y, activeAxis == ScannerGizmoState.AxisDrag.Y_POS);
-        drawGizmoArrow(vc, pose, x, y, z, ScannerGizmoState.AxisDrag.Y_NEG, 0, -1, 0, COL_YN, activeAxis == ScannerGizmoState.AxisDrag.Y_NEG);
+        drawGizmoArrow(vc, pose, x, y, z, ScannerGizmoState.AxisDrag.Y_POS, 0, 1, 0, COL_Y, activeAxis == ScannerGizmoState.AxisDrag.Y_POS, scale);
+        drawGizmoArrow(vc, pose, x, y, z, ScannerGizmoState.AxisDrag.Y_NEG, 0, -1, 0, COL_YN, activeAxis == ScannerGizmoState.AxisDrag.Y_NEG, scale);
 
         // Z Axis (+ / -)
-        drawGizmoArrow(vc, pose, x, y, z, ScannerGizmoState.AxisDrag.Z_POS, 0, 0, 1, COL_Z, activeAxis == ScannerGizmoState.AxisDrag.Z_POS);
-        drawGizmoArrow(vc, pose, x, y, z, ScannerGizmoState.AxisDrag.Z_NEG, 0, 0, -1, COL_ZN, activeAxis == ScannerGizmoState.AxisDrag.Z_NEG);
+        drawGizmoArrow(vc, pose, x, y, z, ScannerGizmoState.AxisDrag.Z_POS, 0, 0, 1, COL_Z, activeAxis == ScannerGizmoState.AxisDrag.Z_POS, scale);
+        drawGizmoArrow(vc, pose, x, y, z, ScannerGizmoState.AxisDrag.Z_NEG, 0, 0, -1, COL_ZN, activeAxis == ScannerGizmoState.AxisDrag.Z_NEG, scale);
     }
 
     private static void drawGizmoArrow(VertexConsumer vc, PoseStack.Pose pose, double x, double y, double z,
-                                       ScannerGizmoState.AxisDrag axis, int dx, int dy, int dz, int[] col, boolean highlight) {
-        float bright = highlight ? 1.5f : 1.0f;
+                                       ScannerGizmoState.AxisDrag axis, int dx, int dy, int dz, int[] col, boolean highlight, float scale) {
+        float bright = highlight ? 1.4f : 1.0f;
         int r = highlight ? 255 : Math.min(255, (int)(col[0] * bright));
         int g = highlight ? 255 : Math.min(255, (int)(col[1] * bright));
         int b = highlight ? 60  : Math.min(255, (int)(col[2] * bright));
         int a = highlight ? 255 : col[3];
 
+        float shaftLen = BASE_SHAFT_LEN * scale;
+        float shaftThickness = BASE_SHAFT_THICKNESS * scale;
+        float headLen = BASE_HEAD_LEN * scale;
+        float headThickness = BASE_HEAD_THICKNESS * scale;
+
         // 1. Shaft
-        AABB shaft = getGizmoAxisAABB(x, y, z, axis, SHAFT_LEN, SHAFT_THICKNESS);
+        AABB shaft = getGizmoAxisAABB(x, y, z, axis, shaftLen, shaftThickness);
         fillAABB(vc, pose, shaft, r, g, b, a);
 
         // 2. Head
-        double headX = x + dx * SHAFT_LEN;
-        double headY = y + dy * SHAFT_LEN;
-        double headZ = z + dz * SHAFT_LEN;
-        AABB head = getGizmoAxisAABB(headX, headY, headZ, axis, HEAD_LEN, HEAD_THICKNESS);
+        double headX = x + dx * shaftLen;
+        double headY = y + dy * shaftLen;
+        double headZ = z + dz * shaftLen;
+        AABB head = getGizmoAxisAABB(headX, headY, headZ, axis, headLen, headThickness);
         fillAABB(vc, pose, head, r, g, b, a);
     }
 
@@ -248,8 +261,8 @@ public final class ScannerGizmoRenderer {
             super(name, format, mode, bufSize, affectsCrumbling, sortOnUpload, setupState, clearState);
         }
 
-        public static final RenderType XRAY_QUADS = create(
-                "scanner_gizmo_quads",
+        public static final RenderType XRAY_BOX_QUADS = create(
+                "scanner_gizmo_box_quads",
                 DefaultVertexFormat.POSITION_COLOR,
                 VertexFormat.Mode.QUADS,
                 256,
@@ -263,8 +276,8 @@ public final class ScannerGizmoRenderer {
                         .createCompositeState(false)
         );
 
-        public static final RenderType XRAY_LINES = create(
-                "scanner_gizmo_lines",
+        public static final RenderType XRAY_BOX_LINES = create(
+                "scanner_gizmo_box_lines",
                 DefaultVertexFormat.POSITION_COLOR,
                 VertexFormat.Mode.DEBUG_LINES,
                 256,
@@ -275,7 +288,22 @@ public final class ScannerGizmoRenderer {
                         .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
                         .setDepthTestState(NO_DEPTH_TEST)
                         .setCullState(NO_CULL)
-                        .setLineState(new LineStateShard(java.util.OptionalDouble.of(3.0)))
+                        .setLineState(new LineStateShard(java.util.OptionalDouble.of(2.5)))
+                        .createCompositeState(false)
+        );
+
+        public static final RenderType XRAY_GIZMO_QUADS = create(
+                "scanner_gizmo_arrows_quads",
+                DefaultVertexFormat.POSITION_COLOR,
+                VertexFormat.Mode.QUADS,
+                256,
+                false,
+                false,
+                CompositeState.builder()
+                        .setShaderState(POSITION_COLOR_SHADER)
+                        .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
+                        .setDepthTestState(NO_DEPTH_TEST)
+                        .setCullState(NO_CULL)
                         .createCompositeState(false)
         );
     }

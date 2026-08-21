@@ -121,7 +121,7 @@ public final class ScannerGizmoController {
                 Vec3 rayDir = getMouseWorldRay(mc);
 
                 // A. Check Gizmo axis hit test on active anchor
-                ScannerGizmoState.AxisDrag hitAxis = hitTestGizmo(rayOrigin, rayDir, ScannerGizmoState.getSelectedAnchor());
+                ScannerGizmoState.AxisDrag hitAxis = hitTestGizmo(mc, rayOrigin, rayDir, ScannerGizmoState.getSelectedAnchor());
                 if (hitAxis != ScannerGizmoState.AxisDrag.NONE) {
                     startGizmoDrag(mc, rayOrigin, rayDir, hitAxis);
                     event.setCanceled(true);
@@ -132,8 +132,10 @@ public final class ScannerGizmoController {
                 ScannerGizmoState.Anchor other = (ScannerGizmoState.getSelectedAnchor() == ScannerGizmoState.Anchor.MIN)
                         ? ScannerGizmoState.Anchor.MAX : ScannerGizmoState.Anchor.MIN;
                 Vec3 otherPos = ScannerGizmoState.getWorldAnchorPos(other);
-                AABB otherCube = new AABB(otherPos.x - 0.35, otherPos.y - 0.35, otherPos.z - 0.35,
-                        otherPos.x + 0.35, otherPos.y + 0.35, otherPos.z + 0.35);
+                float otherScale = ScannerGizmoRenderer.getDistanceScale(rayOrigin, otherPos);
+                double cubeRadius = 0.30 * otherScale;
+                AABB otherCube = new AABB(otherPos.x - cubeRadius, otherPos.y - cubeRadius, otherPos.z - cubeRadius,
+                        otherPos.x + cubeRadius, otherPos.y + cubeRadius, otherPos.z + cubeRadius);
                 Optional<Vec3> hitOther = otherCube.clip(rayOrigin, rayOrigin.add(rayDir.scale(REACH)));
                 if (hitOther.isPresent()) {
                     ScannerGizmoState.setSelectedAnchor(other);
@@ -188,7 +190,7 @@ public final class ScannerGizmoController {
         if (ScannerGizmoState.isDragging()) {
             continueGizmoDrag(rayOrigin, rayDir);
         } else if (!cameraActive) {
-            ScannerGizmoState.AxisDrag hitAxis = hitTestGizmo(rayOrigin, rayDir, ScannerGizmoState.getSelectedAnchor());
+            ScannerGizmoState.AxisDrag hitAxis = hitTestGizmo(mc, rayOrigin, rayDir, ScannerGizmoState.getSelectedAnchor());
             ScannerGizmoState.setHoveredAxis(hitAxis);
         }
     }
@@ -236,15 +238,16 @@ public final class ScannerGizmoController {
         ScannerGizmoState.setDraggingAxis(ScannerGizmoState.AxisDrag.NONE);
     }
 
-    public static ScannerGizmoState.AxisDrag hitTestGizmo(Vec3 rayOrigin, Vec3 rayDir, ScannerGizmoState.Anchor anchor) {
+    public static ScannerGizmoState.AxisDrag hitTestGizmo(Minecraft mc, Vec3 rayOrigin, Vec3 rayDir, ScannerGizmoState.Anchor anchor) {
         Vec3 pos = ScannerGizmoState.getWorldAnchorPos(anchor);
         Vec3 rayEnd = rayOrigin.add(rayDir.scale(REACH));
 
         ScannerGizmoState.AxisDrag bestAxis = ScannerGizmoState.AxisDrag.NONE;
         double minDistance = Double.MAX_VALUE;
 
-        float totalLen = ScannerGizmoRenderer.SHAFT_LEN + ScannerGizmoRenderer.HEAD_LEN + 0.1f;
-        float thickness = 0.22f; // Generous hit box for easy clicking
+        float scale = ScannerGizmoRenderer.getDistanceScale(rayOrigin, pos);
+        float totalLen = (ScannerGizmoRenderer.BASE_SHAFT_LEN + ScannerGizmoRenderer.BASE_HEAD_LEN + 0.1f) * scale;
+        float thickness = 0.22f * scale; // Responsive, generous hit box
 
         for (ScannerGizmoState.AxisDrag axis : ScannerGizmoState.AxisDrag.values()) {
             if (axis == ScannerGizmoState.AxisDrag.NONE) continue;

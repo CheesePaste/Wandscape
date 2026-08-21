@@ -61,6 +61,12 @@ public class ScannerRenderer implements BlockEntityRenderer<CreativeScannerBlock
             return;
         }
 
+        // When Gizmo visual adjustment mode is active, the dedicated Gizmo renderer handles X-Ray on top
+        if (com.wsteam.wandscape.building.scanner.client.gizmo.ScannerGizmoState.isActive()
+                && be.equals(com.wsteam.wandscape.building.scanner.client.gizmo.ScannerGizmoState.getScanner())) {
+            return;
+        }
+
         // 1. Boundary box (orange)
         BlockOffset bMin = be.getBoundaryMin();
         BlockOffset bMax = be.getBoundaryMax();
