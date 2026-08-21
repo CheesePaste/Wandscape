@@ -18,6 +18,7 @@ public record MagicDef(
         Category category,
         int manaCost,
         int baseCooldown,
+        int castTime,
         double range,
         TargetMode targetMode,
         @Nullable String effectCircleId,
@@ -32,6 +33,7 @@ public record MagicDef(
     public MagicDef {
         manaCost = Math.max(0, manaCost);
         baseCooldown = Math.max(0, baseCooldown);
+        castTime = Math.max(0, castTime);
         range = Math.max(0, range);
         altarCooldown = Math.max(0, altarCooldown);
         altarDuration = Math.max(0, altarDuration);
@@ -55,6 +57,7 @@ public record MagicDef(
         Category category = parseEnum(getString(obj, "category", "single_target"), Category.SINGLE_TARGET);
         int manaCost = (int) Math.round(getDouble(obj, "mana_cost", 0));
         int baseCooldown = (int) Math.round(getDouble(obj, "base_cooldown", 0));
+        int castTime = (int) Math.round(getDouble(obj, "cast_time", 0));
         double range = getDouble(obj, "range", 0);
         TargetMode targetMode = parseEnum(getString(obj, "target_mode", "none"), TargetMode.NONE);
 
@@ -71,7 +74,7 @@ public record MagicDef(
         int altarCooldown = (int) Math.round(getDouble(obj, "altar_cooldown", 0));
         int altarDuration = (int) Math.round(getDouble(obj, "altar_duration", 0));
         SpellConditions conditions = SpellConditions.fromJson(obj.get("conditions"));
-        return new MagicDef(defId, category, manaCost, baseCooldown, range, targetMode,
+        return new MagicDef(defId, category, manaCost, baseCooldown, castTime, range, targetMode,
                 circleId, color, damage, altarOnly, altarCooldown, altarDuration, conditions);
     }
 

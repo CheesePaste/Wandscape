@@ -91,6 +91,12 @@ class MagicDefTest {
     }
 
     @Test
+    void parsesCastTime() {
+        MagicDef def = MagicDef.fromJson("s", JsonParser.parseString("{\"cast_time\": 160}"));
+        assertEquals(160, def.castTime());
+    }
+
+    @Test
     void parsesAltarFields() {
         MagicDef def = MagicDef.fromJson("altar", JsonParser.parseString(
                 "{\"altar_only\": true, \"altar_cooldown\": 600, \"altar_duration\": 160}"));
@@ -118,6 +124,7 @@ class MagicDefTest {
         assertEquals(MagicDef.Category.SINGLE_TARGET, def.category());
         assertEquals(0, def.manaCost());
         assertEquals(0, def.baseCooldown());
+        assertEquals(0, def.castTime());
         assertEquals(0, def.range(), 1e-9);
         assertEquals(MagicDef.TargetMode.NONE, def.targetMode());
         assertNull(def.effectCircleId());
@@ -146,9 +153,10 @@ class MagicDefTest {
     @Test
     void clampsNegatives() {
         MagicDef def = MagicDef.fromJson("neg", JsonParser.parseString(
-                "{\"mana_cost\": -5, \"base_cooldown\": -1, \"range\": -10}"));
+                "{\"mana_cost\": -5, \"base_cooldown\": -1, \"cast_time\": -8, \"range\": -10}"));
         assertEquals(0, def.manaCost());
         assertEquals(0, def.baseCooldown());
+        assertEquals(0, def.castTime());
         assertEquals(0, def.range(), 1e-9);
     }
 
