@@ -281,6 +281,30 @@ public class WorldReloaderBuilder {
         return changePos;
     }
 
+    public int getRadius() {
+        return radius;
+    }
+
+    public int getPadding() {
+        return padding;
+    }
+
+    public int getYMin() {
+        return yMin;
+    }
+
+    public int getYMax() {
+        return yMax;
+    }
+
+    public ServerLevel getTargetDimensionWorld() {
+        return targetDimensionWorld != null ? targetDimensionWorld : world;
+    }
+
+    public boolean isPreserveBeacon() {
+        return preserveBeacon;
+    }
+
     private BlockPos getValidSurfacePosition(BlockPos pos) {
         ServerLevel targetLvl = targetDimensionWorld != null ? targetDimensionWorld : world;
         ChunkPos chunkPos = new ChunkPos(pos.getX() >> 4, pos.getZ() >> 4);

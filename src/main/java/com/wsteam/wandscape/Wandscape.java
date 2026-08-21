@@ -773,7 +773,16 @@ public class Wandscape {
                 .playToClient(
                         com.wsteam.wandscape.road.network.RoadStudioEnterPacket.TYPE,
                         com.wsteam.wandscape.road.network.RoadStudioEnterPacket.STREAM_CODEC,
-                        com.wsteam.wandscape.road.network.RoadStudioEnterPacket::handleClient);
+                        com.wsteam.wandscape.road.network.RoadStudioEnterPacket::handleClient)
+                // ── WorldReloader Transform Preview ──
+                .playToClient(
+                        com.wsteam.wandscape.worldreloader.network.TransformPreviewPacket.TYPE,
+                        com.wsteam.wandscape.worldreloader.network.TransformPreviewPacket.STREAM_CODEC,
+                        (packet, ctx) -> com.wsteam.wandscape.worldreloader.network.TransformPreviewPacket.handleClient(packet))
+                .playToClient(
+                        com.wsteam.wandscape.worldreloader.network.TransformPreviewCancelPacket.TYPE,
+                        com.wsteam.wandscape.worldreloader.network.TransformPreviewCancelPacket.STREAM_CODEC,
+                        (packet, ctx) -> com.wsteam.wandscape.worldreloader.network.TransformPreviewCancelPacket.handleClient(packet));
     }
 
     private void onEntityAttributeCreation(EntityAttributeCreationEvent event) {

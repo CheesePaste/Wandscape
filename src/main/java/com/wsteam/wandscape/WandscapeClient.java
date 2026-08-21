@@ -178,6 +178,9 @@ public class WandscapeClient {
         com.wsteam.wandscape.road.client.SplineEditorController.register();
         com.wsteam.wandscape.road.client.SplineEditorRenderer.register();
         com.wsteam.wandscape.road.client.studio.RoadStudioOverlay.register();
+
+        // WorldReloader Transform Preview
+        com.wsteam.wandscape.worldreloader.client.TransformPreviewRenderer.register();
     }
 
     @SubscribeEvent
@@ -440,6 +443,7 @@ public class WandscapeClient {
 
     private static void onClientTick(ClientTickEvent.Post event) {
         ColonyAmbientSystem.tick();
+        com.wsteam.wandscape.worldreloader.client.TransformPreviewClientState.clientTick(Minecraft.getInstance());
 
         // F4: 专用「隐藏/显示面板」键——切换面板可见性。可见→隐藏；隐藏（含被 F1 隐藏）→显示。
         // 隐藏后面板不渲染、输入穿透；F1 隐藏全部 GUI 时面板同样隐藏（见 isPanelHidden）。

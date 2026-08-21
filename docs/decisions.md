@@ -2,6 +2,24 @@
 
 本文件记录偏离直觉的设计选择及其原因，供后续开发快速理解「为什么这么做」。
 
+## 2026-08-21：Transform 地形改造完成态虚影预览（Ghost Fade-in）与延时执行
+
+**需求**（用户指令）：在执行 `transform here`（或 transform 指令/信标交互）时，先显示改造完成后的 3D 虚影渲染，虚影透明度逐渐增加（实体感由浅入深），预览显现完毕后再开始实际方块改造。
+
+**决策**：
+- **服务端采样与下发**：
+  - `WorldReloaderManager` 在解析目标区域后，优先对参考地形采样出改造后的地表与上层方块（上限 16,000 方块，保证轻量低开销）。
+  - 下发 `TransformPreviewPacket`（中心坐标、半径、持续 Tick、相对偏移与方块状态列表）。
+  - 服务端排队 `PendingTransformation`，倒计时 80 Tick（4 秒）后触发真正的异步同心圆改造。
+- **客户端虚影渐显渲染**：
+  - `TransformPreviewClientState` 维护当前预览，计算随时间渐进的透明度曲线（Alpha 从 0.12 平滑递增至 0.85）。
+  - `TransformPreviewRenderer` 挂载 `RenderLevelStageEvent.Stage.AFTER_TRIPWIRE_BLOCKS`，绘制魔法边界光环与 3D 半透明方块模型，并在视锥剔除后渲染。
+  - 在客户端每 Tick 伴随附魔光斑与粒子生成，增强魔法引导与蓄力仪式感。
+- **打断与清理**：
+  - `/wandscape transform stop` 或服务器关闭时，下发 `TransformPreviewCancelPacket` 即刻清除客户端虚影。
+
+---
+
 ## 2026-08-20：WorldReloader 地形改造功能迁移至 Wandscape
 
 **需求**（用户指令）：将 `worldreloader` 模组的基本地形改造功能迁移到 Wandscape，配置屏幕可有可无，迁移前两个模式（STANDARD 完整 3D 地形与 SURFACE 地表地形），不包含直线/路径（LINE）变换模式。

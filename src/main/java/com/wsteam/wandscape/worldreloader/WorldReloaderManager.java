@@ -1,6 +1,8 @@
 package com.wsteam.wandscape.worldreloader;
 
 import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.worldreloader.network.TransformPreviewCancelPacket;
+import com.wsteam.wandscape.worldreloader.network.TransformPreviewPacket;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -17,35 +19,62 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Predicate;
 
 /**
  * Service managing active WorldReloader tasks, block interactions (beacon trigger),
- * and command dispatches.
+ * ghost previews with increasing opacity, and command dispatches.
  */
 public class WorldReloaderManager {
 
     private static final String TAG = "WorldReloaderManager";
     private static final WorldReloaderManager INSTANCE = new WorldReloaderManager();
+    public static final int PREVIEW_DURATION_TICKS = 80; // 4 seconds of preview fade-in
 
     private final List<WorldReloaderTask> activeTasks = new CopyOnWriteArrayList<>();
+    private final List<PendingTransformation> pendingTransformations = new CopyOnWriteArrayList<>();
     private final Map<Item, Integer> itemRequirements = new HashMap<>();
     private Block targetBlock = Blocks.BEACON;
     private WorldReloaderConfig config;
+
+    private static class PendingTransformation {
+        final WorldReloaderBuilder builder;
+        final WorldReloaderConfig.OperationMode opMode;
+        @Nullable final Player player;
+        final BlockPos centerPos;
+        final ServerLevel world;
+        int ticksRemaining;
+
+        PendingTransformation(WorldReloaderBuilder builder, WorldReloaderConfig.OperationMode opMode,
+                              @Nullable Player player, BlockPos centerPos, ServerLevel world, int ticksRemaining) {
+            this.builder = builder;
+            this.opMode = opMode;
+            this.player = player;
+            this.centerPos = centerPos;
+            this.world = world;
+            this.ticksRemaining = ticksRemaining;
+        }
+    }
 
     private WorldReloaderManager() {
         this.config = WorldReloaderConfig.load();
@@ -79,14 +108,26 @@ public class WorldReloaderManager {
     }
 
     public void stopAll() {
+        pendingTransformations.clear();
         for (WorldReloaderTask task : activeTasks) {
             task.stop();
         }
         activeTasks.clear();
-        Log.info(TAG, "All active WorldReloader tasks stopped");
+        PacketDistributor.sendToAllPlayers(new TransformPreviewCancelPacket());
+        Log.info(TAG, "All active and pending WorldReloader tasks stopped");
     }
 
     public void tickAll() {
+        // 1. Update pending preview transformations
+        for (PendingTransformation pending : pendingTransformations) {
+            pending.ticksRemaining--;
+            if (pending.ticksRemaining <= 0) {
+                pendingTransformations.remove(pending);
+                executeBuiltTask(pending.builder, pending.opMode, pending.player, pending.centerPos);
+            }
+        }
+
+        // 2. Update active transformation tasks
         for (WorldReloaderTask task : activeTasks) {
             try {
                 task.tick();
@@ -102,7 +143,7 @@ public class WorldReloaderManager {
     }
 
     public int getActiveTaskCount() {
-        return activeTasks.size();
+        return activeTasks.size() + pendingTransformations.size();
     }
 
     private void updateRequirementsFromConfig() {
@@ -239,7 +280,7 @@ public class WorldReloaderManager {
             builder.setRandomPos(beaconPos, config.randomRadius);
         }
 
-        executeBuiltTask(builder, config.mode, player, beaconPos);
+        schedulePreviewAndTask(world, builder, config.mode, player, beaconPos);
     }
 
     public void startTransformationAt(ServerLevel world, BlockPos centerPos, @Nullable Player player,
@@ -279,7 +320,115 @@ public class WorldReloaderManager {
             builder.setRandomPos(centerPos, config.randomRadius);
         }
 
-        executeBuiltTask(builder, config.mode, player, centerPos);
+        schedulePreviewAndTask(world, builder, config.mode, player, centerPos);
+    }
+
+    private void schedulePreviewAndTask(ServerLevel world, WorldReloaderBuilder builder,
+                                        WorldReloaderConfig.OperationMode opMode,
+                                        @Nullable Player player, BlockPos centerPos) {
+        if (!builder.isValidated()) {
+            if (player != null) {
+                player.sendSystemMessage(Component.literal("§c[WorldReloader] 无法定位目标区域，改造取消！"));
+            }
+            return;
+        }
+
+        BlockPos refCenter = builder.getTargetPos();
+        ServerLevel refWorld = builder.getTargetDimensionWorld();
+
+        List<TransformPreviewPacket.PreviewBlock> previewBlocks = extractPreviewBlocks(
+                world, centerPos, refCenter, refWorld,
+                builder.getRadius(), opMode, builder.getYMin(), builder.getYMax(),
+                builder.getPadding(), builder.isPreserveBeacon());
+
+        TransformPreviewPacket packet = new TransformPreviewPacket(centerPos, builder.getRadius(), PREVIEW_DURATION_TICKS, previewBlocks);
+        PacketDistributor.sendToPlayersTrackingChunk(world, new ChunkPos(centerPos), packet);
+        if (player instanceof ServerPlayer sp) {
+            PacketDistributor.sendToPlayer(sp, packet);
+        }
+
+        pendingTransformations.add(new PendingTransformation(builder, opMode, player, centerPos, world, PREVIEW_DURATION_TICKS));
+
+        if (player != null) {
+            player.sendSystemMessage(Component.literal("§6[WorldReloader] 地形改造虚影预览已展开，显现完毕后开始改造..."));
+        }
+        Log.info(TAG, "Scheduled transformation preview at {} (radius={}, previewBlocks={})",
+                centerPos, builder.getRadius(), previewBlocks.size());
+    }
+
+    private List<TransformPreviewPacket.PreviewBlock> extractPreviewBlocks(
+            ServerLevel world, BlockPos center, BlockPos referenceCenter, ServerLevel refWorld,
+            int radius, WorldReloaderConfig.OperationMode mode, int yMin, int yMax,
+            int paddingCount, boolean preserveBeacon) {
+
+        List<TransformPreviewPacket.PreviewBlock> list = new ArrayList<>();
+        int maxBlocks = 16000;
+
+        Set<Long> forcedChunks = new HashSet<>();
+        int chunkRadius = (radius + 15) >> 4;
+        try {
+            for (int cx = -chunkRadius; cx <= chunkRadius; cx++) {
+                for (int cz = -chunkRadius; cz <= chunkRadius; cz++) {
+                    int chX = (referenceCenter.getX() >> 4) + cx;
+                    int chZ = (referenceCenter.getZ() >> 4) + cz;
+                    long chunkKey = ChunkPos.asLong(chX, chZ);
+                    if (!refWorld.isLoaded(new BlockPos(chX << 4, 64, chZ << 4))) {
+                        refWorld.setChunkForced(chX, chZ, true);
+                        forcedChunks.add(chunkKey);
+                    }
+                    refWorld.getChunk(chX, chZ);
+                }
+            }
+
+            int rSq = radius * radius;
+            for (int dx = -radius; dx <= radius; dx++) {
+                for (int dz = -radius; dz <= radius; dz++) {
+                    int distSq = dx * dx + dz * dz;
+                    if (distSq > rSq) continue;
+                    if (list.size() >= maxBlocks) break;
+
+                    int refX = referenceCenter.getX() + dx;
+                    int refZ = referenceCenter.getZ() + dz;
+
+                    int refSurfaceY = refWorld.getHeight(Heightmap.Types.MOTION_BLOCKING, refX, refZ);
+                    refSurfaceY = WorldReloaderTask.validateAndAdjustHeight(refWorld, refX, refZ, refSurfaceY, refWorld.getMinBuildHeight());
+
+                    WorldReloaderTask.ReferenceTerrainInfo info = WorldReloaderTask.analyzeTerrain(
+                            refWorld, refX, refZ, refSurfaceY, refWorld.getMinBuildHeight(),
+                            mode == WorldReloaderConfig.OperationMode.SURFACE ? yMin : 10, yMax);
+
+                    if (info.aboveSurfaceBlocks != null && info.aboveSurfaceHeights != null) {
+                        for (int i = 0; i < info.aboveSurfaceBlocks.length; i++) {
+                            int targetY = info.aboveSurfaceHeights[i] + center.getY() - referenceCenter.getY();
+                            BlockState state = info.aboveSurfaceBlocks[i];
+                            if (state != null && !state.isAir()) {
+                                list.add(new TransformPreviewPacket.PreviewBlock(
+                                        (short) dx, (short) (targetY - center.getY()), (short) dz, Block.getId(state)));
+                            }
+                        }
+                    }
+
+                    if (info.blocks != null && info.heights != null) {
+                        int count = 0;
+                        for (int i = info.blocks.length - 1; i >= 0 && count < 3; i--) {
+                            int targetY = info.heights[i] + center.getY() - referenceCenter.getY();
+                            BlockState state = info.blocks[i];
+                            if (state != null && !state.isAir()) {
+                                list.add(new TransformPreviewPacket.PreviewBlock(
+                                        (short) dx, (short) (targetY - center.getY()), (short) dz, Block.getId(state)));
+                                count++;
+                            }
+                        }
+                    }
+                }
+            }
+        } finally {
+            for (long chunkKey : forcedChunks) {
+                refWorld.setChunkForced(ChunkPos.getX(chunkKey), ChunkPos.getZ(chunkKey), false);
+            }
+        }
+
+        return list;
     }
 
     private void executeBuiltTask(WorldReloaderBuilder builder, WorldReloaderConfig.OperationMode opMode,

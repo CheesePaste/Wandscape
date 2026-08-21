@@ -119,6 +119,35 @@ class WorldReloaderTest {
         assertFalse(referenceSurfaceYAtTarget2 < originalSurfaceY - height);
     }
 
+    @Test
+    void testTransformPreviewPacketAndState() {
+        BlockPos center = new BlockPos(50, 65, 80);
+        List<com.wsteam.wandscape.worldreloader.network.TransformPreviewPacket.PreviewBlock> blocks = List.of(
+                new com.wsteam.wandscape.worldreloader.network.TransformPreviewPacket.PreviewBlock((short) 0, (short) 0, (short) 0, 1),
+                new com.wsteam.wandscape.worldreloader.network.TransformPreviewPacket.PreviewBlock((short) 1, (short) 0, (short) -1, 2)
+        );
+
+        com.wsteam.wandscape.worldreloader.network.TransformPreviewPacket packet =
+                new com.wsteam.wandscape.worldreloader.network.TransformPreviewPacket(center, 32, 60, blocks);
+
+        assertEquals(center, packet.center());
+        assertEquals(32, packet.radius());
+        assertEquals(60, packet.durationTicks());
+        assertEquals(2, packet.blocks().size());
+
+        com.wsteam.wandscape.worldreloader.client.TransformPreviewClientState.onPreviewReceived(packet);
+        assertTrue(com.wsteam.wandscape.worldreloader.client.TransformPreviewClientState.isActive());
+        assertEquals(center, com.wsteam.wandscape.worldreloader.client.TransformPreviewClientState.getCenter());
+        assertEquals(32, com.wsteam.wandscape.worldreloader.client.TransformPreviewClientState.getRadius());
+        assertEquals(2, com.wsteam.wandscape.worldreloader.client.TransformPreviewClientState.getBlocks().size());
+
+        float alpha = com.wsteam.wandscape.worldreloader.client.TransformPreviewClientState.getAlpha();
+        assertTrue(alpha >= 0.10f && alpha <= 0.90f, "Alpha should start in valid range");
+
+        com.wsteam.wandscape.worldreloader.client.TransformPreviewClientState.clear();
+        assertFalse(com.wsteam.wandscape.worldreloader.client.TransformPreviewClientState.isActive());
+    }
+
     private static class TestDummyTask extends WorldReloaderTask {
         public TestDummyTask(BlockPos center, int maxRadius) {
             super(null, center, center, null, null, maxRadius, 3, 20, true, true);
