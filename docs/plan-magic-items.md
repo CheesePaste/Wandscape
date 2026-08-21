@@ -9,10 +9,10 @@
 |---|---|---|
 | A1 物品注册调研 | ✅ | 结论：`Wandscape.ITEMS`（DeferredRegister.Items）+ `SpellItem extends Item`；magicId 用 `DataComponents.CUSTOM_DATA` 存（项目已有 wand_color 先例）；玩家施法走 `MagicSpellExecutors.castForPlayer(ServerPlayer, MagicDef)`（`MagicCommand` 已复用）；类放 `magic/item/SpellItem.java`，参考 `wand/item/WandItem` / `element/item/ElementItem`；旧 potion 配方引用的 `wandscape:mana_potion` 物品**实际未注册**（影响 C5 处置） |
 | A2 MagicDef + castTime | ✅ | `MagicDef` 加 `castTime` 字段（`cast_time` JSON，clamp ≥0，缺省 0）+ 单测（parsesCastTime / negatives）；各魔法 json 的 `cast_time` 值在 A4 tooltip 一起配 |
-| A3 SpellItem 通用物品 | ⏳ | |
-| A4 tooltip（蓝/冷/施法时间） | ⏳ | |
-| A5 创造右键施法 | ⏳ | |
-| A6 注册/贴图/lang | ⏳ | |
+| A3 SpellItem 通用物品 | ✅ | `magic/item/SpellItem.java`：`DataComponents.CUSTOM_DATA` 存 `magic_id`（get/set 静态方法）；注册 `wandscape:spell_scroll`；创造栏补发各战斗魔法绑定卷轴（`acceptBoundSpellScrolls`，数据驱动排除 UTILITY） |
+| A4 tooltip（蓝/冷/施法时间） | ✅ | `appendHoverText` 读 MagicDef：魔法名 + 耗蓝 / 冷却(s) / 施法时间(s) / 创造施法提示；8 个魔法 json 已配 `cast_time`（前摇+法阵+收尾，取 magic_circles duration）；lang 键 zh/en 各 12 条 |
+| A5 创造右键施法 | ✅ | `use()` 走 `MagicSpellExecutors.castForPlayer`（服务端）；生存/未绑定/UTILITY 拒绝并提示 |
+| A6 注册/贴图/lang | ✅ | model `spell_scroll.json` + 16×16 占位贴图（待美术替换）；`./gradlew test` 全绿；无单测（涉及 ItemStack/MC 运行时留待集成测试）。⚠️ 游戏内视觉/施法待用户 runClient 实测 |
 | 阶段 B/C/D | ⏳ | |
 
 ## 一、需求摘要

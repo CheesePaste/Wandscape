@@ -42,11 +42,13 @@ import com.wsteam.wandscape.command.ConsumeWarehouseCommand;
 import com.wsteam.wandscape.command.StressTestCommand;
 import com.wsteam.wandscape.command.TransportCommand;
 import com.wsteam.wandscape.command.TouristCommand;
+import com.wsteam.wandscape.magic.data.MagicDef;
 import com.wsteam.wandscape.magic.entity.MagicBeamEntity;
 import com.wsteam.wandscape.magic.internal.MagicCastManager;
 import com.wsteam.wandscape.magic.internal.MagicCircleLoader;
 import com.wsteam.wandscape.magic.internal.SpellbookLoader;
 import com.wsteam.wandscape.magic.internal.SpellcastingApiImpl;
+import com.wsteam.wandscape.magic.item.SpellItem;
 import com.wsteam.wandscape.shared.network.MagicCircleCastPacket;
 import com.wsteam.wandscape.road.engine.RoadApiImpl;
 import com.wsteam.wandscape.road.engine.RoadSavedData;
@@ -221,6 +223,9 @@ public class Wandscape {
     // ---- 指南书（右键打开教程首页） ----
     public static final DeferredItem<Item> GUIDE_BOOK = ITEMS.register("guide_book",
             () -> new GuideBookItem(new Item.Properties()));
+    /** 魔法物品（通用件，CUSTOM_DATA 存 magicId，见 magic/item/SpellItem.java）。 */
+    public static final DeferredItem<Item> SPELL_SCROLL = ITEMS.register("spell_scroll",
+            () -> new SpellItem(new Item.Properties().stacksTo(1)));
 
     // ---- 03 element-system ----
     public static final ElementMappingLoader ELEMENT_MAPPING_LOADER = new ElementMappingLoader(DATA_LOADER);
@@ -371,9 +376,21 @@ public class Wandscape {
                         output.accept(BUILDING_SCANNER_ITEM.get());
                         output.accept(INTERACT_SPOT_MARKER_ITEM.get());
                         output.accept(GUIDE_BOOK.get());
+                        output.accept(SPELL_SCROLL.get());
+                        acceptBoundSpellScrolls(output);
                         ELEMENT_ITEMS.values().forEach(item -> output.accept(item.get()));
                     })
                     .build());
+
+    /** 创造栏补发各战斗魔法的已绑定卷轴（数据驱动：新战斗魔法自动出现；UTILITY 卷轴不物品化）。 */
+    private static void acceptBoundSpellScrolls(CreativeModeTab.Output output) {
+        for (MagicDef def : SpellbookLoader.getAllSpecs().values()) {
+            if (def.category() == MagicDef.Category.UTILITY) continue;
+            ItemStack stack = new ItemStack(SPELL_SCROLL.get());
+            SpellItem.setMagicId(stack, def.id());
+            output.accept(stack);
+        }
+    }
 
     // ---- API instances ----
     private final BuildingApiImpl buildingApi = new BuildingApiImpl();

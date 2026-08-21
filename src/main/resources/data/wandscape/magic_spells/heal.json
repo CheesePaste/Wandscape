@@ -3,6 +3,7 @@
   "category": "support",
   "mana_cost": 40,
   "base_cooldown": 300,
+  "cast_time": 120,
   "range": 16,
   "target_mode": "ally_lowest_hp",
   "conditions": {
