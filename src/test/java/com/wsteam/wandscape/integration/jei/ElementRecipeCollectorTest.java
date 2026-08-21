@@ -5,6 +5,7 @@ import java.util.Map;
 
 import com.wsteam.wandscape.element.internal.ElementMappingConfig;
 import com.wsteam.wandscape.production.data.BrewPotionRecipe;
+import com.wsteam.wandscape.production.data.CraftSpellRecipe;
 import com.wsteam.wandscape.production.data.RecipeUnlockRequirement;
 import com.wsteam.wandscape.shared.data.ElementType;
 
@@ -76,7 +77,7 @@ class ElementRecipeCollectorTest {
     @Test
     void fromBrewPotionRecipes_producesOnlySynthesize_withExtraInputs() {
         BrewPotionRecipe potion = new BrewPotionRecipe(
-                "mana_potion", "potion_station", "wandscape:mana_potion",
+                "mana_potion", "crafting_station", "wandscape:mana_potion",
                 Map.of(ElementType.WATER, 16L, ElementType.WOOD, 4L),
                 List.of("minecraft:glass_bottle"), RecipeUnlockRequirement.NONE);
 
@@ -86,7 +87,7 @@ class ElementRecipeCollectorTest {
         assertEquals(1, recipes.size());
         ElementRecipe r = recipes.get(0);
         assertEquals(ElementRecipeKind.SYNTHESIZE, r.kind());
-        assertEquals(ElementRecipeCollector.STATION_POTION, r.stationKey());
+        assertEquals(ElementRecipeCollector.STATION_CRAFTING, r.stationKey());
         assertEquals("wandscape:mana_potion", r.itemId());
         assertEquals(Map.of(ElementType.WATER, 16L, ElementType.WOOD, 4L), r.elements());
         assertEquals(List.of("minecraft:glass_bottle"), r.extraInputs());
@@ -94,9 +95,28 @@ class ElementRecipeCollectorTest {
     }
 
     @Test
+    void fromCraftSpellRecipes_producesOnlySynthesize_atMagicStation() {
+        CraftSpellRecipe spell = new CraftSpellRecipe(
+                "scroll_beam", "magic_station", "火焰光束卷轴", "wandscape:spell_scroll",
+                "beam", Map.of(ElementType.EARTH, 12L, ElementType.FIRE, 8L),
+                RecipeUnlockRequirement.NONE);
+
+        List<ElementRecipe> recipes = ElementRecipeCollector.fromCraftSpellRecipes(List.of(spell));
+
+        assertEquals(1, recipes.size());
+        ElementRecipe r = recipes.get(0);
+        assertEquals(ElementRecipeKind.SYNTHESIZE, r.kind());
+        assertEquals(ElementRecipeCollector.STATION_MAGIC, r.stationKey());
+        assertEquals("wandscape:spell_scroll", r.itemId());
+        assertEquals(Map.of(ElementType.EARTH, 12L, ElementType.FIRE, 8L), r.elements());
+        assertTrue(r.extraInputs().isEmpty());
+        assertEquals(0, r.value());
+    }
+
+    @Test
     void fromBrewPotionRecipes_emptyCost_skipped() {
         BrewPotionRecipe potion = new BrewPotionRecipe(
-                "empty", "potion_station", "wandscape:empty",
+                "empty", "crafting_station", "wandscape:empty",
                 Map.of(), List.of(), RecipeUnlockRequirement.NONE);
         assertTrue(ElementRecipeCollector.fromBrewPotionRecipes(List.of(potion)).isEmpty());
     }

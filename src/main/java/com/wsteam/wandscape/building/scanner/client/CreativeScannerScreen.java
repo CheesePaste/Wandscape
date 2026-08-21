@@ -48,7 +48,7 @@ public class CreativeScannerScreen extends MedievalScreen {
     // ── Category ──
     private static final List<String> CATEGORIES = List.of(
             "basic", "government", "node", "storage", "workstation", "crafting_station",
-            "potion_station", "tavern", "shop", "service", "decoration", "wonder", "altar",
+            "magic_station", "tavern", "shop", "service", "decoration", "wonder", "altar",
             "relax", "atm", "custom"
     );
 

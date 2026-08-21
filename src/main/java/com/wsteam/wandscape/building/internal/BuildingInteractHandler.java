@@ -17,6 +17,7 @@ import com.wsteam.wandscape.building.network.AltarOpenPacket;
 import com.wsteam.wandscape.building.network.ShopOpenPacket;
 import com.wsteam.wandscape.building.network.TavernOpenPacket;
 import com.wsteam.wandscape.production.network.CraftingStationPacket;
+import com.wsteam.wandscape.production.network.MagicStationPacket;
 import com.wsteam.wandscape.production.network.WorkstationDataPacket;
 import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.data.ItemKey;
@@ -190,11 +191,7 @@ public final class BuildingInteractHandler {
                 PacketDistributor.sendToPlayer(player,
                         new TavernOpenPacket(pos, colonyId, recruitCount, mageResumes, creator));
             }
-            case "potion_station" -> {
-                ScreenFeedbackPacket.send(player, I18n.name(
-                        "message.wandscape.building.potion_station_unimplemented",
-                        "[Wandscape] Potion Station — not yet implemented"), true);
-            }
+            case "magic_station" -> openMagicStationGui(level, colonyId, player, pos, creator);
             case "altar" -> {
                 if (level instanceof net.minecraft.server.level.ServerLevel sl) {
                     PacketDistributor.sendToPlayer(player,
@@ -323,6 +320,22 @@ public final class BuildingInteractHandler {
                 nc.amountPerHarvest(), nc.channelTicks());
     }
 
+    private static void openMagicStationGui(Level level, UUID colonyId,
+                                            ServerPlayer player, net.minecraft.core.BlockPos pos,
+                                            String creator) {
+        ColonyItemBank bank = ColonyItemBank.get(level);
+
+        var prodLoader = Wandscape.PRODUCTION_RECIPE_LOADER;
+        var spellRecipes = prodLoader != null
+                ? prodLoader.getSpellRecipes().getAll().values()
+                : java.util.Collections.<com.wsteam.wandscape.production.data.CraftSpellRecipe>emptyList();
+
+        Map<ElementType, Long> elemSnapshot = bank != null
+                ? bank.getElementSnapshot(colonyId) : Map.of();
+        var pkt = MagicStationPacket.from(pos, spellRecipes, elemSnapshot, colonyId, creator);
+        PacketDistributor.sendToPlayer(player, pkt);
+    }
+
     private static void openCraftingStationGui(Level level, UUID colonyId,
                                                 ServerPlayer player, net.minecraft.core.BlockPos pos,
                                                 String creator) {
@@ -332,10 +345,13 @@ public final class BuildingInteractHandler {
         var wandRecipes = prodLoader != null
                 ? prodLoader.getCraftWandRecipes().getAll().values()
                 : java.util.Collections.<com.wsteam.wandscape.production.data.CraftWandRecipe>emptyList();
+        var potionRecipes = prodLoader != null
+                ? prodLoader.getPotionRecipes().getAll().values()
+                : java.util.Collections.<com.wsteam.wandscape.production.data.BrewPotionRecipe>emptyList();
 
         Map<ElementType, Long> elemSnapshot = bank != null
                 ? bank.getElementSnapshot(colonyId) : Map.of();
-        var pkt = CraftingStationPacket.from(pos, wandRecipes, elemSnapshot, colonyId, creator);
+        var pkt = CraftingStationPacket.from(pos, wandRecipes, potionRecipes, elemSnapshot, colonyId, creator);
         PacketDistributor.sendToPlayer(player, pkt);
     }
 }

@@ -57,7 +57,7 @@ import com.wsteam.wandscape.engine.boundary.WandscapeBlockInteractExecutor;
 import com.wsteam.wandscape.engine.sound.WandscapeSounds;
 import com.wsteam.wandscape.production.ProductionRecipeLoader;
 import com.wsteam.wandscape.production.network.CraftingStationPacket;
-import com.wsteam.wandscape.production.network.PotionStationPacket;
+import com.wsteam.wandscape.production.network.MagicStationPacket;
 import com.wsteam.wandscape.production.network.RequestProductionTaskPacket;
 import com.wsteam.wandscape.production.network.WorkstationDataPacket;
 import com.wsteam.wandscape.building.network.ConstructionSiteDataPacket;
@@ -493,6 +493,10 @@ public class Wandscape {
                         CraftingStationPacket.STREAM_CODEC,
                         (packet, ctx) -> CraftingStationPacket.handleClient(packet))
                 .playToClient(
+                        MagicStationPacket.TYPE,
+                        MagicStationPacket.STREAM_CODEC,
+                        (packet, ctx) -> MagicStationPacket.handleClient(packet))
+                .playToClient(
                         ShopOpenPacket.TYPE,
                         ShopOpenPacket.STREAM_CODEC,
                         (packet, ctx) -> ShopOpenPacket.handleClient(packet))
@@ -534,10 +538,6 @@ public class Wandscape {
                         AltarCastRequestPacket.STREAM_CODEC,
                         (packet, ctx) -> AltarCastRequestPacket.handleServer(packet,
                                 (net.minecraft.server.level.ServerPlayer) ctx.player()))
-                .playToClient(
-                        PotionStationPacket.TYPE,
-                        PotionStationPacket.STREAM_CODEC,
-                        (packet, ctx) -> PotionStationPacket.handleClient(packet))
                 .playToClient(
                         TaskQueueDataPacket.TYPE,
                         TaskQueueDataPacket.STREAM_CODEC,

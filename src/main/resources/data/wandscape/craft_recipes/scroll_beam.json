@@ -1,0 +1,14 @@
+{
+  "type": "spell",
+  "craft_station": "magic_station",
+  "id": "scroll_beam",
+  "display_name": "火焰光束卷轴",
+  "output": { "item": "wandscape:spell_scroll", "magic_id": "beam" },
+  "cost": {
+    "fire": 16,
+    "earth": 8
+  },
+  "unlock_requirement": {
+    "min_colony_level": 1
+  }
+}

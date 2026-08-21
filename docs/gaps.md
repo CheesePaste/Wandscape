@@ -19,7 +19,7 @@
 
 - **建筑间道路自动生成（MST）已删除（2026-08）**：废弃功能整体移除——`RoadEventListener`/`RoadPlanner`(MST)/`RoadBuilder`/`RoadTaskSource`/`RoadConfig` 及其 `road_templates`/`road_tiers.json`/`road_rules` 数据全部删除。保留手动铺路（`SplineBuildPacket`/`RoadPlacePacket` 等，经 `PlayerManualSource`）与段完成记账 `RoadSegmentListener`。相关架构文档已同步。
 - **`wonder_config`**：`BuildingConfig` 有该字段（`WonderConfig` → `WonderEffect` StatMod/PriceMod/RuleUnlock），但 `buildings/*.json` **无任何文件定义它**。`WonderEffectApplier` 的查询接口在，但当前没有 wonder 类建筑数据。
-- **`potion_station`**：`BuildingInteractHandler` 对 potion_station 只提示"not yet implemented"；`PotionStationPacket.handleClient` 空实现，**无 GUI**。配方 JSON 有 2 个药水配方（mana/stamina）但无法在游戏中生产。
+- **`potion_station` → `magic_station`（2026-08 P 阶段 C 改造）**：类别更名 `magic_station`（存档 category 于加载时按 BuildingConfig 迁移）并落地魔法合成 GUI（`MagicStationScreen` + `craft_spell` 产物流，卷轴入殖民地仓库）。**旧 2 个药水配方（mana/stamina）归属合成站**（`craft_station=crafting_station`，随法杖配方在合成站 GUI 列出、走 brew_potion 蓝图），但输出物品（`wandscape:mana_potion`/`stamina_potion`）**仍未注册**——产出入仓为数据条目、无图标，属已知残留。
 - **`HouseApi` / `NpcApi.assignHouse`**：恒返回 false（住宅分配 Stage 4 未实现）。
 - **施法决策已集中（P1-P3 落地）**：守卫/自防御经 `CastBrain` 选魔法，CD/蓝/射程/视觉数据驱动；条件决策（`SpellConditions`/`WorldSnapshot`）与玩家策略（`SpellbookComponent`/`CastStrategyComponent`/`NpcStrategyScreen`，经 `SpellcastingApi`）已落地，已知列表来自 NPC spellbook + 玩家策略；自动施法永不选 `altarOnly` 魔法（祭坛专属）。**战斗魔法已多面化**：默认法术书 `[beam, heal, meteor, petrification]` 已按 id 在 `MagicSpellExecutors` switch 分发（单体/AOE/治疗/防御）；`MagicOp` 效果分发仍延后（switch 够用，建单实现 sealed 层级是死代码）。完整方案见 [spell-casting.md](spell-casting.md)。
   > **B 阶段（2026-08）已更新**：`SpellbookComponent` 移除，改 `EquippedMagicComponent`（按分类 4 桶 × 每桶 ≤3，默认 beam+heal，`NBT`=`spellbookEquip`，旧 `spellbookIds` 不再读取）。策略页改装备制。见 [plan-magic-items.md](plan-magic-items.md)。

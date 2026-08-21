@@ -6,8 +6,8 @@ import java.util.Map;
 
 import com.wsteam.wandscape.building.network.TaskQueueDataPacket;
 import com.wsteam.wandscape.building.network.TaskQueueModifyPacket;
-import com.wsteam.wandscape.production.network.CraftingStationPacket;
-import com.wsteam.wandscape.production.network.CraftingStationPacket.RecipeEntry;
+import com.wsteam.wandscape.production.network.MagicStationPacket;
+import com.wsteam.wandscape.production.network.MagicStationPacket.SpellEntry;
 import com.wsteam.wandscape.production.network.RequestProductionTaskPacket;
 import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.ui.I18n;
@@ -23,49 +23,42 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.neoforged.neoforge.network.PacketDistributor;
-public class CraftingStationScreen extends MedievalScreen {
+public class MagicStationScreen extends MedievalScreen {
 
     private static final int PW = 400;
     private static final int PH = 220;
-    // Left panel width (existing content)
     private static final int LEFT_PW = 240;
-    // Right panel (TaskQueuePanel)
     private static final int QUEUE_PW = 140;
     private static final int QUEUE_PH = PH - 28; // headerHeight (20) + padding (8)
     private BlockPos stationPos = BlockPos.ZERO;
-    private List<RecipeEntry> recipes = new ArrayList<>();
-    private List<RecipeEntry> filteredRecipes = new ArrayList<>();
+    private List<SpellEntry> recipes = new ArrayList<>();
+    private List<SpellEntry> filteredRecipes = new ArrayList<>();
 
-    private ScrollableList<RecipeEntry> recipeList;
+    private ScrollableList<SpellEntry> recipeList;
     private EditBox searchInput;
     private Slider slider;
     private TaskQueuePanel taskQueuePanel;
 
-    public CraftingStationScreen() {
-        super(Component.literal("Crafting Station"), PW, PH);
-        setTitleBar(I18n.name("gui.wandscape.crafting_station.title", "Crafting Station"));
+    public MagicStationScreen() {
+        super(Component.literal("Magic Station"), PW, PH);
+        setTitleBar(I18n.name("gui.wandscape.magic_station.title", "Magic Station"));
         this.showCloseButton = true;
-        this.showHelpButton = true;
-        this.helpDocumentPath = "crafting_guide";
     }
 
-    public void updateData(CraftingStationPacket packet) {
+    public void updateData(MagicStationPacket packet) {
         this.stationPos = packet.stationPos();
         setCreator(packet.creator());
         this.recipes = packet.entries();
-        // Re-apply the current search filter to the refreshed data
         applySearch(searchInput != null ? searchInput.getValue() : "");
         if (slider != null) {
             slider.setMax(1);
             slider.setValue(1);
         }
-        // Request current queue data from server
         requestQueueRefresh();
     }
 
@@ -83,7 +76,6 @@ public class CraftingStationScreen extends MedievalScreen {
         }
     }
 
-    /** Convert the packet's current-task record to the panel's CurrentInfo (or null). */
     private static TaskQueuePanel.CurrentInfo toPanelCurrent(TaskQueueDataPacket.CurrentTask ct) {
         if (ct == null) return null;
         TaskQueueDataPacket.QueueEntry e = ct.entry();
@@ -95,7 +87,6 @@ public class CraftingStationScreen extends MedievalScreen {
                 ct.pending());
     }
 
-    /** Send a REFRESH request to the server to get the current task queue. */
     private void requestQueueRefresh() {
         if (stationPos == null || stationPos.equals(BlockPos.ZERO)) return;
         PacketDistributor.sendToServer(new TaskQueueModifyPacket(stationPos, "refresh", 0));
@@ -119,12 +110,10 @@ public class CraftingStationScreen extends MedievalScreen {
     protected void init() {
         super.init();
 
-        // Left panel content (existing widgets)
         int contentX = leftPos + 8;
         int contentY = topPos + headerHeight + 4;
         int contentW = LEFT_PW - 16;
 
-        // Search box above the recipe list (warehouse-style inset field)
         int searchH = font.lineHeight + 6;
         searchInput = new EditBox(font, contentX + 1, contentY + 2, contentW - 2, font.lineHeight,
                 I18n.name("gui.wandscape.common.search", "Search")) {
@@ -142,22 +131,21 @@ public class CraftingStationScreen extends MedievalScreen {
         searchInput.setResponder(this::applySearch);
         addRenderableWidget(searchInput);
 
-        // Recipe list — shrink by the creator footer strip so the slider/submit row stays clear
         int listY = contentY + searchH + 4;
         int listH = PH - headerHeight - 4 - searchH - 4 - 44 - CREATOR_FOOTER_H - 4;
         recipeList = new ScrollableList<>(contentX, listY, contentW, listH, 22) {
             @Override
-            protected void renderRow(GuiGraphics g, RecipeEntry item, int x, int y, int index,
+            protected void renderRow(GuiGraphics g, SpellEntry item, int x, int y, int index,
                                      boolean selected, boolean hovered) {
                 boolean isLocked = !"unlocked".equals(item.lockedReason());
                 boolean canAfford = !isLocked && item.maxAffordable() > 0;
 
-                var registryItem = BuiltInRegistries.ITEM.get(ResourceLocation.tryParse(item.outputItem()));
-                if (registryItem != null && registryItem != Items.AIR) {
-                    g.renderItem(new ItemStack(registryItem), x, y + 2);
+                ItemStack scroll = new ItemStack(BuiltInRegistries.ITEM.get(
+                        ResourceLocation.tryParse(item.outputItem())), 1);
+                if (!scroll.isEmpty()) {
+                    g.renderItem(scroll, x, y + 2);
                 }
 
-                // Name row
                 int nameColor;
                 if (isLocked) {
                     nameColor = MedievalColors.TEXT_DIM;
@@ -166,7 +154,6 @@ public class CraftingStationScreen extends MedievalScreen {
                             : hovered ? MedievalColors.TEXT_WARM_WHITE
                             : MedievalColors.TEXT_MUTED;
                 } else {
-                    // elements insufficient but recipe is unlocked
                     nameColor = MedievalColors.TEXT_DIM;
                 }
 
@@ -175,14 +162,10 @@ public class CraftingStationScreen extends MedievalScreen {
                     g.drawString(Minecraft.getInstance().font, "🔒", textX, y + 1, MedievalColors.TEXT_DIM);
                     textX += 14;
                 }
-                String itemFallback = (registryItem != null && registryItem != Items.AIR)
-                        ? new ItemStack(registryItem).getHoverName().getString()
-                        : item.outputItem();
-                Component recipeName = com.wsteam.wandscape.shared.ui.I18n.name(
-                        "craft_recipe.wandscape." + item.recipeId(), itemFallback);
-                g.drawString(Minecraft.getInstance().font, recipeName, textX, y + 1, nameColor);
+                Component spellName = I18n.name(
+                        "magic.wandscape." + item.magicId(), item.magicId());
+                g.drawString(Minecraft.getInstance().font, spellName, textX, y + 1, nameColor);
 
-                // Requirement / cost row
                 String reason = item.lockedReason();
                 if ("colony".equals(reason)) {
                     StringBuilder costStr = new StringBuilder("🔒 ");
@@ -192,17 +175,13 @@ public class CraftingStationScreen extends MedievalScreen {
                     g.drawString(Minecraft.getInstance().font, costStr.toString(),
                             x + 20, y + 12, MedievalColors.TEXT_DIM);
                 } else {
-                    int endX = drawElementCost(g, item.cost(), x + 20, y + 12);
-                    if (!item.extraInputs().isEmpty()) {
-                        drawExtraInputs(g, item.extraInputs(), endX, y + 12);
-                    }
+                    drawElementCost(g, item.cost(), x + 20, y + 12);
                 }
             }
         };
         recipeList.setOnSelect(i -> updateSliderForRecipe(filteredRecipes.get(i)));
         addRenderableWidget(recipeList);
 
-        // Quantity slider + submit
         int controlY = listY + listH + 6;
         slider = new Slider(contentX, controlY, 120, 1, 1, 1, v -> {});
         addRenderableWidget(slider);
@@ -214,7 +193,6 @@ public class CraftingStationScreen extends MedievalScreen {
         applySearch(searchInput.getValue());
 
         // ── Right panel: Task Queue ──
-        // Shorter panel: header + 4px top + 4px bottom = 8px total vertical padding
         int queuePh = PH - headerHeight - 8;
         int queueX = leftPos + LEFT_PW + 4;
         int queueY = topPos + headerHeight + 4;
@@ -236,23 +214,18 @@ public class CraftingStationScreen extends MedievalScreen {
         if (recipeList != null) recipeList.setItems(filteredRecipes);
     }
 
-    /** Searchable text for a recipe: localized name + output/recipe ids. */
-    private static String recipeSearchText(RecipeEntry r) {
-        var registryItem = BuiltInRegistries.ITEM.get(ResourceLocation.tryParse(r.outputItem()));
-        String fallback = (registryItem != null && registryItem != Items.AIR)
-                ? new ItemStack(registryItem).getHoverName().getString()
-                : r.outputItem();
-        String name = I18n.name("craft_recipe.wandscape." + r.recipeId(), fallback).getString();
+    /** Searchable text for a spell: localized magic name + recipe/output ids. */
+    private static String recipeSearchText(SpellEntry r) {
+        String name = I18n.name("magic.wandscape." + r.magicId(), r.magicId()).getString();
         return name + " " + r.outputItem() + " " + r.recipeId();
     }
 
-    private void updateSliderForRecipe(RecipeEntry entry) {
+    private void updateSliderForRecipe(SpellEntry entry) {
         if (entry == null) {
             slider.setMax(1);
             slider.setValue(1);
             return;
         }
-        // Locked recipes (colony / elements) show max_affordable=0; keep slider at 1
         boolean locked = !"unlocked".equals(entry.lockedReason());
         int max = locked ? 1 : entry.maxAffordable();
         slider.setMax(Math.max(1, max));
@@ -260,15 +233,11 @@ public class CraftingStationScreen extends MedievalScreen {
     }
 
     private void onSubmit() {
-        RecipeEntry sel = recipeList.getSelected();
-        // Block submission when recipe is locked (colony / elements)
+        SpellEntry sel = recipeList.getSelected();
         if (sel == null || !"unlocked".equals(sel.lockedReason())) return;
         int qty = slider.getValue();
-        // 药水配方走 brew_potion（校验额外原料），法杖配方走 craft_wand。
-        String action = "potion".equals(sel.type()) ? "brew_potion" : "craft_wand";
         PacketDistributor.sendToServer(new RequestProductionTaskPacket(
-                stationPos, action, sel.recipeId(), qty));
-        // Refresh queue after submitting a new task
+                stationPos, "craft_spell", sel.recipeId(), qty));
         requestQueueRefresh();
     }
 
@@ -289,8 +258,8 @@ public class CraftingStationScreen extends MedievalScreen {
         PacketDistributor.sendToServer(new TaskQueueModifyPacket(stationPos, "move_down", index));
     }
 
-    /** Draw an element cost as [icon]xN (icon tinted per element, like the V-key panel). Returns end x. */
-    private static int drawElementCost(GuiGraphics g, Map<ElementType, Long> cost, int x, int y) {
+    /** Draw an element cost as [icon]xN (icon tinted per element, like the V-key panel). */
+    private static void drawElementCost(GuiGraphics g, Map<ElementType, Long> cost, int x, int y) {
         var font = Minecraft.getInstance().font;
         int cx = x;
         for (var e : cost.entrySet()) {
@@ -301,20 +270,6 @@ public class CraftingStationScreen extends MedievalScreen {
             String text = "x" + e.getValue();
             g.drawString(font, text, cx, y, tint);
             cx += font.width(text) + 6;
-        }
-        return cx;
-    }
-
-    /** Draw extra non-element inputs (e.g. potion glass bottles) in muted text after the element cost. */
-    private static void drawExtraInputs(GuiGraphics g, List<String> extraInputs, int x, int y) {
-        var font = Minecraft.getInstance().font;
-        int cx = x;
-        for (String itemId : extraInputs) {
-            var registryItem = BuiltInRegistries.ITEM.get(ResourceLocation.tryParse(itemId));
-            String label = (registryItem != null && registryItem != net.minecraft.world.item.Items.AIR)
-                    ? new ItemStack(registryItem).getHoverName().getString() : itemId;
-            g.drawString(font, "+" + label, cx, y, MedievalColors.TEXT_DIM);
-            cx += font.width("+" + label) + 8;
         }
     }
 }

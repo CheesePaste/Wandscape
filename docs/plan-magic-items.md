@@ -19,7 +19,15 @@
 | B4 服务端校验 | ✅ | `NpcStrategyPacket(entityId, preset, equipped, consumeSlot)`；`SpellcastingApiImpl.setEquippedAndStrategy` 走 `fromFlat`（未知/UTILITY 丢、每类 ≤3、去重）；handleServer 校验后仅当卷轴魔法"新增装备"才扣一张、回发 NpcDataPacket 对账 |
 | B5 UTILITY 不装备 | ✅ | teleport/revive 不进装备：`fromFlat` 分类解析对 UTILITY 返 null 丢弃、`resolvePreset` 天然排除、SpellItem 不绑定；导航回退/祭坛逻辑不变 |
 | B6 旧存档兼容 | ✅ | `readAdditionalSaveData` 丢弃旧 `spellbookIds`/`castStrategyPriority`；仅读 `spellbookEquip`；`spellbookLoaded` 标记区分"有意清空载荷"（不重种）与"从未拥有"（种默认）。旧存档 NPC 收敛为默认 beam+heal |
-| 阶段 C/D | ⏳ | |
+| C1 改名 magic_station | ✅ | `potionstation1.json` category=`magic_station`（id/文件保留）、显示名「魔法工坊」；`BuildingSavedData.load` category 以 BuildingConfig 为准自动迁移旧存档；BuildingSort/CreativeScannerScreen/WandscapeConstants(QUEUE_MAGIC)/JEI(STATION_MAGIC)/lang 全量改；`potion_station` 字符串全清 |
+| C2 魔法合成配方 JSON | ✅ | 新 type `spell`：`CraftSpellRecipe`（output.magic_id→CUSTOM_DATA）+ `ProductionRecipeLoader.spellRecipes`；8 个 `scroll_*.json`（beam/heal lv1、fortification/enfeeble_field lv2、petrification/conversion lv3、meteor/desperation lv4），纯元素 cost；不含 teleport/revive |
+| C3 magic_station GUI | ✅ | `MagicStationPacket`(S→C, 带 magic_id) + `MagicStationScreen`（卷轴列表+魔法名+元素成本+滑条+Submit+任务队列，镜像 CraftingStationScreen）+ BuildingInteractHandler `case magic_station`；Wandscape/WandscapeClient 注册；`craft_spell` 蓝图 + RequestProductionTaskPacket 动作 + `WandscapeBlockInteractExecutor.executeCraftSpell` |
+| C4 合成产物去处 | ✅ | 产物进殖民地仓库（`ColonyItemBank`，与 craft_wand 一致）：scroll 绑定 magic_id 入库（CUSTOM_DATA）+ 运输动画 |
+| C5 旧 potion 配方处置 | ✅ | 用户拍板：**归属 crafting_station**——mana/stamina 配方 `craft_station=crafting_station`；CraftingStationPacket 同时携带 wand+potion（RecipeEntry 加 type/extra_inputs），合成站 GUI 列药水（行内显示玻璃瓶原料）并按 type 发 craft_wand/brew_potion；**物品仍不注册**（产出入仓为数据条目、无图标，记录 gaps） |
+| D1 全流程集成 | ⏳ | 游戏内端到端待用户 runClient 实测（卷轴合成→策略页装备→NPC 施法） |
+| D2 单测全绿 | ✅ | `./gradlew test` 全绿（新增 CraftSpellRecipeTest、JEI spell 收集测试；BuildingSortTest/ElementRecipeCollectorTest 随 renamed 更新） |
+| D3 文档同步 | ✅ | plan/architecture/README、docs/{data/craft_recipes,modules/production,building,integration,architecture,README,gaps}.md、decisions.md 同步 |
+| D4 提交与版本 | ✅ | 阶段 C 独立 commit；日常改动不递增 mod_version |
 
 ## 一、需求摘要
 
@@ -50,11 +58,11 @@
 1. ✅ **"四种类型"** = 施法策略页的 4 分类（SINGLE_TARGET单体 / AOE群攻 / DEFENSE防御 / SUPPORT增益），**每类最多装备 3 个**（共 ≤12）。**UTILITY（teleport / revive）不计入装备限制、不做成物品**：teleport 是导航回退硬性路径（系统固有），revive 仅祭坛可施放（`altar_only`，维持现状）。此两类不进装备 UI、不占槽位、无物品形式。
 2. ✅ **魔法物品形态 = 方案 A：通用物品 `SpellItem` + DataComponent 存 magicId**。一份代码、新魔法零注册（最贴"数据驱动"哲学）；tooltip 从 MagicDef 读；合成配方 output 需扩展支持 magic 字段。仅覆盖四类战斗魔法（beam/heal/meteor/petrification/conversion/desperation/fortification/enfeeble_field 及未来战斗魔法），**不覆盖 teleport/revive**。
 3. ✅ **新 NPC 默认装备 beam + heal**（占 single_target/support 各 1 槽，玩家可通过策略页换掉）；teleport 由导航系统固有持有（不占槽）。其余魔法由玩家在 magic_station 合成后到策略页装备。
-4. ❓ **施法策略页面交互形态**：从"已知魔法列表勾选排序"改为"把魔法物品装备到四类槽位（每类 ≤3）"。UI 形态（背包物品选择器 vs 列出殖民地已有人物魔法）待确认。
-5. ❓ **magic_station 与旧 potion 配方**：mana/stamina potion 两配方与"药水"功能是否保留在 magic_station（改 craft_station 指向）？
-6. ❓ **魔法合成消耗**：仅元素（`ColonyItemBank`）还是要输入物品？
-7. ❓ **合成产物去处**：玩家背包 or 殖民地仓库？
-8. ❓ **旧存档兼容**：已存档 NPC 的旧 Spellbook 数据怎么迁移。
+4. ✅ **施法策略页面交互形态**：装备制。策略页上部 4 预设按钮（保留）+ 中部 4 分类×3 槽位面板（点已占槽卸载）+ 右侧背包卷轴源列表（点卷轴装备到对应分类首空槽）。（B 阶段落地）
+5. ✅ **magic_station 与旧 potion 配方**：**旧 mana/stamina potion 配方归属 crafting_station**（`craft_station=crafting_station`，随法杖在合成站 GUI 列出、走 brew_potion 蓝图）；输出物品仍不注册（C 阶段用户拍板）。
+6. ✅ **魔法合成消耗**：**仅元素**（`ColonyItemBank` 扣元素），无空卷轴原料（C 阶段用户拍板）。
+7. ✅ **合成产物去处**：**殖民地仓库**（与 craft_wand 一致）（C 阶段用户拍板）。
+8. ✅ **旧存档兼容**：已存档 NPC 旧 Spellbook 数据于读取时丢弃并收敛默认 beam+heal（B6）；potionstation1 建筑 category 于加载时按 BuildingConfig 迁移到 magic_station（C1）。
 
 ## 四、任务拆分
 
@@ -117,7 +125,7 @@ A 阶段全部完成即可独立提交（物品形态本身是可用成果）；
 
 ✅ 已确认：1) 四种类型=策略页 4 分类、每类 ≤3、UTILITY（teleport/revive）不物品化不占槽、revive 仅祭坛可用；2) 物品形态=通用 SpellItem+DataComponent 存 magicId；3) 新 NPC 默认装备 beam+heal；**4) 阶段 B 追加确认（grill-me 2026-08-21）**：装备语义=消耗式教学（装卷轴即消耗，卸载不返还，需多张卷轴教多人）；策略页 UI=背包物品选择器（背包卷轴源列表，ColonyItemBank 只存元素不存物品）；preset 保留（跨类先后）+ customPriority 保留作覆盖（装备 UI 只写预设，未配置走预设推导，覆盖机制保留在 API）；旧存档 spellbookIds 丢弃（不迁移）。
 
-❓ 剩余（阶段 C 相关）：
-1. 旧 mana/stamina potion 配方与"药水功能"是否保留在 magic_station（改 craft_station 指向）？→ 阶段 C5
-2. 魔法合成是否要输入物品（仅元素 or 元素+空卷轴）？→ 阶段 C3
-3. 合成产物去处（玩家背包 / 殖民地仓库）？→ 阶段 C4
+❓ 剩余（阶段 C 相关）：**全部已确认（2026-08-21 用户拍板）**——
+1. ✅ 旧 mana/stamina potion 配方归属 **crafting_station**（非 magic_station）；输出物品不注册。
+2. ✅ 魔法合成 **仅元素**（无空卷轴原料）。
+3. ✅ 合成产物去**殖民地仓库**。

@@ -17,7 +17,7 @@
 > 注：`wonder_config` 字段已解析，但当前 `buildings/*.json` 均未定义它。
 > 注：方块数据用**调色板**：`pattern`（N 个偏移）+ `palette`（M 个去重方块态）+ `block_indices`（N 个索引，与 pattern 对齐）。`block_mapping` 旧格式已废弃（解析器拒绝）。
 
-`category` 实际值（从数据文件，见 data/buildings.md）：`government`（townhall1）、`storage`（warehouse）、`node`（node×7）、`shop`（bakery/book_shop/flower_shop/potion_store/sea_store/ancient_store/creature_store）、`service`（inn1/service_hall/deprecated library）、`tavern`（tavern）、`crafting_station`（craftstation1）、`potion_station`（potionstation1）、`workstation`（workstation1）。
+`category` 实际值（从数据文件，见 data/buildings.md）：`government`（townhall1）、`storage`（warehouse）、`node`（node×7）、`shop`（bakery/book_shop/flower_shop/potion_store/sea_store/ancient_store/creature_store）、`service`（inn1/service_hall/deprecated library）、`tavern`（tavern）、`crafting_station`（craftstation1）、`magic_station`（potionstation1，原 potion_station 更名）、`workstation`（workstation1）。
 
 ## 建筑状态与持久化
 

@@ -1,0 +1,15 @@
+{
+  "type": "spell",
+  "craft_station": "magic_station",
+  "id": "scroll_meteor",
+  "display_name": "陨石卷轴",
+  "output": { "item": "wandscape:spell_scroll", "magic_id": "meteor" },
+  "cost": {
+    "fire": 40,
+    "metal": 24,
+    "dark": 16
+  },
+  "unlock_requirement": {
+    "min_colony_level": 4
+  }
+}

@@ -105,7 +105,8 @@ public class ElementRecipeManagerPlugin implements ISimpleRecipeManagerPlugin<El
         return ElementRecipeCollector.collectAll(
                 Wandscape.ELEMENT_MAPPING_LOADER.getAllConfigs(),
                 Wandscape.PRODUCTION_RECIPE_LOADER.getCraftWandRecipes().getAll().values(),
-                Wandscape.PRODUCTION_RECIPE_LOADER.getPotionRecipes().getAll().values());
+                Wandscape.PRODUCTION_RECIPE_LOADER.getPotionRecipes().getAll().values(),
+                Wandscape.PRODUCTION_RECIPE_LOADER.getSpellRecipes().getAll().values());
     }
 
     private static boolean isElementItem(String itemId) {

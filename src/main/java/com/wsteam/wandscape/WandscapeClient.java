@@ -22,8 +22,10 @@ import com.wsteam.wandscape.projection.client.BuildingDebugOverlay;
 import com.wsteam.wandscape.overview.client.OverviewFlightController;
 import com.wsteam.wandscape.overview.client.OverviewRenderer;
 import com.wsteam.wandscape.production.client.CraftingStationScreen;
+import com.wsteam.wandscape.production.client.MagicStationScreen;
 import com.wsteam.wandscape.production.client.WorkstationScreen;
 import com.wsteam.wandscape.production.network.CraftingStationPacket;
+import com.wsteam.wandscape.production.network.MagicStationPacket;
 import com.wsteam.wandscape.production.network.WorkstationDataPacket;
 import com.wsteam.wandscape.building.client.ConstructionSiteScreen;
 import com.wsteam.wandscape.building.client.BuildingInfoScreen;
@@ -229,6 +231,8 @@ public class WandscapeClient {
                 ws.updateQueueData(packet);
             } else if (screen instanceof CraftingStationScreen cs) {
                 cs.updateQueueData(packet);
+            } else if (screen instanceof MagicStationScreen ms) {
+                ms.updateQueueData(packet);
             } else if (screen instanceof NodeScreen ns) {
                 ns.updateQueueData(packet);
             }
@@ -241,6 +245,16 @@ public class WandscapeClient {
                 var cs = new CraftingStationScreen();
                 cs.updateData(packet);
                 Minecraft.getInstance().setScreen(cs);
+            }
+        });
+        MagicStationPacket.setClientHandler(packet -> {
+            var screen = Minecraft.getInstance().screen;
+            if (screen instanceof MagicStationScreen ms) {
+                ms.updateData(packet);
+            } else {
+                var ms = new MagicStationScreen();
+                ms.updateData(packet);
+                Minecraft.getInstance().setScreen(ms);
             }
         });
         TavernOpenPacket.setClientHandler(packet -> {

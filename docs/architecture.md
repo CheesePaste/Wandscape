@@ -66,7 +66,7 @@ com.wsteam.wandscape
 ├── npc/                    NPC 实体 + ECS 桥接（EntityComponentBridge）+ 渲染 + 装备网络
 ├── tourist/                游客实体 + 行为 AI + 影子模拟 + 满意度 + 酒馆/酒店
 ├── warehouse/              元素银行（SavedData）+ 双标签 GUI + 运输
-├── production/             工作站/合成站/酿造站 + 配方
+├── production/             工作站/合成站/魔法工坊 + 配方
 ├── road/                   道路（核心数据/算法/MC 实现/预设/客户端编辑器/网络）
 ├── projection/             灵魂投影建造模式
 ├── overview/               俯瞰视角模式

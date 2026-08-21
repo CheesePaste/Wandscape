@@ -1,45 +1,47 @@
 package com.wsteam.wandscape.production.data;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.wsteam.wandscape.shared.data.ElementType;
-public record BrewPotionRecipe(
+
+/**
+ * 魔法卷轴合成配方（{@code data/wandscape/craft_recipes/*.json}，JSON {@code type=="spell"}）。
+ *
+ * <p>产出 {@code wandscape:spell_scroll} 并绑定 {@code magic_id}（写入 CUSTOM_DATA），
+ * 只覆盖四类战斗魔法——teleport（导航回退）/revive（祭坛专属）属 UTILITY，不做成物品。
+ */
+public record CraftSpellRecipe(
     String id,
     String craftStation,
+    String displayName,
     String outputItem,
+    String magicId,
     Map<ElementType, Long> cost,
-    List<String> inputItems,
     RecipeUnlockRequirement unlockRequirement
 ) {
-    public static BrewPotionRecipe fromJson(String id, JsonElement json) {
+    public static CraftSpellRecipe fromJson(String id, JsonElement json) {
         JsonObject obj = json.getAsJsonObject();
 
         String craftStation = obj.has("craft_station")
-                ? obj.get("craft_station").getAsString() : "crafting_station";
+                ? obj.get("craft_station").getAsString() : "magic_station";
+        String displayName = obj.has("display_name")
+                ? obj.get("display_name").getAsString() : id;
 
-        String outputItem = obj.getAsJsonObject("output").get("item").getAsString();
+        JsonObject output = obj.getAsJsonObject("output");
+        String outputItem = output.get("item").getAsString();
+        String magicId = output.has("magic_id")
+                ? output.get("magic_id").getAsString() : id;
+
         Map<ElementType, Long> cost = parseElementMap(obj, "cost");
-        List<String> inputItems = parseInputItems(obj);
 
         RecipeUnlockRequirement req = obj.has("unlock_requirement")
                 ? RecipeUnlockRequirement.fromJson(obj.getAsJsonObject("unlock_requirement"))
                 : RecipeUnlockRequirement.NONE;
 
-        return new BrewPotionRecipe(id, craftStation, outputItem, cost, inputItems, req);
-    }
-
-    private static List<String> parseInputItems(JsonObject obj) {
-        List<String> items = new ArrayList<>();
-        if (!obj.has("input_items")) return items;
-        for (JsonElement e : obj.getAsJsonArray("input_items")) {
-            items.add(e.getAsString());
-        }
-        return items;
+        return new CraftSpellRecipe(id, craftStation, displayName, outputItem, magicId, cost, req);
     }
 
     private static Map<ElementType, Long> parseElementMap(JsonObject obj, String key) {

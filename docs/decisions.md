@@ -833,3 +833,19 @@
 - **跨段不合并**：玩家/补货/自动的同配方任务分属不同段，不会互相合并；同段内连续同配方仍合并（count/channel_ticks 累加）。
 
 **为什么**：优先级应编码在任务自身而非"插队"这类位置技巧；段尾插入保证同段内 FIFO 不饿死，段间严格按玩家＞补货＞自动执行。
+
+---
+
+## 2026-08-21：magic_station 落地——potion_station 更名 + 卷轴元素合成 + 药水配方归合成站
+
+**需求**：P 阶段 C——把 potion_station 改为 magic_station，在其中用元素合成「物品形式的魔法卷轴」（SpellItem 绑定 magic_id，阶段 A 产物）。
+
+**决策**：
+- **类别 key 更名 `potion_station` → `magic_station`，存档 category 于加载时按 BuildingConfig 迁移**：`category` 持久化在 `BuildingSavedData`（TAG_CATEGORY）。纯改类别 key 会让旧存档已建「药水工坊」失配（交互落 default）。故 `BuildingSavedData.load` 中 category 一律以当前 `BuildingConfig.category()` 为准（type 有 config 就用 config，缺失回退存档值）——类别本就是建筑类型的派生属性，改名自愈无需专项迁移数据。建筑文件 id `potionstation1` 保留（type id 更名会孤儿化旧存档建筑）。
+- **魔法合成消耗=仅元素**（`ColonyItemBank` 扣元素），无需空卷轴原料；**产物入殖民地仓库**（与 craft_wand/brew_potion 一致，卷轴写 CUSTOM_DATA magic_id 入库），不走玩家背包。
+- **旧 mana/stamina potion 配方归属 crafting_station**：`craft_station=crafting_station`，随法杖配方在合成站 GUI 列出、走 brew_potion 蓝图（校验输入玻璃瓶）。**输出物品（`wandscape:mana_potion`/`stamina_potion`）仍不注册**（用户拍板不注册；产出入仓为数据条目、无图标，属已知残留记入 gaps）。
+- **CraftingStationPacket 泛化**：RecipeEntry 增加 `type`（wand/potion）与 `extra_inputs`，合成站 GUI 按 type 路由 craft_wand/brew_potion、行内显示药水额外原料。
+
+**为什么**：魔法卷轴是「装备给 NPC 的道具」，走殖民地仓储管线与法杖一致，且阶段 B 策略页正是从背包/殖民地取卷轴装备；把旧药水收编到合成站可保留已有配方数据而无需维护第二把酿造 GUI。未注册药水物品是刻意收敛（药水非当前主线，避免为幽灵配方注册无效果物品）。
+
+**影响**：magic_station 右键打开卷轴合成 GUI；crafting_station 同时展示法杖+药水；旧存档 potionstation1 建筑自动以 magic_station 类别加载。
