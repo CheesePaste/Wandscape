@@ -387,37 +387,64 @@ public class WorldReloaderManager {
                     if (distSq > rSq) continue;
                     if (list.size() >= maxBlocks) break;
 
+                    double dist = Math.sqrt(distSq);
                     int refX = referenceCenter.getX() + dx;
                     int refZ = referenceCenter.getZ() + dz;
+                    int targetX = center.getX() + dx;
+                    int targetZ = center.getZ() + dz;
 
-                    int refSurfaceY = refWorld.getHeight(Heightmap.Types.MOTION_BLOCKING, refX, refZ);
-                    refSurfaceY = WorldReloaderTask.validateAndAdjustHeight(refWorld, refX, refZ, refSurfaceY, refWorld.getMinBuildHeight());
+                    // 1. Find the true solid surface height at (refX, refZ)
+                    int refTopY = refWorld.getHeight(Heightmap.Types.MOTION_BLOCKING, refX, refZ);
+                    int refSurfaceY = refTopY;
+                    while (refSurfaceY > refWorld.getMinBuildHeight() + 10) {
+                        BlockPos checkPos = new BlockPos(refX, refSurfaceY, refZ);
+                        BlockState checkState = refWorld.getBlockState(checkPos);
+                        if (WorldReloaderTask.isSolidBlock(refWorld, checkState)) {
+                            break;
+                        }
+                        refSurfaceY--;
+                    }
 
-                    WorldReloaderTask.ReferenceTerrainInfo info = WorldReloaderTask.analyzeTerrain(
-                            refWorld, refX, refZ, refSurfaceY, refWorld.getMinBuildHeight(),
-                            mode == WorldReloaderConfig.OperationMode.SURFACE ? yMin : 10, yMax);
+                    int originalSurfaceY = world.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, targetX, targetZ) - 1;
+                    int refTargetSurfaceY = refSurfaceY + center.getY() - referenceCenter.getY();
 
-                    if (info.aboveSurfaceBlocks != null && info.aboveSurfaceHeights != null) {
-                        for (int i = 0; i < info.aboveSurfaceBlocks.length; i++) {
-                            int targetY = info.aboveSurfaceHeights[i] + center.getY() - referenceCenter.getY();
-                            BlockState state = info.aboveSurfaceBlocks[i];
-                            if (state != null && !state.isAir()) {
-                                list.add(new TransformPreviewPacket.PreviewBlock(
-                                        (short) dx, (short) (targetY - center.getY()), (short) dz, Block.getId(state)));
-                            }
+                    int baseTargetSurfaceY;
+                    if (mode == WorldReloaderConfig.OperationMode.STANDARD && dist >= radius - paddingCount && paddingCount > 0) {
+                        float progress = 1.0f - (float) (radius - dist) / paddingCount;
+                        baseTargetSurfaceY = (int) (refTargetSurfaceY + (originalSurfaceY - refTargetSurfaceY) * progress);
+                    } else {
+                        baseTargetSurfaceY = refTargetSurfaceY;
+                    }
+
+                    int yDelta = baseTargetSurfaceY - refSurfaceY;
+
+                    // 2. Sample surface and subsurface (2 layers down)
+                    for (int y = refSurfaceY; y >= Math.max(refSurfaceY - 2, refWorld.getMinBuildHeight()); y--) {
+                        int targetY = y + yDelta;
+                        BlockPos targetPos = new BlockPos(targetX, targetY, targetZ);
+                        if (preserveBeacon && dist <= 8 && WorldReloaderTask.shouldPreserveCenterAreaStatic(targetPos, center)) {
+                            continue;
+                        }
+                        BlockState state = refWorld.getBlockState(new BlockPos(refX, y, refZ));
+                        if (!state.isAir()) {
+                            list.add(new TransformPreviewPacket.PreviewBlock(
+                                    (short) dx, (short) (targetY - center.getY()), (short) dz, Block.getId(state)));
                         }
                     }
 
-                    if (info.blocks != null && info.heights != null) {
-                        int count = 0;
-                        for (int i = info.blocks.length - 1; i >= 0 && count < 3; i--) {
-                            int targetY = info.heights[i] + center.getY() - referenceCenter.getY();
-                            BlockState state = info.blocks[i];
-                            if (state != null && !state.isAir()) {
-                                list.add(new TransformPreviewPacket.PreviewBlock(
-                                        (short) dx, (short) (targetY - center.getY()), (short) dz, Block.getId(state)));
-                                count++;
+                    // 3. Sample above-surface features (trees, vegetation, structures up to yMax)
+                    int maxAbove = Math.min(refSurfaceY + yMax, refWorld.getMaxBuildHeight() - 1);
+                    for (int y = refSurfaceY + 1; y <= maxAbove; y++) {
+                        BlockPos abovePos = new BlockPos(refX, y, refZ);
+                        BlockState aboveState = refWorld.getBlockState(abovePos);
+                        if (!aboveState.isAir()) {
+                            int targetY = y + yDelta;
+                            BlockPos targetPos = new BlockPos(targetX, targetY, targetZ);
+                            if (preserveBeacon && dist <= 8 && WorldReloaderTask.shouldPreserveCenterAreaStatic(targetPos, center)) {
+                                continue;
                             }
+                            list.add(new TransformPreviewPacket.PreviewBlock(
+                                    (short) dx, (short) (targetY - center.getY()), (short) dz, Block.getId(aboveState)));
                         }
                     }
                 }

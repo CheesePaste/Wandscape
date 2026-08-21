@@ -300,6 +300,11 @@ public abstract class WorldReloaderTask {
         if (!preserveBeacon) {
             return false;
         }
+        return shouldPreserveCenterAreaStatic(pos, center);
+    }
+
+    public static boolean shouldPreserveCenterAreaStatic(BlockPos pos, BlockPos center) {
+        if (pos == null || center == null) return false;
         for (int i = 0; i <= 4; i++) {
             if (pos.getY() == center.getY() - i &&
                     Math.abs(pos.getX() - center.getX()) <= i &&
