@@ -43,6 +43,21 @@ public final class ScannerGizmoController {
         var bus = NeoForge.EVENT_BUS;
         bus.addListener(InputEvent.MouseButton.Pre.class, ScannerGizmoController::onMouseButtonPre);
         bus.addListener(ClientTickEvent.Post.class, ScannerGizmoController::onClientTickPost);
+        bus.addListener(net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickBlock.class, event -> {
+            if (ScannerGizmoState.isActive()) {
+                event.setCanceled(true);
+            }
+        });
+        bus.addListener(net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickItem.class, event -> {
+            if (ScannerGizmoState.isActive()) {
+                event.setCanceled(true);
+            }
+        });
+        bus.addListener(net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.LeftClickBlock.class, event -> {
+            if (ScannerGizmoState.isActive()) {
+                event.setCanceled(true);
+            }
+        });
         Log.info(TAG, "ScannerGizmoController registered");
     }
 
@@ -85,6 +100,7 @@ public final class ScannerGizmoController {
                     hasSavedCursor = false;
                 }
             }
+            event.setCanceled(true);
             return;
         }
 
@@ -93,10 +109,14 @@ public final class ScannerGizmoController {
             if (action == GLFW.GLFW_PRESS) {
                 if (overPanel) {
                     ScannerGizmoOverlay.handleMouseClick(mx, my, button);
+                    event.setCanceled(true);
                     return;
                 }
 
-                if (mc.gameRenderer == null || mc.gameRenderer.getMainCamera() == null) return;
+                if (mc.gameRenderer == null || mc.gameRenderer.getMainCamera() == null) {
+                    event.setCanceled(true);
+                    return;
+                }
                 Vec3 rayOrigin = mc.gameRenderer.getMainCamera().getPosition();
                 Vec3 rayDir = getMouseWorldRay(mc);
 
@@ -104,6 +124,7 @@ public final class ScannerGizmoController {
                 ScannerGizmoState.AxisDrag hitAxis = hitTestGizmo(rayOrigin, rayDir, ScannerGizmoState.getSelectedAnchor());
                 if (hitAxis != ScannerGizmoState.AxisDrag.NONE) {
                     startGizmoDrag(mc, rayOrigin, rayDir, hitAxis);
+                    event.setCanceled(true);
                     return;
                 }
 
@@ -122,7 +143,12 @@ public final class ScannerGizmoController {
                     finishGizmoDrag();
                 }
             }
+            event.setCanceled(true);
+            return;
         }
+
+        // Always consume other mouse buttons in visual adjust mode
+        event.setCanceled(true);
     }
 
     private static void onClientTickPost(ClientTickEvent.Post event) {

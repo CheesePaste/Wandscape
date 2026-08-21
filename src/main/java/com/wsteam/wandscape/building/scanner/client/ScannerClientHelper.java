@@ -8,10 +8,12 @@ public final class ScannerClientHelper {
     private ScannerClientHelper() {}
 
     public static void openCreativeScanner(CreativeScannerBlockEntity scanner) {
+        if (com.wsteam.wandscape.building.scanner.client.gizmo.ScannerGizmoState.isActive()) return;
         Minecraft.getInstance().setScreen(new CreativeScannerScreen(scanner));
     }
 
     public static void openSurvivalScanner(ScannerBlockEntity scanner) {
+        if (com.wsteam.wandscape.building.scanner.client.gizmo.ScannerGizmoState.isActive()) return;
         Minecraft.getInstance().setScreen(new ScannerScreen(scanner));
     }
 }
