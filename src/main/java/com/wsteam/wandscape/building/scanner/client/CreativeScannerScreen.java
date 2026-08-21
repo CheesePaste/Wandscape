@@ -8,7 +8,9 @@ import java.util.function.Consumer;
 
 import com.wsteam.wandscape.building.data.BlockOffset;
 import com.wsteam.wandscape.building.scanner.CreativeScannerBlockEntity;
+import com.wsteam.wandscape.building.scanner.CreativeScannerBlockEntity.BlockMode;
 import com.wsteam.wandscape.building.scanner.CreativeScannerBlockEntity.ShopGoodData;
+import com.wsteam.wandscape.building.scanner.CreativeScannerBlockEntity.TargetMode;
 import com.wsteam.wandscape.building.scanner.network.ScannerExportPacket;
 import com.wsteam.wandscape.building.scanner.network.ScannerSyncPacket;
 import com.wsteam.wandscape.building.scanner.network.ScannerValuePacket;
@@ -24,106 +26,99 @@ import net.minecraft.nbt.IntArrayTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.util.FormattedCharSequence;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
- * Scanner GUI built on MedievalScreen MINIMAL theme.
- * Features 6 boundary expand buttons (X±1, Y±1, Z±1), auto door detection & cycling,
- * strict Scissor clipping, edit box highlights, and custom drawMinimalBox buttons.
+ * Completely refactored Creative Building Scanner Screen.
+ * Uses a clean 4-tab medieval architecture (Bounds, Properties, Presets, Export)
+ * with robust multi-line wrapping, paged lists, and zero text overlap.
  */
 public class CreativeScannerScreen extends MedievalScreen {
 
-    private static final int PW = 360;
-    private static final int PH = 1000;
+    private static final int PW = 380;
+    private static final int PH = 240;
+    private static final int TAB_H = 18;
 
     private final CreativeScannerBlockEntity scanner;
 
-    // ── Custom Medieval Button Definition ──
-    private record CustomButton(int x, int y, int w, int h, String text, Runnable action) {}
+    // ── Active Tab (0: Bounds, 1: Properties, 2: Presets, 3: Export) ──
+    private int activeTab = 0;
+
+    // ── Custom Medieval Button Record ──
+    private record CustomButton(int x, int y, int w, int h, String text, Runnable action, boolean enabled) {}
     private final List<CustomButton> customButtons = new ArrayList<>();
 
-    // ── Structure Block Mode & Name ──
-    private EditBox structureNameEdit;
-
-    // ── Category ──
-    private static final List<String> CATEGORIES = List.of(
-            "basic", "government", "node", "storage", "workstation", "crafting_station",
-            "potion_station", "tavern", "shop", "service", "decoration", "wonder", "altar",
-            "relax", "atm", "custom"
-    );
-
-    // ── Door offset ──
-    private EditBox doorX, doorY, doorZ;
-    private int doorListY;
-
-    // ── Metadata ──
-    private EditBox metaId, metaName, metaCreator;
-    private EditBox metaComfort, metaMagic, metaWonder;
-
-    // ── Unlock requirement ──
-    private EditBox unlockLevel;
-
-    // ── Shop config (shown when category=shop) ──
-    private EditBox shopProfitRate, shopDuration;
-
-    // ── Service config (shown when category=service) ──
-    private EditBox serviceEnergy, serviceMaxOcc, serviceDuration;
-
-    // ── Relax config (shown when category=relax) ──
-    private EditBox relaxEnergy, relaxDuration;
-
-    // ── Atm config (shown when category=atm) ──
-    private EditBox atmWithdraw, atmDuration;
-
-    // ── Presets ──
-    private EditBox presetNameEdit;
-    private int presetY;
-
-    // ── Scrolling ──
-    private static final int SCROLL_TRAIL = 500;
-    private int scrollOff = 0;
-    private int maxScroll = 0;
-
-    // ── Elements list for selectors ──
-    private static final List<String> ELEMENTS = List.of("earth", "wood", "water", "fire", "metal", "wind", "dark");
-
-    // ── Node config fields (category=node) ──
-    private String currentNodeElem;
-    private EditBox nodeAmount, nodeChannel;
-    private int nodeCatY;
-
-    // ── Shop goods rows (category=shop) ──
-    private int goodsCatY;
-    private final List<GoodRow> goodRows = new ArrayList<>();
-
-    // ── Service element output rows (category=service) ──
-    private int elemOutY;
-    private final List<CostRow> elemOutRows = new ArrayList<>();
-
-    // ── Export ──
-    private Component scanResult = I18n.name("gui.wandscape.scanner.result_initial", "尚未扫描");
-
-    // ── Layout Y positions (computed in init, used in render) ──
-    private int lx; // left edge for widgets (leftPos + 16)
-    private int boundaryCardY;
-    private int boundaryEditY;
-    private EditBox bMinX, bMinY, bMinZ, bMaxX, bMaxY, bMaxZ;
-    private int doorEditY;
-    private int spotHeaderY;
-    private int spotMarkerCount;
-    private int metaStartY, metaCreatorY, metaLabelY;
-    private int unlockY;
-    private int shopCatY, svcCatY, relaxCatY, atmCatY;
-    private int exportBtnY;
-
-    // ── Field Background Inset Rectangles with EditBox reference ──
+    // ── Field Background Insets for glowing EditBoxes ──
     private record FieldRect(int x, int y, int w, int h, EditBox box) {}
     private final List<FieldRect> insetFields = new ArrayList<>();
 
-    // ── Column layout constants (Spacious: max right edge <= lx + 320) ──
-    private static final int COL2 = 60;  // input fields start here
-    private static final int FW = 48;    // default field width
-    private static final int ROW_H = 24; // vertical row spacing
+    // ── Categories & Elements Definitions ──
+    public record CategoryDef(String id, String label, String icon) {}
+    private static final List<CategoryDef> CATEGORIES = List.of(
+            new CategoryDef("basic", "基础建筑", "🏠"),
+            new CategoryDef("government", "政务市政", "🏛️"),
+            new CategoryDef("node", "采集节点", "⛏️"),
+            new CategoryDef("storage", "仓库存储", "📦"),
+            new CategoryDef("workstation", "工作工坊", "🔨"),
+            new CategoryDef("crafting_station", "物品合成", "⚙️"),
+            new CategoryDef("potion_station", "炼金工坊", "🧪"),
+            new CategoryDef("tavern", "冒险酒馆", "🍺"),
+            new CategoryDef("shop", "商业商店", "🏪"),
+            new CategoryDef("service", "市民服务", "🛎️"),
+            new CategoryDef("decoration", "城镇装饰", "🌳"),
+            new CategoryDef("wonder", "奇观奇迹", "✨"),
+            new CategoryDef("altar", "元素祭坛", "🔮"),
+            new CategoryDef("relax", "休闲放松", "☕"),
+            new CategoryDef("atm", "钱庄ATM", "💰"),
+            new CategoryDef("custom", "自定义", "🛠️")
+    );
+
+    public record ElementDef(String id, String label, String symbol) {}
+    private static final List<ElementDef> ELEMENTS = List.of(
+            new ElementDef("earth", "土 Earth", "🟤"),
+            new ElementDef("wood", "木 Wood", "🟢"),
+            new ElementDef("water", "水 Water", "🔵"),
+            new ElementDef("fire", "火 Fire", "🔴"),
+            new ElementDef("metal", "金 Metal", "🟡"),
+            new ElementDef("wind", "风 Wind", "⚪"),
+            new ElementDef("dark", "暗 Dark", "🟣")
+    );
+
+    // ── Shared EditBoxes ──
+    private EditBox structureNameEdit;
+
+    // ── Tab 0: Bounds EditBoxes ──
+    private EditBox bMinX, bMinY, bMinZ;
+    private EditBox bMaxX, bMaxY, bMaxZ;
+    private EditBox doorX, doorY, doorZ;
+
+    // ── Tab 1: Metadata EditBoxes ──
+    private EditBox metaId, metaName, metaCreator;
+    private EditBox metaComfort, metaMagic, metaWonder, unlockLevel;
+
+    // Category-specific inputs
+    private EditBox shopProfitRate, shopDuration;
+    private EditBox serviceEnergy, serviceMaxOcc, serviceDuration;
+    private EditBox relaxEnergy, relaxDuration;
+    private EditBox atmWithdraw, atmDuration;
+    private EditBox nodeAmount, nodeChannel;
+
+    // Paged item collections
+    private int shopGoodsPage = 0;
+    private static final int GOODS_PER_PAGE = 3;
+
+    private int serviceElemPage = 0;
+    private static final int ELEM_PER_PAGE = 3;
+
+    // ── Tab 2: Presets ──
+    private EditBox presetNameEdit;
+    private int presetsPage = 0;
+    private static final int PRESETS_PER_PAGE = 4;
+
+    // ── Execution Result Message ──
+    private Component scanResult = I18n.name("gui.wandscape.scanner.result_initial", "尚未扫描");
+    private boolean needsRebuild = false;
 
     public CreativeScannerScreen(CreativeScannerBlockEntity scanner) {
         super(Component.literal("Creative Building Scanner"), PW, PH);
@@ -134,600 +129,840 @@ public class CreativeScannerScreen extends MedievalScreen {
         this.scanner = scanner;
     }
 
-    /** Package-private accessor for the renderer. */
-    CreativeScannerBlockEntity getScanner() { return scanner; }
-
-    private void addCustomButton(int x, int y, int w, int h, String text, Runnable action) {
-        customButtons.add(new CustomButton(x, y, w, h, text, action));
+    CreativeScannerBlockEntity getScanner() {
+        return scanner;
     }
 
-    // ── init / rebuild ──
+    private void addBtn(int x, int y, int w, int h, String text, Runnable action) {
+        customButtons.add(new CustomButton(x, y, w, h, text, action, true));
+    }
+
+    private void addBtn(int x, int y, int w, int h, String text, Runnable action, boolean enabled) {
+        customButtons.add(new CustomButton(x, y, w, h, text, action, enabled));
+    }
 
     @Override
     protected void init() {
         super.init();
         customButtons.clear();
         insetFields.clear();
-        goodRows.clear();
-        elemOutRows.clear();
 
-        int cx = leftPos + PW / 2;
-        lx = leftPos + 16;
-        int y = topPos + headerHeight + 10 + scrollOff;
+        int lx = leftPos + 8;
+        int contentY = topPos + headerHeight + TAB_H + 6;
 
-        // ── Toolbar Row 1: Mode & Structure Name (Right edge: lx + 320) ──
-        addCustomButton(lx, y, 90, 20, "Mode: " + scanner.getBlockMode().name(), () -> {
-            CreativeScannerBlockEntity.BlockMode next = scanner.getBlockMode() == CreativeScannerBlockEntity.BlockMode.SAVE
-                    ? CreativeScannerBlockEntity.BlockMode.CORNER : CreativeScannerBlockEntity.BlockMode.SAVE;
-            scanner.setBlockMode(next);
+        // ── CORNER Mode View ──
+        if (scanner.getBlockMode() == BlockMode.CORNER) {
+            initCornerMode(lx, topPos + headerHeight + 8);
+            return;
+        }
+
+        // ── SAVE Mode Tab Content ──
+        switch (activeTab) {
+            case 0 -> initTab0Bounds(lx, contentY);
+            case 1 -> initTab1Properties(lx, contentY);
+            case 2 -> initTab2Presets(lx, contentY);
+            case 3 -> initTab3Export(lx, contentY);
+            default -> activeTab = 0;
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // CORNER MODE INIT
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    private void initCornerMode(int lx, int topY) {
+        // Top Toolbar
+        addBtn(lx, topY, 90, 18, "模式: CORNER ▾", () -> {
+            scanner.setBlockMode(BlockMode.SAVE);
             syncToServer();
-            needsRebuild = true;
+            rebuild();
         });
 
-        structureNameEdit = mkEdit(lx + 145, y, 175, scanner.getStructureName(), s -> {
+        structureNameEdit = mkEdit(lx + 135, topY, 150, 18, scanner.getStructureName(), s -> {
             scanner.setStructureName(s);
             syncToServer();
         });
-        y += 28;
 
-        if (scanner.getBlockMode() == CreativeScannerBlockEntity.BlockMode.CORNER) {
-            // CORNER mode: simplified UI
-            addCustomButton(cx - 50, y + 60, 100, 22, I18n.name("gui.wandscape.scanner.done", "完成").getString(), this::onClose);
-            return;
-        }
+        // Done button
+        addBtn(leftPos + (PW - 120) / 2, topPos + PH - 32, 120, 20,
+                I18n.name("gui.wandscape.scanner.done", "✓ 完成").getString(), this::onClose);
+    }
 
-        // ── ROAD Target Mode: Ultra-clean UI (Only Road Info, Export & Hot-register) ──
-        if (scanner.getTargetMode() == CreativeScannerBlockEntity.TargetMode.ROAD) {
-            addCustomButton(lx, y, 145, 20, "Target: ROAD", () -> {
-                scanner.setTargetMode(CreativeScannerBlockEntity.TargetMode.BUILDING);
-                syncToServer();
-                needsRebuild = true;
-            });
+    // ─────────────────────────────────────────────────────────────────────────────
+    // TAB 0: 📐 范围与结构 (Boundary & Structure)
+    // ─────────────────────────────────────────────────────────────────────────────
 
-            addCustomButton(lx + 155, y, 165, 20, I18n.name("gui.wandscape.scanner.match_corners", "❖ 匹配角点").getString(), () -> {
-                syncToServer();
-                needsRebuild = true;
-            });
-            y += 28;
+    private void initTab0Bounds(int lx, int startY) {
+        int y = startY;
 
-            // Boundary Card Row
-            boundaryCardY = y;
-            y += 10;
+        // Top Toolbar Row
+        addBtn(lx, y, 78, 18, "模式: SAVE ▾", () -> {
+            scanner.setBlockMode(BlockMode.CORNER);
+            syncToServer();
+            rebuild();
+        });
 
-            // Boundary min/max edit rows (top=min, bottom=max)
-            boundaryEditY = y;
-            addBoundaryEdits(y);
-            y += ROW_H * 2 + 14;
+        String targetLabel = scanner.getTargetMode() == TargetMode.BUILDING ? "目标: 建筑 ▾" : "目标: 道路 ▾";
+        addBtn(lx + 82, y, 84, 18, targetLabel, () -> {
+            TargetMode next = scanner.getTargetMode() == TargetMode.BUILDING ? TargetMode.ROAD : TargetMode.BUILDING;
+            scanner.setTargetMode(next);
+            syncToServer();
+            rebuild();
+        });
 
-            // Road Preset Identity (ID & Display Name)
-            addSectionHeader(y, I18n.name("gui.wandscape.scanner.road_preset_header", "❖ 道路预设属性 (Road Preset)").getString());
-            y += 16;
-            metaStartY = y - 14;
+        structureNameEdit = mkEdit(lx + 204, y, 80, 18, scanner.getStructureName(), s -> {
+            scanner.setStructureName(s);
+            syncToServer();
+        });
 
-            metaId = mkEdit(lx + 4, y + 14, 155, scanner.getBuildingId().isEmpty() ? "wandscape:custom_road" : scanner.getBuildingId(), s -> {
+        addBtn(lx + 288, y, 76, 18, I18n.name("gui.wandscape.scanner.match_corners", "❖ 匹配角点").getString(), () -> {
+            if (minecraft != null && minecraft.level != null) {
+                boolean matched = scanner.detectBoundaryFromCorners(minecraft.level);
+                if (matched) {
+                    scanResult = Component.literal("§a已匹配角点并更新边界！");
+                } else {
+                    scanResult = Component.literal("§e未找到同名暗号的 CORNER 扫描器。");
+                }
+            }
+            syncToServer();
+            rebuild();
+        });
+        y += 24;
+
+        // ── Card 1: 3D 边界坐标 (Min & Max) ──
+        int cw = 38;
+        int colMin = lx + 54;
+        bMinX = mkCoordEdit(colMin, y + 16, cw, 16, scanner.getBoundaryMin().x(), this::onBoundaryEdit);
+        bMinY = mkCoordEdit(colMin + cw + 4, y + 16, cw, 16, scanner.getBoundaryMin().y(), this::onBoundaryEdit);
+        bMinZ = mkCoordEdit(colMin + (cw + 4) * 2, y + 16, cw, 16, scanner.getBoundaryMin().z(), this::onBoundaryEdit);
+
+        bMaxX = mkCoordEdit(colMin, y + 36, cw, 16, scanner.getBoundaryMax().x(), this::onBoundaryEdit);
+        bMaxY = mkCoordEdit(colMin + cw + 4, y + 36, cw, 16, scanner.getBoundaryMax().y(), this::onBoundaryEdit);
+        bMaxZ = mkCoordEdit(colMin + (cw + 4) * 2, y + 36, cw, 16, scanner.getBoundaryMax().z(), this::onBoundaryEdit);
+
+        y += 62;
+
+        // ── Card 2: 门偏移与交互位 ──
+        int doorW = 32;
+        int doorCol = lx + 44;
+        doorX = mkCoordEdit(doorCol, y + 16, doorW, 16, getDoorAxis(0), this::onDoorChanged);
+        doorY = mkCoordEdit(doorCol + doorW + 4, y + 16, doorW, 16, getDoorAxis(1), this::onDoorChanged);
+        doorZ = mkCoordEdit(doorCol + (doorW + 4) * 2, y + 16, doorW, 16, getDoorAxis(2), this::onDoorChanged);
+
+        addBtn(lx + 8, y + 36, 68, 16, I18n.name("gui.wandscape.scanner.auto_detect_door", "自动检门").getString(), this::onAutoDetectDoor);
+        addBtn(lx + 80, y + 36, 42, 16, I18n.name("gui.wandscape.scanner.clear", "清除").getString(), () -> {
+            scanner.clearDoorOffsets();
+            if (doorX != null) doorX.setValue("0");
+            if (doorY != null) doorY.setValue("0");
+            if (doorZ != null) doorZ.setValue("0");
+            syncToServer();
+            rebuild();
+        });
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // TAB 1: 🏷️ 属性配置 (Properties & Category Config)
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    private void initTab1Properties(int lx, int startY) {
+        int y = startY;
+
+        if (scanner.getTargetMode() == TargetMode.ROAD) {
+            // ── ROAD Mode Properties ──
+            metaId = mkEdit(lx + 68, y + 14, 290, 18, scanner.getBuildingId().isEmpty() ? "wandscape:custom_road" : scanner.getBuildingId(), s -> {
                 scanner.setBuildingId(s);
                 syncToServer();
             });
-            metaName = mkEdit(lx + 165, y + 14, 155, scanner.getDisplayName().isEmpty() ? I18n.name("gui.wandscape.scanner.custom_road", "自定义道路").getString() : scanner.getDisplayName(), s -> {
+            metaName = mkEdit(lx + 68, y + 38, 290, 18, scanner.getDisplayName().isEmpty() ? "自定义道路" : scanner.getDisplayName(), s -> {
                 scanner.setDisplayName(s);
                 syncToServer();
             });
-            y += 40;
+            metaCreator = mkEdit(lx + 68, y + 62, 290, 18, scanner.getCreator(), s -> {
+                scanner.setCreator(s);
+                syncToServer();
+            });
 
-            // Export section
-            addSectionHeader(y, I18n.name("gui.wandscape.scanner.road_export_header", "❖ 道路 JSON 导出与热注册").getString());
-            y += 18;
-            exportBtnY = y - 14;
-
-            addCustomButton(lx + 4, exportBtnY, 95, 22, I18n.name("gui.wandscape.scanner.scan_area", "扫描区域").getString(), () -> doScan());
-            addCustomButton(lx + 105, exportBtnY, 215, 22, I18n.name("gui.wandscape.scanner.export_hotregister_road", "导出与热注册道路 JSON").getString(), () -> doExport());
-
-            int bottom = exportBtnY + 60;
-            int visibleBottom = Math.min(topPos + PH - 6, height - 12);
-            maxScroll = -10000;
+            addBtn(lx + 248, y + 86, 110, 18, "切换为建筑模式", () -> {
+                scanner.setTargetMode(TargetMode.BUILDING);
+                syncToServer();
+                rebuild();
+            });
             return;
         }
 
-        // ── BUILDING Target Mode: Complete Building Configuration ──
-        addCustomButton(lx, y, 110, 20, "Target: BUILDING", () -> {
-            scanner.setTargetMode(CreativeScannerBlockEntity.TargetMode.ROAD);
-            syncToServer();
-            needsRebuild = true;
-        });
-
-        addCustomButton(lx + 115, y, 100, 20, "Type: " + scanner.getCategory(), () -> {
-            int curIdx = CATEGORIES.indexOf(scanner.getCategory());
-            int nextIdx = (curIdx + 1) % CATEGORIES.size();
-            scanner.setCategory(CATEGORIES.get(nextIdx));
-            syncToServer();
-            needsRebuild = true;
-        });
-
-        addCustomButton(lx + 220, y, 100, 20, I18n.name("gui.wandscape.scanner.match_corners", "❖ 匹配角点").getString(), () -> {
-            syncToServer();
-            needsRebuild = true;
-        });
-        y += 28;
-
-        // ── Boundary Card Row ──
-        boundaryCardY = y;
-        y += 10;
-
-        // Boundary min/max edit rows (top=min, bottom=max)
-        boundaryEditY = y;
-        addBoundaryEdits(y);
-        y += ROW_H * 2 + 14;
-
-        // ── Door section ──
-        addSectionHeader(y, I18n.name("gui.wandscape.scanner.door_offset_header", "❖ 门偏移 (Door Offset)").getString());
-        y += 16;
-        doorEditY = y + ROW_H - 4;
-        y = doorEditY + ROW_H + 8;
-        doorListY = y;
-        y += 26;
-
-        doorX = mkEdit(lx + COL2, doorEditY, FW, loadDoorStr(0), s -> onDoorChanged());
-        doorY = mkEdit(lx + COL2 + FW + 4, doorEditY, FW, loadDoorStr(1), s -> onDoorChanged());
-        doorZ = mkEdit(lx + COL2 + (FW + 4) * 2, doorEditY, FW, loadDoorStr(2), s -> onDoorChanged());
-        addCustomButton(lx + 218, doorEditY, 44, 20, I18n.name("gui.wandscape.scanner.clear", "清除").getString(), () -> {
-            scanner.clearDoorOffsets();
-            doorX.setValue(""); doorY.setValue(""); doorZ.setValue("");
-            syncToServer();
-        });
-        addCustomButton(lx + 266, doorEditY, 54, 20, I18n.name("gui.wandscape.scanner.auto_detect_door", "自动检门").getString(), this::onAutoDetectDoor);
-
-        // ── Interact spots (marker-driven) section ──
-        spotMarkerCount = countSpotMarkers();
-        addSectionHeader(y, I18n.name("gui.wandscape.scanner.interact_spots_count_header", "❖ 交互位 (%s)", spotMarkerCount).getString());
-        spotHeaderY = y - 14;
-        y += 16;
-        y += ROW_H * 2;   // 两行提示文案
-        if (isTouristCategory(scanner.getCategory()) && spotMarkerCount == 0) {
-            y += ROW_H;   // 无交互位警告
-        }
-        y += 8;
-
-        // ── Metadata section ──
-        addSectionHeader(y, I18n.name("gui.wandscape.scanner.placement_meta_header", "❖ 放置元数据").getString());
-        y += 16;
-        metaStartY = y - 14;
-
-        metaId = mkEdit(lx + 4, y + 14, 155, scanner.getBuildingId(), s -> {
+        // ── BUILDING Mode Properties ──
+        // Row 1: ID, Name, Creator
+        metaId = mkEdit(lx + 24, y, 100, 16, scanner.getBuildingId(), s -> {
             scanner.setBuildingId(s);
             syncToServer();
         });
-        metaName = mkEdit(lx + 165, y + 14, 155, scanner.getDisplayName(), s -> {
+        metaName = mkEdit(lx + 154, y, 92, 16, scanner.getDisplayName(), s -> {
             scanner.setDisplayName(s);
             syncToServer();
         });
-        y += ROW_H + 2;
-        metaCreatorY = y;
-        metaCreator = mkEdit(lx + 4, y + 14, 310, scanner.getCreator(), s -> {
+        metaCreator = mkEdit(lx + 276, y, 88, 16, scanner.getCreator(), s -> {
             scanner.setCreator(s);
             syncToServer();
         });
-        y += ROW_H + 8;
+        y += 22;
 
-        metaLabelY = y;
-        y += 14;
+        // Row 2: Category Selector
+        addBtn(lx + 62, y, 16, 18, "◀", () -> cycleCategory(-1));
+        CategoryDef curCat = getCategoryDef(scanner.getCategory());
+        addBtn(lx + 80, y, 148, 18, curCat.icon() + " " + curCat.label() + " (" + curCat.id() + ")", () -> cycleCategory(1));
+        addBtn(lx + 230, y, 16, 18, "▶", () -> cycleCategory(1));
 
-        metaComfort = mkNumEdit(lx + COL2, y, FW, scanner.getComfort(), s -> {
+        addBtn(lx + 256, y, 108, 18, "切换为道路模式", () -> {
+            scanner.setTargetMode(TargetMode.ROAD);
+            syncToServer();
+            rebuild();
+        });
+        y += 22;
+
+        // Row 3: Stats (Comfort, Magic, Wonder, Unlock Level)
+        metaComfort = mkNumEdit(lx + 34, y, 30, 16, scanner.getComfort(), s -> {
             scanner.setComfort(intOrZero(s));
             syncToServer();
         });
-        metaMagic = mkNumEdit(lx + COL2 + FW + 16, y, FW, scanner.getMagic(), s -> {
+        metaMagic = mkNumEdit(lx + 98, y, 30, 16, scanner.getMagic(), s -> {
             scanner.setMagic(intOrZero(s));
             syncToServer();
         });
-        metaWonder = mkNumEdit(lx + COL2 + (FW + 16) * 2, y, FW, scanner.getWonder(), s -> {
+        metaWonder = mkNumEdit(lx + 162, y, 30, 16, scanner.getWonder(), s -> {
             scanner.setWonder(intOrZero(s));
             syncToServer();
         });
-        y += ROW_H + 8;
-
-        // ── Unlock requirement ──
-        addSectionHeader(y, I18n.name("gui.wandscape.scanner.unlock_requirement_header", "❖ 解锁门槛").getString());
-        y += 16;
-        unlockY = y - 14;
-        unlockLevel = mkNumEdit(lx + COL2 + 70, y, 50, scanner.getUnlockMinLevel(), s -> {
+        unlockLevel = mkNumEdit(lx + 254, y, 28, 16, scanner.getUnlockMinLevel(), s -> {
             scanner.setUnlockMinLevel(Math.max(1, intOrZero(s)));
             syncToServer();
         });
-        y += ROW_H + 8;
+        y += 24;
 
-        // ── Node config (category=node) ──
+        // ── Category-Specific Sub-Panel ──
         String cat = scanner.getCategory();
-        if ("node".equals(cat)) {
-            addSectionHeader(y, I18n.name("gui.wandscape.scanner.node_config_header", "❖ 节点配置").getString());
-            y += 16;
-            nodeCatY = y - 14;
-
-            this.currentNodeElem = ELEMENTS.contains(scanner.getNodeElement()) ? scanner.getNodeElement() : "earth";
-            addCustomButton(lx + COL2 + 70, y, 75, 20, currentNodeElem, () -> {
-                int curIdx = ELEMENTS.indexOf(currentNodeElem);
-                currentNodeElem = ELEMENTS.get((curIdx + 1) % ELEMENTS.size());
-                scanner.setNodeElement(currentNodeElem);
-                syncToServer();
-                needsRebuild = true;
-            });
-            y += ROW_H + 2;
-
-            nodeAmount = mkNumEdit(lx + COL2 + 70, y, 50, scanner.getNodeAmountPerHarvest(), s -> {
-                scanner.setNodeAmountPerHarvest(intOrZero(s));
-                syncToServer();
-            });
-            y += ROW_H + 2;
-
-            nodeChannel = mkNumEdit(lx + COL2 + 70, y, 50, scanner.getNodeChannelTicks(), s -> {
-                scanner.setNodeChannelTicks(intOrZero(s));
-                syncToServer();
-            });
-            y += ROW_H + 8;
-        } else {
-            nodeCatY = 0;
-            nodeAmount = null; nodeChannel = null;
-        }
-
-        // ── Presets section ──
-        addSectionHeader(y, I18n.name("gui.wandscape.scanner.presets_header", "❖ 预设预存").getString());
-        y += 16;
-        presetY = y - 14;
-        presetNameEdit = mkEdit(lx + 4, y, 110, "", s -> {});
-        addCustomButton(lx + 120, y, 65, 20, I18n.name("gui.wandscape.scanner.save_preset", "保存预设").getString(), this::onPresetSave);
-        addCustomButton(lx + 190, y, 65, 20, I18n.name("gui.wandscape.scanner.load_preset", "加载预设").getString(), this::onPresetLoad);
-        addCustomButton(lx + 260, y, 55, 20, I18n.name("gui.wandscape.scanner.delete_preset", "删除预设").getString(), this::onPresetDelete);
-        y += ROW_H;
-
-        // Preset name quick-load buttons (directly clickable to load)
-        int px = lx + 4;
-        for (String pn : ScannerPresetStore.listPresets()) {
-            int bw = Math.min(font.width(pn) + 12, 120);
-            if (px + bw > lx + 320) { px = lx + 4; y += 22; }
-            addCustomButton(px, y, bw, 18, pn, () -> loadPresetByName(pn));
-            px += bw + 4;
-        }
-        y += 22 + 8;
-
-        // ── Category-specific sections ──
         if ("shop".equals(cat)) {
-            svcCatY = 0;
-            addSectionHeader(y, I18n.name("gui.wandscape.scanner.shop_params_header", "❖ 商店参数").getString());
-            y += 16;
-            shopCatY = y - 14;
-
-            shopProfitRate = mkEdit(lx + COL2 + 70, y, 50, String.valueOf(scanner.getShopProfitRate()), s -> {
-                try {
-                    scanner.setShopProfitRate(Double.parseDouble(s));
-                    syncToServer();
-                } catch (NumberFormatException ignored) {}
-            });
-            y += ROW_H + 2;
-
-            shopDuration = mkNumEdit(lx + COL2 + 70, y, 50, scanner.getShopInteractionDurationTicks(), s -> {
-                scanner.setShopInteractionDurationTicks(intOrZero(s));
-                syncToServer();
-            });
-            y += ROW_H + 8;
-
-            addSectionHeader(y, I18n.name("gui.wandscape.scanner.shop_goods_count_header", "❖ 上架商品 (%s)", scanner.getShopGoods().size()).getString());
-            y += 16;
-            goodsCatY = y - 14;
-
-            addCustomButton(lx + 240, y - 15, 80, 20, I18n.name("gui.wandscape.scanner.add_good", "+ 添加商品").getString(), () -> {
-                scanner.addShopGood(new ShopGoodData("minecraft:apple", 5, 0, 0));
-                syncToServer();
-                needsRebuild = true;
-            });
-
-            for (int i = 0; i < scanner.getShopGoods().size(); i++) {
-                goodRows.add(new GoodRow(i, lx + 4, y));
-                y += ROW_H + 2;
-            }
-            y += 8;
-            elemOutY = 0;
+            initShopConfig(lx, y);
         } else if ("service".equals(cat)) {
-            shopCatY = 0;
-            goodsCatY = 0;
-            shopProfitRate = null; shopDuration = null;
-            addSectionHeader(y, I18n.name("gui.wandscape.scanner.service_params_header", "❖ 服务参数").getString());
-            y += 16;
-            svcCatY = y - 14;
-
-            serviceEnergy = mkNumEdit(lx + COL2 + 90, y, 50, scanner.getServiceEnergyPerUse(), s -> {
-                scanner.setServiceEnergyPerUse(intOrZero(s));
-                syncToServer();
-            });
-            y += ROW_H + 2;
-
-            serviceMaxOcc = mkNumEdit(lx + COL2 + 90, y, 50, scanner.getServiceMaxOccupancy(), s -> {
-                scanner.setServiceMaxOccupancy(intOrZero(s));
-                syncToServer();
-            });
-            y += ROW_H + 2;
-
-            serviceDuration = mkNumEdit(lx + COL2 + 90, y, 50, scanner.getServiceInteractionDurationTicks(), s -> {
-                scanner.setServiceInteractionDurationTicks(intOrZero(s));
-                syncToServer();
-            });
-            y += ROW_H + 8;
-
-            addSectionHeader(y, I18n.name("gui.wandscape.scanner.element_output_header", "❖ 元素产出").getString());
-            y += 16;
-            elemOutY = y - 14;
-
-            addCustomButton(lx + 240, y - 15, 80, 20, I18n.name("gui.wandscape.scanner.add_output", "+ 添加产出").getString(), () -> {
-                String el = nextUnusedElement(scanner.getServiceElementOutput());
-                if (el != null) {
-                    scanner.addServiceElementOutput(el, 1);
-                    syncToServer();
-                    needsRebuild = true;
-                }
-            });
-
-            for (var entry : scanner.getServiceElementOutput().entrySet()) {
-                String el = entry.getKey();
-                elemOutRows.add(new CostRow(lx + 4, y, el, entry.getValue(),
-                        () -> {
-                            scanner.removeServiceElementOutput(el);
-                            syncToServer();
-                            needsRebuild = true;
-                        },
-                        this::syncServiceElemOutput));
-                y += ROW_H + 2;
-            }
-            y += 8;
+            initServiceConfig(lx, y);
+        } else if ("node".equals(cat)) {
+            initNodeConfig(lx, y);
         } else if ("relax".equals(cat)) {
-            shopCatY = 0;
-            goodsCatY = 0;
-            shopProfitRate = null;
-            shopDuration = null;
-            svcCatY = 0;
-            elemOutY = 0;
-            addSectionHeader(y, I18n.name("gui.wandscape.scanner.relax_params_header", "❖ 放松参数").getString());
-            y += 16;
-            relaxCatY = y - 14;
-
-            relaxEnergy = mkNumEdit(lx + COL2 + 90, y, 50, scanner.getRelaxEnergyRestore(), s -> {
-                scanner.setRelaxEnergyRestore(intOrZero(s));
-                syncToServer();
-            });
-            y += ROW_H + 2;
-
-            relaxDuration = mkNumEdit(lx + COL2 + 90, y, 50, scanner.getRelaxInteractionDurationTicks(), s -> {
-                scanner.setRelaxInteractionDurationTicks(intOrZero(s));
-                syncToServer();
-            });
-            y += ROW_H + 8;
+            initRelaxConfig(lx, y);
         } else if ("atm".equals(cat)) {
-            shopCatY = 0;
-            goodsCatY = 0;
-            shopProfitRate = null;
-            shopDuration = null;
-            svcCatY = 0;
-            elemOutY = 0;
-            addSectionHeader(y, I18n.name("gui.wandscape.scanner.atm_params_header", "❖ ATM 参数").getString());
-            y += 16;
-            atmCatY = y - 14;
+            initAtmConfig(lx, y);
+        }
+    }
 
-            atmWithdraw = mkNumEdit(lx + COL2 + 90, y, 50, scanner.getAtmWithdrawAmount(), s -> {
-                scanner.setAtmWithdrawAmount(intOrZero(s));
+    private void initShopConfig(int lx, int y) {
+        shopProfitRate = mkEdit(lx + 54, y + 3, 38, 16, String.valueOf(scanner.getShopProfitRate()), s -> {
+            try {
+                scanner.setShopProfitRate(Double.parseDouble(s));
                 syncToServer();
-            });
-            y += ROW_H + 2;
+            } catch (NumberFormatException ignored) {}
+        });
 
-            atmDuration = mkNumEdit(lx + COL2 + 90, y, 50, scanner.getAtmInteractionDurationTicks(), s -> {
-                scanner.setAtmInteractionDurationTicks(intOrZero(s));
-                syncToServer();
-            });
-            y += ROW_H + 8;
-        } else {
-            shopCatY = 0;
-            goodsCatY = 0;
-            shopProfitRate = null;
-            shopDuration = null;
-            svcCatY = 0;
-            elemOutY = 0;
-        }
+        shopDuration = mkNumEdit(lx + 148, y + 3, 36, 16, scanner.getShopInteractionDurationTicks(), s -> {
+            scanner.setShopInteractionDurationTicks(intOrZero(s));
+            syncToServer();
+        });
 
-        // ── Export section ──
-        addSectionHeader(y, I18n.name("gui.wandscape.scanner.blueprint_export_header", "❖ 蓝图与道路导出").getString());
-        y += 18;
-        exportBtnY = y - 14;
+        addBtn(lx + 276, y + 2, 88, 18, I18n.name("gui.wandscape.scanner.add_good", "+ 上架商品").getString(), () -> {
+            scanner.addShopGood(new ShopGoodData("minecraft:apple", 5, 0, 0));
+            syncToServer();
+            shopGoodsPage = Math.max(0, (scanner.getShopGoods().size() - 1) / GOODS_PER_PAGE);
+            rebuild();
+        });
 
-        addCustomButton(lx + 4, exportBtnY, 95, 22, I18n.name("gui.wandscape.scanner.scan_area", "扫描区域").getString(), () -> doScan());
-        addCustomButton(lx + 105, exportBtnY, 215, 22, I18n.name("gui.wandscape.scanner.export_building_json", "导出建筑 JSON").getString(), () -> doExport());
-        addCustomButton(lx + 4, exportBtnY + 26, 170, 22, I18n.name("gui.wandscape.scanner.calc_area_value", "计算区域价值").getString(), () -> doValue());
+        int rowY = y + 24;
+        List<ShopGoodData> goods = scanner.getShopGoods();
+        int totalPages = Math.max(1, (goods.size() + GOODS_PER_PAGE - 1) / GOODS_PER_PAGE);
+        shopGoodsPage = Math.clamp(shopGoodsPage, 0, totalPages - 1);
 
-        int bottom = exportBtnY + 60;
-        int visibleBottom = Math.min(topPos + PH - 6, height - 12);
-        maxScroll = -10000;
-    }
+        int start = shopGoodsPage * GOODS_PER_PAGE;
+        int end = Math.min(goods.size(), start + GOODS_PER_PAGE);
 
-    private void onAutoDetectDoor() {
-        if (minecraft == null || minecraft.level == null) return;
-        List<BlockOffset> doors = scanner.detectDoors(minecraft.level);
-        if (doors.isEmpty()) {
-            scanResult = I18n.name("gui.wandscape.scanner.result_no_door_found", "未在包围盒内检测到门方块");
-            return;
-        }
-        scanner.setDoorOffsets(doors);
-        BlockOffset first = doors.get(0);
-        if (doorX != null) doorX.setValue(String.valueOf(first.x()));
-        if (doorY != null) doorY.setValue(String.valueOf(first.y()));
-        if (doorZ != null) doorZ.setValue(String.valueOf(first.z()));
-        scanResult = I18n.name("gui.wandscape.scanner.result_doors_found", "已检门 %s 扇，游客从任意一扇门进（编辑框仅改首门）", doors.size());
-        syncToServer();
-    }
-
-    private void addSectionHeader(int y, String title) {
-        // Layout marker only
-    }
-
-    private static boolean isTouristCategory(String c) {
-        return "shop".equals(c) || "service".equals(c) || "relax".equals(c) || "atm".equals(c);
-    }
-
-    /** 扫 boundary 内 interact_spot_marker 数量（client，一次 rebuild 算一次）。 */
-    private int countSpotMarkers() {
-        var level = scanner.getLevel();
-        if (level == null) return 0;
-        BlockPos wMin = scanner.getWorldMin();
-        BlockPos wMax = scanner.getWorldMax();
-        if (wMin == null || wMax == null) return 0;
-        int count = 0;
-        for (int x = wMin.getX(); x <= wMax.getX(); x++) {
-            for (int y = wMin.getY(); y <= wMax.getY(); y++) {
-                for (int z = wMin.getZ(); z <= wMax.getZ(); z++) {
-                    if (level.getBlockState(new BlockPos(x, y, z))
-                            .is(com.wsteam.wandscape.Wandscape.INTERACT_SPOT_MARKER.get())) {
-                        count++;
-                    }
-                }
-            }
-        }
-        return count;
-    }
-
-    // ── Widget creation helpers ──
-
-    private EditBox mkEdit(int x, int y, int w, String val, Consumer<String> r) {
-        EditBox box = new EditBox(font, x + 3, y + 3, w - 6, 14, Component.empty());
-        box.setValue(val);
-        box.setBordered(false);
-        box.setTextColor(MedievalColors.TEXT_WARM_WHITE);
-        box.setTextColorUneditable(MedievalColors.TEXT_MUTED);
-        box.setResponder(r);
-        insetFields.add(new FieldRect(x, y, w, 20, box));
-        return addRenderableWidget(box);
-    }
-
-    private EditBox mkNumEdit(int x, int y, int w, int val, Consumer<String> r) {
-        EditBox box = new EditBox(font, x + 3, y + 3, w - 6, 14, Component.empty());
-        box.setFilter(s -> s.matches("\\d*"));
-        box.setValue(String.valueOf(val));
-        box.setBordered(false);
-        box.setTextColor(MedievalColors.TEXT_WARM_WHITE);
-        box.setTextColorUneditable(MedievalColors.TEXT_MUTED);
-        box.setResponder(r);
-        insetFields.add(new FieldRect(x, y, w, 20, box));
-        return addRenderableWidget(box);
-    }
-
-    // ── Inner classes for rows ──
-
-    private class CostRow {
-        final Runnable onChanged;
-        private String currentElem;
-        final EditBox amountBox;
-
-        CostRow(int x, int y, String elem, int amount, Runnable onRemove, Runnable onChanged) {
-            this.onChanged = onChanged;
-            this.currentElem = ELEMENTS.contains(elem) ? elem : "earth";
-            addCustomButton(x, y, 60, 20, currentElem, this::cycleElem);
-            amountBox = mkNumEdit(x + 64, y, 40, amount, s -> onChanged.run());
-            if (onRemove != null) {
-                addCustomButton(x + 108, y, 18, 20, "×", onRemove::run);
-            }
-        }
-
-        private void cycleElem() {
-            int curIdx = ELEMENTS.indexOf(currentElem);
-            currentElem = ELEMENTS.get((curIdx + 1) % ELEMENTS.size());
-            onChanged.run();
-            needsRebuild = true;
-        }
-
-        String element() { return currentElem; }
-        int amount() { return intOrZero(amountBox); }
-    }
-
-    private class GoodRow {
-        final int index;
-        final EditBox itemIdBox;
-        final EditBox gComfort, gMagic, gWonder;
-
-        GoodRow(int idx, int x, int y) {
-            this.index = idx;
-            ShopGoodData good = scanner.getShopGoods().get(idx);
-            itemIdBox = mkEdit(x + 4, y, 130, good.itemId(), s -> updateGood());
-            gComfort = mkNumEdit(x + 140, y, 28, good.comfort(), s -> updateGood());
-            gMagic = mkNumEdit(x + 172, y, 28, good.magic(), s -> updateGood());
-            gWonder = mkNumEdit(x + 204, y, 28, good.wonder(), s -> updateGood());
-            addCustomButton(x + 238, y, 18, 20, "×", () -> {
+        for (int i = start; i < end; i++) {
+            final int idx = i;
+            ShopGoodData g = goods.get(i);
+            mkEdit(lx + 32, rowY, 120, 16, g.itemId(), s -> updateShopGood(idx, s, g.comfort(), g.magic(), g.wonder()));
+            mkNumEdit(lx + 172, rowY, 26, 16, g.comfort(), s -> updateShopGood(idx, g.itemId(), intOrZero(s), g.magic(), g.wonder()));
+            mkNumEdit(lx + 218, rowY, 26, 16, g.magic(), s -> updateShopGood(idx, g.itemId(), g.comfort(), intOrZero(s), g.wonder()));
+            mkNumEdit(lx + 264, rowY, 26, 16, g.wonder(), s -> updateShopGood(idx, g.itemId(), g.comfort(), g.magic(), intOrZero(s)));
+            addBtn(lx + 300, rowY, 16, 16, "×", () -> {
                 scanner.removeShopGood(idx);
                 syncToServer();
-                needsRebuild = true;
+                rebuild();
             });
+            rowY += 20;
         }
 
-        ShopGoodData captureGood() {
-            return new ShopGoodData(
-                    itemIdBox.getValue(),
-                    intOrZero(gComfort), intOrZero(gMagic), intOrZero(gWonder));
-        }
-
-        void updateGood() {
-            scanner.updateShopGood(index, captureGood());
-            syncToServer();
+        if (totalPages > 1) {
+            addBtn(lx + 12, y + 88, 55, 14, "◀ 上页", () -> {
+                if (shopGoodsPage > 0) { shopGoodsPage--; rebuild(); }
+            }, shopGoodsPage > 0);
+            addBtn(lx + 298, y + 88, 55, 14, "下页 ▶", () -> {
+                if (shopGoodsPage < totalPages - 1) { shopGoodsPage++; rebuild(); }
+            }, shopGoodsPage < totalPages - 1);
         }
     }
 
-    private void addBoundaryEdits(int y) {
-        int cw = 48;
-        int gap = 8;
-        int col1 = lx + 20;
-        int col2 = col1 + cw + gap;
-        int col3 = col2 + cw + gap;
-        bMinX = mkCoordEdit(col1, y, cw, scanner.getBoundaryMin().x(), this::onBoundaryEdit);
-        bMinY = mkCoordEdit(col2, y, cw, scanner.getBoundaryMin().y(), this::onBoundaryEdit);
-        bMinZ = mkCoordEdit(col3, y, cw, scanner.getBoundaryMin().z(), this::onBoundaryEdit);
-        bMaxX = mkCoordEdit(col1, y + ROW_H, cw, scanner.getBoundaryMax().x(), this::onBoundaryEdit);
-        bMaxY = mkCoordEdit(col2, y + ROW_H, cw, scanner.getBoundaryMax().y(), this::onBoundaryEdit);
-        bMaxZ = mkCoordEdit(col3, y + ROW_H, cw, scanner.getBoundaryMax().z(), this::onBoundaryEdit);
-    }
-
-    private void onBoundaryEdit() {
-        scanner.setBoundary(
-                BlockOffset.of(intOrZero(bMinX), intOrZero(bMinY), intOrZero(bMinZ)),
-                BlockOffset.of(intOrZero(bMaxX), intOrZero(bMaxY), intOrZero(bMaxZ)));
+    private void updateShopGood(int idx, String itemId, int c, int m, int w) {
+        scanner.updateShopGood(idx, new ShopGoodData(itemId, c, m, w));
         syncToServer();
     }
 
-    private void drawBoundaryLabels(GuiGraphics gui) {
-        if (bMinX == null) return;
-        int cw = 48;
-        int gap = 8;
-        int col1 = lx + 20;
-        int col2 = col1 + cw + gap;
-        int col3 = col2 + cw + gap;
-        gui.drawString(font, "X", col1, boundaryCardY, MedievalColors.TEXT_MUTED);
-        gui.drawString(font, "Y", col2, boundaryCardY, MedievalColors.TEXT_MUTED);
-        gui.drawString(font, "Z", col3, boundaryCardY, MedievalColors.TEXT_MUTED);
-        gui.drawString(font, "min", lx + 2, boundaryEditY + 3, MedievalColors.TEXT_MUTED);
-        gui.drawString(font, "max", lx + 2, boundaryEditY + ROW_H + 3, MedievalColors.TEXT_MUTED);
+    private void initServiceConfig(int lx, int y) {
+        serviceEnergy = mkNumEdit(lx + 38, y + 3, 30, 16, scanner.getServiceEnergyPerUse(), s -> {
+            scanner.setServiceEnergyPerUse(intOrZero(s));
+            syncToServer();
+        });
+
+        serviceMaxOcc = mkNumEdit(lx + 98, y + 3, 26, 16, scanner.getServiceMaxOccupancy(), s -> {
+            scanner.setServiceMaxOccupancy(intOrZero(s));
+            syncToServer();
+        });
+
+        serviceDuration = mkNumEdit(lx + 154, y + 3, 30, 16, scanner.getServiceInteractionDurationTicks(), s -> {
+            scanner.setServiceInteractionDurationTicks(intOrZero(s));
+            syncToServer();
+        });
+
+        addBtn(lx + 280, y + 2, 84, 18, I18n.name("gui.wandscape.scanner.add_output", "+ 产出").getString(), () -> {
+            String el = nextUnusedElement(scanner.getServiceElementOutput());
+            if (el != null) {
+                scanner.addServiceElementOutput(el, 1);
+                syncToServer();
+                rebuild();
+            }
+        });
+
+        int rowY = y + 24;
+        List<Map.Entry<String, Integer>> list = new ArrayList<>(scanner.getServiceElementOutput().entrySet());
+        int totalPages = Math.max(1, (list.size() + ELEM_PER_PAGE - 1) / ELEM_PER_PAGE);
+        serviceElemPage = Math.clamp(serviceElemPage, 0, totalPages - 1);
+
+        int start = serviceElemPage * ELEM_PER_PAGE;
+        int end = Math.min(list.size(), start + ELEM_PER_PAGE);
+
+        for (int i = start; i < end; i++) {
+            var entry = list.get(i);
+            String elem = entry.getKey();
+            ElementDef elDef = getElementDef(elem);
+            addBtn(lx + 14, rowY, 95, 16, elDef.symbol() + " " + elDef.label(), () -> {
+                cycleServiceElement(elem, entry.getValue());
+            });
+            mkNumEdit(lx + 142, rowY, 32, 16, entry.getValue(), s -> {
+                scanner.addServiceElementOutput(elem, intOrZero(s));
+                syncToServer();
+            });
+            addBtn(lx + 182, rowY, 16, 16, "×", () -> {
+                scanner.removeServiceElementOutput(elem);
+                syncToServer();
+                rebuild();
+            });
+            rowY += 20;
+        }
+
+        if (totalPages > 1) {
+            addBtn(lx + 12, y + 88, 55, 14, "◀ 上页", () -> {
+                if (serviceElemPage > 0) { serviceElemPage--; rebuild(); }
+            }, serviceElemPage > 0);
+            addBtn(lx + 298, y + 88, 55, 14, "下页 ▶", () -> {
+                if (serviceElemPage < totalPages - 1) { serviceElemPage++; rebuild(); }
+            }, serviceElemPage < totalPages - 1);
+        }
+    }
+
+    private void cycleServiceElement(String oldElem, int amount) {
+        int idx = getElementIndex(oldElem);
+        String nextElem = ELEMENTS.get((idx + 1) % ELEMENTS.size()).id();
+        scanner.removeServiceElementOutput(oldElem);
+        scanner.addServiceElementOutput(nextElem, amount);
+        syncToServer();
+        rebuild();
+    }
+
+    private void initNodeConfig(int lx, int y) {
+        ElementDef elDef = getElementDef(scanner.getNodeElement());
+        addBtn(lx + 70, y + 6, 150, 20, "元素: " + elDef.symbol() + " " + elDef.label() + " ▾", () -> {
+            int idx = getElementIndex(scanner.getNodeElement());
+            scanner.setNodeElement(ELEMENTS.get((idx + 1) % ELEMENTS.size()).id());
+            syncToServer();
+            rebuild();
+        });
+
+        nodeAmount = mkNumEdit(lx + 80, y + 34, 45, 16, scanner.getNodeAmountPerHarvest(), s -> {
+            scanner.setNodeAmountPerHarvest(intOrZero(s));
+            syncToServer();
+        });
+
+        nodeChannel = mkNumEdit(lx + 80, y + 60, 45, 16, scanner.getNodeChannelTicks(), s -> {
+            scanner.setNodeChannelTicks(intOrZero(s));
+            syncToServer();
+        });
+    }
+
+    private void initRelaxConfig(int lx, int y) {
+        relaxEnergy = mkNumEdit(lx + 80, y + 10, 45, 16, scanner.getRelaxEnergyRestore(), s -> {
+            scanner.setRelaxEnergyRestore(intOrZero(s));
+            syncToServer();
+        });
+
+        relaxDuration = mkNumEdit(lx + 80, y + 36, 45, 16, scanner.getRelaxInteractionDurationTicks(), s -> {
+            scanner.setRelaxInteractionDurationTicks(intOrZero(s));
+            syncToServer();
+        });
+    }
+
+    private void initAtmConfig(int lx, int y) {
+        atmWithdraw = mkNumEdit(lx + 80, y + 10, 45, 16, scanner.getAtmWithdrawAmount(), s -> {
+            scanner.setAtmWithdrawAmount(intOrZero(s));
+            syncToServer();
+        });
+
+        atmDuration = mkNumEdit(lx + 80, y + 36, 45, 16, scanner.getAtmInteractionDurationTicks(), s -> {
+            scanner.setAtmInteractionDurationTicks(intOrZero(s));
+            syncToServer();
+        });
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // TAB 2: 💾 预设管理 (Presets)
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    private void initTab2Presets(int lx, int startY) {
+        int y = startY;
+
+        presetNameEdit = mkEdit(lx + 62, y, 165, 18, "", s -> {});
+        addBtn(lx + 233, y, 131, 18, I18n.name("gui.wandscape.scanner.save_preset", "💾 保存当前为预设").getString(), this::onPresetSave);
+
+        y += 24;
+        List<String> presets = ScannerPresetStore.listPresets();
+        int totalPages = Math.max(1, (presets.size() + PRESETS_PER_PAGE - 1) / PRESETS_PER_PAGE);
+        presetsPage = Math.clamp(presetsPage, 0, totalPages - 1);
+
+        int start = presetsPage * PRESETS_PER_PAGE;
+        int end = Math.min(presets.size(), start + PRESETS_PER_PAGE);
+
+        int listY = y + 16;
+        for (int i = start; i < end; i++) {
+            final String name = presets.get(i);
+            addBtn(lx + 260, listY + 2, 46, 18, I18n.name("gui.wandscape.scanner.load_preset", "📂 加载").getString(), () -> loadPresetByName(name));
+            addBtn(lx + 312, listY + 2, 46, 18, I18n.name("gui.wandscape.scanner.delete_preset", "🗑️ 删除").getString(), () -> deletePresetByName(name));
+            listY += 24;
+        }
+
+        if (totalPages > 1) {
+            addBtn(lx + 14, y + 118, 65, 16, "◀ 上一页", () -> {
+                if (presetsPage > 0) { presetsPage--; rebuild(); }
+            }, presetsPage > 0);
+            addBtn(lx + 285, y + 118, 65, 16, "下一页 ▶", () -> {
+                if (presetsPage < totalPages - 1) { presetsPage++; rebuild(); }
+            }, presetsPage < totalPages - 1);
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // TAB 3: ⚡ 导出操作 (Export & Actions)
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    private void initTab3Export(int lx, int startY) {
+        int btnY = startY + 82;
+        addBtn(lx + 4, btnY, 114, 22, I18n.name("gui.wandscape.scanner.scan_area", "🔍 扫描区域").getString(), this::doScan);
+        addBtn(lx + 124, btnY, 114, 22, I18n.name("gui.wandscape.scanner.calc_area_value", "💰 计算价值").getString(), this::doValue);
+
+        String exportText = scanner.getTargetMode() == TargetMode.ROAD ? "🚀 导出道路 JSON" : "🚀 导出建筑 JSON";
+        addBtn(lx + 244, btnY, 116, 22, exportText, this::doExport);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // RENDERING
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    @Override
+    public void render(GuiGraphics gui, int mx, int my, float pt) {
+        renderBackground(gui, mx, my, pt);
+        renderMinimalHeader(gui);
+        renderCloseButton(gui, mx, my);
+
+        int lx = leftPos + 8;
+
+        // ── CORNER Mode Render ──
+        if (scanner.getBlockMode() == BlockMode.CORNER) {
+            renderCornerMode(gui, mx, my, lx);
+            renderWidgetsAndButtons(gui, mx, my, pt);
+            return;
+        }
+
+        // ── Tabs Bar Render ──
+        renderTabBar(gui, mx, my, lx);
+
+        // ── Tab Specific Content ──
+        int contentY = topPos + headerHeight + TAB_H + 6;
+        switch (activeTab) {
+            case 0 -> renderTab0Bounds(gui, lx, contentY);
+            case 1 -> renderTab1Properties(gui, lx, contentY);
+            case 2 -> renderTab2Presets(gui, lx, contentY);
+            case 3 -> renderTab3Export(gui, lx, contentY);
+        }
+
+        renderWidgetsAndButtons(gui, mx, my, pt);
+    }
+
+    private void renderTabBar(GuiGraphics gui, int mx, int my, int lx) {
+        String[] tabs = { "📐 范围结构", "🏷️ 属性配置", "💾 预设管理", "⚡ 导出操作" };
+        int tabY = topPos + headerHeight + 2;
+        int tabW = 88;
+
+        for (int i = 0; i < tabs.length; i++) {
+            int tx = lx + i * (tabW + 4);
+            boolean active = i == activeTab;
+            boolean hover = !active && isInRect(mx, my, tx, tabY, tabW, TAB_H);
+
+            drawMinimalBox(gui, tx, tabY, tabW, TAB_H, active, hover);
+
+            int textColor = active ? MedievalColors.BORDER_GOLD : (hover ? MedievalColors.TEXT_WARM_WHITE : MedievalColors.TEXT_MUTED);
+            gui.drawString(font, tabs[i], tx + (tabW - font.width(tabs[i])) / 2, tabY + 4, textColor);
+        }
+    }
+
+    private void renderCornerMode(GuiGraphics gui, int mx, int my, int lx) {
+        int topY = topPos + headerHeight + 8;
+        gui.drawString(font, "暗号:", lx + 102, topY + 5, MedievalColors.TEXT_MUTED);
+
+        int cardY = topY + 30;
+        drawMinimalBox(gui, lx + 8, cardY, 348, 120, true, false);
+
+        gui.drawString(font, "❖ CORNER 辅角点模式已激活", lx + 20, cardY + 12, MedievalColors.BORDER_GOLD);
+        gui.drawString(font, "1. 在上方输入框输入与 SAVE 主扫描器完全一致的暗号。", lx + 20, cardY + 32, MedievalColors.TEXT_WARM_WHITE);
+        gui.drawString(font, "2. 将此方块放置在建筑 3D 对角线的另一个角点顶点位置。", lx + 20, cardY + 50, MedievalColors.TEXT_MUTED);
+        gui.drawString(font, "3. 返回 SAVE 主扫描器点击“❖ 匹配角点”，系统将自动连接", lx + 20, cardY + 68, MedievalColors.TEXT_MUTED);
+        gui.drawString(font, "   并框选出完整的 3D 建筑包围盒范围。", lx + 20, cardY + 84, MedievalColors.TEXT_MUTED);
+    }
+
+    private void renderTab0Bounds(GuiGraphics gui, int lx, int y) {
+        // Top row label
+        gui.drawString(font, "暗号:", lx + 172, y + 5, MedievalColors.TEXT_MUTED);
+
+        // Card 1: 3D Bounds
+        int card1Y = y + 24;
+        drawMinimalBox(gui, lx, card1Y, 364, 58, false, false);
+        gui.drawString(font, "❖ 3D 边界坐标 (相对于扫描器)", lx + 8, card1Y + 4, MedievalColors.BORDER_GOLD);
+
+        gui.drawString(font, "Min(小):", lx + 8, card1Y + 19, MedievalColors.TEXT_MUTED);
+        gui.drawString(font, "Max(大):", lx + 8, card1Y + 39, MedievalColors.TEXT_MUTED);
+
         BlockOffset bMin = scanner.getBoundaryMin();
         BlockOffset bMax = scanner.getBoundaryMax();
         int dx = Math.abs(bMax.x() - bMin.x()) + 1;
         int dy = Math.abs(bMax.y() - bMin.y()) + 1;
         int dz = Math.abs(bMax.z() - bMin.z()) + 1;
-        String sizeText = I18n.name("gui.wandscape.scanner.boundary_size", "尺寸 %d×%d×%d  (Min:%d,%d,%d Max:%d,%d,%d)", dx, dy, dz, bMin.x(), bMin.y(), bMin.z(), bMax.x(), bMax.y(), bMax.z()).getString();
-        gui.drawString(font, sizeText, lx + 2, boundaryEditY + ROW_H * 2 + 4, MedievalColors.BORDER_GOLD);
+        long vol = (long) dx * dy * dz;
+
+        int infoX = lx + 185;
+        gui.drawString(font, String.format("尺寸: %d × %d × %d", dx, dy, dz), infoX, card1Y + 16, MedievalColors.BORDER_GOLD);
+        gui.drawString(font, String.format("体积: %,d 方块格", vol), infoX, card1Y + 28, MedievalColors.TEXT_WARM_WHITE);
+        gui.drawString(font, String.format("X(%d~%d) Y(%d~%d) Z(%d~%d)", bMin.x(), bMax.x(), bMin.y(), bMax.y(), bMin.z(), bMax.z()),
+                infoX, card1Y + 40, MedievalColors.TEXT_DIM);
+
+        // Card 2: Doors & Spots
+        int card2Y = card1Y + 62;
+        // Sub-card Left: Doors
+        drawMinimalBox(gui, lx, card2Y, 186, 92, false, false);
+        gui.drawString(font, String.format("❖ 门偏移 (%d 扇)", scanner.getDoorOffsets().size()), lx + 8, card2Y + 4, MedievalColors.BORDER_GOLD);
+        gui.drawString(font, "首门:", lx + 14, card2Y + 20, MedievalColors.TEXT_MUTED);
+
+        List<BlockOffset> doors = scanner.getDoorOffsets();
+        if (doors.isEmpty()) {
+            gui.drawString(font, "未设门: 游客沿包围盒外进入", lx + 8, card2Y + 60, MedievalColors.TEXT_DIM);
+        } else {
+            StringBuilder sb = new StringBuilder("已录入: ");
+            for (int i = 0; i < Math.min(3, doors.size()); i++) {
+                BlockOffset d = doors.get(i);
+                sb.append("(").append(d.x()).append(",").append(d.y()).append(",").append(d.z()).append(") ");
+            }
+            if (doors.size() > 3) sb.append("...");
+            gui.drawString(font, font.plainSubstrByWidth(sb.toString(), 170), lx + 8, card2Y + 60, MedievalColors.TEXT_WARM_WHITE);
+        }
+
+        // Sub-card Right: Spots
+        int spotsX = lx + 192;
+        drawMinimalBox(gui, spotsX, card2Y, 172, 92, false, false);
+        gui.drawString(font, "❖ 交互位 Marker", spotsX + 8, card2Y + 4, MedievalColors.BORDER_GOLD);
+
+        int spotCount = countSpotMarkers();
+        int spotColor = spotCount > 0 ? MedievalColors.TEXT_WARM_WHITE : (isTouristCategory(scanner.getCategory()) ? 0xFFFF5555 : MedievalColors.TEXT_MUTED);
+        gui.drawString(font, String.format("已放置: %d 个交互位", spotCount), spotsX + 8, card2Y + 20, spotColor);
+
+        if (isTouristCategory(scanner.getCategory()) && spotCount == 0) {
+            gui.drawString(font, "§c⚠ 无交互位！", spotsX + 8, card2Y + 40, 0xFFFF5555);
+            gui.drawString(font, "§c游客将无法在此互动消费", spotsX + 8, card2Y + 54, 0xFFFF7777);
+        } else if (spotCount > 0) {
+            gui.drawString(font, "§a✓ 交互位已就绪", spotsX + 8, card2Y + 40, 0xFF55FF55);
+            gui.drawString(font, "§7右键换动作, 潜行换朝向", spotsX + 8, card2Y + 54, MedievalColors.TEXT_DIM);
+        } else {
+            gui.drawString(font, "§7基础/功能建筑可选填交互位", spotsX + 8, card2Y + 40, MedievalColors.TEXT_DIM);
+        }
     }
 
-    private EditBox mkCoordEdit(int x, int y, int w, int val, Runnable onChange) {
-        EditBox box = new EditBox(font, x + 3, y + 3, w - 6, 14, Component.empty());
-        box.setMaxLength(6);
-        box.setFilter(s -> s.matches("-?\\d{0,6}"));
-        box.setValue(String.valueOf(val));
-        box.setBordered(false);
-        box.setTextColor(MedievalColors.TEXT_WARM_WHITE);
-        box.setTextColorUneditable(MedievalColors.TEXT_MUTED);
-        box.setResponder(s -> onChange.run());
-        insetFields.add(new FieldRect(x, y, w, 20, box));
-        return addRenderableWidget(box);
+    private void renderTab1Properties(GuiGraphics gui, int lx, int y) {
+        if (scanner.getTargetMode() == TargetMode.ROAD) {
+            drawMinimalBox(gui, lx, y, 364, 84, false, false);
+            gui.drawString(font, "❖ 道路预设属性 (Road Preset)", lx + 8, y + 4, MedievalColors.BORDER_GOLD);
+            gui.drawString(font, "道路ID:", lx + 14, y + 19, MedievalColors.TEXT_MUTED);
+            gui.drawString(font, "显示名称:", lx + 14, y + 43, MedievalColors.TEXT_MUTED);
+            gui.drawString(font, "制作作者:", lx + 14, y + 67, MedievalColors.TEXT_MUTED);
+
+            drawMinimalBox(gui, lx, y + 88, 364, 66, false, false);
+            gui.drawString(font, "❖ 道路预设说明", lx + 8, y + 92, MedievalColors.BORDER_GOLD);
+            String hint = "导出后将自动计算包围盒内各方块权重并生成 road_preset JSON，热注册到道路工坊与建造法杖中，可立即使用。";
+            List<FormattedCharSequence> lines = font.split(Component.literal(hint), 345);
+            int ly = y + 106;
+            for (var line : lines) {
+                gui.drawString(font, line, lx + 10, ly, MedievalColors.TEXT_MUTED);
+                ly += 11;
+            }
+            return;
+        }
+
+        // BUILDING Mode
+        drawMinimalBox(gui, lx, y - 2, 364, 68, false, false);
+        gui.drawString(font, "ID:", lx + 6, y + 4, MedievalColors.TEXT_MUTED);
+        gui.drawString(font, "名称:", lx + 128, y + 4, MedievalColors.TEXT_MUTED);
+        gui.drawString(font, "作者:", lx + 250, y + 4, MedievalColors.TEXT_MUTED);
+
+        gui.drawString(font, "分类:", lx + 6, y + 27, MedievalColors.TEXT_MUTED);
+
+        gui.drawString(font, "舒适:", lx + 6, y + 48, MedievalColors.TEXT_MUTED);
+        gui.drawString(font, "魔法:", lx + 70, y + 48, MedievalColors.TEXT_MUTED);
+        gui.drawString(font, "奇观:", lx + 134, y + 48, MedievalColors.TEXT_MUTED);
+        gui.drawString(font, "解锁等级:", lx + 200, y + 48, MedievalColors.TEXT_MUTED);
+        gui.drawString(font, "(1~10)", lx + 286, y + 48, MedievalColors.TEXT_DIM);
+
+        // Category config panel
+        int catY = y + 70;
+        drawMinimalBox(gui, lx, catY, 364, 84, false, false);
+        String cat = scanner.getCategory();
+        CategoryDef def = getCategoryDef(cat);
+        gui.drawString(font, "❖ " + def.label() + " 专属配置", lx + 8, catY + 4, MedievalColors.BORDER_GOLD);
+
+        if ("shop".equals(cat)) {
+            gui.drawString(font, "利润%:", lx + 14, catY + 19, MedievalColors.TEXT_MUTED);
+            gui.drawString(font, "时长Ticks:", lx + 96, catY + 19, MedievalColors.TEXT_MUTED);
+
+            List<ShopGoodData> goods = scanner.getShopGoods();
+            if (goods.isEmpty()) {
+                gui.drawString(font, "暂无商品，请点击右上角“+ 上架商品”", lx + 14, catY + 44, MedievalColors.TEXT_DIM);
+            } else {
+                int start = shopGoodsPage * GOODS_PER_PAGE;
+                int end = Math.min(goods.size(), start + GOODS_PER_PAGE);
+                int gy = catY + 36;
+                for (int i = start; i < end; i++) {
+                    gui.drawString(font, "物品:", lx + 6, gy + 4, MedievalColors.TEXT_DIM);
+                    gui.drawString(font, "舒:", lx + 156, gy + 4, MedievalColors.TEXT_DIM);
+                    gui.drawString(font, "魔:", lx + 202, gy + 4, MedievalColors.TEXT_DIM);
+                    gui.drawString(font, "奇:", lx + 248, gy + 4, MedievalColors.TEXT_DIM);
+                    gy += 20;
+                }
+            }
+        } else if ("service".equals(cat)) {
+            gui.drawString(font, "能耗:", lx + 10, catY + 19, MedievalColors.TEXT_MUTED);
+            gui.drawString(font, "容纳:", lx + 72, catY + 19, MedievalColors.TEXT_MUTED);
+            gui.drawString(font, "时长:", lx + 128, catY + 19, MedievalColors.TEXT_MUTED);
+
+            var outputs = scanner.getServiceElementOutput();
+            if (outputs.isEmpty()) {
+                gui.drawString(font, "暂无元素产出，点击右上角“+ 产出”添加", lx + 14, catY + 44, MedievalColors.TEXT_DIM);
+            } else {
+                int gy = catY + 36;
+                List<Map.Entry<String, Integer>> list = new ArrayList<>(outputs.entrySet());
+                int start = serviceElemPage * ELEM_PER_PAGE;
+                int end = Math.min(list.size(), start + ELEM_PER_PAGE);
+                for (int i = start; i < end; i++) {
+                    gui.drawString(font, "产出量:", lx + 112, gy + 4, MedievalColors.TEXT_DIM);
+                    gy += 20;
+                }
+            }
+        } else if ("node".equals(cat)) {
+            gui.drawString(font, "产出量/次:", lx + 14, catY + 38, MedievalColors.TEXT_MUTED);
+            gui.drawString(font, "引导Ticks:", lx + 14, catY + 64, MedievalColors.TEXT_MUTED);
+            gui.drawString(font, "市民法师在此节点引导采集元素能量", lx + 140, catY + 48, MedievalColors.TEXT_DIM);
+        } else if ("relax".equals(cat)) {
+            gui.drawString(font, "恢复精力/次:", lx + 14, catY + 22, MedievalColors.TEXT_MUTED);
+            gui.drawString(font, "交互时长Ticks:", lx + 14, catY + 48, MedievalColors.TEXT_MUTED);
+            gui.drawString(font, "游客在此建筑放松时恢复精力值", lx + 14, catY + 68, MedievalColors.TEXT_DIM);
+        } else if ("atm".equals(cat)) {
+            gui.drawString(font, "取现上限/次:", lx + 14, catY + 22, MedievalColors.TEXT_MUTED);
+            gui.drawString(font, "交互时长Ticks:", lx + 14, catY + 48, MedievalColors.TEXT_MUTED);
+            gui.drawString(font, "游客金币不足时在此取款后继续消费", lx + 14, catY + 68, MedievalColors.TEXT_DIM);
+        } else {
+            gui.drawString(font, "该建筑类别无需额外特定参数。", lx + 14, catY + 26, MedievalColors.TEXT_WARM_WHITE);
+            gui.drawString(font, "放置后直接作为标准功能或装饰建筑运作。", lx + 14, catY + 44, MedievalColors.TEXT_MUTED);
+        }
     }
 
-    private boolean needsRebuild = false;
+    private void renderTab2Presets(GuiGraphics gui, int lx, int y) {
+        gui.drawString(font, "预设名称:", lx + 8, y + 5, MedievalColors.TEXT_MUTED);
+
+        int cardY = y + 24;
+        List<String> presets = ScannerPresetStore.listPresets();
+        drawMinimalBox(gui, lx, cardY, 364, 130, false, false);
+        gui.drawString(font, String.format("❖ 已保存的扫描预设模板 (%d 个)", presets.size()), lx + 8, cardY + 4, MedievalColors.BORDER_GOLD);
+
+        if (presets.isEmpty()) {
+            gui.drawString(font, "暂无保存的预设模板。", lx + 14, cardY + 36, MedievalColors.TEXT_WARM_WHITE);
+            gui.drawString(font, "在上方输入名称并点击“保存当前为预设”，", lx + 14, cardY + 54, MedievalColors.TEXT_MUTED);
+            gui.drawString(font, "即可将当前包围盒、分类与属性保存为模板存档。", lx + 14, cardY + 70, MedievalColors.TEXT_DIM);
+            return;
+        }
+
+        int start = presetsPage * PRESETS_PER_PAGE;
+        int end = Math.min(presets.size(), start + PRESETS_PER_PAGE);
+        int itemY = cardY + 16;
+
+        for (int i = start; i < end; i++) {
+            String name = presets.get(i);
+            drawInsetField(gui, lx + 8, itemY, 348, 22);
+            gui.drawString(font, "📌 " + name, lx + 16, itemY + 7, MedievalColors.BORDER_GOLD);
+            itemY += 24;
+        }
+
+        int totalPages = Math.max(1, (presets.size() + PRESETS_PER_PAGE - 1) / PRESETS_PER_PAGE);
+        if (totalPages > 1) {
+            String pageStr = String.format("第 %d/%d 页", presetsPage + 1, totalPages);
+            gui.drawString(font, pageStr, lx + (364 - font.width(pageStr)) / 2, cardY + 116, MedievalColors.TEXT_MUTED);
+        }
+    }
+
+    private void renderTab3Export(GuiGraphics gui, int lx, int y) {
+        // Top Overview Card
+        drawMinimalBox(gui, lx, y, 364, 76, false, false);
+        gui.drawString(font, "❖ 当前扫描配置概览", lx + 8, y + 4, MedievalColors.BORDER_GOLD);
+
+        String targetStr = scanner.getTargetMode() == TargetMode.ROAD ? "道路 (ROAD)" : "建筑 (BUILDING)";
+        String catStr = getCategoryDef(scanner.getCategory()).label() + " (" + scanner.getCategory() + ")";
+        gui.drawString(font, "目标: " + targetStr + " | 分类: " + catStr, lx + 12, y + 18, MedievalColors.TEXT_WARM_WHITE);
+
+        String idStr = scanner.getBuildingId().isEmpty() ? "未命名ID" : scanner.getBuildingId();
+        String nameStr = scanner.getDisplayName().isEmpty() ? "—" : scanner.getDisplayName();
+        gui.drawString(font, "标识: " + font.plainSubstrByWidth(idStr, 130) + " (" + font.plainSubstrByWidth(nameStr, 120) + ")", lx + 12, y + 34, MedievalColors.TEXT_WARM_WHITE);
+
+        BlockOffset bMin = scanner.getBoundaryMin();
+        BlockOffset bMax = scanner.getBoundaryMax();
+        int dx = Math.abs(bMax.x() - bMin.x()) + 1;
+        int dy = Math.abs(bMax.y() - bMin.y()) + 1;
+        int dz = Math.abs(bMax.z() - bMin.z()) + 1;
+        long vol = (long) dx * dy * dz;
+        gui.drawString(font, String.format("尺寸: %d×%d×%d (%,d格) | 门: %d扇 | 交互位: %d个", dx, dy, dz, vol, scanner.getDoorOffsets().size(), countSpotMarkers()),
+                lx + 12, y + 50, MedievalColors.BORDER_GOLD);
+
+        // Result Card
+        int resY = y + 108;
+        drawMinimalBox(gui, lx, resY, 364, 46, true, false);
+        gui.drawString(font, "❖ 执行结果 / 状态反馈", lx + 8, resY + 4, MedievalColors.BORDER_GOLD);
+
+        List<FormattedCharSequence> lines = font.split(scanResult, 345);
+        int ly = resY + 18;
+        for (int i = 0; i < Math.min(2, lines.size()); i++) {
+            gui.drawString(font, lines.get(i), lx + 12, ly, MedievalColors.TEXT_WARM_WHITE);
+            ly += 11;
+        }
+    }
+
+    private void renderWidgetsAndButtons(GuiGraphics gui, int mx, int my, float pt) {
+        // Inset glowing borders for edit boxes
+        for (FieldRect f : insetFields) {
+            boolean focused = f.box() != null && f.box().isFocused();
+            boolean hover = isInRect(mx, my, f.x(), f.y(), f.w(), f.h());
+            drawEditBoxBorder(gui, f.x(), f.y(), f.w(), f.h(), focused, hover);
+        }
+
+        // Custom Buttons
+        for (CustomButton btn : customButtons) {
+            boolean hover = btn.enabled() && isInRect(mx, my, btn.x(), btn.y(), btn.w(), btn.h());
+            drawMinimalBox(gui, btn.x(), btn.y(), btn.w(), btn.h(), false, hover);
+            int textColor = !btn.enabled() ? MedievalColors.TEXT_DIM : (hover ? MedievalColors.BORDER_GOLD : MedievalColors.TEXT_WARM_WHITE);
+            gui.drawString(font, btn.text(), btn.x() + (btn.w() - font.width(btn.text())) / 2,
+                    btn.y() + (btn.h() - font.lineHeight) / 2, textColor);
+        }
+
+        // Super render (EditBoxes)
+        for (var child : children()) {
+            if (child instanceof EditBox box && box.visible) {
+                box.render(gui, mx, my, pt);
+            }
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // INPUT HANDLING
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (button == 0) {
+            // Close hit handled by super
+            if (isCloseHit(mouseX, mouseY)) {
+                this.onClose();
+                return true;
+            }
+
+            // Tab bar click
+            if (scanner.getBlockMode() == BlockMode.SAVE) {
+                int tabY = topPos + headerHeight + 2;
+                int tabW = 88;
+                for (int i = 0; i < 4; i++) {
+                    int tx = leftPos + 8 + i * (tabW + 4);
+                    if (isInRect(mouseX, mouseY, tx, tabY, tabW, TAB_H)) {
+                        if (activeTab != i) {
+                            activeTab = i;
+                            rebuild();
+                            return true;
+                        }
+                    }
+                }
+            }
+
+            // Custom Buttons click
+            for (CustomButton btn : customButtons) {
+                if (btn.enabled() && isInRect(mouseX, mouseY, btn.x(), btn.y(), btn.w(), btn.h())) {
+                    btn.action().run();
+                    return true;
+                }
+            }
+        }
+        return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double deltaX, double deltaY) {
+        if (deltaY != 0) {
+            if (activeTab == 1 && scanner.getCategory().equals("shop")) {
+                int totalPages = Math.max(1, (scanner.getShopGoods().size() + GOODS_PER_PAGE - 1) / GOODS_PER_PAGE);
+                if (deltaY < 0 && shopGoodsPage < totalPages - 1) {
+                    shopGoodsPage++;
+                    rebuild();
+                    return true;
+                } else if (deltaY > 0 && shopGoodsPage > 0) {
+                    shopGoodsPage--;
+                    rebuild();
+                    return true;
+                }
+            } else if (activeTab == 2) {
+                int totalPages = Math.max(1, (ScannerPresetStore.listPresets().size() + PRESETS_PER_PAGE - 1) / PRESETS_PER_PAGE);
+                if (deltaY < 0 && presetsPage < totalPages - 1) {
+                    presetsPage++;
+                    rebuild();
+                    return true;
+                } else if (deltaY > 0 && presetsPage > 0) {
+                    presetsPage--;
+                    rebuild();
+                    return true;
+                }
+            }
+        }
+        return super.mouseScrolled(mouseX, mouseY, deltaX, deltaY);
+    }
 
     @Override
     public void tick() {
@@ -737,149 +972,150 @@ public class CreativeScannerScreen extends MedievalScreen {
         }
     }
 
-    @Override
-    public boolean mouseScrolled(double mx, double my, double deltaX, double deltaY) {
-        if (deltaY != 0) {
-            int newScroll = Math.max(maxScroll, Math.min(0, scrollOff + (int) (deltaY * 20)));
-            if (newScroll != scrollOff) {
-                scrollOff = newScroll;
-                rebuild();
-                return true;
-            }
-        }
-        return false;
-    }
-
-    @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        int clipTop = topPos + headerHeight + 2;
-        int clipBottom = topPos + PH - 6;
-        if (mouseY < clipTop || mouseY > clipBottom) {
-            return super.mouseClicked(mouseX, mouseY, button);
-        }
-
-        if (button == 0) {
-            for (CustomButton btn : customButtons) {
-                if (btn.y() + btn.h() > clipTop && btn.y() < clipBottom) {
-                    if (isInRect(mouseX, mouseY, btn.x(), btn.y(), btn.w(), btn.h())) {
-                        btn.action().run();
-                        return true;
-                    }
-                }
-            }
-        }
-        return super.mouseClicked(mouseX, mouseY, button);
-    }
-
     private void rebuild() {
         super.clearWidgets();
         init();
     }
 
-    private String loadDoorStr(int axis) {
+    // ─────────────────────────────────────────────────────────────────────────────
+    // ACTIONS & LOGIC
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    private void onBoundaryEdit() {
+        scanner.setBoundary(
+                BlockOffset.of(intOrZero(bMinX), intOrZero(bMinY), intOrZero(bMinZ)),
+                BlockOffset.of(intOrZero(bMaxX), intOrZero(bMaxY), intOrZero(bMaxZ)));
+        syncToServer();
+    }
+
+    private int getDoorAxis(int axis) {
         BlockOffset off = scanner.getDoorOffset();
-        if (off == null) return "";
+        if (off == null) return 0;
         return switch (axis) {
-            case 0 -> String.valueOf(off.x());
-            case 1 -> String.valueOf(off.y());
-            default -> String.valueOf(off.z());
+            case 0 -> off.x();
+            case 1 -> off.y();
+            default -> off.z();
         };
     }
 
     private void onDoorChanged() {
+        if (doorX == null || doorY == null || doorZ == null) return;
         String xs = doorX.getValue();
         String ys = doorY.getValue();
         String zs = doorZ.getValue();
-        if (xs.isEmpty() || ys.isEmpty() || zs.isEmpty()) {
-            return; // 输入不完整时不动门列表，避免误清空
-        }
+        if (xs.isEmpty() || ys.isEmpty() || zs.isEmpty()) return;
         try {
-            BlockOffset off = BlockOffset.of(
-                    Integer.parseInt(xs), Integer.parseInt(ys), Integer.parseInt(zs));
+            BlockOffset off = BlockOffset.of(Integer.parseInt(xs), Integer.parseInt(ys), Integer.parseInt(zs));
             if (scanner.getDoorOffsets().isEmpty()) {
                 scanner.setDoorOffsets(List.of(off));
             } else {
-                scanner.updateDoorOffset(0, off); // 就地改首门，保留其余门
+                scanner.updateDoorOffset(0, off);
             }
             syncToServer();
-        } catch (NumberFormatException e) {
-            // ignore partial input
-        }
+        } catch (NumberFormatException ignored) {}
     }
 
-    /** 门区只读列表：无门提示 / 列出全部已记录门的偏移。 */
-    private void drawDoorList(GuiGraphics gui) {
-        List<BlockOffset> doors = scanner.getDoorOffsets();
+    private void onAutoDetectDoor() {
+        if (minecraft == null || minecraft.level == null) return;
+        List<BlockOffset> doors = scanner.detectDoors(minecraft.level);
         if (doors.isEmpty()) {
-            gui.drawString(font, I18n.name("gui.wandscape.scanner.no_door_hint", "未设门：游客入口走包围盒外扫描").getString(), lx + 4, doorListY, MedievalColors.TEXT_MUTED);
+            scanResult = Component.literal("§e未在包围盒内检测到门方块。");
             return;
         }
-        StringBuilder sb = new StringBuilder(I18n.name("gui.wandscape.scanner.door_count", "%s 扇门: ", doors.size()).getString());
-        for (BlockOffset d : doors) {
-            sb.append("(").append(d.x()).append(",").append(d.y()).append(",").append(d.z()).append(") ");
-        }
-        gui.drawString(font, sb.toString(), lx + 4, doorListY, MedievalColors.TEXT_MUTED);
+        scanner.setDoorOffsets(doors);
+        BlockOffset first = doors.get(0);
+        if (doorX != null) doorX.setValue(String.valueOf(first.x()));
+        if (doorY != null) doorY.setValue(String.valueOf(first.y()));
+        if (doorZ != null) doorZ.setValue(String.valueOf(first.z()));
+        scanResult = Component.literal(String.format("§a已自动检门 %d 扇！", doors.size()));
+        syncToServer();
+        rebuild();
     }
 
-    private void syncServiceElemOutput() {
-        Map<String, Integer> map = new HashMap<>();
-        for (CostRow r : elemOutRows) {
-            if (r.amount() > 0) {
-                map.put(r.element(), r.amount());
-            }
-        }
-        scanner.setServiceElementOutput(map);
+    private void cycleCategory(int dir) {
+        int idx = getCategoryIndex(scanner.getCategory());
+        int next = (idx + dir + CATEGORIES.size()) % CATEGORIES.size();
+        scanner.setCategory(CATEGORIES.get(next).id());
         syncToServer();
+        rebuild();
+    }
+
+    private void onPresetSave() {
+        if (presetNameEdit == null) return;
+        String name = presetNameEdit.getValue().trim();
+        if (name.isEmpty()) {
+            scanResult = Component.literal("§c请先输入预设名称。");
+            return;
+        }
+        ScannerPresetStore.savePreset(name, capturePresetData());
+        scanResult = Component.literal("§a预设已成功保存: " + name);
+        rebuild();
+    }
+
+    private void loadPresetByName(String name) {
+        CompoundTag tag = ScannerPresetStore.loadPreset(name);
+        if (tag == null) {
+            scanResult = Component.literal("§c未找到预设: " + name);
+            return;
+        }
+        applyPresetData(tag);
+        syncToServer();
+        scanResult = Component.literal("§a预设已成功加载: " + name);
+        rebuild();
+    }
+
+    private void deletePresetByName(String name) {
+        ScannerPresetStore.deletePreset(name);
+        scanResult = Component.literal("§e预设已删除: " + name);
+        rebuild();
     }
 
     private void doScan() {
         BlockPos wMin = scanner.getWorldMin();
         BlockPos wMax = scanner.getWorldMax();
         if (wMin == null || wMax == null) {
-            scanResult = I18n.name("gui.wandscape.scanner.result_no_boundary", "未定义 3D 边界");
+            scanResult = Component.literal("§c未定义 3D 边界范围。");
             return;
         }
         int count = 0;
         BlockPos scannerPos = scanner.getBlockPos();
-        for (int x = wMin.getX(); x <= wMax.getX(); x++) {
-            for (int y = wMin.getY(); y <= wMax.getY(); y++) {
-                for (int z = wMin.getZ(); z <= wMax.getZ(); z++) {
-                    BlockPos bp = new BlockPos(x, y, z);
-                    if (bp.equals(scannerPos)) continue;
-                    if (minecraft != null && minecraft.level != null) {
-                        net.minecraft.world.level.block.state.BlockState state = minecraft.level.getBlockState(bp);
-                        // Auto-filter both scanner blocks (creative + survival)
+        if (minecraft != null && minecraft.level != null) {
+            for (int x = wMin.getX(); x <= wMax.getX(); x++) {
+                for (int y = wMin.getY(); y <= wMax.getY(); y++) {
+                    for (int z = wMin.getZ(); z <= wMax.getZ(); z++) {
+                        BlockPos bp = new BlockPos(x, y, z);
+                        if (bp.equals(scannerPos)) continue;
+                        var state = minecraft.level.getBlockState(bp);
                         if (state.is(com.wsteam.wandscape.Wandscape.BUILDING_SCANNER.get())
-                                || state.is(com.wsteam.wandscape.Wandscape.CREATIVE_BUILDING_SCANNER.get())) continue;
-                        if (!state.isAir()) {
-                            count++;
-                        }
+                                || state.is(com.wsteam.wandscape.Wandscape.CREATIVE_BUILDING_SCANNER.get())
+                                || state.is(com.wsteam.wandscape.Wandscape.INTERACT_SPOT_MARKER.get())) continue;
+                        if (!state.isAir()) count++;
                     }
                 }
             }
         }
-        scanResult = I18n.name("gui.wandscape.scanner.result_scanned", "已扫描 %s 个有效方块 (不含扫描器)", count);
+        scanResult = Component.literal(String.format("§a已扫描区域有效方块: %,d 个 (已排除扫描器)", count));
     }
 
     private void doExport() {
         String id = scanner.getBuildingId();
-        if (id.isBlank()) {
-            scanResult = I18n.name("gui.wandscape.scanner.result_need_id", "请先设置 ID");
+        if (id == null || id.isBlank()) {
+            scanResult = Component.literal("§c导出失败: 请先在属性配置页设置建筑 ID！");
             return;
         }
         PacketDistributor.sendToServer(new ScannerExportPacket(scanner.getBlockPos()));
-        scanResult = I18n.name("gui.wandscape.scanner.result_export_started", "已发起导出: %s", id);
+        scanResult = Component.literal("§a已发起导出与热注册: " + id + " (详见游戏聊天区)");
     }
 
     private void doValue() {
         BlockPos wMin = scanner.getWorldMin();
         BlockPos wMax = scanner.getWorldMax();
         if (wMin == null || wMax == null) {
-            scanResult = I18n.name("gui.wandscape.scanner.result_no_boundary", "未定义 3D 边界");
+            scanResult = Component.literal("§c未定义 3D 边界。");
             return;
         }
         PacketDistributor.sendToServer(new ScannerValuePacket(scanner.getBlockPos()));
-        scanResult = I18n.name("gui.wandscape.scanner.result_value_started", "已发起价值计算，结果见聊天区");
+        scanResult = Component.literal("§a已发起区域元素价值计算，结果已输出到聊天区。");
     }
 
     private void syncToServer() {
@@ -888,45 +1124,9 @@ public class CreativeScannerScreen extends MedievalScreen {
         PacketDistributor.sendToServer(new ScannerSyncPacket(scanner.getBlockPos(), tag));
     }
 
-    private void onPresetSave() {
-        if (presetNameEdit == null) return;
-        String name = presetNameEdit.getValue().trim();
-        if (name.isEmpty()) {
-            scanResult = I18n.name("gui.wandscape.scanner.result_need_preset_name", "请先输入预设名");
-            return;
-        }
-        ScannerPresetStore.savePreset(name, capturePresetData());
-        scanResult = I18n.name("gui.wandscape.scanner.result_preset_saved", "预设已保存: %s", name);
-        needsRebuild = true;
-    }
-
-    private void onPresetLoad() {
-        if (presetNameEdit == null) return;
-        String name = presetNameEdit.getValue().trim();
-        if (name.isEmpty()) return;
-        loadPresetByName(name);
-    }
-
-    private void onPresetDelete() {
-        if (presetNameEdit == null) return;
-        String name = presetNameEdit.getValue().trim();
-        if (name.isEmpty()) return;
-        ScannerPresetStore.deletePreset(name);
-        scanResult = I18n.name("gui.wandscape.scanner.result_preset_deleted", "预设已删除: %s", name);
-        needsRebuild = true;
-    }
-
-    private void loadPresetByName(String name) {
-        CompoundTag tag = ScannerPresetStore.loadPreset(name);
-        if (tag == null) {
-            scanResult = I18n.name("gui.wandscape.scanner.result_preset_not_found", "未找到预设: %s", name);
-            return;
-        }
-        applyPresetData(tag);
-        syncToServer();
-        needsRebuild = true;
-        scanResult = I18n.name("gui.wandscape.scanner.result_preset_loaded", "预设已加载: %s", name);
-    }
+    // ─────────────────────────────────────────────────────────────────────────────
+    // PRESET SERIALIZATION
+    // ─────────────────────────────────────────────────────────────────────────────
 
     private CompoundTag capturePresetData() {
         CompoundTag tag = new CompoundTag();
@@ -995,6 +1195,14 @@ public class CreativeScannerScreen extends MedievalScreen {
     }
 
     private void applyPresetData(CompoundTag tag) {
+        if (tag.contains("boundary_min", Tag.TAG_INT_ARRAY)) {
+            int[] arr = tag.getIntArray("boundary_min");
+            if (arr.length == 3) scanner.setBoundary(BlockOffset.of(arr[0], arr[1], arr[2]), scanner.getBoundaryMax());
+        }
+        if (tag.contains("boundary_max", Tag.TAG_INT_ARRAY)) {
+            int[] arr = tag.getIntArray("boundary_max");
+            if (arr.length == 3) scanner.setBoundary(scanner.getBoundaryMin(), BlockOffset.of(arr[0], arr[1], arr[2]));
+        }
         if (tag.contains("category")) scanner.setCategory(tag.getString("category"));
         if (tag.contains("building_id")) scanner.setBuildingId(tag.getString("building_id"));
         if (tag.contains("display_name")) scanner.setDisplayName(tag.getString("display_name"));
@@ -1012,13 +1220,6 @@ public class CreativeScannerScreen extends MedievalScreen {
                 if (arr.length == 3) loaded.add(BlockOffset.of(arr[0], arr[1], arr[2]));
             }
             scanner.setDoorOffsets(loaded);
-        } else if (tag.contains("door_offset", Tag.TAG_INT_ARRAY)) {
-            int[] arr = tag.getIntArray("door_offset");
-            if (arr.length == 3) {
-                scanner.setDoorOffsets(List.of(BlockOffset.of(arr[0], arr[1], arr[2])));
-            } else {
-                scanner.clearDoorOffsets();
-            }
         } else {
             scanner.clearDoorOffsets();
         }
@@ -1055,193 +1256,135 @@ public class CreativeScannerScreen extends MedievalScreen {
                 scanner.addServiceElementOutput(et.getString("element"), et.getInt("amount"));
             }
         }
+
+        if (tag.contains("relax_energy_restore")) scanner.setRelaxEnergyRestore(tag.getInt("relax_energy_restore"));
+        if (tag.contains("relax_duration")) scanner.setRelaxInteractionDurationTicks(tag.getInt("relax_duration"));
+        if (tag.contains("atm_withdraw_amount")) scanner.setAtmWithdrawAmount(tag.getInt("atm_withdraw_amount"));
+        if (tag.contains("atm_duration")) scanner.setAtmInteractionDurationTicks(tag.getInt("atm_duration"));
     }
 
-    // ── Render ──
+    // ─────────────────────────────────────────────────────────────────────────────
+    // HELPERS & WIDGET FACTORIES
+    // ─────────────────────────────────────────────────────────────────────────────
 
-    @Override
-    public void render(GuiGraphics gui, int mx, int my, float pt) {
-        renderBackground(gui, mx, my, pt);
-        renderMinimalHeader(gui);
-        renderCloseButton(gui, mx, my);
-
-        int clipTop = topPos + headerHeight + 2;
-        int clipBottom = topPos + PH - 6;
-        int clipLeft = leftPos + 4;
-        int clipRight = leftPos + PW - 4;
-
-        // Hide EditBox components outside viewable scissor region
-        for (var child : children()) {
-            if (child instanceof EditBox box) {
-                box.visible = (box.getY() + box.getHeight() > clipTop && box.getY() < clipBottom);
-            }
-        }
-
-        // Enable strict Scissor clipping for all internal text and custom buttons
-        gui.enableScissor(clipLeft, clipTop, clipRight, clipBottom);
-
-        // Render inset dark field backgrounds with glowing gold borders for all edit boxes inside scissor
-        for (FieldRect f : insetFields) {
-            if (f.y() + f.h() > clipTop && f.y() < clipBottom) {
-                boolean focused = f.box() != null && f.box().isFocused();
-                boolean hover = isInRect(mx, my, f.x(), f.y(), f.w(), f.h());
-                drawEditBoxBorder(gui, f.x(), f.y(), f.w(), f.h(), focused, hover);
-            }
-        }
-
-        // Draw custom medieval minimal box buttons (matching TownHallCreateScreen style) inside scissor
-        for (CustomButton btn : customButtons) {
-            if (btn.y() + btn.h() > clipTop && btn.y() < clipBottom) {
-                boolean hover = isInRect(mx, my, btn.x(), btn.y(), btn.w(), btn.h());
-                drawMinimalBox(gui, btn.x(), btn.y(), btn.w(), btn.h(), hover, hover);
-                int textColor = hover ? MedievalColors.BORDER_GOLD : MedievalColors.TEXT_WARM_WHITE;
-                gui.drawString(font, btn.text(), btn.x() + (btn.w() - font.width(btn.text())) / 2,
-                        btn.y() + (btn.h() - font.lineHeight) / 2, textColor);
-            }
-        }
-
-        // Label for structure name
-        int topY = topPos + headerHeight + 10 + scrollOff;
-        gui.drawString(font, I18n.name("gui.wandscape.scanner.structure_name_label", "暗号").getString(), lx + 94, topY + 6, MedievalColors.TEXT_MUTED);
-
-        if (scanner.getBlockMode() == CreativeScannerBlockEntity.BlockMode.CORNER) {
-            drawMinimalBox(gui, lx, topPos + headerHeight + 38, 320, 64, true, false);
-            gui.drawString(font, I18n.name("gui.wandscape.scanner.corner_mode_title", "❖ CORNER 辅角点模式").getString(), lx + 10, topPos + headerHeight + 46, MedievalColors.BORDER_GOLD);
-            gui.drawString(font, I18n.name("gui.wandscape.scanner.corner_line1", "1. 请在上方输入与 SAVE 扫描器相同的暗号。").getString(), lx + 10, topPos + headerHeight + 60, MedievalColors.TEXT_WARM_WHITE);
-            gui.drawString(font, I18n.name("gui.wandscape.scanner.corner_line2", "2. 将此方块放置在建筑 3D 对角线的另一个顶点位置。").getString(), lx + 10, topPos + headerHeight + 74, MedievalColors.TEXT_MUTED);
-            gui.disableScissor();
-            super.render(gui, mx, my, pt);
-            return;
-        }
-
-        // ── ROAD Target Mode Render ──
-        if (scanner.getTargetMode() == CreativeScannerBlockEntity.TargetMode.ROAD) {
-            drawBoundaryLabels(gui);
-
-            drawHdr(gui, I18n.name("gui.wandscape.scanner.road_preset_header", "❖ 道路预设属性 (Road Preset)").getString(), lx, metaStartY);
-            drawLbl(gui, "Road ID", lx + 4, metaStartY + 14);
-            drawLbl(gui, "Display Name", lx + 165, metaStartY + 14);
-
-            drawHdr(gui, I18n.name("gui.wandscape.scanner.road_export_header", "❖ 道路 JSON 导出与热注册").getString(), lx, exportBtnY - 14);
-            gui.drawString(font, scanResult, lx + 5, exportBtnY + 28, MedievalColors.TEXT_MUTED);
-
-            gui.disableScissor();
-            super.render(gui, mx, my, pt);
-            return;
-        }
-
-        // ── BUILDING Target Mode Render ──
-        drawBoundaryLabels(gui);
-
-        // Section Headers & Labels
-        drawHdr(gui, I18n.name("gui.wandscape.scanner.door_offset_count_header", "❖ 门偏移 (%s 扇)", scanner.getDoorOffsets().size()).getString(), lx, doorEditY - 14);
-        drawLbl(gui, "X", lx + COL2, doorEditY - 10);
-        drawLbl(gui, "Y", lx + COL2 + FW + 4, doorEditY - 10);
-        drawLbl(gui, "Z", lx + COL2 + (FW + 4) * 2, doorEditY - 10);
-        drawDoorList(gui);
-
-        drawHdr(gui, I18n.name("gui.wandscape.scanner.interact_spots_count_header", "❖ 交互位 (%s)", spotMarkerCount).getString(), lx, spotHeaderY);
-        gui.drawString(font, I18n.name("gui.wandscape.scanner.interact_spot_hint", "放置 marker 标记交互位（面朝游客朝向）；右键循环动作，潜行右键循环朝向，敲掉=移除。").getString(),
-                lx + 4, spotHeaderY + 16, MedievalColors.TEXT_MUTED);
-        if (isTouristCategory(scanner.getCategory()) && spotMarkerCount == 0) {
-            gui.drawString(font, I18n.name("gui.wandscape.scanner.no_interact_spot_warning", "§c无交互位 = 游客不选该建筑").getString(),
-                    lx + 4, spotHeaderY + 30, MedievalColors.TEXT_MUTED);
-        }
-
-        drawHdr(gui, I18n.name("gui.wandscape.scanner.placement_meta_header", "❖ 放置元数据").getString(), lx, metaStartY);
-        drawLbl(gui, "ID", lx + 4, metaStartY + 14);
-        drawLbl(gui, "Name", lx + 165, metaStartY + 14);
-        drawLbl(gui, "Creator", lx + 4, metaCreatorY);
-        drawLbl(gui, "Comfort", lx + COL2, metaLabelY - 10);
-        drawLbl(gui, "Magic", lx + COL2 + FW + 16, metaLabelY - 10);
-        drawLbl(gui, "Wonder", lx + COL2 + (FW + 16) * 2, metaLabelY - 10);
-
-        drawHdr(gui, I18n.name("gui.wandscape.scanner.unlock_requirement_header", "❖ 解锁门槛").getString(), lx, unlockY);
-        drawLbl(gui, I18n.name("gui.wandscape.scanner.label_min_level", "最低等级").getString(), lx + COL2, unlockY + ROW_H - 4);
-
-        if ("node".equals(scanner.getCategory())) {
-            drawHdr(gui, I18n.name("gui.wandscape.scanner.node_config_header", "❖ 节点配置").getString(), lx, nodeCatY);
-            drawLbl(gui, I18n.name("gui.wandscape.scanner.label_element", "元素").getString(), lx + COL2, nodeCatY + ROW_H - 4);
-            drawLbl(gui, I18n.name("gui.wandscape.scanner.label_output_per_use", "产出/次").getString(), lx + COL2, nodeCatY + ROW_H * 2 - 4);
-            drawLbl(gui, I18n.name("gui.wandscape.scanner.label_channel_ticks", "引导Ticks").getString(), lx + COL2, nodeCatY + ROW_H * 3 - 4);
-        }
-
-        drawHdr(gui, I18n.name("gui.wandscape.scanner.presets_header", "❖ 预设预存").getString(), lx, presetY);
-
-        String cat = scanner.getCategory();
-        if ("shop".equals(cat)) {
-            drawHdr(gui, I18n.name("gui.wandscape.scanner.shop_params_header", "❖ 商店参数").getString(), lx, shopCatY);
-            drawLbl(gui, I18n.name("gui.wandscape.scanner.label_profit_rate", "利润率%").getString(), lx + COL2, shopCatY + ROW_H - 4);
-            drawLbl(gui, I18n.name("gui.wandscape.scanner.label_interact_duration", "交互时长").getString(), lx + COL2, shopCatY + ROW_H * 2 - 4);
-            drawHdr(gui, I18n.name("gui.wandscape.scanner.shop_goods_header", "❖ 上架商品").getString(), lx, goodsCatY);
-        } else if ("service".equals(cat)) {
-            drawHdr(gui, I18n.name("gui.wandscape.scanner.service_params_header", "❖ 服务参数").getString(), lx, svcCatY);
-            drawLbl(gui, I18n.name("gui.wandscape.scanner.label_energy_per_use", "能量消耗/次").getString(), lx + COL2, svcCatY + ROW_H - 4);
-            drawLbl(gui, I18n.name("gui.wandscape.scanner.label_max_occupancy", "最大容纳人数").getString(), lx + COL2, svcCatY + ROW_H * 2 - 2);
-            drawLbl(gui, I18n.name("gui.wandscape.scanner.label_interact_duration", "交互时长").getString(), lx + COL2, svcCatY + ROW_H * 3 - 2);
-            drawHdr(gui, I18n.name("gui.wandscape.scanner.element_output_header", "❖ 元素产出").getString(), lx, elemOutY);
-        } else if ("relax".equals(cat)) {
-            drawHdr(gui, I18n.name("gui.wandscape.scanner.relax_params_header", "❖ 放松参数").getString(), lx, relaxCatY);
-            drawLbl(gui, I18n.name("gui.wandscape.scanner.label_energy_restore", "回精力/次").getString(), lx + COL2, relaxCatY + ROW_H - 4);
-            drawLbl(gui, I18n.name("gui.wandscape.scanner.label_interact_duration", "交互时长").getString(), lx + COL2, relaxCatY + ROW_H * 2 - 4);
-        } else if ("atm".equals(cat)) {
-            drawHdr(gui, I18n.name("gui.wandscape.scanner.atm_params_header", "❖ ATM 参数").getString(), lx, atmCatY);
-            drawLbl(gui, I18n.name("gui.wandscape.scanner.label_withdraw_limit", "取现上限").getString(), lx + COL2, atmCatY + ROW_H - 4);
-            drawLbl(gui, I18n.name("gui.wandscape.scanner.label_interact_duration", "交互时长").getString(), lx + COL2, atmCatY + ROW_H * 2 - 4);
-        }
-
-        drawHdr(gui, I18n.name("gui.wandscape.scanner.blueprint_export_header", "❖ 蓝图与道路导出").getString(), lx, exportBtnY - 14);
-        gui.drawString(font, scanResult, lx + 230, exportBtnY + 6, MedievalColors.TEXT_MUTED);
-
-        gui.disableScissor();
-
-        super.render(gui, mx, my, pt);
+    private EditBox mkEdit(int x, int y, int w, int h, String val, Consumer<String> r) {
+        EditBox box = new EditBox(font, x + 3, y + 3, w - 6, h - 6, Component.empty());
+        box.setValue(val != null ? val : "");
+        box.setBordered(false);
+        box.setTextColor(MedievalColors.TEXT_WARM_WHITE);
+        box.setTextColorUneditable(MedievalColors.TEXT_MUTED);
+        box.setResponder(r);
+        insetFields.add(new FieldRect(x, y, w, h, box));
+        return addRenderableWidget(box);
     }
 
-    /** Draw custom border for edit box fields with focused/hovered glow effects. */
+    private EditBox mkNumEdit(int x, int y, int w, int h, int val, Consumer<String> r) {
+        EditBox box = new EditBox(font, x + 3, y + 3, w - 6, h - 6, Component.empty());
+        box.setFilter(s -> s.matches("\\d*"));
+        box.setValue(String.valueOf(val));
+        box.setBordered(false);
+        box.setTextColor(MedievalColors.TEXT_WARM_WHITE);
+        box.setTextColorUneditable(MedievalColors.TEXT_MUTED);
+        box.setResponder(r);
+        insetFields.add(new FieldRect(x, y, w, h, box));
+        return addRenderableWidget(box);
+    }
+
+    private EditBox mkCoordEdit(int x, int y, int w, int h, int val, Runnable onChange) {
+        EditBox box = new EditBox(font, x + 3, y + 3, w - 6, h - 6, Component.empty());
+        box.setMaxLength(6);
+        box.setFilter(s -> s.matches("-?\\d{0,6}"));
+        box.setValue(String.valueOf(val));
+        box.setBordered(false);
+        box.setTextColor(MedievalColors.TEXT_WARM_WHITE);
+        box.setTextColorUneditable(MedievalColors.TEXT_MUTED);
+        box.setResponder(s -> onChange.run());
+        insetFields.add(new FieldRect(x, y, w, h, box));
+        return addRenderableWidget(box);
+    }
+
     private void drawEditBoxBorder(GuiGraphics gui, int x, int y, int w, int h, boolean focused, boolean hover) {
         drawInsetField(gui, x, y, w, h);
-        int borderColor = focused ? MedievalColors.BORDER_GOLD 
-                        : (hover ? 0xAAFFD700 : 0x55806848);
+        int borderColor = focused ? MedievalColors.BORDER_GOLD : (hover ? 0xAAFFD700 : 0x55806848);
         gui.fill(x, y, x + w, y + 1, borderColor);
         gui.fill(x, y + h - 1, x + w, y + h, borderColor);
         gui.fill(x, y, x + 1, y + h, borderColor);
         gui.fill(x + w - 1, y, x + w, y + h, borderColor);
-
         if (focused) {
             gui.fill(x + 1, y + 1, x + w - 1, y + h - 1, 0x18FFD700);
         }
     }
 
-    /** Draw bold section header with medieval gold theme. */
-    private void drawHdr(GuiGraphics gui, String text, int x, int y) {
-        gui.drawString(font, Component.literal("§l" + text), x, y, MedievalColors.BORDER_GOLD);
+    private int countSpotMarkers() {
+        var level = scanner.getLevel();
+        if (level == null) return 0;
+        BlockPos wMin = scanner.getWorldMin();
+        BlockPos wMax = scanner.getWorldMax();
+        if (wMin == null || wMax == null) return 0;
+        int count = 0;
+        for (int x = wMin.getX(); x <= wMax.getX(); x++) {
+            for (int y = wMin.getY(); y <= wMax.getY(); y++) {
+                for (int z = wMin.getZ(); z <= wMax.getZ(); z++) {
+                    if (level.getBlockState(new BlockPos(x, y, z))
+                            .is(com.wsteam.wandscape.Wandscape.INTERACT_SPOT_MARKER.get())) {
+                        count++;
+                    }
+                }
+            }
+        }
+        return count;
     }
 
-    /** Draw a label with medieval muted color. */
-    private void drawLbl(GuiGraphics gui, String text, int x, int y) {
-        gui.drawString(font, text, x, y, MedievalColors.TEXT_MUTED);
+    private static boolean isTouristCategory(String c) {
+        return "shop".equals(c) || "service".equals(c) || "relax".equals(c) || "atm".equals(c);
     }
 
-    private static int intOrZero(EditBox box) {
-        if (box == null) return 0;
-        String s = box.getValue();
-        if (s == null || s.isEmpty()) return 0;
-        try { return Integer.parseInt(s); }
-        catch (NumberFormatException e) { return 0; }
+    private static CategoryDef getCategoryDef(String id) {
+        for (CategoryDef c : CATEGORIES) {
+            if (c.id().equals(id)) return c;
+        }
+        return CATEGORIES.get(0);
     }
 
-    /** Returns the first element not yet present in the given cost map, or null if all are used. */
+    private static int getCategoryIndex(String id) {
+        for (int i = 0; i < CATEGORIES.size(); i++) {
+            if (CATEGORIES.get(i).id().equals(id)) return i;
+        }
+        return 0;
+    }
+
+    private static ElementDef getElementDef(String id) {
+        for (ElementDef e : ELEMENTS) {
+            if (e.id().equals(id)) return e;
+        }
+        return ELEMENTS.get(0);
+    }
+
+    private static int getElementIndex(String id) {
+        for (int i = 0; i < ELEMENTS.size(); i++) {
+            if (ELEMENTS.get(i).id().equals(id)) return i;
+        }
+        return 0;
+    }
+
     private static String nextUnusedElement(Map<String, Integer> current) {
-        for (String el : ELEMENTS) {
-            if (!current.containsKey(el)) return el;
+        for (ElementDef el : ELEMENTS) {
+            if (!current.containsKey(el.id())) return el.id();
         }
         return null;
     }
 
+    private static int intOrZero(EditBox box) {
+        if (box == null) return 0;
+        return intOrZero(box.getValue());
+    }
+
     private static int intOrZero(String s) {
         if (s == null || s.isEmpty()) return 0;
-        try { return Integer.parseInt(s); }
-        catch (NumberFormatException e) { return 0; }
+        try {
+            return Integer.parseInt(s);
+        } catch (NumberFormatException e) {
+            return 0;
+        }
     }
 }
