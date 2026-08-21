@@ -11,6 +11,8 @@ import com.wsteam.wandscape.building.scanner.CreativeScannerBlockEntity;
 import com.wsteam.wandscape.building.scanner.CreativeScannerBlockEntity.BlockMode;
 import com.wsteam.wandscape.building.scanner.CreativeScannerBlockEntity.ShopGoodData;
 import com.wsteam.wandscape.building.scanner.CreativeScannerBlockEntity.TargetMode;
+import com.wsteam.wandscape.building.scanner.ScannerBlockEntity;
+import com.wsteam.wandscape.building.scanner.client.gizmo.ScannerGizmoState;
 import com.wsteam.wandscape.building.scanner.network.ScannerExportPacket;
 import com.wsteam.wandscape.building.scanner.network.ScannerSyncPacket;
 import com.wsteam.wandscape.building.scanner.network.ScannerValuePacket;
@@ -30,10 +32,9 @@ import net.minecraft.util.FormattedCharSequence;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
- * Completely refactored Creative Building Scanner Screen.
+ * Unified Building Scanner Screen for both Creative and Survival modes.
  * Uses a clean 4-tab medieval architecture (Bounds, Properties, Presets, Export)
- * with robust multi-line wrapping, paged lists, and zero text overlap.
- * Features immediate visual toast feedback for all side-effect actions.
+ * with robust multi-line wrapping, paged lists, 3D Gizmo integration, and zero text overlap.
  */
 public class CreativeScannerScreen extends MedievalScreen {
 
@@ -41,7 +42,8 @@ public class CreativeScannerScreen extends MedievalScreen {
     private static final int PH = 240;
     private static final int TAB_H = 18;
 
-    private final CreativeScannerBlockEntity scanner;
+    protected final CreativeScannerBlockEntity scanner;
+    protected final boolean isSurvival;
 
     // ── Active Tab (0: Bounds, 1: Properties, 2: Presets, 3: Export) ──
     private int activeTab = 0;
@@ -98,7 +100,7 @@ public class CreativeScannerScreen extends MedievalScreen {
     private EditBox metaId, metaName, metaCreator;
     private EditBox metaComfort, metaMagic, metaWonder, unlockLevel;
 
-    // Category-specific inputs
+    // Category-specific inputs (Creative only)
     private EditBox shopProfitRate, shopDuration;
     private EditBox serviceEnergy, serviceMaxOcc, serviceDuration;
     private EditBox relaxEnergy, relaxDuration;
@@ -122,16 +124,30 @@ public class CreativeScannerScreen extends MedievalScreen {
     private boolean needsRebuild = false;
 
     public CreativeScannerScreen(CreativeScannerBlockEntity scanner) {
-        super(Component.literal("Creative Building Scanner"), PW, PH);
-        setTitleBar(I18n.name("gui.wandscape.scanner.title", "创造建筑扫描器"));
-        this.showCloseButton = true;
-        this.showHelpButton = true;
-        this.helpDocumentPath = "creative_scanner_guide";
-        this.scanner = scanner;
+        this(scanner, scanner instanceof ScannerBlockEntity);
     }
 
-    CreativeScannerBlockEntity getScanner() {
+    public CreativeScannerScreen(CreativeScannerBlockEntity scanner, boolean isSurvival) {
+        super(Component.literal("Building Scanner"), PW, PH);
+        this.scanner = scanner;
+        this.isSurvival = isSurvival;
+        if (isSurvival) {
+            setTitleBar(I18n.name("gui.wandscape.scanner.title_survival", "建筑扫描器 (生存)"));
+            this.helpDocumentPath = "scanner_guide";
+        } else {
+            setTitleBar(I18n.name("gui.wandscape.scanner.title", "创造建筑扫描器"));
+            this.helpDocumentPath = "creative_scanner_guide";
+        }
+        this.showCloseButton = true;
+        this.showHelpButton = true;
+    }
+
+    public CreativeScannerBlockEntity getScanner() {
         return scanner;
+    }
+
+    public boolean isSurvival() {
+        return isSurvival;
     }
 
     private void addBtn(int x, int y, int w, int h, String text, Runnable action) {
@@ -252,7 +268,7 @@ public class CreativeScannerScreen extends MedievalScreen {
         bMaxZ = mkCoordEdit(colMin + (cw + 4) * 2, y + 36, cw, 16, scanner.getBoundaryMax().z(), this::onBoundaryEdit);
 
         addBtn(lx + 270, y + 16, 86, 36, "🎮 可视化调整", () -> {
-            com.wsteam.wandscape.building.scanner.client.gizmo.ScannerGizmoState.enter(scanner);
+            ScannerGizmoState.enter(scanner);
         });
 
         y += 62;
@@ -309,6 +325,32 @@ public class CreativeScannerScreen extends MedievalScreen {
         }
 
         // ── BUILDING Mode Properties ──
+        if (isSurvival) {
+            // Survival mode: category is locked to custom, stats are block-calculated
+            metaId = mkEdit(lx + 24, y, 100, 16, scanner.getBuildingId().isEmpty() ? "custom_building" : scanner.getBuildingId(), s -> {
+                scanner.setBuildingId(s);
+                syncToServer();
+            });
+            metaName = mkEdit(lx + 154, y, 92, 16, scanner.getDisplayName().isEmpty() ? "自定义建筑" : scanner.getDisplayName(), s -> {
+                scanner.setDisplayName(s);
+                syncToServer();
+            });
+            metaCreator = mkEdit(lx + 276, y, 88, 16, scanner.getCreator(), s -> {
+                scanner.setCreator(s);
+                syncToServer();
+            });
+            y += 24;
+
+            addBtn(lx + 256, y, 108, 18, "切换为道路模式", () -> {
+                scanner.setTargetMode(TargetMode.ROAD);
+                syncToServer();
+                showFeedback(Component.literal("§e已切换为道路模式"), 0xFFD4A840);
+                rebuild();
+            });
+            return;
+        }
+
+        // Creative mode: Full configurable category and attributes
         // Row 1: ID, Name, Creator
         metaId = mkEdit(lx + 24, y, 100, 16, scanner.getBuildingId(), s -> {
             scanner.setBuildingId(s);
@@ -756,7 +798,36 @@ public class CreativeScannerScreen extends MedievalScreen {
             return;
         }
 
-        // BUILDING Mode
+        // ── BUILDING Mode Properties ──
+        if (isSurvival) {
+            drawMinimalBox(gui, lx, y - 2, 364, 48, false, false);
+            gui.drawString(font, "ID:", lx + 6, y + 4, MedievalColors.TEXT_MUTED);
+            gui.drawString(font, "名称:", lx + 128, y + 4, MedievalColors.TEXT_MUTED);
+            gui.drawString(font, "作者:", lx + 250, y + 4, MedievalColors.TEXT_MUTED);
+
+            gui.drawString(font, "分类:", lx + 6, y + 27, MedievalColors.TEXT_MUTED);
+            gui.drawString(font, "🛠️ 自定义建筑 (custom) [生存模式固定]", lx + 36, y + 27, MedievalColors.BORDER_GOLD);
+
+            drawMinimalBox(gui, lx, y + 50, 364, 104, false, false);
+            gui.drawString(font, "❖ 生存建筑属性与蓝图说明", lx + 8, y + 54, MedievalColors.BORDER_GOLD);
+            String[] notes = {
+                "• 生存模式下扫描的建筑类别固定为 custom (自定义)。",
+                "• 建筑的舒适度、魔法值、奇观值与维护费用在建造时由其内部方块属性自动评估，无需手动配置。",
+                "• 导出的蓝图可直接在蓝图工坊、建造法杖及建筑列表中使用，支持市民法师全自动建造。",
+                "• 如需配置商店出售商品、服务元素产出等深度经济系统，请在创造模式使用创造建筑扫描器。"
+            };
+            int ny = y + 68;
+            for (String note : notes) {
+                List<FormattedCharSequence> lines = font.split(Component.literal(note), 345);
+                for (var line : lines) {
+                    gui.drawString(font, line, lx + 10, ny, MedievalColors.TEXT_MUTED);
+                    ny += 11;
+                }
+            }
+            return;
+        }
+
+        // Creative mode: Full configurable category and attributes
         drawMinimalBox(gui, lx, y - 2, 364, 68, false, false);
         gui.drawString(font, "ID:", lx + 6, y + 4, MedievalColors.TEXT_MUTED);
         gui.drawString(font, "名称:", lx + 128, y + 4, MedievalColors.TEXT_MUTED);
@@ -871,7 +942,7 @@ public class CreativeScannerScreen extends MedievalScreen {
         gui.drawString(font, "❖ 当前扫描配置概览", lx + 8, y + 4, MedievalColors.BORDER_GOLD);
 
         String targetStr = scanner.getTargetMode() == TargetMode.ROAD ? "道路 (ROAD)" : "建筑 (BUILDING)";
-        String catStr = getCategoryDef(scanner.getCategory()).label() + " (" + scanner.getCategory() + ")";
+        String catStr = isSurvival ? "自定义 (custom)" : (getCategoryDef(scanner.getCategory()).label() + " (" + scanner.getCategory() + ")");
         gui.drawString(font, "目标: " + targetStr + " | 分类: " + catStr, lx + 12, y + 18, MedievalColors.TEXT_WARM_WHITE);
 
         String idStr = scanner.getBuildingId().isEmpty() ? "未命名ID" : scanner.getBuildingId();
@@ -1066,6 +1137,7 @@ public class CreativeScannerScreen extends MedievalScreen {
     }
 
     private void cycleCategory(int dir) {
+        if (isSurvival) return;
         int idx = getCategoryIndex(scanner.getCategory());
         int next = (idx + dir + CATEGORIES.size()) % CATEGORIES.size();
         scanner.setCategory(CATEGORIES.get(next).id());
@@ -1166,6 +1238,9 @@ public class CreativeScannerScreen extends MedievalScreen {
 
     private void syncToServer() {
         if (minecraft == null || minecraft.level == null) return;
+        if (isSurvival) {
+            scanner.setCategory("custom");
+        }
         CompoundTag tag = scanner.saveWithoutMetadata(minecraft.level.registryAccess());
         PacketDistributor.sendToServer(new ScannerSyncPacket(scanner.getBlockPos(), tag));
     }
@@ -1249,7 +1324,10 @@ public class CreativeScannerScreen extends MedievalScreen {
             int[] arr = tag.getIntArray("boundary_max");
             if (arr.length == 3) scanner.setBoundary(scanner.getBoundaryMin(), BlockOffset.of(arr[0], arr[1], arr[2]));
         }
-        if (tag.contains("category")) scanner.setCategory(tag.getString("category"));
+        if (tag.contains("category")) {
+            if (isSurvival) scanner.setCategory("custom");
+            else scanner.setCategory(tag.getString("category"));
+        }
         if (tag.contains("building_id")) scanner.setBuildingId(tag.getString("building_id"));
         if (tag.contains("display_name")) scanner.setDisplayName(tag.getString("display_name"));
         if (tag.contains("creator")) scanner.setCreator(tag.getString("creator"));

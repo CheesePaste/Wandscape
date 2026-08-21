@@ -2,7 +2,9 @@ package com.wsteam.wandscape.building.scanner.client.gizmo;
 
 import com.wsteam.wandscape.building.data.BlockOffset;
 import com.wsteam.wandscape.building.scanner.CreativeScannerBlockEntity;
+import com.wsteam.wandscape.building.scanner.ScannerBlockEntity;
 import com.wsteam.wandscape.building.scanner.client.CreativeScannerScreen;
+import com.wsteam.wandscape.building.scanner.client.ScannerScreen;
 import com.wsteam.wandscape.building.scanner.network.ScannerSyncPacket;
 import com.wsteam.wandscape.shared.log.Log;
 
@@ -219,12 +221,15 @@ public final class ScannerGizmoState {
             ));
         }
 
+        CreativeScannerBlockEntity be = scanner;
         active = false;
         if (mc.mouseHandler != null) {
             mc.mouseHandler.releaseMouse();
         }
 
-        CreativeScannerScreen screen = new CreativeScannerScreen(scanner);
+        CreativeScannerScreen screen = (be instanceof ScannerBlockEntity survival)
+                ? new ScannerScreen(survival)
+                : new CreativeScannerScreen(be);
         mc.setScreen(screen);
         screen.showFeedback(Component.literal(String.format("§a✓ 3D 包围盒已更新并同步！(%d×%d×%d)", getWidth(), getHeight(), getDepth())), 0xFF55FF55);
         Log.info(TAG, "Confirmed Gizmo changes: min={}, max={}", currentMin, currentMax);
@@ -233,6 +238,7 @@ public final class ScannerGizmoState {
     public static void cancel() {
         if (!active || scanner == null) return;
 
+        CreativeScannerBlockEntity be = scanner;
         scanner.setBoundary(initialMin, initialMax);
         active = false;
 
@@ -241,7 +247,9 @@ public final class ScannerGizmoState {
             mc.mouseHandler.releaseMouse();
         }
 
-        CreativeScannerScreen screen = new CreativeScannerScreen(scanner);
+        CreativeScannerScreen screen = (be instanceof ScannerBlockEntity survival)
+                ? new ScannerScreen(survival)
+                : new CreativeScannerScreen(be);
         mc.setScreen(screen);
         screen.showFeedback(Component.literal("§6✓ 已还原原始 3D 边界配置。"), 0xFFFFAA00);
         Log.info(TAG, "Cancelled Gizmo mode, reverted to min={}, max={}", initialMin, initialMax);
