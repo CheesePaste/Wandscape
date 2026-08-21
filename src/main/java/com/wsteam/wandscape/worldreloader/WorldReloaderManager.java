@@ -393,17 +393,9 @@ public class WorldReloaderManager {
                     int targetX = center.getX() + dx;
                     int targetZ = center.getZ() + dz;
 
-                    // 1. Find the true solid surface height at (refX, refZ)
+                    // 1. Find reference surface height with safe fallback
                     int refTopY = refWorld.getHeight(Heightmap.Types.MOTION_BLOCKING, refX, refZ);
-                    int refSurfaceY = refTopY;
-                    while (refSurfaceY > refWorld.getMinBuildHeight() + 10) {
-                        BlockPos checkPos = new BlockPos(refX, refSurfaceY, refZ);
-                        BlockState checkState = refWorld.getBlockState(checkPos);
-                        if (WorldReloaderTask.isSolidBlock(refWorld, checkState)) {
-                            break;
-                        }
-                        refSurfaceY--;
-                    }
+                    int refSurfaceY = WorldReloaderTask.validateAndAdjustHeight(refWorld, refX, refZ, refTopY, refWorld.getMinBuildHeight());
 
                     int originalSurfaceY = world.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, targetX, targetZ) - 1;
                     int refTargetSurfaceY = refSurfaceY + center.getY() - referenceCenter.getY();
@@ -418,34 +410,23 @@ public class WorldReloaderManager {
 
                     int yDelta = baseTargetSurfaceY - refSurfaceY;
 
-                    // 2. Sample surface and subsurface (2 layers down)
-                    for (int y = refSurfaceY; y >= Math.max(refSurfaceY - 2, refWorld.getMinBuildHeight()); y--) {
+                    // 2. Sample from subsurface (3 layers down) up to above-surface features (yMax)
+                    int minYToSample = Math.max(refSurfaceY - 3, refWorld.getMinBuildHeight());
+                    int maxYToSample = Math.min(refSurfaceY + yMax, refWorld.getMaxBuildHeight() - 1);
+
+                    for (int y = minYToSample; y <= maxYToSample; y++) {
+                        BlockPos refBlockPos = new BlockPos(refX, y, refZ);
+                        BlockState state = refWorld.getBlockState(refBlockPos);
+                        if (state.isAir()) continue;
+
                         int targetY = y + yDelta;
                         BlockPos targetPos = new BlockPos(targetX, targetY, targetZ);
                         if (preserveBeacon && dist <= 8 && WorldReloaderTask.shouldPreserveCenterAreaStatic(targetPos, center)) {
                             continue;
                         }
-                        BlockState state = refWorld.getBlockState(new BlockPos(refX, y, refZ));
-                        if (!state.isAir()) {
-                            list.add(new TransformPreviewPacket.PreviewBlock(
-                                    (short) dx, (short) (targetY - center.getY()), (short) dz, Block.getId(state)));
-                        }
-                    }
 
-                    // 3. Sample above-surface features (trees, vegetation, structures up to yMax)
-                    int maxAbove = Math.min(refSurfaceY + yMax, refWorld.getMaxBuildHeight() - 1);
-                    for (int y = refSurfaceY + 1; y <= maxAbove; y++) {
-                        BlockPos abovePos = new BlockPos(refX, y, refZ);
-                        BlockState aboveState = refWorld.getBlockState(abovePos);
-                        if (!aboveState.isAir()) {
-                            int targetY = y + yDelta;
-                            BlockPos targetPos = new BlockPos(targetX, targetY, targetZ);
-                            if (preserveBeacon && dist <= 8 && WorldReloaderTask.shouldPreserveCenterAreaStatic(targetPos, center)) {
-                                continue;
-                            }
-                            list.add(new TransformPreviewPacket.PreviewBlock(
-                                    (short) dx, (short) (targetY - center.getY()), (short) dz, Block.getId(aboveState)));
-                        }
+                        list.add(new TransformPreviewPacket.PreviewBlock(
+                                (short) dx, (short) (targetY - center.getY()), (short) dz, Block.getId(state)));
                     }
                 }
             }

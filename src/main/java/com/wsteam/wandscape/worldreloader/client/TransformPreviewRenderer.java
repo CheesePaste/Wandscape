@@ -50,11 +50,6 @@ public final class TransformPreviewRenderer {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null) return;
 
-        AABB bounds = TransformPreviewClientState.getBounds();
-        if (bounds != null && !event.getFrustum().isVisible(bounds)) {
-            return;
-        }
-
         BlockPos center = TransformPreviewClientState.getCenter();
         if (center == null) return;
 
