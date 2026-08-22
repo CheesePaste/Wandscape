@@ -83,11 +83,11 @@ public final class ScannerGizmoOverlay {
         int curY = y + 6;
 
         // Header Title
-        String title = I18n.name("gui.wandscape.gizmo.title", "📐 3D 可视化调整 (Gizmo)").getString();
+        String title = I18n.string("gui.wandscape.gizmo.title", "📐 3D 可视化调整 (Gizmo)");
         gui.drawString(font, title, x + PAD, curY, MedievalColors.BORDER_GOLD);
         curY += 12;
 
-        String subtitle = I18n.name("gui.wandscape.gizmo.subtitle", "建筑 3D 包围盒实时编辑").getString();
+        String subtitle = I18n.string("gui.wandscape.gizmo.subtitle", "建筑 3D 包围盒实时编辑");
         gui.drawString(font, subtitle, x + PAD, curY, MedievalColors.TEXT_MUTED);
         curY += 12;
 
@@ -96,7 +96,7 @@ public final class ScannerGizmoOverlay {
         curY += 5;
 
         // ── Anchor Switcher (MIN vs MAX) ──
-        String anchorLabel = I18n.name("gui.wandscape.gizmo.anchor_label", "编辑锚点 (Tab 切换):").getString();
+        String anchorLabel = I18n.string("gui.wandscape.gizmo.anchor_label", "编辑锚点 (Tab 切换):");
         gui.drawString(font, anchorLabel, x + PAD, curY, MedievalColors.TEXT_WARM_WHITE);
         curY += 11;
 
@@ -104,8 +104,8 @@ public final class ScannerGizmoOverlay {
         boolean minActive = ScannerGizmoState.getSelectedAnchor() == ScannerGizmoState.Anchor.MIN;
         boolean maxActive = ScannerGizmoState.getSelectedAnchor() == ScannerGizmoState.Anchor.MAX;
 
-        String btnMin = I18n.name("gui.wandscape.gizmo.anchor_min", "🔵 Min 角点").getString();
-        String btnMax = I18n.name("gui.wandscape.gizmo.anchor_max", "🟡 Max 角点").getString();
+        String btnMin = I18n.string("gui.wandscape.gizmo.anchor_min", "🔵 Min 角点");
+        String btnMax = I18n.string("gui.wandscape.gizmo.anchor_max", "🟡 Max 角点");
 
         drawButton(gui, font, x + PAD, curY, btnW, 16, btnMin, minActive, isInRect(mx, my, x + PAD, curY, btnW, 16), 0xFF00E5FF);
         drawButton(gui, font, x + PAD + btnW + 4, curY, btnW, 16, btnMax, maxActive, isInRect(mx, my, x + PAD + btnW + 4, curY, btnW, 16), 0xFFFFD700);
@@ -118,15 +118,15 @@ public final class ScannerGizmoOverlay {
         long bVol = ScannerGizmoState.getVolume();
 
         gui.fill(x + PAD, curY, x + w - PAD, curY + 22, 0x66000000);
-        gui.drawString(font, String.format("尺寸: %d × %d × %d", bw, bh, bd), x + PAD + 4, curY + 3, MedievalColors.BORDER_GOLD);
-        gui.drawString(font, String.format("体积: %,d 方块格", bVol), x + PAD + 4, curY + 12, MedievalColors.TEXT_WARM_WHITE);
+        gui.drawString(font, I18n.string("gui.wandscape.scanner.size_format", "尺寸: %d × %d × %d", bw, bh, bd), x + PAD + 4, curY + 3, MedievalColors.BORDER_GOLD);
+        gui.drawString(font, I18n.string("gui.wandscape.scanner.vol_format", "体积: %,d 方块格", bVol), x + PAD + 4, curY + 12, MedievalColors.TEXT_WARM_WHITE);
         curY += 26;
 
         // ── Stepper Adjusters for active anchor ──
         ScannerGizmoState.Anchor anchor = ScannerGizmoState.getSelectedAnchor();
         BlockOffset off = (anchor == ScannerGizmoState.Anchor.MIN) ? ScannerGizmoState.getCurrentMin() : ScannerGizmoState.getCurrentMax();
 
-        String stepperTitle = I18n.name("gui.wandscape.gizmo.stepper_title", "坐标微调 (%s):", anchor == ScannerGizmoState.Anchor.MIN ? "Min" : "Max").getString();
+        String stepperTitle = I18n.string("gui.wandscape.gizmo.stepper_title", "坐标微调 (%s):", anchor == ScannerGizmoState.Anchor.MIN ? "Min" : "Max");
         gui.drawString(font, stepperTitle, x + PAD, curY, MedievalColors.TEXT_MUTED);
         curY += 11;
 
@@ -138,11 +138,11 @@ public final class ScannerGizmoOverlay {
         curY += 18;
 
         // ── Help Text ──
-        String helpMouse = I18n.name("gui.wandscape.gizmo.help_mouse", "🖱️ 右键拖动视角 | 左键拖轴").getString();
+        String helpMouse = I18n.string("gui.wandscape.gizmo.help_mouse", "🖱️ 右键拖动视角 | 左键拖轴");
         gui.drawString(font, helpMouse, x + PAD, curY, MedievalColors.TEXT_DIM);
         curY += 10;
 
-        String helpKeys = I18n.name("gui.wandscape.gizmo.help_keys", "⌨️ Enter 保存 | Esc 还原").getString();
+        String helpKeys = I18n.string("gui.wandscape.gizmo.help_keys", "⌨️ Enter 保存 | Esc 还原");
         gui.drawString(font, helpKeys, x + PAD, curY, MedievalColors.TEXT_DIM);
         curY += 14;
 
@@ -151,8 +151,8 @@ public final class ScannerGizmoOverlay {
         boolean confHover = isInRect(mx, my, x + PAD, curY, actBtnW, 18);
         boolean cancHover = isInRect(mx, my, x + PAD + actBtnW + 4, curY, actBtnW, 18);
 
-        String btnConfirm = I18n.name("gui.wandscape.gizmo.confirm", "✓ 确定 (Enter)").getString();
-        String btnCancel = I18n.name("gui.wandscape.gizmo.cancel", "✕ 还原 (Esc)").getString();
+        String btnConfirm = I18n.string("gui.wandscape.gizmo.confirm", "✓ 确定 (Enter)");
+        String btnCancel = I18n.string("gui.wandscape.gizmo.cancel", "✕ 还原 (Esc)");
 
         drawButton(gui, font, x + PAD, curY, actBtnW, 18, btnConfirm, true, confHover, MedievalColors.BORDER_GOLD);
         drawButton(gui, font, x + PAD + actBtnW + 4, curY, actBtnW, 18, btnCancel, false, cancHover, MedievalColors.TEXT_MUTED);
