@@ -57,11 +57,11 @@ public abstract class MedievalScreen extends Screen {
     protected String helpDocumentPath;
     protected HelpButton helpButton;
 
-    // ── Glass panel gradient ──
-    private static final int GLASS_TOP       = 0xBB483828;
-    private static final int GLASS_BOTTOM    = 0xBB1E1410;
-    private static final int GLASS_BOX_TOP    = 0xBB423020;
-    private static final int GLASS_BOX_BOTTOM = 0xBB1C1008;
+    // ── Glass panel gradient (Dark opaque medieval theme) ──
+    private static final int GLASS_TOP       = 0xF5261A10;
+    private static final int GLASS_BOTTOM    = 0xF5120804;
+    private static final int GLASS_BOX_TOP    = 0xDD3A2818;
+    private static final int GLASS_BOX_BOTTOM = 0xDD1E100A;
 
     // ── Transient feedback toast (drawn over the screen, does not resize the panel) ──
     private static final long FEEDBACK_DURATION_MS = 3000L;

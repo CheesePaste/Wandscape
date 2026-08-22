@@ -214,7 +214,7 @@ public class CreativeScannerScreen extends MedievalScreen {
         int y = startY;
 
         // Top Toolbar Row
-        addBtn(lx, y, 78, 18, I18n.name("gui.wandscape.scanner.mode_save", "模式: SAVE ▾").getString(), () -> {
+        addBtn(lx, y, 80, 18, I18n.string("gui.wandscape.scanner.mode_save", "模式: SAVE ▾"), () -> {
             scanner.setBlockMode(BlockMode.CORNER);
             syncToServer();
             showFeedback(Component.literal("§e已切换到 CORNER 辅角点模式"), 0xFFD4A840);
@@ -222,9 +222,9 @@ public class CreativeScannerScreen extends MedievalScreen {
         });
 
         String targetLabel = scanner.getTargetMode() == TargetMode.BUILDING
-                ? I18n.name("gui.wandscape.scanner.target_building", "目标: 建筑 ▾").getString()
-                : I18n.name("gui.wandscape.scanner.target_road", "目标: 道路 ▾").getString();
-        addBtn(lx + 82, y, 84, 18, targetLabel, () -> {
+                ? I18n.string("gui.wandscape.scanner.target_building", "目标: 建筑 ▾")
+                : I18n.string("gui.wandscape.scanner.target_road", "目标: 道路 ▾");
+        addBtn(lx + 84, y, 92, 18, targetLabel, () -> {
             TargetMode next = scanner.getTargetMode() == TargetMode.BUILDING ? TargetMode.ROAD : TargetMode.BUILDING;
             scanner.setTargetMode(next);
             syncToServer();
@@ -232,12 +232,12 @@ public class CreativeScannerScreen extends MedievalScreen {
             rebuild();
         });
 
-        structureNameEdit = mkEdit(lx + 204, y, 80, 18, scanner.getStructureName(), s -> {
+        structureNameEdit = mkEdit(lx + 180, y, 82, 18, scanner.getStructureName(), s -> {
             scanner.setStructureName(s);
             syncToServer();
         });
 
-        addBtn(lx + 288, y, 76, 18, I18n.name("gui.wandscape.scanner.match_corners", "❖ 匹配角点").getString(), () -> {
+        addBtn(lx + 266, y, 98, 18, I18n.string("gui.wandscape.scanner.match_corners", "❖ 匹配角点"), () -> {
             if (minecraft != null && minecraft.level != null) {
                 boolean matched = scanner.detectBoundaryFromCorners(minecraft.level);
                 if (matched) {
@@ -259,8 +259,8 @@ public class CreativeScannerScreen extends MedievalScreen {
         y += 24;
 
         // ── Card 1: 3D 边界坐标 (Min & Max) ──
-        int cw = 38;
-        int colMin = lx + 54;
+        int cw = 36;
+        int colMin = lx + 50;
         bMinX = mkCoordEdit(colMin, y + 16, cw, 16, scanner.getBoundaryMin().x(), this::onBoundaryEdit);
         bMinY = mkCoordEdit(colMin + cw + 4, y + 16, cw, 16, scanner.getBoundaryMin().y(), this::onBoundaryEdit);
         bMinZ = mkCoordEdit(colMin + (cw + 4) * 2, y + 16, cw, 16, scanner.getBoundaryMin().z(), this::onBoundaryEdit);
@@ -269,21 +269,21 @@ public class CreativeScannerScreen extends MedievalScreen {
         bMaxY = mkCoordEdit(colMin + cw + 4, y + 36, cw, 16, scanner.getBoundaryMax().y(), this::onBoundaryEdit);
         bMaxZ = mkCoordEdit(colMin + (cw + 4) * 2, y + 36, cw, 16, scanner.getBoundaryMax().z(), this::onBoundaryEdit);
 
-        addBtn(lx + 270, y + 16, 86, 36, I18n.name("gui.wandscape.scanner.gizmo_btn", "🎮 可视化调整").getString(), () -> {
+        addBtn(lx + 268, y + 16, 92, 36, I18n.string("gui.wandscape.scanner.gizmo_btn", "🎮 可视化调整"), () -> {
             ScannerGizmoState.enter(scanner);
         });
 
         y += 62;
 
         // ── Card 2: 门偏移与交互位 ──
-        int doorW = 32;
+        int doorW = 28;
         int doorCol = lx + 44;
         doorX = mkCoordEdit(doorCol, y + 16, doorW, 16, getDoorAxis(0), this::onDoorChanged);
         doorY = mkCoordEdit(doorCol + doorW + 4, y + 16, doorW, 16, getDoorAxis(1), this::onDoorChanged);
         doorZ = mkCoordEdit(doorCol + (doorW + 4) * 2, y + 16, doorW, 16, getDoorAxis(2), this::onDoorChanged);
 
-        addBtn(lx + 8, y + 36, 68, 16, I18n.name("gui.wandscape.scanner.auto_detect_door", "自动检门").getString(), this::onAutoDetectDoor);
-        addBtn(lx + 80, y + 36, 42, 16, I18n.name("gui.wandscape.scanner.clear", "清除").getString(), () -> {
+        addBtn(lx + 8, y + 36, 114, 16, I18n.string("gui.wandscape.scanner.auto_detect_door", "自动检门"), this::onAutoDetectDoor);
+        addBtn(lx + 126, y + 36, 52, 16, I18n.string("gui.wandscape.scanner.clear", "清除"), () -> {
             scanner.clearDoorOffsets();
             if (doorX != null) doorX.setValue("0");
             if (doorY != null) doorY.setValue("0");
@@ -991,8 +991,14 @@ public class CreativeScannerScreen extends MedievalScreen {
             boolean hover = btn.enabled() && isInRect(mx, my, btn.x(), btn.y(), btn.w(), btn.h());
             drawMinimalBox(gui, btn.x(), btn.y(), btn.w(), btn.h(), false, hover);
             int textColor = !btn.enabled() ? MedievalColors.TEXT_DIM : (hover ? MedievalColors.BORDER_GOLD : MedievalColors.TEXT_WARM_WHITE);
-            gui.drawString(font, btn.text(), btn.x() + (btn.w() - font.width(btn.text())) / 2,
-                    btn.y() + (btn.h() - font.lineHeight) / 2, textColor);
+            String text = btn.text();
+            int maxTextW = btn.w() - 4;
+            if (font.width(text) > maxTextW) {
+                text = font.plainSubstrByWidth(text, maxTextW);
+            }
+            int tx = btn.x() + (btn.w() - font.width(text)) / 2;
+            int ty = btn.y() + (btn.h() - font.lineHeight) / 2;
+            gui.drawString(font, text, tx, ty, textColor);
         }
 
         // Super render (EditBoxes)
