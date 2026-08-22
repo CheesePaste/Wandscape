@@ -156,17 +156,28 @@ public abstract class MedievalScreen extends Screen {
     }
 
     /** Draw the transient feedback toast, if any, at the top-center of the screen. */
-    private void renderFeedback(GuiGraphics g) {
+    protected void renderFeedback(GuiGraphics g) {
         if (feedback == null) return;
         if (System.currentTimeMillis() > feedbackExpireTick) {
             feedback = null;
             return;
         }
-        int w = font.width(feedback) + 8;
+        int textW = font.width(feedback);
+        int pad = 8;
+        int w = textW + pad * 2;
+        int h = font.lineHeight + 6;
         int x = (this.width - w) / 2;
-        int y = 8;
-        g.fill(x, y, x + w, y + 12, 0xAA000000);
-        g.drawString(font, feedback, x + 4, y + 2, feedbackColor);
+        int y = Math.max(6, topPos - h - 3);
+
+        // Dark medieval box with colored glow border
+        g.fillGradient(x, y, x + w, y + h, 0xEE2A1C14, 0xEE120804);
+        int borderCol = (feedbackColor & 0x00FFFFFF) | 0xDD000000;
+        g.fill(x, y, x + w, y + 1, borderCol);
+        g.fill(x, y + h - 1, x + w, y + h, borderCol);
+        g.fill(x, y, x + 1, y + h, borderCol);
+        g.fill(x + w - 1, y, x + w, y + h, borderCol);
+
+        g.drawString(font, feedback, x + pad, y + (h - font.lineHeight) / 2, feedbackColor);
     }
 
     @Override
