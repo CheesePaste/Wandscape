@@ -12,8 +12,8 @@ class BuildingSortTest {
         assertTrue(BuildingSort.categoryRank("government") < BuildingSort.categoryRank("storage"));
         assertTrue(BuildingSort.categoryRank("storage") < BuildingSort.categoryRank("workstation"));
         assertTrue(BuildingSort.categoryRank("workstation") < BuildingSort.categoryRank("crafting_station"));
-        assertTrue(BuildingSort.categoryRank("crafting_station") < BuildingSort.categoryRank("potion_station"));
-        assertTrue(BuildingSort.categoryRank("potion_station") < BuildingSort.categoryRank("tavern"));
+        assertTrue(BuildingSort.categoryRank("crafting_station") < BuildingSort.categoryRank("magic_station"));
+        assertTrue(BuildingSort.categoryRank("magic_station") < BuildingSort.categoryRank("tavern"));
         assertTrue(BuildingSort.categoryRank("tavern") < BuildingSort.categoryRank("altar"));
         assertTrue(BuildingSort.categoryRank("altar") < BuildingSort.categoryRank("node"));
         assertTrue(BuildingSort.categoryRank("node") < BuildingSort.categoryRank("decoration"));

@@ -1,6 +1,6 @@
 {
   "type": "potion",
-  "craft_station": "potion_station",
+  "craft_station": "crafting_station",
   "id": "mana_potion",
   "output": { "item": "wandscape:mana_potion" },
   "cost": {

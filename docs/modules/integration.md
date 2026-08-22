@@ -20,12 +20,13 @@
 
 ### 数据模型（纯逻辑，零 mezz 引用，可单测）
 
-- `ElementRecipe` — record：`kind`（SYNTHESIZE/DECOMPOSE）、`stationKey`（workstation/crafting_station/potion_station）、`itemId`（存字符串，JEI 层再解析成 ItemStack）、`elements`（Map<ElementType,Long>：合成=成本，分解=完整价值）、`extraInputs`（药剂额外原料如玻璃瓶）、`value`（分解总价值）。
+- `ElementRecipe` — record：`kind`（SYNTHESIZE/DECOMPOSE）、`stationKey`（workstation/crafting_station/magic_station）、`itemId`（存字符串，JEI 层再解析成 ItemStack）、`elements`（Map<ElementType,Long>：合成=成本，分解=完整价值）、`extraInputs`（药剂额外原料如玻璃瓶）、`value`（分解总价值）。
 - `ElementRecipeKind` — SYNTHESIZE / DECOMPOSE。
-- `ElementRecipeCollector` — 纯收集，三个来源：
+- `ElementRecipeCollector` — 纯收集，四个来源：
   - `fromElementMappings`：元素映射 buildCost → 工作站「合成」+「分解」两条；跳过 disabled / 空 buildCost。
   - `fromCraftWandRecipes`：法杖配方 → 合成站「合成」（法杖不可分解）。
-  - `fromBrewPotionRecipes`：药剂配方 → 酿造站「合成」（带额外原料）。
+  - `fromBrewPotionRecipes`：药剂配方 → 合成站「合成」（带额外原料，随配方 craft_station=crafting_station，原酿造站归并）。
+  - `fromCraftSpellRecipes`：魔法卷轴配方 → 魔法工坊「合成」。
   - `itemIdEquals`：忽略 `minecraft:` 前缀比较（与 `ProductionRecipeLoader.findSynthesizeRecipe` 一致）。
 
 ### JEI 层

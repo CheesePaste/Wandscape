@@ -9,6 +9,7 @@ import javax.annotation.Nullable;
 
 import com.wsteam.wandscape.element.internal.ElementMappingConfig;
 import com.wsteam.wandscape.production.data.BrewPotionRecipe;
+import com.wsteam.wandscape.production.data.CraftSpellRecipe;
 import com.wsteam.wandscape.production.data.CraftWandRecipe;
 import com.wsteam.wandscape.shared.data.ElementType;
 
@@ -18,14 +19,15 @@ import com.wsteam.wandscape.shared.data.ElementType;
  * <ul>
  *   <li>元素映射：每个有非空 buildCost 且未 disabled 的映射生成工作站「合成」+「分解」两条。</li>
  *   <li>法杖配方：只生成合成站「合成」（法杖不可分解）。</li>
- *   <li>药剂配方：只生成酿造站「合成」（带额外原料）。</li>
+ *   <li>药剂配方：只生成合成站「合成」（带额外原料，随配方 craft_station 数据驱动定位）。</li>
+ *   <li>魔法卷轴配方：生成魔法工坊「合成」。</li>
  * </ul>
  */
 public final class ElementRecipeCollector {
 
     public static final String STATION_WORKSTATION = "workstation";
     public static final String STATION_CRAFTING = "crafting_station";
-    public static final String STATION_POTION = "potion_station";
+    public static final String STATION_MAGIC = "magic_station";
 
     private ElementRecipeCollector() {}
 
@@ -57,25 +59,39 @@ public final class ElementRecipeCollector {
         return result;
     }
 
-    /** 酿造站药剂配方（不可分解，只生成合成，带额外原料）。 */
+    /** 药剂配方（仅合成，带额外原料；随配方 craft_station 归属合成站）。 */
     public static List<ElementRecipe> fromBrewPotionRecipes(Collection<BrewPotionRecipe> recipes) {
         List<ElementRecipe> result = new ArrayList<>();
         for (BrewPotionRecipe r : recipes) {
             if (r.cost().isEmpty()) continue;
-            String station = r.craftStation() != null ? r.craftStation() : STATION_POTION;
+            String station = r.craftStation() != null ? r.craftStation() : STATION_CRAFTING;
             result.add(new ElementRecipe(r.id(), ElementRecipeKind.SYNTHESIZE, station,
                     r.outputItem(), r.cost(), r.inputItems(), 0));
         }
         return result;
     }
 
-    /** 聚合三个来源为完整配方列表。 */
+    /** 魔法卷轴配方（仅合成，魔法工坊）。 */
+    public static List<ElementRecipe> fromCraftSpellRecipes(Collection<CraftSpellRecipe> recipes) {
+        List<ElementRecipe> result = new ArrayList<>();
+        for (CraftSpellRecipe r : recipes) {
+            if (r.cost().isEmpty()) continue;
+            String station = r.craftStation() != null ? r.craftStation() : STATION_MAGIC;
+            result.add(new ElementRecipe(r.id(), ElementRecipeKind.SYNTHESIZE, station,
+                    r.outputItem(), r.cost(), List.of(), 0));
+        }
+        return result;
+    }
+
+    /** 聚合四个来源为完整配方列表。 */
     public static List<ElementRecipe> collectAll(Collection<ElementMappingConfig> mappings,
                                                  Collection<CraftWandRecipe> wands,
-                                                 Collection<BrewPotionRecipe> potions) {
+                                                 Collection<BrewPotionRecipe> potions,
+                                                 Collection<CraftSpellRecipe> spells) {
         List<ElementRecipe> all = fromElementMappings(mappings);
         all.addAll(fromCraftWandRecipes(wands));
         all.addAll(fromBrewPotionRecipes(potions));
+        all.addAll(fromCraftSpellRecipes(spells));
         return all;
     }
 

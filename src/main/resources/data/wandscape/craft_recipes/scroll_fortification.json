@@ -1,0 +1,14 @@
+{
+  "type": "spell",
+  "craft_station": "magic_station",
+  "id": "scroll_fortification",
+  "display_name": "强化卷轴",
+  "output": { "item": "wandscape:spell_scroll", "magic_id": "fortification" },
+  "cost": {
+    "metal": 24,
+    "earth": 12
+  },
+  "unlock_requirement": {
+    "min_colony_level": 2
+  }
+}

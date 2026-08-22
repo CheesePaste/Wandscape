@@ -1,0 +1,14 @@
+{
+  "type": "spell",
+  "craft_station": "magic_station",
+  "id": "scroll_heal",
+  "display_name": "治愈卷轴",
+  "output": { "item": "wandscape:spell_scroll", "magic_id": "heal" },
+  "cost": {
+    "water": 16,
+    "wood": 8
+  },
+  "unlock_requirement": {
+    "min_colony_level": 1
+  }
+}

@@ -3,6 +3,7 @@ package com.wsteam.wandscape.npc.network;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.wsteam.wandscape.magic.item.SpellItem;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
@@ -12,18 +13,24 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
 /**
- * Client→server packet: player sets an NPC's cast strategy in the strategy screen.
+ * Client→server packet: player edits an NPC's equipped magic loadout + cast preset in the strategy screen.
  *
- * <p>{@code preset} 为 {@code CastStrategyComponent.Preset} 大写名；非 {@code CUSTOM} 时服务端
- * 忽略 {@code priority}（按预设重算），{@code CUSTOM} 时用 {@code priority} 作显式优先级。
- * 服务端改完回发 {@link NpcDataPacket} 刷新屏幕。
+ * <p>{@code equipped} 为扁平 magicId 列表（分类固定序 × 类内槽位序）；服务端按每个魔法真实分类
+ * 装桶校验（未知/UTILITY 丢、每类 ≤3、去重）——客户端立场不获信任，非法请求就地修正而非拒绝。
+ * {@code consumeSlot} ≥ 0 表示本次改动包含「从玩家背包该槽消耗一张卷轴」的装备动作：仅当该卷轴
+ * 绑定的魔法在本次改动中**新增装备**成功才实际扣一张（防状态重发反复扣）。服务端改完回发
+ * {@link NpcDataPacket} 刷新屏幕为权威状态。
  */
-public record NpcStrategyPacket(int entityId, String preset, List<String> priority)
+public record NpcStrategyPacket(int entityId, String preset, List<String> equipped, int consumeSlot)
         implements CustomPacketPayload {
+
+    /** 无装备动作（纯弹 preset / 卸载 / 排序）时 consumeSlot = -1。 */
+    public static final int NO_CONSUME = -1;
 
     public static final Type<NpcStrategyPacket> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath(MODID, "npc_strategy"));
@@ -41,21 +48,23 @@ public record NpcStrategyPacket(int entityId, String preset, List<String> priori
     static void write(RegistryFriendlyByteBuf buf, NpcStrategyPacket pkt) {
         buf.writeInt(pkt.entityId);
         buf.writeUtf(pkt.preset);
-        buf.writeVarInt(pkt.priority.size());
-        for (String id : pkt.priority) {
+        buf.writeVarInt(pkt.equipped.size());
+        for (String id : pkt.equipped) {
             buf.writeUtf(id);
         }
+        buf.writeInt(pkt.consumeSlot);
     }
 
     static NpcStrategyPacket read(RegistryFriendlyByteBuf buf) {
         int entityId = buf.readInt();
         String preset = buf.readUtf();
         int size = buf.readVarInt();
-        List<String> priority = new ArrayList<>(size);
+        List<String> equipped = new ArrayList<>(size);
         for (int i = 0; i < size; i++) {
-            priority.add(buf.readUtf());
+            equipped.add(buf.readUtf());
         }
-        return new NpcStrategyPacket(entityId, preset, priority);
+        int consumeSlot = buf.readInt();
+        return new NpcStrategyPacket(entityId, preset, equipped, consumeSlot);
     }
 
     // ── Server handler ──
@@ -72,16 +81,36 @@ public record NpcStrategyPacket(int entityId, String preset, List<String> priori
             return;
         }
 
+        // 消耗判定前置：若本次改动声明了背包卷轴，先记住其魔法在装备前的已知态
+        String consumedMagic = consumeMagicId(player, packet.consumeSlot());
+        boolean wasKnown = consumedMagic != null && npc.equippedMagic.knows(consumedMagic);
+
         var api = WandscapeApis.getSpellcastingApiSilently();
         if (api == null) {
             Log.warn(TAG, "SpellcastingApi not loaded — strategy change dropped");
             return;
         }
-        api.setStrategy(npc.getUUID(), packet.preset(), packet.priority());
-        Log.info(TAG, "NPC {} strategy preset={} priority={}",
-                npc.getUUID().toString().substring(0, 8), packet.preset(), packet.priority());
+        api.setEquippedAndStrategy(npc.getUUID(), packet.preset(), packet.equipped());
+        Log.info(TAG, "NPC {} preset={} equipped={}",
+                npc.getUUID().toString().substring(0, 8), packet.preset(), packet.equipped());
 
-        // 刷新策略屏 / 信息屏
+        // 卷轴仅在「本次装备中新增」时才消耗（服务端已在 setEquippedAndStrategy 校验装桶成功）
+        if (consumedMagic != null && !wasKnown && npc.equippedMagic.knows(consumedMagic)) {
+            ItemStack stack = player.getInventory().getItem(packet.consumeSlot());
+            if (!stack.isEmpty() && stack.getItem() instanceof SpellItem) {
+                stack.shrink(1);
+            }
+        }
+
+        // 刷新策略屏 / 信息屏（权威状态）
         PacketDistributor.sendToPlayer(player, NpcDataPacket.from(npc));
+    }
+
+    /** 读背包声明槽的卷轴魔法 id；槽非法 / 不是卷轴 / 未绑定返回 null。 */
+    private static String consumeMagicId(ServerPlayer player, int slot) {
+        if (slot < 0 || slot >= player.getInventory().items.size()) return null;
+        ItemStack stack = player.getInventory().getItem(slot);
+        if (stack.isEmpty() || !(stack.getItem() instanceof SpellItem)) return null;
+        return SpellItem.getMagicId(stack);
     }
 }

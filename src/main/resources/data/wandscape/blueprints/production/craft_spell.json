@@ -1,0 +1,23 @@
+{
+  "id": "production:craft_spell",
+  "display_name": "制作魔法卷轴",
+  "description": "NPC channels at the magic station to synthesize spell scrolls from elements.",
+  "params": {
+    "anchor": "pos",
+    "recipe_id": "string",
+    "count": "int",
+    "channel_ticks": "int"
+  },
+  "steps": [
+    {
+      "type": "block_interact",
+      "action": "craft_spell",
+      "at": "$anchor",
+      "channel_ticks": "$channel_ticks",
+      "params": {
+        "recipe_id": "$recipe_id",
+        "count": "$count"
+      }
+    }
+  ]
+}

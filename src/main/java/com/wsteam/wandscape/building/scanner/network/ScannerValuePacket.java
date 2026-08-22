@@ -52,7 +52,7 @@ public record ScannerValuePacket(BlockPos pos) implements CustomPacketPayload {
         BlockEntity be = level.getBlockEntity(packet.pos);
         if (!(be instanceof CreativeScannerBlockEntity scanner)) {
             Log.warn(TAG, "No scanner BE at {}", packet.pos);
-            player.sendSystemMessage(I18n.name("message.wandscape.scanner.value_no_scanner", "§c未找到扫描器方块 @ %s", packet.pos));
+            player.sendSystemMessage(I18n.name("message.wandscape.scanner.value_no_scanner", "§c未找到扫描器方块 @ %s", packet.pos.toShortString()));
             return;
         }
 

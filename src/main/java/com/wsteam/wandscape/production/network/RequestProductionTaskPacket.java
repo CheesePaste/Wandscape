@@ -73,6 +73,7 @@ public record RequestProductionTaskPacket(
                 case "decompose" -> "production:decompose";
                 case "synthesize" -> "production:synthesize";
                 case "craft_wand" -> "production:craft_wand";
+                case "craft_spell" -> "production:craft_spell";
                 case "brew_potion" -> "production:brew_potion";
                 default -> {
                     Log.warn(TAG, "RequestProductionTask: unknown action {}", pkt.action);
@@ -99,6 +100,11 @@ public record RequestProductionTaskPacket(
                     }
                     case "craft_wand" -> {
                         var recipe = loader.getCraftWandRecipes().get(pkt.recipeOrItemId);
+                        yield recipe != null
+                                && RecipeUnlockChecker.isUnlocked(colonyId, recipe.unlockRequirement());
+                    }
+                    case "craft_spell" -> {
+                        var recipe = loader.getSpellRecipes().get(pkt.recipeOrItemId);
                         yield recipe != null
                                 && RecipeUnlockChecker.isUnlocked(colonyId, recipe.unlockRequirement());
                     }
@@ -131,7 +137,7 @@ public record RequestProductionTaskPacket(
             int channelTicks = switch (pkt.action) {
                 case "synthesize", "decompose" ->
                         WandscapeConstants.WORKSTATION_CRAFT_TICKS_PER_UNIT * pkt.quantity;
-                case "craft_wand" ->
+                case "craft_wand", "craft_spell" ->
                         WandscapeConstants.CRAFTING_STATION_CRAFT_TICKS_PER_UNIT * pkt.quantity;
                 default -> 120; // brew_potion, unchanged
             };

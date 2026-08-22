@@ -10,7 +10,7 @@ public final class WandscapeConstants {
     public static final int QUEUE_TOWNHALL = 5;
     public static final int QUEUE_WORKSTATION = 60;
     public static final int QUEUE_CRAFTING = 60;
-    public static final int QUEUE_POTION = 10;
+    public static final int QUEUE_MAGIC = 10;
     public static final int QUEUE_RITUAL_ALTAR = 10;
     public static final int QUEUE_NODE = 10;
     public static final int QUEUE_HOUSE = 5;

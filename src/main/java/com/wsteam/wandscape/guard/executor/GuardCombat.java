@@ -171,7 +171,7 @@ public final class GuardCombat {
                                      String circleId, int color) {
         // known = 玩家策略解析出的魔法级优先级；快照（敌数/自血/友方最低血/状态）驱动目标规则与 conditions
         List<MagicDef> known = CastBrain.resolvePriority(npc.castStrategy,
-                CastBrain.knownSpells(npc.spellbook.ids()));
+                CastBrain.knownSpells(npc.equippedMagic.flattened()));
         WorldSnapshot snapshot = buildSnapshot(level, npc);
         MagicDef chosen = CastBrain.select(known,
                 def -> npc.magic.canCast(def.id()) && npc.magic.getMana() >= def.manaCost(), snapshot);
@@ -263,7 +263,7 @@ public final class GuardCombat {
      */
     private static boolean l0EmergencyHeal(ServerLevel level, WandscapeNpc npc, String circleId, int color) {
         if (lowestAllyHpRatio(level, npc, MagicSpellExecutors.HEAL_RADIUS, true) >= L0_HEAL_THRESHOLD) return false;
-        if (!npc.spellbook.knows("heal")) return false;
+        if (!npc.equippedMagic.knows("heal")) return false;
         MagicDef heal = SpellbookLoader.getSpec("heal");
         if (heal == null) return false;
         if (!npc.magic.canCast("heal") || npc.magic.getMana() < heal.manaCost()) return false;

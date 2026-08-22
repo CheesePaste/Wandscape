@@ -192,7 +192,10 @@ public class CraftingStationScreen extends MedievalScreen {
                     g.drawString(Minecraft.getInstance().font, costStr.toString(),
                             x + 20, y + 12, MedievalColors.TEXT_DIM);
                 } else {
-                    drawElementCost(g, item.cost(), x + 20, y + 12);
+                    int endX = drawElementCost(g, item.cost(), x + 20, y + 12);
+                    if (!item.extraInputs().isEmpty()) {
+                        drawExtraInputs(g, item.extraInputs(), endX, y + 12);
+                    }
                 }
             }
         };
@@ -261,8 +264,10 @@ public class CraftingStationScreen extends MedievalScreen {
         // Block submission when recipe is locked (colony / elements)
         if (sel == null || !"unlocked".equals(sel.lockedReason())) return;
         int qty = slider.getValue();
+        // 药水配方走 brew_potion（校验额外原料），法杖配方走 craft_wand。
+        String action = "potion".equals(sel.type()) ? "brew_potion" : "craft_wand";
         PacketDistributor.sendToServer(new RequestProductionTaskPacket(
-                stationPos, "craft_wand", sel.recipeId(), qty));
+                stationPos, action, sel.recipeId(), qty));
         // Refresh queue after submitting a new task
         requestQueueRefresh();
     }
@@ -284,8 +289,8 @@ public class CraftingStationScreen extends MedievalScreen {
         PacketDistributor.sendToServer(new TaskQueueModifyPacket(stationPos, "move_down", index));
     }
 
-    /** Draw an element cost as [icon]xN (icon tinted per element, like the V-key panel). */
-    private static void drawElementCost(GuiGraphics g, Map<ElementType, Long> cost, int x, int y) {
+    /** Draw an element cost as [icon]xN (icon tinted per element, like the V-key panel). Returns end x. */
+    private static int drawElementCost(GuiGraphics g, Map<ElementType, Long> cost, int x, int y) {
         var font = Minecraft.getInstance().font;
         int cx = x;
         for (var e : cost.entrySet()) {
@@ -296,6 +301,20 @@ public class CraftingStationScreen extends MedievalScreen {
             String text = "x" + e.getValue();
             g.drawString(font, text, cx, y, tint);
             cx += font.width(text) + 6;
+        }
+        return cx;
+    }
+
+    /** Draw extra non-element inputs (e.g. potion glass bottles) in muted text after the element cost. */
+    private static void drawExtraInputs(GuiGraphics g, List<String> extraInputs, int x, int y) {
+        var font = Minecraft.getInstance().font;
+        int cx = x;
+        for (String itemId : extraInputs) {
+            var registryItem = BuiltInRegistries.ITEM.get(ResourceLocation.tryParse(itemId));
+            String label = (registryItem != null && registryItem != net.minecraft.world.item.Items.AIR)
+                    ? new ItemStack(registryItem).getHoverName().getString() : itemId;
+            g.drawString(font, "+" + label, cx, y, MedievalColors.TEXT_DIM);
+            cx += font.width("+" + label) + 8;
         }
     }
 }

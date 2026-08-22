@@ -1,6 +1,7 @@
 package com.wsteam.wandscape.npc.client;
 
 import java.util.List;
+import java.util.Map;
 
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
@@ -59,6 +60,7 @@ public class NpcScreen extends MedievalScreen {
     private List<String> knownSpells = List.of();
     private List<String> spellCategories = List.of();
     private List<String> priority = List.of();
+    private Map<String, String> magicCatalog = Map.of();
     /** 盔甲格（顺序：头盔/胸甲/护腿/靴子）。 */
     private List<ItemStack> armorStacks = List.of(ItemStack.EMPTY, ItemStack.EMPTY,
             ItemStack.EMPTY, ItemStack.EMPTY);
@@ -109,6 +111,7 @@ public class NpcScreen extends MedievalScreen {
         this.knownSpells = packet.knownSpells();
         this.spellCategories = packet.spellCategories();
         this.priority = packet.priority();
+        this.magicCatalog = packet.magicCatalog();
         this.armorStacks = packet.armorStacks();
         this.skinVariant = packet.skinVariant();
         this.hatColor = packet.hatColor();
@@ -187,12 +190,12 @@ public class NpcScreen extends MedievalScreen {
         });
         addRenderableWidget(peaceButton);
         addRenderableWidget(followButton);
-        // 策略按钮（打开施法策略屏）
+        // 策略按钮（打开施法策略屏，装备制）
         addRenderableWidget(new MedievalButton(
                 leftPos + PW - 104, topPos + PH - 22, 46, 16,
                 I18n.name("gui.wandscape.npc.strategy", "Strategy"),
                 () -> Minecraft.getInstance().setScreen(
-                        new NpcStrategyScreen(entityId, strategyPreset, knownSpells, spellCategories, priority))));
+                        new NpcStrategyScreen(entityId, strategyPreset, knownSpells, spellCategories, magicCatalog))));
         // Close button
         addRenderableWidget(new MedievalButton(
                 leftPos + PW - 54, topPos + PH - 22, 46, 16,

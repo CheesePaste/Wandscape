@@ -39,7 +39,7 @@ public final class BuildingSort {
             case "storage" -> 1;           // 仓库
             case "workstation" -> 2;       // 工作站
             case "crafting_station" -> 3;  // 合成站
-            case "potion_station" -> 4;    // 药水工坊
+            case "magic_station" -> 4;     // 魔法工坊
             case "tavern" -> 5;            // 酒馆
             case "altar" -> 6;             // 祭坛
             case "node" -> 8;

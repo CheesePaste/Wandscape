@@ -11,7 +11,7 @@
 | storage | 仓库建筑 |
 | workstation | 工作站（分解/合成） |
 | crafting_station | 制作站（法杖制作） |
-| potion_station | 魔药站 |
+| magic_station | 魔法工坊（卷轴合成） |
 | tavern | 酒馆（招募） |
 | shop | 商店（游客购物） |
 | service | 服务建筑（游客交互；`max_occupancy>0`=旅店） |

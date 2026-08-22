@@ -1,0 +1,14 @@
+{
+  "type": "spell",
+  "craft_station": "magic_station",
+  "id": "scroll_petrification",
+  "display_name": "石化卷轴",
+  "output": { "item": "wandscape:spell_scroll", "magic_id": "petrification" },
+  "cost": {
+    "earth": 32,
+    "metal": 16
+  },
+  "unlock_requirement": {
+    "min_colony_level": 3
+  }
+}

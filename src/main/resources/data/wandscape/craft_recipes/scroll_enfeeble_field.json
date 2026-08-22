@@ -1,0 +1,14 @@
+{
+  "type": "spell",
+  "craft_station": "magic_station",
+  "id": "scroll_enfeeble_field",
+  "display_name": "虚弱力场卷轴",
+  "output": { "item": "wandscape:spell_scroll", "magic_id": "enfeeble_field" },
+  "cost": {
+    "dark": 28,
+    "wind": 16
+  },
+  "unlock_requirement": {
+    "min_colony_level": 2
+  }
+}

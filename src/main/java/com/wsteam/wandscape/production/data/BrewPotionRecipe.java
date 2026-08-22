@@ -20,7 +20,7 @@ public record BrewPotionRecipe(
         JsonObject obj = json.getAsJsonObject();
 
         String craftStation = obj.has("craft_station")
-                ? obj.get("craft_station").getAsString() : "potion_station";
+                ? obj.get("craft_station").getAsString() : "crafting_station";
 
         String outputItem = obj.getAsJsonObject("output").get("item").getAsString();
         Map<ElementType, Long> cost = parseElementMap(obj, "cost");

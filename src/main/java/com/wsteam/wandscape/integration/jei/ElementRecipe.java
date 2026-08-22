@@ -17,7 +17,7 @@ import com.wsteam.wandscape.shared.data.ElementType;
  * </ul>
  *
  * <p>{@code stationKey} 标注配方发生的设施：{@code workstation}（元素合成/分解，工作站）、
- * {@code crafting_station}（合成站）、{@code potion_station}（酿造站）。
+ * {@code crafting_station}（合成站）、{@code magic_station}（魔法工坊）。
  * {@code extraInputs} 为额外的非元素原料（如药剂的玻璃瓶）。
  */
 public record ElementRecipe(

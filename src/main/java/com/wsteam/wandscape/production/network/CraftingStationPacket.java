@@ -4,8 +4,10 @@ import java.util.*;
 import java.util.function.Consumer;
 import javax.annotation.Nullable;
 
+import com.wsteam.wandscape.production.data.BrewPotionRecipe;
 import com.wsteam.wandscape.production.data.CraftWandRecipe;
 import com.wsteam.wandscape.production.data.RecipeUnlockRequirement;
+import com.wsteam.wandscape.production.internal.RecipeUnlockChecker;
 import com.wsteam.wandscape.shared.data.ElementType;
 
 import net.minecraft.core.BlockPos;
@@ -39,6 +41,7 @@ public record CraftingStationPacket(BlockPos stationPos, ListTag recipes, String
 
     public static CraftingStationPacket from(BlockPos stationPos,
                                               Collection<CraftWandRecipe> wandRecipes,
+                                              Collection<BrewPotionRecipe> potionRecipes,
                                               Map<ElementType, Long> elementMap,
                                               @Nullable UUID colonyId,
                                               String creator) {
@@ -47,43 +50,67 @@ public record CraftingStationPacket(BlockPos stationPos, ListTag recipes, String
             // Service-side check only — log but DO NOT filter from the packet.
             // The client renders locked vs unlocked state locally.
             // Server-side re-validation in RequestProductionTaskPacket prevents tampering.
-            boolean unlocked = com.wsteam.wandscape.production.internal.RecipeUnlockChecker
-                    .isUnlocked(colonyId, r.unlockRequirement());
-            int maxAffordable = computeMaxAffordable(r.cost(), elementMap);
-            CompoundTag tag = new CompoundTag();
-            tag.putString("id", r.id());
-            tag.putString("output", r.outputItem());
-            if (r.outputNbt() != null && !r.outputNbt().isEmpty()) {
-                tag.put("nbt", r.outputNbt());
-            }
-            CompoundTag costTag = new CompoundTag();
-            for (var e : r.cost().entrySet()) {
-                costTag.putLong(e.getKey().name().toLowerCase(), e.getValue());
-            }
-            tag.put("cost", costTag);
-
-            // Determine locked reason before setting max_affordable
-            String lockedReason;
-            if (!unlocked) {
-                lockedReason = "colony";
-                maxAffordable = 0;
-            } else if (maxAffordable == 0) {
-                lockedReason = "elements";
-            } else {
-                lockedReason = "unlocked";
-            }
-            tag.putInt("max_affordable", maxAffordable);
-            tag.putString("locked_reason", lockedReason);
-
-            // Serialise colony unlock requirement when not yet satisfied
-            if (!r.unlockRequirement().equals(RecipeUnlockRequirement.NONE)) {
-                CompoundTag unlockTag = new CompoundTag();
-                unlockTag.putInt("min_colony_level", r.unlockRequirement().minColonyLevel());
-                tag.put("unlock_requirement", unlockTag);
-            }
-            list.add(tag);
+            list.add(buildRecipeTag(r.id(), "wand", r.outputItem(), r.outputNbt(), List.of(),
+                    r.cost(), r.unlockRequirement(), colonyId, elementMap));
+        }
+        for (BrewPotionRecipe r : potionRecipes) {
+            list.add(buildRecipeTag(r.id(), "potion", r.outputItem(), null, r.inputItems(),
+                    r.cost(), r.unlockRequirement(), colonyId, elementMap));
         }
         return new CraftingStationPacket(stationPos, list, creator);
+    }
+
+    /** Serialize one recipe as a CompoundTag with common fields (unlock/maxAffordable/type/inputs). */
+    private static CompoundTag buildRecipeTag(String id, String type, String outputItem,
+                                              @Nullable CompoundTag outputNbt, List<String> extraInputs,
+                                              Map<ElementType, Long> cost,
+                                              RecipeUnlockRequirement unlockRequirement,
+                                              @Nullable UUID colonyId,
+                                              Map<ElementType, Long> elementMap) {
+        boolean unlocked = RecipeUnlockChecker.isUnlocked(colonyId, unlockRequirement);
+        int maxAffordable = computeMaxAffordable(cost, elementMap);
+
+        CompoundTag tag = new CompoundTag();
+        tag.putString("id", id);
+        tag.putString("type", type);
+        tag.putString("output", outputItem);
+        if (outputNbt != null && !outputNbt.isEmpty()) {
+            tag.put("nbt", outputNbt);
+        }
+        CompoundTag costTag = new CompoundTag();
+        for (var e : cost.entrySet()) {
+            costTag.putLong(e.getKey().name().toLowerCase(), e.getValue());
+        }
+        tag.put("cost", costTag);
+
+        // Determine locked reason before setting max_affordable
+        String lockedReason;
+        if (!unlocked) {
+            lockedReason = "colony";
+            maxAffordable = 0;
+        } else if (maxAffordable == 0) {
+            lockedReason = "elements";
+        } else {
+            lockedReason = "unlocked";
+        }
+        tag.putInt("max_affordable", maxAffordable);
+        tag.putString("locked_reason", lockedReason);
+
+        if (!extraInputs.isEmpty()) {
+            ListTag inputs = new ListTag();
+            for (String item : extraInputs) {
+                inputs.add(net.minecraft.nbt.StringTag.valueOf(item));
+            }
+            tag.put("extra_inputs", inputs);
+        }
+
+        // Serialise colony unlock requirement when not yet satisfied
+        if (!unlockRequirement.equals(RecipeUnlockRequirement.NONE)) {
+            CompoundTag unlockTag = new CompoundTag();
+            unlockTag.putInt("min_colony_level", unlockRequirement.minColonyLevel());
+            tag.put("unlock_requirement", unlockTag);
+        }
+        return tag;
     }
 
     private static int computeMaxAffordable(Map<ElementType, Long> costPerUnit, Map<ElementType, Long> elements) {
@@ -102,8 +129,16 @@ public record CraftingStationPacket(BlockPos stationPos, ListTag recipes, String
         for (int i = 0; i < recipes.size(); i++) {
             CompoundTag tag = recipes.getCompound(i);
             String id = tag.getString("id");
+            String type = tag.contains("type") ? tag.getString("type") : "wand";
             String output = tag.getString("output");
             CompoundTag nbt = tag.contains("nbt") ? tag.getCompound("nbt") : null;
+            List<String> extraInputs = new ArrayList<>();
+            if (tag.contains("extra_inputs")) {
+                ListTag extra = tag.getList("extra_inputs", Tag.TAG_STRING);
+                for (int j = 0; j < extra.size(); j++) {
+                    extraInputs.add(extra.getString(j));
+                }
+            }
             Map<ElementType, Long> cost = new LinkedHashMap<>();
             CompoundTag costTag = tag.getCompound("cost");
             for (String key : costTag.getAllKeys()) {
@@ -118,15 +153,18 @@ public record CraftingStationPacket(BlockPos stationPos, ListTag recipes, String
                 int level = urTag.contains("min_colony_level") ? urTag.getInt("min_colony_level") : 1;
                 unlockReq = new RecipeUnlockRequirement(level);
             }
-            result.add(new RecipeEntry(id, output, nbt, cost, maxAffordable, lockedReason, unlockReq));
+            result.add(new RecipeEntry(id, type, output, nbt, extraInputs, cost,
+                    maxAffordable, lockedReason, unlockReq));
         }
         return result;
     }
 
     /**
      * @param recipeId          recipe identifier
+     * @param type              recipe kind: "wand" (craft_wand) or "potion" (brew_potion)
      * @param outputItem        output item id
      * @param nbt               output item NBT (nullable)
+     * @param extraInputs       extra non-element inputs (potion glass bottles etc, may be empty)
      * @param cost              element cost per unit
      * @param maxAffordable     maximum quantity affordable with current elements (0 when locked)
      * @param lockedReason      "unlocked" / "colony" / "elements" — client uses this to pick lock hint
@@ -134,8 +172,10 @@ public record CraftingStationPacket(BlockPos stationPos, ListTag recipes, String
      */
     public record RecipeEntry(
             String recipeId,
+            String type,
             String outputItem,
             @javax.annotation.Nullable CompoundTag nbt,
+            List<String> extraInputs,
             Map<ElementType, Long> cost,
             int maxAffordable,
             String lockedReason,

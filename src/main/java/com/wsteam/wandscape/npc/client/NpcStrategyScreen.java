@@ -1,15 +1,15 @@
 package com.wsteam.wandscape.npc.client;
 
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 
-import com.mojang.blaze3d.systems.RenderSystem;
+import com.wsteam.wandscape.Wandscape;
+import com.wsteam.wandscape.core.component.EquippedMagicComponent;
+import com.wsteam.wandscape.magic.item.SpellItem;
 import com.wsteam.wandscape.npc.network.NpcDataPacket;
 import com.wsteam.wandscape.npc.network.NpcStrategyPacket;
 import com.wsteam.wandscape.shared.ui.I18n;
@@ -22,226 +22,197 @@ import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
- * 施法策略屏（两层模型）：顶部 4 个总体策略按钮（管分类优先级）+ 一排 4 个分类按钮
- * （单体攻击/群体攻击/防御/增益）+ 所选分类的魔法列表（滚轮可滚动，每行 ↑/↓/开关，
- * 样式参考 Workstation Queue 面板）。
+ * 施法策略屏（装备制，B 阶段）：顶部 4 个总体策略按钮（管跨类施法先后，保留）+ 中部 4 分类×3
+ * 槽位面板（槽位序 = 类内优先级，点已占槽卸载）+ 右侧玩家背包卷轴源列表（点卷轴装备到对应分类
+ * 首个空槽，卷轴消耗由服务端校验——每类 ≤3、去重、UTILITY 不可装备）。
  *
- * <p>客户端维护各分类的启用列表（{@code enabledByCategory}），任意改动（点预设/上移/下移/开关）
- * 都重排成完整扁平列表发 {@link NpcStrategyPacket}（服务端始终存储）。分类顺序表与
- * {@code CastBrain.PRESET_ORDER} 一致（此处以字符串常量复制，避免跨模块 import）。
+ * <p>本地维护各分类装备桶（{@code equippedByCategory}），任意改动重排成完整扁平装备态
+ * （分类固定序 × 桶内槽位序）连同本次消耗的背包槽发 {@link NpcStrategyPacket}；服务端按真实
+ * 分类装桶校验后回发 {@link NpcDataPacket} 对账（权威状态始终在服务端）。
+ * 分类名/上限与 {@code EquippedMagicComponent.CATEGORIES} 一致。
  */
 public class NpcStrategyScreen extends MedievalScreen {
 
-    private static final int PW = 300;
-    private static final int PH = 230;
+    private static final int PW = 360;
+    private static final int PH = 250;
     private static final int BTN_W = 62;   // 预设按钮
-    private static final int CAT_W = 58;   // 分类按钮
-    private static final int ROW_H = 24;
-
-    private static final int ROW_BTN_H = 14;
-    private static final int ROW_UP_W = 14;
-    private static final int ROW_DOWN_W = 14;
-    private static final int ROW_TOGGLE_W = 22;
-    private static final int ROW_BTN_GAP = 1;
-    private static final int ROW_BTNS_W = ROW_UP_W + ROW_DOWN_W + ROW_TOGGLE_W + 2 * ROW_BTN_GAP; // 52
-    private static final int ROW_BTNS_RIGHT_PAD = 4;
+    private static final int SLOT = 18;    // 槽位
+    private static final int SLOT_PITCH = 20;
+    private static final int ROW_H = 22;   // 分类行高
+    private static final int LABEL_W = 92; // 分类标签宽
 
     private static final List<String> PRESET_NAMES = List.of("balanced", "offensive", "support", "defensive");
 
-    /** 可管理的分类（与 MagicDef.Category 名小写对应；UTILITY 不进策略表）。 */
-    private static final List<String> CATEGORY_NAMES =
-            List.of("single_target", "aoe", "defense", "support");
-
-    /**
-     * 分类级顺序（唯一来源 {@code CastBrain.PRESET_ORDER}，此处复制为避免跨模块 import）。
-     * 总体策略 = 按此顺序把各分类启用列表拼接成扁平施法优先级。
-     */
-    private static List<String> categoryOrder(String preset) {
-        return switch (preset) {
-            case "OFFENSIVE" -> List.of("single_target", "aoe", "defense", "support");
-            case "SUPPORT"   -> List.of("support", "defense", "aoe", "single_target");
-            case "DEFENSIVE" -> List.of("defense", "support", "aoe", "single_target");
-            default          -> List.of("aoe", "single_target", "support", "defense"); // BALANCED
-        };
-    }
-
     private final int entityId;
     private String preset = "BALANCED";
+    /** 服务端权威装备（knownSpells + spellCategories 并行同序），本地镜像重建依据。 */
     private List<String> knownSpells = List.of();
     private List<String> spellCategories = List.of();
-    private List<String> priority = List.of();
-    private String selectedCategory = CATEGORY_NAMES.get(0);
-
-    private final Map<String, List<String>> knownByCategory = new LinkedHashMap<>();
-    private final Map<String, List<String>> enabledByCategory = new LinkedHashMap<>();
-    private final Set<String> enabledSet = new HashSet<>();
+    /** 各分类已装备魔法（本地镜像，服务端为权威；桶键 = 分类固定序保持一致）。 */
+    private final Map<String, List<String>> equippedByCategory = new LinkedHashMap<>();
+    /** 战斗魔法目录（id → 分类小写）：识别背包卷轴归属分类。 */
+    private final Map<String, String> magicCatalog = new HashMap<>();
+    /** 背包中 SpellItem 的槽位列表（源列表）。 */
+    private List<Integer> sourceSlots = List.of();
 
     private final Map<String, int[]> presetButtonBounds = new LinkedHashMap<>();
-    private final Map<String, int[]> categoryButtonBounds = new LinkedHashMap<>();
+    /** "单分类:第i槽" → {x,y}。 */
+    private final Map<String, int[]> slotRects = new LinkedHashMap<>();
 
-    private SpellRowList list;
-    private int cursorX;
-    private int cursorY;
+    private SpellSourceList sourceList;
+    private int equipTop;
+    private int sourceListX;
 
     public NpcStrategyScreen(int entityId, String preset, List<String> knownSpells,
-                             List<String> spellCategories, List<String> priority) {
+                             List<String> spellCategories, Map<String, String> magicCatalog) {
         super(Component.literal("Cast Strategy"), PW, PH);
         setTitleBar(I18n.name("gui.wandscape.strategy.title", "Cast Strategy"));
         this.showCloseButton = true;
         this.showHelpButton = true;
         this.helpDocumentPath = "strategy_guide";
         this.entityId = entityId;
-        this.preset = preset;
-        this.knownSpells = List.copyOf(knownSpells);
-        this.spellCategories = List.copyOf(spellCategories);
-        this.priority = List.copyOf(priority);
+        this.preset = preset != null ? preset : "BALANCED";
+        this.magicCatalog.clear();
+        if (magicCatalog != null) this.magicCatalog.putAll(magicCatalog);
+        this.knownSpells = List.copyOf(knownSpells != null ? knownSpells : List.of());
+        this.spellCategories = List.copyOf(spellCategories != null ? spellCategories : List.of());
+        rebuildBoxes();
     }
 
     /** 服务端回发策略数据时刷新（保持本屏打开）。 */
     public void apply(NpcDataPacket packet) {
         this.preset = packet.strategyPreset();
-        this.knownSpells = packet.knownSpells();
-        this.spellCategories = packet.spellCategories();
-        this.priority = packet.priority();
-        rebuild();
+        this.magicCatalog.clear();
+        if (packet.magicCatalog() != null) this.magicCatalog.putAll(packet.magicCatalog());
+        this.knownSpells = List.copyOf(packet.knownSpells());
+        this.spellCategories = List.copyOf(packet.spellCategories());
+        rebuildBoxes();
     }
 
     // ── 状态重建 ──
 
-    /** 从 knownSpells/priority 重建分类分组；刷新当前列表。 */
-    private void rebuild() {
-        knownByCategory.clear();
-        enabledByCategory.clear();
-        enabledSet.clear();
-        for (String cat : CATEGORY_NAMES) {
-            knownByCategory.put(cat, new ArrayList<>());
-            enabledByCategory.put(cat, new ArrayList<>());
+    /** 从 knownSpells/spellCategories 重建分类装备桶；刷新源列表与当前显示。 */
+    private void rebuildBoxes() {
+        equippedByCategory.clear();
+        for (String cat : EquippedMagicComponent.CATEGORIES) {
+            equippedByCategory.put(cat, new ArrayList<>());
         }
         for (int i = 0; i < knownSpells.size(); i++) {
-            String cat = normalizeCategory(i < spellCategories.size() ? spellCategories.get(i) : "unknown");
+            String cat = normalizeCategory(i < spellCategories.size() ? spellCategories.get(i) : null);
             if (cat != null) {
-                knownByCategory.get(cat).add(knownSpells.get(i));
+                equippedByCategory.get(cat).add(knownSpells.get(i));
             }
         }
-        for (String id : priority) {
-            String cat = categoryOf(id);
-            if (cat != null) {
-                enabledByCategory.get(cat).add(id);
-                enabledSet.add(id);
-            }
-        }
-        if (!CATEGORY_NAMES.contains(selectedCategory)) {
-            selectedCategory = defaultCategory();
-        }
-        if (list != null) {
-            list.setItems(displayItems());
+        refreshSource();
+        if (sourceList != null) {
+            sourceList.setItems(toStringList(sourceSlots));
         }
     }
 
-    /** 所选分类的显示顺序：启用的在前（优先级序），停用的按 spellbook 序在后。 */
-    private List<String> displayItems() {
-        List<String> enabled = enabledByCategory.getOrDefault(selectedCategory, List.of());
-        List<String> known = knownByCategory.getOrDefault(selectedCategory, List.of());
-        List<String> out = new ArrayList<>(enabled);
-        for (String id : known) {
-            if (!out.contains(id)) out.add(id);
+    private void refreshSource() {
+        var player = Minecraft.getInstance().player;
+        sourceSlots = List.of();
+        if (player == null) return;
+        List<Integer> slots = new ArrayList<>();
+        var items = player.getInventory().items;
+        for (int i = 0; i < items.size(); i++) {
+            ItemStack stack = items.get(i);
+            if (!stack.isEmpty() && stack.getItem() instanceof SpellItem) {
+                slots.add(i);
+            }
+        }
+        sourceSlots = slots;
+    }
+
+    private static List<String> toStringList(List<Integer> slots) {
+        List<String> out = new ArrayList<>(slots.size());
+        for (Integer slot : slots) {
+            out.add(Integer.toString(slot));
         }
         return out;
-    }
-
-    /** 按当前总体策略的分类顺序，把各分类启用列表拼成完整扁平优先级。 */
-    private List<String> buildFlatList() {
-        List<String> out = new ArrayList<>();
-        for (String cat : categoryOrder(preset)) {
-            out.addAll(enabledByCategory.getOrDefault(cat, List.of()));
-        }
-        return out;
-    }
-
-    private String defaultCategory() {
-        for (String cat : CATEGORY_NAMES) {
-            if (!knownByCategory.getOrDefault(cat, List.of()).isEmpty()) {
-                return cat;
-            }
-        }
-        return CATEGORY_NAMES.get(0);
     }
 
     private static String normalizeCategory(String name) {
         if (name == null) return null;
         String c = name.toLowerCase(Locale.ROOT);
-        return CATEGORY_NAMES.contains(c) ? c : null;
+        return EquippedMagicComponent.isCategory(c) ? c : null;
     }
 
-    private String categoryOf(String id) {
-        int idx = knownSpells.indexOf(id);
-        if (idx < 0) return null;
-        return normalizeCategory(idx < spellCategories.size() ? spellCategories.get(idx) : "unknown");
-    }
-
-    private boolean isEnabled(String spellId) {
-        return enabledSet.contains(spellId);
+    private boolean isEquipped(String magicId) {
+        for (List<String> bucket : equippedByCategory.values()) {
+            if (bucket.contains(magicId)) return true;
+        }
+        return false;
     }
 
     // ── 交互 ──
 
-    private void send() {
-        PacketDistributor.sendToServer(new NpcStrategyPacket(entityId, preset, buildFlatList()));
+    private void send(int consumeSlot) {
+        List<String> flat = new ArrayList<>();
+        for (String cat : EquippedMagicComponent.CATEGORIES) {
+            flat.addAll(equippedByCategory.getOrDefault(cat, List.of()));
+        }
+        PacketDistributor.sendToServer(new NpcStrategyPacket(entityId, preset, flat, consumeSlot));
     }
 
     private void onPreset(String newPreset) {
         this.preset = newPreset;
-        send();
+        send(NpcStrategyPacket.NO_CONSUME);
     }
 
-    private void onCategory(String cat) {
-        this.selectedCategory = cat;
-        if (list != null) list.setItems(displayItems());
-    }
-
-    private void onToggle(String spellId) {
-        String cat = categoryOf(spellId);
-        if (cat == null) return;
-        List<String> en = enabledByCategory.get(cat);
-        if (en.contains(spellId)) {
-            en.remove(spellId);
-            enabledSet.remove(spellId);
-        } else {
-            en.add(spellId);
-            enabledSet.add(spellId);
+    /** 点击背包卷轴 → 装备到该魔法所属分类首个空槽（本地预校验，服务端权威）。 */
+    private void onEquipScroll(int invSlot) {
+        var player = Minecraft.getInstance().player;
+        if (player == null) return;
+        if (invSlot < 0 || invSlot >= player.getInventory().items.size()) return;
+        ItemStack stack = player.getInventory().getItem(invSlot);
+        if (stack.isEmpty() || !(stack.getItem() instanceof SpellItem)) return;
+        String magicId = SpellItem.getMagicId(stack);
+        if (magicId == null) {
+            showFeedback(I18n.name("gui.wandscape.strategy.not_bound", "Unbound scroll"),
+                    MedievalColors.DANGER_RED);
+            return;
         }
-        refreshAfterEdit();
-    }
-
-    private void onMoveUp(String spellId) {
-        String cat = categoryOf(spellId);
-        if (cat == null) return;
-        List<String> en = enabledByCategory.get(cat);
-        int i = en.indexOf(spellId);
-        if (i > 0) {
-            Collections.swap(en, i, i - 1);
-            refreshAfterEdit();
+        String cat = magicCatalog.get(magicId);
+        if (cat == null) {
+            showFeedback(I18n.name("gui.wandscape.strategy.not_equippable", "Not equippable"),
+                    MedievalColors.DANGER_RED);
+            return;
         }
-    }
-
-    private void onMoveDown(String spellId) {
-        String cat = categoryOf(spellId);
-        if (cat == null) return;
-        List<String> en = enabledByCategory.get(cat);
-        int i = en.indexOf(spellId);
-        if (i >= 0 && i < en.size() - 1) {
-            Collections.swap(en, i, i + 1);
-            refreshAfterEdit();
+        if (isEquipped(magicId)) {
+            showFeedback(I18n.name("gui.wandscape.strategy.already_equipped", "Already equipped"),
+                    MedievalColors.DANGER_RED);
+            return;
         }
+        List<String> bucket = equippedByCategory.get(cat);
+        if (bucket == null || bucket.size() >= EquippedMagicComponent.MAX_PER_CATEGORY) {
+            showFeedback(I18n.name("gui.wandscape.strategy.slot_full", "Category full (max 3)"),
+                    MedievalColors.DANGER_RED);
+            return;
+        }
+        bucket.add(magicId);
+        showFeedback(I18n.name("gui.wandscape.strategy.equipped", "Equipped: ").copy()
+                        .append(magicName(magicId)),
+                MedievalColors.SUCCESS_GREEN);
+        send(invSlot);
     }
 
-    /** 本地即时刷新列表（服务端回包 apply() 会再对账），并发包。 */
-    private void refreshAfterEdit() {
-        if (list != null) list.setItems(displayItems());
-        send();
+    /** 点击已占槽 → 卸载该魔法。 */
+    private void onUnequip(String category, String magicId) {
+        List<String> bucket = equippedByCategory.get(category);
+        if (bucket == null || !bucket.remove(magicId)) return;
+        showFeedback(I18n.name("gui.wandscape.strategy.unequipped", "Unequipped: ").copy()
+                        .append(magicName(magicId)),
+                MedievalColors.TEXT_WARM_WHITE);
+        send(NpcStrategyPacket.NO_CONSUME);
+    }
+
+    private static Component magicName(String magicId) {
+        return Component.translatableWithFallback("magic.wandscape." + magicId, magicId);
     }
 
     // ── 布局 ──
@@ -250,7 +221,6 @@ public class NpcStrategyScreen extends MedievalScreen {
     protected void init() {
         super.init();
         presetButtonBounds.clear();
-        categoryButtonBounds.clear();
 
         int left = leftPos + 12;
         int presetY = topPos + headerHeight + 8;
@@ -265,158 +235,150 @@ public class NpcStrategyScreen extends MedievalScreen {
             x += BTN_W + 6;
         }
 
-        int catY = presetY + 22;
-        x = left;
-        for (String cat : CATEGORY_NAMES) {
-            MedievalButton btn = new MedievalButton(x, catY, CAT_W, 16,
-                    I18n.name("gui.wandscape.strategy.category." + cat, cat),
-                    () -> onCategory(cat));
-            addRenderableWidget(btn);
-            categoryButtonBounds.put(cat, new int[]{x, catY});
-            x += CAT_W + 6;
-        }
-
-        int listY = catY + 20;
-        int listH = PH - (listY - topPos) - 26;
-        list = new SpellRowList(left, listY, PW - 24, listH, ROW_H);
-        addRenderableWidget(list);
+        // 中部：4 分类 × 3 槽位（右侧卷轴源列表并排）
+        equipTop = presetY + 24;
+        int listRight = leftPos + PW - 12;
+        sourceListX = left + LABEL_W + EquippedMagicComponent.MAX_PER_CATEGORY * SLOT_PITCH + 18;
+        int lsX = sourceListX;
+        int lsW = listRight - lsX;
+        int lsY = equipTop + 10; // 对齐第一行槽位
+        sourceList = new SpellSourceList(lsX, lsY, lsW, 4 * ROW_H, ROW_H);
+        sourceList.setItems(toStringList(sourceSlots));
+        sourceList.setOnRowClick((slotStr, index, button) -> {
+            if (button == 0) {
+                onEquipScroll(Integer.parseInt(slotStr));
+            }
+        });
+        addRenderableWidget(sourceList);
 
         addRenderableWidget(new MedievalButton(
                 leftPos + PW - 54, topPos + PH - 22, 46, 16,
                 I18n.name("gui.wandscape.common.close", "Close"),
                 () -> Minecraft.getInstance().setScreen(null)));
 
-        rebuild();
+        rebuildBoxes();
     }
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        this.cursorX = mouseX;
-        this.cursorY = mouseY;
         super.render(g, mouseX, mouseY, partialTick);
 
+        // 当前预设高亮
         int[] pb = presetButtonBounds.get(preset);
         if (pb != null) {
             drawGlowBorder(g, pb[0], pb[1], BTN_W, 16, MedievalColors.BORDER_GOLD);
         }
-        int[] cb = categoryButtonBounds.get(selectedCategory);
-        if (cb != null) {
-            drawGlowBorder(g, cb[0], cb[1], CAT_W, 16, MedievalColors.BORDER_GOLD);
+
+        // 装备区标题
+        g.drawString(font, I18n.name("gui.wandscape.strategy.equip_label",
+                        "Equipped (max 3 per category, slot order = priority)").getString(),
+                leftPos + 12, equipTop, MedievalColors.ACCENT_GOLD);
+        // 源列表标题（右侧列，对齐源列表顶）
+        g.drawString(font, I18n.name("gui.wandscape.strategy.source_label", "Scrolls").getString(),
+                sourceListX, equipTop, MedievalColors.ACCENT_GOLD);
+
+        slotRects.clear();
+        int left = leftPos + 12;
+        int slotCol = left + LABEL_W;
+        for (int row = 0; row < EquippedMagicComponent.CATEGORIES.size(); row++) {
+            String cat = EquippedMagicComponent.CATEGORIES.get(row);
+            int rowY = equipTop + 10 + row * ROW_H;
+            g.drawString(font, I18n.name("gui.wandscape.strategy.category." + cat, cat).getString(),
+                    left, rowY + (ROW_H - font.lineHeight) / 2, MedievalColors.TEXT_WARM_WHITE);
+            List<String> bucket = equippedByCategory.getOrDefault(cat, List.of());
+            for (int s = 0; s < EquippedMagicComponent.MAX_PER_CATEGORY; s++) {
+                int sx = slotCol + s * SLOT_PITCH;
+                int sy = rowY + (ROW_H - SLOT) / 2;
+                String key = cat + ":" + s;
+
+                // 槽背景 + 边框
+                g.fill(sx, sy, sx + SLOT, sy + SLOT, MedievalColors.PARCHMENT_DEEPEST);
+                g.fill(sx, sy, sx + SLOT, sy + 1, MedievalColors.BORDER_GOLD_DARK);
+                g.fill(sx, sy + SLOT - 1, sx + SLOT, sy + SLOT, MedievalColors.BORDER_GOLD_DARK);
+                g.fill(sx, sy, sx + 1, sy + SLOT, MedievalColors.BORDER_GOLD_DARK);
+                g.fill(sx + SLOT - 1, sy, sx + SLOT, sy + SLOT, MedievalColors.BORDER_GOLD_DARK);
+
+                if (s < bucket.size()) {
+                    String magicId = bucket.get(s);
+                    // 槽位序高亮：占满边框金色
+                    g.fill(sx, sy, sx + SLOT, sy + 1, MedievalColors.BORDER_GOLD);
+                    g.fill(sx, sy + SLOT - 1, sx + SLOT, sy + SLOT, MedievalColors.BORDER_GOLD);
+                    g.fill(sx, sy, sx + 1, sy + SLOT, MedievalColors.BORDER_GOLD);
+                    g.fill(sx + SLOT - 1, sy, sx + SLOT, sy + SLOT, MedievalColors.BORDER_GOLD);
+                    ItemStack scroll = new ItemStack(Wandscape.SPELL_SCROLL.get());
+                    SpellItem.setMagicId(scroll, magicId);
+                    g.renderItem(scroll, sx + 1, sy + 1);
+                }
+                slotRects.put(key, new int[]{sx, sy});
+            }
+        }
+
+        // 槽位 tooltip（悬停已占槽 → 魔法名 + 提示卸载）
+        for (int row = 0; row < EquippedMagicComponent.CATEGORIES.size(); row++) {
+            String cat = EquippedMagicComponent.CATEGORIES.get(row);
+            List<String> bucket = equippedByCategory.getOrDefault(cat, List.of());
+            for (int s = 0; s < Math.min(EquippedMagicComponent.MAX_PER_CATEGORY, bucket.size()); s++) {
+                int[] r = slotRects.get(cat + ":" + s);
+                if (r == null) continue;
+                String magicId = bucket.get(s);
+                if (mouseX >= r[0] && mouseX < r[0] + SLOT && mouseY >= r[1] && mouseY < r[1] + SLOT) {
+                    g.renderTooltip(font,
+                            magicName(magicId).copy().append(
+                                    I18n.name("gui.wandscape.strategy.tip.unequip", " — 点击卸载")),
+                            mouseX, mouseY);
+                }
+            }
         }
     }
 
-    // ── 魔法行列表：名称 + ↑/↓/开关 ──
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (button != 0) return super.mouseClicked(mouseX, mouseY, button);
+        for (String key : slotRects.keySet()) {
+            int[] r = slotRects.get(key);
+            if (r == null) continue;
+            if (mouseX >= r[0] && mouseX < r[0] + SLOT && mouseY >= r[1] && mouseY < r[1] + SLOT) {
+                int colon = key.indexOf(':');
+                String cat = key.substring(0, colon);
+                int s = Integer.parseInt(key.substring(colon + 1));
+                List<String> bucket = equippedByCategory.getOrDefault(cat, List.of());
+                if (s < bucket.size()) {
+                    onUnequip(cat, bucket.get(s));
+                } else {
+                    showFeedback(I18n.name("gui.wandscape.strategy.empty_slot", "点右侧卷轴装备"), MedievalColors.TEXT_DIM);
+                }
+                return true;
+            }
+        }
+        return super.mouseClicked(mouseX, mouseY, button);
+    }
 
-    private final class SpellRowList extends ScrollableList<String> {
+    // ── 背包卷轴源列表 ──
 
-        SpellRowList(int x, int y, int w, int h, int rowH) {
+    private final class SpellSourceList extends ScrollableList<String> {
+
+        SpellSourceList(int x, int y, int w, int h, int rowH) {
             super(x, y, w, h, rowH);
         }
 
-        private int buttonAreaLeft() {
-            return getX() + width - scrollbarWidth - ROW_BTNS_RIGHT_PAD - ROW_BTNS_W;
-        }
-
         @Override
-        protected void renderRow(GuiGraphics g, String spellId, int x, int y,
+        protected void renderRow(GuiGraphics g, String slotStr, int x, int y,
                                  int index, boolean selected, boolean hovered) {
-            var font = Minecraft.getInstance().font;
-            boolean enabled = isEnabled(spellId);
-
-            int btnY = y + (rowHeight - ROW_BTN_H) / 2;
-            int upLeft = buttonAreaLeft();
-            int downLeft = upLeft + ROW_UP_W + ROW_BTN_GAP;
-            int toggleLeft = downLeft + ROW_DOWN_W + ROW_BTN_GAP;
-
-            // 名称（超宽截断，避免盖住按钮）
-            String name = I18n.name("magic.wandscape." + spellId, spellId).getString();
-            int nameMax = upLeft - (x + 2) - 6;
+            var player = Minecraft.getInstance().player;
+            if (player == null) return;
+            int slot = Integer.parseInt(slotStr);
+            if (slot < 0 || slot >= player.getInventory().items.size()) return;
+            ItemStack stack = player.getInventory().getItem(slot);
+            if (stack.isEmpty()) return;
+            g.renderItem(stack, x + 1, y + 2);
+            String magicId = SpellItem.getMagicId(stack);
+            String name = magicId != null ? magicName(magicId).getString() : "?";
+            int nameMax = getX() + width - scrollbarWidth - (x + 20);
             if (nameMax > 0 && font.width(name) > nameMax) {
                 name = font.plainSubstrByWidth(name, nameMax);
             }
-            g.drawString(font, name, x + 2, y + 2,
-                    enabled ? MedievalColors.TEXT_WARM_WHITE : MedievalColors.TEXT_DIM);
-
-            // ↑/↓：仅对「启用且相邻同为启用」的行可用（启用块在最前，禁用行不可移动）
-            boolean prevEnabled = index > 0 && isEnabled(items.get(index - 1));
-            boolean nextEnabled = index < items.size() - 1 && isEnabled(items.get(index + 1));
-            boolean canUp = enabled && prevEnabled;
-            boolean canDown = enabled && nextEnabled;
-            boolean overUp = cursorX >= upLeft && cursorX < upLeft + ROW_UP_W
-                    && cursorY >= btnY && cursorY < btnY + ROW_BTN_H;
-            boolean overDown = cursorX >= downLeft && cursorX < downLeft + ROW_DOWN_W
-                    && cursorY >= btnY && cursorY < btnY + ROW_BTN_H;
-
-            drawArrow(g, upLeft, btnY, true, canUp, overUp);
-            drawArrow(g, downLeft, btnY, false, canDown, overDown);
-
-            // 开关按钮
-            boolean overToggle = cursorX >= toggleLeft && cursorX < toggleLeft + ROW_TOGGLE_W
-                    && cursorY >= btnY && cursorY < btnY + ROW_BTN_H;
-            SkinRender.drawButton(g, toggleLeft, btnY, ROW_TOGGLE_W, ROW_BTN_H, 0);
-            if (overToggle) {
-                g.fill(toggleLeft + 1, btnY + 1, toggleLeft + ROW_TOGGLE_W - 1, btnY + ROW_BTN_H - 1, 0x30FFFFFF);
-            }
-            String toggleText = I18n.name(
-                    enabled ? "gui.wandscape.strategy.toggle.on" : "gui.wandscape.strategy.toggle.off",
-                    enabled ? "On" : "Off").getString();
-            g.drawCenteredString(font, toggleText, toggleLeft + ROW_TOGGLE_W / 2,
-                    btnY + (ROW_BTN_H - 9) / 2,
-                    enabled ? MedievalColors.MANA_BLUE : MedievalColors.DANGER_RED);
-        }
-
-        private void drawArrow(GuiGraphics g, int x, int y, boolean up, boolean canUse, boolean over) {
-            int state = canUse ? (over ? 1 : 0) : 2;
-            if (canUse && over) {
-                RenderSystem.setShaderColor(1.6F, 1.6F, 1.6F, 1.0F);
-            }
-            if (up) {
-                SkinRender.drawUpArrow(g, x, y, ROW_UP_W, ROW_BTN_H, state);
-            } else {
-                SkinRender.drawDownArrow(g, x, y, ROW_DOWN_W, ROW_BTN_H, state);
-            }
-            RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
-        }
-
-        @Override
-        public boolean mouseClicked(double mouseX, double mouseY, int button) {
-            if (!visible || !active || button != 0) return false;
-
-            int sbX = getX() + width - scrollbarWidth;
-            if (mouseX >= sbX && mouseX < getX() + width) {
-                return super.mouseClicked(mouseX, mouseY, button);
-            }
-            int contentRight = getX() + width - scrollbarWidth;
-            if (mouseX < getX() || mouseX >= contentRight) return false;
-
-            int relY = (int) mouseY - getY();
-            if (relY < 0 || relY >= height) return false;
-            int row = (relY + scrollOffset) / rowHeight;
-            if (row < 0 || row >= items.size()) return false;
-
-            int rowY = getY() + row * rowHeight - scrollOffset;
-            if (mouseY < rowY || mouseY >= rowY + rowHeight) return false;
-
-            int mx = (int) mouseX;
-            int btnY = rowY + (rowHeight - ROW_BTN_H) / 2;
-            if (mouseY >= btnY && mouseY < btnY + ROW_BTN_H) {
-                int upLeft = buttonAreaLeft();
-                int downLeft = upLeft + ROW_UP_W + ROW_BTN_GAP;
-                int toggleLeft = downLeft + ROW_DOWN_W + ROW_BTN_GAP;
-                if (mx >= upLeft && mx < upLeft + ROW_UP_W) {
-                    onMoveUp(items.get(row));
-                    return true;
-                }
-                if (mx >= downLeft && mx < downLeft + ROW_DOWN_W) {
-                    onMoveDown(items.get(row));
-                    return true;
-                }
-                if (mx >= toggleLeft && mx < toggleLeft + ROW_TOGGLE_W) {
-                    onToggle(items.get(row));
-                    return true;
-                }
-            }
-            return super.mouseClicked(mouseX, mouseY, button);
+            g.drawString(font, name, x + 20, y + (rowHeight - font.lineHeight) / 2,
+                    MedievalColors.TEXT_WARM_WHITE);
         }
     }
 }

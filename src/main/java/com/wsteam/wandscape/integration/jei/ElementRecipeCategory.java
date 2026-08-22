@@ -236,8 +236,8 @@ public class ElementRecipeCategory implements IRecipeCategory<ElementRecipe> {
         switch (recipe.stationKey()) {
             case ElementRecipeCollector.STATION_CRAFTING:
                 return Component.translatable("gui.wandscape.jei.station.crafting");
-            case ElementRecipeCollector.STATION_POTION:
-                return Component.translatable("gui.wandscape.jei.station.potion");
+            case ElementRecipeCollector.STATION_MAGIC:
+                return Component.translatable("gui.wandscape.jei.station.magic");
             case ElementRecipeCollector.STATION_WORKSTATION:
             default:
                 return Component.translatable("gui.wandscape.jei.station.workstation");

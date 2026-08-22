@@ -46,7 +46,7 @@
 | id | string | 唯一标识，snake_case |
 | display_name | string | 显示名称 |
 | creator | string | 可选，制作者名（商店/旅店/祭坛屏幕左下角显示） |
-| category | string | basic/node/storage/workstation/crafting_station/potion_station/tavern/shop/service/decoration/wonder/custom |
+| category | string | basic/node/storage/workstation/crafting_station/magic_station/tavern/shop/service/decoration/wonder/custom |
 | pattern | [x,y,z][] | 相对 anchor 的偏移列表。单方块建筑写 `[[0,0,0]]` |
 | block_mapping | {"x,y,z":"mod:block"} | pattern 中每个偏移→原版方块 ID |
 | comfort/magic/wonder | int | 建筑三值。规则因 category 而异(见下方"三值计入规则") |
@@ -71,7 +71,7 @@
 
 | 建筑类别 | 三值计入方式 |
 |----------|-------------|
-| basic/node/storage/workstation/crafting_station/potion_station/tavern | 每栋正常计入。shutdown/损毁→0 |
+| basic/node/storage/workstation/crafting_station/magic_station/tavern | 每栋正常计入。shutdown/损毁→0 |
 | shop | 建筑基础值 + 所有有货 goods 的 comfort/magic/wonder 合计。**单 goods 缺货不影响其他 goods** |
 | service | 每栋正常计入。shutdown→游客交互产出减半但三值仍计入（见 docs/simulation.md） |
 | decoration | **不计入殖民地总数**。自身 comfort/magic/wonder 以范围辐射方式加成给曼哈顿距离内功能建筑 |
@@ -293,7 +293,7 @@
 | storage | warehouse | 1 |
 | workstation | workstation | 1 |
 | crafting_station | crafting_station | 1 |
-| potion_station | potion_station | 1 |
+| magic_station | potionstation1（原 potion_station，2026-08 更名） | 1 |
 | tavern | tavern | 1 |
 | **shop** | **bakery** | **1** |
 | **service** | **library**, **inn** | **2** |

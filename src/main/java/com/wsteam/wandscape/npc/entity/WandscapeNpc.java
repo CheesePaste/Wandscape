@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -19,9 +20,9 @@ import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.core.component.CastStrategyComponent;
 import com.wsteam.wandscape.core.component.ColonyMember;
 import com.wsteam.wandscape.core.component.EquipmentComponent;
+import com.wsteam.wandscape.core.component.EquippedMagicComponent;
 import com.wsteam.wandscape.core.component.MagicState;
 import com.wsteam.wandscape.core.component.NavigationState;
-import com.wsteam.wandscape.core.component.SpellbookComponent;
 import com.wsteam.wandscape.core.component.TaskExecutor;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.types.AttributeModifier;
@@ -124,8 +125,11 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
 
     public final MagicState magic = new MagicState();
 
-    /** 会哪些魔法（magicId 列表，P3；默认 [beam]）。决策层已知表来源。 */
-    public final SpellbookComponent spellbook = new SpellbookComponent();
+    /** 已装备魔法容器（按分类 4 桶、每桶 ≤3，桶内=类内优先级）。决策层已知表来源。 */
+    public final EquippedMagicComponent equippedMagic = new EquippedMagicComponent();
+
+    /** 载荷是否从存档读出（区分「从未拥有载荷→种默认」与「有意清空载荷→保持空」）。 */
+    private boolean spellbookLoaded;
 
     /** 施法策略（玩家可控：预设 + 自定义优先级）。GuardCombat 经 CastBrain.resolvePriority 消费。 */
     public final CastStrategyComponent castStrategy = new CastStrategyComponent();
@@ -237,7 +241,7 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
     private void tickIdleSelfHeal() {
         if (!isColonyNpc()) return;
         if (getHealth() >= getMaxHealth() - 0.5f) return; // 已满（留 0.5 容差避免浮点/贴满重复奶）
-        if (!spellbook.knows("heal")) return;
+        if (!equippedMagic.knows("heal")) return;
         if (!magic.canCast("heal")) return; // 冷却中 / 施法互斥锁占用
         if (inActiveCombat()) return;       // 战斗中交给战斗循环 L0/L1
         if (!(level() instanceof ServerLevel level)) return;
@@ -1019,13 +1023,13 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
                         generateRandomNpcName(detectNamingStyle())));
                 setCustomNameVisible(true);
             }
-            // P3：默认魔法表（新 NPC / 旧存档迁移），此后玩家可改 spellbook
-            if (spellbook.isEmpty()) {
-                spellbook.set(SpellbookComponent.DEFAULT_SPELLS);
-            } else {
-                for (String defaultSpell : SpellbookComponent.DEFAULT_SPELLS) {
-                    if (!spellbook.knows(defaultSpell)) {
-                        spellbook.add(defaultSpell);
+            // 默认装备 beam + heal（新 NPC / 旧存档无字段），此后玩家经策略页装备卷轴改。
+            // 分类由 MagicDef 数据驱动（core 组件不依赖 magic，种子在实体层做）。
+            if (!spellbookLoaded && equippedMagic.isEmpty()) {
+                for (String defaultSpell : EquippedMagicComponent.DEFAULT_EQUIP) {
+                    MagicDef def = SpellbookLoader.getSpec(defaultSpell);
+                    if (def != null && def.category() != MagicDef.Category.UTILITY) {
+                        equippedMagic.equip(def.category().name().toLowerCase(Locale.ROOT), defaultSpell);
                     }
                 }
             }
@@ -1169,12 +1173,19 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
             armorList.add(armorInventory.getItem(i).saveOptional(registryAccess()));
         }
         tag.put("armorInventory", armorList);
-        // P3：施法决策（会哪些魔法 + 策略预设 + 自定义优先级）
-        ListTag spellbookIds = new ListTag();
-        for (String id : spellbook.ids()) {
-            spellbookIds.add(StringTag.valueOf(id));
+        // 施法决策：已装备魔法（按分类 4 桶、桶内槽位序）+ 策略预设 + 自定义优先级（保留作覆盖）
+        CompoundTag spellbookEquip = new CompoundTag();
+        for (String cat : EquippedMagicComponent.CATEGORIES) {
+            List<String> slot = equippedMagic.list(cat);
+            if (!slot.isEmpty()) {
+                ListTag catList = new ListTag();
+                for (String id : slot) {
+                    catList.add(StringTag.valueOf(id));
+                }
+                spellbookEquip.put(cat, catList);
+            }
         }
-        tag.put("spellbookIds", spellbookIds);
+        tag.put("spellbookEquip", spellbookEquip);
         tag.putString("castStrategyPreset", castStrategy.preset().name());
         ListTag customPriority = new ListTag();
         for (String id : castStrategy.customPriority()) {
@@ -1232,30 +1243,33 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
                         ItemStack.parseOptional(registryAccess(), armorList.getCompound(i)));
             }
         }
-        // P3：施法决策恢复（旧存档无字段 → 保持默认 [beam] / balanced）
-        if (tag.contains("spellbookIds")) {
-            ListTag sl = tag.getList("spellbookIds", Tag.TAG_STRING);
-            List<String> ids = new ArrayList<>(sl.size());
-            for (int i = 0; i < sl.size(); i++) {
-                ids.add(sl.getString(i));
+        // 施法决策恢复：仅新存档（spellbookEquip）加载；旧存档丢弃 spellbookIds 与优先级
+        // （B 阶段决策），组件留空 → onAddedToLevel 种默认 beam+heal，策略回出厂 balanced/未配置。
+        if (tag.contains("spellbookEquip")) {
+            spellbookLoaded = true;
+            CompoundTag equipTag = tag.getCompound("spellbookEquip");
+            for (String cat : EquippedMagicComponent.CATEGORIES) {
+                if (equipTag.contains(cat, Tag.TAG_LIST)) {
+                    ListTag slot = equipTag.getList(cat, Tag.TAG_STRING);
+                    for (int i = 0; i < slot.size(); i++) {
+                        equippedMagic.equip(cat, slot.getString(i));
+                    }
+                }
             }
-            spellbook.set(ids);
-        }
-        castStrategy.setPreset(tag.getString("castStrategyPreset"));
-        if (tag.contains("castStrategyPriority")) {
-            ListTag pl = tag.getList("castStrategyPriority", Tag.TAG_STRING);
-            List<String> pri = new ArrayList<>(pl.size());
-            for (int i = 0; i < pl.size(); i++) {
-                pri.add(pl.getString(i));
+            castStrategy.setPreset(tag.getString("castStrategyPreset"));
+            if (tag.contains("castStrategyPriority")) {
+                ListTag pl = tag.getList("castStrategyPriority", Tag.TAG_STRING);
+                List<String> pri = new ArrayList<>(pl.size());
+                for (int i = 0; i < pl.size(); i++) {
+                    pri.add(pl.getString(i));
+                }
+                castStrategy.setCustomPriority(pri);
             }
-            castStrategy.setCustomPriority(pri);
-        }
-        // configured 恢复：新存档有显式标记；旧存档无标记时，CUSTOM 预设视为已配置（沿用显式列表），
-        // 否则按预设推导（行为与旧版一致）。须在 setCustomPriority 之后覆盖（后者会置 configured=true）。
-        if (tag.contains("castStrategyConfigured")) {
-            castStrategy.setConfigured(tag.getBoolean("castStrategyConfigured"));
-        } else {
-            castStrategy.setConfigured("CUSTOM".equals(tag.getString("castStrategyPreset")));
+            if (tag.contains("castStrategyConfigured")) {
+                castStrategy.setConfigured(tag.getBoolean("castStrategyConfigured"));
+            } else {
+                castStrategy.setConfigured("CUSTOM".equals(tag.getString("castStrategyPreset")));
+            }
         }
         if (tag.hasUUID("colonyId")) {
             colonyId = tag.getUUID("colonyId");

@@ -72,7 +72,7 @@ Config.java           NeoForge TOML 配置，所有可调参数
 ├── building/         建筑管理(除扫描器外无自定义方块/BE，状态存于 SavedData；现有两个自定义方块/BE：
 │                     creative_building_scanner 创造扫描器 + building_scanner 生存扫描器)。
 │                     category: basic/node/storage/workstation/crafting_station/
-│                               potion_station/shop/service/decoration/wonder/tavern
+│                               magic_station/shop/service/decoration/wonder/tavern
 │                     系统: 每日结算(DailySettlementSystem)
 │                           + 装饰辐射(DecorationBonusSystem) + 商店库存(ShopStockManager) + 奇观效果(WonderEffectApplier)
 │   ├── client/       HotelScreen/ShopScreen/TavernScreen/TownHallScreen (MedievalScreen MINIMAL)

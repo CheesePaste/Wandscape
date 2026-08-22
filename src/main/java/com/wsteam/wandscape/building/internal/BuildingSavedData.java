@@ -593,7 +593,10 @@ public class BuildingSavedData extends SavedData {
 
             UUID id = entry.getUUID(TAG_ID);
             String type = entry.getString(TAG_TYPE);
-            String category = entry.getString(TAG_CATEGORY);
+            // category 是建筑类型的派生属性：从当前 BuildingConfig 重取，使类别改名
+            //（如 potion_station → magic_station）能自动迁移旧存档；类型已移除时回退存档值。
+            BuildingConfig typeConfig = BuildingConfigLoader.getInstance().get(type);
+            String category = typeConfig != null ? typeConfig.category() : entry.getString(TAG_CATEGORY);
 
             int[] anchorArr = entry.getIntArray(TAG_ANCHOR);
             BlockPos anchor = new BlockPos(anchorArr[0], anchorArr[1], anchorArr[2]);

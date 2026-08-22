@@ -1,21 +1,22 @@
-# production/ — 生产模块（工作站/合成站/酿造站）
+# production/ — 生产模块（工作站/合成站/魔法工坊）
 
 `src/main/java/com/wsteam/wandscape/production/`
 
 ## 职责
 
-建筑内的生产配方：**工作站**（分解/合成）、**合成站**（法杖）、**酿造站**（药水）。配方 JSON 数据驱动，产物可解锁（按殖民地等级）。
+建筑内的生产配方：**工作站**（分解/合成）、**合成站**（法杖+药水）、**魔法工坊**（魔法卷轴）。配方 JSON 数据驱动，产物可解锁（按殖民地等级）。
 
 ## 配方加载
 
-- `ProductionRecipeLoader`：类目 `craft_recipes`。同一类目注册两个 registry：`craftWandRecipes`（JSON `type=="wand"`）与 `potionRecipes`（`type=="potion"`）；type 缺省按 "wand"。
+- `ProductionRecipeLoader`：类目 `craft_recipes`。同一类目注册三个 registry：`craftWandRecipes`（JSON `type=="wand"`）、`potionRecipes`（`type=="potion"`）、`spellRecipes`（`type=="spell"`）；type 缺省按 "wand"。
 - Synthesize 配方**不从 JSON 加载**，运行时从 ElementMappingConfig 推导（`getSynthesizeRecipe/getAllSynthesizeRecipes`）。
 - `RecipeUnlockChecker.isUnlocked`：colonyId null → 锁定；NONE → 解锁；否则 levelMgr.getLevel(colonyId) >= minColonyLevel。
 
 ## 配方数据类（production/data/）
 
-- `BrewPotionRecipe`：id/craftStation(缺省 potion_station)/outputItem(output.item)/cost(元素 map)/inputItems(字符串列表)/unlockRequirement。
+- `BrewPotionRecipe`：id/craftStation(缺省 crafting_station)/outputItem(output.item)/cost(元素 map)/inputItems(字符串列表)/unlockRequirement。
 - `CraftWandRecipe`：额外 displayName、outputNbt（写入 preset_id + 可选 wand_color）。
+- `CraftSpellRecipe`：额外 displayName、magicId（output.magic_id → 写入 spell_scroll CUSTOM_DATA）。
 - `SynthesizeRecipe.fromElementMapping`：cost 取自 config.buildCost()。
 - `RecipeUnlockRequirement`：仅 minColonyLevel，缺省 1；NONE = min 1。
 
@@ -23,19 +24,20 @@
 
 - `storage` → WarehouseDataPacket
 - `workstation` → openWorkstationGui（发 WorkstationDataPacket）
-- `crafting_station` → openCraftingStationGui（发 CraftingStationPacket）
-- `potion_station` → 仅聊天提示"not yet implemented"（**无 GUI**）
+- `crafting_station` → openCraftingStationGui（发 CraftingStationPacket，含法杖+药水配方）
+- `magic_station` → openMagicStationGui（发 MagicStationPacket，含卷轴配方；原 potion_station 类别更名而来，存档 category 于加载时按 BuildingConfig 迁移）
 
 ## client/ 屏幕
 
-- `CraftingStationScreen`：搜索框 + 配方列表 + 数量滑条 + Submit + 右侧 TaskQueuePanel；Submit 发 RequestProductionTaskPacket("craft_wand")；每 20 tick 用 TaskQueueModifyPacket("refresh") 刷队列。
+- `CraftingStationScreen`：搜索框 + 配方列表（法杖+药水）+ 数量滑条 + Submit + 右侧 TaskQueuePanel；Submit 按配方 type 发 RequestProductionTaskPacket("craft_wand" / "brew_potion")；药水行内显示额外原料（玻璃瓶）。每 20 tick 用 TaskQueueModifyPacket("refresh") 刷队列。
+- `MagicStationScreen`：镜像 CraftingStationScreen，列表显示卷轴图标 + 魔法名 + 元素成本；Submit 发 "craft_spell"。
 - `WorkstationScreen`：双标签 Decompose/Synthesize；Submit 分别发 "decompose"（携带 itemId）与 "synthesize"（携带 recipeId）。均按 lockedReason（"unlocked"/"colony"/"elements"）渲染锁与成本。
 
 ## network/ 包
 
-- `CraftingStationPacket`（S→C）：maxAffordable 上限 64、locked_reason、unlock_requirement NBT。
-- `PotionStationPacket`（S→C）：MVP 存根，handleClient 空实现。
-- `RequestProductionTaskPacket`（C→S）：服务端映射 blueprint `production:{decompose,synthesize,craft_wand,brew_potion}`；**服务端二次校验解锁**；channel_ticks：synthesize/decompose = WORKSTATION_CRAFT_TICKS_PER_UNIT(10)×qty、craft_wand = CRAFTING_STATION_CRAFT_TICKS_PER_UNIT(1200)×qty、brew_potion=120；enqueueWork 入队。
+- `CraftingStationPacket`（S→C）：maxAffordable 上限 64、locked_reason、unlock_requirement NBT；配方条目带 type（wand/potion）+ extra_inputs。
+- `MagicStationPacket`（S→C）：镜像 CraftingStationPacket，携带 magic_id。
+- `RequestProductionTaskPacket`（C→S）：服务端映射 blueprint `production:{decompose,synthesize,craft_wand,craft_spell,brew_potion}`；**服务端二次校验解锁**；channel_ticks：synthesize/decompose = WORKSTATION_CRAFT_TICKS_PER_UNIT(10)×qty、craft_wand / craft_spell = CRAFTING_STATION_CRAFT_TICKS_PER_UNIT(1200)×qty、brew_potion=120；enqueueWork 入队。
 - `WorkstationDataPacket`（S→C）：itemList + recipeList。
 
 ## 执行（WandscapeBlockInteractExecutor）

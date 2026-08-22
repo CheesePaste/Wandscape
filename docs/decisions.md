@@ -2,6 +2,20 @@
 
 本文件记录偏离直觉的设计选择及其原因，供后续开发快速理解「为什么这么做」。
 
+## 2026-08-21：聊天组件跨网参数消毒——translatable 参数只允许原始类型或 Component
+
+**需求**（用户实测 1.9.2）：托管服务器上导出建筑（`export_building_ok`）崩出 `EncoderException: Failed to encode: This value needs to be parsed as component translation{...}`，直接断线。1.8 用时聊天区直出 String 无问题，1.9.2 换成翻译键后触发。
+
+**根因**：1.9.2 的 i18n 重构把所有聊天消息从纯 String 换成 `Component.translatableWithFallback(key, fallback, args)`。MC 1.21.1 将聊天组件打包跨网（`ClientboundSystemChatPacket` 的 `ComponentSerialization.TRUSTED_STREAM_CODEC`）时，`TranslatableContents.ARG_CODEC` 里 `filterAllowedArguments` 只认 **Number / Boolean / String / Component** 四种参数，其余（`Path`、`BlockPos` 等）`DataResult` 直接报错 → 服务端编码抛 `EncoderException` → 连接被关。`ScreenFeedbackPacket`（同为 `ComponentSerialization` 编码）同样受影响。
+
+**决策**：
+- `I18n.name(key, fallback, args)` 作为全部聊天消息的唯一工厂，统一走 `sanitize`：任何非原始类型/非 Component 参数包成 `Component.literal(String.valueOf(arg))`。通用兜底，覆盖所有现在与未来的调用点，不逐个调用点修补。
+- 仅 `export_building_ok`/`export_road_ok` 传 `Path`、`no_scanner`/`value_no_scanner` 传 `BlockPos` 会崩；后两处以 `toShortString()` 传参，聊天显示为 `x, y, z` 而非 `BlockPos{...}`。
+
+**为什么**：聊天参数合法类型是 MC 网络编解码的硬约束而非本模组业务规则，把约束收敛到消息工厂一处即可「不允许静默失败或崩溃」，避免以后新增调用点再踩。
+
+**影响**：任意原始对象参数不再炸编码；`I18nTest` 覆盖 `sanitize` 的参数类型转换。
+
 ## 2026-08-18：TickProfiler 性能分析器与夜间寻路风暴（Pathfinding Storm）优化
 
 **背景与实测**：
@@ -833,3 +847,19 @@
 - **跨段不合并**：玩家/补货/自动的同配方任务分属不同段，不会互相合并；同段内连续同配方仍合并（count/channel_ticks 累加）。
 
 **为什么**：优先级应编码在任务自身而非"插队"这类位置技巧；段尾插入保证同段内 FIFO 不饿死，段间严格按玩家＞补货＞自动执行。
+
+---
+
+## 2026-08-21：magic_station 落地——potion_station 更名 + 卷轴元素合成 + 药水配方归合成站
+
+**需求**：P 阶段 C——把 potion_station 改为 magic_station，在其中用元素合成「物品形式的魔法卷轴」（SpellItem 绑定 magic_id，阶段 A 产物）。
+
+**决策**：
+- **类别 key 更名 `potion_station` → `magic_station`，存档 category 于加载时按 BuildingConfig 迁移**：`category` 持久化在 `BuildingSavedData`（TAG_CATEGORY）。纯改类别 key 会让旧存档已建「药水工坊」失配（交互落 default）。故 `BuildingSavedData.load` 中 category 一律以当前 `BuildingConfig.category()` 为准（type 有 config 就用 config，缺失回退存档值）——类别本就是建筑类型的派生属性，改名自愈无需专项迁移数据。建筑文件 id `potionstation1` 保留（type id 更名会孤儿化旧存档建筑）。
+- **魔法合成消耗=仅元素**（`ColonyItemBank` 扣元素），无需空卷轴原料；**产物入殖民地仓库**（与 craft_wand/brew_potion 一致，卷轴写 CUSTOM_DATA magic_id 入库），不走玩家背包。
+- **旧 mana/stamina potion 配方归属 crafting_station**：`craft_station=crafting_station`，随法杖配方在合成站 GUI 列出、走 brew_potion 蓝图（校验输入玻璃瓶）。**输出物品（`wandscape:mana_potion`/`stamina_potion`）仍不注册**（用户拍板不注册；产出入仓为数据条目、无图标，属已知残留记入 gaps）。
+- **CraftingStationPacket 泛化**：RecipeEntry 增加 `type`（wand/potion）与 `extra_inputs`，合成站 GUI 按 type 路由 craft_wand/brew_potion、行内显示药水额外原料。
+
+**为什么**：魔法卷轴是「装备给 NPC 的道具」，走殖民地仓储管线与法杖一致，且阶段 B 策略页正是从背包/殖民地取卷轴装备；把旧药水收编到合成站可保留已有配方数据而无需维护第二把酿造 GUI。未注册药水物品是刻意收敛（药水非当前主线，避免为幽灵配方注册无效果物品）。
+
+**影响**：magic_station 右键打开卷轴合成 GUI；crafting_station 同时展示法杖+药水；旧存档 potionstation1 建筑自动以 magic_station 类别加载。

@@ -29,7 +29,9 @@ import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.transport.ItemTransportManager;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
+import com.wsteam.wandscape.magic.item.SpellItem;
 import com.wsteam.wandscape.production.ProductionRecipeLoader;
+import com.wsteam.wandscape.production.data.CraftSpellRecipe;
 import com.wsteam.wandscape.production.data.CraftWandRecipe;
 import com.wsteam.wandscape.production.data.SynthesizeRecipe;
 import com.wsteam.wandscape.shared.api.BuildingApi;
@@ -46,6 +48,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
@@ -283,6 +286,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
             case "decompose" -> executeDecompose(params, world, npcId);
             case "synthesize" -> executeSynthesize(params, world, npcId);
             case "craft_wand" -> executeCraftWand(params, world, npcId);
+            case "craft_spell" -> executeCraftSpell(params, world, npcId);
             case "brew_potion" -> executeBrewPotion(params, world, npcId);
             default -> Log.warn(TAG, "Unknown async block_interact action: {}", action);
         }
@@ -522,6 +526,70 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         launchItemTransport(ItemKey.of(recipe.outputItem(), recipe.outputNbt().copy()), count, world, npcId);
 
         Log.info(TAG, "craft_wand: {} x{} → warehouse", recipe.outputItem(), count);
+        spawnCompletionParticles(npcId);
+    }
+
+    /** 魔法工坊合成卷轴：产出 spell_scroll 并绑定 magic_id 入殖民地仓库（C4）。 */
+    private void executeCraftSpell(Map<String, String> params, World world, long npcId) {
+        String recipeId = params.get("recipe_id");
+        int count = parseCount(params);
+        if (recipeId == null || count <= 0) {
+            Log.warn(TAG, "craft_spell: invalid params recipe_id={} count={}", recipeId, count);
+            return;
+        }
+
+        ProductionRecipeLoader recipes = productionRecipeLoader;
+        if (recipes == null) {
+            Log.warn(TAG, "craft_spell: ProductionRecipeLoader not set");
+            return;
+        }
+
+        CraftSpellRecipe recipe = recipes.getSpellRecipes().get(recipeId);
+        if (recipe == null) {
+            Log.warn(TAG, "craft_spell: recipe not found: {}", recipeId);
+            return;
+        }
+
+        Level level = getNpcLevel(npcId);
+        if (level == null) return;
+
+        ColonyItemBank bank = ColonyItemBank.get(level);
+        if (bank == null) return;
+
+        UUID colonyId = findStorageColonyId();
+
+        for (var entry : recipe.cost().entrySet()) {
+            long needed = scaledCraftCost(entry.getValue() * count);
+            if (bank.countElement(colonyId, entry.getKey()) < needed) {
+                String elementId = entry.getKey().name().toLowerCase();
+                Log.warn(TAG, "craft_spell: insufficient {} (need={})", entry.getKey(), needed);
+                throw new ResourceShortageException(
+                        List.of(new ResourceStack(new ResourceId(elementId), (int) needed)));
+            }
+        }
+
+        for (var entry : recipe.cost().entrySet()) {
+            bank.consumeElement(colonyId, entry.getKey(), scaledCraftCost(entry.getValue() * count));
+        }
+
+        var item = BuiltInRegistries.ITEM.get(ResourceLocation.tryParse(recipe.outputItem()));
+        if (item == null) {
+            Log.warn(TAG, "craft_spell: output item not found: {}", recipe.outputItem());
+            return;
+        }
+
+        CompoundTag nbt = new CompoundTag();
+        nbt.putString(SpellItem.MAGIC_ID_KEY, recipe.magicId());
+
+        ItemStack stack = new ItemStack(item, count);
+        stack.set(DataComponents.CUSTOM_DATA, CustomData.of(nbt.copy()));
+
+        bank.add(colonyId, ItemKey.of(recipe.outputItem(), nbt.copy()), count);
+
+        // ── Transport visualization: scroll flies NPC → warehouse ──
+        launchItemTransport(ItemKey.of(recipe.outputItem(), nbt.copy()), count, world, npcId);
+
+        Log.info(TAG, "craft_spell: {} x{} → warehouse (magic_id={})", recipe.outputItem(), count, recipe.magicId());
         spawnCompletionParticles(npcId);
     }
 

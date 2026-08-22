@@ -69,7 +69,7 @@ public class CreativeScannerScreen extends MedievalScreen {
             new CategoryDef("storage", "category.wandscape.storage", "仓库存储", "📦"),
             new CategoryDef("workstation", "category.wandscape.workstation", "工作工坊", "🔨"),
             new CategoryDef("crafting_station", "category.wandscape.crafting_station", "物品合成", "⚙️"),
-            new CategoryDef("potion_station", "category.wandscape.potion_station", "炼金工坊", "🧪"),
+            new CategoryDef("magic_station", "category.wandscape.magic_station", "魔法工坊", "🧪"),
             new CategoryDef("tavern", "category.wandscape.tavern", "冒险酒馆", "🍺"),
             new CategoryDef("shop", "category.wandscape.shop", "商业商店", "🏪"),
             new CategoryDef("service", "category.wandscape.service", "市民服务", "🛎️"),
