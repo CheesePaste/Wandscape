@@ -863,3 +863,23 @@
 **为什么**：魔法卷轴是「装备给 NPC 的道具」，走殖民地仓储管线与法杖一致，且阶段 B 策略页正是从背包/殖民地取卷轴装备；把旧药水收编到合成站可保留已有配方数据而无需维护第二把酿造 GUI。未注册药水物品是刻意收敛（药水非当前主线，避免为幽灵配方注册无效果物品）。
 
 **影响**：magic_station 右键打开卷轴合成 GUI；crafting_station 同时展示法杖+药水；旧存档 potionstation1 建筑自动以 magic_station 类别加载。
+
+## 2026-08-22：仓库 GUI 原版化——真实 Menu + AE2 式只读仓库槽
+
+**需求**：仓库 GUI 的玩家物品栏是手工绘制（`WarehouseScreen` 自绘 `renderSlot` + 手算坐标点击），缺少原版快捷键（数字键/Q/Shift/拖拽），且与一键整理类模组完全不兼容；Exchange 页是文本列表而非大箱子格子样式。要求对齐其他仓储模组。
+
+**调研结论**（读 1.21.1 源码 + AE2/RS/InventorySorter 源码）：
+- 原版所有快捷键由 `AbstractContainerScreen` 基于 `menu.slots` + `hoveredSlot` 自动处理；一键整理（cpw/InventorySorter）要求屏幕是 `AbstractContainerScreen` 且悬停槽在 `menu.slots` 里。
+- 仓储模组共识：玩家物品栏 = menu 真槽（vanilla 语义）；仓库/终端物品 = 只读槽（`mayPickup=false`/`mayPlace=false`/`set()` 空实现）+ 自定义点击包（AE2 `ClientReadOnlySlot` + `InventoryAction`），大数量自绘数字（AE2 `AmountFormat`）。
+
+**决策**：
+- **打开链路从"数据包直开 Screen"改为真实容器流**：注册 `MenuType`，右键仓库建筑/市政厅按钮 → `player.openMenu` → 客户端 vanilla 流程构造 `WarehouseMenu` + `WarehouseScreen`；`WarehouseDataPacket` 退化为纯数据刷新（元素/物品列表）。
+- **玩家槽 = 真 vanilla `Slot`**（`TabAwareSlot` 仅覆写 `isActive` 供页签显隐，保留全部 vanilla 语义）→ 快捷键与一键整理自动兼容。`quickMoveStack` 实现玩家槽 Shift 点击存入银行（`insertItems` 全叠，不受分页限制）；仓库槽返回 EMPTY（防整理模组搬动仓库）。
+- **仓库槽 = AE2 式只读槽**（`WarehouseSlot`：mayPickup/mayPlace=false、set() 空实现、getItem 由 Screen 绑定 supplier）→ 天然免疫 Q 键、数字键、Shift、整理模组；点击全部走自定义 `WarehouseActionPacket`（光标取整叠/半叠、Shift 快速取出、光标存入/存入 1）。
+- **光标同步走 vanilla 机制**：服务端 `menu.setCarried(stack)` → `broadcastChanges` → `sendCarriedChange` 自动同步客户端光标，无需自定义光标包；大数量（>64）进光标与 AE2/RS 一致。
+- **Exchange 页 = 大箱子式 9×6 格子**：每格物品 + 右下角数量（`WarehousePager.formatCount`：<1000 原数，之后 K/M/B 缩写），搜索+分页纯客户端（`WarehousePager` 纯逻辑类可单测）。Overview 页保留元素面板+只读列表。
+- **Q 键对仓库槽无副作用**（mayPickup=false → THROW 的 safeTake 空），玩家槽 Q 正常丢弃。
+
+**为什么**：真 Menu 是"与一键整理兼容"的必要条件（模组要求 menu.slots 中的槽）；仓库槽若做成可写真槽，整理模组会把仓库条目搬进玩家栏（行为怪异），AE2 的只读槽 + 自定义点击正是为此设计。自定义点击包 + `setCarried` 同步光标既对齐仓储模组交互语义，又完全复用 vanilla 光标同步链路。
+
+**影响**：旧交互（左键取 1/右键取 64/点击玩家槽直接存入）被光标语义取代（点击取整叠/半叠进光标、Shift 快速移动、光标点击存入）；`WarehouseActionPacket` 字段重构（containerId + action + itemId + nbt）；`ReplayScreenGuard` 拦截条件改为 `ReplayProtectedScreen` 标记接口（新 Screen 不再是 MedievalScreen 子类）；引导文案与 guide 文档更新为新交互。

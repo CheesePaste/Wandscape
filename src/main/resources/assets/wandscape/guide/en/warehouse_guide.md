@@ -14,7 +14,18 @@ Stores all the town's elements and materials. Building and crafting deduct from 
 
 **Exchange**
 
-Click warehouse items to **withdraw**, click inventory items to **deposit**, with adjustable quantities.
+A chest-style slot grid: one item per slot with the count in the bottom-right corner.
+
+| Action | Effect |
+|---|---|
+| Left-click a warehouse item | Take the whole stack into the cursor |
+| Right-click a warehouse item | Take half into the cursor |
+| Shift + left-click a warehouse item | Quick-withdraw into the inventory |
+| Click a warehouse slot with a carried stack | Deposit the cursor stack |
+| Right-click (with a carried stack) | Deposit 1 item |
+| Shift + left-click an inventory item | Quick-deposit into the warehouse |
+
+The inventory area behaves exactly like a vanilla container: hotbar keys 1-9, Q drop, drag-split and inventory-sorting mods all work.
 
 ## When No Warehouse Building Exists
 

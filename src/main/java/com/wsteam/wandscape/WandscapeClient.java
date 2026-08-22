@@ -55,6 +55,7 @@ import com.wsteam.wandscape.tourist.network.TouristDataPacket;
 import com.wsteam.wandscape.warehouse.client.WarehouseScreen;
 import com.wsteam.wandscape.warehouse.network.WarehouseDataPacket;
 
+import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import com.wsteam.wandscape.shared.ui.panel.WandscapePanelController;
 import com.wsteam.wandscape.shared.ui.panel.WandscapePanelOverlay;
 import com.wsteam.wandscape.shared.ui.panel.WandscapePanelState;
@@ -188,18 +189,20 @@ public class WandscapeClient {
     }
 
     @SubscribeEvent
+    static void onRegisterMenuScreens(RegisterMenuScreensEvent event) {
+        event.register(Wandscape.WAREHOUSE_MENU.get(), WarehouseScreen::new);
+    }
+
+    @SubscribeEvent
     static void onClientSetup(FMLClientSetupEvent event) {
         // Building preview GIF bake params (clarity + framerate) from config
         BuildingPreviewGifCache.configure(Config.PREVIEW_RESOLUTION.get(), Config.PREVIEW_FPS.get());
         // Wire server→client packet handlers — open MedievalScreen directly.
         WarehouseDataPacket.setClientHandler(packet -> {
-            var screen = Minecraft.getInstance().screen;
-            if (screen instanceof WarehouseScreen ws) {
+            // The warehouse screen opens through the vanilla menu flow (openMenu +
+            // RegisterMenuScreensEvent); the data packet only refreshes an open screen.
+            if (Minecraft.getInstance().screen instanceof WarehouseScreen ws) {
                 ws.updateItems(packet);
-            } else {
-                var ws = new WarehouseScreen();
-                ws.updateItems(packet);
-                Minecraft.getInstance().setScreen(ws);
             }
         });
         WorkstationDataPacket.setClientHandler(packet -> {

@@ -76,6 +76,7 @@ import com.wsteam.wandscape.building.network.TaskQueueModifyPacket;
 import com.wsteam.wandscape.building.network.NodeDataPacket;
 import com.wsteam.wandscape.building.network.RequestGatherTaskPacket;
 import com.wsteam.wandscape.warehouse.WarehouseManager;
+import com.wsteam.wandscape.warehouse.WarehouseMenu;
 import com.wsteam.wandscape.warehouse.WarehouseNotificationHandler;
 import com.wsteam.wandscape.warehouse.network.WarehouseActionPacket;
 import com.wsteam.wandscape.warehouse.network.WarehouseDataPacket;
@@ -145,6 +146,8 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.MobCategory;
+import net.minecraft.world.flag.FeatureFlags;
+import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.Item;
@@ -207,6 +210,12 @@ public class Wandscape {
     /** 光束终点序列化器（Optional<Vec3>），供 MagicBeamEntity 同步身体中心/方块命中点。 */
     public static final DeferredHolder<EntityDataSerializer<?>, EntityDataSerializer<?>> BEAM_TARGET_SERIALIZER =
             ENTITY_DATA_SERIALIZERS.register("beam_target", () -> MagicBeamEntity.OPTIONAL_VEC3);
+    public static final DeferredRegister<MenuType<?>> MENUS =
+            DeferredRegister.create(Registries.MENU, MODID);
+    /** 仓库容器菜单（玩家槽 vanilla + 仓库只读槽，见 warehouse/WarehouseMenu）。 */
+    public static final DeferredHolder<MenuType<?>, MenuType<WarehouseMenu>> WAREHOUSE_MENU =
+            MENUS.register("warehouse", () ->
+                    new MenuType<>(WarehouseMenu::new, FeatureFlags.VANILLA_SET));
 
     // ---- Debug target ----
     public static BlockPos debugDiamondTarget = null;
@@ -416,6 +425,7 @@ public class Wandscape {
         BLOCK_ENTITY_TYPES.register(modEventBus);
         MOB_EFFECTS.register(modEventBus);
         ENTITY_DATA_SERIALIZERS.register(modEventBus);
+        MENUS.register(modEventBus);
         WandscapeSounds.SOUNDS.register(modEventBus);
         com.wsteam.wandscape.magic.internal.WandscapeEffects.PETRIFICATION.getId();
 
