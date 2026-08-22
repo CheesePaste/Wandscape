@@ -20,4 +20,19 @@ public final class I18n {
     public static MutableComponent name(String key, String fallback, Object... args) {
         return Component.translatableWithFallback(key, fallback, args);
     }
+
+    /** Safe translatable string extraction with test-safe fallback. */
+    public static String string(String key, String fallback, Object... args) {
+        try {
+            if (net.minecraft.locale.Language.getInstance() != null) {
+                return name(key, fallback, args).getString();
+            }
+        } catch (Throwable ignored) {}
+        if (args != null && args.length > 0) {
+            try {
+                return String.format(fallback, args);
+            } catch (Exception ignored) {}
+        }
+        return fallback;
+    }
 }

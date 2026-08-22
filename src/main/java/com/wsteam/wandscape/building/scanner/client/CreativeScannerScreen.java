@@ -214,14 +214,16 @@ public class CreativeScannerScreen extends MedievalScreen {
         int y = startY;
 
         // Top Toolbar Row
-        addBtn(lx, y, 78, 18, "模式: SAVE ▾", () -> {
+        addBtn(lx, y, 78, 18, I18n.name("gui.wandscape.scanner.mode_save", "模式: SAVE ▾").getString(), () -> {
             scanner.setBlockMode(BlockMode.CORNER);
             syncToServer();
             showFeedback(Component.literal("§e已切换到 CORNER 辅角点模式"), 0xFFD4A840);
             rebuild();
         });
 
-        String targetLabel = scanner.getTargetMode() == TargetMode.BUILDING ? "目标: 建筑 ▾" : "目标: 道路 ▾";
+        String targetLabel = scanner.getTargetMode() == TargetMode.BUILDING
+                ? I18n.name("gui.wandscape.scanner.target_building", "目标: 建筑 ▾").getString()
+                : I18n.name("gui.wandscape.scanner.target_road", "目标: 道路 ▾").getString();
         addBtn(lx + 82, y, 84, 18, targetLabel, () -> {
             TargetMode next = scanner.getTargetMode() == TargetMode.BUILDING ? TargetMode.ROAD : TargetMode.BUILDING;
             scanner.setTargetMode(next);
@@ -267,7 +269,7 @@ public class CreativeScannerScreen extends MedievalScreen {
         bMaxY = mkCoordEdit(colMin + cw + 4, y + 36, cw, 16, scanner.getBoundaryMax().y(), this::onBoundaryEdit);
         bMaxZ = mkCoordEdit(colMin + (cw + 4) * 2, y + 36, cw, 16, scanner.getBoundaryMax().z(), this::onBoundaryEdit);
 
-        addBtn(lx + 270, y + 16, 86, 36, "🎮 可视化调整", () -> {
+        addBtn(lx + 270, y + 16, 86, 36, I18n.name("gui.wandscape.scanner.gizmo_btn", "🎮 可视化调整").getString(), () -> {
             ScannerGizmoState.enter(scanner);
         });
 
@@ -315,7 +317,7 @@ public class CreativeScannerScreen extends MedievalScreen {
                 syncToServer();
             });
 
-            addBtn(lx + 248, y + 86, 110, 18, "切换为建筑模式", () -> {
+            addBtn(lx + 248, y + 86, 110, 18, I18n.name("gui.wandscape.scanner.switch_to_building", "切换为建筑模式").getString(), () -> {
                 scanner.setTargetMode(TargetMode.BUILDING);
                 syncToServer();
                 showFeedback(Component.literal("§e已切换为建筑模式"), 0xFFD4A840);
@@ -341,7 +343,7 @@ public class CreativeScannerScreen extends MedievalScreen {
             });
             y += 24;
 
-            addBtn(lx + 256, y, 108, 18, "切换为道路模式", () -> {
+            addBtn(lx + 256, y, 108, 18, I18n.name("gui.wandscape.scanner.switch_to_road", "切换为道路模式").getString(), () -> {
                 scanner.setTargetMode(TargetMode.ROAD);
                 syncToServer();
                 showFeedback(Component.literal("§e已切换为道路模式"), 0xFFD4A840);
@@ -372,7 +374,7 @@ public class CreativeScannerScreen extends MedievalScreen {
         addBtn(lx + 80, y, 148, 18, curCat.icon() + " " + curCat.label() + " (" + curCat.id() + ")", () -> cycleCategory(1));
         addBtn(lx + 230, y, 16, 18, "▶", () -> cycleCategory(1));
 
-        addBtn(lx + 256, y, 108, 18, "切换为道路模式", () -> {
+        addBtn(lx + 256, y, 108, 18, I18n.name("gui.wandscape.scanner.switch_to_road", "切换为道路模式").getString(), () -> {
             scanner.setTargetMode(TargetMode.ROAD);
             syncToServer();
             showFeedback(Component.literal("§e已切换为道路模式"), 0xFFD4A840);
@@ -460,10 +462,10 @@ public class CreativeScannerScreen extends MedievalScreen {
         }
 
         if (totalPages > 1) {
-            addBtn(lx + 12, y + 88, 55, 14, "◀ 上页", () -> {
+            addBtn(lx + 12, y + 88, 55, 14, I18n.name("gui.wandscape.scanner.prev_page_short", "◀ 上页").getString(), () -> {
                 if (shopGoodsPage > 0) { shopGoodsPage--; rebuild(); }
             }, shopGoodsPage > 0);
-            addBtn(lx + 298, y + 88, 55, 14, "下页 ▶", () -> {
+            addBtn(lx + 298, y + 88, 55, 14, I18n.name("gui.wandscape.scanner.next_page_short", "下页 ▶").getString(), () -> {
                 if (shopGoodsPage < totalPages - 1) { shopGoodsPage++; rebuild(); }
             }, shopGoodsPage < totalPages - 1);
         }
@@ -531,10 +533,10 @@ public class CreativeScannerScreen extends MedievalScreen {
         }
 
         if (totalPages > 1) {
-            addBtn(lx + 12, y + 88, 55, 14, "◀ 上页", () -> {
+            addBtn(lx + 12, y + 88, 55, 14, I18n.name("gui.wandscape.scanner.prev_page_short", "◀ 上页").getString(), () -> {
                 if (serviceElemPage > 0) { serviceElemPage--; rebuild(); }
             }, serviceElemPage > 0);
-            addBtn(lx + 298, y + 88, 55, 14, "下页 ▶", () -> {
+            addBtn(lx + 298, y + 88, 55, 14, I18n.name("gui.wandscape.scanner.next_page_short", "下页 ▶").getString(), () -> {
                 if (serviceElemPage < totalPages - 1) { serviceElemPage++; rebuild(); }
             }, serviceElemPage < totalPages - 1);
         }
@@ -625,10 +627,10 @@ public class CreativeScannerScreen extends MedievalScreen {
         }
 
         if (totalPages > 1) {
-            addBtn(lx + 14, y + 118, 65, 16, "◀ 上一页", () -> {
+            addBtn(lx + 14, y + 118, 65, 16, I18n.name("gui.wandscape.scanner.prev_page", "◀ 上一页").getString(), () -> {
                 if (presetsPage > 0) { presetsPage--; rebuild(); }
             }, presetsPage > 0);
-            addBtn(lx + 285, y + 118, 65, 16, "下一页 ▶", () -> {
+            addBtn(lx + 285, y + 118, 65, 16, I18n.name("gui.wandscape.scanner.next_page", "下一页 ▶").getString(), () -> {
                 if (presetsPage < totalPages - 1) { presetsPage++; rebuild(); }
             }, presetsPage < totalPages - 1);
         }
@@ -684,7 +686,12 @@ public class CreativeScannerScreen extends MedievalScreen {
     }
 
     private void renderTabBar(GuiGraphics gui, int mx, int my, int lx) {
-        String[] tabs = { "📐 范围结构", "🏷️ 属性配置", "💾 预设管理", "⚡ 导出操作" };
+        String[] tabs = {
+                I18n.name("gui.wandscape.scanner.tab_bounds", "📐 范围结构").getString(),
+                I18n.name("gui.wandscape.scanner.tab_properties", "🏷️ 属性配置").getString(),
+                I18n.name("gui.wandscape.scanner.tab_presets", "💾 预设管理").getString(),
+                I18n.name("gui.wandscape.scanner.tab_export", "⚡ 导出操作").getString()
+        };
         int tabY = topPos + headerHeight + 2;
         int tabW = 88;
 
