@@ -27,8 +27,8 @@
 ## NPC 主动防御
 
 - `NpcSpellPowerHandler`：@Subscribe LivingIncomingDamageEvent；目标 Enemy 且伤害源是 WandscapeNpc → 伤害×SPELL_POWER（>1 时），再×魔力强化（`MagicSpellExecutors.magicEnhanceMultiplier`，无 buff 时 ×1）。玩家施法不经过。
-- `SelfDefenseHandler`：NPC 受任意伤 → markRecentlyDamaged()（重置脱战回血计时）；攻击者为非玩家/非 NPC 的 Enemy → setHatedAttacker(uuid, gameTime+GUARD_HATE_DURATION_TICKS)。
-- `SelfDefenseExecutor`：独立于守卫任务，每个 NPC 注入 `self_defense` 包。detectAndInject（每 DETECT_INTERVAL_TICKS=4）：已有自防御包或 guard: 全局任务则跳过；resolveTarget 命中则抢占——分离 pendingFuture（导航则取消）、suspendCurrent（挂起栈满跳过）、startPackage。优先级 90。resolveTarget：仇恨目标（存活、非玩家、≤hateRange、LOS 可见）优先；否则半径内最近可见 Enemy（selfDefenseRange，球面距离+LOS）。runCycle：无目标→clearHatedAttackerIfExpired+complete（队列恢复挂起包）；有目标→engage。**和平模式**：不索敌不反击，但可见怪进入 peaceFleeRange → 同样抢占注入；runCycle 走逃跑分支（navigateAway 后撤，无威胁即 complete 恢复任务）。
+- `SelfDefenseHandler`：NPC 受任意伤 → markRecentlyDamaged()（重置脱战回血计时）；攻击者非玩家且非同殖民地 NPC（`isRetaliationTarget`，不要求 Enemy——北极熊/铁傀儡/狼等中立生物主动攻击也还手）→ setHatedAttacker(uuid, gameTime+GUARD_HATE_DURATION_TICKS)。
+- `SelfDefenseExecutor`：独立于守卫任务，每个 NPC 注入 `self_defense` 包。detectAndInject（每 DETECT_INTERVAL_TICKS=4）：已有自防御包或 guard: 全局任务则跳过；resolveTarget 命中则抢占——分离 pendingFuture（导航则取消）、suspendCurrent（挂起栈满跳过）、startPackage。优先级 90。resolveTarget：仇恨目标（存活、可反击、≤hateRange、LOS 可见）优先；否则半径内最近可见 Enemy（selfDefenseRange，球面距离+LOS）。runCycle：无目标→clearHatedAttackerIfExpired+complete（队列恢复挂起包）；有目标→engage。**和平模式**：不索敌不反击，但可见怪进入 peaceFleeRange → 同样抢占注入；runCycle 走逃跑分支（navigateAway 后撤，无威胁即 complete 恢复任务）。
 - `ProjectileDodge`：**投掷物躲避**（与自防御互补——自防御管近身敌人，本模块管远程投掷物）。每 DETECT_INTERVAL_TICKS=3 扫所有殖民地 NPC 周围 20 格（DETECT_RADIUS）的敌对投掷物（`owner instanceof Enemy`：骷髅箭/凋零骷髅头/火球/女巫药水等），轨迹预判命中（`willHit` 纯数学：直线飞行最近距离 <1 格且 2~16 tick 内会到，窗口/半径可单测）则 `GuardCombat.navigateDodge` 走开让出弹道；单 NPC DODGE_COOLDOWN=12 tick 防连续弹幕来回拽；传送引导中（定身）跳过。
 
 ## 与其他模块关系

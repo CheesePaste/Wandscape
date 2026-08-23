@@ -20,8 +20,11 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 
 /**
- * 让原版敌对生物把 {@link PlayerLike} 实体（NPC）当**玩家**索敌、把
+ * 让原版**敌对生物**（{@link Enemy}）把 {@link PlayerLike} 实体（NPC）当**玩家**索敌、把
  * {@link VillagerLike} 实体（游客）当**村民**索敌。
+ *
+ * <p>只增强 {@link Enemy}：北极熊/铁傀儡/狼等中立·防御生物同样带 Player 索敌 goal，但那是
+ * 条件性的（愤怒/声望），追加无条件的 PlayerLike 索敌会让它们无端攻击 NPC（仇恨吸引）。
  *
  * <p>不枚举「哪些生物追玩家/追村民」——凡是加入世界时目标选择器里已存在对
  * {@link Player} 的 {@link NearestAttackableTargetGoal} 的生物（骷髅 / 史莱姆 /
@@ -55,6 +58,9 @@ public final class HostileTargetingHandler {
         if (event.getLevel().isClientSide()) return;
         if (!(event.getEntity() instanceof Mob mob)) return;
         if (TARGET_TYPE == null) return;
+        // 只增强敌对生物（Enemy）：北极熊/铁傀儡/狼等中立·防御生物虽带 Player 索敌 goal，
+        // 但那是条件性的（愤怒/声望），追加无条件 PlayerLike 索敌会让它们无端攻击 NPC（仇恨吸引）。
+        if (!(mob instanceof Enemy)) return;
 
         // 记录该生物是否追玩家/追村民，以及所有原版索敌 goal 的最低优先级（最大优先级数字）。
         boolean huntsVillagers = false;
