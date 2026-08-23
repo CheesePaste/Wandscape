@@ -30,6 +30,7 @@ import com.wsteam.wandscape.core.types.AttributeType;
 import com.wsteam.wandscape.core.types.EquipmentSlot;
 import com.wsteam.wandscape.core.types.ModifierOperation;
 import com.wsteam.wandscape.core.types.NpcAttributes;
+import com.wsteam.wandscape.npc.NpcMenu;
 import com.wsteam.wandscape.npc.network.NpcDataPacket;
 import com.wsteam.wandscape.task.runtime.ExecutorState;
 import com.wsteam.wandscape.engine.WandscapeEngine;
@@ -48,6 +49,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -992,9 +994,17 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
         if (level().isClientSide) {
             return InteractionResult.SUCCESS;
         }
-        // Send NPC data to the player to open the info/equipment screen
+        // 打开 NPC 装备容器菜单（4 盔甲 + 1 法杖 + 玩家背包，全部真实 vanilla 槽）
         if (player instanceof ServerPlayer sp) {
-            PacketDistributor.sendToPlayer(sp, NpcDataPacket.from(this));
+            sp.openMenu(new net.minecraft.world.SimpleMenuProvider(
+                    (id, inv, p) -> new NpcMenu(id, inv, this),
+                    Component.literal("NPC Info")));
+            // 下一 tick 补发数据（客户端屏幕就绪后刷新名字/属性等）
+            sp.serverLevel().getServer().execute(() -> {
+                if (!isRemoved() && sp.containerMenu instanceof NpcMenu) {
+                    PacketDistributor.sendToPlayer(sp, NpcDataPacket.from(WandscapeNpc.this));
+                }
+            });
         }
         return InteractionResult.CONSUME;
     }

@@ -191,6 +191,8 @@ public class WandscapeClient {
     @SubscribeEvent
     static void onRegisterMenuScreens(RegisterMenuScreensEvent event) {
         event.register(Wandscape.WAREHOUSE_MENU.get(), WarehouseScreen::new);
+        event.register(Wandscape.NPC_MENU.get(), NpcScreen::new);
+        event.register(Wandscape.NPC_STRATEGY_MENU.get(), NpcStrategyScreen::new);
     }
 
     @SubscribeEvent
@@ -289,12 +291,11 @@ public class WandscapeClient {
                 Minecraft.getInstance().setScreen(new BuildingInfoScreen(packet)));
         NpcDataPacket.setClientHandler(packet -> {
             var mc = Minecraft.getInstance();
+            // 装备/策略屏通过 openMenu 打开（RegisterMenuScreensEvent）；数据包仅刷新已开屏幕。
             if (mc.screen instanceof NpcStrategyScreen strategyScreen) {
                 strategyScreen.apply(packet);
             } else if (mc.screen instanceof NpcScreen existing) {
                 existing.apply(packet);
-            } else {
-                mc.setScreen(new NpcScreen(packet));
             }
         });
         TouristDataPacket.setClientHandler(packet -> {

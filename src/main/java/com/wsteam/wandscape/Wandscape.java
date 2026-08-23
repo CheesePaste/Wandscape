@@ -111,8 +111,10 @@ import com.wsteam.wandscape.npc.entity.EvilMage;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.npc.internal.NpcApiImpl;
+import com.wsteam.wandscape.npc.NpcMenu;
+import com.wsteam.wandscape.npc.NpcStrategyMenu;
 import com.wsteam.wandscape.npc.network.NpcDataPacket;
-import com.wsteam.wandscape.npc.network.NpcEquipPacket;
+import com.wsteam.wandscape.npc.network.NpcOpenStrategyPacket;
 import com.wsteam.wandscape.npc.network.NpcRenamePacket;
 import com.wsteam.wandscape.npc.network.NpcStrategyPacket;
 import com.wsteam.wandscape.npc.network.NpcTogglePacket;
@@ -216,6 +218,14 @@ public class Wandscape {
     public static final DeferredHolder<MenuType<?>, MenuType<WarehouseMenu>> WAREHOUSE_MENU =
             MENUS.register("warehouse", () ->
                     new MenuType<>(WarehouseMenu::new, FeatureFlags.VANILLA_SET));
+    /** NPC 装备容器菜单（4 盔甲 + 1 法杖 + 玩家槽，见 npc/NpcMenu）。 */
+    public static final DeferredHolder<MenuType<?>, MenuType<NpcMenu>> NPC_MENU =
+            MENUS.register("npc", () ->
+                    new MenuType<>(NpcMenu::new, FeatureFlags.VANILLA_SET));
+    /** NPC 施法策略容器菜单（12 卷轴槽 + 玩家槽，见 npc/NpcStrategyMenu）。 */
+    public static final DeferredHolder<MenuType<?>, MenuType<NpcStrategyMenu>> NPC_STRATEGY_MENU =
+            MENUS.register("npc_strategy", () ->
+                    new MenuType<>(NpcStrategyMenu::new, FeatureFlags.VANILLA_SET));
 
     // ---- Debug target ----
     public static BlockPos debugDiamondTarget = null;
@@ -703,10 +713,9 @@ public class Wandscape {
                         NpcDataPacket.STREAM_CODEC,
                         (packet, ctx) -> NpcDataPacket.handleClient(packet))
                 .playToServer(
-                        NpcEquipPacket.TYPE,
-                        NpcEquipPacket.STREAM_CODEC,
-                        (packet, ctx) -> NpcEquipPacket.handleServer(packet,
-                                (net.minecraft.server.level.ServerPlayer) ctx.player()))
+                        NpcOpenStrategyPacket.TYPE,
+                        NpcOpenStrategyPacket.STREAM_CODEC,
+                        (packet, ctx) -> NpcOpenStrategyPacket.handleServer(packet, ctx))
                 .playToServer(
                         NpcStrategyPacket.TYPE,
                         NpcStrategyPacket.STREAM_CODEC,

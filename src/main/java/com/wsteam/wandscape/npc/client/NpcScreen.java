@@ -4,56 +4,58 @@ import java.util.List;
 import java.util.Map;
 
 import com.wsteam.wandscape.Wandscape;
+import com.wsteam.wandscape.npc.NpcMenu;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.npc.network.NpcDataPacket;
-import com.wsteam.wandscape.npc.network.NpcEquipPacket;
+import com.wsteam.wandscape.npc.network.NpcOpenStrategyPacket;
 import com.wsteam.wandscape.npc.network.NpcRenamePacket;
 import com.wsteam.wandscape.npc.network.NpcTogglePacket;
 import com.wsteam.wandscape.shared.ui.I18n;
+import com.wsteam.wandscape.shared.ui.ReplayProtectedScreen;
+import com.wsteam.wandscape.shared.ui.component.HelpButton;
 import com.wsteam.wandscape.shared.ui.component.MedievalButton;
-import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
+import com.wsteam.wandscape.shared.ui.skin.SkinRender;
 import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
-import com.wsteam.wandscape.wand.item.WandItem;
+import com.wsteam.wandscape.shared.ui.vanilla.VanillaPlayerInventory;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
-import net.minecraft.client.renderer.texture.TextureAtlasSprite;
-import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.world.InteractionHand;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.InventoryMenu;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.PacketDistributor;
+
 /**
- * NPC info & equipment screen.
+ * NPC 装备界面（容器化）：左列 4 盔甲槽 + 1 法杖槽（真实 vanilla 槽，左键/右键/
+ * Shift/拖拽全部生效），中间 3D 模型，右侧属性，底部原版玩家背包（
+ * {@link VanillaPlayerInventory} 槽 + 原版背包底）。装备槽变更即时写回 NPC 实体。
  *
- * <p>Layout:
- * <ul>
- *   <li>Left — 3D NPC display (vanilla inventory style) + 4 armor slots + wand slot</li>
- *   <li>Right — attributes (HP, spell power, work speed, spell speed, armor)</li>
- *   <li>Bottom — player inventory grid (click wand/armor items to equip)</li>
- * </ul>
+ * <p>属性/名字等展示数据经 {@link NpcDataPacket} 刷新（打开时服务端补发）。
  */
-public class NpcScreen extends MedievalScreen {
+public class NpcScreen extends AbstractContainerScreen<NpcMenu> implements ReplayProtectedScreen {
 
-    private static final int PW = 300;
-    private static final int PH = 230;
-    private static final int SLOT_SIZE = 18;
-    private static final int SLOT_PITCH = 18;
+    private static final int HEADER_H = 22;
+    private static final int CLOSE_W = 18;
+    private static final int CLOSE_H = 14;
+    private static final int GLASS_TOP = 0xBB483828;
+    private static final int GLASS_BOTTOM = 0xBB1E1410;
+    private static final ResourceLocation INVENTORY_TEXTURE =
+            ResourceLocation.withDefaultNamespace("textures/gui/container/inventory.png");
 
-    // NPC data
-    private final int entityId;
+    // NPC 数据
+    /** 实体 id：客户端构造时未知（-1），经 NpcDataPacket.apply 更新。 */
+    private int entityId = -1;
     private String npcName;
     private int currentHealth, maxHealth;
     private int currentMana, maxMana;
     private float moveSpeed, spellPower, workSpeed, spellSpeed, armorValue;
-    private ItemStack wandStack;
-    private boolean isDefaultWand;
+    private ItemStack wandStack = ItemStack.EMPTY;
+    private boolean isDefaultWand = true;
     private boolean peaceMode;
     private boolean followMode;
     private String strategyPreset = "BALANCED";
@@ -61,40 +63,35 @@ public class NpcScreen extends MedievalScreen {
     private List<String> spellCategories = List.of();
     private List<String> priority = List.of();
     private Map<String, String> magicCatalog = Map.of();
-    /** 盔甲格（顺序：头盔/胸甲/护腿/靴子）。 */
     private List<ItemStack> armorStacks = List.of(ItemStack.EMPTY, ItemStack.EMPTY,
             ItemStack.EMPTY, ItemStack.EMPTY);
     private int skinVariant;
     private int hatColor;
-    /** 客户端 3D 展示克隆（不入世界，仅用于面板渲染）。 */
     private WandscapeNpc displayNpc;
 
-    // Layout positions (computed in render, used for click detection)
-    private int wandSlotX, wandSlotY;
-    private final int[] armorSlotX = new int[4];
-    private final int[] armorSlotY = new int[4];
-    private int gridX, gridY;
+    // 布局（init/render 时计算）
+    private int contentTop;
+    private int rightCol;
+    private int modelX, modelY, modelW, modelH;
+    private int closeBtnX, closeBtnY;
+    private HelpButton helpButton;
+    private String helpDocumentPath = "npc_guide";
 
-    // ── Editable name (top-left title bar) ──
     private EditBox nameBox;
-    /** 服务端已确认的名字（与 nameBox 一致时跳过重复发送）。 */
     private String lastServerName = "";
-
-    // ── 底部行为切换按钮（和平 / 跟随） ──
     private MedievalButton peaceButton;
     private MedievalButton followButton;
 
-    public NpcScreen(NpcDataPacket packet) {
-        super(Component.literal("NPC Info"), PW, PH);
-        this.showCloseButton = true;
-        this.showHelpButton = true;
-        this.helpDocumentPath = "npc_guide";
-        this.entityId = packet.entityId();
-        apply(packet);
+    public NpcScreen(NpcMenu menu, Inventory playerInventory, Component title) {
+        super(menu, playerInventory, title);
+        this.imageWidth = NpcMenu.PANEL_W;
+        this.imageHeight = NpcMenu.PANEL_H;
     }
 
-    /** Apply/refresh data from a server packet (preserves entityId). */
+    // ── 数据刷新 ──
+
     public void apply(NpcDataPacket packet) {
+        this.entityId = packet.entityId();
         this.npcName = packet.npcName();
         this.currentHealth = packet.currentHealth();
         this.maxHealth = packet.maxHealth();
@@ -119,7 +116,6 @@ public class NpcScreen extends MedievalScreen {
         this.followMode = packet.followMode();
         refreshToggleButtons();
         rebuildDisplayNpc();
-        // 名字：仅当输入框未聚焦时才回写（避免打断正在编辑），且值相同则不触发重发
         this.lastServerName = packet.npcName();
         if (nameBox != null && !nameBox.isFocused()
                 && !nameBox.getValue().equals(packet.npcName())) {
@@ -127,10 +123,6 @@ public class NpcScreen extends MedievalScreen {
         }
     }
 
-    /**
-     * 从包数据构建一个不入世界的展示克隆，供左侧 3D 模型渲染。
-     * 携带皮肤变体/帽子颜色/当前法杖，标记 guiDisplayMode 跳过名牌与气泡。
-     */
     private void rebuildDisplayNpc() {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null) {
@@ -143,20 +135,32 @@ public class NpcScreen extends MedievalScreen {
         displayNpc.setHatColor(hatColor);
         ItemStack wand = isDefaultWand ? new ItemStack(Wandscape.WAND.get()) : wandStack;
         if (!wand.isEmpty()) {
-            displayNpc.setItemInHand(InteractionHand.MAIN_HAND, wand);
+            displayNpc.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, wand);
         }
     }
+
+    // ── 初始化 ──
 
     @Override
     protected void init() {
         super.init();
-        // 左上角名字框（可编辑，写名字自动保存；结束于帮助按钮之前）
+        closeBtnX = leftPos + imageWidth - CLOSE_W - 6;
+        closeBtnY = topPos + (HEADER_H - CLOSE_H) / 2;
+        helpButton = new HelpButton(closeBtnX - 14 - 4, topPos + (HEADER_H - 14) / 2, 14, 14,
+                this::openHelpDocument);
+        addRenderableWidget(helpButton);
+
+        contentTop = topPos + NpcMenu.EQUIP_Y;
+        rightCol = leftPos + 128;
+        modelX = leftPos + 42;
+        modelY = topPos + NpcMenu.EQUIP_Y + 4;
+        modelW = 72;
+        modelH = 86;
+
+        // 名字框（header 内）
         int boxH = font.lineHeight + 2;
-        int bx = leftPos + titleXOffset + 1;
-        int by = topPos + (headerHeight - boxH) / 2;
-        int boxRight = closeBtnX - 20; // 14(help) + 4(gap) + 2
-        nameBox = new EditBox(font, bx, by, Math.max(40, boxRight - bx), boxH,
-                Component.literal("Name")) {
+        nameBox = new EditBox(font, leftPos + 10, topPos + (HEADER_H - boxH) / 2,
+                Math.max(60, closeBtnX - 60 - 40), boxH, Component.literal("Name")) {
             @Override
             public void renderWidget(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
                 drawInsetField(g, getX() - 1, getY() - 2, getWidth() + 2, getHeight() + 4);
@@ -172,17 +176,15 @@ public class NpcScreen extends MedievalScreen {
         nameBox.setResponder(this::onNameChanged);
         addRenderableWidget(nameBox);
 
-        // 和平 / 跟随 切换按钮（策略按钮左侧，同一行排布）：
-        // 点击即乐观翻转本地状态刷新文字，再发包给服务端确认（服务端回发 NpcDataPacket 同步）。
-        peaceButton = new MedievalButton(
-                leftPos + PW - 272, topPos + PH - 22, 80, 16,
+        // 底部按钮行（装备槽区下方、玩家背包上方）
+        int btnY = topPos + 124;
+        peaceButton = new MedievalButton(leftPos + 8, btnY, 78, 16,
                 peaceLabel(), () -> {
             peaceMode = !peaceMode;
             refreshToggleButtons();
             PacketDistributor.sendToServer(new NpcTogglePacket(entityId, NpcTogglePacket.FLAG_PEACE, peaceMode));
         });
-        followButton = new MedievalButton(
-                leftPos + PW - 188, topPos + PH - 22, 80, 16,
+        followButton = new MedievalButton(leftPos + 90, btnY, 78, 16,
                 followLabel(), () -> {
             followMode = !followMode;
             refreshToggleButtons();
@@ -190,37 +192,29 @@ public class NpcScreen extends MedievalScreen {
         });
         addRenderableWidget(peaceButton);
         addRenderableWidget(followButton);
-        // 策略按钮（打开施法策略屏，装备制）
-        addRenderableWidget(new MedievalButton(
-                leftPos + PW - 104, topPos + PH - 22, 46, 16,
+        addRenderableWidget(new MedievalButton(leftPos + 172, btnY, 56, 16,
                 I18n.name("gui.wandscape.npc.strategy", "Strategy"),
-                () -> Minecraft.getInstance().setScreen(
-                        new NpcStrategyScreen(entityId, strategyPreset, knownSpells, spellCategories, magicCatalog))));
-        // Close button
-        addRenderableWidget(new MedievalButton(
-                leftPos + PW - 54, topPos + PH - 22, 46, 16,
-                I18n.name("gui.wandscape.common.close", "Close"), () -> Minecraft.getInstance().setScreen(null)));
+                () -> PacketDistributor.sendToServer(new NpcOpenStrategyPacket(entityId))));
+        addRenderableWidget(new MedievalButton(leftPos + 232, btnY, 60, 16,
+                I18n.name("gui.wandscape.common.close", "Close"),
+                () -> Minecraft.getInstance().setScreen(null)));
     }
 
-    /** 和平按钮文字：开启时显示「取消和平」，未开启显示「和平」。 */
     private Component peaceLabel() {
         return I18n.name(peaceMode ? "gui.wandscape.npc.peaceOff" : "gui.wandscape.npc.peace",
                 peaceMode ? "Cancel Peace" : "Peace");
     }
 
-    /** 跟随按钮文字：跟随中显示「取消跟随」，否则显示「跟随」。 */
     private Component followLabel() {
         return I18n.name(followMode ? "gui.wandscape.npc.followOff" : "gui.wandscape.npc.follow",
                 followMode ? "Cancel Follow" : "Follow");
     }
 
-    /** 依据当前模式刷新两个切换按钮的文字（apply 时与服务端同步）。 */
     private void refreshToggleButtons() {
         if (peaceButton != null) peaceButton.setMessage(peaceLabel());
         if (followButton != null) followButton.setMessage(followLabel());
     }
 
-    /** 名字框每次变更：非空且与服务端不同则自动发送改名包（写好了自动保存）。 */
     private void onNameChanged(String newName) {
         String trimmed = newName.trim();
         if (trimmed.isEmpty() || trimmed.equals(lastServerName)) return;
@@ -229,63 +223,54 @@ public class NpcScreen extends MedievalScreen {
         PacketDistributor.sendToServer(new NpcRenamePacket(entityId, trimmed));
     }
 
+    public void openHelpDocument() {
+        if (helpDocumentPath != null && minecraft != null) {
+            String content = com.wsteam.wandscape.shared.ui.markdown.navigation.DocumentLoader
+                    .loadMarkdown(helpDocumentPath);
+            minecraft.setScreen(new com.wsteam.wandscape.shared.ui.guide.GuideTestScreen(
+                    this, content, helpDocumentPath));
+        }
+    }
+
+    // ── 渲染 ──
+
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         super.render(g, mouseX, mouseY, partialTick);
+        renderModel(g, mouseX, mouseY);
+        renderAttributes(g);
+        // 与仓库一致：原版 render 不画 tooltip，需显式调用（悬停物品显示介绍）
+        renderTooltip(g, mouseX, mouseY);
+    }
 
-        var font = Minecraft.getInstance().font;
-        int leftCol = leftPos + 12;
-        int rightCol = leftPos + 118;
-        int contentTop = topPos + headerHeight + 4;
+    @Override
+    protected void renderBg(GuiGraphics g, float partialTick, int mouseX, int mouseY) {
+        g.fillGradient(leftPos, topPos, leftPos + imageWidth, topPos + imageHeight,
+                GLASS_TOP, GLASS_BOTTOM);
+        drawGlowBorder(g, leftPos, topPos, imageWidth, imageHeight, MedievalColors.BORDER_GOLD);
+        renderHeader(g, mouseX, mouseY);
+        renderInventoryBackground(g);
+        // 分隔线（装备区与背包之间）
+        g.fill(leftPos + 8, topPos + 143, leftPos + imageWidth - 8, topPos + 144,
+                MedievalColors.BORDER_GOLD_DARK);
+    }
 
-        // ── Equipment slots (left): 4 armor + 1 wand, all same size, gold border ──
-        int slotX = leftCol;
-        ResourceLocation[] armorIcons = {
-                InventoryMenu.EMPTY_ARMOR_SLOT_HELMET,
-                InventoryMenu.EMPTY_ARMOR_SLOT_CHESTPLATE,
-                InventoryMenu.EMPTY_ARMOR_SLOT_LEGGINGS,
-                InventoryMenu.EMPTY_ARMOR_SLOT_BOOTS
-        };
-        for (int i = 0; i < 5; i++) {
-            int sy = contentTop + 4 + i * SLOT_PITCH;
-            // 槽背景 + 金色边框
-            g.fill(slotX, sy, slotX + SLOT_SIZE, sy + SLOT_SIZE, MedievalColors.PARCHMENT_DEEPEST);
-            g.fill(slotX, sy, slotX + SLOT_SIZE, sy + 1, MedievalColors.BORDER_GOLD);
-            g.fill(slotX, sy + SLOT_SIZE - 1, slotX + SLOT_SIZE, sy + SLOT_SIZE, MedievalColors.BORDER_GOLD);
-            g.fill(slotX, sy, slotX + 1, sy + SLOT_SIZE, MedievalColors.BORDER_GOLD);
-            g.fill(slotX + SLOT_SIZE - 1, sy, slotX + SLOT_SIZE, sy + SLOT_SIZE, MedievalColors.BORDER_GOLD);
+    private void renderHeader(GuiGraphics g, int mouseX, int mouseY) {
+        int hx = leftPos + 1;
+        int hy = topPos + 1;
+        g.fillGradient(hx, hy, hx + imageWidth - 2, hy + HEADER_H, 0xFF502870, 0xFF1A0830);
+        g.fill(hx, hy + HEADER_H, hx + imageWidth - 2, hy + HEADER_H + 1, MedievalColors.BORDER_GOLD);
+        g.fillGradient(hx, hy, hx + 3, hy + HEADER_H, 0xFFD4A840, 0xFF6A4020);
+        SkinRender.drawCloseButton(g, closeBtnX, closeBtnY, CLOSE_W, CLOSE_H,
+                isInRect(mouseX, mouseY, closeBtnX, closeBtnY, CLOSE_W, CLOSE_H) ? 1 : 0);
+    }
 
-            if (i < 4) { // armor slots
-                armorSlotX[i] = slotX;
-                armorSlotY[i] = sy;
-                ItemStack stack = i < armorStacks.size() ? armorStacks.get(i) : ItemStack.EMPTY;
-                if (!stack.isEmpty()) {
-                    g.renderItem(stack, slotX + 1, sy + 1);
-                    g.renderItemDecorations(font, stack, slotX + 1, sy + 1);
-                } else {
-                    // 空槽占位：原版 E 对应部位的盔甲图标
-                    TextureAtlasSprite sprite = Minecraft.getInstance()
-                            .getTextureAtlas(InventoryMenu.BLOCK_ATLAS).apply(armorIcons[i]);
-                    g.blit(slotX + 1, sy + 1, 0, 16, 16, sprite);
-                }
-            } else { // wand slot
-                wandSlotX = slotX;
-                wandSlotY = sy;
-                if (!isDefaultWand && !wandStack.isEmpty()) {
-                    g.renderItem(wandStack, slotX + 1, sy + 1);
-                    g.renderItemDecorations(font, wandStack, slotX + 1, sy + 1);
-                } else {
-                    // 空槽占位：法杖图标
-                    g.renderItem(new ItemStack(Wandscape.WAND.get()), slotX + 1, sy + 1);
-                }
-            }
-        }
-
-        // ── 3D NPC model（原版装备栏风格，随鼠标转向），槽列与属性区之间留空隙 ──
-        int modelX = slotX + SLOT_SIZE + 8;
-        int modelY = contentTop + 10;
-        int modelW = 66;
-        int modelH = 80;
+    /** 玩家背包区底（原版 inventory.png 下区，3×9+快捷栏）。 */
+    private void renderInventoryBackground(GuiGraphics g) {
+        int dstY = topPos + NpcMenu.PLAYER_INV_Y;
+        g.blit(INVENTORY_TEXTURE, leftPos + 8, dstY, 8, 84, 9 * 18, 76);
+    }
+    private void renderModel(GuiGraphics g, int mouseX, int mouseY) {
         g.fill(modelX, modelY, modelX + modelW, modelY + modelH, MedievalColors.PARCHMENT_DEEPEST);
         g.fill(modelX, modelY, modelX + modelW, modelY + 1, MedievalColors.BORDER_GOLD);
         g.fill(modelX, modelY + modelH - 1, modelX + modelW, modelY + modelH, MedievalColors.BORDER_GOLD);
@@ -294,143 +279,64 @@ public class NpcScreen extends MedievalScreen {
         if (displayNpc != null) {
             InventoryScreen.renderEntityInInventoryFollowsMouse(
                     g, modelX + 4, modelY + 4, modelX + modelW - 4, modelY + modelH - 4,
-                    30, 0.0625f, mouseX, mouseY, displayNpc);
-        }
-
-        // ── Attributes section (right) ──
-        int sepY = contentTop + 10;
-        g.drawString(font, I18n.name("gui.wandscape.npc.attributes", "Attributes"),
-                rightCol, contentTop, MedievalColors.ACCENT_GOLD);
-        g.fill(rightCol, sepY, rightCol + 165, sepY + 1, MedievalColors.BORDER_GOLD_DARK);
-
-        int attrY = sepY + 4;
-        int labelW = 40;
-        int barWidth = 125;
-
-        // Health
-        g.drawString(font, I18n.name("gui.wandscape.npc.health", "Health").getString() + ":",
-                rightCol, attrY, MedievalColors.TEXT_WARM_WHITE);
-        drawStatBar(g, rightCol + labelW, attrY, barWidth, 10,
-                (float) currentHealth / maxHealth,
-                currentHealth + "/" + maxHealth,
-                MedievalColors.DANGER_RED);
-        attrY += 11;
-
-        // Mana
-        g.drawString(font, I18n.name("gui.wandscape.npc.mana", "Mana").getString() + ":",
-                rightCol, attrY, MedievalColors.TEXT_WARM_WHITE);
-        drawStatBar(g, rightCol + labelW, attrY, barWidth, 10,
-                maxMana > 0 ? (float) currentMana / maxMana : 0f,
-                currentMana + "/" + maxMana,
-                MedievalColors.MANA_BLUE);
-        attrY += 11;
-
-        // Move Speed
-        g.drawString(font, I18n.name("gui.wandscape.npc.moveSpeed", "Move").getString() + ":",
-                rightCol, attrY, MedievalColors.TEXT_WARM_WHITE);
-        g.drawString(font, String.format("%.2f", moveSpeed), rightCol + labelW, attrY, MedievalColors.TEXT_MUTED);
-        attrY += 10;
-
-        // Spell Power
-        g.drawString(font, I18n.name("gui.wandscape.npc.spell", "Spell").getString() + ":",
-                rightCol, attrY, MedievalColors.TEXT_WARM_WHITE);
-        g.drawString(font, String.format("%.1f", spellPower), rightCol + labelW, attrY, MedievalColors.TEXT_MUTED);
-        attrY += 10;
-
-        // Work Speed
-        g.drawString(font, I18n.name("gui.wandscape.npc.work", "Work").getString() + ":",
-                rightCol, attrY, MedievalColors.TEXT_WARM_WHITE);
-        g.drawString(font, String.format("%.1f", workSpeed), rightCol + labelW, attrY, MedievalColors.TEXT_MUTED);
-        attrY += 10;
-
-        // Spell Speed
-        g.drawString(font, I18n.name("gui.wandscape.npc.spellSpeed", "Cast").getString() + ":",
-                rightCol, attrY, MedievalColors.TEXT_WARM_WHITE);
-        g.drawString(font, String.format("%.1f", spellSpeed), rightCol + labelW, attrY, MedievalColors.TEXT_MUTED);
-        attrY += 10;
-
-        // Armor
-        g.drawString(font, I18n.name("gui.wandscape.npc.armor", "Armor").getString() + ":",
-                rightCol, attrY, MedievalColors.TEXT_WARM_WHITE);
-        g.drawString(font, String.format("%.1f", armorValue), rightCol + labelW, attrY, MedievalColors.TEXT_MUTED);
-
-        // ── Divider ──
-        int divY = contentTop + 96;
-        g.fill(leftCol, divY, leftPos + PW - 12, divY + 1, MedievalColors.BORDER_GOLD_DARK);
-
-        // ── Inventory section (bottom) ──
-        int invLabelY = divY + 2;
-        g.drawString(font, I18n.name("gui.wandscape.npc.inventory", "Inventory"),
-                leftCol, invLabelY, MedievalColors.ACCENT_GOLD);
-
-        int gridX = leftCol + 2;
-        int gridY = divY + 12;
-        int cols = 9;
-        this.gridX = gridX;
-        this.gridY = gridY;
-
-        Player player = Minecraft.getInstance().player;
-        if (player != null) {
-            var items = player.getInventory().items;
-            for (int row = 0; row < 4; row++) {
-                for (int col = 0; col < cols; col++) {
-                    int sx = gridX + col * SLOT_PITCH;
-                    int sy = gridY + row * SLOT_PITCH;
-                    int slotIndex;
-                    if (row == 3) { // hotbar
-                        slotIndex = col;
-                    } else { // main inventory slots 9-35
-                        slotIndex = 9 + row * 9 + col;
-                    }
-
-                    g.fill(sx, sy, sx + SLOT_SIZE, sy + SLOT_SIZE,
-                            MedievalColors.PARCHMENT_DEEPEST);
-
-                    ItemStack stack = items.get(slotIndex);
-                    if (!stack.isEmpty()) {
-                        g.renderItem(stack, sx + 1, sy + 1);
-                        g.renderItemDecorations(font, stack, sx + 1, sy + 1);
-                    }
-                }
-            }
-        }
-
-        // ── Tooltip: wand slot ──
-        if (!isDefaultWand && !wandStack.isEmpty()
-                && mouseX >= wandSlotX && mouseX < wandSlotX + SLOT_SIZE
-                && mouseY >= wandSlotY && mouseY < wandSlotY + SLOT_SIZE) {
-            g.renderTooltip(font, wandStack, mouseX, mouseY);
-        }
-
-        // ── Tooltip: armor slots ──
-        for (int i = 0; i < 4; i++) {
-            ItemStack stack = i < armorStacks.size() ? armorStacks.get(i) : ItemStack.EMPTY;
-            if (!stack.isEmpty()
-                    && mouseX >= armorSlotX[i] && mouseX < armorSlotX[i] + SLOT_SIZE
-                    && mouseY >= armorSlotY[i] && mouseY < armorSlotY[i] + SLOT_SIZE) {
-                g.renderTooltip(font, stack, mouseX, mouseY);
-            }
-        }
-
-        // ── Tooltip: inventory slots ──
-        if (player != null) {
-            for (int row = 0; row < 4; row++) {
-                for (int col = 0; col < cols; col++) {
-                    int sx = gridX + col * SLOT_PITCH;
-                    int sy = gridY + row * SLOT_PITCH;
-                    int slotIndex = (row == 3) ? col : 9 + row * 9 + col;
-                    ItemStack stack = player.getInventory().items.get(slotIndex);
-                    if (!stack.isEmpty()
-                            && mouseX >= sx && mouseX < sx + SLOT_SIZE
-                            && mouseY >= sy && mouseY < sy + SLOT_SIZE) {
-                        g.renderTooltip(font, stack, mouseX, mouseY);
-                    }
-                }
-            }
+                    28, 0.0625f, mouseX, mouseY, displayNpc);
         }
     }
 
-    /** Draw a compact stat bar. */
+    private void renderAttributes(GuiGraphics g) {
+        int y = contentTop + 6;
+        g.drawString(font, I18n.name("gui.wandscape.npc.attributes", "Attributes"),
+                rightCol, contentTop, MedievalColors.ACCENT_GOLD);
+        y += 2;
+        int labelW = 40;
+        int barWidth = 116;
+
+        drawStatBar(g, rightCol + labelW, y, barWidth, 10,
+                (float) currentHealth / maxHealth,
+                currentHealth + "/" + maxHealth, MedievalColors.DANGER_RED);
+        g.drawString(font, I18n.name("gui.wandscape.npc.health", "Health").getString() + ":",
+                rightCol, y, MedievalColors.TEXT_WARM_WHITE);
+        y += 12;
+
+        drawStatBar(g, rightCol + labelW, y, barWidth, 10,
+                maxMana > 0 ? (float) currentMana / maxMana : 0f,
+                currentMana + "/" + maxMana, MedievalColors.MANA_BLUE);
+        g.drawString(font, I18n.name("gui.wandscape.npc.mana", "Mana").getString() + ":",
+                rightCol, y, MedievalColors.TEXT_WARM_WHITE);
+        y += 12;
+
+        for (var entry : List.of(
+                new Object[]{"gui.wandscape.npc.moveSpeed", "Move", String.format("%.2f", moveSpeed)},
+                new Object[]{"gui.wandscape.npc.spell", "Spell", String.format("%.1f", spellPower)},
+                new Object[]{"gui.wandscape.npc.work", "Work", String.format("%.1f", workSpeed)},
+                new Object[]{"gui.wandscape.npc.spellSpeed", "Cast", String.format("%.1f", spellSpeed)},
+                new Object[]{"gui.wandscape.npc.armor", "Armor", String.format("%.1f", armorValue)})) {
+            g.drawString(font, I18n.name((String) entry[0], (String) entry[1]).getString() + ":",
+                    rightCol, y, MedievalColors.TEXT_WARM_WHITE);
+            g.drawString(font, (String) entry[2], rightCol + labelW, y, MedievalColors.TEXT_MUTED);
+            y += 10;
+        }
+    }
+
+    @Override
+    protected void renderSlot(GuiGraphics g, Slot slot) {
+        if (slot instanceof NpcMenu.NpcArmorSlot || slot instanceof NpcMenu.WandSlot) {
+            VanillaPlayerInventory.blitSlotBackground(g, slot.x, slot.y);
+        }
+        // 空法杖槽显示默认法杖图标（默认法杖不可卸，暗示槽位用途）
+        if (slot instanceof NpcMenu.WandSlot && slot.getItem().isEmpty()) {
+            g.renderItem(new ItemStack(Wandscape.WAND.get()), slot.x, slot.y,
+                    slot.x + slot.y * imageWidth);
+            return;
+        }
+        super.renderSlot(g, slot);
+    }
+
+    @Override
+    protected void renderLabels(GuiGraphics g, int mouseX, int mouseY) {
+        // 面板装饰由 renderBg 绘制；不画 vanilla 标签。
+    }
+
     private void drawStatBar(GuiGraphics g, int x, int y, int barWidth, int barHeight,
                              float ratio, String label, int fillColor) {
         g.fill(x, y, x + barWidth, y + barHeight, MedievalColors.PROGRESS_BG);
@@ -438,124 +344,48 @@ public class NpcScreen extends MedievalScreen {
         if (fillW > 0) {
             g.fill(x, y, x + fillW, y + barHeight, fillColor);
         }
-        var font = Minecraft.getInstance().font;
         g.drawCenteredString(font, label, x + barWidth / 2, y + (barHeight - 9) / 2,
                 MedievalColors.TEXT_WARM_WHITE);
     }
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (button != 0) return super.mouseClicked(mouseX, mouseY, button);
-
-        // Click on an occupied armor slot → unequip to player inventory
-        for (int i = 0; i < 4; i++) {
-            ItemStack stack = i < armorStacks.size() ? armorStacks.get(i) : ItemStack.EMPTY;
-            if (!stack.isEmpty()
-                    && mouseX >= armorSlotX[i] && mouseX < armorSlotX[i] + SLOT_SIZE
-                    && mouseY >= armorSlotY[i] && mouseY < armorSlotY[i] + SLOT_SIZE) {
-                showFeedback(Component.translatable("gui.wandscape.npc.tip.unequip_success", stack.getHoverName()),
-                        MedievalColors.TEXT_WARM_WHITE);
-                Minecraft.getInstance().getSoundManager().play(
-                        SimpleSoundInstance.forUI(SoundEvents.ITEM_PICKUP, 1.0f));
-                PacketDistributor.sendToServer(new NpcEquipPacket(entityId,
-                        NpcEquipPacket.ACTION_UNEQUIP_ARMOR, 0, i));
-                return true;
-            }
-        }
-
-        // Click on wand slot → unequip
-        if (mouseX >= wandSlotX && mouseX < wandSlotX + SLOT_SIZE
-                && mouseY >= wandSlotY && mouseY < wandSlotY + SLOT_SIZE) {
-            if (isDefaultWand || wandStack.isEmpty()) {
-                showFeedback(Component.translatable("gui.wandscape.npc.tip.cannot_unequip_default"),
-                        MedievalColors.DANGER_RED);
-                Minecraft.getInstance().getSoundManager().play(
-                        SimpleSoundInstance.forUI(SoundEvents.DISPENSER_FAIL, 1.2f));
-            } else {
-                showFeedback(Component.translatable("gui.wandscape.npc.tip.unequip_success", wandStack.getHoverName()),
-                        MedievalColors.TEXT_WARM_WHITE);
-                Minecraft.getInstance().getSoundManager().play(
-                        SimpleSoundInstance.forUI(SoundEvents.ITEM_PICKUP, 1.0f));
-                PacketDistributor.sendToServer(new NpcEquipPacket(entityId,
-                        NpcEquipPacket.ACTION_UNEQUIP, 0, 0));
-            }
+        if (button == 0 && isInRect(mouseX, mouseY, closeBtnX, closeBtnY, CLOSE_W, CLOSE_H)) {
+            onClose();
             return true;
         }
-
-        // Click on inventory slot → equip wand or armor
-        int cols = 9;
-        Player player = Minecraft.getInstance().player;
-
-        for (int row = 0; row < 4; row++) {
-            for (int col = 0; col < cols; col++) {
-                int sx = gridX + col * SLOT_PITCH;
-                int sy = gridY + row * SLOT_PITCH;
-                int slotIndex = (row == 3) ? col : 9 + row * 9 + col;
-
-                if (mouseX >= sx && mouseX < sx + SLOT_SIZE
-                        && mouseY >= sy && mouseY < sy + SLOT_SIZE) {
-                    if (player == null) return true;
-                    ItemStack stack = player.getInventory().items.get(slotIndex);
-                    if (stack.isEmpty()) return true;
-
-                    if (stack.getItem() instanceof WandItem) {
-                        if (!isDefaultWand && !wandStack.isEmpty()) {
-                            showFeedback(Component.translatable("gui.wandscape.npc.tip.swap_success",
-                                    wandStack.getHoverName(), stack.getHoverName()), MedievalColors.ACCENT_GOLD);
-                        } else {
-                            showFeedback(Component.translatable("gui.wandscape.npc.tip.equip_success",
-                                    stack.getHoverName()), MedievalColors.SUCCESS_GREEN);
-                        }
-                        Minecraft.getInstance().getSoundManager().play(
-                                SimpleSoundInstance.forUI(SoundEvents.ENCHANTMENT_TABLE_USE, 1.2f));
-                        PacketDistributor.sendToServer(new NpcEquipPacket(entityId,
-                                NpcEquipPacket.ACTION_EQUIP, slotIndex, 0));
-                        return true;
-                    }
-
-                    int armorIdx = armorIndexFor(stack);
-                    if (armorIdx >= 0) {
-                        ItemStack oldArmor = armorIdx < armorStacks.size() ? armorStacks.get(armorIdx) : ItemStack.EMPTY;
-                        if (!oldArmor.isEmpty()) {
-                            showFeedback(Component.translatable("gui.wandscape.npc.tip.swap_success",
-                                    oldArmor.getHoverName(), stack.getHoverName()), MedievalColors.ACCENT_GOLD);
-                        } else {
-                            showFeedback(Component.translatable("gui.wandscape.npc.tip.equip_success",
-                                    stack.getHoverName()), MedievalColors.SUCCESS_GREEN);
-                        }
-                        Minecraft.getInstance().getSoundManager().play(
-                                SimpleSoundInstance.forUI(SoundEvents.ARMOR_EQUIP_GENERIC.value(), 1.0f));
-                        PacketDistributor.sendToServer(new NpcEquipPacket(entityId,
-                                NpcEquipPacket.ACTION_EQUIP_ARMOR, slotIndex, armorIdx));
-                        return true;
-                    }
-
-                    // Clicked non-equippable item in inventory
-                    showFeedback(Component.translatable("gui.wandscape.npc.tip.not_equippable"),
-                            MedievalColors.DANGER_RED);
-                    Minecraft.getInstance().getSoundManager().play(
-                            SimpleSoundInstance.forUI(SoundEvents.DISPENSER_FAIL, 1.2f));
-                    return true;
-                }
-            }
-        }
-
         return super.mouseClicked(mouseX, mouseY, button);
-    }
-
-    /** 背包物品 → 盔甲格索引（0..3），非盔甲返回 -1。 */
-    private static int armorIndexFor(ItemStack stack) {
-        Player player = Minecraft.getInstance().player;
-        if (player == null) return -1;
-        var slot = player.getEquipmentSlotForItem(stack);
-        for (int i = 0; i < WandscapeNpc.ARMOR_SLOT_COUNT; i++) {
-            if (WandscapeNpc.ARMOR_VANILLA_SLOTS[i] == slot) return i;
-        }
-        return -1;
     }
 
     @Override
     public boolean isPauseScreen() {
         return false;
+    }
+
+    // ── 皮肤工具 ──
+
+    private static void drawGlowBorder(GuiGraphics g, int x, int y, int w, int h, int color) {
+        int c0 = color;
+        int c1 = (color & 0x00FFFFFF) | 0x66000000;
+        g.fill(x, y, x + w, y + 1, c0);
+        g.fill(x, y + h - 1, x + w, y + h, c0);
+        g.fill(x, y, x + 1, y + h, c0);
+        g.fill(x + w - 1, y, x + w, y + h, c0);
+        g.fill(x + 1, y + 1, x + w - 1, y + 2, c1);
+        g.fill(x + 1, y + h - 2, x + w - 1, y + h - 1, c1);
+        g.fill(x + 1, y + 1, x + 2, y + h - 1, c1);
+        g.fill(x + w - 2, y + 1, x + w - 1, y + h - 1, c1);
+    }
+
+    private static void drawInsetField(GuiGraphics g, int x, int y, int w, int h) {
+        g.fillGradient(x, y, x + w, y + h, 0x44000000, 0x33000000);
+        g.fill(x, y, x + w, y + 1, 0x55000000);
+        g.fill(x, y, x + 1, y + h, 0x55000000);
+        g.fill(x, y + h - 1, x + w, y + h, 0x22FFFFFF);
+        g.fill(x + w - 1, y, x + w, y + h, 0x22FFFFFF);
+    }
+
+    private static boolean isInRect(double mx, double my, int x, int y, int w, int h) {
+        return mx >= x && mx < x + w && my >= y && my < y + h;
     }
 }
