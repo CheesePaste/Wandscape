@@ -61,7 +61,8 @@ public class TownHallCreateScreen extends MedievalScreen {
     }
 
     private void confirm() {
-        String name = pendingName.trim();
+        if (confirmed) return;
+        String name = pendingName != null ? pendingName.trim() : "";
         if (name.isEmpty()) {
             name = I18n.name("gui.wandscape.townhall_create.default_name", "魔法小镇").getString();
         }
@@ -72,6 +73,14 @@ public class TownHallCreateScreen extends MedievalScreen {
 
     @Override
     public void onClose() {
+        if (!confirmed) {
+            String name = pendingName != null ? pendingName.trim() : "";
+            if (name.isEmpty()) {
+                name = I18n.name("gui.wandscape.townhall_create.default_name", "魔法小镇").getString();
+            }
+            confirmed = true;
+            PacketDistributor.sendToServer(new ColonyCreateRequestPacket(townHallAnchor, name));
+        }
         super.onClose();
         // 确保清理建造栏和子模式，防止关闭弹窗后因光标抬起与建造栏开启导致 WASD / 视角冻结
         com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.closeBuildingBar();
@@ -85,18 +94,13 @@ public class TownHallCreateScreen extends MedievalScreen {
         if (mc.mouseHandler != null && !com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.isCursorLifted()) {
             mc.mouseHandler.grabMouse();
         }
-
-        if (!confirmed && mc.player != null) {
-            mc.player.displayClientMessage(
-                    I18n.name("message.wandscape.townhall_create.cancelled",
-                            "[Wandscape] 已取消小镇命名。随时右键市政厅可重新命名并创建魔法小镇。"), false);
-        }
     }
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER
-                || keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_KP_ENTER) {
+                || keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_KP_ENTER
+                || keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE) {
             confirm();
             return true;
         }

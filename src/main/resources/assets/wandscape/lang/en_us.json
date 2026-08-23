@@ -95,7 +95,6 @@
   "gui.wandscape.townhall_create.name_hint": "Enter a town name",
   "gui.wandscape.townhall_create.default_name": "Magic Town",
   "gui.wandscape.townhall_create.create": "Create",
-  "message.wandscape.townhall_create.cancelled": "[Wandscape] Town naming cancelled. Right-click the town hall at any time to name and create your town.",
   "gui.wandscape.shop.title": "Shop",
   "gui.wandscape.tavern.title": "Tavern",
   "gui.wandscape.hotel.title": "Hotel",
