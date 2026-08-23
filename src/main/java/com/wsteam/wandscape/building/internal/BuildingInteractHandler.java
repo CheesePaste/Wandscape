@@ -155,14 +155,7 @@ public final class BuildingInteractHandler {
         }
 
         switch (category) {
-            case "storage" -> {
-                ColonyItemBank bank = ColonyItemBank.get(level);
-                if (bank == null) return;
-                Map<ItemKey, Long> snapshot = bank.getSnapshot(colonyId);
-                Map<ElementType, Long> elemSnapshot = bank.getElementSnapshot(colonyId);
-                PacketDistributor.sendToPlayer(player,
-                        WarehouseDataPacket.from(pos, colonyId, snapshot, elemSnapshot, creator));
-            }
+            case "storage" -> openWarehouseMenu(player, colonyId, pos, creator);
             case "workstation" -> openWorkstationGui(level, colonyId, player, pos, creator);
             case "crafting_station" -> openCraftingStationGui(level, colonyId, player, pos, creator);
             case "node" -> openNodeGui(level, player, pos, state);
@@ -218,9 +211,22 @@ public final class BuildingInteractHandler {
         }
     }
 
+    /** Open the warehouse container menu (vanilla flow) and push the initial data snapshot. */
+    public static void openWarehouseMenu(ServerPlayer player, UUID colonyId,
+                                         net.minecraft.core.BlockPos pos, String creator) {
+        player.openMenu(new net.minecraft.world.SimpleMenuProvider(
+                (id, inv, p) -> new com.wsteam.wandscape.warehouse.WarehouseMenu(id, inv, colonyId, pos),
+                Component.translatable("gui.wandscape.warehouse.title")));
+        ColonyItemBank bank = ColonyItemBank.get(player.serverLevel());
+        if (bank == null) return;
+        Map<ItemKey, Long> snapshot = bank.getSnapshot(colonyId);
+        Map<ElementType, Long> elemSnapshot = bank.getElementSnapshot(colonyId);
+        PacketDistributor.sendToPlayer(player,
+                WarehouseDataPacket.from(pos, colonyId, snapshot, elemSnapshot, creator));
+    }
+
     private static void openInfoPanel(ServerPlayer player, BuildingState state,
-                                      String category, BuildingConfig config) {
-        if (config == null) {
+                                      String category, BuildingConfig config) {        if (config == null) {
             Log.warn(TAG, "[Building] {} category={} has no config — nothing to show",
                     state.getBuildingTypeId(), category);
             return;

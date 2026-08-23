@@ -1,16 +1,11 @@
 package com.wsteam.wandscape.building.network;
 
-import java.util.Map;
 import java.util.UUID;
 
 import com.wsteam.wandscape.building.internal.BuildingInteractHandler;
 import com.wsteam.wandscape.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.building.internal.BuildingState;
-import com.wsteam.wandscape.shared.data.ElementType;
-import com.wsteam.wandscape.shared.data.ItemKey;
 import com.wsteam.wandscape.shared.log.Log;
-import com.wsteam.wandscape.warehouse.ColonyItemBank;
-import com.wsteam.wandscape.warehouse.network.WarehouseDataPacket;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -18,16 +13,15 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
 
 /**
  * Client→server: town hall "warehouse access" button pressed. Server validates the
- * position is a government building of the given colony, then replies with a
- * {@link WarehouseDataPacket} so the town hall acts as a warehouse when the colony
- * has no storage building.
+ * position is a government building of the given colony, then opens the warehouse
+ * container menu so the town hall acts as a warehouse when the colony has no
+ * storage building.
  */
 public record TownHallWarehouseRequestPacket(BlockPos buildingPos, UUID colonyId)
         implements CustomPacketPayload {
@@ -71,14 +65,8 @@ public record TownHallWarehouseRequestPacket(BlockPos buildingPos, UUID colonyId
                 return;
             }
 
-            ColonyItemBank bank = ColonyItemBank.get(level);
-            if (bank == null) return;
-
-            Map<ItemKey, Long> itemSnapshot = bank.getSnapshot(colonyId);
-            Map<ElementType, Long> elemSnapshot = bank.getElementSnapshot(colonyId);
-            PacketDistributor.sendToPlayer(sp,
-                    WarehouseDataPacket.from(pkt.buildingPos(), colonyId, itemSnapshot, elemSnapshot,
-                            BuildingInteractHandler.resolveCreator(level, pkt.buildingPos())));
+            BuildingInteractHandler.openWarehouseMenu(sp, colonyId, pkt.buildingPos(),
+                    BuildingInteractHandler.resolveCreator(level, pkt.buildingPos()));
         });
     }
 

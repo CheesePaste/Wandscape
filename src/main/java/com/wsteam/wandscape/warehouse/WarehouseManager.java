@@ -347,7 +347,8 @@ public class WarehouseManager implements WarehouseApi, ColonyResourceAccess {
     }
 
     @Nullable
-    private static ItemStack toItemStack(ItemKey key, int count) {
+    /** Build an {@link ItemStack} (count may exceed 64) from a bank entry key. */
+    public static ItemStack toItemStack(ItemKey key, int count) {
         var item = net.minecraft.core.registries.BuiltInRegistries.ITEM
                 .get(net.minecraft.resources.ResourceLocation.tryParse(key.itemId()));
         if (item == null) return ItemStack.EMPTY;

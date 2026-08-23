@@ -76,6 +76,7 @@ import com.wsteam.wandscape.building.network.TaskQueueModifyPacket;
 import com.wsteam.wandscape.building.network.NodeDataPacket;
 import com.wsteam.wandscape.building.network.RequestGatherTaskPacket;
 import com.wsteam.wandscape.warehouse.WarehouseManager;
+import com.wsteam.wandscape.warehouse.WarehouseMenu;
 import com.wsteam.wandscape.warehouse.WarehouseNotificationHandler;
 import com.wsteam.wandscape.warehouse.network.WarehouseActionPacket;
 import com.wsteam.wandscape.warehouse.network.WarehouseDataPacket;
@@ -110,8 +111,10 @@ import com.wsteam.wandscape.npc.entity.EvilMage;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.npc.internal.NpcApiImpl;
+import com.wsteam.wandscape.npc.NpcMenu;
+import com.wsteam.wandscape.npc.NpcStrategyMenu;
 import com.wsteam.wandscape.npc.network.NpcDataPacket;
-import com.wsteam.wandscape.npc.network.NpcEquipPacket;
+import com.wsteam.wandscape.npc.network.NpcOpenStrategyPacket;
 import com.wsteam.wandscape.npc.network.NpcRenamePacket;
 import com.wsteam.wandscape.npc.network.NpcStrategyPacket;
 import com.wsteam.wandscape.npc.network.NpcTogglePacket;
@@ -145,6 +148,8 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.MobCategory;
+import net.minecraft.world.flag.FeatureFlags;
+import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.Item;
@@ -207,6 +212,20 @@ public class Wandscape {
     /** 光束终点序列化器（Optional<Vec3>），供 MagicBeamEntity 同步身体中心/方块命中点。 */
     public static final DeferredHolder<EntityDataSerializer<?>, EntityDataSerializer<?>> BEAM_TARGET_SERIALIZER =
             ENTITY_DATA_SERIALIZERS.register("beam_target", () -> MagicBeamEntity.OPTIONAL_VEC3);
+    public static final DeferredRegister<MenuType<?>> MENUS =
+            DeferredRegister.create(Registries.MENU, MODID);
+    /** 仓库容器菜单（玩家槽 vanilla + 仓库只读槽，见 warehouse/WarehouseMenu）。 */
+    public static final DeferredHolder<MenuType<?>, MenuType<WarehouseMenu>> WAREHOUSE_MENU =
+            MENUS.register("warehouse", () ->
+                    new MenuType<>(WarehouseMenu::new, FeatureFlags.VANILLA_SET));
+    /** NPC 装备容器菜单（4 盔甲 + 1 法杖 + 玩家槽，见 npc/NpcMenu）。 */
+    public static final DeferredHolder<MenuType<?>, MenuType<NpcMenu>> NPC_MENU =
+            MENUS.register("npc", () ->
+                    new MenuType<>(NpcMenu::new, FeatureFlags.VANILLA_SET));
+    /** NPC 施法策略容器菜单（12 卷轴槽 + 玩家槽，见 npc/NpcStrategyMenu）。 */
+    public static final DeferredHolder<MenuType<?>, MenuType<NpcStrategyMenu>> NPC_STRATEGY_MENU =
+            MENUS.register("npc_strategy", () ->
+                    new MenuType<>(NpcStrategyMenu::new, FeatureFlags.VANILLA_SET));
 
     // ---- Debug target ----
     public static BlockPos debugDiamondTarget = null;
@@ -416,6 +435,7 @@ public class Wandscape {
         BLOCK_ENTITY_TYPES.register(modEventBus);
         MOB_EFFECTS.register(modEventBus);
         ENTITY_DATA_SERIALIZERS.register(modEventBus);
+        MENUS.register(modEventBus);
         WandscapeSounds.SOUNDS.register(modEventBus);
         com.wsteam.wandscape.magic.internal.WandscapeEffects.PETRIFICATION.getId();
 
@@ -693,10 +713,9 @@ public class Wandscape {
                         NpcDataPacket.STREAM_CODEC,
                         (packet, ctx) -> NpcDataPacket.handleClient(packet))
                 .playToServer(
-                        NpcEquipPacket.TYPE,
-                        NpcEquipPacket.STREAM_CODEC,
-                        (packet, ctx) -> NpcEquipPacket.handleServer(packet,
-                                (net.minecraft.server.level.ServerPlayer) ctx.player()))
+                        NpcOpenStrategyPacket.TYPE,
+                        NpcOpenStrategyPacket.STREAM_CODEC,
+                        (packet, ctx) -> NpcOpenStrategyPacket.handleServer(packet, ctx))
                 .playToServer(
                         NpcStrategyPacket.TYPE,
                         NpcStrategyPacket.STREAM_CODEC,

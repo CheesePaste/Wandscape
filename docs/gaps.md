@@ -78,3 +78,10 @@
 
 1. **市政厅与法师招募的关系**——`guide/zh_cn/townhall_guide.md`（及 en 镜像）称市政厅是「吸引法师 NPC 加入的关键」。但 `getting_started_guide.md` 与 `tavern_guide.md` 指明法师通过酒馆招募。市政厅是否真为招募前置待核实；若否，应删除该表述。
 2. **旅馆英文建筑名 Inn / Hotel**——`guide/en/hotel_guide.md` 原文表格用 `Inn`、H1 用 `Hotel`，重写时统一为 `Hotel`（与术语表「旅馆 Hotel」一致）。若游戏内建筑注册的英文显示名实际为 `Inn`，此处需回退；建议核对建筑 lang 键。
+
+## 八、仓库 GUI 原版化后的已知限制（2026-08-22）
+
+1. **光标大数量显示 "999+"**：左键点击仓库格会把整叠（可 >64）取进光标（AE2/RS 语义），但 vanilla 浮动物品数量渲染上限 999（`renderItemDecorations`），>999 显示 "999+"。功能正常，仅显示精简；批量取出请用 Shift 快速移动到背包。
+2. **仓库格点击限制**：Exchange 页仓库槽不可拖拽均分（QUICK_CRAFT 被 `mayPlace=false` 拒绝，对齐 AE2 终端行为）；双击仓库格无合并语义（每条目一槽）。
+3. **光标持有 >64 时点击玩家槽**：`safeInsert` 每次最多放 64（vanilla 槽位上限），剩余留在光标，需多次点击——vanilla 标准行为。
+4. **Overview 页物品列表数据源**：来自 `WarehouseDataPacket` 全量快照（打开时 + 每次动作后刷新），NPC 系统实时入库时列表不实时（槽网格同数据源，但菜单打开期间服务端只读槽不参与 vanilla 同步）；刷新包机制与改造前一致。

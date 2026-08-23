@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.wsteam.wandscape.shared.ui.I18n;
+import com.wsteam.wandscape.shared.ui.ReplayProtectedScreen;
 import com.wsteam.wandscape.shared.ui.animation.MedievalAnimation;
 import com.wsteam.wandscape.shared.ui.skin.SkinRender;
 import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
@@ -18,7 +19,7 @@ import net.minecraft.network.chat.Component;
  * Base screen for all Wandscape single-page UIs.
  * Provides gradient glass panel, glow border, purple header, and {@link MedievalColors} palette.
  */
-public abstract class MedievalScreen extends Screen {
+public abstract class MedievalScreen extends Screen implements ReplayProtectedScreen {
 
     protected int leftPos, topPos;
     protected final int panelWidth;

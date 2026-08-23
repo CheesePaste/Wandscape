@@ -46,7 +46,7 @@ public final class ReplayScreenGuard {
     }
 
     private static void onScreenOpening(ScreenEvent.Opening event) {
-        if (isReplayPlaying() && event.getScreen() instanceof MedievalScreen) {
+        if (isReplayPlaying() && event.getScreen() instanceof ReplayProtectedScreen) {
             event.setCanceled(true);
         }
     }

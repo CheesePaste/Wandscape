@@ -7,12 +7,19 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import com.wsteam.wandscape.WandscapeClient;
 import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.ui.I18n;
+import com.wsteam.wandscape.shared.ui.ReplayProtectedScreen;
 import com.wsteam.wandscape.shared.ui.component.ElementPanel;
-import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
+import com.wsteam.wandscape.shared.ui.component.HelpButton;
 import com.wsteam.wandscape.shared.ui.component.ScrollableList;
+import com.wsteam.wandscape.shared.ui.component.SearchBox;
+import com.wsteam.wandscape.shared.ui.skin.SkinRender;
 import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
+import com.wsteam.wandscape.warehouse.WarehouseMenu;
+import com.wsteam.wandscape.warehouse.WarehousePager;
+import com.wsteam.wandscape.warehouse.WarehouseSlot;
 import com.wsteam.wandscape.warehouse.network.WarehouseActionPacket;
 import com.wsteam.wandscape.warehouse.network.WarehouseDataPacket;
 import com.wsteam.wandscape.warehouse.network.WarehouseDataPacket.ItemEntry;
@@ -20,498 +27,699 @@ import com.wsteam.wandscape.warehouse.network.WarehouseDataPacket.ItemEntry;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
-import net.minecraft.client.gui.components.Renderable;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.component.CustomData;
 import net.neoforged.neoforge.network.PacketDistributor;
 
+import static com.wsteam.wandscape.warehouse.WarehouseMenu.PANEL_H;
+import static com.wsteam.wandscape.warehouse.WarehouseMenu.PANEL_W;
+
 /**
- * Warehouse GUI with two tabs — Overview (element display + searchable item list)
- * and Exchange (warehouse ↔ player inventory).
- * Uses {@link MedievalScreen} MINIMAL theme with {@link MedievalColors}.
+ * Warehouse GUI with two tabs.
+ *
+ * <p><b>Overview</b>: compact medieval panel — element storage + searchable item
+ * list (search driven, no slots).
+ *
+ * <p><b>Exchange</b>: a real vanilla 6-row chest (the {@code generic_54}
+ * texture) — warehouse read-only slots on top, vanilla player inventory below.
+ * Warehouse interactions go through {@link WarehouseActionPacket}; the player
+ * slots are real vanilla {@link Slot}s so all shortcuts and inventory-sorting
+ * mods work on them.
+ *
+ * <p>A floating toolbar above the panel hosts the tabs, the help/close buttons
+ * and (on Exchange) the pager controls. Extends {@link AbstractContainerScreen}
+ * so the panel is centred like a vanilla container; on short screens the top is
+ * clamped so the toolbar stays visible.
  */
-public class WarehouseScreen extends MedievalScreen {
+public class WarehouseScreen extends AbstractContainerScreen<WarehouseMenu> implements ReplayProtectedScreen {
 
-    private static final int PW = 380;
-    private static final int PH = 250;
-    private static final int TAB_H = 18;
-    private static final int MAX_QTY = 64;
-    private static final int SLOT_SIZE = 18;
-    private static final int SCROLLBAR_W = 6;
-    /** Bottom space reserved for the creator footer (content must end above it). */
-    private static final int FOOTER_RESERVE = CREATOR_FOOTER_H + 4;
+    // ── 面板：与市政厅统一 300×230；Exchange 左侧贴原版 6 行箱(generic_54) 纹理 ──
+    private static final int CHEST_W = 176;
+    private static final int CHEST_H = 222;
 
-    private BlockPos buildingPos = BlockPos.ZERO;
-    private UUID colonyId = new UUID(0, 0);
+    private static final int TOOLBAR_H = 20;
+    private static final int OVERVIEW_PAD = 8;
+    private static final int FOOTER_RESERVE = 28;
+
+    private static final WarehousePager PAGER = new WarehousePager(54);
+    private static final Comparator<ItemEntry> BY_ID = Comparator.comparing(ItemEntry::itemId);
+    private static final ResourceLocation CHEST_TEXTURE =
+            ResourceLocation.withDefaultNamespace("textures/gui/container/generic_54.png");
+
+    private static final int GLASS_TOP = 0xBB483828;
+    private static final int GLASS_BOTTOM = 0xBB1E1410;
+    private static final int GLASS_BOX_TOP = 0xBB423020;
+    private static final int GLASS_BOX_BOTTOM = 0xBB1C1008;
+
+    private static final String[] TAB_KEYS = {
+            "gui.wandscape.warehouse.overview",
+            "gui.wandscape.warehouse.exchange"
+    };
+    private static final String[] TAB_FALLBACK = {"Overview", "Exchange"};
+
     private int activeTab;
+    private int page;
+    private int totalPages = 1;
+    private String query = "";
 
     // Data
+    private BlockPos buildingPos = BlockPos.ZERO;
+    private UUID colonyId = new UUID(0, 0);
     private List<ItemEntry> allItems = new ArrayList<>();
-    private List<ItemEntry> filteredItems = new ArrayList<>();
-    private List<ItemEntry> exchangeFilteredItems = new ArrayList<>();
+    private List<ItemEntry> visibleEntries = new ArrayList<>();
+    private List<ItemStack> visibleStacks = new ArrayList<>();
     private Map<ElementType, Long> elements = new LinkedHashMap<>();
 
-    // ── Tab 0: Overview widgets ──
-    private EditBox searchInput;
+    // ── Overview widgets ──
     private ElementPanel elementPanel;
+    private SearchBox searchInput;
     private ScrollableList<ItemEntry> overviewList;
 
-    // ── Tab 1: Exchange widgets ──
-    private ScrollableList<ItemEntry> exchangeList;
-    private EditBox exchangeSearchInput;
+    // ── Exchange widgets ──
+    private SearchBox exchangeSearchInput;
 
-    public WarehouseScreen() {
-        super(Component.literal("Colony Warehouse"), PW, PH);
-        setTitleBar(I18n.name("gui.wandscape.warehouse.title", "Colony Warehouse"));
-        this.showCloseButton = true;
-        this.showHelpButton = true;
-        this.helpDocumentPath = "warehouse_guide";
-        this.headerHeight = 22;
+    // ── 顶部工具栏命中区域（computeToolbar 现算，render 与 click 共用）──
+    private int toolbarY;
+    private final int[] tabX = new int[2];
+    private final int[] tabW = new int[2];
+    private int closeX, closeY, closeW, closeH;
+    private int helpX, helpY, helpW, helpH;
+    private int prevX, prevY, prevW, prevH;
+    private int nextX, nextY, nextW, nextH;
+    private boolean prevActive;
+    private boolean nextActive;
+
+    // ── 通用皮肤状态 ──
+    private String buildingCreator = "";
+    private boolean showCloseButton = true;
+    private boolean showHelpButton = true;
+    private String helpDocumentPath = "warehouse_guide";
+    private HelpButton helpButton;
+    private Component feedback;
+    private int feedbackColor;
+    private long feedbackExpireTick;
+    private static final long FEEDBACK_DURATION_MS = 3000L;
+
+    public WarehouseScreen(WarehouseMenu menu, Inventory playerInventory, Component title) {
+        super(menu, playerInventory, title);
     }
 
-    // ── Data updates from server ──
+    // ── 数据更新 ──
 
     public void updateItems(WarehouseDataPacket packet) {
         this.buildingPos = packet.buildingPos();
         this.colonyId = packet.colonyId();
-        // Refresh packets may carry a blank creator — keep the one from the initial open.
         if (packet.creator() != null && !packet.creator().isBlank()) {
             setCreator(packet.creator());
         }
         this.allItems = new ArrayList<>(packet.itemEntries());
-        this.allItems.sort(Comparator.comparing(ItemEntry::itemId));
+        this.allItems.sort(BY_ID);
         this.elements = new LinkedHashMap<>(packet.elementMap());
-        applyFilter(searchInput != null ? searchInput.getValue() : "");
-        applyExchangeFilter(exchangeSearchInput != null ? exchangeSearchInput.getValue() : "");
+        if (elementPanel != null) {
+            elementPanel.setElements(elements);
+        }
+        if (searchInput != null) {
+            overviewList.setItems(filterItems(searchInput.getValue()));
+        }
+        recomputeVisible();
     }
 
-    // ── Init ──
+    public void setCreator(String creator) {
+        this.buildingCreator = creator != null ? creator : "";
+    }
+
+    public void showFeedback(Component message, int color) {
+        this.feedback = message;
+        this.feedbackColor = color;
+        this.feedbackExpireTick = System.currentTimeMillis() + FEEDBACK_DURATION_MS;
+    }
+
+    // ── 初始化 / 切换 ──
 
     @Override
     protected void init() {
-        super.init();
-
-        int contentX = leftPos + 8;
-        int tabContentY = topPos + headerHeight + 2 + TAB_H + 5;
-
-        buildOverviewTab(contentX, tabContentY);
-        buildExchangeTab(contentX, tabContentY);
+        configureLayout();
+        computeToolbar();
+        if (showHelpButton && helpDocumentPath != null) {
+            helpButton = new HelpButton(helpX, helpY, helpW, helpH, this::openHelpDocument);
+            addRenderableWidget(helpButton);
+        }
+        buildOverviewTab();
+        buildExchangeTab();
         showTab(activeTab);
+        menu.bindSlots(this::getEntryStack, () -> activeTab == 1);
+        recomputeVisible();
     }
 
-    // ── Tab 0: Overview (read-only) ──
+    /** 两个页签共用同一面板（与市政厅统一尺寸）；矮屏贴顶保证顶部工具栏可见。 */
+    private void configureLayout() {
+        this.imageWidth = PANEL_W;
+        this.imageHeight = PANEL_H;
+        this.leftPos = (this.width - this.imageWidth) / 2;
+        this.topPos = Math.max((this.height - this.imageHeight) / 2, TOOLBAR_H + 4);
+    }
 
-    private void buildOverviewTab(int contentX, int tabY) {
-        int tabH = topPos + PH - tabY - 6 - FOOTER_RESERVE;
-        int elementPanelW = 130;
+    private void switchTab(int tabIndex) {
+        if (tabIndex == activeTab) return;
+        this.activeTab = tabIndex;
+        // rebuildWidgets → clearWidgets + init()：重建尺寸/原点/控件
+        this.rebuildWidgets();
+    }
 
-        elementPanel = new ElementPanel(contentX, tabY, elementPanelW);
+    private void buildOverviewTab() {
+        int cx = leftPos + OVERVIEW_PAD;
+        int cy = topPos + OVERVIEW_PAD;
+        int elementW = 130;
+
+        elementPanel = new ElementPanel(cx, cy, elementW);
         elementPanel.setElements(elements);
 
-        int rightX = contentX + elementPanelW + 6;
-        int rightW = PW - 16 - elementPanelW - 6;
+        int rightX = cx + elementW + 6;
+        int rightW = PANEL_W - 16 - elementW - 6;
         int searchH = font.lineHeight + 6;
 
-        searchInput = new EditBox(font, rightX + 1, tabY + 2, rightW - 2, font.lineHeight,
+        searchInput = new SearchBox(font, rightX + 1, cy + 2, rightW - 2,
                 I18n.name("gui.wandscape.warehouse.search", "Search items..."));
-        searchInput.setBordered(false);
-        searchInput.setTextColor(MedievalColors.TEXT_WARM_WHITE);
-        searchInput.setTextColorUneditable(MedievalColors.TEXT_MUTED);
-        searchInput.setHint(I18n.name("gui.wandscape.warehouse.search", "Search items..."));
-        searchInput.setCanLoseFocus(true);
-        searchInput.setResponder(this::applyFilter);
+        searchInput.setResponder(q -> overviewList.setItems(filterItems(q)));
 
-        int listY = tabY + searchH + 4;
-        int listH = tabH - searchH - 4;
-        overviewList = buildItemList(rightX, listY, rightW, listH, false);
-        overviewList.setItems(filteredItems);
+        int listY = cy + searchH + 4;
+        int listH = topPos + PANEL_H - listY - 6 - FOOTER_RESERVE;
+        overviewList = buildItemList(rightX, listY, rightW, listH);
+        overviewList.setItems(filterItems(""));
     }
 
-    // ── Tab 1: Exchange (warehouse ↔ player inventory) ──
-
-    private void buildExchangeTab(int contentX, int tabY) {
-        int tabH = topPos + PH - tabY - 6 - FOOTER_RESERVE;
-        int rightW = PW - 16;
-
-        int invSectionH = 10 + SLOT_SIZE * 4;
-        int bottomY = tabY + tabH - invSectionH;
-
-        int listH = bottomY - tabY - 2;
-        exchangeList = buildItemList(contentX, tabY, rightW, listH, true);
-        exchangeList.setItems(exchangeFilteredItems);
-        exchangeList.setOnRowClick((entry, index, button) -> {
-            if (entry.count() <= 0) return;
-            int take = button == 1
-                    ? (int) Math.min(entry.count(), MAX_QTY)
-                    : 1;
-            PacketDistributor.sendToServer(new WarehouseActionPacket(
-                    buildingPos, "withdraw", entry.itemId(), entry.nbt(), take, -1));
+    private void buildExchangeTab() {
+        int x = leftPos + CHEST_W + 14;
+        exchangeSearchInput = new SearchBox(font, x + 1, topPos + 10, PANEL_W - CHEST_W - 30,
+                I18n.name("gui.wandscape.warehouse.search", "Search items..."));
+        exchangeSearchInput.setResponder(q -> {
+            query = q;
+            page = 0;
+            recomputeVisible();
         });
-
-        int invRight = leftPos + 8 + 9 * SLOT_SIZE;
-        int sbX = invRight + 6;
-        int sbW = (leftPos + PW - 8) - sbX;
-        int sbY = getInventoryY();
-        exchangeSearchInput = new EditBox(font, sbX + 1, sbY + 1, sbW - 2, font.lineHeight,
-                I18n.name("gui.wandscape.warehouse.search", "Search items..."));
-        exchangeSearchInput.setBordered(false);
-        exchangeSearchInput.setTextColor(MedievalColors.TEXT_WARM_WHITE);
-        exchangeSearchInput.setTextColorUneditable(MedievalColors.TEXT_MUTED);
-        exchangeSearchInput.setHint(I18n.name("gui.wandscape.warehouse.search", "Search items..."));
-        exchangeSearchInput.setCanLoseFocus(true);
-        exchangeSearchInput.setResponder(this::applyExchangeFilter);
     }
-
-    /** Build a scrollable item list with themed row rendering. */
-    private ScrollableList<ItemEntry> buildItemList(int x, int y, int w, int h, boolean showHint) {
-        return new ScrollableList<>(x, y, w, h, 20) {
-            @Override
-            protected void renderRow(GuiGraphics g, ItemEntry item, int rx, int ry, int index,
-                                     boolean selected, boolean hovered) {
-                var registryItem = BuiltInRegistries.ITEM.get(ResourceLocation.tryParse(item.itemId()));
-                Component name;
-                if (registryItem != null && registryItem != Items.AIR) {
-                    ItemStack icon = new ItemStack(registryItem);
-                    if (item.nbt() != null && !item.nbt().isEmpty()) {
-                        icon.set(DataComponents.CUSTOM_DATA,
-                                net.minecraft.world.item.component.CustomData.of(item.nbt().copy()));
-                    }
-                    g.renderItem(icon, rx, ry + 2);
-                    name = icon.getHoverName();
-                } else {
-                    name = Component.literal(item.itemId());
-                }
-                int textColor = selected ? MedievalColors.BORDER_GOLD
-                        : hovered ? MedievalColors.TEXT_WARM_WHITE
-                        : MedievalColors.TEXT_MUTED;
-                g.drawString(Minecraft.getInstance().font, name, rx + 20, ry + 3, textColor);
-
-                String count = formatCount(item.count());
-                int countW = Minecraft.getInstance().font.width(count);
-                g.drawString(Minecraft.getInstance().font, count,
-                        rx + getWidth() - SCROLLBAR_W - countW - 8, ry + 3,
-                        MedievalColors.TEXT_MUTED);
-
-                if (showHint && hovered) {
-                    String hint = I18n.name("gui.wandscape.warehouse.withdraw_hint",
-                            "L-click: withdraw 1 | R-click: withdraw %s", MAX_QTY).getString();
-                    g.drawString(Minecraft.getInstance().font, hint, rx + 20, ry + 14,
-                            MedievalColors.TEXT_MUTED);
-                }
-            }
-        };
-    }
-
-    private int getInventoryY() {
-        return topPos + PH - 10 - SLOT_SIZE * 4 - 6 - FOOTER_RESERVE;
-    }
-
-    // ── Tab switching ──
 
     private void showTab(int tabIndex) {
         if (elementPanel != null) removeWidget(elementPanel);
         if (searchInput != null) removeWidget(searchInput);
         if (overviewList != null) removeWidget(overviewList);
-        if (exchangeList != null) removeWidget(exchangeList);
         if (exchangeSearchInput != null) removeWidget(exchangeSearchInput);
-
         if (tabIndex == 0) {
-            if (elementPanel != null) addRenderableWidget(elementPanel);
-            if (searchInput != null) addRenderableWidget(searchInput);
-            if (overviewList != null) addRenderableWidget(overviewList);
+            addRenderableWidget(elementPanel);
+            addRenderableWidget(searchInput);
+            addRenderableWidget(overviewList);
         } else {
-            if (exchangeList != null) addRenderableWidget(exchangeList);
-            if (exchangeSearchInput != null) addRenderableWidget(exchangeSearchInput);
+            addRenderableWidget(exchangeSearchInput);
+        }
+        // 仓库槽由 menu slots 原样渲染；分页/滚轮转移手工命中。
+        recomputeVisible();
+    }
+
+    private ScrollableList<ItemEntry> buildItemList(int x, int y, int w, int h) {
+        return new ScrollableList<>(x, y, w, h, 20) {
+            @Override
+            protected void renderRow(GuiGraphics g, ItemEntry item, int rx, int ry, int index,
+                                     boolean selected, boolean hovered) {
+                ItemStack icon = toStack(item);
+                g.renderItem(icon, rx, ry + 2);
+                Component name = icon.isEmpty() ? Component.literal(item.itemId()) : icon.getHoverName();
+                int textColor = selected ? MedievalColors.BORDER_GOLD
+                        : hovered ? MedievalColors.TEXT_WARM_WHITE
+                        : MedievalColors.TEXT_MUTED;
+                g.drawString(Minecraft.getInstance().font, name, rx + 20, ry + 3, textColor);
+
+                String count = WarehousePager.formatCount(item.count());
+                int countW = Minecraft.getInstance().font.width(count);
+                g.drawString(Minecraft.getInstance().font, count,
+                        rx + getWidth() - 6 - countW - 8, ry + 3,
+                        MedievalColors.TEXT_MUTED);
+            }
+        };
+    }
+
+    // ── 顶部工具栏 ──
+
+    /** 现算工具栏几何（render 与 click 用同一套坐标）。 */
+    private void computeToolbar() {
+        toolbarY = topPos - TOOLBAR_H - 2;
+        int cx = leftPos + 4;
+        for (int i = 0; i < 2; i++) {
+            int tw = font.width(tabLabel(i)) + 16;
+            tabX[i] = cx;
+            tabW[i] = tw;
+            cx += tw + 4;
+        }
+        closeW = 18;
+        closeH = 14;
+        closeX = leftPos + imageWidth - closeW - 4;
+        closeY = toolbarY + (TOOLBAR_H - closeH) / 2;
+        helpW = 14;
+        helpH = 14;
+        helpX = closeX - helpW - 4;
+        helpY = toolbarY + (TOOLBAR_H - helpH) / 2;
+    }
+
+    /** Exchange 右区分页控件几何（面板内、箱子纹理右侧留白区）。 */
+    private void computePager() {
+        int baseX = leftPos + CHEST_W + 14;
+        prevW = 18;
+        prevH = 12;
+        prevY = topPos + 40;
+        prevX = baseX;
+        nextW = 18;
+        nextH = 12;
+        nextY = prevY;
+        nextX = baseX + prevW + 6;
+    }
+
+    private void renderToolbar(GuiGraphics g, int mouseX, int mouseY) {
+        computeToolbar();
+        g.fillGradient(leftPos, toolbarY, leftPos + imageWidth, toolbarY + TOOLBAR_H,
+                GLASS_BOX_TOP, GLASS_BOX_BOTTOM);
+        drawGlowBorder(g, leftPos, toolbarY, imageWidth, TOOLBAR_H, MedievalColors.BORDER_GOLD);
+
+        for (int i = 0; i < 2; i++) {
+            boolean active = i == activeTab;
+            boolean hovered = !active && isInRect(mouseX, mouseY, tabX[i], toolbarY, tabW[i], TOOLBAR_H);
+            drawMinimalBox(g, tabX[i], toolbarY, tabW[i], TOOLBAR_H, active, hovered);
+            int color = active ? MedievalColors.BORDER_GOLD
+                    : hovered ? MedievalColors.TEXT_WARM_WHITE
+                    : MedievalColors.TEXT_MUTED;
+            g.drawString(font, tabLabel(i),
+                    tabX[i] + (tabW[i] - font.width(tabLabel(i))) / 2,
+                    toolbarY + (TOOLBAR_H - font.lineHeight) / 2, color);
+        }
+
+        if (showCloseButton) {
+            int state = isInRect(mouseX, mouseY, closeX, closeY, closeW, closeH) ? 1 : 0;
+            SkinRender.drawCloseButton(g, closeX, closeY, closeW, closeH, state);
         }
     }
 
-    // ── Render ──
+    private void drawNavButton(GuiGraphics g, int x, int y, int w, int h, String label,
+                               boolean active, int mouseX, int mouseY) {
+        boolean hovered = isInRect(mouseX, mouseY, x, y, w, h);
+        drawMinimalBox(g, x, y, w, h, active && hovered, !active && hovered);
+        int color = active ? MedievalColors.TEXT_WARM_WHITE : MedievalColors.TEXT_DIM;
+        g.drawString(font, label, x + (w - font.width(label)) / 2,
+                y + (h - font.lineHeight) / 2, color);
+    }
+
+    private String tabLabel(int i) {
+        return I18n.name(TAB_KEYS[i], TAB_FALLBACK[i]).getString();
+    }
+
+    private boolean handleToolbarClick(double mouseX, double mouseY, int button) {
+        if (button != 0) return false;
+        computeToolbar();
+        if (isInRect(mouseX, mouseY, tabX[0], toolbarY, tabW[0], TOOLBAR_H) && activeTab != 0) {
+            switchTab(0);
+            return true;
+        }
+        if (isInRect(mouseX, mouseY, tabX[1], toolbarY, tabW[1], TOOLBAR_H) && activeTab != 1) {
+            switchTab(1);
+            return true;
+        }
+        if (showCloseButton && isInRect(mouseX, mouseY, closeX, closeY, closeW, closeH)) {
+            onClose();
+            return true;
+        }
+        return false;
+    }
+
+    /** Exchange 右区分页按钮点击（仅 Exchange 页可命中）。 */
+    private boolean handlePagerClick(double mouseX, double mouseY, int button) {
+        if (button != 0 || activeTab != 1) return false;
+        computePager();
+        if (prevActive && isInRect(mouseX, mouseY, prevX, prevY, prevW, prevH)) {
+            page--;
+            recomputeVisible();
+            return true;
+        }
+        if (nextActive && isInRect(mouseX, mouseY, nextX, nextY, nextW, nextH)) {
+            page++;
+            recomputeVisible();
+            return true;
+        }
+        return false;
+    }
+
+    // ── 渲染 ──
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        renderBackground(g, mouseX, mouseY, partialTick);
-        renderMinimalHeader(g);
-        renderCloseButton(g, mouseX, mouseY);
-        renderTabs(g, mouseX, mouseY);
-        renderDecorations(g);
-
-        for (Renderable r : this.renderables) {
-            r.render(g, mouseX, mouseY, partialTick);
-        }
-
-        if (activeTab == 1) {
-            renderPlayerInventory(g, mouseX, mouseY);
-        }
-
+        super.render(g, mouseX, mouseY, partialTick);
         renderCreatorFooter(g);
+        renderFeedback(g);
+        renderTooltip(g, mouseX, mouseY);
     }
 
-    // ── Tabs ──
-
-    private void renderTabs(GuiGraphics g, int mouseX, int mouseY) {
-        String[] tabs = {
-                I18n.name("gui.wandscape.warehouse.overview", "Overview").getString(),
-                I18n.name("gui.wandscape.warehouse.exchange", "Exchange").getString()
-        };
-        int ty = topPos + headerHeight + 2;
-        int tx = leftPos + 8;
-        int padH = 10;
-
-        for (int i = 0; i < tabs.length; i++) {
-            int tw = font.width(tabs[i]) + padH * 2;
-            boolean active = i == activeTab;
-            boolean hovered = !active && isInRect(mouseX, mouseY, tx, ty, tw, TAB_H);
-
-            drawMinimalBox(g, tx, ty, tw, TAB_H, active, hovered);
-
-            int textColor = active ? MedievalColors.BORDER_GOLD
-                    : hovered ? MedievalColors.TEXT_WARM_WHITE
-                    : MedievalColors.TEXT_MUTED;
-            g.drawString(font, tabs[i],
-                    tx + (tw - font.width(tabs[i])) / 2,
-                    ty + (TAB_H - font.lineHeight) / 2,
-                    textColor);
-            tx += tw + 4;
+    @Override
+    protected void renderBg(GuiGraphics g, float partialTick, int mouseX, int mouseY) {
+        renderToolbar(g, mouseX, mouseY);
+        if (activeTab == 0) {
+            g.fillGradient(leftPos, topPos, leftPos + PANEL_W, topPos + PANEL_H,
+                    GLASS_TOP, GLASS_BOTTOM);
+            drawGlowBorder(g, leftPos, topPos, PANEL_W, PANEL_H, MedievalColors.BORDER_GOLD);
+        } else {
+            renderChest(g, mouseX, mouseY);
         }
     }
 
-    // ── Decorations ──
+    /** Exchange 背景：面板左侧贴原版 6 行箱（仓库格+玩家背包），右侧放分页控件。 */
+    private void renderChest(GuiGraphics g, int mouseX, int mouseY) {
+        g.blit(CHEST_TEXTURE, leftPos, topPos, 0, 0, CHEST_W, CHEST_H);
+        g.drawString(font, I18n.name("gui.wandscape.warehouse.title", "Colony Warehouse").getString(),
+                leftPos + 8, topPos + 6, 0x404040);
+        renderPager(g, mouseX, mouseY);
+    }
 
-    private void renderDecorations(GuiGraphics g) {
-        if (activeTab == 0 && searchInput != null) {
-            drawInsetField(g, searchInput.getX() - 1, searchInput.getY() - 2,
-                    searchInput.getWidth() + 2, searchInput.getHeight() + 4);
-        } else if (activeTab == 1 && exchangeSearchInput != null) {
-            drawInsetField(g, exchangeSearchInput.getX() - 1, exchangeSearchInput.getY() - 2,
-                    exchangeSearchInput.getWidth() + 2, exchangeSearchInput.getHeight() + 4);
+    private void renderPager(GuiGraphics g, int mouseX, int mouseY) {
+        computePager();
+        int x = leftPos + CHEST_W + 14;
+        drawNavButton(g, prevX, prevY, prevW, prevH, "◀", prevActive, mouseX, mouseY);
+        drawNavButton(g, nextX, nextY, nextW, nextH, "▶", nextActive, mouseX, mouseY);
+        String pageText = I18n.name("gui.wandscape.warehouse.page", "%s / %s",
+                page + 1, totalPages).getString();
+        g.drawString(font, pageText, x, topPos + 64, MedievalColors.TEXT_MUTED);
+    }
 
-            int invY = getInventoryY();
-            g.fill(leftPos + 8, invY - 2, leftPos + PW - 8, invY - 1,
-                    MedievalColors.BORDER_GOLD_DARK);
-            g.drawString(font, I18n.name("gui.wandscape.warehouse.player_inventory", "Player Inventory"),
-                    leftPos + 8, invY, MedievalColors.TEXT_MUTED);
+    @Override
+    protected void renderLabels(GuiGraphics g, int mouseX, int mouseY) {
+        // 标题/工具条由皮肤绘制；不画 vanilla 标签。
+    }
+
+    @Override
+    protected void renderSlot(GuiGraphics g, Slot slot) {
+        if (slot instanceof WarehouseSlot) {
+            renderWarehouseSlot(g, slot);
+        } else {
+            super.renderSlot(g, slot);
         }
     }
 
-    // ── Player inventory (Exchange tab) ──
-
-    private void renderPlayerInventory(GuiGraphics g, int mouseX, int mouseY) {
-        int invY = getInventoryY() + 10;
-        int invX = leftPos + 8;
-
-        var player = Minecraft.getInstance().player;
-        if (player == null) return;
-        var inventory = player.getInventory();
-
-        for (int row = 0; row < 3; row++) {
-            for (int col = 0; col < 9; col++) {
-                int slot = 9 + row * 9 + col;
-                int sx = invX + col * SLOT_SIZE;
-                int sy = invY + row * SLOT_SIZE;
-                renderSlot(g, inventory.getItem(slot), sx, sy,
-                        isInRect(mouseX, mouseY, sx, sy, SLOT_SIZE, SLOT_SIZE));
-            }
-        }
-
-        for (int col = 0; col < 9; col++) {
-            int sx = invX + col * SLOT_SIZE;
-            int sy = invY + 3 * SLOT_SIZE;
-            renderSlot(g, inventory.getItem(col), sx, sy,
-                    isInRect(mouseX, mouseY, sx, sy, SLOT_SIZE, SLOT_SIZE));
-        }
-
-        renderInventoryTooltip(g, mouseX, mouseY, invX, invY);
-    }
-
-    private void renderSlot(GuiGraphics g, ItemStack stack, int x, int y, boolean hovered) {
-        int bg = hovered ? MedievalColors.BUTTON_BG_HOVER : MedievalColors.PARCHMENT_DEEPEST;
-        int border = hovered ? MedievalColors.BORDER_GOLD : MedievalColors.BORDER_GOLD_DARK;
-
-        g.fill(x, y, x + SLOT_SIZE, y + SLOT_SIZE, bg);
-        g.fill(x, y, x + SLOT_SIZE, y + 1, border);
-        g.fill(x, y + SLOT_SIZE - 1, x + SLOT_SIZE, y + SLOT_SIZE, border);
-        g.fill(x, y, x + 1, y + SLOT_SIZE, border);
-        g.fill(x + SLOT_SIZE - 1, y, x + SLOT_SIZE, y + SLOT_SIZE, border);
-
-        if (!stack.isEmpty()) {
-            g.renderItem(stack, x + 1, y + 1);
-            g.renderItemDecorations(Minecraft.getInstance().font, stack, x + 1, y + 1);
+    /** 原版箱子格样式：不画自绘边框（纹理自带槽框），数量按 RS 式白字描边显示在图标右上。 */
+    private void renderWarehouseSlot(GuiGraphics g, Slot slot) {
+        ItemStack stack = slot.getItem();
+        if (stack.isEmpty()) return;
+        g.renderItem(stack, slot.x, slot.y, slot.x + slot.y * imageWidth);
+        long count = slot.index < visibleEntries.size() ? visibleEntries.get(slot.index).count() : 0;
+        if (count > 1) {
+            renderAmount(g, slot.x, slot.y, count);
         }
     }
 
-    private void renderInventoryTooltip(GuiGraphics g, int mouseX, int mouseY, int invX, int invY) {
-        var player = Minecraft.getInstance().player;
-        if (player == null) return;
-        var inventory = player.getInventory();
-
-        for (int row = 0; row < 3; row++) {
-            for (int col = 0; col < 9; col++) {
-                int slot = 9 + row * 9 + col;
-                int sx = invX + col * SLOT_SIZE;
-                int sy = invY + row * SLOT_SIZE;
-                if (isInRect(mouseX, mouseY, sx, sy, SLOT_SIZE, SLOT_SIZE)) {
-                    showHoverText(g, inventory.getItem(slot), mouseX, mouseY);
-                    return;
-                }
-            }
+    /** RS 式数量：z 抬到图标之上（避免被贴图盖住）、白字描边、长文本半尺寸。 */
+    private void renderAmount(GuiGraphics g, int x, int y, long count) {
+        String text = WarehousePager.formatCount(count);
+        boolean large = font.width(text) <= 16;
+        g.pose().pushPose();
+        g.pose().translate(x + (large ? 1D : 0D), y + (large ? 1D : 0D), 300D);
+        if (!large) {
+            g.pose().scale(0.5F, 0.5F, 1F);
         }
-        for (int col = 0; col < 9; col++) {
-            int sx = invX + col * SLOT_SIZE;
-            int sy = invY + 3 * SLOT_SIZE;
-            if (isInRect(mouseX, mouseY, sx, sy, SLOT_SIZE, SLOT_SIZE)) {
-                showHoverText(g, inventory.getItem(col), mouseX, mouseY);
-                return;
-            }
-        }
+        g.drawString(font, text, (large ? 16 : 30) - font.width(text), large ? 8 : 22, 0xFFFFFF, true);
+        g.pose().popPose();
     }
 
-    private void showHoverText(GuiGraphics g, ItemStack stack, int mx, int my) {
-        if (!stack.isEmpty()) {
-            g.drawString(Minecraft.getInstance().font, stack.getHoverName().getString(),
-                    mx + 8, my - 12, MedievalColors.TEXT_WARM_WHITE);
-        }
+    private void renderCreatorFooter(GuiGraphics g) {
+        if (buildingCreator.isBlank() || activeTab != 0) return;
+        String text = I18n.name("gui.wandscape.common.creator_label", "Creator").getString()
+                + ": " + buildingCreator;
+        g.drawString(font, text, leftPos + 16, topPos + PANEL_H - 24,
+                MedievalColors.TEXT_DIM);
     }
 
-    // ── Input ──
+    private void renderFeedback(GuiGraphics g) {
+        if (feedback == null) return;
+        if (System.currentTimeMillis() > feedbackExpireTick) {
+            feedback = null;
+            return;
+        }
+        int textW = font.width(feedback);
+        int pad = 8;
+        int w = textW + pad * 2;
+        int h = font.lineHeight + 6;
+        int x = (this.width - w) / 2;
+        int y = Math.max(6, topPos - h - 3);
+
+        g.fillGradient(x, y, x + w, y + h, 0xEE2A1C14, 0xEE120804);
+        int borderCol = (feedbackColor & 0x00FFFFFF) | 0xDD000000;
+        g.fill(x, y, x + w, y + 1, borderCol);
+        g.fill(x, y + h - 1, x + w, y + h, borderCol);
+        g.fill(x, y, x + 1, y + h, borderCol);
+        g.fill(x + w - 1, y, x + w, y + h, borderCol);
+
+        g.drawString(font, feedback, x + pad, y + (h - font.lineHeight) / 2, feedbackColor);
+    }
+
+    @Override
+    protected void renderTooltip(GuiGraphics g, int x, int y) {
+        // 仓库格走标准物品 tooltip（与 RS 一致，不附加数量行）。
+        super.renderTooltip(g, x, y);
+    }
+
+    // ── 输入 ──
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        // Base class handles close button + widget clicks
-        if (super.mouseClicked(mouseX, mouseY, button)) return true;
-
-        // Tab clicks
-        if (button == 0) {
-            int tabIdx = getTabAt(mouseX, mouseY);
-            if (tabIdx >= 0 && tabIdx != activeTab) {
-                activeTab = tabIdx;
-                showTab(activeTab);
+        // 顶部工具栏（tabs/帮助/关闭）优先；tab 必须在 super 前拦截，
+        // 因 AbstractContainerScreen.mouseClicked 走到槽位逻辑后无条件返回 true。
+        if (handleToolbarClick(mouseX, mouseY, button)) {
+            return true;
+        }
+        if (handlePagerClick(mouseX, mouseY, button)) {
+            return true;
+        }
+        if (activeTab == 1 && (button == 0 || button == 1)) {
+            Slot slot = findWarehouseSlot(mouseX, mouseY);
+            if (slot != null) {
+                handleWarehouseSlotClick((WarehouseSlot) slot, button);
+                return true;
+            }
+            // RS 语义：光标带物品时，点击存储区任意位置（含空白）都存入。
+            if (!menu.getCarried().isEmpty() && isOverStorageArea(mouseX, mouseY)) {
+                sendDepositAction(button);
                 return true;
             }
         }
+        return super.mouseClicked(mouseX, mouseY, button);
+    }
 
-        // Player inventory (exchange tab)
-        if (activeTab == 1 && isOverInventoryArea(mouseX, mouseY)) {
-            if (handleInventoryClick((int) mouseX, (int) mouseY, button)) return true;
+    /** 存储区矩形（原版 6 行箱格区，相对面板：8..170 × 18..126）。 */
+    private boolean isOverStorageArea(double mouseX, double mouseY) {
+        int x0 = leftPos + 8;
+        int y0 = topPos + 18;
+        return mouseX >= x0 && mouseX < x0 + 9 * 18
+                && mouseY >= y0 && mouseY < y0 + 6 * 18;
+    }
+
+    /** 空白区存入：左键整叠、右键单个（服务端按光标操作，无需 itemId）。 */
+    private void sendDepositAction(int button) {
+        String action = button == 1
+                ? WarehouseActionPacket.ACTION_CURSOR_DEPOSIT_ONE
+                : WarehouseActionPacket.ACTION_CURSOR_DEPOSIT_ALL;
+        PacketDistributor.sendToServer(new WarehouseActionPacket(
+                menu.containerId, action, "", null, 0));
+    }
+
+    @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (super.keyPressed(keyCode, scanCode, modifiers)) {
+            return true;
         }
-
+        if (showHelpButton && helpDocumentPath != null
+                && !(getFocused() instanceof EditBox box && box.canConsumeInput())
+                && WandscapeClient.GUIDE_TOGGLE.matches(keyCode, scanCode)) {
+            openHelpDocument();
+            return true;
+        }
         return false;
     }
 
-    private int getTabAt(double mouseX, double mouseY) {
-        String[] tabs = {
-                I18n.name("gui.wandscape.warehouse.overview", "Overview").getString(),
-                I18n.name("gui.wandscape.warehouse.exchange", "Exchange").getString()
-        };
-        int ty = topPos + headerHeight + 2;
-        int tx = leftPos + 8;
-        int padH = 10;
-        for (int i = 0; i < tabs.length; i++) {
-            int tw = font.width(tabs[i]) + padH * 2;
-            if (isInRect(mouseX, mouseY, tx, ty, tw, TAB_H)) {
-                return i;
-            }
-            tx += tw + 4;
+    public void openHelpDocument() {
+        if (helpDocumentPath != null && minecraft != null) {
+            String content = com.wsteam.wandscape.shared.ui.markdown.navigation.DocumentLoader
+                    .loadMarkdown(helpDocumentPath);
+            var screen = new com.wsteam.wandscape.shared.ui.guide.GuideTestScreen(
+                    this, content, helpDocumentPath);
+            minecraft.setScreen(screen);
         }
-        return -1;
     }
 
-    private boolean isOverInventoryArea(double mouseX, double mouseY) {
-        int invY = getInventoryY() + 10;
-        int invX = leftPos + 8;
-        return mouseX >= invX && mouseX < invX + 9 * SLOT_SIZE
-                && mouseY >= invY && mouseY < invY + 4 * SLOT_SIZE;
+    private Slot findWarehouseSlot(double mouseX, double mouseY) {
+        for (Slot slot : menu.slots) {
+            if (slot instanceof WarehouseSlot && slot.isActive() && slot.hasItem()
+                    && isHovering(slot.x, slot.y, 16, 16, mouseX, mouseY)) {
+                return slot;
+            }
+        }
+        return null;
     }
 
-    private boolean handleInventoryClick(int mouseX, int mouseY, int button) {
-        int invY = getInventoryY() + 10;
-        int invX = leftPos + 8;
+    private void handleWarehouseSlotClick(WarehouseSlot slot, int button) {
+        if (slot.index >= visibleEntries.size()) return;
+        ItemEntry entry = visibleEntries.get(slot.index);
 
-        var player = Minecraft.getInstance().player;
-        if (player == null) return false;
+        String action;
+        if (button == 0) {
+            if (hasShiftDown()) {
+                action = WarehouseActionPacket.ACTION_TAKE_TO_INVENTORY;
+            } else if (menu.getCarried().isEmpty()) {
+                action = WarehouseActionPacket.ACTION_CURSOR_TAKE_ALL;
+            } else {
+                action = WarehouseActionPacket.ACTION_CURSOR_DEPOSIT_ALL;
+            }
+        } else {
+            action = menu.getCarried().isEmpty()
+                    ? WarehouseActionPacket.ACTION_CURSOR_TAKE_HALF
+                    : WarehouseActionPacket.ACTION_CURSOR_DEPOSIT_ONE;
+        }
+        sendAction(entry, action, 0);
+    }
 
-        for (int row = 0; row < 3; row++) {
-            for (int col = 0; col < 9; col++) {
-                int slot = 9 + row * 9 + col;
-                int sx = invX + col * SLOT_SIZE;
-                int sy = invY + row * SLOT_SIZE;
-                if (isInRect(mouseX, mouseY, sx, sy, SLOT_SIZE, SLOT_SIZE)) {
-                    return depositFromSlot(slot, button);
+    private void sendAction(ItemEntry entry, String action, int param) {
+        PacketDistributor.sendToServer(new WarehouseActionPacket(
+                menu.containerId, action, entry.itemId(), entry.nbt(), param));
+    }
+
+    /** RS 式滚轮转移：网格区 Shift+上滚=背包→仓库、Shift+下滚=仓库→背包、Ctrl+下滚=仓库→光标；玩家槽区 Shift 滚轮同理。 */
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+        if (activeTab == 1) {
+            // MC 语义：scrollY > 0 = 上滚（MouseHandler 直接传 GLFW yOffset）
+            double delta = scrollX != 0 ? scrollX : scrollY;
+            boolean up = delta > 0;
+            // 无修饰滚轮：翻页（Shift/Ctrl 滚轮保留转移功能）
+            if (!hasShiftDown() && !Screen.hasControlDown()) {
+                page += up ? -1 : 1;
+                recomputeVisible(); // PAGER 自动 clamp 到有效页
+                return true;
+            }
+            if (hoveredSlot instanceof WarehouseSlot ws && ws.index < visibleEntries.size()) {
+                ItemEntry entry = visibleEntries.get(ws.index);
+                if (up && hasShiftDown()) {
+                    sendAction(entry, WarehouseActionPacket.ACTION_DEPOSIT_INVENTORY_TYPE, 0);
+                    return true;
+                }
+                if (!up) {
+                    if (hasShiftDown()) {
+                        sendAction(entry, WarehouseActionPacket.ACTION_TAKE_TO_INVENTORY, 0);
+                        return true;
+                    }
+                    if (Screen.hasControlDown()) {
+                        sendAction(entry, WarehouseActionPacket.ACTION_CURSOR_TAKE_ALL, 0);
+                        return true;
+                    }
+                }
+            } else if (hasShiftDown() && hoveredSlot != null && hoveredSlot.hasItem()
+                    && !(hoveredSlot instanceof WarehouseSlot)) {
+                int slotIndex = hoveredSlot.getContainerSlot();
+                if (up) {
+                    PacketDistributor.sendToServer(new WarehouseActionPacket(menu.containerId,
+                            WarehouseActionPacket.ACTION_DEPOSIT_SLOT, "", null, slotIndex));
+                    return true;
+                }
+                ItemStack stack = hoveredSlot.getItem();
+                var rl = BuiltInRegistries.ITEM.getKey(stack.getItem());
+                if (rl != null) {
+                    CompoundTag nbt = stack.has(DataComponents.CUSTOM_DATA)
+                            ? stack.get(DataComponents.CUSTOM_DATA).copyTag() : null;
+                    PacketDistributor.sendToServer(new WarehouseActionPacket(menu.containerId,
+                            WarehouseActionPacket.ACTION_TAKE_TO_SLOT, rl.toString(), nbt, slotIndex));
+                    return true;
                 }
             }
         }
-        for (int col = 0; col < 9; col++) {
-            int slot = col;
-            int sx = invX + col * SLOT_SIZE;
-            int sy = invY + 3 * SLOT_SIZE;
-            if (isInRect(mouseX, mouseY, sx, sy, SLOT_SIZE, SLOT_SIZE)) {
-                return depositFromSlot(slot, button);
-            }
-        }
-        return false;
+        return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
     }
 
-    private boolean depositFromSlot(int slot, int button) {
-        var player = Minecraft.getInstance().player;
-        if (player == null) return false;
+    // ── 分页 / 显示数据 ──
 
-        ItemStack stack = player.getInventory().getItem(slot);
-        if (stack.isEmpty()) return false;
-
-        int qty = button == 1 ? stack.getCount() : 1;
-        var rl = BuiltInRegistries.ITEM.getKey(stack.getItem());
-        if (rl == null) return false;
-        CompoundTag nbt = null;
-        var customData = stack.get(DataComponents.CUSTOM_DATA);
-        if (customData != null) {
-            nbt = customData.copyTag();
+    private void recomputeVisible() {
+        var result = PAGER.page(allItems, this::matchesQuery, BY_ID, page);
+        this.page = result.page();
+        this.totalPages = result.totalPages();
+        this.visibleEntries = result.entries();
+        this.visibleStacks = new ArrayList<>(visibleEntries.size());
+        for (ItemEntry entry : visibleEntries) {
+            visibleStacks.add(toStack(entry));
         }
-
-        PacketDistributor.sendToServer(new WarehouseActionPacket(
-                buildingPos, "deposit_from_slot", rl.toString(), nbt, qty, slot));
-        return true;
+        this.prevActive = result.hasPrev();
+        this.nextActive = result.hasNext();
     }
 
-    // ── Filters ──
-
-    private void applyFilter(String query) {
-        filteredItems = filterItems(query);
-        if (overviewList != null) {
-            overviewList.setItems(filteredItems);
-        }
-    }
-
-    private void applyExchangeFilter(String query) {
-        exchangeFilteredItems = filterItems(query);
-        if (exchangeList != null) {
-            exchangeList.setItems(exchangeFilteredItems);
-        }
+    private boolean matchesQuery(ItemEntry entry) {
+        return SearchBox.matches(SearchBox.itemSearchText(entry.itemId()), query);
     }
 
     private List<ItemEntry> filterItems(String query) {
-        if (query == null || query.isEmpty()) {
-            return new ArrayList<>(allItems);
-        }
-        String lower = query.toLowerCase();
-        List<ItemEntry> result = new ArrayList<>();
-        for (ItemEntry item : allItems) {
-            if (item.itemId().toLowerCase().contains(lower)) {
-                result.add(item);
-            }
-        }
-        return result;
+        return SearchBox.filter(allItems, query, e -> SearchBox.itemSearchText(e.itemId()));
     }
 
-    // ── Helpers ──
+    private ItemStack getEntryStack(int slotIndex) {
+        if (slotIndex < 0 || slotIndex >= visibleStacks.size()) {
+            return ItemStack.EMPTY;
+        }
+        return visibleStacks.get(slotIndex);
+    }
 
-    private static String formatCount(long n) {
-        if (n < 1000) return String.valueOf(n);
-        if (n < 1_000_000) return String.format("%.1fK", n / 1000.0);
-        return String.format("%.1fM", n / 1_000_000.0);
+    private static ItemStack toStack(ItemEntry entry) {
+        var registryItem = BuiltInRegistries.ITEM.get(ResourceLocation.tryParse(entry.itemId()));
+        if (registryItem == null || registryItem == Items.AIR) return ItemStack.EMPTY;
+        int count = (int) Math.min(Math.max(entry.count(), 1), Integer.MAX_VALUE);
+        ItemStack stack = new ItemStack(registryItem, count);
+        if (entry.nbt() != null && !entry.nbt().isEmpty()) {
+            stack.set(DataComponents.CUSTOM_DATA, CustomData.of(entry.nbt().copy()));
+        }
+        return stack;
+    }
+
+    // ── 皮肤绘制工具 ──
+
+    private static void drawGlowBorder(GuiGraphics g, int x, int y, int w, int h, int color) {
+        int c0 = color;
+        int c1 = (color & 0x00FFFFFF) | 0x66000000;
+        g.fill(x, y, x + w, y + 1, c0);
+        g.fill(x, y + h - 1, x + w, y + h, c0);
+        g.fill(x, y, x + 1, y + h, c0);
+        g.fill(x + w - 1, y, x + w, y + h, c0);
+        g.fill(x + 1, y + 1, x + w - 1, y + 2, c1);
+        g.fill(x + 1, y + h - 2, x + w - 1, y + h - 1, c1);
+        g.fill(x + 1, y + 1, x + 2, y + h - 1, c1);
+        g.fill(x + w - 2, y + 1, x + w - 1, y + h - 1, c1);
+    }
+
+    private static void drawMinimalBox(GuiGraphics g, int x, int y, int w, int h,
+                                       boolean active, boolean hovered) {
+        if (active) {
+            g.fillGradient(x, y, x + w, y + h, GLASS_BOX_TOP, GLASS_BOX_BOTTOM);
+            drawGlowBorder(g, x, y, w, h, MedievalColors.BORDER_GOLD);
+        } else if (hovered) {
+            g.fillGradient(x, y, x + w, y + h,
+                    MedievalColors.BUTTON_BG_HOVER, MedievalColors.PANEL_TITLE_BG);
+            drawGlowBorder(g, x, y, w, h, MedievalColors.BORDER_GOLD_DARK);
+        } else {
+            g.fillGradient(x, y, x + w, y + h, 0x992A1E18, 0x991A0E08);
+            g.fill(x, y, x + w, y + 1, MedievalColors.BORDER_GOLD_DARK);
+            g.fill(x, y + h - 1, x + w, y + h, MedievalColors.BORDER_GOLD_DARK);
+            g.fill(x, y, x + 1, y + h, MedievalColors.BORDER_GOLD_DARK);
+            g.fill(x + w - 1, y, x + w, y + h, MedievalColors.BORDER_GOLD_DARK);
+        }
+    }
+
+    private static boolean isInRect(double mx, double my, int x, int y, int w, int h) {
+        return mx >= x && mx < x + w && my >= y && my < y + h;
     }
 }

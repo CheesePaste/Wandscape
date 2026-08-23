@@ -15,13 +15,13 @@ import com.wsteam.wandscape.shared.ui.component.MedievalButton;
 import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
 import com.wsteam.wandscape.shared.ui.component.Slider;
 import com.wsteam.wandscape.shared.ui.component.ScrollableList;
+import com.wsteam.wandscape.shared.ui.component.SearchBox;
 import com.wsteam.wandscape.shared.ui.component.TaskQueuePanel;
 import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
 import com.wsteam.wandscape.shared.ui.theme.WandscapeTheme;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
@@ -43,7 +43,7 @@ public class CraftingStationScreen extends MedievalScreen {
     private List<RecipeEntry> filteredRecipes = new ArrayList<>();
 
     private ScrollableList<RecipeEntry> recipeList;
-    private EditBox searchInput;
+    private SearchBox searchInput;
     private Slider slider;
     private TaskQueuePanel taskQueuePanel;
 
@@ -126,19 +126,8 @@ public class CraftingStationScreen extends MedievalScreen {
 
         // Search box above the recipe list (warehouse-style inset field)
         int searchH = font.lineHeight + 6;
-        searchInput = new EditBox(font, contentX + 1, contentY + 2, contentW - 2, font.lineHeight,
-                I18n.name("gui.wandscape.common.search", "Search")) {
-            @Override
-            public void renderWidget(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-                drawInsetField(g, getX() - 1, getY() - 2, getWidth() + 2, getHeight() + 4);
-                super.renderWidget(g, mouseX, mouseY, partialTick);
-            }
-        };
-        searchInput.setBordered(false);
-        searchInput.setTextColor(MedievalColors.TEXT_WARM_WHITE);
-        searchInput.setTextColorUneditable(MedievalColors.TEXT_MUTED);
-        searchInput.setHint(I18n.name("gui.wandscape.common.search", "Search"));
-        searchInput.setCanLoseFocus(true);
+        searchInput = new SearchBox(font, contentX + 1, contentY + 2, contentW - 2,
+                I18n.name("gui.wandscape.common.search", "Search"));
         searchInput.setResponder(this::applySearch);
         addRenderableWidget(searchInput);
 
@@ -227,12 +216,7 @@ public class CraftingStationScreen extends MedievalScreen {
 
     /** Filter the recipe list by the search query, keeping it in sync with selection indexes. */
     private void applySearch(String query) {
-        String lower = (query == null ? "" : query.trim()).toLowerCase();
-        filteredRecipes = lower.isEmpty()
-                ? new ArrayList<>(recipes)
-                : recipes.stream()
-                        .filter(r -> recipeSearchText(r).toLowerCase().contains(lower))
-                        .toList();
+        filteredRecipes = SearchBox.filter(recipes, query, CraftingStationScreen::recipeSearchText);
         if (recipeList != null) recipeList.setItems(filteredRecipes);
     }
 

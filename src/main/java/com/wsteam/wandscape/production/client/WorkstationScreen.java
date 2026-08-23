@@ -17,6 +17,7 @@ import com.wsteam.wandscape.shared.ui.component.MedievalButton;
 import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
 import com.wsteam.wandscape.shared.ui.component.Slider;
 import com.wsteam.wandscape.shared.ui.component.ScrollableList;
+import com.wsteam.wandscape.shared.ui.component.SearchBox;
 import com.wsteam.wandscape.shared.ui.component.TabBar;
 import com.wsteam.wandscape.shared.ui.component.TaskQueuePanel;
 import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
@@ -25,7 +26,6 @@ import com.wsteam.wandscape.shared.log.Log;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
@@ -54,7 +54,7 @@ public class WorkstationScreen extends MedievalScreen {
     private List<SynthesizeEntry> synthesizeFiltered = new ArrayList<>();
 
     private TabBar tabBar;
-    private EditBox searchInput;
+    private SearchBox searchInput;
     private ScrollableList<?> currentList;
     private ScrollableList<DecomposableEntry> decomposeList;
     private ScrollableList<SynthesizeEntry> synthesizeList;
@@ -151,19 +151,8 @@ public class WorkstationScreen extends MedievalScreen {
 
         // Search box between tabs and list (warehouse-style inset field)
         int searchH = font.lineHeight + 6;
-        searchInput = new EditBox(font, contentX + 1, contentY + 20 + 2, contentW - 2, font.lineHeight,
-                I18n.name("gui.wandscape.common.search", "Search")) {
-            @Override
-            public void renderWidget(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-                drawInsetField(g, getX() - 1, getY() - 2, getWidth() + 2, getHeight() + 4);
-                super.renderWidget(g, mouseX, mouseY, partialTick);
-            }
-        };
-        searchInput.setBordered(false);
-        searchInput.setTextColor(MedievalColors.TEXT_WARM_WHITE);
-        searchInput.setTextColorUneditable(MedievalColors.TEXT_MUTED);
-        searchInput.setHint(I18n.name("gui.wandscape.common.search", "Search"));
-        searchInput.setCanLoseFocus(true);
+        searchInput = new SearchBox(font, contentX + 1, contentY + 20 + 2, contentW - 2,
+                I18n.name("gui.wandscape.common.search", "Search"));
         searchInput.setResponder(this::applySearch);
         addRenderableWidget(searchInput);
 
@@ -355,37 +344,20 @@ public class WorkstationScreen extends MedievalScreen {
 
     /** Filter both lists by the search query, keeping the lists in sync with selection indexes. */
     private void applySearch(String query) {
-        String lower = (query == null ? "" : query.trim()).toLowerCase();
-        decomposeFiltered = lower.isEmpty()
-                ? new ArrayList<>(decomposableItems)
-                : decomposableItems.stream()
-                        .filter(d -> decomposeSearchText(d).toLowerCase().contains(lower))
-                        .toList();
+        decomposeFiltered = SearchBox.filter(decomposableItems, query, WorkstationScreen::decomposeSearchText);
         if (decomposeList != null) decomposeList.setItems(decomposeFiltered);
-        synthesizeFiltered = lower.isEmpty()
-                ? new ArrayList<>(synthesizeRecipes)
-                : synthesizeRecipes.stream()
-                        .filter(s -> synthesizeSearchText(s).toLowerCase().contains(lower))
-                        .toList();
+        synthesizeFiltered = SearchBox.filter(synthesizeRecipes, query, WorkstationScreen::synthesizeSearchText);
         if (synthesizeList != null) synthesizeList.setItems(synthesizeFiltered);
     }
 
     /** Searchable text for a decomposable item: localized name + raw id. */
     private static String decomposeSearchText(DecomposableEntry d) {
-        var registryItem = BuiltInRegistries.ITEM.get(ResourceLocation.tryParse(d.itemId()));
-        String name = (registryItem != null && registryItem != Items.AIR)
-                ? new ItemStack(registryItem).getHoverName().getString()
-                : d.itemId();
-        return name + " " + d.itemId();
+        return SearchBox.itemSearchText(d.itemId());
     }
 
     /** Searchable text for a synthesize recipe: localized name + output/recipe ids. */
     private static String synthesizeSearchText(SynthesizeEntry s) {
-        var registryItem = BuiltInRegistries.ITEM.get(ResourceLocation.tryParse(s.outputItem()));
-        String name = (registryItem != null && registryItem != Items.AIR)
-                ? new ItemStack(registryItem).getHoverName().getString()
-                : s.outputItem();
-        return name + " " + s.outputItem() + " " + s.recipeId();
+        return SearchBox.itemSearchText(s.outputItem()) + " " + s.recipeId();
     }
 
     /** Draw an element cost as [icon]xN (icon tinted per element, like the V-key panel). */
