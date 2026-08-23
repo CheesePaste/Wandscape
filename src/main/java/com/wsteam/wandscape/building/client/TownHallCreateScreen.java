@@ -27,6 +27,7 @@ public class TownHallCreateScreen extends MedievalScreen {
 
     private EditBox nameBox;
     private String pendingName = "";
+    private boolean confirmed = false;
 
     public TownHallCreateScreen(BlockPos townHallAnchor, String creator) {
         super(Component.literal("Create Town"), PW, PH);
@@ -49,15 +50,47 @@ public class TownHallCreateScreen extends MedievalScreen {
         nameBox.setTextColor(MedievalColors.TEXT_WARM_WHITE);
         nameBox.setTextColorUneditable(MedievalColors.TEXT_MUTED);
         nameBox.setCanLoseFocus(false);
+
+        String defaultName = I18n.name("gui.wandscape.townhall_create.default_name", "魔法小镇").getString();
+        nameBox.setValue(defaultName);
+        nameBox.setHighlightPos(0);
+        pendingName = defaultName;
+
         addRenderableWidget(nameBox);
         setFocused(nameBox);
     }
 
     private void confirm() {
         String name = pendingName.trim();
-        if (name.isEmpty()) return;
+        if (name.isEmpty()) {
+            name = I18n.name("gui.wandscape.townhall_create.default_name", "魔法小镇").getString();
+        }
+        confirmed = true;
         PacketDistributor.sendToServer(new ColonyCreateRequestPacket(townHallAnchor, name));
         this.onClose();
+    }
+
+    @Override
+    public void onClose() {
+        super.onClose();
+        // 确保清理建造栏和子模式，防止关闭弹窗后因光标抬起与建造栏开启导致 WASD / 视角冻结
+        com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.closeBuildingBar();
+        com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.exitCurrentSubMode();
+        if (com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.isPanelOpen()) {
+            com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.setSubMode(
+                    com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.SubMode.NONE);
+        }
+        com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.syncCursorToState();
+        net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
+        if (mc.mouseHandler != null && !com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.isCursorLifted()) {
+            mc.mouseHandler.grabMouse();
+        }
+
+        if (!confirmed && mc.player != null) {
+            mc.player.displayClientMessage(
+                    I18n.name("message.wandscape.townhall_create.cancelled",
+                            "[Wandscape] 已取消小镇命名。随时右键市政厅可重新命名并创建魔法小镇。"), false);
+        }
     }
 
     @Override

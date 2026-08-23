@@ -95,23 +95,23 @@ public final class BuildingInteractHandler {
      */
     public static void handleInteraction(ServerPlayer player, Level level,
                                           net.minecraft.core.BlockPos pos, BuildingState state) {
-        // Under-construction building → open the construction-site panel
-        // (required materials, warehouse/synthesis status, time estimates).
-        if (!state.hasEverCompleted()) {
-            PacketDistributor.sendToPlayer(player, ConstructionSiteDataPacket.from(level, state));
-            return;
-        }
-
         String category = state.getCategory();
         UUID colonyId = state.getColonyId();
 
-        // Town hall with no colony linked → ask the player to name & create one.
+        // Town hall with no colony linked → ask the player to name & create one (even if under construction).
         if ("government".equals(category) && colonyId == null) {
             BuildingConfig promptCfg = BuildingConfigLoader.getInstance().get(state.getBuildingTypeId());
             String promptCreator = promptCfg != null ? promptCfg.creator() : "";
             PacketDistributor.sendToPlayer(player,
                     new com.wsteam.wandscape.shared.network.ColonyCreatePromptPacket(pos, promptCreator));
             Log.info(TAG, "[Colony] Town hall at {} right-clicked with no colony — prompting for name", pos);
+            return;
+        }
+
+        // Under-construction building → open the construction-site panel
+        // (required materials, warehouse/synthesis status, time estimates).
+        if (!state.hasEverCompleted()) {
+            PacketDistributor.sendToPlayer(player, ConstructionSiteDataPacket.from(level, state));
             return;
         }
 
