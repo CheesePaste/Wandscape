@@ -17,8 +17,8 @@ import com.wsteam.wandscape.shared.data.ServiceConfig;
 import com.wsteam.wandscape.shared.data.ShopConfig;
 import com.wsteam.wandscape.shared.data.WonderConfig;
 
-@DisplayName("DiagnosticRepro")
-class DiagnosticReproTest {
+@DisplayName("BuildingCenteringRotation")
+class BuildingCenteringRotationTest {
 
     private static BuildingConfig cfg(int[][] offsets) {
         List<BlockOffset> pattern = new ArrayList<>();
