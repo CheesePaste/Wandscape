@@ -898,3 +898,20 @@
 **为什么**：真 Menu 是"与一键整理兼容"的必要条件（模组要求 menu.slots 中的槽）；仓库槽若做成可写真槽，整理模组会把仓库条目搬进玩家栏（行为怪异），AE2 的只读槽 + 自定义点击正是为此设计。自定义点击包 + `setCarried` 同步光标既对齐仓储模组交互语义，又完全复用 vanilla 光标同步链路。
 
 **影响**：旧交互（左键取 1/右键取 64/点击玩家槽直接存入）被光标语义取代（点击取整叠/半叠进光标、Shift 快速移动、光标点击存入）；`WarehouseActionPacket` 字段重构（containerId + action + itemId + nbt）；`ReplayScreenGuard` 拦截条件改为 `ReplayProtectedScreen` 标记接口（新 Screen 不再是 MedievalScreen 子类）；引导文案与 guide 文档更新为新交互。
+
+## 2026-08-23：修复中立生物仇恨吸引——北极熊/铁傀儡/狼无端攻击 NPC + NPC 不还手
+
+**需求**（用户指令）：北极熊、铁傀儡、狼会主动攻击 NPC 且 NPC 不还手。要求：1) 修掉这个「仇恨吸引」；2) NPC 受攻击时无论对方是不是 Enemy 都还手，除非攻击者是玩家或同殖民地 NPC。
+
+**根因**：
+- `HostileTargetingHandler` 对「含 Player 索敌 goal 的任意生物」追加无条件 `PlayerLike` 索敌 goal，没限定 `Enemy`。北极熊（`PolarBearAttackPlayersGoal`/`isAngryAt`）、铁傀儡（声望 `isAngryAt`）、狼（`isAngryAt`）的 Player 索敌都是**条件性**的（愤怒/声望），被追加的宽类 goal 却无条件——于是它们无端攻击 NPC。
+- `SelfDefenseHandler` 只对 `Enemy` 记仇；`SelfDefenseExecutor.resolveTarget` 的仇恨分支再用 `isHostileTarget`（仅 Enemy）过滤；`canBeamHurt` 默认 `instanceof Enemy`——三层都要求 Enemy，导致中立生物攻击时 NPC 记不了仇、锁不了目标、光束也打不出伤害。
+
+**决策**：
+- **`HostileTargetingHandler` 只增强 `Enemy`**：非 Enemy（中立·防御生物）跳过，不追加 PlayerLike 索敌——它们的条件性索敌维持原版。
+- **区分「主动索敌」与「受击反击」**：主动索敌（`isHostileTarget`/`nearestVisibleEnemyAround`）仍仅 Enemy；反击走新的 `WandscapeNpc.isRetaliationTarget(attacker)`（非玩家、非同殖民地 NPC 即可，不要求 Enemy）。`SelfDefenseHandler` 记仇与 `resolveTarget` 仇恨分支改用此判定。
+- **`canBeamHurt` 放行当前仇恨目标**：默认仍 `Enemy`，但额外放行「当前仇恨目标」（UUID 匹配且未过期），使光束/普攻/SPELL_POWER 倍率三处统一能伤到被反击的中立生物；玩家与同殖民地 NPC 仍被 `isRetaliationTarget` 排除。
+
+**为什么**：主动索敌维持 Enemy 是防 NPC 无端扫射和平中立生物；反击放开 Enemy 限制是让 NPC 被中立生物攻击时不再当沙包。`canBeamHurt` 仍是唯一伤害边界（光束/倍率/敌数三处共用），只在该钩子内加仇恨目标放行，边界不散落。
+
+**影响**：北极熊/铁傀儡/狼不再主动攻击 NPC；若仍被打（如玩家引怪/狼护主），NPC 会记仇还手，直到仇恨过期（`guard.hateDurationTicks`）。

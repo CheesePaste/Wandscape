@@ -7,8 +7,11 @@ import javax.annotation.Nullable;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.shared.ui.I18n;
+import com.wsteam.wandscape.shared.ui.panel.WandscapePanelState;
 
 import net.minecraft.network.chat.Component;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.fml.loading.FMLEnvironment;
 
 /**
  * Utility for checking whether a building type is unlocked for a given colony.
@@ -30,17 +33,42 @@ public final class BuildingUnlockChecker {
         if (config == null) return false;
 
         boolean isGovernment = "government".equals(config.category());
-        if (colonyId == null) {
-            return isGovernment;
-        }
-
         if (isGovernment) return true;
+        if (colonyId == null) return false;
+
+        return isUnlockedAtLevel(resolveLevel(colonyId), config);
+    }
+
+    /**
+     * Pure level-threshold decision, independent of where the level comes from.
+     * Separated from level resolution so the rule itself is unit-testable.
+     *
+     * <p>{@code government} and {@code NONE} (min level 1) are always unlocked.
+     */
+    static boolean isUnlockedAtLevel(int currentLevel, BuildingConfig config) {
+        if (config == null) return false;
+        if ("government".equals(config.category())) return true;
         BuildingConfig.UnlockRequirement req = config.unlockRequirement();
         if (req == BuildingConfig.UnlockRequirement.NONE) return true;
-
-        var levelMgr = WandscapeEngine.getColonyLevelManager();
-        int currentLevel = levelMgr != null ? levelMgr.getLevel(colonyId) : 1;
         return currentLevel >= req.minColonyLevel();
+    }
+
+    /**
+     * Resolve the colony's current level.
+     *
+     * <p>Server side: {@link WandscapeEngine#getColonyLevelManager()} is populated.
+     * Client side: the engine is server-only ({@code null}), so fall back to the
+     * colony level already synced via {@code ColonyStatsSyncPacket} into
+     * {@link WandscapePanelState} — otherwise every level-gated building would read
+     * level 1 and stay locked even at max colony level.
+     */
+    private static int resolveLevel(@Nullable UUID colonyId) {
+        var levelMgr = WandscapeEngine.getColonyLevelManager();
+        if (levelMgr != null) return levelMgr.getLevel(colonyId);
+        if (FMLEnvironment.dist.isClient()) {
+            return WandscapePanelState.getColonyLevel();
+        }
+        return 1;
     }
 
     @Nullable
@@ -57,8 +85,7 @@ public final class BuildingUnlockChecker {
         BuildingConfig.UnlockRequirement req = config.unlockRequirement();
         if (req == BuildingConfig.UnlockRequirement.NONE) return null;
 
-        var levelMgr = WandscapeEngine.getColonyLevelManager();
-        int currentLevel = levelMgr != null ? levelMgr.getLevel(colonyId) : 1;
+        int currentLevel = resolveLevel(colonyId);
         int required = req.minColonyLevel();
         if (currentLevel < required) {
             return I18n.name("message.wandscape.unlock.need_level",

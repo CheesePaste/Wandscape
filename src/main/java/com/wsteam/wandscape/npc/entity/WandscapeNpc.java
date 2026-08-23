@@ -186,13 +186,41 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
      * 该法师的魔法光束能伤害的目标判定钩子。默认只伤敌对生物（{@link Enemy}）——
      * 与 {@link #isHostileTarget}（索敌判定）分开：战斗中对束内 Enemy 一律结算伤害，
      * 可能误伤正好在束内/溅射范围内的和平中立生物；但 NPC 不会主动索敌锁定它们。
-     * 小镇 NPC 的光束**永不伤害玩家**、其它 NPC 或村民。敌对法师等子类
-     * 覆盖为「Enemy 或 生存玩家」，用于实战测试。光束伤害（{@code MagicBeamEntity}）、
-     * SPELL_POWER 倍率（{@code NpcSpellPowerHandler}）与战斗快照敌数（{@code GuardCombat}）
+     * 受击反击例外：当前仇恨目标（非 Enemy 的攻击者，如北极熊/铁傀儡/狼）也放行，
+     * 使 NPC 被中立生物攻击时能还手——但仍排除玩家与同殖民地 NPC
+     * （见 {@link #isRetaliationTarget}）。敌对法师等子类覆盖为「Enemy 或 生存玩家」，
+     * 用于实战测试。光束伤害（{@code MagicBeamEntity}）、SPELL_POWER 倍率
+     * （{@code NpcSpellPowerHandler}）与战斗快照敌数（{@code GuardCombat}）
      * 三处统一走此钩子，保证「NPC 伤不了玩家、邪恶法师能伤生存玩家」的边界唯一且一致。
      */
     public boolean canBeamHurt(LivingEntity target) {
-        return target instanceof Enemy;
+        if (target instanceof Enemy) return true;
+        return isRetaliationTarget(target) && isCurrentHatedAttacker(target);
+    }
+
+    /**
+     * 受击反击目标判定：NPC 被该攻击者打伤时是否应当还手。
+     * 与 {@link #isHostileTarget}（主动索敌，仅 Enemy）区分——反击不要求 Enemy：
+     * 北极熊/铁傀儡/狼等中立生物主动攻击 NPC 时同样记仇还手。排除玩家与同殖民地 NPC（友伤）。
+     */
+    public boolean isRetaliationTarget(LivingEntity attacker) {
+        if (attacker instanceof Player) return false;
+        if (attacker instanceof WandscapeNpc other) return sameColonyAs(other);
+        return true;
+    }
+
+    /** 与另一 NPC 是否同殖民地（colonyId 一致；null 按占位殖民地处理）。 */
+    private boolean sameColonyAs(WandscapeNpc other) {
+        UUID a = colonyId != null ? colonyId : EntityComponentBridge.PLACEHOLDER_COLONY;
+        UUID b = other.colonyId != null ? other.colonyId : EntityComponentBridge.PLACEHOLDER_COLONY;
+        return a.equals(b);
+    }
+
+    /** 目标是否为当前有效仇恨目标（未过期且 UUID 一致）——反击伤害放行的依据。 */
+    private boolean isCurrentHatedAttacker(LivingEntity target) {
+        if (hatedAttackerUuid == null) return false;
+        if (level().getGameTime() > hateExpiryTick) return false;
+        return target.getUUID().equals(hatedAttackerUuid);
     }
 
     /** 头顶是否显示闲聊气泡（客户端渲染器用）。敌对法师等子类覆盖为 false。 */

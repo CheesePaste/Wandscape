@@ -9,17 +9,15 @@ import com.wsteam.wandscape.shared.log.Log;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.monster.Enemy;
-import net.minecraft.world.entity.player.Player;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 
 /**
- * 受伤仇恨：NPC 被非玩家攻击者打伤时记录仇恨目标（记在 {@link WandscapeNpc} 上），
+ * 受伤仇恨：NPC 被攻击者打伤时记录仇恨目标（记在 {@link WandscapeNpc} 上），
  * 供 {@code SelfDefenseExecutor} 的下一轮目标解析优先反击。
  *
- * <p>只对 {@code Enemy} 记仇：光束伤害（MagicBeamEntity）只伤敌对生物，对非 Enemy
- * 记仇会导致反击打不死的空转。玩家 / 其它 NPC 不记仇（友伤排除）。
+ * <p>不要求 {@code Enemy}——北极熊/铁傀儡/狼等中立生物主动攻击 NPC 时同样记仇还手；
+ * 仅玩家与同殖民地 NPC（友军）不记仇（见 {@link WandscapeNpc#isRetaliationTarget}）。
  *
  * <p>注意：NeoForge 1.21.1 中该事件由 {@code LivingHurtEvent} 改名而来
  * （构造改传 {@code DamageContainer}），订阅 {@code LivingIncomingDamageEvent}。
@@ -51,8 +49,9 @@ public final class SelfDefenseHandler {
             handleEnvironmentalDamage(event, npc);
             return;
         }
-        if (attacker instanceof Player || attacker instanceof WandscapeNpc) return;
-        if (!(attacker instanceof Enemy)) return;
+        // 反击仇恨：不要求 Enemy——北极熊/铁傀儡/狼等中立生物主动攻击 NPC 也要还手；
+        // 仅玩家与同殖民地 NPC（友军）不记仇。
+        if (!npc.isRetaliationTarget(attacker)) return;
 
         long expiry = npc.level().getGameTime() + Config.GUARD_HATE_DURATION_TICKS.get();
         npc.setHatedAttacker(attacker.getUUID(), expiry);

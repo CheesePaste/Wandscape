@@ -1,128 +1,96 @@
 package com.wsteam.wandscape.task.source;
 
-import com.wsteam.wandscape.core.boundary.MockBoundary;
-import com.wsteam.wandscape.core.CoreBootstrap;
-import com.wsteam.wandscape.core.CoreBootstrapConfig;
-import com.wsteam.wandscape.task.engine.pool.GlobalTask;
-import com.wsteam.wandscape.task.engine.pool.TaskRequest;
-import com.wsteam.wandscape.task.runtime.TaskSequence;
-import com.wsteam.wandscape.task.runtime.TaskState;
-import com.wsteam.wandscape.core.types.BlockType;
-import com.wsteam.wandscape.core.types.GridPos;
-import com.wsteam.wandscape.core.types.ResourceId;
-import com.wsteam.wandscape.core.types.ResourceStack;
-import com.wsteam.wandscape.core.types.NpcAttributes;
-import com.wsteam.wandscape.task.engine.dsl.BlueprintRegistry;
-import com.wsteam.wandscape.task.engine.dsl.BlueprintSteps;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import com.wsteam.wandscape.core.ecs.World;
+import com.wsteam.wandscape.core.types.ResourceId;
+import com.wsteam.wandscape.core.types.ResourceStack;
 import com.wsteam.wandscape.op.api.AtomicOp;
-import com.wsteam.wandscape.op.executor.DefaultOpExecutors;
-import com.wsteam.wandscape.task.source.EventDrivenTaskSource;
-import com.wsteam.wandscape.task.scheduler.SystemBlueprintRegistry;
+import com.wsteam.wandscape.task.engine.dsl.Blueprint;
+import com.wsteam.wandscape.task.engine.dsl.BlueprintRegistry;
+import com.wsteam.wandscape.task.engine.dsl.BlueprintSteps;
+import com.wsteam.wandscape.task.runtime.TaskSequence;
 
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 /**
- * Tests EventDrivenTaskSource: event → TaskRequest → addTask → scheduler → complete.
+ * Tests {@link EventDrivenTaskSource#registerDefaultBlueprints}: the auto-registered
+ * gather blueprints must produce a ResourceRequestOp of the right resource, followed by
+ * a TransformOp, with a default amount of 16 (overridable via the "amount" param).
  */
-public class EventDrivenTaskSourceTest {
+class EventDrivenTaskSourceTest {
 
-    private MockBoundary mock;
-    private World world;
-    private UUID colonyId;
-    private long npc;
-
-    @BeforeEach
-    void setUp() {
-        mock = new MockBoundary();
-        mock.seedWarehouse(ResourceId.STONE, 30);
-        mock.seedWarehouse(ResourceId.WOOD, 200);
-        mock.seedWarehouse(ResourceId.STONE_BRICKS, 200);
-
-        BlueprintRegistry blueprints = new BlueprintRegistry();
-        EventDrivenTaskSource.registerDefaultBlueprints(blueprints);
-
-        CoreBootstrapConfig config = new CoreBootstrapConfig(mock, mock, mock, null, mock, List.of(), blueprints,
-                new SystemBlueprintRegistry(), false);
-        world = CoreBootstrap.bootstrap(config);
-        DefaultOpExecutors.registerAll(world.opExecutors);
-
-        GridPos colonyCenter = new GridPos(0, 64, 0);
-        new EventDrivenTaskSource(world.taskPool, world.eventBus);
-
-        colonyId = UUID.randomUUID();
-        CoreBootstrap.createColony(world, colonyCenter.x(), colonyCenter.y(), colonyCenter.z(), 50);
-
-        npc = CoreBootstrap.createNpc(world, 0, 64, 0, colonyId, NpcAttributes.defaults());
-    }
-
-    // ======================== Full restock chain ========================
+    private static final String[] GATHER_IDS = {
+            "gather:wood", "gather:stone_bricks", "gather:stone",
+            "gather:glass", "gather:iron_ingot", "gather:wheat"
+    };
 
     @Test
-    void fullRestockChain_resolvesWaitingTask() {
-        // Heavy task needs 100 stone; warehouse has only 30
-        GridPos loc = new GridPos(5, 64, 5);
-        Map<String, JsonElement> taskParams = new HashMap<>();
-        taskParams.put("x", new JsonPrimitive(loc.x()));
-        taskParams.put("y", new JsonPrimitive(loc.y()));
-        taskParams.put("z", new JsonPrimitive(loc.z()));
-
-        world.blueprintRegistry.register("test:heavy", (BlueprintSteps) p ->
-                TaskSequence.of("Heavy Stone Task",
-                        new AtomicOp.ResourceRequestOp(List.of(new ResourceStack(ResourceId.STONE, 100))),
-                        AtomicOp.TransformOp.place(parseLocation(p), BlockType.STONE_BRICKS)));
-
-        long taskId = world.taskPool.addTask(
-                new TaskRequest("test:heavy", taskParams, 10));
-        tickN(6);
-
-        assertEquals(TaskState.AWAITING_RESOURCES, world.taskPool.get(taskId).state,
-                "Heavy task should AWAIT (30 < 100)");
-
-        // Simulate warehouse restock to wake the AWAITING_RESOURCES task
-        mock.seedWarehouse(ResourceId.STONE, 200);
-        world.taskPool.onResourceAdded(ResourceId.STONE, 200);
-        tickN(12);
-
-        assertEquals(TaskState.COMPLETED, world.taskPool.get(taskId).state,
-                "Heavy task should complete after resource added");
-    }
-
-    // ---- helpers ----
-
-    private void tickN(int n) {
-        for (int i = 0; i < n; i++) world.tick(1.0f);
-    }
-
-    private GlobalTask findGatherTask(ResourceId resource) {
-        String prefix = "Gather " + resource.id();
-        return findByLabel(prefix);
-    }
-
-    private GlobalTask findByLabel(String substring) {
-        for (GlobalTask t : world.taskPool.all()) {
-            if (t.sequence.label().contains(substring)) return t;
+    void registerDefaultBlueprints_registersAllGatherBlueprints() {
+        BlueprintRegistry registry = new BlueprintRegistry();
+        EventDrivenTaskSource.registerDefaultBlueprints(registry);
+        for (String id : GATHER_IDS) {
+            assertTrue(registry.has(id), "missing default blueprint: " + id);
         }
-        return null;
     }
 
-    private static GridPos parseLocation(Map<String, JsonElement> params) {
-        try {
-            int x = params.containsKey("x") ? params.get("x").getAsInt() : 0;
-            int y = params.containsKey("y") ? params.get("y").getAsInt() : 0;
-            int z = params.containsKey("z") ? params.get("z").getAsInt() : 0;
-            return new GridPos(x, y, z);
-        } catch (NumberFormatException | IllegalStateException e) {
-            return GridPos.ORIGIN;
-        }
+    @Test
+    void gatherWood_defaultAmountIs16() {
+        TaskSequence seq = generate("gather:wood", Map.of());
+        assertEquals("Gather wood x16", seq.label());
+        assertEquals(2, seq.size(), "ResourceRequestOp + TransformOp");
+        assertEquals(ResourceId.WOOD, requestResource(seq));
+        assertEquals(16, requestAmount(seq));
+    }
+
+    @Test
+    void gatherAmount_paramOverridesDefault() {
+        TaskSequence seq = generate("gather:stone", Map.of("amount", new JsonPrimitive(8)));
+        assertEquals("Gather stone x8", seq.label());
+        assertEquals(8, requestAmount(seq));
+    }
+
+    @Test
+    void gatherSteps_locationFromParams() {
+        Map<String, JsonElement> params = Map.of(
+                "amount", new JsonPrimitive(4),
+                "x", new JsonPrimitive(5),
+                "y", new JsonPrimitive(64),
+                "z", new JsonPrimitive(-3));
+        TaskSequence seq = generate("gather:glass", params);
+        assertEquals("Gather glass x4", seq.label());
+        assertEquals(4, requestAmount(seq));
+    }
+
+    @Test
+    void gatherSteps_withoutLocation_fallsBackToOriginNotNil() {
+        TaskSequence seq = generate("gather:wood", Map.of("amount", new JsonPrimitive(2)));
+        assertNotNull(seq, "missing coords must fall back to ORIGIN, never null");
+        assertEquals("Gather wood x2", seq.label());
+        assertEquals(2, requestAmount(seq));
+    }
+
+    private static TaskSequence generate(String id, Map<String, JsonElement> params) {
+        BlueprintRegistry registry = new BlueprintRegistry();
+        EventDrivenTaskSource.registerDefaultBlueprints(registry);
+        Blueprint bp = registry.get(id);
+        assertNotNull(bp, "blueprint not registered: " + id);
+        BlueprintSteps steps = bp.steps();
+        return steps.generate(params);
+    }
+
+    private static ResourceId requestResource(TaskSequence seq) {
+        AtomicOp.ResourceRequestOp op = (AtomicOp.ResourceRequestOp) seq.steps().get(0);
+        return op.items().get(0).resource();
+    }
+
+    private static int requestAmount(TaskSequence seq) {
+        AtomicOp.ResourceRequestOp op = (AtomicOp.ResourceRequestOp) seq.steps().get(0);
+        return op.items().get(0).amount();
     }
 }

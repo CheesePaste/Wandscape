@@ -23,7 +23,6 @@ import com.wsteam.wandscape.task.runtime.NpcTaskPackage;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 
 /**
@@ -158,15 +157,15 @@ public final class SelfDefenseExecutor implements OpExecutor<AtomicOp.SelfDefens
         return false;
     }
 
-    /** 目标解析：仇恨目标（存活、非玩家、hateRange 内、可见、且当前仍是敌对目标）优先，
-     *  否则半径内最近可见 {@code isHostileTarget} 的生物（中立生物须已发怒）。
+    /** 目标解析：仇恨目标（存活、可反击、hateRange 内、可见）优先——反击不要求 Enemy，
+     *  北极熊/铁傀儡/狼等中立生物主动攻击 NPC 也还手；否则半径内最近可见
+     *  {@code isHostileTarget} 的生物（主动索敌仍仅 Enemy，中立生物须已发怒）。
      *  地下/隔墙看不见的怪物不锁为目标。 */
     @Nullable
     private static LivingEntity resolveTarget(WandscapeNpc npc, ServerLevel level) {
         int hateRange = Config.GUARD_HATE_RANGE.get();
         LivingEntity hated = npc.getHatedAttacker(level);
-        if (hated != null && !(hated instanceof Player)
-                && WandscapeNpc.isHostileTarget(hated, level)
+        if (hated != null && npc.isRetaliationTarget(hated)
                 && npc.distanceToSqr(hated) <= (double) hateRange * hateRange
                 && GuardCombat.hasLineOfSight(npc, hated)) {
             return hated;
