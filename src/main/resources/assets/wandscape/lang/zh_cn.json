@@ -212,7 +212,6 @@
   "gui.wandscape.warehouse.search": "搜索物品…",
   "gui.wandscape.warehouse.player_inventory": "玩家背包",
   "gui.wandscape.warehouse.page": "%s / %s",
-  "gui.wandscape.warehouse.exchange_hint": "左键：取出 | 右键：半叠 | Shift：快速移动",
   "gui.wandscape.workstation.decompose": "分解",
   "gui.wandscape.workstation.synthesize": "合成",
   "gui.wandscape.queue.category.decompose": "分解",

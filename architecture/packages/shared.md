@@ -41,7 +41,8 @@ MINIMAL 风格：渐变玻璃面板 + 发光边框 + MedievalColors 调色板。
 
 | 子包 | 内容 |
 |------|------|
-| component/ | MedievalScreen(基类) / MedievalButton / TabBar / ScrollableList / ElementPanel / ProgressIndicator / TaskQueuePanel / Slider 等 |
+| component/ | MedievalScreen(基类) / MedievalButton / TabBar / ScrollableList / ElementPanel / ProgressIndicator / TaskQueuePanel / Slider / SearchBox(中英双语物品搜索) 等 |
+| vanilla/ | 原版容器共享组件：ToggleableSlot(可按条件显隐的 vanilla 槽) + VanillaPlayerInventory(3×9+快捷栏玩家背包槽区构建器，含箱类坐标公式/显隐绑定/原版槽底渲染) |
 | panel/ | WandscapePanelState + PanelController + PanelOverlay(顶部HUD栏+左侧侧边栏+STATS面板+警告浮层) + BuildingSelectionOverlay + AnomalyScreen |
 | guidance/ | GuideSession + GuideStep + GuideRegistry + GuideRenderer (左下角四态新手引导弹窗：默认/选卡/射线瞄准/锁定微调，支持点击 ▼/▲ 折叠/展开) |
 | util/ | BuildingPreviewRenderer + WandscapeHighlightRenderer + RenderUtil |

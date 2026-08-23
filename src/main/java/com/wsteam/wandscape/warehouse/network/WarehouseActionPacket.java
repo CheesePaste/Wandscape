@@ -28,7 +28,8 @@ public record WarehouseActionPacket(
         int containerId,
         String action,          // one of the ACTION_* constants
         String itemId,
-        @Nullable CompoundTag nbt
+        @Nullable CompoundTag nbt,
+        int param               // action 附加参数（如目标玩家槽索引）；无则 0
 ) implements CustomPacketPayload {
 
     private static final String TAG = "WarehouseActionPacket";
@@ -43,6 +44,12 @@ public record WarehouseActionPacket(
     public static final String ACTION_CURSOR_DEPOSIT_ALL = "cursor_deposit_all";
     /** Right-click with a carried stack: deposit one item from the cursor. */
     public static final String ACTION_CURSOR_DEPOSIT_ONE = "cursor_deposit_one";
+    /** Scroll (shift+up) on a grid entry: deposit all matching player-inventory items. */
+    public static final String ACTION_DEPOSIT_INVENTORY_TYPE = "deposit_inventory_type";
+    /** Scroll (shift+up) on a player slot: deposit that slot. param = slot index. */
+    public static final String ACTION_DEPOSIT_SLOT = "deposit_slot";
+    /** Scroll (shift+down) on a player slot: take the entry into that slot. param = slot index. */
+    public static final String ACTION_TAKE_TO_SLOT = "take_to_slot";
 
     public static final Type<WarehouseActionPacket> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath(MODID, "warehouse_action"));
@@ -74,6 +81,9 @@ public record WarehouseActionPacket(
                 case ACTION_TAKE_TO_INVENTORY -> menu.takeToInventory(key, sp);
                 case ACTION_CURSOR_DEPOSIT_ALL -> menu.cursorDepositAll(sp);
                 case ACTION_CURSOR_DEPOSIT_ONE -> menu.cursorDepositOne(sp);
+                case ACTION_DEPOSIT_INVENTORY_TYPE -> menu.depositInventoryType(key, sp);
+                case ACTION_DEPOSIT_SLOT -> menu.depositSlot(pkt.param, sp);
+                case ACTION_TAKE_TO_SLOT -> menu.takeToSlot(key, sp, pkt.param);
                 default -> Log.warn(TAG, "[WarehouseAction] unknown action: {}", pkt.action);
             }
             menu.sendRefresh(sp);
@@ -87,6 +97,7 @@ public record WarehouseActionPacket(
         buf.writeUtf(pkt.action);
         buf.writeUtf(pkt.itemId);
         buf.writeNbt(pkt.nbt); // nullable
+        buf.writeVarInt(pkt.param);
     }
 
     static WarehouseActionPacket read(RegistryFriendlyByteBuf buf) {
@@ -94,7 +105,8 @@ public record WarehouseActionPacket(
                 buf.readVarInt(),
                 buf.readUtf(),
                 buf.readUtf(),
-                buf.readNbt()
+                buf.readNbt(),
+                buf.readVarInt()
         );
     }
 }

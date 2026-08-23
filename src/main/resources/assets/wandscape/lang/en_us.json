@@ -212,7 +212,6 @@
   "gui.wandscape.warehouse.search": "Search items...",
   "gui.wandscape.warehouse.player_inventory": "Player Inventory",
   "gui.wandscape.warehouse.page": "%s / %s",
-  "gui.wandscape.warehouse.exchange_hint": "L-click: take | R-click: half | Shift: quick move",
   "gui.wandscape.workstation.decompose": "Decompose",
   "gui.wandscape.workstation.synthesize": "Synthesize",
   "gui.wandscape.queue.category.decompose": "Decompose",

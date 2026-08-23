@@ -2,6 +2,21 @@
 
 本文件记录偏离直觉的设计选择及其原因，供后续开发快速理解「为什么这么做」。
 
+## 2026-08-23：交互界面原版容器化（仓库/NPC 装备/施法策略）——对齐 Refined Storage 交互
+
+**需求**（用户实测反馈）：仓库原先的自绘 MedievalScreen 交互（点击交换页签无效、背包快捷键失效、无法在空白处存入）体验差；要求对齐 RS/AE2 的仓储交互，并把 NPC 装备/策略界面也原版容器化。
+
+**决策**：
+- 仓库/NPC/策略全部改为 `AbstractContainerScreen` + 真实容器菜单（注册 MenuType），玩家背包槽统一用共享组件 `VanillaPlayerInventory`（`ToggleableSlot` 可显隐 + 箱类坐标公式 + 原版槽底渲染）——数字键/Q/Shift/拖拽/整理 mod 原生生效，杜绝"仓库有而其他界面没有"的组件漂移。
+- 仓库 Exchange 页 = 原版 6 行箱纹理 + RS 交互语义：光标带物品点存储区任意位置（含空白/空格子）即存入（左=整叠/右=1 个）；提取左=整叠/右=半叠/Shift=到背包；滚轮转移（Shift/Ctrl 组合）；无修饰滚轮翻页（方向按 MC 语义：scrollY>0 上滚——RS 源码的 scroll<0 约定在 1.21.1 不成立）。
+- 数量显示用 RS `ResourceSlotRendering` 算法：z 抬到图标之上 + 白字描边 + 长文本半尺寸（解决"数字被贴图盖住"）。
+- NPC 策略槽从"magicId 列表 + 点击销毁"改为**真实卷轴槽**（放卷轴=装备、取出=拿回卷轴），槽变更重建扁平装备态写回 `EquippedMagicComponent`；`NpcStrategyPacket` 降级为仅切预设。
+- 实体 id 不经菜单构造传递（客户端 MenuType 工厂拿不到），统一由 `NpcDataPacket` 下发（客户端 `apply` 更新），避免"点策略按钮发 -1 找不到实体"。
+
+**为什么**：仓储/装备交互的行业标准（AE2/RS）是"真实槽 + 修饰键组合"，自绘点击式既反直觉又无法兼容快捷键生态；复用共享组件避免多界面行为不一致（用户明确要求"组件一模一样，不能有缺失功能"）。
+
+**影响**：`NpcEquipPacket` 删除（装备改由菜单槽驱动）；策略槽交互与数据模型改变；新增 `NpcMenu`/`NpcStrategyMenu`/`NpcOpenStrategyPacket` 与 `shared/ui/vanilla/` 共享组件。
+
 ## 2026-08-21：聊天组件跨网参数消毒——translatable 参数只允许原始类型或 Component
 
 **需求**（用户实测 1.9.2）：托管服务器上导出建筑（`export_building_ok`）崩出 `EncoderException: Failed to encode: This value needs to be parsed as component translation{...}`，直接断线。1.8 用时聊天区直出 String 无问题，1.9.2 换成翻译键后触发。

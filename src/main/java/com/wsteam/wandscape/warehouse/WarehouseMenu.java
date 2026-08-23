@@ -1,7 +1,9 @@
 package com.wsteam.wandscape.warehouse;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.function.BooleanSupplier;
 import java.util.function.IntFunction;
@@ -16,12 +18,16 @@ import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.data.ItemKey;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
+import com.wsteam.wandscape.shared.ui.vanilla.ToggleableSlot;
+import com.wsteam.wandscape.shared.ui.vanilla.VanillaPlayerInventory;
 import com.wsteam.wandscape.warehouse.network.WarehouseDataPacket;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.world.Container;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -33,32 +39,31 @@ import net.neoforged.neoforge.network.PacketDistributor;
 /**
  * Real container menu for the colony warehouse.
  *
- * <p>Layout (shared with {@link WarehouseScreen}, indices must match on both
- * sides): 54 read-only warehouse slots (0-53) + 36 vanilla player slots (54-89).
- * Player slots behave exactly like vanilla — all shortcuts and inventory-sorting
- * mods work on them. Warehouse slots are {@link WarehouseSlot} placeholders that
- * are inert to vanilla click machinery; all warehouse interactions arrive via
- * {@code WarehouseActionPacket} and mutate through the bank.
+ * <p>Layout matches a vanilla 6-row chest (the {@code generic_54} texture, shared
+ * with {@link WarehouseScreen}, indices must match on both sides): 54 read-only
+ * warehouse slots (0-53) at the chest grid + 36 vanilla player slots (54-89)
+ * below. Player slots behave exactly like vanilla — all shortcuts and
+ * inventory-sorting mods work on them. Warehouse slots are {@link WarehouseSlot}
+ * placeholders that are inert to vanilla click machinery; all warehouse
+ * interactions arrive via {@code WarehouseActionPacket} and mutate through the
+ * bank.
  */
 public class WarehouseMenu extends AbstractContainerMenu {
 
     private static final String TAG = "WarehouseMenu";
 
     // ── Layout (kept here so client and server menus use identical coordinates) ──
-    public static final int PANEL_W = 380;
-    public static final int PANEL_H = 300;
-    public static final int HEADER_H = 22;
-    public static final int TAB_H = 18;
-    public static final int ELEMENT_PANEL_W = 130;
+    public static final int PANEL_W = 300;   // 与市政厅面板统一
+    public static final int PANEL_H = 230;
     public static final int SLOT = 18;
     public static final int GRID_COLS = 9;
     public static final int GRID_ROWS = 6;
     public static final int WAREHOUSE_SLOT_COUNT = GRID_COLS * GRID_ROWS; // 54
     public static final int PLAYER_SLOT_COUNT = 36;
-    public static final int GRID_X = 8 + ELEMENT_PANEL_W + 10; // 148
-    public static final int CONTENT_Y = HEADER_H + 2 + TAB_H + 6; // 48
-    public static final int SEARCH_H = 20;
-    public static final int PLAYER_INV_Y = CONTENT_Y + GRID_ROWS * SLOT + 6 + SEARCH_H + 4;
+    public static final int GRID_X = 8;
+    public static final int GRID_Y = 18;
+    // 玩家背包 3×9+快捷栏 由共享组件 VanillaPlayerInventory 构建（坐标相对本面板左上，
+    // 落在 Exchange 页 blit 的原版 6 行箱纹理内：inventoryTop(6)=139 / hotbarTop(6)=197）
 
     private static final int MAX_CURSOR_COUNT = Integer.MAX_VALUE;
 
@@ -66,6 +71,8 @@ public class WarehouseMenu extends AbstractContainerMenu {
     private final UUID colonyId;
     @Nullable
     private final BlockPos buildingPos;
+    /** 玩家背包 36 槽（可显隐），由共享组件构建。 */
+    private final List<ToggleableSlot> playerSlots;
 
     /** Client-side factory (MenuType): no colony context yet — data arrives via packet. */
     public WarehouseMenu(int containerId, Inventory playerInventory) {
@@ -82,18 +89,11 @@ public class WarehouseMenu extends AbstractContainerMenu {
         for (int i = 0; i < WAREHOUSE_SLOT_COUNT; i++) {
             int col = i % GRID_COLS;
             int row = i / GRID_COLS;
-            addSlot(new WarehouseSlot(i, GRID_X + col * SLOT, CONTENT_Y + row * SLOT));
+            addSlot(new WarehouseSlot(i, GRID_X + col * SLOT, GRID_Y + row * SLOT));
         }
-        for (int row = 0; row < 3; row++) {
-            for (int col = 0; col < 9; col++) {
-                addSlot(new TabAwareSlot(playerInventory, col + row * 9 + 9,
-                        GRID_X + col * SLOT, PLAYER_INV_Y + row * SLOT));
-            }
-        }
-        for (int col = 0; col < 9; col++) {
-            addSlot(new TabAwareSlot(playerInventory, col,
-                    GRID_X + col * SLOT, PLAYER_INV_Y + 3 * SLOT));
-        }
+        this.playerSlots = VanillaPlayerInventory.addTo(this::addSlot, playerInventory,
+                VanillaPlayerInventory.inventoryTop(GRID_ROWS),
+                VanillaPlayerInventory.hotbarTop(GRID_ROWS));
     }
 
     /** Client: point the read-only warehouse slots at the screen's display data. */
@@ -102,31 +102,9 @@ public class WarehouseMenu extends AbstractContainerMenu {
             if (slot instanceof WarehouseSlot ws) {
                 final int index = ws.index;
                 ws.bind(() -> entryFor.apply(index), active);
-            } else if (slot instanceof TabAwareSlot ts) {
-                ts.setActive(active);
             }
         }
-    }
-
-    /**
-     * Vanilla player slot that can be hidden by the UI (tab switching). Keeps all
-     * vanilla slot semantics — sorting mods still recognise it via its container.
-     */
-    public static final class TabAwareSlot extends Slot {
-        private BooleanSupplier active = () -> true;
-
-        public TabAwareSlot(Container container, int slot, int x, int y) {
-            super(container, slot, x, y);
-        }
-
-        public void setActive(BooleanSupplier active) {
-            this.active = active;
-        }
-
-        @Override
-        public boolean isActive() {
-            return active.getAsBoolean();
-        }
+        VanillaPlayerInventory.bind(playerSlots, active);
     }
 
     // ── Vanilla quick-move (shift-click): player slot → deposit into the bank ──
@@ -224,6 +202,72 @@ public class WarehouseMenu extends AbstractContainerMenu {
         if (carried.isEmpty()) return;
         // split() shrinks the carried stack in place; the remainder stays on the cursor.
         depositCursor(player, carried.split(1));
+    }
+
+    /** 玩家背包中同类型物品全部存入仓库（RS 滚轮: INVENTORY_TO_GRID）。 */
+    public void depositInventoryType(ItemKey key, ServerPlayer player) {
+        if (colonyId == null) return;
+        var api = WandscapeApis.getWarehouseApiSilently();
+        if (api == null) return;
+        Inventory inv = player.getInventory();
+        List<ItemStack> found = new ArrayList<>();
+        for (int i = 0; i < inv.getContainerSize(); i++) {
+            ItemStack s = inv.getItem(i);
+            if (!s.isEmpty() && matches(s, key)) {
+                found.add(s.copy());
+                inv.setItem(i, ItemStack.EMPTY);
+            }
+        }
+        if (found.isEmpty()) return;
+        api.insertItems(colonyId, found);
+        recordDeposit(player);
+        playSound(player);
+    }
+
+    /** 指定玩家槽全部存入仓库（RS 滚轮在玩家槽上移）。 */
+    public void depositSlot(int slotIndex, ServerPlayer player) {
+        if (colonyId == null) return;
+        var api = WandscapeApis.getWarehouseApiSilently();
+        if (api == null) return;
+        Inventory inv = player.getInventory();
+        if (slotIndex < 0 || slotIndex >= inv.getContainerSize()) return;
+        ItemStack stack = inv.getItem(slotIndex);
+        if (stack.isEmpty()) return;
+        api.insertItems(colonyId, List.of(stack.copy()));
+        inv.setItem(slotIndex, ItemStack.EMPTY);
+        recordDeposit(player);
+        playSound(player);
+    }
+
+    /** 仓库条目取到指定玩家槽（尽量填满 64；目标槽为空或同类型才可）。 */
+    public void takeToSlot(ItemKey key, ServerPlayer player, int slotIndex) {
+        if (colonyId == null) return;
+        Inventory inv = player.getInventory();
+        if (slotIndex < 0 || slotIndex >= inv.getContainerSize()) return;
+        var bank = ColonyItemBank.get(player.serverLevel());
+        if (bank == null) return;
+        ItemStack sample = WarehouseManager.toItemStack(key, 1);
+        if (sample.isEmpty()) return;
+        ItemStack target = inv.getItem(slotIndex);
+        if (!target.isEmpty() && !ItemStack.isSameItemSameComponents(target, sample)) return;
+        long take = Math.min(bank.available(colonyId, key), 64 - target.getCount());
+        if (take <= 0) return;
+        if (!bank.consume(colonyId, key, take)) return;
+        if (target.isEmpty()) {
+            inv.setItem(slotIndex, WarehouseManager.toItemStack(key, (int) take));
+        } else {
+            target.grow((int) take);
+            inv.setItem(slotIndex, target);
+        }
+        playSound(player);
+    }
+
+    private static boolean matches(ItemStack stack, ItemKey key) {
+        var rl = BuiltInRegistries.ITEM.getKey(stack.getItem());
+        if (rl == null || !rl.toString().equals(key.itemId())) return false;
+        CompoundTag nbt = stack.has(DataComponents.CUSTOM_DATA)
+                ? stack.get(DataComponents.CUSTOM_DATA).copyTag() : null;
+        return Objects.equals(nbt, key.nbt());
     }
 
     private void depositCursor(ServerPlayer player, ItemStack toDeposit) {

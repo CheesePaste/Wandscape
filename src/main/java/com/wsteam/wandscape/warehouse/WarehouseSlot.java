@@ -77,4 +77,11 @@ public class WarehouseSlot extends Slot {
     public boolean isActive() {
         return active.getAsBoolean();
     }
+
+    @Override
+    public boolean isHighlightable() {
+        // The backing container is a dummy (always "empty"), but on a chest-style
+        // grid the vanilla hover highlight should still appear like a normal slot.
+        return true;
+    }
 }
