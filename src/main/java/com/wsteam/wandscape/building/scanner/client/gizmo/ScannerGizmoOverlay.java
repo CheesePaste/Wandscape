@@ -119,7 +119,7 @@ public final class ScannerGizmoOverlay {
 
         gui.fill(x + PAD, curY, x + w - PAD, curY + 22, 0x66000000);
         gui.drawString(font, I18n.string("gui.wandscape.scanner.size_format", "尺寸: %d × %d × %d", bw, bh, bd), x + PAD + 4, curY + 3, MedievalColors.BORDER_GOLD);
-        gui.drawString(font, I18n.string("gui.wandscape.scanner.vol_format", "体积: %,d 方块格", bVol), x + PAD + 4, curY + 12, MedievalColors.TEXT_WARM_WHITE);
+        gui.drawString(font, I18n.string("gui.wandscape.scanner.vol_format", "体积: %s格", String.format(java.util.Locale.ROOT, "%,d", bVol)), x + PAD + 4, curY + 12, MedievalColors.TEXT_WARM_WHITE);
         curY += 26;
 
         // ── Stepper Adjusters for active anchor ──

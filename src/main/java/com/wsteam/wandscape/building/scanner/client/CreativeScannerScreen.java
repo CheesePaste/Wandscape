@@ -204,10 +204,11 @@ public class CreativeScannerScreen extends MedievalScreen {
             rebuild();
         });
 
-        structureNameEdit = mkEdit(lx + 135, topY, 150, 18, scanner.getStructureName(), s -> {
+        structureNameEdit = mkEdit(lx + 96, topY, 268, 18, scanner.getStructureName(), s -> {
             scanner.setStructureName(s);
             syncToServer();
         });
+        structureNameEdit.setHint(I18n.name("gui.wandscape.scanner.passphrase_corner_hint", "暗号 (需与SAVE扫描器一致)"));
 
         // Done button
         addBtn(leftPos + (PW - 120) / 2, topPos + PH - 32, 120, 20,
@@ -244,6 +245,7 @@ public class CreativeScannerScreen extends MedievalScreen {
             scanner.setStructureName(s);
             syncToServer();
         });
+        structureNameEdit.setHint(I18n.name("gui.wandscape.scanner.passphrase_hint", "暗号"));
 
         addBtn(lx + 266, y, 98, 18, I18n.string("gui.wandscape.scanner.match_corners", "❖ 匹配角点"), () -> {
             if (minecraft != null && minecraft.level != null) {
@@ -719,7 +721,6 @@ public class CreativeScannerScreen extends MedievalScreen {
 
     private void renderCornerMode(GuiGraphics gui, int mx, int my, int lx) {
         int topY = topPos + headerHeight + 8;
-        gui.drawString(font, I18n.string("gui.wandscape.scanner.passphrase", "暗号:"), lx + 102, topY + 5, MedievalColors.TEXT_MUTED);
 
         int cardY = topY + 30;
         drawMinimalBox(gui, lx + 8, cardY, 348, 120, true, false);
@@ -732,8 +733,7 @@ public class CreativeScannerScreen extends MedievalScreen {
     }
 
     private void renderTab0Bounds(GuiGraphics gui, int lx, int y) {
-        // Top row label
-        gui.drawString(font, I18n.string("gui.wandscape.scanner.passphrase", "暗号:"), lx + 148, y + 5, MedievalColors.TEXT_MUTED);
+        // Top row label is now inside structureNameEdit hint
 
         // Card 1: 3D Bounds
         int card1Y = y + 24;
@@ -752,7 +752,7 @@ public class CreativeScannerScreen extends MedievalScreen {
 
         int infoX = lx + 172;
         gui.drawString(font, I18n.string("gui.wandscape.scanner.size_format", "尺寸: %d×%d×%d", dx, dy, dz), infoX, card1Y + 16, MedievalColors.BORDER_GOLD);
-        gui.drawString(font, I18n.string("gui.wandscape.scanner.vol_format", "体积: %,d格", vol), infoX, card1Y + 28, MedievalColors.TEXT_WARM_WHITE);
+        gui.drawString(font, I18n.string("gui.wandscape.scanner.vol_format", "体积: %s格", String.format(java.util.Locale.ROOT, "%,d", vol)), infoX, card1Y + 28, MedievalColors.TEXT_WARM_WHITE);
         gui.drawString(font, String.format("X%d Y%d Z%d", dx, dy, dz), infoX, card1Y + 40, MedievalColors.TEXT_DIM);
 
         // Card 2: Doors & Spots
@@ -972,7 +972,7 @@ public class CreativeScannerScreen extends MedievalScreen {
         int dy = Math.abs(bMax.y() - bMin.y()) + 1;
         int dz = Math.abs(bMax.z() - bMin.z()) + 1;
         long vol = (long) dx * dy * dz;
-        gui.drawString(font, I18n.string("gui.wandscape.scanner.overview_stats", "尺寸: %d×%d×%d (%,d格) | 门: %d扇 | 交互位: %d个", dx, dy, dz, vol, scanner.getDoorOffsets().size(), countSpotMarkers()),
+        gui.drawString(font, I18n.string("gui.wandscape.scanner.overview_stats", "尺寸: %d×%d×%d (%s格) | 门: %d扇 | 交互位: %d个", dx, dy, dz, String.format(java.util.Locale.ROOT, "%,d", vol), scanner.getDoorOffsets().size(), countSpotMarkers()),
                 lx + 12, y + 50, MedievalColors.BORDER_GOLD);
 
         // Result Card
