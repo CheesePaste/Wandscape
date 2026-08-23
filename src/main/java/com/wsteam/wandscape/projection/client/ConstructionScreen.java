@@ -2,8 +2,7 @@ package com.wsteam.wandscape.projection.client;
 
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.projection.network.ProjectionPlacePacket;
-import com.wsteam.wandscape.shared.api.BuildingApi;
-import com.wsteam.wandscape.shared.registry.WandscapeApis;
+import com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket;
 import com.wsteam.wandscape.shared.ui.I18n;
 import com.wsteam.wandscape.shared.ui.component.MedievalButton;
 import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
@@ -149,8 +148,7 @@ public class ConstructionScreen extends MedievalScreen {
             return;
         }
         ProjectionClientState.setGhostPos(pos);
-        BuildingApi api = WandscapeApis.getBuildingApi();
-        boolean overlap = api != null && api.getBuildingAt(pos) != null;
+        boolean overlap = BuildingAreaSyncPacket.findBuildingIdAt(pos) != null;
         ProjectionClientState.setOverlapDetected(overlap);
         status = overlap ? I18n.name("gui.wandscape.construction.overlap", "该位置与现有建筑重叠") : null;
     }
@@ -161,8 +159,7 @@ public class ConstructionScreen extends MedievalScreen {
             status = I18n.name("gui.wandscape.construction.invalid", "坐标无效（Y 需在 -64 ~ 320）");
             return;
         }
-        BuildingApi api = WandscapeApis.getBuildingApi();
-        if (api != null && api.getBuildingAt(pos) != null) {
+        if (BuildingAreaSyncPacket.findBuildingIdAt(pos) != null) {
             status = I18n.name("gui.wandscape.construction.overlap", "该位置与现有建筑重叠");
             return;
         }

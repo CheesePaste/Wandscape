@@ -301,8 +301,7 @@ public final class OverviewFlightController {
 
         BlockPos curGhost = ProjectionClientState.getGhostPos();
         if (curGhost != null) {
-            var api = com.wsteam.wandscape.shared.registry.WandscapeApis.getBuildingApi();
-            boolean overlap = api != null && api.getBuildingAt(curGhost) != null;
+            boolean overlap = findBuildingAt(curGhost) != null;
             ProjectionClientState.setOverlapDetected(overlap);
         }
     }
@@ -591,8 +590,7 @@ public final class OverviewFlightController {
                 if (ProjectionClientState.isProjecting() && ProjectionClientState.isPinned()) {
                     BlockPos fixed = ProjectionClientState.getGhostPos();
                     if (fixed != null) {
-                        var api = com.wsteam.wandscape.shared.registry.WandscapeApis.getBuildingApi();
-                        ProjectionClientState.setOverlapDetected(api != null && api.getBuildingAt(fixed) != null);
+                        ProjectionClientState.setOverlapDetected(findBuildingAt(fixed) != null);
                     }
                 }
             } else {

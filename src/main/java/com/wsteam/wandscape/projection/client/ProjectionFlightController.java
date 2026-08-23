@@ -5,8 +5,7 @@ import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.projection.data.BuildingSlot;
 import com.wsteam.wandscape.projection.network.ProjectionExitPacket;
-import com.wsteam.wandscape.shared.api.BuildingApi;
-import com.wsteam.wandscape.shared.registry.WandscapeApis;
+import com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket;
 import com.wsteam.wandscape.shared.ui.panel.WandscapePanelState;
 
 import net.minecraft.client.Camera;
@@ -129,8 +128,7 @@ public final class ProjectionFlightController {
         if (ProjectionClientState.isPinned()) {
             BlockPos fixed = ProjectionClientState.getGhostPos();
             if (fixed != null) {
-                BuildingApi api = WandscapeApis.getBuildingApi();
-                ProjectionClientState.setOverlapDetected(api != null && api.getBuildingAt(fixed) != null);
+                ProjectionClientState.setOverlapDetected(BuildingAreaSyncPacket.findBuildingIdAt(fixed) != null);
             }
             return;
         }
@@ -164,8 +162,7 @@ public final class ProjectionFlightController {
 
         BlockPos curGhost = ProjectionClientState.getGhostPos();
         if (curGhost != null) {
-            BuildingApi api = WandscapeApis.getBuildingApi();
-            boolean overlap = api != null && api.getBuildingAt(curGhost) != null;
+            boolean overlap = BuildingAreaSyncPacket.findBuildingIdAt(curGhost) != null;
             ProjectionClientState.setOverlapDetected(overlap);
         }
     }

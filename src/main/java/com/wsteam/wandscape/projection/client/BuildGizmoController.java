@@ -5,7 +5,7 @@ import java.util.Optional;
 import org.lwjgl.glfw.GLFW;
 
 import com.wsteam.wandscape.road.client.RoadPlacementController;
-import com.wsteam.wandscape.shared.registry.WandscapeApis;
+import com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket;
 
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
@@ -187,8 +187,7 @@ public final class BuildGizmoController {
         BlockPos newPos = dragStartGhostPos.offset(shiftX, shiftY, shiftZ);
         ProjectionClientState.setGhostPos(newPos);
 
-        var api = WandscapeApis.getBuildingApi();
-        boolean overlap = api != null && api.getBuildingAt(newPos) != null;
+        boolean overlap = BuildingAreaSyncPacket.findBuildingIdAt(newPos) != null;
         ProjectionClientState.setOverlapDetected(overlap);
     }
 
