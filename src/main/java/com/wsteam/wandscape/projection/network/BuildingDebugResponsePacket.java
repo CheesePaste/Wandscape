@@ -30,6 +30,7 @@ public record BuildingDebugResponsePacket(
         boolean shutdown,
         boolean underConstruction,
         boolean constructionStarted,
+        boolean demolishing,
         int comfort,
         int magic,
         int wonder,
@@ -77,6 +78,7 @@ public record BuildingDebugResponsePacket(
         buf.writeBoolean(pkt.shutdown());
         buf.writeBoolean(pkt.underConstruction());
         buf.writeBoolean(pkt.constructionStarted());
+        buf.writeBoolean(pkt.demolishing());
         buf.writeInt(pkt.comfort());
         buf.writeInt(pkt.magic());
         buf.writeInt(pkt.wonder());
@@ -101,7 +103,7 @@ public record BuildingDebugResponsePacket(
 
     static BuildingDebugResponsePacket read(RegistryFriendlyByteBuf buf) {
         UUID buildingId = buf.readUUID();
-        String typeId = buf.readUtf(256);
+        String buildingTypeId = buf.readUtf(256);
         String displayName = buf.readUtf(256);
         String category = buf.readUtf(256);
         UUID colonyId = buf.readBoolean() ? buf.readUUID() : null;
@@ -111,26 +113,28 @@ public record BuildingDebugResponsePacket(
         boolean shutdown = buf.readBoolean();
         boolean underConstruction = buf.readBoolean();
         boolean constructionStarted = buf.readBoolean();
+        boolean demolishing = buf.readBoolean();
         int comfort = buf.readInt();
         int magic = buf.readInt();
         int wonder = buf.readInt();
-        int queueCap = buf.readInt();
+        int queueCapacity = buf.readInt();
 
         int qSize = buf.readInt();
         List<WorkItem> queue = new java.util.ArrayList<>(qSize);
         for (int i = 0; i < qSize; i++) {
             String bpId = buf.readUtf(256);
-            int priority = buf.readInt();
-            String paramsJson = buf.readUtf(2048);
-            queue.add(new WorkItem(bpId, Map.of(), priority));
+            int prio = buf.readInt();
+            buf.readUtf(0);
+            queue.add(new WorkItem(bpId, java.util.Collections.emptyMap(), prio));
         }
 
         UUID currentTaskId = buf.readBoolean() ? buf.readUUID() : null;
 
         return new BuildingDebugResponsePacket(
-                buildingId, typeId, displayName, category, colonyId, anchor,
-                intact, needsRepair, shutdown, underConstruction, constructionStarted,
-                comfort, magic, wonder, queueCap,
-                queue, currentTaskId);
+                buildingId, buildingTypeId, displayName, category,
+                colonyId, anchor, intact, needsRepair, shutdown,
+                underConstruction, constructionStarted, demolishing,
+                comfort, magic, wonder, queueCapacity, queue, currentTaskId
+        );
     }
 }

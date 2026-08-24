@@ -11,7 +11,9 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.Component;
+import net.minecraft.sounds.SoundEvents;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.client.event.RenderGuiEvent;
@@ -172,13 +174,16 @@ public final class BuildingDebugOverlay {
         // Under-construction buildings aren't damaged yet — the first button becomes
         // 撤销 (undo) so a mis-placed building can be cancelled instead of a useless repair.
         boolean underConstruction = data.underConstruction();
+        boolean demolishing = data.demolishing();
         Component repairLabel = underConstruction
                 ? I18n.name("gui.wandscape.building_action.cancel", "Undo")
                 : I18n.name("gui.wandscape.building_action.repair", "Repair");
         Component shutdownLabel = I18n.name(
                 data.shutdown() ? "gui.wandscape.building_action.restart" : "gui.wandscape.building_action.shutdown",
                 data.shutdown() ? "Restart" : "Shutdown");
-        Component destroyLabel = I18n.name("gui.wandscape.building_action.destroy", "Destroy");
+        Component destroyLabel = demolishing
+                ? I18n.name("gui.wandscape.building_action.demolishing", "Demolishing...")
+                : I18n.name("gui.wandscape.building_action.destroy", "Destroy");
 
         int repairLabelW = font.width(repairLabel);
         int shutdownLabelW = font.width(shutdownLabel);
@@ -199,10 +204,12 @@ public final class BuildingDebugOverlay {
         double guiScale = mc.getWindow().getGuiScale();
         double mx = mc.mouseHandler.xpos() / guiScale;
         double my = mc.mouseHandler.ypos() / guiScale;
-        boolean repairEnabled = underConstruction || data.needsRepair();
+        boolean repairEnabled = !demolishing && (underConstruction || data.needsRepair());
+        boolean shutdownEnabled = !demolishing;
+        boolean destroyEnabled = !demolishing;
         boolean hoverRepair = repairEnabled && mx >= repairX && mx <= repairX + repairW && my >= btnY && my <= btnY + BTN_HEIGHT;
-        boolean hoverShutdown = mx >= shutdownX && mx <= shutdownX + shutdownW && my >= btnY && my <= btnY + BTN_HEIGHT;
-        boolean hoverDestroy = mx >= destroyX && mx <= destroyX + destroyW && my >= btnY && my <= btnY + BTN_HEIGHT;
+        boolean hoverShutdown = shutdownEnabled && mx >= shutdownX && mx <= shutdownX + shutdownW && my >= btnY && my <= btnY + BTN_HEIGHT;
+        boolean hoverDestroy = destroyEnabled && mx >= destroyX && mx <= destroyX + destroyW && my >= btnY && my <= btnY + BTN_HEIGHT;
 
         // Undo/repair button (leftmost) — undo for under-construction, else repair when damaged
         com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.drawRtsBox(g, repairX, btnY, repairW, BTN_HEIGHT, false, hoverRepair);
@@ -215,13 +222,17 @@ public final class BuildingDebugOverlay {
         // Shutdown / Restart button (orange/green, middle)
         com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.drawRtsBox(g, shutdownX, btnY, shutdownW, BTN_HEIGHT, false, hoverShutdown);
         int shutdownAccent = data.shutdown() ? BTN_RESTART_BG : BTN_SHUTDOWN_BG;
-        g.fill(RenderType.guiOverlay(), shutdownX, btnY + BTN_HEIGHT - 2, shutdownX + shutdownW, btnY + BTN_HEIGHT, 0, shutdownAccent);
-        drawCenteredText(g, font, shutdownLabel, shutdownX + shutdownW / 2, btnY + (BTN_HEIGHT - font.lineHeight) / 2, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_NORMAL);
+        g.fill(RenderType.guiOverlay(), shutdownX, btnY + BTN_HEIGHT - 2, shutdownX + shutdownW, btnY + BTN_HEIGHT, 0,
+                shutdownEnabled ? shutdownAccent : 0x66554433);
+        drawCenteredText(g, font, shutdownLabel, shutdownX + shutdownW / 2, btnY + (BTN_HEIGHT - font.lineHeight) / 2,
+                shutdownEnabled ? com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_NORMAL : TEXT_DIM);
 
         // Destroy button (dark red, rightmost)
         com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.drawRtsBox(g, destroyX, btnY, destroyW, BTN_HEIGHT, false, hoverDestroy);
-        g.fill(RenderType.guiOverlay(), destroyX, btnY + BTN_HEIGHT - 2, destroyX + destroyW, btnY + BTN_HEIGHT, 0, BTN_DESTROY_BG);
-        drawCenteredText(g, font, destroyLabel, destroyX + destroyW / 2, btnY + (BTN_HEIGHT - font.lineHeight) / 2, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_NORMAL);
+        g.fill(RenderType.guiOverlay(), destroyX, btnY + BTN_HEIGHT - 2, destroyX + destroyW, btnY + BTN_HEIGHT, 0,
+                destroyEnabled ? BTN_DESTROY_BG : 0x66553333);
+        drawCenteredText(g, font, destroyLabel, destroyX + destroyW / 2, btnY + (BTN_HEIGHT - font.lineHeight) / 2,
+                destroyEnabled ? com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_NORMAL : TEXT_DIM);
 
         g.bufferSource().endBatch(RenderType.guiOverlay());
 
@@ -258,14 +269,25 @@ public final class BuildingDebugOverlay {
         // Check undo/repair button (left) — undo for under-construction, repair when damaged
         if (mx >= btnRepairX && mx <= btnRepairX + btnRepairW
                 && my >= btnRepairY && my <= btnRepairY + BTN_HEIGHT) {
+            if (data.demolishing()) return;
             if (data.underConstruction()) {
                 event.setCanceled(true);
+                mc.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
+                if (mc.player != null) {
+                    mc.player.displayClientMessage(
+                            Component.literal("§e[建筑] 已撤销「" + data.displayName() + "」的建造"), true);
+                }
                 PacketDistributor.sendToServer(new BuildingActionPacket(data.buildingId(), "cancel"));
                 Log.info(TAG, "[Debug] Button click: cancel on building {}", shortUuid(data.buildingId()));
                 return;
             }
             if (data.needsRepair()) {
                 event.setCanceled(true);
+                mc.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
+                if (mc.player != null) {
+                    mc.player.displayClientMessage(
+                            Component.literal("§a[建筑] 正在维修「" + data.displayName() + "」... 已下发修复任务"), true);
+                }
                 PacketDistributor.sendToServer(new BuildingActionPacket(data.buildingId(), "repair"));
                 Log.info(TAG, "[Debug] Button click: repair on building {}", shortUuid(data.buildingId()));
                 return;
@@ -275,8 +297,16 @@ public final class BuildingDebugOverlay {
         // Check shutdown / restart button (middle)
         if (mx >= btnShutdownX && mx <= btnShutdownX + btnShutdownW
                 && my >= btnShutdownY && my <= btnShutdownY + BTN_HEIGHT) {
+            if (data.demolishing()) return;
             event.setCanceled(true);
+            mc.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
             String action = data.shutdown() ? "restart" : "shutdown";
+            if (mc.player != null) {
+                String msg = data.shutdown()
+                        ? "§a[建筑] 已恢复「" + data.displayName() + "」的正常运营"
+                        : "§6[建筑] 已暂停「" + data.displayName() + "」的运营";
+                mc.player.displayClientMessage(Component.literal(msg), true);
+            }
             PacketDistributor.sendToServer(new BuildingActionPacket(data.buildingId(), action));
             Log.info(TAG, "[Debug] Button click: {} on building {}", action, shortUuid(data.buildingId()));
             return;
@@ -285,7 +315,13 @@ public final class BuildingDebugOverlay {
         // Check destroy button (right)
         if (mx >= btnDestroyX && mx <= btnDestroyX + btnDestroyW
                 && my >= btnDestroyY && my <= btnDestroyY + BTN_HEIGHT) {
+            if (data.demolishing()) return;
             event.setCanceled(true);
+            mc.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
+            if (mc.player != null) {
+                mc.player.displayClientMessage(
+                        Component.literal("§c[建筑] 正在拆除「" + data.displayName() + "」... 已下发拆除任务"), true);
+            }
             PacketDistributor.sendToServer(new BuildingActionPacket(data.buildingId(), "destroy"));
             Log.info(TAG, "[Debug] Button click: destroy on building {}", shortUuid(data.buildingId()));
         }
@@ -294,6 +330,7 @@ public final class BuildingDebugOverlay {
     // ── Status helpers ──
 
     private static Component getStatusText(BuildingDebugResponsePacket data) {
+        if (data.demolishing()) return I18n.name("gui.wandscape.building_status.demolishing", "Demolishing");
         if (data.shutdown()) return I18n.name("gui.wandscape.building_status.stopped", "Stopped");
         if (data.underConstruction()) {
             return data.constructionStarted()
@@ -305,7 +342,7 @@ public final class BuildingDebugOverlay {
     }
 
     private static int getStatusColor(BuildingDebugResponsePacket data) {
-        if (data.shutdown()) return TEXT_RED;
+        if (data.demolishing() || data.shutdown()) return TEXT_RED;
         if (data.underConstruction()) {
             return data.constructionStarted() ? TEXT_BLUE : TEXT_STAT;
         }

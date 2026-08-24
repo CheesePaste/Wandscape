@@ -49,19 +49,26 @@ public record BuildingActionPacket(UUID buildingId, String action) implements Cu
 
         var api = WandscapeApis.getBuildingApi();
 
+        String name = state.getDisplayName();
         switch (packet.action()) {
             case "shutdown" -> {
                 api.shutdown(packet.buildingId(), "manual");
+                player.displayClientMessage(
+                        net.minecraft.network.chat.Component.literal("§6[建筑] 已暂停「" + name + "」的运营"), true);
                 Log.info(TAG, "Player {} shutdown building {} ({})",
                         player.getGameProfile().getName(), state.getBuildingTypeId(), packet.buildingId());
             }
             case "restart" -> {
                 api.restart(packet.buildingId());
+                player.displayClientMessage(
+                        net.minecraft.network.chat.Component.literal("§a[建筑] 已恢复「" + name + "」的正常运营"), true);
                 Log.info(TAG, "Player {} restarted building {} ({})",
                         player.getGameProfile().getName(), state.getBuildingTypeId(), packet.buildingId());
             }
             case "destroy" -> {
                 api.demolishBuilding(packet.buildingId());
+                player.displayClientMessage(
+                        net.minecraft.network.chat.Component.literal("§c[建筑] 正在拆除「" + name + "」... 已下发拆除任务"), true);
                 Log.info(TAG, "Player {} initiated demolition of {} ({}) at {}",
                         player.getGameProfile().getName(), state.getBuildingTypeId(),
                         packet.buildingId(), state.getAnchor());
@@ -69,9 +76,13 @@ public record BuildingActionPacket(UUID buildingId, String action) implements Cu
             case "repair" -> {
                 boolean ok = BuildingBreakHandler.triggerRepair(player.level(), packet.buildingId());
                 if (ok) {
+                    player.displayClientMessage(
+                            net.minecraft.network.chat.Component.literal("§a[建筑] 正在维修「" + name + "」... 已下发修复任务"), true);
                     Log.info(TAG, "Player {} triggered repair for {} ({})",
                             player.getGameProfile().getName(), state.getBuildingTypeId(), packet.buildingId());
                 } else {
+                    player.displayClientMessage(
+                            net.minecraft.network.chat.Component.literal("§e[建筑]「" + name + "」当前无需维修"), true);
                     Log.warn(TAG, "Player {} tried to repair {} ({}) but repair failed",
                             player.getGameProfile().getName(), state.getBuildingTypeId(), packet.buildingId());
                 }
@@ -80,9 +91,13 @@ public record BuildingActionPacket(UUID buildingId, String action) implements Cu
                 // Undo an under-construction building (waiting for materials / being built).
                 boolean ok = api.cancelBuilding(packet.buildingId());
                 if (ok) {
+                    player.displayClientMessage(
+                            net.minecraft.network.chat.Component.literal("§e[建筑] 已撤销「" + name + "」的建造"), true);
                     Log.info(TAG, "Player {} cancelled under-construction building {} ({})",
                             player.getGameProfile().getName(), state.getBuildingTypeId(), packet.buildingId());
                 } else {
+                    player.displayClientMessage(
+                            net.minecraft.network.chat.Component.literal("§c[建筑] 无法撤销「" + name + "」的建造"), true);
                     Log.warn(TAG, "Player {} tried to cancel {} ({}) but it cannot be cancelled",
                             player.getGameProfile().getName(), state.getBuildingTypeId(), packet.buildingId());
                 }

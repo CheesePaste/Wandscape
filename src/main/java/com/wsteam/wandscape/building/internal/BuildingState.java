@@ -66,6 +66,11 @@ public class BuildingState implements BuildingData {
 
     @Override public UUID getBuildingId() { return buildingId; }
     @Override public String getBuildingTypeId() { return buildingTypeId; }
+    public String getDisplayName() {
+        var config = BuildingConfigLoader.getInstance().get(buildingTypeId);
+        return (config != null && config.displayName() != null && !config.displayName().isEmpty())
+                ? config.displayName() : buildingTypeId;
+    }
     @Override public String getCategory() { return category; }
     @Override public BlockPos getPosition() { return anchor; }
     @Override public boolean isShutdown() { return shutdown; }
