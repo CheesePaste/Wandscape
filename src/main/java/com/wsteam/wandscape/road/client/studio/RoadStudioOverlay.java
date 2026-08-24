@@ -576,6 +576,21 @@ public final class RoadStudioOverlay {
                 26, StudioColors.BUTTON_GREEN, StudioColors.BUTTON_GREEN_HOVER)) {
             submitRoadReplace(mc);
         }
+
+        if (start != null && end != null) {
+            int dx = Math.abs(end.getX() - start.getX()) + 1;
+            int dz = Math.abs(end.getZ() - start.getZ()) + 1;
+            int area = dx * dz;
+            StudioWidgets.spacing();
+            StudioWidgets.textColored(
+                    I18n.name("gui.wandscape.roadstudio.cost_estimate",
+                            "• 本次预计消耗: %d × %s", area, RoadPlacementState.getActivePreset().displayName()).getString(),
+                    StudioColors.TEXT_GOLD);
+            StudioWidgets.textColored(
+                    I18n.name("gui.wandscape.roadstudio.output_estimate",
+                            "• 本次预计产出: %d 个方块 (地表原方块拆除返还)", area).getString(),
+                    StudioColors.TEXT_CYAN);
+        }
     }
 
     // ════════════════════════════════════════════════════════════════
@@ -624,6 +639,22 @@ public final class RoadStudioOverlay {
                 26, StudioColors.BUTTON_GREEN, StudioColors.BUTTON_GREEN_HOVER)) {
             submitFillBox(mc);
         }
+
+        if (start != null && end != null) {
+            int dx = Math.abs(end.getX() - start.getX()) + 1;
+            int dy = Math.abs(end.getY() - start.getY()) + 1;
+            int dz = Math.abs(end.getZ() - start.getZ()) + 1;
+            long volume = (long) dx * dy * dz;
+            StudioWidgets.spacing();
+            StudioWidgets.textColored(
+                    I18n.name("gui.wandscape.roadstudio.cost_estimate",
+                            "• 本次预计消耗: %d × %s", volume, RoadPlacementState.getActivePreset().displayName()).getString(),
+                    StudioColors.TEXT_GOLD);
+            StudioWidgets.textColored(
+                    I18n.name("gui.wandscape.roadstudio.output_estimate",
+                            "• 本次预计产出: %d 个方块 (被替换方块拆除返还)", volume).getString(),
+                    StudioColors.TEXT_CYAN);
+        }
     }
 
     // ════════════════════════════════════════════════════════════════
@@ -642,7 +673,7 @@ public final class RoadStudioOverlay {
         } else {
             StudioWidgets.textColored(
                     I18n.name("gui.wandscape.roadstudio.destroy_ref_fmt",
-                            "参照方块: %s", refBlock).getString(),
+                            "参照方块: %s", formatBlockName(refBlock)).getString(),
                     StudioColors.TEXT_GREEN);
         }
 
@@ -660,6 +691,15 @@ public final class RoadStudioOverlay {
         }
 
         StudioWidgets.spacing();
+        boolean fillDep = RoadPlacementState.isFillDepressions();
+        if (StudioWidgets.checkbox(
+                I18n.name("gui.wandscape.roadstudio.destroy_fill_depressions",
+                        "垫平洼地 (自动填补低于基准面的凹坑)").getString(),
+                fillDep)) {
+            RoadPlacementState.setFillDepressions(!fillDep);
+        }
+
+        StudioWidgets.spacing();
         StudioWidgets.sectionHeader(I18n.name("gui.wandscape.roadstudio.destroy_area_header",
                 "平整区域边界").getString());
         drawPositionControls(mc, I18n.name("gui.wandscape.roadstudio.destroy_start",
@@ -671,15 +711,46 @@ public final class RoadStudioOverlay {
         StudioWidgets.spacing();
         BlockPos start = RoadPlacementState.getStartPos();
         BlockPos end = RoadPlacementState.getEndPos();
+        int breakBlocks = 0;
+        int fillBlocks = 0;
         if (start != null && end != null) {
             int dx = Math.abs(end.getX() - start.getX()) + 1;
             int dz = Math.abs(end.getZ() - start.getZ()) + 1;
+            int area = dx * dz;
             StudioWidgets.sectionHeader(I18n.name("gui.wandscape.roadstudio.destroy_eval_header",
-                    "平整面积评估").getString());
+                    "平整工程评估").getString());
             StudioWidgets.text(I18n.name("gui.wandscape.roadstudio.destroy_size",
-                    "底面尺寸: %d × %d 方块", dx, dz).getString());
-            StudioWidgets.text(I18n.name("gui.wandscape.roadstudio.destroy_area",
-                    "平整面积: %d 平方方块", dx * dz).getString());
+                    "底面尺寸: %d × %d 方块 (共 %d 面积)", dx, dz, area).getString());
+
+            if (mc.level != null) {
+                int minX = Math.min(start.getX(), end.getX());
+                int maxX = Math.max(start.getX(), end.getX());
+                int minZ = Math.min(start.getZ(), end.getZ());
+                int maxZ = Math.max(start.getZ(), end.getZ());
+                int refY = mc.level.getHeight(Heightmap.Types.MOTION_BLOCKING, start.getX(), start.getZ()) - 1;
+
+                for (int x = minX; x <= maxX; x++) {
+                    for (int z = minZ; z <= maxZ; z++) {
+                        int motionY = mc.level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z) - 1;
+                        if (motionY > refY) {
+                            breakBlocks += (motionY - refY);
+                        } else if (fillDep && motionY < refY) {
+                            fillBlocks += (refY - motionY);
+                        }
+                    }
+                }
+            }
+
+            StudioWidgets.text(I18n.name("gui.wandscape.roadstudio.destroy_break_count",
+                    "预计削平挖除: %d 个方块", breakBlocks).getString());
+            if (fillDep) {
+                String fillName = formatBlockName(refBlock.isEmpty() ? "minecraft:dirt" : refBlock);
+                StudioWidgets.text(I18n.name("gui.wandscape.roadstudio.destroy_fill_count",
+                        "预计垫平填补: %d 个方块 (%s)", fillBlocks, fillName).getString());
+            } else {
+                StudioWidgets.textMuted(I18n.name("gui.wandscape.roadstudio.destroy_fill_disabled",
+                        "垫平填补: 已关闭 (纯削平模式)").getString());
+            }
         } else {
             StudioWidgets.textMuted(I18n.name("gui.wandscape.roadstudio.destroy_hint",
                     "提示: 请选择起点与终点以确定平整区域").getString());
@@ -691,6 +762,26 @@ public final class RoadStudioOverlay {
                         "下发地形平整任务").getString(),
                 26, StudioColors.BUTTON_GREEN, StudioColors.BUTTON_GREEN_HOVER)) {
             submitDestroyFill(mc);
+        }
+
+        if (start != null && end != null) {
+            StudioWidgets.spacing();
+            if (fillDep && fillBlocks > 0) {
+                String fillName = formatBlockName(refBlock.isEmpty() ? "minecraft:dirt" : refBlock);
+                StudioWidgets.textColored(
+                        I18n.name("gui.wandscape.roadstudio.cost_estimate",
+                                "• 本次预计消耗: %d × %s", fillBlocks, fillName).getString(),
+                        StudioColors.TEXT_GOLD);
+            } else {
+                StudioWidgets.textColored(
+                        I18n.name("gui.wandscape.roadstudio.cost_free",
+                                "• 本次预计消耗: 无 (0 方块 / 0 元素)").getString(),
+                        StudioColors.TEXT_GREEN);
+            }
+            StudioWidgets.textColored(
+                    I18n.name("gui.wandscape.roadstudio.output_estimate",
+                            "• 本次预计产出: %d 个方块 (NPC 拆除返还)", breakBlocks).getString(),
+                    StudioColors.TEXT_CYAN);
         }
     }
 
@@ -1148,9 +1239,10 @@ public final class RoadStudioOverlay {
         if (!RoadPlacementState.isReady()) return;
         BlockPos start = RoadPlacementState.getStartPos();
         BlockPos end = RoadPlacementState.getEndPos();
+        boolean fillDep = RoadPlacementState.isFillDepressions();
         PacketDistributor.sendToServer(
-                new com.wsteam.wandscape.road.network.DestroyFillPacket(start, end));
-        Log.info(TAG, "[DestroyFill] Published: start={} end={}", start, end);
+                new com.wsteam.wandscape.road.network.DestroyFillPacket(start, end, fillDep));
+        Log.info(TAG, "[DestroyFill] Published: start={} end={} fillDep={}", start, end, fillDep);
         if (mc.player != null) {
             mc.player.displayClientMessage(Component.literal("[Destroy/Fill] §aTerrain flatten task submitted!"), true);
         }

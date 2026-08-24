@@ -112,6 +112,17 @@ class RoadPlacementStateTest {
         assertNull(RoadPlacementState.getStartPos(), "startPos cleared on exit");
         assertNull(RoadPlacementState.getEndPos(), "endPos cleared on exit");
         assertEquals("", RoadPlacementState.getRefBlockId(), "ref block cleared on exit");
+        assertFalse(RoadPlacementState.isFillDepressions(), "fillDepressions reset on exit");
+    }
+
+    @Test
+    @DisplayName("fillDepressions 开关默认关闭且可切换")
+    void fillDepressionsToggle() {
+        assertFalse(RoadPlacementState.isFillDepressions(), "default false");
+        RoadPlacementState.setFillDepressions(true);
+        assertTrue(RoadPlacementState.isFillDepressions(), "set true");
+        RoadPlacementState.exitProjection();
+        assertFalse(RoadPlacementState.isFillDepressions(), "reset on exit");
     }
 
     @Test

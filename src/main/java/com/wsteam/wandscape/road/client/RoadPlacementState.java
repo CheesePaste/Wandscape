@@ -65,6 +65,9 @@ public final class RoadPlacementState {
     /** The block ID right-clicked as reference in DESTROY_FILL mode. */
     private static volatile String refBlockId = "";
 
+    /** Whether DESTROY_FILL mode should pad/fill depressions below the reference height. Default: false (pure flatten). */
+    private static volatile boolean fillDepressions = false;
+
     // ── Double-click tracking (mirrors WandscapePanelState.BUILD pattern) ──
     private static volatile long lastPresetClickTime = 0;
     private static volatile int lastPresetClickIndex = -1;
@@ -93,6 +96,7 @@ public final class RoadPlacementState {
         endPos = null;
         ghostPos = null;
         refBlockId = "";
+        fillDepressions = false;
         resetGizmoState();
         Log.info(TAG, "[RoadPlacement] Exited placement mode");
     }
@@ -224,6 +228,10 @@ public final class RoadPlacementState {
     public static String getRefBlockId() { return refBlockId; }
 
     public static void setRefBlockId(String id) { refBlockId = id != null ? id : ""; }
+
+    public static boolean isFillDepressions() { return fillDepressions; }
+
+    public static void setFillDepressions(boolean fill) { fillDepressions = fill; }
 
     /**
      * Single-click → select. Double-click (same index within 400ms) → return true,

@@ -10,7 +10,7 @@
 |------|------|
 | `core/` | 纯数据模型（RoadNetwork / RoadNode / RoadEdge / SplineModel 等） |
 | `engine/` | MC 实现（RoadSavedData / RoadApiImpl / RoadSegmentListener / WandscapeTags） |
-| `client/` | 客户端放置渲染 + 交互（RoadPlacementState / RoadPlacementController / RoadPlacementRenderer / RoadConstructionGhost 施工虚影 / RoadGhostRenderUtil 虚影渲染工具 / RoadStudioOverlay 原生道路制作工坊覆盖层）。ROAD 栏工具全部统一收口至右侧原生面板：Replace（直线地表替换，走 `road:build_segment`）、Fill（两角点立方体填充，走 `terrain:fill_box`）、Destroy/Fill（铲平/垫平，走 `terrain:flatten`）、Spline（样条曲线编辑器，走 `SplineBuildPacket`）。在 Replace 与 Fill 中均支持【固定预设】与【程序化混合调色板】（可自定义添加方块、配置 1~10 权重比例，按确定性空间哈希加权随机填充）。施工虚影由服务端 `RoadAreaSyncPacket` 同步非 COMPLETE 道路边驱动（镜像建筑 ConstructionGhostRenderer） |
+| `client/` | 客户端放置渲染 + 交互（RoadPlacementState / RoadPlacementController / RoadPlacementRenderer / RoadConstructionGhost 施工虚影 / RoadGhostRenderUtil 虚影渲染工具 / RoadStudioOverlay 原生道路制作工坊覆盖层）。ROAD 栏工具全部统一收口至右侧原生面板：Replace（直线地表替换，走 `road:build_segment`）、Fill（两角点立方体填充，走 `terrain:fill_box`）、Destroy/Fill（铲平削高/垫平，走 `terrain:flatten`，支持【垫平洼地】开关并提示预计消耗与拆除产出）、Spline（样条曲线编辑器，走 `SplineBuildPacket`）。在 Replace 与 Fill 中均支持【固定预设】与【程序化混合调色板】（可自定义添加方块、配置 1~10 权重比例，按确定性空间哈希加权随机填充）。施工虚影由服务端 `RoadAreaSyncPacket` 同步非 COMPLETE 道路边驱动（镜像建筑 ConstructionGhostRenderer） |
 | `network/` | 网络包（全 playToServer：RoadPlacePacket / SplineBuildPacket / SplineEditorEnterPacket / DestroyFillPacket / FillBoxPacket）。施工同步包 `RoadAreaSyncPacket` 在 `shared/network/`（playToClient，镜像 BuildingAreaSyncPacket） |
 | `server/` | RoadEditorHandler |
 

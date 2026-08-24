@@ -180,7 +180,9 @@ public final class BlueprintInterpreter {
                         JsonObject itemObj = el.getAsJsonObject();
                         String res = itemObj.get("resource").getAsString();
                         int amt = itemObj.get("amount").getAsInt();
-                        stacks.add(new ResourceStack(new ResourceId(res), amt));
+                        if (amt > 0) {
+                            stacks.add(new ResourceStack(new ResourceId(res), amt));
+                        }
                     }
                 } else {
                     // Static items path
@@ -188,7 +190,9 @@ public final class BlueprintInterpreter {
                     for (var entry : s.items()) {
                         String resource = evalString(entry.resource(), context, "request_resource.resource");
                         int amount = evalInt(entry.amount(), context, "request_resource.amount");
-                        stacks.add(new ResourceStack(new ResourceId(resource), amount));
+                        if (amount > 0) {
+                            stacks.add(new ResourceStack(new ResourceId(resource), amount));
+                        }
                     }
                 }
                 if (stacks.isEmpty()) {
