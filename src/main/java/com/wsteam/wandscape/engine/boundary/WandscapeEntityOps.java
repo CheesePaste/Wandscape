@@ -61,6 +61,12 @@ public class WandscapeEntityOps implements EntityOps {
     }
 
     @Override
+    public boolean isResting(long npcId) {
+        WandscapeNpc npc = EntityComponentBridge.INSTANCE.getNpc(npcId);
+        return npc != null && npc.isResting();
+    }
+
+    @Override
     public boolean isColonyActive(java.util.UUID colonyId) {
         return com.wsteam.wandscape.engine.colony.ColonyActivation.isColonyActive(colonyId);
     }

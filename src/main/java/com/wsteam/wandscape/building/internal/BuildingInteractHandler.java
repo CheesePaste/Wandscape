@@ -184,6 +184,11 @@ public final class BuildingInteractHandler {
                 PacketDistributor.sendToPlayer(player,
                         new TavernOpenPacket(pos, colonyId, recruitCount, mageResumes, creator));
             }
+            case "mage_hut" -> {
+                if (level instanceof net.minecraft.server.level.ServerLevel sl) {
+                    MageHutServerHandler.openMageHut(player, sl, state.getBuildingId(), state);
+                }
+            }
             case "magic_station" -> openMagicStationGui(level, colonyId, player, pos, creator);
             case "altar" -> {
                 if (level instanceof net.minecraft.server.level.ServerLevel sl) {

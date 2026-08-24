@@ -33,6 +33,7 @@ import com.wsteam.wandscape.building.client.HotelScreen;
 import com.wsteam.wandscape.building.client.NodeScreen;
 import com.wsteam.wandscape.building.client.ShopScreen;
 import com.wsteam.wandscape.building.client.TavernScreen;
+import com.wsteam.wandscape.building.client.MageHutScreen;
 import com.wsteam.wandscape.building.client.AltarScreen;
 import com.wsteam.wandscape.building.client.BuildingAreaRenderer;
 import com.wsteam.wandscape.building.client.ConstructionGhostRenderer;
@@ -44,6 +45,7 @@ import com.wsteam.wandscape.building.network.ConstructionSiteDataPacket;
 import com.wsteam.wandscape.building.network.NodeDataPacket;
 import com.wsteam.wandscape.building.network.ShopOpenPacket;
 import com.wsteam.wandscape.building.network.TavernOpenPacket;
+import com.wsteam.wandscape.building.network.MageHutDataPacket;
 import com.wsteam.wandscape.building.network.TownHallOpenPacket;
 import com.wsteam.wandscape.building.network.TaskQueueDataPacket;
 import com.wsteam.wandscape.engine.sound.ColonyAmbientSystem;
@@ -274,6 +276,14 @@ public class WandscapeClient {
             } else {
                 mc.setScreen(new TavernScreen(packet.buildingPos(), packet.colonyId(),
                         packet.recruitCount(), packet.mageResumes(), packet.creator()));
+            }
+        });
+        MageHutDataPacket.setClientHandler(packet -> {
+            var mc = Minecraft.getInstance();
+            if (mc.screen instanceof MageHutScreen existing) {
+                existing.apply(packet);
+            } else {
+                mc.setScreen(new MageHutScreen(packet));
             }
         });
         HotelOpenPacket.setClientHandler(packet -> {

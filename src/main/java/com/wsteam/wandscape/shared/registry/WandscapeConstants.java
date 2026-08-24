@@ -37,6 +37,12 @@ public final class WandscapeConstants {
     /** 酒馆「招募 NPC」自第二次起每种元素的价格。 */
     public static final long TAVERN_RECRUIT_COST_PER_ELEMENT = 10_000;
 
+    /** 法师小屋「升级法师」/「训练属性」每种元素的价格。 */
+    public static final long MAGE_HUT_COST_PER_ELEMENT = 1_000;
+
+    /** 法师小屋休息时长（tick，2 分钟 = 2400）。 */
+    public static final int MAGE_HUT_REST_TICKS = 2400;
+
     public static final int STUCK_CHECK_INTERVAL_TICKS = 60;
     public static final double STUCK_MIN_MOVE_DISTANCE = 2.0;
     public static final int STUCK_MAX_RETRIES = 3;

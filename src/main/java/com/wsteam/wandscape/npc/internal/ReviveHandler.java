@@ -18,6 +18,9 @@ import com.wsteam.wandscape.shared.log.Log;
 
 import com.wsteam.wandscape.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.building.internal.BuildingState;
+import com.wsteam.wandscape.shared.data.MageHutAttributes;
+import com.wsteam.wandscape.shared.data.MageHutResident;
+import com.wsteam.wandscape.core.types.AttributeType;
 import com.wsteam.wandscape.shared.registry.WandscapeConstants;
 
 import net.minecraft.core.BlockPos;
@@ -123,6 +126,10 @@ public final class ReviveHandler {
         npc.magic.markManaSeeded(); // 阻止首 tick 的"满蓝种子"逻辑把蓝填满
         npc.setHasDefaultWand(rec.hasDefaultWand());
 
+        // 若该法师曾入住法师小屋：重挂到那间小屋，并用小屋持有的等级/基础重算属性
+        // （小屋入住记录在死亡时不变——这里恢复其养成进度并更新入住者 uuid）。
+        rebindToMageHut(level, npc, rec);
+
         fixEcsAfterSpawn(npc, rec);
         ColonyDeathRegistry.get(level).remove(rec);
 
@@ -158,6 +165,40 @@ public final class ReviveHandler {
             for (ResourceStack s : rec.inventory()) {
                 inv.add(s);
             }
+        }
+    }
+
+    /** 若死亡快照的 npcId 匹配某法师小屋的入住者，则重挂并恢复养成进度。
+     *  小屋入住记录在死亡时不变（resident.npcId 仍指向死者 UUID），这里用它反查小屋。 */
+    private static void rebindToMageHut(ServerLevel level, WandscapeNpc npc, DeathRecord rec) {
+        BuildingSavedData savedData = BuildingSavedData.get(level);
+        if (savedData == null) return;
+        for (BuildingState b : savedData.getAllBuildings()) {
+            MageHutResident resident = savedData.getMageHutResident(b.getBuildingId());
+            if (resident != null && rec.npcId().equals(resident.npcId())) {
+                for (AttributeType type : AttributeType.values()) {
+                    setFlat(npc, type, MageHutAttributes.computeEffective(type,
+                            resident.base(type), resident.level(), 0f));
+                }
+                npc.setLevel(resident.level());
+                npc.setHomeHutId(b.getBuildingId());
+                savedData.setMageHutResident(b.getBuildingId(), resident.withNpcId(npc.getUUID()));
+                Log.info(TAG, "NPC {} re-bound to mage hut {} (Lv.{}) — progression preserved",
+                        rec.name(), b.getBuildingId().toString().substring(0, 8), resident.level());
+                return;
+            }
+        }
+    }
+
+    private static void setFlat(WandscapeNpc npc, AttributeType type, float value) {
+        switch (type) {
+            case MAX_HP -> npc.maxHp = value;
+            case MOVE_SPEED -> npc.moveSpeed = value;
+            case SPELL_POWER -> npc.spellPower = value;
+            case WORK_SPEED -> npc.workSpeed = value;
+            case SPELL_SPEED -> npc.spellSpeed = value;
+            case ARMOR_VALUE -> npc.armorValue = value;
+            case MAX_MANA -> npc.maxMana = value;
         }
     }
 

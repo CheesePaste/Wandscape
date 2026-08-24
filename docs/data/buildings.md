@@ -103,7 +103,7 @@
 
 ## category 实际值（当前数据文件）
 
-`government`（townhall1）、`storage`（warehouse）、`node`（nodedark/nodeearth/nodefire/nodemetal/nodewater/nodewind/nodewood）、`shop`（bakery/book_shop/flower_shop/potion_store/sea_store/ancient_store/creature_store）、`service`（inn1/service_hall/deprecated-library）、`tavern`（tavern）、`crafting_station`（craftstation1）、`magic_station`（potionstation1，原 `potion_station` 于 2026-08 P 阶段 C 更名）、`workstation`（workstation1）；`relax`/`atm` 为**新增** category（示例 JSON 待补，可用扫描器导出）。
+`government`（townhall1）、`storage`（warehouse）、`node`（nodedark/nodeearth/nodefire/nodemetal/nodewater/nodewind/nodewood）、`shop`（bakery/book_shop/flower_shop/potion_store/sea_store/ancient_store/creature_store）、`service`（inn1/service_hall/deprecated-library）、`tavern`（tavern）、`mage_hut`（mage_hut1，法师住宅，非游客目标）、`crafting_station`（craftstation1）、`magic_station`（potionstation1，原 `potion_station` 于 2026-08 P 阶段 C 更名）、`workstation`（workstation1）；`relax`/`atm` 为**新增** category（示例 JSON 待补，可用扫描器导出）。
 
 > 各建筑 JSON 在 `buildings/deprecated/` 下的仍会加载（旧存档兼容）但不出现在放置面板。
 > `tavern`/`altar1` 保持原 category（招募/祭坛功能按 category 字符串判定），即使有 `interact_spots` 也非游客目标（无四类模式预设块）。

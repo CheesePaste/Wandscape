@@ -635,6 +635,52 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
         this.followerUuid = uuid;
     }
 
+    // ── 法师等级与小屋归属（法师小屋入住用，NBT 持久化）──
+    // level 默认 1；装备加成由 ECS EquipmentComponent 计算，不改此字段。
+
+    private int level = 1;
+
+    /** 法师当前等级（等级加成为每级线性，见 MageHutAttributes）。 */
+    public int getLevel() { return level; }
+
+    /** 设置法师等级（最低 1）。 */
+    public void setLevel(int level) { this.level = Math.max(1, level); }
+
+    /** 法师所属法师小屋（可空；用于复活后重新挂回小屋）。 */
+    @Nullable
+    private UUID homeHutId = null;
+
+    @Nullable public UUID getHomeHutId() { return homeHutId; }
+    public void setHomeHutId(@Nullable UUID hutId) { this.homeHutId = hutId; }
+
+    // ── 休息（法师小屋「休息」：回小屋休 2 分钟回满状态，期间不接任务）──
+    // 瞬态：不持久化（服务器重启中断休息即恢复正常空闲，不卡死）。
+
+    private boolean resting = false;
+    private long restEndTick = 0;
+    @Nullable
+    private BlockPos restPos = null;
+
+    public boolean isResting() { return resting; }
+
+    /** 进入休息：目标点 + 结束 tick。 */
+    public void setRest(BlockPos pos, long endTick) {
+        this.restPos = pos;
+        this.restEndTick = endTick;
+        this.resting = true;
+    }
+
+    /** 结束休息（恢复空闲，由调度器重新派活；并恢复闲逛，避免休息后永久静止）。 */
+    public void endRest() {
+        this.resting = false;
+        this.restPos = null;
+        setAiWanderingEnabled(true);
+    }
+
+    @Nullable
+    public BlockPos getRestPos() { return restPos; }
+    public long getRestEndTick() { return restEndTick; }
+
     // ── Client-side: last tick particles were spawned (throttle to 1×/tick) ──
     public int lastParticleTick = -1;
 
@@ -704,19 +750,21 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
         // Priority 1: 开门（WandscapeNavigation 已设 canPassDoors/canOpenDoors，
         // DoorInteractGoal.canUse 据此放行；只有水平撞上门时才触发，避免误开）
         this.goalSelector.addGoal(1, new OpenDoorGoal(this, true));
-        // Priority 2: 跟随模式——目标玩家距离 >5 格时走向玩家（被 ECS 任务/施法接管时自动让路）
+        // Priority 2: 法师小屋休息——回到休息点停住并回满状态（可Use与跟随互斥，见各自 canUse）
+        this.goalSelector.addGoal(2, new RestGoal());
+        // Priority 2: 跟随模式——目标玩家距离 >5 格时走向玩家（休息/被 ECS 任务/施法接管时让路）
         this.goalSelector.addGoal(2, new FollowPlayerGoal());
         // Priority 5: wander around when idle (suppressed when MovementOps controls navigation
         // or the engine is busy / casting — casting no longer roots movement via tickCastingState)
         this.goalSelector.addGoal(5, new RandomStrollGoal(this, 0.6) {
             @Override
             public boolean canUse() {
-                return !suppressWandering && !noIdleWander() && super.canUse();
+                return !resting && !suppressWandering && !noIdleWander() && super.canUse();
             }
 
             @Override
             public boolean canContinueToUse() {
-                return !suppressWandering && !noIdleWander() && super.canContinueToUse();
+                return !resting && !suppressWandering && !noIdleWander() && super.canContinueToUse();
             }
 
             @Override
@@ -1234,6 +1282,10 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
         if (colonyId != null) {
             tag.putUUID("colonyId", colonyId);
         }
+        tag.putInt("npcLevel", level);
+        if (homeHutId != null) {
+            tag.putUUID("homeHutId", homeHutId);
+        }
         // Inventory save deferred to stage 3+ (wand contents)
     }
 
@@ -1311,6 +1363,12 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
         }
         if (tag.hasUUID("colonyId")) {
             colonyId = tag.getUUID("colonyId");
+        }
+        if (tag.contains("npcLevel")) {
+            level = Math.max(1, tag.getInt("npcLevel"));
+        }
+        if (tag.hasUUID("homeHutId")) {
+            homeHutId = tag.getUUID("homeHutId");
         }
     }
 
@@ -1406,6 +1464,57 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
     /** 跟随移动速度系数（作用于基础移速）。 */
     private static final double FOLLOW_SPEED = 1.0;
 
+    // ── 休息目标（法师小屋）：回到休息点停住，期间回满血/蓝，到点结束恢复空闲 ──
+    // 与跟随/游荡互斥（跟随与游荡的 canUse 在休息时返回 false）。休息用 vanilla 寻路直走，
+    // 独立于 ECS 导航（休息时已释放任务、引擎空闲），与 FollowPlayerGoal 同构。
+
+    private class RestGoal extends Goal {
+        /** 判定「已到休息点」的水平距离平方（2 格）。 */
+        private static final double REST_ARRIVE_SQ = 4.0;
+
+        RestGoal() {
+            setFlags(EnumSet.of(Goal.Flag.MOVE));
+        }
+
+        @Override
+        public boolean canUse() {
+            return resting;
+        }
+
+        @Override
+        public boolean canContinueToUse() {
+            return resting;
+        }
+
+        @Override
+        public void tick() {
+            if (level() == null) return;
+            // 到点结束休息（恢复空闲，由调度器重新派活；已释放的任务由 TaskExecutionSystem 处理）
+            if (level().getGameTime() >= restEndTick) {
+                endRest();
+                return;
+            }
+            // 回满血/蓝：休息目标。血每 tick 稳步回升，蓝直接补到上限。
+            if (getHealth() < getMaxHealth()) {
+                heal(1f);
+            }
+            magic.setMana(getMaxMana());
+            // 走向休息点；已到则停住。
+            if (restPos != null && distanceToSqr(Vec3.atCenterOf(restPos)) > REST_ARRIVE_SQ) {
+                getNavigation().moveTo(restPos.getX(), restPos.getY(), restPos.getZ(), 0.9);
+            } else if (restPos != null) {
+                getNavigation().stop();
+            }
+        }
+
+        @Override
+        public void stop() {
+            if (!resting) {
+                getNavigation().stop();
+            }
+        }
+    }
+
     private class FollowPlayerGoal extends Goal {
         private int repathCooldown = 0;
 
@@ -1421,7 +1530,7 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
             return (e instanceof Player p && p.isAlive() && !p.isRemoved()) ? p : null;
         }
 
-        /** ECS 任务/施法/手动引导接管时让路，跟随不抢导航。
+        /** ECS 任务/施法/手动引导/休息接管时让路，跟随不抢导航。
          *  isEngineIdle 直读 ECS（无轮询延迟），任务一入队立即让路。 */
         private boolean busy() {
             return !isEngineIdle() || suppressWandering || isCasting() || manualCastTicks > 0;
@@ -1429,14 +1538,14 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
 
         @Override
         public boolean canUse() {
-            if (!followMode || busy()) return false;
+            if (resting || !followMode || busy()) return false;
             Player p = follower();
             return p != null && distanceToSqr(p) > FOLLOW_START_DIST_SQ;
         }
 
         @Override
         public boolean canContinueToUse() {
-            if (!followMode || busy()) return false;
+            if (resting || !followMode || busy()) return false;
             Player p = follower();
             return p != null && distanceToSqr(p) > FOLLOW_STOP_DIST_SQ;
         }

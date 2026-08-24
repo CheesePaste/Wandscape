@@ -129,6 +129,7 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
             npc.armorValue = candidate.armorValue();
             npc.maxMana = candidate.maxMana();
             npc.magic.setMana(candidate.maxMana());
+            npc.setLevel(candidate.level());
 
             // 7. Fix ECS state (spawn() already triggered onNpcJoinWorld)
             fixEcsAfterSpawn(npc, colonyId);
@@ -208,6 +209,7 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
         npc.armorValue = resume.armorValue();
         npc.maxMana = resume.maxMana();
         npc.magic.setMana(resume.maxMana()); // 满蓝入职
+        npc.setLevel(resume.level());
 
         fixEcsAfterSpawn(npc, colonyId);
 

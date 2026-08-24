@@ -54,7 +54,8 @@ public class SchedulerSystem implements System {
             TaskExecutor exec = world.get(entity, TaskExecutor.class);
             if (exec != null && exec.state == ExecutorState.IDLE
                     && exec.npcQueue.isIdle() && exec.globalTaskId == null
-                    && (world.entityOps == null || !world.entityOps.isFollowing(entity))) {
+                    && (world.entityOps == null || (!world.entityOps.isFollowing(entity)
+                            && !world.entityOps.isResting(entity)))) {
                 idleNpcs.add(entity);
             }
         }

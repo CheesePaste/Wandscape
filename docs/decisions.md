@@ -2,6 +2,22 @@
 
 本文件记录偏离直觉的设计选择及其原因，供后续开发快速理解「为什么这么做」。
 
+## 2026-08-24：法师小屋——单法师住宅 + 入住记录与法师实体解耦
+
+**需求**：新增建筑类别 `mage_hut`（法师小屋），一间只住一名法师、入住后锁定。小屋面板提供 3D 预览 + 属性面板（`初始值/初始值上界 + 等级加成 + 装备加成`）+ 装备/策略/升级/休息/训练属性操作；法师死亡时入住状态不变（可复活），只是不能操作。
+
+**决策**：
+- **入住记录存 `BuildingSavedData`（每 buildingId 一条 `MageHutResident`），与法师实体解耦**：法师实体死亡即被移除、复活是全新实体（新 UUID），若把养成进度（等级/基础值）存在实体上会随死亡丢失。故小屋是养成进度的**权威源**（level + base[7]），存活法师只是「投影」——升级/训练时由服务端重算实体 flat 属性 + `seedBaseValues` 重播种 ECS；死亡时小屋记录不变，复活时按 `resident.npcId == rec.npcId()` 反查小屋重挂并恢复等级/基础（装备从零，与既有复活不掉护甲一致）。
+- **属性三件套收敛到纯逻辑 `MageHutAttributes`**：每个属性 `{lower, upper, perLevel, trainStep}`，`effective = clamp(base)+perLevel*(level-1)+equip`，训练只把 base 抬向 upper。`MageAttributeRoller` 把每级加成烘进掷出值，小屋用 `baseFromFlat` 反推 base——存量法师 level 默认 1，base=该掷出值。
+- **休息复用「跟随」的中断链路**，不另开调度路径：`EntityOps.isResting` + `SchedulerSystem` 排除休息 NPC + `TaskExecutionSystem` 第 0 步 `releaseForInterruption`（原 `releaseForFollow` 抽出复用）释放全局任务回池——休息即「抛弃原任务交他人」，与需求一致。休息用实体级 `RestGoal`（vanilla 寻路）走到小屋休 2 分钟回满，不占用 ECS 导航。
+- **装备/策略按钮走现有容器菜单**（`NpcMenu`/`NpcStrategyMenu`），不新做屏幕；升级/训练/休息/指派走一个 C→S `MageHutActionPacket`（action 枚举）。
+- **费用**：升级/训练各扣 7 元素 ×1000（`MAGE_HUT_COST_PER_ELEMENT`），指派免费；升级上限 = 殖民地等级（`ColonyLevelManager.getLevel`）。
+
+**为什么**：养成练度必须活在「建筑」而非「生物」上（否则死亡即归零）；属性/休息/费用都是可复用既有机制（`EquipmentComponent`/跟随中断链/`ColonyItemBank`），把新复杂度压到最低。小屋 UI 全走 `I18n.name`，不硬编码翻译。
+
+**影响**：新增 `mage_hut1.json`、`MageHutAttributes`/`MageHutResident`（共享数据）、`WandscapeNpc.level/homeHutId/resting`+`RestGoal`、`EntityOps.isResting`、`MageHutDataPacket`/`MageHutActionPacket`/`MageHutServerHandler`、`MageHutScreen`、复活重挂（`ReviveHandler.rebindToMageHut`）。
+
+
 ## 2026-08-23：交互界面原版容器化（仓库/NPC 装备/施法策略）——对齐 Refined Storage 交互
 
 **需求**（用户实测反馈）：仓库原先的自绘 MedievalScreen 交互（点击交换页签无效、背包快捷键失效、无法在空白处存入）体验差；要求对齐 RS/AE2 的仓储交互，并把 NPC 装备/策略界面也原版容器化。

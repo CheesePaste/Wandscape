@@ -10,6 +10,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.reflect.TypeToken;
 import com.wsteam.wandscape.building.data.BlockOffset;
 import com.wsteam.wandscape.building.data.BuildingConfig;
+import com.wsteam.wandscape.shared.data.MageHutResident;
 import com.wsteam.wandscape.shared.data.ShopGoodDef;
 import com.wsteam.wandscape.shared.data.WorkItem;
 import com.wsteam.wandscape.shared.event.ColonyEvaluationChangedEvent;
@@ -84,6 +85,9 @@ public class BuildingSavedData extends SavedData {
     // NBT key for claimed first-free builds
     private static final String TAG_CLAIMED_FREE = "claimed_free";
 
+    // NBT key for mage hut residents (buildingId → MageHutResident)
+    private static final String TAG_MAGE_HUT_RESIDENTS = "mage_hut_residents";
+
     private static final Gson PARAMS_GSON = new Gson();
     private static final java.lang.reflect.Type PARAMS_TYPE =
             new TypeToken<Map<String, JsonElement>>(){}.getType();
@@ -110,6 +114,47 @@ public class BuildingSavedData extends SavedData {
     // ── First-free build tracking ──
     /** colonyId → set of buildingTypeIds whose first build was already claimed free. */
     private final Map<UUID, Set<String>> claimedFreeBuilds = new ConcurrentHashMap<>();
+
+    // ── Mage hut residents ──
+    /** buildingId → the single mage assigned to that mage hut (survives the mage's death). */
+    private final Map<UUID, MageHutResident> mageHutResidents = new ConcurrentHashMap<>();
+
+    @Nullable
+    public MageHutResident getMageHutResident(UUID buildingId) {
+        return mageHutResidents.get(buildingId);
+    }
+
+    /** Set (or clear with null) the mage hut resident for a building. */
+    public void setMageHutResident(UUID buildingId, @Nullable MageHutResident resident) {
+        if (resident == null) {
+            mageHutResidents.remove(buildingId);
+        } else {
+            mageHutResidents.put(buildingId, resident);
+        }
+        setDirty();
+    }
+
+    public void removeMageHutResident(UUID buildingId) {
+        mageHutResidents.remove(buildingId);
+        setDirty();
+    }
+
+    /** NBT has no float array — store as int bits. */
+    private static int[] floatBits(float[] values) {
+        int[] bits = new int[values.length];
+        for (int i = 0; i < values.length; i++) {
+            bits[i] = Float.floatToIntBits(values[i]);
+        }
+        return bits;
+    }
+
+    private static float[] floatFromBits(int[] bits) {
+        float[] values = new float[bits.length];
+        for (int i = 0; i < bits.length; i++) {
+            values[i] = Float.intBitsToFloat(bits[i]);
+        }
+        return values;
+    }
 
     public boolean isFirstFreeClaimed(UUID colonyId, String buildingTypeId) {
         Set<String> claimed = claimedFreeBuilds.get(colonyId);
@@ -581,6 +626,22 @@ public class BuildingSavedData extends SavedData {
         }
         tag.put(TAG_CLAIMED_FREE, freeTag);
 
+        // ── Mage hut residents ──
+        CompoundTag hutTag = new CompoundTag();
+        for (var entry : mageHutResidents.entrySet()) {
+            MageHutResident r = entry.getValue();
+            CompoundTag residentTag = new CompoundTag();
+            if (r.npcId() != null) {
+                residentTag.putUUID("npc_id", r.npcId());
+            }
+            residentTag.putUUID("colony_id", r.colonyId());
+            residentTag.putString("name", r.mageName());
+            residentTag.putInt("level", r.level());
+            residentTag.putIntArray("base", floatBits(r.base()));
+            hutTag.put(entry.getKey().toString(), residentTag);
+        }
+        tag.put(TAG_MAGE_HUT_RESIDENTS, hutTag);
+
         return tag;
     }
 
@@ -730,6 +791,26 @@ public class BuildingSavedData extends SavedData {
                     data.claimedFreeBuilds.put(colonyId, types);
                 } catch (IllegalArgumentException e) {
                     Log.warn(TAG, "Invalid colony UUID in claimed free builds: {}", key);
+                }
+            }
+        }
+
+        // ── Load mage hut residents ──
+        if (tag.contains(TAG_MAGE_HUT_RESIDENTS)) {
+            CompoundTag hutTag = tag.getCompound(TAG_MAGE_HUT_RESIDENTS);
+            for (String key : hutTag.getAllKeys()) {
+                try {
+                    UUID buildingId = UUID.fromString(key);
+                    CompoundTag rt = hutTag.getCompound(key);
+                    UUID npcId = rt.hasUUID("npc_id") ? rt.getUUID("npc_id") : null;
+                    UUID colonyId = rt.hasUUID("colony_id") ? rt.getUUID("colony_id") : new UUID(0, 0);
+                    String name = rt.getString("name");
+                    int level = rt.getInt("level");
+                    float[] base = floatFromBits(rt.getIntArray("base"));
+                    data.mageHutResidents.put(buildingId,
+                            new MageHutResident(npcId, colonyId, name, level, base));
+                } catch (IllegalArgumentException e) {
+                    Log.warn(TAG, "Invalid building UUID in mage hut residents: {}", key);
                 }
             }
         }

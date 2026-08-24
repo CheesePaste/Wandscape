@@ -69,6 +69,8 @@ import com.wsteam.wandscape.building.network.ShopMaxStockPacket;
 import com.wsteam.wandscape.building.network.ShopOpenPacket;
 import com.wsteam.wandscape.building.network.TavernOpenPacket;
 import com.wsteam.wandscape.building.network.TavernRecruitPacket;
+import com.wsteam.wandscape.building.network.MageHutDataPacket;
+import com.wsteam.wandscape.building.network.MageHutActionPacket;
 import com.wsteam.wandscape.building.network.TownHallOpenPacket;
 import com.wsteam.wandscape.building.network.TownHallWarehouseRequestPacket;
 import com.wsteam.wandscape.building.network.TaskQueueDataPacket;
@@ -603,6 +605,15 @@ public class Wandscape {
                         TavernRecruitPacket.TYPE,
                         TavernRecruitPacket.STREAM_CODEC,
                         TavernRecruitPacket::handleServer)
+                // ── Mage Hut ──
+                .playToClient(
+                        MageHutDataPacket.TYPE,
+                        MageHutDataPacket.STREAM_CODEC,
+                        (packet, ctx) -> MageHutDataPacket.handleClient(packet))
+                .playToServer(
+                        MageHutActionPacket.TYPE,
+                        MageHutActionPacket.STREAM_CODEC,
+                        (packet, ctx) -> MageHutActionPacket.handleServer(packet, ctx))
                 // ── Soul Projection ──
                 .playToServer(
                         ProjectionEnterPacket.TYPE,

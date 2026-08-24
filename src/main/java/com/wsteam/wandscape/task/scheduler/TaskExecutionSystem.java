@@ -68,12 +68,13 @@ public class TaskExecutionSystem implements System {
 
             NpcTaskQueue queue = exec.npcQueue;
 
-            // ── 0. 跟随模式：释放小镇全局任务（保留 self_defense 等个人包）──
+            // ── 0. 跟随/休息：释放小镇全局任务（保留 self_defense 等个人包）──
             // 放在「无工作→idle」之前：挂起栈里可能还压着被自防御抢断的 global 包，
             // 此时 hasWork()=false 但 hasGlobalPackage()=true，先走 idle 会让该包永驻挂起栈。
-            if (world.entityOps != null && world.entityOps.isFollowing(npcId)
+            if (world.entityOps != null
+                    && (world.entityOps.isFollowing(npcId) || world.entityOps.isResting(npcId))
                     && (exec.globalTaskId != null || queue.hasGlobalPackage())) {
-                releaseForFollow(world, npcId, exec, queue);
+                releaseForInterruption(world, npcId, exec, queue);
                 continue;
             }
 
@@ -426,7 +427,7 @@ public class TaskExecutionSystem implements System {
     }
 
     /**
-     * 跟随模式：释放该 NPC 的全部小镇全局任务（current/pending/挂起栈里的
+     * 跟随/休息：释放该 NPC 的全部小镇全局任务（current/pending/挂起栈里的
      * {@code global:*} 包），只保留 {@code self_defense} 等个人包。已绑定的全局任务
      * 按步进归还任务池（{@link GlobalTaskPool#releaseTaskForReassign}），供其他 NPC 接取。
      *
@@ -434,7 +435,7 @@ public class TaskExecutionSystem implements System {
      * 并取消导航（该 future 属于被释放的任务）；若当前仍是个人包（如自防御的异步战斗），
      * 其 future 由对应执行器独立驱动，须保留，否则任务执行系统会失去同步。
      */
-    private void releaseForFollow(World world, long npcId, TaskExecutor exec, NpcTaskQueue queue) {
+    private void releaseForInterruption(World world, long npcId, TaskExecutor exec, NpcTaskQueue queue) {
         boolean currentIsGlobal = queue.currentPackage() != null
                 && queue.currentPackage().source().startsWith("global:");
         CompletableFuture<Void> keptFuture = exec.pendingFuture;
@@ -455,7 +456,7 @@ public class TaskExecutionSystem implements System {
         } else if (world.movementOps != null) {
             world.movementOps.cancelNavigation(npcId);
         }
-        Log.info(TAG, "NPC %d — follow mode: released global tasks, kept personal packages",
+        Log.info(TAG, "NPC %d — follow/rest: released global tasks, kept personal packages",
                 npcId);
     }
 

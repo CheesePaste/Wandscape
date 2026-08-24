@@ -30,6 +30,13 @@ public interface EntityOps {
     boolean isFollowing(long npcId);
 
     /**
+     * Whether the NPC is resting (in a mage hut). A resting NPC must not be
+     * assigned colony tasks, and any in-hand global task is released (mirrors
+     * {@link #isFollowing}).
+     */
+    boolean isResting(long npcId);
+
+    /**
      * Whether a colony's autonomous simulation should currently run.
      * Implemented by the MC adapter: when the colony's founding player is
      * offline and offline-running is disabled, returns false so NPC task

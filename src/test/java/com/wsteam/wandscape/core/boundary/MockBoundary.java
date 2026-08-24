@@ -86,6 +86,22 @@ public class MockBoundary implements BlockOps, EntityOps, RitualOps, ColonyResou
         return followingNpcs.contains(npcId);
     }
 
+    /** 处于休息（法师小屋）模式的 NPC id 集合（休息门控测试用）。 */
+    private final Set<Long> restingNpcs = new HashSet<>();
+
+    public void setResting(long npcId, boolean resting) {
+        if (resting) {
+            restingNpcs.add(npcId);
+        } else {
+            restingNpcs.remove(npcId);
+        }
+    }
+
+    @Override
+    public boolean isResting(long npcId) {
+        return restingNpcs.contains(npcId);
+    }
+
     /** 冻结（创始人不在线）的殖民地 id 集合：默认空 = 全部激活。 */
     private final Set<UUID> frozenColonies = new HashSet<>();
 
