@@ -29,6 +29,7 @@ Tourists only walk on paved roads. No roads means no tourists; shops won't get v
 - [Workstation (Decompose & Synthesize)](workstation_guide.md)
 - [Element Node](node_guide.md)
 - [Altar (Revive)](altar_guide.md)
+- [Mage Hut (Residence & Training)](mage_hut_guide.md)
 - [Tavern (Recruiting Wizards)](tavern_guide.md)
 - [Shop (Selling to Tourists)](shop_guide.md)
 - [Hotel & Service Buildings (Overnight / Element Production)](hotel_guide.md)

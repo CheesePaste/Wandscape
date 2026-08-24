@@ -12,6 +12,7 @@
 | workstation | 工作站（分解/合成） |
 | crafting_station | 制作站（法杖制作） |
 | magic_station | 魔法工坊（卷轴合成） |
+| mage_hut | 法师小屋（法师住所/属性特训/晋升） |
 | tavern | 酒馆（招募） |
 | shop | 商店（游客购物） |
 | service | 服务建筑（游客交互；`max_occupancy>0`=旅店） |
