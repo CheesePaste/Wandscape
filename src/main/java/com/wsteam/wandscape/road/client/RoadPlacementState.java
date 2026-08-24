@@ -24,6 +24,8 @@ public final class RoadPlacementState {
 
     public enum ToolMode { REPLACE, FILL, DESTROY_FILL, SPLINE }
 
+    public enum ReplaceSubMode { SURFACE, ARRAY }
+
     public enum GizmoTarget { NONE, START, END }
 
     public enum AxisDrag { NONE, X_POS, X_NEG, Y_POS, Y_NEG, Z_POS, Z_NEG }
@@ -31,6 +33,8 @@ public final class RoadPlacementState {
     private static volatile boolean projecting = false;
     private static volatile RoadPhase roadPhase = RoadPhase.BAR;
     private static volatile ToolMode activeTool = ToolMode.REPLACE;
+    private static volatile ReplaceSubMode replaceSubMode = ReplaceSubMode.SURFACE;
+    private static volatile boolean snapTerrain = true;
     private static volatile int selectedPresetIndex = 0;
     private static volatile BlockPos startPos = null;
     private static volatile BlockPos endPos = null;
@@ -67,6 +71,8 @@ public final class RoadPlacementState {
         projecting = false;
         roadPhase = RoadPhase.BAR;
         activeTool = ToolMode.REPLACE;
+        replaceSubMode = ReplaceSubMode.SURFACE;
+        snapTerrain = true;
         startPos = null;
         endPos = null;
         ghostPos = null;
@@ -119,7 +125,20 @@ public final class RoadPlacementState {
         Log.info(TAG, "[RoadPlacement] Tool mode → {}", mode);
     }
 
+    public static ReplaceSubMode getReplaceSubMode() { return replaceSubMode; }
+
+    public static void setReplaceSubMode(ReplaceSubMode mode) {
+        replaceSubMode = mode;
+        Log.info(TAG, "[RoadPlacement] Replace submode → {}", mode);
+    }
+
     public static boolean isReplace() { return activeTool == ToolMode.REPLACE; }
+
+    public static boolean isReplaceArray() { return activeTool == ToolMode.REPLACE && replaceSubMode == ReplaceSubMode.ARRAY; }
+
+    public static boolean isSnapTerrain() { return snapTerrain; }
+
+    public static void setSnapTerrain(boolean snap) { snapTerrain = snap; }
 
     public static boolean isFill() { return activeTool == ToolMode.FILL; }
 

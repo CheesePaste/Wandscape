@@ -141,4 +141,23 @@ class RoadPlacementStateTest {
         RoadPlacementState.enterBar();
         assertEquals(RoadPlacementState.RoadPhase.BAR, RoadPlacementState.getRoadPhase());
     }
+
+    @Test
+    @DisplayName("ReplaceSubMode 与 snapTerrain 状态测试")
+    void replaceSubModeAndSnapTerrain() {
+        assertEquals(RoadPlacementState.ReplaceSubMode.SURFACE, RoadPlacementState.getReplaceSubMode());
+        assertTrue(RoadPlacementState.isSnapTerrain());
+        assertFalse(RoadPlacementState.isReplaceArray());
+
+        RoadPlacementState.setReplaceSubMode(RoadPlacementState.ReplaceSubMode.ARRAY);
+        assertEquals(RoadPlacementState.ReplaceSubMode.ARRAY, RoadPlacementState.getReplaceSubMode());
+        assertTrue(RoadPlacementState.isReplaceArray());
+
+        RoadPlacementState.setSnapTerrain(false);
+        assertFalse(RoadPlacementState.isSnapTerrain());
+
+        RoadPlacementState.exitProjection();
+        assertEquals(RoadPlacementState.ReplaceSubMode.SURFACE, RoadPlacementState.getReplaceSubMode());
+        assertTrue(RoadPlacementState.isSnapTerrain());
+    }
 }

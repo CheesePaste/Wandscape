@@ -311,6 +311,10 @@ public final class StudioWidgets {
         return openCombo != null;
     }
 
+    public static String getComboDropId() {
+        return comboDropId;
+    }
+
     public static void closeCombo() {
         openCombo = null;
         comboDropOptions = null;
