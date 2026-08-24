@@ -34,7 +34,7 @@ import com.wsteam.wandscape.shared.log.Log;
  */
 public final class BuildingSelectionOverlay {
 
-    public static final int BAR_HEIGHT = 120;
+    public static final int BAR_HEIGHT = 58;
     static final int CATEGORY_ROW_H = 16;
     static final int GRID_TOP_OFFSET = CATEGORY_ROW_H + 2;
     static final int CELL_W = 42;
