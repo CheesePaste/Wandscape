@@ -121,8 +121,12 @@ public class NpcStrategyMenu extends AbstractContainerMenu {
     public void clicked(int slotId, int dragType, net.minecraft.world.inventory.ClickType clickType, Player player) {
         super.clicked(slotId, dragType, clickType, player);
         if (npc == null || npc.isRemoved()) return;
-        // 拖拽多格结束会以 slotId=-999 回调，仍需同步
-        if (slotId >= 0 && slotId < SPELL_SLOT_COUNT || clickType == net.minecraft.world.inventory.ClickType.QUICK_CRAFT) {
+        // 拖拽多格结束会以 slotId=-999 回调，仍需同步。QUICK_MOVE（Shift 快速转移）的
+        // 源槽在玩家背包（索引 ≥ SPELL_SLOT_COUNT），范围判定不命中——必须按 clickType 捕获，
+        // 否则 Shift 放的卷轴不会写回 equippedMagic，退出重进即丢失。
+        if (slotId >= 0 && slotId < SPELL_SLOT_COUNT
+                || clickType == net.minecraft.world.inventory.ClickType.QUICK_MOVE
+                || clickType == net.minecraft.world.inventory.ClickType.QUICK_CRAFT) {
             syncEquipped();
         }
     }

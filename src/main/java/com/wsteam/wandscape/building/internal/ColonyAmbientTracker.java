@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.network.ColonyAmbientPacket;
 
 import net.minecraft.core.BlockPos;
@@ -27,8 +26,6 @@ import net.neoforged.neoforge.network.PacketDistributor;
  * 由 {@code Wandscape.onServerTick} 调用。
  */
 public final class ColonyAmbientTracker {
-
-    private static final String TAG = "ColonyAmbientTracker";
 
     /** 建筑包围盒向外延伸的格数，此范围视为城镇。 */
     private static final int TOWN_RADIUS = 20;
@@ -70,11 +67,6 @@ public final class ColonyAmbientTracker {
                 townBoxes.add(bounds.inflatedBy(TOWN_RADIUS));
             }
         }
-        if (counter % 200 == 0) {
-            Log.info(TAG, "ambient scan: {} buildings, {} town boxes (day={})",
-                    sd.getAllBuildings().size(), townBoxes.size(), day);
-        }
-
         java.util.Set<UUID> active = new java.util.HashSet<>();
         for (ServerPlayer player : level.players()) {
             UUID id = player.getUUID();
@@ -99,9 +91,6 @@ public final class ColonyAmbientTracker {
                 lastDay.put(id, day);
                 lastSentTick.put(id, now);
                 PacketDistributor.sendToPlayer(player, new ColonyAmbientPacket(inTown, day));
-                Log.info(TAG, "player {} -> {} ({} {})", id.toString().substring(0, 8),
-                        inTown ? "IN_TOWN" : "OUTSIDE", inTown ? (day ? "DAY" : "NIGHT") : "-",
-                        stateChanged ? "changed" : "heartbeat");
             }
         }
 

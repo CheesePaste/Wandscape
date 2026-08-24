@@ -1436,7 +1436,6 @@ public class TouristMoveGoal extends Goal {
     // ════════════════════════════════════════════════════════════════
 
     private void startWander() {
-        Log.info(TAG, "[Citizen] %s startWander".formatted(tourist.getTouristName()));
         wanderCooldown = 0;
         wanderEvaluateTick = 300 + tourist.getRandom().nextInt(200);
         lastPos = null;

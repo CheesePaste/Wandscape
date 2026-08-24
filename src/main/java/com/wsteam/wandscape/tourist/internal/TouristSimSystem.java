@@ -231,12 +231,10 @@ public final class TouristSimSystem {
             }
         }
 
-        int observedCount = 0, simmedCount = 0, stuckCount = 0, frozenCount = 0;
         for (TouristShadow s : new ArrayList<>(shadows.values())) {
             // 创始人不在线 → 冻结小镇：游客原地冻结——不 sim、不实体化、不离场、不被清。
             // 冻结期间占位/排队保留（shadow 仍在 registry，spot purge 不误清）。
             if (s.getColonyId() != null && !ColonyActivation.isColonyActive(s.getColonyId())) {
-                frozenCount++;
                 continue;
             }
             // The sim drives a tourist whenever no player can observe it. Chunk state is
@@ -246,8 +244,6 @@ public final class TouristSimSystem {
             // proximity is the signal that decides whether the physical entity runs.
             boolean observed = probes.length > 0 && hasObserver(simRangeSq, s.getPosX(), s.getPosZ(), probes);
             if (observed) {
-                observedCount++;
-                if (entities.get(s.getTouristId()) == null) stuckCount++;
                 handleLoaded(level, s, entities.get(s.getTouristId()));
             } else {
                 // Detach the physical body (UNLOADED_TO_CHUNK ≠ KILLED/DISCARDED, so the
@@ -264,13 +260,8 @@ public final class TouristSimSystem {
                     s.setQueueSpotIndex(-1);
                     s.setOccupiedSpot(-1);
                 }
-                simmedCount++;
                 simStep(level, s);
             }
-        }
-        if (observedCount > 0 || simmedCount > 0 || stuckCount > 0) {
-            Log.info(TAG, "[Tourist] sim tick #{} — observed={}, simmed={}, stuck={}, frozen={}, total={}",
-                    tickCounter / SIM_INTERVAL, observedCount, simmedCount, stuckCount, frozenCount, shadows.size());
         }
         }
     }
@@ -331,8 +322,6 @@ public final class TouristSimSystem {
         tourist.setUUID(s.getTouristId());
         importToEntity(tourist, s);
         level.addFreshEntity(tourist);
-        Log.info(TAG, "[Tourist] spawned entity {} from shadow at {}", shortId(s.getTouristId()),
-                tourist.blockPosition().toShortString());
     }
 
     // ── Shadow ↔ entity sync ──
