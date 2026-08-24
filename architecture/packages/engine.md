@@ -37,7 +37,7 @@ NavigationSystem（≤64格寻路 + 卡死检测每60tick/3次→传送）/ Reso
 
 ## 物品运输 (transport/)
 
-ItemTransportManager：直线飞行，服务器发 from/to/duration/onRoad 四元组（TransportStartPacket），服务器仅 elapsed 倒计时判定到达。客户端直线插值（TransportItemEntity，60FPS 帧率平滑；离路加 sin 弧）。onRoad 由服务器沿直线采样地表方块（`custom_roads` 标签）决定——无图，单次 O(采样数)。自定义渲染胶囊气泡（中性金边暗灰底）。
+ItemTransportManager：直线/样条飞行，服务器发 from/to/duration/route（TransportStartPacket），服务器仅 elapsed 倒计时判定到达。客户端插值跟随路径（TransportItemEntity，60FPS 帧率平滑；离路加 sin 弧）。支持双向物流：不仅用于仓库出库供料（Outbound Supply），还用于 NPC 拆除/清理/平整地表时将掉落物回收入库（Inbound Salvage）。自定义渲染胶囊气泡（中性金边暗灰底）。
 
 ## 敌对生物索敌（HostileTargetingHandler）
 

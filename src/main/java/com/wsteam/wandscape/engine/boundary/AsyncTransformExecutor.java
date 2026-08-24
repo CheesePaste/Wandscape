@@ -2,25 +2,44 @@ package com.wsteam.wandscape.engine.boundary;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
+import javax.annotation.Nullable;
+
 import com.wsteam.wandscape.core.boundary.BlockOps;
+import com.wsteam.wandscape.core.component.ColonyMember;
 import com.wsteam.wandscape.core.component.EquipmentComponent;
 import com.wsteam.wandscape.core.component.Inventory;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.types.AttributeType;
+import com.wsteam.wandscape.core.types.BlockType;
 import com.wsteam.wandscape.engine.service.SoundService;
 import com.wsteam.wandscape.engine.sound.WandscapeSounds;
+import com.wsteam.wandscape.engine.transport.ItemTransportManager;
 import com.wsteam.wandscape.op.api.AtomicOp;
 import com.wsteam.wandscape.op.executor.OpExecutor;
 import com.wsteam.wandscape.op.executor.ResourceShortageException;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
+import com.wsteam.wandscape.shared.api.BuildingApi;
+import com.wsteam.wandscape.shared.data.BuildingData;
+import com.wsteam.wandscape.shared.data.ItemKey;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
+import com.wsteam.wandscape.warehouse.ColonyItemBank;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.neoforged.neoforge.server.ServerLifecycleHooks;
 import com.wsteam.wandscape.shared.log.Log;
 
 /**
@@ -36,6 +55,10 @@ import com.wsteam.wandscape.shared.log.Log;
  * removed from NPC inventory before the delay countdown starts. On shortage, a
  * {@link ResourceShortageException} is thrown — the engine marks the task
  * AWAITING_RESOURCES and releases the NPC.
+ *
+ * <p>When an existing block in the world is broken, cleared, flattened, or replaced,
+ * this executor intercepts the destruction, calculates dropped items, launches inbound
+ * flying item logistics animation, and deposits the materials safely into the colony warehouse.
  */
 public class AsyncTransformExecutor implements OpExecutor<AtomicOp.TransformOp> {
 
@@ -45,6 +68,8 @@ public class AsyncTransformExecutor implements OpExecutor<AtomicOp.TransformOp> 
     private static final int NPC_CAST_THROTTLE_TICKS = 10;
 
     private final int delayTicks;
+    @Nullable
+    private final ItemTransportManager transporter;
 
     record Pending(CompletableFuture<Void> future, AtomicOp.TransformOp op, World world,
                    long npcId, int remainingTicks) {}
@@ -52,8 +77,14 @@ public class AsyncTransformExecutor implements OpExecutor<AtomicOp.TransformOp> 
     private final List<Pending> pending = new ArrayList<>();
 
     public AsyncTransformExecutor(int delayTicks) {
+        this(delayTicks, null);
+    }
+
+    public AsyncTransformExecutor(int delayTicks, @Nullable ItemTransportManager transporter) {
         this.delayTicks = delayTicks;
-        Log.info(TAG, "AsyncTransformExecutor delay={} ticks", delayTicks);
+        this.transporter = transporter;
+        Log.info(TAG, "AsyncTransformExecutor delay={} ticks (transporter={})",
+                delayTicks, transporter != null ? "active" : "none");
     }
 
     @Override
@@ -77,12 +108,12 @@ public class AsyncTransformExecutor implements OpExecutor<AtomicOp.TransformOp> 
                             new ResourceShortageException(List.of(op.consumable())));
                 }
                 inv.remove(op.consumable().resource(), op.consumable().amount());
-            } else {
             }
         }
 
         // ── Placement (existing delay-tick mechanism, shared by both paths) ──
         if (delayTicks <= 0) {
+            performSalvage(op, world, npcId);
             BlockOps blockOps = world.blockOps;
             if (blockOps != null) {
                 blockOps.setBlock(op.target(), op.to());
@@ -106,20 +137,24 @@ public class AsyncTransformExecutor implements OpExecutor<AtomicOp.TransformOp> 
             Pending p = findPending(future);
             if (p == null) return;
             pending.remove(p);
-            if (p.world.blockOps != null) {
-                p.world.blockOps.setBlock(p.op.target(), p.op.to());
-                p.world.blockOps.setBlockEntityData(p.op.target(), p.op.blockNbtBase64());
+
+            // Intercept & return salvaged block items to colony warehouse with visual flight
+            performSalvage(p.op(), p.world(), p.npcId());
+
+            if (p.world().blockOps != null) {
+                p.world().blockOps.setBlock(p.op().target(), p.op().to());
+                p.world().blockOps.setBlockEntityData(p.op().target(), p.op().blockNbtBase64());
             }
             // Visual feedback on the NPC that performed the work
             WandscapeNpc npc = EntityComponentBridge.INSTANCE.getNpc(p.npcId());
             if (npc != null) {
                 npc.doWorkAnimation(new BlockPos(
-                        p.op.target().x(), p.op.target().y(), p.op.target().z()));
+                        p.op().target().x(), p.op().target().y(), p.op().target().z()));
                 // NPC 施法放置音（守卫/自防御不走这里，避免与 GuardCombat 开火音重叠）
                 // 节流与方块放置/拆除音同频：整栋楼连续施工时不会每块都响
                 if (npc.level() instanceof ServerLevel sl) {
-                    SoundService.playAtThrottled(sl, p.op.target().x() + 0.5,
-                            p.op.target().y() + 0.5, p.op.target().z() + 0.5,
+                    SoundService.playAtThrottled(sl, p.op().target().x() + 0.5,
+                            p.op().target().y() + 0.5, p.op().target().z() + 0.5,
                             WandscapeSounds.NPC_CAST, SoundSource.NEUTRAL, 0.5f, 1.0f,
                             NPC_CAST_THROTTLE_TICKS);
                 }
@@ -158,9 +193,6 @@ public class AsyncTransformExecutor implements OpExecutor<AtomicOp.TransformOp> 
         for (CompletableFuture<Void> f : toComplete) {
             f.complete(null); // → triggers thenRun → places block
         }
-
-        if (!toComplete.isEmpty()) {
-        }
     }
 
     public boolean hasPendingOps() { return !pending.isEmpty(); }
@@ -170,5 +202,131 @@ public class AsyncTransformExecutor implements OpExecutor<AtomicOp.TransformOp> 
             if (p.future() == future) return p;
         }
         return null;
+    }
+
+    // ════════════════════════════════════════════════════════════
+    //  Dismantling / Salvage Logistics Interception
+    // ════════════════════════════════════════════════════════════
+
+    private void performSalvage(AtomicOp.TransformOp op, World world, long npcId) {
+        WandscapeNpc npc = EntityComponentBridge.INSTANCE.getNpc(npcId);
+        Level level = npc != null ? npc.level() : null;
+        if (level == null && ServerLifecycleHooks.getCurrentServer() != null) {
+            level = ServerLifecycleHooks.getCurrentServer().overworld();
+        }
+        if (!(level instanceof ServerLevel sl)) return;
+
+        BlockPos bp = new BlockPos(op.target().x(), op.target().y(), op.target().z());
+        BlockState oldState = sl.getBlockState(bp);
+        if (!isSalvageable(oldState, sl, bp, op.to())) return;
+
+        BlockEntity be = sl.getBlockEntity(bp);
+        List<ItemStack> drops = Block.getDrops(oldState, sl, bp, be, npc, ItemStack.EMPTY);
+        if (drops.isEmpty()) {
+            if (!oldState.canBeReplaced()) {
+                Item item = oldState.getBlock().asItem();
+                if (item != Items.AIR) {
+                    drops = List.of(new ItemStack(item, 1));
+                }
+            }
+        }
+        if (drops.isEmpty()) return;
+
+        UUID colonyId = resolveColonyId(npc, world, bp);
+        BlockPos storagePos = findNearestStorage(colonyId, bp);
+        ColonyItemBank bank = ColonyItemBank.get(sl);
+
+        for (ItemStack drop : drops) {
+            if (drop.isEmpty()) continue;
+            String itemId = BuiltInRegistries.ITEM.getKey(drop.getItem()).toString();
+            ItemKey key = ItemKey.of(itemId, null);
+            int count = drop.getCount();
+
+            if (transporter != null && storagePos != null) {
+                // Inbound logistics: fly items from broken block to the warehouse
+                transporter.send(key, count, bp, storagePos, sl, npcId, null, true)
+                        .thenRun(() -> {
+                            if (bank != null && colonyId != null) {
+                                bank.add(colonyId, key, count);
+                                Log.info(TAG, "[Salvage] Dismantled item returned to warehouse: {} x{} (colony={})",
+                                        key.itemId(), count, colonyId.toString().substring(0, 8));
+                            }
+                        });
+            } else {
+                // Direct deposit fallback
+                if (bank != null && colonyId != null) {
+                    bank.add(colonyId, key, count);
+                    Log.info(TAG, "[Salvage] Directly deposited dismantled item: {} x{} (colony={})",
+                            key.itemId(), count, colonyId.toString().substring(0, 8));
+                }
+            }
+        }
+    }
+
+    private boolean isSalvageable(BlockState oldState, ServerLevel sl, BlockPos bp, BlockType toType) {
+        if (oldState.isAir()) return false;
+        if (!oldState.getFluidState().isEmpty()) return false;
+        if (oldState.getDestroySpeed(sl, bp) < 0) return false;
+        if (oldState.is(net.minecraft.tags.BlockTags.FIRE)) return false;
+        if (toType != null && !toType.id().isEmpty() && !"minecraft:air".equals(toType.id())) {
+            String pureOld = BuiltInRegistries.BLOCK.getKey(oldState.getBlock()).toString();
+            String pureTo = toType.id().replaceAll("\\[.*?\\]", "").trim();
+            if (pureOld.equals(pureTo)) {
+                return false; // same block type, no replacement salvage needed
+            }
+        }
+        return true;
+    }
+
+    private UUID resolveColonyId(@Nullable WandscapeNpc npc, World world, BlockPos bp) {
+        if (npc != null) {
+            var member = world.get(npc.ecsEntityId, ColonyMember.class);
+            if (member != null && member.colonyId() != null) return member.colonyId();
+            if (npc.colonyId != null) return npc.colonyId;
+        }
+        var colonyApi = WandscapeApis.getColonyApiSilently();
+        if (colonyApi != null) {
+            UUID cid = colonyApi.getColonyId(bp);
+            if (cid != null) return cid;
+        }
+        return new UUID(0, 0);
+    }
+
+    @Nullable
+    private BlockPos findNearestStorage(UUID colonyId, BlockPos refPos) {
+        BuildingApi api = WandscapeApis.getBuildingApi();
+        if (api == null) return null;
+        var ids = api.getBuildingsByCategory(colonyId, "storage");
+        if (ids != null && !ids.isEmpty()) {
+            BlockPos nearest = null;
+            double best = Double.MAX_VALUE;
+            for (UUID id : ids) {
+                BuildingData bd = api.getBuilding(id);
+                if (bd == null || bd.isShutdown()) continue;
+                BlockPos p = bd.getPosition();
+                double d = p.distSqr(refPos);
+                if (d < best) {
+                    best = d;
+                    nearest = p;
+                }
+            }
+            if (nearest != null) return nearest;
+        }
+        // Fallback to government / town hall
+        var govIds = api.getBuildingsByCategory(colonyId, "government");
+        if (govIds == null || govIds.isEmpty()) return null;
+        BlockPos nearest = null;
+        double best = Double.MAX_VALUE;
+        for (UUID id : govIds) {
+            BuildingData bd = api.getBuilding(id);
+            if (bd == null || bd.isShutdown()) continue;
+            BlockPos p = bd.getPosition();
+            double d = p.distSqr(refPos);
+            if (d < best) {
+                best = d;
+                nearest = p;
+            }
+        }
+        return nearest;
     }
 }

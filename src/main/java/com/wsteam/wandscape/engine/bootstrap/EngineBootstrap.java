@@ -175,20 +175,20 @@ public final class EngineBootstrap {
         world.addSystem(supplySystem);
         Log.info(TAG, "  ResourceSupplySystem registered");
 
-        // 9. Override TransformOp executor with async version (V2.5 gating demo)
+        // 9a. Create shared item transport manager (visual item flight)
+        ItemTransportManager transporter = new ItemTransportManager();
+        WandscapeEngine.setTransporter(transporter);
+
+        // 9b. Override TransformOp executor with async version (V2.5 gating demo)
         //    Set to 0 for sync (no gating), >0 for N-tick delay per block.
         //    保持 1 tick：建造即时感更好（WORK_SPEED 作用于采集/合成的大 channelTicks）。
         int asyncDelay = 1;
         if (asyncDelay > 0) {
-            AsyncTransformExecutor asyncExec = new AsyncTransformExecutor(asyncDelay);
+            AsyncTransformExecutor asyncExec = new AsyncTransformExecutor(asyncDelay, transporter);
             world.opExecutors.register(asyncExec); // overwrites default TransformExecutor
             WandscapeEngine.setAsyncExecutor(asyncExec);
-            Log.info(TAG, "  AsyncTransformExecutor active: {} tick delay per block", asyncDelay);
+            Log.info(TAG, "  AsyncTransformExecutor active: {} tick delay per block (with inbound salvage transport)", asyncDelay);
         }
-
-        // 9b. Create shared item transport manager (visual item flight)
-        ItemTransportManager transporter = new ItemTransportManager();
-        WandscapeEngine.setTransporter(transporter);
 
         // 9c. Override BlockInteractOp executor with async version.
         //     Handles both sync actions (toggle/activate/open_gui) and
