@@ -30,6 +30,8 @@ public final class StudioWidgets {
     private static String[] comboDropOptions;
     private static String comboDropId;
     private static long comboOpenTime = 0;
+    private static int comboScroll = 0;
+    private static int comboMaxScroll = 0;
 
     /** Call once per frame before any widget rendering. */
     public static void beginFrame(GuiGraphics graphics, Font f,
@@ -243,6 +245,7 @@ public final class StudioWidgets {
                 comboDropOptions = options;
                 comboDropId = id;
                 comboOpenTime = System.currentTimeMillis();
+                comboScroll = 0;
             }
         } else if (id.equals(openCombo)) {
             // Update dropdown position each frame so it scrolls synchronously with the panel
@@ -265,29 +268,55 @@ public final class StudioWidgets {
         int w = comboDropW;
         String[] opts = comboDropOptions;
         int itemH = font.lineHeight + 6;
-        int totalH = opts.length * itemH + 2;
+        int totalContentH = opts.length * itemH + 2;
 
         int screenH = g.guiHeight();
 
+        // Max visible items: at most 10 items or available screen height
+        int maxDropH = Math.min(itemH * 10 + 2, Math.max(itemH * 3, screenH - 40));
+        int dropH = Math.min(totalContentH, maxDropH);
+        comboDropH = dropH;
+        comboMaxScroll = Math.max(0, totalContentH - dropH);
+
+        // Clamp scroll
+        comboScroll = Math.max(0, Math.min(comboMaxScroll, comboScroll));
+
         // If combo has scrolled far off-screen, auto-close the dropdown
-        if (y < -totalH - 40 || y > screenH + 40) {
+        if (y < -dropH - 40 || y > screenH + 40) {
             openCombo = null;
             return -1;
         }
 
         // If dropdown extends below screen bottom, flip above combo button if room available
-        if (y + totalH > screenH - 18 && y - 22 - totalH > 0) {
-            y = comboDropY - 22 - totalH;
+        if (y + dropH > screenH - 18 && y - 22 - dropH > 0) {
+            y = comboDropY - 22 - dropH;
+        }
+        // Clamp to screen boundaries
+        if (y + dropH > screenH - 4) {
+            y = Math.max(4, screenH - 4 - dropH);
         }
 
-        // Background & gold border on top of everything
-        g.fill(x, y, x + w, y + totalH, StudioColors.PANEL_BG);
-        drawBorder(x, y, w, totalH, StudioColors.BORDER_GOLD_BRIGHT);
+        // 1. Flush previous panel draw calls so text does not draw over dropdown
+        g.flush();
+
+        var poseStack = g.pose();
+        poseStack.pushPose();
+        poseStack.translate(0, 0, 400.0f);
+
+        // 2. Opaque solid background & bright gold border
+        g.fill(x, y, x + w, y + dropH, StudioColors.DROPDOWN_BG);
+        drawBorder(x, y, w, dropH, StudioColors.BORDER_GOLD_BRIGHT);
+
+        // 3. Enable scissor for scrolling items inside dropdown
+        g.enableScissor(x + 1, y + 1, x + w - 1, y + dropH - 1);
 
         int result = -1;
         for (int i = 0; i < opts.length; i++) {
-            int iy = y + 1 + i * itemH;
-            boolean hov = mouseX >= x + 1 && mouseX < x + w - 1 && mouseY >= iy && mouseY < iy + itemH;
+            int iy = y + 1 + i * itemH - comboScroll;
+            if (iy + itemH < y || iy > y + dropH) continue;
+
+            boolean hov = mouseX >= x + 1 && mouseX < x + w - 1 && mouseY >= iy && mouseY < iy + itemH
+                    && mouseY >= y + 1 && mouseY < y + dropH - 1;
             if (hov) {
                 g.fill(x + 1, iy, x + w - 1, iy + itemH, StudioColors.LIST_ITEM_HOVER);
             }
@@ -295,12 +324,28 @@ public final class StudioWidgets {
             if (hov && mouseClicked && (System.currentTimeMillis() - comboOpenTime > 50)) {
                 result = i;
                 openCombo = null;
+                comboScroll = 0;
                 break;
             }
         }
 
+        g.disableScissor();
+
+        // 4. Scrollbar indicator if scrollable
+        if (totalContentH > dropH) {
+            int sbW = 3;
+            int trackH = dropH - 2;
+            int thumbH = Math.max(10, (int) ((float) dropH / totalContentH * trackH));
+            int thumbY = y + 1 + (int) ((float) comboScroll / comboMaxScroll * (trackH - thumbH));
+            g.fill(x + w - sbW - 2, y + 1, x + w - 2, y + dropH - 1, 0x80000000);
+            g.fill(x + w - sbW - 2, thumbY, x + w - 2, thumbY + thumbH, StudioColors.BORDER_GOLD_BRIGHT);
+        }
+
+        g.flush();
+        poseStack.popPose();
+
         if (mouseClicked && (System.currentTimeMillis() - comboOpenTime > 50)
-                && !(mouseX >= x && mouseX < x + w && mouseY >= y && mouseY < y + totalH)) {
+                && !(mouseX >= x && mouseX < x + w && mouseY >= y && mouseY < y + dropH)) {
             openCombo = null;
         }
 
@@ -311,6 +356,16 @@ public final class StudioWidgets {
         return openCombo != null;
     }
 
+    public static boolean isMouseOverComboDrop() {
+        if (openCombo == null) return false;
+        return mouseX >= comboDropX && mouseX <= comboDropX + comboDropW
+                && mouseY >= comboDropY && mouseY <= comboDropY + comboDropH;
+    }
+
+    public static void handleComboScroll(int delta) {
+        comboScroll = Math.max(0, Math.min(comboMaxScroll, comboScroll + delta));
+    }
+
     public static String getComboDropId() {
         return comboDropId;
     }
@@ -318,6 +373,7 @@ public final class StudioWidgets {
     public static void closeCombo() {
         openCombo = null;
         comboDropOptions = null;
+        comboScroll = 0;
     }
 
     // ════════════════════════════════════════════════════════════════

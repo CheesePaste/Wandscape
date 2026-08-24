@@ -144,7 +144,11 @@ public final class RoadStudioOverlay {
         updateMousePos();
 
         if (isMouseOverPanel()) {
-            pendingScroll += event.getScrollDeltaY();
+            if (StudioWidgets.isComboOpen() && StudioWidgets.isMouseOverComboDrop()) {
+                StudioWidgets.handleComboScroll((int) (-event.getScrollDeltaY() * 18));
+            } else {
+                pendingScroll += event.getScrollDeltaY();
+            }
             event.setCanceled(true);
         }
     }

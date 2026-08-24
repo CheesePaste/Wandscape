@@ -10,6 +10,7 @@ public final class StudioColors {
 
     // ── Panel backgrounds ──
     public static final int PANEL_BG = 0xF0141418;
+    public static final int DROPDOWN_BG = 0xFF141418;
     public static final int CHILD_BG = 0xBF1C1C24;
     public static final int HEADER_BG_TOP = 0xD9261A38;
     public static final int HEADER_BG_BOTTOM = 0xD90A0616;
