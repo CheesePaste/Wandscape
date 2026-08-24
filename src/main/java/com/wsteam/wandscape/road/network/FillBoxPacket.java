@@ -104,7 +104,7 @@ public record FillBoxPacket(String presetId, BlockPos startPos, BlockPos endPos)
                     posArr.add(y);
                     posArr.add(z);
                     tile.add("pos", posArr);
-                    String blockId = preset.pickBlock(x, z);
+                    String blockId = preset.pickBlock(x, y, z);
                     tile.addProperty("block", blockId);
                     tiles.add(tile);
 
@@ -167,7 +167,7 @@ public record FillBoxPacket(String presetId, BlockPos startPos, BlockPos endPos)
     // ── Helper ──
 
     private static RoadPreset findPreset(String id) {
-        return com.wsteam.wandscape.road.data.RoadPresetLoader.getInstance().get(id);
+        return com.wsteam.wandscape.road.data.RoadPreset.parseOrGet(id);
     }
 
     // ── StreamCodec ──

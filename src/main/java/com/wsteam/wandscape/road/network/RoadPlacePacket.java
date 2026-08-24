@@ -249,7 +249,7 @@ public record RoadPlacePacket(String presetId, BlockPos startPos, BlockPos endPo
     // ── Helper ──
 
     private static RoadPreset findPreset(String id) {
-        return com.wsteam.wandscape.road.data.RoadPresetLoader.getInstance().get(id);
+        return com.wsteam.wandscape.road.data.RoadPreset.parseOrGet(id);
     }
 
     // ── StreamCodec ──

@@ -109,15 +109,9 @@ public final class RoadPlacementRenderer {
                 renderBoxPreview(bufferSource, poseStack, from, to);
             } else if (RoadPlacementState.isSpline()) {
                 renderPathPreview(mc.level, bufferSource, poseStack, from, to);
-            } else if (RoadPlacementState.isReplaceArray()) {
-                if (SplineEditorClientState.isArrayPreview()) {
-                    renderLinearArrayGhost(mc.level, bufferSource, poseStack, from, to);
-                } else {
-                    renderPathPreview(mc.level, bufferSource, poseStack, from, to);
-                }
             } else {
                 renderRoadGhost(mc.level, bufferSource, poseStack, from, to,
-                        RoadPlacementState.getSelectedPreset());
+                        RoadPlacementState.getActivePreset());
             }
         }
 
@@ -537,126 +531,5 @@ public final class RoadPlacementRenderer {
     /** Sample the MOTION_BLOCKING surface height at (x, z). */
     private static float surfaceHeight(Level level, int x, int z) {
         return (float)level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z);
-    }
-
-    /**
-     * Renders a 3D linear blueprint array preview between {@code from} and {@code to},
-     * matching the server-side tiles generated for Replace array mode.
-     */
-    private static void renderLinearArrayGhost(Level level, MultiBufferSource.BufferSource bufferSource,
-                                               PoseStack poseStack, BlockPos from, BlockPos to) {
-        RoadTemplate template = SplineEditorClientState.getActiveTemplate();
-        if (template == null || template.getBlocks().isEmpty()) {
-            SplineEditorClientState.rebuildDynamicTemplate();
-            template = SplineEditorClientState.getActiveTemplate();
-            if (template == null || template.getBlocks().isEmpty()) return;
-        }
-
-        double stepDistance = Math.max(0.2, SplineEditorClientState.getArrayStepDistance());
-        boolean snapTerrain = RoadPlacementState.isSnapTerrain();
-
-        double sx = from.getX() + 0.5, sy = from.getY() + 0.5, sz = from.getZ() + 0.5;
-        double ex = to.getX() + 0.5, ey = to.getY() + 0.5, ez = to.getZ() + 0.5;
-
-        double dist = snapTerrain ? Math.sqrt((ex - sx) * (ex - sx) + (ez - sz) * (ez - sz))
-                                  : Math.sqrt((ex - sx) * (ex - sx) + (ey - sy) * (ey - sy) + (ez - sz) * (ez - sz));
-        int steps = Math.max(1, (int) Math.ceil(dist / stepDistance));
-
-        List<SplineVec3> samplePoints = new ArrayList<>();
-        for (int i = 0; i <= steps; i++) {
-            double t = (double) i / steps;
-            double px = sx + (ex - sx) * t;
-            double pz = sz + (ez - sz) * t;
-            double py;
-            if (snapTerrain && level != null) {
-                int surfaceY = level.getHeight(Heightmap.Types.MOTION_BLOCKING, (int) Math.floor(px), (int) Math.floor(pz)) - 1;
-                py = surfaceY + 0.5;
-            } else {
-                py = sy + (ey - sy) * t;
-            }
-            samplePoints.add(new SplineVec3(px, py, pz));
-        }
-
-        float roll = (float) Math.toRadians(SplineEditorClientState.getArrayOffsetRoll());
-        float pitch = (float) Math.toRadians(SplineEditorClientState.getArrayOffsetPitch());
-        float yaw = (float) Math.toRadians(SplineEditorClientState.getArrayOffsetYaw());
-
-        Map<BlockPos, BlockState> uniqueBlocks = new HashMap<>();
-
-        for (int i = 0; i < samplePoints.size(); i++) {
-            SplineVec3 pos = samplePoints.get(i);
-            SplineVec3 tan;
-            if (samplePoints.size() <= 1) {
-                tan = new SplineVec3(0, 0, 1);
-            } else if (i < samplePoints.size() - 1) {
-                tan = samplePoints.get(i + 1).subtract(pos);
-            } else {
-                tan = pos.subtract(samplePoints.get(i - 1));
-            }
-
-            org.joml.Vector3f forward = new org.joml.Vector3f((float) tan.x(), (float) tan.y(), (float) tan.z()).normalize();
-            org.joml.Vector3f right = new org.joml.Vector3f(0, 1, 0).cross(forward);
-            if (right.lengthSquared() < 0.0001f) {
-                right.set(1, 0, 0).cross(forward);
-            }
-            right.normalize();
-            org.joml.Vector3f up = new org.joml.Vector3f(forward).cross(right).normalize();
-
-            org.joml.Matrix4f rot = new org.joml.Matrix4f(
-                right.x, right.y, right.z, 0,
-                up.x, up.y, up.z, 0,
-                forward.x, forward.y, forward.z, 0,
-                0, 0, 0, 1
-            );
-
-            org.joml.Matrix4f transform = new org.joml.Matrix4f()
-                .translate((float) pos.x(), (float) pos.y(), (float) pos.z())
-                .mul(rot)
-                .rotateY(yaw)
-                .rotateX(pitch)
-                .rotateZ(roll);
-
-            for (RoadTemplate.RoadTemplateBlock b : template.getBlocks()) {
-                org.joml.Vector3f local = new org.joml.Vector3f(b.x(), b.y(), b.z());
-                org.joml.Vector3f worldPos = transform.transformPosition(local);
-
-                int bx = (int) Math.floor(worldPos.x);
-                int by = (int) Math.floor(worldPos.y);
-                int bz = (int) Math.floor(worldPos.z);
-
-                BlockState state = BuildingPreviewRenderer.resolveBlockState(b.blockState());
-                if (state != null) {
-                    uniqueBlocks.put(new BlockPos(bx, by, bz), state);
-                }
-            }
-        }
-
-        var blockRenderer = Minecraft.getInstance().getBlockRenderer();
-        int light = 0xF000F0;
-        int overlay = net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY;
-
-        for (var entry : uniqueBlocks.entrySet()) {
-            BlockPos bp = entry.getKey();
-            poseStack.pushPose();
-            poseStack.translate(bp.getX(), bp.getY(), bp.getZ());
-            blockRenderer.renderSingleBlock(entry.getValue(), poseStack, bufferSource, light, overlay,
-                    net.neoforged.neoforge.client.model.data.ModelData.EMPTY, null);
-            poseStack.popPose();
-        }
-
-        bufferSource.endBatch(net.minecraft.client.renderer.Sheets.cutoutBlockSheet());
-        bufferSource.endBatch(net.minecraft.client.renderer.Sheets.translucentCullBlockSheet());
-        bufferSource.endBatch(net.minecraft.client.renderer.Sheets.translucentItemSheet());
-
-        // Connect line preview (bright green)
-        VertexConsumer vcLines = bufferSource.getBuffer(RenderType.lines());
-        var pose = poseStack.last();
-        for (int i = 0; i < samplePoints.size() - 1; i++) {
-            SplineVec3 p0 = samplePoints.get(i);
-            SplineVec3 p1 = samplePoints.get(i + 1);
-            line(vcLines, pose, (float) p0.x(), (float) p0.y() + 0.1f, (float) p0.z(),
-                                (float) p1.x(), (float) p1.y() + 0.1f, (float) p1.z(),
-                                0, 255, 120);
-        }
     }
 }

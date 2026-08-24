@@ -1,5 +1,6 @@
 package com.wsteam.wandscape.road.client;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import com.wsteam.wandscape.road.data.RoadPreset;
@@ -24,7 +25,17 @@ public final class RoadPlacementState {
 
     public enum ToolMode { REPLACE, FILL, DESTROY_FILL, SPLINE }
 
-    public enum ReplaceSubMode { SURFACE, ARRAY }
+    public enum PaletteSourceMode { PRESET, PROCEDURAL }
+
+    public static class ProceduralEntry {
+        public String blockId;
+        public int weight;
+
+        public ProceduralEntry(String blockId, int weight) {
+            this.blockId = blockId;
+            this.weight = Math.max(1, weight);
+        }
+    }
 
     public enum GizmoTarget { NONE, START, END }
 
@@ -33,8 +44,14 @@ public final class RoadPlacementState {
     private static volatile boolean projecting = false;
     private static volatile RoadPhase roadPhase = RoadPhase.BAR;
     private static volatile ToolMode activeTool = ToolMode.REPLACE;
-    private static volatile ReplaceSubMode replaceSubMode = ReplaceSubMode.SURFACE;
-    private static volatile boolean snapTerrain = true;
+    private static volatile PaletteSourceMode paletteMode = PaletteSourceMode.PRESET;
+
+    private static final List<ProceduralEntry> proceduralEntries = new ArrayList<>(List.of(
+            new ProceduralEntry("minecraft:stone_bricks", 5),
+            new ProceduralEntry("minecraft:mossy_stone_bricks", 2),
+            new ProceduralEntry("minecraft:cracked_stone_bricks", 1)
+    ));
+
     private static volatile int selectedPresetIndex = 0;
     private static volatile BlockPos startPos = null;
     private static volatile BlockPos endPos = null;
@@ -71,8 +88,7 @@ public final class RoadPlacementState {
         projecting = false;
         roadPhase = RoadPhase.BAR;
         activeTool = ToolMode.REPLACE;
-        replaceSubMode = ReplaceSubMode.SURFACE;
-        snapTerrain = true;
+        paletteMode = PaletteSourceMode.PRESET;
         startPos = null;
         endPos = null;
         ghostPos = null;
@@ -125,20 +141,79 @@ public final class RoadPlacementState {
         Log.info(TAG, "[RoadPlacement] Tool mode → {}", mode);
     }
 
-    public static ReplaceSubMode getReplaceSubMode() { return replaceSubMode; }
+    // ── Palette Mode & Procedural Blend ──
 
-    public static void setReplaceSubMode(ReplaceSubMode mode) {
-        replaceSubMode = mode;
-        Log.info(TAG, "[RoadPlacement] Replace submode → {}", mode);
+    public static PaletteSourceMode getPaletteMode() { return paletteMode; }
+
+    public static void setPaletteMode(PaletteSourceMode mode) {
+        paletteMode = mode;
+        Log.info(TAG, "[RoadPlacement] Palette mode → {}", mode);
+    }
+
+    public static boolean isProcedural() { return paletteMode == PaletteSourceMode.PROCEDURAL; }
+
+    public static List<ProceduralEntry> getProceduralEntries() { return proceduralEntries; }
+
+    public static void addProceduralEntry(String blockId, int weight) {
+        if (blockId == null || blockId.isEmpty()) return;
+        for (var e : proceduralEntries) {
+            if (e.blockId.equals(blockId)) {
+                e.weight = Math.min(10, e.weight + Math.max(1, weight));
+                return;
+            }
+        }
+        proceduralEntries.add(new ProceduralEntry(blockId, weight));
+    }
+
+    public static void removeProceduralEntry(int index) {
+        if (index >= 0 && index < proceduralEntries.size() && proceduralEntries.size() > 1) {
+            proceduralEntries.remove(index);
+        }
+    }
+
+    public static void setProceduralWeight(int index, int weight) {
+        if (index >= 0 && index < proceduralEntries.size()) {
+            proceduralEntries.get(index).weight = Math.max(1, Math.min(10, weight));
+        }
+    }
+
+    public static void resetProceduralEntries() {
+        proceduralEntries.clear();
+        proceduralEntries.add(new ProceduralEntry("minecraft:stone_bricks", 5));
+        proceduralEntries.add(new ProceduralEntry("minecraft:mossy_stone_bricks", 2));
+        proceduralEntries.add(new ProceduralEntry("minecraft:cracked_stone_bricks", 1));
+    }
+
+    public static String getProceduralPresetId() {
+        if (proceduralEntries.isEmpty()) return "minecraft:stone";
+        StringBuilder sb = new StringBuilder("custom:");
+        for (int i = 0; i < proceduralEntries.size(); i++) {
+            if (i > 0) sb.append(";");
+            var e = proceduralEntries.get(i);
+            sb.append(e.blockId).append("*").append(e.weight);
+        }
+        return sb.toString();
+    }
+
+    public static RoadPreset getActivePreset() {
+        if (paletteMode == PaletteSourceMode.PRESET) {
+            return getSelectedPreset();
+        }
+        List<RoadPreset.WeightedEntry> entries = new ArrayList<>();
+        for (var e : proceduralEntries) {
+            entries.add(new RoadPreset.WeightedEntry(e.blockId, e.weight));
+        }
+        return new RoadPreset(getProceduralPresetId(), "程序化混合", List.copyOf(entries));
+    }
+
+    public static String getActivePresetId() {
+        if (paletteMode == PaletteSourceMode.PRESET) {
+            return getSelectedPreset().id();
+        }
+        return getProceduralPresetId();
     }
 
     public static boolean isReplace() { return activeTool == ToolMode.REPLACE; }
-
-    public static boolean isReplaceArray() { return activeTool == ToolMode.REPLACE && replaceSubMode == ReplaceSubMode.ARRAY; }
-
-    public static boolean isSnapTerrain() { return snapTerrain; }
-
-    public static void setSnapTerrain(boolean snap) { snapTerrain = snap; }
 
     public static boolean isFill() { return activeTool == ToolMode.FILL; }
 
