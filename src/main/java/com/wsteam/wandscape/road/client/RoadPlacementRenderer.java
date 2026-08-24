@@ -1,7 +1,14 @@
 package com.wsteam.wandscape.road.client;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.wsteam.wandscape.road.core.RoadTemplate;
+import com.wsteam.wandscape.road.core.SplineVec3;
 import com.wsteam.wandscape.road.data.RoadPreset;
 import com.wsteam.wandscape.shared.ui.util.BuildingPreviewRenderer;
 
@@ -104,7 +111,7 @@ public final class RoadPlacementRenderer {
                 renderPathPreview(mc.level, bufferSource, poseStack, from, to);
             } else {
                 renderRoadGhost(mc.level, bufferSource, poseStack, from, to,
-                        RoadPlacementState.getSelectedPreset());
+                        RoadPlacementState.getActivePreset());
             }
         }
 

@@ -141,4 +141,34 @@ class RoadPlacementStateTest {
         RoadPlacementState.enterBar();
         assertEquals(RoadPlacementState.RoadPhase.BAR, RoadPlacementState.getRoadPhase());
     }
+
+    @Test
+    @DisplayName("PaletteSourceMode 与程序化混合调色板测试")
+    void paletteSourceModeAndProceduralBlend() {
+        assertEquals(RoadPlacementState.PaletteSourceMode.PRESET, RoadPlacementState.getPaletteMode());
+        assertFalse(RoadPlacementState.isProcedural());
+
+        RoadPlacementState.setPaletteMode(RoadPlacementState.PaletteSourceMode.PROCEDURAL);
+        assertEquals(RoadPlacementState.PaletteSourceMode.PROCEDURAL, RoadPlacementState.getPaletteMode());
+        assertTrue(RoadPlacementState.isProcedural());
+
+        // Test procedural entries
+        RoadPlacementState.resetProceduralEntries();
+        var entries = RoadPlacementState.getProceduralEntries();
+        assertEquals(3, entries.size());
+
+        RoadPlacementState.addProceduralEntry("minecraft:deepslate", 4);
+        assertEquals(4, entries.size());
+
+        String presetId = RoadPlacementState.getActivePresetId();
+        assertTrue(presetId.startsWith("custom:"));
+        assertTrue(presetId.contains("minecraft:deepslate*4"));
+
+        var customPreset = RoadPlacementState.getActivePreset();
+        assertEquals("程序化混合", customPreset.displayName());
+
+        // Exit projection resets palette mode
+        RoadPlacementState.exitProjection();
+        assertEquals(RoadPlacementState.PaletteSourceMode.PRESET, RoadPlacementState.getPaletteMode());
+    }
 }

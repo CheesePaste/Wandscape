@@ -1,6 +1,10 @@
 package com.wsteam.wandscape.road.client.studio;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.wsteam.wandscape.road.client.RoadPlacementState;
 import com.wsteam.wandscape.road.client.SplineEditorClientState;
@@ -17,6 +21,8 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.client.event.RenderGuiEvent;
@@ -138,7 +144,11 @@ public final class RoadStudioOverlay {
         updateMousePos();
 
         if (isMouseOverPanel()) {
-            pendingScroll += event.getScrollDeltaY();
+            if (StudioWidgets.isComboOpen() && StudioWidgets.isMouseOverComboDrop()) {
+                StudioWidgets.handleComboScroll((int) (-event.getScrollDeltaY() * 18));
+            } else {
+                pendingScroll += event.getScrollDeltaY();
+            }
             event.setCanceled(true);
         }
     }
@@ -240,9 +250,21 @@ public final class RoadStudioOverlay {
         }
 
         // Combo dropdown (rendered on top of everything)
+        String comboId = StudioWidgets.getComboDropId();
         int comboResult = StudioWidgets.renderComboDropdown();
         if (comboResult >= 0) {
-            RoadPlacementState.setSelectedPresetIndex(comboResult);
+            if ("##tplCombo".equals(comboId) || "##tplComboReplace".equals(comboId)) {
+                List<String> ids = SplineEditorClientState.getAvailableTemplateIds();
+                if (comboResult < ids.size()) {
+                    SplineEditorClientState.setActiveTemplateId(ids.get(comboResult));
+                }
+            } else if ("##addCommonBlock".equals(comboId)) {
+                if (comboResult > 0 && comboResult <= COMMON_BUILDING_BLOCKS.length) {
+                    RoadPlacementState.addProceduralEntry(COMMON_BUILDING_BLOCKS[comboResult - 1], 3);
+                }
+            } else {
+                RoadPlacementState.setSelectedPresetIndex(comboResult);
+            }
         }
     }
 
@@ -346,14 +368,172 @@ public final class RoadStudioOverlay {
     }
 
     // ════════════════════════════════════════════════════════════════
+    //  PALETTE / MIX EDITOR
+    // ════════════════════════════════════════════════════════════════
+
+    private static final String[] COMMON_BUILDING_BLOCKS = {
+            "minecraft:stone",
+            "minecraft:stone_bricks",
+            "minecraft:mossy_stone_bricks",
+            "minecraft:cracked_stone_bricks",
+            "minecraft:chiseled_stone_bricks",
+            "minecraft:cobblestone",
+            "minecraft:mossy_cobblestone",
+            "minecraft:smooth_stone",
+            "minecraft:deepslate",
+            "minecraft:cobbled_deepslate",
+            "minecraft:deepslate_bricks",
+            "minecraft:deepslate_tiles",
+            "minecraft:dirt",
+            "minecraft:dirt_path",
+            "minecraft:coarse_dirt",
+            "minecraft:mud_bricks",
+            "minecraft:gravel",
+            "minecraft:sand",
+            "minecraft:oak_planks",
+            "minecraft:spruce_planks",
+            "minecraft:birch_planks",
+            "minecraft:dark_oak_planks",
+            "minecraft:andesite",
+            "minecraft:polished_andesite",
+            "minecraft:granite",
+            "minecraft:polished_granite",
+            "minecraft:diorite",
+            "minecraft:polished_diorite",
+            "minecraft:bricks"
+    };
+
+    private static String formatBlockName(String blockId) {
+        try {
+            var rl = net.minecraft.resources.ResourceLocation.parse(blockId);
+            var block = net.minecraft.core.registries.BuiltInRegistries.BLOCK.get(rl);
+            if (block != null && block != net.minecraft.world.level.block.Blocks.AIR) {
+                return block.getName().getString();
+            }
+        } catch (Exception ignored) {}
+        return blockId;
+    }
+
+    private static void captureHeldBlock(Minecraft mc) {
+        if (mc.player != null) {
+            var itemStack = mc.player.getMainHandItem();
+            if (!itemStack.isEmpty() && itemStack.getItem() instanceof net.minecraft.world.item.BlockItem bi) {
+                String blockId = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(bi.getBlock()).toString();
+                RoadPlacementState.addProceduralEntry(blockId, 3);
+                mc.player.displayClientMessage(Component.literal("§a[混合调色板] 已添加手中方块: " + formatBlockName(blockId)), true);
+            } else {
+                mc.player.displayClientMessage(Component.literal("§c[混合调色板] 主手未持有可放置的方块物品"), true);
+            }
+        }
+    }
+
+    private static void captureFeetBlock(Minecraft mc) {
+        BlockPos feet = getCapturedFeetPosition(mc);
+        if (mc.level != null) {
+            var st = mc.level.getBlockState(feet);
+            if (!st.isAir()) {
+                String blockId = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(st.getBlock()).toString();
+                RoadPlacementState.addProceduralEntry(blockId, 3);
+                if (mc.player != null) {
+                    mc.player.displayClientMessage(Component.literal("§a[混合调色板] 已添加脚下方块: " + formatBlockName(blockId)), true);
+                }
+            }
+        }
+    }
+
+    private static void drawPaletteSelector(Minecraft mc, String presetHeaderKey, String defaultPresetHeader) {
+        StudioWidgets.spacing();
+        StudioWidgets.sectionHeader(I18n.name("gui.wandscape.roadstudio.palette_mode_header",
+                "方块调色板模式").getString());
+
+        RoadPlacementState.PaletteSourceMode mode = RoadPlacementState.getPaletteMode();
+        int y = StudioWidgets.getY();
+        int x = StudioWidgets.getLayoutX();
+        int halfW = (StudioWidgets.getLayoutW() - 4) / 2;
+
+        if (StudioWidgets.modeButton(I18n.name("gui.wandscape.roadstudio.palette_mode_preset",
+                "固定预设").getString(), mode == RoadPlacementState.PaletteSourceMode.PRESET, x, y, halfW, 22)) {
+            RoadPlacementState.setPaletteMode(RoadPlacementState.PaletteSourceMode.PRESET);
+        }
+        if (StudioWidgets.modeButton(I18n.name("gui.wandscape.roadstudio.palette_mode_procedural",
+                "程序化混合").getString(), mode == RoadPlacementState.PaletteSourceMode.PROCEDURAL, x + halfW + 4, y, halfW, 22)) {
+            RoadPlacementState.setPaletteMode(RoadPlacementState.PaletteSourceMode.PROCEDURAL);
+        }
+        StudioWidgets.setY(y + 22 + 6);
+
+        if (mode == RoadPlacementState.PaletteSourceMode.PRESET) {
+            StudioWidgets.spacing();
+            StudioWidgets.sectionHeader(I18n.name(presetHeaderKey, defaultPresetHeader).getString());
+            drawPresetCombo();
+        } else {
+            drawProceduralMixEditor(mc);
+        }
+    }
+
+    private static void drawProceduralMixEditor(Minecraft mc) {
+        StudioWidgets.spacing();
+        StudioWidgets.sectionHeader(I18n.name("gui.wandscape.roadstudio.mix_header",
+                "方块混合种类与权重").getString());
+
+        var entries = RoadPlacementState.getProceduralEntries();
+        int totalWeight = 0;
+        for (var e : entries) totalWeight += Math.max(1, e.weight);
+
+        for (int i = 0; i < entries.size(); i++) {
+            var entry = entries.get(i);
+            float pct = totalWeight > 0 ? (float) entry.weight / totalWeight * 100f : 0f;
+            String name = formatBlockName(entry.blockId);
+            String label = String.format("%s (%.1f%%)", name, pct);
+
+            int newWeight = StudioWidgets.sliderInt("##pmW_" + i, label, entry.weight, 1, 10);
+            if (newWeight != entry.weight) {
+                RoadPlacementState.setProceduralWeight(i, newWeight);
+            }
+
+            if (entries.size() > 1) {
+                int btnW = 46;
+                int by = StudioWidgets.getY();
+                int bx = StudioWidgets.getLayoutX() + StudioWidgets.getLayoutW() - btnW;
+                if (StudioWidgets.buttonAt("删除", bx, by - 16, btnW, 14,
+                        StudioColors.BUTTON_RED, StudioColors.BUTTON_RED_HOVER, StudioColors.BUTTON_RED_HOVER)) {
+                    RoadPlacementState.removeProceduralEntry(i);
+                    break;
+                }
+            }
+        }
+
+        StudioWidgets.spacing();
+        int y = StudioWidgets.getY();
+        int x = StudioWidgets.getLayoutX();
+        int halfW = (StudioWidgets.getLayoutW() - 4) / 2;
+
+        if (StudioWidgets.buttonAt("捕捉手中方块", x, y, halfW, 20,
+                StudioColors.BUTTON_BLUE, StudioColors.BUTTON_HOVER, StudioColors.BUTTON_ACTIVE)) {
+            captureHeldBlock(mc);
+        }
+        if (StudioWidgets.buttonAt("捕捉脚下方块", x + halfW + 4, y, halfW, 20,
+                StudioColors.BUTTON_BLUE_ALT, StudioColors.BUTTON_HOVER, StudioColors.BUTTON_ACTIVE)) {
+            captureFeetBlock(mc);
+        }
+        StudioWidgets.setY(y + 20 + 4);
+
+        // Dropdown for adding common building blocks
+        String[] blockNames = java.util.Arrays.stream(COMMON_BUILDING_BLOCKS)
+                .map(RoadStudioOverlay::formatBlockName)
+                .toArray(String[]::new);
+        String[] comboOptions = new String[blockNames.length + 1];
+        comboOptions[0] = "+ 添加常用建材...";
+        System.arraycopy(blockNames, 0, comboOptions, 1, blockNames.length);
+
+        StudioWidgets.combo("##addCommonBlock", comboOptions, 0, 20);
+    }
+
+    // ════════════════════════════════════════════════════════════════
     //  MODE: REPLACE
     // ════════════════════════════════════════════════════════════════
 
     private static void drawReplaceModeTab(Minecraft mc) {
-        StudioWidgets.spacing();
-        StudioWidgets.sectionHeader(I18n.name("gui.wandscape.roadstudio.replace_preset_header",
-                "铺设方块预设").getString());
-        drawPresetCombo();
+        drawPaletteSelector(mc, "gui.wandscape.roadstudio.replace_preset_header", "铺设方块预设");
 
         StudioWidgets.spacing();
         StudioWidgets.sectionHeader(I18n.name("gui.wandscape.roadstudio.replace_points_header",
@@ -380,6 +560,10 @@ public final class RoadStudioOverlay {
                     "覆盖跨度: %d × %d 方块范围", dx, dz).getString());
             StudioWidgets.text(I18n.name("gui.wandscape.roadstudio.replace_dist",
                     "直线距离: %.1f 方块", dist).getString());
+            if (RoadPlacementState.isProcedural()) {
+                StudioWidgets.textColored(I18n.name("gui.wandscape.roadstudio.mix_active_hint",
+                        "生成方式: 按配置比例程序化随机混合").getString(), StudioColors.TEXT_GREEN);
+            }
         } else {
             StudioWidgets.textMuted(I18n.name("gui.wandscape.roadstudio.replace_hint",
                     "提示: 在世界中左键拖拽或点击下方按钮设置起终点").getString());
@@ -399,10 +583,7 @@ public final class RoadStudioOverlay {
     // ════════════════════════════════════════════════════════════════
 
     private static void drawFillModeTab(Minecraft mc) {
-        StudioWidgets.spacing();
-        StudioWidgets.sectionHeader(I18n.name("gui.wandscape.roadstudio.fill_preset_header",
-                "填充方块预设").getString());
-        drawPresetCombo();
+        drawPaletteSelector(mc, "gui.wandscape.roadstudio.fill_preset_header", "填充方块预设");
 
         StudioWidgets.spacing();
         StudioWidgets.sectionHeader(I18n.name("gui.wandscape.roadstudio.fill_corners_header",
@@ -427,6 +608,10 @@ public final class RoadStudioOverlay {
                     "尺寸: %d (宽) × %d (高) × %d (深)", dx, dy, dz).getString());
             StudioWidgets.text(I18n.name("gui.wandscape.roadstudio.fill_volume",
                     "总体积: %d 个方块", volume).getString());
+            if (RoadPlacementState.isProcedural()) {
+                StudioWidgets.textColored(I18n.name("gui.wandscape.roadstudio.mix_active_hint",
+                        "生成方式: 按配置比例程序化随机混合").getString(), StudioColors.TEXT_GREEN);
+            }
         } else {
             StudioWidgets.textMuted(I18n.name("gui.wandscape.roadstudio.fill_hint",
                     "提示: 请设置两个对角点以确定填充区域").getString());
@@ -742,6 +927,16 @@ public final class RoadStudioOverlay {
                     "边缘石砖边框").getString(), border)) {
                 SplineEditorClientState.setDynamicHasBorder(!border);
             }
+        } else {
+            StudioWidgets.spacing();
+            List<String> tplIds = SplineEditorClientState.getAvailableTemplateIds();
+            String currentTpl = SplineEditorClientState.getActiveTemplateId();
+            int currentIdx = Math.max(0, tplIds.indexOf(currentTpl));
+            String[] names = tplIds.toArray(String[]::new);
+            int newIdx = StudioWidgets.combo("##tplCombo", names, currentIdx, 22);
+            if (newIdx >= 0 && newIdx < tplIds.size()) {
+                SplineEditorClientState.setActiveTemplateId(tplIds.get(newIdx));
+            }
         }
 
         // Preview toggle
@@ -925,7 +1120,7 @@ public final class RoadStudioOverlay {
         if (!RoadPlacementState.isReady()) return;
         BlockPos start = RoadPlacementState.getStartPos();
         BlockPos end = RoadPlacementState.getEndPos();
-        String presetId = RoadPlacementState.getSelectedPreset().id();
+        String presetId = RoadPlacementState.getActivePresetId();
         PacketDistributor.sendToServer(
                 new com.wsteam.wandscape.road.network.RoadPlacePacket(presetId, start, end));
         Log.info(TAG, "[RoadReplace] Published: preset={} start={} end={}", presetId, start, end);
@@ -939,7 +1134,7 @@ public final class RoadStudioOverlay {
         if (!RoadPlacementState.isReady()) return;
         BlockPos start = RoadPlacementState.getStartPos();
         BlockPos end = RoadPlacementState.getEndPos();
-        String presetId = RoadPlacementState.getSelectedPreset().id();
+        String presetId = RoadPlacementState.getActivePresetId();
         PacketDistributor.sendToServer(
                 new com.wsteam.wandscape.road.network.FillBoxPacket(presetId, start, end));
         Log.info(TAG, "[FillBox] Published: preset={} start={} end={}", presetId, start, end);
