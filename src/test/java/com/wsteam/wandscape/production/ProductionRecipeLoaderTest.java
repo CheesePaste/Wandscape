@@ -32,6 +32,27 @@ class ProductionRecipeLoaderTest {
                 Map.of(), false);
     }
 
+    private static ElementMappingConfig synthesizableDirt() {
+        return new ElementMappingConfig(
+                null, "minecraft:dirt",
+                Map.of(ElementType.EARTH, 1L),
+                false);
+    }
+
+    private static ElementMappingConfig synthesizablePlanks() {
+        return new ElementMappingConfig(
+                null, "minecraft:oak_planks",
+                Map.of(ElementType.EARTH, 1L, ElementType.WOOD, 1L),
+                false);
+    }
+
+    private static ElementMappingConfig synthesizableIron() {
+        return new ElementMappingConfig(
+                null, "minecraft:iron_ingot",
+                Map.of(ElementType.METAL, 3L),
+                false);
+    }
+
     @Test
     void findSynthesizeRecipe_matchesFullPrefixedId() {
         var configs = List.of(synthesizableBread());
@@ -60,5 +81,34 @@ class ProductionRecipeLoaderTest {
         var configs = List.of(synthesizableBread());
         assertNull(ProductionRecipeLoader.findSynthesizeRecipe(configs, "minecraft:golden_apple"));
         assertNull(ProductionRecipeLoader.findSynthesizeRecipe(configs, "wood"));
+    }
+
+    @Test
+    void synthesizeChannelTicks_instantForValueLessOrEqualTo2() {
+        // Value = 1 (Dirt)
+        SynthesizeRecipe dirtRecipe = SynthesizeRecipe.fromElementMapping(synthesizableDirt());
+        assertEquals(1L, dirtRecipe.totalCost());
+        assertEquals(0, dirtRecipe.calculateChannelTicks(1));
+        assertEquals(0, dirtRecipe.calculateChannelTicks(64));
+
+        // Value = 2 (Oak Planks: 1 Earth + 1 Wood)
+        SynthesizeRecipe planksRecipe = SynthesizeRecipe.fromElementMapping(synthesizablePlanks());
+        assertEquals(2L, planksRecipe.totalCost());
+        assertEquals(0, planksRecipe.calculateChannelTicks(1));
+        assertEquals(0, planksRecipe.calculateChannelTicks(100));
+    }
+
+    @Test
+    void synthesizeChannelTicks_fiveTicksPerUnitForValueGreaterThan2() {
+        // Value = 3 (Iron Ingot: 3 Metal)
+        SynthesizeRecipe ironRecipe = SynthesizeRecipe.fromElementMapping(synthesizableIron());
+        assertEquals(3L, ironRecipe.totalCost());
+        assertEquals(5, ironRecipe.calculateChannelTicks(1), "1 unit should take 5 ticks");
+        assertEquals(25, ironRecipe.calculateChannelTicks(5), "5 units should take 25 ticks");
+
+        // Value = 12 (Bread: 12 Wood)
+        SynthesizeRecipe breadRecipe = SynthesizeRecipe.fromElementMapping(synthesizableBread());
+        assertEquals(12L, breadRecipe.totalCost());
+        assertEquals(50, breadRecipe.calculateChannelTicks(10), "10 units should take 50 ticks");
     }
 }

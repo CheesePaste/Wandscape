@@ -86,8 +86,8 @@ public record RequestProductionTaskPacket(
             // Server-side unlock check: guard against client tampering
             UUID colonyId = state.getColonyId();
             if (colonyId == null) colonyId = new UUID(0, 0);
+            var loader = Wandscape.PRODUCTION_RECIPE_LOADER;
             if (!"decompose".equals(pkt.action)) {
-                var loader = Wandscape.PRODUCTION_RECIPE_LOADER;
                 if (loader == null) {
                     Log.warn(TAG, "RequestProductionTask: PRODUCTION_RECIPE_LOADER not available");
                     return;
@@ -132,10 +132,14 @@ public record RequestProductionTaskPacket(
                 params.put("recipe_id", new JsonPrimitive(pkt.recipeOrItemId));
             }
             params.put("count", new JsonPrimitive(pkt.quantity));
-            // Channel duration scales with quantity: workstation 10 ticks/item,
+            // Channel duration scales with quantity: workstation 5 ticks/item (<=2 value is instant/0),
             // crafting station 1200 ticks/item (per unit).
             int channelTicks = switch (pkt.action) {
-                case "synthesize", "decompose" ->
+                case "synthesize" ->
+                        loader != null
+                                ? loader.computeSynthesizeChannelTicks(pkt.recipeOrItemId, pkt.quantity)
+                                : WandscapeConstants.WORKSTATION_CRAFT_TICKS_PER_UNIT * pkt.quantity;
+                case "decompose" ->
                         WandscapeConstants.WORKSTATION_CRAFT_TICKS_PER_UNIT * pkt.quantity;
                 case "craft_wand", "craft_spell" ->
                         WandscapeConstants.CRAFTING_STATION_CRAFT_TICKS_PER_UNIT * pkt.quantity;

@@ -156,7 +156,10 @@ public class ResourceSupplySystem implements System {
         params.put("anchor", posToJsonArray(pos));
         params.put("recipe_id", new JsonPrimitive(itemId));
         params.put("count", new JsonPrimitive(count));
-        params.put("channel_ticks", new JsonPrimitive(WandscapeConstants.WORKSTATION_CRAFT_TICKS_PER_UNIT * count));
+        int channelTicks = com.wsteam.wandscape.Wandscape.PRODUCTION_RECIPE_LOADER != null
+                ? com.wsteam.wandscape.Wandscape.PRODUCTION_RECIPE_LOADER.computeSynthesizeChannelTicks(itemId, count)
+                : WandscapeConstants.WORKSTATION_CRAFT_TICKS_PER_UNIT * count;
+        params.put("channel_ticks", new JsonPrimitive(channelTicks));
 
         // 商店补货（atFront）比自动补产（卡资源缺口的短供）更优先：前者进补货段，
         // 后者进自动段，队列按优先级分段排序。

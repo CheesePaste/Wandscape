@@ -21,7 +21,7 @@
 
 WandscapeBlockInteractExecutor 中 5 个异步动作：
 - `executeDecompose()` — 查 `getItemElementValue`（= build_cost，与商店同源）→ 产 1/divisor（向下取整，默认 5，Config `element.decomposeDivisor`）→ colonyResources；count×总价值 < divisor 提前拒绝（不扣物品）
-- `executeSynthesize()` — 查 element_mappings → bank.consumeElement() → bank.add() 产物
+- `executeSynthesize()` — 查 element_mappings → bank.consumeElement() → bank.add() 产物。合成耗时：总元素价值 $\le 2$ 的基础方块/物料秒合成（0 channel ticks），其余物料每单位 5 ticks（`WORKSTATION_CRAFT_TICKS_PER_UNIT`）。
 - `executeCraftWand()` — 同 synthesize，产物带 NBT（preset_id + wand_color）
 - `executeCraftSpell()` — 同 craft_wand，产物 spell_scroll 绑定 magic_id（CUSTOM_DATA）；魔法工坊
 - `executeBrewPotion()` — 同 synthesize，额外消耗 input_items；现归属合成站

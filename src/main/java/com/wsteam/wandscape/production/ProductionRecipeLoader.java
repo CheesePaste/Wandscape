@@ -54,6 +54,19 @@ public class ProductionRecipeLoader {
     }
 
     /**
+     * Compute synthesize channel duration in ticks for an item and quantity.
+     * Items with total element value <= 2 take 0 ticks (instant).
+     * Higher-tier items take WORKSTATION_CRAFT_TICKS_PER_UNIT (5 ticks) per unit.
+     */
+    public int computeSynthesizeChannelTicks(String id, int quantity) {
+        SynthesizeRecipe recipe = getSynthesizeRecipe(id);
+        if (recipe != null) {
+            return recipe.calculateChannelTicks(quantity);
+        }
+        return com.wsteam.wandscape.shared.registry.WandscapeConstants.WORKSTATION_CRAFT_TICKS_PER_UNIT * quantity;
+    }
+
+    /**
      * Match a recipe id against element mappings. Id comparison is insensitive
      * to the "minecraft:" prefix so callers may pass either the full id
      * ("minecraft:bread") or a bare id ("bread").
