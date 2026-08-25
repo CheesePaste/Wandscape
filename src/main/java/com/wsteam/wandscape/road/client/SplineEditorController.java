@@ -7,7 +7,9 @@ import com.wsteam.wandscape.road.core.SplineVec3;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.ui.panel.WandscapePanelState;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.Camera;
+import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
@@ -275,16 +277,15 @@ public final class SplineEditorController {
             skipFrames = 0;
         }
 
-        if (uiWantsKb) return;
+        if (mc.screen != null || uiWantsKb) return;
 
         float forward = 0, strafe = 0, vertical = 0;
-        if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_W) == GLFW.GLFW_PRESS) forward += 1;
-        if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_S) == GLFW.GLFW_PRESS) forward -= 1;
-        if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_A) == GLFW.GLFW_PRESS) strafe -= 1;
-        if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_D) == GLFW.GLFW_PRESS) strafe += 1;
-        if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_SPACE) == GLFW.GLFW_PRESS) vertical += 1;
-        if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_LEFT_SHIFT) == GLFW.GLFW_PRESS
-                || GLFW.glfwGetKey(window, GLFW.GLFW_KEY_RIGHT_SHIFT) == GLFW.GLFW_PRESS) vertical -= 1;
+        if (isKeyDown(mc.options.keyUp, window)) forward += 1;
+        if (isKeyDown(mc.options.keyDown, window)) forward -= 1;
+        if (isKeyDown(mc.options.keyLeft, window)) strafe -= 1;
+        if (isKeyDown(mc.options.keyRight, window)) strafe += 1;
+        if (isKeyDown(mc.options.keyJump, window)) vertical += 1;
+        if (isKeyDown(mc.options.keyShift, window)) vertical -= 1;
 
         if (forward != 0 || strafe != 0 || vertical != 0) {
             Vec3 fwd = Vec3.directionFromRotation(SplineEditorClientState.getCamPitch(), SplineEditorClientState.getCamYaw());
@@ -321,16 +322,15 @@ public final class SplineEditorController {
         }
         SplineEditorClientState.setLastMouse(mx[0], my[0]);
 
-        if (uiWantsKb) return;
+        if (mc.screen != null || uiWantsKb) return;
 
         float forward = 0, strafe = 0, vertical = 0;
-        if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_W) == GLFW.GLFW_PRESS) forward += 1;
-        if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_S) == GLFW.GLFW_PRESS) forward -= 1;
-        if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_A) == GLFW.GLFW_PRESS) strafe -= 1;
-        if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_D) == GLFW.GLFW_PRESS) strafe += 1;
-        if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_SPACE) == GLFW.GLFW_PRESS) vertical += 1;
-        if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_LEFT_SHIFT) == GLFW.GLFW_PRESS
-                || GLFW.glfwGetKey(window, GLFW.GLFW_KEY_RIGHT_SHIFT) == GLFW.GLFW_PRESS) vertical -= 1;
+        if (isKeyDown(mc.options.keyUp, window)) forward += 1;
+        if (isKeyDown(mc.options.keyDown, window)) forward -= 1;
+        if (isKeyDown(mc.options.keyLeft, window)) strafe -= 1;
+        if (isKeyDown(mc.options.keyRight, window)) strafe += 1;
+        if (isKeyDown(mc.options.keyJump, window)) vertical += 1;
+        if (isKeyDown(mc.options.keyShift, window)) vertical -= 1;
 
         if (forward != 0 || strafe != 0 || vertical != 0) {
             Vec3 fwd = Vec3.directionFromRotation(0, SplineEditorClientState.getCamYaw());
@@ -569,5 +569,18 @@ public final class SplineEditorController {
         if (mc.player != null) {
             mc.player.displayClientMessage(net.minecraft.network.chat.Component.literal("§aSent build task with " + tiles.size() + " blocks and " + splineJson.size() + " spline points!"), true);
         }
+    }
+
+    private static boolean isKeyDown(KeyMapping mapping, long window) {
+        if (mapping == null) return false;
+        if (mapping.isDown()) return true;
+        InputConstants.Key key = mapping.getKey();
+        if (key.getType() == InputConstants.Type.KEYSYM && key.getValue() != InputConstants.UNKNOWN.getValue()) {
+            return GLFW.glfwGetKey(window, key.getValue()) == GLFW.GLFW_PRESS;
+        }
+        if (key.getType() == InputConstants.Type.MOUSE && key.getValue() != InputConstants.UNKNOWN.getValue()) {
+            return GLFW.glfwGetMouseButton(window, key.getValue()) == GLFW.GLFW_PRESS;
+        }
+        return false;
     }
 }

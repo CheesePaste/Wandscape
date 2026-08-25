@@ -14,8 +14,10 @@ import com.wsteam.wandscape.road.client.RoadPlacementState;
 import com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket;
 import com.wsteam.wandscape.shared.log.Log;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.Camera;
 import net.minecraft.client.CameraType;
+import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.LivingEntity;
@@ -242,46 +244,49 @@ public final class OverviewFlightController {
         OverviewClientState.lastMouseY = my[0];
 
         // ── WASD + Shift/Space movement (frame-rate independent, render-smooth) ──
-        float forward = 0, strafe = 0, vertical = 0;
-        if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_W) == GLFW.GLFW_PRESS) forward += 1;
-        if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_S) == GLFW.GLFW_PRESS) forward -= 1;
-        if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_A) == GLFW.GLFW_PRESS) strafe -= 1;
-        if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_D) == GLFW.GLFW_PRESS) strafe += 1;
-        if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_SPACE) == GLFW.GLFW_PRESS) vertical += 1;
-        if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_LEFT_SHIFT) == GLFW.GLFW_PRESS) vertical -= 1;
+        // Only process flight movement when no Screen GUI is open!
+        if (mc.screen == null) {
+            float forward = 0, strafe = 0, vertical = 0;
+            if (isKeyDown(mc.options.keyUp, window)) forward += 1;
+            if (isKeyDown(mc.options.keyDown, window)) forward -= 1;
+            if (isKeyDown(mc.options.keyLeft, window)) strafe -= 1;
+            if (isKeyDown(mc.options.keyRight, window)) strafe += 1;
+            if (isKeyDown(mc.options.keyJump, window)) vertical += 1;
+            if (isKeyDown(mc.options.keyShift, window)) vertical -= 1;
 
-        if (forward != 0 || strafe != 0 || vertical != 0) {
-            // Full 3D look direction (pitch + yaw) so W flies upward when looking up
-            Vec3 fwd = Vec3.directionFromRotation(OverviewClientState.getCamPitch(), OverviewClientState.getCamYaw());
-            Vec3 right = fwd.cross(new Vec3(0, 1, 0)).normalize();
-            Vec3 up = right.cross(fwd).normalize();
-            double move = com.wsteam.wandscape.Config.FLY_SPEED.get() * elapsed;
-            double moveX = (fwd.x * forward + right.x * strafe + up.x * vertical) * move;
-            double moveY = (fwd.y * forward + right.y * strafe + up.y * vertical) * move;
-            double moveZ = (fwd.z * forward + right.z * strafe + up.z * vertical) * move;
-            OverviewClientState.setCamPosition(
-                    OverviewClientState.getCamX() + moveX,
-                    OverviewClientState.getCamY() + moveY,
-                    OverviewClientState.getCamZ() + moveZ);
-            // Manual WASD cancels mage camera tracking
-            com.wsteam.wandscape.shared.ui.panel.TaskManagementClientState.setTrackingEntityId(-1);
-        } else {
-            // Smoothly track selected Mage if active
-            int trackingId = com.wsteam.wandscape.shared.ui.panel.TaskManagementClientState.getTrackingEntityId();
-            if (trackingId >= 0 && mc.level != null) {
-                var entity = mc.level.getEntity(trackingId);
-                if (entity != null) {
-                    double tx = entity.getX();
-                    double ty = entity.getY() + 14.0;
-                    double tz = entity.getZ() - 14.0;
-                    double cx = OverviewClientState.getCamX();
-                    double cy = OverviewClientState.getCamY();
-                    double cz = OverviewClientState.getCamZ();
-                    double lerpSpeed = Math.min(1.0, elapsed * 6.0);
-                    OverviewClientState.setCamPosition(
-                            cx + (tx - cx) * lerpSpeed,
-                            cy + (ty - cy) * lerpSpeed,
-                            cz + (tz - cz) * lerpSpeed);
+            if (forward != 0 || strafe != 0 || vertical != 0) {
+                // Full 3D look direction (pitch + yaw) so W flies upward when looking up
+                Vec3 fwd = Vec3.directionFromRotation(OverviewClientState.getCamPitch(), OverviewClientState.getCamYaw());
+                Vec3 right = fwd.cross(new Vec3(0, 1, 0)).normalize();
+                Vec3 up = right.cross(fwd).normalize();
+                double move = com.wsteam.wandscape.Config.FLY_SPEED.get() * elapsed;
+                double moveX = (fwd.x * forward + right.x * strafe + up.x * vertical) * move;
+                double moveY = (fwd.y * forward + right.y * strafe + up.y * vertical) * move;
+                double moveZ = (fwd.z * forward + right.z * strafe + up.z * vertical) * move;
+                OverviewClientState.setCamPosition(
+                        OverviewClientState.getCamX() + moveX,
+                        OverviewClientState.getCamY() + moveY,
+                        OverviewClientState.getCamZ() + moveZ);
+                // Manual WASD cancels mage camera tracking
+                com.wsteam.wandscape.shared.ui.panel.TaskManagementClientState.setTrackingEntityId(-1);
+            } else {
+                // Smoothly track selected Mage if active
+                int trackingId = com.wsteam.wandscape.shared.ui.panel.TaskManagementClientState.getTrackingEntityId();
+                if (trackingId >= 0 && mc.level != null) {
+                    var entity = mc.level.getEntity(trackingId);
+                    if (entity != null) {
+                        double tx = entity.getX();
+                        double ty = entity.getY() + 14.0;
+                        double tz = entity.getZ() - 14.0;
+                        double cx = OverviewClientState.getCamX();
+                        double cy = OverviewClientState.getCamY();
+                        double cz = OverviewClientState.getCamZ();
+                        double lerpSpeed = Math.min(1.0, elapsed * 6.0);
+                        OverviewClientState.setCamPosition(
+                                cx + (tx - cx) * lerpSpeed,
+                                cy + (ty - cy) * lerpSpeed,
+                                cz + (tz - cz) * lerpSpeed);
+                    }
                 }
             }
         }
@@ -679,5 +684,18 @@ public final class OverviewFlightController {
         while (mc.options.keyInventory.consumeClick()) {}
         while (mc.options.keyDrop.consumeClick()) {}
         while (mc.options.keySprint.consumeClick()) {}
+    }
+
+    private static boolean isKeyDown(KeyMapping mapping, long window) {
+        if (mapping == null) return false;
+        if (mapping.isDown()) return true;
+        InputConstants.Key key = mapping.getKey();
+        if (key.getType() == InputConstants.Type.KEYSYM && key.getValue() != InputConstants.UNKNOWN.getValue()) {
+            return GLFW.glfwGetKey(window, key.getValue()) == GLFW.GLFW_PRESS;
+        }
+        if (key.getType() == InputConstants.Type.MOUSE && key.getValue() != InputConstants.UNKNOWN.getValue()) {
+            return GLFW.glfwGetMouseButton(window, key.getValue()) == GLFW.GLFW_PRESS;
+        }
+        return false;
     }
 }

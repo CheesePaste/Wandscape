@@ -2,6 +2,20 @@
 
 本文件记录偏离直觉的设计选择及其原因，供后续开发快速理解「为什么这么做」。
 
+## 2026-08-25：鸟瞰视角与曲线编辑器飞行输入拦截与按键映射绑定（防 GUI 内 Shift 冲突）
+
+**需求**：在鸟瞰视角（Overview）或样条道路编辑器中打开仓库等 GUI 界面（`mc.screen != null`）时，玩家按 Shift 快捷移动物品或按 WASD 时，飞行控制器的每帧位移检测未做 GUI 状态过滤，依然响应按键位移，导致视角直接向下坠落或乱飞；同时飞行控制器硬编码了 GLFW 的 `W/S/A/D/Space/Left_Shift`，无法随玩家在原版 Controls 设置中修改的按键（如 Sneak/Jump/Move）生效。
+
+**决策**：
+1. **Screen 状态强拦截**：在 [`OverviewFlightController`](file:///D:/Projects/MCMOD/Wandscape/src/main/java/com/wsteam/wandscape/overview/client/OverviewFlightController.java) 与 [`SplineEditorController`](file:///D:/Projects/MCMOD/Wandscape/src/main/java/com/wsteam/wandscape/road/client/SplineEditorController.java) 的位移检测外层增加 `if (mc.screen == null)` 判断。当任何 GUI 界面打开时，彻底屏蔽飞行位移检测，保证仓库 Shift 挪物品、文本框输入等操作完全不干扰相机。
+2. **按键映射与原版 KeyMapping 联动**：将硬编码的 GLFW 键位改为基于 `mc.options` 的标准 KeyMapping（`keyUp`, `keyDown`, `keyLeft`, `keyRight`, `keyJump`, `keyShift`），并通过 `isKeyDown(KeyMapping, window)` 辅助方法统一兼容 `isDown()` 及 GLFW 按键状态。玩家在游戏设置中自定义的潜行/跳跃/移动键位即时对鸟瞰飞行生效。
+
+**为什么**：GUI 打开时玩家的键盘意图属于当前界面，严禁泄露至背景场景飞行；遵循原版按键绑定规范，保障非 QWERTY 键盘（如 AZERTY）或自定义键位玩家的正常体验。
+
+**影响**：
+- `overview/client/OverviewFlightController.java`：增加 `mc.screen == null` 拦截及 `mc.options` KeyMapping 绑定。
+- `road/client/SplineEditorController.java`：同样增加 `mc.screen == null` 拦截及 `mc.options` KeyMapping 绑定。
+
 ## 2026-08-25：任务执行与方块交互执行器缺资源异常防护（防服务端 Tick Loop 崩溃）
 
 **需求**：在 NPC 执行合成（synthesize）等生产操作时，如果所需元素（如木元素）不足且该操作的 channel duration 为 0（低阶物品瞬间合成），`WandscapeBlockInteractExecutor` 在同步执行分支中直接抛出 `ResourceShortageException`，未被捕获并转化为 `failedFuture`，导致异常直穿 `TaskExecutionSystem.processNpc`、`World.tick` 及 `Wandscape.onServerTick`，引起服务端崩溃（`Exception in server tick loop: ResourceShortageException: Resource shortage: need 128 x wood`）。
