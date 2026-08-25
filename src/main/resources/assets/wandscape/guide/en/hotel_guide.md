@@ -1,4 +1,4 @@
-# 🏨 Hotel & Service Buildings
+# Hotel & Service Buildings
 
 Service buildings make tourists spend energy and produce elements for the town. Hotels add overnight stays on top of that: once a tourist checks in, they remember that hotel, come back to sleep every night, wake up with full energy, and only check out when they leave town.
 
@@ -29,4 +29,4 @@ Different service buildings do different things: some produce different elements
 
 [Shop](shop_guide.md)  
 [Tourist System Guide](tourist_guide.md)  
-[📖 Back to the Guide Index](index_guide.md)
+[Back to the Guide Index](index_guide.md)

@@ -1,4 +1,4 @@
-# ⛏️ Element Node
+# Element Node
 
 The gathering facility that produces elements. Wizards automatically come to nodes to gather and send elements into the warehouse.
 
@@ -26,4 +26,4 @@ Place a node → **aim your crosshair at it and right-click** to open the panel:
 [Warehouse & Materials](warehouse_guide.md)  
 [Workstation (Decompose & Synthesize)](workstation_guide.md)  
 [Getting Started: From Empty Land to a Tourist Town](getting_started_guide.md)  
-[📖 Back to the Guide Index](index_guide.md)
+[Back to the Guide Index](index_guide.md)

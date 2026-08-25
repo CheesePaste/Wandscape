@@ -149,7 +149,7 @@ public final class TransportCommand {
                     "[Transport] " + itemId + " arrived! Returning..."), false);
             t.send(key, 1, to, from, player.level(), -1).thenAccept(v2 -> {
                 src.sendSuccess(() -> Component.literal(
-                        "[Transport] Round-trip complete! ✓"), false);
+                        "[Transport] Round-trip complete!"), false);
             });
         });
 

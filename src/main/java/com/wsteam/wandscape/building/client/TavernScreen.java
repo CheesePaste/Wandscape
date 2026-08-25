@@ -122,7 +122,7 @@ public class TavernScreen extends MedievalScreen {
                 + " (" + mageResumes.size() + ")";
         MedievalButton tab0Btn = new MedievalButton(
                 leftPos + 12, tabY, tab0W, 18,
-                Component.literal("📜 " + tab0Title),
+                Component.literal(tab0Title),
                 () -> switchTab(0));
         tab0Btn.active = (activeTab != 0);
         addRenderableWidget(tab0Btn);
@@ -132,7 +132,7 @@ public class TavernScreen extends MedievalScreen {
         String tab1Title = I18n.name("gui.wandscape.tavern.tab_recruit", "Direct Recruit").getString();
         MedievalButton tab1Btn = new MedievalButton(
                 leftPos + 130, tabY, tab1W, 18,
-                Component.literal("🎲 " + tab1Title),
+                Component.literal(tab1Title),
                 () -> switchTab(1));
         tab1Btn.active = (activeTab != 1);
         addRenderableWidget(tab1Btn);
@@ -252,7 +252,7 @@ public class TavernScreen extends MedievalScreen {
                 g.drawString(font, nameText, lx + 8, cy + 3,
                         isSel ? MedievalColors.ACCENT_GOLD : MedievalColors.TEXT_WARM_WHITE);
 
-                String statsSummary = "Lv." + r.level() + " ⚡" + fmt(r.spellPower()) + " ⚒" + fmt(r.workSpeed());
+                String statsSummary = "Lv." + r.level() + " " + fmt(r.spellPower()) + " " + fmt(r.workSpeed());
                 g.drawString(font, statsSummary, lx + 8, cy + 14,
                         isSel ? MedievalColors.TEXT_WARM_WHITE : MedievalColors.TEXT_MUTED);
             }
@@ -300,19 +300,19 @@ public class TavernScreen extends MedievalScreen {
             int col2 = rx + 94;
 
             // Row 1
-            g.drawString(font, I18n.name("gui.wandscape.tavern.attr_hp", "❤️ 生命: %s", (int) r.maxHp()).getString(), col1, ay, MedievalColors.TEXT_WARM_WHITE);
-            g.drawString(font, I18n.name("gui.wandscape.tavern.attr_mana", "💧 魔力: %s", (int) r.maxMana()).getString(), col2, ay, MedievalColors.MANA_BLUE);
+            g.drawString(font, I18n.name("gui.wandscape.tavern.attr_hp", "生命: %s", (int) r.maxHp()).getString(), col1, ay, MedievalColors.TEXT_WARM_WHITE);
+            g.drawString(font, I18n.name("gui.wandscape.tavern.attr_mana", "魔力: %s", (int) r.maxMana()).getString(), col2, ay, MedievalColors.MANA_BLUE);
 
             // Row 2
-            g.drawString(font, I18n.name("gui.wandscape.tavern.attr_spell_power", "⚡ 强度: %s", fmt(r.spellPower())).getString(), col1, ay + 13, MedievalColors.ACCENT_GOLD);
-            g.drawString(font, I18n.name("gui.wandscape.tavern.attr_work_speed", "⚒️ 工速: %s", fmt(r.workSpeed())).getString(), col2, ay + 13, MedievalColors.TEXT_WARM_WHITE);
+            g.drawString(font, I18n.name("gui.wandscape.tavern.attr_spell_power", "强度: %s", fmt(r.spellPower())).getString(), col1, ay + 13, MedievalColors.ACCENT_GOLD);
+            g.drawString(font, I18n.name("gui.wandscape.tavern.attr_work_speed", "工速: %s", fmt(r.workSpeed())).getString(), col2, ay + 13, MedievalColors.TEXT_WARM_WHITE);
 
             // Row 3
-            g.drawString(font, I18n.name("gui.wandscape.tavern.attr_spell_speed", "⏳ 施速: %s", fmt(r.spellSpeed())).getString(), col1, ay + 26, MedievalColors.TEXT_WARM_WHITE);
-            g.drawString(font, I18n.name("gui.wandscape.tavern.attr_armor", "🛡️ 护甲: %s", fmt(r.armorValue())).getString(), col2, ay + 26, MedievalColors.TEXT_MUTED);
+            g.drawString(font, I18n.name("gui.wandscape.tavern.attr_spell_speed", "施速: %s", fmt(r.spellSpeed())).getString(), col1, ay + 26, MedievalColors.TEXT_WARM_WHITE);
+            g.drawString(font, I18n.name("gui.wandscape.tavern.attr_armor", "护甲: %s", fmt(r.armorValue())).getString(), col2, ay + 26, MedievalColors.TEXT_MUTED);
 
             // Row 4
-            g.drawString(font, I18n.name("gui.wandscape.tavern.attr_move_speed", "✦ 速度: %s", fmt(r.moveSpeed())).getString(), col1, ay + 39, MedievalColors.TEXT_MUTED);
+            g.drawString(font, I18n.name("gui.wandscape.tavern.attr_move_speed", "速度: %s", fmt(r.moveSpeed())).getString(), col1, ay + 39, MedievalColors.TEXT_MUTED);
         } else {
             int cx = rx + rw / 2;
             g.drawCenteredString(font, I18n.name("gui.wandscape.tavern.no_selection", "Please select a candidate"),
@@ -339,7 +339,7 @@ public class TavernScreen extends MedievalScreen {
         drawGlowBorder(g, bx, by, bw, bh, MedievalColors.BORDER_GOLD);
 
         if (recruitCount == 0) {
-            g.drawCenteredString(font, I18n.name("gui.wandscape.tavern.first_free", "✦ 首次招募免费 ✦").getString(),
+            g.drawCenteredString(font, I18n.name("gui.wandscape.tavern.first_free", "首次招募免费").getString(),
                     cx, by + 14, MedievalColors.SUCCESS_GREEN);
             g.drawCenteredString(font, I18n.name("gui.wandscape.tavern.recruit_arrive",
                     "招募后法师将即刻抵达酒馆并加入小镇").getString(),

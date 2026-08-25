@@ -63,22 +63,22 @@ public class CreativeScannerScreen extends MedievalScreen {
         }
     }
     private static final List<CategoryDef> CATEGORIES = List.of(
-            new CategoryDef("basic", "category.wandscape.basic", "基础建筑", "🏠"),
-            new CategoryDef("government", "category.wandscape.government", "政务市政", "🏛️"),
-            new CategoryDef("node", "category.wandscape.node", "采集节点", "⛏️"),
-            new CategoryDef("storage", "category.wandscape.storage", "仓库存储", "📦"),
-            new CategoryDef("workstation", "category.wandscape.workstation", "工作工坊", "🔨"),
-            new CategoryDef("crafting_station", "category.wandscape.crafting_station", "物品合成", "⚙️"),
-            new CategoryDef("magic_station", "category.wandscape.magic_station", "魔法工坊", "🧪"),
-            new CategoryDef("tavern", "category.wandscape.tavern", "冒险酒馆", "🍺"),
-            new CategoryDef("shop", "category.wandscape.shop", "商业商店", "🏪"),
-            new CategoryDef("service", "category.wandscape.service", "市民服务", "🛎️"),
-            new CategoryDef("decoration", "category.wandscape.decoration", "城镇装饰", "🌳"),
-            new CategoryDef("wonder", "category.wandscape.wonder", "奇观奇迹", "✨"),
-            new CategoryDef("altar", "category.wandscape.altar", "元素祭坛", "🔮"),
-            new CategoryDef("relax", "category.wandscape.relax", "休闲放松", "☕"),
-            new CategoryDef("atm", "category.wandscape.atm", "钱庄ATM", "💰"),
-            new CategoryDef("custom", "category.wandscape.custom", "自定义", "🛠️")
+            new CategoryDef("basic", "category.wandscape.basic", "基础建筑", ""),
+            new CategoryDef("government", "category.wandscape.government", "政务市政", ""),
+            new CategoryDef("node", "category.wandscape.node", "采集节点", ""),
+            new CategoryDef("storage", "category.wandscape.storage", "仓库存储", ""),
+            new CategoryDef("workstation", "category.wandscape.workstation", "工作工坊", ""),
+            new CategoryDef("crafting_station", "category.wandscape.crafting_station", "物品合成", ""),
+            new CategoryDef("magic_station", "category.wandscape.magic_station", "魔法工坊", ""),
+            new CategoryDef("tavern", "category.wandscape.tavern", "冒险酒馆", ""),
+            new CategoryDef("shop", "category.wandscape.shop", "商业商店", ""),
+            new CategoryDef("service", "category.wandscape.service", "市民服务", ""),
+            new CategoryDef("decoration", "category.wandscape.decoration", "城镇装饰", ""),
+            new CategoryDef("wonder", "category.wandscape.wonder", "奇观奇迹", ""),
+            new CategoryDef("altar", "category.wandscape.altar", "元素祭坛", ""),
+            new CategoryDef("relax", "category.wandscape.relax", "休闲放松", ""),
+            new CategoryDef("atm", "category.wandscape.atm", "钱庄ATM", ""),
+            new CategoryDef("custom", "category.wandscape.custom", "自定义", "")
     );
 
     public record ElementDef(String id, String labelKey, String defaultLabel, String symbol) {
@@ -87,13 +87,13 @@ public class CreativeScannerScreen extends MedievalScreen {
         }
     }
     private static final List<ElementDef> ELEMENTS = List.of(
-            new ElementDef("earth", "element.wandscape.earth", "土 Earth", "🟤"),
-            new ElementDef("wood", "element.wandscape.wood", "木 Wood", "🟢"),
-            new ElementDef("water", "element.wandscape.water", "水 Water", "🔵"),
-            new ElementDef("fire", "element.wandscape.fire", "火 Fire", "🔴"),
-            new ElementDef("metal", "element.wandscape.metal", "金 Metal", "🟡"),
-            new ElementDef("wind", "element.wandscape.wind", "风 Wind", "⚪"),
-            new ElementDef("dark", "element.wandscape.dark", "暗 Dark", "🟣")
+            new ElementDef("earth", "element.wandscape.earth", "土 Earth", ""),
+            new ElementDef("wood", "element.wandscape.wood", "木 Wood", ""),
+            new ElementDef("water", "element.wandscape.water", "水 Water", ""),
+            new ElementDef("fire", "element.wandscape.fire", "火 Fire", ""),
+            new ElementDef("metal", "element.wandscape.metal", "金 Metal", ""),
+            new ElementDef("wind", "element.wandscape.wind", "风 Wind", ""),
+            new ElementDef("dark", "element.wandscape.dark", "暗 Dark", "")
     );
 
     // ── Shared EditBoxes ──
@@ -212,11 +212,11 @@ public class CreativeScannerScreen extends MedievalScreen {
 
         // Done button
         addBtn(leftPos + (PW - 120) / 2, topPos + PH - 32, 120, 20,
-                I18n.string("gui.wandscape.scanner.done", "✓ 完成"), this::onClose);
+                I18n.string("gui.wandscape.scanner.done", "完成"), this::onClose);
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
-    // TAB 0: 📐 范围与结构 (Boundary & Structure)
+    // TAB 0: 范围与结构 (Boundary & Structure)
     // ─────────────────────────────────────────────────────────────────────────────
 
     private void initTab0Bounds(int lx, int startY) {
@@ -247,7 +247,7 @@ public class CreativeScannerScreen extends MedievalScreen {
         });
         structureNameEdit.setHint(I18n.name("gui.wandscape.scanner.passphrase_hint", "暗号"));
 
-        addBtn(lx + 266, y, 98, 18, I18n.string("gui.wandscape.scanner.match_corners", "❖ 匹配角点"), () -> {
+        addBtn(lx + 266, y, 98, 18, I18n.string("gui.wandscape.scanner.match_corners", "匹配角点"), () -> {
             if (minecraft != null && minecraft.level != null) {
                 boolean matched = scanner.detectBoundaryFromCorners(minecraft.level);
                 if (matched) {
@@ -256,10 +256,10 @@ public class CreativeScannerScreen extends MedievalScreen {
                     int dx = Math.abs(bMax.x() - bMin.x()) + 1;
                     int dy = Math.abs(bMax.y() - bMin.y()) + 1;
                     int dz = Math.abs(bMax.z() - bMin.z()) + 1;
-                    showFeedback(Component.literal(String.format("§a✓ 匹配成功！已更新 3D 边界 (%d×%d×%d)", dx, dy, dz)), 0xFF55FF55);
+                    showFeedback(Component.literal(String.format("§a匹配成功！已更新 3D 边界 (%d×%d×%d)", dx, dy, dz)), 0xFF55FF55);
                     scanResult = Component.literal(String.format("§a已匹配角点并更新边界！尺寸: %d×%d×%d", dx, dy, dz));
                 } else {
-                    showFeedback(Component.literal("§c⚠ 未找到同名暗号的 CORNER 扫描器 (需在 64 格内)"), 0xFFFF5555);
+                    showFeedback(Component.literal("§c未找到同名暗号的 CORNER 扫描器 (需在 64 格内)"), 0xFFFF5555);
                     scanResult = Component.literal("§e未找到同名暗号的 CORNER 扫描器。请确认暗号是否一致。");
                 }
             }
@@ -279,7 +279,7 @@ public class CreativeScannerScreen extends MedievalScreen {
         bMaxY = mkCoordEdit(colMin + cw + 4, y + 36, cw, 16, scanner.getBoundaryMax().y(), this::onBoundaryEdit);
         bMaxZ = mkCoordEdit(colMin + (cw + 4) * 2, y + 36, cw, 16, scanner.getBoundaryMax().z(), this::onBoundaryEdit);
 
-        addBtn(lx + 268, y + 16, 92, 36, I18n.string("gui.wandscape.scanner.gizmo_btn", "🎮 可视化调整"), () -> {
+        addBtn(lx + 268, y + 16, 92, 36, I18n.string("gui.wandscape.scanner.gizmo_btn", "可视化调整"), () -> {
             ScannerGizmoState.enter(scanner);
         });
 
@@ -299,14 +299,14 @@ public class CreativeScannerScreen extends MedievalScreen {
             if (doorY != null) doorY.setValue("0");
             if (doorZ != null) doorZ.setValue("0");
             syncToServer();
-            showFeedback(Component.literal("§6✓ 已清除全部门偏移记录 (默认走外围入口)"), 0xFFFFAA00);
+            showFeedback(Component.literal("§6已清除全部门偏移记录 (默认走外围入口)"), 0xFFFFAA00);
             scanResult = Component.literal("§7已清除全部门偏移记录。");
             rebuild();
         });
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
-    // TAB 1: 🏷️ 属性配置 (Properties & Category Config)
+    // TAB 1: 属性配置 (Properties & Category Config)
     // ─────────────────────────────────────────────────────────────────────────────
 
     private void initTab1Properties(int lx, int startY) {
@@ -443,7 +443,7 @@ public class CreativeScannerScreen extends MedievalScreen {
             scanner.addShopGood(new ShopGoodData("minecraft:apple", 5, 0, 0));
             syncToServer();
             shopGoodsPage = Math.max(0, (scanner.getShopGoods().size() - 1) / GOODS_PER_PAGE);
-            showFeedback(Component.literal("§a✓ 已上架新商品行 (请编辑物品ID)"), 0xFF55FF55);
+            showFeedback(Component.literal("§a已上架新商品行 (请编辑物品ID)"), 0xFF55FF55);
             rebuild();
         });
 
@@ -465,7 +465,7 @@ public class CreativeScannerScreen extends MedievalScreen {
             addBtn(lx + 300, rowY, 16, 16, "×", () -> {
                 scanner.removeShopGood(idx);
                 syncToServer();
-                showFeedback(Component.literal("§6✓ 已移除该商品条目"), 0xFFFFAA00);
+                showFeedback(Component.literal("§6已移除该商品条目"), 0xFFFFAA00);
                 rebuild();
             });
             rowY += 20;
@@ -507,10 +507,10 @@ public class CreativeScannerScreen extends MedievalScreen {
             if (el != null) {
                 scanner.addServiceElementOutput(el, 1);
                 syncToServer();
-                showFeedback(Component.literal("§a✓ 已添加元素产出"), 0xFF55FF55);
+                showFeedback(Component.literal("§a已添加元素产出"), 0xFF55FF55);
                 rebuild();
             } else {
-                showFeedback(Component.literal("§e⚠ 所有 7 种元素已全部添加完毕"), 0xFFFFAA00);
+                showFeedback(Component.literal("§e所有 7 种元素已全部添加完毕"), 0xFFFFAA00);
             }
         });
 
@@ -536,7 +536,7 @@ public class CreativeScannerScreen extends MedievalScreen {
             addBtn(lx + 182, rowY, 16, 16, "×", () -> {
                 scanner.removeServiceElementOutput(elem);
                 syncToServer();
-                showFeedback(Component.literal("§6✓ 已移除该元素产出"), 0xFFFFAA00);
+                showFeedback(Component.literal("§6已移除该元素产出"), 0xFFFFAA00);
                 rebuild();
             });
             rowY += 20;
@@ -611,14 +611,14 @@ public class CreativeScannerScreen extends MedievalScreen {
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
-    // TAB 2: 💾 预设管理 (Presets)
+    // TAB 2: 预设管理 (Presets)
     // ─────────────────────────────────────────────────────────────────────────────
 
     private void initTab2Presets(int lx, int startY) {
         int y = startY;
 
         presetNameEdit = mkEdit(lx + 62, y, 165, 18, "", s -> {});
-        addBtn(lx + 233, y, 131, 18, I18n.string("gui.wandscape.scanner.save_preset", "💾 保存预设"), this::onPresetSave);
+        addBtn(lx + 233, y, 131, 18, I18n.string("gui.wandscape.scanner.save_preset", "保存预设"), this::onPresetSave);
 
         y += 24;
         List<String> presets = ScannerPresetStore.listPresets();
@@ -631,8 +631,8 @@ public class CreativeScannerScreen extends MedievalScreen {
         int listY = y + 16;
         for (int i = start; i < end; i++) {
             final String name = presets.get(i);
-            addBtn(lx + 260, listY + 2, 46, 18, I18n.string("gui.wandscape.scanner.load_preset", "📂 加载"), () -> loadPresetByName(name));
-            addBtn(lx + 312, listY + 2, 46, 18, I18n.string("gui.wandscape.scanner.delete_preset", "🗑️ 删除"), () -> deletePresetByName(name));
+            addBtn(lx + 260, listY + 2, 46, 18, I18n.string("gui.wandscape.scanner.load_preset", "加载"), () -> loadPresetByName(name));
+            addBtn(lx + 312, listY + 2, 46, 18, I18n.string("gui.wandscape.scanner.delete_preset", "删除"), () -> deletePresetByName(name));
             listY += 24;
         }
 
@@ -647,17 +647,17 @@ public class CreativeScannerScreen extends MedievalScreen {
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
-    // TAB 3: ⚡ 导出操作 (Export & Actions)
+    // TAB 3: 导出操作 (Export & Actions)
     // ─────────────────────────────────────────────────────────────────────────────
 
     private void initTab3Export(int lx, int startY) {
         int btnY = startY + 82;
-        addBtn(lx + 4, btnY, 114, 22, I18n.string("gui.wandscape.scanner.scan_area", "🔍 扫描区域"), this::doScan);
-        addBtn(lx + 122, btnY, 114, 22, I18n.string("gui.wandscape.scanner.calc_area_value", "💰 计算价值"), this::doValue);
+        addBtn(lx + 4, btnY, 114, 22, I18n.string("gui.wandscape.scanner.scan_area", "扫描区域"), this::doScan);
+        addBtn(lx + 122, btnY, 114, 22, I18n.string("gui.wandscape.scanner.calc_area_value", "计算价值"), this::doValue);
 
         String exportText = scanner.getTargetMode() == TargetMode.ROAD
-                ? I18n.string("gui.wandscape.scanner.export_road_btn", "🚀 导出道路 JSON")
-                : I18n.string("gui.wandscape.scanner.export_building_btn", "🚀 导出建筑 JSON");
+                ? I18n.string("gui.wandscape.scanner.export_road_btn", "导出道路 JSON")
+                : I18n.string("gui.wandscape.scanner.export_building_btn", "导出建筑 JSON");
         addBtn(lx + 240, btnY, 120, 22, exportText, this::doExport);
     }
 
@@ -699,10 +699,10 @@ public class CreativeScannerScreen extends MedievalScreen {
 
     private void renderTabBar(GuiGraphics gui, int mx, int my, int lx) {
         String[] tabs = {
-                I18n.string("gui.wandscape.scanner.tab_bounds", "📐 范围结构"),
-                I18n.string("gui.wandscape.scanner.tab_properties", "🏷️ 属性配置"),
-                I18n.string("gui.wandscape.scanner.tab_presets", "💾 预设管理"),
-                I18n.string("gui.wandscape.scanner.tab_export", "⚡ 导出操作")
+                I18n.string("gui.wandscape.scanner.tab_bounds", "范围结构"),
+                I18n.string("gui.wandscape.scanner.tab_properties", "属性配置"),
+                I18n.string("gui.wandscape.scanner.tab_presets", "预设管理"),
+                I18n.string("gui.wandscape.scanner.tab_export", "导出操作")
         };
         int tabY = topPos + headerHeight + 2;
         int tabW = 88;
@@ -725,10 +725,10 @@ public class CreativeScannerScreen extends MedievalScreen {
         int cardY = topY + 30;
         drawMinimalBox(gui, lx + 8, cardY, 348, 120, true, false);
 
-        gui.drawString(font, I18n.string("gui.wandscape.scanner.corner_title", "❖ CORNER 辅角点模式已激活"), lx + 20, cardY + 12, MedievalColors.BORDER_GOLD);
+        gui.drawString(font, I18n.string("gui.wandscape.scanner.corner_title", "CORNER 辅角点模式已激活"), lx + 20, cardY + 12, MedievalColors.BORDER_GOLD);
         gui.drawString(font, I18n.string("gui.wandscape.scanner.corner_step1", "1. 在上方输入框输入与 SAVE 主扫描器完全一致的暗号。"), lx + 20, cardY + 32, MedievalColors.TEXT_WARM_WHITE);
         gui.drawString(font, I18n.string("gui.wandscape.scanner.corner_step2", "2. 将此方块放置在建筑 3D 对角线的另一个角点顶点位置。"), lx + 20, cardY + 50, MedievalColors.TEXT_MUTED);
-        gui.drawString(font, I18n.string("gui.wandscape.scanner.corner_step3", "3. 返回 SAVE 主扫描器点击“❖ 匹配角点”，系统将自动连接"), lx + 20, cardY + 68, MedievalColors.TEXT_MUTED);
+        gui.drawString(font, I18n.string("gui.wandscape.scanner.corner_step3", "3. 返回 SAVE 主扫描器点击“匹配角点”，系统将自动连接"), lx + 20, cardY + 68, MedievalColors.TEXT_MUTED);
         gui.drawString(font, I18n.string("gui.wandscape.scanner.corner_step4", "   并框选出完整的 3D 建筑包围盒范围。"), lx + 20, cardY + 84, MedievalColors.TEXT_MUTED);
     }
 
@@ -738,7 +738,7 @@ public class CreativeScannerScreen extends MedievalScreen {
         // Card 1: 3D Bounds
         int card1Y = y + 24;
         drawMinimalBox(gui, lx, card1Y, 364, 58, false, false);
-        gui.drawString(font, I18n.string("gui.wandscape.scanner.bounds_header", "❖ 3D 边界坐标 (相对于扫描器)"), lx + 8, card1Y + 4, MedievalColors.BORDER_GOLD);
+        gui.drawString(font, I18n.string("gui.wandscape.scanner.bounds_header", "3D 边界坐标 (相对于扫描器)"), lx + 8, card1Y + 4, MedievalColors.BORDER_GOLD);
 
         gui.drawString(font, I18n.string("gui.wandscape.scanner.min_label", "Min(小):"), lx + 8, card1Y + 19, MedievalColors.TEXT_MUTED);
         gui.drawString(font, I18n.string("gui.wandscape.scanner.max_label", "Max(大):"), lx + 8, card1Y + 39, MedievalColors.TEXT_MUTED);
@@ -759,7 +759,7 @@ public class CreativeScannerScreen extends MedievalScreen {
         int card2Y = card1Y + 62;
         // Sub-card Left: Doors
         drawMinimalBox(gui, lx, card2Y, 186, 92, false, false);
-        gui.drawString(font, I18n.string("gui.wandscape.scanner.door_offset_count_header", "❖ 门偏移 (%d 扇)", scanner.getDoorOffsets().size()), lx + 8, card2Y + 4, MedievalColors.BORDER_GOLD);
+        gui.drawString(font, I18n.string("gui.wandscape.scanner.door_offset_count_header", "门偏移 (%d 扇)", scanner.getDoorOffsets().size()), lx + 8, card2Y + 4, MedievalColors.BORDER_GOLD);
         gui.drawString(font, I18n.string("gui.wandscape.scanner.first_door", "首门:"), lx + 14, card2Y + 20, MedievalColors.TEXT_MUTED);
 
         List<BlockOffset> doors = scanner.getDoorOffsets();
@@ -778,17 +778,17 @@ public class CreativeScannerScreen extends MedievalScreen {
         // Sub-card Right: Spots
         int spotsX = lx + 192;
         drawMinimalBox(gui, spotsX, card2Y, 172, 92, false, false);
-        gui.drawString(font, I18n.string("gui.wandscape.scanner.interact_spots_header", "❖ 交互位 Marker"), spotsX + 8, card2Y + 4, MedievalColors.BORDER_GOLD);
+        gui.drawString(font, I18n.string("gui.wandscape.scanner.interact_spots_header", "交互位 Marker"), spotsX + 8, card2Y + 4, MedievalColors.BORDER_GOLD);
 
         int spotCount = countSpotMarkers();
         int spotColor = spotCount > 0 ? MedievalColors.TEXT_WARM_WHITE : (isTouristCategory(scanner.getCategory()) ? 0xFFFF5555 : MedievalColors.TEXT_MUTED);
         gui.drawString(font, I18n.string("gui.wandscape.scanner.spots_count", "已放置: %d 个交互位", spotCount), spotsX + 8, card2Y + 20, spotColor);
 
         if (isTouristCategory(scanner.getCategory()) && spotCount == 0) {
-            gui.drawString(font, I18n.string("gui.wandscape.scanner.no_spots_warn", "§c⚠ 无交互位！"), spotsX + 8, card2Y + 40, 0xFFFF5555);
+            gui.drawString(font, I18n.string("gui.wandscape.scanner.no_spots_warn", "§c无交互位！"), spotsX + 8, card2Y + 40, 0xFFFF5555);
             gui.drawString(font, I18n.string("gui.wandscape.scanner.no_spots_detail", "§c游客将无法在此互动消费"), spotsX + 8, card2Y + 54, 0xFFFF7777);
         } else if (spotCount > 0) {
-            gui.drawString(font, I18n.string("gui.wandscape.scanner.spots_ready", "§a✓ 交互位已就绪"), spotsX + 8, card2Y + 40, 0xFF55FF55);
+            gui.drawString(font, I18n.string("gui.wandscape.scanner.spots_ready", "§a交互位已就绪"), spotsX + 8, card2Y + 40, 0xFF55FF55);
             gui.drawString(font, I18n.string("gui.wandscape.scanner.spots_hint", "§7右键换动作, 潜行换朝向"), spotsX + 8, card2Y + 54, MedievalColors.TEXT_DIM);
         } else {
             gui.drawString(font, I18n.string("gui.wandscape.scanner.spots_optional", "§7基础/功能建筑可选填交互位"), spotsX + 8, card2Y + 40, MedievalColors.TEXT_DIM);
@@ -798,13 +798,13 @@ public class CreativeScannerScreen extends MedievalScreen {
     private void renderTab1Properties(GuiGraphics gui, int lx, int y) {
         if (scanner.getTargetMode() == TargetMode.ROAD) {
             drawMinimalBox(gui, lx, y, 364, 84, false, false);
-            gui.drawString(font, I18n.string("gui.wandscape.scanner.road_preset_header", "❖ 道路预设属性 (Road Preset)"), lx + 8, y + 4, MedievalColors.BORDER_GOLD);
+            gui.drawString(font, I18n.string("gui.wandscape.scanner.road_preset_header", "道路预设属性 (Road Preset)"), lx + 8, y + 4, MedievalColors.BORDER_GOLD);
             gui.drawString(font, I18n.string("gui.wandscape.scanner.road_id", "道路ID:"), lx + 14, y + 19, MedievalColors.TEXT_MUTED);
             gui.drawString(font, I18n.string("gui.wandscape.scanner.display_name", "显示名称:"), lx + 14, y + 43, MedievalColors.TEXT_MUTED);
             gui.drawString(font, I18n.string("gui.wandscape.scanner.creator", "制作作者:"), lx + 14, y + 67, MedievalColors.TEXT_MUTED);
 
             drawMinimalBox(gui, lx, y + 88, 364, 66, false, false);
-            gui.drawString(font, I18n.string("gui.wandscape.scanner.road_desc_header", "❖ 道路预设说明"), lx + 8, y + 92, MedievalColors.BORDER_GOLD);
+            gui.drawString(font, I18n.string("gui.wandscape.scanner.road_desc_header", "道路预设说明"), lx + 8, y + 92, MedievalColors.BORDER_GOLD);
             String hint = I18n.string("gui.wandscape.scanner.road_desc_body", "导出后将自动计算包围盒内各方块权重并生成 road_preset JSON，热注册到道路工坊与建造法杖中，可立即使用。");
             List<FormattedCharSequence> lines = font.split(Component.literal(hint), 345);
             int ly = y + 106;
@@ -823,10 +823,10 @@ public class CreativeScannerScreen extends MedievalScreen {
             gui.drawString(font, I18n.string("gui.wandscape.scanner.author_label", "作者:"), lx + 250, y + 4, MedievalColors.TEXT_MUTED);
 
             gui.drawString(font, I18n.string("gui.wandscape.scanner.category_label", "分类:"), lx + 6, y + 27, MedievalColors.TEXT_MUTED);
-            gui.drawString(font, I18n.string("gui.wandscape.scanner.survival_category_locked", "🛠️ 自定义建筑 (custom) [生存模式固定]"), lx + 36, y + 27, MedievalColors.BORDER_GOLD);
+            gui.drawString(font, I18n.string("gui.wandscape.scanner.survival_category_locked", "自定义建筑 (custom) [生存模式固定]"), lx + 36, y + 27, MedievalColors.BORDER_GOLD);
 
             drawMinimalBox(gui, lx, y + 50, 364, 104, false, false);
-            gui.drawString(font, I18n.string("gui.wandscape.scanner.survival_desc_header", "❖ 生存建筑属性与蓝图说明"), lx + 8, y + 54, MedievalColors.BORDER_GOLD);
+            gui.drawString(font, I18n.string("gui.wandscape.scanner.survival_desc_header", "生存建筑属性与蓝图说明"), lx + 8, y + 54, MedievalColors.BORDER_GOLD);
             String[] notes = {
                     I18n.string("gui.wandscape.scanner.survival_note1", "• 生存模式下扫描的建筑类别固定为 custom (自定义)。"),
                     I18n.string("gui.wandscape.scanner.survival_note2", "• 建筑的舒适度、魔法值、奇观值与维护费用在建造时由其内部方块属性自动评估，无需手动配置。"),
@@ -863,7 +863,7 @@ public class CreativeScannerScreen extends MedievalScreen {
         drawMinimalBox(gui, lx, catY, 364, 84, false, false);
         String cat = scanner.getCategory();
         CategoryDef def = getCategoryDef(cat);
-        gui.drawString(font, I18n.string("gui.wandscape.scanner.specs_header", "❖ %s 专属配置", def.label()), lx + 8, catY + 4, MedievalColors.BORDER_GOLD);
+        gui.drawString(font, I18n.string("gui.wandscape.scanner.specs_header", "%s 专属配置", def.label()), lx + 8, catY + 4, MedievalColors.BORDER_GOLD);
 
         if ("shop".equals(cat)) {
             gui.drawString(font, I18n.string("gui.wandscape.scanner.profit_rate", "利润%:"), lx + 14, catY + 19, MedievalColors.TEXT_MUTED);
@@ -926,7 +926,7 @@ public class CreativeScannerScreen extends MedievalScreen {
         int cardY = y + 24;
         List<String> presets = ScannerPresetStore.listPresets();
         drawMinimalBox(gui, lx, cardY, 364, 130, false, false);
-        gui.drawString(font, I18n.string("gui.wandscape.scanner.presets_saved_count", "❖ 已保存的扫描预设模板 (%d 个)", presets.size()), lx + 8, cardY + 4, MedievalColors.BORDER_GOLD);
+        gui.drawString(font, I18n.string("gui.wandscape.scanner.presets_saved_count", "已保存的扫描预设模板 (%d 个)", presets.size()), lx + 8, cardY + 4, MedievalColors.BORDER_GOLD);
 
         if (presets.isEmpty()) {
             gui.drawString(font, I18n.string("gui.wandscape.scanner.no_presets_1", "暂无保存的预设模板。"), lx + 14, cardY + 36, MedievalColors.TEXT_WARM_WHITE);
@@ -942,7 +942,7 @@ public class CreativeScannerScreen extends MedievalScreen {
         for (int i = start; i < end; i++) {
             String name = presets.get(i);
             drawInsetField(gui, lx + 8, itemY, 348, 22);
-            gui.drawString(font, "📌 " + name, lx + 16, itemY + 7, MedievalColors.BORDER_GOLD);
+            gui.drawString(font, name, lx + 16, itemY + 7, MedievalColors.BORDER_GOLD);
             itemY += 24;
         }
 
@@ -956,7 +956,7 @@ public class CreativeScannerScreen extends MedievalScreen {
     private void renderTab3Export(GuiGraphics gui, int lx, int y) {
         // Top Overview Card
         drawMinimalBox(gui, lx, y, 364, 76, false, false);
-        gui.drawString(font, I18n.string("gui.wandscape.scanner.overview_header", "❖ 当前扫描配置概览"), lx + 8, y + 4, MedievalColors.BORDER_GOLD);
+        gui.drawString(font, I18n.string("gui.wandscape.scanner.overview_header", "当前扫描配置概览"), lx + 8, y + 4, MedievalColors.BORDER_GOLD);
 
         String targetStr = scanner.getTargetMode() == TargetMode.ROAD ? "道路 (ROAD)" : "建筑 (BUILDING)";
         String catStr = isSurvival ? "自定义 (custom)" : (getCategoryDef(scanner.getCategory()).label() + " (" + scanner.getCategory() + ")");
@@ -978,7 +978,7 @@ public class CreativeScannerScreen extends MedievalScreen {
         // Result Card
         int resY = y + 108;
         drawMinimalBox(gui, lx, resY, 364, 46, true, false);
-        gui.drawString(font, I18n.string("gui.wandscape.scanner.result_header", "❖ 执行结果 / 状态反馈"), lx + 8, resY + 4, MedievalColors.BORDER_GOLD);
+        gui.drawString(font, I18n.string("gui.wandscape.scanner.result_header", "执行结果 / 状态反馈"), lx + 8, resY + 4, MedievalColors.BORDER_GOLD);
 
         List<FormattedCharSequence> lines = font.split(scanResult, 345);
         int ly = resY + 18;
@@ -1144,7 +1144,7 @@ public class CreativeScannerScreen extends MedievalScreen {
         if (minecraft == null || minecraft.level == null) return;
         List<BlockOffset> doors = scanner.detectDoors(minecraft.level);
         if (doors.isEmpty()) {
-            showFeedback(I18n.name("gui.wandscape.scanner.result_no_door_found", "§e⚠ 未在当前 3D 包围盒内检测到门方块"), 0xFFFFAA00);
+            showFeedback(I18n.name("gui.wandscape.scanner.result_no_door_found", "§e未在当前 3D 包围盒内检测到门方块"), 0xFFFFAA00);
             scanResult = I18n.name("gui.wandscape.scanner.result_no_door_found", "§e未在包围盒内检测到门方块。");
             return;
         }
@@ -1153,7 +1153,7 @@ public class CreativeScannerScreen extends MedievalScreen {
         if (doorX != null) doorX.setValue(String.valueOf(first.x()));
         if (doorY != null) doorY.setValue(String.valueOf(first.y()));
         if (doorZ != null) doorZ.setValue(String.valueOf(first.z()));
-        showFeedback(I18n.name("gui.wandscape.scanner.result_doors_found", "§a✓ 已在包围盒内自动检出 %s 扇门", String.valueOf(doors.size())), 0xFF55FF55);
+        showFeedback(I18n.name("gui.wandscape.scanner.result_doors_found", "§a已在包围盒内自动检出 %s 扇门", String.valueOf(doors.size())), 0xFF55FF55);
         scanResult = I18n.name("gui.wandscape.scanner.result_doors_found", "§a已自动检门 %s 扇，游客可从任意一扇门进入", String.valueOf(doors.size()));
         syncToServer();
         rebuild();
@@ -1174,12 +1174,12 @@ public class CreativeScannerScreen extends MedievalScreen {
         if (presetNameEdit == null) return;
         String name = presetNameEdit.getValue().trim();
         if (name.isEmpty()) {
-            showFeedback(I18n.name("gui.wandscape.scanner.result_need_preset_name", "§c⚠ 请先输入预设名称"), 0xFFFF5555);
+            showFeedback(I18n.name("gui.wandscape.scanner.result_need_preset_name", "§c请先输入预设名称"), 0xFFFF5555);
             scanResult = I18n.name("gui.wandscape.scanner.result_need_preset_name", "§c请先输入预设名称。");
             return;
         }
         ScannerPresetStore.savePreset(name, capturePresetData());
-        showFeedback(I18n.name("gui.wandscape.scanner.result_preset_saved", "§a✓ 预设已成功保存: %s", name), 0xFF55FF55);
+        showFeedback(I18n.name("gui.wandscape.scanner.result_preset_saved", "§a预设已成功保存: %s", name), 0xFF55FF55);
         scanResult = I18n.name("gui.wandscape.scanner.result_preset_saved", "§a预设已成功保存: %s", name);
         rebuild();
     }
@@ -1187,20 +1187,20 @@ public class CreativeScannerScreen extends MedievalScreen {
     private void loadPresetByName(String name) {
         CompoundTag tag = ScannerPresetStore.loadPreset(name);
         if (tag == null) {
-            showFeedback(I18n.name("gui.wandscape.scanner.result_preset_not_found", "§c⚠ 未找到预设模板: %s", name), 0xFFFF5555);
+            showFeedback(I18n.name("gui.wandscape.scanner.result_preset_not_found", "§c未找到预设模板: %s", name), 0xFFFF5555);
             scanResult = I18n.name("gui.wandscape.scanner.result_preset_not_found", "§c未找到预设: %s", name);
             return;
         }
         applyPresetData(tag);
         syncToServer();
-        showFeedback(I18n.name("gui.wandscape.scanner.result_preset_loaded", "§a✓ 预设已成功加载: %s", name), 0xFF55FF55);
+        showFeedback(I18n.name("gui.wandscape.scanner.result_preset_loaded", "§a预设已成功加载: %s", name), 0xFF55FF55);
         scanResult = I18n.name("gui.wandscape.scanner.result_preset_loaded", "§a预设已成功加载: %s", name);
         rebuild();
     }
 
     private void deletePresetByName(String name) {
         ScannerPresetStore.deletePreset(name);
-        showFeedback(I18n.name("gui.wandscape.scanner.result_preset_deleted", "§6✓ 预设模板已删除: %s", name), 0xFFFFAA00);
+        showFeedback(I18n.name("gui.wandscape.scanner.result_preset_deleted", "§6预设模板已删除: %s", name), 0xFFFFAA00);
         scanResult = I18n.name("gui.wandscape.scanner.result_preset_deleted", "§e预设已删除: %s", name);
         rebuild();
     }
@@ -1209,7 +1209,7 @@ public class CreativeScannerScreen extends MedievalScreen {
         BlockPos wMin = scanner.getWorldMin();
         BlockPos wMax = scanner.getWorldMax();
         if (wMin == null || wMax == null) {
-            showFeedback(I18n.name("gui.wandscape.scanner.result_no_boundary", "§c⚠ 未定义 3D 边界范围"), 0xFFFF5555);
+            showFeedback(I18n.name("gui.wandscape.scanner.result_no_boundary", "§c未定义 3D 边界范围"), 0xFFFF5555);
             scanResult = I18n.name("gui.wandscape.scanner.result_no_boundary", "§c未定义 3D 边界范围。");
             return;
         }
@@ -1230,19 +1230,19 @@ public class CreativeScannerScreen extends MedievalScreen {
                 }
             }
         }
-        showFeedback(I18n.name("gui.wandscape.scanner.result_scanned", "§a✓ 扫描完成！共 %s 个有效方块", String.valueOf(count)), 0xFF55FF55);
+        showFeedback(I18n.name("gui.wandscape.scanner.result_scanned", "§a扫描完成！共 %s 个有效方块", String.valueOf(count)), 0xFF55FF55);
         scanResult = I18n.name("gui.wandscape.scanner.result_scanned", "§a已扫描区域有效方块: %s 个 (已排除扫描器)", String.valueOf(count));
     }
 
     private void doExport() {
         String id = scanner.getBuildingId();
         if (id == null || id.isBlank()) {
-            showFeedback(I18n.name("gui.wandscape.scanner.result_need_id", "§c⚠ 请先在属性配置页设置建筑/道路 ID！"), 0xFFFF5555);
+            showFeedback(I18n.name("gui.wandscape.scanner.result_need_id", "§c请先在属性配置页设置建筑/道路 ID！"), 0xFFFF5555);
             scanResult = I18n.name("gui.wandscape.scanner.result_need_id", "§c导出失败: 请先在属性配置页设置建筑 ID！");
             return;
         }
         PacketDistributor.sendToServer(new ScannerExportPacket(scanner.getBlockPos()));
-        showFeedback(I18n.name("gui.wandscape.scanner.result_export_started", "§a✓ 已发起导出与热注册: %s！", id), 0xFF55FF55);
+        showFeedback(I18n.name("gui.wandscape.scanner.result_export_started", "§a已发起导出与热注册: %s！", id), 0xFF55FF55);
         scanResult = I18n.name("gui.wandscape.scanner.result_export_started", "§a已发起导出与热注册: %s (详见游戏聊天区)", id);
     }
 
@@ -1250,12 +1250,12 @@ public class CreativeScannerScreen extends MedievalScreen {
         BlockPos wMin = scanner.getWorldMin();
         BlockPos wMax = scanner.getWorldMax();
         if (wMin == null || wMax == null) {
-            showFeedback(I18n.name("gui.wandscape.scanner.result_no_boundary", "§c⚠ 未定义 3D 边界范围"), 0xFFFF5555);
+            showFeedback(I18n.name("gui.wandscape.scanner.result_no_boundary", "§c未定义 3D 边界范围"), 0xFFFF5555);
             scanResult = I18n.name("gui.wandscape.scanner.result_no_boundary", "§c未定义 3D 边界。");
             return;
         }
         PacketDistributor.sendToServer(new ScannerValuePacket(scanner.getBlockPos()));
-        showFeedback(I18n.name("gui.wandscape.scanner.result_value_started", "§a✓ 已发起价值估算，请查看聊天区"), 0xFF55FF55);
+        showFeedback(I18n.name("gui.wandscape.scanner.result_value_started", "§a已发起价值估算，请查看聊天区"), 0xFF55FF55);
         scanResult = I18n.name("gui.wandscape.scanner.result_value_started", "§a已发起区域元素价值计算，结果已输出到聊天区。");
     }
 

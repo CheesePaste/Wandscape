@@ -1,10 +1,10 @@
-# ⚠️ Building Failures
+# Building Failures
 
 When buildings stop or break, handle them in the Anomaly Report. Most problems resolve in one click.
 
 ## How to Open
 
-When a building has a problem, the **⚠️ warning icon in the V panel's sidebar** lights up with a count. Opening it shows the **Anomaly Report**, listing all buildings with problems:
+When a building has a problem, the **warning icon in the V panel's sidebar** lights up with a count. Opening it shows the **Anomaly Report**, listing all buildings with problems:
 
 | Column | Description |
 | :--- | :--- |
@@ -28,4 +28,4 @@ When a building has a problem, the **⚠️ warning icon in the V panel's sideba
 [Element Node](node_guide.md)  
 [Warehouse & Materials](warehouse_guide.md)  
 [Panel & Overview](overview_guide.md)  
-[📖 Back to the Guide Index](index_guide.md)
+[Back to the Guide Index](index_guide.md)

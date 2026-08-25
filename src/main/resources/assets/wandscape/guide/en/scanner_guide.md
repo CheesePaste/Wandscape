@@ -1,4 +1,4 @@
-# 🏗️ Building Scanner
+# Building Scanner
 
 Turn a building you have finished into a blueprint, and wizards can rebuild it elsewhere from that blueprint. The scanner can be crafted in **survival mode**.
 
@@ -29,4 +29,4 @@ The feature-packed **Creative Building Scanner** is for creators and map makers 
 ---
 
 [Panel & Overview](overview_guide.md)  
-[📖 Back to the Guide Index](index_guide.md)
+[Back to the Guide Index](index_guide.md)

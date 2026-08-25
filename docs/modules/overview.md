@@ -30,7 +30,7 @@ AFTER_TRIPWIRE_BLOCKS，画目标建筑/实体 12 边白色线框。
 
 ## 进入与切换
 
-- V 开面板默认 OVERVIEW（WandscapePanelState.SubMode）；面板开时 G 键在 overview↔ground 切换（WandscapePanelController）。
+- V 开面板默认 OVERVIEW（WandscapePanelState.SubMode）；面板开启期间始终处于俯瞰相机——原 G 键 overview↔ground 切换已移除（打开面板即强制俯瞰）。
 - `MixinOverviewCamera`：@Inject Camera.setup TAIL，overview 激活时用 OverviewClientState 覆盖位置/旋转。
 
 ## 网络

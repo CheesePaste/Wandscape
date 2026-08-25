@@ -1,4 +1,4 @@
-# 📖 Wandscape Guide
+# Wandscape Guide
 
 Welcome to Wandscape. Turning it into a magic town starts here.
 
@@ -6,13 +6,13 @@ Wandscape is a management sim mod: you place buildings, and **wizard NPCs do the
 
 > Playing for the first time? Read [Getting Started: From Empty Land to a Tourist Town](getting_started_guide.md) first — it walks through the full game loop.
 
-## 🏗️ Building & Town
+## Building & Town
 
 - [Panel & Overview](overview_guide.md) — press V, everything starts here
 - [Building Scanner](scanner_guide.md) — survival players turn houses they built into blueprints so NPCs can rebuild them
 - [Creative Building Scanner](creative_scanner_guide.md) — a creator tool: interact spots, business parameters, decoration export
 
-## 🛣️ Road System
+## Road System
 
 Tourists only walk on paved roads. No roads means no tourists; shops won't get visitors even when open.
 
@@ -21,7 +21,7 @@ Tourists only walk on paved roads. No roads means no tourists; shops won't get v
 - [Fill & Destroy](road_fill_guide.md)
 - [Spline Editor (Curves & Interchanges)](road_spline_guide.md)
 
-## 🏘️ Buildings & Facilities
+## Buildings & Facilities
 
 - [Town Hall](townhall_guide.md)
 - [Warehouse](warehouse_guide.md)
@@ -35,20 +35,20 @@ Tourists only walk on paved roads. No roads means no tourists; shops won't get v
 - [Hotel & Service Buildings (Overnight / Element Production)](hotel_guide.md)
 - Relax buildings (bathhouses etc., restore energy) and ATMs (refill travel money) — see the [Tourist System Guide](tourist_guide.md)
 
-## 👥 NPCs & Tourists
+## NPCs & Tourists
 
 - [Wizard NPC Guide](npc_guide.md)
 - [Cast Strategy Guide](strategy_guide.md)
 - [Tourist System Guide](tourist_guide.md) — the three need bars, profiles, and four types of tourist buildings
 
-## ⚠️ Operations & Failures
+## Operations & Failures
 
 - [Building Failures](anomaly_guide.md)
 
-## 🛠️ Creator Tools
+## Creator Tools
 
 - [Magic Circle Web Editor](magic_circle_editor_guide.md)
 
-## 📝 About
+## About
 
 - [Creators & Special Thanks](guide:creators_guide)

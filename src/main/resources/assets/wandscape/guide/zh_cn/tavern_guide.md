@@ -1,4 +1,4 @@
-# 🍺 酒馆
+# 酒馆
 
 招募法师的建筑，提供「招募 NPC」和「法师简历」两个页签。
 
@@ -27,4 +27,4 @@
 [法师 NPC 指南](npc_guide.md)  
 [游客系统指南](tourist_guide.md)  
 [新手入门：从空城到游客小镇](getting_started_guide.md)  
-[📖 返回指南首页](index_guide.md)
+[返回指南首页](index_guide.md)

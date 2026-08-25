@@ -1,4 +1,4 @@
-# 🧳 Tourists
+# Tourists
 
 Tourists walk into town along roads in the morning and leave once their three need bars are full. The management loop revolves around their three need bars.
 
@@ -61,4 +61,4 @@ About **5% of tourists are wizard tourists**. Wizard tourists with all three nee
 [Shop](shop_guide.md)  
 [Hotel & Service Buildings](hotel_guide.md)  
 [Tavern](tavern_guide.md)  
-[📖 Back to the Guide Index](index_guide.md)
+[Back to the Guide Index](index_guide.md)

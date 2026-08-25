@@ -151,17 +151,14 @@ public class MagicStationScreen extends MedievalScreen {
                 }
 
                 int textX = x + 20;
-                if (isLocked) {
-                    g.drawString(Minecraft.getInstance().font, "🔒", textX, y + 1, MedievalColors.TEXT_DIM);
-                    textX += 14;
-                }
+                
                 Component spellName = I18n.name(
                         "magic.wandscape." + item.magicId(), item.magicId());
                 g.drawString(Minecraft.getInstance().font, spellName, textX, y + 1, nameColor);
 
                 String reason = item.lockedReason();
                 if ("colony".equals(reason)) {
-                    StringBuilder costStr = new StringBuilder("🔒 ");
+                    StringBuilder costStr = new StringBuilder();
                     var req = item.unlockRequirement();
                     costStr.append(I18n.name("gui.wandscape.recipe.colony_level",
                             "Colony Lv>=%s", req.minColonyLevel()).getString());

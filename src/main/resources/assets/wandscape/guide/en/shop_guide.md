@@ -1,4 +1,4 @@
-# 🏪 Shop
+# Shop
 
 Tourists spend travel money on goods; elements flow into the warehouse based on each good's elemental value and profit rate.
 
@@ -28,4 +28,4 @@ The mod also ships with a Magic Shop. Different shops lean toward different need
 ---
 
 [Tourist System Guide](tourist_guide.md)  
-[📖 Back to the Guide Index](index_guide.md)
+[Back to the Guide Index](index_guide.md)

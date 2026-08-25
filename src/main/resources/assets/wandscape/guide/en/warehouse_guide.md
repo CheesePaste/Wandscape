@@ -1,4 +1,4 @@
-# 📦 Warehouse
+# Warehouse
 
 Stores all the town's elements and materials. Building and crafting deduct from here, and tourists' spending income returns here. **NPCs can only use materials stored in the warehouse.**
 
@@ -48,4 +48,4 @@ Building and crafting both consume elements. When short, gather from [Element No
 [Town Hall](townhall_guide.md)  
 [Element Node](node_guide.md)  
 [Getting Started: From Empty Land to a Tourist Town](getting_started_guide.md)  
-[📖 Back to the Guide Index](index_guide.md)
+[Back to the Guide Index](index_guide.md)

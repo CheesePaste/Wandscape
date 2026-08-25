@@ -1,4 +1,4 @@
-# 🧙‍♂️ 法师 NPC
+# 法师 NPC
 
 法师执行殖民地的建造、采集、合成与战斗。殖民地运转的规模取决于法师数量与装备强度。
 
@@ -49,4 +49,4 @@
 [施法策略指南](strategy_guide.md)  
 [酒馆（招募法师）](tavern_guide.md)  
 [合成台（造法杖）](crafting_guide.md)  
-[📖 返回指南首页](index_guide.md)
+[返回指南首页](index_guide.md)

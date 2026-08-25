@@ -49,7 +49,7 @@ public final class NarrativeTemplates {
     private static final String FALLBACK_ARRIVAL_AFTERNOON = "{name} 来到了小镇";
     private static final String FALLBACK_ARRIVAL_NIGHT = "{name} 来到了小镇";
     private static final String FALLBACK_DEPARTURE = "{name} 离开了小镇";
-    private static final String FALLBACK_HOTEL_CHECKIN = "✨ {name} 入住了 {building}";
+    private static final String FALLBACK_HOTEL_CHECKIN = "{name} 入住了 {building}";
     private static final String FALLBACK_HOTEL_WAKEUP = "{name} 在 {building} 醒来";
 
     // ── Loaded templates ──

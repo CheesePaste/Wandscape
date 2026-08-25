@@ -1,4 +1,4 @@
-# 🧱 Replace Mode
+# Replace Mode
 
 Used for everyday paving: frame an area of ground and replace the surface grass, dirt, sand, and stone directly with the chosen road material.
 
@@ -21,4 +21,4 @@ Picked the wrong spot? **Backspace** to undo, or just drag a new box to overwrit
 [Fill & Destroy](road_fill_guide.md)  
 [Spline Editor](road_spline_guide.md)  
 [Road System Overview](road_guide.md)  
-[📖 Back to the Guide Index](index_guide.md)
+[Back to the Guide Index](index_guide.md)

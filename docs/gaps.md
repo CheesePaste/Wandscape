@@ -13,7 +13,7 @@
 | 5 | 新手引导数据源是 `assets/wandscape/guide/*.md` | 引导步骤**硬编码**在 `shared/ui/guidance/GuideRegistry`（10 步）；md 只服务 Markdown 文档阅读器（GuideTestScreen） |
 | 6 | `ResourceRequestExecutor` "1 item/tick" | 实际 `STAGGER_TICKS=5`（每 5 tick 发一件） |
 | 7 | 建筑扫描器改名 | 原 `building_scanner` 更名 `creative_building_scanner`；`building_scanner` 现为生存扫描器 |
-| 9 | `BuildingDebugController` "G key" 开关 | G 键现为 overview 切换；BuildingDebug 激活由 V 面板驱动 |
+| 9 | `BuildingDebugController` "G key" 开关 | G 键的 overview 切换已移除；BuildingDebug 激活由 V 面板驱动 |
 
 ## 二、已存在但当前未被代码消费（dead data / 未接线）
 

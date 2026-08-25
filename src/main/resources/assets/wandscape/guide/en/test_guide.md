@@ -1,4 +1,4 @@
-# 🏰 Wandscape Guide System Markdown Test
+# Wandscape Guide System Markdown Test
 
 Welcome to the Markdown viewer test page built into the **Wandscape** mod! This renderer is built specifically for Minecraft NeoForge interfaces.
 
@@ -9,15 +9,15 @@ Welcome to the Markdown viewer test page built into the **Wandscape** mod! This 
 - ~~Strikethrough~~: this is a ~~Strikethrough~~ demo.
 - Inline code: access interfaces via `WandscapeApis.getColonyApi()`.
 
-> 💡 **Medieval wisdom**: keeping good tourist reputation and ample element reserves is the decisive key to expanding the magic town's territory and technology.
+> **Medieval wisdom**: keeping good tourist reputation and ample element reserves is the decisive key to expanding the magic town's territory and technology.
 
 ## 2. Interactions & Cross-Document Navigation
 
 Click the links below to experience document jumps and in-game actions:
 
-👉 [Jump to 🏛️ Town Hall guide](townhall_guide.md)  
-👉 [Jump to 📦 Warehouse & logistics guide](warehouse_guide.md)  
-👉 [Open build overview mode](action:wandscape:overview_mode)
+[Jump to Town Hall guide](townhall_guide.md)  
+[Jump to Warehouse & logistics guide](warehouse_guide.md)  
+[Open build overview mode](action:wandscape:overview_mode)
 
 ## 3. Dynamic Images & Animations
 

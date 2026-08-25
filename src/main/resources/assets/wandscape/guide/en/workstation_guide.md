@@ -1,4 +1,4 @@
-# ⚙️ Workstation
+# Workstation
 
 The Workstation is the element exchange: it **decomposes** unneeded high-tier materials into elements, and **synthesizes** what you need from elements. Decomposing is for emergencies, synthesizing is for spending — both ends are usable.
 
@@ -21,4 +21,4 @@ The Workstation is the element exchange: it **decomposes** unneeded high-tier ma
 
 [Crafting Station (Wands)](crafting_guide.md)  
 [Element Node](node_guide.md)  
-[📖 Back to the Guide Index](index_guide.md)
+[Back to the Guide Index](index_guide.md)

@@ -1,4 +1,4 @@
-# 🏠 Mage Hut
+# Mage Hut
 
 The Mage Hut is the dedicated residence for a colony mage. Assigning a mage to a hut enables **Attribute Training**, **Rank Promotion**, and **Management Commands**.
 
@@ -12,13 +12,13 @@ When opened while empty:
 ## Attribute Training
 
 Resident mages can undergo targeted training across 7 core attributes:
-- ❤️ **Health (Max HP)**: Enhances survivability.
-- 💧 **Mana (Max Mana)**: Increases maximum mana capacity.
-- ⚡ **Spell Power**: Amplifies spell damage and efficacy.
-- ⚒ **Work Speed**: Speeds up wand building and harvesting.
-- ⏳ **Spell Speed**: Reduces spell casting and cooldown delays.
-- 🛡 **Armor**: Reduces incoming physical and magic damage.
-- ✦ **Movement Speed**: Increases movement and patrol speed.
+- **Health (Max HP)**: Enhances survivability.
+- **Mana (Max Mana)**: Increases maximum mana capacity.
+- **Spell Power**: Amplifies spell damage and efficacy.
+- **Work Speed**: Speeds up wand building and harvesting.
+- **Spell Speed**: Reduces spell casting and cooldown delays.
+- **Armor**: Reduces incoming physical and magic damage.
+- **Movement Speed**: Increases movement and patrol speed.
 
 Each training session consumes 1000 of all 6 basic elements from the colony warehouse until the attribute reaches its cap.
 
@@ -29,13 +29,13 @@ Each training session consumes 1000 of all 6 basic elements from the colony ware
 
 ## Quick Commands
 
-- ⚔️ **Equip**: Inspect and swap robes and wands.
-- 📜 **Strategy**: Customize smart spellcasting and task priority routines.
-- 💤 **Rest**: Call the mage back to the hut to rest and recover.
+- **Equip**: Inspect and swap robes and wands.
+- **Strategy**: Customize smart spellcasting and task priority routines.
+- **Rest**: Call the mage back to the hut to rest and recover.
 
 ---
 
 [Mage NPC Guide](npc_guide.md)  
 [Tavern Guide](tavern_guide.md)  
 [Strategy Guide](strategy_guide.md)  
-[📖 Return to Index](index_guide.md)
+[Return to Index](index_guide.md)

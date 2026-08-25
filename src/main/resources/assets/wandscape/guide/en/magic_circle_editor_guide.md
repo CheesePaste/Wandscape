@@ -1,4 +1,4 @@
-# 🔮 Magic Circle Web Editor
+# Magic Circle Web Editor
 
 This page is for creators. Regular players can skip it — the pretty magic circles in-game are drawn with this web tool.
 
@@ -25,4 +25,4 @@ Pick a shape → tune the animation (stroke, pulse, smoothness) → drag the cur
 
 ---
 
-[📖 Back to the Guide Index](index_guide.md)
+[Back to the Guide Index](index_guide.md)

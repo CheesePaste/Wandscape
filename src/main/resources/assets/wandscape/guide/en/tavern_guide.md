@@ -1,4 +1,4 @@
-# 🍺 Tavern
+# Tavern
 
 The building for recruiting wizards, with two tabs: "Recruit NPC" and "Mage Resumes".
 
@@ -27,4 +27,4 @@ About **5% of tourists are wizard tourists**. When their three need bars are **a
 [Wizard NPC Guide](npc_guide.md)  
 [Tourist System Guide](tourist_guide.md)  
 [Getting Started: From Empty Land to a Tourist Town](getting_started_guide.md)  
-[📖 Back to the Guide Index](index_guide.md)
+[Back to the Guide Index](index_guide.md)

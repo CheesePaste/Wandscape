@@ -53,4 +53,4 @@ Wandscape 由热爱Minecraft与模拟经营的开发者、建筑师与玩家们�
 - [点我反馈问题](https://github.com/CheesePaste/Wandscape/issues)
 ---
 
-[📖 返回指南首页](guide:index_guide)
+[返回指南首页](guide:index_guide)

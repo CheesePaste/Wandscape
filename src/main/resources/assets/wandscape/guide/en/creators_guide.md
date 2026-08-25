@@ -54,4 +54,4 @@ List the programmers who took part in developing the mod:
 - [Give feedback](https://github.com/CheesePaste/Wandscape/issues)
 ---
 
-[📖 Back to Guide Home](guide:index_guide)
+[Back to Guide Home](guide:index_guide)

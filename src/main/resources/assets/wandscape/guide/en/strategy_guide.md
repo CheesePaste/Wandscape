@@ -1,4 +1,4 @@
-# ⚔️ Cast Strategy
+# Cast Strategy
 
 Which spells a wizard casts in combat is decided by the strategy. With no strategy set, the wizard follows the default preset.
 
@@ -31,4 +31,4 @@ How to open: **aim your crosshair at a wizard and right-click → info screen �
 
 [Wizard NPC Guide](npc_guide.md)  
 [Altar (Ritual Spells like Revive)](altar_guide.md)  
-[📖 Back to the Guide Index](index_guide.md)
+[Back to the Guide Index](index_guide.md)

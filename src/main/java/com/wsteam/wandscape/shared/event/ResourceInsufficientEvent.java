@@ -26,9 +26,9 @@ public class ResourceInsufficientEvent extends Event {
     public int getNeeded() { return needed; }
     public int getAvailable() { return available; }
 
-    /** Human-readable shortage message, e.g. "⚠ Colony is short on stone_bricks: needs 10, has 3". */
+    /** Human-readable shortage message, e.g. "Colony is short on stone_bricks: needs 10, has 3". */
     public String getShortageMessage() {
-        return "⚠ Colony is short on " + resource.id()
+        return "Colony is short on " + resource.id()
                 + ": needs " + needed + ", has " + available;
     }
 }

@@ -2,6 +2,18 @@
 
 本文件记录偏离直觉的设计选择及其原因，供后续开发快速理解「为什么这么做」。
 
+## 2026-08-25：移除面板 G 键 overview↔ground 切换，V 强制进入俯瞰
+
+**需求**（用户反馈）：按 G 切到地面（第一人称）后无法正常操控（要么能飞要么动不了）；要求直接去掉该键位，按 V 打开面板后强制处于俯瞰（鸟瞰）模式。
+
+**决策**：
+- 删除 `WandscapeClient.OVERVIEW_TOGGLE` 键位（G）及其注册、交互处理（`WandscapePanelController.handleGKeyToggle`）与语言/引导文档条目。
+- 面板开合语义不变：`openPanel()` 仍默认 `enterSubMode(OVERVIEW)`，V 打开即进入俯瞰相机。移除 G 后，面板开启期间**不存在任何出口**把相机切出俯瞰（子模式 BUILD/ROAD/STATS/TASKS 均叠加在俯瞰相机上）；想回到第一人称只能关闭面板（ESC / V 再按），这本来就是「关面板夺回操控」的正常路径。
+
+**为什么**：地面/第一人称模式与俯瞰飞行控制器存在输入争夺（玩家移动被 `MovementInputUpdateEvent` 清零或残留飞行），长期是问题入口；面板核心价值在俯瞰管理小镇，关闭面板即可回第一人称，保留「面板内切地面视角」没有不可替代的收益。删除比修复更低风险、更符合"直接去掉该功能"的诉求。
+
+**影响**：`WandscapeClient.java`、`shared/ui/panel/WandscapePanelController.java`、`lang/{zh_cn,en_us}.json`、`guide/{zh_cn,en}/overview_guide.md`、`docs/modules/overview.md`、`architecture/packages/overview.md`、`architecture/packages/projection.md`、`docs/modules/projection.md`、`docs/gaps.md`。
+
 ## 2026-08-25：修复仓库物品分解触发无限自动合成死循环（Issue #18）
 
 **需求**：玩家在工作站发布物品分解（`decompose`）任务后，如果仓库中物品数量不足或被消耗完，工作站会不停地自动生成对应物品和对应数量的 `synthesize` 合成订单，造成死循环且消耗大量元素。

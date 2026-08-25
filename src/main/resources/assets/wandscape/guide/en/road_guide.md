@@ -1,4 +1,4 @@
-# 🛣️ Road System
+# Road System
 
 **Tourists only walk on paved roads.** Without roads there are no tourists — a shop can open but no one will enter.
 
@@ -41,4 +41,4 @@ After submitting, wizard NPCs pave automatically according to the task (if mater
 ---
 
 [Panel & Overview](overview_guide.md)  
-[📖 Back to the Guide Index](index_guide.md)
+[Back to the Guide Index](index_guide.md)
