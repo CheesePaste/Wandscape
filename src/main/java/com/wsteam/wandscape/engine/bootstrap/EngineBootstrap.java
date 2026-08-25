@@ -184,10 +184,10 @@ public final class EngineBootstrap {
         //    保持 1 tick：建造即时感更好（WORK_SPEED 作用于采集/合成的大 channelTicks）。
         int asyncDelay = 1;
         if (asyncDelay > 0) {
-            AsyncTransformExecutor asyncExec = new AsyncTransformExecutor(asyncDelay, transporter);
+            AsyncTransformExecutor asyncExec = new AsyncTransformExecutor(asyncDelay);
             world.opExecutors.register(asyncExec); // overwrites default TransformExecutor
             WandscapeEngine.setAsyncExecutor(asyncExec);
-            Log.info(TAG, "  AsyncTransformExecutor active: {} tick delay per block (with inbound salvage transport)", asyncDelay);
+            Log.info(TAG, "  AsyncTransformExecutor active: {} tick delay per block", asyncDelay);
         }
 
         // 9c. Override BlockInteractOp executor with async version.

@@ -89,4 +89,4 @@
 ## 九、拆除返还的潜在丢物品与已修复的双计（2026-08-25）
 
 1. **【已修复】撤回未完成建筑的双计刷物品**——`cancelBuilding` 原为「蓝图全量退款 + 拆除 salvage 返已放实物」，净赚已放部分。已改为只退未放置部分（详见 `docs/decisions.md` 2026-08-25 条目）。
-2. **【待查】salvage 入库依赖物流动画完成**——`AsyncTransformExecutor.performSalvage`（b04ad70d）的 `bank.add` 写在 `transporter.send(...).thenRun(...)` 里，即**入库发生在物品飞行动画结束后**。若动画因区块卸载/异常不走到 `thenRun`，已拆方块的物品会「飞了但没入账」——正常建造/拆除/铲平路径均受影响。待确认 `transporter.send` 返回的 CompletableFuture 是否总会正常完成；否则应改为动画仅作视觉、入库与动画解耦。
+2. **【已修复】salvage 入库依赖物流动画完成**——`AsyncTransformExecutor.performSalvage` 原把 `bank.add` 写在 `transporter.send(...).thenRun(...)` 里，入库在飞行结束后才发生，动画若不完成则「飞了但没入账」。已改为破坏/拆除路径**直接 `bank.add` 入库**（去掉逐块飞行动画，兼防批量 demolish 时客户端上百 flying entity + 粒子洪泛）；飞行动画仅存于采集/合成入库、仓库→NPC 取料等单发路径。

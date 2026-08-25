@@ -16,14 +16,11 @@ import com.wsteam.wandscape.core.types.AttributeType;
 import com.wsteam.wandscape.core.types.BlockType;
 import com.wsteam.wandscape.engine.service.SoundService;
 import com.wsteam.wandscape.engine.sound.WandscapeSounds;
-import com.wsteam.wandscape.engine.transport.ItemTransportManager;
 import com.wsteam.wandscape.op.api.AtomicOp;
 import com.wsteam.wandscape.op.executor.OpExecutor;
 import com.wsteam.wandscape.op.executor.ResourceShortageException;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
-import com.wsteam.wandscape.shared.api.BuildingApi;
-import com.wsteam.wandscape.shared.data.BuildingData;
 import com.wsteam.wandscape.shared.data.ItemKey;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.warehouse.ColonyItemBank;
@@ -57,8 +54,9 @@ import com.wsteam.wandscape.shared.log.Log;
  * AWAITING_RESOURCES and releases the NPC.
  *
  * <p>When an existing block in the world is broken, cleared, flattened, or replaced,
- * this executor intercepts the destruction, calculates dropped items, launches inbound
- * flying item logistics animation, and deposits the materials safely into the colony warehouse.
+ * this executor intercepts the destruction, calculates dropped items, and deposits
+ * the materials directly into the colony warehouse (no flying-item animation — batch
+ * demolition would flood the client with transport entities).
  */
 public class AsyncTransformExecutor implements OpExecutor<AtomicOp.TransformOp> {
 
@@ -68,8 +66,6 @@ public class AsyncTransformExecutor implements OpExecutor<AtomicOp.TransformOp> 
     private static final int NPC_CAST_THROTTLE_TICKS = 10;
 
     private final int delayTicks;
-    @Nullable
-    private final ItemTransportManager transporter;
 
     record Pending(CompletableFuture<Void> future, AtomicOp.TransformOp op, World world,
                    long npcId, int remainingTicks) {}
@@ -77,14 +73,8 @@ public class AsyncTransformExecutor implements OpExecutor<AtomicOp.TransformOp> 
     private final List<Pending> pending = new ArrayList<>();
 
     public AsyncTransformExecutor(int delayTicks) {
-        this(delayTicks, null);
-    }
-
-    public AsyncTransformExecutor(int delayTicks, @Nullable ItemTransportManager transporter) {
         this.delayTicks = delayTicks;
-        this.transporter = transporter;
-        Log.info(TAG, "AsyncTransformExecutor delay={} ticks (transporter={})",
-                delayTicks, transporter != null ? "active" : "none");
+        Log.info(TAG, "AsyncTransformExecutor delay={} ticks", delayTicks);
     }
 
     @Override
@@ -233,33 +223,20 @@ public class AsyncTransformExecutor implements OpExecutor<AtomicOp.TransformOp> 
         if (drops.isEmpty()) return;
 
         UUID colonyId = resolveColonyId(npc, world, bp);
-        BlockPos storagePos = findNearestStorage(colonyId, bp);
         ColonyItemBank bank = ColonyItemBank.get(sl);
+        if (bank == null || colonyId == null) return;
 
         for (ItemStack drop : drops) {
             if (drop.isEmpty()) continue;
             String itemId = BuiltInRegistries.ITEM.getKey(drop.getItem()).toString();
             ItemKey key = ItemKey.of(itemId, null);
             int count = drop.getCount();
-
-            if (transporter != null && storagePos != null) {
-                // Inbound logistics: fly items from broken block to the warehouse
-                transporter.send(key, count, bp, storagePos, sl, npcId, null, true)
-                        .thenRun(() -> {
-                            if (bank != null && colonyId != null) {
-                                bank.add(colonyId, key, count);
-                                Log.info(TAG, "[Salvage] Dismantled item returned to warehouse: {} x{} (colony={})",
-                                        key.itemId(), count, colonyId.toString().substring(0, 8));
-                            }
-                        });
-            } else {
-                // Direct deposit fallback
-                if (bank != null && colonyId != null) {
-                    bank.add(colonyId, key, count);
-                    Log.info(TAG, "[Salvage] Directly deposited dismantled item: {} x{} (colony={})",
-                            key.itemId(), count, colonyId.toString().substring(0, 8));
-                }
-            }
+            // Direct deposit — no flying-item animation. Batch demolition would spawn
+            // hundreds of transport entities on the client, so shattered blocks just
+            // bank their drops instantly.
+            bank.add(colonyId, key, count);
+            Log.info(TAG, "[Salvage] Dismantled item returned to warehouse: {} x{} (colony={})",
+                    key.itemId(), count, colonyId.toString().substring(0, 8));
         }
     }
 
@@ -290,43 +267,5 @@ public class AsyncTransformExecutor implements OpExecutor<AtomicOp.TransformOp> 
             if (cid != null) return cid;
         }
         return new UUID(0, 0);
-    }
-
-    @Nullable
-    private BlockPos findNearestStorage(UUID colonyId, BlockPos refPos) {
-        BuildingApi api = WandscapeApis.getBuildingApi();
-        if (api == null) return null;
-        var ids = api.getBuildingsByCategory(colonyId, "storage");
-        if (ids != null && !ids.isEmpty()) {
-            BlockPos nearest = null;
-            double best = Double.MAX_VALUE;
-            for (UUID id : ids) {
-                BuildingData bd = api.getBuilding(id);
-                if (bd == null || bd.isShutdown()) continue;
-                BlockPos p = bd.getPosition();
-                double d = p.distSqr(refPos);
-                if (d < best) {
-                    best = d;
-                    nearest = p;
-                }
-            }
-            if (nearest != null) return nearest;
-        }
-        // Fallback to government / town hall
-        var govIds = api.getBuildingsByCategory(colonyId, "government");
-        if (govIds == null || govIds.isEmpty()) return null;
-        BlockPos nearest = null;
-        double best = Double.MAX_VALUE;
-        for (UUID id : govIds) {
-            BuildingData bd = api.getBuilding(id);
-            if (bd == null || bd.isShutdown()) continue;
-            BlockPos p = bd.getPosition();
-            double d = p.distSqr(refPos);
-            if (d < best) {
-                best = d;
-                nearest = p;
-            }
-        }
-        return nearest;
     }
 }
