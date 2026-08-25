@@ -2,9 +2,6 @@ package com.wsteam.wandscape.shared.ui.panel;
 
 import java.util.List;
 
-import org.joml.Matrix4f;
-
-import com.wsteam.wandscape.engine.sound.WandscapeSounds;
 import com.wsteam.wandscape.overview.client.OverviewClientState;
 import com.wsteam.wandscape.overview.client.OverviewFlightController;
 import com.wsteam.wandscape.shared.network.tasks.MageModeActionPacket;
@@ -20,28 +17,26 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
-import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
- * RTS-style Frosted Glass Drawer for Global Task & Mage Management.
+ * RTS-style Compact Drawer for Global Task & Mage Management.
  * Rendered when {@link WandscapePanelState#getActiveSubMode()} is {@code SubMode.TASKS}.
  */
 public final class TaskManagementOverlay {
 
-    public static final int DRAWER_W = 310;
-    private static final int BG_COLOR = 0xF011141A;
+    public static final int DRAWER_W = 240;
+    private static final int BG_COLOR = 0xF211141A;
     private static final int BORDER_COLOR = 0xFFC8A040;
-    private static final int CARD_BG = 0xCC1A1D24;
-    private static final int CARD_BG_HOVER = 0xEE242933;
-    private static final int CARD_BORDER = 0xFF353B47;
+    private static final int CARD_BG = 0xD81A1D24;
+    private static final int CARD_BG_HOVER = 0xF0242933;
 
-    private static final int TAB_BTN_H = 22;
-    private static final int FILTER_BTN_H = 16;
-    private static final int TASK_CARD_H = 68;
-    private static final int MAGE_CARD_H = 74;
-    private static final int CARD_GAP = 6;
+    private static final int TAB_BTN_H = 20;
+    private static final int FILTER_BTN_H = 15;
+    private static final int TASK_CARD_H = 58;
+    private static final int MAGE_CARD_H = 62;
+    private static final int CARD_GAP = 5;
 
     private TaskManagementOverlay() {}
 
@@ -70,17 +65,17 @@ public final class TaskManagementOverlay {
         g.fill(RenderType.guiOverlay(), x, y, x + DRAWER_W, y + h, 0, BG_COLOR);
         g.fill(RenderType.guiOverlay(), x + DRAWER_W - 1, y, x + DRAWER_W, y + h, 0, BORDER_COLOR);
 
-        int curY = y + 8;
+        int curY = y + 6;
 
-        // 2. Header & Tab Switcher
-        renderHeader(g, font, x + 8, curY, DRAWER_W - 16, mx, my);
-        curY += 28;
+        // 2. Header & Tab Switcher + Collapse Button
+        renderHeader(g, font, x + 6, curY, DRAWER_W - 12, mx, my);
+        curY += 24;
 
         TaskManagementClientState.SubTab tab = TaskManagementClientState.getActiveTab();
         if (tab == TaskManagementClientState.SubTab.TASKS) {
-            renderTasksView(g, font, x + 8, curY, DRAWER_W - 16, h - (curY - y) - 8, mx, my);
+            renderTasksView(g, font, x + 6, curY, DRAWER_W - 12, h - (curY - y) - 6, mx, my);
         } else {
-            renderMagesView(g, font, x + 8, curY, DRAWER_W - 16, h - (curY - y) - 8, mx, my);
+            renderMagesView(g, font, x + 6, curY, DRAWER_W - 12, h - (curY - y) - 6, mx, my);
         }
     }
 
@@ -89,7 +84,9 @@ public final class TaskManagementOverlay {
     // ═══════════════════════════════════════════════════════════════════
 
     private static void renderHeader(GuiGraphics g, Font font, int x, int y, int w, double mx, double my) {
-        int halfW = (w - 6) / 2;
+        int collapseW = 16;
+        int tabTotalW = w - collapseW - 4;
+        int halfW = (tabTotalW - 4) / 2;
         TaskManagementClientState.SubTab currentTab = TaskManagementClientState.getActiveTab();
 
         // Tasks Tab Button
@@ -100,13 +97,13 @@ public final class TaskManagementOverlay {
         if (tasksActive) {
             g.fill(RenderType.guiOverlay(), x, y + TAB_BTN_H - 2, x + halfW, y + TAB_BTN_H, 0, BORDER_COLOR);
         }
-        String taskLabel = I18n.string("gui.wandscape.panel.tasks.tab_tasks", "📜 任务大厅")
-                + " (" + TaskManagementClientState.getTotalActiveTasks() + ")";
+        String taskLabel = I18n.string("gui.wandscape.panel.tasks.tab_tasks", "📜 任务")
+                + " " + TaskManagementClientState.getTotalActiveTasks();
         int taskTextColor = tasksActive ? WandscapeTheme.COLOR_TEXT_ACTIVE : WandscapeTheme.COLOR_TEXT_NORMAL;
-        g.drawString(font, taskLabel, x + (halfW - font.width(taskLabel)) / 2, y + 6, taskTextColor, false);
+        g.drawString(font, taskLabel, x + (halfW - font.width(taskLabel)) / 2, y + 5, taskTextColor, false);
 
         // Mages Tab Button
-        int mageX = x + halfW + 6;
+        int mageX = x + halfW + 4;
         boolean magesActive = currentTab == TaskManagementClientState.SubTab.MAGES;
         boolean magesHover = mx >= mageX && mx <= mageX + halfW && my >= y && my <= y + TAB_BTN_H;
         int mageBg = magesActive ? 0xEE2A313D : (magesHover ? 0xCC20252E : 0xAA161920);
@@ -114,10 +111,16 @@ public final class TaskManagementOverlay {
         if (magesActive) {
             g.fill(RenderType.guiOverlay(), mageX, y + TAB_BTN_H - 2, mageX + halfW, y + TAB_BTN_H, 0, BORDER_COLOR);
         }
-        String mageLabel = I18n.string("gui.wandscape.panel.tasks.tab_mages", "🧙 法师名册")
-                + " (" + TaskManagementClientState.getTotalMageCount() + ")";
+        String mageLabel = I18n.string("gui.wandscape.panel.tasks.tab_mages", "🧙 法师")
+                + " " + TaskManagementClientState.getTotalMageCount();
         int mageTextColor = magesActive ? WandscapeTheme.COLOR_TEXT_ACTIVE : WandscapeTheme.COLOR_TEXT_NORMAL;
-        g.drawString(font, mageLabel, mageX + (halfW - font.width(mageLabel)) / 2, y + 6, mageTextColor, false);
+        g.drawString(font, mageLabel, mageX + (halfW - font.width(mageLabel)) / 2, y + 5, mageTextColor, false);
+
+        // Collapse Button [◀]
+        int colX = x + tabTotalW + 4;
+        boolean colHover = mx >= colX && mx <= colX + collapseW && my >= y && my <= y + TAB_BTN_H;
+        g.fill(RenderType.guiOverlay(), colX, y, colX + collapseW, y + TAB_BTN_H, 0, colHover ? 0xEE3E4A5E : 0x881E232B);
+        g.drawString(font, "◀", colX + 4, y + 5, colHover ? WandscapeTheme.COLOR_TEXT_ACTIVE : WandscapeTheme.COLOR_TEXT_DIM, false);
     }
 
     // ═══════════════════════════════════════════════════════════════════
@@ -129,26 +132,26 @@ public final class TaskManagementOverlay {
         int filterY = y;
         TaskManagementClientState.TaskFilter currentFilter = TaskManagementClientState.getActiveFilter();
         TaskManagementClientState.TaskFilter[] filters = TaskManagementClientState.TaskFilter.values();
-        int filterW = (w - (filters.length - 1) * 3) / filters.length;
+        int filterW = (w - (filters.length - 1) * 2) / filters.length;
 
         for (int i = 0; i < filters.length; i++) {
-            int fx = x + i * (filterW + 3);
+            int fx = x + i * (filterW + 2);
             boolean active = filters[i] == currentFilter;
             boolean hover = mx >= fx && mx <= fx + filterW && my >= filterY && my <= filterY + FILTER_BTN_H;
             int bg = active ? 0xFFC8A040 : (hover ? 0x883A3E4A : 0x5520242C);
             g.fill(RenderType.guiOverlay(), fx, filterY, fx + filterW, filterY + FILTER_BTN_H, 0, bg);
             String name = I18n.string(filters[i].getTranslationKey(), filters[i].name());
             int txtColor = active ? 0xFF111214 : WandscapeTheme.COLOR_TEXT_NORMAL;
-            g.drawString(font, name, fx + (filterW - font.width(name)) / 2, filterY + 4, txtColor, false);
+            g.drawString(font, name, fx + (filterW - font.width(name)) / 2, filterY + 3, txtColor, false);
         }
 
         // List Area with Scissors
-        int listY = filterY + FILTER_BTN_H + 6;
-        int listH = h - (FILTER_BTN_H + 6);
+        int listY = filterY + FILTER_BTN_H + 4;
+        int listH = h - (FILTER_BTN_H + 4);
         List<TaskSummaryDto> tasks = TaskManagementClientState.getFilteredTasks();
 
         if (tasks.isEmpty()) {
-            String empty = I18n.string("gui.wandscape.panel.tasks.empty", "当前分类下暂无任务");
+            String empty = I18n.string("gui.wandscape.panel.tasks.empty", "暂无任务");
             g.drawString(font, empty, x + (w - font.width(empty)) / 2, listY + 30, WandscapeTheme.COLOR_TEXT_DIM, false);
             return;
         }
@@ -157,7 +160,7 @@ public final class TaskManagementOverlay {
         int maxScroll = Math.max(0, totalHeight - listH);
         int scroll = Math.min(TaskManagementClientState.getTaskScrollOffset(), maxScroll);
 
-        g.enableScissor(x - 4, listY, x + w + 4, listY + listH);
+        g.enableScissor(x - 2, listY, x + w + 2, listY + listH);
 
         int renderY = listY - scroll;
         for (TaskSummaryDto task : tasks) {
@@ -169,13 +172,13 @@ public final class TaskManagementOverlay {
 
         g.disableScissor();
 
-        // Scrollbar if needed
+        // Scrollbar
         if (maxScroll > 0) {
-            int sbX = x + w - 3;
-            int sbH = Math.max(16, (listH * listH) / totalHeight);
+            int sbX = x + w - 2;
+            int sbH = Math.max(12, (listH * listH) / totalHeight);
             int sbY = listY + (int) ((float) scroll / maxScroll * (listH - sbH));
-            g.fill(RenderType.guiOverlay(), sbX, listY, sbX + 3, listY + listH, 0, 0x44FFFFFF);
-            g.fill(RenderType.guiOverlay(), sbX, sbY, sbX + 3, sbY + sbH, 0, 0xFFAAAAAA);
+            g.fill(RenderType.guiOverlay(), sbX, listY, sbX + 2, listY + listH, 0, 0x33FFFFFF);
+            g.fill(RenderType.guiOverlay(), sbX, sbY, sbX + 2, sbY + sbH, 0, 0xFFAAAAAA);
         }
     }
 
@@ -188,62 +191,65 @@ public final class TaskManagementOverlay {
         // Title + Priority
         String pTag = "[P" + task.priority() + "] ";
         String title = pTag + task.title();
-        if (font.width(title) > w - 70) {
-            title = font.plainSubstrByWidth(title, w - 76) + "...";
+        if (font.width(title) > w - 62) {
+            title = font.plainSubstrByWidth(title, w - 68) + "...";
         }
-        g.drawString(font, title, x + 6, y + 6, WandscapeTheme.COLOR_TEXT_NORMAL, false);
+        g.drawString(font, title, x + 5, y + 4, WandscapeTheme.COLOR_TEXT_NORMAL, false);
 
         // Status Line
-        int statusY = y + 18;
+        int statusY = y + 15;
         if ("IN_PROGRESS".equalsIgnoreCase(task.state())) {
             String mage = task.assignedNpcName().isEmpty() ? "法师" : task.assignedNpcName();
             String stepStr = " (" + (task.stepIndex() + 1) + "/" + task.totalSteps() + ")";
-            String status = "🟢 正在执行: " + mage + stepStr;
-            g.drawString(font, status, x + 6, statusY, 0xFF81C784, false);
+            String status = "🟢 " + mage + stepStr;
+            g.drawString(font, status, x + 5, statusY, 0xFF81C784, false);
 
             // Progress Bar
-            int barW = w - 12;
-            g.fill(RenderType.guiOverlay(), x + 6, y + 32, x + 6 + barW, y + 35, 0, 0xFF2A2E38);
+            int barW = w - 68;
+            g.fill(RenderType.guiOverlay(), x + 5, y + 43, x + 5 + barW, y + 46, 0, 0xFF2A2E38);
             int fillW = (int) (barW * task.getProgress());
-            g.fill(RenderType.guiOverlay(), x + 6, y + 32, x + 6 + fillW, y + 35, 0, 0xFFC8A040);
+            g.fill(RenderType.guiOverlay(), x + 5, y + 43, x + 5 + fillW, y + 46, 0, 0xFFC8A040);
         } else if ("AWAITING_RESOURCES".equalsIgnoreCase(task.state())) {
-            g.drawString(font, "🔴 缺少前置资源", x + 6, statusY, 0xFFE57373, false);
-            // Shortages tags
             if (task.shortages() != null && !task.shortages().isEmpty()) {
                 ResourceShortageDto s = task.shortages().getFirst();
-                String shortStr = s.displayName() + " " + s.currentAmount() + "/" + s.requiredAmount() + " (缺" + s.getMissingAmount() + ")";
-                g.drawString(font, shortStr, x + 6, y + 32, 0xFFFFB74D, false);
+                String shortStr = "🔴 缺" + s.displayName() + " " + s.currentAmount() + "/" + s.requiredAmount();
+                g.drawString(font, shortStr, x + 5, statusY, 0xFFE57373, false);
+            } else {
+                g.drawString(font, "🔴 缺少前置资源", x + 5, statusY, 0xFFE57373, false);
             }
         } else if ("PENDING_ASSIGN".equalsIgnoreCase(task.state())) {
             String reason = "WAITING_NPC".equals(task.blockerReason()) ? "⚠️ 等待空闲法师" : "🟡 排队等待中";
-            g.drawString(font, reason, x + 6, statusY, 0xFFFFD54F, false);
+            g.drawString(font, reason, x + 5, statusY, 0xFFFFD54F, false);
         } else if ("QUEUED".equalsIgnoreCase(task.state())) {
-            g.drawString(font, "⚪ 建筑队列排队中", x + 6, statusY, 0xFFB0BEC5, false);
+            g.drawString(font, "⚪ 建筑队列排队中", x + 5, statusY, 0xFFB0BEC5, false);
         }
 
         // Action Buttons on Card (Right Side)
-        renderTaskActionButtons(g, font, x + w - 68, y + 44, task, mx, my);
+        renderTaskActionButtons(g, font, x + w - 58, y + 36, task, mx, my);
     }
 
     private static void renderTaskActionButtons(GuiGraphics g, Font font, int x, int y, TaskSummaryDto task, double mx, double my) {
+        int btnW = 16;
+        int btnH = 14;
+
         // Locate Button [🔍]
         if (task.hasTargetPos()) {
-            boolean hover = mx >= x && mx <= x + 18 && my >= y && my <= y + 16;
-            g.fill(RenderType.guiOverlay(), x, y, x + 18, y + 16, 0, hover ? 0xCC3E4A5E : 0x882A313D);
-            g.drawString(font, "🔍", x + 3, y + 4, 0xFFFFFFFF, false);
+            boolean hover = mx >= x && mx <= x + btnW && my >= y && my <= y + btnH;
+            g.fill(RenderType.guiOverlay(), x, y, x + btnW, y + btnH, 0, hover ? 0xCC3E4A5E : 0x882A313D);
+            g.drawString(font, "🔍", x + 2, y + 3, 0xFFFFFFFF, false);
         }
 
         // Rush / Priority Button [⚡]
-        int rushX = x + 22;
-        boolean rushHover = mx >= rushX && mx <= rushX + 18 && my >= y && my <= y + 16;
-        g.fill(RenderType.guiOverlay(), rushX, y, rushX + 18, y + 16, 0, rushHover ? 0xCCC8A040 : 0x885C4B20);
-        g.drawString(font, "⚡", rushX + 3, y + 4, 0xFFFFFFFF, false);
+        int rushX = x + 19;
+        boolean rushHover = mx >= rushX && mx <= rushX + btnW && my >= y && my <= y + btnH;
+        g.fill(RenderType.guiOverlay(), rushX, y, rushX + btnW, y + btnH, 0, rushHover ? 0xCCC8A040 : 0x885C4B20);
+        g.drawString(font, "⚡", rushX + 2, y + 3, 0xFFFFFFFF, false);
 
-        // Cancel Button [❌]
-        int cancelX = x + 44;
-        boolean cancelHover = mx >= cancelX && mx <= cancelX + 18 && my >= y && my <= y + 16;
-        g.fill(RenderType.guiOverlay(), cancelX, y, cancelX + 18, y + 16, 0, cancelHover ? 0xCCE53935 : 0x885C2020);
-        g.drawString(font, "✕", cancelX + 4, y + 4, 0xFFFFFFFF, false);
+        // Cancel Button [✕]
+        int cancelX = x + 38;
+        boolean cancelHover = mx >= cancelX && mx <= cancelX + btnW && my >= y && my <= y + btnH;
+        g.fill(RenderType.guiOverlay(), cancelX, y, cancelX + btnW, y + btnH, 0, cancelHover ? 0xCCE53935 : 0x885C2020);
+        g.drawString(font, "✕", cancelX + 3, y + 3, 0xFFFFFFFF, false);
     }
 
     // ═══════════════════════════════════════════════════════════════════
@@ -254,7 +260,7 @@ public final class TaskManagementOverlay {
         List<MageSummaryDto> mages = TaskManagementClientState.getFilteredMages();
 
         if (mages.isEmpty()) {
-            String empty = I18n.string("gui.wandscape.panel.mages.empty", "当前小镇暂无法师");
+            String empty = I18n.string("gui.wandscape.panel.mages.empty", "暂无法师");
             g.drawString(font, empty, x + (w - font.width(empty)) / 2, y + 30, WandscapeTheme.COLOR_TEXT_DIM, false);
             return;
         }
@@ -263,7 +269,7 @@ public final class TaskManagementOverlay {
         int maxScroll = Math.max(0, totalHeight - h);
         int scroll = Math.min(TaskManagementClientState.getMageScrollOffset(), maxScroll);
 
-        g.enableScissor(x - 4, y, x + w + 4, y + h);
+        g.enableScissor(x - 2, y, x + w + 2, y + h);
 
         int renderY = y - scroll;
         for (MageSummaryDto mage : mages) {
@@ -276,11 +282,11 @@ public final class TaskManagementOverlay {
         g.disableScissor();
 
         if (maxScroll > 0) {
-            int sbX = x + w - 3;
-            int sbH = Math.max(16, (h * h) / totalHeight);
+            int sbX = x + w - 2;
+            int sbH = Math.max(12, (h * h) / totalHeight);
             int sbY = y + (int) ((float) scroll / maxScroll * (h - sbH));
-            g.fill(RenderType.guiOverlay(), sbX, y, sbX + 3, y + h, 0, 0x44FFFFFF);
-            g.fill(RenderType.guiOverlay(), sbX, sbY, sbX + 3, sbY + sbH, 0, 0xFFAAAAAA);
+            g.fill(RenderType.guiOverlay(), sbX, y, sbX + 2, y + h, 0, 0x33FFFFFF);
+            g.fill(RenderType.guiOverlay(), sbX, sbY, sbX + 2, sbY + sbH, 0, 0xFFAAAAAA);
         }
     }
 
@@ -292,59 +298,62 @@ public final class TaskManagementOverlay {
 
         // Name + State Badge
         String name = "🧙 " + mage.name();
-        g.drawString(font, name, x + 6, y + 6, WandscapeTheme.COLOR_TEXT_ACTIVE, false);
+        g.drawString(font, name, x + 5, y + 4, WandscapeTheme.COLOR_TEXT_ACTIVE, false);
 
         String stateTag = formatMageState(mage);
-        g.drawString(font, stateTag, x + 6, y + 18, getMageStateTextColor(mage.state()), false);
+        g.drawString(font, stateTag, x + 5, y + 15, getMageStateTextColor(mage.state()), false);
 
         // HP & Mana Bars
-        int barW = 100;
-        int barY = y + 30;
+        int barW = 45;
+        int barY = y + 27;
         // HP Bar
-        g.fill(RenderType.guiOverlay(), x + 6, barY, x + 6 + barW, barY + 4, 0, 0xFF3E2723);
+        g.fill(RenderType.guiOverlay(), x + 5, barY, x + 5 + barW, barY + 3, 0, 0xFF3E2723);
         int hpFill = (int) (barW * mage.getHealthRatio());
-        g.fill(RenderType.guiOverlay(), x + 6, barY, x + 6 + hpFill, barY + 4, 0, 0xFF4CAF50);
+        g.fill(RenderType.guiOverlay(), x + 5, barY, x + 5 + hpFill, barY + 3, 0, 0xFF4CAF50);
 
         // Mana Bar
-        g.fill(RenderType.guiOverlay(), x + 112, barY, x + 112 + barW, barY + 4, 0, 0xFF0D47A1);
+        g.fill(RenderType.guiOverlay(), x + 54, barY, x + 54 + barW, barY + 3, 0, 0xFF0D47A1);
         int manaFill = (int) (barW * mage.getManaRatio());
-        g.fill(RenderType.guiOverlay(), x + 112, barY, x + 112 + manaFill, barY + 4, 0, 0xFF42A5F5);
+        g.fill(RenderType.guiOverlay(), x + 54, barY, x + 54 + manaFill, barY + 3, 0, 0xFF42A5F5);
 
         // Attributes line
-        String attrStr = String.format("⚡法强: %.1fx  🔨工速: %.1fx", mage.spellPower(), mage.workSpeed());
-        g.drawString(font, attrStr, x + 6, y + 42, WandscapeTheme.COLOR_TEXT_DIM, false);
+        String attrStr = String.format("⚡%.1f 🔨%.1f 🛡%.0f", mage.spellPower(), mage.workSpeed(), mage.armorValue());
+        g.drawString(font, attrStr, x + 5, y + 36, WandscapeTheme.COLOR_TEXT_DIM, false);
 
         // Action Buttons
-        renderMageActionButtons(g, font, x + w - 88, y + 52, mage, mx, my);
+        renderMageActionButtons(g, font, x + w - 76, y + 42, mage, mx, my);
     }
 
     private static void renderMageActionButtons(GuiGraphics g, Font font, int x, int y, MageSummaryDto mage, double mx, double my) {
+        int btnW = 16;
+        int btnH = 14;
+
         // Focus [🔍]
-        boolean focusHover = mx >= x && mx <= x + 18 && my >= y && my <= y + 16;
-        g.fill(RenderType.guiOverlay(), x, y, x + 18, y + 16, 0, focusHover ? 0xCC3E4A5E : 0x882A313D);
-        g.drawString(font, "🔍", x + 3, y + 4, 0xFFFFFFFF, false);
+        boolean focusHover = mx >= x && mx <= x + btnW && my >= y && my <= y + btnH;
+        g.fill(RenderType.guiOverlay(), x, y, x + btnW, y + btnH, 0, focusHover ? 0xCC3E4A5E : 0x882A313D);
+        g.drawString(font, "🔍", x + 2, y + 3, 0xFFFFFFFF, false);
 
         // Track Camera [🎥]
-        int trackX = x + 22;
+        int trackX = x + 19;
         boolean isTracking = TaskManagementClientState.getTrackingEntityId() == mage.entityId();
-        boolean trackHover = mx >= trackX && mx <= trackX + 18 && my >= y && my <= y + 16;
+        boolean trackHover = mx >= trackX && mx <= trackX + btnW && my >= y && my <= y + btnH;
         int trackBg = isTracking ? 0xFFC8A040 : (trackHover ? 0xCC3E4A5E : 0x882A313D);
-        g.fill(RenderType.guiOverlay(), trackX, y, trackX + 18, y + 16, 0, trackBg);
-        g.drawString(font, "🎥", trackX + 2, y + 4, isTracking ? 0xFF111214 : 0xFFFFFFFF, false);
+        g.fill(RenderType.guiOverlay(), trackX, y, trackX + btnW, y + btnH, 0, trackBg);
+        g.drawString(font, "🎥", trackX + 1, y + 3, isTracking ? 0xFF111214 : 0xFFFFFFFF, false);
 
-        // Follow Toggle [🛡️]
-        int followX = x + 44;
-        boolean followHover = mx >= followX && mx <= followX + 18 && my >= y && my <= y + 16;
+        // Follow Toggle [🛡]
+        int followX = x + 38;
+        boolean followHover = mx >= followX && mx <= followX + btnW && my >= y && my <= y + btnH;
         int followBg = mage.followMode() ? 0xFF4CAF50 : (followHover ? 0xCC3E4A5E : 0x882A313D);
-        g.fill(RenderType.guiOverlay(), followX, y, followX + 18, y + 16, 0, followBg);
-        g.drawString(font, "🛡", followX + 4, y + 4, 0xFFFFFFFF, false);
+        g.fill(RenderType.guiOverlay(), followX, y, followX + btnW, y + btnH, 0, followBg);
+        g.drawString(font, "🛡", followX + 3, y + 3, 0xFFFFFFFF, false);
 
         // Peace Toggle [🕊]
-        int peaceX = x + 66;
-        boolean peaceHover = mx >= peaceX && mx <= peaceX + 18 && my >= y && my <= y + 16;
+        int peaceX = x + 57;
+        boolean peaceHover = mx >= peaceX && mx <= peaceX + btnW && my >= y && my <= y + btnH;
         int peaceBg = mage.peaceMode() ? 0xFF42A5F5 : (peaceHover ? 0xCC3E4A5E : 0x882A313D);
-        g.fill(RenderType.guiOverlay(), peaceX, y, peaceX + 18, y + 16, 0, peaceBg);
-        g.drawString(font, "🕊", peaceX + 3, y + 4, 0xFFFFFFFF, false);
+        g.fill(RenderType.guiOverlay(), peaceX, y, peaceX + btnW, y + btnH, 0, peaceBg);
+        g.drawString(font, "🕊", peaceX + 2, y + 3, 0xFFFFFFFF, false);
     }
 
     // ═══════════════════════════════════════════════════════════════════
@@ -353,22 +362,31 @@ public final class TaskManagementOverlay {
 
     public static boolean handleMouseClick(double mx, double my, int screenH) {
         if (!isActive()) return false;
-        int x = WandscapePanelOverlay.SIDEBAR_W + 8;
-        int y = WandscapePanelOverlay.TOP_BAR_H + 8;
-        int w = DRAWER_W - 16;
-        int h = screenH - WandscapePanelOverlay.TOP_BAR_H - 16;
+        int x = WandscapePanelOverlay.SIDEBAR_W + 6;
+        int y = WandscapePanelOverlay.TOP_BAR_H + 6;
+        int w = DRAWER_W - 12;
+        int h = screenH - WandscapePanelOverlay.TOP_BAR_H - 12;
 
-        // 1. Header Tab Switcher
-        int halfW = (w - 6) / 2;
+        int collapseW = 16;
+        int tabTotalW = w - collapseW - 4;
+        int halfW = (tabTotalW - 4) / 2;
+
+        // 1. Header Tab Switcher & Collapse Button
         if (my >= y && my <= y + TAB_BTN_H) {
             if (mx >= x && mx <= x + halfW) {
                 TaskManagementClientState.setActiveTab(TaskManagementClientState.SubTab.TASKS);
                 playClickSound();
                 return true;
             }
-            int mageX = x + halfW + 6;
+            int mageX = x + halfW + 4;
             if (mx >= mageX && mx <= mageX + halfW) {
                 TaskManagementClientState.setActiveTab(TaskManagementClientState.SubTab.MAGES);
+                playClickSound();
+                return true;
+            }
+            int colX = x + tabTotalW + 4;
+            if (mx >= colX && mx <= colX + collapseW) {
+                collapseDrawerToOverview();
                 playClickSound();
                 return true;
             }
@@ -377,12 +395,12 @@ public final class TaskManagementOverlay {
         TaskManagementClientState.SubTab tab = TaskManagementClientState.getActiveTab();
         if (tab == TaskManagementClientState.SubTab.TASKS) {
             // Filter pills
-            int filterY = y + 28;
+            int filterY = y + 24;
             TaskManagementClientState.TaskFilter[] filters = TaskManagementClientState.TaskFilter.values();
-            int filterW = (w - (filters.length - 1) * 3) / filters.length;
+            int filterW = (w - (filters.length - 1) * 2) / filters.length;
             if (my >= filterY && my <= filterY + FILTER_BTN_H) {
                 for (int i = 0; i < filters.length; i++) {
-                    int fx = x + i * (filterW + 3);
+                    int fx = x + i * (filterW + 2);
                     if (mx >= fx && mx <= fx + filterW) {
                         TaskManagementClientState.setActiveFilter(filters[i]);
                         playClickSound();
@@ -392,7 +410,7 @@ public final class TaskManagementOverlay {
             }
 
             // Task list clicks
-            int listY = filterY + FILTER_BTN_H + 6;
+            int listY = filterY + FILTER_BTN_H + 4;
             int listH = h - (listY - y);
             if (my >= listY && my <= listY + listH) {
                 List<TaskSummaryDto> tasks = TaskManagementClientState.getFilteredTasks();
@@ -402,23 +420,24 @@ public final class TaskManagementOverlay {
                 for (TaskSummaryDto t : tasks) {
                     if (my >= curY && my <= curY + TASK_CARD_H) {
                         // Action buttons
-                        int btnX = x + w - 68;
-                        int btnY = curY + 44;
-                        if (my >= btnY && my <= btnY + 16) {
-                            if (t.hasTargetPos() && mx >= btnX && mx <= btnX + 18) {
+                        int btnX = x + w - 58;
+                        int btnY = curY + 36;
+                        if (my >= btnY && my <= btnY + 14) {
+                            if (t.hasTargetPos() && mx >= btnX && mx <= btnX + 16) {
                                 flyToTarget(t.targetX(), t.targetY(), t.targetZ());
+                                collapseDrawerToOverview();
                                 playClickSound();
                                 return true;
                             }
-                            int rushX = btnX + 22;
-                            if (mx >= rushX && mx <= rushX + 18) {
+                            int rushX = btnX + 19;
+                            if (mx >= rushX && mx <= rushX + 16) {
                                 PacketDistributor.sendToServer(new TaskManagementActionPacket(
                                         t.taskId(), TaskManagementActionPacket.ACTION_RUSH, 100));
                                 playClickSound();
                                 return true;
                             }
-                            int cancelX = btnX + 44;
-                            if (mx >= cancelX && mx <= cancelX + 18) {
+                            int cancelX = btnX + 38;
+                            if (mx >= cancelX && mx <= cancelX + 16) {
                                 PacketDistributor.sendToServer(new TaskManagementActionPacket(
                                         t.taskId(), TaskManagementActionPacket.ACTION_CANCEL, 0));
                                 playClickSound();
@@ -431,8 +450,8 @@ public final class TaskManagementOverlay {
             }
         } else {
             // Mages list clicks
-            int listY = y + 28;
-            int listH = h - 28;
+            int listY = y + 24;
+            int listH = h - 24;
             if (my >= listY && my <= listY + listH) {
                 List<MageSummaryDto> mages = TaskManagementClientState.getFilteredMages();
                 int scroll = TaskManagementClientState.getMageScrollOffset();
@@ -440,31 +459,36 @@ public final class TaskManagementOverlay {
 
                 for (MageSummaryDto m : mages) {
                     if (my >= curY && my <= curY + MAGE_CARD_H) {
-                        int btnX = x + w - 88;
-                        int btnY = curY + 52;
-                        if (my >= btnY && my <= btnY + 16) {
-                            if (mx >= btnX && mx <= btnX + 18) {
+                        int btnX = x + w - 76;
+                        int btnY = curY + 42;
+                        if (my >= btnY && my <= btnY + 14) {
+                            if (mx >= btnX && mx <= btnX + 16) {
                                 flyToTarget(m.posX(), m.posY(), m.posZ());
+                                collapseDrawerToOverview();
                                 playClickSound();
                                 return true;
                             }
-                            int trackX = btnX + 22;
-                            if (mx >= trackX && mx <= trackX + 18) {
+                            int trackX = btnX + 19;
+                            if (mx >= trackX && mx <= trackX + 16) {
                                 int current = TaskManagementClientState.getTrackingEntityId();
                                 int next = current == m.entityId() ? -1 : m.entityId();
                                 TaskManagementClientState.setTrackingEntityId(next);
+                                if (next != -1) {
+                                    flyToTarget(m.posX(), m.posY(), m.posZ());
+                                    collapseDrawerToOverview();
+                                }
                                 playClickSound();
                                 return true;
                             }
-                            int followX = btnX + 44;
-                            if (mx >= followX && mx <= followX + 18) {
+                            int followX = btnX + 38;
+                            if (mx >= followX && mx <= followX + 16) {
                                 PacketDistributor.sendToServer(new MageModeActionPacket(
                                         m.entityId(), MageModeActionPacket.MODE_FOLLOW, !m.followMode()));
                                 playClickSound();
                                 return true;
                             }
-                            int peaceX = btnX + 66;
-                            if (mx >= peaceX && mx <= peaceX + 18) {
+                            int peaceX = btnX + 57;
+                            if (mx >= peaceX && mx <= peaceX + 16) {
                                 PacketDistributor.sendToServer(new MageModeActionPacket(
                                         m.entityId(), MageModeActionPacket.MODE_PEACE, !m.peaceMode()));
                                 playClickSound();
@@ -476,7 +500,6 @@ public final class TaskManagementOverlay {
                 }
             }
         }
-
         return false;
     }
 
@@ -495,7 +518,19 @@ public final class TaskManagementOverlay {
         return true;
     }
 
+    public static void collapseDrawerToOverview() {
+        if (!OverviewClientState.isActive()) {
+            OverviewFlightController.enter();
+        }
+        // SubMode is changed to OVERVIEW: closes drawer but keeps Overview flight active!
+        WandscapePanelState.setSubMode(WandscapePanelState.SubMode.OVERVIEW);
+        WandscapePanelState.syncCursorToState();
+    }
+
     private static void flyToTarget(double x, double y, double z) {
+        if (!OverviewClientState.isActive()) {
+            OverviewFlightController.enter();
+        }
         OverviewClientState.setCamPosition(x, y + 14.0, z - 14.0);
     }
 
@@ -536,10 +571,10 @@ public final class TaskManagementOverlay {
 
     private static String formatMageState(MageSummaryDto mage) {
         return switch (mage.state().toUpperCase()) {
-            case "CASTING" -> "🔨 " + (mage.currentTaskTitle().isEmpty() ? "正在施法" : mage.currentTaskTitle());
-            case "MOVING" -> "🚶 正在前往工作地点";
-            case "FOLLOWING" -> "🛡️ 跟随玩家警戒中";
-            case "RESTING" -> "💤 回屋冥想休息中";
+            case "CASTING" -> "🔨 正在施法";
+            case "MOVING" -> "🚶 前往工作中";
+            case "FOLLOWING" -> "🛡️ 跟随警戒中";
+            case "RESTING" -> "💤 回屋休息中";
             default -> "🍵 空闲待命中";
         };
     }
