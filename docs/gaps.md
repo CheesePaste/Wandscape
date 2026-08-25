@@ -85,3 +85,8 @@
 2. **仓库格点击限制**：Exchange 页仓库槽不可拖拽均分（QUICK_CRAFT 被 `mayPlace=false` 拒绝，对齐 AE2 终端行为）；双击仓库格无合并语义（每条目一槽）。
 3. **光标持有 >64 时点击玩家槽**：`safeInsert` 每次最多放 64（vanilla 槽位上限），剩余留在光标，需多次点击——vanilla 标准行为。
 4. **Overview 页物品列表数据源**：来自 `WarehouseDataPacket` 全量快照（打开时 + 每次动作后刷新），NPC 系统实时入库时列表不实时（槽网格同数据源，但菜单打开期间服务端只读槽不参与 vanilla 同步）；刷新包机制与改造前一致。
+
+## 九、拆除返还的潜在丢物品与已修复的双计（2026-08-25）
+
+1. **【已修复】撤回未完成建筑的双计刷物品**——`cancelBuilding` 原为「蓝图全量退款 + 拆除 salvage 返已放实物」，净赚已放部分。已改为只退未放置部分（详见 `docs/decisions.md` 2026-08-25 条目）。
+2. **【待查】salvage 入库依赖物流动画完成**——`AsyncTransformExecutor.performSalvage`（b04ad70d）的 `bank.add` 写在 `transporter.send(...).thenRun(...)` 里，即**入库发生在物品飞行动画结束后**。若动画因区块卸载/异常不走到 `thenRun`，已拆方块的物品会「飞了但没入账」——正常建造/拆除/铲平路径均受影响。待确认 `transporter.send` 返回的 CompletableFuture 是否总会正常完成；否则应改为动画仅作视觉、入库与动画解耦。

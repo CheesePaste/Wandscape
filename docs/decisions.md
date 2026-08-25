@@ -2,6 +2,16 @@
 
 本文件记录偏离直觉的设计选择及其原因，供后续开发快速理解「为什么这么做」。
 
+## 2026-08-25：撤回未完成建筑的材料返还——只退「未放置」部分，已放置交给拆除 salvage
+
+**需求**：撤回（V 面板撤销，`cancelBuilding`）一个「未完成建造」的建筑时，需把玩家为它支付的材料退还给仓库。但原实现 `refundMaterials` 按蓝图**全量**退款，紧接着 `demolishBuilding` 又会逐块 `place air` 触发 `AsyncTransformExecutor.performSalvage`，按 `Block.getDrops` 把已建方块的实物再返一遍——两段叠加，净返还 = 全量成本 + 已放部分实物 = **刷物品**（例：蓝图 100 木，开工批量扣除 100 木，建到一半撤回 = 退 100 + 拆掉 60 块掉落 60 = 拿回 160，净赚 60）。
+
+**决策**：撤回时**只退「尚未放置」块的材料，已放置块交给拆除 salvage 物理返还**。用 `BuildCompleteListener.findDamagedBlocks`（返回与蓝图不一致的 offset）筛出缺失/未放好的 offset，`materialCountsForMissingOffsets` 只对这些 offset 累计材料——口径与建造扣费 `EnqueueHelper.computeMaterialCounts`（某块有元素映射才有 cost、air 跳过、每 offset 计 1）完全一致，只是先排除已放块。
+
+**为什么**：建造是 `build:place_structure` 的 `request_resource` 在开工时**一次性扣全量**；若撤回再全额退款、又因拆除把已放实物收回来，同一批材料被计两次。拆成两段——已放块实物由 salvage 收、空位材料由 refund 补——总和恰好等于建造扣费，不刷也不亏，且玩家能直观看到每块已建方块掉落回仓。
+
+**影响**：`BuildingApiImpl.refundMaterials` → `refundUnplacedMaterials`（findDamagedBlocks 判定缺失块）；新增可测纯函数 `materialCountsForMissingOffsets(config, rotationSteps, missingOffsets, hasElementMapping)`（注入 element-mapping 判定，裸 JVM 可测，rotation 由 `BuildingRotation.rotateOffsets` 保序配对 `config.blockIdAt(i)`）；`BuildingApiImplTest` 新增 5 用例覆盖缺失/已放/旋转/air/无映射。正常拆除（destroy 成品建筑）不走 refund、仅靠 salvage，行为不变。
+
 ## 2026-08-24：法师小屋——单法师住宅 + 入住记录与法师实体解耦
 
 **需求**：新增建筑类别 `mage_hut`（法师小屋），一间只住一名法师、入住后锁定。小屋面板提供 3D 预览 + 属性面板（`初始值/初始值上界 + 等级加成 + 装备加成`）+ 装备/策略/升级/休息/训练属性操作；法师死亡时入住状态不变（可复活），只是不能操作。

@@ -9,9 +9,11 @@ import javax.annotation.Nullable;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
+import com.wsteam.wandscape.building.data.BlockOffset;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.engine.service.ParticleService;
 import com.wsteam.wandscape.engine.source.BuildingTaskSource;
+import com.wsteam.wandscape.projection.BuildingRotation;
 import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.data.BuildingData;
 import com.wsteam.wandscape.shared.data.ItemKey;
@@ -400,7 +402,7 @@ public class BuildingApiImpl implements BuildingApi {
             // bulk commit at construction start, so refund the full material cost,
             // then demolish whatever has been built.
             BuildingTaskSource.cancelBuildingTasks(buildingId);
-            refundMaterials(state);
+            refundUnplacedMaterials(state);
             demolishBuilding(buildingId);
         } else {
             // Not started → nothing was consumed; just drop the pending building.
@@ -410,30 +412,70 @@ public class BuildingApiImpl implements BuildingApi {
     }
 
     /**
-     * Return the full material cost of an under-construction building to its colony
-     * warehouse. Materials are block items keyed by bare block id — the same keying
-     * {@code build:place_structure}'s request_resource step uses to consume them.
+     * Return the material cost of the blocks that were NOT yet placed to the colony
+     * warehouse. Blocks that WERE placed are refunded physically by the demolition's
+     * salvage flow (each broken block drops back as items), so refunding the full
+     * blueprint cost here would double-count and mint items. The offsets that are
+     * still missing / mismatched are detected via
+     * {@link BuildCompleteListener#findDamagedBlocks} — the same data the
+     * {@code build:place_structure} request_resource step consumed, minus the
+     * already-placed offsets.
      */
-    private void refundMaterials(BuildingState state) {
+    private void refundUnplacedMaterials(BuildingState state) {
         UUID colonyId = state.getColonyId();
         if (colonyId == null) return;
         BuildingConfig config = BuildingConfigLoader.getInstance().get(state.getBuildingTypeId());
         if (config == null) return;
-        Map<String, Integer> counts = EnqueueHelper.computeMaterialCounts(config);
-        if (counts.isEmpty()) return;
         Level level = getServerLevel();
         if (level == null) return;
         ColonyItemBank bank = ColonyItemBank.get(level);
         if (bank == null) return;
+
+        var missingOffsets = BuildCompleteListener.findDamagedBlocks(
+                level, state.getAnchor(), config, state.getRotationSteps());
+        Map<String, Integer> counts = materialCountsForMissingOffsets(
+                config, state.getRotationSteps(), missingOffsets,
+                id -> com.wsteam.wandscape.shared.registry.WandscapeApis.getElementApi().hasElementMapping(id));
+        if (counts.isEmpty()) return;
 
         int total = 0;
         for (var entry : counts.entrySet()) {
             bank.add(colonyId, ItemKey.of(entry.getKey(), null), entry.getValue());
             total += entry.getValue();
         }
-        Log.info(TAG, "[Cancel] Refunded {} material items ({} types) to colony {} for {} ({})",
+        Log.info(TAG, "[Cancel] Refunded {} unplaced material items ({} types) to colony {} for {} ({})",
                 total, counts.size(), colonyId.toString().substring(0, 8),
                 state.getBuildingTypeId(), state.getBuildingId().toString().substring(0, 8));
+    }
+
+    /**
+     * Material counts for the offsets that are missing / not yet placed, using the
+     * same口径 as {@link EnqueueHelper#computeMaterialCounts} (bare block id, element
+     * mapping filter, air skip, 1 per offset). The missing offsets are passed in so
+     * this stays a pure function, testable without a live {@code Level} or element
+     * registry.
+     *
+     * <p>Already-placed offsets are excluded so the demolition's salvage handles
+     * them — the refund only covers what the warehouse was charged but never turned
+     * into a block.
+     */
+    static Map<String, Integer> materialCountsForMissingOffsets(BuildingConfig config, int rotationSteps,
+            java.util.Collection<BlockOffset> missingOffsets,
+            java.util.function.Predicate<String> hasElementMapping) {
+        var missingKeys = new java.util.HashSet<String>();
+        for (BlockOffset off : missingOffsets) missingKeys.add(off.toKey());
+
+        java.util.List<BlockOffset> rotatedPattern = BuildingRotation.rotateOffsets(config.pattern(), rotationSteps);
+        var counts = new java.util.LinkedHashMap<String, Integer>();
+        for (int i = 0; i < rotatedPattern.size(); i++) {
+            if (!missingKeys.contains(rotatedPattern.get(i).toKey())) continue;
+            String blockId = config.blockIdAt(i);
+            String pureId = blockId.replaceAll("\\[.*?\\]", "").trim();
+            if ("minecraft:air".equals(pureId)) continue;
+            if (!hasElementMapping.test(pureId)) continue;
+            counts.merge(pureId, 1, Integer::sum);
+        }
+        return counts;
     }
 
     // ---- Task bridge ----
