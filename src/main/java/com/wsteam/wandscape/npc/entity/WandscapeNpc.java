@@ -1125,9 +1125,11 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
             if (getHatColor() == 0) {
                 this.entityData.set(DATA_HAT_COLOR, generateRandomHatColor());
             }
-            // Equip wand on spawn so casting animation shows the item
-            setItemInHand(InteractionHand.MAIN_HAND,
-                    new ItemStack(Wandscape.WAND.get()));
+            // Equip wand on initial spawn so casting animation shows the item
+            if (getItemInHand(InteractionHand.MAIN_HAND).isEmpty()) {
+                setItemInHand(InteractionHand.MAIN_HAND,
+                        new ItemStack(Wandscape.WAND.get()));
+            }
             // Prevent vanilla despawn — NPC persistence is managed by the colony/engine
             this.setPersistenceRequired();
             if (isColonyNpc()) {
