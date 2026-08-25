@@ -23,6 +23,15 @@ public class TouristApiImpl implements TouristApi {
     private final Map<UUID, Set<UUID>> colonyTourists = new ConcurrentHashMap<>();
     // colonyId → count of tourists who stayed overnight (checked into hotel)
     private final Map<UUID, Integer> colonyOvernightCounts = new ConcurrentHashMap<>();
+    /**
+     * 本会话内已登记离场的游客 UUID——让 {@link #registerDeparture} 幂等。
+     * <p>同一游客的离场可能被两条路径重复上报：显式离场（onTouristDepart / sim depart / 快进夜）
+     * 与实体移除兜底（onTouristKilled → discard 的 DISCARDED 移除）。两者都调 registerDeparture，
+     * 若不幂等，TouristDepartedEvent 会被重复 post，StatisticsCollector 等把离场数双计。
+     * <p>游客 UUID 离线场后 shadow 即从注册表移除、不会再出现，故集合按「只增不删」即可，
+     * 无需清理；仅按 JVM 生命周期驻留，UUID 不跨世界/会话复用，不会误伤新游客。
+     */
+    private final Set<UUID> departedTourists = ConcurrentHashMap.newKeySet();
 
     @Override
     public int getTouristCount(UUID colonyId) {
@@ -60,6 +69,8 @@ public class TouristApiImpl implements TouristApi {
 
     @Override
     public void registerDeparture(UUID touristId, UUID colonyId, BarRatio fill) {
+        // 幂等：同一游客只登记一次离场（显式离场与实体移除兜底可能双双调用本方法）。
+        if (!departedTourists.add(touristId)) return;
         Set<UUID> tourists = colonyTourists.get(colonyId);
         if (tourists != null) {
             tourists.remove(touristId);

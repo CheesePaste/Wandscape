@@ -201,18 +201,13 @@ public final class TouristSimSystem {
     private void runTick(ServerLevel level) {
         try (var span = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("tourist.sim.run_tick")) {
         Map<UUID, TouristShadow> shadows = registry.getShadows();
-        if (shadows.isEmpty()) return;
 
-        // Pre-compute player probes and sim-range once per tick (was O(S×P) alloc per shadow).
-        double simRange = level.getServer().getPlayerList().getSimulationDistance() * 16.0;
-        double simRangeSq = simRange * simRange;
-        java.util.List<PlayerProbe> probeList = new java.util.ArrayList<>();
-        for (var p : level.players()) {
-            if (!p.isSpectator()) probeList.add(new PlayerProbe(p.getX(), p.getZ()));
-        }
-        PlayerProbe[] probes = probeList.toArray(new PlayerProbe[0]);
-
-        // Index live entities for O(1) lookup + orphan scan.
+        // Index live entities for O(1) lookup + orphan scan. This MUST run BEFORE the
+        // `shadows.isEmpty()` guard below: a skipped night (player sleeps) departs every
+        // no-hotel tourist in one shot (fastForwardNight), emptying the registry — if the
+        // per-shadow loop were the only cleanup, a departed tourist whose body is still
+        // observed would linger in the world once the last shadow leaves. A live body with
+        // no shadow IS a departed tourist; discard it regardless of registry size.
         // Uses the static LIVE_TOURISTS cache (populated by TouristEntity lifecycle)
         // instead of level.getAllEntities() — that iterates every entity in the world
         // (items, mobs, xp orbs, …) every tick, which is the #1 CPU hog.
@@ -225,11 +220,22 @@ public final class TouristSimSystem {
             // (A chunk-unload race can briefly move a shadow to another chunk while
             // the body is still loaded — do NOT discard by position difference, that
             // kills freshly spawned tourists.)
-            if (!shadows.containsKey(t.getUUID())) {
+            if (isOrphan(t.getUUID(), shadows)) {
                 Log.info(TAG, "[Tourist] discarding orphan body {} (departed)", shortId(t.getUUID()));
                 t.discard();
             }
         }
+
+        if (shadows.isEmpty()) return;
+
+        // Pre-compute player probes and sim-range once per tick (was O(S×P) alloc per shadow).
+        double simRange = level.getServer().getPlayerList().getSimulationDistance() * 16.0;
+        double simRangeSq = simRange * simRange;
+        java.util.List<PlayerProbe> probeList = new java.util.ArrayList<>();
+        for (var p : level.players()) {
+            if (!p.isSpectator()) probeList.add(new PlayerProbe(p.getX(), p.getZ()));
+        }
+        PlayerProbe[] probes = probeList.toArray(new PlayerProbe[0]);
 
         for (TouristShadow s : new ArrayList<>(shadows.values())) {
             // 创始人不在线 → 冻结小镇：游客原地冻结——不 sim、不实体化、不离场、不被清。
@@ -844,6 +850,13 @@ public final class TouristSimSystem {
     /** 夜间快进结果判定（纯逻辑，可单测）：deadline/满条 优先于住店/无旅店。 */
     enum NightOutcome {
         DEPART_DEADLINE, DEPART_FULL, DEPART_NO_HOTEL, WAKE, CHECKIN_WAKE
+    }
+
+    /** 孤儿判定（纯逻辑，可单测）：活体游客 UUID 不在影子注册表 → 该游客已离场，残留身体应被清除。
+     *  该判定与注册表是否为空无关——快进夜会一次性清空注册表，此时仍在场的活体身体必须仍能被识别为孤儿，
+     *  否则会永远滞留（runTick 的空保护把孤儿扫描短路正是此 bug）。 */
+    static boolean isOrphan(UUID touristId, Map<UUID, TouristShadow> shadows) {
+        return !shadows.containsKey(touristId);
     }
 
     static NightOutcome nightOutcome(boolean deadlineReached, boolean fullySatisfied,
