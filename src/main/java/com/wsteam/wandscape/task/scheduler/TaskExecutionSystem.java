@@ -126,15 +126,44 @@ public class TaskExecutionSystem implements System {
             if (!exec.pendingFuture.isDone()) {
                 return; // still waiting
             }
-            Log.info(TAG, "NPC %d — future resolved (wasNav=%s)", npcId, exec.pendingFutureIsNav);
+            CompletableFuture<Void> resolvedFuture = exec.pendingFuture;
+            boolean wasNav = exec.pendingFutureIsNav;
+            Log.info(TAG, "NPC %d — future resolved (wasNav=%s)", npcId, wasNav);
             exec.pendingFuture = null;
-            if (!exec.pendingFutureIsNav) {
+            exec.pendingFutureIsNav = false;
+
+            if (resolvedFuture.isCompletedExceptionally()) {
+                Throwable cause = null;
+                try {
+                    resolvedFuture.get();
+                } catch (Exception e) {
+                    cause = e.getCause() != null ? e.getCause() : e;
+                    Log.warn(TAG, "NPC %d — async op %s failed: %s",
+                            npcId, pkg != null ? pkg.source() : "unknown",
+                            cause.getMessage());
+                }
+                if (cause instanceof ResourceShortageException shortage) {
+                    if (exec.globalTaskId != null && taskPool != null) {
+                        taskPool.markAwaitingResources(exec.globalTaskId, npcId,
+                                shortage.requestedItems(), world);
+                        exec.releaseGlobalTask();
+                    }
+                    queue.clearCurrentWithoutResume();
+                } else {
+                    releaseToGlobalPool(exec, queue, npcId, world);
+                }
+                exec.state = ExecutorState.IDLE;
+                exec.currentOpTarget = null;
+                exec.currentOpKind = null;
+                return;
+            }
+
+            if (!wasNav) {
                 queue.advanceStep();
                 syncStepToPool(exec, queue);
                 exec.lastWorkTick = worldTick(world);
             } else {
                 Log.info(TAG, "NPC %d — nav resolved, continuing to execute op", npcId);
-                exec.pendingFutureIsNav = false;
                 navJustResolved = true;
             }
             if (queue.isCurrentPackageDone()) {
@@ -227,7 +256,29 @@ public class TaskExecutionSystem implements System {
             OpExecutor<AtomicOp> executor = (OpExecutor<AtomicOp>) (Object) registry.get(currentOp.getClass());
             if (executor == null) return;
 
-            CompletableFuture<Void> future = executor.execute(currentOp, world, npcId);
+            CompletableFuture<Void> future;
+            try {
+                future = executor.execute(currentOp, world, npcId);
+            } catch (ResourceShortageException shortage) {
+                if (exec.globalTaskId != null && taskPool != null) {
+                    taskPool.markAwaitingResources(exec.globalTaskId, npcId,
+                            shortage.requestedItems(), world);
+                    exec.releaseGlobalTask();
+                }
+                queue.clearCurrentWithoutResume();
+                exec.state = ExecutorState.IDLE;
+                exec.currentOpTarget = null;
+                exec.currentOpKind = null;
+                return;
+            } catch (Throwable t) {
+                Log.warn(TAG, "NPC %d — executor threw exception for op %s: %s",
+                        npcId, currentOp.getClass().getSimpleName(), t.getMessage());
+                releaseToGlobalPool(exec, queue, npcId, world);
+                exec.state = ExecutorState.IDLE;
+                exec.currentOpTarget = null;
+                exec.currentOpKind = null;
+                return;
+            }
 
             // ── 4g. Already done? (sync op) ──
             if (future.isDone()) {
@@ -494,7 +545,11 @@ public class TaskExecutionSystem implements System {
             AtomicOp sub = subs.get(i);
             OpExecutor<AtomicOp> subExec = (OpExecutor<AtomicOp>) (Object) registry.get(sub.getClass());
             if (subExec != null) {
-                futures[i] = subExec.execute(sub, world, npcId);
+                try {
+                    futures[i] = subExec.execute(sub, world, npcId);
+                } catch (Throwable t) {
+                    futures[i] = CompletableFuture.failedFuture(t);
+                }
             } else {
                 Log.warn(TAG, "NPC %d — no executor for parallel sub-op %s",
                         npcId, sub.getClass().getSimpleName());

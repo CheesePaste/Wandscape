@@ -139,11 +139,22 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
             return CompletableFuture.completedFuture(null);
         }
 
+        // ── Preconditions check for async production actions ──
+        try {
+            checkPreconditions(op, world, npcId);
+        } catch (ResourceShortageException e) {
+            return CompletableFuture.failedFuture(e);
+        }
+
         // ── Async actions ──
         if (op.channelTicks() <= 0) {
             // Zero ticks → execute immediately
-            executeAsyncAction(op, world, npcId);
-            return CompletableFuture.completedFuture(null);
+            try {
+                executeAsyncAction(op, world, npcId);
+                return CompletableFuture.completedFuture(null);
+            } catch (ResourceShortageException e) {
+                return CompletableFuture.failedFuture(e);
+            }
         }
 
         CompletableFuture<Void> future = world.startAsyncOp(
@@ -185,6 +196,8 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
                     // （第二次短路时 globalTaskId 已为 null，catch 空操作，白白多引导一趟）。
                     e2.npcQueue.clearCurrentWithoutResume();
                 }
+            } catch (Throwable t) {
+                Log.warn(TAG, "executeAsyncAction threw unexpected error: {}", t.getMessage());
             }
         });
 
@@ -273,6 +286,139 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
             }
         }
         return new int[]{-1, -1};
+    }
+
+    // ── Precondition check implementations ──
+
+    private void checkPreconditions(AtomicOp.BlockInteractOp op, World world, long npcId) {
+        String action = op.action().id();
+        Map<String, String> params = op.params();
+        switch (action) {
+            case "synthesize" -> checkSynthesizePreconditions(params, npcId);
+            case "decompose" -> checkDecomposePreconditions(params, npcId);
+            case "craft_wand" -> checkCraftWandPreconditions(params, npcId);
+            case "craft_spell" -> checkCraftSpellPreconditions(params, npcId);
+            case "brew_potion" -> checkBrewPotionPreconditions(params, npcId);
+            default -> {}
+        }
+    }
+
+    private void checkSynthesizePreconditions(Map<String, String> params, long npcId) {
+        String recipeId = params.get("recipe_id");
+        int count = parseCount(params);
+        if (recipeId == null || count <= 0 || productionRecipeLoader == null) return;
+        SynthesizeRecipe recipe = productionRecipeLoader.getSynthesizeRecipe(recipeId);
+        if (recipe == null) return;
+        Level level = getNpcLevel(npcId);
+        if (level == null) return;
+        ColonyItemBank bank = ColonyItemBank.get(level);
+        if (bank == null) return;
+        UUID colonyId = findStorageColonyId();
+        for (var entry : recipe.cost().entrySet()) {
+            long needed = scaledCraftCost(entry.getValue() * count);
+            if (bank.countElement(colonyId, entry.getKey()) < needed) {
+                String elementId = entry.getKey().name().toLowerCase();
+                Log.warn(TAG, "synthesize: insufficient {} (need={})", entry.getKey(), needed);
+                throw new ResourceShortageException(
+                        List.of(new ResourceStack(new ResourceId(elementId), (int) needed)));
+            }
+        }
+    }
+
+    private void checkDecomposePreconditions(Map<String, String> params, long npcId) {
+        String itemId = params.get("item_id");
+        int count = parseCount(params);
+        if (itemId == null || count <= 0 || elementMappingLoader == null) return;
+        Level level = getNpcLevel(npcId);
+        if (level == null) return;
+        ColonyItemBank bank = ColonyItemBank.get(level);
+        if (bank == null) return;
+        UUID colonyId = findStorageColonyId();
+        ItemKey key = ItemKey.of(itemId, null);
+        long available = bank.count(colonyId, key);
+        if (available < count) {
+            Log.warn(TAG, "decompose: insufficient items. need={} have={} item={}", count, available, itemId);
+            int colonIdx = itemId.lastIndexOf(':');
+            String shortId = colonIdx >= 0 ? itemId.substring(colonIdx + 1) : itemId;
+            throw new ResourceShortageException(
+                    List.of(new ResourceStack(new ResourceId(shortId), count)));
+        }
+    }
+
+    private void checkCraftWandPreconditions(Map<String, String> params, long npcId) {
+        String recipeId = params.get("recipe_id");
+        int count = parseCount(params);
+        if (recipeId == null || count <= 0 || productionRecipeLoader == null) return;
+        CraftWandRecipe recipe = productionRecipeLoader.getCraftWandRecipes().get(recipeId);
+        if (recipe == null) return;
+        Level level = getNpcLevel(npcId);
+        if (level == null) return;
+        ColonyItemBank bank = ColonyItemBank.get(level);
+        if (bank == null) return;
+        UUID colonyId = findStorageColonyId();
+        for (var entry : recipe.cost().entrySet()) {
+            long needed = scaledCraftCost(entry.getValue() * count);
+            if (bank.countElement(colonyId, entry.getKey()) < needed) {
+                String elementId = entry.getKey().name().toLowerCase();
+                Log.warn(TAG, "craft_wand: insufficient {} (need={})", entry.getKey(), needed);
+                throw new ResourceShortageException(
+                        List.of(new ResourceStack(new ResourceId(elementId), (int) needed)));
+            }
+        }
+    }
+
+    private void checkCraftSpellPreconditions(Map<String, String> params, long npcId) {
+        String recipeId = params.get("recipe_id");
+        int count = parseCount(params);
+        if (recipeId == null || count <= 0 || productionRecipeLoader == null) return;
+        CraftSpellRecipe recipe = productionRecipeLoader.getSpellRecipes().get(recipeId);
+        if (recipe == null) return;
+        Level level = getNpcLevel(npcId);
+        if (level == null) return;
+        ColonyItemBank bank = ColonyItemBank.get(level);
+        if (bank == null) return;
+        UUID colonyId = findStorageColonyId();
+        for (var entry : recipe.cost().entrySet()) {
+            long needed = scaledCraftCost(entry.getValue() * count);
+            if (bank.countElement(colonyId, entry.getKey()) < needed) {
+                String elementId = entry.getKey().name().toLowerCase();
+                Log.warn(TAG, "craft_spell: insufficient {} (need={})", entry.getKey(), needed);
+                throw new ResourceShortageException(
+                        List.of(new ResourceStack(new ResourceId(elementId), (int) needed)));
+            }
+        }
+    }
+
+    private void checkBrewPotionPreconditions(Map<String, String> params, long npcId) {
+        String recipeId = params.get("recipe_id");
+        int count = parseCount(params);
+        if (recipeId == null || count <= 0 || productionRecipeLoader == null) return;
+        var recipe = productionRecipeLoader.getPotionRecipes().get(recipeId);
+        if (recipe == null) return;
+        Level level = getNpcLevel(npcId);
+        if (level == null) return;
+        ColonyItemBank bank = ColonyItemBank.get(level);
+        if (bank == null) return;
+        UUID colonyId = findStorageColonyId();
+        for (var entry : recipe.cost().entrySet()) {
+            long needed = scaledCraftCost(entry.getValue() * count);
+            if (bank.countElement(colonyId, entry.getKey()) < needed) {
+                String elementId = entry.getKey().name().toLowerCase();
+                Log.warn(TAG, "brew_potion: insufficient {} (need={})", entry.getKey(), needed);
+                throw new ResourceShortageException(
+                        List.of(new ResourceStack(new ResourceId(elementId), (int) needed)));
+            }
+        }
+        for (String inputItemId : recipe.inputItems()) {
+            ItemKey key = ItemKey.of(inputItemId, null);
+            if (bank.available(colonyId, key) < count) {
+                int colonIdx = inputItemId.lastIndexOf(':');
+                String shortId = colonIdx >= 0 ? inputItemId.substring(colonIdx + 1) : inputItemId;
+                Log.warn(TAG, "brew_potion: insufficient input item {} (need={})", inputItemId, count);
+                throw new ResourceShortageException(
+                        List.of(new ResourceStack(new ResourceId(shortId), count)));
+            }
+        }
     }
 
     // ── Action implementations ──

@@ -2,6 +2,24 @@
 
 本文件记录偏离直觉的设计选择及其原因，供后续开发快速理解「为什么这么做」。
 
+## 2026-08-25：任务执行与方块交互执行器缺资源异常防护（防服务端 Tick Loop 崩溃）
+
+**需求**：在 NPC 执行合成（synthesize）等生产操作时，如果所需元素（如木元素）不足且该操作的 channel duration 为 0（低阶物品瞬间合成），`WandscapeBlockInteractExecutor` 在同步执行分支中直接抛出 `ResourceShortageException`，未被捕获并转化为 `failedFuture`，导致异常直穿 `TaskExecutionSystem.processNpc`、`World.tick` 及 `Wandscape.onServerTick`，引起服务端崩溃（`Exception in server tick loop: ResourceShortageException: Resource shortage: need 128 x wood`）。
+
+**决策**：
+1. **执行器前置校验与同步短路保护**：`WandscapeBlockInteractExecutor` 增加 `checkPreconditions` 前置资源校验，在进入引导前若缺资源立即返回 `CompletableFuture.failedFuture(e)`，避免无谓等待；当 `channelTicks <= 0` 同步执行时，捕获 `ResourceShortageException` 并返回 `CompletableFuture.failedFuture(e)`。
+2. **调度系统异常安全闭环**：
+   - `TaskExecutionSystem.processNpc` 在 Step 4f 调用 `executor.execute(...)` 时增加 `try-catch` 防御，捕获 `ResourceShortageException`（标记任务为 `AWAITING_RESOURCES`，解绑 NPC，清空队列）及未捕获的 `Throwable`（安全回退至全局池，不炸服）。
+   - 在 Step 2 处理已完成的 `pendingFuture` 时，增加 `isCompletedExceptionally()` 判定，捕获异步失败的 `ResourceShortageException` 并正确流转任务状态。
+   - `executeParallel` 子任务执行时增加异常捕获并转化为 `failedFuture`。
+
+**为什么**：核心原则第四条「稳定性优先：所有可能失败的路径必须有兜底。不允许静默失败或崩溃」。缺资源是正常的经营生产业务分支，应当优雅转入 `AWAITING_RESOURCES` 等待资源补充唤醒，绝不能使服务器崩溃。
+
+**影响**：
+- `engine/boundary/WandscapeBlockInteractExecutor.java`：新增 `checkPreconditions`，安全包装同步与异步执行。
+- `task/scheduler/TaskExecutionSystem.java`：Step 2 与 Step 4f 及 `executeParallel` 增强异常拦截与状态流转。
+- `task/scheduler/TaskExecutionResourceShortageTest.java`：新增单元测试，覆盖同步/异步/未捕获异常全场景。
+
 ## 2026-08-25：V 面板全局任务与法师管理抽屉——RTS 式 3D 镜头联动 + 动态节流同步
 
 **需求**：在殖民地发展中，玩家无法直观掌握法师正在忙什么、有哪些任务正在执行、排队等待、哪些卡在前置资源不足（缺少具体什么元素），也无法在鸟瞰/全局模式下便捷调整任务优先级（加急/取消）或一键跟踪/调度法师。
