@@ -21,7 +21,7 @@ public record MageResume(
 ) {
     public MageResume {
         if (level < 1) level = 1;
-        if (maxHp < 1f) maxHp = 40f;
+        if (maxHp < 1f) maxHp = 30f;
         if (moveSpeed < 0.1f) moveSpeed = 0.3f;
         if (spellPower < 1f) spellPower = 1f;
         if (workSpeed < 1f) workSpeed = 1f;
