@@ -9,6 +9,8 @@ import javax.annotation.Nullable;
 import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.data.ItemKey;
 import com.wsteam.wandscape.shared.event.ElementBalanceChangedEvent;
+import com.wsteam.wandscape.shared.event.WarehouseElementChangedEvent;
+import com.wsteam.wandscape.shared.event.WarehouseItemChangedEvent;
 
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
@@ -67,19 +69,47 @@ public class ColonyItemBank extends SavedData {
     // In-memory reservations (not persisted)
     private final Map<UUID, Map<ItemKey, Long>> reservations = new ConcurrentHashMap<>();
 
+    public interface ElementChangeCallback {
+        void onElementChanged(UUID colonyId, ElementType type, long newAmount, long delta);
+    }
+
+    public interface ItemChangeCallback {
+        void onItemChanged(UUID colonyId, ItemKey itemKey, long newCount, long delta);
+    }
+
     /**
-     * Signals element balance changes. Defaults to broadcasting the NeoForge
-     * event (drives the V-panel HUD resync); swappable in unit tests because
-     * the NeoForge bus does not dispatch in a bare JVM.
+     * Signals element balance changes. Defaults to broadcasting NeoForge events
+     * (ElementBalanceChangedEvent and WarehouseElementChangedEvent).
      */
-    private static Consumer<UUID> elementBalanceNotifier =
-            colonyId -> NeoForge.EVENT_BUS.post(new ElementBalanceChangedEvent(colonyId));
+    private static ElementChangeCallback elementChangeNotifier =
+            (colonyId, type, newAmount, delta) -> {
+                NeoForge.EVENT_BUS.post(new ElementBalanceChangedEvent(colonyId));
+                if (type != null) {
+                    NeoForge.EVENT_BUS.post(new WarehouseElementChangedEvent(colonyId, type, newAmount, delta));
+                }
+            };
+
+    /**
+     * Signals item stack changes. Defaults to broadcasting WarehouseItemChangedEvent.
+     */
+    private static ItemChangeCallback itemChangeNotifier =
+            (colonyId, key, newCount, delta) -> {
+                NeoForge.EVENT_BUS.post(new WarehouseItemChangedEvent(colonyId, key, newCount, delta));
+            };
 
     /** Replace the notifier and return the previous one (test seam). */
     static Consumer<UUID> setElementBalanceNotifier(Consumer<UUID> notifier) {
-        Consumer<UUID> previous = elementBalanceNotifier;
-        elementBalanceNotifier = notifier;
-        return previous;
+        ElementChangeCallback previous = elementChangeNotifier;
+        elementChangeNotifier = (colonyId, type, newAmount, delta) -> notifier.accept(colonyId);
+        return colonyId -> previous.onElementChanged(colonyId, null, 0, 0);
+    }
+
+    public static void setElementChangeNotifier(ElementChangeCallback notifier) {
+        elementChangeNotifier = notifier;
+    }
+
+    public static void setItemChangeNotifier(ItemChangeCallback notifier) {
+        itemChangeNotifier = notifier;
     }
     // ── Factory ──
 
@@ -178,10 +208,12 @@ public class ColonyItemBank extends SavedData {
     /** Add amount of element type to colony storage. */
     public void addElement(UUID colonyId, ElementType type, long amount) {
         if (amount <= 0) return;
-        elementStorage.computeIfAbsent(colonyId, k -> new ConcurrentHashMap<>())
+        long newAmount = elementStorage.computeIfAbsent(colonyId, k -> new ConcurrentHashMap<>())
                 .merge(type, amount, Long::sum);
         setDirty();
-        elementBalanceNotifier.accept(colonyId);
+        if (elementChangeNotifier != null) {
+            elementChangeNotifier.onElementChanged(colonyId, type, newAmount, amount);
+        }
         Log.info(TAG, "[BANK] AddElement:%s".formatted(type.name()));
     }
 
@@ -229,16 +261,21 @@ public class ColonyItemBank extends SavedData {
             map.put(type, remaining);
         }
         setDirty();
-        elementBalanceNotifier.accept(colonyId);
+        if (elementChangeNotifier != null) {
+            elementChangeNotifier.onElementChanged(colonyId, type, Math.max(0, remaining), -amount);
+        }
         Log.info(TAG, "[BANK] consumeElement:%s".formatted(type.name()));
         return true;
     }
 
     public void add(UUID colonyId, ItemKey key, long amount) {
         if (amount <= 0) return;
-        storage.computeIfAbsent(colonyId, k -> new ConcurrentHashMap<>())
+        long newCount = storage.computeIfAbsent(colonyId, k -> new ConcurrentHashMap<>())
                 .merge(key, amount, Long::sum);
         setDirty();
+        if (itemChangeNotifier != null) {
+            itemChangeNotifier.onItemChanged(colonyId, key, newCount, amount);
+        }
     }
 
     public boolean consume(UUID colonyId, ItemKey key, long amount) {
@@ -253,6 +290,9 @@ public class ColonyItemBank extends SavedData {
             items.put(key, newCount);
         }
         setDirty();
+        if (itemChangeNotifier != null) {
+            itemChangeNotifier.onItemChanged(colonyId, key, Math.max(0, newCount), -amount);
+        }
         return true;
     }
 

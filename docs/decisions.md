@@ -2,6 +2,32 @@
 
 本文件记录偏离直觉的设计选择及其原因，供后续开发快速理解「为什么这么做」。
 
+## 2026-08-25：仓库公开 API 补全与变更事件广播（支持 AE2 联动与附属生态，Issue #17）
+
+**需求**：在开发 Wandscape × AE2（Applied Energistics 2）仓库存储磁盘等外部联动附属时，附属模组遇到了 4 个关键 API 缺口：
+1. `WarehouseApi` 无法列出全量物品清单，被迫跨模块依赖内部类 `ColonyItemBank.get(level).getSnapshot(colonyId)`。
+2. 缺乏公共仓库变更事件，附属只能通过高频全量轮询做缓存同步。
+3. `WarehouseApi.extractItem` 仅返回 `boolean` 且单次限额 64，无法方便提取大批量物品或获取实际取出数量。
+4. 配方产物不支持自定义 NBT/DataComponents 与 `$colony_id` 占位符变量注入。
+
+**决策**：
+1. **全量快照公开**：在 [`WarehouseApi`](file:///D:/Projects/MCMOD/Wandscape/src/main/java/com/wsteam/wandscape/shared/api/WarehouseApi.java) 中新增 `Map<ItemKey, Long> getItemSnapshot(UUID colonyId)`，由 [`WarehouseManager`](file:///D:/Projects/MCMOD/Wandscape/src/main/java/com/wsteam/wandscape/warehouse/WarehouseManager.java) 委托至 [`ColonyItemBank.getSnapshot`](file:///D:/Projects/MCMOD/Wandscape/src/main/java/com/wsteam/wandscape/warehouse/ColonyItemBank.java)。
+2. **公开变更事件与增量广播**：在 `shared/event/` 新增 [`WarehouseItemChangedEvent`](file:///D:/Projects/MCMOD/Wandscape/src/main/java/com/wsteam/wandscape/shared/event/WarehouseItemChangedEvent.java)（物品出入库）与 [`WarehouseElementChangedEvent`](file:///D:/Projects/MCMOD/Wandscape/src/main/java/com/wsteam/wandscape/shared/event/WarehouseElementChangedEvent.java)（元素变动），在 `ColonyItemBank` 中发生增减时实时广播，支持 $O(1)$ 增量网络同步，并保留单元测试 Seam。
+3. **提取接口升级为返回提取数量 (`long`)**：将 `extractItem(UUID, ItemKey, long, Container)` 返回值改为 `long`（实际放入容器的数量），并优化为支持跨多个槽位连续填充分配。
+4. **配方自定义 NBT 与 `$colony_id` 注入**：[`BrewPotionRecipe`](file:///D:/Projects/MCMOD/Wandscape/src/main/java/com/wsteam/wandscape/production/data/BrewPotionRecipe.java) 等配方产物支持 `output.nbt` JSON 对象，并在 [`WandscapeBlockInteractExecutor`](file:///D:/Projects/MCMOD/Wandscape/src/main/java/com/wsteam/wandscape/engine/boundary/WandscapeBlockInteractExecutor.java) 中自动完成 `$colony_id` 等占位符动态替换后生成 `ItemKey` 入库。
+
+**为什么**：仓库是殖民地自动化与模拟经营的核心数据源，干净的公共 API 与可观察的事件机制让外部附属与内部系统均能以高内聚、低耦合、零轮询的方式实现高性能联动。
+
+**影响**：
+- `shared/api/WarehouseApi.java`：新增 `getItemSnapshot`，`extractItem` 返回类型升级为 `long`。
+- `shared/event/`：新增 `WarehouseItemChangedEvent.java`、`WarehouseElementChangedEvent.java`。
+- `warehouse/ColonyItemBank.java`：增加增减变动事件广播。
+- `warehouse/WarehouseManager.java`：实现 `getItemSnapshot` 与多槽位 `extractItem`。
+- `warehouse/WarehouseMenu.java`：适配 `api.extractItem` 返回值。
+- `production/data/BrewPotionRecipe.java`：支持 `output.nbt` 解析。
+- `engine/boundary/WandscapeBlockInteractExecutor.java`：支持配方产物 NBT 占位符注入。
+- 新增单元测试 `ColonyItemBankChangedEventTest.java`、`BrewPotionRecipeNbtTest.java`。
+
 ## 2026-08-25：鸟瞰视角与曲线编辑器飞行输入拦截与按键映射绑定（防 GUI 内 Shift 冲突）
 
 **需求**：在鸟瞰视角（Overview）或样条道路编辑器中打开仓库等 GUI 界面（`mc.screen != null`）时，玩家按 Shift 快捷移动物品或按 WASD 时，飞行控制器的每帧位移检测未做 GUI 状态过滤，依然响应按键位移，导致视角直接向下坠落或乱飞；同时飞行控制器硬编码了 GLFW 的 `W/S/A/D/Space/Left_Shift`，无法随玩家在原版 Controls 设置中修改的按键（如 Sneak/Jump/Move）生效。

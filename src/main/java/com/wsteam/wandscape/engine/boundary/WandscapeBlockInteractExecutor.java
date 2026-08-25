@@ -49,6 +49,7 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
@@ -796,13 +797,35 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
             bank.consume(colonyId, ItemKey.of(inputItemId, null), count);
         }
 
-        bank.add(colonyId, ItemKey.of(recipe.outputItem(), null), count);
+        CompoundTag outputNbt = recipe.outputNbt() != null ? recipe.outputNbt().copy() : null;
+        if (outputNbt != null) {
+            substitutePlaceholders(outputNbt, colonyId);
+        }
+
+        ItemKey outputKey = ItemKey.of(recipe.outputItem(), outputNbt);
+        bank.add(colonyId, outputKey, count);
 
         // ── Transport visualization: potion flies NPC → warehouse ──
-        launchItemTransport(ItemKey.of(recipe.outputItem(), null), count, world, npcId);
+        launchItemTransport(outputKey, count, world, npcId);
 
         Log.info(TAG, "brew_potion: {} x{} → warehouse", recipe.outputItem(), count);
         spawnCompletionParticles(npcId);
+    }
+
+    private static void substitutePlaceholders(CompoundTag tag, UUID colonyId) {
+        if (tag == null || colonyId == null) return;
+        String colonyIdStr = colonyId.toString();
+        for (String key : tag.getAllKeys()) {
+            byte type = tag.getTagType(key);
+            if (type == Tag.TAG_STRING) {
+                String val = tag.getString(key);
+                if (val.contains("$colony_id")) {
+                    tag.putString(key, val.replace("$colony_id", colonyIdStr));
+                }
+            } else if (type == Tag.TAG_COMPOUND) {
+                substitutePlaceholders(tag.getCompound(key), colonyId);
+            }
+        }
     }
 
     // ── Transport helpers ──────────────────────────────────────────────────

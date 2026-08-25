@@ -174,16 +174,9 @@ public class WarehouseMenu extends AbstractContainerMenu {
         var api = WandscapeApis.getWarehouseApiSilently();
         if (api == null) return;
 
-        long remaining = Long.MAX_VALUE;
-        long totalTaken = 0;
-        while (remaining > 0) {
-            long take = Math.min(remaining, 64);
-            if (!api.extractItem(colonyId, key, take, player.getInventory())) break;
-            remaining -= take;
-            totalTaken += take;
-        }
-        if (totalTaken > 0) {
-            Log.info(TAG, "[Warehouse] {}x {} to inventory (colony={})", totalTaken, key.itemId(),
+        long taken = api.extractItem(colonyId, key, Long.MAX_VALUE, player.getInventory());
+        if (taken > 0) {
+            Log.info(TAG, "[Warehouse] {}x {} to inventory (colony={})", taken, key.itemId(),
                     colonyId.toString().substring(0, 8));
             playSound(player);
         }

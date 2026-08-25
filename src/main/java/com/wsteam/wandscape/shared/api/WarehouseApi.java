@@ -15,6 +15,7 @@ public interface WarehouseApi {
     boolean consumeElement(UUID colonyId, ElementType type, long amount);
     void addElement(UUID colonyId, ElementType type, long amount);
     long getItemCount(UUID colonyId, ItemKey key);
-    boolean extractItem(UUID colonyId, ItemKey key, long count, Container target);
+    Map<ItemKey, Long> getItemSnapshot(UUID colonyId);
+    long extractItem(UUID colonyId, ItemKey key, long count, Container target);
     void insertItems(UUID colonyId, List<ItemStack> items);
 }

@@ -88,38 +88,47 @@ public class WarehouseManager implements WarehouseApi, ColonyResourceAccess {
     }
 
     @Override
-    public boolean extractItem(UUID colonyId, ItemKey key, long count, Container target) {
+    public Map<ItemKey, Long> getItemSnapshot(UUID colonyId) {
         ColonyItemBank bank = getBank();
-        if (bank == null || count <= 0) return false;
-        if (bank.available(colonyId, key) < count) return false;
+        return bank != null ? bank.getSnapshot(colonyId) : Map.of();
+    }
 
-        int take = (int) Math.min(count, 64);
-        ItemStack stack = toItemStack(key, take);
-        if (stack.isEmpty()) return false;
+    @Override
+    public long extractItem(UUID colonyId, ItemKey key, long count, Container target) {
+        ColonyItemBank bank = getBank();
+        if (bank == null || count <= 0) return 0;
+        long avail = bank.available(colonyId, key);
+        if (avail <= 0) return 0;
 
-        int remainder = take;
-        for (int slot = 0; slot < target.getContainerSize() && remainder > 0; slot++) {
+        long toExtract = Math.min(count, avail);
+        long remaining = toExtract;
+
+        ItemStack sample = toItemStack(key, 1);
+        if (sample.isEmpty()) return 0;
+        int maxStackSize = sample.getMaxStackSize();
+
+        for (int slot = 0; slot < target.getContainerSize() && remaining > 0; slot++) {
             ItemStack existing = target.getItem(slot);
             if (existing.isEmpty()) {
-                ItemStack toPlace = stack.copyWithCount(remainder);
-                int maxStack = Math.min(target.getMaxStackSize(), toPlace.getMaxStackSize());
-                toPlace.setCount(Math.min(remainder, maxStack));
+                int placeCount = (int) Math.min(remaining, Math.min(target.getMaxStackSize(), maxStackSize));
+                ItemStack toPlace = sample.copyWithCount(placeCount);
                 target.setItem(slot, toPlace);
-                remainder -= toPlace.getCount();
-            } else if (ItemStack.isSameItemSameComponents(existing, stack)) {
+                remaining -= placeCount;
+            } else if (ItemStack.isSameItemSameComponents(existing, sample)) {
                 int space = Math.min(target.getMaxStackSize(), existing.getMaxStackSize()) - existing.getCount();
-                int add = Math.min(remainder, space);
+                int add = (int) Math.min(remaining, space);
                 if (add > 0) {
                     existing.grow(add);
-                    remainder -= add;
+                    remaining -= add;
                 }
             }
         }
-        int taken = take - remainder;
-        if (taken <= 0) return false;
-        bank.consume(colonyId, key, taken);
-        if (remainder > 0) bank.add(colonyId, key, remainder);
-        return true;
+
+        long actualTaken = toExtract - remaining;
+        if (actualTaken > 0) {
+            bank.consume(colonyId, key, actualTaken);
+        }
+        return actualTaken;
     }
 
     @Override
