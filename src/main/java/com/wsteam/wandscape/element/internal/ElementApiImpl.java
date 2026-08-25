@@ -2,9 +2,11 @@ package com.wsteam.wandscape.element.internal;
 
 import java.util.Map;
 
+import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.shared.api.ElementApi;
 import com.wsteam.wandscape.shared.data.ElementType;
 
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
 public class ElementApiImpl implements ElementApi {
@@ -42,5 +44,10 @@ public class ElementApiImpl implements ElementApi {
     @Override
     public Map<ElementType, Long> getBuildCost(ItemStack stack) {
         return mappingLoader.getItemBuildCost(stack.getItem());
+    }
+
+    @Override
+    public String elementItemId(ElementType type) {
+        return ResourceLocation.fromNamespaceAndPath(Wandscape.MODID, "element_" + type.getId()).toString();
     }
 }

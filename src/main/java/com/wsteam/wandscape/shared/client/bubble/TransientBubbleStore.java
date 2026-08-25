@@ -13,13 +13,6 @@ import javax.annotation.Nullable;
  */
 public final class TransientBubbleStore {
 
-    /** No icon — just the bubble. */
-    public static final int ICON_NONE = 0;
-    /** Registry item icon (iconId = registry id). */
-    public static final int ICON_ITEM = 1;
-    /** Element icon (iconId = element id). */
-    public static final int ICON_ELEMENT = 2;
-
     /** How long an event bubble stays visible, in ticks. */
     public static final int LIFETIME_TICKS = 80;
     /** Fade-in / fade-out duration (ticks). */
@@ -29,14 +22,15 @@ public final class TransientBubbleStore {
     private static final Map<UUID, Event> EVENTS = new ConcurrentHashMap<>();
 
     /** One transient bubble event. {@code startTick} is the entity tickCount when received. */
-    public record Event(int iconKind, @Nullable String iconId, int count, int startTick) {}
+    public record Event(@Nullable String iconId, int count, int startTick) {}
 
     private TransientBubbleStore() {}
 
     /** Record an event for the given entity (restarts its bubble immediately). */
-    public static void trigger(UUID entityUuid, int iconKind, @Nullable String iconId,
+    public static void trigger(UUID entityUuid, @Nullable String iconId,
                                int count, int currentTick) {
-        EVENTS.put(entityUuid, new Event(iconKind, iconId, count, currentTick));
+        if (iconId == null) return; // 没有可展示的物品 → 不触发
+        EVENTS.put(entityUuid, new Event(iconId, count, currentTick));
     }
 
     /** Active event for the entity, or null if none / expired. */

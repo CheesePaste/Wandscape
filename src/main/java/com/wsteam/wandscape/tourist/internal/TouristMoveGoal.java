@@ -19,7 +19,6 @@ import com.wsteam.wandscape.shared.data.Activity;
 import com.wsteam.wandscape.shared.data.NarrativeEvent;
 import com.wsteam.wandscape.shared.data.VisitMemory;
 import com.wsteam.wandscape.shared.api.BuildingApi;
-import com.wsteam.wandscape.shared.client.bubble.TransientBubbleStore;
 import com.wsteam.wandscape.shared.data.BuildingData;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.tourist.entity.TouristEntity;
@@ -1813,11 +1812,11 @@ public class TouristMoveGoal extends Goal {
     // ════════════════════════════════════════════════════════════════
 
     /** Notify nearby players of a purchase / service bubble event above this tourist. */
-    private void sendBubble(int iconKind, @Nullable String iconId, int count) {
+    private void sendBubble(@Nullable String iconId, int count) {
+        if (iconId == null) return; // 没有可展示的物品 → 不发送
         ServerLevel level = getServerLevel();
         if (level == null) return;
-        TouristBubblePacket packet =
-                new TouristBubblePacket(tourist.getId(), iconKind, iconId, count);
+        TouristBubblePacket packet = new TouristBubblePacket(tourist.getId(), iconId, count);
         for (ServerPlayer p : level.getEntitiesOfClass(
                 ServerPlayer.class, tourist.getBoundingBox().inflate(32))) {
             PacketDistributor.sendToPlayer(p, packet);
@@ -1877,9 +1876,9 @@ public class TouristMoveGoal extends Goal {
         emitNarrativeEvent(shopEvent);
 
         var purchase = result.purchase();
-        sendBubble(purchase != null ? TransientBubbleStore.ICON_ITEM : TransientBubbleStore.ICON_NONE,
-                purchase != null ? purchase.itemId() : null,
-                purchase != null ? purchase.count() : 0);
+        if (purchase != null) {
+            sendBubble(purchase.itemId(), purchase.count());
+        }
 
         sparkleSatisfaction();
     }
@@ -1908,9 +1907,11 @@ public class TouristMoveGoal extends Goal {
         if (config != null && config.service() != null && !config.service().elementOutput().isEmpty()) {
             var entries = List.copyOf(config.service().elementOutput().entrySet());
             var pick = entries.get(tourist.level().random.nextInt(entries.size()));
-            sendBubble(TransientBubbleStore.ICON_ELEMENT, pick.getKey(), pick.getValue());
-        } else {
-            sendBubble(TransientBubbleStore.ICON_NONE, null, 0);
+            var type = WandscapeApis.getElementApi().fromId(pick.getKey());
+            if (type != null) {
+                String itemId = WandscapeApis.getElementApi().elementItemId(type);
+                if (itemId != null) sendBubble(itemId, pick.getValue());
+            }
         }
 
         sparkleSatisfaction();
@@ -1937,7 +1938,6 @@ public class TouristMoveGoal extends Goal {
         NarrativeEvent relaxEvent = NarrativeGenerator.generateVisit(memory);
         emitNarrativeEvent(relaxEvent);
 
-        sendBubble(TransientBubbleStore.ICON_NONE, null, 0);
         sparkleSatisfaction();
     }
 
@@ -1962,7 +1962,6 @@ public class TouristMoveGoal extends Goal {
         NarrativeEvent atmEvent = NarrativeGenerator.generateVisit(memory);
         emitNarrativeEvent(atmEvent);
 
-        sendBubble(TransientBubbleStore.ICON_NONE, null, 0);
         sparkleSatisfaction();
     }
 

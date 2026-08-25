@@ -9,8 +9,6 @@ import javax.annotation.Nullable;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 
-import com.wsteam.wandscape.shared.ui.theme.WandscapeTheme;
-
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -139,8 +137,8 @@ public final class SpeechBubbleRenderer {
         EntityRenderDispatcher renderDispatcher = Minecraft.getInstance().getEntityRenderDispatcher();
         if (renderDispatcher.distanceToSqr(entity) > MAX_DIST_SQ) return;
 
-        int iconKind = event.iconKind();
-        if (iconKind == TransientBubbleStore.ICON_NONE) return; // 无图标 → 不显示气泡
+        String iconId = event.iconId();
+        if (iconId == null) return; // 没有可展示的物品 → 不显示气泡
 
         Font font = Minecraft.getInstance().font;
         String countText = "×" + event.count();
@@ -165,11 +163,7 @@ public final class SpeechBubbleRenderer {
         drawEllipseBody(buffer, matrix, bubbleW, bubbleH, by, alpha);
 
         float cx = -contentW / 2F + iconSize / 2F;
-        if (iconKind == TransientBubbleStore.ICON_ITEM) {
-            drawItemIcon(entity, event.iconId(), cx, ey, poseStack, buffer, packedLight);
-        } else if (iconKind == TransientBubbleStore.ICON_ELEMENT) {
-            drawElementIcon(event.iconId(), cx, ey, poseStack, buffer, packedLight, alpha);
-        }
+        drawItemIcon(entity, iconId, cx, ey, poseStack, buffer, packedLight);
 
         float textX = cx + iconSize / 2F + gap;
         float textY = ey - font.lineHeight / 2F;
@@ -227,32 +221,6 @@ public final class SpeechBubbleRenderer {
         BakedModel model = itemRenderer.getModel(stack, entity.level(), entity, 0);
         itemRenderer.render(stack, ItemDisplayContext.GUI, false, poseStack, buffer,
                 packedLight, OverlayTexture.NO_OVERLAY, model);
-        poseStack.popPose();
-    }
-
-    /** Renders an element icon (white-channel PNG tinted with its theme color) as a billboard quad. */
-    private static void drawElementIcon(@Nullable String elementId, float cx, float cy,
-                                        PoseStack poseStack, MultiBufferSource buffer,
-                                        int packedLight, float alpha) {
-        if (elementId == null) return;
-        int argb = WandscapeTheme.elementColor(elementId);
-        float r = ((argb >> 16) & 0xFF) / 255F;
-        float g = ((argb >> 8) & 0xFF) / 255F;
-        float b = (argb & 0xFF) / 255F;
-        float s = 16F;
-        float x0 = cx - s / 2F;
-        float x1 = cx + s / 2F;
-        float y0 = cy - s / 2F;
-        float y1 = cy + s / 2F;
-
-        poseStack.pushPose();
-        poseStack.translate(0, 0, 0.1F);
-        Matrix4f matrix = poseStack.last().pose();
-        VertexConsumer vc = buffer.getBuffer(RenderType.textPolygonOffset(WandscapeTheme.elementIcon(elementId)));
-        vc.addVertex(matrix, x0, y0, 0).setColor(r, g, b, alpha).setUv(0, 0).setLight(packedLight);
-        vc.addVertex(matrix, x1, y0, 0).setColor(r, g, b, alpha).setUv(1, 0).setLight(packedLight);
-        vc.addVertex(matrix, x1, y1, 0).setColor(r, g, b, alpha).setUv(1, 1).setLight(packedLight);
-        vc.addVertex(matrix, x0, y1, 0).setColor(r, g, b, alpha).setUv(0, 1).setLight(packedLight);
         poseStack.popPose();
     }
 

@@ -43,6 +43,7 @@ class EnqueueHelperTest {
             @Override public boolean isDisabled(String blockOrItemId) { return "minecraft:netherite_block".equals(blockOrItemId); }
             @Override public Map<ElementType, Long> getBuildCost(BlockState block) { return Map.of(); }
             @Override public Map<ElementType, Long> getBuildCost(ItemStack stack) { return Map.of(); }
+            @Override public String elementItemId(ElementType type) { return "wandscape:element_" + type.getId(); }
         });
     }
 
@@ -106,7 +107,6 @@ class EnqueueHelperTest {
                 pattern, pal.palette(), pal.indices(),
                 Map.of(), /* blockNbt */
                 5, 3, 2,
-                BuildingConfig.QueueDef.DEFAULT,
                 BuildingConfig.UnlockRequirement.NONE,
                 new BoundaryBox(off(-1, 0, -1), off(1, 1, 1)),
                 null,
@@ -143,7 +143,6 @@ class EnqueueHelperTest {
                 pattern, pal.palette(), pal.indices(),
                 Map.of(), /* blockNbt */
                 1, 2, 0,
-                BuildingConfig.QueueDef.DEFAULT,
                 BuildingConfig.UnlockRequirement.NONE,
                 new BoundaryBox(off(0, 0, 0), off(0, 0, 0)),
                 null,
@@ -166,7 +165,6 @@ class EnqueueHelperTest {
                 pattern, pal.palette(), pal.indices(),
                 Map.of(), /* blockNbt */
                 1, 0, 0,
-                BuildingConfig.QueueDef.DEFAULT,
                 BuildingConfig.UnlockRequirement.NONE,
                 new BoundaryBox(off(-1, -1, -1), off(1, 1, 1)),
                 null,
@@ -232,7 +230,6 @@ class EnqueueHelperTest {
                 pattern, pal.palette(), pal.indices(),
                 Map.of(), /* blockNbt */
                 0, 0, 0,
-                BuildingConfig.QueueDef.DEFAULT,
                 BuildingConfig.UnlockRequirement.NONE,
                 new BoundaryBox(off(0, 0, 0), off(0, 0, 0)),
                 new BlueprintRef("build:clear_and_build",
@@ -276,7 +273,6 @@ class EnqueueHelperTest {
                 pattern, pal.palette(), pal.indices(),
                 Map.of(), /* blockNbt */
                 1, 2, 0,
-                BuildingConfig.QueueDef.DEFAULT,
                 BuildingConfig.UnlockRequirement.NONE,
                 new BoundaryBox(off(0, 0, 0), off(0, 0, 1)),
                 null,
@@ -295,7 +291,6 @@ class EnqueueHelperTest {
                 pattern, pal.palette(), pal.indices(),
                 Map.of(), /* blockNbt */
                 1, 2, 0,
-                BuildingConfig.QueueDef.DEFAULT,
                 BuildingConfig.UnlockRequirement.NONE,
                 new BoundaryBox(off(0, 0, 0), off(0, 0, 0)),
                 null,
@@ -314,7 +309,6 @@ class EnqueueHelperTest {
                 pattern, pal.palette(), pal.indices(),
                 Map.of(), /* blockNbt */
                 1, 2, 0,
-                BuildingConfig.QueueDef.DEFAULT,
                 BuildingConfig.UnlockRequirement.NONE,
                 new BoundaryBox(off(0, 0, 0), off(0, 0, 0)),
                 null,

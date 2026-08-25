@@ -13,7 +13,6 @@ import static com.wsteam.wandscape.Wandscape.MODID;
 
 public record TouristBubblePacket(
         int entityId,
-        int iconKind,
         @Nullable String iconId,
         int count
 ) implements CustomPacketPayload {
@@ -40,16 +39,14 @@ public record TouristBubblePacket(
 
     static void write(RegistryFriendlyByteBuf buf, TouristBubblePacket pkt) {
         buf.writeInt(pkt.entityId);
-        buf.writeVarInt(pkt.iconKind);
         buf.writeUtf(pkt.iconId != null ? pkt.iconId : "");
         buf.writeInt(pkt.count);
     }
 
     static TouristBubblePacket read(RegistryFriendlyByteBuf buf) {
         int entityId = buf.readInt();
-        int iconKind = buf.readVarInt();
         String iconId = buf.readUtf();
         int count = buf.readInt();
-        return new TouristBubblePacket(entityId, iconKind, iconId.isEmpty() ? null : iconId, count);
+        return new TouristBubblePacket(entityId, iconId.isEmpty() ? null : iconId, count);
     }
 }

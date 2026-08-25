@@ -26,4 +26,11 @@ public interface ElementApi {
 
     Map<ElementType, Long> getBuildCost(BlockState block);
     Map<ElementType, Long> getBuildCost(ItemStack stack);
+
+    /**
+     * Registry id of the item token representing this element (e.g.
+     * {@code wandscape:element_fire}), used by JEI/recipe display and the tourist
+     * bubble. Returns null if the element has no item token.
+     */
+    String elementItemId(ElementType type);
 }

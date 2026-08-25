@@ -2,6 +2,26 @@
 
 本文件记录偏离直觉的设计选择及其原因，供后续开发快速理解「为什么这么做」。
 
+## 2026-08-25：游客头顶瞬态气泡统一为物品渲染——服务元素走元素物品、空交互不弹泡
+
+**需求**：游客逛完商店，头顶气泡显示购买的商品；逛服务建筑则显示产出的元素。过去元素不是物品、商品是物品，气泡渲染因此按 `iconKind` 分两套（`drawItemIcon` 渲真实物品 vs `drawElementIcon` 渲主题色染色精灵）。现在七种元素有了物品形态（`ElementItem`），「物品 vs 元素」的渲染分野失去依据，可合并简化。
+
+**决策**：把气泡塌缩成「一个物品图标」——`TransientBubbleStore` 删掉 `ICON_NONE/ICON_ITEM/ICON_ELEMENT` 三态，`Event(iconKind,iconId,count,startTick)` → `Event(iconId,count,startTick)`；`TouristBubblePacket` 退化为 `(entityId, iconId, count)`（去 `iconKind`）；`SpeechBubbleRenderer.renderEventBubble` 恒走 `drawItemIcon`，删 `drawElementIcon`。服务元素经新增的 `ElementApi.elementItemId(ElementType)` 解析成元素物品 registry id（如 `wandscape:element_fire`）后走同一条物品渲染。商店没买到/服务无产出/休闲/ATM 重访不再弹空泡（原 `ICON_NONE` 事件会短暂盖住环境气泡 4 秒，一并消除）。`WandscapeTheme` 的主题色染色精灵与 `ICON_ELEMENT_*` 常量保留——它们被仓库面板/元素面板/工作站界面广泛使用，不在本次范围。
+
+**为什么**：元素有了物品形态后，气泡里不应再区分「物品/元素」两种渲染；保留只留死分支与 `iconKind` 管道，统一成物品渲染是纯删除。服务元素写进 `ColonyItemBank`（游客不拿实物），气泡只是把它可视化成元素物品，语义与 JEI/配方中的元素代币一致。空交互弹空泡是既有怪癖（`renderBubble` 只要事件存在就 `return`，即使 NONE 画不出任何东西也盖住环境文本），删掉更干净。
+
+**影响**：`ElementApi` 新增 `elementItemId(ElementType)`（纯字符串，`ElementApiImpl` 按 `element_<id>` 约定构造，已由 `ElementApiImplTest` 锁定）；`TouristMoveGoal.interactWithShop/interactWithService/interactWithRelax/interactWithAtm` 的 `sendBubble` 去 `iconKind`、空 `iconId` 不发送；客户端 `WandscapeClient` trigger 同步去掉 `iconKind`。服务泡泡外观从染色精灵变为元素物品贴图（与仓库/工作站界面有轻微视觉差异）。
+
+## 2026-08-25：生产站/节点按类型/元素共享队列——多站并行 + 面板多进度条
+
+**需求**：过去工作站/node 的任务只进「玩家点开提交的那一座建筑」自己的队列（`RequestProductionTaskPacket`/`RequestGatherTaskPacket` 用 `stationPos`/`nodePos` 定位到单建筑 `enqueueWork`），自动补给也只挑第一座可用站/同元素第一座 node，于是「建多座工作站/多个同元素 node 也只一座在干活」。要求同型工作站/同元素 node 共享一条队列，每座空闲站认领队首未认领任务，每站同时跑 1 个，面板显示多条运行进度。
+
+**决策**：引入**共享生产队列**——一个组 = `(colonyId, groupKey)`，工作站按 `buildingTypeId` 分组（`production:*` 任务），node 按 `node_config.element()` 分组（`node:gather` 任务）。任务入队到组队列；空闲站 `dequeueWork` 认领队首并把任务 `anchor` **重绑到认领站**（`WandscapeBlockInteractExecutor.getChannelProgress` 按 `op.target()` 匹配进度，不重绑则多站共用同一 anchor、进度互相冲突）。未建成站不认领（只做自身构建），shutdown 站不认领生产（仅 repair），与既有 per-building 语义一致；非共享建筑（仓库/商店/民居/市政府…）完全不受影响。`ResourceSupplySystem` 适配：自动补给把缺口拆成多条 `count=1` 采集任务入元素组队列（node 并行），并按 `(colony, groupKey)` 去重计数防重复补给；`countSynthesizingWorkstations` 改按「正在跑头的站数 + 有排队的组数」。队列无上限（延续 queue 字段移除后的语义）。
+
+**为什么**：共享队列才能让「多建站/多 node = 提速」成立；重绑 anchor 是逐站进度条成立的前提。按 `buildingTypeId`/`element` 而非 category 分组，保证同型站/同元素 node 共享而不同型/不同元素互不串，也避免跨殖民地串（key 含 colonyId）。
+
+**影响**：`BuildingSavedData` 新增 `sharedQueues`(Map<SharedGroup,Deque<WorkItem>>) + `peekSharedQueue/hasSharedWork/groupMembers/isSharedQueueCategory/groupKeyFor` + NBT 持久化；`BuildingApiImpl` 的 `enqueueWork/dequeueWork/getBuildingsWithPendingWork/getQueue/removeFromQueue/moveUp/moveDown` 按角色路由到组队列，新增纯函数 `isProductionWork/isGatherWork/rebindAnchor`；`TaskQueueDataPacket.current`(单) → `currents`(List)，`TaskQueueModifyPacket.buildCurrentTasks` 聚合组内运行头；`TaskQueuePanel` 渲染多条运行任务行；`WorkstationScreen/CraftingStationScreen/MagicStationScreen/NodeScreen` 接线 `currents`；`ResourceSupplySystem` 去重计数 + node 并行分发 + `countGatherInFlight`；新增 `BuildingApiSharedQueueTest`。auto-synthesize 同样受益（任务落组队列、任意空闲站认领）。
+
 ## 2026-08-25：生产任务数量滑块窗口化——滑条固定 64 宽，±64 整页翻页
 
 **需求**：工作站/合成站/魔法工坊发布合成任务时，数量滑条最多只能拉到 64（一组），想一次合成大量物品（如 3000 个）只能反复拖到 64 再提交，极其繁琐。

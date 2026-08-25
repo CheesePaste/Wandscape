@@ -451,7 +451,7 @@ public class WandscapeClient {
             var e = mc.level.getEntity(packet.entityId());
             if (e == null) return;
             com.wsteam.wandscape.shared.client.bubble.TransientBubbleStore.trigger(
-                    e.getUUID(), packet.iconKind(), packet.iconId(), packet.count(), e.tickCount);
+                    e.getUUID(), packet.iconId(), packet.count(), e.tickCount);
         });
 
         com.wsteam.wandscape.building.network.BuildingConfigSyncChunkPacket.setClientHandler(

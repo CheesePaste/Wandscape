@@ -24,7 +24,7 @@ EARTH / WOOD / WATER / FIRE / METAL / WIND / DARK（`@SerializedName` 小写 id�
 
 ## ElementApiImpl
 
-`fromId / hasElementMapping / isDisabled / getBuildCost`（BlockState 与 ItemStack 两组重载）。
+`fromId / hasElementMapping / isDisabled / getBuildCost`（BlockState 与 ItemStack 两组重载）/ `elementItemId`（元素→元素物品 registry id，供游客泡泡/JEI 展示）。
 
 ## ElementValueGenerator
 

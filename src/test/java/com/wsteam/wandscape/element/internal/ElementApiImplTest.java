@@ -2,6 +2,7 @@ package com.wsteam.wandscape.element.internal;
 
 import java.util.List;
 
+import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.shared.data.ElementType;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -53,6 +54,14 @@ class ElementApiImplTest {
         for (ElementType type : ElementType.values()) {
             assertEquals(type, api.fromId(type.getId().toLowerCase()),
                 "fromId failed for " + type.name());
+        }
+    }
+
+    @Test
+    void elementItemId_usesElementPrefixConvention() {
+        for (ElementType type : ElementType.values()) {
+            assertEquals(Wandscape.MODID + ":element_" + type.getId(), api.elementItemId(type),
+                "elementItemId failed for " + type.name());
         }
     }
 }

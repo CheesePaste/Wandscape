@@ -39,6 +39,7 @@ class ConstructionSiteDataTest {
             @Override public boolean isDisabled(String blockOrItemId) { return false; }
             @Override public Map<ElementType, Long> getBuildCost(BlockState block) { return Map.of(); }
             @Override public Map<ElementType, Long> getBuildCost(ItemStack stack) { return Map.of(); }
+            @Override public String elementItemId(ElementType type) { return "wandscape:element_" + type.getId(); }
         });
     }
 
@@ -55,7 +56,6 @@ class ConstructionSiteDataTest {
                 List.of(0, 0, 1, 0, 2, 3),
                 Map.of(),
                 5, 3, 2,
-                BuildingConfig.QueueDef.DEFAULT,
                 BuildingConfig.UnlockRequirement.NONE,
                 new BoundaryBox(off(0, 0, 0), off(1, 1, 1)),
                 null, null, null,
