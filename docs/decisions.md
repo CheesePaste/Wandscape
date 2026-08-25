@@ -2,6 +2,25 @@
 
 本文件记录偏离直觉的设计选择及其原因，供后续开发快速理解「为什么这么做」。
 
+## 2026-08-25：修复仓库物品分解触发无限自动合成死循环（Issue #18）
+
+**需求**：玩家在工作站发布物品分解（`decompose`）任务后，如果仓库中物品数量不足或被消耗完，工作站会不停地自动生成对应物品和对应数量的 `synthesize` 合成订单，造成死循环且消耗大量元素。
+
+**根本原因**：
+1. `WandscapeBlockInteractExecutor.checkDecomposePreconditions` 与 `executeDecompose` 在仓库中目标物品数量不足（`available < count`）时，错误地抛出了 `ResourceShortageException`。
+2. 该异常导致任务被引擎标记为 `TaskState.AWAITING_RESOURCES`，并在调度器中释放。
+3. `ResourceSupplySystem`（每 40 tick 扫描一次阻塞任务）检测到任务在等待该物品，以为是生产/建造缺材料，便自动调用 `enqueueSynthesize` 向工作站下发自动合成订单。
+4. 合成出物品后，分解任务被唤醒将物品分解（返还 1/5 元素，净亏 80%），若队列未完全满足则再次缺物、再次自动合成，导致无限死循环。
+
+**决策**：
+1. **分解操作语义修正**：分解是单向的“废旧材料回收元素”操作，永远不是生产消费链条。当仓库物品不足时，`WandscapeBlockInteractExecutor` 严禁抛出 `ResourceShortageException`。若 `available <= 0` 直接正常结束；若 `0 < available < count`，则取实际可用数量 `actualCount = (int) Math.min(count, available)` 进行分解并产出元素后正常完成。
+2. **深度防御（Defense-in-depth）**：在 `ResourceSupplySystem.scanStuckTasks` 中增加防御检查，若检测到 `production:decompose` 类型的任务，直接唤醒而不派发任何 `enqueueSynthesize` 自动合成任务。
+
+**影响**：
+- `engine/boundary/WandscapeBlockInteractExecutor.java`：修正 `checkDecomposePreconditions` 与 `executeDecompose`。
+- `engine/system/ResourceSupplySystem.java`：增加对 `production:decompose` 的防御唤醒。
+- 新增单元测试 `DecomposeNoAutoSupplyTest.java`。
+
 ## 2026-08-25：仓库公开 API 补全与变更事件广播（支持 AE2 联动与附属生态，Issue #17）
 
 **需求**：在开发 Wandscape × AE2（Applied Energistics 2）仓库存储磁盘等外部联动附属时，附属模组遇到了 4 个关键 API 缺口：

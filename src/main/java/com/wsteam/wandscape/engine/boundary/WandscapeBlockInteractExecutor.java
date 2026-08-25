@@ -327,23 +327,9 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
     }
 
     private void checkDecomposePreconditions(Map<String, String> params, long npcId) {
-        String itemId = params.get("item_id");
-        int count = parseCount(params);
-        if (itemId == null || count <= 0 || elementMappingLoader == null) return;
-        Level level = getNpcLevel(npcId);
-        if (level == null) return;
-        ColonyItemBank bank = ColonyItemBank.get(level);
-        if (bank == null) return;
-        UUID colonyId = findStorageColonyId();
-        ItemKey key = ItemKey.of(itemId, null);
-        long available = bank.count(colonyId, key);
-        if (available < count) {
-            Log.warn(TAG, "decompose: insufficient items. need={} have={} item={}", count, available, itemId);
-            int colonIdx = itemId.lastIndexOf(':');
-            String shortId = colonIdx >= 0 ? itemId.substring(colonIdx + 1) : itemId;
-            throw new ResourceShortageException(
-                    List.of(new ResourceStack(new ResourceId(shortId), count)));
-        }
+        // Decompose recycles surplus warehouse items into elements.
+        // It must NEVER throw ResourceShortageException, which would cause the engine
+        // to auto-synthesize materials just to decompose them in an infinite loop.
     }
 
     private void checkCraftWandPreconditions(Map<String, String> params, long npcId) {
@@ -506,13 +492,12 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         ItemKey key = ItemKey.of(itemId, null);
 
         long available = bank.count(colonyId, key);
-        if (available < count) {
-            Log.warn(TAG, "decompose: insufficient items. need={} have={} item={}", count, available, itemId);
-            int colonIdx = itemId.lastIndexOf(':');
-            String shortId = colonIdx >= 0 ? itemId.substring(colonIdx + 1) : itemId;
-            throw new ResourceShortageException(
-                        List.of(new ResourceStack(new ResourceId(shortId), count)));
+        if (available <= 0) {
+            Log.info(TAG, "decompose: no items available in warehouse for item={}", itemId);
+            return;
         }
+
+        int actualCount = (int) Math.min(count, available);
 
         // Decompose returns 1/N of the item's element value (anti item-duplication):
         // source is build_cost — same lookup as shop sale profit.
@@ -528,28 +513,28 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
 
         double divisor = Config.ELEMENT_DECOMPOSE_DIVISOR.get();
 
-        // Refuse up front when count × total value < divisor: the batch would
+        // Refuse up front when actualCount × total value < divisor: the batch would
         // burn items and yield 0 elements (floor division truncates to zero).
-        if (count * totalValue < divisor) {
-            Log.warn(TAG, "decompose: refuse {} x{} — total value {} < {}", itemId, count,
-                    count * totalValue, divisor);
+        if (actualCount * totalValue < divisor) {
+            Log.warn(TAG, "decompose: refuse {} x{} — total value {} < {}", itemId, actualCount,
+                    actualCount * totalValue, divisor);
             return;
         }
 
-        bank.consume(colonyId, key, count);
+        bank.consume(colonyId, key, actualCount);
 
         ColonyResourceAccess resources = world.colonyResources;
         if (resources == null) {
             Log.warn(TAG, "decompose: colonyResources is null");
-            bank.add(colonyId, key, count);
+            bank.add(colonyId, key, actualCount);
             return;
         }
 
         for (var entry : yield.entrySet()) {
-            long total = (long) ((entry.getValue() * count) / divisor);
+            long total = (long) ((entry.getValue() * actualCount) / divisor);
             if (total <= 0) continue;
             resources.addResource(new ResourceId(entry.getKey().name().toLowerCase()), (int) total);
-            Log.info(TAG, "decompose: {} x{} → {} x{} (1/{} of value)", itemId, count,
+            Log.info(TAG, "decompose: {} x{} → {} x{} (1/{} of value)", itemId, actualCount,
                     entry.getKey().name().toLowerCase(), total, divisor);
         }
 

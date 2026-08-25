@@ -65,6 +65,12 @@ public class ResourceSupplySystem implements System {
         for (GlobalTask task : waiting) {
             if (task.awaitingResource == null || task.awaitingResource.isEmpty()) continue;
 
+            // Defense-in-depth: Never attempt to auto-supply materials for a decompose task
+            if ("production:decompose".equals(task.blueprintId)) {
+                world.taskPool.wakeupTask(task.id);
+                continue;
+            }
+
             boolean allAvailable = true;
             for (ResourceStack need : task.awaitingResource) {
                 if (world.colonyResources.available(need.resource()) < need.amount()) {
