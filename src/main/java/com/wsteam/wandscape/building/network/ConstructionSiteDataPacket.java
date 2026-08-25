@@ -48,8 +48,14 @@ public record ConstructionSiteDataPacket(
         int estCompleteTicks,
         boolean canEstimate,
         boolean completed,
-        String creator
+        String creator,
+        int kind
 ) implements CustomPacketPayload {
+
+    /** Panel target is an under-construction building. */
+    public static final int KIND_BUILDING = 0;
+    /** Panel target is an under-construction road edge. */
+    public static final int KIND_ROAD = 1;
 
     public static final int STATUS_READY = 0;     // 已备齐：仓库储量充足
     public static final int STATUS_CRAFTING = 1;  // 制作中：不足，但工作站正在合成
@@ -163,7 +169,8 @@ public record ConstructionSiteDataPacket(
         ConstructionSiteDataPacket packet = new ConstructionSiteDataPacket(
                 buildingId, state.getAnchor(), state.getBuildingTypeId(), name,
                 materials, est.startTicks(), est.completeTicks(), est.canEstimate(),
-                state.hasEverCompleted(), config != null ? config.creator() : "");
+                state.hasEverCompleted(), config != null ? config.creator() : "",
+                KIND_BUILDING);
         SNAPSHOT_CACHE.put(buildingId, new CacheEntry(packet, System.currentTimeMillis()));
         return packet;
     }
@@ -203,6 +210,7 @@ public record ConstructionSiteDataPacket(
         buf.writeBoolean(pkt.canEstimate);
         buf.writeBoolean(pkt.completed);
         buf.writeUtf(pkt.creator != null ? pkt.creator : "");
+        buf.writeByte(pkt.kind);
     }
 
     static ConstructionSiteDataPacket read(RegistryFriendlyByteBuf buf) {
@@ -221,6 +229,7 @@ public record ConstructionSiteDataPacket(
         boolean can = buf.readBoolean();
         boolean done = buf.readBoolean();
         String creator = buf.readUtf();
-        return new ConstructionSiteDataPacket(buildingId, pos, typeId, name, materials, start, complete, can, done, creator);
+        int kind = buf.readByte();
+        return new ConstructionSiteDataPacket(buildingId, pos, typeId, name, materials, start, complete, can, done, creator, kind);
     }
 }

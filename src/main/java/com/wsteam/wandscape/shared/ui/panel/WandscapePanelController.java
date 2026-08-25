@@ -335,12 +335,23 @@ public final class WandscapePanelController {
                 ? blockHit.getLocation().distanceToSqr(origin) : Double.MAX_VALUE;
 
         var boxHit = BuildingAreaSyncPacket.raycastUnbuilt(origin, end);
-        if (boxHit == null || boxHit.distSq() >= blockDist) return;
+        var roadHit = com.wsteam.wandscape.shared.network.RoadAreaSyncPacket.raycastUnderConstruction(origin, end);
+        double buildingDist = boxHit != null ? boxHit.distSq() : Double.MAX_VALUE;
+        double roadDist = roadHit != null ? roadHit.distSq() : Double.MAX_VALUE;
+        if (boxHit == null && roadHit == null) return;
+        if (Math.min(buildingDist, roadDist) >= blockDist) return;
 
-        PacketDistributor.sendToServer(
-                new com.wsteam.wandscape.overview.network.OverviewInteractPacket(boxHit.pos()));
-        Log.info(TAG, "[Panel] Ground right-click on empty construction site → open building UI at {}",
-                boxHit.pos());
+        if (roadHit != null && roadDist <= buildingDist) {
+            PacketDistributor.sendToServer(
+                    new com.wsteam.wandscape.road.network.RoadInteractPacket(roadHit.pos()));
+            Log.info(TAG, "[Panel] Ground right-click on under-construction road → open construction UI at {}",
+                    roadHit.pos());
+        } else {
+            PacketDistributor.sendToServer(
+                    new com.wsteam.wandscape.overview.network.OverviewInteractPacket(boxHit.pos()));
+            Log.info(TAG, "[Panel] Ground right-click on empty construction site → open building UI at {}",
+                    boxHit.pos());
+        }
         event.setCanceled(true);
     }
 

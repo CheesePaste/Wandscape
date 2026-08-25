@@ -1,7 +1,9 @@
 package com.wsteam.wandscape.road.engine;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import com.wsteam.wandscape.road.core.RoadEdge;
@@ -103,6 +105,13 @@ public final class RoadSavedData extends SavedData {
             }
             e.putLongArray("segmentTaskIds", arr);
 
+            // Per-material demand for this edge's build segment (for refund on withdraw)
+            CompoundTag mats = new CompoundTag();
+            for (var entry : edge.getMaterialCounts().entrySet()) {
+                mats.putInt(entry.getKey(), entry.getValue());
+            }
+            e.put("materialCounts", mats);
+
             // Placed block positions (for clean demolition)
             ListTag placedTag = new ListTag();
             for (PathPoint bp : edge.getPlacedBlocks()) {
@@ -196,6 +205,16 @@ public final class RoadSavedData extends SavedData {
                             bpTag.getInt("x"), bpTag.getInt("y"), bpTag.getInt("z")));
                 }
                 edge.setPlacedBlocks(placed);
+            }
+
+            // Per-material demand (for refund on withdraw)
+            if (e.contains("materialCounts", Tag.TAG_COMPOUND)) {
+                CompoundTag mats = e.getCompound("materialCounts");
+                Map<String, Integer> m = new LinkedHashMap<>();
+                for (String k : mats.getAllKeys()) {
+                    m.put(k, mats.getInt(k));
+                }
+                edge.setMaterialCounts(m);
             }
 
             data.network.addEdge(edge);

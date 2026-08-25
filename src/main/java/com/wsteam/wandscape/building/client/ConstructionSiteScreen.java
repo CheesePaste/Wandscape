@@ -6,7 +6,10 @@ import java.util.UUID;
 
 import com.wsteam.wandscape.building.network.ConstructionSiteDataPacket;
 import com.wsteam.wandscape.building.network.ConstructionSiteDataPacket.MaterialEntry;
+import com.wsteam.wandscape.projection.network.BuildingActionPacket;
+import com.wsteam.wandscape.road.network.RoadWithdrawPacket;
 import com.wsteam.wandscape.shared.ui.I18n;
+import com.wsteam.wandscape.shared.ui.component.MedievalButton;
 import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
 import com.wsteam.wandscape.shared.ui.component.ScrollableList;
 import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
@@ -18,6 +21,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
  * 工地面板：展示未建成建筑的建造材料需求与供应状态。
@@ -48,6 +52,7 @@ public class ConstructionSiteScreen extends MedievalScreen {
     private int estCompleteTicks;
     private boolean canEstimate = true;
     private boolean completed;
+    private int kind;
 
     private ScrollableList<MaterialEntry> list;
 
@@ -74,6 +79,7 @@ public class ConstructionSiteScreen extends MedievalScreen {
         this.estCompleteTicks = packet.estCompleteTicks();
         this.canEstimate = packet.canEstimate();
         this.completed = packet.completed();
+        this.kind = packet.kind();
         setCreator(packet.creator());
         setTitleBar(I18n.name("building.wandscape." + buildingTypeId, buildingName));
         if (list != null) {
@@ -117,6 +123,28 @@ public class ConstructionSiteScreen extends MedievalScreen {
         };
         list.setItems(materials);
         addRenderableWidget(list);
+
+        // Withdraw button — only for under-construction sites (already-completed ones
+        // show nothing and can't be withdrawn). Bottom-right, clear of the creator label.
+        if (!completed) {
+            int btnW = 80, btnH = 18;
+            int btnX = leftPos + PW - 8 - btnW;
+            int btnY = topPos + PH - CREATOR_FOOTER_H + 2;
+            addRenderableWidget(new MedievalButton(
+                    btnX, btnY, btnW, btnH,
+                    I18n.name("gui.wandscape.constructionsite.withdraw", "撤回"),
+                    this::onWithdraw));
+        }
+    }
+
+    private void onWithdraw() {
+        if (buildingId == null) return;
+        if (kind == ConstructionSiteDataPacket.KIND_ROAD) {
+            PacketDistributor.sendToServer(new RoadWithdrawPacket(buildingId));
+        } else {
+            PacketDistributor.sendToServer(new BuildingActionPacket(buildingId, "cancel"));
+        }
+        Minecraft.getInstance().setScreen(null);
     }
 
     @Override

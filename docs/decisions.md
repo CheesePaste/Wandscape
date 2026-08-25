@@ -971,3 +971,19 @@
 **为什么**：主动索敌维持 Enemy 是防 NPC 无端扫射和平中立生物；反击放开 Enemy 限制是让 NPC 被中立生物攻击时不再当沙包。`canBeamHurt` 仍是唯一伤害边界（光束/倍率/敌数三处共用），只在该钩子内加仇恨目标放行，边界不散落。
 
 **影响**：北极熊/铁傀儡/狼不再主动攻击 NPC；若仍被打（如玩家引怪/狼护主），NPC 会记仇还手，直到仇恨过期（`guard.hateDurationTicks`）。
+
+## 2026-08-25：复用工地面板给施工中道路 + 建筑/道路撤回（防刷）
+
+**需求**（用户指令）：准心对准施工中的道路时，道路区域显示白框高亮，右键打开工地面板；面板加"撤回"按钮，能撤回建筑/道路并退料。用户强调**不能多次退料刷物品**。背景是 Road 与 Building 两套平行机制（幽灵/瞄准/面板/同步）重复劳动。
+
+**根因（防刷的关键）**：`AsyncTransformExecutor.performSalvage`（engine/boundary/AsyncTransformExecutor.java:211）在原子操作层拦截 transform：把方块替换成不同类（拆除处 place→air）时 `Block.getDrops` 掉回仓库。所以**已放置方块被 salvage 返还一次**，`WandscapeBlockOps.setBlock` 本身不 drop。→ 退料铁律：**只退"未放置"的，已放置交给 salvage**，否则双重返还刷物品。建筑侧 `BuildingApiImpl.cancelBuilding` 已按此实现（用户已改），`demolishing` 标志同步置位保证重复撤回 no-op。
+
+**决策**：
+- **Road 复用 `ConstructionSiteScreen` / `ConstructionSiteDataPacket`**：给包加 `kind`（0=BUNDING/1=ROAD），服务端 `RoadSiteData.fromEdge` 组装 Road 版 packet（材料需求从 `RoadEdge.materialCounts`、供应状态沿用建筑同套 `ColonyItemBank`/`ResourceSupplySystem` 口径、`completed=status==COMPLETE`），客户端 `setClientHandler` 零改动复用该 Screen。
+- **Road 撤回 `RoadApi.cancelEdge`**：撤段任务（`RoadEdge.segmentTaskIds` 需运行时填充，现为死字段）+ 退料 + 清方块 + 同步移除 edge 作**幂等墓碑**（二次撤回 no-op）。材料需求与段任务 id 在发布时写回 `RoadEdge` 并 NBT 持久化。
+- **Road 清方块用直接 `setBlock(air)`（不走 transform 执行器，无 salvage）**：唯一返还路径是退料 → 只退一次。退料**仅当施工已开始**（≥1 个 footprint 格当前是道路材料方块）才全额，避免给"从未动工"的已发布任务退料刷物品。
+- **瞄准/白框**：`RoadAreaSyncPacket.raycastUnderConstruction`（footprint AABB，镜像建筑 `raycastUnbuilt`）；`WandscapeHighlightRenderer` 画白框；ground 模式 `WandscapePanelController.onMouseButtonPreGrabbed`、overview 模式 `OverviewFlightController.performRaycast` 分别接入，右键发 `RoadInteractPacket`/`RoadWithdrawPacket`。
+
+**为什么**：Road 与 Building 数据系统不同源（样条 vs 矩形框），不能硬合并数据模型；但**展示外衣**（瞄准/幽灵/面板）可共享——抽一条"施工工地"复用线，既满足用户"少做重复工"又不破坏建筑/道路各自的正确性。Road 与 Building 的退料机制结果一致（玩家整体拿回），只是落地路径不同（Building=salvage 已放+退未放；Road=无salvage+全退）。
+
+**影响**：`ConstructionSiteDataPacket` 加 `kind`（codec 向后兼容由读端新字节）；`RoadEdge` 新增 `materialCounts`/`segmentTaskId` 持久化；新增 `findEdgeAt`、`RoadSiteData`、`RoadInteractPacket`、`RoadWithdrawPacket`；`RoadAreaSyncPacket` 加 `raycastUnderConstruction`+`RoadBoxHit`。施工中道路可瞄可退，已完成道路不显示白框、不开面板。

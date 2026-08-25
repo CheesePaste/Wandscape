@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 /**
@@ -40,6 +41,8 @@ public class RoadEdge {
     private final Set<UUID> completedSegmentIds = new HashSet<>();
     /** All block positions modified by this road edge (surface + fill + excavation + decoration). */
     private final Set<PathPoint> placedBlocks = new HashSet<>();
+    /** Per-material demand (bare block id → count) for this edge's build segment. */
+    private Map<String, Integer> materialCounts = Map.of();
 
     public RoadEdge(UUID edgeId, UUID fromNodeId, UUID toNodeId,
                     String tier, SplineModel spline) {
@@ -111,6 +114,17 @@ public class RoadEdge {
     public void setStatus(EdgeStatus status) { this.status = status; }
 
     public void setDecorationTaskId(long taskId) { this.decorationTaskId = taskId; }
+
+    public Map<String, Integer> getMaterialCounts() { return Map.copyOf(materialCounts); }
+
+    public void setMaterialCounts(Map<String, Integer> counts) {
+        this.materialCounts = counts != null ? Map.copyOf(counts) : Map.of();
+    }
+
+    /** Record the live segment task id for this edge (used to cancel on withdraw). */
+    public void addSegmentTaskId(long taskId) {
+        segmentTaskIds.add(taskId);
+    }
 
     public int getWidth() { return width; }
     public void setWidth(int w) { this.width = w; }

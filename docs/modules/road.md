@@ -26,8 +26,9 @@ RoadRouter（buildGraph/Dijkstra/断点桥接/虫洞）、RoadBlobCache/RoadBlob
 
 ## MC 实现（road/engine/）
 
-- `RoadApiImpl`：getNetwork/getEdges（从 overworld RoadSavedData）、removeEdge。
-- `RoadSavedData`（`wandscape_roads`）：仅持久化边（spline 的 a/p/n/l、segmentTaskIds、placedBlocks、status、width），节点加载时重建；兼容旧 "path" 字段。
+- `RoadApiImpl`：getNetwork/getEdges（从 overworld RoadSavedData）、removeEdge、`cancelEdge(colonyId, edgeId)`——撤段任务 + 全额退料（仅当施工已开始，≥1 footprint 格是道路材料方块）+ 直接 `setBlock(air)` 清已铺方块（不走 transform 执行器，无 salvage，不双退）+ 同步移除 edge 作幂等墓碑（防重复退料刷物品）。
+- `RoadSiteData`：组装 Road 版 `ConstructionSiteDataPacket`（材料需求取 `RoadEdge.materialCounts`，供应状态沿用 `ColonyItemBank`/`ResourceSupplySystem` 口径，`completed=status==COMPLETE`），复用建筑的工地面板。
+- `RoadSavedData`（`wandscape_roads`）：仅持久化边（spline 的 a/p/n/l、segmentTaskIds、materialCounts、placedBlocks、status、width），节点加载时重建；兼容旧 "path" 字段。
 - `RoadSegmentListener`：订阅引擎 CustomEvent `road_segment_complete`→recordSegmentComplete，全完成置 COMPLETE。
 - `WandscapeTags`：`Blocks.CUSTOM_ROADS` = wandscape:custom_roads（JSON 值：dirt_path/cobblestone/stone/stone_bricks/gravel/sand 等），游客/运输的方块条件。
 

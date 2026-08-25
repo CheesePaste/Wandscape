@@ -683,6 +683,14 @@ public class Wandscape {
                         com.wsteam.wandscape.road.network.SplineBuildPacket.TYPE,
                         com.wsteam.wandscape.road.network.SplineBuildPacket.STREAM_CODEC,
                         (packet, ctx) -> com.wsteam.wandscape.road.network.SplineBuildPacket.handleServer(packet, (ServerPlayer) ctx.player()))
+                .playToServer(
+                        com.wsteam.wandscape.road.network.RoadInteractPacket.TYPE,
+                        com.wsteam.wandscape.road.network.RoadInteractPacket.STREAM_CODEC,
+                        (packet, ctx) -> com.wsteam.wandscape.road.network.RoadInteractPacket.handleServer(packet, (ServerPlayer) ctx.player()))
+                .playToServer(
+                        com.wsteam.wandscape.road.network.RoadWithdrawPacket.TYPE,
+                        com.wsteam.wandscape.road.network.RoadWithdrawPacket.STREAM_CODEC,
+                        (packet, ctx) -> com.wsteam.wandscape.road.network.RoadWithdrawPacket.handleServer(packet, (ServerPlayer) ctx.player()))
                 // ── Wandscape Panel ──
                 .playToServer(
                         com.wsteam.wandscape.shared.network.PanelStateTogglePacket.TYPE,

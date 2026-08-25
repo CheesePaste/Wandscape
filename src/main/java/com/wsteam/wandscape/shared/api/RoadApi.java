@@ -24,4 +24,17 @@ public interface RoadApi {
      * @param edgeId   the edge to remove
      */
     void removeEdge(UUID colonyId, UUID edgeId);
+
+    /**
+     * Withdraw an under-construction road edge: cancel its build task, refund the
+     * full material demand to the colony warehouse, clear its placed blocks, and
+     * remove the edge. Completed edges are rejected. Repeated calls are no-ops
+     * because the edge is removed synchronously on the first call — this is what
+     * prevents a double refund from minting items.
+     *
+     * @param colonyId colony identifier (null → no refund)
+     * @param edgeId   the edge to withdraw
+     * @return true if the edge was withdrawn, false if it was absent/completed
+     */
+    boolean cancelEdge(UUID colonyId, UUID edgeId);
 }

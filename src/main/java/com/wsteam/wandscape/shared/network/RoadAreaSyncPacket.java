@@ -2,6 +2,9 @@ package com.wsteam.wandscape.shared.network;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+
+import javax.annotation.Nullable;
 
 import com.wsteam.wandscape.road.core.PathPoint;
 import com.wsteam.wandscape.road.core.RoadEdge;
@@ -9,12 +12,15 @@ import com.wsteam.wandscape.shared.api.RoadApi;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
@@ -51,6 +57,69 @@ public record RoadAreaSyncPacket(List<RoadEntry> roads) implements CustomPacketP
     public static void clearCache() {
         cached = List.of();
     }
+
+    /**
+     * Raycast against the bounding box of every under-construction road edge in the
+     * cached area data. Returns the nearest intersecting road, or {@code null}.
+     *
+     * <p>A single AABB over the edge's tile footprint (min..max, inflated 1 block)
+     * is used — cheap per-frame and mirrors
+     * {@link BuildingAreaSyncPacket#raycastUnbuilt}. This lets an empty, not-yet-built
+     * road strip be targeted even before any tile is placed.
+     */
+    @Nullable
+    public static RoadBoxHit raycastUnderConstruction(Vec3 origin, Vec3 end) {
+        RoadBoxHit best = null;
+        RoadBoxHit contained = null;
+        double bestDist = Double.MAX_VALUE;
+        for (RoadEntry entry : cached) {
+            if (entry.tiles().isEmpty()) continue;
+            double minX = Double.MAX_VALUE, minY = Double.MAX_VALUE, minZ = Double.MAX_VALUE;
+            double maxX = -Double.MAX_VALUE, maxY = -Double.MAX_VALUE, maxZ = -Double.MAX_VALUE;
+            for (PathPoint t : entry.tiles()) {
+                minX = Math.min(minX, t.x());
+                minY = Math.min(minY, t.y());
+                minZ = Math.min(minZ, t.z());
+                maxX = Math.max(maxX, t.x() + 1);
+                maxY = Math.max(maxY, t.y() + 1);
+                maxZ = Math.max(maxZ, t.z() + 1);
+            }
+            AABB box = new AABB(minX, minY, minZ, maxX, maxY, maxZ).inflate(RAYCAST_INFLATE);
+            Optional<Vec3> hit = box.clip(origin, end);
+            if (hit.isPresent()) {
+                double dist = hit.get().distanceToSqr(origin);
+                if (dist < bestDist) {
+                    bestDist = dist;
+                    best = new RoadBoxHit(interiorPos(entry), dist, entry);
+                }
+            } else if (contained == null && box.contains(origin)) {
+                contained = new RoadBoxHit(interiorPos(entry), 0, entry);
+            }
+        }
+        return best != null ? best : contained;
+    }
+
+    /** Inflate amount for the road hit box (blocks). */
+    private static final double RAYCAST_INFLATE = 1.0;
+
+    /** A block position guaranteed inside a road entry's footprint (center of its tiles). */
+    private static BlockPos interiorPos(RoadEntry entry) {
+        if (entry.tiles().isEmpty()) return new net.minecraft.core.BlockPos(0, 0, 0);
+        int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE, minZ = Integer.MAX_VALUE;
+        int maxX = Integer.MIN_VALUE, maxY = Integer.MIN_VALUE, maxZ = Integer.MIN_VALUE;
+        for (PathPoint t : entry.tiles()) {
+            minX = Math.min(minX, t.x());
+            minY = Math.min(minY, t.y());
+            minZ = Math.min(minZ, t.z());
+            maxX = Math.max(maxX, t.x());
+            maxY = Math.max(maxY, t.y());
+            maxZ = Math.max(maxZ, t.z());
+        }
+        return new net.minecraft.core.BlockPos((minX + maxX) / 2, (minY + maxY) / 2, (minZ + maxZ) / 2);
+    }
+
+    /** Result of {@link #raycastUnderConstruction}: an under-construction road hit by a crosshair ray. */
+    public record RoadBoxHit(BlockPos pos, double distSq, RoadEntry entry) {}
 
     @Override
     public Type<? extends CustomPacketPayload> type() {

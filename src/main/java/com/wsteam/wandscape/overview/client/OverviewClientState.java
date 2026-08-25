@@ -37,6 +37,9 @@ public final class OverviewClientState {
     /** Building UUID at targetBlockPos (null = no building hit). */
     private static volatile UUID targetBuildingId = null;
 
+    /** Block position on an under-construction road under the crosshair (may be null). */
+    private static volatile BlockPos targetRoadPos = null;
+
     /** Saved player state on entry — used to reset camera reference on exit. */
     private static double prevX, prevY, prevZ;
     private static float prevYaw, prevPitch;
@@ -86,6 +89,7 @@ public final class OverviewClientState {
         targetBlockPos = null;
         targetBuildingId = null;
         targetEntityId = -1;
+        targetRoadPos = null;
         active = true;
     }
 
@@ -99,6 +103,7 @@ public final class OverviewClientState {
         targetBlockPos = null;
         targetBuildingId = null;
         targetEntityId = -1;
+        targetRoadPos = null;
     }
 
     /**
@@ -114,6 +119,7 @@ public final class OverviewClientState {
         targetBlockPos = null;
         targetBuildingId = null;
         targetEntityId = -1;
+        targetRoadPos = null;
         aerialCacheValid = false;
         cacheAnchorX = cacheAnchorZ = 0;
     }
@@ -147,17 +153,27 @@ public final class OverviewClientState {
 
     public static BlockPos getTargetBlockPos() { return targetBlockPos; }
     public static UUID getTargetBuildingId() { return targetBuildingId; }
+    public static BlockPos getTargetRoadPos() { return targetRoadPos; }
 
     public static void setTarget(BlockPos pos, UUID buildingId) {
         targetBlockPos = pos;
         targetBuildingId = buildingId;
+        targetRoadPos = null;
         // Building target takes priority — clear entity target
+        targetEntityId = -1;
+    }
+
+    public static void setTargetRoad(BlockPos pos) {
+        targetRoadPos = pos;
+        targetBlockPos = null;
+        targetBuildingId = null;
         targetEntityId = -1;
     }
 
     public static void clearTarget() {
         targetBlockPos = null;
         targetBuildingId = null;
+        targetRoadPos = null;
     }
 
     // ── Target (entity) ──
@@ -166,9 +182,10 @@ public final class OverviewClientState {
 
     public static void setTargetEntity(int entityId) {
         targetEntityId = entityId;
-        // Entity target takes priority — clear building target
+        // Entity target takes priority — clear building/road target
         targetBlockPos = null;
         targetBuildingId = null;
+        targetRoadPos = null;
     }
 
     public static void clearTargetEntity() {

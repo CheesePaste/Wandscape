@@ -225,6 +225,9 @@ public record RoadPlacePacket(String presetId, BlockPos startPos, BlockPos endPo
 
         try {
             long taskId = source.publish(new TaskRequest("road:build_segment", params, 10));
+            // Capture demand + live task id on the edge so withdraw can cancel & refund.
+            edge.setMaterialCounts(materials);
+            edge.addSegmentTaskId(taskId);
             SoundService.playAt(player.serverLevel(), player.getX(), player.getY(), player.getZ(),
                     WandscapeSounds.TASK_PUBLISH, SoundSource.PLAYERS, 0.4f, 1.0f);
             Log.info(TAG, "[Road] Published task #{}: preset={} from={} to={} tiles={}",

@@ -149,6 +149,23 @@ public class RoadNetwork {
         return Optional.empty();
     }
 
+    /**
+     * Find the road edge whose placed footprint contains the given block cell.
+     * Prefers an under-construction (non-COMPLETE) edge over a completed one so
+     * the crosshair targets a site that can still be withdrawn.
+     *
+     * @return the matching edge, or {@code null} if no edge occupies the cell
+     */
+    public RoadEdge findEdgeAt(PathPoint pos) {
+        RoadEdge completed = null;
+        for (RoadEdge edge : edges.values()) {
+            if (!edge.getPlacedBlocks().contains(pos)) continue;
+            if (edge.getStatus() != RoadEdge.EdgeStatus.COMPLETE) return edge;
+            if (completed == null) completed = edge;
+        }
+        return completed;
+    }
+
     // ---- Mutation operations (editor support) ----
 
     /** Remove an edge by UUID. Returns false if not found. */
