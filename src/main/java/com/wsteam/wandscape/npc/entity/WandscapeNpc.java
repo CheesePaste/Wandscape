@@ -39,6 +39,7 @@ import com.wsteam.wandscape.magic.data.MagicDef;
 import com.wsteam.wandscape.magic.internal.MagicCaster;
 import com.wsteam.wandscape.magic.internal.MagicSpellExecutors;
 import com.wsteam.wandscape.magic.internal.SpellbookLoader;
+import com.wsteam.wandscape.magic.item.SpellItem;
 import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.task.engine.pool.GlobalTask;
 import com.wsteam.wandscape.task.runtime.NpcTaskPackage;
@@ -721,6 +722,45 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
     @Override
     protected PathNavigation createNavigation(Level level) {
         return new WandscapeNavigation(this, level);
+    }
+
+    // ============================================================
+    // 死亡掉落：装备（盔甲 + 自定义法杖）与已装备魔法卷轴
+    // ============================================================
+
+    @Override
+    protected void dropEquipment() {
+        super.dropEquipment();
+        if (level().isClientSide) return;
+        if (!isColonyNpc()) return;
+
+        // 1. 掉落自定义法杖（非默认自带法杖）
+        if (!hasDefaultWand) {
+            ItemStack wand = getItemInHand(InteractionHand.MAIN_HAND);
+            if (!wand.isEmpty()) {
+                spawnAtLocation(wand.copy());
+                setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+            }
+        }
+
+        // 2. 掉落 4 件盔甲装备
+        for (int i = 0; i < ARMOR_SLOT_COUNT; i++) {
+            ItemStack armor = armorInventory.getItem(i);
+            if (!armor.isEmpty()) {
+                spawnAtLocation(armor.copy());
+                armorInventory.setItem(i, ItemStack.EMPTY);
+            }
+        }
+
+        // 3. 掉落已装备的技能魔法卷轴
+        for (String magicId : equippedMagic.flattened()) {
+            if (magicId != null && !magicId.isBlank()) {
+                ItemStack scroll = new ItemStack(Wandscape.SPELL_SCROLL.get());
+                SpellItem.setMagicId(scroll, magicId);
+                spawnAtLocation(scroll);
+            }
+        }
+        equippedMagic.clear();
     }
 
     // ============================================================

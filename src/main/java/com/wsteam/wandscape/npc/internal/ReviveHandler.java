@@ -123,8 +123,8 @@ public final class ReviveHandler {
         // 虚弱复活：1 血 0 蓝，靠脱战回血（interval 回 1 HP）与魔力回复（10t/1 点）缓慢恢复
         npc.setHealth(1f);
         npc.magic.setMana(0f);
-        npc.magic.markManaSeeded(); // 阻止首 tick 的"满蓝种子"逻辑把蓝填满
-        npc.setHasDefaultWand(rec.hasDefaultWand());
+        // 装备与法杖在死亡时已掉落在阵亡处，复活时给一把默认基础法杖
+        npc.setHasDefaultWand(true);
 
         // 若该法师曾入住法师小屋：重挂到那间小屋，并用小屋持有的等级/基础重算属性
         // （小屋入住记录在死亡时不变——这里恢复其养成进度并更新入住者 uuid）。
@@ -150,9 +150,7 @@ public final class ReviveHandler {
         if (eq != null) {
             eq.seedBaseValues(new NpcAttributes(npc.maxHp, npc.moveSpeed, npc.spellPower,
                     npc.workSpeed, npc.spellSpeed, npc.armorValue, npc.maxMana));
-            if (rec.hasDefaultWand()) {
-                eq.equipDefaultWand();
-            }
+            eq.equipDefaultWand();
         }
 
         var member = ecsWorld.get(ecsId, ColonyMember.class);
