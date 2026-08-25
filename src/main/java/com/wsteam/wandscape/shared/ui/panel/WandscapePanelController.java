@@ -179,7 +179,7 @@ public final class WandscapePanelController {
         double mouseX = mc.mouseHandler.xpos() / guiScale;
         double mouseY = mc.mouseHandler.ypos() / guiScale;
 
-        // ── Guidance buttons handling (close × / collapse ➖ / expand ➕) ──
+        // ── Guidance buttons handling (close × / collapse / expand ) ──
         if (com.wsteam.wandscape.shared.ui.guidance.GuideSession.shouldShow()) {
             boolean buildMode = WandscapePanelState.getActiveSubMode() == WandscapePanelState.SubMode.BUILD_PROJECTION;
             boolean isPlacing = WandscapePanelState.getBuildPhase() == WandscapePanelState.BuildPhase.PLACING;
@@ -465,7 +465,7 @@ public final class WandscapePanelController {
         int mods = event.getModifiers();
 
         // Focused search box: route printable/backspace keys into it FIRST, so
-        // global hotkeys (H/G/B) don't hijack letters while typing a name.
+        // global hotkeys (H/B/C) don't hijack letters while typing a name.
         if (BuildingSelectionOverlay.isActive() && WandscapePanelState.isBuildingBarSearchFocused()) {
             if (handleSearchInput(key, mods)) {
                 return;
@@ -488,13 +488,6 @@ public final class WandscapePanelController {
         if (com.wsteam.wandscape.WandscapeClient.PANEL_AREAS_TOGGLE.matches(key, scanCode)
                 && WandscapePanelState.isPanelOpen()) {
             WandscapePanelState.toggleBuildingAreas();
-            return;
-        }
-
-        // Overview mode ↔ ground mode toggle (only when panel is open)
-        if (com.wsteam.wandscape.WandscapeClient.OVERVIEW_TOGGLE.matches(key, scanCode)
-                && WandscapePanelState.isPanelOpen()) {
-            handleGKeyToggle();
             return;
         }
 
@@ -630,34 +623,6 @@ public final class WandscapePanelController {
             return true;
         }
         return false;
-    }
-
-    // ═══════════════════════════════════════════════════════════════
-    // ── Overview mode toggle ──
-    // ═══════════════════════════════════════════════════════════════
-
-    /**
-     * G key: toggle between overview camera and ground (first-person) mode.
-     * Only effective when the panel is open.
-     */
-    private static void handleGKeyToggle() {
-        // Check if overview camera is currently active (pure overview OR overview+build/road)
-        if (com.wsteam.wandscape.overview.client.OverviewClientState.isActive()) {
-            // Overview → Ground mode: exit the overview camera and return to a clean panel
-            // state. Must NOT auto-open the building panel (BUILD_PROJECTION opens the
-            // building selection bar via enterSubMode's overview-branch).
-            WandscapePanelState.exitCurrentSubMode();
-            com.wsteam.wandscape.overview.client.OverviewFlightController.exit();
-            WandscapePanelState.setSubMode(WandscapePanelState.SubMode.NONE);
-        } else {
-            // Ground → Overview mode
-            WandscapePanelState.SubMode current = WandscapePanelState.getActiveSubMode();
-            if (current == WandscapePanelState.SubMode.BUILD_PROJECTION || current == WandscapePanelState.SubMode.NONE
-                    || current == WandscapePanelState.SubMode.STATS || current == WandscapePanelState.SubMode.ROAD_PROJECTION) {
-                WandscapePanelState.exitCurrentSubMode();
-            }
-            WandscapePanelState.enterSubMode(WandscapePanelState.SubMode.OVERVIEW);
-        }
     }
 
     // ── Mouse scroll (building selection bar & task management drawer) ──

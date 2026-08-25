@@ -131,13 +131,6 @@ public class WandscapeClient {
             "key.categories.wandscape"
     );
 
-    public static final KeyMapping OVERVIEW_TOGGLE = new KeyMapping(
-            "key.wandscape.overview",
-            InputConstants.Type.KEYSYM,
-            GLFW.GLFW_KEY_G,
-            "key.categories.wandscape"
-    );
-
     public static final KeyMapping PANEL_HIDE_TOGGLE = new KeyMapping(
             "key.wandscape.panel_hide",
             InputConstants.Type.KEYSYM,
@@ -480,7 +473,6 @@ public class WandscapeClient {
         event.register(RAISE_CURSOR);
         event.register(GUIDE_TOGGLE);
         event.register(PANEL_AREAS_TOGGLE);
-        event.register(OVERVIEW_TOGGLE);
         event.register(PANEL_HIDE_TOGGLE);
     }
 

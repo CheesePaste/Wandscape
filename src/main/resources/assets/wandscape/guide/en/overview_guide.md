@@ -1,4 +1,4 @@
-# 🏰 Panel & Overview
+# Panel & Overview
 
 The panel opened with **V** is used to manage the town: place buildings, lay roads, and check statistics. It opens in **overview mode** by default: the camera rises above your head to survey the whole town.
 
@@ -21,7 +21,6 @@ The panel has two states — understand these and you have the basics:
 | **V** | Open / close the panel |
 | **F4** | Hide / show the panel (does not block the F3 debug screen) |
 | **1 / 2 / 3 / 4** | Quickly switch to **Build / Road / Stats / Warning** |
-| **G** | Toggle overview mode ↔ ground view |
 | **B** | Show / hide building boundary boxes |
 | **H** | Open the help guide |
 | **C** | Raise the cursor |
@@ -33,11 +32,11 @@ Flying works the same as creative mode: **WASD** to pan, **Space / Shift** to as
 
 ## The Three Sidebar Tabs
 
-- **Build**: the building bar below lists buildable structures by category (All / Government / Storage / Service / Shops / Relax / ATM / Workshop / Node). Flow: **single-click** to select → **double-click** to enter placement → the ghost preview follows your mouse → **left-click** to rotate the facing → press **✓ Submit** on the right panel to open the construction screen → **Submit** to build. If the position needs fine-tuning: press **📌 Lock** (or **Enter**) to pin it, drag the **3D axis gizmo** to move it, then **✓ Submit**. While pinned, **Esc** returns to aiming; **Esc** again exits placement. First-free buildings are marked in the bar.
+- **Build**: the building bar below lists buildable structures by category (All / Government / Storage / Service / Shops / Relax / ATM / Workshop / Node). Flow: **single-click** to select → **double-click** to enter placement → the ghost preview follows your mouse → **left-click** to rotate the facing → press **Submit** on the right panel to open the construction screen → **Submit** to build. If the position needs fine-tuning: press **Lock** (or **Enter**) to pin it, drag the **3D axis gizmo** to move it, then **Submit**. While pinned, **Esc** returns to aiming; **Esc** again exits placement. First-free buildings are marked in the bar.
 - **Roads**: the paving toolset — see [Road System Overview](road_guide.md).
 - **Stats**: tourist flow, economic income, resident count, anomaly warnings.
 
-The **⚠️ warning icon** below the sidebar lights up when a building is stopped or broken. Opening it shows the [Anomaly Report](anomaly_guide.md), where broken buildings can be repaired.
+The **warning icon** below the sidebar lights up when a building is stopped or broken. Opening it shows the [Anomaly Report](anomaly_guide.md), where broken buildings can be repaired.
 
 ## Raising the Cursor (C)
 
@@ -58,4 +57,4 @@ See [Getting Started](getting_started_guide.md) for the full route.
 ---
 
 [Road System Overview](road_guide.md)  
-[📖 Back to the Guide Index](index_guide.md)
+[Back to the Guide Index](index_guide.md)

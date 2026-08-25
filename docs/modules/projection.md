@@ -54,7 +54,7 @@ UUID 集合 projectingPlayers，addProjecting/removeProjecting/isProjecting/remo
 - `BuildingDebugClientState`：静态缓存 + 250ms 防抖窗口。
 - `BuildingDebugOverlay`：渲染信息框（名称/类别/状态/三值/队列）+ Repair/Shutdown-Restart/Destroy 按钮（自左到右），点击发 BuildingActionPacket。
 - `BuildingDebugRequestPacket` 服务端读 BuildingSavedData，shop 类别叠加库存商品加成；响应含 `needsRepair`（`BuildCompleteListener.findDamagedBlocks` 判是否有任意损坏块）+ `underConstruction`/`constructionStarted`（未完工建筑状态显示"等待材料/建造中"，禁用修复按钮）；`BuildingActionPacket` 处理 shutdown/restart/destroy/repair。
-- > **注意**：BuildingDebugClientState.setActive 现由 V 面板开合驱动；旧注释 "G key" 已过时（G 键现为 overview 切换）。
+- > **注意**：BuildingDebugClientState.setActive 现由 V 面板开合驱动；旧注释 "G key" 已过时（G 键的 overview 切换已移除，面板常驻俯瞰相机）。
 
 ## network/ 包
 
