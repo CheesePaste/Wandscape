@@ -567,12 +567,12 @@ public final class StudioWidgets {
             String coordStr = String.format("(%d, %d, %d)", pos.getX(), pos.getY(), pos.getZ());
             g.drawString(font, coordStr, x + 4, y + 3, StudioColors.TEXT_GREEN);
 
-            int clearW = font.width("✕") + 10;
+            int clearW = font.width("×") + 10;
             int clearX = x + w - clearW;
             boolean clearHov = isHovered(clearX, y, clearW, rowH);
             g.fill(clearX, y, clearX + clearW, y + rowH,
                     clearHov ? StudioColors.BUTTON_RED_HOVER : StudioColors.BUTTON_RED);
-            g.drawString(font, "✕", clearX + 5, y + 4, StudioColors.TEXT_WARM);
+            g.drawString(font, "×", clearX + 5, y + 4, StudioColors.TEXT_WARM);
             if (clearHov && mouseClicked) result = 1;
             y += rowH;
         } else {

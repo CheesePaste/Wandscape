@@ -1,4 +1,4 @@
-# ⛏️ 元素节点
+# 元素节点
 
 产出元素的采集设施。法师会自动到节点采集，将元素送入仓库。
 
@@ -26,4 +26,4 @@
 [仓库与物资](warehouse_guide.md)  
 [工作站（分解与合成）](workstation_guide.md)  
 [新手入门：从空城到游客小镇](getting_started_guide.md)  
-[📖 返回指南首页](index_guide.md)
+[返回指南首页](index_guide.md)

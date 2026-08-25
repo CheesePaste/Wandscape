@@ -1,4 +1,4 @@
-# 🧙‍♂️ Wizard NPC
+# Wizard NPC
 
 Wizards carry out the colony's building, gathering, crafting, and combat. How much the colony can do depends on how many wizards you have and the gear you give them.
 
@@ -49,4 +49,4 @@ Wizards carry out the colony's building, gathering, crafting, and combat. How mu
 [Cast Strategy Guide](strategy_guide.md)  
 [Tavern (Recruiting Wizards)](tavern_guide.md)  
 [Crafting Station (Wands)](crafting_guide.md)  
-[📖 Back to the Guide Index](index_guide.md)
+[Back to the Guide Index](index_guide.md)

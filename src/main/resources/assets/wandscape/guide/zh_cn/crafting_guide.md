@@ -1,4 +1,4 @@
-# 🔨 合成台
+# 合成台
 
 制造**法杖**的专用设施。法杖决定法师的战斗力。
 
@@ -28,4 +28,4 @@
 
 [工作站（分解与合成）](workstation_guide.md)  
 [法师 NPC 指南](npc_guide.md)  
-[📖 返回指南首页](index_guide.md)
+[返回指南首页](index_guide.md)

@@ -1,4 +1,4 @@
-# ➰ Spline Editor
+# Spline Editor
 
 Replace mode can only pull rectangles; drawing arcs requires **splines**: click anchors in the world to draw curves, used for building curves, loops, and interchanges.
 
@@ -16,10 +16,10 @@ With the cursor free, click the panel or control points in the world; right-clic
 
 ## Drawing a Curve
 
-1. In the panel's "**➕ Click to Add Point**" mode, **left-click** a block surface in the world — that adds an anchor. Add two or more, and the curve preview appears.
+1. In the panel's "**Click to Add Point**" mode, **left-click** a block surface in the world — that adds an anchor. Add two or more, and the curve preview appears.
 2. **Left-click** an anchor to select it; an **RGB 3D axis** appears around it (red X / green Y / blue Z). **Hold and drag an axis** to move the anchor along it. The **tangent handles** at both ends control the arc.
 3. Want a symmetric bend on both sides? Keep "Symmetric Tangent Handle Lock" on; hold **Shift** while dragging to temporarily move only one side.
-4. Delete a point: select it and press **Delete** / **Backspace**, or use the panel's "🗑️ Delete Node".
+4. Delete a point: select it and press **Delete** / **Backspace**, or use the panel's "Delete Node".
 
 ## Generating a Road
 
@@ -44,4 +44,4 @@ The "Templates & Tools" tab lets you save the current curve as a template under 
 
 [Replace Mode (Surface Paving)](road_replace_guide.md)  
 [Road System Overview](road_guide.md)  
-[📖 Back to the Guide Index](index_guide.md)
+[Back to the Guide Index](index_guide.md)

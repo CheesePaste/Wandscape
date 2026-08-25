@@ -83,7 +83,7 @@ public final class ScannerGizmoOverlay {
         int curY = y + 6;
 
         // Header Title
-        String title = I18n.string("gui.wandscape.gizmo.title", "📐 3D 可视化调整 (Gizmo)");
+        String title = I18n.string("gui.wandscape.gizmo.title", "3D 可视化调整 (Gizmo)");
         gui.drawString(font, title, x + PAD, curY, MedievalColors.BORDER_GOLD);
         curY += 12;
 
@@ -104,8 +104,8 @@ public final class ScannerGizmoOverlay {
         boolean minActive = ScannerGizmoState.getSelectedAnchor() == ScannerGizmoState.Anchor.MIN;
         boolean maxActive = ScannerGizmoState.getSelectedAnchor() == ScannerGizmoState.Anchor.MAX;
 
-        String btnMin = I18n.string("gui.wandscape.gizmo.anchor_min", "🔵 Min 角点");
-        String btnMax = I18n.string("gui.wandscape.gizmo.anchor_max", "🟡 Max 角点");
+        String btnMin = I18n.string("gui.wandscape.gizmo.anchor_min", "Min 角点");
+        String btnMax = I18n.string("gui.wandscape.gizmo.anchor_max", "Max 角点");
 
         drawButton(gui, font, x + PAD, curY, btnW, 16, btnMin, minActive, isInRect(mx, my, x + PAD, curY, btnW, 16), 0xFF00E5FF);
         drawButton(gui, font, x + PAD + btnW + 4, curY, btnW, 16, btnMax, maxActive, isInRect(mx, my, x + PAD + btnW + 4, curY, btnW, 16), 0xFFFFD700);
@@ -138,11 +138,11 @@ public final class ScannerGizmoOverlay {
         curY += 18;
 
         // ── Help Text ──
-        String helpMouse = I18n.string("gui.wandscape.gizmo.help_mouse", "🖱️ 右键拖动视角 | 左键拖轴");
+        String helpMouse = I18n.string("gui.wandscape.gizmo.help_mouse", "右键拖动视角 | 左键拖轴");
         gui.drawString(font, helpMouse, x + PAD, curY, MedievalColors.TEXT_DIM);
         curY += 10;
 
-        String helpKeys = I18n.string("gui.wandscape.gizmo.help_keys", "⌨️ Enter 保存 | Esc 还原");
+        String helpKeys = I18n.string("gui.wandscape.gizmo.help_keys", "Enter 保存 | Esc 还原");
         gui.drawString(font, helpKeys, x + PAD, curY, MedievalColors.TEXT_DIM);
         curY += 14;
 
@@ -151,8 +151,8 @@ public final class ScannerGizmoOverlay {
         boolean confHover = isInRect(mx, my, x + PAD, curY, actBtnW, 18);
         boolean cancHover = isInRect(mx, my, x + PAD + actBtnW + 4, curY, actBtnW, 18);
 
-        String btnConfirm = I18n.string("gui.wandscape.gizmo.confirm", "✓ 确定 (Enter)");
-        String btnCancel = I18n.string("gui.wandscape.gizmo.cancel", "✕ 还原 (Esc)");
+        String btnConfirm = I18n.string("gui.wandscape.gizmo.confirm", "确定 (Enter)");
+        String btnCancel = I18n.string("gui.wandscape.gizmo.cancel", "还原 (Esc)");
 
         drawButton(gui, font, x + PAD, curY, actBtnW, 18, btnConfirm, true, confHover, MedievalColors.BORDER_GOLD);
         drawButton(gui, font, x + PAD + actBtnW + 4, curY, actBtnW, 18, btnCancel, false, cancHover, MedievalColors.TEXT_MUTED);

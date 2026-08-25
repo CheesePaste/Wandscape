@@ -1,4 +1,4 @@
-# 🏛️ Altar
+# Altar
 
 The facility for casting **ritual spells**. The currently available ritual spell is **Revive**. Ritual spells are not auto-cast by wizards in combat and must be ordered at the altar.
 
@@ -29,4 +29,4 @@ The facility for casting **ritual spells**. The currently available ritual spell
 
 [Wizard NPC Guide](npc_guide.md)  
 [Cast Strategy Guide](strategy_guide.md)  
-[📖 Back to the Guide Index](index_guide.md)
+[Back to the Guide Index](index_guide.md)

@@ -105,8 +105,8 @@ public final class BuildPopPanelOverlay {
         g.fill(RenderType.guiOverlay(), btnLockX, btnLockY, btnLockX + BTN_W, btnLockY + BTN_H, 0, lockBg);
         g.fill(RenderType.guiOverlay(), btnLockX, btnLockY + BTN_H - 1, btnLockX + BTN_W, btnLockY + BTN_H, 0, lockAccent);
         g.drawCenteredString(font, isPinned
-                        ? I18n.name("gui.wandscape.buildpop.unlock", "🔓 解锁").getString()
-                        : I18n.name("gui.wandscape.buildpop.lock", "📌 锁定").getString(),
+                        ? I18n.name("gui.wandscape.buildpop.unlock", "解锁").getString()
+                        : I18n.name("gui.wandscape.buildpop.lock", "锁定").getString(),
                 btnLockX + BTN_W / 2, btnLockY + 4, hoverLock ? 0xFFFFFFFF : 0xFFCCCCCC);
 
         // Rotation angle (read-only — rotate the ghost with left-click)
@@ -124,7 +124,7 @@ public final class BuildPopPanelOverlay {
         int submitBg = hoverSubmit ? 0xFF1A4D2E : 0xFF14381F;
         g.fill(RenderType.guiOverlay(), submitX, submitY, submitX + submitW, submitY + BTN_H, 0, submitBg);
         g.fill(RenderType.guiOverlay(), submitX, submitY + BTN_H - 1, submitX + submitW, submitY + BTN_H, 0, 0xFF28A745);
-        g.drawCenteredString(font, I18n.name("gui.wandscape.buildpop.submit", "✓ 提交施工").getString(), submitX + submitW / 2, submitY + 4, hoverSubmit ? 0xFFFFFFFF : 0xFFAADDBB);
+        g.drawCenteredString(font, I18n.name("gui.wandscape.buildpop.submit", "提交施工").getString(), submitX + submitW / 2, submitY + 4, hoverSubmit ? 0xFFFFFFFF : 0xFFAADDBB);
     }
 
     public static boolean isOverPanel(double mouseX, double mouseY, int screenW) {

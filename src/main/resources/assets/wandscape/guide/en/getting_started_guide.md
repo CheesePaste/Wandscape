@@ -1,4 +1,4 @@
-# 🚀 Getting Started: From Empty Land to a Tourist Town
+# Getting Started: From Empty Land to a Tourist Town
 
 From an empty plot of land to a magic town that earns money, it only takes eight steps. Don't panic — someone else does the work at every step; you only decide what to build and where.
 
@@ -8,7 +8,7 @@ From an empty plot of land to a magic town that earns money, it only takes eight
 
 ## Step 1: Place the Town Hall
 
-Press **V** to open the panel → the **Build** icon on the left → the **Government** category → select the Town Hall, **double-click** to enter placement → move the ghost preview to an empty spot, **left-click** to rotate the facing if needed → press **✓ Submit** on the right panel to open the construction screen, then **Submit** to build. If the position needs fine-tuning: press **📌 Lock** (or **Enter**) to pin it first, drag the **3D axis gizmo** to move it, then submit.
+Press **V** to open the panel → the **Build** icon on the left → the **Government** category → select the Town Hall, **double-click** to enter placement → move the ghost preview to an empty spot, **left-click** to rotate the facing if needed → press **Submit** on the right panel to open the construction screen, then **Submit** to build. If the position needs fine-tuning: press **Lock** (or **Enter**) to pin it first, drag the **3D axis gizmo** to move it, then submit.
 
 The Town Hall is the brain of the town — without it you haven't built a town, just a pile of buildings. Once it is built, **aim your crosshair at it and right-click** to name your town — that counts as opening for business.
 
@@ -65,10 +65,10 @@ Tourists with **all three need bars full** leave satisfied at night, and the tow
 
 ## Don't Forget
 
-Buildings may **shut down** from **structural damage**. The ⚠️ icon in the V panel's sidebar lists stopped and broken buildings — handle them in one click. The daily settlement still runs as usual — shops restock and stats snapshots fire.
+Buildings may **shut down** from **structural damage**. The icon in the V panel's sidebar lists stopped and broken buildings — handle them in one click. The daily settlement still runs as usual — shops restock and stats snapshots fire.
 
 ---
 
 [Panel & Overview](overview_guide.md)  
 [Road System Overview](road_guide.md)  
-[📖 Back to the Guide Index](index_guide.md)
+[Back to the Guide Index](index_guide.md)

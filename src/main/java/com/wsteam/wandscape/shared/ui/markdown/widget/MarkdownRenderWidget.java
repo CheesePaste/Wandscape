@@ -426,15 +426,15 @@ public class MarkdownRenderWidget extends AbstractWidget {
         if (action.startsWith("action:")) {
             return Component.translatable("gui.wandscape.guide.action_tooltip", action.substring(7));
         } else if (action.startsWith("http://") || action.startsWith("https://")) {
-            return Component.literal("🌐 " + action);
+            return Component.literal(action);
         } else if (action.endsWith(".md") || action.startsWith("guide:")) {
             String doc = action.startsWith("guide:") ? action.substring(6) : action;
             if (doc.endsWith(".md")) {
                 doc = doc.substring(0, doc.length() - 3);
             }
-            return Component.literal("📖 " + doc);
+            return Component.literal(doc);
         }
-        return Component.literal("🔗 " + action);
+        return Component.literal(action);
     }
 
     @Override

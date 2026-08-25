@@ -172,8 +172,8 @@ public class MageHutScreen extends MedievalScreen {
         AttributeType selType = MageHutAttributes.ORDER.get(selectedTrain);
         boolean canTrain = canOperate() && MageHutAttributes.canTrain(selType, base[selType.ordinal()]);
         Component trainLabel = canTrain
-                ? I18n.name("gui.wandscape.mage_hut.train_btn", "⚡ 强化特训")
-                : I18n.name("gui.wandscape.mage_hut.maxed_attr", "✦ 已达属性上限 ✦");
+                ? I18n.name("gui.wandscape.mage_hut.train_btn", "强化特训")
+                : I18n.name("gui.wandscape.mage_hut.maxed_attr", "已达属性上限");
 
         MedievalButton trainBtn = new MedievalButton(
                 rx + 8, ry + 60, rw - 16, 20, trainLabel,
@@ -202,21 +202,21 @@ public class MageHutScreen extends MedievalScreen {
 
         MedievalButton equipBtn = new MedievalButton(
                 rx + 8, bY, bW, bH,
-                I18n.name("gui.wandscape.mage_hut.equip", "⚔️ 装备"),
+                I18n.name("gui.wandscape.mage_hut.equip", "装备"),
                 () -> sendAction("open_equip"));
         equipBtn.active = canOperate();
         addRenderableWidget(equipBtn);
 
         MedievalButton strategyBtn = new MedievalButton(
                 rx + 8 + bW + bGap, bY, bW, bH,
-                I18n.name("gui.wandscape.mage_hut.strategy", "📜 策略"),
+                I18n.name("gui.wandscape.mage_hut.strategy", "策略"),
                 () -> sendAction("open_strategy"));
         strategyBtn.active = canOperate();
         addRenderableWidget(strategyBtn);
 
         MedievalButton restBtn = new MedievalButton(
                 rx + 8 + (bW + bGap) * 2, bY, bW, bH,
-                I18n.name("gui.wandscape.mage_hut.rest", "💤 休息"),
+                I18n.name("gui.wandscape.mage_hut.rest", "休息"),
                 this::onRest);
         restBtn.active = canOperate() && !resting;
         addRenderableWidget(restBtn);
@@ -236,7 +236,7 @@ public class MageHutScreen extends MedievalScreen {
             MageCandidate c = candidates.get(selectedCandidate);
             MedievalButton assignBtn = new MedievalButton(
                     abX, abY, abW, abH,
-                    I18n.name("gui.wandscape.mage_hut.assign_btn", "🏠 指派入住小屋"),
+                    I18n.name("gui.wandscape.mage_hut.assign_btn", "指派入住小屋"),
                     () -> onAssign(c));
             addRenderableWidget(assignBtn);
         }
@@ -255,19 +255,12 @@ public class MageHutScreen extends MedievalScreen {
             renderEmpty(g, font, mouseX, mouseY, contentTop);
         }
 
-        // Colony label / Toast feedback — top-right
-        String status;
-        int statusColor;
+        // Toast feedback — top-right (only while an action toast is showing)
         if (toastMessage != null && System.currentTimeMillis() < toastExpireTick) {
-            status = toastMessage.getString();
-            statusColor = toastColor;
-        } else {
-            status = I18n.name("gui.wandscape.common.colony_label", "Colony").getString()
-                    + ": " + (colonyId != null ? colonyId.toString().substring(0, Math.min(8, colonyId.toString().length())) : "");
-            statusColor = MedievalColors.TEXT_DIM;
+            String toast = toastMessage.getString();
+            g.drawString(font, toast, leftPos + PW - font.width(toast) - 12,
+                    topPos + headerHeight + 8, toastColor);
         }
-        g.drawString(font, status, leftPos + PW - font.width(status) - 12,
-                topPos + headerHeight + 8, statusColor);
 
         // Tooltip rendering for attributes in occupied mode
         if (hasResident) {
@@ -326,13 +319,13 @@ public class MageHutScreen extends MedievalScreen {
         String status;
         int statusCol;
         if (!alive) {
-            status = I18n.name("gui.wandscape.mage_hut.status_dead", "🧟 已阵亡").getString();
+            status = I18n.name("gui.wandscape.mage_hut.status_dead", "已阵亡").getString();
             statusCol = 0xFFFF5555;
         } else if (resting) {
-            status = I18n.name("gui.wandscape.mage_hut.status_resting", "💤 休息中").getString();
+            status = I18n.name("gui.wandscape.mage_hut.status_resting", "休息中").getString();
             statusCol = MedievalColors.INFO_BLUE;
         } else {
-            status = I18n.name("gui.wandscape.mage_hut.status_idle", "🟢 正常执勤").getString();
+            status = I18n.name("gui.wandscape.mage_hut.status_idle", "正常执勤").getString();
             statusCol = MedievalColors.SUCCESS_GREEN;
         }
         g.drawString(font, status, hx, ly + 47, statusCol);
@@ -420,7 +413,7 @@ public class MageHutScreen extends MedievalScreen {
 
         // ── Card 1: Stat Training Module ──
         drawMinimalBox(g, rightX + 4, rightY + 4, rightW - 8, 80, false, false);
-        g.drawCenteredString(font, I18n.name("gui.wandscape.mage_hut.training_title", "✦ 属性特训 ✦"),
+        g.drawCenteredString(font, I18n.name("gui.wandscape.mage_hut.training_title", "属性特训"),
                 rightX + rightW / 2, rightY + 8, MedievalColors.ACCENT_GOLD);
 
         AttributeType selType = MageHutAttributes.ORDER.get(selectedTrain);
@@ -436,7 +429,7 @@ public class MageHutScreen extends MedievalScreen {
             String stepStr = I18n.name("gui.wandscape.mage_hut.train_step", "单次特训: +%s", fmt(selStep)).getString();
             g.drawString(font, stepStr, rightX + 8, rightY + 34, MedievalColors.SUCCESS_GREEN);
         } else {
-            String maxStr = I18n.name("gui.wandscape.mage_hut.maxed_attr", "✦ 已达属性上限 ✦").getString();
+            String maxStr = I18n.name("gui.wandscape.mage_hut.maxed_attr", "已达属性上限").getString();
             g.drawString(font, maxStr, rightX + 8, rightY + 34, MedievalColors.ACCENT_GOLD);
         }
 
@@ -446,7 +439,7 @@ public class MageHutScreen extends MedievalScreen {
 
         // ── Card 2: Promotion & Commands Module ──
         drawMinimalBox(g, rightX + 4, rightY + 88, rightW - 8, 88, false, false);
-        g.drawCenteredString(font, I18n.name("gui.wandscape.mage_hut.command_title", "✦ 晋升与指令 ✦"),
+        g.drawCenteredString(font, I18n.name("gui.wandscape.mage_hut.command_title", "晋升与指令"),
                 rightX + rightW / 2, rightY + 94, MedievalColors.ACCENT_GOLD);
     }
 
@@ -509,7 +502,7 @@ public class MageHutScreen extends MedievalScreen {
                 g.drawString(font, cName, cx + 6, cy + 3,
                         isSel ? MedievalColors.ACCENT_GOLD : MedievalColors.TEXT_WARM_WHITE);
 
-                String cStatus = c.idle() ? "🟢 空闲待命" : "⏳ 正在忙碌";
+                String cStatus = c.idle() ? "空闲待命" : "正在忙碌";
                 g.drawString(font, cStatus, cx + 6, cy + 14,
                         c.idle() ? MedievalColors.SUCCESS_GREEN : MedievalColors.TEXT_MUTED);
             }
@@ -529,7 +522,7 @@ public class MageHutScreen extends MedievalScreen {
         if (!candidates.isEmpty() && selectedCandidate >= 0 && selectedCandidate < candidates.size()) {
             MageCandidate c = candidates.get(selectedCandidate);
 
-            g.drawCenteredString(font, I18n.name("gui.wandscape.mage_hut.assign_title", "✦ 法师入住指派 ✦"),
+            g.drawCenteredString(font, I18n.name("gui.wandscape.mage_hut.assign_title", "法师入住指派"),
                     rx + rw / 2, ry + 6, MedievalColors.ACCENT_GOLD);
 
             // 3D Avatar Box
@@ -547,7 +540,7 @@ public class MageHutScreen extends MedievalScreen {
             // Summary text
             int hx = rx + 56;
             g.drawString(font, c.name(), hx, ry + 22, MedievalColors.ACCENT_GOLD);
-            g.drawString(font, c.idle() ? "状态: 🟢 空闲待命" : "状态: ⏳ 任务执行中",
+            g.drawString(font, c.idle() ? "状态: 空闲待命" : "状态: 任务执行中",
                     hx, ry + 36, MedievalColors.TEXT_WARM_WHITE);
             g.drawString(font, "居所: 尚未分配专属居所", hx, ry + 50, MedievalColors.TEXT_MUTED);
 
@@ -565,7 +558,7 @@ public class MageHutScreen extends MedievalScreen {
                     dx, dy + 37, MedievalColors.TEXT_MUTED);
         } else {
             int cx = rx + rw / 2;
-            g.drawCenteredString(font, "🏠 " + I18n.name("gui.wandscape.mage_hut.title", "法师专属住宅").getString(),
+            g.drawCenteredString(font, I18n.name("gui.wandscape.mage_hut.title", "法师专属住宅").getString(),
                     cx, ry + 35, MedievalColors.ACCENT_GOLD);
             g.drawCenteredString(font, "法师小屋是小镇法师的成长居所", cx, ry + 58, MedievalColors.TEXT_WARM_WHITE);
             g.drawCenteredString(font, "• 招募法师后在此完成入住指派", cx, ry + 78, MedievalColors.TEXT_MUTED);
@@ -596,10 +589,10 @@ public class MageHutScreen extends MedievalScreen {
         tooltip.add(Component.literal(String.format("综合生效: %s", fmt(eff))).withStyle(ChatFormatting.YELLOW, ChatFormatting.BOLD));
 
         if (canOperate() && MageHutAttributes.canTrain(type, b)) {
-            tooltip.add(Component.literal(String.format("✦ 点击该行可特训 (每次+%s)", fmt(step)))
+            tooltip.add(Component.literal(String.format("点击该行可特训 (每次+%s)", fmt(step)))
                     .withStyle(ChatFormatting.GREEN, ChatFormatting.ITALIC));
         } else if (b >= upper - 0.001f) {
-            tooltip.add(Component.literal("✦ 该属性基础已达特训极限")
+            tooltip.add(Component.literal("该属性基础已达特训极限")
                     .withStyle(ChatFormatting.DARK_PURPLE, ChatFormatting.ITALIC));
         }
 
@@ -709,13 +702,13 @@ public class MageHutScreen extends MedievalScreen {
 
     private static String fallbackLabel(AttributeType type) {
         return switch (type) {
-            case MAX_HP -> "❤️ 生命";
-            case MOVE_SPEED -> "✦ 速度";
-            case SPELL_POWER -> "⚡ 法强";
-            case WORK_SPEED -> "⚒ 工速";
-            case SPELL_SPEED -> "⏳ 施速";
-            case ARMOR_VALUE -> "🛡 护甲";
-            case MAX_MANA -> "💧 魔力";
+            case MAX_HP -> "生命";
+            case MOVE_SPEED -> "速度";
+            case SPELL_POWER -> "法强";
+            case WORK_SPEED -> "工速";
+            case SPELL_SPEED -> "施速";
+            case ARMOR_VALUE -> "护甲";
+            case MAX_MANA -> "魔力";
         };
     }
 

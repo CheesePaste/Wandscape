@@ -1,4 +1,4 @@
-# 🏛️ Town Hall
+# Town Hall
 
 The core facility of the colony. It manages the town name, colony level, experience, and reputation, and is the key to attracting wizard NPCs to join. The Town Hall must be built and the colony created before other buildings can operate.
 
@@ -32,4 +32,4 @@ When tourists with **all three need bars full** leave satisfied at night, the to
 
 [Warehouse & Materials](warehouse_guide.md)  
 [Getting Started: From Empty Land to a Tourist Town](getting_started_guide.md)  
-[📖 Back to the Guide Index](index_guide.md)
+[Back to the Guide Index](index_guide.md)

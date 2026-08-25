@@ -1,4 +1,4 @@
-# 📦 仓库
+# 仓库
 
 存放小镇全部元素与物资。建造、合成从这里扣料，游客消费收入也回到这里。**材料存进仓库，NPC 才能取用。**
 
@@ -48,4 +48,4 @@
 [市政厅](townhall_guide.md)  
 [元素节点](node_guide.md)  
 [新手入门：从空城到游客小镇](getting_started_guide.md)  
-[📖 返回指南首页](index_guide.md)
+[返回指南首页](index_guide.md)

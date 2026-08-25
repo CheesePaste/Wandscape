@@ -51,15 +51,15 @@ public class MarkdownParserTest {
     }
 
     @Test
-    void testLinksWithLeadingTextAndEmoji() {
-        String line = "👉 [跳转至 🏛️ 市政厅指南](townhall_guide.md)";
+    void testLinksWithLeadingText() {
+        String line = "跳转至 [市政厅指南](townhall_guide.md)";
         List<FormattedSpan> spans = MarkdownParser.parseInlineSpans(line);
 
         assertEquals(2, spans.size());
-        assertEquals("👉 ", spans.get(0).text());
+        assertEquals("跳转至 ", spans.get(0).text());
         assertNull(spans.get(0).linkAction());
 
-        assertEquals("跳转至 🏛️ 市政厅指南", spans.get(1).text());
+        assertEquals("市政厅指南", spans.get(1).text());
         assertEquals("townhall_guide.md", spans.get(1).linkAction());
     }
 

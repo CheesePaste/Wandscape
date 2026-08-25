@@ -87,7 +87,7 @@ public final class TaskManagementOverlay {
 
         // Colony / Hub Title
         String colonyName = WandscapePanelState.getColonyName();
-        String title = colonyName.isEmpty() ? "🏰 魔法小镇" : "🏰 " + colonyName;
+        String title = colonyName.isEmpty() ? "魔法小镇" : colonyName;
         g.drawString(font, title, curX, 12, WandscapeTheme.COLOR_TEXT_ACTIVE, false);
         curX += font.width(title) + 16;
 
@@ -101,7 +101,7 @@ public final class TaskManagementOverlay {
         if (tasksActive) {
             g.fill(RenderType.guiOverlay(), curX, btnY + btnH - 2, curX + tabTaskW, btnY + btnH, 0, BORDER_GOLD);
         }
-        String taskLabel = "📜 任务大厅 (" + TaskManagementClientState.getTotalActiveTasks() + ")";
+        String taskLabel = "任务大厅 (" + TaskManagementClientState.getTotalActiveTasks() + ")";
         int taskColor = tasksActive ? WandscapeTheme.COLOR_TEXT_ACTIVE : WandscapeTheme.COLOR_TEXT_NORMAL;
         g.drawString(font, taskLabel, curX + (tabTaskW - font.width(taskLabel)) / 2, btnY + 7, taskColor, false);
         curX += tabTaskW + 8;
@@ -115,7 +115,7 @@ public final class TaskManagementOverlay {
         if (magesActive) {
             g.fill(RenderType.guiOverlay(), curX, btnY + btnH - 2, curX + tabMageW, btnY + btnH, 0, BORDER_GOLD);
         }
-        String mageLabel = "🧙 法师名册 (" + TaskManagementClientState.getTotalMageCount() + ")";
+        String mageLabel = "法师名册 (" + TaskManagementClientState.getTotalMageCount() + ")";
         int mageColor = magesActive ? WandscapeTheme.COLOR_TEXT_ACTIVE : WandscapeTheme.COLOR_TEXT_NORMAL;
         g.drawString(font, mageLabel, curX + (tabMageW - font.width(mageLabel)) / 2, btnY + 7, mageColor, false);
         curX += tabMageW + 24;
@@ -128,19 +128,19 @@ public final class TaskManagementOverlay {
                 else if ("AWAITING_RESOURCES".equalsIgnoreCase(t.state())) awaiting++;
                 else if ("PENDING_ASSIGN".equalsIgnoreCase(t.state())) pending++;
             }
-            String metrics = String.format("🟢 运行中: %d  |  🔴 缺资源: %d  |  🟡 排队: %d  |  🧙 空闲法师: %d/%d",
+            String metrics = String.format("运行中: %d  |  缺资源: %d  |  排队: %d  |  空闲法师: %d/%d",
                     inProgress, awaiting, pending,
                     TaskManagementClientState.getIdleMageCount(), TaskManagementClientState.getTotalMageCount());
             g.drawString(font, metrics, curX, 12, WandscapeTheme.COLOR_TEXT_DIM, false);
         }
 
-        // Close / Exit Button [✕ 返回鸟瞰 (ESC)] (Right)
+        // Close / Exit Button [返回鸟瞰 (ESC)] (Right)
         int closeW = 110;
         int closeX = screenW - closeW - 16;
         boolean closeHover = mx >= closeX && mx <= closeX + closeW && my >= btnY && my <= btnY + btnH;
         int closeBg = closeHover ? 0xCCE53935 : 0x883A2020;
         g.fill(RenderType.guiOverlay(), closeX, btnY, closeX + closeW, btnY + btnH, 0, closeBg);
-        String closeText = "✕ 返回鸟瞰 (ESC)";
+        String closeText = "返回鸟瞰 (ESC)";
         g.drawString(font, closeText, closeX + (closeW - font.width(closeText)) / 2, btnY + 7, 0xFFFFFFFF, false);
     }
 
@@ -164,10 +164,10 @@ public final class TaskManagementOverlay {
             for (TaskManagementClientState.TaskFilter f : filters) {
                 String label = switch (f) {
                     case ALL -> "全部";
-                    case IN_PROGRESS -> "🟢 进行中";
-                    case AWAITING_RESOURCES -> "🔴 缺前置资源";
-                    case PENDING -> "🟡 排队等待";
-                    case QUEUED -> "⚪ 建筑待办";
+                    case IN_PROGRESS -> "进行中";
+                    case AWAITING_RESOURCES -> "缺前置资源";
+                    case PENDING -> "排队等待";
+                    case QUEUED -> "建筑待办";
                 };
                 int btnW = font.width(label) + 14;
                 boolean active = f == currentFilter;
@@ -179,7 +179,7 @@ public final class TaskManagementOverlay {
                 curX += btnW + 6;
             }
         } else {
-            String hint = "💡 点击 [🔍聚焦] 或 [🎥跟踪] 可联动 3D 镜头观测法师工作，键盘 WASD 移动即刻脱离跟踪。";
+            String hint = "点击 [聚焦] 或 [跟踪] 可联动 3D 镜头观测法师工作，键盘 WASD 移动即刻脱离跟踪。";
             g.drawString(font, hint, curX, btnY + 5, 0xFF90CAF9, false);
         }
     }
@@ -251,7 +251,7 @@ public final class TaskManagementOverlay {
         int statusY = y + 20;
         if ("IN_PROGRESS".equalsIgnoreCase(task.state())) {
             String mage = task.assignedNpcName().isEmpty() ? "法师" : task.assignedNpcName();
-            String status = "🟢 正在执行: " + mage + " (步骤 " + (task.stepIndex() + 1) + "/" + task.totalSteps() + ")";
+            String status = "正在执行: " + mage + " (步骤 " + (task.stepIndex() + 1) + "/" + task.totalSteps() + ")";
             g.drawString(font, status, x + 8, statusY, 0xFF81C784, false);
 
             // Progress Bar
@@ -263,16 +263,16 @@ public final class TaskManagementOverlay {
         } else if ("AWAITING_RESOURCES".equalsIgnoreCase(task.state())) {
             if (task.shortages() != null && !task.shortages().isEmpty()) {
                 ResourceShortageDto s = task.shortages().getFirst();
-                String shortStr = "🔴 缺少前置: " + s.displayName() + " x" + s.getMissingAmount() + " (库存: " + s.currentAmount() + " / 需: " + s.requiredAmount() + ")";
+                String shortStr = "缺少前置: " + s.displayName() + " x" + s.getMissingAmount() + " (库存: " + s.currentAmount() + " / 需: " + s.requiredAmount() + ")";
                 g.drawString(font, shortStr, x + 8, statusY, 0xFFE57373, false);
             } else {
-                g.drawString(font, "🔴 缺少前置资源", x + 8, statusY, 0xFFE57373, false);
+                g.drawString(font, "缺少前置资源", x + 8, statusY, 0xFFE57373, false);
             }
         } else if ("PENDING_ASSIGN".equalsIgnoreCase(task.state())) {
-            String reason = "WAITING_NPC".equals(task.blockerReason()) ? "⚠️ 暂无空闲法师，等待调度认领" : "🟡 排队等待调度中";
+            String reason = "WAITING_NPC".equals(task.blockerReason()) ? "暂无空闲法师，等待调度认领" : "排队等待调度中";
             g.drawString(font, reason, x + 8, statusY, 0xFFFFD54F, false);
         } else if ("QUEUED".equalsIgnoreCase(task.state())) {
-            g.drawString(font, "⚪ 建筑队列排队中 (待办阶段)", x + 8, statusY, 0xFFB0BEC5, false);
+            g.drawString(font, "建筑队列排队中 (待办阶段)", x + 8, statusY, 0xFFB0BEC5, false);
         }
 
         // Line 3: Action Buttons (Right Aligned)
@@ -282,27 +282,27 @@ public final class TaskManagementOverlay {
     private static void renderTaskActionButtons(GuiGraphics g, Font font, int x, int y, TaskSummaryDto task, double mx, double my) {
         int btnH = 20;
 
-        // [🔍 定位]
+        // [定位]
         if (task.hasTargetPos()) {
             int btnW = 44;
             boolean hover = mx >= x && mx <= x + btnW && my >= y && my <= y + btnH;
             g.fill(RenderType.guiOverlay(), x, y, x + btnW, y + btnH, 0, hover ? 0xEE3E4A5E : 0x882A313D);
-            g.drawString(font, "🔍 定位", x + 6, y + 6, 0xFFFFFFFF, false);
+            g.drawString(font, "定位", x + 6, y + 6, 0xFFFFFFFF, false);
         }
 
-        // [⚡ 加急]
+        // [加急]
         int rushX = x + 48;
         int rushW = 44;
         boolean rushHover = mx >= rushX && mx <= rushX + rushW && my >= y && my <= y + btnH;
         g.fill(RenderType.guiOverlay(), rushX, y, rushX + rushW, y + btnH, 0, rushHover ? 0xEEC8A040 : 0x885C4B20);
-        g.drawString(font, "⚡ 加急", rushX + 6, y + 6, 0xFFFFFFFF, false);
+        g.drawString(font, "加急", rushX + 6, y + 6, 0xFFFFFFFF, false);
 
-        // [✕ 取消]
+        // [取消]
         int cancelX = x + 96;
         int cancelW = 44;
         boolean cancelHover = mx >= cancelX && mx <= cancelX + cancelW && my >= y && my <= y + btnH;
         g.fill(RenderType.guiOverlay(), cancelX, y, cancelX + cancelW, y + btnH, 0, cancelHover ? 0xEEE53935 : 0x885C2020);
-        g.drawString(font, "✕ 取消", cancelX + 6, y + 6, 0xFFFFFFFF, false);
+        g.drawString(font, "取消", cancelX + 6, y + 6, 0xFFFFFFFF, false);
     }
 
     // ═══════════════════════════════════════════════════════════════════
@@ -357,7 +357,7 @@ public final class TaskManagementOverlay {
         g.fill(RenderType.guiOverlay(), x, y, x + 3, y + MAGE_CARD_H, 0, getMageStateAccentColor(mage.state()));
 
         // Line 1: Name + State Tag
-        String name = "🧙 " + mage.name();
+        String name = mage.name();
         g.drawString(font, name, x + 8, y + 6, WandscapeTheme.COLOR_TEXT_ACTIVE, false);
 
         String stateTag = formatMageState(mage);
@@ -380,9 +380,9 @@ public final class TaskManagementOverlay {
         g.fill(RenderType.guiOverlay(), mpX + 18, barY + 2, mpX + 18 + manaFill, barY + 6, 0, 0xFF2196F3);
 
         // Line 3: Attributes + Wand
-        String attrStr = String.format("⚡法强:%.1f  🔨工速:%.1f  🛡护甲:%.0f", mage.spellPower(), mage.workSpeed(), mage.armorValue());
+        String attrStr = String.format("法强:%.1f  工速:%.1f  护甲:%.0f", mage.spellPower(), mage.workSpeed(), mage.armorValue());
         if (!mage.equippedWand().isEmpty()) {
-            attrStr += "  |  🪄 " + mage.equippedWand();
+            attrStr += "  |  " + mage.equippedWand();
         }
         g.drawString(font, attrStr, x + 8, y + 36, WandscapeTheme.COLOR_TEXT_DIM, false);
 
@@ -393,36 +393,36 @@ public final class TaskManagementOverlay {
     private static void renderMageActionButtons(GuiGraphics g, Font font, int x, int y, MageSummaryDto mage, double mx, double my) {
         int btnH = 20;
 
-        // [🔍 聚焦]
+        // [聚焦]
         int btnW = 44;
         boolean focusHover = mx >= x && mx <= x + btnW && my >= y && my <= y + btnH;
         g.fill(RenderType.guiOverlay(), x, y, x + btnW, y + btnH, 0, focusHover ? 0xEE3E4A5E : 0x882A313D);
-        g.drawString(font, "🔍 聚焦", x + 5, y + 6, 0xFFFFFFFF, false);
+        g.drawString(font, "聚焦", x + 5, y + 6, 0xFFFFFFFF, false);
 
-        // [🎥 跟踪]
+        // [跟踪]
         int trackX = x + 48;
         int trackW = 44;
         boolean isTracking = TaskManagementClientState.getTrackingEntityId() == mage.entityId();
         boolean trackHover = mx >= trackX && mx <= trackX + trackW && my >= y && my <= y + btnH;
         int trackBg = isTracking ? 0xFFC8A040 : (trackHover ? 0xEE3E4A5E : 0x882A313D);
         g.fill(RenderType.guiOverlay(), trackX, y, trackX + trackW, y + btnH, 0, trackBg);
-        g.drawString(font, "🎥 跟踪", trackX + 5, y + 6, isTracking ? 0xFF111214 : 0xFFFFFFFF, false);
+        g.drawString(font, "跟踪", trackX + 5, y + 6, isTracking ? 0xFF111214 : 0xFFFFFFFF, false);
 
-        // [🛡 跟随]
+        // [跟随]
         int followX = x + 96;
         int followW = 48;
         boolean followHover = mx >= followX && mx <= followX + followW && my >= y && my <= y + btnH;
         int followBg = mage.followMode() ? 0xFF4CAF50 : (followHover ? 0xEE3E4A5E : 0x882A313D);
         g.fill(RenderType.guiOverlay(), followX, y, followX + followW, y + btnH, 0, followBg);
-        g.drawString(font, mage.followMode() ? "🛡 警戒" : "🛡 跟随", followX + 5, y + 6, 0xFFFFFFFF, false);
+        g.drawString(font, mage.followMode() ? "取消跟随" : "跟随", followX + 5, y + 6, 0xFFFFFFFF, false);
 
-        // [🕊 和平]
+        // [和平]
         int peaceX = x + 148;
         int peaceW = 48;
         boolean peaceHover = mx >= peaceX && mx <= peaceX + peaceW && my >= y && my <= y + btnH;
         int peaceBg = mage.peaceMode() ? 0xFF42A5F5 : (peaceHover ? 0xEE3E4A5E : 0x882A313D);
         g.fill(RenderType.guiOverlay(), peaceX, y, peaceX + peaceW, y + btnH, 0, peaceBg);
-        g.drawString(font, mage.peaceMode() ? "🕊 和平" : "⚔ 迎战", peaceX + 5, y + 6, 0xFFFFFFFF, false);
+        g.drawString(font, mage.peaceMode() ? "取消和平" : "和平", peaceX + 5, y + 6, 0xFFFFFFFF, false);
     }
 
     // ═══════════════════════════════════════════════════════════════════
@@ -435,7 +435,7 @@ public final class TaskManagementOverlay {
         // 1. Header Tab Switcher & Exit
         int curX = 16;
         String colonyName = WandscapePanelState.getColonyName();
-        String title = colonyName.isEmpty() ? "🏰 魔法小镇" : "🏰 " + colonyName;
+        String title = colonyName.isEmpty() ? "魔法小镇" : colonyName;
         curX += Minecraft.getInstance().font.width(title) + 16;
 
         int btnY = 6;
@@ -479,10 +479,10 @@ public final class TaskManagementOverlay {
                 for (TaskManagementClientState.TaskFilter f : TaskManagementClientState.TaskFilter.values()) {
                     String label = switch (f) {
                         case ALL -> "全部";
-                        case IN_PROGRESS -> "🟢 进行中";
-                        case AWAITING_RESOURCES -> "🔴 缺前置资源";
-                        case PENDING -> "🟡 排队等待";
-                        case QUEUED -> "⚪ 建筑待办";
+                        case IN_PROGRESS -> "进行中";
+                        case AWAITING_RESOURCES -> "缺前置资源";
+                        case PENDING -> "排队等待";
+                        case QUEUED -> "建筑待办";
                     };
                     int btnW = font.width(label) + 14;
                     if (mx >= fx && mx <= fx + btnW && my >= fBtnY && my <= fBtnY + fBtnH) {
@@ -521,7 +521,7 @@ public final class TaskManagementOverlay {
                     int btnBaseY = cy + 44;
                     int btnH2 = 20;
 
-                    // [🔍 定位]
+                    // [定位]
                     if (t.hasTargetPos() && mx >= btnBaseX && mx <= btnBaseX + 44 && my >= btnBaseY && my <= btnBaseY + btnH2) {
                         flyToTarget(t.targetX(), t.targetY(), t.targetZ());
                         collapseDrawerToOverview();
@@ -529,7 +529,7 @@ public final class TaskManagementOverlay {
                         return true;
                     }
 
-                    // [⚡ 加急]
+                    // [加急]
                     int rushX = btnBaseX + 48;
                     if (mx >= rushX && mx <= rushX + 44 && my >= btnBaseY && my <= btnBaseY + btnH2) {
                         PacketDistributor.sendToServer(new TaskManagementActionPacket(
@@ -538,7 +538,7 @@ public final class TaskManagementOverlay {
                         return true;
                     }
 
-                    // [✕ 取消]
+                    // [取消]
                     int cancelX = btnBaseX + 96;
                     if (mx >= cancelX && mx <= cancelX + 44 && my >= btnBaseY && my <= btnBaseY + btnH2) {
                         PacketDistributor.sendToServer(new TaskManagementActionPacket(
@@ -566,7 +566,7 @@ public final class TaskManagementOverlay {
                     int btnBaseY = cy + 52;
                     int btnH2 = 20;
 
-                    // [🔍 聚焦]
+                    // [聚焦]
                     if (mx >= btnBaseX && mx <= btnBaseX + 44 && my >= btnBaseY && my <= btnBaseY + btnH2) {
                         flyToTarget(m.posX(), m.posY(), m.posZ());
                         collapseDrawerToOverview();
@@ -574,7 +574,7 @@ public final class TaskManagementOverlay {
                         return true;
                     }
 
-                    // [🎥 跟踪]
+                    // [跟踪]
                     int trackX = btnBaseX + 48;
                     if (mx >= trackX && mx <= trackX + 44 && my >= btnBaseY && my <= btnBaseY + btnH2) {
                         int current = TaskManagementClientState.getTrackingEntityId();
@@ -588,7 +588,7 @@ public final class TaskManagementOverlay {
                         return true;
                     }
 
-                    // [🛡 跟随]
+                    // [跟随]
                     int followX = btnBaseX + 96;
                     if (mx >= followX && mx <= followX + 48 && my >= btnBaseY && my <= btnBaseY + btnH2) {
                         PacketDistributor.sendToServer(new MageModeActionPacket(
@@ -597,7 +597,7 @@ public final class TaskManagementOverlay {
                         return true;
                     }
 
-                    // [🕊 和平]
+                    // [和平]
                     int peaceX = btnBaseX + 148;
                     if (mx >= peaceX && mx <= peaceX + 48 && my >= btnBaseY && my <= btnBaseY + btnH2) {
                         PacketDistributor.sendToServer(new MageModeActionPacket(
@@ -693,11 +693,11 @@ public final class TaskManagementOverlay {
 
     private static String formatMageState(MageSummaryDto mage) {
         return switch (mage.state().toUpperCase()) {
-            case "CASTING" -> "🟢 施法中" + (mage.currentTaskTitle().isEmpty() ? "" : ": " + mage.currentTaskTitle());
-            case "MOVING" -> "🟡 前往工作中";
-            case "FOLLOWING" -> "🔵 跟随警戒中";
-            case "RESTING" -> "🟣 回屋休息中";
-            default -> "⚪ 空闲待命中";
+            case "CASTING" -> "施法中" + (mage.currentTaskTitle().isEmpty() ? "" : ": " + mage.currentTaskTitle());
+            case "MOVING" -> "前往工作中";
+            case "FOLLOWING" -> "跟随中";
+            case "RESTING" -> "回屋休息中";
+            default -> "空闲待命中";
         };
     }
 }

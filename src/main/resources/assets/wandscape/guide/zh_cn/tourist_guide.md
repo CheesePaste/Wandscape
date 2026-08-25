@@ -1,4 +1,4 @@
-# 🧳 游客
+# 游客
 
 游客清晨沿路进镇，三条需求条填满后离场。经营循环围绕游客的三条需求条展开。
 
@@ -61,4 +61,4 @@
 [商店](shop_guide.md)  
 [旅馆与服务建筑](hotel_guide.md)  
 [酒馆](tavern_guide.md)  
-[📖 返回指南首页](index_guide.md)
+[返回指南首页](index_guide.md)

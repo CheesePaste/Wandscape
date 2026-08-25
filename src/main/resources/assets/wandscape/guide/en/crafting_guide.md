@@ -1,4 +1,4 @@
-# 🔨 Crafting Station
+# Crafting Station
 
 The dedicated facility for making **wands**. Wands decide a wizard's combat strength.
 
@@ -28,4 +28,4 @@ Spell power directly decides a wizard's casting might. Recipes have level gates;
 
 [Workstation (Decompose & Synthesize)](workstation_guide.md)  
 [Wizard NPC Guide](npc_guide.md)  
-[📖 Back to the Guide Index](index_guide.md)
+[Back to the Guide Index](index_guide.md)

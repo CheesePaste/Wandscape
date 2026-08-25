@@ -179,7 +179,7 @@ public final class WandscapePanelController {
         double mouseX = mc.mouseHandler.xpos() / guiScale;
         double mouseY = mc.mouseHandler.ypos() / guiScale;
 
-        // ── Guidance buttons handling (close × / collapse / expand ) ──
+        // ── Guidance buttons handling (close × / collapse / expand) ──
         if (com.wsteam.wandscape.shared.ui.guidance.GuideSession.shouldShow()) {
             boolean buildMode = WandscapePanelState.getActiveSubMode() == WandscapePanelState.SubMode.BUILD_PROJECTION;
             boolean isPlacing = WandscapePanelState.getBuildPhase() == WandscapePanelState.BuildPhase.PLACING;

@@ -1,4 +1,4 @@
-# 🧱 替换模式
+# 替换模式
 
 用于日常铺路：框选一块地面，将地表的草、泥土、沙石直接替换为选定的路面材质。
 
@@ -21,4 +21,4 @@
 [填充与清理模式](road_fill_guide.md)  
 [样条线编辑器](road_spline_guide.md)  
 [道路系统总览](road_guide.md)  
-[📖 返回指南首页](index_guide.md)
+[返回指南首页](index_guide.md)

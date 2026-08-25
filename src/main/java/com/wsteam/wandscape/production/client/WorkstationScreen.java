@@ -214,10 +214,7 @@ public class WorkstationScreen extends MedievalScreen {
                 }
 
                 int textX = x + 20;
-                if (isLocked) {
-                    g.drawString(Minecraft.getInstance().font, "🔒", textX, y + 1, MedievalColors.TEXT_DIM);
-                    textX += 14;
-                }
+                
                 Component recipeName = (registryItem != null && registryItem != Items.AIR)
                         ? new ItemStack(registryItem).getHoverName()
                         : Component.literal(item.outputItem());
@@ -226,7 +223,7 @@ public class WorkstationScreen extends MedievalScreen {
                 // Requirement / cost row
                 String reason = item.lockedReason();
                 if ("colony".equals(reason)) {
-                    StringBuilder costStr = new StringBuilder("🔒 ");
+                    StringBuilder costStr = new StringBuilder();
                     var req = item.unlockRequirement();
                     costStr.append(I18n.name("gui.wandscape.recipe.colony_level",
                             "Colony Lv>=%s", req.minColonyLevel()).getString());

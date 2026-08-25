@@ -19,9 +19,9 @@
     },
     "hotel": {
       "checkin": [
-        "✨ {name} 入住了{building}，关上房门准备休息",
-        "✨ {name} 在{building}安顿下来，期待着明天的旅程",
-        "✨ 夜幕降临，{name} 走进了{building}"
+        "{name} 入住了{building}，关上房门准备休息",
+        "{name} 在{building}安顿下来，期待着明天的旅程",
+        "夜幕降临，{name} 走进了{building}"
       ],
       "wakeup": [
         "{name} 在{building}醒来，精力充沛",
