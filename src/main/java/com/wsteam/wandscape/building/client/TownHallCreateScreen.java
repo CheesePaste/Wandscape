@@ -125,20 +125,7 @@ public class TownHallCreateScreen extends MedievalScreen {
     }
 
     @Override
-    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        renderBackground(g, mouseX, mouseY, partialTick);
-        renderMinimalHeader(g);
-        renderCloseButton(g, mouseX, mouseY);
-        renderContent(g, mouseX, mouseY);
-
-        for (Renderable r : this.renderables) {
-            r.render(g, mouseX, mouseY, partialTick);
-        }
-
-        renderCreatorFooter(g);
-    }
-
-    private void renderContent(GuiGraphics g, int mouseX, int mouseY) {
+    protected void renderContent(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         int cx = leftPos + PW / 2;
 
         // Title / instruction

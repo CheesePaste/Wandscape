@@ -243,9 +243,7 @@ public class MageHutScreen extends MedievalScreen {
     }
 
     @Override
-    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        super.render(g, mouseX, mouseY, partialTick);
-
+    protected void renderContent(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         var font = Minecraft.getInstance().font;
         int contentTop = topPos + headerHeight + 6;
 
@@ -268,6 +266,12 @@ public class MageHutScreen extends MedievalScreen {
         }
         g.drawString(font, status, leftPos + PW - font.width(status) - 12,
                 topPos + headerHeight + 8, statusColor);
+    }
+
+    @Override
+    protected void renderForeground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        var font = Minecraft.getInstance().font;
+        int contentTop = topPos + headerHeight + 6;
 
         // Tooltip rendering for attributes in occupied mode
         if (hasResident) {

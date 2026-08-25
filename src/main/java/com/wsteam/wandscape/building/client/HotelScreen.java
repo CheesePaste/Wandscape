@@ -54,9 +54,7 @@ public class HotelScreen extends MedievalScreen {
     }
 
     @Override
-    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        super.render(g, mouseX, mouseY, partialTick);
-
+    protected void renderContent(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         var font = Minecraft.getInstance().font;
         int x = leftPos + 16;
         int y = topPos + headerHeight + 12;

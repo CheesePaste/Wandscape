@@ -156,9 +156,7 @@ public class NodeScreen extends MedievalScreen {
     }
 
     @Override
-    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        super.render(g, mouseX, mouseY, partialTick);
-
+    protected void renderContent(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         int y = topPos + headerHeight + 8;
         drawInfoLine(g, y, i18n("gui.wandscape.node.element", "Element"),
                 i18n("element.wandscape." + element, element));

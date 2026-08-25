@@ -108,11 +108,7 @@ public class ConstructionScreen extends MedievalScreen {
     }
 
     @Override
-    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        renderBackground(g, mouseX, mouseY, partialTick);
-        renderMinimalHeader(g);
-        renderCloseButton(g, mouseX, mouseY);
-
+    protected void renderContent(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         // Coordinate labels + inset fields
         for (int row = 0; row < 3; row++) {
             int y = topPos + ROW_Y + row * ROW_GAP;
@@ -133,10 +129,6 @@ public class ConstructionScreen extends MedievalScreen {
 
         if (status != null) {
             g.drawCenteredString(font, status, leftPos + PW / 2, topPos + STATUS_Y, 0xFFE06060);
-        }
-
-        for (Renderable renderable : this.renderables) {
-            renderable.render(g, mouseX, mouseY, partialTick);
         }
     }
 

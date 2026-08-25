@@ -148,8 +148,7 @@ public class ConstructionSiteScreen extends MedievalScreen {
     }
 
     @Override
-    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        super.render(g, mouseX, mouseY, partialTick);
+    protected void renderContent(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         int textX = leftPos + 8;
         int lineY = topPos + headerHeight + TIME_LINE1_Y;
         g.drawString(font, I18n.name("gui.wandscape.constructionsite.start_time", "预计开工").getString()

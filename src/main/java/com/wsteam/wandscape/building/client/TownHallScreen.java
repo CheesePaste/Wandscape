@@ -141,18 +141,9 @@ public class TownHallScreen extends MedievalScreen {
     }
 
     @Override
-    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        renderBackground(g, mouseX, mouseY, partialTick);
-        renderMinimalHeader(g);
-        renderCloseButton(g, mouseX, mouseY);
+    protected void renderContent(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         renderContent(g);
         renderSelectedStyleHighlight(g);
-
-        for (Renderable r : this.renderables) {
-            r.render(g, mouseX, mouseY, partialTick);
-        }
-
-        renderCreatorFooter(g);
     }
 
     /** Gold border around the currently active naming-rule button. */

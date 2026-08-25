@@ -143,6 +143,8 @@ public abstract class MedievalScreen extends Screen implements ReplayProtectedSc
 
         for (MedievalAnimation a : animations) a.tick();
 
+        renderContent(g, mouseX, mouseY, partialTick);
+
         for (Renderable renderable : this.renderables) {
             renderable.render(g, mouseX, mouseY, partialTick);
         }
@@ -154,7 +156,15 @@ public abstract class MedievalScreen extends Screen implements ReplayProtectedSc
 
         renderCreatorFooter(g);
         renderFeedback(g);
+
+        renderForeground(g, mouseX, mouseY, partialTick);
     }
+
+    /** Hook for drawing screen content (cards, background frames, labels) behind widgets. */
+    protected void renderContent(GuiGraphics g, int mouseX, int mouseY, float partialTick) {}
+
+    /** Hook for drawing foreground elements (tooltips, overlays) in front of widgets. */
+    protected void renderForeground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {}
 
     /** Draw the transient feedback toast, if any, at the top-center of the screen. */
     protected void renderFeedback(GuiGraphics g) {
