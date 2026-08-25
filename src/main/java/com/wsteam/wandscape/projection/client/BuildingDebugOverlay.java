@@ -80,7 +80,9 @@ public final class BuildingDebugOverlay {
     @SubscribeEvent
     public static void onRenderGuiPost(RenderGuiEvent.Post event) {
         if (!BuildingDebugClientState.isActive()) return;
-        if (com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.isPanelHidden()) {
+        if (com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.isPanelHidden()
+                || com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.getActiveSubMode() == com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.SubMode.TASKS
+                || com.wsteam.wandscape.shared.ui.panel.TaskManagementOverlay.isActive()) {
             buttonsVisible = false;
             return;
         }
@@ -246,6 +248,11 @@ public final class BuildingDebugOverlay {
 
     @SubscribeEvent
     public static void onMouseButtonPre(InputEvent.MouseButton.Pre event) {
+        if (com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.getActiveSubMode() == com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.SubMode.TASKS
+                || com.wsteam.wandscape.shared.ui.panel.TaskManagementOverlay.isActive()) {
+            buttonsVisible = false;
+            return;
+        }
         if (!buttonsVisible) return;
         if (com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.isPanelHidden()) return;
         if (event.getAction() != GLFW.GLFW_PRESS) return;
