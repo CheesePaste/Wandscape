@@ -78,8 +78,13 @@ public final class WandscapePanelOverlay {
         // Build mode right pop panel
         com.wsteam.wandscape.projection.client.BuildPopPanelOverlay.render(g, mc.font, screenW, screenH, mx, my);
 
-        // Task & Mage Management Drawer
-        TaskManagementOverlay.render(g, mc.font, screenW, screenH, mx, my);
+        // Task & Mage Management Hub (dedicated spacious overlay — hides top bar & sidebar)
+        if (WandscapePanelState.getActiveSubMode() == WandscapePanelState.SubMode.TASKS) {
+            TaskManagementOverlay.render(g, mc.font, screenW, screenH, mx, my);
+            g.bufferSource().endBatch(RenderType.guiOverlay());
+            g.flush();
+            return;
+        }
 
         renderFills(g, mc.font, screenW, screenH, mx, my);
         g.bufferSource().endBatch(RenderType.guiOverlay());

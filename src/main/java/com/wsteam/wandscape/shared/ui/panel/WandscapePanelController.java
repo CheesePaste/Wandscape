@@ -278,16 +278,11 @@ public final class WandscapePanelController {
             }
         }
 
-        // ── Task & Mage Management Drawer ──
+        // ── Task & Mage Management Hub ──
         if (TaskManagementOverlay.isActive()) {
-            if (TaskManagementOverlay.handleMouseClick(mouseX, mouseY, screenH)) {
-                event.setCanceled(true);
-                return;
-            }
-            if (TaskManagementOverlay.isOverDrawer(mouseX, mouseY, screenH)) {
-                event.setCanceled(true);
-                return;
-            }
+            TaskManagementOverlay.handleMouseClick(mouseX, mouseY, screenW, screenH);
+            event.setCanceled(true);
+            return;
         }
 
         // ── Top Bar Help ? button ──
