@@ -24,7 +24,7 @@ import com.wsteam.wandscape.shared.log.Log;
 public record TaskQueueDataPacket(
     BlockPos stationPos,
     List<QueueEntry> entries,
-    @javax.annotation.Nullable CurrentTask current
+    List<CurrentTask> currents
 ) implements CustomPacketPayload {
 
     private static final String TAG = "TaskQueueDataPacket";
@@ -98,9 +98,8 @@ public record TaskQueueDataPacket(
         for (TaskQueueDataPacket.QueueEntry entry : pkt.entries) {
             writeEntry(buf, entry);
         }
-        CurrentTask current = pkt.current;
-        buf.writeBoolean(current != null);
-        if (current != null) {
+        buf.writeVarInt(pkt.currents.size());
+        for (CurrentTask current : pkt.currents) {
             writeEntry(buf, current.entry());
             buf.writeVarInt(current.stepIndex());
             buf.writeVarInt(current.totalSteps());
@@ -126,17 +125,18 @@ public record TaskQueueDataPacket(
         for (int i = 0; i < size; i++) {
             entries.add(readEntry(buf));
         }
-        CurrentTask current = null;
-        if (buf.readBoolean()) {
-            current = new CurrentTask(
+        int currentCount = buf.readVarInt();
+        List<CurrentTask> currents = new ArrayList<>(currentCount);
+        for (int i = 0; i < currentCount; i++) {
+            currents.add(new CurrentTask(
                     readEntry(buf),
                     buf.readVarInt(),
                     buf.readVarInt(),
                     buf.readVarInt(),
                     buf.readVarInt(),
-                    buf.readBoolean());
+                    buf.readBoolean()));
         }
-        return new TaskQueueDataPacket(pos, entries, current);
+        return new TaskQueueDataPacket(pos, entries, currents);
     }
 
     private static QueueEntry readEntry(RegistryFriendlyByteBuf buf) {

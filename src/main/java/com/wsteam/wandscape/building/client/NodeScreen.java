@@ -80,20 +80,25 @@ public class NodeScreen extends MedievalScreen {
                         qe.blueprintId(), qe.summary()));
             }
             taskQueuePanel.setEntries(entries);
-            taskQueuePanel.setCurrent(toPanelCurrent(packet.current()));
+            taskQueuePanel.setCurrents(toPanelCurrents(packet.currents()));
         }
     }
 
-    /** Convert the packet's current-task record to the panel's CurrentInfo (or null). */
-    private static TaskQueuePanel.CurrentInfo toPanelCurrent(TaskQueueDataPacket.CurrentTask ct) {
-        if (ct == null) return null;
-        TaskQueueDataPacket.QueueEntry e = ct.entry();
-        return new TaskQueuePanel.CurrentInfo(
-                new TaskQueuePanel.Entry(e.index(), e.category(), e.itemOrRecipeId(),
-                        e.quantity(), e.blueprintId(), e.summary()),
-                ct.stepIndex(), ct.totalSteps(),
-                ct.channelRemainingTicks(), ct.channelTotalTicks(),
-                ct.pending());
+    /** Convert the packet's running-task records to the panel's CurrentInfo list. */
+    private static List<TaskQueuePanel.CurrentInfo> toPanelCurrents(List<TaskQueueDataPacket.CurrentTask> cts) {
+        List<TaskQueuePanel.CurrentInfo> result = new ArrayList<>();
+        if (cts == null) return result;
+        for (TaskQueueDataPacket.CurrentTask ct : cts) {
+            if (ct == null) continue;
+            TaskQueueDataPacket.QueueEntry e = ct.entry();
+            result.add(new TaskQueuePanel.CurrentInfo(
+                    new TaskQueuePanel.Entry(e.index(), e.category(), e.itemOrRecipeId(),
+                            e.quantity(), e.blueprintId(), e.summary()),
+                    ct.stepIndex(), ct.totalSteps(),
+                    ct.channelRemainingTicks(), ct.channelTotalTicks(),
+                    ct.pending()));
+        }
+        return result;
     }
 
     /** Send a REFRESH request to the server to get the current task queue. */

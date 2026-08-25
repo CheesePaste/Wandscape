@@ -16,7 +16,7 @@ import net.minecraft.network.chat.Component;
  */
 public class Slider extends AbstractWidget {
 
-    private final int minValue;
+    private int minValue;
     private int maxValue;
     private int value;
     private final IntConsumer onValueChanged;
@@ -50,6 +50,13 @@ public class Slider extends AbstractWidget {
 
     public int getMax() {
         return maxValue;
+    }
+
+    /** Set both bounds of the slider range, clamping the current value into it. */
+    public void setRange(int newMin, int newMax) {
+        this.minValue = newMin;
+        this.maxValue = Math.max(newMin, newMax);
+        this.value = Math.clamp(value, minValue, maxValue);
     }
 
     // ── render ──

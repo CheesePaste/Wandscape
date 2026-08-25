@@ -2,15 +2,15 @@
 
 本文件记录偏离直觉的设计选择及其原因，供后续开发快速理解「为什么这么做」。
 
-## 2026-08-25：生产任务数量滑块去 64 硬上限——加 −64/+64 步进按钮
+## 2026-08-25：生产任务数量滑块窗口化——滑条固定 64 宽，±64 整页翻页
 
-**需求**：工作站/合成站/魔法工坊发布合成任务时，数量滑条最多只能拉到 64（一组），想一次合成大量物品（如 3000 个）只能反复拖到 64 再提交，极其繁琐。玩家想要滑条左右各加一个 `-64` / `+64` 按钮，按「一组」快速增减，从而能超过 64。
+**需求**：工作站/合成站/魔法工坊发布合成任务时，数量滑条最多只能拉到 64（一组），想一次合成大量物品（如 3000 个）只能反复拖到 64 再提交，极其繁琐。
 
-**决策**：把上限抬升到「真实可负担量」并加规格化步进按钮。根因是 64 上限存在两处，一并移除：(1) 三个 packet（`WorkstationDataPacket`/`CraftingStationPacket`/`MagicStationPacket`）的私有 `computeMaxAffordable` 以 `MAX_PER_OPERATION=64` 为起点硬顶合成配方 `maxAffordable`；(2) `WorkstationScreen.updateSliderForDecompose` 用 `min(count, MAX_QTY=64)` 钳制分解量。执行层（`WandscapeBlockInteractExecutor.executeDecompose/executeSynthesize/executeCraftWand`）本就不限 count（蓝图 `count` 是普通 int），抬升安全。`computeMaxAffordable` 抽成共享纯函数 `ProductionAffordability`（可单测、无 MC 依赖），三个 packet 引用之。
+**决策**：取消「单次最多 64」的硬上限，并把滑条改成**窗口化**：滑条始终只显示一页、最多 64 个连续数值（1–64、65–128、…），左右各一个 `-64`/`+64` 按钮把窗口整页上移/下移，`Slider.setRange` 换页时把当前值夹进新窗口；翻到顶/底为安全 no-op。上限取真实总量（合成/法杖/法术 = `ProductionAffordability.computeMaxAffordable` 按当前元素可负担量，分解 = 物品库存数），最后一页不满一页自动收窄（如总量 100 → 首页 1–64，+64 后 65–100）。为此：(1) 三个 packet 的私有 `computeMaxAffordable` 以 `MAX_PER_OPERATION=64` 为起点硬顶 `maxAffordable`，全部改为引用共享纯函数 `ProductionAffordability`（起点改为真实可负担量）；(2) 执行层（`WandscapeBlockInteractExecutor`）本就不限 count（蓝图 `count` 是普通 int），抬升安全。
 
-**为什么**：单次 64 是便利性上限，与「能负担多少」的语义不符；钳到 64 反而逼玩家反复提交小任务。按真实可负担量/库存数做上限，滑块（细调）+ ±64 按钮（粗调）组合才符合批量合成直觉。
+**为什么**：单次 64 是拍脑袋的便利上限，与「能负担多少」不符；钳到 64 反而逼玩家反复提交小任务。滑条直接铺到几千会让拖拽精度崩坏（每像素≈几十），窗口化让滑条永远处于一个可精调、跨度 ≤64 的区间。`QuantityWindow` 管窗口数学，`QuantityStepper` 管三个 widget 与翻页。
 
-**影响**：三个生产界面数量滑条带 `-64`/`+64` 按钮；合成/法杖/法术滑条 max = 真实可负担量、分解滑条 max = 物品库存数；`ProductionAffordabilityTest` 新增 6 用例守护（多原料取最小、零成本跳过、量不足归零、可超 64、空成本无界）。采集节点（NodeScreen）与商店补货（ShopScreen）不改——后者本就有 ±1 步进，语义不同。
+**影响**：三个生产界面数量滑条带 `-64`/`+64` 按钮并按页翻窗口；滑条上限 = 真实总量。`QuantityWindow`（纯）+ `QuantityWindowTest`、`ProductionAffordability`（纯）+ `ProductionAffordabilityTest` 新增守护。采集节点（NodeScreen）与商店补货（ShopScreen）不改——后者本就有 ±1 步进，语义不同。
 
 ## 2026-08-25：撤回未完成建筑的材料返还——只退「未放置」部分，已放置交给拆除 salvage
 

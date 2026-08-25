@@ -13,7 +13,6 @@ import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.ui.I18n;
 import com.wsteam.wandscape.shared.ui.component.MedievalButton;
 import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
-import com.wsteam.wandscape.shared.ui.component.Slider;
 import com.wsteam.wandscape.shared.ui.component.ScrollableList;
 import com.wsteam.wandscape.shared.ui.component.SearchBox;
 import com.wsteam.wandscape.shared.ui.component.TaskQueuePanel;
@@ -44,7 +43,7 @@ public class CraftingStationScreen extends MedievalScreen {
 
     private ScrollableList<RecipeEntry> recipeList;
     private SearchBox searchInput;
-    private Slider slider;
+    private QuantityStepper stepper;
     private TaskQueuePanel taskQueuePanel;
 
     public CraftingStationScreen() {
@@ -61,9 +60,8 @@ public class CraftingStationScreen extends MedievalScreen {
         this.recipes = packet.entries();
         // Re-apply the current search filter to the refreshed data
         applySearch(searchInput != null ? searchInput.getValue() : "");
-        if (slider != null) {
-            slider.setMax(1);
-            slider.setValue(1);
+        if (stepper != null) {
+            stepper.setTotalMax(1);
         }
         // Request current queue data from server
         requestQueueRefresh();
@@ -79,20 +77,25 @@ public class CraftingStationScreen extends MedievalScreen {
                         qe.blueprintId(), qe.summary()));
             }
             taskQueuePanel.setEntries(entries);
-            taskQueuePanel.setCurrent(toPanelCurrent(packet.current()));
+            taskQueuePanel.setCurrents(toPanelCurrents(packet.currents()));
         }
     }
 
-    /** Convert the packet's current-task record to the panel's CurrentInfo (or null). */
-    private static TaskQueuePanel.CurrentInfo toPanelCurrent(TaskQueueDataPacket.CurrentTask ct) {
-        if (ct == null) return null;
-        TaskQueueDataPacket.QueueEntry e = ct.entry();
-        return new TaskQueuePanel.CurrentInfo(
-                new TaskQueuePanel.Entry(e.index(), e.category(), e.itemOrRecipeId(),
-                        e.quantity(), e.blueprintId(), e.summary()),
-                ct.stepIndex(), ct.totalSteps(),
-                ct.channelRemainingTicks(), ct.channelTotalTicks(),
-                ct.pending());
+    /** Convert the packet's running-task records to the panel's CurrentInfo list. */
+    private static List<TaskQueuePanel.CurrentInfo> toPanelCurrents(List<TaskQueueDataPacket.CurrentTask> cts) {
+        List<TaskQueuePanel.CurrentInfo> result = new ArrayList<>();
+        if (cts == null) return result;
+        for (TaskQueueDataPacket.CurrentTask ct : cts) {
+            if (ct == null) continue;
+            TaskQueueDataPacket.QueueEntry e = ct.entry();
+            result.add(new TaskQueuePanel.CurrentInfo(
+                    new TaskQueuePanel.Entry(e.index(), e.category(), e.itemOrRecipeId(),
+                            e.quantity(), e.blueprintId(), e.summary()),
+                    ct.stepIndex(), ct.totalSteps(),
+                    ct.channelRemainingTicks(), ct.channelTotalTicks(),
+                    ct.pending()));
+        }
+        return result;
     }
 
     /** Send a REFRESH request to the server to get the current task queue. */
@@ -193,14 +196,10 @@ public class CraftingStationScreen extends MedievalScreen {
 
         // Quantity slider + submit
         int controlY = listY + listH + 6;
-        slider = new Slider(contentX + 32, controlY, 88, 1, 1, 1, v -> {});
-        addRenderableWidget(slider);
-        addRenderableWidget(new MedievalButton(contentX, controlY + 4, 30, 18,
-                Component.literal("-64"),
-                () -> slider.setValue(slider.getValue() - 64)));
-        addRenderableWidget(new MedievalButton(contentX + 122, controlY + 4, 30, 18,
-                Component.literal("+64"),
-                () -> slider.setValue(slider.getValue() + 64)));
+        stepper = new QuantityStepper(contentX, controlY);
+        addRenderableWidget(stepper.slider());
+        addRenderableWidget(stepper.minusBtn());
+        addRenderableWidget(stepper.plusBtn());
 
         addRenderableWidget(new MedievalButton(
                 contentX + contentW - 70, controlY + 4, 70, 18,
@@ -238,22 +237,20 @@ public class CraftingStationScreen extends MedievalScreen {
 
     private void updateSliderForRecipe(RecipeEntry entry) {
         if (entry == null) {
-            slider.setMax(1);
-            slider.setValue(1);
+            stepper.setTotalMax(1);
             return;
         }
         // Locked recipes (colony / elements) show max_affordable=0; keep slider at 1
         boolean locked = !"unlocked".equals(entry.lockedReason());
         int max = locked ? 1 : entry.maxAffordable();
-        slider.setMax(Math.max(1, max));
-        slider.setValue(Math.min(slider.getValue(), max));
+        stepper.setTotalMax(max);
     }
 
     private void onSubmit() {
         RecipeEntry sel = recipeList.getSelected();
         // Block submission when recipe is locked (colony / elements)
         if (sel == null || !"unlocked".equals(sel.lockedReason())) return;
-        int qty = slider.getValue();
+        int qty = stepper.getValue();
         // 药水配方走 brew_potion（校验额外原料），法杖配方走 craft_wand。
         String action = "potion".equals(sel.type()) ? "brew_potion" : "craft_wand";
         PacketDistributor.sendToServer(new RequestProductionTaskPacket(

@@ -13,7 +13,6 @@ import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.ui.I18n;
 import com.wsteam.wandscape.shared.ui.component.MedievalButton;
 import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
-import com.wsteam.wandscape.shared.ui.component.Slider;
 import com.wsteam.wandscape.shared.ui.component.ScrollableList;
 import com.wsteam.wandscape.shared.ui.component.SearchBox;
 import com.wsteam.wandscape.shared.ui.component.TaskQueuePanel;
@@ -41,7 +40,7 @@ public class MagicStationScreen extends MedievalScreen {
 
     private ScrollableList<SpellEntry> recipeList;
     private SearchBox searchInput;
-    private Slider slider;
+    private QuantityStepper stepper;
     private TaskQueuePanel taskQueuePanel;
 
     public MagicStationScreen() {
@@ -55,9 +54,8 @@ public class MagicStationScreen extends MedievalScreen {
         setCreator(packet.creator());
         this.recipes = packet.entries();
         applySearch(searchInput != null ? searchInput.getValue() : "");
-        if (slider != null) {
-            slider.setMax(1);
-            slider.setValue(1);
+        if (stepper != null) {
+            stepper.setTotalMax(1);
         }
         requestQueueRefresh();
     }
@@ -72,19 +70,25 @@ public class MagicStationScreen extends MedievalScreen {
                         qe.blueprintId(), qe.summary()));
             }
             taskQueuePanel.setEntries(entries);
-            taskQueuePanel.setCurrent(toPanelCurrent(packet.current()));
+            taskQueuePanel.setCurrents(toPanelCurrents(packet.currents()));
         }
     }
 
-    private static TaskQueuePanel.CurrentInfo toPanelCurrent(TaskQueueDataPacket.CurrentTask ct) {
-        if (ct == null) return null;
-        TaskQueueDataPacket.QueueEntry e = ct.entry();
-        return new TaskQueuePanel.CurrentInfo(
-                new TaskQueuePanel.Entry(e.index(), e.category(), e.itemOrRecipeId(),
-                        e.quantity(), e.blueprintId(), e.summary()),
-                ct.stepIndex(), ct.totalSteps(),
-                ct.channelRemainingTicks(), ct.channelTotalTicks(),
-                ct.pending());
+    /** Convert the packet's running-task records to the panel's CurrentInfo list. */
+    private static List<TaskQueuePanel.CurrentInfo> toPanelCurrents(List<TaskQueueDataPacket.CurrentTask> cts) {
+        List<TaskQueuePanel.CurrentInfo> result = new ArrayList<>();
+        if (cts == null) return result;
+        for (TaskQueueDataPacket.CurrentTask ct : cts) {
+            if (ct == null) continue;
+            TaskQueueDataPacket.QueueEntry e = ct.entry();
+            result.add(new TaskQueuePanel.CurrentInfo(
+                    new TaskQueuePanel.Entry(e.index(), e.category(), e.itemOrRecipeId(),
+                            e.quantity(), e.blueprintId(), e.summary()),
+                    ct.stepIndex(), ct.totalSteps(),
+                    ct.channelRemainingTicks(), ct.channelTotalTicks(),
+                    ct.pending()));
+        }
+        return result;
     }
 
     private void requestQueueRefresh() {
@@ -172,14 +176,10 @@ public class MagicStationScreen extends MedievalScreen {
         addRenderableWidget(recipeList);
 
         int controlY = listY + listH + 6;
-        slider = new Slider(contentX + 32, controlY, 88, 1, 1, 1, v -> {});
-        addRenderableWidget(slider);
-        addRenderableWidget(new MedievalButton(contentX, controlY + 4, 30, 18,
-                Component.literal("-64"),
-                () -> slider.setValue(slider.getValue() - 64)));
-        addRenderableWidget(new MedievalButton(contentX + 122, controlY + 4, 30, 18,
-                Component.literal("+64"),
-                () -> slider.setValue(slider.getValue() + 64)));
+        stepper = new QuantityStepper(contentX, controlY);
+        addRenderableWidget(stepper.slider());
+        addRenderableWidget(stepper.minusBtn());
+        addRenderableWidget(stepper.plusBtn());
 
         addRenderableWidget(new MedievalButton(
                 contentX + contentW - 70, controlY + 4, 70, 18,
@@ -212,20 +212,18 @@ public class MagicStationScreen extends MedievalScreen {
 
     private void updateSliderForRecipe(SpellEntry entry) {
         if (entry == null) {
-            slider.setMax(1);
-            slider.setValue(1);
+            stepper.setTotalMax(1);
             return;
         }
         boolean locked = !"unlocked".equals(entry.lockedReason());
         int max = locked ? 1 : entry.maxAffordable();
-        slider.setMax(Math.max(1, max));
-        slider.setValue(Math.min(slider.getValue(), max));
+        stepper.setTotalMax(max);
     }
 
     private void onSubmit() {
         SpellEntry sel = recipeList.getSelected();
         if (sel == null || !"unlocked".equals(sel.lockedReason())) return;
-        int qty = slider.getValue();
+        int qty = stepper.getValue();
         PacketDistributor.sendToServer(new RequestProductionTaskPacket(
                 stationPos, "craft_spell", sel.recipeId(), qty));
         requestQueueRefresh();

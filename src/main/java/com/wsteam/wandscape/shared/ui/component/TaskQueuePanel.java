@@ -97,18 +97,22 @@ public class TaskQueuePanel extends AbstractWidget {
     private final List<Entry> entries = new ArrayList<>();
     private final int rowHeight = 16;
 
-    // ── Current (executing) task ──
+    // ── Current (executing) tasks ──
     private static final int CURRENT_ROW_H = 18;
-    @javax.annotation.Nullable
-    private Entry currentEntry;
-    private int currentStep;
-    private int currentTotalSteps;
-    private int currentChannelRemaining;
-    private int currentChannelTotal;
-    /** Channel task accepted but not started (NPC en route): show waiting label, no animation. */
-    private boolean currentPending;
-    /** Smoothed remaining channel ticks, decremented per client tick between refreshes. */
-    private double animatedRemaining;
+    private final List<Current> currents = new ArrayList<>();
+
+    /** One running task shown at the top of the panel, with its own animated countdown. */
+    private static final class Current {
+        Entry entry;
+        int stepIndex;
+        int totalSteps;
+        int channelRemaining;
+        int channelTotal;
+        /** Channel task accepted but not started (NPC en route): show waiting label, no animation. */
+        boolean pending;
+        /** Smoothed remaining channel ticks, decremented per client tick between refreshes. */
+        double animatedRemaining;
+    }
 
     /** Callbacks wired by the parent Screen. */
     private java.util.function.IntConsumer onDelete;
@@ -161,68 +165,72 @@ public class TaskQueuePanel extends AbstractWidget {
         return Collections.unmodifiableList(entries);
     }
 
-    /**
-     * Replace the currently executing (head) task shown at the top of the panel.
-     * Pass null when the building has no active head task.
-     */
+    /** Convenience single-current setter (kept for callers that only have one running task). */
     public void setCurrent(@javax.annotation.Nullable CurrentInfo info) {
-        if (info == null) {
-            this.currentEntry = null;
-            this.currentStep = 0;
-            this.currentTotalSteps = 0;
-            this.currentChannelRemaining = 0;
-            this.currentChannelTotal = 0;
-            this.currentPending = false;
-            this.animatedRemaining = 0;
-            return;
+        setCurrents(info == null ? List.of() : List.of(info));
+    }
+
+    /**
+     * Replace the currently executing tasks shown at the top of the panel. A shared
+     * building (workstation family / node) may run several concurrently — one per
+     * member — so this accepts a list. Pass empty when nothing is running.
+     */
+    public void setCurrents(List<CurrentInfo> infos) {
+        this.currents.clear();
+        if (infos == null) return;
+        for (CurrentInfo info : infos) {
+            if (info == null) continue;
+            Current c = new Current();
+            c.entry = info.entry();
+            c.stepIndex = info.stepIndex();
+            c.totalSteps = info.totalSteps();
+            c.channelRemaining = info.channelRemainingTicks();
+            c.channelTotal = info.channelTotalTicks();
+            c.pending = info.pending();
+            c.animatedRemaining = Math.max(0, info.channelRemainingTicks());
+            this.currents.add(c);
         }
-        this.currentEntry = info.entry();
-        this.currentStep = info.stepIndex();
-        this.currentTotalSteps = info.totalSteps();
-        this.currentChannelRemaining = info.channelRemainingTicks();
-        this.currentChannelTotal = info.channelTotalTicks();
-        this.currentPending = info.pending();
-        this.animatedRemaining = Math.max(0, info.channelRemainingTicks());
     }
 
     /** Decrement the animated channel countdown by one client tick. Call from the parent Screen's tick(). */
     public void tickProgress() {
-        if (currentEntry != null && !currentPending && currentChannelTotal > 0 && animatedRemaining > 0) {
-            animatedRemaining = Math.max(0, animatedRemaining - 1);
+        for (Current c : currents) {
+            if (c.entry != null && !c.pending && c.channelTotal > 0 && c.animatedRemaining > 0) {
+                c.animatedRemaining = Math.max(0, c.animatedRemaining - 1);
+            }
         }
     }
 
-    /** Fraction 0..1 through the current task (channel-based, else step-based). */
-    private float progressFraction() {
-        if (currentEntry == null || currentPending) return 0;
-        if (currentChannelTotal > 0) {
-            float frac = 1f - (float) animatedRemaining / Math.max(1, currentChannelTotal);
+    /** Fraction 0..1 through a current task (channel-based, else step-based). */
+    private static float progressFraction(Current c) {
+        if (c.entry == null || c.pending) return 0;
+        if (c.channelTotal > 0) {
+            float frac = 1f - (float) c.animatedRemaining / Math.max(1, c.channelTotal);
             return Math.max(0, Math.min(1, frac));
         }
-        if (currentTotalSteps > 0) {
-            return (float) currentStep / Math.max(1, currentTotalSteps);
+        if (c.totalSteps > 0) {
+            return (float) c.stepIndex / Math.max(1, c.totalSteps);
         }
         return 0;
     }
 
-    /** Short "time remaining" label for the current task row, or a waiting label when not started. */
-    private String timeLabel() {
-        if (currentEntry == null) return "";
-        if (currentPending) return pendingLabel();
-        if (currentChannelTotal > 0) {
-            int sec = (int) Math.ceil(animatedRemaining / 20.0);
+    /** Short "time remaining" label for a current task row, or a waiting label when not started. */
+    private static String timeLabel(Current c) {
+        if (c.entry == null) return "";
+        if (c.pending) return pendingLabel(c.entry.category());
+        if (c.channelTotal > 0) {
+            int sec = (int) Math.ceil(c.animatedRemaining / 20.0);
             if (sec >= 60) return String.format("%d:%02d", sec / 60, sec % 60);
             return "≈" + sec + "s";
         }
-        if (currentTotalSteps > 0) {
-            return currentStep + "/" + currentTotalSteps;
+        if (c.totalSteps > 0) {
+            return c.stepIndex + "/" + c.totalSteps;
         }
         return "";
     }
 
     /** Localized "waiting to start" label for a pending channel task. */
-    private String pendingLabel() {
-        String cat = currentEntry.category();
+    private static String pendingLabel(String cat) {
         return switch (cat) {
             case "decompose" -> I18n.name("gui.wandscape.queue.pending.decompose", "待分解").getString();
             case "synthesize" -> I18n.name("gui.wandscape.queue.pending.synthesize", "待合成").getString();
@@ -285,11 +293,11 @@ public class TaskQueuePanel extends AbstractWidget {
         int textY     = getY() + topPadding + 10;
         int listBottom = getY() + height - 4; // 4px bottom padding
 
-        // ── Current (executing) task — top row, locked, with progress bar ──
+        // ── Current (executing) tasks — top rows, locked, each with a progress bar ──
         int rowStartY = textY;
-        if (currentEntry != null) {
-            rowStartY = textY + CURRENT_ROW_H;
-            renderCurrentRow(g, textY);
+        for (int i = 0; i < currents.size(); i++) {
+            renderCurrentRow(g, textY + i * CURRENT_ROW_H, currents.get(i));
+            rowStartY = textY + (i + 1) * CURRENT_ROW_H;
         }
 
         for (int row = 0; row < entries.size(); row++) {
@@ -343,8 +351,8 @@ public class TaskQueuePanel extends AbstractWidget {
         }
     }
 
-    /** Draw the locked current-task row: icon + label + remaining time + progress bar. */
-    private void renderCurrentRow(GuiGraphics g, int rowY) {
+    /** Draw a locked current-task row: icon + label + remaining time + progress bar. */
+    private void renderCurrentRow(GuiGraphics g, int rowY, Current c) {
         // Gold-tinted highlight so the running task stands out from pending rows
         g.fill(getX() + 1, rowY, getX() + width - 1, rowY + CURRENT_ROW_H - 1, 0x44D4A840);
 
@@ -353,16 +361,15 @@ public class TaskQueuePanel extends AbstractWidget {
         // keeping them clear of long category labels.
         int textRight = getX() + width - 4;
 
-        ItemStack icon = resolveIcon(currentEntry.itemOrRecipeId());
+        ItemStack icon = resolveIcon(c.entry.itemOrRecipeId());
         if (icon != null) {
             renderIcon(g, icon, contentX, rowY, CURRENT_ROW_H);
         }
 
         int labelX = contentX + ICON_SIZE + ICON_GAP;
-        Component label = categoryLabel(currentEntry.category());
-        g.drawString(Minecraft.getInstance().font, label, labelX, rowY + 2, MedievalColors.ACCENT_GOLD);
+        g.drawString(Minecraft.getInstance().font, categoryLabel(c.entry.category()), labelX, rowY + 2, MedievalColors.ACCENT_GOLD);
 
-        String time = timeLabel();
+        String time = timeLabel(c);
         if (!time.isEmpty()) {
             int timeW = Minecraft.getInstance().font.width(time);
             g.drawString(Minecraft.getInstance().font, time, textRight - timeW, rowY + 2, MedievalColors.TEXT_MUTED);
@@ -370,9 +377,9 @@ public class TaskQueuePanel extends AbstractWidget {
 
         // Progress bar spans from the label start to the right text edge.
         // Skipped while the channel task is pending (not started yet) — a waiting label shows instead.
-        if (!currentPending) {
+        if (!c.pending) {
             int barW = Math.max(8, textRight - labelX);
-            drawProgressBar(g, labelX, rowY + 13, barW, 3, progressFraction());
+            drawProgressBar(g, labelX, rowY + 13, barW, 3, progressFraction(c));
         }
     }
 
@@ -465,7 +472,7 @@ public class TaskQueuePanel extends AbstractWidget {
         int topPadding = 4;
         int textY     = getY() + topPadding + 10;
         int listBottom = getY() + height - 4;
-        int rowStartY = textY + (currentEntry != null ? CURRENT_ROW_H : 0);
+        int rowStartY = textY + currents.size() * CURRENT_ROW_H;
 
         for (int row = entries.size() - 1; row >= 0; row--) {
             int rowBaseY = rowStartY + row * rowHeight;

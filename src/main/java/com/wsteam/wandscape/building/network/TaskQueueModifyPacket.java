@@ -120,10 +120,10 @@ public record TaskQueueModifyPacket(
                 ));
             }
 
-            // ── Current (executing) task — the building head, tracked separately from the queue ──
-            TaskQueueDataPacket.CurrentTask current = buildCurrentTask(data.getBuilding(buildingId));
+            // ── Running tasks — the group's heads, tracked separately from the queue ──
+            List<TaskQueueDataPacket.CurrentTask> currents = buildCurrentTasks(data, buildingId);
 
-            TaskQueueDataPacket response = new TaskQueueDataPacket(pkt.stationPos, entries, current);
+            TaskQueueDataPacket response = new TaskQueueDataPacket(pkt.stationPos, entries, currents);
             PacketDistributor.sendToPlayer(sp, response);
         });
     }
@@ -199,6 +199,33 @@ public record TaskQueueModifyPacket(
             if (el != null) return el;
         }
         return "";
+    }
+
+    /**
+     * Build the list of currently executing (head) tasks for the panel. For a shared
+     * building (workstation family / node) this aggregates every group member's head so
+     * the panel shows the whole group working at once; for a normal building it's just
+     * the single head (possibly empty).
+     */
+    private static List<TaskQueueDataPacket.CurrentTask> buildCurrentTasks(BuildingSavedData data, UUID buildingId) {
+        BuildingState state = data.getBuilding(buildingId);
+        if (state == null) return List.of();
+
+        List<BuildingState> targets = List.of(state);
+        UUID cid = state.getColonyId();
+        if (cid != null && BuildingSavedData.isSharedQueueCategory(state.getCategory())) {
+            String groupKey = BuildingSavedData.groupKeyFor(state);
+            if (groupKey != null) {
+                targets = data.groupMembers(cid, groupKey);
+            }
+        }
+
+        List<TaskQueueDataPacket.CurrentTask> result = new ArrayList<>();
+        for (BuildingState target : targets) {
+            TaskQueueDataPacket.CurrentTask ct = buildCurrentTask(target);
+            if (ct != null) result.add(ct);
+        }
+        return result;
     }
 
     /**
