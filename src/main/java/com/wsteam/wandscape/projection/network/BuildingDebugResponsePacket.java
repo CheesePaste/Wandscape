@@ -34,7 +34,6 @@ public record BuildingDebugResponsePacket(
         int comfort,
         int magic,
         int wonder,
-        int queueCapacity,
         List<WorkItem> queue,
         UUID currentTaskId
 ) implements CustomPacketPayload {
@@ -82,7 +81,6 @@ public record BuildingDebugResponsePacket(
         buf.writeInt(pkt.comfort());
         buf.writeInt(pkt.magic());
         buf.writeInt(pkt.wonder());
-        buf.writeInt(pkt.queueCapacity());
 
         // Queue — params are not sent (client ignores them anyway)
         int qSize = pkt.queue() != null ? pkt.queue().size() : 0;
@@ -117,7 +115,6 @@ public record BuildingDebugResponsePacket(
         int comfort = buf.readInt();
         int magic = buf.readInt();
         int wonder = buf.readInt();
-        int queueCapacity = buf.readInt();
 
         int qSize = buf.readInt();
         List<WorkItem> queue = new java.util.ArrayList<>(qSize);
@@ -134,7 +131,7 @@ public record BuildingDebugResponsePacket(
                 buildingId, buildingTypeId, displayName, category,
                 colonyId, anchor, intact, needsRepair, shutdown,
                 underConstruction, constructionStarted, demolishing,
-                comfort, magic, wonder, queueCapacity, queue, currentTaskId
+                comfort, magic, wonder, queue, currentTaskId
         );
     }
 }

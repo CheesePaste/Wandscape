@@ -499,7 +499,7 @@ public class BuildingApiImpl implements BuildingApi {
             if (currentTasks.containsKey(state.getBuildingId())) {
                 continue;
             }
-            if (!state.hasWork()) {
+            if (!hasClaimableWork(sd, state)) {
                 continue;
             }
             // No longer skip unloaded anchors: BuildingTaskSource force-loads the
@@ -510,6 +510,19 @@ public class BuildingApiImpl implements BuildingApi {
         return result;
     }
 
+    /**
+     * Whether a building has work it can claim: its own queue (construction / repair)
+     * OR, for a built shared building, its group queue. Shutdown shared buildings only
+     * claim repair work (mirrors {@link BuildingState#hasWork()}).
+     */
+    private boolean hasClaimableWork(BuildingSavedData sd, BuildingState state) {
+        if (state.hasWork()) return true;
+        UUID cid = state.getColonyId();
+        if (cid == null || !state.hasEverCompleted() || state.isShutdown()) return false;
+        String groupKey = BuildingSavedData.groupKeyFor(state);
+        return groupKey != null && sd.hasSharedWork(cid, groupKey);
+    }
+
     @Override
     @Nullable
     public WorkItem dequeueWork(UUID buildingId) {
@@ -518,6 +531,19 @@ public class BuildingApiImpl implements BuildingApi {
 
         BuildingState state = sd.getBuilding(buildingId);
         if (state == null) return null;
+
+        // Shared queue claim: a built, operational shared building (workstation / node)
+        // pulls the front unclaimed task from its group queue. The anchor is rebound to
+        // this building so the channel progress is tracked per-station and tasks at
+        // different stations never collide on one anchor.
+        if (state.hasEverCompleted() && !state.isShutdown()) {
+            Deque<WorkItem> shared = sharedQueueFor(sd, state);
+            if (shared != null && !shared.isEmpty()) {
+                WorkItem item = shared.pollFirst();
+                sd.setDirty();
+                return rebindAnchor(item, state.getAnchor());
+            }
+        }
 
         // Shutdown buildings: only allow repair tasks
         if (state.isShutdown()) {
@@ -546,9 +572,6 @@ public class BuildingApiImpl implements BuildingApi {
         return item;
     }
 
-    /** Colony-wide capacity for construction/repair tasks (per building). */
-    private static final int CONSTRUCTION_CAPACITY = 5;
-
     @Override
     public void enqueueWork(UUID buildingId, WorkItem work) {
         BuildingSavedData sd = getSavedData();
@@ -557,7 +580,16 @@ public class BuildingApiImpl implements BuildingApi {
         BuildingState state = sd.getBuilding(buildingId);
         if (state == null || state.isShutdown() || state.isDemolishing()) return;
 
-        Deque<WorkItem> queue = state.getTaskQueue();
+        // Production/gather tasks on shared buildings (workstation family / nodes) go into
+        // the group queue so any idle member can claim them; construction/repair stays on
+        // the building's own queue.
+        Deque<WorkItem> queue = null;
+        if (isRoleWork(state, work)) {
+            UUID cid = state.getColonyId();
+            String groupKey = cid != null ? BuildingSavedData.groupKeyFor(state) : null;
+            if (groupKey != null) queue = sd.sharedQueue(cid, groupKey);
+        }
+        if (queue == null) queue = state.getTaskQueue();
 
         // Merge a production task into an adjacent same-recipe task at its priority band's
         // tail so restock x1/x2 requests don't flood the queue with consecutive *7/*9
@@ -567,25 +599,6 @@ public class BuildingApiImpl implements BuildingApi {
         if (mergeBandTail(queue, work)) {
             sd.setDirty();
             return;
-        }
-
-        boolean isConstruction = work.blueprintId().startsWith("build:");
-
-        if (isConstruction) {
-            long buildCount = queue.stream()
-                    .filter(w -> w.blueprintId().startsWith("build:"))
-                    .count();
-            if (buildCount >= CONSTRUCTION_CAPACITY) {
-                Log.warn(TAG, "enqueueWork: building {} construction queue full (capacity={})",
-                        buildingId, CONSTRUCTION_CAPACITY);
-                return;
-            }
-        } else {
-            if (queue.size() >= state.getQueueCapacity()) {
-                Log.warn(TAG, "enqueueWork: building {} queue full (capacity={})",
-                        buildingId, state.getQueueCapacity());
-                return;
-            }
         }
 
         insertByPriority(queue, work);
@@ -677,6 +690,52 @@ public class BuildingApiImpl implements BuildingApi {
         return (el instanceof JsonPrimitive p && p.isNumber()) ? p.getAsInt() : 0;
     }
 
+    // ---- Shared production queue routing ----
+
+    /** Whether a WorkItem is a production task (synthesize/decompose/craft/brew). */
+    static boolean isProductionWork(WorkItem w) {
+        return w != null && w.blueprintId().startsWith("production:");
+    }
+
+    /** Whether a WorkItem is a node gather task. */
+    static boolean isGatherWork(WorkItem w) {
+        return w != null && "node:gather".equals(w.blueprintId());
+    }
+
+    /** Whether {@code work} belongs to {@code state}'s shared queue role (station↔production, node↔gather). */
+    private static boolean isRoleWork(BuildingState state, WorkItem work) {
+        return "node".equals(state.getCategory()) ? isGatherWork(work) : isProductionWork(work);
+    }
+
+    /**
+     * The shared group queue a building participates in, or null when it shares none
+     * (non-shared category, or no colony assigned). Shared buildings are workstation
+     * family (by typeId) and element nodes (by element).
+     */
+    @Nullable
+    private Deque<WorkItem> sharedQueueFor(BuildingSavedData sd, BuildingState state) {
+        UUID cid = state.getColonyId();
+        if (cid == null) return null;
+        String groupKey = BuildingSavedData.groupKeyFor(state);
+        return groupKey != null ? sd.peekSharedQueue(cid, groupKey) : null;
+    }
+
+    /**
+     * Rebind a claimed WorkItem's {@code anchor} to the claiming building so the
+     * async channel progress is tracked per-station (two concurrent tasks at
+     * different stations must not collide on one anchor). Returns a new WorkItem;
+     * the queued element is left untouched.
+     */
+    static WorkItem rebindAnchor(WorkItem item, BlockPos anchor) {
+        Map<String, JsonElement> params = new LinkedHashMap<>(item.params());
+        JsonArray arr = new JsonArray();
+        arr.add(anchor.getX());
+        arr.add(anchor.getY());
+        arr.add(anchor.getZ());
+        params.put("anchor", arr);
+        return new WorkItem(item.blueprintId(), params, item.priority());
+    }
+
     @Override
     public List<UUID> getBuildingsByCategory(@Nullable UUID colonyId, String category) {
         BuildingSavedData sd = getSavedData();
@@ -734,7 +793,9 @@ public class BuildingApiImpl implements BuildingApi {
         BuildingState state = sd.getBuilding(buildingId);
         if (state == null) return List.of();
 
-        return new ArrayList<>(state.getTaskQueue());
+        Deque<WorkItem> queue = sharedQueueFor(sd, state);
+        if (queue == null) queue = state.getTaskQueue();
+        return new ArrayList<>(queue);
     }
 
     @Override
@@ -755,7 +816,8 @@ public class BuildingApiImpl implements BuildingApi {
             return false;
         }
 
-        Deque<WorkItem> queue = state.getTaskQueue();
+        Deque<WorkItem> queue = sharedQueueFor(sd, state);
+        if (queue == null) queue = state.getTaskQueue();
         if (index < 0 || index >= queue.size()) {
             Log.warn(TAG, "removeFromQueue: index {} out of range (size={}) for {}", index, queue.size(), buildingId);
             return false;
@@ -789,7 +851,8 @@ public class BuildingApiImpl implements BuildingApi {
             return false;
         }
 
-        Deque<WorkItem> queue = state.getTaskQueue();
+        Deque<WorkItem> queue = sharedQueueFor(sd, state);
+        if (queue == null) queue = state.getTaskQueue();
         if (index <= 0 || index >= queue.size()) {
             Log.warn(TAG, "moveUp: index {} out of range (size={}) for {}", index, queue.size(), buildingId);
             return false;
@@ -825,7 +888,8 @@ public class BuildingApiImpl implements BuildingApi {
             return false;
         }
 
-        Deque<WorkItem> queue = state.getTaskQueue();
+        Deque<WorkItem> queue = sharedQueueFor(sd, state);
+        if (queue == null) queue = state.getTaskQueue();
         if (index < 0 || index >= queue.size() - 1) {
             Log.warn(TAG, "moveDown: index {} out of range (size={}) for {}", index, queue.size(), buildingId);
             return false;

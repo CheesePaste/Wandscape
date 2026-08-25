@@ -27,7 +27,6 @@ class BuildingUnlockCheckerTest {
                 "test", "Test", "test", category,
                 List.of(), List.of(), List.of(), Map.of(),
                 0, 0, 0,
-                BuildingConfig.QueueDef.DEFAULT,
                 req,
                 null, null, null,
                 null, null, null, null, null, null,

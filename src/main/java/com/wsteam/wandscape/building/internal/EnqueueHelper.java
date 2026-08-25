@@ -91,8 +91,7 @@ public final class EnqueueHelper {
                     bounds,
                     config.comfort(),
                     config.magic(),
-                    config.wonder(),
-                    config.queue().capacity()
+                    config.wonder()
             );
             state.setRotationSteps(rotationSteps);
             api.registerBuilding(state);

@@ -112,14 +112,12 @@ public final class BuildingDebugOverlay {
         String comfortStr = String.valueOf(data.comfort());
         String magicStr = String.valueOf(data.magic());
         String wonderStr = String.valueOf(data.wonder());
-        String queueStr = String.valueOf(data.queueCapacity());
 
         // ── Measure ──
         int iconW = 9;
         int statsW = (iconW + 2 + font.width(comfortStr))
                    + 10 + (iconW + 2 + font.width(magicStr))
-                   + 10 + (iconW + 2 + font.width(wonderStr))
-                   + 10 + (font.width("Q:") + 2 + font.width(queueStr));
+                   + 10 + (iconW + 2 + font.width(wonderStr));
 
         int[] widths = {
                 font.width(l1) + GAP + font.width(l1cat) + GAP + font.width(l1status),
@@ -163,11 +161,6 @@ public final class BuildingDebugOverlay {
         com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.drawIcon(g, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.ICON_WONDER, (int)x2, (int)y2 - 1, 9, 9, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_WONDER);
         x2 += 11;
         drawText(g, font, wonderStr, x2, y2, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_WONDER);
-        x2 += font.width(wonderStr) + 10;
-        
-        drawText(g, font, "Q:", x2, y2, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_DIM);
-        x2 += font.width("Q:") + 2;
-        drawText(g, font, queueStr, x2, y2, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_NORMAL);
 
         // ── Buttons: Repair/Undo | Shutdown/Restart | Destroy ──
         int btnY = boxY + boxH + 2;

@@ -66,7 +66,6 @@ public class BuildingSavedData extends SavedData {
     private static final String TAG_COMFORT = "comfort";
     private static final String TAG_MAGIC = "magic";
     private static final String TAG_WONDER = "wonder";
-    private static final String TAG_CAPACITY = "capacity";
     private static final String TAG_QUEUE_ITEM_BLUEPRINT = "blueprint";
     private static final String TAG_QUEUE_ITEM_PARAMS = "params_json";
     private static final String TAG_QUEUE_ITEM_PRIORITY = "priority";
@@ -87,6 +86,9 @@ public class BuildingSavedData extends SavedData {
 
     // NBT key for mage hut residents (buildingId → MageHutResident)
     private static final String TAG_MAGE_HUT_RESIDENTS = "mage_hut_residents";
+
+    // NBT key for shared production queues (workstations by type, nodes by element)
+    private static final String TAG_SHARED_QUEUES = "shared_queues";
 
     private static final Gson PARAMS_GSON = new Gson();
     private static final java.lang.reflect.Type PARAMS_TYPE =
@@ -119,6 +121,18 @@ public class BuildingSavedData extends SavedData {
     /** buildingId → the single mage assigned to that mage hut (survives the mage's death). */
     private final Map<UUID, MageHutResident> mageHutResidents = new ConcurrentHashMap<>();
 
+    // ── Shared production queues ──
+    /**
+     * A queue shared by all buildings of the same "(colony, groupKey)":
+     * workstations share by {@code buildingTypeId}, element nodes by
+     * {@code node_config.element()}. An idle member building claims the front
+     * task (see {@link BuildingApiImpl#dequeueWork}).
+     */
+    private final Map<SharedGroup, Deque<WorkItem>> sharedQueues = new ConcurrentHashMap<>();
+
+    /** Identity of a shared queue: which colony + which groupKey (type/element). */
+    public record SharedGroup(UUID colonyId, String groupKey) {}
+
     @Nullable
     public MageHutResident getMageHutResident(UUID buildingId) {
         return mageHutResidents.get(buildingId);
@@ -137,6 +151,63 @@ public class BuildingSavedData extends SavedData {
     public void removeMageHutResident(UUID buildingId) {
         mageHutResidents.remove(buildingId);
         setDirty();
+    }
+
+    // ── Shared production queues ──
+
+    /** Whether a building's category participates in a shared queue. */
+    public static boolean isSharedQueueCategory(String category) {
+        return SHARED_QUEUE_CATEGORIES.contains(category);
+    }
+
+    private static final Set<String> SHARED_QUEUE_CATEGORIES =
+            Set.of("workstation", "crafting_station", "magic_station", "node");
+
+    /**
+     * The shared-queue group key for a building, or null if it doesn't share a queue.
+     * Workstation-family buildings share by {@code buildingTypeId}; node buildings
+     * share by their {@code node_config.element()} so all nodes of an element fan out.
+     */
+    @Nullable
+    public static String groupKeyFor(BuildingState state) {
+        if (state == null || !isSharedQueueCategory(state.getCategory())) return null;
+        if ("node".equals(state.getCategory())) {
+            BuildingConfig config = BuildingConfigLoader.getInstance().get(state.getBuildingTypeId());
+            return config != null && config.nodeConfig() != null
+                    ? config.nodeConfig().element() : null;
+        }
+        return state.getBuildingTypeId();
+    }
+
+    /** Shared queue for a group, created lazily. Returned queue is mutated by callers. */
+    public Deque<WorkItem> sharedQueue(UUID colonyId, String groupKey) {
+        return sharedQueues.computeIfAbsent(new SharedGroup(colonyId, groupKey), k -> new ArrayDeque<>());
+    }
+
+    /** Shared queue for a group only if one already exists, else null (no side effects). */
+    @Nullable
+    public Deque<WorkItem> peekSharedQueue(UUID colonyId, String groupKey) {
+        return sharedQueues.get(new SharedGroup(colonyId, groupKey));
+    }
+
+    /** Whether a group has at least one queued (not yet claimed) task. */
+    public boolean hasSharedWork(UUID colonyId, String groupKey) {
+        Deque<WorkItem> q = sharedQueues.get(new SharedGroup(colonyId, groupKey));
+        return q != null && !q.isEmpty();
+    }
+
+    /**
+     * All buildings belonging to the given shared group (workstations of a type,
+     * or nodes of an element). Used to aggregate running tasks for the panel.
+     */
+    public List<BuildingState> groupMembers(UUID colonyId, String groupKey) {
+        List<BuildingState> result = new ArrayList<>();
+        for (BuildingState state : buildings.values()) {
+            if (state.getColonyId() == null || !colonyId.equals(state.getColonyId())) continue;
+            if (!groupKey.equals(groupKeyFor(state))) continue;
+            result.add(state);
+        }
+        return result;
     }
 
     /** NBT has no float array — store as int bits. */
@@ -561,7 +632,6 @@ public class BuildingSavedData extends SavedData {
             entry.putInt(TAG_COMFORT, state.getComfort());
             entry.putInt(TAG_MAGIC, state.getMagic());
             entry.putInt(TAG_WONDER, state.getWonder());
-            entry.putInt(TAG_CAPACITY, state.getQueueCapacity());
             entry.putInt(TAG_ROTATION, state.getRotationSteps());
             if (state.getCurrentTaskId() != null) {
                 entry.putUUID(TAG_CURRENT_TASK, state.getCurrentTaskId());
@@ -642,7 +712,48 @@ public class BuildingSavedData extends SavedData {
         }
         tag.put(TAG_MAGE_HUT_RESIDENTS, hutTag);
 
+        // ── Shared production queues ──
+        ListTag sqTag = new ListTag();
+        for (var entry : sharedQueues.entrySet()) {
+            if (entry.getValue().isEmpty()) continue;
+            SharedGroup grp = entry.getKey();
+            CompoundTag grpTag = new CompoundTag();
+            grpTag.putUUID("colony", grp.colonyId());
+            grpTag.putString("group_key", grp.groupKey());
+            ListTag itemsTag = new ListTag();
+            for (WorkItem item : entry.getValue()) {
+                itemsTag.add(workItemToTag(item));
+            }
+            grpTag.put("items", itemsTag);
+            sqTag.add(grpTag);
+        }
+        if (!sqTag.isEmpty()) tag.put(TAG_SHARED_QUEUES, sqTag);
+
         return tag;
+    }
+
+    /** Serialize a single WorkItem to a CompoundTag (shared by building + shared queues). */
+    private static CompoundTag workItemToTag(WorkItem item) {
+        CompoundTag itemTag = new CompoundTag();
+        itemTag.putString(TAG_QUEUE_ITEM_BLUEPRINT, item.blueprintId());
+        itemTag.putInt(TAG_QUEUE_ITEM_PRIORITY, item.priority());
+        itemTag.putString(TAG_QUEUE_ITEM_PARAMS, PARAMS_GSON.toJson(item.params()));
+        return itemTag;
+    }
+
+    /** Deserialize a WorkItem from a CompoundTag, or null on malformed data. */
+    @Nullable
+    private static WorkItem workItemFromTag(CompoundTag itemTag) {
+        String blueprint = itemTag.getString(TAG_QUEUE_ITEM_BLUEPRINT);
+        if (blueprint.isEmpty()) return null;
+        int priority = itemTag.getInt(TAG_QUEUE_ITEM_PRIORITY);
+        Map<String, JsonElement> params = Collections.emptyMap();
+        if (itemTag.contains(TAG_QUEUE_ITEM_PARAMS)) {
+            String json = itemTag.getString(TAG_QUEUE_ITEM_PARAMS);
+            params = PARAMS_GSON.fromJson(json, PARAMS_TYPE);
+            if (params == null) params = Collections.emptyMap();
+        }
+        return new WorkItem(blueprint, params, priority);
     }
 
     private static BuildingSavedData load(CompoundTag tag, HolderLookup.Provider registries) {
@@ -671,11 +782,10 @@ public class BuildingSavedData extends SavedData {
             int comfort = entry.getInt(TAG_COMFORT);
             int magic = entry.getInt(TAG_MAGIC);
             int wonder = entry.getInt(TAG_WONDER);
-            int capacity = entry.getInt(TAG_CAPACITY);
             int rotationSteps = entry.getInt(TAG_ROTATION);
 
             BuildingState state = new BuildingState(id, type, category, anchor, bounds,
-                    comfort, magic, wonder, capacity);
+                    comfort, magic, wonder);
             state.setRotationSteps(rotationSteps);
 
             if (entry.hasUUID(TAG_COLONY)) {
@@ -811,6 +921,27 @@ public class BuildingSavedData extends SavedData {
                             new MageHutResident(npcId, colonyId, name, level, base));
                 } catch (IllegalArgumentException e) {
                     Log.warn(TAG, "Invalid building UUID in mage hut residents: {}", key);
+                }
+            }
+        }
+
+        // ── Load shared production queues ──
+        if (tag.contains(TAG_SHARED_QUEUES)) {
+            ListTag sqTag = tag.getList(TAG_SHARED_QUEUES, Tag.TAG_COMPOUND);
+            for (int i = 0; i < sqTag.size(); i++) {
+                CompoundTag grpTag = sqTag.getCompound(i);
+                try {
+                    UUID colonyId = grpTag.getUUID("colony");
+                    String groupKey = grpTag.getString("group_key");
+                    Deque<WorkItem> queue = data.sharedQueues.computeIfAbsent(
+                            new SharedGroup(colonyId, groupKey), k -> new ArrayDeque<>());
+                    ListTag itemsTag = grpTag.getList("items", Tag.TAG_COMPOUND);
+                    for (int j = 0; j < itemsTag.size(); j++) {
+                        WorkItem item = workItemFromTag(itemsTag.getCompound(j));
+                        if (item != null) queue.addLast(item);
+                    }
+                } catch (IllegalArgumentException e) {
+                    Log.warn(TAG, "Invalid shared queue entry: {}", e.getMessage());
                 }
             }
         }

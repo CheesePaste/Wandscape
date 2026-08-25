@@ -42,7 +42,6 @@ public record BuildingConfig(
         int comfort,
         int magic,
         int wonder,
-        QueueDef queue,
         @SerializedName("unlock_requirement") UnlockRequirement unlockRequirement,
         @Nullable BoundaryBox boundary,
         @Nullable BlueprintRef blueprint,
@@ -59,13 +58,6 @@ public record BuildingConfig(
         @SerializedName("deprecated") boolean deprecated,
         @SerializedName("entities") List<DecorationEntity> entities
 ) {
-    public record QueueDef(
-            int capacity,
-            @SerializedName("task_types") List<String> taskTypes
-    ) {
-        public static final QueueDef DEFAULT = new QueueDef(5, List.of("building"));
-    }
-
     public record UnlockRequirement(
             @SerializedName("min_colony_level") int minColonyLevel
     ) {
@@ -256,11 +248,6 @@ public record BuildingConfig(
             int magic = getInt(obj, "magic", 0);
             int wonder = getInt(obj, "wonder", 0);
 
-            QueueDef queue = QueueDef.DEFAULT;
-            if (obj.has("queue")) {
-                queue = context.deserialize(obj.get("queue"), QueueDef.class);
-            }
-
             UnlockRequirement unlockRequirement = UnlockRequirement.NONE;
             if (obj.has("unlock_requirement")) {
                 unlockRequirement = context.deserialize(
@@ -399,7 +386,7 @@ public record BuildingConfig(
             return new BuildingConfig(id, displayName, creator, category,
                     pattern, palette, blockIndices, blockNbt,
                     comfort, magic, wonder,
-                    queue, unlockRequirement, boundary, blueprint, nodeConfig,
+                    unlockRequirement, boundary, blueprint, nodeConfig,
                     decoration, wonderConfig, shop, service, relax, atm,
                     doorOffsets, interactSpots, firstFree, deprecated, entities);
         }

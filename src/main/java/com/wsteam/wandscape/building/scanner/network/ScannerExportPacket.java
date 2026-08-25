@@ -268,14 +268,6 @@ public record ScannerExportPacket(BlockPos pos) implements CustomPacketPayload {
         root.addProperty("magic", scanner.getMagic());
         root.addProperty("wonder", scanner.getWonder());
 
-        // Queue
-        JsonObject queue = new JsonObject();
-        queue.addProperty("capacity", 5);
-        JsonArray taskTypes = new JsonArray();
-        taskTypes.add("building");
-        queue.add("task_types", taskTypes);
-        root.add("queue", queue);
-
         // Unlock requirement
         JsonObject unlock = new JsonObject();
         unlock.addProperty("min_colony_level", scanner.getUnlockMinLevel());

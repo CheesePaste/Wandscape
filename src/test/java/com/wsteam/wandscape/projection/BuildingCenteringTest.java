@@ -29,7 +29,6 @@ class BuildingCenteringTest {
                 "test", "Test", "", "basic",
                 pattern, List.of(), List.of(), Map.of(),
                 0, 0, 0,
-                BuildingConfig.QueueDef.DEFAULT,
                 BuildingConfig.UnlockRequirement.NONE,
                 null, null, null, null,
                 WonderConfig.NONE, ShopConfig.NONE, ServiceConfig.NONE, RelaxConfig.NONE, AtmConfig.NONE,

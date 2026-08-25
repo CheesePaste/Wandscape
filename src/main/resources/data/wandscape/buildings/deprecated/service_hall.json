@@ -738,12 +738,6 @@
   "comfort": 4,
   "magic": 3,
   "wonder": 2,
-  "queue": {
-    "capacity": 8,
-    "task_types": [
-      "service"
-    ]
-  },
   "unlock_requirement": {
     "min_colony_level": 2
   },

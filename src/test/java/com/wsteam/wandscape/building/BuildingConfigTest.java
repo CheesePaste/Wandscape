@@ -33,7 +33,7 @@ class BuildingConfigTest {
         json.addProperty("id", "town_hall");
         json.addProperty("display_name", "Town Hall");
         json.addProperty("category", "basic");
-        // No pattern, block_mapping, queue, unlock_requirement
+        // No pattern, block_mapping, unlock_requirement
 
         BuildingConfig cfg = GSON.fromJson(json, BuildingConfig.class);
 
@@ -45,8 +45,6 @@ class BuildingConfigTest {
         assertEquals(0, cfg.comfort());
         assertEquals(0, cfg.magic());
         assertEquals(0, cfg.wonder());
-        assertNotNull(cfg.queue());
-        assertEquals(5, cfg.queue().capacity());
         assertNotNull(cfg.unlockRequirement());
         assertEquals(1, cfg.unlockRequirement().minColonyLevel());
         assertSame(UnlockRequirement.NONE, cfg.unlockRequirement());
@@ -65,7 +63,6 @@ class BuildingConfigTest {
               "comfort": 2,
               "magic": 3,
               "wonder": 5,
-              "queue": {"capacity": 60, "task_types": ["crafting", "ritual"]},
               "unlock_requirement": {"min_colony_level": 5}
             }
             """;
@@ -78,8 +75,6 @@ class BuildingConfigTest {
         assertEquals(2, cfg.comfort());
         assertEquals(3, cfg.magic());
         assertEquals(5, cfg.wonder());
-        assertEquals(60, cfg.queue().capacity());
-        assertEquals(List.of("crafting", "ritual"), cfg.queue().taskTypes());
         assertEquals(5, cfg.unlockRequirement().minColonyLevel());
 
         // Pattern
@@ -179,18 +174,6 @@ class BuildingConfigTest {
 
     @Nested
     class DefaultValues {
-        @Test
-        void missingQueueUsesDefault() {
-            JsonObject json = new JsonObject();
-            json.addProperty("id", "test");
-            json.addProperty("display_name", "Test");
-            json.addProperty("category", "basic");
-
-            BuildingConfig cfg = GSON.fromJson(json, BuildingConfig.class);
-            assertEquals(5, cfg.queue().capacity());
-            assertEquals(List.of("building"), cfg.queue().taskTypes());
-        }
-
         @Test
         void missingUnlockRequirementUsesNone() {
             JsonObject json = new JsonObject();

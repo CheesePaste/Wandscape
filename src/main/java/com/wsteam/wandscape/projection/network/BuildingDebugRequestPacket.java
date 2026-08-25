@@ -80,7 +80,6 @@ public record BuildingDebugRequestPacket(BlockPos pos) implements CustomPacketPa
                 !state.hasEverCompleted(), state.isConstructionStarted(),
                 state.isDemolishing(),
                 comfort, magic, wonder,
-                state.getQueueCapacity(),
                 queueSnapshot, state.getCurrentTaskId()
         );
         net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player, response);

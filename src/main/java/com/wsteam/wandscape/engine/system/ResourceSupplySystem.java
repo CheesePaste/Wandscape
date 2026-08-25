@@ -92,7 +92,7 @@ public class ResourceSupplySystem implements System {
      */
     private void trySupplyResource(ResourceId resource, int deficit, World world) {
         if (enqueueSynthesize(resource.id(), deficit, world)) return;
-        tryGatherElement(resource, deficit);
+        tryGatherElement(resource, deficit, world);
     }
 
     /**
@@ -141,11 +141,9 @@ public class ResourceSupplySystem implements System {
         for (UUID id : stations) {
             BuildingData bd = api.getBuilding(id);
             if (bd != null && !bd.isShutdown() && !bd.isDemolishing()) {
-                if (api.getQueue(id).size() < bd.getQueueCapacity()) {
-                    stationId = id;
-                    building = bd;
-                    break;
-                }
+                stationId = id;
+                building = bd;
+                break;
             }
         }
         if (stationId == null || building == null) return false;
@@ -202,7 +200,15 @@ public class ResourceSupplySystem implements System {
 
         BuildingApi api = getBuildingApi();
         if (api != null) {
+            // Each shared queue is counted once per (colony, buildingTypeId) group — a
+            // workstation's getQueue now returns its group's shared queue, so iterating
+            // every station would count the same queue once per member.
+            Set<String> seen = new HashSet<>();
             for (UUID stationId : api.getBuildingsByCategory(colonyId, "workstation")) {
+                BuildingData bd = api.getBuilding(stationId);
+                if (bd == null) continue;
+                String dedupKey = String.valueOf(bd.getColonyId()) + "|" + bd.getBuildingTypeId();
+                if (!seen.add(dedupKey)) continue;
                 for (WorkItem item : api.getQueue(stationId)) {
                     if (!"production:synthesize".equals(item.blueprintId())) continue;
                     if (!sameRecipe(key, item.params().get("recipe_id"))) continue;
@@ -240,19 +246,22 @@ public class ResourceSupplySystem implements System {
         }
 
         int count = 0;
+        Set<String> countedQueueGroups = new HashSet<>();
         for (UUID stationId : api.getBuildingsByCategory(colonyId, "workstation")) {
             BuildingData bd = api.getBuilding(stationId);
             BlockPos pos = bd != null ? bd.getPosition() : null;
-            boolean working = pos != null && runningAnchors.contains(pos);
-            if (!working) {
-                for (WorkItem item : api.getQueue(stationId)) {
-                    if ("production:synthesize".equals(item.blueprintId())) {
-                        working = true;
-                        break;
-                    }
+            boolean isRunning = pos != null && runningAnchors.contains(pos);
+            if (isRunning) { count++; continue; }
+            // A queued synthesize occupies one station per shared group — count each group once.
+            String dedupKey = String.valueOf(bd != null ? bd.getColonyId() : null) + "|"
+                    + (bd != null ? bd.getBuildingTypeId() : "");
+            if (!countedQueueGroups.add(dedupKey)) continue;
+            for (WorkItem item : api.getQueue(stationId)) {
+                if ("production:synthesize".equals(item.blueprintId())) {
+                    count++;
+                    break;
                 }
             }
-            if (working) count++;
         }
         return count;
     }
@@ -273,7 +282,7 @@ public class ResourceSupplySystem implements System {
         return id != null && id.startsWith("minecraft:") ? id.substring("minecraft:".length()) : id;
     }
 
-    private void tryGatherElement(ResourceId resource, int deficit) {
+    private void tryGatherElement(ResourceId resource, int deficit, @Nullable World world) {
         ElementType element;
         try {
             element = ElementType.valueOf(resource.id().toUpperCase());
@@ -287,19 +296,19 @@ public class ResourceSupplySystem implements System {
         BuildingConfigLoader configLoader = BuildingConfigLoader.getInstance();
         List<UUID> nodeBuildings = api.getBuildingsByCategory(null, "node");
 
+        // A representative node producing this element. All nodes of an element share one
+        // queue, so the picked node only needs to be a valid member of that element's group.
+        UUID representativeId = null;
+        int perHarvest = 0;
+        int channelTicks = 0;
+        String blueprint = null;
         for (UUID buildingId : nodeBuildings) {
-            if (api.isBuildingOccupied(buildingId)) continue;
-            if (!api.getQueue(buildingId).isEmpty()) continue;
-
             BuildingData bd = api.getBuilding(buildingId);
             if (bd == null || bd.isShutdown() || !bd.isStructureIntact()) continue;
-
             BuildingConfig config = configLoader.get(bd.getBuildingTypeId());
             if (config == null) continue;
-
             NodeConfig nodeConfig = config.nodeConfig();
             if (nodeConfig == null) continue;
-
             ElementType produced;
             try {
                 produced = ElementType.valueOf(nodeConfig.element().toUpperCase());
@@ -307,20 +316,83 @@ public class ResourceSupplySystem implements System {
                 continue;
             }
             if (produced != element) continue;
-
-            BlockPos pos = bd.getPosition();
-            Map<String, JsonElement> params = new LinkedHashMap<>();
-            params.put("anchor", posToJsonArray(pos));
-            params.put("element", new JsonPrimitive(nodeConfig.element()));
-            params.put("amount", new JsonPrimitive(nodeConfig.amountPerHarvest()));
-            params.put("channel_ticks", new JsonPrimitive(nodeConfig.channelTicks()));
-
-            api.enqueueWork(buildingId, new WorkItem(nodeConfig.blueprint(), params,
-                    WandscapeConstants.TASK_PRIORITY_AUTO));
-            Log.info(TAG, "shortfall {} x{} → gather on node {}",
-                    element, deficit, buildingId.toString().substring(0, 8));
-            return;
+            representativeId = buildingId;
+            perHarvest = nodeConfig.amountPerHarvest();
+            channelTicks = nodeConfig.channelTicks();
+            blueprint = nodeConfig.blueprint();
+            break;
         }
+        if (representativeId == null || perHarvest <= 0) return;
+
+        // How many harvests are still needed beyond what's already queued/running — so
+        // repeated shortfall scans don't pile up redundant gathers.
+        int inFlight = countGatherInFlight(element, world);
+        int remaining = Math.max(0, deficit - inFlight);
+        int harvests = (remaining + perHarvest - 1) / perHarvest; // ceil
+        if (harvests <= 0) return;
+
+        // Queue the shortfall as separate single-harvest tasks on the element's shared queue;
+        // idle nodes of that element claim them concurrently.
+        BuildingData rep = api.getBuilding(representativeId);
+        BlockPos anchor = rep != null ? rep.getPosition() : null;
+        for (int i = 0; i < harvests; i++) {
+            Map<String, JsonElement> params = new LinkedHashMap<>();
+            if (anchor != null) params.put("anchor", posToJsonArray(anchor));
+            params.put("element", new JsonPrimitive(element.name().toLowerCase()));
+            params.put("amount", new JsonPrimitive(perHarvest));
+            params.put("channel_ticks", new JsonPrimitive(channelTicks));
+            api.enqueueWork(representativeId, new WorkItem(blueprint, params,
+                    WandscapeConstants.TASK_PRIORITY_AUTO));
+        }
+        Log.info(TAG, "shortfall {} x{} → gather on node {} ({} harvests, {} already in flight)",
+                element, deficit, representativeId.toString().substring(0, 8), harvests, inFlight);
+    }
+
+    /**
+     * Sum of {@code node:gather} output for {@code element} already queued in the element's
+     * shared queue or running in the pool. Counts each shared queue once (deduped by
+     * colony + element) so fan-out doesn't double-enqueue.
+     */
+    private static int countGatherInFlight(ElementType element, @Nullable World world) {
+        int total = 0;
+        if (world != null) {
+            for (GlobalTask t : world.taskPool.all()) {
+                if (t.state == TaskState.COMPLETED) continue;
+                if (!"node:gather".equals(t.blueprintId)) continue;
+                if (!sameElement(element, t.taskParams.get("element"))) continue;
+                total += intParam(t.taskParams.get("amount"));
+            }
+        }
+
+        BuildingApi api = getBuildingApi();
+        if (api == null) return total;
+        Set<String> seen = new HashSet<>();
+        for (UUID nodeId : api.getBuildingsByCategory(null, "node")) {
+            BuildingData bd = api.getBuilding(nodeId);
+            if (bd == null) continue;
+            String nodeElem = nodeElement(bd);
+            if (nodeElem == null) continue;
+            String dedupKey = String.valueOf(bd.getColonyId()) + "|" + nodeElem;
+            if (!seen.add(dedupKey)) continue;
+            for (WorkItem item : api.getQueue(nodeId)) {
+                if (!"node:gather".equals(item.blueprintId())) continue;
+                if (!sameElement(element, item.params().get("element"))) continue;
+                total += intParam(item.params().get("amount"));
+            }
+        }
+        return total;
+    }
+
+    /** The element a node building produces, or null if it's not a node / has no node_config. */
+    @Nullable
+    private static String nodeElement(BuildingData bd) {
+        BuildingConfig cfg = BuildingConfigLoader.getInstance().get(bd.getBuildingTypeId());
+        return cfg != null && cfg.nodeConfig() != null ? cfg.nodeConfig().element() : null;
+    }
+
+    private static boolean sameElement(ElementType element, JsonElement param) {
+        return param != null && param.isJsonPrimitive() && param.getAsJsonPrimitive().isString()
+                && element.name().equalsIgnoreCase(param.getAsString());
     }
 
     @Nullable

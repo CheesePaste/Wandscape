@@ -857,12 +857,6 @@
   "comfort": 2,
   "magic": 8,
   "wonder": 2,
-  "queue": {
-    "capacity": 60,
-    "task_types": [
-      "crafting"
-    ]
-  },
   "unlock_requirement": {
     "min_colony_level": 1
   },

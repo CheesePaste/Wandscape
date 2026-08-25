@@ -2722,12 +2722,6 @@
   "comfort": 1,
   "magic": 2,
   "wonder": 11,
-  "queue": {
-    "capacity": 5,
-    "task_types": [
-      "building"
-    ]
-  },
   "unlock_requirement": {
     "min_colony_level": 1
   },
