@@ -7,6 +7,7 @@ import javax.annotation.Nullable;
 import com.wsteam.wandscape.production.data.BrewPotionRecipe;
 import com.wsteam.wandscape.production.data.CraftWandRecipe;
 import com.wsteam.wandscape.production.data.RecipeUnlockRequirement;
+import com.wsteam.wandscape.production.internal.ProductionAffordability;
 import com.wsteam.wandscape.production.internal.RecipeUnlockChecker;
 import com.wsteam.wandscape.shared.data.ElementType;
 
@@ -31,8 +32,6 @@ public record CraftingStationPacket(BlockPos stationPos, ListTag recipes, String
 
     public static final StreamCodec<RegistryFriendlyByteBuf, CraftingStationPacket> STREAM_CODEC =
             StreamCodec.of(CraftingStationPacket::write, CraftingStationPacket::read);
-
-    private static final int MAX_PER_OPERATION = 64;
 
     @Override
     public Type<? extends CustomPacketPayload> type() {
@@ -68,7 +67,7 @@ public record CraftingStationPacket(BlockPos stationPos, ListTag recipes, String
                                               @Nullable UUID colonyId,
                                               Map<ElementType, Long> elementMap) {
         boolean unlocked = RecipeUnlockChecker.isUnlocked(colonyId, unlockRequirement);
-        int maxAffordable = computeMaxAffordable(cost, elementMap);
+        int maxAffordable = ProductionAffordability.computeMaxAffordable(cost, elementMap);
 
         CompoundTag tag = new CompoundTag();
         tag.putString("id", id);
@@ -111,17 +110,6 @@ public record CraftingStationPacket(BlockPos stationPos, ListTag recipes, String
             tag.put("unlock_requirement", unlockTag);
         }
         return tag;
-    }
-
-    private static int computeMaxAffordable(Map<ElementType, Long> costPerUnit, Map<ElementType, Long> elements) {
-        int max = MAX_PER_OPERATION;
-        for (var entry : costPerUnit.entrySet()) {
-            long available = elements.getOrDefault(entry.getKey(), 0L);
-            if (entry.getValue() <= 0) continue;
-            int canAfford = (int) (available / entry.getValue());
-            if (canAfford < max) max = canAfford;
-        }
-        return max;
     }
 
     public List<RecipeEntry> entries() {

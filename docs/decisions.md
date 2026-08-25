@@ -2,6 +2,16 @@
 
 本文件记录偏离直觉的设计选择及其原因，供后续开发快速理解「为什么这么做」。
 
+## 2026-08-25：生产任务数量滑块去 64 硬上限——加 −64/+64 步进按钮
+
+**需求**：工作站/合成站/魔法工坊发布合成任务时，数量滑条最多只能拉到 64（一组），想一次合成大量物品（如 3000 个）只能反复拖到 64 再提交，极其繁琐。玩家想要滑条左右各加一个 `-64` / `+64` 按钮，按「一组」快速增减，从而能超过 64。
+
+**决策**：把上限抬升到「真实可负担量」并加规格化步进按钮。根因是 64 上限存在两处，一并移除：(1) 三个 packet（`WorkstationDataPacket`/`CraftingStationPacket`/`MagicStationPacket`）的私有 `computeMaxAffordable` 以 `MAX_PER_OPERATION=64` 为起点硬顶合成配方 `maxAffordable`；(2) `WorkstationScreen.updateSliderForDecompose` 用 `min(count, MAX_QTY=64)` 钳制分解量。执行层（`WandscapeBlockInteractExecutor.executeDecompose/executeSynthesize/executeCraftWand`）本就不限 count（蓝图 `count` 是普通 int），抬升安全。`computeMaxAffordable` 抽成共享纯函数 `ProductionAffordability`（可单测、无 MC 依赖），三个 packet 引用之。
+
+**为什么**：单次 64 是便利性上限，与「能负担多少」的语义不符；钳到 64 反而逼玩家反复提交小任务。按真实可负担量/库存数做上限，滑块（细调）+ ±64 按钮（粗调）组合才符合批量合成直觉。
+
+**影响**：三个生产界面数量滑条带 `-64`/`+64` 按钮；合成/法杖/法术滑条 max = 真实可负担量、分解滑条 max = 物品库存数；`ProductionAffordabilityTest` 新增 6 用例守护（多原料取最小、零成本跳过、量不足归零、可超 64、空成本无界）。采集节点（NodeScreen）与商店补货（ShopScreen）不改——后者本就有 ±1 步进，语义不同。
+
 ## 2026-08-25：撤回未完成建筑的材料返还——只退「未放置」部分，已放置交给拆除 salvage
 
 **需求**：撤回（V 面板撤销，`cancelBuilding`）一个「未完成建造」的建筑时，需把玩家为它支付的材料退还给仓库。但原实现 `refundMaterials` 按蓝图**全量**退款，紧接着 `demolishBuilding` 又会逐块 `place air` 触发 `AsyncTransformExecutor.performSalvage`，按 `Block.getDrops` 把已建方块的实物再返一遍——两段叠加，净返还 = 全量成本 + 已放部分实物 = **刷物品**（例：蓝图 100 木，开工批量扣除 100 木，建到一半撤回 = 退 100 + 拆掉 60 块掉落 60 = 拿回 160，净赚 60）。

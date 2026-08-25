@@ -39,7 +39,6 @@ public class WorkstationScreen extends MedievalScreen {
 
     private static final int PW = 400;
     private static final int PH = 220;
-    private static final int MAX_QTY = 64;
     // Left panel width (existing content)
     private static final int LEFT_PW = 240;
     // Right panel (TaskQueuePanel) — shorter, starts higher
@@ -239,8 +238,14 @@ public class WorkstationScreen extends MedievalScreen {
 
         // Quantity slider + submit
         int controlY = listY + listH + 6;
-        slider = new Slider(contentX, controlY, 120, 1, 1, 1, v -> {});
+        slider = new Slider(contentX + 32, controlY, 88, 1, 1, 1, v -> {});
         addRenderableWidget(slider);
+        addRenderableWidget(new MedievalButton(contentX, controlY + 4, 30, 18,
+                Component.literal("-64"),
+                () -> slider.setValue(slider.getValue() - 64)));
+        addRenderableWidget(new MedievalButton(contentX + 122, controlY + 4, 30, 18,
+                Component.literal("+64"),
+                () -> slider.setValue(slider.getValue() + 64)));
 
         submitBtn = new MedievalButton(contentX + contentW - 70, controlY + 4, 70, 18,
                 I18n.name("gui.wandscape.common.submit", "Submit"), this::onSubmit);
@@ -268,7 +273,7 @@ public class WorkstationScreen extends MedievalScreen {
             slider.setValue(1);
             return;
         }
-        int max = (int) Math.min(entry.count(), MAX_QTY);
+        int max = (int) Math.min(entry.count(), Integer.MAX_VALUE);
         slider.setMax(Math.max(1, max));
         slider.setValue(Math.min(slider.getValue(), max));
     }

@@ -32,10 +32,11 @@
 - `CraftingStationScreen`：搜索框 + 配方列表（法杖+药水）+ 数量滑条 + Submit + 右侧 TaskQueuePanel；Submit 按配方 type 发 RequestProductionTaskPacket("craft_wand" / "brew_potion")；药水行内显示额外原料（玻璃瓶）。每 20 tick 用 TaskQueueModifyPacket("refresh") 刷队列。
 - `MagicStationScreen`：镜像 CraftingStationScreen，列表显示卷轴图标 + 魔法名 + 元素成本；Submit 发 "craft_spell"。
 - `WorkstationScreen`：双标签 Decompose/Synthesize；Submit 分别发 "decompose"（携带 itemId）与 "synthesize"（携带 recipeId）。均按 lockedReason（"unlocked"/"colony"/"elements"）渲染锁与成本。
+- 三个界面共用同一数量滑条：滑块 max = maxAffordable（合成/法杖/法术）或物品库存数（分解），左右各带 −64 / +64 步进按钮按一组快速增减（`Slider.setValue` 夹到 [min,max]，越界为安全 no-op）；合成/法杖/法术的滑条上限由 `ProductionAffordability.computeMaxAffordable` 按真实可负担量给出，不再被单次 64 硬顶。
 
 ## network/ 包
 
-- `CraftingStationPacket`（S→C）：maxAffordable 上限 64、locked_reason、unlock_requirement NBT；配方条目带 type（wand/potion）+ extra_inputs。
+- `CraftingStationPacket`（S→C）：maxAffordable=按当前元素/成本可负担量（无单次 64 硬上限，见 `ProductionAffordability`）、locked_reason、unlock_requirement NBT；配方条目带 type（wand/potion）+ extra_inputs。
 - `MagicStationPacket`（S→C）：镜像 CraftingStationPacket，携带 magic_id。
 - `RequestProductionTaskPacket`（C→S）：服务端映射 blueprint `production:{decompose,synthesize,craft_wand,craft_spell,brew_potion}`；**服务端二次校验解锁**；channel_ticks：synthesize/decompose = WORKSTATION_CRAFT_TICKS_PER_UNIT(10)×qty、craft_wand / craft_spell = CRAFTING_STATION_CRAFT_TICKS_PER_UNIT(1200)×qty、brew_potion=120；enqueueWork 入队。
 - `WorkstationDataPacket`（S→C）：itemList + recipeList。

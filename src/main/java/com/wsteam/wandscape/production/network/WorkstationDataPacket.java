@@ -6,6 +6,7 @@ import javax.annotation.Nullable;
 
 import com.wsteam.wandscape.production.data.RecipeUnlockRequirement;
 import com.wsteam.wandscape.production.data.SynthesizeRecipe;
+import com.wsteam.wandscape.production.internal.ProductionAffordability;
 import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.data.ItemKey;
 
@@ -31,8 +32,6 @@ public record WorkstationDataPacket(BlockPos stationPos, ListTag items, ListTag 
 
     public static final StreamCodec<RegistryFriendlyByteBuf, WorkstationDataPacket> STREAM_CODEC =
             StreamCodec.of(WorkstationDataPacket::write, WorkstationDataPacket::read);
-
-    private static final int MAX_PER_OPERATION = 64;
 
     @Override
     public Type<? extends CustomPacketPayload> type() {
@@ -75,7 +74,7 @@ public record WorkstationDataPacket(BlockPos stationPos, ListTag items, ListTag 
             // RequestProductionTaskPacket.handleServer() to prevent tampering.
             boolean unlocked = com.wsteam.wandscape.production.internal.RecipeUnlockChecker
                     .isUnlocked(colonyId, r.unlockRequirement());
-            int maxAffordable = computeMaxAffordable(r.cost(), elementMap);
+            int maxAffordable = ProductionAffordability.computeMaxAffordable(r.cost(), elementMap);
             CompoundTag tag = new CompoundTag();
             tag.putString("id", r.id());
             tag.putString("output", r.outputItem());
@@ -108,17 +107,6 @@ public record WorkstationDataPacket(BlockPos stationPos, ListTag items, ListTag 
         }
 
         return new WorkstationDataPacket(stationPos, itemList, recipeList, creator);
-    }
-
-    private static int computeMaxAffordable(Map<ElementType, Long> costPerUnit, Map<ElementType, Long> elements) {
-        int max = MAX_PER_OPERATION;
-        for (var entry : costPerUnit.entrySet()) {
-            long available = elements.getOrDefault(entry.getKey(), 0L);
-            if (entry.getValue() <= 0) continue;
-            int canAfford = (int) (available / entry.getValue());
-            if (canAfford < max) max = canAfford;
-        }
-        return max;
     }
 
     public List<DecomposableEntry> decomposableEntries() {

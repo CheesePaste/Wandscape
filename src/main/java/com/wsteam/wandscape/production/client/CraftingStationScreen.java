@@ -193,8 +193,14 @@ public class CraftingStationScreen extends MedievalScreen {
 
         // Quantity slider + submit
         int controlY = listY + listH + 6;
-        slider = new Slider(contentX, controlY, 120, 1, 1, 1, v -> {});
+        slider = new Slider(contentX + 32, controlY, 88, 1, 1, 1, v -> {});
         addRenderableWidget(slider);
+        addRenderableWidget(new MedievalButton(contentX, controlY + 4, 30, 18,
+                Component.literal("-64"),
+                () -> slider.setValue(slider.getValue() - 64)));
+        addRenderableWidget(new MedievalButton(contentX + 122, controlY + 4, 30, 18,
+                Component.literal("+64"),
+                () -> slider.setValue(slider.getValue() + 64)));
 
         addRenderableWidget(new MedievalButton(
                 contentX + contentW - 70, controlY + 4, 70, 18,
