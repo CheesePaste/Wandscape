@@ -78,6 +78,9 @@ public final class WandscapePanelOverlay {
         // Build mode right pop panel
         com.wsteam.wandscape.projection.client.BuildPopPanelOverlay.render(g, mc.font, screenW, screenH, mx, my);
 
+        // Task & Mage Management Drawer
+        TaskManagementOverlay.render(g, mc.font, screenW, screenH, mx, my);
+
         renderFills(g, mc.font, screenW, screenH, mx, my);
         g.bufferSource().endBatch(RenderType.guiOverlay());
         renderTexts(g, mc.font, screenW, screenH, mx, my);
@@ -128,14 +131,15 @@ public final class WandscapePanelOverlay {
         net.minecraft.resources.ResourceLocation[] tabIcons = {
             WandscapeTheme.ICON_TAB_BUILD,
             WandscapeTheme.ICON_TAB_ROAD,
-            WandscapeTheme.ICON_TAB_STATS
+            WandscapeTheme.ICON_TAB_STATS,
+            WandscapeTheme.ICON_TAB_EDITOR
         };
 
         WandscapePanelState.SubMode activeMode = WandscapePanelState.getActiveSubMode();
         int hoveredIcon = getSidebarHoveredIcon(mx, my, screenH);
 
-        // Build / Road / Stats tabs
-        for (int i = 0; i < 3; i++) {
+        // Build / Road / Stats / Tasks tabs
+        for (int i = 0; i < 4; i++) {
             int iy = startY + i * totalIconH;
             int ix = (SIDEBAR_W - SIDEBAR_ICON_S) / 2;
             int color = isTabActive(i, activeMode) ? WandscapeTheme.COLOR_TEXT_ACTIVE : WandscapeTheme.COLOR_TEXT_NORMAL;
@@ -143,7 +147,7 @@ public final class WandscapePanelOverlay {
         }
 
         // Warning icon (with gap below tabs)
-        int warnY = startY + 3 * totalIconH + 12;
+        int warnY = startY + 4 * totalIconH + 12;
         int ix = (SIDEBAR_W - SIDEBAR_ICON_S) / 2;
         WandscapeTheme.drawIcon(g, WandscapeTheme.ICON_WARNING, ix, warnY, SIDEBAR_ICON_S, SIDEBAR_ICON_S, WandscapeTheme.COLOR_TEXT_NORMAL);
     }
@@ -162,7 +166,7 @@ public final class WandscapePanelOverlay {
         int maxLines = 12;
         int h = 12 + lineH * 2 + 4 + lineH * Math.min(maxLines, total) + 4;
         int x = SIDEBAR_W;
-        int startIconY = TOP_BAR_H + 8 + 3 * (SIDEBAR_ICON_S + SIDEBAR_GAP) + 12;
+        int startIconY = TOP_BAR_H + 8 + 4 * (SIDEBAR_ICON_S + SIDEBAR_GAP) + 12;
         int y = startIconY;
 
         if (y + h > screenH) y = screenH - h;
@@ -429,15 +433,15 @@ public final class WandscapePanelOverlay {
         int startY = TOP_BAR_H + 8;
         int totalH = SIDEBAR_ICON_S + SIDEBAR_GAP;
 
-        // Tabs 0–2
-        for (int i = 0; i < 3; i++) {
+        // Tabs 0–3 (Build, Road, Stats, Tasks)
+        for (int i = 0; i < 4; i++) {
             int iy = startY + i * totalH;
             if (my >= iy && my <= iy + SIDEBAR_ICON_S) return i;
         }
 
-        // Warning icon (index 3)
-        int warnY = startY + 3 * totalH + 12;
-        if (my >= warnY && my <= warnY + SIDEBAR_ICON_S) return 3;
+        // Warning icon (index 4)
+        int warnY = startY + 4 * totalH + 12;
+        if (my >= warnY && my <= warnY + SIDEBAR_ICON_S) return 4;
 
         return -1;
     }
@@ -451,6 +455,7 @@ public final class WandscapePanelOverlay {
             case 0 -> activeMode == WandscapePanelState.SubMode.BUILD_PROJECTION;
             case 1 -> activeMode == WandscapePanelState.SubMode.ROAD_PROJECTION;
             case 2 -> activeMode == WandscapePanelState.SubMode.STATS;
+            case 3 -> activeMode == WandscapePanelState.SubMode.TASKS;
             default -> false;
         };
     }

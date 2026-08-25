@@ -353,6 +353,22 @@ public class GlobalTaskPool {
         return npcId;
     }
 
+    /** Update priority of an existing task. Re-sorts assignableSet if pending. */
+    public boolean updatePriority(long taskId, int newPriority) {
+        GlobalTask task = tasksById.get(taskId);
+        if (task == null) return false;
+        if (task.state == TaskState.PENDING_ASSIGN) {
+            removeFromAssignable(task);
+            task.priority = newPriority;
+            addToAssignable(task);
+        } else {
+            task.priority = newPriority;
+        }
+        notifyChanged();
+        Log.info(TAG, "updatePriority #%d '%s' → %d", taskId, task.sequence.label(), newPriority);
+        return true;
+    }
+
     /** Advance stepIndex on the global task. */
     public void advanceStep(long taskId, int newStepIndex) {
         GlobalTask task = tasksById.get(taskId);

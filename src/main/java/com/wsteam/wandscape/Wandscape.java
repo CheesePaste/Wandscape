@@ -450,6 +450,7 @@ public class Wandscape {
         NeoForge.EVENT_BUS.register(BuildingInteractHandler.class);
         NeoForge.EVENT_BUS.register(BuildingBreakHandler.class);
         NeoForge.EVENT_BUS.register(com.wsteam.wandscape.shared.network.PanelStateTracker.class);
+        NeoForge.EVENT_BUS.register(com.wsteam.wandscape.shared.network.tasks.TaskPanelSyncTracker.class);
         DailySettlementSystem.register();
         StatisticsCollector.register();
         decorationBonusSystem = DecorationBonusSystem.register();
@@ -833,7 +834,28 @@ public class Wandscape {
                 .playToClient(
                         com.wsteam.wandscape.road.network.RoadStudioEnterPacket.TYPE,
                         com.wsteam.wandscape.road.network.RoadStudioEnterPacket.STREAM_CODEC,
-                        com.wsteam.wandscape.road.network.RoadStudioEnterPacket::handleClient);
+                        com.wsteam.wandscape.road.network.RoadStudioEnterPacket::handleClient)
+                // ── Task & Mage Management Panel ──
+                .playToServer(
+                        com.wsteam.wandscape.shared.network.tasks.TaskPanelSubscribePacket.TYPE,
+                        com.wsteam.wandscape.shared.network.tasks.TaskPanelSubscribePacket.STREAM_CODEC,
+                        (packet, ctx) -> com.wsteam.wandscape.shared.network.tasks.TaskPanelSubscribePacket
+                                .handleServer(packet, (net.minecraft.server.level.ServerPlayer) ctx.player()))
+                .playToClient(
+                        com.wsteam.wandscape.shared.network.tasks.TaskManagementSyncPacket.TYPE,
+                        com.wsteam.wandscape.shared.network.tasks.TaskManagementSyncPacket.STREAM_CODEC,
+                        (packet, ctx) -> com.wsteam.wandscape.shared.network.tasks.TaskManagementSyncPacket
+                                .handleClient(packet))
+                .playToServer(
+                        com.wsteam.wandscape.shared.network.tasks.TaskManagementActionPacket.TYPE,
+                        com.wsteam.wandscape.shared.network.tasks.TaskManagementActionPacket.STREAM_CODEC,
+                        (packet, ctx) -> com.wsteam.wandscape.shared.network.tasks.TaskManagementActionPacket
+                                .handleServer(packet, (net.minecraft.server.level.ServerPlayer) ctx.player()))
+                .playToServer(
+                        com.wsteam.wandscape.shared.network.tasks.MageModeActionPacket.TYPE,
+                        com.wsteam.wandscape.shared.network.tasks.MageModeActionPacket.STREAM_CODEC,
+                        (packet, ctx) -> com.wsteam.wandscape.shared.network.tasks.MageModeActionPacket
+                                .handleServer(packet, (net.minecraft.server.level.ServerPlayer) ctx.player()));
     }
 
     private void onEntityAttributeCreation(EntityAttributeCreationEvent event) {

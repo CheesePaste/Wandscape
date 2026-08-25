@@ -263,6 +263,27 @@ public final class OverviewFlightController {
                     OverviewClientState.getCamX() + moveX,
                     OverviewClientState.getCamY() + moveY,
                     OverviewClientState.getCamZ() + moveZ);
+            // Manual WASD cancels mage camera tracking
+            com.wsteam.wandscape.shared.ui.panel.TaskManagementClientState.setTrackingEntityId(-1);
+        } else {
+            // Smoothly track selected Mage if active
+            int trackingId = com.wsteam.wandscape.shared.ui.panel.TaskManagementClientState.getTrackingEntityId();
+            if (trackingId >= 0 && mc.level != null) {
+                var entity = mc.level.getEntity(trackingId);
+                if (entity != null) {
+                    double tx = entity.getX();
+                    double ty = entity.getY() + 14.0;
+                    double tz = entity.getZ() - 14.0;
+                    double cx = OverviewClientState.getCamX();
+                    double cy = OverviewClientState.getCamY();
+                    double cz = OverviewClientState.getCamZ();
+                    double lerpSpeed = Math.min(1.0, elapsed * 6.0);
+                    OverviewClientState.setCamPosition(
+                            cx + (tx - cx) * lerpSpeed,
+                            cy + (ty - cy) * lerpSpeed,
+                            cz + (tz - cz) * lerpSpeed);
+                }
+            }
         }
 
         // ── Update building ghost position every render frame (not just 20Hz tick) ──

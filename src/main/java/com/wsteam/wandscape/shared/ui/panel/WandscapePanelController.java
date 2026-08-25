@@ -278,6 +278,18 @@ public final class WandscapePanelController {
             }
         }
 
+        // ── Task & Mage Management Drawer ──
+        if (TaskManagementOverlay.isActive()) {
+            if (TaskManagementOverlay.handleMouseClick(mouseX, mouseY, screenH)) {
+                event.setCanceled(true);
+                return;
+            }
+            if (TaskManagementOverlay.isOverDrawer(mouseX, mouseY, screenH)) {
+                event.setCanceled(true);
+                return;
+            }
+        }
+
         // ── Top Bar Help ? button ──
         if (mouseY <= WandscapePanelOverlay.TOP_BAR_H) {
             int helpX = screenW - 24;
@@ -291,11 +303,11 @@ public final class WandscapePanelController {
         // ── Sidebar tabs ──
         if (mouseX <= WandscapePanelOverlay.SIDEBAR_W && mouseY >= WandscapePanelOverlay.TOP_BAR_H) {
             int sidebarIconIndex = getSidebarIconAt(mouseX, mouseY, screenW, screenH);
-            if (sidebarIconIndex >= 0 && sidebarIconIndex < 3) {
+            if (sidebarIconIndex >= 0 && sidebarIconIndex < 4) {
                 handleTabClick(sidebarIconIndex);
                 event.setCanceled(true);
                 return;
-            } else if (sidebarIconIndex == 3) {
+            } else if (sidebarIconIndex == 4) {
                 Minecraft.getInstance().setScreen(new AnomalyScreen());
                 event.setCanceled(true);
                 return;
@@ -372,15 +384,15 @@ public final class WandscapePanelController {
         int startY = WandscapePanelOverlay.TOP_BAR_H + 8;
         int totalH = WandscapePanelOverlay.SIDEBAR_ICON_S + WandscapePanelOverlay.SIDEBAR_GAP;
 
-        // Tabs 0–2 (Build, Road, Stats)
-        for (int i = 0; i < 3; i++) {
+        // Tabs 0–3 (Build, Road, Stats, Tasks)
+        for (int i = 0; i < 4; i++) {
             int iy = startY + i * totalH;
             if (mouseY >= iy && mouseY <= iy + WandscapePanelOverlay.SIDEBAR_ICON_S) return i;
         }
 
-        // Warning icon (index 3)
-        int warnY = startY + 3 * totalH + 12;
-        if (mouseY >= warnY && mouseY <= warnY + WandscapePanelOverlay.SIDEBAR_ICON_S) return 3;
+        // Warning icon (index 4)
+        int warnY = startY + 4 * totalH + 12;
+        if (mouseY >= warnY && mouseY <= warnY + WandscapePanelOverlay.SIDEBAR_ICON_S) return 4;
 
         return -1;
     }
@@ -392,6 +404,7 @@ public final class WandscapePanelController {
             case 0 -> WandscapePanelState.SubMode.BUILD_PROJECTION;
             case 1 -> WandscapePanelState.SubMode.ROAD_PROJECTION;
             case 2 -> WandscapePanelState.SubMode.STATS;
+            case 3 -> WandscapePanelState.SubMode.TASKS;
             default -> null;
         };
 
@@ -519,7 +532,7 @@ public final class WandscapePanelController {
             return;
         }
 
-        // 1/2/3/4: quick-switch into Build/Road/Stats/Warning（吞掉原版快捷栏切换）。
+        // 1/2/3/4/5: quick-switch into Build/Road/Stats/Tasks/Warning（吞掉原版快捷栏切换）。
         // 面板开着时数字键切子模式，面板关着则保持原版快捷栏。
         if (WandscapePanelState.isPanelOpen()) {
             int digit = switch (key) {
@@ -527,6 +540,7 @@ public final class WandscapePanelController {
                 case GLFW.GLFW_KEY_2 -> 1;
                 case GLFW.GLFW_KEY_3 -> 2;
                 case GLFW.GLFW_KEY_4 -> 3;
+                case GLFW.GLFW_KEY_5 -> 4;
                 default -> -1;
             };
             if (digit >= 0) {
@@ -534,7 +548,7 @@ public final class WandscapePanelController {
                 // handleKeybinds(), so consuming the hotbar click here suppresses the
                 // vanilla hotbar slot switch for this digit.
                 mc.options.keyHotbarSlots[digit].consumeClick();
-                if (digit < 3) {
+                if (digit < 4) {
                     handleTabClick(digit);
                 } else {
                     mc.setScreen(new AnomalyScreen());
@@ -585,13 +599,14 @@ public final class WandscapePanelController {
         // 3. Sub-mode active → exit it, keep the panel open
         if (sub != WandscapePanelState.SubMode.NONE && sub != WandscapePanelState.SubMode.OVERVIEW) {
             WandscapePanelState.exitCurrentSubMode();
-            // Ground-mode / STATS exit leaves the sub-mode set — drop to the bare panel
+            // Ground-mode / STATS / TASKS exit leaves the sub-mode set — drop to the bare panel
             WandscapePanelState.SubMode after = WandscapePanelState.getActiveSubMode();
             if (after == WandscapePanelState.SubMode.BUILD_PROJECTION
                     || after == WandscapePanelState.SubMode.ROAD_PROJECTION
-                    || after == WandscapePanelState.SubMode.STATS) {
+                    || after == WandscapePanelState.SubMode.STATS
+                    || after == WandscapePanelState.SubMode.TASKS) {
                 WandscapePanelState.setSubMode(WandscapePanelState.SubMode.NONE);
-                // 地面/STATS 退出后子模式清空 → 回常态抓取
+                // 地面/STATS/TASKS 退出后子模式清空 → 回常态抓取
                 WandscapePanelState.syncCursorToState();
             }
             return;
@@ -650,10 +665,19 @@ public final class WandscapePanelController {
         }
     }
 
-    // ── Mouse scroll (building selection bar) ──
+    // ── Mouse scroll (building selection bar & task management drawer) ──
 
     static void onMouseScroll(InputEvent.MouseScrollingEvent event) {
-        if (!BuildingSelectionOverlay.isActive() || WandscapePanelState.isPanelHidden()) return;
+        if (WandscapePanelState.isPanelHidden()) return;
+
+        if (TaskManagementOverlay.isActive()) {
+            if (TaskManagementOverlay.handleMouseScroll(event.getScrollDeltaY())) {
+                event.setCanceled(true);
+                return;
+            }
+        }
+
+        if (!BuildingSelectionOverlay.isActive()) return;
 
         int maxScroll = BuildingSelectionOverlay.getMaxScrollOffset();
         if (maxScroll <= 0) return;

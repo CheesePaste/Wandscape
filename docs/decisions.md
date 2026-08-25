@@ -2,6 +2,29 @@
 
 本文件记录偏离直觉的设计选择及其原因，供后续开发快速理解「为什么这么做」。
 
+## 2026-08-25：V 面板全局任务与法师管理抽屉——RTS 式 3D 镜头联动 + 动态节流同步
+
+**需求**：在殖民地发展中，玩家无法直观掌握法师正在忙什么、有哪些任务正在执行、排队等待、哪些卡在前置资源不足（缺少具体什么元素），也无法在鸟瞰/全局模式下便捷调整任务优先级（加急/取消）或一键跟踪/调度法师。
+
+**决策**：
+1. **交互形式**：在 V 面板 Overview / 鸟瞰模式下新增第 4 个侧边栏 Tab（快捷键 `4`），呼出 RTS 风格半透明暗色磨砂玻璃抽屉（`TaskManagementOverlay`，宽度 380px，支持鼠标独立滚轮滚动与多维度卡片操作）。关闭抽屉自动无缝退回纯 Overview 鸟瞰视角。
+2. **视图架构**：
+   - **【📜 任务大厅】**：支持 `全部/进行中/缺资源/排队中/待办` 5 大维度过滤与中英文即时关键词搜索。展示任务所属建筑/蓝图、执行法师、步骤/吟唱进度条，缺资源时醒目红底标签透传缺失元素种类及 `缺口量 / 库存量`。卡片右侧集成 `[🔍 定位镜头]`, `[⚡ 加急 (+50优先级)]`, `[✕ 取消任务]` 操作。
+   - **【🧙 法师名册】**：展示法师头像状态、生命/魔力双条、四维战斗属性（法强/工速/施法/护甲）、手持法杖与当前执行任务。提供 `[🔍 聚焦镜头]`, `[🎥 持续跟踪]`, `[🛡 跟随模式]`, `[🕊 和平模式]` 四大快捷控制。持续跟踪状态下，Overview 相机每一帧平滑插值追踪法师实体，玩家按 WASD 即自动脱离追踪。
+3. **网络同步与性能**：
+   - 采用**按需订阅机制**（`TaskPanelSubscribePacket` 进入订阅/退出退订），无玩家打开面板时服务端 0 开销。
+   - 服务端 `TaskPanelSyncTracker` 采用 **10-tick (0.5s) 合并节流**，仅在有订阅玩家且面板脏或周期到达时生成精简 DTO 快照（`TaskSummaryDto`/`MageSummaryDto`/`ResourceShortageDto`）推送，严禁高频泛洪。
+   - 任务优先级调整在 `GlobalTaskPool` 中动态自平衡 `assignableSet` 排序，保持调度器原子性。
+
+**为什么**：RTS 抽屉与 3D 镜头的深度结合，使宏观管理与微观调度合二为一；订阅制与 10-tick 节流保证大型殖民地多人联机下的极低网络与 CPU 开销。
+
+**影响**：
+- `shared/network/tasks/`：新增 `TaskPanelSubscribePacket`, `TaskManagementSyncPacket`, `TaskManagementActionPacket`, `MageModeActionPacket`, `TaskPanelSyncTracker`。
+- `shared/ui/panel/`：新增 `TaskManagementClientState`, `TaskManagementOverlay`；升级 `WandscapePanelState`（新增 `SubMode.TASKS`）、`WandscapePanelOverlay`（4 Tab 渲染）、`WandscapePanelController`（按键与点击分发）、`OverviewFlightController`（法师相机跟踪）。
+- `task/engine/pool/`：`GlobalTask.priority` 改为可修改并在 `GlobalTaskPool.updatePriority` 中动态重排 `assignableSet`。
+- 单元测试与构建：新增 `GlobalTaskPriorityUpdateTest`、`TaskManagementClientStateTest`，全量测试 100% 通过。
+
+
 ## 2026-08-25：游客头顶瞬态气泡统一为物品渲染——服务元素走元素物品、空交互不弹泡
 
 **需求**：游客逛完商店，头顶气泡显示购买的商品；逛服务建筑则显示产出的元素。过去元素不是物品、商品是物品，气泡渲染因此按 `iconKind` 分两套（`drawItemIcon` 渲真实物品 vs `drawElementIcon` 渲主题色染色精灵）。现在七种元素有了物品形态（`ElementItem`），「物品 vs 元素」的渲染分野失去依据，可合并简化。

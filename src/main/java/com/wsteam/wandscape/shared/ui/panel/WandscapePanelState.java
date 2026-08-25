@@ -18,7 +18,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
  */
 public final class WandscapePanelState {
 
-    public enum SubMode { NONE, BUILD_PROJECTION, ROAD_PROJECTION, STATS, OVERVIEW }
+    public enum SubMode { NONE, BUILD_PROJECTION, ROAD_PROJECTION, STATS, OVERVIEW, TASKS }
 
     /** Build projection phase: BAR = selecting building (UI, no ghost), PLACING = in-world placement (ghost visible). */
     public enum BuildPhase { BAR, PLACING }
@@ -353,7 +353,7 @@ public final class WandscapePanelState {
         }
         switch (activeSubMode) {
             case OVERVIEW, NONE, STATS -> cursorLifted = false;
-            case BUILD_PROJECTION, ROAD_PROJECTION -> cursorLifted = true;
+            case BUILD_PROJECTION, ROAD_PROJECTION, TASKS -> cursorLifted = true;
         }
     }
 
@@ -447,10 +447,10 @@ public final class WandscapePanelState {
     public static void enterSubMode(SubMode mode) {
         SubMode prev = activeSubMode;
 
-        // OVERVIEW → BUILD_PROJECTION / ROAD_PROJECTION / STATS: keep overview camera active
-        // (STATS is an overlay tab — closing it must return to the overview camera, not kill it)
+        // OVERVIEW → BUILD_PROJECTION / ROAD_PROJECTION / STATS / TASKS: keep overview camera active
+        // (STATS and TASKS are overlay tabs — closing them must return to the overview camera, not kill it)
         if (prev == SubMode.OVERVIEW && (mode == SubMode.BUILD_PROJECTION || mode == SubMode.ROAD_PROJECTION
-                || mode == SubMode.STATS)) {
+                || mode == SubMode.STATS || mode == SubMode.TASKS)) {
             activeSubMode = mode;
             switch (mode) {
                 case BUILD_PROJECTION -> {
@@ -464,6 +464,10 @@ public final class WandscapePanelState {
                     RoadPlacementState.enterProjection();
                     com.wsteam.wandscape.road.client.SplineEditorClientState.enterEditMode();
                     com.wsteam.wandscape.road.client.studio.RoadStudioOverlay.open();
+                    liftCursorForUI();
+                }
+                case TASKS -> {
+                    PacketDistributor.sendToServer(new com.wsteam.wandscape.shared.network.tasks.TaskPanelSubscribePacket(true));
                     liftCursorForUI();
                 }
             }
@@ -484,6 +488,10 @@ public final class WandscapePanelState {
                 RoadPlacementState.enterProjection();
                 com.wsteam.wandscape.road.client.SplineEditorClientState.enterEditMode();
                 com.wsteam.wandscape.road.client.studio.RoadStudioOverlay.open();
+                liftCursorForUI();
+            }
+            case TASKS -> {
+                PacketDistributor.sendToServer(new com.wsteam.wandscape.shared.network.tasks.TaskPanelSubscribePacket(true));
                 liftCursorForUI();
             }
             case OVERVIEW -> com.wsteam.wandscape.overview.client.OverviewFlightController.enter();
@@ -529,6 +537,15 @@ public final class WandscapePanelState {
             case STATS -> {
                 // STATS is a pure overlay tab: entered from overview the camera stays active,
                 // so leaving must return to pure overview (handlePanelEscape/G-key rely on this).
+                if (com.wsteam.wandscape.overview.client.OverviewClientState.isActive()) {
+                    activeSubMode = SubMode.OVERVIEW;
+                    syncCursorToState();
+                    return;
+                }
+            }
+            case TASKS -> {
+                PacketDistributor.sendToServer(new com.wsteam.wandscape.shared.network.tasks.TaskPanelSubscribePacket(false));
+                TaskManagementClientState.reset();
                 if (com.wsteam.wandscape.overview.client.OverviewClientState.isActive()) {
                     activeSubMode = SubMode.OVERVIEW;
                     syncCursorToState();

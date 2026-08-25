@@ -43,7 +43,7 @@ MINIMAL 风格：渐变玻璃面板 + 发光边框 + MedievalColors 调色板。
 |------|------|
 | component/ | MedievalScreen(基类) / MedievalButton / TabBar / ScrollableList / ElementPanel / ProgressIndicator / TaskQueuePanel / Slider / SearchBox(中英双语物品搜索) 等 |
 | vanilla/ | 原版容器共享组件：ToggleableSlot(可按条件显隐的 vanilla 槽) + VanillaPlayerInventory(3×9+快捷栏玩家背包槽区构建器，含箱类坐标公式/显隐绑定/原版槽底渲染) |
-| panel/ | WandscapePanelState + PanelController + PanelOverlay(顶部HUD栏+左侧侧边栏+STATS面板+警告浮层) + BuildingSelectionOverlay + AnomalyScreen |
+| panel/ | WandscapePanelState + PanelController + PanelOverlay(顶部HUD栏+左侧侧边栏+STATS面板+警告浮层) + BuildingSelectionOverlay + AnomalyScreen + TaskManagementOverlay + TaskManagementClientState(全局任务大厅与法师名册抽屉面板) |
 | guidance/ | GuideSession + GuideStep + GuideRegistry + GuideRenderer (左下角四态新手引导弹窗：默认/选卡/射线瞄准/锁定微调，支持点击 ▼/▲ 折叠/展开) |
 | util/ | BuildingPreviewRenderer + WandscapeHighlightRenderer + RenderUtil |
 | (根) | ReplayScreenGuard(回放兼容：ReforgedPlay/ReplayMod 播放中取消所有 MedievalScreen 打开) |
@@ -51,3 +51,14 @@ MINIMAL 风格：渐变玻璃面板 + 发光边框 + MedievalColors 调色板。
 | markdown/ | AST节点(Header/Text/Image/Quote/List/Table/Divider) + MarkdownParser(纯Java解析) + MarkdownRenderWidget(MC渲染控件) + navigation(DocumentHistoryStack历史栈+DocumentLoader文档读取) + texture(MarkdownTextureManager全能图像管理) |
 | skin/ | SkinSprite(精灵图坐标) / SkinRender(9-slice/按钮/关闭按钮/进度条/箭头图标) |
 | theme/ | MedievalColors(金色/紫色/文本/功能色) + WandscapeTheme(V面板覆盖层用RTS绘制基元 + 元素图标) |
+
+## network/tasks/ — 全局任务与法师名册同步
+
+| 协议 / DTO | 职责 |
+|---|---|
+| `TaskPanelSubscribePacket` | 客户端订阅/取消订阅（进入/退出 TASKS 子模式） |
+| `TaskManagementSyncPacket` | 服务端 10-tick (0.5s) 节流广播任务与法师快照数据 |
+| `TaskManagementActionPacket` | 客户端任务操作（加急/取消/改优先级） |
+| `MageModeActionPacket` | 客户端法师模式切换（跟随模式/和平模式） |
+| `TaskSummaryDto` / `MageSummaryDto` / `ResourceShortageDto` | 任务、法师属性与缺失资源紧凑 DTO |
+| `TaskPanelSyncTracker` | 服务端订阅跟踪与全局快照聚合器 |

@@ -18,7 +18,7 @@ public class GlobalTask {
 
     public final long id;
     public final TaskSequence sequence;
-    public final int priority;
+    public int priority;
     public final long createdAt;
 
     /** Blueprint ID used to compile this task. Null for pre-built test tasks. */
