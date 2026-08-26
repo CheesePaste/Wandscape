@@ -92,9 +92,9 @@ public class MagicState {
 
     /**
      * 每 server tick 推进：锁递减；锁占用期间每魔法 CD 冻结，锁释放后才递减。
-     * 每 {@code regenIntervalTicks} 回 1 点魔力，封顶 maxMana。
+     * 每 {@code regenIntervalTicks} 结算回 {@code maxMana * regenFraction} 点魔力，封顶 maxMana。
      */
-    public void tickRegen(float maxMana, int regenIntervalTicks) {
+    public void tickRegen(float maxMana, int regenIntervalTicks, float regenFraction) {
         if (lockTicks > 0) {
             lockTicks--;
         } else {
@@ -108,7 +108,7 @@ public class MagicState {
         manaRegenAccum++;
         if (manaRegenAccum >= regenIntervalTicks) {
             manaRegenAccum = 0;
-            currentMana = Math.min(currentMana + 1f, maxMana);
+            currentMana = Math.min(currentMana + maxMana * regenFraction, maxMana);
         }
     }
 

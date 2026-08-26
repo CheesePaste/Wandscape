@@ -60,8 +60,12 @@ public class Config {
             .defineInRange("npc.regenIntervalTicks", 80, 20, 400);
 
     public static final ModConfigSpec.IntValue NPC_MANA_REGEN_TICKS = BUILDER
-            .comment("Ticks per 1 mana regenerated (10 = 1 point every 0.5s)")
+            .comment("Ticks per mana regen settlement (10 = settle every 0.5s)")
             .defineInRange("npc.manaRegenTicks", 10, 1, 100);
+
+    public static final ModConfigSpec.DoubleValue NPC_MANA_REGEN_FRACTION = BUILDER
+            .comment("Fraction of max mana regenerated per settlement (0.01 = 1% of max; full refill ~50s)")
+            .defineInRange("npc.manaRegenFraction", 0.01, 0.0001, 1.0);
 
     public static final ModConfigSpec.IntValue NPC_WALK_THRESHOLD = BUILDER
             .comment("Max distance in blocks for NPC pathfinding; beyond this they teleport")

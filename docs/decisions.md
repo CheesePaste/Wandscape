@@ -1324,3 +1324,16 @@
 **为什么**：Road 与 Building 数据系统不同源（样条 vs 矩形框），不能硬合并数据模型；但**展示外衣**（瞄准/幽灵/面板）可共享——抽一条"施工工地"复用线，既满足用户"少做重复工"又不破坏建筑/道路各自的正确性。Road 与 Building 的退料机制结果一致（玩家整体拿回），只是落地路径不同（Building=salvage 已放+退未放；Road=无salvage+全退）。
 
 **影响**：`ConstructionSiteDataPacket` 加 `kind`（codec 向后兼容由读端新字节）；`RoadEdge` 新增 `materialCounts`/`segmentTaskId` 持久化；新增 `findEdgeAt`、`RoadSiteData`、`RoadInteractPacket`、`RoadWithdrawPacket`；`RoadAreaSyncPacket` 加 `raycastUnderConstruction`+`RoadBoxHit`。施工中道路可瞄可退，已完成道路不显示白框、不开面板。
+
+## 2026-08-26：NPC 魔力回复改为按上限比例——每 10 tick 结算回 1% 上限
+
+**需求**（用户指令）：NPC 的魔力回复从「每 10 tick 固定回 1 点」改为「每 10 tick 结算一次，回最大魔力 × 1%」，回复速度与魔力上限成正比。
+
+**决策**：
+- `MagicState.tickRegen(maxMana, regenIntervalTicks, regenFraction)`：结算间隔 tick 不变（`npc.manaRegenTicks` 默认 10），单次回复量从 `+1` 改为 `+maxMana × regenFraction`；新增配置 `npc.manaRegenFraction` 默认 0.01（1% 上限）。
+- 回复仍按上限封顶、满蓝时结算累计清零；施法锁占用期间回复照常（与每魔法 CD 冻结解耦）。
+- 配置注释与代码注释只描述行为本身，不标注参考来源。
+
+**为什么**：按固定点数回复时满蓝耗时 = 上限 × 结算间隔，随装备把 MAX_MANA 抬高而线性拉长——高魔力法师回蓝慢到失衡；按上限比例回复则满蓝耗时恒定（默认约 50s），数值随装备成长同步加速，无需按上限区间分段调参。
+
+**影响**：`Config` 新增 `npc.manaRegenFraction`；`MagicState` 单测改为断言「每结算回 1% 上限」；旧存档无需迁移（结算累计 tick 字段与持久化键不变）。

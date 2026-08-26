@@ -264,7 +264,7 @@ npc/internal/ReviveHandler.java     ✅ 复活效果：spawnFromRecordAt（指�
 - **引导**：时长 = 复活法阵 spec 时长（法阵完整展开后完成，缺失回退 100 tick）；期间 NPC 面向死亡点、举杖（`startManualCast`）。
 - **完成（P5 后）**：`AltarCastExecutor` 引导到期调用 `ReviveHandler.spawnFromRecordAt(level, rec, 祭坛中心最上方)` 生成新 `WandscapeNpc`，恢复名字/外观/属性上限/默认法杖/背包（ECS 重 seed + ColonyMember 修正），删除死亡记录，PORTAL 爆点。
 - **无死亡记录前置校验（按殖民地）**：`AltarCastHandler.onCastRequest` 点选 revive 时若该殖民地无死亡记录（`latestInColony(colonyId) == null`）直接提示、不发布任务；`AltarCastExecutor` 幂等复核兜底——发布后记录被同殖民地其他祭坛复活消耗时跳过施法（不扣蓝、不放法阵）；`fireRevive` 同样按祭坛所属殖民地取记录（`getBuilding(altarId).getColonyId()`），不跨殖民地捞人。
-- **虚弱复活**：复活后 **1 血 0 蓝**（`setHealth(1)` + `setMana(0)` + `markManaSeeded` 阻止首 tick 满蓝种子），靠脱战回血（interval 回 1 HP）与魔力回复（10t/1 点）缓慢恢复——复活有代价。
+- **虚弱复活**：复活后 **1 血 0 蓝**（`setHealth(1)` + `setMana(0)` + `markManaSeeded` 阻止首 tick 满蓝种子），靠脱战回血（interval 回 1 HP）与魔力回复（每 10t 回 1% 上限）缓慢恢复——复活有代价。
 - **失败兜底**：生成位置无地可放等失败 → 记录保留，玩家可重试。
 - **保卫殖民地复活（2026-08-26）**：法师战死时若距**本殖民地**任一建筑 AABB（3D 距离）≤ `Config.REVIVE_NEAR_BUILDING_RANGE`(20) 格，**立即**在市政厅门口自动复活（复用全灭保底的 `resolveTownHallDoorOrAnchor` + `spawnFromRecordAt` 虚弱复活），无需祭坛仪式——守卫殖民地战死不强制走祭坛，判定只认本殖民地建筑。
 - **与施法决策的关系**：复活不进 NPC 自动战斗决策表（L1）——玩家指挥式，避免 NPC 战斗中弃敌救人。

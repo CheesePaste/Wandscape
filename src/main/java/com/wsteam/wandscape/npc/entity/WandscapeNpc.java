@@ -1035,12 +1035,13 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
         // 脱战回血 + 属性推送 + 魔力回复：idle NPC 也要执行，放在快路 return 之前
         tickHealthRegen();
         applyEffectiveAttributes();
-        // 首 tick 满蓝填充（新 NPC / 旧存档迁移），此后每 10tick 回 1 点
+        // 首 tick 满蓝填充（新 NPC / 旧存档迁移），此后每 10tick 结算回 1% 上限
         if (!magic.isManaSeeded()) {
             magic.setMana(getMaxMana());
             magic.markManaSeeded();
         }
-        magic.tickRegen(getMaxMana(), Config.NPC_MANA_REGEN_TICKS.get());
+        magic.tickRegen(getMaxMana(), Config.NPC_MANA_REGEN_TICKS.get(),
+                Config.NPC_MANA_REGEN_FRACTION.get().floatValue());
 
         tickIdleSelfHeal();
         tickCastingState();

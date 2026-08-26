@@ -25,11 +25,11 @@ class MagicStateTest {
         assertFalse(s.tryCast("beam", 40, 50, 0, 1f));
         assertFalse(s.tryCast("teleport", 300, 30, 0, 1f));
         // 推进 39 tick 后 beam 冷却仍剩 1
-        for (int i = 0; i < 39; i++) s.tickRegen(MAX_MANA, 10);
+        for (int i = 0; i < 39; i++) s.tickRegen(MAX_MANA, 10, 0.01f);
         assertEquals(1, s.getCooldown("beam"));
         assertFalse(s.tryCast("beam", 40, 50, 0, 1f));
         // 再推 1 tick：beam 冷却清空，可再施；传送仍冷却
-        s.tickRegen(MAX_MANA, 10);
+        s.tickRegen(MAX_MANA, 10, 0.01f);
         assertEquals(0, s.getCooldown("beam"));
         assertTrue(s.tryCast("beam", 40, 50, 0, 1f));
         assertFalse(s.tryCast("teleport", 300, 30, 0, 1f));
@@ -44,12 +44,12 @@ class MagicStateTest {
         assertFalse(s.tryCast("teleport", 300, 30, 1, 1f));
         assertFalse(s.tryCast("beam", 40, 50, 1, 1f));
         // 推进 160 tick：锁释放；但 CD 在锁期间冻结，锁释放后才开始倒计时
-        for (int i = 0; i < 160; i++) s.tickRegen(MAX_MANA, 10);
+        for (int i = 0; i < 160; i++) s.tickRegen(MAX_MANA, 10, 0.01f);
         assertEquals(0, s.getLockTicks());
         assertEquals(40, s.getCooldown("beam"), "CD 在锁期间冻结，锁释放后才起算");
         assertFalse(s.tryCast("beam", 40, 50, 1, 1f), "锁释放后 CD 未清仍不可施");
         // 再推进 40 tick：beam CD 清空可再施；teleport CD 300 仍未过
-        for (int i = 0; i < 40; i++) s.tickRegen(MAX_MANA, 10);
+        for (int i = 0; i < 40; i++) s.tickRegen(MAX_MANA, 10, 0.01f);
         assertTrue(s.tryCast("beam", 40, 50, 1, 1f));
         assertFalse(s.tryCast("teleport", 300, 30, 1, 1f));
     }
@@ -72,16 +72,16 @@ class MagicStateTest {
     }
 
     @Test
-    void regenEveryIntervalCappedAtMax() {
+    void regenProportionalToMaxManaCappedAtMax() {
         MagicState s = full();
         s.setMana(150f);
-        for (int i = 0; i < 9; i++) s.tickRegen(MAX_MANA, 10);
-        assertEquals(150f, s.getMana()); // 9 tick 未到 10
-        s.tickRegen(MAX_MANA, 10);
-        assertEquals(151f, s.getMana());
-        // 直到封顶 200（151→200 需 49 点，600 tick 足够）
-        for (int i = 0; i < 600; i++) s.tickRegen(MAX_MANA, 10);
-        assertEquals(200f, s.getMana());
+        for (int i = 0; i < 9; i++) s.tickRegen(MAX_MANA, 10, 0.01f);
+        assertEquals(150f, s.getMana()); // 9 tick 未到 10 结算点
+        s.tickRegen(MAX_MANA, 10, 0.01f);
+        assertEquals(152f, s.getMana(), 0.001f); // 每次结算回 maxMana*0.01 = 2 点
+        // 直到封顶 200（150→200 需 50 点，25 次结算 = 250 tick 足够）
+        for (int i = 0; i < 250; i++) s.tickRegen(MAX_MANA, 10, 0.01f);
+        assertEquals(200f, s.getMana(), 0.001f);
         // 满蓝时累计清零
         assertEquals(0, s.getManaRegenAccum());
     }
@@ -130,7 +130,7 @@ class MagicStateTest {
         assertFalse(s.tryCast("beam", 40, 50, 1, 1f));
         assertFalse(s.tryAltarCast(10, 1));
         // 推进 160 tick：锁释放，可再祭坛施法
-        for (int i = 0; i < 160; i++) s.tickRegen(MAX_MANA, 10);
+        for (int i = 0; i < 160; i++) s.tickRegen(MAX_MANA, 10, 0.01f);
         assertEquals(0, s.getLockTicks());
         assertTrue(s.tryAltarCast(80, 160));
     }

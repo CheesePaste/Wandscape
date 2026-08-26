@@ -169,7 +169,7 @@ public final class ReviveHandler {
         npc.spellSpeed = rec.spellSpeed();
         npc.armorValue = rec.armorValue();
         npc.maxMana = rec.maxMana();
-        // 虚弱复活：1 血 0 蓝，靠脱战回血（interval 回 1 HP）与魔力回复（10t/1 点）缓慢恢复
+        // 虚弱复活：1 血 0 蓝，靠脱战回血（interval 回 1 HP）与魔力回复（10t 回 1% 上限）缓慢恢复
         npc.setHealth(1f);
         npc.magic.setMana(0f);
         // 装备与法杖在死亡时已掉落在阵亡处，复活时给一把默认基础法杖
