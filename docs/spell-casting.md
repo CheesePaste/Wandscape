@@ -1,7 +1,7 @@
 # NPC 施法决策层 — 设计文档
 
 > **状态（2026-08-07）**：**P1 数据与分发、P2 决策集中、P3 玩家策略 + 条件、P4 死亡留存 + 复活、P5 祭坛施法均已实现**（见文末实施表）。
-> 分类已定案为 5 类（SINGLE_TARGET / AOE / DEFENSE / SUPPORT / UTILITY）。
+> 分类已定案为 6 类（SINGLE_TARGET / AOE / DEFENSE / SUPPORT / SPECIAL / ALTAR）。
 > 本文既记录已落地结构，也是各阶段的实施蓝图。
 
 ## 一、现状问题：为什么需要决策层
@@ -89,15 +89,16 @@ L2 兜底层
 }
 ```
 
-**分类定案（5 类）**——`category` 决定策略预设的默认排序与 UI 分组，**不承载触发逻辑**：
+**分类定案（6 类）**——`category` 决定策略预设的默认排序与 UI 分组，**不承载触发逻辑**：
 
 | 分类 | 覆盖 | 典型魔法 | 决策要点 |
 |---|---|---|---|
 | `single_target` 单体攻击 | beam、desperation(背水一战)、火球、闪电 | 单体高伤/持续伤 | 无条件，有敌即可 |
 | `aoe` 群体攻击 | meteor(陨石)、enfeeble_field(虚弱力场)、爆炸、火焰风暴 | 范围伤害 | **敌数 ≥ 1 才施放**（防浪费蓝）；meteor 连落：总量恒 6 颗、按 1/6 持续时长逐颗发射，每颗发射时动态重瞄当时最近目标 |
 | `defense` 防御 | petrification(石化减伤)、conversion(魅惑)、护盾、结界 | 保命/免伤 | 自身血量阈值 + **无同类状态**（防叠加）；与治疗的血线竞争靠预设排序+阈值错开 |
-| `support` 支援 | heal(持续治疗)、fortification(战争赐福)、增益（魔力强化/急速） | 回血/预铺 buff | 治疗响应式（谁血低奶谁）、增益预判式（开战前上），靠 target_mode 区分 |
-| `utility` 杂项 | 传送、复活、召唤、天气 | 非战斗 | L0 硬性路径 / 玩家命令 |
+| `support` 支援 | fortification(战争赐福)、增益（魔力强化/急速） | 回血/预铺 buff | 增益预判式（开战前上），靠 target_mode 区分 |
+| `special` 特殊 | teleport(传送)、heal(治疗) | 系统固有自动触发 | 所有 NPC 天生固有、不进装备槽/决策表；heal 走 L0 紧急奶 + 脱战自奶，teleport 走导航回退/逃生传送 |
+| `altar` 祭坛 | revive(复活) | 祭坛专属仪式 | `altar_only`，仅祭坛可施放，不进 NPC 自动决策 |
 
 `target_mode` 决定"何时算有有效目标"，与 `category` 解耦：
 
@@ -409,4 +410,15 @@ P1/P2 玩家无感知（内部重构），P3 起见 UI。每个阶段完成即�
 - **玩家暂不生效**：玩家施放入口已移除，`castForPlayer` 会给玩家上魔力强化 buff（buff 栏可见）但无实际效果，等玩家施法入口回归后自动生效。
 
 **赐福/背水改用魔力强化**：NPC 与玩家路径一致——vanilla 力量（`DAMAGE_BOOST`）从两魔法中移除，替换为 `MAGIC_ENHANCE`。赐福 = 魔力强化 I；背水 = `min(10, ⌊护甲²/100⌋)` 等级（沿用原力量公式，护甲越高加成越多，10 级 = +200% 魔法伤害）。
+
+## 二十二、特殊魔法与初始装备（2026-08-26）
+
+**动机**：heal 与 teleport 是系统固有的保命/导航魔法，不该占装备槽、也不该进 L1 战斗决策——它们只在特殊情形（L0 紧急奶 / 脱战自奶 / 导航回退传送）由系统触发。同时殖民地初始法师（3 名）应开局就带 beam+meteor（受训法师），酒馆招募的法师是普通人，不该带起始战斗魔法。
+
+- **SPECIAL 分类**（`MagicDef.Category.SPECIAL`）：heal/teleport 迁入，`MagicDef.SPECIAL_SPELLS = [teleport, heal]`。所有 NPC 天生固有（`WandscapeNpc.knowsSpecialSpell`），不进 `EquippedMagicComponent`、不进 L1 `CastBrain.select`（防御性跳过）。
+- **ALTAR 分类**（原 UTILITY 更名）：revive 独占，`altar_only` 祭坛专属，不进装备/决策表。
+- **默认装备**：`EquippedMagicComponent.DEFAULT_EQUIP = [beam, meteor]`（殖民地初始 3 名法师）；酒馆招募法师在 `TavernRecruitPacket` 生成后清空装备槽（无起始战斗魔法，仅特殊区 heal/teleport 系统固有）。
+- **装备排除统一**：`SpellbookLoader.equippableCategoryOf` 对 SPECIAL/ALTAR 返回 null（不可装备）；卷轴槽、魔法目录同样排除 SPECIAL/ALTAR。创造栏含 heal/teleport 卷轴（仅排除 ALTAR revive）；卷轴创造施法排除 ALTAR 与 teleport（heal 可施放）。
+- **heal/teleport 卷轴保留**：`scroll_heal.json` + `scroll_teleport.json`（均 min_colony_level 1，魔法工坊合成、创造栏可获得）；teleport 卷轴创造模式不可施放（导航回退魔法无原地施法语义）。
+- **策略 UI「特殊」面板**：`NpcStrategyScreen` 右侧新增只读「特殊」面板，列出 teleport/heal 并注明「默认使用，不可更换」。
 

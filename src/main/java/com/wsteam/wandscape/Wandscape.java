@@ -418,10 +418,10 @@ public class Wandscape {
         }
     }
 
-    /** 创造栏补发各战斗魔法的已绑定卷轴（数据驱动：新战斗魔法自动出现；UTILITY 卷轴不物品化）。 */
+    /** 创造栏补发各战斗/特殊魔法的已绑定卷轴（数据驱动：新魔法自动出现；ALTAR 祭坛专属不物品化）。 */
     private static void acceptBoundSpellScrolls(CreativeModeTab.Output output) {
         for (MagicDef def : SpellbookLoader.getAllSpecs().values()) {
-            if (def.category() == MagicDef.Category.UTILITY) continue;
+            if (def.category() == MagicDef.Category.ALTAR) continue;
             ItemStack stack = new ItemStack(SPELL_SCROLL.get());
             SpellItem.setMagicId(stack, def.id());
             output.accept(stack);

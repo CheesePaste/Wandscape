@@ -1,7 +1,6 @@
 package com.wsteam.wandscape.magic.internal;
 
 import java.util.List;
-import java.util.Locale;
 import java.util.UUID;
 
 import com.wsteam.wandscape.core.component.CastStrategyComponent;
@@ -18,7 +17,7 @@ import net.neoforged.neoforge.server.ServerLifecycleHooks;
 /**
  * {@link SpellcastingApi} 实现：UUID → NPC 实体（EntityComponentBridge，未注册 ECS 的
  * 敌对法师回退按 UUID 扫世界）→ 读写 {@code equippedMagic}/{@code castStrategy} 组件，
- * 优先级经 {@link CastBrain} 解析。装备载荷按类别装桶校验（每类 ≤3、去重、UTILITY 排除）。
+ * 优先级经 {@link CastBrain} 解析。装备载荷按类别装桶校验（每类 ≤3、去重、ALTAR/SPECIAL 排除）。
  */
 public final class SpellcastingApiImpl implements SpellcastingApi {
 
@@ -47,7 +46,8 @@ public final class SpellcastingApiImpl implements SpellcastingApi {
     public void setEquippedAndStrategy(UUID npcId, String preset, List<String> equipped) {
         WandscapeNpc npc = resolve(npcId);
         if (npc == null) return;
-        // 服务端权威：按每个魔法真实分类装桶（支持 category:id@level 语法与原生魔法），未知 / UTILITY 丢、每类 ≤3、去重
+        // 服务端权威：按每个魔法真实分类装桶（支持 category:id@level 语法与原生魔法），
+        // 未知 / ALTAR / SPECIAL（系统固有）丢、每类 ≤3、去重
         EquippedMagicComponent validated = new EquippedMagicComponent();
         if (equipped != null) {
             for (String item : equipped) {
@@ -63,10 +63,8 @@ public final class SpellcastingApiImpl implements SpellcastingApi {
                 EquippedMagicComponent.SpellEntry entry = EquippedMagicComponent.SpellEntry.parse(spellToken);
                 if (entry.id().isBlank()) continue;
                 if (targetCat == null) {
-                    MagicDef def = SpellbookLoader.getSpec(entry.id());
-                    if (def != null && def.category() != MagicDef.Category.UTILITY) {
-                        targetCat = def.category().name().toLowerCase(Locale.ROOT);
-                    }
+                    // 无显式分类前缀时按注册表推断（ALTAR/SPECIAL 系统固有魔法由此排除）
+                    targetCat = SpellbookLoader.equippableCategoryOf(entry.id());
                 }
                 if (targetCat != null && EquippedMagicComponent.isCategory(targetCat)) {
                     validated.equip(targetCat, entry);

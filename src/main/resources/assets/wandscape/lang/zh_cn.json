@@ -807,6 +807,8 @@
   "gui.wandscape.strategy.category.aoe": "群体攻击",
   "gui.wandscape.strategy.category.defense": "防御",
   "gui.wandscape.strategy.category.support": "增益",
+  "gui.wandscape.strategy.category.special": "特殊",
+  "gui.wandscape.strategy.special.note": "默认使用，不可更换",
   "gui.wandscape.strategy.equip_label": "已装备（每类最多 3 个，槽位序 = 类内优先级）",
   "gui.wandscape.strategy.source_label": "背包卷轴",
   "gui.wandscape.strategy.tip.unequip": " — 点击卸载",

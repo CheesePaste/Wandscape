@@ -150,6 +150,15 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
     }
 
     /**
+     * 该法师是否天生固有某特殊魔法（{@link MagicDef#SPECIAL_SPELLS}：heal/teleport）。
+     * 特殊魔法不进装备槽、不进 L1 决策表，只在特殊情形由系统触发（L0 紧急奶 / 脱战自奶 /
+     * 导航回退传送）——故所有小镇 NPC 默认都会，与 {@code equippedMagic} 无关。
+     */
+    public boolean knowsSpecialSpell(String magicId) {
+        return MagicDef.SPECIAL_SPELLS.contains(magicId);
+    }
+
+    /**
      * 原子施放门控：互斥锁 + 该魔法独立 CD + 固定魔力消耗，全满足才成功。
      * 成功后占用 {@code lockDurationTicks} 的施法互斥锁；CD 在锁占用期间冻结、锁释放后
      * 才开始倒计时（施法时间不计入 CD），CD 基础值按 SPELL_SPEED 缩短（向上取整）。
@@ -278,7 +287,7 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
     private void tickIdleSelfHeal() {
         if (!isColonyNpc()) return;
         if (getHealth() >= getMaxHealth() - 0.5f) return; // 已满（留 0.5 容差避免浮点/贴满重复奶）
-        if (!equippedMagic.knows("heal")) return;
+        if (!knowsSpecialSpell("heal")) return;
         if (!magic.canCast("heal")) return; // 冷却中 / 施法互斥锁占用
         if (inActiveCombat()) return;       // 战斗中交给战斗循环 L0/L1
         if (!(level() instanceof ServerLevel level)) return;
@@ -756,7 +765,8 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
     }
 
     // ============================================================
-    // 死亡掉落：装备（盔甲 + 自定义法杖）与已装备魔法卷轴
+    // 死亡掉落：装备（盔甲 + 自定义法杖）。已装备魔法卷轴不掉落——
+    // 死亡时由 NpcDeathHandler 记入死亡记录，复活时重新挂回复活后 NPC。
     // ============================================================
 
     @Override
@@ -782,26 +792,12 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
                 armorInventory.setItem(i, ItemStack.EMPTY);
             }
         }
-
-        // 3. 掉落已装备的技能魔法卷轴
-        for (EquippedMagicComponent.SpellEntry entry : equippedMagic.flattenedEntries()) {
-            if (entry != null && entry.id() != null && !entry.id().isBlank()) {
-                if (com.wsteam.wandscape.compat.ironspellbooks.IronSpellsCompat.isLoaded()
-                        && com.wsteam.wandscape.compat.ironspellbooks.IronSpellsHelper.isValidSpell(entry.id())) {
-                    ItemStack scroll = com.wsteam.wandscape.compat.ironspellbooks.IronSpellsHelper.createScroll(entry.id(), entry.level());
-                    spawnAtLocation(scroll);
-                } else {
-                    ItemStack scroll = new ItemStack(Wandscape.SPELL_SCROLL.get());
-                    SpellItem.setMagicId(scroll, entry.id());
-                    spawnAtLocation(scroll);
-                }
-            }
-        }
-        equippedMagic.clear();
     }
 
     /**
-     * 解雇：掉落装备（盔甲 + 自定义法杖 + 已装备卷轴，复用 {@link #dropEquipment}）后永久移除。
+     * 解雇：掉落装备（盔甲 + 自定义法杖 + 已装备卷轴）后永久移除。
+     * 解雇无死亡记录、NPC 永久移除，卷轴必须随掉落归还，否则永久丢失——
+     * 因此这里在 {@link #dropEquipment()}（不含卷轴）基础上额外掉落已装备卷轴并清空。
      * 走 {@code discard()} 而非死亡——不触发 LivingDeathEvent、不写死亡记录，
      * 因此不会被复活魔法 / 全灭保底找回。ECS 清理由 {@code onRemovedFromLevel} 的
      * DISCARDED 分支自动完成（释放全局任务 / 取消运输 / 移除组件）。
@@ -809,6 +805,20 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
     public void dismissFromColony() {
         if (level().isClientSide) return;
         dropEquipment();
+        if (isColonyNpc()) {
+            for (EquippedMagicComponent.SpellEntry entry : equippedMagic.flattenedEntries()) {
+                if (entry == null || entry.id() == null || entry.id().isBlank()) continue;
+                if (com.wsteam.wandscape.compat.ironspellbooks.IronSpellsCompat.isLoaded()
+                        && com.wsteam.wandscape.compat.ironspellbooks.IronSpellsHelper.isValidSpell(entry.id())) {
+                    spawnAtLocation(com.wsteam.wandscape.compat.ironspellbooks.IronSpellsHelper.createScroll(entry.id(), entry.level()));
+                } else {
+                    ItemStack scroll = new ItemStack(Wandscape.SPELL_SCROLL.get());
+                    SpellItem.setMagicId(scroll, entry.id());
+                    spawnAtLocation(scroll);
+                }
+            }
+            equippedMagic.clear();
+        }
         discard();
     }
 
@@ -1203,12 +1213,14 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
                         generateRandomNpcName(detectNamingStyle())));
                 setCustomNameVisible(true);
             }
-            // 默认装备 beam + heal（新 NPC / 旧存档无字段），此后玩家经策略页装备卷轴改。
-            // 分类由 MagicDef 数据驱动（core 组件不依赖 magic，种子在实体层做）。
+            // 默认装备 beam + meteor（新 NPC / 旧存档无字段），此后玩家经策略页装备卷轴改。
+            // 分类由 MagicDef 数据驱动（core 组件不依赖 magic，种子在实体层做）；
+            // SPECIAL/ALTAR 魔法（heal/teleport/revive）为系统固有，不进装备槽。
             if (!spellbookLoaded && equippedMagic.isEmpty()) {
                 for (String defaultSpell : EquippedMagicComponent.DEFAULT_EQUIP) {
                     MagicDef def = SpellbookLoader.getSpec(defaultSpell);
-                    if (def != null && def.category() != MagicDef.Category.UTILITY) {
+                    if (def != null && def.category() != MagicDef.Category.ALTAR
+                            && def.category() != MagicDef.Category.SPECIAL) {
                         equippedMagic.equip(def.category().name().toLowerCase(Locale.ROOT), defaultSpell);
                     }
                 }

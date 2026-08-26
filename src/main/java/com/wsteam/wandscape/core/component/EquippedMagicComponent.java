@@ -17,8 +17,9 @@ import javax.annotation.Nullable;
  * <p>支持记录原生无等级法术（level=1）与第三方模组（如 Iron's Spells）具有等级（Lv.1~10）
  * 的法术卷轴条目（{@link SpellEntry}）。
  *
- * <p>桶键用分类名小写字符串（core 不依赖 magic 包；分类合法性由服务端校验）。
- * UTILITY 魔法（teleport/revive）不存此容器——导航回退/祭坛属系统固有，不进装备、不占槽位。
+ * <p>桶键用分类名小写字符串（core 不依赖 magic 包；分类合法性由服务端对 MagicDef 校验）。
+ * SPECIAL（teleport/heal）与 ALTAR（revive）魔法不存此容器——导航回退/祭坛/紧急奶/脱战自奶
+ * 属系统固有，不进装备、不占槽位。
  */
 public class EquippedMagicComponent {
 
@@ -61,12 +62,12 @@ public class EquippedMagicComponent {
     /** 每类上限。 */
     public static final int MAX_PER_CATEGORY = 3;
 
-    /** 可装备分类（= {@code MagicDef.Category} 除 UTILITY 的 4 个，小写名，固定顺序）。 */
+    /** 可装备分类（= {@code MagicDef.Category} 除 SPECIAL/ALTAR 的 4 个，小写名，固定顺序）。 */
     public static final List<String> CATEGORIES =
             List.of("single_target", "aoe", "defense", "support");
 
-    /** 新 NPC / 旧存档无字段时的默认装备（beam+heal）。分类由 {@code MagicDef} 数据决定。 */
-    public static final List<String> DEFAULT_EQUIP = List.of("beam", "heal");
+    /** 殖民地初始法师（3 名）默认装备（beam+meteor）；酒馆招募法师无起始战斗魔法，由招募路径清空。 */
+    public static final List<String> DEFAULT_EQUIP = List.of("beam", "meteor");
 
     private final Map<String, List<SpellEntry>> byCategory = new LinkedHashMap<>();
 
@@ -111,6 +112,23 @@ public class EquippedMagicComponent {
         List<SpellEntry> out = new ArrayList<>();
         for (String cat : CATEGORIES) {
             out.addAll(byCategory.getOrDefault(cat, List.of()));
+        }
+        return out;
+    }
+
+    /**
+     * 全部已装备魔法，按分类固定顺序 + 桶内槽位序展平为 {@code category:id@level} 字符串
+     * （如 {@code "single_target:beam"}、{@code "defense:irons_spellbooks:firebolt@5"}）。
+     * 该格式恰为 {@code SpellcastingApi.setEquippedAndStrategy} 接受的载荷语法，用于
+     * 死亡记录/网络包等需要跨语境无损往返（保留分类与等级）的场景；裸 {@link #flattened()}
+     * 只保留 id，第三方模组带等级法术会丢失分类与等级。
+     */
+    public List<String> flattenedQualified() {
+        List<String> out = new ArrayList<>();
+        for (String cat : CATEGORIES) {
+            for (SpellEntry e : byCategory.getOrDefault(cat, List.of())) {
+                out.add(cat + ":" + e.toFlatString());
+            }
         }
         return out;
     }

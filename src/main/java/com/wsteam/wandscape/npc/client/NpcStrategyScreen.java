@@ -3,6 +3,7 @@ package com.wsteam.wandscape.npc.client;
 import java.util.List;
 
 import com.wsteam.wandscape.core.component.EquippedMagicComponent;
+import com.wsteam.wandscape.magic.data.MagicDef;
 import com.wsteam.wandscape.npc.NpcStrategyMenu;
 import com.wsteam.wandscape.npc.network.NpcDataPacket;
 import com.wsteam.wandscape.npc.network.NpcStrategyPacket;
@@ -119,6 +120,7 @@ public class NpcStrategyScreen extends AbstractContainerScreen<NpcStrategyMenu>
         renderHeader(g, mouseX, mouseY);
         renderInventoryBackground(g);
         renderCategoryRows(g);
+        renderSpecialPanel(g);
     }
 
     private void renderHeader(GuiGraphics g, int mouseX, int mouseY) {
@@ -158,6 +160,32 @@ public class NpcStrategyScreen extends AbstractContainerScreen<NpcStrategyMenu>
         // 分隔线（槽区与背包之间）
         g.fill(leftPos + 8, topPos + 132, leftPos + imageWidth - 8, topPos + 133,
                 MedievalColors.BORDER_GOLD_DARK);
+    }
+
+    /** 右侧只读「特殊」面板：列出所有 NPC 天生固有的特殊魔法（teleport/heal），不可更换。 */
+    private void renderSpecialPanel(GuiGraphics g) {
+        int colX = leftPos + 168;
+        int startY = topPos + NpcStrategyMenu.SPELL_Y;
+        // 槽区与特殊面板之间的竖向分隔线
+        g.fill(leftPos + 158, startY - 2,
+                leftPos + 159, startY + 3 * NpcStrategyMenu.ROW_PITCH + NpcStrategyMenu.SLOT,
+                MedievalColors.BORDER_GOLD_DARK);
+        g.drawString(font,
+                I18n.name("gui.wandscape.strategy.category.special", "special").getString(),
+                colX, startY + (NpcStrategyMenu.SLOT - font.lineHeight) / 2,
+                MedievalColors.TEXT_WARM_WHITE);
+        int y = startY + NpcStrategyMenu.ROW_PITCH;
+        for (String magicId : MagicDef.SPECIAL_SPELLS) {
+            g.drawString(font,
+                    I18n.name("magic.wandscape." + magicId, magicId).getString(),
+                    colX, y + (NpcStrategyMenu.SLOT - font.lineHeight) / 2,
+                    MedievalColors.TEXT_MUTED);
+            y += NpcStrategyMenu.ROW_PITCH;
+        }
+        g.drawString(font,
+                I18n.name("gui.wandscape.strategy.special.note", "默认使用，不可更换").getString(),
+                colX, startY + 3 * NpcStrategyMenu.ROW_PITCH + (NpcStrategyMenu.SLOT - font.lineHeight) / 2,
+                MedievalColors.TEXT_DIM);
     }
 
     @Override

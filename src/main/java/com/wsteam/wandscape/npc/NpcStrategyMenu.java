@@ -187,7 +187,8 @@ public class NpcStrategyMenu extends AbstractContainerMenu {
                 magicId = SpellItem.getMagicId(stack);
                 if (magicId == null) return false;
                 MagicDef def = SpellbookLoader.getSpec(magicId);
-                if (def == null || def.category() == MagicDef.Category.UTILITY) return false;
+                if (def == null || def.category() == MagicDef.Category.ALTAR
+                        || def.category() == MagicDef.Category.SPECIAL) return false;
                 if (!def.category().name().toLowerCase(Locale.ROOT).equals(category)) return false;
             } else if (com.wsteam.wandscape.compat.ironspellbooks.IronSpellsCompat.isLoaded()
                     && com.wsteam.wandscape.compat.ironspellbooks.IronSpellsHelper.isScroll(stack)) {

@@ -19,14 +19,14 @@ import com.wsteam.wandscape.magic.data.WorldSnapshot;
  * <p>L1 优先级扫描（docs/spell-casting.md 三层决策）。L0 硬性覆盖（血量危机/LOS/互斥锁）
  * 由调用方（守卫/自防御战斗循环）在调用前处理。已知魔法来自 NPC 的
  * {@code EquippedMagicComponent}（已装备载荷，分 4 类、每类 ≤3，桶内=类内优先级）
- * 与玩家策略（{@link #resolvePriority}），替代硬编码 {@code [beam]}。UTILITY 魔法
- * （teleport/revive）不在装备载荷中——导航回退/祭坛属系统固有，由 L0/独立路径处理。
+ * 与玩家策略（{@link #resolvePriority}），替代硬编码 {@code [beam]}。SPECIAL 魔法
+ * （teleport/heal）与 ALTAR 魔法（revive）不在装备载荷中——导航回退/祭坛/紧急奶/脱战自奶属系统固有，由 L0/独立路径处理。
  */
 public final class CastBrain {
 
     private CastBrain() {}
 
-    /** 预设 → 分类级默认排序（高→低）。UTILITY 不进预设表（L0 硬性路径/玩家命令管）。 */
+    /** 预设 → 分类级默认排序（高→低）。SPECIAL/ALTAR 不进预设表（L0 硬性路径/祭坛管）。 */
     private static final Map<CastStrategyComponent.Preset, List<MagicDef.Category>> PRESET_ORDER = Map.of(
             CastStrategyComponent.Preset.OFFENSIVE, List.of(
                     MagicDef.Category.SINGLE_TARGET, MagicDef.Category.AOE,
@@ -94,7 +94,7 @@ public final class CastBrain {
      *   <li>已配置（{@code CastStrategyComponent.configured()}）：用 {@code customPriority}
      *       显式顺序过滤到 known 返回；空列表 = 全部停用（不兜底，NPC 走基础攻击）。</li>
      *   <li>未配置：按 {@link #PRESET_ORDER} 预设分类顺序，类内按 {@code known} 顺序，
-     *       UTILITY 类不进列表。</li>
+     *       SPECIAL/ALTAR 类不进列表。</li>
      * </ul>
      * CUSTOM 预设保留仅为旧存档兼容：已配置时走显式列表，未配置时回退 balanced 推导。
      */
@@ -137,8 +137,9 @@ public final class CastBrain {
      * 无则 null。调用方拿到结果后自行执行（门控在 {@code MagicState.tryCast} 原子复验，
      * 此处只做选择、不扣资源）。
      *
-     * <p>{@code altarOnly} 魔法（如复活）只允许祭坛施放，NPC 直接施法永不选中——防御性保证
-     * 其不会进守卫/自防御的自动决策表。
+     * <p>{@code altarOnly} 魔法（如复活）只允许祭坛施放，NPC 直接施法永不选中；SPECIAL 魔法
+     * （heal/teleport）由 L0/独立路径（紧急奶/脱战自奶/导航回退）触发，同样不进自动决策表——
+     * 防御性保证其不会进守卫/自防御的 L1 优先级扫描。
      *
      * @param castable  MagicDef → 是否满足施法门控（互斥锁 + 该魔法 CD + 蓝够）
      * @param snapshot  世界快照（敌数/自血/友方最低血/状态），驱动目标规则与 {@code conditions}
@@ -148,6 +149,7 @@ public final class CastBrain {
         WorldSnapshot s = snapshot != null ? snapshot : WorldSnapshot.EMPTY;
         for (MagicDef def : known) {
             if (def.altarOnly()) continue;
+            if (def.category() == MagicDef.Category.SPECIAL) continue;
             if (!castable.test(def)) continue;
             if (!targetAvailable(def, s)) continue;
             if (!def.conditions().matches(s)) continue;

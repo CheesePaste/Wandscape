@@ -13,9 +13,9 @@ import org.junit.jupiter.api.Test;
 class EquippedMagicComponentTest {
 
     private static final Function<String, String> CATEGORY_OF =
-            Map.of("beam", "single_target", "fireball", "single_target", "heal", "support",
-                    "meteor", "aoe", "petrification", "defense", "teleport", "utility",
-                    "revive", "utility")::get;
+            Map.of("beam", "single_target", "fireball", "single_target", "heal", "special",
+                    "meteor", "aoe", "petrification", "defense", "teleport", "special",
+                    "revive", "altar")::get;
 
     // ── 桶上限 ──
 
@@ -32,7 +32,8 @@ class EquippedMagicComponentTest {
     @Test
     void unknownCategoryRejected() {
         EquippedMagicComponent e = new EquippedMagicComponent();
-        assertFalse(e.equip("utility", "teleport"), "UTILITY 非可装备分类");
+        assertFalse(e.equip("special", "teleport"), "SPECIAL 非可装备分类");
+        assertFalse(e.equip("altar", "revive"), "ALTAR 非可装备分类");
         assertFalse(e.equip("bogus", "beam"), "未知分类拒绝");
         assertTrue(e.isEmpty());
     }
@@ -59,8 +60,8 @@ class EquippedMagicComponentTest {
     // ── 默认 ──
 
     @Test
-    void defaultsAreBeamAndHeal() {
-        assertEquals(List.of("beam", "heal"), EquippedMagicComponent.DEFAULT_EQUIP);
+    void defaultsAreBeamAndMeteor() {
+        assertEquals(List.of("beam", "meteor"), EquippedMagicComponent.DEFAULT_EQUIP);
         EquippedMagicComponent e = new EquippedMagicComponent();
         assertTrue(e.isEmpty());
     }
@@ -122,18 +123,19 @@ class EquippedMagicComponentTest {
                 List.of("heal", "beam", "meteor", "petrification"), CATEGORY_OF);
         EquippedMagicComponent dst = new EquippedMagicComponent();
         dst.replaceWith(src);
-        assertEquals(List.of("beam", "meteor", "petrification", "heal"), dst.flattened(),
-                "新分类容器 = single_target:[beam] aoe:[meteor] defense:[petrification] support:[heal]");
+        assertEquals(List.of("beam", "meteor", "petrification"), dst.flattened(),
+                "新分类容器 = single_target:[beam] aoe:[meteor] defense:[petrification]（heal 特殊丢弃）");
     }
 
     // ── fromFlat（服务端校验核心：未知丢 / 非战斗丢 / ≤3 / 去重）──
 
     @Test
-    void fromFlatDropsUnknownAndUtility() {
+    void fromFlatDropsUnknownAndNonEquippable() {
         EquippedMagicComponent e = EquippedMagicComponent.fromFlat(
                 List.of("beam", "not_a_spell", "teleport", "revive", "heal"), CATEGORY_OF);
-        assertEquals(List.of("beam", "heal"), e.flattened(), "未知 id 与 UTILITY 魔法丢弃");
+        assertEquals(List.of("beam"), e.flattened(), "未知 id 与 SPECIAL/ALTAR 魔法丢弃");
         assertFalse(e.knows("teleport"));
+        assertFalse(e.knows("heal"));
     }
 
     @Test
@@ -149,7 +151,7 @@ class EquippedMagicComponentTest {
                 List.of("beam", "meteor", "heal", "fireball"), CATEGORY_OF);
         assertEquals(List.of("beam", "fireball"), e.list("single_target"),
                 "同分类按扁平序保序：beam 先、fireball 后");
-        assertEquals(List.of("beam", "fireball", "meteor", "heal"), e.flattened());
+        assertEquals(List.of("beam", "fireball", "meteor"), e.flattened());
     }
 
     @Test

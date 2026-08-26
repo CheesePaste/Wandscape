@@ -56,7 +56,8 @@ public final class NpcDeathHandler {
                 npc.hasDefaultWand(),
                 npc.maxHp, npc.moveSpeed, npc.spellPower, npc.workSpeed,
                 npc.spellSpeed, npc.armorValue, npc.maxMana,
-                inv);
+                inv,
+                npc.equippedMagic.flattenedQualified());
         ColonyDeathRegistry.get(level).add(rec);
         Log.info(TAG, "NPC {} ({}) died at {},{},{} — death record saved, inventory {} stacks",
                 rec.npcId().toString().substring(0, 8), rec.name(),

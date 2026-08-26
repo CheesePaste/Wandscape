@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.integration.jei;
+package com.wsteam.wandscape.compat.jei;
 
 /** JEI 展示的元素配方类型：合成或分解。 */
 public enum ElementRecipeKind {

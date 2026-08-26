@@ -1,6 +1,6 @@
 {
   "id": "teleport",
-  "category": "utility",
+  "category": "special",
   "mana_cost": 30,
   "base_cooldown": 150,
   "range": 0,

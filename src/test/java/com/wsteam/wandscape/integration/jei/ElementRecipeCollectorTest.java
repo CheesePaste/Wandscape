@@ -3,6 +3,9 @@ package com.wsteam.wandscape.integration.jei;
 import java.util.List;
 import java.util.Map;
 
+import com.wsteam.wandscape.compat.jei.ElementRecipe;
+import com.wsteam.wandscape.compat.jei.ElementRecipeCollector;
+import com.wsteam.wandscape.compat.jei.ElementRecipeKind;
 import com.wsteam.wandscape.element.internal.ElementMappingConfig;
 import com.wsteam.wandscape.production.data.BrewPotionRecipe;
 import com.wsteam.wandscape.production.data.CraftSpellRecipe;

@@ -15,7 +15,9 @@ import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.service.ParticleService;
 import com.wsteam.wandscape.npc.data.DeathRecord;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
+import com.wsteam.wandscape.shared.api.SpellcastingApi;
 import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.shared.registry.WandscapeApis;
 
 import com.wsteam.wandscape.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.building.internal.BuildingState;
@@ -178,6 +180,9 @@ public final class ReviveHandler {
         rebindToMageHut(level, npc, rec);
 
         fixEcsAfterSpawn(npc, rec);
+        // 恢复已装备魔法卷轴：死亡时不掉落、记入死亡记录，这里重新挂回复活后 NPC
+        //（沿用 SpellcastingApi 的服务端权威校验：未知/ALTAR/SPECIAL 丢、每类 ≤3、去重）。
+        restoreEquippedMagic(npc, rec);
         ColonyDeathRegistry.get(level).remove(rec);
 
         spawnReviveBurst(level, spawnPos.getX() + 0.5, spawnPos.getY() + 1.0, spawnPos.getZ() + 0.5);
@@ -211,6 +216,17 @@ public final class ReviveHandler {
                 inv.add(s);
             }
         }
+    }
+
+    /** 把死亡快照中的已装备魔法卷轴重新挂到复活后 NPC。空负载（无卷轴 / 玩家全卸）跳过——种子默认
+     *  beam+heal 保留；非空则经 SpellcastingApi 服务端权威校验后全量替换。 */
+    private static void restoreEquippedMagic(WandscapeNpc npc, DeathRecord rec) {
+        if (rec.equippedMagic().isEmpty()) return;
+        SpellcastingApi casting = WandscapeApis.getSpellcastingApiSilently();
+        if (casting == null) return;
+        // 预设读回自复活后 NPC（种子默认），仅重设载荷，策略预设保持不变。
+        casting.setEquippedAndStrategy(npc.getUUID(), casting.getStrategyPreset(npc.getUUID()),
+                rec.equippedMagic());
     }
 
     /** 若死亡快照的 npcId 匹配某法师小屋的入住者，则重挂并恢复养成进度。

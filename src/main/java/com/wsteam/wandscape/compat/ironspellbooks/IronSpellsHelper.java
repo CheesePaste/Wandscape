@@ -116,7 +116,7 @@ public final class IronSpellsHelper {
                 targetMode = MagicDef.TargetMode.ALLY_LOWEST_HP;
                 conditions = new SpellConditions(0, null, 0.8f, null);
             }
-            case SINGLE_TARGET, UTILITY -> {
+            case SINGLE_TARGET -> {
                 targetMode = MagicDef.TargetMode.HOSTILE_NEAREST;
                 conditions = SpellConditions.NONE;
             }
