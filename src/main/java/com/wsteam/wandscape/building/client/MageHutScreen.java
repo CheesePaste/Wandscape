@@ -63,6 +63,10 @@ public class MageHutScreen extends MedievalScreen {
     // ── Interactive state ──
     private int selectedCandidate = 0;
     private int selectedTrain = 0;
+    private int candidateScrollOffset = 0;
+    private boolean candidateScrollDragging = false;
+    private double candidateDragStartMouseY;
+    private int candidateDragStartScrollOffset;
     private WandscapeNpc previewNpc;
 
     // ── Toast notifications ──
@@ -103,6 +107,9 @@ public class MageHutScreen extends MedievalScreen {
 
         if (selectedTrain >= MageHutAttributes.ORDER.size()) selectedTrain = 0;
         if (selectedCandidate >= candidates.size()) selectedCandidate = Math.max(0, candidates.size() - 1);
+        int itemH = 26 + 3;
+        int maxScroll = Math.max(0, candidates.size() * itemH - (180 - 24));
+        candidateScrollOffset = (int) Math.clamp(candidateScrollOffset, 0, maxScroll);
         rebuildPreviewNpc();
     }
 
@@ -478,14 +485,26 @@ public class MageHutScreen extends MedievalScreen {
         } else {
             int cardH = 26;
             int cardGap = 3;
-            int maxShow = Math.min(candidates.size(), 5);
-            for (int i = 0; i < maxShow; i++) {
-                int cy = ly + 21 + i * (cardH + cardGap);
-                int cx = lx + 3;
-                int cw = lw - 6;
+            int itemH = cardH + cardGap;
+            int viewX = lx + 3;
+            int viewY = ly + 20;
+            int viewH = lh - 24;
+            int totalH = candidates.size() * itemH;
+            int maxScroll = Math.max(0, totalH - viewH);
+            candidateScrollOffset = (int) Math.clamp(candidateScrollOffset, 0, maxScroll);
+            boolean hasScrollbar = maxScroll > 0;
+            int sbW = 4;
+            int cw = hasScrollbar ? (lw - 6 - sbW - 3) : (lw - 6);
+
+            g.enableScissor(viewX, viewY, viewX + (hasScrollbar ? cw + sbW + 3 : cw), viewY + viewH);
+            for (int i = 0; i < candidates.size(); i++) {
+                int cy = viewY + i * itemH - candidateScrollOffset;
+                if (cy + cardH < viewY || cy > viewY + viewH) continue;
+                int cx = viewX;
                 MageCandidate c = candidates.get(i);
                 boolean isSel = (i == selectedCandidate);
-                boolean isHov = isInRect(mouseX, mouseY, cx, cy, cw, cardH);
+                boolean isHov = isInRect(mouseX, mouseY, cx, cy, cw, cardH)
+                        && mouseY >= viewY && mouseY <= viewY + viewH;
 
                 if (isSel) {
                     g.fill(cx, cy, cx + cw, cy + cardH, 0x66C8A040);
@@ -509,6 +528,18 @@ public class MageHutScreen extends MedievalScreen {
                 String cStatus = c.idle() ? "空闲待命" : "正在忙碌";
                 g.drawString(font, cStatus, cx + 6, cy + 14,
                         c.idle() ? MedievalColors.SUCCESS_GREEN : MedievalColors.TEXT_MUTED);
+            }
+            g.disableScissor();
+
+            if (hasScrollbar) {
+                int sbX = lx + lw - sbW - 3;
+                int thumbH = Math.max(14, viewH * viewH / totalH);
+                int thumbY = viewY + candidateScrollOffset * (viewH - thumbH) / maxScroll;
+                // Track
+                g.fill(sbX, viewY, sbX + sbW, viewY + viewH, MedievalColors.SCROLLBAR_TRACK);
+                // Thumb
+                g.fill(sbX, thumbY, sbX + sbW, thumbY + thumbH,
+                        candidateScrollDragging ? MedievalColors.BORDER_GOLD : MedievalColors.SCROLLBAR_THUMB);
             }
         }
 
@@ -630,28 +661,113 @@ public class MageHutScreen extends MedievalScreen {
                 int lx = leftPos + 12;
                 int ly = contentTop;
                 int lw = 160;
-                int cx = lx + 3;
-                int cw = lw - 6;
+                int lh = 180;
+                int viewX = lx + 3;
+                int viewY = ly + 20;
+                int viewH = lh - 24;
                 int cardH = 26;
                 int cardGap = 3;
-                int maxShow = Math.min(candidates.size(), 5);
-                for (int i = 0; i < maxShow; i++) {
-                    int cy = ly + 21 + i * (cardH + cardGap);
-                    if (isInRect(mouseX, mouseY, cx, cy, cw, cardH)) {
-                        if (selectedCandidate != i) {
-                            selectedCandidate = i;
-                            rebuildPreviewNpc();
-                            clearWidgets();
-                            init();
-                            Minecraft.getInstance().getSoundManager().play(
-                                    SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0f));
+                int itemH = cardH + cardGap;
+                int totalH = candidates.size() * itemH;
+                int maxScroll = Math.max(0, totalH - viewH);
+                int sbW = 4;
+                int sbX = lx + lw - sbW - 3;
+
+                // Check scrollbar click
+                if (maxScroll > 0 && mouseX >= sbX - 2 && mouseX <= sbX + sbW + 2
+                        && mouseY >= viewY && mouseY <= viewY + viewH) {
+                    int thumbH = Math.max(14, viewH * viewH / totalH);
+                    int thumbY = viewY + candidateScrollOffset * (viewH - thumbH) / maxScroll;
+                    if (mouseY >= thumbY && mouseY <= thumbY + thumbH) {
+                        candidateScrollDragging = true;
+                        candidateDragStartMouseY = mouseY;
+                        candidateDragStartScrollOffset = candidateScrollOffset;
+                    } else {
+                        double clickRatio = (mouseY - viewY - thumbH / 2.0) / (viewH - thumbH);
+                        candidateScrollOffset = (int) Math.clamp(clickRatio * maxScroll, 0, maxScroll);
+                        candidateScrollDragging = true;
+                        candidateDragStartMouseY = mouseY;
+                        candidateDragStartScrollOffset = candidateScrollOffset;
+                    }
+                    return true;
+                }
+
+                // Check candidate card click
+                int cw = (maxScroll > 0) ? (lw - 6 - sbW - 3) : (lw - 6);
+                if (mouseX >= viewX && mouseX <= viewX + cw && mouseY >= viewY && mouseY <= viewY + viewH) {
+                    for (int i = 0; i < candidates.size(); i++) {
+                        int cy = viewY + i * itemH - candidateScrollOffset;
+                        if (isInRect(mouseX, mouseY, viewX, cy, cw, cardH)) {
+                            if (selectedCandidate != i) {
+                                selectedCandidate = i;
+                                rebuildPreviewNpc();
+                                clearWidgets();
+                                init();
+                                Minecraft.getInstance().getSoundManager().play(
+                                        SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0f));
+                            }
+                            return true;
                         }
-                        return true;
                     }
                 }
             }
         }
         return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+        if (!hasResident && !candidates.isEmpty()) {
+            int contentTop = topPos + headerHeight + 6;
+            int lx = leftPos + 12;
+            int ly = contentTop;
+            int lw = 160;
+            int lh = 180;
+            if (isInRect(mouseX, mouseY, lx, ly, lw, lh)) {
+                int cardH = 26;
+                int cardGap = 3;
+                int itemH = cardH + cardGap;
+                int viewH = lh - 24;
+                int maxScroll = Math.max(0, candidates.size() * itemH - viewH);
+                if (maxScroll > 0) {
+                    candidateScrollOffset = (int) Math.clamp(
+                            candidateScrollOffset - scrollY * itemH * 2, 0, maxScroll);
+                    return true;
+                }
+            }
+        }
+        return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+    }
+
+    @Override
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+        if (candidateScrollDragging && !hasResident && !candidates.isEmpty()) {
+            int contentTop = topPos + headerHeight + 6;
+            int ly = contentTop;
+            int lh = 180;
+            int viewH = lh - 24;
+            int cardH = 26;
+            int cardGap = 3;
+            int itemH = cardH + cardGap;
+            int totalH = candidates.size() * itemH;
+            int maxScroll = Math.max(0, totalH - viewH);
+            int thumbH = Math.max(14, viewH * viewH / totalH);
+            int trackH = viewH - thumbH;
+            if (trackH > 0) {
+                double deltaY = mouseY - candidateDragStartMouseY;
+                candidateScrollOffset = (int) Math.clamp(
+                        candidateDragStartScrollOffset + (deltaY * maxScroll / trackH),
+                        0, maxScroll);
+                return true;
+            }
+        }
+        return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+    }
+
+    @Override
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        candidateScrollDragging = false;
+        return super.mouseReleased(mouseX, mouseY, button);
     }
 
     private void onTrain(AttributeType type) {
