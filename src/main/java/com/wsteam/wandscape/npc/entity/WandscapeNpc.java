@@ -496,6 +496,10 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
     private static final EntityDataAccessor<String> DATA_STATUS_TEXT =
             SynchedEntityData.defineId(WandscapeNpc.class, EntityDataSerializers.STRING);
 
+    /** 当前施法/蓄力中的魔法 ID（如 irons_spellbooks:black_hole，用于客户端模型动画匹配）。 */
+    private static final EntityDataAccessor<String> DATA_CAST_SPELL_ID =
+            SynchedEntityData.defineId(WandscapeNpc.class, EntityDataSerializers.STRING);
+
     public int getSkinVariant() {
         return this.entityData.get(DATA_SKIN_VARIANT);
     }
@@ -519,6 +523,14 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
 
     public void setCasting(boolean casting) {
         this.entityData.set(DATA_CASTING, casting);
+    }
+
+    public String getCastSpellId() {
+        return this.entityData.get(DATA_CAST_SPELL_ID);
+    }
+
+    public void setCastSpellId(@Nullable String spellId) {
+        this.entityData.set(DATA_CAST_SPELL_ID, spellId != null ? spellId : "");
     }
 
     /** Visual effect kind for the current op. Synced to client for renderer dispatch. */
@@ -566,7 +578,17 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
      * 窗口结束由 tick() 自动恢复为 ECS 决定的状态。
      */
     public void startManualCast(int ticks) {
+        startManualCast("", ticks);
+    }
+
+    /**
+     * 触发带指定法术 ID 的施法动作（驱动客户端对应法术模型专属动作）。
+     */
+    public void startManualCast(@Nullable String spellId, int ticks) {
         manualCastTicks = Math.max(manualCastTicks, ticks);
+        if (spellId != null && !spellId.isBlank()) {
+            setCastSpellId(spellId);
+        }
         setCasting(true);
     }
 
@@ -886,6 +908,7 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
         builder.define(DATA_DEBUG_TARGET, Optional.empty());
         builder.define(DATA_OP_KIND, "");
         builder.define(DATA_STATUS_TEXT, "");
+        builder.define(DATA_CAST_SPELL_ID, "");
     }
 
     // ============================================================
@@ -980,6 +1003,9 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
         if (manual) casting = true;
         if (casting != isCasting()) {
             setCasting(casting);
+            if (!casting) {
+                setCastSpellId("");
+            }
         }
         // 施法不再硬钉移动（getNavigation().stop + 清零速度）：光束等长施法会让 isCasting 连续
         // 数百 tick 为 true，硬钉会把战斗走位（风筝/群殴/投掷物躲避，由 ECS 导航驱动）整个钉死——
