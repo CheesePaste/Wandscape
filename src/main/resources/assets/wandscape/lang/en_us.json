@@ -75,7 +75,7 @@
   "key.wandscape.guide": "Open Help Guide",
   "key.wandscape.building_areas": "Toggle Building Areas",
   "key.wandscape.panel_hide": "Hide / Show Panel",
-  "message.wandscape.town.welcome": "[Wandscape] Welcome! Press V to open the building panel and start building your town. Once the panel is open, press C to release the mouse and H to open the tutorial.",
+  "message.wandscape.town.welcome": "[Wandscape] Welcome! Press V to open the building panel and start building your town. Once the panel is open, press C to release the mouse and H to open the tutorial.\nThis mod is still in its early versions with few built-in spells — playing alongside irons_spellbooks (Iron Spells) is recommended.",
   "message.wandscape.projection.cannot_pin": "Cannot pin — no block under the crosshair",
   "message.wandscape.overview.cannot_pin": "Cannot pin — no block under the crosshair",
   "gui.wandscape.townhall.title": "Town Hall",

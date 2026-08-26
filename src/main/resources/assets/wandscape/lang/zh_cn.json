@@ -75,7 +75,7 @@
   "key.wandscape.guide": "打开帮助指南",
   "key.wandscape.building_areas": "切换建筑区域",
   "key.wandscape.panel_hide": "隐藏/显示面板",
-  "message.wandscape.town.welcome": "[Wandscape] 欢迎！按 V 键打开建筑面板，开始建设你的魔法小镇吧！面板打开后，按 C 键抬起鼠标操作界面，按 H 键打开新手教程。",
+  "message.wandscape.town.welcome": "[Wandscape] 欢迎！按 V 键打开建筑面板，开始建设你的魔法小镇吧！面板打开后，按 C 键抬起鼠标操作界面，按 H 键打开新手教程。\n本模组尚在早期版本，自带魔法较少，推荐搭配 irons_spellbooks（铁魔法）游玩。",
   "message.wandscape.projection.cannot_pin": "无法固定 — 准星没有对准方块",
   "message.wandscape.overview.cannot_pin": "无法固定 — 准星没有对准方块",
   "gui.wandscape.townhall.title": "市政厅",
