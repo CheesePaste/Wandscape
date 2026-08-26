@@ -204,7 +204,7 @@ public class NpcScreen extends AbstractContainerScreen<NpcMenu> implements Repla
                 this::onDismiss));
         addRenderableWidget(new MedievalButton(bx + 238, btnY, 42, 16,
                 I18n.name("gui.wandscape.common.close", "Close"),
-                () -> Minecraft.getInstance().setScreen(null)));
+                this::onClose));
     }
 
     private Component peaceLabel() {
@@ -237,8 +237,9 @@ public class NpcScreen extends AbstractContainerScreen<NpcMenu> implements Repla
                 I18n.name("gui.wandscape.npc.dismiss_confirm", "确定解雇法师 %s？其装备将掉落。", name),
                 () -> {
                     PacketDistributor.sendToServer(new NpcDismissPacket(entityId));
-                    // 乐观关闭：服务端解雇成功后容器失效会再次触发关闭，此处先行收起面板
-                    Minecraft.getInstance().setScreen(null);
+                    // 标准容器关闭（closeContainer + setScreen(null)），与关闭按钮一致；
+                    // 服务端收到 close 包后立即同步关闭容器，避免面板残留/容器状态不一致
+                    onClose();
                 });
     }
 

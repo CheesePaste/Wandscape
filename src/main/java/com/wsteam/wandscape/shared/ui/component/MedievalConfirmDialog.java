@@ -98,8 +98,8 @@ public final class MedievalConfirmDialog {
         if (!open) return;
         Font font = Minecraft.getInstance().font;
 
-        // 全屏半透明遮罩，压暗背景
-        g.fill(0, 0, screenW, screenH, 0x80000000);
+        // 全屏近不透明遮罩：加深以避免下层面板透出，造成「确认框与面板重叠」的观感
+        g.fill(0, 0, screenW, screenH, 0xE6000000);
 
         int bx = (screenW - BOX_W) / 2;
         int by = (screenH - BOX_H) / 2;
