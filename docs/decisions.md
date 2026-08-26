@@ -16,6 +16,18 @@
 
 **影响**：NPC 盔甲（含建镇赠送铁套）随战斗受损、会磨坏——铁套不再是永久，仍是开局一次性免费增益（见 2026-08-16「初始法师赠送铁套」）。旧存档受损盔甲照常累计。
 
+## 2026-08-26：铁魔法伤害倍率去重——SPELL_POWER 只在伤害入口乘一次
+
+**需求**（bug 报告）：玩家实测铁魔法伤害异常高——10.5 基础伤害的魔法飞弹，3.0 法术强度无套装 NPC 应打 31.5 却打出 91.4；3.5 → 应为 36.75 却打 130.6；5.0（湮灭法杖）→ 应为 52.5 却打 257.3。伤害随法术强度二次方增长，而 Wandscape 原生魔法（光束/陨石）完全正常。
+
+**根因**：同一份铁魔法伤害被 SPELL_POWER 连乘两次。铁魔法 `DamageSources.applyDamage` 先发 `SpellDamageEvent`（`compat` 包的 `IronSpellsDamageHandler` 在此乘一次），随后仍调用 `target.hurt()` → 触发 `LivingIncomingDamageEvent`（`guard/NpcSpellPowerHandler` 又乘一次）。原生魔法只走 `LivingIncomingDamageEvent` 一次，故正常。观测值 ≈ `基础 × SPELL_POWER² × 魔力强化²` 与实测完全吻合。
+
+**决策**：删除 `IronSpellsDamageHandler`，铁魔法伤害倍率统一由 `NpcSpellPowerHandler` 在 `LivingIncomingDamageEvent` 入口乘一次（该入口本就是「光束/未来法术/铁魔法」的统一倍率点，还一并承载友军边界与和平模式，见「殖民地友军名单」条目）。`SpellDamageEvent` 端不再有任何倍率监听。
+
+**为什么**：`NpcSpellPowerHandler` 是所有 NPC 伤害的必经入口（铁魔法所有伤害经 `applyDamage → hurt()`），且友军/和平边界必须在它这里取消伤害——倍率若移到 SpellDamageEvent 端，仍无法让铁魔法绕过边界，只会把边界与倍率拆到两处。删除冗余监听是最小且不散落的修法。
+
+**影响**：删除 `compat/ironspellbooks/IronSpellsDamageHandler.java` 及注册；`IronSpellsCompat.init` 不再注册事件；`NpcSpellPowerHandler` javadoc 与 `architecture/packages/compat.md` 增「勿在 SpellDamageEvent 端重新乘倍率」的契约说明。修复后铁魔法伤害回归线性：`基础 × SPELL_POWER × 魔力强化`。
+
 ## 2026-08-26：跟随攻击 + 伤害边界放宽为非友军
 
 **需求**（用户指令）：1) 跟随模式的 NPC 现在玩家打怪后它不帮忙——要求像原版狼一样，玩家攻击的目标让跟随 NPC 获得仇恨并攻击；2) 之前「各种魔法只能打 `Enemy`」判定为设计失误太窄——改为**友军名单管什么不能打，其他的都能打**（友军 = 玩家 + 同殖民地 NPC/铁魔法随从/游客），主动索敌/锁定目标保持 Enemy 不变，只是可伤害对象变广。

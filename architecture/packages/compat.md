@@ -11,11 +11,16 @@
 ## 子包与类
 
 ### `ironspellbooks/`
-- `IronSpellsCompat`：兼容总入口，检查加载状态并在模组加载时注册事件监听。
+- `IronSpellsCompat`：兼容总入口，检查加载状态。
 - `IronSpellsHelper`：识别铁魔法卷轴物品堆、提取/构建带等级的卷轴、生成动态 `MagicDef`（蓝耗 1:1）。
 - `IronSpellsCaster`：瞬发（`INSTANT`）、长蓄力（`LONG`）与持续引导（`CONTINUOUS`）法术的执行与生命周期维护。蓝耗 1:1 直接扣 NPC 魔力；所有类型施法开始一次性扣全量。
-- `IronSpellsDamageHandler`：订阅 `SpellDamageEvent`，将法师的 `SPELL_POWER` 与【魔力强化】倍率乘入铁魔法伤害输出。
 - `IronSpellsAttributes`：把铁魔法装备物品堆的 `ItemAttributeModifiers` 映射为 Wandscape 属性修饰符——`MAX_MANA`→`MAX_MANA`、`SPELL_POWER`→`SPELL_POWER`、vanilla `MOVEMENT_SPEED`→`MOVE_SPEED`（百分比映射 `MULTIPLY_BASE` 乘区）；各学派 `*_spell_power`/`casting_movespeed`/`mana_regen`/冷却/施法时间/抗性等铁魔法特色属性不映射。供 `WandscapeNpc.syncArmorAttributes` 合并进 ECS 盔甲槽。
+
+> **铁魔法伤害倍率不在 compat 包乘**：铁魔法 `DamageSources.applyDamage` 发完 `SpellDamageEvent`
+> 后仍会调用 `target.hurt()`，同一伤害会连续触发 `SpellDamageEvent` 与 `LivingIncomingDamageEvent`
+> 两个事件。SPELL_POWER/魔力强化倍率统一由 `guard/NpcSpellPowerHandler` 在伤害入口乘**一次**，
+> compat 包不再订阅 `SpellDamageEvent`（曾加的 `IronSpellsDamageHandler` 因双重乘算使伤害随法术
+> 强度二次方暴涨而移除）。
 
 ## 依赖关系
 

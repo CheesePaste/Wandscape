@@ -16,6 +16,11 @@ import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
  * （光束/未来法术/铁魔法），在「给目标核算伤害」的唯一入口乘倍率，任何未来新增魔法自动
  * 生效，不会漏写。
  *
+ * <p>铁魔法伤害必须也只在此乘一次：铁魔法 {@code applyDamage} 会先发 {@code SpellDamageEvent}
+ * 再调用 {@code target.hurt()}（同一伤害会连续触发这两个事件），任何在 SpellDamageEvent 端再乘
+ * SPELL_POWER 的监听都会与这里重复乘算，使伤害随法术强度二次方暴涨——曾有的
+ * {@code IronSpellsDamageHandler} 已因该 bug 移除，勿在 compat 包重新引入。
+ *
  * <p>友伤边界（L0，先于倍率）：**友军名单管辖**——伤害源实体是 {@link WandscapeNpc} 时，
  * 目标为友军（玩家 + 同殖民地 NPC/铁魔法随从/游客，见 {@code WandscapeNpc#isFriendlyForce}）
  * 则整伤取消；非友军一律结算（不再限于 {@link Enemy}，与 {@code canBeamHurt} 放宽一致）。

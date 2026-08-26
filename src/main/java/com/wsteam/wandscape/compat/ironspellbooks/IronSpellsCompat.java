@@ -4,7 +4,6 @@ import com.wsteam.wandscape.shared.log.Log;
 
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModList;
-import net.neoforged.neoforge.common.NeoForge;
 
 /**
  * Wandscape × Iron's Spells 'n Spellbooks 兼容总入口。
@@ -35,7 +34,8 @@ public final class IronSpellsCompat {
         }
 
         Log.info(TAG, "Iron's Spells 'n Spellbooks detected! Initializing compat layer...");
-        // 注册伤害与治疗加成监听器
-        NeoForge.EVENT_BUS.register(IronSpellsDamageHandler.class);
+        // 伤害/治疗倍率统一走 NpcSpellPowerHandler（LivingIncomingDamageEvent）单入口——铁魔法
+        // applyDamage 发完 SpellDamageEvent 后仍会调用 target.hurt()，若再在此监听 SpellDamageEvent
+        // 乘 SPELL_POWER 会与 NpcSpellPowerHandler 重复乘算（曾导致铁魔法伤害按法术强度二次方增长）。
     }
 }
