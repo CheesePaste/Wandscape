@@ -120,8 +120,9 @@ public final class MedievalConfirmDialog {
         if (!open) return;
         Font font = Minecraft.getInstance().font;
 
-        // 遮罩：压暗背景即可，不糊死全屏（框体自身不透明负责可读性）
-        g.fill(0, 0, screenW, screenH, DIM_COLOR);
+        // 遮罩：走 fillGradient（与原版 renderTransparentBackground 同路径），
+        // 平铺 fill 在含实体渲染的容器屏里会被同帧批次顺序吞掉
+        g.fillGradient(0, 0, screenW, screenH, DIM_COLOR, DIM_COLOR);
 
         List<net.minecraft.util.FormattedCharSequence> lines = font.split(message, BOX_W - PAD * 2);
         int textH = lines.size() * (font.lineHeight + 2) - 2;
@@ -159,6 +160,10 @@ public final class MedievalConfirmDialog {
 
         drawButton(g, font, cancelX, btnY, I18n.name("gui.wandscape.confirm.cancel", "取消"), cancHov, false);
         drawButton(g, font, confirmX, btnY, I18n.name("gui.wandscape.confirm.ok", "确认"), confHov, true);
+
+        // 立即收批：宿主面板里 renderEntityInInventory 的 flush 会打乱 gui() 批次，
+        // 不收批的话遮罩/框体会被同帧稍后收批的实体与面板内容盖住（透字/不压暗）
+        g.flush();
     }
 
     private static void drawButton(GuiGraphics g, Font font, int x, int y,
