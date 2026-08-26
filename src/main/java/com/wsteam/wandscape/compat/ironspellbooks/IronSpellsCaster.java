@@ -79,9 +79,8 @@ public final class IronSpellsCaster {
             return false;
         }
 
-        int rawMana = spell.getManaCost(spellLevel);
-        int manaCost = Math.max(5, (int) Math.round(rawMana * 0.25));
-        int baseCooldown = spell.getSpellCooldown() > 0 ? (int) Math.round(spell.getSpellCooldown() * 20.0) : 40;
+        int manaCost = IronSpellsHelper.getAdaptedManaCost(spell, spellLevel);
+        int baseCooldown = IronSpellsHelper.getAdaptedCooldown(spell);
         CastType castType = spell.getCastType();
 
         if (target != null && target.isAlive()) {

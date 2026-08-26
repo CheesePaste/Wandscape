@@ -7,6 +7,7 @@ import javax.annotation.Nullable;
 import com.wsteam.wandscape.magic.data.MagicDef;
 import com.wsteam.wandscape.magic.data.SpellConditions;
 
+import io.redspace.ironsspellbooks.api.magic.MagicData;
 import io.redspace.ironsspellbooks.api.registry.SpellRegistry;
 import io.redspace.ironsspellbooks.api.spells.AbstractSpell;
 import io.redspace.ironsspellbooks.api.spells.ISpellContainer;
@@ -18,7 +19,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * Iron's Spells 'n Spellbooks 辅助桥接类（物品识别/元数据转换/合成 MagicDef）。
+ * 铁魔法辅助工具类：卷轴识别、法术等级解析、卷轴物品构造与动态 MagicDef 转换。
  */
 public final class IronSpellsHelper {
 
@@ -26,40 +27,38 @@ public final class IronSpellsHelper {
 
     /** 检查物品堆是否为铁魔法法术卷轴。 */
     public static boolean isScroll(ItemStack stack) {
-        if (stack == null || stack.isEmpty()) return false;
+        if (!IronSpellsCompat.isLoaded() || stack == null || stack.isEmpty()) return false;
         return stack.getItem() instanceof Scroll || ISpellContainer.isSpellContainer(stack);
     }
 
-    /** 从卷轴提取法术数据（SpellData）；若非法或空返回 null。 */
-    @Nullable
-    public static SpellData getSpellData(ItemStack stack) {
-        if (!isScroll(stack)) return null;
-        ISpellContainer container = ISpellContainer.get(stack);
-        if (container == null || container.isEmpty()) return null;
-        return container.getSpellAtIndex(0);
-    }
-
-    /** 从卷轴提取法术 ID（如 "irons_spellbooks:firebolt"）。 */
+    /** 从物品堆中提取铁魔法法术 ID（如 irons_spellbooks:fireball）。 */
     @Nullable
     public static String getSpellId(ItemStack stack) {
-        SpellData data = getSpellData(stack);
-        return data != null && data.getSpell() != null ? data.getSpell().getSpellId() : null;
+        if (!isScroll(stack)) return null;
+        ISpellContainer container = ISpellContainer.get(stack);
+        if (container.isEmpty()) return null;
+        SpellData spellData = container.getSpellAtIndex(0);
+        return spellData != null && spellData.getSpell() != null ? spellData.getSpell().getSpellId() : null;
     }
 
-    /** 从卷轴提取法术等级（默认为 1）。 */
+    /** 从物品堆中提取铁魔法法术等级（默认 1）。 */
     public static int getSpellLevel(ItemStack stack) {
-        SpellData data = getSpellData(stack);
-        return data != null ? data.getLevel() : 1;
+        if (!isScroll(stack)) return 1;
+        ISpellContainer container = ISpellContainer.get(stack);
+        if (container.isEmpty()) return 1;
+        SpellData spellData = container.getSpellAtIndex(0);
+        return spellData != null ? Math.max(1, spellData.getLevel()) : 1;
     }
 
-    /** 根据法术 ID 与等级构造一个铁魔法卷轴物品堆。 */
+    /** 创建指定法术与等级的铁魔法卷轴物品堆。 */
     public static ItemStack createScroll(String spellId, int level) {
         if (!IronSpellsCompat.isLoaded()) return ItemStack.EMPTY;
         AbstractSpell spell = SpellRegistry.getSpell(spellId);
         if (spell == null || spell == SpellRegistry.none()) return ItemStack.EMPTY;
-        ItemStack stack = new ItemStack(ItemRegistry.SCROLL.get());
-        ISpellContainer.createScrollContainer(spell, Math.max(1, level), stack);
-        return stack;
+
+        ItemStack scroll = new ItemStack(ItemRegistry.SCROLL.get());
+        ISpellContainer.createScrollContainer(spell, Math.max(1, level), scroll);
+        return scroll;
     }
 
     /** 是否为有效的铁魔法法术 ID。 */
@@ -70,15 +69,31 @@ public final class IronSpellsHelper {
     }
 
     /**
+     * 适配铁魔法冷却时间（秒 → tick）：
+     * 铁魔法针对玩家多槽轮转设计（终极大招 CD 长达 120s~180s）；
+     * NPC 战斗节奏对齐 Wandscape 动态战斗体系（2s ~ 10s 循环），按 0.08 比例换算并封顶 200 tick (10s)。
+     */
+    public static int getAdaptedCooldown(AbstractSpell spell) {
+        int rawCdSeconds = spell.getSpellCooldown();
+        if (rawCdSeconds <= 0) return 40; // 默认 2s
+        int ticks = (int) Math.round(rawCdSeconds * 20.0 * 0.08);
+        return Math.max(20, Math.min(200, ticks));
+    }
+
+    /**
+     * 适配铁魔法法力消耗：
+     * 铁魔法玩家法力池（500~1500）约为 NPC（100~200）的 5~10 倍；
+     * 对齐 Wandscape 原生蓝耗区间（5 ~ 30 点），终极法术（原 300 蓝）换算为 25~30 蓝。
+     */
+    public static int getAdaptedManaCost(AbstractSpell spell, int level) {
+        int rawMana = spell.getManaCost(level);
+        if (rawMana <= 0) return 5;
+        int mana = (int) Math.round(rawMana * 0.10);
+        return Math.max(5, Math.min(35, mana));
+    }
+
+    /**
      * 根据铁魔法法术与装备放入的门类，构造动态合成的 {@link MagicDef}。
-     *
-     * <p>大类语义规则：
-     * <ul>
-     *   <li>single_target: 目标 hostile_nearest，无条件触发。</li>
-     *   <li>aoe: 目标 hostile_nearest，敌数 ≥ 2 触发。</li>
-     *   <li>defense: 目标 self，自身血量 &lt; 80% 触发。</li>
-     *   <li>support: 目标 ally_lowest_hp，友方血量 &lt; 80% 触发。</li>
-     * </ul>
      */
     @Nullable
     public static MagicDef getSyntheticDef(String spellId, int level, String categoryName) {
@@ -93,10 +108,8 @@ public final class IronSpellsHelper {
             cat = MagicDef.Category.SINGLE_TARGET;
         }
 
-        // 铁魔法法力池规模（500~1500）约为 Wandscape NPC（100~200）的 4 倍；按 0.25 换算适配
-        int rawMana = spell.getManaCost(level);
-        int manaCost = Math.max(5, (int) Math.round(rawMana * 0.25));
-        int baseCooldown = spell.getSpellCooldown() > 0 ? (int) Math.round(spell.getSpellCooldown() * 20.0) : 40;
+        int manaCost = getAdaptedManaCost(spell, level);
+        int baseCooldown = getAdaptedCooldown(spell);
         int castTime = Math.max(0, spell.getCastTime(level));
         double range = 32.0;
 
@@ -106,7 +119,7 @@ public final class IronSpellsHelper {
         switch (cat) {
             case AOE -> {
                 targetMode = MagicDef.TargetMode.HOSTILE_NEAREST;
-                conditions = new SpellConditions(2, null, null, null);
+                conditions = new SpellConditions(1, null, null, null);
             }
             case DEFENSE -> {
                 targetMode = MagicDef.TargetMode.SELF;
