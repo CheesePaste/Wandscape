@@ -1,6 +1,7 @@
 {
   "id": "fortification",
-  "category": "support",
+  "category": "normal",
+  "default_group": "support",
   "mana_cost": 40,
   "base_cooldown": 1200,
   "cast_time": 120,

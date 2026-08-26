@@ -13,6 +13,9 @@ import com.google.gson.JsonObject;
  * 供 BeamOp 等执行器消费。与 {@link MagicCircleSpec} 同模式：record 风格 + fromJson 套默认值。
  *
  * <p>门控执行（施法互斥锁 + 每魔法独立 CD + 魔力）仍在 {@code MagicState}，这里只定义"是什么"。
+ * {@code category} 只表达性质（normal/special/altar）；{@code defaultGroup} 是可选的**默认策略组**
+ * （single_target/aoe/defense/support 之一），normal 法术缺省放置组用，供默认装备种子与
+ * {@code SpellbookLoader.equippableCategoryOf} 兜底装桶——实际组由玩家在策略页放置决定。
  * 数据契约见 {@code docs/spell-casting.md}。
  */
 public record MagicDef(
@@ -29,7 +32,8 @@ public record MagicDef(
         boolean altarOnly,
         int altarCooldown,
         int altarDuration,
-        SpellConditions conditions
+        SpellConditions conditions,
+        @Nullable String defaultGroup
 ) {
 
     public MagicDef {
@@ -41,6 +45,7 @@ public record MagicDef(
         altarDuration = Math.max(0, altarDuration);
         effectDamage = effectDamage != null && effectDamage < 0 ? null : effectDamage;
         conditions = conditions != null ? conditions : SpellConditions.NONE;
+        defaultGroup = defaultGroup == null || defaultGroup.isBlank() ? null : defaultGroup;
     }
 
     /**
@@ -51,12 +56,12 @@ public record MagicDef(
     public static final List<String> SPECIAL_SPELLS = List.of("teleport", "heal");
 
     /**
-     * 施法分类：决定策略预设的默认排序与 UI 分组，不承载触发逻辑
-     * （触发逻辑 = target_mode + conditions，见 docs/spell-casting.md）。
-     * BUFF 与 HEAL 合并为 SUPPORT；SPECIAL（teleport/heal）为系统固有特殊魔法，heal 可装备，
-     * ALTAR（revive）为祭坛专属、不可装备，teleport/ALTAR 不进自动决策表。
+     * 施法分类（3 类）：只表达法术**性质**，不再决定敌数门控与预设排序——那两者改由法术所在的
+     * 策略组（{@code EquippedMagicComponent} 的 4 桶）驱动（见 docs/spell-casting.md）。
+     * NORMAL = 普通战斗法术（放哪个组就按哪个组的敌数门槛与预设位次）；SPECIAL = 系统固有
+     * （teleport/heal，heal 可装备，teleport 导航回退）；ALTAR = 祭坛专属（revive）。
      */
-    public enum Category { SINGLE_TARGET, AOE, DEFENSE, SUPPORT, ALTAR, SPECIAL }
+    public enum Category { NORMAL, SPECIAL, ALTAR }
 
     /** 目标规则：决定"何时算有有效目标"。 */
     public enum TargetMode { HOSTILE_NEAREST, HOSTILE_LOWEST_HP, ALLY_LOWEST_HP, SELF, NONE, DEAD_ALLY }
@@ -64,7 +69,7 @@ public record MagicDef(
     public static MagicDef fromJson(String id, JsonElement json) {
         JsonObject obj = json.getAsJsonObject();
         String defId = getString(obj, "id", id);
-        Category category = parseEnum(getString(obj, "category", "single_target"), Category.SINGLE_TARGET);
+        Category category = parseEnum(getString(obj, "category", "normal"), Category.NORMAL);
         int manaCost = (int) Math.round(getDouble(obj, "mana_cost", 0));
         int baseCooldown = (int) Math.round(getDouble(obj, "base_cooldown", 0));
         int castTime = (int) Math.round(getDouble(obj, "cast_time", 0));
@@ -84,8 +89,9 @@ public record MagicDef(
         int altarCooldown = (int) Math.round(getDouble(obj, "altar_cooldown", 0));
         int altarDuration = (int) Math.round(getDouble(obj, "altar_duration", 0));
         SpellConditions conditions = SpellConditions.fromJson(obj.get("conditions"));
+        String defaultGroup = getString(obj, "default_group", null);
         return new MagicDef(defId, category, manaCost, baseCooldown, castTime, range, targetMode,
-                circleId, color, damage, altarOnly, altarCooldown, altarDuration, conditions);
+                circleId, color, damage, altarOnly, altarCooldown, altarDuration, conditions, defaultGroup);
     }
 
     /** "#A8E0FF" → 0xFFA8E0FF；非法/缺失返回 null。 */

@@ -12,6 +12,7 @@ import com.wsteam.wandscape.engine.service.ParticleService;
 import com.wsteam.wandscape.engine.service.SoundService;
 import com.wsteam.wandscape.engine.sound.WandscapeSounds;
 import com.wsteam.wandscape.magic.data.MagicDef;
+import com.wsteam.wandscape.magic.data.SpellRef;
 import com.wsteam.wandscape.magic.data.WorldSnapshot;
 import com.wsteam.wandscape.magic.entity.MagicBeamEntity;
 import com.wsteam.wandscape.magic.internal.CastBrain;
@@ -179,11 +180,12 @@ public final class GuardCombat {
      */
     private static void castSelected(ServerLevel level, WandscapeNpc npc, LivingEntity target,
                                      String circleId, int color) {
-        // known = 玩家策略解析出的魔法级优先级；快照（敌数/自血/友方最低血/状态）驱动目标规则与 conditions
-        List<MagicDef> known = CastBrain.resolvePriority(npc.castStrategy,
+        // known = 玩家策略解析出的法术级优先级（SpellRef 携带策略组）；快照（敌数/自血/友方最低血/状态）
+        // 驱动目标规则与 conditions；敌数门控按策略组（单体组 ≤3 / 群攻组 ≥3，防御·支援无门槛）
+        List<SpellRef> known = CastBrain.resolvePriority(npc.castStrategy,
                 CastBrain.knownSpells(npc.equippedMagic));
         WorldSnapshot snapshot = buildSnapshot(level, npc);
-        MagicDef chosen = CastBrain.select(known,
+        SpellRef chosen = CastBrain.select(known,
                 def -> com.wsteam.wandscape.core.component.MagicState.isFreeCast()
                         || (npc.magic.canCast(def.id()) && npc.magic.getMana() >= def.manaCost()), snapshot);
         if (chosen == null) {
@@ -191,7 +193,7 @@ public final class GuardCombat {
             normalAttack(level, npc, target);
             return;
         }
-        boolean ok = MagicSpellExecutors.dispatch(level, npc, target, chosen, circleId, color);
+        boolean ok = MagicSpellExecutors.dispatch(level, npc, target, chosen.def(), circleId, color);
         if (ok) {
             // 杖尖彩色爆闪（施法颜色）
             float[] rgb = rgbOf(color);
@@ -296,7 +298,7 @@ public final class GuardCombat {
     }
 
     /** 敌数口径 = 半径内 Enemy（排除友军）+ 非 Enemy 的当前战斗目标（跟随攻击目标 / 受击仇恨 /
-     *  敌对法师的生存玩家目标），驱动类别敌数门控（单发 ≤ 3 / 群发 ≥ 3）与 hostile_nearest
+     *  敌对法师的生存玩家目标），驱动策略组敌数门控（单体组 ≤ 3 / 群攻组 ≥ 3）与 hostile_nearest
      *  （hasHostileTarget）。不把普通平民（村民/动物）计入——否则殖民地里村民会让 AOE 门控恒开、
      *  为打一只怪甩陨石溅射全村；也不计友军——己方/同殖民地亡灵随从跟班会让敌数虚增、误判被围殴。 */
     private static int countEnemies(ServerLevel level, WandscapeNpc npc) {

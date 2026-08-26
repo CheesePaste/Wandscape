@@ -1,6 +1,7 @@
 {
   "id": "petrification",
-  "category": "defense",
+  "category": "normal",
+  "default_group": "defense",
   "mana_cost": 50,
   "base_cooldown": 600,
   "cast_time": 100,

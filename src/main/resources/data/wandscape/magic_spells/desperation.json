@@ -1,6 +1,7 @@
 {
   "id": "desperation",
-  "category": "single_target",
+  "category": "normal",
+  "default_group": "single_target",
   "mana_cost": 80,
   "base_cooldown": 1800,
   "cast_time": 15,

@@ -1337,3 +1337,17 @@
 **为什么**：按固定点数回复时满蓝耗时 = 上限 × 结算间隔，随装备把 MAX_MANA 抬高而线性拉长——高魔力法师回蓝慢到失衡；按上限比例回复则满蓝耗时恒定（默认约 50s），数值随装备成长同步加速，无需按上限区间分段调参。
 
 **影响**：`Config` 新增 `npc.manaRegenFraction`；`MagicState` 单测改为断言「每结算回 1% 上限」；旧存档无需迁移（结算累计 tick 字段与持久化键不变）。
+
+## 2026-08-26：魔法分类收敛 + 敌数门控跟随策略组
+
+**需求**（bug 报告 + 用户定案）：NPC 对单个目标放不出陨石。根因是 a455928b 让策略槽位放置不再校验分类匹配（`mayPlace 去分类匹配`），玩家可把任意法术放进任意策略组，但 `CastBrain.enemyCountGate` 仍按法术自己的 `MagicDef.category()` 判敌数门槛——门控与实际所在策略组脱节（meteor 拖进单体组仍被 aoe 的 ≥3 挡掉）。用户定案：单个法术 category 合并为 normal/special/altar 三种；策略组保持 4 个；敌数门控跟随策略组。
+
+**决策**：
+- `MagicDef.Category` 收敛为 `NORMAL`/`SPECIAL`/`ALTAR`，只表性质；四个进攻类（single_target/aoe/defense/support）并入 NORMAL。
+- 策略组 = `EquippedMagicComponent` 4 桶（single_target/aoe/defense/support），玩家自由放置。
+- `CastBrain` 引入 `SpellRef(MagicDef, group)`：`knownSpells` 从桶循环带回组，`select` 敌数门控与 `resolvePriority` 预设排序都按 `group` 判——单体组 ≤3、群攻组 ≥3、防御/支援无门槛。
+- `MagicDef` 新增可选 `default_group`（默认策略组）：beam→single_target、meteor→aoe 等，供默认装备种子与 `equippableCategoryOf` 兜底装桶；缺省 → support。
+
+**为什么**：category 在放置层面已名存实亡（不校验匹配），继续用它驱动门控必然踩坑；改为跟随玩家可见、可操作的策略组，门控与分组一致。陨石想打单体，把它拖进单体组即可，不必改每个法术的门控配置。
+
+**影响**：spell JSON 的 category 全部改 normal + 补 default_group；CastBrain 接口改吃 SpellRef；铁魔法合成 def category 恒 NORMAL、targetMode/conditions 按组名；策略预设排序按策略组；MagicDefTest/CastBrainTest 同步更新。

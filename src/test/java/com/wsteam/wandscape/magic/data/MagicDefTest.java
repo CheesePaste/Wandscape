@@ -27,7 +27,8 @@ class MagicDefTest {
         MagicDef beam = loadSpec("/data/wandscape/magic_spells/beam.json");
         assertNotNull(beam, "beam.json should be on classpath");
         assertEquals("beam", beam.id());
-        assertEquals(MagicDef.Category.SINGLE_TARGET, beam.category());
+        assertEquals(MagicDef.Category.NORMAL, beam.category());
+        assertEquals("single_target", beam.defaultGroup(), "beam 默认策略组 = 单体攻击组");
         assertEquals(MagicDef.TargetMode.HOSTILE_NEAREST, beam.targetMode());
         assertEquals("arcane_hexagram", beam.effectCircleId());
         assertEquals(0xFFA8E0FF, beam.effectColor());
@@ -72,7 +73,8 @@ class MagicDefTest {
         MagicDef meteor = loadSpec("/data/wandscape/magic_spells/meteor.json");
         assertNotNull(meteor, "meteor.json should be on classpath");
         assertEquals("meteor", meteor.id());
-        assertEquals(MagicDef.Category.AOE, meteor.category());
+        assertEquals(MagicDef.Category.NORMAL, meteor.category());
+        assertEquals("aoe", meteor.defaultGroup(), "meteor 默认策略组 = 群体攻击组");
         assertEquals(MagicDef.TargetMode.HOSTILE_NEAREST, meteor.targetMode());
         assertEquals("meteor_magic_circle", meteor.effectCircleId());
         assertEquals(0xFFE74C3C, meteor.effectColor());
@@ -83,7 +85,8 @@ class MagicDefTest {
         MagicDef pet = loadSpec("/data/wandscape/magic_spells/petrification.json");
         assertNotNull(pet, "petrification.json should be on classpath");
         assertEquals("petrification", pet.id());
-        assertEquals(MagicDef.Category.DEFENSE, pet.category());
+        assertEquals(MagicDef.Category.NORMAL, pet.category());
+        assertEquals("defense", pet.defaultGroup(), "petrification 默认策略组 = 防御组");
         assertEquals(MagicDef.TargetMode.SELF, pet.targetMode());
         assertEquals("petrification_magic_circle", pet.effectCircleId());
         assertEquals(0xFF7F8C8D, pet.effectColor());
@@ -121,7 +124,8 @@ class MagicDefTest {
     void appliesNormalizeDefaults() {
         MagicDef def = MagicDef.fromJson("minimal", JsonParser.parseString("{}"));
         assertEquals("minimal", def.id());
-        assertEquals(MagicDef.Category.SINGLE_TARGET, def.category());
+        assertEquals(MagicDef.Category.NORMAL, def.category());
+        assertNull(def.defaultGroup(), "未配 default_group 默认 null");
         assertEquals(0, def.manaCost());
         assertEquals(0, def.baseCooldown());
         assertEquals(0, def.castTime());
@@ -138,8 +142,20 @@ class MagicDefTest {
                 + "\"category\": \"not_a_category\","
                 + "\"target_mode\": \"also_bad\""
                 + "}"));
-        assertEquals(MagicDef.Category.SINGLE_TARGET, def.category());
+        assertEquals(MagicDef.Category.NORMAL, def.category());
         assertEquals(MagicDef.TargetMode.NONE, def.targetMode());
+    }
+
+    @Test
+    void parsesDefaultGroup() {
+        MagicDef def = MagicDef.fromJson("g", JsonParser.parseString(
+                "{\"category\": \"normal\", \"default_group\": \"aoe\"}"));
+        assertEquals(MagicDef.Category.NORMAL, def.category());
+        assertEquals("aoe", def.defaultGroup());
+        // 非法 default_group（非策略组名）原样保留，由 equippableCategoryOf 兜底拒绝
+        MagicDef bad = MagicDef.fromJson("bad", JsonParser.parseString(
+                "{\"default_group\": \"not_a_group\"}"));
+        assertEquals("not_a_group", bad.defaultGroup());
     }
 
     @Test

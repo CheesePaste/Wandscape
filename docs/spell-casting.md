@@ -73,7 +73,8 @@ L2 兜底层
 ```jsonc
 {
   "id": "beam",                 // 魔法 id（tryCastSpell 的 magicId key）
-  "category": "single_target",  // 分类：single_target / aoe / defense / support / utility
+  "category": "normal",         // 分类（性质）：normal / special / altar；敌数门控看策略组，不看这里
+  "default_group": "single_target", // 可选：默认策略组（single_target/aoe/defense/support），缺省 → support 兜底
   "mana_cost": 50,
   "base_cooldown": 400,         // tick；施法互斥锁（法阵/引导/光束全程）结束后才开始倒计时的冷却，按 SPELL_SPEED 缩短
   "range": 32,
@@ -89,14 +90,11 @@ L2 兜底层
 }
 ```
 
-**分类定案（6 类）**——`category` 决定策略预设的默认排序与 UI 分组，**不承载触发逻辑**：
+**分类定案（3 类）**——`category` 只表达法术**性质**，**不决定敌数门控与预设排序**（那两者由法术所在策略组驱动，见「敌数门控」与 5.4）：
 
-| 分类 | 覆盖 | 典型魔法 | 决策要点 |
+| 分类 | 覆盖 | 典型魔法 | 性质 |
 |---|---|---|---|
-| `single_target` 单体攻击 | beam、desperation(背水一战)、火球、闪电 | 单体高伤/持续伤 | 敌数 ≤ 3（敌少用单发） |
-| `aoe` 群体攻击 | meteor(陨石)、enfeeble_field(虚弱力场)、爆炸、火焰风暴 | 范围伤害 | **敌数 ≥ 3 才施放**（防浪费蓝，敌人多才值得范围伤）；meteor 连落：总量恒 6 颗、按 1/6 持续时长逐颗发射，每颗发射时动态重瞄当时最近目标 |
-| `defense` 防御 | petrification(石化减伤)、conversion(魅惑)、护盾、结界 | 保命/免伤 | 自身血量阈值 + **无同类状态**（防叠加）；与治疗的血线竞争靠预设排序+阈值错开 |
-| `support` 支援 | fortification(战争赐福)、增益（魔力强化/急速） | 回血/预铺 buff | 增益预判式（开战前上），靠 target_mode 区分 |
+| `normal` 普通 | 全部战斗魔法（单体/群攻/防御/支援按**策略组**分） | beam、meteor、petrification、enfeeble_field、conversion、fortification、desperation | 常规战斗法术，可装备进任意策略组；默认策略组 = `default_group` |
 | `special` 特殊 | teleport(传送)、heal(治疗) | 系统固有自动触发 | 所有 NPC 天生固有；heal 可装备进装备槽并经 L1 决策施放，另有 L0 紧急奶 + 脱战自奶兜底；teleport 不进装备/决策表，仅导航回退/逃生传送 |
 | `altar` 祭坛 | revive(复活) | 祭坛专属仪式 | `altar_only`，仅祭坛可施放，不进 NPC 自动决策 |
 
@@ -113,7 +111,7 @@ L2 兜底层
 
 ### 5.2 `conditions` — 内置触发条件（✅ 已实现，数据驱动，非玩家脚本）
 
-每个魔法可配自己的触发阈值，`CastBrain` 对照世界快照判断。**全部可选**，缺省 = 无条件。**只承载血线与效果不重放**；敌数门控已从按魔法配置中移除，改由 `CastBrain` 按类别统一判定（见下方「敌数门控」）：
+每个魔法可配自己的触发阈值，`CastBrain` 对照世界快照判断。**全部可选**，缺省 = 无条件。**只承载血线与效果不重放**；敌数门控已从按魔法配置中移除，改由 `CastBrain` 按**策略组**统一判定（见下方「敌数门控」）：
 
 ```jsonc
 "conditions": {
@@ -123,7 +121,7 @@ L2 兜底层
 }
 ```
 
-**敌数门控（分类规则，非 per-spell）**：单体攻击在敌数 ≤ 3 时可施放，群体攻击在敌数 ≥ 3 时可施放（阈值见 `WandscapeConstants.CAST_SINGLE_TARGET_MAX_ENEMIES` / `CAST_AOE_MIN_ENEMIES`）；DEFENSE/SUPPORT/SPECIAL 不设敌数门槛。原各魔法 JSON 里的 `min_enemies` 已移除。
+**敌数门控（按策略组，非 per-spell / 非 category）**：**单体攻击组**的法术在敌数 ≤ 3 时可施放，**群体攻击组**的法术在敌数 ≥ 3 时可施放（阈值见 `WandscapeConstants.CAST_SINGLE_TARGET_MAX_ENEMIES` / `CAST_AOE_MIN_ENEMIES`）；防御/支援组不设敌数门槛。组 = 玩家在策略页放置法术的桶（`EquippedMagicComponent`），**非法术自身 category**——把群攻法术（如 meteor）拖进单体组 → 敌数 1 也能对单体砸；留在群攻组 → 敌数 ≥ 3 才放。原各魔法 JSON 里的 `min_enemies` 已移除。
 
 **防御 vs 治疗的血线竞争**靠阈值错开解决，不靠运行时互斥：护盾配 `self_hp_max: 0.6`（血量偏高时保命），治疗配 `ally_hp_max: 0.7`（血线偏低才奶）——两者天然不会同时抢。heal 的 `ally_hp_max` 只管 **队友**（快照 `allyLowestHpRatio` 排除施法者自己），**自己或治疗半径（6 格）内友方掉血走 L0 硬性覆盖**（见第四节）——L0 现也管濒死队友，L1 的 `ally_hp_max` 只是正常线，不依赖它保命。
 
@@ -133,7 +131,7 @@ CastBrain 由 `select(known, castable, hasTarget)` 扩展为吃世界快照：
 
 ```java
 record WorldSnapshot(
-    int enemyCount,           // 目标周围敌人数（类别敌数门控用：单发 ≤ 3 / 群发 ≥ 3）
+    int enemyCount,           // 目标周围敌人数（策略组敌数门控用：单体组 ≤ 3 / 群攻组 ≥ 3）
     float selfHpRatio,        // 自身血量比例 [0,1]（self_hp_max 用）
     float allyLowestHpRatio,  // 友方最低血量比例 [0,1]；无友方 = 1（ally_hp_max 用）
     Set<String> activeEffects // 自身已有状态 id（no_effect 用）
@@ -150,14 +148,14 @@ priority: [magicId…]   // 显式优先级列表，配置后始终生效；空 
 configured: bool       // 是否配置过；false（从未配置）→ 按预设推导默认列表
 ```
 
-**预设 = 分类级排序模板**（玩家可整体换预设，也可在某分类内手动排序/启停——手动结果以显式 priority 为准，不被预设覆盖）：
+**预设 = 策略组级排序模板**（玩家可整体换预设，也可在某策略组内手动排序/启停——手动结果以显式 priority 为准，不被预设覆盖）：
 
-| 预设 | 分类顺序（高→低） |
+| 预设 | 策略组顺序（高→低） |
 |---|---|
-| `offensive` 火力 | SINGLE_TARGET > AOE > DEFENSE > SUPPORT |
-| `balanced` 均衡 | AOE > SINGLE_TARGET > SUPPORT > DEFENSE |
-| `support` 支援 | SUPPORT（治疗优先）> DEFENSE > AOE > SINGLE_TARGET |
-| `defensive` 防御 | DEFENSE > SUPPORT > AOE > SINGLE_TARGET |
+| `offensive` 火力 | 单体攻击组 > 群体攻击组 > 防御组 > 支援组 |
+| `balanced` 均衡 | 群体攻击组 > 单体攻击组 > 支援组 > 防御组 |
+| `support` 支援 | 支援组（治疗优先）> 防御组 > 群体攻击组 > 单体攻击组 |
+| `defensive` 防御 | 防御组 > 支援组 > 群体攻击组 > 单体攻击组 |
 
 玩家不设任何东西 → 默认 `balanced` 的默认列表，零配置可用。
 
@@ -230,7 +228,7 @@ npc/internal/ReviveHandler.java     ✅ 复活效果：spawnFromRecordAt（指�
 
 ### 9.1 条件决策（已实现）
 
-- **`SpellConditions`**（`magic/data/`）：`MagicDef.conditions` JSON → record（self_hp_max / ally_hp_max / no_effect），`matches(WorldSnapshot)` 纯逻辑判定，缺省 = 无条件。敌数门控（单 ≤3 / 群 ≥3）由 `CastBrain` 按类别判定，不进 per-spell 条件。
+- **`SpellConditions`**（`magic/data/`）：`MagicDef.conditions` JSON → record（self_hp_max / ally_hp_max / no_effect），`matches(WorldSnapshot)` 纯逻辑判定，缺省 = 无条件。敌数门控（单体组 ≤3 / 群攻组 ≥3）由 `CastBrain` 按**策略组**判定，不进 per-spell 条件。
 - **`WorldSnapshot`**（`magic/data/`）：决策输入快照（敌数 / 自身血比例 / 友方最低血比例 / 状态 id 集合），由守卫/自防御战斗循环每轮构造（`GuardCombat.buildSnapshot`：半径 16 内敌数、自身血比、半径内其他友方 NPC/村民最低血比、`unwrapKey` 取状态 id）。
 - **`CastBrain.select(known, castable, snapshot)`**：目标规则改由快照驱动（HOSTILE 需敌数>0、ALLY 需有受伤友方、DEAD_ALLY 祭坛专属永不自选），并追加 conditions 门控。
 
@@ -419,7 +417,18 @@ P1/P2 玩家无感知（内部重构），P3 起见 UI。每个阶段完成即�
 - **SPECIAL 分类**（`MagicDef.Category.SPECIAL`）：heal/teleport 迁入，`MagicDef.SPECIAL_SPELLS = [teleport, heal]`。所有 NPC 天生固有（`WandscapeNpc.knowsSpecialSpell`）；heal 可装备进装备槽并经 `CastBrain` 选中施放，teleport 不进装备、不进 L1。
 - **ALTAR 分类**（原 UTILITY 更名）：revive 独占，`altar_only` 祭坛专属，不进装备/决策表。
 - **默认装备**：`EquippedMagicComponent.DEFAULT_EQUIP = [beam, meteor]`（殖民地初始 3 名法师）；酒馆招募法师在 `TavernRecruitPacket` 生成后清空装备槽（无起始战斗魔法，仅特殊区 heal/teleport 系统固有）。
-- **装备排除统一**：`SpellbookLoader.equippableCategoryOf` 对 ALTAR(revive) 与 teleport 返回 null（不可装备）；heal 及常规四类可装备——无分类匹配时 convention 归类，heal 默认归 support 桶（施法仍看 `MagicDef.category()`，桶仅存储）。卷轴槽、魔法目录同样排除 ALTAR 与 teleport；创造栏含 heal/teleport 卷轴（仅排除 ALTAR revive）；卷轴创造施法排除 ALTAR 与 teleport（heal 可施放）。
+- **装备排除统一**：`SpellbookLoader.equippableCategoryOf` 对 ALTAR(revive) 与 teleport 返回 null（不可装备）；heal 及 normal 法术可装备——装桶取 `MagicDef.default_group`（缺省兜底 support），heal 无 default_group → support 桶（2026-08-26 起桶即策略组，敌数门控与预设排序按桶判，`MagicDef.category()` 只表性质）。卷轴槽、魔法目录同样排除 ALTAR 与 teleport；创造栏含 heal/teleport 卷轴（仅排除 ALTAR revive）；卷轴创造施法排除 ALTAR 与 teleport（heal 可施放）。
 - **heal/teleport 卷轴保留**：`scroll_heal.json` + `scroll_teleport.json`（均 min_colony_level 1，魔法工坊合成、创造栏可获得）；teleport 卷轴创造模式不可施放（导航回退魔法无原地施法语义）。
 - **策略 UI「特殊」面板**：`NpcStrategyScreen` 右侧新增只读「特殊」面板，列出 teleport/heal 并注明「默认使用，不可更换」。
+
+## 二十三、魔法分类收敛 + 敌数门控跟随策略组（2026-08-26）
+
+**动机**：a455928b 让策略槽位放置不再校验分类匹配（`mayPlace 去分类匹配`）——玩家可把任意法术放进任意策略组；但 `CastBrain.enemyCountGate` 仍按每个法术**自己的 `MagicDef.category()`** 判敌数门槛，门控与实际所在的策略组脱节。例：meteor（曾 category=aoe）即使被拖进「单体攻击组」，敌数 1 时仍被 aoe 的 ≥3 挡掉——"NPC 对单个目标放不出陨石"的根因。
+
+- **`MagicDef.Category` 收敛为 3 类**：`NORMAL`（原 single_target/aoe/defense/support 全部并入）/ `SPECIAL`（teleport/heal）/ `ALTAR`（revive）。`category` 只表性质，不再决定敌数门控与预设排序。
+- **策略组 = `EquippedMagicComponent` 4 桶**（single_target/aoe/defense/support，各 ≤3 槽），玩家自由放置。
+- **敌数门控跟随策略组**（`CastBrain.enemyCountGate(SpellRef, snapshot)`）：单体攻击组 ≤ 3、群体攻击组 ≥ 3、防御/支援组无门槛。法术以新 `SpellRef(MagicDef, group)` 携带所在组——`CastBrain.knownSpells` 从桶循环带回组，`select` 门控与 `resolvePriority` 预设排序都按组判。
+- **`default_group` 字段**（可选）：normal 法术的默认策略组（beam→single_target、meteor→aoe、petrification→defense、enfeeble_field→aoe、conversion→defense、fortification→support、desperation→single_target），供默认装备种子与 `equippableCategoryOf` 兜底装桶；缺省 → support。
+- **玩法**：陨石对单体放行 = 把它拖进**单体攻击组**（按组 ≤3）；留在群体攻击组则敌数 ≥3 才砸。预设（火力/均衡/支援/防御）排序也按策略组。
+- **铁魔法合成**：`IronSpellsHelper.getSyntheticDef` 合成 def 的 category 恒 NORMAL，targetMode/conditions 按组名字符串 switch；组由 SpellRef 携带。
 

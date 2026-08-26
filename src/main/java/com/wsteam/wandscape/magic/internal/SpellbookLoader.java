@@ -1,6 +1,5 @@
 package com.wsteam.wandscape.magic.internal;
 
-import java.util.Locale;
 import java.util.Map;
 
 import javax.annotation.Nullable;
@@ -48,10 +47,11 @@ public class SpellbookLoader {
     }
 
     /**
-     * 该魔法 id 的可装备分类名（小写）；不可装备返回 null。ALTAR（revive）为祭坛专属、
+     * 该魔法 id 的默认策略组名（小写）；不可装备返回 null。ALTAR（revive）为祭坛专属、
      * teleport 为导航回退、未知 id 无定义——三者均不进 {@code EquippedMagicComponent}。
-     * 其余（含 SPECIAL 的 heal）可装备；无分类匹配时常规四类用自身小写类名作存储桶，
-     * special（heal）默认归 support 桶（施法仍看 {@code MagicDef.category()}，桶仅存储）。
+     * normal 法术返回 {@link MagicDef#defaultGroup()}（缺省兜底 support）；SPECIAL 的 heal
+     * 无 default_group → support。策略组只作默认装桶归属，实际组由玩家在策略页放置决定，
+     * 敌数门控与预设排序按实际组（{@code CastBrain}）判。
      * 服务端权威装桶校验统一走这里，避免各调用方重复判。
      */
     @Nullable
@@ -60,7 +60,7 @@ public class SpellbookLoader {
         if (def == null) return null;
         if (def.category() == MagicDef.Category.ALTAR) return null;
         if ("teleport".equals(def.id())) return null;
-        String cat = def.category().name().toLowerCase(Locale.ROOT);
-        return EquippedMagicComponent.isCategory(cat) ? cat : "support";
+        String g = def.defaultGroup();
+        return g != null && EquippedMagicComponent.isCategory(g) ? g : "support";
     }
 }

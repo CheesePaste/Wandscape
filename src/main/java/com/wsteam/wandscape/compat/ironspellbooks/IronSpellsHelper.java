@@ -1,9 +1,6 @@
 package com.wsteam.wandscape.compat.ironspellbooks;
 
-import java.util.Locale;
-
 import javax.annotation.Nullable;
-
 import com.wsteam.wandscape.magic.data.MagicDef;
 import com.wsteam.wandscape.magic.data.SpellConditions;
 
@@ -69,20 +66,16 @@ public final class IronSpellsHelper {
     }
 
     /**
-     * 根据铁魔法法术与装备放入的门类，构造动态合成的 {@link MagicDef}。
+     * 根据铁魔法法术与装备放入的策略组，构造动态合成的 {@link MagicDef}。
+     * {@code categoryName} 现为策略组名（single_target/aoe/defense/support），只决定合成 def 的
+     * targetMode/conditions；合成 def 的 {@code category} 恒为 NORMAL（性质），实际策略组由
+     * {@code SpellRef}（{@code CastBrain.knownSpells} 的桶循环）携带，不落在这里。
      */
     @Nullable
     public static MagicDef getSyntheticDef(String spellId, int level, String categoryName) {
         if (!isValidSpell(spellId)) return null;
         AbstractSpell spell = SpellRegistry.getSpell(spellId);
         if (spell == null) return null;
-
-        MagicDef.Category cat;
-        try {
-            cat = MagicDef.Category.valueOf(categoryName.toUpperCase(Locale.ROOT));
-        } catch (Exception e) {
-            cat = MagicDef.Category.SINGLE_TARGET;
-        }
 
         // 蓝耗 1:1：铁魔法蓝耗直接对等 NPC 魔力池（2026-08-26 用户要求），不再按 0.25/0.10 缩放 / 下限钳制。
         // 昂贵的铁魔法（黑洞 300、传送门 200 等）会超过 NPC 默认蓝池 200，经 CastBrain 门控自动跳过。
@@ -95,25 +88,22 @@ public final class IronSpellsHelper {
         MagicDef.TargetMode targetMode;
         SpellConditions conditions;
 
-        switch (cat) {
-            case AOE -> {
+        switch (categoryName == null ? "" : categoryName) {
+            case "aoe" -> {
                 targetMode = MagicDef.TargetMode.HOSTILE_NEAREST;
-                // 敌数门控（群发 ≥ 阈值）由 CastBrain 按类别统一判定，这里不再设 per-spell 条件
+                // 敌数门控（群攻组 ≥ 阈值）由 CastBrain 按策略组统一判定，这里不再设 per-spell 条件
                 conditions = SpellConditions.NONE;
             }
-            case DEFENSE -> {
+            case "defense" -> {
                 targetMode = MagicDef.TargetMode.SELF;
                 conditions = new SpellConditions(0.8f, null, null);
             }
-            case SUPPORT -> {
+            case "support" -> {
                 targetMode = MagicDef.TargetMode.ALLY_LOWEST_HP;
                 conditions = new SpellConditions(null, 0.8f, null);
             }
-            case SINGLE_TARGET -> {
-                targetMode = MagicDef.TargetMode.HOSTILE_NEAREST;
-                conditions = SpellConditions.NONE;
-            }
             default -> {
+                // single_target 与未知组：敌对单体
                 targetMode = MagicDef.TargetMode.HOSTILE_NEAREST;
                 conditions = SpellConditions.NONE;
             }
@@ -121,7 +111,7 @@ public final class IronSpellsHelper {
 
         return new MagicDef(
                 spellId,
-                cat,
+                MagicDef.Category.NORMAL,
                 manaCost,
                 baseCooldown,
                 castTime,
@@ -133,7 +123,8 @@ public final class IronSpellsHelper {
                 false,
                 0,
                 0,
-                conditions
+                conditions,
+                null
         );
     }
 

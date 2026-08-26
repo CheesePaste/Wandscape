@@ -10,6 +10,7 @@ import javax.annotation.Nullable;
 import com.wsteam.wandscape.core.component.CastStrategyComponent;
 import com.wsteam.wandscape.core.component.EquippedMagicComponent;
 import com.wsteam.wandscape.magic.data.MagicDef;
+import com.wsteam.wandscape.magic.data.SpellRef;
 import com.wsteam.wandscape.magic.data.WorldSnapshot;
 import com.wsteam.wandscape.shared.registry.WandscapeConstants;
 
@@ -19,8 +20,9 @@ import com.wsteam.wandscape.shared.registry.WandscapeConstants;
  *
  * <p>L1 优先级扫描（docs/spell-casting.md 三层决策）。L0 硬性覆盖（血量危机/LOS/互斥锁）
  * 由调用方（守卫/自防御战斗循环）在调用前处理。已知魔法来自 NPC 的
- * {@code EquippedMagicComponent}（已装备载荷，分 4 类、每类 ≤3，桶内=类内优先级）
- * 与玩家策略（{@link #resolvePriority}），替代硬编码 {@code [beam]}。SPECIAL 魔法
+ * {@code EquippedMagicComponent}（已装备载荷，分 4 策略组、每组 ≤3，组内=组内优先级），
+ * 每个法术以 {@link SpellRef} 携带所在策略组——**敌数门控与预设排序都按策略组判**，
+ * 非法术自身 {@code MagicDef.category()}（后者只表达 normal/special/altar 性质）。
  * 与玩家策略（{@link #resolvePriority}），替代硬编码 {@code [beam]}。SPECIAL 的 heal 经装备入列后
  * 可进 L1 自动决策；teleport（导航回退）与 ALTAR（revive，祭坛）仍在装备边界被拒、不经此决策。
  */
@@ -28,37 +30,30 @@ public final class CastBrain {
 
     private CastBrain() {}
 
-    /** 预设 → 分类级默认排序（高→低）。SPECIAL/ALTAR 不进预设表（L0 硬性路径/祭坛管）。 */
-    private static final Map<CastStrategyComponent.Preset, List<MagicDef.Category>> PRESET_ORDER = Map.of(
-            CastStrategyComponent.Preset.OFFENSIVE, List.of(
-                    MagicDef.Category.SINGLE_TARGET, MagicDef.Category.AOE,
-                    MagicDef.Category.DEFENSE, MagicDef.Category.SUPPORT),
-            CastStrategyComponent.Preset.BALANCED, List.of(
-                    MagicDef.Category.AOE, MagicDef.Category.SINGLE_TARGET,
-                    MagicDef.Category.SUPPORT, MagicDef.Category.DEFENSE),
-            CastStrategyComponent.Preset.SUPPORT, List.of(
-                    MagicDef.Category.SUPPORT, MagicDef.Category.DEFENSE,
-                    MagicDef.Category.AOE, MagicDef.Category.SINGLE_TARGET),
-            CastStrategyComponent.Preset.DEFENSIVE, List.of(
-                    MagicDef.Category.DEFENSE, MagicDef.Category.SUPPORT,
-                    MagicDef.Category.AOE, MagicDef.Category.SINGLE_TARGET));
+    /** 预设 → 策略组级默认排序（高→低）。SPECIAL/ALTAR 不进预设表（L0 硬性路径/祭坛管）。 */
+    private static final Map<CastStrategyComponent.Preset, List<String>> PRESET_ORDER = Map.of(
+            CastStrategyComponent.Preset.OFFENSIVE, List.of("single_target", "aoe", "defense", "support"),
+            CastStrategyComponent.Preset.BALANCED, List.of("aoe", "single_target", "support", "defense"),
+            CastStrategyComponent.Preset.SUPPORT, List.of("support", "defense", "aoe", "single_target"),
+            CastStrategyComponent.Preset.DEFENSIVE, List.of("defense", "support", "aoe", "single_target"));
 
     /**
-     * 把 NPC 的 EquippedMagicComponent 容器解析为有效魔法定义列表（支持原生魔法与铁魔法动态合成）。
+     * 把 NPC 的 EquippedMagicComponent 容器解析为带策略组的法术引用列表（支持原生魔法与铁魔法
+     * 动态合成）；{@code group} = 法术实际所在的桶名，驱动敌数门控与预设排序。
      */
-    public static List<MagicDef> knownSpells(EquippedMagicComponent equipped) {
-        List<MagicDef> out = new ArrayList<>();
+    public static List<SpellRef> knownSpells(EquippedMagicComponent equipped) {
+        List<SpellRef> out = new ArrayList<>();
         if (equipped == null) return out;
-        for (String cat : EquippedMagicComponent.CATEGORIES) {
-            for (EquippedMagicComponent.SpellEntry entry : equipped.listEntries(cat)) {
+        for (String group : EquippedMagicComponent.CATEGORIES) {
+            for (EquippedMagicComponent.SpellEntry entry : equipped.listEntries(group)) {
                 MagicDef def = SpellbookLoader.getSpec(entry.id());
                 if (def != null) {
-                    out.add(def);
+                    out.add(new SpellRef(def, group));
                 } else if (com.wsteam.wandscape.compat.ironspellbooks.IronSpellsCompat.isLoaded()) {
                     MagicDef syn = com.wsteam.wandscape.compat.ironspellbooks.IronSpellsHelper
-                            .getSyntheticDef(entry.id(), entry.level(), cat);
+                            .getSyntheticDef(entry.id(), entry.level(), group);
                     if (syn != null) {
-                        out.add(syn);
+                        out.add(new SpellRef(syn, group));
                     }
                 }
             }
@@ -67,22 +62,23 @@ public final class CastBrain {
     }
 
     /**
-     * 把魔法 id 列表解析为魔法定义列表（SpellbookLoader 查表，缺失跳过）。
+     * 把魔法 id 列表解析为带策略组的法术引用（SpellbookLoader 查表，缺失跳过；组取
+     * {@code equippableCategoryOf} 兜底）。当前无调用方，保留兼容旧入口。
      */
-    public static List<MagicDef> knownSpells(List<String> ids) {
-        List<MagicDef> out = new ArrayList<>();
+    public static List<SpellRef> knownSpells(List<String> ids) {
+        List<SpellRef> out = new ArrayList<>();
         if (ids != null) {
             for (String s : ids) {
                 if (s == null || s.isBlank()) continue;
                 EquippedMagicComponent.SpellEntry entry = EquippedMagicComponent.SpellEntry.parse(s);
                 MagicDef def = SpellbookLoader.getSpec(entry.id());
                 if (def != null) {
-                    out.add(def);
+                    out.add(new SpellRef(def, SpellbookLoader.equippableCategoryOf(entry.id())));
                 } else if (com.wsteam.wandscape.compat.ironspellbooks.IronSpellsCompat.isLoaded()) {
                     MagicDef syn = com.wsteam.wandscape.compat.ironspellbooks.IronSpellsHelper
                             .getSyntheticDef(entry.id(), entry.level(), "single_target");
                     if (syn != null) {
-                        out.add(syn);
+                        out.add(new SpellRef(syn, "single_target"));
                     }
                 }
             }
@@ -91,16 +87,16 @@ public final class CastBrain {
     }
 
     /**
-     * 按玩家策略解析出有效施法优先级（魔法级顺序）：
+     * 按玩家策略解析出有效施法优先级（法术级顺序，SpellRef 携带策略组）：
      * <ul>
      *   <li>已配置（{@code CastStrategyComponent.configured()}）：用 {@code customPriority}
      *       显式顺序过滤到 known 返回；空列表 = 全部停用（不兜底，NPC 走基础攻击）。</li>
-     *   <li>未配置：按 {@link #PRESET_ORDER} 预设分类顺序，类内按 {@code known} 顺序，
+     *   <li>未配置：按 {@link #PRESET_ORDER} 预设策略组顺序，组内按 {@code known} 顺序，
      *       SPECIAL/ALTAR 类不进列表。</li>
      * </ul>
      * CUSTOM 预设保留仅为旧存档兼容：已配置时走显式列表，未配置时回退 balanced 推导。
      */
-    public static List<MagicDef> resolvePriority(@Nullable CastStrategyComponent strategy, List<MagicDef> known) {
+    public static List<SpellRef> resolvePriority(@Nullable CastStrategyComponent strategy, List<SpellRef> known) {
         CastStrategyComponent s = strategy != null ? strategy : new CastStrategyComponent();
         if (s.configured()) {
             return filterToKnown(s.customPriority(), known);
@@ -108,13 +104,13 @@ public final class CastBrain {
         return resolvePreset(s.preset(), known);
     }
 
-    /** 把 magicId 顺序表过滤到 known（按显式顺序、跳过未知），返回零个到多个魔法定义。 */
-    private static List<MagicDef> filterToKnown(List<String> ids, List<MagicDef> known) {
-        List<MagicDef> out = new ArrayList<>();
+    /** 把 magicId 顺序表过滤到 known（按显式顺序、跳过未知），返回零个到多个法术引用。 */
+    private static List<SpellRef> filterToKnown(List<String> ids, List<SpellRef> known) {
+        List<SpellRef> out = new ArrayList<>();
         for (String id : ids) {
-            for (MagicDef def : known) {
-                if (def.id().equals(id)) {
-                    out.add(def);
+            for (SpellRef ref : known) {
+                if (ref.def().id().equals(id)) {
+                    out.add(ref);
                     break;
                 }
             }
@@ -122,20 +118,20 @@ public final class CastBrain {
         return out;
     }
 
-    private static List<MagicDef> resolvePreset(CastStrategyComponent.Preset preset, List<MagicDef> known) {
-        List<MagicDef.Category> order = PRESET_ORDER.getOrDefault(preset,
+    private static List<SpellRef> resolvePreset(CastStrategyComponent.Preset preset, List<SpellRef> known) {
+        List<String> order = PRESET_ORDER.getOrDefault(preset,
                 PRESET_ORDER.get(CastStrategyComponent.Preset.BALANCED));
-        List<MagicDef> out = new ArrayList<>();
-        for (MagicDef.Category category : order) {
-            for (MagicDef def : known) {
-                if (def.category() == category) out.add(def);
+        List<SpellRef> out = new ArrayList<>();
+        for (String group : order) {
+            for (SpellRef ref : known) {
+                if (group.equals(ref.group())) out.add(ref);
             }
         }
         return out;
     }
 
     /**
-     * 按 {@code known} 顺序返回第一个门控通过（{@code castable}）、目标规则命中且条件满足的魔法；
+     * 按 {@code known} 顺序返回第一个门控通过（{@code castable}）、目标规则命中且条件满足的法术；
      * 无则 null。调用方拿到结果后自行执行（门控在 {@code MagicState.tryCast} 原子复验，
      * 此处只做选择、不扣资源）。
      *
@@ -147,24 +143,26 @@ public final class CastBrain {
      * @param snapshot  世界快照（敌数/自血/友方最低血/状态），驱动目标规则与 {@code conditions}
      */
     @Nullable
-    public static MagicDef select(List<MagicDef> known, Predicate<MagicDef> castable, WorldSnapshot snapshot) {
+    public static SpellRef select(List<SpellRef> known, Predicate<MagicDef> castable, WorldSnapshot snapshot) {
         WorldSnapshot s = snapshot != null ? snapshot : WorldSnapshot.EMPTY;
-        for (MagicDef def : known) {
+        for (SpellRef ref : known) {
+            MagicDef def = ref.def();
             if (def.altarOnly()) continue;
             if (!castable.test(def)) continue;
             if (!targetAvailable(def, s)) continue;
-            if (!enemyCountGate(def, s)) continue;
+            if (!enemyCountGate(ref, s)) continue;
             if (!def.conditions().matches(s)) continue;
-            return def;
+            return ref;
         }
         return null;
     }
 
-    /** 敌数门控（docs/spell-casting.md）：单体攻击敌数 ≤ 阈值，群体攻击敌数 ≥ 阈值；其余类别不设敌数门槛。 */
-    static boolean enemyCountGate(MagicDef def, WorldSnapshot s) {
-        return switch (def.category()) {
-            case SINGLE_TARGET -> s.enemyCount() <= WandscapeConstants.CAST_SINGLE_TARGET_MAX_ENEMIES;
-            case AOE -> s.enemyCount() >= WandscapeConstants.CAST_AOE_MIN_ENEMIES;
+    /** 敌数门控（docs/spell-casting.md）：按法术所在的**策略组**判——单体攻击组敌数 ≤ 阈值、
+     *  群体攻击组敌数 ≥ 阈值；防御/支援组不设敌数门槛。组由玩家放置决定，非法术自身 category。 */
+    static boolean enemyCountGate(SpellRef ref, WorldSnapshot s) {
+        return switch (ref.group() == null ? "" : ref.group()) {
+            case "single_target" -> s.enemyCount() <= WandscapeConstants.CAST_SINGLE_TARGET_MAX_ENEMIES;
+            case "aoe" -> s.enemyCount() >= WandscapeConstants.CAST_AOE_MIN_ENEMIES;
             default -> true;
         };
     }

@@ -30,6 +30,8 @@
 - **`TavernApi.getCandidates/refreshCandidates/recruitCandidate`**：占位（返回空/false）；实际招募走 `TavernRecruitPacket.handleRecruitMage` + `receiveMageResume/recruitMage`。
 - **`WorkbenchSource`**：V1 stub（POLL_INTERVAL=30，poll 空）。
 - **`ElementAuditor`/`ElementAuditRunner`**：需系统属性 `wandscape.runAudit=true` 才跑（GameTest 用途）。
+- **`NpcDataPacket.spellCategories/magicCatalog`（2026-08-26 category 收敛后）**：`spellCategories`（每个已知法术的 `MagicDef.category()` 小写）与 `magicCatalog`（id → category）在客户端仅存不读（`NpcScreen` 赋值后无消费端）；category 收敛为 normal/special/altar 后 battle 法术一律输出 "normal"，已无区分度，属历史遗留可清理。
+- **`CastBrain.knownSpells(List<String>)` 重载**：无调用方（当前只有 `knownSpells(EquippedMagicComponent)` 被守卫/自防御消费），保留兼容旧入口。
 
 ## 三、已知 stub / TODO
 

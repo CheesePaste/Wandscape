@@ -39,7 +39,7 @@ public final class SpellcastingApiImpl implements SpellcastingApi {
         if (npc == null) return List.of();
         return CastBrain.resolvePriority(npc.castStrategy,
                 CastBrain.knownSpells(npc.equippedMagic))
-                .stream().map(MagicDef::id).toList();
+                .stream().map(ref -> ref.def().id()).toList();
     }
 
     @Override

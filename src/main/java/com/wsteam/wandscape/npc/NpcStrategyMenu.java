@@ -189,7 +189,7 @@ public class NpcStrategyMenu extends AbstractContainerMenu {
                 if (def == null) return false;
                 if (def.category() == MagicDef.Category.ALTAR) return false; // revive：祭坛专属
                 if ("teleport".equals(def.id())) return false;               // 传送：导航回退专用，拒绝装备
-                // 其余（含 SPECIAL 的 heal 与常规四类）自由放置，不校验分类匹配
+                // 其余（含 SPECIAL 的 heal 与 normal 法术）自由放置，不校验分类匹配
             } else if (com.wsteam.wandscape.compat.ironspellbooks.IronSpellsCompat.isLoaded()
                     && com.wsteam.wandscape.compat.ironspellbooks.IronSpellsHelper.isScroll(stack)) {
                 magicId = com.wsteam.wandscape.compat.ironspellbooks.IronSpellsHelper.getSpellId(stack);

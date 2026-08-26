@@ -1,6 +1,7 @@
 {
   "id": "conversion",
-  "category": "defense",
+  "category": "normal",
+  "default_group": "defense",
   "mana_cost": 30,
   "base_cooldown": 900,
   "cast_time": 200,
