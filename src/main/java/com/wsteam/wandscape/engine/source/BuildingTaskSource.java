@@ -2,8 +2,12 @@ package com.wsteam.wandscape.engine.source;
 
 import java.util.*;
 
+import javax.annotation.Nullable;
+
 import com.wsteam.wandscape.core.ecs.World;
+import com.wsteam.wandscape.core.types.ResourceStack;
 import com.wsteam.wandscape.engine.WandscapeEngine;
+import com.wsteam.wandscape.engine.boundary.ProductionEligibility;
 import com.wsteam.wandscape.task.source.TaskSource;
 import com.wsteam.wandscape.task.engine.pool.BuildingTaskPool;
 import com.wsteam.wandscape.task.engine.pool.GlobalTask;
@@ -11,10 +15,14 @@ import com.wsteam.wandscape.task.engine.pool.GlobalTaskPool;
 import com.wsteam.wandscape.task.engine.pool.TaskRequest;
 import com.wsteam.wandscape.task.runtime.TaskState;
 import com.wsteam.wandscape.shared.api.BuildingApi;
+import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.data.WorkItem;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.engine.service.ChunkLoadManager;
+import com.wsteam.wandscape.warehouse.ColonyItemBank;
+
+import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
 /**
  * {@link TaskSource} that polls building block entities and translates
@@ -65,13 +73,25 @@ public class BuildingTaskSource implements TaskSource {
                         Log.info(TAG, "[BuildingTaskSource] cleanup building {} head #{} completed",
                                 buildingId.toString().substring(0, 8), headId);
                     } else if (head.state == TaskState.AWAITING_RESOURCES) {
-                        // Head is parked waiting for elements — release the head slot so the
-                        // next queued WorkItem (which may be craftable) can be published. The
-                        // parked task stays in the pool and resumes when its elements arrive.
-                        btp.parkHead(buildingId, headId);
-                        api.clearCurrentTask(buildingId);
-                        Log.info(TAG, "[BuildingTaskSource] building {} head #{} parked on resource shortage",
-                                buildingId.toString().substring(0, 8), headId);
+                        if (head.buildingId != null && isProductionTask(head) && isElementShortage(head)) {
+                            // 生产任务中途缺元素（发布后元素被并发任务抢走）→ 回收回队列，
+                            // 不 park 进不可见的 AWAITING_RESOURCES：任务留在面板可见，
+                            // 下方发布区重新按「元素不足」跳过它，直到元素补齐。
+                            WorkItem recycled = new WorkItem(head.blueprintId, head.taskParams, head.priority);
+                            api.enqueueWork(buildingId, recycled);
+                            pool.cancelTask(headId, world);
+                            btp.onHeadCompleted(buildingId, pool);
+                            api.clearCurrentTask(buildingId);
+                            Log.info(TAG, "[BuildingTaskSource] building {} head #{} recycled to queue on element shortage",
+                                    buildingId.toString().substring(0, 8), headId);
+                        } else {
+                            // 非生产任务（建材运输等）或缺的是物品原料（如药水玻璃瓶）→ 维持 park，
+                            // 等资源到账由唤醒路径继续。
+                            btp.parkHead(buildingId, headId);
+                            api.clearCurrentTask(buildingId);
+                            Log.info(TAG, "[BuildingTaskSource] building {} head #{} parked on resource shortage",
+                                    buildingId.toString().substring(0, 8), headId);
+                        }
                     }
                 }
 
@@ -105,6 +125,14 @@ public class BuildingTaskSource implements TaskSource {
             // Skip if building already has an active head (should already be leased)
             if (btp != null && btp.hasHead(buildingId)) continue;
 
+            // 先判队列里有没有现在能跑的条目：元素不足的合成任务不会发布，
+            // 因此不能为了「排队但跑不了」的队列强制加载区块（否则每 20 tick 一次
+            // 强制加载/释放，造成区块抖动）。
+            Map<ElementType, Long> elementSnapshot = elementSnapshot(colonyId);
+            if (!hasEligibleWork(api, buildingId, elementSnapshot)) {
+                continue; // 什么都不够 → 不发布 → 相关 NPC 自然空闲，等自动收集补齐
+            }
+
             // Force-load the footprint when a building is newly activated. No concurrency cap —
             // every building with pending work gets a lease (see docs/decisions.md).
             if (!chunkLoad.isLeased(buildingId) && !chunkLoad.leaseBuilding(buildingId)) {
@@ -113,9 +141,11 @@ public class BuildingTaskSource implements TaskSource {
                 continue;
             }
 
-            WorkItem item = api.dequeueWork(buildingId);
+            // 从上到下找第一个「当前元素够」的条目发布：元素不足的合成任务留在队列原位
+            // 被跳过（面板可见「缺元素」），分解/建造/采集等非元素任务恒可发布。
+            WorkItem item = api.dequeueWorkEligible(buildingId, work -> isEligible(work, elementSnapshot));
             if (item == null) {
-                // Nothing to actually do — drop the pointless lease.
+                // 预检通过到真正弹队列之间元素被并发任务消耗光的竞态 → 放弃本轮。
                 chunkLoad.releaseBuilding(buildingId);
                 continue;
             }
@@ -143,6 +173,52 @@ public class BuildingTaskSource implements TaskSource {
                         item.blueprintId(), buildingId, e.getMessage());
             }
         }
+    }
+
+    /** 消耗元素的生产任务（分解不抛短缺，排除）。 */
+    private static boolean isProductionTask(GlobalTask task) {
+        return task.blueprintId != null && task.blueprintId.startsWith("production:")
+                && !"production:decompose".equals(task.blueprintId);
+    }
+
+    /** 短缺是否基于元素（回收只对元素短缺有意义；药水原料等物品短缺维持 park 等待）。 */
+    private static boolean isElementShortage(GlobalTask task) {
+        if (task.awaitingResource == null) return false;
+        for (ResourceStack need : task.awaitingResource) {
+            try {
+                ElementType.valueOf(need.resource().id().toUpperCase());
+                return true;
+            } catch (IllegalArgumentException e) {
+                // 不是元素 id → 物品短缺，不回收
+            }
+        }
+        return false;
+    }
+
+    /** 非元素工作恒可发布；消耗元素的生产配方需当前元素足够才可发布。 */
+    private static boolean isEligible(WorkItem work, @Nullable Map<ElementType, Long> elementSnapshot) {
+        if (!ProductionEligibility.isElementCosting(work.blueprintId())) return true;
+        Map<ElementType, Long> required = ProductionEligibility.requiredElements(work.blueprintId(), work.params());
+        return ProductionEligibility.isAffordable(required, elementSnapshot);
+    }
+
+    /** 队列里是否存在现在能发布的条目（读队列，不弹）。 */
+    private static boolean hasEligibleWork(BuildingApi api, UUID buildingId,
+                                           @Nullable Map<ElementType, Long> elementSnapshot) {
+        for (WorkItem item : api.getQueue(buildingId)) {
+            if (isEligible(item, elementSnapshot)) return true;
+        }
+        return false;
+    }
+
+    /** 殖民地当前元素存量快照；无殖民地或银行不可用返回 null（元素配方按不足处理）。 */
+    @Nullable
+    private static Map<ElementType, Long> elementSnapshot(@Nullable UUID colonyId) {
+        if (colonyId == null) return null;
+        var server = ServerLifecycleHooks.getCurrentServer();
+        if (server == null) return null;
+        ColonyItemBank bank = ColonyItemBank.get(server.overworld());
+        return bank != null ? bank.getElementSnapshot(colonyId) : null;
     }
 
     private BuildingApi getBuildingApi() {

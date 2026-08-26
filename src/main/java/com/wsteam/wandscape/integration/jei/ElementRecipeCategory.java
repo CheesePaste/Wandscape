@@ -9,6 +9,7 @@ import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.log.Log;
 
+import mezz.jei.api.constants.VanillaTypes;
 import mezz.jei.api.gui.builder.IRecipeLayoutBuilder;
 import mezz.jei.api.gui.builder.IRecipeSlotBuilder;
 import mezz.jei.api.gui.drawable.IDrawable;
@@ -54,6 +55,8 @@ public class ElementRecipeCategory implements IRecipeCategory<ElementRecipe> {
     private final IDrawable icon;
     private final IDrawable background;
     private final IDrawable arrow;
+    /** 元素槽位数量角标缩小渲染（五六位成本不溢出）。 */
+    private final SmallCountItemStackRenderer smallCountRenderer = new SmallCountItemStackRenderer();
 
     // 元素网格：合成时居左、分解时居右
     private static final int ELEMENT_GRID_X_LEFT = 8;
@@ -129,6 +132,7 @@ public class ElementRecipeCategory implements IRecipeCategory<ElementRecipe> {
         int i = start;
         for (var entry : sorted(elements)) {
             IRecipeSlotBuilder slot = builder.addInputSlot(slotX(gridX, i), slotY(rows, i))
+                    .setCustomRenderer(VanillaTypes.ITEM_STACK, smallCountRenderer)
                     .setStandardSlotBackground()
                     .addItemStack(elementStack(entry.getKey(), entry.getValue()));
             i++;
@@ -153,6 +157,7 @@ public class ElementRecipeCategory implements IRecipeCategory<ElementRecipe> {
         int i = start;
         for (var entry : sorted(recipe.elements())) {
             builder.addOutputSlot(slotX(gridX, i), slotY(rows, i))
+                    .setCustomRenderer(VanillaTypes.ITEM_STACK, smallCountRenderer)
                     .setStandardSlotBackground()
                     .addItemStack(elementStack(entry.getKey(), entry.getValue()));
             i++;

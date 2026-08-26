@@ -6,6 +6,7 @@ import java.util.Map;
 
 import com.wsteam.wandscape.building.network.TaskQueueDataPacket;
 import com.wsteam.wandscape.building.network.TaskQueueModifyPacket;
+import com.wsteam.wandscape.magic.item.SpellItem;
 import com.wsteam.wandscape.production.network.MagicStationPacket;
 import com.wsteam.wandscape.production.network.MagicStationPacket.SpellEntry;
 import com.wsteam.wandscape.production.network.RequestProductionTaskPacket;
@@ -18,6 +19,7 @@ import com.wsteam.wandscape.shared.ui.component.SearchBox;
 import com.wsteam.wandscape.shared.ui.component.TaskQueuePanel;
 import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
 import com.wsteam.wandscape.shared.ui.theme.WandscapeTheme;
+import com.wsteam.wandscape.shared.ui.util.ItemStackUtil;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -32,7 +34,8 @@ public class MagicStationScreen extends MedievalScreen {
     private static final int PW = 400;
     private static final int PH = 220;
     private static final int LEFT_PW = 240;
-    private static final int QUEUE_PW = 140;
+    // Right panel (TaskQueuePanel) — narrower to stay inside the PW=400 window
+    private static final int QUEUE_PW = 148;
     private static final int QUEUE_PH = PH - 28; // headerHeight (20) + padding (8)
     private BlockPos stationPos = BlockPos.ZERO;
     private List<SpellEntry> recipes = new ArrayList<>();
@@ -67,7 +70,7 @@ public class MagicStationScreen extends MedievalScreen {
             for (TaskQueueDataPacket.QueueEntry qe : packet.entries()) {
                 entries.add(new TaskQueuePanel.Entry(
                         qe.index(), qe.category(), qe.itemOrRecipeId(), qe.quantity(),
-                        qe.blueprintId(), qe.summary()));
+                        qe.blueprintId(), qe.summary(), qe.insufficient(), qe.missingElements()));
             }
             taskQueuePanel.setEntries(entries);
             taskQueuePanel.setCurrents(toPanelCurrents(packet.currents()));
@@ -83,7 +86,7 @@ public class MagicStationScreen extends MedievalScreen {
             TaskQueueDataPacket.QueueEntry e = ct.entry();
             result.add(new TaskQueuePanel.CurrentInfo(
                     new TaskQueuePanel.Entry(e.index(), e.category(), e.itemOrRecipeId(),
-                            e.quantity(), e.blueprintId(), e.summary()),
+                            e.quantity(), e.blueprintId(), e.summary(), false, List.of()),
                     ct.stepIndex(), ct.totalSteps(),
                     ct.channelRemainingTicks(), ct.channelTotalTicks(),
                     ct.pending()));
@@ -170,6 +173,14 @@ public class MagicStationScreen extends MedievalScreen {
             }
         };
         recipeList.setOnSelect(i -> updateSliderForRecipe(filteredRecipes.get(i)));
+        recipeList.setTooltipProvider((item, index) -> {
+            ItemStack stack = ItemStackUtil.fromId(item.outputItem());
+            // 实际产出的卷轴带 magic_id 绑定，tooltip 才会显示魔法名/耗蓝/冷却
+            if (stack.getItem() instanceof SpellItem) {
+                SpellItem.setMagicId(stack, item.magicId());
+            }
+            return stack;
+        });
         addRenderableWidget(recipeList);
 
         int controlY = listY + listH + 6;
@@ -193,6 +204,15 @@ public class MagicStationScreen extends MedievalScreen {
         taskQueuePanel.setOnMoveUp(this::onQueueMoveUp);
         taskQueuePanel.setOnMoveDown(this::onQueueMoveDown);
         addRenderableWidget(taskQueuePanel);
+    }
+
+    @Override
+    protected void renderForeground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        // 悬停列表行时在光标处显示标准物品 tooltip（与物品栏一致，置于所有控件之上）
+        ItemStack tooltip = recipeList != null ? recipeList.hoveredTooltipStack() : null;
+        if (tooltip != null) {
+            g.renderTooltip(font, tooltip, mouseX, mouseY);
+        }
     }
 
     /** Filter the recipe list by the search query, keeping it in sync with selection indexes. */

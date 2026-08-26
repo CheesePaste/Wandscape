@@ -2,6 +2,9 @@ package com.wsteam.wandscape.building.internal;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Deque;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -122,5 +125,64 @@ class BuildingApiSharedQueueTest {
     void groupKeyFor_nodeWithoutResolvableConfig_returnsNull() {
         // No node_config registered in the loader in a bare test JVM → unresolvable element → null.
         assertNull(BuildingSavedData.groupKeyFor(state("nodewood", "node")));
+    }
+
+    // ── dequeueWorkEligible's scan: pollFirstEligible ──
+
+    private static String recipeId(WorkItem item) {
+        return item.params().get("recipe_id").getAsString();
+    }
+
+    @Test
+    void pollFirstEligible_returnsFirstAcceptedAndLeavesRejectedInPlace() {
+        Deque<WorkItem> queue = new ArrayDeque<>();
+        queue.addLast(production("production:synthesize", "a", 1));
+        queue.addLast(production("production:synthesize", "b", 1));
+        queue.addLast(production("production:synthesize", "c", 1));
+
+        WorkItem picked = BuildingApiImpl.pollFirstEligible(queue, w -> "b".equals(recipeId(w)));
+
+        assertNotNull(picked);
+        assertEquals("b", recipeId(picked));
+        // "a" (rejected) stays at the head, "c" untouched — the queue keeps its order.
+        assertEquals(2, queue.size());
+        assertEquals("a", recipeId(queue.peekFirst()));
+        assertEquals("c", recipeId(new ArrayList<>(queue).get(1)));
+    }
+
+    @Test
+    void pollFirstEligible_skipsIneligibleHeadForLaterAffordableItem() {
+        Deque<WorkItem> queue = new ArrayDeque<>();
+        queue.addLast(production("production:synthesize", "a", 1));
+        queue.addLast(production("production:synthesize", "b", 1));
+
+        WorkItem picked = BuildingApiImpl.pollFirstEligible(queue, w -> "b".equals(recipeId(w)));
+
+        assertEquals("b", recipeId(picked));
+        assertEquals(1, queue.size());
+        assertEquals("a", recipeId(queue.peekFirst()));
+    }
+
+    @Test
+    void pollFirstEligible_returnsNullWhenNothingAcceptedAndQueueUntouched() {
+        Deque<WorkItem> queue = new ArrayDeque<>();
+        queue.addLast(production("production:synthesize", "a", 1));
+        queue.addLast(production("production:synthesize", "b", 1));
+
+        assertNull(BuildingApiImpl.pollFirstEligible(queue, w -> false));
+        assertEquals(2, queue.size());
+    }
+
+    @Test
+    void pollFirstEligible_acceptsFirstMatchWhenHeadMatches() {
+        Deque<WorkItem> queue = new ArrayDeque<>();
+        queue.addLast(production("production:synthesize", "a", 1));
+        queue.addLast(production("production:synthesize", "b", 1));
+
+        WorkItem picked = BuildingApiImpl.pollFirstEligible(queue, w -> "a".equals(recipeId(w)));
+
+        assertEquals("a", recipeId(picked));
+        assertEquals(1, queue.size());
+        assertEquals("b", recipeId(queue.peekFirst()));
     }
 }

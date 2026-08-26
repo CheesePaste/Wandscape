@@ -4,6 +4,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.core.component.NavigationState;
 import com.wsteam.wandscape.core.ecs.World;
@@ -61,12 +62,8 @@ public final class GuardCombat {
 
     private static final String TAG = "GuardCombat";
 
-    // ── 走位（风筝/群殴）参数：硬编码与 ENGAGE_STANDOFF 同风格；peaceFleeRange 在 Config ──
-    /** 风筝触发距离（水平，方块）：目标进入此距离 → 后撤拉开。近战攻击范围 ~3，取 6 让后撤提前
-     *  （怪还在逼近就开始退，而不是贴脸才退——贴脸才退在长施法（光束）期间几乎触发不了）。 */
-    private static final double KITE_START_DIST = 6.0;
-    /** 后撤目标间距（方块）：离威胁点保持此距离（beam 射程 200，远够得着）。 */
-    private static final double KITE_STANDOFF = 10.0;
+    // ── 走位（风筝/群殴）参数：数值归属 docs/decisions.md——guard.kite*/engage/flee* 走 Config（TOML），
+    //    群殴扫描等行为常量仍留这里 ──
     /** 群殴阈值：附近可见敌数 ≥ 此值 → 主动拉开避免被围殴。 */
     private static final int CROWD_THRESHOLD = 3;
     /** 群殴扫描半径（方块）：此范围内数可见敌数 + 取质心。 */
@@ -125,6 +122,14 @@ public final class GuardCombat {
         // 战斗态：禁 wandering，走位由本引擎的导航驱动（战斗结束由执行器 markCombatEnd）
         markInCombat(npc);
 
+        // ── 低血逃跑态（guard.flee*，保命优先）：血量比例低于阈值 → 走位距离改用逃跑档
+        //    （fleeStartDist/fleeStandoff），LOS 被墙挡也继续后撤不走近交战；光束边走边打仍在输出。
+        //    能奶的低血已被上方 L0 紧急奶拦下，这里是「奶不了」的兜底逃跑。──
+        boolean fleeing = npc.getHealth() / Math.max(1f, npc.getMaxHealth())
+                < Config.GUARD_FLEE_HP_THRESHOLD.get();
+        double startDist = fleeing ? Config.GUARD_FLEE_START_DIST.get() : Config.GUARD_KITE_START_DIST.get();
+        double standoff = fleeing ? Config.GUARD_FLEE_STANDOFF.get() : Config.GUARD_KITE_STANDOFF.get();
+
         MagicBeamEntity beam = findActiveBeam(level, npc);
         if (beam != null) {
             beam.retarget(target); // 主动切换：光束持续指向最近的怪物
@@ -134,22 +139,27 @@ public final class GuardCombat {
         //    别被围在墙角群殴。走位由 ECS 导航驱动（施法不锁移动）。──
         Crowd crowd = scanCrowd(level, npc);
         if (crowd.count >= CROWD_THRESHOLD) {
-            navigateAway(level, npc, world, npcId, crowd.centroid);
+            navigateAway(level, npc, world, npcId, crowd.centroid, standoff);
             if (beam == null) castSelected(level, npc, target, circleId, color);
             return;
         }
 
         if (!hasLineOfSight(npc, target)) {
-            // 看不见（隔墙）：旧光束会在墙上拖拽，先让它快速消失；然后寻路到能打到的安全落点
+            // 看不见（隔墙）：旧光束会在墙上拖拽，先让它快速消失
             if (beam != null) beam.setLifetime(5);
-            navigateToward(level, npc, world, npcId, target);
+            if (fleeing) {
+                // 低血逃跑：不回走近交战（墙后近战威胁大），继续向后撤，保命优先
+                navigateAway(level, npc, world, npcId, target.getBoundingBox().getCenter(), standoff);
+            } else {
+                navigateToward(level, npc, world, npcId, target); // 寻路到能打到的安全落点
+            }
             return;
         }
 
-        // ── 战斗风筝：LOS 可见但目标进入威胁距离（KITE_START_DIST）→ 后撤拉开距离（边走边打）。
+        // ── 战斗风筝：LOS 可见但目标进入威胁距离（startDist）→ 后撤拉开距离（边走边打）。
         //    落点只选可站立 + 有 LOS 的格子，贴墙被堵死时静默站定继续打，不会寻路进墙/卡死。──
-        if (horizontalDistSq(npc, target) < KITE_START_DIST * KITE_START_DIST) {
-            navigateAway(level, npc, world, npcId, target.getBoundingBox().getCenter());
+        if (horizontalDistSq(npc, target) < startDist * startDist) {
+            navigateAway(level, npc, world, npcId, target.getBoundingBox().getCenter(), standoff);
             if (beam == null) castSelected(level, npc, target, circleId, color);
             return;
         }
@@ -358,8 +368,6 @@ public final class GuardCombat {
 
     // ── 寻路 ──
 
-    /** 与目标交战的期望水平间距（方块）：贴脸落点会被近战 / 苦力怕爆炸波及，故保留安全距离。 */
-    private static final double ENGAGE_STANDOFF = 6.0;
     /** 以目标为圆心、standoff 半径环上的候选采样数。 */
     private static final int ENGAGE_SAMPLES = 16;
     /** 交战落点与怪物脚底允许的楼层高度差：往上 2 格（覆盖坑里/台阶上的怪）、往下 4 格（覆盖低洼）。 */
@@ -369,7 +377,7 @@ public final class GuardCombat {
     /**
      * LOS 被挡时，向目标附近一个安全的交战落点寻路（绕墙走到能打到的位置）。
      *
-     * <p>落点 = 以目标为圆心、{@link #ENGAGE_STANDOFF} 半径的环上，优先选「与目标有视线」且
+     * <p>落点 = 以目标为圆心、{@code guard.engageStandoff} 半径的环上，优先选「与目标有视线」且
      * 「尽量靠近守卫」的格子；环上无有视线落点则退化为最近的可站立格。这样无论走路还是传送兜底
      * （NavigationSystem 寻路失败会传送直达 nav 目标），守卫都**不会落在怪物脸上**——
      * 避免被苦力怕贴身爆炸秒杀。
@@ -398,6 +406,7 @@ public final class GuardCombat {
         Vec3 guardPos = npc.getStaffPosition();
         int mobFeetY = Mth.floor(target.getY());
         double towardGuard = Math.atan2(guardPos.z - mobCenter.z, guardPos.x - mobCenter.x);
+        double standoff = Config.GUARD_ENGAGE_STANDOFF.get();
 
         BlockPos best = null;                 // 有视线的候选中最靠近守卫的
         double bestLosDistSq = Double.MAX_VALUE;
@@ -406,8 +415,8 @@ public final class GuardCombat {
 
         for (int i = 0; i < ENGAGE_SAMPLES; i++) {
             double angle = towardGuard + Math.PI * 2 * i / ENGAGE_SAMPLES;
-            int bx = Mth.floor(mobCenter.x + Math.cos(angle) * ENGAGE_STANDOFF);
-            int bz = Mth.floor(mobCenter.z + Math.sin(angle) * ENGAGE_STANDOFF);
+            int bx = Mth.floor(mobCenter.x + Math.cos(angle) * standoff);
+            int bz = Mth.floor(mobCenter.z + Math.sin(angle) * standoff);
             int standY = findStandingYNear(level, bx, bz, mobFeetY);
             if (standY == Integer.MIN_VALUE) continue; // 该列怪物楼层附近无可站立格 → 跳过
             BlockPos cand = new BlockPos(bx, standY, bz);
@@ -427,7 +436,7 @@ public final class GuardCombat {
         // 极端兜底：沿守卫→目标连线、目标身前 standoff 处（绝不压到目标）
         Vec3 dir = mobCenter.subtract(guardPos);
         if (dir.lengthSqr() < 0.01) dir = new Vec3(1, 0, 0);
-        Vec3 fb = mobCenter.subtract(dir.normalize().scale(ENGAGE_STANDOFF));
+        Vec3 fb = mobCenter.subtract(dir.normalize().scale(standoff));
         int bx = Mth.floor(fb.x);
         int bz = Mth.floor(fb.z);
         int standY = findStandingYNear(level, bx, bz, mobFeetY);
@@ -501,15 +510,21 @@ public final class GuardCombat {
     /**
      * 向威胁点（目标中心 / 敌方质心）的**反方向**后撤：由 ECS 导航驱动
      * （施法不锁移动，走位导航畅通），落点不可站立时静默放弃（站定继续打）。
-     * 守卫/自防御/和平逃跑共用。寻路失败时 NavigationSystem 会回退 self_teleport——
+     * 守卫/自防御/和平逃跑/低血逃跑共用。寻路失败时 NavigationSystem 会回退 self_teleport——
      * 正常走位不会失败（见 findRetreatPos 的可达性约束），传送留给狭小地带真正走投无路时逃生。
      */
     public static void navigateAway(ServerLevel level, WandscapeNpc npc, World world,
-                                    long npcId, Vec3 threat) {
+                                    long npcId, Vec3 threat, double standoff) {
         if (world == null || world.movementOps == null) return;
-        BlockPos dest = findRetreatPos(level, npc, threat);
+        BlockPos dest = findRetreatPos(level, npc, threat, standoff);
         if (dest == null) return;
         world.movementOps.navigateTo(npcId, dest.getX(), dest.getY(), dest.getZ());
+    }
+
+    /** 便捷重载：落点间距用默认 {@link Config#GUARD_KITE_STANDOFF}（和平模式逃跑等调用）。 */
+    public static void navigateAway(ServerLevel level, WandscapeNpc npc, World world,
+                                    long npcId, Vec3 threat) {
+        navigateAway(level, npc, world, npcId, threat, Config.GUARD_KITE_STANDOFF.get());
     }
 
     /**
@@ -526,12 +541,12 @@ public final class GuardCombat {
     }
 
     /**
-     * 后撤落点：威胁点周围 {@link #KITE_STANDOFF} 环上、采样角集中在「远离威胁」方向 ±半圆
+     * 后撤落点：威胁点周围 {@code standoff} 环上、采样角集中在「远离威胁」方向 ±半圆
      * （向身后/侧后方退，不绕到怪物对面）；优先「NPC→落点 无墙 且 落点→威胁 有 LOS 且离 NPC 最近」
      * 的可站立格（NPC→落点 无墙 ≈ 走得过去，源头避免寻路失败→传送），
      * 退化「最近可站立格」，极端兜底沿 NPC→威胁 反方向退 2 格（不可站立返回 null）。
      */
-    private static BlockPos findRetreatPos(ServerLevel level, WandscapeNpc npc, Vec3 threat) {
+    private static BlockPos findRetreatPos(ServerLevel level, WandscapeNpc npc, Vec3 threat, double standoff) {
         Vec3 npcPos = npc.getStaffPosition();
         Vec3 away = npcPos.subtract(threat);
         if (away.lengthSqr() < 0.01) away = new Vec3(1, 0, 0);
@@ -545,8 +560,8 @@ public final class GuardCombat {
 
         for (int i = 0; i < RETREAT_SAMPLES; i++) {
             double angle = baseAngle + (i - RETREAT_SAMPLES / 2) * Math.PI / (RETREAT_SAMPLES - 1);
-            int bx = Mth.floor(threat.x + Math.cos(angle) * KITE_STANDOFF);
-            int bz = Mth.floor(threat.z + Math.sin(angle) * KITE_STANDOFF);
+            int bx = Mth.floor(threat.x + Math.cos(angle) * standoff);
+            int bz = Mth.floor(threat.z + Math.sin(angle) * standoff);
             int standY = findStandingYNear(level, bx, bz, threatFeetY);
             if (standY == Integer.MIN_VALUE) continue;
             BlockPos cand = new BlockPos(bx, standY, bz);

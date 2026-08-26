@@ -3,6 +3,7 @@ package com.wsteam.wandscape.npc.internal;
 import java.util.List;
 import java.util.UUID;
 
+import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.core.component.ColonyMember;
 import com.wsteam.wandscape.core.component.EquipmentComponent;
@@ -29,6 +30,7 @@ import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.MobSpawnType;
+import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.phys.Vec3;
 
 /**
@@ -37,6 +39,7 @@ import net.minecraft.world.phys.Vec3;
  * {@link #spawnFromRecordAt}）；shift+右键直接施放已移除（MagicInteractHandler 删除）。
  *
  * <p>全灭保底：当小镇所有 NPC 均已阵亡时，全灭保底自动在市政厅门口释放复活魔法复活离世成员。
+ * 保卫殖民地复活：法师战死若距本殖民地建筑 ≤ {@link Config#REVIVE_NEAR_BUILDING_RANGE} 格，同样直接在市政厅门口复活。
  * 虚弱复活：生成即 1 血 0 蓝，靠脱战回血与魔力回复缓慢恢复。
  */
 public final class ReviveHandler {
@@ -78,6 +81,50 @@ public final class ReviveHandler {
         Log.info(TAG, "全灭保底触发：小镇 {} 成员全灭，已自动在市政厅门口 ({}) 释放复活魔法唤醒 {}",
                 colonyId.toString().substring(0, 8), townHallPos.toShortString(), latestRec.name());
         return true;
+    }
+
+    /**
+     * 保卫殖民地复活：法师战死时若距本殖民地任一建筑 AABB ≤ {@link Config#REVIVE_NEAR_BUILDING_RANGE} 格，
+     * 立即在市政厅门口复活（复用全灭保底的市政厅门口定位 + 虚弱复活 {@link #spawnFromRecordAt}），无需祭坛仪式。
+     * 阵亡点距建筑 ≤ range 时尝试复活并返回 true；生成失败时记录保留，可由祭坛/全灭保底重试。
+     */
+    public static boolean checkAndReviveNearColonyBuilding(ServerLevel level, DeathRecord rec) {
+        int range = Config.REVIVE_NEAR_BUILDING_RANGE.get();
+        if (!isWithinRangeOfColonyBuilding(level, rec.colonyId(), rec.x(), rec.y(), rec.z(), range)) {
+            return false;
+        }
+        BlockPos deathPos = new BlockPos(rec.x(), rec.y(), rec.z());
+        BlockPos townHallPos = resolveTownHallDoorOrAnchor(level, rec.colonyId(), deathPos);
+        spawnFromRecordAt(level, rec, townHallPos);
+        Log.info(TAG, "保卫殖民地复活：法师 {} 阵亡于距建筑 ≤{} 格处，已在市政厅门口 ({}) 复活",
+                rec.name(), range, townHallPos.toShortString());
+        return true;
+    }
+
+    /** 阵亡位置距本殖民地任一建筑 AABB 的 3D 距离是否 ≤ range（点在盒内视为 0）。 */
+    private static boolean isWithinRangeOfColonyBuilding(ServerLevel level, UUID colonyId,
+                                                         int x, int y, int z, int range) {
+        BuildingSavedData savedData = BuildingSavedData.get(level);
+        if (savedData == null) return false;
+        int rangeSq = range * range;
+        for (BuildingState b : savedData.getAllBuildings()) {
+            if (!colonyId.equals(b.getColonyId())) continue;
+            BoundingBox box = b.getBounds();
+            if (distSqToAabb(x, y, z,
+                    box.minX(), box.minY(), box.minZ(), box.maxX(), box.maxY(), box.maxZ()) <= rangeSq) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** 点到轴对齐盒的 3D 距离平方（点在盒内为 0）。纯逻辑，可单测。 */
+    static long distSqToAabb(int x, int y, int z,
+                             int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {
+        long dx = Math.max(minX - x, Math.max(0, x - maxX));
+        long dy = Math.max(minY - y, Math.max(0, y - maxY));
+        long dz = Math.max(minZ - z, Math.max(0, z - maxZ));
+        return dx * dx + dy * dy + dz * dz;
     }
 
     /** 定位小镇市政厅门口：category=government 建筑优先用 door_offsets 的可站入口点。 */

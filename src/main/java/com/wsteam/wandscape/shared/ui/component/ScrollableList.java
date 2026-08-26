@@ -10,6 +10,7 @@ import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.narration.NarratedElementType;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.ItemStack;
 
 public abstract class ScrollableList<T> extends AbstractWidget {
 
@@ -17,6 +18,8 @@ public abstract class ScrollableList<T> extends AbstractWidget {
     protected final int scrollbarWidth = 6;
     protected int scrollOffset;
     protected int selectedIndex = -1;
+    /** Index of the row currently under the mouse, set during render; -1 when none. */
+    private int hoveredIndex = -1;
     protected List<T> items = List.of();
 
     public ScrollableList(int x, int y, int width, int height, int rowHeight) {
@@ -59,6 +62,37 @@ public abstract class ScrollableList<T> extends AbstractWidget {
 
     public void setOnRowClick(RowClickHandler<T> handler) {
         this.rowClickHandler = handler;
+    }
+
+    // ── Hover tooltip (standard item tooltip, like an inventory slot) ──
+
+    /** Maps a hovered row to the ItemStack whose standard tooltip is shown at the cursor. */
+    @FunctionalInterface
+    public interface TooltipProvider<T> {
+        @javax.annotation.Nullable
+        ItemStack tooltipStack(T item, int index);
+    }
+
+    private TooltipProvider<T> tooltipProvider;
+
+    /**
+     * Set a provider for the hovered row's item tooltip. The screen renders the stack's
+     * standard tooltip (via {@code hoveredTooltipStack()}) on top of all widgets, matching
+     * vanilla inventory behaviour where aiming at an item shows its details.
+     */
+    public void setTooltipProvider(TooltipProvider<T> tooltipProvider) {
+        this.tooltipProvider = tooltipProvider;
+    }
+
+    /**
+     * The item whose tooltip to show for the row currently under the mouse, or null when
+     * nothing is hovered or the provider has no item for it. Valid after {@code renderWidget}.
+     */
+    @javax.annotation.Nullable
+    public ItemStack hoveredTooltipStack() {
+        if (tooltipProvider == null || hoveredIndex < 0 || hoveredIndex >= items.size()) return null;
+        ItemStack stack = tooltipProvider.tooltipStack(items.get(hoveredIndex), hoveredIndex);
+        return (stack == null || stack.isEmpty()) ? null : stack;
     }
 
     // ── Mouse events ──
@@ -151,11 +185,13 @@ public abstract class ScrollableList<T> extends AbstractWidget {
         int startRow = scrollOffset / rowHeight;
         int visibleRows = (height / rowHeight) + 1;
 
+        this.hoveredIndex = -1;
         for (int i = startRow; i < Math.min(totalRows, startRow + visibleRows); i++) {
             int rowY = getY() + i * rowHeight - scrollOffset;
             boolean selected = i == selectedIndex;
             boolean hovered = mouseX >= getX() && mouseX < contentRight
                     && mouseY >= rowY && mouseY < rowY + rowHeight;
+            if (hovered) this.hoveredIndex = i;
 
             if (selected) {
                 g.fill(getX(), rowY, contentRight, rowY + rowHeight, MedievalColors.PURPLE_BG);

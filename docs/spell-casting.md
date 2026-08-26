@@ -48,6 +48,8 @@ L0 硬性覆盖（不可配置，保命/不打断）
   │                                heal 以自身为圆心，可同时奶到范围内友方与自身）
   ├─ LOS 被方块挡住           → 停止施法、转寻路（现有 GuardCombat 逻辑）
   ├─ LOS 可见但目标进入威胁距离  → 战斗风筝：后撤拉开距离（边走边打，光束独立跟随；GuardCombat）
+  ├─ 自身血量比例 < fleeHpThreshold(0.30) → 低血逃跑态：走位距离改用 fleeStart(12)/fleeStandoff(18)，
+  │      LOS 被墙挡也继续后撤不走近（保命优先；阈值 Config.guard.fleeHpThreshold 可调，GuardCombat）
   ├─ 附近可见敌数 ≥3          → 群殴规避：往敌方质心反方向走位（GuardCombat）
   ├─ 施法互斥锁被占用          → 不打断当前施法，等下一轮
   └─ 导航失败需传送           → 走 utility 传送（导航回退，属硬性路径）
@@ -262,6 +264,7 @@ npc/internal/ReviveHandler.java     ✅ 复活效果：spawnFromRecordAt（指�
 - **无死亡记录前置校验（按殖民地）**：`AltarCastHandler.onCastRequest` 点选 revive 时若该殖民地无死亡记录（`latestInColony(colonyId) == null`）直接提示、不发布任务；`AltarCastExecutor` 幂等复核兜底——发布后记录被同殖民地其他祭坛复活消耗时跳过施法（不扣蓝、不放法阵）；`fireRevive` 同样按祭坛所属殖民地取记录（`getBuilding(altarId).getColonyId()`），不跨殖民地捞人。
 - **虚弱复活**：复活后 **1 血 0 蓝**（`setHealth(1)` + `setMana(0)` + `markManaSeeded` 阻止首 tick 满蓝种子），靠脱战回血（interval 回 1 HP）与魔力回复（10t/1 点）缓慢恢复——复活有代价。
 - **失败兜底**：生成位置无地可放等失败 → 记录保留，玩家可重试。
+- **保卫殖民地复活（2026-08-26）**：法师战死时若距**本殖民地**任一建筑 AABB（3D 距离）≤ `Config.REVIVE_NEAR_BUILDING_RANGE`(20) 格，**立即**在市政厅门口自动复活（复用全灭保底的 `resolveTownHallDoorOrAnchor` + `spawnFromRecordAt` 虚弱复活），无需祭坛仪式——守卫殖民地战死不强制走祭坛，判定只认本殖民地建筑。
 - **与施法决策的关系**：复活不进 NPC 自动战斗决策表（L1）——玩家指挥式，避免 NPC 战斗中弃敌救人。
 - **遗留**：装备只恢复 default wand（当前装备系统仅 WAND 槽）；墓碑方块视觉留作后续增强。
 - **P5 迁移（已完成）**：复活入口已改为**祭坛**（见下章），shift+右键施放已移除。
@@ -310,6 +313,7 @@ npc/                                  DeathRecord.latest + ColonyDeathRegistry.l
 - 引导时长与法阵视觉对齐：`altar_duration` 设为该魔法 circle spec 的 `durationTicks`（revive → revive_ritual = 600）。
 - **发布即锁定，施放结束才起 CD**：玩家提交后该祭坛+魔法被任务池锁定（`GlobalTaskPool.hasActiveTask("magic:altar_cast", {altar, magic_id})`，覆盖已发布未施放 + 施放中），任务完成（施放结束）即解锁；祭坛 CD 在 `fireEffect` 起算，接续锁定窗口无缝隙——防止玩家在 NPC 接取前反复点击刷多次施法。客户端以 `AltarSpellInfo.locked` + 本地 submitted 集显示「施法中/已安排」并禁用 Submit。
 - **全灭保底自动复活**：当殖民地所有 NPC 阵亡（活着的 NPC 为 0 且死亡表存在记录）时，系统自动触发全灭保底（`ReviveHandler.checkAndAutoReviveColony`），在市政厅（`town_hall`）门口播放闪耀绿色复活魔法视觉并自动复活一名离世成员，避免全员阵亡后无法师施发复活的瘫痪死锁局面。
+- **保卫殖民地复活（单法师自动召回）**：与全灭保底同链路但**单法师死亡即触发**——法师死亡时距本殖民地最近建筑（AABB 3D 距离）≤ `revive.nearBuildingRange`(20) 则立即在市政厅门口复活（虚弱复活），无需祭坛仪式。
 
 ## 十二、分阶段实施
 

@@ -53,6 +53,7 @@ import com.wsteam.wandscape.shared.network.MagicCircleCastPacket;
 import com.wsteam.wandscape.road.engine.RoadApiImpl;
 import com.wsteam.wandscape.road.engine.RoadSavedData;
 import com.wsteam.wandscape.road.engine.RoadSegmentListener;
+import com.wsteam.wandscape.engine.boundary.ProductionEligibility;
 import com.wsteam.wandscape.engine.boundary.WandscapeBlockInteractExecutor;
 import com.wsteam.wandscape.engine.sound.WandscapeSounds;
 import com.wsteam.wandscape.production.ProductionRecipeLoader;
@@ -924,6 +925,7 @@ public class Wandscape {
         // Wire production loaders to block interact executor
         WandscapeBlockInteractExecutor.setElementMappingLoader(ELEMENT_MAPPING_LOADER);
         WandscapeBlockInteractExecutor.setProductionRecipeLoader(PRODUCTION_RECIPE_LOADER);
+        ProductionEligibility.setProductionRecipeLoader(PRODUCTION_RECIPE_LOADER);
 
         // Load element seeds for Workstation decomposition
         try {

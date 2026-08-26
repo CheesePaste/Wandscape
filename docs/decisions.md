@@ -2,6 +2,50 @@
 
 本文件记录偏离直觉的设计选择及其原因，供后续开发快速理解「为什么这么做」。
 
+## 2026-08-26：保卫殖民地复活——阵亡于建筑附近者直接在市政厅门口复活，复用全灭保底
+
+**需求**（用户指令）：法师战死若发生在守卫殖民地期间（距最近建筑 ≤20 格），不应强制走祭坛复活仪式，而是与全灭保底一致直接在市政厅门口复活，复用既有机制。
+
+**决策**：
+- **判定**：阵亡坐标到**本殖民地**任一建筑 AABB 的 **3D 欧氏距离** ≤ `Config.REVIVE_NEAR_BUILDING_RANGE`(20，`revive.nearBuildingRange` 可调)；点在盒内记为 0。只认本殖民地建筑，不跨殖民地捞建筑——「保卫自己的殖民地」。
+- **复用全灭保底链路**：新增 `ReviveHandler.checkAndReviveNearColonyBuilding` 复用 `resolveTownHallDoorOrAnchor`（市政厅门口）+ `spawnFromRecordAt`（虚弱复活 1 血 0 蓝 + 失败保留记录可重试），不新写复活逻辑。挂在 `NpcDeathHandler` 存记录之后、全灭检测之前——复活后该法师存活，全灭检测自然不触发。
+- **点到 AABB 距离** `distSqToAabb` 为纯逻辑静态方法（配单测），判定与守卫/袭击的「近建筑」语义一致但用 3D 距离而非水平外扩——高空坠落不误判为守卫战死。
+
+**为什么**：守卫战死是高频且非玩家过错的事件，若每次都要求玩家跑祭坛仪式，防线一崩战力断档、生产停摆；而全灭保底已备好「市政厅门口 + 虚弱复活」整套机制，直接复用把新增复杂度压到最低（一个距离判定 + 一个入口）。
+
+**影响**：`Config` 增 `revive.nearBuildingRange`(20)；`ReviveHandler` 增 `checkAndReviveNearColonyBuilding`/`isWithinRangeOfColonyBuilding`/`distSqToAabb`；`NpcDeathHandler` 存记录后先跑近建筑判定；新增 `ReviveHandlerTest`（点到 AABB 距离 6 例）。
+
+## 2026-08-26：走位距离加大 + 低血逃跑态——参数移入 Config
+
+**需求**（用户指令）：法师走位控距离太短，仍会被苦力怕炸、偶尔被近战打到。要求：① 增大走位距离；② 血量低于 30% 进入逃跑状态、走位距离更大，低血能跑远避免被打死。
+
+**决策**（用户选定）：
+- **数值**：`guard.kiteStartDist` 6→9、`guard.kiteStandoff` 10→13、`guard.engageStandoff` 6→9——最低间距 9 格，普通苦力怕爆炸致死半径 ~4（充能 ~8）与近战射程 ~3 都够不着，10 tick 重检间隙（怪能贴 ~2 格）也有余量；光束射程 200，拉远不影响输出。
+- **低血逃跑态**（`guard.fleeHpThreshold`=0.30）：触发/后撤距离改用 `guard.fleeStartDist`=12 / `guard.fleeStandoff`=18；**LOS 被墙挡不再走近交战、继续后撤**（保命优先，墙后近战威胁大），光束边走边打仍在输出。L0 紧急奶（HP<50%）已在上游拦截可奶的低血，逃跑态是「奶不了」的兜底。
+- **参数归属改为 Config（TOML）**：原硬编码 `KITE_START_DIST`/`KITE_STANDOFF`/`ENGAGE_STANDOFF` 移入 `guard.*`，并新增 flee 三参数——玩家改配置即可调平衡，不用改代码重编译。反之前「留 GuardCombat 私有常量」决策（2026-08-12）：用户反复实测调平衡，配置化更省事，代价是常量变配置读（每轮循环多两次 `Config.get()`，可忽略）。
+- **实现**：`engage` 每轮按血量比例选「正常档 / 逃跑档」的 startDist/standoff（flee 分支同时覆盖风筝与群殴后撤）；`navigateAway` 增 standoff 参数（5 参重载按 `kiteStandoff`，供和平模式逃跑复用，其间距 10→13 顺带变大）；`findRetreatPos`/`findEngagePos` 参数化 standoff。
+
+**为什么**：原 6→10 走位带中，法师常停在 6~7 格（`ENGAGE_STANDOFF`=6 与风筝触发 6 重叠，站定施法时怪贴上来），普通苦力怕 6 格爆炸仍有可观伤害、充能苦力怕更致命。9→13 让最低间距超出爆炸致死半径；逃跑态 18 格连充能苦力怕都安全，LOS 被挡也后撤避免低血法师走近墙后近战自杀。
+
+**影响**：`Config` 增 `guard.kiteStartDist`/`guard.kiteStandoff`/`guard.engageStandoff`/`guard.fleeHpThreshold`/`guard.fleeStartDist`/`guard.fleeStandoff`；`GuardCombat` 删 3 个私有常量、`navigateAway` 增 standoff 重载、`findRetreatPos`/`findEngagePos` 参数化、`engage` 增逃跑态分支。
+
+## 2026-08-26：合成队列改为「发布时找第一个够的」——缺元素配方留在原位标记，不再进不可见的 AWAITING_RESOURCES
+
+**需求**（用户指令）：合成时元素不足的配方会进入一个 UI 看不见的「候选列表」（`AWAITING_RESOURCES` + `parkHead` 挂起），像"丢失"一样。期望更简单的模型：合成列表从上到下找第一个元素够的来合成；不够的留在原位、UI 显示「缺元素」；都不够则 NPC 自然空闲；并自动去收集不足的元素。
+
+**根因**：`BuildingTaskSource` 每 20 tick 只把队首条目发布为头任务；执行到一半元素不足 → `markAwaitingResources`（休眠不可见）→ `parkHead` 让出队首、顶上下一条。被挂起的任务在 UI 里完全消失，且只有 `ResourceSupplySystem`/`onResourceAdded` 唤醒后才会回来，玩家无法感知、也无法操作。
+
+**决策**（发布时预判 + 缺元素留队 + 中途回收）：
+- **发布扫描**：`BuildingTaskSource` 发布前用新增 `BuildingApi.dequeueWorkEligible` 从队首到队尾找第一个"当前元素够"的生产配方发布；元素不足的留在队列原位被跳过。可负担性判定收敛到 `engine/boundary/ProductionEligibility`（`requiredElements` = 配方成本 × 数量 × `ELEMENT_CRAFT_COST_MULTIPLIER`，与执行器 `checkElements` 同源），供发布扫描、UI 标记、自动补元素三处复用。
+- **都不够 → 不发布**：相关 NPC 自然空闲（无新状态机）。先判 eligible 再 `leaseBuilding`，避免为"排队但跑不了"的队列每 20 tick 强制加载/释放区块。
+- **中途竞态回收**：发布后元素被并发任务抢走 → 执行器照旧抛 `ResourceShortageException`；`BuildingTaskSource` 清理区对生产任务不再 `parkHead`，而是用 `GlobalTask.blueprintId/taskParams/priority` 重建 WorkItem 重新入队 + `cancelTask`，下轮扫描按「缺元素」跳过——全程可见。`AWAITING_RESOURCES`/`parkHead` 保留给建材运输等非生产任务。
+- **UI**：`TaskQueueDataPacket.QueueEntry` 带 `insufficient` + `missingElements`，`TaskQueuePanel` 对不足行渲染暗红「缺元素」标签 + 缺失元素图标（保留上移/下移/删除）。
+- **自动补元素**：`ResourceSupplySystem` 心跳在扫 `AWAITING_RESOURCES` 之外，新增扫描工作站系队列里元素不足的条目，按 (colony,typeId) 去重聚合缺口，走既有 `trySupplyResource`（先合成物品、回退节点采集，自带 in-flight 去重）。
+
+**为什么**：生产短缺是常态经营分支，不该让任务"消失"。把"元素够不够"的判定从执行期（失败才知）提前到发布期（先判再发），NPC 只会接到当前能跑的任务，队列天然从队首推进；缺元素的留在原位、UI 可见、可手动移除，补齐后自然被挑中——模型只有一个概念："缺元素的任务留在队列里等元素"。
+
+**影响**：`BuildingApi.dequeueWorkEligible` + `pollFirstEligible`（BuildingApiImpl）；`ProductionEligibility`（新增，engine/boundary）；`BuildingTaskSource`（发布扫描 + 清理区回收，`elementSnapshot` 取 `ServerLifecycleHooks` overworld）；`TaskQueueDataPacket.QueueEntry` 增字段 + `TaskQueueModifyPacket` 计算 + `TaskQueuePanel` 渲染 + 三个生产屏幕透传并加宽队列面板；`ResourceSupplySystem.scanProductionQueues`；`WandscapeBlockInteractExecutor.checkElements` 收敛到 `ProductionEligibility`；`Wandscape` 接线 `ProductionEligibility.setProductionRecipeLoader`。测试：`ProductionEligibilityTest`（新）、`BuildingApiSharedQueueTest`（pollFirstEligible 4 例）。`BuildingTaskPoolTest`/`TaskExecutionResourceShortageTest` 测的是通用 AWAITING_RESOURCES/park 机制，不受影响。
+
 ## 2026-08-26：建造落点吸附——草/花/蘑菇/树叶不算立足点，建筑落在真实地面
 
 **需求**（用户反馈）：建造模式下建筑会吸附到草、花、蘑菇、树叶上，整栋建筑被垫高一层（影响高度）。

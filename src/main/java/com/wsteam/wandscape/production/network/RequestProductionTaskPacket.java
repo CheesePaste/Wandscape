@@ -4,9 +4,12 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 
+import javax.annotation.Nullable;
+
 import com.google.gson.JsonPrimitive;
 import com.wsteam.wandscape.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.building.internal.BuildingState;
+import com.wsteam.wandscape.production.ProductionRecipeLoader;
 import com.wsteam.wandscape.production.internal.RecipeUnlockChecker;
 import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.data.WorkItem;
@@ -131,6 +134,11 @@ public record RequestProductionTaskPacket(
             } else {
                 params.put("recipe_id", new JsonPrimitive(pkt.recipeOrItemId));
             }
+            // 输出物品 id（已注册物品）→ 队列面板图标用；decompose 的图标就是 item_id 本身。
+            String outputItem = resolveOutputItem(pkt.action, pkt.recipeOrItemId, loader);
+            if (outputItem != null) {
+                params.put("output_item", new JsonPrimitive(outputItem));
+            }
             params.put("count", new JsonPrimitive(pkt.quantity));
             // Channel duration scales with quantity: workstation 5 ticks/item (<=2 value is instant/0),
             // crafting station 1200 ticks/item (per unit).
@@ -170,6 +178,32 @@ public record RequestProductionTaskPacket(
                             ? state.getColonyId().toString().substring(0, 8) : "null",
                     blueprintId, queueSize);
         });
+    }
+
+    /** Resolve the registered output item id for a recipe-based production task (queue icon). */
+    @Nullable
+    private static String resolveOutputItem(String action, String recipeOrItemId,
+                                            @Nullable ProductionRecipeLoader loader) {
+        if (loader == null) return null;
+        return switch (action) {
+            case "synthesize" -> {
+                var recipe = loader.getSynthesizeRecipe(recipeOrItemId);
+                yield recipe != null ? recipe.outputItem() : null;
+            }
+            case "craft_wand" -> {
+                var recipe = loader.getCraftWandRecipes().get(recipeOrItemId);
+                yield recipe != null ? recipe.outputItem() : null;
+            }
+            case "craft_spell" -> {
+                var recipe = loader.getSpellRecipes().get(recipeOrItemId);
+                yield recipe != null ? recipe.outputItem() : null;
+            }
+            case "brew_potion" -> {
+                var recipe = loader.getPotionRecipes().get(recipeOrItemId);
+                yield recipe != null ? recipe.outputItem() : null;
+            }
+            default -> null;
+        };
     }
 
     private static com.google.gson.JsonArray posToJsonArray(BlockPos pos) {

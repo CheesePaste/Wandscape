@@ -21,6 +21,7 @@ import com.wsteam.wandscape.shared.ui.component.TabBar;
 import com.wsteam.wandscape.shared.ui.component.TaskQueuePanel;
 import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
 import com.wsteam.wandscape.shared.ui.theme.WandscapeTheme;
+import com.wsteam.wandscape.shared.ui.util.ItemStackUtil;
 import com.wsteam.wandscape.shared.log.Log;
 
 import net.minecraft.client.Minecraft;
@@ -40,8 +41,8 @@ public class WorkstationScreen extends MedievalScreen {
     private static final int PH = 220;
     // Left panel width (existing content)
     private static final int LEFT_PW = 240;
-    // Right panel (TaskQueuePanel) — shorter, starts higher
-    private static final int QUEUE_PW = 140;
+    // Right panel (TaskQueuePanel) — narrower to stay inside the PW=400 window
+    private static final int QUEUE_PW = 148;
 
     private BlockPos stationPos = BlockPos.ZERO;
     private int activeTab = 0;
@@ -90,7 +91,7 @@ public class WorkstationScreen extends MedievalScreen {
             for (TaskQueueDataPacket.QueueEntry qe : packet.entries()) {
                 entries.add(new TaskQueuePanel.Entry(
                         qe.index(), qe.category(), qe.itemOrRecipeId(), qe.quantity(),
-                        qe.blueprintId(), qe.summary()));
+                        qe.blueprintId(), qe.summary(), qe.insufficient(), qe.missingElements()));
             }
             taskQueuePanel.setEntries(entries);
             taskQueuePanel.setCurrents(toPanelCurrents(packet.currents()));
@@ -106,7 +107,7 @@ public class WorkstationScreen extends MedievalScreen {
             TaskQueueDataPacket.QueueEntry e = ct.entry();
             result.add(new TaskQueuePanel.CurrentInfo(
                     new TaskQueuePanel.Entry(e.index(), e.category(), e.itemOrRecipeId(),
-                            e.quantity(), e.blueprintId(), e.summary()),
+                            e.quantity(), e.blueprintId(), e.summary(), false, List.of()),
                     ct.stepIndex(), ct.totalSteps(),
                     ct.channelRemainingTicks(), ct.channelTotalTicks(),
                     ct.pending()));
@@ -187,6 +188,7 @@ public class WorkstationScreen extends MedievalScreen {
             }
         };
         decomposeList.setOnSelect(i -> updateSliderForDecompose(decomposeFiltered.get(i)));
+        decomposeList.setTooltipProvider((item, index) -> ItemStackUtil.fromIdWithNbt(item.itemId(), item.nbt()));
 
         synthesizeList = new ScrollableList<>(contentX, listY, contentW, listH, 20) {
             @Override
@@ -235,6 +237,7 @@ public class WorkstationScreen extends MedievalScreen {
             }
         };
         synthesizeList.setOnSelect(i -> updateSliderForSynthesize(synthesizeFiltered.get(i)));
+        synthesizeList.setTooltipProvider((item, index) -> ItemStackUtil.fromId(item.outputItem()));
 
         // Quantity slider + submit
         int controlY = listY + listH + 6;
@@ -297,6 +300,15 @@ public class WorkstationScreen extends MedievalScreen {
         }
         currentList = (tabIndex == 0) ? decomposeList : synthesizeList;
         addRenderableWidget(currentList);
+    }
+
+    @Override
+    protected void renderForeground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        // 悬停列表行时在光标处显示标准物品 tooltip（与物品栏一致，置于所有控件之上）
+        ItemStack tooltip = currentList != null ? currentList.hoveredTooltipStack() : null;
+        if (tooltip != null) {
+            g.renderTooltip(font, tooltip, mouseX, mouseY);
+        }
     }
 
     private void onSubmit() {

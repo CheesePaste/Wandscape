@@ -43,7 +43,7 @@ Wizards carry out the colony's building, gathering, crafting, and combat. How mu
 ## Tips
 
 - **Wands first**: Spell Power directly decides combat strength; give the good wands to your main wizards.
-- Fallen wizards don't disappear — revive them at the [Altar](altar_guide.md). They are briefly weakened after reviving.
+- Fallen wizards don't disappear — revive them at the [Altar](altar_guide.md). They are briefly weakened after reviving. Wizards who die near a building (within 20 blocks) are revived automatically at the town hall door instead.
 
 ---
 

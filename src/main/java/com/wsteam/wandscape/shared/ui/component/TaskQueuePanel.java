@@ -5,6 +5,8 @@ import com.wsteam.wandscape.shared.ui.I18n;
 import com.wsteam.wandscape.shared.ui.skin.SkinRender;
 import com.wsteam.wandscape.shared.ui.skin.SkinSprite;
 import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
+import com.wsteam.wandscape.shared.ui.theme.WandscapeTheme;
+import com.wsteam.wandscape.shared.ui.util.RenderUtil;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -47,11 +49,13 @@ public class TaskQueuePanel extends AbstractWidget {
             String itemOrRecipeId,
             int quantity,
             String blueprintId,
-            String summary
+            String summary,
+            boolean insufficient,
+            List<String> missingElements
     ) {
         /** Legacy constructor kept for backward compatibility. */
         public Entry(int index, String blueprintId, String summary) {
-            this(index, categorize(blueprintId), extractItemId(blueprintId, summary), 0, blueprintId, summary);
+            this(index, categorize(blueprintId), extractItemId(blueprintId, summary), 0, blueprintId, summary, false, List.of());
         }
 
         private static String categorize(String bid) {
@@ -59,6 +63,7 @@ public class TaskQueuePanel extends AbstractWidget {
                 case "production:decompose" -> "decompose";
                 case "production:synthesize" -> "synthesize";
                 case "production:craft_wand" -> "craft";
+                case "production:craft_spell" -> "transcribe";
                 case "production:brew_potion" -> "brew";
                 default -> bid.startsWith("build:") ? "build" : "other";
             };
@@ -96,6 +101,10 @@ public class TaskQueuePanel extends AbstractWidget {
 
     private final List<Entry> entries = new ArrayList<>();
     private final int rowHeight = 16;
+
+    // ── Pending-entries scrolling (mouse wheel) ──
+    /** Pixel offset into the pending entries; drives rendering and hit-testing. */
+    private int scrollOffset;
 
     // ── Current (executing) tasks ──
     private static final int CURRENT_ROW_H = 18;
@@ -159,10 +168,28 @@ public class TaskQueuePanel extends AbstractWidget {
         if (entries != null) {
             this.entries.addAll(entries);
         }
+        // The queue refreshes every ~second; keep the user's scroll position but clamp it
+        // to the new content range so a shrunken queue never leaves the viewport empty.
+        this.scrollOffset = Math.min(this.scrollOffset, maxEntriesScroll());
     }
 
     public List<Entry> getEntries() {
         return Collections.unmodifiableList(entries);
+    }
+
+    /** Top edge of the scrollable pending-entries region (below the current-task rows). */
+    private int entriesRegionTop() {
+        return getY() + 4 + 10 + currents.size() * CURRENT_ROW_H;
+    }
+
+    /** Height of the scrollable pending-entries region. */
+    private int entriesRegionHeight() {
+        return Math.max(0, getY() + height - 4 - entriesRegionTop());
+    }
+
+    /** Maximum pixel scroll offset for pending entries; 0 when everything already fits. */
+    private int maxEntriesScroll() {
+        return Math.max(0, entries.size() * rowHeight - entriesRegionHeight());
     }
 
     /** Convenience single-current setter (kept for callers that only have one running task). */
@@ -238,6 +265,7 @@ public class TaskQueuePanel extends AbstractWidget {
             case "brew"       -> I18n.name("gui.wandscape.queue.pending.brew", "待炼制").getString();
             case "build"      -> I18n.name("gui.wandscape.queue.pending.build", "待建造").getString();
             case "gather"     -> I18n.name("gui.wandscape.queue.pending.gather", "待采集").getString();
+            case "transcribe" -> I18n.name("gui.wandscape.queue.pending.transcribe", "待抄录").getString();
             default           -> I18n.name("gui.wandscape.queue.pending.other", "待执行").getString();
         };
     }
@@ -294,15 +322,29 @@ public class TaskQueuePanel extends AbstractWidget {
         int listBottom = getY() + height - 4; // 4px bottom padding
 
         // ── Current (executing) tasks — top rows, locked, each with a progress bar ──
-        int rowStartY = textY;
         for (int i = 0; i < currents.size(); i++) {
             renderCurrentRow(g, textY + i * CURRENT_ROW_H, currents.get(i));
-            rowStartY = textY + (i + 1) * CURRENT_ROW_H;
         }
 
-        for (int row = 0; row < entries.size(); row++) {
-            int rowBaseY = rowStartY + row * rowHeight;
-            if (rowBaseY + rowHeight > listBottom) break;
+        // ── Pending entries — scrollable region below the current rows ──
+        int regionTop = entriesRegionTop();
+        int regionHeight = Math.max(0, listBottom - regionTop);
+        int maxScroll = maxEntriesScroll();
+        if (scrollOffset > maxScroll) {
+            scrollOffset = maxScroll;
+        }
+
+        boolean scrollable = regionHeight > 0 && maxScroll > 0;
+        if (scrollable) {
+            // Clip partially-scrolled rows so they never paint over the current-task rows or panel edge
+            g.enableScissor(getX(), regionTop, getX() + width, listBottom);
+        }
+
+        int startRow = scrollOffset / rowHeight;
+        for (int row = startRow; row < entries.size(); row++) {
+            int rowBaseY = regionTop + row * rowHeight - scrollOffset;
+            if (rowBaseY + rowHeight <= regionTop) continue;   // scrolled off the top edge
+            if (rowBaseY >= listBottom) break;                 // past the bottom edge
 
             Entry e = entries.get(row);
 
@@ -326,8 +368,26 @@ public class TaskQueuePanel extends AbstractWidget {
             g.drawString(Minecraft.getInstance().font, label,
                     labelX, centerY - 4, MedievalColors.TEXT_DIM);
 
-            // Quantity right-aligned in the text column (left of buttons)
+            // ── Insufficient marker: dark-red "缺元素" tag + missing element icons ──
             int textColEnd = colRightStart - 2;
+            if (e.insufficient) {
+                Component shortTag = I18n.name("gui.wandscape.queue.insufficient", "缺元素");
+                int tagX = labelX + Minecraft.getInstance().font.width(label) + 2;
+                int tagW = Minecraft.getInstance().font.width(shortTag);
+                g.drawString(Minecraft.getInstance().font, shortTag,
+                        tagX, centerY - 4, MedievalColors.TEXT_DIM);
+                int iconX = tagX + tagW + 2;
+                for (String el : e.missingElements) {
+                    if (iconX + 11 > textColEnd) break; // clip at quantity column
+                    ResourceLocation ico = WandscapeTheme.elementIcon(el);
+                    if (ico != null) {
+                        WandscapeTheme.drawIcon(g, ico, iconX, centerY - 5, 9, 9, WandscapeTheme.elementColor(el));
+                        iconX += 11;
+                    }
+                }
+            }
+
+            // Quantity right-aligned in the text column (left of buttons)
             if (e.quantity > 0) {
                 String qtyStr = "x" + e.quantity;
                 int qtyW = Minecraft.getInstance().font.width(qtyStr);
@@ -348,6 +408,13 @@ public class TaskQueuePanel extends AbstractWidget {
                         () -> { if (canDown  && onMoveDown != null)  onMoveDown.accept(e.index);  });
             drawCloseBtn(g,colRightStart + 2*(BTN_W+BTN_GAP),btnY, canDelete, mouseX, mouseY,
                         () -> { if (canDelete && onDelete != null)   onDelete.accept(e.index);    });
+        }
+
+        if (scrollable) {
+            g.disableScissor();
+            // Thin scrollbar in the right padding, shown only while the queue overflows
+            RenderUtil.drawScrollbar(g, getX() + width - 3, regionTop, 3, regionHeight,
+                    entries.size() * rowHeight, scrollOffset);
         }
     }
 
@@ -392,10 +459,11 @@ public class TaskQueuePanel extends AbstractWidget {
         return switch (cat) {
             case "decompose" -> I18n.name(key, "Decompose");
             case "synthesize" -> I18n.name(key, "Synthesize");
-            case "craft"      -> I18n.name(key, "Craft Wand");
+            case "craft"      -> I18n.name(key, "Craft");
             case "brew"       -> I18n.name(key, "Brew");
             case "build"      -> I18n.name(key, "Build");
             case "gather"     -> I18n.name(key, "Gather");
+            case "transcribe" -> I18n.name(key, "Transcribe");
             default           -> I18n.name(key, cat);
         };
     }
@@ -469,14 +537,12 @@ public class TaskQueuePanel extends AbstractWidget {
 
         int mx = (int) mouseX;
         int my = (int) mouseY;
-        int topPadding = 4;
-        int textY     = getY() + topPadding + 10;
+        int regionTop = entriesRegionTop();
         int listBottom = getY() + height - 4;
-        int rowStartY = textY + currents.size() * CURRENT_ROW_H;
 
         for (int row = entries.size() - 1; row >= 0; row--) {
-            int rowBaseY = rowStartY + row * rowHeight;
-            if (rowBaseY + rowHeight < textY || rowBaseY > listBottom) continue;
+            int rowBaseY = regionTop + row * rowHeight - scrollOffset;
+            if (rowBaseY + rowHeight <= regionTop || rowBaseY >= listBottom) continue;
 
             Entry e = entries.get(row);
             int btnY = rowBaseY + (rowHeight - BTN_H) / 2;
@@ -512,6 +578,21 @@ public class TaskQueuePanel extends AbstractWidget {
             return false;
         }
         return false;
+    }
+
+    /** Mouse-wheel scrolls the pending entries; returns true only when the wheel is actually consumed. */
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+        if (!visible) return false;
+        if (mouseX < getX() || mouseX >= getX() + width
+                || mouseY < getY() || mouseY >= getY() + height) {
+            return false;
+        }
+        int maxScroll = maxEntriesScroll();
+        if (maxScroll <= 0) return false;
+        // 2 rows per notch, matching ScrollableList
+        scrollOffset = (int) Math.clamp(scrollOffset - scrollY * rowHeight * 2, 0, maxScroll);
+        return true;
     }
 
     @Override
