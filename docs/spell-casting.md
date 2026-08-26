@@ -75,6 +75,7 @@ L2 兜底层
   "id": "beam",                 // 魔法 id（tryCastSpell 的 magicId key）
   "category": "single_target",  // 分类：single_target / aoe / defense / support / utility
   "mana_cost": 50,
+  "mana_per_tick": 0,           // 持续引导法术每 tick 扣蓝（>0 时门控只需够此量起手、蓝尽中断）；0 = 非持续，开始一次性扣全量
   "base_cooldown": 400,         // tick；施法互斥锁（法阵/引导/光束全程）结束后才开始倒计时的冷却，按 SPELL_SPEED 缩短
   "range": 32,
   "target_mode": "hostile_nearest",
@@ -406,7 +407,7 @@ P1/P2 玩家无感知（内部重构），P3 起见 UI。每个阶段完成即�
 **新增效果 `magic_enhance`（魔力强化）**：纯标记 MobEffect（`WandscapeEffects.MAGIC_ENHANCE`，靛蓝），倍率 = `1 + 0.2 × 等级`（I 级 +20%，每级 +20%，独立乘区，与 SPELL_POWER 各自乘算）。SPELL_POWER 是 ECS 自定义属性（非 vanilla Attribute），挂不了 attribute modifier，故在核算入口手动乘（`MagicSpellExecutors.magicEnhanceMultiplier`，纯函数可单测）。
 
 **应用范围**（所有乘 SPELL_POWER 处都额外乘魔力强化，治疗也吃）：
-- 伤害：`NpcSpellPowerHandler`（`LivingIncomingDamageEvent`）在 SPELL_POWER 倍率后乘——光束/陨石/未来魔法自动生效；**L2 物理普攻兜底也走此钩子，一并被放大**（既定行为）。
+- 伤害：`NpcSpellPowerHandler`（`LivingIncomingDamageEvent`）先按友伤边界取消友军伤害（非 `Enemy` 且非 `canBeamHurt` 的目标、和平模式——铁魔法/召唤物也走此入口，见 `core/types/FriendlyForce`），再在 SPELL_POWER 倍率后乘魔力强化——光束/陨石/未来魔法自动生效；**L2 物理普攻兜底也走此钩子，一并被放大**（既定行为）。
 - 治疗：`castHeal` 每脉冲治疗量 = `HEAL_BASE × SPELL_POWER × 魔力强化`。
 - **玩家暂不生效**：玩家施放入口已移除，`castForPlayer` 会给玩家上魔力强化 buff（buff 栏可见）但无实际效果，等玩家施法入口回归后自动生效。
 
