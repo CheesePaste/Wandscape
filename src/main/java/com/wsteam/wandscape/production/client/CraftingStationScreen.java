@@ -34,8 +34,8 @@ public class CraftingStationScreen extends MedievalScreen {
     private static final int PH = 220;
     // Left panel width (existing content)
     private static final int LEFT_PW = 240;
-    // Right panel (TaskQueuePanel)
-    private static final int QUEUE_PW = 168;
+    // Right panel (TaskQueuePanel) — narrower to stay inside the PW=400 window
+    private static final int QUEUE_PW = 148;
     private static final int QUEUE_PH = PH - 28; // headerHeight (20) + padding (8)
     private BlockPos stationPos = BlockPos.ZERO;
     private List<RecipeEntry> recipes = new ArrayList<>();

@@ -40,8 +40,8 @@ public class WorkstationScreen extends MedievalScreen {
     private static final int PH = 220;
     // Left panel width (existing content)
     private static final int LEFT_PW = 240;
-    // Right panel (TaskQueuePanel) — shorter, starts higher
-    private static final int QUEUE_PW = 168;
+    // Right panel (TaskQueuePanel) — narrower to stay inside the PW=400 window
+    private static final int QUEUE_PW = 148;
 
     private BlockPos stationPos = BlockPos.ZERO;
     private int activeTab = 0;
