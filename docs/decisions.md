@@ -35,6 +35,25 @@
 
 **影响**：新增 `core/types/FriendlyForce`（+`FriendlyForceTest` 决策表 7 例）；`WandscapeNpc` 增 `isFriendlyForce`、修 `isRetaliationTarget`、删 `sameColonyAs`；`NpcSpellPowerHandler` 改取消；`EntityComponentBridge` 常量别名。铁魔法/召唤物打到友军与玩家不再结算，同殖民地 NPC 不再互开战。
 
+## 2026-08-26：安全传送落点与 3D 导航到达判定修复（杜绝矿洞悬空坠亡与进墙传送死循环）
+
+**需求**（用户反馈）：NPC 会传送至施工地点周围，但落点可能在墙内导致掉入矿洞顶部悬空坠亡，且坠亡后任务回滚导致下一个 NPC 循环送命；若未摔死则在矿洞内反复原地传送死循环。
+
+**根因**：
+1. **安全落点算法存在悬空漏洞**（`WandscapeRitualOps#findSafeLanding`）：第二遍放宽搜索（`requireGround = false`）时未校验脚下支撑面，头脚两格为空气即可通过，向上遍历时触及矿洞/空腔洞顶下方即判定成功，将 NPC 传送到数十格高的半空中引发坠亡。
+2. **安全落点失败时强行回退 raw target**：找不到安全地面时直接塞进实心目标坐标，使 NPC 埋入墙体/地下。
+3. **导航到达判定忽略垂直高度差**（`NavigationSystem#update`）：到达只算水平距离平方（`hDistSq <= 25`），导致 NPC 在地下矿洞（相隔数十格垂直高度）时被误判为到达，随后执行操作再次因不可达寻路失败，重新传送到矿洞原地死循环。
+4. **施工寻路直接以实心方块为目的地**：原版寻路进实心方块必定返回 false 触发传送。
+
+**决策**：
+- **安全落点坚决杜绝悬空**：`isSafeLanding` 无论是严格双层实心还是宽松模式，脚底 `ground` 必须有物理碰撞箱支撑（`!getCollisionShape().isEmpty()`）、无液体且非伤害/下陷方块（岩浆/火焰/仙人掌/细雪等），绝对禁止脚底为空气时传送；落点搜索按垂直高度差由近及远遍历。
+- **无安全落点时放弃传送**：`findSafeLanding` 找不到安全落点时返回 null，`executeRitual` 取消本次传送并重置导航，严禁强行传送至实心方块内。
+- **3D 到达判定与高度门控**：`NavigationSystem` 到达判定增加垂直高度差要求（`dy <= 3.5`）；长距离传送门控增加高度差（`dy > walkThreshold`）。
+- **实心方块寻路目的地修正**：`NavigationSystem#resolveWalkTarget` 检测到目标方块为实心时，自动将寻路终点上移至其上方空位，避免原版寻路必定报错。
+- **任务执行器 3D 范围检查**：`TaskExecutionSystem` 触发单步导航的范围判定补充垂直高度差（`dy > 4.0`），避免高度悬殊时错误跳过导航。
+
+**影响**：`WandscapeRitualOps`（安全落点算法重构 + 悬空与危险方块防护 + 取消无效传送）；`NavigationSystem`（3D 到达校验 + `resolveWalkTarget` 目标修正）；`TaskExecutionSystem`（3D 距离范围检查）。
+
 ## 2026-08-26：Wandscape × Iron's Spells 'n Spellbooks（铁魔法）全面兼容
 
 **需求**（用户指令）：使 Wandscape 的 NPC 法师能够装备并施放铁魔法（Iron's Spells 'n Spellbooks）的法术。玩家可以把任意铁魔法卷轴放入 4 大分类（单体/群体/防御/支援）的任意门类中，施法时从大类遍历，按优先级 + CD=0 释放。
@@ -43,7 +62,7 @@
 - **数据与等级存储（Q1 A）**：`EquippedMagicComponent` 升级存储 `SpellEntry(id, level, customData)`，支持带 `@level` 字符串编解码。放进 5 级铁魔法卷轴即按 5 级施法，取下/法师战死掉落时无损还原原等级的铁魔法卷轴。
 - **大类语义与目标判定（Q2 A）**：由放入的大类决定触发时机与目标模式。`single_target`/`aoe` 面向敌对发射（AOE 需敌数 ≥ 2）；`defense` 在处于战斗且自身血量 < 80% 时释放；`support` 在友方/自身血量 < 80% 时释放。
 - **施法生命周期桥接（Q3 A）**：瞬发（`INSTANT`）占 0.5s 施法互斥锁；蓄力（`LONG`）与持续（`CONTINUOUS`）法术按 `castTime / SPELL_SPEED` 占用互斥锁，每 server tick 维持面向与 `onServerCastTick`，到期触发 `onServerCastComplete` 并播放法术音效。
-- **魔力与冷却主控管线（Q4 A）**：直接从 NPC 扣除 `spell.getManaCost(level)`（**1:1，2026-08-26 用户要求**，不再按 0.25 缩放/下限 5——昂贵的铁魔法如黑洞 300/传送门 200 超过 NPC 默认蓝池 200，经 CastBrain 门控自动跳过）；冷却由 `MagicState` 记录并享受 `SPELL_SPEED` 冷却缩减；底层同步至 `MagicData`。**所有类型（含持续引导 CONTINUOUS）都施法开始一次性扣全量**——铁魔法自身无按秒扣蓝机制，最初按 tick 扣的方案已回退（2026-08-26）。
+- **魔力与冷却主控管线（Q4 A）**：直接从 NPC 扣除 `spell.getManaCost(level)`（**1:1，2026-08-26 用户要求**，不再按 0.25/0.10 缩放与下限钳制——昂贵的铁魔法如黑洞 300/传送门 200 超过 NPC 默认蓝池 200，经 CastBrain 门控自动跳过）；冷却 `baseCooldown = spell.getSpellCooldown()`（该 API 已返回 tick，`COOLDOWN_IN_SECONDS × 20`，不再乘 20），由 `MagicState` 记录并享受 `SPELL_SPEED` 冷却缩减（`baseCooldown / spellSpeed`）；底层同步至 `MagicData`。**所有类型（含持续引导 CONTINUOUS）都施法开始一次性扣全量**——铁魔法自身无按秒扣蓝机制，最初按 tick 扣的方案已回退（2026-08-26）。合并时未采纳 origin/main 的 `getAdaptedCooldown`（×0.08 + [20,200] 钳制）缩放方案。
 - **法强放大与优雅降级（Q5 A）**：订阅 `SpellDamageEvent`，自动按 `SPELL_POWER × 魔力强化倍率` 放大伤害；所有实现隔离于 `compat/ironspellbooks/`，未安装铁魔法时不加载任何铁魔法逻辑，保持零硬编码耦合与高容错。
 
 **影响**：`build.gradle`（compileOnly 铁魔法依赖）；`compat/ironspellbooks/`（`IronSpellsCompat`/`IronSpellsHelper`/`IronSpellsCaster`/`IronSpellsDamageHandler`）；`EquippedMagicComponent`（`SpellEntry` 结构化支持）；`NpcStrategyMenu`（支持放置铁魔法卷轴）；`CastBrain`（支持合成 `MagicDef` 与 `EquippedMagicComponent` 查询）；`MagicSpellExecutors`（`dispatch` 桥接 `IronSpellsCaster`）；`Wandscape`（生命周期接线）。

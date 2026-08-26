@@ -7,6 +7,7 @@ import javax.annotation.Nullable;
 import com.wsteam.wandscape.magic.data.MagicDef;
 import com.wsteam.wandscape.magic.data.SpellConditions;
 
+import io.redspace.ironsspellbooks.api.magic.MagicData;
 import io.redspace.ironsspellbooks.api.registry.SpellRegistry;
 import io.redspace.ironsspellbooks.api.spells.AbstractSpell;
 import io.redspace.ironsspellbooks.api.spells.ISpellContainer;
@@ -18,7 +19,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * Iron's Spells 'n Spellbooks 辅助桥接类（物品识别/元数据转换/合成 MagicDef）。
+ * 铁魔法辅助工具类：卷轴识别、法术等级解析、卷轴物品构造与动态 MagicDef 转换。
  */
 public final class IronSpellsHelper {
 
@@ -26,40 +27,38 @@ public final class IronSpellsHelper {
 
     /** 检查物品堆是否为铁魔法法术卷轴。 */
     public static boolean isScroll(ItemStack stack) {
-        if (stack == null || stack.isEmpty()) return false;
+        if (!IronSpellsCompat.isLoaded() || stack == null || stack.isEmpty()) return false;
         return stack.getItem() instanceof Scroll || ISpellContainer.isSpellContainer(stack);
     }
 
-    /** 从卷轴提取法术数据（SpellData）；若非法或空返回 null。 */
-    @Nullable
-    public static SpellData getSpellData(ItemStack stack) {
-        if (!isScroll(stack)) return null;
-        ISpellContainer container = ISpellContainer.get(stack);
-        if (container == null || container.isEmpty()) return null;
-        return container.getSpellAtIndex(0);
-    }
-
-    /** 从卷轴提取法术 ID（如 "irons_spellbooks:firebolt"）。 */
+    /** 从物品堆中提取铁魔法法术 ID（如 irons_spellbooks:fireball）。 */
     @Nullable
     public static String getSpellId(ItemStack stack) {
-        SpellData data = getSpellData(stack);
-        return data != null && data.getSpell() != null ? data.getSpell().getSpellId() : null;
+        if (!isScroll(stack)) return null;
+        ISpellContainer container = ISpellContainer.get(stack);
+        if (container.isEmpty()) return null;
+        SpellData spellData = container.getSpellAtIndex(0);
+        return spellData != null && spellData.getSpell() != null ? spellData.getSpell().getSpellId() : null;
     }
 
-    /** 从卷轴提取法术等级（默认为 1）。 */
+    /** 从物品堆中提取铁魔法法术等级（默认 1）。 */
     public static int getSpellLevel(ItemStack stack) {
-        SpellData data = getSpellData(stack);
-        return data != null ? data.getLevel() : 1;
+        if (!isScroll(stack)) return 1;
+        ISpellContainer container = ISpellContainer.get(stack);
+        if (container.isEmpty()) return 1;
+        SpellData spellData = container.getSpellAtIndex(0);
+        return spellData != null ? Math.max(1, spellData.getLevel()) : 1;
     }
 
-    /** 根据法术 ID 与等级构造一个铁魔法卷轴物品堆。 */
+    /** 创建指定法术与等级的铁魔法卷轴物品堆。 */
     public static ItemStack createScroll(String spellId, int level) {
         if (!IronSpellsCompat.isLoaded()) return ItemStack.EMPTY;
         AbstractSpell spell = SpellRegistry.getSpell(spellId);
         if (spell == null || spell == SpellRegistry.none()) return ItemStack.EMPTY;
-        ItemStack stack = new ItemStack(ItemRegistry.SCROLL.get());
-        ISpellContainer.createScrollContainer(spell, Math.max(1, level), stack);
-        return stack;
+
+        ItemStack scroll = new ItemStack(ItemRegistry.SCROLL.get());
+        ISpellContainer.createScrollContainer(spell, Math.max(1, level), scroll);
+        return scroll;
     }
 
     /** 是否为有效的铁魔法法术 ID。 */
@@ -71,14 +70,6 @@ public final class IronSpellsHelper {
 
     /**
      * 根据铁魔法法术与装备放入的门类，构造动态合成的 {@link MagicDef}。
-     *
-     * <p>大类语义规则：
-     * <ul>
-     *   <li>single_target: 目标 hostile_nearest，无条件触发。</li>
-     *   <li>aoe: 目标 hostile_nearest，敌数 ≥ 2 触发。</li>
-     *   <li>defense: 目标 self，自身血量 &lt; 80% 触发。</li>
-     *   <li>support: 目标 ally_lowest_hp，友方血量 &lt; 80% 触发。</li>
-     * </ul>
      */
     @Nullable
     public static MagicDef getSyntheticDef(String spellId, int level, String categoryName) {
@@ -93,10 +84,11 @@ public final class IronSpellsHelper {
             cat = MagicDef.Category.SINGLE_TARGET;
         }
 
-        // 蓝耗 1:1：铁魔法蓝耗直接对等 NPC 魔力池（2026-08-26 用户要求），不再按 0.25 缩放 / 下限 5。
+        // 蓝耗 1:1：铁魔法蓝耗直接对等 NPC 魔力池（2026-08-26 用户要求），不再按 0.25/0.10 缩放 / 下限钳制。
         // 昂贵的铁魔法（黑洞 300、传送门 200 等）会超过 NPC 默认蓝池 200，经 CastBrain 门控自动跳过。
         int manaCost = spell.getManaCost(level);
-        int baseCooldown = spell.getSpellCooldown() > 0 ? (int) Math.round(spell.getSpellCooldown() * 20.0) : 40;
+        // 冷却：getSpellCooldown() 已返回 tick（COOLDOWN_IN_SECONDS × 20），直接用；SPELL_SPEED 在 MagicState 缩短。
+        int baseCooldown = spell.getSpellCooldown() > 0 ? spell.getSpellCooldown() : 40;
         int castTime = Math.max(0, spell.getCastTime(level));
         double range = 32.0;
 

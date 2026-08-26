@@ -79,9 +79,10 @@ public final class IronSpellsCaster {
             return false;
         }
 
-        // 蓝耗 1:1：铁魔法蓝耗直接对等 NPC 魔力池（2026-08-26 用户要求），不再按 0.25 缩放 / 下限 5
+        // 蓝耗 1:1：铁魔法蓝耗直接对等 NPC 魔力池（2026-08-26 用户要求），不再按 0.25/0.10 缩放 / 下限钳制。
         int manaCost = spell.getManaCost(spellLevel);
-        int baseCooldown = spell.getSpellCooldown() > 0 ? (int) Math.round(spell.getSpellCooldown() * 20.0) : 40;
+        // 冷却：getSpellCooldown() 已返回 tick（COOLDOWN_IN_SECONDS × 20），直接用；SPELL_SPEED 在 MagicState 缩短。
+        int baseCooldown = spell.getSpellCooldown() > 0 ? spell.getSpellCooldown() : 40;
         CastType castType = spell.getCastType();
 
         if (target != null && target.isAlive()) {

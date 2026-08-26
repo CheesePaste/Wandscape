@@ -67,9 +67,10 @@ public class NavigationSystem implements System {
             double dx = npc.getX() - (nav.target.x() + 0.5);
             double dz = npc.getZ() - (nav.target.z() + 0.5);
             double hDistSq = dx * dx + dz * dz;
+            double dy = Math.abs(npc.getY() - (nav.target.y() + 1.0));
 
-            // Arrived (all modes)
-            if (hDistSq <= STOP_RANGE_SQ) {
+            // Arrived (all modes): 水平距离 <= 5格 且 垂直高度差 <= 3.5格（避免身处地下矿洞/屋顶盲区时误判已到达）
+            if (hDistSq <= STOP_RANGE_SQ && dy <= 3.5) {
                 arrive(nav, npc);
                 continue;
             }
@@ -83,7 +84,8 @@ public class NavigationSystem implements System {
 
                 // Distance > walkThreshold → skip pathfinding, use self_teleport ritual
                 if (nav.mode == NavigationState.Mode.PATHFINDING
-                        && hDistSq > (long) Config.NPC_WALK_THRESHOLD.get() * Config.NPC_WALK_THRESHOLD.get()) {
+                        && (hDistSq > (long) Config.NPC_WALK_THRESHOLD.get() * Config.NPC_WALK_THRESHOLD.get()
+                            || dy > Config.NPC_WALK_THRESHOLD.get())) {
                     switchToRitualTeleport(nav, npcId, world);
                     continue;
                 }
@@ -118,8 +120,9 @@ public class NavigationSystem implements System {
         if (npc.getNavigation().isDone()) {
             if (nav.repathCount < MAX_REPATH) {
                 nav.repathCount++;
+                BlockPos to = resolveWalkTarget(npc, nav.target);
                 boolean ok = npc.getNavigation().moveTo(
-                        nav.target.x() + 0.5, nav.target.y() + 1, nav.target.z() + 0.5, NAV_SPEED);
+                        to.getX() + 0.5, to.getY() + 1, to.getZ() + 0.5, NAV_SPEED);
                 Log.info(TAG, "[NavSys] NPC {} re-path #{}, elapsed={} ok={}",
                         npcId, nav.repathCount, elapsed, ok);
                 if (!ok) {
@@ -162,12 +165,27 @@ public class NavigationSystem implements System {
     }
 
     /**
+     * Resolves a walkable destination for pathfinding.
+     * If the target block is solid (e.g. wall or in-ground foundation), targets the block above if clear.
+     */
+    private BlockPos resolveWalkTarget(WandscapeNpc npc, GridPos target) {
+        BlockPos to = new BlockPos(target.x(), target.y(), target.z());
+        if (npc.level().isLoaded(to) && npc.level().getBlockState(to).isSolid()) {
+            BlockPos above = to.above();
+            if (npc.level().isLoaded(above) && !npc.level().getBlockState(above).isSolid()) {
+                return above;
+            }
+        }
+        return to;
+    }
+
+    /**
      * Initialise pathfinding for a fresh request: vanilla A* to the target.
      * Returns false if movement cannot start at all.
      */
     private boolean startPathfinding(NavigationState nav, WandscapeNpc npc, long npcId) {
         GridPos target = nav.target;
-        BlockPos to = new BlockPos(target.x(), target.y(), target.z());
+        BlockPos to = resolveWalkTarget(npc, target);
         BlockPos from = npc.blockPosition();
 
         boolean ok = npc.getNavigation().moveTo(
