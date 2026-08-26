@@ -96,6 +96,7 @@ public final class IronSpellsCaster {
                 return false;
             }
 
+            npc.swing(net.minecraft.world.InteractionHand.MAIN_HAND, true);
             MagicData magicData = getOrCreateMagicData(npc);
             magicData.initiateCast(spell, spellLevel, 0, CastSource.MOB, "mainhand");
             spell.onCast(level, spellLevel, npc, CastSource.MOB, magicData);
@@ -160,6 +161,8 @@ public final class IronSpellsCaster {
                 if (cast.target != null && cast.target.isAlive() && !cast.target.isRemoved()) {
                     cast.npc.faceTarget(cast.target.getEyePosition());
                 }
+
+                cast.npc.swing(net.minecraft.world.InteractionHand.MAIN_HAND, true);
 
                 // 蓄力法术在蓄满时触发落地效果（如黑洞生成、火球发射）
                 if (cast.castType == CastType.LONG) {

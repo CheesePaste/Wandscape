@@ -155,8 +155,12 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
      * 才开始倒计时（施法时间不计入 CD），CD 基础值按 SPELL_SPEED 缩短（向上取整）。
      */
     public boolean tryCastSpell(String magicId, int baseCooldown, int manaCost, int lockDurationTicks) {
-        return magic.tryCast(magicId, baseCooldown, manaCost, lockDurationTicks,
+        boolean ok = magic.tryCast(magicId, baseCooldown, manaCost, lockDurationTicks,
                 getEffectiveAttribute(AttributeType.SPELL_SPEED));
+        if (ok && lockDurationTicks > 0) {
+            startManualCast(lockDurationTicks);
+        }
+        return ok;
     }
 
     /**
