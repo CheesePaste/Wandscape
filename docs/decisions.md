@@ -2,6 +2,19 @@
 
 本文件记录偏离直觉的设计选择及其原因，供后续开发快速理解「为什么这么做」。
 
+## 2026-08-26：移除并发建筑上限 Config.MAX_CONCURRENT_BUILDINGS——工作站并行不再受全局预算挤压
+
+**需求**（用户指令）：删掉 `Config.MAX_CONCURRENT_BUILDINGS`，不设并发建筑数量限制。
+
+**决策**：
+- 删除 Config 定义 `general.maxConcurrentBuildings`（默认 3）。
+- `BuildingTaskSource` 发布新任务时不再检查 `leasedCount() >= budget`——凡有待办工作的建筑直接 `ChunkLoadManager.leaseBuilding` 强加载 footprint。
+- 删除 `ChunkLoadManager.leasedCount()`（预算删除后无调用方）。
+
+**为什么**：共享队列并行化后（见 2026-08-25「生产站/节点按类型/元素共享队列」），工作站并行度应由「同类型站数量 × 空闲 NPC 数」决定；全局 3 建筑预算把施工和生产挤在同一桶里，殖民地一开建就会把工作站并行压回 1-2 座，成为并行生产的隐性瓶颈。去掉后强加载成本由引用计数 + 队列排空即释放兜底，每座建筑 footprint 有限——最坏情况是所有待办建筑同时强加载，这正是「多站并行」的预期形态。
+
+**影响**：`Config.java`、`BuildingTaskSource.java`（移除 budget 判断，lease 分支简化）、`ChunkLoadManager.java`（删 `leasedCount`）、`docs/modules/engine.md`、`architecture/packages/engine.md`。存档 TOML 中残留的 `general.maxConcurrentBuildings` 键不再被读取，无害。
+
 ## 2026-08-25：移除面板 G 键 overview↔ground 切换，V 强制进入俯瞰
 
 **需求**（用户反馈）：按 G 切到地面（第一人称）后无法正常操控（要么能飞要么动不了）；要求直接去掉该键位，按 V 打开面板后强制处于俯瞰（鸟瞰）模式。

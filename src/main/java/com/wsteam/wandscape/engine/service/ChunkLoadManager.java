@@ -135,10 +135,6 @@ public final class ChunkLoadManager {
         return leases.containsKey(buildingId);
     }
 
-    public int leasedCount() {
-        return leases.size();
-    }
-
     // ---- Temporary per-op lease (general safety net) ----
 
     /**

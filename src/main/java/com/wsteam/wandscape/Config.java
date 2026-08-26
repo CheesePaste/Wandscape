@@ -20,12 +20,6 @@ public class Config {
             .comment("Default colony radius in blocks")
             .defineInRange("general.colonyRadius", 128, 16, 512);
 
-    public static final ModConfigSpec.IntValue MAX_CONCURRENT_BUILDINGS = BUILDER
-            .comment("Maximum number of buildings force-loaded for construction/production at once. "
-                    + "While a colony's chunks are unloaded, the active building's footprint is "
-                    + "force-loaded to run real block placement; this caps the concurrent cost.")
-            .defineInRange("general.maxConcurrentBuildings", 3, 1, 32);
-
     // ---- Transport (物品运输) ----
 
     public static final ModConfigSpec.IntValue TRANSPORT_TICKS_PER_BLOCK_ON_ROAD = BUILDER

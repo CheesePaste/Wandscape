@@ -24,7 +24,7 @@ BuildingTaskSource（每 20tick 轮询：清理完成/资源暂存 → 发布 Wo
 
 ## 按需强加载 (service/)
 
-`ChunkLoadManager`（engine/service/）：殖民地在区块卸载时照常施工的核心。`leaseBuilding`/`releaseBuilding` 用 `BuildingState.getBounds().intersectingChunks()`（Stream<ChunkPos>）算 footprint，逐 chunk 引用计数 `ServerLevel.setChunkForced`——共享区块多建筑不会误卸。租赁注册表 `ChunkLeaseData`（SavedData `wandscape_chunk_leases`）持久化 buildingId→chunk 集合，server 启动时对账释放崩溃残留的 `ForcedChunksSavedData` 条目。并发上限 `Config.general.maxConcurrentBuildings`。NPC 无需物理到场：任务 TransformOp 在强加载区块里执行，ECS 逻辑全局 tick 驱动。
+`ChunkLoadManager`（engine/service/）：殖民地在区块卸载时照常施工的核心。`leaseBuilding`/`releaseBuilding` 用 `BuildingState.getBounds().intersectingChunks()`（Stream<ChunkPos>）算 footprint，逐 chunk 引用计数 `ServerLevel.setChunkForced`——共享区块多建筑不会误卸。租赁注册表 `ChunkLeaseData`（SavedData `wandscape_chunk_leases`）持久化 buildingId→chunk 集合，server 启动时对账释放崩溃残留的 `ForcedChunksSavedData` 条目。**无并发上限**（所有有待办工作的建筑都会强加载）。NPC 无需物理到场：任务 TransformOp 在强加载区块里执行，ECS 逻辑全局 tick 驱动。
 
 ## 持久化
 

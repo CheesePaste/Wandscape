@@ -2,7 +2,6 @@ package com.wsteam.wandscape.engine.source;
 
 import java.util.*;
 
-import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.task.source.TaskSource;
@@ -86,14 +85,13 @@ public class BuildingTaskSource implements TaskSource {
 
         // ── 2. Publish new work — only for buildings without a head task ──
         List<UUID> buildingIds = api.getBuildingsWithPendingWork(null);
-        // Deterministic order so the concurrent-build budget isn't starved by map order.
+        // Deterministic order so no building is starved by map order (id sort for fairness).
         buildingIds.sort(Comparator.comparing(UUID::toString));
 
         if (pollCount % HEARTBEAT_INTERVAL == 0) {
         }
 
         ChunkLoadManager chunkLoad = ChunkLoadManager.get();
-        int budget = Config.MAX_CONCURRENT_BUILDINGS.get();
 
         for (UUID buildingId : buildingIds) {
             // 创始人不在线且关闭离线运行 → 冻结小镇：不发布新任务
@@ -107,17 +105,12 @@ public class BuildingTaskSource implements TaskSource {
             // Skip if building already has an active head (should already be leased)
             if (btp != null && btp.hasHead(buildingId)) continue;
 
-            // Force-load the footprint when a building is newly activated, within budget.
-            boolean alreadyLeased = chunkLoad.isLeased(buildingId);
-            if (!alreadyLeased) {
-                if (chunkLoad.leasedCount() >= budget) {
-                    continue;
-                }
-                if (!chunkLoad.leaseBuilding(buildingId)) {
-                    Log.warn(TAG, "[BuildingTaskSource] lease failed for building {}, deferring",
-                            buildingId.toString().substring(0, 8));
-                    continue;
-                }
+            // Force-load the footprint when a building is newly activated. No concurrency cap —
+            // every building with pending work gets a lease (see docs/decisions.md).
+            if (!chunkLoad.isLeased(buildingId) && !chunkLoad.leaseBuilding(buildingId)) {
+                Log.warn(TAG, "[BuildingTaskSource] lease failed for building {}, deferring",
+                        buildingId.toString().substring(0, 8));
+                continue;
             }
 
             WorkItem item = api.dequeueWork(buildingId);

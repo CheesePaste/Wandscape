@@ -50,7 +50,7 @@
 
 ## service/
 
-- **ChunkLoadManager**：单例引用计数强加载；`leaseBuilding` 按 footprint 强载、`releaseBuilding`；BuildingRemovedEvent 自动释放；init 释放上次遗留 lease。预算 **Config.MAX_CONCURRENT_BUILDINGS 默认 3**。
+- **ChunkLoadManager**：单例引用计数强加载；`leaseBuilding` 按 footprint 强载、`releaseBuilding`；BuildingRemovedEvent 自动释放；init 释放上次遗留 lease。无并发上限（所有有待办工作的建筑都会强加载）。
 - `ChunkLeaseData`（`wandscape_chunk_leases`）：持久化 buildingId → chunks。
 - **ColonyMetricsService**：getSnapshot 汇总舒适/魔法/奇观、等级/经验/名、游客数/过夜/满意度、停摆/破损建筑、NPC 空闲/总数、7 元素量。
 - `StatsService`：订阅 NarrativeEventTriggered，onEvent 目前为 TODO 空实现。
