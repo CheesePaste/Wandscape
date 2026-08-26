@@ -2,6 +2,33 @@
 
 本文件记录偏离直觉的设计选择及其原因，供后续开发快速理解「为什么这么做」。
 
+## 2026-08-26：保卫殖民地复活——阵亡于建筑附近者直接在市政厅门口复活，复用全灭保底
+
+**需求**（用户指令）：法师战死若发生在守卫殖民地期间（距最近建筑 ≤20 格），不应强制走祭坛复活仪式，而是与全灭保底一致直接在市政厅门口复活，复用既有机制。
+
+**决策**：
+- **判定**：阵亡坐标到**本殖民地**任一建筑 AABB 的 **3D 欧氏距离** ≤ `Config.REVIVE_NEAR_BUILDING_RANGE`(20，`revive.nearBuildingRange` 可调)；点在盒内记为 0。只认本殖民地建筑，不跨殖民地捞建筑——「保卫自己的殖民地」。
+- **复用全灭保底链路**：新增 `ReviveHandler.checkAndReviveNearColonyBuilding` 复用 `resolveTownHallDoorOrAnchor`（市政厅门口）+ `spawnFromRecordAt`（虚弱复活 1 血 0 蓝 + 失败保留记录可重试），不新写复活逻辑。挂在 `NpcDeathHandler` 存记录之后、全灭检测之前——复活后该法师存活，全灭检测自然不触发。
+- **点到 AABB 距离** `distSqToAabb` 为纯逻辑静态方法（配单测），判定与守卫/袭击的「近建筑」语义一致但用 3D 距离而非水平外扩——高空坠落不误判为守卫战死。
+
+**为什么**：守卫战死是高频且非玩家过错的事件，若每次都要求玩家跑祭坛仪式，防线一崩战力断档、生产停摆；而全灭保底已备好「市政厅门口 + 虚弱复活」整套机制，直接复用把新增复杂度压到最低（一个距离判定 + 一个入口）。
+
+**影响**：`Config` 增 `revive.nearBuildingRange`(20)；`ReviveHandler` 增 `checkAndReviveNearColonyBuilding`/`isWithinRangeOfColonyBuilding`/`distSqToAabb`；`NpcDeathHandler` 存记录后先跑近建筑判定；新增 `ReviveHandlerTest`（点到 AABB 距离 6 例）。
+
+## 2026-08-26：走位距离加大 + 低血逃跑态——参数移入 Config
+
+**需求**（用户指令）：法师走位控距离太短，仍会被苦力怕炸、偶尔被近战打到。要求：① 增大走位距离；② 血量低于 30% 进入逃跑状态、走位距离更大，低血能跑远避免被打死。
+
+**决策**（用户选定）：
+- **数值**：`guard.kiteStartDist` 6→9、`guard.kiteStandoff` 10→13、`guard.engageStandoff` 6→9——最低间距 9 格，普通苦力怕爆炸致死半径 ~4（充能 ~8）与近战射程 ~3 都够不着，10 tick 重检间隙（怪能贴 ~2 格）也有余量；光束射程 200，拉远不影响输出。
+- **低血逃跑态**（`guard.fleeHpThreshold`=0.30）：触发/后撤距离改用 `guard.fleeStartDist`=12 / `guard.fleeStandoff`=18；**LOS 被墙挡不再走近交战、继续后撤**（保命优先，墙后近战威胁大），光束边走边打仍在输出。L0 紧急奶（HP<50%）已在上游拦截可奶的低血，逃跑态是「奶不了」的兜底。
+- **参数归属改为 Config（TOML）**：原硬编码 `KITE_START_DIST`/`KITE_STANDOFF`/`ENGAGE_STANDOFF` 移入 `guard.*`，并新增 flee 三参数——玩家改配置即可调平衡，不用改代码重编译。反之前「留 GuardCombat 私有常量」决策（2026-08-12）：用户反复实测调平衡，配置化更省事，代价是常量变配置读（每轮循环多两次 `Config.get()`，可忽略）。
+- **实现**：`engage` 每轮按血量比例选「正常档 / 逃跑档」的 startDist/standoff（flee 分支同时覆盖风筝与群殴后撤）；`navigateAway` 增 standoff 参数（5 参重载按 `kiteStandoff`，供和平模式逃跑复用，其间距 10→13 顺带变大）；`findRetreatPos`/`findEngagePos` 参数化 standoff。
+
+**为什么**：原 6→10 走位带中，法师常停在 6~7 格（`ENGAGE_STANDOFF`=6 与风筝触发 6 重叠，站定施法时怪贴上来），普通苦力怕 6 格爆炸仍有可观伤害、充能苦力怕更致命。9→13 让最低间距超出爆炸致死半径；逃跑态 18 格连充能苦力怕都安全，LOS 被挡也后撤避免低血法师走近墙后近战自杀。
+
+**影响**：`Config` 增 `guard.kiteStartDist`/`guard.kiteStandoff`/`guard.engageStandoff`/`guard.fleeHpThreshold`/`guard.fleeStartDist`/`guard.fleeStandoff`；`GuardCombat` 删 3 个私有常量、`navigateAway` 增 standoff 重载、`findRetreatPos`/`findEngagePos` 参数化、`engage` 增逃跑态分支。
+
 ## 2026-08-26：合成队列改为「发布时找第一个够的」——缺元素配方留在原位标记，不再进不可见的 AWAITING_RESOURCES
 
 **需求**（用户指令）：合成时元素不足的配方会进入一个 UI 看不见的「候选列表」（`AWAITING_RESOURCES` + `parkHead` 挂起），像"丢失"一样。期望更简单的模型：合成列表从上到下找第一个元素够的来合成；不够的留在原位、UI 显示「缺元素」；都不够则 NPC 自然空闲；并自动去收集不足的元素。

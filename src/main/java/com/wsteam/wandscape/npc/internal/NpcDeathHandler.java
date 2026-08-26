@@ -62,6 +62,9 @@ public final class NpcDeathHandler {
                 rec.npcId().toString().substring(0, 8), rec.name(),
                 rec.x(), rec.y(), rec.z(), inv.size());
 
+        // 保卫殖民地复活：阵亡于距本殖民地建筑 ≤REVIVE_NEAR_BUILDING_RANGE 格 → 直接在市政厅门口复活
+        //（复用全灭保底的市政厅门口定位 + 虚弱复活；复活后该法师存活，下方全灭检测自然不触发）
+        ReviveHandler.checkAndReviveNearColonyBuilding(level, rec);
         // NPC 阵亡时立即轮询全灭检测：若全员阵亡，自动在市政厅门口释放复活魔法
         ReviveHandler.checkAndAutoReviveColony(level, colony);
     }

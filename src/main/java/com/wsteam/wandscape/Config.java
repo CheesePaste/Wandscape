@@ -67,6 +67,12 @@ public class Config {
             .comment("Max distance in blocks for NPC pathfinding; beyond this they teleport")
             .defineInRange("npc.walkThreshold", 64, 16, 256);
 
+    public static final ModConfigSpec.IntValue REVIVE_NEAR_BUILDING_RANGE = BUILDER
+            .comment("Colony-defense revive radius: a colony NPC that dies within this 3D distance of any "
+                    + "building of its colony is revived immediately at the town hall door (reuses the "
+                    + "all-dead fallback revive), instead of requiring an altar ritual.")
+            .defineInRange("revive.nearBuildingRange", 20, 1, 64);
+
     public static final ModConfigSpec.IntValue BASE_OPERATION_RANGE = BUILDER
             .comment("Base operation range for wand operations")
             .defineInRange("wand.baseOperationRange", 16, 4, 64);
@@ -314,6 +320,39 @@ public class Config {
                     + "when a hostile mob is within this visible distance, then resumes once the threat leaves. "
                     + "Smaller than selfDefenseRange since peace NPCs shouldn't be constantly evading.")
             .defineInRange("guard.peaceFleeRange", 8, 2, 32);
+
+    public static final ModConfigSpec.DoubleValue GUARD_KITE_START_DIST = BUILDER
+            .comment("Combat kiting trigger distance (blocks, horizontal): the NPC starts backing away once a "
+                    + "visible enemy gets within this distance. 9 keeps a margin past creeper lethal blast (~4, "
+                    + "charged ~8) and melee reach (~3) so the NPC isn't caught in the blast during recheck gaps.")
+            .defineInRange("guard.kiteStartDist", 9.0, 2.0, 32.0);
+
+    public static final ModConfigSpec.DoubleValue GUARD_KITE_STANDOFF = BUILDER
+            .comment("Combat kiting standoff (blocks): the NPC backs away to this distance from the threat point. "
+                    + "13 is 1 block past the normal-creeper safe radius (~8); beam range 200 keeps output up.")
+            .defineInRange("guard.kiteStandoff", 13.0, 3.0, 64.0);
+
+    public static final ModConfigSpec.DoubleValue GUARD_ENGAGE_STANDOFF = BUILDER
+            .comment("Approach landing distance (blocks) when LOS is blocked: the NPC pathfinds to a standable, "
+                    + "LOS-visible spot this far from the target instead of walking into melee/creeper range. "
+                    + "Kept >= kiteStartDist so the approach doesn't immediately re-trigger kiting.")
+            .defineInRange("guard.engageStandoff", 9.0, 2.0, 32.0);
+
+    public static final ModConfigSpec.DoubleValue GUARD_FLEE_HP_THRESHOLD = BUILDER
+            .comment("Low-HP flee threshold (0-1 hp ratio): below this the NPC enters a flee state with larger "
+                    + "kiting distances (fleeStartDist/fleeStandoff) and stops walking toward LOS-blocked "
+                    + "targets, prioritizing survival. Runs as an L0 override before player spell strategy.")
+            .defineInRange("guard.fleeHpThreshold", 0.30, 0.05, 1.0);
+
+    public static final ModConfigSpec.DoubleValue GUARD_FLEE_START_DIST = BUILDER
+            .comment("Flee-state kiting trigger distance (blocks): the fleeing NPC starts backing away once an "
+                    + "enemy gets within this distance.")
+            .defineInRange("guard.fleeStartDist", 12.0, 3.0, 64.0);
+
+    public static final ModConfigSpec.DoubleValue GUARD_FLEE_STANDOFF = BUILDER
+            .comment("Flee-state standoff (blocks): the fleeing NPC backs away to this distance from the threat. "
+                    + "18 is far beyond even a charged creeper's lethal blast (~8).")
+            .defineInRange("guard.fleeStandoff", 18.0, 4.0, 64.0);
 
     // ---- Raid (袭击) system ----
 

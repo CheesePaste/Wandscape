@@ -13,6 +13,10 @@
 - `guard.selfDefenseRange=16`：NPC 主动索敌半径（球面 + LOS）。
 - `guard.hateRange=48`、`guard.hateDurationTicks=600`：NPC 仇恨记忆。
 - `guard.peaceFleeRange=8`：和平模式 NPC 逃跑半径（可见怪进入即临时离任务后撤，怪远离后恢复）。
+- `guard.kiteStartDist=9`、`guard.kiteStandoff=13`：战斗风筝触发/后撤距离（目标进入 9 格即后撤到威胁点 13 格外，最低间距超出苦力怕爆炸致死半径 ~4）。
+- `guard.engageStandoff=9`：隔墙逼近交战落点（目标周围 9 格「有视线 + 可站立」，≥kiteStartDist 避免落点即折返）。
+- `guard.fleeHpThreshold=0.30`：低血逃跑阈值（血量比例低于此值进入逃跑态）。
+- `guard.fleeStartDist=12`、`guard.fleeStandoff=18`：逃跑态触发/后撤距离（更大，连充能苦力怕致死半径 ~8 都安全）。
 
 ## 守卫任务
 
@@ -21,7 +25,7 @@
 - `GuardTaskSource`：pollInterval=20；overworld 内找威胁：攻击区有存活 Enemy 且无活跃任务 → 发布 `guard:attack` 任务（params: attackRange/releaseRange/circle/color，优先级 `GUARD_PRIORITY=49`）。
 - `GuardBlueprints`：代码注册 `guard:attack` → `[AtomicOp.AttackMonsterOp(attackRange, releaseRange, circle, color)]`。
 - `GuardAttackExecutor`：持续异步循环（由 Wandscape.onServerTick 驱动）；RECHECK_TICKS=10；runCycle 重算攻击区→最近 Enemy；无目标→看脱离区无怪→光束淡出+cancelNavigation+完成；有怪→待命重试。future 未完成前 NPC 保持 ACTIVE 不被改派。
-- `GuardCombat.engage`：有活跃光束→beam.retarget 主动切换；LOS 被挡→光束快淡出 + navigateToward（落点为怪物周围 6 格「有视线 + 可站立」的安全交战点，杜绝传送兜底落到怪脸上被苦力怕炸）；LOS 通且安全距离→站定施法（CD/蓝/锁在 MagicCaster 内部门控：光束 50 蓝、基础 CD 400/SPELL_SPEED（锁结束后起算）、施法互斥锁全程），成功后杖尖 burstColored + GUARD_FIRE 音。**走位**：附近可见敌数 ≥3（CROWD_THRESHOLD）→ 群殴规避，往敌方质心反方向走位；LOS 通但目标进入威胁距离 <6（KITE_START_DIST）→ 战斗风筝，后撤到威胁点 10 格（KITE_STANDOFF）外「有视线 + 可站立」的落点。走位由 ECS 导航驱动，**施法不锁移动**（`tickCastingState` 已无「施法停移动」硬钉，`isCasting` 期间也能走位），光束独立跟随，真正「边走边打」；落点不可站立则静默站定继续打，不寻路进墙。**战斗态**：engage 每轮 `markInCombat` 保持 suppressWandering=true（禁 wandering，防战斗期间闲逛），战斗结束由执行器 `markCombatEnd` 恢复；空闲乱走由 `RandomStrollGoal` 让路（尊重 `isEngineIdle`/`isCasting`，殖民地任务施法期仍不乱走）。后撤落点 `findRetreatPos` 额外要求「NPC→落点 无墙」（走过去可达），源头减少寻路失败；正常走位不失败，self_teleport 传送回退留给狭小地带真正走投无路时逃生。**投掷物躲避走位**：`navigateDodge`/`findDodgePos` 复用同一套走位形式（ECS 导航 + 可站立/LOS 落点），沿弹道垂直方向走开 2.5 格（DODGE_DIST）让出弹道，无落点静默站定，由 ProjectileDodge 调用。
+- `GuardCombat.engage`：有活跃光束→beam.retarget 主动切换；LOS 被挡→光束快淡出 + navigateToward（落点为怪物周围 `guard.engageStandoff`(9) 格「有视线 + 可站立」的安全交战点，杜绝传送兜底落到怪脸上被苦力怕炸）；LOS 通且安全距离→站定施法（CD/蓝/锁在 MagicCaster 内部门控：光束 50 蓝、基础 CD 400/SPELL_SPEED（锁结束后起算）、施法互斥锁全程），成功后杖尖 burstColored + GUARD_FIRE 音。**走位**：附近可见敌数 ≥3（CROWD_THRESHOLD）→ 群殴规避，往敌方质心反方向走位；LOS 通但目标进入威胁距离 `guard.kiteStartDist`=9 → 战斗风筝，后撤到威胁点 `guard.kiteStandoff`=13 格外「有视线 + 可站立」的落点。**低血逃跑态**：血量比例 < `guard.fleeHpThreshold`(0.30) → 触发/后撤改用 `guard.fleeStartDist`=12 / `guard.fleeStandoff`=18，且 LOS 被墙挡不走近交战、继续后撤（保命优先；L0 紧急奶已拦可奶的低血）。走位由 ECS 导航驱动，**施法不锁移动**（`tickCastingState` 已无「施法停移动」硬钉，`isCasting` 期间也能走位），光束独立跟随，真正「边走边打」；落点不可站立则静默站定继续打，不寻路进墙。**战斗态**：engage 每轮 `markInCombat` 保持 suppressWandering=true（禁 wandering，防战斗期间闲逛），战斗结束由执行器 `markCombatEnd` 恢复；空闲乱走由 `RandomStrollGoal` 让路（尊重 `isEngineIdle`/`isCasting`，殖民地任务施法期仍不乱走）。后撤落点 `findRetreatPos` 额外要求「NPC→落点 无墙」（走过去可达），源头减少寻路失败；正常走位不失败，self_teleport 传送回退留给狭小地带真正走投无路时逃生。**投掷物躲避走位**：`navigateDodge`/`findDodgePos` 复用同一套走位形式（ECS 导航 + 可站立/LOS 落点），沿弹道垂直方向走开 2.5 格（DODGE_DIST）让出弹道，无落点静默站定，由 ProjectileDodge 调用。
 - `GuardCommand`：`/wandscape guard status`（perm 2）打印 zones/threat/releaseClear/activeGuards。
 
 ## NPC 主动防御
