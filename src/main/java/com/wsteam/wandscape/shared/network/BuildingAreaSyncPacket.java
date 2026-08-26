@@ -54,6 +54,11 @@ public record BuildingAreaSyncPacket(List<BuildingEntry> buildings) implements C
         return cached;
     }
 
+    /** Clear the client cache (e.g. when the client leaves a world/save). */
+    public static void clear() {
+        cached = List.of();
+    }
+
     /**
      * Find which building (if any) contains the given block position, using the
      * cached building-area data. Returns a stable per-building UUID derived from
@@ -196,7 +201,7 @@ public record BuildingAreaSyncPacket(List<BuildingEntry> buildings) implements C
      * any building lifecycle change (e.g. a new placement).
      */
     public static void sendToPlayer(ServerPlayer player) {
-        sendToPlayer(player, null);
+        sendToPlayer(player, (BlockPos) null);
     }
 
     /**
@@ -211,7 +216,21 @@ public record BuildingAreaSyncPacket(List<BuildingEntry> buildings) implements C
         if (colonyId == null && colonyHint != null) {
             colonyId = colonyApi.getColonyId(colonyHint);
         }
-        if (colonyId == null) return;
+        sendToPlayer(player, colonyId);
+    }
+
+    /**
+     * Send the building-area sync for a specific colony. When no colony can be
+     * resolved (fresh world, player has no colony yet), an empty packet is sent so
+     * the client cache is flushed and never carries stale entries from a previous
+     * world/save — the overlap check on the client would otherwise report phantom
+     * overlaps against the previous save's buildings.
+     */
+    public static void sendToPlayer(ServerPlayer player, @Nullable UUID colonyId) {
+        if (colonyId == null) {
+            PacketDistributor.sendToPlayer(player, new BuildingAreaSyncPacket(List.of()));
+            return;
+        }
         BuildingApi buildingApi = WandscapeApis.getBuildingApi();
         if (buildingApi == null) return;
 

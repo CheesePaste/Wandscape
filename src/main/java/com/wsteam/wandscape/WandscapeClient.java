@@ -61,6 +61,7 @@ import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import com.wsteam.wandscape.shared.ui.panel.WandscapePanelController;
 import com.wsteam.wandscape.shared.ui.panel.WandscapePanelOverlay;
 import com.wsteam.wandscape.shared.ui.panel.WandscapePanelState;
+import com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket;
 import com.wsteam.wandscape.shared.client.render.BuildingGhostVboCache;
 import com.wsteam.wandscape.shared.ui.util.BuildingPreviewGifCache;
 import com.wsteam.wandscape.tourist.client.TouristDebugRenderer;
@@ -535,6 +536,9 @@ public class WandscapeClient {
     /** Reset client panel/UI state on disconnect so it doesn't leak into the next world. */
     private static void onPlayerLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
         WandscapePanelState.reset();
+        // 建筑区域缓存在服务器重新同步前不清空，会带着上一世界（存档）的建筑边界框进入
+        // 下一世界，导致新存档首次建建筑时误报“与旧存档建筑重叠”。
+        BuildingAreaSyncPacket.clear();
     }
 
     @SubscribeEvent

@@ -51,6 +51,9 @@ public record PanelStateTogglePacket(boolean open) implements CustomPacketPayloa
                 if (colonyId == null) {
                     colonyId = colonyApi.getColonyId(player.blockPosition());
                 }
+                // Always sync building areas（无小镇时发空包清空客户端缓存）——否则缓存会带着
+                // 上一世界（存档）的建筑边界框进入新存档，首次建建筑时误报重叠。
+                BuildingAreaSyncPacket.sendToPlayer(player, colonyId);
                 if (colonyId != null) {
                     ColonyMetricsApi metricsApi = WandscapeApis.getColonyMetricsApiSilently();
                     if (metricsApi != null) {
@@ -59,9 +62,6 @@ public record PanelStateTogglePacket(boolean open) implements CustomPacketPayloa
                             PacketDistributor.sendToPlayer(player, ColonyStatsSyncPacket.fromSnapshot(snap));
                         }
                     }
-
-                    // Sync building interaction areas + construction ghosts for overlay rendering
-                    BuildingAreaSyncPacket.sendToPlayer(player);
                 }
             }
 

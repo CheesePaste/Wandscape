@@ -177,4 +177,17 @@ class BuildingAreaSyncPacketTest {
         BuildingAreaSyncPacket.handleClient(new BuildingAreaSyncPacket(List.of()));
         assertNull(BuildingAreaSyncPacket.raycastUnbuilt(new Vec3(0, 0, 0), new Vec3(0, 0, 10)));
     }
+
+    @Test
+    @DisplayName("clear 清空缓存：离开世界后不再用旧存档建筑误判重叠")
+    void clearEmptiesCache() {
+        var e = entry(new BlockPos(0, 0, 0), false, 0, 0, 0, 4, 4, 4);
+        BuildingAreaSyncPacket.handleClient(new BuildingAreaSyncPacket(List.of(e)));
+        assertNotNull(BuildingAreaSyncPacket.findBuildingIdAt(new BlockPos(2, 2, 2)));
+
+        BuildingAreaSyncPacket.clear();
+
+        assertTrue(BuildingAreaSyncPacket.getCached().isEmpty());
+        assertNull(BuildingAreaSyncPacket.findBuildingIdAt(new BlockPos(2, 2, 2)));
+    }
 }
