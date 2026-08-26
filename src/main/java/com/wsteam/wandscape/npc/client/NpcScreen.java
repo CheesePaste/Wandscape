@@ -233,7 +233,8 @@ public class NpcScreen extends AbstractContainerScreen<NpcMenu> implements Repla
     private void onDismiss() {
         if (entityId < 0) return;
         String name = (npcName != null && !npcName.isEmpty()) ? npcName : "…";
-        openConfirmDialog(
+        confirmDialog.open(
+                I18n.name("gui.wandscape.npc.dismiss_title", "解雇法师"),
                 I18n.name("gui.wandscape.npc.dismiss_confirm", "确定解雇法师 %s？其装备将掉落。", name),
                 () -> {
                     PacketDistributor.sendToServer(new NpcDismissPacket(entityId));
@@ -241,10 +242,6 @@ public class NpcScreen extends AbstractContainerScreen<NpcMenu> implements Repla
                     // 服务端收到 close 包后立即同步关闭容器，避免面板残留/容器状态不一致
                     onClose();
                 });
-    }
-
-    private void openConfirmDialog(Component message, Runnable onConfirm) {
-        confirmDialog.open(message, onConfirm);
     }
 
     public void openHelpDocument() {

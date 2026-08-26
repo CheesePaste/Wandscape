@@ -17,7 +17,9 @@ import org.lwjgl.glfw.GLFW;
  * 在渲染末尾调用 {@link #render}、在 mouseClicked / keyPressed 开头调用对应方法。
  *
  * <p>打开时挡住下层一切交互：点击背景 / 任意非 Enter / Esc 键都被吞掉。
- * 确认框绘制复用同包 {@link MedievalScreen} 的 protected 静态绘图助手（金边/玻璃框）。
+ * 视觉：遮罩压暗背景 + <b>全不透明</b>深棕框体（金边 + 与面板同款紫色标题栏），
+ * 高度随消息行数自适应、消息不截断。绘制复用同包 {@link MedievalScreen}
+ * 的 protected 静态绘图助手（金边/玻璃框）。
  *
  * <p>接入方式：
  * <ul>
@@ -27,11 +29,24 @@ import org.lwjgl.glfw.GLFW;
  */
 public final class MedievalConfirmDialog {
 
-    private static final int BOX_W = 280;
-    private static final int BOX_H = 110;
-    private static final int BTN_W = 100;
-    private static final int BTN_H = 20;
+    private static final int BOX_W = 260;
+    private static final int HEADER_H = 16;
+    private static final int PAD = 16;
+    private static final int BTN_W = 96;
+    private static final int BTN_H = 18;
+    private static final int BTN_GAP = 14;
+    /** 遮罩 75% 黑：压暗背景保留环境感；框体不透明，不会透出下层文字。 */
+    private static final int DIM_COLOR = 0xC0000000;
+    // 标题栏：与各面板 header 同款紫色渐变
+    private static final int HEADER_TOP = 0xFF502870;
+    private static final int HEADER_BOTTOM = 0xFF1A0830;
+    private static final int HEADER_ACCENT_TOP = 0xFFD4A840;
+    private static final int HEADER_ACCENT_BOTTOM = 0xFF6A4020;
+    // 框体：全不透明深棕渐变（alpha 必须为 FF，杜绝下层文字透出叠字）
+    private static final int BOX_TOP = 0xFF2A1C12;
+    private static final int BOX_BOTTOM = 0xFF140A06;
 
+    private Component title;
     private Component message;
     private Runnable onConfirm;
     private boolean open;
@@ -39,7 +54,13 @@ public final class MedievalConfirmDialog {
     // 按钮矩形（render 时按屏幕居中计算，供 mouseClicked 命中检测）
     private int cancelX, cancelY, confirmX, confirmY;
 
+    /** 以默认标题（「确认」）打开。 */
     public void open(Component message, Runnable onConfirm) {
+        open(I18n.name("gui.wandscape.confirm.title", "确认"), message, onConfirm);
+    }
+
+    public void open(Component title, Component message, Runnable onConfirm) {
+        this.title = title;
         this.message = message;
         this.onConfirm = onConfirm;
         this.open = true;
@@ -47,6 +68,7 @@ public final class MedievalConfirmDialog {
 
     public void close() {
         this.open = false;
+        this.title = null;
         this.message = null;
         this.onConfirm = null;
     }
@@ -98,32 +120,38 @@ public final class MedievalConfirmDialog {
         if (!open) return;
         Font font = Minecraft.getInstance().font;
 
-        // 全屏近不透明遮罩：加深以避免下层面板透出，造成「确认框与面板重叠」的观感
-        g.fill(0, 0, screenW, screenH, 0xE6000000);
+        // 遮罩：压暗背景即可，不糊死全屏（框体自身不透明负责可读性）
+        g.fill(0, 0, screenW, screenH, DIM_COLOR);
+
+        List<net.minecraft.util.FormattedCharSequence> lines = font.split(message, BOX_W - PAD * 2);
+        int textH = lines.size() * (font.lineHeight + 2) - 2;
+        int boxH = HEADER_H + 12 + textH + 12 + BTN_H + 12;
 
         int bx = (screenW - BOX_W) / 2;
-        int by = (screenH - BOX_H) / 2;
+        int by = (screenH - boxH) / 2;
 
-        // 玻璃渐变框 + 金边
-        g.fillGradient(bx, by, bx + BOX_W, by + BOX_H, 0xF52A1C12, 0xF5100804);
-        MedievalScreen.drawGlowBorder(g, bx, by, BOX_W, BOX_H, MedievalColors.BORDER_GOLD);
+        g.fillGradient(bx, by, bx + BOX_W, by + boxH, BOX_TOP, BOX_BOTTOM);
+        MedievalScreen.drawGlowBorder(g, bx, by, BOX_W, boxH, MedievalColors.BORDER_GOLD);
 
-        // 消息自动换行，居中（FormattedCharSequence 直接绘制，避免类型转换歧义）
-        List<net.minecraft.util.FormattedCharSequence> lines = font.split(message, BOX_W - 24);
-        int lineY = by + 14;
-        int maxLines = 3;
-        for (int i = 0; i < lines.size() && i < maxLines; i++) {
-            net.minecraft.util.FormattedCharSequence line = lines.get(i);
-            g.drawString(font, line, bx + BOX_W / 2 - font.width(line) / 2,
-                    lineY, MedievalColors.TEXT_WARM_WHITE);
+        // 标题栏（与面板 header 同款：紫渐变 + 金分隔线 + 左侧金条）
+        g.fillGradient(bx + 1, by + 1, bx + BOX_W - 1, by + HEADER_H, HEADER_TOP, HEADER_BOTTOM);
+        g.fill(bx + 1, by + HEADER_H, bx + BOX_W - 1, by + HEADER_H + 1, MedievalColors.BORDER_GOLD);
+        g.fillGradient(bx + 1, by + 1, bx + 4, by + HEADER_H, HEADER_ACCENT_TOP, HEADER_ACCENT_BOTTOM);
+        g.drawString(font, title, bx + 8, by + (HEADER_H - font.lineHeight) / 2 + 1,
+                MedievalColors.TEXT_WARM_WHITE);
+
+        // 消息左对齐（多行更易读）
+        int lineY = by + HEADER_H + 12;
+        for (net.minecraft.util.FormattedCharSequence line : lines) {
+            g.drawString(font, line, bx + PAD, lineY, MedievalColors.TEXT_WARM_WHITE);
             lineY += font.lineHeight + 2;
         }
 
         // 底部按钮：取消（左） / 确认（右）
-        int btnY = by + BOX_H - BTN_H - 12;
-        int totalW = BTN_W * 2 + 12;
+        int btnY = by + boxH - BTN_H - 12;
+        int totalW = BTN_W * 2 + BTN_GAP;
         cancelX = bx + (BOX_W - totalW) / 2;
-        confirmX = cancelX + BTN_W + 12;
+        confirmX = cancelX + BTN_W + BTN_GAP;
         cancelY = confirmY = btnY;
 
         boolean cancHov = isInRect(mouseX, mouseY, cancelX, cancelY, BTN_W, BTN_H);
@@ -138,7 +166,7 @@ public final class MedievalConfirmDialog {
         MedievalScreen.drawMinimalBox(g, x, y, BTN_W, BTN_H, confirm, hovered);
         int color = confirm
                 ? (hovered ? MedievalColors.ACCENT_GOLD : MedievalColors.TEXT_WARM_WHITE)
-                : (hovered ? MedievalColors.TEXT_WARM_WHITE : MedievalColors.TEXT_DIM);
+                : (hovered ? MedievalColors.TEXT_WARM_WHITE : MedievalColors.TEXT_MUTED);
         g.drawCenteredString(font, label, x + BTN_W / 2, y + (BTN_H - font.lineHeight) / 2, color);
     }
 
