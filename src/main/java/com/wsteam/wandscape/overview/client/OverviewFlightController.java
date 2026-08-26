@@ -9,6 +9,7 @@ import com.wsteam.wandscape.engine.service.SoundService;
 import com.wsteam.wandscape.engine.sound.WandscapeSounds;
 import com.wsteam.wandscape.overview.network.OverviewEntityInteractPacket;
 import com.wsteam.wandscape.overview.network.OverviewInteractPacket;
+import com.wsteam.wandscape.projection.BuildPlacement;
 import com.wsteam.wandscape.projection.client.ProjectionClientState;
 import com.wsteam.wandscape.road.client.RoadPlacementState;
 import com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket;
@@ -319,7 +320,10 @@ public final class OverviewFlightController {
         boolean rightDown = window != 0L && GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_RIGHT) == GLFW.GLFW_PRESS;
 
         if (centerHit.getType() == HitResult.Type.BLOCK) {
-            BlockPos centerPlacePos = centerHit.getBlockPos().relative(centerHit.getDirection());
+            // 命中草/花/蘑菇/树叶等不能立足的方块时，向下吸附到真正的地面
+            // （草方块/泥土），避免建筑被植物垫高一层。
+            BlockPos centerPlacePos = BuildPlacement.resolve(
+                    mc.level, centerHit.getBlockPos(), centerHit.getDirection());
             if (rightDown || ProjectionClientState.getGhostPos() == null) {
                 ProjectionClientState.setGhostPos(ProjectionClientState.centerAnchor(centerPlacePos));
             }

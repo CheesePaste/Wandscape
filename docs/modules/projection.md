@@ -28,6 +28,7 @@
 - **选取缓存语义**：建筑/朝向/pin 在会话内跨模式切换（切 tab/按 G/ESC/关面板/开关建筑条）保留，仅登出（`WandscapePanelState.reset()`）或显式提交（ConstructionScreen.submit 后清虚影 + unpin）/撤销清空。建筑条的开/关不再重置分类/搜索/滚动。
 - `ProjectionFlightController`：每 tick 输入处理，**仅当 projection 激活且 overview 未激活时运行**（overview 下 ghost 位置由 OverviewFlightController 每帧 raycast 更新）。64 格 raycast 求 ghost 落点 + overlap（落点经 `centerAnchor` 居中）；**左键 90° 旋转**建筑朝向；**右键仅切换 pin（锁定/解锁，供 Gizmo 精确微调）——不再打开施工界面**；**施工只能点右侧面板【提交施工】**（`BuildPopPanel` → `openConstructionScreen`）；面板未开时 ESC 退出；滚轮事件被取消。
 - `ProjectionRenderer`：AFTER_TRIPWIRE_BLOCKS；用 BuildingGhostRenderer 渲染半透明幽灵方块，旋转后边界画白线框（pinned 非重叠）/红框（重叠）。ghost VBO 全局旋转用 `Axis.YP.rotationDegrees(-90°*steps)`，与 `rotateOffset`（x'=-z,z'=x）同向——若误用 +90°，steps=1/3（90°/270°）时 ghost 相对服务端建造/边界线框镜像偏位。
+- `BuildPlacement`：**落点吸附**——射线命中草/花/蘑菇/树叶等不能立足的方块时，沿该列向下找第一个真正可立足的方块（草方块/泥土），把建筑锚点落回地面，避免被植物垫高一层；命中合规支撑（实心方块/墙体）时保持贴面放置（含贴墙/侧面）。判定口径与 `road/network/DestroyFillPacket` 找真实地面一致（跳过 `canBeReplaced()` 的可替换方块 + 空碰撞箱），额外显式排除 `minecraft:leaves` 标签（树叶碰撞箱完整但非建筑落脚点）。`resolve(BlockPos, Direction, SupportTest, int)` 为纯逻辑核心（无 MC 依赖，可单测）；`isStandable(Level, BlockPos)` 为 MC 世界实现。两个建造入口（ProjectionFlightController 步行模式 + OverviewFlightController 每帧落点）共用。
 
 ## ProjectionNetwork（服务端）
 

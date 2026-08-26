@@ -3,6 +3,7 @@ package com.wsteam.wandscape.projection.client;
 import org.lwjgl.glfw.GLFW;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
+import com.wsteam.wandscape.projection.BuildPlacement;
 import com.wsteam.wandscape.projection.data.BuildingSlot;
 import com.wsteam.wandscape.projection.network.ProjectionExitPacket;
 import com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket;
@@ -153,8 +154,9 @@ public final class ProjectionFlightController {
         BlockHitResult hit = mc.level.clip(clipCtx);
 
         if (hit.getType() == HitResult.Type.BLOCK) {
-            BlockPos targetPos = hit.getBlockPos();
-            BlockPos placePos = targetPos.relative(hit.getDirection());
+            // 命中草/花/蘑菇/树叶等不能立足的方块时，向下吸附到真正的地面
+            // （草方块/泥土），避免建筑被植物垫高一层。
+            BlockPos placePos = BuildPlacement.resolve(mc.level, hit.getBlockPos(), hit.getDirection());
             if (rightDown || ProjectionClientState.getGhostPos() == null) {
                 ProjectionClientState.setGhostPos(ProjectionClientState.centerAnchor(placePos));
             }

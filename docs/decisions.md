@@ -2,6 +2,22 @@
 
 本文件记录偏离直觉的设计选择及其原因，供后续开发快速理解「为什么这么做」。
 
+## 2026-08-26：建造落点吸附——草/花/蘑菇/树叶不算立足点，建筑落在真实地面
+
+**需求**（用户反馈）：建造模式下建筑会吸附到草、花、蘑菇、树叶上，整栋建筑被垫高一层（影响高度）。
+
+**根因**：落点取自射线命中方块 `placePos = hitPos.relative(hitDir)`。客户端 raycast 用 `ClipContext.Block.OUTLINE`（取方块 `getShape` 轮廓形状），而原版草本植物轮廓是整格方块、树叶是完整实体方块——射线命中植物顶面时 `hitDir=UP`，锚点就落在植物上方。
+
+**决策**：新增 `projection/BuildPlacement`，命中不可立足的方块时沿该列向下找第一个真正可立足的方块，锚点落回其上方：
+- **立足判定**（与 `road/network/DestroyFillPacket` 找真实地面口径一致）：跳过 `canBeReplaced()`（草/花/蘑菇/雪/水等）+ 空碰撞箱（无碰撞不可站立），额外显式排除 `minecraft:leaves` 标签（树叶碰撞箱完整、不可替换，但显然不是建筑落脚点）。
+- **保留既有行为**：命中合规支撑（草方块/泥土/墙体/楼梯等）时仍贴命中面放置——含贴墙/侧面放置，不破坏墙边建造。
+- `resolve(BlockPos, Direction, SupportTest, int)` 为纯逻辑核心（无 MC 依赖），`isStandable(Level, BlockPos)` 为 MC 实现；步行建造（ProjectionFlightController）与俯瞰建造（OverviewFlightController 每帧落点）两个入口共用。
+
+**为什么**：用「可替换 + 碰撞箱 + 树叶标签」的通用判定而非枚举方块清单，数据驱动地覆盖所有植物/树叶变体（含模组方块走 `minecraft:leaves` 标签）；纯逻辑核心抽出便于单测 `resolve` 的下降分支。
+
+**影响**：新增 `projection/BuildPlacement.java`；`ProjectionFlightController.updateGhostPosition`、`OverviewFlightController.updateGhostPositionPerFrame` 改用 `BuildPlacement.resolve`。测试：`BuildPlacementTest`（7）覆盖贴面放置/贴墙放置/植物下沉/穿透空气/树叶下沉/无立足点回退/世界底界。
+
+
 ## 2026-08-26：游客防卡死升级——作废失败目标 + 清路线 + 3 次寻路失败直接传送目标点
 
 **需求**（用户反馈）：现有防卡死（`noMoveTicks>100/totalNavTicks` 触发传送）能把游客从陷阱里搬出来，但**传送后还会经过同一个点再次卡死**。
