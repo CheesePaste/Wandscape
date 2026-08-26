@@ -185,9 +185,7 @@ public final class GuardCombat {
         WorldSnapshot snapshot = buildSnapshot(level, npc);
         MagicDef chosen = CastBrain.select(known,
                 def -> com.wsteam.wandscape.core.component.MagicState.isFreeCast()
-                        || (npc.magic.canCast(def.id())
-                                // 持续引导法术（manaPerTick > 0）：只需够「每 tick 扣蓝」即可起手，引导期按 tick 扣
-                                && npc.magic.getMana() >= (def.manaPerTick() > 0 ? def.manaPerTick() : def.manaCost())), snapshot);
+                        || (npc.magic.canCast(def.id()) && npc.magic.getMana() >= def.manaCost()), snapshot);
         if (chosen == null) {
             // L2 兜底：无有效魔法（列表全不可施 / conditions 不满足）→ 普通攻击（物理，不耗蓝，2s 攻速）
             normalAttack(level, npc, target);

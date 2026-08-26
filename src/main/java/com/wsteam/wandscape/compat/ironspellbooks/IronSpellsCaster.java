@@ -37,13 +37,11 @@ public final class IronSpellsCaster {
         final int spellLevel;
         final CastType castType;
         final MagicData magicData;
-        /** 持续引导法术每 tick 扣蓝量；0 = 非持续（开始一次性扣全量）。 */
-        final int manaPerTick;
         int remainingTicks;
 
         ActiveCast(ServerLevel level, WandscapeNpc npc, @Nullable LivingEntity target,
                    AbstractSpell spell, int spellLevel, int remainingTicks,
-                   CastType castType, MagicData magicData, int manaPerTick) {
+                   CastType castType, MagicData magicData) {
             this.level = level;
             this.npc = npc;
             this.target = target;
@@ -52,7 +50,6 @@ public final class IronSpellsCaster {
             this.remainingTicks = remainingTicks;
             this.castType = castType;
             this.magicData = magicData;
-            this.manaPerTick = manaPerTick;
         }
     }
 
@@ -111,18 +108,11 @@ public final class IronSpellsCaster {
                     npc.getUUID().toString().substring(0, 8), spellId, spellLevel);
             return true;
         } else {
-            // LONG / CONTINUOUS 蓄力或引导
+            // LONG / CONTINUOUS 蓄力或引导：开始即一次性扣全量（铁魔法自身无按秒扣蓝机制，
+            // 与瞬发/蓄力一致，2026-08-26 用户要求不按 tick 扣）
             int rawCastTime = spell.getCastTime(spellLevel);
             int lockTicks = Math.max(10, (int) Math.ceil(rawCastTime / spellSpeed));
-            // 蓄力（LONG）：开始即一次性扣全量（与铁魔法玩家一致）；持续引导（CONTINUOUS）：
-            // 不预扣全量，改引导期间按 tick 扣（蓝尽中断），门控只需够每 tick 扣量即可起手。
-            int manaPerTick = 0;
-            int upfrontCost = manaCost;
-            if (castType == CastType.CONTINUOUS) {
-                manaPerTick = Math.max(1, (int) Math.ceil((double) manaCost / lockTicks));
-                upfrontCost = 0;
-            }
-            if (!npc.tryCastSpell(spellId, baseCooldown, upfrontCost, lockTicks)) {
+            if (!npc.tryCastSpell(spellId, baseCooldown, manaCost, lockTicks)) {
                 return false;
             }
 
@@ -132,10 +122,9 @@ public final class IronSpellsCaster {
             spell.getCastStartSound().ifPresent(s -> level.playSound(null, npc.getX(), npc.getY(), npc.getZ(),
                     s, SoundSource.NEUTRAL, 1.0f, 1.0f));
 
-            ACTIVE_CASTS.add(new ActiveCast(level, npc, target, spell, spellLevel, lockTicks, castType, magicData, manaPerTick));
-            Log.info(TAG, "NPC {} began channeling iron spell '{}' Lv.{} (lockTicks={}{})",
-                    npc.getUUID().toString().substring(0, 8), spellId, spellLevel, lockTicks,
-                    castType == CastType.CONTINUOUS ? ", manaPerTick=" + manaPerTick : "");
+            ACTIVE_CASTS.add(new ActiveCast(level, npc, target, spell, spellLevel, lockTicks, castType, magicData));
+            Log.info(TAG, "NPC {} began channeling iron spell '{}' Lv.{} (lockTicks={})",
+                    npc.getUUID().toString().substring(0, 8), spellId, spellLevel, lockTicks);
             return true;
         }
     }
@@ -156,17 +145,6 @@ public final class IronSpellsCaster {
 
             if (cast.target != null && cast.target.isAlive() && !cast.target.isRemoved()) {
                 cast.npc.faceTarget(cast.target.getEyePosition());
-            }
-
-            // 持续引导：每 tick 扣 manaPerTick；蓝不够撑到结束 → 中断（末 tick 放行，用剩蓝收尾）
-            if (cast.castType == CastType.CONTINUOUS && cast.manaPerTick > 0) {
-                float mana = cast.npc.magic.getMana();
-                if (mana < cast.manaPerTick && cast.remainingTicks > 1) {
-                    cast.spell.onServerCastComplete(cast.level, cast.spellLevel, cast.npc, cast.magicData, true);
-                    it.remove();
-                    continue;
-                }
-                cast.npc.magic.setMana(mana - Math.min(cast.manaPerTick, mana));
             }
 
             cast.magicData.handleCastDuration();

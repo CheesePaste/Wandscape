@@ -75,7 +75,6 @@ L2 兜底层
   "id": "beam",                 // 魔法 id（tryCastSpell 的 magicId key）
   "category": "single_target",  // 分类：single_target / aoe / defense / support / utility
   "mana_cost": 50,
-  "mana_per_tick": 0,           // 持续引导法术每 tick 扣蓝（>0 时门控只需够此量起手、蓝尽中断）；0 = 非持续，开始一次性扣全量
   "base_cooldown": 400,         // tick；施法互斥锁（法阵/引导/光束全程）结束后才开始倒计时的冷却，按 SPELL_SPEED 缩短
   "range": 32,
   "target_mode": "hostile_nearest",

@@ -28,7 +28,7 @@
 - **数据与等级存储（Q1 A）**：`EquippedMagicComponent` 升级存储 `SpellEntry(id, level, customData)`，支持带 `@level` 字符串编解码。放进 5 级铁魔法卷轴即按 5 级施法，取下/法师战死掉落时无损还原原等级的铁魔法卷轴。
 - **大类语义与目标判定（Q2 A）**：由放入的大类决定触发时机与目标模式。`single_target`/`aoe` 面向敌对发射（AOE 需敌数 ≥ 2）；`defense` 在处于战斗且自身血量 < 80% 时释放；`support` 在友方/自身血量 < 80% 时释放。
 - **施法生命周期桥接（Q3 A）**：瞬发（`INSTANT`）占 0.5s 施法互斥锁；蓄力（`LONG`）与持续（`CONTINUOUS`）法术按 `castTime / SPELL_SPEED` 占用互斥锁，每 server tick 维持面向与 `onServerCastTick`，到期触发 `onServerCastComplete` 并播放法术音效。
-- **魔力与冷却主控管线（Q4 A）**：直接从 NPC 扣除 `spell.getManaCost(level)`（**1:1，2026-08-26 用户要求**，不再按 0.25 缩放/下限 5——昂贵的铁魔法如黑洞 300/传送门 200 超过 NPC 默认蓝池 200，经 CastBrain 门控自动跳过）；冷却由 `MagicState` 记录并享受 `SPELL_SPEED` 冷却缩减；底层同步至 `MagicData`。**持续引导法术（CONTINUOUS）不预扣全量**，改引导期间每 tick 扣 `ceil(总蓝耗/引导时长)`（`MagicDef.manaPerTick` 承载门控阈值），蓝不够撑到结束立即中断引导（`onServerCastComplete(..., true)`）。
+- **魔力与冷却主控管线（Q4 A）**：直接从 NPC 扣除 `spell.getManaCost(level)`（**1:1，2026-08-26 用户要求**，不再按 0.25 缩放/下限 5——昂贵的铁魔法如黑洞 300/传送门 200 超过 NPC 默认蓝池 200，经 CastBrain 门控自动跳过）；冷却由 `MagicState` 记录并享受 `SPELL_SPEED` 冷却缩减；底层同步至 `MagicData`。**所有类型（含持续引导 CONTINUOUS）都施法开始一次性扣全量**——铁魔法自身无按秒扣蓝机制，最初按 tick 扣的方案已回退（2026-08-26）。
 - **法强放大与优雅降级（Q5 A）**：订阅 `SpellDamageEvent`，自动按 `SPELL_POWER × 魔力强化倍率` 放大伤害；所有实现隔离于 `compat/ironspellbooks/`，未安装铁魔法时不加载任何铁魔法逻辑，保持零硬编码耦合与高容错。
 
 **影响**：`build.gradle`（compileOnly 铁魔法依赖）；`compat/ironspellbooks/`（`IronSpellsCompat`/`IronSpellsHelper`/`IronSpellsCaster`/`IronSpellsDamageHandler`）；`EquippedMagicComponent`（`SpellEntry` 结构化支持）；`NpcStrategyMenu`（支持放置铁魔法卷轴）；`CastBrain`（支持合成 `MagicDef` 与 `EquippedMagicComponent` 查询）；`MagicSpellExecutors`（`dispatch` 桥接 `IronSpellsCaster`）；`Wandscape`（生命周期接线）。

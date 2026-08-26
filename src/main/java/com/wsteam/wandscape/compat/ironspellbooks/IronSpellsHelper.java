@@ -9,7 +9,6 @@ import com.wsteam.wandscape.magic.data.SpellConditions;
 
 import io.redspace.ironsspellbooks.api.registry.SpellRegistry;
 import io.redspace.ironsspellbooks.api.spells.AbstractSpell;
-import io.redspace.ironsspellbooks.api.spells.CastType;
 import io.redspace.ironsspellbooks.api.spells.ISpellContainer;
 import io.redspace.ironsspellbooks.api.spells.SpellData;
 import io.redspace.ironsspellbooks.item.Scroll;
@@ -99,13 +98,6 @@ public final class IronSpellsHelper {
         int manaCost = spell.getManaCost(level);
         int baseCooldown = spell.getSpellCooldown() > 0 ? (int) Math.round(spell.getSpellCooldown() * 20.0) : 40;
         int castTime = Math.max(0, spell.getCastTime(level));
-        // 持续引导法术（CONTINUOUS）：施法门控只需够「每 tick 扣蓝」即可起手，引导期间按 tick 扣、蓝尽中断。
-        // 此处无 NPC 上下文，按 SPELL_SPEED=1 估算引导时长；实际每 tick 扣量在 IronSpellsCaster 以真实 SPELL_SPEED 重算。
-        int manaPerTick = 0;
-        if (spell.getCastType() == CastType.CONTINUOUS) {
-            int estLock = Math.max(10, castTime);
-            manaPerTick = Math.max(1, (int) Math.ceil((double) manaCost / estLock));
-        }
         double range = 32.0;
 
         MagicDef.TargetMode targetMode;
@@ -139,7 +131,6 @@ public final class IronSpellsHelper {
                 spellId,
                 cat,
                 manaCost,
-                manaPerTick,
                 baseCooldown,
                 castTime,
                 range,
