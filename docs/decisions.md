@@ -2,6 +2,23 @@
 
 本文件记录偏离直觉的设计选择及其原因，供后续开发快速理解「为什么这么做」。
 
+## 2026-08-26：合成队列改为「发布时找第一个够的」——缺元素配方留在原位标记，不再进不可见的 AWAITING_RESOURCES
+
+**需求**（用户指令）：合成时元素不足的配方会进入一个 UI 看不见的「候选列表」（`AWAITING_RESOURCES` + `parkHead` 挂起），像"丢失"一样。期望更简单的模型：合成列表从上到下找第一个元素够的来合成；不够的留在原位、UI 显示「缺元素」；都不够则 NPC 自然空闲；并自动去收集不足的元素。
+
+**根因**：`BuildingTaskSource` 每 20 tick 只把队首条目发布为头任务；执行到一半元素不足 → `markAwaitingResources`（休眠不可见）→ `parkHead` 让出队首、顶上下一条。被挂起的任务在 UI 里完全消失，且只有 `ResourceSupplySystem`/`onResourceAdded` 唤醒后才会回来，玩家无法感知、也无法操作。
+
+**决策**（发布时预判 + 缺元素留队 + 中途回收）：
+- **发布扫描**：`BuildingTaskSource` 发布前用新增 `BuildingApi.dequeueWorkEligible` 从队首到队尾找第一个"当前元素够"的生产配方发布；元素不足的留在队列原位被跳过。可负担性判定收敛到 `engine/boundary/ProductionEligibility`（`requiredElements` = 配方成本 × 数量 × `ELEMENT_CRAFT_COST_MULTIPLIER`，与执行器 `checkElements` 同源），供发布扫描、UI 标记、自动补元素三处复用。
+- **都不够 → 不发布**：相关 NPC 自然空闲（无新状态机）。先判 eligible 再 `leaseBuilding`，避免为"排队但跑不了"的队列每 20 tick 强制加载/释放区块。
+- **中途竞态回收**：发布后元素被并发任务抢走 → 执行器照旧抛 `ResourceShortageException`；`BuildingTaskSource` 清理区对生产任务不再 `parkHead`，而是用 `GlobalTask.blueprintId/taskParams/priority` 重建 WorkItem 重新入队 + `cancelTask`，下轮扫描按「缺元素」跳过——全程可见。`AWAITING_RESOURCES`/`parkHead` 保留给建材运输等非生产任务。
+- **UI**：`TaskQueueDataPacket.QueueEntry` 带 `insufficient` + `missingElements`，`TaskQueuePanel` 对不足行渲染暗红「缺元素」标签 + 缺失元素图标（保留上移/下移/删除）。
+- **自动补元素**：`ResourceSupplySystem` 心跳在扫 `AWAITING_RESOURCES` 之外，新增扫描工作站系队列里元素不足的条目，按 (colony,typeId) 去重聚合缺口，走既有 `trySupplyResource`（先合成物品、回退节点采集，自带 in-flight 去重）。
+
+**为什么**：生产短缺是常态经营分支，不该让任务"消失"。把"元素够不够"的判定从执行期（失败才知）提前到发布期（先判再发），NPC 只会接到当前能跑的任务，队列天然从队首推进；缺元素的留在原位、UI 可见、可手动移除，补齐后自然被挑中——模型只有一个概念："缺元素的任务留在队列里等元素"。
+
+**影响**：`BuildingApi.dequeueWorkEligible` + `pollFirstEligible`（BuildingApiImpl）；`ProductionEligibility`（新增，engine/boundary）；`BuildingTaskSource`（发布扫描 + 清理区回收，`elementSnapshot` 取 `ServerLifecycleHooks` overworld）；`TaskQueueDataPacket.QueueEntry` 增字段 + `TaskQueueModifyPacket` 计算 + `TaskQueuePanel` 渲染 + 三个生产屏幕透传并加宽队列面板；`ResourceSupplySystem.scanProductionQueues`；`WandscapeBlockInteractExecutor.checkElements` 收敛到 `ProductionEligibility`；`Wandscape` 接线 `ProductionEligibility.setProductionRecipeLoader`。测试：`ProductionEligibilityTest`（新）、`BuildingApiSharedQueueTest`（pollFirstEligible 4 例）。`BuildingTaskPoolTest`/`TaskExecutionResourceShortageTest` 测的是通用 AWAITING_RESOURCES/park 机制，不受影响。
+
 ## 2026-08-26：建造落点吸附——草/花/蘑菇/树叶不算立足点，建筑落在真实地面
 
 **需求**（用户反馈）：建造模式下建筑会吸附到草、花、蘑菇、树叶上，整栋建筑被垫高一层（影响高度）。

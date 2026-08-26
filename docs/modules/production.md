@@ -50,4 +50,24 @@
 - `executeCraftWand`：同样扣元素，产出 ItemStack 写 CUSTOM_DATA=outputNbt，以带 NBT 的 ItemKey 入库。
 - `executeBrewPotion`：校验元素 cost + input_items，同时扣元素与输入物品，产出入仓。
 
+## 合成队列模型（发布扫描，2026-08-26）
+
+工作站/合成站/魔法工坊的队列（右侧 `TaskQueuePanel`）不再把缺元素的合成任务挂进不可见的
+`AWAITING_RESOURCES`/park 状态，而是**发布时找第一个够的**：
+
+- `BuildingTaskSource.poll`（20 tick）发布前用 `BuildingApi.dequeueWorkEligible` + `ProductionEligibility`
+  从队首到队尾扫描：消耗元素的生产配方（synthesize/craft_wand/craft_spell/brew_potion）需当前元素够
+  （`requiredElements` × 数量 × `ELEMENT_CRAFT_COST_MULTIPLIER`，与执行器 `checkElements` 同源）才发布；
+  元素不足的留在队列原位被跳过；decompose/build/gather 恒可发布。
+- 一个都不够 → 不发布任务 → 相关 NPC 自然空闲；同时**先判 eligible 再 lease 区块**，避免为跑不了的队列
+  每 20 tick 强制加载/释放区块。
+- **中途竞态**（发布后元素被并发任务抢走 → 执行器 `ResourceShortageException`）：`BuildingTaskSource` 清理区
+  对生产任务改为**回收回队列**（用 `GlobalTask.blueprintId/taskParams/priority` 重建 WorkItem 重新入队 +
+  `cancelTask`），下轮扫描按「缺元素」跳过，全程可见；`AWAITING_RESOURCES`/`parkHead` 保留给建材运输等非生产任务。
+- UI：`TaskQueueDataPacket.QueueEntry` 带 `insufficient` + `missingElements`（缺失元素 id），`TaskQueuePanel`
+  对不足行在类别文字后渲染暗红「缺元素」标签 + 缺失元素图标（`WandscapeTheme.elementIcon`），按钮保留。
+- **自动补元素**：`ResourceSupplySystem`（40 tick 心跳）除扫 `AWAITING_RESOURCES` 外，新增扫描
+  workstation/crafting_station/magic_station 队列里元素不足的条目，按 (colony,typeId) 去重后聚合元素缺口，
+  走 `trySupplyResource`（先合成物品、回退节点采集，自带 in-flight 去重）。
+
 > **差异提示**：decompose 产物写 colonyResources（ResourceId），而 synthesize/craft_wand/brew_potion 的元素消耗走 ColonyItemBank（ElementType）——两类存储不同，见 [gaps.md](../gaps.md)。

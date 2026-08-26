@@ -5,6 +5,7 @@ import com.wsteam.wandscape.shared.ui.I18n;
 import com.wsteam.wandscape.shared.ui.skin.SkinRender;
 import com.wsteam.wandscape.shared.ui.skin.SkinSprite;
 import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
+import com.wsteam.wandscape.shared.ui.theme.WandscapeTheme;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -47,11 +48,13 @@ public class TaskQueuePanel extends AbstractWidget {
             String itemOrRecipeId,
             int quantity,
             String blueprintId,
-            String summary
+            String summary,
+            boolean insufficient,
+            List<String> missingElements
     ) {
         /** Legacy constructor kept for backward compatibility. */
         public Entry(int index, String blueprintId, String summary) {
-            this(index, categorize(blueprintId), extractItemId(blueprintId, summary), 0, blueprintId, summary);
+            this(index, categorize(blueprintId), extractItemId(blueprintId, summary), 0, blueprintId, summary, false, List.of());
         }
 
         private static String categorize(String bid) {
@@ -59,6 +62,7 @@ public class TaskQueuePanel extends AbstractWidget {
                 case "production:decompose" -> "decompose";
                 case "production:synthesize" -> "synthesize";
                 case "production:craft_wand" -> "craft";
+                case "production:craft_spell" -> "transcribe";
                 case "production:brew_potion" -> "brew";
                 default -> bid.startsWith("build:") ? "build" : "other";
             };
@@ -238,6 +242,7 @@ public class TaskQueuePanel extends AbstractWidget {
             case "brew"       -> I18n.name("gui.wandscape.queue.pending.brew", "待炼制").getString();
             case "build"      -> I18n.name("gui.wandscape.queue.pending.build", "待建造").getString();
             case "gather"     -> I18n.name("gui.wandscape.queue.pending.gather", "待采集").getString();
+            case "transcribe" -> I18n.name("gui.wandscape.queue.pending.transcribe", "待抄录").getString();
             default           -> I18n.name("gui.wandscape.queue.pending.other", "待执行").getString();
         };
     }
@@ -326,8 +331,26 @@ public class TaskQueuePanel extends AbstractWidget {
             g.drawString(Minecraft.getInstance().font, label,
                     labelX, centerY - 4, MedievalColors.TEXT_DIM);
 
-            // Quantity right-aligned in the text column (left of buttons)
+            // ── Insufficient marker: dark-red "缺元素" tag + missing element icons ──
             int textColEnd = colRightStart - 2;
+            if (e.insufficient) {
+                Component shortTag = I18n.name("gui.wandscape.queue.insufficient", "缺元素");
+                int tagX = labelX + Minecraft.getInstance().font.width(label) + 2;
+                int tagW = Minecraft.getInstance().font.width(shortTag);
+                g.drawString(Minecraft.getInstance().font, shortTag,
+                        tagX, centerY - 4, MedievalColors.DANGER_RED);
+                int iconX = tagX + tagW + 2;
+                for (String el : e.missingElements) {
+                    if (iconX + 11 > textColEnd) break; // clip at quantity column
+                    ResourceLocation ico = WandscapeTheme.elementIcon(el);
+                    if (ico != null) {
+                        WandscapeTheme.drawIcon(g, ico, iconX, centerY - 5, 9, 9, WandscapeTheme.elementColor(el));
+                        iconX += 11;
+                    }
+                }
+            }
+
+            // Quantity right-aligned in the text column (left of buttons)
             if (e.quantity > 0) {
                 String qtyStr = "x" + e.quantity;
                 int qtyW = Minecraft.getInstance().font.width(qtyStr);
@@ -392,10 +415,11 @@ public class TaskQueuePanel extends AbstractWidget {
         return switch (cat) {
             case "decompose" -> I18n.name(key, "Decompose");
             case "synthesize" -> I18n.name(key, "Synthesize");
-            case "craft"      -> I18n.name(key, "Craft Wand");
+            case "craft"      -> I18n.name(key, "Craft");
             case "brew"       -> I18n.name(key, "Brew");
             case "build"      -> I18n.name(key, "Build");
             case "gather"     -> I18n.name(key, "Gather");
+            case "transcribe" -> I18n.name(key, "Transcribe");
             default           -> I18n.name(key, cat);
         };
     }

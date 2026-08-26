@@ -305,25 +305,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
     }
 
     private void checkSynthesizePreconditions(Map<String, String> params, long npcId) {
-        String recipeId = params.get("recipe_id");
-        int count = parseCount(params);
-        if (recipeId == null || count <= 0 || productionRecipeLoader == null) return;
-        SynthesizeRecipe recipe = productionRecipeLoader.getSynthesizeRecipe(recipeId);
-        if (recipe == null) return;
-        Level level = getNpcLevel(npcId);
-        if (level == null) return;
-        ColonyItemBank bank = ColonyItemBank.get(level);
-        if (bank == null) return;
-        UUID colonyId = findStorageColonyId();
-        for (var entry : recipe.cost().entrySet()) {
-            long needed = scaledCraftCost(entry.getValue() * count);
-            if (bank.countElement(colonyId, entry.getKey()) < needed) {
-                String elementId = entry.getKey().name().toLowerCase();
-                Log.warn(TAG, "synthesize: insufficient {} (need={})", entry.getKey(), needed);
-                throw new ResourceShortageException(
-                        List.of(new ResourceStack(new ResourceId(elementId), (int) needed)));
-            }
-        }
+        checkElements("production:synthesize", params, npcId);
     }
 
     private void checkDecomposePreconditions(Map<String, String> params, long npcId) {
@@ -333,50 +315,34 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
     }
 
     private void checkCraftWandPreconditions(Map<String, String> params, long npcId) {
-        String recipeId = params.get("recipe_id");
-        int count = parseCount(params);
-        if (recipeId == null || count <= 0 || productionRecipeLoader == null) return;
-        CraftWandRecipe recipe = productionRecipeLoader.getCraftWandRecipes().get(recipeId);
-        if (recipe == null) return;
-        Level level = getNpcLevel(npcId);
-        if (level == null) return;
-        ColonyItemBank bank = ColonyItemBank.get(level);
-        if (bank == null) return;
-        UUID colonyId = findStorageColonyId();
-        for (var entry : recipe.cost().entrySet()) {
-            long needed = scaledCraftCost(entry.getValue() * count);
-            if (bank.countElement(colonyId, entry.getKey()) < needed) {
-                String elementId = entry.getKey().name().toLowerCase();
-                Log.warn(TAG, "craft_wand: insufficient {} (need={})", entry.getKey(), needed);
-                throw new ResourceShortageException(
-                        List.of(new ResourceStack(new ResourceId(elementId), (int) needed)));
-            }
-        }
+        checkElements("production:craft_wand", params, npcId);
     }
 
     private void checkCraftSpellPreconditions(Map<String, String> params, long npcId) {
-        String recipeId = params.get("recipe_id");
-        int count = parseCount(params);
-        if (recipeId == null || count <= 0 || productionRecipeLoader == null) return;
-        CraftSpellRecipe recipe = productionRecipeLoader.getSpellRecipes().get(recipeId);
-        if (recipe == null) return;
+        checkElements("production:craft_spell", params, npcId);
+    }
+
+    /** Element shortage check shared by every element-costing production blueprint. */
+    private void checkElements(String blueprintId, Map<String, String> params, long npcId) {
+        Map<ElementType, Long> required = ProductionEligibility.requiredElementsFromStrings(blueprintId, params);
+        if (required.isEmpty()) return;
         Level level = getNpcLevel(npcId);
         if (level == null) return;
         ColonyItemBank bank = ColonyItemBank.get(level);
         if (bank == null) return;
         UUID colonyId = findStorageColonyId();
-        for (var entry : recipe.cost().entrySet()) {
-            long needed = scaledCraftCost(entry.getValue() * count);
-            if (bank.countElement(colonyId, entry.getKey()) < needed) {
-                String elementId = entry.getKey().name().toLowerCase();
-                Log.warn(TAG, "craft_spell: insufficient {} (need={})", entry.getKey(), needed);
+        for (var e : required.entrySet()) {
+            if (bank.countElement(colonyId, e.getKey()) < e.getValue()) {
+                String elementId = e.getKey().name().toLowerCase();
+                Log.warn(TAG, "{}: insufficient {} (need={})", blueprintId, e.getKey(), e.getValue());
                 throw new ResourceShortageException(
-                        List.of(new ResourceStack(new ResourceId(elementId), (int) needed)));
+                        List.of(new ResourceStack(new ResourceId(elementId), e.getValue().intValue())));
             }
         }
     }
 
     private void checkBrewPotionPreconditions(Map<String, String> params, long npcId) {
+        checkElements("production:brew_potion", params, npcId);
         String recipeId = params.get("recipe_id");
         int count = parseCount(params);
         if (recipeId == null || count <= 0 || productionRecipeLoader == null) return;
@@ -387,15 +353,6 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         ColonyItemBank bank = ColonyItemBank.get(level);
         if (bank == null) return;
         UUID colonyId = findStorageColonyId();
-        for (var entry : recipe.cost().entrySet()) {
-            long needed = scaledCraftCost(entry.getValue() * count);
-            if (bank.countElement(colonyId, entry.getKey()) < needed) {
-                String elementId = entry.getKey().name().toLowerCase();
-                Log.warn(TAG, "brew_potion: insufficient {} (need={})", entry.getKey(), needed);
-                throw new ResourceShortageException(
-                        List.of(new ResourceStack(new ResourceId(elementId), (int) needed)));
-            }
-        }
         for (String inputItemId : recipe.inputItems()) {
             ItemKey key = ItemKey.of(inputItemId, null);
             if (bank.available(colonyId, key) < count) {

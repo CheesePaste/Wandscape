@@ -41,7 +41,7 @@ public class WorkstationScreen extends MedievalScreen {
     // Left panel width (existing content)
     private static final int LEFT_PW = 240;
     // Right panel (TaskQueuePanel) — shorter, starts higher
-    private static final int QUEUE_PW = 140;
+    private static final int QUEUE_PW = 168;
 
     private BlockPos stationPos = BlockPos.ZERO;
     private int activeTab = 0;
@@ -90,7 +90,7 @@ public class WorkstationScreen extends MedievalScreen {
             for (TaskQueueDataPacket.QueueEntry qe : packet.entries()) {
                 entries.add(new TaskQueuePanel.Entry(
                         qe.index(), qe.category(), qe.itemOrRecipeId(), qe.quantity(),
-                        qe.blueprintId(), qe.summary()));
+                        qe.blueprintId(), qe.summary(), qe.insufficient(), qe.missingElements()));
             }
             taskQueuePanel.setEntries(entries);
             taskQueuePanel.setCurrents(toPanelCurrents(packet.currents()));
@@ -106,7 +106,7 @@ public class WorkstationScreen extends MedievalScreen {
             TaskQueueDataPacket.QueueEntry e = ct.entry();
             result.add(new TaskQueuePanel.CurrentInfo(
                     new TaskQueuePanel.Entry(e.index(), e.category(), e.itemOrRecipeId(),
-                            e.quantity(), e.blueprintId(), e.summary()),
+                            e.quantity(), e.blueprintId(), e.summary(), false, List.of()),
                     ct.stepIndex(), ct.totalSteps(),
                     ct.channelRemainingTicks(), ct.channelTotalTicks(),
                     ct.pending()));

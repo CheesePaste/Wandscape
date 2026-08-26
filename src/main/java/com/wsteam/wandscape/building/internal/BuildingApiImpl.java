@@ -573,6 +573,71 @@ public class BuildingApiImpl implements BuildingApi {
     }
 
     @Override
+    @Nullable
+    public WorkItem dequeueWorkEligible(UUID buildingId, Predicate<WorkItem> eligible) {
+        BuildingSavedData sd = getSavedData();
+        if (sd == null) return null;
+
+        BuildingState state = sd.getBuilding(buildingId);
+        if (state == null) return null;
+
+        // Shared queue claim: a built, operational shared building pulls the first
+        // task its owner accepts (e.g. the first element-affordable craft), leaving
+        // rejected ones (element-short crafts) in place for later. Mirrors
+        // dequeueWork's shared-queue routing.
+        if (state.hasEverCompleted() && !state.isShutdown()) {
+            Deque<WorkItem> shared = sharedQueueFor(sd, state);
+            if (shared != null && !shared.isEmpty()) {
+                WorkItem item = pollFirstEligible(shared, eligible);
+                if (item != null) {
+                    sd.setDirty();
+                    return rebindAnchor(item, state.getAnchor());
+                }
+            }
+        }
+
+        // Shutdown buildings: only the front repair task can be claimed.
+        if (state.isShutdown()) {
+            WorkItem first = state.getTaskQueue().peekFirst();
+            if (first == null || !"build:place_structure".equals(first.blueprintId())) return null;
+            if (eligible.test(first)) {
+                state.getTaskQueue().pollFirst();
+                sd.setDirty();
+                return first;
+            }
+            return null;
+        }
+
+        WorkItem item = pollFirstEligible(state.getTaskQueue(), eligible);
+        if (item != null) {
+            sd.setDirty();
+            if (!state.hasEverCompleted() && !state.isConstructionStarted()) {
+                state.setConstructionStarted(true);
+            }
+            if ("build:demolish_structure".equals(item.blueprintId())) {
+                unregisterState(state);
+            }
+        }
+        return item;
+    }
+
+    /** Remove and return the first queue item accepted by {@code eligible}; rejected items stay put. */
+    @Nullable
+    static WorkItem pollFirstEligible(Deque<WorkItem> queue, Predicate<WorkItem> eligible) {
+        java.util.List<WorkItem> list = new ArrayList<>(queue);
+        for (int i = 0; i < list.size(); i++) {
+            WorkItem item = list.get(i);
+            if (eligible.test(item)) {
+                list.remove(i);
+                queue.clear();
+                queue.addAll(list);
+                return item;
+            }
+        }
+        return null;
+    }
+
+    @Override
     public void enqueueWork(UUID buildingId, WorkItem work) {
         BuildingSavedData sd = getSavedData();
         if (sd == null) return;

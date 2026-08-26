@@ -43,12 +43,14 @@ public record TaskQueueDataPacket(
     /**
      * One entry in the task queue.
      *
-     * @param index          position in the FIFO queue (0 = current task)
-     * @param category       short category key: "decompose" / "synthesize" / "craft" / "brew" / "build" / "gather"
-     * @param itemOrRecipeId the item or recipe resource id (e.g. "minecraft:stone_bricks")
-     * @param quantity       number of units involved
-     * @param blueprintId    full blueprint id (for internal/debug use)
-     * @param summary        human-readable fallback label
+     * @param index           position in the FIFO queue (0 = current task)
+     * @param category        short category key: "decompose" / "synthesize" / "craft" / "brew" / "build" / "gather"
+     * @param itemOrRecipeId  the item or recipe resource id (e.g. "minecraft:stone_bricks")
+     * @param quantity        number of units involved
+     * @param blueprintId     full blueprint id (for internal/debug use)
+     * @param summary         human-readable fallback label
+     * @param insufficient    true when an element-costing recipe cannot afford its quantity with current elements
+     * @param missingElements element ids (lowercase, e.g. "wood") that are short — rendered as icons client-side
      */
     public record QueueEntry(
             int index,
@@ -56,8 +58,16 @@ public record TaskQueueDataPacket(
             String itemOrRecipeId,
             int quantity,
             String blueprintId,
-            String summary
-    ) {}
+            String summary,
+            boolean insufficient,
+            List<String> missingElements
+    ) {
+        /** Compact constructor defaulting the insufficient marker (legacy / non-production entries). */
+        public QueueEntry(int index, String category, String itemOrRecipeId, int quantity,
+                          String blueprintId, String summary) {
+            this(index, category, itemOrRecipeId, quantity, blueprintId, summary, false, List.of());
+        }
+    }
 
     /**
      * The building's currently executing (head) task.
@@ -116,6 +126,11 @@ public record TaskQueueDataPacket(
         buf.writeVarInt(entry.quantity);
         buf.writeUtf(entry.blueprintId);
         buf.writeUtf(entry.summary);
+        buf.writeBoolean(entry.insufficient);
+        buf.writeVarInt(entry.missingElements.size());
+        for (String el : entry.missingElements) {
+            buf.writeUtf(el);
+        }
     }
 
     static TaskQueueDataPacket read(RegistryFriendlyByteBuf buf) {
@@ -146,6 +161,12 @@ public record TaskQueueDataPacket(
         int quantity = buf.readVarInt();
         String blueprintId = buf.readUtf();
         String summary = buf.readUtf();
-        return new QueueEntry(index, category, itemOrRecipeId, quantity, blueprintId, summary);
+        boolean insufficient = buf.readBoolean();
+        int missingCount = buf.readVarInt();
+        List<String> missing = new ArrayList<>(missingCount);
+        for (int i = 0; i < missingCount; i++) {
+            missing.add(buf.readUtf());
+        }
+        return new QueueEntry(index, category, itemOrRecipeId, quantity, blueprintId, summary, insufficient, missing);
     }
 }

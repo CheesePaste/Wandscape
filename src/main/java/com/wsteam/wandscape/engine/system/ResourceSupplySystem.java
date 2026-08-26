@@ -18,6 +18,7 @@ import com.wsteam.wandscape.core.ecs.System;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.types.ResourceId;
 import com.wsteam.wandscape.core.types.ResourceStack;
+import com.wsteam.wandscape.engine.boundary.ProductionEligibility;
 import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.data.BuildingData;
 import com.wsteam.wandscape.shared.data.ElementType;
@@ -27,6 +28,9 @@ import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.shared.registry.WandscapeConstants;
 import com.wsteam.wandscape.task.engine.pool.GlobalTask;
 import com.wsteam.wandscape.task.runtime.TaskState;
+import com.wsteam.wandscape.warehouse.ColonyItemBank;
+
+import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
 /**
  * Periodically scans {@link TaskState#AWAITING_RESOURCES} tasks and
@@ -59,6 +63,12 @@ public class ResourceSupplySystem implements System {
     }
 
     private void scanStuckTasks(World world) {
+        scanAwaitingTasks(world);
+        scanProductionQueues(world);
+    }
+
+    /** 扫描 AWAITING_RESOURCES 任务（建材运输等非生产路径）并补资源。 */
+    private void scanAwaitingTasks(World world) {
         List<GlobalTask> waiting = world.taskPool.getByState(TaskState.AWAITING_RESOURCES);
         if (waiting.isEmpty()) return;
 
@@ -89,6 +99,48 @@ public class ResourceSupplySystem implements System {
                 if (available >= need.amount()) continue;
                 trySupplyResource(need.resource(), need.amount() - available, world);
             }
+        }
+    }
+
+    /**
+     * 扫描工作站/合成站/魔法工坊队列里元素不足的生产配方：聚合每种元素的缺口，
+     * 走 {@link #trySupplyResource}（先合成、回退节点采集）自动补齐。这些条目留在队列
+     * 原位（面板可见「缺元素」），补齐后由 BuildingTaskSource 的发布扫描自然挑中。
+     */
+    private void scanProductionQueues(World world) {
+        var api = getBuildingApi();
+        var server = ServerLifecycleHooks.getCurrentServer();
+        if (api == null || server == null) return;
+        ColonyItemBank bank = ColonyItemBank.get(server.overworld());
+        if (bank == null) return;
+
+        Map<ElementType, Long> deficits = new LinkedHashMap<>();
+        Set<String> seenGroups = new HashSet<>();
+        for (String category : List.of("workstation", "crafting_station", "magic_station")) {
+            for (UUID buildingId : api.getBuildingsByCategory(null, category)) {
+                BuildingData bd = api.getBuilding(buildingId);
+                if (bd == null) continue;
+                UUID colonyId = bd.getColonyId();
+                if (colonyId == null) continue;
+                // 共享队列按 (colony, typeId) 分组，每组只扫一次。
+                String groupKey = colonyId + "|" + bd.getBuildingTypeId();
+                if (!seenGroups.add(groupKey)) continue;
+
+                Map<ElementType, Long> available = bank.getElementSnapshot(colonyId);
+                for (WorkItem item : api.getQueue(buildingId)) {
+                    String bid = item.blueprintId();
+                    if (!ProductionEligibility.isElementCosting(bid)) continue;
+                    Map<ElementType, Long> required = ProductionEligibility.requiredElements(bid, item.params());
+                    for (ElementType el : ProductionEligibility.missingElements(required, available)) {
+                        long deficit = required.get(el) - available.getOrDefault(el, 0L);
+                        deficits.merge(el, Math.max(1, deficit), Long::sum);
+                    }
+                }
+            }
+        }
+
+        for (var e : deficits.entrySet()) {
+            trySupplyResource(new ResourceId(e.getKey().getId()), e.getValue().intValue(), world);
         }
     }
 

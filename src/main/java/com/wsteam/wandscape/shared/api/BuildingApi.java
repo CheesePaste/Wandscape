@@ -73,6 +73,16 @@ public interface BuildingApi {
     WorkItem dequeueWork(UUID buildingId);
 
     /**
+     * Dequeue the first WorkItem from the building's queue accepted by
+     * {@code eligible}, scanning top-to-bottom. Items rejected by the predicate
+     * (e.g. a craft task whose elements are short) stay in place so they remain
+     * visible and can be picked up once they become eligible. Returns null when
+     * every item is rejected or the queue is empty.
+     */
+    @Nullable
+    WorkItem dequeueWorkEligible(UUID buildingId, java.util.function.Predicate<WorkItem> eligible);
+
+    /**
      * Enqueue a WorkItem into the building's priority-ordered queue.
      * Higher-priority tasks run first; a new task joins the tail of its own
      * priority band and merges into an adjacent same-recipe production task at

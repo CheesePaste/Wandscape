@@ -32,7 +32,7 @@ public class MagicStationScreen extends MedievalScreen {
     private static final int PW = 400;
     private static final int PH = 220;
     private static final int LEFT_PW = 240;
-    private static final int QUEUE_PW = 140;
+    private static final int QUEUE_PW = 168;
     private static final int QUEUE_PH = PH - 28; // headerHeight (20) + padding (8)
     private BlockPos stationPos = BlockPos.ZERO;
     private List<SpellEntry> recipes = new ArrayList<>();
@@ -67,7 +67,7 @@ public class MagicStationScreen extends MedievalScreen {
             for (TaskQueueDataPacket.QueueEntry qe : packet.entries()) {
                 entries.add(new TaskQueuePanel.Entry(
                         qe.index(), qe.category(), qe.itemOrRecipeId(), qe.quantity(),
-                        qe.blueprintId(), qe.summary()));
+                        qe.blueprintId(), qe.summary(), qe.insufficient(), qe.missingElements()));
             }
             taskQueuePanel.setEntries(entries);
             taskQueuePanel.setCurrents(toPanelCurrents(packet.currents()));
@@ -83,7 +83,7 @@ public class MagicStationScreen extends MedievalScreen {
             TaskQueueDataPacket.QueueEntry e = ct.entry();
             result.add(new TaskQueuePanel.CurrentInfo(
                     new TaskQueuePanel.Entry(e.index(), e.category(), e.itemOrRecipeId(),
-                            e.quantity(), e.blueprintId(), e.summary()),
+                            e.quantity(), e.blueprintId(), e.summary(), false, List.of()),
                     ct.stepIndex(), ct.totalSteps(),
                     ct.channelRemainingTicks(), ct.channelTotalTicks(),
                     ct.pending()));
