@@ -106,15 +106,16 @@ public final class IronSpellsHelper {
         switch (cat) {
             case AOE -> {
                 targetMode = MagicDef.TargetMode.HOSTILE_NEAREST;
-                conditions = new SpellConditions(2, null, null, null);
+                // 敌数门控（群发 ≥ 阈值）由 CastBrain 按类别统一判定，这里不再设 per-spell 条件
+                conditions = SpellConditions.NONE;
             }
             case DEFENSE -> {
                 targetMode = MagicDef.TargetMode.SELF;
-                conditions = new SpellConditions(0, 0.8f, null, null);
+                conditions = new SpellConditions(0.8f, null, null);
             }
             case SUPPORT -> {
                 targetMode = MagicDef.TargetMode.ALLY_LOWEST_HP;
-                conditions = new SpellConditions(0, null, 0.8f, null);
+                conditions = new SpellConditions(null, 0.8f, null);
             }
             case SINGLE_TARGET -> {
                 targetMode = MagicDef.TargetMode.HOSTILE_NEAREST;

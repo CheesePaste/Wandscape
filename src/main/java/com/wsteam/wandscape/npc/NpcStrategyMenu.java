@@ -2,7 +2,6 @@ package com.wsteam.wandscape.npc;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 
 import javax.annotation.Nullable;
 
@@ -30,7 +29,7 @@ import net.minecraft.world.item.ItemStack;
  * 每次槽变更通过 {@link #slotChanged} 把 12 槽状态重建成扁平装备态写回 NPC 的
  * {@code EquippedMagicComponent}（服务端权威，槽内卷轴即装备物，取出 = 拿回卷轴）。
  *
- * <p>槽仅接受魔法卷轴（{@link SpellSlot#mayPlace} 校验分类/去重/每类上限）；
+ * <p>槽仅接受魔法卷轴（{@link SpellSlot#mayPlace} 校验可装备/去重/每类上限，不做分类匹配）；
  * 预设由客户端按钮经 {@code NpcStrategyPacket} 修改，本菜单不处理。
  */
 public class NpcStrategyMenu extends AbstractContainerMenu {
@@ -187,9 +186,10 @@ public class NpcStrategyMenu extends AbstractContainerMenu {
                 magicId = SpellItem.getMagicId(stack);
                 if (magicId == null) return false;
                 MagicDef def = SpellbookLoader.getSpec(magicId);
-                if (def == null || def.category() == MagicDef.Category.ALTAR
-                        || def.category() == MagicDef.Category.SPECIAL) return false;
-                if (!def.category().name().toLowerCase(Locale.ROOT).equals(category)) return false;
+                if (def == null) return false;
+                if (def.category() == MagicDef.Category.ALTAR) return false; // revive：祭坛专属
+                if ("teleport".equals(def.id())) return false;               // 传送：导航回退专用，拒绝装备
+                // 其余（含 SPECIAL 的 heal 与常规四类）自由放置，不校验分类匹配
             } else if (com.wsteam.wandscape.compat.ironspellbooks.IronSpellsCompat.isLoaded()
                     && com.wsteam.wandscape.compat.ironspellbooks.IronSpellsHelper.isScroll(stack)) {
                 magicId = com.wsteam.wandscape.compat.ironspellbooks.IronSpellsHelper.getSpellId(stack);

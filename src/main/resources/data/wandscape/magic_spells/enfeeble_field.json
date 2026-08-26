@@ -6,9 +6,6 @@
   "cast_time": 140,
   "range": 20,
   "target_mode": "hostile_nearest",
-  "conditions": {
-    "min_enemies": 2
-  },
   "effect": {
     "circle_id": "enfeeble_field",
     "color": "#7c3aed"

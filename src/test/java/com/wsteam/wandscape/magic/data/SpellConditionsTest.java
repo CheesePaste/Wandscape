@@ -21,12 +21,10 @@ class SpellConditionsTest {
     @Test
     void parsesAllFields() {
         SpellConditions c = cond("{"
-                + "\"min_enemies\": 3,"
                 + "\"self_hp_max\": 0.6,"
                 + "\"ally_hp_max\": 0.5,"
                 + "\"no_effect\": \"minecraft:absorption\""
                 + "}");
-        assertEquals(3, c.minEnemies());
         assertEquals(0.6f, c.selfHpMax(), 1e-6f);
         assertEquals(0.5f, c.allyHpMax(), 1e-6f);
         assertEquals("minecraft:absorption", c.noEffect());
@@ -37,27 +35,14 @@ class SpellConditionsTest {
         assertSame(SpellConditions.NONE, SpellConditions.fromJson(null));
         assertSame(SpellConditions.NONE, SpellConditions.fromJson(JsonParser.parseString("null")));
         SpellConditions empty = cond("{}");
-        assertEquals(0, empty.minEnemies());
         assertNull(empty.selfHpMax());
         assertNull(empty.allyHpMax());
         assertNull(empty.noEffect());
     }
 
     @Test
-    void clampsNegativeMinEnemies() {
-        assertEquals(0, cond("{\"min_enemies\": -5}").minEnemies());
-    }
-
-    @Test
     void noneAlwaysMatches() {
         assertTrue(SpellConditions.NONE.matches(new WorldSnapshot(0, 1f, 1f, Set.of())));
-    }
-
-    @Test
-    void minEnemiesGate() {
-        SpellConditions c = cond("{\"min_enemies\": 3}");
-        assertFalse(c.matches(new WorldSnapshot(2, 0.5f, 1f, Set.of())));
-        assertTrue(c.matches(new WorldSnapshot(3, 0.5f, 1f, Set.of())));
     }
 
     @Test
@@ -83,17 +68,16 @@ class SpellConditionsTest {
 
     @Test
     void allConditionsTogether() {
-        SpellConditions c = cond("{\"min_enemies\": 2, \"self_hp_max\": 0.8, \"no_effect\": \"minecraft:absorption\"}");
+        SpellConditions c = cond("{\"self_hp_max\": 0.8, \"no_effect\": \"minecraft:absorption\"}");
         assertTrue(c.matches(new WorldSnapshot(2, 0.5f, 1f, Set.of("minecraft:speed"))));
-        assertFalse(c.matches(new WorldSnapshot(1, 0.5f, 1f, Set.of("minecraft:speed"))), "敌数不足");
         assertFalse(c.matches(new WorldSnapshot(2, 0.9f, 1f, Set.of("minecraft:speed"))), "自身血过高");
         assertFalse(c.matches(new WorldSnapshot(2, 0.5f, 1f, Set.of("minecraft:absorption"))), "已有护盾");
     }
 
     @Test
     void nullSnapshotFallsBackToEmpty() {
-        SpellConditions c = cond("{\"min_enemies\": 1}");
-        assertFalse(c.matches(null), "空快照敌数=0");
+        SpellConditions c = cond("{\"self_hp_max\": 0.8}");
+        assertFalse(c.matches(null), "空快照满血(1.0) 不满足 self_hp_max");
         assertTrue(SpellConditions.NONE.matches(null));
     }
 }

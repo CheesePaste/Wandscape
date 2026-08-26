@@ -34,6 +34,11 @@ public final class WandscapeConstants {
 
     public static final int NPC_WALK_THRESHOLD = 64;
 
+    /** 施法决策：单体攻击在敌数 ≤ 该值时优先放（敌多时交给群发）。 */
+    public static final int CAST_SINGLE_TARGET_MAX_ENEMIES = 3;
+    /** 施法决策：群体攻击在敌数 ≥ 该值时放（敌少时先用单发）。 */
+    public static final int CAST_AOE_MIN_ENEMIES = 3;
+
     /** 酒馆「招募 NPC」自第二次起每种元素的价格。 */
     public static final long TAVERN_RECRUIT_COST_PER_ELEMENT = 10_000;
 

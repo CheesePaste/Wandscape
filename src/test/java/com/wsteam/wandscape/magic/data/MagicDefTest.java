@@ -163,8 +163,7 @@ class MagicDefTest {
     @Test
     void parsesConditions() {
         MagicDef def = MagicDef.fromJson("aoe", JsonParser.parseString(
-                "{\"conditions\": {\"min_enemies\": 3, \"self_hp_max\": 0.6, \"no_effect\": \"minecraft:absorption\"}}"));
-        assertEquals(3, def.conditions().minEnemies());
+                "{\"conditions\": {\"self_hp_max\": 0.6, \"no_effect\": \"minecraft:absorption\"}}"));
         assertEquals(0.6f, def.conditions().selfHpMax(), 1e-6f);
         assertEquals("minecraft:absorption", def.conditions().noEffect());
     }

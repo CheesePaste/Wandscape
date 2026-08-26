@@ -93,11 +93,11 @@ L2 兜底层
 
 | 分类 | 覆盖 | 典型魔法 | 决策要点 |
 |---|---|---|---|
-| `single_target` 单体攻击 | beam、desperation(背水一战)、火球、闪电 | 单体高伤/持续伤 | 无条件，有敌即可 |
-| `aoe` 群体攻击 | meteor(陨石)、enfeeble_field(虚弱力场)、爆炸、火焰风暴 | 范围伤害 | **敌数 ≥ 1 才施放**（防浪费蓝）；meteor 连落：总量恒 6 颗、按 1/6 持续时长逐颗发射，每颗发射时动态重瞄当时最近目标 |
+| `single_target` 单体攻击 | beam、desperation(背水一战)、火球、闪电 | 单体高伤/持续伤 | 敌数 ≤ 3（敌少用单发） |
+| `aoe` 群体攻击 | meteor(陨石)、enfeeble_field(虚弱力场)、爆炸、火焰风暴 | 范围伤害 | **敌数 ≥ 3 才施放**（防浪费蓝，敌人多才值得范围伤）；meteor 连落：总量恒 6 颗、按 1/6 持续时长逐颗发射，每颗发射时动态重瞄当时最近目标 |
 | `defense` 防御 | petrification(石化减伤)、conversion(魅惑)、护盾、结界 | 保命/免伤 | 自身血量阈值 + **无同类状态**（防叠加）；与治疗的血线竞争靠预设排序+阈值错开 |
 | `support` 支援 | fortification(战争赐福)、增益（魔力强化/急速） | 回血/预铺 buff | 增益预判式（开战前上），靠 target_mode 区分 |
-| `special` 特殊 | teleport(传送)、heal(治疗) | 系统固有自动触发 | 所有 NPC 天生固有、不进装备槽/决策表；heal 走 L0 紧急奶 + 脱战自奶，teleport 走导航回退/逃生传送 |
+| `special` 特殊 | teleport(传送)、heal(治疗) | 系统固有自动触发 | 所有 NPC 天生固有；heal 可装备进装备槽并经 L1 决策施放，另有 L0 紧急奶 + 脱战自奶兜底；teleport 不进装备/决策表，仅导航回退/逃生传送 |
 | `altar` 祭坛 | revive(复活) | 祭坛专属仪式 | `altar_only`，仅祭坛可施放，不进 NPC 自动决策 |
 
 `target_mode` 决定"何时算有有效目标"，与 `category` 解耦：
@@ -113,16 +113,17 @@ L2 兜底层
 
 ### 5.2 `conditions` — 内置触发条件（✅ 已实现，数据驱动，非玩家脚本）
 
-每个魔法可配自己的触发阈值，`CastBrain` 对照世界快照判断。**全部可选**，缺省 = 无条件：
+每个魔法可配自己的触发阈值，`CastBrain` 对照世界快照判断。**全部可选**，缺省 = 无条件。**只承载血线与效果不重放**；敌数门控已从按魔法配置中移除，改由 `CastBrain` 按类别统一判定（见下方「敌数门控」）：
 
 ```jsonc
 "conditions": {
-  "min_enemies": 1,                     // AOE：范围敌人数 ≥ 1 才施放（meteor 实际配 3：总量恒 6 颗、按 1/6 持续时长逐颗发射、发射时动态重瞄最近目标）
   "self_hp_max": 0.6,                   // DEFENSE：自身血量 < 60% 才开盾
   "ally_hp_max": 0.7,                   // SUPPORT 治疗：友方最低血量 < 70% 才奶（heal 实际配 0.7）
   "no_effect": "minecraft:absorption"   // 自身无此状态才施放（防盾/buff 叠加）
 }
 ```
+
+**敌数门控（分类规则，非 per-spell）**：单体攻击在敌数 ≤ 3 时可施放，群体攻击在敌数 ≥ 3 时可施放（阈值见 `WandscapeConstants.CAST_SINGLE_TARGET_MAX_ENEMIES` / `CAST_AOE_MIN_ENEMIES`）；DEFENSE/SUPPORT/SPECIAL 不设敌数门槛。原各魔法 JSON 里的 `min_enemies` 已移除。
 
 **防御 vs 治疗的血线竞争**靠阈值错开解决，不靠运行时互斥：护盾配 `self_hp_max: 0.6`（血量偏高时保命），治疗配 `ally_hp_max: 0.7`（血线偏低才奶）——两者天然不会同时抢。heal 的 `ally_hp_max` 只管 **队友**（快照 `allyLowestHpRatio` 排除施法者自己），**自己或治疗半径（6 格）内友方掉血走 L0 硬性覆盖**（见第四节）——L0 现也管濒死队友，L1 的 `ally_hp_max` 只是正常线，不依赖它保命。
 
@@ -132,7 +133,7 @@ CastBrain 由 `select(known, castable, hasTarget)` 扩展为吃世界快照：
 
 ```java
 record WorldSnapshot(
-    int enemyCount,           // 目标周围敌人数量（min_enemies 用）
+    int enemyCount,           // 目标周围敌人数（类别敌数门控用：单发 ≤ 3 / 群发 ≥ 3）
     float selfHpRatio,        // 自身血量比例 [0,1]（self_hp_max 用）
     float allyLowestHpRatio,  // 友方最低血量比例 [0,1]；无友方 = 1（ally_hp_max 用）
     Set<String> activeEffects // 自身已有状态 id（no_effect 用）
@@ -229,7 +230,7 @@ npc/internal/ReviveHandler.java     ✅ 复活效果：spawnFromRecordAt（指�
 
 ### 9.1 条件决策（已实现）
 
-- **`SpellConditions`**（`magic/data/`）：`MagicDef.conditions` JSON → record（min_enemies / self_hp_max / ally_hp_max / no_effect），`matches(WorldSnapshot)` 纯逻辑判定，缺省 = 无条件。
+- **`SpellConditions`**（`magic/data/`）：`MagicDef.conditions` JSON → record（self_hp_max / ally_hp_max / no_effect），`matches(WorldSnapshot)` 纯逻辑判定，缺省 = 无条件。敌数门控（单 ≤3 / 群 ≥3）由 `CastBrain` 按类别判定，不进 per-spell 条件。
 - **`WorldSnapshot`**（`magic/data/`）：决策输入快照（敌数 / 自身血比例 / 友方最低血比例 / 状态 id 集合），由守卫/自防御战斗循环每轮构造（`GuardCombat.buildSnapshot`：半径 16 内敌数、自身血比、半径内其他友方 NPC/村民最低血比、`unwrapKey` 取状态 id）。
 - **`CastBrain.select(known, castable, snapshot)`**：目标规则改由快照驱动（HOSTILE 需敌数>0、ALLY 需有受伤友方、DEAD_ALLY 祭坛专属永不自选），并追加 conditions 门控。
 
@@ -413,12 +414,12 @@ P1/P2 玩家无感知（内部重构），P3 起见 UI。每个阶段完成即�
 
 ## 二十二、特殊魔法与初始装备（2026-08-26）
 
-**动机**：heal 与 teleport 是系统固有的保命/导航魔法，不该占装备槽、也不该进 L1 战斗决策——它们只在特殊情形（L0 紧急奶 / 脱战自奶 / 导航回退传送）由系统触发。同时殖民地初始法师（3 名）应开局就带 beam+meteor（受训法师），酒馆招募的法师是普通人，不该带起始战斗魔法。
+**动机**：heal 与 teleport 是系统固有的保命/导航魔法。heal 额外可装备进装备槽并进 L1 决策（仍有 L0 紧急奶 / 脱战自奶兜底）；teleport 保持系统固有、不占装备槽、不进 L1 战斗决策——只在导航回退 / 逃生传送由系统触发。同时殖民地初始法师（3 名）应开局就带 beam+meteor（受训法师），酒馆招募的法师是普通人，不该带起始战斗魔法。
 
-- **SPECIAL 分类**（`MagicDef.Category.SPECIAL`）：heal/teleport 迁入，`MagicDef.SPECIAL_SPELLS = [teleport, heal]`。所有 NPC 天生固有（`WandscapeNpc.knowsSpecialSpell`），不进 `EquippedMagicComponent`、不进 L1 `CastBrain.select`（防御性跳过）。
+- **SPECIAL 分类**（`MagicDef.Category.SPECIAL`）：heal/teleport 迁入，`MagicDef.SPECIAL_SPELLS = [teleport, heal]`。所有 NPC 天生固有（`WandscapeNpc.knowsSpecialSpell`）；heal 可装备进装备槽并经 `CastBrain` 选中施放，teleport 不进装备、不进 L1。
 - **ALTAR 分类**（原 UTILITY 更名）：revive 独占，`altar_only` 祭坛专属，不进装备/决策表。
 - **默认装备**：`EquippedMagicComponent.DEFAULT_EQUIP = [beam, meteor]`（殖民地初始 3 名法师）；酒馆招募法师在 `TavernRecruitPacket` 生成后清空装备槽（无起始战斗魔法，仅特殊区 heal/teleport 系统固有）。
-- **装备排除统一**：`SpellbookLoader.equippableCategoryOf` 对 SPECIAL/ALTAR 返回 null（不可装备）；卷轴槽、魔法目录同样排除 SPECIAL/ALTAR。创造栏含 heal/teleport 卷轴（仅排除 ALTAR revive）；卷轴创造施法排除 ALTAR 与 teleport（heal 可施放）。
+- **装备排除统一**：`SpellbookLoader.equippableCategoryOf` 对 ALTAR(revive) 与 teleport 返回 null（不可装备）；heal 及常规四类可装备——无分类匹配时 convention 归类，heal 默认归 support 桶（施法仍看 `MagicDef.category()`，桶仅存储）。卷轴槽、魔法目录同样排除 ALTAR 与 teleport；创造栏含 heal/teleport 卷轴（仅排除 ALTAR revive）；卷轴创造施法排除 ALTAR 与 teleport（heal 可施放）。
 - **heal/teleport 卷轴保留**：`scroll_heal.json` + `scroll_teleport.json`（均 min_colony_level 1，魔法工坊合成、创造栏可获得）；teleport 卷轴创造模式不可施放（导航回退魔法无原地施法语义）。
 - **策略 UI「特殊」面板**：`NpcStrategyScreen` 右侧新增只读「特殊」面板，列出 teleport/heal 并注明「默认使用，不可更换」。
 

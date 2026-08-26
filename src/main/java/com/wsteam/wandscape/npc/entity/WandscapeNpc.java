@@ -1218,10 +1218,9 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
             // SPECIAL/ALTAR 魔法（heal/teleport/revive）为系统固有，不进装备槽。
             if (!spellbookLoaded && equippedMagic.isEmpty()) {
                 for (String defaultSpell : EquippedMagicComponent.DEFAULT_EQUIP) {
-                    MagicDef def = SpellbookLoader.getSpec(defaultSpell);
-                    if (def != null && def.category() != MagicDef.Category.ALTAR
-                            && def.category() != MagicDef.Category.SPECIAL) {
-                        equippedMagic.equip(def.category().name().toLowerCase(Locale.ROOT), defaultSpell);
+                    String cat = SpellbookLoader.equippableCategoryOf(defaultSpell);
+                    if (cat != null) {
+                        equippedMagic.equip(cat, defaultSpell);
                     }
                 }
             }
