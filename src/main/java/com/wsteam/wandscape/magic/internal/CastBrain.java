@@ -11,6 +11,7 @@ import com.wsteam.wandscape.core.component.CastStrategyComponent;
 import com.wsteam.wandscape.core.component.EquippedMagicComponent;
 import com.wsteam.wandscape.magic.data.MagicDef;
 import com.wsteam.wandscape.magic.data.WorldSnapshot;
+import com.wsteam.wandscape.shared.registry.WandscapeConstants;
 
 /**
  * 统一施法决策脑：给定「已知魔法 + 可施放判定 + 世界快照」，按策略解析出的优先级顺序选第一个
@@ -20,7 +21,8 @@ import com.wsteam.wandscape.magic.data.WorldSnapshot;
  * 由调用方（守卫/自防御战斗循环）在调用前处理。已知魔法来自 NPC 的
  * {@code EquippedMagicComponent}（已装备载荷，分 4 类、每类 ≤3，桶内=类内优先级）
  * 与玩家策略（{@link #resolvePriority}），替代硬编码 {@code [beam]}。SPECIAL 魔法
- * （teleport/heal）与 ALTAR 魔法（revive）不在装备载荷中——导航回退/祭坛/紧急奶/脱战自奶属系统固有，由 L0/独立路径处理。
+ * 与玩家策略（{@link #resolvePriority}），替代硬编码 {@code [beam]}。SPECIAL 的 heal 经装备入列后
+ * 可进 L1 自动决策；teleport（导航回退）与 ALTAR（revive，祭坛）仍在装备边界被拒、不经此决策。
  */
 public final class CastBrain {
 
@@ -137,9 +139,9 @@ public final class CastBrain {
      * 无则 null。调用方拿到结果后自行执行（门控在 {@code MagicState.tryCast} 原子复验，
      * 此处只做选择、不扣资源）。
      *
-     * <p>{@code altarOnly} 魔法（如复活）只允许祭坛施放，NPC 直接施法永不选中；SPECIAL 魔法
-     * （heal/teleport）由 L0/独立路径（紧急奶/脱战自奶/导航回退）触发，同样不进自动决策表——
-     * 防御性保证其不会进守卫/自防御的 L1 优先级扫描。
+     * <p>{@code altarOnly} 魔法（如复活）只允许祭坛施放，NPC 直接施法永不选中。SPECIAL 的 heal 经
+     * 装备进入优先级列表后允许被选中（L0 紧急奶/脱战自奶仍走独立硬性路径兜底）；teleport 在装备
+     * 边界被拒，不会出现在这里。
      *
      * @param castable  MagicDef → 是否满足施法门控（互斥锁 + 该魔法 CD + 蓝够）
      * @param snapshot  世界快照（敌数/自血/友方最低血/状态），驱动目标规则与 {@code conditions}
@@ -149,13 +151,22 @@ public final class CastBrain {
         WorldSnapshot s = snapshot != null ? snapshot : WorldSnapshot.EMPTY;
         for (MagicDef def : known) {
             if (def.altarOnly()) continue;
-            if (def.category() == MagicDef.Category.SPECIAL) continue;
             if (!castable.test(def)) continue;
             if (!targetAvailable(def, s)) continue;
+            if (!enemyCountGate(def, s)) continue;
             if (!def.conditions().matches(s)) continue;
             return def;
         }
         return null;
+    }
+
+    /** 敌数门控（docs/spell-casting.md）：单体攻击敌数 ≤ 阈值，群体攻击敌数 ≥ 阈值；其余类别不设敌数门槛。 */
+    static boolean enemyCountGate(MagicDef def, WorldSnapshot s) {
+        return switch (def.category()) {
+            case SINGLE_TARGET -> s.enemyCount() <= WandscapeConstants.CAST_SINGLE_TARGET_MAX_ENEMIES;
+            case AOE -> s.enemyCount() >= WandscapeConstants.CAST_AOE_MIN_ENEMIES;
+            default -> true;
+        };
     }
 
     /** 快照下目标规则是否命中（SELF/NONE 恒真，DEAD_ALLY 走祭坛永不自选）。 */

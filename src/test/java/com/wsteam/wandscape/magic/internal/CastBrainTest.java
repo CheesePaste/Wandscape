@@ -27,11 +27,6 @@ class CastBrainTest {
                 "{\"id\": \"" + id + "\", \"category\": \"" + category + "\", \"target_mode\": \"" + targetMode + "\"}"));
     }
 
-    private static MagicDef spellWithConditions(String id, String conditionsJson) {
-        return MagicDef.fromJson(id, JsonParser.parseString(
-                "{\"id\": \"" + id + "\", \"target_mode\": \"hostile_nearest\", \"conditions\": " + conditionsJson + "}"));
-    }
-
     private static WorldSnapshot snap(int enemies) {
         return new WorldSnapshot(enemies, 1f, 1f, Set.of());
     }
@@ -108,32 +103,44 @@ class CastBrainTest {
     }
 
     @Test
-    void skipsSpecialSpells() {
+    void specialHealSelectableWhenAllyInjured() {
         MagicDef beam = spell("beam", "hostile_nearest");
         MagicDef heal = spell("heal", "special", "ally_lowest_hp");
         MagicDef chosen = CastBrain.select(List.of(beam, heal), def -> true, snap(1));
-        assertEquals("beam", chosen.id(), "SPECIAL 魔法应被 NPC 自动施法跳过（走 L0/独立路径）");
+        assertEquals("beam", chosen.id(), "敌数=1 时 beam 占优（列表序）");
+        // SPECIAL 锁已移除：heal 装备后允许被自动施法选中（有受伤友方才奶，仍看目标规则）
+        assertEquals("heal", CastBrain.select(List.of(heal), def -> true,
+                new WorldSnapshot(0, 1f, 0.5f, Set.of())).id(),
+                "SPECIAL(heal) 可被自动施法选中");
         assertNull(CastBrain.select(List.of(heal), def -> true,
-                new WorldSnapshot(0, 1f, 0.5f, Set.of())),
-                "只有 SPECIAL 魔法时不施放（治疗由 L0 紧急奶/脱战自奶触发）");
+                new WorldSnapshot(0, 1f, 1f, Set.of())),
+                "无受伤友方仍不奶");
     }
 
     // ── select：conditions 门控 ──
 
     @Test
-    void conditionsGateBlocksUntilMet() {
-        MagicDef aoe = spellWithConditions("explosion", "{\"min_enemies\": 3}");
-        assertNull(CastBrain.select(List.of(aoe), def -> true, snap(2)), "敌数不足不施放 AOE");
-        assertEquals("explosion", CastBrain.select(List.of(aoe), def -> true, snap(3)).id(),
-                "敌数达标才施放");
+    void enemyCountGateSingleMax3AoeMin3() {
+        MagicDef single = spell("beam", "single_target", "hostile_nearest");
+        MagicDef aoe = spell("meteor_", "aoe", "hostile_nearest");
+        // 单发：敌数 ≤ 3 可放；> 3 不选（改等群发）
+        assertEquals("beam", CastBrain.select(List.of(single), def -> true, snap(3)).id(), "单发敌数=3 可放");
+        assertNull(CastBrain.select(List.of(single), def -> true, snap(4)), "单发敌数=4 不选");
+        // 群发：敌数 ≥ 3 可放；< 3 不选
+        assertNull(CastBrain.select(List.of(aoe), def -> true, snap(2)), "群发敌数=2 不选");
+        assertEquals("meteor_", CastBrain.select(List.of(aoe), def -> true, snap(3)).id(), "群发敌数=3 可放");
     }
 
     @Test
-    void conditionsGateFallsBackToNextSpell() {
-        MagicDef aoe = spellWithConditions("explosion", "{\"min_enemies\": 3}");
-        MagicDef beam = spell("beam", "hostile_nearest");
-        MagicDef chosen = CastBrain.select(List.of(aoe, beam), def -> true, snap(2));
-        assertEquals("beam", chosen.id(), "AOE 条件不满足应回落单体");
+    void enemyCountGateFallsBackToNextSpell() {
+        MagicDef single = spell("beam", "single_target", "hostile_nearest");
+        MagicDef aoe = spell("meteor_", "aoe", "hostile_nearest");
+        // 敌数=4：单发被拦(>3)，回落到群发
+        assertEquals("meteor_", CastBrain.select(List.of(single, aoe), def -> true, snap(4)).id(),
+                "敌数=4 单发被拦(>3)，回落到群发");
+        // 敌数=2：群发被拦(<3)，回落到单发
+        assertEquals("beam", CastBrain.select(List.of(aoe, single), def -> true, snap(2)).id(),
+                "敌数=2 群发被拦(<3)，回落到单发");
     }
 
     // ── requiresTarget ──

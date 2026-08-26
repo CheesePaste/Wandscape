@@ -5,6 +5,7 @@ import java.util.Map;
 
 import javax.annotation.Nullable;
 
+import com.wsteam.wandscape.core.component.EquippedMagicComponent;
 import com.wsteam.wandscape.dataconfig.internal.WandscapeDataLoader;
 import com.wsteam.wandscape.magic.data.MagicDef;
 import com.wsteam.wandscape.shared.registry.WandscapeDataRegistry;
@@ -47,16 +48,19 @@ public class SpellbookLoader {
     }
 
     /**
-     * 该魔法 id 的可装备分类名（小写）；不可装备返回 null。SPECIAL（teleport/heal）与
-     * ALTAR（revive）为祭坛专属、未知 id 无定义——三者均不进
-     * {@code EquippedMagicComponent}。服务端权威装桶校验统一走这里，避免各调用方重复判。
+     * 该魔法 id 的可装备分类名（小写）；不可装备返回 null。ALTAR（revive）为祭坛专属、
+     * teleport 为导航回退、未知 id 无定义——三者均不进 {@code EquippedMagicComponent}。
+     * 其余（含 SPECIAL 的 heal）可装备；无分类匹配时常规四类用自身小写类名作存储桶，
+     * special（heal）默认归 support 桶（施法仍看 {@code MagicDef.category()}，桶仅存储）。
+     * 服务端权威装桶校验统一走这里，避免各调用方重复判。
      */
     @Nullable
     public static String equippableCategoryOf(String magicId) {
         MagicDef def = getSpec(magicId);
         if (def == null) return null;
-        MagicDef.Category c = def.category();
-        if (c == MagicDef.Category.ALTAR || c == MagicDef.Category.SPECIAL) return null;
-        return c.name().toLowerCase(Locale.ROOT);
+        if (def.category() == MagicDef.Category.ALTAR) return null;
+        if ("teleport".equals(def.id())) return null;
+        String cat = def.category().name().toLowerCase(Locale.ROOT);
+        return EquippedMagicComponent.isCategory(cat) ? cat : "support";
     }
 }

@@ -39,7 +39,7 @@
 | `Position` | GridPos |
 | `SuspensionContext` | pkg/stepIndex/suspendedAtTick |
 | `TaskExecutor` | 持有 npcQueue、globalTaskId/currentSequence/stepIndex/taskParams/state、pendingFuture（导航 future 不推进 stepIndex）、currentOpTarget/currentOpKind/stance |
-| `EquipmentComponent` | `BASE_VALUES`：MAX_HP 40 / MOVE_SPEED 0.3 / SPELL_POWER 1 / WORK_SPEED 1 / SPELL_SPEED 1 / ARMOR 0；`equip/unequip/equipDefaultWand`；`recalculateAll` **仅加法** `effective = base + sum(amount)` |
+| `EquipmentComponent` | `BASE_VALUES`：MAX_HP 40 / MOVE_SPEED 0.3 / SPELL_POWER 1 / WORK_SPEED 1 / SPELL_SPEED 1 / ARMOR 0；`equip/unequip/equipDefaultWand`；`recalculateAll` 按 vanilla 顺序 `effective = (base + Σ ADDITION) × (1 + Σ MULTIPLY_BASE)`（`ModifierOperation` 两枚举；铁魔法百分比加成走乘区，无乘区时退化为纯加法） |
 
 ## boundary/（8 个接口）
 

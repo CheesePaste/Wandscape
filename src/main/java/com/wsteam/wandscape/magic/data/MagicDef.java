@@ -44,8 +44,8 @@ public record MagicDef(
     }
 
     /**
-     * 特殊魔法 id：所有 NPC 天生固有、不进装备槽、不进 L1 策略决策，仅在特殊情形由系统触发
-     * （heal 走 L0 紧急奶 / 脱战自奶，teleport 走导航回退 / 逃生传送）。顺序即策略 UI「特殊」
+     * 系统固有特殊魔法：所有 NPC 天生固有。heal 额外可经装备槽进入 L1 自动决策（仍有 L0 紧急奶 /
+     * 脱战自奶兜底），teleport 保持不进装备、仅导航回退 / 逃生传送触发。顺序即策略 UI「特殊」
      * 面板的展示顺序。
      */
     public static final List<String> SPECIAL_SPELLS = List.of("teleport", "heal");
@@ -53,8 +53,8 @@ public record MagicDef(
     /**
      * 施法分类：决定策略预设的默认排序与 UI 分组，不承载触发逻辑
      * （触发逻辑 = target_mode + conditions，见 docs/spell-casting.md）。
-     * BUFF 与 HEAL 合并为 SUPPORT；SPECIAL（teleport/heal）为系统固有特殊魔法，
-     * ALTAR（revive）为祭坛专属——两者均不可装备、不进自动决策表。
+     * BUFF 与 HEAL 合并为 SUPPORT；SPECIAL（teleport/heal）为系统固有特殊魔法，heal 可装备，
+     * ALTAR（revive）为祭坛专属、不可装备，teleport/ALTAR 不进自动决策表。
      */
     public enum Category { SINGLE_TARGET, AOE, DEFENSE, SUPPORT, ALTAR, SPECIAL }
 

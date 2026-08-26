@@ -154,21 +154,31 @@ public class EquipmentComponent {
     /**
      * Recalculate all effective attributes from scratch.
      * <p>
-     * All equipment modifiers are additive: {@code effective = base + sum(modifiers)}.
+     * Effective value follows vanilla attribute order:
+     * {@code effective = (base + Σ ADDITION) × (1 + Σ MULTIPLY_BASE)}.
+     * With no MULTIPLY_BASE modifiers this reduces to {@code base + Σ add},
+     * so existing additive-only setups are unaffected.
      */
     private void recalculateAll() {
         effectiveAttributes.clear();
 
         EnumMap<AttributeType, Float> sumAdd = new EnumMap<>(AttributeType.class);
+        EnumMap<AttributeType, Float> sumMultBase = new EnumMap<>(AttributeType.class);
         for (List<AttributeModifier> mods : equippedModifiers.values()) {
             for (AttributeModifier mod : mods) {
-                sumAdd.merge(mod.type(), mod.amount(), Float::sum);
+                if (mod.operation() == ModifierOperation.MULTIPLY_BASE) {
+                    sumMultBase.merge(mod.type(), mod.amount(), Float::sum);
+                } else {
+                    sumAdd.merge(mod.type(), mod.amount(), Float::sum);
+                }
             }
         }
 
         for (AttributeType type : AttributeType.values()) {
             float base = baseOverrides.getOrDefault(type, BASE_VALUES.getOrDefault(type, 0f));
-            effectiveAttributes.put(type, base + sumAdd.getOrDefault(type, 0f));
+            float value = (base + sumAdd.getOrDefault(type, 0f))
+                    * (1f + sumMultBase.getOrDefault(type, 0f));
+            effectiveAttributes.put(type, value);
         }
     }
 }

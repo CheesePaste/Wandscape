@@ -35,7 +35,7 @@ import com.wsteam.wandscape.shared.log.Log;
 public final class SeedWarehouseCommand {
 
     private static final String TAG = "SeedWarehouseCommand";
-    private static final int DEBUG_COUNT = 9999;
+    private static final int DEBUG_COUNT = 1000000;
 
     private SeedWarehouseCommand() {}
 

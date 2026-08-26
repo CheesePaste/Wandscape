@@ -6,9 +6,6 @@
   "cast_time": 200,
   "range": 16,
   "target_mode": "hostile_nearest",
-  "conditions": {
-    "min_enemies": 3
-  },
   "effect": {
     "circle_id": "conversion",
     "color": "#f472b6"

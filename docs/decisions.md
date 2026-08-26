@@ -2,6 +2,39 @@
 
 本文件记录偏离直觉的设计选择及其原因，供后续开发快速理解「为什么这么做」。
 
+## 2026-08-26：铁魔法装备属性桥接到 NPC 属性系统
+
+**需求**（用户指令）：铁魔法装备穿到 NPC 身上后其独有属性加成不生效（流浪法师兜帽 +25 最大法力、+5% 法术强度、速度靴 +25% 移速）。要求这些对到 Wandscape 的魔力值/法术强度/移动速度；各学派法术增强与施法时速度提升等铁魔法特色属性**不兼容**。
+
+**根因**：NPC 的 4 盔甲格走独立 `armorInventory`、不挂 vanilla 装备槽，`ExtendedArmorItem` 写在 `ItemAttributeModifiers` 里的加成从不被 vanilla 属性系统结算；`syncArmorAttributes` 只把 `Attributes.ARMOR` 抄进 ECS，其余属性全丢。
+
+**决策**：
+- **core 增加百分比乘区 `MULTIPLY_BASE`**：`ModifierOperation` 变为 `{ADDITION, MULTIPLY_BASE}`；`EquipmentComponent.recalculateAll` 按 vanilla 顺序 `effective = (base + ΣADDITION) × (1 + ΣMULTIPLY_BASE)`。**不用一次性折成加法**——NPC base 会被法师小屋训练/复活经 `seedBaseValues` 重新播种，折成加法的 +25% 移速会失真（0.3×0.25=0.075 固定，基础升到 0.36 时应为 0.09）。无乘区时退化为纯加法，现有 12 支法杖（全 addition）零影响。
+- **映射放 compat 且只映射三条**：新增 `IronSpellsAttributes.modifiersFor(stack)` 遍历 `ItemAttributeModifiers`——`MAX_MANA`→`MAX_MANA`（ADD_VALUE→ADDITION）、`SPELL_POWER`→`SPELL_POWER`（ADD_MULTIPLIED_BASE→MULTIPLY_BASE）、vanilla `MOVEMENT_SPEED`→`MOVE_SPEED`（ADD_MULTIPLIED_BASE→MULTIPLY_BASE）。各学派 `*_spell_power`/`casting_movespeed`/`mana_regen`/`cooldown_reduction`/`cast_time_reduction`/`summon_damage`/各系抗性等铁魔法特色属性**不映射**（用户明确不兼容）。
+- **syncArmorAttributes 合并**：每盔甲槽修饰符列表 = `[ARMOR_VALUE] + 映射结果` 一次 `eq.equip`；空槽 `unequip` 自动撤销。法力上限/法术强度/移速提升经既有链路生效（`getEffectiveAttribute`/`applyEffectiveAttributes`/伤害倍率），GUI 显示自动跟新。
+
+**为什么**：加乘区是唯一正确做法（base 可变 + 百分比语义）；映射收敛在 compat 保证零硬编码耦合（未装铁魔法返回空列表）；只映射可对到 Wandscape 属性的三条，不把铁魔法特色机制塞进我们的属性模型。
+
+**影响**：`ModifierOperation`/`EquipmentComponent`（乘区公式，+6 个纯逻辑单测）；新增 `compat/ironspellbooks/IronSpellsAttributes`；`WandscapeNpc.syncArmorAttributes` 合并映射；`core.md`/`npc.md`/`compat.md` 文档同步。
+
+## 2026-08-26：殖民地友军名单——NPC 不记仇、不伤害友军（含铁魔法）
+
+**需求**（用户指令）：铁魔法兼容后，NPC 的铁魔法（AoE/溅射/召唤物）会打到其他 NPC 与玩家，且同一殖民地的 NPC 被友伤后互相记仇、彼此开战。要求「每个殖民地有一个友军名单，NPC 不对名单内生物记仇，所有攻击也不伤害名单内生物」。
+
+**根因**（三个叠加）：
+1. **铁魔法伤害绕过 `canBeamHurt`**：Wandscape 原生魔法（光束/陨石/普攻/虚弱）在**施法前**按 `canBeamHurt` 过滤目标；铁魔法由 Iron's 库内部结算伤害（`SpellDamageSource`，causing=施法 NPC），不检查此边界——AoE/弹射物/召唤物打到谁算谁。
+2. **`isRetaliationTarget` 布尔写反**（b33a5540 引入）：`if (other instanceof WandscapeNpc other) return sameColonyAs(other)` 对同殖民地返回 `true`（=可反击），与「仅排除玩家与同殖民地 NPC」的意图相反。于是同殖民地 NPC 被友伤后记仇（`SelfDefenseHandler`）→ 仇恨目标被 `canBeamHurt` 放行 → 互相打。
+3. **`NpcSpellPowerHandler` 只跳过倍率、不取消伤害**：对非 `Enemy`/非 `canBeamHurt` 目标 `return` 只是不乘 SPELL_POWER，基准伤害仍落地。
+
+**决策**：
+- **友军名单派生而非存储**（`core/types/FriendlyForce`，纯 Java 零 MC）：同 `colonyId` 的 NPC + **所有玩家**（用户确认：与既有魔法一致，NPC 永不伤任何玩家，不区分殖民地拥有者）。`null`/占位殖民地互认为同殖民地。`PLACEHOLDER_COLONY` 常量收拢至此，`EntityComponentBridge` 别名引用。
+- **仇恨与伤害统一走 `WandscapeNpc.isFriendlyForce`**：`isRetaliationTarget = !isFriendlyForce`（修掉布尔写反——同殖民地与玩家不记仇；不同殖民地 NPC 属非友军，仍可按此反击）。`SelfDefenseHandler` 记仇、`SelfDefenseExecutor` 仇恨分支、`canBeamHurt` 三处行为随之修正。
+- **伤害入口取消友军伤害**：`NpcSpellPowerHandler.onLivingDamage` 对非 `Enemy` 且非 `canBeamHurt` 的目标、及和平模式，从「跳过倍率」改为 `event.setCanceled(true)` 整伤取消。这是所有 NPC 伤害（含铁魔法与召唤物，causing 恒为施法 NPC）的唯一入口，铁魔法不再能绕过边界。
+
+**为什么**：铁魔法伤害入口散在 Iron's 库内无法逐一挂钩，而所有伤害最终都经 `LivingEntity.hurt()` → `LivingIncomingDamageEvent`，在唯一核算入口设边界是代价最小且不散落的做法。`canBeamHurt` 仍是唯一伤害边界钩子（光束/倍率/敌数/伤害入口共用），友军名单只新增一个纯函数来源。
+
+**影响**：新增 `core/types/FriendlyForce`（+`FriendlyForceTest` 决策表 7 例）；`WandscapeNpc` 增 `isFriendlyForce`、修 `isRetaliationTarget`、删 `sameColonyAs`；`NpcSpellPowerHandler` 改取消；`EntityComponentBridge` 常量别名。铁魔法/召唤物打到友军与玩家不再结算，同殖民地 NPC 不再互开战。
+
 ## 2026-08-26：安全传送落点与 3D 导航到达判定修复（杜绝矿洞悬空坠亡与进墙传送死循环）
 
 **需求**（用户反馈）：NPC 会传送至施工地点周围，但落点可能在墙内导致掉入矿洞顶部悬空坠亡，且坠亡后任务回滚导致下一个 NPC 循环送命；若未摔死则在矿洞内反复原地传送死循环。
@@ -21,7 +54,6 @@
 
 **影响**：`WandscapeRitualOps`（安全落点算法重构 + 悬空与危险方块防护 + 取消无效传送）；`NavigationSystem`（3D 到达校验 + `resolveWalkTarget` 目标修正）；`TaskExecutionSystem`（3D 距离范围检查）。
 
-
 ## 2026-08-26：Wandscape × Iron's Spells 'n Spellbooks（铁魔法）全面兼容
 
 **需求**（用户指令）：使 Wandscape 的 NPC 法师能够装备并施放铁魔法（Iron's Spells 'n Spellbooks）的法术。玩家可以把任意铁魔法卷轴放入 4 大分类（单体/群体/防御/支援）的任意门类中，施法时从大类遍历，按优先级 + CD=0 释放。
@@ -30,7 +62,7 @@
 - **数据与等级存储（Q1 A）**：`EquippedMagicComponent` 升级存储 `SpellEntry(id, level, customData)`，支持带 `@level` 字符串编解码。放进 5 级铁魔法卷轴即按 5 级施法，取下/法师战死掉落时无损还原原等级的铁魔法卷轴。
 - **大类语义与目标判定（Q2 A）**：由放入的大类决定触发时机与目标模式。`single_target`/`aoe` 面向敌对发射（AOE 需敌数 ≥ 2）；`defense` 在处于战斗且自身血量 < 80% 时释放；`support` 在友方/自身血量 < 80% 时释放。
 - **施法生命周期桥接（Q3 A）**：瞬发（`INSTANT`）占 0.5s 施法互斥锁；蓄力（`LONG`）与持续（`CONTINUOUS`）法术按 `castTime / SPELL_SPEED` 占用互斥锁，每 server tick 维持面向与 `onServerCastTick`，到期触发 `onServerCastComplete` 并播放法术音效。
-- **魔力与冷却主控管线（Q4 A）**：直接从 NPC 扣除 `spell.getManaCost(level)`；冷却由 `MagicState` 记录并享受 `SPELL_SPEED` 冷却缩减；底层同步至 `MagicData`。
+- **魔力与冷却主控管线（Q4 A）**：直接从 NPC 扣除 `spell.getManaCost(level)`（**1:1，2026-08-26 用户要求**，不再按 0.25/0.10 缩放与下限钳制——昂贵的铁魔法如黑洞 300/传送门 200 超过 NPC 默认蓝池 200，经 CastBrain 门控自动跳过）；冷却 `baseCooldown = spell.getSpellCooldown()`（该 API 已返回 tick，`COOLDOWN_IN_SECONDS × 20`，不再乘 20），由 `MagicState` 记录并享受 `SPELL_SPEED` 冷却缩减（`baseCooldown / spellSpeed`）；底层同步至 `MagicData`。**所有类型（含持续引导 CONTINUOUS）都施法开始一次性扣全量**——铁魔法自身无按秒扣蓝机制，最初按 tick 扣的方案已回退（2026-08-26）。合并时未采纳 origin/main 的 `getAdaptedCooldown`（×0.08 + [20,200] 钳制）缩放方案。
 - **法强放大与优雅降级（Q5 A）**：订阅 `SpellDamageEvent`，自动按 `SPELL_POWER × 魔力强化倍率` 放大伤害；所有实现隔离于 `compat/ironspellbooks/`，未安装铁魔法时不加载任何铁魔法逻辑，保持零硬编码耦合与高容错。
 
 **影响**：`build.gradle`（compileOnly 铁魔法依赖）；`compat/ironspellbooks/`（`IronSpellsCompat`/`IronSpellsHelper`/`IronSpellsCaster`/`IronSpellsDamageHandler`）；`EquippedMagicComponent`（`SpellEntry` 结构化支持）；`NpcStrategyMenu`（支持放置铁魔法卷轴）；`CastBrain`（支持合成 `MagicDef` 与 `EquippedMagicComponent` 查询）；`MagicSpellExecutors`（`dispatch` 桥接 `IronSpellsCaster`）；`Wandscape`（生命周期接线）。

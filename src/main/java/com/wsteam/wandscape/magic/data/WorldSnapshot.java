@@ -9,7 +9,7 @@ import java.util.Set;
  * 对照 {@link SpellConditions} 判定"此刻该魔法条件是否满足"。语义见
  * {@code docs/spell-casting.md} 5.3：
  * <ul>
- *   <li>{@code enemyCount}：目标周围敌人数量（min_enemies 用）</li>
+ *   <li>{@code enemyCount}：目标周围敌人数（类别敌数门控用：单发 ≤ 3 / 群发 ≥ 3）</li>
  *   <li>{@code selfHpRatio}：自身血量比例 [0,1]（self_hp_max 用）</li>
  *   <li>{@code allyLowestHpRatio}：友方最低血量比例 [0,1]；无友方 = 1（ally_hp_max 用）</li>
  *   <li>{@code activeEffects}：自身已有状态 id（no_effect 用）</li>

@@ -9,6 +9,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import javax.annotation.Nullable;
 
 import com.wsteam.wandscape.core.component.*;
+import com.wsteam.wandscape.core.types.FriendlyForce;
 import com.wsteam.wandscape.core.types.ResourceStack;
 import com.wsteam.wandscape.core.types.NpcAttributes;
 import com.wsteam.wandscape.core.CoreBootstrap;
@@ -43,8 +44,7 @@ public final class EntityComponentBridge {
     private static final String TAG = "EntityComponentBridge";
 
     /** Stage 2 placeholder colony — allows engine scheduling without real colonies. */
-    public static final UUID PLACEHOLDER_COLONY =
-            UUID.fromString("00000000-0000-0000-0000-000000000000");
+    public static final UUID PLACEHOLDER_COLONY = FriendlyForce.PLACEHOLDER_COLONY;
 
     // ecsEntityId → MC entity
     private final Map<Long, WandscapeNpc> npcByEcsId = new ConcurrentHashMap<>();

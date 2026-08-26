@@ -79,8 +79,10 @@ public final class IronSpellsCaster {
             return false;
         }
 
-        int manaCost = IronSpellsHelper.getAdaptedManaCost(spell, spellLevel);
-        int baseCooldown = IronSpellsHelper.getAdaptedCooldown(spell);
+        // 蓝耗 1:1：铁魔法蓝耗直接对等 NPC 魔力池（2026-08-26 用户要求），不再按 0.25/0.10 缩放 / 下限钳制。
+        int manaCost = spell.getManaCost(spellLevel);
+        // 冷却：getSpellCooldown() 已返回 tick（COOLDOWN_IN_SECONDS × 20），直接用；SPELL_SPEED 在 MagicState 缩短。
+        int baseCooldown = spell.getSpellCooldown() > 0 ? spell.getSpellCooldown() : 40;
         CastType castType = spell.getCastType();
 
         if (target != null && target.isAlive()) {
@@ -107,7 +109,8 @@ public final class IronSpellsCaster {
                     npc.getUUID().toString().substring(0, 8), spellId, spellLevel);
             return true;
         } else {
-            // LONG / CONTINUOUS 蓄力或引导
+            // LONG / CONTINUOUS 蓄力或引导：开始即一次性扣全量（铁魔法自身无按秒扣蓝机制，
+            // 与瞬发/蓄力一致，2026-08-26 用户要求不按 tick 扣）
             int rawCastTime = spell.getCastTime(spellLevel);
             int lockTicks = Math.max(10, (int) Math.ceil(rawCastTime / spellSpeed));
             if (!npc.tryCastSpell(spellId, baseCooldown, manaCost, lockTicks)) {

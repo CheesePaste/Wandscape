@@ -69,30 +69,6 @@ public final class IronSpellsHelper {
     }
 
     /**
-     * 适配铁魔法冷却时间（秒 → tick）：
-     * 铁魔法针对玩家多槽轮转设计（终极大招 CD 长达 120s~180s）；
-     * NPC 战斗节奏对齐 Wandscape 动态战斗体系（2s ~ 10s 循环），按 0.08 比例换算并封顶 200 tick (10s)。
-     */
-    public static int getAdaptedCooldown(AbstractSpell spell) {
-        int rawCdSeconds = spell.getSpellCooldown();
-        if (rawCdSeconds <= 0) return 40; // 默认 2s
-        int ticks = (int) Math.round(rawCdSeconds * 20.0 * 0.08);
-        return Math.max(20, Math.min(200, ticks));
-    }
-
-    /**
-     * 适配铁魔法法力消耗：
-     * 铁魔法玩家法力池（500~1500）约为 NPC（100~200）的 5~10 倍；
-     * 对齐 Wandscape 原生蓝耗区间（5 ~ 30 点），终极法术（原 300 蓝）换算为 25~30 蓝。
-     */
-    public static int getAdaptedManaCost(AbstractSpell spell, int level) {
-        int rawMana = spell.getManaCost(level);
-        if (rawMana <= 0) return 5;
-        int mana = (int) Math.round(rawMana * 0.10);
-        return Math.max(5, Math.min(35, mana));
-    }
-
-    /**
      * 根据铁魔法法术与装备放入的门类，构造动态合成的 {@link MagicDef}。
      */
     @Nullable
@@ -108,8 +84,11 @@ public final class IronSpellsHelper {
             cat = MagicDef.Category.SINGLE_TARGET;
         }
 
-        int manaCost = getAdaptedManaCost(spell, level);
-        int baseCooldown = getAdaptedCooldown(spell);
+        // 蓝耗 1:1：铁魔法蓝耗直接对等 NPC 魔力池（2026-08-26 用户要求），不再按 0.25/0.10 缩放 / 下限钳制。
+        // 昂贵的铁魔法（黑洞 300、传送门 200 等）会超过 NPC 默认蓝池 200，经 CastBrain 门控自动跳过。
+        int manaCost = spell.getManaCost(level);
+        // 冷却：getSpellCooldown() 已返回 tick（COOLDOWN_IN_SECONDS × 20），直接用；SPELL_SPEED 在 MagicState 缩短。
+        int baseCooldown = spell.getSpellCooldown() > 0 ? spell.getSpellCooldown() : 40;
         int castTime = Math.max(0, spell.getCastTime(level));
         double range = 32.0;
 
@@ -119,15 +98,16 @@ public final class IronSpellsHelper {
         switch (cat) {
             case AOE -> {
                 targetMode = MagicDef.TargetMode.HOSTILE_NEAREST;
-                conditions = new SpellConditions(1, null, null, null);
+                // 敌数门控（群发 ≥ 阈值）由 CastBrain 按类别统一判定，这里不再设 per-spell 条件
+                conditions = SpellConditions.NONE;
             }
             case DEFENSE -> {
                 targetMode = MagicDef.TargetMode.SELF;
-                conditions = new SpellConditions(0, 0.8f, null, null);
+                conditions = new SpellConditions(0.8f, null, null);
             }
             case SUPPORT -> {
                 targetMode = MagicDef.TargetMode.ALLY_LOWEST_HP;
-                conditions = new SpellConditions(0, null, 0.8f, null);
+                conditions = new SpellConditions(null, 0.8f, null);
             }
             case SINGLE_TARGET -> {
                 targetMode = MagicDef.TargetMode.HOSTILE_NEAREST;
