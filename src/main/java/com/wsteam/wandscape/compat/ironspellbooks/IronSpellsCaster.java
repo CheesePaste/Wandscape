@@ -15,6 +15,7 @@ import io.redspace.ironsspellbooks.api.registry.SpellRegistry;
 import io.redspace.ironsspellbooks.api.spells.AbstractSpell;
 import io.redspace.ironsspellbooks.api.spells.CastSource;
 import io.redspace.ironsspellbooks.api.spells.CastType;
+import io.redspace.ironsspellbooks.capabilities.magic.SyncedSpellData;
 
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundSource;
@@ -57,6 +58,17 @@ public final class IronSpellsCaster {
     private IronSpellsCaster() {}
 
     /**
+     * 获取并确保 NPC 的 MagicData 具备有效的 SyncedSpellData 实例（避免 initiateCast NPE）。
+     */
+    private static MagicData getOrCreateMagicData(WandscapeNpc npc) {
+        MagicData magicData = MagicData.getPlayerMagicData(npc);
+        if (magicData.getSyncedData() == null) {
+            magicData.setSyncedData(new SyncedSpellData(npc));
+        }
+        return magicData;
+    }
+
+    /**
      * 为 NPC 施放铁魔法。
      */
     public static boolean cast(ServerLevel level, WandscapeNpc npc, @Nullable LivingEntity target,
@@ -84,7 +96,7 @@ public final class IronSpellsCaster {
                 return false;
             }
 
-            MagicData magicData = MagicData.getPlayerMagicData(npc);
+            MagicData magicData = getOrCreateMagicData(npc);
             magicData.initiateCast(spell, spellLevel, 0, CastSource.MOB, "mainhand");
             spell.onCast(level, spellLevel, npc, CastSource.MOB, magicData);
             spell.onServerCastComplete(level, spellLevel, npc, magicData, false);
@@ -102,7 +114,7 @@ public final class IronSpellsCaster {
                 return false;
             }
 
-            MagicData magicData = MagicData.getPlayerMagicData(npc);
+            MagicData magicData = getOrCreateMagicData(npc);
             magicData.initiateCast(spell, spellLevel, lockTicks, CastSource.MOB, "mainhand");
             spell.onServerPreCast(level, spellLevel, npc, magicData);
             spell.getCastStartSound().ifPresent(s -> level.playSound(null, npc.getX(), npc.getY(), npc.getZ(),
