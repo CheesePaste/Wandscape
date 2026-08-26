@@ -25,6 +25,9 @@ public interface TavernApi {
     /** Recruit a mage by resume index. Returns the resume data or null if invalid. */
     MageResume recruitMage(UUID tavernId, UUID colonyId, int index);
 
+    /** Reject a mage resume by index (removes it without spawning). Returns the removed resume or null if invalid. */
+    MageResume rejectMage(UUID colonyId, int index);
+
     /** 小镇累计成功「招募 NPC」的次数（首次免费，自第二次起收费）。 */
     int getRecruitCount(UUID colonyId);
 

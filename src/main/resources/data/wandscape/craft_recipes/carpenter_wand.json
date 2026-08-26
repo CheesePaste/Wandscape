@@ -1,16 +1,17 @@
 {
   "type": "wand",
   "craft_station": "crafting_station",
-  "id": "basic_wand",
-  "display_name": "基础法杖",
+  "id": "carpenter_wand",
+  "display_name": "木工法杖",
   "slot": "wand",
-  "wand_color": "#FFD700",
+  "wand_color": "#8B6F47",
   "attributes": [
-    { "type": "spell_power", "operation": "addition", "amount": 0.0 }
+    { "type": "work_speed", "operation": "addition", "amount": 0.4 }
   ],
   "output": { "item": "wandscape:wand" },
   "cost": {
-    "earth": 16
+    "earth": 200,
+    "wood": 250
   },
   "unlock_requirement": {
     "min_colony_level": 1

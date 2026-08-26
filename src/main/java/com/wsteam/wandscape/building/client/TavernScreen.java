@@ -140,15 +140,21 @@ public class TavernScreen extends MedievalScreen {
         int contentTop = topPos + headerHeight + 25;
 
         if (activeTab == 0) {
-            // Tab 0: Hire button for selected candidate
+            // Tab 0: Reject + Hire buttons for selected candidate
             if (!mageResumes.isEmpty() && selectedIndex >= 0 && selectedIndex < mageResumes.size()) {
                 int rx = leftPos + 144;
                 int rw = 184;
                 int ry = contentTop;
-                int btnW = 116;
+                int btnW = 88;
                 int btnH = 20;
+                int gap = 8;
+                int btnX = rx + (rw - (btnW * 2 + gap)) / 2;
                 addRenderableWidget(new MedievalButton(
-                        rx + (rw - btnW) / 2, ry + 138, btnW, btnH,
+                        btnX, ry + 138, btnW, btnH,
+                        I18n.name("gui.wandscape.tavern.reject", "Reject"),
+                        () -> onRejectMage(selectedIndex)));
+                addRenderableWidget(new MedievalButton(
+                        btnX + btnW + gap, ry + 138, btnW, btnH,
                         I18n.name("gui.wandscape.tavern.hire", "Hire Mage"),
                         () -> onRecruitMage(selectedIndex)));
             }
@@ -376,6 +382,10 @@ public class TavernScreen extends MedievalScreen {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        // Confirm dialog open: base class routes it to the dialog, blocking card clicks behind.
+        if (confirmDialog.isOpen()) {
+            return super.mouseClicked(mouseX, mouseY, button);
+        }
         int contentTop = topPos + headerHeight + 25;
 
         // If clicking on candidate cards on Tab 0
@@ -419,6 +429,18 @@ public class TavernScreen extends MedievalScreen {
         Minecraft.getInstance().getSoundManager().play(
                 SimpleSoundInstance.forUI(SoundEvents.VILLAGER_YES, 1.0f));
         setToast(I18n.name("gui.wandscape.tavern.hired_success", "已成功聘用法师：%s！", r.touristName()), MedievalColors.SUCCESS_GREEN);
+    }
+
+    private void onRejectMage(int index) {
+        if (index < 0 || index >= mageResumes.size()) return;
+        MageResume r = mageResumes.get(index);
+        openConfirmDialog(
+                I18n.name("gui.wandscape.tavern.reject_confirm", "确定拒绝 %s 的求职简历？", r.touristName()),
+                () -> {
+                    PacketDistributor.sendToServer(new TavernRecruitPacket(buildingPos, "reject_mage:" + index));
+                    Minecraft.getInstance().getSoundManager().play(
+                            SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0f));
+                });
     }
 
     private static String fmt(float v) {

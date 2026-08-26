@@ -1,0 +1,21 @@
+{
+  "type": "wand",
+  "craft_station": "crafting_station",
+  "id": "bulwark_wand",
+  "display_name": "铁壁法杖",
+  "slot": "wand",
+  "wand_color": "#7A7A7A",
+  "attributes": [
+    { "type": "max_hp", "operation": "addition", "amount": 40.0 },
+    { "type": "armor_value", "operation": "addition", "amount": 5.0 }
+  ],
+  "output": { "item": "wandscape:wand" },
+  "cost": {
+    "earth": 6000,
+    "metal": 4000,
+    "water": 3000
+  },
+  "unlock_requirement": {
+    "min_colony_level": 10
+  }
+}

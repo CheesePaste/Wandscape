@@ -7,6 +7,7 @@ import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.npc.NpcMenu;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.npc.network.NpcDataPacket;
+import com.wsteam.wandscape.npc.network.NpcDismissPacket;
 import com.wsteam.wandscape.npc.network.NpcOpenStrategyPacket;
 import com.wsteam.wandscape.npc.network.NpcRenamePacket;
 import com.wsteam.wandscape.npc.network.NpcTogglePacket;
@@ -14,6 +15,7 @@ import com.wsteam.wandscape.shared.ui.I18n;
 import com.wsteam.wandscape.shared.ui.ReplayProtectedScreen;
 import com.wsteam.wandscape.shared.ui.component.HelpButton;
 import com.wsteam.wandscape.shared.ui.component.MedievalButton;
+import com.wsteam.wandscape.shared.ui.component.MedievalConfirmDialog;
 import com.wsteam.wandscape.shared.ui.skin.SkinRender;
 import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
 import com.wsteam.wandscape.shared.ui.vanilla.VanillaPlayerInventory;
@@ -81,6 +83,7 @@ public class NpcScreen extends AbstractContainerScreen<NpcMenu> implements Repla
     private String lastServerName = "";
     private MedievalButton peaceButton;
     private MedievalButton followButton;
+    private final MedievalConfirmDialog confirmDialog = new MedievalConfirmDialog();
 
     public NpcScreen(NpcMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
@@ -176,15 +179,16 @@ public class NpcScreen extends AbstractContainerScreen<NpcMenu> implements Repla
         nameBox.setResponder(this::onNameChanged);
         addRenderableWidget(nameBox);
 
-        // 底部按钮行（装备槽区下方、玩家背包上方）
+        // 底部按钮行（装备槽区下方、玩家背包上方）：和平 / 跟随 / 策略 / 解雇 / 关闭
         int btnY = topPos + 124;
-        peaceButton = new MedievalButton(leftPos + 8, btnY, 78, 16,
+        int bx = leftPos + 8;
+        peaceButton = new MedievalButton(bx, btnY, 68, 16,
                 peaceLabel(), () -> {
             peaceMode = !peaceMode;
             refreshToggleButtons();
             PacketDistributor.sendToServer(new NpcTogglePacket(entityId, NpcTogglePacket.FLAG_PEACE, peaceMode));
         });
-        followButton = new MedievalButton(leftPos + 90, btnY, 78, 16,
+        followButton = new MedievalButton(bx + 70, btnY, 68, 16,
                 followLabel(), () -> {
             followMode = !followMode;
             refreshToggleButtons();
@@ -192,10 +196,13 @@ public class NpcScreen extends AbstractContainerScreen<NpcMenu> implements Repla
         });
         addRenderableWidget(peaceButton);
         addRenderableWidget(followButton);
-        addRenderableWidget(new MedievalButton(leftPos + 172, btnY, 56, 16,
+        addRenderableWidget(new MedievalButton(bx + 140, btnY, 48, 16,
                 I18n.name("gui.wandscape.npc.strategy", "Strategy"),
                 () -> PacketDistributor.sendToServer(new NpcOpenStrategyPacket(entityId))));
-        addRenderableWidget(new MedievalButton(leftPos + 232, btnY, 60, 16,
+        addRenderableWidget(new MedievalButton(bx + 190, btnY, 46, 16,
+                I18n.name("gui.wandscape.npc.dismiss", "Dismiss"),
+                this::onDismiss));
+        addRenderableWidget(new MedievalButton(bx + 238, btnY, 42, 16,
                 I18n.name("gui.wandscape.common.close", "Close"),
                 () -> Minecraft.getInstance().setScreen(null)));
     }
@@ -223,6 +230,22 @@ public class NpcScreen extends AbstractContainerScreen<NpcMenu> implements Repla
         PacketDistributor.sendToServer(new NpcRenamePacket(entityId, trimmed));
     }
 
+    private void onDismiss() {
+        if (entityId < 0) return;
+        String name = (npcName != null && !npcName.isEmpty()) ? npcName : "…";
+        openConfirmDialog(
+                I18n.name("gui.wandscape.npc.dismiss_confirm", "确定解雇法师 %s？其装备将掉落。", name),
+                () -> {
+                    PacketDistributor.sendToServer(new NpcDismissPacket(entityId));
+                    // 乐观关闭：服务端解雇成功后容器失效会再次触发关闭，此处先行收起面板
+                    Minecraft.getInstance().setScreen(null);
+                });
+    }
+
+    private void openConfirmDialog(Component message, Runnable onConfirm) {
+        confirmDialog.open(message, onConfirm);
+    }
+
     public void openHelpDocument() {
         if (helpDocumentPath != null && minecraft != null) {
             String content = com.wsteam.wandscape.shared.ui.markdown.navigation.DocumentLoader
@@ -241,6 +264,10 @@ public class NpcScreen extends AbstractContainerScreen<NpcMenu> implements Repla
         renderAttributes(g);
         // 与仓库一致：原版 render 不画 tooltip，需显式调用（悬停物品显示介绍）
         renderTooltip(g, mouseX, mouseY);
+        // 确认框置于最顶层
+        if (confirmDialog.isOpen()) {
+            confirmDialog.render(g, width, height, mouseX, mouseY);
+        }
     }
 
     @Override
@@ -350,11 +377,24 @@ public class NpcScreen extends AbstractContainerScreen<NpcMenu> implements Repla
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        // Confirm dialog open: it consumes all clicks, blocking the screen behind.
+        if (confirmDialog.isOpen()) {
+            return confirmDialog.mouseClicked(mouseX, mouseY, button);
+        }
         if (button == 0 && isInRect(mouseX, mouseY, closeBtnX, closeBtnY, CLOSE_W, CLOSE_H)) {
             onClose();
             return true;
         }
         return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        // Confirm dialog open: swallow everything (Esc cancel / Enter confirm handled inside).
+        if (confirmDialog.isOpen()) {
+            return confirmDialog.keyPressed(keyCode, scanCode, modifiers);
+        }
+        return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     @Override

@@ -116,6 +116,7 @@ import com.wsteam.wandscape.npc.internal.NpcApiImpl;
 import com.wsteam.wandscape.npc.NpcMenu;
 import com.wsteam.wandscape.npc.NpcStrategyMenu;
 import com.wsteam.wandscape.npc.network.NpcDataPacket;
+import com.wsteam.wandscape.npc.network.NpcDismissPacket;
 import com.wsteam.wandscape.npc.network.NpcOpenStrategyPacket;
 import com.wsteam.wandscape.npc.network.NpcRenamePacket;
 import com.wsteam.wandscape.npc.network.NpcStrategyPacket;
@@ -133,6 +134,7 @@ import com.wsteam.wandscape.tourist.network.TouristDataPacket;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.wand.internal.WandApiImpl;
 import com.wsteam.wandscape.wand.internal.WandPresetLoader;
+import com.wsteam.wandscape.wand.internal.WandPresetLoader.WandPreset;
 import com.wsteam.wandscape.wand.item.WandItem;
 import com.wsteam.wandscape.guidebook.item.GuideBookItem;
 import com.wsteam.wandscape.guidebook.network.GuideBookOpenPacket;
@@ -156,6 +158,8 @@ import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.CustomData;
+import net.minecraft.core.component.DataComponents;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.api.distmarker.Dist;
@@ -390,6 +394,7 @@ public class Wandscape {
                     .icon(() -> new ItemStack(WAND.get()))
                     .displayItems((params, output) -> {
                         output.accept(WAND.get());
+                        acceptWandPresets(output);
                         output.accept(WANDSCAPE_NPC_EGG.get());
                         output.accept(EVIL_MAGE_SPAWN_EGG.get());
                         output.accept(TOURIST_SPAWN_EGG.get());
@@ -402,6 +407,15 @@ public class Wandscape {
                         ELEMENT_ITEMS.values().forEach(item -> output.accept(item.get()));
                     })
                     .build());
+
+    /** 创造栏补发各法杖预设变体（数据驱动：新法杖配方自动出现）。 */
+    private static void acceptWandPresets(CreativeModeTab.Output output) {
+        for (WandPreset preset : WAND_PRESET_LOADER.getAllPresets().values()) {
+            ItemStack stack = new ItemStack(WAND.get());
+            stack.set(DataComponents.CUSTOM_DATA, CustomData.of(preset.nbt().copy()));
+            output.accept(stack);
+        }
+    }
 
     /** 创造栏补发各战斗魔法的已绑定卷轴（数据驱动：新战斗魔法自动出现；UTILITY 卷轴不物品化）。 */
     private static void acceptBoundSpellScrolls(CreativeModeTab.Output output) {
@@ -750,6 +764,11 @@ public class Wandscape {
                         NpcTogglePacket.TYPE,
                         NpcTogglePacket.STREAM_CODEC,
                         (packet, ctx) -> NpcTogglePacket.handleServer(packet,
+                                (net.minecraft.server.level.ServerPlayer) ctx.player()))
+                .playToServer(
+                        NpcDismissPacket.TYPE,
+                        NpcDismissPacket.STREAM_CODEC,
+                        (packet, ctx) -> NpcDismissPacket.handleServer(packet,
                                 (net.minecraft.server.level.ServerPlayer) ctx.player()))
                 // ── Tourist info screen ──
                 .playToClient(

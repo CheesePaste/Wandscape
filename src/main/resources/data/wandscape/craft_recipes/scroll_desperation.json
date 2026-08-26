@@ -2,14 +2,14 @@
   "type": "spell",
   "craft_station": "magic_station",
   "id": "scroll_desperation",
-  "display_name": "绝境卷轴",
+  "display_name": "背水一战卷轴",
   "output": { "item": "wandscape:spell_scroll", "magic_id": "desperation" },
   "cost": {
-    "dark": 32,
-    "fire": 24,
-    "water": 16
+    "dark": 14000,
+    "fire": 8000,
+    "water": 5500
   },
   "unlock_requirement": {
-    "min_colony_level": 4
+    "min_colony_level": 20
   }
 }

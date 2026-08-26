@@ -1,0 +1,20 @@
+{
+  "type": "wand",
+  "craft_station": "crafting_station",
+  "id": "workshop_wand",
+  "display_name": "工坊法杖",
+  "slot": "wand",
+  "wand_color": "#9AA5B1",
+  "attributes": [
+    { "type": "work_speed", "operation": "addition", "amount": 0.5 },
+    { "type": "spell_speed", "operation": "addition", "amount": 0.15 }
+  ],
+  "output": { "item": "wandscape:wand" },
+  "cost": {
+    "earth": 1600,
+    "wood": 1400
+  },
+  "unlock_requirement": {
+    "min_colony_level": 5
+  }
+}

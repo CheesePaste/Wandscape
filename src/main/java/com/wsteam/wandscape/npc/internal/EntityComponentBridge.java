@@ -138,6 +138,7 @@ public final class EntityComponentBridge {
             ecsIdByUuid.put(npc.getUUID(), npc.ecsEntityId);
             fillDeferredInventory(npc, world);
             npc.syncArmorAttributes();
+            npc.syncWandAttributes();
             return;
         }
 
@@ -178,6 +179,7 @@ public final class EntityComponentBridge {
         fillDeferredInventory(npc, world);
         // Seed armor attribute modifiers (equipment component was just created)
         npc.syncArmorAttributes();
+        npc.syncWandAttributes();
     }
 
     /** Fill inventory items that were scheduled before ECS registration. */

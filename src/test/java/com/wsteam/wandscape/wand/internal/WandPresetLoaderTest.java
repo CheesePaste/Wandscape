@@ -1,6 +1,7 @@
 package com.wsteam.wandscape.wand.internal;
 
 import com.google.gson.JsonParser;
+import com.wsteam.wandscape.core.types.AttributeType;
 import com.wsteam.wandscape.wand.internal.WandPresetLoader.WandPreset;
 
 import org.junit.jupiter.api.Test;
@@ -135,5 +136,28 @@ class WandPresetLoaderTest {
         WandPreset preset = WandPreset.fromJson("legacy", JsonParser.parseString(json));
         assertNotNull(preset);
         assertEquals("Legacy Wand", preset.displayName());
+    }
+
+    @Test
+    void fromJson_tradeoffWand_parsesNegativeAmounts() {
+        String json = """
+            {
+              "type": "wand",
+              "display_name": "Bastion",
+              "wand_color": "#4A4A52",
+              "attributes": [
+                { "type": "move_speed", "operation": "addition", "amount": -0.18 },
+                { "type": "max_hp", "operation": "addition", "amount": 55 },
+                { "type": "armor_value", "operation": "addition", "amount": 8 }
+              ]
+            }""";
+        WandPreset preset = WandPreset.fromJson("bastion_wand", JsonParser.parseString(json));
+        assertEquals(3, preset.attributes().size());
+        assertEquals(AttributeType.MOVE_SPEED, preset.attributes().get(0).type());
+        assertEquals(-0.18f, preset.attributes().get(0).amount(), 0.001f);
+        assertEquals(AttributeType.MAX_HP, preset.attributes().get(1).type());
+        assertEquals(55f, preset.attributes().get(1).amount(), 0.001f);
+        assertEquals(AttributeType.ARMOR_VALUE, preset.attributes().get(2).type());
+        assertEquals(8f, preset.attributes().get(2).amount(), 0.001f);
     }
 }

@@ -16,6 +16,8 @@ Click the "**Recruit NPC**" button to instantly generate a wizard, with attribut
 
 About **5% of tourists are wizard tourists**. When their three need bars are **all full**, they leave a resume at the tavern and can be hired **for free** — the main channel for building your wizard roster.
 
+- Up to **5 resumes** are kept. To remove an unwanted resume, select it and click "**Reject**" (a confirmation dialog appears).
+
 ## Tips
 
 - Recruited wizards join with full mana and start working immediately.

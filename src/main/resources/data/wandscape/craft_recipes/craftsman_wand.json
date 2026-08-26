@@ -1,0 +1,20 @@
+{
+  "type": "wand",
+  "craft_station": "crafting_station",
+  "id": "craftsman_wand",
+  "display_name": "工匠法杖",
+  "slot": "wand",
+  "wand_color": "#C67B30",
+  "attributes": [
+    { "type": "work_speed", "operation": "addition", "amount": 0.9 },
+    { "type": "max_mana", "operation": "addition", "amount": 100.0 }
+  ],
+  "output": { "item": "wandscape:wand" },
+  "cost": {
+    "earth": 25000,
+    "wood": 25000
+  },
+  "unlock_requirement": {
+    "min_colony_level": 20
+  }
+}

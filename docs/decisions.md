@@ -2,6 +2,21 @@
 
 本文件记录偏离直觉的设计选择及其原因，供后续开发快速理解「为什么这么做」。
 
+## 2026-08-26：12 支法杖 + 卷轴重定价；法杖 attributes[] 从"只解析不应用"改为"装备即生效"
+
+**需求**（用户指令）：按 `balance/` 经济产出与 MageHut 各等级属性，设计 12 支有鲜明特色的法杖（工作/爆发/蓝量/血量/极速 + 牺牲型），1/5/10/20/30 级解锁；卷轴重定价（同档法杖约 1/2）；卷轴解锁改 1/10/20 三档。补充要求：Lv20 工作杖叫「工匠法杖」（Lv1 改「木工法杖」）、法杖进创造栏、卷轴/法杖补 i18n。
+
+**决策**：
+- **12 支法杖**：Lv1 木工/学徒；Lv5 烈焰/工坊；Lv10 铁壁/秘泉/疾风；Lv20 工匠/堡垒/奥术；Lv30 湮灭/创世。属性为纯加法（`EquipmentComponent` 只支持加法），数值锚定该级中位数 ±20%~60%（如 Lv30 湮灭 +2.0 强度 = 玻璃炮）。牺牲型只在 Lv20/30（Lv1-10 纯加成，教学友好）。
+- **成本锚点**：单支总价 ≈ 该档日收入 3%~40% 递增（Lv1 ~450 → Lv30 ~165k），元素成本避开单元素瓶颈（Lv1-10 少用金/暗，Lv20+ 才放开）。卷轴 = 同档法杖约 1/2（消耗品，每法师一张教一个魔法）。
+- **修 bug：法杖属性从不应用**。此前 `attributes[]` 只解析进 `WandPreset.attributes`、写入物品 NBT，但 `EquipmentComponent` 的 WAND 槽永远只有 `equipDefaultWand()` 的 +0 修饰符——玩家装高阶法杖只变外观。现 `WandscapeNpc.syncWandAttributes()` 读手部物品 preset_id → `WandApi.getWandModifiers` → `eq.equip(WAND, presetId, mods)`，在 `NpcMenu.clicked` / `onAddedToLevel` / `EntityComponentBridge` 注册路径同步。
+- **旧杖处置**：删 basic/adept/master JSON；`basic_wand` 保留为中性默认预设（无 JSON，`EquipmentComponent` 硬编码），新 NPC 出生自带、合成 GUI 不可见。创造栏 `acceptWandPresets` 按预设数据驱动补发全部变体。
+- **卷轴 i18n**：display_name 与 `magic.wandscape.*` 一致（魅惑/背水一战/防御强化/光束/治疗…）；合成站法杖名走新增 `craft_recipe.wandscape.<id>` 键。
+
+**为什么**：殖民地自动化模组的核心乐趣在"给法师分工"——工作型法杖是建造线的直接杠杆，值得从 Lv1 贯穿到 Lv30 一条成长链。牺牲型放后期避免前期负反馈；成本锚定"攒大半天到一天"保证每次购买是决策而非零钱。属性应用是既有数据模型的空洞（解析了却没用），接上是让整套设计成立的前提。
+
+**影响**：12 个法杖 JSON + 8 个卷轴 JSON、`WandscapeNpc`（syncWandAttributes）、`WandApi`/`WandApiImpl`、`WandscapeApis`、`WandItem`（tooltip）、`EquipmentComponent`（公开默认修饰符）、`Wandscape`（创造栏）、`lang/{zh_cn,en_us}.json`、命令 seed（builder_wand→carpenter_wand）、`docs/data/craft_recipes.md`、`docs/modules/wand.md`、`architecture/packages/wand.md`。测试：`EquipmentComponentWandTest`（4）、`WandItemTest`（2）、`WandPresetLoaderTest` 新增 trade-off 解析用例。
+
 ## 2026-08-26：移除并发建筑上限 Config.MAX_CONCURRENT_BUILDINGS——工作站并行不再受全局预算挤压
 
 **需求**（用户指令）：删掉 `Config.MAX_CONCURRENT_BUILDINGS`，不设并发建筑数量限制。

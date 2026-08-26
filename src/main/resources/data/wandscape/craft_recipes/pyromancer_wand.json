@@ -1,17 +1,17 @@
 {
   "type": "wand",
   "craft_station": "crafting_station",
-  "id": "master_wand",
-  "display_name": "大师法杖",
+  "id": "pyromancer_wand",
+  "display_name": "烈焰法杖",
   "slot": "wand",
-  "wand_color": "#FF4500",
+  "wand_color": "#FF6A00",
   "attributes": [
-    { "type": "spell_power", "operation": "addition", "amount": 1.0 }
+    { "type": "spell_power", "operation": "addition", "amount": 0.7 }
   ],
   "output": { "item": "wandscape:wand" },
   "cost": {
-    "metal": 64,
-    "dark": 32
+    "fire": 1800,
+    "metal": 1200
   },
   "unlock_requirement": {
     "min_colony_level": 5

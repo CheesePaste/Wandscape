@@ -1,0 +1,21 @@
+{
+  "type": "wand",
+  "craft_station": "crafting_station",
+  "id": "arcane_wand",
+  "display_name": "奥术法杖",
+  "slot": "wand",
+  "wand_color": "#8B5CE6",
+  "attributes": [
+    { "type": "spell_power", "operation": "addition", "amount": 0.8 },
+    { "type": "spell_speed", "operation": "addition", "amount": 0.3 }
+  ],
+  "output": { "item": "wandscape:wand" },
+  "cost": {
+    "fire": 20000,
+    "dark": 15000,
+    "water": 15000
+  },
+  "unlock_requirement": {
+    "min_colony_level": 20
+  }
+}

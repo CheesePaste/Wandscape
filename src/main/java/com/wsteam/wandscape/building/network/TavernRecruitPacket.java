@@ -87,6 +87,12 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
                 return;
             }
 
+            // 2.25 Handle reject_mage action (remove a resume without spawning)
+            if (pkt.action.startsWith("reject_mage:")) {
+                handleRejectMage(sp, level, buildingId, colonyId, pkt);
+                return;
+            }
+
             // 2.5 招募计费门控（仅「招募 NPC」收费）：每小镇首次免费，之后每次需每种元素 10000
             com.wsteam.wandscape.shared.api.TavernApi tavernApi = null;
             try {
@@ -234,6 +240,44 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
                                 tavernApi.getMageResumes(colonyId),
                                 BuildingInteractHandler.resolveCreator(sp.serverLevel(), pkt.buildingPos)));
             }
+        } catch (Exception ignored) {}
+    }
+
+    private static void handleRejectMage(ServerPlayer sp, ServerLevel level,
+                                         UUID buildingId, UUID colonyId,
+                                         TavernRecruitPacket pkt) {
+        int index;
+        try {
+            index = Integer.parseInt(pkt.action.substring("reject_mage:".length()));
+        } catch (NumberFormatException e) {
+            Log.warn(TAG, "[Tourist] Invalid reject_mage action: {}", pkt.action);
+            return;
+        }
+
+        try {
+            var tavernApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getTavernApi();
+            com.wsteam.wandscape.shared.data.MageResume removed = tavernApi.rejectMage(colonyId, index);
+            if (removed == null) {
+                ScreenFeedbackPacket.send(sp, I18n.name("message.wandscape.tavern.invalid_selection",
+                        "[Wandscape] Invalid mage selection."), true);
+            } else {
+                Log.info(TAG, "[Tourist] Rejected mage resume {} for colony {}",
+                        removed.touristName(), colonyId.toString().substring(0, 8));
+                ScreenFeedbackPacket.send(sp,
+                        I18n.name("message.wandscape.tavern.rejected",
+                                "[Wandscape] 已拒绝 %s 的求职简历", removed.touristName()),
+                        false);
+            }
+
+            // Refresh the tavern screen with the updated resume list
+            PacketDistributor.sendToPlayer(sp,
+                    new TavernOpenPacket(pkt.buildingPos, colonyId,
+                            tavernApi.getRecruitCount(colonyId),
+                            tavernApi.getMageResumes(colonyId),
+                            BuildingInteractHandler.resolveCreator(sp.serverLevel(), pkt.buildingPos)));
+        } catch (IllegalStateException e) {
+            ScreenFeedbackPacket.send(sp, I18n.name("message.wandscape.tavern.system_unavailable",
+                    "[Wandscape] Tavern system not available."), true);
         } catch (Exception ignored) {}
     }
 

@@ -17,6 +17,8 @@
 
 ## 二、已存在但当前未被代码消费（dead data / 未接线）
 
+- **法杖 attributes[] 曾只解析不应用（2026-08-26 已修复）**：旧 `WandPresetLoader` 把 `attributes[]` 解析进 `WandPreset.attributes` 并写入物品 NBT，但 `EquipmentComponent` 的 WAND 槽永远只有 `equipDefaultWand()` 的 +0 修饰符——玩家装高阶法杖只变外观、属性从不生效。现 `WandscapeNpc.syncWandAttributes()` 按手部物品 preset_id 查预设写入 WAND 槽（`NpcMenu.clicked`/`onAddedToLevel`/`EntityComponentBridge` 三处同步），`WandItem` tooltip 显示加成，创造栏按预设补发全部变体。12 个法杖预设已落地（见 `docs/data/craft_recipes.md`）。旧 basic/adept/master 已删，`basic_wand` 保留为中性默认（无 JSON）。
+
 - **建筑间道路自动生成（MST）已删除（2026-08）**：废弃功能整体移除——`RoadEventListener`/`RoadPlanner`(MST)/`RoadBuilder`/`RoadTaskSource`/`RoadConfig` 及其 `road_templates`/`road_tiers.json`/`road_rules` 数据全部删除。保留手动铺路（`SplineBuildPacket`/`RoadPlacePacket` 等，经 `PlayerManualSource`）与段完成记账 `RoadSegmentListener`。相关架构文档已同步。
 - **`wonder_config`**：`BuildingConfig` 有该字段（`WonderConfig` → `WonderEffect` StatMod/PriceMod/RuleUnlock），但 `buildings/*.json` **无任何文件定义它**。`WonderEffectApplier` 的查询接口在，但当前没有 wonder 类建筑数据。
 - **`potion_station` → `magic_station`（2026-08 P 阶段 C 改造）**：类别更名 `magic_station`（存档 category 于加载时按 BuildingConfig 迁移）并落地魔法合成 GUI（`MagicStationScreen` + `craft_spell` 产物流，卷轴入殖民地仓库）。**旧 2 个药水配方（mana/stamina）归属合成站**（`craft_station=crafting_station`，随法杖配方在合成站 GUI 列出、走 brew_potion 蓝图），但输出物品（`wandscape:mana_potion`/`stamina_potion`）**仍未注册**——产出入仓为数据条目、无图标，属已知残留。

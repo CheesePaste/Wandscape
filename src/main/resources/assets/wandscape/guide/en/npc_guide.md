@@ -38,6 +38,7 @@ Wizards carry out the colony's building, gathering, crafting, and combat. How mu
 
 - **Peace / Cancel Peace**: the wizard stops attacking any creature — no more guarding or self-defense, and an active beam stops immediately (revival, building, and crafting still work). Use it to put a wizard on pure production.
 - **Follow / Cancel Follow**: the wizard follows you — when you get more than **5 blocks** away it walks over and stops within 3 blocks. **While following, the wizard stops accepting colony tasks and drops any task in hand (building, gathering, guarding, etc.)**; personal behavior like self-defense is unaffected. Handy when taking a wizard on a trip or moving camp.
+- **Dismiss**: permanently removes the wizard — equipment (armor / custom wand / equipped spell scrolls) drops where it stands, and a mage hut resident is freed. **A dismissed wizard cannot be brought back by the revive magic**, and the operation asks for confirmation.
 
 ## Tips
 

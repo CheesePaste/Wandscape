@@ -1,0 +1,20 @@
+{
+  "type": "wand",
+  "craft_station": "crafting_station",
+  "id": "gale_wand",
+  "display_name": "疾风法杖",
+  "slot": "wand",
+  "wand_color": "#4FB8B0",
+  "attributes": [
+    { "type": "move_speed", "operation": "addition", "amount": 0.2 },
+    { "type": "spell_speed", "operation": "addition", "amount": 0.4 }
+  ],
+  "output": { "item": "wandscape:wand" },
+  "cost": {
+    "wind": 7000,
+    "fire": 5000
+  },
+  "unlock_requirement": {
+    "min_colony_level": 10
+  }
+}

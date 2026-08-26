@@ -34,8 +34,11 @@ public class EquipmentComponent {
         BASE_VALUES.put(AttributeType.MAX_MANA, 200f);
     }
 
+    /** Default wand preset id (neutral label; no JSON preset required). */
+    public static final String DEFAULT_WAND_PRESET_ID = "basic_wand";
+
     /** Default wand modifiers (neutral — no change from base). */
-    private static final List<AttributeModifier> DEFAULT_WAND_MODIFIERS = List.of(
+    public static final List<AttributeModifier> DEFAULT_WAND_MODIFIERS = List.of(
             new AttributeModifier(AttributeType.SPELL_POWER, 0f, ModifierOperation.ADDITION)
     );
 
@@ -105,7 +108,7 @@ public class EquipmentComponent {
      */
     public void equipDefaultWand() {
         if (hasDefaultWand) return;
-        equip(EquipmentSlot.WAND, "basic_wand", DEFAULT_WAND_MODIFIERS);
+        equip(EquipmentSlot.WAND, DEFAULT_WAND_PRESET_ID, DEFAULT_WAND_MODIFIERS);
         hasDefaultWand = true;
     }
 

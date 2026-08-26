@@ -5,10 +5,10 @@
   "display_name": "虚弱力场卷轴",
   "output": { "item": "wandscape:spell_scroll", "magic_id": "enfeeble_field" },
   "cost": {
-    "dark": 28,
-    "wind": 16
+    "dark": 3300,
+    "wind": 3200
   },
   "unlock_requirement": {
-    "min_colony_level": 2
+    "min_colony_level": 10
   }
 }

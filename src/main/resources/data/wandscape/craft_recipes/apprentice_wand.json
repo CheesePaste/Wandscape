@@ -1,0 +1,21 @@
+{
+  "type": "wand",
+  "craft_station": "crafting_station",
+  "id": "apprentice_wand",
+  "display_name": "学徒法杖",
+  "slot": "wand",
+  "wand_color": "#7FB8D0",
+  "attributes": [
+    { "type": "spell_power", "operation": "addition", "amount": 0.25 },
+    { "type": "max_mana", "operation": "addition", "amount": 30.0 }
+  ],
+  "output": { "item": "wandscape:wand" },
+  "cost": {
+    "fire": 150,
+    "water": 150,
+    "wood": 150
+  },
+  "unlock_requirement": {
+    "min_colony_level": 1
+  }
+}

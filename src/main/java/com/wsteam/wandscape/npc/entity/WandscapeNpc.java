@@ -28,6 +28,8 @@ import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.types.AttributeModifier;
 import com.wsteam.wandscape.core.types.AttributeType;
 import com.wsteam.wandscape.core.types.EquipmentSlot;
+import com.wsteam.wandscape.shared.api.WandApi;
+import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.core.types.ModifierOperation;
 import com.wsteam.wandscape.core.types.NpcAttributes;
 import com.wsteam.wandscape.npc.NpcMenu;
@@ -420,6 +422,31 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
         }
     }
 
+    /**
+     * 把主手法杖（自定义 preset 或默认杖）的属性加成同步到 ECS EquipmentComponent 的 WAND 槽。
+     * 此前 crafted 法杖的 attributes[] 只写入物品 NBT、从不应用——装备高阶法杖只变外观。
+     * 现按 preset_id 查预设属性，放杖即生效；未知/默认杖回退到中性默认加成。
+     */
+    public void syncWandAttributes() {
+        World world = WandscapeEngine.getWorld();
+        if (world == null || ecsEntityId <= 0) return;
+        EquipmentComponent eq = world.get(ecsEntityId, EquipmentComponent.class);
+        if (eq == null) return;
+        WandApi api = WandscapeApis.getWandApiSilently();
+        if (api == null) return;
+        ItemStack stack = getItemInHand(InteractionHand.MAIN_HAND);
+        String presetId = api.getWandPresetId(stack);
+        if (presetId != null) {
+            List<AttributeModifier> mods = api.getWandModifiers(presetId);
+            if (mods != null && !mods.isEmpty()) {
+                eq.equip(EquipmentSlot.WAND, presetId, mods);
+                return;
+            }
+        }
+        eq.equip(EquipmentSlot.WAND, EquipmentComponent.DEFAULT_WAND_PRESET_ID,
+                EquipmentComponent.DEFAULT_WAND_MODIFIERS);
+    }
+
     // ============================================================
     // Casting state (synced to client for animation + particles)
     // ============================================================
@@ -761,6 +788,18 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
             }
         }
         equippedMagic.clear();
+    }
+
+    /**
+     * 解雇：掉落装备（盔甲 + 自定义法杖 + 已装备卷轴，复用 {@link #dropEquipment}）后永久移除。
+     * 走 {@code discard()} 而非死亡——不触发 LivingDeathEvent、不写死亡记录，
+     * 因此不会被复活魔法 / 全灭保底找回。ECS 清理由 {@code onRemovedFromLevel} 的
+     * DISCARDED 分支自动完成（释放全局任务 / 取消运输 / 移除组件）。
+     */
+    public void dismissFromColony() {
+        if (level().isClientSide) return;
+        dropEquipment();
+        discard();
     }
 
     // ============================================================
@@ -1177,6 +1216,7 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
                 if (world != null) {
                     EntityComponentBridge.INSTANCE.onNpcJoinWorld(this, world);
                     syncArmorAttributes();
+                    syncWandAttributes();
                 } else {
                     // Engine not yet bootstrapped — entity loaded before ServerStartingEvent.
                     // Defer registration until the next tick.

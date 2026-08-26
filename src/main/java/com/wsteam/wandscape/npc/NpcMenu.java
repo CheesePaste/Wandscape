@@ -117,6 +117,7 @@ public class NpcMenu extends AbstractContainerMenu {
             npc.setHasDefaultWand(false);
         }
         npc.syncArmorAttributes();
+        npc.syncWandAttributes();
     }
 
     /** 盔甲槽：只接受对应部位盔甲，空槽显示原版部位图标。 */

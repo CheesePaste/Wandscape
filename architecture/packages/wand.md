@@ -11,7 +11,7 @@
 
 ## JSON
 
-位置：`data/wandscape/craft_recipes/*.json`（type="wand"）。attributes[] 格式替代旧 behaviors NBT。3 个预设（basic_wand/adept_wand/master_wand）。
+位置：`data/wandscape/craft_recipes/*.json`（type="wand"）。attributes[] 格式替代旧 behaviors NBT。12 个预设（carpenter_wand/apprentice_wand/pyromancer_wand/workshop_wand/bulwark_wand/mana_spring_wand/gale_wand/craftsman_wand/bastion_wand/arcane_wand/oblivion_wand/genesis_wand）。装备到 NPC 时按 preset_id 查预设把 attributes 写入 EquipmentComponent.WAND 槽（`WandscapeNpc.syncWandAttributes`）。
 
 ## 注册
 

@@ -19,7 +19,7 @@
 | `colony destroy` | 删除殖民地 |
 | `publish <blueprint> [key=value...] [priority]` | 发布全局任务，含坐标/列表参数解析 |
 | `recovery clear` / `recovery status` | 清任务池/建筑队列/复位 NPC；打印任务池统计 |
-| `seed_warehouse` | 向仓库灌 9999×每个注册物品 + 每个元素 + builder_wand |
+| `seed_warehouse` | 向仓库灌 9999×每个注册物品 + 每个元素 + carpenter_wand |
 | `consume_warehouse` | 清空殖民地仓库全部物品/元素 |
 | `stress <n> <m>` | spawn N NPC 网格 + M 个 town_hall 任务（3D 立方分布） |
 | `tourist list/spawn/state/cooldown` | 游客调试：列出/生成/状态/跳过冷却 |

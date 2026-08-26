@@ -1,0 +1,22 @@
+{
+  "type": "wand",
+  "craft_station": "crafting_station",
+  "id": "oblivion_wand",
+  "display_name": "湮灭法杖",
+  "slot": "wand",
+  "wand_color": "#7A2EA6",
+  "attributes": [
+    { "type": "max_hp", "operation": "addition", "amount": -40.0 },
+    { "type": "armor_value", "operation": "addition", "amount": -5.0 },
+    { "type": "spell_power", "operation": "addition", "amount": 2.0 }
+  ],
+  "output": { "item": "wandscape:wand" },
+  "cost": {
+    "fire": 60000,
+    "dark": 50000,
+    "metal": 40000
+  },
+  "unlock_requirement": {
+    "min_colony_level": 30
+  }
+}

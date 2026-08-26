@@ -29,6 +29,14 @@ public abstract class MedievalScreen extends Screen implements ReplayProtectedSc
     protected int titleXOffset = 10;
     protected final List<MedievalAnimation> animations = new ArrayList<>();
 
+    // ── Reusable confirmation dialog (rendered above everything when open) ──
+    protected final MedievalConfirmDialog confirmDialog = new MedievalConfirmDialog();
+
+    /** Open the built-in confirm dialog; on confirm the given action runs. */
+    protected void openConfirmDialog(Component message, Runnable onConfirm) {
+        confirmDialog.open(message, onConfirm);
+    }
+
     // ── Building creator footer ──
     /** Vertical space reserved at the bottom for the creator label (subclasses use it in layout math). */
     protected static final int CREATOR_FOOTER_H = 24;
@@ -115,6 +123,10 @@ public abstract class MedievalScreen extends Screen implements ReplayProtectedSc
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        // Confirm dialog open: swallow everything (Esc cancel / Enter confirm handled inside).
+        if (confirmDialog.isOpen()) {
+            return confirmDialog.keyPressed(keyCode, scanCode, modifiers);
+        }
         // Let a focused text box consume the key first (typing letters incl. H);
         // only open the help document when H is pressed outside any edit box.
         if (super.keyPressed(keyCode, scanCode, modifiers)) {
@@ -158,6 +170,10 @@ public abstract class MedievalScreen extends Screen implements ReplayProtectedSc
         renderFeedback(g);
 
         renderForeground(g, mouseX, mouseY, partialTick);
+
+        if (confirmDialog.isOpen()) {
+            confirmDialog.render(g, width, height, mouseX, mouseY);
+        }
     }
 
     /** Hook for drawing screen content (cards, background frames, labels) behind widgets. */
@@ -244,6 +260,10 @@ public abstract class MedievalScreen extends Screen implements ReplayProtectedSc
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        // Confirm dialog open: it consumes all clicks, blocking the screen behind.
+        if (confirmDialog.isOpen()) {
+            return confirmDialog.mouseClicked(mouseX, mouseY, button);
+        }
         if (button == 0 && isCloseHit(mouseX, mouseY)) {
             this.onClose();
             return true;

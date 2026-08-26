@@ -215,7 +215,7 @@ public final class ColonyCommand {
             EntityComponentBridge.INSTANCE.scheduleInventoryFill(
                     npc.getUUID(), colonyId, starterItems);
 
-            // Seed builder_wand into NPC's MC inventory so WandEquip can
+            // Seed carpenter_wand into NPC's MC inventory so WandEquip can
             // shortfill it without needing a storage building (cold-start
             // bootstrap). All initial NPCs are universal workers.
             seedBuilderWand(npc);
@@ -435,9 +435,9 @@ public final class ColonyCommand {
         return result;
     }
 
-    /** Seed a builder_wand into the NPC's MC inventory (cold-start bootstrap). */
+    /** Seed a builder wand (Lv1 work-type) into the NPC's MC inventory (cold-start bootstrap). */
     private static void seedBuilderWand(WandscapeNpc npc) {
-        var wandPreset = Wandscape.WAND_PRESET_LOADER.getPreset("builder_wand");
+        var wandPreset = Wandscape.WAND_PRESET_LOADER.getPreset("carpenter_wand");
         if (wandPreset == null) return;
         var wandRegItem = net.minecraft.core.registries.BuiltInRegistries.ITEM
                 .get(net.minecraft.resources.ResourceLocation.tryParse("wandscape:wand"));
@@ -446,7 +446,7 @@ public final class ColonyCommand {
         wandStack.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA,
                 net.minecraft.world.item.component.CustomData.of(wandPreset.nbt().copy()));
         npc.inventory.addItem(wandStack);
-        Log.info(TAG, "[Colony] Seeded builder_wand into NPC inventory");
+        Log.info(TAG, "[Colony] Seeded carpenter_wand into NPC inventory");
     }
 
     /**

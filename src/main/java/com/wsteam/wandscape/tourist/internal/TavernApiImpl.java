@@ -97,6 +97,21 @@ public class TavernApiImpl implements TavernApi {
     }
 
     @Override
+    public MageResume rejectMage(UUID colonyId, int index) {
+        TavernRecruitStorage s = getStorage();
+        if (s == null) return null;
+        List<MageResume> resumes = new ArrayList<>(s.getResumes(colonyId));
+        java.util.Collections.reverse(resumes);
+        if (index < 0 || index >= resumes.size()) return null;
+        MageResume resume = s.takeResume(colonyId, resumes.size() - 1 - index);
+        if (resume != null) {
+            Log.info(TAG, "[Tourist] Rejected mage resume {} for colony {}",
+                    resume.touristName(), colonyId.toString().substring(0, 8));
+        }
+        return resume;
+    }
+
+    @Override
     public int getRecruitCount(UUID colonyId) {
         TavernRecruitStorage s = getStorage();
         return s != null ? s.getRecruitCount(colonyId) : 0;

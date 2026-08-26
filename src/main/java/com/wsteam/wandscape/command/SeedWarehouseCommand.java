@@ -28,7 +28,7 @@ import com.wsteam.wandscape.shared.log.Log;
 /**
  * Debug command: seed 9999 of every registered Minecraft item into the colony warehouse.
  *
- * <p>Also adds a builder_wand. Items are written directly to {@link ColonyItemBank}.
+ * <p>Also adds a carpenter_wand. Items are written directly to {@link ColonyItemBank}.
  *
  * <p>Usage: {@code /wandscape seed_warehouse}
  */
@@ -75,8 +75,8 @@ public final class SeedWarehouseCommand {
             return 0;
         }
 
-        // Builder wand
-        WandPreset preset = Wandscape.WAND_PRESET_LOADER.getPreset("builder_wand");
+        // Builder wand (Lv1 work-type)
+        WandPreset preset = Wandscape.WAND_PRESET_LOADER.getPreset("carpenter_wand");
         if (preset != null) {
             bank.add(colonyId, ItemKey.of("wandscape:wand", preset.nbt().copy()), 1);
         }

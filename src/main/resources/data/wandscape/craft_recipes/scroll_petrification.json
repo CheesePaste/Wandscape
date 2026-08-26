@@ -5,10 +5,10 @@
   "display_name": "石化卷轴",
   "output": { "item": "wandscape:spell_scroll", "magic_id": "petrification" },
   "cost": {
-    "earth": 32,
-    "metal": 16
+    "earth": 130,
+    "metal": 95
   },
   "unlock_requirement": {
-    "min_colony_level": 3
+    "min_colony_level": 1
   }
 }

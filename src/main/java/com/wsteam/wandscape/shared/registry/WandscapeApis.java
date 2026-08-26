@@ -20,6 +20,8 @@ public final class WandscapeApis {
         if (wandApi == null) throw new IllegalStateException("Module WandSystem not loaded");
         return wandApi;
     }
+    @javax.annotation.Nullable
+    public static WandApi getWandApiSilently() { return wandApi; }
     public static void setWandApi(WandApi api) { wandApi = api; }
 
     public static ElementApi getElementApi() {

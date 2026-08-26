@@ -1,0 +1,22 @@
+{
+  "type": "wand",
+  "craft_station": "crafting_station",
+  "id": "bastion_wand",
+  "display_name": "堡垒法杖",
+  "slot": "wand",
+  "wand_color": "#4A4A52",
+  "attributes": [
+    { "type": "move_speed", "operation": "addition", "amount": -0.18 },
+    { "type": "max_hp", "operation": "addition", "amount": 55.0 },
+    { "type": "armor_value", "operation": "addition", "amount": 8.0 }
+  ],
+  "output": { "item": "wandscape:wand" },
+  "cost": {
+    "earth": 25000,
+    "metal": 20000,
+    "wood": 15000
+  },
+  "unlock_requirement": {
+    "min_colony_level": 20
+  }
+}

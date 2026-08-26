@@ -1,0 +1,20 @@
+{
+  "type": "wand",
+  "craft_station": "crafting_station",
+  "id": "mana_spring_wand",
+  "display_name": "秘泉法杖",
+  "slot": "wand",
+  "wand_color": "#3B6FA0",
+  "attributes": [
+    { "type": "max_mana", "operation": "addition", "amount": 150.0 },
+    { "type": "spell_speed", "operation": "addition", "amount": 0.2 }
+  ],
+  "output": { "item": "wandscape:wand" },
+  "cost": {
+    "water": 7000,
+    "wood": 6000
+  },
+  "unlock_requirement": {
+    "min_colony_level": 10
+  }
+}
