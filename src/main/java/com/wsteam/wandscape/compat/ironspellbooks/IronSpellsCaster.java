@@ -16,7 +16,6 @@ import io.redspace.ironsspellbooks.api.spells.AbstractSpell;
 import io.redspace.ironsspellbooks.api.spells.CastSource;
 import io.redspace.ironsspellbooks.api.spells.CastType;
 
-import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.LivingEntity;
@@ -68,12 +67,13 @@ public final class IronSpellsCaster {
             return false;
         }
 
-        int manaCost = Math.max(0, spell.getManaCost(spellLevel));
+        int rawMana = spell.getManaCost(spellLevel);
+        int manaCost = Math.max(5, (int) Math.round(rawMana * 0.25));
         int baseCooldown = spell.getSpellCooldown() > 0 ? (int) Math.round(spell.getSpellCooldown() * 20.0) : 40;
         CastType castType = spell.getCastType();
 
         if (target != null && target.isAlive()) {
-            npc.faceTarget(BlockPos.containing(target.getBoundingBox().getCenter()));
+            npc.faceTarget(target.getEyePosition());
         }
 
         float spellSpeed = Math.max(0.1f, npc.getEffectiveAttribute(AttributeType.SPELL_SPEED));
@@ -85,7 +85,9 @@ public final class IronSpellsCaster {
             }
 
             MagicData magicData = MagicData.getPlayerMagicData(npc);
+            magicData.initiateCast(spell, spellLevel, 0, CastSource.MOB, "mainhand");
             spell.onCast(level, spellLevel, npc, CastSource.MOB, magicData);
+            spell.onServerCastComplete(level, spellLevel, npc, magicData, false);
             spell.getCastFinishSound().ifPresent(s -> level.playSound(null, npc.getX(), npc.getY(), npc.getZ(),
                     s, SoundSource.NEUTRAL, 1.0f, 1.0f));
 
@@ -101,6 +103,7 @@ public final class IronSpellsCaster {
             }
 
             MagicData magicData = MagicData.getPlayerMagicData(npc);
+            magicData.initiateCast(spell, spellLevel, lockTicks, CastSource.MOB, "mainhand");
             spell.onServerPreCast(level, spellLevel, npc, magicData);
             spell.getCastStartSound().ifPresent(s -> level.playSound(null, npc.getX(), npc.getY(), npc.getZ(),
                     s, SoundSource.NEUTRAL, 1.0f, 1.0f));
@@ -127,21 +130,36 @@ public final class IronSpellsCaster {
             }
 
             if (cast.target != null && cast.target.isAlive() && !cast.target.isRemoved()) {
-                cast.npc.faceTarget(BlockPos.containing(cast.target.getBoundingBox().getCenter()));
+                cast.npc.faceTarget(cast.target.getEyePosition());
             }
+
+            cast.magicData.handleCastDuration();
 
             if (cast.castType == CastType.CONTINUOUS) {
                 cast.spell.onServerCastTick(cast.level, cast.spellLevel, cast.npc, cast.magicData);
+                // 持续引导按周期触发每跳效果
+                if (cast.remainingTicks % 10 == 0) {
+                    cast.spell.onCast(cast.level, cast.spellLevel, cast.npc, CastSource.MOB, cast.magicData);
+                }
             }
 
             cast.remainingTicks--;
             if (cast.remainingTicks <= 0) {
-                if (cast.castType == CastType.LONG) {
-                    cast.spell.onServerCastComplete(cast.level, cast.spellLevel, cast.npc, cast.magicData, false);
+                if (cast.target != null && cast.target.isAlive() && !cast.target.isRemoved()) {
+                    cast.npc.faceTarget(cast.target.getEyePosition());
                 }
+
+                // 蓄力法术在蓄满时触发落地效果（如黑洞生成、火球发射）
+                if (cast.castType == CastType.LONG) {
+                    cast.spell.onCast(cast.level, cast.spellLevel, cast.npc, CastSource.MOB, cast.magicData);
+                }
+
+                cast.spell.onServerCastComplete(cast.level, cast.spellLevel, cast.npc, cast.magicData, false);
                 cast.spell.getCastFinishSound().ifPresent(s -> cast.level.playSound(null,
                         cast.npc.getX(), cast.npc.getY(), cast.npc.getZ(), s, SoundSource.NEUTRAL, 1.0f, 1.0f));
                 it.remove();
+                Log.info(TAG, "NPC {} completed iron spell '{}' Lv.{}",
+                        cast.npc.getUUID().toString().substring(0, 8), cast.spell.getSpellId(), cast.spellLevel);
             }
         }
     }

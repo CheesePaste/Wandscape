@@ -1012,13 +1012,18 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
 
     /** Face the NPC toward a target block (yaw from horizontal, pitch from vertical angle). */
     public void faceTarget(BlockPos target) {
-        double dx = target.getX() + 0.5 - getX();
-        double dz = target.getZ() + 0.5 - getZ();
+        faceTarget(Vec3.atCenterOf(target));
+    }
+
+    /** Face the NPC toward a 3D position vector (yaw from horizontal, pitch from vertical angle). */
+    public void faceTarget(Vec3 target) {
+        double dx = target.x - getX();
+        double dz = target.z - getZ();
         float yaw = (float) Math.toDegrees(Math.atan2(dz, dx)) - 90f;
         setYRot(yaw);
         yBodyRot = yaw;
         yHeadRot = yaw;
-        double dy = target.getY() + 0.5 - (getY() + 1.4);
+        double dy = target.y - getEyeY();
         double hDist = Math.sqrt(dx * dx + dz * dz);
         float pitch = (float) -Math.toDegrees(Math.atan2(dy, hDist));
         setXRot(pitch);

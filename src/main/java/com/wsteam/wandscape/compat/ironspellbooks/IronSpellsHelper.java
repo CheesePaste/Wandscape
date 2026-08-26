@@ -93,7 +93,9 @@ public final class IronSpellsHelper {
             cat = MagicDef.Category.SINGLE_TARGET;
         }
 
-        int manaCost = Math.max(0, spell.getManaCost(level));
+        // 铁魔法法力池规模（500~1500）约为 Wandscape NPC（100~200）的 4 倍；按 0.25 换算适配
+        int rawMana = spell.getManaCost(level);
+        int manaCost = Math.max(5, (int) Math.round(rawMana * 0.25));
         int baseCooldown = spell.getSpellCooldown() > 0 ? (int) Math.round(spell.getSpellCooldown() * 20.0) : 40;
         int castTime = Math.max(0, spell.getCastTime(level));
         double range = 32.0;
