@@ -338,7 +338,7 @@ public class TaskQueuePanel extends AbstractWidget {
                 int tagX = labelX + Minecraft.getInstance().font.width(label) + 2;
                 int tagW = Minecraft.getInstance().font.width(shortTag);
                 g.drawString(Minecraft.getInstance().font, shortTag,
-                        tagX, centerY - 4, MedievalColors.DANGER_RED);
+                        tagX, centerY - 4, MedievalColors.TEXT_DIM);
                 int iconX = tagX + tagW + 2;
                 for (String el : e.missingElements) {
                     if (iconX + 11 > textColEnd) break; // clip at quantity column
