@@ -47,12 +47,9 @@ public final class SpellcastingApiImpl implements SpellcastingApi {
     public void setEquippedAndStrategy(UUID npcId, String preset, List<String> equipped) {
         WandscapeNpc npc = resolve(npcId);
         if (npc == null) return;
-        // 服务端权威：按每个魔法真实分类装桶，未知 / UTILITY 丢、每类 ≤3、去重
-        EquippedMagicComponent validated = EquippedMagicComponent.fromFlat(equipped, id -> {
-            MagicDef def = SpellbookLoader.getSpec(id);
-            if (def == null || def.category() == MagicDef.Category.UTILITY) return null;
-            return def.category().name().toLowerCase(Locale.ROOT);
-        });
+        // 服务端权威：按每个魔法真实分类装桶，未知 / SPECIAL / UTILITY 丢、每类 ≤3、去重
+        EquippedMagicComponent validated = EquippedMagicComponent.fromFlat(equipped,
+                SpellbookLoader::equippableCategoryOf);
         npc.equippedMagic.replaceWith(validated);
         npc.castStrategy.setPreset(preset);
     }

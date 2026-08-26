@@ -13,7 +13,7 @@ class DeathRecordTest {
     private static DeathRecord rec(int x, int y, int z) {
         return new DeathRecord(UUID.randomUUID(), "Wizard", "minecraft:overworld",
                 x, y, z, 1000L, UUID.randomUUID(), 0, 0, true,
-                40f, 0.3f, 1f, 1f, 1f, 0f, 200f, List.of());
+                40f, 0.3f, 1f, 1f, 1f, 0f, 200f, List.of(), List.of());
     }
 
     @Test
@@ -44,7 +44,7 @@ class DeathRecordTest {
         UUID id = UUID.randomUUID();
         DeathRecord r = new DeathRecord(id, "A", "minecraft:overworld",
                 1, 2, 3, 1L, UUID.randomUUID(), 0, 0, true,
-                40f, 0.3f, 1f, 1f, 1f, 0f, 200f, List.of());
+                40f, 0.3f, 1f, 1f, 1f, 0f, 200f, List.of(), List.of());
         assertEquals(id, r.npcId());
         assertEquals(1, r.x());
         assertEquals(2, r.y());
@@ -53,13 +53,27 @@ class DeathRecordTest {
     }
 
     @Test
+    void equippedMagicIsCopiedAndNullSafe() {
+        DeathRecord r = new DeathRecord(UUID.randomUUID(), "A", "minecraft:overworld",
+                1, 2, 3, 1L, UUID.randomUUID(), 0, 0, true,
+                40f, 0.3f, 1f, 1f, 1f, 0f, 200f, List.of(),
+                List.of("beam", "heal"));
+        assertEquals(List.of("beam", "heal"), r.equippedMagic(), "已装备魔法按死亡快照记录");
+        // null 入参兜底为空列表（旧有调用方未传该字段时不抛 NPE）
+        DeathRecord noMagic = new DeathRecord(UUID.randomUUID(), "A", "minecraft:overworld",
+                1, 2, 3, 1L, UUID.randomUUID(), 0, 0, true,
+                40f, 0.3f, 1f, 1f, 1f, 0f, 200f, List.of(), null);
+        assertEquals(List.of(), noMagic.equippedMagic());
+    }
+
+    @Test
     void latestInColonyPicksNewestDeathTimeIgnoringPosition() {
         DeathRecord old = new DeathRecord(UUID.randomUUID(), "Old", "minecraft:overworld",
                 100, 0, 0, 100L, UUID.randomUUID(), 0, 0, true,
-                40f, 0.3f, 1f, 1f, 1f, 0f, 200f, List.of());
+                40f, 0.3f, 1f, 1f, 1f, 0f, 200f, List.of(), List.of());
         DeathRecord fresh = new DeathRecord(UUID.randomUUID(), "Fresh", "minecraft:overworld",
                 20, 5, 20, 900L, UUID.randomUUID(), 0, 0, true,
-                40f, 0.3f, 1f, 1f, 1f, 0f, 200f, List.of());
+                40f, 0.3f, 1f, 1f, 1f, 0f, 200f, List.of(), List.of());
         DeathRecord r = DeathRecord.latestInColony(List.of(old, fresh), null);
         assertEquals("Fresh", r.name(), "取 deathTime 最新的记录，不限位置");
         assertNull(DeathRecord.latestInColony(List.of(), null), "空列表返回 null");
@@ -71,10 +85,10 @@ class DeathRecordTest {
         UUID colonyB = UUID.randomUUID();
         DeathRecord otherColony = new DeathRecord(UUID.randomUUID(), "Other", "minecraft:overworld",
                 10, 0, 0, 2000L, colonyB, 0, 0, true,
-                40f, 0.3f, 1f, 1f, 1f, 0f, 200f, List.of());
+                40f, 0.3f, 1f, 1f, 1f, 0f, 200f, List.of(), List.of());
         DeathRecord mine = new DeathRecord(UUID.randomUUID(), "Mine", "minecraft:overworld",
                 20, 5, 20, 500L, colonyA, 0, 0, true,
-                40f, 0.3f, 1f, 1f, 1f, 0f, 200f, List.of());
+                40f, 0.3f, 1f, 1f, 1f, 0f, 200f, List.of(), List.of());
         DeathRecord r = DeathRecord.latestInColony(List.of(otherColony, mine), colonyA);
         assertEquals("Mine", r.name(), "跳过其他殖民地更新的记录，取本殖民地最新");
         assertNull(DeathRecord.latestInColony(List.of(otherColony), colonyA), "无本殖民地记录返回 null");

@@ -104,8 +104,9 @@ public final class CastBrain {
      * 无则 null。调用方拿到结果后自行执行（门控在 {@code MagicState.tryCast} 原子复验，
      * 此处只做选择、不扣资源）。
      *
-     * <p>{@code altarOnly} 魔法（如复活）只允许祭坛施放，NPC 直接施法永不选中——防御性保证
-     * 其不会进守卫/自防御的自动决策表。
+     * <p>{@code altarOnly} 魔法（如复活）只允许祭坛施放，NPC 直接施法永不选中；SPECIAL 魔法
+     * （heal/teleport）由 L0/独立路径（紧急奶/脱战自奶/导航回退）触发，同样不进自动决策表——
+     * 防御性保证其不会进守卫/自防御的 L1 优先级扫描。
      *
      * @param castable  MagicDef → 是否满足施法门控（互斥锁 + 该魔法 CD + 蓝够）
      * @param snapshot  世界快照（敌数/自血/友方最低血/状态），驱动目标规则与 {@code conditions}
@@ -115,6 +116,7 @@ public final class CastBrain {
         WorldSnapshot s = snapshot != null ? snapshot : WorldSnapshot.EMPTY;
         for (MagicDef def : known) {
             if (def.altarOnly()) continue;
+            if (def.category() == MagicDef.Category.SPECIAL) continue;
             if (!castable.test(def)) continue;
             if (!targetAvailable(def, s)) continue;
             if (!def.conditions().matches(s)) continue;

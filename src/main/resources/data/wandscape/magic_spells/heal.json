@@ -1,6 +1,6 @@
 {
   "id": "heal",
-  "category": "support",
+  "category": "special",
   "mana_cost": 40,
   "base_cooldown": 300,
   "cast_time": 120,

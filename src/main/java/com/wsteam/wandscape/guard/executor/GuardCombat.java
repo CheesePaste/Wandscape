@@ -273,7 +273,7 @@ public final class GuardCombat {
      */
     private static boolean l0EmergencyHeal(ServerLevel level, WandscapeNpc npc, String circleId, int color) {
         if (lowestAllyHpRatio(level, npc, MagicSpellExecutors.HEAL_RADIUS, true) >= L0_HEAL_THRESHOLD) return false;
-        if (!npc.equippedMagic.knows("heal")) return false;
+        if (!npc.knowsSpecialSpell("heal")) return false;
         MagicDef heal = SpellbookLoader.getSpec("heal");
         if (heal == null) return false;
         if (!npc.magic.canCast("heal") || npc.magic.getMana() < heal.manaCost()) return false;

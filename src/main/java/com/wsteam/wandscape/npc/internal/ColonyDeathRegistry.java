@@ -14,6 +14,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.saveddata.SavedData;
@@ -121,6 +122,13 @@ public class ColonyDeathRegistry extends SavedData {
             }
             t.put("inventory", inv);
         }
+        if (!r.equippedMagic().isEmpty()) {
+            ListTag magics = new ListTag();
+            for (String id : r.equippedMagic()) {
+                magics.add(StringTag.valueOf(id));
+            }
+            t.put("equippedMagic", magics);
+        }
         return t;
     }
 
@@ -138,6 +146,15 @@ public class ColonyDeathRegistry extends SavedData {
                 inv.add(new ResourceStack(new ResourceId(id), amount));
             }
         }
+        // 已装备魔法卷轴：旧存档无此字段 → 空（复活不恢复卷轴，行为同旧版）。默认空保证 NBT 兼容。
+        List<String> equippedMagic = new ArrayList<>();
+        if (t.contains("equippedMagic")) {
+            ListTag list = t.getList("equippedMagic", Tag.TAG_STRING);
+            for (int i = 0; i < list.size(); i++) {
+                String id = list.getString(i);
+                if (!id.isEmpty()) equippedMagic.add(id);
+            }
+        }
         return new DeathRecord(
                 t.getUUID("npcId"),
                 t.getString("name"),
@@ -151,6 +168,7 @@ public class ColonyDeathRegistry extends SavedData {
                 t.getFloat("maxHp"), t.getFloat("moveSpeed"), t.getFloat("spellPower"),
                 t.getFloat("workSpeed"), t.getFloat("spellSpeed"), t.getFloat("armorValue"),
                 t.getFloat("maxMana"),
-                inv);
+                inv,
+                equippedMagic);
     }
 }

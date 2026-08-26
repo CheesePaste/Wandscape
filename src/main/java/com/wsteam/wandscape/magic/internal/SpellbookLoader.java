@@ -1,5 +1,6 @@
 package com.wsteam.wandscape.magic.internal;
 
+import java.util.Locale;
 import java.util.Map;
 
 import javax.annotation.Nullable;
@@ -43,5 +44,19 @@ public class SpellbookLoader {
     /** 全部魔法（id → 定义）；loader 未初始化时为空 map。 */
     public static Map<String, MagicDef> getAllSpecs() {
         return INSTANCE != null ? INSTANCE.getAll() : Map.of();
+    }
+
+    /**
+     * 该魔法 id 的可装备分类名（小写）；不可装备返回 null。SPECIAL（teleport/heal）与
+     * UTILITY（revive）为系统固有/祭坛专属、未知 id 无定义——三者均不进
+     * {@code EquippedMagicComponent}。服务端权威装桶校验统一走这里，避免各调用方重复判。
+     */
+    @Nullable
+    public static String equippableCategoryOf(String magicId) {
+        MagicDef def = getSpec(magicId);
+        if (def == null) return null;
+        MagicDef.Category c = def.category();
+        if (c == MagicDef.Category.UTILITY || c == MagicDef.Category.SPECIAL) return null;
+        return c.name().toLowerCase(Locale.ROOT);
     }
 }
