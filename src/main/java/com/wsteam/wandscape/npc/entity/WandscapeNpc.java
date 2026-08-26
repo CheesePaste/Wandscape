@@ -17,6 +17,7 @@ import javax.annotation.Nullable;
 
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.Wandscape;
+import com.wsteam.wandscape.compat.ironspellbooks.IronSpellsCompat;
 import com.wsteam.wandscape.core.component.CastStrategyComponent;
 import com.wsteam.wandscape.core.component.ColonyMember;
 import com.wsteam.wandscape.core.component.EquipmentComponent;
@@ -28,6 +29,7 @@ import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.types.AttributeModifier;
 import com.wsteam.wandscape.core.types.AttributeType;
 import com.wsteam.wandscape.core.types.EquipmentSlot;
+import com.wsteam.wandscape.core.types.FollowAttackDecision;
 import com.wsteam.wandscape.core.types.FriendlyForce;
 import com.wsteam.wandscape.shared.api.WandApi;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
@@ -47,6 +49,8 @@ import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.task.engine.pool.GlobalTask;
 import com.wsteam.wandscape.task.runtime.NpcTaskPackage;
 
+import io.redspace.ironsspellbooks.entity.mobs.IMagicSummon;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
@@ -62,6 +66,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.SimpleContainer;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
@@ -83,6 +88,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.network.PacketDistributor;
+import com.wsteam.wandscape.shared.entity.ColonyVisitor;
 import com.wsteam.wandscape.shared.entity.PlayerLike;
 import com.wsteam.wandscape.shared.log.Log;
 
@@ -186,7 +192,7 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
      * 普通敌对生物（{@link Enemy} 且非中立）恒是；中立生物（{@link NeutralMob}——末影人/僵尸猪人
      * 等既属 Enemy 又属 NeutralMob）仅在**发怒且怒火指向玩家或小镇成员**（NPC/村民）时才算——
      * 平时和平状态绝不主动索敌；对其它怪物发怒（如被骷髅打伤）也不算小镇威胁。
-     * 注意：这只是「索敌」判定。光束/法术伤害仍按 {@link Enemy} 结算（{@link #canBeamHurt}），
+     * 注意：这只是「索敌」判定。光束/法术伤害走 {@link #canBeamHurt}（非友军皆可结算），
      * 战斗中可能误伤到正好在束内/溅射范围内的和平中立生物——这是有意的。
      */
     public static boolean isHostileTarget(LivingEntity target, ServerLevel level) {
@@ -200,23 +206,21 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
     }
 
     /**
-     * 该法师的魔法光束能伤害的目标判定钩子。默认只伤敌对生物（{@link Enemy}）——
-     * 与 {@link #isHostileTarget}（索敌判定）分开：战斗中对束内 Enemy 一律结算伤害，
-     * 可能误伤正好在束内/溅射范围内的和平中立生物；但 NPC 不会主动索敌锁定它们。
-     * 受击反击例外：当前仇恨目标（非 Enemy 的攻击者，如北极熊/铁傀儡/狼）也放行，
-     * 使 NPC 被中立生物攻击时能还手——但仍排除友军（见 {@link #isFriendlyForce}）。
-     * 敌对法师等子类覆盖为「Enemy 或 生存玩家」，用于实战测试。光束伤害
-     * （{@code MagicBeamEntity}）、SPELL_POWER 倍率（{@code NpcSpellPowerHandler}）
-     * 与战斗快照敌数（{@code GuardCombat}）三处统一走此钩子，保证
-     * 「NPC 伤不了友军与玩家、邪恶法师能伤生存玩家」的边界唯一且一致。
+     * 该法师的魔法光束能伤害的目标判定钩子——**友军名单管辖**：友军（玩家 + 同殖民地 NPC /
+     * 铁魔法随从 / 游客，见 {@link #isFriendlyForce}）以外的一切实体都能伤害。与
+     * {@link #isHostileTarget}（主动索敌，仍仅 Enemy）分开：战斗中 NPC 不会主动锁定非敌对
+     * 生物，但一旦交战（跟随玩家攻击的目标 / 受击反击 / 守卫对怪），光束/陨石溅射对束内
+     * 非友军一律结算伤害。敌对法师等子类覆盖为「非友军 或 生存玩家」，用于实战测试。
+     * 光束伤害（{@code MagicBeamEntity}）、SPELL_POWER 倍率（{@code NpcSpellPowerHandler}）
+     * 与战斗快照敌数（{@code GuardCombat}）统一走此钩子，边界唯一。
      */
     public boolean canBeamHurt(LivingEntity target) {
-        if (target instanceof Enemy) return true;
-        return isRetaliationTarget(target) && isCurrentHatedAttacker(target);
+        return !isFriendlyForce(target);
     }
 
     /**
-     * 目标是否属于本 NPC 所在殖民地的友军名单（派生）：同 {@code colonyId} 的 NPC + 所有玩家。
+     * 目标是否属于本 NPC 所在殖民地的友军名单（派生）：同 {@code colonyId} 的 NPC + 所有玩家
+     * + 同殖民地 NPC 召唤的铁魔法随从 + 同殖民地游客。
      * 友军不记仇、不受本 NPC 任何攻击伤害——仇恨记录（{@code SelfDefenseHandler}）与伤害判定
      * （{@link #canBeamHurt} / {@code NpcSpellPowerHandler} 伤害入口）统一走此方法，边界唯一。
      */
@@ -227,7 +231,33 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
         if (other instanceof WandscapeNpc npc) {
             return FriendlyForce.isAlly(colonyId, npc.colonyId, FriendlyForce.AllyKind.WANDSCAPE_NPC);
         }
+        // 铁魔法召唤物：召唤者为「本 NPC 或同殖民地 NPC」→ 友军（施法不误伤自己/同殖民地召唤的
+        // 亡灵随从）。instanceof 前置 isLoaded 守卫——模组未加载时类不在类路径，直接 instanceof
+        // 会抛 NoClassDefFoundError。玩家/其它模组施法者的召唤物不在豁免范围（仅豁免 NPC 召唤的）；
+        // 不同殖民地 NPC 召唤的仍是敌对目标。
+        if (IronSpellsCompat.isLoaded() && other instanceof IMagicSummon summon) {
+            Entity summoner = summon.getSummoner();
+            if (summoner instanceof WandscapeNpc ownerNpc) {
+                return FriendlyForce.isAlly(colonyId, ownerNpc.colonyId, FriendlyForce.AllyKind.MAGIC_SUMMON);
+            }
+            return false;
+        }
+        // 游客：同殖民地游客 → 友军（避免战斗溅射误伤短居访客）
+        if (other instanceof ColonyVisitor visitor) {
+            return FriendlyForce.isAlly(colonyId, visitor.getColonyId(), FriendlyForce.AllyKind.TOURIST);
+        }
         return FriendlyForce.isAlly(colonyId, null, FriendlyForce.AllyKind.OTHER);
+    }
+
+    /**
+     * 是否为任意殖民地 NPC 召唤的铁魔法随从（守卫触发扫描用）：殖民地随从不构成对建筑的威胁，
+     * 不触发守卫任务——否则发布后立即被守卫执行器过滤为空目标而 stand-down，反复发布空转。
+     * 敌对施法者（{@code isColonyNpc() == false}，如 EvilMage）召唤的不在此列，仍是威胁。
+     */
+    public static boolean isColonyNpcSummon(Entity entity) {
+        if (!IronSpellsCompat.isLoaded() || !(entity instanceof IMagicSummon summon)) return false;
+        Entity summoner = summon.getSummoner();
+        return summoner instanceof WandscapeNpc ownerNpc && ownerNpc.isColonyNpc();
     }
 
     /**
@@ -238,13 +268,6 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
      */
     public boolean isRetaliationTarget(LivingEntity attacker) {
         return !isFriendlyForce(attacker);
-    }
-
-    /** 目标是否为当前有效仇恨目标（未过期且 UUID 一致）——反击伤害放行的依据。 */
-    private boolean isCurrentHatedAttacker(LivingEntity target) {
-        if (hatedAttackerUuid == null) return false;
-        if (level().getGameTime() > hateExpiryTick) return false;
-        return target.getUUID().equals(hatedAttackerUuid);
     }
 
     /** 头顶是否显示闲聊气泡（客户端渲染器用）。敌对法师等子类覆盖为 false。 */
@@ -446,6 +469,28 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
                 eq.equip(coreSlot, stack.getItem().getDescriptionId(), mods);
             }
         }
+    }
+
+    /**
+     * 受击扣 4 个盔甲格耐久。盔甲存于独立 {@link #armorInventory}、不在原版装备槽——
+     * 原版 {@code doHurtEquipment} 按 getItemBySlot 读取够不到这 4 件，故在此按原版语义手动结算：
+     * 每件损耗 max(1, damage/4 取整)，走 {@link ItemStack#hurtAndBreak}（吃耐久/经验修补附魔），
+     * 破损 shrink 空槽并广播破坏事件。某件破损后护甲值变化，需立即重算 ECS 属性
+     * （{@link #syncArmorAttributes}，空槽会 unequip 掉旧的护甲加成）。
+     * 仅在伤害不绕盔甲时被调用（{@code getDamageAfterArmorAbsorb} 保证），与数值减伤同边界。
+     */
+    @Override
+    protected void hurtArmor(DamageSource source, float damageAmount) {
+        if (damageAmount <= 0.0F) return;
+        int dmg = Math.max(1, (int) (damageAmount / 4.0F));
+        boolean anyBroke = false;
+        for (int i = 0; i < ARMOR_SLOT_COUNT; i++) {
+            ItemStack stack = armorInventory.getItem(i);
+            if (stack.isEmpty() || !stack.canBeHurtBy(source)) continue;
+            stack.hurtAndBreak(dmg, this, ARMOR_VANILLA_SLOTS[i]);
+            if (stack.isEmpty()) anyBroke = true;
+        }
+        if (anyBroke) syncArmorAttributes();
     }
 
     /**
@@ -700,7 +745,10 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
     }
 
     public void setFollowMode(boolean value) {
-        this.followMode = value;
+        if (this.followMode != value) {
+            this.followMode = value;
+            clearFollowAttackTarget(); // 切换时清残留目标，防旧会话目标在重开跟随后复活
+        }
     }
 
     public UUID getFollowerUuid() {
@@ -709,6 +757,51 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
 
     public void setFollowerUuid(UUID uuid) {
         this.followerUuid = uuid;
+    }
+
+    // ============================================================
+    // 跟随战斗目标：跟随者玩家攻击的生物 → 本 NPC 获得仇恨并攻击（原版狼 OwnerHurtTarget 行为）。
+    // 瞬态不持久化（与 hatedAttacker 同类战斗态）；目标死亡/过期/出追击范围后自然失效，回落
+    // 自防御扫描。由 FollowAttackHandler（LivingIncomingDamageEvent）标记、SelfDefenseExecutor
+    // 目标解析优先消费。
+    // ============================================================
+
+    /** 跟随战斗目标 UUID（跟随者玩家攻击的生物）。 */
+    private UUID followAttackUuid = null;
+    /** 跟随战斗目标过期 tick（gameTime）——不可达目标的时间盒，玩家再攻击即刷新。 */
+    private long followAttackExpiryTick = 0;
+
+    /** 标记跟随战斗目标（FollowAttackHandler 调用）：记录目标 + 过期时间（每次玩家攻击刷新）。 */
+    public void markFollowAttackTarget(LivingEntity target) {
+        this.followAttackUuid = target.getUUID();
+        this.followAttackExpiryTick = level().getGameTime()
+                + Config.GUARD_FOLLOW_ATTACK_DURATION_TICKS.get();
+    }
+
+    /** 当前跟随战斗目标：有效（跟随开、未过期、目标存活、在追击范围内、非友军）则返回，否则 null。 */
+    @Nullable
+    public LivingEntity getFollowAttackTarget(ServerLevel level) {
+        if (followAttackUuid == null) return null;
+        Entity e = level.getEntity(followAttackUuid);
+        if (!(e instanceof LivingEntity target)) return null;
+        double range = Config.GUARD_HATE_RANGE.get();
+        boolean active = FollowAttackDecision.isActive(level.getGameTime(), followAttackExpiryTick,
+                followMode, resting, target.isAlive() && !target.isRemoved(),
+                target.distanceToSqr(this), range * range,
+                canBeamHurt(target), isFriendlyForce(target));
+        return active ? target : null;
+    }
+
+    /** 目标是否可标记为跟随战斗目标（FollowAttackHandler 标记时判定）：非休息、非友军——
+     *  可伤害性已由放宽后的 {@link #canBeamHurt}（= 非友军）隐含，无需单独查。 */
+    public boolean isValidFollowAttackTarget(LivingEntity target) {
+        return !resting && !isFriendlyForce(target);
+    }
+
+    /** 清除跟随战斗目标（跟随开关切换、目标失效时）。 */
+    public void clearFollowAttackTarget() {
+        this.followAttackUuid = null;
+        this.followAttackExpiryTick = 0;
     }
 
     // ── 法师等级与小屋归属（法师小屋入住用，NBT 持久化）──

@@ -4,7 +4,6 @@ import com.wsteam.wandscape.core.types.AttributeType;
 import com.wsteam.wandscape.magic.internal.MagicSpellExecutors;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 
-import net.minecraft.world.entity.monster.Enemy;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 
@@ -17,11 +16,12 @@ import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
  * （光束/未来法术/铁魔法），在「给目标核算伤害」的唯一入口乘倍率，任何未来新增魔法自动
  * 生效，不会漏写。
  *
- * <p>友伤边界（L0，先于倍率）：伤害源实体是 {@link WandscapeNpc} 时，目标必须可被该法师
- * 伤害——{@link Enemy} 恒可，其余按 {@code npc.canBeamHurt(target)}（普通 NPC 只伤 Enemy /
- * 当前仇恨目标，**永不伤友军名单成员与任何玩家**）。铁魔法（Iron's Spells）由其库内部结算
- * 伤害，不检查此边界，会在 AoE/溅射里打到友军与玩家——这里在伤害入口统一**取消**友军伤害，
- * 使铁魔法与原生魔法（施法前已按 canBeamHurt 过滤目标）边界一致；和平模式同理整伤取消。
+ * <p>友伤边界（L0，先于倍率）：**友军名单管辖**——伤害源实体是 {@link WandscapeNpc} 时，
+ * 目标为友军（玩家 + 同殖民地 NPC/铁魔法随从/游客，见 {@code WandscapeNpc#isFriendlyForce}）
+ * 则整伤取消；非友军一律结算（不再限于 {@link Enemy}，与 {@code canBeamHurt} 放宽一致）。
+ * 铁魔法（Iron's Spells）由其库内部结算伤害，不检查此边界，会在 AoE/溅射里打到友军——
+ * 这里在伤害入口统一**取消**友军伤害，使铁魔法与原生魔法（施法前已按 canBeamHurt 过滤目标）
+ * 边界一致；和平模式同理整伤取消。
  *
  * <p>注意：L2 物理普攻（GuardCombat.normalAttack）也走此钩子（来源是 NPC），因此
  * 会一并被 SPELL_POWER 与魔力强化放大——这是「所有乘 SPELL_POWER 处都乘魔力强化」
@@ -50,9 +50,10 @@ public final class NpcSpellPowerHandler {
             event.setCanceled(true);
             return;
         }
-        // 友伤边界：Enemy 恒可；其余按 canBeamHurt（普通 NPC 只伤 Enemy/当前仇恨目标，
-        // 永不伤友军名单成员与任何玩家）。铁魔法内部结算不检查此边界，这里统一取消友军伤害。
-        if (!(event.getEntity() instanceof Enemy) && !npc.canBeamHurt(event.getEntity())) {
+        // 友军名单管辖：友军（玩家 + 同殖民地 NPC/铁魔法随从/游客）以外皆可伤。铁魔法内部
+        // 结算不检查此边界，这里在伤害入口统一取消友军伤害（原生魔法施法前已按 canBeamHurt
+        // 过滤目标，边界一致）。
+        if (npc.isFriendlyForce(event.getEntity())) {
             event.setCanceled(true);
             return;
         }

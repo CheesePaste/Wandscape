@@ -460,6 +460,7 @@ public class Wandscape {
         NeoForge.EVENT_BUS.register(HostileTargetingHandler.class);
         NeoForge.EVENT_BUS.register(BuildingNoSpawnZoneHandler.class);
         NeoForge.EVENT_BUS.register(com.wsteam.wandscape.guard.SelfDefenseHandler.class);
+        NeoForge.EVENT_BUS.register(com.wsteam.wandscape.guard.FollowAttackHandler.class);
         NeoForge.EVENT_BUS.register(com.wsteam.wandscape.guard.NpcSpellPowerHandler.class);
         NeoForge.EVENT_BUS.register(com.wsteam.wandscape.npc.internal.NpcDeathHandler.class);
         NeoForge.EVENT_BUS.register(BuildingInteractHandler.class);

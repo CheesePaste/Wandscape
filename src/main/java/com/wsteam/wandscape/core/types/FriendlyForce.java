@@ -21,7 +21,11 @@ public final class FriendlyForce {
         PLAYER,
         /** 本模组 NPC：同殖民地才算友军（不同殖民地 NPC 互不视为友军）。 */
         WANDSCAPE_NPC,
-        /** 其它（中立生物/村民/游客/敌对生物等）：默认不是友军。 */
+        /** 铁魔法召唤物（{@code IMagicSummon}）：召唤者为同殖民地 NPC → 友军（施法不误伤自己/同殖民地召唤的亡灵随从）。 */
+        MAGIC_SUMMON,
+        /** 游客（{@code ColonyVisitor}）：同殖民地游客 → 友军（避免战斗溅射误伤短居访客）。 */
+        TOURIST,
+        /** 其它（中立生物/村民/敌对生物等）：默认不是友军。 */
         OTHER
     }
 
@@ -31,7 +35,7 @@ public final class FriendlyForce {
     public static boolean isAlly(UUID selfColony, UUID otherColony, AllyKind kind) {
         return switch (kind) {
             case PLAYER -> true;
-            case WANDSCAPE_NPC -> sameColony(selfColony, otherColony);
+            case WANDSCAPE_NPC, MAGIC_SUMMON, TOURIST -> sameColony(selfColony, otherColony);
             case OTHER -> false;
         };
     }

@@ -77,12 +77,15 @@ public final class GuardTaskSource implements TaskSource {
                 Config.GUARD_RANGE.get(), Config.GUARD_RELEASE_RANGE.get(), pool.size());
     }
 
-    /** 攻击区（±guard.range）内距并集盒中心最近的存活 Enemy；无则 null。 */
+    /** 攻击区（±guard.range）内距并集盒中心最近的存活 Enemy；无则 null。
+     *  殖民地 NPC 的召唤随从不构成对建筑的威胁，不触发守卫任务——否则发布后立即被守卫执行器
+     *  过滤为空目标而 stand-down，反复发布空转。 */
     private static LivingEntity findThreat(ServerLevel level) {
         List<GuardZone> zones = GuardScanner.zones(level, Config.GUARD_RANGE.get());
         AABB queryBox = GuardScanner.unionAabb(zones);
         if (queryBox == null) return null;
-        return GuardScanner.nearestInZones(level, zones, queryBox.getCenter());
+        return GuardScanner.nearestInZones(level, zones, queryBox.getCenter(),
+                m -> !WandscapeNpc.isColonyNpcSummon(m));
     }
 
     /**

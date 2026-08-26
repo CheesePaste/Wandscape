@@ -8,7 +8,7 @@
 
 ## TouristEntity
 
-- `extends PathfinderMob implements VillagerLike, TouristStateHost`。
+- `extends PathfinderMob implements VillagerLike, TouristStateHost, ColonyVisitor`（`ColonyVisitor` 暴露 `getColonyId()`，供友军名单判定「同殖民地游客」）。
 - 外观：`Appearance` 枚举 TOURIST/MAGE，`MAGE_CHANCE=0.05`；皮肤数运行时扫描 `textures/entity/tourist|wizard`。
 - 属性：MOVEMENT_SPEED 0.5、FOLLOW_RANGE 64、MAX_HEALTH 20。AI：FloatGoal(0)/OpenDoorGoal(1)/TouristMoveGoal(2)/RandomLookAroundGoal(3)。`createNavigation` → WandscapeNavigation。
 - 钱包：`wallet`+`initialWallet`，spendWallet 钳到 0；`travelFund`（总旅费 = ATM 取现池，见 simulation.md）。能量 0-100（`TOURIST_MAX_ENERGY`）。

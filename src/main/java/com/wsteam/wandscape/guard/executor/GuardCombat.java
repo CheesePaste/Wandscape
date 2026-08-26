@@ -229,7 +229,8 @@ public final class GuardCombat {
         if (npc.magic.getLockTicks() > 0) return; // 正施法（锁占用）不普攻
         if (!npc.canMeleeAttack(level.getGameTime())) return; // 攻速冷却未到
         if (target == null || target.isRemoved() || !target.isAlive()) return;
-        if (!(target instanceof Enemy) && !npc.canBeamHurt(target)) return;
+        // 友军名单管辖：友军（玩家 + 同殖民地 NPC/铁魔法随从/游客）不打
+        if (npc.isFriendlyForce(target)) return;
 
         npc.markMeleeAttack(level.getGameTime(), MELEE_COOLDOWN_TICKS);
 
@@ -294,18 +295,29 @@ public final class GuardCombat {
                 activeEffectIds(npc));
     }
 
-    /** 半径内可被该法师伤害的存活目标数量（类别敌数门控用：单发 ≤ 3 / 群发 ≥ 3）。
-     *  伤害按 Enemy 结算：默认只数 Enemy（含和平中立生物，与伤害口径一致）；敌对法师
-     *  （canBeamHurt 覆盖为也伤生存玩家）会把生存玩家计入敌数，使 hostile_nearest /
-     *  敌数门控对玩家目标成立。 */
+    /** 敌数口径 = 半径内 Enemy（排除友军）+ 非 Enemy 的当前战斗目标（跟随攻击目标 / 受击仇恨 /
+     *  敌对法师的生存玩家目标），驱动类别敌数门控（单发 ≤ 3 / 群发 ≥ 3）与 hostile_nearest
+     *  （hasHostileTarget）。不把普通平民（村民/动物）计入——否则殖民地里村民会让 AOE 门控恒开、
+     *  为打一只怪甩陨石溅射全村；也不计友军——己方/同殖民地亡灵随从跟班会让敌数虚增、误判被围殴。 */
     private static int countEnemies(ServerLevel level, WandscapeNpc npc) {
         int count = 0;
         for (Entity e : level.getEntities((Entity) null, npc.getBoundingBox().inflate(SNAPSHOT_SCAN_RADIUS),
-                e -> e instanceof Enemy
-                        || (e instanceof LivingEntity le && npc.canBeamHurt(le)))) {
+                e -> e instanceof LivingEntity le && le instanceof Enemy && !npc.isFriendlyForce(le))) {
             if (e.isAlive() && !e.isRemoved()) count++;
         }
+        count += countEngaged(npc, npc.getFollowAttackTarget(level));
+        count += countEngaged(npc, npc.getHatedAttacker(level));
+        count += countEngaged(npc, npc.getTarget()); // 敌对法师的生存玩家目标
         return count;
+    }
+
+    /** 非 Enemy 的当前战斗目标若在快照半径内且 NPC 可伤害，计入敌数（Enemy 已在上方扫描计入）。
+     *  使其施法不被 HOSTILE 目标规则（hasHostileTarget = enemyCount > 0）拦下。 */
+    private static int countEngaged(WandscapeNpc npc, LivingEntity target) {
+        if (target == null || target.isRemoved() || !target.isAlive()) return 0;
+        if (target instanceof Enemy) return 0;
+        if (target.distanceToSqr(npc) > (double) SNAPSHOT_SCAN_RADIUS * SNAPSHOT_SCAN_RADIUS) return 0;
+        return npc.canBeamHurt(target) ? 1 : 0;
     }
 
     /** 半径内友方（NPC/村民）的最低血量比例，可含自身；无对象 = 1。
@@ -487,12 +499,13 @@ public final class GuardCombat {
 
     private record Crowd(int count, Vec3 centroid) {}
 
-    /** 半径 {@link #CROWD_RADIUS} 内「LOS 可见且存活」的 Enemy 计数与位置质心（群殴判定用）。 */
+    /** 半径 {@link #CROWD_RADIUS} 内「LOS 可见且存活」的 Enemy 计数与位置质心（群殴判定用）。
+     *  友军（含己方/同殖民地召唤物）不计入——召唤的亡灵随从会跟着施法者，否则误判被围殴。 */
     private static Crowd scanCrowd(ServerLevel level, WandscapeNpc npc) {
         Vec3 sum = Vec3.ZERO;
         int count = 0;
         for (Entity e : level.getEntities((Entity) null, npc.getBoundingBox().inflate(CROWD_RADIUS),
-                e -> e instanceof Enemy)) {
+                e -> e instanceof LivingEntity le && le instanceof Enemy && !npc.isFriendlyForce(le))) {
             if (!(e instanceof LivingEntity mob) || mob.isRemoved() || !mob.isAlive()) continue;
             if (!hasLineOfSight(npc, mob)) continue;
             sum = sum.add(e.position());

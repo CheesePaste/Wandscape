@@ -157,12 +157,16 @@ public final class SelfDefenseExecutor implements OpExecutor<AtomicOp.SelfDefens
         return false;
     }
 
-    /** 目标解析：仇恨目标（存活、可反击、hateRange 内、可见）优先——反击不要求 Enemy，
-     *  北极熊/铁傀儡/狼等中立生物主动攻击 NPC 也还手；否则半径内最近可见
-     *  {@code isHostileTarget} 的生物（主动索敌仍仅 Enemy，中立生物须已发怒）。
+    /** 目标解析：跟随战斗目标（跟随者玩家攻击的生物）优先——不要求 Enemy、不要求 LOS
+     *  （原版狼 OwnerHurtTarget 行为，隔墙也追）；否则仇恨目标（存活、可反击、hateRange 内、
+     *  可见）优先——反击不要求 Enemy，北极熊/铁傀儡/狼等中立生物主动攻击 NPC 也还手；
+     *  再否则半径内最近可见 {@code isHostileTarget} 的生物（主动索敌仍仅 Enemy，中立生物须已发怒）。
      *  地下/隔墙看不见的怪物不锁为目标。 */
     @Nullable
     private static LivingEntity resolveTarget(WandscapeNpc npc, ServerLevel level) {
+        LivingEntity followAttack = npc.getFollowAttackTarget(level);
+        if (followAttack != null) return followAttack;
+
         int hateRange = Config.GUARD_HATE_RANGE.get();
         LivingEntity hated = npc.getHatedAttacker(level);
         if (hated != null && npc.isRetaliationTarget(hated)
@@ -173,7 +177,8 @@ public final class SelfDefenseExecutor implements OpExecutor<AtomicOp.SelfDefens
         return nearestVisibleEnemyAround(npc, level, Config.GUARD_SELF_DEFENSE_RANGE.get());
     }
 
-    /** 半径内最近可见存活敌对目标（球面距离 + LOS）；无则 null。中立生物须已发怒才算。 */
+    /** 半径内最近可见存活敌对目标（球面距离 + LOS）；无则 null。中立生物须已发怒才算。
+     *  友军（含己方/同殖民地召唤物、同殖民地游客）不索敌——否则 NPC 会锁定自己召唤的亡灵随从。 */
     @Nullable
     private static LivingEntity nearestVisibleEnemyAround(WandscapeNpc npc, ServerLevel level, int radius) {
         LivingEntity nearest = null;
@@ -182,6 +187,7 @@ public final class SelfDefenseExecutor implements OpExecutor<AtomicOp.SelfDefens
         for (Entity e : level.getEntities((Entity) null, npc.getBoundingBox().inflate(radius),
                 e -> e instanceof LivingEntity le && WandscapeNpc.isHostileTarget(le, level))) {
             if (!(e instanceof LivingEntity mob) || mob.isRemoved() || !mob.isAlive()) continue;
+            if (npc.isFriendlyForce(mob)) continue;
             if (!GuardCombat.hasLineOfSight(npc, mob)) continue;
             double d = mob.distanceToSqr(pos);
             if (d <= bestSq) {

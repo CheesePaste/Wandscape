@@ -30,11 +30,13 @@
 | `executor/GuardCombat.java` | **共享战斗引擎**：光束重定向/LOS/隔墙寻路/施法节流。守卫与自防御复用 |
 | `executor/SelfDefenseExecutor.java` | OpExecutor<SelfDefenseOp>：自防御持续循环 + 侦测抢占注入（`suspendCurrent`→`startPackage`）；`tick(World)` 由 onServerTick 驱动 |
 | `SelfDefenseHandler.java` | NeoForge `LivingIncomingDamageEvent`：NPC 被非玩家 Enemy 打伤 → 记仇（`WandscapeNpc.setHatedAttacker`） |
+| `FollowAttackHandler.java` | NeoForge `LivingIncomingDamageEvent`：跟随者玩家攻击生物 → 标记为跟随 NPC 的战斗目标（原版狼 OwnerHurtTarget 行为；友军名单内不标记） |
 | `GuardCommand.java` | `/wandscape guard status` 调试命令 |
 
 ## NPC 自防御（独立子系统）
 
 - **机制**：主动仇恨半径 `guard.selfDefenseRange`(16) 内无条件攻击；被非玩家 Enemy 打伤记仇（`guard.hateRange`=48、`guard.hateDurationTicks`=600，每次被打刷新），仇恨优先于半径扫描。**仇恨与主动侦测的目标都要求 LOS**（地下/隔墙不可见的不锁）。
+- **跟随战斗目标优先**：跟随模式的 NPC，其跟随者玩家攻击的生物（`FollowAttackHandler` 标记，`guard.followAttackDurationTicks`=300 刷新）**优先于仇恨与半径扫描**——不要求 Enemy、不要求 LOS（原版狼 OwnerHurtTarget 行为），目标死/过期后回落。友军名单（玩家 + 同殖民地 NPC/铁魔法随从/游客）内的目标不标记、不追击。
 - **抢占**：走 `NpcTaskQueue` 私有队列，不经过全局任务池（无审批）。`detectAndInject` 每 4 tick：已有自防御/守卫战斗包则跳过；有目标则分离 pendingFuture（防卡异步 op）→ `suspendCurrent` → `startPackage(self_defense)`；挂起栈满跳过。完成后队列自动 `resumeLatest` 恢复原包（stepIndex 不丢）。
 - **进度保护**：`TaskExecutionSystem.syncStepToPool` 只在当前包为 `global:*` 时同步——否则自防御的 step 覆盖被挂起全局任务进度。
 - **互相战斗**：守卫/自防御光束伤害记为 NPC 造成（`MagicBeamEntity` 用 `indirectMagic(casterNpc, beam)`），怪物 `HurtByTargetGoal` 反击 NPC → 受伤仇恨实际触发；玩家施法保持 `magic()`。

@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
 
@@ -64,6 +65,14 @@ public final class GuardScanner {
      *  过滤到任区域内且非黑名单，返回距 {@code from} 最近者；无则 null。 */
     @Nullable
     public static LivingEntity nearestInZones(ServerLevel level, List<GuardZone> zones, Vec3 from) {
+        return nearestInZones(level, zones, from, null);
+    }
+
+    /** {@link #nearestInZones} 带额外过滤（如守卫过滤己方/同殖民地召唤物）：{@code extraFilter} 返回
+     *  false 的目标不入选；null 表示不过滤。 */
+    @Nullable
+    public static LivingEntity nearestInZones(ServerLevel level, List<GuardZone> zones, Vec3 from,
+                                              @Nullable Predicate<LivingEntity> extraFilter) {
         AABB queryBox = unionAabb(zones);
         if (queryBox == null) return null;
         long gameTime = level.getGameTime();
@@ -72,6 +81,7 @@ public final class GuardScanner {
         for (Entity e : level.getEntities((Entity) null, queryBox,
                 e -> e instanceof LivingEntity le && WandscapeNpc.isHostileTarget(le, level))) {
             if (!(e instanceof LivingEntity mob) || mob.isRemoved() || !mob.isAlive()) continue;
+            if (extraFilter != null && !extraFilter.test(mob)) continue;
             if (isBlacklisted(mob.getId(), gameTime)) continue;
             if (!inAnyZone(mob, zones)) continue;
             double d = mob.distanceToSqr(from);
@@ -85,12 +95,20 @@ public final class GuardScanner {
 
     /** 任一区域内是否有非黑名单的存活敌对目标（{@code isHostileTarget}，用于脱离判定）。 */
     public static boolean hasMonsterInZones(ServerLevel level, List<GuardZone> zones) {
+        return hasMonsterInZones(level, zones, null);
+    }
+
+    /** {@link #hasMonsterInZones} 带额外过滤（如守卫过滤己方/同殖民地召唤物）：{@code extraFilter}
+     *  返回 false 的目标不计为威胁；null 表示不过滤。 */
+    public static boolean hasMonsterInZones(ServerLevel level, List<GuardZone> zones,
+                                            @Nullable Predicate<LivingEntity> extraFilter) {
         AABB queryBox = unionAabb(zones);
         if (queryBox == null) return false;
         long gameTime = level.getGameTime();
         for (Entity e : level.getEntities((Entity) null, queryBox,
                 e -> e instanceof LivingEntity le && WandscapeNpc.isHostileTarget(le, level))) {
             if (e instanceof LivingEntity mob && !mob.isRemoved() && mob.isAlive()
+                    && (extraFilter == null || extraFilter.test(mob))
                     && !isBlacklisted(mob.getId(), gameTime)
                     && inAnyZone(mob, zones)) {
                 return true;

@@ -19,6 +19,7 @@ import com.wsteam.wandscape.shared.data.Emotion;
 import com.wsteam.wandscape.shared.data.MageAttributeRoller;
 import com.wsteam.wandscape.shared.data.RecruitmentCandidate;
 import com.wsteam.wandscape.shared.data.VisitMemory;
+import com.wsteam.wandscape.shared.entity.ColonyVisitor;
 import com.wsteam.wandscape.shared.entity.VillagerLike;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.shared.registry.WandscapeConstants;
@@ -78,7 +79,7 @@ import com.wsteam.wandscape.tourist.network.TouristDataPacket;
  * Mage tourists carry mana/spell-power stats; when their three bars are full,
  * their data is stored in the tavern as a recruitment resume.
  */
-public class TouristEntity extends PathfinderMob implements VillagerLike, TouristStateHost {
+public class TouristEntity extends PathfinderMob implements VillagerLike, TouristStateHost, ColonyVisitor {
 
     private static final String TAG = "TouristEntity";
 

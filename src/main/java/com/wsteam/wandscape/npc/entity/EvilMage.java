@@ -50,12 +50,13 @@ public class EvilMage extends WandscapeNpc implements Enemy {
     }
 
     /**
-     * 光束可伤害目标：Enemy（敌对生物）或 生存玩家（非创造/旁观）。
-     * 普通 NPC 的 {@link WandscapeNpc#canBeamHurt} 默认只放行 Enemy —— 玩家永远安全。
+     * 光束可伤害目标：非友军（沿用放宽后的 {@link WandscapeNpc#canBeamHurt}，含村民/动物/
+     * 敌对生物/异殖民地 NPC）或 生存玩家（非创造/旁观）——EvilMage 是敌对测试生物，
+     * 刻意能伤生存玩家用于实战测试；自己的铁魔法召唤随从仍在友军名单内不误伤。
      */
     @Override
     public boolean canBeamHurt(LivingEntity target) {
-        if (target instanceof Enemy) return true;
+        if (super.canBeamHurt(target)) return true;
         return target instanceof Player player
                 && !player.isCreative() && !player.isSpectator();
     }

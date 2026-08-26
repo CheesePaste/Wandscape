@@ -2,6 +2,34 @@
 
 本文件记录偏离直觉的设计选择及其原因，供后续开发快速理解「为什么这么做」。
 
+## 2026-08-26：NPC 盔甲受击扣耐久——独立 armorInventory 手动结算
+
+**需求**（用户指令）：NPC 装备栏的护甲耐久从不被消耗，要求按受击正常磨损。
+
+**根因**：NPC 的 4 盔甲格存于独立 `armorInventory`（`SimpleContainer`）、不进 vanilla 装备槽（防外观覆盖巫师袍）；原版耐久结算在 `LivingEntity.getDamageAfterArmorAbsorb → hurtArmor → doHurtEquipment`，其中 `doHurtEquipment` 按 `getItemBySlot(EquipmentSlot)` 读取物品——`PathfinderMob` 的 `hurtArmor` 是空实现，且即便有实现也够不到 `armorInventory`，故耐久永不消耗。
+
+**决策**：
+- `WandscapeNpc` 覆盖 `hurtArmor(DamageSource, float)`：按原版语义每次受击每件扣 `max(1, ⌊damage/4⌋)`，逐件走 `ItemStack.hurtAndBreak`（免费吃耐久/经验修补附魔，破损 shrink 空槽并广播破坏事件）。该钩子在伤害**不绕盔甲**（非 `bypasses_armor`）时由原版 `getDamageAfterArmorAbsorb` 调用，与数值减伤同边界——绕盔甲伤害（如原版 `magic`/`indirect_magic`）不减伤也不掉耐久，与原版一致；Wandscape 光束 `beam.json` 不在 `bypasses_armor`，正常磨损。
+- **破损后重算属性**：某件破损（槽空）后立即 `syncArmorAttributes()` 把该槽 `unequip`，ECS 护甲加成/铁魔法属性随之撤销，下一 tick `applyEffectiveAttributes` 推送 vanilla `Attributes.ARMOR`——否则破损前加的减伤会一直残留。
+
+**为什么**：覆盖 `hurtArmor` 是原版耐久结算的确切接缝（而非事件监听），自动继承「绕盔甲伤害不掉耐久」边界；盔甲不在 vanilla 槽，`doHurtEquipment` 够不到，只能在此手动结算。
+
+**影响**：NPC 盔甲（含建镇赠送铁套）随战斗受损、会磨坏——铁套不再是永久，仍是开局一次性免费增益（见 2026-08-16「初始法师赠送铁套」）。旧存档受损盔甲照常累计。
+
+## 2026-08-26：跟随攻击 + 伤害边界放宽为非友军
+
+**需求**（用户指令）：1) 跟随模式的 NPC 现在玩家打怪后它不帮忙——要求像原版狼一样，玩家攻击的目标让跟随 NPC 获得仇恨并攻击；2) 之前「各种魔法只能打 `Enemy`」判定为设计失误太窄——改为**友军名单管什么不能打，其他的都能打**（友军 = 玩家 + 同殖民地 NPC/铁魔法随从/游客），主动索敌/锁定目标保持 Enemy 不变，只是可伤害对象变广。
+
+**决策**：
+- **伤害边界唯一钩子放宽**：`WandscapeNpc.canBeamHurt` 由「Enemy \|\| 当前仇恨目标」改为 `!isFriendlyForce(target)`。下游光束（`MagicBeamEntity`）、统一伤害入口（`NpcSpellPowerHandler`，铁魔法 AoE 也走它）、陨石溅射、虚弱力场、L2 普攻全自动跟随——此前逐处「`Enemy \|\| canBeamHurt` + 友军前置排除」的结构在放宽后塌缩为「非友军」，冗余的窄判定一并清理。玩家施法光束保持只伤 Enemy（玩家自身行为，不受 NPC 友军边界管辖）。
+- **敌数快照保持「战斗威胁」口径**而非「非友军」：`GuardCombat.countEnemies` = 半径内 Enemy（排除友军，己方亡灵随从不计）+ 非 Enemy 的当前战斗目标（跟随攻击目标/受击仇恨/敌对法师的生存玩家目标）——否则放宽后殖民地里村民会让 AOE 门控（敌数≥3）恒开、NPC 为打一只怪甩陨石溅射全村。**主动索敌不动**：`isHostileTarget`、守卫/自防御 Enemy 扫描、陨石重瞄、感化（conversion）均保持 Enemy 目标选择（conversion 回退上一个人放宽的非友军选取）。
+- **跟随攻击（原版狼 OwnerHurtTarget 行为）**：新增 `FollowAttackHandler`（`LivingIncomingDamageEvent`）——玩家攻击生物时，把该生物标记为「跟随该玩家且非和平/非休息」的殖民地 NPC 的跟随战斗目标；`SelfDefenseExecutor.resolveTarget` 优先消费，复用整套战斗引擎。目标有效性：跟随开、未过期（`guard.followAttackDurationTicks` 默认 300，玩家再攻击刷新）、存活、在 `guard.hateRange`(48) 追击范围内、非友军。友军名单内的目标绝不标记（玩家打自己人，跟随 NPC 不参战）。
+- **EvilMage 保测试语义**：`canBeamHurt` 覆盖为 `super（非友军）\|\| 生存玩家`——沿用新边界但保住「能伤生存玩家」的实战测试能力。
+
+**为什么**：友军名单是既有唯一边界（仇恨/伤害/索敌统一走它），「非友军可打」是它的自然延伸——再套 Enemy 反而造成「NPC 能打打不过的目标」或「帮玩家打怪却打不出伤害」的割裂。主动索敌保持 Enemy 是为防 NPC 无端扫射平民；可伤害放宽只影响「已交战/玩家点名」的目标，不改变主动行为。跟随攻击复用自防御链路而非另起原版目标 goal，避免第二套战斗路径。
+
+**影响**：`canBeamHurt` 放宽为非友军；`countEnemies` 改「Enemy + 当前战斗目标」口径；新增 `FollowAttackHandler`、`WandscapeNpc` 跟随战斗目标态、`guard.followAttackDurationTicks`；`SelfDefenseExecutor.resolveTarget` 跟随目标优先。**后果**：村民/动物/异殖民地 NPC 不再是 NPC 伤害的天然豁免——友军名单成为唯一保护（要额外保护需扩展 `isFriendlyForce`）。
+
 ## 2026-08-26：铁魔法装备属性桥接到 NPC 属性系统
 
 **需求**（用户指令）：铁魔法装备穿到 NPC 身上后其独有属性加成不生效（流浪法师兜帽 +25 最大法力、+5% 法术强度、速度靴 +25% 移速）。要求这些对到 Wandscape 的魔力值/法术强度/移动速度；各学派法术增强与施法时速度提升等铁魔法特色属性**不兼容**。
@@ -34,6 +62,21 @@
 **为什么**：铁魔法伤害入口散在 Iron's 库内无法逐一挂钩，而所有伤害最终都经 `LivingEntity.hurt()` → `LivingIncomingDamageEvent`，在唯一核算入口设边界是代价最小且不散落的做法。`canBeamHurt` 仍是唯一伤害边界钩子（光束/倍率/敌数/伤害入口共用），友军名单只新增一个纯函数来源。
 
 **影响**：新增 `core/types/FriendlyForce`（+`FriendlyForceTest` 决策表 7 例）；`WandscapeNpc` 增 `isFriendlyForce`、修 `isRetaliationTarget`、删 `sameColonyAs`；`NpcSpellPowerHandler` 改取消；`EntityComponentBridge` 常量别名。铁魔法/召唤物打到友军与玩家不再结算，同殖民地 NPC 不再互开战。
+
+## 2026-08-26：友军名单扩展——同殖民地召唤物与游客
+
+**需求**（用户指令 + 实测反馈）：NPC 用铁魔法「驱役亡灵」（`irons_spellbooks:raise_dead`）召唤的亡灵随从会被自己/守卫攻击。召唤物是原版 `Skeleton`/`Zombie`（`Enemy`）；铁魔法的友伤免疫（`IMagicSummon.shouldIgnoreDamage` → `isFriendlyFireBetween`）只对 **Player 施法者**生效（双方都解析成 Player 走 `canHarmPlayer` 分支 → 免疫），对 NPC 无效——非 Player、无 scoreboard 队 → 兜底 `isAlliedTo`（原版纯队伍判定）恒 false → 免疫失效。且我方索敌/伤害全看 `Enemy`，召唤物恒被锁定。要求把「自己/同殖民地 NPC 召唤的」亡灵加入友军名单，并把同殖民地游客一并加入避免溅射误伤。
+
+**决策**：
+- **`FriendlyForce` 增两类**：`AllyKind.MAGIC_SUMMON` / `TOURIST`，均按 `sameColony` 判定（与 `WANDSCAPE_NPC` 同语义，switch 归并）。
+- **`isFriendlyForce` 增分支**：`IMagicSummon` → `getSummoner()` 若为 `WandscapeNpc` 则比其殖民地（`instanceof` 前置 `IronSpellsCompat.isLoaded()` 守卫——未加载时类不在类路径，直接 instanceof 抛 NCDFE）；游客经新增共享标记 `shared/entity/ColonyVisitor`（暴露 `getColonyId()`，`TouristEntity` 实现）判定——用共享标记而非 npc 模块直接引用游客实体，遵守模块隔离。玩家/非本模组施法者的召唤物不在豁免范围。
+- **`canBeamHurt` 前置友军判定**：友军（含 `Enemy` 召唤物）永不受伤——此前 `instanceof Enemy` 分支短路放行了己方亡灵随从。
+- **伤害/索敌入口逐处过滤友军**：`MagicBeamEntity.canDamage`、`NpcSpellPowerHandler`（统一伤害入口，铁魔法 AoE 也走它）、陨石溅射、NPC 陨石重瞄/虚弱/感化 AoE、守卫普攻/敌数快照/群殴扫描、自防御索敌、守卫区扫描（`GuardScanner` 增带 `Predicate` 重载）、守卫触发（`WandscapeNpc.isColonyNpcSummon` 过滤殖民地随从，避免发布后立即 stand-down 空转）。
+- **自防御仇恨**：召唤物打伤 NPC 时 `isRetaliationTarget = !isFriendlyForce` 自动不记仇（无需额外改动）。
+
+**为什么**：铁魔法免疫只保护 Player 施法者，NPC 恰好在其外；友军名单是既有唯一边界（仇恨/伤害/索敌统一走它），把召唤物/游客按「召唤者/游客所属殖民地」归并进同一派生，边界不散落。EvilMage 等非殖民地施法者的召唤物不在豁免范围（`isColonyNpcSummon` 仅用于守卫触发，区分敌对施法者）。
+
+**影响**：`FriendlyForce` +2 类（`FriendlyForceTest` +2 例）；新增 `shared/entity/ColonyVisitor`；`WandscapeNpc.isFriendlyForce`/`canBeamHurt`/`isColonyNpcSummon`；光束/陨石/虚弱/感化/普攻/守卫/自防御逐处过滤；`GuardScanner` 增重载；`GuardTaskSource` 过滤殖民地随从触发。
 
 ## 2026-08-26：安全传送落点与 3D 导航到达判定修复（杜绝矿洞悬空坠亡与进墙传送死循环）
 
@@ -426,7 +469,7 @@
 
 **决策**：
 - 在 `ColonyCommand.createColonyAt` 生成初始 builder NPC 的循环里，给每个 NPC 的 `armorInventory`（0=头盔 1=胸甲 2=护腿 3=靴子）塞满铁套四件（铁盔/铁胸甲/铁护腿/铁靴），随后 `syncArmorAttributes()` 把护甲值同步进 ECS `EquipmentComponent`（每槽一个加法 `ARMOR_VALUE` 修饰符），下一 tick `applyEffectiveAttributes` 推送到原版 `Attributes.ARMOR`，实际生效约 15 护甲点。
-- 外观不渲染（盔甲格走的是"仅数值生效"路径，巫师袍外观不受影响）；`armorInventory` 不进原版装备槽，故战斗中原版耐久磨损不会消耗它——铁套等效永久生效。
+- 外观不渲染（盔甲格走的是"仅数值生效"路径，巫师袍外观不受影响）；`armorInventory` 不进原版装备槽，原版 `doHurtEquipment` 够不到它——耐久改由 `WandscapeNpc.hurtArmor` 覆盖按原版语义手动结算（见 2026-08-26「NPC 盔甲受击扣耐久」），铁套不再永久、会随战斗磨损。
 - 覆盖全部建镇入口：`/wandscape colony create` 与市政厅命名弹窗（`ColonyCreateRequestPacket`）共用 `createColonyAt`，一处改动两边生效。
 - 延迟入 ECS（engine 未就绪）场景由 `EntityComponentBridge.onNpcJoinWorld → syncArmorAttributes` 兜底：盔甲已存 NBT/内存，join 时自动同步。
 

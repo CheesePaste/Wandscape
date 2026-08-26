@@ -64,4 +64,26 @@ class FriendlyForceTest {
         assertFalse(FriendlyForce.isAlly(C1, C1, AllyKind.OTHER));
         assertFalse(FriendlyForce.isAlly(null, null, AllyKind.OTHER));
     }
+
+    // ── MAGIC_SUMMON / TOURIST：同殖民地才算友军（召唤者为同殖民地 NPC / 游客同殖民地）──
+
+    @Test
+    void magicSummonIsAllyOnlyWhenSummonerSameColony() {
+        assertTrue(FriendlyForce.isAlly(C1, C1, AllyKind.MAGIC_SUMMON));
+        assertFalse(FriendlyForce.isAlly(C1, C2, AllyKind.MAGIC_SUMMON));
+        // 未归属殖民地的召唤者（null）与未归属 NPC 互认为友军
+        assertTrue(FriendlyForce.isAlly(null, null, AllyKind.MAGIC_SUMMON));
+        assertFalse(FriendlyForce.isAlly(C1, null, AllyKind.MAGIC_SUMMON));
+        assertFalse(FriendlyForce.isAlly(null, C1, AllyKind.MAGIC_SUMMON));
+    }
+
+    @Test
+    void touristIsAllyOnlyWhenSameColony() {
+        assertTrue(FriendlyForce.isAlly(C1, C1, AllyKind.TOURIST));
+        assertFalse(FriendlyForce.isAlly(C1, C2, AllyKind.TOURIST));
+        // 未归属殖民地的游客（null）与未归属 NPC 互认为友军
+        assertTrue(FriendlyForce.isAlly(null, null, AllyKind.TOURIST));
+        assertFalse(FriendlyForce.isAlly(C1, null, AllyKind.TOURIST));
+        assertFalse(FriendlyForce.isAlly(null, C1, AllyKind.TOURIST));
+    }
 }

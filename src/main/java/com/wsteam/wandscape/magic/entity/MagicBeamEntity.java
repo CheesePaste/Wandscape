@@ -220,18 +220,20 @@ public class MagicBeamEntity extends Entity {
     }
 
     /**
-     * 光束能否伤害该目标。默认只伤敌对生物（{@link Enemy}）——普通 NPC / 玩家施法的
-     * 光束**永远不会伤到玩家、NPC 或村民**；施法者是 {@code WandscapeNpc} 时按其
-     * {@code canBeamHurt} 判定（敌对法师覆盖为也伤生存玩家），保证「NPC 伤不了玩家、
-     * 邪恶法师能伤生存玩家」的边界唯一。
+     * 光束能否伤害该目标。NPC 施法的光束**友军名单管辖**——友军（玩家 + 同殖民地
+     * NPC/铁魔法随从/游客，见 {@code WandscapeNpc#isFriendlyForce}）恒不伤，非友军一律结算；
+     * 玩家/静态施法（无施法者）保持只伤敌对生物（{@link Enemy}），不因 NPC 边界放宽而影响
+     * 玩家自身行为。敌对法师等子类覆盖 {@code canBeamHurt} 为也伤生存玩家。
      */
     private boolean canDamage(LivingEntity mob) {
         // 和平模式：该 NPC 的光束立即停手（执行器层面的拦截在下一轮才生效，这里即时兜底）
         if (casterNpc != null && casterNpc.isPeaceMode()) return false;
-        // 伤害按 Enemy 结算：束内 Enemy 一律结算（可能误伤和平中立生物，有意的）；施法者是
-        // WandscapeNpc 时按其 canBeamHurt 判定（敌对法师覆盖为也伤生存玩家）。索敌收紧见 isHostileTarget。
-        if (mob instanceof Enemy) return true;
-        return casterNpc != null && !casterNpc.isRemoved() && casterNpc.canBeamHurt(mob);
+        if (casterNpc != null && !casterNpc.isRemoved()) {
+            // NPC 施法：友军名单管辖（己方/同殖民地亡灵随从、同殖民地游客已入友军名单受保护）
+            return casterNpc.canBeamHurt(mob);
+        }
+        // 玩家/静态施法、施法者已移除：保持只伤 Enemy（玩家光束属玩家自身行为，不受 NPC 友军边界管辖）
+        return mob instanceof Enemy;
     }
 
     /**

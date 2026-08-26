@@ -128,3 +128,4 @@
 - `BuildingGhostRenderer`：放置虚影渲染，GHOST_ALPHA=0.40f，hideBuiltBlocks 跳过已建方块。
 - `VillagerLike`：空标记接口，表示"原版敌对生物像对待村民一样索敌"（游客实现；HostileTargetingHandler 消费）。
 - `PlayerLike`：空标记接口，表示"原版敌对生物像对待玩家一样索敌"（NPC 实现，骷髅/史莱姆等会主动攻击；HostileTargetingHandler 消费）。
+- `ColonyVisitor`：标记接口，暴露 `getColonyId()`，表示"属于某殖民地的访客类实体"（游客实现）——供友军名单派生（`WandscapeNpc.isFriendlyForce`）判定「同殖民地游客」用共享标记而非跨模块引用实体类。

@@ -172,6 +172,8 @@ public final class MagicSpellExecutors {
         double bestSqr = Double.MAX_VALUE;
         for (Entity e : level.getEntities((Entity) null, box, e -> e instanceof Enemy && e.isAlive())) {
             if (e instanceof LivingEntity le) {
+                // 友军（含己方/同殖民地召唤物）不重瞄
+                if (caster != null && !caster.isRemoved() && caster.isFriendlyForce(le)) continue;
                 double d = center.distanceToSqr(le.position());
                 if (d < bestSqr) {
                     bestSqr = d;
@@ -263,11 +265,12 @@ public final class MagicSpellExecutors {
         PacketDistributor.sendToPlayersTrackingEntityAndSelf(npc,
                 new MagicCircleCastPacket(effectId, pos, new Vec3(0, 1, 0), circleId, npc.getUUID()));
 
-        // 收集半径内所有敌对生物，施加三层 debuff
+        // 收集半径内所有敌对生物，施加三层 debuff（友军——含己方/同殖民地召唤物——不中招）
         AABB box = npc.getBoundingBox().inflate(ENFEEBLE_RADIUS);
         int hitCount = 0;
         for (Entity e : level.getEntities((Entity) null, box,
                 entity -> entity instanceof LivingEntity le && le.isAlive()
+                        && !npc.isFriendlyForce(le)
                         && (le instanceof Enemy || npc.canBeamHurt(le)))) {
             LivingEntity target = (LivingEntity) e;
             target.addEffect(new MobEffectInstance(
@@ -344,11 +347,13 @@ public final class MagicSpellExecutors {
         }
 
         // 施法瞬间魅惑最近的 CONVERSION_CHARM_COUNT 个敌对生物（16 格内按距施法者近→远，不中途追加；
-        // 受伤即解除 charm，见 MagicEventHandler.onLivingDamage）
+        // 受伤即解除 charm，见 MagicEventHandler.onLivingDamage）。友军（含己方/同殖民地召唤物）不魅惑。
         AABB box = npc.getBoundingBox().inflate(16.0);
         List<LivingEntity> enemies = new ArrayList<>();
-        for (Entity e : level.getEntities((Entity) null, box, e -> e instanceof Enemy && e.isAlive())) {
-            if (e instanceof LivingEntity le) enemies.add(le);
+        for (Entity e : level.getEntities((Entity) null, box,
+                e -> e instanceof LivingEntity le && le instanceof Enemy
+                        && le.isAlive() && !npc.isFriendlyForce(le))) {
+            enemies.add((LivingEntity) e);
         }
         enemies.sort(Comparator.comparingDouble(t -> npc.distanceToSqr(t)));
         if (enemies.isEmpty()) {

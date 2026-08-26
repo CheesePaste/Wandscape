@@ -126,11 +126,13 @@ public final class GuardAttackExecutor implements OpExecutor<AtomicOp.AttackMons
             return new CycleResult(-1, 0);
         }
 
-        LivingEntity nearest = GuardScanner.nearestInZones(level, attackZones, npc.position());
+        // 守卫目标过滤友军（含己方/同殖民地召唤物）——否则守卫会索敌本 NPC 自己召唤的亡灵随从
+        LivingEntity nearest = GuardScanner.nearestInZones(level, attackZones, npc.position(),
+                m -> !npc.isFriendlyForce(m));
         if (nearest == null) {
             // 无攻击目标：脱离区内仍有怪 → 保持守卫待命；彻底无怪 → 任务完成
             List<GuardZone> releaseZones = GuardScanner.zones(level, p.releaseRange());
-            if (!GuardScanner.hasMonsterInZones(level, releaseZones)) {
+            if (!GuardScanner.hasMonsterInZones(level, releaseZones, m -> !npc.isFriendlyForce(m))) {
                 MagicBeamEntity beam = GuardCombat.findActiveBeam(level, npc);
                 if (beam != null) beam.setLifetime(5); // 脱离时让光束快速淡出
                 GuardCombat.cancelNavigation(p.world(), p.npcId()); // 停止寻路，NPC 站定

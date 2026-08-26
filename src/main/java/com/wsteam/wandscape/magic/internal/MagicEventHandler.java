@@ -200,8 +200,10 @@ public final class MagicEventHandler {
 
                 List<LivingEntity> targets = level.getEntitiesOfClass(LivingEntity.class, area, e -> {
                     if (!e.isAlive()) return false;
-                    if (e instanceof Enemy) return true;
                     WandscapeNpc caster = meteor.caster();
+                    // 友军（含己方/同殖民地召唤物、同殖民地游客）永不受伤——先于 Enemy 判定
+                    if (caster != null && !caster.isRemoved() && caster.isFriendlyForce(e)) return false;
+                    if (e instanceof Enemy) return true;
                     return caster != null && !caster.isRemoved() && !caster.isPeaceMode() && caster.canBeamHurt(e);
                 });
                 for (LivingEntity target : targets) {
