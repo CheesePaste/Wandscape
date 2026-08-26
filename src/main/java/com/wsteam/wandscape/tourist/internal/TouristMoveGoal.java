@@ -131,10 +131,11 @@ public class TouristMoveGoal extends Goal {
     private static final int REPATH_COOLDOWN_TICKS = 20;
     /** Game tick of the last navigation re-issue; repaths are throttled against this. */
     private int lastRepathTick = Integer.MIN_VALUE;
-    /** 连续对同一目标寻路失败的次数：达到阈值直接传送到目标点（B 级兜底），不再反复重走同一路线。 */
-    private int navFailures;
-    /** 连续寻路失败多少次后强制传送到目标点（B 级兜底）。 */
-    private static final int NAV_FAILURE_TELEPORT_THRESHOLD = 3;
+    /** 连续对同一目标物理卡死（>100 tick 无水平推进）触发硬兜底的次数：达到阈值直接传送到目标点，
+     *  不再传安全点重走老路。目标到达/切换/传送成功即清零。 */
+    private int stuckFallbacks;
+    /** 物理卡死硬兜底触发多少次后强制传送到目标点（不作废目标）。 */
+    private static final int STUCK_FALLBACK_TELEPORT_THRESHOLD = 3;
     /** 夜晚「无空闲旅店」闩锁：一旦当晚找不到可路由旅店/过远传送失败即闩上，当晚不再搜索
      *  （夜晚无退宿，重扫白费 CPU），次日白天由 {@link #tick()} 解除。 */
     private final HotelRouteBackoff hotelRouteBackoff = new HotelRouteBackoff();
@@ -442,11 +443,25 @@ public class TouristMoveGoal extends Goal {
         }
 
         if (noMoveTicks > 100 || totalNavTicks > 600) {
-            // A：硬兜底视为「目标不可达」——作废目标（visited + 清 target + 强制 WANDER），
-            // 而不是传送到陷阱附近继续重走老路（旧实现保留 waypoint 与目标，会反复经过同一个卡死点）。
-            Log.warn(TAG, "[Tourist] {} outdoor nav hard fallback (noMove={}, total={}), abandoning target",
-                    tourist.getTouristName(), noMoveTicks, totalNavTicks);
-            abandonBuildingVisit();
+            // 卡死 → 作废当前路径（停导航、清 waypoint）+ 之前的防卡死传送（传安全点）。
+            // 连续第 STUCK_FALLBACK_TELEPORT_THRESHOLD 次卡死 → 直接传送到目标入口，不作废目标
+            // （目标保留，由到达判定接管，避免反复重走同一卡死点后放弃）。
+            noMoveTicks = 0;
+            totalNavTicks = 0;
+            lastPos = null;
+            nav.stop();
+            outdoorWaypoints = null;
+            currentWaypointIndex = 0;
+            if (++stuckFallbacks >= STUCK_FALLBACK_TELEPORT_THRESHOLD) {
+                if (teleportToNavTarget(target)) return;
+            }
+            BlockPos tp = TouristTeleport.findSafeSpot(serverLevel(), pos, tourist.getColonyId(), tourist.getTargetBuildingId());
+            if (tp != null) {
+                Log.info(TAG, "[Tourist] {} outdoor nav hard fallback. Teleporting to {}", tourist.getTouristName(), tp.toShortString());
+                tourist.setPos(tp.getX() + 0.5, tp.getY(), tp.getZ() + 0.5);
+                tourist.resetFallDistance();
+                tourist.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+            }
             return;
         }
 
@@ -480,20 +495,18 @@ public class TouristMoveGoal extends Goal {
             return;
         }
 
-        // Stuck recovery：重寻路时累计连续失败次数，连续 NAV_FAILURE_TELEPORT_THRESHOLD 次失败 →
-        // 直接传送到目标入口（B），不再反复走回同一个卡死点。
+        // Stuck recovery：重寻路到当前 waypoint/目标（物理卡死由上方硬兜底梯子处理，这里只防寻路热循环）
         if (nav.isDone()) {
             BlockPos curDest = (outdoorWaypoints != null && currentWaypointIndex < outdoorWaypoints.size())
                     ? outdoorWaypoints.get(currentWaypointIndex) : target;
             if (++stuckTicks > 40) {
                 stuckTicks = 0;
-                retryOrTeleport(curDest, target, touristSpeed);
+                moveToNext(touristSpeed, curDest);
             } else if (repathDue()) {
-                retryOrTeleport(curDest, target, touristSpeed);
+                moveToNext(touristSpeed, curDest);
             }
         } else {
             stuckTicks = Math.max(0, stuckTicks - 1);
-            navFailures = 0;
         }
         }
     }
@@ -547,6 +560,8 @@ public class TouristMoveGoal extends Goal {
         if (noMoveTicks > 100 || totalNavTicks > 400) {
             noMoveTicks = 0;
             totalNavTicks = 0;
+            lastPos = null;
+            nav.stop();
             if (exitingPhase) {
                 // Leaving the building: teleport to safe ground just outside the entry.
                 BlockPos tp = TouristTeleport.findSafeSpotNearEntry(serverLevel(),
@@ -561,9 +576,20 @@ public class TouristMoveGoal extends Goal {
                 tourist.resetFallDistance();
                 tourist.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
             } else {
-                // Stuck navigating to the interact point. Do NOT teleport back onto the
-                // interact point — that just re-loops. Abandon the visit instead.
-                abandonBuildingVisit();
+                // 去 spot 途中卡死 → 作废路径 + 传安全点；连续第 STUCK_FALLBACK_TELEPORT_THRESHOLD 次
+                // 直接传送到 spot 开始交互（不作废本次访问）。
+                if (++stuckFallbacks >= STUCK_FALLBACK_TELEPORT_THRESHOLD && interactPoint != null) {
+                    teleportToIndoorTarget(interactPoint);
+                    startActivityAtSpot();
+                    return;
+                }
+                BlockPos tp = TouristTeleport.findSafeSpot(serverLevel(), pos, tourist.getColonyId(), tourist.getTargetBuildingId());
+                if (tp != null) {
+                    Log.info(TAG, "[Tourist] {} indoor nav hard fallback. Teleporting to {}", tourist.getTouristName(), tp.toShortString());
+                    tourist.setPos(tp.getX() + 0.5, tp.getY(), tp.getZ() + 0.5);
+                    tourist.resetFallDistance();
+                    tourist.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+                }
             }
             return;
         }
@@ -586,22 +612,16 @@ public class TouristMoveGoal extends Goal {
                 return;
             }
 
-            // Stuck recovery：连续寻路失败 → 直接传送到出口（B）
+            // Stuck recovery：重寻路到出口（物理卡死由上方硬兜底处理）
             if (nav.isDone()) {
                 if (++stuckTicks > 40) {
                     stuckTicks = 0;
                 }
                 if (allowRepath()) {
-                    if (++navFailures >= NAV_FAILURE_TELEPORT_THRESHOLD) {
-                        navFailures = 0;
-                        teleportToNavTarget(exitTarget);
-                    } else {
-                        nav.moveTo(exitTarget.getX() + 0.5, exitTarget.getY(), exitTarget.getZ() + 0.5, touristSpeed);
-                    }
+                    nav.moveTo(exitTarget.getX() + 0.5, exitTarget.getY(), exitTarget.getZ() + 0.5, touristSpeed);
                 }
             } else {
                 stuckTicks = Math.max(0, stuckTicks - 1);
-                navFailures = 0;
             }
             return;
         }
@@ -630,25 +650,16 @@ public class TouristMoveGoal extends Goal {
             return;
         }
 
-        // Stuck recovery for indoor navigation：连续寻路失败 → 直接传送到 spot 开始交互（B）
+        // Stuck recovery：重寻路到 spot（物理卡死由上方硬兜底梯子处理）
         if (nav.isDone()) {
             if (++stuckTicks > 40) {
                 stuckTicks = 0;
             }
             if (allowRepath()) {
-                if (++navFailures >= NAV_FAILURE_TELEPORT_THRESHOLD) {
-                    navFailures = 0;
-                    if (interactPoint != null) {
-                        teleportToIndoorTarget(interactPoint);
-                        startActivityAtSpot();
-                    }
-                } else {
-                    nav.moveTo(target.getX() + 0.5, target.getY(), target.getZ() + 0.5, touristSpeed);
-                }
+                nav.moveTo(target.getX() + 0.5, target.getY(), target.getZ() + 0.5, touristSpeed);
             }
         } else {
             stuckTicks = Math.max(0, stuckTicks - 1);
-            navFailures = 0;
         }
         }
     }
@@ -908,7 +919,7 @@ public class TouristMoveGoal extends Goal {
         lastPos = null;
         noMoveTicks = 0;
         totalNavTicks = 0;
-        navFailures = 0;
+        stuckFallbacks = 0;
         // D：进入室内微导航，旧的室外 waypoint 路线作废
         outdoorWaypoints = null;
         currentWaypointIndex = 0;
@@ -1311,7 +1322,7 @@ public class TouristMoveGoal extends Goal {
         totalNavTicks = 0;
         lastPos = null;
         lastNodeIndex = -1;
-        navFailures = 0;
+        stuckFallbacks = 0;
         syncDebugData();
 
         Log.warn(TAG, "[Tourist] {} abandoned stuck building visit, forced to WANDER", tourist.getTouristName());
@@ -1330,7 +1341,7 @@ public class TouristMoveGoal extends Goal {
         lastPos = null;
         noMoveTicks = 0;
         totalNavTicks = 0;
-        navFailures = 0;
+        stuckFallbacks = 0;
         pickNextPoiAndGo();
     }
 
@@ -1349,24 +1360,21 @@ public class TouristMoveGoal extends Goal {
             }
 
             if (noMoveTicks > 100 || totalNavTicks > 400) {
-                // A：硬兜底 → 作废当前 POI 目标换一个（排除失败的 POI），而不是保留 navTarget 重走老路
+                // 卡死 → 作废路径（停导航）+ 之前的防卡死传送（传安全点）；连续第
+                // STUCK_FALLBACK_TELEPORT_THRESHOLD 次卡死 → 直接传送到该 POI，不作废目标。
                 noMoveTicks = 0;
                 totalNavTicks = 0;
-                BlockPos failed = navTarget;
+                lastPos = null;
+                nav.stop();
+                if (++stuckFallbacks >= STUCK_FALLBACK_TELEPORT_THRESHOLD) {
+                    if (navTarget != null && teleportToNavTarget(navTarget)) return;
+                }
                 BlockPos tp = TouristTeleport.findSafeSpot(serverLevel(), pos, tourist.getColonyId(), null);
                 if (tp != null) {
                     Log.info(TAG, "[Tourist] {} POI nav hard fallback. Teleporting to {}", tourist.getTouristName(), tp.toShortString());
                     tourist.setPos(tp.getX() + 0.5, tp.getY(), tp.getZ() + 0.5);
                     tourist.resetFallDistance();
                     tourist.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
-                }
-                nav.stop();
-                navTarget = null;
-                lastPos = null;
-                navFailures = 0;
-                if (!pickNextPoiAndGo(failed)) {
-                    switchMode(MoveMode.WANDERING);
-                    startWander();
                 }
                 return;
             }
@@ -1407,20 +1415,11 @@ public class TouristMoveGoal extends Goal {
             return;
         }
 
-        // Stuck recovery：连续寻路失败 → 直接传送到该 POI（B）；久困 → 换一个 POI（A）
+        // Stuck recovery：重寻路到该 POI（物理卡死由上方硬兜底梯子处理，不作废目标）
         if (nav.isDone()) {
-            if (++stuckTicks > 60) {
-                stuckTicks = 0;
-                if (!pickNextPoiAndGo(wp)) {
-                    switchMode(MoveMode.WANDERING);
-                    startWander();
-                }
-                return;
-            }
-            if (repathDue()) retryOrTeleport(wp, wp, wanderSpeed);
+            if (repathDue()) moveToNext(wanderSpeed, wp);
         } else {
             stuckTicks = Math.max(0, stuckTicks - 1);
-            navFailures = 0;
         }
     }
 
@@ -1429,20 +1428,15 @@ public class TouristMoveGoal extends Goal {
      * @return true if a target was set
      */
     private boolean pickNextPoiAndGo() {
-        return pickNextPoiAndGo(null);
-    }
-
-    /**
-     * 选一个远处 POI（可选排除 {@code exclude}——防反复重选同一个失败/屋顶 POI）并开始导航。
-     * @return true if a target was set
-     */
-    private boolean pickNextPoiAndGo(@Nullable BlockPos exclude) {
         List<BlockPos> pois = tourist.getPoiList();
         BlockPos rawTarget = null;
 
         if (!pois.isEmpty()) {
             BlockPos here = tourist.blockPosition();
-            List<BlockPos> far = farPoisExcluding(pois, here, 25, exclude);
+            List<BlockPos> far = new ArrayList<>();
+            for (BlockPos p : pois) {
+                if (p.distSqr(here) > 25) far.add(p);
+            }
             rawTarget = !far.isEmpty()
                     ? far.get(tourist.getRandom().nextInt(far.size()))
                     : pois.get(tourist.getRandom().nextInt(pois.size()));
@@ -1465,6 +1459,7 @@ public class TouristMoveGoal extends Goal {
         lastPos = null;
         noMoveTicks = 0;
         totalNavTicks = 0;
+        stuckFallbacks = 0; // 新 POI = 新目标会话，卡死计数清零
         moveToNext(wanderSpeed, target);
         return true;
     }
@@ -1816,6 +1811,7 @@ public class TouristMoveGoal extends Goal {
         currentMode = next;
         clearSpotState();
         navTarget = null;
+        stuckFallbacks = 0; // 模式切换 = 新目标会话，卡死计数清零
         indoorPhase = false;
         exitingPhase = false;
         entryPoint = null;
@@ -2026,7 +2022,7 @@ public class TouristMoveGoal extends Goal {
         lastPos = null;
         noMoveTicks = 0;
         totalNavTicks = 0;
-        navFailures = 0;
+        stuckFallbacks = 0;
 
         // Plan road-assisted waypoints along RoadNetwork if beneficial
         outdoorWaypoints = com.wsteam.wandscape.engine.nav.RoadWalkPlanner.plan(
@@ -2067,19 +2063,8 @@ public class TouristMoveGoal extends Goal {
     }
 
     /**
-     * 重寻路或传送（B 级兜底）：连续 NAV_FAILURE_TELEPORT_THRESHOLD 次寻路失败 → 直接传送到最终目标，
-     * 让到达判定接管；否则正常重寻路到当前 waypoint。传送成功后旧路线作废（D）。
-     */
-    private void retryOrTeleport(@Nullable BlockPos waypoint, @Nullable BlockPos finalTarget, double speed) {
-        if (++navFailures >= NAV_FAILURE_TELEPORT_THRESHOLD) {
-            navFailures = 0;
-            if (teleportToNavTarget(finalTarget)) return;
-        }
-        moveToNext(speed, waypoint != null ? waypoint : finalTarget);
-    }
-
-    /**
-     * 传送到目标入口附近的安全点（B 级兜底），并清掉旧路线/卡死计数。找不到安全点返回 false（退回重寻路）。
+     * 连续第 STUCK_FALLBACK_TELEPORT_THRESHOLD 次卡死时传送到目标入口附近的安全点（不作废目标），
+     * 让到达判定接管；并清掉旧路线/卡死计数。找不到安全点返回 false（退回安全点传送）。
      */
     private boolean teleportToNavTarget(@Nullable BlockPos dest) {
         if (dest == null) return false;
@@ -2090,22 +2075,24 @@ public class TouristMoveGoal extends Goal {
             tp = TouristTeleport.findSafeSpot(level, dest, tourist.getColonyId(), tourist.getTargetBuildingId());
         }
         if (tp == null) return false;
-        Log.info(TAG, "[Tourist] {} nav failed x{}, teleporting to target {}",
-                tourist.getTouristName(), NAV_FAILURE_TELEPORT_THRESHOLD, tp.toShortString());
+        Log.info(TAG, "[Tourist] {} nav stuck x{}, teleporting to target {}",
+                tourist.getTouristName(), STUCK_FALLBACK_TELEPORT_THRESHOLD, tp.toShortString());
         tourist.setPos(tp.getX() + 0.5, tp.getY(), tp.getZ() + 0.5);
         tourist.resetFallDistance();
         tourist.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
         tourist.getNavigation().stop();
-        // D：传送后旧路线作废
+        // D：传送后旧路线作废；目标已到，卡死计数清零
         outdoorWaypoints = null;
         currentWaypointIndex = 0;
         lastPos = null;
         noMoveTicks = 0;
         totalNavTicks = 0;
+        stuckFallbacks = 0;
         return true;
     }
 
-    /** 连续寻路失败后直接落到交互 spot（B 级兜底；spot 是已校验可站立点），由调用方 startActivityAtSpot 接手。 */
+    /** 连续第 STUCK_FALLBACK_TELEPORT_THRESHOLD 次卡死时直接落到交互 spot（spot 是已校验可站立点），
+     *  由调用方 startActivityAtSpot 接手。 */
     private void teleportToIndoorTarget(BlockPos spot) {
         ServerLevel level = serverLevel();
         if (level == null || spot == null) return;
@@ -2114,11 +2101,12 @@ public class TouristMoveGoal extends Goal {
         tourist.resetFallDistance();
         tourist.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
         tourist.getNavigation().stop();
-        Log.info(TAG, "[Tourist] {} indoor nav failed x{}, teleporting to spot {}",
-                tourist.getTouristName(), NAV_FAILURE_TELEPORT_THRESHOLD, spot.toShortString());
+        Log.info(TAG, "[Tourist] {} indoor nav stuck x{}, teleporting to spot {}",
+                tourist.getTouristName(), STUCK_FALLBACK_TELEPORT_THRESHOLD, spot.toShortString());
         lastPos = null;
         noMoveTicks = 0;
         totalNavTicks = 0;
+        stuckFallbacks = 0;
     }
 
     // ── Logging ──
@@ -2198,16 +2186,8 @@ public class TouristMoveGoal extends Goal {
         tourist.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
         noMoveTicks = 0;
         totalNavTicks = 0;
-        navFailures = 0;
-        // A：若正在去一个 POI，作废该目标（排除重选），避免再次爬回同一个屋顶
-        if (currentMode == MoveMode.EXPLORING_POI && navTarget != null) {
-            BlockPos failedPoi = navTarget;
-            navTarget = null;
-            if (!pickNextPoiAndGo(failedPoi)) {
-                switchMode(MoveMode.WANDERING);
-                startWander();
-            }
-        }
+        stuckFallbacks = 0;
+        // 屋顶救援只搬人不改计划：目标（含 POI）保留，由物理卡死梯子处理反复上屋顶的情况
         return true;
     }
 
@@ -2250,25 +2230,6 @@ public class TouristMoveGoal extends Goal {
      *  会因 y 波动误判为「在移动」，防卡死永不触发——卡死与否只看 x/z 是否推进。 */
     static boolean sameHorizontal(BlockPos a, BlockPos b) {
         return a.getX() == b.getX() && a.getZ() == b.getZ();
-    }
-
-    /**
-     * 从 POI 列表筛选候选：优先距离超过 {@code minDistSq} 且排除 {@code exclude} 的点；
-     * 若远距离候选全被排除，则退回「排除 exclude 后的全部 POI」。exclude 为 null 时行为与旧实现一致
-     * （只按距离筛）。用于 POI 防卡死时作废失败目标，避免反复重选同一个失败/屋顶 POI。
-     */
-    static List<BlockPos> farPoisExcluding(List<BlockPos> pois, BlockPos here, double minDistSq,
-            @Nullable BlockPos exclude) {
-        List<BlockPos> far = new ArrayList<>();
-        for (BlockPos p : pois) {
-            if (p.distSqr(here) > minDistSq && !p.equals(exclude)) far.add(p);
-        }
-        if (far.isEmpty() && exclude != null) {
-            for (BlockPos p : pois) {
-                if (!p.equals(exclude)) far.add(p);
-            }
-        }
-        return far;
     }
 
     private static String shortId(UUID id) {

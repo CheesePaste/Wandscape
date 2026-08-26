@@ -18,24 +18,21 @@
 **影响**：新增 `projection/BuildPlacement.java`；`ProjectionFlightController.updateGhostPosition`、`OverviewFlightController.updateGhostPositionPerFrame` 改用 `BuildPlacement.resolve`。测试：`BuildPlacementTest`（7）覆盖贴面放置/贴墙放置/植物下沉/穿透空气/树叶下沉/无立足点回退/世界底界。
 
 
-## 2026-08-26：游客防卡死升级——作废失败目标 + 清路线 + 3 次寻路失败直接传送目标点
+## 2026-08-26：游客防卡死——卡死作废路径 + 传安全点，连续 3 次卡死直接传送到目标（不作废目标）
 
-**需求**（用户反馈）：现有防卡死（`noMoveTicks>100/totalNavTicks` 触发传送）能把游客从陷阱里搬出来，但**传送后还会经过同一个点再次卡死**。
+**需求**（用户指令）：`>100 tick 无移动`即视为卡死，此时**作废当前路径**并做之前的防卡死传送（传安全点）；连续 **3 次卡死 → 直接传送到目标点**，**不作废目标**。
 
-**根因**：防卡死只搬人、不改计划——传送只重置了计数器，失败的目标与路线原样保留：
-- outdoor nav 硬兜底不清 `outdoorWaypoints`/`currentWaypointIndex`，传送后继续沿老 waypoint 列表重走陷阱；
-- POI 硬兜底不 `nav.stop()`、保留 `navTarget`，不可达的 POI 会无限重寻；
-- 屋顶救援只把人放下来，屋顶 POI 目标保留 → 重新爬回去；
-- `TouristTeleport.findSafeSpot` 找的是**离卡死点最近的路**（= 陷阱入口），落点就在陷阱门口。
+**根因**：旧防卡死只搬人、不改计划——传送只重置计数器，失败的目标与路线原样保留，游客传送后沿老 waypoint 列表**重走同一个卡死点**。但「作废目标」又过头了：目标本身可达时，放弃会导致游客反复换目标、永远完不成行程。
 
-**决策**（分三级，按触发先后）：
-- **B（先触发，约 60 tick）**：新增 `navFailures` 连续寻路失败计数——`nav.isDone()` 后重寻路即 +1，能走出有效路径（`nav.isDone()==false`）即清零。连续 `NAV_FAILURE_TELEPORT_THRESHOLD=3` 次失败 → **直接传送到目标点**（outdoor/exit 走 `findSafeSpotNearEntry`、indoor 直接落 spot 后 `startActivityAtSpot`、POI 落地面），让到达判定接管，而不是继续重走同一路线。WANDER 无稳定目标不做此级。
-- **A（后触发，>100 tick 仍无水平推进）**：硬兜底视为「目标不可达」，作废失败目标——outdoor 复用 `abandonBuildingVisit`（mark visited + 清 target + 强制 WANDER，`selectNextTarget` 按 visited 门不再重选陷阱建筑）；POI 丢弃当前 `navTarget` 换选一个（`farPoisExcluding` 排除失败 POI）；屋顶救援后同样作废 POI 目标，防重新爬回同一屋顶。
-- **D（贯穿）**：传送成功 / `switchMode` / `switchToIndoorNav` 一律清 `outdoorWaypoints` 与 `currentWaypointIndex`——路线作废，杜绝「重放老路线」。
+**决策**（统一梯子，按物理卡死计数）：
+- **卡死判定**：`noMoveTicks > 100 || totalNavTicks > 上限`（outdoor 600 / indoor 400 / POI 400），与既有判定一致。
+- **每次卡死**：`nav.stop()` + 清 `outdoorWaypoints`/`currentWaypointIndex`（作废路径，D）+ `TouristTeleport.findSafeSpot` 传送到安全点（之前的防卡死传送）。目标保留，重寻路继续。
+- **连续第 3 次卡死**（`stuckFallbacks` 计数）：`teleportToNavTarget` 直接传送到目标入口附近（outdoor/POI 走 `findSafeSpotNearEntry`，indoor 直接落 spot 后 `startActivityAtSpot`），让到达判定接管——**目标从不作废**。
+- **计数清零**：目标到达（`switchToIndoorNav`）/ 切换目标（`beginNavigation`、`pickNextPoiAndGo`）/ 模式切换（`switchMode`）/ 传送目标成功，均清零。
 
-**为什么**：传送是"治标"（当前位置动不了），A/B 才是"治本"（目的地/路线不可达）。只搬人不改计划必然重走老路。B 的「3 次失败即传送目标点」是用户指定的简化版兜底——目标点本身可到达但寻路反复失败（窄门/临时阻挡/A* 缺陷）时强制完成行程，避免直接放弃；A 处理目标本身不可达的情况，标记 visited 让选目标逻辑绕开。
+**为什么**：卡死 = 当前位置动不了，传送是"治标"，但目标是"治好"的方向——传安全点让游客换一条路再试，连续 3 次仍到不了就强制送到目标完成行程。目标不可达时 3 次后传送到目标附近（`findSafeSpotNearEntry` 保证落在可站立点），不放弃、不重走老路。寻路失败（`nav.isDone()`）本身会让游客原地不动，自然落入本梯子，无需单独的寻路失败计数。
 
-**影响**：`TouristMoveGoal.java`（`navFailures`、`retryOrTeleport`/`teleportToNavTarget`/`teleportToIndoorTarget`、outdoor/indoor/POI/屋顶 rescue 恢复逻辑、`pickNextPoiAndGo(exclude)`、`farPoisExcluding`、`switchMode`/`switchToIndoorNav` 清 waypoint）。测试：新增 `TouristMoveGoalPoiSelectTest`（5）覆盖 `farPoisExcluding` 排除失败 POI。
+**影响**：`TouristMoveGoal.java`（`stuckFallbacks`/`STUCK_FALLBACK_TELEPORT_THRESHOLD`、outdoor/indoor/POI 硬兜底梯子、`teleportToNavTarget`/`teleportToIndoorTarget`、`switchMode`/`switchToIndoorNav` 清 waypoint）。室内去 spot 途中卡死由「放弃访问」改为同一梯子（第 3 次直接落 spot 开始交互）。
 
 ## 2026-08-26：12 支法杖 + 卷轴重定价；法杖 attributes[] 从"只解析不应用"改为"装备即生效"
 
