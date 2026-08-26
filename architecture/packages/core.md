@@ -18,7 +18,7 @@ Position / EquipmentComponent / TaskExecutor / NpcTaskQueue / Inventory / Naviga
 
 ### NPC 属性模型
 
-NPC 只有 7 个属性：`MAX_HP` / `MOVE_SPEED` / `SPELL_POWER` / `WORK_SPEED` / `SPELL_SPEED` / `ARMOR_VALUE` / `MAX_MANA`。魔力为第 7 属性（默认 200），当前魔力/每魔法独立 CD/施法互斥锁在 `MagicState`（`core/component/`，由 `WandscapeNpc` 持有）。属性值存于 `EquipmentComponent`：base（来自 `NpcAttributes`，招募/默认值） + 装备 modifier，**所有装备加成一律加法**（`effective = base + Σmodifier`，`ModifierOperation` 只有 ADDITION）。运行时各机制读取：
+NPC 只有 7 个属性：`MAX_HP` / `MOVE_SPEED` / `SPELL_POWER` / `WORK_SPEED` / `SPELL_SPEED` / `ARMOR_VALUE` / `MAX_MANA`。魔力为第 7 属性（默认 200），当前魔力/每魔法独立 CD/施法互斥锁在 `MagicState`（`core/component/`，由 `WandscapeNpc` 持有）。属性值存于 `EquipmentComponent`：base（来自 `NpcAttributes`，招募/默认值） + 装备 modifier，**加法**（`ADDITION`）与**百分比乘区**（`MULTIPLY_BASE`）并存，按 vanilla 顺序结算 `effective = (base + Σ ADDITION) × (1 + Σ MULTIPLY_BASE)`（`ModifierOperation` 两个枚举；铁魔法 +25% 移速等百分比加成走乘区，基础值重新播种后仍正确；无乘区时退化为纯加法，现有法杖零影响）。运行时各机制读取：
 - `SPELL_POWER` → NPC 对敌对生物的魔法伤害倍率，在伤害核算入口统一乘（`guard/NpcSpellPowerHandler`，`LivingIncomingDamageEvent`；判定伤害源是 NPC 且目标为 `Enemy` 或 `canBeamHurt`，非目标/和平模式**整伤取消**——友军名单 `core/types/FriendlyForce`，铁魔法/召唤物也走此入口）——任何未来魔法自动生效，不在单个魔法里写乘算。伤害核算入口另乘**魔力强化**独立乘区（`effect.wandscape:magic_enhance`，每级 +20%，与 SPELL_POWER 各自乘算；SPELL_POWER 是 ECS 属性挂不了 attribute modifier，故手动乘）
 - `WORK_SPEED` → 采集/合成耗时：`实际 = 基础tick / WORK_SPEED`（`WandscapeBlockInteractExecutor`；建造 TransformOp 保持 1 tick 即时感，不随 WORK_SPEED）
 - `SPELL_SPEED` → 各魔法 CD：`实际CD = 基础 / SPELL_SPEED`（光束 400、传送 300；施法时间不参与，CD 在施法锁结束后起算）

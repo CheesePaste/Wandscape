@@ -419,6 +419,8 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
     /**
      * 把 4 个盔甲格的护甲值同步到 ECS EquipmentComponent（每槽一个加法修饰符），
      * 使 armorValue 同时生效于属性查询（GUI）与伤害减免（vanilla ARMOR）。
+     * 铁魔法装备的 MAX_MANA/SPELL_POWER/MOVEMENT_SPEED 加成经
+     * {@code IronSpellsAttributes} 一并映射进 ECS（其余铁魔法特色属性不映射）。
      */
     public void syncArmorAttributes() {
         World world = WandscapeEngine.getWorld();
@@ -436,9 +438,12 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
             if (stack.isEmpty()) {
                 eq.unequip(coreSlot);
             } else {
-                eq.equip(coreSlot, stack.getItem().getDescriptionId(),
-                        List.of(new AttributeModifier(AttributeType.ARMOR_VALUE,
-                                armorValueOf(stack), ModifierOperation.ADDITION)));
+                List<AttributeModifier> mods = new ArrayList<>(4);
+                mods.add(new AttributeModifier(AttributeType.ARMOR_VALUE,
+                        armorValueOf(stack), ModifierOperation.ADDITION));
+                mods.addAll(com.wsteam.wandscape.compat.ironspellbooks.IronSpellsAttributes
+                        .modifiersFor(stack));
+                eq.equip(coreSlot, stack.getItem().getDescriptionId(), mods);
             }
         }
     }

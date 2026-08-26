@@ -2,6 +2,21 @@
 
 本文件记录偏离直觉的设计选择及其原因，供后续开发快速理解「为什么这么做」。
 
+## 2026-08-26：铁魔法装备属性桥接到 NPC 属性系统
+
+**需求**（用户指令）：铁魔法装备穿到 NPC 身上后其独有属性加成不生效（流浪法师兜帽 +25 最大法力、+5% 法术强度、速度靴 +25% 移速）。要求这些对到 Wandscape 的魔力值/法术强度/移动速度；各学派法术增强与施法时速度提升等铁魔法特色属性**不兼容**。
+
+**根因**：NPC 的 4 盔甲格走独立 `armorInventory`、不挂 vanilla 装备槽，`ExtendedArmorItem` 写在 `ItemAttributeModifiers` 里的加成从不被 vanilla 属性系统结算；`syncArmorAttributes` 只把 `Attributes.ARMOR` 抄进 ECS，其余属性全丢。
+
+**决策**：
+- **core 增加百分比乘区 `MULTIPLY_BASE`**：`ModifierOperation` 变为 `{ADDITION, MULTIPLY_BASE}`；`EquipmentComponent.recalculateAll` 按 vanilla 顺序 `effective = (base + ΣADDITION) × (1 + ΣMULTIPLY_BASE)`。**不用一次性折成加法**——NPC base 会被法师小屋训练/复活经 `seedBaseValues` 重新播种，折成加法的 +25% 移速会失真（0.3×0.25=0.075 固定，基础升到 0.36 时应为 0.09）。无乘区时退化为纯加法，现有 12 支法杖（全 addition）零影响。
+- **映射放 compat 且只映射三条**：新增 `IronSpellsAttributes.modifiersFor(stack)` 遍历 `ItemAttributeModifiers`——`MAX_MANA`→`MAX_MANA`（ADD_VALUE→ADDITION）、`SPELL_POWER`→`SPELL_POWER`（ADD_MULTIPLIED_BASE→MULTIPLY_BASE）、vanilla `MOVEMENT_SPEED`→`MOVE_SPEED`（ADD_MULTIPLIED_BASE→MULTIPLY_BASE）。各学派 `*_spell_power`/`casting_movespeed`/`mana_regen`/`cooldown_reduction`/`cast_time_reduction`/`summon_damage`/各系抗性等铁魔法特色属性**不映射**（用户明确不兼容）。
+- **syncArmorAttributes 合并**：每盔甲槽修饰符列表 = `[ARMOR_VALUE] + 映射结果` 一次 `eq.equip`；空槽 `unequip` 自动撤销。法力上限/法术强度/移速提升经既有链路生效（`getEffectiveAttribute`/`applyEffectiveAttributes`/伤害倍率），GUI 显示自动跟新。
+
+**为什么**：加乘区是唯一正确做法（base 可变 + 百分比语义）；映射收敛在 compat 保证零硬编码耦合（未装铁魔法返回空列表）；只映射可对到 Wandscape 属性的三条，不把铁魔法特色机制塞进我们的属性模型。
+
+**影响**：`ModifierOperation`/`EquipmentComponent`（乘区公式，+6 个纯逻辑单测）；新增 `compat/ironspellbooks/IronSpellsAttributes`；`WandscapeNpc.syncArmorAttributes` 合并映射；`core.md`/`npc.md`/`compat.md` 文档同步。
+
 ## 2026-08-26：殖民地友军名单——NPC 不记仇、不伤害友军（含铁魔法）
 
 **需求**（用户指令）：铁魔法兼容后，NPC 的铁魔法（AoE/溅射/召唤物）会打到其他 NPC 与玩家，且同一殖民地的 NPC 被友伤后互相记仇、彼此开战。要求「每个殖民地有一个友军名单，NPC 不对名单内生物记仇，所有攻击也不伤害名单内生物」。
