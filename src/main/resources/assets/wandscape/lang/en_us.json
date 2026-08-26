@@ -483,8 +483,6 @@
   "attr.wandscape.spell_speed": "Spell Speed",
   "attr.wandscape.armor_value": "Armor",
   "attr.wandscape.max_mana": "Max Mana",
-  "craft_recipe.wandscape.stamina_potion": "Stamina Potion",
-  "craft_recipe.wandscape.mana_potion": "Mana Potion",
   "blueprint.wandscape.build:clear_and_build": "Clear and Build",
   "blueprint.wandscape.build:clear_and_build.desc": "First clears non-pattern blocks within the boundary AABB, then calls build:place_structure to place pattern blocks. clear_offsets is pre-computed by EnqueueHelper as boundary volume minus pattern offsets.",
   "blueprint.wandscape.build:demolish_structure": "Demolish Structure",

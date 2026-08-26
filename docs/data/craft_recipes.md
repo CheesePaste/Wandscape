@@ -44,19 +44,7 @@
 
 ## 药水配方（type: "potion"）
 
-```json
-{
-  "type": "potion",
-  "craft_station": "crafting_station",
-  "id": "mana_potion",
-  "output": {"item": "wandscape:mana_potion"},
-  "cost": {"water": 16, "wood": 4},
-  "input_items": ["minecraft:glass_bottle"],
-  "unlock_requirement": {"min_colony_level": 1}
-}
-```
-
-现有：mana_potion、stamina_potion。**归属合成站**（P 阶段 C 起 `craft_station=crafting_station`，随法杖配方一起在合成站 GUI 列出，走 brew_potion 蓝图）。输出物品（`wandscape:mana_potion`/`stamina_potion`）当前未注册，产出入仓为数据条目、无图标。
+**已删除（2026-08-26）**：mana_potion / stamina_potion 两个配方 JSON 移除——输出物品从未注册，产出入仓为无图标数据条目，玩家不可见且无实际用途。代码中的 `BrewPotionRecipe` 类型、`brew_potion` 蓝图、合成站药水路由仍保留（数据驱动，配方为空时优雅降级：合成站 GUI 与 JEI 不列药水，`RequestProductionTaskPacket`/`executeBrewPotion` 对未知 recipe_id 兜底拒绝）。
 
 ## 魔法卷轴配方（type: "spell"）
 

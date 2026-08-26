@@ -29,7 +29,7 @@
 
 ## client/ 屏幕
 
-- `CraftingStationScreen`：搜索框 + 配方列表（法杖+药水）+ 数量滑条 + Submit + 右侧 TaskQueuePanel；Submit 按配方 type 发 RequestProductionTaskPacket("craft_wand" / "brew_potion")；药水行内显示额外原料（玻璃瓶）。每 20 tick 用 TaskQueueModifyPacket("refresh") 刷队列。
+- `CraftingStationScreen`：搜索框 + 配方列表（法杖+药水）+ 数量滑条 + Submit + 右侧 TaskQueuePanel；Submit 按配方 type 发 RequestProductionTaskPacket("craft_wand" / "brew_potion")；药水行内显示额外原料（玻璃瓶）。**药水配方已删（2026-08-26），当前列表只有法杖**；药水路由代码保留（配方为空时优雅降级）。每 20 tick 用 TaskQueueModifyPacket("refresh") 刷队列。
 - `MagicStationScreen`：镜像 CraftingStationScreen，列表显示卷轴图标 + 魔法名 + 元素成本；Submit 发 "craft_spell"。
 - `WorkstationScreen`：双标签 Decompose/Synthesize；Submit 分别发 "decompose"（携带 itemId）与 "synthesize"（携带 recipeId）。均按 lockedReason（"unlocked"/"colony"/"elements"）渲染锁与成本。
 - 三个界面共用同一**窗口化**数量滑条（`QuantityStepper`）：滑条只显示一页、跨度 ≤64（1–64、65–128、…），左右各带 `-64` / `+64` 按钮整页翻页，`Slider.setRange` 换页时把值夹进新窗口、翻到顶/底为安全 no-op（`QuantityWindow` 管窗口数学）。上限取真实总量：合成/法杖/法术 = `ProductionAffordability.computeMaxAffordable` 按当前元素可负担量，分解 = 物品库存数；最后一页不足一页自动收窄到总量（如总量 100 → 首页 1–64，+64 后 65–100）。

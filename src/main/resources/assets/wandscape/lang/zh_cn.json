@@ -483,8 +483,6 @@
   "attr.wandscape.spell_speed": "施法速度",
   "attr.wandscape.armor_value": "护甲",
   "attr.wandscape.max_mana": "魔力上限",
-  "craft_recipe.wandscape.stamina_potion": "体力药水",
-  "craft_recipe.wandscape.mana_potion": "魔力药水",
   "blueprint.wandscape.build:clear_and_build": "清除并建造",
   "blueprint.wandscape.build:clear_and_build.desc": "先清除边界 AABB 内非图案方块，再调用 build:place_structure 放置图案方块。clear_offsets 由 EnqueueHelper 预计算为边界体积减去图案偏移。",
   "blueprint.wandscape.build:demolish_structure": "拆除建筑",
