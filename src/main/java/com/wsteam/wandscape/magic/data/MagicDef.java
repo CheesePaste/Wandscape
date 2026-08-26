@@ -13,12 +13,15 @@ import com.google.gson.JsonObject;
  * 供 BeamOp 等执行器消费。与 {@link MagicCircleSpec} 同模式：record 风格 + fromJson 套默认值。
  *
  * <p>门控执行（施法互斥锁 + 每魔法独立 CD + 魔力）仍在 {@code MagicState}，这里只定义"是什么"。
+ * {@code manaPerTick} 仅用于持续引导法术：>0 时施法门控只需够「每 tick 扣蓝」即可起手，
+ * 引导期间按 tick 扣、蓝尽中断（由铁魔法兼容层在 {@code IronSpellsCaster} 维护）；=0 表示非持续。
  * 数据契约见 {@code docs/spell-casting.md}。
  */
 public record MagicDef(
         String id,
         Category category,
         int manaCost,
+        int manaPerTick,
         int baseCooldown,
         int castTime,
         double range,
@@ -34,6 +37,7 @@ public record MagicDef(
 
     public MagicDef {
         manaCost = Math.max(0, manaCost);
+        manaPerTick = Math.max(0, manaPerTick);
         baseCooldown = Math.max(0, baseCooldown);
         castTime = Math.max(0, castTime);
         range = Math.max(0, range);
@@ -66,6 +70,7 @@ public record MagicDef(
         String defId = getString(obj, "id", id);
         Category category = parseEnum(getString(obj, "category", "single_target"), Category.SINGLE_TARGET);
         int manaCost = (int) Math.round(getDouble(obj, "mana_cost", 0));
+        int manaPerTick = (int) Math.round(getDouble(obj, "mana_per_tick", 0));
         int baseCooldown = (int) Math.round(getDouble(obj, "base_cooldown", 0));
         int castTime = (int) Math.round(getDouble(obj, "cast_time", 0));
         double range = getDouble(obj, "range", 0);
@@ -84,7 +89,7 @@ public record MagicDef(
         int altarCooldown = (int) Math.round(getDouble(obj, "altar_cooldown", 0));
         int altarDuration = (int) Math.round(getDouble(obj, "altar_duration", 0));
         SpellConditions conditions = SpellConditions.fromJson(obj.get("conditions"));
-        return new MagicDef(defId, category, manaCost, baseCooldown, castTime, range, targetMode,
+        return new MagicDef(defId, category, manaCost, manaPerTick, baseCooldown, castTime, range, targetMode,
                 circleId, color, damage, altarOnly, altarCooldown, altarDuration, conditions);
     }
 

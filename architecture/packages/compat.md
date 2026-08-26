@@ -12,8 +12,8 @@
 
 ### `ironspellbooks/`
 - `IronSpellsCompat`：兼容总入口，检查加载状态并在模组加载时注册事件监听。
-- `IronSpellsHelper`：识别铁魔法卷轴物品堆、提取/构建带等级的卷轴、生成动态 `MagicDef`。
-- `IronSpellsCaster`：瞬发（`INSTANT`）、长蓄力（`LONG`）与持续引导（`CONTINUOUS`）法术的执行与生命周期维护。
+- `IronSpellsHelper`：识别铁魔法卷轴物品堆、提取/构建带等级的卷轴、生成动态 `MagicDef`（蓝耗 1:1，持续法术按每 tick 扣蓝）。
+- `IronSpellsCaster`：瞬发（`INSTANT`）、长蓄力（`LONG`）与持续引导（`CONTINUOUS`）法术的执行与生命周期维护。蓝耗 1:1 直接扣 NPC 魔力；持续引导不预扣全量，引导期间每 tick 扣 `ceil(总蓝耗/引导时长)`、蓝尽立即中断引导。
 - `IronSpellsDamageHandler`：订阅 `SpellDamageEvent`，将法师的 `SPELL_POWER` 与【魔力强化】倍率乘入铁魔法伤害输出。
 
 ## 依赖关系

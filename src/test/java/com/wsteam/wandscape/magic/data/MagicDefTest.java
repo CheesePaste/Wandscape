@@ -161,6 +161,20 @@ class MagicDefTest {
     }
 
     @Test
+    void parsesManaPerTick() {
+        MagicDef def = MagicDef.fromJson("s", JsonParser.parseString("{\"mana_per_tick\": 4}"));
+        assertEquals(4, def.manaPerTick());
+    }
+
+    @Test
+    void manaPerTickDefaultAndClamp() {
+        MagicDef d = MagicDef.fromJson("d", JsonParser.parseString("{}"));
+        assertEquals(0, d.manaPerTick(), "非持续引导法术 mana_per_tick 缺省为 0");
+        MagicDef neg = MagicDef.fromJson("neg", JsonParser.parseString("{\"mana_per_tick\": -3}"));
+        assertEquals(0, neg.manaPerTick());
+    }
+
+    @Test
     void parsesConditions() {
         MagicDef def = MagicDef.fromJson("aoe", JsonParser.parseString(
                 "{\"conditions\": {\"self_hp_max\": 0.6, \"no_effect\": \"minecraft:absorption\"}}"));

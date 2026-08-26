@@ -37,11 +37,13 @@ public final class IronSpellsCaster {
         final int spellLevel;
         final CastType castType;
         final MagicData magicData;
+        /** 持续引导法术每 tick 扣蓝量；0 = 非持续（开始一次性扣全量）。 */
+        final int manaPerTick;
         int remainingTicks;
 
         ActiveCast(ServerLevel level, WandscapeNpc npc, @Nullable LivingEntity target,
                    AbstractSpell spell, int spellLevel, int remainingTicks,
-                   CastType castType, MagicData magicData) {
+                   CastType castType, MagicData magicData, int manaPerTick) {
             this.level = level;
             this.npc = npc;
             this.target = target;
@@ -50,6 +52,7 @@ public final class IronSpellsCaster {
             this.remainingTicks = remainingTicks;
             this.castType = castType;
             this.magicData = magicData;
+            this.manaPerTick = manaPerTick;
         }
     }
 
@@ -79,8 +82,8 @@ public final class IronSpellsCaster {
             return false;
         }
 
-        int rawMana = spell.getManaCost(spellLevel);
-        int manaCost = Math.max(5, (int) Math.round(rawMana * 0.25));
+        // 蓝耗 1:1：铁魔法蓝耗直接对等 NPC 魔力池（2026-08-26 用户要求），不再按 0.25 缩放 / 下限 5
+        int manaCost = spell.getManaCost(spellLevel);
         int baseCooldown = spell.getSpellCooldown() > 0 ? (int) Math.round(spell.getSpellCooldown() * 20.0) : 40;
         CastType castType = spell.getCastType();
 
@@ -111,7 +114,15 @@ public final class IronSpellsCaster {
             // LONG / CONTINUOUS 蓄力或引导
             int rawCastTime = spell.getCastTime(spellLevel);
             int lockTicks = Math.max(10, (int) Math.ceil(rawCastTime / spellSpeed));
-            if (!npc.tryCastSpell(spellId, baseCooldown, manaCost, lockTicks)) {
+            // 蓄力（LONG）：开始即一次性扣全量（与铁魔法玩家一致）；持续引导（CONTINUOUS）：
+            // 不预扣全量，改引导期间按 tick 扣（蓝尽中断），门控只需够每 tick 扣量即可起手。
+            int manaPerTick = 0;
+            int upfrontCost = manaCost;
+            if (castType == CastType.CONTINUOUS) {
+                manaPerTick = Math.max(1, (int) Math.ceil((double) manaCost / lockTicks));
+                upfrontCost = 0;
+            }
+            if (!npc.tryCastSpell(spellId, baseCooldown, upfrontCost, lockTicks)) {
                 return false;
             }
 
@@ -121,9 +132,10 @@ public final class IronSpellsCaster {
             spell.getCastStartSound().ifPresent(s -> level.playSound(null, npc.getX(), npc.getY(), npc.getZ(),
                     s, SoundSource.NEUTRAL, 1.0f, 1.0f));
 
-            ACTIVE_CASTS.add(new ActiveCast(level, npc, target, spell, spellLevel, lockTicks, castType, magicData));
-            Log.info(TAG, "NPC {} began channeling iron spell '{}' Lv.{} (lockTicks={})",
-                    npc.getUUID().toString().substring(0, 8), spellId, spellLevel, lockTicks);
+            ACTIVE_CASTS.add(new ActiveCast(level, npc, target, spell, spellLevel, lockTicks, castType, magicData, manaPerTick));
+            Log.info(TAG, "NPC {} began channeling iron spell '{}' Lv.{} (lockTicks={}{})",
+                    npc.getUUID().toString().substring(0, 8), spellId, spellLevel, lockTicks,
+                    castType == CastType.CONTINUOUS ? ", manaPerTick=" + manaPerTick : "");
             return true;
         }
     }
@@ -144,6 +156,17 @@ public final class IronSpellsCaster {
 
             if (cast.target != null && cast.target.isAlive() && !cast.target.isRemoved()) {
                 cast.npc.faceTarget(cast.target.getEyePosition());
+            }
+
+            // 持续引导：每 tick 扣 manaPerTick；蓝不够撑到结束 → 中断（末 tick 放行，用剩蓝收尾）
+            if (cast.castType == CastType.CONTINUOUS && cast.manaPerTick > 0) {
+                float mana = cast.npc.magic.getMana();
+                if (mana < cast.manaPerTick && cast.remainingTicks > 1) {
+                    cast.spell.onServerCastComplete(cast.level, cast.spellLevel, cast.npc, cast.magicData, true);
+                    it.remove();
+                    continue;
+                }
+                cast.npc.magic.setMana(mana - Math.min(cast.manaPerTick, mana));
             }
 
             cast.magicData.handleCastDuration();

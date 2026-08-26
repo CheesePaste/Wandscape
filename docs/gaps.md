@@ -53,6 +53,7 @@
 7. **合成 channel 续跑的两个残余边界（2026-08）**：channel 检查点已持久化（`GlobalTask.channelRemainingTicks`），但仍有：
    - **完成边界竞态**：channel 跑完产出已入仓、而任务 step 尚未 advance 的那一两个 tick 内若存档重载，任务以 step 0 + 无检查点恢复，会重跑一次 channel → 重复产出。窗口极小（`Wandscape.onServerTick` 先 `blockInteractExec.tickAll()` 产出、同 tick 内 `world.tick()` advance step），未修。
    - **攻速换算精度**：检查点按"有效 channel tick"（已除原 NPC WORK_SPEED）存，续跑的新 NPC 直接用该 tick 数（不再按新 NPC 攻速换算）。双方攻速不同时，续跑时长略有偏差（更快/更慢），不造成丢产或重复产出。
+8. **铁魔法 CD 放大 20 倍（2026-08-26，用户已选择暂不修）**：`IronSpellsCaster.cast` 与 `IronSpellsHelper.getSyntheticDef` 都算 `baseCooldown = round(spell.getSpellCooldown() * 20.0)`，但铁魔法 `getSpellCooldown()` 本身已返回 tick（`COOLDOWN_IN_SECONDS × 20`）——再乘 20 等于把 1 秒 CD 变成 20 秒（火矢实测）。SPELL_SPEED 仍能 ÷spellSpeed 缩短，但缩的是 20 倍放大后的底数。修法：两处去掉 `* 20.0`，并补单测断言 1 秒 CD 法术得 20 tick。
 
 ## 五、版本相关（历史提交提示）
 
