@@ -1217,22 +1217,3 @@
 **为什么**：Road 与 Building 数据系统不同源（样条 vs 矩形框），不能硬合并数据模型；但**展示外衣**（瞄准/幽灵/面板）可共享——抽一条"施工工地"复用线，既满足用户"少做重复工"又不破坏建筑/道路各自的正确性。Road 与 Building 的退料机制结果一致（玩家整体拿回），只是落地路径不同（Building=salvage 已放+退未放；Road=无salvage+全退）。
 
 **影响**：`ConstructionSiteDataPacket` 加 `kind`（codec 向后兼容由读端新字节）；`RoadEdge` 新增 `materialCounts`/`segmentTaskId` 持久化；新增 `findEdgeAt`、`RoadSiteData`、`RoadInteractPacket`、`RoadWithdrawPacket`；`RoadAreaSyncPacket` 加 `raycastUnderConstruction`+`RoadBoxHit`。施工中道路可瞄可退，已完成道路不显示白框、不开面板。
-
-## 2026-08-26：NPC 施工传送落点吸附真实可站立表面——杜绝传进墙里/矿洞的循环与坠亡
-
-**需求**（用户实测）：铲平地面（`terrain:flatten`）时 NPC 传送到"合适的施工点"，但该点可能在岩壁内部 → 被传入附近矿洞，原地反复重传送；运气差落到地下矿洞顶部 → 坠亡；任务仍在池中 → 下个 NPC 接取 → 循环死亡。
-
-**根因**：
-- 任务站位 `TaskExecutionSystem.computeTaskStance` 从包围盒推导 `(minX-2, minY+1, midZ)`。建筑任务 minY≈地面所以正确；**地形任务 minY 是目标平整高度（低于周围原始地形）→ 站位 Y 落在周围山体内部**。
-- `WandscapeRitualOps` 的落点搜索相对 `target.y()` 上浮下探（dy 0..4 / -1..-3），不从世界表面找真实站立面；且 `requireGround=false` 放宽搜索**只查脚/头无碰撞、不查脚下地面** → 可悬空放到深洞上方坠亡。
-- `executeRitual` 找不到安全落点时**回退原坏目标**（即"传进墙里"路径）；传送后导航目标仍是同一个坏 Y → 寻路再败 → 再传送 → 无限循环。
-
-**决策**：
-- **新增 `engine/nav/StandableTerrain`（纯 Java + `TerrainView` 接口，引擎层用 `ServerLevel` 实现）**：`isStandable`（脚/头无碰撞非液体、地面有碰撞）、`isSafeLanding`（追加脚下两格实心，除台阶/单格薄板）、`nearestStandableY`（nearY 可站立则保留 → 小偏移 → 表面吸附，最小位移，保住守卫楼顶/地洞）、`findSafeLanding`（各列吸附到**顶**表面、绝不进洞腔、绝不返回原始坏目标）、`findSafeEscapeLanding`（逃生用，保留".origin.y 就近 + 禁悬空"）。收敛原先 `WandscapeRitualOps.isSafeLanding` 与 `GuardCombat.isStandable` 的重复逻辑。
-- **`WandscapeMovementOps.navigateTo`**：目标 Y 仅在原 Y 不可站立时吸附到表面（守卫等已选好可行 Y 的调用为 no-op）。
-- **`WandscapeRitualOps` 预引导安全门控**：仅对 `self_teleport`，进入 85tick 引导前先找安全落点，找不到立即返回 failedFuture（不 startAsyncOp/不发法阵/不进 pending），让 `TaskExecutionSystem` 异常路径把任务释放回池；`executeRitual` **不再回退原坏目标**（找不到则取消传送并 `nav.reset()`）。
-- **`NavigationSystem.switchToRitualTeleport`**：`beginRitual` 返回 failedFuture 时 `nav.reset()`（避免空转 TELEPORT_RITUAL），并把定身标记挪到确认传送可进行之后。
-
-**为什么**：修根因（目标 Y 不可站立）才能同时断掉"原地重传送"与"坠亡再循环"两条路径；吸附只在目标不可站立时生效，故不干扰守卫交战/自防御等刻意选好的合法站位；移除"回退原坏目标 + 允许悬空"两处放宽正是防落点不安全的直接手段。
-
-**影响**：新增 `engine/nav/StandableTerrain`、`engine/nav/LevelTerrainView`、`standableTerrainTest`；改 `WandscapeRitualOps`、`WandscapeMovementOps`、`NavigationSystem`。地形类任务 NPC 传送到真实地面；矿井/悬崖不再导致坠亡或原地循环；落点搜索要求脚下两格实心、不再悬空。

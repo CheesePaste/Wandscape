@@ -259,25 +259,13 @@ public class NavigationSystem implements System {
 
         // ── Direct ritual teleport — NO package queue manipulation ──
         if (world.ritualOps != null && target != null) {
-            CompletableFuture<Void> ritualFuture = world.ritualOps.beginRitual(
-                    RitualId.SELF_TELEPORT, target, world, npcId, Map.of());
-            if (ritualFuture.isCompletedExceptionally()) {
-                // 预引导门控已判无安全落点 → 不放纳到 pending 给 TaskExec 做异常释放（回池重派）；
-                // 同时把 nav 拨回 IDLE，避免空转在 TELEPORT_RITUAL。
-                Log.info(TAG, "[NavSys] NPC {} — no safe teleport spot, aborting (task released)", npcId);
-                if (exec != null) {
-                    exec.pendingFuture = ritualFuture;
-                    exec.pendingFutureIsNav = true;
-                }
-                nav.reset();
-                return;
-            }
-            // 引导期间定身 + 减伤 75%（SelfDefenseHandler 消费；与 tryCastSpell 的锁时长对齐）。
-            // 只在确认传送能进行后标记，避免空传送也定身 85 tick。
+            // 引导期间定身 + 减伤 75%（SelfDefenseHandler 消费；与 tryCastSpell 的锁时长对齐）
             if (npc != null) {
                 npc.markTeleportChanneling(npc.level().getGameTime(),
                         WandscapeRitualOps.channelTicks(RitualId.SELF_TELEPORT));
             }
+            CompletableFuture<Void> ritualFuture = world.ritualOps.beginRitual(
+                    RitualId.SELF_TELEPORT, target, world, npcId, Map.of());
             if (exec != null) {
                 exec.pendingFuture = ritualFuture;
                 exec.pendingFutureIsNav = true;

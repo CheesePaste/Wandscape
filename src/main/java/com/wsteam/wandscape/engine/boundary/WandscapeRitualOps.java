@@ -19,13 +19,12 @@ import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.network.MagicCircleCastPacket;
 
 import com.wsteam.wandscape.op.api.AtomicOp;
-import com.wsteam.wandscape.engine.nav.LevelTerrainView;
-import com.wsteam.wandscape.engine.nav.StandableTerrain;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.network.PacketDistributor;
 
@@ -61,19 +60,6 @@ public class WandscapeRitualOps implements RitualOps {
     @Override
     public CompletableFuture<Void> beginRitual(RitualId ritual, GridPos target, World world,
                                                long casterId, Map<String, String> params) {
-        // ── self_teleport 预引导安全门控 ──
-        // 施法锁/魔力在进入引导前就已消耗，绝不能等 85 tick 引导结束才发现落点在墙里/悬空。
-        // 进入引导前先找安全落点，找不到立即返回 failedFuture（不 startAsyncOp、不发法阵、
-        // 不进 pending），让 TaskExecutionSystem 走异常路径把任务释放回池，避免原地坠亡/循环。
-        if ("self_teleport".equals(ritual.id())) {
-            ServerLevel casterLevel = casterServerLevel(casterId);
-            if (casterLevel == null || findSafeLanding(casterLevel, target) == null) {
-                Log.warn(TAG, "[RitualOps] self_teleport: no safe landing near {} — aborting teleport", target);
-                return CompletableFuture.failedFuture(
-                        new IllegalStateException("self_teleport: no safe landing near " + target));
-            }
-        }
-
         int ticks = channelTicks(ritual);
 
         if (ticks <= 0) {
@@ -185,19 +171,14 @@ public class WandscapeRitualOps implements RitualOps {
                 double fromX = npc.getX();
                 double fromY = npc.getY();
                 double fromZ = npc.getZ();
-                // 传送到安全落点，避免落进实体方块/建筑内部窒息。预引导门控已保证能找到，
-                // 这里不再回退原目标（原目标可能在墙里——那正是传进矿洞/坠亡的根因）。
+                // 传送到安全落点，避免落进实体方块/建筑内部窒息；找不到则回退原目标
                 Vec3 dest = null;
                 if (npc.level() instanceof ServerLevel serverLevel) {
                     dest = findSafeLanding(serverLevel, target);
                 }
                 if (dest == null) {
-                    // 极端兜底（世界在引导期间被改动）：不传送，把导航拨回 IDLE，
-                    // 避免停在 TELEPORT_RITUAL 空转或原地重传送。
-                    Log.warn(TAG, "[RitualOps] self_teleport: no safe landing near {} — cancelling teleport", target);
-                    NavigationState nav = world.get(casterId, NavigationState.class);
-                    if (nav != null) nav.reset();
-                    return;
+                    dest = new Vec3(target.x() + 0.5, target.y(), target.z() + 0.5);
+                    Log.warn(TAG, "[RitualOps] self_teleport: no safe landing near {} — falling back to raw target", target);
                 }
                 npc.teleportTo(dest.x, dest.y, dest.z);
                 // 落点可能超出到达半径，把导航状态拨回 PATHFINDING，让 NavigationSystem 走完剩余距离
@@ -221,26 +202,21 @@ public class WandscapeRitualOps implements RitualOps {
         Log.warn(TAG, "[RitualOps] Unknown ritual '{}' at {} — no-op", ritual.id(), target);
     }
 
-    /** 施法者所在 ServerLevel；实体已移除/非服务端返回 null。 */
-    private static ServerLevel casterServerLevel(long casterId) {
-        WandscapeNpc npc = EntityComponentBridge.INSTANCE.getNpc(casterId);
-        return npc != null && npc.level() instanceof ServerLevel sl ? sl : null;
-    }
-
     /**
-     * 传送落点：在目标点附近搜索「真实可站立地面」。每个候选列吸附到它<strong>顶</strong>表面
-     * （绝不进入洞腔），并要求脚下两格实心（排除台阶/单格薄板/悬崖假地面）。半径 0..4 收紧，
-     * 0..6 放宽仍要求实心地面——不再有「允许悬空下落」的放宽路径，杜绝落到洞顶/悬空坠亡。
-     * 返回 {@code null} 表示即便放宽半径也无真实地面。
+     * 在目标点附近搜索可安全落地的位置：NPC 脚/头两格无碰撞、不落入液体、脚下有实心地面且非房顶薄板。
+     * 两遍搜索：先要求实心地面（首选，落地即站稳）；失败后放宽为「仅不窒息」（允许悬空掉落）。
+     * 返回 {@code null} 表示连放宽搜索都找不到，调用方回退原目标。
      */
     private static Vec3 findSafeLanding(ServerLevel level, GridPos target) {
-        double[] spot = StandableTerrain.findSafeLanding(new LevelTerrainView(level),
-                target.x(), target.y(), target.z(), 0, 4);
-        if (spot == null) {
-            spot = StandableTerrain.findSafeLanding(new LevelTerrainView(level),
-                    target.x(), target.y(), target.z(), 0, 6);
+        for (int r = 0; r <= 4; r++) {
+            Vec3 spot = scanShell(level, target, r, true);
+            if (spot != null) return spot;
         }
-        return spot != null ? new Vec3(spot[0], spot[1], spot[2]) : null;
+        for (int r = 0; r <= 6; r++) {
+            Vec3 spot = scanShell(level, target, r, false);
+            if (spot != null) return spot;
+        }
+        return null;
     }
 
     /** 逃生搜索最大半径：保证传送后远离危险点（岩浆/窒息区域），又不会跳得过远。 */
@@ -249,13 +225,71 @@ public class WandscapeRitualOps implements RitualOps {
     /**
      * 逃生传送目标：在 {@code origin} 周围 r=4..16 的方形外壳上找最近安全落点。
      * 从 r=4 起步（至少离开危险点 4 格，避免原地 no-op 传送）；先要求实心地面，
-     * 失败后放宽为「仅不窒息」（仍排除液体，避免岩浆/洞顶悬空），保证能从岩浆湖逃离。
-     * 返回 {@code null} 表示附近无可逃处。
+     * 失败后放宽为「仅不窒息」。返回 {@code null} 表示附近无可逃处（如超大岩浆湖）。
      */
     public static Vec3 findSafeEscapeLanding(ServerLevel level, GridPos origin) {
-        double[] spot = StandableTerrain.findSafeEscapeLanding(new LevelTerrainView(level),
-                origin.x(), origin.y(), origin.z(), 4, ESCAPE_SEARCH_RADIUS);
-        return spot != null ? new Vec3(spot[0], spot[1], spot[2]) : null;
+        for (int r = 4; r <= ESCAPE_SEARCH_RADIUS; r++) {
+            Vec3 spot = scanShell(level, origin, r, true);
+            if (spot != null) return spot;
+        }
+        for (int r = 4; r <= ESCAPE_SEARCH_RADIUS; r++) {
+            Vec3 spot = scanShell(level, origin, r, false);
+            if (spot != null) return spot;
+        }
+        return null;
+    }
+
+    /** 搜索半径 {@code r} 的方形外壳，优先目标 Y，再往上找净空，最后往下找地面。 */
+    private static Vec3 scanShell(ServerLevel level, GridPos target, int r, boolean requireGround) {
+        for (int dx = -r; dx <= r; dx++) {
+            for (int dz = -r; dz <= r; dz++) {
+                if (Math.max(Math.abs(dx), Math.abs(dz)) != r) continue;
+                int x = target.x() + dx;
+                int z = target.z() + dz;
+                for (int dy = 0; dy <= 4; dy++) {
+                    int y = target.y() + dy;
+                    if (isSafeLanding(level, x, y, z, requireGround)) {
+                        return new Vec3(x + 0.5, y, z + 0.5);
+                    }
+                }
+                for (int dy = -1; dy >= -3; dy--) {
+                    int y = target.y() + dy;
+                    if (isSafeLanding(level, x, y, z, requireGround)) {
+                        return new Vec3(x + 0.5, y, z + 0.5);
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    /** 立足点 {@code (x,y,z)}（y 为脚底 Y）是否安全：所在区块已加载、脚/头两格均无碰撞且非液体。 */
+    private static boolean isSafeLanding(ServerLevel level, int x, int y, int z, boolean requireGround) {
+        BlockPos feet = new BlockPos(x, y, z);
+        BlockPos head = new BlockPos(x, y + 1, z);
+        BlockPos ground = new BlockPos(x, y - 1, z);
+        if (!level.isLoaded(feet) || !level.isLoaded(head) || !level.isLoaded(ground)) {
+            return false;
+        }
+        BlockState feetState = level.getBlockState(feet);
+        BlockState headState = level.getBlockState(head);
+        if (!feetState.getFluidState().isEmpty() || !headState.getFluidState().isEmpty()) {
+            return false;
+        }
+        if (!feetState.getCollisionShape(level, feet).isEmpty()
+                || !headState.getCollisionShape(level, head).isEmpty()) {
+            return false;
+        }
+        if (requireGround) {
+            // 脚下与下方第二格都须为实心立方块——排除台阶/楼梯/单格薄板等假地面（与游客
+            // findGround 双实心一致）。厚建筑房顶（如 inn1 屋面下还有结构）仍会通过，但守卫交战点
+            // 已不再把楼顶当地面（见 GuardCombat.findEngagePos），此处只兜底薄板/斜面。
+            if (!level.getBlockState(ground).isSolid()
+                    || !level.getBlockState(ground.below()).isSolid()) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /** 末影人传送式 PORTAL 爆点（环绕身体，16 粒）。 */

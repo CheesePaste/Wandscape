@@ -7,13 +7,9 @@ import com.wsteam.wandscape.core.component.NavigationState;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.types.GridPos;
 import com.wsteam.wandscape.engine.WandscapeEngine;
-import com.wsteam.wandscape.engine.nav.LevelTerrainView;
-import com.wsteam.wandscape.engine.nav.StandableTerrain;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.shared.log.Log;
-
-import net.minecraft.server.level.ServerLevel;
 
 /**
  * Stateless MC adapter for {@link MovementOps}.
@@ -37,20 +33,6 @@ public class WandscapeMovementOps implements MovementOps {
         World world = WandscapeEngine.getWorld();
         if (world == null) {
             return CompletableFuture.completedFuture(null);
-        }
-
-        // ── 目标 Y 吸附到真实可站立表面 ──
-        // 任务站位（computeTaskStance）从包围盒推导，地形任务（铲平/填方）的站位 Y 会落在周围
-        // 山体内部；逐 op 目标也可能指向实体方块。仅当原 Y 不可站立时才吸附，守卫 findEngagePos
-        // 等「已刻意选好可行 Y」的调用不受影响。结果采用 feet-Y（见 StandableTerrain）。
-        if (npc.level() instanceof ServerLevel serverLevel) {
-            Integer standY = StandableTerrain.nearestStandableY(
-                    new LevelTerrainView(serverLevel), x, y, z);
-            if (standY != null && standY != y) {
-                Log.info(TAG, "[MovementOps] navigateTo npc={} snap Y {} → {} @({},{})",
-                        npcId, y, standY, x, z);
-                y = standY;
-            }
         }
 
         // Cancel any existing nav for this NPC
