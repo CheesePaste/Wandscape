@@ -21,6 +21,7 @@ import com.wsteam.wandscape.shared.ui.component.TabBar;
 import com.wsteam.wandscape.shared.ui.component.TaskQueuePanel;
 import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
 import com.wsteam.wandscape.shared.ui.theme.WandscapeTheme;
+import com.wsteam.wandscape.shared.ui.util.ItemStackUtil;
 import com.wsteam.wandscape.shared.log.Log;
 
 import net.minecraft.client.Minecraft;
@@ -187,6 +188,7 @@ public class WorkstationScreen extends MedievalScreen {
             }
         };
         decomposeList.setOnSelect(i -> updateSliderForDecompose(decomposeFiltered.get(i)));
+        decomposeList.setTooltipProvider((item, index) -> ItemStackUtil.fromIdWithNbt(item.itemId(), item.nbt()));
 
         synthesizeList = new ScrollableList<>(contentX, listY, contentW, listH, 20) {
             @Override
@@ -235,6 +237,7 @@ public class WorkstationScreen extends MedievalScreen {
             }
         };
         synthesizeList.setOnSelect(i -> updateSliderForSynthesize(synthesizeFiltered.get(i)));
+        synthesizeList.setTooltipProvider((item, index) -> ItemStackUtil.fromId(item.outputItem()));
 
         // Quantity slider + submit
         int controlY = listY + listH + 6;
@@ -297,6 +300,15 @@ public class WorkstationScreen extends MedievalScreen {
         }
         currentList = (tabIndex == 0) ? decomposeList : synthesizeList;
         addRenderableWidget(currentList);
+    }
+
+    @Override
+    protected void renderForeground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        // 悬停列表行时在光标处显示标准物品 tooltip（与物品栏一致，置于所有控件之上）
+        ItemStack tooltip = currentList != null ? currentList.hoveredTooltipStack() : null;
+        if (tooltip != null) {
+            g.renderTooltip(font, tooltip, mouseX, mouseY);
+        }
     }
 
     private void onSubmit() {

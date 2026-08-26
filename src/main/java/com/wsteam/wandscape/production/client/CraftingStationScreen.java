@@ -18,6 +18,7 @@ import com.wsteam.wandscape.shared.ui.component.SearchBox;
 import com.wsteam.wandscape.shared.ui.component.TaskQueuePanel;
 import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
 import com.wsteam.wandscape.shared.ui.theme.WandscapeTheme;
+import com.wsteam.wandscape.shared.ui.util.ItemStackUtil;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -189,6 +190,7 @@ public class CraftingStationScreen extends MedievalScreen {
             }
         };
         recipeList.setOnSelect(i -> updateSliderForRecipe(filteredRecipes.get(i)));
+        recipeList.setTooltipProvider((item, index) -> ItemStackUtil.fromIdWithNbt(item.outputItem(), item.nbt()));
         addRenderableWidget(recipeList);
 
         // Quantity slider + submit
@@ -214,6 +216,15 @@ public class CraftingStationScreen extends MedievalScreen {
         taskQueuePanel.setOnMoveUp(this::onQueueMoveUp);
         taskQueuePanel.setOnMoveDown(this::onQueueMoveDown);
         addRenderableWidget(taskQueuePanel);
+    }
+
+    @Override
+    protected void renderForeground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        // 悬停列表行时在光标处显示标准物品 tooltip（与物品栏一致，置于所有控件之上）
+        ItemStack tooltip = recipeList != null ? recipeList.hoveredTooltipStack() : null;
+        if (tooltip != null) {
+            g.renderTooltip(font, tooltip, mouseX, mouseY);
+        }
     }
 
     /** Filter the recipe list by the search query, keeping it in sync with selection indexes. */

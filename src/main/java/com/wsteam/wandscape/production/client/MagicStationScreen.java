@@ -6,6 +6,7 @@ import java.util.Map;
 
 import com.wsteam.wandscape.building.network.TaskQueueDataPacket;
 import com.wsteam.wandscape.building.network.TaskQueueModifyPacket;
+import com.wsteam.wandscape.magic.item.SpellItem;
 import com.wsteam.wandscape.production.network.MagicStationPacket;
 import com.wsteam.wandscape.production.network.MagicStationPacket.SpellEntry;
 import com.wsteam.wandscape.production.network.RequestProductionTaskPacket;
@@ -18,6 +19,7 @@ import com.wsteam.wandscape.shared.ui.component.SearchBox;
 import com.wsteam.wandscape.shared.ui.component.TaskQueuePanel;
 import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
 import com.wsteam.wandscape.shared.ui.theme.WandscapeTheme;
+import com.wsteam.wandscape.shared.ui.util.ItemStackUtil;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -171,6 +173,14 @@ public class MagicStationScreen extends MedievalScreen {
             }
         };
         recipeList.setOnSelect(i -> updateSliderForRecipe(filteredRecipes.get(i)));
+        recipeList.setTooltipProvider((item, index) -> {
+            ItemStack stack = ItemStackUtil.fromId(item.outputItem());
+            // 实际产出的卷轴带 magic_id 绑定，tooltip 才会显示魔法名/耗蓝/冷却
+            if (stack.getItem() instanceof SpellItem) {
+                SpellItem.setMagicId(stack, item.magicId());
+            }
+            return stack;
+        });
         addRenderableWidget(recipeList);
 
         int controlY = listY + listH + 6;
@@ -194,6 +204,15 @@ public class MagicStationScreen extends MedievalScreen {
         taskQueuePanel.setOnMoveUp(this::onQueueMoveUp);
         taskQueuePanel.setOnMoveDown(this::onQueueMoveDown);
         addRenderableWidget(taskQueuePanel);
+    }
+
+    @Override
+    protected void renderForeground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        // 悬停列表行时在光标处显示标准物品 tooltip（与物品栏一致，置于所有控件之上）
+        ItemStack tooltip = recipeList != null ? recipeList.hoveredTooltipStack() : null;
+        if (tooltip != null) {
+            g.renderTooltip(font, tooltip, mouseX, mouseY);
+        }
     }
 
     /** Filter the recipe list by the search query, keeping it in sync with selection indexes. */
