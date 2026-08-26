@@ -143,4 +143,28 @@ class MagicStateTest {
         assertEquals(50f, s.getMana(), "拒绝时不能扣蓝");
         assertEquals(0, s.getLockTicks(), "拒绝时不能占锁");
     }
+
+    @Test
+    void freeCastModeIgnoresCooldownAndManaCost() {
+        try {
+            MagicState.setFreeCast(true);
+            assertTrue(MagicState.isFreeCast());
+
+            MagicState s = new MagicState();
+            s.setMana(0f); // 0 蓝
+
+            // 0 蓝、0 冷却限制下仍可释放，且不扣蓝
+            assertTrue(s.tryCast("black_hole", 2400, 300, 0, 1f));
+            assertEquals(0f, s.getMana(), "测试模式下不扣蓝");
+            assertEquals(0, s.getCooldown("black_hole"), "测试模式下不设 CD");
+            assertTrue(s.canCast("black_hole"), "测试模式下始终可施放");
+
+            // 祭坛施法同样免蓝
+            assertTrue(s.tryAltarCast(100, 0));
+            assertEquals(0f, s.getMana());
+        } finally {
+            MagicState.setFreeCast(false);
+            assertFalse(MagicState.isFreeCast());
+        }
+    }
 }
