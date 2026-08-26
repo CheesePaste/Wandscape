@@ -14,7 +14,7 @@ import javax.annotation.Nullable;
  * 由 {@code WandscapeNpc} 持有并 NBT 持久。
  *
  * <p>桶键用分类名小写字符串（core 不依赖 magic 包；分类合法性由服务端对 MagicDef 校验，
- * 参考 {@link #fromFlat} 的 category 解析器）。SPECIAL（teleport/heal）与 UTILITY（revive）
+ * 参考 {@link #fromFlat} 的 category 解析器）。SPECIAL（teleport/heal）与 ALTAR（revive）
  * 魔法不存此容器——导航回退/祭坛/紧急奶/脱战自奶属系统固有，不进装备、不占槽位。
  */
 public class EquippedMagicComponent {
@@ -22,7 +22,7 @@ public class EquippedMagicComponent {
     /** 每类上限。 */
     public static final int MAX_PER_CATEGORY = 3;
 
-    /** 可装备分类（= {@code MagicDef.Category} 除 SPECIAL/UTILITY 的 4 个，小写名，固定顺序）。 */
+    /** 可装备分类（= {@code MagicDef.Category} 除 SPECIAL/ALTAR 的 4 个，小写名，固定顺序）。 */
     public static final List<String> CATEGORIES =
             List.of("single_target", "aoe", "defense", "support");
 

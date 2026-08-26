@@ -54,9 +54,9 @@ public record MagicDef(
      * 施法分类：决定策略预设的默认排序与 UI 分组，不承载触发逻辑
      * （触发逻辑 = target_mode + conditions，见 docs/spell-casting.md）。
      * BUFF 与 HEAL 合并为 SUPPORT；SPECIAL（teleport/heal）为系统固有特殊魔法，
-     * UTILITY（revive）为祭坛专属——两者均不可装备、不进自动决策表。
+     * ALTAR（revive）为祭坛专属——两者均不可装备、不进自动决策表。
      */
-    public enum Category { SINGLE_TARGET, AOE, DEFENSE, SUPPORT, UTILITY, SPECIAL }
+    public enum Category { SINGLE_TARGET, AOE, DEFENSE, SUPPORT, ALTAR, SPECIAL }
 
     /** 目标规则：决定"何时算有有效目标"。 */
     public enum TargetMode { HOSTILE_NEAREST, HOSTILE_LOWEST_HP, ALLY_LOWEST_HP, SELF, NONE, DEAD_ALLY }

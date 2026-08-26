@@ -57,7 +57,7 @@
 
 1. ✅ **"四种类型"** = 施法策略页的 4 分类（SINGLE_TARGET单体 / AOE群攻 / DEFENSE防御 / SUPPORT增益），**每类最多装备 3 个**（共 ≤12）。**UTILITY（teleport / revive）不计入装备限制、不做成物品**：teleport 是导航回退硬性路径（系统固有），revive 仅祭坛可施放（`altar_only`，维持现状）。此两类不进装备 UI、不占槽位、无物品形式。
 2. ✅ **魔法物品形态 = 方案 A：通用物品 `SpellItem` + DataComponent 存 magicId**。一份代码、新魔法零注册（最贴"数据驱动"哲学）；tooltip 从 MagicDef 读；合成配方 output 需扩展支持 magic 字段。仅覆盖四类战斗魔法（beam/heal/meteor/petrification/conversion/desperation/fortification/enfeeble_field 及未来战斗魔法），**不覆盖 teleport/revive**。
-3. ✅ **新 NPC 默认装备 beam + heal**（占 single_target/support 各 1 槽，玩家可通过策略页换掉）；teleport 由导航系统固有持有（不占槽）。其余魔法由玩家在 magic_station 合成后到策略页装备。
+3. ✅ **新 NPC 默认装备 beam + meteor**（殖民地初始 3 名法师；酒馆招募空装备，2026-08-26 改）。heal/teleport 为**特殊魔法**（SPECIAL 分类，系统固有、不进装备槽，但物品化为卷轴 `scroll_heal`/`scroll_teleport`，1 级解锁；teleport 卷轴创造模式不可施放），revive 为**祭坛专属**（ALTAR 分类，原 UTILITY 更名）。其余魔法由玩家在 magic_station 合成后到策略页装备。
 4. ✅ **施法策略页面交互形态**：装备制。策略页上部 4 预设按钮（保留）+ 中部 4 分类×3 槽位面板（点已占槽卸载）+ 右侧背包卷轴源列表（点卷轴装备到对应分类首空槽）。（B 阶段落地）
 5. ✅ **magic_station 与旧 potion 配方**：**旧 mana/stamina potion 配方归属 crafting_station**（`craft_station=crafting_station`，随法杖在合成站 GUI 列出、走 brew_potion 蓝图）；输出物品仍不注册（C 阶段用户拍板）。
 6. ✅ **魔法合成消耗**：**仅元素**（`ColonyItemBank` 扣元素），无空卷轴原料（C 阶段用户拍板）。

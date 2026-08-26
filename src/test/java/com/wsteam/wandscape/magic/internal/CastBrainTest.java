@@ -107,6 +107,17 @@ class CastBrainTest {
                 "只有 altarOnly 魔法时不施放（等待祭坛）");
     }
 
+    @Test
+    void skipsSpecialSpells() {
+        MagicDef beam = spell("beam", "hostile_nearest");
+        MagicDef heal = spell("heal", "special", "ally_lowest_hp");
+        MagicDef chosen = CastBrain.select(List.of(beam, heal), def -> true, snap(1));
+        assertEquals("beam", chosen.id(), "SPECIAL 魔法应被 NPC 自动施法跳过（走 L0/独立路径）");
+        assertNull(CastBrain.select(List.of(heal), def -> true,
+                new WorldSnapshot(0, 1f, 0.5f, Set.of())),
+                "只有 SPECIAL 魔法时不施放（治疗由 L0 紧急奶/脱战自奶触发）");
+    }
+
     // ── select：conditions 门控 ──
 
     @Test
@@ -181,15 +192,16 @@ class CastBrainTest {
     }
 
     @Test
-    void presetExcludesUtility() {
+    void presetExcludesSpecialAndAltar() {
         CastStrategyComponent s = new CastStrategyComponent();
         s.setPreset(CastStrategyComponent.Preset.BALANCED);
         List<MagicDef> known = List.of(
                 spell("beam", "single_target", "hostile_nearest"),
-                spell("teleport", "utility", "none"));
+                spell("teleport", "special", "none"),
+                spell("revive", "altar", "dead_ally"));
         List<MagicDef> priority = CastBrain.resolvePriority(s, known);
         assertEquals(List.of("beam"), priority.stream().map(MagicDef::id).toList(),
-                "UTILITY 不进策略预设表（L0/玩家命令管）");
+                "SPECIAL/ALTAR 不进策略预设表（L0/祭坛管）");
     }
 
     @Test

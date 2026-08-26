@@ -213,10 +213,11 @@ public record NpcDataPacket(
             armorStacks.add(npc.getArmorItem(i).copy());
         }
 
-        // 战斗魔法目录（id → 分类小写）：策略/装备 UI 识别玩家背包卷轴的归属分类；UTILITY 不进（不可装备）
+        // 战斗魔法目录（id → 分类小写）：策略/装备 UI 识别玩家背包卷轴的归属分类；ALTAR/SPECIAL 不进（不可装备）
         Map<String, String> magicCatalog = new HashMap<>();
         for (Map.Entry<String, MagicDef> e : SpellbookLoader.getAllSpecs().entrySet()) {
-            if (e.getValue().category() != MagicDef.Category.UTILITY) {
+            if (e.getValue().category() != MagicDef.Category.ALTAR
+                    && e.getValue().category() != MagicDef.Category.SPECIAL) {
                 magicCatalog.put(e.getKey(), e.getValue().category().name().toLowerCase(Locale.ROOT));
             }
         }

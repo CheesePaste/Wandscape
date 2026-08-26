@@ -125,6 +125,8 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
             }
             npc.setPersistenceRequired();
             npc.colonyId = colonyId;
+            // 酒馆招募的法师无起始战斗魔法（仅特殊区 heal/teleport 系统固有）：清空 onAddedToLevel 种的默认载荷
+            npc.equippedMagic.clear();
 
             // 6. Apply rolled attributes + 满蓝入职
             npc.maxHp = candidate.maxHp();
@@ -203,6 +205,8 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
         }
         npc.setPersistenceRequired();
         npc.colonyId = colonyId;
+        // 酒馆招募的法师无起始战斗魔法：清空默认载荷（特殊区 heal/teleport 系统固有）
+        npc.equippedMagic.clear();
 
         // Apply mage stats from resume
         npc.setCustomName(Component.literal(resume.touristName()));

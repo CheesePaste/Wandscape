@@ -805,6 +805,8 @@
   "gui.wandscape.strategy.category.aoe": "AoE",
   "gui.wandscape.strategy.category.defense": "Defense",
   "gui.wandscape.strategy.category.support": "Support",
+  "gui.wandscape.strategy.category.special": "Special",
+  "gui.wandscape.strategy.special.note": "Used by default, cannot be changed",
   "gui.wandscape.strategy.equip_label": "Equipped (max 3 per category, slot order = priority)",
   "gui.wandscape.strategy.source_label": "Scrolls",
   "gui.wandscape.strategy.tip.unequip": " — click to unequip",

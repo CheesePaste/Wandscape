@@ -26,7 +26,8 @@ import net.minecraft.world.level.Level;
  *
  * <p>创造模式右键在当前位置施放所绑魔法（测试用）；生存模式不予施放。
  * tooltip 显示魔法名 + 耗蓝 / 冷却 / 施法时间（读 MagicDef 数据）。
- * 只允许绑定四类战斗魔法——teleport（导航回退）、revive（祭坛专属）属 UTILITY，不做成物品。
+ * 只允许绑定战斗魔法 + 特殊魔法（heal/teleport）——revive（祭坛专属，ALTAR）不物品化；
+ * teleport 卷轴创造模式不可施放（导航回退魔法，无原地施法语义）。
  */
 public class SpellItem extends Item {
 
@@ -71,7 +72,8 @@ public class SpellItem extends Item {
             return InteractionResultHolder.fail(stack);
         }
         MagicDef def = SpellbookLoader.getSpec(magicId);
-        if (def == null || def.category() == MagicDef.Category.UTILITY) {
+        if (def == null || def.category() == MagicDef.Category.ALTAR
+                || "teleport".equals(magicId)) {
             sp.displayClientMessage(Component.translatable("item.wandscape.spell.invalid"), true);
             return InteractionResultHolder.fail(stack);
         }

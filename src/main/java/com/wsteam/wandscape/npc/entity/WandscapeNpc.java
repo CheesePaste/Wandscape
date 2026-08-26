@@ -1202,11 +1202,11 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
             }
             // 默认装备 beam + meteor（新 NPC / 旧存档无字段），此后玩家经策略页装备卷轴改。
             // 分类由 MagicDef 数据驱动（core 组件不依赖 magic，种子在实体层做）；
-            // SPECIAL/UTILITY 魔法（heal/teleport/revive）为系统固有，不进装备槽。
+            // SPECIAL/ALTAR 魔法（heal/teleport/revive）为系统固有，不进装备槽。
             if (!spellbookLoaded && equippedMagic.isEmpty()) {
                 for (String defaultSpell : EquippedMagicComponent.DEFAULT_EQUIP) {
                     MagicDef def = SpellbookLoader.getSpec(defaultSpell);
-                    if (def != null && def.category() != MagicDef.Category.UTILITY
+                    if (def != null && def.category() != MagicDef.Category.ALTAR
                             && def.category() != MagicDef.Category.SPECIAL) {
                         equippedMagic.equip(def.category().name().toLowerCase(Locale.ROOT), defaultSpell);
                     }

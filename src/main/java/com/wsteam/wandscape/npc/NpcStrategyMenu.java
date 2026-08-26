@@ -169,7 +169,8 @@ public class NpcStrategyMenu extends AbstractContainerMenu {
             String magicId = SpellItem.getMagicId(stack);
             if (magicId == null) return false;
             MagicDef def = SpellbookLoader.getSpec(magicId);
-            if (def == null || def.category() == MagicDef.Category.UTILITY) return false;
+            if (def == null || def.category() == MagicDef.Category.ALTAR
+                    || def.category() == MagicDef.Category.SPECIAL) return false;
             if (!def.category().name().toLowerCase(Locale.ROOT).equals(category)) return false;
 
             int sameCategory = 0;

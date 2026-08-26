@@ -19,7 +19,7 @@ import static com.wsteam.wandscape.Wandscape.MODID;
  * Client→server packet: player edits an NPC's equipped magic loadout + cast preset in the strategy screen.
  *
  * <p>{@code equipped} 为扁平 magicId 列表（分类固定序 × 类内槽位序）；服务端按每个魔法真实分类
- * 装桶校验（未知/UTILITY 丢、每类 ≤3、去重）——客户端立场不获信任，非法请求就地修正而非拒绝。
+ * 装桶校验（未知/ALTAR/SPECIAL 丢、每类 ≤3、去重）——客户端立场不获信任，非法请求就地修正而非拒绝。
  * {@code consumeSlot} ≥ 0 表示本次改动包含「从玩家背包该槽消耗一张卷轴」的装备动作：仅当该卷轴
  * 绑定的魔法在本次改动中**新增装备**成功才实际扣一张（防状态重发反复扣）。服务端改完回发
  * {@link NpcDataPacket} 刷新屏幕为权威状态。

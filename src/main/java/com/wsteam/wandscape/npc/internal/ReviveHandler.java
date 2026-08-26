@@ -181,7 +181,7 @@ public final class ReviveHandler {
 
         fixEcsAfterSpawn(npc, rec);
         // 恢复已装备魔法卷轴：死亡时不掉落、记入死亡记录，这里重新挂回复活后 NPC
-        //（沿用 SpellcastingApi 的服务端权威校验：未知/UTILITY 丢、每类 ≤3、去重）。
+        //（沿用 SpellcastingApi 的服务端权威校验：未知/ALTAR/SPECIAL 丢、每类 ≤3、去重）。
         restoreEquippedMagic(npc, rec);
         ColonyDeathRegistry.get(level).remove(rec);
 

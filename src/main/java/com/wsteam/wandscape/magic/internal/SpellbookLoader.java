@@ -48,7 +48,7 @@ public class SpellbookLoader {
 
     /**
      * 该魔法 id 的可装备分类名（小写）；不可装备返回 null。SPECIAL（teleport/heal）与
-     * UTILITY（revive）为系统固有/祭坛专属、未知 id 无定义——三者均不进
+     * ALTAR（revive）为祭坛专属、未知 id 无定义——三者均不进
      * {@code EquippedMagicComponent}。服务端权威装桶校验统一走这里，避免各调用方重复判。
      */
     @Nullable
@@ -56,7 +56,7 @@ public class SpellbookLoader {
         MagicDef def = getSpec(magicId);
         if (def == null) return null;
         MagicDef.Category c = def.category();
-        if (c == MagicDef.Category.UTILITY || c == MagicDef.Category.SPECIAL) return null;
+        if (c == MagicDef.Category.ALTAR || c == MagicDef.Category.SPECIAL) return null;
         return c.name().toLowerCase(Locale.ROOT);
     }
 }

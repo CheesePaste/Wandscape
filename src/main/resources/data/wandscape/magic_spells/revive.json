@@ -1,6 +1,6 @@
 {
   "id": "revive",
-  "category": "utility",
+  "category": "altar",
   "mana_cost": 80,
   "base_cooldown": 600,
   "range": 32,

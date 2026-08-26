@@ -11,7 +11,7 @@ import com.wsteam.wandscape.shared.data.ElementType;
  * 魔法卷轴合成配方（{@code data/wandscape/craft_recipes/*.json}，JSON {@code type=="spell"}）。
  *
  * <p>产出 {@code wandscape:spell_scroll} 并绑定 {@code magic_id}（写入 CUSTOM_DATA），
- * 只覆盖四类战斗魔法——teleport（导航回退）/revive（祭坛专属）属 UTILITY，不做成物品。
+ * 覆盖四类战斗魔法 + 特殊魔法（heal/teleport）——revive（祭坛专属，ALTAR）不物品化。
  */
 public record CraftSpellRecipe(
     String id,

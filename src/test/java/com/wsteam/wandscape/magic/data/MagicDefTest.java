@@ -38,9 +38,9 @@ class MagicDefTest {
         MagicDef tp = loadSpec("/data/wandscape/magic_spells/teleport.json");
         assertNotNull(tp, "teleport.json should be on classpath");
         assertEquals("teleport", tp.id());
-        assertEquals(MagicDef.Category.UTILITY, tp.category());
+        assertEquals(MagicDef.Category.SPECIAL, tp.category());
         assertEquals(MagicDef.TargetMode.NONE, tp.targetMode());
-        assertNull(tp.effectCircleId(), "utility spell has no circle visual");
+        assertNull(tp.effectCircleId(), "special spell has no circle visual");
         assertNull(tp.effectColor());
     }
 
@@ -49,7 +49,7 @@ class MagicDefTest {
         MagicDef revive = loadSpec("/data/wandscape/magic_spells/revive.json");
         assertNotNull(revive, "revive.json should be on classpath");
         assertEquals("revive", revive.id());
-        assertEquals(MagicDef.Category.UTILITY, revive.category());
+        assertEquals(MagicDef.Category.ALTAR, revive.category());
         assertEquals(MagicDef.TargetMode.DEAD_ALLY, revive.targetMode());
         assertEquals("revive_ritual", revive.effectCircleId());
         assertNull(revive.effectColor());
@@ -61,7 +61,7 @@ class MagicDefTest {
         MagicDef heal = loadSpec("/data/wandscape/magic_spells/heal.json");
         assertNotNull(heal, "heal.json should be on classpath");
         assertEquals("heal", heal.id());
-        assertEquals(MagicDef.Category.SUPPORT, heal.category());
+        assertEquals(MagicDef.Category.SPECIAL, heal.category());
         assertEquals(MagicDef.TargetMode.ALLY_LOWEST_HP, heal.targetMode());
         assertEquals("heal_magic_circle", heal.effectCircleId());
         assertEquals(0xFF2ECC71, heal.effectColor());
