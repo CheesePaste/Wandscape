@@ -6,6 +6,7 @@ import com.wsteam.wandscape.shared.ui.skin.SkinRender;
 import com.wsteam.wandscape.shared.ui.skin.SkinSprite;
 import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
 import com.wsteam.wandscape.shared.ui.theme.WandscapeTheme;
+import com.wsteam.wandscape.shared.ui.util.RenderUtil;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -101,6 +102,10 @@ public class TaskQueuePanel extends AbstractWidget {
     private final List<Entry> entries = new ArrayList<>();
     private final int rowHeight = 16;
 
+    // ── Pending-entries scrolling (mouse wheel) ──
+    /** Pixel offset into the pending entries; drives rendering and hit-testing. */
+    private int scrollOffset;
+
     // ── Current (executing) tasks ──
     private static final int CURRENT_ROW_H = 18;
     private final List<Current> currents = new ArrayList<>();
@@ -163,10 +168,28 @@ public class TaskQueuePanel extends AbstractWidget {
         if (entries != null) {
             this.entries.addAll(entries);
         }
+        // The queue refreshes every ~second; keep the user's scroll position but clamp it
+        // to the new content range so a shrunken queue never leaves the viewport empty.
+        this.scrollOffset = Math.min(this.scrollOffset, maxEntriesScroll());
     }
 
     public List<Entry> getEntries() {
         return Collections.unmodifiableList(entries);
+    }
+
+    /** Top edge of the scrollable pending-entries region (below the current-task rows). */
+    private int entriesRegionTop() {
+        return getY() + 4 + 10 + currents.size() * CURRENT_ROW_H;
+    }
+
+    /** Height of the scrollable pending-entries region. */
+    private int entriesRegionHeight() {
+        return Math.max(0, getY() + height - 4 - entriesRegionTop());
+    }
+
+    /** Maximum pixel scroll offset for pending entries; 0 when everything already fits. */
+    private int maxEntriesScroll() {
+        return Math.max(0, entries.size() * rowHeight - entriesRegionHeight());
     }
 
     /** Convenience single-current setter (kept for callers that only have one running task). */
@@ -299,15 +322,29 @@ public class TaskQueuePanel extends AbstractWidget {
         int listBottom = getY() + height - 4; // 4px bottom padding
 
         // ── Current (executing) tasks — top rows, locked, each with a progress bar ──
-        int rowStartY = textY;
         for (int i = 0; i < currents.size(); i++) {
             renderCurrentRow(g, textY + i * CURRENT_ROW_H, currents.get(i));
-            rowStartY = textY + (i + 1) * CURRENT_ROW_H;
         }
 
-        for (int row = 0; row < entries.size(); row++) {
-            int rowBaseY = rowStartY + row * rowHeight;
-            if (rowBaseY + rowHeight > listBottom) break;
+        // ── Pending entries — scrollable region below the current rows ──
+        int regionTop = entriesRegionTop();
+        int regionHeight = Math.max(0, listBottom - regionTop);
+        int maxScroll = maxEntriesScroll();
+        if (scrollOffset > maxScroll) {
+            scrollOffset = maxScroll;
+        }
+
+        boolean scrollable = regionHeight > 0 && maxScroll > 0;
+        if (scrollable) {
+            // Clip partially-scrolled rows so they never paint over the current-task rows or panel edge
+            g.enableScissor(getX(), regionTop, getX() + width, listBottom);
+        }
+
+        int startRow = scrollOffset / rowHeight;
+        for (int row = startRow; row < entries.size(); row++) {
+            int rowBaseY = regionTop + row * rowHeight - scrollOffset;
+            if (rowBaseY + rowHeight <= regionTop) continue;   // scrolled off the top edge
+            if (rowBaseY >= listBottom) break;                 // past the bottom edge
 
             Entry e = entries.get(row);
 
@@ -371,6 +408,13 @@ public class TaskQueuePanel extends AbstractWidget {
                         () -> { if (canDown  && onMoveDown != null)  onMoveDown.accept(e.index);  });
             drawCloseBtn(g,colRightStart + 2*(BTN_W+BTN_GAP),btnY, canDelete, mouseX, mouseY,
                         () -> { if (canDelete && onDelete != null)   onDelete.accept(e.index);    });
+        }
+
+        if (scrollable) {
+            g.disableScissor();
+            // Thin scrollbar in the right padding, shown only while the queue overflows
+            RenderUtil.drawScrollbar(g, getX() + width - 3, regionTop, 3, regionHeight,
+                    entries.size() * rowHeight, scrollOffset);
         }
     }
 
@@ -493,14 +537,12 @@ public class TaskQueuePanel extends AbstractWidget {
 
         int mx = (int) mouseX;
         int my = (int) mouseY;
-        int topPadding = 4;
-        int textY     = getY() + topPadding + 10;
+        int regionTop = entriesRegionTop();
         int listBottom = getY() + height - 4;
-        int rowStartY = textY + currents.size() * CURRENT_ROW_H;
 
         for (int row = entries.size() - 1; row >= 0; row--) {
-            int rowBaseY = rowStartY + row * rowHeight;
-            if (rowBaseY + rowHeight < textY || rowBaseY > listBottom) continue;
+            int rowBaseY = regionTop + row * rowHeight - scrollOffset;
+            if (rowBaseY + rowHeight <= regionTop || rowBaseY >= listBottom) continue;
 
             Entry e = entries.get(row);
             int btnY = rowBaseY + (rowHeight - BTN_H) / 2;
@@ -536,6 +578,21 @@ public class TaskQueuePanel extends AbstractWidget {
             return false;
         }
         return false;
+    }
+
+    /** Mouse-wheel scrolls the pending entries; returns true only when the wheel is actually consumed. */
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+        if (!visible) return false;
+        if (mouseX < getX() || mouseX >= getX() + width
+                || mouseY < getY() || mouseY >= getY() + height) {
+            return false;
+        }
+        int maxScroll = maxEntriesScroll();
+        if (maxScroll <= 0) return false;
+        // 2 rows per notch, matching ScrollableList
+        scrollOffset = (int) Math.clamp(scrollOffset - scrollY * rowHeight * 2, 0, maxScroll);
+        return true;
     }
 
     @Override
