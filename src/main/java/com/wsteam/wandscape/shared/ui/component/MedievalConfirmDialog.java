@@ -120,8 +120,11 @@ public final class MedievalConfirmDialog {
         if (!open) return;
         Font font = Minecraft.getInstance().font;
 
-        // 遮罩：走 fillGradient（与原版 renderTransparentBackground 同路径），
-        // 平铺 fill 在含实体渲染的容器屏里会被同帧批次顺序吞掉
+        // 置于最高渲染层（Z=500），压过 3D 实体（Z=50）、浮动物品（Z=232）及下层所有 UI 控件与文本
+        g.pose().pushPose();
+        g.pose().translate(0.0F, 0.0F, 500.0F);
+
+        // 遮罩：走 fillGradient（与原版 renderTransparentBackground 同路径）全屏压暗
         g.fillGradient(0, 0, screenW, screenH, DIM_COLOR, DIM_COLOR);
 
         List<net.minecraft.util.FormattedCharSequence> lines = font.split(message, BOX_W - PAD * 2);
@@ -161,14 +164,26 @@ public final class MedievalConfirmDialog {
         drawButton(g, font, cancelX, btnY, I18n.name("gui.wandscape.confirm.cancel", "取消"), cancHov, false);
         drawButton(g, font, confirmX, btnY, I18n.name("gui.wandscape.confirm.ok", "确认"), confHov, true);
 
-        // 立即收批：宿主面板里 renderEntityInInventory 的 flush 会打乱 gui() 批次，
-        // 不收批的话遮罩/框体会被同帧稍后收批的实体与面板内容盖住（透字/不压暗）
+        // 立即收批并恢复 Pose 栈
         g.flush();
+        g.pose().popPose();
     }
 
     private static void drawButton(GuiGraphics g, Font font, int x, int y,
                                    Component label, boolean hovered, boolean confirm) {
-        MedievalScreen.drawMinimalBox(g, x, y, BTN_W, BTN_H, confirm, hovered);
+        int bgTop = confirm
+                ? (hovered ? MedievalColors.BUTTON_BG_HOVER : 0xFF3A2818)
+                : (hovered ? MedievalColors.BUTTON_BG_HOVER : 0xFF2A1E18);
+        int bgBottom = confirm
+                ? (hovered ? MedievalColors.PANEL_TITLE_BG : 0xFF1E100A)
+                : (hovered ? MedievalColors.PANEL_TITLE_BG : 0xFF140C08);
+        int borderColor = confirm
+                ? (hovered ? MedievalColors.BORDER_GOLD : MedievalColors.BORDER_GOLD)
+                : (hovered ? MedievalColors.BORDER_GOLD : MedievalColors.BORDER_GOLD_DARK);
+
+        g.fillGradient(x, y, x + BTN_W, y + BTN_H, bgTop, bgBottom);
+        MedievalScreen.drawGlowBorder(g, x, y, BTN_W, BTN_H, borderColor);
+
         int color = confirm
                 ? (hovered ? MedievalColors.ACCENT_GOLD : MedievalColors.TEXT_WARM_WHITE)
                 : (hovered ? MedievalColors.TEXT_WARM_WHITE : MedievalColors.TEXT_MUTED);

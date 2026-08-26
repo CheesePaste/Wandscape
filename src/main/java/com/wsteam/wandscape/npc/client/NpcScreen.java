@@ -261,7 +261,9 @@ public class NpcScreen extends AbstractContainerScreen<NpcMenu> implements Repla
         renderModel(g, mouseX, mouseY);
         renderAttributes(g);
         // 与仓库一致：原版 render 不画 tooltip，需显式调用（悬停物品显示介绍）
-        renderTooltip(g, mouseX, mouseY);
+        if (!confirmDialog.isOpen()) {
+            renderTooltip(g, mouseX, mouseY);
+        }
         // 确认框置于最顶层
         if (confirmDialog.isOpen()) {
             confirmDialog.render(g, width, height, mouseX, mouseY);
