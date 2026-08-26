@@ -6,8 +6,11 @@ import java.util.Map;
 import com.wsteam.wandscape.element.internal.ElementMappingConfig;
 import com.wsteam.wandscape.production.data.BrewPotionRecipe;
 import com.wsteam.wandscape.production.data.CraftSpellRecipe;
+import com.wsteam.wandscape.production.data.CraftWandRecipe;
 import com.wsteam.wandscape.production.data.RecipeUnlockRequirement;
 import com.wsteam.wandscape.shared.data.ElementType;
+
+import net.minecraft.nbt.CompoundTag;
 
 import org.junit.jupiter.api.Test;
 
@@ -111,6 +114,33 @@ class ElementRecipeCollectorTest {
         assertEquals(Map.of(ElementType.EARTH, 12L, ElementType.FIRE, 8L), r.elements());
         assertTrue(r.extraInputs().isEmpty());
         assertEquals(0, r.value());
+        // 卷轴携带 magic_id NBT，JEI 才能显示绑定魔法而非"未绑定"
+        assertNotNull(r.outputNbt());
+        assertEquals("beam", r.outputNbt().getString("magic_id"));
+    }
+
+    @Test
+    void fromCraftWandRecipes_carriesPresetNbt() {
+        CompoundTag nbt = new CompoundTag();
+        nbt.putString("preset_id", "craftsman_wand");
+        nbt.putString("wand_color", "#C67B30");
+        CraftWandRecipe wand = new CraftWandRecipe(
+                "craftsman_wand", "crafting_station", "工匠法杖", "wandscape:wand", nbt,
+                Map.of(ElementType.EARTH, 25000L, ElementType.WOOD, 25000L),
+                RecipeUnlockRequirement.NONE);
+
+        List<ElementRecipe> recipes = ElementRecipeCollector.fromCraftWandRecipes(List.of(wand));
+
+        assertEquals(1, recipes.size());
+        ElementRecipe r = recipes.get(0);
+        assertEquals(ElementRecipeKind.SYNTHESIZE, r.kind());
+        assertEquals(ElementRecipeCollector.STATION_CRAFTING, r.stationKey());
+        assertEquals("wandscape:wand", r.itemId());
+        // 法杖携带 preset NBT，JEI 才能显示具体变体与属性 tooltip
+        assertNotNull(r.outputNbt());
+        assertEquals("craftsman_wand", r.outputNbt().getString("preset_id"));
+        assertEquals("#C67B30", r.outputNbt().getString("wand_color"));
+        assertEquals(Map.of(ElementType.EARTH, 25000L, ElementType.WOOD, 25000L), r.elements());
     }
 
     @Test

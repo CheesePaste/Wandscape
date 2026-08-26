@@ -3,12 +3,18 @@ package com.wsteam.wandscape.integration.jei;
 import java.util.List;
 import java.util.Map;
 
+import javax.annotation.Nullable;
+
 import com.wsteam.wandscape.shared.data.ElementType;
 
+import net.minecraft.nbt.CompoundTag;
+
 /**
- * JEI 展示用的元素配方模型（纯逻辑，零 mezz/MC 运行时引用，可单测）。
+ * JEI 展示用的元素配方模型（纯逻辑，零 mezz/客户端运行时引用，可单测）。
  *
  * <p>{@code itemId} 存字符串而非 ItemStack，JEI 层再解析成物品，保持此模型与 JEI 解耦。
+ * {@code outputNbt} 为输出物品的 CUSTOM_DATA（法杖 preset_id + wand_color、卷轴 magic_id），
+ * 供 JEI 渲染带 NBT 的具体变体（tooltip 显示预设名/绑定魔法）。NBT 是数据层类型，非客户端运行时。
  *
  * <ul>
  *   <li>SYNTHESIZE：{@code elements} = 合成/酿造所需元素成本；{@code value} 无用。</li>
@@ -25,6 +31,7 @@ public record ElementRecipe(
     ElementRecipeKind kind,
     String stationKey,
     String itemId,
+    @Nullable CompoundTag outputNbt,
     Map<ElementType, Long> elements,
     List<String> extraInputs,
     long value
@@ -32,5 +39,6 @@ public record ElementRecipe(
     public ElementRecipe {
         elements = Map.copyOf(elements);
         extraInputs = List.copyOf(extraInputs);
+        outputNbt = outputNbt != null ? outputNbt.copy() : null;
     }
 }

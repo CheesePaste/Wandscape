@@ -89,3 +89,4 @@
 - Synthesize（合成站）配方**不从 JSON 加载**，运行时从 ElementMappingConfig 推导（`SynthesizeRecipe.fromElementMapping`，cost = buildCost）。
 - `RecipeUnlockRequirement`：仅 `min_colony_level`，缺省 1；NONE = min 1。服务端放置/生产时二次校验解锁（`RecipeUnlockChecker`）。
 - 生产 channel_ticks：synthesize/decompose = 10×qty、craft_wand / craft_spell = 1200×qty、brew_potion = 120。
+- **JEI 展示**：`ElementRecipe` 携带输出物品 CUSTOM_DATA NBT（法杖 preset_id + wand_color、卷轴 magic_id），JEI 渲染具体变体（悬停 tooltip 显示预设名+属性 / 绑定魔法）；元素成本不封顶 64，>64 数量正常显示。

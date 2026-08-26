@@ -3,6 +3,8 @@ package com.wsteam.wandscape.integration.jei;
 import java.util.List;
 import java.util.Map;
 
+import javax.annotation.Nullable;
+
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.log.Log;
@@ -20,11 +22,14 @@ import mezz.jei.api.recipe.category.IRecipeCategory;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.CustomData;
 
 /**
  * 「Wandscape 元素」配方分类：同一分类内用 kind 区分合成 / 分解。
@@ -103,12 +108,12 @@ public class ElementRecipeCategory implements IRecipeCategory<ElementRecipe> {
             int rows = elementRows(total);
             int index = addElementInputs(builder, recipe.elements(), ELEMENT_GRID_X_LEFT, rows, 0);
             index = addExtraInputs(builder, recipe.extraInputs(), rows, index);
-            builder.addOutputSlot(ITEM_X, itemY).addItemStack(resolveItem(recipe.itemId()));
+            builder.addOutputSlot(ITEM_X, itemY).addItemStack(resolveItem(recipe.itemId(), recipe.outputNbt()));
         } else {
             // 分解：物品(左) → 箭头 → 元素(右)
             int total = sorted(recipe.elements()).size() + recipe.extraInputs().size();
             int rows = elementRows(total);
-            builder.addInputSlot(ELEMENT_GRID_X_LEFT, itemY).addItemStack(resolveItem(recipe.itemId()));
+            builder.addInputSlot(ELEMENT_GRID_X_LEFT, itemY).addItemStack(resolveItem(recipe.itemId(), recipe.outputNbt()));
             int index = addElementOutputs(builder, recipe, ELEMENT_GRID_X_RIGHT, rows, 0);
             addExtraInputs(builder, recipe.extraInputs(), rows, index);
         }
@@ -137,7 +142,7 @@ public class ElementRecipeCategory implements IRecipeCategory<ElementRecipe> {
         for (String itemId : extraInputs) {
             builder.addInputSlot(slotX(ELEMENT_GRID_X_LEFT, i), slotY(rows, i))
                     .setStandardSlotBackground()
-                    .addItemStack(resolveItem(itemId));
+                    .addItemStack(resolveItem(itemId, null));
             i++;
         }
         return i;
@@ -175,16 +180,20 @@ public class ElementRecipeCategory implements IRecipeCategory<ElementRecipe> {
         Item item = Wandscape.ELEMENT_ITEMS.get(type).get();
         if (item == null) return ItemStack.EMPTY;
         ItemStack stack = new ItemStack(item);
-        if (count > 1) stack.setCount((int) Math.min(count, 64));
+        if (count > 1) stack.setCount((int) count);
         return stack;
     }
 
-    private static ItemStack resolveItem(String itemId) {
+    /** 按 itemId + CUSTOM_DATA NBT 解析输出物品（法杖 preset / 卷轴 magic_id），使 JEI 显示具体变体与 tooltip。 */
+    private static ItemStack resolveItem(String itemId, @Nullable CompoundTag nbt) {
         if (itemId == null) return ItemStack.EMPTY;
         try {
             ResourceLocation rl = ResourceLocation.tryParse(itemId);
             if (rl == null) return ItemStack.EMPTY;
             ItemStack stack = new ItemStack(BuiltInRegistries.ITEM.get(rl));
+            if (nbt != null && !nbt.isEmpty()) {
+                stack.set(DataComponents.CUSTOM_DATA, CustomData.of(nbt.copy()));
+            }
             return stack.isEmpty() ? ItemStack.EMPTY : stack;
         } catch (RuntimeException e) {
             Log.warn("ElementRecipeCategory", "解析物品 " + itemId + " 失败，跳过该槽位", e);

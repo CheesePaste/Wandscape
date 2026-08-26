@@ -13,6 +13,8 @@ import com.wsteam.wandscape.production.data.CraftSpellRecipe;
 import com.wsteam.wandscape.production.data.CraftWandRecipe;
 import com.wsteam.wandscape.shared.data.ElementType;
 
+import net.minecraft.nbt.CompoundTag;
+
 /**
  * 从各配方数据源收集 JEI 展示用配方（纯逻辑，零 mezz 引用，可单测）。
  *
@@ -40,21 +42,21 @@ public final class ElementRecipeCollector {
             if (itemId == null) continue;
             long value = sum(config.buildCost());
             recipes.add(new ElementRecipe(itemId, ElementRecipeKind.SYNTHESIZE,
-                    STATION_WORKSTATION, itemId, config.buildCost(), List.of(), 0));
+                    STATION_WORKSTATION, itemId, null, config.buildCost(), List.of(), 0));
             recipes.add(new ElementRecipe(itemId, ElementRecipeKind.DECOMPOSE,
-                    STATION_WORKSTATION, itemId, config.buildCost(), List.of(), value));
+                    STATION_WORKSTATION, itemId, null, config.buildCost(), List.of(), value));
         }
         return recipes;
     }
 
-    /** 合成站法杖配方（不可分解，只生成合成）。 */
+    /** 合成站法杖配方（不可分解，只生成合成；携带 preset NBT 供 JEI 显示具体变体）。 */
     public static List<ElementRecipe> fromCraftWandRecipes(Collection<CraftWandRecipe> recipes) {
         List<ElementRecipe> result = new ArrayList<>();
         for (CraftWandRecipe r : recipes) {
             if (r.cost().isEmpty()) continue;
             String station = r.craftStation() != null ? r.craftStation() : STATION_CRAFTING;
             result.add(new ElementRecipe(r.id(), ElementRecipeKind.SYNTHESIZE, station,
-                    r.outputItem(), r.cost(), List.of(), 0));
+                    r.outputItem(), r.outputNbt(), r.cost(), List.of(), 0));
         }
         return result;
     }
@@ -66,19 +68,21 @@ public final class ElementRecipeCollector {
             if (r.cost().isEmpty()) continue;
             String station = r.craftStation() != null ? r.craftStation() : STATION_CRAFTING;
             result.add(new ElementRecipe(r.id(), ElementRecipeKind.SYNTHESIZE, station,
-                    r.outputItem(), r.cost(), r.inputItems(), 0));
+                    r.outputItem(), null, r.cost(), r.inputItems(), 0));
         }
         return result;
     }
 
-    /** 魔法卷轴配方（仅合成，魔法工坊）。 */
+    /** 魔法卷轴配方（仅合成，魔法工坊；携带 magic_id NBT 供 JEI 显示绑定魔法）。 */
     public static List<ElementRecipe> fromCraftSpellRecipes(Collection<CraftSpellRecipe> recipes) {
         List<ElementRecipe> result = new ArrayList<>();
         for (CraftSpellRecipe r : recipes) {
             if (r.cost().isEmpty()) continue;
             String station = r.craftStation() != null ? r.craftStation() : STATION_MAGIC;
+            CompoundTag nbt = new CompoundTag();
+            nbt.putString("magic_id", r.magicId());
             result.add(new ElementRecipe(r.id(), ElementRecipeKind.SYNTHESIZE, station,
-                    r.outputItem(), r.cost(), List.of(), 0));
+                    r.outputItem(), nbt, r.cost(), List.of(), 0));
         }
         return result;
     }
