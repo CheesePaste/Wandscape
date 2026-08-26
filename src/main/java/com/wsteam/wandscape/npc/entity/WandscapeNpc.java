@@ -164,8 +164,12 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
      * 才开始倒计时（施法时间不计入 CD），CD 基础值按 SPELL_SPEED 缩短（向上取整）。
      */
     public boolean tryCastSpell(String magicId, int baseCooldown, int manaCost, int lockDurationTicks) {
-        return magic.tryCast(magicId, baseCooldown, manaCost, lockDurationTicks,
+        boolean ok = magic.tryCast(magicId, baseCooldown, manaCost, lockDurationTicks,
                 getEffectiveAttribute(AttributeType.SPELL_SPEED));
+        if (ok && lockDurationTicks > 0) {
+            startManualCast(lockDurationTicks);
+        }
+        return ok;
     }
 
     /**
@@ -802,10 +806,14 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
         if (level().isClientSide) return;
         dropEquipment();
         if (isColonyNpc()) {
-            for (String magicId : equippedMagic.flattened()) {
-                if (magicId != null && !magicId.isBlank()) {
+            for (EquippedMagicComponent.SpellEntry entry : equippedMagic.flattenedEntries()) {
+                if (entry == null || entry.id() == null || entry.id().isBlank()) continue;
+                if (com.wsteam.wandscape.compat.ironspellbooks.IronSpellsCompat.isLoaded()
+                        && com.wsteam.wandscape.compat.ironspellbooks.IronSpellsHelper.isValidSpell(entry.id())) {
+                    spawnAtLocation(com.wsteam.wandscape.compat.ironspellbooks.IronSpellsHelper.createScroll(entry.id(), entry.level()));
+                } else {
                     ItemStack scroll = new ItemStack(Wandscape.SPELL_SCROLL.get());
-                    SpellItem.setMagicId(scroll, magicId);
+                    SpellItem.setMagicId(scroll, entry.id());
                     spawnAtLocation(scroll);
                 }
             }
@@ -1018,13 +1026,18 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
 
     /** Face the NPC toward a target block (yaw from horizontal, pitch from vertical angle). */
     public void faceTarget(BlockPos target) {
-        double dx = target.getX() + 0.5 - getX();
-        double dz = target.getZ() + 0.5 - getZ();
+        faceTarget(Vec3.atCenterOf(target));
+    }
+
+    /** Face the NPC toward a 3D position vector (yaw from horizontal, pitch from vertical angle). */
+    public void faceTarget(Vec3 target) {
+        double dx = target.x - getX();
+        double dz = target.z - getZ();
         float yaw = (float) Math.toDegrees(Math.atan2(dz, dx)) - 90f;
         setYRot(yaw);
         yBodyRot = yaw;
         yHeadRot = yaw;
-        double dy = target.getY() + 0.5 - (getY() + 1.4);
+        double dy = target.y - getEyeY();
         double hDist = Math.sqrt(dx * dx + dz * dz);
         float pitch = (float) -Math.toDegrees(Math.atan2(dy, hDist));
         setXRot(pitch);
@@ -1358,11 +1371,11 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
         // 施法决策：已装备魔法（按分类 4 桶、桶内槽位序）+ 策略预设 + 自定义优先级（保留作覆盖）
         CompoundTag spellbookEquip = new CompoundTag();
         for (String cat : EquippedMagicComponent.CATEGORIES) {
-            List<String> slot = equippedMagic.list(cat);
+            List<EquippedMagicComponent.SpellEntry> slot = equippedMagic.listEntries(cat);
             if (!slot.isEmpty()) {
                 ListTag catList = new ListTag();
-                for (String id : slot) {
-                    catList.add(StringTag.valueOf(id));
+                for (EquippedMagicComponent.SpellEntry entry : slot) {
+                    catList.add(StringTag.valueOf(entry.toFlatString()));
                 }
                 spellbookEquip.put(cat, catList);
             }
@@ -1438,7 +1451,10 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
                 if (equipTag.contains(cat, Tag.TAG_LIST)) {
                     ListTag slot = equipTag.getList(cat, Tag.TAG_STRING);
                     for (int i = 0; i < slot.size(); i++) {
-                        equippedMagic.equip(cat, slot.getString(i));
+                        EquippedMagicComponent.SpellEntry entry = EquippedMagicComponent.SpellEntry.parse(slot.getString(i));
+                        if (!entry.id().isBlank()) {
+                            equippedMagic.equip(cat, entry);
+                        }
                     }
                 }
             }

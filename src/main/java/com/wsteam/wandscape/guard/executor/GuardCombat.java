@@ -181,10 +181,11 @@ public final class GuardCombat {
                                      String circleId, int color) {
         // known = 玩家策略解析出的魔法级优先级；快照（敌数/自血/友方最低血/状态）驱动目标规则与 conditions
         List<MagicDef> known = CastBrain.resolvePriority(npc.castStrategy,
-                CastBrain.knownSpells(npc.equippedMagic.flattened()));
+                CastBrain.knownSpells(npc.equippedMagic));
         WorldSnapshot snapshot = buildSnapshot(level, npc);
         MagicDef chosen = CastBrain.select(known,
-                def -> npc.magic.canCast(def.id()) && npc.magic.getMana() >= def.manaCost(), snapshot);
+                def -> com.wsteam.wandscape.core.component.MagicState.isFreeCast()
+                        || (npc.magic.canCast(def.id()) && npc.magic.getMana() >= def.manaCost()), snapshot);
         if (chosen == null) {
             // L2 兜底：无有效魔法（列表全不可施 / conditions 不满足）→ 普通攻击（物理，不耗蓝，2s 攻速）
             normalAttack(level, npc, target);

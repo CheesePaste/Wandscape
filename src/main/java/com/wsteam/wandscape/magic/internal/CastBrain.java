@@ -8,6 +8,7 @@ import java.util.function.Predicate;
 import javax.annotation.Nullable;
 
 import com.wsteam.wandscape.core.component.CastStrategyComponent;
+import com.wsteam.wandscape.core.component.EquippedMagicComponent;
 import com.wsteam.wandscape.magic.data.MagicDef;
 import com.wsteam.wandscape.magic.data.WorldSnapshot;
 
@@ -41,15 +42,47 @@ public final class CastBrain {
                     MagicDef.Category.AOE, MagicDef.Category.SINGLE_TARGET));
 
     /**
+     * 把 NPC 的 EquippedMagicComponent 容器解析为有效魔法定义列表（支持原生魔法与铁魔法动态合成）。
+     */
+    public static List<MagicDef> knownSpells(EquippedMagicComponent equipped) {
+        List<MagicDef> out = new ArrayList<>();
+        if (equipped == null) return out;
+        for (String cat : EquippedMagicComponent.CATEGORIES) {
+            for (EquippedMagicComponent.SpellEntry entry : equipped.listEntries(cat)) {
+                MagicDef def = SpellbookLoader.getSpec(entry.id());
+                if (def != null) {
+                    out.add(def);
+                } else if (com.wsteam.wandscape.compat.ironspellbooks.IronSpellsCompat.isLoaded()) {
+                    MagicDef syn = com.wsteam.wandscape.compat.ironspellbooks.IronSpellsHelper
+                            .getSyntheticDef(entry.id(), entry.level(), cat);
+                    if (syn != null) {
+                        out.add(syn);
+                    }
+                }
+            }
+        }
+        return out;
+    }
+
+    /**
      * 把魔法 id 列表解析为魔法定义列表（SpellbookLoader 查表，缺失跳过）。
-     * 供调用方把 NPC 的 {@code EquippedMagicComponent.flattened()} 转成 {@code known}。
      */
     public static List<MagicDef> knownSpells(List<String> ids) {
         List<MagicDef> out = new ArrayList<>();
         if (ids != null) {
-            for (String id : ids) {
-                MagicDef def = SpellbookLoader.getSpec(id);
-                if (def != null) out.add(def);
+            for (String s : ids) {
+                if (s == null || s.isBlank()) continue;
+                EquippedMagicComponent.SpellEntry entry = EquippedMagicComponent.SpellEntry.parse(s);
+                MagicDef def = SpellbookLoader.getSpec(entry.id());
+                if (def != null) {
+                    out.add(def);
+                } else if (com.wsteam.wandscape.compat.ironspellbooks.IronSpellsCompat.isLoaded()) {
+                    MagicDef syn = com.wsteam.wandscape.compat.ironspellbooks.IronSpellsHelper
+                            .getSyntheticDef(entry.id(), entry.level(), "single_target");
+                    if (syn != null) {
+                        out.add(syn);
+                    }
+                }
             }
         }
         return out;

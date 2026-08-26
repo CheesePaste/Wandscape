@@ -21,13 +21,31 @@ public class MagicState {
     private boolean manaSeeded;
     private final Map<String, Integer> cooldowns = new HashMap<>();
 
-    /** 是否可施该魔法：互斥锁未占用且该魔法冷却已过。 */
+    /** 测试模式：无冷却、无法力消耗全局开关（纯运行时调试，不持久化）。 */
+    private static volatile boolean freeCast = false;
+
+    public static boolean isFreeCast() {
+        return freeCast;
+    }
+
+    public static void setFreeCast(boolean enabled) {
+        freeCast = enabled;
+    }
+
+    public static boolean toggleFreeCast() {
+        freeCast = !freeCast;
+        return freeCast;
+    }
+
+    /** 是否可施该魔法：互斥锁未占用且该魔法冷却已过（测试模式下忽略冷却）。 */
     public boolean canCast(String magicId) {
+        if (freeCast) return lockTicks <= 0;
         return lockTicks <= 0 && cooldowns.getOrDefault(magicId, 0) <= 0;
     }
 
     /**
      * 原子尝试施放：锁/CD/蓝任一不满足即拒绝；成功则扣蓝、置该魔法 CD、占互斥锁。
+     * （测试模式下不扣蓝、不增加冷却）
      *
      * @param baseCooldown 基础冷却 tick（按 spellSpeed 缩短，向上取整）；锁占用期间冻结，
      *                     锁释放后才开始倒计时
@@ -37,6 +55,11 @@ public class MagicState {
      */
     public boolean tryCast(String magicId, int baseCooldown, int manaCost,
                            int lockTicks, float spellSpeed) {
+        if (freeCast) {
+            if (this.lockTicks > 0) return false;
+            this.lockTicks = Math.max(this.lockTicks, lockTicks);
+            return true;
+        }
         if (!canCast(magicId) || currentMana < manaCost) return false;
         currentMana -= manaCost;
         int eff = spellSpeed > 1f ? (int) Math.ceil(baseCooldown / spellSpeed) : baseCooldown;
@@ -56,6 +79,11 @@ public class MagicState {
      * @param lockTicks 引导期间占用的互斥锁时长（= 祭坛魔法时长）
      */
     public boolean tryAltarCast(int manaCost, int lockTicks) {
+        if (freeCast) {
+            if (this.lockTicks > 0) return false;
+            this.lockTicks = Math.max(this.lockTicks, lockTicks);
+            return true;
+        }
         if (this.lockTicks > 0 || currentMana < manaCost) return false;
         currentMana -= manaCost;
         this.lockTicks = Math.max(this.lockTicks, lockTicks);

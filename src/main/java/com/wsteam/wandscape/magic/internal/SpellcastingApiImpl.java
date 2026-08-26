@@ -1,7 +1,6 @@
 package com.wsteam.wandscape.magic.internal;
 
 import java.util.List;
-import java.util.Locale;
 import java.util.UUID;
 
 import com.wsteam.wandscape.core.component.CastStrategyComponent;
@@ -39,7 +38,7 @@ public final class SpellcastingApiImpl implements SpellcastingApi {
         WandscapeNpc npc = resolve(npcId);
         if (npc == null) return List.of();
         return CastBrain.resolvePriority(npc.castStrategy,
-                CastBrain.knownSpells(npc.equippedMagic.flattened()))
+                CastBrain.knownSpells(npc.equippedMagic))
                 .stream().map(MagicDef::id).toList();
     }
 
@@ -47,9 +46,31 @@ public final class SpellcastingApiImpl implements SpellcastingApi {
     public void setEquippedAndStrategy(UUID npcId, String preset, List<String> equipped) {
         WandscapeNpc npc = resolve(npcId);
         if (npc == null) return;
-        // 服务端权威：按每个魔法真实分类装桶，未知 / ALTAR / SPECIAL 丢、每类 ≤3、去重
-        EquippedMagicComponent validated = EquippedMagicComponent.fromFlat(equipped,
-                SpellbookLoader::equippableCategoryOf);
+        // 服务端权威：按每个魔法真实分类装桶（支持 category:id@level 语法与原生魔法），
+        // 未知 / ALTAR / SPECIAL（系统固有）丢、每类 ≤3、去重
+        EquippedMagicComponent validated = new EquippedMagicComponent();
+        if (equipped != null) {
+            for (String item : equipped) {
+                if (item == null || item.isBlank()) continue;
+                String targetCat = null;
+                String spellToken = item;
+                int colonIdx = item.indexOf(':');
+                // 检查是否带分类前缀（如 "defense:irons_spellbooks:firebolt@5"）
+                if (colonIdx > 0 && EquippedMagicComponent.isCategory(item.substring(0, colonIdx))) {
+                    targetCat = item.substring(0, colonIdx);
+                    spellToken = item.substring(colonIdx + 1);
+                }
+                EquippedMagicComponent.SpellEntry entry = EquippedMagicComponent.SpellEntry.parse(spellToken);
+                if (entry.id().isBlank()) continue;
+                if (targetCat == null) {
+                    // 无显式分类前缀时按注册表推断（ALTAR/SPECIAL 系统固有魔法由此排除）
+                    targetCat = SpellbookLoader.equippableCategoryOf(entry.id());
+                }
+                if (targetCat != null && EquippedMagicComponent.isCategory(targetCat)) {
+                    validated.equip(targetCat, entry);
+                }
+            }
+        }
         npc.equippedMagic.replaceWith(validated);
         npc.castStrategy.setPreset(preset);
     }

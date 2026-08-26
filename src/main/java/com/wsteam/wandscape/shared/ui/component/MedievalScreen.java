@@ -168,8 +168,9 @@ public abstract class MedievalScreen extends Screen implements ReplayProtectedSc
 
         renderCreatorFooter(g);
         renderFeedback(g);
-
-        renderForeground(g, mouseX, mouseY, partialTick);
+        if (!confirmDialog.isOpen()) {
+            renderForeground(g, mouseX, mouseY, partialTick);
+        }
 
         if (confirmDialog.isOpen()) {
             confirmDialog.render(g, width, height, mouseX, mouseY);

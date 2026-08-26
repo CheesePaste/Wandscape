@@ -78,12 +78,7 @@ public record NpcStrategyPacket(int entityId, String preset, List<String> equipp
             Log.warn(TAG, "Strategy target entity {} is not a WandscapeNpc", packet.entityId());
             return;
         }
-        var api = WandscapeApis.getSpellcastingApiSilently();
-        if (api == null) {
-            Log.warn(TAG, "SpellcastingApi not loaded — strategy change dropped");
-            return;
-        }
-        api.setEquippedAndStrategy(npc.getUUID(), packet.preset(), api.getKnownSpells(npc.getUUID()));
+        npc.castStrategy.setPreset(packet.preset());
         Log.info(TAG, "NPC {} preset={}", npc.getUUID().toString().substring(0, 8), packet.preset());
 
         // 刷新策略屏 / 信息屏（权威状态）

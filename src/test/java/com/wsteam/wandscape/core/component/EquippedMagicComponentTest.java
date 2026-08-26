@@ -41,8 +41,9 @@ class EquippedMagicComponentTest {
     @Test
     void nullOrBlankIdRejected() {
         EquippedMagicComponent e = new EquippedMagicComponent();
-        assertFalse(e.equip("single_target", null));
+        assertFalse(e.equip("single_target", (String) null));
         assertFalse(e.equip("single_target", "  "));
+        assertFalse(e.equip("single_target", (EquippedMagicComponent.SpellEntry) null));
         assertTrue(e.isEmpty());
     }
 
@@ -157,5 +158,47 @@ class EquippedMagicComponentTest {
     void fromFlatNullSafe() {
         assertTrue(EquippedMagicComponent.fromFlat(null, CATEGORY_OF).isEmpty());
         assertTrue(EquippedMagicComponent.fromFlat(List.of("beam"), null).isEmpty());
+    }
+
+    // ── SpellEntry 等级与解析 ──
+
+    @Test
+    void spellEntryParsesFlatFormat() {
+        EquippedMagicComponent.SpellEntry e1 = EquippedMagicComponent.SpellEntry.parse("beam");
+        assertEquals("beam", e1.id());
+        assertEquals(1, e1.level());
+        assertEquals("beam", e1.toFlatString());
+
+        EquippedMagicComponent.SpellEntry e2 = EquippedMagicComponent.SpellEntry.parse("irons_spellbooks:firebolt@5");
+        assertEquals("irons_spellbooks:firebolt", e2.id());
+        assertEquals(5, e2.level());
+        assertEquals("irons_spellbooks:firebolt@5", e2.toFlatString());
+    }
+
+    @Test
+    void leveledEquipPreservesEntry() {
+        EquippedMagicComponent e = new EquippedMagicComponent();
+        assertTrue(e.equip("single_target", "irons_spellbooks:firebolt", 5));
+        assertTrue(e.knows("irons_spellbooks:firebolt"));
+
+        EquippedMagicComponent.SpellEntry entry = e.getEntry("irons_spellbooks:firebolt");
+        assertEquals("irons_spellbooks:firebolt", entry.id());
+        assertEquals(5, entry.level());
+
+        List<EquippedMagicComponent.SpellEntry> entries = e.listEntries("single_target");
+        assertEquals(1, entries.size());
+        assertEquals(5, entries.get(0).level());
+    }
+
+    @Test
+    void fromFlatParsesLevelsAndCaps() {
+        EquippedMagicComponent e = EquippedMagicComponent.fromFlat(
+                List.of("beam@1", "irons_spellbooks:firebolt@3", "heal@2"),
+                id -> id.equals("heal") ? "support" : "single_target");
+
+        assertEquals(List.of("beam", "irons_spellbooks:firebolt"), e.list("single_target"));
+        assertEquals(1, e.getEntry("beam").level());
+        assertEquals(3, e.getEntry("irons_spellbooks:firebolt").level());
+        assertEquals(2, e.getEntry("heal").level());
     }
 }

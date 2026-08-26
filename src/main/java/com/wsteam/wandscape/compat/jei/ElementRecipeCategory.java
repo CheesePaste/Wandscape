@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.integration.jei;
+package com.wsteam.wandscape.compat.jei;
 
 import java.util.List;
 import java.util.Map;
