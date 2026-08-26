@@ -104,9 +104,10 @@ Config.java           NeoForge TOML 配置，所有可调参数
 ├── raid/             袭击机制(复用原版村庄袭击：玩家带不祥之兆近建筑10格→市政厅中心触发)
 │   ├── RaidTriggerScanner(触发扫描器) + ColonyRaidTracker(胜利跟踪→事件)
 │   └── RaidTownHall(市政厅定位) + MixinServerLevel(isVillage 钩子)
+├── compat/           第三方模组联动与兼容适配层（如 ironspellbooks/ 铁魔法法术卷轴与施法生命周期桥接）
 ├── equipment/        （无独立包）装备系统是 cross-cutting：core/component/EquipmentComponent
-│                     + core/types/(EquipmentSlot/AttributeType/EquipmentPreset/AttributeModifier)，
-│                     桥接在 npc/internal/EntityComponentBridge
+                      + core/types/(EquipmentSlot/AttributeType/EquipmentPreset/AttributeModifier)，
+                      桥接在 npc/internal/EntityComponentBridge
 ```
 
 ## 数据流（核心路径）

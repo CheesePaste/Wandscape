@@ -39,7 +39,7 @@ public final class SpellcastingApiImpl implements SpellcastingApi {
         WandscapeNpc npc = resolve(npcId);
         if (npc == null) return List.of();
         return CastBrain.resolvePriority(npc.castStrategy,
-                CastBrain.knownSpells(npc.equippedMagic.flattened()))
+                CastBrain.knownSpells(npc.equippedMagic))
                 .stream().map(MagicDef::id).toList();
     }
 
@@ -47,12 +47,32 @@ public final class SpellcastingApiImpl implements SpellcastingApi {
     public void setEquippedAndStrategy(UUID npcId, String preset, List<String> equipped) {
         WandscapeNpc npc = resolve(npcId);
         if (npc == null) return;
-        // 服务端权威：按每个魔法真实分类装桶，未知 / UTILITY 丢、每类 ≤3、去重
-        EquippedMagicComponent validated = EquippedMagicComponent.fromFlat(equipped, id -> {
-            MagicDef def = SpellbookLoader.getSpec(id);
-            if (def == null || def.category() == MagicDef.Category.UTILITY) return null;
-            return def.category().name().toLowerCase(Locale.ROOT);
-        });
+        // 服务端权威：按每个魔法真实分类装桶（支持 category:id@level 语法与原生魔法），未知 / UTILITY 丢、每类 ≤3、去重
+        EquippedMagicComponent validated = new EquippedMagicComponent();
+        if (equipped != null) {
+            for (String item : equipped) {
+                if (item == null || item.isBlank()) continue;
+                String targetCat = null;
+                String spellToken = item;
+                int colonIdx = item.indexOf(':');
+                // 检查是否带分类前缀（如 "defense:irons_spellbooks:firebolt@5"）
+                if (colonIdx > 0 && EquippedMagicComponent.isCategory(item.substring(0, colonIdx))) {
+                    targetCat = item.substring(0, colonIdx);
+                    spellToken = item.substring(colonIdx + 1);
+                }
+                EquippedMagicComponent.SpellEntry entry = EquippedMagicComponent.SpellEntry.parse(spellToken);
+                if (entry.id().isBlank()) continue;
+                if (targetCat == null) {
+                    MagicDef def = SpellbookLoader.getSpec(entry.id());
+                    if (def != null && def.category() != MagicDef.Category.UTILITY) {
+                        targetCat = def.category().name().toLowerCase(Locale.ROOT);
+                    }
+                }
+                if (targetCat != null && EquippedMagicComponent.isCategory(targetCat)) {
+                    validated.equip(targetCat, entry);
+                }
+            }
+        }
         npc.equippedMagic.replaceWith(validated);
         npc.castStrategy.setPreset(preset);
     }

@@ -265,4 +265,10 @@ class CastBrainTest {
         List<MagicDef> priority = CastBrain.resolvePriority(null, known);
         assertEquals(List.of("beam"), priority.stream().map(MagicDef::id).toList());
     }
+
+    @Test
+    void knownSpellsFromEquippedComponentNullSafe() {
+        assertTrue(CastBrain.knownSpells((com.wsteam.wandscape.core.component.EquippedMagicComponent) null).isEmpty());
+        assertTrue(CastBrain.knownSpells(new com.wsteam.wandscape.core.component.EquippedMagicComponent()).isEmpty());
+    }
 }

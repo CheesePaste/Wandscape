@@ -64,7 +64,8 @@ public class NpcStrategyMenu extends AbstractContainerMenu {
         this.npc = npc;
         if (npc != null) {
             for (int cat = 0; cat < CATEGORY_COUNT; cat++) {
-                List<String> bucket = npc.equippedMagic.list(EquippedMagicComponent.CATEGORIES.get(cat));
+                List<EquippedMagicComponent.SpellEntry> bucket =
+                        npc.equippedMagic.listEntries(EquippedMagicComponent.CATEGORIES.get(cat));
                 for (int s = 0; s < SLOTS_PER_CATEGORY && s < bucket.size(); s++) {
                     spellSlots.setItem(cat * SLOTS_PER_CATEGORY + s, scrollFor(bucket.get(s)));
                 }
@@ -85,9 +86,14 @@ public class NpcStrategyMenu extends AbstractContainerMenu {
         return npc != null ? npc.getId() : -1;
     }
 
-    private static ItemStack scrollFor(String magicId) {
+    private static ItemStack scrollFor(EquippedMagicComponent.SpellEntry entry) {
+        if (entry == null || entry.id().isBlank()) return ItemStack.EMPTY;
+        if (com.wsteam.wandscape.compat.ironspellbooks.IronSpellsCompat.isLoaded()
+                && com.wsteam.wandscape.compat.ironspellbooks.IronSpellsHelper.isValidSpell(entry.id())) {
+            return com.wsteam.wandscape.compat.ironspellbooks.IronSpellsHelper.createScroll(entry.id(), entry.level());
+        }
         ItemStack scroll = new ItemStack(Wandscape.SPELL_SCROLL.get());
-        SpellItem.setMagicId(scroll, magicId);
+        SpellItem.setMagicId(scroll, entry.id());
         return scroll;
     }
 
@@ -132,24 +138,33 @@ public class NpcStrategyMenu extends AbstractContainerMenu {
     }
 
     private void syncEquipped() {
-        List<String> flat = new ArrayList<>(SPELL_SLOT_COUNT);
-        for (int i = 0; i < SPELL_SLOT_COUNT; i++) {
-            ItemStack s = spellSlots.getItem(i);
-            if (s.isEmpty()) continue;
-            String magicId = SpellItem.getMagicId(s);
-            if (magicId != null) {
-                flat.add(magicId);
+        EquippedMagicComponent newEquipped = new EquippedMagicComponent();
+        for (int cat = 0; cat < CATEGORY_COUNT; cat++) {
+            String categoryName = EquippedMagicComponent.CATEGORIES.get(cat);
+            for (int s = 0; s < SLOTS_PER_CATEGORY; s++) {
+                ItemStack item = spellSlots.getItem(cat * SLOTS_PER_CATEGORY + s);
+                if (item.isEmpty()) continue;
+                if (item.getItem() instanceof SpellItem) {
+                    String magicId = SpellItem.getMagicId(item);
+                    if (magicId != null) {
+                        newEquipped.equip(categoryName, magicId);
+                    }
+                } else if (com.wsteam.wandscape.compat.ironspellbooks.IronSpellsCompat.isLoaded()
+                        && com.wsteam.wandscape.compat.ironspellbooks.IronSpellsHelper.isScroll(item)) {
+                    String spellId = com.wsteam.wandscape.compat.ironspellbooks.IronSpellsHelper.getSpellId(item);
+                    int level = com.wsteam.wandscape.compat.ironspellbooks.IronSpellsHelper.getSpellLevel(item);
+                    if (spellId != null && com.wsteam.wandscape.compat.ironspellbooks.IronSpellsHelper.isValidSpell(spellId)) {
+                        newEquipped.equip(categoryName, spellId, level);
+                    }
+                }
             }
         }
-        var casting = WandscapeApis.getSpellcastingApiSilently();
-        if (casting == null) return;
-        String preset = casting.getStrategyPreset(npc.getUUID());
-        casting.setEquippedAndStrategy(npc.getUUID(), preset, flat);
+        npc.equippedMagic.replaceWith(newEquipped);
         Log.info(TAG, "[Strategy] {} equipped {} spells (npc={})",
-                npc.getUUID().toString().substring(0, 8), flat.size());
+                npc.getUUID().toString().substring(0, 8), newEquipped.flattened().size());
     }
 
-    /** 卷轴槽：只接受魔法卷轴，且分类匹配、去重、每类 ≤ 上限。 */
+    /** 卷轴槽：接受原生魔法卷轴与铁魔法卷轴，且去重、每类 ≤ 上限。 */
     public static final class SpellSlot extends Slot {
         private final String category;
 
@@ -165,21 +180,41 @@ public class NpcStrategyMenu extends AbstractContainerMenu {
 
         @Override
         public boolean mayPlace(ItemStack stack) {
-            if (!(stack.getItem() instanceof SpellItem)) return false;
-            String magicId = SpellItem.getMagicId(stack);
-            if (magicId == null) return false;
-            MagicDef def = SpellbookLoader.getSpec(magicId);
-            if (def == null || def.category() == MagicDef.Category.UTILITY) return false;
-            if (!def.category().name().toLowerCase(Locale.ROOT).equals(category)) return false;
+            if (stack == null || stack.isEmpty()) return false;
+
+            String magicId = null;
+            if (stack.getItem() instanceof SpellItem) {
+                magicId = SpellItem.getMagicId(stack);
+                if (magicId == null) return false;
+                MagicDef def = SpellbookLoader.getSpec(magicId);
+                if (def == null || def.category() == MagicDef.Category.UTILITY) return false;
+                if (!def.category().name().toLowerCase(Locale.ROOT).equals(category)) return false;
+            } else if (com.wsteam.wandscape.compat.ironspellbooks.IronSpellsCompat.isLoaded()
+                    && com.wsteam.wandscape.compat.ironspellbooks.IronSpellsHelper.isScroll(stack)) {
+                magicId = com.wsteam.wandscape.compat.ironspellbooks.IronSpellsHelper.getSpellId(stack);
+                if (magicId == null || !com.wsteam.wandscape.compat.ironspellbooks.IronSpellsHelper.isValidSpell(magicId)) {
+                    return false;
+                }
+                // 铁魔法卷轴可自由放置于任意 4 大门类槽位中
+            } else {
+                return false;
+            }
 
             int sameCategory = 0;
             for (int i = 0; i < container.getContainerSize(); i++) {
                 ItemStack s = container.getItem(i);
                 if (s.isEmpty()) continue;
-                String id = SpellItem.getMagicId(s);
-                if (magicId.equals(id)) return false;
-                MagicDef d = id != null ? SpellbookLoader.getSpec(id) : null;
-                if (d != null && d.category().name().toLowerCase(Locale.ROOT).equals(category)) {
+                String existingId = null;
+                if (s.getItem() instanceof SpellItem) {
+                    existingId = SpellItem.getMagicId(s);
+                } else if (com.wsteam.wandscape.compat.ironspellbooks.IronSpellsCompat.isLoaded()
+                        && com.wsteam.wandscape.compat.ironspellbooks.IronSpellsHelper.isScroll(s)) {
+                    existingId = com.wsteam.wandscape.compat.ironspellbooks.IronSpellsHelper.getSpellId(s);
+                }
+                if (magicId.equals(existingId)) return false;
+
+                int row = i / SLOTS_PER_CATEGORY;
+                if (row >= 0 && row < CATEGORY_COUNT && EquippedMagicComponent.CATEGORIES.get(row).equals(category)) {
                     sameCategory++;
                 }
             }

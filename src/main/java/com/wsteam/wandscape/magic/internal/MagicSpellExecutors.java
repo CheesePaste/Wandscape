@@ -80,6 +80,14 @@ public final class MagicSpellExecutors {
             case "conversion" -> castConversion(level, npc, def, effCircle);
             case "desperation" -> castDesperation(level, npc, def, effCircle);
             default -> {
+                if (com.wsteam.wandscape.compat.ironspellbooks.IronSpellsCompat.isLoaded()
+                        && com.wsteam.wandscape.compat.ironspellbooks.IronSpellsHelper.isValidSpell(def.id())) {
+                    com.wsteam.wandscape.core.component.EquippedMagicComponent.SpellEntry entry =
+                            npc.equippedMagic.getEntry(def.id());
+                    int spellLevel = entry != null ? entry.level() : 1;
+                    yield com.wsteam.wandscape.compat.ironspellbooks.IronSpellsCaster.cast(
+                            level, npc, target, def.id(), spellLevel);
+                }
                 Log.warn(TAG, "未知魔法执行器 id={}", def.id());
                 yield false;
             }

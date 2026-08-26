@@ -780,11 +780,17 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
         }
 
         // 3. 掉落已装备的技能魔法卷轴
-        for (String magicId : equippedMagic.flattened()) {
-            if (magicId != null && !magicId.isBlank()) {
-                ItemStack scroll = new ItemStack(Wandscape.SPELL_SCROLL.get());
-                SpellItem.setMagicId(scroll, magicId);
-                spawnAtLocation(scroll);
+        for (EquippedMagicComponent.SpellEntry entry : equippedMagic.flattenedEntries()) {
+            if (entry != null && entry.id() != null && !entry.id().isBlank()) {
+                if (com.wsteam.wandscape.compat.ironspellbooks.IronSpellsCompat.isLoaded()
+                        && com.wsteam.wandscape.compat.ironspellbooks.IronSpellsHelper.isValidSpell(entry.id())) {
+                    ItemStack scroll = com.wsteam.wandscape.compat.ironspellbooks.IronSpellsHelper.createScroll(entry.id(), entry.level());
+                    spawnAtLocation(scroll);
+                } else {
+                    ItemStack scroll = new ItemStack(Wandscape.SPELL_SCROLL.get());
+                    SpellItem.setMagicId(scroll, entry.id());
+                    spawnAtLocation(scroll);
+                }
             }
         }
         equippedMagic.clear();
@@ -1344,11 +1350,11 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
         // 施法决策：已装备魔法（按分类 4 桶、桶内槽位序）+ 策略预设 + 自定义优先级（保留作覆盖）
         CompoundTag spellbookEquip = new CompoundTag();
         for (String cat : EquippedMagicComponent.CATEGORIES) {
-            List<String> slot = equippedMagic.list(cat);
+            List<EquippedMagicComponent.SpellEntry> slot = equippedMagic.listEntries(cat);
             if (!slot.isEmpty()) {
                 ListTag catList = new ListTag();
-                for (String id : slot) {
-                    catList.add(StringTag.valueOf(id));
+                for (EquippedMagicComponent.SpellEntry entry : slot) {
+                    catList.add(StringTag.valueOf(entry.toFlatString()));
                 }
                 spellbookEquip.put(cat, catList);
             }
@@ -1424,7 +1430,10 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
                 if (equipTag.contains(cat, Tag.TAG_LIST)) {
                     ListTag slot = equipTag.getList(cat, Tag.TAG_STRING);
                     for (int i = 0; i < slot.size(); i++) {
-                        equippedMagic.equip(cat, slot.getString(i));
+                        EquippedMagicComponent.SpellEntry entry = EquippedMagicComponent.SpellEntry.parse(slot.getString(i));
+                        if (!entry.id().isBlank()) {
+                            equippedMagic.equip(cat, entry);
+                        }
                     }
                 }
             }

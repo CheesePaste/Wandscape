@@ -476,6 +476,7 @@ public class Wandscape {
         HotelStayHandler.register();
         MarkerPreviewManager.register();
         WarehouseNotificationHandler.register();
+        com.wsteam.wandscape.compat.ironspellbooks.IronSpellsCompat.init(modEventBus);
 
         modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
 
@@ -1072,6 +1073,11 @@ public class Wandscape {
             // Altar: 每 tick 推进所有祭坛的魔法冷却（SavedData，按祭坛独立）
             try (var s = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("tick.altar_cast")) {
                 com.wsteam.wandscape.building.internal.AltarCastHandler.tick(event.getServer().overworld());
+            }
+
+            // Iron's Spells compat: 推进持续施法与长蓄力法术
+            if (com.wsteam.wandscape.compat.ironspellbooks.IronSpellsCompat.isLoaded()) {
+                com.wsteam.wandscape.compat.ironspellbooks.IronSpellsCaster.tickAll();
             }
 
             var world = WandscapeEngine.getWorld();

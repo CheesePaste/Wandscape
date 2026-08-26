@@ -2,6 +2,19 @@
 
 本文件记录偏离直觉的设计选择及其原因，供后续开发快速理解「为什么这么做」。
 
+## 2026-08-26：Wandscape × Iron's Spells 'n Spellbooks（铁魔法）全面兼容
+
+**需求**（用户指令）：使 Wandscape 的 NPC 法师能够装备并施放铁魔法（Iron's Spells 'n Spellbooks）的法术。玩家可以把任意铁魔法卷轴放入 4 大分类（单体/群体/防御/支援）的任意门类中，施法时从大类遍历，按优先级 + CD=0 释放。
+
+**决策**（通过 grill-me 决策树对齐）：
+- **数据与等级存储（Q1 A）**：`EquippedMagicComponent` 升级存储 `SpellEntry(id, level, customData)`，支持带 `@level` 字符串编解码。放进 5 级铁魔法卷轴即按 5 级施法，取下/法师战死掉落时无损还原原等级的铁魔法卷轴。
+- **大类语义与目标判定（Q2 A）**：由放入的大类决定触发时机与目标模式。`single_target`/`aoe` 面向敌对发射（AOE 需敌数 ≥ 2）；`defense` 在处于战斗且自身血量 < 80% 时释放；`support` 在友方/自身血量 < 80% 时释放。
+- **施法生命周期桥接（Q3 A）**：瞬发（`INSTANT`）占 0.5s 施法互斥锁；蓄力（`LONG`）与持续（`CONTINUOUS`）法术按 `castTime / SPELL_SPEED` 占用互斥锁，每 server tick 维持面向与 `onServerCastTick`，到期触发 `onServerCastComplete` 并播放法术音效。
+- **魔力与冷却主控管线（Q4 A）**：直接从 NPC 扣除 `spell.getManaCost(level)`；冷却由 `MagicState` 记录并享受 `SPELL_SPEED` 冷却缩减；底层同步至 `MagicData`。
+- **法强放大与优雅降级（Q5 A）**：订阅 `SpellDamageEvent`，自动按 `SPELL_POWER × 魔力强化倍率` 放大伤害；所有实现隔离于 `compat/ironspellbooks/`，未安装铁魔法时不加载任何铁魔法逻辑，保持零硬编码耦合与高容错。
+
+**影响**：`build.gradle`（compileOnly 铁魔法依赖）；`compat/ironspellbooks/`（`IronSpellsCompat`/`IronSpellsHelper`/`IronSpellsCaster`/`IronSpellsDamageHandler`）；`EquippedMagicComponent`（`SpellEntry` 结构化支持）；`NpcStrategyMenu`（支持放置铁魔法卷轴）；`CastBrain`（支持合成 `MagicDef` 与 `EquippedMagicComponent` 查询）；`MagicSpellExecutors`（`dispatch` 桥接 `IronSpellsCaster`）；`Wandscape`（生命周期接线）。
+
 ## 2026-08-26：保卫殖民地复活——阵亡于建筑附近者直接在市政厅门口复活，复用全灭保底
 
 **需求**（用户指令）：法师战死若发生在守卫殖民地期间（距最近建筑 ≤20 格），不应强制走祭坛复活仪式，而是与全灭保底一致直接在市政厅门口复活，复用既有机制。
