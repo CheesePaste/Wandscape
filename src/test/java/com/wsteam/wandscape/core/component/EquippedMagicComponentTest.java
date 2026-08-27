@@ -66,6 +66,39 @@ class EquippedMagicComponentTest {
         assertTrue(e.isEmpty());
     }
 
+    // ── shouldSeedDefaults：起始法术只给初始殖民地法师，不给刷怪蛋殖民地法师 ──
+
+    @Test
+    void seedsForInitialColonyMage() {
+        // 初始 3 法师（ColonyCommand 以 COMMAND 生成）：未配置 + 空装备 + 非刷怪蛋 + 殖民地 → 种默认
+        assertTrue(EquippedMagicComponent.shouldSeedDefaults(false, false, false, true));
+    }
+
+    @Test
+    void doesNotSeedForSpawnEggColonyMage() {
+        // 刷怪蛋生成的殖民地法师：不给起始战斗魔法（法术靠策略页/卷轴）
+        assertFalse(EquippedMagicComponent.shouldSeedDefaults(false, false, true, true));
+    }
+
+    @Test
+    void seedsForSpawnEggHostileMage() {
+        // 敌对测试法师（EvilMage，colonyNpc=false）：刷怪蛋生成也保留默认装备（实战测试目标）
+        assertTrue(EquippedMagicComponent.shouldSeedDefaults(false, false, true, false));
+    }
+
+    @Test
+    void seedsForOldSaveMigration() {
+        // 旧存档无 spellbookEquip 字段（spawnType 未恢复为 SPAWN_EGG）：保留迁移种子
+        assertTrue(EquippedMagicComponent.shouldSeedDefaults(false, false, false, true));
+    }
+
+    @Test
+    void neverSeedsWhenSpellbookLoadedOrEquipped() {
+        // 已加载过施法配置（含空负载）或已有装备：不覆盖玩家配置
+        assertFalse(EquippedMagicComponent.shouldSeedDefaults(true, false, false, true));
+        assertFalse(EquippedMagicComponent.shouldSeedDefaults(false, true, false, true));
+    }
+
     @Test
     void emptyByDefaultThenEquip() {
         EquippedMagicComponent e = new EquippedMagicComponent();

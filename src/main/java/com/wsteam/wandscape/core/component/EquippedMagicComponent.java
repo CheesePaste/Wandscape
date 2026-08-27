@@ -69,6 +69,23 @@ public class EquippedMagicComponent {
     /** 殖民地初始法师（3 名）默认装备（beam+meteor）；酒馆招募法师无起始战斗魔法，由招募路径清空。 */
     public static final List<String> DEFAULT_EQUIP = List.of("beam", "meteor");
 
+    /**
+     * 默认装备（{@link #DEFAULT_EQUIP}）的种入策略：是否应给一个法师装备起始战斗魔法。
+     * 起始法术是「殖民地创建」的基建奖励（初始 3 法师），不是法师物种属性——因此：
+     * <ul>
+     *   <li>已加载过施法配置（{@code spellbookLoaded}，含空负载）或已有装备 → 不种，不覆盖玩家配置；</li>
+     *   <li>刷怪蛋生成的**殖民地**法师（{@code spawnedViaSpawnEgg && colonyNpc}）→ 不种，
+     *       起始法术靠玩家策略页装备卷轴；</li>
+     *   <li>其余（初始法师 / 旧存档无字段迁移 / 敌对测试法师 {@code colonyNpc=false}）→ 种。</li>
+     * </ul>
+     * 纯逻辑谓词，NPC 实体在 {@code onAddedToLevel} 传入实际状态调用。
+     */
+    public static boolean shouldSeedDefaults(boolean spellbookLoaded, boolean hasEquippedMagic,
+                                             boolean spawnedViaSpawnEgg, boolean colonyNpc) {
+        if (spellbookLoaded || hasEquippedMagic) return false;
+        return !(spawnedViaSpawnEgg && colonyNpc);
+    }
+
     private final Map<String, List<SpellEntry>> byCategory = new LinkedHashMap<>();
 
     public EquippedMagicComponent() {
