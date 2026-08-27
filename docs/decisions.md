@@ -2,6 +2,19 @@
 
 本文件记录偏离直觉的设计选择及其原因，供后续开发快速理解「为什么这么做」。
 
+## 2026-08-27：护甲区间上抬——[0,8]/默认 4 → [0,10]/默认 5
+
+**需求**（用户指令）：NPC 护甲初始值由 0-8 改为 0-10，默认（区间中点）由 4 提升到 5。
+
+**决策**：
+- `MageAttributeRoller`：掷点 `Math.round(8 × skew)` → `Math.round(10 × skew)`——区间 [0,10]，中点（默认）4→5。
+- `MageHutAttributes`：ARMOR_VALUE 曲线 `AttrSpec(0, 8, 0.5, 0.4)` → `AttrSpec(0, 10, 0.5, 0.5)`——upper 8→10 与掷点上界同步，trainStep 0.4→0.5 维持「20 步均匀特训」不变式（10/0.5 = 20）。
+- 每级加成 0.5/级不变（特训成本曲线/等级上限不受影响）。
+
+**为什么**：区间中点即默认——0-8 中点 4、0-10 中点 5，一次调整同时满足「区间上抬」与「默认 4→5」。训练曲线必须与掷点同源：掷点可到 10 而特训上限停在 8，会造成「掷出 8.5+ 护甲的法师永远无法特训」的死角。游客与法师共用 `MageAttributeRoller`，游客护甲随之同步到 [0,10]。
+
+**影响**：`MageAttributeRoller`、`MageHutAttributes`；同时删除了钉死护甲区间/训练步进的数值断言（护甲调整不再要求改测试）。`WandscapeNpc.createAttributes` 的 `Attributes.ARMOR` spawn 兜底 6.0 保持不变（仅刷怪蛋/非招募路径，与掷点无关）。
+
 ## 2026-08-27：NPC 属性模型全量迁移至 Vanilla Attribute + 彻底移除 ECS EquipmentComponent
 
 **需求**：

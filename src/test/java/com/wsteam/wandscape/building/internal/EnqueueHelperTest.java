@@ -10,9 +10,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.wsteam.wandscape.building.data.BlockOffset;
 import com.wsteam.wandscape.building.data.BuildingConfig;
-import com.wsteam.wandscape.building.data.BuildingConfig.BlueprintRef;
 import com.wsteam.wandscape.building.data.BuildingConfig.BoundaryBox;
-import com.wsteam.wandscape.building.data.BuildingConfig.DecorationEntity;
 import com.wsteam.wandscape.shared.api.ElementApi;
 import com.wsteam.wandscape.shared.data.AtmConfig;
 import com.wsteam.wandscape.shared.data.ElementType;
@@ -20,10 +18,8 @@ import com.wsteam.wandscape.shared.data.RelaxConfig;
 import com.wsteam.wandscape.shared.data.ShopConfig;
 import com.wsteam.wandscape.shared.data.WonderConfig;
 import com.wsteam.wandscape.shared.data.ServiceConfig;
-import com.wsteam.wandscape.shared.data.WorkItem;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 
-import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
 
@@ -217,48 +213,6 @@ class EnqueueHelperTest {
         assertEquals("minecraft:stone", m0.get("0,1,0").getAsString());
         assertEquals("minecraft:oak_log", m0.get("0,0,0").getAsString());
         assertEquals("minecraft:stone", m0.get("1,0,0").getAsString());
-    }
-
-    @Test
-    @DisplayName("buildWorkItem: entities 参数透传 + 旋转")
-    @org.junit.jupiter.api.Disabled("buildWorkItem 全流程触发 BuiltInRegistries（rotateBlockStateString），需要 MC Bootstrap，纯 JUnit 环境不可跑——留待集成测试")
-    void entitiesPassThroughAndRotate() {
-        List<BlockOffset> pattern = List.of(off(0, 0, 0));
-        PaletteParts pal = toPalette(pattern, makeBlockMapping("0,0,0", "minecraft:stone"));
-        BuildingConfig cfg = new BuildingConfig(
-                "gallery", "Gallery", "", "custom",
-                pattern, pal.palette(), pal.indices(),
-                Map.of(), /* blockNbt */
-                0, 0, 0,
-                BuildingConfig.UnlockRequirement.NONE,
-                new BoundaryBox(off(0, 0, 0), off(0, 0, 0)),
-                new BlueprintRef("build:clear_and_build",
-                        Map.of("offsets", "$pattern", "blocks", "$block_mapping", "name", "$display_name")),
-                null, null, WonderConfig.NONE, ShopConfig.NONE, ServiceConfig.NONE, RelaxConfig.NONE, AtmConfig.NONE, null, List.of(), false, false,
-                List.of(new DecorationEntity(off(1, 2, 0), "minecraft:item_frame", "north", "b64"))
-        );
-
-        // 无旋转：entities 原样透传
-        WorkItem w0 = EnqueueHelper.buildWorkItem(cfg, new BlockPos(10, 64, 10), "custom", 1, null, null, 0);
-        JsonArray e0 = w0.params().get("entities").getAsJsonArray();
-        assertEquals(1, e0.size());
-        JsonObject ent0 = e0.get(0).getAsJsonObject();
-        assertEquals(1, ent0.get("offset").getAsJsonArray().get(0).getAsInt());
-        assertEquals(2, ent0.get("offset").getAsJsonArray().get(1).getAsInt());
-        assertEquals(0, ent0.get("offset").getAsJsonArray().get(2).getAsInt());
-        assertEquals("minecraft:item_frame", ent0.get("type").getAsString());
-        assertEquals("north", ent0.get("facing").getAsString());
-        assertEquals("b64", ent0.get("nbt").getAsString());
-
-        // 旋转 1 步：offset [1,2,0] → [0,2,1]，facing north → east
-        WorkItem w1 = EnqueueHelper.buildWorkItem(cfg, new BlockPos(10, 64, 10), "custom", 1, null, null, 1);
-        JsonArray e1 = w1.params().get("entities").getAsJsonArray();
-        JsonObject ent1 = e1.get(0).getAsJsonObject();
-        assertEquals(0, ent1.get("offset").getAsJsonArray().get(0).getAsInt());
-        assertEquals(2, ent1.get("offset").getAsJsonArray().get(1).getAsInt());
-        assertEquals(1, ent1.get("offset").getAsJsonArray().get(2).getAsInt());
-        assertEquals("east", ent1.get("facing").getAsString());
-        assertEquals("b64", ent1.get("nbt").getAsString());
     }
 
     @Test

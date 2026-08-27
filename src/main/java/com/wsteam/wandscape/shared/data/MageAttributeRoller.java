@@ -26,7 +26,7 @@ public final class MageAttributeRoller {
         float spellPower = round2(0.5f + (float) skew(random) + lvl * 0.05f);        // 0.5–1.5 + 0.05/级
         float workSpeed = round2(0.5f + (float) skew(random) + lvl * 0.05f);
         float spellSpeed = round2(0.5f + (float) skew(random) + lvl * 0.05f);
-        float armorValue = (float) Math.round(8 * skew(random)) + lvl * 0.5f;        // 0–8 + 0.5/级
+        float armorValue = (float) Math.round(10 * skew(random)) + lvl * 0.5f;       // 0–10 + 0.5/级
         return new RecruitmentCandidate(safeLevel, maxHp, moveSpeed, spellPower,
                 workSpeed, spellSpeed, armorValue, maxMana, List.of());
     }

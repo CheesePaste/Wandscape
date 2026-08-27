@@ -41,7 +41,7 @@ public final class MageHutAttributes {
             AttributeType.SPELL_POWER,  new AttrSpec(0.5f, 1.5f, 0.05f, 0.05f),
             AttributeType.WORK_SPEED,   new AttrSpec(0.5f, 1.5f, 0.05f, 0.05f),
             AttributeType.SPELL_SPEED,  new AttrSpec(0.5f, 1.5f, 0.05f, 0.05f),
-            AttributeType.ARMOR_VALUE,  new AttrSpec(0f,   8f,   0.5f,  0.4f),
+            AttributeType.ARMOR_VALUE,  new AttrSpec(0f,   10f,  0.5f,  0.5f),
             AttributeType.MAX_MANA,     new AttrSpec(150f, 250f, 15f,   5f));
 
     /** All seven attributes in panel display order (index 0..6). */
