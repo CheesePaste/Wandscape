@@ -126,8 +126,8 @@ public final class RoadPlacementRenderer {
             }
         }
 
-        // Draw Start & End Gizmos when in Replace/Fill/DestroyFill mode and start/end are set
-        if (RoadPlacementState.getActiveTool() != RoadPlacementState.ToolMode.SPLINE && startPos != null && endPos != null) {
+        // Draw Start & End Gizmos when in Replace/Fill/DestroyFill mode and start or end is set
+        if (RoadPlacementState.getActiveTool() != RoadPlacementState.ToolMode.SPLINE && (startPos != null || endPos != null)) {
             VertexConsumer vcQuads = bufferSource.getBuffer(SplineEditorRenderer.SplineRenderType.XRAY_QUADS);
             drawBoxCornerGizmos(vcQuads, poseStack.last(), startPos, endPos);
             bufferSource.endBatch(SplineEditorRenderer.SplineRenderType.XRAY_QUADS);
@@ -240,20 +240,24 @@ public final class RoadPlacementRenderer {
         RoadPlacementState.AxisDrag draggingAxis = RoadPlacementState.getDraggingAxis();
 
         // 1. Start Gizmo (Green center marker)
-        double sx = startPos.getX() + 0.5;
-        double sy = startPos.getY() + 0.5;
-        double sz = startPos.getZ() + 0.5;
-        RoadPlacementState.AxisDrag activeStartAxis = (draggingTarget == RoadPlacementState.GizmoTarget.START) ? draggingAxis
-                : ((hoveredTarget == RoadPlacementState.GizmoTarget.START) ? hoveredAxis : RoadPlacementState.AxisDrag.NONE);
-        drawSingleGizmo(vc, pose, sx, sy, sz, activeStartAxis, true);
+        if (startPos != null) {
+            double sx = startPos.getX() + 0.5;
+            double sy = startPos.getY() + 0.5;
+            double sz = startPos.getZ() + 0.5;
+            RoadPlacementState.AxisDrag activeStartAxis = (draggingTarget == RoadPlacementState.GizmoTarget.START) ? draggingAxis
+                    : ((hoveredTarget == RoadPlacementState.GizmoTarget.START) ? hoveredAxis : RoadPlacementState.AxisDrag.NONE);
+            drawSingleGizmo(vc, pose, sx, sy, sz, activeStartAxis, true);
+        }
 
         // 2. End Gizmo (Red center marker)
-        double ex = endPos.getX() + 0.5;
-        double ey = endPos.getY() + 0.5;
-        double ez = endPos.getZ() + 0.5;
-        RoadPlacementState.AxisDrag activeEndAxis = (draggingTarget == RoadPlacementState.GizmoTarget.END) ? draggingAxis
-                : ((hoveredTarget == RoadPlacementState.GizmoTarget.END) ? hoveredAxis : RoadPlacementState.AxisDrag.NONE);
-        drawSingleGizmo(vc, pose, ex, ey, ez, activeEndAxis, false);
+        if (endPos != null) {
+            double ex = endPos.getX() + 0.5;
+            double ey = endPos.getY() + 0.5;
+            double ez = endPos.getZ() + 0.5;
+            RoadPlacementState.AxisDrag activeEndAxis = (draggingTarget == RoadPlacementState.GizmoTarget.END) ? draggingAxis
+                    : ((hoveredTarget == RoadPlacementState.GizmoTarget.END) ? hoveredAxis : RoadPlacementState.AxisDrag.NONE);
+            drawSingleGizmo(vc, pose, ex, ey, ez, activeEndAxis, false);
+        }
     }
 
     private static void drawSingleGizmo(VertexConsumer vc, PoseStack.Pose pose, double x, double y, double z,

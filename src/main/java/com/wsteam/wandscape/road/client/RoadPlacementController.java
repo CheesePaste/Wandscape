@@ -137,23 +137,23 @@ public final class RoadPlacementController {
         BlockPos startPos = RoadPlacementState.getStartPos();
         BlockPos endPos = RoadPlacementState.getEndPos();
 
-        if (startPos == null || endPos == null) {
+        if (startPos == null && endPos == null) {
             RoadPlacementState.setHoveredTarget(RoadPlacementState.GizmoTarget.NONE);
             RoadPlacementState.setHoveredAxis(RoadPlacementState.AxisDrag.NONE);
             return;
         }
 
         // Test Start Gizmo
-        RoadPlacementState.AxisDrag startAxis = hitTestGizmo(rayOrigin, rayDir, startPos);
+        RoadPlacementState.AxisDrag startAxis = (startPos != null) ? hitTestGizmo(rayOrigin, rayDir, startPos) : RoadPlacementState.AxisDrag.NONE;
         double startDist = Double.MAX_VALUE;
-        if (startAxis != RoadPlacementState.AxisDrag.NONE) {
+        if (startAxis != RoadPlacementState.AxisDrag.NONE && startPos != null) {
             startDist = rayOrigin.distanceTo(new Vec3(startPos.getX() + 0.5, startPos.getY() + 0.5, startPos.getZ() + 0.5));
         }
 
         // Test End Gizmo
-        RoadPlacementState.AxisDrag endAxis = hitTestGizmo(rayOrigin, rayDir, endPos);
+        RoadPlacementState.AxisDrag endAxis = (endPos != null) ? hitTestGizmo(rayOrigin, rayDir, endPos) : RoadPlacementState.AxisDrag.NONE;
         double endDist = Double.MAX_VALUE;
-        if (endAxis != RoadPlacementState.AxisDrag.NONE) {
+        if (endAxis != RoadPlacementState.AxisDrag.NONE && endPos != null) {
             endDist = rayOrigin.distanceTo(new Vec3(endPos.getX() + 0.5, endPos.getY() + 0.5, endPos.getZ() + 0.5));
         }
 
@@ -255,8 +255,20 @@ public final class RoadPlacementController {
 
         if (target == RoadPlacementState.GizmoTarget.START) {
             RoadPlacementState.setStartPos(newPos);
+            if (RoadPlacementState.getActiveTool() == RoadPlacementState.ToolMode.DESTROY_FILL && shiftY != 0) {
+                BlockPos endPos = RoadPlacementState.getEndPos();
+                if (endPos != null) {
+                    RoadPlacementState.setEndPos(new BlockPos(endPos.getX(), newPos.getY(), endPos.getZ()));
+                }
+            }
         } else if (target == RoadPlacementState.GizmoTarget.END) {
             RoadPlacementState.setEndPos(newPos);
+            if (RoadPlacementState.getActiveTool() == RoadPlacementState.ToolMode.DESTROY_FILL && shiftY != 0) {
+                BlockPos startPos = RoadPlacementState.getStartPos();
+                if (startPos != null) {
+                    RoadPlacementState.setStartPos(new BlockPos(startPos.getX(), newPos.getY(), startPos.getZ()));
+                }
+            }
         }
     }
 

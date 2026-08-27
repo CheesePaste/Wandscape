@@ -664,17 +664,35 @@ public final class RoadStudioOverlay {
     private static void drawDestroyFillModeTab(Minecraft mc) {
         StudioWidgets.spacing();
         StudioWidgets.sectionHeader(I18n.name("gui.wandscape.roadstudio.destroy_ref_header",
-                "参照基准方块").getString());
+                "参照基准与平面").getString());
 
         String refBlock = RoadPlacementState.getRefBlockId();
         if (refBlock.isEmpty()) {
             StudioWidgets.textDisabled(I18n.name("gui.wandscape.roadstudio.destroy_no_ref",
-                    "未捕获参照方块 (右键点击方块捕获)").getString());
+                    "未捕获参照方块 (点击方块或捕获脚下)").getString());
         } else {
             StudioWidgets.textColored(
                     I18n.name("gui.wandscape.roadstudio.destroy_ref_fmt",
                             "参照方块: %s", formatBlockName(refBlock)).getString(),
                     StudioColors.TEXT_GREEN);
+        }
+
+        BlockPos start = RoadPlacementState.getStartPos();
+        BlockPos end = RoadPlacementState.getEndPos();
+
+        // Baseline plane height adjustment row
+        if (start != null) {
+            int currentY = start.getY();
+            int dy = StudioWidgets.heightAdjustRow(
+                    I18n.name("gui.wandscape.roadstudio.destroy_baseline_height", "基准平面高度 (Y)").getString(),
+                    currentY);
+            if (dy != 0) {
+                int newY = currentY + dy;
+                RoadPlacementState.setStartPos(new BlockPos(start.getX(), newY, start.getZ()));
+                if (end != null) {
+                    RoadPlacementState.setEndPos(new BlockPos(end.getX(), newY, end.getZ()));
+                }
+            }
         }
 
         if (StudioWidgets.buttonFull(
@@ -683,6 +701,9 @@ public final class RoadStudioOverlay {
                 20, StudioColors.BUTTON_NORMAL, StudioColors.BUTTON_HOVER)) {
             BlockPos feet = getCapturedFeetPosition(mc);
             RoadPlacementState.setStartPos(feet);
+            if (end != null) {
+                RoadPlacementState.setEndPos(new BlockPos(end.getX(), feet.getY(), end.getZ()));
+            }
             if (mc.level != null) {
                 var st = mc.level.getBlockState(feet);
                 String id = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(st.getBlock()).toString();
@@ -709,8 +730,8 @@ public final class RoadStudioOverlay {
                 "边界终点 (End)").getString(), false);
 
         StudioWidgets.spacing();
-        BlockPos start = RoadPlacementState.getStartPos();
-        BlockPos end = RoadPlacementState.getEndPos();
+        start = RoadPlacementState.getStartPos();
+        end = RoadPlacementState.getEndPos();
         int breakBlocks = 0;
         int fillBlocks = 0;
         if (start != null && end != null) {
