@@ -183,8 +183,8 @@ public class Config {
             .defineInRange("colony.expAboveLevel", 1400, 0, 10000);
 
     public static final ModConfigSpec.IntValue COLONY_MAX_LEVEL = BUILDER
-            .comment("城镇等级上限：达到后不再累积经验、不再升级；31 使满级法师满基础生命正好 100、与游客简历等级上限对齐")
-            .defineInRange("colony.maxLevel", 31, 1, 100);
+            .comment("城镇等级上限：达到后不再累积经验、不再升级")
+            .defineInRange("colony.maxLevel", 30, 1, 100);
 
     // ---- Decoration system ----
 

@@ -26,7 +26,7 @@ public class EquipmentComponentTest {
         assertEquals(1f, eq.getAttribute(AttributeType.SPELL_POWER));
         assertEquals(1f, eq.getAttribute(AttributeType.WORK_SPEED));
         assertEquals(1f, eq.getAttribute(AttributeType.SPELL_SPEED));
-        assertEquals(0f, eq.getAttribute(AttributeType.ARMOR_VALUE));
+        assertEquals(4f, eq.getAttribute(AttributeType.ARMOR_VALUE));
         assertEquals(200f, eq.getAttribute(AttributeType.MAX_MANA));
     }
 

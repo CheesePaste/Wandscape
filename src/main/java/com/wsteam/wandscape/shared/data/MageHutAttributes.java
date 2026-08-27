@@ -141,8 +141,12 @@ public final class MageHutAttributes {
         return flat - perLevel(type) * Math.max(0, level - 1);
     }
 
-    /** A mage may level up only while below the colony level. */
+    /**
+     * A mage may level up until its level reaches {@code colonyLevel + 1} —
+     * a level-30 colony can therefore promote mages up to level 31 (where a
+     * maxed base HP hits exactly 100: 40 + 2 × 30).
+     */
     public static boolean canLevelUp(int level, int colonyLevel) {
-        return level < colonyLevel;
+        return level <= colonyLevel;
     }
 }

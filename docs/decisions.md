@@ -2,18 +2,19 @@
 
 本文件记录偏离直觉的设计选择及其原因，供后续开发快速理解「为什么这么做」。
 
-## 2026-08-27：法师等级上限 30 → 31 + MageHut 属性显示两位小数
+## 2026-08-27：法师等级上限 = 殖民地等级 + 1（colony 30 → 法师 31）+ MageHut 两位小数 + 护甲默认 4
 
-**需求**（用户指令）：1) 法师小屋属性显示两位小数——移动速度 0.25 被 `%.1f` 显示成 0.3；2) 法师等级上限改为 31——满级满基础生命值正好 100（base ≤40 + 2×(31−1) = 100）美观，且殖民地刷 31 级游客（殖民地 30 时 C+1），天然存在 31 级法师简历，上限应与之对齐。
+**需求**（用户指令）：1) MageHut 属性显示两位小数——移动速度 0.25 被 `%.1f` 显示成 0.3；2) 法师等级上限改为"殖民地等级 + 1"——colony 上限保持 30、法师可升到 31：满级满基础生命正好 100（base ≤40 + 2×30 = 100），且殖民地刷 31 级游客（colony 30 的 C+1）天然有 31 级法师简历；3) 护甲最低 0、最高 8、默认 4。
 
 **决策**：
-- `Config.COLONY_MAX_LEVEL` 默认 30→**31**。法师升级上限 = 殖民地等级（`canLevelUp: level < colonyLevel`），故法师可达 31；31 级时 `MAX_HP` 满基础正好 100。
-- **游客等级封顶**：`rollTouristLevel` 的 C+1 分支 clamp 到 `COLONY_MAX_LEVEL`——殖民地 30 时 C+1=31 不受影响（保留"刷 31 级游客"前提），殖民地 31 时 C+1=32 被压回 31，避免 32 级游客经酒馆简历变成 32 级法师突破上限。直接招募路径（`MageAttributeRoller.roll(colonyLevel)`）本就 ≤ 殖民地等级，无需处理。
-- `MageHutScreen.fmt`：`%.1f` → `%.2f`（整数仍走整数字段），属性行/单次特训步进/tooltip 统一两位小数。
+- `MageHutAttributes.canLevelUp`：`level < colonyLevel` → `level <= colonyLevel`——法师可达 colony+1（colony 30 → 法师 31）。`Config.COLONY_MAX_LEVEL` **保持 30**。
+- **不封顶游客**：`rollTouristLevel` 维持 C-1/C/C+1 无上限——colony 30 时 C+1=31 恰好是法师上限；colony 上限回到 30 后不存在 32 级游客，无需 clamp。
+- **护甲默认 4**：范围保持 [0,8]（`MageHutAttributes` lower 0/upper 8/步进 0.4、`MageAttributeRoller` 掷 0-8），仅 `EquipmentComponent.BASE_VALUES` 护甲默认 0→4——与其它属性默认取中位数一致（移速 0.3、法术强度 1）。
+- `MageHutScreen.fmt`：`%.1f` → `%.2f`（整数仍无小数），属性行/单次特训步进/tooltip 统一。
 
-**为什么**：殖民地满级时游客 C+1 会突破新上限，必须在源头封顶而非只抬法师上限；封顶点选在"殖民地等级上限"使其与配置联动（改 maxLevel 则游客/法师同步）。31 是"所有人统一的漂亮天花板"。
+**为什么**：colony 等级是建筑解锁/游客节奏的锚（平衡口径按 30 标定），整体抬到 31 会拖慢后续平衡；法师上限 +1 是"百级生命"的纯收益且与 31 级游客简历吻合。护甲默认 4 让无装备 NPC 的护甲落中位，避免默认 0 与"4-8 才合理"的落差。
 
-**影响**：`Config.java`（默认 31 + 注释）、`TouristSpawnSystem.rollTouristLevel`（C+1 clamp）、`MageHutScreen.fmt`（两位小数）、`docs/modules/{engine,tourist}.md`（默认值 30→31）。无测试受影响（游客/Config/屏幕均 MC 依赖）。
+**影响**：`MageHutAttributes.canLevelUp`、`EquipmentComponent.BASE_VALUES`（护甲 0→4）、`MageHutScreen.fmt`；`Config.COLONY_MAX_LEVEL` 保持 30（游客不加 clamp）。测试：`canLevelUpAllowsOneAboveColony`（colony+1 语义）、`EquipmentComponentTest` 护甲默认 4、`MageAttributeRollerTest` 护甲范围 [0,8]。
 
 ## 2026-08-27：幽灵 NPC 不派活——区块卸载后任务循环失败卡死
 

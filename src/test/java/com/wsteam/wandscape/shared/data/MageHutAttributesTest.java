@@ -135,11 +135,13 @@ class MageHutAttributesTest {
     }
 
     @Test
-    void canLevelUpRespectsColonyCap() {
+    void canLevelUpAllowsOneAboveColony() {
+        // Mage cap = colony level + 1 (a level-30 colony can promote to 31).
         assertTrue(MageHutAttributes.canLevelUp(3, 5));
-        assertTrue(MageHutAttributes.canLevelUp(1, 1) == false);
-        assertFalse(MageHutAttributes.canLevelUp(5, 5));
-        assertFalse(MageHutAttributes.canLevelUp(6, 4));
+        assertTrue(MageHutAttributes.canLevelUp(1, 1));   // 1 → 2 (cap 2)
+        assertTrue(MageHutAttributes.canLevelUp(5, 5));   // 5 → 6 (cap 6)
+        assertFalse(MageHutAttributes.canLevelUp(6, 5));  // already at cap 6
+        assertFalse(MageHutAttributes.canLevelUp(6, 4));  // above cap 5
     }
 
     @Test

@@ -30,7 +30,7 @@ public class EquipmentComponent {
         BASE_VALUES.put(AttributeType.SPELL_POWER, 1f);
         BASE_VALUES.put(AttributeType.WORK_SPEED, 1f);
         BASE_VALUES.put(AttributeType.SPELL_SPEED, 1f);
-        BASE_VALUES.put(AttributeType.ARMOR_VALUE, 0f);
+        BASE_VALUES.put(AttributeType.ARMOR_VALUE, 4f);
         BASE_VALUES.put(AttributeType.MAX_MANA, 200f);
     }
 
