@@ -11,7 +11,6 @@ import io.redspace.ironsspellbooks.api.registry.AttributeRegistry;
 
 import net.minecraft.core.Holder;
 import net.minecraft.world.entity.ai.attributes.Attribute;
-import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.ItemAttributeModifiers;
 
@@ -19,16 +18,21 @@ import net.minecraft.world.item.component.ItemAttributeModifiers;
  * Iron's Spells 'n Spellbooks 装备属性 → Wandscape 属性映射。
  *
  * <p>铁魔法装备（{@code ExtendedArmorItem}）把属性加成放在 vanilla
- * {@link ItemAttributeModifiers} 里，但 NPC 的 4 盔甲格走独立 {@code armorInventory}、
- * 不挂 vanilla 装备槽，加成从不被 vanilla 属性系统结算。这里把能对到 Wandscape 属性的
- * 三条加成手动映射回 ECS {@code EquipmentComponent}：
+ * {@link ItemAttributeModifiers} 里。NPC 盔甲现已存于 vanilla 装备槽，原版每 tick 装备
+ * 结算（{@code detectEquipmentUpdates}）会自动应用**原版属性**（ARMOR/ARMOR_TOUGHNESS/
+ * KNOCKBACK_RESISTANCE/MOVEMENT_SPEED），但铁魔法**自有属性**不在 NPC 的 AttributeMap
+ * 中（{@code AttributeSupplier.createInstance} 对未注册属性返回 null → 原版静默跳过），
+ * 且 Wandscape 的魔力/法强读取走自己的 core 枚举（ECS {@code EquipmentComponent}），
+ * 不从原版属性实例读——所以这里只桥 Wandscape 自有属性：
  * <ul>
  *   <li>{@code MAX_MANA}（如流浪法师兜帽 +25 最大法力）→ {@link AttributeType#MAX_MANA}</li>
  *   <li>{@code SPELL_POWER}（如 +5% 法术强度）→ {@link AttributeType#SPELL_POWER}</li>
- *   <li>vanilla {@code MOVEMENT_SPEED}（如速度靴 +25% 移速）→ {@link AttributeType#MOVE_SPEED}</li>
  * </ul>
  * 百分比加成（{@code ADD_MULTIPLIED_BASE}）映射为 {@link ModifierOperation#MULTIPLY_BASE}，
  * 使提升随 NPC 基础值正确放大、且在基础值被重新播种（法师小屋训练/复活）后仍正确。
+ *
+ * <p>{@code MOVEMENT_SPEED} 不再映射——盔甲进 vanilla 槽后原版直接结算移速加成，
+ * 再映射会与 base 推送双重叠加。
  *
  * <p>其余铁魔法特色属性没有 Wandscape 对应属性，一律不映射：各学派 {@code *_spell_power}
  * （某系法术增强）、{@code casting_movespeed}（施法时移速）、{@code mana_regen}、
@@ -45,7 +49,7 @@ public final class IronSpellsAttributes {
      */
     public static List<AttributeModifier> modifiersFor(ItemStack stack) {
         if (!IronSpellsCompat.isLoaded() || stack == null || stack.isEmpty()) return List.of();
-        List<AttributeModifier> out = new ArrayList<>(3);
+        List<AttributeModifier> out = new ArrayList<>(2);
         for (ItemAttributeModifiers.Entry entry : stack.getAttributeModifiers().modifiers()) {
             AttributeType type = mapType(entry.attribute());
             if (type == null) continue;
@@ -60,7 +64,6 @@ public final class IronSpellsAttributes {
     private static AttributeType mapType(Holder<Attribute> attribute) {
         if (attribute.is(AttributeRegistry.MAX_MANA)) return AttributeType.MAX_MANA;
         if (attribute.is(AttributeRegistry.SPELL_POWER)) return AttributeType.SPELL_POWER;
-        if (attribute.is(Attributes.MOVEMENT_SPEED)) return AttributeType.MOVE_SPEED;
         return null;
     }
 

@@ -176,7 +176,9 @@ public record NpcDataPacket(
         float spellPower = npc.spellPower;
         float workSpeed = npc.workSpeed;
         float spellSpeed = npc.spellSpeed;
-        float armorValue = npc.armorValue;
+        // 护甲显示总护甲 = vanilla ARMOR 有效值（base=天生+法杖，transient=槽内盔甲）。槽内盔甲
+        // 由原版装备结算叠加，ECS ARMOR_VALUE 只含天生+法杖，不能直接用于显示。
+        float armorValue = npc.getEffectiveArmorValue();
         World world = WandscapeEngine.getWorld();
         if (world != null && npc.ecsEntityId > 0) {
             EquipmentComponent eq = world.get(npc.ecsEntityId, EquipmentComponent.class);
@@ -185,7 +187,6 @@ public record NpcDataPacket(
                 spellPower = eq.getAttribute(AttributeType.SPELL_POWER);
                 workSpeed = eq.getAttribute(AttributeType.WORK_SPEED);
                 spellSpeed = eq.getAttribute(AttributeType.SPELL_SPEED);
-                armorValue = eq.getAttribute(AttributeType.ARMOR_VALUE);
             }
         }
 
@@ -207,10 +208,10 @@ public record NpcDataPacket(
             spellCategories.add(def != null ? def.category().name().toLowerCase(Locale.ROOT) : "unknown");
         }
 
-        // 盔甲格（顺序：头盔/胸甲/护腿/靴子）— 防御性拷贝，避免引用共享实例
+        // 盔甲格（顺序：头盔/胸甲/护腿/靴子，读 vanilla 槽）— 防御性拷贝，避免引用共享实例
         List<ItemStack> armorStacks = new java.util.ArrayList<>(WandscapeNpc.ARMOR_SLOT_COUNT);
         for (int i = 0; i < WandscapeNpc.ARMOR_SLOT_COUNT; i++) {
-            armorStacks.add(npc.getArmorItem(i).copy());
+            armorStacks.add(npc.getItemBySlot(WandscapeNpc.ARMOR_VANILLA_SLOTS[i]).copy());
         }
 
         // 战斗魔法目录（id → 分类小写）：策略/装备 UI 识别玩家背包卷轴的归属分类；ALTAR(revive) 与

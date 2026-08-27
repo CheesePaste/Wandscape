@@ -19,7 +19,7 @@ PLACEHOLDER_COLONY = UUID(全0)，允许殖民地系统完成前引擎调度正�
 
 右键 NPC / 装备屏"Strategy"按钮走 `openMenu` 打开真实容器菜单（与仓库同款 vanilla 槽机制）：
 
-- `NpcMenu`（装备，MenuType `wandscape:npc`）：4 盔甲槽（`NpcArmorSlot`，canEquip 部位校验 + 原版空槽部位图标，直写 NPC `armorInventory`）+ 1 法杖槽（`WandSlot`，变更同步手持/默认法杖恢复）+ 36 玩家槽（`VanillaPlayerInventory`）；任意槽操作（`menu.clicked`）后同步 NPC 实体
+- `NpcMenu`（装备，MenuType `wandscape:npc`）：4 盔甲槽（`NpcArmorSlot`，canEquip 部位校验 + 原版空槽部位图标，容器包装 NPC 的 vanilla 装备槽、写 `setItemSlot`）+ 1 法杖槽（`WandSlot`，变更同步手持/默认法杖恢复）+ 36 玩家槽（`VanillaPlayerInventory`）；任意槽操作（`menu.clicked`）后同步 NPC 实体
 - `NpcStrategyMenu`（策略，MenuType `wandscape:npc_strategy`）：12 卷轴槽（4 分类 × 3，`SpellSlot` mayPlace 校验分类/去重/每类 ≤3），槽内真实卷轴（取出即拿回），每次槽操作重建扁平装备态写回 `EquippedMagicComponent`；预设经 `NpcStrategyPacket`（只改 preset）
 - 客户端 `NpcScreen` / `NpcStrategyScreen extends AbstractContainerScreen`：原版槽渲染 + 玩家背包原版底 + 悬停 tooltip 与仓库一致；实体 id 经 `NpcDataPacket` 下发（客户端菜单构造时未知）
 - 打开链路：`WandscapeNpc.mobInteract` → `openMenu(NpcMenu)` + 下一 tick 补发 `NpcDataPacket`；装备屏按钮 → `NpcOpenStrategyPacket` → 服务端 `openMenu(NpcStrategyMenu)`

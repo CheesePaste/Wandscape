@@ -2,6 +2,21 @@
 
 本文件记录偏离直觉的设计选择及其原因，供后续开发快速理解「为什么这么做」。
 
+## 2026-08-27：NPC 盔甲改存 vanilla 装备槽——不再用独立 armorInventory
+
+**需求**（用户指令）：当前 NPC 的 4 件盔甲存在独立 `armorInventory`（`SimpleContainer`）、不在原版装备槽——从原版/其它模组的标准 API（`getItemBySlot`/`getArmorSlots`/`ArmorItems` NBT）看就是"没穿盔甲"。问这会不会影响装备兼容性。分析后确认为三处实损：附魔不生效（`EnchantmentHelper.runIterationOnEquipment` 按 `getItemBySlot` 遍历，Protection 等全失效，仅耐久因走 `hurtAndBreak` 正常）、非 ARMOR 属性全丢（护甲韧性/击退抗性/第三方自定义属性——vanilla 每 tick 装备结算只作用于槽内物品）、读写互不可见。且发现原"独立容器防外观覆盖巫师袍"的前提是**误判**：`WandscapeNpcRenderer extends HumanoidMobRenderer`，后者只加 CustomHeadLayer/ElytraLayer/ItemInHandLayer、`WandscapeNpcRenderer` 只加巫师帽层——**没有 HumanoidArmorLayer，盔甲即使放 vanilla 槽也不会渲染**。故决定彻底改。
+
+**决策**：
+- **盔甲直存 vanilla 槽**：删 `armorInventory`/`getArmorItem`/`setArmorItem`/`armorValueOf`。装备经 `Mob.setItemSlot(HEAD/CHEST/LEGS/FEET)` 写入，原版每 tick `detectEquipmentUpdates` 自动结算护甲值/韧性/击退/移速与附魔，其它模组可见。`NpcMenu` 的盔甲容器改为包装 vanilla 槽（写 `setItemSlot`）。
+- **耐久仍手动结算**：原版 `LivingEntity.hurtArmor` 对非玩家生物是空实现、`Mob` 不覆盖——即使盔甲在 vanilla 槽，原版也不会扣槽内耐久。保留 `hurtArmor` 覆盖按原版语义结算（`hurtAndBreak` 吃耐久/经验修补），破损后槽位变化由原版装备结算自动撤销属性。
+- **属性模型拆分**：core `ARMOR_VALUE` 只含天生（招募）+ 法杖加成，`applyEffectiveAttributes` 照旧推 vanilla `ARMOR` base；槽内盔甲由原版叠加 transient，总护甲 = base + 槽内。GUI 显示（`NpcDataPacket`/`TaskPanelSyncTracker`）改读 `getEffectiveArmorValue()` = vanilla `getAttributeValue(ARMOR)`。
+- **铁魔法桥收窄为两条**：`IronSpellsAttributes` 移除 `MOVEMENT_SPEED` 映射（原版直接结算，再映射会与 base 推送双重叠加 1.25²=1.5625）；`MAX_MANA`/`SPELL_POWER` 仍须桥进 ECS——铁魔法自有属性不在 NPC 的 AttributeMap（`AttributeSupplier.createInstance` 对未注册属性返回 null，原版静默跳过），且 Wandscape 的魔力/法强从 core 枚举读取，桥是两套属性模型之间的固有接口。
+- **旧存档迁移**：`readAdditionalSaveData` 捕获旧 `armorInventory` tag（vanilla 槽全空时暂存），`onAddedToLevel` 用 `setItemSlot` 落地，不丢铁套。
+
+**为什么**：vanilla 装备槽是装备的唯一标准事实来源——放进去，原版结算属性/附魔、`ArmorItems` NBT 持久化、其它模组可读，全免费；独立容器只是把"原版不管、模组不见"的负担全揽到自家手工结算上。前提误判（无盔甲层）意味着独立容器没有任何不可替代的价值。
+
+**影响**：`WandscapeNpc`（删容器/`syncIronArmorAttributes`/`hurtArmor` 读槽/`dropEquipment` 读槽/NBT 迁移）、`NpcMenu`（`NpcArmorContainer` 包装 vanilla 槽）、`ColonyCommand`（铁套写 `setItemSlot`）、`IronSpellsAttributes`（去 MOVEMENT_SPEED）、`NpcDataPacket`/`TaskPanelSyncTracker`（护甲显示改 vanilla 有效值）、`docs/modules/npc.md`、`architecture/packages/npc.md`/`compat.md`。行为收益：铁甲韧性/击退、Protection 等附魔现在生效；NPC 装备可被 `/data`、`/item`、datapack 与其它模组读写。注意：非殖民地敌对法师（EvilMage）不注册 ECS，天然护甲不生效的既有语义不变。
+
 ## 2026-08-27：法杖/卷轴重定价——可拆卸调换的永久 buff 不再是"死亡即消失"的一次性投入
 
 **需求**（用户指令）：按 `balance/` 经济模型，现有法杖/卷轴造价太便宜——前期法杖只占该档日收入的 0.8%~2%，"买杖"是零钱不是决策；只有 lv30 毕业杖约一游戏日、用户认可。要贵一点，分析并落地合理幅度。

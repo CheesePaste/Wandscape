@@ -450,16 +450,16 @@ public final class ColonyCommand {
     }
 
     /**
-     * 给初始法师配一套铁甲（4 件塞 {@code armorInventory}，仅护甲数值生效、外观不渲染）。
-     * 早期法师太脆容易死，赠送铁套提升开局生存。同步 ECS 使护甲值立即计入伤害减免；
-     * 延迟入 ECS 的场景由 {@code onNpcJoinWorld → syncArmorAttributes} 兜底。
+     * 给初始法师配一套铁甲（写 vanilla 装备槽——护甲值/韧性/附魔由原版每 tick 装备结算生效，
+     * 其它模组可见；巫师袍外观不受影响，渲染器无盔甲层）。早期法师太脆容易死，赠送铁套提升
+     * 开局生存。铁魔法属性桥由 {@code onNpcJoinWorld → syncIronArmorAttributes} 兜底。
      */
     private static void equipStarterArmor(WandscapeNpc npc) {
-        npc.setArmorItem(0, new ItemStack(Items.IRON_HELMET));
-        npc.setArmorItem(1, new ItemStack(Items.IRON_CHESTPLATE));
-        npc.setArmorItem(2, new ItemStack(Items.IRON_LEGGINGS));
-        npc.setArmorItem(3, new ItemStack(Items.IRON_BOOTS));
-        npc.syncArmorAttributes();
+        npc.setItemSlot(WandscapeNpc.ARMOR_VANILLA_SLOTS[0], new ItemStack(Items.IRON_HELMET));
+        npc.setItemSlot(WandscapeNpc.ARMOR_VANILLA_SLOTS[1], new ItemStack(Items.IRON_CHESTPLATE));
+        npc.setItemSlot(WandscapeNpc.ARMOR_VANILLA_SLOTS[2], new ItemStack(Items.IRON_LEGGINGS));
+        npc.setItemSlot(WandscapeNpc.ARMOR_VANILLA_SLOTS[3], new ItemStack(Items.IRON_BOOTS));
+        npc.syncIronArmorAttributes();
         Log.info(TAG, "[Colony] Equipped starter iron armor on NPC {}",
                 npc.getUUID().toString().substring(0, 8));
     }

@@ -273,7 +273,8 @@ public final class TaskPanelSyncTracker {
             float sp = eq != null ? eq.getAttribute(AttributeType.SPELL_POWER) : npc.spellPower;
             float ws = eq != null ? eq.getAttribute(AttributeType.WORK_SPEED) : npc.workSpeed;
             float ss = eq != null ? eq.getAttribute(AttributeType.SPELL_SPEED) : npc.spellSpeed;
-            float ar = eq != null ? eq.getAttribute(AttributeType.ARMOR_VALUE) : npc.armorValue;
+            // 护甲显示总护甲 = vanilla ARMOR 有效值（槽内盔甲由原版结算，ECS ARMOR_VALUE 只含天生+法杖）
+            float ar = npc.getEffectiveArmorValue();
 
             String currentTaskTitle = "";
             long currentTaskId = exec != null && exec.globalTaskId != null ? exec.globalTaskId : -1;

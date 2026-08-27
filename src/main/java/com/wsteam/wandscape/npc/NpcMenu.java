@@ -19,10 +19,10 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * NPC 装备容器菜单：4 盔甲槽（原版 ArmorSlot 语义，直接写 NPC 的
- * {@code armorInventory}）+ 1 法杖槽（变更同步手持/默认法杖）+ 原版玩家背包槽
- * （{@link VanillaPlayerInventory}）。全部槽位都是真实 vanilla 槽——左键/右键/
- * Shift/拖拽与快捷键全部生效，与原版背包装备槽位一致。
+ * NPC 装备容器菜单：4 盔甲槽（原版 ArmorSlot 语义，直接写 NPC 的 vanilla 装备槽，
+ * 经 {@code setItemSlot} 由原版装备结算接管属性）+ 1 法杖槽（变更同步手持/默认法杖）
+ * + 原版玩家背包槽（{@link VanillaPlayerInventory}）。全部槽位都是真实 vanilla 槽——
+ * 左键/右键/Shift/拖拽与快捷键全部生效，与原版背包装备槽位一致。
  *
  * <p>客户端工厂仅带玩家背包（数据经服务端槽同步填充）；服务端工厂持有 NPC 引用，
  * 槽变更（{@link #slotChanged}）即时写回实体。
@@ -56,7 +56,9 @@ public class NpcMenu extends AbstractContainerMenu {
     public NpcMenu(int containerId, Inventory playerInventory, @Nullable WandscapeNpc npc) {
         super(Wandscape.NPC_MENU.get(), containerId);
         this.npc = npc;
-        this.armorContainer = npc != null ? npc.armorInventory : new SimpleContainer(ARMOR_COUNT);
+        // 盔甲容器：服务端包装 NPC 的 4 个 vanilla 装备槽（写 setItemSlot → 原版装备结算接管属性），
+        // 客户端无 NPC 引用用空容器（槽内容经同步填充）。
+        this.armorContainer = npc != null ? new NpcArmorContainer(npc) : new SimpleContainer(ARMOR_COUNT);
         if (npc != null && !npc.hasDefaultWand()) {
             ItemStack held = npc.getItemInHand(InteractionHand.MAIN_HAND);
             if (!held.isEmpty()) {
@@ -94,6 +96,10 @@ public class NpcMenu extends AbstractContainerMenu {
                 return ItemStack.EMPTY;
             }
         }
+        // Shift 移动可能改动盔甲槽（铁魔法属性桥进 ECS），同步一次。
+        if (npc != null) {
+            npc.syncIronArmorAttributes();
+        }
         return result;
     }
 
@@ -116,8 +122,84 @@ public class NpcMenu extends AbstractContainerMenu {
             npc.setItemInHand(InteractionHand.MAIN_HAND, stack);
             npc.setHasDefaultWand(false);
         }
-        npc.syncArmorAttributes();
+        npc.syncIronArmorAttributes();
         npc.syncWandAttributes();
+    }
+
+    /** 包装 NPC 的 4 个 vanilla 盔甲槽为 {@link Container}：菜单槽写 {@code setItemSlot}，
+     *  原版每 tick 装备结算接管属性与附魔；铁魔法自有属性另经 {@link WandscapeNpc#syncIronArmorAttributes}。 */
+    private static final class NpcArmorContainer implements Container {
+        private final WandscapeNpc npc;
+
+        NpcArmorContainer(WandscapeNpc npc) {
+            this.npc = npc;
+        }
+
+        @Override
+        public int getContainerSize() {
+            return WandscapeNpc.ARMOR_SLOT_COUNT;
+        }
+
+        @Override
+        public boolean isEmpty() {
+            for (int i = 0; i < getContainerSize(); i++) {
+                if (!getItem(i).isEmpty()) return false;
+            }
+            return true;
+        }
+
+        @Override
+        public ItemStack getItem(int index) {
+            return npc.getItemBySlot(WandscapeNpc.ARMOR_VANILLA_SLOTS[index]);
+        }
+
+        @Override
+        public ItemStack removeItem(int index, int count) {
+            if (count < 0) throw new IllegalArgumentException("count should be >= 0");
+            if (count == 0) return ItemStack.EMPTY;
+            ItemStack stack = getItem(index);
+            if (stack.isEmpty()) return ItemStack.EMPTY;
+            if (count >= stack.getCount()) return removeItemNoUpdate(index);
+            ItemStack part = stack.split(count);
+            if (stack.isEmpty()) {
+                npc.setItemSlot(WandscapeNpc.ARMOR_VANILLA_SLOTS[index], ItemStack.EMPTY);
+            }
+            return part;
+        }
+
+        @Override
+        public ItemStack removeItemNoUpdate(int index) {
+            ItemStack stack = getItem(index);
+            if (stack.isEmpty()) return ItemStack.EMPTY;
+            npc.setItemSlot(WandscapeNpc.ARMOR_VANILLA_SLOTS[index], ItemStack.EMPTY);
+            return stack;
+        }
+
+        @Override
+        public void setItem(int index, ItemStack stack) {
+            npc.setItemSlot(WandscapeNpc.ARMOR_VANILLA_SLOTS[index], stack);
+        }
+
+        @Override
+        public int getMaxStackSize() {
+            return 64;
+        }
+
+        @Override
+        public void setChanged() {
+        }
+
+        @Override
+        public boolean stillValid(Player player) {
+            return !npc.isRemoved();
+        }
+
+        @Override
+        public void clearContent() {
+            for (int i = 0; i < getContainerSize(); i++) {
+                npc.setItemSlot(WandscapeNpc.ARMOR_VANILLA_SLOTS[i], ItemStack.EMPTY);
+            }
+        }
     }
 
     /** 盔甲槽：只接受对应部位盔甲，空槽显示原版部位图标。 */

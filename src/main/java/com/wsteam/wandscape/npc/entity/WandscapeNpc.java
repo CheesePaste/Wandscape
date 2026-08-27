@@ -33,7 +33,6 @@ import com.wsteam.wandscape.core.types.FollowAttackDecision;
 import com.wsteam.wandscape.core.types.FriendlyForce;
 import com.wsteam.wandscape.shared.api.WandApi;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
-import com.wsteam.wandscape.core.types.ModifierOperation;
 import com.wsteam.wandscape.core.types.NpcAttributes;
 import com.wsteam.wandscape.npc.NpcMenu;
 import com.wsteam.wandscape.npc.network.NpcDataPacket;
@@ -71,6 +70,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.NeutralMob;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.monster.Enemy;
@@ -371,7 +371,16 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
     private float appliedMoveSpeed = -1;
     private float appliedArmor = -1;
 
-    /** 把有效属性推送到 vanilla 实体（最大生命/移速/护甲）。 */
+    /** 有效护甲值 = vanilla ARMOR（base=天生护甲+法杖加成，transient=槽内盔甲）。GUI 显示总护甲用。 */
+    public float getEffectiveArmorValue() {
+        return (float) getAttributeValue(Attributes.ARMOR);
+    }
+
+    /**
+     * 把有效属性推送到 vanilla 实体（最大生命/移速/护甲 base）。
+     * 护甲只推天生+法杖加成（core ARMOR_VALUE 已不含槽内盔甲）——槽内盔甲由原版
+     * per-tick 装备结算叠加 transient，总护甲 = base + 槽内。
+     */
     private void applyEffectiveAttributes() {
         World world = WandscapeEngine.getWorld();
         if (world == null || ecsEntityId <= 0) return;
@@ -402,16 +411,17 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
     public final SimpleContainer inventory = new SimpleContainer(27);
 
     // ============================================================
-    // Armor slots (4). Stored separately from vanilla equipment slots so the
-    // wizard robe appearance is never overridden — armor only affects stats.
+    // Armor slots (4). Stored in vanilla equipment slots (HEAD/CHEST/LEGS/FEET)
+    // so vanilla/other mods read the worn armor and vanilla applies the item
+    // attribute modifiers + enchantment effects each tick. The wizard robe
+    // appearance is preserved because WandscapeNpcRenderer adds no armor layer.
+    // Only Iron Spells' Wandscape-only attributes (MAX_MANA/SPELL_POWER) are
+    // bridged into the ECS EquipmentComponent by {@link #syncIronArmorAttributes}.
     // ============================================================
 
     public static final int ARMOR_SLOT_COUNT = 4;
 
-    /** 盔甲格顺序：0=头盔 1=胸甲 2=护腿 3=靴子。 */
-    public final SimpleContainer armorInventory = new SimpleContainer(ARMOR_SLOT_COUNT);
-
-    /** 盔甲槽索引 → 原版装备槽（读物品属性/判断装备槽用）。 */
+    /** 盔甲槽索引 → 原版装备槽（读物品属性/判断装备槽/耐久结算用）。 */
     public static final net.minecraft.world.entity.EquipmentSlot[] ARMOR_VANILLA_SLOTS = {
             net.minecraft.world.entity.EquipmentSlot.HEAD,
             net.minecraft.world.entity.EquipmentSlot.CHEST,
@@ -419,33 +429,17 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
             net.minecraft.world.entity.EquipmentSlot.FEET
     };
 
-    public ItemStack getArmorItem(int slot) {
-        return armorInventory.getItem(slot);
-    }
-
-    public void setArmorItem(int slot, ItemStack stack) {
-        armorInventory.setItem(slot, stack);
-    }
-
-    /** 从物品的原版 ARMOR 属性修饰符求单件盔甲的护甲值（外观不渲染，仅数值生效）。 */
-    public static float armorValueOf(ItemStack stack) {
-        if (stack.isEmpty()) return 0f;
-        float total = 0f;
-        for (var entry : stack.getAttributeModifiers().modifiers()) {
-            if (entry.attribute().is(Attributes.ARMOR)) {
-                total += entry.modifier().amount();
-            }
-        }
-        return Math.max(0f, total);
-    }
+    /** 旧存档 armorInventory 迁移暂存：readAdditionalSaveData 捕获，onAddedToLevel 用 setItemSlot 落地。 */
+    private final List<ItemStack> pendingArmorMigration = new ArrayList<>();
 
     /**
-     * 把 4 个盔甲格的护甲值同步到 ECS EquipmentComponent（每槽一个加法修饰符），
-     * 使 armorValue 同时生效于属性查询（GUI）与伤害减免（vanilla ARMOR）。
-     * 铁魔法装备的 MAX_MANA/SPELL_POWER/MOVEMENT_SPEED 加成经
-     * {@code IronSpellsAttributes} 一并映射进 ECS（其余铁魔法特色属性不映射）。
+     * 把 4 个 vanilla 盔甲格中铁魔法装备的 MAX_MANA/SPELL_POWER 加成桥进 ECS
+     * {@code EquipmentComponent}。护甲值/韧性/击退/移速等原版属性由原版每 tick 装备
+     * 结算自动应用（盔甲就在 vanilla 槽）；这里只桥 Wandscape 自有属性——原版不知道它们
+     * （不在 NPC 的 AttributeMap 中会被 {@code AttributeSupplier} 判为 null 跳过），
+     * 且 Wandscape 的魔力/法强从 core 枚举读取。空槽或非铁魔法盔甲 unequip 撤销旧加成。
      */
-    public void syncArmorAttributes() {
+    public void syncIronArmorAttributes() {
         World world = WandscapeEngine.getWorld();
         if (world == null || ecsEntityId <= 0) return;
         EquipmentComponent eq = world.get(ecsEntityId, EquipmentComponent.class);
@@ -457,26 +451,23 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
                 case 2 -> EquipmentSlot.LEGS;
                 default -> EquipmentSlot.FEET;
             };
-            ItemStack stack = armorInventory.getItem(i);
-            if (stack.isEmpty()) {
+            ItemStack stack = getItemBySlot(ARMOR_VANILLA_SLOTS[i]);
+            List<AttributeModifier> mods = stack.isEmpty() ? List.of()
+                    : com.wsteam.wandscape.compat.ironspellbooks.IronSpellsAttributes.modifiersFor(stack);
+            if (mods.isEmpty()) {
                 eq.unequip(coreSlot);
             } else {
-                List<AttributeModifier> mods = new ArrayList<>(4);
-                mods.add(new AttributeModifier(AttributeType.ARMOR_VALUE,
-                        armorValueOf(stack), ModifierOperation.ADDITION));
-                mods.addAll(com.wsteam.wandscape.compat.ironspellbooks.IronSpellsAttributes
-                        .modifiersFor(stack));
                 eq.equip(coreSlot, stack.getItem().getDescriptionId(), mods);
             }
         }
     }
 
     /**
-     * 受击扣 4 个盔甲格耐久。盔甲存于独立 {@link #armorInventory}、不在原版装备槽——
-     * 原版 {@code doHurtEquipment} 按 getItemBySlot 读取够不到这 4 件，故在此按原版语义手动结算：
-     * 每件损耗 max(1, damage/4 取整)，走 {@link ItemStack#hurtAndBreak}（吃耐久/经验修补附魔），
-     * 破损 shrink 空槽并广播破坏事件。某件破损后护甲值变化，需立即重算 ECS 属性
-     * （{@link #syncArmorAttributes}，空槽会 unequip 掉旧的护甲加成）。
+     * 受击扣 4 个盔甲格耐久。盔甲存于 vanilla 装备槽，但原版 {@code LivingEntity.hurtArmor}
+     * 对非玩家生物是空实现、{@code Mob} 不覆盖——原版耐久结算够不到槽内盔甲，故在此按原版
+     * 语义手动结算：每件损耗 max(1, damage/4 取整)，走 {@link ItemStack#hurtAndBreak}
+     * （吃耐久/经验修补附魔），破损 shrink 空槽并广播破坏事件。破损后原版 per-tick 装备结算
+     * 自动撤销该件属性、铁魔法加成由 {@link #syncIronArmorAttributes} 撤销。
      * 仅在伤害不绕盔甲时被调用（{@code getDamageAfterArmorAbsorb} 保证），与数值减伤同边界。
      */
     @Override
@@ -485,12 +476,12 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
         int dmg = Math.max(1, (int) (damageAmount / 4.0F));
         boolean anyBroke = false;
         for (int i = 0; i < ARMOR_SLOT_COUNT; i++) {
-            ItemStack stack = armorInventory.getItem(i);
+            ItemStack stack = getItemBySlot(ARMOR_VANILLA_SLOTS[i]);
             if (stack.isEmpty() || !stack.canBeHurtBy(source)) continue;
             stack.hurtAndBreak(dmg, this, ARMOR_VANILLA_SLOTS[i]);
             if (stack.isEmpty()) anyBroke = true;
         }
-        if (anyBroke) syncArmorAttributes();
+        if (anyBroke) syncIronArmorAttributes();
     }
 
     /**
@@ -923,12 +914,13 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
             }
         }
 
-        // 2. 掉落 4 件盔甲装备
+        // 2. 掉落 4 件盔甲装备（vanilla 槽；super.dropEquipment 已按默认掉率掉过一部分，
+        //    这里补足——被掉过的槽已空，不会重复）
         for (int i = 0; i < ARMOR_SLOT_COUNT; i++) {
-            ItemStack armor = armorInventory.getItem(i);
+            ItemStack armor = getItemBySlot(ARMOR_VANILLA_SLOTS[i]);
             if (!armor.isEmpty()) {
                 spawnAtLocation(armor.copy());
-                armorInventory.setItem(i, ItemStack.EMPTY);
+                setItemSlot(ARMOR_VANILLA_SLOTS[i], ItemStack.EMPTY);
             }
         }
     }
@@ -1360,10 +1352,13 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
                         generateRandomNpcName(detectNamingStyle())));
                 setCustomNameVisible(true);
             }
-            // 默认装备 beam + meteor（新 NPC / 旧存档无字段），此后玩家经策略页装备卷轴改。
+            // 默认装备 beam + meteor（初始殖民地法师 / 旧存档无字段迁移），此后玩家经策略页装备卷轴改。
             // 分类由 MagicDef 数据驱动（core 组件不依赖 magic，种子在实体层做）；
             // SPECIAL/ALTAR 魔法（heal/teleport/revive）为系统固有，不进装备槽。
-            if (!spellbookLoaded && equippedMagic.isEmpty()) {
+            // 刷怪蛋生成的殖民地法师不自动装备起始战斗魔法——起始法术是殖民地创建的基建奖励，
+            // 不是法师物种属性；敌对测试法师（EvilMage，isColonyNpc=false）保留默认装备作实战测试目标。
+            if (EquippedMagicComponent.shouldSeedDefaults(spellbookLoaded, !equippedMagic.isEmpty(),
+                    getSpawnType() == MobSpawnType.SPAWN_EGG, isColonyNpc())) {
                 for (String defaultSpell : EquippedMagicComponent.DEFAULT_EQUIP) {
                     String cat = SpellbookLoader.equippableCategoryOf(defaultSpell);
                     if (cat != null) {
@@ -1382,13 +1377,23 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
                 setItemInHand(InteractionHand.MAIN_HAND,
                         new ItemStack(Wandscape.WAND.get()));
             }
+            // 旧存档盔甲迁移落地（1.10.6 之前盔甲存自定义 armorInventory tag，现迁入 vanilla 槽；
+            // 随后原版每 tick 装备结算接管属性）。必须在 ECS join 之前，让 syncIronArmorAttributes 读到迁移后的槽。
+            if (!pendingArmorMigration.isEmpty()) {
+                for (int i = 0; i < ARMOR_SLOT_COUNT && i < pendingArmorMigration.size(); i++) {
+                    setItemSlot(ARMOR_VANILLA_SLOTS[i], pendingArmorMigration.get(i));
+                }
+                pendingArmorMigration.clear();
+                Log.info(TAG, "Migrated legacy armorInventory to vanilla slots for {}",
+                        getUUID().toString().substring(0, 8));
+            }
             // Prevent vanilla despawn — NPC persistence is managed by the colony/engine
             this.setPersistenceRequired();
             if (isColonyNpc()) {
                 World world = WandscapeEngine.getWorld();
                 if (world != null) {
                     EntityComponentBridge.INSTANCE.onNpcJoinWorld(this, world);
-                    syncArmorAttributes();
+                    syncIronArmorAttributes();
                     syncWandAttributes();
                 } else {
                     // Engine not yet bootstrapped — entity loaded before ServerStartingEvent.
@@ -1508,12 +1513,7 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
         if (followerUuid != null) {
             tag.putUUID("FollowerUuid", followerUuid);
         }
-        // 盔甲格（外观不渲染，仅属性生效）
-        ListTag armorList = new ListTag();
-        for (int i = 0; i < ARMOR_SLOT_COUNT; i++) {
-            armorList.add(armorInventory.getItem(i).saveOptional(registryAccess()));
-        }
-        tag.put("armorInventory", armorList);
+        // 盔甲格：由 super.addAdditionalSaveData 写 vanilla ArmorItems/HandItems，无需额外保存
         // 施法决策：已装备魔法（按分类 4 桶、桶内槽位序）+ 策略预设 + 自定义优先级（保留作覆盖）
         CompoundTag spellbookEquip = new CompoundTag();
         for (String cat : EquippedMagicComponent.CATEGORIES) {
@@ -1580,16 +1580,28 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
         } else {
             followerUuid = null;
         }
-        // 盔甲格恢复（旧存档无字段 → 空）
+        // 旧存档迁移：1.10.6 之前盔甲存于自定义 armorInventory tag。vanilla 槽（ArmorItems）
+        // 已由 super 读出；若 vanilla 槽全空且旧 tag 存在，暂存待 onAddedToLevel 用 setItemSlot
+        // 写入（加载期不直接 setItemSlot，与 vanilla 加载顺序一致）。
         if (tag.contains("armorInventory", Tag.TAG_LIST)) {
-            ListTag armorList = tag.getList("armorInventory", Tag.TAG_COMPOUND);
-            for (int i = 0; i < ARMOR_SLOT_COUNT && i < armorList.size(); i++) {
-                armorInventory.setItem(i,
-                        ItemStack.parseOptional(registryAccess(), armorList.getCompound(i)));
+            boolean vanillaSlotsEmpty = true;
+            for (int i = 0; i < ARMOR_SLOT_COUNT; i++) {
+                if (!getItemBySlot(ARMOR_VANILLA_SLOTS[i]).isEmpty()) {
+                    vanillaSlotsEmpty = false;
+                    break;
+                }
+            }
+            if (vanillaSlotsEmpty) {
+                ListTag armorList = tag.getList("armorInventory", Tag.TAG_COMPOUND);
+                pendingArmorMigration.clear();
+                for (int i = 0; i < ARMOR_SLOT_COUNT && i < armorList.size(); i++) {
+                    pendingArmorMigration.add(
+                            ItemStack.parseOptional(registryAccess(), armorList.getCompound(i)));
+                }
             }
         }
         // 施法决策恢复：仅新存档（spellbookEquip）加载；旧存档丢弃 spellbookIds 与优先级
-        // （B 阶段决策），组件留空 → onAddedToLevel 种默认 beam+heal，策略回出厂 balanced/未配置。
+        // （B 阶段决策），组件留空 → onAddedToLevel 种默认 beam+meteor，策略回出厂 balanced/未配置。
         if (tag.contains("spellbookEquip")) {
             spellbookLoaded = true;
             CompoundTag equipTag = tag.getCompound("spellbookEquip");
