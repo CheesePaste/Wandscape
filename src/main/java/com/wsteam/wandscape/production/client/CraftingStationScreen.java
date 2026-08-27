@@ -59,7 +59,11 @@ public class CraftingStationScreen extends MedievalScreen {
     public void updateData(CraftingStationPacket packet) {
         this.stationPos = packet.stationPos();
         setCreator(packet.creator());
-        this.recipes = packet.entries();
+        this.recipes = packet.entries().stream().sorted((a, b)->{
+            int levelA = a.unlockRequirement() != null ? a.unlockRequirement().minColonyLevel() : 0;
+            int levelB = b.unlockRequirement() != null ? b.unlockRequirement().minColonyLevel() : 0;
+            return Integer.compare(levelA, levelB);
+        }).toList();
         // Re-apply the current search filter to the refreshed data
         applySearch(searchInput != null ? searchInput.getValue() : "");
         if (stepper != null) {
