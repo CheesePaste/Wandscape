@@ -65,7 +65,7 @@ public class Config {
 
     public static final ModConfigSpec.DoubleValue NPC_MANA_REGEN_FRACTION = BUILDER
             .comment("Fraction of max mana regenerated per settlement (0.01 = 1% of max; full refill ~50s)")
-            .defineInRange("npc.manaRegenFraction", 0.01, 0.0001, 1.0);
+            .defineInRange("npc.manaRegenFraction", 0.01, 0.00, 1.0);
 
     public static final ModConfigSpec.IntValue NPC_WALK_THRESHOLD = BUILDER
             .comment("Max distance in blocks for NPC pathfinding; beyond this they teleport")
