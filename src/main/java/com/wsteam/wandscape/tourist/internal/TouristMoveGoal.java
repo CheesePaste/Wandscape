@@ -13,6 +13,7 @@ import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.building.internal.BuildingState;
 import com.wsteam.wandscape.core.event.NarrativeEventTriggered;
 import com.wsteam.wandscape.engine.WandscapeEngine;
+import com.wsteam.wandscape.engine.colony.ColonyActivation;
 import com.wsteam.wandscape.engine.service.ParticleService;
 import com.wsteam.wandscape.road.engine.WandscapeTags;
 import com.wsteam.wandscape.shared.data.Activity;
@@ -442,7 +443,9 @@ public class TouristMoveGoal extends Goal {
             lastPos = pos;
         }
 
-        if (noMoveTicks > 100 || totalNavTicks > 600) {
+        // 卡死判定：硬超时在水中放宽——渡水是合法慢移动，游泳前进的游客不该被 600 tick 硬上限
+        // 强制传送；水中只认水平不动（noMoveTicks，见 sameHorizontal 注释）。
+        if (noMoveTicks > 100 || (totalNavTicks > 600 && !tourist.isInWater())) {
             // 卡死 → 作废当前路径（停导航、清 waypoint）+ 之前的防卡死传送（传安全点）。
             // 连续第 STUCK_FALLBACK_TELEPORT_THRESHOLD 次卡死 → 直接传送到目标入口，不作废目标
             // （目标保留，由到达判定接管，避免反复重走同一卡死点后放弃）。
@@ -557,7 +560,7 @@ public class TouristMoveGoal extends Goal {
             lastPos = pos;
         }
 
-        if (noMoveTicks > 100 || totalNavTicks > 400) {
+        if (noMoveTicks > 100 || (totalNavTicks > 400 && !tourist.isInWater())) {
             noMoveTicks = 0;
             totalNavTicks = 0;
             lastPos = null;
@@ -1359,7 +1362,7 @@ public class TouristMoveGoal extends Goal {
                 lastPos = pos;
             }
 
-            if (noMoveTicks > 100 || totalNavTicks > 400) {
+            if (noMoveTicks > 100 || (totalNavTicks > 400 && !tourist.isInWater())) {
                 // 卡死 → 作废路径（停导航）+ 之前的防卡死传送（传安全点）；连续第
                 // STUCK_FALLBACK_TELEPORT_THRESHOLD 次卡死 → 直接传送到该 POI，不作废目标。
                 noMoveTicks = 0;
@@ -1948,7 +1951,12 @@ public class TouristMoveGoal extends Goal {
             var type = WandscapeApis.getElementApi().fromId(pick.getKey());
             if (type != null) {
                 String itemId = WandscapeApis.getElementApi().elementItemId(type);
-                if (itemId != null) sendBubble(itemId, pick.getValue());
+                if (itemId != null) {
+                    // 气泡显示实际入账数（创始人离线时按系数折减）。
+                    long scaled = ColonyActivation.scaleIncome(pick.getValue(),
+                            ColonyActivation.getIncomeMultiplier(colonyId));
+                    sendBubble(itemId, (int) scaled);
+                }
             }
         }
 

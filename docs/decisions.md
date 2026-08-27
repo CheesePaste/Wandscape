@@ -2,6 +2,43 @@
 
 本文件记录偏离直觉的设计选择及其原因，供后续开发快速理解「为什么这么做」。
 
+## 2026-08-27：NPC/游客水中两栖寻路——不再因落水卡死触发传送兜底
+
+**需求**（bug 报告）：NPC 和游客落水后难以正常寻路移动——要么站在水里不动/反复触发 rescue 传送，要么一渡河就被强制传送。
+
+**根因**（两层）：
+1. **纯陆地寻路器**：`WandscapeNavigation` 继承 `GroundPathNavigation`、用 `WalkNodeEvaluator`。该评估器只探索水平邻居、没有水中垂直邻居——较深的水里无法向上/向岸寻路，`moveTo` 失败，落入传送兜底（NPC self_teleport 仪式 / 游客 rescue teleport）。`GroundPathNavigation` 的水面路径也只在 `canFloat=true`（由 `FloatGoal` 隐式开启）下成立。
+2. **硬超时与慢移动不匹配**：原版陆地生物水中水平移速 ≈ 0.02×移速/0.2 ≈ 0.6~1 格/秒，而 NPC `PATHFIND_TIMEOUT=200tick`、游客 `totalNavTicks>600` 硬上限——任何稍长的渡水都在到达前被强制传送。
+
+**决策**：
+- **两栖寻路器**（`WandscapeNodeEvaluator extends AmphibiousNodeEvaluator`）：保留陆地语义（继承自 `WalkNodeEvaluator`）的同时提供水中垂直邻居（可上浮/爬岸）；把 `AmphibiousNodeEvaluator` 的 WALKABLE 代价 6.0 恢复为 0（中立）——殖民地 NPC 是走路生物，只把水当作可通行地形，不偏向游泳绕行。
+- **显式 `setCanFloat(true)`**：`WandscapeNavigation` 构造器与 `createPathFinder` 都开启，不再依赖 `FloatGoal` 的注册顺序。
+- **水中移速**：NPC 与游客 attribute supplier 加 `WATER_MOVEMENT_EFFICIENCY=1.0`（接近陆地速度）。
+- **水中放宽硬超时**：NPC `PATHFIND_TIMEOUT` 在 `npc.isInWater()` 时跳过（改靠 STUCK 卡死进度三连兜底，真正卡死仍会被传送）；游客 `totalNavTicks` 硬上限同样在水中跳过（只认 `noMoveTicks` 水平不动）。
+
+**为什么**：修正寻路根因（评估器）而非继续堆传送兜底；「慢但前进」的渡水是合法行为，不应被固定超时判死。速度属性选 `WATER_MOVEMENT_EFFICIENCY`（原版机制）而非自定义水中加速度，避免另起一套移动逻辑。
+
+**影响**：新增 `WandscapeNodeEvaluator`；`WandscapeNavigation` 换用 + 强制 canFloat；NPC/游客各加 `WATER_MOVEMENT_EFFICIENCY` 属性；`NavigationSystem`/`TouristMoveGoal` 三处硬超时水中放宽。陆地寻路行为不变（评估器继承陆地逻辑、代价中立）。
+
+## 2026-08-27：光束施法期间横移走位 + 施法姿态与光束同步
+
+**需求**（用户实测）：1) 殖民法师释放光束时几乎不走位——光束是 12 秒持续效果，整个期间站桩当固定炮台；2) 施法姿态比光束持续时间短，目标死亡后光束残留在原地几秒才消失（NPC 已放下手走开，光束还冻在死者位置）。
+
+**根因**（三点叠加）：
+1. **安全距离分支主动站桩**：`GuardCombat.engage` 在 LOS 通且目标 ≥ `guard.kiteStartDist`(9) 时 `cancelNpcNavigation` 钉住 NPC；风筝只在怪进入 9 格触发，远程怪时整根光束一次不动。
+2. **光束每 tick 抢转向**：`MagicBeamEntity.trackTarget` 强制 `casterNpc.faceTarget(aim)`，与 `MoveControl`（MOVE_TO 靠设 yRot + 前进输入寻路）每 tick 互抢 yRot、后 tick 者赢——即便走位被触发，路径也会被掰回目标方向。
+3. **光束活过战斗结束**：`SelfDefenseExecutor` / `EvilMageCastGoal` 战斗结束不淡出光束（守卫 `GuardAttackExecutor` 已 `setLifetime(5)`），目标死亡后光束冻结在死者位置继续渲染剩余寿命（最多 ~11s）；且施法姿态 `manualCast`（锁 = 全程一半 = 120t）比光束（240t）短。
+
+**决策**：
+- **光束持续期间横移走位**（`GuardCombat`）：`engage` 安全距离分支 `beam != null` → `strafe`（沿以目标为圆心、`standoff` 半径圆周、按 `npc.strafeDir` 方向 30° 步进的可站立落点，可达性约束与 `findRetreatPos` 同款：可站立 + NPC→落点 无墙 + 落点→目标 有 LOS）；`beam == null`（法阵引导/两发之间）才站定瞄准再施法。`strafeDir` 每新发一束交替，避免始终同向绕圈漂移。落点不可用（贴墙）静默站定继续打。
+- **走位期间不强制转向**（`MagicBeamEntity.trackTarget`）：`faceTarget` 仅当 `casterNpc.getNavigation().isDone()`（静止）时执行，否则交给 `MoveControl` 转向；光束源点仍每 tick 跟随持杖手，输出不受影响。
+- **施法姿态拉满到光束全程**（`MagicCaster.castNpcBeam`）：`tryCastSpell`（机械锁仍保持减半 120t）后追加 `startManualCast(全程 240t)`——视觉上举杖施法与光束同生同灭；战斗结束由 `GuardCombat.markCombatEnd → npc.endManualCast()` 落姿，避免战后站姿残留。
+- **战斗结束淡出光束**：`SelfDefenseExecutor`（peace 无威胁 / target 为 null 两完成分支）与 `EvilMageCastGoal.stop()` 补 `beam.setLifetime(5)`，与守卫一致。
+
+**为什么**：光束是长持续效果，站桩 12s 是活靶子，「边走边打」是远程施法者的标准生存手段，且光束独立实体 + `suppressWandering` 放行天然支持移动施法——零新移动机制，纯行为补充。施法同步的**真正根因**是光束活过战斗结束（自防御不淡出），淡出光束即两者同灭；姿态拉满只补视觉（举杖到光束消失），机械锁保持减半不阻塞 L0 危机自奶（2026-08 施法锁减半决策的边界不破）。
+
+**影响**：`GuardCombat` 增 `strafe`/`findStrafePos`/`STRAFE_STEP`；`WandscapeNpc` 增瞬态 `strafeDir` + `endManualCast()`；`MagicBeamEntity.trackTarget` faceTarget 门控；`MagicCaster` 姿态拉满；`SelfDefenseExecutor`/`EvilMageCastGoal` 战斗结束淡出光束。
+
 ## 2026-08-27：Road 编辑器铲平模式（DESTROY_FILL）严格遵循基准平面，禁止贴合地表方块
 
 **需求**（用户指令）：Road 编辑器的铲平模式（Flatten / DESTROY_FILL）不要贴合地表起伏，严格遵循基准平面。
@@ -634,6 +671,25 @@
 **为什么**：无人在线时殖民地仍全速运转（游客来逛、NPC 建造、每日结算）会让「挂机党」的殖民地离线也攒钱/升级，且空服持续跑 force-load 造/产白白耗资源。按创始人判定满足「一人一殖民地」模型；无创始人兜底防误冻。
 
 **影响**：关掉开关后，创始人不在线的殖民地完全冻结（不新游客/不建造/不结算），上线瞬间恢复；游客占位/排队、NPC 任务、建筑 footprint lease 全部保留。
+
+## 2026-08-27：离线收益折减取代全有全无冻结（colony.offlineIncomeMultiplier）
+
+**需求**（用户指令）：`colony.runWhenPlayerOffline` 一个 bool 决定离线殖民地要么 100% 收入要么 0%——100% 对在线玩家不公平、0% 对离线玩家太不友好。改为一个 float 收益系数（默认 0.2 = 20%）：创始人不在线时，**商店利润、服务设施元素产出、殖民地经验获取**三路收入降到 20%，殖民地照常运行。
+
+**决策**（取代 2026-08-14 的 `colony.runWhenPlayerOffline`）：
+- **Config**：`colony.runWhenPlayerOffline`（bool）→ `colony.offlineIncomeMultiplier`（double，`defineInRange [0,1]`，默认 0.2）。0 = 完全等价旧 `false`（整镇冻结）；1.0 = 等价旧 `true`（离线满收益）。旧 key 在 TOML 中成为孤儿条目，不迁移。
+- **激活判定**：`ColonyActivation.isColonyActive` 改为「收益系数 > 0 即运行」；新增 `getIncomeMultiplier(colonyId)`——创始人在线/无创始人/无服务器 → 1.0，否则返回配置值。
+- **只折收入侧，不折消耗侧**：物品售价不变（商店按「成本 + 折减利润」入账，永不亏损）；NPC 建造/商店补货的元素消耗照常 100%。离线挂机净收益自然低于在线，消耗不打折是「挂机收益降低」的代价，不额外动 BuildingTaskSource/restock。
+- **折减点（三个收益来源，各一处统一收口）**：
+  - 商店利润：`ShopStockManager.purchase`（profit = 售价 − 元素成本，折减后总收入 = 成本 + round(利润×系数)）。
+  - 服务产出：`TouristSimulation.performServiceInteraction`（`elementOutput` × 系数；TouristMoveGoal 服务气泡同步显示折减后数量）。
+  - 殖民地经验：`TouristSpawnSystem.grantExperience` + `TouristSimSystem.grantExperience`（live 与 shadow 双路径都折减；`ColonyLevelManager.addExperience` 不动，未来非游客经验源不受影响）。
+  - 游客/影子 sim 的商店与服务交互都走 `ShopStockManager` / `TouristSimulation` 同一条收口，实体路径与卸载 sim 路径一致。
+- **纯逻辑**：折减计算收敛为 `ColonyActivation.scaleIncome(value, m)`（四舍五入、不超原值）与 `scaleProfit(cost, profit, m)`（成本不变、永不亏损），单测 `ColonyActivationTest`。
+
+**为什么**：全有全无对两端都苛刻——离线 100% 让挂机党离线攒钱升级碾压在线玩家，0% 让短期不上线的玩家殖民地彻底停滞（游客占位、NPC 任务、建筑 lease 全冻结，回来才恢复）。连续系数让服主在「公平」与「友好」间细调：默认 0.2 保留挂机价值但显著低于在线；0 保留旧硬冻结选项；1.0 保留旧全速选项。只折收入不折消耗是用户明确指定的边界，避免商店亏损与改动面扩散。
+
+**影响**：默认值从旧 `true`（离线 100% 收入）变为 0.2（离线 20% 收入），现有服务器离线经济产出显著下降；愿恢复旧行为的服主设 1.0 即可。
 
 ## 2026-08-14：玩家睡觉跳过夜晚 → 游客夜间批量快进
 
@@ -1366,3 +1422,13 @@
 **为什么**：category 在放置层面已名存实亡（不校验匹配），继续用它驱动门控必然踩坑；改为跟随玩家可见、可操作的策略组，门控与分组一致。陨石想打单体，把它拖进单体组即可，不必改每个法术的门控配置。
 
 **影响**：spell JSON 的 category 全部改 normal + 补 default_group；CastBrain 接口改吃 SpellRef；铁魔法合成 def category 恒 NORMAL、targetMode/conditions 按组名；策略预设排序按策略组；MagicDefTest/CastBrainTest 同步更新。
+
+## 2026-08-27：敌数门控不匹配 = 最低优先级降级，非硬禁用
+
+**需求**（用户反馈）：敌数 > 3 时若只剩单体攻击魔法，NPC 也应施放；敌数 < 3 时只剩群攻魔法同理——不匹配的组不应被硬性禁用，只是优先级最低。
+
+**决策**：`CastBrain.select` 不再 `continue` 跳过门控不匹配的法术，改为两态选择——敌数与策略组匹配的法术按原优先级扫描，命中即返回；全部不可用时回退到第一个通过其余全部检查（`castable`/目标规则/`conditions`）但门控不匹配的法术（`known` 已是优先级序，第一个即最高优先级候选）。`enemyCountGate` 语义从「硬门槛」变为「优先级分层」。
+
+**为什么**：原实现把敌数门控当成硬性开关，导致「怪多但只有单体、怪少但只有群攻」时 NPC 一个法术也不放、只会基础攻击，浪费已装备的魔法。降级语义保留「敌数匹配优先」的意图（避免敌少时砸 AOE 浪费蓝、敌多时单发效率低），又消除僵局。`castable`/目标规则/`conditions` 仍是硬门槛，只有敌数门控是优先级。
+
+**影响**：`CastBrainTest` 相关断言从 `assertNull`（不选）改为断言降级后仍选中；`docs/spell-casting.md` 5.2 敌数门控段落与二十三章同步更新。无存档迁移。

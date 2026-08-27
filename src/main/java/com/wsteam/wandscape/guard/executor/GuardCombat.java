@@ -83,9 +83,11 @@ public final class GuardCombat {
         npc.setAiWanderingEnabled(false);
     }
 
-    /** 战斗结束：恢复 idle wandering（suppressWandering=false）。 */
+    /** 战斗结束：恢复 idle wandering（suppressWandering=false），并立即落下施法姿态
+     *  （配合光束淡出，避免「姿态拉满到光束全程」后战后残留站桩）。 */
     public static void markCombatEnd(WandscapeNpc npc) {
         npc.setAiWanderingEnabled(true);
+        npc.endManualCast();
     }
 
     // ── 单轮战斗动作：光束重定向 / LOS / 寻路 / 施法 ──
@@ -165,11 +167,13 @@ public final class GuardCombat {
             return;
         }
 
-        // 看得见且安全距离：停止移动，面向目标（每轮战斗循环刷新朝向，目标走位时脸跟着转）。
-        // 无光束则经 CastBrain 选魔法再施放（CD/蓝/锁在 MagicCaster 内部门控原子复验）
-        cancelNpcNavigation(world, npcId, npc); // 战斗安全版：world=null（敌对法师）自动跳过
-        npc.faceTarget(BlockPos.containing(target.getBoundingBox().getCenter()));
-        if (beam == null) {
+        // 看得见且安全距离：光束持续中绕目标横向走位（边走边打，光束独立跟随持杖手，不再是固定炮台）；
+        // 法阵引导/两发之间（无光束）才站定瞄准再施法。
+        if (beam != null) {
+            strafe(level, npc, world, npcId, target, standoff);
+        } else {
+            cancelNpcNavigation(world, npcId, npc); // 战斗安全版：world=null（敌对法师）自动跳过
+            npc.faceTarget(BlockPos.containing(target.getBoundingBox().getCenter()));
             castSelected(level, npc, target, circleId, color);
         }
     }
@@ -195,6 +199,8 @@ public final class GuardCombat {
         }
         boolean ok = MagicSpellExecutors.dispatch(level, npc, target, chosen.def(), circleId, color);
         if (ok) {
+            // 每新发一束交替走位绕向，避免始终同一方向绕圈漂移
+            npc.strafeDir = -npc.strafeDir;
             // 杖尖彩色爆闪（施法颜色）
             float[] rgb = rgbOf(color);
             ParticleService.burstColored(level, npc.getStaffPosition(), rgb[0], rgb[1], rgb[2], 6, 0.10f, 15, false);
@@ -643,6 +649,54 @@ public final class GuardCombat {
                 if (standY == Integer.MIN_VALUE) continue;
                 BlockPos cand = new BlockPos(bx, standY, bz);
                 if (positionHasLineOfSight(level, npcPos, staffOf(cand))) return cand;
+            }
+        }
+        return null;
+    }
+
+    // ── 光束走位：绕目标横向移动（边走边打），与风筝/群殴共用可达性约束 ──
+
+    /** 光束走位每次重选的轨道步进角（弧度）：沿走位方向前进 30°（半径 13 时弧长约 6.8 格），
+     *  到达落点后下一轮再前进 30°——连续绕圈而非来回振荡；弧长远小于传送兜底阈值，
+     *  避免 NavigationSystem repath 累积触发 self_teleport。 */
+    private static final double STRAFE_STEP = Math.PI / 6;
+
+    /**
+     * 光束持续期间绕目标横向走位：沿以目标为圆心的圆周、按 {@code npc.strafeDir} 方向前进
+     * {@link #STRAFE_STEP}，由 ECS 导航驱动（施法不锁移动，光束独立跟随持杖手）。落点必须
+     * 可站立 + NPC→落点 无墙 + 落点→目标 有 LOS（与 {@link #findRetreatPos} 同约束）；
+     * 无可用落点（贴墙等）静默站定继续打，不寻路进墙。
+     */
+    private static void strafe(ServerLevel level, WandscapeNpc npc, World world, long npcId,
+                               LivingEntity target, double standoff) {
+        if (world == null || world.movementOps == null) return;
+        NavigationState nav = world.get(npcId, NavigationState.class);
+        if (nav != null && nav.mode != NavigationState.Mode.IDLE) return; // 已在走位中，到达后再重选
+        BlockPos dest = findStrafePos(level, npc, target, standoff);
+        if (dest == null) return;
+        world.movementOps.navigateTo(npcId, dest.getX(), dest.getY(), dest.getZ());
+    }
+
+    /** 走位落点：目标为圆心、standoff 半径圆周上，沿 strafeDir 方向前进 1~2 个 {@link #STRAFE_STEP}
+     *  的可站立格（覆盖落点不可站立的空缺）；要求 NPC→落点 无墙 且 落点→目标 有 LOS。
+     *  无任何可用落点返回 null（站定继续打）。 */
+    private static BlockPos findStrafePos(ServerLevel level, WandscapeNpc npc, LivingEntity target, double standoff) {
+        Vec3 threat = target.getBoundingBox().getCenter();
+        Vec3 npcPos = npc.getStaffPosition();
+        Vec3 radial = npcPos.subtract(threat);
+        if (radial.lengthSqr() < 0.01) return null;
+        double baseAngle = Math.atan2(radial.z, radial.x);
+        int threatFeetY = Mth.floor(threat.y);
+        for (int step = 1; step <= 2; step++) {
+            double angle = baseAngle + npc.strafeDir * step * STRAFE_STEP;
+            int bx = Mth.floor(threat.x + Math.cos(angle) * standoff);
+            int bz = Mth.floor(threat.z + Math.sin(angle) * standoff);
+            int standY = findStandingYNear(level, bx, bz, threatFeetY);
+            if (standY == Integer.MIN_VALUE) continue;
+            BlockPos cand = new BlockPos(bx, standY, bz);
+            if (positionHasLineOfSight(level, npcPos, staffOf(cand))
+                    && positionHasLineOfSight(level, staffOf(cand), threat)) {
+                return cand;
             }
         }
         return null;

@@ -136,7 +136,10 @@ public class NavigationSystem implements System {
             return;
         }
 
-        if (elapsed > PATHFIND_TIMEOUT) {
+        // 渡水是合法的慢移动：原版水中移速（即便本模组把 WATER_MOVEMENT_EFFICIENCY 提到 1.0）
+        // 仍明显慢于陆地，固定超时会把正在游过河/湖的 NPC 提前判死并触发传送。水中改靠下方
+        // 卡死进度检测（STUCK_* 三连）兜底——真正卡死（无水平推进）照样会被传送，慢但前进的不受影响。
+        if (elapsed > PATHFIND_TIMEOUT && !npc.isInWater()) {
             Log.info(TAG, "[NavSys] NPC {} — timeout {} ticks, switching to teleport", npcId, elapsed);
             switchToRitualTeleport(nav, npcId, world);
             return;

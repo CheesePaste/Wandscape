@@ -7,6 +7,7 @@ import java.util.UUID;
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.building.network.MageHutActionPacket;
 import com.wsteam.wandscape.building.network.MageHutDataPacket;
+import com.wsteam.wandscape.building.network.OpenWarehousePacket;
 import com.wsteam.wandscape.building.network.MageHutDataPacket.MageCandidate;
 import com.wsteam.wandscape.core.types.AttributeType;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
@@ -163,6 +164,11 @@ public class MageHutScreen extends MedievalScreen {
         } else {
             initEmpty(contentTop);
         }
+
+        // Open the colony warehouse (element counts & stored items) — left of Close
+        addRenderableWidget(new MedievalButton(
+                leftPos + PW - 54 - 44 - 4, topPos + PH - 20, 44, 16,
+                I18n.name("gui.wandscape.common.open_warehouse", "Open Warehouse"), this::onOpenWarehouse));
 
         // Close button at bottom right
         addRenderableWidget(new MedievalButton(
@@ -796,6 +802,12 @@ public class MageHutScreen extends MedievalScreen {
         Minecraft.getInstance().getSoundManager().play(
                 SimpleSoundInstance.forUI(SoundEvents.VILLAGER_YES, 1.0f));
         setToast(I18n.name("gui.wandscape.mage_hut.toast_assigned", "法师已成功入住小屋！"), MedievalColors.SUCCESS_GREEN);
+    }
+
+    /** Open the colony warehouse to check remaining element counts. */
+    private void onOpenWarehouse() {
+        if (buildingPos == null) return;
+        PacketDistributor.sendToServer(new OpenWarehousePacket(buildingPos));
     }
 
     private void sendAction(String action) {

@@ -102,6 +102,9 @@ public final class MagicCaster {
         // 锁 = 引导全程的一半：缩短施法互斥窗口，守卫施法后能更快自奶/反击，避免站桩被打死
         int lockDuration = (BEAM_SPAWN_DELAY + spec.durationTicks + BEAM_TAIL) / 2;
         if (!npc.tryCastSpell(BEAM_MAGIC_ID, beamBaseCooldown(), beamManaCost(), lockDuration)) return false;
+        // 施法姿态拉满到光束全程（机械锁仍保持减半不阻塞自奶）：视觉上举杖施法与光束同生同灭，
+        // 不再「NPC 已放下手、光束还留在原地几秒」。战斗结束由 markCombatEnd → endManualCast 落姿。
+        npc.startManualCast(BEAM_SPAWN_DELAY + spec.durationTicks + BEAM_TAIL);
 
         UUID effectId = npc.getUUID();
         Vec3 hand = npc.getStaffPosition();

@@ -1,6 +1,7 @@
 package com.wsteam.wandscape.npc.entity;
 
 import com.wsteam.wandscape.guard.executor.GuardCombat;
+import com.wsteam.wandscape.magic.entity.MagicBeamEntity;
 import com.wsteam.wandscape.magic.internal.MagicCaster;
 
 import net.minecraft.server.level.ServerLevel;
@@ -81,5 +82,10 @@ public class EvilMageCastGoal extends Goal {
     public void stop() {
         mage.setCasting(false);
         mage.setDebugTarget(null);
+        // 目标失效/离战：光束快速淡出，不残留原地（与守卫/自防御一致）
+        if (mage.level() instanceof ServerLevel level) {
+            MagicBeamEntity beam = GuardCombat.findActiveBeam(level, mage);
+            if (beam != null) beam.setLifetime(5);
+        }
     }
 }

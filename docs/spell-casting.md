@@ -121,7 +121,7 @@ L2 兜底层
 }
 ```
 
-**敌数门控（按策略组，非 per-spell / 非 category）**：**单体攻击组**的法术在敌数 ≤ 3 时可施放，**群体攻击组**的法术在敌数 ≥ 3 时可施放（阈值见 `WandscapeConstants.CAST_SINGLE_TARGET_MAX_ENEMIES` / `CAST_AOE_MIN_ENEMIES`）；防御/支援组不设敌数门槛。组 = 玩家在策略页放置法术的桶（`EquippedMagicComponent`），**非法术自身 category**——把群攻法术（如 meteor）拖进单体组 → 敌数 1 也能对单体砸；留在群攻组 → 敌数 ≥ 3 才放。原各魔法 JSON 里的 `min_enemies` 已移除。
+**敌数门控（按策略组，非 per-spell / 非 category）——优先级降级，非硬性禁用**：**单体攻击组**的法术在敌数 ≤ 3 时正常优先，**群体攻击组**的法术在敌数 ≥ 3 时正常优先（阈值见 `WandscapeConstants.CAST_SINGLE_TARGET_MAX_ENEMIES` / `CAST_AOE_MIN_ENEMIES`）；防御/支援组不设敌数门槛。敌数与组不匹配的法术（敌数 &gt; 3 只剩单体组、敌数 &lt; 3 只剩群攻组）**不直接禁用，降级为最低优先级**——有其他匹配法术就选匹配的，仅当没有任何匹配法术可用时才施放它（避免「只剩单体攻击却一个也不放」的僵局）。组 = 玩家在策略页放置法术的桶（`EquippedMagicComponent`），**非法术自身 category**——把群攻法术（如 meteor）拖进单体组 → 敌数 1 也能对单体砸；留在群攻组 → 敌数 ≥ 3 才放。原各魔法 JSON 里的 `min_enemies` 已移除。
 
 **防御 vs 治疗的血线竞争**靠阈值错开解决，不靠运行时互斥：护盾配 `self_hp_max: 0.6`（血量偏高时保命），治疗配 `ally_hp_max: 0.7`（血线偏低才奶）——两者天然不会同时抢。heal 的 `ally_hp_max` 只管 **队友**（快照 `allyLowestHpRatio` 排除施法者自己），**自己或治疗半径（6 格）内友方掉血走 L0 硬性覆盖**（见第四节）——L0 现也管濒死队友，L1 的 `ally_hp_max` 只是正常线，不依赖它保命。
 
@@ -427,7 +427,7 @@ P1/P2 玩家无感知（内部重构），P3 起见 UI。每个阶段完成即�
 
 - **`MagicDef.Category` 收敛为 3 类**：`NORMAL`（原 single_target/aoe/defense/support 全部并入）/ `SPECIAL`（teleport/heal）/ `ALTAR`（revive）。`category` 只表性质，不再决定敌数门控与预设排序。
 - **策略组 = `EquippedMagicComponent` 4 桶**（single_target/aoe/defense/support，各 ≤3 槽），玩家自由放置。
-- **敌数门控跟随策略组**（`CastBrain.enemyCountGate(SpellRef, snapshot)`）：单体攻击组 ≤ 3、群体攻击组 ≥ 3、防御/支援组无门槛。法术以新 `SpellRef(MagicDef, group)` 携带所在组——`CastBrain.knownSpells` 从桶循环带回组，`select` 门控与 `resolvePriority` 预设排序都按组判。
+- **敌数门控跟随策略组**（`CastBrain.enemyCountGate(SpellRef, snapshot)`）：单体攻击组 ≤ 3、群体攻击组 ≥ 3、防御/支援组无门槛。法术以新 `SpellRef(MagicDef, group)` 携带所在组——`CastBrain.knownSpells` 从桶循环带回组，`select` 门控与 `resolvePriority` 预设排序都按组判。**2026-08-27 起门控不匹配降级为最低优先级而非硬禁用**（见 5.2）。
 - **`default_group` 字段**（可选）：normal 法术的默认策略组（beam→single_target、meteor→aoe、petrification→defense、enfeeble_field→aoe、conversion→defense、fortification→support、desperation→single_target），供默认装备种子与 `equippableCategoryOf` 兜底装桶；缺省 → support。
 - **玩法**：陨石对单体放行 = 把它拖进**单体攻击组**（按组 ≤3）；留在群体攻击组则敌数 ≥3 才砸。预设（火力/均衡/支援/防御）排序也按策略组。
 - **铁魔法合成**：`IronSpellsHelper.getSyntheticDef` 合成 def 的 category 恒 NORMAL，targetMode/conditions 按组名字符串 switch；组由 SpellRef 携带。

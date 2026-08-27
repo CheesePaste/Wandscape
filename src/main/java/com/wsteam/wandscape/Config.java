@@ -92,11 +92,14 @@ public class Config {
             .comment("Disable to review large build/reconstruction tasks before NPCs start work.")
             .define("general.autoApproveTasks", false);
 
-    public static final ModConfigSpec.BooleanValue COLONY_RUN_WHEN_PLAYER_OFFLINE = BUILDER
-            .comment("是否在小镇创始人玩家不在线时仍运行其小镇自动化（NPC 建造/生产、游客经济、每日结算）。"
-                    + "默认 true = 服务器无人也在运行；设为 false = 玩家不在线时其小镇原地冻结，上线后自动恢复。"
-                    + "无创始人的小镇视为始终运行。")
-            .define("colony.runWhenPlayerOffline", true);
+    public static final ModConfigSpec.DoubleValue COLONY_OFFLINE_INCOME_MULTIPLIER = BUILDER
+            .comment("创始人不在线时小镇的离线收益系数（0~1）：商店利润、服务设施元素产出、殖民地经验获取 × 该系数。"
+                    + "默认 0.2 = 离线收益降为 20%（1.0 = 离线与在线同收益）。"
+                    + "只打折收入侧：物品售价不变（商店按成本+折减利润入账，永不亏损），"
+                    + "NPC 建造/商店补货的元素消耗照常 100%。"
+                    + "设为 0 = 玩家不在线时其小镇整体冻结（NPC 建造/生产、游客经济、每日结算暂停，上线恢复）。"
+                    + "无创始人的小镇视为始终满收益。")
+            .defineInRange("colony.offlineIncomeMultiplier", 0.2, 0.0, 1.0);
 
     public static final ModConfigSpec.IntValue INITIAL_ELEMENT_COUNT = BUILDER
             .comment("每种元素在小镇仓库首次建立时的初始数量（每小镇一次，只种一次）。")

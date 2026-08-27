@@ -112,6 +112,7 @@
   "gui.wandscape.npc.title": "Mage Info",
   "gui.wandscape.npc.wand": "Wand",
   "gui.wandscape.common.close": "Close",
+  "gui.wandscape.common.open_warehouse": "Open Warehouse",
   "gui.wandscape.common.submit": "Submit",
   "gui.wandscape.common.search": "Search",
   "gui.wandscape.common.creator_label": "Creator",
