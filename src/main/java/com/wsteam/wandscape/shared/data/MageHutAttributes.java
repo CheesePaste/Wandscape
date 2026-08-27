@@ -10,7 +10,10 @@ import com.wsteam.wandscape.core.types.AttributeType;
  *
  * <p>Each of the seven mage attributes has a base range {@code [lower, upper]}
  * (the rolled value at level 1), a per-level additive bonus, and a per-train
- * increment. A mage's effective attribute is:
+ * increment. Training is uniform at {@link #MAX_TRAIN_STEPS} steps per attribute
+ * (increment = range / 20); the cost of one training step grows exponentially by
+ * step index, paid in a per-attribute pair of elements, while a level-up cost is
+ * linear and paid in all seven elements evenly. A mage's effective attribute is:
  *
  * <pre>
  *   effective = base + perLevel × (level − 1) + equipBonus
@@ -33,12 +36,12 @@ public final class MageHutAttributes {
     private static final float EPS = 1e-4f;
 
     private static final Map<AttributeType, AttrSpec> SPECS = Map.of(
-            AttributeType.MAX_HP,       new AttrSpec(20f, 40f,  2f,    2f),
-            AttributeType.MOVE_SPEED,   new AttrSpec(0.2f, 0.4f, 0.02f, 0.02f),
-            AttributeType.SPELL_POWER,  new AttrSpec(0.5f, 1.5f, 0.05f, 0.1f),
-            AttributeType.WORK_SPEED,   new AttrSpec(0.5f, 1.5f, 0.05f, 0.1f),
-            AttributeType.SPELL_SPEED,  new AttrSpec(0.5f, 1.5f, 0.05f, 0.1f),
-            AttributeType.ARMOR_VALUE,  new AttrSpec(0f,   8f,   0.5f,  0.5f),
+            AttributeType.MAX_HP,       new AttrSpec(20f, 40f,  2f,    1f),
+            AttributeType.MOVE_SPEED,   new AttrSpec(0.2f, 0.4f, 0.02f, 0.01f),
+            AttributeType.SPELL_POWER,  new AttrSpec(0.5f, 1.5f, 0.05f, 0.05f),
+            AttributeType.WORK_SPEED,   new AttrSpec(0.5f, 1.5f, 0.05f, 0.05f),
+            AttributeType.SPELL_SPEED,  new AttrSpec(0.5f, 1.5f, 0.05f, 0.05f),
+            AttributeType.ARMOR_VALUE,  new AttrSpec(0f,   8f,   0.5f,  0.4f),
             AttributeType.MAX_MANA,     new AttrSpec(150f, 250f, 15f,   5f));
 
     /** All seven attributes in panel display order (index 0..6). */
@@ -53,6 +56,58 @@ public final class MageHutAttributes {
     public static float upper(AttributeType type) { return SPECS.get(type).upper(); }
     public static float perLevel(AttributeType type) { return SPECS.get(type).perLevel(); }
     public static float trainStep(AttributeType type) { return SPECS.get(type).trainStep(); }
+
+    // ── Cost model ──
+
+    /** Training cost curve: step-1 per-element cost and exponential growth per step. */
+    public static final double TRAIN_BASE = 500.0;
+    public static final double TRAIN_GROWTH = 1.28;
+
+    /** Level-up cost: per element × (level+1), all seven elements consumed evenly. */
+    public static final long UPGRADE_BASE = 150;
+
+    /** Uniform training steps per attribute (each trains 20 times from lower to upper). */
+    public static final int MAX_TRAIN_STEPS = 20;
+
+    /** Per-attribute training element set (2 distinct elements each; all 7 elements appear twice). */
+    private static final Map<AttributeType, List<ElementType>> TRAIN_ELEMENTS = Map.of(
+            AttributeType.MAX_HP,      List.of(ElementType.EARTH, ElementType.METAL),
+            AttributeType.MOVE_SPEED,  List.of(ElementType.WOOD, ElementType.WIND),
+            AttributeType.SPELL_POWER, List.of(ElementType.FIRE, ElementType.DARK),
+            AttributeType.WORK_SPEED,  List.of(ElementType.EARTH, ElementType.WOOD),
+            AttributeType.SPELL_SPEED, List.of(ElementType.WIND, ElementType.WATER),
+            AttributeType.ARMOR_VALUE, List.of(ElementType.METAL, ElementType.DARK),
+            AttributeType.MAX_MANA,    List.of(ElementType.FIRE, ElementType.WATER));
+
+    /** Elements consumed by one training step of the given attribute. */
+    public static List<ElementType> trainElements(AttributeType type) {
+        return TRAIN_ELEMENTS.get(type);
+    }
+
+    /**
+     * 0-based training step index for a base value, clamped to
+     * {@code [0, MAX_TRAIN_STEPS-1]}. Step 0 (base at lower) is the cheapest,
+     * step 19 (base near upper) the most expensive.
+     */
+    public static int trainStepIndex(AttributeType type, float base) {
+        int idx = Math.round((base - lower(type)) / trainStep(type));
+        return Math.max(0, Math.min(MAX_TRAIN_STEPS - 1, idx));
+    }
+
+    /** Per-element cost of the next training step from the given base. */
+    public static long trainCostPerElement(AttributeType type, float base) {
+        return Math.round(TRAIN_BASE * Math.pow(TRAIN_GROWTH, trainStepIndex(type, base)));
+    }
+
+    /** Elements consumed by a mage level-up: all seven, evenly. */
+    public static List<ElementType> upgradeElements() {
+        return List.of(ElementType.values());
+    }
+
+    /** Per-element cost of leveling from {@code level} to {@code level + 1}. */
+    public static long upgradeCostPerElement(int level) {
+        return UPGRADE_BASE * (Math.max(0, level) + 1L);
+    }
 
     /**
      * Effective attribute = base + perLevel × (level−1) + equipBonus.

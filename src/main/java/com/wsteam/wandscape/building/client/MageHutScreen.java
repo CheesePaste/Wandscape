@@ -11,9 +11,10 @@ import com.wsteam.wandscape.building.network.OpenWarehousePacket;
 import com.wsteam.wandscape.building.network.MageHutDataPacket.MageCandidate;
 import com.wsteam.wandscape.core.types.AttributeType;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
+import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.data.MageHutAttributes;
-import com.wsteam.wandscape.shared.registry.WandscapeConstants;
 import com.wsteam.wandscape.shared.ui.I18n;
+import com.wsteam.wandscape.shared.ui.theme.WandscapeTheme;
 import com.wsteam.wandscape.shared.ui.component.MedievalButton;
 import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
 import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
@@ -203,12 +204,12 @@ public class MageHutScreen extends MedievalScreen {
                         : Component.literal("Lv." + mageLevel));
 
         MedievalButton upgradeBtn = new MedievalButton(
-                rx + 8, ry + 110, rw - 16, 20, upLabel,
+                rx + 8, ry + 118, rw - 16, 20, upLabel,
                 this::onUpgrade);
         upgradeBtn.active = canLvl;
         addRenderableWidget(upgradeBtn);
 
-        int bY = ry + 134;
+        int bY = ry + 144;
         int bW = 43;
         int bH = 18;
         int bGap = 4;
@@ -450,14 +451,27 @@ public class MageHutScreen extends MedievalScreen {
             g.drawString(font, maxStr, rightX + 8, rightY + 34, MedievalColors.ACCENT_GOLD);
         }
 
-        String costStr = I18n.name("gui.wandscape.mage_hut.train_cost", "消耗各元素: %d",
-                WandscapeConstants.MAGE_HUT_COST_PER_ELEMENT).getString();
-        g.drawString(font, costStr, rightX + 8, rightY + 46, MedievalColors.TEXT_DIM);
+        if (canTrain) {
+            List<ElementType> els = MageHutAttributes.trainElements(selType);
+            long cost = MageHutAttributes.trainCostPerElement(selType, selBase);
+            int cx = rightX + 8;
+            for (ElementType t : els) {
+                WandscapeTheme.drawIcon(g, WandscapeTheme.elementIcon(t.getId()),
+                        cx, rightY + 46, 14, 14, WandscapeTheme.elementColor(t.getId()));
+                g.drawString(font, "×" + cost, cx + 17, rightY + 47, MedievalColors.TEXT_DIM);
+                cx += 17 + font.width("×" + cost) + 6;
+            }
+        }
 
         // ── Card 2: Promotion & Commands Module ──
         drawMinimalBox(g, rightX + 4, rightY + 88, rightW - 8, 88, false, false);
         g.drawCenteredString(font, I18n.name("gui.wandscape.mage_hut.command_title", "晋升与指令"),
                 rightX + rightW / 2, rightY + 94, MedievalColors.ACCENT_GOLD);
+        if (MageHutAttributes.canLevelUp(mageLevel, colonyLevel)) {
+            String upCost = I18n.name("gui.wandscape.mage_hut.upgrade_cost", "消耗 7 系元素各 %d",
+                    MageHutAttributes.upgradeCostPerElement(mageLevel)).getString();
+            g.drawString(font, upCost, rightX + 8, rightY + 104, MedievalColors.TEXT_DIM);
+        }
     }
 
     private void renderEmpty(GuiGraphics g, net.minecraft.client.gui.Font font,

@@ -2,6 +2,7 @@ package com.wsteam.wandscape.building.internal;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import javax.annotation.Nullable;
@@ -161,7 +162,8 @@ public final class MageHutServerHandler {
                     "[Wandscape] The mage is already at the colony level (%d).", colonyLevel), true);
             return;
         }
-        if (!chargeElements(sp, level, colonyId)) return;
+        long cost = MageHutAttributes.upgradeCostPerElement(resident.level());
+        if (!chargeElements(sp, level, colonyId, MageHutAttributes.upgradeElements(), cost)) return;
 
         MageHutResident next = resident.withLevel(resident.level() + 1);
         data.setMageHutResident(buildingId, next);
@@ -187,7 +189,8 @@ public final class MageHutServerHandler {
                     "[Wandscape] %s is already at its base cap.", type.name()), true);
             return;
         }
-        if (!chargeElements(sp, level, colonyId)) return;
+        long cost = MageHutAttributes.trainCostPerElement(type, resident.base(type));
+        if (!chargeElements(sp, level, colonyId, MageHutAttributes.trainElements(type), cost)) return;
 
         MageHutResident next = resident.withBase(type,
                 MageHutAttributes.trainedValue(type, resident.base(type)));
@@ -275,22 +278,31 @@ public final class MageHutServerHandler {
         return null;
     }
 
-    /** Subtract the per-element cost once from the colony warehouse, checking first. */
-    private static boolean chargeElements(ServerPlayer sp, ServerLevel level, UUID colonyId) {
+    /** Subtract {@code cost} of each element in {@code required} from the colony warehouse, checking first. */
+    private static boolean chargeElements(ServerPlayer sp, ServerLevel level, UUID colonyId,
+                                          List<ElementType> required, long cost) {
         ColonyItemBank bank = ColonyItemBank.get(level);
         if (bank == null) {
             ScreenFeedbackPacket.send(sp, I18n.name("message.wandscape.mage_hut.no_bank",
                     "[Wandscape] The warehouse is unavailable."), true);
             return false;
         }
-        long cost = WandscapeConstants.MAGE_HUT_COST_PER_ELEMENT;
-        if (!ElementType.allEnough(bank.getElementSnapshot(colonyId), cost)) {
+        Map<ElementType, Long> balances = bank.getElementSnapshot(colonyId);
+        StringBuilder missing = new StringBuilder();
+        for (ElementType t : required) {
+            if (balances.getOrDefault(t, 0L) < cost) {
+                if (!missing.isEmpty()) missing.append("、");
+                missing.append(I18n.name("element.wandscape." + t.getId(), t.getId()).getString())
+                        .append(" ×").append(cost);
+            }
+        }
+        if (!missing.isEmpty()) {
             ScreenFeedbackPacket.send(sp,
                     I18n.name("message.wandscape.mage_hut.insufficient_elements",
-                            "[Wandscape] Insufficient elements: costs %d of every element.", cost), true);
+                            "[Wandscape] Insufficient elements: %s.", missing), true);
             return false;
         }
-        for (ElementType t : ElementType.values()) {
+        for (ElementType t : required) {
             bank.consumeElement(colonyId, t, cost);
         }
         return true;
