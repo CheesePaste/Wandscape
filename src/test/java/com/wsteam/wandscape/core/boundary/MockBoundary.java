@@ -118,6 +118,22 @@ public class MockBoundary implements BlockOps, EntityOps, RitualOps, ColonyResou
         return colonyId == null || !frozenColonies.contains(colonyId);
     }
 
+    /** 已移除/卸载（幽灵）的 NPC id 集合：`isNpcAlive` 对其返回 false。 */
+    private final Set<Long> removedNpcs = new HashSet<>();
+
+    public void setNpcRemoved(long npcId, boolean removed) {
+        if (removed) {
+            removedNpcs.add(npcId);
+        } else {
+            removedNpcs.remove(npcId);
+        }
+    }
+
+    @Override
+    public boolean isNpcAlive(long npcId) {
+        return !removedNpcs.contains(npcId);
+    }
+
     /** 最近一次 spawnDecoration 调用（测试断言用）。 */
     @Nullable
     public SpawnDecorationCall lastSpawnDecoration;

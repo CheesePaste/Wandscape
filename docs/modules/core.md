@@ -46,7 +46,7 @@
 | 接口 | 方法 |
 |---|---|
 | `BlockOps` | setBlock/getBlock/isAir/toggle/activate/openGui/setBlockEntityData(pos, nbtBase64) |
-| `EntityOps` | applyEffect(EntityId,EffectId,strength,duration)/getPosition |
+| `EntityOps` | applyEffect(EntityId,EffectId,strength,duration)/getPosition/getCurrentMana(npcId)/isFollowing/isResting/isColonyActive(UUID)/isNpcAlive(npcId)（MC 实体存在且未移除，调度/执行排除幽灵 NPC）/spawnDecoration |
 | `RitualOps` | beginRitual(RitualId, GridPos, World, casterId, params) → CompletableFuture |
 | `MovementOps` | navigateTo(npcId,x,y,z)（future 永不异常，10s 超时传送兜底）/cancelNavigation |
 | `EventBus` | emit/subscribe/unsubscribe(延迟)/record Subscription |

@@ -86,6 +86,14 @@ public class TaskExecutionSystem implements System {
                 continue;
             }
 
+            // ── 0.6 幽灵 NPC 防御：MC 实体缺失/已移除（区块卸载、异常清理遗漏）──
+            // 任务不得驱动一个不存在的 NPC：释放绑定全局任务（保留步进、退还已取元素）、
+            // 丢弃全局包、清执行状态并跳过本轮。ECS 组件保留（区块重载后重连复用）。
+            if (world.entityOps != null && !world.entityOps.isNpcAlive(npcId)) {
+                releaseForPhantom(world, npcId, exec, queue);
+                continue;
+            }
+
             // ── 1. No work → idle ──
             if (!queue.hasWork() && exec.globalTaskId == null) {
                 if (exec.state != ExecutorState.IDLE) {
@@ -480,6 +488,22 @@ public class TaskExecutionSystem implements System {
     }
 
     /**
+     * 释放绑定全局任务（保留步进 + 退还已取元素）并丢弃全部 {@code global:} 包。
+     * 覆盖"NPC 不能再干这个活"的所有场景（跟随/休息中断、幽灵 NPC）：
+     * 任务归还任务池供他人续跑，元素退还仓库、步进重置到首个 ResourceRequestOp，
+     * 避免下一 NPC 空背包打到资源短缺死循环。
+     */
+    private void releaseBoundGlobalTask(World world, long npcId, TaskExecutor exec, NpcTaskQueue queue) {
+        if (exec.globalTaskId != null && taskPool != null) {
+            syncStepToPool(exec, queue); // preserve progress before releasing
+            returnAndReset(exec, npcId, world);
+            taskPool.releaseTaskForReassign(exec.globalTaskId, npcId, world);
+        }
+        queue.dropGlobalPackages();
+        exec.releaseGlobalTask();
+    }
+
+    /**
      * 跟随/休息：释放该 NPC 的全部小镇全局任务（current/pending/挂起栈里的
      * {@code global:*} 包），只保留 {@code self_defense} 等个人包。已绑定的全局任务
      * 按步进归还任务池（{@link GlobalTaskPool#releaseTaskForReassign}），供其他 NPC 接取。
@@ -494,14 +518,8 @@ public class TaskExecutionSystem implements System {
         CompletableFuture<Void> keptFuture = exec.pendingFuture;
         boolean keptFutureIsNav = exec.pendingFutureIsNav;
 
-        if (exec.globalTaskId != null && taskPool != null) {
-            syncStepToPool(exec, queue); // preserve progress before releasing
-            returnAndReset(exec, npcId, world);
-            taskPool.releaseTaskForReassign(exec.globalTaskId, npcId, world);
-        }
-        queue.dropGlobalPackages();
+        releaseBoundGlobalTask(world, npcId, exec, queue);
 
-        exec.releaseGlobalTask();
         if (!currentIsGlobal) {
             // 当前是个人包（如 self_defense）→ 恢复其异步 future，执行系统继续驱动
             exec.pendingFuture = keptFuture;
@@ -511,6 +529,20 @@ public class TaskExecutionSystem implements System {
         }
         Log.info(TAG, "NPC %d — follow/rest: released global tasks, kept personal packages",
                 npcId);
+    }
+
+    /**
+     * 幽灵 NPC（MC 实体缺失/已移除，如区块卸载）：释放绑定全局任务、丢弃全局包，
+     * 取消导航并跳过执行。ECS 组件保留供区块重载后重连，重连后由调度器重新派活。
+     * 首次清理后无残留（globalTaskId 空且无 global 包）即空转，不刷日志。
+     */
+    private void releaseForPhantom(World world, long npcId, TaskExecutor exec, NpcTaskQueue queue) {
+        if (exec.globalTaskId == null && !queue.hasGlobalPackage()) return;
+        releaseBoundGlobalTask(world, npcId, exec, queue);
+        if (world.movementOps != null) {
+            world.movementOps.cancelNavigation(npcId);
+        }
+        Log.info(TAG, "NPC %d — phantom (MC entity gone): released global task", npcId);
     }
 
     /** Bind a global task to the executor when a global package starts. */

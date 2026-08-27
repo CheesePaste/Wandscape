@@ -45,6 +45,14 @@ public interface EntityOps {
     boolean isColonyActive(java.util.UUID colonyId);
 
     /**
+     * Whether the NPC's MC entity is present and usable — not unloaded
+     * (chunk unload) and not destroyed (death/discard). A phantom NPC
+     * (components in the ECS world but no live MC entity) must not be
+     * assigned new work or driven by the task executor.
+     */
+    boolean isNpcAlive(long npcId);
+
+    /**
      * Spawn a decoration entity (item frame, painting) from trimmed NBT during
      * building construction.
      *

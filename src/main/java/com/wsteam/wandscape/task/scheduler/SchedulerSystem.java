@@ -48,6 +48,7 @@ public class SchedulerSystem implements System {
 
         // 1. Find all idle NPCs with full component set
         // 跟随模式：NPC 不接取任何小镇任务，从空闲候选中排除
+        // 幽灵 NPC（MC 实体缺失/已移除，如区块卸载）：任务不得派给不存在的工人
         List<Long> idleNpcs = new ArrayList<>();
         for (long entity : world.query(Position.class, TaskExecutor.class,
                 EquipmentComponent.class, Inventory.class, ColonyMember.class)) {
@@ -55,7 +56,8 @@ public class SchedulerSystem implements System {
             if (exec != null && exec.state == ExecutorState.IDLE
                     && exec.npcQueue.isIdle() && exec.globalTaskId == null
                     && (world.entityOps == null || (!world.entityOps.isFollowing(entity)
-                            && !world.entityOps.isResting(entity)))) {
+                            && !world.entityOps.isResting(entity)))
+                    && (world.entityOps == null || world.entityOps.isNpcAlive(entity))) {
                 idleNpcs.add(entity);
             }
         }
