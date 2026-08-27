@@ -49,10 +49,10 @@ public final class MagicSpellExecutors {
     // SPELL_POWER 是 ECS 自定义属性（非 vanilla Attribute），MobEffect 的 attribute modifier
     // 挂不上，故在核算入口手动乘：伤害走 NpcSpellPowerHandler（guard），治疗走下方 castHeal。
 
-    /** 魔力强化每级加成：1 级 +20%、2 级 +40%（独立乘区，每级 +0.2）。 */
-    public static final float MAGIC_ENHANCE_PER_LEVEL = 0.2f;
+    /** 魔力强化每级加成：1 级 +10%、2 级 +20%（独立乘区，每级 +0.1）。 */
+    public static final float MAGIC_ENHANCE_PER_LEVEL = 0.1f;
 
-    /** 魔力强化倍率（纯函数）：amplifier 0（I 级）= 1.2，每级 +0.2。 */
+    /** 魔力强化倍率（纯函数）：amplifier 0（I 级）= 1.2，每级 +0.1。 */
     public static float magicEnhanceMultiplier(int amplifier) {
         return 1f + MAGIC_ENHANCE_PER_LEVEL * (amplifier + 1);
     }
