@@ -482,11 +482,10 @@ public final class RoadPlacementRenderer {
     }
 
     /**
-     * Renders the actual road blocks as translucent 3D ghosts at each surface
-     * position within the rectangle, matching the server-side tiles in
-     * {@code RoadPlacePacket} (same MOTION_BLOCKING surface height and preset
-     * block choice). Mirrors the building ghost so the player sees exactly
-     * which blocks the road will place.
+     * Renders the actual road blocks as translucent 3D ghosts at the start point's
+     * height (Y) within the rectangle, matching the server-side tiles in
+     * {@code RoadPlacePacket}. Mirrors the building ghost so the player sees
+     * exactly which blocks the road will place.
      *
      * <p>Large selections fall back to the cheap flat fill to keep per-frame
      * block-model cost bounded.
@@ -497,12 +496,13 @@ public final class RoadPlacementRenderer {
         int maxX = Math.max(from.getX(), to.getX());
         int minZ = Math.min(from.getZ(), to.getZ());
         int maxZ = Math.max(from.getZ(), to.getZ());
+        int targetY = from.getY();
 
-        renderPerimeterOutline(level, bufferSource, poseStack, minX, minZ, maxX, maxZ);
+        renderFlatPerimeterOutline(bufferSource, poseStack, minX, minZ, maxX, maxZ, targetY);
 
         int area = (maxX - minX + 1) * (maxZ - minZ + 1);
         if (area > ROAD_GHOST_MAX_CELLS) {
-            renderSurfaceFill(bufferSource, poseStack, level, minX, minZ, maxX, maxZ);
+            renderFlatSurfaceFill(bufferSource, poseStack, minX, minZ, maxX, maxZ, targetY);
             return;
         }
 
@@ -510,11 +510,52 @@ public final class RoadPlacementRenderer {
 
         for (int x = minX; x <= maxX; x++) {
             for (int z = minZ; z <= maxZ; z++) {
-                int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z) - 1;
+                int y = targetY;
                 BlockState state = BuildingPreviewRenderer.resolveBlockState(preset.pickBlock(x, z));
                 if (state == null) continue;
 
                 RoadGhostRenderUtil.renderGhostBlock(level, state, poseStack, ghostSource, x, y, z);
+            }
+        }
+    }
+
+    /** Draws the yellow perimeter outline of the placement rectangle at a flat height. */
+    private static void renderFlatPerimeterOutline(MultiBufferSource bufferSource, PoseStack poseStack,
+                                                   int minX, int minZ, int maxX, int maxZ, int targetY) {
+        float y = targetY + 1.02f;
+        VertexConsumer vc = bufferSource.getBuffer(RenderType.lines());
+        var pose = poseStack.last();
+        // Edge along Z=minZ
+        line(vc, pose, minX, y, minZ, maxX + 1, y, minZ, 255, 255, 80);
+        // Edge along X=maxX+1
+        line(vc, pose, maxX + 1, y, minZ, maxX + 1, y, maxZ + 1, 255, 255, 80);
+        // Edge along Z=maxZ+1
+        line(vc, pose, maxX + 1, y, maxZ + 1, minX, y, maxZ + 1, 255, 255, 80);
+        // Edge along X=minX
+        line(vc, pose, minX, y, maxZ + 1, minX, y, minZ, 255, 255, 80);
+    }
+
+    /**
+     * Renders a translucent yellow quad at each position within the rectangle at a flat height,
+     * showing exactly which blocks will be replaced.
+     */
+    private static void renderFlatSurfaceFill(MultiBufferSource bufferSource, PoseStack poseStack,
+                                              int minX, int minZ, int maxX, int maxZ, int targetY) {
+        VertexConsumer vc = bufferSource.getBuffer(RenderType.translucent());
+        var pose = poseStack.last();
+        int light = 0xF000F0;
+        float y = targetY + 1.02f;
+
+        for (int x = minX; x <= maxX; x++) {
+            for (int z = minZ; z <= maxZ; z++) {
+                float x1 = x, x2 = x + 1f, z1 = z, z2 = z + 1f;
+
+                vc.addVertex(pose, x1, y, z1).setColor(255, 255, 80, 48).setUv(0, 0).setLight(light).setNormal(pose, 0, 1, 0);
+                vc.addVertex(pose, x1, y, z2).setColor(255, 255, 80, 48).setUv(0, 0).setLight(light).setNormal(pose, 0, 1, 0);
+                vc.addVertex(pose, x2, y, z2).setColor(255, 255, 80, 48).setUv(0, 0).setLight(light).setNormal(pose, 0, 1, 0);
+                vc.addVertex(pose, x2, y, z2).setColor(255, 255, 80, 48).setUv(0, 0).setLight(light).setNormal(pose, 0, 1, 0);
+                vc.addVertex(pose, x2, y, z1).setColor(255, 255, 80, 48).setUv(0, 0).setLight(light).setNormal(pose, 0, 1, 0);
+                vc.addVertex(pose, x1, y, z1).setColor(255, 255, 80, 48).setUv(0, 0).setLight(light).setNormal(pose, 0, 1, 0);
             }
         }
     }

@@ -29,7 +29,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.levelgen.Heightmap;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
 
@@ -40,8 +39,7 @@ import static com.wsteam.wandscape.Wandscape.MODID;
  * <ol>
  *   <li>Finds the preset by ID</li>
  *   <li>Computes the rectangle between start and end (min → max on XZ plane)</li>
- *   <li>For each position in the rectangle, gets the surface Y via {@link Heightmap.Types#WORLD_SURFACE}</li>
- *   <li>Builds a tiles array with block chosen by the preset's {@link RoadPreset#pickBlock}</li>
+ *   <li>Places tiles at the start point's height (Y) using the preset's {@link RoadPreset#pickBlock}</li>
  *   <li>Pushes a {@link TaskRequest} with blueprint {@code road:build_segment}</li>
  * </ol>
  */
@@ -82,7 +80,7 @@ public record RoadPlacePacket(String presetId, BlockPos startPos, BlockPos endPo
         int minZ = Math.min(start.getZ(), end.getZ());
         int maxZ = Math.max(start.getZ(), end.getZ());
 
-        // 3. Build tiles: every surface block within the rectangle
+        // 3. Build tiles: every block within the rectangle at start point's height Y
         //    Cap at 10 000 tiles to prevent accidental server lag
         JsonArray tiles = new JsonArray();
         int area = (maxX - minX + 1) * (maxZ - minZ + 1);
@@ -94,15 +92,14 @@ public record RoadPlacePacket(String presetId, BlockPos startPos, BlockPos endPo
 
         java.util.Map<String, Integer> materials = new java.util.LinkedHashMap<>();
         var elementApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getElementApi();
+        int targetY = start.getY();
 
         for (int x = minX; x <= maxX; x++) {
             for (int z = minZ; z <= maxZ; z++) {
-                int surfaceY = level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z) - 1;
-
                 JsonObject tile = new JsonObject();
                 JsonArray posArr = new JsonArray();
                 posArr.add(x);
-                posArr.add(surfaceY);
+                posArr.add(targetY);
                 posArr.add(z);
                 tile.add("pos", posArr);
                 String blockId = preset.pickBlock(x, z);
@@ -138,8 +135,8 @@ public record RoadPlacePacket(String presetId, BlockPos startPos, BlockPos endPo
         RoadSavedData savedData = RoadSavedData.getOrCreate(player.serverLevel());
         RoadNetwork network = savedData.getNetwork();
 
-        int startY = level.getHeight(Heightmap.Types.MOTION_BLOCKING, start.getX(), start.getZ()) - 1;
-        int endY = level.getHeight(Heightmap.Types.MOTION_BLOCKING, end.getX(), end.getZ()) - 1;
+        int startY = targetY;
+        int endY = targetY;
         com.wsteam.wandscape.road.core.SplineModel model = new com.wsteam.wandscape.road.core.SplineModel();
         com.wsteam.wandscape.road.core.SplineVec3 pA = new com.wsteam.wandscape.road.core.SplineVec3(start.getX() + 0.5, startY + 0.5, start.getZ() + 0.5);
         com.wsteam.wandscape.road.core.SplineVec3 pB = new com.wsteam.wandscape.road.core.SplineVec3(end.getX() + 0.5, endY + 0.5, end.getZ() + 0.5);
@@ -152,7 +149,7 @@ public record RoadPlacePacket(String presetId, BlockPos startPos, BlockPos endPo
                 double factor = (double) i / (intermediateSamples + 1);
                 int ix = (int) Math.round(start.getX() + (end.getX() - start.getX()) * factor);
                 int iz = (int) Math.round(start.getZ() + (end.getZ() - start.getZ()) * factor);
-                int iy = level.getHeight(Heightmap.Types.MOTION_BLOCKING, ix, iz) - 1;
+                int iy = targetY;
                 com.wsteam.wandscape.road.core.SplineVec3 pMid = new com.wsteam.wandscape.road.core.SplineVec3(ix + 0.5, iy + 0.5, iz + 0.5);
                 model.getPoints().add(new com.wsteam.wandscape.road.core.SplinePoint(pMid, pMid, pMid, true));
             }

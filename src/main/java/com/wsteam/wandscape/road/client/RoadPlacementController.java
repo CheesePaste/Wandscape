@@ -69,7 +69,8 @@ public final class RoadPlacementController {
             if (leftDown) {
                 BlockPos ghostPos = RoadPlacementState.getGhostPos();
                 if (ghostPos != null) {
-                    if (RoadPlacementState.getActiveTool() == RoadPlacementState.ToolMode.DESTROY_FILL) {
+                    if (RoadPlacementState.getActiveTool() == RoadPlacementState.ToolMode.DESTROY_FILL
+                            || RoadPlacementState.getActiveTool() == RoadPlacementState.ToolMode.REPLACE) {
                         BlockPos startPos = RoadPlacementState.getStartPos();
                         if (startPos != null) {
                             RoadPlacementState.setEndPos(new BlockPos(ghostPos.getX(), startPos.getY(), ghostPos.getZ()));
@@ -260,7 +261,8 @@ public final class RoadPlacementController {
 
         if (target == RoadPlacementState.GizmoTarget.START) {
             RoadPlacementState.setStartPos(newPos);
-            if (RoadPlacementState.getActiveTool() == RoadPlacementState.ToolMode.DESTROY_FILL && shiftY != 0) {
+            if ((RoadPlacementState.getActiveTool() == RoadPlacementState.ToolMode.DESTROY_FILL
+                    || RoadPlacementState.getActiveTool() == RoadPlacementState.ToolMode.REPLACE) && shiftY != 0) {
                 BlockPos endPos = RoadPlacementState.getEndPos();
                 if (endPos != null) {
                     RoadPlacementState.setEndPos(new BlockPos(endPos.getX(), newPos.getY(), endPos.getZ()));
@@ -268,7 +270,8 @@ public final class RoadPlacementController {
             }
         } else if (target == RoadPlacementState.GizmoTarget.END) {
             RoadPlacementState.setEndPos(newPos);
-            if (RoadPlacementState.getActiveTool() == RoadPlacementState.ToolMode.DESTROY_FILL && shiftY != 0) {
+            if ((RoadPlacementState.getActiveTool() == RoadPlacementState.ToolMode.DESTROY_FILL
+                    || RoadPlacementState.getActiveTool() == RoadPlacementState.ToolMode.REPLACE) && shiftY != 0) {
                 BlockPos startPos = RoadPlacementState.getStartPos();
                 if (startPos != null) {
                     RoadPlacementState.setStartPos(new BlockPos(startPos.getX(), newPos.getY(), startPos.getZ()));
