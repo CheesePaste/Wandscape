@@ -596,6 +596,50 @@ public final class StudioWidgets {
         return result;
     }
 
+    public static int heightAdjustRow(String label, int currentY) {
+        int x = layoutX;
+        int y = layoutY;
+        int w = layoutW;
+        int rowH = 18;
+
+        g.drawString(font, label + ":", x, y, StudioColors.TEXT_MUTED);
+        y += LINE_H;
+
+        int btnW = 24;
+        int spacing = 3;
+        int centerW = w - (btnW * 4 + spacing * 4);
+
+        int delta = 0;
+        // Button -5
+        if (buttonAt("-5", x, y, btnW, rowH, StudioColors.BUTTON_NORMAL, StudioColors.BUTTON_HOVER, StudioColors.BUTTON_ACTIVE)) {
+            delta -= 5;
+        }
+        // Button -1
+        if (buttonAt("-1", x + btnW + spacing, y, btnW, rowH, StudioColors.BUTTON_NORMAL, StudioColors.BUTTON_HOVER, StudioColors.BUTTON_ACTIVE)) {
+            delta -= 1;
+        }
+
+        // Center display (Y: <currentY>)
+        int cx = x + (btnW + spacing) * 2;
+        g.fill(cx, y, cx + centerW, y + rowH, StudioColors.CHILD_BG);
+        drawBorder(cx, y, centerW, rowH, StudioColors.BORDER_GOLD);
+        String yStr = "Y: " + currentY;
+        int tw = font.width(yStr);
+        g.drawString(font, yStr, cx + (centerW - tw) / 2, y + 4, StudioColors.TEXT_GOLD);
+
+        // Button +1
+        if (buttonAt("+1", cx + centerW + spacing, y, btnW, rowH, StudioColors.BUTTON_NORMAL, StudioColors.BUTTON_HOVER, StudioColors.BUTTON_ACTIVE)) {
+            delta += 1;
+        }
+        // Button +5
+        if (buttonAt("+5", cx + centerW + spacing + btnW + spacing, y, btnW, rowH, StudioColors.BUTTON_NORMAL, StudioColors.BUTTON_HOVER, StudioColors.BUTTON_ACTIVE)) {
+            delta += 5;
+        }
+
+        layoutY = y + rowH + SPACING;
+        return delta;
+    }
+
     // ════════════════════════════════════════════════════════════════
     //  SCROLLBAR
     // ════════════════════════════════════════════════════════════════

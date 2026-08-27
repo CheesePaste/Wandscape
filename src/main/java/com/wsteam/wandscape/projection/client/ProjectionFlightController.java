@@ -35,7 +35,7 @@ public final class ProjectionFlightController {
     private static final String TAG = "ProjectionFlightController";
 
     /** Extended reach distance in projection mode (blocks). */
-    private static final double PROJECTION_REACH = 64.0;
+    private static final double PROJECTION_REACH = 512.0;
 
     // ── Input edge detection state ──
     private static boolean wasLeftDown = false;

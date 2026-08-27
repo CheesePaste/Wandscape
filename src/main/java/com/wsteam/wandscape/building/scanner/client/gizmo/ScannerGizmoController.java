@@ -22,7 +22,7 @@ import org.lwjgl.glfw.GLFW;
  */
 public final class ScannerGizmoController {
     private static final String TAG = "ScannerGizmoController";
-    private static final double REACH = 128.0;
+    private static final double REACH = 512.0;
 
     private static boolean registered = false;
     private static boolean cameraActive = false;
@@ -246,20 +246,41 @@ public final class ScannerGizmoController {
         double minDistance = Double.MAX_VALUE;
 
         float scale = ScannerGizmoRenderer.getDistanceScale(rayOrigin, pos);
-        float totalLen = (ScannerGizmoRenderer.BASE_SHAFT_LEN + ScannerGizmoRenderer.BASE_HEAD_LEN + 0.1f) * scale;
-        float thickness = 0.22f * scale; // Responsive, generous hit box
+        float sMin = 0.15f * scale;
+        float sMax = (ScannerGizmoRenderer.BASE_SHAFT_LEN + ScannerGizmoRenderer.BASE_HEAD_LEN + 0.1f) * scale;
+        double hitRadius = 0.35 * scale; // Responsive, generous hit capsule
 
         for (ScannerGizmoState.AxisDrag axis : ScannerGizmoState.AxisDrag.values()) {
             if (axis == ScannerGizmoState.AxisDrag.NONE) continue;
 
-            AABB aabb = ScannerGizmoRenderer.getGizmoAxisAABB(pos.x, pos.y, pos.z, axis, totalLen, thickness);
-            Optional<Vec3> hit = aabb.clip(rayOrigin, rayEnd);
-            if (hit.isPresent()) {
-                double dist = rayOrigin.distanceTo(hit.get());
-                if (dist < minDistance) {
-                    minDistance = dist;
-                    bestAxis = axis;
-                }
+            Vec3 u = getGizmoWorldDir(axis);
+            Vec3 w0 = rayOrigin.subtract(pos);
+
+            double a = u.dot(u); // 1.0
+            double b = u.dot(rayDir);
+            double c = rayDir.dot(rayDir); // 1.0
+            double d = u.dot(w0);
+            double e = rayDir.dot(w0);
+
+            double denom = a * c - b * b;
+            double s;
+            if (Math.abs(denom) < 1e-6) {
+                s = (sMin + sMax) * 0.5;
+            } else {
+                s = (c * d - b * e) / denom;
+            }
+            s = Math.max(sMin, Math.min(sMax, s));
+
+            Vec3 pSeg = pos.add(u.scale(s));
+            double t = Math.max(0.0, pSeg.subtract(rayOrigin).dot(rayDir));
+            if (t > REACH) continue;
+
+            Vec3 pRay = rayOrigin.add(rayDir.scale(t));
+            double dist = pSeg.distanceTo(pRay);
+
+            if (dist <= hitRadius && dist < minDistance) {
+                minDistance = dist;
+                bestAxis = axis;
             }
         }
 
@@ -270,16 +291,20 @@ public final class ScannerGizmoController {
         long window = mc.getWindow().getWindow();
         double[] mx = new double[1], my = new double[1];
         GLFW.glfwGetCursorPos(window, mx, my);
-        int w = mc.getWindow().getWidth();
-        int h = mc.getWindow().getHeight();
+        int screenW = mc.getWindow().getScreenWidth();
+        int screenH = mc.getWindow().getScreenHeight();
+        if (screenW <= 0) screenW = 1;
+        if (screenH <= 0) screenH = 1;
 
-        float ndcX = (float) (2.0 * mx[0] / w - 1.0);
-        float ndcY = (float) (1.0 - 2.0 * my[0] / h);
+        float ndcX = (float) (2.0 * mx[0] / screenW - 1.0);
+        float ndcY = (float) (1.0 - 2.0 * my[0] / screenH);
 
         Camera cam = mc.gameRenderer.getMainCamera();
-        float fov = (float) mc.options.fov().get();
+        float baseFov = (float) mc.options.fov().get();
+        float fovModifier = (mc.player != null) ? mc.player.getFieldOfViewModifier() : 1.0f;
+        float fov = baseFov * fovModifier;
         float fovRad = (float) Math.toRadians(fov);
-        float aspect = (float) w / Math.max(h, 1);
+        float aspect = (float) screenW / (float) screenH;
         float tanHalfFov = (float) Math.tan(fovRad * 0.5f);
 
         org.joml.Vector3f jLook = cam.getLookVector();

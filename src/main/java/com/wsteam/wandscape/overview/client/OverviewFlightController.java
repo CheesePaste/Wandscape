@@ -45,7 +45,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
 public final class OverviewFlightController {
 
     private static final String TAG = "OverviewFlightController";
-    private static final double REACH = 64.0;
+    private static final double REACH = 512.0;
     /** 滚轮缩放步长（格/格），飞行速度见 Config.panel.flySpeed。 */
     private static final double SCROLL_SPEED = 4.0;
     private static final float MOUSE_SENSITIVITY = 0.15f;
@@ -496,16 +496,20 @@ public final class OverviewFlightController {
         long window = mc.getWindow().getWindow();
         double[] mx = new double[1], my = new double[1];
         GLFW.glfwGetCursorPos(window, mx, my);
-        int w = mc.getWindow().getWidth();
-        int h = mc.getWindow().getHeight();
+        int screenW = mc.getWindow().getScreenWidth();
+        int screenH = mc.getWindow().getScreenHeight();
+        if (screenW <= 0) screenW = 1;
+        if (screenH <= 0) screenH = 1;
 
-        float ndcX = (float) (2.0 * mx[0] / w - 1.0);
-        float ndcY = (float) (1.0 - 2.0 * my[0] / h);
+        float ndcX = (float) (2.0 * mx[0] / screenW - 1.0);
+        float ndcY = (float) (1.0 - 2.0 * my[0] / screenH);
 
         Camera cam = mc.gameRenderer.getMainCamera();
-        float fov = (float) mc.options.fov().get();
+        float baseFov = (float) mc.options.fov().get();
+        float fovModifier = (mc.player != null) ? mc.player.getFieldOfViewModifier() : 1.0f;
+        float fov = baseFov * fovModifier;
         float fovRad = (float) Math.toRadians(fov);
-        float aspect = (float) w / Math.max(h, 1);
+        float aspect = (float) screenW / (float) screenH;
         float tanHalfFov = (float) Math.tan(fovRad * 0.5f);
 
         Vector3f jLook = cam.getLookVector();

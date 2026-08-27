@@ -98,9 +98,18 @@ public final class RoadPlacementRenderer {
             renderBlockOutline(bufferSource, poseStack, endPos, 255, 40, 40);
         }
 
+        // Hover cursor outline before start is selected
+        BlockPos ghostPos = RoadPlacementState.getGhostPos();
+        if (startPos == null && ghostPos != null) {
+            if (RoadPlacementState.isDestroyFill()) {
+                renderBlockOutline(bufferSource, poseStack, ghostPos, 255, 200, 50);
+            } else {
+                renderBlockOutline(bufferSource, poseStack, ghostPos, 200, 200, 200);
+            }
+        }
+
         // Preview: FILL renders the full 3D cube; Replace/Destroy render the actual
         // road blocks as ghost; Spline keeps the flat rectangle approximation.
-        BlockPos ghostPos = RoadPlacementState.getGhostPos();
         BlockPos from = startPos;
         BlockPos to = (endPos != null) ? endPos : ghostPos;
 
@@ -109,14 +118,16 @@ public final class RoadPlacementRenderer {
                 renderBoxPreview(bufferSource, poseStack, from, to);
             } else if (RoadPlacementState.isSpline()) {
                 renderPathPreview(mc.level, bufferSource, poseStack, from, to);
+            } else if (RoadPlacementState.isDestroyFill()) {
+                renderFlattenPreview(mc.level, bufferSource, poseStack, from, to);
             } else {
                 renderRoadGhost(mc.level, bufferSource, poseStack, from, to,
                         RoadPlacementState.getActivePreset());
             }
         }
 
-        // Draw Start & End Gizmos when in Replace/Fill/DestroyFill mode and start/end are set
-        if (RoadPlacementState.getActiveTool() != RoadPlacementState.ToolMode.SPLINE && startPos != null && endPos != null) {
+        // Draw Start & End Gizmos when in Replace/Fill/DestroyFill mode and start or end is set
+        if (RoadPlacementState.getActiveTool() != RoadPlacementState.ToolMode.SPLINE && (startPos != null || endPos != null)) {
             VertexConsumer vcQuads = bufferSource.getBuffer(SplineEditorRenderer.SplineRenderType.XRAY_QUADS);
             drawBoxCornerGizmos(vcQuads, poseStack.last(), startPos, endPos);
             bufferSource.endBatch(SplineEditorRenderer.SplineRenderType.XRAY_QUADS);
@@ -229,20 +240,24 @@ public final class RoadPlacementRenderer {
         RoadPlacementState.AxisDrag draggingAxis = RoadPlacementState.getDraggingAxis();
 
         // 1. Start Gizmo (Green center marker)
-        double sx = startPos.getX() + 0.5;
-        double sy = startPos.getY() + 0.5;
-        double sz = startPos.getZ() + 0.5;
-        RoadPlacementState.AxisDrag activeStartAxis = (draggingTarget == RoadPlacementState.GizmoTarget.START) ? draggingAxis
-                : ((hoveredTarget == RoadPlacementState.GizmoTarget.START) ? hoveredAxis : RoadPlacementState.AxisDrag.NONE);
-        drawSingleGizmo(vc, pose, sx, sy, sz, activeStartAxis, true);
+        if (startPos != null) {
+            double sx = startPos.getX() + 0.5;
+            double sy = startPos.getY() + 0.5;
+            double sz = startPos.getZ() + 0.5;
+            RoadPlacementState.AxisDrag activeStartAxis = (draggingTarget == RoadPlacementState.GizmoTarget.START) ? draggingAxis
+                    : ((hoveredTarget == RoadPlacementState.GizmoTarget.START) ? hoveredAxis : RoadPlacementState.AxisDrag.NONE);
+            drawSingleGizmo(vc, pose, sx, sy, sz, activeStartAxis, true);
+        }
 
         // 2. End Gizmo (Red center marker)
-        double ex = endPos.getX() + 0.5;
-        double ey = endPos.getY() + 0.5;
-        double ez = endPos.getZ() + 0.5;
-        RoadPlacementState.AxisDrag activeEndAxis = (draggingTarget == RoadPlacementState.GizmoTarget.END) ? draggingAxis
-                : ((hoveredTarget == RoadPlacementState.GizmoTarget.END) ? hoveredAxis : RoadPlacementState.AxisDrag.NONE);
-        drawSingleGizmo(vc, pose, ex, ey, ez, activeEndAxis, false);
+        if (endPos != null) {
+            double ex = endPos.getX() + 0.5;
+            double ey = endPos.getY() + 0.5;
+            double ez = endPos.getZ() + 0.5;
+            RoadPlacementState.AxisDrag activeEndAxis = (draggingTarget == RoadPlacementState.GizmoTarget.END) ? draggingAxis
+                    : ((hoveredTarget == RoadPlacementState.GizmoTarget.END) ? hoveredAxis : RoadPlacementState.AxisDrag.NONE);
+            drawSingleGizmo(vc, pose, ex, ey, ez, activeEndAxis, false);
+        }
     }
 
     private static void drawSingleGizmo(VertexConsumer vc, PoseStack.Pose pose, double x, double y, double z,
@@ -355,8 +370,14 @@ public final class RoadPlacementRenderer {
     private static void line(VertexConsumer vc, PoseStack.Pose pose,
                               float x1, float y1, float z1, float x2, float y2, float z2,
                               int r, int g, int b) {
-        vc.addVertex(pose, x1, y1, z1).setColor(r, g, b, 255).setNormal(pose, 0, 1, 0);
-        vc.addVertex(pose, x2, y2, z2).setColor(r, g, b, 255).setNormal(pose, 0, 1, 0);
+        line(vc, pose, x1, y1, z1, x2, y2, z2, r, g, b, 255);
+    }
+
+    private static void line(VertexConsumer vc, PoseStack.Pose pose,
+                              float x1, float y1, float z1, float x2, float y2, float z2,
+                              int r, int g, int b, int a) {
+        vc.addVertex(pose, x1, y1, z1).setColor(r, g, b, a).setNormal(pose, 0, 1, 0);
+        vc.addVertex(pose, x2, y2, z2).setColor(r, g, b, a).setNormal(pose, 0, 1, 0);
     }
 
     // ── 3D cube preview (Fill mode) ──
@@ -381,32 +402,54 @@ public final class RoadPlacementRenderer {
         // Wireframe — 12 edges
         VertexConsumer lineVc = bufferSource.getBuffer(RenderType.lines());
         var pose = poseStack.last();
-        // Bottom face (y1)
-        line(lineVc, pose, x1, y1, z1, x2, y1, z1, 255, 255, 80);
-        line(lineVc, pose, x2, y1, z1, x2, y1, z2, 255, 255, 80);
-        line(lineVc, pose, x2, y1, z2, x1, y1, z2, 255, 255, 80);
-        line(lineVc, pose, x1, y1, z2, x1, y1, z1, 255, 255, 80);
-        // Top face (y2)
-        line(lineVc, pose, x1, y2, z1, x2, y2, z1, 255, 255, 80);
-        line(lineVc, pose, x2, y2, z1, x2, y2, z2, 255, 255, 80);
-        line(lineVc, pose, x2, y2, z2, x1, y2, z2, 255, 255, 80);
-        line(lineVc, pose, x1, y2, z2, x1, y2, z1, 255, 255, 80);
-        // Vertical edges
-        line(lineVc, pose, x1, y1, z1, x1, y2, z1, 255, 255, 80);
-        line(lineVc, pose, x2, y1, z1, x2, y2, z1, 255, 255, 80);
-        line(lineVc, pose, x2, y1, z2, x2, y2, z2, 255, 255, 80);
-        line(lineVc, pose, x1, y1, z2, x1, y2, z2, 255, 255, 80);
+        drawBoxWireframe(lineVc, pose, x1, y1, z1, x2, y2, z2, 255, 255, 80, 255);
 
         // Translucent faces — 6 quads
         VertexConsumer vc = bufferSource.getBuffer(RenderType.translucent());
-        int light = 0xF000F0;
-        int alpha = 40;
-        quad(vc, pose, x1, y1, z1, x2, y1, z1, x2, y1, z2, x1, y1, z2, light, alpha); // bottom
-        quad(vc, pose, x1, y2, z1, x1, y2, z2, x2, y2, z2, x2, y2, z1, light, alpha); // top
-        quad(vc, pose, x1, y1, z1, x1, y2, z1, x1, y2, z2, x1, y1, z2, light, alpha); // -X
-        quad(vc, pose, x2, y1, z1, x2, y1, z2, x2, y2, z2, x2, y2, z1, light, alpha); // +X
-        quad(vc, pose, x1, y1, z1, x2, y1, z1, x2, y2, z1, x1, y2, z1, light, alpha); // -Z
-        quad(vc, pose, x1, y1, z2, x1, y2, z2, x2, y2, z2, x2, y1, z2, light, alpha); // +Z
+        fillBoxFaces(vc, pose, x1, y1, z1, x2, y2, z2, 255, 255, 80, 40, 0xF000F0);
+    }
+
+    private static void drawBoxWireframe(VertexConsumer vc, PoseStack.Pose pose,
+                                         float x1, float y1, float z1, float x2, float y2, float z2,
+                                         int r, int g, int b, int a) {
+        // Bottom face (y1)
+        line(vc, pose, x1, y1, z1, x2, y1, z1, r, g, b, a);
+        line(vc, pose, x2, y1, z1, x2, y1, z2, r, g, b, a);
+        line(vc, pose, x2, y1, z2, x1, y1, z2, r, g, b, a);
+        line(vc, pose, x1, y1, z2, x1, y1, z1, r, g, b, a);
+        // Top face (y2)
+        line(vc, pose, x1, y2, z1, x2, y2, z1, r, g, b, a);
+        line(vc, pose, x2, y2, z1, x2, y2, z2, r, g, b, a);
+        line(vc, pose, x2, y2, z2, x1, y2, z2, r, g, b, a);
+        line(vc, pose, x1, y2, z2, x1, y2, z1, r, g, b, a);
+        // Vertical edges
+        line(vc, pose, x1, y1, z1, x1, y2, z1, r, g, b, a);
+        line(vc, pose, x2, y1, z1, x2, y2, z1, r, g, b, a);
+        line(vc, pose, x2, y1, z2, x2, y2, z2, r, g, b, a);
+        line(vc, pose, x1, y1, z2, x1, y2, z2, r, g, b, a);
+    }
+
+    private static void fillBoxFaces(VertexConsumer vc, PoseStack.Pose pose,
+                                     float x1, float y1, float z1, float x2, float y2, float z2,
+                                     int r, int g, int b, int alpha, int light) {
+        quadColored(vc, pose, x1, y1, z1, x2, y1, z1, x2, y1, z2, x1, y1, z2, r, g, b, alpha, light); // bottom
+        quadColored(vc, pose, x1, y2, z1, x1, y2, z2, x2, y2, z2, x2, y2, z1, r, g, b, alpha, light); // top
+        quadColored(vc, pose, x1, y1, z1, x1, y2, z1, x1, y2, z2, x1, y1, z2, r, g, b, alpha, light); // -X
+        quadColored(vc, pose, x2, y1, z1, x2, y1, z2, x2, y2, z2, x2, y2, z1, r, g, b, alpha, light); // +X
+        quadColored(vc, pose, x1, y1, z1, x2, y1, z1, x2, y2, z1, x1, y2, z1, r, g, b, alpha, light); // -Z
+        quadColored(vc, pose, x1, y1, z2, x1, y2, z2, x2, y2, z2, x2, y1, z2, r, g, b, alpha, light); // +Z
+    }
+
+    private static void quadColored(VertexConsumer vc, PoseStack.Pose pose,
+                                    float x1, float y1, float z1, float x2, float y2, float z2,
+                                    float x3, float y3, float z3, float x4, float y4, float z4,
+                                    int r, int g, int b, int alpha, int light) {
+        vc.addVertex(pose, x1, y1, z1).setColor(r, g, b, alpha).setUv(0, 0).setLight(light).setNormal(pose, 0, 1, 0);
+        vc.addVertex(pose, x2, y2, z2).setColor(r, g, b, alpha).setUv(0, 0).setLight(light).setNormal(pose, 0, 1, 0);
+        vc.addVertex(pose, x3, y3, z3).setColor(r, g, b, alpha).setUv(0, 0).setLight(light).setNormal(pose, 0, 1, 0);
+        vc.addVertex(pose, x3, y3, z3).setColor(r, g, b, alpha).setUv(0, 0).setLight(light).setNormal(pose, 0, 1, 0);
+        vc.addVertex(pose, x4, y4, z4).setColor(r, g, b, alpha).setUv(0, 0).setLight(light).setNormal(pose, 0, 1, 0);
+        vc.addVertex(pose, x1, y1, z1).setColor(r, g, b, alpha).setUv(0, 0).setLight(light).setNormal(pose, 0, 1, 0);
     }
 
     /** Adds a single translucent quad (two triangles, 6 vertices). */
@@ -414,12 +457,7 @@ public final class RoadPlacementRenderer {
                              float x1, float y1, float z1, float x2, float y2, float z2,
                              float x3, float y3, float z3, float x4, float y4, float z4,
                              int light, int alpha) {
-        vc.addVertex(pose, x1, y1, z1).setColor(255, 255, 80, alpha).setUv(0, 0).setLight(light).setNormal(pose, 0, 1, 0);
-        vc.addVertex(pose, x2, y2, z2).setColor(255, 255, 80, alpha).setUv(0, 0).setLight(light).setNormal(pose, 0, 1, 0);
-        vc.addVertex(pose, x3, y3, z3).setColor(255, 255, 80, alpha).setUv(0, 0).setLight(light).setNormal(pose, 0, 1, 0);
-        vc.addVertex(pose, x3, y3, z3).setColor(255, 255, 80, alpha).setUv(0, 0).setLight(light).setNormal(pose, 0, 1, 0);
-        vc.addVertex(pose, x4, y4, z4).setColor(255, 255, 80, alpha).setUv(0, 0).setLight(light).setNormal(pose, 0, 1, 0);
-        vc.addVertex(pose, x1, y1, z1).setColor(255, 255, 80, alpha).setUv(0, 0).setLight(light).setNormal(pose, 0, 1, 0);
+        quadColored(vc, pose, x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4, 255, 255, 80, alpha, light);
     }
 
     // ── Rectangle area preview ──
@@ -484,8 +522,6 @@ public final class RoadPlacementRenderer {
     /** Draws the yellow perimeter outline of the placement rectangle, following the terrain. */
     private static void renderPerimeterOutline(Level level, MultiBufferSource bufferSource, PoseStack poseStack,
                                                int minX, int minZ, int maxX, int maxZ) {
-        // Sample surface height at each of the four corners so the outline follows
-        // the terrain, avoiding buried segments on slopes.
         float yMinZMinX = surfaceHeight(level, minX, minZ) + 0.02f;
         float yMinZMaxX = surfaceHeight(level, maxX, minZ) + 0.02f;
         float yMaxZMinX = surfaceHeight(level, minX, maxZ) + 0.02f;
@@ -526,6 +562,141 @@ public final class RoadPlacementRenderer {
                 vc.addVertex(pose, x1, y, z1).setColor(255, 255, 80, 48).setUv(0, 0).setLight(light).setNormal(pose, 0, 1, 0);
             }
         }
+    }
+
+    /**
+     * Renders the terrain flatten preview:
+     * <ul>
+     *   <li>Translucent red box covering terrain above the baseline plane to be cut</li>
+     *   <li>Translucent green box covering terrain below the baseline plane to be filled (if enabled)</li>
+     *   <li>Golden baseline cutting plane and outline visible directly and through terrain (X-ray)</li>
+     *   <li>Ghost blocks at the baseline plane</li>
+     * </ul>
+     */
+    private static void renderFlattenPreview(Level level, MultiBufferSource.BufferSource bufferSource, PoseStack poseStack,
+                                             BlockPos from, BlockPos to) {
+        int minX = Math.min(from.getX(), to.getX());
+        int maxX = Math.max(from.getX(), to.getX());
+        int minZ = Math.min(from.getZ(), to.getZ());
+        int maxZ = Math.max(from.getZ(), to.getZ());
+        int refY = from.getY();
+
+        // 1. Scan terrain heights in the selection to compute cut/fill extents
+        int maxTerrainY = refY;
+        int minTerrainY = refY;
+        boolean hasCut = false;
+        boolean hasFill = false;
+
+        for (int x = minX; x <= maxX; x++) {
+            for (int z = minZ; z <= maxZ; z++) {
+                int ty = level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z) - 1;
+                if (ty > maxTerrainY) {
+                    maxTerrainY = ty;
+                    hasCut = true;
+                }
+                if (ty < minTerrainY) {
+                    minTerrainY = ty;
+                    hasFill = true;
+                }
+            }
+        }
+
+        // 2. Cut Volume (Red translucent box above refY for terrain to be removed)
+        if (hasCut && maxTerrainY > refY) {
+            renderColoredVolumeBox(bufferSource, poseStack, minX, refY + 1, minZ, maxX + 1, maxTerrainY + 1, maxZ + 1,
+                    255, 60, 60, 35, 255, 80, 80);
+        }
+
+        // 3. Fill Volume (Green translucent box below refY if fillDepressions is enabled)
+        if (RoadPlacementState.isFillDepressions() && hasFill && minTerrainY < refY) {
+            renderColoredVolumeBox(bufferSource, poseStack, minX, minTerrainY, minZ, maxX + 1, refY + 1, maxZ + 1,
+                    60, 220, 100, 35, 80, 255, 120);
+        }
+
+        // 4. Baseline Plane Outline & X-Ray Flat Surface
+        renderFlatBaselinePlane(bufferSource, poseStack, minX, minZ, maxX, maxZ, refY);
+
+        // 5. Ghost Blocks on the Baseline Plane (if selection is within threshold)
+        int area = (maxX - minX + 1) * (maxZ - minZ + 1);
+        if (area <= ROAD_GHOST_MAX_CELLS) {
+            String refBlockId = RoadPlacementState.getRefBlockId();
+            if (refBlockId == null || refBlockId.isEmpty() || "minecraft:air".equals(refBlockId)) {
+                BlockState st = level.getBlockState(from);
+                if (!st.isAir()) {
+                    refBlockId = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(st.getBlock()).toString();
+                } else {
+                    refBlockId = "minecraft:dirt";
+                }
+            }
+            BlockState state = BuildingPreviewRenderer.resolveBlockState(refBlockId);
+            if (state != null) {
+                MultiBufferSource ghostSource = RoadGhostRenderUtil.ghostSource(bufferSource, ROAD_GHOST_ALPHA);
+                for (int x = minX; x <= maxX; x++) {
+                    for (int z = minZ; z <= maxZ; z++) {
+                        RoadGhostRenderUtil.renderGhostBlock(level, state, poseStack, ghostSource, x, refY, z);
+                    }
+                }
+            }
+        }
+    }
+
+    private static void renderColoredVolumeBox(MultiBufferSource.BufferSource bufferSource, PoseStack poseStack,
+                                               float x1, float y1, float z1, float x2, float y2, float z2,
+                                               int r, int g, int b, int alpha,
+                                               int lineR, int lineG, int lineB) {
+        var pose = poseStack.last();
+
+        // 1. Standard lines & faces
+        VertexConsumer lineVc = bufferSource.getBuffer(RenderType.lines());
+        drawBoxWireframe(lineVc, pose, x1, y1, z1, x2, y2, z2, lineR, lineG, lineB, 220);
+
+        VertexConsumer vc = bufferSource.getBuffer(RenderType.translucent());
+        int light = 0xF000F0;
+        fillBoxFaces(vc, pose, x1, y1, z1, x2, y2, z2, r, g, b, alpha, light);
+
+        // 2. X-ray lines & faces (visible through terrain)
+        VertexConsumer xrayLineVc = bufferSource.getBuffer(SplineEditorRenderer.SplineRenderType.XRAY_LINES);
+        drawBoxWireframe(xrayLineVc, pose, x1, y1, z1, x2, y2, z2, lineR, lineG, lineB, 120);
+        bufferSource.endBatch(SplineEditorRenderer.SplineRenderType.XRAY_LINES);
+
+        VertexConsumer xrayVc = bufferSource.getBuffer(SplineEditorRenderer.SplineRenderType.XRAY_QUADS);
+        fillBoxFaces(xrayVc, pose, x1, y1, z1, x2, y2, z2, r, g, b, Math.max(10, alpha / 2), light);
+        bufferSource.endBatch(SplineEditorRenderer.SplineRenderType.XRAY_QUADS);
+    }
+
+    private static void renderFlatBaselinePlane(MultiBufferSource.BufferSource bufferSource, PoseStack poseStack,
+                                                int minX, int minZ, int maxX, int maxZ, int refY) {
+        float y = refY + 1.005f;
+        float x1 = minX, x2 = maxX + 1f, z1 = minZ, z2 = maxZ + 1f;
+        var pose = poseStack.last();
+        int light = 0xF000F0;
+
+        // Standard lines
+        VertexConsumer vc = bufferSource.getBuffer(RenderType.lines());
+        line(vc, pose, x1, y, z1, x2, y, z1, 255, 220, 60, 255);
+        line(vc, pose, x2, y, z1, x2, y, z2, 255, 220, 60, 255);
+        line(vc, pose, x2, y, z2, x1, y, z2, 255, 220, 60, 255);
+        line(vc, pose, x1, y, z2, x1, y, z1, 255, 220, 60, 255);
+
+        // X-Ray Lines (visible through mountains)
+        VertexConsumer xrayLines = bufferSource.getBuffer(SplineEditorRenderer.SplineRenderType.XRAY_LINES);
+        line(xrayLines, pose, x1, y, z1, x2, y, z1, 255, 220, 60, 180);
+        line(xrayLines, pose, x2, y, z1, x2, y, z2, 255, 220, 60, 180);
+        line(xrayLines, pose, x2, y, z2, x1, y, z2, 255, 220, 60, 180);
+        line(xrayLines, pose, x1, y, z2, x1, y, z1, 255, 220, 60, 180);
+        bufferSource.endBatch(SplineEditorRenderer.SplineRenderType.XRAY_LINES);
+
+        // Translucent fill
+        VertexConsumer quads = bufferSource.getBuffer(RenderType.translucent());
+        quadColored(quads, pose, x1, y, z1, x1, y, z2, x2, y, z2, x2, y, z1, 255, 220, 60, 48, light);
+
+        // X-Ray Quad
+        VertexConsumer xrayQuads = bufferSource.getBuffer(SplineEditorRenderer.SplineRenderType.XRAY_QUADS);
+        xrayQuads.addVertex(pose, x1, y, z1).setColor(255, 220, 60, 35);
+        xrayQuads.addVertex(pose, x1, y, z2).setColor(255, 220, 60, 35);
+        xrayQuads.addVertex(pose, x2, y, z2).setColor(255, 220, 60, 35);
+        xrayQuads.addVertex(pose, x2, y, z1).setColor(255, 220, 60, 35);
+        bufferSource.endBatch(SplineEditorRenderer.SplineRenderType.XRAY_QUADS);
     }
 
     /** Sample the MOTION_BLOCKING surface height at (x, z). */

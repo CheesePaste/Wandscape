@@ -182,4 +182,23 @@ class RoadPlacementStateTest {
         RoadPlacementState.exitProjection();
         assertEquals(RoadPlacementState.PaletteSourceMode.PRESET, RoadPlacementState.getPaletteMode());
     }
+
+    @Test
+    @DisplayName("DESTROY_FILL 模式下 startPos 与 refBlock 保留基准平面属性")
+    void destroyFillBaselinePlaneProperties() {
+        RoadPlacementState.enterProjection();
+        RoadPlacementState.setActiveTool(RoadPlacementState.ToolMode.DESTROY_FILL);
+        assertTrue(RoadPlacementState.isDestroyFill());
+
+        BlockPos baselineRef = new BlockPos(100, 68, 200);
+        RoadPlacementState.setStartPos(baselineRef);
+        RoadPlacementState.setRefBlockId("minecraft:stone_bricks");
+
+        assertEquals(68, RoadPlacementState.getStartPos().getY(), "基准平面高度严格遵循 startPos.getY()");
+        assertEquals("minecraft:stone_bricks", RoadPlacementState.getRefBlockId());
+
+        BlockPos endCorner = new BlockPos(120, 68, 220);
+        RoadPlacementState.setEndPos(endCorner);
+        assertEquals(baselineRef.getY(), RoadPlacementState.getEndPos().getY(), "End 坐标严格在同一基准平面高度");
+    }
 }
