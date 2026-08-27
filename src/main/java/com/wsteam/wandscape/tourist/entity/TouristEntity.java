@@ -760,7 +760,10 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
         return Mob.createMobAttributes()
                 .add(Attributes.MOVEMENT_SPEED, 0.5)
                 .add(Attributes.FOLLOW_RANGE, 64.0)
-                .add(Attributes.MAX_HEALTH, 20.0);
+                .add(Attributes.MAX_HEALTH, 20.0)
+                // 水中移动效率 1.0：落水/渡水时以接近陆地的速度游动（原版陆地生物默认 0，
+                // 水中速度仅约 1 格/秒，游客会被"卡"在河里并反复触发救援传送）。
+                .add(Attributes.WATER_MOVEMENT_EFFICIENCY, 1.0);
     }
 
     // ──────────────────────── State helpers ────────────────────────

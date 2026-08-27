@@ -46,7 +46,7 @@
 
 ## nav/
 
-- `WandscapeNavigation`：继承 GroundPathNavigation，canOpenDoors/canPassDoors=true；A* 预算 = FOLLOW_RANGE×16。
+- `WandscapeNavigation`：继承 GroundPathNavigation，canOpenDoors/canPassDoors=true；A* 预算 = FOLLOW_RANGE×16；`WandscapeNodeEvaluator`（AmphibiousNodeEvaluator + 中立陆地/水中代价）两栖寻路——水中可垂直上浮/爬岸，水中移动效率 1.0，NPC/游客落水能自己游回岸。
 
 ## service/
 
@@ -69,7 +69,7 @@
 
 ## system/（ECS System，注册到 World）
 
-- **NavigationSystem**：唯一移动驱动器。到达判定 5²；首帧距离²>64² → 切 ritual 传送；重寻路上限 5、超时 200 tick、卡死 60 tick×3 次 → 传送；`switchToRitualTeleport` 受 `npc.tryCastSpell("teleport", 300, 30, 1)` 门控（互斥锁 + 传送独立 CD 300/SPELL_SPEED + 30 魔力，任一不满足回退走路），经 `world.ritualOps.beginRitual(SELF_TELEPORT)` 并写回 exec.pendingFuture。
+- **NavigationSystem**：唯一移动驱动器。到达判定 5²；首帧距离²>64² → 切 ritual 传送；重寻路上限 5、超时 200 tick（**水中跳过该超时**，改靠卡死进度三连兜底——渡水合法慢移动）、卡死 60 tick×3 次 → 传送；`switchToRitualTeleport` 受 `npc.tryCastSpell("teleport", 300, 30, 1)` 门控（互斥锁 + 传送独立 CD 300/SPELL_SPEED + 30 魔力，任一不满足回退走路），经 `world.ritualOps.beginRitual(SELF_TELEPORT)` 并写回 exec.pendingFuture。
 - **ResourceSupplySystem**：40 tick 心跳。扫描 AWAITING_RESOURCES：可用即唤醒；缺料 `trySupplyResource → enqueueSynthesize`（去重 in-flight）→ `tryGatherElement`（node 建筑匹配元素）。
 
 ## transport/

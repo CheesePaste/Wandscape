@@ -2,6 +2,24 @@
 
 本文件记录偏离直觉的设计选择及其原因，供后续开发快速理解「为什么这么做」。
 
+## 2026-08-27：NPC/游客水中两栖寻路——不再因落水卡死触发传送兜底
+
+**需求**（bug 报告）：NPC 和游客落水后难以正常寻路移动——要么站在水里不动/反复触发 rescue 传送，要么一渡河就被强制传送。
+
+**根因**（两层）：
+1. **纯陆地寻路器**：`WandscapeNavigation` 继承 `GroundPathNavigation`、用 `WalkNodeEvaluator`。该评估器只探索水平邻居、没有水中垂直邻居——较深的水里无法向上/向岸寻路，`moveTo` 失败，落入传送兜底（NPC self_teleport 仪式 / 游客 rescue teleport）。`GroundPathNavigation` 的水面路径也只在 `canFloat=true`（由 `FloatGoal` 隐式开启）下成立。
+2. **硬超时与慢移动不匹配**：原版陆地生物水中水平移速 ≈ 0.02×移速/0.2 ≈ 0.6~1 格/秒，而 NPC `PATHFIND_TIMEOUT=200tick`、游客 `totalNavTicks>600` 硬上限——任何稍长的渡水都在到达前被强制传送。
+
+**决策**：
+- **两栖寻路器**（`WandscapeNodeEvaluator extends AmphibiousNodeEvaluator`）：保留陆地语义（继承自 `WalkNodeEvaluator`）的同时提供水中垂直邻居（可上浮/爬岸）；把 `AmphibiousNodeEvaluator` 的 WALKABLE 代价 6.0 恢复为 0（中立）——殖民地 NPC 是走路生物，只把水当作可通行地形，不偏向游泳绕行。
+- **显式 `setCanFloat(true)`**：`WandscapeNavigation` 构造器与 `createPathFinder` 都开启，不再依赖 `FloatGoal` 的注册顺序。
+- **水中移速**：NPC 与游客 attribute supplier 加 `WATER_MOVEMENT_EFFICIENCY=1.0`（接近陆地速度）。
+- **水中放宽硬超时**：NPC `PATHFIND_TIMEOUT` 在 `npc.isInWater()` 时跳过（改靠 STUCK 卡死进度三连兜底，真正卡死仍会被传送）；游客 `totalNavTicks` 硬上限同样在水中跳过（只认 `noMoveTicks` 水平不动）。
+
+**为什么**：修正寻路根因（评估器）而非继续堆传送兜底；「慢但前进」的渡水是合法行为，不应被固定超时判死。速度属性选 `WATER_MOVEMENT_EFFICIENCY`（原版机制）而非自定义水中加速度，避免另起一套移动逻辑。
+
+**影响**：新增 `WandscapeNodeEvaluator`；`WandscapeNavigation` 换用 + 强制 canFloat；NPC/游客各加 `WATER_MOVEMENT_EFFICIENCY` 属性；`NavigationSystem`/`TouristMoveGoal` 三处硬超时水中放宽。陆地寻路行为不变（评估器继承陆地逻辑、代价中立）。
+
 ## 2026-08-27：光束施法期间横移走位 + 施法姿态与光束同步
 
 **需求**（用户实测）：1) 殖民法师释放光束时几乎不走位——光束是 12 秒持续效果，整个期间站桩当固定炮台；2) 施法姿态比光束持续时间短，目标死亡后光束残留在原地几秒才消失（NPC 已放下手走开，光束还冻在死者位置）。
@@ -1389,3 +1407,13 @@
 **为什么**：category 在放置层面已名存实亡（不校验匹配），继续用它驱动门控必然踩坑；改为跟随玩家可见、可操作的策略组，门控与分组一致。陨石想打单体，把它拖进单体组即可，不必改每个法术的门控配置。
 
 **影响**：spell JSON 的 category 全部改 normal + 补 default_group；CastBrain 接口改吃 SpellRef；铁魔法合成 def category 恒 NORMAL、targetMode/conditions 按组名；策略预设排序按策略组；MagicDefTest/CastBrainTest 同步更新。
+
+## 2026-08-27：敌数门控不匹配 = 最低优先级降级，非硬禁用
+
+**需求**（用户反馈）：敌数 > 3 时若只剩单体攻击魔法，NPC 也应施放；敌数 < 3 时只剩群攻魔法同理——不匹配的组不应被硬性禁用，只是优先级最低。
+
+**决策**：`CastBrain.select` 不再 `continue` 跳过门控不匹配的法术，改为两态选择——敌数与策略组匹配的法术按原优先级扫描，命中即返回；全部不可用时回退到第一个通过其余全部检查（`castable`/目标规则/`conditions`）但门控不匹配的法术（`known` 已是优先级序，第一个即最高优先级候选）。`enemyCountGate` 语义从「硬门槛」变为「优先级分层」。
+
+**为什么**：原实现把敌数门控当成硬性开关，导致「怪多但只有单体、怪少但只有群攻」时 NPC 一个法术也不放、只会基础攻击，浪费已装备的魔法。降级语义保留「敌数匹配优先」的意图（避免敌少时砸 AOE 浪费蓝、敌多时单发效率低），又消除僵局。`castable`/目标规则/`conditions` 仍是硬门槛，只有敌数门控是优先级。
+
+**影响**：`CastBrainTest` 相关断言从 `assertNull`（不选）改为断言降级后仍选中；`docs/spell-casting.md` 5.2 敌数门控段落与二十三章同步更新。无存档迁移。
