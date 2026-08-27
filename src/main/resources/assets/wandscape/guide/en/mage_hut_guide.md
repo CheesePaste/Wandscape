@@ -20,12 +20,13 @@ Resident mages can undergo targeted training across 7 core attributes:
 - **Armor**: Reduces incoming physical and magic damage.
 - **Movement Speed**: Increases movement and patrol speed.
 
-Each training session consumes 1000 of all 6 basic elements from the colony warehouse until the attribute reaches its cap.
+Each training session consumes 2 specific elements from the colony warehouse (e.g. Health = Earth + Metal, Spell Power = Fire + Dark); the per-session cost rises exponentially with training progress — cheap near the bottom, very expensive near the cap. Each attribute has 20 uniform steps to its cap, making the late-game training a sink for surplus elements.
 
 ## Rank Promotion
 
 - When a mage's level is below the colony level, click "**Promote**" to raise their rank.
 - Promoting rank increases overall attribute bonuses across all stats.
+- Promotion costs all 7 elements, `150 × target level` each (Lv1→2 costs 300 each, Lv9→10 costs 1,500 each) — a gentle, level-scaled cost that never blocks progression.
 
 ## Quick Commands
 
