@@ -106,7 +106,11 @@ public class NpcMenu extends AbstractContainerMenu {
     @Override
     public boolean stillValid(Player player) {
         if (npc == null) return true;
-        return !npc.isRemoved() && player.canInteractWithEntity(npc, 64.0);
+        // 有效性只看 NPC 存活，不要求玩家靠近：法师小屋是远程管理站，装备菜单从小屋
+        // 面板远程打开，法师常远在殖民地各处执行任务（>64 格）。距离判定会让菜单刚
+        // 打开就被服务端按原版容器有效性检查关闭。NPC 死亡或区块卸载（UNLOADED_TO_CHUNK
+        // 置 isRemoved）时仍会关闭，交互不会落到无效实体上。
+        return !npc.isRemoved() && npc.isAlive();
     }
 
     /** 任意槽操作（拾取/放置/Shift/拖拽）后同步装备态到 NPC 实体。 */

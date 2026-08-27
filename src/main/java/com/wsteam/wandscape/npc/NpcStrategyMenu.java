@@ -118,7 +118,10 @@ public class NpcStrategyMenu extends AbstractContainerMenu {
     @Override
     public boolean stillValid(Player player) {
         if (npc == null) return true;
-        return !npc.isRemoved() && player.canInteractWithEntity(npc, 64.0);
+        // 与 NpcMenu.stillValid 一致：远程管理站语义，只看 NPC 存活不要求玩家靠近——
+        // 法师小屋面板远程打开的策略菜单，法师距玩家 >64 格时按原版距离检查会在下一
+        // tick 被服务端关闭。死亡/区块卸载仍关闭。
+        return !npc.isRemoved() && npc.isAlive();
     }
 
     /** 任意槽操作（放卷轴/取出/Shift/拖拽）后重建装备态写回 NPC。 */

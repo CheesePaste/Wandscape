@@ -2,6 +2,34 @@
 
 本文件记录偏离直觉的设计选择及其原因，供后续开发快速理解「为什么这么做」。
 
+## 2026-08-27：幽灵 NPC 不派活——区块卸载后任务循环失败卡死
+
+**需求**（用户指令）：日志反复刷 `TaskExec | NPC 51 op ResourceRequestOp failed: [ResourceReq] NPC 51 not found` 与 `navigateTo: unknown or removed NPC 51`，任务无人施工卡死。
+
+**根因**：NPC 所在区块卸载 → 原版 `setRemoved(UNLOADED_TO_CHUNK)` → `Entity.isRemoved()`=true（源码已核）→ `onRemovedFromLevel` 的 UNLOADED 分支刻意保留 ECS 组件（供重连）但不释放绑定任务。于是幽灵 NPC 的组件全在 → `TaskExecutionSystem` 每 tick 驱动它 → 所有 MC 边界操作命中 `npc == null || npc.isRemoved()` 守卫失败 → 任务释放回池 → `SchedulerSystem` 又把它当空闲工人（组件在、state=IDLE）重新派给它 → 失败 → 释放 → 再派，无限循环。
+
+**决策**：
+- **`EntityOps.isNpcAlive(npcId)` 边界方法**：MC 实体存在且未 removed（`WandscapeEntityOps` 经 EntityComponentBridge 实现，同 isFollowing 模式）。
+- **调度器排除幽灵**：`SchedulerSystem` 收集空闲候选时过滤 `!isNpcAlive`——任务绝不派给不存在的工人（切断循环）。
+- **执行系统遇幽灵即释放**：`TaskExecutionSystem` 第 0.6 步守卫，`releaseForPhantom` 复用抽取的 `releaseBoundGlobalTask`（`returnAndReset` 退还已取元素 + 重置步进 + `releaseTaskForReassign` 保留步进归还任务池）并丢弃 `global:` 包、取消导航、跳过执行。
+- **卸载时任务归还任务池**（而非留在幽灵身上等待）：任务系统无"暂停-恢复"机制、重连路径不恢复保持绑定的包，与 KILLED/DISCARDED、跟随/休息中断同语义——"NPC 不能干活 → 任务交他人续跑"。他人续跑靠 `returnAndReset` 避免空背包打到资源短缺死循环；无他人时任务留在池中等重连后的 NPC 重新接取（stepIndex 保留，不丢进度）。
+
+**为什么**：幽灵 NPC 的唯一正确处置是"不作为工人存在"——保留 ECS 组件只为重连复用，绝不该承担派活/驱动。在边界层一次判定（isNpcAlive），调度与执行两处消费，避免各自猜 `isRemoved` 语义。
+
+**影响**：`EntityOps`（+isNpcAlive）、`WandscapeEntityOps`、`SchedulerSystem`、`TaskExecutionSystem`（守卫 + releaseBoundGlobalTask 抽取）、`MockBoundary`（removedNpcs 模拟）、`docs/modules/core.md`。测试：SchedulerPhantomNpcTest 3 例（调度排除幽灵 / 执行释放幽灵任务 / 释放后健康 NPC 续跑）。不改 `onRemovedFromLevel`：任务释放由执行守卫统一承担（带正确退还），MC 层不重复释放逻辑；运输/预留按时间完成，卸载不泄漏。
+
+## 2026-08-27：法师装备/策略菜单有效性只绑 NPC 存活——不绑玩家与法师的距离
+
+**需求**（bug 报告）：法师离玩家太远时，在法师小屋面板里远程打开「装备/策略」子面板，打开瞬间就被关掉。
+
+**根因**：`NpcMenu`/`NpcStrategyMenu.stillValid` 沿用原版容器惯例 `player.canInteractWithEntity(npc, 64.0)`——玩家须距法师 ≤64 格。法师常远在殖民地各处执行任务，从小屋面板远程打开子菜单时该检查立即失败，原版每 tick 容器有效性检查在下一 tick 关闭菜单（服务端发 `ClientboundContainerClosePacket`，客户端容器屏闪开即关，小屋面板也被替换丢失）。
+
+**决策**：`stillValid` 改为 `!npc.isRemoved() && npc.isAlive()`——有效性只绑法师存活，不绑距离。直接右键 NPC 打开（本就贴近）与小屋远程打开统一走同一语义。
+
+**为什么**：法师小屋是**远程管理站**（2026-08-24 设计），管理法师的全部操作都应在小屋就地完成，不要求玩家陪在法师身边；而法师是移动实体，距离判定与「远程管理」天然冲突。保留存活判定仍能在法师死亡或区块卸载（`UNLOADED_TO_CHUNK` 置 `isRemoved`）时关闭菜单，交互不会落到无效实体上。
+
+**影响**：`NpcMenu.java`、`NpcStrategyMenu.java` 的 `stillValid`（各删 `player.canInteractWithEntity(npc, 64.0)`）。
+
 ## 2026-08-27：法师小屋属性训练/升级重定价——每属性专用元素 + 指数曲线 + 统一 20 步
 
 **需求**（用户指令）：小屋训练/升级原为固定全元素×1000，与收入模型不匹配（各元素产出不均，暗/金属短缺）；改为每属性消耗不同元素、数量合理规划；训练前期便宜后期极贵（前期有存在感、大后期为过剩收入的最终凹点），升级温和（有存在感但不卡玩家）；每属性统一 20 步方便规划；升级七种元素均匀消耗。
