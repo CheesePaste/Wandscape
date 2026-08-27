@@ -129,12 +129,14 @@ class CastBrainTest {
     void enemyCountGateByGroupSingleMax3AoeMin3() {
         SpellRef single = spell("beam", "single_target", "hostile_nearest");
         SpellRef aoe = spell("meteor_", "aoe", "hostile_nearest");
-        // 单体攻击组：敌数 ≤ 3 可放；> 3 不选（改等群发）
-        assertEquals("beam", CastBrain.select(List.of(single), def -> true, snap(3)).def().id(), "单体组敌数=3 可放");
-        assertNull(CastBrain.select(List.of(single), def -> true, snap(4)), "单体组敌数=4 不选");
-        // 群体攻击组：敌数 ≥ 3 可放；< 3 不选
-        assertNull(CastBrain.select(List.of(aoe), def -> true, snap(2)), "群攻组敌数=2 不选");
-        assertEquals("meteor_", CastBrain.select(List.of(aoe), def -> true, snap(3)).def().id(), "群攻组敌数=3 可放");
+        // 单体攻击组：敌数 ≤ 3 正常优先；> 3 降级为最低优先级（仍可放，仅在没有匹配法术时）
+        assertEquals("beam", CastBrain.select(List.of(single), def -> true, snap(3)).def().id(), "单体组敌数=3 正常放");
+        assertEquals("beam", CastBrain.select(List.of(single), def -> true, snap(4)).def().id(),
+                "单体组敌数=4 门控不匹配：仅剩它时仍放（降级而非硬禁用）");
+        // 群体攻击组：敌数 ≥ 3 正常优先；< 3 降级为最低优先级
+        assertEquals("meteor_", CastBrain.select(List.of(aoe), def -> true, snap(2)).def().id(),
+                "群攻组敌数=2 门控不匹配：仅剩它时仍放（降级而非硬禁用）");
+        assertEquals("meteor_", CastBrain.select(List.of(aoe), def -> true, snap(3)).def().id(), "群攻组敌数=3 正常放");
     }
 
     @Test
@@ -143,20 +145,29 @@ class CastBrainTest {
         SpellRef meteorInSingle = spell("meteor_", "single_target", "hostile_nearest");
         assertEquals("meteor_", CastBrain.select(List.of(meteorInSingle), def -> true, snap(1)).def().id(),
                 "群攻法术放单体组按单体组门槛（≤3），敌数 1 可放（陨石对单体修复）");
-        assertNull(CastBrain.select(List.of(meteorInSingle), def -> true, snap(4)),
-                "放单体组则按 ≤3，敌数 4 不选");
+        assertEquals("meteor_", CastBrain.select(List.of(meteorInSingle), def -> true, snap(4)).def().id(),
+                "放单体组则按 ≤3：敌数 4 门控不匹配，但仅剩它时仍施放（不硬禁用）");
     }
 
     @Test
-    void enemyCountGateFallsBackToNextSpell() {
+    void enemyCountGateDemotesNotDisables() {
         SpellRef single = spell("beam", "single_target", "hostile_nearest");
         SpellRef aoe = spell("meteor_", "aoe", "hostile_nearest");
-        // 敌数=4：单体组被拦(>3)，回落到群攻组
+        // 敌数=4：单体组被降级(>3)，有群攻组可用时选群攻组
         assertEquals("meteor_", CastBrain.select(List.of(single, aoe), def -> true, snap(4)).def().id(),
-                "敌数=4 单体组被拦(>3)，回落到群攻组");
-        // 敌数=2：群攻组被拦(<3)，回落到单体组
+                "敌数=4 单体组被降级(>3)，回落到群攻组");
+        // 敌数=2：群攻组被降级(<3)，有单体组可用时选单体组
         assertEquals("beam", CastBrain.select(List.of(aoe, single), def -> true, snap(2)).def().id(),
-                "敌数=2 群攻组被拦(<3)，回落到单体组");
+                "敌数=2 群攻组被降级(<3)，回落到单体组");
+        // 群攻组不可用（CD/蓝不够）时，降级的单体组仍被选中施放——最低优先级兜底
+        assertEquals("beam", CastBrain.select(List.of(single, aoe), def -> def.id().equals("beam"), snap(4)).def().id(),
+                "敌数=4 群攻组不可放时，降级的单体组仍施放");
+        // 单体组不可用（CD/蓝不够）时，降级的群攻组仍被选中施放
+        assertEquals("meteor_", CastBrain.select(List.of(aoe, single), def -> def.id().equals("meteor_"), snap(2)).def().id(),
+                "敌数=2 单体组不可放时，降级的群攻组仍施放");
+        // 全不可放仍返回 null（调用方走基础攻击兜底），降级不改变这一契约
+        assertNull(CastBrain.select(List.of(single, aoe), def -> false, snap(4)),
+                "全不施放时仍 null，不因降级兜底选中不可放法术");
     }
 
     // ── requiresTarget ──

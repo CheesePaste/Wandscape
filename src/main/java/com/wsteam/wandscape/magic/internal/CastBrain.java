@@ -132,8 +132,12 @@ public final class CastBrain {
 
     /**
      * 按 {@code known} 顺序返回第一个门控通过（{@code castable}）、目标规则命中且条件满足的法术；
-     * 无则 null。调用方拿到结果后自行执行（门控在 {@code MagicState.tryCast} 原子复验，
+     * 全部不满足返回 null。调用方拿到结果后自行执行（门控在 {@code MagicState.tryCast} 原子复验，
      * 此处只做选择、不扣资源）。
+     *
+     * <p><b>敌数门控是优先级降级，不是硬性禁用</b>：敌数与策略组不匹配的法术（如敌数 &gt; 3 只剩
+     * 单体攻击组、敌数 &lt; 3 只剩群体攻击组）不直接跳过，而是记作最低优先级候选——仅在没有任何
+     * 敌数匹配的法术可用时才选中它，避免「只剩单体攻击却一个也不放」的僵局。
      *
      * <p>{@code altarOnly} 魔法（如复活）只允许祭坛施放，NPC 直接施法永不选中。SPECIAL 的 heal 经
      * 装备进入优先级列表后允许被选中（L0 紧急奶/脱战自奶仍走独立硬性路径兜底）；teleport 在装备
@@ -145,20 +149,24 @@ public final class CastBrain {
     @Nullable
     public static SpellRef select(List<SpellRef> known, Predicate<MagicDef> castable, WorldSnapshot snapshot) {
         WorldSnapshot s = snapshot != null ? snapshot : WorldSnapshot.EMPTY;
+        SpellRef demoted = null; // 敌数与策略组不匹配的最高优先级候选（见 enemyCountGate）
         for (SpellRef ref : known) {
             MagicDef def = ref.def();
             if (def.altarOnly()) continue;
             if (!castable.test(def)) continue;
             if (!targetAvailable(def, s)) continue;
-            if (!enemyCountGate(ref, s)) continue;
             if (!def.conditions().matches(s)) continue;
-            return ref;
+            if (enemyCountGate(ref, s)) {
+                return ref;
+            }
+            if (demoted == null) demoted = ref; // 敌数不匹配：不硬禁用，降级为最低优先级兜底
         }
-        return null;
+        return demoted;
     }
 
-    /** 敌数门控（docs/spell-casting.md）：按法术所在的**策略组**判——单体攻击组敌数 ≤ 阈值、
-     *  群体攻击组敌数 ≥ 阈值；防御/支援组不设敌数门槛。组由玩家放置决定，非法术自身 category。 */
+    /** 敌数是否与所在**策略组**匹配（docs/spell-casting.md）：单体攻击组敌数 ≤ 阈值、群体攻击组
+     *  敌数 ≥ 阈值、防御/支援组恒匹配。组由玩家放置决定，非法术自身 category。不匹配 = 最低优先级，
+     *  由 {@link #select} 降级兜底，非硬性禁用。 */
     static boolean enemyCountGate(SpellRef ref, WorldSnapshot s) {
         return switch (ref.group() == null ? "" : ref.group()) {
             case "single_target" -> s.enemyCount() <= WandscapeConstants.CAST_SINGLE_TARGET_MAX_ENEMIES;
