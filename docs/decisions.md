@@ -2,6 +2,21 @@
 
 本文件记录偏离直觉的设计选择及其原因，供后续开发快速理解「为什么这么做」。
 
+## 2026-08-27：法师小屋属性训练/升级重定价——每属性专用元素 + 指数曲线 + 统一 20 步
+
+**需求**（用户指令）：小屋训练/升级原为固定全元素×1000，与收入模型不匹配（各元素产出不均，暗/金属短缺）；改为每属性消耗不同元素、数量合理规划；训练前期便宜后期极贵（前期有存在感、大后期为过剩收入的最终凹点），升级温和（有存在感但不卡玩家）；每属性统一 20 步方便规划；升级七种元素均匀消耗。
+
+**决策**：
+- **统一 20 步**：`trainStep = range/20`——SPELL_POWER/WORK/SPELL_SPEED 0.1→0.05、MAX_HP 2→1、MOVE_SPEED 0.02→0.01、ARMOR 0.5→0.4、MAX_MANA 保持 5。单步增益减半但步数翻倍，上限不变。
+- **每属性 2 种元素**（7 元素各恰好出现 2 次，晚后期属性耗金/暗稀缺元素）：生命=土+金、移速=木+风、法术强度=火+暗、建造工速=土+木、施法速度=风+水、护甲=金+暗、法力=火+水。
+- **训练指数曲线**：`cost(k) = 500 × 1.28^k`（k=0..19，按值域档位计，不按已训次数——高roll法师补最后一步也贵）。0.5→0.6 两步 ~2.3k、1.4→1.5 两步 ~194k；单属性 20 步 ~49.5 万、满配 7 属性一法师 ~350 万——大后期过剩收入的最终凹点，暗/金属成为自然门控。
+- **升级线性**：`150 × 目标等级` 每元素，**七元素均匀消耗**；Lv1→2 各 300、Lv29→30 各 4,500，全程 ~49 万/法师（训练满配的 ~14%）——随殖民地等级自然节奏、不卡玩家。
+- 成本函数放 `MageHutAttributes`（纯 Java，服务端扣费 + 客户端经同一函数同步显示）；`chargeElements` 参数化（训练扣该属性 2 元素、升级扣 7 元素）；删 `MAGE_HUT_COST_PER_ELEMENT`。
+
+**为什么**：固定全元素×1000 既不匹配供给（暗/金属短缺时所有训练同价却只有部分元素真正缺）也不构成决策（前期 0.5 天日收入、后期对 90 万日产出是零钱）。训练是永久定向提升，指数曲线让"每次购买是决策"且给印钞机经济一个真正的回收端；升级绑殖民地等级节奏，线性足够。
+
+**影响**：`MageHutAttributes`（SPECS 步进 + 成本模型）、`MageHutServerHandler`（chargeElements 参数化 + 不足元素明细）、`MageHutScreen`（训练卡元素图标+数量、升级卡成本行，按钮下移 8px）、`WandscapeConstants`（删 MAGE_HUT_COST_PER_ELEMENT）、`lang/{zh_cn,en_us}.json`（train_cost→upgrade_cost、insufficient 消息）、`guide/{zh_cn,en}/mage_hut_guide.md`。测试：MageHutAttributesTest 更新步进断言 + 新增 6 个成本模型用例（20 步不变式/指数首尾/元素映射平衡/升级线性）。
+
 ## 2026-08-27：NPC 盔甲改存 vanilla 装备槽——不再用独立 armorInventory
 
 **需求**（用户指令）：当前 NPC 的 4 件盔甲存在独立 `armorInventory`（`SimpleContainer`）、不在原版装备槽——从原版/其它模组的标准 API（`getItemBySlot`/`getArmorSlots`/`ArmorItems` NBT）看就是"没穿盔甲"。问这会不会影响装备兼容性。分析后确认为三处实损：附魔不生效（`EnchantmentHelper.runIterationOnEquipment` 按 `getItemBySlot` 遍历，Protection 等全失效，仅耐久因走 `hurtAndBreak` 正常）、非 ARMOR 属性全丢（护甲韧性/击退抗性/第三方自定义属性——vanilla 每 tick 装备结算只作用于槽内物品）、读写互不可见。且发现原"独立容器防外观覆盖巫师袍"的前提是**误判**：`WandscapeNpcRenderer extends HumanoidMobRenderer`，后者只加 CustomHeadLayer/ElytraLayer/ItemInHandLayer、`WandscapeNpcRenderer` 只加巫师帽层——**没有 HumanoidArmorLayer，盔甲即使放 vanilla 槽也不会渲染**。故决定彻底改。
