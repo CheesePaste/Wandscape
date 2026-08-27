@@ -123,9 +123,6 @@ public final class AltarCastHandler {
         params.put("altar", new JsonPrimitive(buildingId.toString()));
         params.put("mana_cost", new JsonPrimitive(def.manaCost()));
         params.put("duration", new JsonPrimitive(def.altarDuration()));
-        if (colonyId != null) {
-            params.put("colony_id", new JsonPrimitive(colonyId.toString()));
-        }
 
         var source = WandscapeEngine.getPlayerManualSource();
         if (source == null) {
@@ -133,7 +130,9 @@ public final class AltarCastHandler {
                     "[Wandscape] 任务系统未就绪"), true);
             return;
         }
-        source.publish(new TaskRequest(TASK_BLUEPRINT, params, WandscapeConstants.QUEUE_RITUAL_ALTAR));
+        // 殖民地归属经 TaskRequest.colonyId 显式传递（GlobalTaskPool 统一写入 colony_id 参数）
+        source.publish(new TaskRequest(TASK_BLUEPRINT, params, WandscapeConstants.QUEUE_RITUAL_ALTAR,
+                colonyId));
         Log.info(TAG, "player={} requested altar cast: altar={} magic={} manaCost={}",
                 player.getName().getString(), buildingId.toString().substring(0, 8),
                 magicId, def.manaCost());

@@ -182,7 +182,7 @@ public class CoreSystemsTest {
             params.put("x", new JsonPrimitive(pos.x()));
             params.put("y", new JsonPrimitive(pos.y()));
             params.put("z", new JsonPrimitive(pos.z()));
-            return new TaskRequest(blueprintId, params, priority);
+            return new TaskRequest(blueprintId, params, priority, null);
         }
 
         private void tickN(int n) {
@@ -267,7 +267,7 @@ public class CoreSystemsTest {
             params.put("x", new JsonPrimitive(pos.x()));
             params.put("y", new JsonPrimitive(pos.y()));
             params.put("z", new JsonPrimitive(pos.z()));
-            return new TaskRequest(blueprintId, params, priority);
+            return new TaskRequest(blueprintId, params, priority, null);
         }
 
         private void tickN(int n) {
@@ -383,7 +383,7 @@ public class CoreSystemsTest {
             params.put("x", new JsonPrimitive(pos.x()));
             params.put("y", new JsonPrimitive(pos.y()));
             params.put("z", new JsonPrimitive(pos.z()));
-            return new TaskRequest(blueprintId, params, priority);
+            return new TaskRequest(blueprintId, params, priority, null);
         }
 
         private void tickN(int n) {
@@ -419,7 +419,7 @@ public class CoreSystemsTest {
         @Test
         void highPriorityTask_startsPendingApproval() {
             long taskId = world.taskPool.addTask(new TaskRequest("test:any",
-                    Map.of("x", new JsonPrimitive(0), "y", new JsonPrimitive(64), "z", new JsonPrimitive(0)), 60));
+                    Map.of("x", new JsonPrimitive(0), "y", new JsonPrimitive(64), "z", new JsonPrimitive(0)), 60, null));
             assertEquals(TaskState.PENDING_APPROVAL, world.taskPool.get(taskId).state);
             assertNotNull(world.taskPool.get(taskId).approval);
         }
@@ -427,7 +427,7 @@ public class CoreSystemsTest {
         @Test
         void lowPriorityTask_skipsApproval() {
             long taskId = world.taskPool.addTask(new TaskRequest("test:any",
-                    Map.of("x", new JsonPrimitive(0), "y", new JsonPrimitive(64), "z", new JsonPrimitive(0)), 10));
+                    Map.of("x", new JsonPrimitive(0), "y", new JsonPrimitive(64), "z", new JsonPrimitive(0)), 10, null));
             assertEquals(TaskState.PENDING_ASSIGN, world.taskPool.get(taskId).state,
                     "Priority < 50 should skip approval");
         }
@@ -435,7 +435,7 @@ public class CoreSystemsTest {
         @Test
         void approve_movesToPendingAssign() {
             long taskId = world.taskPool.addTask(new TaskRequest("test:any",
-                    Map.of("x", new JsonPrimitive(0), "y", new JsonPrimitive(64), "z", new JsonPrimitive(0)), 55));
+                    Map.of("x", new JsonPrimitive(0), "y", new JsonPrimitive(64), "z", new JsonPrimitive(0)), 55, null));
             assertEquals(TaskState.PENDING_APPROVAL, world.taskPool.get(taskId).state);
 
             world.taskPool.approve(taskId);
@@ -445,7 +445,7 @@ public class CoreSystemsTest {
         @Test
         void reject_movesToCompleted() {
             long taskId = world.taskPool.addTask(new TaskRequest("test:any",
-                    Map.of("x", new JsonPrimitive(0), "y", new JsonPrimitive(64), "z", new JsonPrimitive(0)), 60));
+                    Map.of("x", new JsonPrimitive(0), "y", new JsonPrimitive(64), "z", new JsonPrimitive(0)), 60, null));
             assertEquals(TaskState.PENDING_APPROVAL, world.taskPool.get(taskId).state);
 
             world.taskPool.reject(taskId);
@@ -456,10 +456,10 @@ public class CoreSystemsTest {
         void pendingApprovalTasks_notScheduled() {
             // Create approved (low-prio) task — will be scheduled
             long approvedId = world.taskPool.addTask(new TaskRequest("test:any",
-                    Map.of("x", new JsonPrimitive(0), "y", new JsonPrimitive(64), "z", new JsonPrimitive(0)), 10));
+                    Map.of("x", new JsonPrimitive(0), "y", new JsonPrimitive(64), "z", new JsonPrimitive(0)), 10, null));
             // Create high-prio task — needs approval, stays PENDING_APPROVAL
             long pendingId = world.taskPool.addTask(new TaskRequest("test:any",
-                    Map.of("x", new JsonPrimitive(0), "y", new JsonPrimitive(64), "z", new JsonPrimitive(0)), 60));
+                    Map.of("x", new JsonPrimitive(0), "y", new JsonPrimitive(64), "z", new JsonPrimitive(0)), 60, null));
 
             // Create NPC and tick
             UUID colonyId = UUID.randomUUID();
@@ -761,7 +761,7 @@ public class CoreSystemsTest {
             params.put("x", new JsonPrimitive(pos.x()));
             params.put("y", new JsonPrimitive(pos.y()));
             params.put("z", new JsonPrimitive(pos.z()));
-            return new TaskRequest(blueprintId, params, priority);
+            return new TaskRequest(blueprintId, params, priority, null);
         }
 
         private void tickN(int n) {
@@ -875,7 +875,7 @@ public class CoreSystemsTest {
             params.put("x", new JsonPrimitive(pos.x()));
             params.put("y", new JsonPrimitive(pos.y()));
             params.put("z", new JsonPrimitive(pos.z()));
-            return new TaskRequest(blueprintId, params, priority);
+            return new TaskRequest(blueprintId, params, priority, null);
         }
 
         private void tickN(int n) {

@@ -230,7 +230,8 @@ public final class TaskPoolSavedData extends SavedData {
         // otherwise assignLight(task.id) / get(task.id) resolve to the wrong entry
         // after a reload, leaving a ghost task that re-assigns the same task to a
         // new NPC every heartbeat.
-        TaskRequest request = new TaskRequest(blueprintId, taskParams, priority);
+        // colonyId 传 null：恢复任务的 colony_id 已随 taskParams 持久化，池不覆盖。
+        TaskRequest request = new TaskRequest(blueprintId, taskParams, priority, null);
         try {
             long newId = pool.addTaskWithId(request, originalId);
             GlobalTask task = pool.get(newId);

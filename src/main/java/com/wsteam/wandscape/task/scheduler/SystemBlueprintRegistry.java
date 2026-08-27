@@ -101,8 +101,20 @@ public class SystemBlueprintRegistry {
             }
         }
 
+        // 事件透传殖民地归属：事件参数带 colony_id（字符串）→ 归一化为任务殖民地。
+        // 无主（事件无 colony_id）任务仍可派给真实殖民地 NPC，但绝不派给占位殖民地 NPC。
+        UUID colonyId = null;
+        String cid = event.params().get("colony_id");
+        if (cid != null) {
+            try {
+                colonyId = UUID.fromString(cid);
+            } catch (IllegalArgumentException ignored) {
+                // 非合法 UUID → 按无主处理
+            }
+        }
+
         long newTaskId = taskPool.addTask(
-                new TaskRequest(resolvedBpId, taskParams, trigger.priority()));
+                new TaskRequest(resolvedBpId, taskParams, trigger.priority(), colonyId));
         Log.info(TAG, "system trigger %s → task #%d blueprint=%s",
                 trigger.eventName(), newTaskId, resolvedBpId);
     }

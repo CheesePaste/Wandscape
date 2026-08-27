@@ -34,14 +34,16 @@ public class BuildingTaskPool {
      * If the building has no head task, compile and publish to the global pool immediately.
      * Otherwise, append to the building's pending queue.
      *
+     * @param colonyId the building's owning colony (may be null for unassigned buildings) —
+     *                 passed through to the published {@link TaskRequest}
      * @return the global task ID if a new head was published, or -1 if queued behind existing head
      */
-    public long enqueue(UUID buildingId, WorkItem item, GlobalTaskPool pool) {
+    public long enqueue(UUID buildingId, @Nullable UUID colonyId, WorkItem item, GlobalTaskPool pool) {
         BuildingTaskQueue queue = getOrCreate(buildingId);
 
         if (!queue.hasHead()) {
             TaskRequest request = new TaskRequest(
-                    item.blueprintId(), item.params(), item.priority());
+                    item.blueprintId(), item.params(), item.priority(), colonyId);
             long taskId = pool.addTaskFromBuilding(request, buildingId);
             queue.setHeadTaskId(taskId);
             return taskId;
@@ -54,8 +56,10 @@ public class BuildingTaskPool {
     /**
      * Called when a building's head task completes or fails terminally.
      * Promotes the next pending WorkItem to head if any remain.
+     *
+     * @param colonyId the building's owning colony (passed through to the promoted task)
      */
-    public void onHeadCompleted(UUID buildingId, GlobalTaskPool pool) {
+    public void onHeadCompleted(UUID buildingId, @Nullable UUID colonyId, GlobalTaskPool pool) {
         BuildingTaskQueue queue = queues.get(buildingId);
         if (queue == null) return;
 
@@ -64,7 +68,7 @@ public class BuildingTaskPool {
         WorkItem next = queue.dequeueNext();
         if (next != null) {
             TaskRequest request = new TaskRequest(
-                    next.blueprintId(), next.params(), next.priority());
+                    next.blueprintId(), next.params(), next.priority(), colonyId);
             long taskId = pool.addTaskFromBuilding(request, buildingId);
             queue.setHeadTaskId(taskId);
             Log.info(TAG, "building {} promoted next #{} blueprint={} pending={}",

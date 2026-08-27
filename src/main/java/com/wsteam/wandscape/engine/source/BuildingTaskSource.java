@@ -68,7 +68,7 @@ public class BuildingTaskSource implements TaskSource {
                 if (headId != null) {
                     GlobalTask head = pool.get(headId);
                     if (head == null || head.state == TaskState.COMPLETED) {
-                        btp.onHeadCompleted(buildingId, pool);
+                        btp.onHeadCompleted(buildingId, resolveColony(api, buildingId), pool);
                         api.clearCurrentTask(buildingId);
                         Log.info(TAG, "[BuildingTaskSource] cleanup building {} head #{} completed",
                                 buildingId.toString().substring(0, 8), headId);
@@ -80,7 +80,7 @@ public class BuildingTaskSource implements TaskSource {
                             WorkItem recycled = new WorkItem(head.blueprintId, head.taskParams, head.priority);
                             api.enqueueWork(buildingId, recycled);
                             pool.cancelTask(headId, world);
-                            btp.onHeadCompleted(buildingId, pool);
+                            btp.onHeadCompleted(buildingId, resolveColony(api, buildingId), pool);
                             api.clearCurrentTask(buildingId);
                             Log.info(TAG, "[BuildingTaskSource] building {} head #{} recycled to queue on element shortage",
                                     buildingId.toString().substring(0, 8), headId);
@@ -153,11 +153,11 @@ public class BuildingTaskSource implements TaskSource {
             try {
                 long taskId;
                 if (btp != null) {
-                    taskId = btp.enqueue(buildingId, item, pool);
+                    taskId = btp.enqueue(buildingId, colonyId, item, pool);
                 } else {
                     // Fallback: direct publish (no BuildingTaskPool)
                     TaskRequest request = new TaskRequest(
-                            item.blueprintId(), item.params(), item.priority());
+                            item.blueprintId(), item.params(), item.priority(), colonyId);
                     taskId = pool.addTask(request);
                 }
 
@@ -227,6 +227,13 @@ public class BuildingTaskSource implements TaskSource {
         } catch (IllegalStateException e) {
             return null;
         }
+    }
+
+    /** 建筑所属殖民地；建筑不存在/未归属返回 null（该任务视为无主，仍可派给真实殖民地 NPC）。 */
+    @Nullable
+    private static UUID resolveColony(BuildingApi api, UUID buildingId) {
+        com.wsteam.wandscape.shared.data.BuildingData bd = api.getBuilding(buildingId);
+        return bd != null ? bd.getColonyId() : null;
     }
 
     /**

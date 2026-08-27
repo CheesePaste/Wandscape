@@ -154,7 +154,8 @@ public record FillBoxPacket(String presetId, BlockPos startPos, BlockPos endPos)
         params.put("material_counts", counts);
 
         try {
-            long taskId = source.publish(new TaskRequest("terrain:fill_box", params, 10));
+            long taskId = source.publish(new TaskRequest("terrain:fill_box", params, 10,
+                    com.wsteam.wandscape.shared.registry.WandscapeApis.colonyAt(player.blockPosition())));
             SoundService.playAt(player.serverLevel(), player.getX(), player.getY(), player.getZ(),
                     WandscapeSounds.TASK_PUBLISH, SoundSource.PLAYERS, 0.4f, 1.0f);
             Log.info(TAG, "[Fill] Published task #{}: preset={} box=({},{},{})→({},{},{}) tiles={}",

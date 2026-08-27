@@ -72,6 +72,14 @@ public class WandscapeEntityOps implements EntityOps {
     }
 
     @Override
+    public boolean isColonyRegistered(java.util.UUID colonyId) {
+        if (colonyId == null) return false;
+        var api = com.wsteam.wandscape.shared.registry.WandscapeApis.getColonyApiSilently();
+        if (api == null) return false;
+        return api.getAllColonyIds().contains(colonyId);
+    }
+
+    @Override
     public boolean isNpcAlive(long npcId) {
         WandscapeNpc npc = EntityComponentBridge.INSTANCE.getNpc(npcId);
         return npc != null && !npc.isRemoved();

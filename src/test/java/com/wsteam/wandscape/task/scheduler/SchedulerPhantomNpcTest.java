@@ -76,7 +76,7 @@ class SchedulerPhantomNpcTest {
 
     /** 把一个任务手动绑定到指定 NPC（模拟已接取：分配 + 队列压包 + globalTaskId 绑定）。 */
     private GlobalTask bindTaskToNpc(long npcId) {
-        long taskId = world.taskPool.addTask(new TaskRequest(BP_BLOCKED, Map.of(), 10));
+        long taskId = world.taskPool.addTask(new TaskRequest(BP_BLOCKED, Map.of(), 10, null));
         GlobalTask task = world.taskPool.get(taskId);
         world.taskPool.assignLight(taskId, npcId, world);
         TaskExecutor exec = world.get(npcId, TaskExecutor.class);
@@ -92,7 +92,7 @@ class SchedulerPhantomNpcTest {
         long phantomId = createNpc(10);
         mock.setNpcRemoved(phantomId, true);
 
-        long taskId = world.taskPool.addTask(new TaskRequest(BP_BLOCKED, Map.of(), 10));
+        long taskId = world.taskPool.addTask(new TaskRequest(BP_BLOCKED, Map.of(), 10, null));
         GlobalTask task = world.taskPool.get(taskId);
 
         world.tick(1.0f); // heartbeat=1：调度器第一个 tick 派活

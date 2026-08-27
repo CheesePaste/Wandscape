@@ -78,7 +78,7 @@ class WandscapeBlockInteractChannelTest {
 
     /** Create a task in the pool and bind it to the NPC as IN_PROGRESS. */
     private GlobalTask bindTask() {
-        long taskId = world.taskPool.addTask(new TaskRequest(BP, Map.of(), 10));
+        long taskId = world.taskPool.addTask(new TaskRequest(BP, Map.of(), 10, null));
         GlobalTask task = world.taskPool.get(taskId);
         TaskExecutor exec = world.get(npcId, TaskExecutor.class);
         exec.globalTaskId = taskId;

@@ -181,7 +181,8 @@ public record SplineBuildPacket(String tilesJson, String splineJson) implements 
             params.put("material_list", list);
             params.put("material_counts", counts);
 
-            long taskId = source.publish(new TaskRequest("road:build_segment", params, 10));
+            long taskId = source.publish(new TaskRequest("road:build_segment", params, 10,
+                    com.wsteam.wandscape.shared.registry.WandscapeApis.colonyAt(player.blockPosition())));
             // Capture demand + live task id on the edge so withdraw can cancel & refund.
             edge.setMaterialCounts(materials);
             edge.addSegmentTaskId(taskId);

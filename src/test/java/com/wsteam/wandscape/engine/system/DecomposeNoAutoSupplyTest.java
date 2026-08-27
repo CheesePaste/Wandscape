@@ -55,7 +55,7 @@ class DecomposeNoAutoSupplyTest {
     @Test
     void scanStuckTasks_ignoresDecomposeTasks_doesNotTriggerAutoSynthesize() {
         // Create a decompose task and manually set state to AWAITING_RESOURCES
-        long taskId = world.taskPool.addTask(new TaskRequest("production:decompose", Map.of(), 50));
+        long taskId = world.taskPool.addTask(new TaskRequest("production:decompose", Map.of(), 50, null));
         GlobalTask task = world.taskPool.get(taskId);
         task.state = TaskState.AWAITING_RESOURCES;
         task.awaitingResource = List.of(new ResourceStack(new ResourceId("oak_log"), 64));

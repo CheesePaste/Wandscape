@@ -118,6 +118,25 @@ public class MockBoundary implements BlockOps, EntityOps, RitualOps, ColonyResou
         return colonyId == null || !frozenColonies.contains(colonyId);
     }
 
+    /** 模拟注册表：默认所有非占位殖民地都视为已注册（兼容测试用随机 UUID 造殖民地）；
+     *  需模拟"未注册/陈旧殖民地"时可显式设置。 */
+    private final Set<UUID> unregisteredColonies = new HashSet<>();
+
+    public void setColonyUnregistered(UUID colonyId, boolean unregistered) {
+        if (unregistered) {
+            unregisteredColonies.add(colonyId);
+        } else {
+            unregisteredColonies.remove(colonyId);
+        }
+    }
+
+    @Override
+    public boolean isColonyRegistered(UUID colonyId) {
+        if (colonyId == null) return false;
+        if (FriendlyForce.PLACEHOLDER_COLONY.equals(colonyId)) return false;
+        return !unregisteredColonies.contains(colonyId);
+    }
+
     /** 已移除/卸载（幽灵）的 NPC id 集合：`isNpcAlive` 对其返回 false。 */
     private final Set<Long> removedNpcs = new HashSet<>();
 

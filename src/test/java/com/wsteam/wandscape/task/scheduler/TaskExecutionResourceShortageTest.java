@@ -69,7 +69,7 @@ class TaskExecutionResourceShortageTest {
         TaskSequence seq = new TaskSequence(List.of(op), "synth");
         blueprints.register(bpId, params -> seq);
 
-        long taskId = world.taskPool.addTask(new TaskRequest(bpId, Map.of(), 10));
+        long taskId = world.taskPool.addTask(new TaskRequest(bpId, Map.of(), 10, null));
         GlobalTask task = world.taskPool.get(taskId);
         world.taskPool.assignLight(taskId, npcId, world);
 

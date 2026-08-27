@@ -135,9 +135,9 @@ public class WorldEcsTest {
                                     "test:place")));
 
             // Add 3 tasks
-            long t1 = world.taskPool.addTask(new TaskRequest("test:place", Map.of(), 10));
-            long t2 = world.taskPool.addTask(new TaskRequest("test:place", Map.of(), 20));
-            long t3 = world.taskPool.addTask(new TaskRequest("test:place", Map.of(), 30));
+            long t1 = world.taskPool.addTask(new TaskRequest("test:place", Map.of(), 10, null));
+            long t2 = world.taskPool.addTask(new TaskRequest("test:place", Map.of(), 20, null));
+            long t3 = world.taskPool.addTask(new TaskRequest("test:place", Map.of(), 30, null));
 
             assertEquals(3, world.taskPool.size(), "Should have 3 active tasks");
 

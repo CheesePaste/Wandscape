@@ -94,6 +94,21 @@ public class TaskExecutionSystem implements System {
                 continue;
             }
 
+            // ── 0.7 未注册殖民地 NPC 防御：占位（刷怪蛋召唤在殖民地外）/陈旧（殖民地已删除）
+            // 殖民地无仓库可服务，不得执行任何殖民地工作——与幽灵防御同构：释放绑定全局任务、
+            // 丢弃 global 包、取消导航，保留个人包（自防御）。首次清理后无残留即空转不刷日志。
+            ColonyMember colonyMember = world.get(npcId, ColonyMember.class);
+            if (colonyMember != null && world.entityOps != null
+                    && !world.entityOps.isColonyRegistered(colonyMember.colonyId())
+                    && (exec.globalTaskId != null || queue.hasGlobalPackage())) {
+                releaseBoundGlobalTask(world, npcId, exec, queue);
+                if (world.movementOps != null) {
+                    world.movementOps.cancelNavigation(npcId);
+                }
+                Log.info(TAG, "NPC %d — unregistered colony (placeholder/stale): released global task", npcId);
+                continue;
+            }
+
             // ── 1. No work → idle ──
             if (!queue.hasWork() && exec.globalTaskId == null) {
                 if (exec.state != ExecutorState.IDLE) {

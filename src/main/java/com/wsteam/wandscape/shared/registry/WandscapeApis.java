@@ -1,5 +1,7 @@
 package com.wsteam.wandscape.shared.registry;
 
+import java.util.UUID;
+
 import com.wsteam.wandscape.shared.api.*;
 public final class WandscapeApis {
     private static WandApi wandApi;
@@ -109,4 +111,15 @@ public final class WandscapeApis {
     @javax.annotation.Nullable
     public static SpellcastingApi getSpellcastingApiSilently() { return spellcastingApi; }
     public static void setSpellcastingApi(SpellcastingApi api) { spellcastingApi = api; }
+
+    /**
+     * 位置所在殖民地 id（位置检测，256 格内最近殖民地原点）；殖民地 API 未就绪或位置不在
+     * 任何殖民地范围内返回 null。玩家/道路/地形/调试命令发布任务时统一用此解析任务殖民地
+     * 归属——保证"只能叫自己殖民地的 NPC 干活"、多殖民地不串仓库。
+     */
+    @javax.annotation.Nullable
+    public static UUID colonyAt(net.minecraft.core.BlockPos pos) {
+        if (colonyApi == null || pos == null) return null;
+        return colonyApi.getColonyId(pos);
+    }
 }

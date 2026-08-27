@@ -107,7 +107,7 @@ public class TaskExecutionNavTest {
                                         TaskSequence seq, World world) {
         blueprints.register(bpId, params -> seq);
         return world.taskPool.addTask(
-                new TaskRequest(bpId, Map.of(), 10));
+                new TaskRequest(bpId, Map.of(), 10, null));
     }
 
     /** Create a standard NPC with full attributes. */

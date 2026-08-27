@@ -2,6 +2,25 @@
 
 本文件记录偏离直觉的设计选择及其原因，供后续开发快速理解「为什么这么做」。
 
+## 2026-08-27：任务殖民地归属统一规范化 + 占位殖民地 NPC 不派活
+
+**需求**（bug 报告 + 用户指令）：日志反复刷 `TaskExec | NPC 17 op ResourceRequestOp failed: [ResourceReq] no storage for colony 00000000-0000-0000-0000-000000000000`，玩家有仓库但该任务无人施工卡死。用户要求：1) 不是自己殖民地的 NPC 别让它干活，只能叫自己殖民地的 NPC 干活（保底）；2) 所有任务都带 colony_id，在某个地方统一规范，避免给以后多殖民地挖坑。
+
+**根因**（两层）：
+- **刷怪蛋 NPC 殖民地全零**：`EntityComponentBridge.onNpcJoinWorld` 对占位殖民地 NPC 自动检测殖民地（`ColonyApi.getColonyId(pos)`，`MAX_COLONY_RANGE=256`）。刷在殖民地原点 256 格外的 NPC 检测返回 null → 保持 `PLACEHOLDER_COLONY`（全零）。而 `ColonyActivation.isColonyActive(全零)` 对全零查创始人返回 null →「无创始人视为在线满收益」→ 返回 true——占位殖民地组被调度器误判为正常激活工作组。
+- **建筑任务不带 colony_id**：`BuildingTaskSource` 发布任务只带 `WorkItem.params()`，殖民地是隐含的（建筑位置暗示），执行器在运行时用执行者的 `ColonyMember` 推导仓库（`ResourceRequestExecutor.resolveColonyId`）。单殖民地时"NPC 在自己建筑附近"侥幸没炸；多殖民地/离群 NPC 一碰就碎——占位 NPC 抢到无过滤任务 → 全零查不到仓库 → 失败 → 归还池 → 又被派给唯一空闲的占位 NPC → 无限循环。
+
+**决策**：
+- **`TaskRequest` 加必填 `UUID colonyId` 字段**（第 4 参，删旧 3 参构造以编译期强制决策）。`GlobalTaskPool.addTaskWithId` 是 `params["colony_id"]` 的**唯一写入点**：colonyId 非空 → 归一化写成规范化 UUID 字符串；null → 保留 params 里已透传的 colony_id（事件透传/存档恢复），并对建筑/生产/道路/地形型蓝图无殖民地打告警。
+- **所有任务来源解析殖民地**：建筑任务 → `bd.getColonyId()`（BuildingTaskPool 透传）；祭坛 → 祭坛建筑殖民地（改走字段而非 params）；道路/地形/玩家/调试 → `WandscapeApis.colonyAt(playerPos)`（位置检测，沿用 ColonyCommand/TouristCommand 模式）；系统事件 → 事件参数里的 `colony_id`；守卫任务 → **刻意无主**（守卫区由全殖民地建筑包围盒并集生成，可能横跨多小镇，执行器防守所有区域）。
+- **无主任务（colonyId=null）可派给任意真实殖民地 NPC，绝不派给占位**——仓库用执行者的殖民地供料（对调试/系统事件合理）。
+- **保底（占位/未注册殖民地 NPC 不干活）**：新增 `EntityOps.isColonyRegistered(UUID)`（委托 `ColonyApi.getAllColonyIds()`）。`SchedulerSystem` 跳过未注册殖民地组（占位 + 殖民地删除后遗留的陈旧 colonyId 一次堵死）；`TaskExecutionSystem` 第 0.7 步守卫，未注册殖民地 NPC 持有全局任务即释放（复用 `releaseBoundGlobalTask`，保留步进/退还已取元素，保留自防御个人包）。
+- **执行器不改**：`ResourceRequestExecutor` 仓库仍以执行者殖民地为准——路由正确后 NPC colony == task colony；改读任务 colony_id 会让执行器反查 taskPool 且万一守卫失效反而给占位 NPC 开口子。
+
+**为什么**：任务殖民地归属必须是**发布时**的显式事实而非运行时从执行者反推——执行者是会变的（任务可归还重派）、可以不在自己殖民地（刷怪蛋）。单点写入（GlobalTaskPool）保证 key 不漂移，编译期必填保证未来新来源不漏。占位殖民地的正确语义是「不作为工人存在」：它没有仓库/建筑可服务，`isColonyActive` 的"无创始人视为激活"是为冻结判定服务的，不该被误当成"这是个真殖民地"。
+
+**影响**：`TaskRequest`（+colonyId 必填）、`GlobalTaskPool`（唯一写入 + 事件 colony_id 提取 + 告警）、`BuildingTaskPool`/`BuildingTaskSource`（透传建筑殖民地）、`GuardTaskSource`（无主）、`AltarCastHandler`、`SystemBlueprintRegistry`、道路 4 包、调试 3 命令、`WandscapeApis.colonyAt`、`EntityOps`/`WandscapeEntityOps`/`MockBoundary`（+isColonyRegistered）、`SchedulerSystem`（跳过未注册组）、`TaskExecutionSystem`（0.7 守卫）。测试：SchedulerColonyScopeTest 9 例（占位不派活×3、同殖民地路由、跨殖民地不派、无主只派真实殖民地、colony_id 归一化×3）；~35 处 `new TaskRequest` 调用点补第 4 参。
+
 ## 2026-08-27：法师等级上限 = 殖民地等级 + 1（colony 30 → 法师 31）+ MageHut 两位小数 + 护甲默认 4
 
 **需求**（用户指令）：1) MageHut 属性显示两位小数——移动速度 0.25 被 `%.1f` 显示成 0.3；2) 法师等级上限改为"殖民地等级 + 1"——colony 上限保持 30、法师可升到 31：满级满基础生命正好 100（base ≤40 + 2×30 = 100），且殖民地刷 31 级游客（colony 30 的 C+1）天然有 31 级法师简历；3) 护甲最低 0、最高 8、默认 4。

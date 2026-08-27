@@ -70,7 +70,10 @@ public final class GuardTaskSource implements TaskSource {
         Map<String, JsonElement> params = new LinkedHashMap<>();
         params.put("attackRange", new JsonPrimitive(Config.GUARD_RANGE.get()));
         params.put("releaseRange", new JsonPrimitive(Config.GUARD_RELEASE_RANGE.get()));
-        TaskRequest request = new TaskRequest("guard:attack", params, GuardConstants.GUARD_PRIORITY);
+        // 守卫任务刻意不绑定殖民地：守卫区由全殖民地建筑包围盒并集生成，可能横跨多个小镇，
+        // 执行器（GuardAttackExecutor）防守所有区域。colonyId=null → 无主任务，
+        // 由距威胁最近的真实殖民地 NPC 接取（调度器按邻近评分）；占位殖民地 NPC 永不接取。
+        TaskRequest request = new TaskRequest("guard:attack", params, GuardConstants.GUARD_PRIORITY, null);
         activeTaskId = pool.addTask(request);
         Log.info(TAG, ">>> GUARD TASK PUBLISHED #{} target={} attack={} release={} pool={}",
                 activeTaskId, threat.getUUID().toString().substring(0, 8),

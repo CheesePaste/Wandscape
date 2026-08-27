@@ -45,8 +45,8 @@ class GlobalTaskPriorityUpdateTest {
 
     @Test
     void testUpdatePriorityReordersAssignableTasks() {
-        TaskRequest lowReq = new TaskRequest("test:bp", Map.of(), 10);
-        TaskRequest midReq = new TaskRequest("test:bp", Map.of(), 50);
+        TaskRequest lowReq = new TaskRequest("test:bp", Map.of(), 10, null);
+        TaskRequest midReq = new TaskRequest("test:bp", Map.of(), 50, null);
 
         long lowId = world.taskPool.addTask(lowReq);
         long midId = world.taskPool.addTask(midReq);

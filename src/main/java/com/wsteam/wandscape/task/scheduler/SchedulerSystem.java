@@ -79,6 +79,12 @@ public class SchedulerSystem implements System {
 
         // 3. For each colony, match NPCs to tasks
         for (Map.Entry<UUID, List<Long>> entry : npcsByColony.entrySet()) {
+            // 占位/未注册殖民地 NPC（刷怪蛋召唤在殖民地外、殖民地已删除但 NPC 留档）不是任何
+            // 小镇的工人：不派任何任务——它们没有仓库/建筑可服务，派了只会 no-storage 死循环
+            // （全零占位殖民地 getFounder 为 null，会被 isColonyActive 误判为激活）。
+            if (world.entityOps != null && !world.entityOps.isColonyRegistered(entry.getKey())) {
+                continue;
+            }
             // 创始人不在线且关闭离线运行 → 冻结该小镇：不分配任何任务
             if (world.entityOps != null && !world.entityOps.isColonyActive(entry.getKey())) {
                 continue;

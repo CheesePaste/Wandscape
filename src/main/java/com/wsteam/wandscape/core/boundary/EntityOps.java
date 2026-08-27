@@ -45,6 +45,17 @@ public interface EntityOps {
     boolean isColonyActive(java.util.UUID colonyId);
 
     /**
+     * Whether the colony is a <em>real, registered</em> colony — present in the
+     * colony registry (opposite of the placeholder colony and of stale ids left
+     * behind by a deleted colony). NPCs whose {@code ColonyMember} points at an
+     * unregistered colony must not be assigned colony work: there is no warehouse
+     * or building to serve, and the all-zero placeholder would otherwise look
+     * "active" (no founder → treated online) and pull tasks into an endless
+     * fail→release→reassign loop.
+     */
+    boolean isColonyRegistered(java.util.UUID colonyId);
+
+    /**
      * Whether the NPC's MC entity is present and usable — not unloaded
      * (chunk unload) and not destroyed (death/discard). A phantom NPC
      * (components in the ECS world but no live MC entity) must not be

@@ -224,7 +224,8 @@ public record RoadPlacePacket(String presetId, BlockPos startPos, BlockPos endPo
         params.put("material_counts", counts);
 
         try {
-            long taskId = source.publish(new TaskRequest("road:build_segment", params, 10));
+            long taskId = source.publish(new TaskRequest("road:build_segment", params, 10,
+                    com.wsteam.wandscape.shared.registry.WandscapeApis.colonyAt(player.blockPosition())));
             // Capture demand + live task id on the edge so withdraw can cancel & refund.
             edge.setMaterialCounts(materials);
             edge.addSegmentTaskId(taskId);

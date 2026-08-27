@@ -173,7 +173,8 @@ public record DestroyFillPacket(BlockPos refPos, BlockPos endPos, boolean fillDe
         params.put("fill_count", new JsonPrimitive(fillCount));
 
         try {
-            long taskId = source.publish(new TaskRequest("terrain:flatten", params, 10));
+            long taskId = source.publish(new TaskRequest("terrain:flatten", params, 10,
+                    com.wsteam.wandscape.shared.registry.WandscapeApis.colonyAt(player.blockPosition())));
             SoundService.playAt(player.serverLevel(), player.getX(), player.getY(), player.getZ(),
                     WandscapeSounds.TASK_PUBLISH, SoundSource.PLAYERS, 0.4f, 1.0f);
             Log.info(TAG, "[DestroyFill] Published task #{}: ref={} refBlock={} from=({},{})→({},{}) breaks={} fills={} fillDep={}",

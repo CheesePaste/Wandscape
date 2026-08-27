@@ -58,7 +58,7 @@ class BuildingTaskPoolTest {
         GlobalTaskPool pool = world.taskPool;
         UUID buildingId = UUID.randomUUID();
 
-        long headId = btp.enqueue(buildingId, synthWork("recipeA"), pool);
+        long headId = btp.enqueue(buildingId, null, synthWork("recipeA"), pool);
         assertTrue(headId >= 0, "first WorkItem becomes the head");
         assertTrue(btp.hasHead(buildingId));
         assertEquals(0, btp.getPendingCount(buildingId));
@@ -71,7 +71,7 @@ class BuildingTaskPoolTest {
         assertTrue(btp.hasParked(buildingId), "parked task should be tracked");
 
         // Next WorkItem (craftable) can now be published as the new head
-        long nextId = btp.enqueue(buildingId, synthWork("recipeB"), pool);
+        long nextId = btp.enqueue(buildingId, null, synthWork("recipeB"), pool);
         assertTrue(nextId >= 0, "second WorkItem should publish while the first is parked");
         assertNotEquals(headId, nextId);
         assertTrue(btp.hasHead(buildingId));
@@ -87,11 +87,11 @@ class BuildingTaskPoolTest {
         GlobalTaskPool pool = world.taskPool;
         UUID buildingId = UUID.randomUUID();
 
-        long a = btp.enqueue(buildingId, synthWork("recipeA"), pool);
+        long a = btp.enqueue(buildingId, null, synthWork("recipeA"), pool);
         pool.get(a).state = TaskState.AWAITING_RESOURCES;
         btp.parkHead(buildingId, a);
 
-        long b = btp.enqueue(buildingId, synthWork("recipeB"), pool);
+        long b = btp.enqueue(buildingId, null, synthWork("recipeB"), pool);
         pool.get(b).state = TaskState.AWAITING_RESOURCES;
         btp.parkHead(buildingId, b);
 
@@ -114,7 +114,7 @@ class BuildingTaskPoolTest {
         GlobalTaskPool pool = world.taskPool;
         UUID buildingId = UUID.randomUUID();
 
-        long a = btp.enqueue(buildingId, synthWork("recipeA"), pool);
+        long a = btp.enqueue(buildingId, null, synthWork("recipeA"), pool);
         pool.get(a).state = TaskState.AWAITING_RESOURCES;
         btp.parkHead(buildingId, a);
 
@@ -139,10 +139,10 @@ class BuildingTaskPoolTest {
         GlobalTaskPool pool = world.taskPool;
         UUID buildingId = UUID.randomUUID();
 
-        long parked = btp.enqueue(buildingId, synthWork("recipeA"), pool);
+        long parked = btp.enqueue(buildingId, null, synthWork("recipeA"), pool);
         pool.get(parked).state = TaskState.AWAITING_RESOURCES;
         btp.parkHead(buildingId, parked);
-        long head = btp.enqueue(buildingId, synthWork("recipeB"), pool);
+        long head = btp.enqueue(buildingId, null, synthWork("recipeB"), pool);
         assertTrue(btp.hasHead(buildingId));
         assertTrue(btp.hasParked(buildingId));
 

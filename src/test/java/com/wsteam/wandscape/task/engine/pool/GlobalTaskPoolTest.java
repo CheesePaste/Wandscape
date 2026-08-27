@@ -70,7 +70,7 @@ class GlobalTaskPoolTest {
     @Test
     void activeTask_locksSameAltarAndMagic_untilCompleted() {
         long taskId = world.taskPool.addTask(
-                new TaskRequest(ALTAR_BLUEPRINT, altarParams("revive"), 10));
+                new TaskRequest(ALTAR_BLUEPRINT, altarParams("revive"), 10, null));
 
         assertTrue(world.taskPool.hasActiveTask(ALTAR_BLUEPRINT, altarParams("revive")),
                 "已发布未完成的任务应锁定同一祭坛同一魔法");
@@ -89,7 +89,7 @@ class GlobalTaskPoolTest {
         Map<String, JsonElement> full = altarParams("revive");
         full.put("duration", new JsonPrimitive(600));
         full.put("colony_id", new JsonPrimitive(UUID.randomUUID().toString()));
-        world.taskPool.addTask(new TaskRequest(ALTAR_BLUEPRINT, full, 10));
+        world.taskPool.addTask(new TaskRequest(ALTAR_BLUEPRINT, full, 10, null));
 
         // 只要求 altar+magic_id 子集即可匹配（任务还带 duration/colony_id）
         assertTrue(world.taskPool.hasActiveTask(ALTAR_BLUEPRINT, altarParams("revive")));
@@ -102,7 +102,7 @@ class GlobalTaskPoolTest {
     @Test
     void cancelTask_removesPendingAssignTask() {
         long taskId = world.taskPool.addTask(
-                new TaskRequest(ALTAR_BLUEPRINT, altarParams("revive"), 10));
+                new TaskRequest(ALTAR_BLUEPRINT, altarParams("revive"), 10, null));
         assertEquals(1, world.taskPool.assignableCount());
 
         long released = world.taskPool.cancelTask(taskId, world);
@@ -121,7 +121,7 @@ class GlobalTaskPoolTest {
         long npcId = CoreBootstrap.createNpc(world, 0, 64, 0,
                 UUID.randomUUID(), NpcAttributes.defaults());
         long taskId = world.taskPool.addTask(
-                new TaskRequest(ALTAR_BLUEPRINT, altarParams("revive"), 10));
+                new TaskRequest(ALTAR_BLUEPRINT, altarParams("revive"), 10, null));
         world.taskPool.assignLight(taskId, npcId, world);
 
         TaskExecutor exec = world.get(npcId, TaskExecutor.class);

@@ -645,7 +645,7 @@ public class BlueprintEventSystemTest {
         params.putIfAbsent("x", new JsonPrimitive(pos.x()));
         params.putIfAbsent("y", new JsonPrimitive(pos.y()));
         params.putIfAbsent("z", new JsonPrimitive(pos.z()));
-        return new TaskRequest(blueprintId, params, priority);
+        return new TaskRequest(blueprintId, params, priority, null);
     }
 
     private void tickN(int n) {

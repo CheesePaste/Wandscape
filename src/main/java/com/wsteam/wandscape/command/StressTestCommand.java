@@ -98,6 +98,9 @@ public final class StressTestCommand {
 
         int cubeSide = (int) Math.ceil(Math.cbrt(taskCount));
         int spacing = 12; // town_hall boundary is 3×2×3, 12 blocks gives room
+        // 压力测试也归属玩家殖民地（避免触发"建筑型任务无殖民地"告警），无玩家 → 无主
+        java.util.UUID colonyId = com.wsteam.wandscape.shared.registry.WandscapeApis.colonyAt(
+                src.getPlayer() != null ? src.getPlayer().blockPosition() : null);
 
         for (int i = 0; i < taskCount; i++) {
             try {
@@ -109,7 +112,7 @@ public final class StressTestCommand {
 
                 var workItem = EnqueueHelper.buildWorkItem(config, anchor, config.id(), 10);
                 world.taskPool.addTask(
-                        new TaskRequest(workItem.blueprintId(), workItem.params(), workItem.priority()));
+                        new TaskRequest(workItem.blueprintId(), workItem.params(), workItem.priority(), colonyId));
                 created++;
             } catch (Exception e) {
                 Log.warn("Wandscape", "[StressTest] Task #{} failed: {}", i, e.getMessage());

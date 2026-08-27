@@ -92,6 +92,9 @@ public final class FillBuildingCommand {
         }
 
         int submitted = 0;
+        // 调试命令也按玩家位置解析殖民地归属（无玩家/不在任何殖民地 → 无主任务）
+        java.util.UUID colonyId = com.wsteam.wandscape.shared.registry.WandscapeApis.colonyAt(
+                src.getPlayer() != null ? src.getPlayer().blockPosition() : null);
 
         for (int i = 0; i < count; i++) {
             BlockPos pos = origin.offset(i * spacing, 0, 0);
@@ -99,7 +102,7 @@ public final class FillBuildingCommand {
             EnqueueHelper.registerIfAbsent(pos, config, type);
             WorkItem work = EnqueueHelper.buildWorkItem(config, pos, type, 10);
             TaskRequest request = new TaskRequest(
-                    work.blueprintId(), work.params(), work.priority());
+                    work.blueprintId(), work.params(), work.priority(), colonyId);
             world.taskPool.addTask(request);
             submitted++;
         }

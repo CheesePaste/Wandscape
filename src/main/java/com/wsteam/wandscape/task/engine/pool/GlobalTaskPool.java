@@ -133,10 +133,23 @@ public class GlobalTaskPool {
         }
 
         long createdAt = System.currentTimeMillis();
+
+        // ── 殖民地归属归一化（params["colony_id"] 的唯一写入点）──
+        // 来源在 TaskRequest.colonyId 显式给出 → 统一写成规范化 UUID 字符串；
+        // 来源传 null（无主任务）→ 保留 params 里已有的 colony_id（事件透传/存档恢复）。
+        Map<String, JsonElement> taskParams = new HashMap<>(request.params());
+        if (request.colonyId() != null) {
+            taskParams.put("colony_id", new JsonPrimitive(request.colonyId().toString()));
+        } else if (isColonyBoundBlueprint(request.blueprintId())
+                && !taskParams.containsKey("colony_id")) {
+            Log.warn(TAG, "addTask #%d '%s' — colony-bound blueprint has no colony_id; task is unbound "
+                    + "(assigned to any real-colony NPC, never placeholder)", id, request.blueprintId());
+        }
+
         GlobalTask task = new GlobalTask(id, seq,
                 request.priority(), createdAt,
                 compiled.triggers(), new ArrayList<>(),
-                new HashMap<>(request.params()),
+                taskParams,
                 initialState, 0, null, null,
                 new ArrayDeque<>(), approval);
         task.blueprintId = request.blueprintId();
@@ -405,9 +418,31 @@ public class GlobalTaskPool {
             }
         }
 
-        long newTaskId = addTask(new TaskRequest(resolvedBpId, taskParams, trigger.priority()));
+        long newTaskId = addTask(new TaskRequest(resolvedBpId, taskParams, trigger.priority(),
+                colonyIdFrom(event.params())));
         Log.info(TAG, "trigger %s → task #%d blueprint=%s priority=%d",
                 trigger.eventName(), newTaskId, resolvedBpId, trigger.priority());
+    }
+
+    /** 事件参数里的 colony_id（字符串）→ UUID；缺失或格式非法返回 null（无主任务）。 */
+    @Nullable
+    private static UUID colonyIdFrom(Map<String, String> eventParams) {
+        String cid = eventParams.get("colony_id");
+        if (cid == null) return null;
+        try {
+            return UUID.fromString(cid);
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    /** 资源消耗型/建筑型蓝图前缀——必须归属殖民地，否则无法从仓库供料。 */
+    private static boolean isColonyBoundBlueprint(@Nullable String blueprintId) {
+        if (blueprintId == null) return false;
+        return blueprintId.startsWith("build:")
+                || blueprintId.startsWith("production:")
+                || blueprintId.startsWith("road:")
+                || blueprintId.startsWith("terrain:");
     }
 
     private static boolean matchesFilter(Map<String, String> filter, Map<String, String> eventParams) {

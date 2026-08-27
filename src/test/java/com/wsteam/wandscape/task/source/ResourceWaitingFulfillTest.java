@@ -194,7 +194,7 @@ public class ResourceWaitingFulfillTest {
         params.put("x", new JsonPrimitive(pos.x()));
         params.put("y", new JsonPrimitive(pos.y()));
         params.put("z", new JsonPrimitive(pos.z()));
-        return new TaskRequest(blueprintId, params, priority);
+        return new TaskRequest(blueprintId, params, priority, null);
     }
 
     private void registerBlueprints(BlueprintRegistry registry) {
