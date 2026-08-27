@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.wsteam.wandscape.Config;
+import com.wsteam.wandscape.building.network.OpenWarehousePacket;
 import com.wsteam.wandscape.building.network.TaskQueueDataPacket;
 import com.wsteam.wandscape.building.network.TaskQueueModifyPacket;
 import com.wsteam.wandscape.production.network.RequestProductionTaskPacket;
@@ -250,6 +251,10 @@ public class WorkstationScreen extends MedievalScreen {
                 I18n.name("gui.wandscape.common.submit", "Submit"), this::onSubmit);
         addRenderableWidget(submitBtn);
 
+        // Open the colony warehouse to view remaining element counts and stored items
+        addRenderableWidget(new MedievalButton(contentX + contentW - 70, controlY + 24, 70, 18,
+                I18n.name("gui.wandscape.common.open_warehouse", "Open Warehouse"), this::onOpenWarehouse));
+
         // Show active tab
         showTab(activeTab);
         applySearch(searchInput.getValue());
@@ -327,6 +332,12 @@ public class WorkstationScreen extends MedievalScreen {
         }
         // Refresh queue after submitting a new task
         requestQueueRefresh();
+    }
+
+    /** Open the colony warehouse to check remaining element counts. */
+    private void onOpenWarehouse() {
+        if (stationPos == null || stationPos.equals(BlockPos.ZERO)) return;
+        PacketDistributor.sendToServer(new OpenWarehousePacket(stationPos));
     }
 
     // ── Task queue callbacks ──

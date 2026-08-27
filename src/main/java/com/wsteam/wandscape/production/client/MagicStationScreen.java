@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import com.wsteam.wandscape.building.network.OpenWarehousePacket;
 import com.wsteam.wandscape.building.network.TaskQueueDataPacket;
 import com.wsteam.wandscape.building.network.TaskQueueModifyPacket;
 import com.wsteam.wandscape.magic.item.SpellItem;
@@ -193,6 +194,11 @@ public class MagicStationScreen extends MedievalScreen {
                 contentX + contentW - 70, controlY + 4, 70, 18,
                 I18n.name("gui.wandscape.common.submit", "Submit"), this::onSubmit));
 
+        // Open the colony warehouse to view remaining element counts and stored items
+        addRenderableWidget(new MedievalButton(
+                contentX + contentW - 70, controlY + 24, 70, 18,
+                I18n.name("gui.wandscape.common.open_warehouse", "Open Warehouse"), this::onOpenWarehouse));
+
         applySearch(searchInput.getValue());
 
         // ── Right panel: Task Queue ──
@@ -244,6 +250,12 @@ public class MagicStationScreen extends MedievalScreen {
         PacketDistributor.sendToServer(new RequestProductionTaskPacket(
                 stationPos, "craft_spell", sel.recipeId(), qty));
         requestQueueRefresh();
+    }
+
+    /** Open the colony warehouse to check remaining element counts. */
+    private void onOpenWarehouse() {
+        if (stationPos == null || stationPos.equals(BlockPos.ZERO)) return;
+        PacketDistributor.sendToServer(new OpenWarehousePacket(stationPos));
     }
 
     // ── Task queue callbacks ──
