@@ -61,7 +61,6 @@ public final class EntityComponentBridge {
     private static final Class<?>[] NPC_COMPONENTS = {
             Position.class,
             TaskExecutor.class,
-            EquipmentComponent.class,
             Inventory.class,
             ColonyMember.class,
     };
@@ -138,7 +137,6 @@ public final class EntityComponentBridge {
             ecsIdByUuid.put(npc.getUUID(), npc.ecsEntityId);
             fillDeferredInventory(npc, world);
             npc.syncIronArmorAttributes();
-            npc.syncWandAttributes();
             return;
         }
 
@@ -160,9 +158,7 @@ public final class EntityComponentBridge {
             }
         }
 
-        NpcAttributes attrs = new NpcAttributes(
-                npc.maxHp, npc.moveSpeed, npc.spellPower, npc.workSpeed,
-                npc.spellSpeed, npc.armorValue, npc.maxMana);
+        NpcAttributes attrs = NpcAttributes.defaults();
         long ecsId = CoreBootstrap.createNpc(world,
                 npc.getBlockX(), npc.getBlockY(), npc.getBlockZ(),
                 colony, attrs);
@@ -179,7 +175,6 @@ public final class EntityComponentBridge {
         fillDeferredInventory(npc, world);
         // Seed iron-spells attribute bridge (armor lives in vanilla slots; vanilla owns the rest)
         npc.syncIronArmorAttributes();
-        npc.syncWandAttributes();
     }
 
     /** Fill inventory items that were scheduled before ECS registration. */

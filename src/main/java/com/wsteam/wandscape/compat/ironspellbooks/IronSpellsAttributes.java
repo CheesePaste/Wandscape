@@ -72,9 +72,9 @@ public final class IronSpellsAttributes {
     /** Iron's 属性 → Wandscape 属性；无对应返回 null（跳过）。 */
     private static AttributeType mapType(Holder<Attribute> attribute) {
         if (attribute.is(AttributeRegistry.MAX_MANA)) return AttributeType.MAX_MANA;
-        if (attribute.is(AttributeRegistry.SPELL_POWER)) return AttributeType.SPELL_POWER;
         if (attribute.is(AttributeRegistry.COOLDOWN_REDUCTION)) return AttributeType.SPELL_SPEED;
         if (attribute.is(AttributeRegistry.CAST_TIME_REDUCTION)) return AttributeType.SPELL_SPEED;
+        if (attribute.is(AttributeRegistry.MANA_REGEN)) return AttributeType.MANA_REGEN;
         return null;
     }
 

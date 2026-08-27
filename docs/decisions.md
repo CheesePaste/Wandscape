@@ -2,6 +2,35 @@
 
 本文件记录偏离直觉的设计选择及其原因，供后续开发快速理解「为什么这么做」。
 
+## 2026-08-27：NPC 属性模型全量迁移至 Vanilla Attribute + 彻底移除 ECS EquipmentComponent
+
+**需求**：
+1. 铁魔法盔甲法术强度（`ironspellbooks:spell_power`）双倍放大回归：铁魔法施法体系已直接读取盔甲的原版修饰符，Wandscape 旧桥接层又把该修饰符桥进 ECS `EquipmentComponent`，并在 `NpcSpellPowerHandler` 再次乘算，导致实际伤害被乘了两次（如 1.25 × 1.25 = 1.56 倍）。
+2. NPC 属性模型割裂：战斗属性（`MAX_HEALTH`/`MOVEMENT_SPEED`/`ARMOR`）走 vanilla 属性，模组专属属性（`SPELL_POWER`/`WORK_SPEED`/`SPELL_SPEED`/`MAX_MANA`）走 ECS `EquipmentComponent`，每 tick 手动比对并 setBaseValue 推送，存在架构冗余与潜在同步漏洞。
+
+**决策**：
+1. **注册 6 个 Wandscape 专属 Vanilla Attribute**（`WandscapeAttributes`，`engine/attribute/`）：
+   - `wandscape:spell_power`（默认 1.0）
+   - `wandscape:work_speed`（默认 1.0）
+   - `wandscape:spell_speed`（默认 1.0）
+   - `wandscape:max_mana`（默认 200.0）
+   - `wandscape:health_regen`（默认 1.0）
+   - `wandscape:mana_regen`（默认 1.0）
+2. **法杖属性直接走 Vanilla `ItemAttributeModifiers`（`EquipmentSlotGroup.MAINHAND`）**：
+   - 12 个法杖预设由 `WandPresetLoader` 构建 vanilla `ItemAttributeModifiers`。
+   - `WandItem.getDefaultAttributeModifiers(ItemStack)` 暴露修饰符，原版 `LivingEntity.detectEquipmentUpdates()` 自动应用到实体的 `AttributeInstance`。
+   - 删除 `WandItem` 自定义 tooltip 格式化，完全由原版装备属性 tooltip 接管。
+3. **修复铁魔法盔甲双倍加成**：
+   - `IronSpellsAttributes` 移除 `SPELL_POWER` 映射（铁魔法施法管线已原生读取 `ironspellbooks:spell_power`；Wandscape 光束在 `NpcSpellPowerHandler` 中读取 `wandscape:spell_power`）。
+   - 保留非原版属性（`MAX_MANA`、`SPELL_SPEED`、`MANA_REGEN`）通过 `WandscapeNpc.syncIronArmorAttributes()` 动态应用 transient 修饰符至实体属性表。
+4. **彻底移除 ECS `EquipmentComponent`**：
+   - 调度系统与 op 执行器统一通过 `world.entityOps.getWorkSpeed(npcId)` 读取工作速度。
+   - NPC 实体持久化直接依靠 vanilla `LivingEntity` 原生 `"Attributes"` NBT 列表；旧存档字段（`maxHp`/`moveSpeed` 等）在 `readAdditionalSaveData` 中自动兼容迁移。
+   - 彻底删除 `EquipmentComponent.java` 及废弃单测。
+
+**影响**：
+- 注册 `WandscapeAttributes`；`WandscapeNpc` 属性完全由原版 `AttributeMap` 驱动；`SchedulerSystem` / `AsyncTransformExecutor` / `WandscapeBlockInteractExecutor` 走 `EntityOps.getWorkSpeed`；`WandPresetLoader` / `WandItem` 走 `ItemAttributeModifiers`；删除 `EquipmentComponent.java`。单元测试 749 全部通过。
+
 ## 2026-08-27：任务殖民地归属统一规范化 + 占位殖民地 NPC 不派活
 
 **需求**（bug 报告 + 用户指令）：日志反复刷 `TaskExec | NPC 17 op ResourceRequestOp failed: [ResourceReq] no storage for colony 00000000-0000-0000-0000-000000000000`，玩家有仓库但该任务无人施工卡死。用户要求：1) 不是自己殖民地的 NPC 别让它干活，只能叫自己殖民地的 NPC 干活（保底）；2) 所有任务都带 colony_id，在某个地方统一规范，避免给以后多殖民地挖坑。

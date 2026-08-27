@@ -11,7 +11,6 @@ import com.wsteam.wandscape.building.network.MageHutActionPacket;
 import com.wsteam.wandscape.building.network.MageHutDataPacket;
 import com.wsteam.wandscape.building.network.MageHutDataPacket.MageCandidate;
 import com.wsteam.wandscape.core.component.ColonyMember;
-import com.wsteam.wandscape.core.component.EquipmentComponent;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.types.AttributeType;
 import com.wsteam.wandscape.core.types.NpcAttributes;
@@ -130,7 +129,7 @@ public final class MageHutServerHandler {
         }
 
         float[] base = new float[AttributeType.values().length];
-        for (AttributeType type : AttributeType.values()) {
+        for (AttributeType type : MageHutAttributes.ORDER) {
             base[type.ordinal()] = MageHutAttributes.baseFromFlat(type, flat(npc, type), npc.getLevel());
         }
         MageHutResident resident = new MageHutResident(npc.getUUID(), colonyId,
@@ -308,27 +307,13 @@ public final class MageHutServerHandler {
         return true;
     }
 
-    /** Recompute the mage's flat attributes from the resident base+level, then re-seed ECS. */
+    /** Recompute the mage's base attributes from the resident base+level. */
     private static void applyResidentAttributes(WandscapeNpc npc, MageHutResident resident) {
-        for (AttributeType type : AttributeType.values()) {
+        for (AttributeType type : MageHutAttributes.ORDER) {
             setFlat(npc, type, MageHutAttributes.computeEffective(type,
                     resident.base(type), resident.level(), 0f));
         }
         npc.setLevel(resident.level());
-        reseedEcsAttributes(npc);
-    }
-
-    /** Seed the ECS base values from the mage's flat attributes (mirrors tavern recruit). */
-    private static void reseedEcsAttributes(WandscapeNpc npc) {
-        World ecsWorld = WandscapeEngine.getWorld();
-        if (ecsWorld == null) return;
-        Long ecsId = EntityComponentBridge.INSTANCE.getEcsId(npc.getUUID());
-        if (ecsId == null) return;
-        EquipmentComponent eq = ecsWorld.get(ecsId, EquipmentComponent.class);
-        if (eq != null) {
-            eq.seedBaseValues(new NpcAttributes(npc.maxHp, npc.moveSpeed, npc.spellPower,
-                    npc.workSpeed, npc.spellSpeed, npc.armorValue, npc.maxMana));
-        }
     }
 
     /** The world-space rest point: hut anchor + rotated interior offset. */
@@ -357,7 +342,8 @@ public final class MageHutServerHandler {
         if (resident == null) {
             List<MageCandidate> candidates = collectCandidates(level, colonyId);
             return new MageHutDataPacket(state.getAnchor(), colonyId, creator, colonyLevel,
-                    false, false, false, null, "", 1, -1, new float[7], new float[7], candidates);
+                    false, false, false, null, "", 1, -1, new float[MageHutAttributes.ORDER.size()],
+                    new float[MageHutAttributes.ORDER.size()], candidates);
         }
 
         WandscapeNpc npc = aliveNpc(level, resident);
@@ -365,7 +351,7 @@ public final class MageHutServerHandler {
         float[] base = resident.base();
         float[] equip = new float[AttributeType.values().length];
         if (alive) {
-            for (AttributeType type : AttributeType.values()) {
+            for (AttributeType type : MageHutAttributes.ORDER) {
                 float effective = npc.getEffectiveAttribute(type);
                 equip[type.ordinal()] = effective
                         - MageHutAttributes.computeEffective(type, base[type.ordinal()],
@@ -396,26 +382,10 @@ public final class MageHutServerHandler {
     // ── Attribute field mapping ──
 
     private static float flat(WandscapeNpc npc, AttributeType type) {
-        return switch (type) {
-            case MAX_HP -> npc.maxHp;
-            case MOVE_SPEED -> npc.moveSpeed;
-            case SPELL_POWER -> npc.spellPower;
-            case WORK_SPEED -> npc.workSpeed;
-            case SPELL_SPEED -> npc.spellSpeed;
-            case ARMOR_VALUE -> npc.armorValue;
-            case MAX_MANA -> npc.maxMana;
-        };
+        return npc.getBaseAttributeValue(type);
     }
 
     private static void setFlat(WandscapeNpc npc, AttributeType type, float value) {
-        switch (type) {
-            case MAX_HP -> npc.maxHp = value;
-            case MOVE_SPEED -> npc.moveSpeed = value;
-            case SPELL_POWER -> npc.spellPower = value;
-            case WORK_SPEED -> npc.workSpeed = value;
-            case SPELL_SPEED -> npc.spellSpeed = value;
-            case ARMOR_VALUE -> npc.armorValue = value;
-            case MAX_MANA -> npc.maxMana = value;
-        }
+        npc.setBaseAttributeValue(type, value);
     }
 }

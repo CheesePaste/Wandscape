@@ -1,6 +1,6 @@
 # 全量 vanilla Attribute 迁移方案
 
-> 状态：规划中（2026-08-27）
+> 状态：已完成（2026-08-27）
 > 目标：把 NPC 属性模型从 ECS `EquipmentComponent`（core 枚举）迁移到 vanilla `Attribute`（注册进实体属性表），对齐铁魔法的 vanilla 属性样式。
 
 ## 一、背景与动机

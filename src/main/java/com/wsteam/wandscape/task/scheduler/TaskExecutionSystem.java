@@ -59,8 +59,7 @@ public class TaskExecutionSystem implements System {
         OpExecutorRegistry registry = world.opExecutors;
         if (registry == null) return;
 
-        List<Long> npcs = world.query(Position.class, TaskExecutor.class,
-                EquipmentComponent.class, Inventory.class);
+        List<Long> npcs = world.query(Position.class, TaskExecutor.class, Inventory.class);
 
         for (long npcId : npcs) {
             TaskExecutor exec = world.get(npcId, TaskExecutor.class);
@@ -228,7 +227,6 @@ public class TaskExecutionSystem implements System {
         }
 
         // ── 4. Execute op loop (batch pure ops, one side-effect per tick) ──
-        EquipmentComponent eq = world.get(npcId, EquipmentComponent.class);
         while (queue.peekCurrentOp() != null) {
             AtomicOp currentOp = queue.peekCurrentOp();
 

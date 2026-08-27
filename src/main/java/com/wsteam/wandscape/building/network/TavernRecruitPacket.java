@@ -8,8 +8,7 @@ import com.wsteam.wandscape.building.internal.BuildingInteractHandler;
 import com.wsteam.wandscape.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.building.internal.BuildingState;
 import com.wsteam.wandscape.core.component.ColonyMember;
-import com.wsteam.wandscape.core.component.EquipmentComponent;
-import com.wsteam.wandscape.core.types.NpcAttributes;
+import com.wsteam.wandscape.core.types.AttributeType;
 import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.engine.WandscapeEngine;
@@ -129,13 +128,13 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
             npc.equippedMagic.clear();
 
             // 6. Apply rolled attributes + 满蓝入职
-            npc.maxHp = candidate.maxHp();
-            npc.moveSpeed = candidate.moveSpeed();
-            npc.spellPower = candidate.spellPower();
-            npc.workSpeed = candidate.workSpeed();
-            npc.spellSpeed = candidate.spellSpeed();
-            npc.armorValue = candidate.armorValue();
-            npc.maxMana = candidate.maxMana();
+            npc.setBaseAttributeValue(AttributeType.MAX_HP, candidate.maxHp());
+            npc.setBaseAttributeValue(AttributeType.MOVE_SPEED, candidate.moveSpeed());
+            npc.setBaseAttributeValue(AttributeType.SPELL_POWER, candidate.spellPower());
+            npc.setBaseAttributeValue(AttributeType.WORK_SPEED, candidate.workSpeed());
+            npc.setBaseAttributeValue(AttributeType.SPELL_SPEED, candidate.spellSpeed());
+            npc.setBaseAttributeValue(AttributeType.ARMOR_VALUE, candidate.armorValue());
+            npc.setBaseAttributeValue(AttributeType.MAX_MANA, candidate.maxMana());
             npc.magic.setMana(candidate.maxMana());
             npc.setLevel(candidate.level());
 
@@ -211,13 +210,13 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
         // Apply mage stats from resume
         npc.setCustomName(Component.literal(resume.touristName()));
         npc.setCustomNameVisible(true);
-        npc.maxHp = resume.maxHp();
-        npc.moveSpeed = resume.moveSpeed();
-        npc.spellPower = resume.spellPower();
-        npc.workSpeed = resume.workSpeed();
-        npc.spellSpeed = resume.spellSpeed();
-        npc.armorValue = resume.armorValue();
-        npc.maxMana = resume.maxMana();
+        npc.setBaseAttributeValue(AttributeType.MAX_HP, resume.maxHp());
+        npc.setBaseAttributeValue(AttributeType.MOVE_SPEED, resume.moveSpeed());
+        npc.setBaseAttributeValue(AttributeType.SPELL_POWER, resume.spellPower());
+        npc.setBaseAttributeValue(AttributeType.WORK_SPEED, resume.workSpeed());
+        npc.setBaseAttributeValue(AttributeType.SPELL_SPEED, resume.spellSpeed());
+        npc.setBaseAttributeValue(AttributeType.ARMOR_VALUE, resume.armorValue());
+        npc.setBaseAttributeValue(AttributeType.MAX_MANA, resume.maxMana());
         npc.magic.setMana(resume.maxMana()); // 满蓝入职
         npc.setLevel(resume.level());
 
@@ -314,21 +313,13 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
         return origin.above(2);
     }
 
-    /** Mirror of ColonyCommand.fixEcsAfterSpawn — correct PLACEHOLDER_COLONY → real colonyId,
-     *  and re-seed ECS base attributes from the resume (the NPC spawned with defaults). */
+    /** Mirror of ColonyCommand.fixEcsAfterSpawn — correct PLACEHOLDER_COLONY → real colonyId. */
     private static void fixEcsAfterSpawn(WandscapeNpc npc, UUID colonyId) {
         World ecsWorld = WandscapeEngine.getWorld();
         if (ecsWorld == null) return;
 
         Long ecsId = EntityComponentBridge.INSTANCE.getEcsId(npc.getUUID());
         if (ecsId == null) return;
-
-        // Re-seed ECS base attributes from the resume's rolled values
-        EquipmentComponent eq = ecsWorld.get(ecsId, EquipmentComponent.class);
-        if (eq != null) {
-            eq.seedBaseValues(new NpcAttributes(npc.maxHp, npc.moveSpeed, npc.spellPower,
-                    npc.workSpeed, npc.spellSpeed, npc.armorValue, npc.maxMana));
-        }
 
         var member = ecsWorld.get(ecsId,
                 ColonyMember.class);

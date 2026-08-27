@@ -24,10 +24,9 @@ Config.java           NeoForge TOML 配置，所有可调参数
 │
 ├── core/             ECS 核心框架（精简），纯 Java 21，零 MC 依赖
 │   ├── ecs/          World + System + ComponentStore + CoreBootstrap
-│   ├── component/    9 组件: Position/EquipmentComponent/TaskExecutor/NpcTaskQueue/Inventory/
+│   ├── component/    8 组件: Position/TaskExecutor/NpcTaskQueue/Inventory/
 │   │                 NavigationState/ColonyMember/ColonyMetadata/SuspensionContext
-│   │                 （NPC 属性收敛为 6 个：MAX_HP/MOVE_SPEED/SPELL_POWER/WORK_SPEED/
-│   │                 SPELL_SPEED/ARMOR_VALUE；装备加成仅加法）
+│   │                 （NPC 属性对齐 vanilla Attribute，注册于 WandscapeAttributes）
 │   ├── boundary/     8 个接口：BlockOps/EntityOps/RitualOps/MovementOps/ColonyResourceAccess/EventBus/ResourceAddedListener/ResourceShortageHandler
 │   ├── event/        领域事件(SimpleEventBus) + TaskCompleted/CustomEvent/NarrativeEventTriggered
 │   └── types/        基础record: GridPos/BlockType/ResourceId/EffectId/InteractAction/AttributeType/EquipmentSlot/EquipmentPreset/...
@@ -105,9 +104,8 @@ Config.java           NeoForge TOML 配置，所有可调参数
 │   ├── RaidTriggerScanner(触发扫描器) + ColonyRaidTracker(胜利跟踪→事件)
 │   └── RaidTownHall(市政厅定位) + MixinServerLevel(isVillage 钩子)
 ├── compat/           第三方模组联动与兼容适配层（如 ironspellbooks/ 铁魔法法术卷轴与施法生命周期桥接）
-├── equipment/        （无独立包）装备系统是 cross-cutting：core/component/EquipmentComponent
-                      + core/types/(EquipmentSlot/AttributeType/EquipmentPreset/AttributeModifier)，
-                      桥接在 npc/internal/EntityComponentBridge
+├── equipment/        （无独立包）装备系统直接走 vanilla 物品栏与 ItemAttributeModifiers，
+                      由 WandscapeAttributes 与 WandscapeNpc 驱动
 ```
 
 ## 数据流（核心路径）

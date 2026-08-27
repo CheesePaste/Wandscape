@@ -70,6 +70,17 @@ public class MockBoundary implements BlockOps, EntityOps, RitualOps, ColonyResou
 
     public void setNpcMana(float v) { this.npcMana = v; }
 
+    private final Map<Long, Float> npcWorkSpeed = new HashMap<>();
+
+    public void setWorkSpeed(long npcId, float speed) {
+        npcWorkSpeed.put(npcId, speed);
+    }
+
+    @Override
+    public float getWorkSpeed(long npcId) {
+        return npcWorkSpeed.getOrDefault(npcId, 1.0f);
+    }
+
     /** 处于跟随模式的 NPC id 集合（跟随门控测试用）。 */
     private final Set<Long> followingNpcs = new HashSet<>();
 

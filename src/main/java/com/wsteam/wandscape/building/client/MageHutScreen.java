@@ -843,6 +843,7 @@ public class MageHutScreen extends MedievalScreen {
             case SPELL_SPEED -> "attr_cast";
             case ARMOR_VALUE -> "attr_armor";
             case MAX_MANA -> "attr_mana";
+            default -> "";
         };
     }
 
@@ -855,6 +856,7 @@ public class MageHutScreen extends MedievalScreen {
             case SPELL_SPEED -> "施速";
             case ARMOR_VALUE -> "护甲";
             case MAX_MANA -> "魔力";
+            default -> "";
         };
     }
 

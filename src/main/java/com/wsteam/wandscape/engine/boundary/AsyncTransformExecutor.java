@@ -9,10 +9,8 @@ import javax.annotation.Nullable;
 
 import com.wsteam.wandscape.core.boundary.BlockOps;
 import com.wsteam.wandscape.core.component.ColonyMember;
-import com.wsteam.wandscape.core.component.EquipmentComponent;
 import com.wsteam.wandscape.core.component.Inventory;
 import com.wsteam.wandscape.core.ecs.World;
-import com.wsteam.wandscape.core.types.AttributeType;
 import com.wsteam.wandscape.core.types.BlockType;
 import com.wsteam.wandscape.engine.service.SoundService;
 import com.wsteam.wandscape.engine.sound.WandscapeSounds;
@@ -156,8 +154,7 @@ public class AsyncTransformExecutor implements OpExecutor<AtomicOp.TransformOp> 
 
     /** Effective per-block delay for this NPC: base delayTicks divided by WORK_SPEED. */
     private int effectiveDelay(World world, long npcId) {
-        EquipmentComponent eq = world.get(npcId, EquipmentComponent.class);
-        float work = eq != null ? eq.getAttribute(AttributeType.WORK_SPEED) : 1f;
+        float work = (world.entityOps != null) ? world.entityOps.getWorkSpeed(npcId) : 1f;
         if (work <= 1f) return delayTicks;
         return Math.max(1, (int) Math.ceil(delayTicks / work));
     }

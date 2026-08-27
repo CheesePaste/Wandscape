@@ -6,10 +6,8 @@ import java.util.UUID;
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.core.component.ColonyMember;
-import com.wsteam.wandscape.core.component.EquipmentComponent;
 import com.wsteam.wandscape.core.component.Inventory;
 import com.wsteam.wandscape.core.ecs.World;
-import com.wsteam.wandscape.core.types.NpcAttributes;
 import com.wsteam.wandscape.core.types.ResourceStack;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.service.ParticleService;
@@ -162,13 +160,13 @@ public final class ReviveHandler {
         npc.setCustomNameVisible(true);
         npc.setSkinVariant(rec.skinVariant());
         npc.setHatColor(rec.hatColor());
-        npc.maxHp = rec.maxHp();
-        npc.moveSpeed = rec.moveSpeed();
-        npc.spellPower = rec.spellPower();
-        npc.workSpeed = rec.workSpeed();
-        npc.spellSpeed = rec.spellSpeed();
-        npc.armorValue = rec.armorValue();
-        npc.maxMana = rec.maxMana();
+        npc.setBaseAttributeValue(com.wsteam.wandscape.core.types.AttributeType.MAX_HP, rec.maxHp());
+        npc.setBaseAttributeValue(com.wsteam.wandscape.core.types.AttributeType.MOVE_SPEED, rec.moveSpeed());
+        npc.setBaseAttributeValue(com.wsteam.wandscape.core.types.AttributeType.SPELL_POWER, rec.spellPower());
+        npc.setBaseAttributeValue(com.wsteam.wandscape.core.types.AttributeType.WORK_SPEED, rec.workSpeed());
+        npc.setBaseAttributeValue(com.wsteam.wandscape.core.types.AttributeType.SPELL_SPEED, rec.spellSpeed());
+        npc.setBaseAttributeValue(com.wsteam.wandscape.core.types.AttributeType.ARMOR_VALUE, rec.armorValue());
+        npc.setBaseAttributeValue(com.wsteam.wandscape.core.types.AttributeType.MAX_MANA, rec.maxMana());
         // 虚弱复活：1 血 0 蓝，靠脱战回血（interval 回 1 HP）与魔力回复（10t 回 1% 上限）缓慢恢复
         npc.setHealth(1f);
         npc.magic.setMana(0f);
@@ -191,19 +189,12 @@ public final class ReviveHandler {
                 spawnPos.toShortString(), rec.inventory().size());
     }
 
-    /** spawn() 已用默认属性注册 ECS——这里按死亡快照重新 seed 属性/小镇/装备/背包（TavernRecruit 同款修正）。 */
+    /** spawn() 已用默认属性注册 ECS——这里按死亡快照重新设置小镇与背包。 */
     private static void fixEcsAfterSpawn(WandscapeNpc npc, DeathRecord rec) {
         World ecsWorld = WandscapeEngine.getWorld();
         if (ecsWorld == null) return;
         Long ecsId = EntityComponentBridge.INSTANCE.getEcsId(npc.getUUID());
         if (ecsId == null) return;
-
-        EquipmentComponent eq = ecsWorld.get(ecsId, EquipmentComponent.class);
-        if (eq != null) {
-            eq.seedBaseValues(new NpcAttributes(npc.maxHp, npc.moveSpeed, npc.spellPower,
-                    npc.workSpeed, npc.spellSpeed, npc.armorValue, npc.maxMana));
-            eq.equipDefaultWand();
-        }
 
         var member = ecsWorld.get(ecsId, ColonyMember.class);
         if (member != null && !rec.colonyId().equals(member.colonyId())) {
@@ -252,15 +243,7 @@ public final class ReviveHandler {
     }
 
     private static void setFlat(WandscapeNpc npc, AttributeType type, float value) {
-        switch (type) {
-            case MAX_HP -> npc.maxHp = value;
-            case MOVE_SPEED -> npc.moveSpeed = value;
-            case SPELL_POWER -> npc.spellPower = value;
-            case WORK_SPEED -> npc.workSpeed = value;
-            case SPELL_SPEED -> npc.spellSpeed = value;
-            case ARMOR_VALUE -> npc.armorValue = value;
-            case MAX_MANA -> npc.maxMana = value;
-        }
+        npc.setBaseAttributeValue(type, value);
     }
 
     /** 期望位置（祭坛中心最上方）通常已是空气且下方有实体；被占则在周围找可站位置。 */

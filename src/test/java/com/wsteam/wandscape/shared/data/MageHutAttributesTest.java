@@ -15,9 +15,11 @@ class MageHutAttributesTest {
 
     @Test
     void definitionsCoverAllSevenAttributes() {
-        assertEquals(7, AttributeType.values().length);
+        assertEquals(9, AttributeType.values().length);
         assertEquals(7, MageHutAttributes.ORDER.size());
-        for (AttributeType type : AttributeType.values()) {
+        assertFalse(MageHutAttributes.ORDER.contains(AttributeType.HEALTH_REGEN));
+        assertFalse(MageHutAttributes.ORDER.contains(AttributeType.MANA_REGEN));
+        for (AttributeType type : MageHutAttributes.ORDER) {
             assertTrue(MageHutAttributes.lower(type) <= MageHutAttributes.upper(type),
                     type + " lower must be ≤ upper");
             assertTrue(MageHutAttributes.perLevel(type) >= 0);
@@ -63,7 +65,7 @@ class MageHutAttributesTest {
 
     @Test
     void allAttributesHaveTwentyUniformTrainSteps() {
-        for (AttributeType type : AttributeType.values()) {
+        for (AttributeType type : MageHutAttributes.ORDER) {
             float steps = (MageHutAttributes.upper(type) - MageHutAttributes.lower(type))
                     / MageHutAttributes.trainStep(type);
             assertEquals(20f, steps, 0.01f, type + " must train in exactly 20 uniform steps");
@@ -96,7 +98,7 @@ class MageHutAttributesTest {
 
     @Test
     void trainElementsTwoDistinctPerAttribute() {
-        for (AttributeType type : AttributeType.values()) {
+        for (AttributeType type : MageHutAttributes.ORDER) {
             List<ElementType> els = MageHutAttributes.trainElements(type);
             assertEquals(2, els.size(), type + " must use exactly 2 elements");
             assertEquals(2, els.stream().distinct().count(), type + " elements must be distinct");
@@ -106,7 +108,7 @@ class MageHutAttributesTest {
     @Test
     void elementMappingBalancedAcrossAllSeven() {
         Map<ElementType, Integer> count = new HashMap<>();
-        for (AttributeType type : AttributeType.values()) {
+        for (AttributeType type : MageHutAttributes.ORDER) {
             for (ElementType e : MageHutAttributes.trainElements(type)) {
                 count.merge(e, 1, Integer::sum);
             }
@@ -147,7 +149,7 @@ class MageHutAttributesTest {
     @Test
     void residentStoresBaseByAttributeOrder() {
         float[] base = new float[AttributeType.values().length];
-        for (AttributeType type : AttributeType.values()) {
+        for (AttributeType type : MageHutAttributes.ORDER) {
             base[type.ordinal()] = MageHutAttributes.lower(type);
         }
         MageHutResident resident = new MageHutResident(

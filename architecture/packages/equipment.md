@@ -1,25 +1,24 @@
 # equipment/ — 装备系统
 
-替代旧 WandCarrier。统一管理 NPC 各槽位装备、属性计算。
-
-**cross-cutting 关注点**：核心类型在 core/，桥接在 npc/，调度在 core/system/。
+装备直接走 vanilla 物品栏槽位（法杖在 MAINHAND，盔甲在 HEAD/CHEST/LEGS/FEET），统一由 vanilla `Attribute` 与 `ItemAttributeModifiers` 驱动。
 
 ## 核心类型
 
-EquipmentSlot（WAND，预留 RING/AMULET/ROBE/BOOTS）/ AttributeType（RANGE / MANA_COST_MULTIPLIER / MAX_MANA / MANA_REGEN / MAX_HP / MOVE_SPEED）/ AttributeModifier / ModifierOperation（ADD/MULTIPLY）/ EquipmentPreset
+AttributeType（MAX_HP / MOVE_SPEED / SPELL_POWER / WORK_SPEED / SPELL_SPEED / ARMOR_VALUE / MAX_MANA / HEALTH_REGEN / MANA_REGEN）/ AttributeModifier / ModifierOperation / WandscapeAttributes
 
 ## 数据流
 
 ```
 WandPresetLoader 加载 JSON (attributes[])
+  → 构建 ItemAttributeModifiers (EquipmentSlotGroup.MAINHAND)
   → 法杖物品 NBT (preset_id + wand_color)
-  → 玩家/系统装备 → EquipmentComponent.equip()
-  → 属性计算: 基础值 + 所有装备修饰器 → 有效属性值
-  → SchedulerSystem / TaskExecutionSystem 读取
+  → NPC 装备在主手 → vanilla LivingEntity.detectEquipmentUpdates()
+  → 实体 AttributeInstance 自动挂载修饰符
+  → SchedulerSystem / TaskExecutionSystem / NpcSpellPowerHandler 读取有效属性
 ```
 
 ## 依赖
 
-- core/types/EquipmentSlot / AttributeType / AttributeModifier / ModifierOperation / EquipmentPreset
-- core/component/EquipmentComponent
+- core/types/AttributeType / AttributeModifier / ModifierOperation
+- engine/attribute/WandscapeAttributes
 - wand/internal/WandPresetLoader

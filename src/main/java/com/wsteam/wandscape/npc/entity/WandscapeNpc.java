@@ -15,12 +15,14 @@ import java.util.stream.Stream;
 
 import javax.annotation.Nullable;
 
+import net.minecraft.core.Holder;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.ai.attributes.Attribute;
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.compat.ironspellbooks.IronSpellsCompat;
 import com.wsteam.wandscape.core.component.CastStrategyComponent;
 import com.wsteam.wandscape.core.component.ColonyMember;
-import com.wsteam.wandscape.core.component.EquipmentComponent;
 import com.wsteam.wandscape.core.component.EquippedMagicComponent;
 import com.wsteam.wandscape.core.component.MagicState;
 import com.wsteam.wandscape.core.component.NavigationState;
@@ -28,12 +30,10 @@ import com.wsteam.wandscape.core.component.TaskExecutor;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.types.AttributeModifier;
 import com.wsteam.wandscape.core.types.AttributeType;
-import com.wsteam.wandscape.core.types.EquipmentSlot;
 import com.wsteam.wandscape.core.types.FollowAttackDecision;
 import com.wsteam.wandscape.core.types.FriendlyForce;
-import com.wsteam.wandscape.shared.api.WandApi;
-import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.core.types.NpcAttributes;
+import com.wsteam.wandscape.engine.attribute.WandscapeAttributes;
 import com.wsteam.wandscape.npc.NpcMenu;
 import com.wsteam.wandscape.npc.network.NpcDataPacket;
 import com.wsteam.wandscape.task.runtime.ExecutorState;
@@ -118,21 +118,42 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
     public UUID colonyId = EntityComponentBridge.PLACEHOLDER_COLONY;
 
     // ============================================================
-    // Attributes (ECS EquipmentComponent is authoritative at runtime:
-    // base = these fields + equipment modifiers; these fields are NBT transit)
+    // Attributes (stored in vanilla AttributeMap)
     // ============================================================
 
-    public float maxHp = NpcAttributes.defaults().maxHp();
-    public float moveSpeed = NpcAttributes.defaults().moveSpeed();
-    public float spellPower = NpcAttributes.defaults().spellPower();
-    public float workSpeed = NpcAttributes.defaults().workSpeed();
-    public float spellSpeed = NpcAttributes.defaults().spellSpeed();
-    public float armorValue = NpcAttributes.defaults().armorValue();
-    public float maxMana = NpcAttributes.defaults().maxMana();
+    public float getBaseAttributeValue(AttributeType type) {
+        Holder<Attribute> attr = WandscapeAttributes.toVanilla(type);
+        if (attr == null) return 1.0f;
+        var inst = getAttribute(attr);
+        return inst != null ? (float) inst.getBaseValue() : 1.0f;
+    }
+
+    public void setBaseAttributeValue(AttributeType type, float value) {
+        Holder<Attribute> attr = WandscapeAttributes.toVanilla(type);
+        if (attr == null) return;
+        var inst = getAttribute(attr);
+        if (inst != null) {
+            inst.setBaseValue(value);
+            if (type == AttributeType.MAX_HP && getHealth() > value) {
+                setHealth(value);
+            }
+        }
+    }
+
+    public float getEffectiveAttribute(AttributeType type) {
+        Holder<Attribute> attr = WandscapeAttributes.toVanilla(type);
+        if (attr == null) return 1.0f;
+        var inst = getAttribute(attr);
+        return inst != null ? (float) inst.getValue() : 1.0f;
+    }
+
+    public float getEffectiveArmorValue() {
+        return (float) getAttributeValue(Attributes.ARMOR);
+    }
 
     // ============================================================
     // 魔力值 + 每魔法独立 CD + 施法互斥锁（纯逻辑在 core/component/MagicState）
-    // 魔力上限 = 第 7 属性 MAX_MANA（ECS EquipmentComponent 权威，getEffectiveAttribute 读取）
+    // 魔力上限 = 第 7 属性 MAX_MANA（vanilla 属性权威，getEffectiveAttribute 读取）
     // ============================================================
 
     public final MagicState magic = new MagicState();
@@ -299,7 +320,7 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
             regenAccum++;
             if (regenAccum >= Config.NPC_REGEN_INTERVAL_TICKS.get()) {
                 regenAccum = 0;
-                heal(1f);
+                heal(getEffectiveAttribute(AttributeType.HEALTH_REGEN));
             }
         } else {
             regenAccum = 0;
@@ -345,65 +366,6 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
         return false;
     }
 
-    /**
-     * 读取 NPC 有效属性（ECS EquipmentComponent：base + 装备加成）。
-     * ECS 不可用时回退到 NBT transit 字段。
-     */
-    public float getEffectiveAttribute(AttributeType type) {
-        World world = WandscapeEngine.getWorld();
-        if (world != null && ecsEntityId > 0) {
-            EquipmentComponent eq = world.get(ecsEntityId, EquipmentComponent.class);
-            if (eq != null) return eq.getAttribute(type);
-        }
-        return switch (type) {
-            case MAX_HP -> maxHp;
-            case MOVE_SPEED -> moveSpeed;
-            case SPELL_POWER -> spellPower;
-            case WORK_SPEED -> workSpeed;
-            case SPELL_SPEED -> spellSpeed;
-            case ARMOR_VALUE -> armorValue;
-            case MAX_MANA -> maxMana;
-        };
-    }
-
-    /** 上次推送到 vanilla 的属性值（防每 tick 重复 setBaseValue）。 */
-    private float appliedMaxHp = -1;
-    private float appliedMoveSpeed = -1;
-    private float appliedArmor = -1;
-
-    /** 有效护甲值 = vanilla ARMOR（base=天生护甲+法杖加成，transient=槽内盔甲）。GUI 显示总护甲用。 */
-    public float getEffectiveArmorValue() {
-        return (float) getAttributeValue(Attributes.ARMOR);
-    }
-
-    /**
-     * 把有效属性推送到 vanilla 实体（最大生命/移速/护甲 base）。
-     * 护甲只推天生+法杖加成（core ARMOR_VALUE 已不含槽内盔甲）——槽内盔甲由原版
-     * per-tick 装备结算叠加 transient，总护甲 = base + 槽内。
-     */
-    private void applyEffectiveAttributes() {
-        World world = WandscapeEngine.getWorld();
-        if (world == null || ecsEntityId <= 0) return;
-        EquipmentComponent eq = world.get(ecsEntityId, EquipmentComponent.class);
-        if (eq == null) return;
-        float maxHp = eq.getAttribute(AttributeType.MAX_HP);
-        float speed = eq.getAttribute(AttributeType.MOVE_SPEED);
-        float armor = eq.getAttribute(AttributeType.ARMOR_VALUE);
-        if (Math.abs(maxHp - appliedMaxHp) > 0.001f) {
-            appliedMaxHp = maxHp;
-            this.getAttribute(Attributes.MAX_HEALTH).setBaseValue(maxHp);
-            if (getHealth() > maxHp) setHealth(maxHp);
-        }
-        if (Math.abs(speed - appliedMoveSpeed) > 0.001f) {
-            appliedMoveSpeed = speed;
-            this.getAttribute(Attributes.MOVEMENT_SPEED).setBaseValue(speed);
-        }
-        if (Math.abs(armor - appliedArmor) > 0.001f) {
-            appliedArmor = armor;
-            this.getAttribute(Attributes.ARMOR).setBaseValue(armor);
-        }
-    }
-
     // ============================================================
     // Inventory
     // ============================================================
@@ -415,8 +377,8 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
     // so vanilla/other mods read the worn armor and vanilla applies the item
     // attribute modifiers + enchantment effects each tick. The wizard robe
     // appearance is preserved because WandscapeNpcRenderer adds no armor layer.
-    // Only Iron Spells' Wandscape-only attributes (MAX_MANA/SPELL_POWER) are
-    // bridged into the ECS EquipmentComponent by {@link #syncIronArmorAttributes}.
+    // Iron Spells' custom attributes (MAX_MANA/SPELL_SPEED/MANA_REGEN) are
+    // bridged into the NPC's vanilla AttributeMap by {@link #syncIronArmorAttributes}.
     // ============================================================
 
     public static final int ARMOR_SLOT_COUNT = 4;
@@ -432,32 +394,58 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
     /** 旧存档 armorInventory 迁移暂存：readAdditionalSaveData 捕获，onAddedToLevel 用 setItemSlot 落地。 */
     private final List<ItemStack> pendingArmorMigration = new ArrayList<>();
 
+    @Override
+    public void setItemSlot(net.minecraft.world.entity.EquipmentSlot slot, ItemStack stack) {
+        super.setItemSlot(slot, stack);
+        if (!level().isClientSide && slot.getType() == net.minecraft.world.entity.EquipmentSlot.Type.HUMANOID_ARMOR) {
+            syncIronArmorAttributes();
+        }
+    }
+
     /**
-     * 把 4 个 vanilla 盔甲格中铁魔法装备的 MAX_MANA/SPELL_POWER 加成桥进 ECS
-     * {@code EquipmentComponent}。护甲值/韧性/击退/移速等原版属性由原版每 tick 装备
-     * 结算自动应用（盔甲就在 vanilla 槽）；这里只桥 Wandscape 自有属性——原版不知道它们
-     * （不在 NPC 的 AttributeMap 中会被 {@code AttributeSupplier} 判为 null 跳过），
-     * 且 Wandscape 的魔力/法强从 core 枚举读取。空槽或非铁魔法盔甲 unequip 撤销旧加成。
+     * 把 4 个 vanilla 盔甲格中铁魔法装备的 MAX_MANA/SPELL_SPEED/MANA_REGEN 加成桥进
+     * 实体属性表（transient 修饰符）。护甲值/韧性/击退/移速等原版属性由原版每 tick 装备
+     * 结算自动应用（盔甲就在 vanilla 槽）。空槽或非铁魔法盔甲自动移除旧修饰符。
      */
     public void syncIronArmorAttributes() {
-        World world = WandscapeEngine.getWorld();
-        if (world == null || ecsEntityId <= 0) return;
-        EquipmentComponent eq = world.get(ecsEntityId, EquipmentComponent.class);
-        if (eq == null) return;
+        if (level().isClientSide) return;
+        AttributeType[] bridgedTypes = {
+                AttributeType.MAX_MANA,
+                AttributeType.SPELL_SPEED,
+                AttributeType.MANA_REGEN
+        };
+
         for (int i = 0; i < ARMOR_SLOT_COUNT; i++) {
-            EquipmentSlot coreSlot = switch (i) {
-                case 0 -> EquipmentSlot.HEAD;
-                case 1 -> EquipmentSlot.CHEST;
-                case 2 -> EquipmentSlot.LEGS;
-                default -> EquipmentSlot.FEET;
-            };
-            ItemStack stack = getItemBySlot(ARMOR_VANILLA_SLOTS[i]);
-            List<AttributeModifier> mods = stack.isEmpty() ? List.of()
-                    : com.wsteam.wandscape.compat.ironspellbooks.IronSpellsAttributes.modifiersFor(stack);
-            if (mods.isEmpty()) {
-                eq.unequip(coreSlot);
-            } else {
-                eq.equip(coreSlot, stack.getItem().getDescriptionId(), mods);
+            var vanillaSlot = ARMOR_VANILLA_SLOTS[i];
+            for (AttributeType type : bridgedTypes) {
+                var vanillaAttr = WandscapeAttributes.toVanilla(type);
+                if (vanillaAttr == null) continue;
+                var inst = getAttribute(vanillaAttr);
+                if (inst != null) {
+                    ResourceLocation modId = ResourceLocation.fromNamespaceAndPath(
+                            Wandscape.MODID, "iron_armor_" + vanillaSlot.getName() + "_" + type.name().toLowerCase(Locale.ROOT));
+                    inst.removeModifier(modId);
+                }
+            }
+
+            ItemStack stack = getItemBySlot(vanillaSlot);
+            if (!stack.isEmpty()) {
+                List<com.wsteam.wandscape.core.types.AttributeModifier> mods =
+                        com.wsteam.wandscape.compat.ironspellbooks.IronSpellsAttributes.modifiersFor(stack);
+                for (var mod : mods) {
+                    var vanillaAttr = WandscapeAttributes.toVanilla(mod.type());
+                    if (vanillaAttr == null) continue;
+                    var inst = getAttribute(vanillaAttr);
+                    if (inst != null) {
+                        ResourceLocation modId = ResourceLocation.fromNamespaceAndPath(
+                                Wandscape.MODID, "iron_armor_" + vanillaSlot.getName() + "_" + mod.type().name().toLowerCase(Locale.ROOT));
+                        var op = (mod.operation() == com.wsteam.wandscape.core.types.ModifierOperation.MULTIPLY_BASE)
+                                ? net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_MULTIPLIED_BASE
+                                : net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_VALUE;
+                        inst.addTransientModifier(new net.minecraft.world.entity.ai.attributes.AttributeModifier(
+                                modId, mod.amount(), op));
+                    }
+                }
             }
         }
     }
@@ -482,31 +470,6 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
             if (stack.isEmpty()) anyBroke = true;
         }
         if (anyBroke) syncIronArmorAttributes();
-    }
-
-    /**
-     * 把主手法杖（自定义 preset 或默认杖）的属性加成同步到 ECS EquipmentComponent 的 WAND 槽。
-     * 此前 crafted 法杖的 attributes[] 只写入物品 NBT、从不应用——装备高阶法杖只变外观。
-     * 现按 preset_id 查预设属性，放杖即生效；未知/默认杖回退到中性默认加成。
-     */
-    public void syncWandAttributes() {
-        World world = WandscapeEngine.getWorld();
-        if (world == null || ecsEntityId <= 0) return;
-        EquipmentComponent eq = world.get(ecsEntityId, EquipmentComponent.class);
-        if (eq == null) return;
-        WandApi api = WandscapeApis.getWandApiSilently();
-        if (api == null) return;
-        ItemStack stack = getItemInHand(InteractionHand.MAIN_HAND);
-        String presetId = api.getWandPresetId(stack);
-        if (presetId != null) {
-            List<AttributeModifier> mods = api.getWandModifiers(presetId);
-            if (mods != null && !mods.isEmpty()) {
-                eq.equip(EquipmentSlot.WAND, presetId, mods);
-                return;
-            }
-        }
-        eq.equip(EquipmentSlot.WAND, EquipmentComponent.DEFAULT_WAND_PRESET_ID,
-                EquipmentComponent.DEFAULT_WAND_MODIFIERS);
     }
 
     // ============================================================
@@ -967,6 +930,13 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
                 .add(Attributes.MOVEMENT_SPEED, 0.3)
                 .add(Attributes.ATTACK_DAMAGE, 1.0)
                 .add(Attributes.FOLLOW_RANGE, 48.0)
+                .add(Attributes.ARMOR, 6.0)
+                .add(com.wsteam.wandscape.engine.attribute.WandscapeAttributes.SPELL_POWER, 1.0)
+                .add(com.wsteam.wandscape.engine.attribute.WandscapeAttributes.WORK_SPEED, 1.0)
+                .add(com.wsteam.wandscape.engine.attribute.WandscapeAttributes.SPELL_SPEED, 1.0)
+                .add(com.wsteam.wandscape.engine.attribute.WandscapeAttributes.MAX_MANA, 200.0)
+                .add(com.wsteam.wandscape.engine.attribute.WandscapeAttributes.HEALTH_REGEN, 1.0)
+                .add(com.wsteam.wandscape.engine.attribute.WandscapeAttributes.MANA_REGEN, 1.0)
                 // 水中移动效率 1.0：落水/渡水时以接近陆地的速度游动。原版陆地生物默认 0，
                 // 水中速度被拖到约 0.6 格/秒，会让 NPC 在河里"卡死"并触发传送兜底。
                 .add(Attributes.WATER_MOVEMENT_EFFICIENCY, 1.0);
@@ -1038,16 +1008,15 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
             setDeltaMovement(Vec3.ZERO);
         }
 
-        // 脱战回血 + 属性推送 + 魔力回复：idle NPC 也要执行，放在快路 return 之前
+        // 脱战回血 + 魔力回复：idle NPC 也要执行，放在快路 return 之前
         tickHealthRegen();
-        applyEffectiveAttributes();
         // 首 tick 满蓝填充（新 NPC / 旧存档迁移），此后每 10tick 结算回 1% 上限
         if (!magic.isManaSeeded()) {
             magic.setMana(getMaxMana());
             magic.markManaSeeded();
         }
         magic.tickRegen(getMaxMana(), Config.NPC_MANA_REGEN_TICKS.get(),
-                Config.NPC_MANA_REGEN_FRACTION.get().floatValue());
+                Config.NPC_MANA_REGEN_FRACTION.get().floatValue() * getEffectiveAttribute(AttributeType.MANA_REGEN));
 
         tickIdleSelfHeal();
         tickCastingState();
@@ -1394,7 +1363,6 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
                 if (world != null) {
                     EntityComponentBridge.INSTANCE.onNpcJoinWorld(this, world);
                     syncIronArmorAttributes();
-                    syncWandAttributes();
                 } else {
                     // Engine not yet bootstrapped — entity loaded before ServerStartingEvent.
                     // Defer registration until the next tick.
@@ -1489,13 +1457,6 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
         tag.putInt("SkinVariant", getSkinVariant());
         tag.putInt("HatColor", getHatColor());
         tag.putLong("EcsEntityId", ecsEntityId);
-        tag.putFloat("maxHp", maxHp);
-        tag.putFloat("moveSpeed", moveSpeed);
-        tag.putFloat("spellPower", spellPower);
-        tag.putFloat("workSpeed", workSpeed);
-        tag.putFloat("spellSpeed", spellSpeed);
-        tag.putFloat("armorValue", armorValue);
-        tag.putFloat("maxMana", maxMana);
         tag.putFloat("currentMana", magic.getMana());
         tag.putInt("manaRegenAccum", magic.getManaRegenAccum());
         tag.putInt("spellLockTicks", magic.getLockTicks());
@@ -1554,13 +1515,27 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
             this.entityData.set(DATA_HAT_COLOR, tag.getInt("HatColor"));
         }
         ecsEntityId = tag.getLong("EcsEntityId");
-        maxHp = tag.getFloat("maxHp");
-        moveSpeed = tag.getFloat("moveSpeed");
-        spellPower = tag.getFloat("spellPower");
-        workSpeed = tag.getFloat("workSpeed");
-        spellSpeed = tag.getFloat("spellSpeed");
-        armorValue = tag.getFloat("armorValue");
-        maxMana = tag.getFloat("maxMana");
+        if (tag.contains("maxHp", Tag.TAG_ANY_NUMERIC)) {
+            setBaseAttributeValue(AttributeType.MAX_HP, tag.getFloat("maxHp"));
+        }
+        if (tag.contains("moveSpeed", Tag.TAG_ANY_NUMERIC)) {
+            setBaseAttributeValue(AttributeType.MOVE_SPEED, tag.getFloat("moveSpeed"));
+        }
+        if (tag.contains("spellPower", Tag.TAG_ANY_NUMERIC)) {
+            setBaseAttributeValue(AttributeType.SPELL_POWER, tag.getFloat("spellPower"));
+        }
+        if (tag.contains("workSpeed", Tag.TAG_ANY_NUMERIC)) {
+            setBaseAttributeValue(AttributeType.WORK_SPEED, tag.getFloat("workSpeed"));
+        }
+        if (tag.contains("spellSpeed", Tag.TAG_ANY_NUMERIC)) {
+            setBaseAttributeValue(AttributeType.SPELL_SPEED, tag.getFloat("spellSpeed"));
+        }
+        if (tag.contains("armorValue", Tag.TAG_ANY_NUMERIC)) {
+            setBaseAttributeValue(AttributeType.ARMOR_VALUE, tag.getFloat("armorValue"));
+        }
+        if (tag.contains("maxMana", Tag.TAG_ANY_NUMERIC)) {
+            setBaseAttributeValue(AttributeType.MAX_MANA, tag.getFloat("maxMana"));
+        }
         Map<String, Integer> cds = new HashMap<>();
         if (tag.contains("magicCooldowns")) {
             CompoundTag mc = tag.getCompound("magicCooldowns");

@@ -4,16 +4,26 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import java.util.Locale;
+
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.core.types.AttributeModifier;
 import com.wsteam.wandscape.core.types.AttributeType;
 import com.wsteam.wandscape.core.types.ModifierOperation;
 import com.wsteam.wandscape.dataconfig.internal.WandscapeDataLoader;
+import com.wsteam.wandscape.engine.attribute.WandscapeAttributes;
 import com.wsteam.wandscape.shared.registry.WandscapeDataRegistry;
 
+import net.minecraft.core.Holder;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.EquipmentSlotGroup;
+import net.minecraft.world.entity.ai.attributes.Attribute;
+import net.minecraft.world.item.component.ItemAttributeModifiers;
+
 public class WandPresetLoader {
     private static final String CATEGORY = "craft_recipes";
 
@@ -38,6 +48,32 @@ public class WandPresetLoader {
         CompoundTag nbt,
         List<AttributeModifier> attributes
     ) {
+        public ItemAttributeModifiers itemAttributeModifiers() {
+            return buildItemAttributeModifiers(id, attributes);
+        }
+
+        public static ItemAttributeModifiers buildItemAttributeModifiers(String id, List<AttributeModifier> attributes) {
+            if (attributes == null || attributes.isEmpty()) {
+                return ItemAttributeModifiers.EMPTY;
+            }
+            ItemAttributeModifiers.Builder builder = ItemAttributeModifiers.builder();
+            for (AttributeModifier mod : attributes) {
+                Holder<Attribute> vanillaAttr = WandscapeAttributes.toVanilla(mod.type());
+                if (vanillaAttr == null) continue;
+                net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation op =
+                        switch (mod.operation()) {
+                            case ADDITION -> net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_VALUE;
+                            case MULTIPLY_BASE -> net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_MULTIPLIED_BASE;
+                        };
+                ResourceLocation modId = ResourceLocation.fromNamespaceAndPath(
+                        Wandscape.MODID, "wand_" + id + "_" + mod.type().name().toLowerCase(Locale.ROOT));
+                builder.add(vanillaAttr,
+                        new net.minecraft.world.entity.ai.attributes.AttributeModifier(modId, mod.amount(), op),
+                        EquipmentSlotGroup.MAINHAND);
+            }
+            return builder.build();
+        }
+
         static WandPreset fromJson(String id, JsonElement json) {
             JsonObject obj = json.getAsJsonObject();
 
@@ -63,9 +99,9 @@ public class WandPresetLoader {
                 for (JsonElement attrEl : attrs) {
                     JsonObject attrObj = attrEl.getAsJsonObject();
                     AttributeType type = AttributeType.valueOf(
-                            attrObj.get("type").getAsString().toUpperCase());
+                            attrObj.get("type").getAsString().toUpperCase(Locale.ROOT));
                     ModifierOperation op = ModifierOperation.valueOf(
-                            attrObj.get("operation").getAsString().toUpperCase());
+                            attrObj.get("operation").getAsString().toUpperCase(Locale.ROOT));
                     float amount = attrObj.get("amount").getAsFloat();
                     attributes.add(new AttributeModifier(type, amount, op));
                 }

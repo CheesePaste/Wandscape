@@ -7,7 +7,6 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.function.Consumer;
 
-import com.wsteam.wandscape.core.component.EquipmentComponent;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.types.AttributeType;
 import com.wsteam.wandscape.engine.WandscapeEngine;
@@ -171,24 +170,12 @@ public record NpcDataPacket(
         ItemStack held = npc.getItemInHand(InteractionHand.MAIN_HAND);
         boolean isDefault = npc.hasDefaultWand();
 
-        // Read effective attributes from ECS equipment (base + additive modifiers)
-        float moveSpeed = npc.moveSpeed;
-        float spellPower = npc.spellPower;
-        float workSpeed = npc.workSpeed;
-        float spellSpeed = npc.spellSpeed;
-        // 护甲显示总护甲 = vanilla ARMOR 有效值（base=天生+法杖，transient=槽内盔甲）。槽内盔甲
-        // 由原版装备结算叠加，ECS ARMOR_VALUE 只含天生+法杖，不能直接用于显示。
+        // Read effective attributes from vanilla attributes
+        float moveSpeed = npc.getEffectiveAttribute(AttributeType.MOVE_SPEED);
+        float spellPower = npc.getEffectiveAttribute(AttributeType.SPELL_POWER);
+        float workSpeed = npc.getEffectiveAttribute(AttributeType.WORK_SPEED);
+        float spellSpeed = npc.getEffectiveAttribute(AttributeType.SPELL_SPEED);
         float armorValue = npc.getEffectiveArmorValue();
-        World world = WandscapeEngine.getWorld();
-        if (world != null && npc.ecsEntityId > 0) {
-            EquipmentComponent eq = world.get(npc.ecsEntityId, EquipmentComponent.class);
-            if (eq != null) {
-                moveSpeed = eq.getAttribute(AttributeType.MOVE_SPEED);
-                spellPower = eq.getAttribute(AttributeType.SPELL_POWER);
-                workSpeed = eq.getAttribute(AttributeType.WORK_SPEED);
-                spellSpeed = eq.getAttribute(AttributeType.SPELL_SPEED);
-            }
-        }
 
         // P3：施法策略（预设 + 魔法表 + 解析后的优先级），经 SpellcastingApi 取；未初始化回退空
         String strategyPreset = "";

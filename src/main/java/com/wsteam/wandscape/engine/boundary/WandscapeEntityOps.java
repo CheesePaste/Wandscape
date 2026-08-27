@@ -55,6 +55,12 @@ public class WandscapeEntityOps implements EntityOps {
     }
 
     @Override
+    public float getWorkSpeed(long npcId) {
+        WandscapeNpc npc = EntityComponentBridge.INSTANCE.getNpc(npcId);
+        return npc != null ? npc.getEffectiveAttribute(com.wsteam.wandscape.core.types.AttributeType.WORK_SPEED) : 1f;
+    }
+
+    @Override
     public boolean isFollowing(long npcId) {
         WandscapeNpc npc = EntityComponentBridge.INSTANCE.getNpc(npcId);
         return npc != null && npc.isFollowMode();

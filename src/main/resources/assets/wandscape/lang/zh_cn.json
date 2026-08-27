@@ -1,4 +1,10 @@
 {
+  "attribute.name.wandscape.spell_power": "法术强度",
+  "attribute.name.wandscape.work_speed": "工作速度",
+  "attribute.name.wandscape.spell_speed": "施法速度",
+  "attribute.name.wandscape.max_mana": "法力上限",
+  "attribute.name.wandscape.health_regen": "生命回复",
+  "attribute.name.wandscape.mana_regen": "法力回复",
   "itemGroup.wandscape": "魔法小镇",
   "item.wandscape.wand": "法杖",
   "item.wandscape.guide_book": "魔法小镇建设指南",

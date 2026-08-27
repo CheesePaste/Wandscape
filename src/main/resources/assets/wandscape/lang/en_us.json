@@ -1,4 +1,10 @@
 {
+  "attribute.name.wandscape.spell_power": "Spell Power",
+  "attribute.name.wandscape.work_speed": "Work Speed",
+  "attribute.name.wandscape.spell_speed": "Spell Speed",
+  "attribute.name.wandscape.max_mana": "Max Mana",
+  "attribute.name.wandscape.health_regen": "Health Regeneration",
+  "attribute.name.wandscape.mana_regen": "Mana Regeneration",
   "itemGroup.wandscape": "Wandscape",
   "item.wandscape.wand": "Wand",
   "item.wandscape.guide_book": "Wandscape Guide",

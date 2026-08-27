@@ -54,8 +54,13 @@ public final class NpcDeathHandler {
                 colony,
                 npc.getSkinVariant(), npc.getHatColor(),
                 npc.hasDefaultWand(),
-                npc.maxHp, npc.moveSpeed, npc.spellPower, npc.workSpeed,
-                npc.spellSpeed, npc.armorValue, npc.maxMana,
+                npc.getBaseAttributeValue(com.wsteam.wandscape.core.types.AttributeType.MAX_HP),
+                npc.getBaseAttributeValue(com.wsteam.wandscape.core.types.AttributeType.MOVE_SPEED),
+                npc.getBaseAttributeValue(com.wsteam.wandscape.core.types.AttributeType.SPELL_POWER),
+                npc.getBaseAttributeValue(com.wsteam.wandscape.core.types.AttributeType.WORK_SPEED),
+                npc.getBaseAttributeValue(com.wsteam.wandscape.core.types.AttributeType.SPELL_SPEED),
+                npc.getBaseAttributeValue(com.wsteam.wandscape.core.types.AttributeType.ARMOR_VALUE),
+                npc.getBaseAttributeValue(com.wsteam.wandscape.core.types.AttributeType.MAX_MANA),
                 inv,
                 npc.equippedMagic.flattenedQualified());
         ColonyDeathRegistry.get(level).add(rec);

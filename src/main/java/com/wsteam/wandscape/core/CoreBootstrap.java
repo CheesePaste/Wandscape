@@ -57,7 +57,6 @@ public final class CoreBootstrap {
         world.registerComponent(ColonyMember.class, new HashMapComponentStore<>());
         world.registerComponent(ColonyMetadata.class, new HashMapComponentStore<>());
         world.registerComponent(NavigationState.class, new HashMapComponentStore<>());
-        world.registerComponent(EquipmentComponent.class, new HashMapComponentStore<>());
 
         // 3. Set up task compiler
         world.blueprintRegistry = config.blueprints();
@@ -97,10 +96,6 @@ public final class CoreBootstrap {
                                   NpcAttributes attrs) {
         long entity = world.createEntity();
         world.addComponent(entity, new Position(new GridPos(x, y, z)));
-        EquipmentComponent eq = new EquipmentComponent();
-        eq.seedBaseValues(attrs);
-        eq.equipDefaultWand();
-        world.addComponent(entity, eq);
         world.addComponent(entity, new TaskExecutor());
         world.addComponent(entity, new Inventory(27)); // standard 27-slot inventory
         world.addComponent(entity, new ColonyMember(colonyId));

@@ -455,6 +455,7 @@ public class Wandscape {
         ENTITY_DATA_SERIALIZERS.register(modEventBus);
         MENUS.register(modEventBus);
         WandscapeSounds.SOUNDS.register(modEventBus);
+        com.wsteam.wandscape.engine.attribute.WandscapeAttributes.ATTRIBUTES.register(modEventBus);
         com.wsteam.wandscape.magic.internal.WandscapeEffects.PETRIFICATION.getId();
 
         NeoForge.EVENT_BUS.register(this);

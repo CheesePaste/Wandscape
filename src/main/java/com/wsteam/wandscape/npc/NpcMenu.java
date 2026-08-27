@@ -127,7 +127,6 @@ public class NpcMenu extends AbstractContainerMenu {
             npc.setHasDefaultWand(false);
         }
         npc.syncIronArmorAttributes();
-        npc.syncWandAttributes();
     }
 
     /** 包装 NPC 的 4 个 vanilla 盔甲槽为 {@link Container}：菜单槽写 {@code setItemSlot}，

@@ -22,6 +22,9 @@ public interface EntityOps {
     /** Get the current mana of an NPC by ECS entity id (scheduler mana gate). */
     float getCurrentMana(long npcId);
 
+    /** Get the effective work speed of an NPC by ECS entity id. */
+    float getWorkSpeed(long npcId);
+
     /**
      * Whether the NPC is in follow mode (following a player). A following NPC
      * must not be assigned colony tasks, and any in-hand global task is

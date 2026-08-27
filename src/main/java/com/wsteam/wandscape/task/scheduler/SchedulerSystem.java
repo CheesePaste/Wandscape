@@ -2,7 +2,6 @@ package com.wsteam.wandscape.task.scheduler;
 
 import com.wsteam.wandscape.core.component.*;
 import com.wsteam.wandscape.shared.log.Log;
-import com.wsteam.wandscape.core.component.*;
 import com.wsteam.wandscape.core.ecs.System;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.task.runtime.ExecutorState;
@@ -10,8 +9,6 @@ import com.wsteam.wandscape.task.engine.pool.GlobalTask;
 import com.wsteam.wandscape.task.engine.pool.GlobalTaskPool;
 import com.wsteam.wandscape.task.runtime.NpcTaskPackage;
 import com.wsteam.wandscape.task.runtime.TaskState;
-import com.wsteam.wandscape.core.types.AttributeType;
-import com.wsteam.wandscape.core.types.EquipmentSlot;
 import com.wsteam.wandscape.core.types.GridPos;
 
 import java.util.*;
@@ -51,7 +48,7 @@ public class SchedulerSystem implements System {
         // 幽灵 NPC（MC 实体缺失/已移除，如区块卸载）：任务不得派给不存在的工人
         List<Long> idleNpcs = new ArrayList<>();
         for (long entity : world.query(Position.class, TaskExecutor.class,
-                EquipmentComponent.class, Inventory.class, ColonyMember.class)) {
+                Inventory.class, ColonyMember.class)) {
             TaskExecutor exec = world.get(entity, TaskExecutor.class);
             if (exec != null && exec.state == ExecutorState.IDLE
                     && exec.npcQueue.isIdle() && exec.globalTaskId == null
@@ -121,18 +118,10 @@ public class SchedulerSystem implements System {
                 double bestDist = -1;
 
                 for (long npcId : colonyNpcs) {
-                    EquipmentComponent eq = world.get(npcId, EquipmentComponent.class);
-                    if (eq == null) continue;
-
                     // 魔力门槛：接取前当前魔力 ≥ 任务蓝耗（否则跳过，等魔力恢复后下轮再评）
                     if (manaRequirement > 0 && (world.entityOps == null
                             || world.entityOps.getCurrentMana(npcId) < manaRequirement)) {
                         continue;
-                    }
-
-                    // Ensure NPC has a wand equipped
-                    if (!eq.hasEquipment(EquipmentSlot.WAND)) {
-                        eq.equipDefaultWand();
                     }
 
                     // Calculate horizontal distance from NPC to task target
@@ -148,7 +137,8 @@ public class SchedulerSystem implements System {
 
                     // Score: proximity + work speed (faster workers favored)
                     float proximity = 10f / (10f + (float) distance);
-                    float workEff = Math.min(eq.getAttribute(AttributeType.WORK_SPEED), 4f);
+                    float workSpeed = (world.entityOps != null) ? world.entityOps.getWorkSpeed(npcId) : 1f;
+                    float workEff = Math.min(workSpeed, 4f);
                     double score = proximity * 0.6f + (workEff - 1f) * 0.4f;
 
                     if (score > bestScore) {

@@ -12,7 +12,6 @@ import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.building.internal.BuildingState;
 import com.wsteam.wandscape.core.component.ColonyMember;
-import com.wsteam.wandscape.core.component.EquipmentComponent;
 import com.wsteam.wandscape.core.component.Position;
 import com.wsteam.wandscape.core.component.TaskExecutor;
 import com.wsteam.wandscape.core.ecs.World;
@@ -268,12 +267,10 @@ public final class TaskPanelSyncTracker {
             float maxHp = npc.getMaxHealth();
             float mana = npc.getCurrentMana();
             float maxMana = npc.getMaxMana();
-
-            EquipmentComponent eq = world.get(ecsId, EquipmentComponent.class);
-            float sp = eq != null ? eq.getAttribute(AttributeType.SPELL_POWER) : npc.spellPower;
-            float ws = eq != null ? eq.getAttribute(AttributeType.WORK_SPEED) : npc.workSpeed;
-            float ss = eq != null ? eq.getAttribute(AttributeType.SPELL_SPEED) : npc.spellSpeed;
-            // 护甲显示总护甲 = vanilla ARMOR 有效值（槽内盔甲由原版结算，ECS ARMOR_VALUE 只含天生+法杖）
+            float sp = npc.getEffectiveAttribute(AttributeType.SPELL_POWER);
+            float ws = npc.getEffectiveAttribute(AttributeType.WORK_SPEED);
+            float ss = npc.getEffectiveAttribute(AttributeType.SPELL_SPEED);
+            // 护甲显示总护甲 = vanilla ARMOR 有效值（槽内盔甲由原版结算，包含天生+法杖+槽内盔甲）
             float ar = npc.getEffectiveArmorValue();
 
             String currentTaskTitle = "";

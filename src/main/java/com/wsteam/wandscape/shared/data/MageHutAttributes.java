@@ -45,7 +45,15 @@ public final class MageHutAttributes {
             AttributeType.MAX_MANA,     new AttrSpec(150f, 250f, 15f,   5f));
 
     /** All seven attributes in panel display order (index 0..6). */
-    public static final List<AttributeType> ORDER = List.of(AttributeType.values());
+    public static final List<AttributeType> ORDER = List.of(
+            AttributeType.MAX_HP,
+            AttributeType.MOVE_SPEED,
+            AttributeType.SPELL_POWER,
+            AttributeType.WORK_SPEED,
+            AttributeType.SPELL_SPEED,
+            AttributeType.ARMOR_VALUE,
+            AttributeType.MAX_MANA
+    );
 
     /** The spec for one attribute. */
     public static AttrSpec spec(AttributeType type) {
