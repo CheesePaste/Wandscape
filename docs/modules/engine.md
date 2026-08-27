@@ -41,7 +41,7 @@
 
 - `ColonySavedData`（`wandscape_colonies`）：colonyId → origin + founder；saveNow 同步写盘绕过 NeoForge 异步 IO。
 - `ColonyLevelData`（`wandscape_colony_levels`）：默认 level 1、exp 0、名"殖民地 XXXXXXXX"。
-- `ColonyLevelManager`：`expToNext = (level+1)*500`（1→2=1000、每级 +500）；贡献规则 tourist<colony→0、==→COLONY_EXP_EQUAL_LEVEL(250)、>→COLONY_EXP_ABOVE_LEVEL(500)；等级上限 `COLONY_MAX_LEVEL`(默认30) 封顶，封顶后不再累积经验；升级溢出转存 + `levelUpCallback`（发 ColonyLevelUpEvent record）+ 市政厅烟花/COLONY_LEVEL_UP 音。
+- `ColonyLevelManager`：`expToNext = (level+1)*500`（1→2=1000、每级 +500）；贡献规则 tourist<colony→0、==→COLONY_EXP_EQUAL_LEVEL(250)、>→COLONY_EXP_ABOVE_LEVEL(500)；等级上限 `COLONY_MAX_LEVEL`(默认31) 封顶，封顶后不再累积经验；升级溢出转存 + `levelUpCallback`（发 ColonyLevelUpEvent record）+ 市政厅烟花/COLONY_LEVEL_UP 音。
 - `ColonyApiImpl`：单例；createColony 同步持久化；getColonyId 256 格内最近原点查找；onBuildingIntact 不自动建殖民地仅链接；rebuildFromSavedData 优先 ColonySavedData、回退扫描 government 建筑。
 
 ## nav/

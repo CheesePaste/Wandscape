@@ -862,6 +862,6 @@ public class MageHutScreen extends MedievalScreen {
         if (Math.abs(v - Math.floor(v)) < 0.001f) {
             return String.valueOf((int) v);
         }
-        return String.format("%.1f", v);
+        return String.format("%.2f", v);
     }
 }

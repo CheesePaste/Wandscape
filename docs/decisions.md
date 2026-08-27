@@ -2,6 +2,19 @@
 
 本文件记录偏离直觉的设计选择及其原因，供后续开发快速理解「为什么这么做」。
 
+## 2026-08-27：法师等级上限 30 → 31 + MageHut 属性显示两位小数
+
+**需求**（用户指令）：1) 法师小屋属性显示两位小数——移动速度 0.25 被 `%.1f` 显示成 0.3；2) 法师等级上限改为 31——满级满基础生命值正好 100（base ≤40 + 2×(31−1) = 100）美观，且殖民地刷 31 级游客（殖民地 30 时 C+1），天然存在 31 级法师简历，上限应与之对齐。
+
+**决策**：
+- `Config.COLONY_MAX_LEVEL` 默认 30→**31**。法师升级上限 = 殖民地等级（`canLevelUp: level < colonyLevel`），故法师可达 31；31 级时 `MAX_HP` 满基础正好 100。
+- **游客等级封顶**：`rollTouristLevel` 的 C+1 分支 clamp 到 `COLONY_MAX_LEVEL`——殖民地 30 时 C+1=31 不受影响（保留"刷 31 级游客"前提），殖民地 31 时 C+1=32 被压回 31，避免 32 级游客经酒馆简历变成 32 级法师突破上限。直接招募路径（`MageAttributeRoller.roll(colonyLevel)`）本就 ≤ 殖民地等级，无需处理。
+- `MageHutScreen.fmt`：`%.1f` → `%.2f`（整数仍走整数字段），属性行/单次特训步进/tooltip 统一两位小数。
+
+**为什么**：殖民地满级时游客 C+1 会突破新上限，必须在源头封顶而非只抬法师上限；封顶点选在"殖民地等级上限"使其与配置联动（改 maxLevel 则游客/法师同步）。31 是"所有人统一的漂亮天花板"。
+
+**影响**：`Config.java`（默认 31 + 注释）、`TouristSpawnSystem.rollTouristLevel`（C+1 clamp）、`MageHutScreen.fmt`（两位小数）、`docs/modules/{engine,tourist}.md`（默认值 30→31）。无测试受影响（游客/Config/屏幕均 MC 依赖）。
+
 ## 2026-08-27：幽灵 NPC 不派活——区块卸载后任务循环失败卡死
 
 **需求**（用户指令）：日志反复刷 `TaskExec | NPC 51 op ResourceRequestOp failed: [ResourceReq] NPC 51 not found` 与 `navigateTo: unknown or removed NPC 51`，任务无人施工卡死。

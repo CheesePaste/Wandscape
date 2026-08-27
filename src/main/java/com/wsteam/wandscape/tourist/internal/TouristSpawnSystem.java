@@ -357,7 +357,9 @@ public final class TouristSpawnSystem {
 
     /**
      * Roll a tourist level based on colony level.
-     * Distribution: colonyLevel-1 (40%), colonyLevel (40%), colonyLevel+1 (20%)
+     * Distribution: colonyLevel-1 (40%), colonyLevel (40%), colonyLevel+1 (20%).
+     * Capped at the colony max level so a max-level tourist can never exceed the
+     * mage level cap (its resume would become a mage above the cap).
      */
     private int rollTouristLevel(int colonyLevel) {
         double roll = random.nextDouble();
@@ -369,7 +371,7 @@ public final class TouristSpawnSystem {
         } else {
             level = colonyLevel + 1;
         }
-        return Math.max(1, level);
+        return Math.max(1, Math.min(Config.COLONY_MAX_LEVEL.get(), level));
     }
 
     /**
