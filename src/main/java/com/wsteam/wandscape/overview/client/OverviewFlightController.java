@@ -256,14 +256,13 @@ public final class OverviewFlightController {
             if (isKeyDown(mc.options.keyShift, window)) vertical -= 1;
 
             if (forward != 0 || strafe != 0 || vertical != 0) {
-                // Full 3D look direction (pitch + yaw) so W flies upward when looking up
+                // Full 3D look direction (pitch + yaw) for WASD, pure world Y for Space/Shift
                 Vec3 fwd = Vec3.directionFromRotation(OverviewClientState.getCamPitch(), OverviewClientState.getCamYaw());
-                Vec3 right = fwd.cross(new Vec3(0, 1, 0)).normalize();
-                Vec3 up = right.cross(fwd).normalize();
+                Vec3 right = Vec3.directionFromRotation(0, OverviewClientState.getCamYaw()).cross(new Vec3(0, 1, 0)).normalize();
                 double move = com.wsteam.wandscape.Config.FLY_SPEED.get() * elapsed;
-                double moveX = (fwd.x * forward + right.x * strafe + up.x * vertical) * move;
-                double moveY = (fwd.y * forward + right.y * strafe + up.y * vertical) * move;
-                double moveZ = (fwd.z * forward + right.z * strafe + up.z * vertical) * move;
+                double moveX = (fwd.x * forward + right.x * strafe) * move;
+                double moveY = (fwd.y * forward + vertical) * move;
+                double moveZ = (fwd.z * forward + right.z * strafe) * move;
                 OverviewClientState.setCamPosition(
                         OverviewClientState.getCamX() + moveX,
                         OverviewClientState.getCamY() + moveY,
