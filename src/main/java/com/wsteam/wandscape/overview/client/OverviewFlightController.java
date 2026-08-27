@@ -45,7 +45,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
 public final class OverviewFlightController {
 
     private static final String TAG = "OverviewFlightController";
-    private static final double REACH = 64.0;
+    private static final double REACH = 512.0;
     /** 滚轮缩放步长（格/格），飞行速度见 Config.panel.flySpeed。 */
     private static final double SCROLL_SPEED = 4.0;
     private static final float MOUSE_SENSITIVITY = 0.15f;

@@ -26,7 +26,7 @@ import net.neoforged.neoforge.common.NeoForge;
 public final class RoadPlacementController {
 
     private static final String TAG = "RoadPlacementController";
-    private static final double REACH = 64.0;
+    private static final double REACH = 512.0;
 
     // Drag state for Gizmos
     private static BlockPos dragStartBlockPos = null;

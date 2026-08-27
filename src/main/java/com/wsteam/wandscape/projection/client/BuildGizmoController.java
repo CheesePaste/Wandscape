@@ -27,7 +27,8 @@ public final class BuildGizmoController {
         NONE, X_POS, X_NEG, Y_POS, Y_NEG, Z_POS, Z_NEG
     }
 
-    private static final double REACH = 128.0;
+    private static final String TAG = "BuildGizmoController";
+    private static final double REACH = 512.0;
     private static AxisDrag hoveredAxis = AxisDrag.NONE;
     private static AxisDrag draggingAxis = AxisDrag.NONE;
 

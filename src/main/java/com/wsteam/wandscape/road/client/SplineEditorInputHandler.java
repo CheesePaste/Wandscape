@@ -23,7 +23,7 @@ import net.minecraft.world.phys.Vec3;
  */
 public final class SplineEditorInputHandler {
     private static final String TAG = "SplineEditorInputHandler";
-    private static final double REACH = 128.0;
+    private static final double REACH = 512.0;
 
     private static boolean wasLeftDown = false;
     private static int tickCounter = 0;

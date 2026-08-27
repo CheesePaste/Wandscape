@@ -22,7 +22,7 @@ import org.lwjgl.glfw.GLFW;
  */
 public final class ScannerGizmoController {
     private static final String TAG = "ScannerGizmoController";
-    private static final double REACH = 128.0;
+    private static final double REACH = 512.0;
 
     private static boolean registered = false;
     private static boolean cameraActive = false;

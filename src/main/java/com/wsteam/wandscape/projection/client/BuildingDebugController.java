@@ -33,7 +33,7 @@ import javax.annotation.Nullable;
 public final class BuildingDebugController {
 
     private static final String TAG = "BuildingDebugController";
-    private static final double DEBUG_REACH = 64.0;
+    private static final double DEBUG_REACH = 512.0;
     /** Minimum interval between packets in ms to avoid spam when sweeping view. */
     private static final long MIN_REQUEST_INTERVAL_MS = 200;
 
