@@ -120,28 +120,44 @@ public final class BuildGizmoController {
     }
 
     private static AxisDrag hitTestGizmo(Vec3 rayOrigin, Vec3 rayDir, Vec3 origin, float scale) {
-        double px = origin.x;
-        double py = origin.y;
-        double pz = origin.z;
-
-        Vec3 rayEnd = rayOrigin.add(rayDir.scale(REACH));
         AxisDrag bestAxis = AxisDrag.NONE;
         double minDistance = Double.MAX_VALUE;
 
-        float shaftLen = 1.6f * scale;
-        float thickness = 0.12f * scale;
+        float sMin = 0.15f * scale;
+        float sMax = 1.9f * scale;
+        double hitRadius = 0.35 * scale;
 
         for (AxisDrag axis : AxisDrag.values()) {
             if (axis == AxisDrag.NONE) continue;
 
-            AABB aabb = getGizmoAxisAABB(px, py, pz, axis, shaftLen, thickness);
-            Optional<Vec3> hit = aabb.clip(rayOrigin, rayEnd);
-            if (hit.isPresent()) {
-                double dist = rayOrigin.distanceTo(hit.get());
-                if (dist < minDistance) {
-                    minDistance = dist;
-                    bestAxis = axis;
-                }
+            Vec3 u = getGizmoWorldDir(axis);
+            Vec3 w0 = rayOrigin.subtract(origin);
+
+            double a = u.dot(u); // 1.0
+            double b = u.dot(rayDir);
+            double c = rayDir.dot(rayDir); // 1.0
+            double d = u.dot(w0);
+            double e = rayDir.dot(w0);
+
+            double denom = a * c - b * b;
+            double s;
+            if (Math.abs(denom) < 1e-6) {
+                s = (sMin + sMax) * 0.5;
+            } else {
+                s = (c * d - b * e) / denom;
+            }
+            s = Math.max(sMin, Math.min(sMax, s));
+
+            Vec3 pSeg = origin.add(u.scale(s));
+            double t = Math.max(0.0, pSeg.subtract(rayOrigin).dot(rayDir));
+            if (t > REACH) continue;
+
+            Vec3 pRay = rayOrigin.add(rayDir.scale(t));
+            double dist = pSeg.distanceTo(pRay);
+
+            if (dist <= hitRadius && dist < minDistance) {
+                minDistance = dist;
+                bestAxis = axis;
             }
         }
 

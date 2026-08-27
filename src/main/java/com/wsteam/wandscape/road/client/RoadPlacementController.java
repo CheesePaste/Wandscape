@@ -173,45 +173,50 @@ public final class RoadPlacementController {
         double px = pos.getX() + 0.5;
         double py = pos.getY() + 0.5;
         double pz = pos.getZ() + 0.5;
-        Vec3 rayEnd = rayOrigin.add(rayDir.scale(REACH));
+        Vec3 gizmoCenter = new Vec3(px, py, pz);
 
         RoadPlacementState.AxisDrag bestAxis = RoadPlacementState.AxisDrag.NONE;
         double minDistance = Double.MAX_VALUE;
 
-        float totalLen = 1.85f;
-        float thickness = 0.20f;
+        float sMin = 0.15f;
+        float sMax = 1.85f;
+        double hitRadius = 0.35; // 35cm generous capsule tolerance for responsive dragging
 
         for (RoadPlacementState.AxisDrag axis : RoadPlacementState.AxisDrag.values()) {
             if (axis == RoadPlacementState.AxisDrag.NONE) continue;
 
-            AABB aabb = getGizmoAxisAABB(px, py, pz, axis, totalLen, thickness);
-            Optional<Vec3> hit = aabb.clip(rayOrigin, rayEnd);
-            if (hit.isPresent()) {
-                double dist = rayOrigin.distanceTo(hit.get());
-                if (dist < minDistance) {
-                    minDistance = dist;
-                    bestAxis = axis;
-                }
+            Vec3 u = getGizmoWorldDir(axis);
+            Vec3 w0 = rayOrigin.subtract(gizmoCenter);
+
+            double a = u.dot(u); // 1.0
+            double b = u.dot(rayDir);
+            double c = rayDir.dot(rayDir); // 1.0
+            double d = u.dot(w0);
+            double e = rayDir.dot(w0);
+
+            double denom = a * c - b * b;
+            double s;
+            if (Math.abs(denom) < 1e-6) {
+                s = (sMin + sMax) * 0.5;
+            } else {
+                s = (c * d - b * e) / denom;
+            }
+            s = Math.max(sMin, Math.min(sMax, s));
+
+            Vec3 pSeg = gizmoCenter.add(u.scale(s));
+            double t = Math.max(0.0, pSeg.subtract(rayOrigin).dot(rayDir));
+            if (t > REACH) continue;
+
+            Vec3 pRay = rayOrigin.add(rayDir.scale(t));
+            double dist = pSeg.distanceTo(pRay);
+
+            if (dist <= hitRadius && dist < minDistance) {
+                minDistance = dist;
+                bestAxis = axis;
             }
         }
 
         return bestAxis;
-    }
-
-    private static AABB getGizmoAxisAABB(double x, double y, double z, RoadPlacementState.AxisDrag axis, float length, float thickness) {
-        double minX = x - thickness, minY = y - thickness, minZ = z - thickness;
-        double maxX = x + thickness, maxY = y + thickness, maxZ = z + thickness;
-
-        switch (axis) {
-            case X_POS -> maxX = x + length;
-            case X_NEG -> minX = x - length;
-            case Y_POS -> maxY = y + length;
-            case Y_NEG -> minY = y - length;
-            case Z_POS -> maxZ = z + length;
-            case Z_NEG -> minZ = z - length;
-        }
-
-        return new AABB(minX, minY, minZ, maxX, maxY, maxZ);
     }
 
     public static void startGizmoDrag(Minecraft mc, Vec3 rayOrigin, Vec3 rayDir) {
@@ -311,16 +316,20 @@ public final class RoadPlacementController {
         long window = mc.getWindow().getWindow();
         double[] mx = new double[1], my = new double[1];
         org.lwjgl.glfw.GLFW.glfwGetCursorPos(window, mx, my);
-        int w = mc.getWindow().getWidth();
-        int h = mc.getWindow().getHeight();
+        int screenW = mc.getWindow().getScreenWidth();
+        int screenH = mc.getWindow().getScreenHeight();
+        if (screenW <= 0) screenW = 1;
+        if (screenH <= 0) screenH = 1;
 
-        float ndcX = (float) (2.0 * mx[0] / w - 1.0);
-        float ndcY = (float) (1.0 - 2.0 * my[0] / h);
+        float ndcX = (float) (2.0 * mx[0] / screenW - 1.0);
+        float ndcY = (float) (1.0 - 2.0 * my[0] / screenH);
 
         Camera cam = mc.gameRenderer.getMainCamera();
-        float fov = (float) mc.options.fov().get();
+        float baseFov = (float) mc.options.fov().get();
+        float fovModifier = (mc.player != null) ? mc.player.getFieldOfViewModifier() : 1.0f;
+        float fov = baseFov * fovModifier;
         float fovRad = (float) Math.toRadians(fov);
-        float aspect = (float) w / Math.max(h, 1);
+        float aspect = (float) screenW / (float) screenH;
         float tanHalfFov = (float) Math.tan(fovRad * 0.5f);
 
         org.joml.Vector3f jLook = cam.getLookVector();
