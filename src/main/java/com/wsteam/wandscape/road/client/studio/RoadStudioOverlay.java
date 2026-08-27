@@ -727,7 +727,7 @@ public final class RoadStudioOverlay {
                 int maxX = Math.max(start.getX(), end.getX());
                 int minZ = Math.min(start.getZ(), end.getZ());
                 int maxZ = Math.max(start.getZ(), end.getZ());
-                int refY = mc.level.getHeight(Heightmap.Types.MOTION_BLOCKING, start.getX(), start.getZ()) - 1;
+                int refY = start.getY();
 
                 for (int x = minX; x <= maxX; x++) {
                     for (int z = minZ; z <= maxZ; z++) {

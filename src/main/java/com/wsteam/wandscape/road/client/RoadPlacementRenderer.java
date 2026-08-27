@@ -109,6 +109,8 @@ public final class RoadPlacementRenderer {
                 renderBoxPreview(bufferSource, poseStack, from, to);
             } else if (RoadPlacementState.isSpline()) {
                 renderPathPreview(mc.level, bufferSource, poseStack, from, to);
+            } else if (RoadPlacementState.isDestroyFill()) {
+                renderFlattenPreview(mc.level, bufferSource, poseStack, from, to);
             } else {
                 renderRoadGhost(mc.level, bufferSource, poseStack, from, to,
                         RoadPlacementState.getActivePreset());
@@ -526,6 +528,81 @@ public final class RoadPlacementRenderer {
                 vc.addVertex(pose, x1, y, z1).setColor(255, 255, 80, 48).setUv(0, 0).setLight(light).setNormal(pose, 0, 1, 0);
             }
         }
+    }
+
+    /**
+     * Renders the terrain flatten preview. Strictly adheres to the baseline plane at
+     * {@code from.getY()} without conforming to the undulating surface terrain.
+     */
+    private static void renderFlattenPreview(Level level, MultiBufferSource.BufferSource bufferSource, PoseStack poseStack,
+                                             BlockPos from, BlockPos to) {
+        int minX = Math.min(from.getX(), to.getX());
+        int maxX = Math.max(from.getX(), to.getX());
+        int minZ = Math.min(from.getZ(), to.getZ());
+        int maxZ = Math.max(from.getZ(), to.getZ());
+        int refY = from.getY();
+
+        renderFlatPerimeterOutline(bufferSource, poseStack, minX, minZ, maxX, maxZ, refY);
+
+        String refBlockId = RoadPlacementState.getRefBlockId();
+        if (refBlockId == null || refBlockId.isEmpty() || "minecraft:air".equals(refBlockId)) {
+            BlockState st = level.getBlockState(from);
+            if (!st.isAir()) {
+                refBlockId = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(st.getBlock()).toString();
+            } else {
+                refBlockId = "minecraft:dirt";
+            }
+        }
+        BlockState state = BuildingPreviewRenderer.resolveBlockState(refBlockId);
+
+        int area = (maxX - minX + 1) * (maxZ - minZ + 1);
+        if (area > ROAD_GHOST_MAX_CELLS || state == null) {
+            renderFlatSurfaceFill(bufferSource, poseStack, minX, minZ, maxX, maxZ, refY);
+            return;
+        }
+
+        MultiBufferSource ghostSource = RoadGhostRenderUtil.ghostSource(bufferSource, ROAD_GHOST_ALPHA);
+
+        for (int x = minX; x <= maxX; x++) {
+            for (int z = minZ; z <= maxZ; z++) {
+                RoadGhostRenderUtil.renderGhostBlock(level, state, poseStack, ghostSource, x, refY, z);
+            }
+        }
+    }
+
+    /** Draws the yellow perimeter outline of the flatten rectangle strictly on the baseline plane. */
+    private static void renderFlatPerimeterOutline(MultiBufferSource bufferSource, PoseStack poseStack,
+                                                   int minX, int minZ, int maxX, int maxZ, int refY) {
+        float y = refY + 1.02f;
+        VertexConsumer vc = bufferSource.getBuffer(RenderType.lines());
+        var pose = poseStack.last();
+        // Edge along Z=minZ
+        line(vc, pose, minX, y, minZ, maxX + 1, y, minZ, 255, 255, 80);
+        // Edge along X=maxX+1
+        line(vc, pose, maxX + 1, y, minZ, maxX + 1, y, maxZ + 1, 255, 255, 80);
+        // Edge along Z=maxZ+1
+        line(vc, pose, maxX + 1, y, maxZ + 1, minX, y, maxZ + 1, 255, 255, 80);
+        // Edge along X=minX
+        line(vc, pose, minX, y, maxZ + 1, minX, y, minZ, 255, 255, 80);
+    }
+
+    /**
+     * Renders a translucent yellow flat quad covering the entire plane at {@code refY + 1.02f}.
+     */
+    private static void renderFlatSurfaceFill(MultiBufferSource bufferSource, PoseStack poseStack,
+                                              int minX, int minZ, int maxX, int maxZ, int refY) {
+        VertexConsumer vc = bufferSource.getBuffer(RenderType.translucent());
+        var pose = poseStack.last();
+        int light = 0xF000F0;
+        float y = refY + 1.02f;
+        float x1 = minX, x2 = maxX + 1f, z1 = minZ, z2 = maxZ + 1f;
+
+        vc.addVertex(pose, x1, y, z1).setColor(255, 255, 80, 48).setUv(0, 0).setLight(light).setNormal(pose, 0, 1, 0);
+        vc.addVertex(pose, x1, y, z2).setColor(255, 255, 80, 48).setUv(0, 0).setLight(light).setNormal(pose, 0, 1, 0);
+        vc.addVertex(pose, x2, y, z2).setColor(255, 255, 80, 48).setUv(0, 0).setLight(light).setNormal(pose, 0, 1, 0);
+        vc.addVertex(pose, x2, y, z2).setColor(255, 255, 80, 48).setUv(0, 0).setLight(light).setNormal(pose, 0, 1, 0);
+        vc.addVertex(pose, x2, y, z1).setColor(255, 255, 80, 48).setUv(0, 0).setLight(light).setNormal(pose, 0, 1, 0);
+        vc.addVertex(pose, x1, y, z1).setColor(255, 255, 80, 48).setUv(0, 0).setLight(light).setNormal(pose, 0, 1, 0);
     }
 
     /** Sample the MOTION_BLOCKING surface height at (x, z). */

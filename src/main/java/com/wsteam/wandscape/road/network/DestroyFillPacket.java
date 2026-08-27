@@ -68,13 +68,19 @@ public record DestroyFillPacket(BlockPos refPos, BlockPos endPos, boolean fillDe
         if (ref == null || end == null) return;
         boolean fillDepressions = packet.fillDepressions();
 
-        // 1. Determine reference Y and reference block from the ref position
-        int refY = level.getHeight(Heightmap.Types.MOTION_BLOCKING, ref.getX(), ref.getZ()) - 1;
-        BlockState refState = level.getBlockState(new BlockPos(ref.getX(), refY, ref.getZ()));
+        // 1. Determine reference Y and reference block from the ref position (strictly adhere to baseline plane)
+        int refY = ref.getY();
+        BlockState refState = level.getBlockState(ref);
         String refBlockId = BuiltInRegistries.BLOCK.getKey(refState.getBlock()).toString();
-        // Fallback: If ref block is dirt_path or air/unobtainable, use natural dirt for sub-surface fill
+        // Fallback: If ref block is dirt_path or air/unobtainable, check one block below or use natural dirt
         if ("minecraft:dirt_path".equals(refBlockId) || "minecraft:air".equals(refBlockId)) {
-            refBlockId = "minecraft:dirt";
+            BlockState belowState = level.getBlockState(ref.below());
+            String belowId = BuiltInRegistries.BLOCK.getKey(belowState.getBlock()).toString();
+            if (!belowState.isAir() && !"minecraft:dirt_path".equals(belowId)) {
+                refBlockId = belowId;
+            } else {
+                refBlockId = "minecraft:dirt";
+            }
         }
 
         // 2. Compute rectangle bounds

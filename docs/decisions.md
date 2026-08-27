@@ -2,6 +2,21 @@
 
 本文件记录偏离直觉的设计选择及其原因，供后续开发快速理解「为什么这么做」。
 
+## 2026-08-27：Road 编辑器铲平模式（DESTROY_FILL）严格遵循基准平面，禁止贴合地表方块
+
+**需求**（用户指令）：Road 编辑器的铲平模式（Flatten / DESTROY_FILL）不要贴合地表起伏，严格遵循基准平面。
+
+**根因**：
+1. 客户端预览（`RoadPlacementRenderer`）此前在 `DESTROY_FILL` 模式下直接调用 `renderRoadGhost`，导致每一列 `(x, z)` 均通过 `level.getHeight(MOTION_BLOCKING, x, z) - 1` 采样地表高度，外边框与方块虚影随地形高低起伏，与“平整至基准面”的语义背道而驰。
+2. 服务端执行（`DestroyFillPacket`）与 UI 工程评估（`RoadStudioOverlay`）此前通过 `level.getHeight(...) - 1` 计算基准 Y，忽略了玩家在 Gizmo 或 UI 面板中设定的精确 `refPos.getY()` / `startPos.getY()`。
+
+**决策**：
+- **基准面严格单高度**：以 `startPos.getY()`（`refPos.getY()`）为唯一权威的基准平面高度 `refY`。
+- **客户端专用平整预览**：`RoadPlacementRenderer` 增加 `renderFlattenPreview`，外轮廓边框与方块虚影严格水平定位于 `refY` 平面，不再随地形起伏。
+- **拖拽与评估同步**：`RoadPlacementController` 拖拽与 `RoadStudioOverlay` 评估统一严格对齐基准高度 `startPos.getY()`。
+
+**影响**：`RoadPlacementRenderer.java`、`RoadPlacementController.java`、`RoadStudioOverlay.java`、`DestroyFillPacket.java`、`RoadPlacementStateTest.java`。
+
 ## 2026-08-26：NPC 盔甲受击扣耐久——独立 armorInventory 手动结算
 
 **需求**（用户指令）：NPC 装备栏的护甲耐久从不被消耗，要求按受击正常磨损。

@@ -69,7 +69,16 @@ public final class RoadPlacementController {
             if (leftDown) {
                 BlockPos ghostPos = RoadPlacementState.getGhostPos();
                 if (ghostPos != null) {
-                    RoadPlacementState.setEndPos(ghostPos);
+                    if (RoadPlacementState.getActiveTool() == RoadPlacementState.ToolMode.DESTROY_FILL) {
+                        BlockPos startPos = RoadPlacementState.getStartPos();
+                        if (startPos != null) {
+                            RoadPlacementState.setEndPos(new BlockPos(ghostPos.getX(), startPos.getY(), ghostPos.getZ()));
+                        } else {
+                            RoadPlacementState.setEndPos(ghostPos);
+                        }
+                    } else {
+                        RoadPlacementState.setEndPos(ghostPos);
+                    }
                 }
             } else {
                 isLmbDragging = false;
