@@ -96,6 +96,14 @@ public final class MagicSpellExecutors {
 
     // ── 1. 治疗魔法 (Heal) ──
 
+    /**
+     * 根据施法者 SPELL_SPEED 属性（含铁魔法冷却/吟唱缩减装备加成）计算实际施法锁定时长（前摇引导）。
+     */
+    private static int computeLockTicks(WandscapeNpc npc, int durationTicks) {
+        float speed = Math.max(0.1f, npc.getEffectiveAttribute(AttributeType.SPELL_SPEED));
+        return Math.max(5, (int) Math.ceil((durationTicks / 2.0) / speed));
+    }
+
     /** 治疗光环覆盖半径（方块）。GuardCombat 的 L0 紧急奶扫描范围须与此一致，保证施放必然够得着目标。 */
     public static final float HEAL_RADIUS = 6.0f;
 
@@ -107,7 +115,7 @@ public final class MagicSpellExecutors {
         MagicCircleSpec spec = MagicCircleLoader.getSpec(circleId);
         int durationTicks = spec != null ? spec.durationTicks : 120;
 
-        if (!npc.tryCastSpell(def.id(), def.baseCooldown(), def.manaCost(), durationTicks / 2)) {
+        if (!npc.tryCastSpell(def.id(), def.baseCooldown(), def.manaCost(), computeLockTicks(npc, durationTicks))) {
             return false;
         }
 
@@ -129,23 +137,24 @@ public final class MagicSpellExecutors {
         MagicEventHandler.addHealAura(new MagicEventHandler.HealAura(
                 level, pos, npc, level.getGameTime() + durationTicks, healAmount, HEAL_RADIUS));
 
-        level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.NEUTRAL, 1.0f, 1.2f);
-        Log.info(TAG, "castHeal caster={} pos={} duration={}", npc.getUUID().toString().substring(0, 8), pos, durationTicks);
+        level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.NEUTRAL, 1.0f, 1.0f);
+        Log.info(TAG, "castHeal caster={} healAmount={} durationTicks={}",
+                npc.getUUID().toString().substring(0, 8), healAmount, durationTicks);
         return true;
     }
 
     // ── 2. 陨石魔法 (Meteor) ──
 
-    /** 陨石单颗伤害缺省值（magic_spells/meteor.json 未配 effect.damage 时兜底；连落 6 颗后为减半值）。 */
-    private static final float METEOR_DEFAULT_DAMAGE = 5.0f;
+    /** 连落陨石总颗数（法阵周期内逐颗发射，每颗发射时动态重瞄最近敌人）。 */
+    public static final int METEOR_TOTAL = 6;
 
-    /** 陨石总量：一次施放恒 6 颗、按 1/6 持续时长逐颗发射，总伤害 = 6 × 单颗伤害。 */
-    static final int METEOR_TOTAL = 6;
+    /** 连落陨石默认每颗伤害（MagicDef.effectDamage 为 null 时保底）。 */
+    public static final float METEOR_DEFAULT_DAMAGE = 10.0f;
 
-    /** 发射时重瞄的敌人扫描半径（方块），与旧版收集陨石目标的 16 格一致。 */
-    private static final double METEOR_SCAN_RADIUS = 16.0;
+    /** 陨石重瞄扫描半径（方块）。 */
+    public static final double METEOR_SCAN_RADIUS = 32.0;
 
-    /** 连落间隔（tick）：持续时长内均匀排 METEOR_TOTAL 颗，间隔 = durationTicks / METEOR_TOTAL，至少 1t。 */
+    /** 每颗陨石发射间隔 tick（= durationTicks / METEOR_TOTAL）。 */
     static int meteorIntervalTicks(int durationTicks) {
         return Math.max(1, durationTicks / METEOR_TOTAL);
     }
@@ -193,11 +202,13 @@ public final class MagicSpellExecutors {
         MagicCircleSpec spec = MagicCircleLoader.getSpec(circleId);
         int durationTicks = spec != null ? spec.durationTicks : 120;
 
-        if (!npc.tryCastSpell(def.id(), def.baseCooldown(), def.manaCost(), durationTicks / 2)) {
+        if (!npc.tryCastSpell(def.id(), def.baseCooldown(), def.manaCost(), computeLockTicks(npc, durationTicks))) {
             return false;
         }
 
-        float damage = def.effectDamage() != null ? def.effectDamage().floatValue() : METEOR_DEFAULT_DAMAGE;
+        float damage = (def.effectDamage() != null ? def.effectDamage().floatValue() : METEOR_DEFAULT_DAMAGE)
+                * Math.max(0f, npc.getEffectiveAttribute(AttributeType.SPELL_POWER))
+                * magicEnhanceMultiplier(npc);
         Vec3 pos = npc.position();
         UUID effectId = UUID.randomUUID();
 
@@ -224,7 +235,7 @@ public final class MagicSpellExecutors {
         MagicCircleSpec spec = MagicCircleLoader.getSpec(circleId);
         int durationTicks = spec != null ? spec.durationTicks : 100;
 
-        if (!npc.tryCastSpell(def.id(), def.baseCooldown(), def.manaCost(), durationTicks / 2)) {
+        if (!npc.tryCastSpell(def.id(), def.baseCooldown(), def.manaCost(), computeLockTicks(npc, durationTicks))) {
             return false;
         }
 
@@ -254,7 +265,7 @@ public final class MagicSpellExecutors {
         MagicCircleSpec spec = MagicCircleLoader.getSpec(circleId);
         int durationTicks = spec != null ? spec.durationTicks : 140;
 
-        if (!npc.tryCastSpell(def.id(), def.baseCooldown(), def.manaCost(), durationTicks / 2)) {
+        if (!npc.tryCastSpell(def.id(), def.baseCooldown(), def.manaCost(), computeLockTicks(npc, durationTicks))) {
             return false;
         }
 
@@ -302,7 +313,7 @@ public final class MagicSpellExecutors {
         MagicCircleSpec spec = MagicCircleLoader.getSpec(circleId);
         int durationTicks = spec != null ? spec.durationTicks : 120;
 
-        if (!npc.tryCastSpell(def.id(), def.baseCooldown(), def.manaCost(), durationTicks / 2)) {
+        if (!npc.tryCastSpell(def.id(), def.baseCooldown(), def.manaCost(), computeLockTicks(npc, durationTicks))) {
             return false;
         }
 
@@ -342,7 +353,7 @@ public final class MagicSpellExecutors {
         MagicCircleSpec spec = MagicCircleLoader.getSpec(circleId);
         int durationTicks = spec != null ? spec.durationTicks : 200;
 
-        if (!npc.tryCastSpell(def.id(), def.baseCooldown(), def.manaCost(), durationTicks / 2)) {
+        if (!npc.tryCastSpell(def.id(), def.baseCooldown(), def.manaCost(), computeLockTicks(npc, durationTicks))) {
             return false;
         }
 
@@ -406,7 +417,7 @@ public final class MagicSpellExecutors {
         MagicCircleSpec spec = MagicCircleLoader.getSpec(circleId);
         int durationTicks = spec != null ? spec.durationTicks : 15;
 
-        if (!npc.tryCastSpell(def.id(), def.baseCooldown(), def.manaCost(), durationTicks / 2)) {
+        if (!npc.tryCastSpell(def.id(), def.baseCooldown(), def.manaCost(), computeLockTicks(npc, durationTicks))) {
             return false;
         }
 

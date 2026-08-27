@@ -411,6 +411,7 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
         if (level().isClientSide) return;
         AttributeType[] bridgedTypes = {
                 AttributeType.MAX_MANA,
+                AttributeType.SPELL_POWER,
                 AttributeType.SPELL_SPEED,
                 AttributeType.MANA_REGEN
         };
