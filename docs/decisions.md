@@ -74,6 +74,18 @@
 
 **影响**：`WandscapeNpc`（删容器/`syncIronArmorAttributes`/`hurtArmor` 读槽/`dropEquipment` 读槽/NBT 迁移）、`NpcMenu`（`NpcArmorContainer` 包装 vanilla 槽）、`ColonyCommand`（铁套写 `setItemSlot`）、`IronSpellsAttributes`（去 MOVEMENT_SPEED）、`NpcDataPacket`/`TaskPanelSyncTracker`（护甲显示改 vanilla 有效值）、`docs/modules/npc.md`、`architecture/packages/npc.md`/`compat.md`。行为收益：铁甲韧性/击退、Protection 等附魔现在生效；NPC 装备可被 `/data`、`/item`、datapack 与其它模组读写。注意：非殖民地敌对法师（EvilMage）不注册 ECS，天然护甲不生效的既有语义不变。
 
+## 2026-08-27：铁魔法冷却/吟唱缩减折叠进 SPELL_SPEED
+
+**需求**（用户指令）：盔甲改 vanilla 槽后，继续评估铁魔法剩余属性——问法术抗性、学派法术强度、冷却缩减、吟唱缩减是否要兼容，并提议后两者统一乘入模组施法速度。
+
+**决策**：
+- **`COOLDOWN_REDUCTION`/`CAST_TIME_REDUCTION` → `SPELL_SPEED`（MULTIPLY_BASE）**：二者与 Wandscape"冷却/吟唱 ÷ SPELL_SPEED"同语义。已核对铁魔法自身公式（`冷却=基础×(2−值)`、`吟唱=基础×值`）与 `IronSpellsCaster`（用 `getCastTime` 基础值 + ÷SPELL_SPEED，未走 `getEffectiveCastTime`）——折叠不会双重叠加。常见护甲幅度（+5%~15%）下 `÷(1+A)` 与铁魔法 `×(1−A)` 近似等价（0.10 → 0.909 vs 0.90）。折叠只影响冷却与铁魔法吟唱；原生 Wandscape 法术锁时长固定（`durationTicks/2` 不随 SPELL_SPEED 缩放）——把原生锁也改 ÷SS 属独立平衡决策，本轮不做。
+- **其余不映射**：各学派 `*_spell_power` 折进通用 SPELL_POWER 语义错（学派加成 buff 一切）；`mana_regen` 无属性归处（回蓝是配置驱动）；`spell_resist`/各系抗性无受击减伤钩子（要做是新增 SPELL_RESIST 属性 + 魔法受击减伤钩子的新机制，非兼容映射）；`casting_movespeed`/`summon_damage` 无归处。
+
+**为什么**：缩减与 SPELL_SPEED 天然同构（都是"除以速度"），是最低成本、语义最干净的两条；其余要么折进去语义错、要么需要新增机制，超出"装备属性兼容"范畴。
+
+**影响**：`IronSpellsAttributes.mapType` +2 映射（`AttributeRegistry.COOLDOWN_REDUCTION`/`CAST_TIME_REDUCTION`）、javadoc、`docs/modules/npc.md`、`architecture/packages/compat.md`。
+
 ## 2026-08-27：法杖/卷轴重定价——可拆卸调换的永久 buff 不再是"死亡即消失"的一次性投入
 
 **需求**（用户指令）：按 `balance/` 经济模型，现有法杖/卷轴造价太便宜——前期法杖只占该档日收入的 0.8%~2%，"买杖"是零钱不是决策；只有 lv30 毕业杖约一游戏日、用户认可。要贵一点，分析并落地合理幅度。

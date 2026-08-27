@@ -27,17 +27,26 @@ import net.minecraft.world.item.component.ItemAttributeModifiers;
  * <ul>
  *   <li>{@code MAX_MANA}（如流浪法师兜帽 +25 最大法力）→ {@link AttributeType#MAX_MANA}</li>
  *   <li>{@code SPELL_POWER}（如 +5% 法术强度）→ {@link AttributeType#SPELL_POWER}</li>
+ *   <li>{@code COOLDOWN_REDUCTION}（法术冷却缩减）→ {@link AttributeType#SPELL_SPEED}</li>
+ *   <li>{@code CAST_TIME_REDUCTION}（法术吟唱缩减）→ {@link AttributeType#SPELL_SPEED}</li>
  * </ul>
  * 百分比加成（{@code ADD_MULTIPLIED_BASE}）映射为 {@link ModifierOperation#MULTIPLY_BASE}，
  * 使提升随 NPC 基础值正确放大、且在基础值被重新播种（法师小屋训练/复活）后仍正确。
+ *
+ * <p>冷却/吟唱缩减折叠进 {@code SPELL_SPEED}：Wandscape 冷却 = 基础 ÷ SPELL_SPEED、
+ * 铁魔法吟唱锁时长 = 基础 ÷ SPELL_SPEED（见 {@code IronSpellsCaster}）——两个缩减与
+ * {@code SPELL_SPEED} 都是"除以速度"语义，方向一致。常见护甲幅度（+5%~15%）下与铁魔法
+ * 自身公式（{@code 基础×(2−值)}）近似等价（0.10 → ÷1.10 ≈ ×0.909 vs ×0.90）。注意
+ * 折叠只影响冷却与铁魔法吟唱；原生 Wandscape 法术的锁时长固定（{@code durationTicks/2}
+ * 不随 SPELL_SPEED 缩放）。
  *
  * <p>{@code MOVEMENT_SPEED} 不再映射——盔甲进 vanilla 槽后原版直接结算移速加成，
  * 再映射会与 base 推送双重叠加。
  *
  * <p>其余铁魔法特色属性没有 Wandscape 对应属性，一律不映射：各学派 {@code *_spell_power}
- * （某系法术增强）、{@code casting_movespeed}（施法时移速）、{@code mana_regen}、
- * {@code cooldown_reduction}、{@code cast_time_reduction}、{@code summon_damage}、
- * {@code spell_resist} 与各系抗性。
+ * （某系法术增强，折进通用 SPELL_POWER 会语义错——学派加成 buff 一切）、
+ * {@code casting_movespeed}（施法时移速）、{@code mana_regen}（Wandscape 回蓝是配置驱动）、
+ * {@code summon_damage}、{@code spell_resist} 与各系抗性（无受击减伤钩子）。
  */
 public final class IronSpellsAttributes {
 
@@ -49,7 +58,7 @@ public final class IronSpellsAttributes {
      */
     public static List<AttributeModifier> modifiersFor(ItemStack stack) {
         if (!IronSpellsCompat.isLoaded() || stack == null || stack.isEmpty()) return List.of();
-        List<AttributeModifier> out = new ArrayList<>(2);
+        List<AttributeModifier> out = new ArrayList<>(4);
         for (ItemAttributeModifiers.Entry entry : stack.getAttributeModifiers().modifiers()) {
             AttributeType type = mapType(entry.attribute());
             if (type == null) continue;
@@ -64,6 +73,8 @@ public final class IronSpellsAttributes {
     private static AttributeType mapType(Holder<Attribute> attribute) {
         if (attribute.is(AttributeRegistry.MAX_MANA)) return AttributeType.MAX_MANA;
         if (attribute.is(AttributeRegistry.SPELL_POWER)) return AttributeType.SPELL_POWER;
+        if (attribute.is(AttributeRegistry.COOLDOWN_REDUCTION)) return AttributeType.SPELL_SPEED;
+        if (attribute.is(AttributeRegistry.CAST_TIME_REDUCTION)) return AttributeType.SPELL_SPEED;
         return null;
     }
 
