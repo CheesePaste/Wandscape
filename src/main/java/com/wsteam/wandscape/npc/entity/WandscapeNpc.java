@@ -589,6 +589,33 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
     // ── 光束走位方向（±1，瞬态不持久化）：每新发一束在 castSelected 交替翻转，避免始终同一方向绕圈 ──
     public int strafeDir = 1;
 
+    // ── 安全距离横向摆动（像原版骷髅的随机横移，非 ECS 导航、非固定周期钟摆）──
+    // GuardCombat 在「安全距离 + LOS 可见」的施法间隙开启，tick() 每 tick 用 MoveControl.strafe
+    // 施加侧向移动；导航（投掷物躲避/后撤/圆周走位）进行中由 getNavigation().isDone() 让位。
+    // 侧移方向按概率随机翻转、幅度随机起伏（swayRoamTicks 计数 + nextFloat 判定），前后分量
+    // 由 GuardCombat 按距离带设置（swayForward）微调走位带。瞬态不持久化。
+    private boolean combatSway;
+    private float combatSwayDir = 1.0f;      // 侧移方向 ±1（随机翻转）
+    private float combatSwayForward = 0.0f;  // 距离带前后分量 ±1/0（GuardCombat 每轮按距离设置）
+    private int swayRoamTicks;                // 随机翻转判定计数
+    private float combatSwayMag = 0.85f;      // 侧移幅度（随机起伏，产生速度变化）
+
+    /** 开启横向摆动（首次进入随机初始化方向/幅度；重复调用仅刷新前后分量，不重置随机态）。 */
+    public void enterCombatSway(float forward) {
+        if (!combatSway) {
+            combatSway = true;
+            combatSwayDir = getRandom().nextBoolean() ? 1.0f : -1.0f;
+            combatSwayMag = 0.6f + getRandom().nextFloat() * 0.4f;
+            swayRoamTicks = 0;
+        }
+        combatSwayForward = forward;
+    }
+
+    /** 关闭横向摆动。 */
+    public void exitCombatSway() {
+        combatSway = false;
+    }
+
     /**
      * 触发一次手动施法：在 {@code ticks} 内保持举杖姿态（isCasting=true）。
      * 窗口结束由 tick() 自动恢复为 ECS 决定的状态。
@@ -1021,6 +1048,22 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
 
         tickIdleSelfHeal();
         tickCastingState();
+        tickCombatSway();
+    }
+
+    /** 安全距离横向摆动：每 tick 经 MoveControl.strafe 施加随机方向的侧移，让 NPC 在施法间隙不再站桩当
+     *  固定炮台（像原版骷髅）。方向按概率随机翻转、幅度随机起伏——非固定周期钟摆。导航进行中
+     *  （躲避/后撤/走位寻路）让位，不抢其轨迹。 */
+    private void tickCombatSway() {
+        if (!combatSway) return;
+        if (!getNavigation().isDone()) return; // 有导航进行中，让位
+        if (++swayRoamTicks >= Config.GUARD_SWAY_FLIP_TICKS.get()) {
+            swayRoamTicks = 0;
+            if (getRandom().nextFloat() < 0.35f) combatSwayDir = -combatSwayDir; // 随机换边
+            combatSwayMag = 0.6f + getRandom().nextFloat() * 0.4f;               // 随机幅度起伏
+        }
+        // 前后分量（走位带微调，靠 distance band 而非随机）+ 侧向随机横移
+        getMoveControl().strafe(combatSwayForward * 0.35f, combatSwayDir * combatSwayMag);
     }
 
     /**

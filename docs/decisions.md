@@ -197,6 +197,23 @@
 
 **影响**：`GuardCombat` 增 `strafe`/`findStrafePos`/`STRAFE_STEP`；`WandscapeNpc` 增瞬态 `strafeDir` + `endManualCast()`；`MagicBeamEntity.trackTarget` faceTarget 门控；`MagicCaster` 姿态拉满；`SelfDefenseExecutor`/`EvilMageCastGoal` 战斗结束淡出光束。
 
+## 2026-08-27：无光束间隙横向摆动走位——补齐冷却站桩，像原版骷髅持续侧移
+
+**需求**（用户实测）：法师退到走位距离后**静止不动**，特别容易被箭等投掷物打中。上一条决策实现了光束期间横移走位，但 `beam == null`（法阵引导/两发之间，最长约 20s 冷却）仍站定瞄准——远程怪时 NPC 退到风筝距离就变固定炮台。
+
+**根因**：`GuardCombat.engage` 安全距离分支在 `beam == null` 时走 `cancelNpcNavigation` 钉住 NPC 站定施法，冷却间隙整段不动。
+
+**决策**：
+- **无光束间隙改为横向摆动**（`GuardCombat.engage` 安全距离分支 `beam == null`）：不再 `cancelNpcNavigation` 站桩，改为 `npc.enterCombatSway(swayForwardBias(npc, target, standoff))` + `faceTarget` + 照常 `castSelected`（CD 未到则静默尝试，成功则进入光束分支）。
+- **用原版骷髅的 `MoveControl.strafe` 做持续侧移**，而非 ECS 走位寻路：`MoveControl.strafe` 每 tick 重置（`operation = WAIT`），必须每 tick 重发，故由 `WandscapeNpc.tick()` 的 `tickCombatSway()` 驱动；它靠设 `Zza/Xxa` 相对朝向侧移，且有 `isWalkable` 兜底（侧移被墙挡改走正前）。**不借 ECS `navigateTo`**——其 5 格到达半径（`STOP_RANGE_SQ`）会让短距离走位变成「挪一小步停一拍」的抽搐，且每 10 tick 才重检。
+- **导航让位**（`tickCombatSway`）：仅当 `getNavigation().isDone()`（无进行中寻路）才施侧移——投掷物躲避/后撤/圆周走位进行中自动让位，不抢其轨迹，躲避不受影响。
+- **方向随机**（初版曾用 `gameTime` 奇偶定时满幅反转，用户实测「像钟摆，不自然」，改随机）：首次进入随机初始化方向/幅度；之后每隔 `guard.swayFlipTicks` 掷一次 —— 35% 概率翻转侧移方向、重掷幅度（0.6~1.0，产生速度起伏），前后分量由 `swayForwardBias` 按距离带微调（偏远→前逼、偏近→后退、带内→0）——非固定周期、非满幅反转，像骷髅的随机横移。只在 `beam == null` 间隙开启，光束期间沿用上一条的圆周 `strafe`。
+- **战斗结束关摆动**：`markCombatEnd` 增 `npc.exitCombatSway()`；`engage` 每轮开头顶部先 `exitCombatSway()`，仅间隙分支开启——避免战斗结束后残留摆动态。
+
+**为什么**：走位距离 9→13 后 NPC 停在 13 格施法间隙，是远程怪（骷髅/幻术师/弓手）的活靶子；横向摆动不改变朝向（仍面向目标、光束独立跟随持杖手），靠持续侧移打乱投掷物预判。速度受 `MoveControl.strafe` 硬编码 `speedModifier=0.25` 限制（≈1.5 格/秒，与骷髅一致），故侧移速度不设 Config；只新增翻转检测周期 `guard.swayFlipTicks`（走位节奏算可调平衡值，走 Config，与 `guard.kite*` 同风格）。
+
+**影响**：`WandscapeNpc` 增瞬态 `combatSway`/`combatSwayDir`/`combatSwayForward`/`swayRoamTicks`/`combatSwayMag` + `enterCombatSway`/`exitCombatSway` + `tickCombatSway()`；`GuardCombat` 安全距离 `beam == null` 分支改摆动、`markCombatEnd` 关摆动、增 `swayForwardBias`；`EvilMageCastGoal.stop()` 关摆动（防敌对法师目标失效后残留摆动态）；`Config` 增 `guard.swayFlipTicks`。`cancelNpcNavigation` 失去生产调用（仅剩单测），按「代码清理延后」暂留。
+
 ## 2026-08-27：Road 编辑器铲平模式（DESTROY_FILL）严格遵循基准平面，禁止贴合地表方块
 
 **需求**（用户指令）：Road 编辑器的铲平模式（Flatten / DESTROY_FILL）不要贴合地表起伏，严格遵循基准平面。

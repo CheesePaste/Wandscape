@@ -345,6 +345,13 @@ public class Config {
                     + "13 is 1 block past the normal-creeper safe radius (~8); beam range 200 keeps output up.")
             .defineInRange("guard.kiteStandoff", 13.0, 3.0, 64.0);
 
+    public static final ModConfigSpec.IntValue GUARD_SWAY_FLIP_TICKS = BUILDER
+            .comment("Lateral sway direction random-check interval (ticks): at the kiting standoff with a "
+                    + "visible target and no active beam, the NPC strafes sideways like a vanilla skeleton "
+                    + "instead of standing still. On this cadence it rolls whether to switch sides (35%) and "
+                    + "re-rolls its movement magnitude, so the weave is organic and non-pendulum.")
+            .defineInRange("guard.swayFlipTicks", 20, 10, 200);
+
     public static final ModConfigSpec.DoubleValue GUARD_ENGAGE_STANDOFF = BUILDER
             .comment("Approach landing distance (blocks) when LOS is blocked: the NPC pathfinds to a standable, "
                     + "LOS-visible spot this far from the target instead of walking into melee/creeper range. "

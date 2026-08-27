@@ -82,6 +82,8 @@ public class EvilMageCastGoal extends Goal {
     public void stop() {
         mage.setCasting(false);
         mage.setDebugTarget(null);
+        // 关闭安全距离横向摆动：combatSway 由 engage 在目标失效/离战前开启，stop 不清会残留摆动态
+        mage.exitCombatSway();
         // 目标失效/离战：光束快速淡出，不残留原地（与守卫/自防御一致）
         if (mage.level() instanceof ServerLevel level) {
             MagicBeamEntity beam = GuardCombat.findActiveBeam(level, mage);

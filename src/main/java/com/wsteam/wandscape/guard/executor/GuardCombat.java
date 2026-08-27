@@ -86,6 +86,7 @@ public final class GuardCombat {
     /** 战斗结束：恢复 idle wandering（suppressWandering=false），并立即落下施法姿态
      *  （配合光束淡出，避免「姿态拉满到光束全程」后战后残留站桩）。 */
     public static void markCombatEnd(WandscapeNpc npc) {
+        npc.exitCombatSway();
         npc.setAiWanderingEnabled(true);
         npc.endManualCast();
     }
@@ -109,6 +110,9 @@ public final class GuardCombat {
      */
     public static void engage(ServerLevel level, WandscapeNpc npc, LivingEntity target,
                               World world, long npcId, String circleId, int color) {
+        // 每轮先关安全距离横向摆动，仅「安全距离 + 无光束」间隙开启（见下方分支）
+        npc.exitCombatSway();
+
         // L0 硬性覆盖（docs/spell-casting.md 三层决策）：自身或治疗范围内友方血量危机且会治疗 →
         // 无视玩家策略/conditions 强制施奶；只门控 CD/蓝/互斥锁，失败回落 L1。
         if (l0EmergencyHeal(level, npc, circleId, color)) return;
@@ -168,11 +172,15 @@ public final class GuardCombat {
         }
 
         // 看得见且安全距离：光束持续中绕目标横向走位（边走边打，光束独立跟随持杖手，不再是固定炮台）；
-        // 法阵引导/两发之间（无光束）才站定瞄准再施法。
+        // 两发之间（无光束）横向摆动走位（像原版骷髅），只有落点/导航不可用时才短暂站定。
         if (beam != null) {
             strafe(level, npc, world, npcId, target, standoff);
         } else {
-            cancelNpcNavigation(world, npcId, npc); // 战斗安全版：world=null（敌对法师）自动跳过
+            // 无光束（施法引导/冷却间隙）：像原版骷髅随机方向横移走位，不做固定炮台——每 tick 用
+            // MoveControl.strafe 侧移（见 WandscapeNpc.tickCombatSway），方向按概率随机翻转、
+            // 幅度随机起伏（非固定周期钟摆）；导航（躲避/后撤）进行中让位。前后分量按距离带微调
+            // （swayForwardBias），保持走位带内不漂走。
+            npc.enterCombatSway(swayForwardBias(npc, target, standoff));
             npc.faceTarget(BlockPos.containing(target.getBoundingBox().getCenter()));
             castSelected(level, npc, target, circleId, color);
         }
@@ -723,5 +731,14 @@ public final class GuardCombat {
             world.movementOps.cancelNavigation(npcId);
             markInCombat(npc);
         }
+    }
+
+    /** 前后分量方向（±1/0）：按当前水平距离相对 standoff 的距离带（像原版骷髅的攻击距离带），
+     *  偏远→前逼(+1)、偏近→后退(-1)、带内→居中(0)——让横移时走位带不被漂走。 */
+    private static float swayForwardBias(WandscapeNpc npc, LivingEntity target, double standoff) {
+        double d = Math.sqrt(horizontalDistSq(npc, target));
+        if (d > standoff * 1.15) return 1.0f;
+        if (d < standoff * 0.75) return -1.0f;
+        return 0.0f;
     }
 }
