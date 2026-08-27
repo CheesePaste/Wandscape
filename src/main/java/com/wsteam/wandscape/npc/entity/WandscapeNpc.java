@@ -631,6 +631,9 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
     // ── 手动施法（祭坛施法引导窗口）：窗口内强制 isCasting=true，与 ECS 驱动的施法互不干扰 ──
     private int manualCastTicks = 0;
 
+    // ── 光束走位方向（±1，瞬态不持久化）：每新发一束在 castSelected 交替翻转，避免始终同一方向绕圈 ──
+    public int strafeDir = 1;
+
     /**
      * 触发一次手动施法：在 {@code ticks} 内保持举杖姿态（isCasting=true）。
      * 窗口结束由 tick() 自动恢复为 ECS 决定的状态。
@@ -648,6 +651,14 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
             setCastSpellId(spellId);
         }
         setCasting(true);
+    }
+
+    /**
+     * 立即结束手动施法姿态（战斗结束/打断时调用）：清除引导计数，下一 tick {@code tickCastingState}
+     * 自动回落为 ECS 决定的 isCasting。
+     */
+    public void endManualCast() {
+        manualCastTicks = 0;
     }
 
     // ── 自防御仇恨：被非玩家攻击者打伤后记仇，直到对方死亡/超出范围/过期 ──
@@ -963,7 +974,10 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
                 .add(Attributes.MAX_HEALTH, 30.0)
                 .add(Attributes.MOVEMENT_SPEED, 0.3)
                 .add(Attributes.ATTACK_DAMAGE, 1.0)
-                .add(Attributes.FOLLOW_RANGE, 48.0);
+                .add(Attributes.FOLLOW_RANGE, 48.0)
+                // 水中移动效率 1.0：落水/渡水时以接近陆地的速度游动。原版陆地生物默认 0，
+                // 水中速度被拖到约 0.6 格/秒，会让 NPC 在河里"卡死"并触发传送兜底。
+                .add(Attributes.WATER_MOVEMENT_EFFICIENCY, 1.0);
     }
 
     // ============================================================

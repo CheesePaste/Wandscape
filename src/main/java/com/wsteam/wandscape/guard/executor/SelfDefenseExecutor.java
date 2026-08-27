@@ -11,6 +11,7 @@ import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.core.component.NpcTaskQueue;
 import com.wsteam.wandscape.core.component.TaskExecutor;
 import com.wsteam.wandscape.core.ecs.World;
+import com.wsteam.wandscape.magic.entity.MagicBeamEntity;
 import com.wsteam.wandscape.magic.internal.MagicCaster;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
@@ -244,6 +245,7 @@ public final class SelfDefenseExecutor implements OpExecutor<AtomicOp.SelfDefens
             LivingEntity threat = nearestVisibleEnemyAround(npc, level,
                     Config.GUARD_PEACE_FLEE_RANGE.get());
             if (threat == null) {
+                fadeBeam(level, npc); // 和平脱离：光束快速淡出，不残留原地
                 GuardCombat.markCombatEnd(npc);
                 return -1;
             }
@@ -260,7 +262,9 @@ public final class SelfDefenseExecutor implements OpExecutor<AtomicOp.SelfDefens
 
         LivingEntity target = resolveTarget(npc, level);
         if (target == null) {
-            // 无目标：仇恨已死/过期、半径内无怪 → 完成，队列恢复挂起任务
+            // 无目标：仇恨已死/过期、半径内无怪 → 完成，队列恢复挂起任务；
+            // 光束随战斗结束快速淡出（与守卫 GuardAttackExecutor 一致），避免残影留在原地
+            fadeBeam(level, npc);
             npc.clearHatedAttackerIfExpired(level);
             GuardCombat.markCombatEnd(npc);
             return -1;
@@ -269,5 +273,12 @@ public final class SelfDefenseExecutor implements OpExecutor<AtomicOp.SelfDefens
         GuardCombat.engage(level, npc, target, p.world(), p.npcId(),
                 MagicCaster.beamCircleId(), MagicCaster.beamColor());
         return RECHECK_TICKS;
+    }
+
+    /** 快速淡出该 NPC 的活跃光束（战斗结束/脱离时调用，与守卫 {@code GuardAttackExecutor} 一致），
+     *  避免目标死亡后光束冻结在死者位置继续渲染剩余寿命。 */
+    private static void fadeBeam(ServerLevel level, WandscapeNpc npc) {
+        MagicBeamEntity beam = GuardCombat.findActiveBeam(level, npc);
+        if (beam != null) beam.setLifetime(5);
     }
 }

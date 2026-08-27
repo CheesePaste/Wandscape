@@ -197,9 +197,12 @@ public class MagicBeamEntity extends Entity {
         if (casterNpc == null || targetMob == null) return;
         if (casterNpc.isRemoved() || targetMob.isRemoved() || !targetMob.isAlive()) return;
 
-        // 瞄身体中心（AABB 中心），而非脚底
+        // 瞄身体中心（AABB 中心），而非脚底。走位/赶路中不强制转向（交给 MoveControl）——
+        // 否则每 tick 把 yRot 掰向目标会覆盖寻路旋转、打断走位路径；静止施法才盯准目标。
         Vec3 aim = targetMob.getBoundingBox().getCenter();
-        casterNpc.faceTarget(BlockPos.containing(aim));
+        if (casterNpc.getNavigation().isDone()) {
+            casterNpc.faceTarget(BlockPos.containing(aim));
+        }
         Vec3 hand = casterNpc.getStaffPosition();
         Vec3 aimDir = aim.subtract(hand).normalize();
         Vec3 source = hand.add(aimDir.scale(STAFF_CENTER_OFFSET));
