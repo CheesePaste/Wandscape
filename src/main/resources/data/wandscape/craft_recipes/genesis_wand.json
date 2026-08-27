@@ -12,9 +12,9 @@
   ],
   "output": { "item": "wandscape:wand" },
   "cost": {
-    "wood": 80000,
-    "earth": 60000,
-    "water": 40000
+    "wood": 95000,
+    "earth": 70000,
+    "water": 50000
   },
   "unlock_requirement": {
     "min_colony_level": 30

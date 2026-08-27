@@ -12,9 +12,9 @@
   ],
   "output": { "item": "wandscape:wand" },
   "cost": {
-    "fire": 60000,
-    "dark": 50000,
-    "metal": 40000
+    "fire": 75000,
+    "dark": 60000,
+    "metal": 45000
   },
   "unlock_requirement": {
     "min_colony_level": 30

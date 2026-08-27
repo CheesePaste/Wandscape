@@ -5,8 +5,8 @@
   "display_name": "光束卷轴",
   "output": { "item": "wandscape:spell_scroll", "magic_id": "beam" },
   "cost": {
-    "fire": 120,
-    "earth": 105
+    "fire": 650,
+    "earth": 550
   },
   "unlock_requirement": {
     "min_colony_level": 1

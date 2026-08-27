@@ -5,8 +5,8 @@
   "display_name": "防御强化卷轴",
   "output": { "item": "wandscape:spell_scroll", "magic_id": "fortification" },
   "cost": {
-    "metal": 3500,
-    "earth": 3000
+    "metal": 8000,
+    "earth": 7000
   },
   "unlock_requirement": {
     "min_colony_level": 10

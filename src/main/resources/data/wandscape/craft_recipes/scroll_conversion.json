@@ -5,8 +5,8 @@
   "display_name": "魅惑卷轴",
   "output": { "item": "wandscape:spell_scroll", "magic_id": "conversion" },
   "cost": {
-    "dark": 14000,
-    "fire": 13500
+    "dark": 24000,
+    "fire": 23000
   },
   "unlock_requirement": {
     "min_colony_level": 20

@@ -23,20 +23,20 @@ NPC 法师的法杖物品：预设（配方 JSON → attributes）、NBT、施�
 
 | 配方 | 解锁 | 属性（加法） | 成本 | 颜色 |
 |---|---|---|---|---|
-| `carpenter_wand` 木工 | lv1 | work_speed +0.4 | earth 200 + wood 250 | #8B6F47 |
-| `apprentice_wand` 学徒 | lv1 | spell_power +0.25, max_mana +30 | fire 150 + water 150 + wood 150 | #7FB8D0 |
-| `pyromancer_wand` 烈焰 | lv5 | spell_power +0.7 | fire 1800 + metal 1200 | #FF6A00 |
-| `workshop_wand` 工坊 | lv5 | work_speed +0.5, spell_speed +0.15 | earth 1600 + wood 1400 | #9AA5B1 |
-| `bulwark_wand` 铁壁 | lv10 | max_hp +40, armor_value +5 | earth 6000 + metal 4000 + water 3000 | #7A7A7A |
-| `mana_spring_wand` 秘泉 | lv10 | max_mana +150, spell_speed +0.2 | water 7000 + wood 6000 | #3B6FA0 |
-| `gale_wand` 疾风 | lv10 | move_speed +0.2, spell_speed +0.4 | wind 7000 + fire 5000 | #4FB8B0 |
-| `craftsman_wand` 工匠 | lv20 | work_speed +0.9, max_mana +100 | earth 25000 + wood 25000 | #C67B30 |
-| `bastion_wand` 堡垒 | lv20 | move_speed −0.18, max_hp +55, armor_value +8 | earth 25000 + metal 20000 + wood 15000 | #4A4A52 |
-| `arcane_wand` 奥术 | lv20 | spell_power +0.8, spell_speed +0.3 | fire 20000 + dark 15000 + water 15000 | #8B5CE6 |
-| `oblivion_wand` 湮灭 | lv30 | max_hp −40, armor_value −5, spell_power +2.0 | fire 60000 + dark 50000 + metal 40000 | #7A2EA6 |
-| `genesis_wand` 创世 | lv30 | spell_power −1.0, work_speed +1.6, max_mana +200 | wood 80000 + earth 60000 + water 40000 | #C8B74A |
+| `carpenter_wand` 木工 | lv1 | work_speed +0.4 | earth 1100 + wood 1300 | #8B6F47 |
+| `apprentice_wand` 学徒 | lv1 | spell_power +0.25, max_mana +30 | fire 800 + water 800 + wood 800 | #7FB8D0 |
+| `pyromancer_wand` 烈焰 | lv5 | spell_power +0.7 | fire 7000 + metal 5000 | #FF6A00 |
+| `workshop_wand` 工坊 | lv5 | work_speed +0.5, spell_speed +0.15 | earth 6000 + wood 6000 | #9AA5B1 |
+| `bulwark_wand` 铁壁 | lv10 | max_hp +40, armor_value +5 | earth 14000 + metal 9000 + water 7000 | #7A7A7A |
+| `mana_spring_wand` 秘泉 | lv10 | max_mana +150, spell_speed +0.2 | water 17000 + wood 13000 | #3B6FA0 |
+| `gale_wand` 疾风 | lv10 | move_speed +0.2, spell_speed +0.4 | wind 17000 + fire 13000 | #4FB8B0 |
+| `craftsman_wand` 工匠 | lv20 | work_speed +0.9, max_mana +100 | earth 45000 + wood 45000 | #C67B30 |
+| `bastion_wand` 堡垒 | lv20 | move_speed −0.18, max_hp +55, armor_value +8 | earth 45000 + metal 35000 + wood 25000 | #4A4A52 |
+| `arcane_wand` 奥术 | lv20 | spell_power +0.8, spell_speed +0.3 | fire 35000 + dark 30000 + water 30000 | #8B5CE6 |
+| `oblivion_wand` 湮灭 | lv30 | max_hp −40, armor_value −5, spell_power +2.0 | fire 75000 + dark 60000 + metal 45000 | #7A2EA6 |
+| `genesis_wand` 创世 | lv30 | spell_power −1.0, work_speed +1.6, max_mana +200 | wood 95000 + earth 70000 + water 50000 | #C8B74A |
 
-均 `output:{item:"wandscape:wand"}`、`craft_station:"crafting_station"`、`slot:"wand"`。成本锚点 = 该档日收入的 3%~40%（低档攒几小时、高档攒大半天到一天）。旧 basic/adept/master 已删除；`basic_wand` 保留为中性默认预设（无 JSON，`EquipmentComponent.equipDefaultWand` 硬编码），新 NPC 出生自带，可从合成 GUI 换成任意 12 支之一。
+均 `output:{item:"wandscape:wand"}`、`craft_station:"crafting_station"`、`slot:"wand"`。成本锚点（2026-08-27 重定价）：单支总价 ≈ 该档日收入的 4%~25%（lv1 2,400 → lv30 180k/215k），每个元素组件 ≈ 0.7~3 天该元素日收入（低档攒大半天到一天、高档攒数天）——法杖现为可随时拆卸调换的永久 buff，不再是"死亡即消失"的一次性投入，造价按"每次购买是决策而非零钱"锚定。旧 basic/adept/master 已删除；`basic_wand` 保留为中性默认预设（无 JSON，`EquipmentComponent.equipDefaultWand` 硬编码），新 NPC 出生自带，可从合成 GUI 换成任意 12 支之一。
 
 ## WandApiImpl
 

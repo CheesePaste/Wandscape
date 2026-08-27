@@ -5,9 +5,9 @@
   "display_name": "背水一战卷轴",
   "output": { "item": "wandscape:spell_scroll", "magic_id": "desperation" },
   "cost": {
-    "dark": 14000,
-    "fire": 8000,
-    "water": 5500
+    "dark": 24000,
+    "fire": 13000,
+    "water": 10000
   },
   "unlock_requirement": {
     "min_colony_level": 20

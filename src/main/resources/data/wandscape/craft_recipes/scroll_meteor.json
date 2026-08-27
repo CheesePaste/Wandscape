@@ -5,8 +5,8 @@
   "display_name": "陨石卷轴",
   "output": { "item": "wandscape:spell_scroll", "magic_id": "meteor" },
   "cost": {
-    "fire": 140,
-    "metal": 85
+    "fire": 700,
+    "metal": 500
   },
   "unlock_requirement": {
     "min_colony_level": 1

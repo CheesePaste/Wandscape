@@ -11,7 +11,7 @@ Wizards carry out the colony's building, gathering, crafting, and combat. How mu
 
 **Left side · Equipment (5 slots)**
 
-- **Wand slot**: equip a better wand to raise **Spell Power** (casting might). The three wand tiers are in the [Crafting Station](crafting_guide.md).
+- **Wand slot**: equip a better wand to raise **Spell Power** (casting might). The wand list is in the [Crafting Station](crafting_guide.md).
 - **Armor slots (4)**: helmet / chestplate / leggings / boots, raising armor damage reduction. Armor only affects the numbers; the robe appearance stays the same.
 
 **Right side · Attributes**
