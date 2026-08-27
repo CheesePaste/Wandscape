@@ -13,6 +13,7 @@ import javax.annotation.Nullable;
 
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.engine.WandscapeEngine;
+import com.wsteam.wandscape.engine.colony.ColonyActivation;
 import com.wsteam.wandscape.engine.system.ResourceSupplySystem;
 import com.wsteam.wandscape.engine.transport.ItemTransportManager;
 import com.wsteam.wandscape.shared.api.BuildingApi;
@@ -349,12 +350,17 @@ public final class ShopStockManager {
         updateHasStock(buildingId, s);
 
         // Deposit profit elements into colony bank (based on item's element mapping value)
+        // 创始人离线时按 offlineIncomeMultiplier 折减利润：成本不变、只折利润，
+        // 商店按进价出售也永不亏损（不折售价，否则商品卖出即亏本）。
         if (colonyId != null) {
             ColonyItemBank bank = ColonyItemBank.get(level);
             double profitRate = config.shop().profitRate();
+            double m = ColonyActivation.getIncomeMultiplier(colonyId);
             Map<ElementType, Long> elementValue = getItemElementValue(itemId);
             for (var entry : elementValue.entrySet()) {
-                long perUnit = (long) Math.ceil(entry.getValue() * (1.0 + profitRate));
+                long cost = entry.getValue();
+                long fullRevenue = (long) Math.ceil(cost * (1.0 + profitRate));
+                long perUnit = ColonyActivation.scaleProfit(cost, fullRevenue - cost, m);
                 bank.addElement(colonyId, entry.getKey(), perUnit * qty);
             }
             bank.recordPurchase(colonyId);

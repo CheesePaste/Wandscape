@@ -15,6 +15,7 @@ import com.wsteam.wandscape.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.building.internal.BuildingState;
 import com.wsteam.wandscape.core.event.NarrativeEventTriggered;
 import com.wsteam.wandscape.engine.WandscapeEngine;
+import com.wsteam.wandscape.engine.colony.ColonyActivation;
 import com.wsteam.wandscape.engine.colony.ColonyLevelManager;
 import com.wsteam.wandscape.engine.service.ChunkLoadManager;
 import com.wsteam.wandscape.road.core.RoadEdge;
@@ -164,7 +165,7 @@ public final class TouristSpawnSystem {
         // 创始人不在线且关闭离线运行 → 冻结小镇：不生成新游客、不清冻结游客
         UUID colonyId = getColonyId();
         boolean colonyFrozen = colonyId != null
-                && !com.wsteam.wandscape.engine.colony.ColonyActivation.isColonyActive(colonyId);
+                && !ColonyActivation.isColonyActive(colonyId);
 
         // ── Morning: reset schedule flag + count overnight stayers（每 tick 检查，便宜）──
         if (dayTime < 1000 && scheduleDay != day) {
@@ -461,7 +462,7 @@ public final class TouristSpawnSystem {
 
             // 创始人不在线 → 冻结小镇：不清除其游客（原地冻结）
             UUID cid = t.getColonyId();
-            if (cid != null && !com.wsteam.wandscape.engine.colony.ColonyActivation.isColonyActive(cid)) {
+            if (cid != null && !ColonyActivation.isColonyActive(cid)) {
                 continue;
             }
 
@@ -516,7 +517,7 @@ public final class TouristSpawnSystem {
 
             // 创始人不在线 → 冻结小镇：不安排其游客离场（原地冻结）
             UUID cid = t.getColonyId();
-            if (cid != null && !com.wsteam.wandscape.engine.colony.ColonyActivation.isColonyActive(cid)) {
+            if (cid != null && !ColonyActivation.isColonyActive(cid)) {
                 continue;
             }
 
@@ -583,6 +584,7 @@ public final class TouristSpawnSystem {
 
     /**
      * Grant colony experience when a tourist departs with all three bars full.
+     * 创始人离线时经验 × offlineIncomeMultiplier（满条离场是唯一经验来源）。
      */
     private void grantExperience(TouristEntity t) {
         if (!t.isFullySatisfied()) return;
@@ -591,10 +593,12 @@ public final class TouristSpawnSystem {
         if (colonyId == null) return;
         int colonyLevel = levelManager.getLevel(colonyId);
         int contribution = ColonyLevelManager.computeExpContribution(colonyLevel, t.getLevel());
-        if (contribution > 0) {
-            levelManager.addExperience(colonyId, contribution);
+        int scaled = (int) ColonyActivation.scaleIncome(contribution,
+                ColonyActivation.getIncomeMultiplier(colonyId));
+        if (scaled > 0) {
+            levelManager.addExperience(colonyId, scaled);
             Log.info(TAG, "[Tourist] {} (Lv.{}) granted {} exp to colony Lv.{} (满条)",
-                    t.getTouristName(), t.getLevel(), contribution, colonyLevel);
+                    t.getTouristName(), t.getLevel(), scaled, colonyLevel);
         }
     }
 

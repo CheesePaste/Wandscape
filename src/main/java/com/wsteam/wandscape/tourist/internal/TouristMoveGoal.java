@@ -13,6 +13,7 @@ import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.building.internal.BuildingState;
 import com.wsteam.wandscape.core.event.NarrativeEventTriggered;
 import com.wsteam.wandscape.engine.WandscapeEngine;
+import com.wsteam.wandscape.engine.colony.ColonyActivation;
 import com.wsteam.wandscape.engine.service.ParticleService;
 import com.wsteam.wandscape.road.engine.WandscapeTags;
 import com.wsteam.wandscape.shared.data.Activity;
@@ -1948,7 +1949,12 @@ public class TouristMoveGoal extends Goal {
             var type = WandscapeApis.getElementApi().fromId(pick.getKey());
             if (type != null) {
                 String itemId = WandscapeApis.getElementApi().elementItemId(type);
-                if (itemId != null) sendBubble(itemId, pick.getValue());
+                if (itemId != null) {
+                    // 气泡显示实际入账数（创始人离线时按系数折减）。
+                    long scaled = ColonyActivation.scaleIncome(pick.getValue(),
+                            ColonyActivation.getIncomeMultiplier(colonyId));
+                    sendBubble(itemId, (int) scaled);
+                }
             }
         }
 

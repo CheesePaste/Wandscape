@@ -1028,8 +1028,11 @@ public final class TouristSimSystem {
         if (lm == null || s.getColonyId() == null) return;
         int colonyLevel = lm.getLevel(s.getColonyId());
         int contribution = ColonyLevelManager.computeExpContribution(colonyLevel, s.getLevel());
-        if (contribution > 0) {
-            lm.addExperience(s.getColonyId(), contribution);
+        // 创始人离线时经验 × offlineIncomeMultiplier。
+        int scaled = (int) ColonyActivation.scaleIncome(contribution,
+                ColonyActivation.getIncomeMultiplier(s.getColonyId()));
+        if (scaled > 0) {
+            lm.addExperience(s.getColonyId(), scaled);
         }
     }
 

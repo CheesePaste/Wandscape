@@ -13,6 +13,7 @@ import com.wsteam.wandscape.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.building.internal.BuildingState;
 import com.wsteam.wandscape.building.internal.ShopInteractionHandler;
 import com.wsteam.wandscape.building.internal.ShopStockManager;
+import com.wsteam.wandscape.engine.colony.ColonyActivation;
 import com.wsteam.wandscape.projection.BuildingRotation;
 import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.data.Activity;
@@ -313,9 +314,12 @@ public final class TouristSimulation {
         if (colonyId != null && !svc.elementOutput().isEmpty()) {
             ColonyItemBank bank = ColonyItemBank.get(level);
             if (bank != null) {
+                // 创始人离线时按 offlineIncomeMultiplier 折减产出（消耗侧不打折）。
+                double m = ColonyActivation.getIncomeMultiplier(colonyId);
                 for (var entry : svc.elementOutput().entrySet()) {
                     try {
-                        bank.addElement(colonyId, ElementType.fromId(entry.getKey()), entry.getValue());
+                        bank.addElement(colonyId, ElementType.fromId(entry.getKey()),
+                                ColonyActivation.scaleIncome(entry.getValue(), m));
                     } catch (IllegalArgumentException e) {
                         Log.warn(TAG, "[Tourist] Unknown element type '{}' in service {} elementOutput",
                                 entry.getKey(), shortId(buildingId));
