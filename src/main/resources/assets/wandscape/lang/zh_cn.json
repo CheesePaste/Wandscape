@@ -42,6 +42,7 @@
   "message.wandscape.scepter.hostile_on": "生物 %s 被标记为强制仇恨目标",
   "message.wandscape.scepter.hostile_transfer": "强制仇恨已转移到生物 %s",
   "message.wandscape.scepter.hostile_off": "生物 %s 的强制仇恨已解除",
+  "message.wandscape.scepter.hostile_ally": "生物 %s 是你的盟友，不能标记为敌对",
   "message.wandscape.ring.no_colony": "你没有创建殖民地，无法使用盟誓戒指",
   "message.wandscape.ring.other_colony": "只能存入属于你自己殖民地的法师",
   "message.wandscape.ring.slots_full": "戒指内法师位已满（本档位只能存取前 %s 个法师）",

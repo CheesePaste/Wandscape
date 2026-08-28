@@ -93,6 +93,12 @@ public final class ScepterService {
             fail(player, "message.wandscape.scepter.no_colony");
             return;
         }
+        // 防误点：盟友（玩家/同殖民地法师/同殖民地游客/庇护名单等 isFriendlyForce）不能被标记为
+        // 强制仇恨——法师本就不攻击友军，标记只会制造无意义状态。校验按目标所在殖民地（本殖民地）。
+        if (WandscapeNpc.isFriendlyForce(target, colonyId)) {
+            fail(player, "message.wandscape.scepter.hostile_ally", target.getDisplayName());
+            return;
+        }
         ScepterMarksSavedData data = ScepterMarksSavedData.get(player.getServer());
         ScepterMarks marks = data.marks();
         UUID prev = marks.forcedHostile(colonyId);
@@ -141,12 +147,12 @@ public final class ScepterService {
         }
     }
 
-    private static void ok(ServerPlayer player, String key, Component... args) {
-        player.displayClientMessage(Component.translatable(key, (Object[]) args), true);
+    private static void ok(ServerPlayer player, String key, Object... args) {
+        player.displayClientMessage(Component.translatable(key, args), true);
     }
 
-    private static void fail(ServerPlayer player, String key) {
-        player.displayClientMessage(Component.translatable(key), true);
+    private static void fail(ServerPlayer player, String key, Object... args) {
+        player.displayClientMessage(Component.translatable(key, args), true);
     }
 
     private static void log(ServerPlayer player, String action, boolean value, WandscapeNpc npc) {

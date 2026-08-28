@@ -248,6 +248,15 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
      * （{@link #canBeamHurt} / {@code NpcSpellPowerHandler} 伤害入口）统一走此方法，边界唯一。
      */
     public boolean isFriendlyForce(LivingEntity other) {
+        return isFriendlyForce(other, colonyId);
+    }
+
+    /**
+     * 目标是否属于指定殖民地的友军名单（静态重载，供自身实例委托与玩家权杖 PvP/误点校验用）。
+     * 与实例版本同一套派生规则，只是殖民地显式传入——权限校验处（如敌对权杖拒绝标记盟友）无需
+     * 依赖某个具体 NPC 实例。
+     */
+    public static boolean isFriendlyForce(LivingEntity other, UUID colonyId) {
         if (other instanceof Player) {
             return FriendlyForce.isAlly(colonyId, null, FriendlyForce.AllyKind.PLAYER);
         }

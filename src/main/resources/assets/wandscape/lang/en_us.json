@@ -36,6 +36,7 @@
   "message.wandscape.scepter.hostile_on": "Creature %s is marked as a forced hate target",
   "message.wandscape.scepter.hostile_transfer": "Forced hate transferred to creature %s",
   "message.wandscape.scepter.hostile_off": "Forced hate on creature %s is cleared",
+  "message.wandscape.scepter.hostile_ally": "Creature %s is your ally and cannot be marked hostile",
   "message.wandscape.ring.no_colony": "You have no colony — the oath ring cannot be used",
   "message.wandscape.ring.other_colony": "Only mages of your own colony can be stored",
   "message.wandscape.ring.slots_full": "The ring is full (this tier can access the first %s mages)",
