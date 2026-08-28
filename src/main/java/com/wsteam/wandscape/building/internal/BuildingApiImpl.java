@@ -268,6 +268,18 @@ public class BuildingApiImpl implements BuildingApi {
         // doesn't keep working on a structure that's being torn down (undo/destroy).
         BuildingTaskSource.cancelBuildingTasks(buildingId);
 
+        // Cancel any auto-synthesis tasks if the building was still under construction
+        if (!state.hasEverCompleted()) {
+            BuildingConfig config = BuildingConfigLoader.getInstance().get(state.getBuildingTypeId());
+            if (config != null) {
+                Map<String, Integer> materialCounts = EnqueueHelper.computeMaterialCounts(config);
+                if (!materialCounts.isEmpty()) {
+                    com.wsteam.wandscape.engine.system.ResourceSupplySystem.cancelAutoSynthesize(
+                            state.getColonyId(), materialCounts, com.wsteam.wandscape.engine.WandscapeEngine.getWorld());
+                }
+            }
+        }
+
         // Mark building for demolition and clear any pending work. Also flip
         // structureIntact so tourist filters (which check intact) drop the
         // building immediately, before the NPC dispatch poll picks it up.
@@ -335,17 +347,34 @@ public class BuildingApiImpl implements BuildingApi {
         // Completed buildings are removed through the normal demolition path instead.
         if (state.hasEverCompleted() || state.isDemolishing()) return false;
 
+        UUID colonyId = state.getColonyId();
+        BuildingConfig config = BuildingConfigLoader.getInstance().get(state.getBuildingTypeId());
+        var world = com.wsteam.wandscape.engine.WandscapeEngine.getWorld();
+
+        // 1. Immediately cancel all building tasks in engine/global/building task pool and clear state queue
+        BuildingTaskSource.cancelBuildingTasks(buildingId);
+        state.getTaskQueue().clear();
+
+        // 2. Cancel auto-synthesized workstation tasks spawned for this building
+        if (config != null) {
+            Map<String, Integer> materialCounts = EnqueueHelper.computeMaterialCounts(config);
+            if (!materialCounts.isEmpty()) {
+                com.wsteam.wandscape.engine.system.ResourceSupplySystem.cancelAutoSynthesize(
+                        colonyId, materialCounts, world);
+            }
+        }
+
         if (state.isConstructionStarted()) {
             // Construction started → materials were charged to the warehouse in one
             // bulk commit at construction start, so refund the full material cost,
             // then demolish whatever has been built.
-            BuildingTaskSource.cancelBuildingTasks(buildingId);
             refundUnplacedMaterials(state);
             demolishBuilding(buildingId);
         } else {
             // Not started → nothing was consumed; just drop the pending building.
             unregisterState(state);
         }
+        sd.setDirty();
         return true;
     }
 

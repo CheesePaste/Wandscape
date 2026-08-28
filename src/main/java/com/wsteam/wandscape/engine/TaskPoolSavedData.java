@@ -61,7 +61,7 @@ public final class TaskPoolSavedData extends SavedData {
             net.minecraft.server.level.ServerLevel level, GlobalTaskPool pool) {
         return level.getDataStorage().computeIfAbsent(
                 new Factory<>(() -> new TaskPoolSavedData(pool),
-                        (tag, registries) -> load(pool, tag)),
+                        (tag, registries) -> load(pool, tag, level)),
                 DATA_NAME);
     }
 
@@ -158,13 +158,13 @@ public final class TaskPoolSavedData extends SavedData {
     // NBT load
     // ================================================================
 
-    private static TaskPoolSavedData load(GlobalTaskPool pool, CompoundTag tag) {
+    private static TaskPoolSavedData load(GlobalTaskPool pool, CompoundTag tag, @Nullable net.minecraft.server.level.ServerLevel level) {
         ListTag list = tag.getList("tasks", Tag.TAG_COMPOUND);
         int loaded = 0;
         for (int i = 0; i < list.size(); i++) {
             CompoundTag t = list.getCompound(i);
             long originalId = t.getLong("id");
-            GlobalTask task = taskFromNbt(t, pool, originalId);
+            GlobalTask task = taskFromNbt(t, pool, originalId, level);
             if (task != null) {
                 pool.addLoadedTask(task, originalId);
                 loaded++;
@@ -181,7 +181,8 @@ public final class TaskPoolSavedData extends SavedData {
     }
 
     @Nullable
-    private static GlobalTask taskFromNbt(CompoundTag tag, GlobalTaskPool pool, long originalId) {
+    private static GlobalTask taskFromNbt(CompoundTag tag, GlobalTaskPool pool, long originalId,
+                                          @Nullable net.minecraft.server.level.ServerLevel level) {
         String blueprintId = tag.getString("bp");
         if (blueprintId.isEmpty()) return null;
 
@@ -205,6 +206,26 @@ public final class TaskPoolSavedData extends SavedData {
                 String raw = paramsTag.getString(key);
                 // Parse via Gson to preserve JSON structure
                 taskParams.put(key, tryParseJson(raw));
+            }
+        }
+
+        // Defense-in-depth: If this is a building task for a building that was deleted/undone, drop it
+        if (level != null) {
+            var buildingSd = com.wsteam.wandscape.building.internal.BuildingSavedData.get(level);
+            if (buildingSd != null) {
+                java.util.UUID bid = null;
+                if (tag.contains("bid")) {
+                    bid = tag.getUUID("bid");
+                } else if (taskParams.containsKey("building_id")) {
+                    try {
+                        bid = java.util.UUID.fromString(taskParams.get("building_id").getAsString());
+                    } catch (Exception ignored) {}
+                }
+                if (bid != null && blueprintId.startsWith("build:") && buildingSd.getBuilding(bid) == null) {
+                    Log.info(TAG, "[TaskPoolSavedData] Dropping orphaned task #{} ('{}') for removed building {}",
+                            originalId, blueprintId, bid);
+                    return null;
+                }
             }
         }
 

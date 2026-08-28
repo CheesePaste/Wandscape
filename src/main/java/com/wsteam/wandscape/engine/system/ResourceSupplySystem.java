@@ -324,6 +324,92 @@ public class ResourceSupplySystem implements System {
         return count;
     }
 
+    /**
+     * Cancel auto-generated synthesize tasks (priority <= TASK_PRIORITY_AUTO) in the
+     * colony's workstations that were spawned for the given material quantities.
+     * Called when a building construction is cancelled or undone.
+     */
+    public static void cancelAutoSynthesize(@Nullable UUID colonyId,
+                                            Map<String, Integer> materialCounts,
+                                            @Nullable World world) {
+        if (materialCounts == null || materialCounts.isEmpty()) return;
+        BuildingApi api = getBuildingApi();
+        if (api == null) return;
+
+        List<UUID> stations = api.getBuildingsByCategory(colonyId, "workstation");
+        Set<String> processedGroups = new HashSet<>();
+
+        for (var entry : materialCounts.entrySet()) {
+            String itemId = entry.getKey();
+            String strippedKey = stripMcPrefix(itemId);
+            int remainingToCancel = entry.getValue();
+            if (remainingToCancel <= 0) continue;
+
+            // 1. Process queued WorkItems in workstation queues
+            for (UUID stationId : stations) {
+                if (remainingToCancel <= 0) break;
+                BuildingData bd = api.getBuilding(stationId);
+                if (bd == null) continue;
+                String groupKey = String.valueOf(bd.getColonyId()) + "|" + bd.getBuildingTypeId();
+                if (!processedGroups.add(groupKey + "|" + strippedKey)) continue;
+
+                List<WorkItem> queue = api.getQueue(stationId);
+                for (int i = queue.size() - 1; i >= 0; i--) {
+                    if (remainingToCancel <= 0) break;
+                    WorkItem item = queue.get(i);
+                    if (!"production:synthesize".equals(item.blueprintId())) continue;
+                    if (item.priority() > WandscapeConstants.TASK_PRIORITY_AUTO) continue;
+                    if (!sameRecipe(strippedKey, item.params().get("recipe_id"))) continue;
+
+                    int count = intParam(item.params().get("count"));
+                    if (count <= remainingToCancel) {
+                        api.removeFromQueue(stationId, i);
+                        remainingToCancel -= count;
+                        Log.info(TAG, "[CancelAutoSupply] Removed auto-synthesize WorkItem for {} x{} from station {}",
+                                strippedKey, count, stationId.toString().substring(0, 8));
+                    } else {
+                        // Partially reduce count
+                        int newCount = count - remainingToCancel;
+                        api.removeFromQueue(stationId, i);
+                        // Re-enqueue with reduced count
+                        Map<String, JsonElement> params = new LinkedHashMap<>(item.params());
+                        params.put("count", new JsonPrimitive(newCount));
+                        int oldTicks = intParam(item.params().get("channel_ticks"));
+                        int channelTicks = oldTicks > 0
+                                ? (int) Math.max(1, (long) oldTicks * newCount / count)
+                                : WandscapeConstants.WORKSTATION_CRAFT_TICKS_PER_UNIT * newCount;
+                        params.put("channel_ticks", new JsonPrimitive(channelTicks));
+                        api.enqueueWork(stationId, new WorkItem(item.blueprintId(), params, item.priority()));
+                        Log.info(TAG, "[CancelAutoSupply] Reduced auto-synthesize WorkItem for {} from x{} to x{} at station {}",
+                                strippedKey, count, newCount, stationId.toString().substring(0, 8));
+                        remainingToCancel = 0;
+                    }
+                }
+            }
+
+            // 2. If still remaining, check running GlobalTasks in world.taskPool
+            if (remainingToCancel > 0 && world != null && world.taskPool != null) {
+                for (GlobalTask t : world.taskPool.all()) {
+                    if (remainingToCancel <= 0) break;
+                    if (t.state == TaskState.COMPLETED) continue;
+                    if (!"production:synthesize".equals(t.blueprintId)) continue;
+                    if (t.priority > WandscapeConstants.TASK_PRIORITY_AUTO) continue;
+                    if (!sameRecipe(strippedKey, t.taskParams.get("recipe_id"))) continue;
+
+                    int count = intParam(t.taskParams.get("count"));
+                    world.taskPool.cancelTask(t.id, world);
+                    if (t.buildingId != null && world.buildingTaskPool != null) {
+                        world.buildingTaskPool.onHeadCompleted(t.buildingId, colonyId, world.taskPool);
+                        api.clearCurrentTask(t.buildingId);
+                    }
+                    remainingToCancel -= count;
+                    Log.info(TAG, "[CancelAutoSupply] Cancelled running auto-synthesize task #{} for {} x{}",
+                            t.id, strippedKey, count);
+                }
+            }
+        }
+    }
+
     private static boolean sameRecipe(String strippedKey, JsonElement recipeParam) {
         return recipeParam != null && recipeParam.isJsonPrimitive()
                 && strippedKey.equals(stripMcPrefix(recipeParam.getAsString()));
