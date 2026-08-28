@@ -12,5 +12,6 @@
   "effect": {
     "circle_id": "heal_magic_circle",
     "color": "#2ECC71"
-  }
+  },
+  "description": "持续一段时间，治疗施法者周围一定半径内的友方单位。"
 }

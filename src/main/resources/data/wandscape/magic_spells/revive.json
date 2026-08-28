@@ -10,5 +10,6 @@
   "altar_duration": 600,
   "effect": {
     "circle_id": "revive_ritual"
-  }
+  },
+  "description": "在祭坛上唤醒一位死去的法师，使其以虚弱之躯重生。"
 }

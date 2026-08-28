@@ -16,6 +16,7 @@ import com.google.gson.JsonObject;
  * {@code category} 只表达性质（normal/special/altar）；{@code defaultGroup} 是可选的**默认策略组**
  * （single_target/aoe/defense/support 之一），normal 法术缺省放置组用，供默认装备种子与
  * {@code SpellbookLoader.equippableCategoryOf} 兜底装桶——实际组由玩家在策略页放置决定。
+ * {@code description} 是可选的玩家可读介绍文本（魔法卷轴的 JEI 信息页用，缺省 null）。
  * 数据契约见 {@code docs/spell-casting.md}。
  */
 public record MagicDef(
@@ -33,7 +34,8 @@ public record MagicDef(
         int altarCooldown,
         int altarDuration,
         SpellConditions conditions,
-        @Nullable String defaultGroup
+        @Nullable String defaultGroup,
+        @Nullable String description
 ) {
 
     public MagicDef {
@@ -46,6 +48,7 @@ public record MagicDef(
         effectDamage = effectDamage != null && effectDamage < 0 ? null : effectDamage;
         conditions = conditions != null ? conditions : SpellConditions.NONE;
         defaultGroup = defaultGroup == null || defaultGroup.isBlank() ? null : defaultGroup;
+        description = description == null || description.isBlank() ? null : description;
     }
 
     /**
@@ -90,8 +93,10 @@ public record MagicDef(
         int altarDuration = (int) Math.round(getDouble(obj, "altar_duration", 0));
         SpellConditions conditions = SpellConditions.fromJson(obj.get("conditions"));
         String defaultGroup = getString(obj, "default_group", null);
+        String description = getString(obj, "description", null);
         return new MagicDef(defId, category, manaCost, baseCooldown, castTime, range, targetMode,
-                circleId, color, damage, altarOnly, altarCooldown, altarDuration, conditions, defaultGroup);
+                circleId, color, damage, altarOnly, altarCooldown, altarDuration, conditions, defaultGroup,
+                description);
     }
 
     /** "#A8E0FF" → 0xFFA8E0FF；非法/缺失返回 null。 */

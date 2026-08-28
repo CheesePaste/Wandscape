@@ -14,5 +14,6 @@
   "effect": {
     "circle_id": "petrification_magic_circle",
     "color": "#7F8C8D"
-  }
+  },
+  "description": "给予自身石化效果，受到的伤害降低 2 点。"
 }

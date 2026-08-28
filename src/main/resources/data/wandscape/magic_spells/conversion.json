@@ -10,5 +10,6 @@
   "effect": {
     "circle_id": "conversion",
     "color": "#f472b6"
-  }
+  },
+  "description": "将最近的三个敌方单位转化为友军，持续一段时间；被魅惑的单位受到伤害后失去该效果。"
 }

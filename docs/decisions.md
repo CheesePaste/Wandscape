@@ -2,6 +2,19 @@
 
 本文件记录偏离直觉的设计选择及其原因，供后续开发快速理解「为什么这么做」。
 
+## 2026-08-28：魔法卷轴 JEI 信息页——description 数据驱动 + addItemStackInfo
+
+**需求**（用户指令）：进一步兼容 JEI——在 JEI 中查看本模组魔法卷轴时显示该魔法的介绍文本（光束/陨石/石化/治疗/魅惑/背水一战文案用户给定，虚弱力场/防御强化两个按真实效果自拟），介绍文本落进 `magic_spells/*.json`。
+
+**决策**：
+- `MagicDef` 新增可选 `description`（解析 `magic_spells/*.json` 的 `description`，空白归一 null）——描述随魔法定义数据驱动，新魔法只改 JSON 即自动有 JEI 信息页。
+- JEI 侧不加自定义 recipe category，走内置信息机制：`WandscapeJeiPlugin.registerRecipes` 对每个「绑定带描述魔法」的卷轴 ItemStack 调 `IRecipeRegistration.addItemStackInfo`（注册到 JEI 内置「信息」用法页）；跳过 ALTAR（revive 无卷轴形态）与空白描述的魔法，筛选逻辑抽纯函数 `SpellInfoCollector.fromDefs` 可单测。
+- 文本经 `magic.wandscape.<id>.desc` 语言键本地化并双语配齐，缺失语言键时回退 JSON `description` 原文——`translatableWithFallback`，与 SpellItem 魔法名同款方案（JSON 是数据层权威，lang 只是渲染层覆写）。
+
+**为什么**：JEI 19.27 的 `IAdvancedRegistration` 已无旧式 `addIngredientInfo`，`IRecipeRegistration.addItemStackInfo` 是注册物品内置「信息」页的标准入口（最常见的信息兼容做法，自身带文本换行/滚动渲染）。描述落 JSON 而非纯 lang，贴合「魔法=数据驱动（MagicDef.toJson 镜像）」哲学，新魔法零代码接入；lang 键兜底双语。
+
+**影响**：`MagicDef`（+description）、10 个 `magic_spells/*.json`（+description）、`compat/jei/`（+`SpellInfoEntry`/`SpellInfoCollector`、`WandscapeJeiPlugin.registerRecipes`）、`IronSpellsHelper.getSyntheticDef`（null 占位）、`lang/{zh_cn,en_us}.json`（+10×2 条 desc 键）、`docs/spell-casting.md`（5.1 键表）、`docs/modules/integration.md`。测试：`MagicDefTest`（+2）、`SpellInfoCollectorTest`（新建 5 个纯收集用例）。
+
 ## 2026-08-28：建筑信息顶栏限定俯瞰(OVERVIEW)模式
 
 **需求**（用户指令）：建造/道路/统计/任务等操作型子模式下，准心对准建筑**不弹**建筑信息顶栏（建筑名 + 舒适/魔法/奇迹三值 + 修复/拆除按钮），只在俯瞰(OVERVIEW)模式显示——避免玩家把施工/经营子模式当成巡检上下文、误触建筑操作按钮或界面出现空白。

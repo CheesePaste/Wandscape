@@ -10,5 +10,6 @@
   "effect": {
     "circle_id": "arcane_hexagram",
     "color": "#A8E0FF"
-  }
+  },
+  "description": "发射一道光束，每 tick 对目标造成正相关于光束宽度的伤害，无视无敌帧。光束不可穿透墙壁。"
 }

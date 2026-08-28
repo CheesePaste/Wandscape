@@ -95,3 +95,6 @@ curseforge-description.md
 
 ### 本地 build-only 依赖 jar（如 JEI flatDir，不入库） ###
 /libs/
+
+### Curios API 参考源码（第三方 GPL-3.0，只读参考，不入库） ###
+/Curios/

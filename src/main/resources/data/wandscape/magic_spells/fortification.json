@@ -13,5 +13,6 @@
   "effect": {
     "circle_id": "fortification",
     "color": "#f59e0b"
-  }
+  },
+  "description": "为自身施加防御强化：护甲 +4、魔力强化 I（魔法伤害 +20%）与迅捷 I，持续 15 秒。"
 }

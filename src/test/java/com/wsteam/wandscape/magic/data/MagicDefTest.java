@@ -100,6 +100,16 @@ class MagicDefTest {
     }
 
     @Test
+    void parsesDescription() {
+        MagicDef def = MagicDef.fromJson("beam", JsonParser.parseString(
+                "{\"description\": \"发射一道光束，不可穿透墙壁。\"}"));
+        assertEquals("发射一道光束，不可穿透墙壁。", def.description());
+        // 空白 description 归一化为 null，与 default_group 同款
+        MagicDef blank = MagicDef.fromJson("b", JsonParser.parseString("{\"description\": \"\"}"));
+        assertNull(blank.description());
+    }
+
+    @Test
     void parsesAltarFields() {
         MagicDef def = MagicDef.fromJson("altar", JsonParser.parseString(
                 "{\"altar_only\": true, \"altar_cooldown\": 600, \"altar_duration\": 160}"));
@@ -134,6 +144,7 @@ class MagicDefTest {
         assertNull(def.effectCircleId());
         assertNull(def.effectColor());
         assertNull(def.effectDamage());
+        assertNull(def.description(), "未配 description 默认 null");
     }
 
     @Test

@@ -86,7 +86,8 @@ L2 兜底层
   "effect": {                   // 每魔法专属参数，由对应效果执行器消费
     "circle_id": "arcane_hexagram",
     "color": "0xFFA8E0FF"
-  }
+  },
+  "description": "…"            // 可选：玩家可读的介绍文本（魔法卷轴的 JEI 信息页用），缺省 = null
 }
 ```
 

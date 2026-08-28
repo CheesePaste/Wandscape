@@ -16,7 +16,7 @@
 |---|---|---|
 | `jei/` | `mezz.jei`（compileOnly，flatDir `libs/`，19.27.0.336） | 在 JEI 物品配方视图顶部加模组标签页，展示元素合成/分解/法杖/药剂配方 |
 
-## jei/ — 元素配方标签页
+## jei/ — 元素配方标签页 + 魔法卷轴信息
 
 ### 数据模型（纯逻辑，零 mezz 引用，可单测）
 
@@ -28,10 +28,12 @@
   - `fromBrewPotionRecipes`：药剂配方 → 合成站「合成」（带额外原料，随配方 craft_station=crafting_station，原酿造站归并）。
   - `fromCraftSpellRecipes`：魔法卷轴配方 → 魔法工坊「合成」。
   - `itemIdEquals`：忽略 `minecraft:` 前缀比较（与 `ProductionRecipeLoader.findSynthesizeRecipe` 一致）。
+- `SpellInfoEntry` — record：`magicId` + `description`（魔法卷轴信息页条目）。
+- `SpellInfoCollector` — 纯收集：`fromDefs` 从 `MagicDef` 集合生成卷轴信息条目；跳过 ALTAR（祭坛专属、无卷轴）与缺失/空白 `description` 的魔法。
 
 ### JEI 层
 
-- `WandscapeJeiPlugin` — `@JeiPlugin` + `IModPlugin`；注册单个 category + `addTypedRecipeManagerPlugin`（懒查询，随 `/reload` 刷新）。
+- `WandscapeJeiPlugin` — `@JeiPlugin` + `IModPlugin`；注册单个 category + `addTypedRecipeManagerPlugin`（懒查询，随 `/reload` 刷新）；`registerRecipes` 为每个已绑定魔法的卷轴调 `addItemStackInfo` 注册内置「信息」页（描述文本 = `magic.wandscape.<id>.desc` 语言键，缺省回退 JSON `description` 原文）。
 - `ElementRecipeCategory` — 图标=法杖；布局：
   - 合成：左侧元素物品（带数量）→ 中间箭头（上方站名标签）→ 右侧物品。
   - 分解：左侧物品 → 中间箭头（上方站名标签，下方 ÷N）→ 右侧元素物品。
@@ -47,6 +49,7 @@
 | 药剂合成 | `Wandscape.PRODUCTION_RECIPE_LOADER.getPotionRecipes()` |
 | 元素物品 | `Wandscape.ELEMENT_ITEMS` |
 | 分解除数 | `Config.ELEMENT_DECOMPOSE_DIVISOR`（默认 5） |
+| 卷轴信息描述 | `magic_spells/*.json` 的 `description`（经 `MagicDef`，`SpellbookLoader.getAllSpecs()`） |
 
 ### 依赖配置
 
