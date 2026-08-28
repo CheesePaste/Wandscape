@@ -15,6 +15,6 @@ public record NpcAttributes(
 ) {
     /** Defaults matching current NPC behavior (no equipment). */
     public static NpcAttributes defaults() {
-        return new NpcAttributes(30f, 0.3f, 1f, 1f, 1f, 6f, 200f);
+        return new NpcAttributes(30f, 0.3f, 1f, 1f, 1f, 5f, 200f);
     }
 }

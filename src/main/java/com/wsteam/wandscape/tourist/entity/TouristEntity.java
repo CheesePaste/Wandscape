@@ -207,12 +207,12 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
 
     // ── Mage-only attributes (stored in tavern recruitment resume at three-bars-full) ──
 
-    private float maxHp = 40f;
+    private float maxHp = 30f;
     private float moveSpeed = 0.3f;
     private float spellPower = 1f;
     private float workSpeed = 1f;
     private float spellSpeed = 1f;
-    private float armorValue = 0f;
+    private float armorValue = 5f;
     private float maxMana = 200f;
 
     /** Whether the mage resume has already been stored in the tavern for this tourist. */
