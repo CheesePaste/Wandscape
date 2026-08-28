@@ -3,9 +3,11 @@ package com.wsteam.wandscape.compat.curios;
 import java.lang.reflect.Field;
 import java.util.Locale;
 import java.util.Map;
+import java.util.function.Predicate;
 
 import com.google.common.collect.ImmutableMap;
 import com.wsteam.wandscape.Wandscape;
+import com.wsteam.wandscape.compass.CompassService;
 import com.wsteam.wandscape.compat.ironspellbooks.IronSpellsAttributes;
 import com.wsteam.wandscape.core.types.AttributeType;
 import com.wsteam.wandscape.engine.attribute.WandscapeAttributes;
@@ -16,16 +18,20 @@ import net.minecraft.core.Holder;
 import net.minecraft.core.NonNullList;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.inventory.MenuType;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModList;
+import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.common.extensions.IMenuTypeExtension;
 import net.neoforged.neoforge.event.OnDatapackSyncEvent;
@@ -33,9 +39,11 @@ import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import top.theillusivec4.curios.api.CuriosApi;
+import top.theillusivec4.curios.api.CuriosCapability;
 import top.theillusivec4.curios.api.SlotContext;
 import top.theillusivec4.curios.api.event.CurioChangeEvent;
 import top.theillusivec4.curios.api.type.ISlotType;
+import top.theillusivec4.curios.api.type.capability.ICurio;
 import top.theillusivec4.curios.api.type.inventory.ICurioStacksHandler;
 import top.theillusivec4.curios.api.type.inventory.IDynamicStackHandler;
 import top.theillusivec4.curios.common.data.CuriosEntityManager;
@@ -45,15 +53,6 @@ import top.theillusivec4.curios.common.data.CuriosEntityManager;
  *
  * <p>所有 Curios 相关类均封装在此包内，运行时统一用 {@link #isLoaded()} 门控；未安装 Curios 时
  * 本包逻辑不执行，零硬编码依赖与优雅降级（对齐 {@code compat/ironspellbooks}）。
- *
- * <p>法师（{@code wandscape:wandscape_npc}）饰品槽位采用**运行时镜像**：服务端在数据 reload /
- * 玩家登录同步时，把法师实体类型的槽位映射注入 Curios 的 {@link CuriosEntityManager}，内容 = 玩家
- * 标准槽位集（{@code CuriosApi.getEntitySlots(EntityType.PLAYER)}）。这样铁魔法的法术书槽位等其他模组
- * 给玩家加的槽位，法师初始即有；注入后 Curios 自带的 datapack sync 自动把映射分发给客户端，客户端无须
- * 任何改动。若数据包已显式定义了法师的槽位集，则以数据层为准，镜像让位。
- *
- * <p>本实现**不修改 Curios 源码**：对 {@link CuriosEntityManager} 仅做运行时字段写入（反射），
- * 不复制 / 改写其代码，故不触发 LGPL-3.0 传染，集成进 Wandscape 本体即可。
  */
 public final class CuriosCompat {
 
@@ -74,6 +73,26 @@ public final class CuriosCompat {
         return loaded;
     }
 
+    /** 检查实体是否在 Curios 饰品槽中佩戴了指定物品。未安装 Curios 时返回 false。 */
+    public static boolean isEquipped(LivingEntity entity, Item item) {
+        if (!loaded || entity == null || item == null) {
+            return false;
+        }
+        return CuriosApi.getCuriosInventory(entity)
+                .map(handler -> handler.isEquipped(item))
+                .orElse(false);
+    }
+
+    /** 检查实体是否在 Curios 饰品槽中佩戴了满足条件的物品。未安装 Curios 时返回 false。 */
+    public static boolean isEquipped(LivingEntity entity, Predicate<ItemStack> filter) {
+        if (!loaded || entity == null || filter == null) {
+            return false;
+        }
+        return CuriosApi.getCuriosInventory(entity)
+                .map(handler -> handler.isEquipped(filter))
+                .orElse(false);
+    }
+
     /** 在模组初始化阶段调用（Wandscape 主类）。 */
     public static void init(IEventBus modEventBus) {
         loaded = ModList.get().isLoaded(MOD_ID);
@@ -87,7 +106,32 @@ public final class CuriosCompat {
         NPC_CURIOS_MENU = MENUS.register("npc_curios", () ->
                 IMenuTypeExtension.create(NpcCuriosMenu::new));
         MENUS.register(modEventBus);
+        modEventBus.addListener(CuriosCompat::onRegisterCapabilities);
         NeoForge.EVENT_BUS.register(ServerHooks.class);
+    }
+
+    private static void onRegisterCapabilities(RegisterCapabilitiesEvent event) {
+        if (!loaded) return;
+        // 为魔法指南针注册 ICurio capability：戴在护符槽时服务端每 100 tick 自动重同步市政厅坐标
+        event.registerItem(
+                CuriosCapability.ITEM,
+                (stack, context) -> new ICurio() {
+                    @Override
+                    public ItemStack getStack() {
+                        return stack;
+                    }
+
+                    @Override
+                    public void curioTick(SlotContext slotContext) {
+                        if (slotContext.entity() instanceof ServerPlayer sp && sp.level().getGameTime() % 100 == 0) {
+                            CompassService.syncFor(sp);
+                        }
+                    }
+                },
+                Wandscape.MAGIC_COMPASS.get(),
+                Wandscape.ADVANCED_MAGIC_COMPASS.get(),
+                Wandscape.ULTIMATE_MAGIC_COMPASS.get()
+        );
     }
 
     /** 服务端钩子：数据 reload 与玩家登录同步把法师槽位镜像为玩家标准槽位集。 */

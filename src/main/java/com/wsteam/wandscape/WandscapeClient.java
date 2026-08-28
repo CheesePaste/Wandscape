@@ -94,6 +94,7 @@ import net.neoforged.neoforge.client.event.RegisterParticleProvidersEvent;
 import net.neoforged.neoforge.client.gui.ConfigurationScreen;
 import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.network.PacketDistributor;
 import com.wsteam.wandscape.shared.log.Log;
 
 public class WandscapeClient {
@@ -140,6 +141,13 @@ public class WandscapeClient {
             "key.wandscape.panel_hide",
             InputConstants.Type.KEYSYM,
             GLFW.GLFW_KEY_F4,
+            "key.categories.wandscape"
+    );
+
+    public static final KeyMapping WAREHOUSE_TERMINAL_KEY = new KeyMapping(
+            "key.wandscape.warehouse_terminal",
+            InputConstants.Type.KEYSYM,
+            InputConstants.UNKNOWN.getValue(),
             "key.categories.wandscape"
     );
 
@@ -494,6 +502,7 @@ public class WandscapeClient {
         event.register(GUIDE_TOGGLE);
         event.register(PANEL_AREAS_TOGGLE);
         event.register(PANEL_HIDE_TOGGLE);
+        event.register(WAREHOUSE_TERMINAL_KEY);
     }
 
     private static void onClientTick(ClientTickEvent.Post event) {
@@ -529,6 +538,13 @@ public class WandscapeClient {
             if (searchFocused) continue;
             if (!WandscapePanelState.isPanelOpen()) {
                 openGuideIndex();
+            }
+        }
+        while (WAREHOUSE_TERMINAL_KEY.consumeClick()) {
+            if (searchFocused) continue;
+            Minecraft mc = Minecraft.getInstance();
+            if (mc != null && mc.screen == null) {
+                PacketDistributor.sendToServer(new com.wsteam.wandscape.warehouse.network.WarehouseTerminalKeyPacket());
             }
         }
     }

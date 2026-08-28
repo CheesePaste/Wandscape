@@ -12,7 +12,7 @@
 - **归属限制**：只能存入「玩家自己创建殖民地」的法师（`ColonyApi.getColonyByFounder`）；**无殖民地的玩家禁止使用**（存取都拒绝）。
 - **等级门槛**：`RingTier.requiredColonyLevel`（1/10/20）与合成站配方 `min_colony_level` 一致（1/10/20），三档由合成站配方产出；创造栏仍发放三档。
 - **共享空间**：存储按存取玩家 UUID 键控，落盘于 overworld `OathRingSavedData`；与戒指物品所在槽位/是否在背包无关。
-- Curios 戒指槽兼容、存取数 tooltip 同步为后续待办（见 `docs/gaps.md`）。
+- **Curios 兼容**：已通过 `data/curios/tags/item/ring.json` 接入 `curios:ring` 物品标签（三档均可佩戴于 Curios 戒指槽）；存取数 tooltip 同步由 `OathRingClientData` 驱动。
 
 ## 代码结构
 

@@ -8,44 +8,44 @@ shift+右键本殖民地法师可以把法师存入戒指，右键地面放出
     - 槽位为固定 4 槽（0~3），释放不塌缩；低级=槽0、中级=槽0~1、高级=槽0~3（见 docs/modules/ring.md）。
     - 「本殖民地法师」= 玩家自己创建殖民地的法师（ColonyApi.getColonyByFounder）；无殖民地玩家禁止使用（存取都拒绝）。
     - 1/10/20 等级门槛现由合成站配方 `min_colony_level` 落地（与 RingTier.requiredColonyLevel 一致：1/10/20）。
-    - **待办：Curios 戒指槽兼容,贴图美术**
-2.和平权杖
+    - **Curios 兼容**：已接入 `curios:ring` 物品标签（三档均可佩戴于 Curios 戒指槽）；三档独立美术贴图已具备（`textures/item/oath_ring*.png`）。
+2. 和平权杖
 合成站1级解锁配方，右键法师快速切换和平/取消和平
     状态：已实现（scepter/ 模块，合成站 1 级配方）；右键本殖民地法师即时切换（复用 WandscapeNpc.peaceMode）。
-3.跟随权杖
+3. 跟随权杖
 合成站1级解锁配方，右键法师快速切换跟随/非跟随
     状态：已实现（scepter/ 模块）；右键本殖民地法师即时切换跟随（复用 followMode/followerUuid）。
-4.庇护权杖
+4. 庇护权杖
 合成站1级解锁配方，右键某生物则将该生物视作盟友，法师不会主动攻击，也不会误伤它，再次右键解除。
     状态：已实现（scepter/ 模块）；庇护名单按殖民地名下长期持久化（ScepterMarksSavedData），
     并入 isFriendlyForce（法师不主动攻击/不误伤/不触发守卫发布），右键同生物解除。
-5.敌对权杖
+5. 敌对权杖
 合成站1级解锁配方，右键某生物使得128格以内所有盟友获得该生物的仇恨并且优先攻击它，再次右键解除仇恨。
 这个仇恨优先级很高，仇恨解除或者该生物死亡前法师不会被别的生物吸引。
 右键另一个生物会把仇恨转移到它身上。
     状态：已实现（scepter/ 模块）；单槽强制仇恨，≤128 格（Config.scepter.hostileRange）内本殖民地法师集火
     （resolvedTarget/守卫最高优先），右键另一生物转移、右键当前/目标死亡自动解除；与庇护同目标互斥。
-6.魔法指南针   可放入Curios  护符
+6. 魔法指南针   可放入Curios  护符
 合成站1级解锁配方，灌入了魔法的指南针，始终指向城镇市政厅的位置
     状态：已实现（compass/ 模块，合成站 1 级配方）。指针复用 vanilla 指南针帧模型 + 32 帧改造，
     始终指向玩家自己殖民地的市政厅（无殖民地/无市政厅时指针乱转）。目标坐标服务端权威解析并经
-    CompassTargetPacket 同步。**待办：Curios 护符槽位**。
-7.高级魔法指南针  可放入Curios  护符
+    CompassTargetPacket 同步。接入 Curios 护符槽（`curios:charm` 标签 + `curioTick` 自动同步）。
+7. 高级魔法指南针  可放入Curios  护符
 合成站10级解锁配方。灌入了更精纯魔法的指南针，始终指向城镇市政厅的位置，准心放在上面还会显示具体坐标(Tooltip)。
     状态：已实现（compass/ 模块，合成站 10 级配方）。在 6 的基础上，tooltip 显示市政厅坐标。
-    **待办：Curios 护符槽位**。
-8.终极魔法指南针  可放入Curios  护符
+    接入 Curios 护符槽（`curios:charm` 标签 + `curioTick` 自动同步）。
+8. 终极魔法指南针  可放入Curios  护符
 合成站20级解锁配方。灌入了至纯魔法的指南针，始终指向城镇市政厅的位置，准心放在上面还会显示具体坐标(Tooltip)。右键就能传送到城镇市政厅。
     状态：已实现（compass/ 模块，合成站 20 级配方）。在 7 的基础上，右键传送到市政厅安全落点
-    （复用盟誓戒指同款安全落点判定）。**待办：Curios 护符槽位**。
-9.仓库终端     可放入Curios 手饰
+    （复用盟誓戒指同款安全落点判定）。接入 Curios 护符槽（`curios:charm` 标签 + `curioTick` 自动同步）。
+9. 仓库终端     可放入Curios 手饰
 合成站20级解锁配方，右键打开仓库面板，穿戴在身上可以使用设置的快捷键打开。
-    状态：已实现（warehouse/ 模块的 WarehouseTerminalItem，合成站 20 级配方）。右键打开玩家自己殖民地的
-    仓库面板（概览/兑换两页，复用 WarehouseMenu）。**未做：Curios 手饰槽位 + 穿戴快捷键**（本期用户拍板延后）；
-**贴图占位（自制 16×16 终端图标，待美术替换）**。
-10.万能权杖
+    状态：已实现（warehouse/ 模块的 WarehouseTerminalItem，合成站 20 级配方）。右键或穿戴/持有状态下
+    按快捷键（`key.wandscape.warehouse_terminal`）打开玩家自己殖民地的仓库面板（概览/兑换两页，复用 WarehouseMenu）。
+    接入 Curios 手饰槽（`curios:hands` / `curios:bracelet` 标签），服务端经 `WarehouseTerminalKeyPacket` 校验穿戴。
+10. 万能权杖
 合成站10级解锁配方，一杖四模式（和平/跟随/庇护/敌对）。shift+右键循环模式，右键执行当前模式；
 颜色与 tooltip 显示当前模式（和平白/跟随青/庇护绿/敌对红）。
     状态：已实现（scepter/ 模块的 OmniScepterItem，合成站 10 级配方）。模式存物品 NBT（CUSTOM_DATA["mode"]，
     默认和平），客户端 tint/tooltip 读它随模式变色；复用 MageWandItem/NpcBindingItem/EntityInteract/use 四处
-    seam 分流，行为全部复用 ScepterService，无第二套业务。**待办：贴图复用 scepter 模板（头部染色），无独立贴图**。
+    seam 分流，行为全部复用 ScepterService，无第二套业务。模型复用 `wandscape:item/scepter` 并由 tint index 0 染色权杖头部。

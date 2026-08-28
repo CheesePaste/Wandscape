@@ -1,0 +1,8 @@
+{
+  "replace": false,
+  "values": [
+    "wandscape:magic_compass",
+    "wandscape:advanced_magic_compass",
+    "wandscape:ultimate_magic_compass"
+  ]
+}

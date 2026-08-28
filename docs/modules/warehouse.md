@@ -28,7 +28,7 @@
 
 ## 仓库终端（WarehouseTerminalItem）
 
-玩家侧物品「仓库终端」（smallitems 第 9 项）：右键打开**玩家自己殖民地**的仓库面板。合成站 20 级配方产出。便携式——`buildingPos` 暂取玩家当前坐标（菜单 64 格内有效），存/取/兑换全部按菜单内 `colonyId` 走，与具体建筑无关。**未做：Curios 手饰槽 + 穿戴快捷键**（用户拍板延后，见 gaps）。
+玩家侧物品「仓库终端」（smallitems 第 9 项）：右键打开**玩家自己殖民地**的仓库面板，穿戴/持有状态下支持快捷键（`key.wandscape.warehouse_terminal`）一键开仓。合成站 20 级配方产出。便携式——`buildingPos` 暂取玩家当前坐标（菜单 64 格内有效），存/取/兑换全部按菜单内 `colonyId` 走，与具体建筑无关。**Curios 兼容**：已接入 `curios:hands` 与 `curios:bracelet` 手饰槽，服务端通过 `WarehouseTerminalKeyPacket` 校验穿戴后远程开仓。
 
 ## 网络
 

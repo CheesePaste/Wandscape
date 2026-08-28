@@ -42,9 +42,9 @@
 - **`RitualOp.channelTicks()`**（op/）：self_teleport/item_teleport/player_summon=600、warding=200、group_vigor=400、rain_call/clear_weather=1200、portal_gate=1800——与 `WandscapeRitualOps` 的 1 不一致，需对齐。
 - **`ColonyMetricsService`/`StatsSyncPacket`**：统计面板已同步，但 `WandscapePanelState.StatsSummary` 消费端展示待确认。
 
-- **盟誓戒指（ring/）后续待办（2026-08-28 核心已实现，见 [modules/ring.md](modules/ring.md)）**：
-  - **Curios 戒指槽兼容**：`docs/plan/smallitems.md` 第 1 项首行「可放入 Curios 戒指」。Curios 尚未引入依赖（当前仅 JEI 有 compileOnly 集成），戒指只在 vanilla 背包主/副手生效；集成 Curios 需新增可选依赖 + `integration/curios/` 子包。
-  - **存取数 tooltip 同步**：存储按玩家 UUID 存于服务端 SavedData，客户端 tooltip 无法读取——需先加 S→C 同步包，才能在置备提示中添加「已存 X/Y」。
+- **盟誓戒指（ring/）（2026-08-28 核心已实现，见 [modules/ring.md](modules/ring.md)）**：
+  - **Curios 戒指槽兼容**：【已实现】接入 `curios:ring` 物品标签，三档戒指均可放入 Curios 戒指槽。
+  - **存取数 tooltip 同步**：【已实现】通过 `OathRingMaskPacket` 服务端→客户端同步掩码，客户端 `OathRingClientData` 解析并在 hover text 显示「已存 X/Y」。
 
 ## 四、潜在不一致 / 需要注意
 
@@ -111,9 +111,9 @@
 
 ## 十一、魔法指南针 / 仓库终端（2026-08-28）
 
-`compass/` 模块已实现 smallitems 6/7/8；`warehouse/WarehouseTerminalItem` 实现第 9 项。已知短板：
+`compass/` 模块已实现 smallitems 6/7/8；`warehouse/WarehouseTerminalItem` 实现第 9 项：
 
-1. **Curios 护符槽位（指南针）未接入**——用户拍板本期只做物品功能 + 合成站配方，`可放入Curios 护符` 为待办。若要接入：参照 `compat/curios/CuriosCompat`（已给法师饰品槽做镜像），给三个指南针注册「护符」槽位并桥接 item 使用/指针行为。
-2. **指南针贴图占位**——复用 vanilla 指南针 32 帧指针，仅圆盘按档位染色（蓝/金/紫），由 `tools/generate_compass_textures.py` 生成（生成的 195 个纹理/模型文件已提交）。替换正式贴图：运行脚本改色 或 用自制帧模型替换 `assets/wandscape/models/item/compass_frame/<tier>/*.json` 的 layer0 纹理引用即可。
-3. **仓库终端 Curios 手饰槽 + 穿戴快捷键未接入**——本期用户拍板只做右键开面板 + 配方；`可放入Curios 手饰` 与「穿戴时按键开面板」为待办（后者依赖穿戴检测，需 Curios）。贴图占位（自制 16×16 终端图标）。
-4. **仓库终端 buildingPos 语义**——为便携将其 `buildingPos` 暂取玩家当前坐标（菜单 64 格内有效）；若后期要求真正"远程任意位置可开"，需放开 `WarehouseMenu.stillValid` 的距离约束或让 `WarehouseDataPacket` 容忍 null pos。
+1. **Curios 护符槽位（指南针）**——【已实现】接入 `curios:charm` 物品标签并在 `CuriosCompat` 中注册 `ICurio` 接口，穿戴时每 100 tick 自动执行 `CompassService.syncFor(player)` 同步市政厅。
+2. **指南针贴图**——复用 vanilla 指南针 32 帧指针，仅圆盘按档位染色（蓝/金/紫），由 `tools/generate_compass_textures.py` 生成（生成的 195 个纹理/模型文件已提交）。
+3. **仓库终端 Curios 手饰槽 + 穿戴快捷键**——【已实现】接入 `curios:hands` 与 `curios:bracelet` 手饰槽，注册 `key.wandscape.warehouse_terminal` 快捷键，服务端经 `WarehouseTerminalKeyPacket` 校验穿戴后远程开仓。
+4. **仓库终端 buildingPos 语义**——为便携将其 `buildingPos` 暂取玩家当前坐标（菜单 64 格内有效），存/取/兑换按菜单内 `colonyId` 全局操作。

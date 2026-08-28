@@ -39,26 +39,52 @@ public class WarehouseTerminalItem extends Item {
     @Override
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
         if (!level.isClientSide && player instanceof ServerPlayer sp) {
-            UUID colonyId = ownColony(sp);
-            if (colonyId == null) {
-                sp.displayClientMessage(
-                        Component.translatable("message.wandscape.warehouse_terminal.no_colony"), true);
-                return InteractionResultHolder.consume(sp.getItemInHand(hand));
-            }
-            BlockPos pos = sp.blockPosition();
-            sp.openMenu(new SimpleMenuProvider(
-                    (id, inv, p) -> new WarehouseMenu(id, inv, colonyId, pos),
-                    Component.translatable("gui.wandscape.warehouse.title")));
-            pushInitialData(sp, colonyId, pos);
-            return InteractionResultHolder.consume(sp.getItemInHand(hand));
+            openWarehouse(sp);
+            return InteractionResultHolder.consume(player.getItemInHand(hand));
         }
         return InteractionResultHolder.success(player.getItemInHand(hand));
+    }
+
+    /** 打开玩家自己殖民地的仓库菜单；无殖民地给出提示并返回 false。 */
+    public static boolean openWarehouse(ServerPlayer player) {
+        UUID colonyId = ownColony(player);
+        if (colonyId == null) {
+            player.displayClientMessage(
+                    Component.translatable("message.wandscape.warehouse_terminal.no_colony"), true);
+            return false;
+        }
+        BlockPos pos = player.blockPosition();
+        player.openMenu(new SimpleMenuProvider(
+                (id, inv, p) -> new WarehouseMenu(id, inv, colonyId, pos),
+                Component.translatable("gui.wandscape.warehouse.title")));
+        pushInitialData(player, colonyId, pos);
+        return true;
+    }
+
+    /** 检查玩家是否穿戴或持有了仓库终端（支持 Curios 饰品槽与背包）。 */
+    public static boolean isTerminalEquipped(Player player) {
+        if (player == null) return false;
+        Item terminal = com.wsteam.wandscape.Wandscape.WAREHOUSE_TERMINAL.get();
+        if (com.wsteam.wandscape.compat.curios.CuriosCompat.isLoaded()
+                && com.wsteam.wandscape.compat.curios.CuriosCompat.isEquipped(player, terminal)) {
+            return true;
+        }
+        if (player.getMainHandItem().is(terminal) || player.getOffhandItem().is(terminal)) {
+            return true;
+        }
+        for (ItemStack armor : player.getArmorSlots()) {
+            if (armor.is(terminal)) {
+                return true;
+            }
+        }
+        return player.getInventory().contains(new ItemStack(terminal));
     }
 
     @Override
     public void appendHoverText(ItemStack stack, Item.TooltipContext context,
                                 java.util.List<Component> tooltipComponents, net.minecraft.world.item.TooltipFlag tooltipFlag) {
         tooltipComponents.add(Component.translatable("item.wandscape.warehouse_terminal.tooltip"));
+        tooltipComponents.add(Component.translatable("item.wandscape.warehouse_terminal.tooltip_curios"));
     }
 
     /** 打开后推一帧仓库数据（物品 + 元素快照）供客户端渲染；与 {@code BuildingInteractHandler.openWarehouseMenu} 对齐。 */

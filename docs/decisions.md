@@ -2,6 +2,22 @@
 
 本文件记录偏离直觉的设计选择及其原因，供后续开发快速理解「为什么这么做」。
 
+## 2026-08-28：smallitems 待办全量收尾——Curios 槽位接入 + 护符 Tick 同步 + 仓库终端快捷键开仓
+
+**需求**（用户指令）：按 `docs/plan/smallitems.md` 完成盟誓戒指、魔法指南针（初/高/终）、仓库终端、万能权杖等全部待办。
+
+**决策**：
+- **Curios 槽位接入（数据驱动标签）**：
+  - 盟誓戒指三档：接入 `data/curios/tags/item/ring.json`（`curios:ring`）。
+  - 魔法指南针三档：接入 `data/curios/tags/item/charm.json`（`curios:charm`）。
+  - 仓库终端：接入 `data/curios/tags/item/hands.json` 与 `data/curios/tags/item/bracelet.json`（`curios:hands` / `curios:bracelet`）。
+- **指南针护符 Capability 注册**：在 `CuriosCompat` 加载时，为三个指南针注册 `CuriosCapability.ITEM`，其 `curioTick` 在服务端每 100 tick 自动触发 `CompassService.syncFor(player)`，解决放护符槽时不走 vanilla `inventoryTick` 的市政厅目标同步问题。
+- **仓库终端穿戴与快捷键开仓**：
+  - 客户端注册 `key.wandscape.warehouse_terminal` 快捷键（默认未绑定，Controls 面板可配置）。
+  - 按键消费时发送 `WarehouseTerminalKeyPacket` 到服务端。
+  - 服务端经 `WarehouseTerminalItem.isTerminalEquipped(player)` 统一校验：安装 Curios 时先查 `CuriosCompat.isEquipped`，未安装或未佩戴时回退检查主手/副手/护甲/背包；佩戴则调用 `WarehouseTerminalItem.openWarehouse` 远程开仓，未佩戴给出友好 action bar 提示。
+- **万能权杖与美术贴图**：万能权杖模型复用 `wandscape:item/scepter` 并由 tint index 0 随模式变色；盟誓戒指与指南针各档位纹理模型完整对齐。
+
 ## 2026-08-28：4 种玩家权杖——本殖民地作用范围 + 庇护并「友军边界」/ 敌对「单槽强制仇恨」
 
 **需求**（用户指令）：`docs/plan/smallitems.md` 第 2-5 项。和平/跟随权杖右键法师快捷切换；庇护权杖右键生物标盟友、法师不主动攻击/不误伤、再次右键解除、长期持久化；敌对权杖右键生物让本殖民地 128 格内法师集火、解除/死亡前不被其它生物吸引、右键另一生物转移。

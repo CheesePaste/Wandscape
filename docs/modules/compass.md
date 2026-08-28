@@ -10,7 +10,7 @@
 
 - **档位**（`CompassTier`）：BASIC（合成站 1 级，仅指向）/ ADVANCED（10 级，+tooltip 坐标）/ ULTIMATE（20 级，+右键传送）。
 - **归属限制**：市政厅坐标按「玩家自己创建殖民地」解析（`ColonyApi.getColonyByFounder` + `RaidTownHall.findTownHall`，要求 category=government 且结构完整）；无殖民地/无市政厅玩家指针乱转、终极传送给出上屏提示。
-- **Curios 护符槽位未接入**（本期明确延后，见 `docs/gaps.md`）；贴图为占位（vanilla 指针帧 + 圆盘三色染色，`tools/generate_compass_textures.py` 生成）。
+- **Curios 兼容**：已通过 `data/curios/tags/item/charm.json` 接入 `curios:charm` 物品标签（三档均可放入护符槽），并在 `CuriosCompat` 中为指南针注册 `ICurio` 接口，穿戴时每 100 tick 自动执行 `CompassService.syncFor(player)` 同步市政厅。贴图为 32 帧指针 + 圆盘三色染色。
 
 ## 指针机制
 
