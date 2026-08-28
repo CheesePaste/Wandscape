@@ -2,6 +2,35 @@
 
 本文件记录偏离直觉的设计选择及其原因，供后续开发快速理解「为什么这么做」。
 
+## 2026-08-28：建筑信息顶栏限定俯瞰(OVERVIEW)模式
+
+**需求**（用户指令）：建造/道路/统计/任务等操作型子模式下，准心对准建筑**不弹**建筑信息顶栏（建筑名 + 舒适/魔法/奇迹三值 + 修复/拆除按钮），只在俯瞰(OVERVIEW)模式显示——避免玩家把施工/经营子模式当成巡检上下文、误触建筑操作按钮或界面出现空白。
+
+**决策**：
+- 唯一判据 `WandscapePanelState.isInspectContext()` = `activeSubMode == OVERVIEW`，所有消费端统一走它。
+- `BuildingDebugController` 仅俯瞰模式 raycast/发包——操作型子模式不巡检、不产生无谓网络流量。
+- `BuildingDebugOverlay` 渲染与点击响应均 gate 在俯瞰模式；`WandscapePanelOverlay`「看着建筑 → 隐藏殖民地带」的判定同步改为「俯瞰且看着建筑」，避免操作型子模式下殖民地带消失、顶部出现空白。
+- `WandscapeHighlightRenderer` 建筑外框高亮同口径。
+
+**为什么**：建筑信息顶栏原是 G 键第一人称巡检功能（G 键已移除）的残留，现由 V 面板驱动。建造/道路是施工工具，弹信息框 + 操作按钮既干扰施工，又有误触 destructive 操作的风险；统一收窄到俯瞰巡检上下文，行为与「操作型子模式不做建筑/NPC 交互」的既有设计一致。
+
+**影响**：`WandscapePanelState.isInspectContext`、`BuildingDebugController`、`BuildingDebugOverlay`、`WandscapePanelOverlay`、`WandscapeHighlightRenderer`。
+
+## 2026-08-28：市政厅/仓库/工作站只剩最后一座时禁止拆除
+
+**需求**（用户指令）：当只剩一个市政厅/一个仓库/一个工作站时禁止拆除，并在屏幕上提醒玩家，避免引发 bug。仅这三个建筑受限，其他建筑不受影响。
+
+**决策**：
+- 按**类别**保护 `government` / `storage` / `workstation`（`WandscapeConstants.PROTECTED_LAST_CATEGORIES`），而非按建筑类型——目前这三个类别各只有一个建筑类型（市政厅/仓库/工作站），未来新增同类建筑自动纳入保护。
+- 计数规则：全世界范围内所有已注册、未标记拆除中的该类别建筑；若仅剩 1 座则禁止拆除。**跨殖民地计数**——只要世上还有一座同类建筑就可拆，只在「拆到 0 座」这一步拦住。
+- 新增 `BuildingApi.demolishBlockReason(UUID)`：被保护时返回上屏原因，否则返回 null。`BuildingActionPacket` 的 destroy/cancel 分支先查原因，被拦则上屏「§c[建筑] 无法拆除「XXX」：这是最后一座同类建筑…」。
+- `demolishBuilding` / `cancelBuilding` 内部各自再做一次防御性拦截（防绕过），`cancelBuilding` 的拦截放在**退料之前**，避免「退了料却没拆」的物资复制。
+- 计数逻辑抽成纯函数 `BuildingApiImpl.isLastProtected(...)`，脱离 MC 运行时单测。
+
+**为什么**：这三类建筑拆到 0 座会破坏殖民地运转——无市政厅小镇无法定位/重开命名面板、`WarehouseManager.findStorageColony` 无仓库时回落死账户 `UUID(0,0)`（资源存入即丢）、无工作站生产停摆。跨殖民地计数与「只剩下一个」的字面语义一致，且避开「建筑 colonyId 为空时按殖民地分组」的边界问题。
+
+**影响**：`WandscapeConstants.PROTECTED_LAST_CATEGORIES`、`BuildingApi.demolishBlockReason`、`BuildingApiImpl`（`CategoryPresence` / `isLastProtected` / `isProtectedLast` + 双入口拦截）、`BuildingActionPacket`（destroy/cancel 上屏）、`BuildingApiImplTest`（4 个纯函数单测）。
+
 ## 2026-08-27：护甲区间上抬——[0,8]/默认 4 → [0,10]/默认 5
 
 **需求**（用户指令）：NPC 护甲初始值由 0-8 改为 0-10，默认（区间中点）由 4 提升到 5。
@@ -1607,3 +1636,17 @@
 **为什么**：原实现把敌数门控当成硬性开关，导致「怪多但只有单体、怪少但只有群攻」时 NPC 一个法术也不放、只会基础攻击，浪费已装备的魔法。降级语义保留「敌数匹配优先」的意图（避免敌少时砸 AOE 浪费蓝、敌多时单发效率低），又消除僵局。`castable`/目标规则/`conditions` 仍是硬门槛，只有敌数门控是优先级。
 
 **影响**：`CastBrainTest` 相关断言从 `assertNull`（不选）改为断言降级后仍选中；`docs/spell-casting.md` 5.2 敌数门控段落与二十三章同步更新。无存档迁移。
+
+## 2026-08-28：移除建筑 shutdown 机制与「损坏 >1/3 停摆」
+
+**需求**（用户指令）：去除「建筑损坏大于 1/3 即停摆」与 shutdown（手动关闭）机制；V 面板准心对准建筑时不再显示「关闭/重启」按钮。用户拍板受损建筑**照常运转、照常贡献**，仅外观缺块；异常报告去掉「关闭/损坏」列表，只留「建造中」。
+
+**决策**：
+- **shutdown 整体移除**：`BuildingState` 删除 `shutdown`/`shutdownReason` 字段，`BuildingData` 删除 `isShutdown()`/`getShutdownReason()`，`BuildingSavedData` 不再读写 shutdown NBT 位（旧存档残留位一律忽略 → 旧存档停摆建筑自动复活运转）。`BuildingApi.shutdown()/restart()` 与 `BuildingApiImpl` 的 `applyShutdownPenalties`/`colonyActiveCounts`（写而不读的死计数）一并删除。`BuildingShutdownEvent`/`BuildingRestartedEvent` 及订阅者（AchievementService 停摆重置、WonderEffectApplier 移除/重算）删除。
+- **1/3 停摆移除**：`BuildCompleteListener` 不再按 `DAMAGE_THRESHOLD_DENOMINATOR` 判 broken——建成即 `structureIntact=true` 并计入贡献，缺失方块可经 V 面板「修复」补齐。原 `BuildingBreakHandler` 更名为 `BuildingRepairHandler`，不再监听 BreakEvent/ExplosionEvent，只保留手动 `triggerRepair`（任何缺失方块都修）；**>1/3 自动修复一并删除**。`structureIntact` 语义收窄为「是否运转中」，仅拆除时置 false。
+- **V 面板**：`BuildingDebugOverlay` 按钮从「修复/撤销 | 关闭/重启 | 拆除」三键收敛为「修复/撤销 | 拆除」两键；`AnomalyScreen` 只列「建造中」，移除关闭/损坏类别与营业/修复按钮；`ColonyMetricsSnapshot`/`ColonyStatsSyncPacket`/`WandscapePanelState` 移除 shutdown/broken 字段与计数；警告浮层（`renderWarningOverlay`）与异常计数因恒 0 而删除。
+- `steady_hand` 成就语义从「连续 7 天无建筑停摆」改为「连续 7 天维持殖民地运转」。
+
+**为什么**：建筑因物理损坏或手动关闭而停摆会打断殖民地自动化，与「轻度不硬核：不引入生存难度惩罚」原则相悖；手动关闭/重启则是低频操作、UI 三按钮显拥挤。损坏只影响外观、运转不受影响，修复变成可选的补齐手段，玩家不再被迫处理故障。
+
+**影响**：`docs/modules/building.md`/`engine.md`/`guard.md`/`raid.md`/`projection.md`/`shared.md`/`simulation.md`/`architecture.md` 同步更新；guide 文档（anomaly/getting_started/overview）重写；lang 移除 shutdown/restart/stopped/broken/营业等 key。无存档迁移（shutdown NBT 位被忽略）。`getBuildingIdInInteractionZone`/`getTouristInteractPoint`/`getEntryPoint` 等处的 `isShutdown()` 过滤一并移除。

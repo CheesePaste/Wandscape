@@ -1,9 +1,21 @@
 package com.wsteam.wandscape.shared.registry;
 
+import java.util.Set;
+
 public final class WandscapeConstants {
     private WandscapeConstants() {}
 
     public static final String BUILDING_CATEGORY_GOVERNMENT = "government";
+    public static final String BUILDING_CATEGORY_STORAGE = "storage";
+    public static final String BUILDING_CATEGORY_WORKSTATION = "workstation";
+
+    /**
+     * 受拆除保护的建筑类别：拆到 0 座会破坏殖民地运转（无市政厅无法定位小镇、
+     * 无仓库资源落入死账户 UUID(0,0)、无工作站生产停摆），故只剩最后一座时禁止拆除。
+     * 按类别保护而非按类型，未来新增同类建筑自动纳入。
+     */
+    public static final Set<String> PROTECTED_LAST_CATEGORIES = Set.of(
+            BUILDING_CATEGORY_GOVERNMENT, BUILDING_CATEGORY_STORAGE, BUILDING_CATEGORY_WORKSTATION);
 
     public static final double SAME_BUILDING_CONTINUATION_BONUS = 50.0;
 

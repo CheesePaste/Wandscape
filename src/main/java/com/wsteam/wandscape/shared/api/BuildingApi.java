@@ -29,14 +29,20 @@ public interface BuildingApi {
     void registerBuilding(BuildingData data);
     void unregisterBuilding(BlockPos pos);
 
-    // ---- Shutdown/Restart ----
-    boolean shutdown(UUID buildingId);
-    boolean shutdown(UUID buildingId, String reason);
-    boolean restart(UUID buildingId);
-
     // ---- Demolish ----
     void demolishBuilding(UUID buildingId);
     boolean isDemolishing(UUID buildingId);
+
+    /**
+     * Whether demolishing (or cancelling an under-construction) building would leave
+     * the world with zero buildings of an essential category (town hall / warehouse /
+     * workstation). Returns a player-facing reason Component when removal must be
+     * blocked, null when allowed. Consult on the server thread before
+     * {@link #demolishBuilding} / {@link #cancelBuilding} to show the player why
+     * removal was refused.
+     */
+    @Nullable
+    Component demolishBlockReason(UUID buildingId);
 
     /**
      * Undo an under-construction (not yet completed) building. Returns true when

@@ -9,6 +9,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.wsteam.wandscape.building.data.BlockOffset;
 import com.wsteam.wandscape.building.data.BuildingConfig;
+import com.wsteam.wandscape.shared.registry.WandscapeConstants;
 
 import org.junit.jupiter.api.Test;
 
@@ -102,5 +103,46 @@ class BuildingApiImplTest {
                 cfg, 1, missing, id -> true);
 
         assertEquals(Map.of("minecraft:stone", 1, "minecraft:oak_log", 1), counts);
+    }
+
+    // ---- 拆除保护：市政厅/仓库/工作站只剩最后一座时禁止拆除 ----
+
+    @Test
+    void unprotectedCategoryIsNeverBlocked() {
+        // 商店等其他类别不受保护，拆到只剩一座也放行。
+        var buildings = List.of(
+                new BuildingApiImpl.CategoryPresence("shop", false));
+        assertFalse(BuildingApiImpl.isLastProtected(
+                buildings, WandscapeConstants.PROTECTED_LAST_CATEGORIES, "shop"));
+    }
+
+    @Test
+    void soleProtectedBuildingIsBlocked() {
+        // 全世界只有一座市政厅 → 禁止拆除。
+        var buildings = List.of(
+                new BuildingApiImpl.CategoryPresence("government", false),
+                new BuildingApiImpl.CategoryPresence("shop", false));
+        assertTrue(BuildingApiImpl.isLastProtected(
+                buildings, WandscapeConstants.PROTECTED_LAST_CATEGORIES, "government"));
+    }
+
+    @Test
+    void secondProtectedBuildingLiftsTheBlock() {
+        // 有两座仓库 → 拆其中一座不触发保护。
+        var buildings = List.of(
+                new BuildingApiImpl.CategoryPresence("storage", false),
+                new BuildingApiImpl.CategoryPresence("storage", false));
+        assertFalse(BuildingApiImpl.isLastProtected(
+                buildings, WandscapeConstants.PROTECTED_LAST_CATEGORIES, "storage"));
+    }
+
+    @Test
+    void demolishingDuplicateIsExcludedFromCount() {
+        // 另一座同类别建筑已标记拆除中 → 不计入，目标仍视为最后一座而阻止。
+        var buildings = List.of(
+                new BuildingApiImpl.CategoryPresence("workstation", false),
+                new BuildingApiImpl.CategoryPresence("workstation", true));
+        assertTrue(BuildingApiImpl.isLastProtected(
+                buildings, WandscapeConstants.PROTECTED_LAST_CATEGORIES, "workstation"));
     }
 }

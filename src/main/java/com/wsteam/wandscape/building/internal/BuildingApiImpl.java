@@ -20,8 +20,7 @@ import com.wsteam.wandscape.shared.data.ItemKey;
 import com.wsteam.wandscape.shared.data.WorkItem;
 import com.wsteam.wandscape.shared.event.BuildingPlacedEvent;
 import com.wsteam.wandscape.shared.event.BuildingRemovedEvent;
-import com.wsteam.wandscape.shared.event.BuildingRestartedEvent;
-import com.wsteam.wandscape.shared.event.BuildingShutdownEvent;
+import com.wsteam.wandscape.shared.registry.WandscapeConstants;
 import com.wsteam.wandscape.warehouse.ColonyItemBank;
 
 import net.minecraft.core.BlockPos;
@@ -47,8 +46,9 @@ public class BuildingApiImpl implements BuildingApi {
 
     // Three-value: per colony, which building types have ever been built
     private final Map<UUID, Set<String>> colonyUnlockedTypes = new ConcurrentHashMap<>();
-    // Per colony, how many active (non-shutdown) buildings of each type
-    private final Map<UUID, Map<String, Integer>> colonyActiveCounts = new ConcurrentHashMap<>();
+
+    /** 拆除保护计数的建筑最小投影（纯数据，可脱离 MC 运行时单测）。 */
+    record CategoryPresence(String category, boolean demolishing) {}
 
     @Nullable
     private Level serverLevel;
@@ -130,9 +130,6 @@ public class BuildingApiImpl implements BuildingApi {
             colonyUnlockedTypes
                     .computeIfAbsent(colonyId, k -> ConcurrentHashMap.newKeySet())
                     .add(state.getBuildingTypeId());
-            colonyActiveCounts
-                    .computeIfAbsent(colonyId, k -> new ConcurrentHashMap<>())
-                    .merge(state.getBuildingTypeId(), 1, Integer::sum);
         }
 
         // Notify downstream systems (e.g. tourist spawner, colony evaluation)
@@ -160,12 +157,7 @@ public class BuildingApiImpl implements BuildingApi {
 
         UUID colonyId = state.getColonyId();
         if (colonyId != null) {
-            Map<String, Integer> counts = colonyActiveCounts.get(colonyId);
-            if (counts != null) {
-                counts.merge(state.getBuildingTypeId(), -1, Integer::sum);
-                counts.remove(state.getBuildingTypeId(), 0);
-            }
-            // Also remove from the contribution registry so evaluation values drop
+            // Remove from the contribution registry so evaluation values drop
             // if this was the last intact building of its type.
             sd.removeBuildingContribution(colonyId, state.getBuildingTypeId());
         }
@@ -175,114 +167,6 @@ public class BuildingApiImpl implements BuildingApi {
         sd.unregister(state.getBuildingId());
         // Notify engine services (e.g. ChunkLoadManager) to release the footprint lease.
         NeoForge.EVENT_BUS.post(new BuildingRemovedEvent(state.getBuildingId(), state.getColonyId()));
-    }
-
-    // ---- Shutdown/Restart ----
-
-    @Override
-    public boolean shutdown(UUID buildingId) {
-        return shutdown(buildingId, "manual");
-    }
-
-    @Override
-    public boolean shutdown(UUID buildingId, String reason) {
-        BuildingSavedData sd = getSavedData();
-        if (sd == null) return false;
-
-        BuildingState state = sd.getBuilding(buildingId);
-        if (state == null) return false;
-
-        if (!state.isShutdown()) {
-            state.setShutdown(true);
-            state.setShutdownReason(reason);
-            UUID cid = state.getColonyId();
-            String category = state.getCategory();
-            if (cid != null) {
-                Map<String, Integer> counts = colonyActiveCounts.get(cid);
-                if (counts != null) {
-                    counts.merge(state.getBuildingTypeId(), -1, Integer::sum);
-                }
-                // Apply category-specific graded shutdown penalties
-                applyShutdownPenalties(sd, state, cid, category);
-                NeoForge.EVENT_BUS.post(new BuildingShutdownEvent(buildingId, cid, reason));
-
-                // ── 关停：屋顶灰烟 ──
-                if (serverLevel instanceof ServerLevel srv) {
-                    ParticleService.burstAt(srv, ParticleTypes.LARGE_SMOKE,
-                            ParticleService.boundsCenterAbove(state.getBounds(), 0), 20, 1.2, 0.05);
-                }
-            }
-
-            sd.setDirty();
-        }
-        return true;
-    }
-
-    @Override
-    public boolean restart(UUID buildingId) {
-        BuildingSavedData sd = getSavedData();
-        if (sd == null) return false;
-
-        BuildingState state = sd.getBuilding(buildingId);
-        if (state == null) return false;
-
-        if (state.isShutdown()) {
-            state.setShutdown(false);
-            state.setShutdownReason("");
-            UUID cid = state.getColonyId();
-            if (cid != null) {
-                colonyActiveCounts
-                        .computeIfAbsent(cid, k -> new ConcurrentHashMap<>())
-                        .merge(state.getBuildingTypeId(), 1, Integer::sum);
-                // Restore contributions that were zeroed on shutdown
-                if (state.isStructureIntact()) {
-                    sd.addBuildingContribution(cid, state.getBuildingTypeId());
-                }
-                NeoForge.EVENT_BUS.post(new BuildingRestartedEvent(buildingId, cid));
-
-                // ── 重启：上升星光 ──
-                if (serverLevel instanceof ServerLevel srv) {
-                    ParticleService.burstAt(srv, ParticleTypes.END_ROD,
-                            ParticleService.boundsCenterAbove(state.getBounds(), 0), 15, 1.0, 0.08);
-                }
-            }
-            sd.setDirty();
-        }
-        return true;
-    }
-
-    /**
-     * Apply category-specific penalties when a building is shut down.
-     * Categories that lose their three-value contribution: shop, basic, storage, tavern.
-     * Other categories: effects are handled by their respective systems (C2-C4).
-     */
-    private void applyShutdownPenalties(BuildingSavedData sd, BuildingState state,
-                                        UUID colonyId, String category) {
-        switch (category) {
-            case "shop", "basic", "government", "storage", "tavern", "relax", "atm":
-                sd.removeBuildingContribution(colonyId, state.getBuildingTypeId());
-                Log.info(TAG, "[Shutdown] {} '{}': contribution zeroed",
-                        category, state.getBuildingId().toString().substring(0, 8));
-                break;
-            case "decoration":
-                // Radiation zeroed — DecorationBonusSystem checks isShutdown()
-                break;
-            case "wonder":
-                // Global effects paused — WonderEffectApplier checks isShutdown()
-                break;
-            case "service":
-                // Still usable but output halved — production module checks
-                break;
-            case "workstation", "node":
-                // Work time +100%, output -50% — production/scheduler checks
-                break;
-            default:
-                // Safe default: zero contribution for unknown categories
-                sd.removeBuildingContribution(colonyId, state.getBuildingTypeId());
-                Log.warn(TAG, "[Shutdown] Unknown category '{}': contribution zeroed",
-                        category);
-                break;
-        }
     }
 
     // ---- Colony stats (three-value system) ----
@@ -320,6 +204,48 @@ public class BuildingApiImpl implements BuildingApi {
 
     private static final int DEMOLISH_PRIORITY = 49;
 
+    /**
+     * 是否应阻止拆除：目标建筑所属类别在受保护类别内，且它是该类唯一未被拆除中的一座。
+     * 纯函数，输入为全部注册建筑的最小投影，便于脱离 MC 运行时单元测试。
+     *
+     * @param buildings          当前全部注册建筑（含目标）的类别/拆除中投影
+     * @param protectedCategories 受保护类别集合
+     * @param targetCategory     被拆除建筑所属类别
+     */
+    static boolean isLastProtected(List<CategoryPresence> buildings,
+                                   Set<String> protectedCategories,
+                                   String targetCategory) {
+        if (!protectedCategories.contains(targetCategory)) return false;
+        int remaining = 0;
+        for (CategoryPresence b : buildings) {
+            if (targetCategory.equals(b.category()) && !b.demolishing()) remaining++;
+        }
+        return remaining <= 1;
+    }
+
+    /** 目标建筑是否是其受保护类别的最后一座（拆除/撤销入口的防御性双保险）。 */
+    private boolean isProtectedLast(BuildingState state) {
+        if (!WandscapeConstants.PROTECTED_LAST_CATEGORIES.contains(state.getCategory())) return false;
+        BuildingSavedData sd = getSavedData();
+        if (sd == null) return false;
+        List<CategoryPresence> projection = new ArrayList<>();
+        for (BuildingState b : sd.getAllBuildings()) {
+            projection.add(new CategoryPresence(b.getCategory(), b.isDemolishing()));
+        }
+        return isLastProtected(projection, WandscapeConstants.PROTECTED_LAST_CATEGORIES,
+                state.getCategory());
+    }
+
+    @Override
+    @Nullable
+    public Component demolishBlockReason(UUID buildingId) {
+        BuildingSavedData sd = getSavedData();
+        if (sd == null) return null;
+        BuildingState state = sd.getBuilding(buildingId);
+        if (state == null || state.isDemolishing() || !isProtectedLast(state)) return null;
+        return Component.literal("这是最后一座同类建筑，必须保留至少一座以维持殖民地运转");
+    }
+
     @Override
     public void demolishBuilding(UUID buildingId) {
         BuildingSavedData sd = getSavedData();
@@ -332,13 +258,19 @@ public class BuildingApiImpl implements BuildingApi {
             return;
         }
 
+        if (isProtectedLast(state)) {
+            Log.warn(TAG, "[Demolish] BLOCKED {} ({}) at {} — last {} building, demolition refused",
+                    state.getBuildingTypeId(), buildingId, state.getAnchor(), state.getCategory());
+            return;
+        }
+
         // Immediately stop any in-progress construction/production task so an NPC
         // doesn't keep working on a structure that's being torn down (undo/destroy).
         BuildingTaskSource.cancelBuildingTasks(buildingId);
 
         // Mark building for demolition and clear any pending work. Also flip
-        // structureIntact so tourist filters (which only check intact/shutdown)
-        // drop the building immediately, before the NPC dispatch poll picks it up.
+        // structureIntact so tourist filters (which check intact) drop the
+        // building immediately, before the NPC dispatch poll picks it up.
         state.setDemolishing(true);
         state.setStructureIntact(false);
         state.getTaskQueue().clear();
@@ -392,6 +324,12 @@ public class BuildingApiImpl implements BuildingApi {
 
         BuildingState state = sd.getBuilding(buildingId);
         if (state == null) return false;
+
+        if (isProtectedLast(state)) {
+            Log.warn(TAG, "[Cancel] BLOCKED {} ({}) — last {} building, undo refused",
+                    state.getBuildingTypeId(), buildingId, state.getCategory());
+            return false;
+        }
 
         // Only buildings that have not yet completed construction can be undone.
         // Completed buildings are removed through the normal demolition path instead.
@@ -512,13 +450,12 @@ public class BuildingApiImpl implements BuildingApi {
 
     /**
      * Whether a building has work it can claim: its own queue (construction / repair)
-     * OR, for a built shared building, its group queue. Shutdown shared buildings only
-     * claim repair work (mirrors {@link BuildingState#hasWork()}).
+     * OR, for a built shared building, its group queue.
      */
     private boolean hasClaimableWork(BuildingSavedData sd, BuildingState state) {
         if (state.hasWork()) return true;
         UUID cid = state.getColonyId();
-        if (cid == null || !state.hasEverCompleted() || state.isShutdown()) return false;
+        if (cid == null || !state.hasEverCompleted()) return false;
         String groupKey = BuildingSavedData.groupKeyFor(state);
         return groupKey != null && sd.hasSharedWork(cid, groupKey);
     }
@@ -536,19 +473,13 @@ public class BuildingApiImpl implements BuildingApi {
         // pulls the front unclaimed task from its group queue. The anchor is rebound to
         // this building so the channel progress is tracked per-station and tasks at
         // different stations never collide on one anchor.
-        if (state.hasEverCompleted() && !state.isShutdown()) {
+        if (state.hasEverCompleted()) {
             Deque<WorkItem> shared = sharedQueueFor(sd, state);
             if (shared != null && !shared.isEmpty()) {
                 WorkItem item = shared.pollFirst();
                 sd.setDirty();
                 return rebindAnchor(item, state.getAnchor());
             }
-        }
-
-        // Shutdown buildings: only allow repair tasks
-        if (state.isShutdown()) {
-            WorkItem first = state.getTaskQueue().peekFirst();
-            if (first == null || !"build:place_structure".equals(first.blueprintId())) return null;
         }
 
         WorkItem item = state.getTaskQueue().pollFirst();
@@ -585,7 +516,7 @@ public class BuildingApiImpl implements BuildingApi {
         // task its owner accepts (e.g. the first element-affordable craft), leaving
         // rejected ones (element-short crafts) in place for later. Mirrors
         // dequeueWork's shared-queue routing.
-        if (state.hasEverCompleted() && !state.isShutdown()) {
+        if (state.hasEverCompleted()) {
             Deque<WorkItem> shared = sharedQueueFor(sd, state);
             if (shared != null && !shared.isEmpty()) {
                 WorkItem item = pollFirstEligible(shared, eligible);
@@ -594,18 +525,6 @@ public class BuildingApiImpl implements BuildingApi {
                     return rebindAnchor(item, state.getAnchor());
                 }
             }
-        }
-
-        // Shutdown buildings: only the front repair task can be claimed.
-        if (state.isShutdown()) {
-            WorkItem first = state.getTaskQueue().peekFirst();
-            if (first == null || !"build:place_structure".equals(first.blueprintId())) return null;
-            if (eligible.test(first)) {
-                state.getTaskQueue().pollFirst();
-                sd.setDirty();
-                return first;
-            }
-            return null;
         }
 
         WorkItem item = pollFirstEligible(state.getTaskQueue(), eligible);
@@ -643,7 +562,7 @@ public class BuildingApiImpl implements BuildingApi {
         if (sd == null) return;
 
         BuildingState state = sd.getBuilding(buildingId);
-        if (state == null || state.isShutdown() || state.isDemolishing()) return;
+        if (state == null || state.isDemolishing()) return;
 
         // Production/gather tasks on shared buildings (workstation family / nodes) go into
         // the group queue so any idle member can claim them; construction/repair stays on
@@ -876,10 +795,6 @@ public class BuildingApiImpl implements BuildingApi {
             Log.warn(TAG, "removeFromQueue: building {} not found", buildingId);
             return false;
         }
-        if (state.isShutdown()) {
-            Log.warn(TAG, "removeFromQueue: building {} is shutdown", buildingId);
-            return false;
-        }
 
         Deque<WorkItem> queue = sharedQueueFor(sd, state);
         if (queue == null) queue = state.getTaskQueue();
@@ -909,10 +824,6 @@ public class BuildingApiImpl implements BuildingApi {
         BuildingState state = sd.getBuilding(buildingId);
         if (state == null) {
             Log.warn(TAG, "moveUp: building {} not found", buildingId);
-            return false;
-        }
-        if (state.isShutdown()) {
-            Log.warn(TAG, "moveUp: building {} is shutdown", buildingId);
             return false;
         }
 
@@ -946,10 +857,6 @@ public class BuildingApiImpl implements BuildingApi {
         BuildingState state = sd.getBuilding(buildingId);
         if (state == null) {
             Log.warn(TAG, "moveDown: building {} not found", buildingId);
-            return false;
-        }
-        if (state.isShutdown()) {
-            Log.warn(TAG, "moveDown: building {} is shutdown", buildingId);
             return false;
         }
 
