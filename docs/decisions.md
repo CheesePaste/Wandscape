@@ -2,6 +2,23 @@
 
 本文件记录偏离直觉的设计选择及其原因，供后续开发快速理解「为什么这么做」。
 
+## 2026-08-28：移除建镇初始塞包（computeStarterInventory）——彻底消除幽灵库存与扣料短路
+
+**需求**（用户指令 / Bug 修复）：建造非首免建筑（如 `arrow_store`）合成缺料后，建筑造完仓库中仍固定残留多余方块（木桶 1、营火 14、灯笼 1、云杉木活板门 24），排查是否与法师自身背包机制有关并修复。
+
+**根因**：
+1. 殖民地创建（`ColonyCommand.createColonyAt`）曾调用 `computeStarterInventory` 给初始建造法师 ECS 背包塞入市政厅全套建材（每种至少 64 个），含木桶/营火/灯笼/活板门。
+2. 市政厅是首免建筑（`first_free: true`），建造时不扣材料，导致这 64 个方块全部永久残留在法师背包里。
+3. 建造非首免建筑（`arrow_store`，需 1 桶、14 火、1 灯、24 门）缺料时，`ResourceSupplySystem` 扫描仓库缺口，工作站准确合成 1 桶/14 火/1 灯/24 门入库。
+4. 任务恢复时，持有该背包的法师执行 `ResourceRequestExecutor`，检测到自身背包已有 64 个，判定 `shortfall <= 0` 自备充足，**完全短路了向仓库的索取与扣款（commit）**；而方块放置（`AsyncTransformExecutor`）不扣背包。最终导致仓库新合成的 1 桶/14 火/1 灯/24 门未被扣减，全部残留。
+
+**决策**：
+- **彻底移除 `computeStarterInventory`**：建镇时法师背包保持干净，不再注入任何虚假方块建材（仅手持木工法杖、身穿初始铁套）。
+- **清理无用辅助逻辑**：清理 `fixEcsAfterSpawn` 中的塞包循环，移除 `computeUniqueBlockTypes`，更新建镇成功提示。
+- **与既有机制正交**：市政厅首免由 `first_free: true` 保证零材料消耗，仓库初始注资由 `seedInitialElementsIfNeeded` 保证 7 元素各 2000 点，建材流转完全由「元素 → 工作站合成 → 仓库统一扣除」闭环驱动。
+
+**影响**：`ColonyCommand`（移除 `computeStarterInventory` / `computeUniqueBlockTypes` / 背包填充）。
+
 ## 2026-08-28：建筑信息顶栏限定俯瞰(OVERVIEW)模式
 
 **需求**（用户指令）：建造/道路/统计/任务等操作型子模式下，准心对准建筑**不弹**建筑信息顶栏（建筑名 + 舒适/魔法/奇迹三值 + 修复/拆除按钮），只在俯瞰(OVERVIEW)模式显示——避免玩家把施工/经营子模式当成巡检上下文、误触建筑操作按钮或界面出现空白。
