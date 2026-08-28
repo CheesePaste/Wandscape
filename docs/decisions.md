@@ -1726,3 +1726,26 @@
 **影响**：
 - `engine/boundary/WandscapeBlockOps.java`：修改 `setBlock`、`setBlockEntityData` 与 `setPropertyValue`。
 
+## 2026-08-28：修复检测与方块状态序列化使用 Property.getName 解决枚举大小写失配
+
+**需求**：
+建筑方块（如箱子）已正确放置在世界中，但 V 面板上的「修复」按钮依然常亮。
+
+**根因分析**：
+1. **`Enum.toString()` 返回大写枚举名**：
+   在 `BuildCompleteListener.getPropertyValue` 中，原实现调用了 `value.toString()`。对于 `ChestType`（`SINGLE`, `LEFT`, `RIGHT`）等实现 `StringRepresentable` 但未重写 `toString()` 的原版枚举，`value.toString()` 返回大写名称（如 `"LEFT"`）。
+2. **比较失配**：
+   从蓝图 JSON 解析出的期望属性值为小写（如 `type="left"`），`"left".equals("LEFT")` 恒为 `false`，导致完好无损的箱子被永久判定为「方块损坏/缺失」，从而导致 `findDamagedBlocks` 永远非空、修复按钮永远常亮。
+3. **建筑旋转字符串重序列化问题**：
+   `BuildingRotation.blockStateToString` 同样使用了 `entry.getValue().toString()`，导致旋转后的方块状态字符串包含大写属性名（如 `type=LEFT`），反序列化时被 `EnumProperty` 拒识。
+
+**决策**：
+1. **采用 Minecraft 原生规范 `Property.getName(value)`**：
+   在 `BuildCompleteListener.getPropertyValue` 中，改用 `prop.getName(value)`，遵循 Minecraft 官方的属性值小写规范（获取 `StringRepresentable.getSerializedName()`），使 `ChestType.LEFT` 准确返回 `"left"`，与蓝图数据精确匹配。
+2. **建筑旋转属性序列化同步修复**：
+   在 `BuildingRotation.blockStateToString` 中，改用 `prop.getName(val)` 序列化每个属性值，避免产生大写脏数据。
+
+**影响**：
+- `building/internal/BuildCompleteListener.java`：修复 `getPropertyValue`。
+- `projection/BuildingRotation.java`：修复 `blockStateToString`。
+

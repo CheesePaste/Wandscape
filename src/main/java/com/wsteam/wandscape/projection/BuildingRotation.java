@@ -260,6 +260,7 @@ public final class BuildingRotation {
     }
 
     /** Serialize a BlockState back to a string like "minecraft:oak_log[axis=x]". */
+    @SuppressWarnings({ "unchecked", "rawtypes" })
     private static String blockStateToString(BlockState state) {
         ResourceLocation id = BuiltInRegistries.BLOCK.getKey(state.getBlock());
         var values = state.getValues();
@@ -270,8 +271,10 @@ public final class BuildingRotation {
         boolean first = true;
         for (var entry : values.entrySet()) {
             if (!first) sb.append(',');
-            sb.append(entry.getKey().getName()).append('=');
-            sb.append(entry.getValue()); // Direction/Axis/Boolean/Integer all toString correctly
+            Property prop = entry.getKey();
+            Comparable val = entry.getValue();
+            sb.append(prop.getName()).append('=');
+            sb.append(prop.getName(val));
             first = false;
         }
         sb.append(']');
