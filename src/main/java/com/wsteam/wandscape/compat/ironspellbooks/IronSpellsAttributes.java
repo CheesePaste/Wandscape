@@ -2,12 +2,12 @@ package com.wsteam.wandscape.compat.ironspellbooks;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
+import com.google.common.collect.Multimap;
 import com.wsteam.wandscape.core.types.AttributeModifier;
 import com.wsteam.wandscape.core.types.AttributeType;
 import com.wsteam.wandscape.core.types.ModifierOperation;
-
-import io.redspace.ironsspellbooks.api.registry.AttributeRegistry;
 
 import net.minecraft.core.Holder;
 import net.minecraft.world.entity.ai.attributes.Attribute;
@@ -69,18 +69,47 @@ public final class IronSpellsAttributes {
         return out;
     }
 
+    /**
+     * 把 Curios API 收集到的饰品属性修饰符映射为 Wandscape 属性修饰符。
+     * 铁魔法饰品（{@code CurioBaseItem}，如 +100 法力戒指）不走原版 {@link ItemAttributeModifiers}，
+     * 属性在 Curios API 的 {@code ICurioItem.getAttributeModifiers(SlotContext, id, stack)} 中声明；
+     * Curios 应用属性时要求目标属性注册在穿戴者 AttributeMap（否则静默跳过），而 NPC 属性表没有
+     * {@code irons_spellbooks:*} 属性——故由 {@code CuriosCompat#syncIronCurioAttributes} 在此桥进
+     * Wandscape 自有属性。未加载铁魔法 / 空表 / 无映射属性时返回空列表。
+     */
+    public static List<AttributeModifier> modifiersForCurio(
+            Multimap<Holder<Attribute>, net.minecraft.world.entity.ai.attributes.AttributeModifier> map) {
+        if (!IronSpellsCompat.isLoaded() || map == null || map.isEmpty()) return List.of();
+        List<AttributeModifier> out = new ArrayList<>(2);
+        for (Map.Entry<Holder<Attribute>, net.minecraft.world.entity.ai.attributes.AttributeModifier> entry : map.entries()) {
+            AttributeType type = mapType(entry.getKey());
+            if (type == null) continue;
+            ModifierOperation op = mapOperation(entry.getValue().operation());
+            if (op == null) continue;
+            out.add(new AttributeModifier(type, (float) entry.getValue().amount(), op));
+        }
+        return out;
+    }
+
     /** Iron's 属性 → Wandscape 属性；无对应返回 null（跳过）。 */
     private static AttributeType mapType(Holder<Attribute> attribute) {
-        if (attribute.is(AttributeRegistry.MAX_MANA)) return AttributeType.MAX_MANA;
-        if (attribute.is(AttributeRegistry.SPELL_POWER)) return AttributeType.SPELL_POWER;
-        if (attribute.is(AttributeRegistry.COOLDOWN_REDUCTION)) return AttributeType.SPELL_SPEED;
-        if (attribute.is(AttributeRegistry.CAST_TIME_REDUCTION)) return AttributeType.SPELL_SPEED;
-        if (attribute.is(AttributeRegistry.MANA_REGEN)) return AttributeType.MANA_REGEN;
-        return null;
+        return mapType(attribute.getRegisteredName());
+    }
+
+    /** 按属性注册名映射（纯字符串决策表，方便单测）。未注册 / 不相关属性返回 null。 */
+    static AttributeType mapType(String registeredName) {
+        return switch (registeredName) {
+            case "irons_spellbooks:max_mana" -> AttributeType.MAX_MANA;
+            case "irons_spellbooks:spell_power" -> AttributeType.SPELL_POWER;
+            case "irons_spellbooks:cooldown_reduction" -> AttributeType.SPELL_SPEED;
+            case "irons_spellbooks:cast_time_reduction" -> AttributeType.SPELL_SPEED;
+            case "irons_spellbooks:mana_regen" -> AttributeType.MANA_REGEN;
+            default -> null;
+        };
     }
 
     /** MC 修饰符操作 → Wandscape 操作；不支持的（ADD_MULTIPLIED_TOTAL）返回 null（跳过）。 */
-    private static ModifierOperation mapOperation(
+    static ModifierOperation mapOperation(
             net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation op) {
         return switch (op) {
             case ADD_VALUE -> ModifierOperation.ADDITION;

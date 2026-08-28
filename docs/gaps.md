@@ -99,3 +99,11 @@
 
 1. **【已修复】撤回未完成建筑的双计刷物品**——`cancelBuilding` 原为「蓝图全量退款 + 拆除 salvage 返已放实物」，净赚已放部分。已改为只退未放置部分（详见 `docs/decisions.md` 2026-08-25 条目）。
 2. **【已修复】salvage 入库依赖物流动画完成**——`AsyncTransformExecutor.performSalvage` 原把 `bank.add` 写在 `transporter.send(...).thenRun(...)` 里，入库在飞行结束后才发生，动画若不完成则「飞了但没入账」。已改为破坏/拆除路径**直接 `bank.add` 入库**（去掉逐块飞行动画，兼防批量 demolish 时客户端上百 flying entity + 粒子洪泛）；飞行动画仅存于采集/合成入库、仓库→NPC 取料等单发路径。
+
+## 十、法师 Curios 饰品兼容的效果边界（2026-08-28）
+
+法师像玩家一样真实穿戴 Curios（槽位运行时镜像 + 真实 `ICuriosItemHandler`），三类饰品效果各有效力边界：
+
+1. **属性类**——**已桥接，本次修复**。铁魔法饰品（如 +100 法力戒指）不走原版 `ItemAttributeModifiers`，属性在 Curios API 的 `ICurioItem.getAttributeModifiers` 中声明；Curios 应用属性要求目标属性注册在穿戴者 AttributeMap，而 NPC 属性表没有 `irons_spellbooks:*`——原被静默丢弃。现由 `CuriosCompat.syncIronCurioAttributes()`（`CurioChangeEvent` 触发，全量重建）将 MAX_MANA/SPELL_POWER/SPELL_SPEED/MANA_REGEN 桥进 `wandscape:*` 属性，与护甲桥 `WandscapeNpc.syncIronArmorAttributes` 对称。vanilla 属性（max_health）Curios 直接应用，无需桥。
+2. **纯每 tick 行为类**（`curioTick`/`onEquip`，无 Player 守卫，如铁魔法 `FrostwardRing` 解冰冻）——**直接生效**：Curios 经 `EntityTickEvent.Post` 对所有 LivingEntity 跑 `curioTick`。
+3. **Player 作用域类**（物品实现里 `instanceof ServerPlayer/Player` 守卫，或模组自己监听事件只扫玩家库存，如磁吸/苦力怕逃避类饰品）——**无效且无法通用修复**：NPC 不是 `ServerPlayer`，镜像/桥接都救不了，只能逐个模组做事件级适配（在其监听里额外判定 NPC 是否佩戴该物品）。
