@@ -2,7 +2,6 @@ package com.wsteam.wandscape.wand.item;
 
 import java.util.List;
 
-import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.shared.api.WandApi;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 
@@ -28,19 +27,15 @@ public class WandItem extends Item {
         return false;
     }
 
+    /**
+     * 法杖属性只对 NPC 生效，玩家手持不生效：不再用 vanilla {@link ItemAttributeModifiers}
+     * 自动结算（谁拿主手谁享属性），而是返回空。NPC 主手装备法杖时，加成由
+     * {@code WandscapeNpc#syncWandAttributes} 手动桥接；玩家持法杖则无任何属性
+     * （顺带避免 bastion 法杖的负移速让玩家无法行走）。
+     */
     @Override
     public ItemAttributeModifiers getDefaultAttributeModifiers(ItemStack stack) {
-        WandApi api = WandscapeApis.getWandApiSilently();
-        if (api != null) {
-            String presetId = api.getWandPresetId(stack);
-            if (presetId != null && Wandscape.WAND_PRESET_LOADER != null) {
-                var preset = Wandscape.WAND_PRESET_LOADER.getPreset(presetId);
-                if (preset != null && preset.itemAttributeModifiers() != null) {
-                    return preset.itemAttributeModifiers();
-                }
-            }
-        }
-        return super.getDefaultAttributeModifiers(stack);
+        return ItemAttributeModifiers.EMPTY;
     }
 
     @Override

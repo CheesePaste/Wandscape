@@ -415,10 +415,19 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
     @Override
     public void setItemSlot(net.minecraft.world.entity.EquipmentSlot slot, ItemStack stack) {
         super.setItemSlot(slot, stack);
-        if (!level().isClientSide && slot.getType() == net.minecraft.world.entity.EquipmentSlot.Type.HUMANOID_ARMOR) {
+        if (level().isClientSide) return;
+        if (slot.getType() == net.minecraft.world.entity.EquipmentSlot.Type.HUMANOID_ARMOR) {
             syncIronArmorAttributes();
         }
+        if (slot == net.minecraft.world.entity.EquipmentSlot.MAINHAND) {
+            syncWandAttributes();
+        }
     }
+
+    /**
+     * 法杖属性自动桥接：主手变化即刷新（{@link #setItemSlot} 主手分支），不复用
+     * {@link #syncIronArmorAttributes}（那是 iron 盔甲专用、被 join/装备事件多处调用）。
+     */
 
     /**
      * 把 4 个 vanilla 盔甲格中铁魔法装备的 MAX_MANA/SPELL_SPEED/MANA_REGEN 加成桥进
@@ -468,6 +477,49 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
             }
         }
     }
+
+    /**
+     * 把主手自定义法杖（{@code WandItem} preset，如 疾风/堡垒）的属性加成桥进实体属性表
+     * （transient 修饰符）。玩家手持法杖不生效——法杖只在 NPC 装备时起作用。空槽、默认
+     * 法杖或非 wand 物品自动移除旧修饰符；换法杖时先撤旧再桥新，避免残留。
+     */
+    public void syncWandAttributes() {
+        if (level().isClientSide) return;
+        for (WandMod wm : activeWandMods) {
+            var inst = getAttribute(wm.attr());
+            if (inst != null) inst.removeModifier(wm.id());
+        }
+        activeWandMods.clear();
+
+        ItemStack stack = getItemInHand(InteractionHand.MAIN_HAND);
+        if (stack.isEmpty()) return;
+        com.wsteam.wandscape.shared.api.WandApi api = WandscapeApis.getWandApiSilently();
+        if (api == null) return;
+        String presetId = api.getWandPresetId(stack);
+        if (presetId == null) return;
+        List<com.wsteam.wandscape.core.types.AttributeModifier> mods = api.getWandModifiers(presetId);
+        if (mods == null) return;
+        for (com.wsteam.wandscape.core.types.AttributeModifier mod : mods) {
+            var vanillaAttr = WandscapeAttributes.toVanilla(mod.type());
+            if (vanillaAttr == null) continue;
+            var inst = getAttribute(vanillaAttr);
+            if (inst == null) continue;
+            ResourceLocation id = ResourceLocation.fromNamespaceAndPath(
+                    Wandscape.MODID, "wand_" + presetId + "_" + mod.type().name().toLowerCase(Locale.ROOT));
+            inst.removeModifier(id);
+            net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation op =
+                    (mod.operation() == com.wsteam.wandscape.core.types.ModifierOperation.MULTIPLY_BASE)
+                            ? net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_MULTIPLIED_BASE
+                            : net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_VALUE;
+            inst.addTransientModifier(new net.minecraft.world.entity.ai.attributes.AttributeModifier(id, mod.amount(), op));
+            activeWandMods.add(new WandMod(vanillaAttr, id));
+        }
+    }
+
+    /** 当前已桥接的法杖修饰符（属性 + 唯一 id），换法杖/卸下时据此撤销。 */
+    private record WandMod(Holder<Attribute> attr, ResourceLocation id) {}
+
+    private final List<WandMod> activeWandMods = new ArrayList<>();
 
     /**
      * 受击扣 4 个盔甲格耐久。盔甲存于 vanilla 装备槽，但原版 {@code LivingEntity.hurtArmor}
