@@ -1,0 +1,14 @@
+{
+  "type": "misc",
+  "craft_station": "crafting_station",
+  "id": "oath_ring_mid",
+  "display_name": "中级盟誓戒指",
+  "output": { "item": "wandscape:oath_ring_mid" },
+  "cost": {
+    "earth": 8000,
+    "water": 8000
+  },
+  "unlock_requirement": {
+    "min_colony_level": 10
+  }
+}

@@ -26,6 +26,10 @@
 - **Overview**：ElementPanel（7 元素存量）+ 可搜索物品列表。
 - **Exchange**：点击提货（`WarehouseActionPacket("withdraw")`）、点背包格存入（`"deposit_from_slot"`）。
 
+## 仓库终端（WarehouseTerminalItem）
+
+玩家侧物品「仓库终端」（smallitems 第 9 项）：右键打开**玩家自己殖民地**的仓库面板。合成站 20 级配方产出。便携式——`buildingPos` 暂取玩家当前坐标（菜单 64 格内有效），存/取/兑换全部按菜单内 `colonyId` 走，与具体建筑无关。**未做：Curios 手饰槽 + 穿戴快捷键**（用户拍板延后，见 gaps）。
+
 ## 网络
 
 - `WarehouseActionPacket`（C→S）：服务端校验建筑类别 = storage；withdraw 用 api.extractItem；deposit 用**服务端手部物品**（防客户端伪造）；deposit_from_slot 限制 slot 0-35；操作后回发 WarehouseDataPacket 刷新。

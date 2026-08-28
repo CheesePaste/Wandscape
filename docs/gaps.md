@@ -22,7 +22,7 @@
 - **建筑间道路自动生成（MST）已删除（2026-08）**：废弃功能整体移除——`RoadEventListener`/`RoadPlanner`(MST)/`RoadBuilder`/`RoadTaskSource`/`RoadConfig` 及其 `road_templates`/`road_tiers.json`/`road_rules` 数据全部删除。保留手动铺路（`SplineBuildPacket`/`RoadPlacePacket` 等，经 `PlayerManualSource`）与段完成记账 `RoadSegmentListener`。相关架构文档已同步。
 - **`wonder_config`**：`BuildingConfig` 有该字段（`WonderConfig` → `WonderEffect` StatMod/PriceMod/RuleUnlock），但 `buildings/*.json` **无任何文件定义它**。`WonderEffectApplier` 的查询接口在，但当前没有 wonder 类建筑数据。
 - **`potion_station` → `magic_station`（2026-08 P 阶段 C 改造）**：类别更名 `magic_station`（存档 category 于加载时按 BuildingConfig 迁移）并落地魔法合成 GUI（`MagicStationScreen` + `craft_spell` 产物流，卷轴入殖民地仓库）。旧 2 个药水配方（mana/stamina）**已于 2026-08-26 删除**（输出物品从未注册、产出入仓为无图标数据条目、无实际用途）；`BrewPotionRecipe` 类型 / `brew_potion` 蓝图 / 合成站药水路由仍保留（数据驱动，配方为空时优雅降级）。
-- **制作站配方统一半途（2026-08-28）**：craft_wand/brew_potion/scepter 已并成一个 `production:craft` + `CraftRecipeView`（消费端 switch 收敛）；但配方仍按 wand/potion/scepter 分 4 份 record 与 registry，`CraftRecipeView.resolve` 与 `ProductionRecipeLoader` 仍有类型分支。下一步深度统一为单一 `CraftRecipe` 通用配方（见 `docs/plan/recipe-unify.md`），使「加制作站可合成物 = 配方 JSON + 物品注册 + lang 键」零管线改动。
+- **制作站配方统一半途（2026-08-28）**：craft_wand/brew_potion/misc 已并成一个 `production:craft` + `CraftRecipeView`（消费端 switch 收敛）；但配方仍按 wand/potion/spell/misc 分 4 份 record 与 registry，`CraftRecipeView.resolve` 与 `ProductionRecipeLoader` 仍有类型分支。下一步深度统一为单一 `CraftRecipe` 通用配方（见 `docs/plan/recipe-unify.md`），使「加制作站可合成物 = 配方 JSON + 物品注册 + lang 键」零管线改动。
 - **`HouseApi` / `NpcApi.assignHouse`**：恒返回 false（住宅分配 Stage 4 未实现）。
 - **施法决策已集中（P1-P3 落地）**：守卫/自防御经 `CastBrain` 选魔法，CD/蓝/射程/视觉数据驱动；条件决策（`SpellConditions`/`WorldSnapshot`）与玩家策略（`SpellbookComponent`/`CastStrategyComponent`/`NpcStrategyScreen`，经 `SpellcastingApi`）已落地，已知列表来自 NPC spellbook + 玩家策略；自动施法永不选 `altarOnly` 魔法（祭坛专属）。**战斗魔法已多面化**：默认法术书 `[beam, heal, meteor, petrification]` 已按 id 在 `MagicSpellExecutors` switch 分发（单体/AOE/治疗/防御）；`MagicOp` 效果分发仍延后（switch 够用，建单实现 sealed 层级是死代码）。完整方案见 [spell-casting.md](spell-casting.md)。
   > **B 阶段（2026-08）已更新**：`SpellbookComponent` 移除，改 `EquippedMagicComponent`（按分类 4 桶 × 每桶 ≤3，默认 beam+heal，`NBT`=`spellbookEquip`，旧 `spellbookIds` 不再读取）。策略页改装备制。见 [plan-magic-items.md](plan-magic-items.md)。
@@ -108,3 +108,12 @@
 1. **属性类**——**已桥接，本次修复**。铁魔法饰品（如 +100 法力戒指）不走原版 `ItemAttributeModifiers`，属性在 Curios API 的 `ICurioItem.getAttributeModifiers` 中声明；Curios 应用属性要求目标属性注册在穿戴者 AttributeMap，而 NPC 属性表没有 `irons_spellbooks:*`——原被静默丢弃。现由 `CuriosCompat.syncIronCurioAttributes()`（`CurioChangeEvent` 触发，全量重建）将 MAX_MANA/SPELL_POWER/SPELL_SPEED/MANA_REGEN 桥进 `wandscape:*` 属性，与护甲桥 `WandscapeNpc.syncIronArmorAttributes` 对称。vanilla 属性（max_health）Curios 直接应用，无需桥。
 2. **纯每 tick 行为类**（`curioTick`/`onEquip`，无 Player 守卫，如铁魔法 `FrostwardRing` 解冰冻）——**直接生效**：Curios 经 `EntityTickEvent.Post` 对所有 LivingEntity 跑 `curioTick`。
 3. **Player 作用域类**（物品实现里 `instanceof ServerPlayer/Player` 守卫，或模组自己监听事件只扫玩家库存，如磁吸/苦力怕逃避类饰品）——**无效且无法通用修复**：NPC 不是 `ServerPlayer`，镜像/桥接都救不了，只能逐个模组做事件级适配（在其监听里额外判定 NPC 是否佩戴该物品）。
+
+## 十一、魔法指南针 / 仓库终端（2026-08-28）
+
+`compass/` 模块已实现 smallitems 6/7/8；`warehouse/WarehouseTerminalItem` 实现第 9 项。已知短板：
+
+1. **Curios 护符槽位（指南针）未接入**——用户拍板本期只做物品功能 + 合成站配方，`可放入Curios 护符` 为待办。若要接入：参照 `compat/curios/CuriosCompat`（已给法师饰品槽做镜像），给三个指南针注册「护符」槽位并桥接 item 使用/指针行为。
+2. **指南针贴图占位**——复用 vanilla 指南针 32 帧指针，仅圆盘按档位染色（蓝/金/紫），由 `tools/generate_compass_textures.py` 生成（生成的 195 个纹理/模型文件已提交）。替换正式贴图：运行脚本改色 或 用自制帧模型替换 `assets/wandscape/models/item/compass_frame/<tier>/*.json` 的 layer0 纹理引用即可。
+3. **仓库终端 Curios 手饰槽 + 穿戴快捷键未接入**——本期用户拍板只做右键开面板 + 配方；`可放入Curios 手饰` 与「穿戴时按键开面板」为待办（后者依赖穿戴检测，需 Curios）。贴图占位（自制 16×16 终端图标）。
+4. **仓库终端 buildingPos 语义**——为便携将其 `buildingPos` 暂取玩家当前坐标（菜单 64 格内有效）；若后期要求真正"远程任意位置可开"，需放开 `WarehouseMenu.stillValid` 的距离约束或让 `WarehouseDataPacket` 容忍 null pos。

@@ -141,6 +141,11 @@ import com.wsteam.wandscape.wand.internal.WandPresetLoader.WandPreset;
 import com.wsteam.wandscape.wand.item.WandItem;
 import com.wsteam.wandscape.guidebook.item.GuideBookItem;
 import com.wsteam.wandscape.guidebook.network.GuideBookOpenPacket;
+import com.wsteam.wandscape.compass.MagicCompassItem;
+import com.wsteam.wandscape.compass.CompassTier;
+import com.wsteam.wandscape.compass.CompassSyncHandler;
+import com.wsteam.wandscape.compass.network.CompassTargetPacket;
+import com.wsteam.wandscape.warehouse.WarehouseTerminalItem;
 import com.wsteam.wandscape.engine.transport.TransportItemEntity;
 import com.wsteam.wandscape.engine.transport.TransportStartPacket;
 
@@ -392,6 +397,22 @@ public class Wandscape {
     public static final com.wsteam.wandscape.scepter.internal.ScepterApiImpl SCEPTER_API =
             new com.wsteam.wandscape.scepter.internal.ScepterApiImpl();
 
+    // ---- compass: 魔法指南针（三档，指针指向玩家自己殖民地的市政厅，合成站 1/10/20 级配方产出）----
+    public static final DeferredItem<Item> MAGIC_COMPASS =
+            ITEMS.register("magic_compass", () ->
+                    new MagicCompassItem(new Item.Properties().stacksTo(1), CompassTier.BASIC));
+    public static final DeferredItem<Item> ADVANCED_MAGIC_COMPASS =
+            ITEMS.register("advanced_magic_compass", () ->
+                    new MagicCompassItem(new Item.Properties().stacksTo(1), CompassTier.ADVANCED));
+    public static final DeferredItem<Item> ULTIMATE_MAGIC_COMPASS =
+            ITEMS.register("ultimate_magic_compass", () ->
+                    new MagicCompassItem(new Item.Properties().stacksTo(1), CompassTier.ULTIMATE));
+
+    // ---- warehouse terminal: 仓库终端（右键打开本殖民地仓库面板，合成站 20 级配方产出；Curios 手饰槽待办）----
+    public static final DeferredItem<Item> WAREHOUSE_TERMINAL =
+            ITEMS.register("warehouse_terminal", () ->
+                    new WarehouseTerminalItem(new Item.Properties().stacksTo(1)));
+
     // ---- building-scanner blocks ----
     // Creative Building Scanner (full-featured, for creators) — renamed from building_scanner to
     // creative_building_scanner; the plain id "building_scanner" now belongs to the Survival scanner.
@@ -449,6 +470,10 @@ public class Wandscape {
                         output.accept(FOLLOW_WAND.get());
                         output.accept(SHELTER_WAND.get());
                         output.accept(HOSTILE_WAND.get());
+                        output.accept(MAGIC_COMPASS.get());
+                        output.accept(ADVANCED_MAGIC_COMPASS.get());
+                        output.accept(ULTIMATE_MAGIC_COMPASS.get());
+                        output.accept(WAREHOUSE_TERMINAL.get());
                         output.accept(CREATIVE_BUILDING_SCANNER_ITEM.get());
                         output.accept(BUILDING_SCANNER_ITEM.get());
                         output.accept(INTERACT_SPOT_MARKER_ITEM.get());
@@ -511,6 +536,7 @@ public class Wandscape {
         NeoForge.EVENT_BUS.register(HostileTargetingHandler.class);
         NeoForge.EVENT_BUS.register(BuildingNoSpawnZoneHandler.class);
         NeoForge.EVENT_BUS.register(com.wsteam.wandscape.ring.internal.OathRingSyncHandler.class);
+        NeoForge.EVENT_BUS.register(CompassSyncHandler.class);
         NeoForge.EVENT_BUS.register(com.wsteam.wandscape.scepter.internal.ScepterInteractHandler.class);
         NeoForge.EVENT_BUS.register(com.wsteam.wandscape.scepter.internal.ScepterDeathHandler.class);
         NeoForge.EVENT_BUS.register(com.wsteam.wandscape.guard.SelfDefenseHandler.class);
@@ -650,6 +676,10 @@ public class Wandscape {
                         com.wsteam.wandscape.ring.network.OathRingDataPacket.TYPE,
                         com.wsteam.wandscape.ring.network.OathRingDataPacket.STREAM_CODEC,
                         (packet, ctx) -> com.wsteam.wandscape.ring.network.OathRingDataPacket.handleClient(packet))
+                .playToClient(
+                        CompassTargetPacket.TYPE,
+                        CompassTargetPacket.STREAM_CODEC,
+                        (packet, ctx) -> CompassTargetPacket.handleClient(packet))
                 .playToServer(
                         DestroyFillPacket.TYPE,
                         DestroyFillPacket.STREAM_CODEC,

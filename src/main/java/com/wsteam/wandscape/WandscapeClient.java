@@ -56,6 +56,7 @@ import com.wsteam.wandscape.tourist.client.TouristScreen;
 import com.wsteam.wandscape.tourist.network.TouristDataPacket;
 import com.wsteam.wandscape.warehouse.client.WarehouseScreen;
 import com.wsteam.wandscape.warehouse.network.WarehouseDataPacket;
+import com.wsteam.wandscape.compass.client.CompassTargetClientCache;
 
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import com.wsteam.wandscape.shared.ui.panel.WandscapePanelController;
@@ -68,8 +69,11 @@ import com.wsteam.wandscape.tourist.client.TouristDebugRenderer;
 import com.wsteam.wandscape.tourist.client.TouristRenderer;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.item.CompassItemPropertyFunction;
+import net.minecraft.client.renderer.item.ItemProperties;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.PreparableReloadListener;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.util.profiling.ProfilerFiller;
@@ -469,6 +473,16 @@ public class WandscapeClient {
             }
         });
 
+        // 魔法指南针：注册 angle item property，使指针指向自己殖民地的市政厅（vanilla 指南针帧模型）。
+        // 无市政厅时 CompassTargetClientCache 为 null，指针乱转（与 vanilla 无 lodestone 同义）。
+        CompassItemPropertyFunction.CompassTarget compassTarget =
+                (level, stack, entity) -> CompassTargetClientCache.get();
+        for (var compass : java.util.List.of(
+                Wandscape.MAGIC_COMPASS, Wandscape.ADVANCED_MAGIC_COMPASS, Wandscape.ULTIMATE_MAGIC_COMPASS)) {
+            ItemProperties.register(compass.get(), ResourceLocation.withDefaultNamespace("angle"),
+                    new CompassItemPropertyFunction(compassTarget));
+        }
+
         Log.info("Wandscape", "Wandscape client setup complete");
     }
 
@@ -541,6 +555,7 @@ public class WandscapeClient {
     /** Reset client panel/UI state on disconnect so it doesn't leak into the next world. */
     private static void onPlayerLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
         WandscapePanelState.reset();
+        CompassTargetClientCache.clear(); // 跨世界/存档不残留上一市政厅目标
         // 建筑区域缓存在服务器重新同步前不清空，会带着上一世界（存档）的建筑边界框进入
         // 下一世界，导致新存档首次建建筑时误报“与旧存档建筑重叠”。
         BuildingAreaSyncPacket.clear();

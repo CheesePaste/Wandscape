@@ -1,0 +1,14 @@
+{
+  "type": "misc",
+  "craft_station": "crafting_station",
+  "id": "oath_ring",
+  "display_name": "盟誓戒指",
+  "output": { "item": "wandscape:oath_ring" },
+  "cost": {
+    "earth": 800,
+    "water": 800
+  },
+  "unlock_requirement": {
+    "min_colony_level": 1
+  }
+}

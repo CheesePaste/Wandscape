@@ -1,0 +1,14 @@
+{
+  "type": "misc",
+  "craft_station": "crafting_station",
+  "id": "magic_compass",
+  "display_name": "魔法指南针",
+  "output": { "item": "wandscape:magic_compass" },
+  "cost": {
+    "earth": 600,
+    "wind": 600
+  },
+  "unlock_requirement": {
+    "min_colony_level": 1
+  }
+}

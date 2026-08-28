@@ -14,7 +14,7 @@ import com.wsteam.wandscape.element.internal.ElementMappingLoader;
 import com.wsteam.wandscape.production.data.BrewPotionRecipe;
 import com.wsteam.wandscape.production.data.CraftSpellRecipe;
 import com.wsteam.wandscape.production.data.CraftWandRecipe;
-import com.wsteam.wandscape.production.data.ScepterRecipe;
+import com.wsteam.wandscape.production.data.MiscRecipe;
 import com.wsteam.wandscape.production.data.SynthesizeRecipe;
 import com.wsteam.wandscape.shared.registry.WandscapeDataRegistry;
 import com.wsteam.wandscape.shared.log.Log;
@@ -25,7 +25,7 @@ public class ProductionRecipeLoader {
     private final WandscapeDataRegistry<CraftWandRecipe> craftWandRecipes;
     private final WandscapeDataRegistry<BrewPotionRecipe> potionRecipes;
     private final WandscapeDataRegistry<CraftSpellRecipe> spellRecipes;
-    private final WandscapeDataRegistry<ScepterRecipe> scepterRecipes;
+    private final WandscapeDataRegistry<MiscRecipe> miscRecipes;
     private final ElementMappingLoader elementMappingLoader;
 
     public ProductionRecipeLoader(WandscapeDataLoader dataLoader, ElementMappingLoader elementMappingLoader) {
@@ -41,9 +41,9 @@ public class ProductionRecipeLoader {
             String type = getType(json);
             return "spell".equals(type) ? CraftSpellRecipe.fromJson(id, json) : null;
         });
-        this.scepterRecipes = dataLoader.register(CATEGORY, (id, json) -> {
+        this.miscRecipes = dataLoader.register(CATEGORY, (id, json) -> {
             String type = getType(json);
-            return "scepter".equals(type) ? ScepterRecipe.fromJson(id, json) : null;
+            return "misc".equals(type) ? MiscRecipe.fromJson(id, json) : null;
         });
         this.elementMappingLoader = elementMappingLoader;
     }
@@ -115,7 +115,7 @@ public class ProductionRecipeLoader {
         return spellRecipes;
     }
 
-    public WandscapeDataRegistry<ScepterRecipe> getScepterRecipes() {
-        return scepterRecipes;
+    public WandscapeDataRegistry<MiscRecipe> getMiscRecipes() {
+        return miscRecipes;
     }
 }

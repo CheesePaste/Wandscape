@@ -15,19 +15,19 @@
 - **模块隔离**：共享 `shared/api/ScepterApi` + `WandscapeApis.setScepterApi/getScepterApiSilently`；npc/guard 只经 API 读取，不跨包引用 scepter 具体类。
 - **3D = 共用法杖模板 + 换色**（用户指令）：4 权杖共用 `models/item/scepter.json`（几何同 NPC 法杖 `wand.json`），ItemColors tintindex 0 染各 kind 主题色；不做独立几何（「明显区分」= 颜色 + 独立物品身份）。
 
-**影响**：新模块 `scepter/`（`ScepterItem`/`ScepterKind`/`ScepterApi`/`internal/{ScepterMarks,ScepterMarksSavedData,ScepterApiImpl,ScepterService,ScepterInteractHandler,ScepterDeathHandler}`）+ 共享 `shared/api/MageWandItem` + `WandscapeNpc.mobInteract` 非潜行分支 + `isFriendlyForce` 庇护钩子 + `SelfDefenseExecutor`/`GuardAttackExecutor`/`GuardTaskSource` 集成 + `Config.scepter.hostileRange` + 4 模型/壳 + zh/en lang。测试：`ScepterMarksTest`（8）、`HostileMarkDecisionTest`（4）、`ScepterRecipeTest`（3）。
+**影响**：新模块 `scepter/`（`ScepterItem`/`ScepterKind`/`ScepterApi`/`internal/{ScepterMarks,ScepterMarksSavedData,ScepterApiImpl,ScepterService,ScepterInteractHandler,ScepterDeathHandler}`）+ 共享 `shared/api/MageWandItem` + `WandscapeNpc.mobInteract` 非潜行分支 + `isFriendlyForce` 庇护钩子 + `SelfDefenseExecutor`/`GuardAttackExecutor`/`GuardTaskSource` 集成 + `Config.scepter.hostileRange` + 4 模型/壳 + zh/en lang。测试：`ScepterMarksTest`（8）、`HostileMarkDecisionTest`（4）、`MiscRecipeTest`（3）。
 
 ## 2026-08-28：制作站配方统一 `production:craft`——消除「加物品改一堆文件」的类型扇出
 
 **需求**（用户指令）：加新可合成物要同时改 `RecipeLoader`/`CraftingStationPacket`/`RequestProductionTaskPacket`/`BlockInteractExecutor`/`ProductionEligibility`/队列三处等一大堆文件，是否为缺陷、要不要改。用户拍板：**合并制作站的动作**（法杖/权杖/药水合成），同时保留魔法工坊卷轴独立（不同建筑）。
 
 **决策**（本功能内先落地，深度统一见 `docs/plan/recipe-unify.md`）：
-- **制作站动作统一为 `craft`**：craft_wand/brew_potion/scepter 合并为 `craft` + 蓝图 `production:craft`（旧 craft_wand.json/brew_potion.json 删除）；新增 `CraftRecipeView`（按 recipe_id 查法杖/权杖/药水注册表）统一解析，`RequestProductionTaskPacket`/`WandscapeBlockInteractExecutor`/`ProductionEligibility` 不再按类型分发 switch。
+- **制作站动作统一为 `craft`**：craft_wand/brew_potion/misc 合并为 `craft` + 蓝图 `production:craft`（旧 craft_wand.json/brew_potion.json 删除）；新增 `CraftRecipeView`（按 recipe_id 查法杖/杂项/药水注册表）统一解析，`RequestProductionTaskPacket`/`WandscapeBlockInteractExecutor`/`ProductionEligibility` 不再按类型分发 switch。
 - **魔法工坊卷轴独立**：`craft_spell` + `production:craft_spell` 保留（magic_station 是独立建筑，GUI/提交/计费/队列类别 "transcribe" 维持）。
-- **类型差异落进配方数据**：法杖/权杖/药水都是「元素→物品入仓库」，差异（法杖 preset 属性 NBT、药水 input_items 额外原料）由各自 record 字段承载，消费端只认识 `CraftRecipeView`。
+- **类型差异落进配方数据**：法杖/杂项/药水都是「元素→物品入仓库」，差异（法杖 preset 属性 NBT、药水 input_items 额外原料）由各自 record 字段承载，消费端只认识 `CraftRecipeView`。
 - 用户确认后续深度统一（单一 `CraftRecipe` 通用配方）在 4 权杖功能完成后单独 `refactor:` commit。
 
-**影响**：`ProductionRecipeLoader`（+scepter registry）、`CraftingStationPacket.from`（+scepter collection）、`BuildingInteractHandler`、`CraftingStationScreen.onSubmit`（恒 "craft"）、`RequestProductionTaskPacket`（craft 分支 + CraftRecipeView）、蓝图 craft.json（删 craft_wand/brew_potion）、`WandscapeBlockInteractExecutor`（统一 executeCraft，删 executeCraftWand/executeBrewPotion）、`ProductionEligibility`（production:craft）、队列三处 categorize（"craft"）、lang 蓝图键。测试：`TaskQueueModifyPacketTest`/`ProductionEligibilityTest` 更新。
+**影响**：`ProductionRecipeLoader`（+misc registry）、`CraftingStationPacket.from`（+misc collection）、`BuildingInteractHandler`、`CraftingStationScreen.onSubmit`（恒 "craft"）、`RequestProductionTaskPacket`（craft 分支 + CraftRecipeView）、蓝图 craft.json（删 craft_wand/brew_potion）、`WandscapeBlockInteractExecutor`（统一 executeCraft，删 executeCraftWand/executeBrewPotion）、`ProductionEligibility`（production:craft）、队列三处 categorize（"craft"）、lang 蓝图键。测试：`TaskQueueModifyPacketTest`/`ProductionEligibilityTest` 更新。
 
 ## 2026-08-28：盟誓戒指——玩家维度固定槽存储 + 归属限本殖民地法师
 

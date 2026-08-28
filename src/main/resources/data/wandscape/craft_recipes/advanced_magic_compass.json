@@ -1,0 +1,14 @@
+{
+  "type": "misc",
+  "craft_station": "crafting_station",
+  "id": "advanced_magic_compass",
+  "display_name": "高级魔法指南针",
+  "output": { "item": "wandscape:advanced_magic_compass" },
+  "cost": {
+    "earth": 5000,
+    "wind": 5000
+  },
+  "unlock_requirement": {
+    "min_colony_level": 10
+  }
+}

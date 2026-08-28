@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "wandscape:item/compass/magic_compass/compass_19"
+  }
+}

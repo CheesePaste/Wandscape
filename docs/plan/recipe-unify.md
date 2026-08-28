@@ -1,11 +1,11 @@
 # 制作站/魔法工坊配方管线统一 — 消除「加物品改一堆文件」
 
 > **状态（2026-08-28）**：方案草案，**在 4 权杖（smallitems 2-5 项）功能完成并提交后单独执行**（`refactor:` 独立 commit，可回滚）。不在功能进行中掺结构重构。
-> 背景：本次 4 权杖把 craft_wand/brew_potion/scepter 已并成一个 `production:craft` + `CraftRecipeView`，消费端 switch 大幅收敛；本文档再把「制作站/魔法工坊可合成物」收敛为**一条通用配方**，让消费端零类型分支。
+> 背景：本次 4 权杖把 craft_wand/brew_potion/misc 已并成一个 `production:craft` + `CraftRecipeView`，消费端 switch 大幅收敛；本文档再把「制作站/魔法工坊可合成物」收敛为**一条通用配方**，让消费端零类型分支。
 
 ## 一、问题：类型扇出
 
-一个可合成物要经历：配方 JSON 加载 → 建筑 GUI 列表 → 客户端提交 → 服务端解锁校验 → 队列图标/类别 → NPC 执行扣料 → 计费发布扫描。过去每新增一种配方 `type`（wand/spell/potion/scepter），就要在 `ProductionRecipeLoader`、`CraftingStationPacket`、`RequestProductionTaskPacket`、`WandscapeBlockInteractExecutor`、`ProductionEligibility`、`TaskQueueModifyPacket`、`TaskPanelSyncTracker`、`TaskQueuePanel` 各加一个 case——**数据已 JSON 驱动，管线却硬编码按类型复制**。这是结构缺陷，不是「加物品」的固有成本。
+一个可合成物要经历：配方 JSON 加载 → 建筑 GUI 列表 → 客户端提交 → 服务端解锁校验 → 队列图标/类别 → NPC 执行扣料 → 计费发布扫描。过去每新增一种配方 `type`（wand/spell/potion/misc），就要在 `ProductionRecipeLoader`、`CraftingStationPacket`、`RequestProductionTaskPacket`、`WandscapeBlockInteractExecutor`、`ProductionEligibility`、`TaskQueueModifyPacket`、`TaskPanelSyncTracker`、`TaskQueuePanel` 各加一个 case——**数据已 JSON 驱动，管线却硬编码按类型复制**。这是结构缺陷，不是「加物品」的固有成本。
 
 要点：**法杖 `attributes[]`/`wand_color` 是 NPC 法杖属性预设（`WandPresetLoader` 消费），与「工艺配方」（产出物品入仓库）是两拨人**，不必耦合。
 
@@ -17,7 +17,7 @@
 
 ### 1. 一条通用配方 record `CraftRecipe`
 
-替换 `CraftWandRecipe`/`CraftSpellRecipe`/`BrewPotionRecipe`/`ScepterRecipe` 四份 record（含各 fromJson 与测试）为一份：
+替换 `CraftWandRecipe`/`CraftSpellRecipe`/`BrewPotionRecipe`/`MiscRecipe` 四份 record（含各 fromJson 与测试）为一份：
 
 ```json
 {
@@ -43,7 +43,7 @@ record 字段：`id / craftStation / displayName / outputItem / outputNbt(Compou
 
 ### 2. 一份注册表 + 一个解析入口
 
-- `ProductionRecipeLoader`：**只注册一个** `craftRecipes` registry（`dataLoader.register("craft_recipes", (id,json) -> "craft".equals(type) ? CraftRecipe.fromJson(...) : null)`）。删 `craftWandRecipes/potionRecipes/spellRecipes/scepterRecipes` 四个 registry。
+- `ProductionRecipeLoader`：**只注册一个** `craftRecipes` registry（`dataLoader.register("craft_recipes", (id,json) -> "craft".equals(type) ? CraftRecipe.fromJson(...) : null)`）。删 `craftWandRecipes/potionRecipes/spellRecipes/miscRecipes` 四个 registry。
 - `CraftRecipeView`（现用作站内统一解析）升级为 **全管线唯一解析**：`CraftRecipe.resolve(loader, recipeId)`，没有类型 if/else——直接查唯一 registry。
 - 删除 `CraftRecipeView`，`RequestProductionTaskPacket`/`WandscapeBlockInteractExecutor`/`ProductionEligibility` 统一用 `CraftRecipe.resolve`。
 
@@ -67,7 +67,7 @@ record 字段：`id / craftStation / displayName / outputItem / outputNbt(Compou
 
 | # | 动作 |
 |---|---|
-| 1 | 新建 `production/data/CraftRecipe.java`（含 fromJson + parseNbt）；`ScepterRecipeTest` → `CraftRecipeTest` |
+| 1 | 新建 `production/data/CraftRecipe.java`（含 fromJson + parseNbt）；`MiscRecipeTest` → `CraftRecipeTest` |
 | 2 | `ProductionRecipeLoader`：删 4 registry，改 1 个 |
 | 3 | `CraftRecipeView` → 删；`RequestProductionTaskPacket`/`WandscapeBlockInteractExecutor`/`ProductionEligibility` 改 `CraftRecipe.resolve` |
 | 4 | `WandPresetLoader`：保留 `type=="wand"` 解析（方案 a） |

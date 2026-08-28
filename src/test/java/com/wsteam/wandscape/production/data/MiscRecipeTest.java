@@ -10,15 +10,15 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * {@link ScepterRecipe} — fromJson 解析：成本/解锁缺省/字段读入。
+ * {@link MiscRecipe} — fromJson 解析：成本/解锁缺省/字段读入。
  * 成本用自选字面量，不钉死平衡数值。
  */
-class ScepterRecipeTest {
+class MiscRecipeTest {
 
     @Test
     void parsesOutputAndCost() {
-        ScepterRecipe r = ScepterRecipe.fromJson("peace_wand", JsonParser.parseString(
-                "{\"type\":\"scepter\",\"id\":\"peace_wand\",\"display_name\":\"和平权杖\","
+        MiscRecipe r = MiscRecipe.fromJson("peace_wand", JsonParser.parseString(
+                "{\"type\":\"misc\",\"id\":\"peace_wand\",\"display_name\":\"和平权杖\","
                         + "\"output\":{\"item\":\"wandscape:peace_wand\"},"
                         + "\"cost\":{\"earth\":1100,\"water\":1300},"
                         + "\"unlock_requirement\":{\"min_colony_level\":1}}"));
@@ -31,8 +31,8 @@ class ScepterRecipeTest {
 
     @Test
     void defaultsCraftStationToCraftingStationAndUnlockToLevelOne() {
-        ScepterRecipe r = ScepterRecipe.fromJson("follow_wand", JsonParser.parseString(
-                "{\"type\":\"scepter\",\"id\":\"follow_wand\",\"output\":{\"item\":\"wandscape:follow_wand\"}}"));
+        MiscRecipe r = MiscRecipe.fromJson("follow_wand", JsonParser.parseString(
+                "{\"type\":\"misc\",\"id\":\"follow_wand\",\"output\":{\"item\":\"wandscape:follow_wand\"}}"));
         assertEquals("crafting_station", r.craftStation());
         assertEquals(1, r.unlockRequirement().minColonyLevel()); // 缺省 = NONE 语义（1 级可用）
         assertTrue(r.cost().isEmpty());
@@ -40,8 +40,8 @@ class ScepterRecipeTest {
 
     @Test
     void costMapIsKeyedByElementType() {
-        ScepterRecipe r = ScepterRecipe.fromJson("hostile_wand", JsonParser.parseString(
-                "{\"type\":\"scepter\",\"id\":\"hostile_wand\",\"output\":{\"item\":\"wandscape:hostile_wand\"},"
+        MiscRecipe r = MiscRecipe.fromJson("hostile_wand", JsonParser.parseString(
+                "{\"type\":\"misc\",\"id\":\"hostile_wand\",\"output\":{\"item\":\"wandscape:hostile_wand\"},"
                         + "\"cost\":{\"fire\":1300,\"dark\":1100}}"));
         assertEquals(Map.of(ElementType.FIRE, 1300L, ElementType.DARK, 1100L), r.cost());
     }

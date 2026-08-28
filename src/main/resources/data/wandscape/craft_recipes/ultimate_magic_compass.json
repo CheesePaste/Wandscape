@@ -1,0 +1,15 @@
+{
+  "type": "misc",
+  "craft_station": "crafting_station",
+  "id": "ultimate_magic_compass",
+  "display_name": "终极魔法指南针",
+  "output": { "item": "wandscape:ultimate_magic_compass" },
+  "cost": {
+    "earth": 30000,
+    "wind": 25000,
+    "dark": 15000
+  },
+  "unlock_requirement": {
+    "min_colony_level": 20
+  }
+}

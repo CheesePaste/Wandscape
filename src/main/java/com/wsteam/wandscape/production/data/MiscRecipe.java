@@ -8,12 +8,14 @@ import com.google.gson.JsonObject;
 import com.wsteam.wandscape.shared.data.ElementType;
 
 /**
- * 玩家权杖合成配方（{@code data/wandscape/craft_recipes/*.json}，JSON {@code type=="scepter"}）。
+ * 合成站「杂项物品」配方（{@code data/wandscape/craft_recipes/*.json}，JSON {@code type=="misc"}）。
  *
- * <p>与法杖 {@code type=="wand"} 同构但产物是独立注册物品（{@code wandscape:peace_wand} 等），
- * 不携带 preset 属性/NBT——权杖是右键行为法器，不是属性法杖。合成站 1 级解锁。
+ * <p>产物是独立注册物品（{@code wandscape:peace_wand} / {@code wandscape:magic_compass} /
+ * {@code wandscape:warehouse_terminal} / {@code wandscape:oath_ring} 等），不带 preset 属性 NBT——
+ * 是右键行为法器/功能物品，不是属性法杖。同构于法杖 {@code type=="wand"} 但产物无 preset。合成站按
+ * 配方 {@code craft_station} + {@code min_colony_level} 展示/解锁。
  */
-public record ScepterRecipe(
+public record MiscRecipe(
     String id,
     String craftStation,
     String displayName,
@@ -21,7 +23,7 @@ public record ScepterRecipe(
     Map<ElementType, Long> cost,
     RecipeUnlockRequirement unlockRequirement
 ) {
-    public static ScepterRecipe fromJson(String id, JsonElement json) {
+    public static MiscRecipe fromJson(String id, JsonElement json) {
         JsonObject obj = json.getAsJsonObject();
 
         String craftStation = obj.has("craft_station")
@@ -38,7 +40,7 @@ public record ScepterRecipe(
                 ? RecipeUnlockRequirement.fromJson(obj.getAsJsonObject("unlock_requirement"))
                 : RecipeUnlockRequirement.NONE;
 
-        return new ScepterRecipe(id, craftStation, displayName, outputItem, cost, req);
+        return new MiscRecipe(id, craftStation, displayName, outputItem, cost, req);
     }
 
     private static Map<ElementType, Long> parseElementMap(JsonObject obj, String key) {

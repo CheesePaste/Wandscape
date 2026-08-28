@@ -359,13 +359,13 @@ public final class BuildingInteractHandler {
         var potionRecipes = prodLoader != null
                 ? prodLoader.getPotionRecipes().getAll().values()
                 : java.util.Collections.<com.wsteam.wandscape.production.data.BrewPotionRecipe>emptyList();
-        var scepterRecipes = prodLoader != null
-                ? prodLoader.getScepterRecipes().getAll().values()
-                : java.util.Collections.<com.wsteam.wandscape.production.data.ScepterRecipe>emptyList();
+        var miscRecipes = prodLoader != null
+                ? prodLoader.getMiscRecipes().getAll().values()
+                : java.util.Collections.<com.wsteam.wandscape.production.data.MiscRecipe>emptyList();
 
         Map<ElementType, Long> elemSnapshot = bank != null
                 ? bank.getElementSnapshot(colonyId) : Map.of();
-        var pkt = CraftingStationPacket.from(pos, wandRecipes, potionRecipes, scepterRecipes,
+        var pkt = CraftingStationPacket.from(pos, wandRecipes, potionRecipes, miscRecipes,
                 elemSnapshot, colonyId, creator);
         PacketDistributor.sendToPlayer(player, pkt);
     }

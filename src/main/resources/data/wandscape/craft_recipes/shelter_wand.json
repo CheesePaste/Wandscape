@@ -1,13 +1,13 @@
 {
-  "type": "scepter",
+  "type": "misc",
   "craft_station": "crafting_station",
   "id": "shelter_wand",
   "display_name": "庇护权杖",
   "output": { "item": "wandscape:shelter_wand" },
   "cost": {
-    "earth": 900,
-    "wood": 700,
-    "water": 800
+    "earth": 500,
+    "wood": 600,
+    "water": 500
   },
   "unlock_requirement": {
     "min_colony_level": 1

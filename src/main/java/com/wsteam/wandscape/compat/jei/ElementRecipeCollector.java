@@ -11,7 +11,7 @@ import com.wsteam.wandscape.element.internal.ElementMappingConfig;
 import com.wsteam.wandscape.production.data.BrewPotionRecipe;
 import com.wsteam.wandscape.production.data.CraftSpellRecipe;
 import com.wsteam.wandscape.production.data.CraftWandRecipe;
-import com.wsteam.wandscape.production.data.ScepterRecipe;
+import com.wsteam.wandscape.production.data.MiscRecipe;
 import com.wsteam.wandscape.shared.data.ElementType;
 
 import net.minecraft.nbt.CompoundTag;
@@ -88,10 +88,10 @@ public final class ElementRecipeCollector {
         return result;
     }
 
-    /** 制作站玩家权杖配方（无属性 NBT，产物即注册物品）。 */
-    public static List<ElementRecipe> fromScepterRecipes(Collection<ScepterRecipe> recipes) {
+    /** 制作站杂项物品配方（无属性 NBT，产物即注册物品；涵盖权杖/指南针/仓库终端/盟誓戒指等）。 */
+    public static List<ElementRecipe> fromMiscRecipes(Collection<MiscRecipe> recipes) {
         List<ElementRecipe> result = new ArrayList<>();
-        for (ScepterRecipe r : recipes) {
+        for (MiscRecipe r : recipes) {
             if (r.cost().isEmpty()) continue;
             String station = r.craftStation() != null ? r.craftStation() : STATION_CRAFTING;
             result.add(new ElementRecipe(r.id(), ElementRecipeKind.SYNTHESIZE, station,
@@ -105,12 +105,12 @@ public final class ElementRecipeCollector {
                                                  Collection<CraftWandRecipe> wands,
                                                  Collection<BrewPotionRecipe> potions,
                                                  Collection<CraftSpellRecipe> spells,
-                                                 Collection<ScepterRecipe> scepters) {
+                                                 Collection<MiscRecipe> misc) {
         List<ElementRecipe> all = fromElementMappings(mappings);
         all.addAll(fromCraftWandRecipes(wands));
         all.addAll(fromBrewPotionRecipes(potions));
         all.addAll(fromCraftSpellRecipes(spells));
-        all.addAll(fromScepterRecipes(scepters));
+        all.addAll(fromMiscRecipes(misc));
         return all;
     }
 

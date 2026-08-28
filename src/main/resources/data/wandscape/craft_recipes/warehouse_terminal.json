@@ -1,0 +1,15 @@
+{
+  "type": "misc",
+  "craft_station": "crafting_station",
+  "id": "warehouse_terminal",
+  "display_name": "仓库终端",
+  "output": { "item": "wandscape:warehouse_terminal" },
+  "cost": {
+    "earth": 45000,
+    "metal": 65000,
+    "dark": 40000
+  },
+  "unlock_requirement": {
+    "min_colony_level": 20
+  }
+}
