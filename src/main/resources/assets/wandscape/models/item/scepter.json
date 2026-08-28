@@ -1,0 +1,85 @@
+{
+  "credit": "Wandscape 权杖 3D — 区别于法杖剪影：粗金杆 + 金色护手环 + 实心融合宝石头（头部 tintindex 0 染各权杖主题色）",
+  "textures": {
+    "0": "wandscape:item/scepter_3d",
+    "particle": "wandscape:item/scepter_3d"
+  },
+  "elements": [
+    {
+      "name": "rod",
+      "from": [6.5, 0, 6.5],
+      "to": [9.5, 12, 9.5],
+      "faces": {
+        "north": {"uv": [0, 3, 2, 15], "texture": "#0"},
+        "south": {"uv": [2, 3, 4, 15], "texture": "#0"},
+        "east":  {"uv": [4, 3, 6, 15], "texture": "#0"},
+        "west":  {"uv": [6, 3, 8, 15], "texture": "#0"},
+        "up":    {"uv": [2, 3, 4, 5],  "texture": "#0"},
+        "down":  {"uv": [0, 14, 2, 16], "texture": "#0"}
+      }
+    },
+    {
+      "name": "guard",
+      "from": [5, 9, 5],
+      "to": [11, 11, 11],
+      "faces": {
+        "north": {"uv": [0, 0, 6, 2], "texture": "#0"},
+        "south": {"uv": [0, 0, 6, 2], "texture": "#0"},
+        "east":  {"uv": [0, 0, 6, 2], "texture": "#0"},
+        "west":  {"uv": [0, 0, 6, 2], "texture": "#0"},
+        "up":    {"uv": [0, 0, 6, 2], "texture": "#0"},
+        "down":  {"uv": [0, 0, 6, 2], "texture": "#0"}
+      }
+    },
+    {
+      "name": "head",
+      "from": [6, 12, 6],
+      "to": [10, 15, 10],
+      "faces": {
+        "north": {"uv": [10, 0, 14, 4], "texture": "#0", "tintindex": 0},
+        "south": {"uv": [10, 0, 14, 4], "texture": "#0", "tintindex": 0},
+        "east":  {"uv": [10, 0, 14, 4], "texture": "#0", "tintindex": 0},
+        "west":  {"uv": [10, 0, 14, 4], "texture": "#0", "tintindex": 0},
+        "up":    {"uv": [10, 0, 14, 4], "texture": "#0", "tintindex": 0},
+        "down":  {"uv": [10, 0, 14, 4], "texture": "#0", "tintindex": 0}
+      }
+    }
+  ],
+  "display": {
+    "thirdperson_righthand": {
+      "rotation": [0, -135, 40],
+      "translation": [0, 4.5, -4.0],
+      "scale": [0.82, 0.82, 0.82]
+    },
+    "thirdperson_lefthand": {
+      "rotation": [0, 135, -40],
+      "translation": [0, 4.5, -4.0],
+      "scale": [0.82, 0.82, 0.82]
+    },
+    "firstperson_righthand": {
+      "rotation": [0, -135, 15],
+      "translation": [1.2, 3.0, -4.2],
+      "scale": [0.6, 0.6, 0.6]
+    },
+    "firstperson_lefthand": {
+      "rotation": [0, 135, -15],
+      "translation": [1.2, 3.0, -4.2],
+      "scale": [0.6, 0.6, 0.6]
+    },
+    "ground": {
+      "translation": [0, 2, 0],
+      "scale": [0.5, 0.5, 0.5]
+    },
+    "gui": {
+      "rotation": [25, 45, 0],
+      "scale": [0.55, 0.55, 0.55]
+    },
+    "head": {
+      "translation": [0, 14, -5],
+      "scale": [0.7, 0.7, 0.7]
+    },
+    "fixed": {
+      "scale": [0.8, 0.8, 0.8]
+    }
+  }
+}

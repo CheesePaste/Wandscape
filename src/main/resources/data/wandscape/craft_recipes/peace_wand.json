@@ -1,0 +1,14 @@
+{
+  "type": "scepter",
+  "craft_station": "crafting_station",
+  "id": "peace_wand",
+  "display_name": "和平权杖",
+  "output": { "item": "wandscape:peace_wand" },
+  "cost": {
+    "earth": 1100,
+    "water": 1300
+  },
+  "unlock_requirement": {
+    "min_colony_level": 1
+  }
+}

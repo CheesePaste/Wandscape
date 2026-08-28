@@ -17,9 +17,8 @@ class ProductionEligibilityTest {
     @Test
     void isElementCosting_recognizesElementConsumingBlueprintsOnly() {
         assertTrue(ProductionEligibility.isElementCosting("production:synthesize"));
-        assertTrue(ProductionEligibility.isElementCosting("production:craft_wand"));
+        assertTrue(ProductionEligibility.isElementCosting("production:craft"));
         assertTrue(ProductionEligibility.isElementCosting("production:craft_spell"));
-        assertTrue(ProductionEligibility.isElementCosting("production:brew_potion"));
 
         assertFalse(ProductionEligibility.isElementCosting("production:decompose"));
         assertFalse(ProductionEligibility.isElementCosting("build:place_structure"));

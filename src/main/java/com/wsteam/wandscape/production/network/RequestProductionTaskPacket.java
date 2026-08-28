@@ -30,7 +30,7 @@ import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Client→server packet requesting creation of a production task
- * (decompose / synthesize / craft_wand / brew_potion).
+ * (decompose / synthesize / craft / craft_spell).
  */
 public record RequestProductionTaskPacket(
     BlockPos stationPos,
@@ -75,9 +75,8 @@ public record RequestProductionTaskPacket(
             String blueprintId = switch (pkt.action) {
                 case "decompose" -> "production:decompose";
                 case "synthesize" -> "production:synthesize";
-                case "craft_wand" -> "production:craft_wand";
+                case "craft" -> "production:craft";
                 case "craft_spell" -> "production:craft_spell";
-                case "brew_potion" -> "production:brew_potion";
                 default -> {
                     Log.warn(TAG, "RequestProductionTask: unknown action {}", pkt.action);
                     yield null;
@@ -101,18 +100,13 @@ public record RequestProductionTaskPacket(
                         yield recipe != null
                                 && RecipeUnlockChecker.isUnlocked(colonyId, recipe.unlockRequirement());
                     }
-                    case "craft_wand" -> {
-                        var recipe = loader.getCraftWandRecipes().get(pkt.recipeOrItemId);
+                    case "craft" -> {
+                        var recipe = com.wsteam.wandscape.production.data.CraftRecipeView.resolve(loader, pkt.recipeOrItemId);
                         yield recipe != null
                                 && RecipeUnlockChecker.isUnlocked(colonyId, recipe.unlockRequirement());
                     }
                     case "craft_spell" -> {
                         var recipe = loader.getSpellRecipes().get(pkt.recipeOrItemId);
-                        yield recipe != null
-                                && RecipeUnlockChecker.isUnlocked(colonyId, recipe.unlockRequirement());
-                    }
-                    case "brew_potion" -> {
-                        var recipe = loader.getPotionRecipes().get(pkt.recipeOrItemId);
                         yield recipe != null
                                 && RecipeUnlockChecker.isUnlocked(colonyId, recipe.unlockRequirement());
                     }
@@ -149,7 +143,7 @@ public record RequestProductionTaskPacket(
                                 : WandscapeConstants.WORKSTATION_CRAFT_TICKS_PER_UNIT * pkt.quantity;
                 case "decompose" ->
                         WandscapeConstants.WORKSTATION_CRAFT_TICKS_PER_UNIT * pkt.quantity;
-                case "craft_wand", "craft_spell" ->
+                case "craft", "craft_spell" ->
                         WandscapeConstants.CRAFTING_STATION_CRAFT_TICKS_PER_UNIT * pkt.quantity;
                 default -> 120; // brew_potion, unchanged
             };
@@ -190,16 +184,12 @@ public record RequestProductionTaskPacket(
                 var recipe = loader.getSynthesizeRecipe(recipeOrItemId);
                 yield recipe != null ? recipe.outputItem() : null;
             }
-            case "craft_wand" -> {
-                var recipe = loader.getCraftWandRecipes().get(recipeOrItemId);
+            case "craft" -> {
+                var recipe = com.wsteam.wandscape.production.data.CraftRecipeView.resolve(loader, recipeOrItemId);
                 yield recipe != null ? recipe.outputItem() : null;
             }
             case "craft_spell" -> {
                 var recipe = loader.getSpellRecipes().get(recipeOrItemId);
-                yield recipe != null ? recipe.outputItem() : null;
-            }
-            case "brew_potion" -> {
-                var recipe = loader.getPotionRecipes().get(recipeOrItemId);
                 yield recipe != null ? recipe.outputItem() : null;
             }
             default -> null;

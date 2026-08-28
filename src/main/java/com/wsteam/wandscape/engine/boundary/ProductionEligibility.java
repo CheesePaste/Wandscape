@@ -11,9 +11,8 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.production.ProductionRecipeLoader;
-import com.wsteam.wandscape.production.data.BrewPotionRecipe;
+import com.wsteam.wandscape.production.data.CraftRecipeView;
 import com.wsteam.wandscape.production.data.CraftSpellRecipe;
-import com.wsteam.wandscape.production.data.CraftWandRecipe;
 import com.wsteam.wandscape.production.data.SynthesizeRecipe;
 import com.wsteam.wandscape.shared.data.ElementType;
 
@@ -38,12 +37,12 @@ public final class ProductionEligibility {
         recipeLoader = loader;
     }
 
-    /** Blueprints that consume elements (synthesize / craft_wand / craft_spell / brew_potion). */
+    /** Blueprints that consume elements (synthesize / craft crafting-station / craft_spell magic-station). */
     public static boolean isElementCosting(String blueprintId) {
         if (blueprintId == null) return false;
         return switch (blueprintId) {
-            case "production:synthesize", "production:craft_wand",
-                 "production:craft_spell", "production:brew_potion" -> true;
+            case "production:synthesize", "production:craft",
+                 "production:craft_spell" -> true;
             default -> false;
         };
     }
@@ -86,16 +85,12 @@ public final class ProductionEligibility {
                 SynthesizeRecipe r = loader.getSynthesizeRecipe(recipeId);
                 yield r != null ? r.cost() : Map.of();
             }
-            case "production:craft_wand" -> {
-                CraftWandRecipe r = loader.getCraftWandRecipes().get(recipeId);
+            case "production:craft" -> {
+                CraftRecipeView r = CraftRecipeView.resolve(loader, recipeId);
                 yield r != null ? r.cost() : Map.of();
             }
             case "production:craft_spell" -> {
                 CraftSpellRecipe r = loader.getSpellRecipes().get(recipeId);
-                yield r != null ? r.cost() : Map.of();
-            }
-            case "production:brew_potion" -> {
-                BrewPotionRecipe r = loader.getPotionRecipes().get(recipeId);
                 yield r != null ? r.cost() : Map.of();
             }
             default -> Map.of();

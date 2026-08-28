@@ -1,0 +1,14 @@
+{
+  "type": "scepter",
+  "craft_station": "crafting_station",
+  "id": "follow_wand",
+  "display_name": "跟随权杖",
+  "output": { "item": "wandscape:follow_wand" },
+  "cost": {
+    "wood": 1100,
+    "wind": 1300
+  },
+  "unlock_requirement": {
+    "min_colony_level": 1
+  }
+}

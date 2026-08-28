@@ -1,0 +1,14 @@
+{
+  "type": "scepter",
+  "craft_station": "crafting_station",
+  "id": "hostile_wand",
+  "display_name": "敌对权杖",
+  "output": { "item": "wandscape:hostile_wand" },
+  "cost": {
+    "fire": 1300,
+    "dark": 1100
+  },
+  "unlock_requirement": {
+    "min_colony_level": 1
+  }
+}

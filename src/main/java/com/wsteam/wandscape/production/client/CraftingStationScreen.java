@@ -269,8 +269,8 @@ public class CraftingStationScreen extends MedievalScreen {
         // Block submission when recipe is locked (colony / elements)
         if (sel == null || !"unlocked".equals(sel.lockedReason())) return;
         int qty = stepper.getValue();
-        // 药水配方走 brew_potion（校验额外原料），法杖配方走 craft_wand。
-        String action = "potion".equals(sel.type()) ? "brew_potion" : "craft_wand";
+        // 制作站统一 craft 动作：法杖/权杖/药水配方都走 production:craft（服务端按 recipe_id 解析）。
+        String action = "craft";
         PacketDistributor.sendToServer(new RequestProductionTaskPacket(
                 stationPos, action, sel.recipeId(), qty));
         // Refresh queue after submitting a new task

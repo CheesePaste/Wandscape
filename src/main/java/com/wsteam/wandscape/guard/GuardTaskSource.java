@@ -11,6 +11,7 @@ import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.task.engine.pool.GlobalTaskPool;
 import com.wsteam.wandscape.task.engine.pool.TaskRequest;
 import com.wsteam.wandscape.task.source.TaskSource;
@@ -87,8 +88,10 @@ public final class GuardTaskSource implements TaskSource {
         List<GuardZone> zones = GuardScanner.zones(level, Config.GUARD_RANGE.get());
         AABB queryBox = GuardScanner.unionAabb(zones);
         if (queryBox == null) return null;
+        var scepterApi = WandscapeApis.getScepterApiSilently();
         return GuardScanner.nearestInZones(level, zones, queryBox.getCenter(),
-                m -> !WandscapeNpc.isColonyNpcSummon(m));
+                m -> !WandscapeNpc.isColonyNpcSummon(m)
+                        && (scepterApi == null || !scepterApi.isShelteredForAny(m.getUUID(), level)));
     }
 
     /**

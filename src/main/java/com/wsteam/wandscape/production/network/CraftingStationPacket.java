@@ -7,6 +7,7 @@ import javax.annotation.Nullable;
 import com.wsteam.wandscape.production.data.BrewPotionRecipe;
 import com.wsteam.wandscape.production.data.CraftWandRecipe;
 import com.wsteam.wandscape.production.data.RecipeUnlockRequirement;
+import com.wsteam.wandscape.production.data.ScepterRecipe;
 import com.wsteam.wandscape.production.internal.ProductionAffordability;
 import com.wsteam.wandscape.production.internal.RecipeUnlockChecker;
 import com.wsteam.wandscape.shared.data.ElementType;
@@ -22,7 +23,7 @@ import net.minecraft.resources.ResourceLocation;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
 /**
- * Server→client packet carrying craft_wand recipe data for the crafting station GUI.
+ * Server→client packet carrying craft recipe data (wand / potion / scepter) for the crafting station GUI.
  */
 public record CraftingStationPacket(BlockPos stationPos, ListTag recipes, String creator)
         implements CustomPacketPayload {
@@ -41,6 +42,7 @@ public record CraftingStationPacket(BlockPos stationPos, ListTag recipes, String
     public static CraftingStationPacket from(BlockPos stationPos,
                                               Collection<CraftWandRecipe> wandRecipes,
                                               Collection<BrewPotionRecipe> potionRecipes,
+                                              Collection<ScepterRecipe> scepterRecipes,
                                               Map<ElementType, Long> elementMap,
                                               @Nullable UUID colonyId,
                                               String creator) {
@@ -54,6 +56,10 @@ public record CraftingStationPacket(BlockPos stationPos, ListTag recipes, String
         }
         for (BrewPotionRecipe r : potionRecipes) {
             list.add(buildRecipeTag(r.id(), "potion", r.outputItem(), null, r.inputItems(),
+                    r.cost(), r.unlockRequirement(), colonyId, elementMap));
+        }
+        for (ScepterRecipe r : scepterRecipes) {
+            list.add(buildRecipeTag(r.id(), "scepter", r.outputItem(), null, List.of(),
                     r.cost(), r.unlockRequirement(), colonyId, elementMap));
         }
         return new CraftingStationPacket(stationPos, list, creator);
@@ -149,7 +155,7 @@ public record CraftingStationPacket(BlockPos stationPos, ListTag recipes, String
 
     /**
      * @param recipeId          recipe identifier
-     * @param type              recipe kind: "wand" (craft_wand) or "potion" (brew_potion)
+     * @param type              recipe kind: "wand" / "potion" / "scepter" / "spell" (station screen submits "craft")
      * @param outputItem        output item id
      * @param nbt               output item NBT (nullable)
      * @param extraInputs       extra non-element inputs (potion glass bottles etc, may be empty)

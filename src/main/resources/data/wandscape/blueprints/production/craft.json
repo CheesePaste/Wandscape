@@ -1,7 +1,7 @@
 {
-  "id": "production:craft_wand",
-  "display_name": "制作法杖",
-  "description": "NPC channels at the crafting station to create wands from elements.",
+  "id": "production:craft",
+  "display_name": "制作物品",
+  "description": "NPC channels at the crafting station to create wands, scepters or potions from elements.",
   "params": {
     "anchor": "pos",
     "recipe_id": "string",
@@ -11,7 +11,7 @@
   "steps": [
     {
       "type": "block_interact",
-      "action": "craft_wand",
+      "action": "craft",
       "at": "$anchor",
       "channel_ticks": "$channel_ticks",
       "params": {

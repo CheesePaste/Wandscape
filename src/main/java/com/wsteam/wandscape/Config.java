@@ -358,6 +358,13 @@ public class Config {
                     + "Kept >= kiteStartDist so the approach doesn't immediately re-trigger kiting.")
             .defineInRange("guard.engageStandoff", 9.0, 2.0, 32.0);
 
+    // ── scepter: 玩家权杖（庇护/敌对）──
+    public static final ModConfigSpec.DoubleValue SCEPTER_HOSTILE_RANGE = BUILDER
+            .comment("Hostile-wand forced-target range (blocks): when a player marks a creature with the "
+                    + "hostile wand, every colony mage within this distance of that creature is forced to "
+                    + "prioritize attacking it until the mark is cleared or it dies.")
+            .defineInRange("scepter.hostileRange", 128.0, 16.0, 512.0);
+
     public static final ModConfigSpec.DoubleValue GUARD_FLEE_HP_THRESHOLD = BUILDER
             .comment("Low-HP flee threshold (0-1 hp ratio): below this the NPC enters a flee state with larger "
                     + "kiting distances (fleeStartDist/fleeStandoff) and stops walking toward LOS-blocked "

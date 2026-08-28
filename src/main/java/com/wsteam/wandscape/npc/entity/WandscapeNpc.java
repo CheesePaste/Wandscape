@@ -88,9 +88,11 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.network.PacketDistributor;
+import com.wsteam.wandscape.shared.api.MageWandItem;
 import com.wsteam.wandscape.shared.entity.ColonyVisitor;
 import com.wsteam.wandscape.shared.entity.PlayerLike;
 import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.shared.registry.WandscapeApis;
 
 /**
  * A colony NPC — the MC-layer shell for an ECS-driven task executor.
@@ -266,6 +268,13 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
         // 游客：同殖民地游客 → 友军（避免战斗溅射误伤短居访客）
         if (other instanceof ColonyVisitor visitor) {
             return FriendlyForce.isAlly(colonyId, visitor.getColonyId(), FriendlyForce.AllyKind.TOURIST);
+        }
+        // 庇护名单：被玩家用庇护权杖标记的生物视作盟友（按殖民地名下长期持久化）——
+        // 法师不主动攻击、不误伤（守卫/光束/陨石/自防御/跟随攻击全部经本方法过滤）。未装配 API
+        // 或客户端调用经 ScepterApi.isSheltered 内部返回 false。
+        var scepterApi = WandscapeApis.getScepterApiSilently();
+        if (scepterApi != null && scepterApi.isSheltered(colonyId, other.getUUID(), other.level())) {
+            return true;
         }
         return FriendlyForce.isAlly(colonyId, null, FriendlyForce.AllyKind.OTHER);
     }
@@ -1330,6 +1339,12 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
         if (player.isShiftKeyDown() && player.getItemInHand(hand).getItem()
                 instanceof com.wsteam.wandscape.shared.api.NpcBindingItem binder) {
             binder.onShiftClickNpc((ServerPlayer) player, this, hand);
+            return InteractionResult.CONSUME;
+        }
+        // 非潜行右键：若手持玩家权杖（和平/跟随/庇护/敌对），交由物品处理（不开信息菜单）
+        if (!player.isShiftKeyDown() && player.getItemInHand(hand).getItem()
+                instanceof MageWandItem mageWand) {
+            mageWand.onInteractNpc((ServerPlayer) player, this, hand);
             return InteractionResult.CONSUME;
         }
         // 打开 NPC 装备容器菜单（4 盔甲 + 1 法杖 + 玩家背包，全部真实 vanilla 槽）

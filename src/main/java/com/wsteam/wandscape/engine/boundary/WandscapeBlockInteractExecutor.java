@@ -29,8 +29,8 @@ import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.magic.item.SpellItem;
 import com.wsteam.wandscape.production.ProductionRecipeLoader;
+import com.wsteam.wandscape.production.data.CraftRecipeView;
 import com.wsteam.wandscape.production.data.CraftSpellRecipe;
-import com.wsteam.wandscape.production.data.CraftWandRecipe;
 import com.wsteam.wandscape.production.data.SynthesizeRecipe;
 import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.data.BuildingData;
@@ -294,9 +294,8 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         switch (action) {
             case "synthesize" -> checkSynthesizePreconditions(params, npcId);
             case "decompose" -> checkDecomposePreconditions(params, npcId);
-            case "craft_wand" -> checkCraftWandPreconditions(params, npcId);
+            case "craft" -> checkCraftPreconditions(params, npcId);
             case "craft_spell" -> checkCraftSpellPreconditions(params, npcId);
-            case "brew_potion" -> checkBrewPotionPreconditions(params, npcId);
             default -> {}
         }
     }
@@ -311,8 +310,29 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         // to auto-synthesize materials just to decompose them in an infinite loop.
     }
 
-    private void checkCraftWandPreconditions(Map<String, String> params, long npcId) {
-        checkElements("production:craft_wand", params, npcId);
+    /** 制作站统一 craft 预检：元素 + 可选额外物品原料（药水等）是否足够。 */
+    private void checkCraftPreconditions(Map<String, String> params, long npcId) {
+        checkElements("production:craft", params, npcId);
+        String recipeId = params.get("recipe_id");
+        int count = parseCount(params);
+        if (recipeId == null || count <= 0) return;
+        CraftRecipeView recipe = CraftRecipeView.resolve(productionRecipeLoader, recipeId);
+        if (recipe == null || recipe.inputItems().isEmpty()) return;
+        Level level = getNpcLevel(npcId);
+        if (level == null) return;
+        ColonyItemBank bank = ColonyItemBank.get(level);
+        if (bank == null) return;
+        UUID colonyId = findStorageColonyId();
+        for (String inputItemId : recipe.inputItems()) {
+            ItemKey key = ItemKey.of(inputItemId, null);
+            if (bank.available(colonyId, key) < count) {
+                int colonIdx = inputItemId.lastIndexOf(':');
+                String shortId = colonIdx >= 0 ? inputItemId.substring(colonIdx + 1) : inputItemId;
+                Log.warn(TAG, "craft: insufficient input item {} (need={})", inputItemId, count);
+                throw new ResourceShortageException(
+                        List.of(new ResourceStack(new ResourceId(shortId), count)));
+            }
+        }
     }
 
     private void checkCraftSpellPreconditions(Map<String, String> params, long npcId) {
@@ -338,30 +358,6 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         }
     }
 
-    private void checkBrewPotionPreconditions(Map<String, String> params, long npcId) {
-        checkElements("production:brew_potion", params, npcId);
-        String recipeId = params.get("recipe_id");
-        int count = parseCount(params);
-        if (recipeId == null || count <= 0 || productionRecipeLoader == null) return;
-        var recipe = productionRecipeLoader.getPotionRecipes().get(recipeId);
-        if (recipe == null) return;
-        Level level = getNpcLevel(npcId);
-        if (level == null) return;
-        ColonyItemBank bank = ColonyItemBank.get(level);
-        if (bank == null) return;
-        UUID colonyId = findStorageColonyId();
-        for (String inputItemId : recipe.inputItems()) {
-            ItemKey key = ItemKey.of(inputItemId, null);
-            if (bank.available(colonyId, key) < count) {
-                int colonIdx = inputItemId.lastIndexOf(':');
-                String shortId = colonIdx >= 0 ? inputItemId.substring(colonIdx + 1) : inputItemId;
-                Log.warn(TAG, "brew_potion: insufficient input item {} (need={})", inputItemId, count);
-                throw new ResourceShortageException(
-                        List.of(new ResourceStack(new ResourceId(shortId), count)));
-            }
-        }
-    }
-
     // ── Action implementations ──
 
     private void executeAsyncAction(AtomicOp.BlockInteractOp op, World world, long npcId) {
@@ -372,9 +368,8 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
             case "gather" -> executeGather(op.target(), params, world, npcId);
             case "decompose" -> executeDecompose(params, world, npcId);
             case "synthesize" -> executeSynthesize(params, world, npcId);
-            case "craft_wand" -> executeCraftWand(params, world, npcId);
+            case "craft" -> executeCraft(params, world, npcId);
             case "craft_spell" -> executeCraftSpell(params, world, npcId);
-            case "brew_potion" -> executeBrewPotion(params, world, npcId);
             default -> Log.warn(TAG, "Unknown async block_interact action: {}", action);
         }
     }
@@ -553,23 +548,21 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         spawnCompletionParticles(npcId);
     }
 
-    private void executeCraftWand(Map<String, String> params, World world, long npcId) {
+    /**
+     * 制作站统一 craft 动作：法杖/权杖/药水按 recipe_id 解析（{@link CraftRecipeView}），
+     * 扣元素 + 可选额外物品原料，产物带 NBT 入殖民地仓库。卷轴（魔法工坊）走独立 craft_spell。
+     */
+    private void executeCraft(Map<String, String> params, World world, long npcId) {
         String recipeId = params.get("recipe_id");
         int count = parseCount(params);
         if (recipeId == null || count <= 0) {
-            Log.warn(TAG, "craft_wand: invalid params recipe_id={} count={}", recipeId, count);
+            Log.warn(TAG, "craft: invalid params recipe_id={} count={}", recipeId, count);
             return;
         }
 
-        ProductionRecipeLoader recipes = productionRecipeLoader;
-        if (recipes == null) {
-            Log.warn(TAG, "craft_wand: ProductionRecipeLoader not set");
-            return;
-        }
-
-        CraftWandRecipe recipe = recipes.getCraftWandRecipes().get(recipeId);
+        CraftRecipeView recipe = CraftRecipeView.resolve(productionRecipeLoader, recipeId);
         if (recipe == null) {
-            Log.warn(TAG, "craft_wand: recipe not found: {}", recipeId);
+            Log.warn(TAG, "craft: recipe not found: {}", recipeId);
             return;
         }
 
@@ -585,33 +578,40 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
             long needed = scaledCraftCost(entry.getValue() * count);
             if (bank.countElement(colonyId, entry.getKey()) < needed) {
                 String elementId = entry.getKey().name().toLowerCase();
-                Log.warn(TAG, "craft_wand: insufficient {} (need={})", entry.getKey(), needed);
+                Log.warn(TAG, "craft: insufficient {} (need={})", entry.getKey(), needed);
                 throw new ResourceShortageException(
                         List.of(new ResourceStack(new ResourceId(elementId), (int) needed)));
+            }
+        }
+        for (String inputItemId : recipe.inputItems()) {
+            ItemKey key = ItemKey.of(inputItemId, null);
+            if (bank.available(colonyId, key) < count) {
+                int colonIdx = inputItemId.lastIndexOf(':');
+                String shortId = colonIdx >= 0 ? inputItemId.substring(colonIdx + 1) : inputItemId;
+                Log.warn(TAG, "craft: insufficient input item {} (need={})", inputItemId, count);
+                throw new ResourceShortageException(
+                        List.of(new ResourceStack(new ResourceId(shortId), count)));
             }
         }
 
         for (var entry : recipe.cost().entrySet()) {
             bank.consumeElement(colonyId, entry.getKey(), scaledCraftCost(entry.getValue() * count));
         }
-
-        var item = BuiltInRegistries.ITEM.get(ResourceLocation.tryParse(recipe.outputItem()));
-        if (item == null) {
-            Log.warn(TAG, "craft_wand: output item not found: {}", recipe.outputItem());
-            return;
+        for (String inputItemId : recipe.inputItems()) {
+            bank.consume(colonyId, ItemKey.of(inputItemId, null), count);
         }
 
-        ItemStack stack = new ItemStack(item, count);
-        if (recipe.outputNbt() != null && !recipe.outputNbt().isEmpty()) {
-            stack.set(DataComponents.CUSTOM_DATA, CustomData.of(recipe.outputNbt().copy()));
+        CompoundTag outputNbt = recipe.outputNbt() != null ? recipe.outputNbt().copy() : null;
+        if (outputNbt != null) {
+            substitutePlaceholders(outputNbt, colonyId);
         }
+        ItemKey outputKey = ItemKey.of(recipe.outputItem(), outputNbt);
+        bank.add(colonyId, outputKey, count);
 
-        bank.add(colonyId, ItemKey.of(recipe.outputItem(), recipe.outputNbt().copy()), count);
+        // ── Transport visualization: crafted item flies NPC → warehouse ──
+        launchItemTransport(outputKey, count, world, npcId);
 
-        // ── Transport visualization: wand flies NPC → warehouse ──
-        launchItemTransport(ItemKey.of(recipe.outputItem(), recipe.outputNbt().copy()), count, world, npcId);
-
-        Log.info(TAG, "craft_wand: {} x{} → warehouse", recipe.outputItem(), count);
+        Log.info(TAG, "craft: {} x{} → warehouse", recipe.outputItem(), count);
         spawnCompletionParticles(npcId);
     }
 
@@ -679,78 +679,6 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         spawnCompletionParticles(npcId);
     }
 
-    private void executeBrewPotion(Map<String, String> params, World world, long npcId) {
-        String recipeId = params.get("recipe_id");
-        int count = parseCount(params);
-        if (recipeId == null || count <= 0) {
-            Log.warn(TAG, "brew_potion: invalid params recipe_id={} count={}", recipeId, count);
-            return;
-        }
-
-        ProductionRecipeLoader recipes = productionRecipeLoader;
-        if (recipes == null) {
-            Log.warn(TAG, "brew_potion: ProductionRecipeLoader not set");
-            return;
-        }
-
-        var recipe = recipes.getPotionRecipes().get(recipeId);
-        if (recipe == null) {
-            Log.warn(TAG, "brew_potion: recipe not found: {}", recipeId);
-            return;
-        }
-
-        Level level = getNpcLevel(npcId);
-        if (level == null) return;
-
-        ColonyItemBank bank = ColonyItemBank.get(level);
-        if (bank == null) return;
-
-        UUID colonyId = findStorageColonyId();
-
-        for (var entry : recipe.cost().entrySet()) {
-            long needed = scaledCraftCost(entry.getValue() * count);
-            if (bank.countElement(colonyId, entry.getKey()) < needed) {
-                String elementId = entry.getKey().name().toLowerCase();
-                Log.warn(TAG, "brew_potion: insufficient {} (need={})", entry.getKey(), needed);
-                throw new ResourceShortageException(
-                        List.of(new ResourceStack(new ResourceId(elementId), (int) needed)));
-            }
-        }
-
-        for (String inputItemId : recipe.inputItems()) {
-            ItemKey key = ItemKey.of(inputItemId, null);
-            if (bank.available(colonyId, key) < count) {
-                int colonIdx = inputItemId.lastIndexOf(':');
-                String shortId = colonIdx >= 0 ? inputItemId.substring(colonIdx + 1) : inputItemId;
-                Log.warn(TAG, "brew_potion: insufficient input item {} (need={})", inputItemId, count);
-                throw new ResourceShortageException(
-                        List.of(new ResourceStack(new ResourceId(shortId), count)));
-            }
-        }
-
-        for (var entry : recipe.cost().entrySet()) {
-            bank.consumeElement(colonyId, entry.getKey(), scaledCraftCost(entry.getValue() * count));
-        }
-
-        for (String inputItemId : recipe.inputItems()) {
-            bank.consume(colonyId, ItemKey.of(inputItemId, null), count);
-        }
-
-        CompoundTag outputNbt = recipe.outputNbt() != null ? recipe.outputNbt().copy() : null;
-        if (outputNbt != null) {
-            substitutePlaceholders(outputNbt, colonyId);
-        }
-
-        ItemKey outputKey = ItemKey.of(recipe.outputItem(), outputNbt);
-        bank.add(colonyId, outputKey, count);
-
-        // ── Transport visualization: potion flies NPC → warehouse ──
-        launchItemTransport(outputKey, count, world, npcId);
-
-        Log.info(TAG, "brew_potion: {} x{} → warehouse", recipe.outputItem(), count);
-        spawnCompletionParticles(npcId);
-    }
-
     private static void substitutePlaceholders(CompoundTag tag, UUID colonyId) {
         if (tag == null || colonyId == null) return;
         String colonyIdStr = colonyId.toString();
@@ -791,7 +719,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         transporter.send(key, amount, from, to, npc.level(), npcId);
     }
 
-    /** Launch transport animation for produced items (synthesize/craft_wand/brew_potion). */
+    /** Launch transport animation for produced items (synthesize/craft/craft_spell). */
     private void launchItemTransport(ItemKey outputKey, int count, World world, long npcId) {
         WandscapeNpc npc = EntityComponentBridge.INSTANCE.getNpc(npcId);
         if (npc == null || npc.isRemoved()) return;

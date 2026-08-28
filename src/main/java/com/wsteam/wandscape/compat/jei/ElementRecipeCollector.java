@@ -11,6 +11,7 @@ import com.wsteam.wandscape.element.internal.ElementMappingConfig;
 import com.wsteam.wandscape.production.data.BrewPotionRecipe;
 import com.wsteam.wandscape.production.data.CraftSpellRecipe;
 import com.wsteam.wandscape.production.data.CraftWandRecipe;
+import com.wsteam.wandscape.production.data.ScepterRecipe;
 import com.wsteam.wandscape.shared.data.ElementType;
 
 import net.minecraft.nbt.CompoundTag;
@@ -87,15 +88,29 @@ public final class ElementRecipeCollector {
         return result;
     }
 
-    /** 聚合四个来源为完整配方列表。 */
+    /** 制作站玩家权杖配方（无属性 NBT，产物即注册物品）。 */
+    public static List<ElementRecipe> fromScepterRecipes(Collection<ScepterRecipe> recipes) {
+        List<ElementRecipe> result = new ArrayList<>();
+        for (ScepterRecipe r : recipes) {
+            if (r.cost().isEmpty()) continue;
+            String station = r.craftStation() != null ? r.craftStation() : STATION_CRAFTING;
+            result.add(new ElementRecipe(r.id(), ElementRecipeKind.SYNTHESIZE, station,
+                    r.outputItem(), null, r.cost(), List.of(), 0));
+        }
+        return result;
+    }
+
+    /** 聚合五个来源为完整配方列表。 */
     public static List<ElementRecipe> collectAll(Collection<ElementMappingConfig> mappings,
                                                  Collection<CraftWandRecipe> wands,
                                                  Collection<BrewPotionRecipe> potions,
-                                                 Collection<CraftSpellRecipe> spells) {
+                                                 Collection<CraftSpellRecipe> spells,
+                                                 Collection<ScepterRecipe> scepters) {
         List<ElementRecipe> all = fromElementMappings(mappings);
         all.addAll(fromCraftWandRecipes(wands));
         all.addAll(fromBrewPotionRecipes(potions));
         all.addAll(fromCraftSpellRecipes(spells));
+        all.addAll(fromScepterRecipes(scepters));
         return all;
     }
 

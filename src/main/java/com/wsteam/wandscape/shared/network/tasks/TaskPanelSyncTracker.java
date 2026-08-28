@@ -542,9 +542,8 @@ public final class TaskPanelSyncTracker {
     private static String categorizeWorkItem(String blueprintId) {
         if (blueprintId.equals("production:decompose")) return "decompose";
         if (blueprintId.equals("production:synthesize")) return "synthesize";
-        if (blueprintId.equals("production:craft_wand")) return "craft";
+        if (blueprintId.equals("production:craft")) return "craft";
         if (blueprintId.equals("production:craft_spell")) return "transcribe";
-        if (blueprintId.equals("production:brew_potion")) return "brew";
         if (blueprintId.startsWith("build:")) return "build";
         if (blueprintId.equals("node:gather")) return "gather";
         return "other";

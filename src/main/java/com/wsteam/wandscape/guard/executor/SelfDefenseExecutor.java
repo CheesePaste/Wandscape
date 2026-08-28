@@ -3,6 +3,7 @@ package com.wsteam.wandscape.guard.executor;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
@@ -11,6 +12,7 @@ import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.core.component.NpcTaskQueue;
 import com.wsteam.wandscape.core.component.TaskExecutor;
 import com.wsteam.wandscape.core.ecs.World;
+import com.wsteam.wandscape.core.types.HostileMarkDecision;
 import com.wsteam.wandscape.magic.entity.MagicBeamEntity;
 import com.wsteam.wandscape.magic.internal.MagicCaster;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
@@ -18,6 +20,7 @@ import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.op.api.AtomicOp;
 import com.wsteam.wandscape.op.executor.OpExecutor;
 import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.task.engine.pool.GlobalTask;
 import com.wsteam.wandscape.task.runtime.NpcTaskPackage;
 
@@ -158,13 +161,28 @@ public final class SelfDefenseExecutor implements OpExecutor<AtomicOp.SelfDefens
         return false;
     }
 
-    /** 目标解析：跟随战斗目标（跟随者玩家攻击的生物）优先——不要求 Enemy、不要求 LOS
-     *  （原版狼 OwnerHurtTarget 行为，隔墙也追）；否则仇恨目标（存活、可反击、hateRange 内、
-     *  可见）优先——反击不要求 Enemy，北极熊/铁傀儡/狼等中立生物主动攻击 NPC 也还手；
-     *  再否则半径内最近可见 {@code isHostileTarget} 的生物（主动索敌仍仅 Enemy，中立生物须已发怒）。
-     *  地下/隔墙看不见的怪物不锁为目标。 */
+    /**
+     * 目标解析：**敌对权杖强制仇恨目标**（本殖民地标记、目标存活且在作用范围内）压过一切——
+     * 解除/目标死亡前该法师不被其它生物吸引（{@link HostileMarkDecision}）；否则跟随战斗目标
+     * （跟随者玩家攻击的生物）优先——不要求 Enemy、不要求 LOS（原版狼 OwnerHurtTarget 行为，
+     * 隔墙也追）；否则仇恨目标（存活、可反击、hateRange 内、可见）优先——反击不要求 Enemy，
+     * 北极熊/铁傀儡/狼等中立生物主动攻击 NPC 也还手；再否则半径内最近可见 {@code isHostileTarget}
+     * 的生物（主动索敌仍仅 Enemy，中立生物须已发怒）。地下/隔墙看不见的怪物不锁为目标。 */
     @Nullable
     private static LivingEntity resolveTarget(WandscapeNpc npc, ServerLevel level) {
+        var scepterApi = WandscapeApis.getScepterApiSilently();
+        if (scepterApi != null) {
+            LivingEntity forced = scepterApi.forcedHostile(level, npc.colonyId);
+            if (forced != null) {
+                UUID forcedUuid = forced.getUUID();
+                double range = Config.SCEPTER_HOSTILE_RANGE.get();
+                if (HostileMarkDecision.shouldPrioritize(forcedUuid, forcedUuid,
+                        forced.distanceToSqr(npc), range * range)) {
+                    return forced;
+                }
+            }
+        }
+
         LivingEntity followAttack = npc.getFollowAttackTarget(level);
         if (followAttack != null) return followAttack;
 

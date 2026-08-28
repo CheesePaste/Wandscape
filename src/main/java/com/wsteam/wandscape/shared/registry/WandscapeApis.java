@@ -15,6 +15,7 @@ public final class WandscapeApis {
     private static RoadApi roadApi;
     private static TouristApi touristApi;
     private static ColonyMetricsApi colonyMetricsApi;
+    private static ScepterApi scepterApi;
 
     private WandscapeApis() {}
 
@@ -97,6 +98,11 @@ public final class WandscapeApis {
     @javax.annotation.Nullable
     public static ColonyMetricsApi getColonyMetricsApiSilently() { return colonyMetricsApi; }
     public static void setColonyMetricsApi(ColonyMetricsApi api) { colonyMetricsApi = api; }
+
+    /** 玩家权杖（庇护/敌对）殖民地标记查询。npc/guard 跨模块读取统一走这里（未装配返回 null 安全）。 */
+    @javax.annotation.Nullable
+    public static ScepterApi getScepterApiSilently() { return scepterApi; }
+    public static void setScepterApi(ScepterApi api) { scepterApi = api; }
 
     private static GuideProgressApi guideProgressApi;
     @javax.annotation.Nullable

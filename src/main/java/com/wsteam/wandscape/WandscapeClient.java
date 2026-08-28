@@ -580,6 +580,19 @@ public class WandscapeClient {
             }
             return 0xFFFFFFFF;
         }, Wandscape.WAND.get());
+        // 玩家权杖：4 件共用模板 + 固定主题色（ItemColors tintindex 0 染头部）
+        event.register((stack, tintIndex) -> tintIndex == 0
+                        ? com.wsteam.wandscape.scepter.ScepterKind.PEACE.themeColor() : 0xFFFFFFFF,
+                Wandscape.PEACE_WAND.get());
+        event.register((stack, tintIndex) -> tintIndex == 0
+                        ? com.wsteam.wandscape.scepter.ScepterKind.FOLLOW.themeColor() : 0xFFFFFFFF,
+                Wandscape.FOLLOW_WAND.get());
+        event.register((stack, tintIndex) -> tintIndex == 0
+                        ? com.wsteam.wandscape.scepter.ScepterKind.SHELTER.themeColor() : 0xFFFFFFFF,
+                Wandscape.SHELTER_WAND.get());
+        event.register((stack, tintIndex) -> tintIndex == 0
+                        ? com.wsteam.wandscape.scepter.ScepterKind.HOSTILE.themeColor() : 0xFFFFFFFF,
+                Wandscape.HOSTILE_WAND.get());
     }
 
     @SubscribeEvent

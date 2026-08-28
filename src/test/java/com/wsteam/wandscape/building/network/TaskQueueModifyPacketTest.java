@@ -40,9 +40,8 @@ class TaskQueueModifyPacketTest {
     void categorizeMappings() {
         assertEquals("decompose", TaskQueueModifyPacket.categorize("production:decompose"));
         assertEquals("synthesize", TaskQueueModifyPacket.categorize("production:synthesize"));
-        assertEquals("craft", TaskQueueModifyPacket.categorize("production:craft_wand"));
+        assertEquals("craft", TaskQueueModifyPacket.categorize("production:craft"));
         assertEquals("transcribe", TaskQueueModifyPacket.categorize("production:craft_spell"));
-        assertEquals("brew", TaskQueueModifyPacket.categorize("production:brew_potion"));
         assertEquals("build", TaskQueueModifyPacket.categorize("build:town_hall"));
         assertEquals("gather", TaskQueueModifyPacket.categorize("node:gather"));
         assertEquals("other", TaskQueueModifyPacket.categorize("some:unknown"));
@@ -54,14 +53,14 @@ class TaskQueueModifyPacketTest {
     @DisplayName("extractItemId: 配方类任务优先返回 output_item（已注册物品，图标可渲染）")
     void recipeBasedPrefersOutputItem() {
         assertEquals("wandscape:wand",
-                TaskQueueModifyPacket.extractItemId("production:craft_wand",
+                TaskQueueModifyPacket.extractItemId("production:craft",
                         params("recipe_id", "apprentice_wand", "output_item", "wandscape:wand")));
         assertEquals("wandscape:spell_scroll",
                 TaskQueueModifyPacket.extractItemId("production:craft_spell",
                         params("recipe_id", "scroll_heal", "output_item", "wandscape:spell_scroll")));
-        assertEquals("minecraft:potion",
-                TaskQueueModifyPacket.extractItemId("production:brew_potion",
-                        params("recipe_id", "heal_potion", "output_item", "minecraft:potion")));
+        assertEquals("wandscape:peace_wand",
+                TaskQueueModifyPacket.extractItemId("production:craft",
+                        params("recipe_id", "peace_wand", "output_item", "wandscape:peace_wand")));
     }
 
     @Test
@@ -71,7 +70,7 @@ class TaskQueueModifyPacketTest {
                 TaskQueueModifyPacket.extractItemId("production:craft_spell",
                         params("recipe_id", "scroll_heal")));
         assertEquals("apprentice_wand",
-                TaskQueueModifyPacket.extractItemId("production:craft_wand",
+                TaskQueueModifyPacket.extractItemId("production:craft",
                         params("recipe_id", "apprentice_wand")));
     }
 

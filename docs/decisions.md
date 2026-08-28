@@ -2,6 +2,33 @@
 
 本文件记录偏离直觉的设计选择及其原因，供后续开发快速理解「为什么这么做」。
 
+## 2026-08-28：4 种玩家权杖——本殖民地作用范围 + 庇护并「友军边界」/ 敌对「单槽强制仇恨」
+
+**需求**（用户指令）：`docs/plan/smallitems.md` 第 2-5 项。和平/跟随权杖右键法师快捷切换；庇护权杖右键生物标盟友、法师不主动攻击/不误伤、再次右键解除、长期持久化；敌对权杖右键生物让本殖民地 128 格内法师集火、解除/死亡前不被其它生物吸引、右键另一生物转移。
+
+**决策**：
+- **范围归属 = 本殖民地**（用户确认）：四把都只指挥玩家自己殖民地的法师——和平/跟随要求目标法师属自己殖民地（`ColonyApi.getColonyByFounder`），庇护/敌对要求玩家有殖民地（标记存该殖民地名下）。与盟誓戒指「本殖民地」语义及「只能叫自己殖民地 NPC 干活」哲学一致；无殖民地/跨殖民地拒绝并上屏反馈。
+- **庇护 = 扩「友军边界」而非新名单**：庇护是 `WandscapeNpc.isFriendlyForce` 的**唯一接入点**——把被庇护 UUID 并入该判定（经 `SharedApi.ScepterApi.isSheltered`），守卫/光束/陨石/自防御/跟随攻击全部经它过滤自动生效（零散点），边界不散落。**只存 UUID 不存实体引用**（实体可能卸载/重生；死亡保留但亡者 UUID 不再被点名，无碍）。
+- **敌对 = 单槽强制仇恨 + 集火最优先**：每殖民地**单槽**目标；消费点 = `SelfDefenseExecutor.resolveTarget` 与 `GuardAttackExecutor` 选目标处**最高优先**（`HostileMarkDecision` 纯决策表：目标存活 + 距 ≤ `Config.scepter.hostileRange`(128)），压过 followAttack/仇恨/最近敌——期间不被其它生物吸引。**死亡自动清除**（`ScepterDeathHandler` LivingDeathEvent）。右键另一生物转移、右键当前解除。**与庇护互斥**：标记敌对时自动撤该目标庇护（否则守卫过滤器把它当友军滤掉，语义矛盾）。「和平优先」：`SelfDefenseExecutor` 的 peace 分支先于 resolveTarget，强制仇恨对和平法师不生效。
+- **关键实现约束**：`GuardScanner.nearestInZones` 只收 `isHostileTarget`（Enemy）——强制目标（可能是牛等非敌对）必须**按 UUID 直查** `level.getEntity()` + 存活校验（仿 `getHatedAttacker` L661-665），不能走扫描器。
+- **交互拦截**：法师走 `WandscapeNpc.mobInteract` 非潜行分支（新增共享接口 `MageWandItem`，与 `NpcBindingItem` 潜行分支区分）；非法师/非本殖民地生物走 `PlayerInteractEvent.EntityInteract`（已核实先于 `mobInteract`/`item.interactLivingEntity`，`setCanceled(true)+SUCCESS` 两端一致可靠屏蔽喂牛/驯狼，SUCCESS 保留挥手；**只订阅 EntityInteract，不订阅 EntityInteractAt**）。本殖民地法师与玩家放行给 mobInteract/不干涉。
+- **模块隔离**：共享 `shared/api/ScepterApi` + `WandscapeApis.setScepterApi/getScepterApiSilently`；npc/guard 只经 API 读取，不跨包引用 scepter 具体类。
+- **3D = 共用法杖模板 + 换色**（用户指令）：4 权杖共用 `models/item/scepter.json`（几何同 NPC 法杖 `wand.json`），ItemColors tintindex 0 染各 kind 主题色；不做独立几何（「明显区分」= 颜色 + 独立物品身份）。
+
+**影响**：新模块 `scepter/`（`ScepterItem`/`ScepterKind`/`ScepterApi`/`internal/{ScepterMarks,ScepterMarksSavedData,ScepterApiImpl,ScepterService,ScepterInteractHandler,ScepterDeathHandler}`）+ 共享 `shared/api/MageWandItem` + `WandscapeNpc.mobInteract` 非潜行分支 + `isFriendlyForce` 庇护钩子 + `SelfDefenseExecutor`/`GuardAttackExecutor`/`GuardTaskSource` 集成 + `Config.scepter.hostileRange` + 4 模型/壳 + zh/en lang。测试：`ScepterMarksTest`（8）、`HostileMarkDecisionTest`（4）、`ScepterRecipeTest`（3）。
+
+## 2026-08-28：制作站配方统一 `production:craft`——消除「加物品改一堆文件」的类型扇出
+
+**需求**（用户指令）：加新可合成物要同时改 `RecipeLoader`/`CraftingStationPacket`/`RequestProductionTaskPacket`/`BlockInteractExecutor`/`ProductionEligibility`/队列三处等一大堆文件，是否为缺陷、要不要改。用户拍板：**合并制作站的动作**（法杖/权杖/药水合成），同时保留魔法工坊卷轴独立（不同建筑）。
+
+**决策**（本功能内先落地，深度统一见 `docs/plan/recipe-unify.md`）：
+- **制作站动作统一为 `craft`**：craft_wand/brew_potion/scepter 合并为 `craft` + 蓝图 `production:craft`（旧 craft_wand.json/brew_potion.json 删除）；新增 `CraftRecipeView`（按 recipe_id 查法杖/权杖/药水注册表）统一解析，`RequestProductionTaskPacket`/`WandscapeBlockInteractExecutor`/`ProductionEligibility` 不再按类型分发 switch。
+- **魔法工坊卷轴独立**：`craft_spell` + `production:craft_spell` 保留（magic_station 是独立建筑，GUI/提交/计费/队列类别 "transcribe" 维持）。
+- **类型差异落进配方数据**：法杖/权杖/药水都是「元素→物品入仓库」，差异（法杖 preset 属性 NBT、药水 input_items 额外原料）由各自 record 字段承载，消费端只认识 `CraftRecipeView`。
+- 用户确认后续深度统一（单一 `CraftRecipe` 通用配方）在 4 权杖功能完成后单独 `refactor:` commit。
+
+**影响**：`ProductionRecipeLoader`（+scepter registry）、`CraftingStationPacket.from`（+scepter collection）、`BuildingInteractHandler`、`CraftingStationScreen.onSubmit`（恒 "craft"）、`RequestProductionTaskPacket`（craft 分支 + CraftRecipeView）、蓝图 craft.json（删 craft_wand/brew_potion）、`WandscapeBlockInteractExecutor`（统一 executeCraft，删 executeCraftWand/executeBrewPotion）、`ProductionEligibility`（production:craft）、队列三处 categorize（"craft"）、lang 蓝图键。测试：`TaskQueueModifyPacketTest`/`ProductionEligibilityTest` 更新。
+
 ## 2026-08-28：盟誓戒指——玩家维度固定槽存储 + 归属限本殖民地法师
 
 **需求**（用户指令）：`docs/plan/smallitems.md` 第 1 项盟誓戒指——shift+右键本殖民地法师存入、右键地面放出；同玩家所有戒指共享空间；低级/中级/高级分别存取 1/2/4 个法师；1/10/20 级解锁三档；暂不加入配方，创造栏发放。

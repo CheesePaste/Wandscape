@@ -150,15 +150,10 @@ public record TaskQueueModifyPacket(
                 int count = paramInt(params, "count", 0);
                 yield "Synthesize " + id + " x" + count;
             }
-            case "production:craft_wand" -> {
+            case "production:craft" -> {
                 String id = paramStr(params, "recipe_id");
                 int count = paramInt(params, "count", 0);
                 yield "Craft " + id + " x" + count;
-            }
-            case "production:brew_potion" -> {
-                String id = paramStr(params, "recipe_id");
-                int count = paramInt(params, "count", 0);
-                yield "Brew " + id + " x" + count;
             }
             case "production:craft_spell" -> {
                 String id = paramStr(params, "recipe_id");
@@ -182,9 +177,8 @@ public record TaskQueueModifyPacket(
     static String categorize(String blueprintId) {
         if (blueprintId.equals("production:decompose")) return "decompose";
         if (blueprintId.equals("production:synthesize")) return "synthesize";
-        if (blueprintId.equals("production:craft_wand")) return "craft";
+        if (blueprintId.equals("production:craft")) return "craft";
         if (blueprintId.equals("production:craft_spell")) return "transcribe";
-        if (blueprintId.equals("production:brew_potion")) return "brew";
         if (blueprintId.startsWith("build:")) return "build";
         if (blueprintId.equals("node:gather")) return "gather";
         return "other";
@@ -197,9 +191,8 @@ public record TaskQueueModifyPacket(
     static String extractItemId(String blueprintId, Map<String, JsonElement> params) {
         // 配方类生产任务优先用 output_item（已注册物品，队列图标可渲染）；旧数据回退 recipe_id。
         if (blueprintId.equals("production:synthesize")
-                || blueprintId.equals("production:craft_wand")
-                || blueprintId.equals("production:craft_spell")
-                || blueprintId.equals("production:brew_potion")) {
+                || blueprintId.equals("production:craft")
+                || blueprintId.equals("production:craft_spell")) {
             String output = paramStr(params, "output_item");
             if (output != null) return output;
         }
@@ -208,9 +201,8 @@ public record TaskQueueModifyPacket(
             if (id != null) return id;
         }
         if (blueprintId.equals("production:synthesize")
-                || blueprintId.equals("production:craft_wand")
-                || blueprintId.equals("production:craft_spell")
-                || blueprintId.equals("production:brew_potion")) {
+                || blueprintId.equals("production:craft")
+                || blueprintId.equals("production:craft_spell")) {
             String id = paramStr(params, "recipe_id");
             if (id != null) return id;
         }

@@ -62,9 +62,8 @@ public class TaskQueuePanel extends AbstractWidget {
             return switch (bid) {
                 case "production:decompose" -> "decompose";
                 case "production:synthesize" -> "synthesize";
-                case "production:craft_wand" -> "craft";
+                case "production:craft" -> "craft";
                 case "production:craft_spell" -> "transcribe";
-                case "production:brew_potion" -> "brew";
                 default -> bid.startsWith("build:") ? "build" : "other";
             };
         }

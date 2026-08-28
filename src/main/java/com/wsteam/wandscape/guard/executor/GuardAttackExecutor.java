@@ -2,10 +2,13 @@ package com.wsteam.wandscape.guard.executor;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
+import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.core.component.NavigationState;
 import com.wsteam.wandscape.core.ecs.World;
+import com.wsteam.wandscape.core.types.HostileMarkDecision;
 import com.wsteam.wandscape.guard.GuardScanner;
 import com.wsteam.wandscape.guard.GuardZone;
 import com.wsteam.wandscape.magic.entity.MagicBeamEntity;
@@ -15,6 +18,7 @@ import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.op.api.AtomicOp;
 import com.wsteam.wandscape.op.executor.OpExecutor;
 import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.shared.registry.WandscapeApis;
 
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
@@ -129,6 +133,22 @@ public final class GuardAttackExecutor implements OpExecutor<AtomicOp.AttackMons
         // 守卫目标过滤友军（含己方/同殖民地召唤物）——否则守卫会索敌本 NPC 自己召唤的亡灵随从
         LivingEntity nearest = GuardScanner.nearestInZones(level, attackZones, npc.position(),
                 m -> !npc.isFriendlyForce(m));
+
+        // 敌对权杖强制目标（本殖民地标记、存活且距 ≤128）压过区内外任何敌人——优先集火、
+        // 不被其它生物吸引；目标被庇护时经 isFriendlyForce 过滤自然不在此列（ScepterMark 已互斥）。
+        var scepterApi = WandscapeApis.getScepterApiSilently();
+        if (scepterApi != null) {
+            LivingEntity forced = scepterApi.forcedHostile(level, npc.colonyId);
+            if (forced != null) {
+                UUID forcedUuid = forced.getUUID();
+                double range = Config.SCEPTER_HOSTILE_RANGE.get();
+                if (HostileMarkDecision.shouldPrioritize(forcedUuid, forcedUuid,
+                        forced.distanceToSqr(npc), range * range)) {
+                    nearest = forced;
+                }
+            }
+        }
+
         if (nearest == null) {
             // 无攻击目标：脱离区内仍有怪 → 保持守卫待命；彻底无怪 → 任务完成
             List<GuardZone> releaseZones = GuardScanner.zones(level, p.releaseRange());

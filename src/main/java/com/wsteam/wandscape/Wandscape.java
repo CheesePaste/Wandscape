@@ -368,6 +368,30 @@ public class Wandscape {
                             new Item.Properties().stacksTo(1),
                             com.wsteam.wandscape.ring.RingTier.HIGH));
 
+    // ---- scepter: 玩家权杖（和平/跟随/庇护/敌对，合成站 1 级配方产出，见 scepter/）----
+    public static final DeferredItem<Item> PEACE_WAND =
+            ITEMS.register("peace_wand", () ->
+                    new com.wsteam.wandscape.scepter.ScepterItem(
+                            new Item.Properties().stacksTo(1),
+                            com.wsteam.wandscape.scepter.ScepterKind.PEACE));
+    public static final DeferredItem<Item> FOLLOW_WAND =
+            ITEMS.register("follow_wand", () ->
+                    new com.wsteam.wandscape.scepter.ScepterItem(
+                            new Item.Properties().stacksTo(1),
+                            com.wsteam.wandscape.scepter.ScepterKind.FOLLOW));
+    public static final DeferredItem<Item> SHELTER_WAND =
+            ITEMS.register("shelter_wand", () ->
+                    new com.wsteam.wandscape.scepter.ScepterItem(
+                            new Item.Properties().stacksTo(1),
+                            com.wsteam.wandscape.scepter.ScepterKind.SHELTER));
+    public static final DeferredItem<Item> HOSTILE_WAND =
+            ITEMS.register("hostile_wand", () ->
+                    new com.wsteam.wandscape.scepter.ScepterItem(
+                            new Item.Properties().stacksTo(1),
+                            com.wsteam.wandscape.scepter.ScepterKind.HOSTILE));
+    public static final com.wsteam.wandscape.scepter.internal.ScepterApiImpl SCEPTER_API =
+            new com.wsteam.wandscape.scepter.internal.ScepterApiImpl();
+
     // ---- building-scanner blocks ----
     // Creative Building Scanner (full-featured, for creators) — renamed from building_scanner to
     // creative_building_scanner; the plain id "building_scanner" now belongs to the Survival scanner.
@@ -421,6 +445,10 @@ public class Wandscape {
                         output.accept(OATH_RING.get());
                         output.accept(OATH_RING_MID.get());
                         output.accept(OATH_RING_HIGH.get());
+                        output.accept(PEACE_WAND.get());
+                        output.accept(FOLLOW_WAND.get());
+                        output.accept(SHELTER_WAND.get());
+                        output.accept(HOSTILE_WAND.get());
                         output.accept(CREATIVE_BUILDING_SCANNER_ITEM.get());
                         output.accept(BUILDING_SCANNER_ITEM.get());
                         output.accept(INTERACT_SPOT_MARKER_ITEM.get());
@@ -483,6 +511,8 @@ public class Wandscape {
         NeoForge.EVENT_BUS.register(HostileTargetingHandler.class);
         NeoForge.EVENT_BUS.register(BuildingNoSpawnZoneHandler.class);
         NeoForge.EVENT_BUS.register(com.wsteam.wandscape.ring.internal.OathRingSyncHandler.class);
+        NeoForge.EVENT_BUS.register(com.wsteam.wandscape.scepter.internal.ScepterInteractHandler.class);
+        NeoForge.EVENT_BUS.register(com.wsteam.wandscape.scepter.internal.ScepterDeathHandler.class);
         NeoForge.EVENT_BUS.register(com.wsteam.wandscape.guard.SelfDefenseHandler.class);
         NeoForge.EVENT_BUS.register(com.wsteam.wandscape.guard.FollowAttackHandler.class);
         NeoForge.EVENT_BUS.register(com.wsteam.wandscape.guard.NpcSpellPowerHandler.class);
@@ -511,6 +541,7 @@ public class Wandscape {
         // Register API implementations
         WandscapeApis.setBuildingApi(buildingApi);
         WandscapeApis.setNpcApi(new NpcApiImpl());
+        WandscapeApis.setScepterApi(SCEPTER_API);
         WandscapeApis.setWarehouseApi(new WarehouseManager());
         WandscapeApis.setColonyApi(ColonyApiImpl.get());
         WandscapeApis.setTouristApi(new TouristApiImpl());
@@ -1020,6 +1051,8 @@ public class Wandscape {
 
         // Oath ring per-player storage (eagerly load so ring interactions never hit a null instance)
         OathRingSavedData.get(event.getServer());
+        // Scepter marks per-colony storage (庇护/敌对 标记长期持久化；预载避免首次使用读档延迟)
+        com.wsteam.wandscape.scepter.internal.ScepterMarksSavedData.get(event.getServer());
         Log.info(TAG, "Oath ring storage wired");
 
         // Colony level data
