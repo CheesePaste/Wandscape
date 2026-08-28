@@ -261,6 +261,13 @@ public class BuildingTaskSource implements TaskSource {
             world.taskPool.cancelTask(taskId, world);
         }
 
+        // Sweep any active tasks in the global pool explicitly tagged with this buildingId
+        for (GlobalTask task : world.taskPool.all()) {
+            if (buildingId.equals(task.buildingId) && task.state != TaskState.COMPLETED) {
+                world.taskPool.cancelTask(task.id, world);
+            }
+        }
+
         ChunkLoadManager.get().releaseBuilding(buildingId);
         var api = WandscapeApis.getBuildingApiSilently();
         if (api != null) {

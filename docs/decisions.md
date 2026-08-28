@@ -1693,3 +1693,37 @@
 **为什么**：建筑因物理损坏或手动关闭而停摆会打断殖民地自动化，与「轻度不硬核：不引入生存难度惩罚」原则相悖；手动关闭/重启则是低频操作、UI 三按钮显拥挤。损坏只影响外观、运转不受影响，修复变成可选的补齐手段，玩家不再被迫处理故障。
 
 **影响**：`docs/modules/building.md`/`engine.md`/`guard.md`/`raid.md`/`projection.md`/`shared.md`/`simulation.md`/`architecture.md` 同步更新；guide 文档（anomaly/getting_started/overview）重写；lang 移除 shutdown/restart/stopped/broken/营业等 key。无存档迁移（shutdown NBT 位被忽略）。`getBuildingIdInInteractionZone`/`getTouristInteractPoint`/`getEntryPoint` 等处的 `isShutdown()` 过滤一并移除。
+
+## 2026-08-28：撤销建造任务彻底清理、工作站自动补料任务同步取消与跨存档幽灵任务熔断
+
+**需求**：
+1. 玩家撤销未开始放置方块（等待材料中）的建筑建造后，重进游戏时该建筑任务会莫名其妙再次请求物资并重新被法师建造出来。
+2. 建筑撤销建造（或未完工即拆除）后，工作站因该建筑材料短缺而自动生成的合成任务（`production:synthesize`）仍然残留在工坊队列中，造成资源浪费与多余排队。
+
+**根因分析**：
+1. **`cancelBuilding` 在未开工分支漏调引擎任务取消**：
+   在 `BuildingApiImpl.cancelBuilding` 中，当 `!state.isConstructionStarted()` 时，直接调用了 `unregisterState`，漏掉了 `BuildingTaskSource.cancelBuildingTasks(buildingId)` 和 `state.getTaskQueue().clear()`。已发布的 `GlobalTask` 仍留在 `GlobalTaskPool` 中，保存入 `TaskPoolSavedData`（`wandscape_tasks` NBT）。重进世界时，任务被重新加载并派发给法师，使已撤销建筑"起死回生"。
+2. **工作站自动合成任务无关联清理**：
+   `ResourceSupplySystem.scanAwaitingTasks` 之前为缺料建筑派发了 `TASK_PRIORITY_AUTO`（40）的 `production:synthesize` 任务。当建筑被撤销或未完工拆除时，没有通知工坊队列或全局池销毁这些为它生成的合成条目。
+3. **存档载入未校验建筑存活状态**：
+   `TaskPoolSavedData` 反序列化持久化任务时，没有核对 `buildingId` 是否仍然存在于 `BuildingSavedData` 中。若存档中存在孤儿任务（如旧版本遗留或异常关服产生），会被原样重新注册。
+
+**决策**：
+1. **`cancelBuilding` 与 `demolishBuilding` 严格取消与全清**：
+   - 无论是否开工，`cancelBuilding` 必调 `BuildingTaskSource.cancelBuildingTasks(buildingId)` 与 `state.getTaskQueue().clear()`。
+   - `cancelBuildingTasks` 除了从 `BuildingTaskPool` 移出外，额外遍历 `world.taskPool.all()` 终结所有 `task.buildingId.equals(buildingId)` 的活跃任务。
+2. **工作站自动合成任务精准回退与取消（`ResourceSupplySystem.cancelAutoSynthesize`）**：
+   - 当建筑撤销或未完工拆除时，根据建筑蓝图物料清单，逆向检索小镇所有工作站队列：
+     - 若队列中有匹配 `recipe_id` 且 `priority <= TASK_PRIORITY_AUTO`（40）的条目：
+       - `count <= remainingToCancel`：直接从队列移除；
+       - `count > remainingToCancel`：扣减 `count` 并等比缩放 `channel_ticks`。
+     - 若工坊当前正在执行全局合成任务（Head 任务），直接调用 `cancelTask` 并推进工坊队列，绝不影响玩家手动下单（50）或商店补货（60）。
+3. **跨存档幽灵任务熔断机制（`TaskPoolSavedData`）**：
+   - 在 `TaskPoolSavedData.taskFromNbt` 载入建筑相关任务（`blueprintId.startsWith("build:")` 或带 `building_id`）时，实时比对 `BuildingSavedData.getBuilding(bid)`。若所属建筑在世界中已不存在，直接丢弃该幽灵任务并记录日志，彻底防止幽灵任务复现。
+
+**影响**：
+- `engine/system/ResourceSupplySystem.java`：新增 `cancelAutoSynthesize`。
+- `building/internal/BuildingApiImpl.java`：完善 `cancelBuilding` 与 `demolishBuilding`。
+- `engine/source/BuildingTaskSource.java`：`cancelBuildingTasks` 补充 global pool 扫描清理。
+- `engine/TaskPoolSavedData.java`：增加孤儿建筑任务加载拦截。
+- `engine/system/CancelAutoSupplyTest.java`：新增自动合成取消与数量扣减单元测试。
