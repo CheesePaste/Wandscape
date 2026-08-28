@@ -84,7 +84,11 @@ public class WandscapeBlockOps implements BlockOps {
             // 侦测器脉冲、比较器重算），方块落地即为其最终状态，避免施工中水流。
             BuildPlacementGuard.enable();
             try {
-                level.setBlock(bp, state, 2);
+                // UPDATE_CLIENTS (2) | UPDATE_KNOWN_SHAPE (16) | UPDATE_SUPPRESS_DROPS (32) = 50
+                // 1. UPDATE_CLIENTS (2): 立即向客户端同步方块渲染
+                // 2. UPDATE_KNOWN_SHAPE (16): 施工中压制邻居形状更新，避免未放置完时悬空灯笼/活板门/双箱左右半变空气
+                // 3. UPDATE_SUPPRESS_DROPS (32): 避免覆盖方块时掉落掉落物实体
+                level.setBlock(bp, state, Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE | Block.UPDATE_SUPPRESS_DROPS);
             } finally {
                 BuildPlacementGuard.disable();
             }
@@ -119,20 +123,29 @@ public class WandscapeBlockOps implements BlockOps {
         try {
             byte[] data = Base64.getDecoder().decode(nbtBase64);
             CompoundTag tag = NbtIo.readCompressed(new ByteArrayInputStream(data), NbtAccounter.create(0x200000L));
+            tag.putInt("x", bp.getX());
+            tag.putInt("y", bp.getY());
+            tag.putInt("z", bp.getZ());
             BlockState state = level.getBlockState(bp);
-            BlockEntity be = BlockEntity.loadStatic(bp, state, tag, level.registryAccess());
+            BlockEntity be = level.getBlockEntity(bp);
             if (be != null) {
-                level.setBlockEntity(be);
+                be.loadWithComponents(tag, level.registryAccess());
                 be.setChanged();
-                // Sync BlockEntity data to clients
-                if (level instanceof ServerLevel serverLevel) {
-                    var packet = be.getUpdatePacket();
-                    if (packet != null) {
-                        serverLevel.getChunkSource().chunkMap.getPlayers(
-                                serverLevel.getChunk(bp).getPos(), false
-                        ).forEach(player -> player.connection.send(packet));
-                    }
+            } else {
+                be = BlockEntity.loadStatic(bp, state, tag, level.registryAccess());
+                if (be != null) {
+                    level.setBlockEntity(be);
+                    be.setChanged();
                 }
+            }
+            if (be != null && level instanceof ServerLevel serverLevel) {
+                var packet = be.getUpdatePacket();
+                if (packet != null) {
+                    serverLevel.getChunkSource().chunkMap.getPlayers(
+                            serverLevel.getChunk(bp).getPos(), false
+                    ).forEach(player -> player.connection.send(packet));
+                }
+                serverLevel.sendBlockUpdated(bp, state, state, 3);
             }
         } catch (Exception e) {
             Log.warn(TAG, "Failed to restore BlockEntity NBT at {}: {}", bp, e.toString());
@@ -378,7 +391,9 @@ public class WandscapeBlockOps implements BlockOps {
             BlockState state,
             net.minecraft.world.level.block.state.properties.Property<T> prop,
             String value) {
-        return state.setValue(prop, (T) prop.getValue(value).orElse(null));
+        return prop.getValue(value)
+                .map(v -> (BlockState) state.setValue(prop, v))
+                .orElse(state);
     }
 
     /** Keep resolveBlock for calls that just need the Block (getBlock, isAir). */

@@ -1699,3 +1699,30 @@
 - `lang/`：`zh_cn.json` 与 `en_us.json` 补全流水线与筛选中英文字段。
 - 单元测试：`TaskManagementClientStateTest` 全面覆盖流水线数据过滤与选中逻辑。
 
+## 2026-08-28：方块放置压制邻居形状变化（UPDATE_KNOWN_SHAPE）与 BlockEntity 原位加载修复
+
+**需求**：
+建造仓库（`warehouse1`）、商店等建筑时，箱子放出来变空气或双箱变单箱、活板门/悬空灯笼/营火等概率放不上；建造完成后由于缺失方块，V 面板修复按钮亮起，合成出的资源残留在仓库中。
+
+**根因分析**：
+1. **原版邻居形状更新（Shape Update）引发自毁**：
+   原 `WandscapeBlockOps.setBlock` 使用了硬编码 flag `2`（仅 `UPDATE_CLIENTS`），未置位 `Block.UPDATE_KNOWN_SHAPE`（16）。当悬挂灯笼（`hanging=true`）、双箱（`type=left/right`）、活板门、门、火把在未放置上方支撑方块或相邻方块前被放置时，原版 `markAndNotifyBlock` 会同步触发 `updateNeighbourShapes`。灯笼由于上方还是空气，`canSurvive` 返回 false 瞬间自毁变回 `AIR`；双箱由于相邻箱子还没放，`updateShape` 强制将 `TYPE` 降级为 `SINGLE`。
+2. **BlockEntity 实例覆盖问题**：
+   `setBlockEntityData` 每次都调用 `BlockEntity.loadStatic` 并使用 `level.setBlockEntity` 重新插入，没有复用 `level.setBlock` 已生成的 BlockEntity 实例，且未重写 tag 中的绝对坐标，导致部分容器方块数据异常。
+3. **`setPropertyValue` 空指针防护不足**：
+   `prop.getValue(value).orElse(null)` 传入 `state.setValue` 在遇到非法值时会直接抛出 `IllegalArgumentException`，中断方块状态解析。
+
+**决策**：
+1. **采用结构化放置 Flag 组合**：
+   在 `WandscapeBlockOps.setBlock` 中统一使用 `Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE | Block.UPDATE_SUPPRESS_DROPS`（`2 | 16 | 32 = 50`）：
+   - `UPDATE_CLIENTS` (2)：立即向客户端同步视觉；
+   - `UPDATE_KNOWN_SHAPE` (16)：严格压制邻居形状更新，保证蓝图中的最终状态（如已包含的 `type=left`、`hanging=true`、`open=true`）精准落地，不被未完成的周围方块干扰自毁；
+   - `UPDATE_SUPPRESS_DROPS` (32)：压制被替换方块的掉落物生成。
+2. **BlockEntity 原位加载与坐标同步**：
+   在 `setBlockEntityData` 中，优先通过 `level.getBlockEntity(bp)` 获取已有实例并调用 `loadWithComponents(tag, level.registryAccess())` 原位热更新，重写 tag 中的 `x, y, z` 保持一致，并同步下发更新包与 `sendBlockUpdated`。
+3. **`setPropertyValue` 安全化**：
+   改为 `prop.getValue(value).map(v -> (BlockState) state.setValue(prop, v)).orElse(state)`，防御非法/不匹配属性值。
+
+**影响**：
+- `engine/boundary/WandscapeBlockOps.java`：修改 `setBlock`、`setBlockEntityData` 与 `setPropertyValue`。
+
