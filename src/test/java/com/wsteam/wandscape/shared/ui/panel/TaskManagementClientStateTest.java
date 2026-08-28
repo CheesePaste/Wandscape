@@ -11,6 +11,9 @@ import com.wsteam.wandscape.shared.network.tasks.ResourceShortageDto;
 import com.wsteam.wandscape.shared.network.tasks.TaskManagementSyncPacket;
 import com.wsteam.wandscape.shared.network.tasks.TaskSummaryDto;
 
+import com.wsteam.wandscape.shared.network.tasks.ProductionGroupDto;
+import com.wsteam.wandscape.shared.network.tasks.ProductionItemDto;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class TaskManagementClientStateTest {
@@ -61,8 +64,26 @@ class TaskManagementClientStateTest {
                 105.0, 64.0, 205.0, true, true
         );
 
+        ProductionItemDto pItem1 = new ProductionItemDto(
+                100L, 0, "synthesize", "production:synthesize", "minecraft:campfire", "营火", 14,
+                "RUNNING", 10L, "埃尔德里奇", 0.45f,
+                List.of(), List.of(), "arrow_store 建造缺料自动派发", false
+        );
+
+        ProductionItemDto pItem2 = new ProductionItemDto(
+                -5001L, 1, "synthesize", "production:synthesize", "minecraft:lantern", "灯笼", 1,
+                "MISSING_ELEMENTS", -1L, "", 0.0f,
+                List.of(new ResourceShortageDto("element", "fire", "火元素", 28, 0)),
+                List.of("fire"), "arrow_store 建造缺料自动派发", true
+        );
+
+        ProductionGroupDto group1 = new ProductionGroupDto(
+                buildingId, "初级工作站", "workstation",
+                100, 64, 200, 1, List.of(pItem1, pItem2)
+        );
+
         TaskManagementSyncPacket packet = new TaskManagementSyncPacket(
-                colonyId, List.of(t1, t2, t3), List.of(m1, m2), 3, 1, 2
+                colonyId, List.of(t1, t2, t3), List.of(group1), List.of(m1, m2), 3, 1, 2
         );
 
         TaskManagementClientState.update(packet);
@@ -70,6 +91,7 @@ class TaskManagementClientStateTest {
         assertEquals(3, TaskManagementClientState.getTotalActiveTasks());
         assertEquals(1, TaskManagementClientState.getIdleMageCount());
         assertEquals(2, TaskManagementClientState.getTotalMageCount());
+        assertEquals(2, TaskManagementClientState.getTotalProductionItemCount());
 
         // Default Filter: ALL
         assertEquals(3, TaskManagementClientState.getFilteredTasks().size());
@@ -91,8 +113,34 @@ class TaskManagementClientStateTest {
         assertEquals(1, TaskManagementClientState.getFilteredTasks().size());
         assertEquals("合成 治疗药水", TaskManagementClientState.getFilteredTasks().get(0).title());
 
-        // Mage List
+        // Production Tab & Filters
         TaskManagementClientState.setSearchQuery("");
+        TaskManagementClientState.setActiveTab(TaskManagementClientState.SubTab.PRODUCTION);
+        assertEquals(TaskManagementClientState.SubTab.PRODUCTION, TaskManagementClientState.getActiveTab());
+        assertEquals(1, TaskManagementClientState.getFilteredProductionGroups().size());
+        assertEquals(2, TaskManagementClientState.getFilteredProductionGroups().get(0).items().size());
+
+        // Filter Production: RUNNING
+        TaskManagementClientState.setActiveProductionFilter(TaskManagementClientState.ProductionFilter.RUNNING);
+        List<ProductionGroupDto> runningGroups = TaskManagementClientState.getFilteredProductionGroups();
+        assertEquals(1, runningGroups.size());
+        assertEquals(1, runningGroups.get(0).items().size());
+        assertEquals("营火", runningGroups.get(0).items().get(0).displayName());
+
+        // Filter Production: MISSING_ELEMENTS
+        TaskManagementClientState.setActiveProductionFilter(TaskManagementClientState.ProductionFilter.MISSING_ELEMENTS);
+        List<ProductionGroupDto> missingGroups = TaskManagementClientState.getFilteredProductionGroups();
+        assertEquals(1, missingGroups.size());
+        assertEquals(1, missingGroups.get(0).items().size());
+        assertEquals("灯笼", missingGroups.get(0).items().get(0).displayName());
+        assertTrue(missingGroups.get(0).items().get(0).activeSupplyingGather());
+
+        // Select Production Virtual ID for modal
+        TaskManagementClientState.setSelectedProductionVirtualId(-5001L);
+        assertEquals(-5001L, TaskManagementClientState.getSelectedProductionVirtualId());
+
+        // Mage List
+        TaskManagementClientState.setActiveTab(TaskManagementClientState.SubTab.MAGES);
         assertEquals(2, TaskManagementClientState.getFilteredMages().size());
         TaskManagementClientState.setSearchQuery("梅林");
         assertEquals(1, TaskManagementClientState.getFilteredMages().size());

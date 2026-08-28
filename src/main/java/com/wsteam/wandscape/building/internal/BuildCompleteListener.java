@@ -228,7 +228,7 @@ public final class BuildCompleteListener {
     private static String getPropertyValue(BlockState state,
                                             net.minecraft.world.level.block.state.properties.Property<?> prop) {
         Comparable<?> value = state.getValue((net.minecraft.world.level.block.state.properties.Property) prop);
-        return value != null ? value.toString() : "";
+        return value != null ? ((net.minecraft.world.level.block.state.properties.Property) prop).getName(value) : "";
     }
 
     private static Level getServerLevel() {

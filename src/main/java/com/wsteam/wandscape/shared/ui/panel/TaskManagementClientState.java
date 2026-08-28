@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.UUID;
 
 import com.wsteam.wandscape.shared.network.tasks.MageSummaryDto;
+import com.wsteam.wandscape.shared.network.tasks.ProductionGroupDto;
+import com.wsteam.wandscape.shared.network.tasks.ProductionItemDto;
 import com.wsteam.wandscape.shared.network.tasks.TaskManagementSyncPacket;
 import com.wsteam.wandscape.shared.network.tasks.TaskSummaryDto;
 
@@ -15,6 +17,7 @@ public final class TaskManagementClientState {
 
     public enum SubTab {
         TASKS,
+        PRODUCTION,
         MAGES
     }
 
@@ -36,20 +39,41 @@ public final class TaskManagementClientState {
         }
     }
 
+    public enum ProductionFilter {
+        ALL("gui.wandscape.panel.production.filter.all"),
+        RUNNING("gui.wandscape.panel.production.filter.running"),
+        QUEUED("gui.wandscape.panel.production.filter.queued"),
+        MISSING_ELEMENTS("gui.wandscape.panel.production.filter.missing");
+
+        private final String translationKey;
+
+        ProductionFilter(String translationKey) {
+            this.translationKey = translationKey;
+        }
+
+        public String getTranslationKey() {
+            return translationKey;
+        }
+    }
+
     private static volatile SubTab activeTab = SubTab.TASKS;
     private static volatile TaskFilter activeFilter = TaskFilter.ALL;
+    private static volatile ProductionFilter activeProductionFilter = ProductionFilter.ALL;
     private static volatile String searchQuery = "";
     private static volatile int taskScrollOffset = 0;
+    private static volatile int productionScrollOffset = 0;
     private static volatile int mageScrollOffset = 0;
 
     private static volatile UUID colonyId = null;
     private static volatile List<TaskSummaryDto> allTasks = List.of();
+    private static volatile List<ProductionGroupDto> allProductionGroups = List.of();
     private static volatile List<MageSummaryDto> allMages = List.of();
     private static volatile int totalActiveTasks = 0;
     private static volatile int idleMageCount = 0;
     private static volatile int totalMageCount = 0;
 
     private static volatile long selectedTaskId = -1;
+    private static volatile long selectedProductionVirtualId = -1;
     private static volatile long selectedMageEcsId = -1;
     private static volatile int trackingEntityId = -1;
 
@@ -58,6 +82,7 @@ public final class TaskManagementClientState {
     public static void update(TaskManagementSyncPacket packet) {
         colonyId = packet.colonyId();
         allTasks = packet.tasks() != null ? packet.tasks() : List.of();
+        allProductionGroups = packet.productionGroups() != null ? packet.productionGroups() : List.of();
         allMages = packet.mages() != null ? packet.mages() : List.of();
         totalActiveTasks = packet.totalActiveTasks();
         idleMageCount = packet.idleMageCount();
@@ -67,16 +92,20 @@ public final class TaskManagementClientState {
     public static void reset() {
         activeTab = SubTab.TASKS;
         activeFilter = TaskFilter.ALL;
+        activeProductionFilter = ProductionFilter.ALL;
         searchQuery = "";
         taskScrollOffset = 0;
+        productionScrollOffset = 0;
         mageScrollOffset = 0;
         colonyId = null;
         allTasks = List.of();
+        allProductionGroups = List.of();
         allMages = List.of();
         totalActiveTasks = 0;
         idleMageCount = 0;
         totalMageCount = 0;
         selectedTaskId = -1;
+        selectedProductionVirtualId = -1;
         selectedMageEcsId = -1;
         trackingEntityId = -1;
     }
@@ -92,6 +121,12 @@ public final class TaskManagementClientState {
         taskScrollOffset = 0;
     }
 
+    public static ProductionFilter getActiveProductionFilter() { return activeProductionFilter; }
+    public static void setActiveProductionFilter(ProductionFilter filter) {
+        activeProductionFilter = filter;
+        productionScrollOffset = 0;
+    }
+
     public static String getSearchQuery() { return searchQuery; }
     public static void setSearchQuery(String query) {
         searchQuery = query != null ? query : "";
@@ -100,18 +135,32 @@ public final class TaskManagementClientState {
     public static int getTaskScrollOffset() { return taskScrollOffset; }
     public static void setTaskScrollOffset(int offset) { taskScrollOffset = Math.max(0, offset); }
 
+    public static int getProductionScrollOffset() { return productionScrollOffset; }
+    public static void setProductionScrollOffset(int offset) { productionScrollOffset = Math.max(0, offset); }
+
     public static int getMageScrollOffset() { return mageScrollOffset; }
     public static void setMageScrollOffset(int offset) { mageScrollOffset = Math.max(0, offset); }
 
     public static List<TaskSummaryDto> getAllTasks() { return allTasks; }
+    public static List<ProductionGroupDto> getAllProductionGroups() { return allProductionGroups; }
     public static List<MageSummaryDto> getAllMages() { return allMages; }
 
     public static int getTotalActiveTasks() { return totalActiveTasks; }
+    public static int getTotalProductionItemCount() {
+        int total = 0;
+        for (ProductionGroupDto group : allProductionGroups) {
+            if (group.items() != null) total += group.items().size();
+        }
+        return total;
+    }
     public static int getIdleMageCount() { return idleMageCount; }
     public static int getTotalMageCount() { return totalMageCount; }
 
     public static long getSelectedTaskId() { return selectedTaskId; }
     public static void setSelectedTaskId(long id) { selectedTaskId = id; }
+
+    public static long getSelectedProductionVirtualId() { return selectedProductionVirtualId; }
+    public static void setSelectedProductionVirtualId(long id) { selectedProductionVirtualId = id; }
 
     public static long getSelectedMageEcsId() { return selectedMageEcsId; }
     public static void setSelectedMageEcsId(long id) { selectedMageEcsId = id; }
@@ -145,6 +194,42 @@ public final class TaskManagementClientState {
             list.add(t);
         }
         return list;
+    }
+
+    public static List<ProductionGroupDto> getFilteredProductionGroups() {
+        List<ProductionGroupDto> result = new ArrayList<>();
+        String query = searchQuery.trim().toLowerCase();
+
+        for (ProductionGroupDto group : allProductionGroups) {
+            List<ProductionItemDto> matchedItems = new ArrayList<>();
+            for (ProductionItemDto item : group.items()) {
+                boolean matchFilter = switch (activeProductionFilter) {
+                    case ALL -> true;
+                    case RUNNING -> "RUNNING".equalsIgnoreCase(item.status());
+                    case QUEUED -> "QUEUED".equalsIgnoreCase(item.status());
+                    case MISSING_ELEMENTS -> "MISSING_ELEMENTS".equalsIgnoreCase(item.status());
+                };
+                if (!matchFilter) continue;
+
+                if (!query.isEmpty()) {
+                    boolean matchSearch = (item.displayName() != null && item.displayName().toLowerCase().contains(query))
+                            || (group.buildingName() != null && group.buildingName().toLowerCase().contains(query))
+                            || (item.itemOrRecipeId() != null && item.itemOrRecipeId().toLowerCase().contains(query))
+                            || (item.dependencySource() != null && item.dependencySource().toLowerCase().contains(query));
+                    if (!matchSearch) continue;
+                }
+
+                matchedItems.add(item);
+            }
+
+            if (!matchedItems.isEmpty()) {
+                result.add(new ProductionGroupDto(
+                        group.buildingId(), group.buildingName(), group.category(),
+                        group.x(), group.y(), group.z(), group.activeWorkers(), matchedItems
+                ));
+            }
+        }
+        return result;
     }
 
     public static List<MageSummaryDto> getFilteredMages() {

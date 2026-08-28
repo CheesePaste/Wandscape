@@ -192,7 +192,6 @@ public final class ColonyCommand {
         // fillDeferredInventory(). Both run BEFORE we set colonyId or
         // schedule inventory — so the ECS NPC gets PLACEHOLDER_COLONY
         // and an empty inventory. We fix both immediately after spawn.
-        List<ResourceStack> starterItems = computeStarterInventory(townHallConfig);
         List<BlockPos> spawnPositions = findBuilderSpawns(level, origin, INITIAL_BUILDER_COUNT);
         List<WandscapeNpc> spawnedNpcs = new ArrayList<>();
         for (BlockPos spawnPos : spawnPositions) {
@@ -204,16 +203,11 @@ public final class ColonyCommand {
             npc.setPersistenceRequired();
             npc.colonyId = colonyId;
 
-            // ── Step 5: fix ECS state + fill inventory ─────────────────────
+            // ── Step 5: fix ECS state (ColonyMember) ────────────────────────
             // spawn() already ran onNpcJoinWorld(). If the NPC joined ECS
             // immediately (engine was bootstrapped), its ColonyMember has
-            // PLACEHOLDER_COLONY and its Inventory is empty. Fix both now.
-            // For the deferred-join case (engine not yet bootstrapped), the
-            // scheduleInventoryFill fallback handles it when flushDeferredJoins
-            // runs — npc.colonyId is already set by then.
-            fixEcsAfterSpawn(npc, colonyId, starterItems);
-            EntityComponentBridge.INSTANCE.scheduleInventoryFill(
-                    npc.getUUID(), colonyId, starterItems);
+            // PLACEHOLDER_COLONY. Fix it now.
+            fixEcsAfterSpawn(npc, colonyId);
 
             // Seed carpenter_wand into NPC's MC inventory so WandEquip can
             // shortfill it without needing a storage building (cold-start
@@ -239,14 +233,12 @@ public final class ColonyCommand {
         }
 
         // ── Step 7: reply ───────────────────────────────────────────────────
-        int materialTypes = computeUniqueBlockTypes(townHallConfig);
         return ColonyCreateOutcome.success(Component.literal(
                 "[Wandscape] Colony '" + name + "' created!\n" +
                 "  ID: " + colonyId.toString().substring(0, 8) + "\n" +
                 "  TownHall: " + origin.toShortString() + "\n" +
                 "  NPC: " + INITIAL_BUILDER_COUNT + " builders at "
                         + spawnPositions.get(0).toShortString() + "\n" +
-                "  Inventory: " + starterItems.size() + " stacks (" + materialTypes + " types)\n" +
                 "  Radius: 256 blocks\n" +
                 "\nTip: use /wandscape fill " + townHallConfig.id()
                         + " 1 1 to queue construction"));
@@ -364,8 +356,7 @@ public final class ColonyCommand {
      * fallback + correct {@code npc.colonyId} will take effect when
      * flushDeferredJoins runs on the next tick.
      */
-    private static void fixEcsAfterSpawn(WandscapeNpc npc, UUID colonyId,
-                                         List<ResourceStack> items) {
+    private static void fixEcsAfterSpawn(WandscapeNpc npc, UUID colonyId) {
         World ecsWorld = WandscapeEngine.getWorld();
         if (ecsWorld == null) return;
 
@@ -382,19 +373,6 @@ public final class ColonyCommand {
                     npc.getUUID().toString().substring(0, 8),
                     member.colonyId().toString().substring(0, 8),
                     colonyId.toString().substring(0, 8));
-        }
-
-        // Fill inventory: deferred fill already consumed by onNpcJoinWorld
-        Inventory inv = ecsWorld.get(ecsId, Inventory.class);
-        if (inv != null) {
-            int added = 0;
-            for (ResourceStack stack : items) {
-                if (inv.add(stack)) added++;
-            }
-            if (added > 0) {
-                Log.info(TAG, "[Colony] Filled NPC {} ECS inventory with {} stacks",
-                        npc.getUUID().toString().substring(0, 8), added);
-            }
         }
     }
 
@@ -462,33 +440,5 @@ public final class ColonyCommand {
         npc.syncIronArmorAttributes();
         Log.info(TAG, "[Colony] Equipped starter iron armor on NPC {}",
                 npc.getUUID().toString().substring(0, 8));
-    }
-
-    /** Compute exact material stacks for the NPC's inventory to construct the Town Hall. */
-    private static List<ResourceStack> computeStarterInventory(BuildingConfig config) {
-        java.util.Map<String, Integer> counts = new java.util.LinkedHashMap<>();
-        for (BlockOffset offset : config.pattern()) {
-            String blockId = config.blockMapping().get(offset.toKey());
-            if (blockId == null || "minecraft:air".equals(blockId)) continue;
-            String cleanId = blockId.replaceAll("\\[.*?\\]", "").trim();
-            counts.put(cleanId, counts.getOrDefault(cleanId, 0) + 1);
-        }
-        List<ResourceStack> stacks = new ArrayList<>();
-        for (var entry : counts.entrySet()) {
-            // Give exact required quantity (at least 64 per type to be generous)
-            int qty = Math.max(64, entry.getValue());
-            stacks.add(new ResourceStack(new ResourceId(entry.getKey()), qty));
-        }
-        return stacks;
-    }
-
-    private static int computeUniqueBlockTypes(BuildingConfig config) {
-        Set<String> seen = new LinkedHashSet<>();
-        for (BlockOffset offset : config.pattern()) {
-            String blockId = config.blockMapping().get(offset.toKey());
-            if (blockId == null || "minecraft:air".equals(blockId)) continue;
-            seen.add(blockId);
-        }
-        return seen.size();
     }
 }
