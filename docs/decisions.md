@@ -1667,3 +1667,35 @@
 **为什么**：建筑因物理损坏或手动关闭而停摆会打断殖民地自动化，与「轻度不硬核：不引入生存难度惩罚」原则相悖；手动关闭/重启则是低频操作、UI 三按钮显拥挤。损坏只影响外观、运转不受影响，修复变成可选的补齐手段，玩家不再被迫处理故障。
 
 **影响**：`docs/modules/building.md`/`engine.md`/`guard.md`/`raid.md`/`projection.md`/`shared.md`/`simulation.md`/`architecture.md` 同步更新；guide 文档（anomaly/getting_started/overview）重写；lang 移除 shutdown/restart/stopped/broken/营业等 key。无存档迁移（shutdown NBT 位被忽略）。`getBuildingIdInInteractionZone`/`getTouristInteractPoint`/`getEntryPoint` 等处的 `isShutdown()` 过滤一并移除。
+
+## 2026-08-28：V 面板任务管理新增【工坊流水线】Tab 与全链路供应链依赖溯源
+
+**需求**：
+1. 殖民地任务池中，建筑施工（全局任务池乐观执行，缺材料转入 `AWAITING_RESOURCES` 挂起）与工坊生产（`BuildingTaskSource` 本地队列，严格元素门禁预检）属于两套不同的任务管线。
+2. 玩家在原有的【任务大厅】中只能看到已被调度发布的全局任务，无法直观掌握工作站、炼药台、魔法工坊及元素节点本地排队的合成项目、各配方的元素消耗与缺口。
+3. 当建筑施工因缺少材料触发自动合成时，玩家无法直观追溯「施工缺料 → 工坊合成 → 缺少元素 → 元素节点自动采集」这一多级依赖链条。
+
+**决策**：
+1. **新增独立 Tab【工坊流水线】（SubTab.PRODUCTION）**：
+   - 顶部导航栏升级为三 Tab 架构：`【📜 任务大厅】 | 【⚙️ 工坊流水线】 | 【🧙 法师名册】`。
+   - 实时聚合所有生产类建筑（工作站、炼金工坊、魔法工坊、元素节点）的 Head 正在执行任务与本地 `taskQueue` 排队待办。
+2. **多维筛选与卡片直观状态**：
+   - 支持 `全部 / 正在制作 / 排队等待 / 缺元素/受阻` 4 档胶囊筛选。
+   - 卡片直观展示产物名称与数量、实时制作进度条、执行法师姓名、所需元素消耗及库存缺口进度条。
+   - 标识下游状态：自动识别是否已有活跃的 `node:gather` 全局采集任务在为该缺口自动采集元素（高亮提示 `⚡ 元素节点正在自动采集补齐中...`）。
+3. **全链路供应链与依赖溯源弹窗（Dependency Tree Modal）**：
+   - 点击卡片 `[ 依赖链 ]` 按钮可呼出全屏深层依赖树弹窗：
+     1. `[1] 需求发起源头 (Upstream Trigger)`：追溯是由哪座建筑施工缺料触发（如 `arrow_store 建造缺料派发`）还是工坊手动排队。
+     2. `[2] 当前生产工坊 (Workshop Node)`：当前工坊名称、目标配方产物、制作数量与状态。
+     3. `[3] 元素消耗与库存明细 (Element Requirements)`：各元素所需量、仓库库存量与缺口核算。
+     4. `[4] 下游自动化补料闭环 (Downstream Auto-Supply)`：显示对应元素节点采集任务的执行状态与闭环健康度。
+4. **数据同步与客户端状态**：
+   - `TaskPanelSyncTracker` 服务端打包 `List<ProductionGroupDto>` 随 `TaskManagementSyncPacket` 下发。
+   - `TaskManagementClientState` 统一管理过滤、搜索、分页滚动与选中依赖项虚拟 ID。
+
+**影响**：
+- `shared/network/tasks/`：新增 `ProductionItemDto`、`ProductionGroupDto`；`TaskManagementSyncPacket` 扩展 `productionGroups` 编解码；`TaskPanelSyncTracker` 实现 `buildProductionGroups`。
+- `shared/ui/panel/`：`TaskManagementClientState` 支持 `SubTab.PRODUCTION` 与 `ProductionFilter`；`TaskManagementOverlay` 实现工坊流水线网格渲染与依赖树弹窗。
+- `lang/`：`zh_cn.json` 与 `en_us.json` 补全流水线与筛选中英文字段。
+- 单元测试：`TaskManagementClientStateTest` 全面覆盖流水线数据过滤与选中逻辑。
+

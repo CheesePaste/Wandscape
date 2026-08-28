@@ -19,6 +19,7 @@ import net.minecraft.resources.ResourceLocation;
 public record TaskManagementSyncPacket(
         UUID colonyId,
         List<TaskSummaryDto> tasks,
+        List<ProductionGroupDto> productionGroups,
         List<MageSummaryDto> mages,
         int totalActiveTasks,
         int idleMageCount,
@@ -51,6 +52,13 @@ public record TaskManagementSyncPacket(
             }
         }
 
+        buf.writeVarInt(pkt.productionGroups != null ? pkt.productionGroups.size() : 0);
+        if (pkt.productionGroups != null) {
+            for (ProductionGroupDto group : pkt.productionGroups) {
+                ProductionGroupDto.write(buf, group);
+            }
+        }
+
         buf.writeVarInt(pkt.mages != null ? pkt.mages.size() : 0);
         if (pkt.mages != null) {
             for (MageSummaryDto mage : pkt.mages) {
@@ -72,6 +80,12 @@ public record TaskManagementSyncPacket(
             tasks.add(TaskSummaryDto.read(buf));
         }
 
+        int groupCount = buf.readVarInt();
+        List<ProductionGroupDto> productionGroups = new ArrayList<>(groupCount);
+        for (int i = 0; i < groupCount; i++) {
+            productionGroups.add(ProductionGroupDto.read(buf));
+        }
+
         int mageCount = buf.readVarInt();
         List<MageSummaryDto> mages = new ArrayList<>(mageCount);
         for (int i = 0; i < mageCount; i++) {
@@ -82,6 +96,6 @@ public record TaskManagementSyncPacket(
         int idleMageCount = buf.readVarInt();
         int totalMageCount = buf.readVarInt();
 
-        return new TaskManagementSyncPacket(colonyId, tasks, mages, totalActiveTasks, idleMageCount, totalMageCount);
+        return new TaskManagementSyncPacket(colonyId, tasks, productionGroups, mages, totalActiveTasks, idleMageCount, totalMageCount);
     }
 }

@@ -2,12 +2,17 @@ package com.wsteam.wandscape.shared.network.tasks;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Deque;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonPrimitive;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.building.internal.BuildingState;
@@ -19,6 +24,7 @@ import com.wsteam.wandscape.core.types.AttributeType;
 import com.wsteam.wandscape.core.types.GridPos;
 import com.wsteam.wandscape.core.types.ResourceStack;
 import com.wsteam.wandscape.engine.WandscapeEngine;
+import com.wsteam.wandscape.engine.boundary.ProductionEligibility;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.shared.api.ColonyApi;
@@ -34,6 +40,8 @@ import com.wsteam.wandscape.task.runtime.ExecutorState;
 import com.wsteam.wandscape.task.runtime.TaskState;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -299,7 +307,10 @@ public final class TaskPanelSyncTracker {
             ));
         }
 
-        return new TaskManagementSyncPacket(colonyId, taskDtos, mageDtos, activeTaskCount, idleMageCount, totalMageCount);
+        // 4. Collect Production Groups (Workstations, Alchemy, Magic Workshops, Nodes)
+        List<ProductionGroupDto> productionGroups = buildProductionGroups(world, buildingData, colonyId, warehouseApi);
+
+        return new TaskManagementSyncPacket(colonyId, taskDtos, productionGroups, mageDtos, activeTaskCount, idleMageCount, totalMageCount);
     }
 
     private static String extractCategory(GlobalTask task) {
@@ -388,5 +399,192 @@ public final class TaskPanelSyncTracker {
             return "IN_PROGRESS";
         }
         return "NONE";
+    }
+
+    private static List<ProductionGroupDto> buildProductionGroups(World world, BuildingSavedData buildingData, UUID colonyId, WarehouseApi warehouseApi) {
+        List<ProductionGroupDto> groups = new ArrayList<>();
+        BuildingTaskPool buildingTaskPool = world.buildingTaskPool;
+
+        // Check active node:gather tasks and which elements are actively being harvested
+        Set<String> activeGatherElements = new HashSet<>();
+        for (GlobalTask gt : world.taskPool.all()) {
+            if (gt.state != TaskState.COMPLETED && "node:gather".equals(gt.blueprintId)) {
+                if (gt.buildingId != null) {
+                    BuildingState nbs = buildingData.getBuilding(gt.buildingId);
+                    if (nbs != null && nbs.getBuildingTypeId() != null) {
+                        String btype = nbs.getBuildingTypeId();
+                        if (btype.startsWith("node")) {
+                            activeGatherElements.add(btype.substring(4)); // e.g. "nodefire" -> "fire"
+                        }
+                    }
+                }
+            }
+        }
+
+        // Snapshot of available elements
+        Map<ElementType, Long> elementSnapshot = new LinkedHashMap<>();
+        if (warehouseApi != null) {
+            for (ElementType et : ElementType.values()) {
+                try {
+                    elementSnapshot.put(et, warehouseApi.getElement(colonyId, et));
+                } catch (Exception ignored) {}
+            }
+        }
+
+        for (BuildingState bs : buildingData.getAllBuildings()) {
+            if (bs == null || !colonyId.equals(bs.getColonyId())) continue;
+
+            String category = bs.getCategory();
+            boolean isProdCategory = "workstation".equals(category) || "magic_workshop".equals(category)
+                    || "alchemy".equals(category) || "node".equals(category);
+            Deque<WorkItem> localQueue = bs.getTaskQueue();
+            boolean hasQueue = localQueue != null && !localQueue.isEmpty();
+            boolean hasHead = buildingTaskPool != null && buildingTaskPool.hasHead(bs.getBuildingId());
+
+            if (!isProdCategory && !hasQueue && !hasHead) continue;
+
+            String bName = formatBuildingName(bs);
+            int activeWorkers = 0;
+            List<ProductionItemDto> items = new ArrayList<>();
+            long virtualId = -5000;
+
+            // 1. Running Head Task
+            if (buildingTaskPool != null && buildingTaskPool.hasHead(bs.getBuildingId())) {
+                Long headTaskId = buildingTaskPool.getHeadTaskId(bs.getBuildingId());
+                if (headTaskId != null) {
+                    GlobalTask head = world.taskPool.get(headTaskId);
+                    if (head != null && head.state != TaskState.COMPLETED) {
+                        activeWorkers++;
+                        long assignedNpcId = head.assignedNpcId != null ? head.assignedNpcId : -1;
+                        String assignedNpcName = "";
+                        if (assignedNpcId >= 0) {
+                            WandscapeNpc npc = EntityComponentBridge.INSTANCE.getNpc(assignedNpcId);
+                            if (npc != null) assignedNpcName = npc.getName().getString();
+                        }
+                        int totalSteps = head.sequence != null ? head.sequence.size() : 1;
+                        float progress = totalSteps > 0 ? (float) (head.stepIndex + 1) / totalSteps : 0.5f;
+                        String bid = head.blueprintId != null ? head.blueprintId : "";
+                        String itemOrRecipeId = extractItemOrRecipeIdJson(bid, head.taskParams);
+                        String displayName = formatItemDisplayName(bid, itemOrRecipeId);
+                        int count = paramIntJson(head.taskParams, "count", 1);
+                        String cat = extractCategory(head);
+
+                        items.add(new ProductionItemDto(
+                                head.id, 0, cat, bid, itemOrRecipeId, displayName, count,
+                                "RUNNING", assignedNpcId, assignedNpcName, progress,
+                                List.of(), List.of(), "正在执行中", false
+                        ));
+                    }
+                }
+            }
+
+            // 2. Queued WorkItems
+            if (localQueue != null) {
+                int qIndex = 1;
+                for (WorkItem item : localQueue) {
+                    virtualId--;
+                    String bid = item.blueprintId();
+                    String cat = categorizeWorkItem(bid);
+                    String itemOrRecipeId = extractItemOrRecipeIdJson(bid, item.params());
+                    String displayName = formatItemDisplayName(bid, itemOrRecipeId);
+                    int count = paramIntJson(item.params(), "count", 1);
+
+                    // Required elements & shortages
+                    Map<ElementType, Long> req = ProductionEligibility.requiredElements(bid, item.params());
+                    List<ResourceShortageDto> elementCosts = new ArrayList<>();
+                    List<String> missingElems = new ArrayList<>();
+                    boolean isShort = false;
+
+                    for (var entry : req.entrySet()) {
+                        ElementType et = entry.getKey();
+                        long needAmt = entry.getValue();
+                        long availAmt = elementSnapshot.getOrDefault(et, 0L);
+                        elementCosts.add(new ResourceShortageDto("element", et.getId(), formatResourceName(et.getId()), (int) needAmt, (int) availAmt));
+                        if (availAmt < needAmt) {
+                            isShort = true;
+                            missingElems.add(et.getId());
+                        }
+                    }
+
+                    boolean isGathering = false;
+                    for (String me : missingElems) {
+                        if (activeGatherElements.contains(me)) {
+                            isGathering = true;
+                            break;
+                        }
+                    }
+
+                    String status = isShort ? "MISSING_ELEMENTS" : "QUEUED";
+                    String reason = item.params() != null && item.params().containsKey("reason")
+                            ? item.params().get("reason").getAsString()
+                            : (bid.startsWith("production:synthesize") ? "自动化供应链补料" : "工坊手动排队");
+
+                    items.add(new ProductionItemDto(
+                            virtualId, qIndex++, cat, bid, itemOrRecipeId, displayName, count,
+                            status, -1, "", 0f,
+                            elementCosts, missingElems, reason, isGathering
+                    ));
+                }
+            }
+
+            if (!items.isEmpty()) {
+                BlockPos anchor = bs.getAnchor() != null ? bs.getAnchor() : BlockPos.ZERO;
+                groups.add(new ProductionGroupDto(
+                        bs.getBuildingId(), bName, category != null ? category : "workstation",
+                        anchor.getX(), anchor.getY(), anchor.getZ(),
+                        activeWorkers, items
+                ));
+            }
+        }
+        return groups;
+    }
+
+    private static String categorizeWorkItem(String blueprintId) {
+        if (blueprintId.equals("production:decompose")) return "decompose";
+        if (blueprintId.equals("production:synthesize")) return "synthesize";
+        if (blueprintId.equals("production:craft_wand")) return "craft";
+        if (blueprintId.equals("production:craft_spell")) return "transcribe";
+        if (blueprintId.equals("production:brew_potion")) return "brew";
+        if (blueprintId.startsWith("build:")) return "build";
+        if (blueprintId.equals("node:gather")) return "gather";
+        return "other";
+    }
+
+    private static String extractItemOrRecipeIdJson(String blueprintId, Map<String, JsonElement> params) {
+        if (params == null) return "";
+        String out = paramStrJson(params, "output_item");
+        if (out != null) return out;
+        String item = paramStrJson(params, "item_id");
+        if (item != null) return item;
+        String recipe = paramStrJson(params, "recipe_id");
+        if (recipe != null) return recipe;
+        String el = paramStrJson(params, "element");
+        if (el != null) return el;
+        return "";
+    }
+
+    private static String formatItemDisplayName(String blueprintId, String itemOrRecipeId) {
+        if (itemOrRecipeId == null || itemOrRecipeId.isEmpty()) {
+            return blueprintId != null ? blueprintId : "未知生产项";
+        }
+        if (itemOrRecipeId.startsWith("minecraft:") || itemOrRecipeId.startsWith("wandscape:")) {
+            var rl = ResourceLocation.tryParse(itemOrRecipeId);
+            if (rl != null && BuiltInRegistries.ITEM.containsKey(rl)) {
+                return BuiltInRegistries.ITEM.get(rl).getDescription().getString();
+            }
+        }
+        return formatResourceName(itemOrRecipeId);
+    }
+
+    private static String paramStrJson(Map<String, JsonElement> params, String key) {
+        if (params == null) return null;
+        JsonElement el = params.get(key);
+        return (el instanceof JsonPrimitive p && p.isString()) ? p.getAsString() : null;
+    }
+
+    private static int paramIntJson(Map<String, JsonElement> params, String key, int fallback) {
+        if (params == null) return fallback;
+        JsonElement el = params.get(key);
+        return (el instanceof JsonPrimitive p && p.isNumber()) ? p.getAsInt() : fallback;
     }
 }
