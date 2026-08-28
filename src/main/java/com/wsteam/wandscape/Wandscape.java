@@ -83,6 +83,7 @@ import com.wsteam.wandscape.warehouse.WarehouseMenu;
 import com.wsteam.wandscape.warehouse.WarehouseNotificationHandler;
 import com.wsteam.wandscape.warehouse.network.WarehouseActionPacket;
 import com.wsteam.wandscape.warehouse.network.WarehouseDataPacket;
+import com.wsteam.wandscape.ring.internal.OathRingSavedData;
 import com.wsteam.wandscape.road.network.DestroyFillPacket;
 import com.wsteam.wandscape.road.network.FillBoxPacket;
 import com.wsteam.wandscape.road.network.RoadPlacePacket;
@@ -349,6 +350,23 @@ public class Wandscape {
                             0xFFFFFF,  // white highlight
                             new Item.Properties()));
 
+    // ---- ring: 盟誓戒指（同玩家共享固定槽存储，见 ring/internal/）----
+    public static final DeferredItem<Item> OATH_RING =
+            ITEMS.register("oath_ring", () ->
+                    new com.wsteam.wandscape.ring.OathRingItem(
+                            new Item.Properties().stacksTo(1),
+                            com.wsteam.wandscape.ring.RingTier.LOW));
+    public static final DeferredItem<Item> OATH_RING_MID =
+            ITEMS.register("oath_ring_mid", () ->
+                    new com.wsteam.wandscape.ring.OathRingItem(
+                            new Item.Properties().stacksTo(1),
+                            com.wsteam.wandscape.ring.RingTier.MID));
+    public static final DeferredItem<Item> OATH_RING_HIGH =
+            ITEMS.register("oath_ring_high", () ->
+                    new com.wsteam.wandscape.ring.OathRingItem(
+                            new Item.Properties().stacksTo(1),
+                            com.wsteam.wandscape.ring.RingTier.HIGH));
+
     // ---- building-scanner blocks ----
     // Creative Building Scanner (full-featured, for creators) — renamed from building_scanner to
     // creative_building_scanner; the plain id "building_scanner" now belongs to the Survival scanner.
@@ -399,6 +417,9 @@ public class Wandscape {
                         output.accept(WANDSCAPE_NPC_EGG.get());
                         output.accept(EVIL_MAGE_SPAWN_EGG.get());
                         output.accept(TOURIST_SPAWN_EGG.get());
+                        output.accept(OATH_RING.get());
+                        output.accept(OATH_RING_MID.get());
+                        output.accept(OATH_RING_HIGH.get());
                         output.accept(CREATIVE_BUILDING_SCANNER_ITEM.get());
                         output.accept(BUILDING_SCANNER_ITEM.get());
                         output.accept(INTERACT_SPOT_MARKER_ITEM.get());
@@ -978,6 +999,10 @@ public class Wandscape {
         var recruitStorage = TavernRecruitStorage.getOrCreate(level);
         tavernApi.setStorage(recruitStorage);
         Log.info(TAG, "Tavern recruit storage wired");
+
+        // Oath ring per-player storage (eagerly load so ring interactions never hit a null instance)
+        OathRingSavedData.get(event.getServer());
+        Log.info(TAG, "Oath ring storage wired");
 
         // Colony level data
         var colonyLevelData = ColonyLevelData.getOrCreate(level);

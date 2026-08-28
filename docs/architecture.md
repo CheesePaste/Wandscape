@@ -64,6 +64,7 @@ com.wsteam.wandscape
 ├── wand/                   法杖物品 + 预设 + NBT + 施法
 ├── element/                方块→元素映射 + 种子值 + 审计
 ├── npc/                    NPC 实体 + ECS 桥接（EntityComponentBridge）+ 渲染 + 装备网络
+├── ring/                   盟誓戒指（玩家侧物品：shift+右键存/右键放本殖民地法师，同玩家共享固定槽存储）
 ├── tourist/                游客实体 + 行为 AI + 影子模拟 + 满意度 + 酒馆/酒店
 ├── warehouse/              元素银行（SavedData）+ 双标签 GUI + 运输
 ├── production/             工作站/合成站/魔法工坊 + 配方

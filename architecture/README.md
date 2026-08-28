@@ -79,6 +79,7 @@ Config.java           NeoForge TOML 配置，所有可调参数
 ├── wand/             法杖物品+预设+NBT+JSON配方(新attributes[]格式)
 ├── element/          方块→元素映射 + 元素物品（获得即存入仓库）
 ├── npc/              NPC实体+ECS桥接(EntityComponentBridge)+渲染
+├── ring/             盟誓戒指（玩家侧物品：存/放本殖民地法师，同玩家共享固定槽存储，见 docs/modules/ring.md）
 ├── warehouse/        GUI+ColonyItemBank(SavedData), 双标签页(Overview+Exchange)
 ├── production/       工作站(GUI/配方/菜单/网络包, wand_level已删除)
 ├── dataconfig/       JSON数据加载框架(WandscapeDataLoader)

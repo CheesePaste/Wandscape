@@ -41,6 +41,10 @@
 - **`RitualOp.channelTicks()`**（op/）：self_teleport/item_teleport/player_summon=600、warding=200、group_vigor=400、rain_call/clear_weather=1200、portal_gate=1800——与 `WandscapeRitualOps` 的 1 不一致，需对齐。
 - **`ColonyMetricsService`/`StatsSyncPacket`**：统计面板已同步，但 `WandscapePanelState.StatsSummary` 消费端展示待确认。
 
+- **盟誓戒指（ring/）后续待办（2026-08-28 核心已实现，见 [modules/ring.md](modules/ring.md)）**：
+  - **Curios 戒指槽兼容**：`docs/plan/smallitems.md` 第 1 项首行「可放入 Curios 戒指」。Curios 尚未引入依赖（当前仅 JEI 有 compileOnly 集成），戒指只在 vanilla 背包主/副手生效；集成 Curios 需新增可选依赖 + `integration/curios/` 子包。
+  - **存取数 tooltip 同步**：存储按玩家 UUID 存于服务端 SavedData，客户端 tooltip 无法读取——需先加 S→C 同步包，才能在置备提示中添加「已存 X/Y」。
+
 ## 四、潜在不一致 / 需要注意
 
 1. **两类元素存储分叉**：

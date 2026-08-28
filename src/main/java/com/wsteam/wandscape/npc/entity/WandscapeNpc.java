@@ -1326,6 +1326,12 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
         if (level().isClientSide) {
             return InteractionResult.SUCCESS;
         }
+        // 潜行右键：若手持约定物品（如盟誓戒指），交由物品自身处理（存/放法师），不开信息菜单
+        if (player.isShiftKeyDown() && player.getItemInHand(hand).getItem()
+                instanceof com.wsteam.wandscape.shared.api.NpcBindingItem binder) {
+            binder.onShiftClickNpc((ServerPlayer) player, this, hand);
+            return InteractionResult.CONSUME;
+        }
         // 打开 NPC 装备容器菜单（4 盔甲 + 1 法杖 + 玩家背包，全部真实 vanilla 槽）
         if (player instanceof ServerPlayer sp) {
             sp.openMenu(new net.minecraft.world.SimpleMenuProvider(

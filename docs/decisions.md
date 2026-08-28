@@ -2,6 +2,19 @@
 
 本文件记录偏离直觉的设计选择及其原因，供后续开发快速理解「为什么这么做」。
 
+## 2026-08-28：盟誓戒指——玩家维度固定槽存储 + 归属限本殖民地法师
+
+**需求**（用户指令）：`docs/plan/smallitems.md` 第 1 项盟誓戒指——shift+右键本殖民地法师存入、右键地面放出；同玩家所有戒指共享空间；低级/中级/高级分别存取 1/2/4 个法师；1/10/20 级解锁三档；暂不加入配方，创造栏发放。
+
+**决策**：
+- **固定槽存储（不塌缩）**：共享空间为固定 4 槽（0~3），挡位决定可存取的槽位前缀（低=0、中=0~1、高=0~3），释放固定取最低已占槽且**槽位不塌缩**——否则「低级只能取出第一个」会因释放后补位而失效。存储按存取玩家 UUID 键控，落盘 overworld `OathRingSavedData`；戒指本身不持 NBT，与物品所在槽/是否在背包无关。
+- **归属限制**：「本殖民地法师」= 玩家自己创建殖民地的法师（`ColonyApi.getColonyByFounder`），**无殖民地的玩家禁止使用**（存取都拒绝）——比「任意殖民地法师」更贴合字面语义，也让存取两侧校验一致（存量法师必然来自本殖民地）。
+- **等级门槛暂不校验**：1/10/20 仅作 `RingTier.requiredColonyLevel` 数据留档，留作未来合成配方的解锁条件。当前无配方、创造栏直接可拿三档，若此刻运行时校验会让 1 级殖民地玩家在创造测试中困惑。
+- **存取即「整份实体 NBT」**：存入用 `WandscapeNpc.save()` 存整份（含 uuid/attributes/手持/装备/法术装载/魔力/和平跟随），移除用 `discard()`（`onRemovedFromLevel` DISCARDED 分支自动释放全局任务/取消运输/销毁 ECS）；放出 `create`+`load`+`addFreshEntity`，`EntityComponentBridge.onNpcJoinWorld` fresh 注册。**先落存储成功再 discard**，失败则法师不受影响。7 属性走 vanilla `attributes` 标签往返（当前代码属性权威是 vanilla AttributeMap，无 ECS→vanilla 覆盖），故存→放属性不丢。
+- **交互拦截放 `mobInteract`**（本就拦截全部右键开菜单），潜行 + 手持 `shared/api/NpcBindingItem` 时转交物品。不依赖 NeoForge `PlayerInteractEvent.EntityInteract` 的取消语义（取消后若不设取消结果会 fall-through 继续开菜单，语义易碎），行为完全确定。
+
+**影响**：新模块 `ring/`（`RingTier`/`OathRingItem`/`internal/{OathRingService,OathRingSavedData,OathRingStorage}`）+ `shared/api/NpcBindingItem` + `WandscapeNpc.mobInteract` 潜行拦截 + `Wandscape` 注册/创造栏/启动预载 + 3 模型/占位纹理 + zh/en 双语消息。待办（见 gaps）：Curios 戒指槽兼容、存取数 tooltip 同步。测试：`OathRingStorageTest`（固定槽语义 + NBT 往返，6 用例）。
+
 ## 2026-08-28：魔法卷轴 JEI 信息页——description 数据驱动 + addItemStackInfo
 
 **需求**（用户指令）：进一步兼容 JEI——在 JEI 中查看本模组魔法卷轴时显示该魔法的介绍文本（光束/陨石/石化/治疗/魅惑/背水一战文案用户给定，虚弱力场/防御强化两个按真实效果自拟），介绍文本落进 `magic_spells/*.json`。
