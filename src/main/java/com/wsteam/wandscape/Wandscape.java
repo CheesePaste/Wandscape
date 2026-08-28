@@ -481,6 +481,7 @@ public class Wandscape {
         NeoForge.EVENT_BUS.register(this);
         NeoForge.EVENT_BUS.register(HostileTargetingHandler.class);
         NeoForge.EVENT_BUS.register(BuildingNoSpawnZoneHandler.class);
+        NeoForge.EVENT_BUS.register(com.wsteam.wandscape.ring.internal.OathRingSyncHandler.class);
         NeoForge.EVENT_BUS.register(com.wsteam.wandscape.guard.SelfDefenseHandler.class);
         NeoForge.EVENT_BUS.register(com.wsteam.wandscape.guard.FollowAttackHandler.class);
         NeoForge.EVENT_BUS.register(com.wsteam.wandscape.guard.NpcSpellPowerHandler.class);
@@ -499,6 +500,7 @@ public class Wandscape {
         MarkerPreviewManager.register();
         WarehouseNotificationHandler.register();
         com.wsteam.wandscape.compat.ironspellbooks.IronSpellsCompat.init(modEventBus);
+        com.wsteam.wandscape.compat.curios.CuriosCompat.init(modEventBus);
 
         modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
 
@@ -612,6 +614,10 @@ public class Wandscape {
                         RoadPlacePacket.TYPE,
                         RoadPlacePacket.STREAM_CODEC,
                         (packet, ctx) -> RoadPlacePacket.handleServer(packet, (net.minecraft.server.level.ServerPlayer) ctx.player()))
+                .playToClient(
+                        com.wsteam.wandscape.ring.network.OathRingDataPacket.TYPE,
+                        com.wsteam.wandscape.ring.network.OathRingDataPacket.STREAM_CODEC,
+                        (packet, ctx) -> com.wsteam.wandscape.ring.network.OathRingDataPacket.handleClient(packet))
                 .playToServer(
                         DestroyFillPacket.TYPE,
                         DestroyFillPacket.STREAM_CODEC,
@@ -902,7 +908,13 @@ public class Wandscape {
                         com.wsteam.wandscape.shared.network.tasks.MageModeActionPacket.TYPE,
                         com.wsteam.wandscape.shared.network.tasks.MageModeActionPacket.STREAM_CODEC,
                         (packet, ctx) -> com.wsteam.wandscape.shared.network.tasks.MageModeActionPacket
-                                .handleServer(packet, (net.minecraft.server.level.ServerPlayer) ctx.player()));
+                                .handleServer(packet, (net.minecraft.server.level.ServerPlayer) ctx.player()))
+                // ── Curios 兼容：法师饰品栏打开请求（仅 Curios 加载时注册；包类全在 compat 包内） ──
+                .playToServer(
+                        com.wsteam.wandscape.compat.curios.NpcOpenCuriosPacket.TYPE,
+                        com.wsteam.wandscape.compat.curios.NpcOpenCuriosPacket.STREAM_CODEC,
+                        (packet, ctx) -> com.wsteam.wandscape.compat.curios.NpcOpenCuriosPacket
+                                .handleServer(packet, ctx));
     }
 
     private void onEntityAttributeCreation(EntityAttributeCreationEvent event) {
@@ -1075,6 +1087,10 @@ public class Wandscape {
                 .then(com.wsteam.wandscape.command.MagicCommand.node())
                 .then(com.wsteam.wandscape.command.RoadStudioCommand.node())
                 .then(com.wsteam.wandscape.command.ProfileCommand.node());
+        // ── Curios 兼容：法师饰品槽位管理（仅 Curios 加载时注册，避免无 Curios 时缺类崩溃） ──
+        if (com.wsteam.wandscape.compat.curios.CuriosCompat.isLoaded()) {
+            root.then(com.wsteam.wandscape.compat.curios.CuriosCommand.node());
+        }
         dispatcher.register(root);
     }
 

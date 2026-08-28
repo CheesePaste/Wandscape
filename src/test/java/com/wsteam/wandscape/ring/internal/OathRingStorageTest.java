@@ -90,4 +90,18 @@ class OathRingStorageTest {
         assertEquals(-1, restored.findReleaseSlot(4));
         assertEquals(0, restored.findStoreSlot(4));
     }
+
+    @Test
+    void toMaskReflectsOccupiedSlots() {
+        OathRingStorage s = new OathRingStorage();
+        assertEquals(0, s.toMask());
+        s.put(0, mage("a"));
+        assertEquals((byte) 0b0001, s.toMask());
+        s.put(2, mage("c"));
+        assertEquals((byte) 0b0101, s.toMask());
+        s.put(3, mage("d"));
+        assertEquals((byte) 0b1101, s.toMask());
+        s.remove(0);
+        assertEquals((byte) 0b1100, s.toMask());
+    }
 }

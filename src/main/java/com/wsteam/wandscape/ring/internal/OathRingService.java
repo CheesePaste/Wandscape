@@ -52,7 +52,7 @@ public final class OathRingService {
         OathRingStorage storage = data.storageFor(player.getUUID());
         int slot = storage.findStoreSlot(tier.capacity());
         if (slot < 0) {
-            fail(player, "message.wandscape.ring.slots_full", Component.literal(String.valueOf(tier.capacity())));
+            fail(player, "message.wandscape.ring.slots_full", tier.capacity());
             return;
         }
 
@@ -68,6 +68,7 @@ public final class OathRingService {
 
         Log.info(TAG, "Player {} stored mage {} into slot {} (tier {})",
                 shortId(player.getUUID()), shortId(mage.getUUID()), slot, tier.name());
+        syncToClient(player);
         ok(player, "message.wandscape.ring.store.success", name);
     }
 
@@ -90,7 +91,7 @@ public final class OathRingService {
         int slot = storage.findReleaseSlot(tier.capacity());
         if (slot < 0) {
             if (storage.hasAnyStored()) {
-                fail(player, "message.wandscape.ring.inaccessible", Component.literal(String.valueOf(tier.capacity())));
+                fail(player, "message.wandscape.ring.inaccessible", tier.capacity());
             } else {
                 fail(player, "message.wandscape.ring.empty");
             }
@@ -128,6 +129,7 @@ public final class OathRingService {
             data.setDirty();
             Log.info(TAG, "Player {} released mage {} from slot {} at {}", shortId(player.getUUID()),
                     shortId(npc.getUUID()), slot, pos);
+            syncToClient(player);
             ok(player, "message.wandscape.ring.release.success", name);
         } catch (RuntimeException e) {
             Log.warn(TAG, "Failed to restore mage from oath ring slot {}: {}", slot, e.toString());
@@ -187,6 +189,13 @@ public final class OathRingService {
 
     private static void fail(ServerPlayer player, String key, Object... args) {
         player.displayClientMessage(Component.translatable(key, args), true);
+    }
+
+    /** 推送玩家当前占用掩码到客户端（tooltip 实时数量）。 */
+    private static void syncToClient(ServerPlayer player) {
+        byte mask = OathRingSavedData.get(player.getServer()).maskFor(player.getUUID());
+        net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(
+                player, new com.wsteam.wandscape.ring.network.OathRingDataPacket(mask));
     }
 
     private static String shortId(UUID id) {

@@ -49,6 +49,12 @@ public class OathRingSavedData extends SavedData {
         return storageByPlayer.computeIfAbsent(playerId, k -> new OathRingStorage());
     }
 
+    /** 玩家当前已占槽掩码（不新建条目），登录/变更后同步客户端用。 */
+    public byte maskFor(UUID playerId) {
+        OathRingStorage storage = storageByPlayer.get(playerId);
+        return storage != null ? storage.toMask() : 0;
+    }
+
     @Override
     public CompoundTag save(CompoundTag tag, HolderLookup.Provider registries) {
         ListTag playersTag = new ListTag();

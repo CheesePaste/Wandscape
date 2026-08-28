@@ -4,6 +4,9 @@ import java.util.List;
 import java.util.Map;
 
 import com.wsteam.wandscape.Wandscape;
+import com.wsteam.wandscape.compat.curios.CuriosCompat;
+import com.wsteam.wandscape.compat.curios.NpcOpenCuriosPacket;
+import com.wsteam.wandscape.compat.curios.client.NpcCuriosButton;
 import com.wsteam.wandscape.npc.NpcMenu;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.npc.network.NpcDataPacket;
@@ -84,6 +87,9 @@ public class NpcScreen extends AbstractContainerScreen<NpcMenu> implements Repla
     private MedievalButton peaceButton;
     private MedievalButton followButton;
     private final MedievalConfirmDialog confirmDialog = new MedievalConfirmDialog();
+    /** 法师 3D 缩略图左上角的 Curios 饰品按钮（仅 Curios 加载时创建）；模型底会在 widget 之后绘制，
+     *  故不加入 renderable widget 列表，由 render 手动绘制、mouseClicked 手动处理。 */
+    private NpcCuriosButton curiosButton;
 
     public NpcScreen(NpcMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
@@ -159,6 +165,15 @@ public class NpcScreen extends AbstractContainerScreen<NpcMenu> implements Repla
         modelY = topPos + NpcMenu.EQUIP_Y + 4;
         modelW = 72;
         modelH = 86;
+
+        // Curios：模型框左上角的饰品按钮（与玩家背包 3D 缩略图左上角图标同款），点击打开法师饰品栏
+        if (CuriosCompat.isLoaded()) {
+            curiosButton = new NpcCuriosButton(modelX + 6, modelY + 6, () -> {
+                if (entityId >= 0) {
+                    PacketDistributor.sendToServer(new NpcOpenCuriosPacket(entityId));
+                }
+            });
+        }
 
         // 名字框（header 内）
         int boxH = font.lineHeight + 2;
@@ -260,9 +275,18 @@ public class NpcScreen extends AbstractContainerScreen<NpcMenu> implements Repla
         super.render(g, mouseX, mouseY, partialTick);
         renderModel(g, mouseX, mouseY);
         renderAttributes(g);
+        // Curios 饰品按钮绘制在模型之上（widget 列表渲染早于模型底，会被盖住，需手动后置）
+        if (curiosButton != null && CuriosCompat.isLoaded()) {
+            curiosButton.render(g, mouseX, mouseY, partialTick);
+        }
         // 与仓库一致：原版 render 不画 tooltip，需显式调用（悬停物品显示介绍）
         if (!confirmDialog.isOpen()) {
             renderTooltip(g, mouseX, mouseY);
+        }
+        // Curios 按钮悬停提示（置于物品 tooltip 之后保证浮在最上）
+        if (curiosButton != null && CuriosCompat.isLoaded() && curiosButton.isHovered()) {
+            g.renderTooltip(font, I18n.name("gui.wandscape.curios.open", "Trinkets"),
+                    mouseX, mouseY);
         }
         // 确认框置于最顶层
         if (confirmDialog.isOpen()) {
@@ -380,6 +404,11 @@ public class NpcScreen extends AbstractContainerScreen<NpcMenu> implements Repla
         // Confirm dialog open: it consumes all clicks, blocking the screen behind.
         if (confirmDialog.isOpen()) {
             return confirmDialog.mouseClicked(mouseX, mouseY, button);
+        }
+        // Curios 饰品按钮（点击发 NpcOpenCuriosPacket 打开法师饰品栏）
+        if (curiosButton != null && CuriosCompat.isLoaded()
+                && curiosButton.mouseClicked(mouseX, mouseY, button)) {
+            return true;
         }
         if (button == 0 && isInRect(mouseX, mouseY, closeBtnX, closeBtnY, CLOSE_W, CLOSE_H)) {
             onClose();

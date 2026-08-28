@@ -73,6 +73,17 @@ public final class OathRingStorage {
         return slots.remove(slot);
     }
 
+    /** 已占槽位掩码（bit i = 槽 i 已占，低 4 位有效），服务端→客户端同步用。 */
+    public byte toMask() {
+        byte mask = 0;
+        for (int i = 0; i < MAX_SLOTS; i++) {
+            if (slots.containsKey(i)) {
+                mask |= (byte) (1 << i);
+            }
+        }
+        return mask;
+    }
+
     // ── 序列化（全部槽位落盘，空槽为空的 CompoundTag）──
 
     public CompoundTag toNbt() {

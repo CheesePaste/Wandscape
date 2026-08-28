@@ -1,10 +1,14 @@
 package com.wsteam.wandscape.ring;
 
+import com.wsteam.wandscape.ring.client.OathRingClientData;
 import com.wsteam.wandscape.ring.internal.OathRingService;
 import com.wsteam.wandscape.shared.api.NpcBindingItem;
 import com.wsteam.wandscape.shared.log.Log;
 
+import java.util.List;
+
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -13,6 +17,7 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 
@@ -73,5 +78,14 @@ public class OathRingItem extends Item implements NpcBindingItem {
             return InteractionResultHolder.consume(player.getItemInHand(hand));
         }
         return InteractionResultHolder.success(player.getItemInHand(hand));
+    }
+
+    @Override
+    public void appendHoverText(ItemStack stack, Item.TooltipContext context,
+                                List<Component> tooltipComponents, TooltipFlag tooltipFlag) {
+        // 已存 x/y：x = 本档位可存取槽内已占数，y = 档位容量（数值来自服务端同步的占用掩码）
+        int stored = OathRingClientData.reachable(tier.capacity());
+        tooltipComponents.add(Component.translatable("item.wandscape.oath_ring.tooltip",
+                stored, tier.capacity()));
     }
 }
