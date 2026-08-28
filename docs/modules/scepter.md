@@ -9,12 +9,14 @@
 ## 物品
 
 - `ScepterItem extends Item implements MageWandItem`：持 `ScepterKind`；右键法师经 `MageWandItem` 接口由 `WandscapeNpc.mobInteract` 转交（非潜行分支，`!isShiftKeyDown()`）；tooltip 显示用途。注册 `wandscape:peace_wand / follow_wand / shelter_wand / hostile_wand`，创造栏补发。
+- `OmniScepterItem extends Item implements MageWandItem, NpcBindingItem`：**一杖四模式**（复用 `ScepterKind` 作模式枚举），模式存物品 `CUSTOM_DATA["mode"]`（默认 PEACE）；shift+右键循环模式，右键执行当前模式。注册 `wandscape:omni_scepter`，合成站 10 级配方。
 - `ScepterKind`：PEACE/FOLLOW/SHELTER/HOSTILE + 主题色（`themeColor`，ItemColors tintindex 0 染头部）。
 
 ## 交互分派
 
-- **法师（本殖民地）**：`WandscapeNpc.mobInteract` L1334 后加 `held instanceof MageWandItem → onInteractNpc + return CONSUME`。四把都适用。潜行+权杖仍走默认（非 NpcBindingItem → openMenu）。
-- **非法师/非本殖民地生物**：`ScepterInteractHandler`（`PlayerInteractEvent.EntityInteract`）——手持 SHELTER/HOSTILE 权杖、目标为 `LivingEntity && !Player`、非本殖民地法师（含 EvilMage/非法师生物）时 `setCanceled(true)+setCancellationResult(SUCCESS)`，两端一致屏蔽喂牛/驯狼，服务端业务执行。本殖民地法师与玩家一律放行（走 mobInteract / 不干涉）。**只订阅 EntityInteract，不订阅 EntityInteractAt**（后者先到且默认 PASS）。
+- **法师（本殖民地）**：`WandscapeNpc.mobInteract` L1334 后加 `held instanceof MageWandItem → onInteractNpc + return CONSUME`。四把都适用。潜行+权杖仍走默认（非 NpcBindingItem → openMenu）。**万能权杖例外**：它同时实现 `NpcBindingItem`，潜行右键法师走 `onShiftClickNpc` → 循环模式（复用既有潜行 seam，不改 mobInteract）。
+- **非法师/非本殖民地生物**：`ScepterInteractHandler`（`PlayerInteractEvent.EntityInteract`）——手持 SHELTER/HOSTILE 权杖（或万能权杖处于庇护/敌对模式）、目标为 `LivingEntity && !Player`、非本殖民地法师（含 EvilMage/非法师生物）时 `setCanceled(true)+setCancellationResult(SUCCESS)`，两端一致屏蔽喂牛/驯狼，服务端业务执行。万能权杖潜行（循环模式）与庇护/敌对模式均接管；和平/跟随模式（非潜行）与基础权杖一样对生物放行 vanilla。本殖民地法师与玩家一律放行（走 mobInteract / 不干涉）。**只订阅 EntityInteract，不订阅 EntityInteractAt**（后者先到且默认 PASS）。
+- **空气/方块**：`OmniScepterItem.use()`——潜行则循环模式，非潜行 `PASS`（执行需目标，法师/生物走各自 seam）。
 
 ## 行为
 

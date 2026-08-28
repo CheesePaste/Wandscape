@@ -608,6 +608,10 @@ public class WandscapeClient {
         event.register((stack, tintIndex) -> tintIndex == 0
                         ? com.wsteam.wandscape.scepter.ScepterKind.HOSTILE.themeColor() : 0xFFFFFFFF,
                 Wandscape.HOSTILE_WAND.get());
+        // 万能权杖：模式染头（tintindex 0 读物品 NBT 模式的 themeColor，色随模式变）
+        event.register((stack, tintIndex) -> tintIndex == 0
+                        ? com.wsteam.wandscape.scepter.OmniScepterItem.getMode(stack).themeColor() : 0xFFFFFFFF,
+                Wandscape.OMNI_SCEPTER.get());
     }
 
     @SubscribeEvent

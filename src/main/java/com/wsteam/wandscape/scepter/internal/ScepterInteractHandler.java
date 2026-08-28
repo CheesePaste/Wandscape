@@ -1,6 +1,7 @@
 package com.wsteam.wandscape.scepter.internal;
 
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
+import com.wsteam.wandscape.scepter.OmniScepterItem;
 import com.wsteam.wandscape.scepter.ScepterItem;
 import com.wsteam.wandscape.scepter.ScepterKind;
 
@@ -9,6 +10,7 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -36,16 +38,31 @@ public final class ScepterInteractHandler {
         if (!(target instanceof LivingEntity living)) return;
 
         ItemStack held = event.getEntity().getItemInHand(event.getHand());
-        if (!(held.getItem() instanceof ScepterItem scepter)) return;
-        ScepterKind kind = scepter.kind();
-        if (kind != ScepterKind.SHELTER && kind != ScepterKind.HOSTILE) return;
+        Item heldItem = held.getItem();
+
+        boolean omni = heldItem instanceof OmniScepterItem;
+        if (!omni && !(heldItem instanceof ScepterItem)) return;
+
+        ScepterKind kind = omni ? OmniScepterItem.getMode(held) : ((ScepterItem) heldItem).kind();
+        boolean sneak = event.getEntity().isShiftKeyDown();
+
+        // 基础权杖：和平/跟随只对法师目标（onInteractNpc 路径），对生物无效 → 放行 vanilla。
+        // 万能权杖：非潜行且当前模式为和平/跟随时同样放行；潜行（切模式）与庇护/敌对模式均接管。
+        if ((!omni && kind != ScepterKind.SHELTER && kind != ScepterKind.HOSTILE)
+                || (omni && !sneak && kind != ScepterKind.SHELTER && kind != ScepterKind.HOSTILE)) {
+            return;
+        }
 
         // 两端一致取消：服务端执行业务，客户端保证预测表现同步
         Level level = event.getLevel();
         event.setCanceled(true);
         event.setCancellationResult(InteractionResult.sidedSuccess(level.isClientSide));
         if (!level.isClientSide && event.getEntity() instanceof ServerPlayer sp) {
-            ScepterService.onInteractCreature(sp, living, kind);
+            if (omni && sneak) {
+                OmniScepterItem.cycleMode(sp, held, event.getHand());
+            } else {
+                ScepterService.onInteractCreature(sp, living, kind);
+            }
         }
     }
 }

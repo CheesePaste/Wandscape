@@ -93,6 +93,7 @@
 | peace_wand / follow_wand / shelter_wand / hostile_wand | lv1 | 见各自 json |
 | magic_compass 魔法指南针 | lv1 | earth 600 + wind 600 |
 | advanced_magic_compass 高级魔法指南针 | lv10 | earth 5000 + wind 5000 |
+| omni_scepter 万能权杖 | lv10 | earth 4000 + water 4000 + wood 3000 + wind 3000 + fire 3000 + dark 3000 |
 | ultimate_magic_compass 终极魔法指南针 | lv20 | earth 30000 + wind 25000 + dark 15000 |
 | warehouse_terminal 仓库终端 | lv20 | earth 45000 + metal 65000 + dark 40000 |
 | oath_ring 盟誓戒指 | lv1 | earth 800 + water 800 |

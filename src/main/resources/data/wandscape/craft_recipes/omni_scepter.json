@@ -1,0 +1,18 @@
+{
+  "type": "misc",
+  "craft_station": "crafting_station",
+  "id": "omni_scepter",
+  "display_name": "万能权杖",
+  "output": { "item": "wandscape:omni_scepter" },
+  "cost": {
+    "earth": 4000,
+    "water": 4000,
+    "wood": 3000,
+    "wind": 3000,
+    "fire": 3000,
+    "dark": 3000
+  },
+  "unlock_requirement": {
+    "min_colony_level": 10
+  }
+}

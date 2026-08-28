@@ -43,3 +43,9 @@ shift+右键本殖民地法师可以把法师存入戒指，右键地面放出
     状态：已实现（warehouse/ 模块的 WarehouseTerminalItem，合成站 20 级配方）。右键打开玩家自己殖民地的
     仓库面板（概览/兑换两页，复用 WarehouseMenu）。**未做：Curios 手饰槽位 + 穿戴快捷键**（本期用户拍板延后）；
 **贴图占位（自制 16×16 终端图标，待美术替换）**。
+10.万能权杖
+合成站10级解锁配方，一杖四模式（和平/跟随/庇护/敌对）。shift+右键循环模式，右键执行当前模式；
+颜色与 tooltip 显示当前模式（和平白/跟随青/庇护绿/敌对红）。
+    状态：已实现（scepter/ 模块的 OmniScepterItem，合成站 10 级配方）。模式存物品 NBT（CUSTOM_DATA["mode"]，
+    默认和平），客户端 tint/tooltip 读它随模式变色；复用 MageWandItem/NpcBindingItem/EntityInteract/use 四处
+    seam 分流，行为全部复用 ScepterService，无第二套业务。**待办：贴图复用 scepter 模板（头部染色），无独立贴图**。

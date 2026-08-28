@@ -394,6 +394,9 @@ public class Wandscape {
                     new com.wsteam.wandscape.scepter.ScepterItem(
                             new Item.Properties().stacksTo(1),
                             com.wsteam.wandscape.scepter.ScepterKind.HOSTILE));
+    public static final DeferredItem<Item> OMNI_SCEPTER =
+            ITEMS.register("omni_scepter", () ->
+                    new com.wsteam.wandscape.scepter.OmniScepterItem(new Item.Properties().stacksTo(1)));
     public static final com.wsteam.wandscape.scepter.internal.ScepterApiImpl SCEPTER_API =
             new com.wsteam.wandscape.scepter.internal.ScepterApiImpl();
 
@@ -470,6 +473,7 @@ public class Wandscape {
                         output.accept(FOLLOW_WAND.get());
                         output.accept(SHELTER_WAND.get());
                         output.accept(HOSTILE_WAND.get());
+                        output.accept(OMNI_SCEPTER.get());
                         output.accept(MAGIC_COMPASS.get());
                         output.accept(ADVANCED_MAGIC_COMPASS.get());
                         output.accept(ULTIMATE_MAGIC_COMPASS.get());
