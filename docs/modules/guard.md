@@ -21,7 +21,7 @@
 ## 守卫任务
 
 - `GuardZone`：record 6 int；of() 仅 X/Z 水平外扩（刻意防锁洞穴怪）；contains 世界坐标含边界。
-- `GuardScanner`：zones(level, range) 取全部非停摆/非拆除中建筑 AABB 水平外扩；nearestInZones/hasMonsterInZones/unionAabb。
+- `GuardScanner`：zones(level, range) 取全部非拆除中建筑 AABB 水平外扩；nearestInZones/hasMonsterInZones/unionAabb。
 - `GuardTaskSource`：pollInterval=20；overworld 内找威胁：攻击区有存活 Enemy 且无活跃任务 → 发布 `guard:attack` 任务（params: attackRange/releaseRange/circle/color，优先级 `GUARD_PRIORITY=49`）。
 - `GuardBlueprints`：代码注册 `guard:attack` → `[AtomicOp.AttackMonsterOp(attackRange, releaseRange, circle, color)]`。
 - `GuardAttackExecutor`：持续异步循环（由 Wandscape.onServerTick 驱动）；RECHECK_TICKS=10；runCycle 重算攻击区→最近 Enemy；无目标→看脱离区无怪→光束淡出+cancelNavigation+完成；有怪→待命重试。future 未完成前 NPC 保持 ACTIVE 不被改派。

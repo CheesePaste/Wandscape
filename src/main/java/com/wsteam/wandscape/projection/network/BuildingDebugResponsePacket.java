@@ -27,7 +27,6 @@ public record BuildingDebugResponsePacket(
         BlockPos anchor,
         boolean intact,
         boolean needsRepair,
-        boolean shutdown,
         boolean underConstruction,
         boolean constructionStarted,
         boolean demolishing,
@@ -74,7 +73,6 @@ public record BuildingDebugResponsePacket(
         buf.writeBlockPos(pkt.anchor());
         buf.writeBoolean(pkt.intact());
         buf.writeBoolean(pkt.needsRepair());
-        buf.writeBoolean(pkt.shutdown());
         buf.writeBoolean(pkt.underConstruction());
         buf.writeBoolean(pkt.constructionStarted());
         buf.writeBoolean(pkt.demolishing());
@@ -108,7 +106,6 @@ public record BuildingDebugResponsePacket(
         BlockPos anchor = buf.readBlockPos();
         boolean intact = buf.readBoolean();
         boolean needsRepair = buf.readBoolean();
-        boolean shutdown = buf.readBoolean();
         boolean underConstruction = buf.readBoolean();
         boolean constructionStarted = buf.readBoolean();
         boolean demolishing = buf.readBoolean();
@@ -129,7 +126,7 @@ public record BuildingDebugResponsePacket(
 
         return new BuildingDebugResponsePacket(
                 buildingId, buildingTypeId, displayName, category,
-                colonyId, anchor, intact, needsRepair, shutdown,
+                colonyId, anchor, intact, needsRepair,
                 underConstruction, constructionStarted, demolishing,
                 comfort, magic, wonder, queue, currentTaskId
         );

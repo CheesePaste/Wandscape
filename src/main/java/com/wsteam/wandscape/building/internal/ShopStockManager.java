@@ -111,7 +111,7 @@ public final class ShopStockManager {
         ServerLevel level = getServerLevel();
         if (level == null) return;
         BuildingState state = savedData.getBuilding(buildingId);
-        if (state == null || state.isShutdown() || !state.isStructureIntact()) return;
+        if (state == null || !state.isStructureIntact()) return;
 
         UUID colonyId = state.getColonyId();
         if (colonyId == null) return;
@@ -178,7 +178,7 @@ public final class ShopStockManager {
         ServerLevel level = getServerLevel();
         if (level == null) return;
         BuildingState state = getBuildingState(buildingId);
-        if (state == null || state.isShutdown() || !state.isStructureIntact()) return;
+        if (state == null || !state.isStructureIntact()) return;
         UUID colonyId = state.getColonyId();
         if (colonyId == null) return;
         BuildingConfig config = BuildingConfigLoader.getInstance()
@@ -399,7 +399,7 @@ public final class ShopStockManager {
                 hasTransport = false;
             } else {
                 BuildingState shopState = savedData.getBuilding(buildingId);
-                if (shopState == null || shopState.isShutdown()) {
+                if (shopState == null) {
                     hasTransport = false;
                 }
             }
@@ -440,7 +440,7 @@ public final class ShopStockManager {
                 // Stock is added immediately to prevent compound over-stocking
                 // from repeated daily restocks before previous transports arrive.
                 BuildingState shopState = savedData.getBuilding(buildingId);
-                if (shopState != null && !shopState.isShutdown()) {
+                if (shopState != null) {
                     Map<String, Integer> stock = savedData.getOrCreateShopStock(buildingId);
                     stock.put(good.itemId(), stock.getOrDefault(good.itemId(), 0) + canAfford);
                     launchRestockTransport(buildingId, good.itemId(), canAfford,
@@ -516,7 +516,7 @@ public final class ShopStockManager {
 
         for (UUID buildingId : List.copyOf(pendingRestock)) {
             BuildingState state = savedData.getBuilding(buildingId);
-            if (state == null || state.isShutdown() || !state.isStructureIntact()) {
+            if (state == null || !state.isStructureIntact()) {
                 pendingRestock.remove(buildingId);
                 continue;
             }
@@ -556,7 +556,7 @@ public final class ShopStockManager {
         BuildingSavedData savedData = getSavedData();
         if (savedData == null) return;
         BuildingState state = savedData.getBuilding(buildingId);
-        if (state == null || state.isShutdown()) {
+        if (state == null) {
             Log.warn(TAG, "[Shop] Transport arrived but building {} gone — lost {} × {}",
                     buildingId.toString().substring(0, 8), amount, itemId);
             return;
@@ -575,7 +575,7 @@ public final class ShopStockManager {
         if (ids == null || ids.isEmpty()) return null;
         // Return the first warehouse's position (don't need nearest for restock)
         BuildingData bd = api.getBuilding(ids.get(0));
-        return bd != null && !bd.isShutdown() ? bd.getPosition() : null;
+        return bd != null ? bd.getPosition() : null;
     }
 
     /**
@@ -615,7 +615,7 @@ public final class ShopStockManager {
 
         for (BuildingState state : savedData.getAllBuildings()) {
             if (!colonyId.equals(state.getColonyId())) continue;
-            if (state.isShutdown() || !state.isStructureIntact()) continue;
+            if (!state.isStructureIntact()) continue;
 
             BuildingConfig config = BuildingConfigLoader.getInstance()
                     .get(state.getBuildingTypeId());

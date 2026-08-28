@@ -97,7 +97,7 @@ public final class RaidTriggerScanner {
     private boolean isNearBuilding(UUID colonyId, BlockPos playerPos) {
         var buildingApi = WandscapeApis.getBuildingApi();
         for (BuildingData b : buildingApi.getColonyBuildings(colonyId)) {
-            if (b.isShutdown() || !b.isStructureIntact()) continue;
+            if (!b.isStructureIntact()) continue;
             var bounds = buildingApi.getBuildingBounds(b.getBuildingId());
             if (GuardZone.of(bounds.minX(), bounds.minY(), bounds.minZ(),
                     bounds.maxX(), bounds.maxY(), bounds.maxZ(),

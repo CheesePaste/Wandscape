@@ -34,9 +34,9 @@ Flying works the same as creative mode: **WASD** to pan, **Space / Shift** to as
 
 - **Build**: the building bar below lists buildable structures by category (All / Government / Storage / Service / Shops / Relax / ATM / Workshop / Node). Flow: **single-click** to select → **double-click** to enter placement → the ghost preview follows your mouse → **left-click** to rotate the facing → press **Submit** on the right panel to open the construction screen → **Submit** to build. If the position needs fine-tuning: press **Lock** (or **Enter**) to pin it, drag the **3D axis gizmo** to move it, then **Submit**. While pinned, **Esc** returns to aiming; **Esc** again exits placement. First-free buildings are marked in the bar.
 - **Roads**: the paving toolset — see [Road System Overview](road_guide.md).
-- **Stats**: tourist flow, economic income, resident count, anomaly warnings.
+- **Stats**: tourist flow, economic income, resident count.
 
-The **warning icon** below the sidebar lights up when a building is stopped or broken. Opening it shows the [Anomaly Report](anomaly_guide.md), where broken buildings can be repaired.
+The **warning icon** below the sidebar opens the [Building Status report](anomaly_guide.md), which lists buildings still under construction.
 
 ## Raising the Cursor (C)
 

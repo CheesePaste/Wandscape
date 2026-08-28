@@ -36,7 +36,7 @@ public interface ColonyApi {
     // Returns the colonyId assigned, or null if none found.
     UUID onBuildingIntact(com.wsteam.wandscape.shared.data.BuildingData building);
 
-    // Called by BuildingBreakHandler when a building is destroyed.
+    // Called when a building is destroyed (e.g. demolition complete).
     void onBuildingDestroyed(com.wsteam.wandscape.shared.data.BuildingData building);
 
     // Try to assign a colony to a newly registered building.

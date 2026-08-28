@@ -10,7 +10,7 @@
 
 | 接口 | 主要方法 |
 |---|---|
-| `BuildingApi` | getBuilding/getBuildingAt/getColonyBuildings/getBuildingBounds；registerBuilding/unregisterBuilding；shutdown/restart；demolishBuilding；getColonySnapshot(→ColonySnapshot 三值)/getColonyComfort/Magic/Wonder；队列操作（enqueueWork/dequeueWork/moveUp/moveDown）；placeBuilding(→PlacementResult)；isFirstFreeClaimed/findBeds/sampleWalkableGround/getTouristInteractionTarget/getEntryPoint/getTouristInteractPoint |
+| `BuildingApi` | getBuilding/getBuildingAt/getColonyBuildings/getBuildingBounds；registerBuilding/unregisterBuilding；demolishBuilding；getColonySnapshot(→ColonySnapshot 三值)/getColonyComfort/Magic/Wonder；队列操作（enqueueWork/dequeueWork/moveUp/moveDown）；placeBuilding(→PlacementResult)；isFirstFreeClaimed/findBeds/sampleWalkableGround/getTouristInteractionTarget/getEntryPoint/getTouristInteractPoint |
 | `ColonyApi` | createColony(origin[,founder])/getFounder/getColonyByFounder/getColonyId/deleteColony/isColonyOrigin/onBuildingIntact/onBuildingDestroyed/assignColonyIfPossible/getAllColonyIds/rebuildFromSavedData |
 | `ColonyMetricsApi` | getSnapshot + 兜底 getSnapshotSafe |
 | `ElementApi` | fromId/hasElementMapping/isDisabled/getBuildCost（BlockState + ItemStack 两组重载）/elementItemId（元素→元素物品 registry id） |
@@ -31,9 +31,9 @@
 
 ## data/（数据类）
 
-- `BuildingData` interface：getBuildingId/getColonyId/getBuildingTypeId/getCategory/getPosition/isShutdown/getComfort/getMagic/getWonder/getQueueCapacity/isStructureIntact/hasEverCompleted/isConstructionStarted/...。
+- `BuildingData` interface：getBuildingId/getColonyId/getBuildingTypeId/getCategory/getPosition/getComfort/getMagic/getWonder/getQueueCapacity/isStructureIntact/hasEverCompleted/isConstructionStarted/...。
 - `CharacterNames`：法师与游客共享的**双语**随机名池（44 个名字，`wandscape.character_name.<i>` lang key：zh 中文 / en 拼音），`generateRandomNameKey()` 生成 key，`displayComponent` 返回 translatable 组件（客户端按语言渲染），`localizedString` 解析当前语言（无 lang 条目时回退中文，旧存档纯中文名原样通过）。游客 `getTouristName()` 解析、`getTouristNameKey()` 存 key；NPC 自动命名 `setCustomName(displayComponent(key))`。
-- `ColonyMetricsSnapshot` record：colonyId + 三评 + 名称/等级/经验 + 游客数/过夜数/平均满意度 + NPC 空闲/总数 + 七元素 + 停机/损坏/建造中（含 等待材料/建造中 phase）名单；EMPTY、totalAnomalyCount()（只计停机+损坏，建造中不算异常）。
+- `ColonyMetricsSnapshot` record：colonyId + 三评 + 名称/等级/经验 + 游客数/过夜数/平均满意度 + NPC 空闲/总数 + 七元素 + 建造中（含 等待材料/建造中 phase）名单；EMPTY。
 - `ElementType` enum：EARTH/WOOD/WATER/FIRE/METAL/WIND/DARK。
 - `Emotion` enum：DELIGHTED/PLEASED/SATISFIED/NEUTRAL/DISAPPOINTED/UPSET。
 - `ExecutionResult(success, errorMessage)`、`InterruptRecord(npcId, timestamp)`、`ItemKey(itemId, nbt)`、`MageResume`（见 npc 模块）、`RecruitmentCandidate`、`VisitMemory`（builder）、`BlueprintInfo(id, displayName, description, params)`。
@@ -51,7 +51,6 @@
 | 事件 | 触发者 |
 |---|---|
 | BuildingPlacedEvent / BuildingRemovedEvent | BuildingApiImpl / BuildCompleteListener |
-| BuildingShutdownEvent(reason) / BuildingRestartedEvent | BuildingApiImpl |
 | ColonyCreatedEvent | ColonyCommand |
 | ColonyEvaluationChangedEvent(old/new 三评) | BuildingContributionRegistry |
 | **ColonyLevelUpEvent**（record，非总线） | ColonyLevelManager.levelUpCallback |

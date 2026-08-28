@@ -487,7 +487,7 @@ public final class TouristSimulation {
         // Cache configs per building so weightedPick → buildingScore skips redundant getConfig() lookups.
         java.util.Map<UUID, BuildingConfig> cfgCache = new java.util.HashMap<>();
         for (BuildingData b : allBuildings) {
-            if (b.isShutdown() || !b.isStructureIntact()) continue;
+            if (!b.isStructureIntact()) continue;
             BuildingState state = getState(level, b.getBuildingId());
             if (state == null) continue;
             BuildingConfig cfg = getConfig(level, b.getBuildingId());
@@ -657,7 +657,7 @@ public final class TouristSimulation {
         int bestDist = Integer.MAX_VALUE;
         for (BuildingData b : api.getColonyBuildings(colonyId)) {
             if (!"service".equals(b.getCategory())) continue;
-            if (b.isShutdown() || !b.isStructureIntact()) continue;
+            if (!b.isStructureIntact()) continue;
             if (!isHotelBuilding(level, b.getBuildingId())) continue;
             if (requireLoaded && !level.isLoaded(b.getPosition())) continue;
             if (!hasHotelVacancy(level, b.getBuildingId())) continue;

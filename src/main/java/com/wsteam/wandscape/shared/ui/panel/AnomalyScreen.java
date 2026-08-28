@@ -1,22 +1,21 @@
 package com.wsteam.wandscape.shared.ui.panel;
 
-import com.wsteam.wandscape.projection.network.BuildingActionPacket;
 import com.wsteam.wandscape.shared.ui.I18n;
 import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
 import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
 import com.wsteam.wandscape.shared.ui.util.RenderUtil;
 
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
 /**
- * Screen showing all building anomalies (shutdown/broken) with action buttons.
+ * Screen listing buildings still under construction.
+ * 建筑不再因损坏或手动关闭而停摆，异常报告只保留"建造中"类别（从未完工的建筑，
+ * 带等待材料/建造中阶段标识）。
  * Uses {@link MedievalScreen} MINIMAL theme with {@link MedievalColors}.
  * Opened by clicking the warning icon in the V-panel sidebar.
  */
@@ -26,12 +25,8 @@ public class AnomalyScreen extends MedievalScreen {
     private static final int PANEL_H = 230;
     private static final int ROW_H = 26;
     private static final int CONTENT_PAD = 10;
-    private static final int BTN_W = 50;
-    private static final int BTN_H = 18;
 
-    private record AnomalyEntry(UUID buildingId, String buildingName, Type type, boolean started) {
-        enum Type { BROKEN, SHUTDOWN, UNDER_CONSTRUCTION }
-    }
+    private record AnomalyEntry(UUID buildingId, String buildingName, boolean started) {}
 
     private List<AnomalyEntry> entries = List.of();
     private int scrollOffset;
@@ -52,30 +47,12 @@ public class AnomalyScreen extends MedievalScreen {
 
     private void rebuildEntries() {
         List<AnomalyEntry> list = new ArrayList<>();
-        var shutdownIds = WandscapePanelState.getShutdownBuildingIds();
-        var shutdownNames = WandscapePanelState.getShutdownBuildingNames();
-        int n = Math.min(shutdownIds.size(), shutdownNames.size());
-        for (int i = 0; i < n; i++) {
-            list.add(new AnomalyEntry(shutdownIds.get(i), shutdownNames.get(i),
-                    AnomalyEntry.Type.SHUTDOWN, false));
-        }
-        var brokenIds = WandscapePanelState.getBrokenBuildingIds();
-        var brokenNames = WandscapePanelState.getBrokenBuildingNames();
-        n = Math.min(brokenIds.size(), brokenNames.size());
-        for (int i = 0; i < n; i++) {
-            list.add(new AnomalyEntry(brokenIds.get(i), brokenNames.get(i),
-                    AnomalyEntry.Type.BROKEN, false));
-        }
-        // Under-construction buildings are NOT anomalies but are listed so the
-        // player sees they're still being built (等待材料/建造中) instead of mistaking
-        // them for damaged.
         var ucIds = WandscapePanelState.getUnderConstructionBuildingIds();
         var ucNames = WandscapePanelState.getUnderConstructionBuildingNames();
         var ucStarted = WandscapePanelState.getUnderConstructionStarted();
-        n = Math.min(ucIds.size(), Math.min(ucNames.size(), ucStarted.size()));
+        int n = Math.min(ucIds.size(), Math.min(ucNames.size(), ucStarted.size()));
         for (int i = 0; i < n; i++) {
-            list.add(new AnomalyEntry(ucIds.get(i), ucNames.get(i),
-                    AnomalyEntry.Type.UNDER_CONSTRUCTION, ucStarted.get(i)));
+            list.add(new AnomalyEntry(ucIds.get(i), ucNames.get(i), ucStarted.get(i)));
         }
         this.entries = list;
     }
@@ -92,7 +69,6 @@ public class AnomalyScreen extends MedievalScreen {
         // Header row
         g.drawString(font, I18n.name("gui.wandscape.anomaly.col_building", "建筑名称").getString(), cx, cy, MedievalColors.BORDER_GOLD, false);
         g.drawString(font, I18n.name("gui.wandscape.anomaly.col_status", "状态").getString(), cx + cw - 125, cy, MedievalColors.BORDER_GOLD, false);
-        g.drawString(font, I18n.name("gui.wandscape.anomaly.col_action", "操作").getString(), cx + cw - BTN_W, cy, MedievalColors.BORDER_GOLD, false);
 
         int sepY = cy + 12;
         g.fill(cx, sepY, cx + cw, sepY + 1, MedievalColors.BORDER_GOLD_DARK);
@@ -119,44 +95,21 @@ public class AnomalyScreen extends MedievalScreen {
             g.drawString(font, entry.buildingName(), cx + 4, rowY + (ROW_H - 9) / 2,
                     MedievalColors.TEXT_WARM_WHITE, false);
 
-            // Type badge
-            boolean isUnderConstruction = entry.type() == AnomalyEntry.Type.UNDER_CONSTRUCTION;
-            boolean isBroken = entry.type() == AnomalyEntry.Type.BROKEN;
+            // Status badge (建造中 / 等待材料)
             int badgeColor;
             String badgeText;
-            if (isUnderConstruction) {
+            if (entry.started()) {
                 badgeColor = MedievalColors.INFO_BLUE;
-                badgeText = entry.started()
-                        ? I18n.name("gui.wandscape.anomaly.badge_under_construction", "建造中").getString()
-                        : I18n.name("gui.wandscape.anomaly.badge_waiting_materials", "等待材料").getString();
-            } else if (isBroken) {
-                badgeColor = MedievalColors.DANGER_RED;
-                badgeText = I18n.name("gui.wandscape.anomaly.badge_broken", "损坏").getString();
+                badgeText = I18n.name("gui.wandscape.anomaly.badge_under_construction", "建造中").getString();
             } else {
                 badgeColor = MedievalColors.BORDER_GOLD_DARK;
-                badgeText = I18n.name("gui.wandscape.anomaly.badge_shutdown", "关闭").getString();
+                badgeText = I18n.name("gui.wandscape.anomaly.badge_waiting_materials", "等待材料").getString();
             }
             int badgeW = font.width(badgeText) + 8;
             int badgeX = cx + cw - 125;
             int badgeY = rowY + (ROW_H - 14) / 2;
             g.fill(badgeX, badgeY, badgeX + badgeW, badgeY + 14, badgeColor | 0xCC000000);
             g.drawString(font, badgeText, badgeX + 4, badgeY + 3, MedievalColors.TEXT_WARM_WHITE, false);
-
-            // Action button — under-construction buildings have no repair/restart action
-            if (!isUnderConstruction) {
-                String btnText = isBroken
-                        ? I18n.name("gui.wandscape.anomaly.action_repair", "修复").getString()
-                        : I18n.name("gui.wandscape.anomaly.action_restart", "营业").getString();
-                int btnX = cx + cw - BTN_W;
-                int btnY = rowY + (ROW_H - BTN_H) / 2;
-                int btnColor = isBroken ? MedievalColors.SUCCESS_GREEN : MedievalColors.INFO_BLUE;
-                boolean btnHovered = mouseX >= btnX && mouseX < btnX + BTN_W
-                        && mouseY >= btnY && mouseY < btnY + BTN_H;
-                int fillColor = btnHovered ? btnColor : (btnColor & 0x00FFFFFF) | 0xAA000000;
-                g.fill(btnX, btnY, btnX + BTN_W, btnY + BTN_H, fillColor);
-                g.drawString(font, btnText, btnX + (BTN_W - font.width(btnText)) / 2,
-                        btnY + (BTN_H - 9) / 2, MedievalColors.TEXT_WARM_WHITE, false);
-            }
         }
 
         g.disableScissor();
@@ -168,49 +121,10 @@ public class AnomalyScreen extends MedievalScreen {
             RenderUtil.drawScrollbar(g, cx + cw - 4, listY, 4, listH, totalH, scrollOffset);
         }
 
-        // Summary footer — 建造中 buildings are listed but are not anomalies
-        String summary = I18n.name("gui.wandscape.anomaly.summary", "共 %s 项  |  关闭: %s  |  损坏: %s  |  建造中: %s", entries.size(), WandscapePanelState.getShutdownCount(), WandscapePanelState.getBrokenCount(), WandscapePanelState.getUnderConstructionCount()).getString();
+        // Summary footer
+        String summary = I18n.name("gui.wandscape.anomaly.summary", "建造中: %s 项",
+                WandscapePanelState.getUnderConstructionCount()).getString();
         g.drawString(font, summary, cx, listY + listH + 4, MedievalColors.TEXT_MUTED, false);
-    }
-
-    @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (super.mouseClicked(mouseX, mouseY, button)) return true;
-        if (button != 0) return false;
-
-        int cx = leftPos + CONTENT_PAD;
-        int cy = topPos + headerHeight + 6;
-        int cw = panelWidth - CONTENT_PAD * 2;
-        int sepY = cy + 12;
-        int listY = sepY + 4;
-        int listH = panelHeight - headerHeight - 16 - 14;
-
-        for (int i = 0; i < entries.size(); i++) {
-            int rowY = listY + i * ROW_H - scrollOffset;
-            if (rowY + ROW_H < listY || rowY > listY + listH) continue;
-
-            var entry = entries.get(i);
-            if (entry.type() == AnomalyEntry.Type.UNDER_CONSTRUCTION) continue;
-            boolean isBroken = entry.type() == AnomalyEntry.Type.BROKEN;
-            int btnX = cx + cw - BTN_W;
-            int btnY = rowY + (ROW_H - BTN_H) / 2;
-
-            if (mouseX >= btnX && mouseX < btnX + BTN_W
-                    && mouseY >= btnY && mouseY < btnY + BTN_H) {
-                String action = isBroken ? "repair" : "restart";
-                PacketDistributor.sendToServer(new BuildingActionPacket(entry.buildingId(), action));
-                Minecraft mc = Minecraft.getInstance();
-                if (mc.player != null) {
-                    mc.player.displayClientMessage(isBroken
-                            ? I18n.name("gui.wandscape.anomaly.msg_repair_sent", "§a已发送修复指令")
-                            : I18n.name("gui.wandscape.anomaly.msg_restart_sent", "§a已发送营业指令"), true);
-                }
-                onClose();
-                return true;
-            }
-        }
-
-        return false;
     }
 
     @Override

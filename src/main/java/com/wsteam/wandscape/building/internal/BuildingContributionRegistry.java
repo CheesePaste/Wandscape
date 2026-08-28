@@ -185,7 +185,7 @@ public final class BuildingContributionRegistry {
 
     /**
      * Computes the colony's three evaluation values by iterating every building
-     * instance. Each intact, non-shutdown building contributes individually —
+     * instance. Each intact building contributes individually —
      * same-type buildings stack. Decoration buildings radiate instead of
      * contributing directly. Shops only contribute if the individual shop has stock.
      */
@@ -198,7 +198,7 @@ public final class BuildingContributionRegistry {
             // Per-building-instance contribution
             for (BuildingState state : source.allBuildings()) {
                 if (!colonyId.equals(state.getColonyId())) continue;
-                if (!state.isStructureIntact() || state.isShutdown()) continue;
+                if (!state.isStructureIntact()) continue;
 
                 BuildingConfig cfg = configLoader.get(state.getBuildingTypeId());
                 if (cfg == null) continue;
@@ -257,7 +257,7 @@ public final class BuildingContributionRegistry {
             double cap = Config.DECORATION_BONUS_CAP.get();
             for (BuildingState state : source.allBuildings()) {
                 if (!colonyId.equals(state.getColonyId())) continue;
-                if (state.isShutdown() || !state.isStructureIntact()) continue;
+                if (!state.isStructureIntact()) continue;
                 String cat = state.getCategory();
                 if ("decoration".equals(cat) || "wonder".equals(cat)) continue;
 

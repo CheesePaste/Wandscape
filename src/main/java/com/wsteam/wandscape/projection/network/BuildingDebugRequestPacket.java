@@ -76,7 +76,7 @@ public record BuildingDebugRequestPacket(BlockPos pos) implements CustomPacketPa
         var response = new BuildingDebugResponsePacket(
                 state.getBuildingId(), typeId, displayName, state.getCategory(),
                 state.getColonyId(), state.getAnchor(),
-                state.isStructureIntact(), needsRepair, state.isShutdown(),
+                state.isStructureIntact(), needsRepair,
                 !state.hasEverCompleted(), state.isConstructionStarted(),
                 state.isDemolishing(),
                 comfort, magic, wonder,

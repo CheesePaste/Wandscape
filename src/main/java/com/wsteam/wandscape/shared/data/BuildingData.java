@@ -12,7 +12,6 @@ public interface BuildingData {
     String getBuildingTypeId();
     String getCategory();
     BlockPos getPosition();
-    boolean isShutdown();
     int getComfort();
     int getMagic();
     int getWonder();
@@ -44,9 +43,6 @@ public interface BuildingData {
 
     /** Whether the building is being demolished by an NPC task. */
     default boolean isDemolishing() { return false; }
-
-    /** Reason for shutdown, or empty string if not shut down. */
-    default String getShutdownReason() { return ""; }
 
     /** Number of 90° CCW rotation steps applied to the building (0-3). */
     default int getRotationSteps() { return 0; }

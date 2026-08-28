@@ -323,7 +323,7 @@ public class WarehouseManager implements WarehouseApi, ColonyResourceAccess {
     private static UUID findStorageColony() {
         var api = com.wsteam.wandscape.shared.registry.WandscapeApis.getBuildingApi();
         for (var bd : api.getColonyBuildings(null)) {
-            if ("storage".equals(bd.getCategory()) && !bd.isShutdown()) {
+            if ("storage".equals(bd.getCategory())) {
                 UUID cid = bd.getColonyId();
                 return cid != null ? cid : new UUID(0, 0);
             }

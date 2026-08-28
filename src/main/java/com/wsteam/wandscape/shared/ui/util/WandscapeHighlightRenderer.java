@@ -59,7 +59,9 @@ public final class WandscapeHighlightRenderer {
         //    as OverviewRenderer) so a rotated building's outline matches its true
         //    footprint — the debug packet only carries the anchor, not the rotation.
         BuildingDebugResponsePacket data = BuildingDebugClientState.getDisplayData();
-        if (data != null && data.anchor() != null && data.buildingTypeId() != null) {
+        // 建筑外框高亮同口径：仅俯瞰(OVERVIEW)模式，跟随建筑信息顶栏的显示范围
+        if (data != null && WandscapePanelState.isInspectContext()
+                && data.anchor() != null && data.buildingTypeId() != null) {
             for (BuildingAreaSyncPacket.BuildingEntry entry : BuildingAreaSyncPacket.getCached()) {
                 if (entry.hasBoundary()
                         && entry.anchor().equals(data.anchor())

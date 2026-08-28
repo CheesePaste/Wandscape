@@ -198,7 +198,7 @@ public class ResourceSupplySystem implements System {
         BuildingData building = null;
         for (UUID id : stations) {
             BuildingData bd = api.getBuilding(id);
-            if (bd != null && !bd.isShutdown() && !bd.isDemolishing()) {
+            if (bd != null && !bd.isDemolishing()) {
                 stationId = id;
                 building = bd;
                 break;
@@ -362,7 +362,7 @@ public class ResourceSupplySystem implements System {
         String blueprint = null;
         for (UUID buildingId : nodeBuildings) {
             BuildingData bd = api.getBuilding(buildingId);
-            if (bd == null || bd.isShutdown() || !bd.isStructureIntact()) continue;
+            if (bd == null || !bd.isStructureIntact()) continue;
             BuildingConfig config = configLoader.get(bd.getBuildingTypeId());
             if (config == null) continue;
             NodeConfig nodeConfig = config.nodeConfig();

@@ -57,7 +57,6 @@ public class BuildingSavedData extends SavedData {
     private static final String TAG_BOUNDS_MIN = "bounds_min";
     private static final String TAG_BOUNDS_MAX = "bounds_max";
     private static final String TAG_COLONY = "colony";
-    private static final String TAG_SHUTDOWN = "shutdown";
     private static final String TAG_INTACT = "intact";
     private static final String TAG_EVER_COMPLETED = "ever_completed";
     private static final String TAG_CONSTRUCTION_STARTED = "construction_started";
@@ -69,7 +68,6 @@ public class BuildingSavedData extends SavedData {
     private static final String TAG_QUEUE_ITEM_BLUEPRINT = "blueprint";
     private static final String TAG_QUEUE_ITEM_PARAMS = "params_json";
     private static final String TAG_QUEUE_ITEM_PRIORITY = "priority";
-    private static final String TAG_SHUTDOWN_REASON = "shutdown_reason";
 
     // NBT keys for shop inventory persistence
     private static final String TAG_SHOP_STOCK = "shop_stock";
@@ -309,7 +307,7 @@ public class BuildingSavedData extends SavedData {
      * Clicking inside any building's bounding box (not just on pattern blocks)
      * counts as interacting with that building.
      *
-     * @return buildingId if pos is within boundary of an intact non-shutdown building
+     * @return buildingId if pos is within boundary of an intact building
      */
     @Nullable
     public UUID getBuildingIdInInteractionZone(BlockPos pos) {
@@ -319,7 +317,7 @@ public class BuildingSavedData extends SavedData {
 
         for (UUID candidate : chunkIds) {
             BuildingState state = buildings.get(candidate);
-            if (state == null || state.isShutdown() || !state.isStructureIntact()) continue;
+            if (state == null || !state.isStructureIntact()) continue;
 
             if (state.getBounds().isInside(pos)) {
                 return candidate;
@@ -350,7 +348,7 @@ public class BuildingSavedData extends SavedData {
     @Nullable
     public BlockPos getTouristInteractPoint(UUID buildingId, Level level) {
         BuildingState state = buildings.get(buildingId);
-        if (state == null || state.isShutdown() || !state.isStructureIntact()) return null;
+        if (state == null || !state.isStructureIntact()) return null;
 
         BuildingConfig config = BuildingConfigLoader.getInstance().get(state.getBuildingTypeId());
         if (config == null || config.interactSpots() == null || config.interactSpots().isEmpty()) {
@@ -379,7 +377,7 @@ public class BuildingSavedData extends SavedData {
     @Nullable
     public BlockPos getEntryPoint(UUID buildingId, Level level) {
         BuildingState state = buildings.get(buildingId);
-        if (state == null || state.isShutdown() || !state.isStructureIntact()) return null;
+        if (state == null || !state.isStructureIntact()) return null;
 
         BuildingConfig config = BuildingConfigLoader.getInstance().get(state.getBuildingTypeId());
         BoundingBox bounds = state.getBounds();
@@ -625,7 +623,6 @@ public class BuildingSavedData extends SavedData {
             if (state.getColonyId() != null) {
                 entry.putUUID(TAG_COLONY, state.getColonyId());
             }
-            entry.putBoolean(TAG_SHUTDOWN, state.isShutdown());
             entry.putBoolean(TAG_INTACT, state.isStructureIntact());
             entry.putBoolean(TAG_EVER_COMPLETED, state.hasEverCompleted());
             entry.putBoolean(TAG_CONSTRUCTION_STARTED, state.isConstructionStarted());
@@ -635,11 +632,6 @@ public class BuildingSavedData extends SavedData {
             entry.putInt(TAG_ROTATION, state.getRotationSteps());
             if (state.getCurrentTaskId() != null) {
                 entry.putUUID(TAG_CURRENT_TASK, state.getCurrentTaskId());
-            }
-
-            String reason = state.getShutdownReason();
-            if (!reason.isEmpty()) {
-                entry.putString(TAG_SHUTDOWN_REASON, reason);
             }
 
             // Task queue
@@ -791,7 +783,6 @@ public class BuildingSavedData extends SavedData {
             if (entry.hasUUID(TAG_COLONY)) {
                 state.setColonyId(entry.getUUID(TAG_COLONY));
             }
-            state.setShutdown(entry.getBoolean(TAG_SHUTDOWN));
             state.setStructureIntact(entry.getBoolean(TAG_INTACT));
             // Migration: older saves lack the flag; a currently-intact building
             // was necessarily built, so infer it completed construction.
@@ -819,14 +810,8 @@ public class BuildingSavedData extends SavedData {
                 state.getTaskQueue().addLast(new WorkItem(blueprint, params, priority));
             }
 
-            if (entry.contains(TAG_SHUTDOWN_REASON)) {
-                state.setShutdownReason(entry.getString(TAG_SHUTDOWN_REASON));
-            }
-            // 维护费已删除：旧存档因维护费停摆的建筑一次性复活，防止永久停摆
-            if ("maintenance".equals(state.getShutdownReason())) {
-                state.setShutdown(false);
-                state.setShutdownReason("");
-            }
+            // 维护费已删除：旧存档中"maintenance" 字段会被忽略，建筑不再可能因维护费停摆。
+            // 旧存档残留的 shutdown 位一律忽略（建筑照常运转）。
 
             // Pattern positions (precise overlap detection)
             if (entry.contains(TAG_PATTERN_POSITIONS)) {
@@ -1080,8 +1065,8 @@ public class BuildingSavedData extends SavedData {
     }
 
     /**
-     * Record that a building transitioned away from intact state (damaged or destroyed).
-     * Called by {@link BuildingBreakHandler}.
+     * Record that a building transitioned away from intact state (removed / demolished).
+     * Called by {@link BuildingApiImpl#unregisterState} when a building is removed.
      */
     public boolean removeBuildingContribution(UUID colonyId, String buildingTypeId) {
         if (contributionRegistry == null) {

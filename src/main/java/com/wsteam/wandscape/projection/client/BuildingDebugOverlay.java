@@ -28,7 +28,7 @@ import org.lwjgl.glfw.GLFW;
  * is active (now tied to V panel open/close) and the player is looking at a
  * building.
  *
- * <p>Includes repair, shutdown/restart and destroy action buttons below the info box.
+ * <p>Includes repair/undo and destroy action buttons below the info box.
  */
 public final class BuildingDebugOverlay {
 
@@ -52,8 +52,6 @@ public final class BuildingDebugOverlay {
     // Button colors
     private static final int BTN_REPAIR_BG = 0xCC2E7D32;
     private static final int BTN_CANCEL_BG = 0xCCB8860B;
-    private static final int BTN_SHUTDOWN_BG = 0xCC8B4513;
-    private static final int BTN_RESTART_BG = 0xCC2E7D32;
     private static final int BTN_DESTROY_BG = 0xCC8B0000;
     private static final int BTN_HOVER_BRIGHTEN = 0x33333333;
     private static final int BTN_TEXT = 0xFFFFFFFF;
@@ -62,7 +60,6 @@ public final class BuildingDebugOverlay {
 
     // Button bounds — set each frame, read by mouse handler
     private static volatile int btnRepairX, btnRepairY, btnRepairW;
-    private static volatile int btnShutdownX, btnShutdownY, btnShutdownW;
     private static volatile int btnDestroyX, btnDestroyY, btnDestroyW;
     private static volatile boolean buttonsVisible = false;
 
@@ -80,8 +77,9 @@ public final class BuildingDebugOverlay {
     @SubscribeEvent
     public static void onRenderGuiPost(RenderGuiEvent.Post event) {
         if (!BuildingDebugClientState.isActive()) return;
-        if (com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.isPanelHidden()
-                || com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.getActiveSubMode() == com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.SubMode.TASKS
+        // 建筑信息顶栏仅在俯瞰(OVERVIEW)模式显示——其余子模式（含 TASKS）一律不弹
+        if (!com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.isInspectContext()
+                || com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.isPanelHidden()
                 || com.wsteam.wandscape.shared.ui.panel.TaskManagementOverlay.isActive()) {
             buttonsVisible = false;
             return;
@@ -164,7 +162,7 @@ public final class BuildingDebugOverlay {
         x2 += 11;
         drawText(g, font, wonderStr, x2, y2, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_WONDER);
 
-        // ── Buttons: Repair/Undo | Shutdown/Restart | Destroy ──
+        // ── Buttons: Repair/Undo | Destroy ──
         int btnY = boxY + boxH + 2;
         // Under-construction buildings aren't damaged yet — the first button becomes
         // 撤销 (undo) so a mis-placed building can be cancelled instead of a useless repair.
@@ -173,40 +171,32 @@ public final class BuildingDebugOverlay {
         Component repairLabel = underConstruction
                 ? I18n.name("gui.wandscape.building_action.cancel", "Undo")
                 : I18n.name("gui.wandscape.building_action.repair", "Repair");
-        Component shutdownLabel = I18n.name(
-                data.shutdown() ? "gui.wandscape.building_action.restart" : "gui.wandscape.building_action.shutdown",
-                data.shutdown() ? "Restart" : "Shutdown");
         Component destroyLabel = demolishing
                 ? I18n.name("gui.wandscape.building_action.demolishing", "Demolishing...")
                 : I18n.name("gui.wandscape.building_action.destroy", "Destroy");
 
         int repairLabelW = font.width(repairLabel);
-        int shutdownLabelW = font.width(shutdownLabel);
         int destroyLabelW = font.width(destroyLabel);
 
         int repairW = repairLabelW + PAD_X * 2 + 4;
-        int shutdownW = shutdownLabelW + PAD_X * 2 + 4;
         int destroyW = destroyLabelW + PAD_X * 2 + 4;
-        int btnTotalW = repairW + shutdownW + destroyW + BTN_GAP * 2;
+        int btnTotalW = repairW + destroyW + BTN_GAP;
         int btnAreaW = Math.max(btnTotalW, boxW);
         int btnStartX = boxX + (boxW - btnAreaW) / 2;
 
         int repairX = btnStartX + (btnAreaW - btnTotalW) / 2;
-        int shutdownX = repairX + repairW + BTN_GAP;
-        int destroyX = shutdownX + shutdownW + BTN_GAP;
+        int destroyX = repairX + repairW + BTN_GAP;
 
         // Hover state
         double guiScale = mc.getWindow().getGuiScale();
         double mx = mc.mouseHandler.xpos() / guiScale;
         double my = mc.mouseHandler.ypos() / guiScale;
         boolean repairEnabled = !demolishing && (underConstruction || data.needsRepair());
-        boolean shutdownEnabled = !demolishing;
         boolean destroyEnabled = !demolishing;
         boolean hoverRepair = repairEnabled && mx >= repairX && mx <= repairX + repairW && my >= btnY && my <= btnY + BTN_HEIGHT;
-        boolean hoverShutdown = shutdownEnabled && mx >= shutdownX && mx <= shutdownX + shutdownW && my >= btnY && my <= btnY + BTN_HEIGHT;
         boolean hoverDestroy = destroyEnabled && mx >= destroyX && mx <= destroyX + destroyW && my >= btnY && my <= btnY + BTN_HEIGHT;
 
-        // Undo/repair button (leftmost) — undo for under-construction, else repair when damaged
+        // Undo/repair button (left) — undo for under-construction, else repair when damaged
         com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.drawRtsBox(g, repairX, btnY, repairW, BTN_HEIGHT, false, hoverRepair);
         int repairAccent = underConstruction ? BTN_CANCEL_BG : BTN_REPAIR_BG;
         g.fill(RenderType.guiOverlay(), repairX, btnY + BTN_HEIGHT - 2, repairX + repairW, btnY + BTN_HEIGHT, 0,
@@ -214,15 +204,7 @@ public final class BuildingDebugOverlay {
         drawCenteredText(g, font, repairLabel, repairX + repairW / 2, btnY + (BTN_HEIGHT - font.lineHeight) / 2,
                 repairEnabled ? com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_NORMAL : TEXT_DIM);
 
-        // Shutdown / Restart button (orange/green, middle)
-        com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.drawRtsBox(g, shutdownX, btnY, shutdownW, BTN_HEIGHT, false, hoverShutdown);
-        int shutdownAccent = data.shutdown() ? BTN_RESTART_BG : BTN_SHUTDOWN_BG;
-        g.fill(RenderType.guiOverlay(), shutdownX, btnY + BTN_HEIGHT - 2, shutdownX + shutdownW, btnY + BTN_HEIGHT, 0,
-                shutdownEnabled ? shutdownAccent : 0x66554433);
-        drawCenteredText(g, font, shutdownLabel, shutdownX + shutdownW / 2, btnY + (BTN_HEIGHT - font.lineHeight) / 2,
-                shutdownEnabled ? com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_NORMAL : TEXT_DIM);
-
-        // Destroy button (dark red, rightmost)
+        // Destroy button (dark red, right)
         com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.drawRtsBox(g, destroyX, btnY, destroyW, BTN_HEIGHT, false, hoverDestroy);
         g.fill(RenderType.guiOverlay(), destroyX, btnY + BTN_HEIGHT - 2, destroyX + destroyW, btnY + BTN_HEIGHT, 0,
                 destroyEnabled ? BTN_DESTROY_BG : 0x66553333);
@@ -235,9 +217,6 @@ public final class BuildingDebugOverlay {
         btnRepairX = repairX;
         btnRepairY = btnY;
         btnRepairW = repairW;
-        btnShutdownX = shutdownX;
-        btnShutdownY = btnY;
-        btnShutdownW = shutdownW;
         btnDestroyX = destroyX;
         btnDestroyY = btnY;
         btnDestroyW = destroyW;
@@ -248,7 +227,7 @@ public final class BuildingDebugOverlay {
 
     @SubscribeEvent
     public static void onMouseButtonPre(InputEvent.MouseButton.Pre event) {
-        if (com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.getActiveSubMode() == com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.SubMode.TASKS
+        if (!com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.isInspectContext()
                 || com.wsteam.wandscape.shared.ui.panel.TaskManagementOverlay.isActive()) {
             buttonsVisible = false;
             return;
@@ -294,24 +273,6 @@ public final class BuildingDebugOverlay {
             }
         }
 
-        // Check shutdown / restart button (middle)
-        if (mx >= btnShutdownX && mx <= btnShutdownX + btnShutdownW
-                && my >= btnShutdownY && my <= btnShutdownY + BTN_HEIGHT) {
-            if (data.demolishing()) return;
-            event.setCanceled(true);
-            mc.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
-            String action = data.shutdown() ? "restart" : "shutdown";
-            if (mc.player != null) {
-                String msg = data.shutdown()
-                        ? "§a[建筑] 已恢复「" + data.displayName() + "」的正常运营"
-                        : "§6[建筑] 已暂停「" + data.displayName() + "」的运营";
-                mc.player.displayClientMessage(Component.literal(msg), true);
-            }
-            PacketDistributor.sendToServer(new BuildingActionPacket(data.buildingId(), action));
-            Log.info(TAG, "[Debug] Button click: {} on building {}", action, shortUuid(data.buildingId()));
-            return;
-        }
-
         // Check destroy button (right)
         if (mx >= btnDestroyX && mx <= btnDestroyX + btnDestroyW
                 && my >= btnDestroyY && my <= btnDestroyY + BTN_HEIGHT) {
@@ -331,22 +292,19 @@ public final class BuildingDebugOverlay {
 
     private static Component getStatusText(BuildingDebugResponsePacket data) {
         if (data.demolishing()) return I18n.name("gui.wandscape.building_status.demolishing", "Demolishing");
-        if (data.shutdown()) return I18n.name("gui.wandscape.building_status.stopped", "Stopped");
         if (data.underConstruction()) {
             return data.constructionStarted()
                     ? I18n.name("gui.wandscape.building_status.under_construction", "Under Construction")
                     : I18n.name("gui.wandscape.building_status.waiting_materials", "Waiting for Materials");
         }
-        if (!data.intact()) return I18n.name("gui.wandscape.building_status.broken", "Broken");
         return I18n.name("gui.wandscape.building_status.ok", "Operational");
     }
 
     private static int getStatusColor(BuildingDebugResponsePacket data) {
-        if (data.demolishing() || data.shutdown()) return TEXT_RED;
+        if (data.demolishing()) return TEXT_RED;
         if (data.underConstruction()) {
             return data.constructionStarted() ? TEXT_BLUE : TEXT_STAT;
         }
-        if (!data.intact()) return TEXT_YELLOW;
         return TEXT_GREEN;
     }
 

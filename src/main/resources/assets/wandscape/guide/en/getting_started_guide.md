@@ -65,7 +65,7 @@ Tourists with **all three need bars full** leave satisfied at night, and the tow
 
 ## Don't Forget
 
-Buildings may **shut down** from **structural damage**. The icon in the V panel's sidebar lists stopped and broken buildings — handle them in one click. The daily settlement still runs as usual — shops restock and stats snapshots fire.
+Buildings **never stop working from damage or manual shutdown** — being hit only loses some blocks visually while the building keeps operating and contributing. The icon in the V panel's sidebar lists buildings under construction; to fill in missing blocks, aim at the building in overview mode and click **Repair**. The daily settlement still runs as usual — shops restock and stats snapshots fire.
 
 ---
 

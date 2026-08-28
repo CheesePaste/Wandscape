@@ -33,7 +33,7 @@ public final class GuardScanner {
         BuildingApi api = buildingApi();
         if (api == null) return zones;
         for (BuildingData b : api.getColonyBuildings(null)) {
-            if (b.isShutdown() || b.isDemolishing()) continue;
+            if (b.isDemolishing()) continue;
             BoundingBox bb = api.getBuildingBounds(b.getBuildingId());
             if (bb == null) continue;
             zones.add(GuardZone.of(bb.minX(), bb.minY(), bb.minZ(),

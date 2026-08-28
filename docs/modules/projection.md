@@ -51,10 +51,10 @@ UUID 集合 projectingPlayers，addProjecting/removeProjecting/isProjecting/remo
 
 ## 调试功能（BuildingDebug*）
 
-- `BuildingDebugController`：每 tick 自动 raycast（64 格），200ms 限速 + 按建筑 UUID 去重发 BuildingDebugRequestPacket。
+- `BuildingDebugController`：每 tick 自动 raycast（64 格），200ms 限速 + 按建筑 UUID 去重发 BuildingDebugRequestPacket。**仅俯瞰(OVERVIEW)子模式运行**（`WandscapePanelState.isInspectContext()`），操作型子模式（建造/道路/统计/任务）不巡检、不发包。
 - `BuildingDebugClientState`：静态缓存 + 250ms 防抖窗口。
-- `BuildingDebugOverlay`：渲染信息框（名称/类别/状态/三值/队列）+ Repair/Shutdown-Restart/Destroy 按钮（自左到右），点击发 BuildingActionPacket。
-- `BuildingDebugRequestPacket` 服务端读 BuildingSavedData，shop 类别叠加库存商品加成；响应含 `needsRepair`（`BuildCompleteListener.findDamagedBlocks` 判是否有任意损坏块）+ `underConstruction`/`constructionStarted`（未完工建筑状态显示"等待材料/建造中"，禁用修复按钮）；`BuildingActionPacket` 处理 shutdown/restart/destroy/repair。
+- `BuildingDebugOverlay`：渲染信息框（名称/类别/状态/三值）+ Repair/Undo 与 Destroy 两按钮，点击发 BuildingActionPacket。**仅俯瞰(OVERVIEW)子模式渲染/响应点击**（2026-08-28 收窄，避免操作型子模式误触建筑操作）。
+- `BuildingDebugRequestPacket` 服务端读 BuildingSavedData，shop 类别叠加库存商品加成；响应含 `needsRepair`（`BuildCompleteListener.findDamagedBlocks` 判是否有任意缺失方块）+ `underConstruction`/`constructionStarted`（未完工建筑状态显示"等待材料/建造中"，禁用修复按钮）；`BuildingActionPacket` 处理 destroy/repair/cancel。
 - > **注意**：BuildingDebugClientState.setActive 现由 V 面板开合驱动；旧注释 "G key" 已过时（G 键的 overview 切换已移除，面板常驻俯瞰相机）。
 
 ## network/ 包

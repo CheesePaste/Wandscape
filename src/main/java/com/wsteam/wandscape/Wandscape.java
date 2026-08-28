@@ -14,7 +14,6 @@ import net.neoforged.neoforge.event.level.BlockEvent;
 import com.wsteam.wandscape.building.internal.BuildCompleteListener;
 import com.wsteam.wandscape.building.internal.DemolishCompleteListener;
 import com.wsteam.wandscape.building.internal.BuildingApiImpl;
-import com.wsteam.wandscape.building.internal.BuildingBreakHandler;
 import com.wsteam.wandscape.building.internal.BuildingInteractHandler;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.building.internal.DailySettlementSystem;
@@ -466,7 +465,6 @@ public class Wandscape {
         NeoForge.EVENT_BUS.register(com.wsteam.wandscape.guard.NpcSpellPowerHandler.class);
         NeoForge.EVENT_BUS.register(com.wsteam.wandscape.npc.internal.NpcDeathHandler.class);
         NeoForge.EVENT_BUS.register(BuildingInteractHandler.class);
-        NeoForge.EVENT_BUS.register(BuildingBreakHandler.class);
         NeoForge.EVENT_BUS.register(com.wsteam.wandscape.shared.network.PanelStateTracker.class);
         NeoForge.EVENT_BUS.register(com.wsteam.wandscape.shared.network.tasks.TaskPanelSyncTracker.class);
         DailySettlementSystem.register();

@@ -603,7 +603,7 @@ public final class TouristSimSystem {
 
         BuildingApi api = getBuildingApi();
         BuildingData data = api != null ? api.getBuilding(buildingId) : null;
-        if (data == null || data.isShutdown() || !data.isStructureIntact()) {
+        if (data == null || !data.isStructureIntact()) {
             s.setCommuteTarget(null);
             s.setTargetBuildingId(null);
             s.setTargetBuildingCategory(null);
@@ -664,7 +664,7 @@ public final class TouristSimSystem {
         // 建筑失效（被拆/停用）→ 退出排队重规划
         BuildingApi api = getBuildingApi();
         BuildingData data = api != null ? api.getBuilding(buildingId) : null;
-        if (data == null || data.isShutdown() || !data.isStructureIntact()) {
+        if (data == null || !data.isStructureIntact()) {
             TouristSpotManager.getActive().leaveAllQueues(buildingId, s.getTouristId());
             s.setQueueSpotIndex(-1);
             s.setCommuteTarget(null);
@@ -896,7 +896,7 @@ public final class TouristSimSystem {
     private boolean hotelStillValid(ServerLevel level, UUID hotel) {
         BuildingApi api = getBuildingApi();
         BuildingData data = api != null ? api.getBuilding(hotel) : null;
-        return data != null && !data.isShutdown() && data.isStructureIntact()
+        return data != null && data.isStructureIntact()
                 && TouristSimulation.isHotelBuilding(level, hotel);
     }
 
@@ -982,7 +982,7 @@ public final class TouristSimSystem {
         if (hotel == null) return false;
         BuildingApi api = getBuildingApi();
         BuildingData data = api != null ? api.getBuilding(hotel) : null;
-        if (data == null || data.isShutdown() || !data.isStructureIntact()
+        if (data == null || !data.isStructureIntact()
                 || !TouristSimulation.isHotelBuilding(level, hotel)) {
             return false;
         }

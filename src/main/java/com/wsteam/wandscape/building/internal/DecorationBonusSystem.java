@@ -63,7 +63,6 @@ public final class DecorationBonusSystem {
         List<BuildingState> targets = new ArrayList<>();
 
         for (BuildingState state : savedData.getAllBuildings()) {
-            if (state.isShutdown()) continue;
             String category = state.getCategory();
             if ("decoration".equals(category)) {
                 sources.add(state);

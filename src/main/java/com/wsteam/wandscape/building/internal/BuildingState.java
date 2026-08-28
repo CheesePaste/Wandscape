@@ -27,12 +27,8 @@ public class BuildingState implements BuildingData {
     private final int magic;
     private final int wonder;
 
-    // ── Shutdown tracking ──
-    private String shutdownReason = "";
-
     @Nullable
     private UUID colonyId;
-    private boolean shutdown;
     private boolean structureIntact;
     /** Sticky flag: set once construction completes, never reset (drives the ghost). */
     private boolean hasEverCompleted;
@@ -70,7 +66,6 @@ public class BuildingState implements BuildingData {
     }
     @Override public String getCategory() { return category; }
     @Override public BlockPos getPosition() { return anchor; }
-    @Override public boolean isShutdown() { return shutdown; }
     @Override public boolean isDemolishing() { return demolishing; }
     @Override public int getComfort() { return comfort; }
     @Override public int getMagic() { return magic; }
@@ -87,16 +82,8 @@ public class BuildingState implements BuildingData {
     @Nullable public UUID getCurrentTaskId() { return currentTaskId; }
     public Deque<WorkItem> getTaskQueue() { return taskQueue; }
     public boolean hasWork() {
-        if (taskQueue.isEmpty()) return false;
-        if (!shutdown) return true;
-        // Shutdown buildings can still process repair tasks
-        WorkItem first = taskQueue.peekFirst();
-        return first != null && "build:place_structure".equals(first.blueprintId());
+        return !taskQueue.isEmpty();
     }
-
-    // ── Shutdown getter ──
-
-    @Override public String getShutdownReason() { return shutdownReason; }
 
     // ── Pattern positions getter/setter ──
 
@@ -109,7 +96,6 @@ public class BuildingState implements BuildingData {
     // ── Setters ──
 
     public void setColonyId(@Nullable UUID colonyId) { this.colonyId = colonyId; }
-    public void setShutdown(boolean shutdown) { this.shutdown = shutdown; }
     public void setStructureIntact(boolean intact) { this.structureIntact = intact; }
     public void setHasEverCompleted(boolean completed) { this.hasEverCompleted = completed; }
     public void setConstructionStarted(boolean started) { this.constructionStarted = started; }
@@ -117,8 +103,4 @@ public class BuildingState implements BuildingData {
     public void setCurrentTaskId(@Nullable UUID taskId) { this.currentTaskId = taskId; }
     public int getRotationSteps() { return rotationSteps; }
     public void setRotationSteps(int steps) { this.rotationSteps = steps & 3; }
-
-    // ── Shutdown setter ──
-
-    public void setShutdownReason(String reason) { this.shutdownReason = reason; }
 }

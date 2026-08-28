@@ -50,31 +50,13 @@ public final class ColonyMetricsService implements ColonyMetricsApi {
             overnightStayerCount = touristApi.getOvernightStayerCount(colonyId);
         }
 
-        // 4. Building anomalies — single building list traversal
-        int shutdownCount = 0;
-        List<String> shutdownBuildingNames = List.of();
-        List<UUID> shutdownBuildingIds = List.of();
-        int brokenCount = 0;
-        List<UUID> brokenBuildingIds = List.of();
-        List<String> brokenBuildingNames = List.of();
+        // 4. Building list — 建筑不再因损坏或手动关闭而停摆，异常报告只保留"建造中"类别。
         int underConstructionCount = 0;
         List<UUID> underConstructionBuildingIds = List.of();
         List<String> underConstructionBuildingNames = List.of();
         List<Boolean> underConstructionStarted = List.of();
         try {
             var buildings = buildingApi.getColonyBuildings(colonyId);
-            var shutdowns = buildings.stream().filter(b -> b.isShutdown()).toList();
-            shutdownCount = shutdowns.size();
-            shutdownBuildingNames = shutdowns.stream().map(b -> b.getBuildingTypeId()).toList();
-            shutdownBuildingIds = shutdowns.stream().map(b -> b.getBuildingId()).toList();
-            // Not-yet-completed buildings are NOT broken — only a completed building
-            // whose structure is damaged qualifies. Under-construction buildings get
-            // their own "建造中" category (with 等待材料/建造中 phase).
-            var brokens = buildings.stream()
-                    .filter(b -> b.hasEverCompleted() && !b.isStructureIntact()).toList();
-            brokenCount = brokens.size();
-            brokenBuildingIds = brokens.stream().map(b -> b.getBuildingId()).toList();
-            brokenBuildingNames = brokens.stream().map(b -> b.getBuildingTypeId()).toList();
             var constructing = buildings.stream().filter(b -> !b.hasEverCompleted()).toList();
             underConstructionCount = constructing.size();
             underConstructionBuildingIds = constructing.stream().map(b -> b.getBuildingId()).toList();
@@ -121,8 +103,6 @@ public final class ColonyMetricsService implements ColonyMetricsApi {
                 touristCount, overnightStayerCount,
                 npcIdleCount, npcTotalCount,
                 earthAmount, woodAmount, waterAmount, fireAmount, windAmount, metalAmount, darkAmount,
-                shutdownCount, shutdownBuildingNames, shutdownBuildingIds,
-                brokenCount, brokenBuildingIds, brokenBuildingNames,
                 underConstructionCount, underConstructionBuildingIds,
                 underConstructionBuildingNames, underConstructionStarted);
     }

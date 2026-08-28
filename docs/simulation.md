@@ -46,7 +46,7 @@
 只产出候选，不评分。所有条件不满足 → 返回 null → 游客闲逛（wander）。
 
 1. **视野**：建筑锚点与游客水平距离 ≤ `TOURIST_VISION_RADIUS(48)`；实体寻路（requireLoaded=true）还要求目标区块已加载。
-2. **可用性**：非 shutdown、结构完整、`isTouristTarget`、`interact_spots` 非空（0-spot 建筑对游客无效）。
+2. **可用性**：结构完整、`isTouristTarget`、`interact_spots` 非空（0-spot 建筑对游客无效）。
 3. **visited 门**：已逛过 → 剔除；**豁免**：`atmReusable` 通过（travelFund>0 且 wallet<initialWallet/4 且取现冷却已过）时 ATM 跳过 visited 门，可分批取现；`relaxReusable` 通过（精力比 < `TOURIST_ENERGY_RESTORE_THRESHOLD`(0.25)，默认 energy<25；精力 0 恒可去）时 relax 跳过 visited 门，可重复歇脚回精力。
 4. **精力 0**：只能去 relax（energyRestore>0）；无恢复建筑 → 闲逛，**不离场**。
 5. **夜晚 + 未满条**：优先旅店（`service.maxOccupancy>0` 且有空位，不查 visited）；视野内无旅店 → 回退普通建筑（仍尊重 visited、精力 0 只去 relax），避免傍晚干晃 5000 tick。

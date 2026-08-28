@@ -30,17 +30,6 @@ import com.wsteam.wandscape.shared.log.Log;
 public final class BuildCompleteListener {
     private static final String TAG = "BuildCompleteListener";
 
-    /**
-     * Fraction of pattern blocks that must be damaged before a building is
-     * considered broken. For example, 3 means 1/3 or more.
-     */
-    static final int DAMAGE_THRESHOLD_DENOMINATOR = 3;
-
-    static boolean isBroken(int damagedCount, int totalPatternBlocks) {
-        if (totalPatternBlocks <= 0) return false;
-        return damagedCount * DAMAGE_THRESHOLD_DENOMINATOR >= totalPatternBlocks;
-    }
-
     private BuildCompleteListener() {}
 
     /**
@@ -89,74 +78,65 @@ public final class BuildCompleteListener {
         }
 
         List<BlockOffset> damaged = findDamagedBlocks(level, anchor, config, state.getRotationSteps());
-        boolean broken = isBroken(damaged.size(), config.pattern().size());
-        boolean intact = !broken;
-        state.setStructureIntact(intact);
-        if (intact) {
-            // Sticky: once construction completes, never show the ghost again,
-            // even if the building later becomes damaged.
-            state.setHasEverCompleted(true);
-        }
+        // 建筑不再因结构损坏而停摆：无论残留多少缺失方块，建成即判定完好并计入贡献，
+        // 缺失方块可通过 V 面板「修复」手动补齐。
+        state.setStructureIntact(true);
+        // Sticky: once construction completes, never show the ghost again,
+        // even if the building later becomes damaged.
+        state.setHasEverCompleted(true);
         data.setDirty();
 
-        // Refresh client caches: a completed building's construction ghost clears,
-        // a broken one gains a ghost footprint.
+        // Refresh client caches: a completed building's construction ghost clears.
         com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket.broadcastToColony(
                 ServerLifecycleHooks.getCurrentServer(), anchor);
 
-        if (intact) {
-            if (damaged.isEmpty()) {
-                Log.info(TAG, "[Building] {} at {} construction complete — now operational",
-                        state.getBuildingTypeId(), anchor);
-            } else {
-                Log.info(TAG, "[Building] {} at {} — {}/{} blocks damaged (< 1/3), still operational",
-                        state.getBuildingTypeId(), anchor, damaged.size(), config.pattern().size());
-            }
-
-            // Assign colony via ColonyApi
-            com.wsteam.wandscape.shared.api.ColonyApi colonyApi =
-                    com.wsteam.wandscape.shared.registry.WandscapeApis.getColonyApiSilently();
-            if (colonyApi != null) {
-                UUID assignedColonyId = colonyApi.onBuildingIntact(state);
-                if (assignedColonyId != null && !assignedColonyId.equals(state.getColonyId())) {
-                    // Colony was newly created or newly assigned
-                    data.setDirty();
-                }
-            }
-
-            // Always notify downstream systems when a building becomes intact.
-            // Colony assignment may be null for the very first building;
-            // downstream handlers (e.g. tourist spawner) check the registry anyway.
-            NeoForge.EVENT_BUS.post(new BuildingPlacedEvent(
-                    state.getBuildingId(), state.getColonyId(), state.getBuildingTypeId()));
-
-            // ── 建成庆祝：建筑包围盒一圈烟花；奇观建筑额外金色圣光柱 ──
-            if (level instanceof ServerLevel srv) {
-                ParticleService.celebrateRing(srv, state.getBounds(), 4);
-                if ("wonder".equals(state.getCategory())) {
-                    ParticleService.burstColored(srv,
-                            ParticleService.boundsCenterAbove(state.getBounds(), 2),
-                            1.0f, 0.85f, 0.30f, 40, 0.14f, 40, true);
-                }
-            }
-
-            // Record contribution: only fires ColonyEvaluationChangedEvent when this
-            // building type transitions from 0→1 intact buildings in the colony.
-            UUID colonyId = state.getColonyId();
-            if (colonyId != null) {
-                boolean changed = data.addBuildingContribution(
-                        colonyId, state.getBuildingTypeId());
-                if (changed) {
-                    Log.info(TAG, "[Evaluation] Colony {} gained +{} from first {}",
-                            colonyId.toString().substring(0, 8),
-                            data.getContributionRegistry().getSnapshot(colonyId),
-                            state.getBuildingTypeId());
-                }
-            }
+        if (damaged.isEmpty()) {
+            Log.info(TAG, "[Building] {} at {} construction complete — now operational",
+                    state.getBuildingTypeId(), anchor);
         } else {
-            Log.warn(TAG, "[Building] {} at {} — {}/{} blocks damaged (>= 1/3) BROKEN, enqueuing repair",
+            Log.info(TAG, "[Building] {} at {} — {}/{} blocks missing (still operational, repair via V panel)",
                     state.getBuildingTypeId(), anchor, damaged.size(), config.pattern().size());
-            BuildingBreakHandler.enqueueRepairForOffsets(state, config, damaged);
+        }
+
+        // Assign colony via ColonyApi
+        com.wsteam.wandscape.shared.api.ColonyApi colonyApi =
+                com.wsteam.wandscape.shared.registry.WandscapeApis.getColonyApiSilently();
+        if (colonyApi != null) {
+            UUID assignedColonyId = colonyApi.onBuildingIntact(state);
+            if (assignedColonyId != null && !assignedColonyId.equals(state.getColonyId())) {
+                // Colony was newly created or newly assigned
+                data.setDirty();
+            }
+        }
+
+        // Always notify downstream systems when a building becomes intact.
+        // Colony assignment may be null for the very first building;
+        // downstream handlers (e.g. tourist spawner) check the registry anyway.
+        NeoForge.EVENT_BUS.post(new BuildingPlacedEvent(
+                state.getBuildingId(), state.getColonyId(), state.getBuildingTypeId()));
+
+        // ── 建成庆祝：建筑包围盒一圈烟花；奇观建筑额外金色圣光柱 ──
+        if (level instanceof ServerLevel srv) {
+            ParticleService.celebrateRing(srv, state.getBounds(), 4);
+            if ("wonder".equals(state.getCategory())) {
+                ParticleService.burstColored(srv,
+                        ParticleService.boundsCenterAbove(state.getBounds(), 2),
+                        1.0f, 0.85f, 0.30f, 40, 0.14f, 40, true);
+            }
+        }
+
+        // Record contribution: only fires ColonyEvaluationChangedEvent when this
+        // building type transitions from 0→1 intact buildings in the colony.
+        UUID colonyId = state.getColonyId();
+        if (colonyId != null) {
+            boolean changed = data.addBuildingContribution(
+                    colonyId, state.getBuildingTypeId());
+            if (changed) {
+                Log.info(TAG, "[Evaluation] Colony {} gained +{} from first {}",
+                        colonyId.toString().substring(0, 8),
+                        data.getContributionRegistry().getSnapshot(colonyId),
+                        state.getBuildingTypeId());
+            }
         }
     }
 

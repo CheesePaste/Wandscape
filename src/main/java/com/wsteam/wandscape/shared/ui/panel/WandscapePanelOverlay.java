@@ -99,7 +99,9 @@ public final class WandscapePanelOverlay {
     // ═══════════════════════════════════════════════════════════════
 
     private static void renderFills(GuiGraphics g, Font font, int screenW, int screenH, double mx, double my) {
-        boolean lookingAtBuilding = BuildingDebugClientState.getDisplayData() != null;
+        // 建筑信息顶栏仅在俯瞰(OVERVIEW)模式显示——操作型子模式下不弹、也不隐藏殖民地带
+        boolean lookingAtBuilding = BuildingDebugClientState.getDisplayData() != null
+                && WandscapePanelState.isInspectContext();
 
         // 1. Top bar background
         if (!lookingAtBuilding) {
@@ -112,11 +114,6 @@ public final class WandscapePanelOverlay {
 
         // 2. Sidebar
         renderSidebar(g, screenW, screenH, mx, my);
-
-        // 3. Warning overlay (quick preview — full screen opened from sidebar click)
-        if (WandscapePanelState.isWarningOverlayActive() && WandscapePanelState.getTotalAnomalyCount() > 0) {
-            renderWarningOverlay(g, font, screenH);
-        }
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -158,66 +155,13 @@ public final class WandscapePanelOverlay {
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // ── Warning overlay ──
-    // ═══════════════════════════════════════════════════════════════
-
-    private static void renderWarningOverlay(GuiGraphics g, Font font, int screenH) {
-        List<String> shutdownNames = WandscapePanelState.getShutdownBuildingNames();
-        List<String> brokenNames = WandscapePanelState.getBrokenBuildingNames();
-        int total = WandscapePanelState.getTotalAnomalyCount();
-
-        int w = 220;
-        int lineH = font.lineHeight + 1;
-        int maxLines = 12;
-        int h = 12 + lineH * 2 + 4 + lineH * Math.min(maxLines, total) + 4;
-        int x = SIDEBAR_W;
-        int startIconY = TOP_BAR_H + 8 + 4 * (SIDEBAR_ICON_S + SIDEBAR_GAP) + 12;
-        int y = startIconY;
-
-        if (y + h > screenH) y = screenH - h;
-
-        g.fill(RenderType.guiOverlay(), x, y, x + w, y + h, 0, OVERLAY_BG);
-        g.fill(RenderType.guiOverlay(), x, y, x + w, y + 1, 0, WandscapeTheme.COLOR_BORDER_ACTIVE);
-        g.fill(RenderType.guiOverlay(), x, y + h - 1, x + w, y + h, 0, WandscapeTheme.COLOR_BORDER_ACTIVE);
-        g.fill(RenderType.guiOverlay(), x, y + 1, x + 1, y + h - 1, 0, WandscapeTheme.COLOR_BORDER_ACTIVE);
-        g.fill(RenderType.guiOverlay(), x + w - 1, y + 1, x + w, y + h - 1, 0, WandscapeTheme.COLOR_BORDER_ACTIVE);
-
-        int tx = x + 8;
-        int ty = y + 6;
-        drawText(g, font, I18n.name("gui.wandscape.panel.anomaly_report", "异常报告 (%s)", total).getString(), tx, ty, WandscapeTheme.COLOR_TEXT_ACTIVE);
-        ty += lineH + 4;
-
-        int shown = 0;
-        int maxPerType = maxLines / 2;
-        if (!shutdownNames.isEmpty()) {
-            drawText(g, font, I18n.name("gui.wandscape.panel.shutdown_badge", "§c[关闭]").getString(), tx + 2, ty, 0xFFB22222);
-            ty += lineH;
-            for (int i = 0; i < Math.min(shutdownNames.size(), maxPerType); i++) {
-                drawText(g, font, "  - " + shutdownNames.get(i), tx + 4, ty, WandscapeTheme.COLOR_TEXT_DIM);
-                ty += lineH;
-                shown++;
-            }
-        }
-        if (!brokenNames.isEmpty()) {
-            drawText(g, font, I18n.name("gui.wandscape.panel.broken_badge", "§e[损坏]").getString(), tx + 2, ty, 0xFFB8860B);
-            ty += lineH;
-            for (int i = 0; i < Math.min(brokenNames.size(), maxPerType); i++) {
-                drawText(g, font, "  - " + brokenNames.get(i), tx + 4, ty, WandscapeTheme.COLOR_TEXT_DIM);
-                ty += lineH;
-                shown++;
-            }
-        }
-        if (shown >= maxLines && total > shown) {
-            drawText(g, font, I18n.name("gui.wandscape.panel.more_anomalies", "... 还有 %s 个异常", total - shown).getString(), tx + 4, ty, WandscapeTheme.COLOR_TEXT_DIM);
-        }
-    }
-
-    // ═══════════════════════════════════════════════════════════════
     // ── Texts ──
     // ═══════════════════════════════════════════════════════════════
 
     private static void renderTexts(GuiGraphics g, Font font, int screenW, int screenH, double mx, double my) {
-        boolean lookingAtBuilding = BuildingDebugClientState.getDisplayData() != null;
+        // 与 renderFills 同口径：非俯瞰模式不视为「看着建筑」，殖民地带照常显示
+        boolean lookingAtBuilding = BuildingDebugClientState.getDisplayData() != null
+                && WandscapePanelState.isInspectContext();
 
         if (!lookingAtBuilding) {
             UUID cid = WandscapePanelState.getColonyId();
@@ -311,19 +255,7 @@ public final class WandscapePanelOverlay {
                 WandscapePanelState.getNpcIdleCount(), WandscapePanelState.getNpcTotalCount()).getString();
         drawText(g, font, npcText, x, textY1, WandscapeTheme.COLOR_TEXT_NORMAL);
 
-        // 8. Warning icon+count at far right of first row (total anomalies)
-        int warnWidth = 0;
-        int anomalyCount = WandscapePanelState.getTotalAnomalyCount();
-        if (anomalyCount > 0) {
-            String warnStr = String.valueOf(anomalyCount);
-            warnWidth = iconS1 + 2 + font.width(warnStr);
-            int warnX = screenW - rightMargin - warnWidth - 22;
-            WandscapeTheme.drawIcon(g, WandscapeTheme.ICON_WARNING, warnX, y1, iconS1, iconS1, WandscapeTheme.COLOR_TEXT_ACTIVE);
-            warnX += iconS1 + 2;
-            drawText(g, font, warnStr, warnX, textY1, WandscapeTheme.COLOR_TEXT_ACTIVE);
-        }
-
-        // 9. Help ? button at top right
+        // 8. Help ? button at top right
         int helpX = screenW - rightMargin - 16;
         int helpY = 4;
         int helpW = 14;

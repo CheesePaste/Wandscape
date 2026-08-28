@@ -996,7 +996,7 @@ public class TouristMoveGoal extends Goal {
         // interaction against a ghost.
         BuildingApi api = getBuildingApi();
         var target = api != null ? api.getBuilding(buildingId) : null;
-        if (target == null || target.isShutdown() || !target.isStructureIntact() || target.isDemolishing()) {
+        if (target == null || !target.isStructureIntact() || target.isDemolishing()) {
             Log.info(TAG, "[Tourist] {} skipped interaction with invalid building {} ({})",
                     tourist.getTouristName(), shortId(buildingId),
                     target == null ? "removed" : target.getBuildingTypeId());
@@ -1100,7 +1100,7 @@ public class TouristMoveGoal extends Goal {
 
         BuildingApi api = getBuildingApi();
         var data = api != null ? api.getBuilding(hotel) : null;
-        if (data == null || data.isShutdown() || !data.isStructureIntact() || !isHotelBuilding(hotel)) {
+        if (data == null || !data.isStructureIntact() || !isHotelBuilding(hotel)) {
             // 旅店已失效 → 解除登记，按无旅店游客处理（傍晚路由去别的旅店 / 离场窗口兜底）
             clearSpotState();
             tourist.setCommuteTarget(null);
@@ -1265,7 +1265,7 @@ public class TouristMoveGoal extends Goal {
         if (!isHotelBuilding(target)) return false;
         BuildingApi api = getBuildingApi();
         var data = api != null ? api.getBuilding(target) : null;
-        return data != null && !data.isShutdown() && data.isStructureIntact();
+        return data != null && data.isStructureIntact();
     }
 
     private void finishBuildingStop() {
@@ -2136,7 +2136,7 @@ public class TouristMoveGoal extends Goal {
         BuildingApi api = getBuildingApi();
         if (api == null) return false;
         var data = api.getBuilding(buildingId);
-        return data != null && !data.isShutdown() && data.isStructureIntact();
+        return data != null && data.isStructureIntact();
     }
 
     private boolean isHotelBuilding(@javax.annotation.Nullable UUID buildingId) {

@@ -200,9 +200,9 @@ public final class BuildingInteractHandler {
             case "service", "relax", "decoration", "atm" ->
                     openInfoPanel(player, state, category, bldConfig);
             default -> {
-                Log.info(TAG, "[Building] Right-click: type={} at={} intact={} shutdown={} queue={}",
+                Log.info(TAG, "[Building] Right-click: type={} at={} intact={} queue={}",
                         state.getBuildingTypeId(), state.getAnchor(),
-                        state.isStructureIntact(), state.isShutdown(),
+                        state.isStructureIntact(),
                         state.getTaskQueue().size());
                 BuildingConfig config = BuildingConfigLoader.getInstance().get(state.getBuildingTypeId());
                 if (config != null) {

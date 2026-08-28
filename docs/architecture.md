@@ -149,7 +149,7 @@ BuildingConfig JSON → BuildingConfigLoader
   → 封顶 min(累计, 目标基础×bonusCap) → BuildingContributionRegistry 计入
 
 奇观效果:
-  WonderEffectApplier → 完整且非关停的 wonder 建筑 → StatMod/PriceMod/RuleUnlock 全局效果
+  WonderEffectApplier → 完整的 wonder 建筑 → StatMod/PriceMod/RuleUnlock 全局效果
 ```
 
 ### 指标聚合流
@@ -159,7 +159,7 @@ ColonyMetricsService.getSnapshot(colonyId)
   → BuildingApi.getColonySnapshot（三值，单次遍历）
   → ColonyLevelManager（等级/经验/名称）
   → TouristApi（游客数/过夜/满意度）
-  → BuildingApi.getColonyBuildings（关停/损坏/建造中计数）
+  → BuildingApi.getColonyBuildings（建造中计数）
   → NpcApi（NPC 总数/空闲数）
   → WarehouseApi.getAllElements（7 元素储量）
   → ColonyMetricsSnapshot

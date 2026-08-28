@@ -38,7 +38,6 @@ public final class WandscapePanelState {
     // ── HUD fields (synced from ColonyStatsSyncPacket) ──
     private static volatile int touristCount = 0;
     private static volatile int overnightStayerCount = 0;
-    private static volatile int shutdownCount = 0;
     private static volatile int npcIdleCount = 0;
     private static volatile int npcTotalCount = 0;
     private static volatile int earthAmount = 0;
@@ -48,18 +47,10 @@ public final class WandscapePanelState {
     private static volatile int windAmount = 0;
     private static volatile int metalAmount = 0;
     private static volatile int darkAmount = 0;
-    private static volatile List<String> shutdownBuildingNames = List.of();
-    private static volatile List<UUID> shutdownBuildingIds = List.of();
-    private static volatile int brokenCount = 0;
-    private static volatile List<UUID> brokenBuildingIds = List.of();
-    private static volatile List<String> brokenBuildingNames = List.of();
     private static volatile int underConstructionCount = 0;
     private static volatile List<UUID> underConstructionBuildingIds = List.of();
     private static volatile List<String> underConstructionBuildingNames = List.of();
     private static volatile List<Boolean> underConstructionStarted = List.of();
-
-    // ── Sidebar warning overlay toggle ──
-    private static volatile boolean warningOverlayActive = false;
 
     // ── Stats tab data (set from StatsSyncPacket) ──
 
@@ -113,6 +104,15 @@ public final class WandscapePanelState {
     /** 真实光标意图：受控（false，游戏层）或抬起（true，UI 层）。与面板开关解耦。 */
     public static boolean isCursorLifted() { return cursorLifted; }
     public static SubMode getActiveSubMode() { return activeSubMode; }
+
+    /**
+     * 是否处于建筑巡检上下文：仅俯瞰(OVERVIEW)模式显示建筑信息顶栏。
+     * 建造/道路/统计/任务是操作型子模式——准心对准建筑时不弹建筑信息
+     * （含修复/拆除两按钮），避免误触与界面混淆。
+     */
+    public static boolean isInspectContext() {
+        return activeSubMode == SubMode.OVERVIEW;
+    }
     public static UUID getColonyId() { return colonyId; }
     public static int getComfort() { return comfort; }
     public static int getMagic() { return magic; }
@@ -124,7 +124,6 @@ public final class WandscapePanelState {
     // ── HUD field getters ──
     public static int getTouristCount() { return touristCount; }
     public static int getOvernightStayerCount() { return overnightStayerCount; }
-    public static int getShutdownCount() { return shutdownCount; }
     public static int getNpcIdleCount() { return npcIdleCount; }
     public static int getNpcTotalCount() { return npcTotalCount; }
     public static int getEarthAmount() { return earthAmount; }
@@ -134,26 +133,11 @@ public final class WandscapePanelState {
     public static int getWindAmount() { return windAmount; }
     public static int getMetalAmount() { return metalAmount; }
     public static int getDarkAmount() { return darkAmount; }
-    public static List<String> getShutdownBuildingNames() { return shutdownBuildingNames; }
-    public static List<UUID> getShutdownBuildingIds() { return shutdownBuildingIds; }
-
-    // ── Anomaly fields ──
-    public static int getBrokenCount() { return brokenCount; }
-    public static List<UUID> getBrokenBuildingIds() { return brokenBuildingIds; }
-    public static List<String> getBrokenBuildingNames() { return brokenBuildingNames; }
-
-    /** Buildings still under construction (never completed) — not anomalies. */
+    /** Buildings still under construction (never completed). */
     public static int getUnderConstructionCount() { return underConstructionCount; }
     public static List<UUID> getUnderConstructionBuildingIds() { return underConstructionBuildingIds; }
     public static List<String> getUnderConstructionBuildingNames() { return underConstructionBuildingNames; }
     public static List<Boolean> getUnderConstructionStarted() { return underConstructionStarted; }
-
-    /** Total anomalies across all types (shutdown + broken). */
-    public static int getTotalAnomalyCount() { return shutdownCount + brokenCount; }
-
-    // ── Warning overlay ──
-    public static boolean isWarningOverlayActive() { return warningOverlayActive; }
-    public static void toggleWarningOverlay() { warningOverlayActive = !warningOverlayActive; }
 
     public static WandscapePanelState.StatsSummary getStatsSummary() { return statsSummary; }
     public static void setStatsSummary(WandscapePanelState.StatsSummary summary) { statsSummary = summary; }
@@ -171,15 +155,10 @@ public final class WandscapePanelState {
 
     public static void setColonyStats(UUID colonyId, int comfort, int magic, int wonder,
                                       String name, int level, int experience,
-                                      int touristCount, int overnightStayerCount, int shutdownCount,
+                                      int touristCount, int overnightStayerCount,
                                       int npcIdleCount, int npcTotalCount,
                                       int earth, int wood, int water, int fire, int wind,
                                       int metal, int dark,
-                                      List<String> shutdownNames,
-                                      List<UUID> shutdownIds,
-                                      int brokenCount,
-                                      List<UUID> brokenIds,
-                                      List<String> brokenNames,
                                       int underConstructionCount,
                                       List<UUID> underConstructionIds,
                                       List<String> underConstructionNames,
@@ -187,7 +166,6 @@ public final class WandscapePanelState {
         setColonyStats(colonyId, comfort, magic, wonder, name, level, experience);
         WandscapePanelState.touristCount = touristCount;
         WandscapePanelState.overnightStayerCount = overnightStayerCount;
-        WandscapePanelState.shutdownCount = shutdownCount;
         WandscapePanelState.npcIdleCount = npcIdleCount;
         WandscapePanelState.npcTotalCount = npcTotalCount;
         WandscapePanelState.earthAmount = earth;
@@ -197,11 +175,6 @@ public final class WandscapePanelState {
         WandscapePanelState.windAmount = wind;
         WandscapePanelState.metalAmount = metal;
         WandscapePanelState.darkAmount = dark;
-        WandscapePanelState.shutdownBuildingNames = shutdownNames != null ? shutdownNames : List.of();
-        WandscapePanelState.shutdownBuildingIds = shutdownIds != null ? shutdownIds : List.of();
-        WandscapePanelState.brokenCount = brokenCount;
-        WandscapePanelState.brokenBuildingIds = brokenIds != null ? brokenIds : List.of();
-        WandscapePanelState.brokenBuildingNames = brokenNames != null ? brokenNames : List.of();
         WandscapePanelState.underConstructionCount = underConstructionCount;
         WandscapePanelState.underConstructionBuildingIds =
                 underConstructionIds != null ? underConstructionIds : List.of();
@@ -253,7 +226,6 @@ public final class WandscapePanelState {
         cursorLifted = false;
         activeSubMode = SubMode.NONE;
         buildPhase = BuildPhase.BAR;
-        warningOverlayActive = false;
         PacketDistributor.sendToServer(new PanelStateTogglePacket(false));
         // Panel closed → the per-tick reconciler no longer runs, so return the
         // cursor to gameplay (grabbed) directly here.
@@ -294,7 +266,6 @@ public final class WandscapePanelState {
         colonyExperience = 0;
         touristCount = 0;
         overnightStayerCount = 0;
-        shutdownCount = 0;
         npcIdleCount = 0;
         npcTotalCount = 0;
         earthAmount = 0;
@@ -304,16 +275,10 @@ public final class WandscapePanelState {
         windAmount = 0;
         metalAmount = 0;
         darkAmount = 0;
-        shutdownBuildingNames = List.of();
-        shutdownBuildingIds = List.of();
-        brokenCount = 0;
-        brokenBuildingIds = List.of();
-        brokenBuildingNames = List.of();
         underConstructionCount = 0;
         underConstructionBuildingIds = List.of();
         underConstructionBuildingNames = List.of();
         underConstructionStarted = List.of();
-        warningOverlayActive = false;
         statsSummary = StatsSummary.EMPTY;
         showBuildingAreas = false;
         buildingBarOpen = false;

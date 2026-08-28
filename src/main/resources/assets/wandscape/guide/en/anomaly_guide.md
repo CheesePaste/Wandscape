@@ -1,27 +1,22 @@
-# Building Failures
+# Building Status
 
-When buildings stop or break, handle them in the Anomaly Report. Most problems resolve in one click.
+Buildings **never stop working from damage or manual shutdown** — when a building is hit by monsters or explosions it only loses some blocks visually, while still operating and contributing normally. Missing blocks can be rebuilt via the **Repair** button in the V panel.
 
-## How to Open
+## Viewing Construction Progress
 
-When a building has a problem, the **warning icon in the V panel's sidebar** lights up with a count. Opening it shows the **Anomaly Report**, listing all buildings with problems:
+Open the **warning icon** in the V panel's sidebar to see buildings still under construction (waiting for materials / building):
 
 | Column | Description |
 | :--- | :--- |
-| **Building name** | The affected building |
-| **Status** | Stopped (shut down) or Broken |
-| **Action** | A Restart or Repair button |
+| **Building name** | Buildings still under construction |
+| **Status** | Waiting for Materials, or Under Construction |
 
-## Two Kinds of Problems
+## Repairing Buildings
 
-**Stopped (manual or structural damage)**: buildings the player shut down manually, or that stopped due to structural damage. Stopped buildings don't work or contribute. Click "**Restart**" to bring them back online.
-
-**Broken (physical damage)**: when a building is damaged by monsters, explosions, or similar beyond about **1/3**, it counts as broken and stops contributing. Click "**Repair**" and the system dispatches wizards to fix it per the blueprint.
-
-## Prevention
-
-- **Keep an element reserve in the warehouse**: build more [Element Nodes](node_guide.md) to gather, and decompose surplus materials at the [Workstation](workstation_guide.md) to top up elements.
+- Open the overview camera with V, aim at the building, and click **Repair** below the info box.
+- Clicking Repair makes wizards fill in the missing blocks per the blueprint (the warehouse must have the matching elements / materials).
 - **Damage doesn't auto-repair**: you must click "Repair" to trigger it.
+- A damaged building keeps working normally even if you never repair it — only the appearance is affected.
 
 ---
 

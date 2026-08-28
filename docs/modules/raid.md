@@ -4,7 +4,7 @@
 
 ## 职责
 
-复用原版村庄袭击机制，让殖民地成为袭击目标。玩家带不祥之兆靠近非关停建筑 → 以**市政厅**为中心触发袭击；胜利后授予进度/事件。
+复用原版村庄袭击机制，让殖民地成为袭击目标。玩家带不祥之兆靠近完整建筑 → 以**市政厅**为中心触发袭击；胜利后授予进度/事件。
 
 ## 配置（Config.java）
 
@@ -16,7 +16,7 @@
 ## RaidTriggerScanner
 
 - 扫描间隔 = RAID_CHECK_INTERVAL(20)；RAIDS_DISABLED gamerule 或维度无袭击则跳过；遍历非旁观、带 BAD_OMEN 或 RAID_OMEN 的玩家。
-- `triggerForPlayer`：逐殖民地找市政厅 → `isNearBuilding`（玩家在任一非停摆且完整建筑 AABB ±triggerRange 内，Y 不扩）→ 市政厅 nearbyRadius 内已有袭击则跳过 → `ensureRaidOmen`（仅 BAD_OMEN 时补 RAID_OMEN 600 tick + 同放大器）→ `createOrExtendRaid(player, townHall)` → track + 发 `ColonyRaidStartedEvent`（含 omenLevel、numGroups）+ 政府建筑中心上方橙色营火烟粒子。袭击以市政厅为中心。
+- `triggerForPlayer`：逐殖民地找市政厅 → `isNearBuilding`（玩家在任一完整建筑 AABB ±triggerRange 内，Y 不扩）→ 市政厅 nearbyRadius 内已有袭击则跳过 → `ensureRaidOmen`（仅 BAD_OMEN 时补 RAID_OMEN 600 tick + 同放大器）→ `createOrExtendRaid(player, townHall)` → track + 发 `ColonyRaidStartedEvent`（含 omenLevel、numGroups）+ 政府建筑中心上方橙色营火烟粒子。袭击以市政厅为中心。
 
 ## ColonyRaidTracker
 

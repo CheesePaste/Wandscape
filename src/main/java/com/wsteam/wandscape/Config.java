@@ -378,7 +378,7 @@ public class Config {
 
     public static final ModConfigSpec.IntValue RAID_TRIGGER_RANGE = BUILDER
             .comment("Raid trigger radius: a player carrying Bad Omen (RAID_OMEN/BAD_OMEN) within this horizontal "
-                    + "X/Z expansion of a non-shutdown building's AABB (Y unchanged) starts a raid centered on the "
+                    + "X/Z expansion of a building's AABB (Y unchanged) starts a raid centered on the "
                     + "colony's town hall.")
             .defineInRange("raid.triggerRange", 10, 1, 64);
 
@@ -406,8 +406,7 @@ public class Config {
     // ---- Building no-spawn zone (建筑防刷怪区) ----
 
     public static final ModConfigSpec.BooleanValue BUILDING_NO_SPAWN_IN_AREA = BUILDER
-            .comment("No natural mob spawns inside intact, operational (non-shutdown) "
-                    + "building bounding boxes.")
+            .comment("No natural mob spawns inside intact building bounding boxes.")
             .define("building.noSpawnInBuildingArea", true);
 
     // ---- Building preview GIF ----

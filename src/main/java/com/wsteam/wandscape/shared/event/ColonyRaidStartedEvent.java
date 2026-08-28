@@ -9,7 +9,7 @@ import net.neoforged.bus.api.Event;
  * Fired on the NeoForge bus when a raid starts against a colony.
  *
  * <p>Trigger: a player carrying Bad Omen (RAID_OMEN/BAD_OMEN) approaches within
- * {@code raid.triggerRange} of a non-shutdown building. The raid center is the
+ * {@code raid.triggerRange} of a building. The raid center is the
  * colony's town hall. Carries enough data for the achievement system to react
  * (colony, wave count, omen level).
  */

@@ -31,7 +31,7 @@ public final class BuildingNoSpawnZoneHandler {
 
         BlockPos pos = event.getPos();
         BuildingData building = WandscapeApis.getBuildingApi().getBuildingAt(pos);
-        if (building != null && !building.isShutdown() && building.isStructureIntact()) {
+        if (building != null && building.isStructureIntact()) {
             event.setResult(MobSpawnEvent.SpawnPlacementCheck.Result.FAIL);
         }
     }

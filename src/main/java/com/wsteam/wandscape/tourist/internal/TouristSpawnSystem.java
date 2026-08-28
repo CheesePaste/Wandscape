@@ -116,7 +116,7 @@ public final class TouristSpawnSystem {
         BuildingApi buildingApi = getBuildingApi();
         for (PendingSpawn ps : all) {
             var target = buildingApi != null ? buildingApi.getBuilding(ps.buildingId()) : null;
-            if (target == null || target.isShutdown() || !target.isStructureIntact() || target.isDemolishing()) {
+            if (target == null || !target.isStructureIntact() || target.isDemolishing()) {
                 continue;
             }
 
@@ -304,7 +304,7 @@ public final class TouristSpawnSystem {
                 // Re-validate the target at spawn time — the building may have been
                 // demolished after scheduling. Never spawn a tourist near a ghost.
                 var target = buildingApi.getBuilding(ps.buildingId());
-                if (target == null || target.isShutdown() || !target.isStructureIntact() || target.isDemolishing()) {
+                if (target == null || !target.isStructureIntact() || target.isDemolishing()) {
                     continue;
                 }
 
@@ -689,7 +689,7 @@ public final class TouristSpawnSystem {
 
         for (BuildingData b : api.getColonyBuildings(colonyId)) {
             if (!"service".equals(b.getCategory())) continue;
-            if (b.isShutdown() || !b.isStructureIntact()) continue;
+            if (!b.isStructureIntact()) continue;
             if (!isHotelBuilding(b.getBuildingId())) continue;
             // 酒店豁免 visitedBuildings：白天逛过 inn 不应阻止夜晚入住
             if (!hotel.hasVacancy(b.getBuildingId())) continue;
@@ -732,7 +732,7 @@ public final class TouristSpawnSystem {
             if (!"shop".equals(cat) && !"service".equals(cat) && !"relax".equals(cat) && !"atm".equals(cat)) {
                 continue;
             }
-            if (b.isShutdown() || !b.isStructureIntact()) continue;
+            if (!b.isStructureIntact()) continue;
             BuildingState state = savedData.getBuilding(b.getBuildingId());
             if (state != null) targets.add(state);
         }

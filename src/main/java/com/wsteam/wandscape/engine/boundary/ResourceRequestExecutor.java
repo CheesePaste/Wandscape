@@ -299,7 +299,7 @@ public class ResourceRequestExecutor implements OpExecutor<AtomicOp.ResourceRequ
         double best = Double.MAX_VALUE;
         for (UUID id : ids) {
             BuildingData bd = api.getBuilding(id);
-            if (bd == null || bd.isShutdown()) continue;
+            if (bd == null) continue;
             BlockPos p = bd.getPosition();
             double d = p.distSqr(npcPos);
             if (d < best) { best = d; nearest = p; }

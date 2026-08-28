@@ -13,8 +13,6 @@ import com.wsteam.wandscape.engine.service.SoundService;
 import com.wsteam.wandscape.engine.sound.WandscapeSounds;
 import com.wsteam.wandscape.shared.data.WonderConfig;
 import com.wsteam.wandscape.shared.data.WonderEffect;
-import com.wsteam.wandscape.shared.event.BuildingRestartedEvent;
-import com.wsteam.wandscape.shared.event.BuildingShutdownEvent;
 import com.wsteam.wandscape.shared.event.ColonyEvaluationChangedEvent;
 import com.wsteam.wandscape.shared.event.WonderEffectChangedEvent;
 
@@ -29,7 +27,7 @@ import com.wsteam.wandscape.shared.log.Log;
 /**
  * Collects and applies wonder building global effects.
  *
- * <p>Wonder effects are active when the building is intact and not shutdown.
+ * <p>Wonder effects are active when the building is intact.
  * Effects are aggregated across all wonders and cached for fast querying.
  *
  * <p>Supports three effect types:
@@ -61,16 +59,6 @@ public final class WonderEffectApplier {
     }
 
     // ── Event handlers ──
-
-    @SubscribeEvent
-    public void onBuildingShutdown(BuildingShutdownEvent event) {
-        removeEffects(event.getBuildingId());
-    }
-
-    @SubscribeEvent
-    public void onBuildingRestarted(BuildingRestartedEvent event) {
-        recalculateForBuilding(event.getBuildingId());
-    }
 
     @SubscribeEvent
     public void onColonyEvaluationChanged(ColonyEvaluationChangedEvent event) {
@@ -121,7 +109,7 @@ public final class WonderEffectApplier {
 
         for (BuildingState state : savedData.getAllBuildings()) {
             if (!"wonder".equals(state.getCategory())) continue;
-            if (state.isShutdown() || !state.isStructureIntact()) continue;
+            if (!state.isStructureIntact()) continue;
 
             BuildingConfig config = configLoader.get(state.getBuildingTypeId());
             if (config == null || config.wonderConfig() == null) continue;

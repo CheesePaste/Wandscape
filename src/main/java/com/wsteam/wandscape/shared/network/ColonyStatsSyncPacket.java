@@ -21,15 +21,9 @@ public record ColonyStatsSyncPacket(
         String colonyName, int colonyLevel, int colonyExperience,
         int touristCount,
         int overnightStayerCount,
-        int shutdownCount,
         int npcIdleCount, int npcTotalCount,
         int earthAmount, int woodAmount, int waterAmount, int fireAmount, int windAmount,
         int metalAmount, int darkAmount,
-        List<String> shutdownBuildingNames,
-        List<UUID> shutdownBuildingIds,
-        int brokenCount,
-        List<UUID> brokenBuildingIds,
-        List<String> brokenBuildingNames,
         int underConstructionCount,
         List<UUID> underConstructionBuildingIds,
         List<String> underConstructionBuildingNames,
@@ -49,12 +43,10 @@ public record ColonyStatsSyncPacket(
         return new ColonyStatsSyncPacket(
                 snap.colonyId(), snap.comfort(), snap.magic(), snap.wonder(),
                 snap.colonyName(), snap.colonyLevel(), snap.colonyExperience(),
-                snap.touristCount(), snap.overnightStayerCount(), snap.shutdownCount(),
+                snap.touristCount(), snap.overnightStayerCount(),
                 snap.npcIdleCount(), snap.npcTotalCount(),
                 snap.earthAmount(), snap.woodAmount(), snap.waterAmount(),
                 snap.fireAmount(), snap.windAmount(), snap.metalAmount(), snap.darkAmount(),
-                snap.shutdownBuildingNames(), snap.shutdownBuildingIds(),
-                snap.brokenCount(), snap.brokenBuildingIds(), snap.brokenBuildingNames(),
                 snap.underConstructionCount(), snap.underConstructionBuildingIds(),
                 snap.underConstructionBuildingNames(), snap.underConstructionStarted());
     }
@@ -63,12 +55,10 @@ public record ColonyStatsSyncPacket(
         WandscapePanelState.setColonyStats(
                 packet.colonyId, packet.comfort, packet.magic, packet.wonder,
                 packet.colonyName, packet.colonyLevel, packet.colonyExperience,
-                packet.touristCount, packet.overnightStayerCount, packet.shutdownCount,
+                packet.touristCount, packet.overnightStayerCount,
                 packet.npcIdleCount, packet.npcTotalCount,
                 packet.earthAmount, packet.woodAmount, packet.waterAmount, packet.fireAmount, packet.windAmount,
                 packet.metalAmount, packet.darkAmount,
-                packet.shutdownBuildingNames, packet.shutdownBuildingIds,
-                packet.brokenCount, packet.brokenBuildingIds, packet.brokenBuildingNames,
                 packet.underConstructionCount, packet.underConstructionBuildingIds,
                 packet.underConstructionBuildingNames, packet.underConstructionStarted);
     }
@@ -84,7 +74,6 @@ public record ColonyStatsSyncPacket(
         buf.writeVarInt(pkt.colonyExperience);
         buf.writeVarInt(pkt.touristCount);
         buf.writeVarInt(pkt.overnightStayerCount);
-        buf.writeVarInt(pkt.shutdownCount);
         buf.writeVarInt(pkt.npcIdleCount);
         buf.writeVarInt(pkt.npcTotalCount);
         buf.writeVarInt(pkt.earthAmount);
@@ -94,11 +83,6 @@ public record ColonyStatsSyncPacket(
         buf.writeVarInt(pkt.windAmount);
         buf.writeVarInt(pkt.metalAmount);
         buf.writeVarInt(pkt.darkAmount);
-        buf.writeCollection(pkt.shutdownBuildingNames, (b, s) -> b.writeUtf(s));
-        buf.writeCollection(pkt.shutdownBuildingIds, (b, id) -> b.writeUUID(id));
-        buf.writeVarInt(pkt.brokenCount);
-        buf.writeCollection(pkt.brokenBuildingIds, (b, id) -> b.writeUUID(id));
-        buf.writeCollection(pkt.brokenBuildingNames, (b, s) -> b.writeUtf(s));
         buf.writeVarInt(pkt.underConstructionCount);
         buf.writeCollection(pkt.underConstructionBuildingIds, (b, id) -> b.writeUUID(id));
         buf.writeCollection(pkt.underConstructionBuildingNames, (b, s) -> b.writeUtf(s));
@@ -114,15 +98,9 @@ public record ColonyStatsSyncPacket(
                 buf.readUtf(), buf.readVarInt(), buf.readVarInt(),
                 buf.readVarInt(), // touristCount
                 buf.readVarInt(), // overnightStayerCount
-                buf.readVarInt(), // shutdownCount
                 buf.readVarInt(), buf.readVarInt(), // npcIdle, npcTotal
                 buf.readVarInt(), buf.readVarInt(), buf.readVarInt(), buf.readVarInt(), buf.readVarInt(), // 5 elements
                 buf.readVarInt(), buf.readVarInt(), // metal, dark
-                buf.readList(b -> b.readUtf()), // shutdownBuildingNames
-                buf.readList(b -> b.readUUID()), // shutdownBuildingIds
-                buf.readVarInt(), // brokenCount
-                buf.readList(b -> b.readUUID()), // brokenBuildingIds
-                buf.readList(b -> b.readUtf()), // brokenBuildingNames
                 buf.readVarInt(), // underConstructionCount
                 buf.readList(b -> b.readUUID()), // underConstructionBuildingIds
                 buf.readList(b -> b.readUtf()), // underConstructionBuildingNames

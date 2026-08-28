@@ -865,7 +865,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
     private static UUID findStorageColonyId() {
         var api = WandscapeApis.getBuildingApi();
         for (var bd : api.getColonyBuildings(null)) {
-            if ("storage".equals(bd.getCategory()) && !bd.isShutdown()) {
+            if ("storage".equals(bd.getCategory())) {
                 UUID cid = bd.getColonyId();
                 return cid != null ? cid : new UUID(0, 0);
             }
@@ -889,7 +889,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
             double best = Double.MAX_VALUE;
             for (UUID id : ids) {
                 BuildingData bd = api.getBuilding(id);
-                if (bd == null || bd.isShutdown()) continue;
+                if (bd == null) continue;
                 BlockPos p = bd.getPosition();
                 double d = p.distSqr(npcPos);
                 if (d < best) { best = d; nearest = p; }
@@ -903,7 +903,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         double best = Double.MAX_VALUE;
         for (UUID id : govIds) {
             BuildingData bd = api.getBuilding(id);
-            if (bd == null || bd.isShutdown()) continue;
+            if (bd == null) continue;
             BlockPos p = bd.getPosition();
             double d = p.distSqr(npcPos);
             if (d < best) { best = d; nearest = p; }

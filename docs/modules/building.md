@@ -6,7 +6,7 @@
 
 殖民地建筑管理：建筑配置（JSON 数据驱动）、建造生命周期、每日结算、装饰加成、商店库存、奇观效果、交互界面、建筑扫描器。建筑**没有自定义方块**（除扫描器外），全部状态存于 `BuildingSavedData`。
 
-**防刷怪区**：完好且运营中（未停摆）建筑的包围盒内不自然刷怪（`engine/BuildingNoSpawnZoneHandler` 拦 `MobSpawnEvent.SpawnPlacementCheck`，仅 `NATURAL`；`building.noSpawnInBuildingArea` 可关）。设计细节见 [decisions.md](../decisions.md)。
+**防刷怪区**：完好建筑的包围盒内不自然刷怪（`engine/BuildingNoSpawnZoneHandler` 拦 `MobSpawnEvent.SpawnPlacementCheck`，仅 `NATURAL`；`building.noSpawnInBuildingArea` 可关）。设计细节见 [decisions.md](../decisions.md)。
 
 ## BuildingConfig（JSON → 数据）
 
@@ -21,13 +21,13 @@
 
 ## 建筑状态与持久化
 
-- `BuildingState`：**无枚举状态机**，用布尔标志：`shutdown`、`structureIntact`、`demolishing`；持久字段含 shutdownReason/colonyId/rotationSteps/taskQueue(Deque<WorkItem>)/patternPositions/currentTaskId。`hasWork()`：关停建筑仅当队首是 `build:place_structure`（修复）才工作。
+- `BuildingState`：**无枚举状态机**，用布尔标志：`structureIntact`、`demolishing`；持久字段含 colonyId/rotationSteps/taskQueue(Deque<WorkItem>)/patternPositions/currentTaskId。`hasWork()` = 队列非空。
 - `BuildingSavedData`（`wandscape_buildings`）：NBT 键含 shop_stock/shop_max_stock/claimed_free/pattern_pos/rotation 等；三个索引 buildings/posIndex/chunkIndex。
 
 ## BuildingApiImpl 公开方法
 
 - 查询：getBuilding/getBuildingAt/getColonyBuildings/getBuildingBounds；聚落三值 getColonySnapshot/getColonyComfort/getColonyMagic/getColonyWonder。
-- 生命周期：registerBuilding（重叠检查 + BuildingPlacedEvent）/unregisterBuilding；shutdown(id[,reason])（按类别 applyShutdownPenalties 零贡献 + BuildingShutdownEvent + 灰烟）；restart（恢复贡献 + 星光）；demolishBuilding（置 demolishing + structureIntact=false + 清队列 + 入队 `build:demolish_structure` 优先 49）；cancelBuilding（**撤销建造中建筑**：未开工 → unregisterState 直接移除；开工 → refundMaterials 全额退还材料 + demolishBuilding 拆已建部分；已完工不可撤销；入口=准心 HUD 建造中建筑第一个按钮「撤销」）。
+- 生命周期：registerBuilding（重叠检查 + BuildingPlacedEvent）/unregisterBuilding；demolishBuilding（置 demolishing + structureIntact=false + 清队列 + 入队 `build:demolish_structure` 优先 49）；cancelBuilding（**撤销建造中建筑**：未开工 → unregisterState 直接移除；开工 → refundMaterials 全额退还材料 + demolishBuilding 拆已建部分；已完工不可撤销；入口=准心 HUD 建造中建筑第一个按钮「撤销」）。
 - 队列：isBuildingOccupied/getBuildingsWithPendingWork/dequeueWork/enqueueWork（上限=queue容量或 5；**按优先级分段排序**——玩家 80 ＞ 补货 60 ＞ 修复/拆除 49 ＞ 自动 40 ＞ 建造 0；新任务经 `insertByPriority` 进本段队尾，段尾同配方生产任务经 `mergeBandTail` 合并；`dequeueWork` pollFirst 恒出最高优先段）/getBuildingsByCategory/setCurrentTask/getQueue/removeFromQueue/moveUp/moveDown。
 - 放置：placeBuilding（firstFree 逻辑 + EnqueueHelper.buildWorkItem）；isFirstFreeClaimed；游客交互点：findBeds/sampleWalkableGround/getTouristInteractionTarget/getEntryPoint/getTouristInteractPoint。
 
@@ -46,9 +46,9 @@ BuildingConfig JSON → BuildingConfigLoader → BuildingConfig
 ```
 
 - `EnqueueHelper.registerIfAbsent`：先 `getBuildingAt` 判占位，建 BuildingState、`api.registerBuilding`、assignColonyIfPossible；**首个建筑时给仓库每元素种 6000**（`colony.initialElementCount` 可配）。
-- `BuildCompleteListener`：订阅 `build_complete`，`findDamagedBlocks` 逐块比对 palette 派生 map（含方块态属性）；损坏≥1/3 判 broken → `BuildingBreakHandler.enqueueRepairForOffsets`；完好 → 分配殖民地 + BuildingPlacedEvent + 烟花 + addBuildingContribution。
+- `BuildCompleteListener`：订阅 `build_complete`，`findDamagedBlocks` 逐块比对 palette 派生 map（含方块态属性）；**建成即判定完好**（缺失方块不阻塞运转，可经「修复」补齐）→ 分配殖民地 + BuildingPlacedEvent + 烟花 + addBuildingContribution。
 - `DemolishCompleteListener`：订阅 `demolish_complete`，unregisterBuilding + colonyApi.onBuildingDestroyed。
-- `BuildingBreakHandler`：BreakEvent/ExplosionEvent 复检，broken 则 structureIntact=false、删贡献、town_hall 则删殖民地；**不自动入队修复**（修复只能玩家触发）。`triggerRepair` 供"修复"按钮（V 面板 Repair 或 AnomalyScreen）：复检损坏块（**轻微 <1/3 与 broken ≥1/3 都修**）→ 入队 `build:place_structure` 修复任务（优先 49, addFirst）。
+- `BuildingRepairHandler`：**只做手动修复**——`triggerRepair` 供"修复"按钮（V 面板 Repair）：复检缺失方块 → 入队 `build:place_structure` 修复任务（优先 49, addFirst）。建筑被破坏不改变任何状态，也无自动修复。
 
 ## 五大子系统
 
@@ -66,7 +66,7 @@ BuildingConfig JSON → BuildingConfigLoader → BuildingConfig
 
 ### 4. WonderEffectApplier（奇观效果）
 
-wonder 类且完整非关停生效；三种效果：`StatMod(target,value)` / `PriceMod(target,percentage)` / `RuleUnlock(ruleId)`（WonderEffect sealed + 按 type 字段反序列化）；shutdown 移除 + WonderEffectChangedEvent + 音效；查询 getStatMod/getPriceMod/isRuleUnlocked。
+wonder 类且完整生效；三种效果：`StatMod(target,value)` / `PriceMod(target,percentage)` / `RuleUnlock(ruleId)`（WonderEffect sealed + 按 type 字段反序列化）；WonderEffectChangedEvent + 音效；查询 getStatMod/getPriceMod/isRuleUnlocked。
 
 ### 5. 辅助
 
