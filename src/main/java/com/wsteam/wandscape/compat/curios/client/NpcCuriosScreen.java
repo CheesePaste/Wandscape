@@ -1,7 +1,12 @@
 package com.wsteam.wandscape.compat.curios.client;
 
+import java.util.Locale;
+
+import com.wsteam.wandscape.compat.curios.NpcCurioSlot;
 import com.wsteam.wandscape.compat.curios.NpcCuriosMenu;
+import com.wsteam.wandscape.npc.network.NpcOpenEquipPacket;
 import com.wsteam.wandscape.shared.ui.I18n;
+import com.wsteam.wandscape.shared.ui.component.MedievalButton;
 import com.wsteam.wandscape.shared.ui.vanilla.VanillaPlayerInventory;
 
 import net.minecraft.client.gui.GuiGraphics;
@@ -10,6 +15,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
  * 法师饰品容器屏幕：顶部法师饰品槽网格（空槽显示 Curios 槽类型图标），下方原版玩家背包。
@@ -38,12 +44,42 @@ public class NpcCuriosScreen extends AbstractContainerScreen<NpcCuriosMenu> {
         // 自绘 header，禁画 vanilla 标签
         this.inventoryLabelX = 100000;
         this.inventoryLabelY = 100000;
+        // 返回按钮：重新打开法师装备界面（法师 UI）
+        addRenderableWidget(new MedievalButton(leftPos + imageWidth - 62, topPos + 3, 54, 16,
+                I18n.name("gui.wandscape.curios.back", "Back"), this::onBack));
+    }
+
+    private void onBack() {
+        int entityId = menu.getEntityId();
+        if (entityId >= 0 && minecraft != null) {
+            PacketDistributor.sendToServer(new NpcOpenEquipPacket(entityId));
+        } else if (minecraft != null && minecraft.player != null) {
+            minecraft.player.closeContainer();
+        }
     }
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         super.render(g, mouseX, mouseY, partialTick);
         renderTooltip(g, mouseX, mouseY);
+    }
+
+    @Override
+    protected void renderTooltip(GuiGraphics g, int mouseX, int mouseY) {
+        super.renderTooltip(g, mouseX, mouseY);
+        // 空饰品槽悬停：提示槽位名称（curios.identifier.<id>，缺失回退首字母大写）
+        if (this.hoveredSlot instanceof NpcCurioSlot curio && this.menu.getCarried().isEmpty()
+                && this.hoveredSlot.getItem().isEmpty()) {
+            g.renderTooltip(font, Component.literal(slotName(curio.getIdentifier())), mouseX, mouseY);
+        }
+    }
+
+    private static String slotName(String id) {
+        String key = "curios.identifier." + id;
+        if (net.minecraft.client.resources.language.I18n.exists(key)) {
+            return net.minecraft.client.resources.language.I18n.get(key);
+        }
+        return Character.toUpperCase(id.charAt(0)) + id.substring(1).toLowerCase(Locale.ROOT);
     }
 
     @Override

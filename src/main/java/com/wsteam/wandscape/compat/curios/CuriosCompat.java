@@ -9,13 +9,13 @@ import com.wsteam.wandscape.shared.log.Log;
 
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.flag.FeatureFlags;
 import net.minecraft.world.inventory.MenuType;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.common.extensions.IMenuTypeExtension;
 import net.neoforged.neoforge.event.OnDatapackSyncEvent;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import net.neoforged.neoforge.registries.DeferredHolder;
@@ -66,8 +66,10 @@ public final class CuriosCompat {
             return;
         }
         Log.info(TAG, "Curios API detected! Initializing compat layer...");
+        // 扩展菜单：客户端工厂带 RegistryFriendlyByteBuf，服务端经 IPlayerExtension.openMenu(provider, buf)
+        // 写入法师 entityId —— 返回按钮据此重新打开法师装备界面
         NPC_CURIOS_MENU = MENUS.register("npc_curios", () ->
-                new MenuType<>(NpcCuriosMenu::new, FeatureFlags.VANILLA_SET));
+                IMenuTypeExtension.create(NpcCuriosMenu::new));
         MENUS.register(modEventBus);
         NeoForge.EVENT_BUS.register(ServerHooks.class);
     }

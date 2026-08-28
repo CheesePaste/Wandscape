@@ -22,11 +22,13 @@ import top.theillusivec4.curios.api.type.inventory.IDynamicStackHandler;
  */
 public class NpcCurioSlot extends SlotItemHandler {
 
+    private final String identifier;
     private final SlotContext slotContext;
 
     public NpcCurioSlot(String identifier, LivingEntity owner, IItemHandlerModifiable handler,
                         int index, int x, int y, NonNullList<Boolean> renders) {
         super(handler, index, x, y);
+        this.identifier = identifier;
         this.slotContext = new SlotContext(identifier, owner, index, false,
                 renders.size() > index && renders.get(index));
         CuriosApi.getSlot(identifier, owner.level())
@@ -36,6 +38,11 @@ public class NpcCurioSlot extends SlotItemHandler {
     @Override
     public int getMaxStackSize() {
         return 1;
+    }
+
+    /** 槽类型标识（如 {@code ring}），用于显示槽名称（{@code curios.identifier.<id>}）。 */
+    public String getIdentifier() {
+        return identifier;
     }
 
     @Override

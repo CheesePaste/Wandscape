@@ -10,6 +10,7 @@ import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.shared.ui.vanilla.VanillaPlayerInventory;
 
 import net.minecraft.core.NonNullList;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Inventory;
@@ -49,18 +50,25 @@ public class NpcCuriosMenu extends AbstractContainerMenu {
 
     @Nullable
     private final WandscapeNpc npc;
+    private final int entityId;
     private final int curioSlotCount;
 
-    /** Client-side factory (MenuType): contents arrive via sync. */
-    public NpcCuriosMenu(int containerId, Inventory playerInventory) {
-        this(containerId, playerInventory, null, null);
+    /** Client-side factory (extended MenuType): 附件数据携带法师 entityId；内容经容器广播同步。 */
+    public NpcCuriosMenu(int containerId, Inventory playerInventory, RegistryFriendlyByteBuf extraData) {
+        this(containerId, playerInventory, null, null, extraData.readInt());
     }
 
     /** Server-side factory (MenuProvider). */
     public NpcCuriosMenu(int containerId, Inventory playerInventory,
                          @Nullable ICuriosItemHandler handler, @Nullable WandscapeNpc npc) {
+        this(containerId, playerInventory, handler, npc, npc != null ? npc.getId() : -1);
+    }
+
+    private NpcCuriosMenu(int containerId, Inventory playerInventory,
+                          @Nullable ICuriosItemHandler handler, @Nullable WandscapeNpc npc, int entityId) {
         super(CuriosCompat.NPC_CURIOS_MENU.get(), containerId);
         this.npc = npc;
+        this.entityId = entityId;
         int count = 0;
         if (handler != null) {
             LivingEntity wearer = handler.getWearer();
@@ -108,7 +116,7 @@ public class NpcCuriosMenu extends AbstractContainerMenu {
     }
 
     public int getEntityId() {
-        return npc != null ? npc.getId() : -1;
+        return entityId;
     }
 
     // ── 布局辅助（菜单与服务端屏幕共用） ──

@@ -119,6 +119,7 @@ import com.wsteam.wandscape.npc.NpcMenu;
 import com.wsteam.wandscape.npc.NpcStrategyMenu;
 import com.wsteam.wandscape.npc.network.NpcDataPacket;
 import com.wsteam.wandscape.npc.network.NpcDismissPacket;
+import com.wsteam.wandscape.npc.network.NpcOpenEquipPacket;
 import com.wsteam.wandscape.npc.network.NpcOpenStrategyPacket;
 import com.wsteam.wandscape.npc.network.NpcRenamePacket;
 import com.wsteam.wandscape.npc.network.NpcStrategyPacket;
@@ -914,7 +915,12 @@ public class Wandscape {
                         com.wsteam.wandscape.compat.curios.NpcOpenCuriosPacket.TYPE,
                         com.wsteam.wandscape.compat.curios.NpcOpenCuriosPacket.STREAM_CODEC,
                         (packet, ctx) -> com.wsteam.wandscape.compat.curios.NpcOpenCuriosPacket
-                                .handleServer(packet, ctx));
+                                .handleServer(packet, ctx))
+                // ── NPC 装备界面重开（饰品屏返回按钮） ──
+                .playToServer(
+                        NpcOpenEquipPacket.TYPE,
+                        NpcOpenEquipPacket.STREAM_CODEC,
+                        (packet, ctx) -> NpcOpenEquipPacket.handleServer(packet, ctx));
     }
 
     private void onEntityAttributeCreation(EntityAttributeCreationEvent event) {

@@ -815,6 +815,7 @@
   "gui.wandscape.npc.dismiss_confirm": "Dismiss mage %s? Their equipment will drop.",
   "gui.wandscape.curios.title": "Mage Trinkets",
   "gui.wandscape.curios.open": "Trinkets",
+  "gui.wandscape.curios.back": "Back",
   "message.wandscape.curios.no_slots": "[Wandscape] This mage has no trinket slots — Curios not detected or no slots assigned.",
   "gui.wandscape.strategy.title": "Cast Strategy",
   "gui.wandscape.strategy.preset.balanced": "Balanced",

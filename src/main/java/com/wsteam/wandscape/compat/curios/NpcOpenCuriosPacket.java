@@ -60,8 +60,10 @@ public record NpcOpenCuriosPacket(int entityId) implements CustomPacketPayload {
                     true);
             return;
         }
+        // 扩展菜单：随 open 包写法师 entityId（客户端菜单据此可重新打开法师装备界面）
         sp.openMenu(new SimpleMenuProvider(
                 (id, inv, p) -> new NpcCuriosMenu(id, inv, handler, npc),
-                I18n.name("gui.wandscape.curios.title", "Mage Trinkets")));
+                I18n.name("gui.wandscape.curios.title", "Mage Trinkets")),
+                buf -> buf.writeInt(npc.getId()));
     }
 }
