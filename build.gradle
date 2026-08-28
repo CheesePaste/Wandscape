@@ -41,6 +41,10 @@ repositories {
         url = "https://code.redspace.io/releases"
     }
     maven {
+        name = "Illusive Soulworks maven"
+        url = "https://maven.theillusivec4.top/"
+    }
+    maven {
         name = "CurseMaven"
         url = "https://cursemaven.com"
         content {
@@ -168,6 +172,9 @@ dependencies {
 
     // Iron's Spells 'n Spellbooks — 可选兼容依赖，compileOnly 不打包
     compileOnly "io.redspace:irons_spellbooks:${irons_spells_version}"
+
+    // Curios API — 可选兼容依赖，compileOnly 不打包；玩家自行装 Curios。未装时法师饰品功能自动隐藏。
+    compileOnly "top.theillusivec4.curios:curios-neoforge:${curios_version}"
 
     // Example project dependency using a sister or child project:
     // implementation project(":myproject")
