@@ -153,6 +153,16 @@
 5. **猜测 MC 类名** → 必须查源码
 6. **超时/异步路径无兜底** → 所有可能失败的路径必须有兜底（原则 4）
 7. **游客 ≠ 常驻市民** → 旧 Citizen 系统已完全移除（CitizenManager/Profession/StoredCitizen/CitizenMoveGoal 等）。游客是短居访客，无职业/床位/工作场所/住宅/状态机。所有游客行为由 `tourist/` 包内的 TouristSpawnSystem + TouristMoveGoal + HotelStayHandler 驱动。`TouristState`（枚举：VISITING/EXPLORING/WANDERING/IDLE/SLEEPING）是当前游客系统内的移动状态标记，不是状态机——禁止扩展为带迁移逻辑的复杂状态机。禁止向 TouristEntity 添加任何常驻市民概念（Profession/Bed/Workplace/Home/StoredCitizen/ComplexStateMachine）。
+8. **数据格式改动不加版本号** → 缺 key 兜底越攒越多。改 NBT/JSON/注册 id 前必读下文「数据格式与兼容纪律」。
+
+## 数据格式与兼容纪律
+
+**开发期不承诺存档兼容。** 模组还没面对真实玩家，迭代期旧档直接断档重开是权利，不是损失。
+
+1. **改 NBT 键 / JSON 字段 / 注册 id，要么带版本号迁移，要么断档。** 禁止新增"缺 key → 补默认/猜测"的无版本号兜底分支——这是兼容代码唯一且必然的指数增长源：每加一个版本就要兼容前面所有版本，到第 N 版就是 (N-1) 份逐层特判。
+2. **真要兼容旧档时，走"版本号"机制**：SavedData 顶层存 `version`，读取按版本号走一条显式迁移链，其他类不得各自散加迁移分支。新字段带缺省默认可以，但那不是"旧版本单独处理"，不要写 `if (旧结构) 特判`。
+3. **删字段就真删**：不留读取别名、不留兼容构造器。旧数据读不出来的，就该当断档处理。
+4. **存量兼容代码只清不增**：现有约 400 行 / 22 文件的兼容分支（审计见 plan.md）随其他重构步骤顺手清，严禁再新增同类。
 
 ## 重构进行中
 
