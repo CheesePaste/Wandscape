@@ -15,9 +15,9 @@ CurseForge 上传流水线自动静态扫描，命中高危模式即转人工。
 | 信号 | 位置 | 判定 |
 |------|------|------|
 | **反射改写另一 mod 静态字段** | `CuriosCompatImpl.mirrorMageSlots`：`CuriosEntityManager.class.getDeclaredField("entitySlots")` + `setAccessible` + `field.set(SERVER, …)` | 头号高危。恶意 mod 惯用同套路关校验/复制物品/改写对方运行时状态。虽有正当用途，静态扫描无法区分，必转人工。 |
-| 反射计数堆叠 | jar 内另有 3 处历史反射：`ReplayScreenGuard`（`Class.forName` 进 ReplayMod）、`HostileTargetingHandler`（反射原版 `NearestAttackableTargetGoal.targetType`）、`ProjectionNetwork`（`Class.forName` 自有类） | 叠加后命中「强反射」规则。 |
+| 反射计数堆叠 | jar 内原有 3 处历史反射：`ReplayScreenGuard`（`Class.forName` 进 ReplayMod）、`HostileTargetingHandler`（反射原版 `NearestAttackableTargetGoal.targetType`）、`ProjectionNetwork`（`Class.forName` 自有类） | 叠加后命中「强反射」规则。 |
 
-前者由本方案消除；后者属历史存量，非本窗口新增，维持现状（本次不动）。
+前者由本方案消除；`HostileTargetingHandler` 随后另立任务改 NeoForge AT（见 docs/decisions.md 2026-08-29）同样消除；剩 `ReplayScreenGuard`（官方公开 API 反射）与 `ProjectionNetwork`（包内 `Class.forName`）不属于「改写外部/私有状态」，维持现状。
 
 ## Fix #1：Curios 槽位映射改数据包声明（零反射）
 
@@ -77,7 +77,7 @@ CurseForge 上传流水线自动静态扫描，命中高危模式即转人工。
 ## 验证
 
 1. `./gradlew build` / `./gradlew test` 全绿（编译期 + 单测）。
-2. Jar 内新反射面复核：`grep -r 'getDeclaredField\|setAccessible\|Class.forName'` 应只剩历史存量（`ReplayScreenGuard`/`HostileTargetingHandler`/`ProjectionNetwork`），Curios 与 TaskPanel 相关清零。
+2. Jar 内新反射面复核：`grep -r 'getDeclaredField\|setAccessible\|Class.forName'` 只剩 `ReplayScreenGuard`（官方公开 API，无 setAccessible）与 `ProjectionNetwork`（包内 `Class.forName`），Curios / TaskPanel / HostileTargeting 全部清零。
 3. 游戏内（有 Curios）：
    - 法师饰品按钮 → 打开饰品栏，槽位 = 10 标准槽；
    - `data/curios/curios/entities/wandscape_npc.json` 存在即生效（同步由 Curios sync 完成，客户端无感知）；
@@ -86,5 +86,5 @@ CurseForge 上传流水线自动静态扫描，命中高危模式即转人工。
 
 ## 非目标
 
-- 历史 3 处反射（Replay 检测 / 原版目标类 / 自有类 `Class.forName`）本次不动——非本窗口引入，改动范围扩大徒增回归风险；如后续仍被自动扫描点名再单独处理。
+- 剩 2 处反射不动：`ReplayScreenGuard` 反射 ReplayMod/ReforgedPlay 的**官方公开 API**（只碰 public 成员、无 setAccessible；事件接口 register 包私有，换事件订阅反射面更大，已核实 ReforgedPlay 1.21 分支源码）；`ProjectionNetwork` 的 `Class.forName` 指向**自有类**。均非「改写外部/私有状态」，人审可辩护。
 - 建筑扫描器 Base64/NBT 数据面——上版本修复已把它从「物品+实体完整导出」降级为纯方块结构，且非本窗口新增写法，本次不动。

@@ -43,6 +43,8 @@ ItemTransportManager：直线/样条飞行，服务器发 from/to/duration/route
 
 `EntityJoinLevelEvent`：生物加入世界时若目标选择器已有对 AbstractVillager 的 `NearestAttackableTargetGoal`，则同优先级追加等价 goal——目标类型用公共父类 PathfinderMob + `instanceof VillagerLike` 谓词（实体区块存储 ClassInstanceMultiMap 只支持 Entity 子类查找、接口会崩）。不枚举生物类，自动覆盖僵尸族/灾厄村民/劫掠兽，排除中立生物（僵尸猪灵）。同一实体可能多次 join（维度传送/chunk 重载）：若目标选择器已存在目标类为 PathfinderMob.class 的等价 goal（本 handler 唯一标记），跳过避免叠加。
 
+读取索敌目标类（`NearestAttackableTargetGoal#targetType`）经 NeoForge AccessTransformer（`META-INF/accesstransformer.cfg`）把 protected 提为 public 后**直读**，不用反射；AT 因版本变动未生效时记 ERROR 日志并禁用索敌增强（锦上添花，缺了不伤功能），不崩溃。
+
 ## ColonyApiImpl（engine 根包）
 
 ColonyApi 实现，桥接 BuildingSavedData 查询殖民地信息。

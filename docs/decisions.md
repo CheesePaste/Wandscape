@@ -2,6 +2,19 @@
 
 本文件记录偏离直觉的设计选择及其原因，供后续开发快速理解「为什么这么做」。
 
+## 2026-08-29：HostileTargetingHandler 原版私有字段反射改 NeoForge AccessTransformer
+
+**需求**：CurseForge 人审去风险任务里约定「历史 3 处反射本次不动」，用户随后要求把其中「反射原版私有字段」那处（`engine/HostileTargetingHandler` 读 `NearestAttackableTargetGoal#targetType`）也消掉。
+
+**根因**：`targetType` 是 `protected final Class<T>`（已查 MC 1.21.1 源码确认），`getDeclaredField`+`setAccessible` 只是为跨包读一个 protected 字段——NeoForge 官方 AccessTransformer 把这字段提为 public 即可直读，零反射。
+
+**决策**：
+1. **AT 方案**：新增 `META-INF/accesstransformer.cfg`（`public net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal targetType`），`neoforge.mods.toml` 加 `[[accessTransformers]]` 声明。AT 是 NeoForge 官方声明机制，审查语义上属于 SDK 机制而非反射；MDG 自动检测并把 AT 应用到 dev 编译 classpath（能编译过即证明生效）。
+2. **直读 + 兜底**：`targetType` 直读，不用反射。AT 未生效（字段改名等）时捕获 Error 置 `atActive=false` 并记 ERROR 日志禁用增强——索敌增强是锦上添花，缺了不伤功能、不崩溃。（与 ReplayScreenGuard「按次反射」不同：AT 是一次性静态机制，失败即永久降级，无需每次重试。）
+3. **ReplayScreenGuard / ProjectionNetwork 不改**：前者只碰 ReplayMod 官方公开 API（无 setAccessible；官方事件 register 包私有，换事件订阅反射面更大），后者 `Class.forName` 指向自有类——均为可辩护的最低反射面。
+
+**影响**：`engine/HostileTargetingHandler.java` 删反射直读；新增 `src/main/resources/META-INF/accesstransformer.cfg`；`src/main/templates/META-INF/neoforge.mods.toml` 声明 AT；`architecture/packages/engine.md` 补 AT 说明；`docs/plan/curseforge-review-de-risk.md` 非目标段更新。
+
 ## 2026-08-29：CurseForge 人审去风险——法师 Curios 槽位改数据包声明（删反射镜像）+ 任务面板静默失败反射块删除
 
 **需求**：1.11.0 上传后进入 CurseForge 人工审核。目标是把 jar 内「反射访问非自有类私有状态 + 改写外部 mod 静态字段」等自动扫描高危模式清零，使后续版本走自动审核直发。
