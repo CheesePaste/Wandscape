@@ -939,7 +939,7 @@
   "gui.wandscape.npc.tip.unequip_success": "已卸下：%s",
   "gui.wandscape.npc.tip.cannot_unequip_default": "初始默认法杖无法卸下",
   "gui.wandscape.npc.tip.not_equippable": "该物品无法装备",
-  "guide.wandscape.common.open_build": "§b① 按 §e1§b 打开【建造】页签，按C抬起鼠标",
+  "guide.wandscape.common.open_build": "§b① 按 §e1§b 打开【建造】页签",
   "guide.wandscape.common.build_list_open": "§a建造列表已打开",
   "guide.wandscape.common.aim_drag_place": "§b▶ §e按住右键拖动§b转视角，把建筑放到你要的位置",
   "guide.wandscape.common.aim_rotate_submit": "§b▶ §e左键§b旋转朝向，点右侧【§e提交施工§b】→【§e提交§b】",
