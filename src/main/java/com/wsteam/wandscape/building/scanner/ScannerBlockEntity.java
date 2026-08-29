@@ -31,6 +31,10 @@ public class ScannerBlockEntity extends CreativeScannerBlockEntity {
     @Override
     public String getCategory() { return "custom"; }
 
+    /** 生存扫描器导出为纯建筑：不携带任何可复制物品的 NBT（防“藏物品→打印”刷物品）。 */
+    @Override
+    public boolean isSafeExport() { return true; }
+
     @Override
     public int getComfort() { return 0; }
 

@@ -22,7 +22,9 @@
     "minecraft:mud_brick_wall[north=tall,west=tall]"
   ],
   "block_indices": [0, 2, 1, 3, 0, ...], // 必填：N 个 palette 索引，block_indices[i] ↔ pattern[i]
-  "block_nbt": {"x,y,z": "<base64压缩NBT>"},   // 可选：方块实体 NBT（键仍为 "x,y,z"）
+  "block_nbt": {"x,y,z": "<base64压缩NBT>"},   // 可选：方块实体 NBT（键仍为 "x,y,z"）。
+                                                   // 仅创造建筑扫描器导出时写入；生存建筑扫描器
+                                                   // 导出为"纯建筑"，不带任何 NBT（防"藏物品→打印"刷物品）。
   "comfort": 10,                        // int，默认 0（三值之一）
   "magic": 10,                          // int，默认 0
   "wonder": 10,                         // int，默认 0

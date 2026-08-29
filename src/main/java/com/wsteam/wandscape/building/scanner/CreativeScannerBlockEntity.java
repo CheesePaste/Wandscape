@@ -284,6 +284,14 @@ public class CreativeScannerBlockEntity extends BlockEntity {
     public String getCategory() { return category; }
     public void setCategory(String cat) { this.category = cat; }
 
+    /**
+     * 导出保真分级。默认 false（创造扫描器）：完整导出方块/实体 NBT，供创作者编辑与分享。
+     * 生存扫描器覆写为 true：导出为"纯建筑"——不携带任何可复制物品的 NBT（容器内容、
+     * 展示框内物品），从导出来源上堵死用建筑扫描器打印刷物品的路径。
+     * 只有创造扫描器位于创造栏、生存玩家无法获得，故生存导出的无损保真才有保障。
+     */
+    public boolean isSafeExport() { return false; }
+
     public int getComfort() { return comfort; }
     public void setComfort(int v) { this.comfort = v; }
     public int getMagic() { return magic; }

@@ -88,6 +88,10 @@ public record ScannerExportPacket(BlockPos pos) implements CustomPacketPayload {
             return;
         }
 
+        // 导出保真分级：生存扫描器（isSafeExport=true）导出为纯建筑，连方块 NBT 都不写，
+        // 从来源上杜绝“箱子里藏物品→扫描→打印”刷物品；创造扫描器完整保真（创作者专用）。
+        boolean safe = scanner.isSafeExport();
+
         BlockPos wMin = scanner.getWorldMin();
         BlockPos wMax = scanner.getWorldMax();
         if (wMin == null || wMax == null) {
@@ -141,8 +145,9 @@ public record ScannerExportPacket(BlockPos pos) implements CustomPacketPayload {
                     }
                     blockIndices.add(pi);
 
-                    // Save BlockEntity NBT if present
-                    BlockEntity blockEntity = level.getBlockEntity(bp);
+                    // Save BlockEntity NBT if present. Survival scanner (safe export) skips
+                    // block NBT entirely — containers, signs, and banners all print bare.
+                    BlockEntity blockEntity = !safe ? level.getBlockEntity(bp) : null;
                     if (blockEntity != null) {
                         try {
                             CompoundTag tag = blockEntity.saveWithFullMetadata(level.registryAccess());
@@ -180,6 +185,11 @@ public record ScannerExportPacket(BlockPos pos) implements CustomPacketPayload {
                 tag.remove("UUID");
                 tag.remove("Pos");
                 tag.remove("Motion");
+                if (safe && ("minecraft:item_frame".equals(typeId) || "minecraft:glow_item_frame".equals(typeId))) {
+                    // 生存导出：剥掉展示框内的物品（框保留朝向/旋转，打印出来是空框），
+                    // 封死“框里放珍贵物品→扫描→打印”这一条刷物品路径。
+                    tag.remove("Item");
+                }
                 tag.putString("id", typeId);
                 tag.putInt("TileX", rx);
                 tag.putInt("TileY", ry);
