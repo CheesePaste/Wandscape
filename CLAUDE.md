@@ -70,6 +70,7 @@
 2. 涉及原版类名/方法/行为/NBT/NeoForge API 时，必须查源码（本地 sources jar / 反编译 / 在线源码），严禁凭记忆猜测。
 3. 大规模重构后重新建立索引。
 4. 本机可用的具体工具及用法见 `CLAUDE.local.md`（可选，不入库）。
+5. **参考模组查证**：动**结构/包组织/API 面/UI 形态/数据组织**类改动前，先到 `_refs/`（MineColonies/Create/Botania 浅克隆，自 2026-08 起挂在本仓库、已 gitignore）找对应做法作参照再动手；简单机械改动与纯 bug 修复不必。速查：殖民地/NPC/任务/建筑纵向切片看 MineColonies；顶层包形态/注册门面/API 门禁看 Create；代码量控制/API 稳定/注册工厂/Screen 精简看 Botania。三家解剖要点汇总在 `docs/plan/refactor/plan.md`【参考解剖判据】。**参考的是判据不是代码，禁止整段照搬**（版本/授权/结构都不同）。
 
 ## 代码组织约定
 
@@ -77,7 +78,7 @@
 
 现实约定：
 
-- 一个功能域一个顶层包（building/tourist/npc/warehouse/wand/element/...），相关客户端/网络/数据放该包下的子包，不另开共享包装杂物。
+- 目标形态（plan.md 已定，5 顶层包）：功能域收进 `content/` 子包（content/building、content/tourist/...）；**域内按功能块切，不设 client/network/data 子包**；网络包与 UI 全局收敛（foundation/networking、foundation/ui）。**未搬完的旧代码仍散在顶层各包**，旧代码不主动搬——除非任务正好落在那一块，顺手搬到目标形态且不动其他。
 - **跨包直接引用普通类 = 正常**。需要调另一个功能域的东西就直接 new / 直接调。之前的"通过 getXxxApi() + 事件通信、互不直接引用"是反模式，废除。
 - WandscapeApis / shared/event 只留给两类真实需求：
   1) 附属模组 / 整合包作者要用的公开契约；
