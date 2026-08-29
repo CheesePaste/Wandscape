@@ -22,19 +22,19 @@ public final class MageAttributeRoller {
         int lvl = safeLevel - 1;
         float maxHp = (float) Math.round(20 + 20 * skew(random)) + lvl * 2f;        // 20–40 + 2/级
         float maxMana = (float) Math.round(150 + 100 * skew(random)) + lvl * 15f;   // 150–250 + 15/级
-        float moveSpeed = 0.2f + random.nextFloat() * 0.2f + lvl * 0.02f;            // 0.2–0.4 + 0.02/级
+        float moveSpeed = 0.2f + random.nextFloat() * 0.2f;            // 0.2–0.4/级
         float spellPower = round2(0.5f + (float) skew(random) + lvl * 0.05f);        // 0.5–1.5 + 0.05/级
         float workSpeed = round2(0.5f + (float) skew(random) + lvl * 0.05f);
         float spellSpeed = round2(0.5f + (float) skew(random) + lvl * 0.05f);
-        float armorValue = (float) Math.round(10 * skew(random)) + lvl * 0.5f;       // 0–10 + 0.5/级
+        float armorValue = (float) Math.round(10 * skew(random));      // 0–10 + 0.5/级
         return new RecruitmentCandidate(safeLevel, maxHp, moveSpeed, spellPower,
                 workSpeed, spellSpeed, armorValue, maxMana, List.of());
     }
 
-    /** 偏斜随机因子：random⁴ ∈ [0,1)，多数偏向低值、偶发接近 1。 */
+    /** 偏斜随机因子：random2 ∈ [0,1)*/
     private static double skew(Random random) {
         double r = random.nextDouble();
-        return r * r * r * r;
+        return r * r;
     }
 
     /** 保留两位小数。 */

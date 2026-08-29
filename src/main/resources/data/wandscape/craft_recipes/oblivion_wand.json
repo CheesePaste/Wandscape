@@ -7,7 +7,7 @@
   "wand_color": "#7A2EA6",
   "attributes": [
     { "type": "max_hp", "operation": "addition", "amount": -40.0 },
-    { "type": "armor_value", "operation": "addition", "amount": -5.0 },
+    { "type": "armor_value", "operation": "addition", "amount": -15.0 },
     { "type": "spell_power", "operation": "addition", "amount": 2.0 }
   ],
   "output": { "item": "wandscape:wand" },
