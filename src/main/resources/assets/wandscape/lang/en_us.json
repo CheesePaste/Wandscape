@@ -938,7 +938,7 @@
   "gui.wandscape.npc.tip.unequip_success": "Unequipped: %s",
   "gui.wandscape.npc.tip.cannot_unequip_default": "Cannot unequip default wand",
   "gui.wandscape.npc.tip.not_equippable": "Cannot equip this item",
-  "guide.wandscape.common.open_build": "§b① Press §e1§b to open the §eBuild§b tab",
+  "guide.wandscape.common.open_build": "§b① Press §e1§b to open the §eBuild§b tab,Press C to catch mouse",
   "guide.wandscape.common.build_list_open": "§aBuild list opened",
   "guide.wandscape.common.aim_drag_place": "§b▶ §eHold right-click and drag§b to turn the view and place the building",
   "guide.wandscape.common.aim_rotate_submit": "§b▶ §eLeft-click§b to rotate, then click the right panel's §eSubmit Build§b → §eSubmit§b",
