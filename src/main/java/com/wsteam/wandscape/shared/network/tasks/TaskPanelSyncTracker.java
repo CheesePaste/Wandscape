@@ -34,7 +34,6 @@ import com.wsteam.wandscape.shared.data.WorkItem;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.task.engine.pool.BuildingTaskPool;
-import com.wsteam.wandscape.task.engine.pool.BuildingTaskQueue;
 import com.wsteam.wandscape.task.engine.pool.GlobalTask;
 import com.wsteam.wandscape.task.runtime.ExecutorState;
 import com.wsteam.wandscape.task.runtime.TaskState;
@@ -204,41 +203,6 @@ public final class TaskPanelSyncTracker {
                     assignedNpcId, assignedNpcUuid, assignedNpcName,
                     shortages, hasTarget, tx, ty, tz, blockerReason
             ));
-        }
-
-        // 2. Collect queued building WorkItems (if any)
-        BuildingTaskPool buildingTaskPool = null;
-        try {
-            var field = WandscapeEngine.class.getDeclaredField("buildingTaskPool");
-            field.setAccessible(true);
-            buildingTaskPool = (BuildingTaskPool) field.get(null);
-        } catch (Exception ignored) {}
-
-        if (buildingTaskPool != null) {
-            long queuedVirtualId = -1000;
-            for (Map.Entry<UUID, BuildingTaskQueue> entry : buildingTaskPool.getAll().entrySet()) {
-                UUID bId = entry.getKey();
-                BuildingState bs = buildingData.getBuilding(bId);
-                if (bs == null || !colonyId.equals(bs.getColonyId())) continue;
-
-                BuildingTaskQueue q = entry.getValue();
-                String bName = formatBuildingName(bs);
-                int index = 1;
-                for (WorkItem item : q.getPending()) {
-                    queuedVirtualId--;
-                    String title = formatWorkItemTitle(item, bName, index++);
-                    taskDtos.add(new TaskSummaryDto(
-                            queuedVirtualId, "queued", title,
-                            item.blueprintId(), bId, bName,
-                            "QUEUED", item.priority(), 0, 1,
-                            -1, 0,
-                            -1, null, "",
-                            List.of(), true,
-                            bs.getAnchor().getX(), bs.getAnchor().getY(), bs.getAnchor().getZ(),
-                            "QUEUED_STAGE"
-                    ));
-                }
-            }
         }
 
         // 3. Collect Mages

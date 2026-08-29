@@ -26,13 +26,12 @@ import top.theillusivec4.curios.server.command.CurioArgumentType;
  *
  * <pre>
  *   /wandscape curios list [target]                 — 列出目标法师的槽位类型与数量（默认全部殖民地法师）
- *   /wandscape curios mirror                        — 强制把法师默认槽位重新镜像为玩家标准槽位集
  *   /wandscape curios set|add|remove <slot> <count> [target] — 实例级调整（持久化在实体，/reload 不清）
  * </pre>
  *
- * <p>语义对齐 Curios 的 {@code /curios} 命令：<b>实例级</b>增减只作用于目标法师自身的栈大小；
- * {@code wandscape:wandscape_npc}）。{@code mirror} 只刷新实体类型级槽位映射，对已存在法师在下次
- * 反序列化（区块重载/重启）后生效，不覆盖实例级调整。
+ * <p>实体类型级默认槽位由数据包 {@code data/curios/curios/entities/wandscape_npc.json} 声明
+ * （与玩家标准槽位集一致），随 Curios 自带 datapack reload 与 sync 生效。本命令只做<b>实例级</b>
+ * 调整：set/add/remove 增减只作用于目标法师自身的栈大小，持久化在实体，区块重载/重启不清除。
  */
 public final class CuriosCommand {
 
@@ -48,15 +47,6 @@ public final class CuriosCommand {
                         .then(Commands.argument("target", EntityArgument.entity())
                                 .executes(ctx -> list(ctx.getSource(),
                                         EntityArgument.getEntity(ctx, "target")))))
-                .then(Commands.literal("mirror")
-                        .requires(src -> src.hasPermission(2))
-                        .executes(ctx -> {
-                            CuriosCompatImpl.mirrorMageSlots(true);
-                            ctx.getSource().sendSuccess(() -> Component.literal(
-                                    "[Wandscape] Mage curio slots re-mirrored to the player standard set."),
-                                    true);
-                            return 1;
-                        }))
                 .then(adjustNode("set"))
                 .then(adjustNode("add"))
                 .then(adjustNode("remove"));

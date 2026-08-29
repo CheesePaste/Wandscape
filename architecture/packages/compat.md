@@ -32,10 +32,13 @@ classpath，故本包须保证「无 Curios 也能正常启动」——zero 硬�
 - `CuriosCompatImpl`：**唯一引用 `top.theillusivec4.curios.*` 类型的类**。仅在门面确认 Curios 已加载
   （`ModList.get().isLoaded("curios")`）后经门控静态调用触达；`loaded == false` 时门面提前返回，
   本类永不装载，故无 Curios 时无 `NoClassDefFoundError`。承载法师饰品菜单注册、护符 `ICurio`
-  capability、槽位镜像、铁魔法饰品属性桥（`syncIronCurioAttributes`）、`/wandscape curios` 归属。
+  capability、铁魔法饰品属性桥（`syncIronCurioAttributes`）、`/wandscape curios` 归属。
 - `NpcCuriosMenu`/`NpcCurioSlot`/`NpcOpenCuriosPacket`/`CuriosCommand`/`client/NpcCuriosScreen`：
   法师饰品容器菜单、槽位、打开请求 payload、命令与容器屏幕（仅在 Curios 加载时由 `CuriosCompatImpl`
   注册/引用，属 present-only）。
+- 法师槽位映射：由数据包 `data/curios/curios/entities/wandscape_npc.json` 声明（10 标准槽位，
+  即 Curios 1.21.1 玩家默认集；`replace:false` 允许整合包在自有 `curios/entities/*.json` 中叠加或
+  以 `replace:true` 覆盖），随 Curios 自带 datapack reload 与 sync 分发，客户端零改动——**无运行时反射**。
 - `client/NpcCuriosButton`：模型框左上角饰品按钮。**硬编码纹样 `ResourceLocation`**
   （`curios:button`/`curios:button_highlighted`）取代 Curios 的 `CuriosButton.BIG`，使本类自身无
   Curios 依赖——`NpcScreen` 持有其字段也不触发 Curios 类装载。

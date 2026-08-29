@@ -1,5 +1,10 @@
 # Plan: 法师 Curios 饰品格子 —— 运行时镜像玩家槽位 + /wandscape curios 指令
 
+> **已被取代（2026-08-29）**：本文的「运行时反射镜像」方案因 CurseForge 人工审核风险已废弃——
+> 改为数据包声明槽位（`data/curios/curios/entities/wandscape_npc.json`，零反射）。
+> 见 `docs/plan/curseforge-review-de-risk.md` 与 `docs/decisions.md`（2026-08-29 决策）。
+> 下文保留作历史记录，不再作为实现依据。
+
 > 方案决策（2026-08-28 修订）：默认槽位**不在 JSON 写死**，而是**运行时镜像玩家标准槽位集**——
 > 这样铁魔法法术书槽位等其他模组给玩家加的新槽位，法师初始就拥有。兼配 `/wandscape curios` 指令
 > 供模组/整合包作者精细调整。实现任务清单见 `.claude/plans/partitioned-tickling-music.md`（已批准，

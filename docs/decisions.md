@@ -2,6 +2,22 @@
 
 本文件记录偏离直觉的设计选择及其原因，供后续开发快速理解「为什么这么做」。
 
+## 2026-08-29：CurseForge 人审去风险——法师 Curios 槽位改数据包声明（删反射镜像）+ 任务面板静默失败反射块删除
+
+**需求**：1.11.0 上传后进入 CurseForge 人工审核。目标是把 jar 内「反射访问非自有类私有状态 + 改写外部 mod 静态字段」等自动扫描高危模式清零，使后续版本走自动审核直发。
+
+**根因**：
+1. **Curios 反射**：原 `CuriosCompatImpl.mirrorMageSlots` 用 `getDeclaredField("entitySlots")` + `setAccessible` + `Field.set` 改写 Curios 内部类 `CuriosEntityManager.SERVER` 的实体槽位表——扫描器头号高危模式（恶意 mod 惯用同套路关校验/复制物品/改写对方运行时状态），有正当用途也无法自动放行。且 Curios 9.5.x 对 `CuriosEntityManager` 无公开写 API，但槽位本就走官方数据驱动（`curios/entities/*.json`），镜像要的效果数据包全有；Curios 16.0.0 已把该类改名删除，跨版本脆弱实锤。
+2. **任务面板反射**：`TaskPanelSyncTracker` 反射 `WandscapeEngine.class.getDeclaredField("buildingTaskPool")`，但该字段根本不在 WandscapeEngine 上（真实位置 `core/ecs/World.buildingTaskPool` 且为 public），每次抛 `NoSuchFieldException` 被 `catch (Exception ignored)` 吞掉——「建筑待办队列」段从未渲染过。用户确认：功能已齐全，直接删除整块，不做修复。
+
+**决策**：
+1. **法师槽位映射改官方数据包声明**：新增 `data/curios/curios/entities/wandscape_npc.json`，`slots` 列 1.21.1 的 10 个标准槽位（back/belt/body/bracelet/charm/curio/hands/head/necklace/ring），`replace:false` 且带 `neoforge:mod_loaded` 条件；随 Curios 自家 reload + sync 分发，客户端零改动。整合包可在自有 `curios/entities/*.json` 里叠加（`replace:false`）或覆盖（`replace:true`）扩展法师槽。
+2. **删运行时镜像**：`mirrorMageSlots`（含重载）与 `ServerStartingEvent`/`OnDatapackSyncEvent` 钩子全删；`ServerHooks` 只留 `onCurioChange`（铁魔法属性桥，全公开 API）。`/wandscape curios mirror` 子命令删除，`list/set/add/remove` 保留（全公开 API 的实例级调整，持久在实体 NBT）。
+3. **取舍**：法师默认槽位从「运行时镜像玩家槽位集（含其它 mod 实时新加的槽）」降为「静态标准槽位集」——以标准数据驱动 + 零反射换取通过人审，扩展交给数据包。
+4. **删任务面板反射块**：`TaskPanelSyncTracker` 步 2 整块删除，`BuildingTaskQueue` import 同步清理；工坊流水线展示本就由 `buildProductionGroups` 用 `world.buildingTaskPool` 合法读取。
+
+**影响**：`compat/curios/CuriosCompatImpl.java`/`CuriosCommand.java` 删反射与 mirror、新增 `src/main/resources/data/curios/curios/entities/wandscape_npc.json`、`shared/network/tasks/TaskPanelSyncTracker.java` 删块、`architecture/packages/compat.md` 槽位小节改写。方案详见 `docs/plan/curseforge-review-de-risk.md`。
+
 ## 2026-08-29：Build 右侧面板补六个轴微调按钮——「微调即自动锁定」
 
 **需求**（用户指令）：V 面板 Build 子模式下右侧缺少 X+1/X-1/Y+1/Y-1/Z+1/Z-1 六个微调按钮，需补上。

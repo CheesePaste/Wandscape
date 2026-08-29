@@ -1,0 +1,24 @@
+{
+  "replace": false,
+  "conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "wandscape"
+    }
+  ],
+  "entities": [
+    "wandscape:wandscape_npc"
+  ],
+  "slots": [
+    "back",
+    "belt",
+    "body",
+    "bracelet",
+    "charm",
+    "curio",
+    "hands",
+    "head",
+    "necklace",
+    "ring"
+  ]
+}

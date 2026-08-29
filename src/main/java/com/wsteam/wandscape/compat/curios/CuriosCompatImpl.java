@@ -1,11 +1,8 @@
 package com.wsteam.wandscape.compat.curios;
 
-import java.lang.reflect.Field;
 import java.util.Locale;
-import java.util.Map;
 import java.util.function.Predicate;
 
-import com.google.common.collect.ImmutableMap;
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.compass.CompassService;
 import com.wsteam.wandscape.compat.curios.client.NpcCuriosScreen;
@@ -13,14 +10,12 @@ import com.wsteam.wandscape.compat.ironspellbooks.IronSpellsAttributes;
 import com.wsteam.wandscape.core.types.AttributeType;
 import com.wsteam.wandscape.engine.attribute.WandscapeAttributes;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
-import com.wsteam.wandscape.shared.log.Log;
 
 import net.minecraft.core.Holder;
 import net.minecraft.core.NonNullList;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
@@ -28,15 +23,12 @@ import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.common.extensions.IMenuTypeExtension;
-import net.neoforged.neoforge.event.OnDatapackSyncEvent;
-import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -44,11 +36,9 @@ import top.theillusivec4.curios.api.CuriosApi;
 import top.theillusivec4.curios.api.CuriosCapability;
 import top.theillusivec4.curios.api.SlotContext;
 import top.theillusivec4.curios.api.event.CurioChangeEvent;
-import top.theillusivec4.curios.api.type.ISlotType;
 import top.theillusivec4.curios.api.type.capability.ICurio;
 import top.theillusivec4.curios.api.type.inventory.ICurioStacksHandler;
 import top.theillusivec4.curios.api.type.inventory.IDynamicStackHandler;
-import top.theillusivec4.curios.common.data.CuriosEntityManager;
 
 /**
  * Wandscape × Curios API 兼容实现。
@@ -59,8 +49,6 @@ import top.theillusivec4.curios.common.data.CuriosEntityManager;
  * {@code loaded == false} 提前返回共同保证。
  */
 public final class CuriosCompatImpl {
-
-    private static final String TAG = "CuriosCompat";
 
     /** 法师饰品容器菜单（独立 DeferredRegister——不可放进 Wandscape.MENUS，否则类加载期无条件引用 Curios 类）。 */
     public static DeferredHolder<MenuType<?>, MenuType<NpcCuriosMenu>> NPC_CURIOS_MENU;
@@ -130,22 +118,12 @@ public final class CuriosCompatImpl {
         );
     }
 
-    /** 服务端钩子：数据 reload 与玩家登录同步把法师槽位镜像为玩家标准槽位集。 */
+    /** 服务端钩子：饰品槽变化 → 重建铁魔法饰品属性桥。
+     *  法师槽位映射由数据包 {@code data/curios/curios/entities/wandscape_npc.json} 声明，
+     *  Curios 自带 datapack reload 与 sync 分发，无须任何运行时镜像。 */
     public static final class ServerHooks {
 
         private ServerHooks() {
-        }
-
-        @SubscribeEvent
-        public static void onServerStarting(ServerStartingEvent evt) {
-            mirrorMageSlots();
-        }
-
-        /** HIGHEST —— 必须先于 Curios 自己的 onDatapackSync 发包，注入才能进同步包分发到客户端；
-         *  数据 reload（全员广播）与玩家加入（个人）都会触发本事件。 */
-        @SubscribeEvent(priority = EventPriority.HIGHEST)
-        public static void onDatapackSync(OnDatapackSyncEvent evt) {
-            mirrorMageSlots();
         }
 
         /** 饰品槽变化（换装/摘下/换入/存档读入后首次 tick 的 prevStack 对比）→ 重建铁魔法饰品属性桥。 */
@@ -154,52 +132,6 @@ public final class CuriosCompatImpl {
             if (evt.getEntity() instanceof WandscapeNpc npc) {
                 syncIronCurioAttributes(npc);
             }
-        }
-    }
-
-    static void mirrorMageSlots() {
-        mirrorMageSlots(false);
-    }
-
-    /**
-     * 把法师实体类型的槽位映射镜像为玩家标准槽位集，写入 Curios 服务端实体槽位表。
-     *
-     * <p>规则：
-     * <ul>
-     *   <li>玩家标准槽位集为空 → 法师也为空（保持"新玩家"语义）。</li>
-     *   <li>非强制时，若数据包已显式定义法师槽位（{@code curios/entities/*.json} 提及
-     *       {@code wandscape:wandscape_npc}）→ 数据层胜出，本次镜像让位。{@code /wandscape curios mirror}
-     *       传 {@code force=true} 强制执行。</li>
-     *   <li>否则写入 {@code wandscape:wandscape_npc → 玩家槽位集副本}。</li>
-     * </ul>
-     *
-     * <p>写入后 Curios 的 {@code CuriosEntityManager.getSyncPacket()} 会带上法师条目，随 datapack sync
-     * 分发到客户端——客户端（菜单构建、实体饰品 handler）无须任何额外改动。
-     */
-    static void mirrorMageSlots(boolean force) {
-        try {
-            EntityType<?> mageType = Wandscape.WANDSCAPE_NPC.get();
-            Field field = CuriosEntityManager.class.getDeclaredField("entitySlots");
-            field.setAccessible(true);
-            @SuppressWarnings("unchecked")
-            Map<EntityType<?>, Map<String, ISlotType>> current =
-                    (Map<EntityType<?>, Map<String, ISlotType>>) field.get(CuriosEntityManager.SERVER);
-
-            if (!force && current.containsKey(mageType)) {
-                return; // 数据包显式定义胜出
-            }
-            Map<String, ISlotType> playerSlots = CuriosApi.getEntitySlots(EntityType.PLAYER, false);
-            ImmutableMap.Builder<EntityType<?>, Map<String, ISlotType>> builder = ImmutableMap.builder();
-            builder.putAll(current);
-            if (!playerSlots.isEmpty()) {
-                builder.put(mageType, ImmutableMap.copyOf(playerSlots));
-            }
-            field.set(CuriosEntityManager.SERVER, builder.buildKeepingLast());
-            Log.info(TAG, "Mage curio slots mirrored from player standard set ({} slot types)",
-                    playerSlots.size());
-        } catch (Exception e) {
-            // 反射字段随 Curios 版本可能变动：失败则法师无饰品槽，功能惰性降级，不影响其余功能
-            Log.warn(TAG, "Failed to mirror player curio slots onto the mage: {}", e.getMessage());
         }
     }
 
