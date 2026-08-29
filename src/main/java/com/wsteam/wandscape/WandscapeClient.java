@@ -505,6 +505,13 @@ public class WandscapeClient {
     private static void onClientTick(ClientTickEvent.Post event) {
         ColonyAmbientSystem.tick();
 
+        Minecraft mc = Minecraft.getInstance();
+        // 保险：管理面板仅支持主世界。若面板在主世界打开后进入下界/末地等维度，
+        // 立即回收面板，避免俯瞰相机等 UI 状态在非主世界继续运行。
+        if (WandscapePanelState.isPanelOpen() && !WandscapePanelState.isInSupportedWorld()) {
+            WandscapePanelState.closePanel();
+        }
+
         // F4: 专用「隐藏/显示面板」键——切换面板可见性。可见→隐藏；隐藏（含被 F1 隐藏）→显示。
         // 隐藏后面板不渲染、输入穿透；F1 隐藏全部 GUI 时面板同样隐藏（见 isPanelHidden）。
         while (PANEL_HIDE_TOGGLE.consumeClick()) {
@@ -527,6 +534,14 @@ public class WandscapeClient {
                     WandscapePanelState.closePanel();
                 }
             } else {
+                // 非主世界维度拒绝打开管理面板（打开会触发俯瞰相机等 UI 状态，导致面板/UI 异常）
+                if (!WandscapePanelState.isInSupportedWorld()) {
+                    if (mc.player != null) {
+                        mc.player.displayClientMessage(
+                                Component.translatable("message.wandscape.panel.overworld_only"), false);
+                    }
+                    continue;
+                }
                 WandscapePanelState.openPanel();
             }
         }
@@ -539,7 +554,6 @@ public class WandscapeClient {
         }
         while (WAREHOUSE_TERMINAL_KEY.consumeClick()) {
             if (searchFocused) continue;
-            Minecraft mc = Minecraft.getInstance();
             if (mc != null && mc.screen == null) {
                 PacketDistributor.sendToServer(new com.wsteam.wandscape.warehouse.network.WarehouseTerminalKeyPacket());
             }

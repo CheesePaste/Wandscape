@@ -12,6 +12,7 @@ import com.wsteam.wandscape.road.client.RoadPlacementState;
 import com.wsteam.wandscape.shared.network.PanelStateTogglePacket;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.network.PacketDistributor;
 /**
  * Client-side static state holder for the Wandscape comprehensive panel.
@@ -190,7 +191,18 @@ public final class WandscapePanelState {
         return panelEverOpened;
     }
 
+    /** 管理面板仅支持主世界：非主世界（下界/末地/模组维度）打开会让俯瞰相机等客户端 UI
+     *  状态在主世界假设下运行，造成面板/UI 异常。当前是否处于可打开面板的世界。 */
+    public static boolean isInSupportedWorld() {
+        Minecraft mc = Minecraft.getInstance();
+        return mc != null && mc.level != null && mc.level.dimension() == Level.OVERWORLD;
+    }
+
     public static void openPanel() {
+        // 非主世界维度禁止打开——覆盖 V 键、指南入口等所有打开面板的调用点
+        if (!isInSupportedWorld()) {
+            return;
+        }
         panelOpen = true;
         // 常态 = 游戏层（抓取鼠标/准心/右键交互），不再默认抬光标
         cursorLifted = false;

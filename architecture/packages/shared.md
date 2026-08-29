@@ -43,7 +43,7 @@ MINIMAL 风格：渐变玻璃面板 + 发光边框 + MedievalColors 调色板。
 |------|------|
 | component/ | MedievalScreen(基类) / MedievalConfirmDialog(可复用模态确认框，MedievalScreen 基类内置 openConfirmDialog) / MedievalButton / TabBar / ScrollableList / ElementPanel / ProgressIndicator / TaskQueuePanel / Slider / SearchBox(中英双语物品搜索) 等 |
 | vanilla/ | 原版容器共享组件：ToggleableSlot(可按条件显隐的 vanilla 槽) + VanillaPlayerInventory(3×9+快捷栏玩家背包槽区构建器，含箱类坐标公式/显隐绑定/原版槽底渲染) |
-| panel/ | WandscapePanelState + PanelController + PanelOverlay(顶部HUD栏+左侧侧边栏+STATS面板+警告浮层) + BuildingSelectionOverlay + AnomalyScreen + TaskManagementOverlay + TaskManagementClientState(全局任务大厅与法师名册抽屉面板) |
+| panel/ | WandscapePanelState + PanelController + PanelOverlay(顶部HUD栏+左侧侧边栏+STATS面板+警告浮层) + BuildingSelectionOverlay + AnomalyScreen + TaskManagementOverlay + TaskManagementClientState(全局任务大厅与法师名册抽屉面板)。**仅主世界**：`openPanel()` 与 V 键守卫（`isInSupportedWorld`）拒绝非主世界维度打开；tick 保险在玩家带着已开面板进入其他维度时自动关闭 |
 | guidance/ | GuideSession + GuideStep + GuideRegistry + GuideRenderer (左下角四态新手引导弹窗：默认/选卡/射线瞄准/锁定微调，支持点击 ▼/▲ 折叠/展开) |
 | util/ | BuildingPreviewRenderer + WandscapeHighlightRenderer + RenderUtil |
 | (根) | ReplayScreenGuard(回放兼容：ReforgedPlay/ReplayMod 播放中取消所有 MedievalScreen 打开) |

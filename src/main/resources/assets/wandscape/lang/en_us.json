@@ -150,6 +150,7 @@
   "message.wandscape.town.welcome": "[Wandscape] Welcome! Press V to open the building panel and start building your town. Once the panel is open, press C to release the mouse and H to open the tutorial.\nThis mod is still in its early versions with few built-in spells — playing alongside irons_spellbooks (Iron Spells) is recommended.",
   "message.wandscape.projection.cannot_pin": "Cannot pin — no block under the crosshair",
   "message.wandscape.overview.cannot_pin": "Cannot pin — no block under the crosshair",
+  "message.wandscape.panel.overworld_only": "The management panel can only be opened in the Overworld",
   "gui.wandscape.townhall.title": "Town Hall",
   "gui.wandscape.townhall.name_hint": "Town name",
   "gui.wandscape.townhall.founder": "Founder: %s",
