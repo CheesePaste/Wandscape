@@ -37,11 +37,11 @@ public final class MageHutAttributes {
 
     private static final Map<AttributeType, AttrSpec> SPECS = Map.of(
             AttributeType.MAX_HP,       new AttrSpec(20f, 40f,  2f,    1f),
-            AttributeType.MOVE_SPEED,   new AttrSpec(0.2f, 0.4f, 0.02f, 0.01f),
+            AttributeType.MOVE_SPEED,   new AttrSpec(0.2f, 0.4f, 0f, 0.01f),
             AttributeType.SPELL_POWER,  new AttrSpec(0.5f, 1.5f, 0.05f, 0.05f),
             AttributeType.WORK_SPEED,   new AttrSpec(0.5f, 1.5f, 0.05f, 0.05f),
             AttributeType.SPELL_SPEED,  new AttrSpec(0.5f, 1.5f, 0.05f, 0.05f),
-            AttributeType.ARMOR_VALUE,  new AttrSpec(0f,   10f,  0.5f,  0.5f),
+            AttributeType.ARMOR_VALUE,  new AttrSpec(0f,   10f,  0f,  0.5f),
             AttributeType.MAX_MANA,     new AttrSpec(150f, 250f, 15f,   5f));
 
     /** All seven attributes in panel display order (index 0..6). */
