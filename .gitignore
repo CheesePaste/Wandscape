@@ -19,7 +19,8 @@ magiccircles/
 CLAUDE.local.md
 ### Dev tools (maintained outside the repo) ###
 tools/
-
+ReForgedPlay/
+ReForgedPlay-1.21/
 ### 平衡分析工作区（脚本/数据/模拟输出，不入库） ###
 /balance/
 
