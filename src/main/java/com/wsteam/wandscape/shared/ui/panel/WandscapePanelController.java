@@ -226,6 +226,30 @@ public final class WandscapePanelController {
                 event.setCanceled(true);
                 return;
             }
+            // 六个轴微调按钮（X-/X+/Y-/Y+/Z-/Z+，每步一格）：沿轴平移虚影一格并自动锁定，
+            // 避免准星跟随下一帧覆盖位移
+            int nudgeIdx = com.wsteam.wandscape.projection.client.BuildPopPanelOverlay.hitTestNudge(mouseX, mouseY, screenW);
+            if (nudgeIdx >= 0) {
+                net.minecraft.core.BlockPos ghost = com.wsteam.wandscape.projection.client.ProjectionClientState.getGhostPos();
+                if (ghost == null) {
+                    mc.player.displayClientMessage(
+                            net.minecraft.network.chat.Component.literal("§c")
+                                    .append(com.wsteam.wandscape.shared.ui.I18n.name(
+                                            "message.wandscape.projection.no_target",
+                                            "没有可施工的位置 — 先对准地面")), true);
+                } else {
+                    int[] d = com.wsteam.wandscape.projection.client.BuildPopPanelOverlay.nudgeDelta(nudgeIdx);
+                    net.minecraft.core.BlockPos nudgePos = ghost.offset(d[0], d[1], d[2]);
+                    com.wsteam.wandscape.projection.client.ProjectionClientState.setGhostPos(nudgePos);
+                    com.wsteam.wandscape.projection.client.ProjectionClientState.setPinned(true);
+                    com.wsteam.wandscape.projection.client.ProjectionClientState.setOverlapDetected(
+                            com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket.findBuildingIdAt(nudgePos) != null);
+                }
+                mc.getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(
+                        net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK, 1.0f));
+                event.setCanceled(true);
+                return;
+            }
             if (com.wsteam.wandscape.projection.client.BuildPopPanelOverlay.isOverPanel(mouseX, mouseY, screenW)) {
                 event.setCanceled(true);
                 return;

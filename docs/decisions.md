@@ -2,6 +2,18 @@
 
 本文件记录偏离直觉的设计选择及其原因，供后续开发快速理解「为什么这么做」。
 
+## 2026-08-29：Build 右侧面板补六个轴微调按钮——「微调即自动锁定」
+
+**需求**（用户指令）：V 面板 Build 子模式下右侧缺少 X+1/X-1/Y+1/Y-1/Z+1/Z-1 六个微调按钮，需补上。
+
+**决策**：
+- **按钮沿轴平移一格 = 移动 ghostPos（已居中锚点）**：`ghostPos` 是 `centerAnchor` 后的放置锚点，`offset(±1,0,0)` 之类按轴平移即建筑精确移动一格，无需再经过中心换算。
+- **点击微调自动置 pin（锁定）**：未锁定时（俯瞰下）ghost 每帧跟随准星，一次位移会被下一帧 raycast 覆盖，微调必然无效；因此按钮点击即 `setPinned(true)`，保证位移粘住。步行模式下 ghost 本已不随准星刷新，置 pin 也无副作用。这比「先右键锁定再点按钮」少一步，符合「轻度不硬核」。若准星无目标（ghostPos==null）与提交按钮一致上屏提示。
+- **重叠检测即时刷新**：与 Gizmo 拖拽同一口径（`findBuildingIdAt != null`）；锁定态下每 tick 的 `updateGhostPosition` 也会接力复查。
+- **Gizmo 互斥**：`BuildGizmoController.onMouseButtonPre` 增加面板区域守卫——光标落在右侧面板（含微调按钮）时不取消/不启动 3D 轴拖拽，避免同一记左键点按钮又在轴上拖、虚影双重位移。
+
+**影响**：`BuildPopPanelOverlay`（PANEL_H 112→132，新增 NUDGE_* 几何/hitTestNudge/nudgeDelta）、`WandscapePanelController.onMouseButtonPre`（nudge 点击处理）、`BuildGizmoController.onMouseButtonPre`（面板守卫）。无测试（改动为纯渲染 + 客户端点击分支，无纯净逻辑）。
+
 ## 2026-08-29：建筑扫描器导出按「保真分层」——生存导出不带 NBT，创造导出完整保真
 
 **需求**（用户指令）：建筑扫描器会存储箱子等方块 NBT，玩家可「箱子里藏东西→扫描→打印」刷物品；另与其它模组一起加载时，黑名单式剥离容器 NBT 难以防全。用户拍板：**生存建筑扫描器导出不带 NBT，创造建筑扫描器导出正常带 NBT**，并确认不加建造端兜底、信任导出为唯一入口；装饰实体采用「保留布局、剥掉框内物品」。

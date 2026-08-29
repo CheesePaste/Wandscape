@@ -14,13 +14,15 @@ import net.minecraft.core.BlockPos;
 /**
  * Right-side pop panel for Build Projection mode.
  * Displays target building coordinates (X, Y, Z), Lock/Unlock button, rotation
- * angle readout, and a Submit button (always shown — construction does not
- * require pinning first). Rotation itself is done with left-click on the ghost.
+ * angle readout, six axis nudge buttons (X/Y/Z ±1, move the ghost by one block,
+ * auto-locking so the nudge sticks), and a Submit button (always shown —
+ * construction does not require pinning first). Rotation itself is done with
+ * left-click on the ghost.
  */
 public final class BuildPopPanelOverlay {
 
     public static final int PANEL_W = 164;
-    public static final int PANEL_H = 112;
+    public static final int PANEL_H = 132;
     public static final int PANEL_RIGHT_MARGIN = 8;
     public static final int PANEL_TOP_MARGIN = WandscapePanelOverlay.TOP_BAR_H + 8;
 
@@ -29,11 +31,18 @@ public final class BuildPopPanelOverlay {
     private static final int POS_Y = HEADER_Y + 18;
     private static final int STATUS_Y = POS_Y + 16;
     private static final int ROT_Y = STATUS_Y + 20;
-    private static final int SUBMIT_Y = ROT_Y + 22;
+    private static final int NUDGE_Y = ROT_Y + 18;
+    private static final int SUBMIT_Y = NUDGE_Y + 24;
 
     private static final int BTN_W = 58;
     private static final int BTN_H = 16;
     private static final int BTN_RIGHT_PAD = 8;
+
+    // 六个轴微调按钮（X-/X+/Y-/Y+/Z-/Z+，每步一格）几何；NUDGE_LABELS 下标与 nudgeDelta() 一一对应
+    private static final int NUDGE_BTN_W = 22;
+    private static final int NUDGE_BTN_H = 14;
+    private static final int NUDGE_GAP = 3;
+    private static final String[] NUDGE_LABELS = {"X-1", "X+1", "Y-1", "Y+1", "Z-1", "Z+1"};
 
     private BuildPopPanelOverlay() {}
 
@@ -114,6 +123,19 @@ public final class BuildPopPanelOverlay {
         int rotDeg = ProjectionClientState.getRotationSteps() * 90;
         g.drawString(font, I18n.name("gui.wandscape.buildpop.rotation", "§7朝向: §e%d°", rotDeg).getString(), panelX + 8, y + 3, 0xFFFFFFFF, false);
 
+        // Axis nudge buttons (X-1 X+1 Y-1 Y+1 Z-1 Z+1) — move the ghost by one block along the axis
+        y = panelY + NUDGE_Y;
+        int nudgeX = panelX + 8;
+        for (int i = 0; i < NUDGE_LABELS.length; i++) {
+            boolean hover = mouseX >= nudgeX && mouseX <= nudgeX + NUDGE_BTN_W
+                    && mouseY >= y && mouseY <= y + NUDGE_BTN_H;
+            int nudgeBg = hover ? 0xFF282C34 : 0xFF1C1F26;
+            g.fill(RenderType.guiOverlay(), nudgeX, y, nudgeX + NUDGE_BTN_W, y + NUDGE_BTN_H, 0, nudgeBg);
+            g.fill(RenderType.guiOverlay(), nudgeX, y + NUDGE_BTN_H - 1, nudgeX + NUDGE_BTN_W, y + NUDGE_BTN_H, 0, 0xFF3A3E47);
+            g.drawCenteredString(font, NUDGE_LABELS[i], nudgeX + NUDGE_BTN_W / 2, y + 3, hover ? 0xFFFFFFFF : 0xFFCCCCCC);
+            nudgeX += NUDGE_BTN_W + NUDGE_GAP;
+        }
+
         // Submit button (always shown — construction does not require pinning first)
         y = panelY + SUBMIT_Y;
         int submitW = PANEL_W - 16;
@@ -152,5 +174,35 @@ public final class BuildPopPanelOverlay {
         int submitX = panelX + 8;
         int submitY = panelY + SUBMIT_Y;
         return mouseX >= submitX && mouseX <= submitX + submitW && mouseY >= submitY && mouseY <= submitY + BTN_H;
+    }
+
+    /**
+     * 命中的微调按钮下标（0=X-1, 1=X+1, 2=Y-1, 3=Y+1, 4=Z-1, 5=Z+1），未命中返回 -1。
+     * 下标与 {@link #nudgeDelta(int)}、{@link #NUDGE_LABELS} 一一对应。
+     */
+    public static int hitTestNudge(double mouseX, double mouseY, int screenW) {
+        if (!isActive()) return -1;
+        int panelX = getPanelX(screenW);
+        int startX = panelX + 8;
+        int y = getPanelY() + NUDGE_Y;
+        if (mouseY < y || mouseY > y + NUDGE_BTN_H) return -1;
+        for (int i = 0; i < NUDGE_LABELS.length; i++) {
+            int x = startX + i * (NUDGE_BTN_W + NUDGE_GAP);
+            if (mouseX >= x && mouseX <= x + NUDGE_BTN_W) return i;
+        }
+        return -1;
+    }
+
+    /** 微调按钮的位移增量 [dx, dy, dz]，下标与 {@link #hitTestNudge} 一致。 */
+    public static int[] nudgeDelta(int index) {
+        return switch (index) {
+            case 0 -> new int[]{-1, 0, 0};
+            case 1 -> new int[]{ 1, 0, 0};
+            case 2 -> new int[]{ 0, -1, 0};
+            case 3 -> new int[]{ 0, 1, 0};
+            case 4 -> new int[]{ 0, 0, -1};
+            case 5 -> new int[]{ 0, 0, 1};
+            default -> new int[]{0, 0, 0};
+        };
     }
 }

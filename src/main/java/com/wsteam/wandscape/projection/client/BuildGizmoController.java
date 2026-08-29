@@ -107,6 +107,14 @@ public final class BuildGizmoController {
 
     static void onMouseButtonPre(InputEvent.MouseButton.Pre event) {
         if (!isActive()) return;
+        // 光标落在右侧建造面板（含微调按钮/锁定/提交）上时交给面板处理，
+        // 避免同一记左键既点按钮又在 3D 轴上起拖拽，导致虚影双重位移。
+        Minecraft mc = Minecraft.getInstance();
+        double guiScale = mc.getWindow().getGuiScale();
+        double mx = mc.mouseHandler.xpos() / guiScale;
+        double my = mc.mouseHandler.ypos() / guiScale;
+        int screenW = mc.getWindow().getGuiScaledWidth();
+        if (BuildPopPanelOverlay.isOverPanel(mx, my, screenW)) return;
         if (hoveredAxis != AxisDrag.NONE || draggingAxis != AxisDrag.NONE) {
             if (event.getButton() == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
                 event.setCanceled(true);
