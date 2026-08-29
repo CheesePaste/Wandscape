@@ -1770,3 +1770,17 @@
 - `engine/source/BuildingTaskSource.java`：`cancelBuildingTasks` 补充 global pool 扫描清理。
 - `engine/TaskPoolSavedData.java`：增加孤儿建筑任务加载拦截。
 - `engine/system/CancelAutoSupplyTest.java`：新增自动合成取消与数量扣减单元测试。
+
+## 2026-08-29：Curios 软依赖改「零引用门面 + 门控实现」——无 Curios 时不再因类装载崩溃
+
+**需求**：Wandscape 1.11.0 在未安装 Curios API 的环境启动即崩溃（`NoClassDefFoundError: top.theillusivec4.curios.api.type.capability.ICurio`，位于 `Wandscape.<init>` 的 `CuriosCompat.init`）。Curios 是 compileOnly 可选依赖，未安装时其类不在运行期 classpath。
+
+**根因分析**：`CuriosCompat` 类直接引用大量 Curios 类型（`ICurio`/`CuriosApi`/`CurioChangeEvent`/`ISlotType`/`CuriosEntityManager`…）。JVM 在类装载/验证期解析这些引用（`new`、字段类型、`xxx.class` 常量、方法体类型），因此只要 `CuriosCompat` 被装载而 Curios 缺失即抛 `NoClassDefFoundError`。而 `Wandscape.<init>` 无条件调用 `CuriosCompat.init`，导致无 Curios 时整模启动崩溃。`IronSpellsCompat` 不崩仅因其方法体从不引用铁魔法类型。同类风险还潜伏在 `Wandscape` 的 payload 注册（无条件 `NpcOpenCuriosPacket.TYPE`）、`WandscapeClient` 菜单屏幕注册、`NpcScreen`/`WarehouseTerminalItem`。
+
+**决策**：
+1. **`CuriosCompat` 改 Curios 类型零引用的门面**：非 compat 包唯一可引用的 Curios 入口；方法体只引用 `ModList`/`Log`/NeoForge 事件与网络类。所有引用 Curios 类型的代码隔离到 `CuriosCompatImpl`。
+2. **门控静态委派**：门面每个方法先 `if (!loaded) return;`（`loaded` 由 `ModList.get().isLoaded("curios")` 决定）再 `invokestatic CuriosCompatImpl.xxx(...)`。JVM 对 `invokestatic` 按执行期而非验证期解析（由本项目 `Wandscape` 能越过含门控 Curios 引用到达构造器执行期证得），故 `loaded == false` 时提前返回即保证 `CuriosCompatImpl` 永不装载。
+3. **`NpcCuriosButton` 硬编码纹样 `ResourceLocation`**（`curios:button`/`curios:button_highlighted`）取代 `CuriosButton.BIG`，使本类自身无 Curios 依赖，`NpcScreen` 持其字段安全。
+4. **payload / 菜单屏幕统一经门面注册**：复用主链路同一 `PayloadRegistrar`（`CuriosCompat.registerPayloads(registrar)`）、`RegisterMenuScreensEvent`（`CuriosCompat.registerNpcMenuScreens(event)`）。
+
+**影响**：`compat/curios/` 新增 `CuriosCompatImpl` 承载全部 Curios-typed 逻辑；`CuriosCompat` 变薄门面；`NpcCuriosButton` 去 Curios 依赖；`Wandscape`/`WandscapeClient`/`NpcCuriosMenu`/`CuriosCommand` 引用调整。新增 `CuriosCompatSoftDependencyTest` 断言门面字节码不含 `top/theillusivec4/curios/` 引用防回归。此模式对其它可选软依赖（如 Iron's Spells）同理适用。

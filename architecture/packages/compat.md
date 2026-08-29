@@ -22,6 +22,26 @@
 > compat 包不再订阅 `SpellDamageEvent`（曾加的 `IronSpellsDamageHandler` 因双重乘算使伤害随法术
 > 强度二次方暴涨而移除）。
 
+### `curios/`
+Curios API（NeoForge）兼容。Curios 是 compileOnly 可选依赖，未安装时其类不存在于运行期
+classpath，故本包须保证「无 Curios 也能正常启动」——zero 硬编码耦合 + 优雅降级。
+
+- `CuriosCompat`：**Curios 类型零引用的门面**。非 compat 包唯一可引用的 Curios 入口
+  （`Wandscape`/`WandscapeClient`/`NpcScreen`/`WarehouseTerminalItem` 均只碰它）。方法体只引用
+  `ModList`/`Log`/NeoForge 事件与网络类；所有引用 Curios 类型的代码隔离到 `CuriosCompatImpl`。
+- `CuriosCompatImpl`：**唯一引用 `top.theillusivec4.curios.*` 类型的类**。仅在门面确认 Curios 已加载
+  （`ModList.get().isLoaded("curios")`）后经门控静态调用触达；`loaded == false` 时门面提前返回，
+  本类永不装载，故无 Curios 时无 `NoClassDefFoundError`。承载法师饰品菜单注册、护符 `ICurio`
+  capability、槽位镜像、铁魔法饰品属性桥（`syncIronCurioAttributes`）、`/wandscape curios` 归属。
+- `NpcCuriosMenu`/`NpcCurioSlot`/`NpcOpenCuriosPacket`/`CuriosCommand`/`client/NpcCuriosScreen`：
+  法师饰品容器菜单、槽位、打开请求 payload、命令与容器屏幕（仅在 Curios 加载时由 `CuriosCompatImpl`
+  注册/引用，属 present-only）。
+- `client/NpcCuriosButton`：模型框左上角饰品按钮。**硬编码纹样 `ResourceLocation`**
+  （`curios:button`/`curios:button_highlighted`）取代 Curios 的 `CuriosButton.BIG`，使本类自身无
+  Curios 依赖——`NpcScreen` 持有其字段也不触发 Curios 类装载。
+- 引用链：`Wandscape.<init>` → `CuriosCompat.init`；payload/菜单屏幕/命令统一经门面
+  （`registerPayloads`/`registerNpcMenuScreens`）委派；`isEquipped` 供 `WarehouseTerminalItem` 等查询。
+
 ## 依赖关系
 
 - **上游依赖**：`core/`、`shared/`、`npc/`、`magic/`

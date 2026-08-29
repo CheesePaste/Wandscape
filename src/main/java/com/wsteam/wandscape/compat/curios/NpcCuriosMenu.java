@@ -66,7 +66,7 @@ public class NpcCuriosMenu extends AbstractContainerMenu {
 
     private NpcCuriosMenu(int containerId, Inventory playerInventory,
                           @Nullable ICuriosItemHandler handler, @Nullable WandscapeNpc npc, int entityId) {
-        super(CuriosCompat.NPC_CURIOS_MENU.get(), containerId);
+        super(CuriosCompatImpl.NPC_CURIOS_MENU.get(), containerId);
         this.npc = npc;
         this.entityId = entityId;
         int count = 0;

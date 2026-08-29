@@ -98,3 +98,7 @@ curseforge-description.md
 
 ### Curios API 参考源码（第三方 GPL-3.0，只读参考，不入库） ###
 /Curios/
+
+### 本地错误/崩溃报告 zip（调试用，不入库） ###
+错误报告-*.zip
+crash-*.zip

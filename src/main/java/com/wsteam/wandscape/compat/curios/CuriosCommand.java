@@ -51,7 +51,7 @@ public final class CuriosCommand {
                 .then(Commands.literal("mirror")
                         .requires(src -> src.hasPermission(2))
                         .executes(ctx -> {
-                            CuriosCompat.mirrorMageSlots(true);
+                            CuriosCompatImpl.mirrorMageSlots(true);
                             ctx.getSource().sendSuccess(() -> Component.literal(
                                     "[Wandscape] Mage curio slots re-mirrored to the player standard set."),
                                     true);

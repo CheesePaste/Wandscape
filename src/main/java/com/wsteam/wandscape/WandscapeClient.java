@@ -201,11 +201,8 @@ public class WandscapeClient {
         event.register(Wandscape.WAREHOUSE_MENU.get(), WarehouseScreen::new);
         event.register(Wandscape.NPC_MENU.get(), NpcScreen::new);
         event.register(Wandscape.NPC_STRATEGY_MENU.get(), NpcStrategyScreen::new);
-        // Curios 兼容：法师饰品栏（仅 Curios 加载时注册；Curios 类引用必须门控）
-        if (com.wsteam.wandscape.compat.curios.CuriosCompat.isLoaded()) {
-            event.register(com.wsteam.wandscape.compat.curios.CuriosCompat.NPC_CURIOS_MENU.get(),
-                    com.wsteam.wandscape.compat.curios.client.NpcCuriosScreen::new);
-        }
+        // Curios 兼容：法师饰品栏（仅 Curios 加载时在实现类内注册，避免无 Curios 时缺类崩溃）
+        com.wsteam.wandscape.compat.curios.CuriosCompat.registerNpcMenuScreens(event);
     }
 
     @SubscribeEvent

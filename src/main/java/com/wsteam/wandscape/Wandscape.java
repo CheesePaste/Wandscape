@@ -604,8 +604,8 @@ public class Wandscape {
     }
 
     private void onRegisterPayloads(RegisterPayloadHandlersEvent event) {
-        event.registrar(MODID)
-                .versioned("1.0")
+        var registrar = event.registrar(MODID).versioned("1.0");
+        registrar
                 .playToClient(
                         WarehouseDataPacket.TYPE,
                         WarehouseDataPacket.STREAM_CODEC,
@@ -981,17 +981,13 @@ public class Wandscape {
                         com.wsteam.wandscape.shared.network.tasks.MageModeActionPacket.STREAM_CODEC,
                         (packet, ctx) -> com.wsteam.wandscape.shared.network.tasks.MageModeActionPacket
                                 .handleServer(packet, (net.minecraft.server.level.ServerPlayer) ctx.player()))
-                // ── Curios 兼容：法师饰品栏打开请求（仅 Curios 加载时注册；包类全在 compat 包内） ──
-                .playToServer(
-                        com.wsteam.wandscape.compat.curios.NpcOpenCuriosPacket.TYPE,
-                        com.wsteam.wandscape.compat.curios.NpcOpenCuriosPacket.STREAM_CODEC,
-                        (packet, ctx) -> com.wsteam.wandscape.compat.curios.NpcOpenCuriosPacket
-                                .handleServer(packet, ctx))
                 // ── NPC 装备界面重开（饰品屏返回按钮） ──
                 .playToServer(
                         NpcOpenEquipPacket.TYPE,
                         NpcOpenEquipPacket.STREAM_CODEC,
                         (packet, ctx) -> NpcOpenEquipPacket.handleServer(packet, ctx));
+        // Curios 兼容：法师饰品栏打开请求（仅 Curios 加载时在实现类内注册；无 Curios 时此处不引用任何 Curios 类）
+        com.wsteam.wandscape.compat.curios.CuriosCompat.registerPayloads(registrar);
     }
 
     private void onEntityAttributeCreation(EntityAttributeCreationEvent event) {
