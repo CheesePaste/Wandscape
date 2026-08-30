@@ -42,29 +42,84 @@
 
 ## 三、目标形态
 
-### 顶层包地图（30 → 5）
+### 顶层包地图（29 → 5）
+> 依据：`packages.md`（tier0 摸底，29 顶层包实测）+ 用户拍板。数字/依赖据真实代码。
 ```
 com.wsteam.wandscape/
-├── api/        公开契约（addon/整合包）：现有 shared/api + WandscapeApis 收敛搬迁，瘦身后只留 5-7 接口 + 公开事件
-├── content/    全部功能域，域内按功能块切
-│   ├── building/  colony/  npc/  tourist/  road/  wand/  task/
-│   ├── production/  warehouse/  guard/  raid/  projection/
-│   └── (compass/stats/overview 等小型域并入相关域或做 content 下小目录)
-├── foundation/ 跨域基建：ui（全部 Screen 集中）、networking（基类 + 全局包）、registry、saveddata 工具、log、effect
-├── compat/     jei/curios/ironspellbooks 第三方集成（保留）
-└── impl/       @ApiStatus.Internal 装配门禁（薄，可选）
+├── api/         公开契约（addon/整合包）——只留真公开面，其余内联回功能域
+├── content/     全部功能域（11 域），域内按功能块切，不设 client/network/data 镜像子包
+├── foundation/  跨域基建
+├── compat/      jei/curios/ironspellbooks 第三方集成（compileOnly）
+└── impl/        @ApiStatus.Internal 装配/门禁（薄）
 ```
-规则：
-- **域内按功能块/机器切，不设 client/network/data 子包**；域内 Screen/packet 不收，全局收。
-- **网络包全局一层**（foundation/networking），**UI 全局一层**（foundation/ui/screens/<域>/）。
-- 跨域直接调用普通类 = 正常（沿用现有约定），防火墙只在 api 面。
 
-### API 面
-- 位置：平级顶层 `api/`；`impl/package-info.java` 一行 `@ApiStatus.Internal` 门禁。
-- **判据一条**：这个方法，addon 作者没有会不会写不出来？不会用到的全内联回功能域（`BuildingApi` 的 demolish/cancel/place/task-bridge 方法全内联，查询面保留）。
-- 稳定机制：接口新增方法带 default（二进制兼容）；淘汰标注 `@Deprecated(since, forRemoval)` 注明版本，绝不静默删。
-- 公开事件：Colony 生命周期 / Raid / Tourist 到达离开 / Element 变化（真事件流保留，假事件内联）。
-- `WandscapeApis` 静态注册表搬迁进 `api/` 并瘦身（去掉 14 套 get/set 样板，只留真公开面）。
+### content/（11 功能域）
+
+| 域 | 职责 | 收编（旧包） | 关键子块 |
+|----|------|-------------|---------|
+| `colony` | 殖民地级纯逻辑：等级/经验、激活冻结/离线倍率、存档；报表；袭击 | engine/colony + stats + raid | `colony/level`、`colony/activation`、`colony/SavedData`、`colony/stats`、`colony/raid` |
+| `building` | 建筑内核：注册/注销/持久化/空间索引/贡献/任务队列/右键分流/建造拆除生命周期；建造模式；扫描器 | building + projection + scanner | `building/internal`、`building/placement`、`building/scanner`、`building/config`、`building/block` |
+| `npc` | 殖民地自动化核心：法师实体 + 属性收敛 + 战斗 + 招募 + 死亡复活 | npc + guard + scepter系统层 + 招募 | `npc/entity`、`npc/ecs-bridge`、`npc/attributes`、`npc/combat`、`npc/recruit` |
+| `tourist` | 短居访客经济：spawn/移动/阴影仿真/商利/离城 | tourist | `tourist/sim`、`tourist/goal`、`tourist/spawn`、`tourist/entity` |
+| `production` | 配方/craft 门面 | production | `production/recipe`、`production/craft`、`production/affordability` |
+| `road` | 路网：图路由/样条/编辑器/铺路/建造 | road | `road/router`、`road/core`、`road/editor`、`road/place`、`road/saveddata`、`road/transport` |
+| `magic` | 施法系统：法术定义/决策脑/施放/光束/法阵/效果 | magic | `magic/cast`、`magic/spell`、`magic/effect`、`magic/circle` |
+| `task` | 自动化引擎：蓝图 DSL/任务池/调度/执行 + op 原子操作 + 零 MC 运行内核 | task + op + core(ECS/组件/边界) | `task/engine/dsl/pool/scheduler/source`、`task/op`、`task/kernel` |
+| `warehouse` | 经济存储：物品+元素银行/预约/契约 | warehouse | `warehouse/bank`、`warehouse/manager`、`warehouse/menu` |
+| `element` | 7 元素值数据/查询层（玩法域，非 foundational） | element + shared/data.ElementType(并入) | `element/mapping`、`element/item`、`element/audit` |
+| `items` | 纯物品容器（无系统内核）：各域剥出的物品类。各物品薄（仅 use/interact 派发到域服务），items→npc/warehouse/magic/element 出向依赖按直接调用（正常） | wand/compass/guidebook + scepter/ring 物品 + SpellItem + 便携终端 | `items/wand`、`items/compass`、`items/guidebook`、`items/scepter`、`items/ring`、`items/terminal` |
+
+### foundation/（跨域基建，7 子包）
+
+| 包 | 职责 | 收编 |
+|----|------|------|
+| `foundation/ui` | **去堆核心**：公共 Screen 框架（模块组装、数据驱动）+ 各建筑 Screen 塌缩成的数据驱动窗口 + 共享控件/theme/markdown/guidance/skin | shared/ui + 各建筑屏幕（塌缩）+ overview 客户端飞行/交互总控 |
+| `foundation/networking` | **仅包基建**：AbstractPayload 基类/codec/注册 + 真跨域同步包（BuildingAreaSync/RoadAreaSync/ScreenFeedback/ParticleBurst/MagicCircleCast 等） | shared/network（基类+跨角包） |
+| `foundation/registry` | 注册门面(DeferredRegister) + WandscapeConstants + WandscapeDataRegistry + SoundEvent(唯一注册点) | shared/registry + engine/sound + dataconfig |
+| `foundation/ui/render` | **仅跨域共享视觉工具**（无域归属）：RenderUtil、BuildingGhostRenderer+VboCache、SpeechBubbleRenderer、WandscapeHighlightRenderer、BuildingPreviewRenderer | shared/client/render + shared/ui/util（共享者） |
+| `foundation/saveddata` | SavedDataUtil + 抽象基类（收 15 份样板） | 各域 SavedData 样板 |
+| `foundation/log` | Log 统一过滤 | shared/log |
+| `foundation/util` | **仅跨切纯值类型**（零 MC）：GridPos/ResourceStack/ResourceId/... + **点/向量合并后 int 点类**。**NPC 属性值类型不在此**（AttributeType/AttributeModifier→npc） | core/types(跨切者) + 点/向量自造族合并 |
+
+> **统一裁决（贯穿 ui/networking/render，用户拍板）——"基建/框架/去堆目标收 foundation，域特性留域"**：
+> - **foundation 收**：真公共基建（包基类、Screen 框架、共享控件、共享视觉工具、SavedData/log 工具、跨切值类型）+ **去堆塌缩目标**（各建筑 Screen → 数据驱动窗口）+ 真跨域同步包。
+> - **域留**：实体/域特性渲染器（WandscapeNpcRenderer、RoadPlacementRenderer、BuildingAreaRenderer...）、域特性网络包（SplineBuild/AltarCast/TavernRecruit...）、域特性 Overlay/Menu（RoadStudioOverlay、TaskManagementOverlay、BuildingSelectionOverlay、NpcMenu、WarehouseMenu）。
+> - 这些"域留"不是 tech 镜像（不是每域一套 client/server/network/data），而是该实体/特性的配套；若硬收全，renders 从实体撕开、packets 从域特性撕开、domain UI 从域撕开，foundation 反向认识全部域。
+
+### compat/
+- jei/curios/ironspellbooks 独立顶层（compileOnly 门禁/插件发现隔离）；**修** `WandscapeNpc→IMagicSummon` 直触泄漏（走 compat 接缝）。
+
+### impl/（薄装配/门禁）
+- `@ApiStatus.Internal`：`WandscapeBootstrap`（原 EngineBootstrap，唯一装配点）+ 公开 api 实现注册。**解散 `WandscapeEngine` 静态定位器**（getXxx() 搭桥本体，36 跨域引用）——消费方直接 new/直调，不再经 getter。
+
+### api/（公开契约，5-7 接口 + 公开事件）
+定位：addon/整合包作者没有它写不出来才留；内部 use 主导的删接口、消费方直连实现类（Tier 4 走）。
+```
+api/
+├── colony/    ColonyApi（查殖民地状态/等级）        ← 交互面板需要
+├── building/  BuildingApi（仅查询；place/demolish/cancel 内联）
+├── element/   ElementApi（查方块/物品元素 worth）
+├── warehouse/ WarehouseApi（存/取/查询 物品+元素）
+├── road/      RoadApi（getNetwork）
+├── wand/      WandApi（getWandPresetId/Color/Modifiers）
+├── magic/     SpellcastingApi（addon 魔法/施法集成）
+├── (可选) npc/NpcApi、tourist/TouristApi —— 视 addon 需求定，不默认入面
+├── event/     公开事件（真事件流：Colony 生命周期/Raid/Tourist 到离/Element 变化/Warehouse 变化）
+└── WandscapeApis  静态注册表（瘦身：只留真公开 getter 作 addon 入口，删 ~15 套 set/样板）
+```
+**砍削**（内联回功能域）：`HouseApi`（市民系统已删，实质死码——仅 WandscapeApis 注册、零消费，Tier 1 删）、`GuideProgressApi`、`ColonyMetricsApi`、`TavernApi`、`ScepterApi`。`MageWandItem/NpcBindingItem` 是标记接口非契约，随物品去 items。**最终存留以 Tier 2e 引用计数定死**（ColonyApi 43 / BuildingApi 39 内部重度 → 可能只留查询面或直连实现类）。
+
+**稳定机制**：接口新增 default（二进制兼容）、淘汰 `@Deprecated(since, forRemoval)`、不静默删。
+
+### 目标形态约束规则（替代现有「代码组织约定」）
+1. **域内按功能块/机器切，不设 client/network/data 镜像子包**（决策 #2）。但**基建/框架/去堆目标收 foundation**（Screen 框架、包基类、共享控件/工具/值类型），**域特性（实体渲染器、域特性网络包、域特性 Overlay/Menu）留域**——它们非 tech 镜像（不是每域一套 client/server/network/data），而是该实体/特性的配套；硬收全会让 foundation 反向认识全部域。
+2. **跨域直接调用普通类 = 正常**；防火墙只在 api 面。npc↔magic 双向耦合接受（代码可读优先，不为此加接口/事件环）。
+3. **一个概念全地图唯一命名类**（增量归属约束）：NPC 属性→`npc/attributes/NpcAttributes`；7 元素→`content/element`；点/向量→`foundation/util` 一个 int 点类（Tier 3 合 GridPos/PathPoint/BlockOffset/XZPoint）。同域别处只引用、不清写。
+4. **纯逻辑不 import MC** 为唯一硬边界：零 MC 内核（task/kernel + task/op + 纯值类型）保持可单测；MC 适配（boundary 实现/渲染/网络/注册）在其边界类内。
+5. **数据真相当代码/生成物**：配方等先 datagen 试点（决策 #5）；不维护手写镜像。
+6. **mixin 随各自域**（building/colony-raid/road/foundation-ui），不进全局 foundation/mixin 桶；**command 随各自域**（debug 命令后续清理）；gametest `ElementAuditRunner` 归 element。
+
+**净减量核对**：content 11 域 + foundation 7 子包 + api 5-7 接口，对应旧 29 顶层包 + core/engine/shared 桥层解散。目标：建筑加按钮碰 3 文件（UI 框架 + 数据驱动）；属性/品类改动碰 1 个命名类。
 
 ### 文档裁决
 - **删 `architecture/` 整树**（自认过时的历史快照）。
