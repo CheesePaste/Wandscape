@@ -1,12 +1,10 @@
 package com.wsteam.wandscape.projection.client;
 
-import java.util.UUID;
-
 import com.wsteam.wandscape.projection.network.BuildingDebugResponsePacket;
-
 import net.minecraft.core.BlockPos;
 
 import javax.annotation.Nullable;
+import java.util.UUID;
 
 /**
  * Standalone debug-inspect mode (G key) — completely independent of

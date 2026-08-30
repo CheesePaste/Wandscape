@@ -1,24 +1,19 @@
 package com.wsteam.wandscape.road.client;
 
-import java.util.List;
-
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexFormat;
-import com.wsteam.wandscape.road.core.CurveSample;
-import com.wsteam.wandscape.road.core.RoadTemplate;
-import com.wsteam.wandscape.road.core.SplineModel;
-import com.wsteam.wandscape.road.core.SplinePoint;
-import com.wsteam.wandscape.road.core.SplineVec3;
+import com.wsteam.wandscape.road.core.*;
 import com.wsteam.wandscape.shared.log.Log;
-
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
+
+import java.util.List;
 
 /**
  * Renders the spline curves, control points, connection lines, and Gizmo handles.

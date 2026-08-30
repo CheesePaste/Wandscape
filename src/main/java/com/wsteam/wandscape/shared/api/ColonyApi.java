@@ -1,11 +1,10 @@
 package com.wsteam.wandscape.shared.api;
 
-import java.util.Collection;
-import java.util.UUID;
+import net.minecraft.core.BlockPos;
 
 import javax.annotation.Nullable;
-
-import net.minecraft.core.BlockPos;
+import java.util.Collection;
+import java.util.UUID;
 public interface ColonyApi {
     /** Register a new colony at the given origin. Returns its UUID. */
     default UUID createColony(BlockPos origin) {

@@ -7,10 +7,8 @@ import com.wsteam.wandscape.building.scanner.client.CreativeScannerScreen;
 import com.wsteam.wandscape.building.scanner.client.ScannerScreen;
 import com.wsteam.wandscape.building.scanner.network.ScannerSyncPacket;
 import com.wsteam.wandscape.shared.log.Log;
-
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.chat.Component;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.network.PacketDistributor;
 

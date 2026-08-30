@@ -16,7 +16,6 @@ import com.wsteam.wandscape.tourist.internal.TouristCooldownDebug;
 import com.wsteam.wandscape.tourist.internal.TouristSimSystem;
 import com.wsteam.wandscape.tourist.internal.TouristSpawnSystem;
 import com.wsteam.wandscape.tourist.internal.TouristState;
-
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.core.BlockPos;

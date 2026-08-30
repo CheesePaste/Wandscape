@@ -1,8 +1,8 @@
 package com.wsteam.wandscape.shared.data;
 
-import java.util.List;
-
 import com.google.gson.annotations.SerializedName;
+
+import java.util.List;
 /**
  * Shop building configuration.
  * Goods are fixed by JSON; players adjust maxStock per good via GUI.

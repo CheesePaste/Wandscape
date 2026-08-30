@@ -1,18 +1,15 @@
 package com.wsteam.wandscape.projection.network;
 
-import java.util.List;
-import java.util.UUID;
-
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
-import com.wsteam.wandscape.projection.data.BuildingSlot;
 import com.wsteam.wandscape.engine.service.SoundService;
 import com.wsteam.wandscape.engine.sound.WandscapeSounds;
+import com.wsteam.wandscape.projection.data.BuildingSlot;
 import com.wsteam.wandscape.shared.api.BuildingApi;
+import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.network.ScreenFeedbackPacket;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.shared.ui.I18n;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -21,8 +18,10 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
 
+import java.util.List;
+import java.util.UUID;
+
 import static com.wsteam.wandscape.Wandscape.MODID;
-import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Client→Server: Player confirms building placement from projection mode.

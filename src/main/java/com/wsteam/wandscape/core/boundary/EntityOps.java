@@ -1,12 +1,10 @@
 package com.wsteam.wandscape.core.boundary;
 
-import java.util.UUID;
-
-import javax.annotation.Nullable;
-
 import com.wsteam.wandscape.core.types.EffectId;
 import com.wsteam.wandscape.core.types.EntityId;
 import com.wsteam.wandscape.core.types.GridPos;
+
+import javax.annotation.Nullable;
 /**
  * Core-layer boundary for entity-level operations.
  * Implemented by the Minecraft adapter layer.

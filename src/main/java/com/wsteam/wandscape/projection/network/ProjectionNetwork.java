@@ -1,21 +1,13 @@
 package com.wsteam.wandscape.projection.network;
 
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
+import com.wsteam.wandscape.projection.data.BuildingSlot;
+import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.shared.registry.WandscapeApis;
+import net.minecraft.server.level.ServerPlayer;
 
 import javax.annotation.Nullable;
-
-import com.wsteam.wandscape.Wandscape;
-import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
-import com.wsteam.wandscape.building.data.BuildingConfig;
-import com.wsteam.wandscape.projection.data.BuildingSlot;
-import com.wsteam.wandscape.shared.registry.WandscapeApis;
-
-import net.minecraft.server.level.ServerPlayer;
-import com.wsteam.wandscape.shared.log.Log;
+import java.util.*;
 
 /**
  * Manages the set of players currently in soul projection mode.

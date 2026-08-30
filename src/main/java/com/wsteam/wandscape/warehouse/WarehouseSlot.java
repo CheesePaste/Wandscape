@@ -1,12 +1,12 @@
 package com.wsteam.wandscape.warehouse;
 
-import java.util.function.BooleanSupplier;
-import java.util.function.Supplier;
-
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
+
+import java.util.function.BooleanSupplier;
+import java.util.function.Supplier;
 
 /**
  * Read-only slot for warehouse items (AE2-style {@code ClientReadOnlySlot}).

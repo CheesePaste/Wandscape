@@ -1,12 +1,10 @@
 package com.wsteam.wandscape.shared.api;
 
-import java.util.List;
+import com.wsteam.wandscape.core.types.AttributeModifier;
+import net.minecraft.world.item.ItemStack;
 
 import javax.annotation.Nullable;
-
-import com.wsteam.wandscape.core.types.AttributeModifier;
-
-import net.minecraft.world.item.ItemStack;
+import java.util.List;
 public interface WandApi {
     String getWandColor(ItemStack wand);
 

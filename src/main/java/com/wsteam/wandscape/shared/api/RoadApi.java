@@ -1,10 +1,10 @@
 package com.wsteam.wandscape.shared.api;
 
-import java.util.List;
-import java.util.UUID;
-
 import com.wsteam.wandscape.road.core.RoadEdge;
 import com.wsteam.wandscape.road.core.RoadNetwork;
+
+import java.util.List;
+import java.util.UUID;
 /**
  * API for the road system. Provides access to the road network state.
  */

@@ -1,22 +1,12 @@
 package com.wsteam.wandscape.engine.boundary;
 
-import java.io.ByteArrayInputStream;
-import java.util.Base64;
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-
-import javax.annotation.Nullable;
-
 import com.wsteam.wandscape.core.boundary.BlockOps;
 import com.wsteam.wandscape.core.types.BlockType;
 import com.wsteam.wandscape.core.types.GridPos;
 import com.wsteam.wandscape.engine.service.ChunkLoadManager;
 import com.wsteam.wandscape.engine.service.SoundService;
-
+import com.wsteam.wandscape.shared.log.Log;
 import net.minecraft.core.BlockPos;
-import net.minecraft.world.level.ChunkPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
@@ -30,6 +20,7 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.Container;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
@@ -39,7 +30,14 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
-import com.wsteam.wandscape.shared.log.Log;
+
+import javax.annotation.Nullable;
+import java.io.ByteArrayInputStream;
+import java.util.Base64;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 /**
  * MC implementation of {@link BlockOps}.
@@ -392,7 +390,7 @@ public class WandscapeBlockOps implements BlockOps {
             net.minecraft.world.level.block.state.properties.Property<T> prop,
             String value) {
         return prop.getValue(value)
-                .map(v -> (BlockState) state.setValue(prop, v))
+                .map(v -> state.setValue(prop, v))
                 .orElse(state);
     }
 

@@ -1,11 +1,10 @@
 package com.wsteam.wandscape.shared.data;
 
-import java.util.UUID;
-
-import javax.annotation.Nullable;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
+
+import javax.annotation.Nullable;
+import java.util.UUID;
 public interface BuildingData {
     UUID getBuildingId();
     UUID getColonyId();

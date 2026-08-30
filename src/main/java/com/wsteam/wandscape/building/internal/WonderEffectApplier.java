@@ -1,13 +1,5 @@
 package com.wsteam.wandscape.building.internal;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.engine.service.SoundService;
 import com.wsteam.wandscape.engine.sound.WandscapeSounds;
@@ -15,14 +7,19 @@ import com.wsteam.wandscape.shared.data.WonderConfig;
 import com.wsteam.wandscape.shared.data.WonderEffect;
 import com.wsteam.wandscape.shared.event.ColonyEvaluationChangedEvent;
 import com.wsteam.wandscape.shared.event.WonderEffectChangedEvent;
-
+import com.wsteam.wandscape.shared.log.Log;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundSource;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
-import com.wsteam.wandscape.shared.log.Log;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Collects and applies wonder building global effects.

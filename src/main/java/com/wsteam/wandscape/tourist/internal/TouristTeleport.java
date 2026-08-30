@@ -1,9 +1,5 @@
 package com.wsteam.wandscape.tourist.internal;
 
-import java.util.UUID;
-
-import javax.annotation.Nullable;
-
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.building.internal.BuildingState;
 import com.wsteam.wandscape.road.core.PathPoint;
@@ -14,11 +10,13 @@ import com.wsteam.wandscape.shared.api.RoadApi;
 import com.wsteam.wandscape.shared.data.BuildingData;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
+
+import javax.annotation.Nullable;
+import java.util.UUID;
 
 /**
  * Rescue-teleport destination selection for trapped tourists.

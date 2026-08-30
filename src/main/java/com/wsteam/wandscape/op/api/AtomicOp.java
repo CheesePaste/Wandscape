@@ -3,11 +3,10 @@ package com.wsteam.wandscape.op.api;
 import com.wsteam.wandscape.core.types.*;
 import com.wsteam.wandscape.op.executor.ResourceShortageException;
 
+import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-
-import javax.annotation.Nullable;
 
 /**
  * Sealed hierarchy of atomic operations that NPCs can perform.

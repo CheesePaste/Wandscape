@@ -1,10 +1,5 @@
 package com.wsteam.wandscape.building.internal;
 
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-
-import javax.annotation.Nullable;
-
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.reflect.TypeToken;
@@ -14,7 +9,7 @@ import com.wsteam.wandscape.shared.data.MageHutResident;
 import com.wsteam.wandscape.shared.data.ShopGoodDef;
 import com.wsteam.wandscape.shared.data.WorkItem;
 import com.wsteam.wandscape.shared.event.ColonyEvaluationChangedEvent;
-
+import com.wsteam.wandscape.shared.log.Log;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
@@ -26,7 +21,10 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.level.saveddata.SavedData;
 import net.neoforged.bus.api.IEventBus;
-import com.wsteam.wandscape.shared.log.Log;
+
+import javax.annotation.Nullable;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Level-attached persistent storage for all building state.

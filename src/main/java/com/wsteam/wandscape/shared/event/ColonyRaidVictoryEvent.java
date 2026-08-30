@@ -1,9 +1,9 @@
 package com.wsteam.wandscape.shared.event;
 
-import java.util.UUID;
-
 import net.minecraft.core.BlockPos;
 import net.neoforged.bus.api.Event;
+
+import java.util.UUID;
 
 /**
  * Fired on the NeoForge bus when a raid against a colony is won (all raiders

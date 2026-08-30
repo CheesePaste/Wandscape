@@ -6,7 +6,6 @@ import com.wsteam.wandscape.shared.client.render.BuildingGhostRenderer;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket;
 import com.wsteam.wandscape.shared.ui.panel.WandscapePanelState;
-
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.AABB;

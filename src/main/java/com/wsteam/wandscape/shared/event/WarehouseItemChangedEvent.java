@@ -1,10 +1,9 @@
 package com.wsteam.wandscape.shared.event;
 
-import java.util.UUID;
-
 import com.wsteam.wandscape.shared.data.ItemKey;
-
 import net.neoforged.bus.api.Event;
+
+import java.util.UUID;
 
 /**
  * Fired when an item stack in a colony's warehouse changes (deposit, withdraw, craft, consumption).

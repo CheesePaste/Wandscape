@@ -1,15 +1,14 @@
 package com.wsteam.wandscape.shared.network;
 
-import java.util.UUID;
-import java.util.function.Consumer;
-
-import javax.annotation.Nullable;
-
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.Vec3;
+
+import javax.annotation.Nullable;
+import java.util.UUID;
+import java.util.function.Consumer;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
 

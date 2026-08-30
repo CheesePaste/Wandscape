@@ -1,10 +1,9 @@
 package com.wsteam.wandscape.shared.api;
 
-import java.util.UUID;
+import net.minecraft.server.level.ServerPlayer;
 
 import javax.annotation.Nullable;
-
-import net.minecraft.server.level.ServerPlayer;
+import java.util.UUID;
 
 /**
  * Server-side tutorial progress evaluation: computes the current onboarding

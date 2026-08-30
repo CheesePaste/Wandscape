@@ -1,13 +1,11 @@
 package com.wsteam.wandscape.building.scanner;
 
-import java.util.List;
-import java.util.Map;
-
-import com.wsteam.wandscape.building.scanner.CreativeScannerBlockEntity.ShopGoodData;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
+
+import java.util.List;
+import java.util.Map;
 
 /**
  * Block entity for the Survival Building Scanner.

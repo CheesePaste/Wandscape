@@ -1,13 +1,12 @@
 package com.wsteam.wandscape.shared.data;
 
+import net.minecraft.network.chat.Component;
+
+import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.Random;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import javax.annotation.Nullable;
-
-import net.minecraft.network.chat.Component;
 
 /**
  * Character name pools shared by mages ({@code WandscapeNpc}) and tourists

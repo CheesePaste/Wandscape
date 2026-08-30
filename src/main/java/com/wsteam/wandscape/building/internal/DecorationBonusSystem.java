@@ -1,12 +1,7 @@
 package com.wsteam.wandscape.building.internal;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
-
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.building.data.BuildingConfig;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -14,6 +9,9 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Periodically computes decoration radiation: decoration buildings radiate

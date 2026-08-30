@@ -4,7 +4,6 @@ import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.scepter.OmniScepterItem;
 import com.wsteam.wandscape.scepter.ScepterItem;
 import com.wsteam.wandscape.scepter.ScepterKind;
-
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;

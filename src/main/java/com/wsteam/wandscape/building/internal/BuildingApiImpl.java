@@ -1,17 +1,10 @@
 package com.wsteam.wandscape.building.internal;
 
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Predicate;
-
-import javax.annotation.Nullable;
-
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
 import com.wsteam.wandscape.building.data.BlockOffset;
 import com.wsteam.wandscape.building.data.BuildingConfig;
-import com.wsteam.wandscape.engine.service.ParticleService;
 import com.wsteam.wandscape.engine.source.BuildingTaskSource;
 import com.wsteam.wandscape.projection.BuildingRotation;
 import com.wsteam.wandscape.shared.api.BuildingApi;
@@ -20,20 +13,22 @@ import com.wsteam.wandscape.shared.data.ItemKey;
 import com.wsteam.wandscape.shared.data.WorkItem;
 import com.wsteam.wandscape.shared.event.BuildingPlacedEvent;
 import com.wsteam.wandscape.shared.event.BuildingRemovedEvent;
+import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.registry.WandscapeConstants;
 import com.wsteam.wandscape.warehouse.ColonyItemBank;
-
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
-import com.wsteam.wandscape.shared.log.Log;
+
+import javax.annotation.Nullable;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Predicate;
 
 /**
  * Implementation of {@link BuildingApi} backed by {@link BuildingSavedData}.

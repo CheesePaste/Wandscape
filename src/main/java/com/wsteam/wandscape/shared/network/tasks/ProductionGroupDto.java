@@ -1,10 +1,10 @@
 package com.wsteam.wandscape.shared.network.tasks;
 
+import net.minecraft.network.RegistryFriendlyByteBuf;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-
-import net.minecraft.network.RegistryFriendlyByteBuf;
 
 /**
  * DTO representing a production building group (e.g. Workstation, Magic Table, Node)

@@ -3,7 +3,6 @@ package com.wsteam.wandscape.guard;
 import com.wsteam.wandscape.core.types.AttributeType;
 import com.wsteam.wandscape.magic.internal.MagicSpellExecutors;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
-
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 

@@ -1,13 +1,5 @@
 package com.wsteam.wandscape.command;
 
-import java.util.LinkedHashSet;
-import java.util.Set;
-import java.util.UUID;
-import java.util.ArrayList;
-import java.util.List;
-
-import javax.annotation.Nullable;
-
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
@@ -15,26 +7,23 @@ import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.tree.CommandNode;
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.building.data.BuildingConfig;
-import com.wsteam.wandscape.building.data.BlockOffset;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
-
 import com.wsteam.wandscape.core.component.ColonyMember;
 import com.wsteam.wandscape.core.component.ColonyMetadata;
 import com.wsteam.wandscape.core.component.Inventory;
-import com.wsteam.wandscape.core.types.GridPos;
 import com.wsteam.wandscape.core.ecs.World;
-import com.wsteam.wandscape.core.types.ResourceId;
-import com.wsteam.wandscape.core.types.ResourceStack;
-import com.wsteam.wandscape.engine.WandscapeEngine;
+import com.wsteam.wandscape.core.types.GridPos;
 import com.wsteam.wandscape.engine.ColonyApiImpl;
+import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.service.ParticleService;
-import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
+import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.shared.api.ColonyApi;
 import com.wsteam.wandscape.shared.event.ColonyCreatedEvent;
+import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.shared.registry.WandscapeConstants;
-
+import com.wsteam.wandscape.shared.ui.I18n;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.core.BlockPos;
@@ -46,8 +35,11 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.NeoForge;
-import com.wsteam.wandscape.shared.log.Log;
-import com.wsteam.wandscape.shared.ui.I18n;
+
+import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 
 /**
  * Colony lifecycle commands.

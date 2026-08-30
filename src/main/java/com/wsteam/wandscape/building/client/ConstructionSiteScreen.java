@@ -1,9 +1,5 @@
 package com.wsteam.wandscape.building.client;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
-
 import com.wsteam.wandscape.building.network.ConstructionSiteDataPacket;
 import com.wsteam.wandscape.building.network.ConstructionSiteDataPacket.MaterialEntry;
 import com.wsteam.wandscape.projection.network.BuildingActionPacket;
@@ -13,7 +9,6 @@ import com.wsteam.wandscape.shared.ui.component.MedievalButton;
 import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
 import com.wsteam.wandscape.shared.ui.component.ScrollableList;
 import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
-
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -22,6 +17,10 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.neoforged.neoforge.network.PacketDistributor;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 
 /**
  * 工地面板：展示未建成建筑的建造材料需求与供应状态。

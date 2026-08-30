@@ -1,10 +1,9 @@
 package com.wsteam.wandscape.shared.event;
 
-import java.util.UUID;
+import net.neoforged.bus.api.Event;
 
 import javax.annotation.Nullable;
-
-import net.neoforged.bus.api.Event;
+import java.util.UUID;
 /** Fired when a building is fully removed (demolished / unregistered). */
 public class BuildingRemovedEvent extends Event {
     private final UUID buildingId;

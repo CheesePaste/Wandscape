@@ -1,14 +1,8 @@
 package com.wsteam.wandscape.compat.jei;
 
-import java.util.List;
-import java.util.Map;
-
-import javax.annotation.Nullable;
-
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.log.Log;
-
 import mezz.jei.api.constants.VanillaTypes;
 import mezz.jei.api.gui.builder.IRecipeLayoutBuilder;
 import mezz.jei.api.gui.builder.IRecipeSlotBuilder;
@@ -19,7 +13,6 @@ import mezz.jei.api.helpers.IGuiHelper;
 import mezz.jei.api.recipe.IFocusGroup;
 import mezz.jei.api.recipe.RecipeType;
 import mezz.jei.api.recipe.category.IRecipeCategory;
-
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -31,6 +24,10 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
+
+import javax.annotation.Nullable;
+import java.util.List;
+import java.util.Map;
 
 /**
  * 「Wandscape 元素」配方分类：同一分类内用 kind 区分合成 / 分解。

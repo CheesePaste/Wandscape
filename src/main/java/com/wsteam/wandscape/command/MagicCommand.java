@@ -1,24 +1,22 @@
 package com.wsteam.wandscape.command;
 
-import java.util.List;
-
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import com.mojang.brigadier.tree.CommandNode;
-
 import com.wsteam.wandscape.core.component.MagicState;
 import com.wsteam.wandscape.magic.data.MagicDef;
 import com.wsteam.wandscape.magic.internal.MagicSpellExecutors;
 import com.wsteam.wandscape.magic.internal.SpellbookLoader;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.shared.ui.I18n;
-
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+
+import java.util.List;
 
 /**
  * 魔法测试命令：

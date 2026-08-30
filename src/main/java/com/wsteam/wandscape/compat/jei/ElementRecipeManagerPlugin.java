@@ -1,20 +1,17 @@
 package com.wsteam.wandscape.compat.jei;
 
-import java.util.List;
-
-import javax.annotation.Nullable;
-
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.log.Log;
-
 import mezz.jei.api.ingredients.ITypedIngredient;
 import mezz.jei.api.recipe.advanced.ISimpleRecipeManagerPlugin;
-
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+
+import javax.annotation.Nullable;
+import java.util.List;
 
 /**
  * 懒查询式 JEI 配方提供者：每次调用都从数据加载器实时收集，天然支持 /reload 刷新。

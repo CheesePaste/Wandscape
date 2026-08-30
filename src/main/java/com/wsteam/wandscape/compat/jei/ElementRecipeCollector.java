@@ -1,20 +1,18 @@
 package com.wsteam.wandscape.compat.jei;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-
-import javax.annotation.Nullable;
-
 import com.wsteam.wandscape.element.internal.ElementMappingConfig;
 import com.wsteam.wandscape.production.data.BrewPotionRecipe;
 import com.wsteam.wandscape.production.data.CraftSpellRecipe;
 import com.wsteam.wandscape.production.data.CraftWandRecipe;
 import com.wsteam.wandscape.production.data.MiscRecipe;
 import com.wsteam.wandscape.shared.data.ElementType;
-
 import net.minecraft.nbt.CompoundTag;
+
+import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 
 /**
  * 从各配方数据源收集 JEI 展示用配方（纯逻辑，零 mezz 引用，可单测）。

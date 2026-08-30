@@ -1,15 +1,12 @@
 package com.wsteam.wandscape.magic.data;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
-import javax.annotation.Nullable;
-
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+
+import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * MagicCircleSpec JSON 契约的纯数据镜像，与 Web 编辑器 {@code src/spec.ts} 一一对应。

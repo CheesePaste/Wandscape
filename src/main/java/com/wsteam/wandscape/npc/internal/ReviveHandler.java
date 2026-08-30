@@ -1,29 +1,24 @@
 package com.wsteam.wandscape.npc.internal;
 
-import java.util.List;
-import java.util.UUID;
-
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.Wandscape;
+import com.wsteam.wandscape.building.internal.BuildingSavedData;
+import com.wsteam.wandscape.building.internal.BuildingState;
 import com.wsteam.wandscape.core.component.ColonyMember;
 import com.wsteam.wandscape.core.component.Inventory;
 import com.wsteam.wandscape.core.ecs.World;
+import com.wsteam.wandscape.core.types.AttributeType;
 import com.wsteam.wandscape.core.types.ResourceStack;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.service.ParticleService;
 import com.wsteam.wandscape.npc.data.DeathRecord;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.shared.api.SpellcastingApi;
-import com.wsteam.wandscape.shared.log.Log;
-import com.wsteam.wandscape.shared.registry.WandscapeApis;
-
-import com.wsteam.wandscape.building.internal.BuildingSavedData;
-import com.wsteam.wandscape.building.internal.BuildingState;
 import com.wsteam.wandscape.shared.data.MageHutAttributes;
 import com.wsteam.wandscape.shared.data.MageHutResident;
-import com.wsteam.wandscape.core.types.AttributeType;
+import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.shared.registry.WandscapeConstants;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ColorParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
@@ -32,6 +27,8 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.phys.Vec3;
+
+import java.util.UUID;
 
 /**
  * 复活效果：祭坛施法引导完成后在指定位置（祭坛中心最上方）生成新 WandscapeNpc，

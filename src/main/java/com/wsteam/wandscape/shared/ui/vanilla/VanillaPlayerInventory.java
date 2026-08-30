@@ -1,14 +1,14 @@
 package com.wsteam.wandscape.shared.ui.vanilla;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.function.BooleanSupplier;
-import java.util.function.Consumer;
-
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.BooleanSupplier;
+import java.util.function.Consumer;
 
 /**
  * Reusable vanilla player-inventory section: the 3×9 main bag plus the 1×9

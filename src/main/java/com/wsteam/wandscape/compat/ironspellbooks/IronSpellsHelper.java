@@ -1,19 +1,17 @@
 package com.wsteam.wandscape.compat.ironspellbooks;
 
-import javax.annotation.Nullable;
 import com.wsteam.wandscape.magic.data.MagicDef;
 import com.wsteam.wandscape.magic.data.SpellConditions;
-
-import io.redspace.ironsspellbooks.api.magic.MagicData;
 import io.redspace.ironsspellbooks.api.registry.SpellRegistry;
 import io.redspace.ironsspellbooks.api.spells.AbstractSpell;
 import io.redspace.ironsspellbooks.api.spells.ISpellContainer;
 import io.redspace.ironsspellbooks.api.spells.SpellData;
 import io.redspace.ironsspellbooks.item.Scroll;
 import io.redspace.ironsspellbooks.registries.ItemRegistry;
-
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
+
+import javax.annotation.Nullable;
 
 /**
  * 铁魔法辅助工具类：卷轴识别、法术等级解析、卷轴物品构造与动态 MagicDef 转换。

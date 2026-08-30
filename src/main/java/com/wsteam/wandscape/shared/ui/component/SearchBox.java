@@ -1,11 +1,6 @@
 package com.wsteam.wandscape.shared.ui.component;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.function.Function;
-
 import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
-
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
@@ -14,6 +9,10 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Function;
 
 /**
  * Medieval-styled search box shared by all Wandscape screens.

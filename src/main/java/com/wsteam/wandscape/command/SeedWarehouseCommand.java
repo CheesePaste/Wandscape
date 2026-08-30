@@ -1,19 +1,16 @@
 package com.wsteam.wandscape.command;
 
-import java.util.UUID;
-
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.tree.CommandNode;
-
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.shared.api.ColonyApi;
 import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.data.ItemKey;
+import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.wand.internal.WandPresetLoader.WandPreset;
 import com.wsteam.wandscape.warehouse.ColonyItemBank;
-
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.core.BlockPos;
@@ -23,7 +20,8 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.phys.Vec3;
-import com.wsteam.wandscape.shared.log.Log;
+
+import java.util.UUID;
 
 /**
  * Debug command: seed 9999 of every registered Minecraft item into the colony warehouse.

@@ -2,7 +2,6 @@ package com.wsteam.wandscape.building.scanner.network;
 
 import com.wsteam.wandscape.building.scanner.CreativeScannerBlockEntity;
 import com.wsteam.wandscape.shared.log.Log;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.RegistryFriendlyByteBuf;

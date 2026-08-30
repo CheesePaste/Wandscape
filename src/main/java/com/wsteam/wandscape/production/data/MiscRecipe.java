@@ -1,11 +1,11 @@
 package com.wsteam.wandscape.production.data;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.wsteam.wandscape.shared.data.ElementType;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * 合成站「杂项物品」配方（{@code data/wandscape/craft_recipes/*.json}，JSON {@code type=="misc"}）。

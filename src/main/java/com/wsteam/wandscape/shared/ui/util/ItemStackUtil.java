@@ -1,7 +1,5 @@
 package com.wsteam.wandscape.shared.ui.util;
 
-import javax.annotation.Nullable;
-
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
@@ -10,6 +8,8 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.CustomData;
+
+import javax.annotation.Nullable;
 
 /**
  * ItemStack 构建 helpers：从 registry id 解析物品并附加旧式 NBT。

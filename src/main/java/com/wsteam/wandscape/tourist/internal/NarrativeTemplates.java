@@ -3,22 +3,14 @@ package com.wsteam.wandscape.tourist.internal;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.reflect.TypeToken;
-import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.shared.data.Emotion;
 import com.wsteam.wandscape.shared.log.Log;
 
 import javax.annotation.Nullable;
 import java.io.InputStreamReader;
 import java.io.Reader;
-import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**

@@ -1,7 +1,5 @@
 package com.wsteam.wandscape.building.client;
 
-import java.util.UUID;
-
 import com.wsteam.wandscape.building.network.TownHallNameStylePacket;
 import com.wsteam.wandscape.building.network.TownHallWarehouseRequestPacket;
 import com.wsteam.wandscape.shared.data.NameStyle;
@@ -10,13 +8,13 @@ import com.wsteam.wandscape.shared.ui.I18n;
 import com.wsteam.wandscape.shared.ui.component.MedievalButton;
 import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
 import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
-
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
-import net.minecraft.client.gui.components.Renderable;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.neoforged.neoforge.network.PacketDistributor;
+
+import java.util.UUID;
 
 /**
  * Town Hall info screen — colony name (editable), level, experience bar, progression

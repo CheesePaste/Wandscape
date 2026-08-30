@@ -3,8 +3,8 @@
   "package": "com.wsteam.wandscape.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
-    "MixinServerLevel",
-    "MixinLevelTicks"
+    "MixinLevelTicks",
+    "MixinServerLevel"
   ],
   "client": [
     "MixinOverviewCamera",

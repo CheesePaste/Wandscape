@@ -1,9 +1,9 @@
 package com.wsteam.wandscape.shared.ui.vanilla;
 
-import java.util.function.BooleanSupplier;
-
 import net.minecraft.world.Container;
 import net.minecraft.world.inventory.Slot;
+
+import java.util.function.BooleanSupplier;
 
 /**
  * Vanilla slot that can be hidden by the surrounding UI through a condition

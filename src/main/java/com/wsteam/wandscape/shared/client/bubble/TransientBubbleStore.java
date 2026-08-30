@@ -1,10 +1,9 @@
 package com.wsteam.wandscape.shared.client.bubble;
 
+import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-
-import javax.annotation.Nullable;
 
 /**
  * Client-side store of transient event bubbles (purchase / service feedback)

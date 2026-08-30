@@ -1,20 +1,18 @@
 package com.wsteam.wandscape.ring.internal;
 
-import java.util.UUID;
-
-import javax.annotation.Nullable;
-
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.ring.RingTier;
 import com.wsteam.wandscape.shared.log.Log;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.block.state.BlockState;
+
+import javax.annotation.Nullable;
+import java.util.UUID;
 
 /**
  * 盟誓戒指服务端业务：存入/放出法师 + 权限校验 + 玩家反馈。
@@ -43,7 +41,7 @@ public final class OathRingService {
             fail(player, "message.wandscape.ring.no_colony");
             return;
         }
-        if (!mage.isColonyNpc() || mage.colonyId == null || !playerColony.equals(mage.colonyId)) {
+        if (!mage.isColonyNpc() || !playerColony.equals(mage.colonyId)) {
             fail(player, "message.wandscape.ring.other_colony");
             return;
         }

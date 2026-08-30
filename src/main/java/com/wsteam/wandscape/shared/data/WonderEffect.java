@@ -1,12 +1,8 @@
 package com.wsteam.wandscape.shared.data;
 
-import java.lang.reflect.Type;
+import com.google.gson.*;
 
-import com.google.gson.JsonDeserializationContext;
-import com.google.gson.JsonDeserializer;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParseException;
+import java.lang.reflect.Type;
 /**
  * Sealed interface for wonder building global effects.
  * Applied when the wonder is intact; paused otherwise.

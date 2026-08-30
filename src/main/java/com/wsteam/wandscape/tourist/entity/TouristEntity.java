@@ -1,40 +1,15 @@
 package com.wsteam.wandscape.tourist.entity;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Stream;
-
+import com.wsteam.wandscape.Config;
+import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.engine.nav.WandscapeNavigation;
-import com.wsteam.wandscape.shared.data.Activity;
-import com.wsteam.wandscape.shared.data.BarRatio;
-import com.wsteam.wandscape.shared.data.Emotion;
-import com.wsteam.wandscape.shared.data.MageAttributeRoller;
-import com.wsteam.wandscape.shared.data.RecruitmentCandidate;
-import com.wsteam.wandscape.shared.data.VisitMemory;
+import com.wsteam.wandscape.shared.data.*;
 import com.wsteam.wandscape.shared.entity.ColonyVisitor;
 import com.wsteam.wandscape.shared.entity.VillagerLike;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.shared.registry.WandscapeConstants;
-import com.wsteam.wandscape.tourist.internal.HotelStayHandler;
-import com.wsteam.wandscape.tourist.internal.TouristSpawnSystem;
-import com.wsteam.wandscape.tourist.internal.TouristSimSystem;
-import com.wsteam.wandscape.tourist.internal.TouristSpotManager;
-import com.wsteam.wandscape.tourist.internal.TouristStateHost;
-
-import javax.annotation.Nullable;
-
-import com.wsteam.wandscape.Config;
-import com.wsteam.wandscape.Wandscape;
-import com.wsteam.wandscape.tourist.internal.TouristState;
-
+import com.wsteam.wandscape.tourist.internal.*;
+import com.wsteam.wandscape.tourist.network.TouristDataPacket;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -42,16 +17,12 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.entity.Entity.RemovalReason;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.Mob;
-import net.minecraft.world.entity.MobSpawnType;
-import net.minecraft.world.entity.PathfinderMob;
-import net.minecraft.world.entity.Pose;
-import net.minecraft.world.entity.SpawnGroupData;
+import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
@@ -63,10 +34,13 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
 import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.network.PacketDistributor;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.ServerPlayer;
 
-import com.wsteam.wandscape.tourist.network.TouristDataPacket;
+import javax.annotation.Nullable;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.*;
+import java.util.stream.Stream;
 /**
  * A tourist NPC that visits the colony to interact with shops and service buildings.
  *

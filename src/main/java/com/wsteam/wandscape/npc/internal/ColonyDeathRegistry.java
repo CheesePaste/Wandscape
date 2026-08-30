@@ -1,15 +1,8 @@
 package com.wsteam.wandscape.npc.internal;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
-
-import javax.annotation.Nullable;
-
 import com.wsteam.wandscape.core.types.ResourceId;
 import com.wsteam.wandscape.core.types.ResourceStack;
 import com.wsteam.wandscape.npc.data.DeathRecord;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
@@ -18,6 +11,11 @@ import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.saveddata.SavedData;
+
+import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 
 /**
  * 每世界一份的死亡留存注册表（SavedData）：NPC 战死快照在此增删查，永久留存直至复活成功。

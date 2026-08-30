@@ -1,8 +1,5 @@
 package com.wsteam.wandscape.engine.service;
 
-import java.util.List;
-import java.util.UUID;
-
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.colony.ColonyLevelManager;
 import com.wsteam.wandscape.shared.api.BuildingApi;
@@ -11,6 +8,9 @@ import com.wsteam.wandscape.shared.api.ColonyMetricsApi;
 import com.wsteam.wandscape.shared.data.ColonyMetricsSnapshot;
 import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
+
+import java.util.List;
+import java.util.UUID;
 
 /**
  * Engine-side implementation of {@link ColonyMetricsApi}.

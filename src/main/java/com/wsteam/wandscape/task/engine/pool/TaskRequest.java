@@ -1,12 +1,11 @@
 package com.wsteam.wandscape.task.engine.pool;
 
+import com.google.gson.JsonElement;
+
+import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.Map;
 import java.util.UUID;
-
-import javax.annotation.Nullable;
-
-import com.google.gson.JsonElement;
 
 /**
  * Request to create a global task from a blueprint.

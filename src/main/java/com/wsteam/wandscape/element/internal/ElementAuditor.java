@@ -1,15 +1,16 @@
 package com.wsteam.wandscape.element.internal;
 
-import java.util.*;
-
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import com.wsteam.wandscape.shared.data.ElementType;
-
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
+
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 /**
  * Scans all Minecraft items and finds which ones lack elemental values.

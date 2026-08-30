@@ -1,17 +1,11 @@
 package com.wsteam.wandscape.warehouse;
 
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Consumer;
-
-import javax.annotation.Nullable;
-
 import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.data.ItemKey;
 import com.wsteam.wandscape.shared.event.ElementBalanceChangedEvent;
 import com.wsteam.wandscape.shared.event.WarehouseElementChangedEvent;
 import com.wsteam.wandscape.shared.event.WarehouseItemChangedEvent;
-
+import com.wsteam.wandscape.shared.log.Log;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -19,7 +13,13 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.saveddata.SavedData;
 import net.neoforged.neoforge.common.NeoForge;
-import com.wsteam.wandscape.shared.log.Log;
+
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 
 /**
  * Per-level persistent item bank shared by all colonies.

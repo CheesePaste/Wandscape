@@ -1,8 +1,8 @@
 package com.wsteam.wandscape.shared.event;
 
-import java.util.UUID;
-
 import net.neoforged.bus.api.Event;
+
+import java.util.UUID;
 /**
  * Fired when a colony's warehouse element balance changes (any element added or
  * consumed). Subscribers can resync UI that mirrors element balances.

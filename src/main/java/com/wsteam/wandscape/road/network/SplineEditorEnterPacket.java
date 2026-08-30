@@ -1,15 +1,14 @@
 package com.wsteam.wandscape.road.network;
 
-import static com.wsteam.wandscape.Wandscape.MODID;
-
 import com.wsteam.wandscape.road.client.SplineEditorClientState;
 import com.wsteam.wandscape.road.client.studio.RoadStudioOverlay;
-
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
+
+import static com.wsteam.wandscape.Wandscape.MODID;
 
 /**
  * Server→Client: Directs client to enter or exit Spline Road Editor.

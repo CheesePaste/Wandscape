@@ -1,20 +1,19 @@
 package com.wsteam.wandscape.building.internal;
 
-import java.util.Map;
-
 import com.wsteam.wandscape.core.event.CustomEvent;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.service.ParticleService;
 import com.wsteam.wandscape.shared.api.ColonyApi;
+import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
-import com.wsteam.wandscape.shared.log.Log;
+
+import java.util.Map;
 
 /**
  * Subscribes to the engine-internal {@code EventBus} for {@code demolish_complete} events.

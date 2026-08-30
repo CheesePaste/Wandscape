@@ -1,10 +1,5 @@
 package com.wsteam.wandscape.building.internal;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -12,10 +7,14 @@ import com.google.gson.JsonPrimitive;
 import com.wsteam.wandscape.building.data.BlockOffset;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.shared.data.WorkItem;
-
+import com.wsteam.wandscape.shared.log.Log;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
-import com.wsteam.wandscape.shared.log.Log;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 /**
  * Manual repair entry point: {@link #triggerRepair} scans a building for missing

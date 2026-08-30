@@ -1,16 +1,11 @@
 package com.wsteam.wandscape.building.client;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.UUID;
-
 import com.wsteam.wandscape.building.network.ShopMaxStockPacket;
 import com.wsteam.wandscape.shared.ui.I18n;
 import com.wsteam.wandscape.shared.ui.component.MedievalButton;
 import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
 import com.wsteam.wandscape.shared.ui.component.Slider;
 import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
-
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.core.BlockPos;
@@ -19,6 +14,10 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.PacketDistributor;
+
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.UUID;
 /**
  * Shop GUI — per-good max-stock slider (0–64) with −/+ buttons.
  * Uses the shared {@link Slider} component with blue/black theme.

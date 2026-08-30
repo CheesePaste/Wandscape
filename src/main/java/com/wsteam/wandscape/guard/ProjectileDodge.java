@@ -1,19 +1,18 @@
 package com.wsteam.wandscape.guard;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.guard.executor.GuardCombat;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.shared.log.Log;
-
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.phys.Vec3;
+
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 投掷物躲避：侦测朝 NPC 飞来的**敌对投掷物**（箭/凋零骷髅头/火球等，发射者是 {@link Enemy}），

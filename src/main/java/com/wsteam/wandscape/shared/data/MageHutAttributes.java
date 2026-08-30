@@ -1,9 +1,9 @@
 package com.wsteam.wandscape.shared.data;
 
+import com.wsteam.wandscape.core.types.AttributeType;
+
 import java.util.List;
 import java.util.Map;
-
-import com.wsteam.wandscape.core.types.AttributeType;
 
 /**
  * Pure per-attribute rules for the Mage Hut progression model.

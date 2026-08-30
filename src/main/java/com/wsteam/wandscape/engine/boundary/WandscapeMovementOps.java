@@ -1,7 +1,5 @@
 package com.wsteam.wandscape.engine.boundary;
 
-import java.util.concurrent.CompletableFuture;
-
 import com.wsteam.wandscape.core.boundary.MovementOps;
 import com.wsteam.wandscape.core.component.NavigationState;
 import com.wsteam.wandscape.core.ecs.World;
@@ -10,6 +8,8 @@ import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.shared.log.Log;
+
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Stateless MC adapter for {@link MovementOps}.

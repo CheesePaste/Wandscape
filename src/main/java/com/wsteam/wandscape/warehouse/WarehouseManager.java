@@ -1,13 +1,5 @@
 package com.wsteam.wandscape.warehouse;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-
-import javax.annotation.Nullable;
-
 import com.wsteam.wandscape.core.boundary.ColonyResourceAccess;
 import com.wsteam.wandscape.core.boundary.ResourceAddedListener;
 import com.wsteam.wandscape.core.types.ResourceId;
@@ -15,7 +7,7 @@ import com.wsteam.wandscape.shared.api.WarehouseApi;
 import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.data.ItemKey;
 import com.wsteam.wandscape.shared.event.ResourceInsufficientEvent;
-
+import com.wsteam.wandscape.shared.log.Log;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.MinecraftServer;
@@ -25,7 +17,9 @@ import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
-import com.wsteam.wandscape.shared.log.Log;
+
+import javax.annotation.Nullable;
+import java.util.*;
 
 /**
  * Implements both {@link WarehouseApi} and {@link ColonyResourceAccess}.

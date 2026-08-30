@@ -1,15 +1,14 @@
 package com.wsteam.wandscape.tourist.internal;
 
+import com.wsteam.wandscape.shared.log.Log;
+
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
-
-import javax.annotation.Nullable;
-
-import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * 交互位（spot）占用管理：spot 数量 = 该建筑同时交互的游客人数上限。

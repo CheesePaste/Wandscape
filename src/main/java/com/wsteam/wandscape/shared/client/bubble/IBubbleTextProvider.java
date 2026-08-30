@@ -1,9 +1,9 @@
 package com.wsteam.wandscape.shared.client.bubble;
 
-import javax.annotation.Nullable;
-
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.LivingEntity;
+
+import javax.annotation.Nullable;
 
 /**
  * Provides text for the speech bubble shown above NPC heads.

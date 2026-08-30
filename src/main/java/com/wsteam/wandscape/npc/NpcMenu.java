@@ -1,12 +1,9 @@
 package com.wsteam.wandscape.npc;
 
-import javax.annotation.Nullable;
-
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.shared.ui.vanilla.VanillaPlayerInventory;
 import com.wsteam.wandscape.wand.item.WandItem;
-
 import net.minecraft.world.Container;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.SimpleContainer;
@@ -17,6 +14,8 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
+
+import javax.annotation.Nullable;
 
 /**
  * NPC 装备容器菜单：4 盔甲槽（原版 ArmorSlot 语义，直接写 NPC 的 vanilla 装备槽，

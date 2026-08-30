@@ -9,11 +9,9 @@ import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
 import com.wsteam.wandscape.shared.ui.panel.WandscapePanelState;
 import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
 import com.wsteam.wandscape.shared.ui.util.BuildingPreviewGifCache;
-
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
-import net.minecraft.client.gui.components.Renderable;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;

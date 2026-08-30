@@ -1,11 +1,10 @@
 package com.wsteam.wandscape.tourist.client;
 
-import javax.annotation.Nullable;
-
 import com.wsteam.wandscape.shared.data.Activity;
-
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
+
+import javax.annotation.Nullable;
 
 /**
  * 游客活动（Activity）→ 表现注册表：骨骼目标角度 + 粒子规格。

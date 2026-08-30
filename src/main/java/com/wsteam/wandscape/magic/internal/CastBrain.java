@@ -1,18 +1,17 @@
 package com.wsteam.wandscape.magic.internal;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.function.Predicate;
-
-import javax.annotation.Nullable;
-
 import com.wsteam.wandscape.core.component.CastStrategyComponent;
 import com.wsteam.wandscape.core.component.EquippedMagicComponent;
 import com.wsteam.wandscape.magic.data.MagicDef;
 import com.wsteam.wandscape.magic.data.SpellRef;
 import com.wsteam.wandscape.magic.data.WorldSnapshot;
 import com.wsteam.wandscape.shared.registry.WandscapeConstants;
+
+import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Predicate;
 
 /**
  * 统一施法决策脑：给定「已知魔法 + 可施放判定 + 世界快照」，按策略解析出的优先级顺序选第一个

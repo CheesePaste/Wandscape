@@ -1,24 +1,16 @@
 package com.wsteam.wandscape.tourist.internal;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-
-import javax.annotation.Nullable;
-
 import com.wsteam.wandscape.shared.data.Activity;
 import com.wsteam.wandscape.shared.data.Emotion;
 import com.wsteam.wandscape.shared.data.VisitMemory;
 import com.wsteam.wandscape.shared.registry.WandscapeConstants;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
+
+import javax.annotation.Nullable;
+import java.util.*;
 
 /**
  * Data-side mirror of a {@code TouristEntity} that survives chunk unload.
@@ -141,7 +133,7 @@ public final class TouristShadow implements TouristStateHost {
     // teleport fails one night, stop re-scanning every sim tick (SIM_INTERVAL=1) — no
     // checkouts at night, so a re-scan is wasted CPU. Cleared at day break by the sim.
 
-    private transient HotelRouteBackoff hotelRouteBackoff = new HotelRouteBackoff();
+    private final transient HotelRouteBackoff hotelRouteBackoff = new HotelRouteBackoff();
 
     public HotelRouteBackoff getHotelRouteBackoff() { return hotelRouteBackoff; }
 

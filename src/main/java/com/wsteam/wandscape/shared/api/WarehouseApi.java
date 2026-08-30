@@ -1,14 +1,13 @@
 package com.wsteam.wandscape.shared.api;
 
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-
+import com.wsteam.wandscape.shared.data.ElementType;
+import com.wsteam.wandscape.shared.data.ItemKey;
 import net.minecraft.world.Container;
 import net.minecraft.world.item.ItemStack;
 
-import com.wsteam.wandscape.shared.data.ElementType;
-import com.wsteam.wandscape.shared.data.ItemKey;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 public interface WarehouseApi {
     long getElement(UUID colonyId, ElementType type);
     Map<ElementType, Long> getAllElements(UUID colonyId);

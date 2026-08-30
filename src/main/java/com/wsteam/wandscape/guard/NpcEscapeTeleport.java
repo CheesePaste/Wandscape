@@ -1,7 +1,5 @@
 package com.wsteam.wandscape.guard;
 
-import java.util.Map;
-
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.types.GridPos;
 import com.wsteam.wandscape.core.types.RitualId;
@@ -11,10 +9,11 @@ import com.wsteam.wandscape.magic.data.MagicDef;
 import com.wsteam.wandscape.magic.internal.SpellbookLoader;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.shared.log.Log;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.phys.Vec3;
+
+import java.util.Map;
 
 /**
  * 环境伤害逃生：NPC 受窒息/岩浆/火烧等非生物伤害时，用传送魔法离开危险区域。

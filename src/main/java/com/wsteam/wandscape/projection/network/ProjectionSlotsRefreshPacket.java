@@ -1,15 +1,14 @@
 package com.wsteam.wandscape.projection.network;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import com.wsteam.wandscape.projection.data.BuildingSlot;
 import com.wsteam.wandscape.projection.client.ProjectionClientState;
-
+import com.wsteam.wandscape.projection.data.BuildingSlot;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
 

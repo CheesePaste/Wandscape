@@ -1,9 +1,9 @@
 package com.wsteam.wandscape.shared.ui.theme;
 
+import com.wsteam.wandscape.Wandscape;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
-import com.wsteam.wandscape.Wandscape;
 
 /**
  * Wandscape RTS-style UI Theme primitives.

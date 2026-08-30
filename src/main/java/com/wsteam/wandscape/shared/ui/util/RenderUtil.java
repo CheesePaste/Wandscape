@@ -1,7 +1,6 @@
 package com.wsteam.wandscape.shared.ui.util;
 
 import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
-
 import net.minecraft.client.gui.GuiGraphics;
 /**
  * Stateless rendering helpers used by themed widgets and screens.

@@ -1,8 +1,8 @@
 package com.wsteam.wandscape.road.core;
 
-import java.util.UUID;
-
 import com.wsteam.wandscape.core.types.GridPos;
+
+import java.util.UUID;
 /**
  * A node in the road network graph.
  * Can be a building anchor, a road intersection, or an orphan

@@ -1,8 +1,8 @@
 package com.wsteam.wandscape.shared.api;
 
-import java.util.UUID;
-
 import com.wsteam.wandscape.shared.data.ColonyMetricsSnapshot;
+
+import java.util.UUID;
 
 /**
  * Read-only facade that aggregates all colony-level metrics from

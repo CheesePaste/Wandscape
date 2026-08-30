@@ -3,7 +3,6 @@ package com.wsteam.wandscape.engine;
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.shared.data.BuildingData;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.MobSpawnType;
 import net.neoforged.bus.api.SubscribeEvent;

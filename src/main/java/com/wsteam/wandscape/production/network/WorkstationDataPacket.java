@@ -1,15 +1,10 @@
 package com.wsteam.wandscape.production.network;
 
-import java.util.*;
-import java.util.function.Consumer;
-import javax.annotation.Nullable;
-
 import com.wsteam.wandscape.production.data.RecipeUnlockRequirement;
 import com.wsteam.wandscape.production.data.SynthesizeRecipe;
 import com.wsteam.wandscape.production.internal.ProductionAffordability;
 import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.data.ItemKey;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -18,6 +13,10 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
+
+import javax.annotation.Nullable;
+import java.util.*;
+import java.util.function.Consumer;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
 /**

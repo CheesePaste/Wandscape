@@ -1,24 +1,22 @@
 package com.wsteam.wandscape.command;
 
-import java.util.UUID;
-
 import com.mojang.brigadier.Command;
-import com.wsteam.wandscape.shared.log.Log;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.tree.CommandNode;
-
 import com.wsteam.wandscape.shared.api.ColonyApi;
 import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.data.ItemKey;
+import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.warehouse.ColonyItemBank;
-
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.phys.Vec3;
+
+import java.util.UUID;
 
 /**
  * Debug command: consume (clear) all items and elements from the colony warehouse.

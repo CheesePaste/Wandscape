@@ -1,8 +1,5 @@
 package com.wsteam.wandscape.element.item;
 
-import java.util.List;
-import java.util.UUID;
-
 import com.wsteam.wandscape.engine.service.SoundService;
 import com.wsteam.wandscape.engine.sound.WandscapeSounds;
 import com.wsteam.wandscape.shared.api.ColonyApi;
@@ -10,7 +7,6 @@ import com.wsteam.wandscape.shared.api.WarehouseApi;
 import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
-
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
@@ -19,6 +15,9 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
+
+import java.util.List;
+import java.util.UUID;
 
 /**
  * 元素代币：一种元素的物品形态（供 JEI/配方展示）。

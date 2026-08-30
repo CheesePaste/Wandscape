@@ -1,14 +1,8 @@
 package com.wsteam.wandscape.magic.entity;
 
-import java.util.Optional;
-import java.util.UUID;
-
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.shared.log.Log;
-
-import org.joml.Vector3f;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
@@ -32,6 +26,10 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.CollisionContext;
+import org.joml.Vector3f;
+
+import java.util.Optional;
+import java.util.UUID;
 
 /**
  * 服务端显示实体：从源点（法阵中心）射向目标的信标光束。

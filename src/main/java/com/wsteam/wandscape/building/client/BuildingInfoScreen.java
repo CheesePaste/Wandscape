@@ -1,8 +1,5 @@
 package com.wsteam.wandscape.building.client;
 
-import java.util.List;
-import java.util.Map;
-
 import com.wsteam.wandscape.building.network.BuildingInfoPacket;
 import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.log.Log;
@@ -11,12 +8,14 @@ import com.wsteam.wandscape.shared.ui.component.MedievalButton;
 import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
 import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
 import com.wsteam.wandscape.shared.ui.theme.WandscapeTheme;
-
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
+
+import java.util.List;
+import java.util.Map;
 /**
  * Generic right-click info panel for tourist-building categories without a
  * dedicated screen (service non-hotel / relax / decoration / atm). Panel size

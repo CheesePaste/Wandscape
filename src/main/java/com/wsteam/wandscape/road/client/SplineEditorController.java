@@ -1,20 +1,17 @@
 package com.wsteam.wandscape.road.client;
 
-import org.lwjgl.glfw.GLFW;
-
+import com.mojang.blaze3d.platform.InputConstants;
 import com.wsteam.wandscape.road.client.studio.RoadStudioOverlay;
 import com.wsteam.wandscape.road.core.SplineVec3;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.ui.panel.WandscapePanelState;
-
-import com.mojang.blaze3d.platform.InputConstants;
-import net.minecraft.client.Camera;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.client.event.MovementInputUpdateEvent;
+import org.lwjgl.glfw.GLFW;
 
 /**
  * Per-tick controller for the Spline Road Editor.

@@ -1,11 +1,9 @@
 package com.wsteam.wandscape.projection.client;
 
-import java.util.UUID;
-
 import com.wsteam.wandscape.projection.network.BuildingDebugRequestPacket;
+import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket;
 import com.wsteam.wandscape.shared.ui.panel.WandscapePanelState;
-
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
@@ -14,11 +12,11 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
-import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.common.NeoForge;
-import com.wsteam.wandscape.shared.log.Log;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 import javax.annotation.Nullable;
+import java.util.UUID;
 
 /**
  * Standalone debug-inspect mode controller.

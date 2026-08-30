@@ -1,17 +1,9 @@
 package com.wsteam.wandscape.shared.ui.panel;
 
-import java.util.List;
-
 import com.wsteam.wandscape.overview.client.OverviewClientState;
 import com.wsteam.wandscape.overview.client.OverviewFlightController;
-import com.wsteam.wandscape.shared.network.tasks.MageModeActionPacket;
-import com.wsteam.wandscape.shared.network.tasks.MageSummaryDto;
-import com.wsteam.wandscape.shared.network.tasks.ResourceShortageDto;
-import com.wsteam.wandscape.shared.network.tasks.TaskManagementActionPacket;
-import com.wsteam.wandscape.shared.network.tasks.TaskSummaryDto;
-import com.wsteam.wandscape.shared.ui.I18n;
+import com.wsteam.wandscape.shared.network.tasks.*;
 import com.wsteam.wandscape.shared.ui.theme.WandscapeTheme;
-
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -20,8 +12,7 @@ import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.sounds.SoundEvents;
 import net.neoforged.neoforge.network.PacketDistributor;
 
-import com.wsteam.wandscape.shared.network.tasks.ProductionGroupDto;
-import com.wsteam.wandscape.shared.network.tasks.ProductionItemDto;
+import java.util.List;
 
 /**
  * Full-screen RTS Colony Management Hub for Global Tasks & Mages.

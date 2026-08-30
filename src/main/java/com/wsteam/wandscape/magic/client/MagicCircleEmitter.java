@@ -1,14 +1,5 @@
 package com.wsteam.wandscape.magic.client;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-
-import javax.annotation.Nullable;
-
 import com.wsteam.wandscape.magic.data.MagicCircleSpec;
 import com.wsteam.wandscape.magic.data.MagicCircleSpec.Easing;
 import com.wsteam.wandscape.magic.data.MagicCircleSpec.Element;
@@ -16,13 +7,15 @@ import com.wsteam.wandscape.magic.data.MagicCircleSpec.ElementType;
 import com.wsteam.wandscape.magic.entity.MagicBeamEntity;
 import com.wsteam.wandscape.magic.internal.MagicCircleLoader;
 import com.wsteam.wandscape.shared.log.Log;
-
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
+
+import javax.annotation.Nullable;
+import java.util.*;
 
 /**
  * 客户端魔法阵发射器：持有一批 {@link ActiveCircle}，每 tick 采样 spec 动画曲线，

@@ -1,7 +1,5 @@
 package com.wsteam.wandscape.projection.client;
 
-import java.util.List;
-
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.wsteam.wandscape.building.data.BlockOffset;
@@ -10,14 +8,15 @@ import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.projection.BuildingRotation;
 import com.wsteam.wandscape.projection.data.BuildingSlot;
 import com.wsteam.wandscape.shared.client.render.BuildingGhostRenderer;
-
+import com.wsteam.wandscape.shared.log.Log;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
-import com.wsteam.wandscape.shared.log.Log;
+
+import java.util.List;
 
 /**
  * World-space rendering for soul projection mode.

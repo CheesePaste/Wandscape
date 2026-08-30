@@ -1,13 +1,12 @@
 package com.wsteam.wandscape.ring.internal;
 
-import java.util.HashMap;
-import java.util.Map;
-
-import javax.annotation.Nullable;
-
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
+
+import javax.annotation.Nullable;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * 一名玩家在盟誓戒指中的固定槽存储（纯逻辑，零 Level 依赖，可单测）。

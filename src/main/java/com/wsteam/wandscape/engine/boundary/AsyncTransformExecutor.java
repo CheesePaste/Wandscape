@@ -1,12 +1,5 @@
 package com.wsteam.wandscape.engine.boundary;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-
-import javax.annotation.Nullable;
-
 import com.wsteam.wandscape.core.boundary.BlockOps;
 import com.wsteam.wandscape.core.component.ColonyMember;
 import com.wsteam.wandscape.core.component.Inventory;
@@ -14,15 +7,15 @@ import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.types.BlockType;
 import com.wsteam.wandscape.engine.service.SoundService;
 import com.wsteam.wandscape.engine.sound.WandscapeSounds;
+import com.wsteam.wandscape.npc.entity.WandscapeNpc;
+import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.op.api.AtomicOp;
 import com.wsteam.wandscape.op.executor.OpExecutor;
 import com.wsteam.wandscape.op.executor.ResourceShortageException;
-import com.wsteam.wandscape.npc.entity.WandscapeNpc;
-import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.shared.data.ItemKey;
+import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.warehouse.ColonyItemBank;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.level.ServerLevel;
@@ -35,7 +28,12 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
-import com.wsteam.wandscape.shared.log.Log;
+
+import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Async TransformOp executor — exercises V2.5 CompletableFuture model.
@@ -245,9 +243,7 @@ public class AsyncTransformExecutor implements OpExecutor<AtomicOp.TransformOp> 
         if (toType != null && !toType.id().isEmpty() && !"minecraft:air".equals(toType.id())) {
             String pureOld = BuiltInRegistries.BLOCK.getKey(oldState.getBlock()).toString();
             String pureTo = toType.id().replaceAll("\\[.*?\\]", "").trim();
-            if (pureOld.equals(pureTo)) {
-                return false; // same block type, no replacement salvage needed
-            }
+            return !pureOld.equals(pureTo); // same block type, no replacement salvage needed
         }
         return true;
     }

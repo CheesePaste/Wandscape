@@ -1,10 +1,5 @@
 package com.wsteam.wandscape.engine.service;
 
-import java.util.List;
-import java.util.UUID;
-
-import javax.annotation.Nullable;
-
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.shared.api.GuideProgressApi;
@@ -14,10 +9,13 @@ import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.network.GuideProgressSyncPacket;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.warehouse.ColonyItemBank;
-
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.PacketDistributor;
+
+import javax.annotation.Nullable;
+import java.util.List;
+import java.util.UUID;
 
 /**
  * Server-authoritative onboarding progress. Computes the current step from

@@ -1,14 +1,13 @@
 package com.wsteam.wandscape.projection.client;
 
-import org.lwjgl.glfw.GLFW;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.projection.BuildPlacement;
 import com.wsteam.wandscape.projection.data.BuildingSlot;
 import com.wsteam.wandscape.projection.network.ProjectionExitPacket;
+import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket;
 import com.wsteam.wandscape.shared.ui.panel.WandscapePanelState;
-
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
@@ -19,7 +18,7 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
-import com.wsteam.wandscape.shared.log.Log;
+import org.lwjgl.glfw.GLFW;
 
 /**
  * Per-tick input handler for ground-based building placement mode.

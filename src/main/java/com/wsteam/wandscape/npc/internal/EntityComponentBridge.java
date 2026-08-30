@@ -1,22 +1,24 @@
 package com.wsteam.wandscape.npc.internal;
 
+import com.wsteam.wandscape.core.CoreBootstrap;
+import com.wsteam.wandscape.core.component.ColonyMember;
+import com.wsteam.wandscape.core.component.Inventory;
+import com.wsteam.wandscape.core.component.Position;
+import com.wsteam.wandscape.core.component.TaskExecutor;
+import com.wsteam.wandscape.core.ecs.World;
+import com.wsteam.wandscape.core.types.FriendlyForce;
+import com.wsteam.wandscape.core.types.GridPos;
+import com.wsteam.wandscape.core.types.NpcAttributes;
+import com.wsteam.wandscape.core.types.ResourceStack;
+import com.wsteam.wandscape.npc.entity.WandscapeNpc;
+import com.wsteam.wandscape.shared.log.Log;
+
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-
-import javax.annotation.Nullable;
-
-import com.wsteam.wandscape.core.component.*;
-import com.wsteam.wandscape.core.types.FriendlyForce;
-import com.wsteam.wandscape.core.types.ResourceStack;
-import com.wsteam.wandscape.core.types.NpcAttributes;
-import com.wsteam.wandscape.core.CoreBootstrap;
-import com.wsteam.wandscape.core.ecs.World;
-import com.wsteam.wandscape.core.types.GridPos;
-import com.wsteam.wandscape.npc.entity.WandscapeNpc;
-import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Singleton bridge between MC {@link WandscapeNpc} entities and the ECS World.

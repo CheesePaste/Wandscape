@@ -1,13 +1,8 @@
 package com.wsteam.wandscape.engine;
 
-import java.lang.reflect.Field;
-
-import javax.annotation.Nullable;
-
 import com.wsteam.wandscape.shared.entity.PlayerLike;
 import com.wsteam.wandscape.shared.entity.VillagerLike;
 import com.wsteam.wandscape.shared.log.Log;
-
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.goal.Goal;
@@ -18,6 +13,9 @@ import net.minecraft.world.entity.npc.AbstractVillager;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
+
+import javax.annotation.Nullable;
+import java.lang.reflect.Field;
 
 /**
  * 让原版**敌对生物**（{@link Enemy}）把 {@link PlayerLike} 实体（NPC）当**玩家**索敌、把

@@ -1,24 +1,19 @@
 package com.wsteam.wandscape.building.client;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
-
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.building.network.MageHutActionPacket;
 import com.wsteam.wandscape.building.network.MageHutDataPacket;
-import com.wsteam.wandscape.building.network.OpenWarehousePacket;
 import com.wsteam.wandscape.building.network.MageHutDataPacket.MageCandidate;
+import com.wsteam.wandscape.building.network.OpenWarehousePacket;
 import com.wsteam.wandscape.core.types.AttributeType;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.data.MageHutAttributes;
 import com.wsteam.wandscape.shared.ui.I18n;
-import com.wsteam.wandscape.shared.ui.theme.WandscapeTheme;
 import com.wsteam.wandscape.shared.ui.component.MedievalButton;
 import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
 import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
-
+import com.wsteam.wandscape.shared.ui.theme.WandscapeTheme;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -30,6 +25,10 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.PacketDistributor;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 
 /**
  * Mage Hut panel — manage the single resident mage of a mage hut.
@@ -111,7 +110,7 @@ public class MageHutScreen extends MedievalScreen {
         if (selectedCandidate >= candidates.size()) selectedCandidate = Math.max(0, candidates.size() - 1);
         int itemH = 26 + 3;
         int maxScroll = Math.max(0, candidates.size() * itemH - (180 - 24));
-        candidateScrollOffset = (int) Math.clamp(candidateScrollOffset, 0, maxScroll);
+        candidateScrollOffset = Math.clamp(candidateScrollOffset, 0, maxScroll);
         rebuildPreviewNpc();
     }
 
@@ -511,7 +510,7 @@ public class MageHutScreen extends MedievalScreen {
             int viewH = lh - 24;
             int totalH = candidates.size() * itemH;
             int maxScroll = Math.max(0, totalH - viewH);
-            candidateScrollOffset = (int) Math.clamp(candidateScrollOffset, 0, maxScroll);
+            candidateScrollOffset = Math.clamp(candidateScrollOffset, 0, maxScroll);
             boolean hasScrollbar = maxScroll > 0;
             int sbW = 4;
             int cw = hasScrollbar ? (lw - 6 - sbW - 3) : (lw - 6);

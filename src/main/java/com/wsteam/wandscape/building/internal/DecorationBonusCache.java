@@ -1,10 +1,9 @@
 package com.wsteam.wandscape.building.internal;
 
+import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-
-import javax.annotation.Nullable;
 /**
  * Cache for decoration radiation bonuses applied to functional buildings.
  *

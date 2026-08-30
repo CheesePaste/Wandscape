@@ -1,19 +1,8 @@
 package com.wsteam.wandscape.warehouse;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.UUID;
-import java.util.function.BooleanSupplier;
-import java.util.function.IntFunction;
-
-import javax.annotation.Nullable;
-
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.engine.service.SoundService;
 import com.wsteam.wandscape.engine.sound.WandscapeSounds;
-import com.wsteam.wandscape.shared.api.WarehouseApi;
 import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.data.ItemKey;
 import com.wsteam.wandscape.shared.log.Log;
@@ -21,7 +10,6 @@ import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.shared.ui.vanilla.ToggleableSlot;
 import com.wsteam.wandscape.shared.ui.vanilla.VanillaPlayerInventory;
 import com.wsteam.wandscape.warehouse.network.WarehouseDataPacket;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -31,10 +19,14 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.PacketDistributor;
+
+import javax.annotation.Nullable;
+import java.util.*;
+import java.util.function.BooleanSupplier;
+import java.util.function.IntFunction;
 
 /**
  * Real container menu for the colony warehouse.

@@ -1,9 +1,5 @@
 package com.wsteam.wandscape.engine.system;
 
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.core.component.NavigationState;
 import com.wsteam.wandscape.core.component.Position;
@@ -18,8 +14,11 @@ import com.wsteam.wandscape.magic.internal.SpellbookLoader;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.shared.log.Log;
-
 import net.minecraft.core.BlockPos;
+
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Single driver of all NPC movement.

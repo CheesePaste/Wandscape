@@ -1,11 +1,10 @@
 package com.wsteam.wandscape.magic.data;
 
-import java.util.List;
-
-import javax.annotation.Nullable;
-
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+
+import javax.annotation.Nullable;
+import java.util.List;
 
 /**
  * 魔法定义（{@code data/wandscape/magic_spells/*.json} 的纯数据镜像）。

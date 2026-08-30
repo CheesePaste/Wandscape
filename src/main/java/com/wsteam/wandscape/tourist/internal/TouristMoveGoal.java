@@ -1,14 +1,6 @@
 package com.wsteam.wandscape.tourist.internal;
 
-import java.util.ArrayList;
-import java.util.EnumSet;
-import java.util.List;
-import java.util.UUID;
-
-import javax.annotation.Nullable;
-
 import com.wsteam.wandscape.Config;
-import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.building.internal.BuildingState;
 import com.wsteam.wandscape.core.event.NarrativeEventTriggered;
@@ -16,27 +8,31 @@ import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.colony.ColonyActivation;
 import com.wsteam.wandscape.engine.service.ParticleService;
 import com.wsteam.wandscape.road.engine.WandscapeTags;
+import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.data.Activity;
+import com.wsteam.wandscape.shared.data.BuildingData;
 import com.wsteam.wandscape.shared.data.NarrativeEvent;
 import com.wsteam.wandscape.shared.data.VisitMemory;
-import com.wsteam.wandscape.shared.api.BuildingApi;
-import com.wsteam.wandscape.shared.data.BuildingData;
+import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.tourist.entity.TouristEntity;
 import com.wsteam.wandscape.tourist.network.TouristBubblePacket;
-
 import net.minecraft.core.BlockPos;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.ai.goal.Goal;
-import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.level.pathfinder.Path;
-import net.minecraft.resources.ResourceLocation;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
-import com.wsteam.wandscape.shared.log.Log;
+
+import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.UUID;
 
 /**
  * Unified movement AI for {@link TouristEntity}.
@@ -489,7 +485,7 @@ public class TouristMoveGoal extends Goal {
         int interactionRange = getInteractionRange();
         if (distSqr < interactionRange * interactionRange) {
             // 到达旅店 → 入住即时完成（不占 spot、不等 interaction_duration）
-            if (buildingId != null && isHotelBuilding(buildingId)
+            if (isHotelBuilding(buildingId)
                     && tryHotelCheckIn(buildingId, getBuildingTypeId(buildingId))) {
                 return;
             }
@@ -738,7 +734,7 @@ public class TouristMoveGoal extends Goal {
     private void tickActivity() {
         try (var span = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("tourist.goal.activity")) {
         UUID bid = tourist.getTargetBuildingId();
-        if (bid == null || !isBuildingValid(bid)) {
+        if (!isBuildingValid(bid)) {
             Log.info(TAG, "[Tourist] {} activity target {} is destroyed/invalidated. Aborting activity.",
                     tourist.getTouristName(), bid);
             clearSpotState();
@@ -1370,7 +1366,7 @@ public class TouristMoveGoal extends Goal {
                 lastPos = null;
                 nav.stop();
                 if (++stuckFallbacks >= STUCK_FALLBACK_TELEPORT_THRESHOLD) {
-                    if (navTarget != null && teleportToNavTarget(navTarget)) return;
+                    if (teleportToNavTarget(navTarget)) return;
                 }
                 BlockPos tp = TouristTeleport.findSafeSpot(serverLevel(), pos, tourist.getColonyId(), null);
                 if (tp != null) {

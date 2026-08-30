@@ -1,21 +1,20 @@
 package com.wsteam.wandscape.building.scanner.client;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.wsteam.wandscape.building.data.BlockOffset;
 import com.wsteam.wandscape.building.scanner.CreativeScannerBlockEntity;
 import com.wsteam.wandscape.shared.data.Activity;
-
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.core.BlockPos;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Block Entity Renderer for the Building Scanner block.

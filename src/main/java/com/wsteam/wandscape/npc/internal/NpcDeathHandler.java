@@ -1,8 +1,5 @@
 package com.wsteam.wandscape.npc.internal;
 
-import java.util.List;
-import java.util.UUID;
-
 import com.wsteam.wandscape.core.component.Inventory;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.types.ResourceStack;
@@ -10,10 +7,12 @@ import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.npc.data.DeathRecord;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.shared.log.Log;
-
 import net.minecraft.server.level.ServerLevel;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
+
+import java.util.List;
+import java.util.UUID;
 
 /**
  * NPC 死亡留存钩子：WandscapeNpc 战死瞬间抓快照写入 {@link ColonyDeathRegistry}。

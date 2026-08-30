@@ -1,19 +1,13 @@
 package com.wsteam.wandscape.shared.client.render;
 
-import java.util.Map;
-
-import org.joml.Matrix4f;
-
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.wsteam.wandscape.building.data.BlockOffset;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.projection.BuildingRotation;
 import com.wsteam.wandscape.shared.ui.util.BuildingPreviewRenderer;
-
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.ItemDisplayContext;
@@ -22,6 +16,9 @@ import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.extensions.common.IClientItemExtensions;
+import org.joml.Matrix4f;
+
+import java.util.Map;
 
 /**
  * World-space semi-transparent building ghost renderer facade.

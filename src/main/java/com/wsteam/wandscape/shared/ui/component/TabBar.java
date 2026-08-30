@@ -1,16 +1,15 @@
 package com.wsteam.wandscape.shared.ui.component;
 
-import java.util.List;
-import java.util.function.Consumer;
-
 import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
-
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.narration.NarratedElementType;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.network.chat.Component;
+
+import java.util.List;
+import java.util.function.Consumer;
 /**
  * Horizontal tab bar. Each tab is a label string; the selected tab
  * gets a gold underline and gold text color.

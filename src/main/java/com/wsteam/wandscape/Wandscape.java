@@ -1,46 +1,36 @@
 package com.wsteam.wandscape;
 
-import com.wsteam.wandscape.engine.BuildingNoSpawnZoneHandler;
-import com.wsteam.wandscape.engine.ColonyApiImpl;
-import com.wsteam.wandscape.engine.HostileTargetingHandler;
-import com.wsteam.wandscape.engine.colony.ColonyLevelData;
-import com.wsteam.wandscape.engine.colony.ColonyLevelManager;
-import net.minecraft.core.BlockPos;
-import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.entity.BlockEntityType;
-import net.minecraft.world.level.block.state.BlockBehaviour;
-import net.neoforged.neoforge.event.level.BlockEvent;
-import com.wsteam.wandscape.building.internal.BuildCompleteListener;
-import com.wsteam.wandscape.building.internal.DemolishCompleteListener;
-import com.wsteam.wandscape.building.internal.BuildingApiImpl;
-import com.wsteam.wandscape.building.internal.BuildingInteractHandler;
-import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
-import com.wsteam.wandscape.building.internal.DailySettlementSystem;
-import com.wsteam.wandscape.stats.internal.StatisticsCollector;
-import com.wsteam.wandscape.building.internal.DecorationBonusSystem;
-import com.wsteam.wandscape.building.internal.BuildingSavedData;
-import com.wsteam.wandscape.building.internal.ShopStockManager;
-import com.wsteam.wandscape.building.internal.WonderEffectApplier;
+import com.wsteam.wandscape.building.internal.*;
+import com.wsteam.wandscape.building.network.*;
 import com.wsteam.wandscape.building.scanner.CreativeScannerBlock;
 import com.wsteam.wandscape.building.scanner.CreativeScannerBlockEntity;
 import com.wsteam.wandscape.building.scanner.ScannerBlock;
 import com.wsteam.wandscape.building.scanner.ScannerBlockEntity;
 import com.wsteam.wandscape.building.scanner.network.ScannerExportPacket;
 import com.wsteam.wandscape.building.scanner.network.ScannerSyncPacket;
-import com.wsteam.wandscape.command.ColonyCommand;
-import com.wsteam.wandscape.command.FillBuildingCommand;
-import com.wsteam.wandscape.command.AuditElementsCommand;
-import com.wsteam.wandscape.command.GenerateElementMappingsCommand;
-import com.wsteam.wandscape.command.LogFilterCommand;
-import com.wsteam.wandscape.command.NavTestCommand;
-import com.wsteam.wandscape.command.PublishBlueprintCommand;
-import com.wsteam.wandscape.command.RecoveryCommand;
-import com.wsteam.wandscape.command.SeedWarehouseCommand;
-import com.wsteam.wandscape.command.ConsumeWarehouseCommand;
-import com.wsteam.wandscape.command.StressTestCommand;
-import com.wsteam.wandscape.command.TransportCommand;
-import com.wsteam.wandscape.command.TouristCommand;
+import com.wsteam.wandscape.command.*;
+import com.wsteam.wandscape.compass.CompassSyncHandler;
+import com.wsteam.wandscape.compass.CompassTier;
+import com.wsteam.wandscape.compass.MagicCompassItem;
+import com.wsteam.wandscape.compass.network.CompassTargetPacket;
+import com.wsteam.wandscape.dataconfig.internal.WandscapeDataLoader;
+import com.wsteam.wandscape.element.internal.ElementApiImpl;
+import com.wsteam.wandscape.element.internal.ElementMappingLoader;
+import com.wsteam.wandscape.element.item.ElementItem;
+import com.wsteam.wandscape.engine.*;
+import com.wsteam.wandscape.engine.bootstrap.EngineBootstrap;
+import com.wsteam.wandscape.engine.boundary.ProductionEligibility;
+import com.wsteam.wandscape.engine.boundary.WandscapeBlockInteractExecutor;
+import com.wsteam.wandscape.engine.colony.ColonyLevelData;
+import com.wsteam.wandscape.engine.colony.ColonyLevelManager;
+import com.wsteam.wandscape.engine.service.ChunkLoadManager;
+import com.wsteam.wandscape.engine.service.ColonyMetricsService;
+import com.wsteam.wandscape.engine.sound.WandscapeSounds;
+import com.wsteam.wandscape.engine.source.blueprint.BlueprintConfigLoader;
+import com.wsteam.wandscape.engine.transport.TransportItemEntity;
+import com.wsteam.wandscape.engine.transport.TransportStartPacket;
+import com.wsteam.wandscape.guidebook.item.GuideBookItem;
+import com.wsteam.wandscape.guidebook.network.GuideBookOpenPacket;
 import com.wsteam.wandscape.magic.data.MagicDef;
 import com.wsteam.wandscape.magic.entity.MagicBeamEntity;
 import com.wsteam.wandscape.magic.internal.MagicCastManager;
@@ -48,118 +38,59 @@ import com.wsteam.wandscape.magic.internal.MagicCircleLoader;
 import com.wsteam.wandscape.magic.internal.SpellbookLoader;
 import com.wsteam.wandscape.magic.internal.SpellcastingApiImpl;
 import com.wsteam.wandscape.magic.item.SpellItem;
-import com.wsteam.wandscape.shared.network.MagicCircleCastPacket;
-import com.wsteam.wandscape.road.engine.RoadApiImpl;
-import com.wsteam.wandscape.road.engine.RoadSavedData;
-import com.wsteam.wandscape.road.engine.RoadSegmentListener;
-import com.wsteam.wandscape.engine.boundary.ProductionEligibility;
-import com.wsteam.wandscape.engine.boundary.WandscapeBlockInteractExecutor;
-import com.wsteam.wandscape.engine.sound.WandscapeSounds;
+import com.wsteam.wandscape.npc.NpcMenu;
+import com.wsteam.wandscape.npc.NpcStrategyMenu;
+import com.wsteam.wandscape.npc.entity.EvilMage;
+import com.wsteam.wandscape.npc.entity.WandscapeNpc;
+import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
+import com.wsteam.wandscape.npc.internal.NpcApiImpl;
+import com.wsteam.wandscape.npc.network.*;
+import com.wsteam.wandscape.overview.network.OverviewEntityInteractPacket;
+import com.wsteam.wandscape.overview.network.OverviewInteractPacket;
 import com.wsteam.wandscape.production.ProductionRecipeLoader;
 import com.wsteam.wandscape.production.network.CraftingStationPacket;
 import com.wsteam.wandscape.production.network.MagicStationPacket;
 import com.wsteam.wandscape.production.network.RequestProductionTaskPacket;
 import com.wsteam.wandscape.production.network.WorkstationDataPacket;
-import com.wsteam.wandscape.building.network.ConstructionSiteDataPacket;
-import com.wsteam.wandscape.building.network.HotelOpenPacket;
-import com.wsteam.wandscape.building.network.BuildingInfoPacket;
-import com.wsteam.wandscape.building.network.AltarCastRequestPacket;
-import com.wsteam.wandscape.building.network.AltarOpenPacket;
-import com.wsteam.wandscape.building.network.ShopMaxStockPacket;
-import com.wsteam.wandscape.building.network.ShopOpenPacket;
-import com.wsteam.wandscape.building.network.TavernOpenPacket;
-import com.wsteam.wandscape.building.network.TavernRecruitPacket;
-import com.wsteam.wandscape.building.network.MageHutDataPacket;
-import com.wsteam.wandscape.building.network.MageHutActionPacket;
-import com.wsteam.wandscape.building.network.OpenWarehousePacket;
-import com.wsteam.wandscape.building.network.TownHallOpenPacket;
-import com.wsteam.wandscape.building.network.TownHallWarehouseRequestPacket;
-import com.wsteam.wandscape.building.network.TaskQueueDataPacket;
-import com.wsteam.wandscape.building.network.TaskQueueModifyPacket;
-import com.wsteam.wandscape.building.network.NodeDataPacket;
-import com.wsteam.wandscape.building.network.RequestGatherTaskPacket;
-import com.wsteam.wandscape.warehouse.WarehouseManager;
-import com.wsteam.wandscape.warehouse.WarehouseMenu;
-import com.wsteam.wandscape.warehouse.WarehouseNotificationHandler;
-import com.wsteam.wandscape.warehouse.network.WarehouseActionPacket;
-import com.wsteam.wandscape.warehouse.network.WarehouseDataPacket;
-import com.wsteam.wandscape.warehouse.network.WarehouseTerminalKeyPacket;
+import com.wsteam.wandscape.projection.network.*;
 import com.wsteam.wandscape.ring.internal.OathRingSavedData;
+import com.wsteam.wandscape.road.engine.RoadApiImpl;
+import com.wsteam.wandscape.road.engine.RoadSavedData;
+import com.wsteam.wandscape.road.engine.RoadSegmentListener;
 import com.wsteam.wandscape.road.network.DestroyFillPacket;
 import com.wsteam.wandscape.road.network.FillBoxPacket;
 import com.wsteam.wandscape.road.network.RoadPlacePacket;
-import com.wsteam.wandscape.projection.network.ProjectionEnterPacket;
-import com.wsteam.wandscape.projection.network.ProjectionEnterResponsePacket;
-import com.wsteam.wandscape.projection.network.ProjectionExitPacket;
-import com.wsteam.wandscape.projection.network.ProjectionPlacePacket;
-import com.wsteam.wandscape.projection.network.ProjectionSlotsRefreshPacket;
-import com.wsteam.wandscape.projection.network.ProjectionNetwork;
-import com.wsteam.wandscape.projection.network.BuildingDebugRequestPacket;
-import com.wsteam.wandscape.projection.network.BuildingDebugResponsePacket;
-import com.wsteam.wandscape.projection.network.BuildingActionPacket;
-import com.wsteam.wandscape.overview.network.OverviewEntityInteractPacket;
-import com.wsteam.wandscape.overview.network.OverviewInteractPacket;
-
-import net.minecraft.commands.Commands;
-import com.wsteam.wandscape.engine.source.blueprint.BlueprintConfigLoader;
-import com.wsteam.wandscape.task.source.PlayerManualSource;
-import com.wsteam.wandscape.dataconfig.internal.WandscapeDataLoader;
-import com.wsteam.wandscape.element.internal.ElementApiImpl;
-import com.wsteam.wandscape.element.internal.ElementMappingLoader;
-import com.wsteam.wandscape.element.item.ElementItem;
-import com.wsteam.wandscape.engine.TaskPoolSavedData;
-import com.wsteam.wandscape.engine.WandscapeEngine;
-import com.wsteam.wandscape.engine.bootstrap.EngineBootstrap;
-import com.wsteam.wandscape.engine.service.ColonyMetricsService;
-import com.wsteam.wandscape.engine.service.ChunkLoadManager;
-import com.wsteam.wandscape.npc.entity.EvilMage;
-import com.wsteam.wandscape.npc.entity.WandscapeNpc;
-import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
-import com.wsteam.wandscape.npc.internal.NpcApiImpl;
-import com.wsteam.wandscape.npc.NpcMenu;
-import com.wsteam.wandscape.npc.NpcStrategyMenu;
-import com.wsteam.wandscape.npc.network.NpcDataPacket;
-import com.wsteam.wandscape.npc.network.NpcDismissPacket;
-import com.wsteam.wandscape.npc.network.NpcOpenEquipPacket;
-import com.wsteam.wandscape.npc.network.NpcOpenStrategyPacket;
-import com.wsteam.wandscape.npc.network.NpcRenamePacket;
-import com.wsteam.wandscape.npc.network.NpcStrategyPacket;
-import com.wsteam.wandscape.npc.network.NpcTogglePacket;
-import com.wsteam.wandscape.tourist.entity.TouristEntity;
-import com.wsteam.wandscape.tourist.internal.HotelStayHandler;
-import com.wsteam.wandscape.tourist.internal.MarkerPreviewManager;
-import com.wsteam.wandscape.tourist.internal.TavernApiImpl;
-import com.wsteam.wandscape.tourist.internal.TavernRecruitStorage;
-import com.wsteam.wandscape.tourist.internal.TouristApiImpl;
-import com.wsteam.wandscape.tourist.internal.TouristSimSystem;
-import com.wsteam.wandscape.tourist.internal.TouristSpawnSystem;
-import com.wsteam.wandscape.tourist.internal.TouristSpotManager;
-import com.wsteam.wandscape.tourist.network.TouristDataPacket;
+import com.wsteam.wandscape.shared.data.ElementType;
+import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.shared.network.MagicCircleCastPacket;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
+import com.wsteam.wandscape.stats.internal.StatisticsCollector;
+import com.wsteam.wandscape.task.source.PlayerManualSource;
+import com.wsteam.wandscape.tourist.entity.TouristEntity;
+import com.wsteam.wandscape.tourist.internal.*;
+import com.wsteam.wandscape.tourist.network.TouristDataPacket;
 import com.wsteam.wandscape.wand.internal.WandApiImpl;
 import com.wsteam.wandscape.wand.internal.WandPresetLoader;
 import com.wsteam.wandscape.wand.internal.WandPresetLoader.WandPreset;
 import com.wsteam.wandscape.wand.item.WandItem;
-import com.wsteam.wandscape.guidebook.item.GuideBookItem;
-import com.wsteam.wandscape.guidebook.network.GuideBookOpenPacket;
-import com.wsteam.wandscape.compass.MagicCompassItem;
-import com.wsteam.wandscape.compass.CompassTier;
-import com.wsteam.wandscape.compass.CompassSyncHandler;
-import com.wsteam.wandscape.compass.network.CompassTargetPacket;
+import com.wsteam.wandscape.warehouse.WarehouseManager;
+import com.wsteam.wandscape.warehouse.WarehouseMenu;
+import com.wsteam.wandscape.warehouse.WarehouseNotificationHandler;
 import com.wsteam.wandscape.warehouse.WarehouseTerminalItem;
-import com.wsteam.wandscape.engine.transport.TransportItemEntity;
-import com.wsteam.wandscape.engine.transport.TransportStartPacket;
-
+import com.wsteam.wandscape.warehouse.network.WarehouseActionPacket;
+import com.wsteam.wandscape.warehouse.network.WarehouseDataPacket;
+import com.wsteam.wandscape.warehouse.network.WarehouseTerminalKeyPacket;
+import net.minecraft.commands.Commands;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.ParticleType;
 import net.minecraft.core.particles.SimpleParticleType;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataSerializer;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.flag.FeatureFlags;
 import net.minecraft.world.inventory.MenuType;
@@ -168,10 +99,13 @@ import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
-import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.api.distmarker.Dist;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
@@ -184,6 +118,7 @@ import net.neoforged.neoforge.event.AddReloadListenerEvent;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.event.level.BlockEvent;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
@@ -192,12 +127,10 @@ import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import net.neoforged.neoforge.registries.NeoForgeRegistries;
-import com.wsteam.wandscape.shared.log.Log;
-import com.wsteam.wandscape.shared.data.ElementType;
+
 import java.nio.charset.StandardCharsets;
 import java.util.EnumMap;
 import java.util.Map;
-import java.util.function.Supplier;
 
 @Mod(Wandscape.MODID)
 public class Wandscape {
@@ -325,7 +258,7 @@ public class Wandscape {
     public static final DeferredItem<Item> WANDSCAPE_NPC_EGG =
             ITEMS.register("wandscape_npc_spawn_egg", () ->
                     new DeferredSpawnEggItem(
-                            () -> (EntityType<? extends Mob>) (EntityType<?>) WANDSCAPE_NPC.get(),
+                            () -> WANDSCAPE_NPC.get(),
                             0x4B0082,  // dark purple background
                             0xFFD700,  // gold highlight
                             new Item.Properties()));
@@ -334,7 +267,7 @@ public class Wandscape {
     public static final DeferredItem<Item> EVIL_MAGE_SPAWN_EGG =
             ITEMS.register("evil_mage_spawn_egg", () ->
                     new DeferredSpawnEggItem(
-                            () -> (EntityType<? extends Mob>) (EntityType<?>) EVIL_MAGE.get(),
+                            () -> EVIL_MAGE.get(),
                             0x8B0000,  // dark red background
                             0x1A1A1A,  // black highlight
                             new Item.Properties()));
@@ -352,7 +285,7 @@ public class Wandscape {
     public static final DeferredItem<Item> TOURIST_SPAWN_EGG =
             ITEMS.register("tourist_spawn_egg", () ->
                     new DeferredSpawnEggItem(
-                            () -> (EntityType<? extends Mob>) (EntityType<?>) TOURIST.get(),
+                            () -> TOURIST.get(),
                             0xFFAA00,  // orange background
                             0xFFFFFF,  // white highlight
                             new Item.Properties()));
@@ -425,7 +358,7 @@ public class Wandscape {
             DeferredRegister.create(Registries.BLOCK_ENTITY_TYPE, MODID);
 
     public static final DeferredHolder<Block, Block> CREATIVE_BUILDING_SCANNER = BLOCKS.register("creative_building_scanner",
-            () -> (Block) new CreativeScannerBlock(BlockBehaviour.Properties.of().strength(2.0f).noOcclusion(),
+            () -> new CreativeScannerBlock(BlockBehaviour.Properties.of().strength(2.0f).noOcclusion(),
                     Wandscape.CREATIVE_BUILDING_SCANNER_BE::get));
 
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<CreativeScannerBlockEntity>> CREATIVE_BUILDING_SCANNER_BE =
@@ -438,7 +371,7 @@ public class Wandscape {
             ITEMS.register("creative_building_scanner", () -> new BlockItem(CREATIVE_BUILDING_SCANNER.get(), new Item.Properties()));
 
     public static final DeferredHolder<Block, Block> BUILDING_SCANNER = BLOCKS.register("building_scanner",
-            () -> (Block) new ScannerBlock(BlockBehaviour.Properties.of().strength(2.0f).noOcclusion(),
+            () -> new ScannerBlock(BlockBehaviour.Properties.of().strength(2.0f).noOcclusion(),
                     Wandscape.BUILDING_SCANNER_BE::get));
 
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<ScannerBlockEntity>> BUILDING_SCANNER_BE =
@@ -451,7 +384,7 @@ public class Wandscape {
             ITEMS.register("building_scanner", () -> new BlockItem(BUILDING_SCANNER.get(), new Item.Properties()));
 
     public static final DeferredHolder<Block, Block> INTERACT_SPOT_MARKER = BLOCKS.register("interact_spot_marker",
-            () -> (Block) new com.wsteam.wandscape.building.scanner.InteractSpotMarkerBlock(
+            () -> new com.wsteam.wandscape.building.scanner.InteractSpotMarkerBlock(
                     BlockBehaviour.Properties.of().strength(2.0f).noOcclusion()));
     public static final DeferredItem<Item> INTERACT_SPOT_MARKER_ITEM =
             ITEMS.register("interact_spot_marker", () -> new BlockItem(INTERACT_SPOT_MARKER.get(), new Item.Properties()));
@@ -514,10 +447,10 @@ public class Wandscape {
     public static final BlueprintConfigLoader BLUEPRINT_CONFIG_LOADER = new BlueprintConfigLoader();
     public static final com.wsteam.wandscape.road.data.RoadPresetLoader ROAD_PRESET_LOADER =
             com.wsteam.wandscape.road.data.RoadPresetLoader.getInstance();
-    private DecorationBonusSystem decorationBonusSystem;
-    private ShopStockManager shopStockManager;
-    private WonderEffectApplier wonderEffectApplier;
-    private TavernApiImpl tavernApi;
+    private final DecorationBonusSystem decorationBonusSystem;
+    private final ShopStockManager shopStockManager;
+    private final WonderEffectApplier wonderEffectApplier;
+    private final TavernApiImpl tavernApi;
 
     public Wandscape(IEventBus modEventBus, ModContainer modContainer) {
         modEventBus.addListener(this::commonSetup);

@@ -1,18 +1,17 @@
 package com.wsteam.wandscape.building.network;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.function.Consumer;
-
-import com.wsteam.wandscape.shared.data.WorkItem;
+import com.wsteam.wandscape.shared.log.Log;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Consumer;
+
 import static com.wsteam.wandscape.Wandscape.MODID;
-import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Server→client packet carrying the current task queue for a building.

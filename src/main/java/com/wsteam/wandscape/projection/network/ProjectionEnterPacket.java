@@ -1,12 +1,9 @@
 package com.wsteam.wandscape.projection.network;
 
-import java.util.List;
-import java.util.UUID;
-
 import com.wsteam.wandscape.projection.data.BuildingSlot;
+import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.shared.ui.I18n;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -14,8 +11,10 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 
+import java.util.List;
+import java.util.UUID;
+
 import static com.wsteam.wandscape.Wandscape.MODID;
-import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Client→Server: Player requests entry into soul projection mode.

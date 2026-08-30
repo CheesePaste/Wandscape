@@ -1,10 +1,10 @@
 package com.wsteam.wandscape.compat.jei;
 
+import com.wsteam.wandscape.magic.data.MagicDef;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-
-import com.wsteam.wandscape.magic.data.MagicDef;
 
 /**
  * 从 {@code magic_spells/*.json} 收集 JEI 魔法卷轴信息（纯逻辑，零 mezz 引用，可单测）。

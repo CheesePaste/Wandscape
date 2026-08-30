@@ -1,5 +1,11 @@
 package com.wsteam.wandscape.shared.ui.panel;
 
+import com.wsteam.wandscape.building.data.BuildingConfig;
+import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
+import com.wsteam.wandscape.building.internal.BuildingUnlockChecker;
+import com.wsteam.wandscape.projection.client.ProjectionClientState;
+import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.PauseScreen;
 import net.minecraft.world.level.ClipContext;
@@ -11,15 +17,7 @@ import net.neoforged.neoforge.client.event.MovementInputUpdateEvent;
 import net.neoforged.neoforge.client.event.ScreenEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.network.PacketDistributor;
-
 import org.lwjgl.glfw.GLFW;
-import com.wsteam.wandscape.building.data.BuildingConfig;
-import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
-import com.wsteam.wandscape.building.internal.BuildingUnlockChecker;
-import com.wsteam.wandscape.projection.client.ProjectionClientState;
-import com.wsteam.wandscape.road.client.RoadPlacementState;
-import com.wsteam.wandscape.shared.log.Log;
-import com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket;
 
 
 /**
@@ -325,11 +323,9 @@ public final class WandscapePanelController {
             if (sidebarIconIndex >= 0 && sidebarIconIndex < 4) {
                 handleTabClick(sidebarIconIndex);
                 event.setCanceled(true);
-                return;
             } else if (sidebarIconIndex == 4) {
                 Minecraft.getInstance().setScreen(new AnomalyScreen());
                 event.setCanceled(true);
-                return;
             }
         }
     }

@@ -7,7 +7,6 @@ import com.wsteam.wandscape.shared.ui.skin.SkinSprite;
 import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
 import com.wsteam.wandscape.shared.ui.theme.WandscapeTheme;
 import com.wsteam.wandscape.shared.ui.util.RenderUtil;
-
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
@@ -19,11 +18,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 /**
  * Side panel displaying a building's task queue.
  * Each entry shows:

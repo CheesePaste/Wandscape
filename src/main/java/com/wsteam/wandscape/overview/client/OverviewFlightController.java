@@ -1,10 +1,6 @@
 package com.wsteam.wandscape.overview.client;
 
-import java.util.UUID;
-
-import org.joml.Vector3f;
-import org.lwjgl.glfw.GLFW;
-
+import com.mojang.blaze3d.platform.InputConstants;
 import com.wsteam.wandscape.engine.service.SoundService;
 import com.wsteam.wandscape.engine.sound.WandscapeSounds;
 import com.wsteam.wandscape.overview.network.OverviewEntityInteractPacket;
@@ -12,10 +8,8 @@ import com.wsteam.wandscape.overview.network.OverviewInteractPacket;
 import com.wsteam.wandscape.projection.BuildPlacement;
 import com.wsteam.wandscape.projection.client.ProjectionClientState;
 import com.wsteam.wandscape.road.client.RoadPlacementState;
-import com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket;
 import com.wsteam.wandscape.shared.log.Log;
-
-import com.mojang.blaze3d.platform.InputConstants;
+import com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket;
 import net.minecraft.client.Camera;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.KeyMapping;
@@ -33,6 +27,10 @@ import net.neoforged.neoforge.client.event.MovementInputUpdateEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.network.PacketDistributor;
+import org.joml.Vector3f;
+import org.lwjgl.glfw.GLFW;
+
+import java.util.UUID;
 
 /**
  * Per-frame controller for overview (bird's eye) mode.

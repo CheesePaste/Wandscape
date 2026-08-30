@@ -2,10 +2,9 @@ package com.wsteam.wandscape.task.engine.dsl;
 
 import com.wsteam.wandscape.task.runtime.TaskSequence;
 
+import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
-
-import javax.annotation.Nullable;
 /**
  * A named blueprint that defines:
  * <ul>

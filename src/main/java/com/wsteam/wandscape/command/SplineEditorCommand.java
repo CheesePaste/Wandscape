@@ -3,13 +3,11 @@ package com.wsteam.wandscape.command;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.tree.CommandNode;
 import com.wsteam.wandscape.road.network.SplineEditorEnterPacket;
-
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.PacketDistributor;
-import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Commands to enter and exit the Spline Road Editor.

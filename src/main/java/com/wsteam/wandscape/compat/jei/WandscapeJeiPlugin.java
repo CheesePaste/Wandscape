@@ -3,13 +3,11 @@ package com.wsteam.wandscape.compat.jei;
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.magic.internal.SpellbookLoader;
 import com.wsteam.wandscape.magic.item.SpellItem;
-
 import mezz.jei.api.IModPlugin;
 import mezz.jei.api.JeiPlugin;
 import mezz.jei.api.registration.IAdvancedRegistration;
 import mezz.jei.api.registration.IRecipeCategoryRegistration;
 import mezz.jei.api.registration.IRecipeRegistration;
-
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;

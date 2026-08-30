@@ -1,14 +1,11 @@
 package com.wsteam.wandscape.tourist.client;
 
-import java.util.List;
-
-import com.wsteam.wandscape.shared.ui.component.MedievalButton;
-import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
 import com.wsteam.wandscape.shared.registry.WandscapeConstants;
 import com.wsteam.wandscape.shared.ui.I18n;
+import com.wsteam.wandscape.shared.ui.component.MedievalButton;
+import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
 import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
 import com.wsteam.wandscape.tourist.network.TouristDataPacket;
-
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -16,6 +13,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+
+import java.util.List;
 /**
  * Tourist info screen.
  *

@@ -1,17 +1,14 @@
 package com.wsteam.wandscape.building.internal;
 
-import java.util.UUID;
-
-import javax.annotation.Nullable;
-
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.shared.ui.I18n;
 import com.wsteam.wandscape.shared.ui.panel.WandscapePanelState;
-
 import net.minecraft.network.chat.Component;
-import net.neoforged.api.distmarker.Dist;
 import net.neoforged.fml.loading.FMLEnvironment;
+
+import javax.annotation.Nullable;
+import java.util.UUID;
 
 /**
  * Utility for checking whether a building type is unlocked for a given colony.

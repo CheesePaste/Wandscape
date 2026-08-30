@@ -1,17 +1,16 @@
 package com.wsteam.wandscape.shared.network.tasks;
 
-import static com.wsteam.wandscape.Wandscape.MODID;
+import com.wsteam.wandscape.shared.ui.panel.TaskManagementClientState;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-import com.wsteam.wandscape.shared.ui.panel.TaskManagementClientState;
-
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import static com.wsteam.wandscape.Wandscape.MODID;
 
 /**
  * Server→Client: Full live snapshot for the Task Management Drawer.

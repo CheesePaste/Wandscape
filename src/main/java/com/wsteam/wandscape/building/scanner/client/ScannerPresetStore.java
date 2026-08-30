@@ -1,5 +1,10 @@
 package com.wsteam.wandscape.building.scanner.client;
 
+import com.wsteam.wandscape.shared.log.Log;
+import net.minecraft.client.Minecraft;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtIo;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -7,12 +12,6 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Stream;
-
-import com.wsteam.wandscape.shared.log.Log;
-
-import net.minecraft.client.Minecraft;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.NbtIo;
 
 /**
  * Client-side file storage for scanner presets.

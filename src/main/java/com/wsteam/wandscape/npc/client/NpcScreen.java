@@ -1,19 +1,12 @@
 package com.wsteam.wandscape.npc.client;
 
-import java.util.List;
-import java.util.Map;
-
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.compat.curios.CuriosCompat;
 import com.wsteam.wandscape.compat.curios.NpcOpenCuriosPacket;
 import com.wsteam.wandscape.compat.curios.client.NpcCuriosButton;
 import com.wsteam.wandscape.npc.NpcMenu;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
-import com.wsteam.wandscape.npc.network.NpcDataPacket;
-import com.wsteam.wandscape.npc.network.NpcDismissPacket;
-import com.wsteam.wandscape.npc.network.NpcOpenStrategyPacket;
-import com.wsteam.wandscape.npc.network.NpcRenamePacket;
-import com.wsteam.wandscape.npc.network.NpcTogglePacket;
+import com.wsteam.wandscape.npc.network.*;
 import com.wsteam.wandscape.shared.ui.I18n;
 import com.wsteam.wandscape.shared.ui.ReplayProtectedScreen;
 import com.wsteam.wandscape.shared.ui.component.HelpButton;
@@ -22,7 +15,6 @@ import com.wsteam.wandscape.shared.ui.component.MedievalConfirmDialog;
 import com.wsteam.wandscape.shared.ui.skin.SkinRender;
 import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
 import com.wsteam.wandscape.shared.ui.vanilla.VanillaPlayerInventory;
-
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
@@ -34,6 +26,9 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.PacketDistributor;
+
+import java.util.List;
+import java.util.Map;
 
 /**
  * NPC 装备界面（容器化）：左列 4 盔甲槽 + 1 法杖槽（真实 vanilla 槽，左键/右键/
@@ -80,7 +75,7 @@ public class NpcScreen extends AbstractContainerScreen<NpcMenu> implements Repla
     private int modelX, modelY, modelW, modelH;
     private int closeBtnX, closeBtnY;
     private HelpButton helpButton;
-    private String helpDocumentPath = "npc_guide";
+    private final String helpDocumentPath = "npc_guide";
 
     private EditBox nameBox;
     private String lastServerName = "";

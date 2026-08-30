@@ -1,15 +1,13 @@
 package com.wsteam.wandscape.tourist.internal;
 
+import com.wsteam.wandscape.shared.data.Activity;
+import com.wsteam.wandscape.shared.data.VisitMemory;
+import net.minecraft.core.BlockPos;
+
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
-
-import javax.annotation.Nullable;
-
-import com.wsteam.wandscape.shared.data.Activity;
-import com.wsteam.wandscape.shared.data.VisitMemory;
-
-import net.minecraft.core.BlockPos;
 
 /**
  * Common tourist state surface shared by the physical {@code TouristEntity}

@@ -1,31 +1,18 @@
 package com.wsteam.wandscape.building.internal;
 
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-
-import javax.annotation.Nullable;
-
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.building.data.BuildingConfig;
-import com.wsteam.wandscape.building.network.ConstructionSiteDataPacket;
-import com.wsteam.wandscape.building.network.BuildingInfoPacket;
-import com.wsteam.wandscape.building.network.HotelOpenPacket;
-import com.wsteam.wandscape.building.network.NodeDataPacket;
-import com.wsteam.wandscape.building.network.AltarOpenPacket;
-import com.wsteam.wandscape.building.network.ShopOpenPacket;
-import com.wsteam.wandscape.building.network.TavernOpenPacket;
+import com.wsteam.wandscape.building.network.*;
 import com.wsteam.wandscape.production.network.CraftingStationPacket;
 import com.wsteam.wandscape.production.network.MagicStationPacket;
 import com.wsteam.wandscape.production.network.WorkstationDataPacket;
 import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.data.ItemKey;
-import com.wsteam.wandscape.warehouse.ColonyItemBank;
-import com.wsteam.wandscape.warehouse.network.WarehouseDataPacket;
+import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.network.ScreenFeedbackPacket;
 import com.wsteam.wandscape.shared.ui.I18n;
-
+import com.wsteam.wandscape.warehouse.ColonyItemBank;
+import com.wsteam.wandscape.warehouse.network.WarehouseDataPacket;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
@@ -33,7 +20,12 @@ import net.minecraft.world.level.Level;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
-import com.wsteam.wandscape.shared.log.Log;
+
+import javax.annotation.Nullable;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 /**
  * Intercepts right-click on blocks within a building's pattern

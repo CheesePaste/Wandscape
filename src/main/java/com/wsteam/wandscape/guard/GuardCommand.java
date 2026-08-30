@@ -1,7 +1,5 @@
 package com.wsteam.wandscape.guard;
 
-import java.util.List;
-
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.tree.CommandNode;
@@ -10,7 +8,6 @@ import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.task.runtime.TaskState;
-
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
@@ -18,6 +15,8 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+
+import java.util.List;
 
 /**
  * 守卫调试命令：{@code /wandscape guard status} — 打印守卫区域数、最近威胁、

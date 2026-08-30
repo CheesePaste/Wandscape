@@ -2,7 +2,6 @@ package com.wsteam.wandscape.engine.attribute;
 
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.core.types.AttributeType;
-
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.entity.ai.attributes.Attribute;

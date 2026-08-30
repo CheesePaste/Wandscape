@@ -1,17 +1,15 @@
 package com.wsteam.wandscape.building.internal;
 
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-
-import javax.annotation.Nullable;
-
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.shared.event.ColonyEvaluationChangedEvent;
-
-import net.neoforged.bus.api.IEventBus;
 import com.wsteam.wandscape.shared.log.Log;
+import net.neoforged.bus.api.IEventBus;
+
+import javax.annotation.Nullable;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Tracks, per colony, how many <em>intact</em> buildings exist for each building type.

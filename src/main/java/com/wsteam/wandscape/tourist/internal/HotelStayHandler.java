@@ -1,14 +1,5 @@
 package com.wsteam.wandscape.tourist.internal;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-
-import javax.annotation.Nullable;
-
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.building.internal.BuildingSavedData;
@@ -17,10 +8,10 @@ import com.wsteam.wandscape.core.event.NarrativeEventTriggered;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.shared.data.NarrativeEvent;
 import com.wsteam.wandscape.shared.data.ServiceConfig;
+import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.registry.WandscapeConstants;
 import com.wsteam.wandscape.shared.ui.I18n;
 import com.wsteam.wandscape.tourist.entity.TouristEntity;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -32,7 +23,10 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
-import com.wsteam.wandscape.shared.log.Log;
+
+import javax.annotation.Nullable;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Manages hotel/inn stays for tourists（住店客机制）.
@@ -385,7 +379,7 @@ public final class HotelStayHandler {
         TouristSimSystem sim = TouristSimSystem.getActive();
         if (sim != null && sim.getRegistry() != null) {
             TouristShadow s = sim.getRegistry().getShadows().get(touristId);
-            if (s != null && buildingId.equals(s.getCheckedInBuildingId())) return true;
+            return s != null && buildingId.equals(s.getCheckedInBuildingId());
         }
         return false;
     }

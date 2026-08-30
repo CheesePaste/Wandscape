@@ -1,11 +1,6 @@
 package com.wsteam.wandscape.building.scanner;
 
-import java.util.function.Supplier;
-
-import javax.annotation.Nullable;
-
 import com.wsteam.wandscape.building.scanner.client.ScannerClientHelper;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -14,6 +9,9 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
+
+import javax.annotation.Nullable;
+import java.util.function.Supplier;
 
 /**
  * Survival Building Scanner block — simplified counterpart of the Creative Building Scanner.

@@ -4,9 +4,6 @@ import com.wsteam.wandscape.ring.client.OathRingClientData;
 import com.wsteam.wandscape.ring.internal.OathRingService;
 import com.wsteam.wandscape.shared.api.NpcBindingItem;
 import com.wsteam.wandscape.shared.log.Log;
-
-import java.util.List;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -20,6 +17,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
+
+import java.util.List;
 
 /**
  * 盟誓戒指：shift+右键本殖民地法师将其存入戒指，右键地面/空气放出。

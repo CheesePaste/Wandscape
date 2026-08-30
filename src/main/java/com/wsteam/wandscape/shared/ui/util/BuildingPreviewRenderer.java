@@ -1,29 +1,27 @@
 package com.wsteam.wandscape.shared.ui.util;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-import org.joml.Quaternionf;
 import com.mojang.blaze3d.platform.Lighting;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.wsteam.wandscape.building.data.BlockOffset;
 import com.wsteam.wandscape.building.data.BuildingConfig;
-
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.block.BlockRenderDispatcher;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.Property;
-import com.wsteam.wandscape.shared.log.Log;
+import org.joml.Quaternionf;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Standalone 3D building preview renderer.
@@ -229,7 +227,7 @@ public final class BuildingPreviewRenderer {
     private static <T extends Comparable<T>> BlockState setPropertyValue(
             BlockState state, Property<T> property, String valueStr) {
         return property.getValue(valueStr)
-                .map(v -> (BlockState) state.setValue(property, v))
+                .map(v -> state.setValue(property, v))
                 .orElse(state);
     }
 

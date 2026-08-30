@@ -1,9 +1,9 @@
 package com.wsteam.wandscape.task.engine.dsl;
 
-import java.util.Map;
-
 import com.google.gson.JsonElement;
 import com.wsteam.wandscape.task.runtime.TaskSequence;
+
+import java.util.Map;
 
 /**
  * Functional interface that generates a {@link TaskSequence} from task parameters.

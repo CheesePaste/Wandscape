@@ -1,9 +1,6 @@
 package com.wsteam.wandscape.compass;
 
-import java.util.List;
-
 import com.wsteam.wandscape.compass.client.CompassTargetClientCache;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.network.chat.Component;
@@ -18,6 +15,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
+
+import java.util.List;
 
 /**
  * 魔法指南针（玩家侧物品）：指针经 {@code angle} item property 始终指向自己殖民地的市政厅。

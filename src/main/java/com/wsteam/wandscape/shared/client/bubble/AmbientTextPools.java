@@ -6,15 +6,14 @@ import com.wsteam.wandscape.shared.data.VisitMemory;
 import com.wsteam.wandscape.shared.ui.I18n;
 import com.wsteam.wandscape.tourist.entity.TouristEntity;
 import com.wsteam.wandscape.tourist.internal.TouristState;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.LivingEntity;
 
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
-
-import net.minecraft.network.chat.Component;
-import net.minecraft.world.entity.LivingEntity;
 
 /**
  * Text pools for NPC speech bubbles, organized by emotion × state for tourists

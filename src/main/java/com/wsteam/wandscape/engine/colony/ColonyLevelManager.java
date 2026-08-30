@@ -1,10 +1,5 @@
 package com.wsteam.wandscape.engine.colony;
 
-import java.util.UUID;
-import java.util.function.Consumer;
-
-import javax.annotation.Nullable;
-
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.engine.service.ParticleService;
 import com.wsteam.wandscape.engine.service.SoundService;
@@ -12,10 +7,13 @@ import com.wsteam.wandscape.engine.sound.WandscapeSounds;
 import com.wsteam.wandscape.shared.event.ColonyLevelUpEvent;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
-
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.sounds.SoundSource;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
+
+import javax.annotation.Nullable;
+import java.util.UUID;
+import java.util.function.Consumer;
 
 /**
  * Business logic for colony leveling and experience.

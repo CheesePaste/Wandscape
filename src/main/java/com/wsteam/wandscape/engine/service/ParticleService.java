@@ -2,7 +2,6 @@ package com.wsteam.wandscape.engine.service;
 
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.shared.network.ParticleBurstPacket;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.server.level.ServerLevel;

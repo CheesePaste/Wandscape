@@ -1,50 +1,39 @@
 package com.wsteam.wandscape.engine.bootstrap;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-
-import com.wsteam.wandscape.core.types.ResourceId;
+import com.wsteam.wandscape.building.executor.AltarCastExecutor;
 import com.wsteam.wandscape.core.CoreBootstrap;
-import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.core.CoreBootstrapConfig;
 import com.wsteam.wandscape.core.boundary.ColonyResourceAccess;
 import com.wsteam.wandscape.core.boundary.ResourceShortageHandler;
+import com.wsteam.wandscape.core.ecs.World;
+import com.wsteam.wandscape.core.types.ResourceId;
+import com.wsteam.wandscape.engine.WandscapeEngine;
+import com.wsteam.wandscape.engine.boundary.*;
 import com.wsteam.wandscape.engine.service.AchievementService;
 import com.wsteam.wandscape.engine.service.StatsService;
-import com.wsteam.wandscape.shared.registry.WandscapeApis;
-import com.wsteam.wandscape.core.ecs.World;
-import com.wsteam.wandscape.op.executor.DefaultOpExecutors;
-import com.wsteam.wandscape.task.source.EventDrivenTaskSource;
-import com.wsteam.wandscape.task.scheduler.SystemBlueprintRegistry;
-import com.wsteam.wandscape.task.source.TaskSource;
-import com.wsteam.wandscape.task.source.WorkbenchSource;
-import com.wsteam.wandscape.task.engine.dsl.BlueprintInterpreter;
-import com.wsteam.wandscape.task.engine.dsl.BlueprintRegistry;
-import com.wsteam.wandscape.task.engine.pool.BuildingTaskPool;
-import com.wsteam.wandscape.engine.WandscapeEngine;
-import com.wsteam.wandscape.engine.boundary.AsyncTransformExecutor;
-import com.wsteam.wandscape.engine.boundary.WandscapeBlockInteractExecutor;
-import com.wsteam.wandscape.engine.boundary.WandscapeBlockOps;
-import com.wsteam.wandscape.engine.boundary.WandscapeEntityOps;
-import com.wsteam.wandscape.engine.boundary.WandscapeMovementOps;
-import com.wsteam.wandscape.engine.boundary.ResourceRequestExecutor;
-import com.wsteam.wandscape.engine.boundary.WandscapeRitualOps;
-import com.wsteam.wandscape.engine.system.ResourceSupplySystem;
-import com.wsteam.wandscape.engine.system.NavigationSystem;
-import com.wsteam.wandscape.engine.transport.ItemTransportManager;
-import com.wsteam.wandscape.building.data.BuildingConfig;
-import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.engine.source.BuildingTaskSource;
 import com.wsteam.wandscape.engine.source.blueprint.BlueprintConfigLoader;
+import com.wsteam.wandscape.engine.system.NavigationSystem;
+import com.wsteam.wandscape.engine.system.ResourceSupplySystem;
+import com.wsteam.wandscape.engine.transport.ItemTransportManager;
 import com.wsteam.wandscape.guard.GuardBlueprints;
 import com.wsteam.wandscape.guard.GuardTaskSource;
 import com.wsteam.wandscape.guard.executor.GuardAttackExecutor;
 import com.wsteam.wandscape.guard.executor.SelfDefenseExecutor;
-import com.wsteam.wandscape.building.executor.AltarCastExecutor;
-
-import net.neoforged.neoforge.event.server.ServerStartingEvent;
+import com.wsteam.wandscape.op.executor.DefaultOpExecutors;
 import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.shared.registry.WandscapeApis;
+import com.wsteam.wandscape.task.engine.dsl.BlueprintInterpreter;
+import com.wsteam.wandscape.task.engine.dsl.BlueprintRegistry;
+import com.wsteam.wandscape.task.engine.pool.BuildingTaskPool;
+import com.wsteam.wandscape.task.scheduler.SystemBlueprintRegistry;
+import com.wsteam.wandscape.task.source.EventDrivenTaskSource;
+import com.wsteam.wandscape.task.source.TaskSource;
+import com.wsteam.wandscape.task.source.WorkbenchSource;
+import net.neoforged.neoforge.event.server.ServerStartingEvent;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Bootstraps the engine integration layer.

@@ -1,11 +1,5 @@
 package com.wsteam.wandscape.wand.internal;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-
-import java.util.Locale;
-
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -16,13 +10,17 @@ import com.wsteam.wandscape.core.types.ModifierOperation;
 import com.wsteam.wandscape.dataconfig.internal.WandscapeDataLoader;
 import com.wsteam.wandscape.engine.attribute.WandscapeAttributes;
 import com.wsteam.wandscape.shared.registry.WandscapeDataRegistry;
-
 import net.minecraft.core.Holder;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EquipmentSlotGroup;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.item.component.ItemAttributeModifiers;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
 public class WandPresetLoader {
     private static final String CATEGORY = "craft_recipes";

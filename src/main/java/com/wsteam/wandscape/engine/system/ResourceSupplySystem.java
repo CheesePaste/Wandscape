@@ -1,15 +1,8 @@
 package com.wsteam.wandscape.engine.system;
 
-import java.util.*;
-
-import javax.annotation.Nullable;
-
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
-
-import net.minecraft.core.BlockPos;
-
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.building.data.BuildingConfig.NodeConfig;
@@ -29,8 +22,11 @@ import com.wsteam.wandscape.shared.registry.WandscapeConstants;
 import com.wsteam.wandscape.task.engine.pool.GlobalTask;
 import com.wsteam.wandscape.task.runtime.TaskState;
 import com.wsteam.wandscape.warehouse.ColonyItemBank;
-
+import net.minecraft.core.BlockPos;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
+
+import javax.annotation.Nullable;
+import java.util.*;
 
 /**
  * Periodically scans {@link TaskState#AWAITING_RESOURCES} tasks and
@@ -265,7 +261,7 @@ public class ResourceSupplySystem implements System {
             for (UUID stationId : api.getBuildingsByCategory(colonyId, "workstation")) {
                 BuildingData bd = api.getBuilding(stationId);
                 if (bd == null) continue;
-                String dedupKey = String.valueOf(bd.getColonyId()) + "|" + bd.getBuildingTypeId();
+                String dedupKey = bd.getColonyId() + "|" + bd.getBuildingTypeId();
                 if (!seen.add(dedupKey)) continue;
                 for (WorkItem item : api.getQueue(stationId)) {
                     if (!"production:synthesize".equals(item.blueprintId())) continue;
@@ -311,7 +307,7 @@ public class ResourceSupplySystem implements System {
             boolean isRunning = pos != null && runningAnchors.contains(pos);
             if (isRunning) { count++; continue; }
             // A queued synthesize occupies one station per shared group — count each group once.
-            String dedupKey = String.valueOf(bd != null ? bd.getColonyId() : null) + "|"
+            String dedupKey = (bd != null ? bd.getColonyId() : null) + "|"
                     + (bd != null ? bd.getBuildingTypeId() : "");
             if (!countedQueueGroups.add(dedupKey)) continue;
             for (WorkItem item : api.getQueue(stationId)) {
@@ -350,7 +346,7 @@ public class ResourceSupplySystem implements System {
                 if (remainingToCancel <= 0) break;
                 BuildingData bd = api.getBuilding(stationId);
                 if (bd == null) continue;
-                String groupKey = String.valueOf(bd.getColonyId()) + "|" + bd.getBuildingTypeId();
+                String groupKey = bd.getColonyId() + "|" + bd.getBuildingTypeId();
                 if (!processedGroups.add(groupKey + "|" + strippedKey)) continue;
 
                 List<WorkItem> queue = api.getQueue(stationId);
@@ -516,7 +512,7 @@ public class ResourceSupplySystem implements System {
             if (bd == null) continue;
             String nodeElem = nodeElement(bd);
             if (nodeElem == null) continue;
-            String dedupKey = String.valueOf(bd.getColonyId()) + "|" + nodeElem;
+            String dedupKey = bd.getColonyId() + "|" + nodeElem;
             if (!seen.add(dedupKey)) continue;
             for (WorkItem item : api.getQueue(nodeId)) {
                 if (!"node:gather".equals(item.blueprintId())) continue;

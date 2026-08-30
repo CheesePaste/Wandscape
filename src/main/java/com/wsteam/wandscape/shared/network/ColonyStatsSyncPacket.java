@@ -2,7 +2,6 @@ package com.wsteam.wandscape.shared.network;
 
 import com.wsteam.wandscape.shared.data.ColonyMetricsSnapshot;
 import com.wsteam.wandscape.shared.ui.panel.WandscapePanelState;
-
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;

@@ -1,7 +1,6 @@
 package com.wsteam.wandscape.shared.ui.markdown.navigation;
 
 import com.wsteam.wandscape.shared.ui.I18n;
-
 import net.minecraft.client.Minecraft;
 
 import java.io.InputStream;

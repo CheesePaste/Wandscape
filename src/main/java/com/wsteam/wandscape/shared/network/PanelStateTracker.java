@@ -8,7 +8,6 @@ import com.wsteam.wandscape.shared.event.ElementBalanceChangedEvent;
 import com.wsteam.wandscape.shared.event.TouristArrivedEvent;
 import com.wsteam.wandscape.shared.event.TouristDepartedEvent;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
-
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;

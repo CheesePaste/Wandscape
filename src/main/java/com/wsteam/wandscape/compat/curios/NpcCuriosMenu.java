@@ -1,14 +1,8 @@
 package com.wsteam.wandscape.compat.curios;
 
-import java.util.List;
-import java.util.Map;
-
-import javax.annotation.Nullable;
-
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.shared.ui.vanilla.VanillaPlayerInventory;
-
 import net.minecraft.core.NonNullList;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.world.entity.EntityType;
@@ -25,6 +19,10 @@ import top.theillusivec4.curios.api.type.ISlotType;
 import top.theillusivec4.curios.api.type.capability.ICuriosItemHandler;
 import top.theillusivec4.curios.api.type.inventory.ICurioStacksHandler;
 import top.theillusivec4.curios.api.type.inventory.IDynamicStackHandler;
+
+import javax.annotation.Nullable;
+import java.util.List;
+import java.util.Map;
 
 /**
  * 法师饰品容器菜单：法师全部饰品槽（按槽类型自然序排列，8 列网格）+ 原版玩家背包槽。槽位是真实

@@ -1,12 +1,5 @@
 package com.wsteam.wandscape.warehouse.client;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-
 import com.wsteam.wandscape.WandscapeClient;
 import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.ui.I18n;
@@ -23,7 +16,6 @@ import com.wsteam.wandscape.warehouse.WarehouseSlot;
 import com.wsteam.wandscape.warehouse.network.WarehouseActionPacket;
 import com.wsteam.wandscape.warehouse.network.WarehouseDataPacket;
 import com.wsteam.wandscape.warehouse.network.WarehouseDataPacket.ItemEntry;
-
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
@@ -41,6 +33,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.CustomData;
 import net.neoforged.neoforge.network.PacketDistributor;
+
+import java.util.*;
 
 import static com.wsteam.wandscape.warehouse.WarehouseMenu.PANEL_H;
 import static com.wsteam.wandscape.warehouse.WarehouseMenu.PANEL_W;
@@ -122,9 +116,9 @@ public class WarehouseScreen extends AbstractContainerScreen<WarehouseMenu> impl
 
     // ── 通用皮肤状态 ──
     private String buildingCreator = "";
-    private boolean showCloseButton = true;
-    private boolean showHelpButton = true;
-    private String helpDocumentPath = "warehouse_guide";
+    private final boolean showCloseButton = true;
+    private final boolean showHelpButton = true;
+    private final String helpDocumentPath = "warehouse_guide";
     private HelpButton helpButton;
     private Component feedback;
     private int feedbackColor;

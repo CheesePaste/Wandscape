@@ -1,13 +1,5 @@
 package com.wsteam.wandscape.guard.executor;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-
-import javax.annotation.Nullable;
-
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.core.component.NpcTaskQueue;
 import com.wsteam.wandscape.core.component.TaskExecutor;
@@ -23,11 +15,17 @@ import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.task.engine.pool.GlobalTask;
 import com.wsteam.wandscape.task.runtime.NpcTaskPackage;
-
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
+
+import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * NPC 自防御执行器：主动仇恨范围 + 受伤反击，**独立于守卫任务**。
@@ -156,7 +154,7 @@ public final class SelfDefenseExecutor implements OpExecutor<AtomicOp.SelfDefens
         if (current.source().equals("self_defense")) return true;
         if (exec.globalTaskId != null && world.taskPool != null) {
             GlobalTask t = world.taskPool.get(exec.globalTaskId);
-            if (t != null && t.blueprintId != null && t.blueprintId.startsWith("guard:")) return true;
+            return t != null && t.blueprintId != null && t.blueprintId.startsWith("guard:");
         }
         return false;
     }

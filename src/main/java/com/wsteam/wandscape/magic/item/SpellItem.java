@@ -1,13 +1,8 @@
 package com.wsteam.wandscape.magic.item;
 
-import java.util.List;
-
-import javax.annotation.Nullable;
-
 import com.wsteam.wandscape.magic.data.MagicDef;
 import com.wsteam.wandscape.magic.internal.MagicSpellExecutors;
 import com.wsteam.wandscape.magic.internal.SpellbookLoader;
-
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
@@ -20,6 +15,9 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.Level;
+
+import javax.annotation.Nullable;
+import java.util.List;
 
 /**
  * 魔法的物品形态（通用件，CUSTOM_DATA 存 magicId）。

@@ -1,10 +1,5 @@
 package com.wsteam.wandscape.engine.boundary;
 
-import java.io.ByteArrayInputStream;
-import java.util.Base64;
-
-import javax.annotation.Nullable;
-
 import com.wsteam.wandscape.core.boundary.EntityOps;
 import com.wsteam.wandscape.core.types.EffectId;
 import com.wsteam.wandscape.core.types.EntityId;
@@ -13,14 +8,9 @@ import com.wsteam.wandscape.engine.service.ChunkLoadManager;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.shared.log.Log;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.DoubleTag;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.NbtAccounter;
-import net.minecraft.nbt.NbtIo;
+import net.minecraft.nbt.*;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
@@ -29,6 +19,10 @@ import net.minecraft.world.entity.decoration.BlockAttachedEntity;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.phys.AABB;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
+
+import javax.annotation.Nullable;
+import java.io.ByteArrayInputStream;
+import java.util.Base64;
 
 /**
  * MC implementation of {@link EntityOps}.

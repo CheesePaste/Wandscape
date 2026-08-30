@@ -1,7 +1,7 @@
 package com.wsteam.wandscape.core.types;
 
-import java.util.UUID;
 import javax.annotation.Nullable;
+import java.util.UUID;
 
 /**
  * 敌对权杖强制仇恨目标决策表（纯逻辑，零 MC 依赖，可单测）。

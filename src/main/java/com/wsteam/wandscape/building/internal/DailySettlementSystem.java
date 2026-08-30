@@ -1,19 +1,18 @@
 package com.wsteam.wandscape.building.internal;
 
-import java.util.HashSet;
-import java.util.Set;
-import java.util.UUID;
-
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.shared.event.DailySettlementEvent;
 import com.wsteam.wandscape.shared.log.Log;
-
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
+
+import java.util.HashSet;
+import java.util.Set;
+import java.util.UUID;
 
 /**
  * Daily settlement boundary. Fires once per Minecraft day at time-of-day 0

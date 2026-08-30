@@ -1,9 +1,5 @@
 package com.wsteam.wandscape.stats.internal;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
-
 import com.wsteam.wandscape.shared.api.ColonyApi;
 import com.wsteam.wandscape.shared.event.ColonyEvaluationChangedEvent;
 import com.wsteam.wandscape.shared.event.DailySettlementEvent;
@@ -15,7 +11,6 @@ import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.stats.data.ColonyDailySnapshot;
 import com.wsteam.wandscape.stats.data.ColonyStatsSummary;
 import com.wsteam.wandscape.stats.network.StatsSyncPacket;
-
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -23,6 +18,10 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 
 /**
  * Collects colony statistics by subscribing to domain events.

@@ -1,10 +1,5 @@
 package com.wsteam.wandscape.building.client;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
-
 import com.wsteam.wandscape.building.network.AltarCastRequestPacket;
 import com.wsteam.wandscape.shared.data.AltarSpellInfo;
 import com.wsteam.wandscape.shared.ui.I18n;
@@ -12,12 +7,16 @@ import com.wsteam.wandscape.shared.ui.component.MedievalButton;
 import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
 import com.wsteam.wandscape.shared.ui.component.ScrollableList;
 import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
-
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.neoforged.neoforge.network.PacketDistributor;
+
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 /**
  * 祭坛 GUI：列出祭坛可施放的 altarOnly 魔法（名称/蓝耗/CD/时长/冷却/施法锁定状态）。
  * 左键点选一行（高亮）→ 点右下角 Submit 才发送 {@link AltarCastRequestPacket} 发布任务；

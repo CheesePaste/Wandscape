@@ -1,5 +1,6 @@
 package com.wsteam.wandscape.op.executor;
 
+import com.google.gson.JsonElement;
 import com.wsteam.wandscape.core.TemplateResolver;
 import com.wsteam.wandscape.core.boundary.BlockOps;
 import com.wsteam.wandscape.core.boundary.ColonyResourceAccess;
@@ -12,8 +13,6 @@ import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.event.CustomEvent;
 import com.wsteam.wandscape.core.types.ResourceId;
 import com.wsteam.wandscape.core.types.ResourceStack;
-
-import com.google.gson.JsonElement;
 import com.wsteam.wandscape.op.api.AtomicOp;
 import com.wsteam.wandscape.op.api.ConditionEvaluator;
 
@@ -260,7 +259,7 @@ public final class DefaultOpExecutors {
         public CompletableFuture<Void> execute(AtomicOp.IfConditionOp op, World world, long npcId) {
             ConditionEvaluator evaluator = world.opExecutors.getCondition(op.conditionName());
             boolean conditionTrue = evaluator != null && evaluator.evaluate(op.params(), world, npcId);
-            boolean shouldSkip = op.elseSkip() ? !conditionTrue : conditionTrue;
+            boolean shouldSkip = op.elseSkip() != conditionTrue;
             int advance = shouldSkip ? op.skipCount() + 1 : 1;
             advanceAfterPureOp(world, npcId, advance);
             return CompletableFuture.completedFuture(null);

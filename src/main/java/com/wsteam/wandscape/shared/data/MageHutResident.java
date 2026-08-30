@@ -1,11 +1,10 @@
 package com.wsteam.wandscape.shared.data;
 
-import java.util.Arrays;
-import java.util.UUID;
+import com.wsteam.wandscape.core.types.AttributeType;
 
 import javax.annotation.Nullable;
-
-import com.wsteam.wandscape.core.types.AttributeType;
+import java.util.Arrays;
+import java.util.UUID;
 
 /**
  * Persistent record of the single mage assigned to a Mage Hut.

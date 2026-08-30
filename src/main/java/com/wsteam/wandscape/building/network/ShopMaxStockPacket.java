@@ -1,11 +1,6 @@
 package com.wsteam.wandscape.building.network;
 
-import java.util.Map;
-import java.util.UUID;
-
-import com.wsteam.wandscape.building.internal.BuildingInteractHandler;
 import com.wsteam.wandscape.building.internal.ShopStockManager;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -14,6 +9,9 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.PacketDistributor;
+
+import java.util.Map;
+import java.util.UUID;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
 /**

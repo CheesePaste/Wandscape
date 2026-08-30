@@ -1,12 +1,7 @@
 package com.wsteam.wandscape.projection.client;
 
-import java.util.Optional;
-
-import org.lwjgl.glfw.GLFW;
-
 import com.wsteam.wandscape.road.client.RoadPlacementController;
 import com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket;
-
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
@@ -15,6 +10,7 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.common.NeoForge;
+import org.lwjgl.glfw.GLFW;
 
 /**
  * Controller for mouse interaction, hover detection, and 3D Axis Gizmo dragging

@@ -1,18 +1,10 @@
 package com.wsteam.wandscape.tourist.internal;
 
-import java.util.Iterator;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-
-import javax.annotation.Nullable;
-
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.building.scanner.InteractSpotMarkerBlock;
 import com.wsteam.wandscape.shared.data.Activity;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.tourist.entity.TouristEntity;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
@@ -31,6 +23,12 @@ import net.neoforged.neoforge.event.level.ChunkEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
+
+import javax.annotation.Nullable;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 交互位（interact_spot_marker）预览假人管理（服务器端，始终常态）。

@@ -1,7 +1,6 @@
 package com.wsteam.wandscape.mixin;
 
 import com.wsteam.wandscape.engine.boundary.BuildPlacementGuard;
-
 import net.minecraft.world.ticks.LevelTicks;
 import net.minecraft.world.ticks.ScheduledTick;
 import org.spongepowered.asm.mixin.Mixin;

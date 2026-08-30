@@ -1,17 +1,16 @@
 package com.wsteam.wandscape.tourist.internal;
 
+import com.wsteam.wandscape.shared.api.TouristApi;
+import com.wsteam.wandscape.shared.data.BarRatio;
+import com.wsteam.wandscape.shared.event.TouristArrivedEvent;
+import com.wsteam.wandscape.shared.event.TouristDepartedEvent;
+import net.neoforged.neoforge.common.NeoForge;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-
-import com.wsteam.wandscape.shared.api.TouristApi;
-import com.wsteam.wandscape.shared.data.BarRatio;
-import com.wsteam.wandscape.shared.event.TouristArrivedEvent;
-import com.wsteam.wandscape.shared.event.TouristDepartedEvent;
-
-import net.neoforged.neoforge.common.NeoForge;
 /**
  * Implementation of {@link TouristApi}.
  * Tracks tourist presence per colony in memory.

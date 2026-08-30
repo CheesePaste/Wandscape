@@ -1,12 +1,5 @@
 package com.wsteam.wandscape.engine.boundary;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-
-import javax.annotation.Nullable;
-
 import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
 import com.wsteam.wandscape.Config;
@@ -15,6 +8,12 @@ import com.wsteam.wandscape.production.data.CraftRecipeView;
 import com.wsteam.wandscape.production.data.CraftSpellRecipe;
 import com.wsteam.wandscape.production.data.SynthesizeRecipe;
 import com.wsteam.wandscape.shared.data.ElementType;
+
+import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Shared affordability decision for production WorkItems. All three places that

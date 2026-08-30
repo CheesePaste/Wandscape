@@ -1,16 +1,14 @@
 package com.wsteam.wandscape.shared.ui.component;
 
-import java.util.List;
-
 import com.wsteam.wandscape.shared.ui.I18n;
 import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
-
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
-
 import org.lwjgl.glfw.GLFW;
+
+import java.util.List;
 
 /**
  * 可复用的中世纪确认框（模态）。自包含：不依赖 widget 生命周期，宿主 Screen
@@ -178,7 +176,7 @@ public final class MedievalConfirmDialog {
                 ? (hovered ? MedievalColors.PANEL_TITLE_BG : 0xFF1E100A)
                 : (hovered ? MedievalColors.PANEL_TITLE_BG : 0xFF140C08);
         int borderColor = confirm
-                ? (hovered ? MedievalColors.BORDER_GOLD : MedievalColors.BORDER_GOLD)
+                ? (MedievalColors.BORDER_GOLD)
                 : (hovered ? MedievalColors.BORDER_GOLD : MedievalColors.BORDER_GOLD_DARK);
 
         g.fillGradient(x, y, x + BTN_W, y + BTN_H, bgTop, bgBottom);

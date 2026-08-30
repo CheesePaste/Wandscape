@@ -1,26 +1,19 @@
 package com.wsteam.wandscape.npc.network;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.UUID;
-import java.util.function.Consumer;
-
-import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.types.AttributeType;
-import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.magic.data.MagicDef;
 import com.wsteam.wandscape.magic.internal.SpellbookLoader;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
-
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
+
+import java.util.*;
+import java.util.function.Consumer;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
 /**

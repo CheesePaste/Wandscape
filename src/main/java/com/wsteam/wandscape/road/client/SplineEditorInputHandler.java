@@ -1,22 +1,19 @@
 package com.wsteam.wandscape.road.client;
 
-import java.util.Optional;
-
-import org.lwjgl.glfw.GLFW;
-
 import com.wsteam.wandscape.road.core.SplineModel;
 import com.wsteam.wandscape.road.core.SplinePoint;
 import com.wsteam.wandscape.road.core.SplineVec3;
 import com.wsteam.wandscape.shared.log.Log;
-
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
+import org.lwjgl.glfw.GLFW;
+
+import java.util.Optional;
 
 /**
  * Handles mouse clicks, raycasting, point selection, and 3D axis Gizmo dragging for the spline editor.
@@ -25,8 +22,8 @@ public final class SplineEditorInputHandler {
     private static final String TAG = "SplineEditorInputHandler";
     private static final double REACH = 512.0;
 
-    private static boolean wasLeftDown = false;
-    private static int tickCounter = 0;
+    private static final boolean wasLeftDown = false;
+    private static final int tickCounter = 0;
 
     // Drag state
     private static SplineVec3 dragStartPointPos = null;

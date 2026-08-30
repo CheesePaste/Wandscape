@@ -1,16 +1,7 @@
 package com.wsteam.wandscape.task.engine.pool;
 
-import com.wsteam.wandscape.task.runtime.ApprovalInfo;
-import com.wsteam.wandscape.task.runtime.TaskSequence;
-import com.wsteam.wandscape.task.runtime.TaskState;
-import com.wsteam.wandscape.core.types.GridPos;
-import com.wsteam.wandscape.core.types.ResourceId;
-import com.wsteam.wandscape.core.types.ResourceStack;
-import com.wsteam.wandscape.task.engine.dsl.CompiledBlueprint;
-import com.wsteam.wandscape.task.engine.dsl.TaskCompiler;
-import com.wsteam.wandscape.task.engine.dsl.TriggerDeclaration;
-import com.wsteam.wandscape.core.types.*;
-import com.wsteam.wandscape.shared.log.Log;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonPrimitive;
 import com.wsteam.wandscape.core.TemplateResolver;
 import com.wsteam.wandscape.core.boundary.ColonyResourceAccess;
 import com.wsteam.wandscape.core.boundary.EventBus;
@@ -19,13 +10,19 @@ import com.wsteam.wandscape.core.component.TaskExecutor;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.event.CustomEvent;
 import com.wsteam.wandscape.core.event.TaskCompleted;
-
-import java.util.*;
+import com.wsteam.wandscape.core.types.GridPos;
+import com.wsteam.wandscape.core.types.ResourceId;
+import com.wsteam.wandscape.core.types.ResourceStack;
+import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.task.engine.dsl.CompiledBlueprint;
+import com.wsteam.wandscape.task.engine.dsl.TaskCompiler;
+import com.wsteam.wandscape.task.engine.dsl.TriggerDeclaration;
+import com.wsteam.wandscape.task.runtime.ApprovalInfo;
+import com.wsteam.wandscape.task.runtime.TaskSequence;
+import com.wsteam.wandscape.task.runtime.TaskState;
 
 import javax.annotation.Nullable;
-
-import com.google.gson.JsonElement;
-import com.google.gson.JsonPrimitive;
+import java.util.*;
 
 /**
  * Central container for all global tasks. Manages task lifecycle and assignment.

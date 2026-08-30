@@ -1,56 +1,35 @@
 package com.wsteam.wandscape.npc.entity;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.stream.Stream;
-
-import javax.annotation.Nullable;
-
-import net.minecraft.core.Holder;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.entity.ai.attributes.Attribute;
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.compat.ironspellbooks.IronSpellsCompat;
-import com.wsteam.wandscape.core.component.CastStrategyComponent;
-import com.wsteam.wandscape.core.component.ColonyMember;
-import com.wsteam.wandscape.core.component.EquippedMagicComponent;
-import com.wsteam.wandscape.core.component.MagicState;
-import com.wsteam.wandscape.core.component.NavigationState;
-import com.wsteam.wandscape.core.component.TaskExecutor;
+import com.wsteam.wandscape.core.component.*;
 import com.wsteam.wandscape.core.ecs.World;
-import com.wsteam.wandscape.core.types.AttributeModifier;
 import com.wsteam.wandscape.core.types.AttributeType;
 import com.wsteam.wandscape.core.types.FollowAttackDecision;
 import com.wsteam.wandscape.core.types.FriendlyForce;
-import com.wsteam.wandscape.core.types.NpcAttributes;
-import com.wsteam.wandscape.engine.attribute.WandscapeAttributes;
-import com.wsteam.wandscape.npc.NpcMenu;
-import com.wsteam.wandscape.npc.network.NpcDataPacket;
-import com.wsteam.wandscape.task.runtime.ExecutorState;
 import com.wsteam.wandscape.engine.WandscapeEngine;
+import com.wsteam.wandscape.engine.attribute.WandscapeAttributes;
 import com.wsteam.wandscape.engine.nav.WandscapeNavigation;
 import com.wsteam.wandscape.magic.data.MagicDef;
 import com.wsteam.wandscape.magic.internal.MagicCaster;
 import com.wsteam.wandscape.magic.internal.MagicSpellExecutors;
 import com.wsteam.wandscape.magic.internal.SpellbookLoader;
 import com.wsteam.wandscape.magic.item.SpellItem;
+import com.wsteam.wandscape.npc.NpcMenu;
 import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
+import com.wsteam.wandscape.npc.network.NpcDataPacket;
+import com.wsteam.wandscape.shared.api.MageWandItem;
+import com.wsteam.wandscape.shared.entity.ColonyVisitor;
+import com.wsteam.wandscape.shared.entity.PlayerLike;
+import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.task.engine.pool.GlobalTask;
+import com.wsteam.wandscape.task.runtime.ExecutorState;
 import com.wsteam.wandscape.task.runtime.NpcTaskPackage;
-
 import io.redspace.ironsspellbooks.entity.mobs.IMagicSummon;
-
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -60,21 +39,15 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.Mob;
-import net.minecraft.world.entity.MobSpawnType;
-import net.minecraft.world.entity.NeutralMob;
-import net.minecraft.world.entity.PathfinderMob;
-import net.minecraft.world.entity.monster.Enemy;
-import net.minecraft.world.entity.npc.Villager;
+import net.minecraft.world.entity.*;
+import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
@@ -82,17 +55,21 @@ import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.ai.goal.OpenDoorGoal;
 import net.minecraft.world.entity.ai.goal.RandomStrollGoal;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
+import net.minecraft.world.entity.monster.Enemy;
+import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.network.PacketDistributor;
-import com.wsteam.wandscape.shared.api.MageWandItem;
-import com.wsteam.wandscape.shared.entity.ColonyVisitor;
-import com.wsteam.wandscape.shared.entity.PlayerLike;
-import com.wsteam.wandscape.shared.log.Log;
-import com.wsteam.wandscape.shared.registry.WandscapeApis;
+
+import javax.annotation.Nullable;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.*;
+import java.util.stream.Stream;
 
 /**
  * A colony NPC — the MC-layer shell for an ECS-driven task executor.
@@ -379,7 +356,7 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
         if (current != null && "self_defense".equals(current.source())) return true;
         if (exec.globalTaskId != null && world.taskPool != null) {
             GlobalTask t = world.taskPool.get(exec.globalTaskId);
-            if (t != null && t.blueprintId != null && t.blueprintId.startsWith("guard:")) return true;
+            return t != null && t.blueprintId != null && t.blueprintId.startsWith("guard:");
         }
         return false;
     }

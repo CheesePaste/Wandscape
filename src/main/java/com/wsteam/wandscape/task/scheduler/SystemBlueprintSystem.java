@@ -8,7 +8,9 @@ import com.wsteam.wandscape.op.executor.OpExecutorRegistry;
 import com.wsteam.wandscape.task.engine.dsl.Blueprint;
 import com.wsteam.wandscape.task.runtime.TaskSequence;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -63,7 +65,7 @@ public class SystemBlueprintSystem implements System {
                 if (isPure) {
                     @SuppressWarnings("unchecked")
                     OpExecutor<AtomicOp> executor =
-                            (OpExecutor<AtomicOp>) (Object) opRegistry.get(op.getClass());
+                            (OpExecutor<AtomicOp>) opRegistry.get(op.getClass());
                     if (executor != null) {
                         executor.execute(op, world, 0); // npcId=0 for system
                     }
@@ -74,7 +76,7 @@ public class SystemBlueprintSystem implements System {
                     // Side-effect op: execute once then yield
                     @SuppressWarnings("unchecked")
                     OpExecutor<AtomicOp> executor =
-                            (OpExecutor<AtomicOp>) (Object) opRegistry.get(op.getClass());
+                            (OpExecutor<AtomicOp>) opRegistry.get(op.getClass());
                     if (executor != null) {
                         CompletableFuture<Void> future = executor.execute(op, world, 0);
                         if (future.isDone()) {

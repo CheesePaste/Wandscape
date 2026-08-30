@@ -1,17 +1,10 @@
 package com.wsteam.wandscape.shared.network;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-
-import javax.annotation.Nullable;
-
 import com.wsteam.wandscape.road.core.PathPoint;
 import com.wsteam.wandscape.road.core.RoadEdge;
 import com.wsteam.wandscape.shared.api.RoadApi;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -22,6 +15,11 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.network.PacketDistributor;
+
+import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
 

@@ -1,31 +1,13 @@
 package com.wsteam.wandscape.building.data;
 
-import java.lang.reflect.Type;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import com.google.gson.*;
+import com.google.gson.annotations.SerializedName;
+import com.wsteam.wandscape.shared.data.*;
+import net.minecraft.core.Direction;
 
 import javax.annotation.Nullable;
-
-import com.google.gson.JsonArray;
-import com.google.gson.JsonDeserializationContext;
-import com.google.gson.JsonDeserializer;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParseException;
-import com.google.gson.annotations.SerializedName;
-import com.wsteam.wandscape.shared.data.Activity;
-import com.wsteam.wandscape.shared.data.AtmConfig;
-import com.wsteam.wandscape.shared.data.DecorationConfig;
-import com.wsteam.wandscape.shared.data.ElementType;
-import com.wsteam.wandscape.shared.data.RelaxConfig;
-import com.wsteam.wandscape.shared.data.ServiceConfig;
-import com.wsteam.wandscape.shared.data.ShopConfig;
-import com.wsteam.wandscape.shared.data.WonderConfig;
-
-import net.minecraft.core.Direction;
+import java.lang.reflect.Type;
+import java.util.*;
 /**
  * Parsed from {@code data/wandscape/buildings/<id>.json}.
  * Immutable — created once at JSON load time.

@@ -1,15 +1,14 @@
 package com.wsteam.wandscape.wand.item;
 
-import java.util.List;
-
 import com.wsteam.wandscape.shared.api.WandApi;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
-
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.component.ItemAttributeModifiers;
+
+import java.util.List;
 
 public class WandItem extends Item {
 

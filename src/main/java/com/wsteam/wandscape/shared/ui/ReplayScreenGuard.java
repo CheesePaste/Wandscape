@@ -1,6 +1,5 @@
 package com.wsteam.wandscape.shared.ui;
 
-import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
 import net.neoforged.neoforge.client.event.ScreenEvent;
 import net.neoforged.neoforge.common.NeoForge;
 

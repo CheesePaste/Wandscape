@@ -1,11 +1,8 @@
 package com.wsteam.wandscape.warehouse.network;
 
-import javax.annotation.Nullable;
-
 import com.wsteam.wandscape.shared.data.ItemKey;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.warehouse.WarehouseMenu;
-
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -13,6 +10,8 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
+
+import javax.annotation.Nullable;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
 

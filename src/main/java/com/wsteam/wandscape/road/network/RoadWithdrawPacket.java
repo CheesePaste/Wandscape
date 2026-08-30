@@ -1,18 +1,17 @@
 package com.wsteam.wandscape.road.network;
 
-import java.util.UUID;
-
 import com.wsteam.wandscape.shared.api.RoadApi;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.network.ScreenFeedbackPacket;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.shared.ui.I18n;
-
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+
+import java.util.UUID;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
 

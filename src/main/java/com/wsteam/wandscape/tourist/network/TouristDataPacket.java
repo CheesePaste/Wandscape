@@ -1,17 +1,15 @@
 package com.wsteam.wandscape.tourist.network;
 
-import java.util.List;
-import java.util.function.Consumer;
-
-import javax.annotation.Nullable;
-
 import com.wsteam.wandscape.shared.data.Activity;
 import com.wsteam.wandscape.tourist.entity.TouristEntity;
-
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
+
+import javax.annotation.Nullable;
+import java.util.List;
+import java.util.function.Consumer;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
 /**

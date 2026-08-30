@@ -1,15 +1,15 @@
 package com.wsteam.wandscape.task.engine.dsl;
 
-import java.util.*;
-
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 import com.wsteam.wandscape.core.types.*;
-import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.op.api.AtomicOp;
+import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.task.runtime.TaskSequence;
+
+import java.util.*;
 
 /**
  * Runtime interpreter for the Blueprint DSL.

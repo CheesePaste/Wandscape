@@ -1,12 +1,8 @@
 package com.wsteam.wandscape.building.data;
 
-import java.lang.reflect.Type;
+import com.google.gson.*;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonDeserializationContext;
-import com.google.gson.JsonDeserializer;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonParseException;
+import java.lang.reflect.Type;
 /**
  * A relative offset in a building's structure pattern.
  * Serialized as {@code [x, y, z]} in JSON.

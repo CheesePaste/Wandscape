@@ -1,27 +1,25 @@
 package com.wsteam.wandscape.task.scheduler;
 
-import com.wsteam.wandscape.core.component.*;
-import com.wsteam.wandscape.op.api.AtomicOp;
-import com.wsteam.wandscape.op.executor.OpExecutor;
-import com.wsteam.wandscape.op.executor.OpExecutorRegistry;
-import com.wsteam.wandscape.op.executor.ResourceShortageException;
-import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.core.boundary.ColonyResourceAccess;
 import com.wsteam.wandscape.core.boundary.MovementOps;
 import com.wsteam.wandscape.core.component.*;
 import com.wsteam.wandscape.core.ecs.System;
 import com.wsteam.wandscape.core.ecs.World;
-import com.wsteam.wandscape.task.runtime.ExecutorState;
-import com.wsteam.wandscape.task.engine.pool.GlobalTask;
-import com.wsteam.wandscape.task.engine.pool.GlobalTaskPool;
-import com.wsteam.wandscape.task.runtime.NpcTaskPackage;
-import com.wsteam.wandscape.task.runtime.TaskSequence;
 import com.wsteam.wandscape.core.types.GridPos;
 import com.wsteam.wandscape.core.types.ResourceStack;
 import com.wsteam.wandscape.core.types.RitualId;
+import com.wsteam.wandscape.op.api.AtomicOp;
+import com.wsteam.wandscape.op.executor.OpExecutor;
+import com.wsteam.wandscape.op.executor.OpExecutorRegistry;
+import com.wsteam.wandscape.op.executor.ResourceShortageException;
+import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.task.engine.pool.GlobalTask;
+import com.wsteam.wandscape.task.engine.pool.GlobalTaskPool;
+import com.wsteam.wandscape.task.runtime.ExecutorState;
+import com.wsteam.wandscape.task.runtime.NpcTaskPackage;
+import com.wsteam.wandscape.task.runtime.TaskSequence;
 
 import javax.annotation.Nullable;
-
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -276,7 +274,7 @@ public class TaskExecutionSystem implements System {
 
             // ── 4f. Execute → get future ──
             @SuppressWarnings("unchecked")
-            OpExecutor<AtomicOp> executor = (OpExecutor<AtomicOp>) (Object) registry.get(currentOp.getClass());
+            OpExecutor<AtomicOp> executor = (OpExecutor<AtomicOp>) registry.get(currentOp.getClass());
             if (executor == null) return;
 
             CompletableFuture<Void> future;
@@ -478,8 +476,8 @@ public class TaskExecutionSystem implements System {
         int firstReqIdx = -1;
 
         for (int i = 0; i < task.sequence.size() && i < currentStep; i++) {
-            if (task.sequence.get(i) instanceof AtomicOp.ResourceRequestOp req) {
-                for (ResourceStack item : req.items()) {
+            if (task.sequence.get(i) instanceof AtomicOp.ResourceRequestOp(List<ResourceStack> items)) {
+                for (ResourceStack item : items) {
                     int count = inv.count(item.resource());
                     if (count > 0) {
                         inv.remove(item.resource(), count);
@@ -590,7 +588,7 @@ public class TaskExecutionSystem implements System {
         CompletableFuture<Void>[] futures = new CompletableFuture[subs.size()];
         for (int i = 0; i < subs.size(); i++) {
             AtomicOp sub = subs.get(i);
-            OpExecutor<AtomicOp> subExec = (OpExecutor<AtomicOp>) (Object) registry.get(sub.getClass());
+            OpExecutor<AtomicOp> subExec = (OpExecutor<AtomicOp>) registry.get(sub.getClass());
             if (subExec != null) {
                 try {
                     futures[i] = subExec.execute(sub, world, npcId);
@@ -631,7 +629,7 @@ public class TaskExecutionSystem implements System {
     }
 
     private static boolean sameTarget(@Nullable GridPos a, @Nullable GridPos b) {
-        return a != null && b != null && a.equals(b);
+        return a != null && a.equals(b);
     }
 
     /** Approximate tick counter from system time (for lastWorkTick tracking). */
@@ -665,8 +663,8 @@ public class TaskExecutionSystem implements System {
             if (t.z() < box[3]) box[3] = t.z();
             if (t.z() > box[4]) box[4] = t.z();
         }
-        if (op instanceof AtomicOp.ParallelOp par) {
-            for (AtomicOp sub : par.steps()) {
+        if (op instanceof AtomicOp.ParallelOp(List<AtomicOp> steps)) {
+            for (AtomicOp sub : steps) {
                 collectTargets(sub, box, hasTarget);
             }
         }

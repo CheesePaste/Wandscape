@@ -1,9 +1,5 @@
 package com.wsteam.wandscape.guard.executor;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.core.component.NavigationState;
@@ -20,8 +16,6 @@ import com.wsteam.wandscape.magic.internal.MagicCaster;
 import com.wsteam.wandscape.magic.internal.MagicSpellExecutors;
 import com.wsteam.wandscape.magic.internal.SpellbookLoader;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
-import com.wsteam.wandscape.shared.log.Log;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
@@ -37,13 +31,17 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.projectile.Projectile;
-import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.CollisionContext;
+
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 /**
  * 守卫/自防御共用的战斗引擎（静态工具）：光束重定向、视线、隔墙寻路、施法节流。

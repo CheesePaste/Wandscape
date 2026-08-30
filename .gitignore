@@ -111,3 +111,6 @@ crash-*.zip
 
 # 参考模组浅克隆（只读解剖用，不入库）
 _refs/
+/ideadeadcode.json
+# IDEA 全仓检查报告（4-5GB，不入库）
+/index.html

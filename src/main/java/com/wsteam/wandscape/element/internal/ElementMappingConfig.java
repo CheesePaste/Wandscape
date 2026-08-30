@@ -1,13 +1,12 @@
 package com.wsteam.wandscape.element.internal;
 
-import java.util.HashMap;
-import java.util.Map;
-
-import javax.annotation.Nullable;
-
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.wsteam.wandscape.shared.data.ElementType;
+
+import javax.annotation.Nullable;
+import java.util.HashMap;
+import java.util.Map;
 public record ElementMappingConfig(
     @Nullable String blockId,
     @Nullable String itemId,

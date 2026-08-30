@@ -3,7 +3,6 @@ package com.wsteam.wandscape.npc.entity;
 import com.wsteam.wandscape.guard.executor.GuardCombat;
 import com.wsteam.wandscape.magic.entity.MagicBeamEntity;
 import com.wsteam.wandscape.magic.internal.MagicCaster;
-
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.goal.Goal;

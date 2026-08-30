@@ -1,11 +1,11 @@
 package com.wsteam.wandscape.shared.network.tasks;
 
+import net.minecraft.network.RegistryFriendlyByteBuf;
+
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import javax.annotation.Nullable;
-
-import net.minecraft.network.RegistryFriendlyByteBuf;
 
 /**
  * Compact DTO representing a task for the Global Task & Mage Management panel.

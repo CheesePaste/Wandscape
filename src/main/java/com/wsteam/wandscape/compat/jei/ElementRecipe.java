@@ -1,13 +1,11 @@
 package com.wsteam.wandscape.compat.jei;
 
-import java.util.List;
-import java.util.Map;
+import com.wsteam.wandscape.shared.data.ElementType;
+import net.minecraft.nbt.CompoundTag;
 
 import javax.annotation.Nullable;
-
-import com.wsteam.wandscape.shared.data.ElementType;
-
-import net.minecraft.nbt.CompoundTag;
+import java.util.List;
+import java.util.Map;
 
 /**
  * JEI 展示用的元素配方模型（纯逻辑，零 mezz/客户端运行时引用，可单测）。

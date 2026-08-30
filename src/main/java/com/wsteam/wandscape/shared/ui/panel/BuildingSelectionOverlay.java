@@ -1,23 +1,18 @@
 package com.wsteam.wandscape.shared.ui.panel;
 
-import java.util.ArrayList;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
-
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.building.internal.BuildingUnlockChecker;
 import com.wsteam.wandscape.projection.client.ProjectionClientState;
 import com.wsteam.wandscape.projection.data.BuildingSlot;
+import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.ui.util.BuildingPreviewGifCache;
-
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.resources.ResourceLocation;
-import com.wsteam.wandscape.shared.log.Log;
+
+import java.util.*;
 
 /**
  * Compact building selection bar shown during Build projection mode BAR phase.

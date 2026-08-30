@@ -1,7 +1,5 @@
 package com.wsteam.wandscape.npc.client;
 
-import java.util.List;
-
 import com.wsteam.wandscape.core.component.EquippedMagicComponent;
 import com.wsteam.wandscape.magic.data.MagicDef;
 import com.wsteam.wandscape.npc.NpcStrategyMenu;
@@ -13,7 +11,6 @@ import com.wsteam.wandscape.shared.ui.component.HelpButton;
 import com.wsteam.wandscape.shared.ui.component.MedievalButton;
 import com.wsteam.wandscape.shared.ui.skin.SkinRender;
 import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
-
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -21,6 +18,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.neoforged.neoforge.network.PacketDistributor;
+
+import java.util.List;
 
 /**
  * 施法策略屏（容器化）：顶部 4 个总体策略预设按钮 + 中部 4 分类 × 3 卷轴槽（真实
@@ -47,7 +46,7 @@ public class NpcStrategyScreen extends AbstractContainerScreen<NpcStrategyMenu>
     private String preset = "BALANCED";
     private int closeBtnX, closeBtnY;
     private HelpButton helpButton;
-    private String helpDocumentPath = "strategy_guide";
+    private final String helpDocumentPath = "strategy_guide";
     private final java.util.Map<String, int[]> presetButtonBounds = new java.util.LinkedHashMap<>();
 
     public NpcStrategyScreen(NpcStrategyMenu menu, Inventory playerInventory, Component title) {

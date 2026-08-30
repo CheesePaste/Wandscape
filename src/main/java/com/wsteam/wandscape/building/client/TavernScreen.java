@@ -1,9 +1,5 @@
 package com.wsteam.wandscape.building.client;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
-
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.building.network.TavernRecruitPacket;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
@@ -13,7 +9,6 @@ import com.wsteam.wandscape.shared.ui.I18n;
 import com.wsteam.wandscape.shared.ui.component.MedievalButton;
 import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
 import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
-
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
@@ -24,6 +19,10 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.PacketDistributor;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 
 /**
  * Tavern GUI — recruit NPCs and review mage resumes.

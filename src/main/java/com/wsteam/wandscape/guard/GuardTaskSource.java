@@ -1,9 +1,5 @@
 package com.wsteam.wandscape.guard;
 
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-
 import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
 import com.wsteam.wandscape.Config;
@@ -15,12 +11,15 @@ import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.task.engine.pool.GlobalTaskPool;
 import com.wsteam.wandscape.task.engine.pool.TaskRequest;
 import com.wsteam.wandscape.task.source.TaskSource;
-
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.AABB;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
+
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * 守卫任务源：扫描所有非停摆建筑的攻击区（水平 ±guard.range，Y 不变），

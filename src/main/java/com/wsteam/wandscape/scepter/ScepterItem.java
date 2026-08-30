@@ -1,10 +1,7 @@
 package com.wsteam.wandscape.scepter;
 
-import java.util.List;
-
 import com.wsteam.wandscape.scepter.internal.ScepterService;
 import com.wsteam.wandscape.shared.api.MageWandItem;
-
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
@@ -12,6 +9,8 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
+
+import java.util.List;
 
 /**
  * 玩家权杖物品（和平/跟随/庇护/敌对），3D 模型 + 头部主题色染色，合成站 1 级配方产出。

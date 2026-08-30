@@ -1,15 +1,13 @@
 package com.wsteam.wandscape.engine.colony;
 
-import java.util.UUID;
-
-import javax.annotation.Nullable;
-
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.shared.api.ColonyApi;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
-
 import net.minecraft.server.MinecraftServer;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
+
+import javax.annotation.Nullable;
+import java.util.UUID;
 
 /**
  * 小镇自动化激活判定 + 离线收益折减。

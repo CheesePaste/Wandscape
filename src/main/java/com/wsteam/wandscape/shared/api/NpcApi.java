@@ -1,9 +1,9 @@
 package com.wsteam.wandscape.shared.api;
 
+import com.wsteam.wandscape.shared.data.NpcData;
+
 import java.util.List;
 import java.util.UUID;
-
-import com.wsteam.wandscape.shared.data.NpcData;
 public interface NpcApi {
     List<NpcData> getColonyNpcs(UUID colonyId);
     List<NpcData> getIdleNpcs(UUID colonyId);

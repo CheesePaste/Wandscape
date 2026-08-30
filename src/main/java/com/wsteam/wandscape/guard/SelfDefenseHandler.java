@@ -1,16 +1,15 @@
 package com.wsteam.wandscape.guard;
 
-import javax.annotation.Nullable;
-
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.shared.log.Log;
-
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
+
+import javax.annotation.Nullable;
 
 /**
  * 受伤仇恨：NPC 被攻击者打伤时记录仇恨目标（记在 {@link WandscapeNpc} 上），

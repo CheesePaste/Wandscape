@@ -1,13 +1,12 @@
 package com.wsteam.wandscape.shared.network;
 
-import java.util.function.Consumer;
-
 import com.wsteam.wandscape.Wandscape;
-
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
+
+import java.util.function.Consumer;
 
 /**
  * Server→client packet：通知客户端小镇环境音状态。

@@ -1,42 +1,36 @@
 package com.wsteam.wandscape.building.internal;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-
-import javax.annotation.Nullable;
-
 import com.wsteam.wandscape.building.network.MageHutActionPacket;
 import com.wsteam.wandscape.building.network.MageHutDataPacket;
 import com.wsteam.wandscape.building.network.MageHutDataPacket.MageCandidate;
-import com.wsteam.wandscape.core.component.ColonyMember;
-import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.types.AttributeType;
-import com.wsteam.wandscape.core.types.NpcAttributes;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.npc.NpcMenu;
 import com.wsteam.wandscape.npc.NpcStrategyMenu;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
-import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.npc.network.NpcDataPacket;
 import com.wsteam.wandscape.projection.BuildingRotation;
 import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.data.MageHutAttributes;
 import com.wsteam.wandscape.shared.data.MageHutResident;
+import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.shared.network.ScreenFeedbackPacket;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.shared.registry.WandscapeConstants;
 import com.wsteam.wandscape.shared.ui.I18n;
 import com.wsteam.wandscape.warehouse.ColonyItemBank;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.SimpleMenuProvider;
 import net.neoforged.neoforge.network.PacketDistributor;
-import com.wsteam.wandscape.shared.log.Log;
-import com.wsteam.wandscape.shared.network.ScreenFeedbackPacket;
+
+import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 /**
  * Server-side logic for the Mage Hut panel actions (assign / upgrade / rest /

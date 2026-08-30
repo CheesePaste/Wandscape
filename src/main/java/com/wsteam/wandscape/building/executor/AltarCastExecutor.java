@@ -1,10 +1,5 @@
 package com.wsteam.wandscape.building.executor;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-
 import com.wsteam.wandscape.building.internal.AltarCastHandler;
 import com.wsteam.wandscape.building.internal.AltarCastState;
 import com.wsteam.wandscape.core.ecs.World;
@@ -23,13 +18,17 @@ import com.wsteam.wandscape.shared.data.BuildingData;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.network.MagicCircleCastPacket;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.network.PacketDistributor;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * 祭坛施法执行器：接取祭坛施法任务的 NPC 走到祭坛旁后执行 {@link AtomicOp.AltarCastOp}。

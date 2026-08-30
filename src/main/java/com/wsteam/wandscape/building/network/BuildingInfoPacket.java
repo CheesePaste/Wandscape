@@ -1,15 +1,15 @@
 package com.wsteam.wandscape.building.network;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.function.Consumer;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.function.Consumer;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
 /**

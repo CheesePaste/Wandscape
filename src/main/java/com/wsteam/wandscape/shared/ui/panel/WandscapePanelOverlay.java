@@ -1,13 +1,10 @@
 package com.wsteam.wandscape.shared.ui.panel;
 
-import java.util.List;
-import java.util.UUID;
-
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.wsteam.wandscape.projection.client.BuildingDebugClientState;
-import com.wsteam.wandscape.road.client.RoadPlacementState;
+import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.ui.I18n;
 import com.wsteam.wandscape.shared.ui.theme.WandscapeTheme;
-
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -15,8 +12,8 @@ import net.minecraft.client.renderer.RenderType;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.client.event.RenderGuiEvent;
 import net.neoforged.neoforge.common.NeoForge;
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.wsteam.wandscape.shared.log.Log;
+
+import java.util.UUID;
 
 /**
  * Renders the Wandscape panel overlay on top of the game HUD.

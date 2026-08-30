@@ -1,19 +1,18 @@
 package com.wsteam.wandscape.raid;
 
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.UUID;
-
-import com.wsteam.wandscape.shared.event.ColonyRaidVictoryEvent;
 import com.wsteam.wandscape.engine.service.ParticleService;
+import com.wsteam.wandscape.shared.event.ColonyRaidVictoryEvent;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.raid.Raid;
 import net.neoforged.neoforge.common.NeoForge;
+
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.UUID;
 
 /**
  * 小镇↔袭击跟踪：轮询 {@link Raid#isVictory()}，胜利时广播

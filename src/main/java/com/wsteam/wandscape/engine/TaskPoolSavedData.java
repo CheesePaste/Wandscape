@@ -1,5 +1,20 @@
 package com.wsteam.wandscape.engine;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonPrimitive;
+import com.wsteam.wandscape.core.types.ResourceId;
+import com.wsteam.wandscape.core.types.ResourceStack;
+import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.task.engine.pool.GlobalTask;
+import com.wsteam.wandscape.task.engine.pool.GlobalTaskPool;
+import com.wsteam.wandscape.task.engine.pool.TaskRequest;
+import com.wsteam.wandscape.task.runtime.TaskState;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
+import net.minecraft.world.level.saveddata.SavedData;
+
+import javax.annotation.Nullable;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -10,23 +25,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
-
-import javax.annotation.Nullable;
-
-import com.google.gson.JsonElement;
-import com.google.gson.JsonPrimitive;
-import com.wsteam.wandscape.task.engine.pool.GlobalTask;
-import com.wsteam.wandscape.task.engine.pool.GlobalTaskPool;
-import com.wsteam.wandscape.task.engine.pool.TaskRequest;
-import com.wsteam.wandscape.task.runtime.TaskState;
-import com.wsteam.wandscape.core.types.ResourceId;
-import com.wsteam.wandscape.core.types.ResourceStack;
-
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.Tag;
-import net.minecraft.world.level.saveddata.SavedData;
-import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Persists the {@link GlobalTaskPool} across world sessions via Minecraft {@link SavedData}.

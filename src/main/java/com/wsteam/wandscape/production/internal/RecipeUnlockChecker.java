@@ -1,11 +1,10 @@
 package com.wsteam.wandscape.production.internal;
 
-import java.util.UUID;
-
-import javax.annotation.Nullable;
-
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.production.data.RecipeUnlockRequirement;
+
+import javax.annotation.Nullable;
+import java.util.UUID;
 /**
  * Utility for checking whether a production recipe is unlocked for a given colony.
  *

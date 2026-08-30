@@ -1,26 +1,20 @@
 package com.wsteam.wandscape.building.scanner;
 
-import java.util.function.Supplier;
-
-import javax.annotation.Nullable;
-
 import com.wsteam.wandscape.building.scanner.client.ScannerClientHelper;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.EntityBlock;
-import net.minecraft.world.level.block.HorizontalDirectionalBlock;
-import net.minecraft.world.level.block.Mirror;
-import net.minecraft.world.level.block.Rotation;
+import net.minecraft.world.level.block.*;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.phys.BlockHitResult;
+
+import javax.annotation.Nullable;
+import java.util.function.Supplier;
 
 /**
  * Building Scanner block — replacement for the ImGui-based building editor.

@@ -1,8 +1,8 @@
 package com.wsteam.wandscape.shared.event;
 
-import java.util.UUID;
-
 import net.neoforged.bus.api.Event;
+
+import java.util.UUID;
 public class BuildingPlacedEvent extends Event {
     private final UUID buildingId;
     private final UUID colonyId;

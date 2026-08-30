@@ -1,18 +1,15 @@
 package com.wsteam.wandscape.building.internal;
 
-import java.util.ArrayDeque;
-import java.util.Deque;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.UUID;
-
-import javax.annotation.Nullable;
-
 import com.wsteam.wandscape.shared.data.BuildingData;
 import com.wsteam.wandscape.shared.data.WorkItem;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
+
+import javax.annotation.Nullable;
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.Set;
+import java.util.UUID;
 /**
  * Mutable building state — replaces all {@code AbstractWandscapeBE} fields.
  * Implements {@link BuildingData} for read-only access.

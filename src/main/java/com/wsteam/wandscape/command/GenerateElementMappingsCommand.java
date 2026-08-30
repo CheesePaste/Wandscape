@@ -1,22 +1,20 @@
 package com.wsteam.wandscape.command;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.tree.CommandNode;
 import com.wsteam.wandscape.element.internal.ElementValueGenerator;
 import com.wsteam.wandscape.element.internal.ElementValueGenerator.GenerationReport;
-
+import com.wsteam.wandscape.shared.log.Log;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
-import com.wsteam.wandscape.shared.log.Log;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 
 public final class GenerateElementMappingsCommand {
     private static final String TAG = "GenerateElementMappingsCommand";

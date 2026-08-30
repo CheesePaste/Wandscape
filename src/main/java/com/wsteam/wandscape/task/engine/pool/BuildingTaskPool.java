@@ -1,15 +1,11 @@
 package com.wsteam.wandscape.task.engine.pool;
 
-import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.data.WorkItem;
+import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.task.runtime.TaskState;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**

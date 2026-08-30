@@ -1,11 +1,5 @@
 package com.wsteam.wandscape.road.client.studio;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-
 import com.wsteam.wandscape.road.client.RoadPlacementState;
 import com.wsteam.wandscape.road.client.SplineEditorClientState;
 import com.wsteam.wandscape.road.client.SplineEditorController;
@@ -15,13 +9,11 @@ import com.wsteam.wandscape.road.core.SplineVec3;
 import com.wsteam.wandscape.road.data.RoadPreset;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.ui.I18n;
-
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.event.InputEvent;
@@ -29,6 +21,8 @@ import net.neoforged.neoforge.client.event.RenderGuiEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.network.PacketDistributor;
 import org.lwjgl.glfw.GLFW;
+
+import java.util.List;
 
 /**
  * Self-drawn overlay panel for the Road Studio — MC-native UI (no ImGui dependency).

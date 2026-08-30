@@ -1,18 +1,17 @@
 package com.wsteam.wandscape.projection;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import com.wsteam.wandscape.building.data.BlockOffset;
 import com.wsteam.wandscape.building.data.BuildingConfig;
-
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.Property;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Static utilities for rotating building structures 90° counter-clockwise
@@ -255,7 +254,7 @@ public final class BuildingRotation {
     private static <T extends Comparable<T>> BlockState setPropertyValue(
             BlockState state, Property<T> property, String valueStr) {
         return property.getValue(valueStr)
-                .map(v -> (BlockState) state.setValue(property, v))
+                .map(v -> state.setValue(property, v))
                 .orElse(state);
     }
 

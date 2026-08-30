@@ -1,14 +1,14 @@
 package com.wsteam.wandscape.building.client;
 
-import java.io.ByteArrayOutputStream;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.zip.DataFormatException;
-
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.building.network.BuildingConfigCompressor;
 import com.wsteam.wandscape.building.network.BuildingConfigSyncChunkPacket;
 import com.wsteam.wandscape.shared.log.Log;
+
+import java.io.ByteArrayOutputStream;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.zip.DataFormatException;
 
 /**
  * Client-side reassembly for the chunked building-config sync. Buffers chunks per

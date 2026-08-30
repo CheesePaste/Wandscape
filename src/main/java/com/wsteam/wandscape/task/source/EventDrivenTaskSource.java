@@ -1,21 +1,19 @@
 package com.wsteam.wandscape.task.source;
 
-import com.wsteam.wandscape.core.boundary.ResourceShortageHandler;
-import com.wsteam.wandscape.task.engine.pool.GlobalTaskPool;
-import com.wsteam.wandscape.task.runtime.TaskSequence;
-import com.wsteam.wandscape.shared.log.Log;
-import com.wsteam.wandscape.task.engine.dsl.BlueprintRegistry;
-import com.wsteam.wandscape.task.engine.dsl.BlueprintSteps;
+import com.google.gson.JsonElement;
 import com.wsteam.wandscape.core.boundary.EventBus;
+import com.wsteam.wandscape.core.boundary.ResourceShortageHandler;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.event.TaskCompleted;
-import com.wsteam.wandscape.op.api.AtomicOp;
 import com.wsteam.wandscape.core.types.BlockType;
 import com.wsteam.wandscape.core.types.GridPos;
 import com.wsteam.wandscape.core.types.ResourceId;
 import com.wsteam.wandscape.core.types.ResourceStack;
-
-import com.google.gson.JsonElement;
+import com.wsteam.wandscape.op.api.AtomicOp;
+import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.task.engine.dsl.BlueprintRegistry;
+import com.wsteam.wandscape.task.engine.pool.GlobalTaskPool;
+import com.wsteam.wandscape.task.runtime.TaskSequence;
 
 import java.util.List;
 import java.util.Map;
@@ -57,22 +55,22 @@ public class EventDrivenTaskSource implements TaskSource {
 
     /** Register default gather blueprints (ResourceRequestOp → TransformOp). */
     public static void registerDefaultBlueprints(BlueprintRegistry registry) {
-        registry.register("gather:wood", (BlueprintSteps) params ->
+        registry.register("gather:wood", params ->
                 gatherSteps(ResourceId.WOOD, BlockType.OAK_PLANKS, params));
 
-        registry.register("gather:stone_bricks", (BlueprintSteps) params ->
+        registry.register("gather:stone_bricks", params ->
                 gatherSteps(ResourceId.STONE_BRICKS, BlockType.STONE_BRICKS, params));
 
-        registry.register("gather:stone", (BlueprintSteps) params ->
+        registry.register("gather:stone", params ->
                 gatherSteps(ResourceId.STONE, BlockType.STONE, params));
 
-        registry.register("gather:glass", (BlueprintSteps) params ->
+        registry.register("gather:glass", params ->
                 gatherSteps(ResourceId.GLASS, BlockType.GLASS, params));
 
-        registry.register("gather:iron_ingot", (BlueprintSteps) params ->
+        registry.register("gather:iron_ingot", params ->
                 gatherSteps(ResourceId.IRON_INGOT, BlockType.IRON_ORE, params));
 
-        registry.register("gather:wheat", (BlueprintSteps) params ->
+        registry.register("gather:wheat", params ->
                 gatherSteps(ResourceId.WHEAT, BlockType.DIRT, params));
 
         Log.info(TAG, "registered default blueprints: gather:[wood,stone_bricks,stone,glass,iron_ingot,wheat]");

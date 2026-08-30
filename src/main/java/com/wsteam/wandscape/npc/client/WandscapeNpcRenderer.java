@@ -1,19 +1,11 @@
 package com.wsteam.wandscape.npc.client;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.List;
-import java.util.Optional;
-import java.util.stream.Stream;
-
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.shared.client.bubble.AmbientTextPools;
 import com.wsteam.wandscape.shared.client.bubble.SpeechBubbleRenderer;
 import com.wsteam.wandscape.shared.ui.I18n;
-
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.model.HumanoidModel;
@@ -33,6 +25,13 @@ import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.fml.ModList;
 import org.joml.Matrix4f;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Stream;
 public class WandscapeNpcRenderer extends HumanoidMobRenderer<WandscapeNpc, HumanoidModel<WandscapeNpc>> {
 
     public static final ModelLayerLocation WIZARD_HAT_LAYER =

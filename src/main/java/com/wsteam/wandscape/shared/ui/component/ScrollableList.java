@@ -1,16 +1,15 @@
 package com.wsteam.wandscape.shared.ui.component;
 
-import java.util.List;
-
 import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
 import com.wsteam.wandscape.shared.ui.util.RenderUtil;
-
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.narration.NarratedElementType;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
+
+import java.util.List;
 
 public abstract class ScrollableList<T> extends AbstractWidget {
 

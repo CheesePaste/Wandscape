@@ -4,27 +4,27 @@ import com.wsteam.wandscape.core.boundary.ColonyResourceAccess;
 import com.wsteam.wandscape.core.component.ColonyMember;
 import com.wsteam.wandscape.core.component.Inventory;
 import com.wsteam.wandscape.core.component.TaskExecutor;
-import com.wsteam.wandscape.task.runtime.ExecutorState;
 import com.wsteam.wandscape.core.ecs.World;
-import com.wsteam.wandscape.op.api.AtomicOp;
-import com.wsteam.wandscape.op.executor.OpExecutor;
-import com.wsteam.wandscape.op.executor.ResourceShortageException;
 import com.wsteam.wandscape.core.types.ResourceStack;
 import com.wsteam.wandscape.engine.transport.ItemTransportManager;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
+import com.wsteam.wandscape.op.api.AtomicOp;
+import com.wsteam.wandscape.op.executor.OpExecutor;
+import com.wsteam.wandscape.op.executor.ResourceShortageException;
 import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.data.BuildingData;
 import com.wsteam.wandscape.shared.data.ItemKey;
+import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
-
+import com.wsteam.wandscape.task.runtime.ExecutorState;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Executes {@link AtomicOp.ResourceRequestOp} by starting item transport

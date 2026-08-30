@@ -1,8 +1,8 @@
 package com.wsteam.wandscape.shared.event;
 
-import java.util.UUID;
-
 import net.neoforged.bus.api.Event;
+
+import java.util.UUID;
 /**
  * Fired when any of the three colony evaluation values (comfort / magic / wonder)
  * changes for a given colony.

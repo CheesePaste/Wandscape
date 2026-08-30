@@ -64,10 +64,7 @@ public class NpcTaskQueue {
     /** Advance one step in the current package. Returns true if the package is now complete. */
     public boolean advanceStep() {
         stepIndex++;
-        if (currentPackage != null && currentPackage.isComplete(stepIndex)) {
-            return true;
-        }
-        return false;
+        return currentPackage != null && currentPackage.isComplete(stepIndex);
     }
 
     /** True when the current package has no more steps. */

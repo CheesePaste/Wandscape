@@ -2,7 +2,6 @@ package com.wsteam.wandscape.warehouse.network;
 
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.warehouse.WarehouseTerminalItem;
-
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;

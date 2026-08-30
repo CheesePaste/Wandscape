@@ -1,18 +1,16 @@
 package com.wsteam.wandscape.magic.internal;
 
-import java.util.List;
-import java.util.UUID;
-
 import com.wsteam.wandscape.core.component.CastStrategyComponent;
 import com.wsteam.wandscape.core.component.EquippedMagicComponent;
-import com.wsteam.wandscape.magic.data.MagicDef;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.shared.api.SpellcastingApi;
-
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
+
+import java.util.List;
+import java.util.UUID;
 
 /**
  * {@link SpellcastingApi} 实现：UUID → NPC 实体（EntityComponentBridge，未注册 ECS 的
@@ -66,7 +64,7 @@ public final class SpellcastingApiImpl implements SpellcastingApi {
                     // 无显式分类前缀时按注册表推断（ALTAR/SPECIAL 系统固有魔法由此排除）
                     targetCat = SpellbookLoader.equippableCategoryOf(entry.id());
                 }
-                if (targetCat != null && EquippedMagicComponent.isCategory(targetCat)) {
+                if (EquippedMagicComponent.isCategory(targetCat)) {
                     validated.equip(targetCat, entry);
                 }
             }

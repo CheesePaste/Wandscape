@@ -1,21 +1,20 @@
 package com.wsteam.wandscape.road.client;
 
-import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.wsteam.wandscape.road.core.SplineModel;
 import com.wsteam.wandscape.road.core.SplinePoint;
 import com.wsteam.wandscape.road.core.SplineVec3;
 import com.wsteam.wandscape.shared.log.Log;
-
 import net.minecraft.client.Minecraft;
 import org.lwjgl.glfw.GLFW;
+
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Global static client state for the Spline Road Editor.

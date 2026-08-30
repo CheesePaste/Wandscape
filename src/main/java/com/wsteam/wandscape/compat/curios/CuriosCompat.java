@@ -1,9 +1,6 @@
 package com.wsteam.wandscape.compat.curios;
 
-import java.util.function.Predicate;
-
 import com.wsteam.wandscape.shared.log.Log;
-
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -11,6 +8,8 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.neoforged.neoforge.network.registration.PayloadRegistrar;
+
+import java.util.function.Predicate;
 
 /**
  * Wandscape × Curios API 兼容门面（非 compat 包唯一可引用的 Curios 入口）。

@@ -7,12 +7,10 @@ import com.mojang.brigadier.tree.CommandNode;
 import com.wsteam.wandscape.shared.data.MageAttributeRoller;
 import com.wsteam.wandscape.shared.data.MageResume;
 import com.wsteam.wandscape.shared.data.RecruitmentCandidate;
-import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.shared.ui.I18n;
 import com.wsteam.wandscape.tourist.entity.TouristEntity;
 import com.wsteam.wandscape.tourist.internal.TouristSpawnSystem;
-
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.core.BlockPos;

@@ -1,11 +1,5 @@
 package com.wsteam.wandscape.engine.boundary;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-
 import com.wsteam.wandscape.core.boundary.RitualOps;
 import com.wsteam.wandscape.core.component.NavigationState;
 import com.wsteam.wandscape.core.ecs.World;
@@ -15,10 +9,9 @@ import com.wsteam.wandscape.magic.data.MagicCircleSpec;
 import com.wsteam.wandscape.magic.internal.MagicCircleLoader;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
+import com.wsteam.wandscape.op.api.AtomicOp;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.network.MagicCircleCastPacket;
-
-import com.wsteam.wandscape.op.api.AtomicOp;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
@@ -28,6 +21,12 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.network.PacketDistributor;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * MC implementation of {@link RitualOps} with async channeling.
@@ -304,24 +303,19 @@ public class WandscapeRitualOps implements RitualOps {
 
         if (requireSolidGround) {
             // 严格模式：脚下与下方第二格都须为实心立方块——排除台阶/楼梯/单格薄板等假地面
-            if (!groundState.isSolid() || !level.getBlockState(ground.below()).isSolid()) {
-                return false;
-            }
+            return groundState.isSolid() && level.getBlockState(ground.below()).isSolid();
         } else {
             // 宽松模式：允许单层实心方块或台阶等，但必须有碰撞箱支撑，绝不允许悬空（空气/无碰撞）
-            if (groundState.getCollisionShape(level, ground).isEmpty()) {
-                return false;
-            }
+            return !groundState.getCollisionShape(level, ground).isEmpty();
         }
-        return true;
     }
 
     /** 末影人传送式 PORTAL 爆点（环绕身体，16 粒）。 */
     private static void spawnPortalBurst(Level level, double x, double y, double z) {
         for (int i = 0; i < 16; i++) {
-            double ox = (level.random.nextDouble() - 0.5) * 1.0;
+            double ox = (level.random.nextDouble() - 0.5);
             double oy = level.random.nextDouble() * 2.0;
-            double oz = (level.random.nextDouble() - 0.5) * 1.0;
+            double oz = (level.random.nextDouble() - 0.5);
             level.addParticle(ParticleTypes.PORTAL, x + ox, y + oy, z + oz, 0, 0, 0);
         }
     }

@@ -1,7 +1,5 @@
 package com.wsteam.wandscape.shared.ui.markdown.ast;
 
-import java.util.List;
-
 /**
  * Sealed interface for all AST nodes in the Wandscape Markdown parser.
  */

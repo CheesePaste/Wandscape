@@ -1,14 +1,5 @@
 package com.wsteam.wandscape.tourist.internal;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.Set;
-import java.util.UUID;
-
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.building.internal.BuildingSavedData;
@@ -25,11 +16,9 @@ import com.wsteam.wandscape.shared.api.ColonyApi;
 import com.wsteam.wandscape.shared.api.RoadApi;
 import com.wsteam.wandscape.shared.api.TouristApi;
 import com.wsteam.wandscape.shared.data.*;
+import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.tourist.entity.TouristEntity;
-
-import javax.annotation.Nullable;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -38,7 +27,9 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
-import com.wsteam.wandscape.shared.log.Log;
+
+import javax.annotation.Nullable;
+import java.util.*;
 
 /**
  * Manages tourist spawning and cleanup with colony-level-driven mechanics.
@@ -402,7 +393,7 @@ public final class TouristSpawnSystem {
                 ? instance.levelManager.getLevel(colonyId) : 1;
         int touristLevel = instance.rollTouristLevel(colonyLevel);
         tourist.setLevel(touristLevel);
-        int start = instance.startingWallet(touristLevel);
+        int start = startingWallet(touristLevel);
         tourist.setWallet(start);
         tourist.setInitialWallet(start);
         instance.applySpawnDefaults(tourist, touristLevel, gameTime);
@@ -777,11 +768,11 @@ public final class TouristSpawnSystem {
                     var path = edge.getPath();
                     if (path.size() >= 2) {
                         positions.add(new BlockPos(
-                                (int) path.get(0).x(), (int) path.get(0).y(), (int) path.get(0).z()));
+                                path.get(0).x(), path.get(0).y(), path.get(0).z()));
                         positions.add(new BlockPos(
-                                (int) path.get(path.size() - 1).x(),
-                                (int) path.get(path.size() - 1).y(),
-                                (int) path.get(path.size() - 1).z()));
+                                path.get(path.size() - 1).x(),
+                                path.get(path.size() - 1).y(),
+                                path.get(path.size() - 1).z()));
                     }
                 }
             }

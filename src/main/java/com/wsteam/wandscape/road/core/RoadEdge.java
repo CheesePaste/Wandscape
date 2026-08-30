@@ -1,12 +1,6 @@
 package com.wsteam.wandscape.road.core;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 /**
  * An edge in the road network — a road segment connecting two nodes.
  * The path is stored as 3D points so terrain height is part of the data.

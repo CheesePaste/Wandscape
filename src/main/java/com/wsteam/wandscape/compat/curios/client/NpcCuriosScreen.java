@@ -1,14 +1,11 @@
 package com.wsteam.wandscape.compat.curios.client;
 
-import java.util.Locale;
-
 import com.wsteam.wandscape.compat.curios.NpcCurioSlot;
 import com.wsteam.wandscape.compat.curios.NpcCuriosMenu;
 import com.wsteam.wandscape.npc.network.NpcOpenEquipPacket;
 import com.wsteam.wandscape.shared.ui.I18n;
 import com.wsteam.wandscape.shared.ui.component.MedievalButton;
 import com.wsteam.wandscape.shared.ui.vanilla.VanillaPlayerInventory;
-
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
@@ -16,6 +13,8 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
 import net.neoforged.neoforge.network.PacketDistributor;
+
+import java.util.Locale;
 
 /**
  * 法师饰品容器屏幕：顶部法师饰品槽网格（空槽显示 Curios 槽类型图标），下方原版玩家背包。

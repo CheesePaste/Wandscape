@@ -1,10 +1,5 @@
 package com.wsteam.wandscape.npc;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import javax.annotation.Nullable;
-
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.core.component.EquippedMagicComponent;
 import com.wsteam.wandscape.magic.data.MagicDef;
@@ -12,9 +7,7 @@ import com.wsteam.wandscape.magic.internal.SpellbookLoader;
 import com.wsteam.wandscape.magic.item.SpellItem;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.shared.log.Log;
-import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.shared.ui.vanilla.VanillaPlayerInventory;
-
 import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
@@ -22,6 +15,9 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
+
+import javax.annotation.Nullable;
+import java.util.List;
 
 /**
  * NPC 施法策略容器菜单：12 个卷轴槽（4 分类 × 每类 3，槽位序 = 类内施法优先级）+

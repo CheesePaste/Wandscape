@@ -2,9 +2,8 @@ package com.wsteam.wandscape.core.component;
 
 import com.wsteam.wandscape.core.types.GridPos;
 
-import java.util.concurrent.CompletableFuture;
-
 import javax.annotation.Nullable;
+import java.util.concurrent.CompletableFuture;
 /**
  * Single source of truth for NPC movement.
  *

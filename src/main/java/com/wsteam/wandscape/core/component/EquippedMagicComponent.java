@@ -1,13 +1,8 @@
 package com.wsteam.wandscape.core.component;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.function.Function;
-
 import javax.annotation.Nullable;
+import java.util.*;
+import java.util.function.Function;
 
 /**
  * NPC 已装备魔法容器（替代 {@code SpellbookComponent}）：按施法分类分 4 桶，每桶 ≤

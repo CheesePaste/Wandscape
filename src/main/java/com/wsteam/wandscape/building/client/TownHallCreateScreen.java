@@ -4,10 +4,8 @@ import com.wsteam.wandscape.shared.network.ColonyCreateRequestPacket;
 import com.wsteam.wandscape.shared.ui.I18n;
 import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
 import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
-
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
-import net.minecraft.client.gui.components.Renderable;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.neoforged.neoforge.network.PacketDistributor;
@@ -149,7 +147,7 @@ public class TownHallCreateScreen extends MedievalScreen {
         int bx = cx - bw / 2;
         int by = topPos + headerHeight + 72;
         boolean hover = isInRect(mouseX, mouseY, bx, by, bw, bh);
-        drawMinimalBox(g, bx, by, bw, bh, pendingName.trim().isEmpty() ? false : hover, hover);
+        drawMinimalBox(g, bx, by, bw, bh, !pendingName.trim().isEmpty() && hover, hover);
         String label = I18n.name("gui.wandscape.townhall_create.create", "创建").getString();
         g.drawString(font, label, cx - font.width(label) / 2,
                 by + (bh - font.lineHeight) / 2, MedievalColors.TEXT_WARM_WHITE);

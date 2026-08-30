@@ -1,20 +1,20 @@
 package com.wsteam.wandscape.building.network;
 
-import java.util.Random;
-import java.util.UUID;
-
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.building.internal.BuildingInteractHandler;
 import com.wsteam.wandscape.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.building.internal.BuildingState;
 import com.wsteam.wandscape.core.component.ColonyMember;
-import com.wsteam.wandscape.core.types.AttributeType;
-import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
-import com.wsteam.wandscape.npc.entity.WandscapeNpc;
-import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.core.ecs.World;
+import com.wsteam.wandscape.core.types.AttributeType;
+import com.wsteam.wandscape.engine.WandscapeEngine;
+import com.wsteam.wandscape.npc.entity.WandscapeNpc;
+import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.shared.data.MageAttributeRoller;
-
+import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.shared.network.ScreenFeedbackPacket;
+import com.wsteam.wandscape.shared.registry.WandscapeConstants;
+import com.wsteam.wandscape.shared.ui.I18n;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
@@ -27,11 +27,10 @@ import net.minecraft.world.entity.MobSpawnType;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
+import java.util.Random;
+import java.util.UUID;
+
 import static com.wsteam.wandscape.Wandscape.MODID;
-import com.wsteam.wandscape.shared.log.Log;
-import com.wsteam.wandscape.shared.network.ScreenFeedbackPacket;
-import com.wsteam.wandscape.shared.registry.WandscapeConstants;
-import com.wsteam.wandscape.shared.ui.I18n;
 
 /**
  * Client→server packet: player clicks "Recruit NPC" in the tavern GUI.

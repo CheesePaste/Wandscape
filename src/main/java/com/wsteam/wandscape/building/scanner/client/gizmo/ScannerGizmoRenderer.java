@@ -1,7 +1,5 @@
 package com.wsteam.wandscape.building.scanner.client.gizmo;
 
-import java.util.List;
-
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
@@ -9,7 +7,6 @@ import com.mojang.blaze3d.vertex.VertexFormat;
 import com.wsteam.wandscape.building.data.BlockOffset;
 import com.wsteam.wandscape.building.scanner.CreativeScannerBlockEntity;
 import com.wsteam.wandscape.shared.log.Log;
-
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
@@ -18,6 +15,8 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.neoforge.common.NeoForge;
+
+import java.util.List;
 
 /**
  * 3D World Renderer for the Building Scanner Gizmo Visual Adjuster.

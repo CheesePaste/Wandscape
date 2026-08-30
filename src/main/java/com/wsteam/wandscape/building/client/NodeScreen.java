@@ -1,8 +1,5 @@
 package com.wsteam.wandscape.building.client;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import com.wsteam.wandscape.building.network.NodeDataPacket;
 import com.wsteam.wandscape.building.network.RequestGatherTaskPacket;
 import com.wsteam.wandscape.building.network.TaskQueueDataPacket;
@@ -13,12 +10,14 @@ import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
 import com.wsteam.wandscape.shared.ui.component.Slider;
 import com.wsteam.wandscape.shared.ui.component.TaskQueuePanel;
 import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
-
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.neoforged.neoforge.network.PacketDistributor;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Right-click panel for node (gather) buildings.

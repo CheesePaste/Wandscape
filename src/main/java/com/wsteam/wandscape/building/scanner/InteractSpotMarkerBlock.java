@@ -2,7 +2,6 @@ package com.wsteam.wandscape.building.scanner;
 
 import com.wsteam.wandscape.shared.data.Activity;
 import com.wsteam.wandscape.shared.ui.I18n;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;

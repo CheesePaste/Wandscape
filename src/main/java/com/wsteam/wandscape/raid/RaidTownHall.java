@@ -1,14 +1,12 @@
 package com.wsteam.wandscape.raid;
 
-import java.util.UUID;
-
-import javax.annotation.Nullable;
-
 import com.wsteam.wandscape.shared.data.BuildingData;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.shared.registry.WandscapeConstants;
-
 import net.minecraft.core.BlockPos;
+
+import javax.annotation.Nullable;
+import java.util.UUID;
 
 /**
  * 市政厅定位与"小镇位于村庄内"判定。

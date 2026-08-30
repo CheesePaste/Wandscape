@@ -1,11 +1,10 @@
 package com.wsteam.wandscape.npc.data;
 
-import java.util.UUID;
-
-import javax.annotation.Nullable;
-
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.shared.data.NpcData;
+
+import javax.annotation.Nullable;
+import java.util.UUID;
 /**
  * Implementation of {@link NpcData} wrapping a {@link WandscapeNpc}.
  */

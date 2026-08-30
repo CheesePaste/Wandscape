@@ -1,10 +1,9 @@
 package com.wsteam.wandscape.shared.event;
 
-import java.util.UUID;
-
 import com.wsteam.wandscape.shared.data.ElementType;
-
 import net.neoforged.bus.api.Event;
+
+import java.util.UUID;
 
 /**
  * Fired when an element balance in a colony's warehouse changes with explicit delta information.

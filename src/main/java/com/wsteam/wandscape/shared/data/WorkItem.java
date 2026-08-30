@@ -1,9 +1,9 @@
 package com.wsteam.wandscape.shared.data;
 
+import com.google.gson.JsonElement;
+
 import java.util.Collections;
 import java.util.Map;
-
-import com.google.gson.JsonElement;
 /**
  * A queued work item inside a building's internal FIFO queue.
  * Contains enough information to construct a {@code TaskRequest} when

@@ -1,32 +1,17 @@
 package com.wsteam.wandscape.building.internal;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import javax.annotation.Nullable;
-
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.colony.ColonyActivation;
 import com.wsteam.wandscape.engine.system.ResourceSupplySystem;
 import com.wsteam.wandscape.engine.transport.ItemTransportManager;
 import com.wsteam.wandscape.shared.api.BuildingApi;
-import com.wsteam.wandscape.shared.data.BuildingData;
-import com.wsteam.wandscape.shared.data.ElementType;
-import com.wsteam.wandscape.shared.data.ItemKey;
-import com.wsteam.wandscape.shared.data.ShopGoodDef;
-import com.wsteam.wandscape.shared.data.ShopConfig;
+import com.wsteam.wandscape.shared.data.*;
 import com.wsteam.wandscape.shared.event.DailySettlementEvent;
 import com.wsteam.wandscape.shared.event.ShopRestockedEvent;
+import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.warehouse.ColonyItemBank;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -34,7 +19,10 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
-import com.wsteam.wandscape.shared.log.Log;
+
+import javax.annotation.Nullable;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Manages shop inventory: dynamic restock on low stock, tourist purchases.
@@ -559,7 +547,6 @@ public final class ShopStockManager {
         if (state == null) {
             Log.warn(TAG, "[Shop] Transport arrived but building {} gone — lost {} × {}",
                     buildingId.toString().substring(0, 8), amount, itemId);
-            return;
         }
     }
 

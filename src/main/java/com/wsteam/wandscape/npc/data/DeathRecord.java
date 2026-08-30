@@ -1,11 +1,10 @@
 package com.wsteam.wandscape.npc.data;
 
-import java.util.List;
-import java.util.UUID;
+import com.wsteam.wandscape.core.types.ResourceStack;
 
 import javax.annotation.Nullable;
-
-import com.wsteam.wandscape.core.types.ResourceStack;
+import java.util.List;
+import java.util.UUID;
 
 /**
  * 死亡留存记录：NPC 战死瞬间的快照，供复活魔法恢复身份/外观/属性/背包/已装备魔法。

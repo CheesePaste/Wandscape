@@ -1,15 +1,14 @@
 package com.wsteam.wandscape.shared.network.tasks;
 
-import static com.wsteam.wandscape.Wandscape.MODID;
-
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.shared.log.Log;
-
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+
+import static com.wsteam.wandscape.Wandscape.MODID;
 
 /**
  * Client→Server: Toggles Mage mode (Follow player, Peace mode, Rest) from the Mage Roster view.

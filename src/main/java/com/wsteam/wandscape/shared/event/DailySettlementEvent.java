@@ -1,8 +1,8 @@
 package com.wsteam.wandscape.shared.event;
 
-import java.util.UUID;
-
 import net.neoforged.bus.api.Event;
+
+import java.util.UUID;
 
 /**
  * Fired after a colony's daily settlement completes.

@@ -83,41 +83,41 @@ public class MarkdownRenderWidget extends AbstractWidget {
     }
 
     private int calculateNodeHeight(MarkdownNode node, Font font, int width) {
-        if (node instanceof HeaderNode header) {
-            MutableComponent comp = Component.literal(header.text()).withStyle(Style.EMPTY.withBold(true));
+        if (node instanceof HeaderNode(int level, String text)) {
+            MutableComponent comp = Component.literal(text).withStyle(Style.EMPTY.withBold(true));
             List<FormattedCharSequence> lines = font.split(comp, width);
-            int lineHeight = header.level() == 1 ? 16 : header.level() == 2 ? 14 : 12;
+            int lineHeight = level == 1 ? 16 : level == 2 ? 14 : 12;
             return lines.size() * lineHeight + 6;
-        } else if (node instanceof TextParagraphNode paragraph) {
-            MutableComponent comp = buildComponent(paragraph.spans());
+        } else if (node instanceof TextParagraphNode(List<MarkdownNode.FormattedSpan> spans)) {
+            MutableComponent comp = buildComponent(spans);
             List<FormattedCharSequence> lines = font.split(comp, width);
             return lines.size() * (font.lineHeight + 2) + 4;
         } else if (node instanceof ImageNode img) {
             return (img.height() > 0 ? img.height() : 64) + 8;
-        } else if (node instanceof QuoteBlockNode quote) {
+        } else if (node instanceof QuoteBlockNode(List<MarkdownNode> children)) {
             int qh = 4;
-            for (MarkdownNode child : quote.children()) {
+            for (MarkdownNode child : children) {
                 qh += calculateNodeHeight(child, font, width - 16);
             }
             return qh + 4;
-        } else if (node instanceof ListNode list) {
+        } else if (node instanceof ListNode(boolean ordered, List<MarkdownNode> items)) {
             int lh = 2;
             int index = 1;
-            for (MarkdownNode item : list.items()) {
-                String prefix = list.ordered() ? index + ". " : "• ";
+            for (MarkdownNode item : items) {
+                String prefix = ordered ? index + ". " : "• ";
                 int prefixW = font.width(prefix);
                 lh += calculateNodeHeight(item, font, width - prefixW - 2);
                 index++;
             }
             return lh + 2;
-        } else if (node instanceof TableNode table) {
-            if (table.headers().isEmpty()) return 0;
-            int numCols = table.headers().size();
+        } else if (node instanceof TableNode(List<String> headers, List<List<String>> rows)) {
+            if (headers.isEmpty()) return 0;
+            int numCols = headers.size();
             int cellPadding = 4;
             int colW = Math.max(40, (width - 4) / numCols);
 
             int th = font.lineHeight + 6 + 4;
-            for (List<String> row : table.rows()) {
+            for (List<String> row : rows) {
                 int maxRowLines = 1;
                 for (int c = 0; c < numCols; c++) {
                     String cellText = c < row.size() ? row.get(c) : "";
@@ -179,7 +179,7 @@ public class MarkdownRenderWidget extends AbstractWidget {
                 && mouseY >= getY() && mouseY <= getY() + getHeight()) {
             RenderedLine hoveredLine = getLineAt(mouseX, mouseY);
             if (hoveredLine != null) {
-                int relX = (int) (mouseX - hoveredLine.x());
+                int relX = mouseX - hoveredLine.x();
                 Style style = font.getSplitter().componentStyleAtWidth(hoveredLine.sequence(), relX);
                 if (style != null && style.getClickEvent() != null) {
                     String action = style.getClickEvent().getValue();
@@ -193,11 +193,11 @@ public class MarkdownRenderWidget extends AbstractWidget {
     }
 
     private int renderNode(GuiGraphics g, Font font, MarkdownNode node, int x, int y, int width, int mouseX, int mouseY) {
-        if (node instanceof HeaderNode header) {
-            int color = header.level() == 1 ? MedievalColors.BORDER_GOLD : header.level() == 2 ? MedievalColors.ACCENT_GOLD : MedievalColors.TEXT_WARM_WHITE;
-            int lineHeight = header.level() == 1 ? 16 : header.level() == 2 ? 14 : 12;
+        if (node instanceof HeaderNode(int level, String text)) {
+            int color = level == 1 ? MedievalColors.BORDER_GOLD : level == 2 ? MedievalColors.ACCENT_GOLD : MedievalColors.TEXT_WARM_WHITE;
+            int lineHeight = level == 1 ? 16 : level == 2 ? 14 : 12;
 
-            MutableComponent comp = Component.literal(header.text()).withStyle(Style.EMPTY.withBold(true));
+            MutableComponent comp = Component.literal(text).withStyle(Style.EMPTY.withBold(true));
             List<FormattedCharSequence> lines = font.split(comp, width);
             int lineY = y;
 
@@ -210,14 +210,14 @@ public class MarkdownRenderWidget extends AbstractWidget {
             }
 
             // Header underline for H1
-            if (header.level() == 1 && lineY >= getY() && lineY <= getY() + getHeight()) {
+            if (level == 1 && lineY >= getY() && lineY <= getY() + getHeight()) {
                 g.fill(x, lineY, x + width, lineY + 1, MedievalColors.BORDER_GOLD_DARK);
             }
             return lineY + 6;
         }
 
-        if (node instanceof TextParagraphNode paragraph) {
-            MutableComponent comp = buildComponent(paragraph.spans());
+        if (node instanceof TextParagraphNode(List<MarkdownNode.FormattedSpan> spans)) {
+            MutableComponent comp = buildComponent(spans);
             List<FormattedCharSequence> lines = font.split(comp, width);
             int lineY = y;
 
@@ -232,14 +232,14 @@ public class MarkdownRenderWidget extends AbstractWidget {
             return lineY + 4;
         }
 
-        if (node instanceof ImageNode img) {
-            int imgW = img.width() > 0 ? img.width() : Math.min(width, 128);
-            int imgH = img.height() > 0 ? img.height() : 64;
+        if (node instanceof ImageNode(String altText, String resourceLocation, int width1, int height1)) {
+            int imgW = width1 > 0 ? width1 : Math.min(width, 128);
+            int imgH = height1 > 0 ? height1 : 64;
             int imgX = x + (width - imgW) / 2;
 
             if (y + imgH >= getY() && y <= getY() + getHeight()) {
                 try {
-                    ResourceLocation tex = ResourceLocation.parse(img.resourceLocation());
+                    ResourceLocation tex = ResourceLocation.parse(resourceLocation);
                     ResourceLocation activeTex = com.wsteam.wandscape.shared.ui.markdown.texture.MarkdownTextureManager.getActiveTexture(tex);
                     g.blit(activeTex, imgX, y, 0.0f, 0.0f, imgW, imgH, imgW, imgH);
                     // Gold border frame
@@ -247,15 +247,15 @@ public class MarkdownRenderWidget extends AbstractWidget {
                 } catch (Exception e) {
                     // Fallback placeholder text if image texture missing
                     g.fill(imgX, y, imgX + imgW, y + imgH, MedievalColors.PARCHMENT_DARK);
-                    g.drawString(font, "[" + img.altText() + "]", imgX + 4, y + imgH / 2 - 4, MedievalColors.TEXT_MUTED, false);
+                    g.drawString(font, "[" + altText + "]", imgX + 4, y + imgH / 2 - 4, MedievalColors.TEXT_MUTED, false);
                 }
             }
             return y + imgH + 8;
         }
 
-        if (node instanceof QuoteBlockNode quote) {
+        if (node instanceof QuoteBlockNode(List<MarkdownNode> children)) {
             int quoteInnerH = 0;
-            for (MarkdownNode child : quote.children()) {
+            for (MarkdownNode child : children) {
                 quoteInnerH += calculateNodeHeight(child, font, width - 16);
             }
             int quoteHeight = quoteInnerH + 8;
@@ -268,19 +268,19 @@ public class MarkdownRenderWidget extends AbstractWidget {
 
             // Render quote children text on top of the background
             int innerY = y + 4;
-            for (MarkdownNode child : quote.children()) {
+            for (MarkdownNode child : children) {
                 innerY = renderNode(g, font, child, x + 12, innerY, width - 16, mouseX, mouseY);
             }
 
             return innerY + 4;
         }
 
-        if (node instanceof ListNode list) {
+        if (node instanceof ListNode(boolean ordered, List<MarkdownNode> items)) {
             int listY = y;
             int index = 1;
 
-            for (MarkdownNode item : list.items()) {
-                String prefix = list.ordered() ? index + ". " : "• ";
+            for (MarkdownNode item : items) {
+                String prefix = ordered ? index + ". " : "• ";
                 int prefixW = font.width(prefix);
 
                 if (listY + font.lineHeight >= getY() && listY <= getY() + getHeight()) {
@@ -293,12 +293,12 @@ public class MarkdownRenderWidget extends AbstractWidget {
             return listY + 2;
         }
 
-        if (node instanceof TableNode table) {
-            if (table.headers().isEmpty()) {
+        if (node instanceof TableNode(List<String> headers, List<List<String>> rows)) {
+            if (headers.isEmpty()) {
                 return y;
             }
 
-            int numCols = table.headers().size();
+            int numCols = headers.size();
             int cellPadding = 4;
             int tableW = width - 4;
             int colW = Math.max(40, tableW / numCols);
@@ -314,7 +314,7 @@ public class MarkdownRenderWidget extends AbstractWidget {
 
                 for (int c = 0; c < numCols; c++) {
                     int cellX = x + c * colW + cellPadding;
-                    String hText = table.headers().get(c);
+                    String hText = headers.get(c);
                     g.drawString(font, font.plainSubstrByWidth(hText, colW - cellPadding * 2), cellX, currentY + 3, MedievalColors.ACCENT_GOLD, true);
                     if (c > 0) {
                         g.fill(x + c * colW, currentY, x + c * colW + 1, currentY + headerH, MedievalColors.BORDER_GOLD_DARK);
@@ -325,7 +325,7 @@ public class MarkdownRenderWidget extends AbstractWidget {
 
             // Render Data Rows
             int rowIndex = 0;
-            for (List<String> row : table.rows()) {
+            for (List<String> row : rows) {
                 int maxRowLines = 1;
                 List<List<FormattedCharSequence>> cellLinesList = new ArrayList<>();
 

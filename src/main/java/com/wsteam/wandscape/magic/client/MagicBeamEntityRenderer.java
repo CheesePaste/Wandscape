@@ -1,11 +1,7 @@
 package com.wsteam.wandscape.magic.client;
 
-import org.joml.Quaternionf;
-import org.joml.Vector3f;
-
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.wsteam.wandscape.magic.entity.MagicBeamEntity;
-
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.blockentity.BeaconRenderer;
 import net.minecraft.client.renderer.entity.EntityRenderer;
@@ -13,6 +9,8 @@ import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
+import org.joml.Quaternionf;
+import org.joml.Vector3f;
 
 /**
  * 信标光束渲染：复用原版 {@link BeaconRenderer#renderBeaconBeam}（原版 beam shader + 逐顶点染色）。

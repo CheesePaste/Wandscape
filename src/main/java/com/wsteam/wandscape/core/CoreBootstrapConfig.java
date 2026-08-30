@@ -1,14 +1,10 @@
 package com.wsteam.wandscape.core;
 
-import com.wsteam.wandscape.core.boundary.BlockOps;
-import com.wsteam.wandscape.core.boundary.ColonyResourceAccess;
-import com.wsteam.wandscape.core.boundary.EntityOps;
-import com.wsteam.wandscape.core.boundary.MovementOps;
-import com.wsteam.wandscape.core.boundary.RitualOps;
-import com.wsteam.wandscape.task.scheduler.SystemBlueprintRegistry;
-import com.wsteam.wandscape.task.source.TaskSource;
+import com.wsteam.wandscape.core.boundary.*;
 import com.wsteam.wandscape.task.engine.dsl.BlueprintRegistry;
 import com.wsteam.wandscape.task.engine.pool.BuildingTaskPool;
+import com.wsteam.wandscape.task.scheduler.SystemBlueprintRegistry;
+import com.wsteam.wandscape.task.source.TaskSource;
 
 import javax.annotation.Nullable;
 import java.util.Collections;

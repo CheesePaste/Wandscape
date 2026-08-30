@@ -1,15 +1,14 @@
 package com.wsteam.wandscape.building.network;
 
-import java.util.UUID;
-
 import com.wsteam.wandscape.building.internal.AltarCastHandler;
-
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+
+import java.util.UUID;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
 /**

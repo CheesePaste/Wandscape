@@ -1,7 +1,8 @@
 package com.wsteam.wandscape.shared.network.tasks;
 
-import java.util.UUID;
 import net.minecraft.network.RegistryFriendlyByteBuf;
+
+import java.util.UUID;
 
 /**
  * Compact DTO representing a Mage / NPC in the colony for the management panel.

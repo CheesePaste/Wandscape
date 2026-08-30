@@ -1,5 +1,11 @@
 package com.wsteam.wandscape.gametest;
 
+import com.wsteam.wandscape.Wandscape;
+import com.wsteam.wandscape.element.internal.ElementAuditor;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.server.ServerStartedEvent;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -8,13 +14,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashSet;
 import java.util.Set;
-
-import com.wsteam.wandscape.Wandscape;
-import com.wsteam.wandscape.element.internal.ElementAuditor;
-
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.event.server.ServerStartedEvent;
 
 /**
  * Runs the element coverage audit when the game test server starts

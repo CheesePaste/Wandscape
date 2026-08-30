@@ -1,19 +1,18 @@
 package com.wsteam.wandscape.projection.client;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.engine.service.SoundService;
 import com.wsteam.wandscape.engine.sound.WandscapeSounds;
 import com.wsteam.wandscape.projection.BuildingCentering;
 import com.wsteam.wandscape.projection.data.BuildingSlot;
-
+import com.wsteam.wandscape.shared.log.Log;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
-import com.wsteam.wandscape.shared.log.Log;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * Client-side static state holder for soul projection mode.

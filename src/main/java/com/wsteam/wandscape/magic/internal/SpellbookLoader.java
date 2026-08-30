@@ -1,13 +1,12 @@
 package com.wsteam.wandscape.magic.internal;
 
-import java.util.Map;
-
-import javax.annotation.Nullable;
-
 import com.wsteam.wandscape.core.component.EquippedMagicComponent;
 import com.wsteam.wandscape.dataconfig.internal.WandscapeDataLoader;
 import com.wsteam.wandscape.magic.data.MagicDef;
 import com.wsteam.wandscape.shared.registry.WandscapeDataRegistry;
+
+import javax.annotation.Nullable;
+import java.util.Map;
 
 /**
  * 注册 {@code data/wandscape/magic_spells/*.json}，客户端/服务端均可按 id 查魔法定义。
@@ -61,6 +60,6 @@ public class SpellbookLoader {
         if (def.category() == MagicDef.Category.ALTAR) return null;
         if ("teleport".equals(def.id())) return null;
         String g = def.defaultGroup();
-        return g != null && EquippedMagicComponent.isCategory(g) ? g : "support";
+        return EquippedMagicComponent.isCategory(g) ? g : "support";
     }
 }

@@ -1,9 +1,9 @@
 package com.wsteam.wandscape.shared.event;
 
-import java.util.UUID;
-
 import com.wsteam.wandscape.shared.data.BarRatio;
 import net.neoforged.bus.api.Event;
+
+import java.util.UUID;
 /** Fired when a tourist leaves a colony. */
 public class TouristDepartedEvent extends Event {
     private final UUID touristId;

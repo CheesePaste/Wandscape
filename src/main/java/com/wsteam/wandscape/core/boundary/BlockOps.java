@@ -1,9 +1,9 @@
 package com.wsteam.wandscape.core.boundary;
 
-import javax.annotation.Nullable;
-
 import com.wsteam.wandscape.core.types.BlockType;
 import com.wsteam.wandscape.core.types.GridPos;
+
+import javax.annotation.Nullable;
 /**
  * Core-layer boundary for block-level world operations.
  * Implemented by the Minecraft adapter layer.

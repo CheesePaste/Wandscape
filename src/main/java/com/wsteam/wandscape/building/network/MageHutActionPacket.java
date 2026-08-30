@@ -1,7 +1,6 @@
 package com.wsteam.wandscape.building.network;
 
 import com.wsteam.wandscape.building.internal.MageHutServerHandler;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;

@@ -1,19 +1,18 @@
 package com.wsteam.wandscape.shared.ui.component;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import com.wsteam.wandscape.shared.ui.I18n;
 import com.wsteam.wandscape.shared.ui.ReplayProtectedScreen;
 import com.wsteam.wandscape.shared.ui.animation.MedievalAnimation;
 import com.wsteam.wandscape.shared.ui.skin.SkinRender;
 import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
-
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.Renderable;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Base screen for all Wandscape single-page UIs.

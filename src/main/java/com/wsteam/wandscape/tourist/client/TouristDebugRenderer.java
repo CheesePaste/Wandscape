@@ -4,8 +4,7 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexFormat;
-
-import java.util.OptionalDouble;
+import com.wsteam.wandscape.tourist.entity.TouristEntity;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderStateShard;
@@ -15,9 +14,8 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 
-import com.wsteam.wandscape.tourist.entity.TouristEntity;
-
 import java.util.List;
+import java.util.OptionalDouble;
 
 /**
  * Debug renderer that visualizes tourist navigation targets.

@@ -1,16 +1,14 @@
 package com.wsteam.wandscape.mixin;
 
+import com.wsteam.wandscape.overview.client.OverviewClientState;
 import net.minecraft.client.Camera;
-import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.entity.Entity;
-
+import net.minecraft.world.level.BlockGetter;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-
-import com.wsteam.wandscape.overview.client.OverviewClientState;
 
 @Mixin(Camera.class)
 public abstract class MixinOverviewCamera {

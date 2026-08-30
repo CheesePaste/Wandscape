@@ -1,7 +1,5 @@
 package com.wsteam.wandscape.compat.curios;
 
-import javax.annotation.Nonnull;
-
 import net.minecraft.core.NonNullList;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.inventory.InventoryMenu;
@@ -11,6 +9,8 @@ import net.neoforged.neoforge.items.SlotItemHandler;
 import top.theillusivec4.curios.api.CuriosApi;
 import top.theillusivec4.curios.api.SlotContext;
 import top.theillusivec4.curios.api.type.inventory.IDynamicStackHandler;
+
+import javax.annotation.Nonnull;
 
 /**
  * 法师饰品槽。绑定某个饰品类型的 {@link IItemHandlerModifiable} 栈（服务端为法师实体真实的

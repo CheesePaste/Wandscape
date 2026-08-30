@@ -1,14 +1,12 @@
 package com.wsteam.wandscape.production.data;
 
-import java.util.List;
-import java.util.Map;
-
-import javax.annotation.Nullable;
-
 import com.wsteam.wandscape.production.ProductionRecipeLoader;
 import com.wsteam.wandscape.shared.data.ElementType;
-
 import net.minecraft.nbt.CompoundTag;
+
+import javax.annotation.Nullable;
+import java.util.List;
+import java.util.Map;
 
 /**
  * 制作站统一「craft」配方的运行时视图（法杖/杂项物品/药水）。

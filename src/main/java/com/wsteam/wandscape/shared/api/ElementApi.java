@@ -1,11 +1,10 @@
 package com.wsteam.wandscape.shared.api;
 
-import java.util.Map;
-
 import com.wsteam.wandscape.shared.data.ElementType;
-
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
+
+import java.util.Map;
 public interface ElementApi {
     ElementType fromId(String id);
 

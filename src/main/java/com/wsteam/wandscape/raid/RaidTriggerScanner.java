@@ -1,7 +1,5 @@
 package com.wsteam.wandscape.raid;
 
-import java.util.UUID;
-
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.engine.service.ParticleService;
 import com.wsteam.wandscape.guard.GuardZone;
@@ -10,7 +8,6 @@ import com.wsteam.wandscape.shared.event.ColonyRaidStartedEvent;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.shared.registry.WandscapeConstants;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
@@ -22,6 +19,8 @@ import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.dimension.DimensionType;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.NeoForge;
+
+import java.util.UUID;
 
 /**
  * 袭击触发扫描器：玩家携带不祥之兆（RAID_OMEN/BAD_OMEN）靠近任意非停摆建筑

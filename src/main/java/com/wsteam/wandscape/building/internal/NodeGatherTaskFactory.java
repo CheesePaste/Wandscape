@@ -1,16 +1,15 @@
 package com.wsteam.wandscape.building.internal;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
-
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.shared.data.WorkItem;
 import com.wsteam.wandscape.shared.registry.WandscapeConstants;
-
 import net.minecraft.core.BlockPos;
+
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * Builds a {@code node:gather} {@link WorkItem} from a node building's

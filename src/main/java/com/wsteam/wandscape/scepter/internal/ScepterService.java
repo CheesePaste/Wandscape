@@ -1,16 +1,14 @@
 package com.wsteam.wandscape.scepter.internal;
 
-import java.util.UUID;
-
-import javax.annotation.Nullable;
-
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.scepter.ScepterKind;
 import com.wsteam.wandscape.shared.log.Log;
-
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
+
+import javax.annotation.Nullable;
+import java.util.UUID;
 
 /**
  * 玩家权杖服务端业务：应用右键命令 + 本殖民地校验 + 玩家上屏反馈。

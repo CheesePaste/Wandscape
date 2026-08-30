@@ -1,15 +1,14 @@
 package com.wsteam.wandscape.shared.ui.component;
 
-import java.util.function.IntConsumer;
-
 import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
-
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.narration.NarratedElementType;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.network.chat.Component;
+
+import java.util.function.IntConsumer;
 /**
  * Minimal integer slider — solid track with pure-blue fill, no handle, no highlights.
  * Range: [min, max]. Value label centered above the track.

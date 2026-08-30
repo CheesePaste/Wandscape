@@ -1,21 +1,19 @@
 package com.wsteam.wandscape.engine.service;
 
+import com.wsteam.wandscape.building.internal.BuildingSavedData;
+import com.wsteam.wandscape.building.internal.BuildingState;
+import com.wsteam.wandscape.shared.event.BuildingRemovedEvent;
+import com.wsteam.wandscape.shared.log.Log;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.ChunkPos;
+import net.neoforged.neoforge.common.NeoForge;
+
+import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
-
-import javax.annotation.Nullable;
-
-import com.wsteam.wandscape.building.internal.BuildingSavedData;
-import com.wsteam.wandscape.building.internal.BuildingState;
-import com.wsteam.wandscape.shared.event.BuildingRemovedEvent;
-import com.wsteam.wandscape.shared.log.Log;
-
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.level.ChunkPos;
-import net.neoforged.neoforge.common.NeoForge;
 
 /**
  * Force-loads building footprint chunks while a building has an active

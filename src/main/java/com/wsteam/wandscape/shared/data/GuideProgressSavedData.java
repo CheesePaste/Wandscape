@@ -1,15 +1,15 @@
 package com.wsteam.wandscape.shared.data;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
-
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.saveddata.SavedData;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 
 /**
  * Per-player tutorial progress (highest reached step + dismissal), stored in

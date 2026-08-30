@@ -1,11 +1,11 @@
 package com.wsteam.wandscape.dataconfig.internal;
 
+import com.google.gson.JsonElement;
+import com.wsteam.wandscape.shared.registry.WandscapeDataRegistry;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.BiFunction;
-
-import com.google.gson.JsonElement;
-import com.wsteam.wandscape.shared.registry.WandscapeDataRegistry;
 class SimpleDataRegistry<T> implements WandscapeDataRegistry<T> {
     private final Map<String, T> entries = new HashMap<>();
     private final BiFunction<String, JsonElement, T> parser;

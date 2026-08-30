@@ -1,19 +1,17 @@
 package com.wsteam.wandscape.shared.ui.panel;
 
-import java.util.List;
-import java.util.UUID;
-
 import com.wsteam.wandscape.projection.client.BuildingDebugClientState;
 import com.wsteam.wandscape.projection.client.ProjectionClientState;
-import com.wsteam.wandscape.projection.data.BuildingSlot;
 import com.wsteam.wandscape.projection.network.ProjectionEnterPacket;
 import com.wsteam.wandscape.projection.network.ProjectionExitPacket;
 import com.wsteam.wandscape.road.client.RoadPlacementState;
 import com.wsteam.wandscape.shared.network.PanelStateTogglePacket;
-
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.network.PacketDistributor;
+
+import java.util.List;
+import java.util.UUID;
 /**
  * Client-side static state holder for the Wandscape comprehensive panel.
  */

@@ -1,12 +1,11 @@
 package com.wsteam.wandscape.shared.api;
 
-import java.util.UUID;
-
-import javax.annotation.Nullable;
-
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
+
+import javax.annotation.Nullable;
+import java.util.UUID;
 
 /**
  * 玩家权杖（庇护/敌对）的殖民地标记查询接口。

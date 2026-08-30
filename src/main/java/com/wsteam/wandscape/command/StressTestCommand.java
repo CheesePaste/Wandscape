@@ -8,16 +8,15 @@ import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.building.internal.EnqueueHelper;
-import com.wsteam.wandscape.task.engine.pool.TaskRequest;
 import com.wsteam.wandscape.engine.WandscapeEngine;
+import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.registry.WandscapeConstants;
-
+import com.wsteam.wandscape.task.engine.pool.TaskRequest;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.MobSpawnType;
-import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Stress-test command: spawn N NPCs and create M town_hall building tasks at once.

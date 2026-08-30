@@ -1,9 +1,9 @@
 package com.wsteam.wandscape.magic.data;
 
-import javax.annotation.Nullable;
-
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+
+import javax.annotation.Nullable;
 
 /**
  * 魔法内置触发条件（{@code MagicDef.conditions} 的纯数据镜像，缺省 = 无条件）。
@@ -30,8 +30,7 @@ public record SpellConditions(
         WorldSnapshot s = snapshot != null ? snapshot : WorldSnapshot.EMPTY;
         if (selfHpMax != null && s.selfHpRatio() >= selfHpMax) return false;
         if (allyHpMax != null && s.allyLowestHpRatio() >= allyHpMax) return false;
-        if (noEffect != null && s.activeEffects().contains(noEffect)) return false;
-        return true;
+        return noEffect == null || !s.activeEffects().contains(noEffect);
     }
 
     /** 从 JSON 解析；无 {@code conditions} 对象或全空时返回 {@link #NONE}。 */

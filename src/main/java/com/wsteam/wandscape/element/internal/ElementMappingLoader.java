@@ -1,19 +1,18 @@
 package com.wsteam.wandscape.element.internal;
 
-import java.util.Collection;
-import java.util.LinkedHashMap;
-import java.util.Map;
-
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.wsteam.wandscape.dataconfig.internal.WandscapeDataLoader;
 import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.registry.WandscapeDataRegistry;
-
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.state.BlockState;
+
+import java.util.Collection;
+import java.util.LinkedHashMap;
+import java.util.Map;
 public class ElementMappingLoader {
     private static final String TAG = "ElementMappingLoader";
     private static final String CATEGORY = "element_mappings";

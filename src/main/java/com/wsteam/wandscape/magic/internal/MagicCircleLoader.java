@@ -1,10 +1,10 @@
 package com.wsteam.wandscape.magic.internal;
 
-import javax.annotation.Nullable;
-
 import com.wsteam.wandscape.dataconfig.internal.WandscapeDataLoader;
 import com.wsteam.wandscape.magic.data.MagicCircleSpec;
 import com.wsteam.wandscape.shared.registry.WandscapeDataRegistry;
+
+import javax.annotation.Nullable;
 
 /**
  * 注册 {@code data/wandscape/magic_circles/*.json}，客户端/服务端均可按 id 查 spec。

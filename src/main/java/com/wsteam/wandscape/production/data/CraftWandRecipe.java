@@ -1,13 +1,12 @@
 package com.wsteam.wandscape.production.data;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.wsteam.wandscape.shared.data.ElementType;
-
 import net.minecraft.nbt.CompoundTag;
+
+import java.util.HashMap;
+import java.util.Map;
 public record CraftWandRecipe(
     String id,
     String craftStation,

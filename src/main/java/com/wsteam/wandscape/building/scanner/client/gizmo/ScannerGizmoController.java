@@ -1,20 +1,17 @@
 package com.wsteam.wandscape.building.scanner.client.gizmo;
 
-import java.util.Optional;
-
 import com.wsteam.wandscape.building.data.BlockOffset;
-import com.wsteam.wandscape.building.scanner.CreativeScannerBlockEntity;
 import com.wsteam.wandscape.shared.log.Log;
-
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
-import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import org.lwjgl.glfw.GLFW;
+
+import java.util.Optional;
 
 /**
  * Handles mouse events, Unity-style right-click camera rotation, raycasting,

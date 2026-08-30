@@ -1,8 +1,5 @@
 package com.wsteam.wandscape.compat.curios;
 
-import java.util.Locale;
-import java.util.function.Predicate;
-
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.compass.CompassService;
 import com.wsteam.wandscape.compat.curios.client.NpcCuriosScreen;
@@ -10,7 +7,6 @@ import com.wsteam.wandscape.compat.ironspellbooks.IronSpellsAttributes;
 import com.wsteam.wandscape.core.types.AttributeType;
 import com.wsteam.wandscape.engine.attribute.WandscapeAttributes;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
-
 import net.minecraft.core.Holder;
 import net.minecraft.core.NonNullList;
 import net.minecraft.core.registries.Registries;
@@ -39,6 +35,9 @@ import top.theillusivec4.curios.api.event.CurioChangeEvent;
 import top.theillusivec4.curios.api.type.capability.ICurio;
 import top.theillusivec4.curios.api.type.inventory.ICurioStacksHandler;
 import top.theillusivec4.curios.api.type.inventory.IDynamicStackHandler;
+
+import java.util.Locale;
+import java.util.function.Predicate;
 
 /**
  * Wandscape × Curios API 兼容实现。

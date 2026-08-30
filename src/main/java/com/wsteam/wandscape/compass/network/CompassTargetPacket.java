@@ -1,16 +1,15 @@
 package com.wsteam.wandscape.compass.network;
 
-import static com.wsteam.wandscape.Wandscape.MODID;
-
-import javax.annotation.Nullable;
-
 import com.wsteam.wandscape.compass.client.CompassTargetClientCache;
-
 import net.minecraft.core.GlobalPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
+
+import javax.annotation.Nullable;
+
+import static com.wsteam.wandscape.Wandscape.MODID;
 
 /** Server→Client: 玩家自己殖民地的市政厅坐标（用作魔法指南针指向目标）。无市政厅时 hasTarget=false。 */
 public record CompassTargetPacket(boolean hasTarget, @Nullable GlobalPos target) implements CustomPacketPayload {

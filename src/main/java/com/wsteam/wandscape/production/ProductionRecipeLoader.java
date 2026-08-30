@@ -1,23 +1,17 @@
 package com.wsteam.wandscape.production;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-
-import javax.annotation.Nullable;
-
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.wsteam.wandscape.dataconfig.internal.WandscapeDataLoader;
 import com.wsteam.wandscape.element.internal.ElementMappingConfig;
 import com.wsteam.wandscape.element.internal.ElementMappingLoader;
-import com.wsteam.wandscape.production.data.BrewPotionRecipe;
-import com.wsteam.wandscape.production.data.CraftSpellRecipe;
-import com.wsteam.wandscape.production.data.CraftWandRecipe;
-import com.wsteam.wandscape.production.data.MiscRecipe;
-import com.wsteam.wandscape.production.data.SynthesizeRecipe;
+import com.wsteam.wandscape.production.data.*;
 import com.wsteam.wandscape.shared.registry.WandscapeDataRegistry;
-import com.wsteam.wandscape.shared.log.Log;
+
+import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 public class ProductionRecipeLoader {
     private static final String TAG = "ProductionRecipeLoader";
     private static final String CATEGORY = "craft_recipes";

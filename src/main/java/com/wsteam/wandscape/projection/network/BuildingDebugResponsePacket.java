@@ -1,19 +1,16 @@
 package com.wsteam.wandscape.projection.network;
 
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-
 import com.wsteam.wandscape.shared.data.WorkItem;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 
+import java.util.List;
+import java.util.UUID;
+
 import static com.wsteam.wandscape.Wandscape.MODID;
-import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Server→Client: debug data snapshot for a building.

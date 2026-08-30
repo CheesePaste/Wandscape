@@ -1,11 +1,11 @@
 package com.wsteam.wandscape.scepter.internal;
 
-import java.util.UUID;
-
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
+
+import java.util.UUID;
 
 /**
  * 强制仇恨目标死亡自动解除：任意殖民地标记的生物死亡即清除该标记，法师恢复普通索敌。

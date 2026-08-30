@@ -1,9 +1,6 @@
 package com.wsteam.wandscape.compat.jei;
 
-import java.util.List;
-
 import mezz.jei.api.ingredients.IIngredientRenderer;
-
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -12,6 +9,8 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
+
+import java.util.List;
 
 /**
  * 元素物品槽位渲染器：图标同 vanilla，数量角标缩小到 0.5 倍并右对齐槽位内右缘。

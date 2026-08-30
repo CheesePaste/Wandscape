@@ -1,7 +1,5 @@
 package com.wsteam.wandscape.shared.network;
 
-import java.util.function.Consumer;
-
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentSerialization;
@@ -11,6 +9,8 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.PacketDistributor;
+
+import java.util.function.Consumer;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
 /**

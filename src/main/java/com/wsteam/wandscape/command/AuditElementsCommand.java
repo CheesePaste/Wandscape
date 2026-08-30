@@ -1,10 +1,5 @@
 package com.wsteam.wandscape.command;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
-import java.util.*;
-
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -12,14 +7,18 @@ import com.google.gson.JsonParser;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.tree.CommandNode;
-
+import com.wsteam.wandscape.Wandscape;
+import com.wsteam.wandscape.element.internal.ElementAuditor;
+import com.wsteam.wandscape.shared.log.Log;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 
-import com.wsteam.wandscape.Wandscape;
-import com.wsteam.wandscape.element.internal.ElementAuditor;
-import com.wsteam.wandscape.shared.log.Log;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Scans ALL registered Minecraft items and reports which ones lack

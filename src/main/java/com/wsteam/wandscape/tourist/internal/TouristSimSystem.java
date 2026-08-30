@@ -1,13 +1,5 @@
 package com.wsteam.wandscape.tourist.internal;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.UUID;
-
-import javax.annotation.Nullable;
-
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.building.internal.BuildingState;
@@ -18,11 +10,10 @@ import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.api.TouristApi;
 import com.wsteam.wandscape.shared.data.BarRatio;
 import com.wsteam.wandscape.shared.data.BuildingData;
+import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.shared.registry.WandscapeConstants;
 import com.wsteam.wandscape.tourist.entity.TouristEntity;
-import com.wsteam.wandscape.shared.log.Log;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -32,6 +23,12 @@ import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.level.SleepFinishedTimeEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
+
+import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.Random;
+import java.util.UUID;
 
 /**
  * Drives tourists when no player can observe them.
@@ -940,7 +937,7 @@ public final class TouristSimSystem {
             leave = inDepartureWindow || idleTimeout;
         } else if (inDepartureWindow) {
             // 离场窗口 + 未满条：入旅店；无旅店/满 → 离场。交互/排队中先完成交互，不打断。
-            leave = interacting ? false : !routeToHotel(level, s);
+            leave = !interacting && !routeToHotel(level, s);
         } else {
             leave = idleTimeout;
         }

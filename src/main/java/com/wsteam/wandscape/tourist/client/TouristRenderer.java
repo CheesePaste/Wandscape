@@ -1,21 +1,13 @@
 package com.wsteam.wandscape.tourist.client;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.List;
-import java.util.stream.Stream;
-
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.wsteam.wandscape.Wandscape;
-import com.wsteam.wandscape.shared.data.Activity;
-import com.wsteam.wandscape.tourist.entity.TouristEntity;
-
 import com.wsteam.wandscape.shared.client.bubble.AmbientTextPools;
 import com.wsteam.wandscape.shared.client.bubble.SpeechBubbleRenderer;
-
-import net.minecraft.client.multiplayer.ClientLevel;
+import com.wsteam.wandscape.shared.data.Activity;
+import com.wsteam.wandscape.tourist.entity.TouristEntity;
 import net.minecraft.client.model.geom.ModelLayers;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.HumanoidMobRenderer;
@@ -27,6 +19,12 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.fml.ModList;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+import java.util.stream.Stream;
 public class TouristRenderer extends HumanoidMobRenderer<TouristEntity, TouristHumanoidModel> {
 
     private static final ResourceLocation[] TOURIST_TEXTURES = detectTextures(

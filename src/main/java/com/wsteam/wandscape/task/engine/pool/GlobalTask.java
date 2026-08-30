@@ -1,15 +1,16 @@
 package com.wsteam.wandscape.task.engine.pool;
 
-import com.wsteam.wandscape.task.engine.dsl.TriggerDeclaration;
+import com.google.gson.JsonElement;
 import com.wsteam.wandscape.core.boundary.EventBus;
 import com.wsteam.wandscape.core.types.ResourceStack;
-
-import java.util.*;
+import com.wsteam.wandscape.task.engine.dsl.TriggerDeclaration;
+import com.wsteam.wandscape.task.runtime.ApprovalInfo;
+import com.wsteam.wandscape.task.runtime.InterruptRecord;
+import com.wsteam.wandscape.task.runtime.TaskSequence;
+import com.wsteam.wandscape.task.runtime.TaskState;
 
 import javax.annotation.Nullable;
-
-import com.google.gson.JsonElement;
-import com.wsteam.wandscape.task.runtime.*;
+import java.util.*;
 
 /**
  * A task in the global pool. Tracks its lifecycle state, assigned NPC, and progress.

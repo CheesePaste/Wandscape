@@ -5,7 +5,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import com.wsteam.wandscape.projection.client.BuildGizmoController.AxisDrag;
-
+import com.wsteam.wandscape.shared.log.Log;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
@@ -14,7 +14,6 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.neoforge.common.NeoForge;
-import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Renders the 3D Axis Gizmo (X, Y, Z arrows) at the building ghost position in Build mode

@@ -1,11 +1,5 @@
 package com.wsteam.wandscape.npc.internal;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
-
-import javax.annotation.Nullable;
-
 import com.wsteam.wandscape.core.component.ColonyMember;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.engine.WandscapeEngine;
@@ -14,7 +8,10 @@ import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.shared.api.NpcApi;
 import com.wsteam.wandscape.shared.data.NpcData;
 
-import com.wsteam.wandscape.shared.log.Log;
+import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 
 /**
  * Implementation of {@link NpcApi} that queries the ECS World via

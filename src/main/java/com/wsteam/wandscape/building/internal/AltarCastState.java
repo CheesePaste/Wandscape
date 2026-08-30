@@ -1,16 +1,16 @@
 package com.wsteam.wandscape.building.internal;
 
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.UUID;
-
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.saveddata.SavedData;
+
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.UUID;
 
 /**
  * 每世界一份的祭坛施法状态（SavedData）：每个祭坛（building UUID）独立存放各魔法的

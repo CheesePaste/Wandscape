@@ -1,15 +1,14 @@
 package com.wsteam.wandscape.engine.source.blueprint;
 
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
+import com.google.gson.*;
+import com.wsteam.wandscape.core.types.GridPos;
+import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.shared.registry.WandscapeDataRegistry;
+import com.wsteam.wandscape.task.engine.dsl.*;
 
 import javax.annotation.Nullable;
-
-import com.google.gson.*;
-import com.wsteam.wandscape.shared.log.Log;
-import com.wsteam.wandscape.task.engine.dsl.*;
-import com.wsteam.wandscape.core.types.GridPos;
-import com.wsteam.wandscape.shared.registry.WandscapeDataRegistry;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Loads blueprint JSON files from {@code data/wandscape/blueprints/}
@@ -59,7 +58,7 @@ public final class BlueprintConfigLoader {
             BlueprintDefinition def = entry.getValue();
             // Register with definition so call steps can macro-expand this blueprint
             registry.register(id, new Blueprint(id,
-                    (BlueprintSteps) params -> interpreter.interpret(def, params),
+                    params -> interpreter.interpret(def, params),
                     def));
             Log.info(TAG, "registered blueprint: %s (params=%d steps=%d)",
                     id, def.params().size(), def.steps().size());

@@ -1,15 +1,13 @@
 package com.wsteam.wandscape.scepter.internal;
 
-import java.util.UUID;
-
-import javax.annotation.Nullable;
-
 import com.wsteam.wandscape.shared.api.ScepterApi;
-
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
+
+import javax.annotation.Nullable;
+import java.util.UUID;
 
 /**
  * {@link ScepterApi} 实现：从 {@link ScepterMarksSavedData}（overworld SavedData）读殖民地标记。

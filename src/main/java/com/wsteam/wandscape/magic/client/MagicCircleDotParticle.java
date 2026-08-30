@@ -1,15 +1,11 @@
 package com.wsteam.wandscape.magic.client;
 
-import javax.annotation.Nullable;
-
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.client.particle.Particle;
-import net.minecraft.client.particle.ParticleProvider;
-import net.minecraft.client.particle.ParticleRenderType;
-import net.minecraft.client.particle.SpriteSet;
-import net.minecraft.client.particle.TextureSheetParticle;
+import net.minecraft.client.particle.*;
 import net.minecraft.core.particles.SimpleParticleType;
+
+import javax.annotation.Nullable;
 
 /**
  * 魔法阵可染色点粒子（自定义 glow/ember + glyph 放大点，v1 用同一类）。

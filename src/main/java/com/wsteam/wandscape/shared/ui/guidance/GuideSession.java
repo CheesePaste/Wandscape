@@ -2,7 +2,6 @@ package com.wsteam.wandscape.shared.ui.guidance;
 
 import com.wsteam.wandscape.shared.network.GuideProgressUpdatePacket;
 import com.wsteam.wandscape.shared.ui.I18n;
-
 import net.minecraft.client.Minecraft;
 import net.neoforged.neoforge.network.PacketDistributor;
 

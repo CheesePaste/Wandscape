@@ -1,12 +1,9 @@
 package com.wsteam.wandscape.projection.client;
 
-import java.util.List;
-import java.util.UUID;
-
 import com.wsteam.wandscape.projection.network.BuildingActionPacket;
 import com.wsteam.wandscape.projection.network.BuildingDebugResponsePacket;
+import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.ui.I18n;
-
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -19,9 +16,9 @@ import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.client.event.RenderGuiEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.network.PacketDistributor;
-import com.wsteam.wandscape.shared.log.Log;
-
 import org.lwjgl.glfw.GLFW;
+
+import java.util.UUID;
 
 /**
  * Renders a small translucent building-info overlay when debug inspect mode

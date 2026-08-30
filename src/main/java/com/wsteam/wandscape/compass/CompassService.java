@@ -1,20 +1,18 @@
 package com.wsteam.wandscape.compass;
 
-import java.util.UUID;
-
-import javax.annotation.Nullable;
-
 import com.wsteam.wandscape.compass.network.CompassTargetPacket;
 import com.wsteam.wandscape.raid.RaidTownHall;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.PacketDistributor;
+
+import javax.annotation.Nullable;
+import java.util.UUID;
 
 /**
  * 魔法指南针服务端业务：解析玩家自己殖民地的市政厅 + 同步到客户端 + 终极右键传送。

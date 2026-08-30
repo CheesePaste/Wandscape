@@ -1,9 +1,9 @@
 package com.wsteam.wandscape.overview.client;
 
-import java.util.UUID;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.Vec3;
+
+import java.util.UUID;
 
 /**
  * Client-side static state holder for overview (bird's eye) mode.

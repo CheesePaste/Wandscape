@@ -1,33 +1,23 @@
 package com.wsteam.wandscape.engine.boundary;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-
-import javax.annotation.Nullable;
-
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.core.boundary.BlockOps;
 import com.wsteam.wandscape.core.boundary.ColonyResourceAccess;
 import com.wsteam.wandscape.core.component.ColonyMember;
 import com.wsteam.wandscape.core.component.TaskExecutor;
-import com.wsteam.wandscape.task.scheduler.TaskExecutionSystem;
 import com.wsteam.wandscape.core.ecs.World;
-import com.wsteam.wandscape.op.api.AtomicOp;
-import com.wsteam.wandscape.op.executor.OpExecutor;
-import com.wsteam.wandscape.op.executor.ResourceShortageException;
 import com.wsteam.wandscape.core.types.GridPos;
 import com.wsteam.wandscape.core.types.ResourceId;
 import com.wsteam.wandscape.core.types.ResourceStack;
 import com.wsteam.wandscape.element.internal.ElementMappingLoader;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.transport.ItemTransportManager;
+import com.wsteam.wandscape.magic.item.SpellItem;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
-import com.wsteam.wandscape.magic.item.SpellItem;
+import com.wsteam.wandscape.op.api.AtomicOp;
+import com.wsteam.wandscape.op.executor.OpExecutor;
+import com.wsteam.wandscape.op.executor.ResourceShortageException;
 import com.wsteam.wandscape.production.ProductionRecipeLoader;
 import com.wsteam.wandscape.production.data.CraftRecipeView;
 import com.wsteam.wandscape.production.data.CraftSpellRecipe;
@@ -36,12 +26,12 @@ import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.data.BuildingData;
 import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.data.ItemKey;
+import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
-import com.wsteam.wandscape.shared.registry.WandscapeConstants;
 import com.wsteam.wandscape.task.engine.pool.GlobalTask;
 import com.wsteam.wandscape.task.runtime.TaskState;
+import com.wsteam.wandscape.task.scheduler.TaskExecutionSystem;
 import com.wsteam.wandscape.warehouse.ColonyItemBank;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.ParticleTypes;
@@ -52,7 +42,10 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.Level;
-import com.wsteam.wandscape.shared.log.Log;
+
+import javax.annotation.Nullable;
+import java.util.*;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * MC implementation of {@link OpExecutor} for {@link AtomicOp.BlockInteractOp}.
@@ -779,9 +772,9 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         WandscapeNpc npc = EntityComponentBridge.INSTANCE.getNpc(npcId);
         if (npc != null && !npc.isRemoved()) {
             for (int i = 0; i < 5; i++) {
-                double ox = (npc.getRandom().nextDouble() - 0.5) * 1.0;
+                double ox = (npc.getRandom().nextDouble() - 0.5);
                 double oy = npc.getRandom().nextDouble() * 2.0;
-                double oz = (npc.getRandom().nextDouble() - 0.5) * 1.0;
+                double oz = (npc.getRandom().nextDouble() - 0.5);
                 npc.level().addParticle(ParticleTypes.HAPPY_VILLAGER,
                         npc.getX() + ox, npc.getY() + oy, npc.getZ() + oz,
                         0, 0, 0);

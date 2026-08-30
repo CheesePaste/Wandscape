@@ -1,12 +1,11 @@
 package com.wsteam.wandscape.npc.client;
 
-import java.util.Locale;
-
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
-
 import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.util.Mth;
+
+import java.util.Locale;
 
 /**
  * Wandscape 法师人形模型：根据当前释放/蓄力的魔法类型，智能匹配玩家同款专属施法姿态。

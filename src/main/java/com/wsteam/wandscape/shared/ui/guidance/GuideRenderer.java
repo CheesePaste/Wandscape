@@ -1,15 +1,14 @@
 package com.wsteam.wandscape.shared.ui.guidance;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import com.wsteam.wandscape.shared.ui.panel.WandscapePanelOverlay;
-
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Renders the onboarding guidance box (dark background, gold border) at the

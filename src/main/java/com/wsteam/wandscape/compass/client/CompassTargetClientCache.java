@@ -1,8 +1,8 @@
 package com.wsteam.wandscape.compass.client;
 
-import javax.annotation.Nullable;
-
 import net.minecraft.core.GlobalPos;
+
+import javax.annotation.Nullable;
 
 /**
  * 客户端缓存的「玩家自己殖民地的市政厅」坐标（由 {@code CompassTargetPacket} 服务端→客户端同步）。

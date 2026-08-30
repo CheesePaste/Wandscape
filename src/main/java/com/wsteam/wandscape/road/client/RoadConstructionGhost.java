@@ -1,13 +1,10 @@
 package com.wsteam.wandscape.road.client;
 
-import java.util.List;
-
 import com.wsteam.wandscape.road.data.RoadPreset;
 import com.wsteam.wandscape.road.data.RoadPresetLoader;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.network.RoadAreaSyncPacket;
 import com.wsteam.wandscape.shared.ui.util.BuildingPreviewRenderer;
-
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
@@ -16,6 +13,8 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.neoforge.common.NeoForge;
+
+import java.util.List;
 
 /**
  * Client-side ghost of roads still under construction, driven by the server
