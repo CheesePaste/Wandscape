@@ -123,33 +123,6 @@ public final class WonderEffectApplier {
                 activeEffectsByBuilding.size(), statCache, priceCache, unlockedRules);
     }
 
-    private void recalculateForBuilding(UUID buildingId) {
-        // Full recalc is simpler and wonder count is small
-        recalculateAll();
-    }
-
-    private void removeEffects(UUID buildingId) {
-        List<WonderEffect> removed = activeEffectsByBuilding.remove(buildingId);
-        if (removed != null) {
-            // Fire event then full recalc to rebuild caches
-            ServerLevel level = getServerLevel();
-            UUID colonyId = null;
-            if (level != null) {
-                BuildingSavedData sd = BuildingSavedData.get(level);
-                if (sd != null) {
-                    BuildingState state = sd.getBuilding(buildingId);
-                    if (state != null) colonyId = state.getColonyId();
-                }
-            }
-            NeoForge.EVENT_BUS.post(new WonderEffectChangedEvent(
-                    buildingId, colonyId, List.of(), false));
-            playWonderSound(buildingId, false);
-            recalculateAll();
-            Log.info(TAG, "[Wonder] Effects removed for building={}",
-                    buildingId.toString().substring(0, 8));
-        }
-    }
-
     private void applyEffects(List<WonderEffect> effects, UUID buildingId, UUID colonyId) {
         boolean anyApplied = false;
         for (WonderEffect effect : effects) {

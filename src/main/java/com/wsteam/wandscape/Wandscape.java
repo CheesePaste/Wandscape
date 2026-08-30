@@ -449,7 +449,6 @@ public class Wandscape {
             com.wsteam.wandscape.road.data.RoadPresetLoader.getInstance();
     private final DecorationBonusSystem decorationBonusSystem;
     private final ShopStockManager shopStockManager;
-    private final WonderEffectApplier wonderEffectApplier;
     private final TavernApiImpl tavernApi;
 
     public Wandscape(IEventBus modEventBus, ModContainer modContainer) {
@@ -488,7 +487,7 @@ public class Wandscape {
         StatisticsCollector.register();
         decorationBonusSystem = DecorationBonusSystem.register();
         shopStockManager = ShopStockManager.register();
-        wonderEffectApplier = WonderEffectApplier.register();
+        WonderEffectApplier.register();
         BuildingInteractHandler.setShopStockManager(shopStockManager);
         TouristSpawnSystem.register();
         HotelStayHandler.register();

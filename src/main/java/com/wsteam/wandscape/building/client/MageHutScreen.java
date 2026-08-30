@@ -49,7 +49,6 @@ public class MageHutScreen extends MedievalScreen {
 
     // ── Data snapshot ──
     private BlockPos buildingPos;
-    private UUID colonyId;
     private int colonyLevel;
     private boolean hasResident;
     private boolean alive;
@@ -93,7 +92,6 @@ public class MageHutScreen extends MedievalScreen {
 
     private void applyData(MageHutDataPacket packet) {
         this.buildingPos = packet.buildingPos();
-        this.colonyId = packet.colonyId();
         this.colonyLevel = packet.colonyLevel();
         this.hasResident = packet.hasResident();
         this.alive = packet.alive();

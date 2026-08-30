@@ -228,16 +228,8 @@ public class ResourceSupplySystem implements System {
      * Sum the amount of {@code production:synthesize} work for {@code itemId} already
      * queued on any workstation or running in the task pool. Recipe ids are compared
      * prefix-insensitively so bare ("bread") and full ("minecraft:bread") ids aggregate.
-     */
-    private static int countSynthesizeInFlight(String itemId, @Nullable World world) {
-        return countSynthesizeInFlight(itemId, null, world);
-    }
-
-    /**
-     * Colony-scoped variant of {@link #countSynthesizeInFlight(String, World)}. When
-     * {@code colonyId} is non-null, only that colony's workstations are considered for
-     * the queued portion (running pool tasks are always global — tasks don't expose a
-     * colony filter cheaply).
+     * When {@code colonyId} is non-null, only that colony's workstations are considered for
+     * the queued portion.
      */
     public static int countSynthesizeInFlight(String itemId, @Nullable UUID colonyId, @Nullable World world) {
         String key = stripMcPrefix(itemId);

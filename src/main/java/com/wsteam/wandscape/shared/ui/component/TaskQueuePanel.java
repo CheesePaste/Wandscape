@@ -472,7 +472,6 @@ public class TaskQueuePanel extends AbstractWidget {
                     : ARROW_STATE_NORMAL)
                 : ARROW_STATE_DISABLED;
         renderArrow(g, btnX, btnY, state, true);
-        storePressAction(btnX, btnY, active, onPress);
     }
 
     private void drawDownBtn(GuiGraphics g, int btnX, int btnY,
@@ -483,7 +482,6 @@ public class TaskQueuePanel extends AbstractWidget {
                     : ARROW_STATE_NORMAL)
                 : ARROW_STATE_DISABLED;
         renderArrow(g, btnX, btnY, state, false);
-        storePressAction(btnX, btnY, active, onPress);
     }
 
     /**
@@ -510,16 +508,9 @@ public class TaskQueuePanel extends AbstractWidget {
                     : 0)
                 : CLOSE_STATE_DISABLED;
         SkinRender.drawCloseButton(g, btnX, btnY, BTN_W, BTN_H, state);
-        storePressAction(btnX, btnY, active, onPress);
     }
 
     // ── Click handling ─────────────────────────────────────────────────────
-
-    /** Store the last active button's action (used by legacy hit-test path, kept for safety). */
-    private Runnable lastPressAction;
-    private void storePressAction(int btnX, int btnY, boolean active, Runnable onPress) {
-        if (active) this.lastPressAction = onPress;
-    }
 
     /**
      * Hit-test: find which active button the mouse is over and fire its action.

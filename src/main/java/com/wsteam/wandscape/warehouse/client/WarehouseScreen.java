@@ -88,8 +88,6 @@ public class WarehouseScreen extends AbstractContainerScreen<WarehouseMenu> impl
     private String query = "";
 
     // Data
-    private BlockPos buildingPos = BlockPos.ZERO;
-    private UUID colonyId = new UUID(0, 0);
     private List<ItemEntry> allItems = new ArrayList<>();
     private List<ItemEntry> visibleEntries = new ArrayList<>();
     private List<ItemStack> visibleStacks = new ArrayList<>();
@@ -132,8 +130,6 @@ public class WarehouseScreen extends AbstractContainerScreen<WarehouseMenu> impl
     // ── 数据更新 ──
 
     public void updateItems(WarehouseDataPacket packet) {
-        this.buildingPos = packet.buildingPos();
-        this.colonyId = packet.colonyId();
         if (packet.creator() != null && !packet.creator().isBlank()) {
             setCreator(packet.creator());
         }

@@ -26,7 +26,6 @@ public class TouristScreen extends MedievalScreen {
     private static final int PW = 300;
     private static final int PH = 300;
 
-    private final int entityId;
     private String touristName;
     private int energy;
     private int level;
@@ -43,7 +42,6 @@ public class TouristScreen extends MedievalScreen {
         this.showCloseButton = true;
         this.showHelpButton = true;
         this.helpDocumentPath = "tourist_guide";
-        this.entityId = packet.entityId();
         apply(packet);
     }
 

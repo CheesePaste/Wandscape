@@ -673,11 +673,6 @@ public final class WandscapePanelController {
         event.setCanceled(true);
     }
 
-    /** Compute number of building grid columns for the current screen width. */
-    private static int getCols(int screenW) {
-        return Math.max(1, (screenW - BuildingSelectionOverlay.GRID_PAD_X * 2 - BuildingSelectionOverlay.SCROLLBAR_W) / BuildingSelectionOverlay.CELL_W);
-    }
-
     private static String keyToChar(int key, boolean shift) {
         if (key >= GLFW.GLFW_KEY_A && key <= GLFW.GLFW_KEY_Z) {
             char c = (char) ('a' + (key - GLFW.GLFW_KEY_A));

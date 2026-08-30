@@ -102,17 +102,6 @@ public class CreativeScannerScreen extends MedievalScreen {
     private EditBox bMaxX, bMaxY, bMaxZ;
     private EditBox doorX, doorY, doorZ;
 
-    // ── Tab 1: Metadata EditBoxes ──
-    private EditBox metaId, metaName, metaCreator;
-    private EditBox metaComfort, metaMagic, metaWonder, unlockLevel;
-
-    // Category-specific inputs (Creative only)
-    private EditBox shopProfitRate, shopDuration;
-    private EditBox serviceEnergy, serviceMaxOcc, serviceDuration;
-    private EditBox relaxEnergy, relaxDuration;
-    private EditBox atmWithdraw, atmDuration;
-    private EditBox nodeAmount, nodeChannel;
-
     // Paged item collections
     private int shopGoodsPage = 0;
     private static final int GOODS_PER_PAGE = 3;
@@ -312,15 +301,15 @@ public class CreativeScannerScreen extends MedievalScreen {
 
         if (scanner.getTargetMode() == TargetMode.ROAD) {
             // ── ROAD Mode Properties ──
-            metaId = mkEdit(lx + 68, y + 14, 290, 18, scanner.getBuildingId().isEmpty() ? "wandscape:custom_road" : scanner.getBuildingId(), s -> {
+            mkEdit(lx + 68, y + 14, 290, 18, scanner.getBuildingId().isEmpty() ? "wandscape:custom_road" : scanner.getBuildingId(), s -> {
                 scanner.setBuildingId(s);
                 syncToServer();
             });
-            metaName = mkEdit(lx + 68, y + 38, 290, 18, scanner.getDisplayName().isEmpty() ? "自定义道路" : scanner.getDisplayName(), s -> {
+            mkEdit(lx + 68, y + 38, 290, 18, scanner.getDisplayName().isEmpty() ? "自定义道路" : scanner.getDisplayName(), s -> {
                 scanner.setDisplayName(s);
                 syncToServer();
             });
-            metaCreator = mkEdit(lx + 68, y + 62, 290, 18, scanner.getCreator(), s -> {
+            mkEdit(lx + 68, y + 62, 290, 18, scanner.getCreator(), s -> {
                 scanner.setCreator(s);
                 syncToServer();
             });
@@ -337,15 +326,15 @@ public class CreativeScannerScreen extends MedievalScreen {
         // ── BUILDING Mode Properties ──
         if (isSurvival) {
             // Survival mode: category is locked to custom, stats are block-calculated
-            metaId = mkEdit(lx + 24, y, 100, 16, scanner.getBuildingId().isEmpty() ? "custom_building" : scanner.getBuildingId(), s -> {
+            mkEdit(lx + 24, y, 100, 16, scanner.getBuildingId().isEmpty() ? "custom_building" : scanner.getBuildingId(), s -> {
                 scanner.setBuildingId(s);
                 syncToServer();
             });
-            metaName = mkEdit(lx + 154, y, 92, 16, scanner.getDisplayName().isEmpty() ? "自定义建筑" : scanner.getDisplayName(), s -> {
+            mkEdit(lx + 154, y, 92, 16, scanner.getDisplayName().isEmpty() ? "自定义建筑" : scanner.getDisplayName(), s -> {
                 scanner.setDisplayName(s);
                 syncToServer();
             });
-            metaCreator = mkEdit(lx + 276, y, 88, 16, scanner.getCreator(), s -> {
+            mkEdit(lx + 276, y, 88, 16, scanner.getCreator(), s -> {
                 scanner.setCreator(s);
                 syncToServer();
             });
@@ -362,15 +351,15 @@ public class CreativeScannerScreen extends MedievalScreen {
 
         // Creative mode: Full configurable category and attributes
         // Row 1: ID, Name, Creator
-        metaId = mkEdit(lx + 24, y, 100, 16, scanner.getBuildingId(), s -> {
+        mkEdit(lx + 24, y, 100, 16, scanner.getBuildingId(), s -> {
             scanner.setBuildingId(s);
             syncToServer();
         });
-        metaName = mkEdit(lx + 154, y, 92, 16, scanner.getDisplayName(), s -> {
+        mkEdit(lx + 154, y, 92, 16, scanner.getDisplayName(), s -> {
             scanner.setDisplayName(s);
             syncToServer();
         });
-        metaCreator = mkEdit(lx + 276, y, 88, 16, scanner.getCreator(), s -> {
+        mkEdit(lx + 276, y, 88, 16, scanner.getCreator(), s -> {
             scanner.setCreator(s);
             syncToServer();
         });
@@ -391,19 +380,19 @@ public class CreativeScannerScreen extends MedievalScreen {
         y += 22;
 
         // Row 3: Stats (Comfort, Magic, Wonder, Unlock Level)
-        metaComfort = mkNumEdit(lx + 34, y, 30, 16, scanner.getComfort(), s -> {
+        mkNumEdit(lx + 34, y, 30, 16, scanner.getComfort(), s -> {
             scanner.setComfort(intOrZero(s));
             syncToServer();
         });
-        metaMagic = mkNumEdit(lx + 98, y, 30, 16, scanner.getMagic(), s -> {
+        mkNumEdit(lx + 98, y, 30, 16, scanner.getMagic(), s -> {
             scanner.setMagic(intOrZero(s));
             syncToServer();
         });
-        metaWonder = mkNumEdit(lx + 162, y, 30, 16, scanner.getWonder(), s -> {
+        mkNumEdit(lx + 162, y, 30, 16, scanner.getWonder(), s -> {
             scanner.setWonder(intOrZero(s));
             syncToServer();
         });
-        unlockLevel = mkNumEdit(lx + 254, y, 28, 16, scanner.getUnlockMinLevel(), s -> {
+        mkNumEdit(lx + 254, y, 28, 16, scanner.getUnlockMinLevel(), s -> {
             scanner.setUnlockMinLevel(Math.max(1, intOrZero(s)));
             syncToServer();
         });
@@ -425,14 +414,14 @@ public class CreativeScannerScreen extends MedievalScreen {
     }
 
     private void initShopConfig(int lx, int y) {
-        shopProfitRate = mkEdit(lx + 54, y + 3, 38, 16, String.valueOf(scanner.getShopProfitRate()), s -> {
+        mkEdit(lx + 54, y + 3, 38, 16, String.valueOf(scanner.getShopProfitRate()), s -> {
             try {
                 scanner.setShopProfitRate(Double.parseDouble(s));
                 syncToServer();
             } catch (NumberFormatException ignored) {}
         });
 
-        shopDuration = mkNumEdit(lx + 148, y + 3, 36, 16, scanner.getShopInteractionDurationTicks(), s -> {
+        mkNumEdit(lx + 148, y + 3, 36, 16, scanner.getShopInteractionDurationTicks(), s -> {
             scanner.setShopInteractionDurationTicks(intOrZero(s));
             syncToServer();
         });
@@ -485,17 +474,17 @@ public class CreativeScannerScreen extends MedievalScreen {
     }
 
     private void initServiceConfig(int lx, int y) {
-        serviceEnergy = mkNumEdit(lx + 38, y + 3, 30, 16, scanner.getServiceEnergyPerUse(), s -> {
+        mkNumEdit(lx + 38, y + 3, 30, 16, scanner.getServiceEnergyPerUse(), s -> {
             scanner.setServiceEnergyPerUse(intOrZero(s));
             syncToServer();
         });
 
-        serviceMaxOcc = mkNumEdit(lx + 98, y + 3, 26, 16, scanner.getServiceMaxOccupancy(), s -> {
+        mkNumEdit(lx + 98, y + 3, 26, 16, scanner.getServiceMaxOccupancy(), s -> {
             scanner.setServiceMaxOccupancy(intOrZero(s));
             syncToServer();
         });
 
-        serviceDuration = mkNumEdit(lx + 154, y + 3, 30, 16, scanner.getServiceInteractionDurationTicks(), s -> {
+        mkNumEdit(lx + 154, y + 3, 30, 16, scanner.getServiceInteractionDurationTicks(), s -> {
             scanner.setServiceInteractionDurationTicks(intOrZero(s));
             syncToServer();
         });
@@ -573,36 +562,36 @@ public class CreativeScannerScreen extends MedievalScreen {
             rebuild();
         });
 
-        nodeAmount = mkNumEdit(lx + 80, y + 34, 45, 16, scanner.getNodeAmountPerHarvest(), s -> {
+        mkNumEdit(lx + 80, y + 34, 45, 16, scanner.getNodeAmountPerHarvest(), s -> {
             scanner.setNodeAmountPerHarvest(intOrZero(s));
             syncToServer();
         });
 
-        nodeChannel = mkNumEdit(lx + 80, y + 60, 45, 16, scanner.getNodeChannelTicks(), s -> {
+        mkNumEdit(lx + 80, y + 60, 45, 16, scanner.getNodeChannelTicks(), s -> {
             scanner.setNodeChannelTicks(intOrZero(s));
             syncToServer();
         });
     }
 
     private void initRelaxConfig(int lx, int y) {
-        relaxEnergy = mkNumEdit(lx + 80, y + 10, 45, 16, scanner.getRelaxEnergyRestore(), s -> {
+        mkNumEdit(lx + 80, y + 10, 45, 16, scanner.getRelaxEnergyRestore(), s -> {
             scanner.setRelaxEnergyRestore(intOrZero(s));
             syncToServer();
         });
 
-        relaxDuration = mkNumEdit(lx + 80, y + 36, 45, 16, scanner.getRelaxInteractionDurationTicks(), s -> {
+        mkNumEdit(lx + 80, y + 36, 45, 16, scanner.getRelaxInteractionDurationTicks(), s -> {
             scanner.setRelaxInteractionDurationTicks(intOrZero(s));
             syncToServer();
         });
     }
 
     private void initAtmConfig(int lx, int y) {
-        atmWithdraw = mkNumEdit(lx + 80, y + 10, 45, 16, scanner.getAtmWithdrawAmount(), s -> {
+        mkNumEdit(lx + 80, y + 10, 45, 16, scanner.getAtmWithdrawAmount(), s -> {
             scanner.setAtmWithdrawAmount(intOrZero(s));
             syncToServer();
         });
 
-        atmDuration = mkNumEdit(lx + 80, y + 36, 45, 16, scanner.getAtmInteractionDurationTicks(), s -> {
+        mkNumEdit(lx + 80, y + 36, 45, 16, scanner.getAtmInteractionDurationTicks(), s -> {
             scanner.setAtmInteractionDurationTicks(intOrZero(s));
             syncToServer();
         });

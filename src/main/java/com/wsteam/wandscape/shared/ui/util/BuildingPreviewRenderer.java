@@ -230,9 +230,4 @@ public final class BuildingPreviewRenderer {
                 .map(v -> state.setValue(property, v))
                 .orElse(state);
     }
-
-    private static void drawDebugRect(GuiGraphics g, int x, int y, int w, int h, int color) {
-        g.fill(x, y, x + w, y + h, color);
-        g.fill(x + 1, y + 1, x + w - 1, y + h - 1, 0xFF000000);
-    }
 }

@@ -44,7 +44,6 @@ public class ElementValueGenerator {
 
     private int recipesProcessed;
     private int iterationsRequired;
-    private int filesWritten;
     private int filesSkipped;
 
     record IngredientSlot(
@@ -370,7 +369,6 @@ public class ElementValueGenerator {
             written++;
         }
 
-        this.filesWritten = written;
         this.filesSkipped = skipped;
         return written;
     }

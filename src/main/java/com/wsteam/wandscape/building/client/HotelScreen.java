@@ -19,9 +19,6 @@ public class HotelScreen extends MedievalScreen {
     private static final int PW = 300;
     private static final int PH = 230;
 
-    private final BlockPos buildingPos;
-    private final UUID colonyId;
-    private final UUID buildingId;
     private final int maxOccupancy;
     private final int currentOccupancy;
     private final List<String> guestNames;
@@ -33,9 +30,6 @@ public class HotelScreen extends MedievalScreen {
         this.showCloseButton = true;
         this.showHelpButton = true;
         this.helpDocumentPath = "hotel_guide";
-        this.buildingPos = buildingPos;
-        this.colonyId = colonyId;
-        this.buildingId = buildingId;
         setCreator(creator);
         this.maxOccupancy = maxOccupancy;
         this.currentOccupancy = currentOccupancy;

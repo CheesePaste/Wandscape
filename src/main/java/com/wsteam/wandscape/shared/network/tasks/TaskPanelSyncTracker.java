@@ -309,10 +309,6 @@ public final class TaskPanelSyncTracker {
         return bs.getBuildingTypeId();
     }
 
-    private static String formatWorkItemTitle(WorkItem item, String buildingName, int stage) {
-        return buildingName + " (待办 #" + stage + ")";
-    }
-
     private static String formatResourceName(String elementId) {
         return switch (elementId) {
             case "earth" -> "地元素";

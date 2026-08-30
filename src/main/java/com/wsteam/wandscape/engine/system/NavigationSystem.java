@@ -303,10 +303,6 @@ public class NavigationSystem implements System {
 
     // ---- Internal ----
 
-    private static long worldTick(World world) {
-        return java.lang.System.currentTimeMillis() / 50;
-    }
-
     private void arrive(NavigationState nav, WandscapeNpc npc) {
         npc.setAiWanderingEnabled(true);
         if (nav.future != null && !nav.future.isDone()) {

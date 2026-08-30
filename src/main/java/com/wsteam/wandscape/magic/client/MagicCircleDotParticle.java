@@ -16,7 +16,6 @@ public class MagicCircleDotParticle extends TextureSheetParticle {
 
     private static SpriteSet cachedSprite;
 
-    private final SpriteSet sprites;
     private final float startSize;
     private final float endSize;
     private final float baseAlpha;
@@ -40,7 +39,6 @@ public class MagicCircleDotParticle extends TextureSheetParticle {
                                      int lifetime, SpriteSet sprites,
                                      double vx, double vy, double vz, boolean moving) {
         super(level, x, y, z, 0, 0, 0);
-        this.sprites = sprites;
         this.startSize = startSize;
         this.endSize = endSize;
         this.baseAlpha = baseAlpha;

@@ -58,13 +58,6 @@ public class NpcScreen extends AbstractContainerScreen<NpcMenu> implements Repla
     private boolean isDefaultWand = true;
     private boolean peaceMode;
     private boolean followMode;
-    private String strategyPreset = "BALANCED";
-    private List<String> knownSpells = List.of();
-    private List<String> spellCategories = List.of();
-    private List<String> priority = List.of();
-    private Map<String, String> magicCatalog = Map.of();
-    private List<ItemStack> armorStacks = List.of(ItemStack.EMPTY, ItemStack.EMPTY,
-            ItemStack.EMPTY, ItemStack.EMPTY);
     private int skinVariant;
     private int hatColor;
     private WandscapeNpc displayNpc;
@@ -108,12 +101,6 @@ public class NpcScreen extends AbstractContainerScreen<NpcMenu> implements Repla
         this.armorValue = packet.armorValue();
         this.wandStack = packet.wandStack();
         this.isDefaultWand = packet.isDefaultWand();
-        this.strategyPreset = packet.strategyPreset();
-        this.knownSpells = packet.knownSpells();
-        this.spellCategories = packet.spellCategories();
-        this.priority = packet.priority();
-        this.magicCatalog = packet.magicCatalog();
-        this.armorStacks = packet.armorStacks();
         this.skinVariant = packet.skinVariant();
         this.hatColor = packet.hatColor();
         this.peaceMode = packet.peaceMode();

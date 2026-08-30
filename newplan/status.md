@@ -30,11 +30,11 @@
 - [x] 新建本文件（进度跟踪）
 - [x] 立「数据格式与兼容纪律」（CLAUDE.md 新增节 + plan.md 决策 #6）：开发期不承诺存档兼容、禁无版本号兜底分支、删字段就真删、存量 ~400 行只清不增。前提来自兼容审计：全仓向下兼容代码约 360-450 行 / 22 文件 / 占 0.35-0.45%，无版本号机制、无 @Deprecated，全靠"缺 key 补默认"内联分支——成本函数是版本数指数，立规优先于删码。
 
-## 阶段 2 — 结构重构（未开始，方案已定）
+## 阶段 2 — 结构重构（进行中）
 
 方案：`plan.md`（业余版重构方案）。目标：提取真正有用的模块，拆掉无意义分层。按风险分档排队：
 
-- **Tier 1 删除**（2a）：0 引用类 + 无加载路径废 JSON + 陪葬测试。**具体方案见 `tier1.md`**（含双通道候选生成 / 工具分级 / 级联重跑 / 复核清单）。完成判定：build + test 绿 + 候选类名全仓 grep 零命中，净减由候选表核算给出。**注意三点**：① 图谱 in-degree 实测不可信（4/4 高危候选全是活类，见 tier1.md §2），删除闭环靠「编译 + grep」；② `data/wandscape/buildings/deprecated`（14 文件/23.7k 行）是 building 兼容载荷，**不删**；③ 8 万行目标是 Tier 1–3 跨阶段目标，非 2a 验收线。
+- **Tier 1 删除**（2a，已完成）：0 引用类 + 私有死字段/死方法清理。**执行记录见 `tier1-candidates.md`**。完成判定：`./gradlew test` 与 `./gradlew build` 均绿，删除了 2 个 0 引用死类（`shared/data/InterruptRecord`、`core/types/EquipmentPreset`）、37 处私有未读死字段、13 处真死私有方法；经人工+编译+全仓 grep 严格核验保全了全部事件监听器、命令建议器与内部活跃调用。
 - **Tier 2 改名**（2b）：Mage→Npc 全仓统一（连注册 id/lang key/NBT 字符串一起 grep）。完成判定：grep 旧名零命中。
 - **Tier 3 合并**（2c）：消灭五处属性定义，收敛到一处（纯逻辑 + 数据驱动），样例等值验证。
 - **Tier 4 重组**（2d）：拆除 core/engine/shared 三层的搭桥类，按功能域重排。移动不改逻辑。
@@ -52,3 +52,4 @@
 - 2026-08-30：**诊断"文档全不可信"**——`architecture.md` 包图漏 `scepter/`（代码 9 文件、文档无）、`docs/README` 缺包、architecture.md + modules/(20) + data/ 三套镜像各自缺包互相漂移；连"同一份报告"都能描述两套调参（`expToNext` Javadoc 55 vs 代码 25——调过参、注释改了、Javadoc 忘同步）。结论：现有文档无一可信，重构前必须先重建认知。据此立 **tier0（可信全项目文档摸底）** → 新建 `newplan/tier0.md`（8 批探索，每批一个 AI 扫真实代码产 packages.md 节稿；先建空骨架、旧三镜像删除）；plan.md 阶段序列已挂载 tier0 行。
 - 2026-08-30：完成三侦察（结论作 tier0 各批**初始假设**，待真实代码核验）：① 参考解剖——三家玩法域公分母 **12~21**（Create content 12 / Botania common 18 / MineColonies core 21），顶层软件层单包收容（foundation/infrastructure/api/network），域内按功能块切不设 client/network/data 子包。② 功能域扫描——content/ 初步落 **8 功能域 + 1 items/equipment 域**：building(并 projection/overview/raid/stats)、task(并 op)、road、magic(并 element)、npc(并 guard + scepter/ring 系统留域)、tourist、production、warehouse；items 收 wand/compass/guidebook + 各域剥出的物品类；shared/core/engine/client/compat/command/dataconfig/mixin/gametest 进 foundation。③ 重复收敛新发现（plan.md 重复清单之外）：`ColonySnapshot` 双 record 逐字节相同（与 NPC 属性 bug 同源，加字段碰 8+ 文件）、`UnlockRequirement` 双 record、4 个 Async-op 执行器"pending+tickAll"样板（注释自认镜像）、5 个 `record X(String id)` 同构、`expToNext` Javadoc 漂移（实为文档漂移、非重复 bug）。
 - 2026-08-30：**tier0 摸底产物落库 `newplan/packages.md`**（审核合并批 1–8 节稿，29 顶层包全覆盖无漏包，含 scepter；注 plan.md「30 顶层」为旧数、实际 29）。审核结论：① 承重断言全对（依赖方向 building↔projection 环 / raid→guard 仅 / stats 零 building、WandscapeNpc 84/63、guard 14、core 47/2421/0、engine 42/16、resources 1368/1188/2031/2032/52/14 逐字命中）；② 修正三处——点/向量自造族实为 **5 个（补 building/data/BlockOffset）**、NPC 属性收敛目标统一到 **npc 域 NpcAttributes**（原批 1 说 building、批 6 说 npc 打架）、guidebook 批 4/8 重复去重；③ **新揭 NPC 属性已漂移**：`MageAttributeRoller.roll` 给 MOVE_SPEED/ARMOR_VALUE 每级 +0.02/+0.5，但 `MageHutAttributes.SPECS` 声明 perLevel=0——「拆多文件必然漂移」实证，收敛硬理由；`NpcAttributes.defaults()`(30/0.3/1/1/1/5/200) 与 SPECS 中点不符。**tier0 阶段未完成**：旧三镜像（docs/architecture.md + modules/）删除待用户确认后执行。【全局结论表】= content/ 分包依据（8 功能域 + items + foundation）。
+- 2026-08-30：**完成 Tier 1 死代码清理**（依据 `newplan/tier1-candidates.md` + 严格双重校验）：删除 2 个 0 引用死类（`shared/data/InterruptRecord`、`core/types/EquipmentPreset`）、37 处私有未读死字段、13 处真死私有方法；经人工+编译+全仓 grep 严格核验保全了全部事件监听器、命令建议器与内部活跃调用。`./gradlew test` 及 `./gradlew build` 均绿。更新 `tier1-candidates.md` 与 `status.md`。

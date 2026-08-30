@@ -311,14 +311,6 @@ public final class BuildingDebugOverlay {
         return id.toString().substring(0, 8);
     }
 
-    private static int brighten(int color) {
-        int a = (color >> 24) & 0xFF;
-        int r = Math.min(0xFF, ((color >> 16) & 0xFF) + 0x30);
-        int g = Math.min(0xFF, ((color >> 8) & 0xFF) + 0x30);
-        int b = Math.min(0xFF, (color & 0xFF) + 0x30);
-        return (a << 24) | (r << 16) | (g << 8) | b;
-    }
-
     // ── Text helpers ──
 
     private static void drawText(GuiGraphics g, Font font, String text, float x, float y, int color) {
@@ -331,10 +323,6 @@ public final class BuildingDebugOverlay {
         font.drawInBatch(text, x, y, color, false,
                 g.pose().last().pose(), g.bufferSource(),
                 Font.DisplayMode.SEE_THROUGH, 0, 0xF000F0);
-    }
-
-    private static void drawCenteredText(GuiGraphics g, Font font, String text, int x, float y, int color) {
-        drawText(g, font, text, x - font.width(text) / 2f, y, color);
     }
 
     private static void drawCenteredText(GuiGraphics g, Font font, Component text, int x, float y, int color) {

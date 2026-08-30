@@ -38,8 +38,4 @@ public final class ShopInteractionHandler {
         }
         return result;
     }
-
-    private static String shortId(UUID id) {
-        return id.toString().substring(0, 8);
-    }
 }

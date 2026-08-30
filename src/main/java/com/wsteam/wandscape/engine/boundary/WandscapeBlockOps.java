@@ -56,8 +56,6 @@ public class WandscapeBlockOps implements BlockOps {
     /** 方块放置/拆除音效节流间隔（tick）：建造连续放块、拆除连续清块时防止每块都响。 */
     private static final int BLOCK_SOUND_THROTTLE_TICKS = 10;
 
-    // Cache block type string → MC Block lookups
-    private final ConcurrentMap<String, Block> blockCache = new ConcurrentHashMap<>();
     // Cache resolved BlockStates for types with bracket properties
     private final ConcurrentMap<String, BlockState> stateCache = new ConcurrentHashMap<>();
 
@@ -392,20 +390,6 @@ public class WandscapeBlockOps implements BlockOps {
         return prop.getValue(value)
                 .map(v -> state.setValue(prop, v))
                 .orElse(state);
-    }
-
-    /** Keep resolveBlock for calls that just need the Block (getBlock, isAir). */
-    @Nullable
-    private Block resolveBlock(BlockType type) {
-        String id = type.id();
-        int bracket = id.indexOf('[');
-        if (bracket > 0) id = id.substring(0, bracket); // strip state properties
-        final String cleanId = id;
-        return blockCache.computeIfAbsent(cleanId, id2 -> {
-            ResourceLocation rl = ResourceLocation.tryParse(id2);
-            if (rl == null) return null;
-            return BuiltInRegistries.BLOCK.getOptional(rl).orElse(null);
-        });
     }
 
     private static String keyOf(Block block) {

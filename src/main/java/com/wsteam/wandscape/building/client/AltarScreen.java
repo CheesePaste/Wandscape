@@ -28,8 +28,6 @@ public class AltarScreen extends MedievalScreen {
     private static final int PH = 240;
     private static final int ROW_H = 20;
 
-    private final BlockPos buildingPos;
-    private final UUID colonyId;
     private final UUID buildingId;
     private final List<AltarSpellInfo> spells;
     /** 本次打开会话中已提交（发布任务）的魔法 id —— 本地锁定反馈。 */
@@ -45,8 +43,6 @@ public class AltarScreen extends MedievalScreen {
         this.showCloseButton = true;
         this.showHelpButton = true;
         this.helpDocumentPath = "altar_guide";
-        this.buildingPos = buildingPos;
-        this.colonyId = colonyId;
         this.buildingId = buildingId;
         setCreator(creator);
         this.spells = List.copyOf(spells);
