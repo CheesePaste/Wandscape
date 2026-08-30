@@ -1,0 +1,149 @@
+# Tier 1 死码候选表（IDEA 全仓检查 · 已滤杂音 + 置信度分级）
+
+> 来源：`Analyze|Inspect Code`（默认 profile，32 错误/2489 警告）已滤拼写/风格/空方法/Javadoc/API 用法/未解析引用；已滤契约(抽象/接口)、事件/mixin/命令 handler、枚举/私有类构造。
+> 判据：private 字段/方法信 IDEA 数据流「从未被读」；**public 面与数据/NBT/注册字符串引用不在此表**（闭环见 tier1.md 通道 B）。
+> 置信度：**高**=已 grep 收紧无任何引用；**中**=IDEA 标记待核；**低**=`load(`(SavedData 加载器)/`tick*`/`worldTick`/tourist 流程等疑似被注册活着。删除仍须「build+test 绿 + grep 旧名零命中」。
+
+## A. 整类死的 record/类（已确认）
+- `shared/data/InterruptRecord` —— 整 record + 构造函数死（IDEA 标出，与 plan 侦察一致）。
+
+## B. 特殊：record 组件死（工具抓不到，人工核）
+- `core/types/NpcAttributes` —— **类未死**（`CoreBootstrap`/`EntityComponentBridge` 用作类型并传参），7 个组件 `maxHp/moveSpeed/spellPower/workSpeed/spellSpeed/armorValue/maxMana` **全 0 读取**（record 访问器 public 合成，IDE 默认不报）。且是 Mage 属性**重复定义**——归 Tier 3，本表只记录不删。
+
+## C. 私有死字段（IDEA 数据流「未读」，37 处）
+- `wonderEffectApplier` `src/main/java/com/wsteam/wandscape/Wandscape.java`
+- `buildingPos` `src/main/java/com/wsteam/wandscape/building/client/AltarScreen.java`
+- `colonyId` `src/main/java/com/wsteam/wandscape/building/client/AltarScreen.java`
+- `buildingId` `src/main/java/com/wsteam/wandscape/building/client/HotelScreen.java`
+- `buildingPos` `src/main/java/com/wsteam/wandscape/building/client/HotelScreen.java`
+- `colonyId` `src/main/java/com/wsteam/wandscape/building/client/HotelScreen.java`
+- `colonyId` `src/main/java/com/wsteam/wandscape/building/client/MageHutScreen.java`
+- `atmDuration` `src/main/java/com/wsteam/wandscape/building/scanner/client/CreativeScannerScreen.java`
+- `atmWithdraw` `src/main/java/com/wsteam/wandscape/building/scanner/client/CreativeScannerScreen.java`
+- `metaComfort` `src/main/java/com/wsteam/wandscape/building/scanner/client/CreativeScannerScreen.java`
+- `metaCreator` `src/main/java/com/wsteam/wandscape/building/scanner/client/CreativeScannerScreen.java`
+- `metaId` `src/main/java/com/wsteam/wandscape/building/scanner/client/CreativeScannerScreen.java`
+- `metaMagic` `src/main/java/com/wsteam/wandscape/building/scanner/client/CreativeScannerScreen.java`
+- `metaName` `src/main/java/com/wsteam/wandscape/building/scanner/client/CreativeScannerScreen.java`
+- `metaWonder` `src/main/java/com/wsteam/wandscape/building/scanner/client/CreativeScannerScreen.java`
+- `nodeAmount` `src/main/java/com/wsteam/wandscape/building/scanner/client/CreativeScannerScreen.java`
+- `nodeChannel` `src/main/java/com/wsteam/wandscape/building/scanner/client/CreativeScannerScreen.java`
+- `relaxDuration` `src/main/java/com/wsteam/wandscape/building/scanner/client/CreativeScannerScreen.java`
+- `relaxEnergy` `src/main/java/com/wsteam/wandscape/building/scanner/client/CreativeScannerScreen.java`
+- `serviceDuration` `src/main/java/com/wsteam/wandscape/building/scanner/client/CreativeScannerScreen.java`
+- `serviceEnergy` `src/main/java/com/wsteam/wandscape/building/scanner/client/CreativeScannerScreen.java`
+- `serviceMaxOcc` `src/main/java/com/wsteam/wandscape/building/scanner/client/CreativeScannerScreen.java`
+- `shopDuration` `src/main/java/com/wsteam/wandscape/building/scanner/client/CreativeScannerScreen.java`
+- `shopProfitRate` `src/main/java/com/wsteam/wandscape/building/scanner/client/CreativeScannerScreen.java`
+- `unlockLevel` `src/main/java/com/wsteam/wandscape/building/scanner/client/CreativeScannerScreen.java`
+- `filesWritten` `src/main/java/com/wsteam/wandscape/element/internal/ElementValueGenerator.java`
+- `sprites` `src/main/java/com/wsteam/wandscape/magic/client/MagicCircleDotParticle.java`
+- `armorStacks` `src/main/java/com/wsteam/wandscape/npc/client/NpcScreen.java`
+- `knownSpells` `src/main/java/com/wsteam/wandscape/npc/client/NpcScreen.java`
+- `magicCatalog` `src/main/java/com/wsteam/wandscape/npc/client/NpcScreen.java`
+- `priority` `src/main/java/com/wsteam/wandscape/npc/client/NpcScreen.java`
+- `spellCategories` `src/main/java/com/wsteam/wandscape/npc/client/NpcScreen.java`
+- `strategyPreset` `src/main/java/com/wsteam/wandscape/npc/client/NpcScreen.java`
+- `lastPressAction` `src/main/java/com/wsteam/wandscape/shared/ui/component/TaskQueuePanel.java`
+- `entityId` `src/main/java/com/wsteam/wandscape/tourist/client/TouristScreen.java`
+- `buildingPos` `src/main/java/com/wsteam/wandscape/warehouse/client/WarehouseScreen.java`
+- `colonyId` `src/main/java/com/wsteam/wandscape/warehouse/client/WarehouseScreen.java`
+
+## D. 私有死方法（按置信度）
+- [中] `commonSetup(...)` `src/main/java/com/wsteam/wandscape/Wandscape.java`
+- [中] `onModConfig(...)` `src/main/java/com/wsteam/wandscape/Wandscape.java`
+- [中] `onClientTick(...)` `src/main/java/com/wsteam/wandscape/WandscapeClient.java`
+- [中] `onPlayerLoggingOut(...)` `src/main/java/com/wsteam/wandscape/WandscapeClient.java`
+- [中] `onBuildComplete(...)` `src/main/java/com/wsteam/wandscape/building/internal/BuildCompleteListener.java`
+- [中] `onOpenMenu(...)` `src/main/java/com/wsteam/wandscape/building/internal/MageHutServerHandler.java`
+- [中] `handleRejectMage(...)` `src/main/java/com/wsteam/wandscape/building/network/TavernRecruitPacket.java`
+- [中] `onClientTickPost(...)` `src/main/java/com/wsteam/wandscape/building/scanner/client/gizmo/ScannerGizmoController.java`
+- [中] `suggestTypes(...)` `src/main/java/com/wsteam/wandscape/command/FillBuildingCommand.java`
+- [中] `suggestLayers(...)` `src/main/java/com/wsteam/wandscape/command/TouristCommand.java`
+- [中] `suggestStates(...)` `src/main/java/com/wsteam/wandscape/command/TouristCommand.java`
+- [中] `suggestToggle(...)` `src/main/java/com/wsteam/wandscape/command/TouristCommand.java`
+- [中] `onServerTick(...)` `src/main/java/com/wsteam/wandscape/engine/service/AchievementService.java`
+- [中] `onEvent(...)` `src/main/java/com/wsteam/wandscape/engine/service/StatsService.java`
+- [中] `countSynthesizeInFlight(...)` `src/main/java/com/wsteam/wandscape/engine/system/ResourceSupplySystem.java`
+- [中] `handleEnvironmentalDamage(...)` `src/main/java/com/wsteam/wandscape/guard/SelfDefenseHandler.java`
+- [中] `onCoordChanged(...)` `src/main/java/com/wsteam/wandscape/projection/client/ConstructionScreen.java`
+- [中] `handleEscape(...)` `src/main/java/com/wsteam/wandscape/projection/client/ProjectionFlightController.java`
+- [中] `handleEscapeInput(...)` `src/main/java/com/wsteam/wandscape/road/client/RoadPlacementController.java`
+- [中] `quad(...)` `src/main/java/com/wsteam/wandscape/road/client/RoadPlacementRenderer.java`
+- [中] `handleBuildingSlotClick(...)` `src/main/java/com/wsteam/wandscape/shared/ui/panel/WandscapePanelController.java`
+- [中] `onTaskCompleted(...)` `src/main/java/com/wsteam/wandscape/task/source/EventDrivenTaskSource.java`
+- [中] `tryHotelCheckIn(...)` `src/main/java/com/wsteam/wandscape/tourist/internal/TouristMoveGoal.java`
+- [低] `load(...)` `src/main/java/com/wsteam/wandscape/building/internal/AltarCastState.java`
+- [低] `openNodeGui(...)` `src/main/java/com/wsteam/wandscape/building/internal/BuildingInteractHandler.java`
+- [低] `load(...)` `src/main/java/com/wsteam/wandscape/building/internal/BuildingSavedData.java`
+- [低] `renderCornerMode(...)` `src/main/java/com/wsteam/wandscape/building/scanner/client/CreativeScannerScreen.java`
+- [低] `startGizmoDrag(...)` `src/main/java/com/wsteam/wandscape/building/scanner/client/gizmo/ScannerGizmoController.java`
+- [低] `exportRoad(...)` `src/main/java/com/wsteam/wandscape/building/scanner/network/ScannerExportPacket.java`
+- [低] `renderBubble(...)` `src/main/java/com/wsteam/wandscape/client/renderer/TransportItemEntityRenderer.java`
+- [低] `batch(...)` `src/main/java/com/wsteam/wandscape/command/TransportCommand.java`
+- [低] `addElementInputs(...)` `src/main/java/com/wsteam/wandscape/compat/jei/ElementRecipeCategory.java`
+- [低] `checkDecomposePreconditions(...)` `src/main/java/com/wsteam/wandscape/engine/boundary/WandscapeBlockInteractExecutor.java`
+- [低] `checkPreconditions(...)` `src/main/java/com/wsteam/wandscape/engine/boundary/WandscapeBlockInteractExecutor.java`
+- [低] `load(...)` `src/main/java/com/wsteam/wandscape/engine/colony/ColonySavedData.java`
+- [低] `load(...)` `src/main/java/com/wsteam/wandscape/engine/service/ChunkLeaseData.java`
+- [低] `worldTick(...)` `src/main/java/com/wsteam/wandscape/engine/system/NavigationSystem.java`
+- [低] `emit(...)` `src/main/java/com/wsteam/wandscape/magic/client/MagicCircleEmitter.java`
+- [低] `spawnElement(...)` `src/main/java/com/wsteam/wandscape/magic/client/MagicCircleEmitter.java`
+- [低] `load(...)` `src/main/java/com/wsteam/wandscape/npc/internal/ColonyDeathRegistry.java`
+- [低] `load(...)` `src/main/java/com/wsteam/wandscape/ring/internal/OathRingSavedData.java`
+- [低] `startGizmoDrag(...)` `src/main/java/com/wsteam/wandscape/road/client/SplineEditorInputHandler.java`
+- [低] `drawArrayTab(...)` `src/main/java/com/wsteam/wandscape/road/client/studio/RoadStudioOverlay.java`
+- [低] `drawCurveTab(...)` `src/main/java/com/wsteam/wandscape/road/client/studio/RoadStudioOverlay.java`
+- [低] `load(...)` `src/main/java/com/wsteam/wandscape/shared/data/GuideProgressSavedData.java`
+- [低] `extractItemOrRecipeIdJson(...)` `src/main/java/com/wsteam/wandscape/shared/network/tasks/TaskPanelSyncTracker.java`
+- [低] `storePressAction(...)` `src/main/java/com/wsteam/wandscape/shared/ui/component/TaskQueuePanel.java`
+- [低] `layout(...)` `src/main/java/com/wsteam/wandscape/shared/ui/guidance/GuideRenderer.java`
+- [低] `renderScrollbar(...)` `src/main/java/com/wsteam/wandscape/shared/ui/panel/BuildingSelectionOverlay.java`
+- [低] `renderSearchBar(...)` `src/main/java/com/wsteam/wandscape/shared/ui/panel/BuildingSelectionOverlay.java`
+- [低] `renderFills(...)` `src/main/java/com/wsteam/wandscape/shared/ui/panel/WandscapePanelOverlay.java`
+- [低] `renderSidebar(...)` `src/main/java/com/wsteam/wandscape/shared/ui/panel/WandscapePanelOverlay.java`
+- [低] `renderStatsContent(...)` `src/main/java/com/wsteam/wandscape/shared/ui/panel/WandscapePanelOverlay.java`
+- [低] `load(...)` `src/main/java/com/wsteam/wandscape/stats/internal/StatisticsData.java`
+- [低] `evalString(...)` `src/main/java/com/wsteam/wandscape/task/engine/dsl/BlueprintInterpreter.java`
+- [低] `isDuplicate(...)` `src/main/java/com/wsteam/wandscape/task/engine/pool/GlobalTaskPool.java`
+- [低] `isDuplicate(...)` `src/main/java/com/wsteam/wandscape/task/scheduler/SystemBlueprintRegistry.java`
+- [低] `opKind(...)` `src/main/java/com/wsteam/wandscape/task/scheduler/TaskExecutionSystem.java`
+- [低] `worldTick(...)` `src/main/java/com/wsteam/wandscape/task/scheduler/TaskExecutionSystem.java`
+- [低] `findBed(...)` `src/main/java/com/wsteam/wandscape/tourist/internal/HotelStayHandler.java`
+- [低] `getBuildingDisplayName(...)` `src/main/java/com/wsteam/wandscape/tourist/internal/HotelStayHandler.java`
+- [低] `eveningRouteToHotel(...)` `src/main/java/com/wsteam/wandscape/tourist/internal/TouristMoveGoal.java`
+- [低] `getBuildingDisplayName(...)` `src/main/java/com/wsteam/wandscape/tourist/internal/TouristMoveGoal.java`
+- [低] `navigateToQueueSlot(...)` `src/main/java/com/wsteam/wandscape/tourist/internal/TouristMoveGoal.java`
+- [低] `returnToOwnHotel(...)` `src/main/java/com/wsteam/wandscape/tourist/internal/TouristMoveGoal.java`
+- [低] `routeToHotelBuilding(...)` `src/main/java/com/wsteam/wandscape/tourist/internal/TouristMoveGoal.java`
+- [低] `startQueueing(...)` `src/main/java/com/wsteam/wandscape/tourist/internal/TouristMoveGoal.java`
+- [低] `teleportToHotel(...)` `src/main/java/com/wsteam/wandscape/tourist/internal/TouristMoveGoal.java`
+- [低] `tickActivity(...)` `src/main/java/com/wsteam/wandscape/tourist/internal/TouristMoveGoal.java`
+- [低] `tickIndoorNav(...)` `src/main/java/com/wsteam/wandscape/tourist/internal/TouristMoveGoal.java`
+- [低] `tickOutdoorNav(...)` `src/main/java/com/wsteam/wandscape/tourist/internal/TouristMoveGoal.java`
+- [低] `tickQueue(...)` `src/main/java/com/wsteam/wandscape/tourist/internal/TouristMoveGoal.java`
+- [低] `load(...)` `src/main/java/com/wsteam/wandscape/tourist/internal/TouristSimRegistry.java`
+- [低] `abandonQueue(...)` `src/main/java/com/wsteam/wandscape/tourist/internal/TouristSimSystem.java`
+- [低] `atOwnHotel(...)` `src/main/java/com/wsteam/wandscape/tourist/internal/TouristSimSystem.java`
+- [低] `checkDeparture(...)` `src/main/java/com/wsteam/wandscape/tourist/internal/TouristSimSystem.java`
+- [低] `depart(...)` `src/main/java/com/wsteam/wandscape/tourist/internal/TouristSimSystem.java`
+- [低] `runTick(...)` `src/main/java/com/wsteam/wandscape/tourist/internal/TouristSimSystem.java`
+- [低] `hasHotelVacancy(...)` `src/main/java/com/wsteam/wandscape/tourist/internal/TouristSimulation.java`
+- [低] `collectSpawnPositions(...)` `src/main/java/com/wsteam/wandscape/tourist/internal/TouristSpawnSystem.java`
+- [低] `countOvernightStayers(...)` `src/main/java/com/wsteam/wandscape/tourist/internal/TouristSpawnSystem.java`
+- [低] `containingBox(...)` `src/main/java/com/wsteam/wandscape/tourist/internal/TouristTeleport.java`
+- [低] `findGround(...)` `src/main/java/com/wsteam/wandscape/tourist/internal/TouristTeleport.java`
+- [低] `isInsideAnyBuilding(...)` `src/main/java/com/wsteam/wandscape/tourist/internal/TouristTeleport.java`
+- [低] `nearestRoadSpot(...)` `src/main/java/com/wsteam/wandscape/tourist/internal/TouristTeleport.java`
+- [低] `peripherySpot(...)` `src/main/java/com/wsteam/wandscape/tourist/internal/TouristTeleport.java`
+- [低] `load(...)` `src/main/java/com/wsteam/wandscape/warehouse/ColonyItemBank.java`
+- [高] `computeWorldBoxFromPattern(...)` `src/main/java/com/wsteam/wandscape/building/internal/BuildingSavedData.java`
+- [高] `shortId(...)` `src/main/java/com/wsteam/wandscape/building/internal/ShopInteractionHandler.java`
+- [高] `recalculateForBuilding(...)` `src/main/java/com/wsteam/wandscape/building/internal/WonderEffectApplier.java`
+- [高] `removeEffects(...)` `src/main/java/com/wsteam/wandscape/building/internal/WonderEffectApplier.java`
+- [高] `resolveBlock(...)` `src/main/java/com/wsteam/wandscape/engine/boundary/WandscapeBlockOps.java`
+- [高] `brighten(...)` `src/main/java/com/wsteam/wandscape/projection/client/BuildingDebugOverlay.java`
+- [高] `drawCenteredText(...)` `src/main/java/com/wsteam/wandscape/projection/client/BuildingDebugOverlay.java`
+- [高] `formatWorkItemTitle(...)` `src/main/java/com/wsteam/wandscape/shared/network/tasks/TaskPanelSyncTracker.java`
+- [高] `getCols(...)` `src/main/java/com/wsteam/wandscape/shared/ui/panel/WandscapePanelController.java`
+- [高] `drawDebugRect(...)` `src/main/java/com/wsteam/wandscape/shared/ui/util/BuildingPreviewRenderer.java`
