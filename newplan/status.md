@@ -1,7 +1,7 @@
 # 重构进度跟踪
 
 > 此文件是重构进度的唯一事实源。每个阶段做完、每发现一个新问题，都更新这里。
-> 起点：`docs/newplan/why`（2026-08-29 写出的十条痼疾）
+> 起点：`newplan/why`（2026-08-29 写出的十条痼疾）
 > 约定重写：`CLAUDE.md`（重构状态、代码组织约定、Testing、重构进行中）
 
 上次更新：2026-08-30
@@ -49,5 +49,5 @@
 - 2026-08-30：6 个子代理全仓扫命名问题（648 类，逐一核对 neoforge sources jar 撞 MC/JDK、注册 id/lang/NBT/JSON 字符串面），产出 Tier 2 改名清单 `rename.md`。**用户拍板决策①：殖民地法师统一到 `Mage`（B + 全字典）**——类名、注册 id、网络包 id、lang key（含散文）、NBT 键、指南名一并 npc→mage。清单含批 1 撞 MC/JDK 实锤（core/ecs/System↔java.lang.System、core/types/AttributeModifier↔MC、core/component/Inventory↔MC、core/boundary/EventBus↔NeoForge、shared/data/Activity↔MC、shared/ui/I18n↔MC 等）、批 2 一物多名收敛（词表驱动）、批 3 泛名矫正、批 4 方法名重灾区（`ResourceId.getFuckPureResourceId_NotContainFuckedNBT()` 2026-07-04 commit 0afd43ec 引入，6 处调用）、以及「跟 Tier 4 走、现在别动」清单。
 - 2026-08-30：**审计 plan.md 并落 Tier 1 具体方案** → 新建 `tier1.md`；plan.md 三处修正。三大发现：① codebase-memory 图谱 in-degree 不可信（`max_degree=0` 抽 100 个，抽查 `Config`/`AchievementService`/`EnqueueHelper`/`BuildingInteractHandler` 全是活跃类——图谱漏建类级 import / event method-ref 边），0-引用判定改以编译+grep 双关；② `data/wandscape/buildings/deprecated`（14 文件/23.7k 行）是 building 兼容载荷（`ProjectionNetwork` 已证实语义），**不可删**，废 JSON 判定以加载路径为准；③ 8 万行目标是 Tier 1–3 跨阶段，非 Tier 1 验收线。工具调研：无 MC 专用死码工具，组合为 IDEA「Unused declaration」（零配置保底）→ PMD/SpotBugs（补死变量/死字段）→ ProGuard `-printusage`（Tier 3 后真死码复核）→ grep 字符串兜底（必做）。
 - 2026-08-30：修 "AttributeType 加 `HEALTH_REGEN/MANA_REGEN` 两属性、其余处漏同步" 崩溃 bug——NPC 属性分散五处的实证（见阶段 0）。据此 CLAUDE.md 立【增量归属约束】（功能域改动只落自己包、一个概念收敛进唯一命名类、禁再往 core/shared/engine 塞），gaps.md 记收敛指引；并委派两侦察：① 全仓扫同类"一处改多处漏"重复收敛遗漏；② 解剖 `_refs/` 三家核心包划分，用于敲定 content/ 分包粒度。
-- 2026-08-30：**诊断"文档全不可信"**——`architecture.md` 包图漏 `scepter/`（代码 9 文件、文档无）、`docs/README` 缺包、architecture.md + modules/(20) + data/ 三套镜像各自缺包互相漂移；连"同一份报告"都能描述两套调参（`expToNext` Javadoc 55 vs 代码 25——调过参、注释改了、Javadoc 忘同步）。结论：现有文档无一可信，重构前必须先重建认知。据此立 **tier0（可信全项目文档摸底）** → 新建 `docs/newplan/tier0.md`（8 批探索，每批一个 AI 扫真实代码产 packages.md 节稿；先建空骨架、旧三镜像删除）；plan.md 阶段序列已挂载 tier0 行。
+- 2026-08-30：**诊断"文档全不可信"**——`architecture.md` 包图漏 `scepter/`（代码 9 文件、文档无）、`docs/README` 缺包、architecture.md + modules/(20) + data/ 三套镜像各自缺包互相漂移；连"同一份报告"都能描述两套调参（`expToNext` Javadoc 55 vs 代码 25——调过参、注释改了、Javadoc 忘同步）。结论：现有文档无一可信，重构前必须先重建认知。据此立 **tier0（可信全项目文档摸底）** → 新建 `newplan/tier0.md`（8 批探索，每批一个 AI 扫真实代码产 packages.md 节稿；先建空骨架、旧三镜像删除）；plan.md 阶段序列已挂载 tier0 行。
 - 2026-08-30：完成三侦察（结论作 tier0 各批**初始假设**，待真实代码核验）：① 参考解剖——三家玩法域公分母 **12~21**（Create content 12 / Botania common 18 / MineColonies core 21），顶层软件层单包收容（foundation/infrastructure/api/network），域内按功能块切不设 client/network/data 子包。② 功能域扫描——content/ 初步落 **8 功能域 + 1 items/equipment 域**：building(并 projection/overview/raid/stats)、task(并 op)、road、magic(并 element)、npc(并 guard + scepter/ring 系统留域)、tourist、production、warehouse；items 收 wand/compass/guidebook + 各域剥出的物品类；shared/core/engine/client/compat/command/dataconfig/mixin/gametest 进 foundation。③ 重复收敛新发现（plan.md 重复清单之外）：`ColonySnapshot` 双 record 逐字节相同（与 NPC 属性 bug 同源，加字段碰 8+ 文件）、`UnlockRequirement` 双 record、4 个 Async-op 执行器"pending+tickAll"样板（注释自认镜像）、5 个 `record X(String id)` 同构、`expToNext` Javadoc 漂移（实为文档漂移、非重复 bug）。
