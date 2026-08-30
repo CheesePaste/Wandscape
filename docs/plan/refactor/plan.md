@@ -19,7 +19,7 @@
 ### 原则（沿用）
 - 只侦察下两步需要的范围，不搞全项目体检。产出是候选改动清单表，不是文档。
 - **数字摸底，让数字自己说话**：包、文件、行、JSON 计数。
-- **引用计数定生死**（codebase-memory 图谱查 in-degree）：0 引用→直接删；1 引用→内联进调用方；同包 2~N 引用→合并收敛对象；跨包高引用→只改名字不动结构。
+- **引用计数定生死**（codebase-memory 图谱查 in-degree）：0 引用→直接删；1 引用→内联进调用方；同包 2~N 引用→合并收敛对象；跨包高引用→只改名字不动结构。⚠️ **图谱 in-degree 只作建议、不作闭环**（实测 `max_degree=0` 抽出的前 100 个"0 引用类"中 `Config`/`AchievementService`/`EnqueueHelper`/`BuildingInteractHandler` 全是活跃类，图谱漏建了类级/事件 method-ref 边）。定生死靠「编译 + grep 字符串引用」双关，详见 `tier1.md`。
 - **依赖图找搭桥点**：shared/event、shared/api、engine/boundary 的真实使用方，纯转发类→Tier 3，环→Tier 4。
 - **痛点反向侦察**：每加一个功能/修一个 bug 记一笔：绕了几个包、碰几个文件。
 - **适配 MC 特有坑**：类名被 lang/*.json、NBT 键、注册 id、JSON 数据引用时 grep 字符串一起改，避免运行期崩/存档炸。
@@ -88,7 +88,7 @@ com.wsteam.wandscape/
 
 **Tier 0 基线**：build + test 全绿、git 工作区干净。
 
-**Tier 1 删除（最高价值，最低风险，先做）**：0 引用类、`deprecated/` 等废 JSON、无用 log（配合 Log 治理）、陪葬测试。验收：build 绿。
+**Tier 1 删除（最高价值，最低风险，先做）**：0 引用类、无加载路径的废 JSON、陪葬测试。删除候选以「编译 + grep 字符串引用」双关判定，**不信图谱 in-degree**；反射入口类（mixin/事件订阅/@Mod/Config）与 `deprecated/` 兼容 JSON（building 旧档载荷，`ProjectionNetwork` 里 deprecated 建筑"隐藏但仍可用"）不删；无用 log 挪到横切 Log 治理。验收：build 绿 + 候选类名全仓 grep 零命中。具体见 `tier1.md`。
 
 **Tier 2 改名（编译器当安全网）**：Mage→Npc 全仓统一，连注册 id/lang key/NBT 字符串一起 grep。验收：build 绿 + grep 旧名零命中。
 
@@ -124,7 +124,7 @@ com.wsteam.wandscape/
 | 阶段 | 内容 | 对应 | 完成判定 |
 |------|------|------|----------|
 | 0/1 | 问题确认 / 约定去专业化 | — | ✅ / 进行中（本次修订含：顶层形态五包、域内规则改、UI/持久化/API/文档决策） |
-| 2a | 死代码清理 | Tier 1 | build 绿；候选表核算删减，**基线 648→540~580 文件、10.1万→8万± 行** |
+| 2a | 死代码清理 | Tier 1 | build 绿 + 候选类名全仓 grep 零命中；净减由候选表核算给出（**8 万行是 Tier 1–3 跨阶段目标，不是 2a 验收线**——Tier 1 纯删除到不了，主要回吐靠 Tier 3 样板收敛/重复删除） |
 | 2b | Mage→Npc 统一 | Tier 2 | grep 旧名零命中 |
 | 2c | 重复收敛（属性+配方+向量+双样板） | Tier 3 | 各集群收敛到一处 + 样例等值 |
 | 2d | 拆桥层，五顶层形态落地 | Tier 4 | 目标包地图落地，行为不变 |
