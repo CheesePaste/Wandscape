@@ -4,8 +4,8 @@
 
 **我们正在做模组的第一次大重构，当前在 `refactor` 分支。** 完成情况见文末【重构进行中】。
 
-- 重构动机与问题清单：`docs/plan/refactor/why`
-- 进度跟踪：`docs/plan/refactor/status.md`（每个阶段做完立即更新）
+- 重构动机与问题清单：`docs/newplan/why`
+- 进度跟踪：`docs/newplan/status.md`（每个阶段做完立即更新）
 - 重构 = 提取真正有用的模块 + 拆掉无意义的专业软件式分层，**不是重写**。两大系统与全部玩法保留，模组能开发到今天靠的是可取之处。
 
 ## 开发方向
@@ -54,7 +54,7 @@
 |------|------|---------|
 | `docs/architecture.md` | **当前**包地图 + 数据流 + 依赖方向 | 开始任务前扫一眼相关包 |
 | `docs/modules/` | 每个包的事实说明（存在的才可信） | 深入某包时 |
-| `docs/plan/refactor/` | 重构动机（`why`）与进度（`status.md`） | 重构期间每次必读 |
+| `docs/newplan/` | 重构动机（`why`）与进度（`status.md`） | 重构期间每次必读 |
 | `docs/plan/` | 一次性功能设计（recipe-unify 等） | 相关功能时才读 |
 | `docs/decisions.md` | 设计决策日志（非显而易见的选择） | 需要理解"为什么"时 |
 | `docs/gaps.md` | 已知问题 + 代码审查发现 + 后续待办 | 排查问题或规划时 |
@@ -70,7 +70,7 @@
 2. 涉及原版类名/方法/行为/NBT/NeoForge API 时，必须查源码（本地 sources jar / 反编译 / 在线源码），严禁凭记忆猜测。
 3. 大规模重构后重新建立索引。
 4. 本机可用的具体工具及用法见 `CLAUDE.local.md`（可选，不入库）。
-5. **参考模组查证**：动**结构/包组织/API 面/UI 形态/数据组织**类改动前，先到 `_refs/`（MineColonies/Create/Botania 浅克隆，自 2026-08 起挂在本仓库、已 gitignore）找对应做法作参照再动手；简单机械改动与纯 bug 修复不必。速查：殖民地/NPC/任务/建筑纵向切片看 MineColonies；顶层包形态/注册门面/API 门禁看 Create；代码量控制/API 稳定/注册工厂/Screen 精简看 Botania。三家解剖要点汇总在 `docs/plan/refactor/plan.md`【参考解剖判据】。**参考的是判据不是代码，禁止整段照搬**（版本/授权/结构都不同）。
+5. **参考模组查证**：动**结构/包组织/API 面/UI 形态/数据组织**类改动前，先到 `_refs/`（MineColonies/Create/Botania 浅克隆，自 2026-08 起挂在本仓库、已 gitignore）找对应做法作参照再动手；简单机械改动与纯 bug 修复不必。速查：殖民地/NPC/任务/建筑纵向切片看 MineColonies；顶层包形态/注册门面/API 门禁看 Create；代码量控制/API 稳定/注册工厂/Screen 精简看 Botania。三家解剖要点汇总在 `docs/newplan/plan.md`【参考解剖判据】。**参考的是判据不是代码，禁止整段照搬**（版本/授权/结构都不同）。
 
 ## 代码组织约定
 
@@ -79,6 +79,7 @@
 现实约定：
 
 - 目标形态（plan.md 已定，5 顶层包）：功能域收进 `content/` 子包（content/building、content/tourist/...）；**域内按功能块切，不设 client/network/data 子包**；网络包与 UI 全局收敛（foundation/networking、foundation/ui）。**未搬完的旧代码仍散在顶层各包**，旧代码不主动搬——除非任务正好落在那一块，顺手搬到目标形态且不动其他。
+- **增量归属约束（防再分散）**：改动/新增某功能域（npc/road/tourist/building/task...）的逻辑，代码只落**该功能域自己的包**（当前顶层 npc/road/...，未来 content/npc 等），**禁止再往 `core/`/`shared/`/`engine/` 塞**——三个桥层只减不增、收尾拆除。旧代码不主动搬，但**不许因"找不到所属包"就另起炉灶**。一个概念（如 NPC 属性）的全套规则/常量/公式收敛进该功能域**唯一一个命名类**（如 `NpcAttributes`），同域别处只引用、不清写，避开"一处改、别处漏"。
 - **跨包直接引用普通类 = 正常**。需要调另一个功能域的东西就直接 new / 直接调。之前的"通过 getXxxApi() + 事件通信、互不直接引用"是反模式，废除。
 - WandscapeApis / shared/event 只留给两类真实需求：
   1) 附属模组 / 整合包作者要用的公开契约；
@@ -170,7 +171,7 @@
 
 **重构 ≠ 重写**：两大系统（殖民地自动化、模拟经营）和全部玩法保留，模组能开发到今天正是因为有可取之处——高兼容的数据驱动、功能域划分、纯逻辑可测等。目标是**提取出真正有用的模块**，砍掉无意义的桥梁与镜像，把代码量降到业余开发者能维护的量级。
 
-### 问题清单（全文见 `docs/plan/refactor/why`）
+### 问题清单（全文见 `docs/newplan/why`）
 
 1. 多次定义（NPC 属性定义了六七次，core/types/NpcAttributes 还是 0 引用死代码）
 2. 软件包混乱（几十个包，engine/core/shared 区别不明）
@@ -192,4 +193,4 @@
 3. 每次改动保证 `./gradlew build` + `./gradlew test` 全绿。
 4. 大改动按`提交规则`里的大重构例外逐步提交，每一步一个 `refactor:` commit，保留回滚点。
 5. **多 AI 并行约定**：同一分支同一时刻只允许一个 AI 写提交。要并行就开独立分支或 worktree，最后手动合并。绝不 reset/stash/rebase 对方提交；别人的提交落在自己中间时就 cherry-pick 到最新，绝不回退。看到别的 AI 未提交的改动，跳过它只提交自己改的。
-6. 重构中发现的新问题，追加进 `docs/plan/refactor/status.md`；每次一个阶段做完，更新 status.md 的进度。
+6. 重构中发现的新问题，追加进 `docs/newplan/status.md`；每次一个阶段做完，更新 status.md 的进度。

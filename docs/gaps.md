@@ -61,6 +61,7 @@
    - **完成边界竞态**：channel 跑完产出已入仓、而任务 step 尚未 advance 的那一两个 tick 内若存档重载，任务以 step 0 + 无检查点恢复，会重跑一次 channel → 重复产出。窗口极小（`Wandscape.onServerTick` 先 `blockInteractExec.tickAll()` 产出、同 tick 内 `world.tick()` advance step），未修。
    - **攻速换算精度**：检查点按"有效 channel tick"（已除原 NPC WORK_SPEED）存，续跑的新 NPC 直接用该 tick 数（不再按新 NPC 攻速换算）。双方攻速不同时，续跑时长略有偏差（更快/更慢），不造成丢产或重复产出。
 8. **【已修复】铁魔法 CD 放大 20 倍（2026-08-26）**：`IronSpellsCaster.cast` 与 `IronSpellsHelper.getSyntheticDef` 原按 `round(spell.getSpellCooldown() * 20.0)` 算 CD，但铁魔法 `getSpellCooldown()` 已返回 tick（`COOLDOWN_IN_SECONDS × 20`）——再乘 20 等于把 1 秒 CD 变成 20 秒（火矢实测）。已随合并改回 `baseCooldown = getSpellCooldown()`（直接 tick），SPELL_SPEED 照常在 `MagicState` 缩短。origin/main 曾用 `getAdaptedCooldown`（×0.08 + [20,200] 钳制）方案，未采纳（会抹平法术间真实 CD 差异）。
+9. **NPC 属性定义分散五处（2026-08-30 实际咬人）**：`core/types/NpcAttributes`（0 引用死码）、`core/types/AttributeType`（枚举，现 9 值）、`shared/data/MageHutAttributes`（7 项 SPECS 规则真相）、`shared/data/MageAttributeRoller`（区间又硬编码一遍）、`engine/attribute/WandscapeAttributes`(MC 注册映射)。某处给枚举加 `HEALTH_REGEN/MANA_REGEN`，SPECS/Roller 没同步 → 漏。收敛方向（status.md 阶段 0 + plan.md Tier 3）：属性五处→一处、Roller 区间并入规则类、去 NpcAttributes 死码；防复发靠 CLAUDE.md【增量归属约束】。
 
 ## 五、版本相关（历史提交提示）
 

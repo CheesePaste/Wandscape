@@ -109,7 +109,7 @@ codebase-memory 图谱的 in-degree 被当作 0-引用判据是**错的**。用 
 - [ ] 反射入口白名单复查（mixin/event/@Mod 未被误删）
 - [ ] `git status` 只含本步文件；净增行数 → 停下问值不值（横移嫌疑）
 - [ ] 每批后跑一轮新候选（级联），到不新增为止
-- [ ] 更新 `docs/plan/refactor/tier1.md` 的待删表核算与 `status.md`
+- [ ] 更新 `docs/newplan/tier1.md` 的待删表核算与 `status.md`
 
 ## 7. 不变式红线（沿用 plan.md）
 
