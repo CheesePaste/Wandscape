@@ -87,6 +87,12 @@ fix_icons.py
 generate_icons.js
 analyze_ticks.py
 
+### PMD 死码扫描（local tooling, 不入库） ###
+.pmd/
+pmd-unused.txt
+pmd.sh
+pmd-deadcode.xml
+
 ### 废弃的指南重写临时目录（已 revert，残留不入库） ###
 guide_rewrite_temp/
 
