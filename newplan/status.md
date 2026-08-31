@@ -36,7 +36,7 @@
 
 - **Tier 1 删除**（2a，已完成）：0 引用类 + 私有死字段/死方法清理。**执行记录见 `tier1-candidates.md`**。完成判定：`./gradlew test` 与 `./gradlew build` 均绿，删除了 2 个 0 引用死类（`shared/data/InterruptRecord`、`core/types/EquipmentPreset`）、37 处私有未读死字段、13 处真死私有方法；经人工+编译+全仓 grep 严格核验保全了全部事件监听器、命令建议器与内部活跃调用。
 - **Tier 2 改名**（2b）：Mage→Npc 全仓统一（连注册 id/lang key/NBT 字符串一起 grep）。完成判定：grep 旧名零命中。
-- **Tier 3 合并**（2c）：消灭五处属性定义，收敛到一处（纯逻辑 + 数据驱动），样例等值验证。
+- **Tier 3 合并**（2c）：消灭五处属性定义，收敛到一处（纯逻辑 + 数据驱动），样例等值验证。**2026-08-31 用户拍板重排**：先啃容易的（`parseElementMap` 配方集群/点/SavedData），全项目体检不做、等 Tier 4 重组后一个包一个包来；具体方案落库 `newplan/tier3.md`。**侦察修正两条**：① `UnlockRequirement` 双 record 系误报（`BuildingConfig.UnlockRequirement`=建筑解锁 vs `production/data/RecipeUnlockRequirement`=配方解锁，概念不同、消费方不同，剔除不合并）；② 点/向量 5 类非"逐字节相同"（SplineVec3=double 数学向量、XZPoint=2D、GridPos/PathPoint/BlockOffset=int 3D 但业务方法各异，BlockOffset 带 Gson 序列化）+ SplineVec3 被 JSON 引用——plan 原句"改用 vanilla 类型"与 CLAUDE.md"保留非 vanilla、合 int 点类"矛盾，以 tier3.md §5 裁决口（建议 A：不硬合，只抽真逐字节重复）为准，启动点=XZPoint 已读（2D、与 PathPoint 非逐字节冲突）。`ColonySnapshot` 双 record 移交 2e（API 收敛），Tier 3 不碰。**#1 parseElementMap 配方集群已完成（2026-08-31）**：抽 `element/internal/ElementMaps.parse(...)` 共享方法，7 处调用改走它、删 7 私有方法；**5 个配方 record 并不同构（组件/逻辑各异），未做 record 收敛**（推翻 plan"6 个配方 record 平行同构"）；`./gradlew build`+`test` 全绿，`grep parseElementMap src/` 零命中。
 - **Tier 4 重组**（2d）：拆除 core/engine/shared 三层的搭桥类，按功能域重排。移动不改逻辑。
 - **横切三件套**（3/4/5 阶段）：UI 去堆（抽公共 Screen 样板先行）、lang 分文件（样板先行）、Log 治理（删除随 2a 顺手做，输出点审计放最后）。
 
