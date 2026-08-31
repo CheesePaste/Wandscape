@@ -2,9 +2,9 @@ package com.wsteam.wandscape.production.data;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.wsteam.wandscape.element.internal.ElementMaps;
 import com.wsteam.wandscape.shared.data.ElementType;
 
-import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -34,23 +34,12 @@ public record MiscRecipe(
         JsonObject output = obj.getAsJsonObject("output");
         String outputItem = output.get("item").getAsString();
 
-        Map<ElementType, Long> cost = parseElementMap(obj, "cost");
+        Map<ElementType, Long> cost = ElementMaps.parse(obj, "cost");
 
         RecipeUnlockRequirement req = obj.has("unlock_requirement")
                 ? RecipeUnlockRequirement.fromJson(obj.getAsJsonObject("unlock_requirement"))
                 : RecipeUnlockRequirement.NONE;
 
         return new MiscRecipe(id, craftStation, displayName, outputItem, cost, req);
-    }
-
-    private static Map<ElementType, Long> parseElementMap(JsonObject obj, String key) {
-        Map<ElementType, Long> map = new HashMap<>();
-        if (!obj.has(key)) return map;
-        JsonObject costObj = obj.getAsJsonObject(key);
-        for (var entry : costObj.entrySet()) {
-            ElementType type = ElementType.valueOf(entry.getKey().toUpperCase());
-            map.put(type, entry.getValue().getAsLong());
-        }
-        return map;
     }
 }

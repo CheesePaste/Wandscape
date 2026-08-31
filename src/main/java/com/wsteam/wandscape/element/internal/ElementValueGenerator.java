@@ -104,7 +104,7 @@ public class ElementValueGenerator {
         for (JsonElement elem : root.getAsJsonArray("seeds")) {
             JsonObject obj = elem.getAsJsonObject();
             String itemId = obj.get("item").getAsString();
-            Map<ElementType, Long> values = parseElementMap(obj, "values");
+            Map<ElementType, Long> values = ElementMaps.parse(obj, "values");
             if (!values.isEmpty()) {
                 seedValues.put(itemId, values);
             }
@@ -526,16 +526,5 @@ public class ElementValueGenerator {
             unresolvedSample,
             rootCauses
         );
-    }
-
-    private static Map<ElementType, Long> parseElementMap(JsonObject obj, String key) {
-        Map<ElementType, Long> map = new LinkedHashMap<>();
-        if (!obj.has(key)) return map;
-        JsonObject costObj = obj.getAsJsonObject(key);
-        for (var entry : costObj.entrySet()) {
-            ElementType type = ElementType.valueOf(entry.getKey().toUpperCase());
-            map.put(type, entry.getValue().getAsLong());
-        }
-        return map;
     }
 }
