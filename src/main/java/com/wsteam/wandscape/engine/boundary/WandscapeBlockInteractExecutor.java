@@ -12,7 +12,6 @@ import com.wsteam.wandscape.core.types.ResourceStack;
 import com.wsteam.wandscape.element.internal.ElementMappingLoader;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.transport.ItemTransportManager;
-import com.wsteam.wandscape.magic.item.SpellItem;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.op.api.AtomicOp;
@@ -20,7 +19,6 @@ import com.wsteam.wandscape.op.executor.OpExecutor;
 import com.wsteam.wandscape.op.executor.ResourceShortageException;
 import com.wsteam.wandscape.production.ProductionRecipeLoader;
 import com.wsteam.wandscape.production.data.CraftRecipeView;
-import com.wsteam.wandscape.production.data.CraftSpellRecipe;
 import com.wsteam.wandscape.production.data.SynthesizeRecipe;
 import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.data.BuildingData;
@@ -33,14 +31,9 @@ import com.wsteam.wandscape.task.runtime.TaskState;
 import com.wsteam.wandscape.task.scheduler.TaskExecutionSystem;
 import com.wsteam.wandscape.warehouse.ColonyItemBank;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.Level;
 
 import javax.annotation.Nullable;
@@ -287,8 +280,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         switch (action) {
             case "synthesize" -> checkSynthesizePreconditions(params, npcId);
             case "decompose" -> checkDecomposePreconditions(params, npcId);
-            case "craft" -> checkCraftPreconditions(params, npcId);
-            case "craft_spell" -> checkCraftSpellPreconditions(params, npcId);
+            case "craft", "craft_spell" -> checkCraftPreconditions(params, npcId, action);
             default -> {}
         }
     }
@@ -303,13 +295,15 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         // to auto-synthesize materials just to decompose them in an infinite loop.
     }
 
-    /** 制作站统一 craft 预检：元素 + 可选额外物品原料（药水等）是否足够。 */
-    private void checkCraftPreconditions(Map<String, String> params, long npcId) {
-        checkElements("production:craft", params, npcId);
+    /** 制作站统一 craft/craft_spell 预检：元素 + 可选额外物品原料（药水等）是否足够。 */
+    private void checkCraftPreconditions(Map<String, String> params, long npcId, String action) {
+        checkElements("production:" + action, params, npcId);
         String recipeId = params.get("recipe_id");
         int count = parseCount(params);
         if (recipeId == null || count <= 0) return;
-        CraftRecipeView recipe = CraftRecipeView.resolve(productionRecipeLoader, recipeId);
+        CraftRecipeView recipe = "craft_spell".equals(action)
+                ? CraftRecipeView.resolveSpell(productionRecipeLoader, recipeId)
+                : CraftRecipeView.resolve(productionRecipeLoader, recipeId);
         if (recipe == null || recipe.inputItems().isEmpty()) return;
         Level level = getNpcLevel(npcId);
         if (level == null) return;
@@ -321,15 +315,11 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
             if (bank.available(colonyId, key) < count) {
                 int colonIdx = inputItemId.lastIndexOf(':');
                 String shortId = colonIdx >= 0 ? inputItemId.substring(colonIdx + 1) : inputItemId;
-                Log.warn(TAG, "craft: insufficient input item {} (need={})", inputItemId, count);
+                Log.warn(TAG, "{}: insufficient input item {} (need={})", action, inputItemId, count);
                 throw new ResourceShortageException(
                         List.of(new ResourceStack(new ResourceId(shortId), count)));
             }
         }
-    }
-
-    private void checkCraftSpellPreconditions(Map<String, String> params, long npcId) {
-        checkElements("production:craft_spell", params, npcId);
     }
 
     /** Element shortage check shared by every element-costing production blueprint. */
@@ -361,8 +351,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
             case "gather" -> executeGather(op.target(), params, world, npcId);
             case "decompose" -> executeDecompose(params, world, npcId);
             case "synthesize" -> executeSynthesize(params, world, npcId);
-            case "craft" -> executeCraft(params, world, npcId);
-            case "craft_spell" -> executeCraftSpell(params, world, npcId);
+            case "craft", "craft_spell" -> executeCraft(params, world, npcId, action);
             default -> Log.warn(TAG, "Unknown async block_interact action: {}", action);
         }
     }
@@ -542,20 +531,23 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
     }
 
     /**
-     * 制作站统一 craft 动作：法杖/权杖/药水按 recipe_id 解析（{@link CraftRecipeView}），
-     * 扣元素 + 可选额外物品原料，产物带 NBT 入殖民地仓库。卷轴（魔法工坊）走独立 craft_spell。
+     * 制作站统一 craft/craft_spell 动作：法杖/权杖/药水按 recipe_id 解析（{@link CraftRecipeView}），
+     * 扣元素 + 可选额外物品原料，产物带 NBT 入殖民地仓库；卷轴（craft_spell）经
+     * {@link CraftRecipeView#resolveSpell} 解析为同一视图，输出 NBT 为 {@code magic_id}。
      */
-    private void executeCraft(Map<String, String> params, World world, long npcId) {
+    private void executeCraft(Map<String, String> params, World world, long npcId, String action) {
         String recipeId = params.get("recipe_id");
         int count = parseCount(params);
         if (recipeId == null || count <= 0) {
-            Log.warn(TAG, "craft: invalid params recipe_id={} count={}", recipeId, count);
+            Log.warn(TAG, "{}: invalid params recipe_id={} count={}", action, recipeId, count);
             return;
         }
 
-        CraftRecipeView recipe = CraftRecipeView.resolve(productionRecipeLoader, recipeId);
+        CraftRecipeView recipe = "craft_spell".equals(action)
+                ? CraftRecipeView.resolveSpell(productionRecipeLoader, recipeId)
+                : CraftRecipeView.resolve(productionRecipeLoader, recipeId);
         if (recipe == null) {
-            Log.warn(TAG, "craft: recipe not found: {}", recipeId);
+            Log.warn(TAG, "{}: recipe not found: {}", action, recipeId);
             return;
         }
 
@@ -571,7 +563,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
             long needed = scaledCraftCost(entry.getValue() * count);
             if (bank.countElement(colonyId, entry.getKey()) < needed) {
                 String elementId = entry.getKey().name().toLowerCase();
-                Log.warn(TAG, "craft: insufficient {} (need={})", entry.getKey(), needed);
+                Log.warn(TAG, "{}: insufficient {} (need={})", action, entry.getKey(), needed);
                 throw new ResourceShortageException(
                         List.of(new ResourceStack(new ResourceId(elementId), (int) needed)));
             }
@@ -581,7 +573,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
             if (bank.available(colonyId, key) < count) {
                 int colonIdx = inputItemId.lastIndexOf(':');
                 String shortId = colonIdx >= 0 ? inputItemId.substring(colonIdx + 1) : inputItemId;
-                Log.warn(TAG, "craft: insufficient input item {} (need={})", inputItemId, count);
+                Log.warn(TAG, "{}: insufficient input item {} (need={})", action, inputItemId, count);
                 throw new ResourceShortageException(
                         List.of(new ResourceStack(new ResourceId(shortId), count)));
             }
@@ -604,71 +596,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         // ── Transport visualization: crafted item flies NPC → warehouse ──
         launchItemTransport(outputKey, count, world, npcId);
 
-        Log.info(TAG, "craft: {} x{} → warehouse", recipe.outputItem(), count);
-        spawnCompletionParticles(npcId);
-    }
-
-    /** 魔法工坊合成卷轴：产出 spell_scroll 并绑定 magic_id 入殖民地仓库（C4）。 */
-    private void executeCraftSpell(Map<String, String> params, World world, long npcId) {
-        String recipeId = params.get("recipe_id");
-        int count = parseCount(params);
-        if (recipeId == null || count <= 0) {
-            Log.warn(TAG, "craft_spell: invalid params recipe_id={} count={}", recipeId, count);
-            return;
-        }
-
-        ProductionRecipeLoader recipes = productionRecipeLoader;
-        if (recipes == null) {
-            Log.warn(TAG, "craft_spell: ProductionRecipeLoader not set");
-            return;
-        }
-
-        CraftSpellRecipe recipe = recipes.getSpellRecipes().get(recipeId);
-        if (recipe == null) {
-            Log.warn(TAG, "craft_spell: recipe not found: {}", recipeId);
-            return;
-        }
-
-        Level level = getNpcLevel(npcId);
-        if (level == null) return;
-
-        ColonyItemBank bank = ColonyItemBank.get(level);
-        if (bank == null) return;
-
-        UUID colonyId = findStorageColonyId();
-
-        for (var entry : recipe.cost().entrySet()) {
-            long needed = scaledCraftCost(entry.getValue() * count);
-            if (bank.countElement(colonyId, entry.getKey()) < needed) {
-                String elementId = entry.getKey().name().toLowerCase();
-                Log.warn(TAG, "craft_spell: insufficient {} (need={})", entry.getKey(), needed);
-                throw new ResourceShortageException(
-                        List.of(new ResourceStack(new ResourceId(elementId), (int) needed)));
-            }
-        }
-
-        for (var entry : recipe.cost().entrySet()) {
-            bank.consumeElement(colonyId, entry.getKey(), scaledCraftCost(entry.getValue() * count));
-        }
-
-        var item = BuiltInRegistries.ITEM.get(ResourceLocation.tryParse(recipe.outputItem()));
-        if (item == null) {
-            Log.warn(TAG, "craft_spell: output item not found: {}", recipe.outputItem());
-            return;
-        }
-
-        CompoundTag nbt = new CompoundTag();
-        nbt.putString(SpellItem.MAGIC_ID_KEY, recipe.magicId());
-
-        ItemStack stack = new ItemStack(item, count);
-        stack.set(DataComponents.CUSTOM_DATA, CustomData.of(nbt.copy()));
-
-        bank.add(colonyId, ItemKey.of(recipe.outputItem(), nbt.copy()), count);
-
-        // ── Transport visualization: scroll flies NPC → warehouse ──
-        launchItemTransport(ItemKey.of(recipe.outputItem(), nbt.copy()), count, world, npcId);
-
-        Log.info(TAG, "craft_spell: {} x{} → warehouse (magic_id={})", recipe.outputItem(), count, recipe.magicId());
+        Log.info(TAG, "{}: {} x{} → warehouse", action, recipe.outputItem(), count);
         spawnCompletionParticles(npcId);
     }
 

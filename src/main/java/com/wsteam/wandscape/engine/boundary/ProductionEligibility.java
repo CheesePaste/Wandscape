@@ -5,7 +5,6 @@ import com.google.gson.JsonPrimitive;
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.production.ProductionRecipeLoader;
 import com.wsteam.wandscape.production.data.CraftRecipeView;
-import com.wsteam.wandscape.production.data.CraftSpellRecipe;
 import com.wsteam.wandscape.production.data.SynthesizeRecipe;
 import com.wsteam.wandscape.shared.data.ElementType;
 
@@ -84,12 +83,10 @@ public final class ProductionEligibility {
                 SynthesizeRecipe r = loader.getSynthesizeRecipe(recipeId);
                 yield r != null ? r.cost() : Map.of();
             }
-            case "production:craft" -> {
-                CraftRecipeView r = CraftRecipeView.resolve(loader, recipeId);
-                yield r != null ? r.cost() : Map.of();
-            }
-            case "production:craft_spell" -> {
-                CraftSpellRecipe r = loader.getSpellRecipes().get(recipeId);
+            case "production:craft", "production:craft_spell" -> {
+                CraftRecipeView r = "production:craft_spell".equals(blueprintId)
+                        ? CraftRecipeView.resolveSpell(loader, recipeId)
+                        : CraftRecipeView.resolve(loader, recipeId);
                 yield r != null ? r.cost() : Map.of();
             }
             default -> Map.of();

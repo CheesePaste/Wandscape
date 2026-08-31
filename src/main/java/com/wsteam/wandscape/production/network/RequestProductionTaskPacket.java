@@ -5,6 +5,7 @@ import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.building.internal.BuildingState;
 import com.wsteam.wandscape.production.ProductionRecipeLoader;
+import com.wsteam.wandscape.production.data.CraftRecipeView;
 import com.wsteam.wandscape.production.internal.RecipeUnlockChecker;
 import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.data.WorkItem;
@@ -98,13 +99,10 @@ public record RequestProductionTaskPacket(
                         yield recipe != null
                                 && RecipeUnlockChecker.isUnlocked(colonyId, recipe.unlockRequirement());
                     }
-                    case "craft" -> {
-                        var recipe = com.wsteam.wandscape.production.data.CraftRecipeView.resolve(loader, pkt.recipeOrItemId);
-                        yield recipe != null
-                                && RecipeUnlockChecker.isUnlocked(colonyId, recipe.unlockRequirement());
-                    }
-                    case "craft_spell" -> {
-                        var recipe = loader.getSpellRecipes().get(pkt.recipeOrItemId);
+                    case "craft", "craft_spell" -> {
+                        var recipe = "craft_spell".equals(pkt.action)
+                                ? CraftRecipeView.resolveSpell(loader, pkt.recipeOrItemId)
+                                : CraftRecipeView.resolve(loader, pkt.recipeOrItemId);
                         yield recipe != null
                                 && RecipeUnlockChecker.isUnlocked(colonyId, recipe.unlockRequirement());
                     }
@@ -182,12 +180,10 @@ public record RequestProductionTaskPacket(
                 var recipe = loader.getSynthesizeRecipe(recipeOrItemId);
                 yield recipe != null ? recipe.outputItem() : null;
             }
-            case "craft" -> {
-                var recipe = com.wsteam.wandscape.production.data.CraftRecipeView.resolve(loader, recipeOrItemId);
-                yield recipe != null ? recipe.outputItem() : null;
-            }
-            case "craft_spell" -> {
-                var recipe = loader.getSpellRecipes().get(recipeOrItemId);
+            case "craft", "craft_spell" -> {
+                var recipe = "craft_spell".equals(action)
+                        ? CraftRecipeView.resolveSpell(loader, recipeOrItemId)
+                        : CraftRecipeView.resolve(loader, recipeOrItemId);
                 yield recipe != null ? recipe.outputItem() : null;
             }
             default -> null;

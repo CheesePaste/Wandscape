@@ -1,5 +1,6 @@
 package com.wsteam.wandscape.production.data;
 
+import com.wsteam.wandscape.magic.item.SpellItem;
 import com.wsteam.wandscape.production.ProductionRecipeLoader;
 import com.wsteam.wandscape.shared.data.ElementType;
 import net.minecraft.nbt.CompoundTag;
@@ -45,5 +46,17 @@ public record CraftRecipeView(
                     potion.inputItems(), potion.cost(), potion.unlockRequirement());
         }
         return null;
+    }
+
+    /** 魔法工坊的卷轴（{@code craft_spell}）视图：magicId 包进 outputNbt{magic_id}，与 craft 共用执行。 */
+    @Nullable
+    public static CraftRecipeView resolveSpell(@Nullable ProductionRecipeLoader loader, String recipeId) {
+        if (loader == null || recipeId == null) return null;
+        CraftSpellRecipe spell = loader.getSpellRecipes().get(recipeId);
+        if (spell == null) return null;
+        CompoundTag nbt = new CompoundTag();
+        nbt.putString(SpellItem.MAGIC_ID_KEY, spell.magicId());
+        return new CraftRecipeView(spell.id(), spell.outputItem(), nbt, List.of(),
+                spell.cost(), spell.unlockRequirement());
     }
 }
