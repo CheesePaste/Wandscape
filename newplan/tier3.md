@@ -75,10 +75,13 @@ plan.md「拆分铁律」：**基建/框架/去堆目标收 foundation，域特�
 | # | cluster | 难度 | 内容 | 验收 |
 |---|---------|------|------|------|
 | 1 | **配方 `parseElementMap` 集群** | 易（逐字节相同） | ✅ 完成：抽 `element/internal/ElementMaps.parse(...)` 共享方法，7 处调用改走它，删 7 个私有方法（6 处 `HashMap` + 1 处 `LinkedHashMap`）；**5 个配方 record 并不同构（组件/逻辑各异），未做 record 收敛** | ✅ build+test 绿；`grep parseElementMap src/` 零命中；既有测试覆盖 `fromJson→ElementMaps.parse` 等值 |
-| 2 | **点/向量自造族** | 中（裁决口） | 读 5 类各自引用面，按 §5 裁决收敛粒度 | build 绿 + 收敛后纯逻辑测试绿 |
-| 3 | **SavedData 样板 15 份** | 中 | 抽 `SavedDataUtil` + 抽象基类，逐份迁移 | 每份 Save+Load 往返等值 + build 绿 |
+| 2 | **点/向量自造族** | 中（裁决口） | ✅ 裁决 A：**不合并**；5 类分属三系统（GridPos=task 内核 / BlockOffset=building / PathPoint+XZPoint+SplineVec3=road），无逐字节重复 | ✅ 无改动，归包留待 Tier 4（纯移动不改定义） |
+| 3 | **SavedData 样板 15 份** | 中 | ✅ 裁决：**砍掉不收敛**。15 类实为 10 个功能域各自的状态根（非"样板"），真逐字节重复仅 getOrCreate 内 ~7 行（Factory+computeIfAbsent）；跨 10 域改 13 文件省 ~100 行，净减量法则下性价比为负，且 RoadSavedData.load 单参/TaskPoolSavedData.load 多参/ColonySavedData 强写盘形状特殊硬收逼改签撞红线。plan「foundation/saveddata 收 15 份各域样板」违反其自身拆分铁律（foundation 反向认识全域）。留待 Tier 4 重组时归包顺手统一 | ✅ 无改动 |
 | 4 | packet 静态 handler 样板（~30 份） | 大（最高风险） | 抽泛型 `AbstractPayload`；**域特性包留域** | 泛型基类 + build 绿 + 相关测试绿 |
 | 5 | （移交 2e）`ColonySnapshot` 双 record | — | **不做**，见 §1 修正 3 | 移交给 API 收敛 |
+| 6 | **craft/craft_spell 执行合一** | 中（行为敏感） | ✅ 完成：`CraftRecipeView.resolveSpell()`；`executeCraft` 加 `action` 参数共用，删 `executeCraftSpell`/`checkCraftSpellPreconditions` 整段；packet/eligibility 分支统一走 `CraftRecipeView` | ✅ build+test 绿；行为不变（制作站 craft 仍查不到 spell，服务端防护不破） |
+
+> **侦察 #6 实录（2026-08-31）**：用户指出 Workstation/Craftingstation/Potionstation 的合成/合成法杖/合成杂物/抄写本质都是"扣元素→出物品"。实测：craft 系列（法杖/杂物/药水）已被 `CraftRecipeView.resolve` 统一；**craft_spell（抄写）漏在外面，与 craft 执行 80% 逐字节相同**（仅 recipe 解析源 + 输出 NBT 构造差异，craft_spell 把 `magicId` 手写进 CompoundTag，恰可转成 `CraftRecipeView.outputNbt`）。craft.json 与 craft_spell.json 两个 blueprint 逐字节同构（仅 action 一词 + 文案）。**synthesize 不可并入**：推导式（element_mappings 动态查/无原料/5 ticks）≠ 配方式（JSON 配方/可选原料/1200 ticks），是 decompose 的另一端。**裁决**：craft/craft_spell 合一执行，但**保留 craft_spell action 与 blueprint id**（魔法工坊专用 + UI 显示 transcribe），spell 不塞进全局 `resolve`（否则制作站能造卷轴，服务端防护破）。
 
 > **侦察 #1 实录（2026-08-31）**：plan §二「配方 record 集群」判断过期——5 个配方 record（Synthesize/Misc/CraftWand/CraftSpell/BrewPotion）**组件与逻辑全不同**（`SynthesizeRecipe.totalCost`/`calculateChannelTicks`、`CraftWandRecipe.outputNbt+preset_id`、`BrewPotionRecipe.parseNbt/inputItems`），不满足"平行同构"，**不可收敛成 1 个 `CraftRecipe`**。真正逐字节重复的只有 `parseElementMap` 这一个方法（7 份，6 份 `HashMap` 一字不差 + `ElementValueGenerator` 用 `LinkedHashMap` 保审计确定序）。收敛点：`element/internal/ElementMaps`（element 域；production 已依赖 element，无环）。
 
