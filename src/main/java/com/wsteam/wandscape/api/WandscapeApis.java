@@ -119,14 +119,14 @@ public final class WandscapeApis {
     public static GuideProgressApi getGuideProgressApiSilently() { return guideProgressApi; }
     public static void setGuideProgressApi(GuideProgressApi api) { guideProgressApi = api; }
 
-    private static SpellcastingApi spellcastingApi;
-    public static SpellcastingApi getSpellcastingApi() {
-        if (spellcastingApi == null) throw new IllegalStateException("SpellcastingApi not loaded");
-        return spellcastingApi;
+    private static MagicApi magicApi;
+    public static MagicApi getMagicApi() {
+        if (magicApi == null) throw new IllegalStateException("MagicApi not loaded");
+        return magicApi;
     }
     @javax.annotation.Nullable
-    public static SpellcastingApi getSpellcastingApiSilently() { return spellcastingApi; }
-    public static void setSpellcastingApi(SpellcastingApi api) { spellcastingApi = api; }
+    public static MagicApi getMagicApiSilently() { return magicApi; }
+    public static void setMagicApi(MagicApi api) { magicApi = api; }
 
     /**
      * 位置所在殖民地 id（位置检测，256 格内最近殖民地原点）；殖民地 API 未就绪或位置不在

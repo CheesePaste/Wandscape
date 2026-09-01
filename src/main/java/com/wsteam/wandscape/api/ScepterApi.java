@@ -30,4 +30,24 @@ public interface ScepterApi {
     /** 指定殖民地当前的强制仇恨目标实体（存活且存在）；无标记/实体未加载返回 null。 */
     @Nullable
     LivingEntity forcedHostile(ServerLevel level, UUID colonyId);
+
+    // ── 未实现（重设计阶段声明，见 @Unimplemented）──
+
+    /** 设置目标实体是否被指定殖民地庇护（法师视其为盟友）。same colony hostile 互斥由实现侧处理。 */
+    @Unimplemented("重设计阶段——待接入 ScepterMarks.setSheltered/toggleShelter")
+    default void setSheltered(UUID colonyId, UUID entityUuid, boolean sheltered) {
+        throw new UnsupportedOperationException("ScepterApi.setSheltered not yet implemented");
+    }
+
+    /** 设某实体为指定殖民地的强制仇恨目标（单槽；如已被庇护先撤庇护）。 */
+    @Unimplemented("重设计阶段——待接入 ScepterMarks.toggleForcedHostile")
+    default void setForcedHostile(UUID colonyId, UUID entityUuid) {
+        throw new UnsupportedOperationException("ScepterApi.setForcedHostile not yet implemented");
+    }
+
+    /** 清除指定殖民地的强制仇恨标记（返回被清除的旧目标，无则 null）。 */
+    @Unimplemented("重设计阶段——待接入 ScepterMarks.clearForcedHostile")
+    default UUID clearForcedHostile(UUID colonyId) {
+        throw new UnsupportedOperationException("ScepterApi.clearForcedHostile not yet implemented");
+    }
 }

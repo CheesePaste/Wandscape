@@ -25,4 +25,12 @@ public interface TouristApi {
 
     /** Number of tourists who stayed overnight (checked into hotel) in a colony. */
     int getOvernightStayerCount(UUID colonyId);
+
+    // ── 未实现（重设计阶段声明，见 @Unimplemented）──
+
+    /** 清空指定殖民地的全部游客（触发正常离城流程，而非直接删除实体）。 */
+    @Unimplemented("重设计阶段——待接入批量离成/实体处理")
+    default void despawnAll(UUID colonyId) {
+        throw new UnsupportedOperationException("TouristApi.despawnAll not yet implemented");
+    }
 }

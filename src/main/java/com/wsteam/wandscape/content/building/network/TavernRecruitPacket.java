@@ -124,8 +124,10 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
             }
             npc.setPersistenceRequired();
             npc.colonyId = colonyId;
-            // 酒馆招募的法师无起始战斗魔法（仅特殊区 heal/teleport 系统固有）：清空 onAddedToLevel 种的默认载荷
-            npc.equippedMagic.clear();
+            // 酒馆招募的法师无起始战斗魔法（仅特殊区 heal/teleport 系统固有）：经 MagicApi 清空
+            // onAddedToLevel 种的默认载荷（空装备态 + 当前预设，走权威校验）。
+            com.wsteam.wandscape.api.WandscapeApis.getMagicApi()
+                    .setEquippedAndStrategy(npc.getUUID(), npc.castStrategy.preset().name(), java.util.List.of());
 
             // 6. Apply rolled attributes + 满蓝入职
             npc.setBaseAttributeValue(AttributeType.MAX_HP, candidate.maxHp());
@@ -204,8 +206,9 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
         }
         npc.setPersistenceRequired();
         npc.colonyId = colonyId;
-        // 酒馆招募的法师无起始战斗魔法：清空默认载荷（特殊区 heal/teleport 系统固有）
-        npc.equippedMagic.clear();
+        // 酒馆招募的法师无起始战斗魔法：经 MagicApi 清空默认载荷（空装备态 + 当前预设，走权威校验）。
+        com.wsteam.wandscape.api.WandscapeApis.getMagicApi()
+                .setEquippedAndStrategy(npc.getUUID(), npc.castStrategy.preset().name(), java.util.List.of());
 
         // Apply mage stats from resume
         npc.setCustomName(Component.literal(resume.touristName()));

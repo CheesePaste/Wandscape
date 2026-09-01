@@ -235,7 +235,7 @@ public final class TouristSpawnSystem {
             return;
         }
 
-        List<BuildingData> allBuildings = buildingApi.getColonyBuildings(null);
+        List<BuildingState> allBuildings = buildingApi.getColonyBuildings(null);
         if (allBuildings.isEmpty()) {
             Log.warn(TAG, "[Tourist] No buildings found in colony — cannot spawn tourists. "
                     + "Build a town hall and register a colony first.");
@@ -730,7 +730,7 @@ public final class TouristSpawnSystem {
     // Target & spawn position helpers
     // ════════════════════════════════════════════════════════════════
 
-    private List<BuildingState> getTouristTargets(ServerLevel level, List<BuildingData> allBuildings) {
+    private List<BuildingState> getTouristTargets(ServerLevel level, List<BuildingState> allBuildings) {
         List<BuildingState> targets = new ArrayList<>();
         BuildingSavedData savedData = BuildingSavedData.get(level);
         for (BuildingData b : allBuildings) {
@@ -772,7 +772,7 @@ public final class TouristSpawnSystem {
         }
     }
 
-    private List<BlockPos> collectSpawnPositions(ServerLevel level, List<BuildingData> buildings) {
+    private List<BlockPos> collectSpawnPositions(ServerLevel level, List<BuildingState> buildings) {
         List<BlockPos> positions = new ArrayList<>();
         RoadApi roadApi = getRoadApiSilently();
         if (roadApi != null) {

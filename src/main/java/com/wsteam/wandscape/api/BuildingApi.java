@@ -4,7 +4,7 @@ import com.wsteam.wandscape.content.task.component.Position;
 import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.foundation.registry.WandscapeConstants;
 
-import com.wsteam.wandscape.content.building.data.BuildingData;
+import com.wsteam.wandscape.content.building.internal.BuildingState;
 import com.wsteam.wandscape.content.building.data.WorkItem;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -15,9 +15,9 @@ import java.util.List;
 import java.util.UUID;
 public interface BuildingApi {
     // ---- Query ----
-    BuildingData getBuilding(UUID buildingId);
-    BuildingData getBuildingAt(BlockPos pos);
-    List<BuildingData> getColonyBuildings(UUID colonyId);
+    BuildingState getBuilding(UUID buildingId);
+    BuildingState getBuildingAt(BlockPos pos);
+    List<BuildingState> getColonyBuildings(UUID colonyId);
 
     /**
      * Get the building's world-space bounding box (AABB).

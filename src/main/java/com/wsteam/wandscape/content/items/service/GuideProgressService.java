@@ -4,6 +4,7 @@ import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.content.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.api.GuideProgressApi;
 import com.wsteam.wandscape.content.building.data.BuildingData;
+import com.wsteam.wandscape.content.building.internal.BuildingState;
 import com.wsteam.wandscape.content.items.data.GuideProgressSavedData;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.content.items.network.GuideProgressSyncPacket;
@@ -66,7 +67,7 @@ public final class GuideProgressService implements GuideProgressApi {
     private static final class ServerContext implements GuideServerContext {
         private final ServerLevel level;
         private final UUID colonyId;
-        private final List<BuildingData> buildings;
+        private final List<BuildingState> buildings;
 
         ServerContext(ServerLevel level, UUID colonyId) {
             this.level = level;

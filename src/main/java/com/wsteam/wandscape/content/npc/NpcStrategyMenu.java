@@ -158,7 +158,12 @@ public class NpcStrategyMenu extends AbstractContainerMenu {
                 }
             }
         }
-        npc.equippedMagic.replaceWith(newEquipped);
+        // 服务端权威：经 MagicApi.setEquippedAndStrategy 走装桶/≤3/去重/ALTAR-SPECIAL 校验
+        // （flattenedQualified 保留槽行类别前缀→往返不挪位），预设不变。取代直写字段，
+        // 保证 GUI 编辑与 API 校验一致。
+        com.wsteam.wandscape.api.WandscapeApis.getMagicApi()
+                .setEquippedAndStrategy(npc.getUUID(), npc.castStrategy.preset().name(),
+                        newEquipped.flattenedQualified());
         Log.info(TAG, "[Strategy] {} equipped {} spells (npc={})",
                 npc.getUUID().toString().substring(0, 8), newEquipped.flattened().size());
     }

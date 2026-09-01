@@ -44,4 +44,24 @@ public interface ElementApi {
 
     /** Undo a {@link #registerMapping} override, falling back to the JSON registry. */
     void unregisterMapping(String blockOrItemId);
+
+    // ── 未实现（重设计阶段声明，见 @Unimplemented）──
+
+    /** 全部已注册映射快照（含 JSON + 运行时覆盖层；disabled 以空成本表示）。 */
+    @Unimplemented("重设计阶段——待接入 ElementMappingLoader.getAllConfigs")
+    default Map<String, Map<ElementType, Long>> getAllMappings() {
+        throw new UnsupportedOperationException("ElementApi.getAllMappings not yet implemented");
+    }
+
+    /** 是否已有元素映射（用方块状态对象查询；disabled 返回 false，见 {@link #isDisabled}）。 */
+    @Unimplemented("重设计阶段——待接入按 BlockState 查询")
+    default boolean hasElementMapping(BlockState blockState) {
+        throw new UnsupportedOperationException("ElementApi.hasElementMapping(BlockState) not yet implemented");
+    }
+
+    /** 对某 id 单元素成本做增量调整（非整表覆盖；叠加到当前值之上）。 */
+    @Unimplemented("重设计阶段——待接入增量成本调整")
+    default void adjustCost(String blockOrItemId, ElementType type, long delta) {
+        throw new UnsupportedOperationException("ElementApi.adjustCost not yet implemented");
+    }
 }

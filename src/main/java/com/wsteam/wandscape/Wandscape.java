@@ -238,7 +238,7 @@ public class Wandscape {
     public static final SpellcastingApiImpl SPELLCASTING_API = new SpellcastingApiImpl();
 
     static {
-        WandscapeApis.setSpellcastingApi(SPELLCASTING_API);
+        WandscapeApis.setMagicApi(SPELLCASTING_API);
         WandscapeApis.setProductionApi(new com.wsteam.wandscape.content.production.internal.ProductionApiImpl());
     }
 

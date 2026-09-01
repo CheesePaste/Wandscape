@@ -13,7 +13,6 @@ import com.wsteam.wandscape.content.task.component.ColonyMetadata;
 import com.wsteam.wandscape.content.task.component.NpcInventory;
 import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.content.task.types.GridPos;
-import com.wsteam.wandscape.content.colony.ColonyApiImpl;
 import com.wsteam.wandscape.content.colony.ColonyLevelManager;
 import com.wsteam.wandscape.foundation.service.ParticleService;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
@@ -140,7 +139,7 @@ public final class ColonyCommand {
     public static ColonyCreateOutcome createColonyAt(ServerLevel level, BlockPos origin, String name,
                                         @Nullable UUID founder) {
         // 一人一小镇：玩家已拥有小镇时拒绝创建第二个（V 面板/市政厅命名/命令共用此入口）
-        if (founder != null && ColonyApiImpl.get().getColonyByFounder(founder) != null) {
+        if (founder != null && WandscapeApis.getColonyApi().getColonyByFounder(founder) != null) {
             return ColonyCreateOutcome.failure(I18n.name(
                     "message.wandscape.command.colony_already_owned",
                     "[Wandscape] Failed: 你已拥有小镇，不能创建第二个。"));
@@ -156,7 +155,7 @@ public final class ColonyCommand {
         }
 
         // ── Step 2: create colonyId ─────────────────────────────────────────
-        ColonyApi colonyApi = ColonyApiImpl.get();
+        ColonyApi colonyApi = WandscapeApis.getColonyApi();
         UUID colonyId = colonyApi.createColony(origin, founder);
         var levelMgr = ColonyLevelManager.get();
         if (levelMgr != null && name != null && !name.isBlank()) {
@@ -251,7 +250,7 @@ public final class ColonyCommand {
     @Nullable
     public static UUID ensureColonyNear(ServerLevel level, BlockPos origin,
                                         String name, @Nullable UUID founder) {
-        ColonyApi colonyApi = ColonyApiImpl.get();
+        ColonyApi colonyApi = WandscapeApis.getColonyApi();
         // 一人一小镇：玩家已有小镇时返回它（无论多远），绝不新建第二个
         if (founder != null) {
             UUID owned = colonyApi.getColonyByFounder(founder);
@@ -285,7 +284,7 @@ public final class ColonyCommand {
             return 0;
         }
 
-        ColonyApi colonyApi = ColonyApiImpl.get();
+        ColonyApi colonyApi = WandscapeApis.getColonyApi();
         UUID colonyId = colonyApi.getColonyByFounder(player.getUUID());
         if (colonyId == null) {
             colonyId = colonyApi.getColonyId(player.blockPosition());
@@ -315,7 +314,7 @@ public final class ColonyCommand {
             return 0;
         }
 
-        ColonyApi colonyApi = ColonyApiImpl.get();
+        ColonyApi colonyApi = WandscapeApis.getColonyApi();
         UUID colonyId = colonyApi.getColonyId(player.blockPosition());
         if (colonyId == null) {
             ctx.getSource().sendFailure(Component.literal(

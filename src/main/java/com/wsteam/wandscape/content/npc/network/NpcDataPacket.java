@@ -172,11 +172,11 @@ public record NpcDataPacket(
         float spellSpeed = npc.getEffectiveAttribute(AttributeType.SPELL_SPEED);
         float armorValue = npc.getEffectiveArmorValue();
 
-        // P3：施法策略（预设 + 魔法表 + 解析后的优先级），经 SpellcastingApi 取；未初始化回退空
+        // P3：施法策略（预设 + 魔法表 + 解析后的优先级），经 MagicApi 取；未初始化回退空
         String strategyPreset = "";
         List<String> knownSpells = List.of();
         List<String> priority = List.of();
-        var casting = WandscapeApis.getSpellcastingApiSilently();
+        var casting = WandscapeApis.getMagicApiSilently();
         if (casting != null) {
             UUID uuid = npc.getUUID();
             strategyPreset = casting.getStrategyPreset(uuid);

@@ -77,7 +77,10 @@ public record NpcStrategyPacket(int entityId, String preset, List<String> equipp
             Log.warn(TAG, "Strategy target entity {} is not a WandscapeNpc", packet.entityId());
             return;
         }
-        npc.castStrategy.setPreset(packet.preset());
+        // 预设切换经 MagicApi.setEquippedAndStrategy（校验一致的写入，装备态不变但重验）：
+        // 取代直写 castStrategy，保证与 API 一致。
+        com.wsteam.wandscape.api.WandscapeApis.getMagicApi()
+                .setEquippedAndStrategy(npc.getUUID(), packet.preset(), npc.equippedMagic.flattenedQualified());
         Log.info(TAG, "NPC {} preset={}", npc.getUUID().toString().substring(0, 8), packet.preset());
 
         // 刷新策略屏 / 信息屏（权威状态）

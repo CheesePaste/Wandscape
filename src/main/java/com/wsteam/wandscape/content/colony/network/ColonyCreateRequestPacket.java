@@ -3,6 +3,7 @@ package com.wsteam.wandscape.content.colony.network;
 import com.wsteam.wandscape.content.command.ColonyCommand;
 import com.wsteam.wandscape.content.building.internal.BuildingState;
 import com.wsteam.wandscape.api.ColonyApi;
+import com.wsteam.wandscape.api.WandscapeApis;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.foundation.ui.I18n;
 import net.minecraft.core.BlockPos;
@@ -51,7 +52,7 @@ public record ColonyCreateRequestPacket(BlockPos townHallAnchor, String name)
                 ? packet.name.trim().substring(0, 30) : packet.name.trim();
 
         ServerLevel level = player.serverLevel();
-        ColonyApi colonyApi = com.wsteam.wandscape.content.colony.ColonyApiImpl.get();
+        ColonyApi colonyApi = WandscapeApis.getColonyApi();
 
         // If this town hall's position is ALREADY linked to an existing colony, link and notify
         UUID existing = colonyApi.getColonyId(packet.townHallAnchor);

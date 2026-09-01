@@ -38,4 +38,13 @@ public interface RoadApi {
      * @return true if the edge was withdrawn, false if it was absent/completed
      */
     boolean cancelEdge(UUID colonyId, UUID edgeId);
+
+    /**
+     * 程序化建一条道路边（节点已存在时）；否则需先建节点。接入真实铺设/材料核算前为桩。
+     * 实现方负责：加入 {@code RoadNetwork}、核算材料、派发 {@code road:build_segment} 任务。
+     */
+    @Unimplemented("重设计阶段——待接入 RoadSavedData/RoadNetwork.addEdge + 建造任务派发")
+    default boolean addEdge(UUID colonyId, RoadEdge edge) {
+        throw new UnsupportedOperationException("RoadApi.addEdge not yet implemented");
+    }
 }

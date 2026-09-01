@@ -18,4 +18,24 @@ public interface GuideProgressApi {
      * sent so a pre-colony dismissal still persists.
      */
     void sendToPlayer(ServerPlayer player, @Nullable UUID colonyId);
+
+    // ── 未实现（重设计阶段声明，见 @Unimplemented）──
+
+    /** 强制把某玩家的教程推进到指定步。 */
+    @Unimplemented("重设计阶段——待接入 GuideProgressSavedData.set")
+    default void setProgress(ServerPlayer player, int step) {
+        throw new UnsupportedOperationException("GuideProgressApi.setProgress not yet implemented");
+    }
+
+    /** 清除某玩家的教程进度（回到第 0 步）。 */
+    @Unimplemented("重设计阶段——待接入 GuideProgressSavedData 清空")
+    default void clearProgress(ServerPlayer player) {
+        throw new UnsupportedOperationException("GuideProgressApi.clearProgress not yet implemented");
+    }
+
+    /** 服务端打开某玩家的指南书到指定页面。 */
+    @Unimplemented("重设计阶段——待接入 GuideDocOpenPacket")
+    default void openGuide(ServerPlayer player, String docPath) {
+        throw new UnsupportedOperationException("GuideProgressApi.openGuide not yet implemented");
+    }
 }

@@ -482,7 +482,7 @@ public final class TouristSimulation {
         BuildingApi api = getBuildingApi();
         if (api == null) return null;
 
-        List<BuildingData> allBuildings = api.getColonyBuildings(colonyId);
+        List<BuildingState> allBuildings = api.getColonyBuildings(colonyId);
         if (allBuildings.isEmpty()) return null;
 
         BlockPos touristPos = t.touristPos();

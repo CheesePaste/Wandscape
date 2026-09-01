@@ -49,4 +49,22 @@ public interface WarehouseApi {
     void setTransportTicksPerBlockOnRoad(int v);
     int getTransportTicksPerBlockOffRoad();
     void setTransportTicksPerBlockOffRoad(int v);
+
+    // ── 未实现（重设计阶段声明，见 @Unimplemented）──
+
+    /** 清空指定殖民地的全部物品与元素（不可逆）。 */
+    @Unimplemented("重设计阶段——待接入 ColonyItemBank 清空")
+    default void clearAll(UUID colonyId) {
+        throw new UnsupportedOperationException("WarehouseApi.clearAll not yet implemented");
+    }
+
+    /**
+     * 跨殖民地原子转账元素（A 扣除 + B 到账，失败整体回滚）。
+     *
+     * @return 全部成功 true；B 未就绪等失败 false 且 A 不动
+     */
+    @Unimplemented("重设计阶段——待接入跨殖民地原子转账")
+    default boolean transferElements(UUID fromColonyId, UUID toColonyId, Map<ElementType, Long> amounts) {
+        throw new UnsupportedOperationException("WarehouseApi.transferElements not yet implemented");
+    }
 }

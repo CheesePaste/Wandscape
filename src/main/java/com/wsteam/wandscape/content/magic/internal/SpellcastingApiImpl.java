@@ -4,7 +4,7 @@ import com.wsteam.wandscape.content.npc.component.CastStrategyComponent;
 import com.wsteam.wandscape.content.npc.component.EquippedMagicComponent;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.content.npc.internal.EntityComponentBridge;
-import com.wsteam.wandscape.api.SpellcastingApi;
+import com.wsteam.wandscape.api.MagicApi;
 import com.wsteam.wandscape.foundation.util.BalanceValues;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -14,11 +14,11 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * {@link SpellcastingApi} 实现：UUID → NPC 实体（EntityComponentBridge，未注册 ECS 的
+ * {@link MagicApi} 实现：UUID → NPC 实体（EntityComponentBridge，未注册 ECS 的
  * 敌对法师回退按 UUID 扫世界）→ 读写 {@code equippedMagic}/{@code castStrategy} 组件，
  * 优先级经 {@link CastBrain} 解析。装备载荷按类别装桶校验（每类 ≤3、去重、ALTAR/SPECIAL 排除）。
  */
-public final class SpellcastingApiImpl implements SpellcastingApi {
+public final class SpellcastingApiImpl implements MagicApi {
 
     @Override
     public List<String> getKnownSpells(UUID npcId) {

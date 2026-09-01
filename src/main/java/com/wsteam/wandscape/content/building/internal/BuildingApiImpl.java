@@ -82,22 +82,22 @@ public class BuildingApiImpl implements BuildingApi {
     // ---- Query ----
 
     @Override
-    public BuildingData getBuilding(UUID buildingId) {
+    public BuildingState getBuilding(UUID buildingId) {
         BuildingSavedData sd = getSavedData();
         return sd != null ? sd.getBuilding(buildingId) : null;
     }
 
     @Override
-    public BuildingData getBuildingAt(BlockPos pos) {
+    public BuildingState getBuildingAt(BlockPos pos) {
         BuildingSavedData sd = getSavedData();
         return sd != null ? sd.getBuildingAt(pos) : null;
     }
 
     @Override
-    public List<BuildingData> getColonyBuildings(UUID colonyId) {
+    public List<BuildingState> getColonyBuildings(UUID colonyId) {
         BuildingSavedData sd = getSavedData();
         if (sd == null) return List.of();
-        List<BuildingData> result = new ArrayList<>();
+        List<BuildingState> result = new ArrayList<>();
         for (BuildingState state : sd.getAllBuildings()) {
             if (colonyId == null || java.util.Objects.equals(colonyId, state.getColonyId())) {
                 result.add(state);
@@ -459,10 +459,6 @@ public class BuildingApiImpl implements BuildingApi {
 
     // ---- Task bridge ----
 
-    public boolean isBuildingOccupied(UUID buildingId) {
-        return currentTasks.containsKey(buildingId);
-    }
-
     public List<UUID> getBuildingsWithPendingWork(UUID colonyId) {
         BuildingSavedData sd = getSavedData();
         if (sd == null || serverLevel == null) return List.of();
@@ -497,48 +493,6 @@ public class BuildingApiImpl implements BuildingApi {
         if (cid == null || !state.hasEverCompleted()) return false;
         String groupKey = BuildingSavedData.groupKeyFor(state);
         return groupKey != null && sd.hasSharedWork(cid, groupKey);
-    }
-
-    @Nullable
-    public WorkItem dequeueWork(UUID buildingId) {
-        BuildingSavedData sd = getSavedData();
-        if (sd == null) return null;
-
-        BuildingState state = sd.getBuilding(buildingId);
-        if (state == null) return null;
-
-        // Shared queue claim: a built, operational shared building (workstation / node)
-        // pulls the front unclaimed task from its group queue. The anchor is rebound to
-        // this building so the channel progress is tracked per-station and tasks at
-        // different stations never collide on one anchor.
-        if (state.hasEverCompleted()) {
-            Deque<WorkItem> shared = sharedQueueFor(sd, state);
-            if (shared != null && !shared.isEmpty()) {
-                WorkItem item = shared.pollFirst();
-                sd.setDirty();
-                return rebindAnchor(item, state.getAnchor());
-            }
-        }
-
-        WorkItem item = state.getTaskQueue().pollFirst();
-        if (item != null) {
-            sd.setDirty();
-            // Sticky "under construction" marker: once an NPC claims a not-yet-
-            // completed building's work, it is being built and never reverts to
-            // waiting-for-materials. Completed buildings already started long ago.
-            if (!state.hasEverCompleted() && !state.isConstructionStarted()) {
-                state.setConstructionStarted(true);
-            }
-            // Demolition task has been claimed by an NPC — remove the building
-            // data NOW instead of waiting for the fragile blueprint tail
-            // (for_each → emit_event). Block destruction uses the snapshot params
-            // in the WorkItem, so it is decoupled from data cleanup. The
-            // demolish_complete event listener stays as an idempotent fallback.
-            if ("build:demolish_structure".equals(item.blueprintId())) {
-                unregisterState(state);
-            }
-        }
-        return item;
     }
 
     @Nullable

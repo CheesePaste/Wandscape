@@ -23,4 +23,12 @@ public interface TavernApi {
 
     /** 消耗一次「招募 NPC」代价并计数：首次免费；之后每种元素扣招募成本。生成成功后调用，返回是否扣费成功。 */
     boolean chargeRecruit(UUID colonyId);
+
+    // ── 未实现（重设计阶段声明，见 @Unimplemented）──
+
+    /** 直接向某殖民地的酒馆简历池注入一份简历（任务/奖励用，未生成实体）。 */
+    @Unimplemented("重设计阶段——待接入 TavernRecruitStorage.addResume")
+    default void addResume(UUID colonyId, MageResume resume) {
+        throw new UnsupportedOperationException("TavernApi.addResume not yet implemented");
+    }
 }

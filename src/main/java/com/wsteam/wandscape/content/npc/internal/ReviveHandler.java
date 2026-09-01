@@ -12,7 +12,7 @@ import com.wsteam.wandscape.content.task.types.ResourceStack;
 import com.wsteam.wandscape.foundation.service.ParticleService;
 import com.wsteam.wandscape.content.npc.data.DeathRecord;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
-import com.wsteam.wandscape.api.SpellcastingApi;
+import com.wsteam.wandscape.api.MagicApi;
 import com.wsteam.wandscape.content.npc.attributes.NpcAttributes;
 import com.wsteam.wandscape.content.npc.data.MageHutResident;
 import com.wsteam.wandscape.foundation.log.Log;
@@ -206,10 +206,10 @@ public final class ReviveHandler {
     }
 
     /** 把死亡快照中的已装备魔法卷轴重新挂到复活后 NPC。空负载（无卷轴 / 玩家全卸）跳过——种子默认
-     *  beam+heal 保留；非空则经 SpellcastingApi 服务端权威校验后全量替换。 */
+     *  beam+heal 保留；非空则经 MagicApi 服务端权威校验后全量替换。 */
     private static void restoreEquippedMagic(WandscapeNpc npc, DeathRecord rec) {
         if (rec.equippedMagic().isEmpty()) return;
-        SpellcastingApi casting = WandscapeApis.getSpellcastingApiSilently();
+        MagicApi casting = WandscapeApis.getMagicApiSilently();
         if (casting == null) return;
         // 预设读回自复活后 NPC（种子默认），仅重设载荷，策略预设保持不变。
         casting.setEquippedAndStrategy(npc.getUUID(), casting.getStrategyPreset(npc.getUUID()),
