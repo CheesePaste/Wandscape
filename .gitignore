@@ -59,7 +59,7 @@ run/
 repo/
 !**/src/**/repo/
 .agents
-AGENTS.md
+#AGENTS.md
 ref
 node_modules
 
