@@ -9,7 +9,7 @@ import com.wsteam.wandscape.content.building.internal.BuildingState;
 import com.wsteam.wandscape.content.task.component.ColonyMember;
 import com.wsteam.wandscape.content.task.component.TaskExecutor;
 import com.wsteam.wandscape.content.task.ecs.World;
-import com.wsteam.wandscape.content.npc.types.AttributeType;
+import com.wsteam.wandscape.content.npc.attributes.NpcAttributes.AttributeType;
 import com.wsteam.wandscape.content.task.types.ResourceStack;
 import com.wsteam.wandscape.impl.WandscapeEngine;
 import com.wsteam.wandscape.content.production.ProductionEligibility;

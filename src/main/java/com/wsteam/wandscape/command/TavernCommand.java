@@ -5,7 +5,7 @@ import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.tree.CommandNode;
-import com.wsteam.wandscape.content.npc.data.MageAttributeRoller;
+import com.wsteam.wandscape.content.npc.attributes.NpcAttributes;
 import com.wsteam.wandscape.content.npc.data.MageResume;
 import com.wsteam.wandscape.content.npc.data.RecruitmentCandidate;
 import com.wsteam.wandscape.api.WandscapeApis;
@@ -71,7 +71,7 @@ public final class TavernCommand {
         }
 
         int safeLevel = Math.clamp(level, 1, 10);
-        RecruitmentCandidate candidate = MageAttributeRoller.roll(safeLevel,
+        RecruitmentCandidate candidate = NpcAttributes.roll(safeLevel,
                 new java.util.Random(serverLevel.random.nextLong()));
         String name = TouristSpawnSystem.generateRandomTouristName(colonyId);
         int variant = serverLevel.random.nextInt(TouristEntity.WIZARD_SKIN_COUNT);

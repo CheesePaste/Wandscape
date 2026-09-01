@@ -11,7 +11,6 @@ import com.wsteam.wandscape.content.task.component.TaskExecutor;
 import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.content.npc.types.FriendlyForce;
 import com.wsteam.wandscape.content.task.types.GridPos;
-import com.wsteam.wandscape.content.npc.types.NpcAttributes;
 import com.wsteam.wandscape.content.task.types.ResourceStack;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.foundation.log.Log;
@@ -163,10 +162,9 @@ public final class EntityComponentBridge {
             }
         }
 
-        NpcAttributes attrs = NpcAttributes.defaults();
         long ecsId = CoreBootstrap.createNpc(world,
                 npc.getBlockX(), npc.getBlockY(), npc.getBlockZ(),
-                colony, attrs);
+                colony);
 
         npc.ecsEntityId = ecsId;
         npcByEcsId.put(ecsId, npc);

@@ -49,6 +49,15 @@ public final class WandscapeApis {
     public static NpcApi getNpcApiSilently() { return npcApi; }
     public static void setNpcApi(NpcApi api) { npcApi = api; }
 
+    private static NpcAttributesApi npcAttributesApi;
+    public static NpcAttributesApi getNpcAttributesApi() {
+        if (npcAttributesApi == null) throw new IllegalStateException("Module NpcSystem not loaded");
+        return npcAttributesApi;
+    }
+    @javax.annotation.Nullable
+    public static NpcAttributesApi getNpcAttributesApiSilently() { return npcAttributesApi; }
+    public static void setNpcAttributesApi(NpcAttributesApi api) { npcAttributesApi = api; }
+
     public static BuildingApi getBuildingApi() {
         if (buildingApi == null) throw new IllegalStateException("Module BuildingCore not loaded");
         return buildingApi;

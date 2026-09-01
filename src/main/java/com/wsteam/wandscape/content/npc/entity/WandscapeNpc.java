@@ -12,7 +12,7 @@ import com.wsteam.wandscape.content.task.component.ColonyMember;
 import com.wsteam.wandscape.content.task.component.NavigationState;
 import com.wsteam.wandscape.content.task.component.Position;
 import com.wsteam.wandscape.content.task.component.NpcInventory;
-import com.wsteam.wandscape.content.npc.data.MageHutAttributes;
+import com.wsteam.wandscape.content.npc.attributes.NpcAttributes;
 import com.wsteam.wandscape.foundation.util.CharacterNames;
 import com.wsteam.wandscape.foundation.util.NameStyle;
 
@@ -22,7 +22,7 @@ import com.wsteam.wandscape.compat.ironspellbooks.IronSpellsCompat;
 import com.wsteam.wandscape.content.warehouse.ColonyItemBank;
 // core.component wildcard replaced
 import com.wsteam.wandscape.content.task.ecs.World;
-import com.wsteam.wandscape.content.npc.types.AttributeType;
+import com.wsteam.wandscape.content.npc.attributes.NpcAttributes.AttributeType;
 import com.wsteam.wandscape.content.npc.types.FollowAttackDecision;
 import com.wsteam.wandscape.content.npc.types.FriendlyForce;
 import com.wsteam.wandscape.impl.WandscapeEngine;
@@ -866,7 +866,7 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
 
     private int level = 1;
 
-    /** 法师当前等级（等级加成为每级线性，见 MageHutAttributes）。 */
+    /** 法师当前等级（等级加成为每级线性，见 NpcAttributes）。 */
     public int getLevel() { return level; }
 
     /** 设置法师等级（最低 1）。 */
@@ -1018,17 +1018,17 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
      */
     public static AttributeSupplier.Builder createAttributes() {
         return Mob.createMobAttributes()
-                .add(Attributes.MAX_HEALTH, 30.0)
-                .add(Attributes.MOVEMENT_SPEED, 0.3)
+                .add(Attributes.MAX_HEALTH, NpcAttributes.defaultFor(AttributeType.MAX_HP))
+                .add(Attributes.MOVEMENT_SPEED, NpcAttributes.defaultFor(AttributeType.MOVE_SPEED))
                 .add(Attributes.ATTACK_DAMAGE, 1.0)
                 .add(Attributes.FOLLOW_RANGE, 48.0)
-                .add(Attributes.ARMOR, 6.0)
-                .add(com.wsteam.wandscape.content.npc.WandscapeAttributes.SPELL_POWER, 1.0)
-                .add(com.wsteam.wandscape.content.npc.WandscapeAttributes.WORK_SPEED, 1.0)
-                .add(com.wsteam.wandscape.content.npc.WandscapeAttributes.SPELL_SPEED, 1.0)
-                .add(com.wsteam.wandscape.content.npc.WandscapeAttributes.MAX_MANA, 200.0)
-                .add(com.wsteam.wandscape.content.npc.WandscapeAttributes.HEALTH_REGEN, 1.0)
-                .add(com.wsteam.wandscape.content.npc.WandscapeAttributes.MANA_REGEN, 1.0)
+                .add(Attributes.ARMOR, NpcAttributes.defaultFor(AttributeType.ARMOR_VALUE))
+                .add(com.wsteam.wandscape.content.npc.WandscapeAttributes.SPELL_POWER, NpcAttributes.defaultFor(AttributeType.SPELL_POWER))
+                .add(com.wsteam.wandscape.content.npc.WandscapeAttributes.WORK_SPEED, NpcAttributes.defaultFor(AttributeType.WORK_SPEED))
+                .add(com.wsteam.wandscape.content.npc.WandscapeAttributes.SPELL_SPEED, NpcAttributes.defaultFor(AttributeType.SPELL_SPEED))
+                .add(com.wsteam.wandscape.content.npc.WandscapeAttributes.MAX_MANA, NpcAttributes.defaultFor(AttributeType.MAX_MANA))
+                .add(com.wsteam.wandscape.content.npc.WandscapeAttributes.HEALTH_REGEN, NpcAttributes.defaultFor(AttributeType.HEALTH_REGEN))
+                .add(com.wsteam.wandscape.content.npc.WandscapeAttributes.MANA_REGEN, NpcAttributes.defaultFor(AttributeType.MANA_REGEN))
                 // 水中移动效率 1.0：落水/渡水时以接近陆地的速度游动。原版陆地生物默认 0，
                 // 水中速度被拖到约 0.6 格/秒，会让 NPC 在河里"卡死"并触发传送兜底。
                 .add(Attributes.WATER_MOVEMENT_EFFICIENCY, 1.0);

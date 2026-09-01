@@ -7,14 +7,14 @@ import com.wsteam.wandscape.content.building.internal.BuildingState;
 import com.wsteam.wandscape.content.task.component.ColonyMember;
 import com.wsteam.wandscape.content.task.component.NpcInventory;
 import com.wsteam.wandscape.content.task.ecs.World;
-import com.wsteam.wandscape.content.npc.types.AttributeType;
+import com.wsteam.wandscape.content.npc.attributes.NpcAttributes.AttributeType;
 import com.wsteam.wandscape.content.task.types.ResourceStack;
 import com.wsteam.wandscape.impl.WandscapeEngine;
 import com.wsteam.wandscape.foundation.service.ParticleService;
 import com.wsteam.wandscape.content.npc.data.DeathRecord;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.api.SpellcastingApi;
-import com.wsteam.wandscape.content.npc.data.MageHutAttributes;
+import com.wsteam.wandscape.content.npc.attributes.NpcAttributes;
 import com.wsteam.wandscape.content.npc.data.MageHutResident;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.api.WandscapeApis;
@@ -157,13 +157,13 @@ public final class ReviveHandler {
         npc.setCustomNameVisible(true);
         npc.setSkinVariant(rec.skinVariant());
         npc.setHatColor(rec.hatColor());
-        npc.setBaseAttributeValue(com.wsteam.wandscape.content.npc.types.AttributeType.MAX_HP, rec.maxHp());
-        npc.setBaseAttributeValue(com.wsteam.wandscape.content.npc.types.AttributeType.MOVE_SPEED, rec.moveSpeed());
-        npc.setBaseAttributeValue(com.wsteam.wandscape.content.npc.types.AttributeType.SPELL_POWER, rec.spellPower());
-        npc.setBaseAttributeValue(com.wsteam.wandscape.content.npc.types.AttributeType.WORK_SPEED, rec.workSpeed());
-        npc.setBaseAttributeValue(com.wsteam.wandscape.content.npc.types.AttributeType.SPELL_SPEED, rec.spellSpeed());
-        npc.setBaseAttributeValue(com.wsteam.wandscape.content.npc.types.AttributeType.ARMOR_VALUE, rec.armorValue());
-        npc.setBaseAttributeValue(com.wsteam.wandscape.content.npc.types.AttributeType.MAX_MANA, rec.maxMana());
+        npc.setBaseAttributeValue(com.wsteam.wandscape.content.npc.attributes.NpcAttributes.AttributeType.MAX_HP, rec.maxHp());
+        npc.setBaseAttributeValue(com.wsteam.wandscape.content.npc.attributes.NpcAttributes.AttributeType.MOVE_SPEED, rec.moveSpeed());
+        npc.setBaseAttributeValue(com.wsteam.wandscape.content.npc.attributes.NpcAttributes.AttributeType.SPELL_POWER, rec.spellPower());
+        npc.setBaseAttributeValue(com.wsteam.wandscape.content.npc.attributes.NpcAttributes.AttributeType.WORK_SPEED, rec.workSpeed());
+        npc.setBaseAttributeValue(com.wsteam.wandscape.content.npc.attributes.NpcAttributes.AttributeType.SPELL_SPEED, rec.spellSpeed());
+        npc.setBaseAttributeValue(com.wsteam.wandscape.content.npc.attributes.NpcAttributes.AttributeType.ARMOR_VALUE, rec.armorValue());
+        npc.setBaseAttributeValue(com.wsteam.wandscape.content.npc.attributes.NpcAttributes.AttributeType.MAX_MANA, rec.maxMana());
         // 虚弱复活：1 血 0 蓝，靠脱战回血（interval 回 1 HP）与魔力回复（10t 回 1% 上限）缓慢恢复
         npc.setHealth(1f);
         npc.magic.setMana(0f);
@@ -225,8 +225,8 @@ public final class ReviveHandler {
         for (BuildingState b : savedData.getAllBuildings()) {
             MageHutResident resident = savedData.getMageHutResident(b.getBuildingId());
             if (resident != null && rec.npcId().equals(resident.npcId())) {
-                for (AttributeType type : AttributeType.values()) {
-                    setFlat(npc, type, MageHutAttributes.computeEffective(type,
+                for (AttributeType type : NpcAttributes.ORDER) {
+                    setFlat(npc, type, NpcAttributes.computeEffective(type,
                             resident.base(type), resident.level(), 0f));
                 }
                 npc.setLevel(resident.level());

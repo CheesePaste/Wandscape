@@ -97,6 +97,7 @@ import com.wsteam.wandscape.content.npc.entity.EvilMage;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.content.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.content.npc.internal.NpcApiImpl;
+import com.wsteam.wandscape.content.npc.internal.NpcAttributesApiImpl;
 import com.wsteam.wandscape.content.npc.network.*;
 import com.wsteam.wandscape.content.colony.overview.network.OverviewEntityInteractPacket;
 import com.wsteam.wandscape.content.colony.overview.network.OverviewInteractPacket;
@@ -552,6 +553,7 @@ public class Wandscape {
         // Register API implementations
         WandscapeApis.setBuildingApi(buildingApi);
         WandscapeApis.setNpcApi(new NpcApiImpl());
+        WandscapeApis.setNpcAttributesApi(new NpcAttributesApiImpl());
         WandscapeApis.setScepterApi(SCEPTER_API);
         WandscapeApis.setWarehouseApi(new WarehouseManager());
         WandscapeApis.setColonyApi(ColonyApiImpl.get());

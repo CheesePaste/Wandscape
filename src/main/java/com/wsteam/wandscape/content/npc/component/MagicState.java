@@ -1,5 +1,5 @@
 package com.wsteam.wandscape.content.npc.component;
-import com.wsteam.wandscape.content.npc.types.AttributeType;
+import com.wsteam.wandscape.content.npc.attributes.NpcAttributes.AttributeType;
 
 import java.util.HashMap;
 import java.util.Map;

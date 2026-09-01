@@ -2,7 +2,7 @@ package com.wsteam.wandscape.content.npc.network;
 import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.content.task.types.EntityId;
 
-import com.wsteam.wandscape.content.npc.types.AttributeType;
+import com.wsteam.wandscape.content.npc.attributes.NpcAttributes.AttributeType;
 import com.wsteam.wandscape.content.magic.data.MagicDef;
 import com.wsteam.wandscape.content.magic.internal.SpellbookLoader;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;

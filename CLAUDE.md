@@ -47,8 +47,8 @@ impl/      @ApiStatus.Internal 装配门禁（WandscapeBootstrap = 原 EngineBoo
 **`newplan/packages.md`** —— tier0 摸底产物，29 顶层包逐一核实（职责/数据流/依赖/坑/归属/全局结论表）。**改结构前先查它**；旧 `docs/architecture.md` + `docs/modules/` + `data/` 全是过期镜像，已在待删清单。**进度唯一事实源 `newplan/status.md`，每步做完立即更新。**
 
 ### 探索已知的关键事实（别再踩）
-- **`core/types/NpcAttributes`、`magic/CastBrain` 不是死码**（前者被 CoreBootstrap/EntityComponentBridge 用；后者被 12 文件引用）——旧"0 引用"cite 已过期，**Tier 1 删除候选须避开二者**；真死码是 `core/types/EquipmentPreset`。
-- **NPC 属性全套规则必须收敛到 `npc/attributes/NpcAttributes` 一个类**。六段（上下界/默认值/种类/roll/升级/招募）现散在 5 类且**已漂移**：`MageAttributeRoller` 给 MOVE_SPEED/ARMOR_VALUE 每级加成，但 `MageHutAttributes.SPECS` 声明 `perLevel=0`。招募计算 = 基础 roll + 升级提升组合，**勿独立成类**。
+- **`magic/CastBrain` 不是死码**（12 文件引用）——旧"0 引用"cite 已过期，Tier 1 删除候选须避开；真死码是 `core/types/EquipmentPreset`。原 `core/types/NpcAttributes` record（零字段读取的 ECS 不透明载体）已随属性收敛合并删除。
+- **NPC 属性全套规则已收敛到 `content/npc/attributes/NpcAttributes` 一个类（2026-09-01 完成）**。六段（种类/上下界/默认值/roll/升级/招募）全在单类；规则表是「默认值 + 覆盖层」结构，整合包经 `WandscapeApis.getNpcAttributesApi()`（`api/NpcAttributesApi`）在 mod 初始化时覆盖。**改属性规则只碰 `NpcAttributes` 一个文件。** 属性共 9 项：7 可见（`ORDER`，可训练/可升级/有 SPECS）+ 2 隐藏（HEALTH_REGEN/MANA_REGEN，不显示、无 SPECS、base 恒 1.0，仅装备/外部修饰符改动）。MOVE_SPEED/ARMOR_VALUE 每级加成是废案（perLevel=0）；ARMOR 默认 5。招募计算 = 基础 roll + 升级提升组合，勿独立成类。
 - **点/向量自造族 5 个、保留非 vanilla**（SplineVec3/PathPoint/XZPoint/GridPos/BlockOffset）；Tier 3 若收敛，首选合并成单个 int 点类（非改 MC 类型——保"纯逻辑不 import MC"）。
 - **`shared/data/InterruptRecord` 死、`task/runtime/InterruptRecord` 活**，同名双 record 别删错。
 

@@ -3,7 +3,7 @@ import com.wsteam.wandscape.content.npc.types.NpcAttributeModifier;
 import com.wsteam.wandscape.content.task.ecs.World;
 
 import com.google.common.collect.Multimap;
-import com.wsteam.wandscape.content.npc.types.AttributeType;
+import com.wsteam.wandscape.content.npc.attributes.NpcAttributes.AttributeType;
 import com.wsteam.wandscape.content.npc.types.ModifierOperation;
 import net.minecraft.core.Holder;
 import net.minecraft.world.entity.ai.attributes.Attribute;

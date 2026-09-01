@@ -7,7 +7,7 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.content.tourist.data.BarRatio;
-import com.wsteam.wandscape.content.npc.data.MageAttributeRoller;
+import com.wsteam.wandscape.content.npc.attributes.NpcAttributes;
 import com.wsteam.wandscape.content.npc.data.RecruitmentCandidate;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.api.WandscapeApis;
@@ -270,7 +270,7 @@ public final class TouristCommand {
 
         // 2. Roll candidate stats
         int safeLevel = Math.clamp(level, 1, 10);
-        RecruitmentCandidate candidate = MageAttributeRoller.roll(safeLevel,
+        RecruitmentCandidate candidate = NpcAttributes.roll(safeLevel,
                 new java.util.Random(serverLevel.random.nextLong()));
 
         // 3. Create TouristEntity

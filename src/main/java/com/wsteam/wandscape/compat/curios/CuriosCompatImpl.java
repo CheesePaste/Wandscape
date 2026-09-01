@@ -8,7 +8,7 @@ import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.content.items.compass.CompassService;
 import com.wsteam.wandscape.compat.curios.client.NpcCuriosScreen;
 import com.wsteam.wandscape.compat.ironspellbooks.IronSpellsAttributes;
-import com.wsteam.wandscape.content.npc.types.AttributeType;
+import com.wsteam.wandscape.content.npc.attributes.NpcAttributes.AttributeType;
 import com.wsteam.wandscape.content.npc.WandscapeAttributes;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import net.minecraft.core.Holder;

@@ -1,6 +1,6 @@
 package com.wsteam.wandscape.content.task.boundary;
 import com.wsteam.wandscape.content.colony.ColonyActivation;
-import com.wsteam.wandscape.content.npc.types.AttributeType;
+import com.wsteam.wandscape.content.npc.attributes.NpcAttributes.AttributeType;
 import com.wsteam.wandscape.content.task.component.Position;
 import com.wsteam.wandscape.content.task.ecs.World;
 
@@ -55,7 +55,7 @@ public class WandscapeEntityOps implements EntityOps {
     @Override
     public float getWorkSpeed(long npcId) {
         WandscapeNpc npc = EntityComponentBridge.INSTANCE.getNpc(npcId);
-        return npc != null ? npc.getEffectiveAttribute(com.wsteam.wandscape.content.npc.types.AttributeType.WORK_SPEED) : 1f;
+        return npc != null ? npc.getEffectiveAttribute(com.wsteam.wandscape.content.npc.attributes.NpcAttributes.AttributeType.WORK_SPEED) : 1f;
     }
 
     @Override

@@ -5,10 +5,10 @@ import com.wsteam.wandscape.content.building.network.MageHutActionPacket;
 import com.wsteam.wandscape.content.building.network.MageHutDataPacket;
 import com.wsteam.wandscape.content.building.network.MageHutDataPacket.MageCandidate;
 import com.wsteam.wandscape.content.building.network.OpenWarehousePacket;
-import com.wsteam.wandscape.content.npc.types.AttributeType;
+import com.wsteam.wandscape.content.npc.attributes.NpcAttributes.AttributeType;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.content.element.data.ElementType;
-import com.wsteam.wandscape.content.npc.data.MageHutAttributes;
+import com.wsteam.wandscape.content.npc.attributes.NpcAttributes;
 import com.wsteam.wandscape.foundation.ui.I18n;
 import com.wsteam.wandscape.foundation.ui.component.MedievalButton;
 import com.wsteam.wandscape.foundation.ui.component.MedievalScreen;
@@ -55,8 +55,8 @@ public class MageHutScreen extends MedievalScreen {
     private String mageName;
     private int mageLevel;
     private int skinVariant;
-    private float[] base = new float[7];
-    private float[] equip = new float[7];
+    private float[] base = new float[NpcAttributes.ORDER.size()];
+    private float[] equip = new float[NpcAttributes.ORDER.size()];
     private List<MageCandidate> candidates = new ArrayList<>();
 
     // ── Interactive state ──
@@ -98,12 +98,12 @@ public class MageHutScreen extends MedievalScreen {
         this.mageName = packet.mageName() != null ? packet.mageName() : "";
         this.mageLevel = packet.mageLevel();
         this.skinVariant = packet.skinVariant();
-        this.base = packet.base() != null && packet.base().length >= 7 ? packet.base() : new float[7];
-        this.equip = packet.equipBonus() != null && packet.equipBonus().length >= 7 ? packet.equipBonus() : new float[7];
+        this.base = packet.base() != null && packet.base().length >= NpcAttributes.ORDER.size() ? packet.base() : new float[NpcAttributes.ORDER.size()];
+        this.equip = packet.equipBonus() != null && packet.equipBonus().length >= NpcAttributes.ORDER.size() ? packet.equipBonus() : new float[NpcAttributes.ORDER.size()];
         this.candidates = packet.candidates() != null ? packet.candidates() : List.of();
         setCreator(packet.creator());
 
-        if (selectedTrain >= MageHutAttributes.ORDER.size()) selectedTrain = 0;
+        if (selectedTrain >= NpcAttributes.ORDER.size()) selectedTrain = 0;
         if (selectedCandidate >= candidates.size()) selectedCandidate = Math.max(0, candidates.size() - 1);
         int itemH = 26 + 3;
         int maxScroll = Math.max(0, candidates.size() * itemH - (180 - 24));
@@ -179,8 +179,8 @@ public class MageHutScreen extends MedievalScreen {
         int rw = 154;
 
         // ── Card 1: Stat Training Button ──
-        AttributeType selType = MageHutAttributes.ORDER.get(selectedTrain);
-        boolean canTrain = canOperate() && MageHutAttributes.canTrain(selType, base[selType.ordinal()]);
+        AttributeType selType = NpcAttributes.ORDER.get(selectedTrain);
+        boolean canTrain = canOperate() && NpcAttributes.canTrain(selType, base[selType.ordinal()]);
         Component trainLabel = canTrain
                 ? I18n.name("gui.wandscape.mage_hut.train_btn", "强化特训")
                 : I18n.name("gui.wandscape.mage_hut.maxed_attr", "已达属性上限");
@@ -192,7 +192,7 @@ public class MageHutScreen extends MedievalScreen {
         addRenderableWidget(trainBtn);
 
         // ── Card 2: Promotion & Quick Commands ──
-        boolean canLvl = canOperate() && MageHutAttributes.canLevelUp(mageLevel, colonyLevel);
+        boolean canLvl = canOperate() && NpcAttributes.canLevelUp(mageLevel, colonyLevel);
         Component upLabel = canLvl
                 ? I18n.name("gui.wandscape.mage_hut.upgrade", "⬆ 晋升等阶 (Lv.%d)", mageLevel + 1)
                 : (mageLevel >= colonyLevel
@@ -283,10 +283,10 @@ public class MageHutScreen extends MedievalScreen {
             int lw = 196;
             int rx = lx + 4;
             int rw = lw - 8;
-            for (int i = 0; i < MageHutAttributes.ORDER.size(); i++) {
+            for (int i = 0; i < NpcAttributes.ORDER.size(); i++) {
                 int rowY = ly + 68 + i * 16;
                 if (isInRect(mouseX, mouseY, rx, rowY, rw, 15)) {
-                    renderAttributeTooltip(g, font, mouseX, mouseY, MageHutAttributes.ORDER.get(i), i);
+                    renderAttributeTooltip(g, font, mouseX, mouseY, NpcAttributes.ORDER.get(i), i);
                     break;
                 }
             }
@@ -350,8 +350,8 @@ public class MageHutScreen extends MedievalScreen {
         // 7 Attributes Rows
         int rx = lx + 4;
         int rw = lw - 8;
-        for (int i = 0; i < MageHutAttributes.ORDER.size(); i++) {
-            AttributeType type = MageHutAttributes.ORDER.get(i);
+        for (int i = 0; i < NpcAttributes.ORDER.size(); i++) {
+            AttributeType type = NpcAttributes.ORDER.get(i);
             int rowY = ly + 68 + i * 16;
             boolean isSel = (i == selectedTrain);
             boolean isHov = isInRect(mouseX, mouseY, rx, rowY, rw, 15);
@@ -386,8 +386,8 @@ public class MageHutScreen extends MedievalScreen {
             g.fill(barX + barW - 1, barY, barX + barW, barY + barH, 0xFF3D2A14);
 
             float b = base[i];
-            float lower = MageHutAttributes.lower(type);
-            float upper = MageHutAttributes.upper(type);
+            float lower = NpcAttributes.lower(type);
+            float upper = NpcAttributes.upper(type);
             float pct = (upper > lower) ? (b - lower) / (upper - lower) : 1.0f;
             pct = Math.max(0f, Math.min(1.0f, pct));
             int fillW = (int) ((barW - 2) * pct);
@@ -400,7 +400,7 @@ public class MageHutScreen extends MedievalScreen {
             g.drawString(font, fmt(b), rx + 94, rowY + 4, MedievalColors.TEXT_MUTED);
 
             // Bonus value
-            float lvl = MageHutAttributes.perLevel(type) * Math.max(0, mageLevel - 1);
+            float lvl = NpcAttributes.perLevel(type) * Math.max(0, mageLevel - 1);
             float eq = equip[i];
             if (lvl + eq > 0.001f) {
                 String bonusStr = "+" + fmt(lvl + eq);
@@ -430,15 +430,15 @@ public class MageHutScreen extends MedievalScreen {
         g.drawCenteredString(font, I18n.name("gui.wandscape.mage_hut.training_title", "属性特训"),
                 rightX + rightW / 2, rightY + 8, MedievalColors.ACCENT_GOLD);
 
-        AttributeType selType = MageHutAttributes.ORDER.get(selectedTrain);
+        AttributeType selType = NpcAttributes.ORDER.get(selectedTrain);
         float selBase = base[selType.ordinal()];
-        float selUpper = MageHutAttributes.upper(selType);
-        float selStep = MageHutAttributes.trainStep(selType);
+        float selUpper = NpcAttributes.upper(selType);
+        float selStep = NpcAttributes.trainStep(selType);
 
         String curStr = attrKeyLabel(selType) + ": " + fmt(selBase) + " / " + fmt(selUpper);
         g.drawString(font, curStr, rightX + 8, rightY + 22, MedievalColors.TEXT_WARM_WHITE);
 
-        boolean canTrain = canOperate() && MageHutAttributes.canTrain(selType, selBase);
+        boolean canTrain = canOperate() && NpcAttributes.canTrain(selType, selBase);
         if (canTrain) {
             String stepStr = I18n.name("gui.wandscape.mage_hut.train_step", "单次特训: +%s", fmt(selStep)).getString();
             g.drawString(font, stepStr, rightX + 8, rightY + 34, MedievalColors.SUCCESS_GREEN);
@@ -448,8 +448,8 @@ public class MageHutScreen extends MedievalScreen {
         }
 
         if (canTrain) {
-            List<ElementType> els = MageHutAttributes.trainElements(selType);
-            long cost = MageHutAttributes.trainCostPerElement(selType, selBase);
+            List<ElementType> els = NpcAttributes.trainElements(selType);
+            long cost = NpcAttributes.trainCostPerElement(selType, selBase);
             int cx = rightX + 8;
             for (ElementType t : els) {
                 WandscapeTheme.drawIcon(g, WandscapeTheme.elementIcon(t.getId()),
@@ -463,9 +463,9 @@ public class MageHutScreen extends MedievalScreen {
         drawMinimalBox(g, rightX + 4, rightY + 88, rightW - 8, 88, false, false);
         g.drawCenteredString(font, I18n.name("gui.wandscape.mage_hut.command_title", "晋升与指令"),
                 rightX + rightW / 2, rightY + 94, MedievalColors.ACCENT_GOLD);
-        if (MageHutAttributes.canLevelUp(mageLevel, colonyLevel)) {
+        if (NpcAttributes.canLevelUp(mageLevel, colonyLevel)) {
             String upCost = I18n.name("gui.wandscape.mage_hut.upgrade_cost", "消耗 7 系元素各 %d",
-                    MageHutAttributes.upgradeCostPerElement(mageLevel)).getString();
+                    NpcAttributes.upgradeCostPerElement(mageLevel)).getString();
             g.drawString(font, upCost, rightX + 8, rightY + 104, MedievalColors.TEXT_DIM);
         }
     }
@@ -621,12 +621,12 @@ public class MageHutScreen extends MedievalScreen {
     private void renderAttributeTooltip(GuiGraphics g, net.minecraft.client.gui.Font font,
                                         int mouseX, int mouseY, AttributeType type, int index) {
         float b = base[index];
-        float upper = MageHutAttributes.upper(type);
-        float perLvl = MageHutAttributes.perLevel(type);
+        float upper = NpcAttributes.upper(type);
+        float perLvl = NpcAttributes.perLevel(type);
         float lvl = perLvl * Math.max(0, mageLevel - 1);
         float eq = equip[index];
         float eff = b + lvl + eq;
-        float step = MageHutAttributes.trainStep(type);
+        float step = NpcAttributes.trainStep(type);
 
         List<Component> tooltip = new ArrayList<>();
         tooltip.add(Component.literal(attrKeyLabel(type) + " " + I18n.name("gui.wandscape.mage_hut.dossier_title", "属性详情").getString())
@@ -639,7 +639,7 @@ public class MageHutScreen extends MedievalScreen {
         tooltip.add(Component.literal("──────────────────────").withStyle(ChatFormatting.DARK_GRAY));
         tooltip.add(Component.literal(String.format("综合生效: %s", fmt(eff))).withStyle(ChatFormatting.YELLOW, ChatFormatting.BOLD));
 
-        if (canOperate() && MageHutAttributes.canTrain(type, b)) {
+        if (canOperate() && NpcAttributes.canTrain(type, b)) {
             tooltip.add(Component.literal(String.format("点击该行可特训 (每次+%s)", fmt(step)))
                     .withStyle(ChatFormatting.GREEN, ChatFormatting.ITALIC));
         } else if (b >= upper - 0.001f) {
@@ -660,7 +660,7 @@ public class MageHutScreen extends MedievalScreen {
                 int lw = 196;
                 int rx = lx + 4;
                 int rw = lw - 8;
-                for (int i = 0; i < MageHutAttributes.ORDER.size(); i++) {
+                for (int i = 0; i < NpcAttributes.ORDER.size(); i++) {
                     int rowY = ly + 68 + i * 16;
                     if (isInRect(mouseX, mouseY, rx, rowY, rw, 15)) {
                         if (selectedTrain != i) {

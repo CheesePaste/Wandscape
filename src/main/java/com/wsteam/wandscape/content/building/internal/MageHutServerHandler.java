@@ -5,7 +5,7 @@ import com.wsteam.wandscape.content.building.data.BlockOffset;
 import com.wsteam.wandscape.content.building.network.MageHutActionPacket;
 import com.wsteam.wandscape.content.building.network.MageHutDataPacket;
 import com.wsteam.wandscape.content.building.network.MageHutDataPacket.MageCandidate;
-import com.wsteam.wandscape.content.npc.types.AttributeType;
+import com.wsteam.wandscape.content.npc.attributes.NpcAttributes.AttributeType;
 import com.wsteam.wandscape.impl.WandscapeEngine;
 import com.wsteam.wandscape.content.npc.NpcMenu;
 import com.wsteam.wandscape.content.npc.NpcStrategyMenu;
@@ -13,7 +13,7 @@ import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.content.npc.network.NpcDataPacket;
 import com.wsteam.wandscape.content.building.projection.BuildingRotation;
 import com.wsteam.wandscape.content.element.data.ElementType;
-import com.wsteam.wandscape.content.npc.data.MageHutAttributes;
+import com.wsteam.wandscape.content.npc.attributes.NpcAttributes;
 import com.wsteam.wandscape.content.npc.data.MageHutResident;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.foundation.networking.ScreenFeedbackPacket;
@@ -124,9 +124,9 @@ public final class MageHutServerHandler {
             return;
         }
 
-        float[] base = new float[AttributeType.values().length];
-        for (AttributeType type : MageHutAttributes.ORDER) {
-            base[type.ordinal()] = MageHutAttributes.baseFromFlat(type, flat(npc, type), npc.getLevel());
+        float[] base = new float[NpcAttributes.ORDER.size()];
+        for (AttributeType type : NpcAttributes.ORDER) {
+            base[type.ordinal()] = NpcAttributes.baseFromFlat(type, flat(npc, type), npc.getLevel());
         }
         MageHutResident resident = new MageHutResident(npc.getUUID(), colonyId,
                 npc.getNpcName(), npc.getLevel(), base);
@@ -152,13 +152,13 @@ public final class MageHutServerHandler {
 
         int colonyLevel = WandscapeEngine.getColonyLevelManager() != null
                 ? WandscapeEngine.getColonyLevelManager().getLevel(colonyId) : 1;
-        if (!MageHutAttributes.canLevelUp(resident.level(), colonyLevel)) {
+        if (!NpcAttributes.canLevelUp(resident.level(), colonyLevel)) {
             ScreenFeedbackPacket.send(sp, I18n.name("message.wandscape.mage_hut.max_level",
                     "[Wandscape] The mage is already at the colony level (%d).", colonyLevel), true);
             return;
         }
-        long cost = MageHutAttributes.upgradeCostPerElement(resident.level());
-        if (!chargeElements(sp, level, colonyId, MageHutAttributes.upgradeElements(), cost)) return;
+        long cost = NpcAttributes.upgradeCostPerElement(resident.level());
+        if (!chargeElements(sp, level, colonyId, NpcAttributes.upgradeElements(), cost)) return;
 
         MageHutResident next = resident.withLevel(resident.level() + 1);
         data.setMageHutResident(buildingId, next);
@@ -179,16 +179,16 @@ public final class MageHutServerHandler {
         WandscapeNpc npc = requireAlive(sp, level, resident);
         if (npc == null) return;
 
-        if (!MageHutAttributes.canTrain(type, resident.base(type))) {
+        if (!NpcAttributes.canTrain(type, resident.base(type))) {
             ScreenFeedbackPacket.send(sp, I18n.name("message.wandscape.mage_hut.max_base",
                     "[Wandscape] %s is already at its base cap.", type.name()), true);
             return;
         }
-        long cost = MageHutAttributes.trainCostPerElement(type, resident.base(type));
-        if (!chargeElements(sp, level, colonyId, MageHutAttributes.trainElements(type), cost)) return;
+        long cost = NpcAttributes.trainCostPerElement(type, resident.base(type));
+        if (!chargeElements(sp, level, colonyId, NpcAttributes.trainElements(type), cost)) return;
 
         MageHutResident next = resident.withBase(type,
-                MageHutAttributes.trainedValue(type, resident.base(type)));
+                NpcAttributes.trainedValue(type, resident.base(type)));
         data.setMageHutResident(buildingId, next);
         applyResidentAttributes(npc, next);
 
@@ -305,8 +305,8 @@ public final class MageHutServerHandler {
 
     /** Recompute the mage's base attributes from the resident base+level. */
     private static void applyResidentAttributes(WandscapeNpc npc, MageHutResident resident) {
-        for (AttributeType type : MageHutAttributes.ORDER) {
-            setFlat(npc, type, MageHutAttributes.computeEffective(type,
+        for (AttributeType type : NpcAttributes.ORDER) {
+            setFlat(npc, type, NpcAttributes.computeEffective(type,
                     resident.base(type), resident.level(), 0f));
         }
         npc.setLevel(resident.level());
@@ -338,19 +338,19 @@ public final class MageHutServerHandler {
         if (resident == null) {
             List<MageCandidate> candidates = collectCandidates(level, colonyId);
             return new MageHutDataPacket(state.getAnchor(), colonyId, creator, colonyLevel,
-                    false, false, false, null, "", 1, -1, new float[MageHutAttributes.ORDER.size()],
-                    new float[MageHutAttributes.ORDER.size()], candidates);
+                    false, false, false, null, "", 1, -1, new float[NpcAttributes.ORDER.size()],
+                    new float[NpcAttributes.ORDER.size()], candidates);
         }
 
         WandscapeNpc npc = aliveNpc(level, resident);
         boolean alive = npc != null;
         float[] base = resident.base();
-        float[] equip = new float[AttributeType.values().length];
+        float[] equip = new float[NpcAttributes.ORDER.size()];
         if (alive) {
-            for (AttributeType type : MageHutAttributes.ORDER) {
+            for (AttributeType type : NpcAttributes.ORDER) {
                 float effective = npc.getEffectiveAttribute(type);
                 equip[type.ordinal()] = effective
-                        - MageHutAttributes.computeEffective(type, base[type.ordinal()],
+                        - NpcAttributes.computeEffective(type, base[type.ordinal()],
                                 resident.level(), 0f);
             }
         }

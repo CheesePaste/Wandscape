@@ -1,6 +1,7 @@
 package com.wsteam.wandscape.content.npc.data;
 
 import com.google.gson.annotations.SerializedName;
+import com.wsteam.wandscape.content.npc.attributes.NpcAttributes;
 /**
  * A mage tourist whose three bars were full and who left their resume at the tavern.
  * Stored in {@code TavernRecruitStorage} (SavedData), max 5 per colony.
@@ -21,13 +22,13 @@ public record MageResume(
 ) {
     public MageResume {
         if (level < 1) level = 1;
-        if (maxHp < 1f) maxHp = 30f;
-        if (moveSpeed < 0.1f) moveSpeed = 0.3f;
-        if (spellPower < 1f) spellPower = 1f;
-        if (workSpeed < 1f) workSpeed = 1f;
-        if (spellSpeed < 1f) spellSpeed = 1f;
-        if (armorValue < 0f) armorValue = 0f;
-        if (maxMana < 1f) maxMana = 200f;
+        if (maxHp < 1f) maxHp = NpcAttributes.defaultFor(NpcAttributes.AttributeType.MAX_HP);
+        if (moveSpeed < 0.1f) moveSpeed = NpcAttributes.defaultFor(NpcAttributes.AttributeType.MOVE_SPEED);
+        if (spellPower < 1f) spellPower = NpcAttributes.defaultFor(NpcAttributes.AttributeType.SPELL_POWER);
+        if (workSpeed < 1f) workSpeed = NpcAttributes.defaultFor(NpcAttributes.AttributeType.WORK_SPEED);
+        if (spellSpeed < 1f) spellSpeed = NpcAttributes.defaultFor(NpcAttributes.AttributeType.SPELL_SPEED);
+        if (armorValue < 0f) armorValue = NpcAttributes.defaultFor(NpcAttributes.AttributeType.ARMOR_VALUE);
+        if (maxMana < 1f) maxMana = NpcAttributes.defaultFor(NpcAttributes.AttributeType.MAX_MANA);
         if (skinVariant < 0) skinVariant = 0;
     }
 

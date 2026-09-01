@@ -8,11 +8,11 @@ import com.wsteam.wandscape.content.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.content.building.internal.BuildingState;
 import com.wsteam.wandscape.content.task.component.ColonyMember;
 import com.wsteam.wandscape.content.task.ecs.World;
-import com.wsteam.wandscape.content.npc.types.AttributeType;
+import com.wsteam.wandscape.content.npc.attributes.NpcAttributes.AttributeType;
 import com.wsteam.wandscape.impl.WandscapeEngine;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.content.npc.internal.EntityComponentBridge;
-import com.wsteam.wandscape.content.npc.data.MageAttributeRoller;
+import com.wsteam.wandscape.content.npc.attributes.NpcAttributes;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.foundation.networking.ScreenFeedbackPacket;
 import com.wsteam.wandscape.foundation.registry.WandscapeConstants;
@@ -110,7 +110,7 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
             //    （模拟小镇等级游客投出的简历——与法师游客掷简历同一公式）
             var levelMgr = WandscapeEngine.getColonyLevelManager();
             int colonyLevel = levelMgr != null ? levelMgr.getLevel(colonyId) : 1;
-            var candidate = MageAttributeRoller.roll(colonyLevel,
+            var candidate = NpcAttributes.roll(colonyLevel,
                     new Random(level.random.nextLong()));
 
             // 4. Find spawn position near the tavern

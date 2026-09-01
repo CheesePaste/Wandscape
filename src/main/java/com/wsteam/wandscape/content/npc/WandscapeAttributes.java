@@ -2,7 +2,7 @@ package com.wsteam.wandscape.content.npc;
 import com.wsteam.wandscape.content.task.ecs.World;
 
 import com.wsteam.wandscape.Wandscape;
-import com.wsteam.wandscape.content.npc.types.AttributeType;
+import com.wsteam.wandscape.content.npc.attributes.NpcAttributes.AttributeType;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.entity.ai.attributes.Attribute;
