@@ -29,6 +29,7 @@ import com.wsteam.wandscape.content.building.data.BuildingData;
 import com.wsteam.wandscape.content.element.data.ElementType;
 import com.wsteam.wandscape.foundation.util.ItemKey;
 import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.log.LogCategory;
 import com.wsteam.wandscape.api.WandscapeApis;
 import com.wsteam.wandscape.content.task.engine.pool.GlobalTask;
 import com.wsteam.wandscape.content.task.runtime.TaskState;
@@ -397,7 +398,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
 
         spawnCompletionParticles(npcId);
 
-        Log.info(TAG, "block_interact gather complete: {} x{} → colony {} warehouse ({} total)",
+        Log.debug(LogCategory.TASK, "interact", "block_interact gather complete: {} x{} → colony {} warehouse ({} total)",
                 element, amount, colonyId.toString().substring(0, 8), bank.countElement(colonyId, elem));
     }
 
@@ -407,13 +408,13 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         String itemId = params.get("item_id");
         int count = parseCount(params);
         if (itemId == null || count <= 0) {
-            Log.warn(TAG, "decompose: invalid params item_id={} count={}", itemId, count);
+            Log.warn(LogCategory.PRODUCTION, "decompose", "decompose: invalid params item_id={} count={}", itemId, count);
             return;
         }
 
         ElementMappingLoader mappings = elementMappingLoader;
         if (mappings == null) {
-            Log.warn(TAG, "decompose: ElementMappingLoader not set");
+            Log.warn(LogCategory.PRODUCTION, "decompose", "decompose: ElementMappingLoader not set");
             return;
         }
 
@@ -428,7 +429,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
 
         long available = bank.count(colonyId, key);
         if (available <= 0) {
-            Log.info(TAG, "decompose: no items available in warehouse for item={}", itemId);
+            Log.debug(LogCategory.PRODUCTION, "decompose", "decompose: no items available in warehouse for item={}", itemId);
             return;
         }
 
@@ -469,7 +470,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
             long total = (long) ((entry.getValue() * actualCount) / divisor);
             if (total <= 0) continue;
             resources.addResource(new ResourceId(entry.getKey().name().toLowerCase()), (int) total);
-            Log.info(TAG, "decompose: {} x{} → {} x{} (1/{} of value)", itemId, actualCount,
+            Log.debug(LogCategory.PRODUCTION, "decompose", "decompose: {} x{} → {} x{} (1/{} of value)", itemId, actualCount,
                     entry.getKey().name().toLowerCase(), total, divisor);
         }
 
@@ -530,7 +531,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         // ── Transport visualization: crafted item flies NPC → warehouse ──
         launchItemTransport(outputKey, count, world, npcId);
 
-        Log.info(TAG, "synthesize: {} x{} → warehouse", recipe.outputItem(), count);
+        Log.debug(LogCategory.PRODUCTION, "synthesize", "synthesize: {} x{} → warehouse", recipe.outputItem(), count);
         spawnCompletionParticles(npcId);
     }
 
@@ -600,7 +601,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         // ── Transport visualization: crafted item flies NPC → warehouse ──
         launchItemTransport(outputKey, count, world, npcId);
 
-        Log.info(TAG, "{}: {} x{} → warehouse", action, recipe.outputItem(), count);
+        Log.debug(LogCategory.PRODUCTION, "craft", "{}: {} x{} → warehouse", action, recipe.outputItem(), count);
         spawnCompletionParticles(npcId);
     }
 

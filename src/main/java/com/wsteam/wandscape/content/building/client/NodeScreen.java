@@ -5,6 +5,7 @@ import com.wsteam.wandscape.content.building.network.RequestGatherTaskPacket;
 import com.wsteam.wandscape.content.building.network.TaskQueueDataPacket;
 import com.wsteam.wandscape.content.building.network.TaskQueueModifyPacket;
 import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.log.LogCategory;
 import com.wsteam.wandscape.foundation.ui.component.MedievalButton;
 import com.wsteam.wandscape.foundation.ui.component.MedievalScreen;
 import com.wsteam.wandscape.foundation.ui.component.Slider;
@@ -187,7 +188,7 @@ public class NodeScreen extends MedievalScreen {
     private void onSubmit() {
         int harvests = slider != null ? slider.getValue() : 1;
         if (nodePos == null || nodePos.equals(BlockPos.ZERO)) return;
-        Log.info(TAG, "[Node] publish gather x{} at {}", harvests, nodePos);
+        Log.debug(LogCategory.BUILDING, "ui", "publish gather x{} at {}", harvests, nodePos);
         PacketDistributor.sendToServer(new RequestGatherTaskPacket(nodePos, harvests));
         requestQueueRefresh();
     }
@@ -196,7 +197,7 @@ public class NodeScreen extends MedievalScreen {
 
     private void onQueueDelete(int index) {
         if (nodePos == null || nodePos.equals(BlockPos.ZERO)) return;
-        Log.info(TAG, "[Node] queue delete index={} pos={}", index, nodePos);
+        Log.debug(LogCategory.BUILDING, "ui", "queue delete index={} pos={}", index, nodePos);
         PacketDistributor.sendToServer(new TaskQueueModifyPacket(nodePos, "delete", index));
     }
 

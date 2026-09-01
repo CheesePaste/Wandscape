@@ -16,6 +16,7 @@ import com.wsteam.wandscape.content.task.types.GridPos;
 import com.wsteam.wandscape.content.task.types.ResourceId;
 import com.wsteam.wandscape.content.task.types.ResourceStack;
 import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.log.LogCategory;
 import com.wsteam.wandscape.content.task.engine.dsl.CompiledBlueprint;
 import com.wsteam.wandscape.content.task.engine.dsl.TaskCompiler;
 import com.wsteam.wandscape.content.task.engine.dsl.TriggerDeclaration;
@@ -245,7 +246,7 @@ public class GlobalTaskPool {
             }
         }
 
-        Log.info(TAG, "assignLight #%d '%s' → NPC %d (triggers=%d)",
+        Log.debug(LogCategory.TASK, "pool", "assignLight #%d '%s' → NPC %d (triggers=%d)",
                 taskId, task.sequence.label(), npcId, task.triggers.size());
     }
 
@@ -278,7 +279,7 @@ public class GlobalTaskPool {
 
         eventBus.emit(new TaskCompleted(taskId, npcId));
         notifyChanged();
-        Log.info(TAG, "complete #%d '%s' by NPC %d", taskId, task.sequence.label(), npcId);
+        Log.debug(LogCategory.TASK, "pool", "complete #%d '%s' by NPC %d", taskId, task.sequence.label(), npcId);
     }
 
     /** Called when an op returns WAITING due to resource shortage. */
@@ -302,7 +303,7 @@ public class GlobalTaskPool {
         }
 
         notifyChanged();
-        Log.info(TAG, "awaitingResources #%d need %s (step=%d)", taskId, needed, task.stepIndex);
+        Log.debug(LogCategory.TASK, "pool", "awaitingResources #%d need %s (step=%d)", taskId, needed, task.stepIndex);
     }
 
     /**
@@ -321,7 +322,7 @@ public class GlobalTaskPool {
         transitionToPendingAssign(task);
 
         notifyChanged();
-        Log.info(TAG, "reassign #%d '%s' — NPC %d released, step=%d re-queued",
+        Log.debug(LogCategory.TASK, "pool", "reassign #%d '%s' — NPC %d released, step=%d re-queued",
                 taskId, task.sequence.label(), npcId, task.stepIndex);
     }
 
@@ -361,7 +362,7 @@ public class GlobalTaskPool {
         task.subscriptions.clear();
 
         notifyChanged();
-        Log.info(TAG, "cancel #%d '%s' — task removed (npc=%d)", taskId, task.sequence.label(), npcId);
+        Log.debug(LogCategory.TASK, "pool", "cancel #%d '%s' — task removed (npc=%d)", taskId, task.sequence.label(), npcId);
         return npcId;
     }
 
@@ -377,7 +378,7 @@ public class GlobalTaskPool {
             task.priority = newPriority;
         }
         notifyChanged();
-        Log.info(TAG, "updatePriority #%d '%s' → %d", taskId, task.sequence.label(), newPriority);
+        Log.debug(LogCategory.TASK, "pool", "updatePriority #%d '%s' → %d", taskId, task.sequence.label(), newPriority);
         return true;
     }
 
@@ -419,7 +420,7 @@ public class GlobalTaskPool {
 
         long newTaskId = addTask(new TaskRequest(resolvedBpId, taskParams, trigger.priority(),
                 colonyIdFrom(event.params())));
-        Log.info(TAG, "trigger %s → task #%d blueprint=%s priority=%d",
+        Log.debug(LogCategory.TASK, "pool", "trigger %s → task #%d blueprint=%s priority=%d",
                 trigger.eventName(), newTaskId, resolvedBpId, trigger.priority());
     }
 
@@ -532,7 +533,7 @@ public class GlobalTaskPool {
                 awakened++;
             }
         }
-        Log.info(TAG, "onResourceAdded(%s +%d) waiting=%d relevant=%d awakened=%d",
+        Log.debug(LogCategory.TASK, "pool", "onResourceAdded(%s +%d) waiting=%d relevant=%d awakened=%d",
                 resource, amount, totalWaiting, relevant, awakened);
         if (awakened > 0) {
             notifyChanged();
@@ -545,7 +546,7 @@ public class GlobalTaskPool {
         if (task == null || task.state != TaskState.AWAITING_RESOURCES) return;
         transitionToPendingAssign(task);
         notifyChanged();
-        Log.info(TAG, "wakeup #%d '%s' → PENDING_ASSIGN", taskId, task.sequence.label());
+        Log.debug(LogCategory.TASK, "pool", "wakeup #%d '%s' → PENDING_ASSIGN", taskId, task.sequence.label());
     }
 
     // ── Persistence ──
@@ -584,7 +585,7 @@ public class GlobalTaskPool {
         } else {
             assignableSet.remove(task);
         }
-        Log.info(TAG, "loadTask #%d '%s' state=%s step=%d/%d",
+        Log.debug(LogCategory.TASK, "pool", "loadTask #%d '%s' state=%s step=%d/%d",
                 originalId, task.sequence.label(), task.state,
                 task.stepIndex, task.sequence.size());
     }

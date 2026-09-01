@@ -5,6 +5,7 @@ import com.wsteam.wandscape.content.building.data.BuildingConfig;
 import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.content.building.render.BuildingGhostRenderer;
 import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.log.LogCategory;
 import com.wsteam.wandscape.content.building.network.BuildingAreaSyncPacket;
 import com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState;
 import net.minecraft.client.Minecraft;
@@ -36,7 +37,7 @@ public final class ConstructionGhostRenderer {
         if (registered) return;
         registered = true;
         NeoForge.EVENT_BUS.addListener(RenderLevelStageEvent.class, ConstructionGhostRenderer::onRenderLevelStage);
-        Log.info(TAG, "[Renderer] Registered");
+        Log.debug(LogCategory.BUILDING, "render", "ConstructionGhostRenderer Registered");
     }
 
     static void onRenderLevelStage(RenderLevelStageEvent event) {

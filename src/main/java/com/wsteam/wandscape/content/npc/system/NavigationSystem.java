@@ -17,6 +17,7 @@ import com.wsteam.wandscape.content.magic.internal.SpellbookLoader;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.content.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.log.LogCategory;
 import net.minecraft.core.BlockPos;
 
 import java.util.List;
@@ -97,7 +98,7 @@ public class NavigationSystem implements EcsSystem {
                 if (nav.mode == NavigationState.Mode.PATHFINDING) {
                     boolean ok = startPathfinding(nav, npc, npcId);
                     if (!ok) {
-                        Log.info(TAG, "[NavSys] NPC {} — pathfinding init failed, switching to teleport", npcId);
+                        Log.debug(LogCategory.NPC, "nav", "NPC {} — pathfinding init failed, switching to teleport", npcId);
                         switchToRitualTeleport(nav, npcId, world);
                     }
                     continue;
@@ -125,14 +126,14 @@ public class NavigationSystem implements EcsSystem {
                 BlockPos to = resolveWalkTarget(npc, nav.target);
                 boolean ok = npc.getNavigation().moveTo(
                         to.getX() + 0.5, to.getY() + 1, to.getZ() + 0.5, NAV_SPEED);
-                Log.info(TAG, "[NavSys] NPC {} re-path #{}, elapsed={} ok={}",
+                Log.debug(LogCategory.NPC, "nav", "NPC {} re-path #{}, elapsed={} ok={}",
                         npcId, nav.repathCount, elapsed, ok);
                 if (!ok) {
-                    Log.info(TAG, "[NavSys] NPC {} — re-path failed, switching to teleport", npcId);
+                    Log.debug(LogCategory.NPC, "nav", "NPC {} — re-path failed, switching to teleport", npcId);
                     switchToRitualTeleport(nav, npcId, world);
                 }
             } else {
-                Log.info(TAG, "[NavSys] NPC {} — re-paths exhausted, switching to teleport", npcId);
+                Log.debug(LogCategory.NPC, "nav", "NPC {} — re-paths exhausted, switching to teleport", npcId);
                 switchToRitualTeleport(nav, npcId, world);
             }
             return;
@@ -142,7 +143,7 @@ public class NavigationSystem implements EcsSystem {
         // 仍明显慢于陆地，固定超时会把正在游过河/湖的 NPC 提前判死并触发传送。水中改靠下方
         // 卡死进度检测（STUCK_* 三连）兜底——真正卡死（无水平推进）照样会被传送，慢但前进的不受影响。
         if (elapsed > PATHFIND_TIMEOUT && !npc.isInWater()) {
-            Log.info(TAG, "[NavSys] NPC {} — timeout {} ticks, switching to teleport", npcId, elapsed);
+            Log.debug(LogCategory.NPC, "nav", "NPC {} — timeout {} ticks, switching to teleport", npcId, elapsed);
             switchToRitualTeleport(nav, npcId, world);
             return;
         }
@@ -153,10 +154,10 @@ public class NavigationSystem implements EcsSystem {
                     + Math.abs(npc.getZ() - nav.lastCheckZ);
             if (progress < Config.STUCK_MIN_MOVE_DISTANCE.get()) {
                 nav.stuckChecks++;
-                Log.info(TAG, "[NavSys] NPC {} — stuck check #{}, progress={}",
+                Log.debug(LogCategory.NPC, "nav", "NPC {} — stuck check #{}, progress={}",
                         npcId, nav.stuckChecks, String.format("%.2f", progress));
                 if (nav.stuckChecks >= Config.STUCK_MAX_RETRIES.get()) {
-                    Log.info(TAG, "[NavSys] NPC {} — stuck, switching to teleport", npcId);
+                    Log.debug(LogCategory.NPC, "nav", "NPC {} — stuck, switching to teleport", npcId);
                     switchToRitualTeleport(nav, npcId, world);
                     return;
                 }
@@ -198,7 +199,7 @@ public class NavigationSystem implements EcsSystem {
         if (!ok) {
             // 诊断：moveTo 返回 false（createPath 未找到路径）。打失败瞬间状态定位根因。
             var navPath = npc.getNavigation().getPath();
-            Log.info(TAG, "[NavSys] NPC {} moveTo FAIL dest=({},{},{}) from=({},{},{}) "
+            Log.debug(LogCategory.NPC, "nav", "NPC {} moveTo FAIL dest=({},{},{}) from=({},{},{}) "
                             + "onGround={} y={} stepH={} loaded={} pathNodes={}",
                     npcId, to.getX(), to.getY(), to.getZ(),
                     from.getX(), from.getY(), from.getZ(),
@@ -251,7 +252,7 @@ public class NavigationSystem implements EcsSystem {
         int tpMana = tp != null ? tp.manaCost() : TELEPORT_MANA_COST;
         if (npc != null && !npc.tryCastSpell("teleport", tpCd, tpMana,
                 WandscapeRitualOps.channelTicks(RitualId.SELF_TELEPORT))) {
-            Log.info(TAG, "[NavSys] NPC {} — teleport gated (lock/CD/mana), walking instead", npcId);
+            Log.debug(LogCategory.NPC, "nav", "NPC {} — teleport gated (lock/CD/mana), walking instead", npcId);
             // 门控未通过（CD/锁/蓝）：真正开始走路，而不是站桩等 CD。startTick 保持非 0，
             // 避免下一 tick init 块再次进传送分支形成每 tick 空转（旧行为 startTick=0 → 每 tick
             // 重试门控 + 该走路时站着，直到 CD 结束才一次性传送）。中途 CD 就绪由
@@ -296,7 +297,7 @@ public class NavigationSystem implements EcsSystem {
             nav.mode = NavigationState.Mode.TELEPORT_RITUAL;
             nav.stuckChecks = 0;
             nav.repathCount = 0;
-            Log.info(TAG, "[NavSys] NPC {} — self_teleport ritual fired → ({},{},{})",
+            Log.debug(LogCategory.NPC, "nav", "NPC {} — self_teleport ritual fired → ({},{},{})",
                     npcId, target.x(), target.y(), target.z());
         } else {
             Log.warn(TAG, "[NavSys] NPC {} — cannot teleport: ritualOps={} target={}",

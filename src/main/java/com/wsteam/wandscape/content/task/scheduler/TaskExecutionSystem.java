@@ -22,6 +22,7 @@ import com.wsteam.wandscape.content.task.op.executor.OpExecutor;
 import com.wsteam.wandscape.content.task.op.executor.OpExecutorRegistry;
 import com.wsteam.wandscape.content.task.op.executor.ResourceShortageException;
 import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.log.LogCategory;
 import com.wsteam.wandscape.content.task.engine.pool.GlobalTask;
 import com.wsteam.wandscape.content.task.engine.pool.GlobalTaskPool;
 import com.wsteam.wandscape.content.task.runtime.ExecutorState;
@@ -111,7 +112,7 @@ public class TaskExecutionSystem implements EcsSystem {
                 if (world.movementOps != null) {
                     world.movementOps.cancelNavigation(npcId);
                 }
-                Log.info(TAG, "NPC %d — unregistered colony (placeholder/stale): released global task", npcId);
+                Log.debug(LogCategory.TASK, "exec", "NPC %d — unregistered colony (placeholder/stale): released global task", npcId);
                 continue;
             }
 
@@ -157,7 +158,7 @@ public class TaskExecutionSystem implements EcsSystem {
             }
             CompletableFuture<Void> resolvedFuture = exec.pendingFuture;
             boolean wasNav = exec.pendingFutureIsNav;
-            Log.info(TAG, "NPC %d — future resolved (wasNav=%s)", npcId, wasNav);
+            Log.debug(LogCategory.TASK, "exec", "NPC %d — future resolved (wasNav=%s)", npcId, wasNav);
             exec.pendingFuture = null;
             exec.pendingFutureIsNav = false;
 
@@ -167,7 +168,7 @@ public class TaskExecutionSystem implements EcsSystem {
                     resolvedFuture.get();
                 } catch (Exception e) {
                     cause = e.getCause() != null ? e.getCause() : e;
-                    Log.warn(TAG, "NPC %d — async op %s failed: %s",
+                    Log.warn(LogCategory.TASK, "exec", "NPC %d — async op %s failed: %s",
                             npcId, pkg != null ? pkg.source() : "unknown",
                             cause.getMessage());
                 }
@@ -192,7 +193,7 @@ public class TaskExecutionSystem implements EcsSystem {
                 syncStepToPool(exec, queue);
                 exec.lastWorkTick = worldTick(world);
             } else {
-                Log.info(TAG, "NPC %d — nav resolved, continuing to execute op", npcId);
+                Log.debug(LogCategory.TASK, "exec", "NPC %d — nav resolved, continuing to execute op", npcId);
                 navJustResolved = true;
             }
             if (queue.isCurrentPackageDone()) {
@@ -389,7 +390,7 @@ public class TaskExecutionSystem implements EcsSystem {
         if (pkg == null) return;
 
         String source = pkg.source();
-        Log.info(TAG, "NPC %d — finish pkg source=%s state=%s pendingFuture=%s nav=%s globalTaskId=%s",
+        Log.debug(LogCategory.TASK, "exec", "NPC %d — finish pkg source=%s state=%s pendingFuture=%s nav=%s globalTaskId=%s",
                 npcId, source, exec.state,
                 exec.pendingFuture != null && !exec.pendingFuture.isDone(),
                 exec.pendingFutureIsNav,
@@ -398,7 +399,7 @@ public class TaskExecutionSystem implements EcsSystem {
         if (source.startsWith("global:") && exec.globalTaskId != null) {
             syncStepToPool(exec, queue);
             taskPool.completeTask(exec.globalTaskId, npcId);
-            Log.info(TAG, "NPC %d — completed global task #%d", npcId, exec.globalTaskId);
+            Log.debug(LogCategory.TASK, "exec", "NPC %d — completed global task #%d", npcId, exec.globalTaskId);
 
 
             exec.releaseGlobalTask();
@@ -491,7 +492,7 @@ public class TaskExecutionSystem implements EcsSystem {
                     if (count > 0) {
                         inv.remove(item.resource(), count);
                         colony.addResource(item.resource(), count);
-                        Log.info(TAG, "NPC %d — returned %d x %s to warehouse on release",
+                        Log.debug(LogCategory.TASK, "exec", "NPC %d — returned %d x %s to warehouse on release",
                                 npcId, count, item.resource().id());
                     }
                 }
@@ -547,7 +548,7 @@ public class TaskExecutionSystem implements EcsSystem {
         } else if (world.movementOps != null) {
             world.movementOps.cancelNavigation(npcId);
         }
-        Log.info(TAG, "NPC %d — follow/rest: released global tasks, kept personal packages",
+        Log.debug(LogCategory.TASK, "exec", "NPC %d — follow/rest: released global tasks, kept personal packages",
                 npcId);
     }
 
@@ -562,7 +563,7 @@ public class TaskExecutionSystem implements EcsSystem {
         if (world.movementOps != null) {
             world.movementOps.cancelNavigation(npcId);
         }
-        Log.info(TAG, "NPC %d — phantom (MC entity gone): released global task", npcId);
+        Log.debug(LogCategory.TASK, "exec", "NPC %d — phantom (MC entity gone): released global task", npcId);
     }
 
     /** Bind a global task to the executor when a global package starts. */

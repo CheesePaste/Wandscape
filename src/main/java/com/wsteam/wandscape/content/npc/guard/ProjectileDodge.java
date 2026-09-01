@@ -6,6 +6,7 @@ import com.wsteam.wandscape.content.npc.guard.executor.GuardCombat;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.content.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.log.LogCategory;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.monster.Enemy;
@@ -73,7 +74,7 @@ public final class ProjectileDodge {
 
             GuardCombat.navigateDodge(level, npc, world, npcId, threat);
             lastDodgeTick.put(npcId, level.getGameTime());
-            Log.info(TAG, "NPC {} — dodge projectile {} ({} blocks away)",
+            Log.debug(LogCategory.NPC, "guard", "NPC {} — dodge projectile {} ({} blocks away)",
                     npcId, threat.getType().getDescriptionId(), (int) Math.sqrt(npc.distanceToSqr(threat)));
         }
     }

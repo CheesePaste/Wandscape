@@ -12,6 +12,7 @@ import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.content.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.content.task.op.api.AtomicOp;
 import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.log.LogCategory;
 import com.wsteam.wandscape.content.magic.network.MagicCircleCastPacket;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
@@ -79,7 +80,7 @@ public class WandscapeRitualOps implements RitualOps {
             sendTeleportCircles(target, casterId);
         }
 
-        Log.info(TAG, "[RitualOps] NPC {} — {} channeling {} ticks at {}",
+        Log.debug(LogCategory.TASK, "ritual", "NPC {} — {} channeling {} ticks at {}",
                 casterId, ritual.id(), ticks, target);
         return future;
     }
@@ -133,7 +134,7 @@ public class WandscapeRitualOps implements RitualOps {
         pending.removeIf(p -> p.future().isDone());
 
         if (!toComplete.isEmpty()) {
-            Log.info(TAG, "[RitualOps] tickAll: {} completed, {} remaining",
+            Log.debug(LogCategory.TASK, "ritual", "tickAll: {} completed, {} remaining",
                     toComplete.size(), pending.size());
         }
     }
@@ -189,7 +190,7 @@ public class WandscapeRitualOps implements RitualOps {
                     // 末影人式传送爆点：起点（消失）+ 终点（出现）
                     spawnPortalBurst(npc.level(), fromX, fromY, fromZ);
                     spawnPortalBurst(npc.level(), npc.getX(), npc.getY(), npc.getZ());
-                    Log.info(TAG, "[RitualOps] self_teleport: NPC {} → {} (dest {},{},{})",
+                    Log.debug(LogCategory.TASK, "ritual", "self_teleport: NPC {} → {} (dest {},{},{})",
                             casterId, target, dest.x, dest.y, dest.z);
                 } else {
                     Log.warn(TAG, "[RitualOps] self_teleport: no safe landing near {} — aborting teleport to prevent suffocation/fall", target);

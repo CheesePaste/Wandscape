@@ -7,6 +7,7 @@ import com.wsteam.wandscape.foundation.registry.WandscapeSounds;
 import com.wsteam.wandscape.content.element.data.ElementType;
 import com.wsteam.wandscape.foundation.util.ItemKey;
 import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.log.LogCategory;
 import com.wsteam.wandscape.api.WandscapeApis;
 import com.wsteam.wandscape.foundation.ui.vanilla.ToggleableSlot;
 import com.wsteam.wandscape.foundation.ui.vanilla.VanillaPlayerInventory;
@@ -156,7 +157,7 @@ public class WarehouseMenu extends AbstractContainerMenu {
         var bank = ColonyItemBank.get(player.serverLevel());
         if (bank == null || !bank.consume(colonyId, key, take)) return;
         setCarried(stack);
-        Log.info(TAG, "[Warehouse] {}x {} to cursor (colony={})", take, key.itemId(),
+        Log.debug(LogCategory.WAREHOUSE, "menu", "{}x {} to cursor (colony={})", take, key.itemId(),
                 colonyId.toString().substring(0, 8));
         playSound(player);
     }
@@ -169,7 +170,7 @@ public class WarehouseMenu extends AbstractContainerMenu {
 
         long taken = api.extractItem(colonyId, key, Long.MAX_VALUE, player.getInventory());
         if (taken > 0) {
-            Log.info(TAG, "[Warehouse] {}x {} to inventory (colony={})", taken, key.itemId(),
+            Log.debug(LogCategory.WAREHOUSE, "menu", "{}x {} to inventory (colony={})", taken, key.itemId(),
                     colonyId.toString().substring(0, 8));
             playSound(player);
         }
@@ -262,7 +263,7 @@ public class WarehouseMenu extends AbstractContainerMenu {
         if (api == null) return;
 
         var rl = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(toDeposit.getItem());
-        Log.info(TAG, "[Warehouse] {}x {} deposited from cursor (colony={})",
+        Log.debug(LogCategory.WAREHOUSE, "menu", "{}x {} deposited from cursor (colony={})",
                 toDeposit.getCount(), rl != null ? rl : "?", colonyId.toString().substring(0, 8));
         api.insertItems(colonyId, List.of(toDeposit));
         recordDeposit(player);

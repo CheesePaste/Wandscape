@@ -14,6 +14,7 @@ import com.wsteam.wandscape.content.task.types.GridPos;
 import com.wsteam.wandscape.content.task.types.ResourceStack;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.log.LogCategory;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -111,7 +112,7 @@ public final class EntityComponentBridge {
         }
         for (WandscapeNpc npc : pending) {
             if (npc.isRemoved()) continue;
-            Log.info(TAG, "Deferred NPC {} now joining ECS", npc.getUUID().toString().substring(0, 8));
+            Log.debug(LogCategory.NPC, "bridge", "Deferred NPC {} now joining ECS", npc.getUUID().toString().substring(0, 8));
             onNpcJoinWorld(npc, world);
         }
     }
@@ -155,7 +156,7 @@ public final class EntityComponentBridge {
                 if (detected != null) {
                     colony = detected;
                     npc.colonyId = detected;
-                    Log.info(TAG, "NPC {} auto-assigned to colony {} (spawn-egg detection)",
+                    Log.debug(LogCategory.NPC, "bridge", "NPC {} auto-assigned to colony {} (spawn-egg detection)",
                             npc.getUUID().toString().substring(0, 8),
                             detected.toString().substring(0, 8));
                 }
@@ -170,7 +171,7 @@ public final class EntityComponentBridge {
         npcByEcsId.put(ecsId, npc);
         ecsIdByUuid.put(npc.getUUID(), ecsId);
 
-        Log.info(TAG, "NPC {} joined ECS as entity {} (colony={})",
+        Log.debug(LogCategory.NPC, "bridge", "NPC {} joined ECS as entity {} (colony={})",
                 npc.getUUID().toString().substring(0, 8), ecsId,
                 colony.toString().substring(0, 8));
 
@@ -200,7 +201,7 @@ public final class EntityComponentBridge {
         for (ResourceStack stack : items) {
             if (inv.add(stack)) added++;
         }
-        Log.info(TAG, "[Bridge] Filled NPC {} inventory with {} stacks (colony={})",
+        Log.debug(LogCategory.NPC, "bridge", "Filled NPC {} inventory with {} stacks (colony={})",
                 npc.getUUID().toString().substring(0, 8), added,
                 npc.colonyId != null ? npc.colonyId.toString().substring(0, 8) : "?");
     }
@@ -210,7 +211,7 @@ public final class EntityComponentBridge {
         npcByEcsId.clear();
         ecsIdByUuid.clear();
         deferredInventory.clear();
-        Log.info(TAG, "EntityComponentBridge cleared — {} NPCs, {} UUIDs",
+        Log.debug(LogCategory.NPC, "bridge", "EntityComponentBridge cleared — {} NPCs, {} UUIDs",
                 npcByEcsId.size(), ecsIdByUuid.size());
     }
 
@@ -227,7 +228,7 @@ public final class EntityComponentBridge {
         npcByEcsId.remove(npc.ecsEntityId);
         ecsIdByUuid.remove(npc.getUUID());
 
-        Log.info(TAG, "NPC {} left ECS (entity {})", npc.getUUID().toString().substring(0, 8), npc.ecsEntityId);
+        Log.debug(LogCategory.NPC, "bridge", "NPC {} left ECS (entity {})", npc.getUUID().toString().substring(0, 8), npc.ecsEntityId);
     }
 
     // ================================================================

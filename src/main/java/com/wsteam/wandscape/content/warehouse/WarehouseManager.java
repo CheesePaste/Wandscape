@@ -10,6 +10,7 @@ import com.wsteam.wandscape.content.element.data.ElementType;
 import com.wsteam.wandscape.foundation.util.ItemKey;
 import com.wsteam.wandscape.content.warehouse.event.ResourceInsufficientEvent;
 import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.log.LogCategory;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.MinecraftServer;
@@ -267,13 +268,13 @@ public class WarehouseManager implements WarehouseApi, ColonyResourceAccess {
         if (elem != null) {
             UUID colonyId = findStorageColony();
             bank.addElement(colonyId, elem, amount);
-            Log.info(TAG, "addResource: {} x{} → colony {} warehouse ({} total)",
+            Log.debug(LogCategory.WAREHOUSE, "storage", "addResource: {} x{} → colony {} warehouse ({} total)",
                     resource.id(), amount, colonyId, bank.countElement(colonyId, elem));
         } else {
             ItemKey key = ItemKey.of(resource.stripBlockStateSuffix().id(), null);
             UUID colonyId = findStorageColony();
             bank.add(colonyId, key, amount);
-            Log.info(TAG, "addResource: {} x{} → colony {} warehouse ({} total)",
+            Log.debug(LogCategory.WAREHOUSE, "storage", "addResource: {} x{} → colony {} warehouse ({} total)",
                     resource.id(), amount, colonyId, bank.count(colonyId, key));
         }
 

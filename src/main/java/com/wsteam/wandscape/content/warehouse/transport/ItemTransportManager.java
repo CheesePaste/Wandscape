@@ -11,6 +11,7 @@ import com.wsteam.wandscape.content.road.core.TransportRoute;
 import com.wsteam.wandscape.content.road.engine.RoadSavedData;
 import com.wsteam.wandscape.foundation.util.ItemKey;
 import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.log.LogCategory;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
@@ -120,7 +121,7 @@ public class ItemTransportManager {
             }
             t.future.cancel(false);
             active.remove(t);
-            Log.info(TAG, "[Transport] orphan recovery: {} {} (npc={})",
+            Log.debug(LogCategory.WAREHOUSE, "transport", "orphan recovery: {} {} (npc={})",
                     t.itemKey.itemId(), t.ownsItem ? "returned" : "discarded", npcId);
         }
     }

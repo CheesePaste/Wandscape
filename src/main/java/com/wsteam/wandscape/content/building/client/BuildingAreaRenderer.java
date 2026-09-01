@@ -8,6 +8,7 @@ import com.wsteam.wandscape.content.building.data.BlockOffset;
 import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.content.building.projection.BuildingRotation;
 import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.log.LogCategory;
 import com.wsteam.wandscape.content.building.network.BuildingAreaSyncPacket;
 import com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState;
 import net.minecraft.client.Minecraft;
@@ -60,7 +61,7 @@ public final class BuildingAreaRenderer {
         if (registered) return;
         registered = true;
         NeoForge.EVENT_BUS.addListener(RenderLevelStageEvent.class, BuildingAreaRenderer::onRenderLevelStage);
-        Log.info(TAG, "[Renderer] Registered");
+        Log.debug(LogCategory.BUILDING, "render", "BuildingAreaRenderer Registered");
     }
 
     static void onRenderLevelStage(RenderLevelStageEvent event) {

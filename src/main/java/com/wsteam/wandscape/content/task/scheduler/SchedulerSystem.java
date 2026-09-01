@@ -11,6 +11,7 @@ import com.wsteam.wandscape.content.task.ecs.EcsSystem;
 import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.content.task.types.GridPos;
 import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.log.LogCategory;
 import com.wsteam.wandscape.content.task.engine.pool.GlobalTask;
 import com.wsteam.wandscape.content.task.engine.pool.GlobalTaskPool;
 import com.wsteam.wandscape.content.task.runtime.ExecutorState;
@@ -162,7 +163,7 @@ public class SchedulerSystem implements EcsSystem {
                     }
                     taskPool.assignLight(task.id, bestNpc, world);
                     occupiedTargets.add(taskTarget);
-                    Log.info(TAG, "assigned #%d '%s' → NPC %d (score=%.2f dist=%.0f)",
+                    Log.debug(LogCategory.TASK, "scheduler", "assigned #%d '%s' → NPC %d (score=%.2f dist=%.0f)",
                             task.id, task.sequence.label(), bestNpc, bestScore, bestDist);
                     colonyNpcs.remove(bestNpc);
                     if (colonyNpcs.isEmpty()) break;
@@ -172,7 +173,7 @@ public class SchedulerSystem implements EcsSystem {
                 // No NPC matched — log diagnostics
                 if (!colonyNpcs.isEmpty()) {
                     ColonyMember cm = world.get(colonyNpcs.get(0), ColonyMember.class);
-                    Log.warn(TAG, "  NO_MATCH task #%d '%s' — no suitable NPC in colony=%s",
+                    Log.debug(LogCategory.TASK, "scheduler", "NO_MATCH task #%d '%s' — no suitable NPC in colony=%s",
                             task.id, task.sequence.label(),
                             cm != null ? cm.colonyId().toString().substring(0, 8) : "?");
                 }
