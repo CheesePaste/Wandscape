@@ -31,6 +31,11 @@ public class BlueprintRegistry implements TaskCompiler {
         return blueprints.containsKey(id);
     }
 
+    /** All registered blueprint ids (for command suggestions / inspection). */
+    public java.util.Set<String> ids() {
+        return blueprints.keySet();
+    }
+
     @Override
     public CompiledBlueprint compile(TaskRequest request, World world) {
         Blueprint bp = blueprints.get(request.blueprintId());

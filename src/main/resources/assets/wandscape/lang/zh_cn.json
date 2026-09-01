@@ -567,8 +567,6 @@
   "blueprint.wandscape.build:demolish_structure.desc": "移除建筑的全部图案方块并发出 demolish_complete 事件。",
   "blueprint.wandscape.build:place_structure": "建造建筑",
   "blueprint.wandscape.build:place_structure.desc": "遍历建筑图案偏移，从 block_mapping 放置每个方块。完成时发出 build_complete 事件。",
-  "blueprint.wandscape.demo:tnt_platform": "TNT 平台",
-  "blueprint.wandscape.demo:tnt_platform.desc": "建造一个由红石和拉杆连接的 3x3 TNT 平台。拉动拉杆时全部 TNT 同时引燃。",
   "blueprint.wandscape.node:gather": "节点采集",
   "blueprint.wandscape.node:gather.desc": "NPC 站在节点建筑旁引导施法。完成后元素直接注入魔法小镇仓库。引导刻数与魔力消耗可按建筑配置。",
   "blueprint.wandscape.road:build_segment": "铺设道路",

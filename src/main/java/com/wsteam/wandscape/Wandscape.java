@@ -79,7 +79,6 @@ import com.wsteam.wandscape.content.colony.ColonyLevelManager;
 import com.wsteam.wandscape.content.colony.service.ChunkLoadManager;
 import com.wsteam.wandscape.content.colony.service.ColonyMetricsService;
 import com.wsteam.wandscape.foundation.registry.WandscapeSounds;
-import com.wsteam.wandscape.content.building.source.BlueprintConfigLoader;
 import com.wsteam.wandscape.content.warehouse.transport.TransportItemEntity;
 import com.wsteam.wandscape.content.warehouse.transport.TransportStartPacket;
 import com.wsteam.wandscape.content.items.guidebook.item.GuideBookItem;
@@ -493,7 +492,6 @@ public class Wandscape {
     // ---- API instances ----
     private final BuildingApiImpl buildingApi = new BuildingApiImpl();
     private final BuildingConfigLoader configLoader = BuildingConfigLoader.getInstance();
-    public static final BlueprintConfigLoader BLUEPRINT_CONFIG_LOADER = new BlueprintConfigLoader();
     public static final RoadPresetLoader ROAD_PRESET_LOADER =
             RoadPresetLoader.getInstance();
     private final DecorationBonusSystem decorationBonusSystem;
@@ -563,9 +561,7 @@ public class Wandscape {
 
         // Register config loaders with data loader
         configLoader.registerWith(DATA_LOADER);
-        BLUEPRINT_CONFIG_LOADER.registerWith(DATA_LOADER);
         ROAD_PRESET_LOADER.registerWith(DATA_LOADER);
-        WandscapeEngine.setBlueprintConfigLoader(BLUEPRINT_CONFIG_LOADER);
 
         // Production recipe loader
         PRODUCTION_RECIPE_LOADER = new ProductionRecipeLoader(DATA_LOADER, ELEMENT_MAPPING_LOADER);

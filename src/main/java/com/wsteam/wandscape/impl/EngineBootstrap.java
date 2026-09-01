@@ -25,7 +25,6 @@ import com.wsteam.wandscape.impl.WandscapeEngine;
 // engine wildcard replaced
 import com.wsteam.wandscape.content.colony.service.AchievementService;
 import com.wsteam.wandscape.content.building.source.BuildingTaskSource;
-import com.wsteam.wandscape.content.building.source.BlueprintConfigLoader;
 import com.wsteam.wandscape.content.npc.system.NavigationSystem;
 import com.wsteam.wandscape.content.warehouse.system.ResourceSupplySystem;
 import com.wsteam.wandscape.content.warehouse.transport.ItemTransportManager;
@@ -36,7 +35,7 @@ import com.wsteam.wandscape.content.npc.guard.executor.SelfDefenseExecutor;
 import com.wsteam.wandscape.content.task.op.executor.DefaultOpExecutors;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.api.WandscapeApis;
-import com.wsteam.wandscape.content.task.engine.dsl.BlueprintInterpreter;
+import com.wsteam.wandscape.content.task.engine.dsl.BlueprintDefaults;
 import com.wsteam.wandscape.content.task.engine.dsl.BlueprintRegistry;
 import com.wsteam.wandscape.content.task.engine.pool.BuildingTaskPool;
 import com.wsteam.wandscape.content.task.scheduler.SystemBlueprintRegistry;
@@ -67,15 +66,8 @@ public final class EngineBootstrap {
         // 1. Build blueprint registry
         BlueprintRegistry blueprints = new BlueprintRegistry();
 
-        // 1a. Register DSL blueprints from JSON (BlueprintConfigLoader)
-        //     These are loaded by WandscapeDataLoader at startup / on /reload.
-        BlueprintConfigLoader bpConfigLoader = WandscapeEngine.getBlueprintConfigLoader();
-        if (bpConfigLoader != null) {
-            BlueprintInterpreter interpreter = new BlueprintInterpreter(blueprints);
-            bpConfigLoader.registerIn(blueprints, interpreter);
-            Log.info(TAG, "  registered {} DSL blueprints from JSON",
-                    bpConfigLoader.getAll().size());
-        }
+        // 1a. Register default blueprints as Java lambdas (replaces the removed JSON DSL).
+        BlueprintDefaults.register(blueprints);
 
         EventDrivenTaskSource.registerDefaultBlueprints(blueprints);
         GuardBlueprints.registerDefault(blueprints);

@@ -10,7 +10,6 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.wsteam.wandscape.impl.WandscapeEngine;
-import com.wsteam.wandscape.content.building.source.BlueprintConfigLoader;
 import com.wsteam.wandscape.content.task.engine.pool.TaskRequest;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -26,8 +25,8 @@ import java.util.Map;
  *
  * <p>Examples:
  * <pre>{@code
- * /wandscape publish demo:tnt_platform anchor=[127,-61,11]
- * /wandscape publish demo:tnt_platform anchor=[10,64,0] 20
+ * /wandscape publish magic:altar_cast anchor=[127,-61,11] magic_id=heal altar=abc123 duration=60
+ * /wandscape publish node:gather anchor=[10,64,0] element=wood amount=16 channel_ticks=1200 20
  * }</pre>
  */
 public final class PublishBlueprintCommand {
@@ -45,9 +44,9 @@ public final class PublishBlueprintCommand {
     public static java.util.concurrent.CompletableFuture<com.mojang.brigadier.suggestion.Suggestions> suggestBlueprints(
             CommandContext<CommandSourceStack> ctx,
             com.mojang.brigadier.suggestion.SuggestionsBuilder builder) {
-        BlueprintConfigLoader loader = WandscapeEngine.getBlueprintConfigLoader();
-        if (loader != null) {
-            for (String id : loader.getAll().keySet()) {
+        World world = WandscapeEngine.getWorld();
+        if (world != null && world.blueprintRegistry != null) {
+            for (String id : world.blueprintRegistry.ids()) {
                 builder.suggest(id);
             }
         }

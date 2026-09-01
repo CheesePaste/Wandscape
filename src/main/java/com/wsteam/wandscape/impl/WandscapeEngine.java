@@ -14,7 +14,6 @@ import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.impl.EngineBootstrap;
 // engine wildcard replaced
 import com.wsteam.wandscape.content.colony.ColonyLevelManager;
-import com.wsteam.wandscape.content.building.source.BlueprintConfigLoader;
 import com.wsteam.wandscape.content.warehouse.transport.ItemTransportManager;
 import com.wsteam.wandscape.content.npc.guard.executor.GuardAttackExecutor;
 import com.wsteam.wandscape.content.npc.guard.executor.SelfDefenseExecutor;
@@ -40,8 +39,6 @@ public final class WandscapeEngine {
 
     @Nullable
     private static WandscapeMovementOps movementOps;
-    @Nullable
-    private static BlueprintConfigLoader blueprintConfigLoader;
 
     @Nullable
     private static TaskPoolSavedData taskPoolSavedData;
@@ -106,16 +103,6 @@ public final class WandscapeEngine {
 
     @Nullable
     public static WandscapeMovementOps getMovementOps() { return movementOps; }
-
-    /** Set the blueprint config loader singleton (called from Wandscape constructor). */
-    public static void setBlueprintConfigLoader(BlueprintConfigLoader loader) {
-        blueprintConfigLoader = loader;
-    }
-
-    @Nullable
-    public static BlueprintConfigLoader getBlueprintConfigLoader() {
-        return blueprintConfigLoader;
-    }
 
     @Nullable
     public static TaskPoolSavedData getTaskPoolSavedData() { return taskPoolSavedData; }

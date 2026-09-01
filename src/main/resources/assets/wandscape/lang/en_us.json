@@ -567,8 +567,6 @@
   "blueprint.wandscape.build:demolish_structure.desc": "Remove all pattern blocks of a building and emit demolish_complete event.",
   "blueprint.wandscape.build:place_structure": "Build Structure",
   "blueprint.wandscape.build:place_structure.desc": "Iterate over building pattern offsets, placing each block from block_mapping. Emits build_complete event when done.",
-  "blueprint.wandscape.demo:tnt_platform": "TNT Platform",
-  "blueprint.wandscape.demo:tnt_platform.desc": "Builds a 3x3 TNT platform wired with redstone and a lever. When the lever is pulled, all TNT ignites simultaneously.",
   "blueprint.wandscape.node:gather": "Node Gather",
   "blueprint.wandscape.node:gather.desc": "NPC stands beside a node building and channels. On completion, elements are injected directly into the town warehouse. Channel ticks and mana cost are configurable per building.",
   "blueprint.wandscape.road:build_segment": "Road Segment",
