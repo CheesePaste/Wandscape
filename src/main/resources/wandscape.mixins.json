@@ -1,14 +1,14 @@
 {
   "required": true,
-  "package": "com.wsteam.wandscape.foundation.mixin",
+  "package": "com.wsteam.wandscape.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
-    "com.wsteam.wandscape.mixin.MixinLevelTicks",
-    "com.wsteam.wandscape.mixin.MixinServerLevel"
+    "MixinLevelTicks",
+    "MixinServerLevel"
   ],
   "client": [
-    "com.wsteam.wandscape.mixin.MixinOverviewCamera",
-    "com.wsteam.wandscape.mixin.MixinSplineEditorCamera"
+    "MixinOverviewCamera",
+    "MixinSplineEditorCamera"
   ],
   "injectors": {
     "defaultRequire": 1
