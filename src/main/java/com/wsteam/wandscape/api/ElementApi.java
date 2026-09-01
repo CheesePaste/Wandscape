@@ -33,4 +33,15 @@ public interface ElementApi {
      * bubble. Returns null if the element has no item token.
      */
     String elementItemId(ElementType type);
+
+    /**
+     * Programmatically register an element mapping for a block/item id (overrides JSON).
+     * Takes effect immediately. No element-balance event is fired — this is a global
+     * mapping, not a per-colony balance change. {@code buildCost} may be empty to
+     * register a cost-free mapping.
+     */
+    void registerMapping(String blockOrItemId, Map<ElementType, Long> buildCost);
+
+    /** Undo a {@link #registerMapping} override, falling back to the JSON registry. */
+    void unregisterMapping(String blockOrItemId);
 }

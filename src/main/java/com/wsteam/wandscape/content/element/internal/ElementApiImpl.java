@@ -50,4 +50,14 @@ public class ElementApiImpl implements ElementApi {
     public String elementItemId(ElementType type) {
         return ResourceLocation.fromNamespaceAndPath(Wandscape.MODID, "element_" + type.getId()).toString();
     }
+
+    @Override
+    public void registerMapping(String blockOrItemId, Map<ElementType, Long> buildCost) {
+        mappingLoader.register(blockOrItemId, buildCost);
+    }
+
+    @Override
+    public void unregisterMapping(String blockOrItemId) {
+        mappingLoader.unregister(blockOrItemId);
+    }
 }

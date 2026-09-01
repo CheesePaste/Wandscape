@@ -14,6 +14,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 public class ElementMappingLoader {
     private static final String TAG = "ElementMappingLoader";
     private static final String CATEGORY = "element_mappings";
@@ -23,8 +24,27 @@ public class ElementMappingLoader {
     /** Seed values loaded from element_seeds.json — base-material values, kept for reporting/count. */
     private final Map<String, Map<ElementType, Long>> seedValues = new LinkedHashMap<>();
 
+    /** 程序化注册覆盖层（addon 经 ElementApi.registerMapping 写入；查询先查它再回落 JSON registry）。 */
+    private final Map<String, ElementMappingConfig> runtimeOverrides = new ConcurrentHashMap<>();
+
     public ElementMappingLoader(WandscapeDataLoader dataLoader) {
         this.registry = dataLoader.register(CATEGORY, ElementMappingConfig::fromJson);
+    }
+
+    /** 程序化注册一个块/物品的元素映射（覆盖 JSON）；buildCost 为空 → 无成本。 */
+    public void register(String id, Map<ElementType, Long> buildCost) {
+        runtimeOverrides.put(id, new ElementMappingConfig(null, null,
+                buildCost == null ? Map.of() : Map.copyOf(buildCost), false));
+    }
+
+    /** 撤销程序化注册，恢复回落 JSON registry。 */
+    public void unregister(String id) {
+        runtimeOverrides.remove(id);
+    }
+
+    @javax.annotation.Nullable
+    private ElementMappingConfig runtimeConfig(String id) {
+        return runtimeOverrides.get(id);
     }
 
     public Map<ElementType, Long> getBuildCost(BlockState state) {
@@ -62,6 +82,8 @@ public class ElementMappingLoader {
     private ElementMappingConfig findConfig(BlockState state) {
         ResourceLocation key = BuiltInRegistries.BLOCK.getKey(state.getBlock());
         String blockId = key.toString();
+        ElementMappingConfig rc = runtimeConfig(blockId);
+        if (rc != null) return rc;
         for (ElementMappingConfig config : registry.getAll().values()) {
             if (blockId.equals(config.blockId())) return config;
         }
@@ -76,6 +98,8 @@ public class ElementMappingLoader {
     }
 
     private ElementMappingConfig findConfigByItemId(String itemId) {
+        ElementMappingConfig rc = runtimeConfig(itemId);
+        if (rc != null) return rc;
         for (ElementMappingConfig config : registry.getAll().values()) {
             if (itemId.equals(config.itemId())||itemId.equals(config.blockId())) return config;
         }
