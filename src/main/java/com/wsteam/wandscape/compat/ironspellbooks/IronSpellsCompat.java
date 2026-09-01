@@ -1,6 +1,8 @@
 package com.wsteam.wandscape.compat.ironspellbooks;
 
 import com.wsteam.wandscape.foundation.log.Log;
+import io.redspace.ironsspellbooks.entity.mobs.IMagicSummon;
+import net.minecraft.world.entity.Entity;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModList;
 
@@ -22,6 +24,16 @@ public final class IronSpellsCompat {
     /** 是否已安装并加载铁魔法模组。 */
     public static boolean isLoaded() {
         return loaded;
+    }
+
+    /**
+     * 若实体是铁魔法召唤物（仅当模组已加载），返回其召唤者实体；否则 {@code null}。
+     * 前置 {@link #isLoaded()} 守卫——未加载时 {@code IMagicSummon} 不在类路径，直接
+     * {@code instanceof} 会抛 {@code NoClassDefFoundError}。调用方据 null 走降级分支。
+     */
+    public static Entity getSummoner(Entity entity) {
+        if (!loaded) return null;
+        return entity instanceof IMagicSummon summon ? summon.getSummoner() : null;
     }
 
     /** 在模组初始化阶段调用（Wandscape 主类）。 */

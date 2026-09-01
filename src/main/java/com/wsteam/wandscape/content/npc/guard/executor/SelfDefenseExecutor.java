@@ -1,9 +1,6 @@
 package com.wsteam.wandscape.content.npc.guard.executor;
-import com.wsteam.wandscape.content.task.boundary.MovementOps;
-import com.wsteam.wandscape.content.task.component.Position;
 
-import com.wsteam.wandscape.Config;
-import com.wsteam.wandscape.content.npc.component.NpcTaskQueue;
+import com.wsteam.wandscape.content.task.NpcTaskQueue;
 import com.wsteam.wandscape.content.task.component.TaskExecutor;
 import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.content.npc.types.HostileMarkDecision;

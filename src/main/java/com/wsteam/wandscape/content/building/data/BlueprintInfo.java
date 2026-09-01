@@ -1,5 +1,4 @@
 package com.wsteam.wandscape.content.building.data;
-import com.wsteam.wandscape.content.magic.data.ParamTypeInfo;
 
 import java.util.Map;
 /**

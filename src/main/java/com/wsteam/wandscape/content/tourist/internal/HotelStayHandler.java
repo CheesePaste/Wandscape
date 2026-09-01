@@ -9,7 +9,7 @@ import com.wsteam.wandscape.content.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.content.building.internal.BuildingState;
 import com.wsteam.wandscape.content.task.event.NarrativeEventTriggered;
 import com.wsteam.wandscape.content.colony.data.NarrativeEvent;
-import com.wsteam.wandscape.content.tourist.data.ServiceConfig;
+import com.wsteam.wandscape.content.building.data.ServiceConfig;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.foundation.registry.WandscapeConstants;
 import com.wsteam.wandscape.foundation.ui.I18n;

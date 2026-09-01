@@ -1,22 +1,12 @@
 package com.wsteam.wandscape.content.npc.entity;
-import com.wsteam.wandscape.content.npc.system.NavigationSystem;
-import com.wsteam.wandscape.content.npc.HostileTargetingHandler;
-import com.wsteam.wandscape.content.task.boundary.AsyncTransformExecutor;
 import com.wsteam.wandscape.content.npc.component.EquippedMagicComponent;
-import com.wsteam.wandscape.content.npc.types.ModifierOperation;
-import com.wsteam.wandscape.content.task.boundary.MovementOps;
 import com.wsteam.wandscape.content.npc.component.CastStrategyComponent;
 import com.wsteam.wandscape.content.npc.component.MagicState;
 import com.wsteam.wandscape.content.task.component.TaskExecutor;
 import com.wsteam.wandscape.content.task.component.ColonyMember;
 import com.wsteam.wandscape.content.task.component.NavigationState;
-import com.wsteam.wandscape.content.task.component.Position;
-import com.wsteam.wandscape.content.task.component.NpcInventory;
 import com.wsteam.wandscape.content.npc.attributes.NpcAttributes;
-import com.wsteam.wandscape.foundation.util.CharacterNames;
-import com.wsteam.wandscape.foundation.util.NameStyle;
 
-import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.compat.ironspellbooks.IronSpellsCompat;
 import com.wsteam.wandscape.content.warehouse.ColonyItemBank;
@@ -26,7 +16,7 @@ import com.wsteam.wandscape.content.npc.attributes.NpcAttributes.AttributeType;
 import com.wsteam.wandscape.content.npc.types.FollowAttackDecision;
 import com.wsteam.wandscape.content.npc.types.FriendlyForce;
 import com.wsteam.wandscape.content.npc.WandscapeAttributes;
-import com.wsteam.wandscape.content.npc.nav.WandscapeNavigation;
+import com.wsteam.wandscape.foundation.nav.WandscapeNavigation;
 import com.wsteam.wandscape.content.magic.data.MagicDef;
 import com.wsteam.wandscape.content.magic.internal.MagicCaster;
 import com.wsteam.wandscape.content.magic.internal.MagicSpellExecutors;
@@ -43,7 +33,6 @@ import com.wsteam.wandscape.api.WandscapeApis;
 import com.wsteam.wandscape.content.task.engine.pool.GlobalTask;
 import com.wsteam.wandscape.content.task.runtime.ExecutorState;
 import com.wsteam.wandscape.content.task.runtime.NpcTaskPackage;
-import io.redspace.ironsspellbooks.entity.mobs.IMagicSummon;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.particles.ParticleTypes;
@@ -263,8 +252,8 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
         // 亡灵随从）。instanceof 前置 isLoaded 守卫——模组未加载时类不在类路径，直接 instanceof
         // 会抛 NoClassDefFoundError。玩家/其它模组施法者的召唤物不在豁免范围（仅豁免 NPC 召唤的）；
         // 不同殖民地 NPC 召唤的仍是敌对目标。
-        if (IronSpellsCompat.isLoaded() && other instanceof IMagicSummon summon) {
-            Entity summoner = summon.getSummoner();
+        Entity summoner = IronSpellsCompat.getSummoner(other);
+        if (summoner != null) {
             if (summoner instanceof WandscapeNpc ownerNpc) {
                 return FriendlyForce.isAlly(colonyId, ownerNpc.colonyId, FriendlyForce.AllyKind.MAGIC_SUMMON);
             }
@@ -290,8 +279,7 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
      * 敌对施法者（{@code isColonyNpc() == false}，如 EvilMage）召唤的不在此列，仍是威胁。
      */
     public static boolean isColonyNpcSummon(Entity entity) {
-        if (!IronSpellsCompat.isLoaded() || !(entity instanceof IMagicSummon summon)) return false;
-        Entity summoner = summon.getSummoner();
+        Entity summoner = IronSpellsCompat.getSummoner(entity);
         return summoner instanceof WandscapeNpc ownerNpc && ownerNpc.isColonyNpc();
     }
 

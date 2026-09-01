@@ -115,7 +115,7 @@ api/
 1. **域内按功能块/机器切，不设 client/network/data 镜像子包**（决策 #2）。但**基建/框架/去堆目标收 foundation**（Screen 框架、包基类、共享控件/工具/值类型），**域特性（实体渲染器、域特性网络包、域特性 Overlay/Menu）留域**——它们非 tech 镜像（不是每域一套 client/server/network/data），而是该实体/特性的配套；硬收全会让 foundation 反向认识全部域。
 2. **跨域直接调用普通类 = 正常**；防火墙只在 api 面。npc↔magic 双向耦合接受（代码可读优先，不为此加接口/事件环）。
 3. **一个概念全地图唯一命名类**（增量归属约束）：NPC 属性→`npc/attributes/NpcAttributes`；7 元素→`content/element`；点/向量→`foundation/util` 一个 int 点类（Tier 3 合 GridPos/PathPoint/BlockOffset/XZPoint）。同域别处只引用、不清写。
-4. **纯逻辑不 import MC** 为唯一硬边界：零 MC 内核（task/kernel + task/op + 纯值类型）保持可单测；MC 适配（boundary 实现/渲染/网络/注册）在其边界类内。
+4. **纯逻辑不 import MC** 为唯一硬边界：零 MC 内核（task/kernel + task/op + 纯值类型）保持清晰可移植（当前不维护单测）；MC 适配（boundary 实现/渲染/网络/注册）在其边界类内。
 5. **数据真相当代码/生成物**：配方等先 datagen 试点（决策 #5）；不维护手写镜像。
 6. **mixin 随各自域**（building/colony-raid/road/foundation-ui），不进全局 foundation/mixin 桶；**command 随各自域**（debug 命令后续清理）；gametest `ElementAuditRunner` 归 element。
 
@@ -142,7 +142,7 @@ api/
 
 ## 五、修改（Tier 阶梯）
 
-**Tier 0 基线**：build + test 全绿、git 工作区干净。
+**Tier 0 基线**：build 绿（当前不维护单测）、git 工作区干净。
 
 **Tier 1 删除（最高价值，最低风险，先做）**：0 引用类、无加载路径的废 JSON、陪葬测试。删除候选以「编译 + grep 字符串引用」双关判定，**不信图谱 in-degree**；反射入口类（mixin/事件订阅/@Mod/Config）与 `deprecated/` 兼容 JSON（building 旧档载荷，`ProjectionNetwork` 里 deprecated 建筑"隐藏但仍可用"）不删；无用 log 挪到横切 Log 治理。验收：build 绿 + 候选类名全仓 grep 零命中。具体见 `tier1.md`。
 
@@ -169,7 +169,7 @@ api/
 ## 六、复核
 
 1. **编译是头号复核刑具。** build 绿 = 基本盘。
-2. **测试是守门员不是简历。** 纯逻辑相关测试保持绿；测死代码的测试跟删。重构不改变行为，不因重构加新测试。
+2. **当前不维护单测**（`src/test` 已删，参考 Create/Botania 亦无）。重构不改变行为，build 绿 + 三查清单即复核。
 3. **三查清单**（每次 commit 前）：`grep 旧类名` 零命中；`grep 字符串 id` 与代码一致；改动前后行数对比应净减，净增说明在横移停下问值不值。
 4. **运行复核短清单**：行为改动最多 1~2 条手测路径，能跑 GameTest 的用 GameTest，禁止 runClient。
 5. **提交复核**：`git status` 只含本步文件；提交后立即更新 status.md。**同一改动返工两次停手重新侦察。**

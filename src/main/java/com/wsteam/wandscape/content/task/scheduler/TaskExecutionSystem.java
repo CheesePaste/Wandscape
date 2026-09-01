@@ -1,13 +1,9 @@
 package com.wsteam.wandscape.content.task.scheduler;
-import com.wsteam.wandscape.content.npc.system.NavigationSystem;
-import com.wsteam.wandscape.content.task.boundary.BlockOps;
-import com.wsteam.wandscape.content.npc.component.NpcTaskQueue;
-import com.wsteam.wandscape.content.task.boundary.EntityOps;
+import com.wsteam.wandscape.content.task.NpcTaskQueue;
 import com.wsteam.wandscape.content.task.component.TaskExecutor;
 import com.wsteam.wandscape.content.task.component.ColonyMember;
 import com.wsteam.wandscape.content.task.component.Position;
 import com.wsteam.wandscape.content.task.component.NpcInventory;
-import com.wsteam.wandscape.foundation.util.TickProfiler;
 
 import com.wsteam.wandscape.content.task.boundary.ColonyResourceAccess;
 import com.wsteam.wandscape.content.task.boundary.MovementOps;

@@ -3,9 +3,9 @@ import com.wsteam.wandscape.content.task.component.Position;
 import com.wsteam.wandscape.content.task.component.NpcInventory;
 import com.wsteam.wandscape.content.element.data.ElementType;
 import com.wsteam.wandscape.content.building.data.BuildingData;
-import com.wsteam.wandscape.content.tourist.data.ShopGoodDef;
+import com.wsteam.wandscape.content.building.data.ShopGoodDef;
 import com.wsteam.wandscape.foundation.util.ItemKey;
-import com.wsteam.wandscape.content.tourist.data.ShopConfig;
+import com.wsteam.wandscape.content.building.data.ShopConfig;
 import com.wsteam.wandscape.foundation.util.TickProfiler;
 
 import com.wsteam.wandscape.content.building.data.BuildingConfig;

@@ -1,14 +1,9 @@
 package com.wsteam.wandscape.content.task.boundary;
-import com.wsteam.wandscape.content.colony.ColonyActivation;
-import com.wsteam.wandscape.content.npc.attributes.NpcAttributes.AttributeType;
-import com.wsteam.wandscape.content.task.component.Position;
-import com.wsteam.wandscape.content.task.ecs.World;
 
-import com.wsteam.wandscape.content.task.boundary.EntityOps;
 import com.wsteam.wandscape.content.task.types.EffectId;
 import com.wsteam.wandscape.content.task.types.EntityId;
 import com.wsteam.wandscape.content.task.types.GridPos;
-import com.wsteam.wandscape.content.colony.service.ChunkLoadManager;
+import com.wsteam.wandscape.content.building.ChunkLoadManager;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.content.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.foundation.log.Log;

@@ -62,7 +62,7 @@ impl/      @ApiStatus.Internal 装配门禁（WandscapeBootstrap = 原 EngineBoo
 3. **轻度不硬核**：关停是效率降级而非建筑损坏。
 4. **稳定性优先**：所有可能失败路径必有兜底；出错至少 `Log.warn()`，禁静默失败/崩溃。
 5. **文档讲人话**：只写接手人需要的；能半行说清不写一段；代码本身可读优先于文档。
-6. **纯逻辑与 MC 解耦**：不依赖 MC 的纯逻辑（属性计算/蓝图解析/任务评分/路由）**不 import MC 类**——这是它们能 JUnit 单测的前提，**唯一硬边界**（Tier 3 点/向量裁决口，保留自造族正是保此边界）。
+6. **纯逻辑与 MC 解耦**：不依赖 MC 的纯逻辑（属性计算/蓝图解析/任务评分/路由）**不 import MC 类**——保持这份解耦（逻辑清晰、可移植，将来真想加单测随时能测），**唯一硬边界**（Tier 3 点/向量裁决口，保留自造族正是保此边界）。
 7. **用模组 Log**：`shared/log/Log.java`；上屏/聊天只留错误与完成反馈，其余用 Log。
 8. **禁止 `./gradlew runClient`**。
 9. **动手前看** `packages.md` 该包小节 + `plan.md` 相关阶梯，不逐篇读文档。
@@ -76,17 +76,16 @@ impl/      @ApiStatus.Internal 装配门禁（WandscapeBootstrap = 原 EngineBoo
 
 ### 构建命令
 ```bash
-./gradlew build              # 编译
-./gradlew test               # 运行单元测试
+./gradlew build              # 编译（项目不维护 JUnit 单测，build 即验证）
 ./gradlew runGameTestServer  # 运行 GameTest
 ```
-首次运行或 runClient 报错 `clientRunVmArgs.txt` 不存在，先 `./gradlew neoForgeIdeSync`。**写完后改动要能过 `./gradlew build`；改纯逻辑要全绿 `./gradlew test`。**
+首次运行或 runClient 报错 `clientRunVmArgs.txt` 不存在，先 `./gradlew neoForgeIdeSync`。**写完后改动要能过 `./gradlew build`**（`src/test` 已删，无单测，build 全绿即可）。
 
-### Testing（守门员不是简历）
-现在 760 个类挂 779 个 `@Test`，绝大部分从没抓到过 bug，纯烧维护费——**不养这种测试**。只在**纯逻辑且有分支/解析/计算/状态转换**的地方写几个代表用例：属性计算、蓝图 DSL 解析、任务评分、配方与元素公式。**下面这些不值得测**：纯数据容器、getter/setter、透传、单个 if 平凡判断、任何依赖 MC 运行时的东西（留下集成/手测）。删测试比写空转测试好。其余：数值平衡不用断言钉死；测试类 `<Name>Test` 镜像包路径；纯 JUnit 5，不引 Mockito/AssertJ。
+### Testing（当前不维护单测）
+项目**当前不维护 JUnit 单测**：`src/test` 已整目录删除（2026-09-01，参考 Create/Botania 亦无 test）。不写测试、不跑 `./gradlew test`、不为测试凑量。纯逻辑代码照旧保持**不 import MC**（见§二.6）；将来想在某纯逻辑处补用例随时可加，不属本次承诺。`./gradlew build` 是全量验证的唯一门槛。
 
 ### 工作流
-**需求澄清前不写代码**：用户提出设计/实现问题时，先用 `grill-me` skill 反复追问直到需求明确、决策树每支都敲定，再写代码；禁止需求模糊时直接动手实现。**修 bug**：先复现 → 修根因 → 纯逻辑处补防回归测试 → 全量 `./gradlew test`。
+**需求澄清前不写代码**：用户提出设计/实现问题时，先用 `grill-me` skill 反复追问直到需求明确、决策树每支都敲定，再写代码；禁止需求模糊时直接动手实现。**修 bug**：先复现 → 修根因 → `./gradlew build` 验证（纯逻辑处若值得可自斟酌补用例——项目当前不维护单测）。
 
 ### 常见陷阱
 1. **NBT 传出不 copy** → `return tag.copy()`
@@ -116,7 +115,7 @@ impl/      @ApiStatus.Internal 装配门禁（WandscapeBootstrap = 原 EngineBoo
 - ✅ 正例：`scepter` 是功能性物品（含系统层/SavedData）→ 整树进 `content/items`；npc/guard 消费它 = 跨域直接调用，正常。
 - 这条是**模组 shared 桥层病根的根治**：桥层就是为"规避反向依赖"而生的，禁了动机，桥就不会再长出来。判定归属时若发现自己在为"谁依赖它"纠结，停下来按"它是什么"重判。
 
-**唯一不变的硬边界**：纯逻辑代码不 import MC 类（保单测）。靠自觉 + IDE 检查，不靠包名禁令。
+**唯一不变的硬边界**：纯逻辑代码不 import MC 类（非为单测，而是保持清晰可移植，想测随时能测）。靠自觉 + IDE 检查，不靠包名禁令。
 
 ---
 

@@ -1,10 +1,6 @@
 package com.wsteam.wandscape.content.tourist.entity;
-import com.wsteam.wandscape.content.task.component.Position;
-import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.content.npc.data.RecruitmentCandidate;
 import com.wsteam.wandscape.content.tourist.data.VisitMemory;
-import com.wsteam.wandscape.foundation.util.CharacterNames;
-import com.wsteam.wandscape.content.tourist.event.TouristArrivedEvent;
 import com.wsteam.wandscape.content.tourist.data.BarRatio;
 import com.wsteam.wandscape.content.npc.attributes.NpcAttributes;
 import com.wsteam.wandscape.content.tourist.data.Emotion;
@@ -13,13 +9,9 @@ import com.wsteam.wandscape.content.tourist.data.Activity;
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.content.tourist.internal.*;
-import com.wsteam.wandscape.content.npc.nav.WandscapeNavigation;
+import com.wsteam.wandscape.foundation.nav.WandscapeNavigation;
 // data imports updated
-import com.wsteam.wandscape.content.tourist.entity.ColonyVisitor;
-import com.wsteam.wandscape.content.tourist.entity.VillagerLike;
 import com.wsteam.wandscape.api.WandscapeApis;
-import com.wsteam.wandscape.foundation.registry.WandscapeConstants;
-import com.wsteam.wandscape.content.tourist.internal.*;
 import com.wsteam.wandscape.content.tourist.network.TouristDataPacket;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;

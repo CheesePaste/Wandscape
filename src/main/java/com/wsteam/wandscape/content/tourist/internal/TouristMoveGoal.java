@@ -1,11 +1,6 @@
 package com.wsteam.wandscape.content.tourist.internal;
-import com.wsteam.wandscape.content.npc.nav.RoadWalkPlanner;
-import com.wsteam.wandscape.content.task.boundary.EventBus;
-import com.wsteam.wandscape.content.task.component.Position;
-import com.wsteam.wandscape.content.task.ecs.World;
-import com.wsteam.wandscape.foundation.util.TickProfiler;
+import com.wsteam.wandscape.content.road.RoadWalkPlanner;
 
-import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.content.building.internal.BuildingState;
 import com.wsteam.wandscape.content.road.core.RoadEdge;
@@ -2042,7 +2037,7 @@ public class TouristMoveGoal extends Goal {
         stuckFallbacks = 0;
 
         // Plan road-assisted waypoints along RoadNetwork if beneficial
-        outdoorWaypoints = com.wsteam.wandscape.content.npc.nav.RoadWalkPlanner.plan(
+        outdoorWaypoints = RoadWalkPlanner.plan(
                 tourist.level(), tourist.blockPosition(), target);
         currentWaypointIndex = 0;
 

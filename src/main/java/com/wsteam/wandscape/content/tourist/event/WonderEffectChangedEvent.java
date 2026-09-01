@@ -1,6 +1,6 @@
 package com.wsteam.wandscape.content.tourist.event;
 
-import com.wsteam.wandscape.content.tourist.data.WonderEffect;
+import com.wsteam.wandscape.content.building.data.WonderEffect;
 import net.neoforged.bus.api.Event;
 
 import java.util.List;

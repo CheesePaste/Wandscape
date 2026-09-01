@@ -152,14 +152,6 @@ public final class SplineEditorClientState {
     private static volatile String activeTemplateId = "vpanel_preset_dynamic";
 
     static {
-        RoadTemplate testTemplate = new RoadTemplate("test_road_5x1");
-        testTemplate.addBlock(-2, 0, 0, "minecraft:stone_bricks");
-        testTemplate.addBlock(-1, 0, 0, "minecraft:stone_bricks");
-        testTemplate.addBlock( 0, 0, 0, "minecraft:stone_bricks");
-        testTemplate.addBlock( 1, 0, 0, "minecraft:stone_bricks");
-        testTemplate.addBlock( 2, 0, 0, "minecraft:stone_bricks");
-        templateRegistry.put(testTemplate.getId(), testTemplate);
-
         rebuildDynamicTemplate();
     }
 

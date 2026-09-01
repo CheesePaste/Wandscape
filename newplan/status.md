@@ -22,7 +22,7 @@
 
 - [x] 重写 CLAUDE.md
   - [x] 废除"互不直接引用 / getXxxApi() 搭桥 / 事件通信"约定，改为按功能包直接调用
-  - [x] 保留唯一硬边界：纯逻辑不 import MC 类（保单测能力）
+  - [x] 保留唯一硬边界：纯逻辑不 import MC 类（保清晰/可移植，非为单测）
   - [x] 文档即代码 → 文档讲人话：只写接手人需要的，不为写而写
   - [x] Testing 从"补强断言、结构不变式"降为"守门员不是简历"：只为纯逻辑有分支/解析/计算处写几个代表用例，禁止堆量
   - [x] 工作流简化：不做先后读 architecture/packages → roadmap → per-包 的仪式链
@@ -60,7 +60,7 @@
     - `TaskPoolSavedData`、4 个 Ops MC 实现与 3 个 Op 执行器 → `content/task/boundary/`
     - 粒子与音效（ParticleService, SoundService, WandscapeSounds, ClientSoundHelper） → `foundation/{service, sound, registry}`
     - `EngineBootstrap`、`WandscapeEngine` → `impl/`
-- **⚠️ 测试故意不搬、后续大删（用户拍板 2026-08-31）**：`src/test` 未随 src/main 搬——测试类仍散在旧顶层包，被测类已搬去 content/，导致 package-private 方法跨包访问失败（`compileTestJava` 100 个错误，如 ProjectileDodgeTest.willHit/MagicSpellExecutorsTest.meteorIntervalTicks/ProjectionClientStateTest.clampSlotIndex）。**决策：现在不搬测试**（数量过多、维护费高，CLAUDE.md「守门员不是简历」要删大部分），搬完等于搬了再删。故迁移完成判定 = `./gradlew compileJava` 绿（已达成），`./gradlew build`/`test` 暂不要求绿；测试在 main 稳定后单独大删。
+- **测试已整目录删除（用户拍板 2026-09-01）**：`src/test`（111 文件）**已删除**——参考 Create/Botania 亦无 test、且迁移麻烦，test 短期内不会加入项目。迁移/构建判定 = `./gradlew compileJava` 绿（已达成）；`./gradlew build` 现应全绿（无单测即无 test 任务）。旧决定（2026-08-31「测试故意不搬、后续大删」）已执行完毕。
 - **暂缓清单**：command（归域+debug 大清理）、顶层 client（TransportItemEntityRenderer 随 transport）、mixin（各归各域，依赖域内结构定后）、gametest（ElementAuditRunner 归 element）——待域内结构定死后再归位。
 - **桥层拆解规则文档 `newplan/tier4-dissolve-rules.md`（2026-08-31 立）**：给 AI 判断 shared/core/engine 三桥层每类去处的决策规则——§1 决策树（死?/纯逻辑?/服务谁/content?/基建?/装配?/公开契约?/MC适配?）+ §2 五类目标判据速查 + §3 必删必活红线 + §4 已知类别模板（packages.md 实锤）+ §5 产出格式。**用法**：AI 逐类跑决策树产出「类→终点」表（删/content/foundation/impl/api ），标 `?` 交人工；不逐文件读，靠规则自判。拆 shared/core/engine 时作为执行依据。
 - **横切三件套**（3/4/5 阶段）：UI 去堆（抽公共 Screen 样板先行）、lang 分文件（样板先行）、**Log 治理（已全量完成，构建 16 域细粒度分类 + 节流 + 动态命令 + 全局高噪降噪）**。
@@ -107,3 +107,6 @@
 - 2026-09-01：**API 部分消费审计 + ④③② 修正落地（编译绿）**。用户担心"本体标'已走'却部分绕过直调内部"（刚重构完的隐患），4 并行子代理逐 API 核实。**审计结论**：ScepterApi 3 读 / NpcApi 查询 / TouristApi 读 / TavernApi 读招拒 / GuideProgressApi.sendToPlayer / RoadApi 增减撤 / ElementApi 命名方法 / BuildingApi 拆撤快照 / ColonyApi 名单，**全走 API 无绕过**；WarehouseApi（`ColonyItemBank` 全经济域直调 104 处）与 ColonyLevelManager（游客/建筑/生产直读）为**剩下的大绕过点**（归入待 dogfood/自治法两类）。**④ Magic 校验旁路**：NpcStrategyMenu:161（GUI 直写 equippedMagic）、NpcStrategyPacket:80（直写 castStrategy）、TavernRecruitPacket:128/208（直清默认载荷）三处改走 `MagicApi.setEquippedAndStrategy`（GUI 用 `flattenedQualified()` 保留槽行类别→幂等；预设包带当前装备重设；酒馆空列表=清空）——**根治策略屏编辑不跑服务端装桶/≤3/去重校验**。**③ Colony 单例接缝**：ColonyCommand:143/159/254/288/318 + ColonyCreateRequestPacket:54 改 `WandscapeApis.getColonyApi()`（:100-101 的 assignColonyIfPossible/onBuildingIntact 是 impl-only 保留）。**② Building 读模型**（用户拍板"API 拿活体，面向 addon 不加限制"）：BuildingApi `getBuilding`/`getBuildingAt`→`BuildingState`、`getColonyBuildings`→`List<BuildingState>`，impl 签名同步 + 4 处 `List<BuildingData>` 消费方修复。**裁定不动**：FillBuilding/StressTest 不路由 placeBuilding（调试命令故意低层；`EnqueueHelper.registerIfAbsent` 本身带重叠校验，核心校验未绕过；路由会改调试用途）；BuildingApiImpl 其余 impl-only（队列调度 getQueue/removeFromQueue/moveUp/moveDown/dequeueWorkEligible/setCurrentTask/clearCurrentTask/getBuildingsWithPendingWork/registerBuilding/unregisterBuilding）留 content/building 不搬 API（接口故意不暴露，跨域直调正常）。**死码清理**：删 BuildingApiImpl `isBuildingOccupied`/`dequeueWork`（零调用，删后编译绿=真死码）；**`setLevel` 一度 grep 误判死码、编译抓出 `Wandscape.java:960/1067` 装配调用而恢复**（Tier 1"编译为权威"活例）。全部 `./gradlew compileJava` 绿。审计+修正记入 `api-ledger.md` §五。
 
 - 2026-09-01：**新增 `api/CurioApi`（法师 Curios 饰品槽/装备契约，桩）**。用户点题：addon 要有能力加/减法师饰品槽、查/装备/卸下饰品。接入点现成（`CuriosCommand` `/wandscape curios list/set/add/remove` 已实现：槽读 `ICuriosItemHandler.getCurios()`、增删 `growSlotType/shrinkSlotType`）；方法全 `@Unimplemented` 桩（10 个：getCurioContents/getSlotCounts/getSlotCount/isEquipped×2/addSlots/removeSlots/setSlots/equipCurio/unequipCurio）。**接口零 Curios import**（未装 Curios 的 addon 不崩）；`WandscapeApis.getCurioApi`（未装配抛）/`getCurioApiSilently`（null）。**命名取单数 `CurioApi` 避开 Curios 自家 `CuriosApi` 撞名**。实现层待接 `CuriosCompatImpl`（`growSlotType/shrinkSlotType` 有 `@SuppressWarnings("removal")`——Curios 1.22 退役，1.21 可用）。`./gradlew compileJava` 绿。已记入 `api-ledger.md` §19。
+
+- 2026-09-01：**测试整目录删除（用户拍板）**：`src/test`（111 文件）删除——参考 Create/Botania 亦无 test、迁移麻烦，test 短期不加入项目。`CLAUDE.md`/`plan.md`/本文件的单测相关表述同步改为"当前不维护单测"（build 为唯一验证门槛）。
+- 2026-09-01：**包扫描跟进（11 子代理全包扫）**，落库 `newplan/package-sweep-followup.md`（#8 移动清单 9 项 + #9 删除清单 + 顺手死 import）。**已动手两项**：① `building→tourist` 依赖倒置解除——`tourist/data` 的 8 个 building 配置类型（Shop/Service/Atm/Relax/Decoration/ShopGoodDef/WonderConfig/WonderEffect）git mv 至 `building/data`，全仓 FQ import 替换；② `WandscapeNpc→IMagicSummon` 泄漏下沉——`IronSpellsCompat.getSummoner(Entity)` 新增，WandscapeNpc 删第三方 import、两处 `instanceof` 改走 compat（行为等价）。`compileJava` 绿。**记录待办**：`GuideProgress` 系统内核错置在 `items`（见 `newplan/guide-progress-kernel.md`，待拍板归属）；UI 去堆（用户构思中）；#8/#9 由用户手动挪/删。

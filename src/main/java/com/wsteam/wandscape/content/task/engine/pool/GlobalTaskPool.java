@@ -1,6 +1,4 @@
 package com.wsteam.wandscape.content.task.engine.pool;
-import com.wsteam.wandscape.content.npc.component.NpcTaskQueue;
-import com.wsteam.wandscape.content.task.boundary.MovementOps;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;

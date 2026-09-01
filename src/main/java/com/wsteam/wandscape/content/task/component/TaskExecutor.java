@@ -1,6 +1,5 @@
 package com.wsteam.wandscape.content.task.component;
-import com.wsteam.wandscape.content.npc.component.NpcTaskQueue;
-import com.wsteam.wandscape.content.task.ecs.World;
+import com.wsteam.wandscape.content.task.NpcTaskQueue;
 
 import com.google.gson.JsonElement;
 import com.wsteam.wandscape.content.task.types.GridPos;

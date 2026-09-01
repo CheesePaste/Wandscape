@@ -9,7 +9,7 @@ import com.wsteam.wandscape.content.building.data.BlockOffset;
 import com.wsteam.wandscape.content.building.data.BuildingConfig;
 import com.wsteam.wandscape.content.building.projection.BuildingRotation;
 import com.wsteam.wandscape.content.npc.data.MageHutResident;
-import com.wsteam.wandscape.content.tourist.data.ShopGoodDef;
+import com.wsteam.wandscape.content.building.data.ShopGoodDef;
 import com.wsteam.wandscape.content.building.data.WorkItem;
 import com.wsteam.wandscape.content.colony.event.ColonyEvaluationChangedEvent;
 import com.wsteam.wandscape.foundation.log.Log;

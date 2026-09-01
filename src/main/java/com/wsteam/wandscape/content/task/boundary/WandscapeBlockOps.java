@@ -1,13 +1,9 @@
 package com.wsteam.wandscape.content.task.boundary;
 import com.wsteam.wandscape.content.building.BuildPlacementGuard;
-import com.wsteam.wandscape.content.task.component.Position;
-import com.wsteam.wandscape.content.task.ecs.World;
-import com.wsteam.wandscape.content.task.component.NpcInventory;
 
-import com.wsteam.wandscape.content.task.boundary.BlockOps;
 import com.wsteam.wandscape.content.task.types.BlockType;
 import com.wsteam.wandscape.content.task.types.GridPos;
-import com.wsteam.wandscape.content.colony.service.ChunkLoadManager;
+import com.wsteam.wandscape.content.building.ChunkLoadManager;
 import com.wsteam.wandscape.foundation.sound.SoundService;
 import com.wsteam.wandscape.foundation.log.Log;
 import net.minecraft.core.BlockPos;

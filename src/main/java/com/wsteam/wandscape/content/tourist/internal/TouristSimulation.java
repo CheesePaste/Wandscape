@@ -1,14 +1,14 @@
 package com.wsteam.wandscape.content.tourist.internal;
 import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.content.element.data.ElementType;
-import com.wsteam.wandscape.content.tourist.data.ServiceConfig;
+import com.wsteam.wandscape.content.building.data.ServiceConfig;
 import com.wsteam.wandscape.content.building.data.BuildingData;
 import com.wsteam.wandscape.content.tourist.data.VisitMemory;
-import com.wsteam.wandscape.content.tourist.data.AtmConfig;
-import com.wsteam.wandscape.content.tourist.data.ShopConfig;
+import com.wsteam.wandscape.content.building.data.AtmConfig;
+import com.wsteam.wandscape.content.building.data.ShopConfig;
 import com.wsteam.wandscape.foundation.util.TickProfiler;
 import com.wsteam.wandscape.content.tourist.data.Emotion;
-import com.wsteam.wandscape.content.tourist.data.RelaxConfig;
+import com.wsteam.wandscape.content.building.data.RelaxConfig;
 import com.wsteam.wandscape.content.tourist.data.Activity;
 
 import com.wsteam.wandscape.Config;

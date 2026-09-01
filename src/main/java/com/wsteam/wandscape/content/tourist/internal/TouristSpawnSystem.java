@@ -1,12 +1,7 @@
 package com.wsteam.wandscape.content.tourist.internal;
-import com.wsteam.wandscape.content.task.boundary.EventBus;
-import com.wsteam.wandscape.content.task.component.Position;
-import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.content.building.data.BuildingData;
 import com.wsteam.wandscape.foundation.util.CharacterNames;
 import com.wsteam.wandscape.content.tourist.data.BarRatio;
-import com.wsteam.wandscape.content.tourist.event.TouristDepartedEvent;
-import com.wsteam.wandscape.foundation.util.TickProfiler;
 import com.wsteam.wandscape.foundation.util.NameStyle;
 import com.wsteam.wandscape.content.colony.data.NarrativeEvent;
 
@@ -17,7 +12,7 @@ import com.wsteam.wandscape.content.building.internal.BuildingState;
 import com.wsteam.wandscape.content.task.event.NarrativeEventTriggered;
 import com.wsteam.wandscape.content.colony.ColonyActivation;
 import com.wsteam.wandscape.content.colony.ColonyLevelManager;
-import com.wsteam.wandscape.content.colony.service.ChunkLoadManager;
+import com.wsteam.wandscape.content.building.ChunkLoadManager;
 import com.wsteam.wandscape.content.road.core.RoadEdge;
 import com.wsteam.wandscape.content.road.core.RoadNetwork;
 import com.wsteam.wandscape.api.BuildingApi;

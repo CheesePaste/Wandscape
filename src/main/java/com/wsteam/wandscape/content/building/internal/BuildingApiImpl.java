@@ -1,8 +1,4 @@
 package com.wsteam.wandscape.content.building.internal;
-import com.wsteam.wandscape.content.colony.service.ChunkLoadManager;
-import com.wsteam.wandscape.content.colony.ColonyApiImpl;
-import com.wsteam.wandscape.content.warehouse.system.ResourceSupplySystem;
-import com.wsteam.wandscape.content.task.component.Position;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;

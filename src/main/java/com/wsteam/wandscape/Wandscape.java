@@ -1,4 +1,5 @@
 package com.wsteam.wandscape;
+import com.wsteam.wandscape.content.colony.sound.ColonyAmbientTracker;
 import com.wsteam.wandscape.content.command.*;
 import com.wsteam.wandscape.content.npc.HostileTargetingHandler;
 import com.wsteam.wandscape.content.task.TaskPoolSavedData;
@@ -50,7 +51,7 @@ import com.wsteam.wandscape.content.production.ProductionEligibility;
 import com.wsteam.wandscape.content.task.boundary.WandscapeBlockInteractExecutor;
 import com.wsteam.wandscape.content.colony.ColonyLevelData;
 import com.wsteam.wandscape.content.colony.ColonyLevelManager;
-import com.wsteam.wandscape.content.colony.service.ChunkLoadManager;
+import com.wsteam.wandscape.content.building.ChunkLoadManager;
 import com.wsteam.wandscape.content.colony.service.ColonyStatusService;
 import com.wsteam.wandscape.foundation.registry.WandscapeSounds;
 import com.wsteam.wandscape.content.warehouse.transport.TransportItemEntity;
@@ -96,7 +97,6 @@ import com.wsteam.wandscape.content.items.wand.internal.WandPresetLoader.WandPre
 import com.wsteam.wandscape.content.items.wand.item.WandItem;
 import com.wsteam.wandscape.content.warehouse.WarehouseManager;
 import com.wsteam.wandscape.content.warehouse.WarehouseMenu;
-import com.wsteam.wandscape.content.warehouse.WarehouseNotificationHandler;
 import com.wsteam.wandscape.content.warehouse.WarehouseTerminalItem;
 import com.wsteam.wandscape.content.warehouse.network.WarehouseActionPacket;
 import com.wsteam.wandscape.content.warehouse.network.WarehouseDataPacket;
@@ -513,10 +513,8 @@ public class Wandscape {
         TouristSpawnSystem.register();
         HotelStayHandler.register();
         MarkerPreviewManager.register();
-        WarehouseNotificationHandler.register();
         com.wsteam.wandscape.compat.ironspellbooks.IronSpellsCompat.init(modEventBus);
         com.wsteam.wandscape.compat.curios.CuriosCompat.init(modEventBus);
-
         modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
         modContainer.registerConfig(ModConfig.Type.CLIENT, ClientConfig.SPEC);
 
