@@ -4,7 +4,7 @@
 
 魔法阵编辑器（`tools/magic-circle-editor/`）是个独立网页，可视化设计粒子特效，导出 JSON 放进模组的 `magic_circles/` 目录，游戏里就能用。
 
-![魔法阵编辑器示意图](wandscape:textures/gui/guide/magic_editor_diagram.png =200x100)
+![魔法阵编辑器示意图](wandscape:textures/gui/guidebook/magic_editor_diagram.png =200x100)
 
 ## 能调什么
 

@@ -100,7 +100,7 @@ public class WandscapeClient {
     );
 
 
-    public static final KeyMapping GUIDE_TOGGLE = new KeyMapping(
+    public static final KeyMapping GUIDEBOOK_TOGGLE = new KeyMapping(
             "key.wandscape.guide",
             InputConstants.Type.KEYSYM,
             GLFW.GLFW_KEY_H,
@@ -332,9 +332,9 @@ public class WandscapeClient {
         });
 
         // Guide test screen
-        com.wsteam.wandscape.content.items.network.GuideDocOpenPacket.setClientHandler(packet -> {
+        com.wsteam.wandscape.content.items.guidebook.network.GuidebookDocOpenPacket.setClientHandler(packet -> {
             net.minecraft.client.Minecraft.getInstance().setScreen(
-                    new com.wsteam.wandscape.foundation.ui.guide.GuideScreen(packet.markdownContent()));
+                    new com.wsteam.wandscape.foundation.ui.guidebook.GuidebookScreen(packet.markdownContent()));
         });
 
         // Guide book: right-click opens the tutorial home (index_guide), locale-resolved
@@ -342,7 +342,7 @@ public class WandscapeClient {
             String docPath = packet.docPath();
             String content = com.wsteam.wandscape.foundation.ui.markdown.navigation.DocumentLoader.loadMarkdown(docPath);
             net.minecraft.client.Minecraft.getInstance().setScreen(
-                    new com.wsteam.wandscape.foundation.ui.guide.GuideScreen(null, content, docPath));
+                    new com.wsteam.wandscape.foundation.ui.guidebook.GuidebookScreen(null, content, docPath));
         });
 
         // Guide progress seed — apply saved tutorial step/dismissal on panel open
@@ -475,7 +475,7 @@ public class WandscapeClient {
         event.register(PROJECTION_TOGGLE);
         event.register(TUTORIAL_FOLD_TOGGLE);
         event.register(RAISE_CURSOR);
-        event.register(GUIDE_TOGGLE);
+        event.register(GUIDEBOOK_TOGGLE);
         event.register(PANEL_AREAS_TOGGLE);
         event.register(PANEL_HIDE_TOGGLE);
         event.register(WAREHOUSE_TERMINAL_KEY);
@@ -524,7 +524,7 @@ public class WandscapeClient {
                 WandscapePanelState.openPanel();
             }
         }
-        while (GUIDE_TOGGLE.consumeClick()) {
+        while (GUIDEBOOK_TOGGLE.consumeClick()) {
             // H key: open guide — panel has its own handler; this covers non-panel contexts
             if (searchFocused) continue;
             if (!WandscapePanelState.isPanelOpen()) {
@@ -544,7 +544,7 @@ public class WandscapeClient {
         Minecraft mc = Minecraft.getInstance();
         if (mc != null) {
             String content = com.wsteam.wandscape.foundation.ui.markdown.navigation.DocumentLoader.loadMarkdown("index_guide");
-            mc.setScreen(new com.wsteam.wandscape.foundation.ui.guide.GuideScreen(null, content, "index_guide"));
+            mc.setScreen(new com.wsteam.wandscape.foundation.ui.guidebook.GuidebookScreen(null, content, "index_guide"));
         }
     }
 
@@ -629,6 +629,7 @@ public class WandscapeClient {
     @SubscribeEvent
     static void onRegisterClientReloadListeners(RegisterClientReloadListenersEvent event) {
         event.registerReloadListener(Wandscape.DATA_LOADER);
+        event.registerReloadListener(Wandscape.BALANCE_LOADER);
         // A datapack reload recreates every BuildingConfig instance, so the GPU
         // buffers keyed by the old instances are stale — close them so they get
         // re-baked (not leaked). Runs after DATA_LOADER so new configs are ready.

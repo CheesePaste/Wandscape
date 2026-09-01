@@ -524,7 +524,7 @@ public final class WandscapePanelController {
         }
 
         // Guide key: open guide document (only when panel is open)
-        if (com.wsteam.wandscape.WandscapeClient.GUIDE_TOGGLE.matches(key, scanCode)
+        if (com.wsteam.wandscape.WandscapeClient.GUIDEBOOK_TOGGLE.matches(key, scanCode)
                 && WandscapePanelState.isPanelOpen()) {
             openPanelHelpDocument();
             return;
@@ -717,7 +717,7 @@ public final class WandscapePanelController {
                 docPath = "road_guide";
             }
             String content = com.wsteam.wandscape.foundation.ui.markdown.navigation.DocumentLoader.loadMarkdown(docPath);
-            mc.setScreen(new com.wsteam.wandscape.foundation.ui.guide.GuideScreen(null, content, docPath));
+            mc.setScreen(new com.wsteam.wandscape.foundation.ui.guidebook.GuidebookScreen(null, content, docPath));
         }
     }
 }

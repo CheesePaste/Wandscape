@@ -2,7 +2,7 @@
 
 **Tourists only walk on paved roads.** Without roads there are no tourists — a shop can open but no one will enter.
 
-![Road system diagram](wandscape:textures/gui/guide/road_diagram.png =200x100)
+![Road system diagram](wandscape:textures/gui/guidebook/road_diagram.png =200x100)
 
 ## Entering Road Mode
 

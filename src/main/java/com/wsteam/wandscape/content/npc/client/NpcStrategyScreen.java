@@ -99,7 +99,7 @@ public class NpcStrategyScreen extends AbstractContainerScreen<NpcStrategyMenu>
         if (helpDocumentPath != null && minecraft != null) {
             String content = com.wsteam.wandscape.foundation.ui.markdown.navigation.DocumentLoader
                     .loadMarkdown(helpDocumentPath);
-            minecraft.setScreen(new com.wsteam.wandscape.foundation.ui.guide.GuideScreen(
+            minecraft.setScreen(new com.wsteam.wandscape.foundation.ui.guidebook.GuidebookScreen(
                     this, content, helpDocumentPath));
         }
     }

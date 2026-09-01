@@ -41,6 +41,7 @@ import com.wsteam.wandscape.content.road.data.RoadPresetLoader;
 import com.wsteam.wandscape.content.road.network.*;
 import com.wsteam.wandscape.content.tourist.internal.*;
 import com.wsteam.wandscape.content.tourist.network.TouristBubblePacket;
+import com.wsteam.wandscape.foundation.registry.dataconfig.internal.WandscapeBalanceLoader;
 import com.wsteam.wandscape.foundation.registry.dataconfig.internal.WandscapeDataLoader;
 import com.wsteam.wandscape.content.element.internal.ElementApiImpl;
 import com.wsteam.wandscape.content.element.internal.ElementMappingLoader;
@@ -201,6 +202,8 @@ public class Wandscape {
 
     // ---- Data loader ----
     public static final WandscapeDataLoader DATA_LOADER = new WandscapeDataLoader();
+    /** 加载 data/wandscape/wandscape_balance.json，把可调平衡值灌进 BalanceValues（reload 时确定性重载）。 */
+    public static final WandscapeBalanceLoader BALANCE_LOADER = new WandscapeBalanceLoader();
 
     // ---- 02 wand-system ----
     public static final DeferredItem<Item> WAND = ITEMS.register("wand",
@@ -888,9 +891,9 @@ public class Wandscape {
                         (packet, ctx) -> com.wsteam.wandscape.foundation.networking.ParticleBurstPacket.handleClient(packet))
                 // ── Guide doc open ──
                 .playToClient(
-                        com.wsteam.wandscape.content.items.network.GuideDocOpenPacket.TYPE,
-                        com.wsteam.wandscape.content.items.network.GuideDocOpenPacket.STREAM_CODEC,
-                        (packet, ctx) -> com.wsteam.wandscape.content.items.network.GuideDocOpenPacket.handleClient(packet))
+                        com.wsteam.wandscape.content.items.guidebook.network.GuidebookDocOpenPacket.TYPE,
+                        com.wsteam.wandscape.content.items.guidebook.network.GuidebookDocOpenPacket.STREAM_CODEC,
+                        (packet, ctx) -> com.wsteam.wandscape.content.items.guidebook.network.GuidebookDocOpenPacket.handleClient(packet))
                 // ── Guide book (right-click to open tutorial home) ──
                 .playToClient(
                         GuideBookOpenPacket.TYPE,
@@ -950,6 +953,7 @@ public class Wandscape {
     @SubscribeEvent
     public void onAddReloadListener(AddReloadListenerEvent event) {
         event.addListener(DATA_LOADER);
+        event.addListener(BALANCE_LOADER);
     }
 
     @SubscribeEvent
@@ -1103,7 +1107,7 @@ public class Wandscape {
                 .then(TavernCommand.node())
                 .then(TransportCommand.node())
                 .then(GuardCommand.node())
-                .then(GuideCommand.node())
+                .then(GuidebookCommand.node())
                 .then(SplineEditorCommand.node())
                 .then(MagicCommand.node())
                 .then(RoadStudioCommand.node())

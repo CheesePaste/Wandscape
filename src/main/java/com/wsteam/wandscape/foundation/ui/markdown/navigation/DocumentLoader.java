@@ -11,13 +11,13 @@ import java.util.List;
 /**
  * Classpath Markdown document resource loader.
  *
- * Guide documents live under {@code assets/wandscape/guide/<locale>/} so content follows the
+ * Guide documents live under {@code assets/wandscape/guidebook/<locale>/} so content follows the
  * client's language. Locale directory names: {@code en} for any en_* language, {@code zh_cn}
  * for zh_*. A missing localized file falls back to the default {@code zh_cn} directory.
  */
 public final class DocumentLoader {
 
-    private static final String GUIDE_ROOT = "assets/wandscape/guide/";
+    private static final String GUIDE_ROOT = "assets/wandscape/guidebook/";
     private static final String DEFAULT_LOCALE = "zh_cn";
 
     private DocumentLoader() {}
@@ -25,8 +25,8 @@ public final class DocumentLoader {
     /**
      * Load Markdown content by path or ID from classpath resources.
      * Supports formats like:
-     * - "assets/wandscape/guide/test_guide.md"
-     * - "guide:assets/wandscape/guide/townhall_guide.md"
+     * - "assets/wandscape/guidebook/test_guide.md"
+     * - "guide:assets/wandscape/guidebook/townhall_guide.md"
      * - "townhall_guide.md"
      * - "townhall_guide"
      */
@@ -50,8 +50,8 @@ public final class DocumentLoader {
     /** Resource paths to try for a guide location: current locale first, then the default locale. */
     private static List<String> resolveCandidates(String location) {
         String path = location.trim();
-        if (path.startsWith("guide:")) {
-            path = path.substring(6).trim();
+        if (path.startsWith("guidebook:")) {
+            path = path.substring("guidebook:".length()).trim();
         }
 
         List<String> candidates = new ArrayList<>();

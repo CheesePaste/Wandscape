@@ -51,4 +51,4 @@ Tourists only walk on paved roads. No roads means no tourists; shops won't get v
 
 ## About
 
-- [Creators & Special Thanks](guide:creators_guide)
+- [Creators & Special Thanks](guidebook:creators_guide)

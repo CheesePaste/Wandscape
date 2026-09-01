@@ -531,7 +531,7 @@ public class WarehouseScreen extends AbstractContainerScreen<WarehouseMenu> impl
         }
         if (showHelpButton && helpDocumentPath != null
                 && !(getFocused() instanceof EditBox box && box.canConsumeInput())
-                && WandscapeClient.GUIDE_TOGGLE.matches(keyCode, scanCode)) {
+                && WandscapeClient.GUIDEBOOK_TOGGLE.matches(keyCode, scanCode)) {
             openHelpDocument();
             return true;
         }
@@ -542,7 +542,7 @@ public class WarehouseScreen extends AbstractContainerScreen<WarehouseMenu> impl
         if (helpDocumentPath != null && minecraft != null) {
             String content = com.wsteam.wandscape.foundation.ui.markdown.navigation.DocumentLoader
                     .loadMarkdown(helpDocumentPath);
-            var screen = new com.wsteam.wandscape.foundation.ui.guide.GuideScreen(
+            var screen = new com.wsteam.wandscape.foundation.ui.guidebook.GuidebookScreen(
                     this, content, helpDocumentPath);
             minecraft.setScreen(screen);
         }

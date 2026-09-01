@@ -266,8 +266,8 @@ public final class WandscapePanelOverlay {
         com.wsteam.wandscape.foundation.ui.skin.SkinRender.drawHelpButton(g, helpX, helpY, helpW, helpH, helpState);
 
         if (helpHover) {
-            String keyName = com.wsteam.wandscape.WandscapeClient.GUIDE_TOGGLE.getTranslatedKeyMessage().getString();
-            g.renderTooltip(font, I18n.name("gui.wandscape.panel.open_guide", "打开指南 (%s)", keyName), (int) mx, (int) my);
+            String keyName = com.wsteam.wandscape.WandscapeClient.GUIDEBOOK_TOGGLE.getTranslatedKeyMessage().getString();
+            g.renderTooltip(font, I18n.name("gui.wandscape.panel.open_guidebook", "打开指南 (%s)", keyName), (int) mx, (int) my);
         }
 
         // ── Row 2: element icons + amounts ──

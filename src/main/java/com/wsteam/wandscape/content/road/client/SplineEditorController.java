@@ -403,7 +403,7 @@ public final class SplineEditorController {
 
         // H key: toggle spline guide document
         if (!uiWantsKb && !cameraActive) {
-            int hKey = com.wsteam.wandscape.WandscapeClient.GUIDE_TOGGLE.getKey().getValue();
+            int hKey = com.wsteam.wandscape.WandscapeClient.GUIDEBOOK_TOGGLE.getKey().getValue();
             boolean helpDown = GLFW.glfwGetKey(window, hKey) == GLFW.GLFW_PRESS;
             if (helpDown && !wasHelpDown) {
                 if (isSplineGuideOpen(mc)) {
@@ -411,7 +411,7 @@ public final class SplineEditorController {
                     Log.info(TAG, "[SplineEditor] Guide closed (H toggle)");
                 } else {
                     String content = com.wsteam.wandscape.foundation.ui.markdown.navigation.DocumentLoader.loadMarkdown("road_spline_guide");
-                    mc.setScreen(new com.wsteam.wandscape.foundation.ui.guide.GuideScreen(null, content, "road_spline_guide"));
+                    mc.setScreen(new com.wsteam.wandscape.foundation.ui.guidebook.GuidebookScreen(null, content, "road_spline_guide"));
                 }
             }
             wasHelpDown = helpDown;
@@ -473,7 +473,7 @@ public final class SplineEditorController {
 
     private static boolean isSplineGuideOpen(Minecraft mc) {
         if (mc.screen == null) return false;
-        if (!(mc.screen instanceof com.wsteam.wandscape.foundation.ui.guide.GuideScreen guide)) return false;
+        if (!(mc.screen instanceof com.wsteam.wandscape.foundation.ui.guidebook.GuidebookScreen guide)) return false;
         return guide.isShowingDocument("road_spline_guide");
     }
 

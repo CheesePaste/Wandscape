@@ -115,7 +115,7 @@ public abstract class MedievalScreen extends Screen implements ReplayProtectedSc
     public void openHelpDocument() {
         if (helpDocumentPath != null && minecraft != null) {
             String content = com.wsteam.wandscape.foundation.ui.markdown.navigation.DocumentLoader.loadMarkdown(helpDocumentPath);
-            var screen = new com.wsteam.wandscape.foundation.ui.guide.GuideScreen(this, content, helpDocumentPath);
+            var screen = new com.wsteam.wandscape.foundation.ui.guidebook.GuidebookScreen(this, content, helpDocumentPath);
             minecraft.setScreen(screen);
         }
     }
@@ -133,7 +133,7 @@ public abstract class MedievalScreen extends Screen implements ReplayProtectedSc
         }
         if (showHelpButton && helpDocumentPath != null
                 && !(getFocused() instanceof EditBox box && box.canConsumeInput())
-                && com.wsteam.wandscape.WandscapeClient.GUIDE_TOGGLE.matches(keyCode, scanCode)) {
+                && com.wsteam.wandscape.WandscapeClient.GUIDEBOOK_TOGGLE.matches(keyCode, scanCode)) {
             openHelpDocument();
             return true;
         }

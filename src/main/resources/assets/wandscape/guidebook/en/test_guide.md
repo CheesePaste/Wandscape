@@ -23,7 +23,7 @@ Click the links below to experience document jumps and in-game actions:
 
 Below demonstrates the renderer's automatic slicing support for images and animated sequences:
 
-![Test demo texture](wandscape:textures/gui/guide/sample.png =180x90)
+![Test demo texture](wandscape:textures/gui/guidebook/sample.png =180x90)
 
 - Supports reading static PNG images from Minecraft resource packs
 - Supports automatic gilded frame decoration and horizontal centering

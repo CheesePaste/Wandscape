@@ -424,11 +424,11 @@ public class MarkdownRenderWidget extends AbstractWidget {
     private Component formatLinkTooltip(String action) {
         if (action == null || action.isBlank()) return null;
         if (action.startsWith("action:")) {
-            return Component.translatable("gui.wandscape.guide.action_tooltip", action.substring(7));
+            return Component.translatable("gui.wandscape.guidebook.action_tooltip", action.substring(7));
         } else if (action.startsWith("http://") || action.startsWith("https://")) {
             return Component.literal(action);
-        } else if (action.endsWith(".md") || action.startsWith("guide:")) {
-            String doc = action.startsWith("guide:") ? action.substring(6) : action;
+        } else if (action.endsWith(".md") || action.startsWith("guidebook:")) {
+            String doc = action.startsWith("guidebook:") ? action.substring("guidebook:".length()) : action;
             if (doc.endsWith(".md")) {
                 doc = doc.substring(0, doc.length() - 3);
             }

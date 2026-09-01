@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.foundation.ui.guide;
+package com.wsteam.wandscape.foundation.ui.guidebook;
 import com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState;
 
 import com.wsteam.wandscape.foundation.log.Log;
@@ -20,7 +20,7 @@ import java.net.URISyntaxException;
  * Interactive Markdown Guide Screen supporting inter-document navigation,
  * browser-like back/forward history stack, and ESC key press interception.
  */
-public class GuideScreen extends MedievalScreen {
+public class GuidebookScreen extends MedievalScreen {
 
     private final Screen parentScreen;
     private final DocumentHistoryStack historyStack;
@@ -29,17 +29,17 @@ public class GuideScreen extends MedievalScreen {
     private MedievalButton btnBack;
     private MedievalButton btnForward;
 
-    public GuideScreen(String initialMarkdownContent) {
-        this(null, initialMarkdownContent, "assets/wandscape/guide/test_guide.md");
+    public GuidebookScreen(String initialMarkdownContent) {
+        this(null, initialMarkdownContent, "assets/wandscape/guidebook/test_guide.md");
     }
 
-    public GuideScreen(Screen parentScreen, String initialMarkdownContent, String initialDocPath) {
-        super(I18n.name("gui.wandscape.guide.title", "Wandscape 引导系统"), 320, 230);
+    public GuidebookScreen(Screen parentScreen, String initialMarkdownContent, String initialDocPath) {
+        super(I18n.name("gui.wandscape.guidebook.title", "Wandscape 指南书"), 320, 230);
         this.parentScreen = parentScreen;
         this.historyStack = new DocumentHistoryStack(initialDocPath);
         this.showCloseButton = true;
         this.titleXOffset = 52;
-        setTitleBar(I18n.name("gui.wandscape.guide.titlebar", "Wandscape 引导指南"));
+        setTitleBar(I18n.name("gui.wandscape.guidebook.titlebar", "Wandscape 指南书"));
     }
 
     @Override
@@ -120,8 +120,8 @@ public class GuideScreen extends MedievalScreen {
         //    - legacy guide:doc_id (backwards compat — strip prefix)
         //    DocumentLoader.resolveCandidates normalizes all of these (incl. .md suffix).
         String docPath = target;
-        if (target.startsWith("guide:")) {
-            docPath = target.substring("guide:".length()).trim();
+        if (target.startsWith("guidebook:")) {
+            docPath = target.substring("guidebook:".length()).trim();
         }
 
         historyStack.navigateTo(docPath);

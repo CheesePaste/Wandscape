@@ -51,4 +51,4 @@ Wandscape 是个模拟经营模组：你放下建筑，**法师 NPC 替你干活
 
 ## 关于
 
-- [制作者 & 特别感谢](guide:creators_guide)
+- [制作者 & 特别感谢](guidebook:creators_guide)

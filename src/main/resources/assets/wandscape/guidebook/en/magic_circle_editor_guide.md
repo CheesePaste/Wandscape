@@ -4,7 +4,7 @@ This page is for creators. Regular players can skip it — the pretty magic circ
 
 The Magic Circle Editor (`tools/magic-circle-editor/`) is a standalone web page for visually designing particle effects; export JSON, drop it into the mod's `magic_circles/` directory, and it becomes usable in-game.
 
-![Magic circle editor diagram](wandscape:textures/gui/guide/magic_editor_diagram.png =200x100)
+![Magic circle editor diagram](wandscape:textures/gui/guidebook/magic_editor_diagram.png =200x100)
 
 ## What You Can Tune
 

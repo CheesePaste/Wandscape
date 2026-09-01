@@ -23,7 +23,7 @@
 
 以下展示渲染器对图像及动态动画的自动切片支持：
 
-![测试演示纹理](wandscape:textures/gui/guide/sample.png =180x90)
+![测试演示纹理](wandscape:textures/gui/guidebook/sample.png =180x90)
 
 - 支持读取 Minecraft 资源包中的静态 PNG 图片
 - 支持自动金边画框修饰与水平居中排版

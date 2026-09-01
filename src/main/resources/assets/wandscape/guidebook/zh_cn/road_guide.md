@@ -2,7 +2,7 @@
 
 **游客只走铺好的路**。没有路就没有游客，商店开门也不会有人进。
 
-![道路系统示意图](wandscape:textures/gui/guide/road_diagram.png =200x100)
+![道路系统示意图](wandscape:textures/gui/guidebook/road_diagram.png =200x100)
 
 ## 进入道路模式
 
