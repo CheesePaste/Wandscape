@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.command;
+package com.wsteam.wandscape.content.command;
 import com.wsteam.wandscape.content.task.ecs.World;
 
 import com.mojang.brigadier.arguments.IntegerArgumentType;

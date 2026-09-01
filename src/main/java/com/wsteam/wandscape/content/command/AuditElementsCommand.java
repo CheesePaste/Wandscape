@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.command;
+package com.wsteam.wandscape.content.command;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;

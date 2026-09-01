@@ -1,5 +1,4 @@
-package com.wsteam.wandscape.command;
-import com.wsteam.wandscape.content.task.ecs.World;
+package com.wsteam.wandscape.content.command;
 
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.tree.CommandNode;
