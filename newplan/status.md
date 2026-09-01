@@ -42,6 +42,7 @@
 - **Tier 4 骨架迁移完成（2026-08-31）**：21 个旧顶层功能包已搬入 content/（building+projection 合、npc+guard 合、task+op 合、overview+stats 合向 colony、raid→colony、scepter→items 整树、magic 拆 SpellItem→items）。**build 已修好**：IDEA move 漏改 11 处残留旧路径 import（Wandscape.java 3 处、WandscapeClient 1 处、Engine 侧 nav/transport/blueprint 3 处、搬走域自身跨子包 4 处），`compileJava` 绿。**归属判据（决策 #7）**：raid 归 colony（殖民地袭击，非 npc）、scepter 归 items（功能性物品含系统层）；scepter 系统层含 SavedData，被 npc/guard 消费属跨域直接调用。
 - **⚠️ 测试故意不搬、后续大删（用户拍板 2026-08-31）**：`src/test` 未随 src/main 搬——测试类仍散在旧顶层包，被测类已搬去 content/，导致 package-private 方法跨包访问失败（`compileTestJava` 100 个错误，如 ProjectileDodgeTest.willHit/MagicSpellExecutorsTest.meteorIntervalTicks/ProjectionClientStateTest.clampSlotIndex）。**决策：现在不搬测试**（数量过多、维护费高，CLAUDE.md「守门员不是简历」要删大部分），搬完等于搬了再删。故迁移完成判定 = `./gradlew compileJava` 绿（已达成），`./gradlew build`/`test` 暂不要求绿；测试在 main 稳定后单独大删。
 - **暂缓清单**：command（归域+debug 大清理）、顶层 client（TransportItemEntityRenderer 随 transport）、mixin（各归各域，依赖域内结构定后）、gametest（ElementAuditRunner 归 element）——与 shared/core/engine 桥层拆解分开处理（桥层拆完、域结构定死后再归位）。
+- **桥层拆解规则文档 `newplan/tier4-dissolve-rules.md`（2026-08-31 立）**：给 AI 判断 shared/core/engine 三桥层每类去处的决策规则——§1 决策树（死?/纯逻辑?/服务谁/content?/基建?/装配?/公开契约?/MC适配?）+ §2 五类目标判据速查 + §3 必删必活红线 + §4 已知类别模板（packages.md 实锤）+ §5 产出格式。**用法**：AI 逐类跑决策树产出「类→终点」表（删/content/foundation/impl/api ），标 `?` 交人工；不逐文件读，靠规则自判。拆 shared/core/engine 时作为执行依据。
 - **横切三件套**（3/4/5 阶段）：UI 去堆（抽公共 Screen 样板先行）、lang 分文件（样板先行）、Log 治理（删除随 2a 顺手做，输出点审计放最后）。
 
 ## 其他（日志）
