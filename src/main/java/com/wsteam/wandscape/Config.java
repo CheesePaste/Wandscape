@@ -17,10 +17,6 @@ public class Config {
                     + "已移除游戏内滚轮/Ctrl 调速，改此值即可整体调整。")
             .defineInRange("panel.flySpeed", 15.0, 1.0, 200.0);
 
-    public static final ModConfigSpec.IntValue COLONY_RADIUS = BUILDER
-            .comment("Default colony radius in blocks")
-            .defineInRange("general.colonyRadius", 128, 16, 512);
-
     // ---- Transport (物品运输) ----
 
     public static final ModConfigSpec.IntValue TRANSPORT_TICKS_PER_BLOCK_ON_ROAD = BUILDER
@@ -35,10 +31,6 @@ public class Config {
             .comment("Scheduler heartbeat interval in ticks: how often idle NPCs are matched "
                     + "to pending tasks (20 ticks = 1 second)")
             .defineInRange("scheduler.heartbeatTicks", 20, 10, 200);
-
-    public static final ModConfigSpec.DoubleValue SAME_BUILDING_CONTINUATION_BONUS = BUILDER
-            .comment("Score bonus for NPC continuing tasks on the same building")
-            .defineInRange("scheduler.sameBuildingContinuationBonus", 50.0, 0.0, 500.0);
 
     public static final ModConfigSpec.IntValue STUCK_CHECK_INTERVAL_TICKS = BUILDER
             .comment("Interval in ticks between NPC stuck checks (60 ticks = 3 seconds)")
@@ -77,14 +69,6 @@ public class Config {
                     + "building of its colony is revived immediately at the town hall door (reuses the "
                     + "all-dead fallback revive), instead of requiring an altar ritual.")
             .defineInRange("revive.nearBuildingRange", 20, 1, 64);
-
-    public static final ModConfigSpec.IntValue BASE_OPERATION_RANGE = BUILDER
-            .comment("Base operation range for wand operations")
-            .defineInRange("wand.baseOperationRange", 16, 4, 64);
-
-    public static final ModConfigSpec.IntValue PER_WAND_LEVEL_RANGE = BUILDER
-            .comment("Additional range per wand level")
-            .defineInRange("wand.perWandLevelRange", 8, 0, 32);
 
     // ---- Colony autonomy ----
 
