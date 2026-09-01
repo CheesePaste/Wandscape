@@ -1,0 +1,35 @@
+{
+  "_comment": "Wandscape 可调平衡值覆盖文件。扁平键，值即覆盖默认；缺省或用下划线开头的键被忽略。改值后 /reload 生效。此处数值＝当前默认值（可整文件删除以回默认）。",
+
+  "npcRegenGraceTicks": 100,
+  "npcRegenIntervalTicks": 80,
+  "npcManaRegenTicks": 10,
+  "npcManaRegenFraction": 0.01,
+
+  "guardRange": 10,
+  "guardReleaseRange": 15,
+  "guardSelfDefenseRange": 16,
+  "guardHateRange": 48,
+  "guardHateDurationTicks": 600,
+  "guardFollowAttackDurationTicks": 300,
+  "guardKiteStartDist": 9.0,
+  "guardKiteStandoff": 13.0,
+  "guardEngageStandoff": 9.0,
+  "guardFleeHpThreshold": 0.30,
+  "guardFleeStartDist": 12.0,
+  "guardFleeStandoff": 18.0,
+
+  "reviveNearBuildingRange": 20,
+  "scepterHostileRange": 128.0,
+
+  "transportTicksPerBlockOnRoad": 2,
+  "transportTicksPerBlockOffRoad": 4,
+  "decorationBonusCap": 1.0,
+
+  "workstationCraftTicksPerUnit": 5,
+  "craftingStationCraftTicksPerUnit": 1200,
+  "constructionPlaceTicksPerUnit": 1,
+  "castSingleTargetMaxEnemies": 3,
+  "castAoeMinEnemies": 3,
+  "mageHutRestTicks": 2400
+}
