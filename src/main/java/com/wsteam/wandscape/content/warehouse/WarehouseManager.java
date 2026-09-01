@@ -68,9 +68,22 @@ public class WarehouseManager implements WarehouseApi, ColonyResourceAccess {
     }
 
     @Override
-    public void addElement(UUID colonyId, ElementType type, long amount) {
+    public boolean addElement(UUID colonyId, ElementType type, long amount) {
         ColonyItemBank bank = getBank();
-        if (bank != null) bank.addElement(colonyId, type, amount);
+        if (bank == null) return false;
+        bank.addElement(colonyId, type, amount);
+        return true;
+    }
+
+    @Override
+    public boolean addAllElements(UUID colonyId, Map<ElementType, Long> amounts) {
+        ColonyItemBank bank = getBank();
+        if (bank == null) return false;
+        for (var e : amounts.entrySet()) {
+            if (e.getValue() == null || e.getValue() <= 0) continue;
+            bank.addElement(colonyId, e.getKey(), e.getValue());
+        }
+        return true;
     }
 
     // ════════════════════════════════════════════════════════════
@@ -128,9 +141,9 @@ public class WarehouseManager implements WarehouseApi, ColonyResourceAccess {
     }
 
     @Override
-    public void insertItems(UUID colonyId, List<ItemStack> stacks) {
+    public boolean insertItems(UUID colonyId, List<ItemStack> stacks) {
         ColonyItemBank bank = getBank();
-        if (bank == null) return;
+        if (bank == null) return false;
         Set<String> emitted = new HashSet<>();
         for (ItemStack stack : stacks) {
             if (stack.isEmpty()) continue;
@@ -144,6 +157,7 @@ public class WarehouseManager implements WarehouseApi, ColonyResourceAccess {
                 resourceAddedListener.onResourceAdded(new ResourceId(rl.toString()), stack.getCount());
             }
         }
+        return true;
     }
 
     // ════════════════════════════════════════════════════════════
