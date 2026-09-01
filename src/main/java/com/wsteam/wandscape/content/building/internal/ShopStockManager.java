@@ -9,7 +9,6 @@ import com.wsteam.wandscape.content.tourist.data.ShopConfig;
 import com.wsteam.wandscape.foundation.util.TickProfiler;
 
 import com.wsteam.wandscape.content.building.data.BuildingConfig;
-import com.wsteam.wandscape.impl.WandscapeEngine;
 import com.wsteam.wandscape.content.colony.ColonyActivation;
 import com.wsteam.wandscape.content.warehouse.system.ResourceSupplySystem;
 import com.wsteam.wandscape.content.warehouse.transport.ItemTransportManager;
@@ -384,7 +383,7 @@ public final class ShopStockManager {
         ServerLevel level = getServerLevel();
         if (level == null) return;
 
-        ItemTransportManager transporter = WandscapeEngine.getTransporter();
+        ItemTransportManager transporter = ItemTransportManager.getInstance();
         boolean hasTransport = transporter != null && findNearestWarehouse(colonyId) != null;
 
         // Find warehouse position for this restock cycle
@@ -482,7 +481,7 @@ public final class ShopStockManager {
      */
     private boolean requestSynthesize(@Nullable UUID colonyId, String itemId, int amount) {
         try {
-            return ResourceSupplySystem.enqueueSynthesize(itemId, amount, colonyId, WandscapeEngine.getWorld(), true);
+            return ResourceSupplySystem.enqueueSynthesize(itemId, amount, colonyId, com.wsteam.wandscape.content.task.ecs.World.getActive(), true);
         } catch (Exception e) {
             Log.warn(TAG, "[Shop] requestSynthesize({} x{} colony={}) failed: {}", itemId, amount, colonyId, e.getMessage());
             return false;
@@ -537,7 +536,7 @@ public final class ShopStockManager {
     private void launchRestockTransport(UUID buildingId, String itemId, int amount,
                                         ServerLevel level,
                                         BlockPos warehousePos, BlockPos shopPos) {
-        ItemTransportManager transporter = WandscapeEngine.getTransporter();
+        ItemTransportManager transporter = ItemTransportManager.getInstance();
         if (transporter == null) return;
 
         ItemKey key = ItemKey.of(itemId, null);

@@ -6,19 +6,6 @@ import com.wsteam.wandscape.content.npc.data.RecruitmentCandidate;
 import java.util.List;
 import java.util.UUID;
 public interface TavernApi {
-    List<RecruitmentCandidate> getCandidates(UUID tavernId);
-    boolean refreshCandidates(UUID tavernId);
-    boolean recruitCandidate(UUID tavernId, int index);
-
-    /**
-     * Called when a mage tourist departs with all three bars full.
-     * Stores their rolled attributes (resume) in the colony's tavern recruitment pool.
-     */
-    void receiveMageResume(UUID colonyId, String touristName, int level,
-                           float maxHp, float moveSpeed, float spellPower,
-                           float workSpeed, float spellSpeed, float armorValue,
-                           float maxMana, int skinVariant);
-
     /** Returns mage resumes available at a tavern, newest first. */
     List<MageResume> getMageResumes(UUID colonyId);
 

@@ -11,7 +11,6 @@ import com.wsteam.wandscape.content.road.core.RoadEdge;
 import com.wsteam.wandscape.content.road.core.SplineLeg;
 import com.wsteam.wandscape.content.road.core.TransportRoute;
 import com.wsteam.wandscape.content.road.engine.RoadSavedData;
-import com.wsteam.wandscape.impl.WandscapeEngine;
 import com.wsteam.wandscape.content.warehouse.transport.ItemTransportManager;
 import com.wsteam.wandscape.content.warehouse.transport.TransportItemEntity;
 import com.wsteam.wandscape.foundation.util.ItemKey;
@@ -238,7 +237,7 @@ public final class TransportCommand {
     }
 
     private static ItemTransportManager getTransporter(CommandContext<CommandSourceStack> ctx) {
-        var t = WandscapeEngine.getTransporter();
+        var t = ItemTransportManager.getInstance();
         if (t == null) ctx.getSource().sendFailure(Component.literal("[Transport] Not initialized"));
         return t;
     }

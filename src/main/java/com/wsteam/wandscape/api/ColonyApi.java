@@ -33,16 +33,6 @@ public interface ColonyApi {
     /** True if pos is a registered colony origin. */
     boolean isColonyOrigin(BlockPos pos);
 
-    // Called by BuildCompleteListener when a building becomes intact.
-    // Returns the colonyId assigned, or null if none found.
-    UUID onBuildingIntact(com.wsteam.wandscape.content.building.data.BuildingData building);
-
-    // Called when a building is destroyed (e.g. demolition complete).
-    void onBuildingDestroyed(com.wsteam.wandscape.content.building.data.BuildingData building);
-
-    // Try to assign a colony to a newly registered building.
-    void assignColonyIfPossible(com.wsteam.wandscape.content.building.data.BuildingData building);
-
     /** Returns all registered colony UUIDs. Empty if no colonies exist. */
     Collection<UUID> getAllColonyIds();
 
@@ -51,9 +41,6 @@ public interface ColonyApi {
 
     /** Change the colony's character naming rule (only affects future names). */
     void setNamingStyle(UUID colonyId, com.wsteam.wandscape.foundation.util.NameStyle style);
-
-    // Rebuild spatial index from saved data (called on server start).
-    void rebuildFromSavedData();
 
     /** Current colony level (1..max), or 0 when no such colony exists. */
     int getColonyLevel(UUID colonyId);

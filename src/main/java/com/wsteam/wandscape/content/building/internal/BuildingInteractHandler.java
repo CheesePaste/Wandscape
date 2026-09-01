@@ -1,5 +1,4 @@
 package com.wsteam.wandscape.content.building.internal;
-import com.wsteam.wandscape.impl.WandscapeEngine;
 import com.wsteam.wandscape.content.task.component.Position;
 import com.wsteam.wandscape.foundation.ui.panel.PanelStateTracker;
 import com.wsteam.wandscape.content.colony.network.ColonyCreatePromptPacket;
@@ -123,7 +122,7 @@ public final class BuildingInteractHandler {
 
         // Town hall with linked colony: show colony level & exp info
         if ("government".equals(category) && state.getColonyId() != null) {
-            var levelMgr = com.wsteam.wandscape.impl.WandscapeEngine.getColonyLevelManager();
+            var levelMgr = com.wsteam.wandscape.content.colony.ColonyLevelManager.get();
             int lvl = levelMgr != null ? levelMgr.getLevel(colonyId) : 1;
             int exp = levelMgr != null ? levelMgr.getExperience(colonyId) : 0;
             int expNext = levelMgr != null ? levelMgr.expToNextLevel(colonyId) : 1000;

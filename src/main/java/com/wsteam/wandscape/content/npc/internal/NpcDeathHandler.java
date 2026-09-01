@@ -4,7 +4,6 @@ import com.wsteam.wandscape.content.npc.attributes.NpcAttributes.AttributeType;
 import com.wsteam.wandscape.content.task.component.NpcInventory;
 import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.content.task.types.ResourceStack;
-import com.wsteam.wandscape.impl.WandscapeEngine;
 import com.wsteam.wandscape.content.npc.data.DeathRecord;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.foundation.log.Log;
@@ -36,7 +35,7 @@ public final class NpcDeathHandler {
         if (!(npc.level() instanceof ServerLevel level)) return;
 
         List<ResourceStack> inv = List.of();
-        World world = WandscapeEngine.getWorld();
+        World world = com.wsteam.wandscape.content.task.ecs.World.getActive();
         if (world != null && npc.ecsEntityId > 0) {
             NpcInventory ecsInv = world.get(npc.ecsEntityId, NpcInventory.class);
             if (ecsInv != null) {

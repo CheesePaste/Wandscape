@@ -403,7 +403,7 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
                     // 已有该 uuid）与磁盘加载体（loadedFromDisk）在此被排除，避免重复
                     // 触发 TouristArrivedEvent 虚增「游客到达」统计。
                     if (colonyId != null) {
-                        var api = WandscapeApis.getTouristApiSilently();
+                        var api = com.wsteam.wandscape.content.tourist.internal.TouristApiImpl.get();
                         if (api != null) {
                             api.registerArrival(getUUID(), colonyId);
                         }
@@ -536,7 +536,7 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
             sim.removeShadow(getUUID());
         }
         if (colonyId != null) {
-            var api = WandscapeApis.getTouristApiSilently();
+            var api = com.wsteam.wandscape.content.tourist.internal.TouristApiImpl.get();
             if (api != null) {
                 api.registerDeparture(getUUID(), colonyId,
                         BarRatio.of(getComfortSat(), getComfortNeed(), getMagicSat(), getMagicNeed(),

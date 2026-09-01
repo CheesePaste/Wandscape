@@ -2,7 +2,6 @@ package com.wsteam.wandscape.content.npc.internal;
 
 import com.wsteam.wandscape.content.task.component.ColonyMember;
 import com.wsteam.wandscape.content.task.ecs.World;
-import com.wsteam.wandscape.impl.WandscapeEngine;
 import com.wsteam.wandscape.content.npc.data.NpcDataImpl;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.api.NpcApi;
@@ -32,7 +31,7 @@ public class NpcApiImpl implements NpcApi {
     @Override
     public List<NpcData> getColonyNpcs(UUID colonyId) {
         List<NpcData> result = new ArrayList<>();
-        World world = WandscapeEngine.getWorld();
+        World world = com.wsteam.wandscape.content.task.ecs.World.getActive();
         if (world == null) return result;
 
         for (var entry : EntityComponentBridge.INSTANCE.allNpcs().entrySet()) {

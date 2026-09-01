@@ -12,7 +12,6 @@ import com.wsteam.wandscape.content.tourist.event.DailySettlementEvent;
 import com.wsteam.wandscape.content.building.data.BuildingConfig;
 import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.content.building.internal.ShopStockManager;
-import com.wsteam.wandscape.impl.WandscapeEngine;
 import com.wsteam.wandscape.content.colony.ColonyLevelManager;
 import com.wsteam.wandscape.api.*;
 // event imports updated
@@ -89,7 +88,7 @@ public final class AchievementService {
     private AchievementService() {}
 
     public static void register() {
-        var world = WandscapeEngine.getWorld();
+        var world = com.wsteam.wandscape.content.task.ecs.World.getActive();
         if (world == null || world.eventBus == null) {
             Log.warn(TAG, "Cannot register — engine not bootstrapped");
             return;
@@ -188,7 +187,7 @@ public final class AchievementService {
     }
 
     private static void checkLevel(UUID colonyId) {
-        ColonyLevelManager mgr = WandscapeEngine.getColonyLevelManager();
+        ColonyLevelManager mgr = ColonyLevelManager.get();
         if (mgr == null) return;
         int level = mgr.getLevel(colonyId);
         if (level >= 2) grant(colonyId, LEVEL_UP);

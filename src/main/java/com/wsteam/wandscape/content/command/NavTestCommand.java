@@ -2,7 +2,6 @@ package com.wsteam.wandscape.content.command;
 
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.context.CommandContext;
-import com.wsteam.wandscape.impl.WandscapeEngine;
 import com.wsteam.wandscape.content.task.boundary.WandscapeMovementOps;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import net.minecraft.commands.CommandSourceStack;
@@ -76,7 +75,8 @@ public final class NavTestCommand {
         }
 
         // 3. Trigger pathfinding via MovementOps
-        WandscapeMovementOps mov = WandscapeEngine.getMovementOps();
+        var rt = com.wsteam.wandscape.content.task.runtime.TaskRuntime.getActive();
+        var mov = rt != null ? rt.getMovementOps() : null;
         if (mov == null) {
             src.sendFailure(Component.literal(
                     "[Wandscape] MovementOps not initialized — engine not bootstrapped?"));

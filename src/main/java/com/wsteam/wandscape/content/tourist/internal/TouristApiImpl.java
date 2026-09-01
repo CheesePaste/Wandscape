@@ -17,6 +17,20 @@ import java.util.concurrent.ConcurrentHashMap;
  * Full spawn logic will be implemented in Phase C (TouristSpawnSystem).
  */
 public class TouristApiImpl implements TouristApi {
+    private static volatile TouristApiImpl instance;
+
+    public TouristApiImpl() {
+        instance = this;
+    }
+
+    public static TouristApiImpl get() {
+        if (instance == null) {
+            synchronized (TouristApiImpl.class) {
+                if (instance == null) instance = new TouristApiImpl();
+            }
+        }
+        return instance;
+    }
 
     // colonyId → set of tourist entity UUIDs
     private final Map<UUID, Set<UUID>> colonyTourists = new ConcurrentHashMap<>();
@@ -60,13 +74,11 @@ public class TouristApiImpl implements TouristApi {
         // For now, this is a placeholder that the spawn system will call
     }
 
-    @Override
     public void registerArrival(UUID touristId, UUID colonyId) {
         colonyTourists.computeIfAbsent(colonyId, k -> ConcurrentHashMap.newKeySet()).add(touristId);
         NeoForge.EVENT_BUS.post(new TouristArrivedEvent(touristId, colonyId));
     }
 
-    @Override
     public void registerDeparture(UUID touristId, UUID colonyId, BarRatio fill) {
         // 幂等：同一游客只登记一次离场（显式离场与实体移除兜底可能双双调用本方法）。
         if (!departedTourists.add(touristId)) return;

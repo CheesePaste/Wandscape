@@ -33,6 +33,22 @@ public class ItemTransportManager {
 
     private static final String TAG = "ItemTransportManager";
 
+    @Nullable
+    private static volatile ItemTransportManager activeInstance;
+
+    public static void setActive(@Nullable ItemTransportManager mgr) {
+        activeInstance = mgr;
+    }
+
+    @Nullable
+    public static ItemTransportManager getInstance() {
+        return activeInstance;
+    }
+
+    public static void reset() {
+        activeInstance = null;
+    }
+
     private final List<ActiveTransport> active = new ArrayList<>();
 
     // ── Public API ──

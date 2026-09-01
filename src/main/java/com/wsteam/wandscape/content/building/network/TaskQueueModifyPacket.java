@@ -7,7 +7,6 @@ import com.wsteam.wandscape.content.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.content.building.internal.BuildingState;
 import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.content.task.types.GridPos;
-import com.wsteam.wandscape.impl.WandscapeEngine;
 import com.wsteam.wandscape.content.production.ProductionEligibility;
 import com.wsteam.wandscape.api.BuildingApi;
 import com.wsteam.wandscape.content.element.data.ElementType;
@@ -80,7 +79,7 @@ public record TaskQueueModifyPacket(
             Log.info(TAG, "TaskQueueModify: buildingId={} action={} index={}",
                     buildingId.toString().substring(0, 8), pkt.action, pkt.index);
 
-            BuildingApi api = WandscapeApis.getBuildingApi();
+            var api = com.wsteam.wandscape.content.building.internal.BuildingApiImpl.get();
             boolean changed = false;
 
             switch (pkt.action) {
@@ -251,7 +250,7 @@ public record TaskQueueModifyPacket(
         UUID currentTaskUuid = state.getCurrentTaskId();
         if (currentTaskUuid == null) return null;
 
-        World world = WandscapeEngine.getWorld();
+        World world = com.wsteam.wandscape.content.task.ecs.World.getActive();
         GlobalTask gt = world != null ? world.taskPool.get(currentTaskUuid.getMostSignificantBits()) : null;
         if (gt == null || gt.blueprintId == null) return null;
 
@@ -266,7 +265,8 @@ public record TaskQueueModifyPacket(
         if (channelTotal > 0) {
             GridPos anchor = anchorOf(params, state);
             if (anchor != null) {
-                var exec = WandscapeEngine.getBlockInteractExec();
+                var rt = com.wsteam.wandscape.content.task.runtime.TaskRuntime.getActive();
+                var exec = rt != null ? rt.getBlockInteractExec() : null;
                 int[] prog = exec != null ? exec.getChannelProgress(anchor) : new int[]{-1, -1};
                 if (prog[0] >= 0) {
                     channelRemaining = Math.max(0, prog[0]);

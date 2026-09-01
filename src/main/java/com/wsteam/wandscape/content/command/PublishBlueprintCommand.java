@@ -7,7 +7,6 @@ import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
-import com.wsteam.wandscape.impl.WandscapeEngine;
 import com.wsteam.wandscape.content.task.engine.pool.TaskRequest;
 import com.wsteam.wandscape.content.task.ecs.World;
 import net.minecraft.commands.CommandSourceStack;
@@ -43,7 +42,7 @@ public final class PublishBlueprintCommand {
     public static java.util.concurrent.CompletableFuture<com.mojang.brigadier.suggestion.Suggestions> suggestBlueprints(
             CommandContext<CommandSourceStack> ctx,
             com.mojang.brigadier.suggestion.SuggestionsBuilder builder) {
-        World world = WandscapeEngine.getWorld();
+        World world = com.wsteam.wandscape.content.task.ecs.World.getActive();
         if (world != null && world.blueprintRegistry != null) {
             for (String id : world.blueprintRegistry.ids()) {
                 builder.suggest(id);
@@ -145,7 +144,7 @@ public final class PublishBlueprintCommand {
         }
 
         // Submit
-        var world = WandscapeEngine.getWorld();
+        var world = com.wsteam.wandscape.content.task.ecs.World.getActive();
         if (world == null || world.taskPool == null) {
             src.sendFailure(Component.literal("[Wandscape] Engine not bootstrapped."));
             return 0;

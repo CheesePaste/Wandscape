@@ -1,5 +1,4 @@
 package com.wsteam.wandscape.content.building.internal;
-import com.wsteam.wandscape.impl.WandscapeEngine;
 import com.wsteam.wandscape.content.colony.service.ChunkLoadManager;
 import com.wsteam.wandscape.content.colony.ColonyApiImpl;
 import com.wsteam.wandscape.content.warehouse.system.ResourceSupplySystem;
@@ -41,6 +40,20 @@ import java.util.function.Predicate;
  */
 public class BuildingApiImpl implements BuildingApi {
     private static final String TAG = "BuildingApiImpl";
+    private static volatile BuildingApiImpl instance;
+
+    public BuildingApiImpl() {
+        instance = this;
+    }
+
+    public static BuildingApiImpl get() {
+        if (instance == null) {
+            synchronized (BuildingApiImpl.class) {
+                if (instance == null) instance = new BuildingApiImpl();
+            }
+        }
+        return instance;
+    }
 
     // Task tracking (engine taskId → buildingId)
     private final Map<UUID, UUID> currentTasks = new ConcurrentHashMap<>(); // buildingId → taskId
@@ -103,7 +116,6 @@ public class BuildingApiImpl implements BuildingApi {
 
     // ---- Lifecycle ----
 
-    @Override
     public void registerBuilding(BuildingData data) {
         BuildingSavedData sd = getSavedData();
         if (sd == null) {
@@ -140,7 +152,6 @@ public class BuildingApiImpl implements BuildingApi {
                 state.getBuildingId(), colonyId, state.getBuildingTypeId()));
     }
 
-    @Override
     public void unregisterBuilding(BlockPos pos) {
         BuildingSavedData sd = getSavedData();
         if (sd == null) return;
@@ -276,7 +287,7 @@ public class BuildingApiImpl implements BuildingApi {
                 Map<String, Integer> materialCounts = EnqueueHelper.computeMaterialCounts(config);
                 if (!materialCounts.isEmpty()) {
                     com.wsteam.wandscape.content.warehouse.system.ResourceSupplySystem.cancelAutoSynthesize(
-                            state.getColonyId(), materialCounts, com.wsteam.wandscape.impl.WandscapeEngine.getWorld());
+                            state.getColonyId(), materialCounts, com.wsteam.wandscape.content.task.ecs.World.getActive());
                 }
             }
         }
@@ -350,7 +361,7 @@ public class BuildingApiImpl implements BuildingApi {
 
         UUID colonyId = state.getColonyId();
         BuildingConfig config = BuildingConfigLoader.getInstance().get(state.getBuildingTypeId());
-        var world = com.wsteam.wandscape.impl.WandscapeEngine.getWorld();
+        var world = com.wsteam.wandscape.content.task.ecs.World.getActive();
 
         // 1. Immediately cancel all building tasks in engine/global/building task pool and clear state queue
         BuildingTaskSource.cancelBuildingTasks(buildingId);
@@ -448,12 +459,10 @@ public class BuildingApiImpl implements BuildingApi {
 
     // ---- Task bridge ----
 
-    @Override
     public boolean isBuildingOccupied(UUID buildingId) {
         return currentTasks.containsKey(buildingId);
     }
 
-    @Override
     public List<UUID> getBuildingsWithPendingWork(UUID colonyId) {
         BuildingSavedData sd = getSavedData();
         if (sd == null || serverLevel == null) return List.of();
@@ -490,7 +499,6 @@ public class BuildingApiImpl implements BuildingApi {
         return groupKey != null && sd.hasSharedWork(cid, groupKey);
     }
 
-    @Override
     @Nullable
     public WorkItem dequeueWork(UUID buildingId) {
         BuildingSavedData sd = getSavedData();
@@ -533,7 +541,6 @@ public class BuildingApiImpl implements BuildingApi {
         return item;
     }
 
-    @Override
     @Nullable
     public WorkItem dequeueWorkEligible(UUID buildingId, Predicate<WorkItem> eligible) {
         BuildingSavedData sd = getSavedData();
@@ -773,7 +780,6 @@ public class BuildingApiImpl implements BuildingApi {
         return result;
     }
 
-    @Override
     public void setCurrentTask(UUID buildingId, UUID taskId) {
         currentTasks.put(buildingId, taskId);
         BuildingSavedData sd = getSavedData();
@@ -786,7 +792,6 @@ public class BuildingApiImpl implements BuildingApi {
         }
     }
 
-    @Override
     public void clearCurrentTask(UUID buildingId) {
         currentTasks.remove(buildingId);
         BuildingSavedData sd = getSavedData();
@@ -799,7 +804,6 @@ public class BuildingApiImpl implements BuildingApi {
         }
     }
 
-    @Override
     public List<WorkItem> getQueue(UUID buildingId) {
         BuildingSavedData sd = getSavedData();
         if (sd == null) return List.of();
@@ -812,7 +816,6 @@ public class BuildingApiImpl implements BuildingApi {
         return new ArrayList<>(queue);
     }
 
-    @Override
     public boolean removeFromQueue(UUID buildingId, int index) {
         BuildingSavedData sd = getSavedData();
         if (sd == null) {
@@ -843,7 +846,6 @@ public class BuildingApiImpl implements BuildingApi {
         return true;
     }
 
-    @Override
     public boolean moveUp(UUID buildingId, int index) {
         BuildingSavedData sd = getSavedData();
         if (sd == null) {
@@ -876,7 +878,6 @@ public class BuildingApiImpl implements BuildingApi {
         return true;
     }
 
-    @Override
     public boolean moveDown(UUID buildingId, int index) {
         BuildingSavedData sd = getSavedData();
         if (sd == null) {

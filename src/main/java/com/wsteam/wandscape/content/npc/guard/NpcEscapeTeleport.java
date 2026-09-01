@@ -5,7 +5,6 @@ import com.wsteam.wandscape.content.task.boundary.RitualOps;
 import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.content.task.types.GridPos;
 import com.wsteam.wandscape.content.task.types.RitualId;
-import com.wsteam.wandscape.impl.WandscapeEngine;
 import com.wsteam.wandscape.content.task.boundary.WandscapeRitualOps;
 import com.wsteam.wandscape.content.magic.data.MagicDef;
 import com.wsteam.wandscape.content.magic.internal.SpellbookLoader;
@@ -48,7 +47,7 @@ public final class NpcEscapeTeleport {
         long gameTime = level.getGameTime();
         if (!npc.consumeEscapeScan(gameTime)) return false;
 
-        World world = WandscapeEngine.getWorld();
+        World world = com.wsteam.wandscape.content.task.ecs.World.getActive();
         if (world == null || world.ritualOps == null) return false;
 
         // 门控预检（不扣蓝）：锁/CD/蓝任一不足则跳过，避免每次环境伤害都全量扫目标点

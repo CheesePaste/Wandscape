@@ -7,7 +7,6 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 import com.wsteam.wandscape.content.road.core.*;
-import com.wsteam.wandscape.impl.WandscapeEngine;
 import com.wsteam.wandscape.foundation.sound.SoundService;
 import com.wsteam.wandscape.foundation.registry.WandscapeSounds;
 import com.wsteam.wandscape.content.road.core.RoadNetwork;
@@ -18,7 +17,6 @@ import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.foundation.networking.ScreenFeedbackPacket;
 import com.wsteam.wandscape.foundation.ui.I18n;
 import com.wsteam.wandscape.content.task.engine.pool.TaskRequest;
-import com.wsteam.wandscape.content.task.source.PlayerManualSource;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -200,10 +198,10 @@ public record RoadPlacePacket(String presetId, BlockPos startPos, BlockPos endPo
         network.addEdge(edge);
         savedData.setDirty();
 
-        // 5. Push task via PlayerManualSource
-        PlayerManualSource source = WandscapeEngine.getPlayerManualSource();
-        if (source == null) {
-            Log.warn(TAG, "PlayerManualSource not available — cannot publish road task");
+        // 5. Push task via World.getActive().taskPool
+        var world = com.wsteam.wandscape.content.task.ecs.World.getActive();
+        if (world == null || world.taskPool == null) {
+            Log.warn(TAG, "TaskPool not available — cannot publish road task");
             return;
         }
 
@@ -223,7 +221,7 @@ public record RoadPlacePacket(String presetId, BlockPos startPos, BlockPos endPo
         params.put("material_counts", counts);
 
         try {
-            long taskId = source.publish(new TaskRequest("road:build_segment", params, 10,
+            long taskId = world.taskPool.addTask(new TaskRequest("road:build_segment", params, 10,
                     com.wsteam.wandscape.api.WandscapeApis.colonyAt(player.blockPosition())));
             // Capture demand + live task id on the edge so withdraw can cancel & refund.
             edge.setMaterialCounts(materials);

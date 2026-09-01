@@ -27,10 +27,6 @@ public interface BuildingApi {
     @Nullable
     BoundingBox getBuildingBounds(UUID buildingId);
 
-    // ---- Lifecycle (called by block place/break handlers) ----
-    void registerBuilding(BuildingData data);
-    void unregisterBuilding(BlockPos pos);
-
     // ---- Demolish ----
     void demolishBuilding(UUID buildingId);
     boolean isDemolishing(UUID buildingId);
@@ -70,26 +66,6 @@ public interface BuildingApi {
     int getColonyMagic(UUID colonyId);
     int getColonyWonder(UUID colonyId);
 
-    // ---- Task bridge (called by BuildingTaskSource) ----
-    boolean isBuildingOccupied(UUID buildingId);
-
-    /** Buildings that have queued work, are operational, and have no current task. */
-    List<UUID> getBuildingsWithPendingWork(UUID colonyId);
-
-    /** Dequeue the next WorkItem from the building's FIFO queue. Returns null if empty. */
-    @Nullable
-    WorkItem dequeueWork(UUID buildingId);
-
-    /**
-     * Dequeue the first WorkItem from the building's queue accepted by
-     * {@code eligible}, scanning top-to-bottom. Items rejected by the predicate
-     * (e.g. a craft task whose elements are short) stay in place so they remain
-     * visible and can be picked up once they become eligible. Returns null when
-     * every item is rejected or the queue is empty.
-     */
-    @Nullable
-    WorkItem dequeueWorkEligible(UUID buildingId, java.util.function.Predicate<WorkItem> eligible);
-
     /**
      * Enqueue a WorkItem into the building's priority-ordered queue.
      * Higher-priority tasks run first; a new task joins the tail of its own
@@ -101,27 +77,6 @@ public interface BuildingApi {
 
     /** Get building IDs filtered by category. */
     List<UUID> getBuildingsByCategory(@Nullable UUID colonyId, String category);
-
-    /** Mark the building as having an active task in the engine pool. */
-    void setCurrentTask(UUID buildingId, UUID taskId);
-
-    /** Get a snapshot of the current task queue in FIFO order. */
-    List<WorkItem> getQueue(UUID buildingId);
-
-    /** Remove a task from the queue by index. Returns true if removed.
-     *  Index 0 (current task) cannot be removed. */
-    boolean removeFromQueue(UUID buildingId, int index);
-
-    /** Swap the task at index with the one above it. Returns true if swapped.
-     *  Index 0 cannot be moved. */
-    boolean moveUp(UUID buildingId, int index);
-
-    /** Swap the task at index with the one below it. Returns true if swapped.
-     *  Index 0 cannot be moved. */
-    boolean moveDown(UUID buildingId, int index);
-
-    /** Clear the active task when it completes or is cancelled. */
-    void clearCurrentTask(UUID buildingId);
 
     // ---- Placement (unified entry point) ----
 

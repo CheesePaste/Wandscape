@@ -1,7 +1,6 @@
 package com.wsteam.wandscape.content.task.network;
 
 import com.wsteam.wandscape.content.task.ecs.World;
-import com.wsteam.wandscape.impl.WandscapeEngine;
 import com.wsteam.wandscape.foundation.log.Log;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -54,7 +53,7 @@ public record TaskManagementActionPacket(
     public static void handleServer(TaskManagementActionPacket packet, ServerPlayer player) {
         if (player == null || player.isRemoved()) return;
 
-        World world = WandscapeEngine.getWorld();
+        World world = com.wsteam.wandscape.content.task.ecs.World.getActive();
         if (world == null || world.taskPool == null) return;
 
         long taskId = packet.taskId();

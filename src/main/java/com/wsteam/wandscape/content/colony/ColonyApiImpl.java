@@ -28,7 +28,7 @@ public final class ColonyApiImpl implements ColonyApi {
     /** Colony UUID → origin position (reverse lookup). */
     private final Map<UUID, BlockPos> colonyToOrigin = new ConcurrentHashMap<>();
 
-    /** Colony level/exp data source — injected by Wandscape.java during assembly (not via WandscapeEngine). */
+    /** Colony level/exp data source — injected by Wandscape.java during assembly. */
     @Nullable
     private ColonyLevelManager colonyLevelManager;
 
@@ -124,7 +124,6 @@ public final class ColonyApiImpl implements ColonyApi {
 
     // ── Event hooks ───────────────────────────────────────────────────────
 
-    @Override
     @Nullable
     public UUID onBuildingIntact(BuildingData data) {
         if ("government".equals(data.getCategory())) {
@@ -157,14 +156,12 @@ public final class ColonyApiImpl implements ColonyApi {
         return colonyId;
     }
 
-    @Override
     public void onBuildingDestroyed(BuildingData data) {
         // Colonies are permanent — destroying the town hall does NOT delete
         // the colony. The colony persists in ColonySavedData and will be
         // recovered on next restart as long as the data file exists.
     }
 
-    @Override
     public void assignColonyIfPossible(BuildingData data) {
         if (data.getColonyId() != null) return;
         UUID colonyId = getColonyId(data.getPosition());
@@ -193,7 +190,6 @@ public final class ColonyApiImpl implements ColonyApi {
         }
     }
 
-    @Override
     public void rebuildFromSavedData() {
         colonyOrigins.clear();
         colonyToOrigin.clear();
@@ -234,7 +230,7 @@ public final class ColonyApiImpl implements ColonyApi {
         }
     }
 
-    // ── Colony level / experience (injected, not via WandscapeEngine) ──────
+    // ── Colony level / experience ──────
 
     public void setColonyLevelManager(@Nullable ColonyLevelManager mgr) {
         this.colonyLevelManager = mgr;

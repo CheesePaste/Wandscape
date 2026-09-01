@@ -4,7 +4,6 @@ import com.mojang.brigadier.Command;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.tree.CommandNode;
 import com.wsteam.wandscape.content.task.ecs.World;
-import com.wsteam.wandscape.impl.WandscapeEngine;
 import com.wsteam.wandscape.content.task.engine.pool.GlobalTask;
 import com.wsteam.wandscape.content.task.runtime.TaskState;
 import net.minecraft.commands.CommandSourceStack;
@@ -34,7 +33,7 @@ public final class RecoveryCommand {
 
     private static int clearAll(CommandContext<CommandSourceStack> ctx) {
         CommandSourceStack src = ctx.getSource();
-        World world = WandscapeEngine.getWorld();
+        World world = com.wsteam.wandscape.content.task.ecs.World.getActive();
         if (world == null || world.taskPool == null) {
             src.sendFailure(Component.literal("[Wandscape] Engine not bootstrapped"));
             return 0;
@@ -65,7 +64,7 @@ public final class RecoveryCommand {
 
     private static int showStatus(CommandContext<CommandSourceStack> ctx) {
         CommandSourceStack src = ctx.getSource();
-        World world = WandscapeEngine.getWorld();
+        World world = com.wsteam.wandscape.content.task.ecs.World.getActive();
         if (world == null || world.taskPool == null) {
             src.sendFailure(Component.literal("[Wandscape] Engine not bootstrapped"));
             return 0;

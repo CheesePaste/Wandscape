@@ -75,31 +75,25 @@ public final class TavernCommand {
         String name = TouristSpawnSystem.generateRandomTouristName(colonyId);
         int variant = serverLevel.random.nextInt(TouristEntity.WIZARD_SKIN_COUNT);
 
-        try {
-            var tavernApi = WandscapeApis.getTavernApi();
-            tavernApi.receiveMageResume(colonyId, name, safeLevel,
-                    candidate.maxHp(), candidate.moveSpeed(), candidate.spellPower(),
-                    candidate.workSpeed(), candidate.spellSpeed(), candidate.armorValue(),
-                    candidate.maxMana(), variant);
+        var recruitStorage = com.wsteam.wandscape.content.tourist.internal.TavernRecruitStorage.getOrCreate(serverLevel);
+        recruitStorage.addResume(colonyId, new com.wsteam.wandscape.content.npc.data.MageResume(
+                name, safeLevel, candidate.maxHp(), candidate.moveSpeed(), candidate.spellPower(),
+                candidate.workSpeed(), candidate.spellSpeed(), candidate.armorValue(),
+                candidate.maxMana(), variant, System.currentTimeMillis()));
 
-            Component msg = I18n.name("message.wandscape.command.tavern_resume_added",
-                    "[Tavern] 已向小镇 %s 酒馆添加法师简历：%s (Lv.%s)\n"
-                    + "  属性: 生命 %s, 魔力 %s, 强度 %s, 工速 %s, 施速 %s, 护甲 %s\n"
-                    + "  可直接前往酒馆打开「法师简历」标签页招聘",
-                    colonyId.toString().substring(0, 8), name, safeLevel,
-                    String.format(Locale.ROOT, "%.0f", candidate.maxHp()),
-                    String.format(Locale.ROOT, "%.0f", candidate.maxMana()),
-                    String.format(Locale.ROOT, "%.2f", candidate.spellPower()),
-                    String.format(Locale.ROOT, "%.2f", candidate.workSpeed()),
-                    String.format(Locale.ROOT, "%.2f", candidate.spellSpeed()),
-                    String.format(Locale.ROOT, "%.1f", candidate.armorValue()));
-            src.sendSuccess(() -> msg, false);
-            return Command.SINGLE_SUCCESS;
-        } catch (Exception e) {
-            src.sendFailure(I18n.name("message.wandscape.command.tavern_unavailable",
-                    "[Wandscape] 酒馆系统不可用: %s", e.getMessage()));
-            return 0;
-        }
+        Component msg = I18n.name("message.wandscape.command.tavern_resume_added",
+                "[Tavern] 已向小镇 %s 酒馆添加法师简历：%s (Lv.%s)\n"
+                + "  属性: 生命 %s, 魔力 %s, 强度 %s, 工速 %s, 施速 %s, 护甲 %s\n"
+                + "  可直接前往酒馆打开「法师简历」标签页招聘",
+                colonyId.toString().substring(0, 8), name, safeLevel,
+                String.format(Locale.ROOT, "%.0f", candidate.maxHp()),
+                String.format(Locale.ROOT, "%.0f", candidate.maxMana()),
+                String.format(Locale.ROOT, "%.2f", candidate.spellPower()),
+                String.format(Locale.ROOT, "%.2f", candidate.workSpeed()),
+                String.format(Locale.ROOT, "%.2f", candidate.spellSpeed()),
+                String.format(Locale.ROOT, "%.1f", candidate.armorValue()));
+        src.sendSuccess(() -> msg, false);
+        return Command.SINGLE_SUCCESS;
     }
 
     private static int listResumes(CommandContext<CommandSourceStack> ctx) {

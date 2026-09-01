@@ -1,6 +1,5 @@
 package com.wsteam.wandscape;
 import com.wsteam.wandscape.content.command.*;
-import com.wsteam.wandscape.impl.WandscapeEngine;
 import com.wsteam.wandscape.content.npc.HostileTargetingHandler;
 import com.wsteam.wandscape.content.task.TaskPoolSavedData;
 import com.wsteam.wandscape.content.building.BuildingNoSpawnZoneHandler;
@@ -89,7 +88,6 @@ import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.content.magic.network.MagicCircleCastPacket;
 import com.wsteam.wandscape.api.WandscapeApis;
 import com.wsteam.wandscape.content.colony.stats.internal.StatisticsCollector;
-import com.wsteam.wandscape.content.task.source.PlayerManualSource;
 import com.wsteam.wandscape.content.tourist.entity.TouristEntity;
 import com.wsteam.wandscape.content.tourist.network.TouristDataPacket;
 import com.wsteam.wandscape.content.items.wand.internal.WandApiImpl;
@@ -958,7 +956,7 @@ public class Wandscape {
     public void onServerStarting(ServerStartingEvent event) {
         Log.info(TAG, "Wandscape server starting — bootstrapping engine...");
         buildingApi.setLevel(event.getServer().overworld());
-        EngineBootstrap.bootstrap();
+        var runtime = EngineBootstrap.bootstrap();
 
         // Register unified metrics facade (after bootstrap, before any consumer queries it)
         var metricsService = ColonyStatusService.create();
@@ -1014,10 +1012,9 @@ public class Wandscape {
 
         // Load persisted tasks from previous session
         ServerLevel level = event.getServer().overworld();
-        var world = WandscapeEngine.getWorld();
+        var world = runtime.getWorld();
         if (world != null && world.taskPool != null) {
             var saved = TaskPoolSavedData.getOrCreate(level, world.taskPool);
-            WandscapeEngine.setTaskPoolSavedData(saved);
             // Mark dirty when pool changes so SavedData writes to disk
             world.taskPool.onChanged = saved::setDirty;
             Log.info(TAG, "Task persistence wired — pool has {} active tasks", world.taskPool.size());
@@ -1029,7 +1026,6 @@ public class Wandscape {
 
         // Road persistence + API
         var roadSaved = RoadSavedData.getOrCreate(level);
-        WandscapeEngine.setRoadSavedData(roadSaved);
         WandscapeApis.setRoadApi(new RoadApiImpl());
         Log.info(TAG, "Road system wired — {} edges persisted", roadSaved.getNetwork().edgeCount());
 
@@ -1047,7 +1043,7 @@ public class Wandscape {
         // Colony level data
         var colonyLevelData = ColonyLevelData.getOrCreate(level);
         var colonyLevelManager = new ColonyLevelManager(colonyLevelData);
-        WandscapeEngine.setColonyLevelManager(colonyLevelManager);
+        ColonyLevelManager.setActive(colonyLevelManager);
         com.wsteam.wandscape.content.colony.ColonyApiImpl.get().setColonyLevelManager(colonyLevelManager);
 
         // Wire level-up event to engine EventBus
@@ -1061,13 +1057,6 @@ public class Wandscape {
         // Tourist sim — drives unloaded tourists from data shadows.
         TouristSimSystem.register(level);
         Log.info(TAG, "Tourist sim system wired");
-
-        // Wire manual task publishing for GUI (network layer reads PlayerManualSource from engine)
-        if (world != null && world.taskPool != null) {
-            PlayerManualSource playerSource = new PlayerManualSource(world.taskPool);
-            WandscapeEngine.setPlayerManualSource(playerSource);
-            Log.info(TAG, "PlayerManualSource wired — manual task publishing available");
-        }
     }
 
     @SubscribeEvent
@@ -1077,7 +1066,9 @@ public class Wandscape {
         ChunkLoadManager.get().reset();
         TouristSimSystem.reset();
         TouristSpotManager.getActive().clear(); // 静态单例跨世界存活，需清空幽灵占位/排队
-        WandscapeEngine.reset();
+        com.wsteam.wandscape.content.task.runtime.TaskRuntime.reset();
+        ColonyLevelManager.reset();
+        com.wsteam.wandscape.content.warehouse.transport.ItemTransportManager.reset();
         EntityComponentBridge.INSTANCE.clear();
     }
 
@@ -1156,78 +1147,15 @@ public class Wandscape {
                 com.wsteam.wandscape.compat.ironspellbooks.IronSpellsCaster.tickAll();
             }
 
-            var world = WandscapeEngine.getWorld();
-            if (world == null) return;
+            var rt = com.wsteam.wandscape.content.task.runtime.TaskRuntime.getActive();
+            if (rt == null) return;
+            var world = rt.getWorld();
 
             mcTickCount++;
-
-            // ① Tick async executor countdowns
-            var asyncExec = WandscapeEngine.getAsyncExecutor();
-            if (asyncExec != null) {
-                try (var s = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tick.async_exec")) {
-                    asyncExec.tickAll();
-                }
-            }
-
-            // ①b Tick async block interaction countdowns (gather/decompose/synthesize)
-            var blockInteractExec = WandscapeEngine.getBlockInteractExec();
-            if (blockInteractExec != null) {
-                try (var s = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tick.block_interact")) {
-                    blockInteractExec.tickAll();
-                }
-            }
-
-            // ①c Tick async ritual channeling countdowns (self_teleport, etc.)
-            var ritualOps = WandscapeEngine.getRitualOps();
-            if (ritualOps != null) {
-                try (var s = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tick.ritual_ops")) {
-                    ritualOps.tickAll();
-                }
-            }
-
-            // ①d Drive item transport animations (visual item flight warehouse→NPC)
-            var transporter = WandscapeEngine.getTransporter();
-            if (transporter != null) {
-                try (var s = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tick.transporter")) {
-                    transporter.tickAll();
-                }
-            }
-
-            // ①e Drive resource request staggered launches (1 item/tick from warehouse)
-            var resourceReqExec = WandscapeEngine.getResourceRequestExec();
-            if (resourceReqExec != null) {
-                try (var s = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tick.resource_req")) {
-                    resourceReqExec.tickAll();
-                }
-            }
-
-            // ①f Tick guard combat sustained loops (cast → wait beam → retarget → complete)
-            var guardExec = WandscapeEngine.getGuardExecutor();
-            if (guardExec != null) {
-                try (var s = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tick.guard_exec")) {
-                    guardExec.tickAll();
-                }
-            }
-
-            // ①g Tick NPC self-defense (proactive aggro scan + retaliation loop; preempts current task)
-            var selfDefenseExec = WandscapeEngine.getSelfDefenseExecutor();
-            if (selfDefenseExec != null) {
-                try (var s = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tick.self_defense")) {
-                    selfDefenseExec.tick(world);
-                }
-            }
 
             // ①g1 Tick projectile dodge (walk away from incoming hostile arrows/skulls; throttled)
             try (var s = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tick.projectile_dodge")) {
                 ProjectileDodge.tick(world);
-            }
-
-            // ①g2 Tick altar cast channeling countdowns (altar-only magic channel → effect fire)
-            var altarCastExec = WandscapeEngine.getAltarCastExecutor();
-            if (altarCastExec != null) {
-                try (var s = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tick.altar_exec")) {
-                    altarCastExec.tickAll();
-                }
             }
 
             // ①h Tick raid trigger scanner + victory tracker (colonies live in the overworld)
@@ -1249,11 +1177,9 @@ public class Wandscape {
                 EntityComponentBridge.INSTANCE.flushDeferredJoins(world);
             }
 
-            // ③ Engine logic tick (incl. NavigationSystem which drives movement)
+            // ③ Task runtime tick (executors + ECS world)
             engineTickCount++;
-            try (var s = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tick.ecs_world")) {
-                world.tick(1.0f);
-            }
+            rt.tick(event.getServer().overworld());
 
             // Heartbeat every ~5 seconds (100 MC ticks)
             if (mcTickCount % 100 == 0) {

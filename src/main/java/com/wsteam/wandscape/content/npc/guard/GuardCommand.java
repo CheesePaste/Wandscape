@@ -6,7 +6,6 @@ import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.tree.CommandNode;
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.content.task.ecs.World;
-import com.wsteam.wandscape.impl.WandscapeEngine;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.content.task.runtime.TaskState;
 import net.minecraft.commands.CommandSourceStack;
@@ -57,7 +56,7 @@ public final class GuardCommand {
                 level, GuardScanner.zones(level, releaseRange));
 
         int activeGuards = 0;
-        World world = WandscapeEngine.getWorld();
+        World world = com.wsteam.wandscape.content.task.ecs.World.getActive();
         if (world != null) {
             for (var t : world.taskPool.all()) {
                 if ("guard:attack".equals(t.blueprintId) && t.state != TaskState.COMPLETED) {

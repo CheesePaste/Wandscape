@@ -14,7 +14,7 @@ import com.wsteam.wandscape.content.task.component.NpcInventory;
 import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.content.task.types.GridPos;
 import com.wsteam.wandscape.content.colony.ColonyApiImpl;
-import com.wsteam.wandscape.impl.WandscapeEngine;
+import com.wsteam.wandscape.content.colony.ColonyLevelManager;
 import com.wsteam.wandscape.foundation.service.ParticleService;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.content.npc.internal.EntityComponentBridge;
@@ -158,7 +158,7 @@ public final class ColonyCommand {
         // ── Step 2: create colonyId ─────────────────────────────────────────
         ColonyApi colonyApi = ColonyApiImpl.get();
         UUID colonyId = colonyApi.createColony(origin, founder);
-        var levelMgr = WandscapeEngine.getColonyLevelManager();
+        var levelMgr = ColonyLevelManager.get();
         if (levelMgr != null && name != null && !name.isBlank()) {
             levelMgr.setColonyName(colonyId, name);
         }
@@ -166,7 +166,7 @@ public final class ColonyCommand {
                 colonyId.toString().substring(0, 8), origin);
 
         // ── Step 3: create ECS colony entity ────────────────────────────────
-        World world = WandscapeEngine.getWorld();
+        World world = World.getActive();
         if (world != null) {
             ColonyMetadata meta =
                     ColonyMetadata.create(
@@ -269,7 +269,7 @@ public final class ColonyCommand {
 
         UUID created = colonyApi.getColonyId(origin);
         if (created != null) {
-            var levelMgr = com.wsteam.wandscape.impl.WandscapeEngine.getColonyLevelManager();
+            var levelMgr = ColonyLevelManager.get();
             if (levelMgr != null) {
                 levelMgr.setColonyName(created, name);
             }
@@ -323,7 +323,7 @@ public final class ColonyCommand {
             return 0;
         }
 
-        var levelMgr = WandscapeEngine.getColonyLevelManager();
+        var levelMgr = ColonyLevelManager.get();
         if (levelMgr == null) {
             ctx.getSource().sendFailure(Component.literal("[Wandscape] Level manager not ready"));
             return 0;
@@ -349,7 +349,7 @@ public final class ColonyCommand {
      * flushDeferredJoins runs on the next tick.
      */
     private static void fixEcsAfterSpawn(WandscapeNpc npc, UUID colonyId) {
-        World ecsWorld = WandscapeEngine.getWorld();
+        World ecsWorld = World.getActive();
         if (ecsWorld == null) return;
 
         Long ecsId = EntityComponentBridge.INSTANCE.getEcsId(npc.getUUID());

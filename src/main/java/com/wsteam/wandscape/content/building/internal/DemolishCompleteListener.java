@@ -3,7 +3,6 @@ import com.wsteam.wandscape.content.task.boundary.EventBus;
 import com.wsteam.wandscape.content.task.component.Position;
 
 import com.wsteam.wandscape.content.task.event.CustomEvent;
-import com.wsteam.wandscape.impl.WandscapeEngine;
 import com.wsteam.wandscape.foundation.service.ParticleService;
 import com.wsteam.wandscape.api.ColonyApi;
 import com.wsteam.wandscape.foundation.log.Log;
@@ -32,7 +31,7 @@ public final class DemolishCompleteListener {
      * Call after engine bootstrap in {@code onServerStarting}.
      */
     public static void register() {
-        var world = WandscapeEngine.getWorld();
+        var world = com.wsteam.wandscape.content.task.ecs.World.getActive();
         if (world == null || world.eventBus == null) {
             Log.warn(TAG, "Cannot register DemolishCompleteListener — engine not bootstrapped");
             return;
@@ -69,16 +68,13 @@ public final class DemolishCompleteListener {
         }
 
         // Unregister the building from saved data
-        var api = WandscapeApis.getBuildingApi();
+        var api = BuildingApiImpl.get();
         if (api != null) {
             api.unregisterBuilding(anchor);
         }
 
         // Notify colony system (cascade-deletes colony if this was a town hall)
-        ColonyApi colonyApi = WandscapeApis.getColonyApiSilently();
-        if (colonyApi != null) {
-            colonyApi.onBuildingDestroyed(state);
-        }
+        com.wsteam.wandscape.content.colony.ColonyApiImpl.get().onBuildingDestroyed(state);
 
         // ── 拆除完成：建筑包围盒一圈灰烟 ──
         if (level instanceof ServerLevel srv) {

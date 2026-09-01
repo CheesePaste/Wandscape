@@ -15,7 +15,6 @@ import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.content.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.content.building.internal.BuildingState;
 import com.wsteam.wandscape.content.task.event.NarrativeEventTriggered;
-import com.wsteam.wandscape.impl.WandscapeEngine;
 import com.wsteam.wandscape.content.colony.ColonyActivation;
 import com.wsteam.wandscape.content.colony.ColonyLevelManager;
 import com.wsteam.wandscape.content.colony.service.ChunkLoadManager;
@@ -616,17 +615,15 @@ public final class TouristSpawnSystem {
     private void storeMageResume(TouristEntity t) {
         UUID colonyId = t.getColonyId();
         if (colonyId == null) return;
-        try {
-            var tavernApi = com.wsteam.wandscape.api.WandscapeApis.getTavernApi();
-            tavernApi.receiveMageResume(colonyId, t.getTouristName(), t.getLevel(),
+        if (t.level() instanceof ServerLevel sLevel) {
+            var recruitStorage = TavernRecruitStorage.getOrCreate(sLevel);
+            recruitStorage.addResume(colonyId, new com.wsteam.wandscape.content.npc.data.MageResume(
+                    t.getTouristName(), t.getLevel(),
                     t.getMaxHp(), t.getMoveSpeed(), t.getSpellPower(),
                     t.getWorkSpeed(), t.getSpellSpeed(), t.getArmor(),
-                    t.getMaxMana(), t.getSkinVariant());
+                    t.getMaxMana(), t.getSkinVariant(), System.currentTimeMillis()));
             t.setMageResumeStored(true);
             Log.info(TAG, "[Tourist] Mage resume stored: {} (Lv.{})", t.getTouristName(), t.getLevel());
-        } catch (IllegalStateException e) {
-            Log.warn(TAG, "[Tourist] TavernApi not available — mage resume lost: {}",
-                    t.getTouristName());
         }
     }
 
@@ -657,8 +654,8 @@ public final class TouristSpawnSystem {
             storeMageResume(t);
         }
 
-        // Register departure via TouristApi → fires TouristDepartedEvent
-        var touristApi = getTouristApi();
+        // Register departure via TouristApiImpl → fires TouristDepartedEvent
+        var touristApi = TouristApiImpl.get();
         if (touristApi != null && colonyId != null) {
             touristApi.registerDeparture(t.getUUID(), colonyId, fill);
         }
@@ -876,7 +873,7 @@ public final class TouristSpawnSystem {
     }
 
     private static void emitNarrativeEvent(NarrativeEvent ne) {
-        var world = WandscapeEngine.getWorld();
+        var world = com.wsteam.wandscape.content.task.ecs.World.getActive();
         if (world != null && world.eventBus != null) {
             world.eventBus.emit(new NarrativeEventTriggered(ne));
         }

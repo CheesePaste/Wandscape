@@ -1,7 +1,6 @@
 package com.wsteam.wandscape.content.road.engine;
 import com.wsteam.wandscape.content.task.ecs.World;
 
-import com.wsteam.wandscape.impl.WandscapeEngine;
 import com.wsteam.wandscape.content.road.core.PathPoint;
 import com.wsteam.wandscape.content.road.core.RoadEdge;
 import com.wsteam.wandscape.content.road.core.RoadNetwork;
@@ -65,7 +64,7 @@ public class RoadApiImpl implements RoadApi {
         if (edge.getStatus() == RoadEdge.EdgeStatus.COMPLETE) return false; // completed can't withdraw
 
         // 1. Cancel the live segment task(s) so an NPC stops building it.
-        var world = WandscapeEngine.getWorld();
+        var world = com.wsteam.wandscape.content.task.ecs.World.getActive();
         if (world != null && world.taskPool != null) {
             for (long taskId : edge.getSegmentTaskIds()) {
                 world.taskPool.cancelTask(taskId, world);

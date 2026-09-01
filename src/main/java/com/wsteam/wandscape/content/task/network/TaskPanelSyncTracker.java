@@ -11,7 +11,6 @@ import com.wsteam.wandscape.content.task.component.TaskExecutor;
 import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.content.npc.attributes.NpcAttributes.AttributeType;
 import com.wsteam.wandscape.content.task.types.ResourceStack;
-import com.wsteam.wandscape.impl.WandscapeEngine;
 import com.wsteam.wandscape.content.production.ProductionEligibility;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.content.npc.internal.EntityComponentBridge;
@@ -103,7 +102,7 @@ public final class TaskPanelSyncTracker {
         }
         if (colonyId == null) return;
 
-        World world = WandscapeEngine.getWorld();
+        World world = com.wsteam.wandscape.content.task.ecs.World.getActive();
         if (world == null || world.taskPool == null) return;
 
         TaskManagementSyncPacket packet = buildSnapshot(world, colonyId, player);

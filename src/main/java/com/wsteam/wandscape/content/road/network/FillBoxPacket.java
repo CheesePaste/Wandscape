@@ -6,7 +6,6 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
-import com.wsteam.wandscape.impl.WandscapeEngine;
 import com.wsteam.wandscape.foundation.sound.SoundService;
 import com.wsteam.wandscape.foundation.registry.WandscapeSounds;
 import com.wsteam.wandscape.content.road.data.RoadPreset;
@@ -14,7 +13,6 @@ import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.foundation.networking.ScreenFeedbackPacket;
 import com.wsteam.wandscape.foundation.ui.I18n;
 import com.wsteam.wandscape.content.task.engine.pool.TaskRequest;
-import com.wsteam.wandscape.content.task.source.PlayerManualSource;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -134,10 +132,10 @@ public record FillBoxPacket(String presetId, BlockPos startPos, BlockPos endPos)
             }
         }
 
-        // 5. Push task via PlayerManualSource
-        PlayerManualSource source = WandscapeEngine.getPlayerManualSource();
-        if (source == null) {
-            Log.warn(TAG, "PlayerManualSource not available — cannot publish fill task");
+        // 5. Push task via World.getActive().taskPool
+        var world = com.wsteam.wandscape.content.task.ecs.World.getActive();
+        if (world == null || world.taskPool == null) {
+            Log.warn(TAG, "TaskPool not available — cannot publish fill task");
             return;
         }
 
@@ -154,7 +152,7 @@ public record FillBoxPacket(String presetId, BlockPos startPos, BlockPos endPos)
         params.put("material_counts", counts);
 
         try {
-            long taskId = source.publish(new TaskRequest("terrain:fill_box", params, 10,
+            long taskId = world.taskPool.addTask(new TaskRequest("terrain:fill_box", params, 10,
                     com.wsteam.wandscape.api.WandscapeApis.colonyAt(player.blockPosition())));
             SoundService.playAt(player.serverLevel(), player.getX(), player.getY(), player.getZ(),
                     WandscapeSounds.TASK_PUBLISH, SoundSource.PLAYERS, 0.4f, 1.0f);

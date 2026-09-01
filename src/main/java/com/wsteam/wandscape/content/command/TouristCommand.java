@@ -312,15 +312,12 @@ public final class TouristCommand {
 
         // 7. Store Resume directly to Tavern for immediate recruitment testing
         if (colonyId != null) {
-            try {
-                var tavernApi = WandscapeApis.getTavernApi();
-                tavernApi.receiveMageResume(colonyId, tourist.getTouristName(), tourist.getLevel(),
-                        tourist.getMaxHp(), tourist.getMoveSpeed(), tourist.getSpellPower(),
-                        tourist.getWorkSpeed(), tourist.getSpellSpeed(), tourist.getArmor(),
-                        tourist.getMaxMana(), tourist.getSkinVariant());
-            } catch (Exception e) {
-                Log.warn("TouristCommand", "TavernApi not available when storing resume: {}", e.getMessage());
-            }
+            var recruitStorage = com.wsteam.wandscape.content.tourist.internal.TavernRecruitStorage.getOrCreate(serverLevel);
+            recruitStorage.addResume(colonyId, new com.wsteam.wandscape.content.npc.data.MageResume(
+                    tourist.getTouristName(), tourist.getLevel(),
+                    tourist.getMaxHp(), tourist.getMoveSpeed(), tourist.getSpellPower(),
+                    tourist.getWorkSpeed(), tourist.getSpellSpeed(), tourist.getArmor(),
+                    tourist.getMaxMana(), tourist.getSkinVariant(), System.currentTimeMillis()));
         }
 
         Component colonyInfo = colonyId != null

@@ -4,7 +4,6 @@ import com.wsteam.wandscape.content.task.component.Position;
 
 import com.google.gson.*;
 import com.wsteam.wandscape.content.road.core.*;
-import com.wsteam.wandscape.impl.WandscapeEngine;
 import com.wsteam.wandscape.foundation.sound.SoundService;
 import com.wsteam.wandscape.foundation.registry.WandscapeSounds;
 import com.wsteam.wandscape.content.road.engine.RoadSavedData;
@@ -12,7 +11,6 @@ import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.foundation.networking.ScreenFeedbackPacket;
 import com.wsteam.wandscape.foundation.ui.I18n;
 import com.wsteam.wandscape.content.task.engine.pool.TaskRequest;
-import com.wsteam.wandscape.content.task.source.PlayerManualSource;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -88,9 +86,9 @@ public record SplineBuildPacket(String tilesJson, String splineJson) implements 
                 return;
             }
 
-            PlayerManualSource source = WandscapeEngine.getPlayerManualSource();
-            if (source == null) {
-                Log.warn(TAG, "PlayerManualSource not available — cannot publish spline road task");
+            var world = com.wsteam.wandscape.content.task.ecs.World.getActive();
+            if (world == null || world.taskPool == null) {
+                Log.warn(TAG, "TaskPool not available — cannot publish spline road task");
                 return;
             }
 
@@ -170,7 +168,7 @@ public record SplineBuildPacket(String tilesJson, String splineJson) implements 
             params.put("material_list", list);
             params.put("material_counts", counts);
 
-            long taskId = source.publish(new TaskRequest("road:build_segment", params, 10,
+            long taskId = world.taskPool.addTask(new TaskRequest("road:build_segment", params, 10,
                     com.wsteam.wandscape.api.WandscapeApis.colonyAt(player.blockPosition())));
             // Capture demand + live task id on the edge so withdraw can cancel & refund.
             edge.setMaterialCounts(materials);

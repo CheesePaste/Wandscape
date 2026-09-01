@@ -6,7 +6,6 @@ import com.wsteam.wandscape.content.building.network.MageHutActionPacket;
 import com.wsteam.wandscape.content.building.network.MageHutDataPacket;
 import com.wsteam.wandscape.content.building.network.MageHutDataPacket.MageCandidate;
 import com.wsteam.wandscape.content.npc.attributes.NpcAttributes.AttributeType;
-import com.wsteam.wandscape.impl.WandscapeEngine;
 import com.wsteam.wandscape.content.npc.NpcMenu;
 import com.wsteam.wandscape.content.npc.NpcStrategyMenu;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
@@ -53,8 +52,8 @@ public final class MageHutServerHandler {
                                    BuildingState state) {
         UUID colonyId = state.getColonyId();
         if (colonyId == null) return;
-        var colonyLevel = WandscapeEngine.getColonyLevelManager() != null
-                ? WandscapeEngine.getColonyLevelManager().getLevel(colonyId) : 1;
+        var colonyLevel = com.wsteam.wandscape.content.colony.ColonyLevelManager.get() != null
+                ? com.wsteam.wandscape.content.colony.ColonyLevelManager.get().getLevel(colonyId) : 1;
         PacketDistributor.sendToPlayer(sp,
                 buildPacket(level, buildingId, state, colonyId, colonyLevel));
     }
@@ -150,8 +149,8 @@ public final class MageHutServerHandler {
         WandscapeNpc npc = requireAlive(sp, level, resident);
         if (npc == null) return;
 
-        int colonyLevel = WandscapeEngine.getColonyLevelManager() != null
-                ? WandscapeEngine.getColonyLevelManager().getLevel(colonyId) : 1;
+        int colonyLevel = com.wsteam.wandscape.content.colony.ColonyLevelManager.get() != null
+                ? com.wsteam.wandscape.content.colony.ColonyLevelManager.get().getLevel(colonyId) : 1;
         if (!NpcAttributes.canLevelUp(resident.level(), colonyLevel)) {
             ScreenFeedbackPacket.send(sp, I18n.name("message.wandscape.mage_hut.max_level",
                     "[Wandscape] The mage is already at the colony level (%d).", colonyLevel), true);
@@ -324,8 +323,8 @@ public final class MageHutServerHandler {
 
     private static void sendRefresh(ServerPlayer sp, ServerLevel level, UUID buildingId,
                                     BuildingState state, UUID colonyId) {
-        var colonyLevel = WandscapeEngine.getColonyLevelManager() != null
-                ? WandscapeEngine.getColonyLevelManager().getLevel(colonyId) : 1;
+        var colonyLevel = com.wsteam.wandscape.content.colony.ColonyLevelManager.get() != null
+                ? com.wsteam.wandscape.content.colony.ColonyLevelManager.get().getLevel(colonyId) : 1;
         PacketDistributor.sendToPlayer(sp,
                 buildPacket(level, buildingId, state, colonyId, colonyLevel));
     }

@@ -4,7 +4,6 @@ import com.wsteam.wandscape.content.building.data.BuildingData;
 
 import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.content.task.types.ResourceStack;
-import com.wsteam.wandscape.impl.WandscapeEngine;
 import com.wsteam.wandscape.content.production.ProductionEligibility;
 import com.wsteam.wandscape.content.colony.service.ChunkLoadManager;
 import com.wsteam.wandscape.api.BuildingApi;
@@ -55,7 +54,7 @@ public class BuildingTaskSource implements TaskSource {
 
     @Override
     public void poll(GlobalTaskPool pool, World world) {
-        BuildingApi api = getBuildingApi();
+        var api = com.wsteam.wandscape.content.building.internal.BuildingApiImpl.get();
         if (api == null) return;
 
         pollCount++;
@@ -207,7 +206,7 @@ public class BuildingTaskSource implements TaskSource {
     }
 
     /** 队列里是否存在现在能发布的条目（读队列，不弹）。 */
-    private static boolean hasEligibleWork(BuildingApi api, UUID buildingId,
+    private static boolean hasEligibleWork(com.wsteam.wandscape.content.building.internal.BuildingApiImpl api, UUID buildingId,
                                            @Nullable Map<ElementType, Long> elementSnapshot) {
         for (WorkItem item : api.getQueue(buildingId)) {
             if (isEligible(item, elementSnapshot)) return true;
@@ -225,17 +224,9 @@ public class BuildingTaskSource implements TaskSource {
         return bank != null ? bank.getElementSnapshot(colonyId) : null;
     }
 
-    private BuildingApi getBuildingApi() {
-        try {
-            return WandscapeApis.getBuildingApi();
-        } catch (IllegalStateException e) {
-            return null;
-        }
-    }
-
     /** 建筑所属殖民地；建筑不存在/未归属返回 null（该任务视为无主，仍可派给真实殖民地 NPC）。 */
     @Nullable
-    private static UUID resolveColony(BuildingApi api, UUID buildingId) {
+    private static UUID resolveColony(com.wsteam.wandscape.content.building.internal.BuildingApiImpl api, UUID buildingId) {
         com.wsteam.wandscape.content.building.data.BuildingData bd = api.getBuilding(buildingId);
         return bd != null ? bd.getColonyId() : null;
     }
@@ -258,7 +249,7 @@ public class BuildingTaskSource implements TaskSource {
      * ids and is a no-op (safe to call from both undo and demolish paths).
      */
     public static void cancelBuildingTasks(UUID buildingId) {
-        World world = WandscapeEngine.getWorld();
+        World world = World.getActive();
         if (world == null || world.taskPool == null || world.buildingTaskPool == null) return;
 
         for (long taskId : world.buildingTaskPool.removeBuilding(buildingId)) {
@@ -273,7 +264,7 @@ public class BuildingTaskSource implements TaskSource {
         }
 
         ChunkLoadManager.get().releaseBuilding(buildingId);
-        var api = WandscapeApis.getBuildingApiSilently();
+        var api = com.wsteam.wandscape.content.building.internal.BuildingApiImpl.get();
         if (api != null) {
             api.clearCurrentTask(buildingId);
         }

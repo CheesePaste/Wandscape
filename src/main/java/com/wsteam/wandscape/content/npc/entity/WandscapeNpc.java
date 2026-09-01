@@ -25,7 +25,6 @@ import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.content.npc.attributes.NpcAttributes.AttributeType;
 import com.wsteam.wandscape.content.npc.types.FollowAttackDecision;
 import com.wsteam.wandscape.content.npc.types.FriendlyForce;
-import com.wsteam.wandscape.impl.WandscapeEngine;
 import com.wsteam.wandscape.content.npc.WandscapeAttributes;
 import com.wsteam.wandscape.content.npc.nav.WandscapeNavigation;
 import com.wsteam.wandscape.content.magic.data.MagicDef;
@@ -368,7 +367,7 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
      *  战斗必然以任务形式占用 ECS 队列，故按此判定——空闲/建造/采集等非战斗任务不拦截自奶。 */
     private boolean inActiveCombat() {
         if (ecsEntityId < 0) return false;
-        World world = WandscapeEngine.getWorld();
+        World world = com.wsteam.wandscape.content.task.ecs.World.getActive();
         if (world == null) return false;
         TaskExecutor exec = world.get(ecsEntityId, TaskExecutor.class);
         if (exec == null) return false;
@@ -1148,7 +1147,7 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
             ecsPollCooldown--;
             return;
         } else {
-            World ecsWorld = WandscapeEngine.getWorld();
+            World ecsWorld = com.wsteam.wandscape.content.task.ecs.World.getActive();
             if (ecsWorld != null && ecsEntityId > 0) {
                 var exec = ecsWorld.get(ecsEntityId,
                         TaskExecutor.class);
@@ -1482,7 +1481,7 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
             // Prevent vanilla despawn — NPC persistence is managed by the colony/engine
             this.setPersistenceRequired();
             if (isColonyNpc()) {
-                World world = WandscapeEngine.getWorld();
+                World world = com.wsteam.wandscape.content.task.ecs.World.getActive();
                 if (world != null) {
                     EntityComponentBridge.INSTANCE.onNpcJoinWorld(this, world);
                     syncIronArmorAttributes();
@@ -1518,7 +1517,7 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
     public void onRemovedFromLevel() {
         RemovalReason reason = getRemovalReason();
         if (!level().isClientSide && reason != null) {
-            World world = WandscapeEngine.getWorld();
+            World world = com.wsteam.wandscape.content.task.ecs.World.getActive();
 
             // CHANGED_DIMENSION: entity is transitioning to another dimension,
             // not leaving the world. Skip all cleanup — ECS components stay.
@@ -1542,13 +1541,14 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
                     // Release resource reservations from pending transports.
                     // Items were reserved but never consumed — just dropping the
                     // reservation is correct (no items need to be returned to bank).
-                    var resourceReqExec = WandscapeEngine.getResourceRequestExec();
+                    var rt = com.wsteam.wandscape.content.task.runtime.TaskRuntime.getActive();
+                    var resourceReqExec = rt != null ? rt.getResourceReqExec() : null;
                     if (resourceReqExec != null) {
                         resourceReqExec.cancelForNpc(ecsEntityId);
                     }
 
                     // Orphan recovery: cancel all in-flight transports for this NPC
-                    var transporter = WandscapeEngine.getTransporter();
+                    var transporter = com.wsteam.wandscape.content.warehouse.transport.ItemTransportManager.getInstance();
                     if (transporter != null) {
                         var bank = ColonyItemBank.get(level());
                         if (bank != null) {
@@ -1747,7 +1747,7 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
     /** Whether the NPC is idle (no ECS work). Used by NpcApiImpl. */
     public boolean isEngineIdle() {
         if (ecsEntityId < 0) return true;
-        World world = WandscapeEngine.getWorld();
+        World world = com.wsteam.wandscape.content.task.ecs.World.getActive();
         if (world == null) return true;
         var exec = world.get(ecsEntityId, TaskExecutor.class);
         return exec == null || !(exec.npcQueue.hasWork() || exec.globalTaskId != null);
@@ -1763,7 +1763,7 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
     @Nullable
     public UUID getCurrentTaskId() {
         if (ecsEntityId < 0) return null;
-        World world = WandscapeEngine.getWorld();
+        World world = com.wsteam.wandscape.content.task.ecs.World.getActive();
         if (world == null) return null;
         var exec = world.get(ecsEntityId, TaskExecutor.class);
         return exec != null && exec.globalTaskId != null

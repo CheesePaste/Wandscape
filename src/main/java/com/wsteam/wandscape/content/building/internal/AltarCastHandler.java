@@ -4,7 +4,6 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
 import com.wsteam.wandscape.content.task.ecs.World;
-import com.wsteam.wandscape.impl.WandscapeEngine;
 import com.wsteam.wandscape.content.magic.data.MagicDef;
 import com.wsteam.wandscape.content.magic.internal.SpellbookLoader;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
@@ -104,7 +103,7 @@ public final class AltarCastHandler {
                     "[Wandscape] 该小镇没有可复活的死亡记录"), true);
             return;
         }
-        if (!hasAdequateMage(level, colonyId, def.manaCost())) {
+        if (!hasCasterWithMana(level, colonyId, def.manaCost())) {
             ScreenFeedbackPacket.send(player, I18n.name("message.wandscape.altar.no_adequate_mage",
                     "[Wandscape] 没有魔力足够（≥%d）的法师 NPC", def.manaCost()), true);
             return;
@@ -118,14 +117,14 @@ public final class AltarCastHandler {
         params.put("mana_cost", new JsonPrimitive(def.manaCost()));
         params.put("duration", new JsonPrimitive(def.altarDuration()));
 
-        var source = WandscapeEngine.getPlayerManualSource();
-        if (source == null) {
+        World world = World.getActive();
+        if (world == null || world.taskPool == null) {
             ScreenFeedbackPacket.send(player, I18n.name("message.wandscape.altar.task_system_not_ready",
                     "[Wandscape] 任务系统未就绪"), true);
             return;
         }
         // 殖民地归属经 TaskRequest.colonyId 显式传递（GlobalTaskPool 统一写入 colony_id 参数）
-        source.publish(new TaskRequest(TASK_BLUEPRINT, params, WandscapeConstants.TASK_PRIORITY_PLAYER,
+        world.taskPool.addTask(new TaskRequest(TASK_BLUEPRINT, params, WandscapeConstants.TASK_PRIORITY_PLAYER,
                 colonyId));
         Log.info(TAG, "player={} requested altar cast: altar={} magic={} manaCost={}",
                 player.getName().getString(), buildingId.toString().substring(0, 8),
@@ -139,8 +138,8 @@ public final class AltarCastHandler {
         AltarCastState.get(level).tick();
     }
 
-    /** 小镇内是否存在当前魔力足以支付蓝耗的 NPC（调度器分派时的最终门槛，这里做尽早反馈）。 */
-    private static boolean hasAdequateMage(ServerLevel level, @Nullable UUID colonyId, int manaCost) {
+    /** 检查祭坛所属殖民地内是否有任意 NPC 当前法力 >= manaCost（无 NPC 在场则不允许发布）。 */
+    private static boolean hasCasterWithMana(ServerLevel level, @Nullable UUID colonyId, int manaCost) {
         for (WandscapeNpc npc : EntityComponentBridge.INSTANCE.allNpcs().values()) {
             if (npc.isRemoved() || npc.level() != level) continue;
             if (colonyId != null && (npc.colonyId == null || !npc.colonyId.equals(colonyId))) continue;
@@ -151,7 +150,7 @@ public final class AltarCastHandler {
 
     /** 该祭坛该魔法是否已有活跃的 altar_cast 任务（已发布未施放 / 正在施法）——发布即锁定。 */
     private static boolean isAltarCastLocked(UUID buildingId, String magicId) {
-        World world = WandscapeEngine.getWorld();
+        World world = World.getActive();
         if (world == null || world.taskPool == null) return false;
         return world.taskPool.hasActiveTask(TASK_BLUEPRINT, Map.of(
                 "altar", new JsonPrimitive(buildingId.toString()),

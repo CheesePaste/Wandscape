@@ -186,7 +186,7 @@ public class ResourceSupplySystem implements EcsSystem {
         int toAdd = amount - inFlight;
         if (toAdd <= 0) return true; // already covered by queued/running production
 
-        BuildingApi api = getBuildingApi();
+        var api = getBuildingApi();
         if (api == null) return false;
         List<UUID> stations = api.getBuildingsByCategory(colonyId, "workstation");
         if (stations.isEmpty()) return false;
@@ -245,7 +245,7 @@ public class ResourceSupplySystem implements EcsSystem {
             }
         }
 
-        BuildingApi api = getBuildingApi();
+        var api = getBuildingApi();
         if (api != null) {
             // Each shared queue is counted once per (colony, buildingTypeId) group — a
             // workstation's getQueue now returns its group's shared queue, so iterating
@@ -273,7 +273,7 @@ public class ResourceSupplySystem implements EcsSystem {
      * divisor for the construction-site panel's start-time estimate.
      */
     public static int countSynthesizingWorkstations(@Nullable UUID colonyId, @Nullable World world) {
-        BuildingApi api = getBuildingApi();
+        var api = getBuildingApi();
         if (api == null) return 0;
 
         // Anchors of workstations with a running synthesize task (head was dequeued,
@@ -322,7 +322,7 @@ public class ResourceSupplySystem implements EcsSystem {
                                             Map<String, Integer> materialCounts,
                                             @Nullable World world) {
         if (materialCounts == null || materialCounts.isEmpty()) return;
-        BuildingApi api = getBuildingApi();
+        var api = getBuildingApi();
         if (api == null) return;
 
         List<UUID> stations = api.getBuildingsByCategory(colonyId, "workstation");
@@ -423,7 +423,7 @@ public class ResourceSupplySystem implements EcsSystem {
             return;
         }
 
-        BuildingApi api = getBuildingApi();
+        var api = getBuildingApi();
         if (api == null) return;
 
         BuildingConfigLoader configLoader = BuildingConfigLoader.getInstance();
@@ -497,7 +497,7 @@ public class ResourceSupplySystem implements EcsSystem {
             }
         }
 
-        BuildingApi api = getBuildingApi();
+        var api = getBuildingApi();
         if (api == null) return total;
         Set<String> seen = new HashSet<>();
         for (UUID nodeId : api.getBuildingsByCategory(null, "node")) {
@@ -529,12 +529,8 @@ public class ResourceSupplySystem implements EcsSystem {
     }
 
     @Nullable
-    private static BuildingApi getBuildingApi() {
-        try {
-            return WandscapeApis.getBuildingApi();
-        } catch (IllegalStateException e) {
-            return null;
-        }
+    private static com.wsteam.wandscape.content.building.internal.BuildingApiImpl getBuildingApi() {
+        return com.wsteam.wandscape.content.building.internal.BuildingApiImpl.get();
     }
 
     private static JsonArray posToJsonArray(BlockPos pos) {

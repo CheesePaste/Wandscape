@@ -87,3 +87,15 @@
   - **基础设施**：新建 `LogLevel`、`LogCategory`（16 个业务域频道：colony/building/npc/task/warehouse/road/magic/tourist/element/production/items/ui/network/compat/bootstrap/general）、`LogRateLimiter`（毫秒节流与单次警告）、`LogConfig`（配置持久化至 `config/wandscape-logging.properties`）；重构 `Log.java`，彻底移除 JUL 劫持，全量接入标准 SLF4J，支持全套 Category、子标签、智能提升（DEBUG 下穿透 Log4j2 默认过滤）；内置 `matchCategory` 智能路由兼容全仓 400+ 处旧调用。
   - **命令控制**：新建 `content/command/LogCommand`，提供游戏内命令 `/wandscape log status|level|reset|reload|save`，并在 `Wandscape.java` 注册。
   - **全域热点高噪审计降噪**：将 tick 循环、心跳、调度分配、状态轮转、导航确认、物品放入/取出等核心热点文件（`WarehouseMenu`, `WarehouseManager`, `ItemTransportManager`, `NavigationSystem`, `ProjectileDodge`, `SelfDefenseHandler`, `EntityComponentBridge`, `SchedulerSystem`, `TaskExecutionSystem`, `WandscapeMovementOps`, `WandscapeRitualOps`, `GlobalTaskPool`, `WandscapeBlockInteractExecutor`, `BuildingAreaRenderer`, `ConstructionGhostRenderer`, `BuildingTaskSource`, `NodeScreen`, `Wandscape.java`）中数十处每秒高频刷屏的 `Log.info` 精确降级为 `Log.debug` 或 `warnThrottled`。`./gradlew compileJava` 100% 编译通过。
+
+- 2026-09-01：**Step 2e API 瘦身与解散 WandscapeEngine 静态定位器全量完成**。
+  - **API 剪裁与内部桥瘦身**：
+    - `TavernApi`：删除通用 NPC 招募占位空壳方法（`getCandidates`/`refreshCandidates`/`recruitCandidate`），保留法师简历与招募流程；游客离场写简历钩子 `receiveMageResume` 移出接口改直调 `TavernRecruitStorage`。
+    - `ColonyApi`：移出内部 building→colony 建筑完整度/销毁事件钩子及存储重建（`onBuildingIntact`/`onBuildingDestroyed`/`assignColonyIfPossible`/`rebuildFromSavedData`），改由内部实现直调；保留全部小镇查询、创建、等级与经验操作。
+    - `BuildingApi`：移出内部任务调度池协作（`dequeue`/`dequeueEligible`/`setCurrentTask`/`clearCurrentTask`/`isBuildingOccupied`/`getBuildingsWithPendingWork`）、内部队列 UI 交互（`getQueue`/`removeFromQueue`/`moveUp`/`moveDown`）及内部生命周期注册（`registerBuilding`/`unregisterBuilding`）；保留 `enqueueWork`、建筑查询、拆除/取消与建造配置面。
+    - `TouristApi`：移出 `registerArrival`/`registerDeparture` 内部计数钩子（改直调实现），保留 `TouristArrivedEvent`/`TouristDepartedEvent` 供外部监听，保留全部游客查询与生成面。
+  - **解散 WandscapeEngine 上帝类**：
+    - 建立 `content/task/runtime/TaskRuntime.java`，统一聚合 ECS `World` 与 9 个底层执行器（`asyncExec`, `ritualOps`, `blockInteractExec`, `movementOps`, `transporter`, `resourceReqExec`, `guardExec`, `selfDefenseExec`, `altarCastExec`），`onServerTick` 直调 `taskRuntime.tick(level)`，大幅精简 `Wandscape.java`。
+    - 领域服务按域自闭环归位：`ColonyLevelManager` 回归 `content/colony` 域，`ItemTransportManager` 回归 `content/warehouse` 域；任务池数据读写直调 `world.taskPool.onChanged` / 原版 `SavedData`。
+    - 废除 `PlayerManualSource` 冗余中转，任务提交直调 `World.getActive().taskPool.addTask(...)`。
+    - 物理删除 `impl/WandscapeEngine.java` 与 `content/task/source/PlayerManualSource.java`。全仓 grep `WandscapeEngine` 0 命中，`./gradlew compileJava` 100% 绿。

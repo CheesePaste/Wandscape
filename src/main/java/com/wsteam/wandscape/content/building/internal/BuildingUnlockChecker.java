@@ -2,7 +2,6 @@ package com.wsteam.wandscape.content.building.internal;
 import com.wsteam.wandscape.content.colony.network.ColonyStatsSyncPacket;
 
 import com.wsteam.wandscape.content.building.data.BuildingConfig;
-import com.wsteam.wandscape.impl.WandscapeEngine;
 import com.wsteam.wandscape.foundation.ui.I18n;
 import com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState;
 import net.minecraft.network.chat.Component;
@@ -54,14 +53,14 @@ public final class BuildingUnlockChecker {
     /**
      * Resolve the colony's current level.
      *
-     * <p>Server side: {@link WandscapeEngine#getColonyLevelManager()} is populated.
-     * Client side: the engine is server-only ({@code null}), so fall back to the
+     * <p>Server side: {@link com.wsteam.wandscape.content.colony.ColonyLevelManager#get()} is populated.
+     * Client side: the level manager is server-only ({@code null}), so fall back to the
      * colony level already synced via {@code ColonyStatsSyncPacket} into
      * {@link WandscapePanelState} — otherwise every level-gated building would read
      * level 1 and stay locked even at max colony level.
      */
     private static int resolveLevel(@Nullable UUID colonyId) {
-        var levelMgr = WandscapeEngine.getColonyLevelManager();
+        var levelMgr = com.wsteam.wandscape.content.colony.ColonyLevelManager.get();
         if (levelMgr != null) return levelMgr.getLevel(colonyId);
         if (FMLEnvironment.dist.isClient()) {
             return WandscapePanelState.getColonyLevel();

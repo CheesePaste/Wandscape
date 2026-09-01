@@ -11,7 +11,6 @@ import com.wsteam.wandscape.content.building.internal.BuildingState;
 import com.wsteam.wandscape.content.road.core.RoadEdge;
 import com.wsteam.wandscape.content.road.engine.RoadSavedData;
 import com.wsteam.wandscape.content.task.event.NarrativeEventTriggered;
-import com.wsteam.wandscape.impl.WandscapeEngine;
 import com.wsteam.wandscape.content.colony.ColonyActivation;
 import com.wsteam.wandscape.foundation.service.ParticleService;
 import com.wsteam.wandscape.content.road.engine.WandscapeTags;
@@ -2274,7 +2273,7 @@ public class TouristMoveGoal extends Goal {
     }
 
     private static void emitNarrativeEvent(NarrativeEvent ne) {
-        var world = WandscapeEngine.getWorld();
+        var world = com.wsteam.wandscape.content.task.ecs.World.getActive();
         if (world != null && world.eventBus != null) {
             world.eventBus.emit(new NarrativeEventTriggered(ne));
         }

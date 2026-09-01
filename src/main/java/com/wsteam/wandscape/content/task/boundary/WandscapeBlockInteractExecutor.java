@@ -14,7 +14,6 @@ import com.wsteam.wandscape.content.task.types.GridPos;
 import com.wsteam.wandscape.content.task.types.ResourceId;
 import com.wsteam.wandscape.content.task.types.ResourceStack;
 import com.wsteam.wandscape.content.element.internal.ElementMappingLoader;
-import com.wsteam.wandscape.impl.WandscapeEngine;
 import com.wsteam.wandscape.content.warehouse.transport.ItemTransportManager;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.content.npc.internal.EntityComponentBridge;
@@ -254,8 +253,10 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
 
     /** Mark the persisted task pool dirty so the latest channel checkpoint is saved. */
     private static void markTaskPoolDirty() {
-        var sd = WandscapeEngine.getTaskPoolSavedData();
-        if (sd != null) sd.markChanged();
+        var world = com.wsteam.wandscape.content.task.ecs.World.getActive();
+        if (world != null && world.taskPool != null && world.taskPool.onChanged != null) {
+            world.taskPool.onChanged.run();
+        }
     }
 
     public boolean hasPendingOps() {

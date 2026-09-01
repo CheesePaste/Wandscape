@@ -9,7 +9,6 @@ import com.wsteam.wandscape.content.building.internal.BuildingState;
 import com.wsteam.wandscape.content.task.component.ColonyMember;
 import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.content.npc.attributes.NpcAttributes.AttributeType;
-import com.wsteam.wandscape.impl.WandscapeEngine;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.content.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.content.npc.attributes.NpcAttributes;
@@ -108,7 +107,7 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
 
             // 3. Roll recruit attributes: random² 偏斜分布 + 小镇等级加成
             //    （模拟小镇等级游客投出的简历——与法师游客掷简历同一公式）
-            var levelMgr = WandscapeEngine.getColonyLevelManager();
+            var levelMgr = com.wsteam.wandscape.content.colony.ColonyLevelManager.get();
             int colonyLevel = levelMgr != null ? levelMgr.getLevel(colonyId) : 1;
             var candidate = NpcAttributes.roll(colonyLevel,
                     new Random(level.random.nextLong()));
@@ -316,7 +315,7 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
 
     /** Mirror of ColonyCommand.fixEcsAfterSpawn — correct PLACEHOLDER_COLONY → real colonyId. */
     private static void fixEcsAfterSpawn(WandscapeNpc npc, UUID colonyId) {
-        World ecsWorld = WandscapeEngine.getWorld();
+        World ecsWorld = com.wsteam.wandscape.content.task.ecs.World.getActive();
         if (ecsWorld == null) return;
 
         Long ecsId = EntityComponentBridge.INSTANCE.getEcsId(npc.getUUID());

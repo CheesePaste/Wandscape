@@ -9,7 +9,6 @@ import com.wsteam.wandscape.content.task.component.NpcInventory;
 import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.content.npc.attributes.NpcAttributes.AttributeType;
 import com.wsteam.wandscape.content.task.types.ResourceStack;
-import com.wsteam.wandscape.impl.WandscapeEngine;
 import com.wsteam.wandscape.foundation.service.ParticleService;
 import com.wsteam.wandscape.content.npc.data.DeathRecord;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
@@ -59,7 +58,7 @@ public final class ReviveHandler {
         if (latestRec == null) return false;
 
         // 检查世界上该小镇活着的 NPC 数量
-        World world = WandscapeEngine.getWorld();
+        World world = com.wsteam.wandscape.content.task.ecs.World.getActive();
         if (world != null) {
             for (var entry : EntityComponentBridge.INSTANCE.allNpcs().entrySet()) {
                 WandscapeNpc npc = entry.getValue();
@@ -188,7 +187,7 @@ public final class ReviveHandler {
 
     /** spawn() 已用默认属性注册 ECS——这里按死亡快照重新设置小镇与背包。 */
     private static void fixEcsAfterSpawn(WandscapeNpc npc, DeathRecord rec) {
-        World ecsWorld = WandscapeEngine.getWorld();
+        World ecsWorld = com.wsteam.wandscape.content.task.ecs.World.getActive();
         if (ecsWorld == null) return;
         Long ecsId = EntityComponentBridge.INSTANCE.getEcsId(npc.getUUID());
         if (ecsId == null) return;

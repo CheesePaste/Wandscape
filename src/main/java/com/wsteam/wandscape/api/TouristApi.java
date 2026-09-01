@@ -23,12 +23,6 @@ public interface TouristApi {
     /** Request a tourist spawn at the given position for a colony. */
     void spawnTourist(UUID colonyId, BlockPos spawnPos);
 
-    /** Register a tourist arrival, firing {@code TouristArrivedEvent}. */
-    void registerArrival(UUID touristId, UUID colonyId);
-
-    /** Register a tourist departure, firing {@code TouristDepartedEvent} with the tourist's final bar fill. */
-    void registerDeparture(UUID touristId, UUID colonyId, BarRatio fill);
-
     /** Number of tourists who stayed overnight (checked into hotel) in a colony. */
     int getOvernightStayerCount(UUID colonyId);
 }

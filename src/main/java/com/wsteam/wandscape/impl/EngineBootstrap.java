@@ -1,47 +1,44 @@
 package com.wsteam.wandscape.impl;
-import com.wsteam.wandscape.content.task.boundary.WandscapeMovementOps;
-import com.wsteam.wandscape.content.task.boundary.ResourceRequestExecutor;
-import com.wsteam.wandscape.content.task.boundary.WandscapeBlockOps;
-import com.wsteam.wandscape.content.task.boundary.WandscapeBlockInteractExecutor;
-import com.wsteam.wandscape.content.task.boundary.WandscapeRitualOps;
-import com.wsteam.wandscape.content.task.boundary.WandscapeEntityOps;
-import com.wsteam.wandscape.content.task.boundary.AsyncTransformExecutor;
-import com.wsteam.wandscape.content.task.boundary.BlockOps;
-import com.wsteam.wandscape.content.task.boundary.RitualOps;
-import com.wsteam.wandscape.content.task.boundary.MovementOps;
-import com.wsteam.wandscape.content.task.boundary.EntityOps;
-import com.wsteam.wandscape.content.task.component.NavigationState;
-import com.wsteam.wandscape.content.task.boundary.ResourceAddedListener;
 
+import com.wsteam.wandscape.api.WandscapeApis;
 import com.wsteam.wandscape.content.building.executor.AltarCastExecutor;
-import com.wsteam.wandscape.content.warehouse.WarehouseManager;
-import com.wsteam.wandscape.impl.CoreBootstrap;
-import com.wsteam.wandscape.impl.CoreBootstrapConfig;
-import com.wsteam.wandscape.content.task.boundary.ColonyResourceAccess;
-import com.wsteam.wandscape.content.task.boundary.ResourceShortageHandler;
-import com.wsteam.wandscape.content.task.ecs.World;
-import com.wsteam.wandscape.content.task.types.ResourceId;
-import com.wsteam.wandscape.impl.WandscapeEngine;
-// engine wildcard replaced
-import com.wsteam.wandscape.content.colony.service.AchievementService;
 import com.wsteam.wandscape.content.building.source.BuildingTaskSource;
-import com.wsteam.wandscape.content.npc.system.NavigationSystem;
-import com.wsteam.wandscape.content.warehouse.system.ResourceSupplySystem;
-import com.wsteam.wandscape.content.warehouse.transport.ItemTransportManager;
+import com.wsteam.wandscape.content.colony.service.AchievementService;
 import com.wsteam.wandscape.content.npc.guard.GuardBlueprints;
 import com.wsteam.wandscape.content.npc.guard.GuardTaskSource;
 import com.wsteam.wandscape.content.npc.guard.executor.GuardAttackExecutor;
 import com.wsteam.wandscape.content.npc.guard.executor.SelfDefenseExecutor;
-import com.wsteam.wandscape.content.task.op.executor.DefaultOpExecutors;
-import com.wsteam.wandscape.foundation.log.Log;
-import com.wsteam.wandscape.api.WandscapeApis;
+import com.wsteam.wandscape.content.npc.system.NavigationSystem;
+import com.wsteam.wandscape.content.task.boundary.AsyncTransformExecutor;
+import com.wsteam.wandscape.content.task.boundary.BlockOps;
+import com.wsteam.wandscape.content.task.boundary.ColonyResourceAccess;
+import com.wsteam.wandscape.content.task.boundary.EntityOps;
+import com.wsteam.wandscape.content.task.boundary.MovementOps;
+import com.wsteam.wandscape.content.task.boundary.ResourceAddedListener;
+import com.wsteam.wandscape.content.task.boundary.ResourceRequestExecutor;
+import com.wsteam.wandscape.content.task.boundary.ResourceShortageHandler;
+import com.wsteam.wandscape.content.task.boundary.RitualOps;
+import com.wsteam.wandscape.content.task.boundary.WandscapeBlockInteractExecutor;
+import com.wsteam.wandscape.content.task.boundary.WandscapeBlockOps;
+import com.wsteam.wandscape.content.task.boundary.WandscapeEntityOps;
+import com.wsteam.wandscape.content.task.boundary.WandscapeMovementOps;
+import com.wsteam.wandscape.content.task.boundary.WandscapeRitualOps;
+import com.wsteam.wandscape.content.task.component.NavigationState;
+import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.content.task.engine.dsl.BlueprintDefaults;
 import com.wsteam.wandscape.content.task.engine.dsl.BlueprintRegistry;
 import com.wsteam.wandscape.content.task.engine.pool.BuildingTaskPool;
+import com.wsteam.wandscape.content.task.op.executor.DefaultOpExecutors;
+import com.wsteam.wandscape.content.task.runtime.TaskRuntime;
 import com.wsteam.wandscape.content.task.scheduler.SystemBlueprintRegistry;
 import com.wsteam.wandscape.content.task.source.EventDrivenTaskSource;
 import com.wsteam.wandscape.content.task.source.TaskSource;
 import com.wsteam.wandscape.content.task.source.WorkbenchSource;
+import com.wsteam.wandscape.content.task.types.ResourceId;
+import com.wsteam.wandscape.content.warehouse.WarehouseManager;
+import com.wsteam.wandscape.content.warehouse.system.ResourceSupplySystem;
+import com.wsteam.wandscape.content.warehouse.transport.ItemTransportManager;
+import com.wsteam.wandscape.foundation.log.Log;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
 
 import java.util.ArrayList;
@@ -63,7 +60,7 @@ public final class EngineBootstrap {
      * Bootstrap the engine with MC boundary implementations.
      * Must be called once on server start, after all modules are initialized.
      */
-    public static World bootstrap() {
+    public static TaskRuntime bootstrap() {
         Log.info(TAG, "CoreBootstrap bootstrap starting...");
 
         // 1. Build blueprint registry
@@ -89,7 +86,6 @@ public final class EngineBootstrap {
         WandscapeEntityOps entityOps = new WandscapeEntityOps();
         WandscapeRitualOps ritualOps = new WandscapeRitualOps();
         WandscapeMovementOps movementOps = new WandscapeMovementOps();
-        WandscapeEngine.setRitualOps(ritualOps);
 
         // Use WarehouseManager (implements WarehouseApi + ColonyResourceAccess).
         // Falls back to stub if warehouse module not loaded.
@@ -147,20 +143,17 @@ public final class EngineBootstrap {
         // 7b. Register guard combat executor (sustained cast loop, driven by onServerTick tickAll)
         GuardAttackExecutor guardExec = new GuardAttackExecutor();
         world.opExecutors.register(guardExec);
-        WandscapeEngine.setGuardExecutor(guardExec);
         Log.info(TAG, "  GuardAttackExecutor registered");
 
         // 7b2. Register NPC self-defense executor (proactive aggro + retaliation, preempts tasks)
         SelfDefenseExecutor selfDefenseExec = new SelfDefenseExecutor();
         world.opExecutors.register(selfDefenseExec);
-        WandscapeEngine.setSelfDefenseExecutor(selfDefenseExec);
         Log.info(TAG, "  SelfDefenseExecutor registered");
 
         // 7c. Register altar cast executor (NPC casts an altar-only magic at the altar;
         //     channeling countdown driven by onServerTick tickAll)
         AltarCastExecutor altarCastExec = new AltarCastExecutor();
         world.opExecutors.register(altarCastExec);
-        WandscapeEngine.setAltarCastExecutor(altarCastExec);
         Log.info(TAG, "  AltarCastExecutor registered");
 
         // 8. Register NavigationSystem (drives all NPC movement via NavigationState)
@@ -174,48 +167,39 @@ public final class EngineBootstrap {
 
         // 9a. Create shared item transport manager (visual item flight)
         ItemTransportManager transporter = new ItemTransportManager();
-        WandscapeEngine.setTransporter(transporter);
+        ItemTransportManager.setActive(transporter);
 
         // 9b. Override TransformOp executor with async version (V2.5 gating demo)
-        //    Set to 0 for sync (no gating), >0 for N-tick delay per block.
-        //    保持 1 tick：建造即时感更好（WORK_SPEED 作用于采集/合成的大 channelTicks）。
         int asyncDelay = 1;
+        AsyncTransformExecutor asyncExec = null;
         if (asyncDelay > 0) {
-            AsyncTransformExecutor asyncExec = new AsyncTransformExecutor(asyncDelay);
+            asyncExec = new AsyncTransformExecutor(asyncDelay);
             world.opExecutors.register(asyncExec); // overwrites default TransformExecutor
-            WandscapeEngine.setAsyncExecutor(asyncExec);
             Log.info(TAG, "  AsyncTransformExecutor active: {} tick delay per block", asyncDelay);
         }
 
         // 9c. Override BlockInteractOp executor with async version.
-        //     Handles both sync actions (toggle/activate/open_gui) and
-        //     async actions (gather/decompose/synthesize) with configurable timing/mana.
-        //     Receives transporter for visual NPC→warehouse transport on production complete.
         WandscapeBlockInteractExecutor blockInteractExec = new WandscapeBlockInteractExecutor(transporter);
         world.opExecutors.register(blockInteractExec); // overwrites default BlockInteractExecutor
-        WandscapeEngine.setBlockInteractExec(blockInteractExec);
         Log.info(TAG, "  WandscapeBlockInteractExecutor active (sync + async actions + transport)");
 
         // 9d. Register resource request executor (replaces inline handling)
-        //     Uses the transporter for visual item delivery from warehouse to NPC.
         ResourceRequestExecutor resourceReqExec = new ResourceRequestExecutor(transporter);
         world.opExecutors.register(resourceReqExec);
-        WandscapeEngine.setResourceRequestExec(resourceReqExec);
         Log.info(TAG, "  ResourceRequestExecutor registered (visual transport, staggered)");
 
-        // 10. Publish boundary services
-        WandscapeEngine.setMovementOps(movementOps);
+        // 10. Construct TaskRuntime
+        TaskRuntime runtime = new TaskRuntime(world, asyncExec, blockInteractExec, ritualOps,
+                transporter, resourceReqExec, guardExec, selfDefenseExec, altarCastExec, movementOps);
+        TaskRuntime.setActive(runtime);
 
-        // 11. Store world in singleton (must precede service registration)
-        WandscapeEngine.setWorld(world);
-
-        // 12. Register narrative event subscribers (achievements)
+        // 11. Register narrative event subscribers (achievements)
         AchievementService.register();
         Log.info(TAG, "  AchievementService registered");
 
         Log.info(TAG, "CoreBootstrap bootstrap complete — {} systems, {} task sources, {} blueprints",
                 world.systemCount(), taskSources.size(), blueprints);
-        return world;
+        return runtime;
     }
 
     /**

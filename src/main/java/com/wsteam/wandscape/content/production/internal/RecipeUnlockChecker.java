@@ -1,6 +1,5 @@
 package com.wsteam.wandscape.content.production.internal;
 
-import com.wsteam.wandscape.impl.WandscapeEngine;
 import com.wsteam.wandscape.content.production.data.RecipeUnlockRequirement;
 
 import javax.annotation.Nullable;
@@ -24,7 +23,7 @@ public final class RecipeUnlockChecker {
     public static boolean isUnlocked(@Nullable UUID colonyId, RecipeUnlockRequirement req) {
         if (colonyId == null) return false;
         if (req == null || req == RecipeUnlockRequirement.NONE) return true;
-        var levelMgr = WandscapeEngine.getColonyLevelManager();
+        var levelMgr = com.wsteam.wandscape.content.colony.ColonyLevelManager.get();
         if (levelMgr == null) return false;
         return levelMgr.getLevel(colonyId) >= req.minColonyLevel();
     }
@@ -36,7 +35,7 @@ public final class RecipeUnlockChecker {
     @Nullable
     public static String getLockReason(@Nullable UUID colonyId, RecipeUnlockRequirement req) {
         if (req == null || req == RecipeUnlockRequirement.NONE) return null;
-        var levelMgr = WandscapeEngine.getColonyLevelManager();
+        var levelMgr = com.wsteam.wandscape.content.colony.ColonyLevelManager.get();
         if (levelMgr == null) return "Level system not available";
         int current = levelMgr.getLevel(colonyId);
         int required = req.minColonyLevel();

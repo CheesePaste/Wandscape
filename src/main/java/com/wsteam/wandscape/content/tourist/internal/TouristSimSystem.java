@@ -6,11 +6,11 @@ import com.wsteam.wandscape.foundation.util.TickProfiler;
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.content.building.internal.BuildingState;
-import com.wsteam.wandscape.impl.WandscapeEngine;
 import com.wsteam.wandscape.content.colony.ColonyActivation;
 import com.wsteam.wandscape.content.colony.ColonyLevelManager;
 import com.wsteam.wandscape.api.BuildingApi;
 import com.wsteam.wandscape.api.TouristApi;
+import com.wsteam.wandscape.content.npc.data.MageResume;
 import com.wsteam.wandscape.content.tourist.data.BarRatio;
 import com.wsteam.wandscape.content.building.data.BuildingData;
 import com.wsteam.wandscape.foundation.log.Log;
@@ -923,7 +923,7 @@ public final class TouristSimSystem {
         }
 
         if (s.isFullySatisfied() && s.isMage() && !s.isMageResumeStored()) {
-            storeMageResume(s);
+            storeMageResume(level, s);
             s.setMageResumeStored(true);
         }
 
@@ -1011,9 +1011,9 @@ public final class TouristSimSystem {
         releaseShadowSpots(s);
         grantExperience(s);
         if (s.isMage() && s.isFullySatisfied() && !s.isMageResumeStored()) {
-            storeMageResume(s);
+            storeMageResume(level, s);
         }
-        TouristApi touristApi = getTouristApi();
+        var touristApi = TouristApiImpl.get();
         if (touristApi != null && s.getColonyId() != null) {
             BarRatio fill = BarRatio.of(s.getComfortSat(), s.getComfortNeed(),
                     s.getMagicSat(), s.getMagicNeed(), s.getWonderSat(), s.getWonderNeed());
@@ -1026,7 +1026,7 @@ public final class TouristSimSystem {
 
     private void grantExperience(TouristShadow s) {
         if (!s.isFullySatisfied()) return;
-        ColonyLevelManager lm = WandscapeEngine.getColonyLevelManager();
+        ColonyLevelManager lm = ColonyLevelManager.get();
         if (lm == null || s.getColonyId() == null) return;
         int colonyLevel = lm.getLevel(s.getColonyId());
         int contribution = ColonyLevelManager.computeExpContribution(colonyLevel, s.getLevel());
@@ -1038,17 +1038,16 @@ public final class TouristSimSystem {
         }
     }
 
-    private void storeMageResume(TouristShadow s) {
+    private void storeMageResume(ServerLevel level, TouristShadow s) {
         if (s.getColonyId() == null) return;
-        try {
-            WandscapeApis.getTavernApi().receiveMageResume(
-                    s.getColonyId(), s.getTouristName(), s.getLevel(),
+        TavernRecruitStorage storage = TavernRecruitStorage.getOrCreate(level);
+        if (storage != null) {
+            storage.addResume(s.getColonyId(), new MageResume(
+                    s.getTouristName(), s.getLevel(),
                     s.getMaxHp(), s.getMoveSpeed(), s.getSpellPower(),
                     s.getWorkSpeed(), s.getSpellSpeed(), s.getArmor(),
-                    s.getMaxMana(), s.getSkinVariant());
+                    s.getMaxMana(), s.getSkinVariant(), System.currentTimeMillis()));
             s.setMageResumeStored(true);
-        } catch (IllegalStateException e) {
-            Log.warn(TAG, "[Tourist] TavernApi not available — mage resume lost: {}", s.getTouristName());
         }
     }
 

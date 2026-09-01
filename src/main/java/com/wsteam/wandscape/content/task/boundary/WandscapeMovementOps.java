@@ -5,7 +5,6 @@ import com.wsteam.wandscape.content.task.boundary.MovementOps;
 import com.wsteam.wandscape.content.task.component.NavigationState;
 import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.content.task.types.GridPos;
-import com.wsteam.wandscape.impl.WandscapeEngine;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.content.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.foundation.log.Log;
@@ -32,7 +31,7 @@ public class WandscapeMovementOps implements MovementOps {
             return CompletableFuture.completedFuture(null);
         }
 
-        World world = WandscapeEngine.getWorld();
+        World world = com.wsteam.wandscape.content.task.ecs.World.getActive();
         if (world == null) {
             return CompletableFuture.completedFuture(null);
         }
@@ -66,7 +65,7 @@ public class WandscapeMovementOps implements MovementOps {
     @Override
     public void cancelNavigation(long npcId) {
         WandscapeNpc npc = EntityComponentBridge.INSTANCE.getNpc(npcId);
-        World world = WandscapeEngine.getWorld();
+        World world = com.wsteam.wandscape.content.task.ecs.World.getActive();
         if (world != null) {
             NavigationState nav = world.get(npcId, NavigationState.class);
             if (nav != null) nav.reset();

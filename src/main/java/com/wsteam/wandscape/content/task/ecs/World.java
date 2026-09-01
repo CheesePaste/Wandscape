@@ -17,6 +17,11 @@ import java.util.concurrent.CompletableFuture;
  */
 public class World {
 
+    /** Return the active server ECS world, or null if no server is running. */
+    public static World getActive() {
+        return com.wsteam.wandscape.content.task.runtime.TaskRuntime.getActiveWorld();
+    }
+
     // ---- Component stores ----
     final Map<Class<?>, ComponentStore<?>> stores = new LinkedHashMap<>();
 

@@ -1,5 +1,4 @@
 package com.wsteam.wandscape.content.colony.network;
-import com.wsteam.wandscape.impl.WandscapeEngine;
 
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -26,8 +25,7 @@ public record ColonyNameUpdatePacket(UUID colonyId, String name) implements Cust
     public Type<? extends CustomPacketPayload> type() { return TYPE; }
 
     public static void handleServer(ColonyNameUpdatePacket packet, ServerPlayer player) {
-        if (packet.name() == null || packet.name().isBlank()) return;
-        var levelMgr = com.wsteam.wandscape.impl.WandscapeEngine.getColonyLevelManager();
+        var levelMgr = com.wsteam.wandscape.content.colony.ColonyLevelManager.get();
         if (levelMgr == null) return;
         String name = packet.name().trim();
         if (name.length() > 30) name = name.substring(0, 30);

@@ -33,6 +33,22 @@ import java.util.function.Consumer;
 public final class ColonyLevelManager {
     private static final String TAG = "ColonyLevelManager";
 
+    @Nullable
+    private static volatile ColonyLevelManager activeInstance;
+
+    public static void setActive(@Nullable ColonyLevelManager mgr) {
+        activeInstance = mgr;
+    }
+
+    @Nullable
+    public static ColonyLevelManager get() {
+        return activeInstance;
+    }
+
+    public static void reset() {
+        activeInstance = null;
+    }
+
     private final ColonyLevelData data;
 
     @Nullable

@@ -4,7 +4,6 @@ import com.wsteam.wandscape.content.task.ecs.World;
 
 import com.wsteam.wandscape.content.building.network.ConstructionSiteDataPacket;
 import com.wsteam.wandscape.content.building.network.ConstructionSiteDataPacket.MaterialEntry;
-import com.wsteam.wandscape.impl.WandscapeEngine;
 import com.wsteam.wandscape.content.warehouse.system.ResourceSupplySystem;
 import com.wsteam.wandscape.content.road.core.PathPoint;
 import com.wsteam.wandscape.content.road.core.RoadEdge;
@@ -52,7 +51,7 @@ public final class RoadSiteData {
             int required = e.getValue();
             long stock = bank != null ? bank.count(colonyId, ItemKey.of(key, null)) : 0;
             int inFlight = ResourceSupplySystem.countSynthesizeInFlight(
-                    key, colonyId, WandscapeEngine.getWorld());
+                    key, colonyId, com.wsteam.wandscape.content.task.ecs.World.getActive());
             int status;
             if (stock >= required) {
                 status = ConstructionSiteDataPacket.STATUS_READY;
@@ -67,7 +66,7 @@ public final class RoadSiteData {
         }
 
         int workingCount = ResourceSupplySystem.countSynthesizingWorkstations(
-                colonyId, WandscapeEngine.getWorld());
+                colonyId, com.wsteam.wandscape.content.task.ecs.World.getActive());
         // Remaining placement work is proxied by the planned footprint size.
         int remainingTiles = edge.getPlacedBlocks().size();
         ConstructionSiteDataPacket.Estimate est = ConstructionSiteDataPacket.Estimate.of(

@@ -63,7 +63,7 @@ public final class EnqueueHelper {
     @Nullable
     public static BuildingState registerIfAbsent(BlockPos pos, BuildingConfig config, String buildingTypeId, int rotationSteps) {
         try {
-            BuildingApi api = WandscapeApis.getBuildingApi();
+            BuildingApiImpl api = BuildingApiImpl.get();
             if (api.getBuildingAt(pos) != null) {
                 return null;
             }

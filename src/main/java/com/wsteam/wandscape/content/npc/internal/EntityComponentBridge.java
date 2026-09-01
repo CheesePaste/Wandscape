@@ -1,5 +1,4 @@
 package com.wsteam.wandscape.content.npc.internal;
-import com.wsteam.wandscape.impl.WandscapeEngine;
 import com.wsteam.wandscape.content.task.boundary.RitualOps;
 import com.wsteam.wandscape.content.task.boundary.EntityOps;
 
@@ -91,7 +90,7 @@ public final class EntityComponentBridge {
     /**
      * Queue an NPC for ECS registration once the engine is ready.
      * Called from {@code WandscapeNpc.onAddedToLevel} when
-     * {@code WandscapeEngine.getWorld()} returns null.
+     * {@code World.getActive()} returns null.
      */
     public void deferJoin(WandscapeNpc npc) {
         synchronized (deferredJoins) {

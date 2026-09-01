@@ -56,7 +56,7 @@ public record ColonyCreateRequestPacket(BlockPos townHallAnchor, String name)
         // If this town hall's position is ALREADY linked to an existing colony, link and notify
         UUID existing = colonyApi.getColonyId(packet.townHallAnchor);
         if (existing != null) {
-            linkTownHall(colonyApi, packet.townHallAnchor, existing);
+            linkTownHall(packet.townHallAnchor, existing);
             sendMessage(player, I18n.name("message.wandscape.colony.attached",
                     "[Wandscape] 市政厅已关联至现有小镇。"));
             return;
@@ -74,7 +74,7 @@ public record ColonyCreateRequestPacket(BlockPos townHallAnchor, String name)
         // Link the town hall to the just-created colony
         UUID colonyId = colonyApi.getColonyId(packet.townHallAnchor);
         if (colonyId != null) {
-            linkTownHall(colonyApi, packet.townHallAnchor, colonyId);
+            linkTownHall(packet.townHallAnchor, colonyId);
             Log.info(TAG, "[Colony] Town hall at {} linked to new colony {}",
                     packet.townHallAnchor, colonyId.toString().substring(0, 8));
         }
@@ -91,14 +91,14 @@ public record ColonyCreateRequestPacket(BlockPos townHallAnchor, String name)
         }
     }
 
-    private static void linkTownHall(ColonyApi colonyApi, BlockPos anchor, UUID colonyId) {
+    private static void linkTownHall(BlockPos anchor, UUID colonyId) {
         var buildingApi = com.wsteam.wandscape.api.WandscapeApis.getBuildingApi();
         if (buildingApi == null) return;
         var building = buildingApi.getBuildingAt(anchor);
         if (building instanceof BuildingState state) {
             state.setColonyId(colonyId);
-            colonyApi.assignColonyIfPossible(building);
-            colonyApi.onBuildingIntact(building);
+            com.wsteam.wandscape.content.colony.ColonyApiImpl.get().assignColonyIfPossible(building);
+            com.wsteam.wandscape.content.colony.ColonyApiImpl.get().onBuildingIntact(building);
         }
     }
 

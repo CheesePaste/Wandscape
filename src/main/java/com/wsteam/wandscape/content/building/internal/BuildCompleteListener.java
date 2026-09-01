@@ -8,7 +8,6 @@ import com.wsteam.wandscape.content.building.data.BlockOffset;
 import com.wsteam.wandscape.content.building.data.BuildingConfig;
 import com.wsteam.wandscape.content.building.projection.BuildingRotation;
 import com.wsteam.wandscape.content.task.event.CustomEvent;
-import com.wsteam.wandscape.impl.WandscapeEngine;
 import com.wsteam.wandscape.foundation.service.ParticleService;
 import com.wsteam.wandscape.content.building.event.BuildingPlacedEvent;
 import com.wsteam.wandscape.foundation.log.Log;
@@ -37,7 +36,7 @@ public final class BuildCompleteListener {
      * Call after engine bootstrap in {@code onServerStarting}.
      */
     public static void register() {
-        var world = WandscapeEngine.getWorld();
+        var world = com.wsteam.wandscape.content.task.ecs.World.getActive();
         if (world == null || world.eventBus == null) {
             Log.warn(TAG, "Cannot register BuildCompleteListener — engine not bootstrapped");
             return;
@@ -98,15 +97,11 @@ public final class BuildCompleteListener {
                     state.getBuildingTypeId(), anchor, damaged.size(), config.pattern().size());
         }
 
-        // Assign colony via ColonyApi
-        com.wsteam.wandscape.api.ColonyApi colonyApi =
-                com.wsteam.wandscape.api.WandscapeApis.getColonyApiSilently();
-        if (colonyApi != null) {
-            UUID assignedColonyId = colonyApi.onBuildingIntact(state);
-            if (assignedColonyId != null && !assignedColonyId.equals(state.getColonyId())) {
-                // Colony was newly created or newly assigned
-                data.setDirty();
-            }
+        // Assign colony via ColonyApiImpl
+        UUID assignedColonyId = com.wsteam.wandscape.content.colony.ColonyApiImpl.get().onBuildingIntact(state);
+        if (assignedColonyId != null && !assignedColonyId.equals(state.getColonyId())) {
+            // Colony was newly created or newly assigned
+            data.setDirty();
         }
 
         // Always notify downstream systems when a building becomes intact.

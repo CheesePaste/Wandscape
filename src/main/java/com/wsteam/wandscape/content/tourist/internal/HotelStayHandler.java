@@ -8,7 +8,6 @@ import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.content.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.content.building.internal.BuildingState;
 import com.wsteam.wandscape.content.task.event.NarrativeEventTriggered;
-import com.wsteam.wandscape.impl.WandscapeEngine;
 import com.wsteam.wandscape.content.colony.data.NarrativeEvent;
 import com.wsteam.wandscape.content.tourist.data.ServiceConfig;
 import com.wsteam.wandscape.foundation.log.Log;
@@ -446,7 +445,7 @@ public final class HotelStayHandler {
     }
 
     private static void emitNarrativeEvent(NarrativeEvent ne) {
-        var world = WandscapeEngine.getWorld();
+        var world = com.wsteam.wandscape.content.task.ecs.World.getActive();
         if (world != null && world.eventBus != null) {
             world.eventBus.emit(new NarrativeEventTriggered(ne));
         }

@@ -39,23 +39,6 @@ public class TavernApiImpl implements TavernApi {
         return storage;
     }
 
-    @Override
-    public List<RecruitmentCandidate> getCandidates(UUID tavernId) {
-        // Generic NPC recruitment (not mage) — placeholder for future expansion
-        return List.of();
-    }
-
-    @Override
-    public boolean refreshCandidates(UUID tavernId) {
-        return false;
-    }
-
-    @Override
-    public boolean recruitCandidate(UUID tavernId, int index) {
-        return false;
-    }
-
-    @Override
     public void receiveMageResume(UUID colonyId, String touristName, int level,
                                    float maxHp, float moveSpeed, float spellPower,
                                    float workSpeed, float spellSpeed, float armorValue,

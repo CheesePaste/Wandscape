@@ -4,7 +4,6 @@ import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.content.road.network.RoadAreaSyncPacket;
 
 import com.wsteam.wandscape.content.task.event.CustomEvent;
-import com.wsteam.wandscape.impl.WandscapeEngine;
 import com.wsteam.wandscape.content.road.core.RoadEdge;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.api.WandscapeApis;
@@ -31,7 +30,7 @@ public final class RoadSegmentListener {
     private RoadSegmentListener() {}
 
     public static void register() {
-        var world = WandscapeEngine.getWorld();
+        var world = com.wsteam.wandscape.content.task.ecs.World.getActive();
         if (world == null || world.eventBus == null) {
             Log.warn(TAG, "Cannot register RoadSegmentListener — engine not bootstrapped");
             return;

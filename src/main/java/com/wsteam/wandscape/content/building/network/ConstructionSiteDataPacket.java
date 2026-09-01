@@ -5,7 +5,6 @@ import com.wsteam.wandscape.content.building.internal.BuildCompleteListener;
 import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.content.building.internal.BuildingState;
 import com.wsteam.wandscape.content.building.internal.EnqueueHelper;
-import com.wsteam.wandscape.impl.WandscapeEngine;
 import com.wsteam.wandscape.content.warehouse.system.ResourceSupplySystem;
 import com.wsteam.wandscape.foundation.util.ItemKey;
 import com.wsteam.wandscape.foundation.log.Log;
@@ -140,7 +139,7 @@ public record ConstructionSiteDataPacket(
                 int required = e.getValue();
                 long stock = bank != null ? bank.count(colonyId, ItemKey.of(pureId, null)) : 0;
                 int inFlight = ResourceSupplySystem.countSynthesizeInFlight(
-                        pureId, colonyId, WandscapeEngine.getWorld());
+                        pureId, colonyId, com.wsteam.wandscape.content.task.ecs.World.getActive());
                 int status;
                 if (stock >= required) {
                     status = STATUS_READY;
@@ -156,7 +155,7 @@ public record ConstructionSiteDataPacket(
         }
 
         int workingCount = ResourceSupplySystem.countSynthesizingWorkstations(
-                colonyId, WandscapeEngine.getWorld());
+                colonyId, com.wsteam.wandscape.content.task.ecs.World.getActive());
         Estimate est = Estimate.of(sumMissing, remainingBlocks, workingCount,
                 com.wsteam.wandscape.foundation.util.BalanceValues.workstationCraftTicksPerUnit(),
                 com.wsteam.wandscape.foundation.util.BalanceValues.constructionPlaceTicksPerUnit());
