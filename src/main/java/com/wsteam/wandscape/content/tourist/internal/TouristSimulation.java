@@ -127,11 +127,10 @@ public final class TouristSimulation {
      */
     public static int[] fillBars(ServerLevel level, TouristStateHost t, UUID buildingId) {
         int[] v = effectiveValues(level, buildingId);
-        double coeff = Config.TOURIST_BAR_GAIN_COEFF.get();
         int[] delta = new int[3];
-        delta[0] = fillBar(t.getComfortSat(), t.getComfortNeed(), v[0], coeff, t::setComfortSat);
-        delta[1] = fillBar(t.getMagicSat(), t.getMagicNeed(), v[1], coeff, t::setMagicSat);
-        delta[2] = fillBar(t.getWonderSat(), t.getWonderNeed(), v[2], coeff, t::setWonderSat);
+        delta[0] = fillBar(t.getComfortSat(), t.getComfortNeed(), v[0], 1.0, t::setComfortSat);
+        delta[1] = fillBar(t.getMagicSat(), t.getMagicNeed(), v[1], 1.0, t::setMagicSat);
+        delta[2] = fillBar(t.getWonderSat(), t.getWonderNeed(), v[2], 1.0, t::setWonderSat);
         return delta;
     }
 
@@ -550,7 +549,7 @@ public final class TouristSimulation {
                 : effectiveValues(level, state.getBuildingId());
         int[] need = {t.getComfortNeed(), t.getMagicNeed(), t.getWonderNeed()};
         int[] sat = {t.getComfortSat(), t.getMagicSat(), t.getWonderSat()};
-        double score = satisfactionGain(need, sat, v, Config.TOURIST_BAR_GAIN_COEFF.get());
+        double score = satisfactionGain(need, sat, v, 1.0);
 
         if (cfg != null) {
             // 精力低 → 偏向恢复（relax）建筑（加分与单次满意度增益同量级）

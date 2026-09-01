@@ -108,7 +108,7 @@ public final class SelfDefenseExecutor implements OpExecutor<AtomicOp.SelfDefens
             // 和平模式：不主动索敌、不反击，但被怪贴到 peaceFleeRange 内会临时逃离
             if (npc.isPeaceMode()) {
                 LivingEntity threat = nearestVisibleEnemyAround(npc, level,
-                        Config.GUARD_PEACE_FLEE_RANGE.get());
+                        Config.GUARD_FLEE_START_DIST.get());
                 if (threat != null) {
                     injectSelfDefense(world, npcId, exec, queue, level, "flee",
                             threat.getName().getString());
@@ -199,9 +199,9 @@ public final class SelfDefenseExecutor implements OpExecutor<AtomicOp.SelfDefens
     /** 半径内最近可见存活敌对目标（球面距离 + LOS）；无则 null。中立生物须已发怒才算。
      *  友军（含己方/同殖民地召唤物、同殖民地游客）不索敌——否则 NPC 会锁定自己召唤的亡灵随从。 */
     @Nullable
-    private static LivingEntity nearestVisibleEnemyAround(WandscapeNpc npc, ServerLevel level, int radius) {
+    private static LivingEntity nearestVisibleEnemyAround(WandscapeNpc npc, ServerLevel level, double radius) {
         LivingEntity nearest = null;
-        double bestSq = (double) radius * radius;
+        double bestSq = radius * radius;
         Vec3 pos = npc.position();
         for (Entity e : level.getEntities((Entity) null, npc.getBoundingBox().inflate(radius),
                 e -> e instanceof LivingEntity le && WandscapeNpc.isHostileTarget(le, level))) {
@@ -261,7 +261,7 @@ public final class SelfDefenseExecutor implements OpExecutor<AtomicOp.SelfDefens
         // 战斗中途开启和平 → 同样转入逃离（原逻辑是立即结束自防御）。
         if (npc.isPeaceMode()) {
             LivingEntity threat = nearestVisibleEnemyAround(npc, level,
-                    Config.GUARD_PEACE_FLEE_RANGE.get());
+                    Config.GUARD_FLEE_START_DIST.get());
             if (threat == null) {
                 fadeBeam(level, npc); // 和平脱离：光束快速淡出，不残留原地
                 GuardCombat.markCombatEnd(npc);

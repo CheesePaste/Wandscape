@@ -209,9 +209,6 @@ public class Config {
 
     // ── 游客经济改造：三条需求条 / 精力循环 / 停留 / 视野 / ATM（Block 0 新增）──
 
-    public static final ModConfigSpec.DoubleValue TOURIST_BAR_GAIN_COEFF = BUILDER
-            .comment("每条需求条填充 = round(建筑该维值 × 该系数)，封顶 need。默认 1.0 = 增益等于 JSON 值。")
-            .defineInRange("tourist.barGainCoeff", 1.0, 0.1, 10.0);
 
     public static final ModConfigSpec.DoubleValue TOURIST_ENERGY_RESTORE_THRESHOLD = BUILDER
             .comment("精力低于此比例（0~1）时，游客强烈偏向恢复（relax）建筑。")
@@ -305,12 +302,6 @@ public class Config {
                     + "follower player attacked before giving up, unless the player attacks it again (300 = 15s). "
                     + "Pursuit range reuses guard.hateRange.")
             .defineInRange("guard.followAttackDurationTicks", 300, 20, 72000);
-
-    public static final ModConfigSpec.IntValue GUARD_PEACE_FLEE_RANGE = BUILDER
-            .comment("Peace-mode flee radius (blocks): a peace-mode NPC breaks its current task to back away "
-                    + "when a hostile mob is within this visible distance, then resumes once the threat leaves. "
-                    + "Smaller than selfDefenseRange since peace NPCs shouldn't be constantly evading.")
-            .defineInRange("guard.peaceFleeRange", 8, 2, 32);
 
     public static final ModConfigSpec.DoubleValue GUARD_KITE_START_DIST = BUILDER
             .comment("Combat kiting trigger distance (blocks, horizontal): the NPC starts backing away once a "
