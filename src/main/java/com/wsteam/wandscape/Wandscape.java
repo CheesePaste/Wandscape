@@ -72,6 +72,7 @@ import com.wsteam.wandscape.content.npc.entity.EvilMage;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.content.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.content.npc.internal.NpcApiImpl;
+import com.wsteam.wandscape.content.npc.internal.NpcAttributesApiImpl;
 import com.wsteam.wandscape.content.npc.network.*;
 import com.wsteam.wandscape.content.colony.overview.network.OverviewEntityInteractPacket;
 import com.wsteam.wandscape.content.colony.overview.network.OverviewInteractPacket;
@@ -527,6 +528,7 @@ public class Wandscape {
         // Register API implementations
         WandscapeApis.setBuildingApi(buildingApi);
         WandscapeApis.setNpcApi(new NpcApiImpl());
+        WandscapeApis.setNpcAttributesApi(new NpcAttributesApiImpl());
         WandscapeApis.setScepterApi(SCEPTER_API);
         WandscapeApis.setWarehouseApi(new WarehouseManager());
         WandscapeApis.setColonyApi(ColonyApiImpl.get());
@@ -885,11 +887,11 @@ public class Wandscape {
                         com.wsteam.wandscape.foundation.networking.ParticleBurstPacket.TYPE,
                         com.wsteam.wandscape.foundation.networking.ParticleBurstPacket.STREAM_CODEC,
                         (packet, ctx) -> com.wsteam.wandscape.foundation.networking.ParticleBurstPacket.handleClient(packet))
-                // ── Guide test ──
+                // ── Guide doc open ──
                 .playToClient(
-                        com.wsteam.wandscape.content.items.network.GuideTestPacket.TYPE,
-                        com.wsteam.wandscape.content.items.network.GuideTestPacket.STREAM_CODEC,
-                        (packet, ctx) -> com.wsteam.wandscape.content.items.network.GuideTestPacket.handleClient(packet))
+                        com.wsteam.wandscape.content.items.network.GuideDocOpenPacket.TYPE,
+                        com.wsteam.wandscape.content.items.network.GuideDocOpenPacket.STREAM_CODEC,
+                        (packet, ctx) -> com.wsteam.wandscape.content.items.network.GuideDocOpenPacket.handleClient(packet))
                 // ── Guide book (right-click to open tutorial home) ──
                 .playToClient(
                         GuideBookOpenPacket.TYPE,
@@ -906,11 +908,6 @@ public class Wandscape {
                         (packet, ctx) -> com.wsteam.wandscape.content.items.network.GuideProgressUpdatePacket.handleServer(packet,
                                 (net.minecraft.server.level.ServerPlayer) ctx.player()))
                 // ── Spline Road Editor ──
-                .playToClient(
-                        SplineEditorEnterPacket.TYPE,
-                        SplineEditorEnterPacket.STREAM_CODEC,
-                        SplineEditorEnterPacket::handleClient)
-                // ── Native Road Studio ──
                 .playToClient(
                         RoadStudioEnterPacket.TYPE,
                         RoadStudioEnterPacket.STREAM_CODEC,

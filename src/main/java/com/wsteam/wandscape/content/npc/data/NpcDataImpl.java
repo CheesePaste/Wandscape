@@ -1,5 +1,5 @@
 package com.wsteam.wandscape.content.npc.data;
-import com.wsteam.wandscape.content.npc.types.AttributeType;
+import com.wsteam.wandscape.content.npc.attributes.NpcAttributes.AttributeType;
 
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.content.npc.data.NpcData;
@@ -52,9 +52,9 @@ public class NpcDataImpl implements NpcData {
                 npc.getNpcName(),
                 (int) npc.getMaxHealth(),
                 (int) npc.getHealth(),
-                npc.getEffectiveAttribute(com.wsteam.wandscape.content.npc.types.AttributeType.SPELL_POWER),
-                npc.getEffectiveAttribute(com.wsteam.wandscape.content.npc.types.AttributeType.WORK_SPEED),
-                npc.getEffectiveAttribute(com.wsteam.wandscape.content.npc.types.AttributeType.SPELL_SPEED),
+                npc.getEffectiveAttribute(com.wsteam.wandscape.content.npc.attributes.NpcAttributes.AttributeType.SPELL_POWER),
+                npc.getEffectiveAttribute(com.wsteam.wandscape.content.npc.attributes.NpcAttributes.AttributeType.WORK_SPEED),
+                npc.getEffectiveAttribute(com.wsteam.wandscape.content.npc.attributes.NpcAttributes.AttributeType.SPELL_SPEED),
                 npc.getEffectiveArmorValue(),
                 npc.isEngineIdle(),
                 null,            // stage 4+: house binding

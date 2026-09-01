@@ -1,9 +1,9 @@
 package com.wsteam.wandscape.compat.ironspellbooks;
-import com.wsteam.wandscape.content.npc.types.AttributeModifier;
+import com.wsteam.wandscape.content.npc.types.NpcAttributeModifier;
 import com.wsteam.wandscape.content.task.ecs.World;
 
 import com.google.common.collect.Multimap;
-import com.wsteam.wandscape.content.npc.types.AttributeType;
+import com.wsteam.wandscape.content.npc.attributes.NpcAttributes.AttributeType;
 import com.wsteam.wandscape.content.npc.types.ModifierOperation;
 import net.minecraft.core.Holder;
 import net.minecraft.world.entity.ai.attributes.Attribute;
@@ -56,15 +56,15 @@ public final class IronSpellsAttributes {
      * 把铁魔法装备物品堆的属性修饰符映射为 Wandscape 属性修饰符。
      * 未加载铁魔法 / 空堆 / 无映射属性时返回空列表。
      */
-    public static List<AttributeModifier> modifiersFor(ItemStack stack) {
+    public static List<NpcAttributeModifier> modifiersFor(ItemStack stack) {
         if (!IronSpellsCompat.isLoaded() || stack == null || stack.isEmpty()) return List.of();
-        List<AttributeModifier> out = new ArrayList<>(4);
+        List<NpcAttributeModifier> out = new ArrayList<>(4);
         for (ItemAttributeModifiers.Entry entry : stack.getAttributeModifiers().modifiers()) {
             AttributeType type = mapType(entry.attribute());
             if (type == null) continue;
             ModifierOperation op = mapOperation(entry.modifier().operation());
             if (op == null) continue;
-            out.add(new AttributeModifier(type, (float) entry.modifier().amount(), op));
+            out.add(new NpcAttributeModifier(type, (float) entry.modifier().amount(), op));
         }
         return out;
     }
@@ -77,16 +77,16 @@ public final class IronSpellsAttributes {
      * {@code irons_spellbooks:*} 属性——故由 {@code CuriosCompat#syncIronCurioAttributes} 在此桥进
      * Wandscape 自有属性。未加载铁魔法 / 空表 / 无映射属性时返回空列表。
      */
-    public static List<AttributeModifier> modifiersForCurio(
+    public static List<NpcAttributeModifier> modifiersForCurio(
             Multimap<Holder<Attribute>, net.minecraft.world.entity.ai.attributes.AttributeModifier> map) {
         if (!IronSpellsCompat.isLoaded() || map == null || map.isEmpty()) return List.of();
-        List<AttributeModifier> out = new ArrayList<>(2);
+        List<NpcAttributeModifier> out = new ArrayList<>(2);
         for (Map.Entry<Holder<Attribute>, net.minecraft.world.entity.ai.attributes.AttributeModifier> entry : map.entries()) {
             AttributeType type = mapType(entry.getKey());
             if (type == null) continue;
             ModifierOperation op = mapOperation(entry.getValue().operation());
             if (op == null) continue;
-            out.add(new AttributeModifier(type, (float) entry.getValue().amount(), op));
+            out.add(new NpcAttributeModifier(type, (float) entry.getValue().amount(), op));
         }
         return out;
     }

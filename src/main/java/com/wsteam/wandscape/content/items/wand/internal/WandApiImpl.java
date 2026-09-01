@@ -2,7 +2,7 @@ package com.wsteam.wandscape.content.items.wand.internal;
 import com.wsteam.wandscape.content.task.ecs.World;
 
 import com.wsteam.wandscape.Wandscape;
-import com.wsteam.wandscape.content.npc.types.AttributeModifier;
+import com.wsteam.wandscape.content.npc.types.NpcAttributeModifier;
 import com.wsteam.wandscape.api.WandApi;
 import com.wsteam.wandscape.content.items.wand.internal.WandPresetLoader.WandPreset;
 import net.minecraft.core.component.DataComponents;
@@ -35,7 +35,7 @@ public class WandApiImpl implements WandApi {
 
     @Override
     @Nullable
-    public List<AttributeModifier> getWandModifiers(String presetId) {
+    public List<NpcAttributeModifier> getWandModifiers(String presetId) {
         if (presetId == null) return null;
         WandPreset preset = Wandscape.WAND_PRESET_LOADER.getPreset(presetId);
         return preset == null ? null : preset.attributes();

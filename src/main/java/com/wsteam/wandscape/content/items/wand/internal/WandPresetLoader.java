@@ -1,12 +1,12 @@
 package com.wsteam.wandscape.content.items.wand.internal;
-import com.wsteam.wandscape.content.npc.types.AttributeModifier;
+import com.wsteam.wandscape.content.npc.types.NpcAttributeModifier;
 import com.wsteam.wandscape.content.task.ecs.World;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.wsteam.wandscape.Wandscape;
-import com.wsteam.wandscape.content.npc.types.AttributeType;
+import com.wsteam.wandscape.content.npc.attributes.NpcAttributes.AttributeType;
 import com.wsteam.wandscape.content.npc.types.ModifierOperation;
 import com.wsteam.wandscape.foundation.registry.dataconfig.internal.WandscapeDataLoader;
 import com.wsteam.wandscape.content.npc.WandscapeAttributes;
@@ -45,18 +45,18 @@ public class WandPresetLoader {
         String displayName,
         String defaultColor,
         CompoundTag nbt,
-        List<AttributeModifier> attributes
+        List<NpcAttributeModifier> attributes
     ) {
         public ItemAttributeModifiers itemAttributeModifiers() {
             return buildItemAttributeModifiers(id, attributes);
         }
 
-        public static ItemAttributeModifiers buildItemAttributeModifiers(String id, List<AttributeModifier> attributes) {
+        public static ItemAttributeModifiers buildItemAttributeModifiers(String id, List<NpcAttributeModifier> attributes) {
             if (attributes == null || attributes.isEmpty()) {
                 return ItemAttributeModifiers.EMPTY;
             }
             ItemAttributeModifiers.Builder builder = ItemAttributeModifiers.builder();
-            for (AttributeModifier mod : attributes) {
+            for (NpcAttributeModifier mod : attributes) {
                 Holder<Attribute> vanillaAttr = WandscapeAttributes.toVanilla(mod.type());
                 if (vanillaAttr == null) continue;
                 net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation op =
@@ -92,7 +92,7 @@ public class WandPresetLoader {
             nbt.putString("wand_color", defaultColor);
 
             // Parse attributes array
-            List<AttributeModifier> attributes = new ArrayList<>();
+            List<NpcAttributeModifier> attributes = new ArrayList<>();
             if (obj.has("attributes")) {
                 JsonArray attrs = obj.getAsJsonArray("attributes");
                 for (JsonElement attrEl : attrs) {
@@ -102,7 +102,7 @@ public class WandPresetLoader {
                     ModifierOperation op = ModifierOperation.valueOf(
                             attrObj.get("operation").getAsString().toUpperCase(Locale.ROOT));
                     float amount = attrObj.get("amount").getAsFloat();
-                    attributes.add(new AttributeModifier(type, amount, op));
+                    attributes.add(new NpcAttributeModifier(type, amount, op));
                 }
             }
 

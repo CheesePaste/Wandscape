@@ -2,7 +2,6 @@ package com.wsteam.wandscape.content.npc.entity;
 import com.wsteam.wandscape.content.npc.system.NavigationSystem;
 import com.wsteam.wandscape.content.npc.HostileTargetingHandler;
 import com.wsteam.wandscape.content.task.boundary.AsyncTransformExecutor;
-import com.wsteam.wandscape.content.npc.types.EquipmentSlot;
 import com.wsteam.wandscape.content.npc.component.EquippedMagicComponent;
 import com.wsteam.wandscape.content.npc.types.ModifierOperation;
 import com.wsteam.wandscape.content.task.boundary.MovementOps;
@@ -12,8 +11,8 @@ import com.wsteam.wandscape.content.task.component.TaskExecutor;
 import com.wsteam.wandscape.content.task.component.ColonyMember;
 import com.wsteam.wandscape.content.task.component.NavigationState;
 import com.wsteam.wandscape.content.task.component.Position;
-import com.wsteam.wandscape.content.task.component.Inventory;
-import com.wsteam.wandscape.content.npc.data.MageHutAttributes;
+import com.wsteam.wandscape.content.task.component.NpcInventory;
+import com.wsteam.wandscape.content.npc.attributes.NpcAttributes;
 import com.wsteam.wandscape.foundation.util.CharacterNames;
 import com.wsteam.wandscape.foundation.util.NameStyle;
 
@@ -23,7 +22,7 @@ import com.wsteam.wandscape.compat.ironspellbooks.IronSpellsCompat;
 import com.wsteam.wandscape.content.warehouse.ColonyItemBank;
 // core.component wildcard replaced
 import com.wsteam.wandscape.content.task.ecs.World;
-import com.wsteam.wandscape.content.npc.types.AttributeType;
+import com.wsteam.wandscape.content.npc.attributes.NpcAttributes.AttributeType;
 import com.wsteam.wandscape.content.npc.types.FollowAttackDecision;
 import com.wsteam.wandscape.content.npc.types.FriendlyForce;
 import com.wsteam.wandscape.impl.WandscapeEngine;
@@ -37,7 +36,7 @@ import com.wsteam.wandscape.content.items.SpellItem;
 import com.wsteam.wandscape.content.npc.NpcMenu;
 import com.wsteam.wandscape.content.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.content.npc.network.NpcDataPacket;
-import com.wsteam.wandscape.api.MageWandItem;
+import com.wsteam.wandscape.api.NpcInteractHook;
 import com.wsteam.wandscape.content.tourist.entity.ColonyVisitor;
 import com.wsteam.wandscape.content.tourist.entity.PlayerLike;
 import com.wsteam.wandscape.foundation.log.Log;
@@ -380,7 +379,7 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
     }
 
     // ============================================================
-    // Inventory
+    // NpcInventory
     // ============================================================
 
     public final SimpleContainer inventory = new SimpleContainer(27);
@@ -453,7 +452,7 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
 
             ItemStack stack = getItemBySlot(vanillaSlot);
             if (!stack.isEmpty()) {
-                List<com.wsteam.wandscape.content.npc.types.AttributeModifier> mods =
+                List<com.wsteam.wandscape.content.npc.types.NpcAttributeModifier> mods =
                         com.wsteam.wandscape.compat.ironspellbooks.IronSpellsAttributes.modifiersFor(stack);
                 for (var mod : mods) {
                     var vanillaAttr = WandscapeAttributes.toVanilla(mod.type());
@@ -492,9 +491,9 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
         if (api == null) return;
         String presetId = api.getWandPresetId(stack);
         if (presetId == null) return;
-        List<com.wsteam.wandscape.content.npc.types.AttributeModifier> mods = api.getWandModifiers(presetId);
+        List<com.wsteam.wandscape.content.npc.types.NpcAttributeModifier> mods = api.getWandModifiers(presetId);
         if (mods == null) return;
-        for (com.wsteam.wandscape.content.npc.types.AttributeModifier mod : mods) {
+        for (com.wsteam.wandscape.content.npc.types.NpcAttributeModifier mod : mods) {
             var vanillaAttr = WandscapeAttributes.toVanilla(mod.type());
             if (vanillaAttr == null) continue;
             var inst = getAttribute(vanillaAttr);
@@ -867,7 +866,7 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
 
     private int level = 1;
 
-    /** 法师当前等级（等级加成为每级线性，见 MageHutAttributes）。 */
+    /** 法师当前等级（等级加成为每级线性，见 NpcAttributes）。 */
     public int getLevel() { return level; }
 
     /** 设置法师等级（最低 1）。 */
@@ -1019,17 +1018,17 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
      */
     public static AttributeSupplier.Builder createAttributes() {
         return Mob.createMobAttributes()
-                .add(Attributes.MAX_HEALTH, 30.0)
-                .add(Attributes.MOVEMENT_SPEED, 0.3)
+                .add(Attributes.MAX_HEALTH, NpcAttributes.defaultFor(AttributeType.MAX_HP))
+                .add(Attributes.MOVEMENT_SPEED, NpcAttributes.defaultFor(AttributeType.MOVE_SPEED))
                 .add(Attributes.ATTACK_DAMAGE, 1.0)
                 .add(Attributes.FOLLOW_RANGE, 48.0)
-                .add(Attributes.ARMOR, 6.0)
-                .add(com.wsteam.wandscape.content.npc.WandscapeAttributes.SPELL_POWER, 1.0)
-                .add(com.wsteam.wandscape.content.npc.WandscapeAttributes.WORK_SPEED, 1.0)
-                .add(com.wsteam.wandscape.content.npc.WandscapeAttributes.SPELL_SPEED, 1.0)
-                .add(com.wsteam.wandscape.content.npc.WandscapeAttributes.MAX_MANA, 200.0)
-                .add(com.wsteam.wandscape.content.npc.WandscapeAttributes.HEALTH_REGEN, 1.0)
-                .add(com.wsteam.wandscape.content.npc.WandscapeAttributes.MANA_REGEN, 1.0)
+                .add(Attributes.ARMOR, NpcAttributes.defaultFor(AttributeType.ARMOR_VALUE))
+                .add(com.wsteam.wandscape.content.npc.WandscapeAttributes.SPELL_POWER, NpcAttributes.defaultFor(AttributeType.SPELL_POWER))
+                .add(com.wsteam.wandscape.content.npc.WandscapeAttributes.WORK_SPEED, NpcAttributes.defaultFor(AttributeType.WORK_SPEED))
+                .add(com.wsteam.wandscape.content.npc.WandscapeAttributes.SPELL_SPEED, NpcAttributes.defaultFor(AttributeType.SPELL_SPEED))
+                .add(com.wsteam.wandscape.content.npc.WandscapeAttributes.MAX_MANA, NpcAttributes.defaultFor(AttributeType.MAX_MANA))
+                .add(com.wsteam.wandscape.content.npc.WandscapeAttributes.HEALTH_REGEN, NpcAttributes.defaultFor(AttributeType.HEALTH_REGEN))
+                .add(com.wsteam.wandscape.content.npc.WandscapeAttributes.MANA_REGEN, NpcAttributes.defaultFor(AttributeType.MANA_REGEN))
                 // 水中移动效率 1.0：落水/渡水时以接近陆地的速度游动。原版陆地生物默认 0，
                 // 水中速度被拖到约 0.6 格/秒，会让 NPC 在河里"卡死"并触发传送兜底。
                 .add(Attributes.WATER_MOVEMENT_EFFICIENCY, 1.0);
@@ -1393,14 +1392,14 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
         }
         // 潜行右键：若手持约定物品（如盟誓戒指），交由物品自身处理（存/放法师），不开信息菜单
         if (player.isShiftKeyDown() && player.getItemInHand(hand).getItem()
-                instanceof com.wsteam.wandscape.api.NpcBindingItem binder) {
+                instanceof com.wsteam.wandscape.api.NpcSneakInteractHook binder) {
             binder.onShiftClickNpc((ServerPlayer) player, this, hand);
             return InteractionResult.CONSUME;
         }
         // 非潜行右键：若手持玩家权杖（和平/跟随/庇护/敌对），交由物品处理（不开信息菜单）
         if (!player.isShiftKeyDown() && player.getItemInHand(hand).getItem()
-                instanceof MageWandItem mageWand) {
-            mageWand.onInteractNpc((ServerPlayer) player, this, hand);
+                instanceof NpcInteractHook hook) {
+            hook.onInteractNpc((ServerPlayer) player, this, hand);
             return InteractionResult.CONSUME;
         }
         // 打开 NPC 装备容器菜单（4 盔甲 + 1 法杖 + 玩家背包，全部真实 vanilla 槽）
@@ -1623,7 +1622,7 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
         if (homeHutId != null) {
             tag.putUUID("homeHutId", homeHutId);
         }
-        // Inventory save deferred to stage 3+ (wand contents)
+        // NpcInventory save deferred to stage 3+ (wand contents)
     }
 
     @Override

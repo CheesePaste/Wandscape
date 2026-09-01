@@ -1,5 +1,4 @@
 package com.wsteam.wandscape.content.building.data;
-import com.wsteam.wandscape.content.task.ecs.World;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;

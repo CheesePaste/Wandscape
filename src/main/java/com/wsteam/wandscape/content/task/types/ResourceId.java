@@ -21,7 +21,7 @@ public record ResourceId(String id) {
         return id;
     }
 
-    public ResourceId getFuckPureResourceId_NotContainFuckedNBT() {
+    public ResourceId stripBlockStateSuffix() {
         return new ResourceId(id.replaceAll("\\[.*?\\]", "").trim());
     }
 }

@@ -1,5 +1,4 @@
 package com.wsteam.wandscape.content.building.scanner.client;
-import com.wsteam.wandscape.content.task.ecs.World;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;

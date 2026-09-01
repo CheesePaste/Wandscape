@@ -1,6 +1,6 @@
 package com.wsteam.wandscape.content.task.scheduler;
 
-import com.wsteam.wandscape.content.task.ecs.System;
+import com.wsteam.wandscape.content.task.ecs.EcsSystem;
 import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.content.task.op.api.AtomicOp;
 import com.wsteam.wandscape.content.task.op.executor.OpExecutor;
@@ -22,7 +22,7 @@ import java.util.concurrent.CompletableFuture;
  * execute one per tick. WAITING is not supported for system blueprints
  * (there is no NPC to retry on).
  */
-public class SystemBlueprintSystem implements System {
+public class SystemBlueprintSystem implements EcsSystem {
 
     private static final String TAG = "SysBlueprintExec";
 

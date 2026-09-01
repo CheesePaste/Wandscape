@@ -9,14 +9,13 @@ import com.wsteam.wandscape.content.task.component.TaskExecutor;
 import com.wsteam.wandscape.content.task.component.ColonyMember;
 import com.wsteam.wandscape.content.task.component.NavigationState;
 import com.wsteam.wandscape.content.task.component.Position;
-import com.wsteam.wandscape.content.task.component.Inventory;
+import com.wsteam.wandscape.content.task.component.NpcInventory;
 
 // core.component wildcard replaced
 import com.wsteam.wandscape.content.task.ecs.HashMapComponentStore;
 import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.content.task.event.SimpleEventBus;
 import com.wsteam.wandscape.content.task.types.GridPos;
-import com.wsteam.wandscape.content.npc.types.NpcAttributes;
 import com.wsteam.wandscape.content.task.op.executor.OpExecutorRegistry;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.content.task.engine.pool.BuildingTaskPool;
@@ -64,7 +63,7 @@ public final class CoreBootstrap {
         // 2. Register component stores
         world.registerComponent(Position.class, new HashMapComponentStore<>());
         world.registerComponent(TaskExecutor.class, new HashMapComponentStore<>());
-        world.registerComponent(Inventory.class, new HashMapComponentStore<>());
+        world.registerComponent(NpcInventory.class, new HashMapComponentStore<>());
         world.registerComponent(ColonyMember.class, new HashMapComponentStore<>());
         world.registerComponent(ColonyMetadata.class, new HashMapComponentStore<>());
         world.registerComponent(NavigationState.class, new HashMapComponentStore<>());
@@ -103,15 +102,14 @@ public final class CoreBootstrap {
      * Create an NPC entity with all required components for task execution.
      */
     public static long createNpc(World world, int x, int y, int z,
-                                  UUID colonyId,
-                                  NpcAttributes attrs) {
+                                  UUID colonyId) {
         long entity = world.createEntity();
         world.addComponent(entity, new Position(new GridPos(x, y, z)));
         world.addComponent(entity, new TaskExecutor());
-        world.addComponent(entity, new Inventory(27)); // standard 27-slot inventory
+        world.addComponent(entity, new NpcInventory(27)); // standard 27-slot inventory
         world.addComponent(entity, new ColonyMember(colonyId));
-        Log.info(TAG, "createNpc #%d pos=(%d,%d,%d) attrs=%s colony=%s",
-                entity, x, y, z, attrs,
+        Log.info(TAG, "createNpc #%d pos=(%d,%d,%d) colony=%s",
+                entity, x, y, z,
                 colonyId.toString().substring(0, 8));
         return entity;
     }

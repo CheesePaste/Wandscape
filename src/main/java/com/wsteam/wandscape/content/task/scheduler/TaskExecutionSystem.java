@@ -6,13 +6,13 @@ import com.wsteam.wandscape.content.task.boundary.EntityOps;
 import com.wsteam.wandscape.content.task.component.TaskExecutor;
 import com.wsteam.wandscape.content.task.component.ColonyMember;
 import com.wsteam.wandscape.content.task.component.Position;
-import com.wsteam.wandscape.content.task.component.Inventory;
+import com.wsteam.wandscape.content.task.component.NpcInventory;
 import com.wsteam.wandscape.foundation.util.TickProfiler;
 
 import com.wsteam.wandscape.content.task.boundary.ColonyResourceAccess;
 import com.wsteam.wandscape.content.task.boundary.MovementOps;
 // core.component wildcard replaced
-import com.wsteam.wandscape.content.task.ecs.System;
+import com.wsteam.wandscape.content.task.ecs.EcsSystem;
 import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.content.task.types.GridPos;
 import com.wsteam.wandscape.content.task.types.ResourceStack;
@@ -48,7 +48,7 @@ import java.util.concurrent.CompletableFuture;
  *   <li>Execute current op → handle resources, async</li>
  * </ol>
  */
-public class TaskExecutionSystem implements System {
+public class TaskExecutionSystem implements EcsSystem {
 
     private static final String TAG = "TaskExec";
     private static final double NAV_RANGE_SQ = 25.0;
@@ -66,7 +66,7 @@ public class TaskExecutionSystem implements System {
         OpExecutorRegistry registry = world.opExecutors;
         if (registry == null) return;
 
-        List<Long> npcs = world.query(Position.class, TaskExecutor.class, Inventory.class);
+        List<Long> npcs = world.query(Position.class, TaskExecutor.class, NpcInventory.class);
 
         for (long npcId : npcs) {
             TaskExecutor exec = world.get(npcId, TaskExecutor.class);
@@ -478,7 +478,7 @@ public class TaskExecutionSystem implements System {
         int currentStep = exec.stepIndex;
         if (currentStep <= 0) return; // nothing past ResourceRequestOp
 
-        Inventory inv = world.get(npcId, Inventory.class);
+        NpcInventory inv = world.get(npcId, NpcInventory.class);
         ColonyResourceAccess colony = world.colonyResources;
         if (inv == null || colony == null) return;
 

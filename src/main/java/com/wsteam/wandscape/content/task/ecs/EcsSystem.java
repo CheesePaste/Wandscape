@@ -5,6 +5,6 @@ package com.wsteam.wandscape.content.task.ecs;
  * Systems are executed in registration order by World.tick().
  */
 @FunctionalInterface
-public interface System {
+public interface EcsSystem {
     void update(World world, float delta);
 }

@@ -24,7 +24,6 @@ import com.wsteam.wandscape.content.task.types.ResourceId;
 import com.wsteam.wandscape.impl.WandscapeEngine;
 // engine wildcard replaced
 import com.wsteam.wandscape.content.colony.service.AchievementService;
-import com.wsteam.wandscape.content.colony.service.StatsService;
 import com.wsteam.wandscape.content.building.source.BuildingTaskSource;
 import com.wsteam.wandscape.content.building.source.BlueprintConfigLoader;
 import com.wsteam.wandscape.content.npc.system.NavigationSystem;
@@ -215,10 +214,9 @@ public final class EngineBootstrap {
         // 11. Store world in singleton (must precede service registration)
         WandscapeEngine.setWorld(world);
 
-        // 12. Register narrative event subscribers (stats, achievements)
-        StatsService.register();
+        // 12. Register narrative event subscribers (achievements)
         AchievementService.register();
-        Log.info(TAG, "  StatsService / AchievementService registered");
+        Log.info(TAG, "  AchievementService registered");
 
         Log.info(TAG, "CoreBootstrap bootstrap complete — {} systems, {} task sources, {} blueprints",
                 world.systemCount(), taskSources.size(), blueprints);

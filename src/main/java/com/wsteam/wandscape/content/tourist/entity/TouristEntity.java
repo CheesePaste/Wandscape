@@ -6,7 +6,7 @@ import com.wsteam.wandscape.content.tourist.data.VisitMemory;
 import com.wsteam.wandscape.foundation.util.CharacterNames;
 import com.wsteam.wandscape.content.tourist.event.TouristArrivedEvent;
 import com.wsteam.wandscape.content.tourist.data.BarRatio;
-import com.wsteam.wandscape.content.npc.data.MageAttributeRoller;
+import com.wsteam.wandscape.content.npc.attributes.NpcAttributes;
 import com.wsteam.wandscape.content.tourist.data.Emotion;
 import com.wsteam.wandscape.content.tourist.data.Activity;
 
@@ -192,13 +192,13 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
 
     // ── Mage-only attributes (stored in tavern recruitment resume at three-bars-full) ──
 
-    private float maxHp = 30f;
-    private float moveSpeed = 0.3f;
-    private float spellPower = 1f;
-    private float workSpeed = 1f;
-    private float spellSpeed = 1f;
-    private float armorValue = 5f;
-    private float maxMana = 200f;
+    private float maxHp = NpcAttributes.defaultFor(NpcAttributes.AttributeType.MAX_HP);
+    private float moveSpeed = NpcAttributes.defaultFor(NpcAttributes.AttributeType.MOVE_SPEED);
+    private float spellPower = NpcAttributes.defaultFor(NpcAttributes.AttributeType.SPELL_POWER);
+    private float workSpeed = NpcAttributes.defaultFor(NpcAttributes.AttributeType.WORK_SPEED);
+    private float spellSpeed = NpcAttributes.defaultFor(NpcAttributes.AttributeType.SPELL_SPEED);
+    private float armorValue = NpcAttributes.defaultFor(NpcAttributes.AttributeType.ARMOR_VALUE);
+    private float maxMana = NpcAttributes.defaultFor(NpcAttributes.AttributeType.MAX_MANA);
 
     /** Whether the mage resume has already been stored in the tavern for this tourist. */
     private boolean mageResumeStored;
@@ -368,7 +368,7 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
                 if (mage) {
                     variant = random.nextInt(WIZARD_SKIN_COUNT);
                     // 偏斜分布 random⁴（多数偏低、偶发高值 → 自然出专精），等级做加法叠加（更公平）
-                    RecruitmentCandidate roll = MageAttributeRoller.roll(level,
+                    RecruitmentCandidate roll = NpcAttributes.roll(level,
                             new java.util.Random(random.nextLong()));
                     maxHp = roll.maxHp();
                     maxMana = roll.maxMana();

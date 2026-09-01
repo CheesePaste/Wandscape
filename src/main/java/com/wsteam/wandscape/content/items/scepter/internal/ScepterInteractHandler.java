@@ -22,7 +22,7 @@ import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
  * <p>已核实源码：事件确定先于 {@code mobInteract}/{@code item.interactLivingEntity}，
  * {@code setCanceled(true)} 会同时跳过喂牛/驯狼/使用等所有原版交互；两端一致
  * {@code setCancellationResult(SUCCESS)} 保留挥手动画、预测一致。只对庇护/敌对权杖处理；
- * 玩家与自己殖民地的法师（走 {@code MageWandItem}→{@code mobInteract}）与非生物目标一律
+ * 玩家与自己殖民地的法师（走 {@code NpcInteractHook}→{@code mobInteract}）与非生物目标一律
  * 放行（不 cancel），避免屏蔽其它交互。非殖民地法师（含敌对测试法师 EvilMage）也由本类处理，
  * 使庇护/敌对能指定任何生物。
  */

@@ -2,7 +2,7 @@ package com.wsteam.wandscape.content.task.boundary;
 
 import com.wsteam.wandscape.content.task.boundary.ColonyResourceAccess;
 import com.wsteam.wandscape.content.task.component.ColonyMember;
-import com.wsteam.wandscape.content.task.component.Inventory;
+import com.wsteam.wandscape.content.task.component.NpcInventory;
 import com.wsteam.wandscape.content.task.component.TaskExecutor;
 import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.content.task.types.ResourceStack;
@@ -106,7 +106,7 @@ public class ResourceRequestExecutor implements OpExecutor<AtomicOp.ResourceRequ
         ColonyResourceAccess resources = world.colonyResources;
 
         // ── 1. Compute shortfalls (NPC inventory offsets) ──
-        Inventory inv = world.get(npcId, Inventory.class);
+        NpcInventory inv = world.get(npcId, NpcInventory.class);
         List<ResourceStack> needs = new ArrayList<>();
         for (ResourceStack item : items) {
             int alreadyHas = inv != null ? inv.count(item.resource()) : 0;

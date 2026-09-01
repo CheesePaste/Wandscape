@@ -2,7 +2,7 @@ package com.wsteam.wandscape.content.command;
 
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.tree.CommandNode;
-import com.wsteam.wandscape.content.items.network.GuideTestPacket;
+import com.wsteam.wandscape.content.items.network.GuideDocOpenPacket;
 import com.wsteam.wandscape.foundation.ui.I18n;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -48,7 +48,7 @@ public final class GuideCommand {
             markdownContent = "# Wandscape Guide Error\n\nError: " + e.getMessage();
         }
 
-        PacketDistributor.sendToPlayer(player, new GuideTestPacket(markdownContent));
+        PacketDistributor.sendToPlayer(player, new GuideDocOpenPacket(markdownContent));
         source.sendSuccess(() -> I18n.name("message.wandscape.command.guide_opened",
                 "[Wandscape] 已成功打开 Markdown 引导测试视窗"), false);
 

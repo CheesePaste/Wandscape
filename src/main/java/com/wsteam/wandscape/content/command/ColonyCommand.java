@@ -10,7 +10,7 @@ import com.wsteam.wandscape.content.building.data.BuildingConfig;
 import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.content.task.component.ColonyMember;
 import com.wsteam.wandscape.content.task.component.ColonyMetadata;
-import com.wsteam.wandscape.content.task.component.Inventory;
+import com.wsteam.wandscape.content.task.component.NpcInventory;
 import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.content.task.types.GridPos;
 import com.wsteam.wandscape.content.colony.ColonyApiImpl;
@@ -52,7 +52,7 @@ import java.util.UUID;
  * </pre>
  *
  * <p>Creates a colony with a new UUID, spawns 3 initial builder NPCs, and fills
- * the NPCs' ECS {@link Inventory} with town_hall building materials.
+ * the NPCs' ECS {@link NpcInventory} with town_hall building materials.
  */
 public final class ColonyCommand {
 
@@ -336,7 +336,7 @@ public final class ColonyCommand {
     }
 
     /**
-     * Fix ECS {@code ColonyMember} and {@code Inventory} after spawn.
+     * Fix ECS {@code ColonyMember} and {@code NpcInventory} after spawn.
      *
      * <p>{@code spawn()} synchronously triggers onNpcJoinWorld(), which reads
      * {@code npc.colonyId} (still PLACEHOLDER_COLONY at that point) and calls

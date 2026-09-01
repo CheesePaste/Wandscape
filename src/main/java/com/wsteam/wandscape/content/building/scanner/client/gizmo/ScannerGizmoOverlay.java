@@ -1,5 +1,4 @@
 package com.wsteam.wandscape.content.building.scanner.client.gizmo;
-import com.wsteam.wandscape.content.task.ecs.World;
 
 import com.wsteam.wandscape.content.building.data.BlockOffset;
 import com.wsteam.wandscape.foundation.log.Log;

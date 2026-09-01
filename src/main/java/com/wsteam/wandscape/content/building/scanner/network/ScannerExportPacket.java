@@ -1,6 +1,5 @@
 package com.wsteam.wandscape.content.building.scanner.network;
 import com.wsteam.wandscape.content.task.component.Position;
-import com.wsteam.wandscape.content.task.ecs.World;
 
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;

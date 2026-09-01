@@ -1,6 +1,6 @@
 package com.wsteam.wandscape.content.npc.guard;
 
-import com.wsteam.wandscape.content.npc.types.AttributeType;
+import com.wsteam.wandscape.content.npc.attributes.NpcAttributes.AttributeType;
 import com.wsteam.wandscape.content.magic.internal.MagicSpellExecutors;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import net.neoforged.bus.api.SubscribeEvent;

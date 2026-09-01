@@ -4,7 +4,7 @@ import com.wsteam.wandscape.content.task.component.TaskExecutor;
 
 import com.wsteam.wandscape.content.task.boundary.BlockOps;
 import com.wsteam.wandscape.content.task.component.ColonyMember;
-import com.wsteam.wandscape.content.task.component.Inventory;
+import com.wsteam.wandscape.content.task.component.NpcInventory;
 import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.content.task.types.BlockType;
 import com.wsteam.wandscape.foundation.sound.SoundService;
@@ -87,9 +87,9 @@ public class AsyncTransformExecutor implements OpExecutor<AtomicOp.TransformOp> 
             // Strip blockstate to check element mapping. Blocks without element
             // mappings are "free" materials — skip inventory consumption and place
             // directly (they were excluded from warehouse transport by computeMaterialData).
-            String pureId = op.consumable().resource().id().replaceAll("\\[.*?\\]", "").trim();
+            String pureId = op.consumable().resource().stripBlockStateSuffix().id();
             if (WandscapeApis.getElementApi().hasElementMapping(pureId)) {
-                Inventory inv = world.get(npcId, Inventory.class);
+                NpcInventory inv = world.get(npcId, NpcInventory.class);
                 if (inv == null || !inv.hasEnough(op.consumable().resource(),
                         op.consumable().amount())) {
                     return CompletableFuture.failedFuture(
@@ -244,7 +244,7 @@ public class AsyncTransformExecutor implements OpExecutor<AtomicOp.TransformOp> 
         if (oldState.is(net.minecraft.tags.BlockTags.FIRE)) return false;
         if (toType != null && !toType.id().isEmpty() && !"minecraft:air".equals(toType.id())) {
             String pureOld = BuiltInRegistries.BLOCK.getKey(oldState.getBlock()).toString();
-            String pureTo = toType.id().replaceAll("\\[.*?\\]", "").trim();
+            String pureTo = toType.stripBlockStateSuffix().id();
             return !pureOld.equals(pureTo); // same block type, no replacement salvage needed
         }
         return true;

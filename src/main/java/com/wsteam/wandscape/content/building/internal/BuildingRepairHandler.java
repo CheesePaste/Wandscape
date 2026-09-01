@@ -1,5 +1,4 @@
 package com.wsteam.wandscape.content.building.internal;
-import com.wsteam.wandscape.content.task.ecs.World;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;

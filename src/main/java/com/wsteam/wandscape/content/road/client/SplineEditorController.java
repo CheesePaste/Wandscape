@@ -411,7 +411,7 @@ public final class SplineEditorController {
                     Log.info(TAG, "[SplineEditor] Guide closed (H toggle)");
                 } else {
                     String content = com.wsteam.wandscape.foundation.ui.markdown.navigation.DocumentLoader.loadMarkdown("road_spline_guide");
-                    mc.setScreen(new com.wsteam.wandscape.foundation.ui.guide.GuideTestScreen(null, content, "road_spline_guide"));
+                    mc.setScreen(new com.wsteam.wandscape.foundation.ui.guide.GuideScreen(null, content, "road_spline_guide"));
                 }
             }
             wasHelpDown = helpDown;
@@ -473,7 +473,7 @@ public final class SplineEditorController {
 
     private static boolean isSplineGuideOpen(Minecraft mc) {
         if (mc.screen == null) return false;
-        if (!(mc.screen instanceof com.wsteam.wandscape.foundation.ui.guide.GuideTestScreen guide)) return false;
+        if (!(mc.screen instanceof com.wsteam.wandscape.foundation.ui.guide.GuideScreen guide)) return false;
         return guide.isShowingDocument("road_spline_guide");
     }
 

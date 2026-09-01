@@ -12,7 +12,7 @@ import com.wsteam.wandscape.content.task.boundary.BlockOps;
 import com.wsteam.wandscape.content.task.boundary.ColonyResourceAccess;
 import com.wsteam.wandscape.content.task.boundary.EntityOps;
 import com.wsteam.wandscape.content.task.boundary.RitualOps;
-import com.wsteam.wandscape.content.task.component.Inventory;
+import com.wsteam.wandscape.content.task.component.NpcInventory;
 import com.wsteam.wandscape.content.task.component.Position;
 import com.wsteam.wandscape.content.task.component.TaskExecutor;
 import com.wsteam.wandscape.content.task.ecs.World;
@@ -62,7 +62,7 @@ public final class DefaultOpExecutors {
         public CompletableFuture<Void> execute(AtomicOp.TransformOp op, World world, long npcId) {
             // Consumable check: remove from NPC inventory before placing
             if (op.consumable() != null) {
-                Inventory inv = world.get(npcId, Inventory.class);
+                NpcInventory inv = world.get(npcId, NpcInventory.class);
                 if (inv == null || !inv.hasEnough(op.consumable().resource(),
                         op.consumable().amount())) {
                     return CompletableFuture.failedFuture(
@@ -161,7 +161,7 @@ public final class DefaultOpExecutors {
         @Override
         public CompletableFuture<Void> execute(AtomicOp.ResourceRequestOp op, World world, long npcId) {
             ColonyResourceAccess resources = world.colonyResources;
-            Inventory inv = world.get(npcId, Inventory.class);
+            NpcInventory inv = world.get(npcId, NpcInventory.class);
             List<ResourceStack> items = op.items();
 
             // ── Phase 1: compute shortfalls (NPC inventory offsets) ──
@@ -304,7 +304,7 @@ public final class DefaultOpExecutors {
 
     static class InventoryHasCondition implements ConditionEvaluator {
         @Override public boolean evaluate(Map<String, String> params, World world, long npcId) {
-            Inventory inv = world.get(npcId, Inventory.class);
+            NpcInventory inv = world.get(npcId, NpcInventory.class);
             if (inv == null) return false;
             String resourceName = params.get("resource");
             if (resourceName == null) return false;
@@ -317,7 +317,7 @@ public final class DefaultOpExecutors {
 
     static class InventoryFullCondition implements ConditionEvaluator {
         @Override public boolean evaluate(Map<String, String> params, World world, long npcId) {
-            Inventory inv = world.get(npcId, Inventory.class);
+            NpcInventory inv = world.get(npcId, NpcInventory.class);
             return inv != null && inv.isFull();
         }
     }

@@ -11,9 +11,9 @@ import net.minecraft.world.entity.Mob;
  * <p>由 {@code WandscapeNpc.mobInteract} 在玩家非潜行且手持本物品时调用；实现方负责执行自身
  * 逻辑并给玩家反馈，返回后 NPC 不再打开信息菜单。接口放在 shared 层避免 {@code npc/} 反向依赖
  * 具体物品模块——玩家权杖（和平/跟随/庇护/敌对）经此直接把法师从面板操作快捷到右键一键。
- * 与 {@link NpcBindingItem}（潜行钩子）区分：本接口是非潜行右键钩子。
+ * 与 {@link NpcSneakInteractHook}（潜行钩子）区分：本接口是非潜行右键钩子。
  */
-public interface MageWandItem {
+public interface NpcInteractHook {
 
     /**
      * 服务端回调：玩家右键了一名殖民地法师，手持本物品于 {@code hand} 槽位。

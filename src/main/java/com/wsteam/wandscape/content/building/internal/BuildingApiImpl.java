@@ -4,7 +4,6 @@ import com.wsteam.wandscape.content.colony.service.ChunkLoadManager;
 import com.wsteam.wandscape.content.colony.ColonyApiImpl;
 import com.wsteam.wandscape.content.warehouse.system.ResourceSupplySystem;
 import com.wsteam.wandscape.content.task.component.Position;
-import com.wsteam.wandscape.content.task.ecs.World;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;

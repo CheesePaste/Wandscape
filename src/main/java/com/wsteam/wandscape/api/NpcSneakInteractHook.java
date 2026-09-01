@@ -12,7 +12,7 @@ import net.minecraft.world.entity.Mob;
  * 执行自身逻辑并给玩家反馈，返回后 NPC 不再打开信息菜单。接口放在 shared 层避免
  * {@code npc/} 反向依赖具体物品模块——潜行交互的语义由实现物品（如盟誓戒指）决定。
  */
-public interface NpcBindingItem {
+public interface NpcSneakInteractHook {
 
     /**
      * 服务端回调：玩家潜行右键了一名殖民地法师，手持本物品于 {@code hand} 槽位。

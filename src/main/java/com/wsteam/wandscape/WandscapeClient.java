@@ -6,7 +6,7 @@ import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.content.task.types.EntityId;
 import com.wsteam.wandscape.content.magic.network.MagicCircleCastPacket;
 import com.wsteam.wandscape.foundation.networking.ScreenFeedbackPacket;
-import com.wsteam.wandscape.content.items.network.GuideTestPacket;
+import com.wsteam.wandscape.content.items.network.GuideDocOpenPacket;
 import com.wsteam.wandscape.foundation.networking.ParticleBurstPacket;
 import com.wsteam.wandscape.content.items.network.GuideProgressSyncPacket;
 import com.wsteam.wandscape.content.colony.network.ColonyAmbientPacket;
@@ -342,9 +342,9 @@ public class WandscapeClient {
         });
 
         // Guide test screen
-        com.wsteam.wandscape.content.items.network.GuideTestPacket.setClientHandler(packet -> {
+        com.wsteam.wandscape.content.items.network.GuideDocOpenPacket.setClientHandler(packet -> {
             net.minecraft.client.Minecraft.getInstance().setScreen(
-                    new com.wsteam.wandscape.foundation.ui.guide.GuideTestScreen(packet.markdownContent()));
+                    new com.wsteam.wandscape.foundation.ui.guide.GuideScreen(packet.markdownContent()));
         });
 
         // Guide book: right-click opens the tutorial home (index_guide), locale-resolved
@@ -352,7 +352,7 @@ public class WandscapeClient {
             String docPath = packet.docPath();
             String content = com.wsteam.wandscape.foundation.ui.markdown.navigation.DocumentLoader.loadMarkdown(docPath);
             net.minecraft.client.Minecraft.getInstance().setScreen(
-                    new com.wsteam.wandscape.foundation.ui.guide.GuideTestScreen(null, content, docPath));
+                    new com.wsteam.wandscape.foundation.ui.guide.GuideScreen(null, content, docPath));
         });
 
         // Guide progress seed — apply saved tutorial step/dismissal on panel open
@@ -554,7 +554,7 @@ public class WandscapeClient {
         Minecraft mc = Minecraft.getInstance();
         if (mc != null) {
             String content = com.wsteam.wandscape.foundation.ui.markdown.navigation.DocumentLoader.loadMarkdown("index_guide");
-            mc.setScreen(new com.wsteam.wandscape.foundation.ui.guide.GuideTestScreen(null, content, "index_guide"));
+            mc.setScreen(new com.wsteam.wandscape.foundation.ui.guide.GuideScreen(null, content, "index_guide"));
         }
     }
 

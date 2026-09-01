@@ -1,6 +1,5 @@
 package com.wsteam.wandscape.content.building.internal;
 import com.wsteam.wandscape.content.colony.ColonyActivation;
-import com.wsteam.wandscape.content.task.ecs.System;
 import com.wsteam.wandscape.foundation.util.TickProfiler;
 
 import com.wsteam.wandscape.Config;

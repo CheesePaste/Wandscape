@@ -4,10 +4,10 @@ import com.wsteam.wandscape.foundation.util.TickProfiler;
 
 import com.google.gson.JsonElement;
 import com.wsteam.wandscape.content.task.component.ColonyMember;
-import com.wsteam.wandscape.content.task.component.Inventory;
+import com.wsteam.wandscape.content.task.component.NpcInventory;
 import com.wsteam.wandscape.content.task.component.Position;
 import com.wsteam.wandscape.content.task.component.TaskExecutor;
-import com.wsteam.wandscape.content.task.ecs.System;
+import com.wsteam.wandscape.content.task.ecs.EcsSystem;
 import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.content.task.types.GridPos;
 import com.wsteam.wandscape.foundation.log.Log;
@@ -28,7 +28,7 @@ import java.util.*;
  * Phase 3 (migration): uses EquipmentComponent for scoring.
  * Scoring: proximity × 0.6 + mana efficiency × 0.4 (temp, being replaced by attribute-weighted).
  */
-public class SchedulerSystem implements System {
+public class SchedulerSystem implements EcsSystem {
 
     private final int heartbeatInterval;
     private int tickCounter = 0;
@@ -51,7 +51,7 @@ public class SchedulerSystem implements System {
         // 幽灵 NPC（MC 实体缺失/已移除，如区块卸载）：任务不得派给不存在的工人
         List<Long> idleNpcs = new ArrayList<>();
         for (long entity : world.query(Position.class, TaskExecutor.class,
-                Inventory.class, ColonyMember.class)) {
+                NpcInventory.class, ColonyMember.class)) {
             TaskExecutor exec = world.get(entity, TaskExecutor.class);
             if (exec != null && exec.state == ExecutorState.IDLE
                     && exec.npcQueue.isIdle() && exec.globalTaskId == null

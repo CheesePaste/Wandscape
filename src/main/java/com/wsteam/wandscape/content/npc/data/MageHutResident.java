@@ -1,6 +1,7 @@
 package com.wsteam.wandscape.content.npc.data;
 
-import com.wsteam.wandscape.content.npc.types.AttributeType;
+import com.wsteam.wandscape.content.npc.attributes.NpcAttributes;
+import com.wsteam.wandscape.content.npc.attributes.NpcAttributes.AttributeType;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
@@ -15,8 +16,8 @@ import java.util.UUID;
  * progression when the mage is revived.
  *
  * <p>{@code base} is the per-attribute current base (after training), indexed by
- * {@link AttributeType#ordinal()}. Effective = base + perLevel×(level−1) +
- * equipBonus (see {@link MageHutAttributes}).
+ * {@link AttributeType#ordinal()} over the 7 visible attributes. Effective =
+ * base + perLevel×(level−1) + equipBonus (see {@link NpcAttributes}).
  */
 public record MageHutResident(
         @Nullable UUID npcId,
@@ -26,7 +27,7 @@ public record MageHutResident(
         float[] base
 ) {
     public MageHutResident {
-        base = Arrays.copyOf(base, AttributeType.values().length);
+        base = Arrays.copyOf(base, NpcAttributes.ORDER.size());
         if (level < 1) level = 1;
     }
 

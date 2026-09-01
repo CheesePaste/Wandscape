@@ -5,13 +5,12 @@ import com.wsteam.wandscape.content.task.boundary.EntityOps;
 
 import com.wsteam.wandscape.impl.CoreBootstrap;
 import com.wsteam.wandscape.content.task.component.ColonyMember;
-import com.wsteam.wandscape.content.task.component.Inventory;
+import com.wsteam.wandscape.content.task.component.NpcInventory;
 import com.wsteam.wandscape.content.task.component.Position;
 import com.wsteam.wandscape.content.task.component.TaskExecutor;
 import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.content.npc.types.FriendlyForce;
 import com.wsteam.wandscape.content.task.types.GridPos;
-import com.wsteam.wandscape.content.npc.types.NpcAttributes;
 import com.wsteam.wandscape.content.task.types.ResourceStack;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.foundation.log.Log;
@@ -59,21 +58,21 @@ public final class EntityComponentBridge {
     /** NPCs that loaded before the engine was bootstrapped — flush on next tick. */
     private final List<WandscapeNpc> deferredJoins = new ArrayList<>();
 
-    /** Inventory items to fill after ECS join (keyed by NPC UUID). */
+    /** NpcInventory items to fill after ECS join (keyed by NPC UUID). */
     private final Map<UUID, java.util.List<ResourceStack>> deferredInventory = new ConcurrentHashMap<>();
 
     /** ECS component types that make up an NPC. */
     private static final Class<?>[] NPC_COMPONENTS = {
             Position.class,
             TaskExecutor.class,
-            Inventory.class,
+            NpcInventory.class,
             ColonyMember.class,
     };
 
     private EntityComponentBridge() {}
 
     /**
-     * Schedule inventory items to be filled into the NPC's ECS Inventory
+     * Schedule inventory items to be filled into the NPC's ECS NpcInventory
      * after it joins the ECS world.
      *
      * <p>Used by {@code ColonyCommand} to give the builder NPC its starter
@@ -163,10 +162,9 @@ public final class EntityComponentBridge {
             }
         }
 
-        NpcAttributes attrs = NpcAttributes.defaults();
         long ecsId = CoreBootstrap.createNpc(world,
                 npc.getBlockX(), npc.getBlockY(), npc.getBlockZ(),
-                colony, attrs);
+                colony);
 
         npc.ecsEntityId = ecsId;
         npcByEcsId.put(ecsId, npc);
@@ -191,9 +189,9 @@ public final class EntityComponentBridge {
         Long ecsId = ecsIdByUuid.get(npc.getUUID());
         if (ecsId == null) return;
 
-        Inventory inv = world.get(ecsId, Inventory.class);
+        NpcInventory inv = world.get(ecsId, NpcInventory.class);
         if (inv == null) {
-            Log.warn(TAG, "[Bridge] Cannot fill inventory — NPC {} has no Inventory component",
+            Log.warn(TAG, "[Bridge] Cannot fill inventory — NPC {} has no NpcInventory component",
                     npc.getUUID().toString().substring(0, 8));
             return;
         }

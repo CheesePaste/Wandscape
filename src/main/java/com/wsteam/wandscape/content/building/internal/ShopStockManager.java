@@ -1,6 +1,6 @@
 package com.wsteam.wandscape.content.building.internal;
 import com.wsteam.wandscape.content.task.component.Position;
-import com.wsteam.wandscape.content.task.component.Inventory;
+import com.wsteam.wandscape.content.task.component.NpcInventory;
 import com.wsteam.wandscape.content.element.data.ElementType;
 import com.wsteam.wandscape.content.building.data.BuildingData;
 import com.wsteam.wandscape.content.tourist.data.ShopGoodDef;
@@ -86,7 +86,7 @@ public final class ShopStockManager {
         return instance;
     }
 
-    // ── Inventory query ──
+    // ── NpcInventory query ──
 
     /** Returns a snapshot of the shop's current stock (itemId → count). */
     public Map<String, Integer> getStock(UUID buildingId) {

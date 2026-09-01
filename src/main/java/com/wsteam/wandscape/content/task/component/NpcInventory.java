@@ -11,12 +11,12 @@ import java.util.List;
  * NPC inventory managed by the core layer.
  * Simple list-based storage with capacity limit.
  */
-public class Inventory {
+public class NpcInventory {
 
     private final List<ResourceStack> items;
     private final int capacity;
 
-    public Inventory(int capacity) {
+    public NpcInventory(int capacity) {
         this.items = new ArrayList<>();
         this.capacity = capacity;
     }
@@ -38,7 +38,7 @@ public class Inventory {
         // Normalize: strip block state properties so that
         // oak_door[facing=north] and oak_door[facing=south] merge into one stack.
         ResourceStack toAdd = stack;
-        ResourceId cleanId = stack.resource().getFuckPureResourceId_NotContainFuckedNBT();
+        ResourceId cleanId = stack.resource().stripBlockStateSuffix();
         if (!cleanId.equals(stack.resource())) {
             toAdd = new ResourceStack(cleanId, stack.amount());
         }
@@ -64,7 +64,7 @@ public class Inventory {
         Iterator<ResourceStack> iter = items.iterator();
         while (iter.hasNext() && remaining > 0) {
             ResourceStack stack = iter.next();
-            if (stack.resource().equals(resource) || stack.resource().equals(resource.getFuckPureResourceId_NotContainFuckedNBT())) {
+            if (stack.resource().equals(resource) || stack.resource().equals(resource.stripBlockStateSuffix())) {
                 if (stack.amount() <= remaining) {
                     remaining -= stack.amount();
                     iter.remove();
@@ -81,7 +81,7 @@ public class Inventory {
     public int count(ResourceId resource) {
         int total = 0;
         for (ResourceStack stack : items) {
-            if (stack.resource().equals(resource)||stack.resource().equals(resource.getFuckPureResourceId_NotContainFuckedNBT())) {
+            if (stack.resource().equals(resource)||stack.resource().equals(resource.stripBlockStateSuffix())) {
                 total += stack.amount();
             }
         }

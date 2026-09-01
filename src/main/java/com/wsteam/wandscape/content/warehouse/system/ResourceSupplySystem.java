@@ -8,7 +8,7 @@ import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.content.building.data.BuildingConfig;
 import com.wsteam.wandscape.content.building.data.BuildingConfig.NodeConfig;
 import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
-import com.wsteam.wandscape.content.task.ecs.System;
+import com.wsteam.wandscape.content.task.ecs.EcsSystem;
 import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.content.task.types.ResourceId;
 import com.wsteam.wandscape.content.task.types.ResourceStack;
@@ -45,7 +45,7 @@ import java.util.*;
  * this system is the retry loop for cases where the initial shortage handler
  * could not create supply tasks (e.g. no crafting station was free at the time).
  */
-public class ResourceSupplySystem implements System {
+public class ResourceSupplySystem implements EcsSystem {
 
     private static final String TAG = "ResourceSupplySystem";
     private static final int HEARTBEAT = 40;

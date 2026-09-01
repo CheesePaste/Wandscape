@@ -1,5 +1,7 @@
 package com.wsteam.wandscape.content.building.network;
 
+import com.wsteam.wandscape.content.npc.attributes.NpcAttributes;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -133,6 +135,6 @@ public record MageHutDataPacket(BlockPos buildingPos, UUID colonyId, String crea
 
     private static MageHutDataPacket empty() {
         return new MageHutDataPacket(BlockPos.ZERO, new UUID(0, 0), "", 1, false,
-                false, false, null, "", 1, -1, new float[7], new float[7], List.of());
+                false, false, null, "", 1, -1, new float[NpcAttributes.ORDER.size()], new float[NpcAttributes.ORDER.size()], List.of());
     }
 }
