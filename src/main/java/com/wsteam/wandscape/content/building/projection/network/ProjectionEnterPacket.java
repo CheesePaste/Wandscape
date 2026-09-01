@@ -66,7 +66,7 @@ public record ProjectionEnterPacket() implements CustomPacketPayload {
             colonyId = colonyApi.getColonyId(player.blockPosition());
         }
         if (colonyId != null) {
-            var metricsApi = WandscapeApis.getColonyMetricsApiSilently();
+            var metricsApi = WandscapeApis.getColonyStatusApiSilently();
             if (metricsApi != null) {
                 var snap = metricsApi.getSnapshot(colonyId);
                 net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player,

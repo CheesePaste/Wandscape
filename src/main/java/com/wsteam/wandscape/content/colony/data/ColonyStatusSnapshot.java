@@ -3,7 +3,7 @@ package com.wsteam.wandscape.content.colony.data;
 import java.util.List;
 import java.util.UUID;
 
-public record ColonyMetricsSnapshot(
+public record ColonyStatusSnapshot(
         UUID colonyId,
         int comfort, int magic, int wonder,
         String colonyName, int colonyLevel, int colonyExperience,
@@ -14,7 +14,7 @@ public record ColonyMetricsSnapshot(
         int underConstructionCount, List<UUID> underConstructionBuildingIds,
         List<String> underConstructionBuildingNames, List<Boolean> underConstructionStarted) {
 
-    public static final ColonyMetricsSnapshot EMPTY = new ColonyMetricsSnapshot(
+    public static final ColonyStatusSnapshot EMPTY = new ColonyStatusSnapshot(
             null, 0, 0, 0, "", 1, 0,
             0, 0,
             0, 0,

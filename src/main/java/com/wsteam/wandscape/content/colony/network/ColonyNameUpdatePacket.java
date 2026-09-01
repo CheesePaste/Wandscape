@@ -33,7 +33,7 @@ public record ColonyNameUpdatePacket(UUID colonyId, String name) implements Cust
         if (name.length() > 30) name = name.substring(0, 30);
         levelMgr.setColonyName(packet.colonyId(), name);
 
-        var metricsApi = com.wsteam.wandscape.api.WandscapeApis.getColonyMetricsApiSilently();
+        var metricsApi = com.wsteam.wandscape.api.WandscapeApis.getColonyStatusApiSilently();
         if (metricsApi != null) {
             var snap = metricsApi.getSnapshot(packet.colonyId());
             net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player,

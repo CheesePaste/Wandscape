@@ -77,7 +77,7 @@ import com.wsteam.wandscape.content.task.boundary.WandscapeBlockInteractExecutor
 import com.wsteam.wandscape.content.colony.ColonyLevelData;
 import com.wsteam.wandscape.content.colony.ColonyLevelManager;
 import com.wsteam.wandscape.content.colony.service.ChunkLoadManager;
-import com.wsteam.wandscape.content.colony.service.ColonyMetricsService;
+import com.wsteam.wandscape.content.colony.service.ColonyStatusService;
 import com.wsteam.wandscape.foundation.registry.WandscapeSounds;
 import com.wsteam.wandscape.content.warehouse.transport.TransportItemEntity;
 import com.wsteam.wandscape.content.warehouse.transport.TransportStartPacket;
@@ -981,9 +981,9 @@ public class Wandscape {
         EngineBootstrap.bootstrap();
 
         // Register unified metrics facade (after bootstrap, before any consumer queries it)
-        var metricsService = ColonyMetricsService.create();
-        com.wsteam.wandscape.api.WandscapeApis.setColonyMetricsApi(metricsService);
-        Log.info(TAG, "ColonyMetricsService registered");
+        var metricsService = ColonyStatusService.create();
+        com.wsteam.wandscape.api.WandscapeApis.setColonyStatusApi(metricsService);
+        Log.info(TAG, "ColonyStatusService registered");
 
         // Register server-authoritative tutorial progress evaluator
         com.wsteam.wandscape.api.WandscapeApis.setGuideProgressApi(

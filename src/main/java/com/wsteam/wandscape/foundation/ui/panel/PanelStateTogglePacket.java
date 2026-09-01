@@ -5,8 +5,8 @@ import com.wsteam.wandscape.content.building.network.BuildingAreaSyncPacket;
 import com.wsteam.wandscape.content.colony.network.ColonyStatsSyncPacket;
 
 import com.wsteam.wandscape.api.ColonyApi;
-import com.wsteam.wandscape.api.ColonyMetricsApi;
-import com.wsteam.wandscape.content.colony.data.ColonyMetricsSnapshot;
+import com.wsteam.wandscape.api.ColonyStatusApi;
+import com.wsteam.wandscape.content.colony.data.ColonyStatusSnapshot;
 import com.wsteam.wandscape.api.WandscapeApis;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -56,9 +56,9 @@ public record PanelStateTogglePacket(boolean open) implements CustomPacketPayloa
                 // 上一世界（存档）的建筑边界框进入新存档，首次建建筑时误报重叠。
                 BuildingAreaSyncPacket.sendToPlayer(player, colonyId);
                 if (colonyId != null) {
-                    ColonyMetricsApi metricsApi = WandscapeApis.getColonyMetricsApiSilently();
+                    ColonyStatusApi metricsApi = WandscapeApis.getColonyStatusApiSilently();
                     if (metricsApi != null) {
-                        ColonyMetricsSnapshot snap = metricsApi.getSnapshotSafe(colonyId);
+                        ColonyStatusSnapshot snap = metricsApi.getSnapshotSafe(colonyId);
                         if (snap.colonyId() != null) {
                             PacketDistributor.sendToPlayer(player, ColonyStatsSyncPacket.fromSnapshot(snap));
                         }

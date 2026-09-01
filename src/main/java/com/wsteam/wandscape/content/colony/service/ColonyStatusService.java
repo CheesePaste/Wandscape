@@ -4,8 +4,8 @@ import com.wsteam.wandscape.impl.WandscapeEngine;
 import com.wsteam.wandscape.content.colony.ColonyLevelManager;
 import com.wsteam.wandscape.api.BuildingApi;
 import com.wsteam.wandscape.api.BuildingApi.ColonySnapshot;
-import com.wsteam.wandscape.api.ColonyMetricsApi;
-import com.wsteam.wandscape.content.colony.data.ColonyMetricsSnapshot;
+import com.wsteam.wandscape.api.ColonyStatusApi;
+import com.wsteam.wandscape.content.colony.data.ColonyStatusSnapshot;
 import com.wsteam.wandscape.content.element.data.ElementType;
 import com.wsteam.wandscape.api.WandscapeApis;
 
@@ -13,20 +13,20 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Engine-side implementation of {@link ColonyMetricsApi}.
+ * Engine-side implementation of {@link ColonyStatusApi}.
  * Aggregates data from all module APIs in a single call.
  */
-public final class ColonyMetricsService implements ColonyMetricsApi {
+public final class ColonyStatusService implements ColonyStatusApi {
 
-    private ColonyMetricsService() {}
+    private ColonyStatusService() {}
 
-    public static ColonyMetricsService create() {
-        return new ColonyMetricsService();
+    public static ColonyStatusService create() {
+        return new ColonyStatusService();
     }
 
     @Override
-    public ColonyMetricsSnapshot getSnapshot(UUID colonyId) {
-        if (colonyId == null) return ColonyMetricsSnapshot.EMPTY;
+    public ColonyStatusSnapshot getSnapshot(UUID colonyId) {
+        if (colonyId == null) return ColonyStatusSnapshot.EMPTY;
 
         // 1. Building evaluation (single traversal)
         BuildingApi buildingApi = WandscapeApis.getBuildingApi();
@@ -97,7 +97,7 @@ public final class ColonyMetricsService implements ColonyMetricsApi {
             }
         }
 
-        return new ColonyMetricsSnapshot(
+        return new ColonyStatusSnapshot(
                 colonyId, comfort, magic, wonder,
                 name, lvl, exp,
                 touristCount, overnightStayerCount,

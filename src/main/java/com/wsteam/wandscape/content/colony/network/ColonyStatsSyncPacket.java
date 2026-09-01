@@ -1,6 +1,6 @@
 package com.wsteam.wandscape.content.colony.network;
 
-import com.wsteam.wandscape.content.colony.data.ColonyMetricsSnapshot;
+import com.wsteam.wandscape.content.colony.data.ColonyStatusSnapshot;
 import com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -38,7 +38,7 @@ public record ColonyStatsSyncPacket(
     @Override
     public Type<? extends CustomPacketPayload> type() { return TYPE; }
 
-    public static ColonyStatsSyncPacket fromSnapshot(ColonyMetricsSnapshot snap) {
+    public static ColonyStatsSyncPacket fromSnapshot(ColonyStatusSnapshot snap) {
         return new ColonyStatsSyncPacket(
                 snap.colonyId(), snap.comfort(), snap.magic(), snap.wonder(),
                 snap.colonyName(), snap.colonyLevel(), snap.colonyExperience(),

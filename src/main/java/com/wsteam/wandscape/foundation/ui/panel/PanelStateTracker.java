@@ -3,8 +3,8 @@ import com.wsteam.wandscape.content.colony.network.ColonyStatsSyncPacket;
 
 import com.wsteam.wandscape.content.building.internal.BuildingInteractHandler;
 import com.wsteam.wandscape.api.ColonyApi;
-import com.wsteam.wandscape.api.ColonyMetricsApi;
-import com.wsteam.wandscape.content.colony.data.ColonyMetricsSnapshot;
+import com.wsteam.wandscape.api.ColonyStatusApi;
+import com.wsteam.wandscape.content.colony.data.ColonyStatusSnapshot;
 import com.wsteam.wandscape.content.colony.event.ColonyEvaluationChangedEvent;
 import com.wsteam.wandscape.content.element.event.ElementBalanceChangedEvent;
 import com.wsteam.wandscape.content.tourist.event.TouristArrivedEvent;
@@ -100,10 +100,10 @@ public final class PanelStateTracker {
         MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
         if (server == null) return;
 
-        ColonyMetricsApi metricsApi = WandscapeApis.getColonyMetricsApiSilently();
+        ColonyStatusApi metricsApi = WandscapeApis.getColonyStatusApiSilently();
         if (metricsApi == null) return;
 
-        ColonyMetricsSnapshot snap = metricsApi.getSnapshotSafe(colonyId);
+        ColonyStatusSnapshot snap = metricsApi.getSnapshotSafe(colonyId);
 
         for (UUID playerId : panelOpenPlayers) {
             ServerPlayer player = server.getPlayerList().getPlayer(playerId);

@@ -20,7 +20,8 @@
 |---|---|---|---|
 | Config | 普通玩家可懂的全局标量 | 玩家 | **精简** |
 | API | 程序化查询/操作/注册/覆盖 | addon + 整合包作者 | **丰富、好命名** |
-| JSON | 现有结构化内容（元素/建筑/配方/魔法） | 整合包作者加内容 | **不再新增** |
+| JSON | 现有结构化内容（元素/建筑/配方/魔法） | 整合包作者加内容 | **不再新增**。⚠️ `buildings/deprecated/`（14 文件）是向下兼容载荷**禁删**（CLAUDE.md 已记，见下） |
+| Java | `blueprints/`（13 JSON）已另行收敛为 Java lambda 蓝图 | 内部（非 JSON 面） | 同属"少 JSON"，不在本方案范围但**本方案不再把 blueprints 当 JSON** |
 
 ---
 
@@ -35,6 +36,12 @@
   - （可选）`boolean insertItems(UUID colonyId, List<ItemStack> stacks)` 也返回成功。
 - `content/warehouse/WarehouseManager.java`：实现返回 `bank != null && bank.addElement(...)`；`consumeElement` 已是 boolean 保持一致。
 - 文档注释写明契约：colony 必须存在，返回失败表示镇/仓库未就绪。
+
+**⚠️ "镇不存在"的判定口径（待拍板）**：`ColonyItemBank.addElement`（:210）用 `computeIfAbsent` 对**任意** colonyId 自动建条目，`getColonyIds()`（:151）= storage.keySet ∪ elementStorage.keySet——**无法区分"注册的镇"与"临时加元素产生的 id"**。故"返回 false = 镇不存在"**不能靠 bank** 判定，否则任何 colonyId 都能"成功"。改法二选一：
+- 改从 **colony 注册表**判定（`ColonyApi.getColonyId(origin)` / `ColonySavedData.getAllColonies()`）——语义准确，但要把 colony 注册表挂钩进 WarehouseManager（跨域依赖）；
+- **或**简化语义为"返回 false = 仓库未就绪"（保留原有 `bank != null` 口径），不承诺"镇不存在"。
+
+推荐前者（语义更符合"程序化给镇加元素"的 addon 视角），但需接受跨域依赖。
 
 **验证**：`./gradlew compileJava` 绿；生产消费方（`addElement` 旧调用方）返回值用法不引发行为变化（返回值可忽略）。
 
@@ -158,3 +165,4 @@
 3. **JSON 不新增**：所有注册（元素映射/配方/魔法）走 API 而非新 JSON。
 4. **ColonyApi/ElementApi 是公开契约**：加方法用 default 或直接加签名（开发期不承诺二进制兼容，acceptable）。
 5. 完成后更新 `newplan/status.md` + 在 `CLAUDE.md` 增补 Config/API 分层条款（防再散）。
+6. **与 resources/data 审计协同（防再撞）**：`data/wandscape` 有 1368 文件，其中 `buildings/deprecated/`（14 文件）为向下兼容载荷**多次被误删**（判定靠 `newplan/packages.md` + 文件夹内 `README.md` 双重确认，CLAUDE.md 已记）；`road_templates/`（2 文件）系旧 schema 孤儿死数据待删；`blueprints/`（13 JSON）已另行收敛为 Java lambda。本方案执行涉及 `buildings` 时**避开 `deprecated/`**、涉及元素/建筑/配方时**别再当 blueprints 是 JSON**。具体字段/API 决策见 `newplan/config-api-decisions.md`（每字段打算 + API 增删，先人工审再执行）。
