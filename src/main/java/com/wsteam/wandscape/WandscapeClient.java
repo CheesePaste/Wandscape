@@ -1,17 +1,5 @@
 package com.wsteam.wandscape;
-import com.wsteam.wandscape.content.warehouse.transport.TransportStartPacket;
-import com.wsteam.wandscape.content.warehouse.transport.TransportItemEntity;
-import com.wsteam.wandscape.content.task.types.EffectId;
-import com.wsteam.wandscape.content.task.ecs.World;
-import com.wsteam.wandscape.content.task.types.EntityId;
-import com.wsteam.wandscape.content.magic.network.MagicCircleCastPacket;
-import com.wsteam.wandscape.foundation.networking.ScreenFeedbackPacket;
-import com.wsteam.wandscape.content.items.network.GuideDocOpenPacket;
-import com.wsteam.wandscape.foundation.networking.ParticleBurstPacket;
-import com.wsteam.wandscape.content.items.network.GuideProgressSyncPacket;
-import com.wsteam.wandscape.content.colony.network.ColonyAmbientPacket;
-import com.wsteam.wandscape.content.colony.network.ColonyCreatePromptPacket;
-import com.wsteam.wandscape.foundation.util.ItemKey;
+import com.wsteam.wandscape.content.warehouse.transport.TransportItemEntityRenderer;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import com.wsteam.wandscape.content.building.client.*;
@@ -583,7 +571,7 @@ public class WandscapeClient {
         // 敌对测试法师复用同款渲染器（模型/纹理/帽子/名牌），外观与 NPC 法师一致
         event.registerEntityRenderer(Wandscape.EVIL_MAGE.get(), WandscapeNpcRenderer::new);
         event.registerEntityRenderer(Wandscape.TOURIST.get(), TouristRenderer::new);
-        event.registerEntityRenderer(Wandscape.TRANSPORT_ITEM.get(), com.wsteam.wandscape.content.warehouse.transport.client.TransportItemEntityRenderer::new);
+        event.registerEntityRenderer(Wandscape.TRANSPORT_ITEM.get(), TransportItemEntityRenderer::new);
         event.registerEntityRenderer(Wandscape.MAGIC_BEAM.get(), MagicBeamEntityRenderer::new);
         event.registerBlockEntityRenderer(Wandscape.CREATIVE_BUILDING_SCANNER_BE.get(), ScannerRenderer::new);
         event.registerBlockEntityRenderer(Wandscape.BUILDING_SCANNER_BE.get(), ScannerRenderer::new);
