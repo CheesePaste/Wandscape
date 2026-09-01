@@ -1,6 +1,7 @@
 package com.wsteam.wandscape.foundation.util;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -19,6 +20,20 @@ public final class BalanceValues {
     private BalanceValues() {}
 
     private static final Map<String, Double> OVERRIDES = new ConcurrentHashMap<>();
+
+    /** 可被持久化 JSON（{@code data/wandscape/wandscape_balance.json}）覆盖的全部键。
+     *  新增 balance 值须同步补进本 Set，否则该键无法被文件覆盖。 */
+    private static final Set<String> KNOWN_KEYS = Set.of(
+            "npcRegenGraceTicks", "npcRegenIntervalTicks", "npcManaRegenTicks", "npcManaRegenFraction",
+            "guardRange", "guardReleaseRange", "guardSelfDefenseRange", "guardHateRange",
+            "guardHateDurationTicks", "guardFollowAttackDurationTicks", "guardKiteStartDist",
+            "guardKiteStandoff", "guardEngageStandoff", "guardFleeHpThreshold", "guardFleeStartDist",
+            "guardFleeStandoff",
+            "reviveNearBuildingRange", "scepterHostileRange",
+            "transportTicksPerBlockOnRoad", "transportTicksPerBlockOffRoad", "decorationBonusCap",
+            "workstationCraftTicksPerUnit", "craftingStationCraftTicksPerUnit",
+            "constructionPlaceTicksPerUnit", "castSingleTargetMaxEnemies", "castAoeMinEnemies",
+            "mageHutRestTicks");
 
     // ============================================================
     // npc 回血回蓝
@@ -125,4 +140,21 @@ public final class BalanceValues {
     public static void setCastAoeMinEnemies(int v) { OVERRIDES.put("castAoeMinEnemies", (double) v); }
     public static int mageHutRestTicks() { return (int)(double) OVERRIDES.getOrDefault("mageHutRestTicks", (double) DEFAULT_MAGE_HUT_REST_TICKS); }
     public static void setMageHutRestTicks(int v) { OVERRIDES.put("mageHutRestTicks", (double) v); }
+
+    // ============================================================
+    // 持久化 JSON 覆盖（data/wandscape/wandscape_balance.json）驱动
+    // ============================================================
+
+    /** 按键写覆盖层：仅接受 {@link #KNOWN_KEYS} 中的键，未知返回 false（调用方记 warn）。
+     *  供 datapack loader 使用；纯 Java，零 MC 依赖。 */
+    public static boolean apply(String key, double value) {
+        if (!KNOWN_KEYS.contains(key)) return false;
+        OVERRIDES.put(key, value);
+        return true;
+    }
+
+    /** 清空覆盖层、回到全部默认常量。reload 时让 JSON 文件成为唯一持久源（确定性）。 */
+    public static void reset() {
+        OVERRIDES.clear();
+    }
 }

@@ -4,7 +4,7 @@
 > 起点：`newplan/why`（2026-08-29 写出的十条痼疾）
 > 约定重写：`CLAUDE.md`（重构状态、代码组织约定、Testing、重构进行中）
 
-上次更新：2026-08-30
+上次更新：2026-09-02
 
 ## 阶段 0 — 确认问题（已完成）
 
@@ -111,3 +111,5 @@
 - 2026-09-01：**测试整目录删除（用户拍板）**：`src/test`（111 文件）删除——参考 Create/Botania 亦无 test、迁移麻烦，test 短期不加入项目。`CLAUDE.md`/`plan.md`/本文件的单测相关表述同步改为"当前不维护单测"（build 为唯一验证门槛）。
 - 2026-09-01：**包扫描跟进（11 子代理全包扫）**，落库 `newplan/package-sweep-followup.md`（#8 移动清单 9 项 + #9 删除清单 + 顺手死 import）。**已动手两项**：① `building→tourist` 依赖倒置解除——`tourist/data` 的 8 个 building 配置类型（Shop/Service/Atm/Relax/Decoration/ShopGoodDef/WonderConfig/WonderEffect）git mv 至 `building/data`，全仓 FQ import 替换；② `WandscapeNpc→IMagicSummon` 泄漏下沉——`IronSpellsCompat.getSummoner(Entity)` 新增，WandscapeNpc 删第三方 import、两处 `instanceof` 改走 compat（行为等价）。`compileJava` 绿。**记录待办**：`GuideProgress` 系统内核错置在 `items`（见 `newplan/guide-progress-kernel.md`，待拍板归属）；UI 去堆（用户构思中）；#8/#9 由用户手动挪/删。
 - 2026-09-02：**guide 双概念拆分 Step 1 落地（新手引导独立成域）**。用户点题：`GuideProgress`（新手引导系统内核）与 `GuideBook`（指南书手册）共用 `Guide*` 词根、彼此无关、无法区分。拍板：**A 新手引导→`Tutorial`**（独立域 `content/tutorial` 迁出 items，类 `Guide*`→`Tutorial*`，含 Service/ServerContext/SavedData/SyncPacket/UpdatePacket/Step/Registry/Renderer/Session + `api/TutorialApi`；网络 id `tutorial_progress_*`、SavedData `wandscape_tutorial_progress`、lang `tutorial.wandscape.*`、`getTutorialApiSilently`、TUTORIAL_FOLD_TOGGLE），**B 指南书→`Guidebook`**（Step 2 待做）。全链一次性（Tier 2）。**删 `TutorialApi.openGuide`**（@Unimplemented、属 B 指南书操作、混进 A/API 病灶、零调用方）。`./gradlew build` 全绿。待办：Step 2 指南书化（类/包/资源目录/lang key/文档前缀）；Step 3 文档收尾。
+
+- 2026-09-02：**BalanceValues 持久化 JSON 覆盖（整合包作者改文件一劳永逸）**。用户点题：`foundation/util/BalanceValues` 的可调值只能经领域 API `setXxx` 运行时覆盖（`ConcurrentHashMap` OVERRIDES），**零持久化、重启即回默认**——整合包作者（只编辑文件）没法改。拍板三点：**扁平键**（JSON 键 = BalanceValues 内部 override 名，无映射表）；**根文件+专用 loader**（`data/wandscape/wandscape_balance.json`，不走现有 category 扫描）；**ship 模板**（文件带 `_comment` 说明 + 全部默认值，改之即覆盖）。实现：`BalanceValues` 加 `KNOWN_KEYS` 集、`apply(key,value)`（仅已知键/未知返 false）、`reset()`；新增 `foundation/registry/dataconfig/internal/WandscapeBalanceLoader`（`SimpleJsonResourceReloadListener`，on reload 先 `reset()` 再灌文件=文件为唯一持久源、`/reload` 确定性；`_` 前缀键=注释忽略；未知键/非数值 `Log.warn` 跳过）；`Wandscape` 加 `BALANCE_LOADER` 字段 + `onAddReloadListener` 注册，`WandscapeClient.onRegisterClientReloadListeners` 同步挂（与 DATA_LOADER 双挂一致）。**语义定板**：reload 即 `reset()`+灌文件（文件权威、addon 运行时 setXxx 为会话级、下次 reload 被覆盖）；整数语义字段小数部分截断。`./gradlew build` 验证。
