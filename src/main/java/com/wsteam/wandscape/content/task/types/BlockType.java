@@ -19,4 +19,9 @@ public record BlockType(String id) {
     public String toString() {
         return id;
     }
+
+    /** 去除方块状态后缀（"minecraft:stone[lit=true]" → "minecraft:stone"）。 */
+    public BlockType stripBlockStateSuffix() {
+        return new BlockType(id.replaceAll("\\[.*?\\]", "").trim());
+    }
 }

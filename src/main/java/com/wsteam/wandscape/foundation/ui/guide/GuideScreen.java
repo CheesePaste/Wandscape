@@ -29,11 +29,11 @@ public class GuideScreen extends MedievalScreen {
     private MedievalButton btnBack;
     private MedievalButton btnForward;
 
-    public GuideTestScreen(String initialMarkdownContent) {
+    public GuideScreen(String initialMarkdownContent) {
         this(null, initialMarkdownContent, "assets/wandscape/guide/test_guide.md");
     }
 
-    public GuideTestScreen(Screen parentScreen, String initialMarkdownContent, String initialDocPath) {
+    public GuideScreen(Screen parentScreen, String initialMarkdownContent, String initialDocPath) {
         super(I18n.name("gui.wandscape.guide.title", "Wandscape 引导系统"), 320, 230);
         this.parentScreen = parentScreen;
         this.historyStack = new DocumentHistoryStack(initialDocPath);

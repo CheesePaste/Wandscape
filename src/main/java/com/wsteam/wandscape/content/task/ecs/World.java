@@ -21,7 +21,7 @@ public class World {
     final Map<Class<?>, ComponentStore<?>> stores = new LinkedHashMap<>();
 
     // ---- Systems ----
-    final List<System> systems = new ArrayList<>();
+    final List<EcsSystem> systems = new ArrayList<>();
 
     // ---- Entity ID generation ----
     long nextEntityId = 1;
@@ -168,7 +168,7 @@ public class World {
 
     // ---- System management ----
 
-    public void addSystem(System sys) {
+    public void addSystem(EcsSystem sys) {
         systems.add(sys);
     }
 
@@ -194,7 +194,7 @@ public class World {
     /** Execute all systems in registration order. */
     public void tick(float delta) {
 
-        for (System sys : systems) {
+        for (EcsSystem sys : systems) {
             sys.update(this, delta);
         }
         // Dispatch queued events at end of tick

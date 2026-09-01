@@ -16,7 +16,7 @@ public class NpcInventory {
     private final List<ResourceStack> items;
     private final int capacity;
 
-    public Inventory(int capacity) {
+    public NpcInventory(int capacity) {
         this.items = new ArrayList<>();
         this.capacity = capacity;
     }
