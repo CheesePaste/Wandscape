@@ -1,4 +1,5 @@
 package com.wsteam.wandscape.content.tourist.internal;
+import com.wsteam.wandscape.content.task.ecs.World;
 
 import com.wsteam.wandscape.content.npc.data.MageResume;
 import com.wsteam.wandscape.foundation.log.Log;

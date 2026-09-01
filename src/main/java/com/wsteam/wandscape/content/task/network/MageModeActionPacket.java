@@ -1,4 +1,5 @@
 package com.wsteam.wandscape.content.task.network;
+import com.wsteam.wandscape.content.task.types.EntityId;
 
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.foundation.log.Log;

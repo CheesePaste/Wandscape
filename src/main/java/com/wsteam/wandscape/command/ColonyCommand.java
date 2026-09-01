@@ -1,4 +1,5 @@
 package com.wsteam.wandscape.command;
+import com.wsteam.wandscape.content.task.component.Position;
 import com.wsteam.wandscape.content.colony.network.ColonyCreateRequestPacket;
 
 import com.mojang.brigadier.Command;
@@ -9,14 +10,14 @@ import com.mojang.brigadier.tree.CommandNode;
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.content.building.data.BuildingConfig;
 import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
-import com.wsteam.wandscape.core.component.ColonyMember;
-import com.wsteam.wandscape.core.component.ColonyMetadata;
-import com.wsteam.wandscape.core.component.Inventory;
-import com.wsteam.wandscape.core.ecs.World;
-import com.wsteam.wandscape.core.types.GridPos;
-import com.wsteam.wandscape.engine.ColonyApiImpl;
-import com.wsteam.wandscape.engine.WandscapeEngine;
-import com.wsteam.wandscape.engine.service.ParticleService;
+import com.wsteam.wandscape.content.task.component.ColonyMember;
+import com.wsteam.wandscape.content.task.component.ColonyMetadata;
+import com.wsteam.wandscape.content.task.component.Inventory;
+import com.wsteam.wandscape.content.task.ecs.World;
+import com.wsteam.wandscape.content.task.types.GridPos;
+import com.wsteam.wandscape.content.colony.ColonyApiImpl;
+import com.wsteam.wandscape.impl.WandscapeEngine;
+import com.wsteam.wandscape.foundation.service.ParticleService;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.content.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.api.ColonyApi;
@@ -270,7 +271,7 @@ public final class ColonyCommand {
 
         UUID created = colonyApi.getColonyId(origin);
         if (created != null) {
-            var levelMgr = com.wsteam.wandscape.engine.WandscapeEngine.getColonyLevelManager();
+            var levelMgr = com.wsteam.wandscape.impl.WandscapeEngine.getColonyLevelManager();
             if (levelMgr != null) {
                 levelMgr.setColonyName(created, name);
             }

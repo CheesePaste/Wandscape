@@ -1,4 +1,5 @@
 package com.wsteam.wandscape.content.tourist.entity;
+import com.wsteam.wandscape.content.npc.HostileTargetingHandler;
 
 /**
  * 标记接口：原版敌对生物会像对待村民一样把实现者列为攻击目标。

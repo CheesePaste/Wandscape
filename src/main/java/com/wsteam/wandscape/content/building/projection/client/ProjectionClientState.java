@@ -1,9 +1,11 @@
 package com.wsteam.wandscape.content.building.projection.client;
+import com.wsteam.wandscape.content.task.component.Position;
+import com.wsteam.wandscape.content.task.ecs.World;
 
 import com.wsteam.wandscape.content.building.data.BuildingConfig;
 import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
-import com.wsteam.wandscape.engine.service.SoundService;
-import com.wsteam.wandscape.engine.sound.WandscapeSounds;
+import com.wsteam.wandscape.foundation.sound.SoundService;
+import com.wsteam.wandscape.foundation.registry.WandscapeSounds;
 import com.wsteam.wandscape.content.building.projection.BuildingCentering;
 import com.wsteam.wandscape.content.building.projection.data.BuildingSlot;
 import com.wsteam.wandscape.foundation.log.Log;

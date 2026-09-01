@@ -1,4 +1,6 @@
 package com.wsteam.wandscape.content.building.internal;
+import com.wsteam.wandscape.content.colony.ColonyActivation;
+import com.wsteam.wandscape.content.task.ecs.System;
 import com.wsteam.wandscape.foundation.util.TickProfiler;
 
 import com.wsteam.wandscape.Config;
@@ -80,7 +82,7 @@ public final class DailySettlementSystem {
         int fired = 0;
         for (UUID colonyId : colonyIds) {
             // 创始人不在线且关闭离线运行 → 冻结小镇：跳过当日结算（商店补货/统计等）
-            if (!com.wsteam.wandscape.engine.colony.ColonyActivation.isColonyActive(colonyId)) {
+            if (!com.wsteam.wandscape.content.colony.ColonyActivation.isColonyActive(colonyId)) {
                 continue;
             }
             NeoForge.EVENT_BUS.post(new DailySettlementEvent(

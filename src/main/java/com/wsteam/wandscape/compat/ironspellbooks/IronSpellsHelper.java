@@ -1,4 +1,6 @@
 package com.wsteam.wandscape.compat.ironspellbooks;
+import com.wsteam.wandscape.content.npc.component.MagicState;
+import com.wsteam.wandscape.content.task.ecs.World;
 
 import com.wsteam.wandscape.content.magic.data.MagicDef;
 import com.wsteam.wandscape.content.magic.data.SpellConditions;

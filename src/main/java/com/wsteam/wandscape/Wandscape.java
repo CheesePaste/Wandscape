@@ -1,4 +1,16 @@
 package com.wsteam.wandscape;
+import com.wsteam.wandscape.content.npc.system.NavigationSystem;
+import com.wsteam.wandscape.impl.WandscapeEngine;
+import com.wsteam.wandscape.content.npc.HostileTargetingHandler;
+import com.wsteam.wandscape.content.task.TaskPoolSavedData;
+import com.wsteam.wandscape.content.items.service.GuideProgressService;
+import com.wsteam.wandscape.content.building.BuildingNoSpawnZoneHandler;
+import com.wsteam.wandscape.content.colony.ColonyApiImpl;
+import com.wsteam.wandscape.content.npc.WandscapeAttributes;
+import com.wsteam.wandscape.content.task.boundary.EventBus;
+import com.wsteam.wandscape.content.task.boundary.RitualOps;
+import com.wsteam.wandscape.content.task.ecs.World;
+import com.wsteam.wandscape.content.task.component.Inventory;
 import com.wsteam.wandscape.foundation.ui.panel.PanelStateTogglePacket;
 import com.wsteam.wandscape.foundation.networking.ScreenFeedbackPacket;
 import com.wsteam.wandscape.content.items.network.GuideTestPacket;
@@ -58,18 +70,18 @@ import com.wsteam.wandscape.foundation.registry.dataconfig.internal.WandscapeDat
 import com.wsteam.wandscape.content.element.internal.ElementApiImpl;
 import com.wsteam.wandscape.content.element.internal.ElementMappingLoader;
 import com.wsteam.wandscape.content.element.item.ElementItem;
-import com.wsteam.wandscape.engine.*;
-import com.wsteam.wandscape.engine.bootstrap.EngineBootstrap;
-import com.wsteam.wandscape.engine.boundary.ProductionEligibility;
-import com.wsteam.wandscape.engine.boundary.WandscapeBlockInteractExecutor;
-import com.wsteam.wandscape.engine.colony.ColonyLevelData;
-import com.wsteam.wandscape.engine.colony.ColonyLevelManager;
-import com.wsteam.wandscape.engine.service.ChunkLoadManager;
-import com.wsteam.wandscape.engine.service.ColonyMetricsService;
-import com.wsteam.wandscape.engine.sound.WandscapeSounds;
-import com.wsteam.wandscape.engine.source.blueprint.BlueprintConfigLoader;
-import com.wsteam.wandscape.engine.transport.TransportItemEntity;
-import com.wsteam.wandscape.engine.transport.TransportStartPacket;
+// engine wildcard replaced
+import com.wsteam.wandscape.impl.EngineBootstrap;
+import com.wsteam.wandscape.content.production.ProductionEligibility;
+import com.wsteam.wandscape.content.task.boundary.WandscapeBlockInteractExecutor;
+import com.wsteam.wandscape.content.colony.ColonyLevelData;
+import com.wsteam.wandscape.content.colony.ColonyLevelManager;
+import com.wsteam.wandscape.content.colony.service.ChunkLoadManager;
+import com.wsteam.wandscape.content.colony.service.ColonyMetricsService;
+import com.wsteam.wandscape.foundation.registry.WandscapeSounds;
+import com.wsteam.wandscape.content.building.source.BlueprintConfigLoader;
+import com.wsteam.wandscape.content.warehouse.transport.TransportItemEntity;
+import com.wsteam.wandscape.content.warehouse.transport.TransportStartPacket;
 import com.wsteam.wandscape.content.items.guidebook.item.GuideBookItem;
 import com.wsteam.wandscape.content.items.guidebook.network.GuideBookOpenPacket;
 import com.wsteam.wandscape.content.magic.data.MagicDef;
@@ -502,7 +514,7 @@ public class Wandscape {
         ENTITY_DATA_SERIALIZERS.register(modEventBus);
         MENUS.register(modEventBus);
         WandscapeSounds.SOUNDS.register(modEventBus);
-        com.wsteam.wandscape.engine.attribute.WandscapeAttributes.ATTRIBUTES.register(modEventBus);
+        com.wsteam.wandscape.content.npc.WandscapeAttributes.ATTRIBUTES.register(modEventBus);
         WandscapeEffects.PETRIFICATION.getId();
 
         NeoForge.EVENT_BUS.register(this);
@@ -982,7 +994,7 @@ public class Wandscape {
 
         // Register server-authoritative tutorial progress evaluator
         com.wsteam.wandscape.api.WandscapeApis.setGuideProgressApi(
-                new com.wsteam.wandscape.engine.service.GuideProgressService());
+                new com.wsteam.wandscape.content.items.service.GuideProgressService());
         Log.info(TAG, "GuideProgressService registered");
 
         BuildCompleteListener.register();

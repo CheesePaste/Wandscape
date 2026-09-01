@@ -1,4 +1,6 @@
 package com.wsteam.wandscape.content.building.internal;
+import com.wsteam.wandscape.content.task.component.Position;
+import com.wsteam.wandscape.content.task.component.Inventory;
 import com.wsteam.wandscape.content.element.data.ElementType;
 import com.wsteam.wandscape.content.building.data.BuildingData;
 import com.wsteam.wandscape.content.tourist.data.ShopGoodDef;
@@ -7,10 +9,10 @@ import com.wsteam.wandscape.content.tourist.data.ShopConfig;
 import com.wsteam.wandscape.foundation.util.TickProfiler;
 
 import com.wsteam.wandscape.content.building.data.BuildingConfig;
-import com.wsteam.wandscape.engine.WandscapeEngine;
-import com.wsteam.wandscape.engine.colony.ColonyActivation;
-import com.wsteam.wandscape.engine.system.ResourceSupplySystem;
-import com.wsteam.wandscape.engine.transport.ItemTransportManager;
+import com.wsteam.wandscape.impl.WandscapeEngine;
+import com.wsteam.wandscape.content.colony.ColonyActivation;
+import com.wsteam.wandscape.content.warehouse.system.ResourceSupplySystem;
+import com.wsteam.wandscape.content.warehouse.transport.ItemTransportManager;
 import com.wsteam.wandscape.api.BuildingApi;
 // data imports updated
 import com.wsteam.wandscape.content.tourist.event.DailySettlementEvent;

@@ -1,4 +1,5 @@
 package com.wsteam.wandscape.content.npc.network;
+import com.wsteam.wandscape.content.task.types.EntityId;
 
 import com.wsteam.wandscape.content.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.content.building.internal.BuildingState;

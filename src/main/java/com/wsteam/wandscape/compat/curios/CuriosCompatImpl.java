@@ -1,11 +1,15 @@
 package com.wsteam.wandscape.compat.curios;
+import com.wsteam.wandscape.content.npc.types.ModifierOperation;
+import com.wsteam.wandscape.content.task.ecs.World;
+import com.wsteam.wandscape.content.task.component.Inventory;
+import com.wsteam.wandscape.content.task.types.EntityId;
 
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.content.items.compass.CompassService;
 import com.wsteam.wandscape.compat.curios.client.NpcCuriosScreen;
 import com.wsteam.wandscape.compat.ironspellbooks.IronSpellsAttributes;
-import com.wsteam.wandscape.core.types.AttributeType;
-import com.wsteam.wandscape.engine.attribute.WandscapeAttributes;
+import com.wsteam.wandscape.content.npc.types.AttributeType;
+import com.wsteam.wandscape.content.npc.WandscapeAttributes;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import net.minecraft.core.Holder;
 import net.minecraft.core.NonNullList;
@@ -203,7 +207,7 @@ public final class CuriosCompatImpl {
                                 IRON_CURIO_MODIFIER_PREFIX + identifier + "_" + i + "_"
                                         + mod.type().name().toLowerCase(Locale.ROOT));
                         AttributeModifier.Operation op =
-                                (mod.operation() == com.wsteam.wandscape.core.types.ModifierOperation.MULTIPLY_BASE)
+                                (mod.operation() == com.wsteam.wandscape.content.npc.types.ModifierOperation.MULTIPLY_BASE)
                                         ? AttributeModifier.Operation.ADD_MULTIPLIED_BASE
                                         : AttributeModifier.Operation.ADD_VALUE;
                         inst.addOrUpdateTransientModifier(new AttributeModifier(modId, mod.amount(), op));

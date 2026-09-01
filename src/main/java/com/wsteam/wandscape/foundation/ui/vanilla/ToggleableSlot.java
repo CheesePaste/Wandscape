@@ -1,4 +1,6 @@
 package com.wsteam.wandscape.foundation.ui.vanilla;
+import com.wsteam.wandscape.content.task.ecs.World;
+import com.wsteam.wandscape.content.task.component.Inventory;
 
 import net.minecraft.world.Container;
 import net.minecraft.world.inventory.Slot;

@@ -1,7 +1,7 @@
 package com.wsteam.wandscape.content.task.scheduler;
 
-import com.wsteam.wandscape.core.ecs.System;
-import com.wsteam.wandscape.core.ecs.World;
+import com.wsteam.wandscape.content.task.ecs.System;
+import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.content.task.op.api.AtomicOp;
 import com.wsteam.wandscape.content.task.op.executor.OpExecutor;
 import com.wsteam.wandscape.content.task.op.executor.OpExecutorRegistry;

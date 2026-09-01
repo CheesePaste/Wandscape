@@ -1,9 +1,12 @@
 package com.wsteam.wandscape.command;
+import com.wsteam.wandscape.content.task.boundary.MovementOps;
+import com.wsteam.wandscape.content.task.component.Position;
+import com.wsteam.wandscape.content.task.ecs.World;
 
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.context.CommandContext;
-import com.wsteam.wandscape.engine.WandscapeEngine;
-import com.wsteam.wandscape.engine.boundary.WandscapeMovementOps;
+import com.wsteam.wandscape.impl.WandscapeEngine;
+import com.wsteam.wandscape.content.task.boundary.WandscapeMovementOps;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;

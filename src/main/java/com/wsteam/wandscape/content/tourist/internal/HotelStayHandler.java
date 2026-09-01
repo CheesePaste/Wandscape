@@ -1,12 +1,14 @@
 package com.wsteam.wandscape.content.tourist.internal;
+import com.wsteam.wandscape.content.task.boundary.EventBus;
+import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.foundation.util.TickProfiler;
 
 import com.wsteam.wandscape.content.building.data.BuildingConfig;
 import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.content.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.content.building.internal.BuildingState;
-import com.wsteam.wandscape.core.event.NarrativeEventTriggered;
-import com.wsteam.wandscape.engine.WandscapeEngine;
+import com.wsteam.wandscape.content.task.event.NarrativeEventTriggered;
+import com.wsteam.wandscape.impl.WandscapeEngine;
 import com.wsteam.wandscape.content.colony.data.NarrativeEvent;
 import com.wsteam.wandscape.content.tourist.data.ServiceConfig;
 import com.wsteam.wandscape.foundation.log.Log;

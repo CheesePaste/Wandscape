@@ -1,7 +1,7 @@
 package com.wsteam.wandscape.content.task.source;
 
-import com.wsteam.wandscape.core.ecs.System;
-import com.wsteam.wandscape.core.ecs.World;
+import com.wsteam.wandscape.content.task.ecs.System;
+import com.wsteam.wandscape.content.task.ecs.World;
 
 import java.util.List;
 

@@ -1,4 +1,6 @@
 package com.wsteam.wandscape.foundation.ui.util;
+import com.wsteam.wandscape.content.task.boundary.WandscapeBlockInteractExecutor;
+import com.wsteam.wandscape.content.task.ecs.World;
 
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;

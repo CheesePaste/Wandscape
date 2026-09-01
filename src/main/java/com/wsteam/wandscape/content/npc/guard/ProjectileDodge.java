@@ -1,6 +1,7 @@
 package com.wsteam.wandscape.content.npc.guard;
+import com.wsteam.wandscape.content.task.component.Position;
 
-import com.wsteam.wandscape.core.ecs.World;
+import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.content.npc.guard.executor.GuardCombat;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.content.npc.internal.EntityComponentBridge;

@@ -1,14 +1,15 @@
 package com.wsteam.wandscape.content.building.network;
+import com.wsteam.wandscape.content.task.component.Position;
 import com.wsteam.wandscape.content.npc.data.MageResume;
 
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.content.building.internal.BuildingInteractHandler;
 import com.wsteam.wandscape.content.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.content.building.internal.BuildingState;
-import com.wsteam.wandscape.core.component.ColonyMember;
-import com.wsteam.wandscape.core.ecs.World;
-import com.wsteam.wandscape.core.types.AttributeType;
-import com.wsteam.wandscape.engine.WandscapeEngine;
+import com.wsteam.wandscape.content.task.component.ColonyMember;
+import com.wsteam.wandscape.content.task.ecs.World;
+import com.wsteam.wandscape.content.npc.types.AttributeType;
+import com.wsteam.wandscape.impl.WandscapeEngine;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.content.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.content.npc.data.MageAttributeRoller;

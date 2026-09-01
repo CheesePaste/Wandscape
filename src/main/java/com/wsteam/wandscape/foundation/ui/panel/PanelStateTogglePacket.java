@@ -1,4 +1,5 @@
 package com.wsteam.wandscape.foundation.ui.panel;
+import com.wsteam.wandscape.content.task.component.Position;
 import com.wsteam.wandscape.content.road.network.RoadAreaSyncPacket;
 import com.wsteam.wandscape.content.building.network.BuildingAreaSyncPacket;
 import com.wsteam.wandscape.content.colony.network.ColonyStatsSyncPacket;

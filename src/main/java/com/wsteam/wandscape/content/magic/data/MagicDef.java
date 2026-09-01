@@ -1,4 +1,6 @@
 package com.wsteam.wandscape.content.magic.data;
+import com.wsteam.wandscape.content.npc.component.EquippedMagicComponent;
+import com.wsteam.wandscape.content.npc.component.MagicState;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;

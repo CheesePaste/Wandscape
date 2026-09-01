@@ -1,4 +1,6 @@
 package com.wsteam.wandscape.content.road.network;
+import com.wsteam.wandscape.content.task.component.Position;
+import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.content.building.network.BuildingAreaSyncPacket;
 
 import com.wsteam.wandscape.content.road.core.PathPoint;

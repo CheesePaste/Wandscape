@@ -1,11 +1,17 @@
 package com.wsteam.wandscape.content.building.internal;
+import com.wsteam.wandscape.impl.WandscapeEngine;
+import com.wsteam.wandscape.content.colony.service.ChunkLoadManager;
+import com.wsteam.wandscape.content.colony.ColonyApiImpl;
+import com.wsteam.wandscape.content.warehouse.system.ResourceSupplySystem;
+import com.wsteam.wandscape.content.task.component.Position;
+import com.wsteam.wandscape.content.task.ecs.World;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
 import com.wsteam.wandscape.content.building.data.BlockOffset;
 import com.wsteam.wandscape.content.building.data.BuildingConfig;
-import com.wsteam.wandscape.engine.source.BuildingTaskSource;
+import com.wsteam.wandscape.content.building.source.BuildingTaskSource;
 import com.wsteam.wandscape.content.building.projection.BuildingRotation;
 import com.wsteam.wandscape.api.BuildingApi;
 import com.wsteam.wandscape.content.building.data.BuildingData;
@@ -269,8 +275,8 @@ public class BuildingApiImpl implements BuildingApi {
             if (config != null) {
                 Map<String, Integer> materialCounts = EnqueueHelper.computeMaterialCounts(config);
                 if (!materialCounts.isEmpty()) {
-                    com.wsteam.wandscape.engine.system.ResourceSupplySystem.cancelAutoSynthesize(
-                            state.getColonyId(), materialCounts, com.wsteam.wandscape.engine.WandscapeEngine.getWorld());
+                    com.wsteam.wandscape.content.warehouse.system.ResourceSupplySystem.cancelAutoSynthesize(
+                            state.getColonyId(), materialCounts, com.wsteam.wandscape.impl.WandscapeEngine.getWorld());
                 }
             }
         }
@@ -344,7 +350,7 @@ public class BuildingApiImpl implements BuildingApi {
 
         UUID colonyId = state.getColonyId();
         BuildingConfig config = BuildingConfigLoader.getInstance().get(state.getBuildingTypeId());
-        var world = com.wsteam.wandscape.engine.WandscapeEngine.getWorld();
+        var world = com.wsteam.wandscape.impl.WandscapeEngine.getWorld();
 
         // 1. Immediately cancel all building tasks in engine/global/building task pool and clear state queue
         BuildingTaskSource.cancelBuildingTasks(buildingId);
@@ -354,7 +360,7 @@ public class BuildingApiImpl implements BuildingApi {
         if (config != null) {
             Map<String, Integer> materialCounts = EnqueueHelper.computeMaterialCounts(config);
             if (!materialCounts.isEmpty()) {
-                com.wsteam.wandscape.engine.system.ResourceSupplySystem.cancelAutoSynthesize(
+                com.wsteam.wandscape.content.warehouse.system.ResourceSupplySystem.cancelAutoSynthesize(
                         colonyId, materialCounts, world);
             }
         }
@@ -912,7 +918,7 @@ public class BuildingApiImpl implements BuildingApi {
             return PlacementResult.fail(Component.literal("Unknown building type: " + buildingTypeId));
         }
 
-        UUID tempColonyId = com.wsteam.wandscape.engine.ColonyApiImpl.get().getColonyId(anchor);
+        UUID tempColonyId = com.wsteam.wandscape.content.colony.ColonyApiImpl.get().getColonyId(anchor);
         if (!BuildingUnlockChecker.isUnlocked(tempColonyId, config)) {
             Component reason = BuildingUnlockChecker.getLockReason(tempColonyId, config);
             return PlacementResult.fail(reason != null ? reason : Component.literal("Building is locked"));

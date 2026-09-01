@@ -1,4 +1,7 @@
 package com.wsteam.wandscape.api;
+import com.wsteam.wandscape.content.building.source.BuildingTaskSource;
+import com.wsteam.wandscape.content.task.component.Position;
+import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.foundation.registry.WandscapeConstants;
 
 import com.wsteam.wandscape.content.building.data.BuildingData;

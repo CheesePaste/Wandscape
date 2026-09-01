@@ -1,4 +1,5 @@
 package com.wsteam.wandscape.content.items.scepter.internal;
+import com.wsteam.wandscape.content.task.types.EntityId;
 
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;

@@ -1,4 +1,5 @@
 package com.wsteam.wandscape.content.building.network;
+import com.wsteam.wandscape.content.task.component.Position;
 
 import com.wsteam.wandscape.content.building.internal.BuildingInteractHandler;
 import com.wsteam.wandscape.content.building.internal.BuildingSavedData;

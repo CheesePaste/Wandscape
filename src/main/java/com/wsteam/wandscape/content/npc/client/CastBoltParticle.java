@@ -1,4 +1,5 @@
 package com.wsteam.wandscape.content.npc.client;
+import com.wsteam.wandscape.content.task.ecs.World;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;

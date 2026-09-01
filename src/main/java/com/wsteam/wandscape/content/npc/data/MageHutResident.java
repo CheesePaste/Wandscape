@@ -1,6 +1,6 @@
 package com.wsteam.wandscape.content.npc.data;
 
-import com.wsteam.wandscape.core.types.AttributeType;
+import com.wsteam.wandscape.content.npc.types.AttributeType;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;

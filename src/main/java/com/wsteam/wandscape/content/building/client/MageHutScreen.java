@@ -1,11 +1,12 @@
 package com.wsteam.wandscape.content.building.client;
+import com.wsteam.wandscape.content.task.ecs.World;
 
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.content.building.network.MageHutActionPacket;
 import com.wsteam.wandscape.content.building.network.MageHutDataPacket;
 import com.wsteam.wandscape.content.building.network.MageHutDataPacket.MageCandidate;
 import com.wsteam.wandscape.content.building.network.OpenWarehousePacket;
-import com.wsteam.wandscape.core.types.AttributeType;
+import com.wsteam.wandscape.content.npc.types.AttributeType;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.content.element.data.ElementType;
 import com.wsteam.wandscape.content.npc.data.MageHutAttributes;

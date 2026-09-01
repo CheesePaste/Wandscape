@@ -1,15 +1,18 @@
 package com.wsteam.wandscape.content.npc.internal;
+import com.wsteam.wandscape.impl.WandscapeEngine;
+import com.wsteam.wandscape.content.task.boundary.RitualOps;
+import com.wsteam.wandscape.content.task.boundary.EntityOps;
 
-import com.wsteam.wandscape.core.CoreBootstrap;
-import com.wsteam.wandscape.core.component.ColonyMember;
-import com.wsteam.wandscape.core.component.Inventory;
-import com.wsteam.wandscape.core.component.Position;
-import com.wsteam.wandscape.core.component.TaskExecutor;
-import com.wsteam.wandscape.core.ecs.World;
-import com.wsteam.wandscape.core.types.FriendlyForce;
-import com.wsteam.wandscape.core.types.GridPos;
-import com.wsteam.wandscape.core.types.NpcAttributes;
-import com.wsteam.wandscape.core.types.ResourceStack;
+import com.wsteam.wandscape.impl.CoreBootstrap;
+import com.wsteam.wandscape.content.task.component.ColonyMember;
+import com.wsteam.wandscape.content.task.component.Inventory;
+import com.wsteam.wandscape.content.task.component.Position;
+import com.wsteam.wandscape.content.task.component.TaskExecutor;
+import com.wsteam.wandscape.content.task.ecs.World;
+import com.wsteam.wandscape.content.npc.types.FriendlyForce;
+import com.wsteam.wandscape.content.task.types.GridPos;
+import com.wsteam.wandscape.content.npc.types.NpcAttributes;
+import com.wsteam.wandscape.content.task.types.ResourceStack;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.foundation.log.Log;
 

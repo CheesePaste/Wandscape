@@ -1,4 +1,5 @@
 package com.wsteam.wandscape.content.task.network;
+import com.wsteam.wandscape.content.task.types.ResourceId;
 
 import net.minecraft.network.RegistryFriendlyByteBuf;
 

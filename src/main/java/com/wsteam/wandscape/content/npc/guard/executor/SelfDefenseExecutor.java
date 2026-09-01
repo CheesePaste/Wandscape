@@ -1,10 +1,12 @@
 package com.wsteam.wandscape.content.npc.guard.executor;
+import com.wsteam.wandscape.content.task.boundary.MovementOps;
+import com.wsteam.wandscape.content.task.component.Position;
 
 import com.wsteam.wandscape.Config;
-import com.wsteam.wandscape.core.component.NpcTaskQueue;
-import com.wsteam.wandscape.core.component.TaskExecutor;
-import com.wsteam.wandscape.core.ecs.World;
-import com.wsteam.wandscape.core.types.HostileMarkDecision;
+import com.wsteam.wandscape.content.npc.component.NpcTaskQueue;
+import com.wsteam.wandscape.content.task.component.TaskExecutor;
+import com.wsteam.wandscape.content.task.ecs.World;
+import com.wsteam.wandscape.content.npc.types.HostileMarkDecision;
 import com.wsteam.wandscape.content.magic.entity.MagicBeamEntity;
 import com.wsteam.wandscape.content.magic.internal.MagicCaster;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;

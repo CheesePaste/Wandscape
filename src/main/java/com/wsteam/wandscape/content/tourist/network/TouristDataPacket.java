@@ -1,4 +1,5 @@
 package com.wsteam.wandscape.content.tourist.network;
+import com.wsteam.wandscape.content.task.types.EntityId;
 import com.wsteam.wandscape.content.tourist.data.VisitMemory;
 
 import com.wsteam.wandscape.content.tourist.data.Activity;

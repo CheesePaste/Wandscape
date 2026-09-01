@@ -1,4 +1,5 @@
 package com.wsteam.wandscape.content.magic.data;
+import com.wsteam.wandscape.content.npc.component.EquippedMagicComponent;
 
 import javax.annotation.Nullable;
 

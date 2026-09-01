@@ -1,4 +1,5 @@
 package com.wsteam.wandscape.content.building.projection.client;
+import com.wsteam.wandscape.content.task.component.Position;
 
 import com.wsteam.wandscape.foundation.ui.I18n;
 import com.wsteam.wandscape.foundation.ui.panel.WandscapePanelOverlay;

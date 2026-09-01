@@ -1,12 +1,13 @@
 package com.wsteam.wandscape.content.building.projection.network;
+import com.wsteam.wandscape.content.task.component.Position;
 import com.wsteam.wandscape.content.building.network.BuildingAreaSyncPacket;
 import com.wsteam.wandscape.content.colony.network.ColonyCreatePromptPacket;
 import com.wsteam.wandscape.content.building.data.WorkItem;
 
 import com.wsteam.wandscape.content.building.data.BuildingConfig;
 import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
-import com.wsteam.wandscape.engine.service.SoundService;
-import com.wsteam.wandscape.engine.sound.WandscapeSounds;
+import com.wsteam.wandscape.foundation.sound.SoundService;
+import com.wsteam.wandscape.foundation.registry.WandscapeSounds;
 import com.wsteam.wandscape.content.building.projection.data.BuildingSlot;
 import com.wsteam.wandscape.api.BuildingApi;
 import com.wsteam.wandscape.foundation.log.Log;

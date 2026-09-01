@@ -1,4 +1,6 @@
 package com.wsteam.wandscape.foundation.ui.component;
+import com.wsteam.wandscape.content.task.ecs.World;
+import com.wsteam.wandscape.content.task.component.Inventory;
 
 import com.wsteam.wandscape.foundation.ui.theme.MedievalColors;
 import com.wsteam.wandscape.foundation.ui.util.RenderUtil;

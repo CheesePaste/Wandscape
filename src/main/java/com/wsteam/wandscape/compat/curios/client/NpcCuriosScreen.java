@@ -1,4 +1,6 @@
 package com.wsteam.wandscape.compat.curios.client;
+import com.wsteam.wandscape.content.task.ecs.World;
+import com.wsteam.wandscape.content.task.types.EntityId;
 
 import com.wsteam.wandscape.compat.curios.NpcCurioSlot;
 import com.wsteam.wandscape.compat.curios.NpcCuriosMenu;

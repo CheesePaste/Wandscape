@@ -1,4 +1,5 @@
 package com.wsteam.wandscape.foundation.ui.util;
+import com.wsteam.wandscape.content.task.component.Position;
 
 import com.wsteam.wandscape.foundation.ui.theme.MedievalColors;
 import net.minecraft.client.gui.GuiGraphics;

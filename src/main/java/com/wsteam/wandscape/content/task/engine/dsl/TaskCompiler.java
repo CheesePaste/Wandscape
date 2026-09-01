@@ -1,6 +1,6 @@
 package com.wsteam.wandscape.content.task.engine.dsl;
 
-import com.wsteam.wandscape.core.ecs.World;
+import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.content.task.engine.pool.TaskRequest;
 
 /**

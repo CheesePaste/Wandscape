@@ -1,6 +1,6 @@
 package com.wsteam.wandscape.content.production.internal;
 
-import com.wsteam.wandscape.engine.WandscapeEngine;
+import com.wsteam.wandscape.impl.WandscapeEngine;
 import com.wsteam.wandscape.content.production.data.RecipeUnlockRequirement;
 
 import javax.annotation.Nullable;

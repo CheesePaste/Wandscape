@@ -1,8 +1,8 @@
 package com.wsteam.wandscape.content.task.engine.pool;
 
 import com.google.gson.JsonElement;
-import com.wsteam.wandscape.core.boundary.EventBus;
-import com.wsteam.wandscape.core.types.ResourceStack;
+import com.wsteam.wandscape.content.task.boundary.EventBus;
+import com.wsteam.wandscape.content.task.types.ResourceStack;
 import com.wsteam.wandscape.content.task.engine.dsl.TriggerDeclaration;
 import com.wsteam.wandscape.content.task.runtime.ApprovalInfo;
 import com.wsteam.wandscape.content.task.runtime.InterruptRecord;

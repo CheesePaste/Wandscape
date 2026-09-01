@@ -1,6 +1,6 @@
 package com.wsteam.wandscape.content.warehouse.event;
 
-import com.wsteam.wandscape.core.types.ResourceId;
+import com.wsteam.wandscape.content.task.types.ResourceId;
 import net.neoforged.bus.api.Event;
 /**
  * Posted to {@code NeoForge.EVENT_BUS} when a {@code ResourceRequestOp}

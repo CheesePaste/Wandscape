@@ -1,4 +1,5 @@
 package com.wsteam.wandscape.api;
+import com.wsteam.wandscape.content.task.component.Position;
 import com.wsteam.wandscape.content.tourist.event.TouristArrivedEvent;
 import com.wsteam.wandscape.content.tourist.event.TouristDepartedEvent;
 

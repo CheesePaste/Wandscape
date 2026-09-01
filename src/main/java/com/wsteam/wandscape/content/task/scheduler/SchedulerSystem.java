@@ -1,14 +1,15 @@
 package com.wsteam.wandscape.content.task.scheduler;
+import com.wsteam.wandscape.content.task.boundary.EntityOps;
 import com.wsteam.wandscape.foundation.util.TickProfiler;
 
 import com.google.gson.JsonElement;
-import com.wsteam.wandscape.core.component.ColonyMember;
-import com.wsteam.wandscape.core.component.Inventory;
-import com.wsteam.wandscape.core.component.Position;
-import com.wsteam.wandscape.core.component.TaskExecutor;
-import com.wsteam.wandscape.core.ecs.System;
-import com.wsteam.wandscape.core.ecs.World;
-import com.wsteam.wandscape.core.types.GridPos;
+import com.wsteam.wandscape.content.task.component.ColonyMember;
+import com.wsteam.wandscape.content.task.component.Inventory;
+import com.wsteam.wandscape.content.task.component.Position;
+import com.wsteam.wandscape.content.task.component.TaskExecutor;
+import com.wsteam.wandscape.content.task.ecs.System;
+import com.wsteam.wandscape.content.task.ecs.World;
+import com.wsteam.wandscape.content.task.types.GridPos;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.content.task.engine.pool.GlobalTask;
 import com.wsteam.wandscape.content.task.engine.pool.GlobalTaskPool;

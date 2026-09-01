@@ -1,4 +1,5 @@
 package com.wsteam.wandscape.content.tourist.internal;
+import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.content.element.data.ElementType;
 import com.wsteam.wandscape.content.tourist.data.ServiceConfig;
 import com.wsteam.wandscape.content.building.data.BuildingData;
@@ -18,7 +19,7 @@ import com.wsteam.wandscape.content.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.content.building.internal.BuildingState;
 import com.wsteam.wandscape.content.building.internal.ShopInteractionHandler;
 import com.wsteam.wandscape.content.building.internal.ShopStockManager;
-import com.wsteam.wandscape.engine.colony.ColonyActivation;
+import com.wsteam.wandscape.content.colony.ColonyActivation;
 import com.wsteam.wandscape.content.building.projection.BuildingRotation;
 import com.wsteam.wandscape.api.BuildingApi;
 // data imports updated

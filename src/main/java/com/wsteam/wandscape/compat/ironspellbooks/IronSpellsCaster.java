@@ -1,6 +1,8 @@
 package com.wsteam.wandscape.compat.ironspellbooks;
+import com.wsteam.wandscape.content.npc.component.MagicState;
+import com.wsteam.wandscape.content.task.ecs.World;
 
-import com.wsteam.wandscape.core.types.AttributeType;
+import com.wsteam.wandscape.content.npc.types.AttributeType;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.foundation.log.Log;
 import io.redspace.ironsspellbooks.api.magic.MagicData;

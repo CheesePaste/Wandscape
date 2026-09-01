@@ -1,4 +1,5 @@
 package com.wsteam.wandscape.content.warehouse.network;
+import com.wsteam.wandscape.content.task.component.Inventory;
 
 import com.wsteam.wandscape.foundation.util.ItemKey;
 import com.wsteam.wandscape.foundation.log.Log;

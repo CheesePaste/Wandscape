@@ -1,6 +1,7 @@
 package com.wsteam.wandscape.content.npc.data;
+import com.wsteam.wandscape.content.task.component.Inventory;
 
-import com.wsteam.wandscape.core.types.ResourceStack;
+import com.wsteam.wandscape.content.task.types.ResourceStack;
 
 import javax.annotation.Nullable;
 import java.util.List;

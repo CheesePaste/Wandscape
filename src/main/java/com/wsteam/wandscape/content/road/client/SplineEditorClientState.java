@@ -1,4 +1,5 @@
 package com.wsteam.wandscape.content.road.client;
+import com.wsteam.wandscape.content.task.component.Position;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;

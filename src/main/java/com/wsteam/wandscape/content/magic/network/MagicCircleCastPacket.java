@@ -1,4 +1,6 @@
 package com.wsteam.wandscape.content.magic.network;
+import com.wsteam.wandscape.content.task.types.EffectId;
+import com.wsteam.wandscape.content.task.ecs.World;
 
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;

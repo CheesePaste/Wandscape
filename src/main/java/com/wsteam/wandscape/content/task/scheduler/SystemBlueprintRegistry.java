@@ -2,9 +2,9 @@ package com.wsteam.wandscape.content.task.scheduler;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
-import com.wsteam.wandscape.core.TemplateResolver;
-import com.wsteam.wandscape.core.boundary.EventBus;
-import com.wsteam.wandscape.core.event.CustomEvent;
+import com.wsteam.wandscape.impl.TemplateResolver;
+import com.wsteam.wandscape.content.task.boundary.EventBus;
+import com.wsteam.wandscape.content.task.event.CustomEvent;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.content.task.engine.dsl.Blueprint;
 import com.wsteam.wandscape.content.task.engine.dsl.BlueprintSteps;

@@ -1,7 +1,7 @@
 package com.wsteam.wandscape.content.task.network;
 
-import com.wsteam.wandscape.core.ecs.World;
-import com.wsteam.wandscape.engine.WandscapeEngine;
+import com.wsteam.wandscape.content.task.ecs.World;
+import com.wsteam.wandscape.impl.WandscapeEngine;
 import com.wsteam.wandscape.foundation.log.Log;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;

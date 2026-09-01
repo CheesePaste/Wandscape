@@ -1,7 +1,8 @@
 package com.wsteam.wandscape.content.magic.internal;
+import com.wsteam.wandscape.content.task.ecs.World;
 
-import com.wsteam.wandscape.engine.service.SoundService;
-import com.wsteam.wandscape.engine.sound.WandscapeSounds;
+import com.wsteam.wandscape.foundation.sound.SoundService;
+import com.wsteam.wandscape.foundation.registry.WandscapeSounds;
 import com.wsteam.wandscape.content.magic.entity.MagicBeamEntity;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.foundation.log.Log;

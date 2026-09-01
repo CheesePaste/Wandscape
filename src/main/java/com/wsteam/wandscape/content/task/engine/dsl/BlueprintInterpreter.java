@@ -1,10 +1,19 @@
 package com.wsteam.wandscape.content.task.engine.dsl;
+import com.wsteam.wandscape.content.task.types.ResourceId;
+import com.wsteam.wandscape.content.task.types.BlockType;
+import com.wsteam.wandscape.content.task.types.InteractAction;
+import com.wsteam.wandscape.content.task.types.GridPos;
+import com.wsteam.wandscape.content.task.types.EffectId;
+import com.wsteam.wandscape.content.task.ecs.World;
+import com.wsteam.wandscape.content.task.types.ResourceStack;
+import com.wsteam.wandscape.content.task.types.RitualId;
+import com.wsteam.wandscape.content.task.types.EntityId;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
-import com.wsteam.wandscape.core.types.*;
+// core.types wildcard replaced
 import com.wsteam.wandscape.content.task.op.api.AtomicOp;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.content.task.runtime.TaskSequence;

@@ -1,6 +1,10 @@
 package com.wsteam.wandscape.content.magic.internal;
+import com.wsteam.wandscape.content.npc.component.EquippedMagicComponent;
+import com.wsteam.wandscape.content.task.types.EffectId;
+import com.wsteam.wandscape.content.task.component.Position;
+import com.wsteam.wandscape.content.task.ecs.World;
 
-import com.wsteam.wandscape.core.types.AttributeType;
+import com.wsteam.wandscape.content.npc.types.AttributeType;
 import com.wsteam.wandscape.content.magic.data.MagicCircleSpec;
 import com.wsteam.wandscape.content.magic.data.MagicDef;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
@@ -74,7 +78,7 @@ public final class MagicSpellExecutors {
             default -> {
                 if (com.wsteam.wandscape.compat.ironspellbooks.IronSpellsCompat.isLoaded()
                         && com.wsteam.wandscape.compat.ironspellbooks.IronSpellsHelper.isValidSpell(def.id())) {
-                    com.wsteam.wandscape.core.component.EquippedMagicComponent.SpellEntry entry =
+                    com.wsteam.wandscape.content.npc.component.EquippedMagicComponent.SpellEntry entry =
                             npc.equippedMagic.getEntry(def.id());
                     int spellLevel = entry != null ? entry.level() : 1;
                     yield com.wsteam.wandscape.compat.ironspellbooks.IronSpellsCaster.cast(

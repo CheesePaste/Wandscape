@@ -1,4 +1,5 @@
 package com.wsteam.wandscape.foundation.registry;
+import com.wsteam.wandscape.content.task.boundary.AsyncTransformExecutor;
 
 import java.util.Set;
 

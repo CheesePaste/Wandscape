@@ -1,4 +1,5 @@
 package com.wsteam.wandscape.foundation.ui.component;
+import com.wsteam.wandscape.content.task.ecs.World;
 
 import com.wsteam.wandscape.foundation.ui.theme.MedievalColors;
 import net.minecraft.client.gui.Font;

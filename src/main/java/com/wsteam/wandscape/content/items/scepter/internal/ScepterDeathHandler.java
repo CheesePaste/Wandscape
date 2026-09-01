@@ -1,4 +1,5 @@
 package com.wsteam.wandscape.content.items.scepter.internal;
+import com.wsteam.wandscape.content.task.ecs.World;
 
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;

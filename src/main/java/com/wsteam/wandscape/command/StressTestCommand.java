@@ -1,4 +1,5 @@
 package com.wsteam.wandscape.command;
+import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.content.building.data.WorkItem;
 
 import com.mojang.brigadier.Command;
@@ -9,7 +10,7 @@ import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.content.building.data.BuildingConfig;
 import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.content.building.internal.EnqueueHelper;
-import com.wsteam.wandscape.engine.WandscapeEngine;
+import com.wsteam.wandscape.impl.WandscapeEngine;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.foundation.registry.WandscapeConstants;
 import com.wsteam.wandscape.content.task.engine.pool.TaskRequest;

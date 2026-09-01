@@ -1,4 +1,5 @@
 package com.wsteam.wandscape.content.tourist.network;
+import com.wsteam.wandscape.content.task.types.EntityId;
 
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;

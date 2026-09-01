@@ -1,4 +1,6 @@
 package com.wsteam.wandscape.content.colony.overview.client;
+import com.wsteam.wandscape.content.task.ecs.World;
+import com.wsteam.wandscape.content.task.types.EntityId;
 
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;

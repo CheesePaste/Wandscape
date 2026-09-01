@@ -1,14 +1,15 @@
 package com.wsteam.wandscape.content.items.wand.internal;
+import com.wsteam.wandscape.content.npc.types.AttributeModifier;
+import com.wsteam.wandscape.content.task.ecs.World;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.wsteam.wandscape.Wandscape;
-import com.wsteam.wandscape.core.types.AttributeModifier;
-import com.wsteam.wandscape.core.types.AttributeType;
-import com.wsteam.wandscape.core.types.ModifierOperation;
+import com.wsteam.wandscape.content.npc.types.AttributeType;
+import com.wsteam.wandscape.content.npc.types.ModifierOperation;
 import com.wsteam.wandscape.foundation.registry.dataconfig.internal.WandscapeDataLoader;
-import com.wsteam.wandscape.engine.attribute.WandscapeAttributes;
+import com.wsteam.wandscape.content.npc.WandscapeAttributes;
 import com.wsteam.wandscape.foundation.registry.WandscapeDataRegistry;
 import net.minecraft.core.Holder;
 import net.minecraft.nbt.CompoundTag;

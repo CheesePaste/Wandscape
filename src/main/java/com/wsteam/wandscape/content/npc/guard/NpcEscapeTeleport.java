@@ -1,10 +1,12 @@
 package com.wsteam.wandscape.content.npc.guard;
+import com.wsteam.wandscape.content.npc.system.NavigationSystem;
+import com.wsteam.wandscape.content.task.boundary.RitualOps;
 
-import com.wsteam.wandscape.core.ecs.World;
-import com.wsteam.wandscape.core.types.GridPos;
-import com.wsteam.wandscape.core.types.RitualId;
-import com.wsteam.wandscape.engine.WandscapeEngine;
-import com.wsteam.wandscape.engine.boundary.WandscapeRitualOps;
+import com.wsteam.wandscape.content.task.ecs.World;
+import com.wsteam.wandscape.content.task.types.GridPos;
+import com.wsteam.wandscape.content.task.types.RitualId;
+import com.wsteam.wandscape.impl.WandscapeEngine;
+import com.wsteam.wandscape.content.task.boundary.WandscapeRitualOps;
 import com.wsteam.wandscape.content.magic.data.MagicDef;
 import com.wsteam.wandscape.content.magic.internal.SpellbookLoader;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;

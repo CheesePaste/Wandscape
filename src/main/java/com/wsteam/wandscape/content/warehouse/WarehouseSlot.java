@@ -1,4 +1,6 @@
 package com.wsteam.wandscape.content.warehouse;
+import com.wsteam.wandscape.content.task.ecs.World;
+import com.wsteam.wandscape.content.task.component.Inventory;
 
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Player;

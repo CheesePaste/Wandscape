@@ -2,7 +2,7 @@ package com.wsteam.wandscape.content.building.executor;
 
 import com.wsteam.wandscape.content.building.internal.AltarCastHandler;
 import com.wsteam.wandscape.content.building.internal.AltarCastState;
-import com.wsteam.wandscape.core.ecs.World;
+import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.content.magic.data.MagicCircleSpec;
 import com.wsteam.wandscape.content.magic.data.MagicDef;
 import com.wsteam.wandscape.content.magic.internal.MagicCircleLoader;

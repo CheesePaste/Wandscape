@@ -1,12 +1,16 @@
 package com.wsteam.wandscape.content.npc.guard.executor;
+import com.wsteam.wandscape.content.npc.system.NavigationSystem;
+import com.wsteam.wandscape.content.task.boundary.MovementOps;
+import com.wsteam.wandscape.content.npc.component.MagicState;
+import com.wsteam.wandscape.content.task.component.Position;
 
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.Wandscape;
-import com.wsteam.wandscape.core.component.NavigationState;
-import com.wsteam.wandscape.core.ecs.World;
-import com.wsteam.wandscape.engine.service.ParticleService;
-import com.wsteam.wandscape.engine.service.SoundService;
-import com.wsteam.wandscape.engine.sound.WandscapeSounds;
+import com.wsteam.wandscape.content.task.component.NavigationState;
+import com.wsteam.wandscape.content.task.ecs.World;
+import com.wsteam.wandscape.foundation.service.ParticleService;
+import com.wsteam.wandscape.foundation.sound.SoundService;
+import com.wsteam.wandscape.foundation.registry.WandscapeSounds;
 import com.wsteam.wandscape.content.magic.data.MagicDef;
 import com.wsteam.wandscape.content.magic.data.SpellRef;
 import com.wsteam.wandscape.content.magic.data.WorldSnapshot;
@@ -196,7 +200,7 @@ public final class GuardCombat {
                 CastBrain.knownSpells(npc.equippedMagic));
         WorldSnapshot snapshot = buildSnapshot(level, npc);
         SpellRef chosen = CastBrain.select(known,
-                def -> com.wsteam.wandscape.core.component.MagicState.isFreeCast()
+                def -> com.wsteam.wandscape.content.npc.component.MagicState.isFreeCast()
                         || (npc.magic.canCast(def.id()) && npc.magic.getMana() >= def.manaCost()), snapshot);
         if (chosen == null) {
             // L2 兜底：无有效魔法（列表全不可施 / conditions 不满足）→ 普通攻击（物理，不耗蓝，2s 攻速）

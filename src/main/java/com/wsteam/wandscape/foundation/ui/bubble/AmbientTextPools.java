@@ -1,4 +1,5 @@
 package com.wsteam.wandscape.foundation.ui.bubble;
+import com.wsteam.wandscape.content.task.ecs.World;
 
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.content.tourist.data.Emotion;

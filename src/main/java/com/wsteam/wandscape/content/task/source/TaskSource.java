@@ -1,6 +1,6 @@
 package com.wsteam.wandscape.content.task.source;
 
-import com.wsteam.wandscape.core.ecs.World;
+import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.content.task.engine.pool.GlobalTaskPool;
 /**
  * A source of tasks that periodically polls the world state

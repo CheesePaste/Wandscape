@@ -1,4 +1,5 @@
 package com.wsteam.wandscape.compat.jei;
+import com.wsteam.wandscape.content.task.ecs.World;
 
 import mezz.jei.api.ingredients.IIngredientRenderer;
 import net.minecraft.client.Minecraft;

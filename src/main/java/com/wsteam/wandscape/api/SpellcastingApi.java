@@ -1,4 +1,6 @@
 package com.wsteam.wandscape.api;
+import com.wsteam.wandscape.content.npc.component.EquippedMagicComponent;
+import com.wsteam.wandscape.content.npc.component.CastStrategyComponent;
 
 import java.util.List;
 import java.util.UUID;

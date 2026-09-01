@@ -1,4 +1,7 @@
 package com.wsteam.wandscape.content.magic.entity;
+import com.wsteam.wandscape.content.colony.service.AchievementService;
+import com.wsteam.wandscape.content.task.component.Position;
+import com.wsteam.wandscape.content.task.ecs.World;
 
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;

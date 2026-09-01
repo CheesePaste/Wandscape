@@ -1,4 +1,5 @@
 package com.wsteam.wandscape.content.building.network;
+import com.wsteam.wandscape.content.colony.ColonySavedData;
 
 import com.wsteam.wandscape.foundation.util.NameStyle;
 import com.wsteam.wandscape.api.WandscapeApis;

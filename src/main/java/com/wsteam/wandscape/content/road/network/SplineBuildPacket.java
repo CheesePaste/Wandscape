@@ -1,10 +1,12 @@
 package com.wsteam.wandscape.content.road.network;
+import com.wsteam.wandscape.content.task.types.GridPos;
+import com.wsteam.wandscape.content.task.component.Position;
 
 import com.google.gson.*;
 import com.wsteam.wandscape.content.road.core.*;
-import com.wsteam.wandscape.engine.WandscapeEngine;
-import com.wsteam.wandscape.engine.service.SoundService;
-import com.wsteam.wandscape.engine.sound.WandscapeSounds;
+import com.wsteam.wandscape.impl.WandscapeEngine;
+import com.wsteam.wandscape.foundation.sound.SoundService;
+import com.wsteam.wandscape.foundation.registry.WandscapeSounds;
 import com.wsteam.wandscape.content.road.engine.RoadSavedData;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.foundation.networking.ScreenFeedbackPacket;
@@ -110,7 +112,7 @@ public record SplineBuildPacket(String tilesJson, String splineJson) implements 
                 fromNodeId = startNode.nodeId();
             } else {
                 fromNodeId = UUID.randomUUID();
-                network.addNode(new RoadNode(fromNodeId, new com.wsteam.wandscape.core.types.GridPos(startPt.x(), startPt.y(), startPt.z()), RoadNode.NodeType.ORPHAN));
+                network.addNode(new RoadNode(fromNodeId, new com.wsteam.wandscape.content.task.types.GridPos(startPt.x(), startPt.y(), startPt.z()), RoadNode.NodeType.ORPHAN));
             }
 
             RoadNode endNode = network.findNearestNode(endPt.xz());
@@ -118,7 +120,7 @@ public record SplineBuildPacket(String tilesJson, String splineJson) implements 
                 toNodeId = endNode.nodeId();
             } else {
                 toNodeId = UUID.randomUUID();
-                network.addNode(new RoadNode(toNodeId, new com.wsteam.wandscape.core.types.GridPos(endPt.x(), endPt.y(), endPt.z()), RoadNode.NodeType.ORPHAN));
+                network.addNode(new RoadNode(toNodeId, new com.wsteam.wandscape.content.task.types.GridPos(endPt.x(), endPt.y(), endPt.z()), RoadNode.NodeType.ORPHAN));
             }
 
             UUID edgeId = UUID.randomUUID();

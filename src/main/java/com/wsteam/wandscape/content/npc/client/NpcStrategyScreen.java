@@ -1,6 +1,8 @@
 package com.wsteam.wandscape.content.npc.client;
+import com.wsteam.wandscape.content.task.ecs.World;
+import com.wsteam.wandscape.content.task.types.EntityId;
 
-import com.wsteam.wandscape.core.component.EquippedMagicComponent;
+import com.wsteam.wandscape.content.npc.component.EquippedMagicComponent;
 import com.wsteam.wandscape.content.magic.data.MagicDef;
 import com.wsteam.wandscape.content.npc.NpcStrategyMenu;
 import com.wsteam.wandscape.content.npc.network.NpcDataPacket;

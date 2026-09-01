@@ -1,8 +1,11 @@
 package com.wsteam.wandscape.content.building.internal;
+import com.wsteam.wandscape.content.task.boundary.EventBus;
+import com.wsteam.wandscape.content.task.component.Position;
+import com.wsteam.wandscape.content.task.ecs.World;
 
-import com.wsteam.wandscape.core.event.CustomEvent;
-import com.wsteam.wandscape.engine.WandscapeEngine;
-import com.wsteam.wandscape.engine.service.ParticleService;
+import com.wsteam.wandscape.content.task.event.CustomEvent;
+import com.wsteam.wandscape.impl.WandscapeEngine;
+import com.wsteam.wandscape.foundation.service.ParticleService;
 import com.wsteam.wandscape.api.ColonyApi;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.api.WandscapeApis;

@@ -1,4 +1,5 @@
 package com.wsteam.wandscape.api;
+import com.wsteam.wandscape.content.colony.service.ColonyMetricsService;
 
 import com.wsteam.wandscape.api.*;
 

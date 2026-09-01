@@ -1,4 +1,5 @@
 package com.wsteam.wandscape.content.npc.entity;
+import com.wsteam.wandscape.content.task.ecs.World;
 
 import com.wsteam.wandscape.content.npc.guard.executor.GuardCombat;
 import com.wsteam.wandscape.content.magic.entity.MagicBeamEntity;

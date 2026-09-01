@@ -1,8 +1,8 @@
 package com.wsteam.wandscape.content.npc.internal;
 
-import com.wsteam.wandscape.core.component.ColonyMember;
-import com.wsteam.wandscape.core.ecs.World;
-import com.wsteam.wandscape.engine.WandscapeEngine;
+import com.wsteam.wandscape.content.task.component.ColonyMember;
+import com.wsteam.wandscape.content.task.ecs.World;
+import com.wsteam.wandscape.impl.WandscapeEngine;
 import com.wsteam.wandscape.content.npc.data.NpcDataImpl;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.api.NpcApi;

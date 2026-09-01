@@ -1,14 +1,22 @@
 package com.wsteam.wandscape.content.task.scheduler;
+import com.wsteam.wandscape.content.npc.system.NavigationSystem;
+import com.wsteam.wandscape.content.task.boundary.BlockOps;
+import com.wsteam.wandscape.content.npc.component.NpcTaskQueue;
+import com.wsteam.wandscape.content.task.boundary.EntityOps;
+import com.wsteam.wandscape.content.task.component.TaskExecutor;
+import com.wsteam.wandscape.content.task.component.ColonyMember;
+import com.wsteam.wandscape.content.task.component.Position;
+import com.wsteam.wandscape.content.task.component.Inventory;
 import com.wsteam.wandscape.foundation.util.TickProfiler;
 
-import com.wsteam.wandscape.core.boundary.ColonyResourceAccess;
-import com.wsteam.wandscape.core.boundary.MovementOps;
-import com.wsteam.wandscape.core.component.*;
-import com.wsteam.wandscape.core.ecs.System;
-import com.wsteam.wandscape.core.ecs.World;
-import com.wsteam.wandscape.core.types.GridPos;
-import com.wsteam.wandscape.core.types.ResourceStack;
-import com.wsteam.wandscape.core.types.RitualId;
+import com.wsteam.wandscape.content.task.boundary.ColonyResourceAccess;
+import com.wsteam.wandscape.content.task.boundary.MovementOps;
+// core.component wildcard replaced
+import com.wsteam.wandscape.content.task.ecs.System;
+import com.wsteam.wandscape.content.task.ecs.World;
+import com.wsteam.wandscape.content.task.types.GridPos;
+import com.wsteam.wandscape.content.task.types.ResourceStack;
+import com.wsteam.wandscape.content.task.types.RitualId;
 import com.wsteam.wandscape.content.task.op.api.AtomicOp;
 import com.wsteam.wandscape.content.task.op.executor.OpExecutor;
 import com.wsteam.wandscape.content.task.op.executor.OpExecutorRegistry;

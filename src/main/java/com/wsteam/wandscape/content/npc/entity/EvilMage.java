@@ -1,4 +1,6 @@
 package com.wsteam.wandscape.content.npc.entity;
+import com.wsteam.wandscape.content.npc.component.MagicState;
+import com.wsteam.wandscape.content.task.ecs.World;
 
 import com.wsteam.wandscape.content.npc.network.NpcDataPacket;
 import net.minecraft.network.chat.Component;

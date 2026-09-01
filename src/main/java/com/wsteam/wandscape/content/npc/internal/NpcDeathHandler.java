@@ -1,9 +1,10 @@
 package com.wsteam.wandscape.content.npc.internal;
+import com.wsteam.wandscape.content.npc.types.AttributeType;
 
-import com.wsteam.wandscape.core.component.Inventory;
-import com.wsteam.wandscape.core.ecs.World;
-import com.wsteam.wandscape.core.types.ResourceStack;
-import com.wsteam.wandscape.engine.WandscapeEngine;
+import com.wsteam.wandscape.content.task.component.Inventory;
+import com.wsteam.wandscape.content.task.ecs.World;
+import com.wsteam.wandscape.content.task.types.ResourceStack;
+import com.wsteam.wandscape.impl.WandscapeEngine;
 import com.wsteam.wandscape.content.npc.data.DeathRecord;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.foundation.log.Log;
@@ -53,13 +54,13 @@ public final class NpcDeathHandler {
                 colony,
                 npc.getSkinVariant(), npc.getHatColor(),
                 npc.hasDefaultWand(),
-                npc.getBaseAttributeValue(com.wsteam.wandscape.core.types.AttributeType.MAX_HP),
-                npc.getBaseAttributeValue(com.wsteam.wandscape.core.types.AttributeType.MOVE_SPEED),
-                npc.getBaseAttributeValue(com.wsteam.wandscape.core.types.AttributeType.SPELL_POWER),
-                npc.getBaseAttributeValue(com.wsteam.wandscape.core.types.AttributeType.WORK_SPEED),
-                npc.getBaseAttributeValue(com.wsteam.wandscape.core.types.AttributeType.SPELL_SPEED),
-                npc.getBaseAttributeValue(com.wsteam.wandscape.core.types.AttributeType.ARMOR_VALUE),
-                npc.getBaseAttributeValue(com.wsteam.wandscape.core.types.AttributeType.MAX_MANA),
+                npc.getBaseAttributeValue(com.wsteam.wandscape.content.npc.types.AttributeType.MAX_HP),
+                npc.getBaseAttributeValue(com.wsteam.wandscape.content.npc.types.AttributeType.MOVE_SPEED),
+                npc.getBaseAttributeValue(com.wsteam.wandscape.content.npc.types.AttributeType.SPELL_POWER),
+                npc.getBaseAttributeValue(com.wsteam.wandscape.content.npc.types.AttributeType.WORK_SPEED),
+                npc.getBaseAttributeValue(com.wsteam.wandscape.content.npc.types.AttributeType.SPELL_SPEED),
+                npc.getBaseAttributeValue(com.wsteam.wandscape.content.npc.types.AttributeType.ARMOR_VALUE),
+                npc.getBaseAttributeValue(com.wsteam.wandscape.content.npc.types.AttributeType.MAX_MANA),
                 inv,
                 npc.equippedMagic.flattenedQualified());
         ColonyDeathRegistry.get(level).add(rec);

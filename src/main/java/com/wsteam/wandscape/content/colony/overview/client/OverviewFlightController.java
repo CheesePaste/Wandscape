@@ -1,4 +1,7 @@
 package com.wsteam.wandscape.content.colony.overview.client;
+import com.wsteam.wandscape.content.task.component.Position;
+import com.wsteam.wandscape.content.task.ecs.World;
+import com.wsteam.wandscape.content.task.types.EntityId;
 import com.wsteam.wandscape.content.road.network.RoadAreaSyncPacket;
 import com.wsteam.wandscape.content.building.ui.BuildingSelectionOverlay;
 import com.wsteam.wandscape.foundation.ui.panel.WandscapePanelController;
@@ -13,8 +16,8 @@ import com.wsteam.wandscape.content.road.client.SplineEditorClientState;
 import com.wsteam.wandscape.content.road.client.studio.RoadStudioOverlay;
 import com.wsteam.wandscape.content.road.network.RoadInteractPacket;
 import com.wsteam.wandscape.content.tourist.entity.TouristEntity;
-import com.wsteam.wandscape.engine.service.SoundService;
-import com.wsteam.wandscape.engine.sound.WandscapeSounds;
+import com.wsteam.wandscape.foundation.sound.SoundService;
+import com.wsteam.wandscape.foundation.registry.WandscapeSounds;
 import com.wsteam.wandscape.content.colony.overview.network.OverviewEntityInteractPacket;
 import com.wsteam.wandscape.content.colony.overview.network.OverviewInteractPacket;
 import com.wsteam.wandscape.content.building.projection.BuildPlacement;

@@ -1,4 +1,5 @@
 package com.wsteam.wandscape.content.task.ui;
+import com.wsteam.wandscape.content.task.types.EntityId;
 
 import com.wsteam.wandscape.content.task.network.*;
 

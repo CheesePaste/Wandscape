@@ -1,8 +1,10 @@
 package com.wsteam.wandscape.content.warehouse;
+import com.wsteam.wandscape.impl.EngineBootstrap;
+import com.wsteam.wandscape.content.task.ecs.World;
 
-import com.wsteam.wandscape.core.boundary.ColonyResourceAccess;
-import com.wsteam.wandscape.core.boundary.ResourceAddedListener;
-import com.wsteam.wandscape.core.types.ResourceId;
+import com.wsteam.wandscape.content.task.boundary.ColonyResourceAccess;
+import com.wsteam.wandscape.content.task.boundary.ResourceAddedListener;
+import com.wsteam.wandscape.content.task.types.ResourceId;
 import com.wsteam.wandscape.api.WarehouseApi;
 import com.wsteam.wandscape.content.element.data.ElementType;
 import com.wsteam.wandscape.foundation.util.ItemKey;

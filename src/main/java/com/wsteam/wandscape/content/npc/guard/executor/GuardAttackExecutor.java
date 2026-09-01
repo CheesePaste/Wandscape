@@ -1,9 +1,10 @@
 package com.wsteam.wandscape.content.npc.guard.executor;
+import com.wsteam.wandscape.content.task.component.Position;
 
 import com.wsteam.wandscape.Config;
-import com.wsteam.wandscape.core.component.NavigationState;
-import com.wsteam.wandscape.core.ecs.World;
-import com.wsteam.wandscape.core.types.HostileMarkDecision;
+import com.wsteam.wandscape.content.task.component.NavigationState;
+import com.wsteam.wandscape.content.task.ecs.World;
+import com.wsteam.wandscape.content.npc.types.HostileMarkDecision;
 import com.wsteam.wandscape.content.npc.guard.GuardScanner;
 import com.wsteam.wandscape.content.npc.guard.GuardZone;
 import com.wsteam.wandscape.content.magic.entity.MagicBeamEntity;

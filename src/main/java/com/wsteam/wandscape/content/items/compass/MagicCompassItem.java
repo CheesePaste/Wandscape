@@ -1,4 +1,5 @@
 package com.wsteam.wandscape.content.items.compass;
+import com.wsteam.wandscape.content.task.ecs.World;
 
 import com.wsteam.wandscape.content.items.compass.client.CompassTargetClientCache;
 import net.minecraft.core.BlockPos;

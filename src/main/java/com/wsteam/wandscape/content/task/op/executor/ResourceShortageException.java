@@ -1,6 +1,6 @@
 package com.wsteam.wandscape.content.task.op.executor;
 
-import com.wsteam.wandscape.core.types.ResourceStack;
+import com.wsteam.wandscape.content.task.types.ResourceStack;
 import com.wsteam.wandscape.content.task.runtime.TaskState;
 import com.wsteam.wandscape.content.task.scheduler.TaskExecutionSystem;
 

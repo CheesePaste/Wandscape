@@ -1,9 +1,10 @@
 package com.wsteam.wandscape.compat.ironspellbooks;
+import com.wsteam.wandscape.content.npc.types.AttributeModifier;
+import com.wsteam.wandscape.content.task.ecs.World;
 
 import com.google.common.collect.Multimap;
-import com.wsteam.wandscape.core.types.AttributeModifier;
-import com.wsteam.wandscape.core.types.AttributeType;
-import com.wsteam.wandscape.core.types.ModifierOperation;
+import com.wsteam.wandscape.content.npc.types.AttributeType;
+import com.wsteam.wandscape.content.npc.types.ModifierOperation;
 import net.minecraft.core.Holder;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.item.ItemStack;

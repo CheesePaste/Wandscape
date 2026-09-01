@@ -1,4 +1,5 @@
 package com.wsteam.wandscape.content.road.network;
+import com.wsteam.wandscape.content.task.component.Position;
 
 import com.wsteam.wandscape.content.building.network.ConstructionSiteDataPacket;
 import com.wsteam.wandscape.content.colony.overview.network.OverviewInteractPacket;

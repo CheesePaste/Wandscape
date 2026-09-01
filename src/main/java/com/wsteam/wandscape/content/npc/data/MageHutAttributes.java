@@ -1,7 +1,7 @@
 package com.wsteam.wandscape.content.npc.data;
 import com.wsteam.wandscape.content.element.data.ElementType;
 
-import com.wsteam.wandscape.core.types.AttributeType;
+import com.wsteam.wandscape.content.npc.types.AttributeType;
 
 import java.util.List;
 import java.util.Map;

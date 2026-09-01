@@ -1,4 +1,5 @@
 package com.wsteam.wandscape.content.tourist.client;
+import com.wsteam.wandscape.content.task.ecs.World;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.wsteam.wandscape.Wandscape;

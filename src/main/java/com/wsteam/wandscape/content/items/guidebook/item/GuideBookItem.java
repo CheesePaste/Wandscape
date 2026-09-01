@@ -1,4 +1,5 @@
 package com.wsteam.wandscape.content.items.guidebook.item;
+import com.wsteam.wandscape.content.task.ecs.World;
 
 import com.wsteam.wandscape.content.items.guidebook.network.GuideBookOpenPacket;
 import net.minecraft.network.chat.Component;

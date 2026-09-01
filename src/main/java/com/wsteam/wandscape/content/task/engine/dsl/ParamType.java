@@ -1,4 +1,5 @@
 package com.wsteam.wandscape.content.task.engine.dsl;
+import com.wsteam.wandscape.content.task.component.Position;
 
 /**
  * Strongly-typed parameter type declaration for {@link BlueprintDefinition}.

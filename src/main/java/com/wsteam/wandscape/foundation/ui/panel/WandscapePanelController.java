@@ -1,4 +1,6 @@
 package com.wsteam.wandscape.foundation.ui.panel;
+import com.wsteam.wandscape.content.task.component.Position;
+import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.content.road.network.RoadAreaSyncPacket;
 import com.wsteam.wandscape.content.building.ui.BuildingSelectionOverlay;
 import com.wsteam.wandscape.content.task.ui.TaskManagementOverlay;

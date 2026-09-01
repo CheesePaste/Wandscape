@@ -1,6 +1,6 @@
 package com.wsteam.wandscape.content.task.engine.dsl;
 
-import com.wsteam.wandscape.core.event.CustomEvent;
+import com.wsteam.wandscape.content.task.event.CustomEvent;
 
 import java.util.Collections;
 import java.util.Map;

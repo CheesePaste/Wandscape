@@ -1,6 +1,6 @@
 package com.wsteam.wandscape.content.magic.internal;
 
-import com.wsteam.wandscape.core.component.EquippedMagicComponent;
+import com.wsteam.wandscape.content.npc.component.EquippedMagicComponent;
 import com.wsteam.wandscape.foundation.registry.dataconfig.internal.WandscapeDataLoader;
 import com.wsteam.wandscape.content.magic.data.MagicDef;
 import com.wsteam.wandscape.foundation.registry.WandscapeDataRegistry;

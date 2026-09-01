@@ -1,4 +1,5 @@
 package com.wsteam.wandscape.content.road.core;
+import com.wsteam.wandscape.content.task.component.Position;
 
 import java.util.ArrayList;
 import java.util.List;

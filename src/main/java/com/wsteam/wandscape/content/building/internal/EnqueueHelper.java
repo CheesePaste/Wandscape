@@ -1,4 +1,6 @@
 package com.wsteam.wandscape.content.building.internal;
+import com.wsteam.wandscape.content.task.component.Position;
+import com.wsteam.wandscape.content.task.ecs.World;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -7,7 +9,7 @@ import com.google.gson.JsonPrimitive;
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.content.building.data.BlockOffset;
 import com.wsteam.wandscape.content.building.data.BuildingConfig;
-import com.wsteam.wandscape.engine.ColonyApiImpl;
+import com.wsteam.wandscape.content.colony.ColonyApiImpl;
 import com.wsteam.wandscape.content.building.projection.BuildingRotation;
 import com.wsteam.wandscape.api.BuildingApi;
 import com.wsteam.wandscape.content.element.data.ElementType;

@@ -1,6 +1,16 @@
 package com.wsteam.wandscape.content.task.op.api;
+import com.wsteam.wandscape.content.task.types.BlockType;
+import com.wsteam.wandscape.content.task.types.InteractAction;
+import com.wsteam.wandscape.content.task.types.GridPos;
+import com.wsteam.wandscape.content.task.types.EffectId;
+import com.wsteam.wandscape.content.task.component.Position;
+import com.wsteam.wandscape.content.task.ecs.World;
+import com.wsteam.wandscape.content.task.component.Inventory;
+import com.wsteam.wandscape.content.task.types.ResourceStack;
+import com.wsteam.wandscape.content.task.types.RitualId;
+import com.wsteam.wandscape.content.task.types.EntityId;
 
-import com.wsteam.wandscape.core.types.*;
+// core.types wildcard replaced
 import com.wsteam.wandscape.content.task.op.executor.ResourceShortageException;
 
 import javax.annotation.Nullable;

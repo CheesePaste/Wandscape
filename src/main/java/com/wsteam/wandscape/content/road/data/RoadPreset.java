@@ -1,4 +1,6 @@
 package com.wsteam.wandscape.content.road.data;
+import com.wsteam.wandscape.content.task.component.Position;
+import com.wsteam.wandscape.content.task.ecs.World;
 
 import com.google.gson.*;
 import net.minecraft.world.level.block.Block;

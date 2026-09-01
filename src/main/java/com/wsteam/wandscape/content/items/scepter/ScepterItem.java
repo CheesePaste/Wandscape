@@ -1,4 +1,5 @@
 package com.wsteam.wandscape.content.items.scepter;
+import com.wsteam.wandscape.content.task.ecs.World;
 
 import com.wsteam.wandscape.content.items.scepter.internal.ScepterService;
 import com.wsteam.wandscape.api.MageWandItem;

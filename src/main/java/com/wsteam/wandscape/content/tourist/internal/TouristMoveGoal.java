@@ -1,4 +1,8 @@
 package com.wsteam.wandscape.content.tourist.internal;
+import com.wsteam.wandscape.content.npc.nav.RoadWalkPlanner;
+import com.wsteam.wandscape.content.task.boundary.EventBus;
+import com.wsteam.wandscape.content.task.component.Position;
+import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.foundation.util.TickProfiler;
 
 import com.wsteam.wandscape.Config;
@@ -6,10 +10,10 @@ import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.content.building.internal.BuildingState;
 import com.wsteam.wandscape.content.road.core.RoadEdge;
 import com.wsteam.wandscape.content.road.engine.RoadSavedData;
-import com.wsteam.wandscape.core.event.NarrativeEventTriggered;
-import com.wsteam.wandscape.engine.WandscapeEngine;
-import com.wsteam.wandscape.engine.colony.ColonyActivation;
-import com.wsteam.wandscape.engine.service.ParticleService;
+import com.wsteam.wandscape.content.task.event.NarrativeEventTriggered;
+import com.wsteam.wandscape.impl.WandscapeEngine;
+import com.wsteam.wandscape.content.colony.ColonyActivation;
+import com.wsteam.wandscape.foundation.service.ParticleService;
 import com.wsteam.wandscape.content.road.engine.WandscapeTags;
 import com.wsteam.wandscape.api.BuildingApi;
 import com.wsteam.wandscape.content.tourist.data.Activity;
@@ -2032,7 +2036,7 @@ public class TouristMoveGoal extends Goal {
         stuckFallbacks = 0;
 
         // Plan road-assisted waypoints along RoadNetwork if beneficial
-        outdoorWaypoints = com.wsteam.wandscape.engine.nav.RoadWalkPlanner.plan(
+        outdoorWaypoints = com.wsteam.wandscape.content.npc.nav.RoadWalkPlanner.plan(
                 tourist.level(), tourist.blockPosition(), target);
         currentWaypointIndex = 0;
 

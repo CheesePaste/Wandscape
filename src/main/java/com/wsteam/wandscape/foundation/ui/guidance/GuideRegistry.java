@@ -1,4 +1,5 @@
 package com.wsteam.wandscape.foundation.ui.guidance;
+import com.wsteam.wandscape.content.items.service.GuideProgressService;
 
 import java.util.List;
 

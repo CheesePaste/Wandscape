@@ -1,4 +1,6 @@
 package com.wsteam.wandscape.content.road.client;
+import com.wsteam.wandscape.content.task.component.Position;
+import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.content.building.preview.BuildingPreviewRenderer;
 
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;

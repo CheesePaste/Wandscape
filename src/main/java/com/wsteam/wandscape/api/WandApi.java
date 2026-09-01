@@ -1,6 +1,7 @@
 package com.wsteam.wandscape.api;
+import com.wsteam.wandscape.content.task.ecs.World;
 
-import com.wsteam.wandscape.core.types.AttributeModifier;
+import com.wsteam.wandscape.content.npc.types.AttributeModifier;
 import net.minecraft.world.item.ItemStack;
 
 import javax.annotation.Nullable;

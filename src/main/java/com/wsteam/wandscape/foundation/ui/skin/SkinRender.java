@@ -1,4 +1,5 @@
 package com.wsteam.wandscape.foundation.ui.skin;
+import com.wsteam.wandscape.content.task.component.Position;
 
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.resources.ResourceLocation;

@@ -1,4 +1,5 @@
 package com.wsteam.wandscape.content.building.projection.network;
+import com.wsteam.wandscape.content.task.component.Position;
 
 import com.wsteam.wandscape.content.building.projection.data.BuildingSlot;
 import net.minecraft.core.BlockPos;

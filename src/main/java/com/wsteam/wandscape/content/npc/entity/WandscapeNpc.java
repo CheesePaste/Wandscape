@@ -1,4 +1,18 @@
 package com.wsteam.wandscape.content.npc.entity;
+import com.wsteam.wandscape.content.npc.system.NavigationSystem;
+import com.wsteam.wandscape.content.npc.HostileTargetingHandler;
+import com.wsteam.wandscape.content.task.boundary.AsyncTransformExecutor;
+import com.wsteam.wandscape.content.npc.types.EquipmentSlot;
+import com.wsteam.wandscape.content.npc.component.EquippedMagicComponent;
+import com.wsteam.wandscape.content.npc.types.ModifierOperation;
+import com.wsteam.wandscape.content.task.boundary.MovementOps;
+import com.wsteam.wandscape.content.npc.component.CastStrategyComponent;
+import com.wsteam.wandscape.content.npc.component.MagicState;
+import com.wsteam.wandscape.content.task.component.TaskExecutor;
+import com.wsteam.wandscape.content.task.component.ColonyMember;
+import com.wsteam.wandscape.content.task.component.NavigationState;
+import com.wsteam.wandscape.content.task.component.Position;
+import com.wsteam.wandscape.content.task.component.Inventory;
 import com.wsteam.wandscape.content.npc.data.MageHutAttributes;
 import com.wsteam.wandscape.foundation.util.CharacterNames;
 import com.wsteam.wandscape.foundation.util.NameStyle;
@@ -7,14 +21,14 @@ import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.compat.ironspellbooks.IronSpellsCompat;
 import com.wsteam.wandscape.content.warehouse.ColonyItemBank;
-import com.wsteam.wandscape.core.component.*;
-import com.wsteam.wandscape.core.ecs.World;
-import com.wsteam.wandscape.core.types.AttributeType;
-import com.wsteam.wandscape.core.types.FollowAttackDecision;
-import com.wsteam.wandscape.core.types.FriendlyForce;
-import com.wsteam.wandscape.engine.WandscapeEngine;
-import com.wsteam.wandscape.engine.attribute.WandscapeAttributes;
-import com.wsteam.wandscape.engine.nav.WandscapeNavigation;
+// core.component wildcard replaced
+import com.wsteam.wandscape.content.task.ecs.World;
+import com.wsteam.wandscape.content.npc.types.AttributeType;
+import com.wsteam.wandscape.content.npc.types.FollowAttackDecision;
+import com.wsteam.wandscape.content.npc.types.FriendlyForce;
+import com.wsteam.wandscape.impl.WandscapeEngine;
+import com.wsteam.wandscape.content.npc.WandscapeAttributes;
+import com.wsteam.wandscape.content.npc.nav.WandscapeNavigation;
 import com.wsteam.wandscape.content.magic.data.MagicDef;
 import com.wsteam.wandscape.content.magic.internal.MagicCaster;
 import com.wsteam.wandscape.content.magic.internal.MagicSpellExecutors;
@@ -439,7 +453,7 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
 
             ItemStack stack = getItemBySlot(vanillaSlot);
             if (!stack.isEmpty()) {
-                List<com.wsteam.wandscape.core.types.AttributeModifier> mods =
+                List<com.wsteam.wandscape.content.npc.types.AttributeModifier> mods =
                         com.wsteam.wandscape.compat.ironspellbooks.IronSpellsAttributes.modifiersFor(stack);
                 for (var mod : mods) {
                     var vanillaAttr = WandscapeAttributes.toVanilla(mod.type());
@@ -448,7 +462,7 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
                     if (inst != null) {
                         ResourceLocation modId = ResourceLocation.fromNamespaceAndPath(
                                 Wandscape.MODID, "iron_armor_" + vanillaSlot.getName() + "_" + mod.type().name().toLowerCase(Locale.ROOT));
-                        var op = (mod.operation() == com.wsteam.wandscape.core.types.ModifierOperation.MULTIPLY_BASE)
+                        var op = (mod.operation() == com.wsteam.wandscape.content.npc.types.ModifierOperation.MULTIPLY_BASE)
                                 ? net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_MULTIPLIED_BASE
                                 : net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_VALUE;
                         inst.addTransientModifier(new net.minecraft.world.entity.ai.attributes.AttributeModifier(
@@ -478,9 +492,9 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
         if (api == null) return;
         String presetId = api.getWandPresetId(stack);
         if (presetId == null) return;
-        List<com.wsteam.wandscape.core.types.AttributeModifier> mods = api.getWandModifiers(presetId);
+        List<com.wsteam.wandscape.content.npc.types.AttributeModifier> mods = api.getWandModifiers(presetId);
         if (mods == null) return;
-        for (com.wsteam.wandscape.core.types.AttributeModifier mod : mods) {
+        for (com.wsteam.wandscape.content.npc.types.AttributeModifier mod : mods) {
             var vanillaAttr = WandscapeAttributes.toVanilla(mod.type());
             if (vanillaAttr == null) continue;
             var inst = getAttribute(vanillaAttr);
@@ -489,7 +503,7 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
                     Wandscape.MODID, "wand_" + presetId + "_" + mod.type().name().toLowerCase(Locale.ROOT));
             inst.removeModifier(id);
             net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation op =
-                    (mod.operation() == com.wsteam.wandscape.core.types.ModifierOperation.MULTIPLY_BASE)
+                    (mod.operation() == com.wsteam.wandscape.content.npc.types.ModifierOperation.MULTIPLY_BASE)
                             ? net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_MULTIPLIED_BASE
                             : net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_VALUE;
             inst.addTransientModifier(new net.minecraft.world.entity.ai.attributes.AttributeModifier(id, mod.amount(), op));
@@ -1010,12 +1024,12 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
                 .add(Attributes.ATTACK_DAMAGE, 1.0)
                 .add(Attributes.FOLLOW_RANGE, 48.0)
                 .add(Attributes.ARMOR, 6.0)
-                .add(com.wsteam.wandscape.engine.attribute.WandscapeAttributes.SPELL_POWER, 1.0)
-                .add(com.wsteam.wandscape.engine.attribute.WandscapeAttributes.WORK_SPEED, 1.0)
-                .add(com.wsteam.wandscape.engine.attribute.WandscapeAttributes.SPELL_SPEED, 1.0)
-                .add(com.wsteam.wandscape.engine.attribute.WandscapeAttributes.MAX_MANA, 200.0)
-                .add(com.wsteam.wandscape.engine.attribute.WandscapeAttributes.HEALTH_REGEN, 1.0)
-                .add(com.wsteam.wandscape.engine.attribute.WandscapeAttributes.MANA_REGEN, 1.0)
+                .add(com.wsteam.wandscape.content.npc.WandscapeAttributes.SPELL_POWER, 1.0)
+                .add(com.wsteam.wandscape.content.npc.WandscapeAttributes.WORK_SPEED, 1.0)
+                .add(com.wsteam.wandscape.content.npc.WandscapeAttributes.SPELL_SPEED, 1.0)
+                .add(com.wsteam.wandscape.content.npc.WandscapeAttributes.MAX_MANA, 200.0)
+                .add(com.wsteam.wandscape.content.npc.WandscapeAttributes.HEALTH_REGEN, 1.0)
+                .add(com.wsteam.wandscape.content.npc.WandscapeAttributes.MANA_REGEN, 1.0)
                 // 水中移动效率 1.0：落水/渡水时以接近陆地的速度游动。原版陆地生物默认 0，
                 // 水中速度被拖到约 0.6 格/秒，会让 NPC 在河里"卡死"并触发传送兜底。
                 .add(Attributes.WATER_MOVEMENT_EFFICIENCY, 1.0);

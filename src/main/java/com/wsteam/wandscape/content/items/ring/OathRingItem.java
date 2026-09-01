@@ -1,4 +1,5 @@
 package com.wsteam.wandscape.content.items.ring;
+import com.wsteam.wandscape.content.task.ecs.World;
 
 import com.wsteam.wandscape.content.items.ring.client.OathRingClientData;
 import com.wsteam.wandscape.content.items.ring.internal.OathRingService;

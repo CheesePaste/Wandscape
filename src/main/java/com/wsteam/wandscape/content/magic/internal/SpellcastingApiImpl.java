@@ -1,7 +1,7 @@
 package com.wsteam.wandscape.content.magic.internal;
 
-import com.wsteam.wandscape.core.component.CastStrategyComponent;
-import com.wsteam.wandscape.core.component.EquippedMagicComponent;
+import com.wsteam.wandscape.content.npc.component.CastStrategyComponent;
+import com.wsteam.wandscape.content.npc.component.EquippedMagicComponent;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.content.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.api.SpellcastingApi;

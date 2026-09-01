@@ -1,4 +1,6 @@
 package com.wsteam.wandscape.content.task.ui;
+import com.wsteam.wandscape.content.task.ecs.World;
+import com.wsteam.wandscape.content.task.types.EntityId;
 import com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState;
 
 import com.wsteam.wandscape.content.colony.overview.client.OverviewClientState;

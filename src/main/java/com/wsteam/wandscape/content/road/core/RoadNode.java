@@ -1,6 +1,6 @@
 package com.wsteam.wandscape.content.road.core;
 
-import com.wsteam.wandscape.core.types.GridPos;
+import com.wsteam.wandscape.content.task.types.GridPos;
 
 import java.util.UUID;
 /**

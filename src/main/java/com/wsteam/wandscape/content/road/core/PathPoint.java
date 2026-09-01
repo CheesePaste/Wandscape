@@ -1,4 +1,5 @@
 package com.wsteam.wandscape.content.road.core;
+import com.wsteam.wandscape.content.task.ecs.World;
 
 /**
  * A 3D point in the world, used for road path storage.

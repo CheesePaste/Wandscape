@@ -1,8 +1,8 @@
 package com.wsteam.wandscape.content.building.internal;
 
 import com.wsteam.wandscape.content.building.data.BuildingConfig;
-import com.wsteam.wandscape.engine.service.SoundService;
-import com.wsteam.wandscape.engine.sound.WandscapeSounds;
+import com.wsteam.wandscape.foundation.sound.SoundService;
+import com.wsteam.wandscape.foundation.registry.WandscapeSounds;
 import com.wsteam.wandscape.content.tourist.data.WonderConfig;
 import com.wsteam.wandscape.content.tourist.data.WonderEffect;
 import com.wsteam.wandscape.content.colony.event.ColonyEvaluationChangedEvent;

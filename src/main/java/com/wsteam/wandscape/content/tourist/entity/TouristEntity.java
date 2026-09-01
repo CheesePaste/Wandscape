@@ -1,4 +1,6 @@
 package com.wsteam.wandscape.content.tourist.entity;
+import com.wsteam.wandscape.content.task.component.Position;
+import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.content.npc.data.RecruitmentCandidate;
 import com.wsteam.wandscape.content.tourist.data.VisitMemory;
 import com.wsteam.wandscape.foundation.util.CharacterNames;
@@ -11,7 +13,7 @@ import com.wsteam.wandscape.content.tourist.data.Activity;
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.content.tourist.internal.*;
-import com.wsteam.wandscape.engine.nav.WandscapeNavigation;
+import com.wsteam.wandscape.content.npc.nav.WandscapeNavigation;
 // data imports updated
 import com.wsteam.wandscape.content.tourist.entity.ColonyVisitor;
 import com.wsteam.wandscape.content.tourist.entity.VillagerLike;
