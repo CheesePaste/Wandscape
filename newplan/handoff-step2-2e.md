@@ -1,7 +1,7 @@
 # Handoff — Step 2：2e API 收敛（剪接口 + 瘦内部桥 + 解散 WandscapeEngine）
 
-> 用户明确做 Step 2。Step 1（config-api）已完成，见 `handoff-config-api.md`。当前分支 `refactor`，`compileJava` 绿。
-> 依据：`config-api-decisions.md` Part D（已确认的去留表）+ 本次实测的 `WandscapeEngine` 消费方分布。
+> 用户明确做 Step 2。当前分支 `refactor`，`compileJava` 绿。
+> 依据：`config-api-decisions.md` Part D（已确认的去留表）+ 务实模组架构（按域自闭环 + 消除全局上帝类，破除 MC 构造注入幻想）。
 
 ## 意图（为什么做）
 
@@ -21,6 +21,8 @@ CLAUDE.md 目标形态点名：**解散 `WandscapeEngine` 静态定位器**（"g
 - **删**（空壳）：`getCandidates`/`refreshCandidates`/`recruitCandidate`（Generic NPC recruitment 占位实现，返回空/false，无功能）。
 - **改直调**：`receiveMageResume`（满条游客离场存简历钩子，纯内部——tourist 系统直调 `TavernRecruitStorage`）。
 
+---
+
 ## 任务二：瘦"内部桥方法"（保留能产生功能价值的）
 
 | 接口 | 瘦（移出接口 → 改直调实现类） | 留 |
@@ -31,37 +33,38 @@ CLAUDE.md 目标形态点名：**解散 `WandscapeEngine` 静态定位器**（"g
 
 **保留（不砍）**：`GuideProgressApi`（横切教程推进，10+ 跨域消费）、`ColonyStatusApi`（镇指标查询接缝）、`ScepterApi`（上面已改保留）。
 
-**一句话**：只剪"纯内部反依赖搭桥 + 空壳 + 内部钩子"；凡是能产生 addon 功能价值（查询/创建/招募/发布任务/事件流）的都留。tourist 导航查询（`findBeds`/`sampleWalkableGround`/`getTouristInteractionTarget`/`getEntryPoint`/`getTouristInteractPoint`）查询无害，**倾向保留**（addon 自定义互动/寻路可能用）。
-
-## 任务三：解散 `WandscapeEngine` 静态定位器（最大、最重要）
-
-**现状（实测）**：约 40 个文件引用。`getWorld` **46 引用**（ECS `World` 是真全局单例，**唯一例外**，不能 new）；其余 getter `getColonyLevelManager`(18)/`getTransporter`(5)/`getPlayerManualSource`(5)/`getResourceRequestExec`(2)/`getBlockInteractExec`(2)/`getAsyncExecutor`·`getRitualOps`·`getMovementOps`·`getGuardExecutor`·`getSelfDefenseExecutor`·`getAltarCastExecutor`·`getTaskPoolSavedData`·`getRoadSavedData`(各 1)；对应 set 各 1。
-
-**改法**：这些是"域服务句柄"。解散 = **消费方在装配时拿到实例（构造注入/事件回调），不再 `WandscapeEngine.getXxx()`**。
-- `getWorld`：建"World 注入门面"（如 `WorldHolder` 或成员字段），`Wandscape.java` 装配时塞入，各系统经门面取——是注入，非静态 getter。
-- 其余域服务：谁用谁在 `Wandscape.java` 装配处把服务注入（或经所属域中枢对象）。
-- `WandscapeEngine` 本身：**删除**（消费方全改注入）。⚠️ 检查 `blueprintConfigLoader` 是否残留（Step 1 已删蓝图 DSL，若已无则整体删干净；若有，一并清）。
-
-**验收**：`grep -rn 'WandscapeEngine\.' src/main/java` **全仓零命中**；`compileJava` 绿。
+**一句话**：只剪"纯内部反依赖搭桥 + 空壳 + 内部钩子"；凡是能产生 addon 功能价值（查询/创建/招募/发布任务/事件流）的都留。
 
 ---
 
-## 顺序与风险
+## 任务三：解散 `WandscapeEngine` 静态定位器（务实按域归位方案）
 
-1. **先低危**：任务一（剪 TavernApi 空壳/钩子，ScepterApi 不动）+ 任务二（瘦内部桥）→ 各自独立 commit，行为不漂移（只是"桥变直调"）。
-2. **最后高**：任务三（解散 WandscapeEngine）——40 文件、47 处 getWorld，**必须独立 + 每步 `compileJava` 兜底 + 小步 commit**。
-3. 铁律：**移动不改逻辑、改逻辑另开一步**；每步完成 `grep WandscapeEngine.` 零命中才算验收。
-4. 卡住标注：某服务消费方难以注入（如 World 深透进 ECS 系统）→ 标 `?` 交人工，别硬凑临时 getter。
+> **破除构造注入（DI）幻想**：Minecraft 的网络包（Packet）、实体（Entity）、命令（Command）和事件处理器（Event）由引擎反射或静态注册，无法进行纯 DI。解散方案采用 **“执行器运行时自闭环 + 领域服务按域归位 + 任务中枢理性收口”**。
 
-## 边界 / 不做
+### 1. 执行器与 Tick 自闭环 (`TaskRuntime`)
+- 在 `content/task/runtime/`（或 `impl/`）建立 `TaskRuntime`，聚合 `World` 与 9 个内部执行器（`asyncExec`, `ritualOps`, `blockInteractExec`, `movementOps`, `transporter`, `resourceReqExec`, `guardExec`, `selfDefenseExec`, `altarCastExec`）。
+- `EngineBootstrap.bootstrap(...)` 返回 `TaskRuntime` 实例。
+- `Wandscape.java` 在 `onServerTick` 直接调用 `taskRuntime.tick(server)`，一举蒸发 `Wandscape.java` 中百行逐个 get 执行器的胶水代码与 9 对全局 Getter/Setter。
 
-- 不新增"公开事件流"（算新功能，无 addon 需求先不加）。
-- 不动 Step 1 已完成的东西（`BalanceValues` / 各领域 API 可调面 / Config 精简 / WandscapeConstants 结构性常量）。
-- 本步（2e）不改行为，纯结构；验收 = 编译绿 + grep 零命中 + 行为不变。
+### 2. 领域服务与 SavedData 回归本域
+- **`ColonyLevelManager`**：归入 `content/colony` 域，由 `ColonySavedData` 或 `ColonyManager` 统一持有，提供 `ColonyLevelManager.get(level)`，或上层直接通过 `ColonyApi` 查等级。
+- **`ItemTransportManager`**：归入 `content/warehouse` 域，作为仓库物资流转管理器，提供 `ItemTransportManager.get(level)`（或单例直调）。
+- **`RoadSavedData` / `TaskPoolSavedData`**：彻底删除 Engine 中的冗余静态缓存，使用 MC 原版标准的 `SavedData.get(serverLevel)`。
+- **`PlayerManualSource`**：装配时直接挂载进 `TaskPool`，不暴露全局变量。
 
-## 关键文件
+### 3. ECS `World` 核心单例收敛
+- `World` 是 ECS 任务运行时的核心，提供 `TaskEngine.getActiveWorld()` / `World.getActive()` 作为任务域运行期单例。
+- 任务发布方（Packet / Command / Building）若只为操作任务，收口为直接调用 `GlobalTaskPool` 或 `BuildingTaskSource`。
 
-- `impl/WandscapeEngine.java`（解散本体）
-- `api/`：`ScepterApi`/`TavernApi`/`ColonyApi`/`BuildingApi`/`TouristApi`（改）
-- 各 API 实现（`apiImpl`/`internal`）
-- `Wandscape.java`（装配改造：注入替代 getter）
+### 4. 彻底物理删除 `impl/WandscapeEngine.java`
+- 验收标准：`grep -rn 'WandscapeEngine\.' src/main/java` **全仓零命中**；`compileJava` 绿。
+
+---
+
+## 顺序与执行步骤
+
+1. **第 1 步**：任务一（剪 TavernApi 空壳/钩子）+ 任务二（瘦 ColonyApi/BuildingApi/TouristApi 内部桥）。
+2. **第 2 步**：领域服务归位与 SavedData 缓存清理（`ColonyLevelManager` 归 `colony`，`ItemTransportManager` 归 `warehouse`，移除 Engine 中的 SavedData）。
+3. **第 3 步**：构建 `TaskRuntime`，清理 `Wandscape.java` 中的 Tick 胶水代码，聚合内部执行器。
+4. **第 4 步**：收口 `World` 访问至 `TaskEngine` / `World.getActive()`，物理删除 `impl/WandscapeEngine.java`。
+5. **第 5 步**：全仓编译验证 `./gradlew compileJava`，更新 `status.md`，提交原子 commit。
