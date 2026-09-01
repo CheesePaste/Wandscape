@@ -122,14 +122,14 @@ public class TavernApiImpl implements TavernApi {
         if (s.getRecruitCount(colonyId) == 0) return true; // 首次免费
         WarehouseApi wh = WandscapeApis.getWarehouseApiSilently();
         return wh != null && ElementType.allEnough(wh.getAllElements(colonyId),
-                WandscapeConstants.TAVERN_RECRUIT_COST_PER_ELEMENT);
+                com.wsteam.wandscape.Config.TAVERN_RECRUIT_COST_PER_ELEMENT.get());
     }
 
     @Override
     public boolean chargeRecruit(UUID colonyId) {
         TavernRecruitStorage s = getStorage();
         if (s == null) return false;
-        long cost = WandscapeConstants.TAVERN_RECRUIT_COST_PER_ELEMENT;
+        long cost = com.wsteam.wandscape.Config.TAVERN_RECRUIT_COST_PER_ELEMENT.get();
         if (s.getRecruitCount(colonyId) == 0) {
             s.incrementRecruitCount(colonyId); // 首次免费
             return true;

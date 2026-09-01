@@ -102,7 +102,7 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
                 ScreenFeedbackPacket.send(sp, I18n.name("message.wandscape.tavern.insufficient_elements",
                         "[Wandscape] Insufficient elements: recruiting costs %d of every element "
                                 + "(first recruit free).",
-                        WandscapeConstants.TAVERN_RECRUIT_COST_PER_ELEMENT), true);
+                        com.wsteam.wandscape.Config.TAVERN_RECRUIT_COST_PER_ELEMENT.get()), true);
                 return;
             }
 

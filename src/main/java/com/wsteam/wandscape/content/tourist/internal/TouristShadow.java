@@ -193,7 +193,7 @@ public final class TouristShadow implements TouristStateHost {
     public void setTargetBuildingCategory(@Nullable String c) { this.targetBuildingCategory = c; }
 
     public int getEnergy() { return energy; }
-    public void setEnergy(int e) { this.energy = Math.clamp(e, 0, WandscapeConstants.TOURIST_MAX_ENERGY); }
+    public void setEnergy(int e) { this.energy = Math.clamp(e, 0, com.wsteam.wandscape.Config.TOURIST_MAX_ENERGY.get()); }
 
     // ── 三条需求条（fill/need）──
 
@@ -383,7 +383,7 @@ public final class TouristShadow implements TouristStateHost {
         s.commuteTarget = tag.contains("commute") ? BlockPos.of(tag.getLong("commute")) : null;
         s.targetBuildingId = tag.hasUUID("target") ? tag.getUUID("target") : null;
         s.targetBuildingCategory = tag.contains("targetCat") ? tag.getString("targetCat") : null;
-        s.energy = Math.clamp(tag.getInt("energy"), 0, WandscapeConstants.TOURIST_MAX_ENERGY);
+        s.energy = Math.clamp(tag.getInt("energy"), 0, com.wsteam.wandscape.Config.TOURIST_MAX_ENERGY.get());
         s.level = Math.max(1, tag.getInt("level"));
         s.wallet = Math.max(0, tag.getInt("wallet"));
         s.initialWallet = Math.max(0, tag.getInt("initialWallet"));

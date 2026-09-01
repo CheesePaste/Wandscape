@@ -138,7 +138,7 @@ public final class HotelStayHandler {
             tourist.applyState(TouristState.IDLE);
             tourist.setHotelCheckinTime(0);
             tourist.setNightsStayed(tourist.getNightsStayed() + 1);
-            tourist.setEnergy(WandscapeConstants.TOURIST_MAX_ENERGY);
+            tourist.setEnergy(com.wsteam.wandscape.Config.TOURIST_MAX_ENERGY.get());
 
             // 一晚满意值结算（与参观一致）+ Emit HOTEL_WAKEUP narrative
             UUID buildingId = touristToHotel.get(tourist.getUUID());

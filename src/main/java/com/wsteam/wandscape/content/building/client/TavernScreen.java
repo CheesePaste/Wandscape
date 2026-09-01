@@ -351,12 +351,12 @@ public class TavernScreen extends MedievalScreen {
                     cx, by + 32, MedievalColors.TEXT_WARM_WHITE);
             g.drawCenteredString(font, I18n.name("gui.wandscape.tavern.recruit_cost_future",
                     "（此后每次招募将消耗 6 种元素各 %d）",
-                    WandscapeConstants.TAVERN_RECRUIT_COST_PER_ELEMENT).getString(),
+                    com.wsteam.wandscape.Config.TAVERN_RECRUIT_COST_PER_ELEMENT.get()).getString(),
                     cx, by + 48, MedievalColors.TEXT_DIM);
         } else {
             g.drawCenteredString(font, I18n.name("gui.wandscape.tavern.recruit_cost_now",
                     "招募代价：6 种基础元素各 %d",
-                    WandscapeConstants.TAVERN_RECRUIT_COST_PER_ELEMENT).getString(),
+                    com.wsteam.wandscape.Config.TAVERN_RECRUIT_COST_PER_ELEMENT.get()).getString(),
                     cx, by + 14, MedievalColors.TEXT_WARM_WHITE);
             g.drawCenteredString(font, I18n.name("gui.wandscape.tavern.recruit_count",
                     "已累计招募：%d 位法师", recruitCount).getString(),

@@ -114,8 +114,8 @@ public class TouristScreen extends MedievalScreen {
         // Energy bar
         g.drawString(font, I18n.name("gui.wandscape.touristscreen.energy", "精力:").getString(), leftCol, statY, MedievalColors.TEXT_WARM_WHITE);
         drawStatBar(g, leftCol + labelW, statY, barW, 10,
-                Math.clamp((float) energy / WandscapeConstants.TOURIST_MAX_ENERGY, 0f, 1f),
-                energy + "/" + WandscapeConstants.TOURIST_MAX_ENERGY,
+                Math.clamp((float) energy / com.wsteam.wandscape.Config.TOURIST_MAX_ENERGY.get(), 0f, 1f),
+                energy + "/" + com.wsteam.wandscape.Config.TOURIST_MAX_ENERGY.get(),
                 MedievalColors.SUCCESS_GREEN);
         statY += 11;
 

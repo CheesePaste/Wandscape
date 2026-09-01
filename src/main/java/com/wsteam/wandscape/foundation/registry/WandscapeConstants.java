@@ -24,13 +24,9 @@ public final class WandscapeConstants {
     public static final int TASK_PRIORITY_AUTO = 40;
 
     public static final int NPC_WALK_THRESHOLD = 64;
-    /** 酒馆「招募 NPC」自第二次起每种元素的价格。 */
-    public static final long TAVERN_RECRUIT_COST_PER_ELEMENT = 10_000;
 
     public static final int STUCK_CHECK_INTERVAL_TICKS = 60;
     public static final double STUCK_MIN_MOVE_DISTANCE = 2.0;
     public static final int STUCK_MAX_RETRIES = 3;
 
-    /** 游客精力上限：初始 100、清晨晨起回满 100，耗尽(=0)只能去 relax 恢复建筑。 */
-    public static final int TOURIST_MAX_ENERGY = 100;
 }

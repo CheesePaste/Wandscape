@@ -160,7 +160,7 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
 
     // ── Tourist attributes ──
 
-    private int energy = WandscapeConstants.TOURIST_MAX_ENERGY;
+    private int energy = com.wsteam.wandscape.Config.TOURIST_MAX_ENERGY.get();
     private int level = 1;
     /** Universal-element spending money. Higher tourist levels start with more. */
     private int wallet;
@@ -657,7 +657,7 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
         this.wanderAnchor = tag.contains("wanderAnchor") ? BlockPos.of(tag.getLong("wanderAnchor")) : null;
         this.wanderRadius = tag.getInt("wanderRadius");
         // Clamp values in case of corrupted data
-        this.energy = Math.clamp(tag.getInt("energy"), 0, WandscapeConstants.TOURIST_MAX_ENERGY);
+        this.energy = Math.clamp(tag.getInt("energy"), 0, com.wsteam.wandscape.Config.TOURIST_MAX_ENERGY.get());
         this.level = Math.max(1, tag.getInt("level"));
         this.wallet = Math.max(0, tag.getInt("wallet"));
         this.initialWallet = Math.max(0, tag.getInt("initialWallet"));
@@ -814,7 +814,7 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
     public void setPoiList(List<BlockPos> pois) { this.poiList = List.copyOf(pois); }
 
     public int getEnergy() { return energy; }
-    public void setEnergy(int e) { this.energy = Math.clamp(e, 0, WandscapeConstants.TOURIST_MAX_ENERGY); }
+    public void setEnergy(int e) { this.energy = Math.clamp(e, 0, com.wsteam.wandscape.Config.TOURIST_MAX_ENERGY.get()); }
 
     // ── 三条需求条（fill/need）──
 

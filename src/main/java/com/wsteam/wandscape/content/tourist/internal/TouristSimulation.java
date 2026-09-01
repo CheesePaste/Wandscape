@@ -416,7 +416,7 @@ public final class TouristSimulation {
     private static boolean relaxReusable(TouristStateHost t, RelaxConfig relax) {
         if (relax == null || relax == RelaxConfig.NONE) return false;
         if (relax.energyRestore() <= 0) return false;
-        return relaxReusable(t.getEnergy(), WandscapeConstants.TOURIST_MAX_ENERGY,
+        return relaxReusable(t.getEnergy(), com.wsteam.wandscape.Config.TOURIST_MAX_ENERGY.get(),
                 TOURIST_ENERGY_RESTORE_THRESHOLD);
     }
 
@@ -564,7 +564,7 @@ public final class TouristSimulation {
 
         if (cfg != null) {
             // 精力低 → 偏向恢复（relax）建筑（加分与单次满意度增益同量级）
-            double energyRatio = t.getEnergy() / (double) WandscapeConstants.TOURIST_MAX_ENERGY;
+            double energyRatio = t.getEnergy() / (double) com.wsteam.wandscape.Config.TOURIST_MAX_ENERGY.get();
             boolean isRelax = cfg.relax() != RelaxConfig.NONE && cfg.relax().energyRestore() > 0;
             if (isRelax && energyRatio < TOURIST_ENERGY_RESTORE_THRESHOLD) {
                 score += ENERGY_URGENCY_BONUS;

@@ -453,7 +453,7 @@ public final class TouristSimSystem {
                 // 清晨晨起：住店晚数 +1、精力回 100、结算一晚满意值、回入住前站位；**保持登记**（名单不删）
                 s.setHotelCheckinTime(0);
                 s.setNightsStayed(s.getNightsStayed() + 1);
-                s.setEnergy(WandscapeConstants.TOURIST_MAX_ENERGY);
+                s.setEnergy(com.wsteam.wandscape.Config.TOURIST_MAX_ENERGY.get());
                 TouristSimulation.grantHotelNightStay(level, s, hotel);
                 s.setCommuteTarget(null);
                 BlockPos wake = s.getWakeUpPos();
@@ -873,7 +873,7 @@ public final class TouristSimSystem {
     private void wakeUpShadow(ServerLevel level, TouristShadow s) {
         s.setHotelCheckinTime(0);
         s.setNightsStayed(s.getNightsStayed() + 1);
-        s.setEnergy(WandscapeConstants.TOURIST_MAX_ENERGY);
+        s.setEnergy(com.wsteam.wandscape.Config.TOURIST_MAX_ENERGY.get());
         BlockPos wake = s.getWakeUpPos();
         if (wake != null) {
             s.setPosition(wake.getX() + 0.5, wake.getY(), wake.getZ() + 0.5);
