@@ -272,7 +272,7 @@ public final class OverviewFlightController {
                 // Full 3D look direction (pitch + yaw) for WASD, pure world Y for Space/Shift
                 Vec3 fwd = Vec3.directionFromRotation(OverviewClientState.getCamPitch(), OverviewClientState.getCamYaw());
                 Vec3 right = Vec3.directionFromRotation(0, OverviewClientState.getCamYaw()).cross(new Vec3(0, 1, 0)).normalize();
-                double move = com.wsteam.wandscape.Config.FLY_SPEED.get() * elapsed;
+                double move = com.wsteam.wandscape.ClientConfig.FLY_SPEED.get() * elapsed;
                 double moveX = (fwd.x * forward + right.x * strafe) * move;
                 double moveY = (fwd.y * forward + vertical) * move;
                 double moveZ = (fwd.z * forward + right.z * strafe) * move;

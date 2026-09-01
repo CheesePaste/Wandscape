@@ -544,6 +544,7 @@ public class Wandscape {
         com.wsteam.wandscape.compat.curios.CuriosCompat.init(modEventBus);
 
         modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
+        modContainer.registerConfig(ModConfig.Type.CLIENT, ClientConfig.SPEC);
 
         // Keep log verbosity in sync with the config (applies on load and reload)
         modEventBus.addListener(this::onModConfig);

@@ -295,7 +295,7 @@ public final class SplineEditorController {
             Vec3 fwd = Vec3.directionFromRotation(SplineEditorClientState.getCamPitch(), SplineEditorClientState.getCamYaw());
             Vec3 right = Vec3.directionFromRotation(0, SplineEditorClientState.getCamYaw()).cross(new Vec3(0, 1, 0)).normalize();
 
-            double move = com.wsteam.wandscape.Config.FLY_SPEED.get() * elapsed;
+            double move = com.wsteam.wandscape.ClientConfig.FLY_SPEED.get() * elapsed;
             double moveX = (fwd.x * forward + right.x * strafe) * move;
             double moveZ = (fwd.z * forward + right.z * strafe) * move;
             double moveY = (fwd.y * forward + vertical) * move;
@@ -339,7 +339,7 @@ public final class SplineEditorController {
         if (forward != 0 || strafe != 0 || vertical != 0) {
             Vec3 fwd = Vec3.directionFromRotation(0, SplineEditorClientState.getCamYaw());
             Vec3 right = fwd.cross(new Vec3(0, 1, 0)).normalize();
-            double move = com.wsteam.wandscape.Config.FLY_SPEED.get() * elapsed;
+            double move = com.wsteam.wandscape.ClientConfig.FLY_SPEED.get() * elapsed;
             double moveX = (fwd.x * forward + right.x * strafe) * move;
             double moveZ = (fwd.z * forward + right.z * strafe) * move;
             double moveY = vertical * move;

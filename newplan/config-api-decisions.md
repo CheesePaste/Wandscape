@@ -25,7 +25,7 @@
 | `FLY_SPEED` | panel.flySpeed | V 面板相机飞行速度(格/秒) | 活(OverviewFlight:275, SplineEditor:298/342 均 client) | **Client** | 纯 client 读，安全 |
 | `PREVIEW_RESOLUTION` | preview.resolution | 建筑预览 GIF 分辨率 | 活(WandscapeClient:200) | **Client** | 纯 client |
 | `PREVIEW_FPS` | preview.fps | 预览 GIF 帧率 | 活(WandscapeClient:200) | **Client** | 纯 client |
-| `PARTICLE_LEVEL` | particle.level | 粒子等级 OFF/LOW/NORMAL/HIGH | 活(ParticleService:38/43) | **Client** | ⚠️ **迁前先确认服务端是否也读**——若 `ParticleService` 在 dedicated server 侧读，纯 CLIENT 会读不到崩（见待拍板 8） |
+| `PARTICLE_LEVEL` | particle.level | 粒子等级 OFF/LOW/NORMAL/HIGH | 活(ParticleService:38/43 服务端读) | **留(COMMON)** | 实测 `ParticleService` 服务端大量调用（LevelManager/Raid/Revive/Guard 经 server.overworld() 发粒子）、`isEnabled` 服务端判断 → **不迁 Client** |
 
 ### colony
 | 字段 | key | 作用 | 读点 | 打算       | 说明 |

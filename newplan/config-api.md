@@ -97,9 +97,9 @@
 | `PER_WAND_LEVEL_RANGE` | Config 死，活源 `WandscapeConstants.java:44` |
 
 ### 4b. 新建 `ClientConfig.java`（`ModConfig.Type.CLIENT`）
-迁入并保持读取点：`panel.flySpeed`、`particle.level`、`preview.resolution`、`preview.fps`。
-- 读点在 client 侧（`OverviewFlightController`、`BuildingPreviewGifCache`、粒子层）改为 `ClientConfig.XXX`。
-- `Config.java` 从 COMMON 移除这 4 键；COMMON 与 CLIENT 分别 `registerConfig`（`Wandscape.java`）。
+迁入并保持读取点：`panel.flySpeed`、`preview.resolution`、`preview.fps`（**`particle.level` 不迁**——`ParticleService.isEnabled` 在**服务端**也读（`ColonyLevelManager`/`Raid`/`Revive`/`Guard` 均经 `server.overworld()` 发粒子），纯 CLIENT 会读不到，留 COMMON）。
+- 读点在 client 侧（`OverviewFlightController`/`SplineEditorController`、`BuildingPreviewGifCache`）改为 `ClientConfig.XXX`。
+- `Config.java` 从 COMMON 移除这 3 键；COMMON 与 CLIENT 分别 `registerConfig`（`Wandscape.java`）。
 
 ### 4c. 深度值从 Config 移回常量（硬编码，不动手调）
 对每个被移出的键：把默认值定义到 `WandscapeConstants`（或新建 `foundation/.../Defaults`），并把读取点 `Config.X.get()` → `WandscapeConstants.X`（或 `BalanceValues.X`，见⑤）。
