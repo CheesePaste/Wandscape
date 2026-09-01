@@ -106,4 +106,6 @@ public class NpcApiImpl implements NpcApi {
     @Override public void setReviveNearBuildingRange(int v) { BalanceValues.setReviveNearBuildingRange(v); }
     @Override public double getScepterHostileRange() { return BalanceValues.scepterHostileRange(); }
     @Override public void setScepterHostileRange(double v) { BalanceValues.setScepterHostileRange(v); }
+    @Override public int getMageHutRestTicks() { return BalanceValues.mageHutRestTicks(); }
+    @Override public void setMageHutRestTicks(int v) { BalanceValues.setMageHutRestTicks(v); }
 }

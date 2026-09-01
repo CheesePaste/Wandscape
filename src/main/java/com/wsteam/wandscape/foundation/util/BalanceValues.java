@@ -102,4 +102,27 @@ public final class BalanceValues {
     public static void setTransportTicksPerBlockOffRoad(int v) { OVERRIDES.put("transportTicksPerBlockOffRoad", (double) v); }
     public static double decorationBonusCap() { return OVERRIDES.getOrDefault("decorationBonusCap", DEFAULT_DECORATION_BONUS_CAP); }
     public static void setDecorationBonusCap(double v) { OVERRIDES.put("decorationBonusCap", v); }
+
+    // ============================================================
+    // craft / construction / cast / mage
+    // ============================================================
+    private static final int DEFAULT_WORKSTATION_CRAFT_TICKS_PER_UNIT = 5;
+    private static final int DEFAULT_CRAFTING_STATION_CRAFT_TICKS_PER_UNIT = 1200;
+    private static final int DEFAULT_CONSTRUCTION_PLACE_TICKS_PER_UNIT = 1;
+    private static final int DEFAULT_CAST_SINGLE_TARGET_MAX_ENEMIES = 3;
+    private static final int DEFAULT_CAST_AOE_MIN_ENEMIES = 3;
+    private static final int DEFAULT_MAGE_HUT_REST_TICKS = 2400;
+
+    public static int workstationCraftTicksPerUnit() { return (int)(double) OVERRIDES.getOrDefault("workstationCraftTicksPerUnit", (double) DEFAULT_WORKSTATION_CRAFT_TICKS_PER_UNIT); }
+    public static void setWorkstationCraftTicksPerUnit(int v) { OVERRIDES.put("workstationCraftTicksPerUnit", (double) v); }
+    public static int craftingStationCraftTicksPerUnit() { return (int)(double) OVERRIDES.getOrDefault("craftingStationCraftTicksPerUnit", (double) DEFAULT_CRAFTING_STATION_CRAFT_TICKS_PER_UNIT); }
+    public static void setCraftingStationCraftTicksPerUnit(int v) { OVERRIDES.put("craftingStationCraftTicksPerUnit", (double) v); }
+    public static int constructionPlaceTicksPerUnit() { return (int)(double) OVERRIDES.getOrDefault("constructionPlaceTicksPerUnit", (double) DEFAULT_CONSTRUCTION_PLACE_TICKS_PER_UNIT); }
+    public static void setConstructionPlaceTicksPerUnit(int v) { OVERRIDES.put("constructionPlaceTicksPerUnit", (double) v); }
+    public static int castSingleTargetMaxEnemies() { return (int)(double) OVERRIDES.getOrDefault("castSingleTargetMaxEnemies", (double) DEFAULT_CAST_SINGLE_TARGET_MAX_ENEMIES); }
+    public static void setCastSingleTargetMaxEnemies(int v) { OVERRIDES.put("castSingleTargetMaxEnemies", (double) v); }
+    public static int castAoeMinEnemies() { return (int)(double) OVERRIDES.getOrDefault("castAoeMinEnemies", (double) DEFAULT_CAST_AOE_MIN_ENEMIES); }
+    public static void setCastAoeMinEnemies(int v) { OVERRIDES.put("castAoeMinEnemies", (double) v); }
+    public static int mageHutRestTicks() { return (int)(double) OVERRIDES.getOrDefault("mageHutRestTicks", (double) DEFAULT_MAGE_HUT_REST_TICKS); }
+    public static void setMageHutRestTicks(int v) { OVERRIDES.put("mageHutRestTicks", (double) v); }
 }

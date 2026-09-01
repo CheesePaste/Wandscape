@@ -198,4 +198,6 @@ public interface BuildingApi {
 
     double getDecorationBonusCap();
     void setDecorationBonusCap(double v);
+    int getConstructionPlaceTicksPerUnit();
+    void setConstructionPlaceTicksPerUnit(int v);
 }

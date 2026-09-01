@@ -64,7 +64,7 @@ public class ProductionRecipeLoader {
         if (recipe != null) {
             return recipe.calculateChannelTicks(quantity);
         }
-        return com.wsteam.wandscape.foundation.registry.WandscapeConstants.WORKSTATION_CRAFT_TICKS_PER_UNIT * quantity;
+        return com.wsteam.wandscape.foundation.util.BalanceValues.workstationCraftTicksPerUnit() * quantity;
     }
 
     /**

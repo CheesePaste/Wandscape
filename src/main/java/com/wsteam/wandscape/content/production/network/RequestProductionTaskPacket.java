@@ -137,11 +137,11 @@ public record RequestProductionTaskPacket(
                 case "synthesize" ->
                         loader != null
                                 ? loader.computeSynthesizeChannelTicks(pkt.recipeOrItemId, pkt.quantity)
-                                : WandscapeConstants.WORKSTATION_CRAFT_TICKS_PER_UNIT * pkt.quantity;
+                                : com.wsteam.wandscape.foundation.util.BalanceValues.workstationCraftTicksPerUnit() * pkt.quantity;
                 case "decompose" ->
-                        WandscapeConstants.WORKSTATION_CRAFT_TICKS_PER_UNIT * pkt.quantity;
+                        com.wsteam.wandscape.foundation.util.BalanceValues.workstationCraftTicksPerUnit() * pkt.quantity;
                 case "craft", "craft_spell" ->
-                        WandscapeConstants.CRAFTING_STATION_CRAFT_TICKS_PER_UNIT * pkt.quantity;
+                        com.wsteam.wandscape.foundation.util.BalanceValues.craftingStationCraftTicksPerUnit() * pkt.quantity;
                 default -> 120; // brew_potion, unchanged
             };
             params.put("channel_ticks", new JsonPrimitive(channelTicks));

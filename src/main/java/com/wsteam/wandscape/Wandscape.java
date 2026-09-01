@@ -241,6 +241,7 @@ public class Wandscape {
 
     static {
         WandscapeApis.setSpellcastingApi(SPELLCASTING_API);
+        WandscapeApis.setProductionApi(new com.wsteam.wandscape.content.production.internal.ProductionApiImpl());
     }
 
     // ---- 10 production-stations: loader ----

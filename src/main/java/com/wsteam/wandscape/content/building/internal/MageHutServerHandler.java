@@ -207,11 +207,11 @@ public final class MageHutServerHandler {
         if (npc == null) return;
 
         BlockPos restPos = hutRestPos(state);
-        npc.setRest(restPos, level.getGameTime() + WandscapeConstants.MAGE_HUT_REST_TICKS);
+        npc.setRest(restPos, level.getGameTime() + com.wsteam.wandscape.foundation.util.BalanceValues.mageHutRestTicks());
         npc.setAiWanderingEnabled(false);
 
         Log.info(TAG, "Mage {} resting at {} for {} ticks", npc.getNpcName(), restPos,
-                WandscapeConstants.MAGE_HUT_REST_TICKS);
+                com.wsteam.wandscape.foundation.util.BalanceValues.mageHutRestTicks());
         ScreenFeedbackPacket.send(sp,
                 I18n.name("message.wandscape.mage_hut.resting",
                         "[Wandscape] Now resting — the mage returns to the hut."), false);

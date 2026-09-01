@@ -33,7 +33,7 @@ public record SynthesizeRecipe(
         if (totalCost() <= 2) {
             return 0; // 价值 <= 2 秒合成
         }
-        return com.wsteam.wandscape.foundation.registry.WandscapeConstants.WORKSTATION_CRAFT_TICKS_PER_UNIT * quantity;
+        return com.wsteam.wandscape.foundation.util.BalanceValues.workstationCraftTicksPerUnit() * quantity;
     }
 
     /** Build a SynthesizeRecipe from an ElementMappingConfig that has a non-empty build cost. */

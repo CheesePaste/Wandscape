@@ -169,8 +169,8 @@ public final class CastBrain {
      *  由 {@link #select} 降级兜底，非硬性禁用。 */
     static boolean enemyCountGate(SpellRef ref, WorldSnapshot s) {
         return switch (ref.group() == null ? "" : ref.group()) {
-            case "single_target" -> s.enemyCount() <= WandscapeConstants.CAST_SINGLE_TARGET_MAX_ENEMIES;
-            case "aoe" -> s.enemyCount() >= WandscapeConstants.CAST_AOE_MIN_ENEMIES;
+            case "single_target" -> s.enemyCount() <= com.wsteam.wandscape.foundation.util.BalanceValues.castSingleTargetMaxEnemies();
+            case "aoe" -> s.enemyCount() >= com.wsteam.wandscape.foundation.util.BalanceValues.castAoeMinEnemies();
             default -> true;
         };
     }

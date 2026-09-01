@@ -102,6 +102,13 @@ public final class WandscapeApis {
     public static ColonyStatusApi getColonyStatusApiSilently() { return colonyMetricsApi; }
     public static void setColonyStatusApi(ColonyStatusApi api) { colonyMetricsApi = api; }
 
+    private static ProductionApi productionApi;
+    public static ProductionApi getProductionApi() {
+        if (productionApi == null) throw new IllegalStateException("ProductionApi not loaded");
+        return productionApi;
+    }
+    public static void setProductionApi(ProductionApi api) { productionApi = api; }
+
     /** 玩家权杖（庇护/敌对）殖民地标记查询。npc/guard 跨模块读取统一走这里（未装配返回 null 安全）。 */
     @javax.annotation.Nullable
     public static ScepterApi getScepterApiSilently() { return scepterApi; }

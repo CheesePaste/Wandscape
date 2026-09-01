@@ -211,7 +211,7 @@ public class ResourceSupplySystem implements EcsSystem {
         params.put("count", new JsonPrimitive(count));
         int channelTicks = com.wsteam.wandscape.Wandscape.PRODUCTION_RECIPE_LOADER != null
                 ? com.wsteam.wandscape.Wandscape.PRODUCTION_RECIPE_LOADER.computeSynthesizeChannelTicks(itemId, count)
-                : WandscapeConstants.WORKSTATION_CRAFT_TICKS_PER_UNIT * count;
+                : com.wsteam.wandscape.foundation.util.BalanceValues.workstationCraftTicksPerUnit() * count;
         params.put("channel_ticks", new JsonPrimitive(channelTicks));
 
         // 商店补货（atFront）比自动补产（卡资源缺口的短供）更优先：前者进补货段，
@@ -366,7 +366,7 @@ public class ResourceSupplySystem implements EcsSystem {
                         int oldTicks = intParam(item.params().get("channel_ticks"));
                         int channelTicks = oldTicks > 0
                                 ? (int) Math.max(1, (long) oldTicks * newCount / count)
-                                : WandscapeConstants.WORKSTATION_CRAFT_TICKS_PER_UNIT * newCount;
+                                : com.wsteam.wandscape.foundation.util.BalanceValues.workstationCraftTicksPerUnit() * newCount;
                         params.put("channel_ticks", new JsonPrimitive(channelTicks));
                         api.enqueueWork(stationId, new WorkItem(item.blueprintId(), params, item.priority()));
                         Log.info(TAG, "[CancelAutoSupply] Reduced auto-synthesize WorkItem for {} from x{} to x{} at station {}",

@@ -72,8 +72,8 @@ public final class RoadSiteData {
         int remainingTiles = edge.getPlacedBlocks().size();
         ConstructionSiteDataPacket.Estimate est = ConstructionSiteDataPacket.Estimate.of(
                 sumMissing, remainingTiles, workingCount,
-                WandscapeConstants.WORKSTATION_CRAFT_TICKS_PER_UNIT,
-                WandscapeConstants.CONSTRUCTION_PLACE_TICKS_PER_UNIT);
+                com.wsteam.wandscape.foundation.util.BalanceValues.workstationCraftTicksPerUnit(),
+                com.wsteam.wandscape.foundation.util.BalanceValues.constructionPlaceTicksPerUnit());
 
         BlockPos pos = representativePos(edge);
         return new ConstructionSiteDataPacket(

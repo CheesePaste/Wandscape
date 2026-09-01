@@ -158,8 +158,8 @@ public record ConstructionSiteDataPacket(
         int workingCount = ResourceSupplySystem.countSynthesizingWorkstations(
                 colonyId, WandscapeEngine.getWorld());
         Estimate est = Estimate.of(sumMissing, remainingBlocks, workingCount,
-                WandscapeConstants.WORKSTATION_CRAFT_TICKS_PER_UNIT,
-                WandscapeConstants.CONSTRUCTION_PLACE_TICKS_PER_UNIT);
+                com.wsteam.wandscape.foundation.util.BalanceValues.workstationCraftTicksPerUnit(),
+                com.wsteam.wandscape.foundation.util.BalanceValues.constructionPlaceTicksPerUnit());
 
         ConstructionSiteDataPacket packet = new ConstructionSiteDataPacket(
                 buildingId, state.getAnchor(), state.getBuildingTypeId(), name,

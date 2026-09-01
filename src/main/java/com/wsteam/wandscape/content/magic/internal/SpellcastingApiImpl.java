@@ -5,6 +5,7 @@ import com.wsteam.wandscape.content.npc.component.EquippedMagicComponent;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.content.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.api.SpellcastingApi;
+import com.wsteam.wandscape.foundation.util.BalanceValues;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
@@ -72,6 +73,12 @@ public final class SpellcastingApiImpl implements SpellcastingApi {
         npc.equippedMagic.replaceWith(validated);
         npc.castStrategy.setPreset(preset);
     }
+
+    // ── 可调平衡值（委托 BalanceValues；运行时生效，不追溯已生成实体）──
+    @Override public int getCastSingleTargetMaxEnemies() { return BalanceValues.castSingleTargetMaxEnemies(); }
+    @Override public void setCastSingleTargetMaxEnemies(int v) { BalanceValues.setCastSingleTargetMaxEnemies(v); }
+    @Override public int getCastAoeMinEnemies() { return BalanceValues.castAoeMinEnemies(); }
+    @Override public void setCastAoeMinEnemies(int v) { BalanceValues.setCastAoeMinEnemies(v); }
 
     private static WandscapeNpc resolve(UUID npcId) {
         if (npcId == null) return null;

@@ -59,4 +59,6 @@ public interface NpcApi {
     void setReviveNearBuildingRange(int v);
     double getScepterHostileRange();
     void setScepterHostileRange(double v);
+    int getMageHutRestTicks();
+    void setMageHutRestTicks(int v);
 }

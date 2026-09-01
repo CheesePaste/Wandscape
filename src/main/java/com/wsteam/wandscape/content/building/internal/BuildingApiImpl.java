@@ -1108,4 +1108,6 @@ public class BuildingApiImpl implements BuildingApi {
     // ── 可调平衡值（委托 BalanceValues；运行时生效，不追溯已生成实体）──
     @Override public double getDecorationBonusCap() { return BalanceValues.decorationBonusCap(); }
     @Override public void setDecorationBonusCap(double v) { BalanceValues.setDecorationBonusCap(v); }
+    @Override public int getConstructionPlaceTicksPerUnit() { return BalanceValues.constructionPlaceTicksPerUnit(); }
+    @Override public void setConstructionPlaceTicksPerUnit(int v) { BalanceValues.setConstructionPlaceTicksPerUnit(v); }
 }

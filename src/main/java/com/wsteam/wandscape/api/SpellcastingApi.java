@@ -34,4 +34,11 @@ public interface SpellcastingApi {
      * 客户端立场不获信任。预设决定跨类施法先后。
      */
     void setEquippedAndStrategy(UUID npcId, String preset, List<String> equipped);
+
+    // ── 可调平衡值（委托 BalanceValues；运行时生效，不追溯已生成实体）──
+
+    int getCastSingleTargetMaxEnemies();
+    void setCastSingleTargetMaxEnemies(int v);
+    int getCastAoeMinEnemies();
+    void setCastAoeMinEnemies(int v);
 }
