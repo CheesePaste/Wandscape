@@ -1,6 +1,4 @@
-package com.wsteam.wandscape.command;
-import com.wsteam.wandscape.content.task.component.Position;
-import com.wsteam.wandscape.content.colony.network.ColonyCreateRequestPacket;
+package com.wsteam.wandscape.content.command;
 
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.IntegerArgumentType;

@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.command;
+package com.wsteam.wandscape.content.command;
 
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.tree.CommandNode;

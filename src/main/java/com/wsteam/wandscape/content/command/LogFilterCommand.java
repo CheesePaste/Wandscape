@@ -1,5 +1,4 @@
-package com.wsteam.wandscape.command;
-import com.wsteam.wandscape.foundation.log.Log;
+package com.wsteam.wandscape.content.command;
 
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.StringArgumentType;

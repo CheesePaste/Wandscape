@@ -1,9 +1,6 @@
 package com.wsteam.wandscape.content.colony.network;
-import com.wsteam.wandscape.content.colony.ColonyApiImpl;
-import com.wsteam.wandscape.content.task.component.Position;
-import com.wsteam.wandscape.content.building.network.BuildingAreaSyncPacket;
 
-import com.wsteam.wandscape.command.ColonyCommand;
+import com.wsteam.wandscape.content.command.ColonyCommand;
 import com.wsteam.wandscape.content.building.internal.BuildingState;
 import com.wsteam.wandscape.api.ColonyApi;
 import com.wsteam.wandscape.foundation.log.Log;

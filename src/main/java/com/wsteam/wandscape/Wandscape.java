@@ -1,34 +1,10 @@
 package com.wsteam.wandscape;
-import com.wsteam.wandscape.content.npc.system.NavigationSystem;
+import com.wsteam.wandscape.content.command.*;
 import com.wsteam.wandscape.impl.WandscapeEngine;
 import com.wsteam.wandscape.content.npc.HostileTargetingHandler;
 import com.wsteam.wandscape.content.task.TaskPoolSavedData;
-import com.wsteam.wandscape.content.items.service.GuideProgressService;
 import com.wsteam.wandscape.content.building.BuildingNoSpawnZoneHandler;
 import com.wsteam.wandscape.content.colony.ColonyApiImpl;
-import com.wsteam.wandscape.content.npc.WandscapeAttributes;
-import com.wsteam.wandscape.content.task.boundary.EventBus;
-import com.wsteam.wandscape.content.task.boundary.RitualOps;
-import com.wsteam.wandscape.content.task.ecs.World;
-import com.wsteam.wandscape.content.task.component.Inventory;
-import com.wsteam.wandscape.foundation.ui.panel.PanelStateTogglePacket;
-import com.wsteam.wandscape.foundation.networking.ScreenFeedbackPacket;
-import com.wsteam.wandscape.content.items.network.GuideTestPacket;
-import com.wsteam.wandscape.foundation.networking.ParticleBurstPacket;
-import com.wsteam.wandscape.content.task.network.TaskPanelSyncTracker;
-import com.wsteam.wandscape.content.items.network.GuideProgressSyncPacket;
-import com.wsteam.wandscape.content.task.network.TaskManagementSyncPacket;
-import com.wsteam.wandscape.content.colony.network.ColonyNameUpdatePacket;
-import com.wsteam.wandscape.foundation.ui.panel.PanelStateTracker;
-import com.wsteam.wandscape.content.colony.network.ColonyAmbientPacket;
-import com.wsteam.wandscape.content.colony.network.ColonyCreatePromptPacket;
-import com.wsteam.wandscape.content.task.network.MageModeActionPacket;
-import com.wsteam.wandscape.content.task.network.TaskPanelSubscribePacket;
-import com.wsteam.wandscape.content.items.network.GuideProgressUpdatePacket;
-import com.wsteam.wandscape.content.task.network.TaskManagementActionPacket;
-import com.wsteam.wandscape.content.colony.network.ColonyStatsSyncPacket;
-import com.wsteam.wandscape.content.colony.network.ColonyCreateRequestPacket;
-import com.wsteam.wandscape.foundation.util.TickProfiler;
 
 import com.wsteam.wandscape.content.building.internal.*;
 import com.wsteam.wandscape.content.building.network.*;
@@ -39,7 +15,6 @@ import com.wsteam.wandscape.content.building.scanner.ScannerBlockEntity;
 import com.wsteam.wandscape.content.building.scanner.InteractSpotMarkerBlock;
 import com.wsteam.wandscape.content.building.scanner.network.ScannerExportPacket;
 import com.wsteam.wandscape.content.building.scanner.network.ScannerSyncPacket;
-import com.wsteam.wandscape.command.*;
 import com.wsteam.wandscape.content.building.projection.network.*;
 import com.wsteam.wandscape.content.building.scanner.network.ScannerValuePacket;
 import com.wsteam.wandscape.content.colony.raid.ColonyRaidTracker;
@@ -1134,14 +1109,14 @@ public class Wandscape {
                 .then(ConsumeWarehouseCommand.node())
                 .then(StressTestCommand.buildNode())
                 .then(TouristCommand.node())
-                .then(com.wsteam.wandscape.command.TavernCommand.node())
+                .then(TavernCommand.node())
                 .then(TransportCommand.node())
                 .then(GuardCommand.node())
-                .then(com.wsteam.wandscape.command.GuideCommand.node())
-                .then(com.wsteam.wandscape.command.SplineEditorCommand.node())
-                .then(com.wsteam.wandscape.command.MagicCommand.node())
-                .then(com.wsteam.wandscape.command.RoadStudioCommand.node())
-                .then(com.wsteam.wandscape.command.ProfileCommand.node());
+                .then(GuideCommand.node())
+                .then(SplineEditorCommand.node())
+                .then(MagicCommand.node())
+                .then(RoadStudioCommand.node())
+                .then(ProfileCommand.node());
         // ── Curios 兼容：法师饰品槽位管理（仅 Curios 加载时注册，避免无 Curios 时缺类崩溃） ──
         if (com.wsteam.wandscape.compat.curios.CuriosCompat.isLoaded()) {
             root.then(com.wsteam.wandscape.compat.curios.CuriosCommand.node());
