@@ -1,6 +1,4 @@
-package com.wsteam.wandscape.mixin;
-import com.wsteam.wandscape.content.task.component.Position;
-import com.wsteam.wandscape.content.task.ecs.World;
+package com.wsteam.wandscape.foundation.mixin;
 
 import com.wsteam.wandscape.content.road.client.SplineEditorClientState;
 import net.minecraft.client.Camera;
