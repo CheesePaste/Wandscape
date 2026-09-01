@@ -5,7 +5,7 @@ import com.wsteam.wandscape.content.task.types.GridPos;
 import com.wsteam.wandscape.content.task.types.EffectId;
 import com.wsteam.wandscape.content.task.component.Position;
 import com.wsteam.wandscape.content.task.ecs.World;
-import com.wsteam.wandscape.content.task.component.Inventory;
+import com.wsteam.wandscape.content.task.component.NpcInventory;
 import com.wsteam.wandscape.content.task.types.ResourceStack;
 import com.wsteam.wandscape.content.task.types.RitualId;
 import com.wsteam.wandscape.content.task.types.EntityId;

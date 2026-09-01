@@ -1,5 +1,4 @@
 package com.wsteam.wandscape.content.building.render;
-import com.wsteam.wandscape.content.task.ecs.World;
 
 import com.mojang.blaze3d.vertex.*;
 import com.wsteam.wandscape.content.building.data.BlockOffset;

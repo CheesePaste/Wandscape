@@ -1,7 +1,7 @@
 package com.wsteam.wandscape.api;
 import com.wsteam.wandscape.content.task.ecs.World;
 
-import com.wsteam.wandscape.content.npc.types.AttributeModifier;
+import com.wsteam.wandscape.content.npc.types.NpcAttributeModifier;
 import net.minecraft.world.item.ItemStack;
 
 import javax.annotation.Nullable;
@@ -15,5 +15,5 @@ public interface WandApi {
 
     /** 法杖 preset id → 属性修饰符列表；未知 id 返回 null（调用方回退默认杖）。 */
     @Nullable
-    List<AttributeModifier> getWandModifiers(String presetId);
+    List<NpcAttributeModifier> getWandModifiers(String presetId);
 }

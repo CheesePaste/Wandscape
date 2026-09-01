@@ -1,6 +1,6 @@
 package com.wsteam.wandscape.content.task.engine.dsl;
 import com.wsteam.wandscape.content.task.component.Position;
-import com.wsteam.wandscape.content.task.component.Inventory;
+import com.wsteam.wandscape.content.task.component.NpcInventory;
 import com.wsteam.wandscape.foundation.log.Log;
 
 import com.wsteam.wandscape.content.task.op.api.AtomicOp;

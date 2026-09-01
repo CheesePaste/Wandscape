@@ -10,10 +10,10 @@ import com.wsteam.wandscape.content.npc.WandscapeAttributes;
 import com.wsteam.wandscape.content.task.boundary.EventBus;
 import com.wsteam.wandscape.content.task.boundary.RitualOps;
 import com.wsteam.wandscape.content.task.ecs.World;
-import com.wsteam.wandscape.content.task.component.Inventory;
+import com.wsteam.wandscape.content.task.component.NpcInventory;
 import com.wsteam.wandscape.foundation.ui.panel.PanelStateTogglePacket;
 import com.wsteam.wandscape.foundation.networking.ScreenFeedbackPacket;
-import com.wsteam.wandscape.content.items.network.GuideTestPacket;
+import com.wsteam.wandscape.content.items.network.GuideDocOpenPacket;
 import com.wsteam.wandscape.foundation.networking.ParticleBurstPacket;
 import com.wsteam.wandscape.content.task.network.TaskPanelSyncTracker;
 import com.wsteam.wandscape.content.items.network.GuideProgressSyncPacket;
@@ -910,11 +910,11 @@ public class Wandscape {
                         com.wsteam.wandscape.foundation.networking.ParticleBurstPacket.TYPE,
                         com.wsteam.wandscape.foundation.networking.ParticleBurstPacket.STREAM_CODEC,
                         (packet, ctx) -> com.wsteam.wandscape.foundation.networking.ParticleBurstPacket.handleClient(packet))
-                // ── Guide test ──
+                // ── Guide doc open ──
                 .playToClient(
-                        com.wsteam.wandscape.content.items.network.GuideTestPacket.TYPE,
-                        com.wsteam.wandscape.content.items.network.GuideTestPacket.STREAM_CODEC,
-                        (packet, ctx) -> com.wsteam.wandscape.content.items.network.GuideTestPacket.handleClient(packet))
+                        com.wsteam.wandscape.content.items.network.GuideDocOpenPacket.TYPE,
+                        com.wsteam.wandscape.content.items.network.GuideDocOpenPacket.STREAM_CODEC,
+                        (packet, ctx) -> com.wsteam.wandscape.content.items.network.GuideDocOpenPacket.handleClient(packet))
                 // ── Guide book (right-click to open tutorial home) ──
                 .playToClient(
                         GuideBookOpenPacket.TYPE,
@@ -931,11 +931,6 @@ public class Wandscape {
                         (packet, ctx) -> com.wsteam.wandscape.content.items.network.GuideProgressUpdatePacket.handleServer(packet,
                                 (net.minecraft.server.level.ServerPlayer) ctx.player()))
                 // ── Spline Road Editor ──
-                .playToClient(
-                        SplineEditorEnterPacket.TYPE,
-                        SplineEditorEnterPacket.STREAM_CODEC,
-                        SplineEditorEnterPacket::handleClient)
-                // ── Native Road Studio ──
                 .playToClient(
                         RoadStudioEnterPacket.TYPE,
                         RoadStudioEnterPacket.STREAM_CODEC,

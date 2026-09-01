@@ -1,5 +1,5 @@
 package com.wsteam.wandscape.content.npc.data;
-import com.wsteam.wandscape.content.task.component.Inventory;
+import com.wsteam.wandscape.content.task.component.NpcInventory;
 
 import com.wsteam.wandscape.content.task.types.ResourceStack;
 

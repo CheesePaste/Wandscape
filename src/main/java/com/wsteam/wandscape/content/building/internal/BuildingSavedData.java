@@ -1,7 +1,6 @@
 package com.wsteam.wandscape.content.building.internal;
 import com.wsteam.wandscape.content.task.component.Position;
-import com.wsteam.wandscape.content.task.ecs.World;
-import com.wsteam.wandscape.content.task.component.Inventory;
+import com.wsteam.wandscape.content.task.component.NpcInventory;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;

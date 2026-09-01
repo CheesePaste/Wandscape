@@ -2,8 +2,8 @@ package com.wsteam.wandscape.content.items.scepter;
 import com.wsteam.wandscape.content.task.ecs.World;
 
 import com.wsteam.wandscape.content.items.scepter.internal.ScepterService;
-import com.wsteam.wandscape.api.MageWandItem;
-import com.wsteam.wandscape.api.NpcBindingItem;
+import com.wsteam.wandscape.api.NpcInteractHook;
+import com.wsteam.wandscape.api.NpcSneakInteractHook;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
@@ -28,11 +28,11 @@ import java.util.Locale;
  * 默认 {@link ScepterKind#PEACE}；客户端 tint/tooltip 读它 → 颜色与提示随模式变化，靠
  * {@code player.setItemInHand} 触发玩家每 tick 的 inventoryMenu 广播同步（同皮革染色的物品 NBT 渲染语义）。
  *
- * <p>交互分流复用既有 seam，不改 {@code mobInteract}：本殖民地法师非潜行经 {@link MageWandItem}
- * 执行、潜行经 {@link NpcBindingItem} 循环；非法师生物经 {@link ScepterInteractHandler}；空气/方块经
+ * <p>交互分流复用既有 seam，不改 {@code mobInteract}：本殖民地法师非潜行经 {@link NpcInteractHook}
+ * 执行、潜行经 {@link NpcSneakInteractHook} 循环；非法师生物经 {@link ScepterInteractHandler}；空气/方块经
  * {@link #use}。执行逻辑全部复用 {@link ScepterService}，无第二套业务。
  */
-public class OmniScepterItem extends Item implements MageWandItem, NpcBindingItem {
+public class OmniScepterItem extends Item implements NpcInteractHook, NpcSneakInteractHook {
 
     /** {@link DataComponents#CUSTOM_DATA} 中存当前模式的键。 */
     public static final String MODE_KEY = "mode";
@@ -88,7 +88,7 @@ public class OmniScepterItem extends Item implements MageWandItem, NpcBindingIte
         ScepterService.onInteractNpc(player, mage, getMode(player.getItemInHand(hand)));
     }
 
-    /** 潜行右键本殖民地法师：循环模式（复用 NpcBindingItem 潜行 seam，mobInteract 已保证服务端）。 */
+    /** 潜行右键本殖民地法师：循环模式（复用 NpcSneakInteractHook 潜行 seam，mobInteract 已保证服务端）。 */
     @Override
     public void onShiftClickNpc(ServerPlayer player, Mob npc, InteractionHand hand) {
         cycleMode(player, player.getItemInHand(hand), hand);

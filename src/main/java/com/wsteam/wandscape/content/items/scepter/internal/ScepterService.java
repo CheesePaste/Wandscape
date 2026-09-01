@@ -23,7 +23,7 @@ public final class ScepterService {
 
     private ScepterService() {}
 
-    /** 玩家右键法师（{@code MageWandItem} 转交）：四把权杖都适用。 */
+    /** 玩家右键法师（{@code NpcInteractHook} 转交）：四把权杖都适用。 */
     public static void onInteractNpc(ServerPlayer player, LivingEntity mage, ScepterKind kind) {
         if (!(mage instanceof WandscapeNpc npc)) return;
         switch (kind) {

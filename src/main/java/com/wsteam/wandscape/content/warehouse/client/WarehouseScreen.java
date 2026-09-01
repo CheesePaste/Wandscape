@@ -542,7 +542,7 @@ public class WarehouseScreen extends AbstractContainerScreen<WarehouseMenu> impl
         if (helpDocumentPath != null && minecraft != null) {
             String content = com.wsteam.wandscape.foundation.ui.markdown.navigation.DocumentLoader
                     .loadMarkdown(helpDocumentPath);
-            var screen = new com.wsteam.wandscape.foundation.ui.guide.GuideTestScreen(
+            var screen = new com.wsteam.wandscape.foundation.ui.guide.GuideScreen(
                     this, content, helpDocumentPath);
             minecraft.setScreen(screen);
         }

@@ -2,7 +2,7 @@ package com.wsteam.wandscape.command;
 
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.tree.CommandNode;
-import com.wsteam.wandscape.content.road.network.SplineEditorEnterPacket;
+import com.wsteam.wandscape.content.road.network.RoadStudioEnterPacket;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
@@ -40,7 +40,7 @@ public final class SplineEditorCommand {
             return 0;
         }
 
-        PacketDistributor.sendToPlayer(player, new SplineEditorEnterPacket(true));
+        PacketDistributor.sendToPlayer(player, new RoadStudioEnterPacket(true));
 
         ctx.getSource().sendSuccess(() -> Component.literal(
                 "§aEntered spline editor mode!\n" +
@@ -59,7 +59,7 @@ public final class SplineEditorCommand {
             return 0;
         }
 
-        PacketDistributor.sendToPlayer(player, new SplineEditorEnterPacket(false));
+        PacketDistributor.sendToPlayer(player, new RoadStudioEnterPacket(false));
 
         ctx.getSource().sendSuccess(() -> Component.literal("§eExited spline editor mode."), true);
         return 1;

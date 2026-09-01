@@ -717,7 +717,7 @@ public final class WandscapePanelController {
                 docPath = "road_guide";
             }
             String content = com.wsteam.wandscape.foundation.ui.markdown.navigation.DocumentLoader.loadMarkdown(docPath);
-            mc.setScreen(new com.wsteam.wandscape.foundation.ui.guide.GuideTestScreen(null, content, docPath));
+            mc.setScreen(new com.wsteam.wandscape.foundation.ui.guide.GuideScreen(null, content, docPath));
         }
     }
 }

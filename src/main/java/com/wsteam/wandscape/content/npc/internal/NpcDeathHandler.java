@@ -1,7 +1,7 @@
 package com.wsteam.wandscape.content.npc.internal;
 import com.wsteam.wandscape.content.npc.types.AttributeType;
 
-import com.wsteam.wandscape.content.task.component.Inventory;
+import com.wsteam.wandscape.content.task.component.NpcInventory;
 import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.content.task.types.ResourceStack;
 import com.wsteam.wandscape.impl.WandscapeEngine;
@@ -38,7 +38,7 @@ public final class NpcDeathHandler {
         List<ResourceStack> inv = List.of();
         World world = WandscapeEngine.getWorld();
         if (world != null && npc.ecsEntityId > 0) {
-            Inventory ecsInv = world.get(npc.ecsEntityId, Inventory.class);
+            NpcInventory ecsInv = world.get(npc.ecsEntityId, NpcInventory.class);
             if (ecsInv != null) {
                 inv = List.copyOf(ecsInv.items());
             }

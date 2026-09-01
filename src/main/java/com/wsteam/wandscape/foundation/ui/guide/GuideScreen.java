@@ -20,7 +20,7 @@ import java.net.URISyntaxException;
  * Interactive Markdown Guide Screen supporting inter-document navigation,
  * browser-like back/forward history stack, and ESC key press interception.
  */
-public class GuideTestScreen extends MedievalScreen {
+public class GuideScreen extends MedievalScreen {
 
     private final Screen parentScreen;
     private final DocumentHistoryStack historyStack;

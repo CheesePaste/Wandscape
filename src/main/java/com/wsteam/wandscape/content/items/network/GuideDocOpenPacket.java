@@ -13,15 +13,15 @@ import static com.wsteam.wandscape.Wandscape.MODID;
 /**
  * Server -> Client packet to open the Markdown guide test screen.
  */
-public record GuideTestPacket(String markdownContent) implements CustomPacketPayload {
+public record GuideDocOpenPacket(String markdownContent) implements CustomPacketPayload {
 
-    public static final Type<GuideTestPacket> TYPE =
-            new Type<>(ResourceLocation.fromNamespaceAndPath(MODID, "guide_test"));
+    public static final Type<GuideDocOpenPacket> TYPE =
+            new Type<>(ResourceLocation.fromNamespaceAndPath(MODID, "guide_doc_open"));
 
-    public static final StreamCodec<RegistryFriendlyByteBuf, GuideTestPacket> STREAM_CODEC =
+    public static final StreamCodec<RegistryFriendlyByteBuf, GuideDocOpenPacket> STREAM_CODEC =
             StreamCodec.composite(
-                    ByteBufCodecs.STRING_UTF8, GuideTestPacket::markdownContent,
-                    GuideTestPacket::new
+                    ByteBufCodecs.STRING_UTF8, GuideDocOpenPacket::markdownContent,
+                    GuideDocOpenPacket::new
             );
 
     @Override
@@ -29,13 +29,13 @@ public record GuideTestPacket(String markdownContent) implements CustomPacketPay
         return TYPE;
     }
 
-    private static Consumer<GuideTestPacket> clientHandler;
+    private static Consumer<GuideDocOpenPacket> clientHandler;
 
-    public static void setClientHandler(Consumer<GuideTestPacket> handler) {
+    public static void setClientHandler(Consumer<GuideDocOpenPacket> handler) {
         clientHandler = handler;
     }
 
-    public static void handleClient(GuideTestPacket packet) {
+    public static void handleClient(GuideDocOpenPacket packet) {
         if (clientHandler != null) {
             clientHandler.accept(packet);
         }

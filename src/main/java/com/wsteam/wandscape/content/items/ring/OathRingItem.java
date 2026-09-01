@@ -3,7 +3,7 @@ import com.wsteam.wandscape.content.task.ecs.World;
 
 import com.wsteam.wandscape.content.items.ring.client.OathRingClientData;
 import com.wsteam.wandscape.content.items.ring.internal.OathRingService;
-import com.wsteam.wandscape.api.NpcBindingItem;
+import com.wsteam.wandscape.api.NpcSneakInteractHook;
 import com.wsteam.wandscape.foundation.log.Log;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -28,7 +28,7 @@ import java.util.List;
  * 档位（{@link RingTier}）决定本戒指可存取的槽位前缀数量。无殖民地玩家禁止使用。
  * 本物品不持有任何法师数据——存储按玩家 UUID 全局落盘。
  */
-public class OathRingItem extends Item implements NpcBindingItem {
+public class OathRingItem extends Item implements NpcSneakInteractHook {
 
     private static final String TAG = "OathRingItem";
 

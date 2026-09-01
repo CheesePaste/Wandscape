@@ -1,6 +1,6 @@
 package com.wsteam.wandscape.content.task.source;
 
-import com.wsteam.wandscape.content.task.ecs.System;
+import com.wsteam.wandscape.content.task.ecs.EcsSystem;
 import com.wsteam.wandscape.content.task.ecs.World;
 
 import java.util.List;
@@ -9,7 +9,7 @@ import java.util.List;
  * Polls all registered TaskSources on their configured intervals.
  * Runs second in the tick order.
  */
-public class TaskSourcePoller implements System {
+public class TaskSourcePoller implements EcsSystem {
 
     private static final String TAG = "TaskSrcPoller";
 

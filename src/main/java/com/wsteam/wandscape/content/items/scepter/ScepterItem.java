@@ -2,7 +2,7 @@ package com.wsteam.wandscape.content.items.scepter;
 import com.wsteam.wandscape.content.task.ecs.World;
 
 import com.wsteam.wandscape.content.items.scepter.internal.ScepterService;
-import com.wsteam.wandscape.api.MageWandItem;
+import com.wsteam.wandscape.api.NpcInteractHook;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
@@ -16,11 +16,11 @@ import java.util.List;
 /**
  * 玩家权杖物品（和平/跟随/庇护/敌对），3D 模型 + 头部主题色染色，合成站 1 级配方产出。
  *
- * <p>右键行为经 {@link MageWandItem} 接口由 {@code WandscapeNpc.mobInteract} 转交本物品
+ * <p>右键行为经 {@link NpcInteractHook} 接口由 {@code WandscapeNpc.mobInteract} 转交本物品
  * （法师目标），或经 {@code ScepterInteractHandler}（EntityInteract，非法师生物目标）注入
  * {@link ScepterService}。物品本身不持任何数据——标记持久化于 {@code ScepterMarksSavedData}。
  */
-public class ScepterItem extends Item implements MageWandItem {
+public class ScepterItem extends Item implements NpcInteractHook {
 
     private final ScepterKind kind;
 

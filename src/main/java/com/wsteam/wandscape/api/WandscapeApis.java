@@ -10,7 +10,6 @@ public final class WandscapeApis {
     private static WarehouseApi warehouseApi;
     private static NpcApi npcApi;
     private static BuildingApi buildingApi;
-    private static HouseApi houseApi;
     private static TavernApi tavernApi;
     private static ColonyApi colonyApi;
     private static RoadApi roadApi;
@@ -57,12 +56,6 @@ public final class WandscapeApis {
     @javax.annotation.Nullable
     public static BuildingApi getBuildingApiSilently() { return buildingApi; }
     public static void setBuildingApi(BuildingApi api) { buildingApi = api; }
-
-    public static HouseApi getHouseApi() {
-        if (houseApi == null) throw new IllegalStateException("Module HousingManaPool not loaded");
-        return houseApi;
-    }
-    public static void setHouseApi(HouseApi api) { houseApi = api; }
 
     public static TavernApi getTavernApi() {
         if (tavernApi == null) throw new IllegalStateException("Module TavernRecruitment not loaded");

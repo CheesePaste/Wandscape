@@ -7,7 +7,7 @@ import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.content.task.component.NavigationState;
 import com.wsteam.wandscape.content.task.component.Position;
 import com.wsteam.wandscape.content.task.component.TaskExecutor;
-import com.wsteam.wandscape.content.task.ecs.System;
+import com.wsteam.wandscape.content.task.ecs.EcsSystem;
 import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.content.task.types.GridPos;
 import com.wsteam.wandscape.content.task.types.RitualId;
@@ -35,7 +35,7 @@ import java.util.concurrent.CompletableFuture;
  * request written during step-execution is picked up in the same
  * {@link World#tick(float)} call.
  */
-public class NavigationSystem implements System {
+public class NavigationSystem implements EcsSystem {
 
     private static final String TAG = "NavigationSystem";
 

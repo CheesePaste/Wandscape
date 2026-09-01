@@ -1,6 +1,6 @@
 package com.wsteam.wandscape.content.npc.internal;
 import com.wsteam.wandscape.content.task.ecs.World;
-import com.wsteam.wandscape.content.task.component.Inventory;
+import com.wsteam.wandscape.content.task.component.NpcInventory;
 
 import com.wsteam.wandscape.content.task.types.ResourceId;
 import com.wsteam.wandscape.content.task.types.ResourceStack;

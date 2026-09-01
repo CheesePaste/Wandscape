@@ -1,7 +1,6 @@
 package com.wsteam.wandscape.content.building.internal;
 import com.wsteam.wandscape.content.task.boundary.EventBus;
 import com.wsteam.wandscape.content.task.component.Position;
-import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.content.building.network.BuildingAreaSyncPacket;
 import com.wsteam.wandscape.content.colony.event.ColonyEvaluationChangedEvent;
 

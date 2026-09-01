@@ -1,6 +1,6 @@
 package com.wsteam.wandscape.compat.curios;
 import com.wsteam.wandscape.content.task.ecs.World;
-import com.wsteam.wandscape.content.task.component.Inventory;
+import com.wsteam.wandscape.content.task.component.NpcInventory;
 import com.wsteam.wandscape.content.task.types.EntityId;
 
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;

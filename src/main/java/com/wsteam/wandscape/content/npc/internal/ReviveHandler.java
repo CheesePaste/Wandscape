@@ -5,7 +5,7 @@ import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.content.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.content.building.internal.BuildingState;
 import com.wsteam.wandscape.content.task.component.ColonyMember;
-import com.wsteam.wandscape.content.task.component.Inventory;
+import com.wsteam.wandscape.content.task.component.NpcInventory;
 import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.content.npc.types.AttributeType;
 import com.wsteam.wandscape.content.task.types.ResourceStack;
@@ -198,7 +198,7 @@ public final class ReviveHandler {
             ecsWorld.addComponent(ecsId, new ColonyMember(rec.colonyId()));
         }
 
-        Inventory inv = ecsWorld.get(ecsId, Inventory.class);
+        NpcInventory inv = ecsWorld.get(ecsId, NpcInventory.class);
         if (inv != null) {
             for (ResourceStack s : rec.inventory()) {
                 inv.add(s);

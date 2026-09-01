@@ -1,5 +1,4 @@
 package com.wsteam.wandscape.content.building.client;
-import com.wsteam.wandscape.content.task.ecs.World;
 
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.content.building.network.MageHutActionPacket;
