@@ -1,17 +1,17 @@
-package com.wsteam.wandscape.foundation.ui.guidance;
-import com.wsteam.wandscape.content.items.service.GuideProgressService;
+package com.wsteam.wandscape.foundation.ui.tutorial;
+import com.wsteam.wandscape.content.tutorial.service.TutorialProgressService;
 import com.wsteam.wandscape.content.task.ecs.World;
 
 import java.util.List;
 
 /**
  * A single tutorial step (pure content). All text fields hold i18n keys resolved to the
- * client's language at render time by {@code GuideRenderer.text}. Three line variants are
+ * client's language at render time by {@code TutorialRenderer.text}. Three line variants are
  * shown depending on the player's build phase: default (panel idle), building-bar open, or
  * placing a blueprint in world. Step completion is evaluated server-side by
- * {@code GuideProgressService.computeStep}.
+ * {@code TutorialProgressService.computeStep}.
  */
-public record GuideStep(
+public record TutorialStep(
         String id,
         String title,
         List<String> defaultLines,

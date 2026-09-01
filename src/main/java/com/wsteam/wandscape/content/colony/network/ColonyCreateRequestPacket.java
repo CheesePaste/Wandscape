@@ -86,9 +86,9 @@ public record ColonyCreateRequestPacket(BlockPos townHallAnchor, String name)
         com.wsteam.wandscape.content.building.network.BuildingAreaSyncPacket.sendToPlayer(player, colonyId);
 
         // Push tutorial progress — the new colony's town hall completes the first step.
-        var guideApi = com.wsteam.wandscape.api.WandscapeApis.getGuideProgressApiSilently();
-        if (guideApi != null) {
-            guideApi.sendToPlayer(player, colonyId);
+        var tutorialApi = com.wsteam.wandscape.api.WandscapeApis.getTutorialApiSilently();
+        if (tutorialApi != null) {
+            tutorialApi.sendToPlayer(player, colonyId);
         }
     }
 

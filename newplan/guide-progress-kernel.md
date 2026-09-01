@@ -1,32 +1,32 @@
-# GuideProgress 系统内核错置在 items（待处理，需拍板）
+# GuideProgress 系统内核错置在 items —— 已拍板并落地 Step 1
 
-> 记录：2026-09-01 包扫描发现。**非小优化，需拍板归属后再搬**，先记录备用。
-> 判定依据：`items` 域定位 = **纯薄物品容器（无系统内核）**；而这是完整**跨域新手引导系统内核**。
+> 2026-09-01 包扫描发现：`items` 域定位 = 纯薄物品容器（无系统内核），而 GuideProgress 是完整**跨域新手引导系统内核**。
+> 2026-09-02 用户拍板 + 执行：
+> - **命名分离**：概念 A「新手引导（onboarding）」→ `Tutorial`；概念 B「指南书（玩家翻的手册物品）」→ `Guidebook`。两者本无任何关系，共用 `Guide*` 词根致混淆（`guide` vs `guidance`、`GuideStep` vs `GuideScreen`）。
+> - **A 独立成 `content/tutorial` 功能域**（`guide-progress-kernel.md` 方案一），迁出 items。
+> - **范围**：全链一次性（Tier 2，类名+包+网络 id+lang key）。
 
-## 现状（全在 `content/items/`）
+## 概念 A：新手引导（tutorial）
 
-- `items/service/GuideProgressService` —— 服务端核：10 步进度计算，聚合 `colony`/`building`/`warehouse`/`tourist`/`production` 五域状态
-- `items/service/GuideServerContext`
-- `items/data/GuideProgressSavedData`
-- `items/network/GuideProgressSyncPacket`、`GuideProgressUpdatePacket`
+服务端权威算"玩家走到第几步"（10 步：市政厅→仓库→存→工作站→合成→铺路→面包店→节点→祭坛→旅舍入住），聚合五域状态，推给客户端渲染。**已迁入 `content/tutorial`，类 `Guide*`→`Tutorial*`**：
+- `content/tutorial/service/` —— `TutorialProgressService`、`TutorialServerContext`
+- `content/tutorial/data/` —— `TutorialProgressSavedData`
+- `content/tutorial/network/` —— `TutorialProgressSyncPacket`、`TutorialProgressUpdatePacket`
+- `api/TutorialApi`（原 `GuideProgressApi`；**删除了混进来的 `openGuide`**——那是 B 指南书的操作，见下方）
+- `foundation/ui/tutorial/` —— `TutorialStep`、`TutorialRegistry`、`TutorialRenderer`、`TutorialSession`
+- 网络 id `guide_progress_*`→`tutorial_progress_*`；SavedData 名 `wandscape_guide_progress`→`wandscape_tutorial_progress`（开发期断档）；lang `guide.wandscape.*`→`tutorial.wandscape.*`
+- `WandscapeApis.getGuideProgressApiSilently`→`getTutorialApiSilently`；`GUIDE_FOLD_TOGGLE`(Tab 折叠键)→`TUTORIAL_FOLD_TOGGLE`（key id `key.wandscape.guide_fold` 保留，仅改显示名——用户拍板）
 
-客户端引导步骤表在 `foundation/ui/guidance/GuideRegistry`、`GuideStep`（引 `GuideProgressService.computeStep` 对齐顺序）——**服务端核在 items，客户端表在 foundation/ui/guidance，特性被割裂两地**。
+## 概念 B：指南书（guidebook）—— Step 2 待做，尚未动
 
-## 为何算错置
+玩家右键打开的可合成手册物品（`GuideBookItem`）+ markdown 阅读器 + `assets/wandscape/guide/**`（52 md）。纯物品零系统内核，**留在 `content/items/guidebook`**（packages.md 早已判"guidebook→并入 items"）。Step 2 统一词根：
+- `foundation/ui/guide/GuideScreen`→`foundation/ui/guidebook/GuidebookScreen`
+- `GuideDocOpenPacket`→`items/guidebook/network/GuidebookDocOpenPacket`（id `guide_doc_open`→`guidebook_doc_open`）
+- `GuideCommand`（debug 开测试屏）→`GuidebookCommand`
+- 资源目录 `assets/wandscape/guide/`→`guidebook/`；文档 `guide:` 链接前缀→`guidebook:`
+- lang `gui.wandscape.guide.*`→`gui.wandscape.guidebook.*`
+- **保留**：物品注册 id `guide_book`（模型/贴图/配方/存档侵入，收益低——用户拍板）；key id `key.wandscape.guide`（仅改显示名）
 
-违反"items=纯物品容器（无系统内核）"——它不是薄物品，而是一套带 SavedData + 进度计算 + 网包的独立系统。
+## 归属判定（为何独立成域）
 
-## 消费面（全模组，经 `WandscapeApis.getGuideApi`）
-
-`ColonyCreateRequestPacket`、`BuildingInteractHandler`、`ProjectionPlacePacket`、`RoadSegmentListener`、`WarehouseMenu`、`PanelStateTogglePacket`、`RequestGatherTaskPacket` 等。
-
-## 可选去路（拍板三选一）
-
-1. **独立功能域 `content/guide`**（最干净，新增一个域）
-2. **整体收 `foundation/ui/guidance`**（与客户端引导表同址；但服务端核含 SavedData + 系统逻辑，放 foundation 需注意"foundation 不反向认识域"红线——若引导要聚合五域状态，它天然认识域，可能仍该独立成域）
-3. **保留 `items` 但明确扩展 items 域为"物品 + 引导系统"**（力度最小，但淡化 items 定位；类似 scepter 例外）
-
-## 动工前
-
-- 与"核心恒持"（10 步进度如何被五域推进）对齐，确认进度的**真实归属语义**——它是"玩家在新手期的全局状态机"，不是任一域的私有状态。
-- 参考 §『拆分铁律』：跨域聚合状态（认多域）按其语义可独立成域，塞进某域或收 foundation 都不完全贴。
+违反"items=纯物品容器（无系统内核）"——它是跨域聚合状态（认五域），不是任一域私有状态。塞某域或收 foundation 都不贴（foundation 天然不反向认识域），按语义独立成域最干净（与"归属看语义不看依赖方向"一致）。

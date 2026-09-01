@@ -112,11 +112,11 @@ public record ProjectionPlacePacket(
         }
 
         // 4c. Push tutorial progress — the newly placed building may advance a step.
-        var guideApi = com.wsteam.wandscape.api.WandscapeApis.getGuideProgressApiSilently();
-        if (guideApi != null) {
+        var tutorialApi = com.wsteam.wandscape.api.WandscapeApis.getTutorialApiSilently();
+        if (tutorialApi != null) {
             var colonyApi2 = com.wsteam.wandscape.api.WandscapeApis.getColonyApiSilently();
             UUID guideColony = colonyApi2 != null ? colonyApi2.getColonyId(packet.anchorPos) : null;
-            guideApi.sendToPlayer(player, guideColony);
+            tutorialApi.sendToPlayer(player, guideColony);
         }
 
         // 5. If placing a government building (Town Hall) and no colony is linked to this position, prompt for colony creation

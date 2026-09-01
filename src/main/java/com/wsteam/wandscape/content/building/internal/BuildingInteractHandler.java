@@ -169,8 +169,8 @@ public final class BuildingInteractHandler {
                 PacketDistributor.sendToPlayer(player,
                         new ShopOpenPacket(pos, colonyId, state.getBuildingId(), creator, stock, maxStocks));
                 // Opening a shop triggers its first restock — push onboarding progress (step 7).
-                var guideApi = com.wsteam.wandscape.api.WandscapeApis.getGuideProgressApiSilently();
-                if (guideApi != null) guideApi.sendToPlayer(player, colonyId);
+                var tutorialApi = com.wsteam.wandscape.api.WandscapeApis.getTutorialApiSilently();
+                if (tutorialApi != null) tutorialApi.sendToPlayer(player, colonyId);
             }
             case "tavern" -> {
                 List<com.wsteam.wandscape.content.npc.data.MageResume> mageResumes = List.of();

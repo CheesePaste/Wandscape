@@ -156,8 +156,8 @@ public record RequestProductionTaskPacket(
             if ("synthesize".equals(pkt.action) && state.getColonyId() != null) {
                 var bank = ColonyItemBank.get(level);
                 if (bank != null) bank.recordPlayerSynthesize(state.getColonyId());
-                var guideApi = com.wsteam.wandscape.api.WandscapeApis.getGuideProgressApiSilently();
-                if (guideApi != null) guideApi.sendToPlayer(sp, state.getColonyId());
+                var tutorialApi = com.wsteam.wandscape.api.WandscapeApis.getTutorialApiSilently();
+                if (tutorialApi != null) tutorialApi.sendToPlayer(sp, state.getColonyId());
             }
 
             int queueSize = state.getTaskQueue().size();

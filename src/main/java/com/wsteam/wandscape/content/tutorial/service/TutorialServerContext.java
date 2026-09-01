@@ -1,10 +1,10 @@
-package com.wsteam.wandscape.content.items.service;
+package com.wsteam.wandscape.content.tutorial.service;
 
 /**
- * Pure view of colony state consumed by {@link GuideProgressService#computeStep}.
+ * Pure view of colony state consumed by {@link TutorialProgressService#computeStep}.
  * Kept MC-free so the step logic is unit-testable with a fake implementation.
  */
-public interface GuideServerContext {
+public interface TutorialServerContext {
 
     boolean hasCategory(String category);
 

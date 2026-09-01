@@ -172,14 +172,14 @@ public final class WandscapePanelOverlay {
         }
 
         // First-time guidance
-        if (com.wsteam.wandscape.foundation.ui.guidance.GuideSession.shouldShow()) {
+        if (com.wsteam.wandscape.foundation.ui.tutorial.TutorialSession.shouldShow()) {
             boolean buildMode = WandscapePanelState.getActiveSubMode() == WandscapePanelState.SubMode.BUILD_PROJECTION;
             boolean isPlacing = WandscapePanelState.getBuildPhase() == WandscapePanelState.BuildPhase.PLACING;
             boolean isBar = WandscapePanelState.getBuildPhase() == WandscapePanelState.BuildPhase.BAR;
             boolean isPinned = ProjectionClientState.isPinned();
-            com.wsteam.wandscape.foundation.ui.guidance.GuideRenderer.render(g, font, screenW, screenH, mx, my,
-                    com.wsteam.wandscape.foundation.ui.guidance.GuideRegistry.step(
-                            com.wsteam.wandscape.foundation.ui.guidance.GuideSession.currentStep()),
+            com.wsteam.wandscape.foundation.ui.tutorial.TutorialRenderer.render(g, font, screenW, screenH, mx, my,
+                    com.wsteam.wandscape.foundation.ui.tutorial.TutorialRegistry.step(
+                            com.wsteam.wandscape.foundation.ui.tutorial.TutorialSession.currentStep()),
                     buildMode, isPlacing, isBar, isPinned);
         }
 

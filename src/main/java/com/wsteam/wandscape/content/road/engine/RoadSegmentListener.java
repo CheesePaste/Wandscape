@@ -119,12 +119,12 @@ public final class RoadSegmentListener {
         if (bank != null) {
             bank.recordPlayerRoadPlace(pending.colonyId());
         }
-        var guideApi = WandscapeApis.getGuideProgressApiSilently();
-        if (guideApi == null) return;
+        var tutorialApi = WandscapeApis.getTutorialApiSilently();
+        if (tutorialApi == null) return;
         ServerPlayer player = level.getServer() != null
                 ? level.getServer().getPlayerList().getPlayer(pending.playerId()) : null;
         if (player != null) {
-            guideApi.sendToPlayer(player, pending.colonyId());
+            tutorialApi.sendToPlayer(player, pending.colonyId());
         }
         Log.info(TAG, "[Road] Built manual road counted for onboarding colony={}",
                 pending.colonyId());

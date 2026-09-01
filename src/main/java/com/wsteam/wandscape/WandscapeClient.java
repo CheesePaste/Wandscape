@@ -84,7 +84,7 @@ public class WandscapeClient {
     );
 
 
-    public static final KeyMapping GUIDE_FOLD_TOGGLE = new KeyMapping(
+    public static final KeyMapping TUTORIAL_FOLD_TOGGLE = new KeyMapping(
             "key.wandscape.guide_fold",
             InputConstants.Type.KEYSYM,
             GLFW.GLFW_KEY_TAB,
@@ -346,8 +346,8 @@ public class WandscapeClient {
         });
 
         // Guide progress seed — apply saved tutorial step/dismissal on panel open
-        com.wsteam.wandscape.content.items.network.GuideProgressSyncPacket.setClientHandler(packet ->
-                com.wsteam.wandscape.foundation.ui.guidance.GuideSession.applySync(
+        com.wsteam.wandscape.content.tutorial.network.TutorialProgressSyncPacket.setClientHandler(packet ->
+                com.wsteam.wandscape.foundation.ui.tutorial.TutorialSession.applySync(
                         packet.stepIndex(), packet.dismissed()));
 
         com.wsteam.wandscape.content.warehouse.transport.TransportStartPacket.setClientHandler(packet -> {
@@ -473,7 +473,7 @@ public class WandscapeClient {
     @SubscribeEvent
     static void onRegisterKeyMappings(RegisterKeyMappingsEvent event) {
         event.register(PROJECTION_TOGGLE);
-        event.register(GUIDE_FOLD_TOGGLE);
+        event.register(TUTORIAL_FOLD_TOGGLE);
         event.register(RAISE_CURSOR);
         event.register(GUIDE_TOGGLE);
         event.register(PANEL_AREAS_TOGGLE);

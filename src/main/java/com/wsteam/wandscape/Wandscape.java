@@ -898,13 +898,13 @@ public class Wandscape {
                         (packet, ctx) -> GuideBookOpenPacket.handleClient(packet))
                 // ── Guide progress (onboarding persistence) ──
                 .playToClient(
-                        com.wsteam.wandscape.content.items.network.GuideProgressSyncPacket.TYPE,
-                        com.wsteam.wandscape.content.items.network.GuideProgressSyncPacket.STREAM_CODEC,
-                        (packet, ctx) -> com.wsteam.wandscape.content.items.network.GuideProgressSyncPacket.handleClient(packet))
+                        com.wsteam.wandscape.content.tutorial.network.TutorialProgressSyncPacket.TYPE,
+                        com.wsteam.wandscape.content.tutorial.network.TutorialProgressSyncPacket.STREAM_CODEC,
+                        (packet, ctx) -> com.wsteam.wandscape.content.tutorial.network.TutorialProgressSyncPacket.handleClient(packet))
                 .playToServer(
-                        com.wsteam.wandscape.content.items.network.GuideProgressUpdatePacket.TYPE,
-                        com.wsteam.wandscape.content.items.network.GuideProgressUpdatePacket.STREAM_CODEC,
-                        (packet, ctx) -> com.wsteam.wandscape.content.items.network.GuideProgressUpdatePacket.handleServer(packet,
+                        com.wsteam.wandscape.content.tutorial.network.TutorialProgressUpdatePacket.TYPE,
+                        com.wsteam.wandscape.content.tutorial.network.TutorialProgressUpdatePacket.STREAM_CODEC,
+                        (packet, ctx) -> com.wsteam.wandscape.content.tutorial.network.TutorialProgressUpdatePacket.handleServer(packet,
                                 (net.minecraft.server.level.ServerPlayer) ctx.player()))
                 // ── Spline Road Editor ──
                 .playToClient(
@@ -964,9 +964,9 @@ public class Wandscape {
         Log.info(TAG, "ColonyStatusService registered");
 
         // Register server-authoritative tutorial progress evaluator
-        com.wsteam.wandscape.api.WandscapeApis.setGuideProgressApi(
-                new com.wsteam.wandscape.content.items.service.GuideProgressService());
-        Log.info(TAG, "GuideProgressService registered");
+        com.wsteam.wandscape.api.WandscapeApis.setTutorialApi(
+                new com.wsteam.wandscape.content.tutorial.service.TutorialProgressService());
+        Log.info(TAG, "TutorialProgressService registered");
 
         BuildCompleteListener.register();
         DemolishCompleteListener.register();

@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.foundation.ui.guidance;
+package com.wsteam.wandscape.foundation.ui.tutorial;
 
 import com.wsteam.wandscape.foundation.ui.panel.WandscapePanelOverlay;
 import net.minecraft.client.gui.Font;
@@ -16,9 +16,9 @@ import java.util.List;
  * drawn at {@link #SCALE} so text and layout shrink together. Supports clicking
  * to collapse/expand.
  */
-public final class GuideRenderer {
+public final class TutorialRenderer {
 
-    private GuideRenderer() {}
+    private TutorialRenderer() {}
 
     private static final int BOX_BG = 0xEE14161B;
     private static final int BOX_BORDER = 0xFFD4A338;
@@ -45,10 +45,10 @@ public final class GuideRenderer {
                        int toggleX, int toggleY, int toggleS,
                        int wrapW, String title, List<String> lines, String hint, boolean collapsed) {}
 
-    private static Box layout(Font font, int screenW, int screenH, GuideStep step,
+    private static Box layout(Font font, int screenW, int screenH, TutorialStep step,
                               boolean buildMode, boolean isPlacing, boolean isBar, boolean isPinned) {
         int pad = PAD;
-        boolean collapsed = GuideSession.isCollapsed();
+        boolean collapsed = TutorialSession.isCollapsed();
         int topY = Math.round(WandscapePanelOverlay.TOP_BAR_H / SCALE);
         int scaledW = Math.round(screenW / SCALE);
 
@@ -60,9 +60,9 @@ public final class GuideRenderer {
             return new Box(x, y, s, s, 0, 0, 0, 0, 0, 9, 0, "", List.of(), "", true);
         }
 
-        // GuideStep fields hold i18n keys; resolve them to the client's language here.
+        // TutorialStep fields hold i18n keys; resolve them to the client's language here.
         List<String> lines = step.linesFor(buildMode, isPlacing, isBar, isPinned)
-                .stream().map(GuideRenderer::text).toList();
+                .stream().map(TutorialRenderer::text).toList();
         String hint = text(step.hint());
         String title = text(step.title());
 
@@ -130,7 +130,7 @@ public final class GuideRenderer {
     }
 
     public static boolean isCloseClicked(Font font, double mx, double my, int screenW, int screenH,
-                                         GuideStep step, boolean buildMode, boolean isPlacing, boolean isBar, boolean isPinned) {
+                                         TutorialStep step, boolean buildMode, boolean isPlacing, boolean isBar, boolean isPinned) {
         Box b = layout(font, screenW, screenH, step, buildMode, isPlacing, isBar, isPinned);
         if (b.collapsed) return false; // no close button on the collapsed tab
         double sx = mx / SCALE;
@@ -140,7 +140,7 @@ public final class GuideRenderer {
     }
 
     public static boolean isCollapseClicked(Font font, double mx, double my, int screenW, int screenH,
-                                            GuideStep step, boolean buildMode, boolean isPlacing, boolean isBar, boolean isPinned) {
+                                            TutorialStep step, boolean buildMode, boolean isPlacing, boolean isBar, boolean isPinned) {
         Box b = layout(font, screenW, screenH, step, buildMode, isPlacing, isBar, isPinned);
         double sx = mx / SCALE;
         double sy = my / SCALE;
@@ -153,7 +153,7 @@ public final class GuideRenderer {
     }
 
     public static void render(GuiGraphics g, Font font, int screenW, int screenH, double mx, double my,
-                              GuideStep step,
+                              TutorialStep step,
                               boolean buildMode, boolean isPlacing, boolean isBar, boolean isPinned) {
         Box b = layout(font, screenW, screenH, step, buildMode, isPlacing, isBar, isPinned);
         int pad = PAD;

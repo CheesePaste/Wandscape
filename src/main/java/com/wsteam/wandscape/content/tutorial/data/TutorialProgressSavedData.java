@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.content.items.data;
+package com.wsteam.wandscape.content.tutorial.data;
 import com.wsteam.wandscape.content.task.ecs.World;
 
 import net.minecraft.core.HolderLookup;
@@ -16,9 +16,9 @@ import java.util.UUID;
  * Per-player tutorial progress (highest reached step + dismissal), stored in
  * the overworld so it survives restarts. Keyed by player UUID.
  */
-public class GuideProgressSavedData extends SavedData {
+public class TutorialProgressSavedData extends SavedData {
 
-    public static final String DATA_NAME = "wandscape_guide_progress";
+    public static final String DATA_NAME = "wandscape_tutorial_progress";
 
     private static final String TAG_PLAYERS = "players";
     private static final String TAG_UUID = "uuid";
@@ -26,28 +26,28 @@ public class GuideProgressSavedData extends SavedData {
     private static final String TAG_DISMISSED = "dismissed";
 
     /** stepIndex = number of completed steps (0 = none); dismissed = guide closed. */
-    public record GuideProgress(int stepIndex, boolean dismissed) {}
+    public record TutorialProgress(int stepIndex, boolean dismissed) {}
 
-    private final Map<UUID, GuideProgress> progress = new HashMap<>();
+    private final Map<UUID, TutorialProgress> progress = new HashMap<>();
 
-    public static final Factory<GuideProgressSavedData> FACTORY = new Factory<>(
-            GuideProgressSavedData::new,
-            GuideProgressSavedData::load,
+    public static final Factory<TutorialProgressSavedData> FACTORY = new Factory<>(
+            TutorialProgressSavedData::new,
+            TutorialProgressSavedData::load,
             null);
 
-    public static GuideProgressSavedData get(Level level) {
+    public static TutorialProgressSavedData get(Level level) {
         return level.getServer().overworld()
                 .getDataStorage()
                 .computeIfAbsent(FACTORY, DATA_NAME);
     }
 
     /** Saved progress for a player, or {@code (0, false)} if none recorded. */
-    public GuideProgress get(UUID playerId) {
-        return progress.getOrDefault(playerId, new GuideProgress(0, false));
+    public TutorialProgress get(UUID playerId) {
+        return progress.getOrDefault(playerId, new TutorialProgress(0, false));
     }
 
     public void set(UUID playerId, int stepIndex, boolean dismissed) {
-        progress.put(playerId, new GuideProgress(Math.max(0, stepIndex), dismissed));
+        progress.put(playerId, new TutorialProgress(Math.max(0, stepIndex), dismissed));
         setDirty();
     }
 
@@ -65,14 +65,14 @@ public class GuideProgressSavedData extends SavedData {
         return tag;
     }
 
-    private static GuideProgressSavedData load(CompoundTag tag, HolderLookup.Provider registries) {
-        GuideProgressSavedData data = new GuideProgressSavedData();
+    private static TutorialProgressSavedData load(CompoundTag tag, HolderLookup.Provider registries) {
+        TutorialProgressSavedData data = new TutorialProgressSavedData();
         ListTag list = tag.getList(TAG_PLAYERS, Tag.TAG_COMPOUND);
         for (int i = 0; i < list.size(); i++) {
             CompoundTag entry = list.getCompound(i);
             if (!entry.hasUUID(TAG_UUID)) continue;
             data.progress.put(entry.getUUID(TAG_UUID),
-                    new GuideProgress(entry.getInt(TAG_STEP), entry.getBoolean(TAG_DISMISSED)));
+                    new TutorialProgress(entry.getInt(TAG_STEP), entry.getBoolean(TAG_DISMISSED)));
         }
         return data;
     }

@@ -112,8 +112,8 @@ public final class WandscapePanelController {
         // 玩家列表闪烁；引导结束后 Tab 恢复原版玩家列表功能。
         // 面板隐藏时放行，让 Tab 回到原版玩家列表。
         if (!WandscapePanelState.isPanelHidden()
-                && com.wsteam.wandscape.foundation.ui.guidance.GuideSession.shouldShow()
-                && com.wsteam.wandscape.WandscapeClient.GUIDE_FOLD_TOGGLE.getKey().getValue() == GLFW.GLFW_KEY_TAB) {
+                && com.wsteam.wandscape.foundation.ui.tutorial.TutorialSession.shouldShow()
+                && com.wsteam.wandscape.WandscapeClient.TUTORIAL_FOLD_TOGGLE.getKey().getValue() == GLFW.GLFW_KEY_TAB) {
             mc.options.keyPlayerList.setDown(false);
         }
 
@@ -190,22 +190,22 @@ public final class WandscapePanelController {
         double mouseY = mc.mouseHandler.ypos() / guiScale;
 
         // ── Guidance buttons handling (close × / collapse / expand) ──
-        if (com.wsteam.wandscape.foundation.ui.guidance.GuideSession.shouldShow()) {
+        if (com.wsteam.wandscape.foundation.ui.tutorial.TutorialSession.shouldShow()) {
             boolean buildMode = WandscapePanelState.getActiveSubMode() == WandscapePanelState.SubMode.BUILD_PROJECTION;
             boolean isPlacing = WandscapePanelState.getBuildPhase() == WandscapePanelState.BuildPhase.PLACING;
             boolean isBar = WandscapePanelState.getBuildPhase() == WandscapePanelState.BuildPhase.BAR;
             boolean isPinned = ProjectionClientState.isPinned();
-            var step = com.wsteam.wandscape.foundation.ui.guidance.GuideRegistry.step(
-                    com.wsteam.wandscape.foundation.ui.guidance.GuideSession.currentStep());
-            if (com.wsteam.wandscape.foundation.ui.guidance.GuideRenderer.isCloseClicked(mc.font, mouseX, mouseY,
+            var step = com.wsteam.wandscape.foundation.ui.tutorial.TutorialRegistry.step(
+                    com.wsteam.wandscape.foundation.ui.tutorial.TutorialSession.currentStep());
+            if (com.wsteam.wandscape.foundation.ui.tutorial.TutorialRenderer.isCloseClicked(mc.font, mouseX, mouseY,
                     screenW, screenH, step, buildMode, isPlacing, isBar, isPinned)) {
-                com.wsteam.wandscape.foundation.ui.guidance.GuideSession.dismiss();
+                com.wsteam.wandscape.foundation.ui.tutorial.TutorialSession.dismiss();
                 event.setCanceled(true);
                 return;
             }
-            if (com.wsteam.wandscape.foundation.ui.guidance.GuideRenderer.isCollapseClicked(mc.font, mouseX, mouseY,
+            if (com.wsteam.wandscape.foundation.ui.tutorial.TutorialRenderer.isCollapseClicked(mc.font, mouseX, mouseY,
                     screenW, screenH, step, buildMode, isPlacing, isBar, isPinned)) {
-                com.wsteam.wandscape.foundation.ui.guidance.GuideSession.toggleCollapsed();
+                com.wsteam.wandscape.foundation.ui.tutorial.TutorialSession.toggleCollapsed();
                 event.setCanceled(true);
                 return;
             }
@@ -532,10 +532,10 @@ public final class WandscapePanelController {
 
         // Tab key: fold/expand the tutorial guide only (cursor raise is on C).
         // When no guide is showing, Tab does nothing to the panel.
-        if (com.wsteam.wandscape.WandscapeClient.GUIDE_FOLD_TOGGLE.matches(key, scanCode)
+        if (com.wsteam.wandscape.WandscapeClient.TUTORIAL_FOLD_TOGGLE.matches(key, scanCode)
                 && WandscapePanelState.isPanelOpen()
-                && com.wsteam.wandscape.foundation.ui.guidance.GuideSession.shouldShow()) {
-            com.wsteam.wandscape.foundation.ui.guidance.GuideSession.toggleCollapsed();
+                && com.wsteam.wandscape.foundation.ui.tutorial.TutorialSession.shouldShow()) {
+            com.wsteam.wandscape.foundation.ui.tutorial.TutorialSession.toggleCollapsed();
             return;
         }
 

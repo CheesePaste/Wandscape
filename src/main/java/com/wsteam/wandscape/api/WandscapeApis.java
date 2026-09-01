@@ -114,10 +114,10 @@ public final class WandscapeApis {
     public static ScepterApi getScepterApiSilently() { return scepterApi; }
     public static void setScepterApi(ScepterApi api) { scepterApi = api; }
 
-    private static GuideProgressApi guideProgressApi;
+    private static TutorialApi tutorialApi;
     @javax.annotation.Nullable
-    public static GuideProgressApi getGuideProgressApiSilently() { return guideProgressApi; }
-    public static void setGuideProgressApi(GuideProgressApi api) { guideProgressApi = api; }
+    public static TutorialApi getTutorialApiSilently() { return tutorialApi; }
+    public static void setTutorialApi(TutorialApi api) { tutorialApi = api; }
 
     private static MagicApi magicApi;
     public static MagicApi getMagicApi() {

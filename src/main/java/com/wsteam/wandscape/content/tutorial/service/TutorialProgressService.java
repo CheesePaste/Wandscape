@@ -1,13 +1,13 @@
-package com.wsteam.wandscape.content.items.service;
+package com.wsteam.wandscape.content.tutorial.service;
 
 import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.content.building.internal.BuildingSavedData;
-import com.wsteam.wandscape.api.GuideProgressApi;
+import com.wsteam.wandscape.api.TutorialApi;
 import com.wsteam.wandscape.content.building.data.BuildingData;
 import com.wsteam.wandscape.content.building.internal.BuildingState;
-import com.wsteam.wandscape.content.items.data.GuideProgressSavedData;
+import com.wsteam.wandscape.content.tutorial.data.TutorialProgressSavedData;
 import com.wsteam.wandscape.foundation.log.Log;
-import com.wsteam.wandscape.content.items.network.GuideProgressSyncPacket;
+import com.wsteam.wandscape.content.tutorial.network.TutorialProgressSyncPacket;
 import com.wsteam.wandscape.api.WandscapeApis;
 import com.wsteam.wandscape.content.warehouse.ColonyItemBank;
 import net.minecraft.server.level.ServerLevel;
@@ -23,33 +23,33 @@ import java.util.UUID;
  * colony state (buildings, player actions, shop stock, tourist stays) and
  * pushes it to the client, which only renders.
  *
- * <p>{@link #computeStep} is pure and MC-free (over {@link GuideServerContext})
+ * <p>{@link #computeStep} is pure and MC-free (over {@link TutorialServerContext})
  * so the ordering logic is unit-testable.
  */
-public final class GuideProgressService implements GuideProgressApi {
+public final class TutorialProgressService implements TutorialApi {
 
-    private static final String TAG = "GuideProgressService";
+    private static final String TAG = "TutorialProgressService";
 
     @Override
     public void sendToPlayer(ServerPlayer player, @Nullable UUID colonyId) {
         ServerLevel level = player.serverLevel();
-        GuideProgressSavedData sd = GuideProgressSavedData.get(level);
-        GuideProgressSavedData.GuideProgress saved = sd.get(player.getUUID());
+        TutorialProgressSavedData sd = TutorialProgressSavedData.get(level);
+        TutorialProgressSavedData.TutorialProgress saved = sd.get(player.getUUID());
         int step = saved.stepIndex();
         if (colonyId != null) {
             step = Math.max(step, computeStep(new ServerContext(level, colonyId)));
         }
         sd.set(player.getUUID(), step, saved.dismissed());
-        PacketDistributor.sendToPlayer(player, new GuideProgressSyncPacket(step, saved.dismissed()));
+        PacketDistributor.sendToPlayer(player, new TutorialProgressSyncPacket(step, saved.dismissed()));
         Log.info(TAG, "[Guide] {} step={} dismissed={}",
                 player.getGameProfile().getName(), step, saved.dismissed());
     }
 
     /**
-     * Step completion checks, in order — MUST match {@code GuideRegistry.STEPS}.
+     * Step completion checks, in order — MUST match {@code TutorialRegistry.STEPS}.
      * Returns the number of leading steps satisfied (0..10).
      */
-    public static int computeStep(GuideServerContext ctx) {
+    public static int computeStep(TutorialServerContext ctx) {
         int step = 0;
         if (ctx.hasCategory("government")) step++;        // 1 建造市政厅
         if (ctx.hasCategory("storage")) step++;           // 2 建造仓库
@@ -64,7 +64,7 @@ public final class GuideProgressService implements GuideProgressApi {
         return step;
     }
 
-    private static final class ServerContext implements GuideServerContext {
+    private static final class ServerContext implements TutorialServerContext {
         private final ServerLevel level;
         private final UUID colonyId;
         private final List<BuildingState> buildings;

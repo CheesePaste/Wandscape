@@ -71,9 +71,9 @@ public record PanelStateTogglePacket(boolean open) implements CustomPacketPayloa
 
             // Seed tutorial progress (recomputed when a colony exists; otherwise
             // only the saved value so a pre-colony dismissal still persists).
-            var guideApi = com.wsteam.wandscape.api.WandscapeApis.getGuideProgressApiSilently();
-            if (guideApi != null) {
-                guideApi.sendToPlayer(player, colonyId);
+            var tutorialApi = com.wsteam.wandscape.api.WandscapeApis.getTutorialApiSilently();
+            if (tutorialApi != null) {
+                tutorialApi.sendToPlayer(player, colonyId);
             }
         } else {
             PanelStateTracker.close(playerId);

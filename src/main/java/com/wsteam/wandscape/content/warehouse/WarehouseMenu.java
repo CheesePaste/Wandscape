@@ -293,8 +293,8 @@ public class WarehouseMenu extends AbstractContainerMenu {
         if (colonyId == null) return;
         var bank = ColonyItemBank.get(player.serverLevel());
         if (bank != null) bank.recordPlayerDeposit(colonyId);
-        var guideApi = WandscapeApis.getGuideProgressApiSilently();
-        if (guideApi != null) guideApi.sendToPlayer(player, colonyId);
+        var tutorialApi = WandscapeApis.getTutorialApiSilently();
+        if (tutorialApi != null) tutorialApi.sendToPlayer(player, colonyId);
     }
 
     private void playSound(ServerPlayer player) {

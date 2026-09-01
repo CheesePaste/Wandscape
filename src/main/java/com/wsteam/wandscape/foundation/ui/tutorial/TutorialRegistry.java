@@ -1,12 +1,12 @@
-package com.wsteam.wandscape.foundation.ui.guidance;
-import com.wsteam.wandscape.content.items.service.GuideProgressService;
+package com.wsteam.wandscape.foundation.ui.tutorial;
+import com.wsteam.wandscape.content.tutorial.service.TutorialProgressService;
 
 import java.util.List;
 
 /**
  * Ordered onboarding steps (pure content — every text field is an i18n key resolved at
- * render time by {@link GuideRenderer}). Completion is evaluated server-side by
- * {@code GuideProgressService.computeStep} — the ORDER here MUST match the checks in that
+ * render time by {@link TutorialRenderer}). Completion is evaluated server-side by
+ * {@code TutorialProgressService.computeStep} — the ORDER here MUST match the checks in that
  * method. Building names mirror the building-bar card names.
  *
  * <p>Keys live in {@code assets/wandscape/lang/en_us.json} (English) and {@code zh_cn.json}
@@ -27,9 +27,9 @@ import java.util.List;
  * <p>Readability: every character must be clearly visible — no gray/dark text (§7/§8).
  * Keys/buttons/building names use §e gold, instruction lines §b aqua, completed steps §a green.
  */
-public final class GuideRegistry {
+public final class TutorialRegistry {
 
-    private GuideRegistry() {}
+    private TutorialRegistry() {}
 
     // ── Shared keys (reused across steps) ──
 
@@ -41,7 +41,7 @@ public final class GuideRegistry {
             "guide.wandscape.common.pinned_locked",
             "guide.wandscape.common.pinned_submit");
 
-    private static final GuideStep TOWN_HALL = new GuideStep(
+    private static final TutorialStep TOWN_HALL = new TutorialStep(
             "townhall",
             "guide.wandscape.townhall.title",
             List.of(
@@ -57,7 +57,7 @@ public final class GuideRegistry {
             PINNED_LINES,
             "guide.wandscape.townhall.hint");
 
-    private static final GuideStep WAREHOUSE = new GuideStep(
+    private static final TutorialStep WAREHOUSE = new TutorialStep(
             "warehouse",
             "guide.wandscape.warehouse.title",
             List.of(
@@ -72,7 +72,7 @@ public final class GuideRegistry {
             PINNED_LINES,
             "guide.wandscape.warehouse.hint");
 
-    private static final GuideStep DEPOSIT = new GuideStep(
+    private static final TutorialStep DEPOSIT = new TutorialStep(
             "deposit",
             "guide.wandscape.deposit.title",
             List.of(
@@ -93,7 +93,7 @@ public final class GuideRegistry {
                     "guide.wandscape.deposit.line3"),
             "guide.wandscape.deposit.hint");
 
-    private static final GuideStep WORKSTATION = new GuideStep(
+    private static final TutorialStep WORKSTATION = new TutorialStep(
             "workstation",
             "guide.wandscape.workstation.title",
             List.of(
@@ -108,7 +108,7 @@ public final class GuideRegistry {
             PINNED_LINES,
             "guide.wandscape.workstation.hint");
 
-    private static final GuideStep SYNTHESIZE = new GuideStep(
+    private static final TutorialStep SYNTHESIZE = new TutorialStep(
             "synthesize",
             "guide.wandscape.synthesize.title",
             List.of(
@@ -133,7 +133,7 @@ public final class GuideRegistry {
                     "guide.wandscape.synthesize.line4"),
             "guide.wandscape.synthesize.hint");
 
-    private static final GuideStep ROAD = new GuideStep(
+    private static final TutorialStep ROAD = new TutorialStep(
             "road",
             "guide.wandscape.road.title",
             List.of(
@@ -154,7 +154,7 @@ public final class GuideRegistry {
                     "guide.wandscape.road.line3"),
             "guide.wandscape.road.hint");
 
-    private static final GuideStep BAKERY = new GuideStep(
+    private static final TutorialStep BAKERY = new TutorialStep(
             "bakery",
             "guide.wandscape.bakery.title",
             List.of(
@@ -169,7 +169,7 @@ public final class GuideRegistry {
             PINNED_LINES,
             "guide.wandscape.bakery.hint");
 
-    private static final GuideStep NODE = new GuideStep(
+    private static final TutorialStep NODE = new TutorialStep(
             "node",
             "guide.wandscape.node.title",
             List.of(
@@ -184,7 +184,7 @@ public final class GuideRegistry {
             PINNED_LINES,
             "guide.wandscape.node.hint");
 
-    private static final GuideStep ALTAR = new GuideStep(
+    private static final TutorialStep ALTAR = new TutorialStep(
             "altar",
             "guide.wandscape.altar.title",
             List.of(
@@ -199,7 +199,7 @@ public final class GuideRegistry {
             PINNED_LINES,
             "guide.wandscape.altar.hint");
 
-    private static final GuideStep INN = new GuideStep(
+    private static final TutorialStep INN = new TutorialStep(
             "youth_hostel",
             "guide.wandscape.youth_hostel.title",
             List.of(
@@ -214,11 +214,11 @@ public final class GuideRegistry {
             PINNED_LINES,
             "guide.wandscape.youth_hostel.hint");
 
-    public static final List<GuideStep> STEPS = List.of(
+    public static final List<TutorialStep> STEPS = List.of(
             TOWN_HALL, WAREHOUSE, DEPOSIT, WORKSTATION, SYNTHESIZE,
             ROAD, BAKERY, NODE, ALTAR, INN);
 
-    public static GuideStep step(int index) {
+    public static TutorialStep step(int index) {
         return STEPS.get(index);
     }
 }

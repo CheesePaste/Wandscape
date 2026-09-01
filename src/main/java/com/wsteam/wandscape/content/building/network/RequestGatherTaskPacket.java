@@ -79,8 +79,8 @@ public record RequestGatherTaskPacket(
             if (state.getColonyId() != null) {
                 var bank = ColonyItemBank.get(level);
                 if (bank != null) bank.recordGatherPublished(state.getColonyId());
-                var guideApi = com.wsteam.wandscape.api.WandscapeApis.getGuideProgressApiSilently();
-                if (guideApi != null) guideApi.sendToPlayer(sp, state.getColonyId());
+                var tutorialApi = com.wsteam.wandscape.api.WandscapeApis.getTutorialApiSilently();
+                if (tutorialApi != null) tutorialApi.sendToPlayer(sp, state.getColonyId());
             }
 
             Log.info(TAG, "[GatherTask] enqueued {} x{} at building {} (harvests={})",
