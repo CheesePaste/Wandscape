@@ -253,7 +253,7 @@ public final class BuildingContributionRegistry {
         // Merge decoration radiation bonuses for individual functional buildings
         DecorationBonusCache cache = this.decorationBonusCache;
         if (cache != null && source != null) {
-            double cap = Config.DECORATION_BONUS_CAP.get();
+            double cap = com.wsteam.wandscape.foundation.util.BalanceValues.decorationBonusCap();
             for (BuildingState state : source.allBuildings()) {
                 if (!colonyId.equals(state.getColonyId())) continue;
                 if (!state.isStructureIntact()) continue;

@@ -135,9 +135,9 @@ public final class GuardCombat {
         //    （fleeStartDist/fleeStandoff），LOS 被墙挡也继续后撤不走近交战；光束边走边打仍在输出。
         //    能奶的低血已被上方 L0 紧急奶拦下，这里是「奶不了」的兜底逃跑。──
         boolean fleeing = npc.getHealth() / Math.max(1f, npc.getMaxHealth())
-                < Config.GUARD_FLEE_HP_THRESHOLD.get();
-        double startDist = fleeing ? Config.GUARD_FLEE_START_DIST.get() : Config.GUARD_KITE_START_DIST.get();
-        double standoff = fleeing ? Config.GUARD_FLEE_STANDOFF.get() : Config.GUARD_KITE_STANDOFF.get();
+                < com.wsteam.wandscape.foundation.util.BalanceValues.guardFleeHpThreshold();
+        double startDist = fleeing ? com.wsteam.wandscape.foundation.util.BalanceValues.guardFleeStartDist() : com.wsteam.wandscape.foundation.util.BalanceValues.guardKiteStartDist();
+        double standoff = fleeing ? com.wsteam.wandscape.foundation.util.BalanceValues.guardFleeStandoff() : com.wsteam.wandscape.foundation.util.BalanceValues.guardKiteStandoff();
 
         MagicBeamEntity beam = findActiveBeam(level, npc);
         if (beam != null) {
@@ -437,7 +437,7 @@ public final class GuardCombat {
         Vec3 guardPos = npc.getStaffPosition();
         int mobFeetY = Mth.floor(target.getY());
         double towardGuard = Math.atan2(guardPos.z - mobCenter.z, guardPos.x - mobCenter.x);
-        double standoff = Config.GUARD_ENGAGE_STANDOFF.get();
+        double standoff = com.wsteam.wandscape.foundation.util.BalanceValues.guardEngageStandoff();
 
         BlockPos best = null;                 // 有视线的候选中最靠近守卫的
         double bestLosDistSq = Double.MAX_VALUE;
@@ -556,7 +556,7 @@ public final class GuardCombat {
     /** 便捷重载：落点间距用默认 {@link Config#GUARD_KITE_STANDOFF}（和平模式逃跑等调用）。 */
     public static void navigateAway(ServerLevel level, WandscapeNpc npc, World world,
                                     long npcId, Vec3 threat) {
-        navigateAway(level, npc, world, npcId, threat, Config.GUARD_KITE_STANDOFF.get());
+        navigateAway(level, npc, world, npcId, threat, com.wsteam.wandscape.foundation.util.BalanceValues.guardKiteStandoff());
     }
 
     /**

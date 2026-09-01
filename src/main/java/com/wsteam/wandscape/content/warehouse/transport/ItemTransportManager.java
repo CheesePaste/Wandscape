@@ -69,8 +69,8 @@ public class ItemTransportManager {
         int ticksOnRoad = RoadRouter.DEFAULT_TICKS_ON_ROAD;
         int ticksOffRoad = RoadRouter.DEFAULT_TICKS_OFF_ROAD;
         try {
-            ticksOnRoad = Config.TRANSPORT_TICKS_PER_BLOCK_ON_ROAD.get();
-            ticksOffRoad = Config.TRANSPORT_TICKS_PER_BLOCK_OFF_ROAD.get();
+            ticksOnRoad = com.wsteam.wandscape.foundation.util.BalanceValues.transportTicksPerBlockOnRoad();
+            ticksOffRoad = com.wsteam.wandscape.foundation.util.BalanceValues.transportTicksPerBlockOffRoad();
         } catch (Exception ignored) {}
 
         TransportRoute actualRoute = route;

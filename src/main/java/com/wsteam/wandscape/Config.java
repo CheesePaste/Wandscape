@@ -12,14 +12,6 @@ public class Config {
 
     // ---- Transport (物品运输) ----
 
-    public static final ModConfigSpec.IntValue TRANSPORT_TICKS_PER_BLOCK_ON_ROAD = BUILDER
-            .comment("物品贴路巡航运输速度（tick/格，越小越快）：默认 2（10 格/秒），旧版为 10（2 格/秒）。")
-            .defineInRange("transport.ticksPerBlockOnRoad", 2, 1, 20);
-
-    public static final ModConfigSpec.IntValue TRANSPORT_TICKS_PER_BLOCK_OFF_ROAD = BUILDER
-            .comment("物品离路/直飞运输速度（tick/格，越小越快）：默认 4（5 格/秒），旧版为 20（1 格/秒）。")
-            .defineInRange("transport.ticksPerBlockOffRoad", 4, 1, 40);
-
     public static final ModConfigSpec.IntValue SCHEDULER_HEARTBEAT_TICKS = BUILDER
             .comment("Scheduler heartbeat interval in ticks: how often idle NPCs are matched "
                     + "to pending tasks (20 ticks = 1 second)")
@@ -37,31 +29,9 @@ public class Config {
             .comment("Number of consecutive stuck checks before NPC teleports")
             .defineInRange("scheduler.stuckMaxRetries", 3, 1, 10);
 
-    public static final ModConfigSpec.IntValue NPC_REGEN_GRACE_TICKS = BUILDER
-            .comment("Ticks after taking damage before out-of-combat health regen resumes (100 = 5s)")
-            .defineInRange("npc.regenGraceTicks", 100, 20, 1000);
-
-    public static final ModConfigSpec.IntValue NPC_REGEN_INTERVAL_TICKS = BUILDER
-            .comment("Ticks per 1 HP healed once out-of-combat regen is active (80 = 4s)")
-            .defineInRange("npc.regenIntervalTicks", 80, 20, 400);
-
-    public static final ModConfigSpec.IntValue NPC_MANA_REGEN_TICKS = BUILDER
-            .comment("Ticks per mana regen settlement (10 = settle every 0.5s)")
-            .defineInRange("npc.manaRegenTicks", 10, 1, 100);
-
-    public static final ModConfigSpec.DoubleValue NPC_MANA_REGEN_FRACTION = BUILDER
-            .comment("Fraction of max mana regenerated per settlement (0.01 = 1% of max; full refill ~50s)")
-            .defineInRange("npc.manaRegenFraction", 0.01, 0.00, 1.0);
-
     public static final ModConfigSpec.IntValue NPC_WALK_THRESHOLD = BUILDER
             .comment("Max distance in blocks for NPC pathfinding; beyond this they teleport")
             .defineInRange("npc.walkThreshold", 64, 16, 256);
-
-    public static final ModConfigSpec.IntValue REVIVE_NEAR_BUILDING_RANGE = BUILDER
-            .comment("Colony-defense revive radius: a colony NPC that dies within this 3D distance of any "
-                    + "building of its colony is revived immediately at the town hall door (reuses the "
-                    + "all-dead fallback revive), instead of requiring an altar ritual.")
-            .defineInRange("revive.nearBuildingRange", 20, 1, 64);
 
     // ---- Colony autonomy ----
 
@@ -166,10 +136,6 @@ public class Config {
 
     // ---- Decoration system ----
 
-    public static final ModConfigSpec.DoubleValue DECORATION_BONUS_CAP = BUILDER
-            .comment("Max decoration bonus as fraction of a building's base stat (1.0 = 100%)")
-            .defineInRange("decoration.bonusCap", 1.0, 0.0, 5.0);
-
     public static final ModConfigSpec.IntValue DECORATION_SCAN_INTERVAL_TICKS = BUILDER
             .comment("Interval in ticks between decoration radiation recalculations")
             .defineInRange("decoration.scanIntervalTicks", 200, 40, 1200);
@@ -270,85 +236,12 @@ public class Config {
 
     // ---- Guard (守卫) system ----
 
-    public static final ModConfigSpec.IntValue GUARD_RANGE = BUILDER
-            .comment("Guard threat/attack radius: horizontal X/Z expansion of a building's AABB (Y unchanged). "
-                    + "Monsters within this radius are attacked.")
-            .defineInRange("guard.range", 10, 1, 64);
-
-    public static final ModConfigSpec.IntValue GUARD_RELEASE_RANGE = BUILDER
-            .comment("Guard release radius: the guard task completes only when no monster is within this "
-                    + "horizontal X/Z expansion (hysteresis band, should be > guard.range to avoid edge churn). "
-                    + "Y unchanged.")
-            .defineInRange("guard.releaseRange", 15, 2, 64);
-
-    public static final ModConfigSpec.IntValue GUARD_SELF_DEFENSE_RANGE = BUILDER
-            .comment("NPC self-defense aggro radius (blocks): hostile mobs within this spherical distance "
-                    + "around an NPC are attacked unconditionally, preempting the NPC's current task. "
-                    + "Independent of building guard zones.")
-            .defineInRange("guard.selfDefenseRange", 16, 1, 64);
-
-    public static final ModConfigSpec.IntValue GUARD_HATE_RANGE = BUILDER
-            .comment("NPC retaliation range (blocks): the NPC fights back against a non-player mob that "
-                    + "damaged it while the attacker is within this distance (the hate is refreshed on each hit).")
-            .defineInRange("guard.hateRange", 48, 1, 128);
-
-    public static final ModConfigSpec.IntValue GUARD_HATE_DURATION_TICKS = BUILDER
-            .comment("NPC hate memory (ticks): how long the NPC keeps a grudge against a non-player attacker "
-                    + "before forgetting, unless it gets hurt again (600 = 30s).")
-            .defineInRange("guard.hateDurationTicks", 600, 20, 72000);
-
-    public static final ModConfigSpec.IntValue GUARD_FOLLOW_ATTACK_DURATION_TICKS = BUILDER
-            .comment("NPC follow-combat memory (ticks): how long a follow-mode NPC keeps pursuing the mob its "
-                    + "follower player attacked before giving up, unless the player attacks it again (300 = 15s). "
-                    + "Pursuit range reuses guard.hateRange.")
-            .defineInRange("guard.followAttackDurationTicks", 300, 20, 72000);
-
-    public static final ModConfigSpec.DoubleValue GUARD_KITE_START_DIST = BUILDER
-            .comment("Combat kiting trigger distance (blocks, horizontal): the NPC starts backing away once a "
-                    + "visible enemy gets within this distance. 9 keeps a margin past creeper lethal blast (~4, "
-                    + "charged ~8) and melee reach (~3) so the NPC isn't caught in the blast during recheck gaps.")
-            .defineInRange("guard.kiteStartDist", 9.0, 2.0, 32.0);
-
-    public static final ModConfigSpec.DoubleValue GUARD_KITE_STANDOFF = BUILDER
-            .comment("Combat kiting standoff (blocks): the NPC backs away to this distance from the threat point. "
-                    + "13 is 1 block past the normal-creeper safe radius (~8); beam range 200 keeps output up.")
-            .defineInRange("guard.kiteStandoff", 13.0, 3.0, 64.0);
-
     public static final ModConfigSpec.IntValue GUARD_SWAY_FLIP_TICKS = BUILDER
             .comment("Lateral sway direction random-check interval (ticks): at the kiting standoff with a "
                     + "visible target and no active beam, the NPC strafes sideways like a vanilla skeleton "
                     + "instead of standing still. On this cadence it rolls whether to switch sides (35%) and "
                     + "re-rolls its movement magnitude, so the weave is organic and non-pendulum.")
             .defineInRange("guard.swayFlipTicks", 20, 10, 200);
-
-    public static final ModConfigSpec.DoubleValue GUARD_ENGAGE_STANDOFF = BUILDER
-            .comment("Approach landing distance (blocks) when LOS is blocked: the NPC pathfinds to a standable, "
-                    + "LOS-visible spot this far from the target instead of walking into melee/creeper range. "
-                    + "Kept >= kiteStartDist so the approach doesn't immediately re-trigger kiting.")
-            .defineInRange("guard.engageStandoff", 9.0, 2.0, 32.0);
-
-    // ── scepter: 玩家权杖（庇护/敌对）──
-    public static final ModConfigSpec.DoubleValue SCEPTER_HOSTILE_RANGE = BUILDER
-            .comment("Hostile-wand forced-target range (blocks): when a player marks a creature with the "
-                    + "hostile wand, every colony mage within this distance of that creature is forced to "
-                    + "prioritize attacking it until the mark is cleared or it dies.")
-            .defineInRange("scepter.hostileRange", 128.0, 16.0, 512.0);
-
-    public static final ModConfigSpec.DoubleValue GUARD_FLEE_HP_THRESHOLD = BUILDER
-            .comment("Low-HP flee threshold (0-1 hp ratio): below this the NPC enters a flee state with larger "
-                    + "kiting distances (fleeStartDist/fleeStandoff) and stops walking toward LOS-blocked "
-                    + "targets, prioritizing survival. Runs as an L0 override before player spell strategy.")
-            .defineInRange("guard.fleeHpThreshold", 0.30, 0.05, 1.0);
-
-    public static final ModConfigSpec.DoubleValue GUARD_FLEE_START_DIST = BUILDER
-            .comment("Flee-state kiting trigger distance (blocks): the fleeing NPC starts backing away once an "
-                    + "enemy gets within this distance.")
-            .defineInRange("guard.fleeStartDist", 12.0, 3.0, 64.0);
-
-    public static final ModConfigSpec.DoubleValue GUARD_FLEE_STANDOFF = BUILDER
-            .comment("Flee-state standoff (blocks): the fleeing NPC backs away to this distance from the threat. "
-                    + "18 is far beyond even a charged creeper's lethal blast (~8).")
-            .defineInRange("guard.fleeStandoff", 18.0, 4.0, 64.0);
 
     // ---- Raid (袭击) system ----
 

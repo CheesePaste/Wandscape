@@ -45,8 +45,8 @@ public final class GuardCommand {
             return 0;
         }
 
-        int attackRange = Config.GUARD_RANGE.get();
-        int releaseRange = Config.GUARD_RELEASE_RANGE.get();
+        int attackRange = com.wsteam.wandscape.foundation.util.BalanceValues.guardRange();
+        int releaseRange = com.wsteam.wandscape.foundation.util.BalanceValues.guardReleaseRange();
 
         List<GuardZone> attackZones = GuardScanner.zones(level, attackRange);
         AABB queryBox = GuardScanner.unionAabb(attackZones);

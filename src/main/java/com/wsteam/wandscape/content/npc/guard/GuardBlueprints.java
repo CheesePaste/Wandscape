@@ -21,8 +21,8 @@ public final class GuardBlueprints {
     }
 
     private static TaskSequence attackSteps(Map<String, JsonElement> params) {
-        int attackRange = intParam(params, "attackRange", Config.GUARD_RANGE.get());
-        int releaseRange = intParam(params, "releaseRange", Config.GUARD_RELEASE_RANGE.get());
+        int attackRange = intParam(params, "attackRange", com.wsteam.wandscape.foundation.util.BalanceValues.guardRange());
+        int releaseRange = intParam(params, "releaseRange", com.wsteam.wandscape.foundation.util.BalanceValues.guardReleaseRange());
         return new TaskSequence(
                 List.of(new AtomicOp.AttackMonsterOp(attackRange, releaseRange)),
                 "Guard attack");

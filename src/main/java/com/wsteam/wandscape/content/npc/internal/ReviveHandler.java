@@ -86,7 +86,7 @@ public final class ReviveHandler {
      * 阵亡点距建筑 ≤ range 时尝试复活并返回 true；生成失败时记录保留，可由祭坛/全灭保底重试。
      */
     public static boolean checkAndReviveNearColonyBuilding(ServerLevel level, DeathRecord rec) {
-        int range = Config.REVIVE_NEAR_BUILDING_RANGE.get();
+        int range = com.wsteam.wandscape.foundation.util.BalanceValues.reviveNearBuildingRange();
         if (!isWithinRangeOfColonyBuilding(level, rec.colonyId(), rec.x(), rec.y(), rec.z(), range)) {
             return false;
         }

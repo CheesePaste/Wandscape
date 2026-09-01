@@ -141,7 +141,7 @@ public final class GuardAttackExecutor implements OpExecutor<AtomicOp.AttackMons
             LivingEntity forced = scepterApi.forcedHostile(level, npc.colonyId);
             if (forced != null) {
                 UUID forcedUuid = forced.getUUID();
-                double range = Config.SCEPTER_HOSTILE_RANGE.get();
+                double range = com.wsteam.wandscape.foundation.util.BalanceValues.scepterHostileRange();
                 if (HostileMarkDecision.shouldPrioritize(forcedUuid, forcedUuid,
                         forced.distanceToSqr(npc), range * range)) {
                     nearest = forced;

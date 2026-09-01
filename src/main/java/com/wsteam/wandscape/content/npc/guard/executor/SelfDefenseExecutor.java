@@ -108,7 +108,7 @@ public final class SelfDefenseExecutor implements OpExecutor<AtomicOp.SelfDefens
             // 和平模式：不主动索敌、不反击，但被怪贴到 peaceFleeRange 内会临时逃离
             if (npc.isPeaceMode()) {
                 LivingEntity threat = nearestVisibleEnemyAround(npc, level,
-                        Config.GUARD_FLEE_START_DIST.get());
+                        com.wsteam.wandscape.foundation.util.BalanceValues.guardFleeStartDist());
                 if (threat != null) {
                     injectSelfDefense(world, npcId, exec, queue, level, "flee",
                             threat.getName().getString());
@@ -143,7 +143,7 @@ public final class SelfDefenseExecutor implements OpExecutor<AtomicOp.SelfDefens
             return; // 挂起栈满，不能覆盖当前包
         }
         queue.startPackage(NpcTaskPackage.system("self_defense",
-                new AtomicOp.SelfDefenseOp(Config.GUARD_SELF_DEFENSE_RANGE.get()),
+                new AtomicOp.SelfDefenseOp(com.wsteam.wandscape.foundation.util.BalanceValues.guardSelfDefenseRange()),
                 null, SELF_DEFENSE_PRIORITY));
         Log.info(TAG, "NPC {} engages {} target={} preempted={}",
                 npcId, what, targetName, hadPackage ? "yes" : "idle");
@@ -175,7 +175,7 @@ public final class SelfDefenseExecutor implements OpExecutor<AtomicOp.SelfDefens
             LivingEntity forced = scepterApi.forcedHostile(level, npc.colonyId);
             if (forced != null) {
                 UUID forcedUuid = forced.getUUID();
-                double range = Config.SCEPTER_HOSTILE_RANGE.get();
+                double range = com.wsteam.wandscape.foundation.util.BalanceValues.scepterHostileRange();
                 if (HostileMarkDecision.shouldPrioritize(forcedUuid, forcedUuid,
                         forced.distanceToSqr(npc), range * range)) {
                     return forced;
@@ -186,14 +186,14 @@ public final class SelfDefenseExecutor implements OpExecutor<AtomicOp.SelfDefens
         LivingEntity followAttack = npc.getFollowAttackTarget(level);
         if (followAttack != null) return followAttack;
 
-        int hateRange = Config.GUARD_HATE_RANGE.get();
+        int hateRange = com.wsteam.wandscape.foundation.util.BalanceValues.guardHateRange();
         LivingEntity hated = npc.getHatedAttacker(level);
         if (hated != null && npc.isRetaliationTarget(hated)
                 && npc.distanceToSqr(hated) <= (double) hateRange * hateRange
                 && GuardCombat.hasLineOfSight(npc, hated)) {
             return hated;
         }
-        return nearestVisibleEnemyAround(npc, level, Config.GUARD_SELF_DEFENSE_RANGE.get());
+        return nearestVisibleEnemyAround(npc, level, com.wsteam.wandscape.foundation.util.BalanceValues.guardSelfDefenseRange());
     }
 
     /** 半径内最近可见存活敌对目标（球面距离 + LOS）；无则 null。中立生物须已发怒才算。
@@ -261,7 +261,7 @@ public final class SelfDefenseExecutor implements OpExecutor<AtomicOp.SelfDefens
         // 战斗中途开启和平 → 同样转入逃离（原逻辑是立即结束自防御）。
         if (npc.isPeaceMode()) {
             LivingEntity threat = nearestVisibleEnemyAround(npc, level,
-                    Config.GUARD_FLEE_START_DIST.get());
+                    com.wsteam.wandscape.foundation.util.BalanceValues.guardFleeStartDist());
             if (threat == null) {
                 fadeBeam(level, npc); // 和平脱离：光束快速淡出，不残留原地
                 GuardCombat.markCombatEnd(npc);

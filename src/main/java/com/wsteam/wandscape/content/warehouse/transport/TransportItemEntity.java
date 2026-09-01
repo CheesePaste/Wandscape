@@ -53,8 +53,8 @@ public class TransportItemEntity extends ItemEntity {
         this.legIndex = 0;
         this.legElapsed = 0;
         try {
-            this.ticksOnRoad = Config.TRANSPORT_TICKS_PER_BLOCK_ON_ROAD.get();
-            this.ticksOffRoad = Config.TRANSPORT_TICKS_PER_BLOCK_OFF_ROAD.get();
+            this.ticksOnRoad = com.wsteam.wandscape.foundation.util.BalanceValues.transportTicksPerBlockOnRoad();
+            this.ticksOffRoad = com.wsteam.wandscape.foundation.util.BalanceValues.transportTicksPerBlockOffRoad();
         } catch (Exception ignored) {
             this.ticksOnRoad = RoadRouter.DEFAULT_TICKS_ON_ROAD;
             this.ticksOffRoad = RoadRouter.DEFAULT_TICKS_OFF_ROAD;

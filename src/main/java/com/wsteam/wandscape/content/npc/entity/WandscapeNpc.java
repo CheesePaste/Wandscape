@@ -318,7 +318,7 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
 
     /** 受击时调用（SelfDefenseHandler）：重置脱战封伤计时。 */
     public void markRecentlyDamaged() {
-        regenCooldown = Config.NPC_REGEN_GRACE_TICKS.get();
+        regenCooldown = com.wsteam.wandscape.foundation.util.BalanceValues.npcRegenGraceTicks();
         regenAccum = 0;
     }
 
@@ -330,7 +330,7 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
         }
         if (getHealth() < getMaxHealth()) {
             regenAccum++;
-            if (regenAccum >= Config.NPC_REGEN_INTERVAL_TICKS.get()) {
+            if (regenAccum >= com.wsteam.wandscape.foundation.util.BalanceValues.npcRegenIntervalTicks()) {
                 regenAccum = 0;
                 heal(getEffectiveAttribute(AttributeType.HEALTH_REGEN));
             }
@@ -832,7 +832,7 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
     public void markFollowAttackTarget(LivingEntity target) {
         this.followAttackUuid = target.getUUID();
         this.followAttackExpiryTick = level().getGameTime()
-                + Config.GUARD_FOLLOW_ATTACK_DURATION_TICKS.get();
+                + com.wsteam.wandscape.foundation.util.BalanceValues.guardFollowAttackDurationTicks();
     }
 
     /** 当前跟随战斗目标：有效（跟随开、未过期、目标存活、在追击范围内、非友军）则返回，否则 null。 */
@@ -841,7 +841,7 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
         if (followAttackUuid == null) return null;
         Entity e = level.getEntity(followAttackUuid);
         if (!(e instanceof LivingEntity target)) return null;
-        double range = Config.GUARD_HATE_RANGE.get();
+        double range = com.wsteam.wandscape.foundation.util.BalanceValues.guardHateRange();
         boolean active = FollowAttackDecision.isActive(level.getGameTime(), followAttackExpiryTick,
                 followMode, resting, target.isAlive() && !target.isRemoved(),
                 target.distanceToSqr(this), range * range,
@@ -1107,8 +1107,8 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
             magic.setMana(getMaxMana());
             magic.markManaSeeded();
         }
-        magic.tickRegen(getMaxMana(), Config.NPC_MANA_REGEN_TICKS.get(),
-                Config.NPC_MANA_REGEN_FRACTION.get().floatValue() * getEffectiveAttribute(AttributeType.MANA_REGEN));
+        magic.tickRegen(getMaxMana(), com.wsteam.wandscape.foundation.util.BalanceValues.npcManaRegenTicks(),
+                (float) com.wsteam.wandscape.foundation.util.BalanceValues.npcManaRegenFraction() * getEffectiveAttribute(AttributeType.MANA_REGEN));
 
         tickIdleSelfHeal();
         tickCastingState();

@@ -101,7 +101,7 @@ public final class DecorationBonusSystem {
             }
 
             // Cap per stat: min(accumulated, base × cap)
-            double cap = Config.DECORATION_BONUS_CAP.get();
+            double cap = com.wsteam.wandscape.foundation.util.BalanceValues.decorationBonusCap();
             int bonusComfort = (int) Math.min(accComfort, targetCfg.comfort() * cap);
             int bonusMagic   = (int) Math.min(accMagic,   targetCfg.magic() * cap);
             int bonusWonder  = (int) Math.min(accWonder,  targetCfg.wonder() * cap);

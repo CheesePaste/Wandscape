@@ -53,12 +53,12 @@ public final class SelfDefenseHandler {
         // 仅玩家与同殖民地 NPC（友军）不记仇。
         if (!npc.isRetaliationTarget(attacker)) return;
 
-        long expiry = npc.level().getGameTime() + Config.GUARD_HATE_DURATION_TICKS.get();
+        long expiry = npc.level().getGameTime() + com.wsteam.wandscape.foundation.util.BalanceValues.guardHateDurationTicks();
         npc.setHatedAttacker(attacker.getUUID(), expiry);
         Log.info(TAG, "NPC {} hurt by {} — hate set until +{}t",
                 npc.getUUID().toString().substring(0, 8),
                 attacker.getUUID().toString().substring(0, 8),
-                Config.GUARD_HATE_DURATION_TICKS.get());
+                com.wsteam.wandscape.foundation.util.BalanceValues.guardHateDurationTicks());
     }
 
     /** 伤害源的真实攻击者：近战=攻击者本体、弹射物=发射者（source.getEntity()）；无则 null。 */

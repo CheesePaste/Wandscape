@@ -69,8 +69,8 @@ public final class GuardTaskSource implements TaskSource {
         if (activeTaskId != 0) return;
 
         Map<String, JsonElement> params = new LinkedHashMap<>();
-        params.put("attackRange", new JsonPrimitive(Config.GUARD_RANGE.get()));
-        params.put("releaseRange", new JsonPrimitive(Config.GUARD_RELEASE_RANGE.get()));
+        params.put("attackRange", new JsonPrimitive(com.wsteam.wandscape.foundation.util.BalanceValues.guardRange()));
+        params.put("releaseRange", new JsonPrimitive(com.wsteam.wandscape.foundation.util.BalanceValues.guardReleaseRange()));
         // 守卫任务刻意不绑定殖民地：守卫区由全殖民地建筑包围盒并集生成，可能横跨多个小镇，
         // 执行器（GuardAttackExecutor）防守所有区域。colonyId=null → 无主任务，
         // 由距威胁最近的真实殖民地 NPC 接取（调度器按邻近评分）；占位殖民地 NPC 永不接取。
@@ -78,14 +78,14 @@ public final class GuardTaskSource implements TaskSource {
         activeTaskId = pool.addTask(request);
         Log.info(TAG, ">>> GUARD TASK PUBLISHED #{} target={} attack={} release={} pool={}",
                 activeTaskId, threat.getUUID().toString().substring(0, 8),
-                Config.GUARD_RANGE.get(), Config.GUARD_RELEASE_RANGE.get(), pool.size());
+                com.wsteam.wandscape.foundation.util.BalanceValues.guardRange(), com.wsteam.wandscape.foundation.util.BalanceValues.guardReleaseRange(), pool.size());
     }
 
     /** 攻击区（±guard.range）内距并集盒中心最近的存活 Enemy；无则 null。
      *  殖民地 NPC 的召唤随从不构成对建筑的威胁，不触发守卫任务——否则发布后立即被守卫执行器
      *  过滤为空目标而 stand-down，反复发布空转。 */
     private static LivingEntity findThreat(ServerLevel level) {
-        List<GuardZone> zones = GuardScanner.zones(level, Config.GUARD_RANGE.get());
+        List<GuardZone> zones = GuardScanner.zones(level, com.wsteam.wandscape.foundation.util.BalanceValues.guardRange());
         AABB queryBox = GuardScanner.unionAabb(zones);
         if (queryBox == null) return null;
         var scepterApi = WandscapeApis.getScepterApiSilently();
