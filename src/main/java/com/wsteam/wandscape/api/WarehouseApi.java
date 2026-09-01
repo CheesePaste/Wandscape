@@ -42,4 +42,11 @@ public interface WarehouseApi {
      *         it is not initialized and nothing was inserted.
      */
     boolean insertItems(UUID colonyId, List<ItemStack> items);
+
+    // ── 可调平衡值（委托 BalanceValues；运行时生效，不追溯已生成实体）──
+
+    int getTransportTicksPerBlockOnRoad();
+    void setTransportTicksPerBlockOnRoad(int v);
+    int getTransportTicksPerBlockOffRoad();
+    void setTransportTicksPerBlockOffRoad(int v);
 }

@@ -15,6 +15,7 @@ import com.wsteam.wandscape.content.building.projection.BuildingRotation;
 import com.wsteam.wandscape.api.BuildingApi;
 import com.wsteam.wandscape.content.building.data.BuildingData;
 import com.wsteam.wandscape.foundation.util.ItemKey;
+import com.wsteam.wandscape.foundation.util.BalanceValues;
 import com.wsteam.wandscape.content.building.data.WorkItem;
 import com.wsteam.wandscape.content.building.event.BuildingPlacedEvent;
 import com.wsteam.wandscape.content.building.event.BuildingRemovedEvent;
@@ -1103,4 +1104,8 @@ public class BuildingApiImpl implements BuildingApi {
         arr.add(pos.getZ());
         return arr;
     }
+
+    // ── 可调平衡值（委托 BalanceValues；运行时生效，不追溯已生成实体）──
+    @Override public double getDecorationBonusCap() { return BalanceValues.decorationBonusCap(); }
+    @Override public void setDecorationBonusCap(double v) { BalanceValues.setDecorationBonusCap(v); }
 }

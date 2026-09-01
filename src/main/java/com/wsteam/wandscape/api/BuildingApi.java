@@ -193,4 +193,9 @@ public interface BuildingApi {
      */
     @Nullable
     BlockPos getTouristInteractPoint(UUID buildingId);
+
+    // ── 可调平衡值（委托 BalanceValues；运行时生效，不追溯已生成实体）──
+
+    double getDecorationBonusCap();
+    void setDecorationBonusCap(double v);
 }

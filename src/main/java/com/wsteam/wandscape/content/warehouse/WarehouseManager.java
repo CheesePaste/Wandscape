@@ -6,6 +6,7 @@ import com.wsteam.wandscape.content.task.boundary.ColonyResourceAccess;
 import com.wsteam.wandscape.content.task.boundary.ResourceAddedListener;
 import com.wsteam.wandscape.content.task.types.ResourceId;
 import com.wsteam.wandscape.api.WarehouseApi;
+import com.wsteam.wandscape.foundation.util.BalanceValues;
 import com.wsteam.wandscape.content.element.data.ElementType;
 import com.wsteam.wandscape.foundation.util.ItemKey;
 import com.wsteam.wandscape.content.warehouse.event.ResourceInsufficientEvent;
@@ -85,6 +86,12 @@ public class WarehouseManager implements WarehouseApi, ColonyResourceAccess {
         }
         return true;
     }
+
+    // ── 可调平衡值（委托 BalanceValues；运行时生效，不追溯已生成实体）──
+    @Override public int getTransportTicksPerBlockOnRoad() { return BalanceValues.transportTicksPerBlockOnRoad(); }
+    @Override public void setTransportTicksPerBlockOnRoad(int v) { BalanceValues.setTransportTicksPerBlockOnRoad(v); }
+    @Override public int getTransportTicksPerBlockOffRoad() { return BalanceValues.transportTicksPerBlockOffRoad(); }
+    @Override public void setTransportTicksPerBlockOffRoad(int v) { BalanceValues.setTransportTicksPerBlockOffRoad(v); }
 
     // ════════════════════════════════════════════════════════════
     //  WarehouseApi — item operations
