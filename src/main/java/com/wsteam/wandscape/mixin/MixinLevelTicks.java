@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.foundation.mixin;
+package com.wsteam.wandscape.mixin;
 import com.wsteam.wandscape.content.task.ecs.World;
 
 import com.wsteam.wandscape.content.building.BuildPlacementGuard;

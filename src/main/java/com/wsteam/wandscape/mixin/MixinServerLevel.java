@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.foundation.mixin;
+package com.wsteam.wandscape.mixin;
 
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.content.colony.raid.RaidTownHall;
