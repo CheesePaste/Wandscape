@@ -51,6 +51,7 @@ impl/      @ApiStatus.Internal 装配门禁（WandscapeBootstrap = 原 EngineBoo
 - **NPC 属性全套规则已收敛到 `content/npc/attributes/NpcAttributes` 一个类（2026-09-01 完成）**。六段（种类/上下界/默认值/roll/升级/招募）全在单类；规则表是「默认值 + 覆盖层」结构，整合包经 `WandscapeApis.getNpcAttributesApi()`（`api/NpcAttributesApi`）在 mod 初始化时覆盖。**改属性规则只碰 `NpcAttributes` 一个文件。** 属性共 9 项：7 可见（`ORDER`，可训练/可升级/有 SPECS）+ 2 隐藏（HEALTH_REGEN/MANA_REGEN，不显示、无 SPECS、base 恒 1.0，仅装备/外部修饰符改动）。MOVE_SPEED/ARMOR_VALUE 每级加成是废案（perLevel=0）；ARMOR 默认 5。招募计算 = 基础 roll + 升级提升组合，勿独立成类。
 - **点/向量自造族 5 个、保留非 vanilla**（SplineVec3/PathPoint/XZPoint/GridPos/BlockOffset）；Tier 3 若收敛，首选合并成单个 int 点类（非改 MC 类型——保"纯逻辑不 import MC"）。
 - **`shared/data/InterruptRecord` 死、`task/runtime/InterruptRecord` 活**，同名双 record 别删错。
+- **`buildings/deprecated/`（14 文件）是向下兼容载荷，不可删** —— 旧档/隐藏建筑按内层 `id` 解析（如 `tavern`，`WandscapeDataLoader` 递归扫 `*.json` 仍注册），删即断旧档加载。本目录**多次被误删**过：判定靠 `newplan/packages.md` + 该文件夹内 `README.md` 双重确认；已废的 `road_templates/`（旧 schema 孤儿）别与它混为一谈。新增/删除此类兼容载荷须同步 `packages.md`。
 
 ---
 

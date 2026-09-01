@@ -353,7 +353,7 @@
 - **结论**：薄域入口。item→items，UI→foundation/ui。
 
 ## resources（data / lang / assets —— JSON 泛滥与 lang 灾难真实数字）
-- **data/wandscape：1368 文件（1366 json+2 nbt，实测）。`element_mappings` = 1188 json = 整个 data/wandscape 的 87%**（审核更正：原节稿写 1187，实测 1188 个 json 文件）——**JSON 泛滥几乎全在这一类**（逐原版方块→7 元素映射）。其余：buildings 53（+deprecated 14=67）、craft_recipes 32、advancement 33、magic_spells 10、magic_circles 10、blueprints 13（含 production 4）、recipe 2、loot_table/blocks 2、damage_type 2、narratives 3、road_templates 2、structure/road 2 nbt、tags/block 1、根 element_seeds.json。
+- **data/wandscape：1353 文件（1351 json+2 nbt，实测）。`element_mappings` = 1188 json = 整个 data/wandscape 的 88%**（审核更正：原节稿写 1187，实测 1188 个 json 文件）——**JSON 泛滥几乎全在这一类**（逐原版方块→7 元素映射）。其余：buildings 53（+deprecated 14=67）、craft_recipes 32、advancement 33、magic_spells 10、magic_circles 10、recipe 2、loot_table/blocks 2、damage_type 2、narratives 3、structure/road 2 nbt、tags/block 1、根 element_seeds.json。（2026-09-01 数据治理：删 `road_templates/`（corner/straight）旧 schema 孤儿无引用，见 road 节；**`blueprints/` 13 JSON 全部删除，收敛为 Java lambda**（`content/task/engine/dsl/BlueprintDefaults.java`），DSL 解释器栈（BlueprintConfigLoader/BlueprintInterpreter/BlueprintDefinition/StepNode/ExprNode/ParamType）拆除；登记的是 `road_presets` 类别，无本地文件、靠硬编码 `RoadPreset.DEFAULT_PRESETS`，勿误标。）
 - **buildings/deprecated（14）是 building 兼容载荷，不可删**（`ProjectionNetwork`：deprecated 建筑隐藏但仍可用）——与 status.md/tier1.md 一致。
 - data/curios：5 json。
 - **lang：en_us 2031 + zh_cn 2032 = 4063 行，正好一语言一大坨**（实测逐字命中）——「lang 分文件」目标实锤。
