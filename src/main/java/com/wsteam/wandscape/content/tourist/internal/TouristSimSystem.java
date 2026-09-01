@@ -58,6 +58,8 @@ import java.util.UUID;
 public final class TouristSimSystem {
 
     private static final String TAG = "TouristSimSystem";
+    public static final int TOURIST_EVENING_ROUTING_START = 16000;
+    public static final int TOURIST_QUEUE_WAIT_TOLERANCE_TICKS = 2400;
     /** Sim runs every tick — per-tourist work is a few arithmetic ops (negligible). */
     private static final int SIM_INTERVAL = 1;
     /** 幽灵占位自愈探测间隔（tick）：周期释放占用者已消失的交互点，兜底任何漏清理路径。 */
@@ -433,11 +435,11 @@ public final class TouristSimSystem {
         s.markUnhydrated();
 
         long dayTime = level.getDayTime() % 24000;
-        boolean isNight = dayTime >= Config.TOURIST_NIGHT_START.get();
+        boolean isNight = dayTime >= TouristSimulation.TOURIST_NIGHT_START;
         UUID hotel = s.getCheckedInBuildingId();
 
         // 白天：解除夜晚「无空闲旅店」闩锁，让下一晚重新尝试找旅店
-        if (dayTime < Config.TOURIST_EVENING_ROUTING_START.get()) {
+        if (dayTime < TOURIST_EVENING_ROUTING_START) {
             s.getHotelRouteBackoff().clear();
         }
 
@@ -489,7 +491,7 @@ public final class TouristSimSystem {
         }
 
         // ── 傍晚路由：无旅店游客停止当前任务去旅店（防夜晚无旅店被清场；16000 起）──
-        if (dayTime >= Config.TOURIST_EVENING_ROUTING_START.get()
+        if (dayTime >= TOURIST_EVENING_ROUTING_START
                 && hotel == null && !s.isFullySatisfied()) {
             UUID cur = s.getTargetBuildingId();
             if (cur == null || !TouristSimulation.isHotelBuilding(level, cur)) {
@@ -516,7 +518,7 @@ public final class TouristSimSystem {
         if (s.getQueueSpotIndex() >= 0) {
             // 排队超时（与实体 tickQueue 一致）：超 TOURIST_QUEUE_WAIT_TOLERANCE_TICKS 放弃去别处
             s.setQueueTicks(s.getQueueTicks() + 1);
-            if (s.getQueueTicks() > Config.TOURIST_QUEUE_WAIT_TOLERANCE_TICKS.get()) {
+            if (s.getQueueTicks() > TOURIST_QUEUE_WAIT_TOLERANCE_TICKS) {
                 abandonQueue(level, s);
                 checkDeparture(level, s);
                 return;
@@ -613,7 +615,7 @@ public final class TouristSimSystem {
         boolean isHotel = TouristSimulation.isHotelBuilding(level, buildingId);
         if (isHotel) {
             long dayTime = level.getDayTime() % 24000;
-            boolean isNight = dayTime >= Config.TOURIST_NIGHT_START.get();
+            boolean isNight = dayTime >= TouristSimulation.TOURIST_NIGHT_START;
             boolean alreadyResident = buildingId.equals(s.getCheckedInBuildingId());
             if (isNight && !s.isFullySatisfied()) {
                 // 夜晚 + 未满条：到达即入住（住店客回店免查空位、免重复填条）——入住即时完成，无 spot 交互
@@ -907,8 +909,8 @@ public final class TouristSimSystem {
         UUID hotel = s.getCheckedInBuildingId();
         long dayTime = level.getDayTime() % 24000;
         // 离场/清场只在 18000-24000 窗口（与实体路径一致，sim 不再 14000 起提前清人）
-        boolean inDepartureWindow = dayTime >= Config.TOURIST_DEPARTURE_WINDOW_START.get()
-                && dayTime < Config.TOURIST_DEPARTURE_WINDOW_END.get();
+        boolean inDepartureWindow = dayTime >= TouristSpawnSystem.TOURIST_DEPARTURE_WINDOW_START
+                && dayTime < TouristSpawnSystem.TOURIST_DEPARTURE_WINDOW_END;
 
         if (hotel != null) {
             // 住店客：只按停留截止（任意时刻）或满条在离场窗口离场；其余时刻不被清
@@ -926,7 +928,7 @@ public final class TouristSimSystem {
         }
 
         boolean isIdle = s.getCommuteTarget() == null && s.getTargetBuildingId() == null;
-        boolean idleTimeout = isIdle && s.simTick() > Config.TOURIST_DESPAWN_TIMEOUT_TICKS.get();
+        boolean idleTimeout = isIdle && s.simTick() > TouristSpawnSystem.TOURIST_DESPAWN_TIMEOUT_TICKS;
         // 交互/排队中：不转旅店（routeToHotel 会改 target 打断当前交互），先完成当前交互，
         // 完成后 decideNext 的夜晚逻辑自会选旅店。
         boolean interacting = s.getInteractTicksLeft() > 0 || s.getQueueSpotIndex() >= 0;

@@ -27,6 +27,8 @@ import java.util.UUID;
  */
 public final class DailySettlementSystem {
     private static final String TAG = "DailySettlementSystem";
+    /** Settlement window: time-of-day ticks within which daily settlement triggers. */
+    private static final int SETTLEMENT_WINDOW_TICKS = 10;
 
     private long settledDay = -1;
 
@@ -57,7 +59,7 @@ public final class DailySettlementSystem {
 
         // Wait until we're within the settlement window (time-of-day near 0)
         int tod = (int) (dayTime % 24000);
-        int window = Config.SETTLEMENT_WINDOW_TICKS.get();
+        int window = SETTLEMENT_WINDOW_TICKS;
         if (tod > window) return;
 
         settledDay = currentDay;

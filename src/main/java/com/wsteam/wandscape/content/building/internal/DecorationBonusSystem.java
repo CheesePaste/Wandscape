@@ -25,6 +25,8 @@ import java.util.List;
  */
 public final class DecorationBonusSystem {
     private static final String TAG = "DecorationBonusSystem";
+    /** Interval in ticks between decoration radiation recalculations. */
+    private static final int DECORATION_SCAN_INTERVAL_TICKS = 200;
 
     private int tickCounter;
     private final DecorationBonusCache cache = new DecorationBonusCache();
@@ -51,7 +53,7 @@ public final class DecorationBonusSystem {
         if (level == null) return;
 
         tickCounter++;
-        int interval = Config.DECORATION_SCAN_INTERVAL_TICKS.get();
+        int interval = DECORATION_SCAN_INTERVAL_TICKS;
         if (tickCounter % interval != 0) return;
 
         BuildingSavedData savedData = BuildingSavedData.get(level);

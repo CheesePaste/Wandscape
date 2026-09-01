@@ -4,6 +4,7 @@ import com.wsteam.wandscape.content.task.boundary.MovementOps;
 import com.wsteam.wandscape.foundation.util.TickProfiler;
 
 import com.wsteam.wandscape.Config;
+import com.wsteam.wandscape.foundation.registry.WandscapeConstants;
 import com.wsteam.wandscape.content.task.component.NavigationState;
 import com.wsteam.wandscape.content.task.component.Position;
 import com.wsteam.wandscape.content.task.component.TaskExecutor;
@@ -86,8 +87,8 @@ public class NavigationSystem implements EcsSystem {
 
                 // Distance > walkThreshold → skip pathfinding, use self_teleport ritual
                 if (nav.mode == NavigationState.Mode.PATHFINDING
-                        && (hDistSq > (long) Config.NPC_WALK_THRESHOLD.get() * Config.NPC_WALK_THRESHOLD.get()
-                            || dy > Config.NPC_WALK_THRESHOLD.get())) {
+                        && (hDistSq > (long) WandscapeConstants.NPC_WALK_THRESHOLD * WandscapeConstants.NPC_WALK_THRESHOLD
+                            || dy > WandscapeConstants.NPC_WALK_THRESHOLD)) {
                     switchToRitualTeleport(nav, npcId, world);
                     continue;
                 }
@@ -148,14 +149,14 @@ public class NavigationSystem implements EcsSystem {
         }
 
         // Stuck check
-        if (tickCounter - nav.lastCheckTick >= Config.STUCK_CHECK_INTERVAL_TICKS.get()) {
+        if (tickCounter - nav.lastCheckTick >= WandscapeConstants.STUCK_CHECK_INTERVAL_TICKS) {
             double progress = Math.abs(npc.getX() - nav.lastCheckX)
                     + Math.abs(npc.getZ() - nav.lastCheckZ);
-            if (progress < Config.STUCK_MIN_MOVE_DISTANCE.get()) {
+            if (progress < WandscapeConstants.STUCK_MIN_MOVE_DISTANCE) {
                 nav.stuckChecks++;
                 Log.info(TAG, "[NavSys] NPC {} — stuck check #{}, progress={}",
                         npcId, nav.stuckChecks, String.format("%.2f", progress));
-                if (nav.stuckChecks >= Config.STUCK_MAX_RETRIES.get()) {
+                if (nav.stuckChecks >= WandscapeConstants.STUCK_MAX_RETRIES) {
                     Log.info(TAG, "[NavSys] NPC {} — stuck, switching to teleport", npcId);
                     switchToRitualTeleport(nav, npcId, world);
                     return;

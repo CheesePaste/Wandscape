@@ -36,10 +36,16 @@ public final class RaidTriggerScanner {
     public static final RaidTriggerScanner INSTANCE = new RaidTriggerScanner();
 
     private static final String TAG = "RaidTriggerScanner";
+    /** Raid trigger scan interval (ticks). */
+    private static final int RAID_CHECK_INTERVAL = 20;
+    /** Raid nearby radius (blocks) — one active raid per colony within this range. */
+    private static final int RAID_NEARBY_RADIUS = 64;
+    /** Raid trigger radius (blocks) around a building's AABB. */
+    private static final int RAID_TRIGGER_RANGE = 10;
     private int tickCounter;
 
     public void tick(ServerLevel level) {
-        if (++tickCounter < Config.RAID_CHECK_INTERVAL.get()) return;
+        if (++tickCounter < RAID_CHECK_INTERVAL) return;
         tickCounter = 0;
         scan(level);
     }
@@ -63,7 +69,7 @@ public final class RaidTriggerScanner {
             if (townHall == null) continue;
             if (!isNearBuilding(colonyId, playerPos)) continue;
 
-            int nearbyRadiusSq = Config.RAID_NEARBY_RADIUS.get() * Config.RAID_NEARBY_RADIUS.get();
+            int nearbyRadiusSq = RAID_NEARBY_RADIUS * RAID_NEARBY_RADIUS;
             if (level.getRaids().getNearbyRaid(townHall, nearbyRadiusSq) != null) continue;
 
             ensureRaidOmen(player);
@@ -101,7 +107,7 @@ public final class RaidTriggerScanner {
             var bounds = buildingApi.getBuildingBounds(b.getBuildingId());
             if (GuardZone.of(bounds.minX(), bounds.minY(), bounds.minZ(),
                     bounds.maxX(), bounds.maxY(), bounds.maxZ(),
-                    Config.RAID_TRIGGER_RANGE.get())
+                    RAID_TRIGGER_RANGE)
                     .contains(playerPos.getX(), playerPos.getY(), playerPos.getZ())) {
                 return true;
             }

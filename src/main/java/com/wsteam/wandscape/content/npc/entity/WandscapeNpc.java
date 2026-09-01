@@ -103,6 +103,9 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
 
     private static final String TAG = "WandscapeNpc";
 
+    /** Lateral sway direction random-check interval (ticks). */
+    private static final int GUARD_SWAY_FLIP_TICKS = 20;
+
     // ============================================================
     // Engine bridge (public for same-module cross-package access)
     // ============================================================
@@ -1121,7 +1124,7 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
     private void tickCombatSway() {
         if (!combatSway) return;
         if (!getNavigation().isDone()) return; // 有导航进行中，让位
-        if (++swayRoamTicks >= Config.GUARD_SWAY_FLIP_TICKS.get()) {
+        if (++swayRoamTicks >= GUARD_SWAY_FLIP_TICKS) {
             swayRoamTicks = 0;
             if (getRandom().nextFloat() < 0.35f) combatSwayDir = -combatSwayDir; // 随机换边
             combatSwayMag = 0.6f + getRandom().nextFloat() * 0.4f;               // 随机幅度起伏

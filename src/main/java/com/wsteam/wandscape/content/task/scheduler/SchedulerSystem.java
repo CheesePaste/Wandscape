@@ -23,7 +23,7 @@ import java.util.*;
 /**
  * Assigns global tasks to idle NPCs.
  * Runs every {@code heartbeatInterval} ticks (interval wired from
- * {@code Config.SCHEDULER_HEARTBEAT_TICKS} at bootstrap).
+ * {@code SCHEDULER_HEARTBEAT_TICKS} at bootstrap).
  * <p>
  * Phase 3 (migration): uses EquipmentComponent for scoring.
  * Scoring: proximity × 0.6 + mana efficiency × 0.4 (temp, being replaced by attribute-weighted).

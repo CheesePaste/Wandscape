@@ -60,6 +60,14 @@ import java.util.*;
 public final class TouristSpawnSystem {
     private static final String TAG = "TouristSpawnSystem";
 
+    public static final int TOURIST_DESPAWN_TIMEOUT_TICKS = 36000;
+    public static final int TOURIST_DEPARTURE_WINDOW_START = 18000;
+    public static final int TOURIST_DEPARTURE_WINDOW_END = 24000;
+    private static final int TOURIST_SPAWN_WINDOW_START = 1000;
+    private static final int TOURIST_SPAWN_WINDOW_END = 8000;
+    private static final int TOURIST_DEPARTURE_DELAY_MAX_TICKS = 1500;
+    private static final double TOURIST_ATM_TRAVEL_FUND_MULTIPLIER = 3.0;
+
     /** Tick interval between spawn/cleanup checks. */
     private static final int CHECK_INTERVAL = 100;
     /** Tick offset after departure window start before first purge. */
@@ -180,8 +188,8 @@ public final class TouristSpawnSystem {
         // 高 tick rate（如 1000）下游戏时间推进更快：若只在每 CHECK_INTERVAL tick 才
         // flush，生成窗口可能被跳过去、每日游客「来不及生成」。改为每 tick flush，
         // 每个 pending 的随机 spawnTime 一到就立即生成，窗口内绝不漏。
-        boolean inSpawnWindow = dayTime >= Config.TOURIST_SPAWN_WINDOW_START.get()
-                && dayTime < Config.TOURIST_SPAWN_WINDOW_END.get();
+        boolean inSpawnWindow = dayTime >= TOURIST_SPAWN_WINDOW_START
+                && dayTime < TOURIST_SPAWN_WINDOW_END;
         if (inSpawnWindow && !colonyFrozen) {
             if (!scheduleCreated || scheduleDay != day) {
                 createSchedule(level);
@@ -195,8 +203,8 @@ public final class TouristSpawnSystem {
         if (tickCounter % CHECK_INTERVAL != 0) return;
 
         // ── Night departure window (18000-24000) ──
-        boolean inDepartureWindow = dayTime >= Config.TOURIST_DEPARTURE_WINDOW_START.get()
-                && dayTime < Config.TOURIST_DEPARTURE_WINDOW_END.get();
+        boolean inDepartureWindow = dayTime >= TOURIST_DEPARTURE_WINDOW_START
+                && dayTime < TOURIST_DEPARTURE_WINDOW_END;
 
         // Always run cleanup for energy/idle/timeout regardless of time
         cleanupTourists(level, inDepartureWindow);
@@ -265,8 +273,8 @@ public final class TouristSpawnSystem {
         // Create pending spawns. 生成时间在 [windowStart, windowEnd) 内随机取，
         // 每天游客错峰到达。高 tick rate 防护在 onServerTick（每 tick flush），
         // 不在这里——这里只负责把到达时间随机分布到生成窗口内。
-        int windowStart = Config.TOURIST_SPAWN_WINDOW_START.get();
-        int windowDuration = Config.TOURIST_SPAWN_WINDOW_END.get() - windowStart;
+        int windowStart = TOURIST_SPAWN_WINDOW_START;
+        int windowDuration = TOURIST_SPAWN_WINDOW_END - windowStart;
         for (int i = 0; i < toSpawn; i++) {
             BlockPos spawnPos = pickSpawnPos(spawnCandidates);
             if (spawnPos == null) continue;
@@ -386,7 +394,7 @@ public final class TouristSpawnSystem {
         long stayTicks = (stayMin + random.nextInt(stayMax - stayMin + 1)) * 24000L;
         tourist.setDepartureDeadline(gameTime + stayTicks);
         tourist.setTravelFund((int) Math.round(startingWallet(touristLevel)
-                * Config.TOURIST_ATM_TRAVEL_FUND_MULTIPLIER.get()));
+                * TOURIST_ATM_TRAVEL_FUND_MULTIPLIER));
     }
 
     /**
@@ -489,7 +497,7 @@ public final class TouristSpawnSystem {
             // 白天/傍晚：到点 或 idle 超时 → 离场
             boolean deadlineReached = level.getGameTime() >= t.getDepartureDeadline();
             boolean idleTimeout = t.getCommuteTarget() == null
-                    && t.tickCount > Config.TOURIST_DESPAWN_TIMEOUT_TICKS.get();
+                    && t.tickCount > TOURIST_DESPAWN_TIMEOUT_TICKS;
             if (deadlineReached || idleTimeout) {
                 toRemove.add(t);
             }
@@ -542,7 +550,7 @@ public final class TouristSpawnSystem {
                 if (t.isFullySatisfied()) {
                     Long departAt = pendingDepartures.get(t.getUUID());
                     if (departAt == null) {
-                        int delay = random.nextInt(Config.TOURIST_DEPARTURE_DELAY_MAX_TICKS.get() + 1);
+                        int delay = random.nextInt(TOURIST_DEPARTURE_DELAY_MAX_TICKS + 1);
                         departAt = gameTime + delay;
                         pendingDepartures.put(t.getUUID(), departAt);
                     }
@@ -558,7 +566,7 @@ public final class TouristSpawnSystem {
                 // 满条 → 开心离场：随机延迟错峰
                 Long departAt = pendingDepartures.get(t.getUUID());
                 if (departAt == null) {
-                    int delay = random.nextInt(Config.TOURIST_DEPARTURE_DELAY_MAX_TICKS.get() + 1);
+                    int delay = random.nextInt(TOURIST_DEPARTURE_DELAY_MAX_TICKS + 1);
                     departAt = gameTime + delay;
                     pendingDepartures.put(t.getUUID(), departAt);
                 }

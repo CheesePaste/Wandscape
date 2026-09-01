@@ -54,6 +54,9 @@ import java.util.List;
 public final class EngineBootstrap {
     private static final String TAG = "EngineBootstrap";
 
+    /** Scheduler heartbeat interval in ticks (20 ticks = 1 second). */
+    private static final int SCHEDULER_HEARTBEAT_TICKS = 20;
+
     private EngineBootstrap() {}
 
     /**
@@ -118,7 +121,7 @@ public final class EngineBootstrap {
                 blueprints,
                 sysBlueprints,
                 com.wsteam.wandscape.Config.AUTO_APPROVE_TASKS.get(),
-                com.wsteam.wandscape.Config.SCHEDULER_HEARTBEAT_TICKS.get(),
+                SCHEDULER_HEARTBEAT_TICKS,
                 new BuildingTaskPool()
         );
 

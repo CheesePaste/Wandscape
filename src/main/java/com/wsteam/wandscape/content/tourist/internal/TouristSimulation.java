@@ -54,6 +54,17 @@ public final class TouristSimulation {
 
     private static final String TAG = "TouristSimulation";
 
+    /** 精力低于此比例（0~1）→ relax 建筑紧急加分（取代 Config 键）。 */
+    private static final double TOURIST_ENERGY_RESTORE_THRESHOLD = 0.25;
+    /** 排队站位间距（格）。 */
+    private static final double TOURIST_QUEUE_SLOT_SPACING = 1.0;
+    /** 游客「夜晚」开始时刻（game time tick，约 19:40）。 */
+    public static final int TOURIST_NIGHT_START = 14000;
+    /** 游客视野半径（格）。 */
+    public static final int TOURIST_VISION_RADIUS = 64;
+    /** ATM 取现冷却（tick）。 */
+    public static final int TOURIST_ATM_WITHDRAW_COOLDOWN_TICKS = 2400;
+
     /** 精力低于此比例 → relax 建筑紧急加分（与单次满意度增益同量级，不再碾压选店）。 */
     private static final double ENERGY_URGENCY_BONUS = 100;
     /** 钱包低于初始 1/4 → ATM 取现加分（与单次满意度增益同量级，不再碾压选店）。 */
@@ -238,7 +249,7 @@ public final class TouristSimulation {
         BlockPos spot = spotWorldPos(level, buildingId, spotIndex);
         if (spot == null || queuePosition < 0) return null;
         Direction facing = spotFacing(level, buildingId, spotIndex);
-        double d = Config.TOURIST_QUEUE_SLOT_SPACING.get() * (queuePosition + 1);
+        double d = TOURIST_QUEUE_SLOT_SPACING * (queuePosition + 1);
         // 沿 facing 反方向向后排（facing 恒为水平轴，队列是一条直线、非斜线）
         int dx = -facing.getStepX();
         int dz = -facing.getStepZ();
@@ -406,7 +417,7 @@ public final class TouristSimulation {
         if (relax == null || relax == RelaxConfig.NONE) return false;
         if (relax.energyRestore() <= 0) return false;
         return relaxReusable(t.getEnergy(), WandscapeConstants.TOURIST_MAX_ENERGY,
-                Config.TOURIST_ENERGY_RESTORE_THRESHOLD.get());
+                TOURIST_ENERGY_RESTORE_THRESHOLD);
     }
 
     /** 纯判定（可 JUnit）：精力 0 恒可去（精力耗尽必须能自救，不受阈值影响）；否则精力比 < threshold 时可重复去。 */
@@ -478,12 +489,12 @@ public final class TouristSimulation {
         if (touristPos == null) return null;
 
         long dayTime = level.getDayTime() % 24000;
-        boolean isNight = dayTime >= Config.TOURIST_NIGHT_START.get();
+        boolean isNight = dayTime >= TOURIST_NIGHT_START;
         boolean energyEmpty = t.getEnergy() <= 0;
         boolean nightHotel = isNight && !t.isFullySatisfied();
 
-        int visionSq = Config.TOURIST_VISION_RADIUS.get() * Config.TOURIST_VISION_RADIUS.get();
-        int atmCooldown = Config.TOURIST_ATM_WITHDRAW_COOLDOWN_TICKS.get();
+        int visionSq = TOURIST_VISION_RADIUS * TOURIST_VISION_RADIUS;
+        int atmCooldown = TOURIST_ATM_WITHDRAW_COOLDOWN_TICKS;
 
         List<BuildingState> normal = new ArrayList<>();
         List<BuildingState> hotels = new ArrayList<>();
@@ -555,13 +566,13 @@ public final class TouristSimulation {
             // 精力低 → 偏向恢复（relax）建筑（加分与单次满意度增益同量级）
             double energyRatio = t.getEnergy() / (double) WandscapeConstants.TOURIST_MAX_ENERGY;
             boolean isRelax = cfg.relax() != RelaxConfig.NONE && cfg.relax().energyRestore() > 0;
-            if (isRelax && energyRatio < Config.TOURIST_ENERGY_RESTORE_THRESHOLD.get()) {
+            if (isRelax && energyRatio < TOURIST_ENERGY_RESTORE_THRESHOLD) {
                 score += ENERGY_URGENCY_BONUS;
             }
             // 钱包低/空 + 池子有余额 + 冷却已过 → ATM 取现（取现补钱包继续逛）；
             // 池子空/冷却中不加分——免得游客因偏好跑去 ATM 却一分钱取不到。
             boolean isAtm = cfg.atm() != AtmConfig.NONE
-                    && atmReusable(t, cfg.atm(), Config.TOURIST_ATM_WITHDRAW_COOLDOWN_TICKS.get());
+                    && atmReusable(t, cfg.atm(), TOURIST_ATM_WITHDRAW_COOLDOWN_TICKS);
             if (isAtm) {
                 if (t.getWallet() <= 0) {
                     score += WALLET_EMPTY_BONUS;

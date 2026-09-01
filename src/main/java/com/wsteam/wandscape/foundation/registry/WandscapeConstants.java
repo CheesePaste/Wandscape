@@ -18,17 +18,6 @@ public final class WandscapeConstants {
     public static final Set<String> PROTECTED_LAST_CATEGORIES = Set.of(
             BUILDING_CATEGORY_GOVERNMENT, BUILDING_CATEGORY_STORAGE, BUILDING_CATEGORY_WORKSTATION);
 
-    public static final double SAME_BUILDING_CONTINUATION_BONUS = 50.0;
-
-    public static final int QUEUE_TOWNHALL = 5;
-    public static final int QUEUE_WORKSTATION = 60;
-    public static final int QUEUE_CRAFTING = 60;
-    public static final int QUEUE_MAGIC = 10;
-    public static final int QUEUE_RITUAL_ALTAR = 10;
-    public static final int QUEUE_NODE = 10;
-    public static final int QUEUE_HOUSE = 5;
-    public static final int QUEUE_TAVERN = 5;
-
     /** 建筑任务队列优先级（高→低）：玩家手动发布 > 商店补货 > 自动补产/采集。 */
     public static final int TASK_PRIORITY_PLAYER = 80;
     public static final int TASK_PRIORITY_RESTOCK = 60;
@@ -39,11 +28,6 @@ public final class WandscapeConstants {
 
     /** 每方块建造耗时（建筑CD），与引擎 AsyncTransformExecutor 的 1 tick/块一致。 */
     public static final int CONSTRUCTION_PLACE_TICKS_PER_UNIT = 1;
-
-    public static final int BASE_OPERATION_RANGE = 16;
-    public static final int PER_WAND_LEVEL_RANGE = 8;
-
-    public static final int DEFAULT_COLONY_RADIUS = 128;
 
     public static final int NPC_WALK_THRESHOLD = 64;
 

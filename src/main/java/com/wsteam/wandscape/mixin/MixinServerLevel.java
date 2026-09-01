@@ -21,10 +21,13 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(ServerLevel.class)
 public abstract class MixinServerLevel {
 
+    /** Raid village radius (blocks) around a colony's town hall. */
+    private static final int RAID_VILLAGE_RANGE = 16;
+
     @Inject(method = "isVillage(Lnet/minecraft/core/BlockPos;)Z",
             at = @At("HEAD"), cancellable = true)
     private void wandscape$isVillageNearTownHall(BlockPos pos, CallbackInfoReturnable<Boolean> cir) {
-        if (RaidTownHall.isNearTownHall(pos, Config.RAID_VILLAGE_RANGE.get())) {
+        if (RaidTownHall.isNearTownHall(pos, RAID_VILLAGE_RANGE)) {
             cir.setReturnValue(true);
         }
     }

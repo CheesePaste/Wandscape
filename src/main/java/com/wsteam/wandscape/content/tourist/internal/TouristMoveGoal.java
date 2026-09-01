@@ -60,6 +60,13 @@ import java.util.UUID;
 public class TouristMoveGoal extends Goal {
     private static final String TAG = "TouristMoveGoal";
 
+    /** 夜晚回/去旅店传送距离阈值（格），超过直接传送。 */
+    private static final int TOURIST_HOTEL_TELEPORT_DISTANCE = 64;
+    /** 距建筑 bbox 该距离内切换到室内 micro-nav。 */
+    private static final int MICRO_NAV_SWITCH_DISTANCE = 5;
+    /** 到达建筑 interact/entry 点的距离。 */
+    private static final int ARRIVAL_RADIUS = 3;
+
     // ── Internal movement mode ──
 
     enum MoveMode {
@@ -260,11 +267,11 @@ public class TouristMoveGoal extends Goal {
             }
 
             long dayTime = tourist.level().getDayTime() % 24000;
-            boolean isNight = dayTime >= Config.TOURIST_NIGHT_START.get();
+            boolean isNight = dayTime >= TouristSimulation.TOURIST_NIGHT_START;
             UUID hotelId = tourist.getCheckedInBuildingId();
 
             // 白天：解除夜晚「无空闲旅店」闩锁，让下一晚重新尝试找旅店
-            if (dayTime < Config.TOURIST_EVENING_ROUTING_START.get()) {
+            if (dayTime < TouristSimSystem.TOURIST_EVENING_ROUTING_START) {
                 hotelRouteBackoff.clear();
             }
 
@@ -284,7 +291,7 @@ public class TouristMoveGoal extends Goal {
 
             // ── 傍晚路由：无旅店游客停止当前任务去旅店（防夜晚无旅店被清场）──
             // 错峰与前置过滤：每 10 tick 轮询一次，且当晚已锁住/已在去旅店路上时前置跳过
-            if (dayTime >= Config.TOURIST_EVENING_ROUTING_START.get()
+            if (dayTime >= TouristSimSystem.TOURIST_EVENING_ROUTING_START
                     && hotelId == null && !tourist.isFullySatisfied()
                     && !targetingHotel() && !hotelRouteBackoff.isActive()) {
                 if ((tourist.timeBase() + tourist.getId()) % 10 == 0) {
@@ -355,7 +362,7 @@ public class TouristMoveGoal extends Goal {
         if (tourist.getRecentVisits().isEmpty()) {
             long dayTime = tourist.level().getDayTime() % 24000;
             String dayPhase = dayTime < 6000 ? "morning"
-                    : dayTime < Config.TOURIST_NIGHT_START.get() ? "afternoon" : "night";
+                    : dayTime < TouristSimulation.TOURIST_NIGHT_START ? "afternoon" : "night";
             NarrativeEvent arrival = NarrativeGenerator.generateArrival(
                     tourist.getTouristName(), dayPhase, tourist.level().getGameTime());
             emitNarrativeEvent(arrival);
@@ -416,7 +423,7 @@ public class TouristMoveGoal extends Goal {
 
         // Check if we're close enough to the building to switch to indoor micro-nav
         UUID buildingId = tourist.getTargetBuildingId();
-        if (buildingId != null && isWithinDistanceOfBbox(buildingId, Config.MICRO_NAV_SWITCH_DISTANCE.get())) {
+        if (buildingId != null && isWithinDistanceOfBbox(buildingId, MICRO_NAV_SWITCH_DISTANCE)) {
             // 旅店入住：游客**进入建筑 bbox** 时触发（bbox+5 外扩已去掉，避免大旅店离门老远就入住）
             if (isHotelBuilding(buildingId) && isInsideBuilding(buildingId)) {
                 if (tryHotelCheckIn(buildingId, getBuildingTypeId(buildingId))) {
@@ -425,7 +432,7 @@ public class TouristMoveGoal extends Goal {
                 // 夜晚 + 未满条：意图入住（到达即入，spot time = 0）。旅店满员 → 不排队当 service 逛，
                 // 直接放弃本次访问重新规划（去别的旅店/离场窗口兜底），避免排队拖到被清场。
                 long dayTime = tourist.level().getDayTime() % 24000;
-                if (dayTime >= Config.TOURIST_NIGHT_START.get() && !tourist.isFullySatisfied()) {
+                if (dayTime >= TouristSimulation.TOURIST_NIGHT_START && !tourist.isFullySatisfied()) {
                     finishBuildingStop();
                     return;
                 }
@@ -530,7 +537,7 @@ public class TouristMoveGoal extends Goal {
         // 白天/满条/满员（tryHotelCheckIn 失败）→ 按普通 service 建筑继续。
         if (isHotelBuilding(buildingId) && isInsideBuilding(buildingId)) {
             long dayTime = tourist.level().getDayTime() % 24000;
-            if (dayTime >= Config.TOURIST_NIGHT_START.get() && !tourist.isFullySatisfied()) {
+            if (dayTime >= TouristSimulation.TOURIST_NIGHT_START && !tourist.isFullySatisfied()) {
                 if (tryHotelCheckIn(buildingId, getBuildingTypeId(buildingId))) {
                     return;
                 }
@@ -788,7 +795,7 @@ public class TouristMoveGoal extends Goal {
     /** 排队等待：轮询本队 spot 空位，超 TOURIST_QUEUE_WAIT_TOLERANCE_TICKS 放弃去别处。 */
     private void tickQueue() {
         try (var span = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tourist.goal.tick_queue")) {
-        if (++queueTicks > Config.TOURIST_QUEUE_WAIT_TOLERANCE_TICKS.get()) {
+        if (++queueTicks > TouristSimSystem.TOURIST_QUEUE_WAIT_TOLERANCE_TICKS) {
             abandonBuildingVisit();
             return;
         }
@@ -1038,7 +1045,7 @@ public class TouristMoveGoal extends Goal {
         try (var span = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tourist.goal.try_hotel_checkin")) {
         if (!isHotelBuilding(buildingId)) return false;
         long dayTime = tourist.level().getDayTime() % 24000;
-        boolean isNight = dayTime >= Config.TOURIST_NIGHT_START.get();
+        boolean isNight = dayTime >= TouristSimulation.TOURIST_NIGHT_START;
         // 夜晚 + 未满条 → 入住/回店睡（满条游客夜晚等离场，不入旅店）
         if (!(isNight && !tourist.isFullySatisfied())) return false;
 
@@ -1134,7 +1141,7 @@ public class TouristMoveGoal extends Goal {
             BlockPos target = api.getTouristInteractionTarget(hotel);
             if (target == null) target = data.getPosition();
             if (target != null && tourist.blockPosition().distSqr(target)
-                    > (long) Config.TOURIST_HOTEL_TELEPORT_DISTANCE.get() * Config.TOURIST_HOTEL_TELEPORT_DISTANCE.get()) {
+                    > (long) TOURIST_HOTEL_TELEPORT_DISTANCE * TOURIST_HOTEL_TELEPORT_DISTANCE) {
                 if (!hotelRouteBackoff.isActive() && teleportToHotel(hotel, target)) {
                     // 传送后重设近距离导航（清掉旧的远距离 waypoint 路径）
                     routeToHotelBuilding(hotel, target, false);
@@ -1214,7 +1221,7 @@ public class TouristMoveGoal extends Goal {
 
         // 过远 → 先尝试传送（传送失败则放弃本次路由，不强制远距离寻路）
         if (teleportIfFar) {
-            int max = Config.TOURIST_HOTEL_TELEPORT_DISTANCE.get();
+            int max = TOURIST_HOTEL_TELEPORT_DISTANCE;
             if (tourist.blockPosition().distSqr(target) > (long) max * max) {
                 if (!teleportToHotel(hotelId, target)) {
                     return false;
@@ -1875,7 +1882,7 @@ public class TouristMoveGoal extends Goal {
         if (chosen == null) {
             Log.info(TAG, "[Tourist] {} | NO BUILDING | colony={} | night={} | visited={} | energy={} | bars={}/{}/{} (need {}/{}/{})",
                     tourist.getTouristName(), tourist.getColonyId(),
-                    (level.getDayTime() % 24000) >= Config.TOURIST_NIGHT_START.get(),
+                    (level.getDayTime() % 24000) >= TouristSimulation.TOURIST_NIGHT_START,
                     tourist.getVisitedBuildings().size(), tourist.getEnergy(),
                     tourist.getComfortSat(), tourist.getMagicSat(), tourist.getWonderSat(),
                     tourist.getComfortNeed(), tourist.getMagicNeed(), tourist.getWonderNeed());
@@ -2170,7 +2177,7 @@ public class TouristMoveGoal extends Goal {
     }
 
     private int getInteractionRange() {
-        return Config.ARRIVAL_RADIUS.get();
+        return ARRIVAL_RADIUS;
     }
 
     /** Universal insurance: if stuck on a floating surface (building roof) while roaming, teleport down. */

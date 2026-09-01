@@ -35,6 +35,10 @@ import java.util.UUID;
 public final class TouristTeleport {
 
     private static final String TAG = "TouristTeleport";
+    /** Max blocks a rescue teleport searches for a road. */
+    private static final int TOURIST_RESCUE_ROAD_RADIUS = 96;
+    /** Max blocks a rescue teleport scans outward for open ground. */
+    private static final int TOURIST_RESCUE_PERIPHERY_RADIUS = 24;
 
     private TouristTeleport() {
     }
@@ -91,7 +95,7 @@ public final class TouristTeleport {
         RoadNetwork net = roadNetwork(colonyId);
         if (net == null || net.isEmpty()) return null;
 
-        int maxSq = Config.TOURIST_RESCUE_ROAD_RADIUS.get() * Config.TOURIST_RESCUE_ROAD_RADIUS.get();
+        int maxSq = TOURIST_RESCUE_ROAD_RADIUS * TOURIST_RESCUE_ROAD_RADIUS;
         PathPoint best = null;
         int bestSq = Integer.MAX_VALUE;
         for (RoadEdge edge : net.getEdges().values()) {
@@ -159,7 +163,7 @@ public final class TouristTeleport {
             }
         }
         // 3. Bounded outward ring scan, sampling columns until one clears all bboxes.
-        int radius = Config.TOURIST_RESCUE_PERIPHERY_RADIUS.get();
+        int radius = TOURIST_RESCUE_PERIPHERY_RADIUS;
         for (int r = 2; r <= radius; r += 2) {
             int step = Math.max(1, r / 4);
             for (int x = -r; x <= r; x += step) {

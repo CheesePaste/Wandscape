@@ -125,7 +125,7 @@ public final class AltarCastHandler {
             return;
         }
         // 殖民地归属经 TaskRequest.colonyId 显式传递（GlobalTaskPool 统一写入 colony_id 参数）
-        source.publish(new TaskRequest(TASK_BLUEPRINT, params, WandscapeConstants.QUEUE_RITUAL_ALTAR,
+        source.publish(new TaskRequest(TASK_BLUEPRINT, params, WandscapeConstants.TASK_PRIORITY_PLAYER,
                 colonyId));
         Log.info(TAG, "player={} requested altar cast: altar={} magic={} manaCost={}",
                 player.getName().getString(), buildingId.toString().substring(0, 8),
