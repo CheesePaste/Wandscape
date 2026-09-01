@@ -28,6 +28,10 @@ public final class ColonyApiImpl implements ColonyApi {
     /** Colony UUID → origin position (reverse lookup). */
     private final Map<UUID, BlockPos> colonyToOrigin = new ConcurrentHashMap<>();
 
+    /** Colony level/exp data source — injected by Wandscape.java during assembly (not via WandscapeEngine). */
+    @Nullable
+    private ColonyLevelManager colonyLevelManager;
+
     private ColonyApiImpl() {}
 
     // ── Lifecycle ──────────────────────────────────────────────────────────
@@ -228,6 +232,30 @@ public final class ColonyApiImpl implements ColonyApi {
         if (colonyOrigins.isEmpty()) {
             Log.warn(TAG, "[Colony] No colonies restored — ColonySavedData is empty and no government building found");
         }
+    }
+
+    // ── Colony level / experience (injected, not via WandscapeEngine) ──────
+
+    public void setColonyLevelManager(@Nullable ColonyLevelManager mgr) {
+        this.colonyLevelManager = mgr;
+    }
+
+    @Override
+    public int getColonyLevel(UUID colonyId) {
+        if (colonyId == null || !colonyToOrigin.containsKey(colonyId)) return 0;
+        return colonyLevelManager != null ? colonyLevelManager.getLevel(colonyId) : 1;
+    }
+
+    @Override
+    public int getColonyExp(UUID colonyId) {
+        if (colonyId == null || !colonyToOrigin.containsKey(colonyId)) return 0;
+        return colonyLevelManager != null ? colonyLevelManager.getExperience(colonyId) : 0;
+    }
+
+    @Override
+    public void grantExperience(UUID colonyId, int amount) {
+        if (colonyId == null || !colonyToOrigin.containsKey(colonyId)) return;
+        if (colonyLevelManager != null) colonyLevelManager.addExperience(colonyId, amount);
     }
 
     // ── Singleton ─────────────────────────────────────────────────────────

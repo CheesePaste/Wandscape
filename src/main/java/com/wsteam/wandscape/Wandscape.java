@@ -1068,6 +1068,7 @@ public class Wandscape {
         var colonyLevelData = ColonyLevelData.getOrCreate(level);
         var colonyLevelManager = new ColonyLevelManager(colonyLevelData);
         WandscapeEngine.setColonyLevelManager(colonyLevelManager);
+        com.wsteam.wandscape.content.colony.ColonyApiImpl.get().setColonyLevelManager(colonyLevelManager);
 
         // Wire level-up event to engine EventBus
         if (world != null && world.eventBus != null) {

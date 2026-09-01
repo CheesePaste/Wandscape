@@ -11,7 +11,7 @@
 2. `api/` 面有真扩展点（NpcInteractHook、NpcAttributesApi、注册接口），但操作类有静默失败（`addElement` void no-op）、**缺"给社区灵活性"的程序化操作**（注册元素映射、程序化升级殖民地、程序化调深度数值）。
 
 **调性（用户拍板）**：
-- **少 JSON**：不加新 JSON 驱动内容；现有 element_mappings/buildings/craft_recipes/magic_spells 保留。
+- **不加新 JSON 驱动**：现有 element_mappings/buildings/craft_recipes/magic_spells 保留（**数量不减**）；registerMapping 等是给 addon 的**代码注册通道**（免写 JSON 文件、运行时覆盖），非为了削减仓库内 JSON 数量。
 - **Config = 精简，面向普通玩家**：只留玩家会懂、会想调的少数标量。
 - **API = 丰富，面向附属/整合包作者**：确实有使用需求 + 好命名才加；目标是"给社区很大灵活性，发展生态"。
 
@@ -47,9 +47,9 @@
 
 ---
 
-## 三、② ElementApi.registerMapping（程序化注册元素映射，减 JSON）
+## 三、② ElementApi.registerMapping（程序化注册元素映射——addon 免写 JSON）
 
-**目的**：附属作者给自家方块/物品加元素值、或改 build_cost，无需写 `data/<ns>/element_mappings/*.json`，代码注册即可。这是"少 JSON"的第一个直接落点。
+**目的**：附属作者给自家方块/物品加元素值、或改 build_cost，无需写 `data/<ns>/element_mappings/*.json`，代码注册即可。这是给 addon 的**代码注册通道**（免写 JSON 文件、运行时覆盖），非为了削减仓库内 JSON 数量——现有 `element_mappings` JSON 照常保留。
 
 **改动**：
 - `content/element/internal/ElementMappingLoader.java`：

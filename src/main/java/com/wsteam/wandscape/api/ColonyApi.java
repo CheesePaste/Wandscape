@@ -54,4 +54,13 @@ public interface ColonyApi {
 
     // Rebuild spatial index from saved data (called on server start).
     void rebuildFromSavedData();
+
+    /** Current colony level (1..max), or 0 when no such colony exists. */
+    int getColonyLevel(UUID colonyId);
+
+    /** Current colony experience, or 0 when no such colony exists. */
+    int getColonyExp(UUID colonyId);
+
+    /** Programmatically grant experience to a colony (respects max level, may trigger level-up). */
+    void grantExperience(UUID colonyId, int amount);
 }
