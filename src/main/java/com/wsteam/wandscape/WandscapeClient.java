@@ -185,7 +185,9 @@ public class WandscapeClient {
     @SubscribeEvent
     static void onClientSetup(FMLClientSetupEvent event) {
         // Building preview GIF bake params (clarity + framerate) from config
-        BuildingPreviewGifCache.configure(com.wsteam.wandscape.ClientConfig.PREVIEW_RESOLUTION.get(), com.wsteam.wandscape.ClientConfig.PREVIEW_FPS.get());
+        int res = ClientConfig.SPEC.isLoaded() ? ClientConfig.PREVIEW_RESOLUTION.get() : 128;
+        int fps = ClientConfig.SPEC.isLoaded() ? ClientConfig.PREVIEW_FPS.get() : 12;
+        BuildingPreviewGifCache.configure(res, fps);
         // Wire server→client packet handlers — open MedievalScreen directly.
         WarehouseDataPacket.setClientHandler(packet -> {
             // The warehouse screen opens through the vanilla menu flow (openMenu +

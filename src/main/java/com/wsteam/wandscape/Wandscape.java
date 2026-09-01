@@ -554,8 +554,10 @@ public class Wandscape {
     }
 
     private void onModConfig(ModConfigEvent event) {
-        if (Config.DEBUG.get()) {
-            com.wsteam.wandscape.foundation.log.LogConfig.setRootLevel(com.wsteam.wandscape.foundation.log.LogLevel.DEBUG);
+        if (event.getConfig().getSpec() == Config.SPEC && Config.SPEC.isLoaded()) {
+            if (Config.DEBUG.get()) {
+                com.wsteam.wandscape.foundation.log.LogConfig.setRootLevel(com.wsteam.wandscape.foundation.log.LogLevel.DEBUG);
+            }
         }
     }
 
