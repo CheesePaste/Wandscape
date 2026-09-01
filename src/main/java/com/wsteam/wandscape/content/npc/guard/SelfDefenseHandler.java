@@ -4,6 +4,7 @@ import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.log.LogCategory;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.LivingEntity;
@@ -55,7 +56,7 @@ public final class SelfDefenseHandler {
 
         long expiry = npc.level().getGameTime() + com.wsteam.wandscape.foundation.util.BalanceValues.guardHateDurationTicks();
         npc.setHatedAttacker(attacker.getUUID(), expiry);
-        Log.info(TAG, "NPC {} hurt by {} — hate set until +{}t",
+        Log.debug(LogCategory.NPC, "guard", "NPC {} hurt by {} — hate set until +{}t",
                 npc.getUUID().toString().substring(0, 8),
                 attacker.getUUID().toString().substring(0, 8),
                 com.wsteam.wandscape.foundation.util.BalanceValues.guardHateDurationTicks());

@@ -549,13 +549,16 @@ public class Wandscape {
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {
+        com.wsteam.wandscape.foundation.log.LogConfig.load();
         WandscapeApis.setWandApi(WAND_API);
         WandscapeApis.setElementApi(ELEMENT_API);
-        Log.info(TAG, "Wandscape common setup — wand, element, buildings, npc ready");
+        Log.info(com.wsteam.wandscape.foundation.log.LogCategory.BOOTSTRAP, "Wandscape common setup — wand, element, buildings, npc ready");
     }
 
     private void onModConfig(ModConfigEvent event) {
-        Log.setVerbose(Config.DEBUG.get());
+        if (Config.DEBUG.get()) {
+            com.wsteam.wandscape.foundation.log.LogConfig.setRootLevel(com.wsteam.wandscape.foundation.log.LogLevel.DEBUG);
+        }
     }
 
     private void onRegisterPayloads(RegisterPayloadHandlersEvent event) {
@@ -1095,6 +1098,7 @@ public class Wandscape {
         var root = Commands.literal("wandscape")
                 .then(GenerateElementMappingsCommand.node())
                 .then(AuditElementsCommand.node())
+                .then(LogCommand.node())
                 .then(LogFilterCommand.node())
                 .then(FillBuildingCommand.fillNode())
                 .then(NavTestCommand.node())
@@ -1262,7 +1266,7 @@ public class Wandscape {
                         }
                     }
                 }
-                Log.info(TAG, "[Engine] engineTick=#{} mcTick=#{} — entities={} tasks_in_pool={} pendingAsync={}",
+                Log.debug(com.wsteam.wandscape.foundation.log.LogCategory.BOOTSTRAP, "engine", "engineTick=#{} mcTick=#{} — entities={} tasks_in_pool={} pendingAsync={}",
                         engineTickCount, mcTickCount,
                         world.getNextEntityId() - 1,
                         world.taskPool != null ? world.taskPool.size() : 0,

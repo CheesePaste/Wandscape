@@ -11,6 +11,7 @@ import com.wsteam.wandscape.api.BuildingApi;
 import com.wsteam.wandscape.content.element.data.ElementType;
 import com.wsteam.wandscape.content.building.data.WorkItem;
 import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.log.LogCategory;
 import com.wsteam.wandscape.api.WandscapeApis;
 import com.wsteam.wandscape.content.task.engine.pool.BuildingTaskPool;
 import com.wsteam.wandscape.content.task.engine.pool.GlobalTask;
@@ -73,7 +74,7 @@ public class BuildingTaskSource implements TaskSource {
                     if (head == null || head.state == TaskState.COMPLETED) {
                         btp.onHeadCompleted(buildingId, resolveColony(api, buildingId), pool);
                         api.clearCurrentTask(buildingId);
-                        Log.info(TAG, "[BuildingTaskSource] cleanup building {} head #{} completed",
+                        Log.debug(LogCategory.BUILDING, "source", "cleanup building {} head #{} completed",
                                 buildingId.toString().substring(0, 8), headId);
                     } else if (head.state == TaskState.AWAITING_RESOURCES) {
                         if (head.buildingId != null && isProductionTask(head) && isElementShortage(head)) {
@@ -85,14 +86,14 @@ public class BuildingTaskSource implements TaskSource {
                             pool.cancelTask(headId, world);
                             btp.onHeadCompleted(buildingId, resolveColony(api, buildingId), pool);
                             api.clearCurrentTask(buildingId);
-                            Log.info(TAG, "[BuildingTaskSource] building {} head #{} recycled to queue on element shortage",
+                            Log.debug(LogCategory.BUILDING, "source", "building {} head #{} recycled to queue on element shortage",
                                     buildingId.toString().substring(0, 8), headId);
                         } else {
                             // 非生产任务（建材运输等）或缺的是物品原料（如药水玻璃瓶）→ 维持 park，
                             // 等资源到账由唤醒路径继续。
                             btp.parkHead(buildingId, headId);
                             api.clearCurrentTask(buildingId);
-                            Log.info(TAG, "[BuildingTaskSource] building {} head #{} parked on resource shortage",
+                            Log.debug(LogCategory.BUILDING, "source", "building {} head #{} parked on resource shortage",
                                     buildingId.toString().substring(0, 8), headId);
                         }
                     }

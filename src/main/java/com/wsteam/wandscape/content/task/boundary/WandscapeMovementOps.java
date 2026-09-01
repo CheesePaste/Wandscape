@@ -9,6 +9,7 @@ import com.wsteam.wandscape.impl.WandscapeEngine;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.content.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.log.LogCategory;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -43,7 +44,7 @@ public class WandscapeMovementOps implements MovementOps {
         double dz = npc.getZ() - (z + 0.5);
         double hDistSq = dx * dx + dz * dz;
 
-        Log.info(TAG, "[MovementOps] navigateTo npc={} → ({},{},{}) hDist={}",
+        Log.debug(LogCategory.TASK, "move", "navigateTo npc={} → ({},{},{}) hDist={}",
                 npcId, x, y, z, (int) Math.sqrt(hDistSq));
 
         // Write NavigationState — NavigationSystem picks this up (always, even when in-range)
@@ -58,7 +59,7 @@ public class WandscapeMovementOps implements MovementOps {
         nav.target = new GridPos(x, y, z);
         nav.future = future;
 
-        Log.info(TAG, "[MovementOps] nav queued for NPC {} — NavigationSystem will drive it", npcId);
+        Log.debug(LogCategory.TASK, "move", "nav queued for NPC {} — NavigationSystem will drive it", npcId);
         return future;
     }
 

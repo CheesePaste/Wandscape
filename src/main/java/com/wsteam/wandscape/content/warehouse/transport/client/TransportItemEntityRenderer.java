@@ -1,5 +1,4 @@
-package com.wsteam.wandscape.client.renderer;
-import com.wsteam.wandscape.content.task.ecs.World;
+package com.wsteam.wandscape.content.warehouse.transport.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
