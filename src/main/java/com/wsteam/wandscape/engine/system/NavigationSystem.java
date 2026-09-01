@@ -1,4 +1,5 @@
 package com.wsteam.wandscape.engine.system;
+import com.wsteam.wandscape.foundation.util.TickProfiler;
 
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.core.component.NavigationState;
@@ -13,7 +14,7 @@ import com.wsteam.wandscape.content.magic.data.MagicDef;
 import com.wsteam.wandscape.content.magic.internal.SpellbookLoader;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.content.npc.internal.EntityComponentBridge;
-import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.foundation.log.Log;
 import net.minecraft.core.BlockPos;
 
 import java.util.List;
@@ -49,7 +50,7 @@ public class NavigationSystem implements System {
 
     @Override
     public void update(World world, float delta) {
-        try (var span = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("ecs.navigation.tick")) {
+        try (var span = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("ecs.navigation.tick")) {
         tickCounter++;
 
         List<Long> npcs = world.query(NavigationState.class, Position.class);

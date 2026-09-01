@@ -1,6 +1,6 @@
 package com.wsteam.wandscape.content.tourist.internal;
 
-import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.foundation.log.Log;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;

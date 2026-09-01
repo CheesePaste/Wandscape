@@ -1,6 +1,6 @@
 package com.wsteam.wandscape.content.colony.stats.network;
 
-import com.wsteam.wandscape.shared.ui.panel.WandscapePanelState;
+import com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState;
 import com.wsteam.wandscape.content.colony.stats.data.ColonyStatsSummary;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;

@@ -1,4 +1,5 @@
 package com.wsteam.wandscape.content.building.network;
+import com.wsteam.wandscape.content.npc.data.MageResume;
 
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.content.building.internal.BuildingInteractHandler;
@@ -10,11 +11,11 @@ import com.wsteam.wandscape.core.types.AttributeType;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.content.npc.internal.EntityComponentBridge;
-import com.wsteam.wandscape.shared.data.MageAttributeRoller;
-import com.wsteam.wandscape.shared.log.Log;
-import com.wsteam.wandscape.shared.network.ScreenFeedbackPacket;
-import com.wsteam.wandscape.shared.registry.WandscapeConstants;
-import com.wsteam.wandscape.shared.ui.I18n;
+import com.wsteam.wandscape.content.npc.data.MageAttributeRoller;
+import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.networking.ScreenFeedbackPacket;
+import com.wsteam.wandscape.foundation.registry.WandscapeConstants;
+import com.wsteam.wandscape.foundation.ui.I18n;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
@@ -92,9 +93,9 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
             }
 
             // 2.5 招募计费门控（仅「招募 NPC」收费）：每小镇首次免费，之后每次需每种元素 10000
-            com.wsteam.wandscape.shared.api.TavernApi tavernApi = null;
+            com.wsteam.wandscape.api.TavernApi tavernApi = null;
             try {
-                tavernApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getTavernApi();
+                tavernApi = com.wsteam.wandscape.api.WandscapeApis.getTavernApi();
             } catch (IllegalStateException ignored) {}
             if (tavernApi != null && !tavernApi.canAffordRecruit(colonyId)) {
                 ScreenFeedbackPacket.send(sp, I18n.name("message.wandscape.tavern.insufficient_elements",
@@ -178,9 +179,9 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
             return;
         }
 
-        com.wsteam.wandscape.shared.data.MageResume resume;
+        com.wsteam.wandscape.content.npc.data.MageResume resume;
         try {
-            var tavernApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getTavernApi();
+            var tavernApi = com.wsteam.wandscape.api.WandscapeApis.getTavernApi();
             resume = tavernApi.recruitMage(buildingId, colonyId, index);
         } catch (IllegalStateException e) {
             ScreenFeedbackPacket.send(sp, I18n.name("message.wandscape.tavern.system_unavailable",
@@ -234,7 +235,7 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
                 false);
 
         try {
-            var tavernApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getTavernApi();
+            var tavernApi = com.wsteam.wandscape.api.WandscapeApis.getTavernApi();
             if (tavernApi != null) {
                 PacketDistributor.sendToPlayer(sp,
                         new TavernOpenPacket(pkt.buildingPos, colonyId,
@@ -257,8 +258,8 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
         }
 
         try {
-            var tavernApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getTavernApi();
-            com.wsteam.wandscape.shared.data.MageResume removed = tavernApi.rejectMage(colonyId, index);
+            var tavernApi = com.wsteam.wandscape.api.WandscapeApis.getTavernApi();
+            com.wsteam.wandscape.content.npc.data.MageResume removed = tavernApi.rejectMage(colonyId, index);
             if (removed == null) {
                 ScreenFeedbackPacket.send(sp, I18n.name("message.wandscape.tavern.invalid_selection",
                         "[Wandscape] Invalid mage selection."), true);

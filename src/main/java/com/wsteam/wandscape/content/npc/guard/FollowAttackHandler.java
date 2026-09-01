@@ -2,7 +2,7 @@ package com.wsteam.wandscape.content.npc.guard;
 
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.content.npc.internal.EntityComponentBridge;
-import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.foundation.log.Log;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;

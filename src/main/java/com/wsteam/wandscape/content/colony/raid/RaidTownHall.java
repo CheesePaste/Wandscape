@@ -1,8 +1,8 @@
 package com.wsteam.wandscape.content.colony.raid;
 
-import com.wsteam.wandscape.shared.data.BuildingData;
-import com.wsteam.wandscape.shared.registry.WandscapeApis;
-import com.wsteam.wandscape.shared.registry.WandscapeConstants;
+import com.wsteam.wandscape.content.building.data.BuildingData;
+import com.wsteam.wandscape.api.WandscapeApis;
+import com.wsteam.wandscape.foundation.registry.WandscapeConstants;
 import net.minecraft.core.BlockPos;
 
 import javax.annotation.Nullable;

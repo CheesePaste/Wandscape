@@ -4,8 +4,8 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.wsteam.wandscape.foundation.registry.dataconfig.internal.WandscapeDataLoader;
-import com.wsteam.wandscape.shared.log.Log;
-import com.wsteam.wandscape.shared.registry.WandscapeDataRegistry;
+import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.registry.WandscapeDataRegistry;
 
 import javax.annotation.Nullable;
 import java.util.*;

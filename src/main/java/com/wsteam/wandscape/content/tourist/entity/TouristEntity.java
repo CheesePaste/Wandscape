@@ -1,14 +1,22 @@
 package com.wsteam.wandscape.content.tourist.entity;
+import com.wsteam.wandscape.content.npc.data.RecruitmentCandidate;
+import com.wsteam.wandscape.content.tourist.data.VisitMemory;
+import com.wsteam.wandscape.foundation.util.CharacterNames;
+import com.wsteam.wandscape.content.tourist.event.TouristArrivedEvent;
+import com.wsteam.wandscape.content.tourist.data.BarRatio;
+import com.wsteam.wandscape.content.npc.data.MageAttributeRoller;
+import com.wsteam.wandscape.content.tourist.data.Emotion;
+import com.wsteam.wandscape.content.tourist.data.Activity;
 
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.content.tourist.internal.*;
 import com.wsteam.wandscape.engine.nav.WandscapeNavigation;
-import com.wsteam.wandscape.shared.data.*;
-import com.wsteam.wandscape.shared.entity.ColonyVisitor;
-import com.wsteam.wandscape.shared.entity.VillagerLike;
-import com.wsteam.wandscape.shared.registry.WandscapeApis;
-import com.wsteam.wandscape.shared.registry.WandscapeConstants;
+// data imports updated
+import com.wsteam.wandscape.content.tourist.entity.ColonyVisitor;
+import com.wsteam.wandscape.content.tourist.entity.VillagerLike;
+import com.wsteam.wandscape.api.WandscapeApis;
+import com.wsteam.wandscape.foundation.registry.WandscapeConstants;
 import com.wsteam.wandscape.content.tourist.internal.*;
 import com.wsteam.wandscape.content.tourist.network.TouristDataPacket;
 import net.minecraft.core.BlockPos;
@@ -775,7 +783,7 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
 
     /** Display name resolved to the current language (legacy literal names pass through). */
     public String getTouristName() {
-        return com.wsteam.wandscape.shared.data.CharacterNames.localizedString(touristName);
+        return com.wsteam.wandscape.foundation.util.CharacterNames.localizedString(touristName);
     }
 
     /** Raw name key (or legacy literal) — used when copying between entity and shadow. */
@@ -1010,6 +1018,6 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
     }
 
     private void syncName() {
-        setCustomName(com.wsteam.wandscape.shared.data.CharacterNames.displayComponent(touristName));
+        setCustomName(com.wsteam.wandscape.foundation.util.CharacterNames.displayComponent(touristName));
     }
 }

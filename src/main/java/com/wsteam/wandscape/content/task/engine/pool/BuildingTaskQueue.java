@@ -1,6 +1,6 @@
 package com.wsteam.wandscape.content.task.engine.pool;
 
-import com.wsteam.wandscape.shared.data.WorkItem;
+import com.wsteam.wandscape.content.building.data.WorkItem;
 
 import javax.annotation.Nullable;
 import java.util.ArrayDeque;

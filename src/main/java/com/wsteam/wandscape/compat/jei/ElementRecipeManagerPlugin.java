@@ -1,8 +1,8 @@
 package com.wsteam.wandscape.compat.jei;
 
 import com.wsteam.wandscape.Wandscape;
-import com.wsteam.wandscape.shared.data.ElementType;
-import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.content.element.data.ElementType;
+import com.wsteam.wandscape.foundation.log.Log;
 import mezz.jei.api.ingredients.ITypedIngredient;
 import mezz.jei.api.recipe.advanced.ISimpleRecipeManagerPlugin;
 import net.minecraft.core.registries.BuiltInRegistries;

@@ -1,6 +1,6 @@
 package com.wsteam.wandscape.content.tourist.client;
 
-import com.wsteam.wandscape.shared.data.Activity;
+import com.wsteam.wandscape.content.tourist.data.Activity;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
 

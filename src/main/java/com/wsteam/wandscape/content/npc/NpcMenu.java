@@ -2,7 +2,7 @@ package com.wsteam.wandscape.content.npc;
 
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
-import com.wsteam.wandscape.shared.ui.vanilla.VanillaPlayerInventory;
+import com.wsteam.wandscape.foundation.ui.vanilla.VanillaPlayerInventory;
 import com.wsteam.wandscape.content.items.wand.item.WandItem;
 import net.minecraft.world.Container;
 import net.minecraft.world.InteractionHand;

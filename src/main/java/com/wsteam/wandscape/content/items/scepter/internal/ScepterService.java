@@ -2,7 +2,7 @@ package com.wsteam.wandscape.content.items.scepter.internal;
 
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.content.items.scepter.ScepterKind;
-import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.foundation.log.Log;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
@@ -137,7 +137,7 @@ public final class ScepterService {
     @Nullable
     private static UUID ownColony(ServerPlayer player) {
         try {
-            var api = com.wsteam.wandscape.shared.registry.WandscapeApis.getColonyApiSilently();
+            var api = com.wsteam.wandscape.api.WandscapeApis.getColonyApiSilently();
             return api != null ? api.getColonyByFounder(player.getUUID()) : null;
         } catch (RuntimeException e) {
             Log.warn(TAG, "Failed to resolve own colony for {}: {}", shortId(player.getUUID()), e.toString());

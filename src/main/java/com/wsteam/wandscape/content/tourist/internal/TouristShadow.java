@@ -1,9 +1,11 @@
 package com.wsteam.wandscape.content.tourist.internal;
+import com.wsteam.wandscape.content.npc.data.MageResume;
+import com.wsteam.wandscape.foundation.util.CharacterNames;
 
-import com.wsteam.wandscape.shared.data.Activity;
-import com.wsteam.wandscape.shared.data.Emotion;
-import com.wsteam.wandscape.shared.data.VisitMemory;
-import com.wsteam.wandscape.shared.registry.WandscapeConstants;
+import com.wsteam.wandscape.content.tourist.data.Activity;
+import com.wsteam.wandscape.content.tourist.data.Emotion;
+import com.wsteam.wandscape.content.tourist.data.VisitMemory;
+import com.wsteam.wandscape.foundation.registry.WandscapeConstants;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -144,7 +146,7 @@ public final class TouristShadow implements TouristStateHost {
 
     /** Display name resolved to the current language (legacy literal names pass through). */
     public String getTouristName() {
-        return com.wsteam.wandscape.shared.data.CharacterNames.localizedString(touristName);
+        return com.wsteam.wandscape.foundation.util.CharacterNames.localizedString(touristName);
     }
 
     /** Raw name key (or legacy literal) — used when copying between entity and shadow. */

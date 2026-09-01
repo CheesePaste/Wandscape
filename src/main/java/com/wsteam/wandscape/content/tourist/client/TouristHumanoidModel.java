@@ -1,6 +1,6 @@
 package com.wsteam.wandscape.content.tourist.client;
 
-import com.wsteam.wandscape.shared.data.Activity;
+import com.wsteam.wandscape.content.tourist.data.Activity;
 import com.wsteam.wandscape.content.tourist.entity.TouristEntity;
 import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.model.geom.ModelPart;

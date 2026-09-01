@@ -6,7 +6,7 @@ import com.mojang.brigadier.tree.CommandNode;
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.engine.WandscapeEngine;
-import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.content.task.runtime.TaskState;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;

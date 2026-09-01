@@ -1,4 +1,5 @@
 package com.wsteam.wandscape.content.task.engine.dsl;
+import com.wsteam.wandscape.foundation.log.Log;
 
 import com.wsteam.wandscape.content.task.op.api.AtomicOp;
 

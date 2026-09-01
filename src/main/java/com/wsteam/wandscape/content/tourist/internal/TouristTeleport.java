@@ -1,15 +1,16 @@
 package com.wsteam.wandscape.content.tourist.internal;
+import com.wsteam.wandscape.foundation.util.TickProfiler;
 
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.content.building.internal.BuildingState;
 import com.wsteam.wandscape.content.road.core.PathPoint;
 import com.wsteam.wandscape.content.road.core.RoadEdge;
 import com.wsteam.wandscape.content.road.core.RoadNetwork;
-import com.wsteam.wandscape.shared.api.BuildingApi;
-import com.wsteam.wandscape.shared.api.RoadApi;
-import com.wsteam.wandscape.shared.data.BuildingData;
-import com.wsteam.wandscape.shared.log.Log;
-import com.wsteam.wandscape.shared.registry.WandscapeApis;
+import com.wsteam.wandscape.api.BuildingApi;
+import com.wsteam.wandscape.api.RoadApi;
+import com.wsteam.wandscape.content.building.data.BuildingData;
+import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.api.WandscapeApis;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.levelgen.Heightmap;
@@ -48,7 +49,7 @@ public final class TouristTeleport {
     @Nullable
     public static BlockPos findSafeSpot(ServerLevel level, BlockPos origin,
             @Nullable UUID colonyId, @Nullable UUID targetBuildingId) {
-        try (var span = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("tourist.teleport.find_safe_spot")) {
+        try (var span = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tourist.teleport.find_safe_spot")) {
         // 1. Nearest built road within the search radius.
         BlockPos road = nearestRoadSpot(level, origin, colonyId);
         if (road != null) return road;
@@ -72,7 +73,7 @@ public final class TouristTeleport {
     @Nullable
     public static BlockPos findSafeSpotNearEntry(ServerLevel level, BlockPos entry,
             @Nullable UUID colonyId) {
-        try (var span = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("tourist.teleport.find_safe_spot_near_entry")) {
+        try (var span = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tourist.teleport.find_safe_spot_near_entry")) {
         if (entry == null) return null;
         BlockPos near = walkableOutsideBuilding(level, entry.getX(), entry.getY(), entry.getZ(), colonyId);
         if (near != null) return near;
@@ -84,7 +85,7 @@ public final class TouristTeleport {
 
     @Nullable
     private static BlockPos nearestRoadSpot(ServerLevel level, BlockPos origin, @Nullable UUID colonyId) {
-        try (var span = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("tourist.teleport.nearest_road")) {
+        try (var span = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tourist.teleport.nearest_road")) {
         RoadNetwork net = roadNetwork(colonyId);
         if (net == null || net.isEmpty()) return null;
 
@@ -128,7 +129,7 @@ public final class TouristTeleport {
     @Nullable
     private static BlockPos peripherySpot(ServerLevel level, BlockPos origin,
             @Nullable UUID colonyId, @Nullable UUID targetBuildingId) {
-        try (var span = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("tourist.teleport.periphery")) {
+        try (var span = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tourist.teleport.periphery")) {
         // 1. The building's documented entry point already sits just outside its bbox.
         if (targetBuildingId != null) {
             BlockPos entry = getEntryPoint(targetBuildingId);

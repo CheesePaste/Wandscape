@@ -1,4 +1,5 @@
 package com.wsteam.wandscape.content.production.network;
+import com.wsteam.wandscape.foundation.log.Log;
 
 import com.wsteam.wandscape.content.production.data.BrewPotionRecipe;
 import com.wsteam.wandscape.content.production.data.CraftWandRecipe;
@@ -6,7 +7,7 @@ import com.wsteam.wandscape.content.production.data.MiscRecipe;
 import com.wsteam.wandscape.content.production.data.RecipeUnlockRequirement;
 import com.wsteam.wandscape.content.production.internal.ProductionAffordability;
 import com.wsteam.wandscape.content.production.internal.RecipeUnlockChecker;
-import com.wsteam.wandscape.shared.data.ElementType;
+import com.wsteam.wandscape.content.element.data.ElementType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;

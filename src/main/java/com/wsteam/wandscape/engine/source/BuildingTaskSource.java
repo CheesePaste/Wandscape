@@ -1,15 +1,16 @@
 package com.wsteam.wandscape.engine.source;
+import com.wsteam.wandscape.content.building.data.BuildingData;
 
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.types.ResourceStack;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.boundary.ProductionEligibility;
 import com.wsteam.wandscape.engine.service.ChunkLoadManager;
-import com.wsteam.wandscape.shared.api.BuildingApi;
-import com.wsteam.wandscape.shared.data.ElementType;
-import com.wsteam.wandscape.shared.data.WorkItem;
-import com.wsteam.wandscape.shared.log.Log;
-import com.wsteam.wandscape.shared.registry.WandscapeApis;
+import com.wsteam.wandscape.api.BuildingApi;
+import com.wsteam.wandscape.content.element.data.ElementType;
+import com.wsteam.wandscape.content.building.data.WorkItem;
+import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.api.WandscapeApis;
 import com.wsteam.wandscape.content.task.engine.pool.BuildingTaskPool;
 import com.wsteam.wandscape.content.task.engine.pool.GlobalTask;
 import com.wsteam.wandscape.content.task.engine.pool.GlobalTaskPool;
@@ -117,7 +118,7 @@ public class BuildingTaskSource implements TaskSource {
         for (UUID buildingId : buildingIds) {
             // 创始人不在线且关闭离线运行 → 冻结小镇：不发布新任务
             //（建筑的排队工作与占地保留，上线后由下一次 poll 继续处理）
-            com.wsteam.wandscape.shared.data.BuildingData bd = api.getBuilding(buildingId);
+            com.wsteam.wandscape.content.building.data.BuildingData bd = api.getBuilding(buildingId);
             UUID colonyId = bd != null ? bd.getColonyId() : null;
             if (colonyId != null && !com.wsteam.wandscape.engine.colony.ColonyActivation.isColonyActive(colonyId)) {
                 continue;
@@ -233,7 +234,7 @@ public class BuildingTaskSource implements TaskSource {
     /** 建筑所属殖民地；建筑不存在/未归属返回 null（该任务视为无主，仍可派给真实殖民地 NPC）。 */
     @Nullable
     private static UUID resolveColony(BuildingApi api, UUID buildingId) {
-        com.wsteam.wandscape.shared.data.BuildingData bd = api.getBuilding(buildingId);
+        com.wsteam.wandscape.content.building.data.BuildingData bd = api.getBuilding(buildingId);
         return bd != null ? bd.getColonyId() : null;
     }
 

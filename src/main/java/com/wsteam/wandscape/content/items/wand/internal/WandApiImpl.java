@@ -2,7 +2,7 @@ package com.wsteam.wandscape.content.items.wand.internal;
 
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.core.types.AttributeModifier;
-import com.wsteam.wandscape.shared.api.WandApi;
+import com.wsteam.wandscape.api.WandApi;
 import com.wsteam.wandscape.content.items.wand.internal.WandPresetLoader.WandPreset;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.item.ItemStack;

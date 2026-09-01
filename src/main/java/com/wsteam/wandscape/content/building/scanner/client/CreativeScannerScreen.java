@@ -10,9 +10,9 @@ import com.wsteam.wandscape.content.building.scanner.client.gizmo.ScannerGizmoSt
 import com.wsteam.wandscape.content.building.scanner.network.ScannerExportPacket;
 import com.wsteam.wandscape.content.building.scanner.network.ScannerSyncPacket;
 import com.wsteam.wandscape.content.building.scanner.network.ScannerValuePacket;
-import com.wsteam.wandscape.shared.ui.I18n;
-import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
-import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
+import com.wsteam.wandscape.foundation.ui.I18n;
+import com.wsteam.wandscape.foundation.ui.component.MedievalScreen;
+import com.wsteam.wandscape.foundation.ui.theme.MedievalColors;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.core.BlockPos;

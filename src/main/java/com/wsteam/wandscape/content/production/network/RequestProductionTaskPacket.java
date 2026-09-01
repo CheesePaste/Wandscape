@@ -8,11 +8,11 @@ import com.wsteam.wandscape.content.production.ProductionRecipeLoader;
 import com.wsteam.wandscape.content.production.data.CraftRecipeView;
 import com.wsteam.wandscape.content.production.internal.RecipeUnlockChecker;
 import com.wsteam.wandscape.content.warehouse.ColonyItemBank;
-import com.wsteam.wandscape.shared.api.BuildingApi;
-import com.wsteam.wandscape.shared.data.WorkItem;
-import com.wsteam.wandscape.shared.log.Log;
-import com.wsteam.wandscape.shared.registry.WandscapeApis;
-import com.wsteam.wandscape.shared.registry.WandscapeConstants;
+import com.wsteam.wandscape.api.BuildingApi;
+import com.wsteam.wandscape.content.building.data.WorkItem;
+import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.api.WandscapeApis;
+import com.wsteam.wandscape.foundation.registry.WandscapeConstants;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -156,7 +156,7 @@ public record RequestProductionTaskPacket(
             if ("synthesize".equals(pkt.action) && state.getColonyId() != null) {
                 var bank = ColonyItemBank.get(level);
                 if (bank != null) bank.recordPlayerSynthesize(state.getColonyId());
-                var guideApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getGuideProgressApiSilently();
+                var guideApi = com.wsteam.wandscape.api.WandscapeApis.getGuideProgressApiSilently();
                 if (guideApi != null) guideApi.sendToPlayer(sp, state.getColonyId());
             }
 

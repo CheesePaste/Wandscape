@@ -8,9 +8,9 @@ import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.service.SoundService;
 import com.wsteam.wandscape.engine.sound.WandscapeSounds;
 import com.wsteam.wandscape.content.road.data.RoadPreset;
-import com.wsteam.wandscape.shared.log.Log;
-import com.wsteam.wandscape.shared.network.ScreenFeedbackPacket;
-import com.wsteam.wandscape.shared.ui.I18n;
+import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.networking.ScreenFeedbackPacket;
+import com.wsteam.wandscape.foundation.ui.I18n;
 import com.wsteam.wandscape.content.task.engine.pool.TaskRequest;
 import com.wsteam.wandscape.content.task.source.PlayerManualSource;
 import net.minecraft.core.BlockPos;
@@ -87,7 +87,7 @@ public record FillBoxPacket(String presetId, BlockPos startPos, BlockPos endPos)
         // 4. Build tiles: every position in the cube gets the preset's block (skip bedrock)
         JsonArray tiles = new JsonArray();
         java.util.Map<String, Integer> materials = new java.util.LinkedHashMap<>();
-        var elementApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getElementApi();
+        var elementApi = com.wsteam.wandscape.api.WandscapeApis.getElementApi();
         BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
 
         for (int x = minX; x <= maxX; x++) {
@@ -153,7 +153,7 @@ public record FillBoxPacket(String presetId, BlockPos startPos, BlockPos endPos)
 
         try {
             long taskId = source.publish(new TaskRequest("terrain:fill_box", params, 10,
-                    com.wsteam.wandscape.shared.registry.WandscapeApis.colonyAt(player.blockPosition())));
+                    com.wsteam.wandscape.api.WandscapeApis.colonyAt(player.blockPosition())));
             SoundService.playAt(player.serverLevel(), player.getX(), player.getY(), player.getZ(),
                     WandscapeSounds.TASK_PUBLISH, SoundSource.PLAYERS, 0.4f, 1.0f);
             Log.info(TAG, "[Fill] Published task #{}: preset={} box=({},{},{})→({},{},{}) tiles={}",

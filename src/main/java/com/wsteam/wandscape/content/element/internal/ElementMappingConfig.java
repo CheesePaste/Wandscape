@@ -2,7 +2,7 @@ package com.wsteam.wandscape.content.element.internal;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.wsteam.wandscape.shared.data.ElementType;
+import com.wsteam.wandscape.content.element.data.ElementType;
 
 import javax.annotation.Nullable;
 import java.util.Map;

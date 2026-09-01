@@ -7,8 +7,8 @@ import com.google.gson.JsonPrimitive;
 import com.wsteam.wandscape.content.building.data.BlockOffset;
 import com.wsteam.wandscape.content.building.data.BuildingConfig;
 import com.wsteam.wandscape.content.building.projection.BuildingRotation;
-import com.wsteam.wandscape.shared.data.WorkItem;
-import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.content.building.data.WorkItem;
+import com.wsteam.wandscape.foundation.log.Log;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 
@@ -112,7 +112,7 @@ public final class BuildingRepairHandler {
     /** Compute deduped material_list + material_counts from a block mapping. */
     private static RepairMaterialData computeRepairMaterialData(JsonObject blocks) {
         var counts = new java.util.LinkedHashMap<String, Integer>();
-        var elementApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getElementApi();
+        var elementApi = com.wsteam.wandscape.api.WandscapeApis.getElementApi();
         for (var entry : blocks.entrySet()) {
             String blockId = entry.getValue().getAsString();
             if (blockId == null || "minecraft:air".equals(blockId)) continue;

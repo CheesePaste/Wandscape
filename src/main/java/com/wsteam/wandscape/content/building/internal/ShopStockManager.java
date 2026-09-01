@@ -1,16 +1,22 @@
 package com.wsteam.wandscape.content.building.internal;
+import com.wsteam.wandscape.content.element.data.ElementType;
+import com.wsteam.wandscape.content.building.data.BuildingData;
+import com.wsteam.wandscape.content.tourist.data.ShopGoodDef;
+import com.wsteam.wandscape.foundation.util.ItemKey;
+import com.wsteam.wandscape.content.tourist.data.ShopConfig;
+import com.wsteam.wandscape.foundation.util.TickProfiler;
 
 import com.wsteam.wandscape.content.building.data.BuildingConfig;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.colony.ColonyActivation;
 import com.wsteam.wandscape.engine.system.ResourceSupplySystem;
 import com.wsteam.wandscape.engine.transport.ItemTransportManager;
-import com.wsteam.wandscape.shared.api.BuildingApi;
-import com.wsteam.wandscape.shared.data.*;
-import com.wsteam.wandscape.shared.event.DailySettlementEvent;
-import com.wsteam.wandscape.shared.event.ShopRestockedEvent;
-import com.wsteam.wandscape.shared.log.Log;
-import com.wsteam.wandscape.shared.registry.WandscapeApis;
+import com.wsteam.wandscape.api.BuildingApi;
+// data imports updated
+import com.wsteam.wandscape.content.tourist.event.DailySettlementEvent;
+import com.wsteam.wandscape.content.tourist.event.ShopRestockedEvent;
+import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.api.WandscapeApis;
 import com.wsteam.wandscape.content.warehouse.ColonyItemBank;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
@@ -486,7 +492,7 @@ public final class ShopStockManager {
     /** Re-attempt restock for shops awaiting produced goods, on a slow heartbeat. */
     @SubscribeEvent
     public void onServerTick(ServerTickEvent.Post event) {
-        try (var span = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("building.shop_stock.on_server_tick")) {
+        try (var span = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("building.shop_stock.on_server_tick")) {
             if (pendingRestock.isEmpty()) return;
             if (++restockRetryTicks < RESTOCK_RETRY_INTERVAL_TICKS) return;
             restockRetryTicks = 0;

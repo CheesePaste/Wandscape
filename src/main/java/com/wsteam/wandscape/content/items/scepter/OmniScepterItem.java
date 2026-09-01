@@ -1,8 +1,8 @@
 package com.wsteam.wandscape.content.items.scepter;
 
 import com.wsteam.wandscape.content.items.scepter.internal.ScepterService;
-import com.wsteam.wandscape.shared.api.MageWandItem;
-import com.wsteam.wandscape.shared.api.NpcBindingItem;
+import com.wsteam.wandscape.api.MageWandItem;
+import com.wsteam.wandscape.api.NpcBindingItem;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;

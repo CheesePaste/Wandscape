@@ -2,8 +2,8 @@ package com.wsteam.wandscape.content.items.ring;
 
 import com.wsteam.wandscape.content.items.ring.client.OathRingClientData;
 import com.wsteam.wandscape.content.items.ring.internal.OathRingService;
-import com.wsteam.wandscape.shared.api.NpcBindingItem;
-import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.api.NpcBindingItem;
+import com.wsteam.wandscape.foundation.log.Log;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;

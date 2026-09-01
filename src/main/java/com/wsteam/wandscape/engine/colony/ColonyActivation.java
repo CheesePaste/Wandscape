@@ -1,8 +1,8 @@
 package com.wsteam.wandscape.engine.colony;
 
 import com.wsteam.wandscape.Config;
-import com.wsteam.wandscape.shared.api.ColonyApi;
-import com.wsteam.wandscape.shared.registry.WandscapeApis;
+import com.wsteam.wandscape.api.ColonyApi;
+import com.wsteam.wandscape.api.WandscapeApis;
 import net.minecraft.server.MinecraftServer;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 

@@ -5,7 +5,7 @@ import com.google.gson.JsonPrimitive;
 import com.wsteam.wandscape.core.TemplateResolver;
 import com.wsteam.wandscape.core.boundary.EventBus;
 import com.wsteam.wandscape.core.event.CustomEvent;
-import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.content.task.engine.dsl.Blueprint;
 import com.wsteam.wandscape.content.task.engine.dsl.BlueprintSteps;
 import com.wsteam.wandscape.content.task.engine.dsl.TriggerDeclaration;

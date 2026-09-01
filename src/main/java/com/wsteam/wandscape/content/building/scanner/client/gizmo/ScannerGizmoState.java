@@ -6,7 +6,7 @@ import com.wsteam.wandscape.content.building.scanner.ScannerBlockEntity;
 import com.wsteam.wandscape.content.building.scanner.client.CreativeScannerScreen;
 import com.wsteam.wandscape.content.building.scanner.client.ScannerScreen;
 import com.wsteam.wandscape.content.building.scanner.network.ScannerSyncPacket;
-import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.foundation.log.Log;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.Vec3;
@@ -86,7 +86,7 @@ public final class ScannerGizmoState {
 
     public static void setSelectedAnchor(Anchor a) {
         selectedAnchor = a;
-        showToast(com.wsteam.wandscape.shared.ui.I18n.string("gui.wandscape.gizmo.toast_anchor_switched", "已切换编辑锚点: %s", a.getLabel()), a.getColor());
+        showToast(com.wsteam.wandscape.foundation.ui.I18n.string("gui.wandscape.gizmo.toast_anchor_switched", "已切换编辑锚点: %s", a.getLabel()), a.getColor());
     }
 
     public static void toggleAnchor() {
@@ -191,7 +191,7 @@ public final class ScannerGizmoState {
             mc.mouseHandler.releaseMouse();
         }
 
-        showToast(com.wsteam.wandscape.shared.ui.I18n.string("gui.wandscape.gizmo.toast_enter", "§a已进入 3D 可视化调整模式 (右键旋转视角, 左键拖拽轴向)"), 0xFF55FF55);
+        showToast(com.wsteam.wandscape.foundation.ui.I18n.string("gui.wandscape.gizmo.toast_enter", "§a已进入 3D 可视化调整模式 (右键旋转视角, 左键拖拽轴向)"), 0xFF55FF55);
         Log.info(TAG, "Entered Gizmo mode for scanner at {}", be.getBlockPos());
     }
 
@@ -229,7 +229,7 @@ public final class ScannerGizmoState {
                 ? new ScannerScreen(survival)
                 : new CreativeScannerScreen(be);
         mc.setScreen(screen);
-        screen.showFeedback(com.wsteam.wandscape.shared.ui.I18n.name("gui.wandscape.gizmo.toast_confirmed", "§a3D 包围盒已更新并同步！(%d×%d×%d)", getWidth(), getHeight(), getDepth()), 0xFF55FF55);
+        screen.showFeedback(com.wsteam.wandscape.foundation.ui.I18n.name("gui.wandscape.gizmo.toast_confirmed", "§a3D 包围盒已更新并同步！(%d×%d×%d)", getWidth(), getHeight(), getDepth()), 0xFF55FF55);
         Log.info(TAG, "Confirmed Gizmo changes: min={}, max={}", currentMin, currentMax);
     }
 
@@ -249,7 +249,7 @@ public final class ScannerGizmoState {
                 ? new ScannerScreen(survival)
                 : new CreativeScannerScreen(be);
         mc.setScreen(screen);
-        screen.showFeedback(com.wsteam.wandscape.shared.ui.I18n.name("gui.wandscape.gizmo.toast_cancelled", "§6已还原原始 3D 边界配置。"), 0xFFFFAA00);
+        screen.showFeedback(com.wsteam.wandscape.foundation.ui.I18n.name("gui.wandscape.gizmo.toast_cancelled", "§6已还原原始 3D 边界配置。"), 0xFFFFAA00);
         Log.info(TAG, "Cancelled Gizmo mode, reverted to min={}, max={}", initialMin, initialMax);
     }
 

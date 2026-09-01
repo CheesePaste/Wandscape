@@ -1,7 +1,7 @@
 package com.wsteam.wandscape.content.items.wand.item;
 
-import com.wsteam.wandscape.shared.api.WandApi;
-import com.wsteam.wandscape.shared.registry.WandscapeApis;
+import com.wsteam.wandscape.api.WandApi;
+import com.wsteam.wandscape.api.WandscapeApis;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;

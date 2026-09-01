@@ -9,8 +9,8 @@ import com.wsteam.wandscape.content.building.scanner.CreativeScannerBlockEntity.
 import com.wsteam.wandscape.content.building.scanner.InteractSpotMarkerBlock;
 import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.content.road.data.RoadPresetLoader;
-import com.wsteam.wandscape.shared.log.Log;
-import com.wsteam.wandscape.shared.ui.I18n;
+import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.ui.I18n;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;

@@ -1,13 +1,13 @@
 package com.wsteam.wandscape.content.colony.stats.internal;
 
-import com.wsteam.wandscape.shared.api.ColonyApi;
-import com.wsteam.wandscape.shared.event.ColonyEvaluationChangedEvent;
-import com.wsteam.wandscape.shared.event.DailySettlementEvent;
-import com.wsteam.wandscape.shared.event.TouristArrivedEvent;
-import com.wsteam.wandscape.shared.event.TouristDepartedEvent;
-import com.wsteam.wandscape.shared.log.Log;
-import com.wsteam.wandscape.shared.network.PanelStateTracker;
-import com.wsteam.wandscape.shared.registry.WandscapeApis;
+import com.wsteam.wandscape.api.ColonyApi;
+import com.wsteam.wandscape.content.colony.event.ColonyEvaluationChangedEvent;
+import com.wsteam.wandscape.content.tourist.event.DailySettlementEvent;
+import com.wsteam.wandscape.content.tourist.event.TouristArrivedEvent;
+import com.wsteam.wandscape.content.tourist.event.TouristDepartedEvent;
+import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.ui.panel.PanelStateTracker;
+import com.wsteam.wandscape.api.WandscapeApis;
 import com.wsteam.wandscape.content.colony.stats.data.ColonyDailySnapshot;
 import com.wsteam.wandscape.content.colony.stats.data.ColonyStatsSummary;
 import com.wsteam.wandscape.content.colony.stats.network.StatsSyncPacket;

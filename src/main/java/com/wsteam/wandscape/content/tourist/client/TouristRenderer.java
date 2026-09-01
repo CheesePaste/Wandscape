@@ -2,9 +2,9 @@ package com.wsteam.wandscape.content.tourist.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.wsteam.wandscape.Wandscape;
-import com.wsteam.wandscape.shared.client.bubble.AmbientTextPools;
-import com.wsteam.wandscape.shared.client.bubble.SpeechBubbleRenderer;
-import com.wsteam.wandscape.shared.data.Activity;
+import com.wsteam.wandscape.foundation.ui.bubble.AmbientTextPools;
+import com.wsteam.wandscape.foundation.ui.bubble.SpeechBubbleRenderer;
+import com.wsteam.wandscape.content.tourist.data.Activity;
 import com.wsteam.wandscape.content.tourist.entity.TouristEntity;
 import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.multiplayer.ClientLevel;

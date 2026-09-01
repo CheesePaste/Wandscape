@@ -11,7 +11,7 @@ import com.wsteam.wandscape.core.types.GridPos;
 import com.wsteam.wandscape.core.types.NpcAttributes;
 import com.wsteam.wandscape.core.types.ResourceStack;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
-import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.foundation.log.Log;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -147,7 +147,7 @@ public final class EntityComponentBridge {
 
         // Auto-detect colony for spawn-egg NPCs that still have the default
         if (PLACEHOLDER_COLONY.equals(colony)) {
-            var colonyApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getColonyApiSilently();
+            var colonyApi = com.wsteam.wandscape.api.WandscapeApis.getColonyApiSilently();
             if (colonyApi != null) {
                 UUID detected = colonyApi.getColonyId(npc.blockPosition());
                 if (detected != null) {

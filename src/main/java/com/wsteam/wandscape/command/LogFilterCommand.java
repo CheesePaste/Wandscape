@@ -1,11 +1,12 @@
 package com.wsteam.wandscape.command;
+import com.wsteam.wandscape.foundation.log.Log;
 
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.tree.CommandNode;
-import com.wsteam.wandscape.shared.log.LogFilter;
+import com.wsteam.wandscape.foundation.log.LogFilter;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;

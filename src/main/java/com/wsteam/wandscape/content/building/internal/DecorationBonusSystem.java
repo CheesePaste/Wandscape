@@ -1,4 +1,5 @@
 package com.wsteam.wandscape.content.building.internal;
+import com.wsteam.wandscape.foundation.util.TickProfiler;
 
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.content.building.data.BuildingConfig;
@@ -43,7 +44,7 @@ public final class DecorationBonusSystem {
 
     @SubscribeEvent
     public void onServerTick(ServerTickEvent.Post event) {
-        try (var span = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("building.decoration.on_server_tick")) {
+        try (var span = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("building.decoration.on_server_tick")) {
         MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
         if (server == null) return;
         ServerLevel level = server.overworld();

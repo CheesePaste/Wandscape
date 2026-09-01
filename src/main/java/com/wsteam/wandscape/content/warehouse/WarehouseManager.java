@@ -3,11 +3,11 @@ package com.wsteam.wandscape.content.warehouse;
 import com.wsteam.wandscape.core.boundary.ColonyResourceAccess;
 import com.wsteam.wandscape.core.boundary.ResourceAddedListener;
 import com.wsteam.wandscape.core.types.ResourceId;
-import com.wsteam.wandscape.shared.api.WarehouseApi;
-import com.wsteam.wandscape.shared.data.ElementType;
-import com.wsteam.wandscape.shared.data.ItemKey;
-import com.wsteam.wandscape.shared.event.ResourceInsufficientEvent;
-import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.api.WarehouseApi;
+import com.wsteam.wandscape.content.element.data.ElementType;
+import com.wsteam.wandscape.foundation.util.ItemKey;
+import com.wsteam.wandscape.content.warehouse.event.ResourceInsufficientEvent;
+import com.wsteam.wandscape.foundation.log.Log;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.MinecraftServer;
@@ -315,7 +315,7 @@ public class WarehouseManager implements WarehouseApi, ColonyResourceAccess {
 
     /** Find the first storage building's colony ID, or fallback to default. */
     private static UUID findStorageColony() {
-        var api = com.wsteam.wandscape.shared.registry.WandscapeApis.getBuildingApi();
+        var api = com.wsteam.wandscape.api.WandscapeApis.getBuildingApi();
         for (var bd : api.getColonyBuildings(null)) {
             if ("storage".equals(bd.getCategory())) {
                 UUID cid = bd.getColonyId();

@@ -1,9 +1,9 @@
 package com.wsteam.wandscape.content.building.projection.client;
 
 import com.wsteam.wandscape.content.building.projection.network.BuildingDebugRequestPacket;
-import com.wsteam.wandscape.shared.log.Log;
-import com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket;
-import com.wsteam.wandscape.shared.ui.panel.WandscapePanelState;
+import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.content.building.network.BuildingAreaSyncPacket;
+import com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;

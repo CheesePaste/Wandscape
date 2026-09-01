@@ -3,7 +3,7 @@ package com.wsteam.wandscape.content.building.client;
 import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.content.building.network.BuildingConfigCompressor;
 import com.wsteam.wandscape.content.building.network.BuildingConfigSyncChunkPacket;
-import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.foundation.log.Log;
 
 import java.io.ByteArrayOutputStream;
 import java.util.HashMap;

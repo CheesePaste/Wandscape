@@ -1,7 +1,7 @@
 package com.wsteam.wandscape.content.npc.data;
 
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
-import com.wsteam.wandscape.shared.data.NpcData;
+import com.wsteam.wandscape.content.npc.data.NpcData;
 
 import javax.annotation.Nullable;
 import java.util.UUID;

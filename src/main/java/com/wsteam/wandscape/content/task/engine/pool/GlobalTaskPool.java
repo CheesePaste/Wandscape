@@ -13,7 +13,7 @@ import com.wsteam.wandscape.core.event.TaskCompleted;
 import com.wsteam.wandscape.core.types.GridPos;
 import com.wsteam.wandscape.core.types.ResourceId;
 import com.wsteam.wandscape.core.types.ResourceStack;
-import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.content.task.engine.dsl.CompiledBlueprint;
 import com.wsteam.wandscape.content.task.engine.dsl.TaskCompiler;
 import com.wsteam.wandscape.content.task.engine.dsl.TriggerDeclaration;

@@ -5,8 +5,8 @@ import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.content.npc.data.NpcDataImpl;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
-import com.wsteam.wandscape.shared.api.NpcApi;
-import com.wsteam.wandscape.shared.data.NpcData;
+import com.wsteam.wandscape.api.NpcApi;
+import com.wsteam.wandscape.content.npc.data.NpcData;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;

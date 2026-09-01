@@ -1,6 +1,6 @@
 package com.wsteam.wandscape.content.production.internal;
 
-import com.wsteam.wandscape.shared.data.ElementType;
+import com.wsteam.wandscape.content.element.data.ElementType;
 
 import java.util.Map;
 

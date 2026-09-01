@@ -1,4 +1,5 @@
 package com.wsteam.wandscape.content.building.network;
+import com.wsteam.wandscape.foundation.util.NameStyle;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -15,7 +16,7 @@ import static com.wsteam.wandscape.Wandscape.MODID;
  * {@code canUseWarehouse} is true when the colony has no storage building, so the client
  * shows a "warehouse access" button letting the town hall act as a warehouse.
  * {@code namingStyle} is the colony's character naming rule ({@link
- * com.wsteam.wandscape.shared.data.NameStyle} ordinal) for the UI switcher.
+ * com.wsteam.wandscape.foundation.util.NameStyle} ordinal) for the UI switcher.
  */
 public record TownHallOpenPacket(BlockPos buildingPos, UUID colonyId,
                                  String colonyName, int level, int experience, int expToNext,

@@ -4,7 +4,7 @@ import com.wsteam.wandscape.core.types.AttributeType;
 import com.wsteam.wandscape.content.magic.data.MagicDef;
 import com.wsteam.wandscape.content.magic.internal.SpellbookLoader;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
-import com.wsteam.wandscape.shared.registry.WandscapeApis;
+import com.wsteam.wandscape.api.WandscapeApis;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;

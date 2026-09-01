@@ -4,7 +4,7 @@ import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.content.items.ring.network.OathRingDataPacket;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.content.items.ring.RingTier;
-import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.foundation.log.Log;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
@@ -144,7 +144,7 @@ public final class OathRingService {
     @Nullable
     private static UUID ownColony(ServerPlayer player) {
         try {
-            var api = com.wsteam.wandscape.shared.registry.WandscapeApis.getColonyApiSilently();
+            var api = com.wsteam.wandscape.api.WandscapeApis.getColonyApiSilently();
             return api != null ? api.getColonyByFounder(player.getUUID()) : null;
         } catch (RuntimeException e) {
             Log.warn(TAG, "Failed to resolve own colony for {}: {}", shortId(player.getUUID()), e.toString());

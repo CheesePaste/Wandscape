@@ -7,14 +7,14 @@ import com.wsteam.wandscape.compat.curios.client.NpcCuriosButton;
 import com.wsteam.wandscape.content.npc.NpcMenu;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.content.npc.network.*;
-import com.wsteam.wandscape.shared.ui.I18n;
-import com.wsteam.wandscape.shared.ui.ReplayProtectedScreen;
-import com.wsteam.wandscape.shared.ui.component.HelpButton;
-import com.wsteam.wandscape.shared.ui.component.MedievalButton;
-import com.wsteam.wandscape.shared.ui.component.MedievalConfirmDialog;
-import com.wsteam.wandscape.shared.ui.skin.SkinRender;
-import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
-import com.wsteam.wandscape.shared.ui.vanilla.VanillaPlayerInventory;
+import com.wsteam.wandscape.foundation.ui.I18n;
+import com.wsteam.wandscape.foundation.ui.ReplayProtectedScreen;
+import com.wsteam.wandscape.foundation.ui.component.HelpButton;
+import com.wsteam.wandscape.foundation.ui.component.MedievalButton;
+import com.wsteam.wandscape.foundation.ui.component.MedievalConfirmDialog;
+import com.wsteam.wandscape.foundation.ui.skin.SkinRender;
+import com.wsteam.wandscape.foundation.ui.theme.MedievalColors;
+import com.wsteam.wandscape.foundation.ui.vanilla.VanillaPlayerInventory;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
@@ -242,9 +242,9 @@ public class NpcScreen extends AbstractContainerScreen<NpcMenu> implements Repla
 
     public void openHelpDocument() {
         if (helpDocumentPath != null && minecraft != null) {
-            String content = com.wsteam.wandscape.shared.ui.markdown.navigation.DocumentLoader
+            String content = com.wsteam.wandscape.foundation.ui.markdown.navigation.DocumentLoader
                     .loadMarkdown(helpDocumentPath);
-            minecraft.setScreen(new com.wsteam.wandscape.shared.ui.guide.GuideTestScreen(
+            minecraft.setScreen(new com.wsteam.wandscape.foundation.ui.guide.GuideTestScreen(
                     this, content, helpDocumentPath));
         }
     }

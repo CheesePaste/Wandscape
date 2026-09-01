@@ -1,15 +1,15 @@
 package com.wsteam.wandscape.content.warehouse.client;
 
 import com.wsteam.wandscape.WandscapeClient;
-import com.wsteam.wandscape.shared.data.ElementType;
-import com.wsteam.wandscape.shared.ui.I18n;
-import com.wsteam.wandscape.shared.ui.ReplayProtectedScreen;
-import com.wsteam.wandscape.shared.ui.component.ElementPanel;
-import com.wsteam.wandscape.shared.ui.component.HelpButton;
-import com.wsteam.wandscape.shared.ui.component.ScrollableList;
-import com.wsteam.wandscape.shared.ui.component.SearchBox;
-import com.wsteam.wandscape.shared.ui.skin.SkinRender;
-import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
+import com.wsteam.wandscape.content.element.data.ElementType;
+import com.wsteam.wandscape.foundation.ui.I18n;
+import com.wsteam.wandscape.foundation.ui.ReplayProtectedScreen;
+import com.wsteam.wandscape.foundation.ui.component.ElementPanel;
+import com.wsteam.wandscape.foundation.ui.component.HelpButton;
+import com.wsteam.wandscape.foundation.ui.component.ScrollableList;
+import com.wsteam.wandscape.foundation.ui.component.SearchBox;
+import com.wsteam.wandscape.foundation.ui.skin.SkinRender;
+import com.wsteam.wandscape.foundation.ui.theme.MedievalColors;
 import com.wsteam.wandscape.content.warehouse.WarehouseMenu;
 import com.wsteam.wandscape.content.warehouse.WarehousePager;
 import com.wsteam.wandscape.content.warehouse.WarehouseSlot;
@@ -539,9 +539,9 @@ public class WarehouseScreen extends AbstractContainerScreen<WarehouseMenu> impl
 
     public void openHelpDocument() {
         if (helpDocumentPath != null && minecraft != null) {
-            String content = com.wsteam.wandscape.shared.ui.markdown.navigation.DocumentLoader
+            String content = com.wsteam.wandscape.foundation.ui.markdown.navigation.DocumentLoader
                     .loadMarkdown(helpDocumentPath);
-            var screen = new com.wsteam.wandscape.shared.ui.guide.GuideTestScreen(
+            var screen = new com.wsteam.wandscape.foundation.ui.guide.GuideTestScreen(
                     this, content, helpDocumentPath);
             minecraft.setScreen(screen);
         }

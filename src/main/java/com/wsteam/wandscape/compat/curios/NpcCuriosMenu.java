@@ -2,7 +2,7 @@ package com.wsteam.wandscape.compat.curios;
 
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
-import com.wsteam.wandscape.shared.ui.vanilla.VanillaPlayerInventory;
+import com.wsteam.wandscape.foundation.ui.vanilla.VanillaPlayerInventory;
 import net.minecraft.core.NonNullList;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.world.entity.EntityType;

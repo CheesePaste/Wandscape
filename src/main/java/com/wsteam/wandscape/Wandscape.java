@@ -1,4 +1,22 @@
 package com.wsteam.wandscape;
+import com.wsteam.wandscape.foundation.ui.panel.PanelStateTogglePacket;
+import com.wsteam.wandscape.foundation.networking.ScreenFeedbackPacket;
+import com.wsteam.wandscape.content.items.network.GuideTestPacket;
+import com.wsteam.wandscape.foundation.networking.ParticleBurstPacket;
+import com.wsteam.wandscape.content.task.network.TaskPanelSyncTracker;
+import com.wsteam.wandscape.content.items.network.GuideProgressSyncPacket;
+import com.wsteam.wandscape.content.task.network.TaskManagementSyncPacket;
+import com.wsteam.wandscape.content.colony.network.ColonyNameUpdatePacket;
+import com.wsteam.wandscape.foundation.ui.panel.PanelStateTracker;
+import com.wsteam.wandscape.content.colony.network.ColonyAmbientPacket;
+import com.wsteam.wandscape.content.colony.network.ColonyCreatePromptPacket;
+import com.wsteam.wandscape.content.task.network.MageModeActionPacket;
+import com.wsteam.wandscape.content.task.network.TaskPanelSubscribePacket;
+import com.wsteam.wandscape.content.items.network.GuideProgressUpdatePacket;
+import com.wsteam.wandscape.content.task.network.TaskManagementActionPacket;
+import com.wsteam.wandscape.content.colony.network.ColonyStatsSyncPacket;
+import com.wsteam.wandscape.content.colony.network.ColonyCreateRequestPacket;
+import com.wsteam.wandscape.foundation.util.TickProfiler;
 
 import com.wsteam.wandscape.content.building.internal.*;
 import com.wsteam.wandscape.content.building.network.*;
@@ -79,10 +97,10 @@ import com.wsteam.wandscape.content.items.ring.internal.OathRingSavedData;
 import com.wsteam.wandscape.content.road.engine.RoadApiImpl;
 import com.wsteam.wandscape.content.road.engine.RoadSavedData;
 import com.wsteam.wandscape.content.road.engine.RoadSegmentListener;
-import com.wsteam.wandscape.shared.data.ElementType;
-import com.wsteam.wandscape.shared.log.Log;
-import com.wsteam.wandscape.shared.network.MagicCircleCastPacket;
-import com.wsteam.wandscape.shared.registry.WandscapeApis;
+import com.wsteam.wandscape.content.element.data.ElementType;
+import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.content.magic.network.MagicCircleCastPacket;
+import com.wsteam.wandscape.api.WandscapeApis;
 import com.wsteam.wandscape.content.colony.stats.internal.StatisticsCollector;
 import com.wsteam.wandscape.content.task.source.PlayerManualSource;
 import com.wsteam.wandscape.content.tourist.entity.TouristEntity;
@@ -499,8 +517,8 @@ public class Wandscape {
         NeoForge.EVENT_BUS.register(NpcSpellPowerHandler.class);
         NeoForge.EVENT_BUS.register(com.wsteam.wandscape.content.npc.internal.NpcDeathHandler.class);
         NeoForge.EVENT_BUS.register(BuildingInteractHandler.class);
-        NeoForge.EVENT_BUS.register(com.wsteam.wandscape.shared.network.PanelStateTracker.class);
-        NeoForge.EVENT_BUS.register(com.wsteam.wandscape.shared.network.tasks.TaskPanelSyncTracker.class);
+        NeoForge.EVENT_BUS.register(com.wsteam.wandscape.foundation.ui.panel.PanelStateTracker.class);
+        NeoForge.EVENT_BUS.register(com.wsteam.wandscape.content.task.network.TaskPanelSyncTracker.class);
         DailySettlementSystem.register();
         StatisticsCollector.register();
         decorationBonusSystem = DecorationBonusSystem.register();
@@ -764,14 +782,14 @@ public class Wandscape {
                         (packet, ctx) -> RoadWithdrawPacket.handleServer(packet, (ServerPlayer) ctx.player()))
                 // ── Wandscape Panel ──
                 .playToServer(
-                        com.wsteam.wandscape.shared.network.PanelStateTogglePacket.TYPE,
-                        com.wsteam.wandscape.shared.network.PanelStateTogglePacket.STREAM_CODEC,
-                        (packet, ctx) -> com.wsteam.wandscape.shared.network.PanelStateTogglePacket
+                        com.wsteam.wandscape.foundation.ui.panel.PanelStateTogglePacket.TYPE,
+                        com.wsteam.wandscape.foundation.ui.panel.PanelStateTogglePacket.STREAM_CODEC,
+                        (packet, ctx) -> com.wsteam.wandscape.foundation.ui.panel.PanelStateTogglePacket
                                 .handleServer(packet, (ServerPlayer) ctx.player()))
                 .playToClient(
-                        com.wsteam.wandscape.shared.network.ColonyStatsSyncPacket.TYPE,
-                        com.wsteam.wandscape.shared.network.ColonyStatsSyncPacket.STREAM_CODEC,
-                        (packet, ctx) -> com.wsteam.wandscape.shared.network.ColonyStatsSyncPacket
+                        com.wsteam.wandscape.content.colony.network.ColonyStatsSyncPacket.TYPE,
+                        com.wsteam.wandscape.content.colony.network.ColonyStatsSyncPacket.STREAM_CODEC,
+                        (packet, ctx) -> com.wsteam.wandscape.content.colony.network.ColonyStatsSyncPacket
                                 .handleClient(packet))
                 // ── Stats ──
                 .playToClient(
@@ -781,21 +799,21 @@ public class Wandscape {
                                 .handleClient(packet))
                 // ── Building interaction area overlay ──
                 .playToClient(
-                        com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket.TYPE,
-                        com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket.STREAM_CODEC,
-                        (packet, ctx) -> com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket
+                        com.wsteam.wandscape.content.building.network.BuildingAreaSyncPacket.TYPE,
+                        com.wsteam.wandscape.content.building.network.BuildingAreaSyncPacket.STREAM_CODEC,
+                        (packet, ctx) -> com.wsteam.wandscape.content.building.network.BuildingAreaSyncPacket
                                 .handleClient(packet))
                 // ── Road construction ghost sync ──
                 .playToClient(
-                        com.wsteam.wandscape.shared.network.RoadAreaSyncPacket.TYPE,
-                        com.wsteam.wandscape.shared.network.RoadAreaSyncPacket.STREAM_CODEC,
-                        (packet, ctx) -> com.wsteam.wandscape.shared.network.RoadAreaSyncPacket
+                        com.wsteam.wandscape.content.road.network.RoadAreaSyncPacket.TYPE,
+                        com.wsteam.wandscape.content.road.network.RoadAreaSyncPacket.STREAM_CODEC,
+                        (packet, ctx) -> com.wsteam.wandscape.content.road.network.RoadAreaSyncPacket
                                 .handleClient(packet))
                 // ── Transient action feedback (screen toast or action bar) ──
                 .playToClient(
-                        com.wsteam.wandscape.shared.network.ScreenFeedbackPacket.TYPE,
-                        com.wsteam.wandscape.shared.network.ScreenFeedbackPacket.STREAM_CODEC,
-                        (packet, ctx) -> com.wsteam.wandscape.shared.network.ScreenFeedbackPacket
+                        com.wsteam.wandscape.foundation.networking.ScreenFeedbackPacket.TYPE,
+                        com.wsteam.wandscape.foundation.networking.ScreenFeedbackPacket.STREAM_CODEC,
+                        (packet, ctx) -> com.wsteam.wandscape.foundation.networking.ScreenFeedbackPacket
                                 .handleClient(packet))
                 // ── NPC info screen ──
                 .playToClient(
@@ -838,15 +856,15 @@ public class Wandscape {
                         (packet, ctx) -> TouristBubblePacket.handleClient(packet))
                 // ── Colony day/night ambient ──
                 .playToClient(
-                        com.wsteam.wandscape.shared.network.ColonyAmbientPacket.TYPE,
-                        com.wsteam.wandscape.shared.network.ColonyAmbientPacket.STREAM_CODEC,
-                        (packet, ctx) -> com.wsteam.wandscape.shared.network.ColonyAmbientPacket
+                        com.wsteam.wandscape.content.colony.network.ColonyAmbientPacket.TYPE,
+                        com.wsteam.wandscape.content.colony.network.ColonyAmbientPacket.STREAM_CODEC,
+                        (packet, ctx) -> com.wsteam.wandscape.content.colony.network.ColonyAmbientPacket
                                 .handleClient(packet))
                 // ── Colony name update ──
                 .playToServer(
-                        com.wsteam.wandscape.shared.network.ColonyNameUpdatePacket.TYPE,
-                        com.wsteam.wandscape.shared.network.ColonyNameUpdatePacket.STREAM_CODEC,
-                        (packet, ctx) -> com.wsteam.wandscape.shared.network.ColonyNameUpdatePacket
+                        com.wsteam.wandscape.content.colony.network.ColonyNameUpdatePacket.TYPE,
+                        com.wsteam.wandscape.content.colony.network.ColonyNameUpdatePacket.STREAM_CODEC,
+                        (packet, ctx) -> com.wsteam.wandscape.content.colony.network.ColonyNameUpdatePacket
                                 .handleServer(packet, (net.minecraft.server.level.ServerPlayer) ctx.player()))
                 // ── Town hall naming rule switch ──
                 .playToServer(
@@ -856,14 +874,14 @@ public class Wandscape {
                                 .handleServer(packet, (net.minecraft.server.level.ServerPlayer) ctx.player()))
                 // ── Colony create (town hall naming flow) ──
                 .playToServer(
-                        com.wsteam.wandscape.shared.network.ColonyCreateRequestPacket.TYPE,
-                        com.wsteam.wandscape.shared.network.ColonyCreateRequestPacket.STREAM_CODEC,
-                        (packet, ctx) -> com.wsteam.wandscape.shared.network.ColonyCreateRequestPacket
+                        com.wsteam.wandscape.content.colony.network.ColonyCreateRequestPacket.TYPE,
+                        com.wsteam.wandscape.content.colony.network.ColonyCreateRequestPacket.STREAM_CODEC,
+                        (packet, ctx) -> com.wsteam.wandscape.content.colony.network.ColonyCreateRequestPacket
                                 .handleServer(packet, (net.minecraft.server.level.ServerPlayer) ctx.player()))
                 .playToClient(
-                        com.wsteam.wandscape.shared.network.ColonyCreatePromptPacket.TYPE,
-                        com.wsteam.wandscape.shared.network.ColonyCreatePromptPacket.STREAM_CODEC,
-                        (packet, ctx) -> com.wsteam.wandscape.shared.network.ColonyCreatePromptPacket
+                        com.wsteam.wandscape.content.colony.network.ColonyCreatePromptPacket.TYPE,
+                        com.wsteam.wandscape.content.colony.network.ColonyCreatePromptPacket.STREAM_CODEC,
+                        (packet, ctx) -> com.wsteam.wandscape.content.colony.network.ColonyCreatePromptPacket
                                 .handleClient(packet))
                 // ── Transport start ──
                 .playToClient(
@@ -877,14 +895,14 @@ public class Wandscape {
                         (packet, ctx) -> MagicCircleCastPacket.handleClient(packet))
                 // ── Particle burst (colored FX) ──
                 .playToClient(
-                        com.wsteam.wandscape.shared.network.ParticleBurstPacket.TYPE,
-                        com.wsteam.wandscape.shared.network.ParticleBurstPacket.STREAM_CODEC,
-                        (packet, ctx) -> com.wsteam.wandscape.shared.network.ParticleBurstPacket.handleClient(packet))
+                        com.wsteam.wandscape.foundation.networking.ParticleBurstPacket.TYPE,
+                        com.wsteam.wandscape.foundation.networking.ParticleBurstPacket.STREAM_CODEC,
+                        (packet, ctx) -> com.wsteam.wandscape.foundation.networking.ParticleBurstPacket.handleClient(packet))
                 // ── Guide test ──
                 .playToClient(
-                        com.wsteam.wandscape.shared.network.GuideTestPacket.TYPE,
-                        com.wsteam.wandscape.shared.network.GuideTestPacket.STREAM_CODEC,
-                        (packet, ctx) -> com.wsteam.wandscape.shared.network.GuideTestPacket.handleClient(packet))
+                        com.wsteam.wandscape.content.items.network.GuideTestPacket.TYPE,
+                        com.wsteam.wandscape.content.items.network.GuideTestPacket.STREAM_CODEC,
+                        (packet, ctx) -> com.wsteam.wandscape.content.items.network.GuideTestPacket.handleClient(packet))
                 // ── Guide book (right-click to open tutorial home) ──
                 .playToClient(
                         GuideBookOpenPacket.TYPE,
@@ -892,13 +910,13 @@ public class Wandscape {
                         (packet, ctx) -> GuideBookOpenPacket.handleClient(packet))
                 // ── Guide progress (onboarding persistence) ──
                 .playToClient(
-                        com.wsteam.wandscape.shared.network.GuideProgressSyncPacket.TYPE,
-                        com.wsteam.wandscape.shared.network.GuideProgressSyncPacket.STREAM_CODEC,
-                        (packet, ctx) -> com.wsteam.wandscape.shared.network.GuideProgressSyncPacket.handleClient(packet))
+                        com.wsteam.wandscape.content.items.network.GuideProgressSyncPacket.TYPE,
+                        com.wsteam.wandscape.content.items.network.GuideProgressSyncPacket.STREAM_CODEC,
+                        (packet, ctx) -> com.wsteam.wandscape.content.items.network.GuideProgressSyncPacket.handleClient(packet))
                 .playToServer(
-                        com.wsteam.wandscape.shared.network.GuideProgressUpdatePacket.TYPE,
-                        com.wsteam.wandscape.shared.network.GuideProgressUpdatePacket.STREAM_CODEC,
-                        (packet, ctx) -> com.wsteam.wandscape.shared.network.GuideProgressUpdatePacket.handleServer(packet,
+                        com.wsteam.wandscape.content.items.network.GuideProgressUpdatePacket.TYPE,
+                        com.wsteam.wandscape.content.items.network.GuideProgressUpdatePacket.STREAM_CODEC,
+                        (packet, ctx) -> com.wsteam.wandscape.content.items.network.GuideProgressUpdatePacket.handleServer(packet,
                                 (net.minecraft.server.level.ServerPlayer) ctx.player()))
                 // ── Spline Road Editor ──
                 .playToClient(
@@ -912,24 +930,24 @@ public class Wandscape {
                         RoadStudioEnterPacket::handleClient)
                 // ── Task & Mage Management Panel ──
                 .playToServer(
-                        com.wsteam.wandscape.shared.network.tasks.TaskPanelSubscribePacket.TYPE,
-                        com.wsteam.wandscape.shared.network.tasks.TaskPanelSubscribePacket.STREAM_CODEC,
-                        (packet, ctx) -> com.wsteam.wandscape.shared.network.tasks.TaskPanelSubscribePacket
+                        com.wsteam.wandscape.content.task.network.TaskPanelSubscribePacket.TYPE,
+                        com.wsteam.wandscape.content.task.network.TaskPanelSubscribePacket.STREAM_CODEC,
+                        (packet, ctx) -> com.wsteam.wandscape.content.task.network.TaskPanelSubscribePacket
                                 .handleServer(packet, (net.minecraft.server.level.ServerPlayer) ctx.player()))
                 .playToClient(
-                        com.wsteam.wandscape.shared.network.tasks.TaskManagementSyncPacket.TYPE,
-                        com.wsteam.wandscape.shared.network.tasks.TaskManagementSyncPacket.STREAM_CODEC,
-                        (packet, ctx) -> com.wsteam.wandscape.shared.network.tasks.TaskManagementSyncPacket
+                        com.wsteam.wandscape.content.task.network.TaskManagementSyncPacket.TYPE,
+                        com.wsteam.wandscape.content.task.network.TaskManagementSyncPacket.STREAM_CODEC,
+                        (packet, ctx) -> com.wsteam.wandscape.content.task.network.TaskManagementSyncPacket
                                 .handleClient(packet))
                 .playToServer(
-                        com.wsteam.wandscape.shared.network.tasks.TaskManagementActionPacket.TYPE,
-                        com.wsteam.wandscape.shared.network.tasks.TaskManagementActionPacket.STREAM_CODEC,
-                        (packet, ctx) -> com.wsteam.wandscape.shared.network.tasks.TaskManagementActionPacket
+                        com.wsteam.wandscape.content.task.network.TaskManagementActionPacket.TYPE,
+                        com.wsteam.wandscape.content.task.network.TaskManagementActionPacket.STREAM_CODEC,
+                        (packet, ctx) -> com.wsteam.wandscape.content.task.network.TaskManagementActionPacket
                                 .handleServer(packet, (net.minecraft.server.level.ServerPlayer) ctx.player()))
                 .playToServer(
-                        com.wsteam.wandscape.shared.network.tasks.MageModeActionPacket.TYPE,
-                        com.wsteam.wandscape.shared.network.tasks.MageModeActionPacket.STREAM_CODEC,
-                        (packet, ctx) -> com.wsteam.wandscape.shared.network.tasks.MageModeActionPacket
+                        com.wsteam.wandscape.content.task.network.MageModeActionPacket.TYPE,
+                        com.wsteam.wandscape.content.task.network.MageModeActionPacket.STREAM_CODEC,
+                        (packet, ctx) -> com.wsteam.wandscape.content.task.network.MageModeActionPacket
                                 .handleServer(packet, (net.minecraft.server.level.ServerPlayer) ctx.player()))
                 // ── NPC 装备界面重开（饰品屏返回按钮） ──
                 .playToServer(
@@ -959,18 +977,18 @@ public class Wandscape {
 
         // Register unified metrics facade (after bootstrap, before any consumer queries it)
         var metricsService = ColonyMetricsService.create();
-        com.wsteam.wandscape.shared.registry.WandscapeApis.setColonyMetricsApi(metricsService);
+        com.wsteam.wandscape.api.WandscapeApis.setColonyMetricsApi(metricsService);
         Log.info(TAG, "ColonyMetricsService registered");
 
         // Register server-authoritative tutorial progress evaluator
-        com.wsteam.wandscape.shared.registry.WandscapeApis.setGuideProgressApi(
+        com.wsteam.wandscape.api.WandscapeApis.setGuideProgressApi(
                 new com.wsteam.wandscape.engine.service.GuideProgressService());
         Log.info(TAG, "GuideProgressService registered");
 
         BuildCompleteListener.register();
         DemolishCompleteListener.register();
         // Rebuild colony spatial index from saved data
-        var colonyApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getColonyApiSilently();
+        var colonyApi = com.wsteam.wandscape.api.WandscapeApis.getColonyApiSilently();
         if (colonyApi instanceof ColonyApiImpl impl) {
             impl.rebuildFromSavedData();
         }
@@ -1128,21 +1146,21 @@ public class Wandscape {
 
     @SubscribeEvent
     public void onServerTick(ServerTickEvent.Post event) {
-        com.wsteam.wandscape.shared.util.TickProfiler.Span spanTotal =
-                com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("tick.server_post");
+        com.wsteam.wandscape.foundation.util.TickProfiler.Span spanTotal =
+                com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tick.server_post");
         try {
             // Colony ambient: 建筑包围盒+20格内玩家昼夜环境音门控（服务端判断+发包）
-            try (var s = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("tick.ambient")) {
+            try (var s = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tick.ambient")) {
                 ColonyAmbientTracker.tick(event.getServer());
             }
 
             // Magic cast: 法阵动画结束后生成信标光束（不依赖 ECS）
-            try (var s = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("tick.magic_cast")) {
+            try (var s = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tick.magic_cast")) {
                 MagicCastManager.tick();
             }
 
             // Altar: 每 tick 推进所有祭坛的魔法冷却（SavedData，按祭坛独立）
-            try (var s = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("tick.altar_cast")) {
+            try (var s = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tick.altar_cast")) {
                 AltarCastHandler.tick(event.getServer().overworld());
             }
 
@@ -1159,7 +1177,7 @@ public class Wandscape {
             // ① Tick async executor countdowns
             var asyncExec = WandscapeEngine.getAsyncExecutor();
             if (asyncExec != null) {
-                try (var s = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("tick.async_exec")) {
+                try (var s = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tick.async_exec")) {
                     asyncExec.tickAll();
                 }
             }
@@ -1167,7 +1185,7 @@ public class Wandscape {
             // ①b Tick async block interaction countdowns (gather/decompose/synthesize)
             var blockInteractExec = WandscapeEngine.getBlockInteractExec();
             if (blockInteractExec != null) {
-                try (var s = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("tick.block_interact")) {
+                try (var s = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tick.block_interact")) {
                     blockInteractExec.tickAll();
                 }
             }
@@ -1175,7 +1193,7 @@ public class Wandscape {
             // ①c Tick async ritual channeling countdowns (self_teleport, etc.)
             var ritualOps = WandscapeEngine.getRitualOps();
             if (ritualOps != null) {
-                try (var s = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("tick.ritual_ops")) {
+                try (var s = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tick.ritual_ops")) {
                     ritualOps.tickAll();
                 }
             }
@@ -1183,7 +1201,7 @@ public class Wandscape {
             // ①d Drive item transport animations (visual item flight warehouse→NPC)
             var transporter = WandscapeEngine.getTransporter();
             if (transporter != null) {
-                try (var s = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("tick.transporter")) {
+                try (var s = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tick.transporter")) {
                     transporter.tickAll();
                 }
             }
@@ -1191,7 +1209,7 @@ public class Wandscape {
             // ①e Drive resource request staggered launches (1 item/tick from warehouse)
             var resourceReqExec = WandscapeEngine.getResourceRequestExec();
             if (resourceReqExec != null) {
-                try (var s = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("tick.resource_req")) {
+                try (var s = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tick.resource_req")) {
                     resourceReqExec.tickAll();
                 }
             }
@@ -1199,7 +1217,7 @@ public class Wandscape {
             // ①f Tick guard combat sustained loops (cast → wait beam → retarget → complete)
             var guardExec = WandscapeEngine.getGuardExecutor();
             if (guardExec != null) {
-                try (var s = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("tick.guard_exec")) {
+                try (var s = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tick.guard_exec")) {
                     guardExec.tickAll();
                 }
             }
@@ -1207,20 +1225,20 @@ public class Wandscape {
             // ①g Tick NPC self-defense (proactive aggro scan + retaliation loop; preempts current task)
             var selfDefenseExec = WandscapeEngine.getSelfDefenseExecutor();
             if (selfDefenseExec != null) {
-                try (var s = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("tick.self_defense")) {
+                try (var s = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tick.self_defense")) {
                     selfDefenseExec.tick(world);
                 }
             }
 
             // ①g1 Tick projectile dodge (walk away from incoming hostile arrows/skulls; throttled)
-            try (var s = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("tick.projectile_dodge")) {
+            try (var s = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tick.projectile_dodge")) {
                 ProjectileDodge.tick(world);
             }
 
             // ①g2 Tick altar cast channeling countdowns (altar-only magic channel → effect fire)
             var altarCastExec = WandscapeEngine.getAltarCastExecutor();
             if (altarCastExec != null) {
-                try (var s = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("tick.altar_exec")) {
+                try (var s = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tick.altar_exec")) {
                     altarCastExec.tickAll();
                 }
             }
@@ -1228,25 +1246,25 @@ public class Wandscape {
             // ①h Tick raid trigger scanner + victory tracker (colonies live in the overworld)
             var raidLevel = event.getServer().overworld();
             if (raidLevel != null) {
-                try (var s = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("tick.raid")) {
+                try (var s = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tick.raid")) {
                     RaidTriggerScanner.INSTANCE.tick(raidLevel);
                     ColonyRaidTracker.INSTANCE.tick(raidLevel);
                 }
             }
 
             // ② Sync MC entity positions → ECS
-            try (var s = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("tick.bridge_sync_pos")) {
+            try (var s = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tick.bridge_sync_pos")) {
                 EntityComponentBridge.INSTANCE.syncPositions(world);
             }
 
             // ②b Flush any NPCs that loaded before the engine was ready
-            try (var s = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("tick.bridge_flush_joins")) {
+            try (var s = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tick.bridge_flush_joins")) {
                 EntityComponentBridge.INSTANCE.flushDeferredJoins(world);
             }
 
             // ③ Engine logic tick (incl. NavigationSystem which drives movement)
             engineTickCount++;
-            try (var s = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("tick.ecs_world")) {
+            try (var s = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tick.ecs_world")) {
                 world.tick(1.0f);
             }
 
@@ -1268,10 +1286,10 @@ public class Wandscape {
                         world.hasPendingAsyncOps() ? 1 : 0);
             }
         } finally {
-            com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.end(spanTotal);
+            com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.end(spanTotal);
             var ow = event.getServer().overworld();
             long time = ow != null ? ow.getGameTime() : 0;
-            com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.flushTick(time);
+            com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.flushTick(time);
         }
     }
 

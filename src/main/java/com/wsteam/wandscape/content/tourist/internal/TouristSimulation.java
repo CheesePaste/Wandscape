@@ -1,4 +1,14 @@
 package com.wsteam.wandscape.content.tourist.internal;
+import com.wsteam.wandscape.content.element.data.ElementType;
+import com.wsteam.wandscape.content.tourist.data.ServiceConfig;
+import com.wsteam.wandscape.content.building.data.BuildingData;
+import com.wsteam.wandscape.content.tourist.data.VisitMemory;
+import com.wsteam.wandscape.content.tourist.data.AtmConfig;
+import com.wsteam.wandscape.content.tourist.data.ShopConfig;
+import com.wsteam.wandscape.foundation.util.TickProfiler;
+import com.wsteam.wandscape.content.tourist.data.Emotion;
+import com.wsteam.wandscape.content.tourist.data.RelaxConfig;
+import com.wsteam.wandscape.content.tourist.data.Activity;
 
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.content.building.data.BlockOffset;
@@ -10,11 +20,11 @@ import com.wsteam.wandscape.content.building.internal.ShopInteractionHandler;
 import com.wsteam.wandscape.content.building.internal.ShopStockManager;
 import com.wsteam.wandscape.engine.colony.ColonyActivation;
 import com.wsteam.wandscape.content.building.projection.BuildingRotation;
-import com.wsteam.wandscape.shared.api.BuildingApi;
-import com.wsteam.wandscape.shared.data.*;
-import com.wsteam.wandscape.shared.log.Log;
-import com.wsteam.wandscape.shared.registry.WandscapeApis;
-import com.wsteam.wandscape.shared.registry.WandscapeConstants;
+import com.wsteam.wandscape.api.BuildingApi;
+// data imports updated
+import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.api.WandscapeApis;
+import com.wsteam.wandscape.foundation.registry.WandscapeConstants;
 import com.wsteam.wandscape.content.warehouse.ColonyItemBank;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -411,14 +421,14 @@ public final class TouristSimulation {
     }
 
     /** Mark a visit memory on the host (journey diary). Returns the memory for narrative use. */
-    public static com.wsteam.wandscape.shared.data.VisitMemory addVisitMemory(TouristStateHost t,
+    public static com.wsteam.wandscape.content.tourist.data.VisitMemory addVisitMemory(TouristStateHost t,
             @Nullable String buildingTypeId, @Nullable String displayName, String category, long gameTime,
             int comfortDelta, int magicDelta, int wonderDelta, int energyDelta, String whatHappened) {
         String type = buildingTypeId != null ? buildingTypeId : "unknown";
         String name = displayName != null && !displayName.isEmpty() ? displayName : type;
-        com.wsteam.wandscape.shared.data.VisitMemory memory = new com.wsteam.wandscape.shared.data.VisitMemory(
+        com.wsteam.wandscape.content.tourist.data.VisitMemory memory = new com.wsteam.wandscape.content.tourist.data.VisitMemory(
                 type, name, category, gameTime, comfortDelta, magicDelta, wonderDelta, energyDelta, whatHappened,
-                com.wsteam.wandscape.shared.data.Emotion.fromDelta(comfortDelta + magicDelta + wonderDelta));
+                com.wsteam.wandscape.content.tourist.data.Emotion.fromDelta(comfortDelta + magicDelta + wonderDelta));
         t.addVisitMemory(memory);
         return memory;
     }
@@ -455,7 +465,7 @@ public final class TouristSimulation {
      */
     @Nullable
     public static BuildingState selectNextTarget(ServerLevel level, TouristStateHost t, boolean requireLoaded) {
-        try (var span = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("tourist.sim.select_next_target")) {
+        try (var span = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tourist.sim.select_next_target")) {
         UUID colonyId = t.getColonyId();
         if (colonyId == null) return null;
         BuildingApi api = getBuildingApi();
@@ -638,7 +648,7 @@ public final class TouristSimulation {
     @javax.annotation.Nullable
     public static BuildingState findHotelTarget(ServerLevel level, TouristStateHost t,
             boolean requireLoaded) {
-        try (var span = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("tourist.sim.find_hotel_target")) {
+        try (var span = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tourist.sim.find_hotel_target")) {
         UUID colonyId = t.getColonyId();
         if (colonyId == null) return null;
         BuildingApi api = getBuildingApi();

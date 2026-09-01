@@ -1,7 +1,7 @@
 package com.wsteam.wandscape.content.road.engine;
 
 import com.wsteam.wandscape.content.road.core.*;
-import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.foundation.log.Log;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;

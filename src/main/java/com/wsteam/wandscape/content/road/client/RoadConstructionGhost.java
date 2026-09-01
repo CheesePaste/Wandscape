@@ -2,9 +2,9 @@ package com.wsteam.wandscape.content.road.client;
 
 import com.wsteam.wandscape.content.road.data.RoadPreset;
 import com.wsteam.wandscape.content.road.data.RoadPresetLoader;
-import com.wsteam.wandscape.shared.log.Log;
-import com.wsteam.wandscape.shared.network.RoadAreaSyncPacket;
-import com.wsteam.wandscape.shared.ui.util.BuildingPreviewRenderer;
+import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.content.road.network.RoadAreaSyncPacket;
+import com.wsteam.wandscape.content.building.preview.BuildingPreviewRenderer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;

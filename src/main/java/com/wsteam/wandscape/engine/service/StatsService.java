@@ -2,7 +2,7 @@ package com.wsteam.wandscape.engine.service;
 
 import com.wsteam.wandscape.core.event.NarrativeEventTriggered;
 import com.wsteam.wandscape.engine.WandscapeEngine;
-import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.foundation.log.Log;
 
 /**
  * Subscribes to {@link NarrativeEventTriggered} and records per-colony statistics.

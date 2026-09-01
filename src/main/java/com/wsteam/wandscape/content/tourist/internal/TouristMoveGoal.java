@@ -1,4 +1,5 @@
 package com.wsteam.wandscape.content.tourist.internal;
+import com.wsteam.wandscape.foundation.util.TickProfiler;
 
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
@@ -10,13 +11,13 @@ import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.colony.ColonyActivation;
 import com.wsteam.wandscape.engine.service.ParticleService;
 import com.wsteam.wandscape.content.road.engine.WandscapeTags;
-import com.wsteam.wandscape.shared.api.BuildingApi;
-import com.wsteam.wandscape.shared.data.Activity;
-import com.wsteam.wandscape.shared.data.BuildingData;
-import com.wsteam.wandscape.shared.data.NarrativeEvent;
-import com.wsteam.wandscape.shared.data.VisitMemory;
-import com.wsteam.wandscape.shared.log.Log;
-import com.wsteam.wandscape.shared.registry.WandscapeApis;
+import com.wsteam.wandscape.api.BuildingApi;
+import com.wsteam.wandscape.content.tourist.data.Activity;
+import com.wsteam.wandscape.content.building.data.BuildingData;
+import com.wsteam.wandscape.content.colony.data.NarrativeEvent;
+import com.wsteam.wandscape.content.tourist.data.VisitMemory;
+import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.api.WandscapeApis;
 import com.wsteam.wandscape.content.tourist.entity.TouristEntity;
 import com.wsteam.wandscape.content.tourist.network.TouristBubblePacket;
 import net.minecraft.core.BlockPos;
@@ -247,7 +248,7 @@ public class TouristMoveGoal extends Goal {
 
     @Override
     public void tick() {
-        try (var span = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("tourist.goal.tick")) {
+        try (var span = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tourist.goal.tick")) {
             // 睡着（住店客在旅店床上）：不动，等清晨晨起（HotelStayHandler.wakeUp 后自然外出）
             if (tourist.isSleeping()) {
                 tourist.getNavigation().stop();
@@ -376,7 +377,7 @@ public class TouristMoveGoal extends Goal {
 
     /** Macro-navigation phase: approach building entry point via road network. */
     private void tickOutdoorNav() {
-        try (var span = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("tourist.goal.outdoor_nav")) {
+        try (var span = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tourist.goal.outdoor_nav")) {
         BlockPos target = tourist.getCommuteTarget();
         if (target == null) {
             idleTicks++;
@@ -514,7 +515,7 @@ public class TouristMoveGoal extends Goal {
 
     /** Micro-navigation phase: inside building, navigate to interact point then exit. */
     private void tickIndoorNav() {
-        try (var span = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("tourist.goal.indoor_nav")) {
+        try (var span = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tourist.goal.indoor_nav")) {
         UUID buildingId = tourist.getTargetBuildingId();
         if (buildingId == null) {
             finishBuildingStop();
@@ -734,7 +735,7 @@ public class TouristMoveGoal extends Goal {
 
     /** 活动倒计时：duration 结束 → 释放 spot + 结算（四类交互）+ 退出。 */
     private void tickActivity() {
-        try (var span = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("tourist.goal.activity")) {
+        try (var span = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tourist.goal.activity")) {
         UUID bid = tourist.getTargetBuildingId();
         if (!isBuildingValid(bid)) {
             Log.info(TAG, "[Tourist] {} activity target {} is destroyed/invalidated. Aborting activity.",
@@ -782,7 +783,7 @@ public class TouristMoveGoal extends Goal {
 
     /** 排队等待：轮询本队 spot 空位，超 TOURIST_QUEUE_WAIT_TOLERANCE_TICKS 放弃去别处。 */
     private void tickQueue() {
-        try (var span = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("tourist.goal.tick_queue")) {
+        try (var span = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tourist.goal.tick_queue")) {
         if (++queueTicks > Config.TOURIST_QUEUE_WAIT_TOLERANCE_TICKS.get()) {
             abandonBuildingVisit();
             return;
@@ -812,7 +813,7 @@ public class TouristMoveGoal extends Goal {
 
     /** 进入排队状态（spot 全满）：排到队最短的 spot 后，沿该 spot 朝向站成一列。 */
     private void startQueueing() {
-        try (var span = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("tourist.goal.start_queue")) {
+        try (var span = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tourist.goal.start_queue")) {
         queueing = true;
         queueTicks = 0;
         tourist.setCurrentActivity(Activity.QUEUE);
@@ -834,7 +835,7 @@ public class TouristMoveGoal extends Goal {
 
     /** 导航到本队当前队序对应的站位（沿 spot 朝向向后排开），到位后朝向与 spot 一致。 */
     private void navigateToQueueSlot() {
-        try (var span = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("tourist.goal.nav_queue_slot")) {
+        try (var span = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tourist.goal.nav_queue_slot")) {
         UUID buildingId = tourist.getTargetBuildingId();
         ServerLevel level = serverLevel();
         if (buildingId == null || level == null || queueSpotIndex < 0) {
@@ -1030,7 +1031,7 @@ public class TouristMoveGoal extends Goal {
      * @return true if the tourist checked in (caller must stop navigation)
      */
     private boolean tryHotelCheckIn(UUID buildingId, @Nullable String bldType) {
-        try (var span = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("tourist.goal.try_hotel_checkin")) {
+        try (var span = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tourist.goal.try_hotel_checkin")) {
         if (!isHotelBuilding(buildingId)) return false;
         long dayTime = tourist.level().getDayTime() % 24000;
         boolean isNight = dayTime >= Config.TOURIST_NIGHT_START.get();
@@ -1088,7 +1089,7 @@ public class TouristMoveGoal extends Goal {
      * 旅店被拆/停用 → 解除登记，按无旅店游客处理。
      */
     private ReturnHomeResult returnToOwnHotel() {
-        try (var span = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("tourist.goal.return_hotel")) {
+        try (var span = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tourist.goal.return_hotel")) {
         UUID hotel = tourist.getCheckedInBuildingId();
         if (hotel == null) return ReturnHomeResult.NONE;
         if (tourist.isSleeping()) {
@@ -1176,7 +1177,7 @@ public class TouristMoveGoal extends Goal {
      * @return true = 刚设置路由（本 tick 不再派发）
      */
     private boolean eveningRouteToHotel() {
-        try (var span = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("tourist.goal.evening_route_hotel")) {
+        try (var span = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tourist.goal.evening_route_hotel")) {
         if (targetingHotel()) return false;
         // 闩锁中（当晚无空闲旅店/传送失败）：不再搜索，正常行为继续
         if (hotelRouteBackoff.isActive()) return false;
@@ -1204,7 +1205,7 @@ public class TouristMoveGoal extends Goal {
      * @return 路由设置成功
      */
     private boolean routeToHotelBuilding(UUID hotelId, BlockPos target, boolean teleportIfFar) {
-        try (var span = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("tourist.goal.route_to_hotel")) {
+        try (var span = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tourist.goal.route_to_hotel")) {
         if (target == null) return false;
 
         // 过远 → 先尝试传送（传送失败则放弃本次路由，不强制远距离寻路）
@@ -1240,7 +1241,7 @@ public class TouristMoveGoal extends Goal {
 
     /** 传送到旅店入口附近的安全点；找不到安全点返回 false（不动、不传送）。 */
     private boolean teleportToHotel(UUID hotelId, BlockPos target) {
-        try (var span = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("tourist.goal.teleport_hotel")) {
+        try (var span = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tourist.goal.teleport_hotel")) {
         BlockPos tp = TouristTeleport.findSafeSpotNearEntry(serverLevel(), target, tourist.getColonyId());
         if (tp == null) {
             tp = TouristTeleport.findSafeSpot(serverLevel(), target, tourist.getColonyId(), hotelId);

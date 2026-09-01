@@ -1,8 +1,8 @@
 package com.wsteam.wandscape.engine;
 
-import com.wsteam.wandscape.shared.entity.PlayerLike;
-import com.wsteam.wandscape.shared.entity.VillagerLike;
-import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.content.tourist.entity.PlayerLike;
+import com.wsteam.wandscape.content.tourist.entity.VillagerLike;
+import com.wsteam.wandscape.foundation.log.Log;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.goal.Goal;

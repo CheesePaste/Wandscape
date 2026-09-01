@@ -6,7 +6,7 @@ import com.wsteam.wandscape.content.building.data.BlockOffset;
 import com.wsteam.wandscape.content.building.scanner.CreativeScannerBlockEntity;
 import com.wsteam.wandscape.content.building.scanner.InteractSpotMarkerBlock;
 import com.wsteam.wandscape.content.building.scanner.client.gizmo.ScannerGizmoState;
-import com.wsteam.wandscape.shared.data.Activity;
+import com.wsteam.wandscape.content.tourist.data.Activity;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;

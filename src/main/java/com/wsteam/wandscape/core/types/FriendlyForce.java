@@ -1,4 +1,5 @@
 package com.wsteam.wandscape.core.types;
+import com.wsteam.wandscape.content.tourist.entity.ColonyVisitor;
 
 import java.util.UUID;
 

@@ -1,4 +1,9 @@
 package com.wsteam.wandscape.content.colony.overview.client;
+import com.wsteam.wandscape.content.road.network.RoadAreaSyncPacket;
+import com.wsteam.wandscape.content.building.ui.BuildingSelectionOverlay;
+import com.wsteam.wandscape.foundation.ui.panel.WandscapePanelController;
+import com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState;
+import com.wsteam.wandscape.content.task.ui.TaskManagementClientState;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import com.wsteam.wandscape.content.building.projection.client.BuildGizmoController;
@@ -15,8 +20,8 @@ import com.wsteam.wandscape.content.colony.overview.network.OverviewInteractPack
 import com.wsteam.wandscape.content.building.projection.BuildPlacement;
 import com.wsteam.wandscape.content.building.projection.client.ProjectionClientState;
 import com.wsteam.wandscape.content.road.client.RoadPlacementState;
-import com.wsteam.wandscape.shared.log.Log;
-import com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket;
+import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.content.building.network.BuildingAreaSyncPacket;
 import net.minecraft.client.Camera;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.KeyMapping;
@@ -201,8 +206,8 @@ public final class OverviewFlightController {
 
         // Only rotate when no screen open and cursor not lifted to panel (or holding RMB)
         if (mc.screen == null) {
-            boolean cursorLifted = com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.isPanelOpen()
-                    && com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.isCursorLifted();
+            boolean cursorLifted = com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState.isPanelOpen()
+                    && com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState.isCursorLifted();
             boolean rightDown = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_RIGHT) == GLFW.GLFW_PRESS;
             boolean grabbed = !cursorLifted || rightDown;
 
@@ -273,10 +278,10 @@ public final class OverviewFlightController {
                         OverviewClientState.getCamY() + moveY,
                         OverviewClientState.getCamZ() + moveZ);
                 // Manual WASD cancels mage camera tracking
-                com.wsteam.wandscape.shared.ui.panel.TaskManagementClientState.setTrackingEntityId(-1);
+                com.wsteam.wandscape.content.task.ui.TaskManagementClientState.setTrackingEntityId(-1);
             } else {
                 // Smoothly track selected Mage if active
-                int trackingId = com.wsteam.wandscape.shared.ui.panel.TaskManagementClientState.getTrackingEntityId();
+                int trackingId = com.wsteam.wandscape.content.task.ui.TaskManagementClientState.getTrackingEntityId();
                 if (trackingId >= 0 && mc.level != null) {
                     var entity = mc.level.getEntity(trackingId);
                     if (entity != null) {
@@ -352,13 +357,13 @@ public final class OverviewFlightController {
 
         // 受伤/死亡 → 完全退出控制面板（保留空中相机缓存），回原版第一人称夺回操控
         if (mc.player.isDeadOrDying()) {
-            com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.closePanel();
+            com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState.closePanel();
             return;
         }
         float health = mc.player.getHealth();
         if (health < lastHealth) {
             Log.info(TAG, "[Overview] Player took damage ({} → {}), exiting control panel", lastHealth, health);
-            com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.closePanel();
+            com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState.closePanel();
             lastHealth = health;
             return;
         }
@@ -403,10 +408,10 @@ public final class OverviewFlightController {
             } else {
                 // 常态（OVERVIEW/NONE，无子模式）+ 游戏层抓取：准心右键交互建筑/NPC。
                 // Build/Road/Stats 子模式内不做建筑/NPC 交互（目标是建建筑不是交互）。
-                var sub = com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.getActiveSubMode();
-                boolean normalState = sub == com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.SubMode.OVERVIEW
-                        || sub == com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.SubMode.NONE;
-                boolean grabbed = !com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.isCursorLifted();
+                var sub = com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState.getActiveSubMode();
+                boolean normalState = sub == com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState.SubMode.OVERVIEW
+                        || sub == com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState.SubMode.NONE;
+                boolean grabbed = !com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState.isCursorLifted();
                 if (normalState && grabbed && rightClicked) {
                     handleTargetInteraction();
                 }
@@ -439,14 +444,14 @@ public final class OverviewFlightController {
         int screenH = mc.getWindow().getGuiScaledHeight();
 
         if (BuildPopPanelOverlay.isOverPanel(mouseX, mouseY, screenW)) return true;
-        if (com.wsteam.wandscape.shared.ui.panel.BuildingSelectionOverlay.isActive()) {
-            int barY = com.wsteam.wandscape.shared.ui.panel.BuildingSelectionOverlay.getBarY(screenH);
-            if (mouseY >= barY && mouseY <= barY + com.wsteam.wandscape.shared.ui.panel.BuildingSelectionOverlay.BAR_HEIGHT) {
+        if (com.wsteam.wandscape.content.building.ui.BuildingSelectionOverlay.isActive()) {
+            int barY = com.wsteam.wandscape.content.building.ui.BuildingSelectionOverlay.getBarY(screenH);
+            if (mouseY >= barY && mouseY <= barY + com.wsteam.wandscape.content.building.ui.BuildingSelectionOverlay.BAR_HEIGHT) {
                 return true;
             }
         }
-        return com.wsteam.wandscape.shared.ui.panel.WandscapePanelController.isInTopBar(mouseY, screenH)
-                || com.wsteam.wandscape.shared.ui.panel.WandscapePanelController.isInSidebar(mouseX, mouseY, screenH);
+        return com.wsteam.wandscape.foundation.ui.panel.WandscapePanelController.isInTopBar(mouseY, screenH)
+                || com.wsteam.wandscape.foundation.ui.panel.WandscapePanelController.isInSidebar(mouseX, mouseY, screenH);
     }
 
     // ═══════════════════════════════════════════════════════════════════
@@ -550,9 +555,9 @@ public final class OverviewFlightController {
         double mouseX = mc.mouseHandler.xpos() / guiScale;
         double mouseY = mc.mouseHandler.ypos() / guiScale;
         int screenH = mc.getWindow().getGuiScaledHeight();
-        if (com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.isPanelOpen()
-                && (com.wsteam.wandscape.shared.ui.panel.WandscapePanelController.isInTopBar(mouseY, screenH)
-                || com.wsteam.wandscape.shared.ui.panel.WandscapePanelController.isInSidebar(mouseX, mouseY, screenH))) {
+        if (com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState.isPanelOpen()
+                && (com.wsteam.wandscape.foundation.ui.panel.WandscapePanelController.isInTopBar(mouseY, screenH)
+                || com.wsteam.wandscape.foundation.ui.panel.WandscapePanelController.isInSidebar(mouseX, mouseY, screenH))) {
             return;
         }
 
@@ -567,8 +572,8 @@ public final class OverviewFlightController {
         Camera camera = mc.gameRenderer.getMainCamera();
         Vec3 origin = camera.getPosition();
         // 常态（抓取）用准心（相机中心线）；自由光标（子模式/Tab 抬起）用鼠标射线。
-        boolean cursorLifted = com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.isPanelOpen()
-                && com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.isCursorLifted();
+        boolean cursorLifted = com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState.isPanelOpen()
+                && com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState.isCursorLifted();
         Vec3 rayDir = cursorLifted
                 ? getMouseWorldRay(mc)
                 : new Vec3(camera.getLookVector().x(), camera.getLookVector().y(), camera.getLookVector().z());
@@ -616,7 +621,7 @@ public final class OverviewFlightController {
             // 边界框（虚影区域），把射线入口距离和方块命中距离比大小——框顶面更近就
             // 视为选中该建筑，整片空白工地都能右键打开 UI。施工中道路同理（footprint 框）。
             var boxHit = BuildingAreaSyncPacket.raycastUnbuilt(origin, end);
-            var roadHit = com.wsteam.wandscape.shared.network.RoadAreaSyncPacket.raycastUnderConstruction(origin, end);
+            var roadHit = com.wsteam.wandscape.content.road.network.RoadAreaSyncPacket.raycastUnderConstruction(origin, end);
             double bd = boxHit != null ? boxHit.distSq() : Double.MAX_VALUE;
             double rd = roadHit != null ? roadHit.distSq() : Double.MAX_VALUE;
             if (roadHit != null && rd < blockDist && rd <= bd) {

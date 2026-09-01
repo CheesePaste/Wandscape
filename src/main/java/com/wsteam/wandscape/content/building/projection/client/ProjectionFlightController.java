@@ -1,4 +1,5 @@
 package com.wsteam.wandscape.content.building.projection.client;
+import com.wsteam.wandscape.foundation.ui.panel.WandscapePanelController;
 
 import com.wsteam.wandscape.content.building.data.BuildingConfig;
 import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
@@ -6,9 +7,9 @@ import com.wsteam.wandscape.content.colony.overview.client.OverviewClientState;
 import com.wsteam.wandscape.content.building.projection.BuildPlacement;
 import com.wsteam.wandscape.content.building.projection.data.BuildingSlot;
 import com.wsteam.wandscape.content.building.projection.network.ProjectionExitPacket;
-import com.wsteam.wandscape.shared.log.Log;
-import com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket;
-import com.wsteam.wandscape.shared.ui.panel.WandscapePanelState;
+import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.content.building.network.BuildingAreaSyncPacket;
+import com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
@@ -199,7 +200,7 @@ public final class ProjectionFlightController {
                 if (mc.player != null) {
                     mc.player.displayClientMessage(
                             Component.literal("[Projection] §c").append(
-                                    com.wsteam.wandscape.shared.ui.I18n.name(
+                                    com.wsteam.wandscape.foundation.ui.I18n.name(
                                             "message.wandscape.projection.cannot_pin",
                                             "无法固定 — 准星没有对准方块")), true);
                 }

@@ -7,7 +7,7 @@ import com.wsteam.wandscape.content.road.core.RoadTemplate;
 import com.wsteam.wandscape.content.road.core.SplineModel;
 import com.wsteam.wandscape.content.road.core.SplinePoint;
 import com.wsteam.wandscape.content.road.core.SplineVec3;
-import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.foundation.log.Log;
 import net.minecraft.client.Minecraft;
 import org.lwjgl.glfw.GLFW;
 

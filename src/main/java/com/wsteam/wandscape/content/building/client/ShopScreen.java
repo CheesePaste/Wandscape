@@ -1,11 +1,11 @@
 package com.wsteam.wandscape.content.building.client;
 
 import com.wsteam.wandscape.content.building.network.ShopMaxStockPacket;
-import com.wsteam.wandscape.shared.ui.I18n;
-import com.wsteam.wandscape.shared.ui.component.MedievalButton;
-import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
-import com.wsteam.wandscape.shared.ui.component.Slider;
-import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
+import com.wsteam.wandscape.foundation.ui.I18n;
+import com.wsteam.wandscape.foundation.ui.component.MedievalButton;
+import com.wsteam.wandscape.foundation.ui.component.MedievalScreen;
+import com.wsteam.wandscape.foundation.ui.component.Slider;
+import com.wsteam.wandscape.foundation.ui.theme.MedievalColors;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.core.BlockPos;

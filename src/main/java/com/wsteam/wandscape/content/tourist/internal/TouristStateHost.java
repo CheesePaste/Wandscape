@@ -1,7 +1,7 @@
 package com.wsteam.wandscape.content.tourist.internal;
 
-import com.wsteam.wandscape.shared.data.Activity;
-import com.wsteam.wandscape.shared.data.VisitMemory;
+import com.wsteam.wandscape.content.tourist.data.Activity;
+import com.wsteam.wandscape.content.tourist.data.VisitMemory;
 import net.minecraft.core.BlockPos;
 
 import javax.annotation.Nullable;

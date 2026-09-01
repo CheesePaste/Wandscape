@@ -1,4 +1,5 @@
 package com.wsteam.wandscape.content.task.scheduler;
+import com.wsteam.wandscape.foundation.util.TickProfiler;
 
 import com.wsteam.wandscape.core.boundary.ColonyResourceAccess;
 import com.wsteam.wandscape.core.boundary.MovementOps;
@@ -12,7 +13,7 @@ import com.wsteam.wandscape.content.task.op.api.AtomicOp;
 import com.wsteam.wandscape.content.task.op.executor.OpExecutor;
 import com.wsteam.wandscape.content.task.op.executor.OpExecutorRegistry;
 import com.wsteam.wandscape.content.task.op.executor.ResourceShortageException;
-import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.content.task.engine.pool.GlobalTask;
 import com.wsteam.wandscape.content.task.engine.pool.GlobalTaskPool;
 import com.wsteam.wandscape.content.task.runtime.ExecutorState;
@@ -53,7 +54,7 @@ public class TaskExecutionSystem implements System {
 
     @Override
     public void update(World world, float delta) {
-        try (var span = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("ecs.task_execution.tick")) {
+        try (var span = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("ecs.task_execution.tick")) {
         OpExecutorRegistry registry = world.opExecutors;
         if (registry == null) return;
 

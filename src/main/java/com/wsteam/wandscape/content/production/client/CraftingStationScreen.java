@@ -6,12 +6,12 @@ import com.wsteam.wandscape.content.building.network.TaskQueueModifyPacket;
 import com.wsteam.wandscape.content.production.network.CraftingStationPacket;
 import com.wsteam.wandscape.content.production.network.CraftingStationPacket.RecipeEntry;
 import com.wsteam.wandscape.content.production.network.RequestProductionTaskPacket;
-import com.wsteam.wandscape.shared.data.ElementType;
-import com.wsteam.wandscape.shared.ui.I18n;
-import com.wsteam.wandscape.shared.ui.component.*;
-import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
-import com.wsteam.wandscape.shared.ui.theme.WandscapeTheme;
-import com.wsteam.wandscape.shared.ui.util.ItemStackUtil;
+import com.wsteam.wandscape.content.element.data.ElementType;
+import com.wsteam.wandscape.foundation.ui.I18n;
+import com.wsteam.wandscape.foundation.ui.component.*;
+import com.wsteam.wandscape.foundation.ui.theme.MedievalColors;
+import com.wsteam.wandscape.foundation.ui.theme.WandscapeTheme;
+import com.wsteam.wandscape.foundation.ui.util.ItemStackUtil;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.core.BlockPos;
@@ -168,7 +168,7 @@ public class CraftingStationScreen extends MedievalScreen {
                 String itemFallback = (registryItem != null && registryItem != Items.AIR)
                         ? new ItemStack(registryItem).getHoverName().getString()
                         : item.outputItem();
-                Component recipeName = com.wsteam.wandscape.shared.ui.I18n.name(
+                Component recipeName = com.wsteam.wandscape.foundation.ui.I18n.name(
                         "craft_recipe.wandscape." + item.recipeId(), itemFallback);
                 g.drawString(Minecraft.getInstance().font, recipeName, textX, y + 1, nameColor);
 

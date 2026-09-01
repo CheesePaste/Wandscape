@@ -5,7 +5,7 @@ import com.google.gson.JsonPrimitive;
 import com.wsteam.wandscape.content.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.core.types.ResourceId;
 import com.wsteam.wandscape.core.types.ResourceStack;
-import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.content.task.engine.pool.GlobalTask;
 import com.wsteam.wandscape.content.task.engine.pool.GlobalTaskPool;
 import com.wsteam.wandscape.content.task.engine.pool.TaskRequest;

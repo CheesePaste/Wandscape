@@ -1,8 +1,8 @@
 package com.wsteam.wandscape.compat.jei;
 
 import com.wsteam.wandscape.Wandscape;
-import com.wsteam.wandscape.shared.data.ElementType;
-import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.content.element.data.ElementType;
+import com.wsteam.wandscape.foundation.log.Log;
 import mezz.jei.api.constants.VanillaTypes;
 import mezz.jei.api.gui.builder.IRecipeLayoutBuilder;
 import mezz.jei.api.gui.builder.IRecipeSlotBuilder;

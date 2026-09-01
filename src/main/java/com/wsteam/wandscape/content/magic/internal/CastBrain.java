@@ -5,7 +5,7 @@ import com.wsteam.wandscape.core.component.EquippedMagicComponent;
 import com.wsteam.wandscape.content.magic.data.MagicDef;
 import com.wsteam.wandscape.content.magic.data.SpellRef;
 import com.wsteam.wandscape.content.magic.data.WorldSnapshot;
-import com.wsteam.wandscape.shared.registry.WandscapeConstants;
+import com.wsteam.wandscape.foundation.registry.WandscapeConstants;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;

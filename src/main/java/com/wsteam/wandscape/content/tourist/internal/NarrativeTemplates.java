@@ -3,8 +3,8 @@ package com.wsteam.wandscape.content.tourist.internal;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.wsteam.wandscape.shared.data.Emotion;
-import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.content.tourist.data.Emotion;
+import com.wsteam.wandscape.foundation.log.Log;
 
 import javax.annotation.Nullable;
 import java.io.InputStreamReader;

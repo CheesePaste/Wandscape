@@ -13,7 +13,7 @@ import com.wsteam.wandscape.content.road.engine.RoadSavedData;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.transport.ItemTransportManager;
 import com.wsteam.wandscape.engine.transport.TransportItemEntity;
-import com.wsteam.wandscape.shared.data.ItemKey;
+import com.wsteam.wandscape.foundation.util.ItemKey;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.core.BlockPos;

@@ -3,7 +3,7 @@ package com.wsteam.wandscape.content.production.data;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.wsteam.wandscape.content.element.internal.ElementMaps;
-import com.wsteam.wandscape.shared.data.ElementType;
+import com.wsteam.wandscape.content.element.data.ElementType;
 import net.minecraft.nbt.CompoundTag;
 
 import java.util.ArrayList;

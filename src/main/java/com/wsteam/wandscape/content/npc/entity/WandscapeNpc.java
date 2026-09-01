@@ -1,4 +1,7 @@
 package com.wsteam.wandscape.content.npc.entity;
+import com.wsteam.wandscape.content.npc.data.MageHutAttributes;
+import com.wsteam.wandscape.foundation.util.CharacterNames;
+import com.wsteam.wandscape.foundation.util.NameStyle;
 
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.Wandscape;
@@ -20,11 +23,11 @@ import com.wsteam.wandscape.content.items.SpellItem;
 import com.wsteam.wandscape.content.npc.NpcMenu;
 import com.wsteam.wandscape.content.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.content.npc.network.NpcDataPacket;
-import com.wsteam.wandscape.shared.api.MageWandItem;
-import com.wsteam.wandscape.shared.entity.ColonyVisitor;
-import com.wsteam.wandscape.shared.entity.PlayerLike;
-import com.wsteam.wandscape.shared.log.Log;
-import com.wsteam.wandscape.shared.registry.WandscapeApis;
+import com.wsteam.wandscape.api.MageWandItem;
+import com.wsteam.wandscape.content.tourist.entity.ColonyVisitor;
+import com.wsteam.wandscape.content.tourist.entity.PlayerLike;
+import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.api.WandscapeApis;
 import com.wsteam.wandscape.content.task.engine.pool.GlobalTask;
 import com.wsteam.wandscape.content.task.runtime.ExecutorState;
 import com.wsteam.wandscape.content.task.runtime.NpcTaskPackage;
@@ -471,7 +474,7 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
 
         ItemStack stack = getItemInHand(InteractionHand.MAIN_HAND);
         if (stack.isEmpty()) return;
-        com.wsteam.wandscape.shared.api.WandApi api = WandscapeApis.getWandApiSilently();
+        com.wsteam.wandscape.api.WandApi api = WandscapeApis.getWandApiSilently();
         if (api == null) return;
         String presetId = api.getWandPresetId(stack);
         if (presetId == null) return;
@@ -1376,7 +1379,7 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
         }
         // 潜行右键：若手持约定物品（如盟誓戒指），交由物品自身处理（存/放法师），不开信息菜单
         if (player.isShiftKeyDown() && player.getItemInHand(hand).getItem()
-                instanceof com.wsteam.wandscape.shared.api.NpcBindingItem binder) {
+                instanceof com.wsteam.wandscape.api.NpcBindingItem binder) {
             binder.onShiftClickNpc((ServerPlayer) player, this, hand);
             return InteractionResult.CONSUME;
         }
@@ -1421,7 +1424,7 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
             // the custom name persists through save/load, so this is a no-op later.
             // The colony's naming rule applies when the mage spawns inside one.
             if (!hasCustomName()) {
-                setCustomName(com.wsteam.wandscape.shared.data.CharacterNames.displayComponent(
+                setCustomName(com.wsteam.wandscape.foundation.util.CharacterNames.displayComponent(
                         generateRandomNpcName(detectNamingStyle())));
                 setCustomNameVisible(true);
             }
@@ -1754,7 +1757,7 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
     /** In-game display name for the NPC (resolved to the current language). */
     public String getNpcName() {
         if (!hasCustomName()) return "Mage";
-        return com.wsteam.wandscape.shared.data.CharacterNames.localizedString(getCustomName().getString());
+        return com.wsteam.wandscape.foundation.util.CharacterNames.localizedString(getCustomName().getString());
     }
 
     // ── Auto-generated mage names ──
@@ -1764,20 +1767,20 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
     // default style (FANTASY) is used.
 
     /** Roll a random name key for the given style. */
-    public static String generateRandomNpcName(com.wsteam.wandscape.shared.data.NameStyle style) {
-        return com.wsteam.wandscape.shared.data.CharacterNames.generateRandomNameKey(style);
+    public static String generateRandomNpcName(com.wsteam.wandscape.foundation.util.NameStyle style) {
+        return com.wsteam.wandscape.foundation.util.CharacterNames.generateRandomNameKey(style);
     }
 
     /** The naming rule of the colony this mage is spawning inside, if any. */
-    private com.wsteam.wandscape.shared.data.NameStyle detectNamingStyle() {
-        var colonyApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getColonyApiSilently();
+    private com.wsteam.wandscape.foundation.util.NameStyle detectNamingStyle() {
+        var colonyApi = com.wsteam.wandscape.api.WandscapeApis.getColonyApiSilently();
         if (colonyApi != null) {
             UUID detected = colonyApi.getColonyId(blockPosition());
             if (detected != null) {
                 return colonyApi.getNamingStyle(detected);
             }
         }
-        return com.wsteam.wandscape.shared.data.NameStyle.FANTASY;
+        return com.wsteam.wandscape.foundation.util.NameStyle.FANTASY;
     }
 
     // ============================================================

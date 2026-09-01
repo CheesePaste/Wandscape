@@ -1,7 +1,7 @@
 package com.wsteam.wandscape.content.element.internal;
 
 import com.google.gson.JsonObject;
-import com.wsteam.wandscape.shared.data.ElementType;
+import com.wsteam.wandscape.content.element.data.ElementType;
 
 import java.util.LinkedHashMap;
 import java.util.Map;

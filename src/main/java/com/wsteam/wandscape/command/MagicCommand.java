@@ -9,7 +9,7 @@ import com.wsteam.wandscape.content.magic.data.MagicDef;
 import com.wsteam.wandscape.content.magic.internal.MagicSpellExecutors;
 import com.wsteam.wandscape.content.magic.internal.SpellbookLoader;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
-import com.wsteam.wandscape.shared.ui.I18n;
+import com.wsteam.wandscape.foundation.ui.I18n;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;

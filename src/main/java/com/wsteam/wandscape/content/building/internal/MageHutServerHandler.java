@@ -1,4 +1,5 @@
 package com.wsteam.wandscape.content.building.internal;
+import com.wsteam.wandscape.content.npc.data.NpcData;
 
 import com.wsteam.wandscape.content.building.data.BlockOffset;
 import com.wsteam.wandscape.content.building.network.MageHutActionPacket;
@@ -11,14 +12,14 @@ import com.wsteam.wandscape.content.npc.NpcStrategyMenu;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.content.npc.network.NpcDataPacket;
 import com.wsteam.wandscape.content.building.projection.BuildingRotation;
-import com.wsteam.wandscape.shared.data.ElementType;
-import com.wsteam.wandscape.shared.data.MageHutAttributes;
-import com.wsteam.wandscape.shared.data.MageHutResident;
-import com.wsteam.wandscape.shared.log.Log;
-import com.wsteam.wandscape.shared.network.ScreenFeedbackPacket;
-import com.wsteam.wandscape.shared.registry.WandscapeApis;
-import com.wsteam.wandscape.shared.registry.WandscapeConstants;
-import com.wsteam.wandscape.shared.ui.I18n;
+import com.wsteam.wandscape.content.element.data.ElementType;
+import com.wsteam.wandscape.content.npc.data.MageHutAttributes;
+import com.wsteam.wandscape.content.npc.data.MageHutResident;
+import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.networking.ScreenFeedbackPacket;
+import com.wsteam.wandscape.api.WandscapeApis;
+import com.wsteam.wandscape.foundation.registry.WandscapeConstants;
+import com.wsteam.wandscape.foundation.ui.I18n;
 import com.wsteam.wandscape.content.warehouse.ColonyItemBank;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;

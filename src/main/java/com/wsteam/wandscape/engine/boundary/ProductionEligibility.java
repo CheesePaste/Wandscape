@@ -1,4 +1,5 @@
 package com.wsteam.wandscape.engine.boundary;
+import com.wsteam.wandscape.content.building.data.WorkItem;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
@@ -7,7 +8,7 @@ import com.wsteam.wandscape.content.building.network.TaskQueueModifyPacket;
 import com.wsteam.wandscape.content.production.ProductionRecipeLoader;
 import com.wsteam.wandscape.content.production.data.CraftRecipeView;
 import com.wsteam.wandscape.content.production.data.SynthesizeRecipe;
-import com.wsteam.wandscape.shared.data.ElementType;
+import com.wsteam.wandscape.content.element.data.ElementType;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;

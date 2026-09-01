@@ -3,7 +3,7 @@ package com.wsteam.wandscape.content.road.client;
 import com.wsteam.wandscape.content.road.core.SplineModel;
 import com.wsteam.wandscape.content.road.core.SplinePoint;
 import com.wsteam.wandscape.content.road.core.SplineVec3;
-import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.foundation.log.Log;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;

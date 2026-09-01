@@ -7,7 +7,7 @@ import com.wsteam.wandscape.core.types.GridPos;
 import com.wsteam.wandscape.engine.service.ChunkLoadManager;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.content.npc.internal.EntityComponentBridge;
-import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.foundation.log.Log;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.*;
@@ -74,7 +74,7 @@ public class WandscapeEntityOps implements EntityOps {
     @Override
     public boolean isColonyRegistered(java.util.UUID colonyId) {
         if (colonyId == null) return false;
-        var api = com.wsteam.wandscape.shared.registry.WandscapeApis.getColonyApiSilently();
+        var api = com.wsteam.wandscape.api.WandscapeApis.getColonyApiSilently();
         if (api == null) return false;
         return api.getAllColonyIds().contains(colonyId);
     }

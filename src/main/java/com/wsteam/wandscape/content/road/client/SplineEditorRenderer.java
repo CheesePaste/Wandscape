@@ -1,4 +1,5 @@
 package com.wsteam.wandscape.content.road.client;
+import com.wsteam.wandscape.content.building.preview.BuildingPreviewRenderer;
 
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -6,7 +7,7 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import com.wsteam.wandscape.content.road.core.*;
 import com.wsteam.wandscape.content.road.core.*;
-import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.foundation.log.Log;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
@@ -205,7 +206,7 @@ public final class SplineEditorRenderer {
                 int bz = (int) Math.floor(worldPos.z);
 
                 net.minecraft.world.level.block.state.BlockState state = 
-                    com.wsteam.wandscape.shared.ui.util.BuildingPreviewRenderer.resolveBlockState(block.blockState());
+                    com.wsteam.wandscape.content.building.preview.BuildingPreviewRenderer.resolveBlockState(block.blockState());
                 
                 if (state != null) {
                     uniqueBlocks.put(new net.minecraft.core.BlockPos(bx, by, bz), state);

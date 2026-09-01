@@ -1,9 +1,11 @@
 package com.wsteam.wandscape.content.building.projection.client;
+import com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState;
+import com.wsteam.wandscape.content.task.ui.TaskManagementOverlay;
 
 import com.wsteam.wandscape.content.building.projection.network.BuildingActionPacket;
 import com.wsteam.wandscape.content.building.projection.network.BuildingDebugResponsePacket;
-import com.wsteam.wandscape.shared.log.Log;
-import com.wsteam.wandscape.shared.ui.I18n;
+import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.ui.I18n;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -75,9 +77,9 @@ public final class BuildingDebugOverlay {
     public static void onRenderGuiPost(RenderGuiEvent.Post event) {
         if (!BuildingDebugClientState.isActive()) return;
         // 建筑信息顶栏仅在俯瞰(OVERVIEW)模式显示——其余子模式（含 TASKS）一律不弹
-        if (!com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.isInspectContext()
-                || com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.isPanelHidden()
-                || com.wsteam.wandscape.shared.ui.panel.TaskManagementOverlay.isActive()) {
+        if (!com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState.isInspectContext()
+                || com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState.isPanelHidden()
+                || com.wsteam.wandscape.content.task.ui.TaskManagementOverlay.isActive()) {
             buttonsVisible = false;
             return;
         }
@@ -130,14 +132,14 @@ public final class BuildingDebugOverlay {
         float yBase = boxY + PAD_Y;
 
         // ── Background ──
-        com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.drawRtsBox(g, boxX, boxY, boxW, boxH, false, false);
+        com.wsteam.wandscape.foundation.ui.theme.WandscapeTheme.drawRtsBox(g, boxX, boxY, boxW, boxH, false, false);
         g.bufferSource().endBatch(RenderType.guiOverlay());
 
         // ── Line 1: typeId | category | status ──
         float x = boxX + PAD_X;
-        drawText(g, font, l1, x, yBase, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_NORMAL);
+        drawText(g, font, l1, x, yBase, com.wsteam.wandscape.foundation.ui.theme.WandscapeTheme.COLOR_TEXT_NORMAL);
         x += font.width(l1) + GAP;
-        drawText(g, font, l1cat, x, yBase, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_DIM);
+        drawText(g, font, l1cat, x, yBase, com.wsteam.wandscape.foundation.ui.theme.WandscapeTheme.COLOR_TEXT_DIM);
         x += font.width(l1cat) + GAP;
         drawText(g, font, l1status, x, yBase, l1statusColor);
 
@@ -145,19 +147,19 @@ public final class BuildingDebugOverlay {
         float x2 = boxX + PAD_X;
         float y2 = yBase + LINE_H;
         
-        com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.drawIcon(g, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.ICON_COMFORT, (int)x2, (int)y2 - 1, 9, 9, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_COMFORT);
+        com.wsteam.wandscape.foundation.ui.theme.WandscapeTheme.drawIcon(g, com.wsteam.wandscape.foundation.ui.theme.WandscapeTheme.ICON_COMFORT, (int)x2, (int)y2 - 1, 9, 9, com.wsteam.wandscape.foundation.ui.theme.WandscapeTheme.COLOR_COMFORT);
         x2 += 11;
-        drawText(g, font, comfortStr, x2, y2, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_COMFORT);
+        drawText(g, font, comfortStr, x2, y2, com.wsteam.wandscape.foundation.ui.theme.WandscapeTheme.COLOR_COMFORT);
         x2 += font.width(comfortStr) + 10;
         
-        com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.drawIcon(g, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.ICON_MAGIC, (int)x2, (int)y2 - 1, 9, 9, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_MAGIC);
+        com.wsteam.wandscape.foundation.ui.theme.WandscapeTheme.drawIcon(g, com.wsteam.wandscape.foundation.ui.theme.WandscapeTheme.ICON_MAGIC, (int)x2, (int)y2 - 1, 9, 9, com.wsteam.wandscape.foundation.ui.theme.WandscapeTheme.COLOR_MAGIC);
         x2 += 11;
-        drawText(g, font, magicStr, x2, y2, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_MAGIC);
+        drawText(g, font, magicStr, x2, y2, com.wsteam.wandscape.foundation.ui.theme.WandscapeTheme.COLOR_MAGIC);
         x2 += font.width(magicStr) + 10;
         
-        com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.drawIcon(g, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.ICON_WONDER, (int)x2, (int)y2 - 1, 9, 9, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_WONDER);
+        com.wsteam.wandscape.foundation.ui.theme.WandscapeTheme.drawIcon(g, com.wsteam.wandscape.foundation.ui.theme.WandscapeTheme.ICON_WONDER, (int)x2, (int)y2 - 1, 9, 9, com.wsteam.wandscape.foundation.ui.theme.WandscapeTheme.COLOR_WONDER);
         x2 += 11;
-        drawText(g, font, wonderStr, x2, y2, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_WONDER);
+        drawText(g, font, wonderStr, x2, y2, com.wsteam.wandscape.foundation.ui.theme.WandscapeTheme.COLOR_WONDER);
 
         // ── Buttons: Repair/Undo | Destroy ──
         int btnY = boxY + boxH + 2;
@@ -194,19 +196,19 @@ public final class BuildingDebugOverlay {
         boolean hoverDestroy = destroyEnabled && mx >= destroyX && mx <= destroyX + destroyW && my >= btnY && my <= btnY + BTN_HEIGHT;
 
         // Undo/repair button (left) — undo for under-construction, else repair when damaged
-        com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.drawRtsBox(g, repairX, btnY, repairW, BTN_HEIGHT, false, hoverRepair);
+        com.wsteam.wandscape.foundation.ui.theme.WandscapeTheme.drawRtsBox(g, repairX, btnY, repairW, BTN_HEIGHT, false, hoverRepair);
         int repairAccent = underConstruction ? BTN_CANCEL_BG : BTN_REPAIR_BG;
         g.fill(RenderType.guiOverlay(), repairX, btnY + BTN_HEIGHT - 2, repairX + repairW, btnY + BTN_HEIGHT, 0,
                 repairEnabled ? repairAccent : 0x66445544);
         drawCenteredText(g, font, repairLabel, repairX + repairW / 2, btnY + (BTN_HEIGHT - font.lineHeight) / 2,
-                repairEnabled ? com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_NORMAL : TEXT_DIM);
+                repairEnabled ? com.wsteam.wandscape.foundation.ui.theme.WandscapeTheme.COLOR_TEXT_NORMAL : TEXT_DIM);
 
         // Destroy button (dark red, right)
-        com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.drawRtsBox(g, destroyX, btnY, destroyW, BTN_HEIGHT, false, hoverDestroy);
+        com.wsteam.wandscape.foundation.ui.theme.WandscapeTheme.drawRtsBox(g, destroyX, btnY, destroyW, BTN_HEIGHT, false, hoverDestroy);
         g.fill(RenderType.guiOverlay(), destroyX, btnY + BTN_HEIGHT - 2, destroyX + destroyW, btnY + BTN_HEIGHT, 0,
                 destroyEnabled ? BTN_DESTROY_BG : 0x66553333);
         drawCenteredText(g, font, destroyLabel, destroyX + destroyW / 2, btnY + (BTN_HEIGHT - font.lineHeight) / 2,
-                destroyEnabled ? com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_NORMAL : TEXT_DIM);
+                destroyEnabled ? com.wsteam.wandscape.foundation.ui.theme.WandscapeTheme.COLOR_TEXT_NORMAL : TEXT_DIM);
 
         g.bufferSource().endBatch(RenderType.guiOverlay());
 
@@ -224,13 +226,13 @@ public final class BuildingDebugOverlay {
 
     @SubscribeEvent
     public static void onMouseButtonPre(InputEvent.MouseButton.Pre event) {
-        if (!com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.isInspectContext()
-                || com.wsteam.wandscape.shared.ui.panel.TaskManagementOverlay.isActive()) {
+        if (!com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState.isInspectContext()
+                || com.wsteam.wandscape.content.task.ui.TaskManagementOverlay.isActive()) {
             buttonsVisible = false;
             return;
         }
         if (!buttonsVisible) return;
-        if (com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.isPanelHidden()) return;
+        if (com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState.isPanelHidden()) return;
         if (event.getAction() != GLFW.GLFW_PRESS) return;
 
         Minecraft mc = Minecraft.getInstance();

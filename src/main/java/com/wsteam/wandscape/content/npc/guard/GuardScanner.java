@@ -1,9 +1,9 @@
 package com.wsteam.wandscape.content.npc.guard;
 
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
-import com.wsteam.wandscape.shared.api.BuildingApi;
-import com.wsteam.wandscape.shared.data.BuildingData;
-import com.wsteam.wandscape.shared.registry.WandscapeApis;
+import com.wsteam.wandscape.api.BuildingApi;
+import com.wsteam.wandscape.content.building.data.BuildingData;
+import com.wsteam.wandscape.api.WandscapeApis;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;

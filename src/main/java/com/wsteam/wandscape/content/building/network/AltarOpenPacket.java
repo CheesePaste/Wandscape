@@ -1,6 +1,6 @@
 package com.wsteam.wandscape.content.building.network;
 
-import com.wsteam.wandscape.shared.data.AltarSpellInfo;
+import com.wsteam.wandscape.content.magic.data.AltarSpellInfo;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;

@@ -1,6 +1,6 @@
 package com.wsteam.wandscape.content.tourist.internal;
 
-import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.foundation.log.Log;
 
 /**
  * Debug flags to disable tourist mechanism layers independently.

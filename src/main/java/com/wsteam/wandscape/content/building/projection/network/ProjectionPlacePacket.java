@@ -1,15 +1,18 @@
 package com.wsteam.wandscape.content.building.projection.network;
+import com.wsteam.wandscape.content.building.network.BuildingAreaSyncPacket;
+import com.wsteam.wandscape.content.colony.network.ColonyCreatePromptPacket;
+import com.wsteam.wandscape.content.building.data.WorkItem;
 
 import com.wsteam.wandscape.content.building.data.BuildingConfig;
 import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.engine.service.SoundService;
 import com.wsteam.wandscape.engine.sound.WandscapeSounds;
 import com.wsteam.wandscape.content.building.projection.data.BuildingSlot;
-import com.wsteam.wandscape.shared.api.BuildingApi;
-import com.wsteam.wandscape.shared.log.Log;
-import com.wsteam.wandscape.shared.network.ScreenFeedbackPacket;
-import com.wsteam.wandscape.shared.registry.WandscapeApis;
-import com.wsteam.wandscape.shared.ui.I18n;
+import com.wsteam.wandscape.api.BuildingApi;
+import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.networking.ScreenFeedbackPacket;
+import com.wsteam.wandscape.api.WandscapeApis;
+import com.wsteam.wandscape.foundation.ui.I18n;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -90,7 +93,7 @@ public record ProjectionPlacePacket(
         // 4. Refresh the client's building-area cache so the newly placed
         // building's construction ghost appears immediately (no need to
         // reopen the panel).
-        com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket.sendToPlayer(player);
+        com.wsteam.wandscape.content.building.network.BuildingAreaSyncPacket.sendToPlayer(player);
 
         // 4b. Refresh projection slots so first-free badges stay accurate —
         // placing a first-free building claims it server-side. Resolve the
@@ -98,7 +101,7 @@ public record ProjectionPlacePacket(
         // unlike the free-flying body position).
         if (ProjectionNetwork.isProjecting(player)) {
             UUID colonyId = null;
-            var colonyApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getColonyApiSilently();
+            var colonyApi = com.wsteam.wandscape.api.WandscapeApis.getColonyApiSilently();
             if (colonyApi != null) {
                 colonyId = colonyApi.getColonyId(packet.anchorPos);
             }
@@ -108,19 +111,19 @@ public record ProjectionPlacePacket(
         }
 
         // 4c. Push tutorial progress — the newly placed building may advance a step.
-        var guideApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getGuideProgressApiSilently();
+        var guideApi = com.wsteam.wandscape.api.WandscapeApis.getGuideProgressApiSilently();
         if (guideApi != null) {
-            var colonyApi2 = com.wsteam.wandscape.shared.registry.WandscapeApis.getColonyApiSilently();
+            var colonyApi2 = com.wsteam.wandscape.api.WandscapeApis.getColonyApiSilently();
             UUID guideColony = colonyApi2 != null ? colonyApi2.getColonyId(packet.anchorPos) : null;
             guideApi.sendToPlayer(player, guideColony);
         }
 
         // 5. If placing a government building (Town Hall) and no colony is linked to this position, prompt for colony creation
         if ("government".equals(config.category())) {
-            var colonyApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getColonyApiSilently();
+            var colonyApi = com.wsteam.wandscape.api.WandscapeApis.getColonyApiSilently();
             if (colonyApi == null || colonyApi.getColonyId(packet.anchorPos) == null) {
                 net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player,
-                        new com.wsteam.wandscape.shared.network.ColonyCreatePromptPacket(
+                        new com.wsteam.wandscape.content.colony.network.ColonyCreatePromptPacket(
                                 packet.anchorPos, config.creator() != null ? config.creator() : ""));
                 Log.info(TAG, "[Projection] Government building placed at {}, prompting for colony creation", packet.anchorPos);
             }

@@ -1,8 +1,8 @@
 package com.wsteam.wandscape.content.element.internal;
 
 import com.google.gson.*;
-import com.wsteam.wandscape.shared.data.ElementType;
-import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.content.element.data.ElementType;
+import com.wsteam.wandscape.foundation.log.Log;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.NonNullList;
 import net.minecraft.core.registries.BuiltInRegistries;

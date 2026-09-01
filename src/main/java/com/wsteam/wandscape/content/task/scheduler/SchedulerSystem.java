@@ -1,4 +1,5 @@
 package com.wsteam.wandscape.content.task.scheduler;
+import com.wsteam.wandscape.foundation.util.TickProfiler;
 
 import com.google.gson.JsonElement;
 import com.wsteam.wandscape.core.component.ColonyMember;
@@ -8,7 +9,7 @@ import com.wsteam.wandscape.core.component.TaskExecutor;
 import com.wsteam.wandscape.core.ecs.System;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.types.GridPos;
-import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.content.task.engine.pool.GlobalTask;
 import com.wsteam.wandscape.content.task.engine.pool.GlobalTaskPool;
 import com.wsteam.wandscape.content.task.runtime.ExecutorState;
@@ -40,7 +41,7 @@ public class SchedulerSystem implements System {
 
     @Override
     public void update(World world, float delta) {
-        try (var span = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("ecs.scheduler.tick")) {
+        try (var span = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("ecs.scheduler.tick")) {
         tickCounter++;
         if (tickCounter % heartbeatInterval != 0) return;
 

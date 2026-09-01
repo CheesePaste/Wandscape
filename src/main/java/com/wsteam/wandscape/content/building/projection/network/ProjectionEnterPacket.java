@@ -1,9 +1,10 @@
 package com.wsteam.wandscape.content.building.projection.network;
+import com.wsteam.wandscape.content.colony.network.ColonyStatsSyncPacket;
 
 import com.wsteam.wandscape.content.building.projection.data.BuildingSlot;
-import com.wsteam.wandscape.shared.log.Log;
-import com.wsteam.wandscape.shared.registry.WandscapeApis;
-import com.wsteam.wandscape.shared.ui.I18n;
+import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.api.WandscapeApis;
+import com.wsteam.wandscape.foundation.ui.I18n;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -69,7 +70,7 @@ public record ProjectionEnterPacket() implements CustomPacketPayload {
             if (metricsApi != null) {
                 var snap = metricsApi.getSnapshot(colonyId);
                 net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player,
-                        com.wsteam.wandscape.shared.network.ColonyStatsSyncPacket.fromSnapshot(snap));
+                        com.wsteam.wandscape.content.colony.network.ColonyStatsSyncPacket.fromSnapshot(snap));
             }
         }
         List<BuildingSlot> slots = ProjectionNetwork.getAvailableBuildings(colonyId);

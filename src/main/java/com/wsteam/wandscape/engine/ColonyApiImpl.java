@@ -1,11 +1,12 @@
 package com.wsteam.wandscape.engine;
+import com.wsteam.wandscape.foundation.util.NameStyle;
 
 import com.wsteam.wandscape.content.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.content.building.internal.BuildingState;
 import com.wsteam.wandscape.engine.colony.ColonySavedData;
-import com.wsteam.wandscape.shared.api.ColonyApi;
-import com.wsteam.wandscape.shared.data.BuildingData;
-import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.api.ColonyApi;
+import com.wsteam.wandscape.content.building.data.BuildingData;
+import com.wsteam.wandscape.foundation.log.Log;
 import net.minecraft.core.BlockPos;
 
 import javax.annotation.Nullable;
@@ -173,14 +174,14 @@ public final class ColonyApiImpl implements ColonyApi {
     }
 
     @Override
-    public com.wsteam.wandscape.shared.data.NameStyle getNamingStyle(UUID colonyId) {
+    public com.wsteam.wandscape.foundation.util.NameStyle getNamingStyle(UUID colonyId) {
         ColonySavedData csd = getColonySavedData();
         return csd != null ? csd.getNamingStyle(colonyId)
-                : com.wsteam.wandscape.shared.data.NameStyle.FANTASY;
+                : com.wsteam.wandscape.foundation.util.NameStyle.FANTASY;
     }
 
     @Override
-    public void setNamingStyle(UUID colonyId, com.wsteam.wandscape.shared.data.NameStyle style) {
+    public void setNamingStyle(UUID colonyId, com.wsteam.wandscape.foundation.util.NameStyle style) {
         ColonySavedData csd = getColonySavedData();
         if (csd != null) {
             csd.setNamingStyle(colonyId, style);

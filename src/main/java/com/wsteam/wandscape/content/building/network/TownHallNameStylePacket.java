@@ -1,7 +1,7 @@
 package com.wsteam.wandscape.content.building.network;
 
-import com.wsteam.wandscape.shared.data.NameStyle;
-import com.wsteam.wandscape.shared.registry.WandscapeApis;
+import com.wsteam.wandscape.foundation.util.NameStyle;
+import com.wsteam.wandscape.api.WandscapeApis;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;

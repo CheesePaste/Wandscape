@@ -12,9 +12,9 @@ import com.wsteam.wandscape.content.road.core.RoadNetwork;
 import com.wsteam.wandscape.content.road.data.RoadPreset;
 import com.wsteam.wandscape.content.road.engine.RoadPlaceAttribution;
 import com.wsteam.wandscape.content.road.engine.RoadSavedData;
-import com.wsteam.wandscape.shared.log.Log;
-import com.wsteam.wandscape.shared.network.ScreenFeedbackPacket;
-import com.wsteam.wandscape.shared.ui.I18n;
+import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.networking.ScreenFeedbackPacket;
+import com.wsteam.wandscape.foundation.ui.I18n;
 import com.wsteam.wandscape.content.task.engine.pool.TaskRequest;
 import com.wsteam.wandscape.content.task.source.PlayerManualSource;
 import net.minecraft.core.BlockPos;
@@ -91,7 +91,7 @@ public record RoadPlacePacket(String presetId, BlockPos startPos, BlockPos endPo
         }
 
         java.util.Map<String, Integer> materials = new java.util.LinkedHashMap<>();
-        var elementApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getElementApi();
+        var elementApi = com.wsteam.wandscape.api.WandscapeApis.getElementApi();
         int targetY = start.getY();
 
         for (int x = minX; x <= maxX; x++) {
@@ -222,7 +222,7 @@ public record RoadPlacePacket(String presetId, BlockPos startPos, BlockPos endPo
 
         try {
             long taskId = source.publish(new TaskRequest("road:build_segment", params, 10,
-                    com.wsteam.wandscape.shared.registry.WandscapeApis.colonyAt(player.blockPosition())));
+                    com.wsteam.wandscape.api.WandscapeApis.colonyAt(player.blockPosition())));
             // Capture demand + live task id on the edge so withdraw can cancel & refund.
             edge.setMaterialCounts(materials);
             edge.addSegmentTaskId(taskId);
@@ -232,12 +232,12 @@ public record RoadPlacePacket(String presetId, BlockPos startPos, BlockPos endPo
                     taskId, packet.presetId(), start.toShortString(), end.toShortString(), tiles.size());
 
             // Sync the new under-construction road edge to all clients.
-            com.wsteam.wandscape.shared.network.RoadAreaSyncPacket.broadcastToServer(player.serverLevel().getServer());
+            com.wsteam.wandscape.content.road.network.RoadAreaSyncPacket.broadcastToServer(player.serverLevel().getServer());
 
             // Manual road placement counts toward onboarding step 6 — but only once
             // the road is actually built, so register a pending attribution that
             // RoadSegmentListener consumes on road_segment_complete.
-            var colonyApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getColonyApiSilently();
+            var colonyApi = com.wsteam.wandscape.api.WandscapeApis.getColonyApiSilently();
             UUID colonyId = colonyApi != null ? colonyApi.getColonyId(player.blockPosition()) : null;
             if (colonyId != null) {
                 RoadPlaceAttribution.register(segmentId, player.getUUID(), colonyId);

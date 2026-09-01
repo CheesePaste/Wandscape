@@ -1,10 +1,10 @@
 package com.wsteam.wandscape.content.building.scanner.network;
 
 import com.wsteam.wandscape.content.building.scanner.CreativeScannerBlockEntity;
-import com.wsteam.wandscape.shared.data.ElementType;
-import com.wsteam.wandscape.shared.log.Log;
-import com.wsteam.wandscape.shared.registry.WandscapeApis;
-import com.wsteam.wandscape.shared.ui.I18n;
+import com.wsteam.wandscape.content.element.data.ElementType;
+import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.api.WandscapeApis;
+import com.wsteam.wandscape.foundation.ui.I18n;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;

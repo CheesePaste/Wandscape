@@ -5,12 +5,12 @@ import com.wsteam.wandscape.content.magic.data.MagicDef;
 import com.wsteam.wandscape.content.npc.NpcStrategyMenu;
 import com.wsteam.wandscape.content.npc.network.NpcDataPacket;
 import com.wsteam.wandscape.content.npc.network.NpcStrategyPacket;
-import com.wsteam.wandscape.shared.ui.I18n;
-import com.wsteam.wandscape.shared.ui.ReplayProtectedScreen;
-import com.wsteam.wandscape.shared.ui.component.HelpButton;
-import com.wsteam.wandscape.shared.ui.component.MedievalButton;
-import com.wsteam.wandscape.shared.ui.skin.SkinRender;
-import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
+import com.wsteam.wandscape.foundation.ui.I18n;
+import com.wsteam.wandscape.foundation.ui.ReplayProtectedScreen;
+import com.wsteam.wandscape.foundation.ui.component.HelpButton;
+import com.wsteam.wandscape.foundation.ui.component.MedievalButton;
+import com.wsteam.wandscape.foundation.ui.skin.SkinRender;
+import com.wsteam.wandscape.foundation.ui.theme.MedievalColors;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -95,9 +95,9 @@ public class NpcStrategyScreen extends AbstractContainerScreen<NpcStrategyMenu>
 
     public void openHelpDocument() {
         if (helpDocumentPath != null && minecraft != null) {
-            String content = com.wsteam.wandscape.shared.ui.markdown.navigation.DocumentLoader
+            String content = com.wsteam.wandscape.foundation.ui.markdown.navigation.DocumentLoader
                     .loadMarkdown(helpDocumentPath);
-            minecraft.setScreen(new com.wsteam.wandscape.shared.ui.guide.GuideTestScreen(
+            minecraft.setScreen(new com.wsteam.wandscape.foundation.ui.guide.GuideTestScreen(
                     this, content, helpDocumentPath));
         }
     }
@@ -190,7 +190,7 @@ public class NpcStrategyScreen extends AbstractContainerScreen<NpcStrategyMenu>
     @Override
     protected void renderSlot(GuiGraphics g, net.minecraft.world.inventory.Slot slot) {
         if (slot instanceof NpcStrategyMenu.SpellSlot) {
-            com.wsteam.wandscape.shared.ui.vanilla.VanillaPlayerInventory
+            com.wsteam.wandscape.foundation.ui.vanilla.VanillaPlayerInventory
                     .blitSlotBackground(g, slot.x, slot.y);
         }
         super.renderSlot(g, slot);

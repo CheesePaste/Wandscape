@@ -1,8 +1,8 @@
 package com.wsteam.wandscape.content.element.internal;
 
 import com.wsteam.wandscape.Wandscape;
-import com.wsteam.wandscape.shared.api.ElementApi;
-import com.wsteam.wandscape.shared.data.ElementType;
+import com.wsteam.wandscape.api.ElementApi;
+import com.wsteam.wandscape.content.element.data.ElementType;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;

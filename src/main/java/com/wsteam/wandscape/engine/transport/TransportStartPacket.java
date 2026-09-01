@@ -2,7 +2,7 @@ package com.wsteam.wandscape.engine.transport;
 
 import com.wsteam.wandscape.content.road.core.*;
 import com.wsteam.wandscape.content.road.core.*;
-import com.wsteam.wandscape.shared.data.ItemKey;
+import com.wsteam.wandscape.foundation.util.ItemKey;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.RegistryFriendlyByteBuf;

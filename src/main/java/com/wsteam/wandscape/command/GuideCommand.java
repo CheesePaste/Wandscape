@@ -2,8 +2,8 @@ package com.wsteam.wandscape.command;
 
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.tree.CommandNode;
-import com.wsteam.wandscape.shared.network.GuideTestPacket;
-import com.wsteam.wandscape.shared.ui.I18n;
+import com.wsteam.wandscape.content.items.network.GuideTestPacket;
+import com.wsteam.wandscape.foundation.ui.I18n;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.server.level.ServerPlayer;

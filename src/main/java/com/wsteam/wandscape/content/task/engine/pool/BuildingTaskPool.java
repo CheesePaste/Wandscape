@@ -1,7 +1,7 @@
 package com.wsteam.wandscape.content.task.engine.pool;
 
-import com.wsteam.wandscape.shared.data.WorkItem;
-import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.content.building.data.WorkItem;
+import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.content.task.runtime.TaskState;
 
 import javax.annotation.Nullable;

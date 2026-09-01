@@ -2,11 +2,11 @@ package com.wsteam.wandscape.content.element.item;
 
 import com.wsteam.wandscape.engine.service.SoundService;
 import com.wsteam.wandscape.engine.sound.WandscapeSounds;
-import com.wsteam.wandscape.shared.api.ColonyApi;
-import com.wsteam.wandscape.shared.api.WarehouseApi;
-import com.wsteam.wandscape.shared.data.ElementType;
-import com.wsteam.wandscape.shared.log.Log;
-import com.wsteam.wandscape.shared.registry.WandscapeApis;
+import com.wsteam.wandscape.api.ColonyApi;
+import com.wsteam.wandscape.api.WarehouseApi;
+import com.wsteam.wandscape.content.element.data.ElementType;
+import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.api.WandscapeApis;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;

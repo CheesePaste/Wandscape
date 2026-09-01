@@ -1,4 +1,7 @@
 package com.wsteam.wandscape.content.building.internal;
+import com.wsteam.wandscape.foundation.ui.panel.PanelStateTracker;
+import com.wsteam.wandscape.content.colony.network.ColonyCreatePromptPacket;
+import com.wsteam.wandscape.content.npc.data.MageResume;
 
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.content.building.data.BuildingConfig;
@@ -9,11 +12,11 @@ import com.wsteam.wandscape.content.production.network.MagicStationPacket;
 import com.wsteam.wandscape.content.production.network.WorkstationDataPacket;
 import com.wsteam.wandscape.content.tourist.internal.HotelStayHandler;
 import com.wsteam.wandscape.content.warehouse.WarehouseMenu;
-import com.wsteam.wandscape.shared.data.ElementType;
-import com.wsteam.wandscape.shared.data.ItemKey;
-import com.wsteam.wandscape.shared.log.Log;
-import com.wsteam.wandscape.shared.network.ScreenFeedbackPacket;
-import com.wsteam.wandscape.shared.ui.I18n;
+import com.wsteam.wandscape.content.element.data.ElementType;
+import com.wsteam.wandscape.foundation.util.ItemKey;
+import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.networking.ScreenFeedbackPacket;
+import com.wsteam.wandscape.foundation.ui.I18n;
 import com.wsteam.wandscape.content.warehouse.ColonyItemBank;
 import com.wsteam.wandscape.content.warehouse.network.WarehouseDataPacket;
 import net.minecraft.network.chat.Component;
@@ -56,7 +59,7 @@ public final class BuildingInteractHandler {
     /** Resolve a colony's founding player's display name for the town hall screen. */
     @Nullable
     private static String resolveFounderName(ServerPlayer player, UUID colonyId) {
-        var colonyApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getColonyApiSilently();
+        var colonyApi = com.wsteam.wandscape.api.WandscapeApis.getColonyApiSilently();
         if (colonyApi == null) return null;
         UUID founder = colonyApi.getFounder(colonyId);
         if (founder == null) return null;
@@ -98,7 +101,7 @@ public final class BuildingInteractHandler {
             BuildingConfig promptCfg = BuildingConfigLoader.getInstance().get(state.getBuildingTypeId());
             String promptCreator = promptCfg != null ? promptCfg.creator() : "";
             PacketDistributor.sendToPlayer(player,
-                    new com.wsteam.wandscape.shared.network.ColonyCreatePromptPacket(pos, promptCreator));
+                    new com.wsteam.wandscape.content.colony.network.ColonyCreatePromptPacket(pos, promptCreator));
             Log.info(TAG, "[Colony] Town hall at {} right-clicked with no colony — prompting for name", pos);
             return;
         }
@@ -124,9 +127,9 @@ public final class BuildingInteractHandler {
             int expNext = levelMgr != null ? levelMgr.expToNextLevel(colonyId) : 1000;
             String name = levelMgr != null ? levelMgr.getColonyName(colonyId) : "";
             String founderName = resolveFounderName(player, colonyId);
-            boolean canUseWarehouse = com.wsteam.wandscape.shared.registry.WandscapeApis.getBuildingApi()
+            boolean canUseWarehouse = com.wsteam.wandscape.api.WandscapeApis.getBuildingApi()
                     .getBuildingsByCategory(colonyId, "storage").isEmpty();
-            var colonyApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getColonyApiSilently();
+            var colonyApi = com.wsteam.wandscape.api.WandscapeApis.getColonyApiSilently();
             int namingStyle = colonyApi != null ? colonyApi.getNamingStyle(colonyId).ordinal() : 0;
             PacketDistributor.sendToPlayer(player,
                     new TownHallOpenPacket(
@@ -165,14 +168,14 @@ public final class BuildingInteractHandler {
                 PacketDistributor.sendToPlayer(player,
                         new ShopOpenPacket(pos, colonyId, state.getBuildingId(), creator, stock, maxStocks));
                 // Opening a shop triggers its first restock — push onboarding progress (step 7).
-                var guideApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getGuideProgressApiSilently();
+                var guideApi = com.wsteam.wandscape.api.WandscapeApis.getGuideProgressApiSilently();
                 if (guideApi != null) guideApi.sendToPlayer(player, colonyId);
             }
             case "tavern" -> {
-                List<com.wsteam.wandscape.shared.data.MageResume> mageResumes = List.of();
+                List<com.wsteam.wandscape.content.npc.data.MageResume> mageResumes = List.of();
                 int recruitCount = 0;
                 try {
-                    var tavernApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getTavernApi();
+                    var tavernApi = com.wsteam.wandscape.api.WandscapeApis.getTavernApi();
                     mageResumes = tavernApi.getMageResumes(colonyId);
                     recruitCount = tavernApi.getRecruitCount(colonyId);
                 } catch (IllegalStateException ignored) {}
@@ -255,7 +258,7 @@ public final class BuildingInteractHandler {
 
         // Only intercept when player has the Wandscape panel open
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
-        if (!com.wsteam.wandscape.shared.network.PanelStateTracker.isPanelOpen(player)) return;
+        if (!com.wsteam.wandscape.foundation.ui.panel.PanelStateTracker.isPanelOpen(player)) return;
 
         var pos = event.getPos();
         BuildingSavedData data = BuildingSavedData.get(level);

@@ -1,8 +1,8 @@
 package com.wsteam.wandscape.content.building.scanner;
 
 import com.wsteam.wandscape.content.tourist.internal.MarkerPreviewManager;
-import com.wsteam.wandscape.shared.data.Activity;
-import com.wsteam.wandscape.shared.ui.I18n;
+import com.wsteam.wandscape.content.tourist.data.Activity;
+import com.wsteam.wandscape.foundation.ui.I18n;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;

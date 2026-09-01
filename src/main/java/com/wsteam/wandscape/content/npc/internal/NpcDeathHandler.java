@@ -6,7 +6,7 @@ import com.wsteam.wandscape.core.types.ResourceStack;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.content.npc.data.DeathRecord;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
-import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.foundation.log.Log;
 import net.minecraft.server.level.ServerLevel;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;

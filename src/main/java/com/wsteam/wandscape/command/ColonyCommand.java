@@ -1,4 +1,5 @@
 package com.wsteam.wandscape.command;
+import com.wsteam.wandscape.content.colony.network.ColonyCreateRequestPacket;
 
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
@@ -18,12 +19,12 @@ import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.service.ParticleService;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.content.npc.internal.EntityComponentBridge;
-import com.wsteam.wandscape.shared.api.ColonyApi;
-import com.wsteam.wandscape.shared.event.ColonyCreatedEvent;
-import com.wsteam.wandscape.shared.log.Log;
-import com.wsteam.wandscape.shared.registry.WandscapeApis;
-import com.wsteam.wandscape.shared.registry.WandscapeConstants;
-import com.wsteam.wandscape.shared.ui.I18n;
+import com.wsteam.wandscape.api.ColonyApi;
+import com.wsteam.wandscape.content.colony.event.ColonyCreatedEvent;
+import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.api.WandscapeApis;
+import com.wsteam.wandscape.foundation.registry.WandscapeConstants;
+import com.wsteam.wandscape.foundation.ui.I18n;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.core.BlockPos;

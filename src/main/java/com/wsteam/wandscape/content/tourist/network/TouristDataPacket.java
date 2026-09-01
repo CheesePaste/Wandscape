@@ -1,6 +1,7 @@
 package com.wsteam.wandscape.content.tourist.network;
+import com.wsteam.wandscape.content.tourist.data.VisitMemory;
 
-import com.wsteam.wandscape.shared.data.Activity;
+import com.wsteam.wandscape.content.tourist.data.Activity;
 import com.wsteam.wandscape.content.tourist.entity.TouristEntity;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -43,7 +44,7 @@ public record TouristDataPacket(
             StreamCodec.of(TouristDataPacket::write, TouristDataPacket::read);
 
     /**
-     * Serializable visit entry — lightweight subset of {@link com.wsteam.wandscape.shared.data.VisitMemory}.
+     * Serializable visit entry — lightweight subset of {@link com.wsteam.wandscape.content.tourist.data.VisitMemory}.
      * {@code buildingTypeId} lets the client resolve the localized name via {@code building.wandscape.<id>}.
      * Block 2：满意度 satDelta → 三维增量（comfort/magic/wonder）。
      */

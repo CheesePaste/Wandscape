@@ -1,9 +1,9 @@
 package com.wsteam.wandscape.content.tourist.internal;
 
-import com.wsteam.wandscape.shared.data.Emotion;
-import com.wsteam.wandscape.shared.data.NarrativeEvent;
-import com.wsteam.wandscape.shared.data.NarrativeEventType;
-import com.wsteam.wandscape.shared.data.VisitMemory;
+import com.wsteam.wandscape.content.tourist.data.Emotion;
+import com.wsteam.wandscape.content.colony.data.NarrativeEvent;
+import com.wsteam.wandscape.content.colony.data.NarrativeEventType;
+import com.wsteam.wandscape.content.tourist.data.VisitMemory;
 
 import java.util.Map;
 

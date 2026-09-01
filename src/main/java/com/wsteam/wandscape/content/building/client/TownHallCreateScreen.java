@@ -1,9 +1,10 @@
 package com.wsteam.wandscape.content.building.client;
+import com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState;
 
-import com.wsteam.wandscape.shared.network.ColonyCreateRequestPacket;
-import com.wsteam.wandscape.shared.ui.I18n;
-import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
-import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
+import com.wsteam.wandscape.content.colony.network.ColonyCreateRequestPacket;
+import com.wsteam.wandscape.foundation.ui.I18n;
+import com.wsteam.wandscape.foundation.ui.component.MedievalScreen;
+import com.wsteam.wandscape.foundation.ui.theme.MedievalColors;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.core.BlockPos;
@@ -81,15 +82,15 @@ public class TownHallCreateScreen extends MedievalScreen {
         }
         super.onClose();
         // 确保清理建造栏和子模式，防止关闭弹窗后因光标抬起与建造栏开启导致 WASD / 视角冻结
-        com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.closeBuildingBar();
-        com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.exitCurrentSubMode();
-        if (com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.isPanelOpen()) {
-            com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.setSubMode(
-                    com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.SubMode.NONE);
+        com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState.closeBuildingBar();
+        com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState.exitCurrentSubMode();
+        if (com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState.isPanelOpen()) {
+            com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState.setSubMode(
+                    com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState.SubMode.NONE);
         }
-        com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.syncCursorToState();
+        com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState.syncCursorToState();
         net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
-        if (mc.mouseHandler != null && !com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.isCursorLifted()) {
+        if (mc.mouseHandler != null && !com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState.isCursorLifted()) {
             mc.mouseHandler.grabMouse();
         }
     }

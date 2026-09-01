@@ -1,9 +1,9 @@
 package com.wsteam.wandscape.content.building.scanner.client.gizmo;
 
 import com.wsteam.wandscape.content.building.data.BlockOffset;
-import com.wsteam.wandscape.shared.log.Log;
-import com.wsteam.wandscape.shared.ui.I18n;
-import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
+import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.ui.I18n;
+import com.wsteam.wandscape.foundation.ui.theme.MedievalColors;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;

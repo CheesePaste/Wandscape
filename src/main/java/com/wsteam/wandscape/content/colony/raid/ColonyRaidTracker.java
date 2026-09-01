@@ -1,9 +1,9 @@
 package com.wsteam.wandscape.content.colony.raid;
 
 import com.wsteam.wandscape.engine.service.ParticleService;
-import com.wsteam.wandscape.shared.event.ColonyRaidVictoryEvent;
-import com.wsteam.wandscape.shared.log.Log;
-import com.wsteam.wandscape.shared.registry.WandscapeApis;
+import com.wsteam.wandscape.content.colony.event.ColonyRaidVictoryEvent;
+import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.api.WandscapeApis;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.raid.Raid;

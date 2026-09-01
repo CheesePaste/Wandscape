@@ -1,4 +1,5 @@
 package com.wsteam.wandscape.content.production;
+import com.wsteam.wandscape.foundation.registry.WandscapeConstants;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -6,7 +7,7 @@ import com.wsteam.wandscape.foundation.registry.dataconfig.internal.WandscapeDat
 import com.wsteam.wandscape.content.element.internal.ElementMappingConfig;
 import com.wsteam.wandscape.content.element.internal.ElementMappingLoader;
 import com.wsteam.wandscape.content.production.data.*;
-import com.wsteam.wandscape.shared.registry.WandscapeDataRegistry;
+import com.wsteam.wandscape.foundation.registry.WandscapeDataRegistry;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -63,7 +64,7 @@ public class ProductionRecipeLoader {
         if (recipe != null) {
             return recipe.calculateChannelTicks(quantity);
         }
-        return com.wsteam.wandscape.shared.registry.WandscapeConstants.WORKSTATION_CRAFT_TICKS_PER_UNIT * quantity;
+        return com.wsteam.wandscape.foundation.registry.WandscapeConstants.WORKSTATION_CRAFT_TICKS_PER_UNIT * quantity;
     }
 
     /**

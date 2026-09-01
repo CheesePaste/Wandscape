@@ -6,9 +6,9 @@ import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.service.SoundService;
 import com.wsteam.wandscape.engine.sound.WandscapeSounds;
 import com.wsteam.wandscape.content.road.engine.RoadSavedData;
-import com.wsteam.wandscape.shared.log.Log;
-import com.wsteam.wandscape.shared.network.ScreenFeedbackPacket;
-import com.wsteam.wandscape.shared.ui.I18n;
+import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.networking.ScreenFeedbackPacket;
+import com.wsteam.wandscape.foundation.ui.I18n;
 import com.wsteam.wandscape.content.task.engine.pool.TaskRequest;
 import com.wsteam.wandscape.content.task.source.PlayerManualSource;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -47,7 +47,7 @@ public record SplineBuildPacket(String tilesJson, String splineJson) implements 
 
             // Disabled blocks must not be placed as free material — refuse before any
             // RoadEdge/network side effects below.
-            var elementApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getElementApi();
+            var elementApi = com.wsteam.wandscape.api.WandscapeApis.getElementApi();
             for (JsonElement tileEl : tiles) {
                 JsonObject tileObj = tileEl.getAsJsonObject();
                 if (tileObj.has("block")) {
@@ -169,7 +169,7 @@ public record SplineBuildPacket(String tilesJson, String splineJson) implements 
             params.put("material_counts", counts);
 
             long taskId = source.publish(new TaskRequest("road:build_segment", params, 10,
-                    com.wsteam.wandscape.shared.registry.WandscapeApis.colonyAt(player.blockPosition())));
+                    com.wsteam.wandscape.api.WandscapeApis.colonyAt(player.blockPosition())));
             // Capture demand + live task id on the edge so withdraw can cancel & refund.
             edge.setMaterialCounts(materials);
             edge.addSegmentTaskId(taskId);

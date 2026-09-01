@@ -1,7 +1,7 @@
 package com.wsteam.wandscape.engine.colony;
 
-import com.wsteam.wandscape.shared.data.NameStyle;
-import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.foundation.util.NameStyle;
+import com.wsteam.wandscape.foundation.log.Log;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;

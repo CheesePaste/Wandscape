@@ -1,7 +1,7 @@
 package com.wsteam.wandscape.content.building.scanner.client.gizmo;
 
 import com.wsteam.wandscape.content.building.data.BlockOffset;
-import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.foundation.log.Log;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.phys.AABB;

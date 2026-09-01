@@ -1,6 +1,7 @@
 package com.wsteam.wandscape.engine.sound;
+import com.wsteam.wandscape.content.colony.network.ColonyAmbientPacket;
 
-import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.foundation.log.Log;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.resources.sounds.AbstractTickableSoundInstance;
@@ -14,7 +15,7 @@ import net.neoforged.api.distmarker.OnlyIn;
  * 小镇昼夜环境音（客户端，包驱动）。
  *
  * <p>由服务端 {@code ColonyAmbientTracker} 判断玩家是否在城镇范围内并发送
- * {@link com.wsteam.wandscape.shared.network.ColonyAmbientPacket}，本类据包启停/切相位：
+ * {@link com.wsteam.wandscape.content.colony.network.ColonyAmbientPacket}，本类据包启停/切相位：
  * 白天（游客在城）播放人群环境音，夜晚低音量播放森林环境音。
  *
  * <p>两个循环都是 2D 全局声（relative + AMBIENT 通道），由 {@link AmbientLoop} 淡入。

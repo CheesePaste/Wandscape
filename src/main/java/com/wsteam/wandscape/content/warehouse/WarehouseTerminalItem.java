@@ -1,7 +1,7 @@
 package com.wsteam.wandscape.content.warehouse;
 
-import com.wsteam.wandscape.shared.log.Log;
-import com.wsteam.wandscape.shared.registry.WandscapeApis;
+import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.api.WandscapeApis;
 import com.wsteam.wandscape.content.warehouse.network.WarehouseDataPacket;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;

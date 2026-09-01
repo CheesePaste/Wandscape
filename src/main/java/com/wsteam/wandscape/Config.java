@@ -1,4 +1,5 @@
 package com.wsteam.wandscape;
+import com.wsteam.wandscape.foundation.log.Log;
 
 import net.neoforged.neoforge.common.ModConfigSpec;
 public class Config {

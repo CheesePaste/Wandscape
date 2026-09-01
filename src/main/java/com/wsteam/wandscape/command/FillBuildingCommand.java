@@ -9,7 +9,7 @@ import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.content.building.internal.EnqueueHelper;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.engine.WandscapeEngine;
-import com.wsteam.wandscape.shared.data.WorkItem;
+import com.wsteam.wandscape.content.building.data.WorkItem;
 import com.wsteam.wandscape.content.task.engine.pool.TaskRequest;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
@@ -92,7 +92,7 @@ public final class FillBuildingCommand {
 
         int submitted = 0;
         // 调试命令也按玩家位置解析殖民地归属（无玩家/不在任何殖民地 → 无主任务）
-        java.util.UUID colonyId = com.wsteam.wandscape.shared.registry.WandscapeApis.colonyAt(
+        java.util.UUID colonyId = com.wsteam.wandscape.api.WandscapeApis.colonyAt(
                 src.getPlayer() != null ? src.getPlayer().blockPosition() : null);
 
         for (int i = 0; i < count; i++) {

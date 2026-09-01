@@ -1,13 +1,13 @@
 package com.wsteam.wandscape.content.tourist.internal;
 
-import com.wsteam.wandscape.shared.api.TavernApi;
-import com.wsteam.wandscape.shared.api.WarehouseApi;
-import com.wsteam.wandscape.shared.data.ElementType;
-import com.wsteam.wandscape.shared.data.MageResume;
-import com.wsteam.wandscape.shared.data.RecruitmentCandidate;
-import com.wsteam.wandscape.shared.log.Log;
-import com.wsteam.wandscape.shared.registry.WandscapeApis;
-import com.wsteam.wandscape.shared.registry.WandscapeConstants;
+import com.wsteam.wandscape.api.TavernApi;
+import com.wsteam.wandscape.api.WarehouseApi;
+import com.wsteam.wandscape.content.element.data.ElementType;
+import com.wsteam.wandscape.content.npc.data.MageResume;
+import com.wsteam.wandscape.content.npc.data.RecruitmentCandidate;
+import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.api.WandscapeApis;
+import com.wsteam.wandscape.foundation.registry.WandscapeConstants;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;

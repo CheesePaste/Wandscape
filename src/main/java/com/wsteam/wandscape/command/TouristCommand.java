@@ -5,12 +5,12 @@ import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.wsteam.wandscape.Wandscape;
-import com.wsteam.wandscape.shared.data.BarRatio;
-import com.wsteam.wandscape.shared.data.MageAttributeRoller;
-import com.wsteam.wandscape.shared.data.RecruitmentCandidate;
-import com.wsteam.wandscape.shared.log.Log;
-import com.wsteam.wandscape.shared.registry.WandscapeApis;
-import com.wsteam.wandscape.shared.ui.I18n;
+import com.wsteam.wandscape.content.tourist.data.BarRatio;
+import com.wsteam.wandscape.content.npc.data.MageAttributeRoller;
+import com.wsteam.wandscape.content.npc.data.RecruitmentCandidate;
+import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.api.WandscapeApis;
+import com.wsteam.wandscape.foundation.ui.I18n;
 import com.wsteam.wandscape.content.tourist.entity.TouristEntity;
 import com.wsteam.wandscape.content.tourist.internal.TouristCooldownDebug;
 import com.wsteam.wandscape.content.tourist.internal.TouristSimSystem;
@@ -212,7 +212,7 @@ public final class TouristCommand {
                 "[Tourist] Cooldown '" + layer + "' -> " + state), true);
 
         // Also log to server console for traceability
-        com.wsteam.wandscape.shared.log.Log.info("TouristCommand",
+        com.wsteam.wandscape.foundation.log.Log.info("TouristCommand",
                 "[Debug] Cooldown '{}' set to {}", layer, enable ? "on" : "off");
 
         return Command.SINGLE_SUCCESS;

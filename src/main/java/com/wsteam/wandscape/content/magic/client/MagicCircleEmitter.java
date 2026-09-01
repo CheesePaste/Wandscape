@@ -6,7 +6,7 @@ import com.wsteam.wandscape.content.magic.data.MagicCircleSpec.Element;
 import com.wsteam.wandscape.content.magic.data.MagicCircleSpec.ElementType;
 import com.wsteam.wandscape.content.magic.entity.MagicBeamEntity;
 import com.wsteam.wandscape.content.magic.internal.MagicCircleLoader;
-import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.foundation.log.Log;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.particles.ParticleOptions;

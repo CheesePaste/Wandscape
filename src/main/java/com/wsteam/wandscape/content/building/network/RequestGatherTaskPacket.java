@@ -6,10 +6,10 @@ import com.wsteam.wandscape.content.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.content.building.internal.BuildingState;
 import com.wsteam.wandscape.content.building.internal.NodeGatherTaskFactory;
 import com.wsteam.wandscape.content.warehouse.ColonyItemBank;
-import com.wsteam.wandscape.shared.api.BuildingApi;
-import com.wsteam.wandscape.shared.data.WorkItem;
-import com.wsteam.wandscape.shared.log.Log;
-import com.wsteam.wandscape.shared.registry.WandscapeApis;
+import com.wsteam.wandscape.api.BuildingApi;
+import com.wsteam.wandscape.content.building.data.WorkItem;
+import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.api.WandscapeApis;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -79,7 +79,7 @@ public record RequestGatherTaskPacket(
             if (state.getColonyId() != null) {
                 var bank = ColonyItemBank.get(level);
                 if (bank != null) bank.recordGatherPublished(state.getColonyId());
-                var guideApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getGuideProgressApiSilently();
+                var guideApi = com.wsteam.wandscape.api.WandscapeApis.getGuideProgressApiSilently();
                 if (guideApi != null) guideApi.sendToPlayer(sp, state.getColonyId());
             }
 

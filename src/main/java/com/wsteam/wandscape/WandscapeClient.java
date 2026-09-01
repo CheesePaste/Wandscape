@@ -1,4 +1,12 @@
 package com.wsteam.wandscape;
+import com.wsteam.wandscape.content.magic.network.MagicCircleCastPacket;
+import com.wsteam.wandscape.foundation.networking.ScreenFeedbackPacket;
+import com.wsteam.wandscape.content.items.network.GuideTestPacket;
+import com.wsteam.wandscape.foundation.networking.ParticleBurstPacket;
+import com.wsteam.wandscape.content.items.network.GuideProgressSyncPacket;
+import com.wsteam.wandscape.content.colony.network.ColonyAmbientPacket;
+import com.wsteam.wandscape.content.colony.network.ColonyCreatePromptPacket;
+import com.wsteam.wandscape.foundation.util.ItemKey;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import com.wsteam.wandscape.content.building.client.*;
@@ -36,13 +44,13 @@ import com.wsteam.wandscape.content.building.projection.client.ProjectionFlightC
 import com.wsteam.wandscape.content.road.client.RoadConstructionGhost;
 import com.wsteam.wandscape.content.road.client.RoadPlacementController;
 import com.wsteam.wandscape.content.road.client.RoadPlacementRenderer;
-import com.wsteam.wandscape.shared.client.render.BuildingGhostVboCache;
-import com.wsteam.wandscape.shared.log.Log;
-import com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket;
-import com.wsteam.wandscape.shared.ui.panel.WandscapePanelController;
-import com.wsteam.wandscape.shared.ui.panel.WandscapePanelOverlay;
-import com.wsteam.wandscape.shared.ui.panel.WandscapePanelState;
-import com.wsteam.wandscape.shared.ui.util.BuildingPreviewGifCache;
+import com.wsteam.wandscape.content.building.render.BuildingGhostVboCache;
+import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.content.building.network.BuildingAreaSyncPacket;
+import com.wsteam.wandscape.foundation.ui.panel.WandscapePanelController;
+import com.wsteam.wandscape.foundation.ui.panel.WandscapePanelOverlay;
+import com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState;
+import com.wsteam.wandscape.content.building.preview.BuildingPreviewGifCache;
 import com.wsteam.wandscape.content.tourist.client.TouristDebugRenderer;
 import com.wsteam.wandscape.content.tourist.client.TouristRenderer;
 import com.wsteam.wandscape.content.tourist.client.TouristScreen;
@@ -150,12 +158,12 @@ public class WandscapeClient {
         // Wandscape Panel
         WandscapePanelController.register();
         // Register the preview bake pump BEFORE the panel overlay so blits see fresh frames
-        com.wsteam.wandscape.shared.ui.util.BuildingPreviewGifCache.register();
+        com.wsteam.wandscape.content.building.preview.BuildingPreviewGifCache.register();
         WandscapePanelOverlay.register();
-        com.wsteam.wandscape.shared.ui.util.WandscapeHighlightRenderer.register();
+        com.wsteam.wandscape.foundation.ui.util.WandscapeHighlightRenderer.register();
 
         // Replay mod compat: don't open UI screens during ReplayMod/ReforgedPlay playback
-        com.wsteam.wandscape.shared.ui.ReplayScreenGuard.register();
+        com.wsteam.wandscape.foundation.ui.ReplayScreenGuard.register();
 
         // Overview mode
         OverviewFlightController.register();
@@ -300,7 +308,7 @@ public class WandscapeClient {
                 mc.setScreen(new TouristScreen(packet));
             }
         });
-        com.wsteam.wandscape.shared.network.ColonyAmbientPacket.setClientHandler(packet ->
+        com.wsteam.wandscape.content.colony.network.ColonyAmbientPacket.setClientHandler(packet ->
                 ColonyAmbientSystem.setState(packet.playing(), packet.day()));
         ShopOpenPacket.setClientHandler(packet -> {
             var mc = Minecraft.getInstance();
@@ -323,28 +331,28 @@ public class WandscapeClient {
         });
 
         // Colony create prompt: town hall right-clicked but no colony exists
-        com.wsteam.wandscape.shared.network.ColonyCreatePromptPacket.setClientHandler(packet -> {
+        com.wsteam.wandscape.content.colony.network.ColonyCreatePromptPacket.setClientHandler(packet -> {
             net.minecraft.client.Minecraft.getInstance().setScreen(
                     new TownHallCreateScreen(packet.townHallAnchor(), packet.creator()));
         });
 
         // Guide test screen
-        com.wsteam.wandscape.shared.network.GuideTestPacket.setClientHandler(packet -> {
+        com.wsteam.wandscape.content.items.network.GuideTestPacket.setClientHandler(packet -> {
             net.minecraft.client.Minecraft.getInstance().setScreen(
-                    new com.wsteam.wandscape.shared.ui.guide.GuideTestScreen(packet.markdownContent()));
+                    new com.wsteam.wandscape.foundation.ui.guide.GuideTestScreen(packet.markdownContent()));
         });
 
         // Guide book: right-click opens the tutorial home (index_guide), locale-resolved
         GuideBookOpenPacket.setClientHandler(packet -> {
             String docPath = packet.docPath();
-            String content = com.wsteam.wandscape.shared.ui.markdown.navigation.DocumentLoader.loadMarkdown(docPath);
+            String content = com.wsteam.wandscape.foundation.ui.markdown.navigation.DocumentLoader.loadMarkdown(docPath);
             net.minecraft.client.Minecraft.getInstance().setScreen(
-                    new com.wsteam.wandscape.shared.ui.guide.GuideTestScreen(null, content, docPath));
+                    new com.wsteam.wandscape.foundation.ui.guide.GuideTestScreen(null, content, docPath));
         });
 
         // Guide progress seed — apply saved tutorial step/dismissal on panel open
-        com.wsteam.wandscape.shared.network.GuideProgressSyncPacket.setClientHandler(packet ->
-                com.wsteam.wandscape.shared.ui.guidance.GuideSession.applySync(
+        com.wsteam.wandscape.content.items.network.GuideProgressSyncPacket.setClientHandler(packet ->
+                com.wsteam.wandscape.foundation.ui.guidance.GuideSession.applySync(
                         packet.stepIndex(), packet.dismissed()));
 
         com.wsteam.wandscape.engine.transport.TransportStartPacket.setClientHandler(packet -> {
@@ -380,26 +388,26 @@ public class WandscapeClient {
             if (mc.player == null) return;
             if (packet.granted()) {
                 ProjectionClientState.enterProjection(packet.bodyAnchor(), packet.buildingSlots());
-                com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.openBuildingBar();
+                com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState.openBuildingBar();
             } else {
                 ProjectionClientState.exitProjection();
-                com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.closeBuildingBar();
-                if (com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.isPanelOpen()) {
-                    com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.setSubMode(com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.SubMode.NONE);
-                    com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.closeBuildingBar();
+                com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState.closeBuildingBar();
+                if (com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState.isPanelOpen()) {
+                    com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState.setSubMode(com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState.SubMode.NONE);
+                    com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState.closeBuildingBar();
                 }
                 mc.player.displayClientMessage(Component.translatable("message.wandscape.projection.rejected"), false);
             }
         });
 
-        com.wsteam.wandscape.shared.network.MagicCircleCastPacket.setClientHandler(packet -> {
+        com.wsteam.wandscape.content.magic.network.MagicCircleCastPacket.setClientHandler(packet -> {
             var mc = Minecraft.getInstance();
             if (mc.level instanceof net.minecraft.client.multiplayer.ClientLevel cl) {
                 MagicCircleEmitter.add(cl, packet.effectId(), packet.pos(), packet.axis(), packet.circleId(), packet.casterUuid());
             }
         });
 
-        com.wsteam.wandscape.shared.network.ParticleBurstPacket.setClientHandler(packet -> {
+        com.wsteam.wandscape.foundation.networking.ParticleBurstPacket.setClientHandler(packet -> {
             var mc = Minecraft.getInstance();
             if (!(mc.level instanceof net.minecraft.client.multiplayer.ClientLevel cl)) return;
             var rand = cl.random;
@@ -434,7 +442,7 @@ public class WandscapeClient {
             if (mc.level == null) return;
             var e = mc.level.getEntity(packet.entityId());
             if (e == null) return;
-            com.wsteam.wandscape.shared.client.bubble.TransientBubbleStore.trigger(
+            com.wsteam.wandscape.foundation.ui.bubble.TransientBubbleStore.trigger(
                     e.getUUID(), packet.iconId(), packet.count(), e.tickCount);
         });
 
@@ -442,13 +450,13 @@ public class WandscapeClient {
                 BuildingConfigSyncReceiver::onChunk);
 
         // Transient feedback: show on the open MedievalScreen if any, else the action bar.
-        com.wsteam.wandscape.shared.network.ScreenFeedbackPacket.setClientHandler(packet -> {
+        com.wsteam.wandscape.foundation.networking.ScreenFeedbackPacket.setClientHandler(packet -> {
             var mc = Minecraft.getInstance();
-            if (mc.screen instanceof com.wsteam.wandscape.shared.ui.component.MedievalScreen ms) {
+            if (mc.screen instanceof com.wsteam.wandscape.foundation.ui.component.MedievalScreen ms) {
                 ms.showFeedback(packet.message(),
                         packet.isError()
-                                ? com.wsteam.wandscape.shared.ui.theme.MedievalColors.DANGER_RED
-                                : com.wsteam.wandscape.shared.ui.theme.MedievalColors.ACCENT_GOLD);
+                                ? com.wsteam.wandscape.foundation.ui.theme.MedievalColors.DANGER_RED
+                                : com.wsteam.wandscape.foundation.ui.theme.MedievalColors.ACCENT_GOLD);
             } else if (mc.player != null) {
                 mc.player.displayClientMessage(packet.message(), true);
             }
@@ -540,8 +548,8 @@ public class WandscapeClient {
     public static void openGuideIndex() {
         Minecraft mc = Minecraft.getInstance();
         if (mc != null) {
-            String content = com.wsteam.wandscape.shared.ui.markdown.navigation.DocumentLoader.loadMarkdown("index_guide");
-            mc.setScreen(new com.wsteam.wandscape.shared.ui.guide.GuideTestScreen(null, content, "index_guide"));
+            String content = com.wsteam.wandscape.foundation.ui.markdown.navigation.DocumentLoader.loadMarkdown("index_guide");
+            mc.setScreen(new com.wsteam.wandscape.foundation.ui.guide.GuideTestScreen(null, content, "index_guide"));
         }
     }
 

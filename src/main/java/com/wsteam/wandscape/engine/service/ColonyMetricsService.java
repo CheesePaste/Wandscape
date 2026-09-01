@@ -2,12 +2,12 @@ package com.wsteam.wandscape.engine.service;
 
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.colony.ColonyLevelManager;
-import com.wsteam.wandscape.shared.api.BuildingApi;
-import com.wsteam.wandscape.shared.api.BuildingApi.ColonySnapshot;
-import com.wsteam.wandscape.shared.api.ColonyMetricsApi;
-import com.wsteam.wandscape.shared.data.ColonyMetricsSnapshot;
-import com.wsteam.wandscape.shared.data.ElementType;
-import com.wsteam.wandscape.shared.registry.WandscapeApis;
+import com.wsteam.wandscape.api.BuildingApi;
+import com.wsteam.wandscape.api.BuildingApi.ColonySnapshot;
+import com.wsteam.wandscape.api.ColonyMetricsApi;
+import com.wsteam.wandscape.content.colony.data.ColonyMetricsSnapshot;
+import com.wsteam.wandscape.content.element.data.ElementType;
+import com.wsteam.wandscape.api.WandscapeApis;
 
 import java.util.List;
 import java.util.UUID;

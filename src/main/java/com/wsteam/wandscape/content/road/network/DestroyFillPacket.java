@@ -7,7 +7,7 @@ import com.google.gson.JsonPrimitive;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.service.SoundService;
 import com.wsteam.wandscape.engine.sound.WandscapeSounds;
-import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.content.task.engine.pool.TaskRequest;
 import com.wsteam.wandscape.content.task.source.PlayerManualSource;
 import net.minecraft.core.BlockPos;
@@ -178,7 +178,7 @@ public record DestroyFillPacket(BlockPos refPos, BlockPos endPos, boolean fillDe
 
         try {
             long taskId = source.publish(new TaskRequest("terrain:flatten", params, 10,
-                    com.wsteam.wandscape.shared.registry.WandscapeApis.colonyAt(player.blockPosition())));
+                    com.wsteam.wandscape.api.WandscapeApis.colonyAt(player.blockPosition())));
             SoundService.playAt(player.serverLevel(), player.getX(), player.getY(), player.getZ(),
                     WandscapeSounds.TASK_PUBLISH, SoundSource.PLAYERS, 0.4f, 1.0f);
             Log.info(TAG, "[DestroyFill] Published task #{}: ref={} refBlock={} from=({},{})→({},{}) breaks={} fills={} fillDep={}",

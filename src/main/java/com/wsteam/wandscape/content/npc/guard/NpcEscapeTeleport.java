@@ -8,7 +8,7 @@ import com.wsteam.wandscape.engine.boundary.WandscapeRitualOps;
 import com.wsteam.wandscape.content.magic.data.MagicDef;
 import com.wsteam.wandscape.content.magic.internal.SpellbookLoader;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
-import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.foundation.log.Log;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.phys.Vec3;

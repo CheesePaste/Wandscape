@@ -7,14 +7,14 @@ import com.wsteam.wandscape.content.building.data.BlockOffset;
 import com.wsteam.wandscape.content.building.data.BuildingConfig;
 import com.wsteam.wandscape.engine.source.BuildingTaskSource;
 import com.wsteam.wandscape.content.building.projection.BuildingRotation;
-import com.wsteam.wandscape.shared.api.BuildingApi;
-import com.wsteam.wandscape.shared.data.BuildingData;
-import com.wsteam.wandscape.shared.data.ItemKey;
-import com.wsteam.wandscape.shared.data.WorkItem;
-import com.wsteam.wandscape.shared.event.BuildingPlacedEvent;
-import com.wsteam.wandscape.shared.event.BuildingRemovedEvent;
-import com.wsteam.wandscape.shared.log.Log;
-import com.wsteam.wandscape.shared.registry.WandscapeConstants;
+import com.wsteam.wandscape.api.BuildingApi;
+import com.wsteam.wandscape.content.building.data.BuildingData;
+import com.wsteam.wandscape.foundation.util.ItemKey;
+import com.wsteam.wandscape.content.building.data.WorkItem;
+import com.wsteam.wandscape.content.building.event.BuildingPlacedEvent;
+import com.wsteam.wandscape.content.building.event.BuildingRemovedEvent;
+import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.registry.WandscapeConstants;
 import com.wsteam.wandscape.content.warehouse.ColonyItemBank;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -397,7 +397,7 @@ public class BuildingApiImpl implements BuildingApi {
                 level, state.getAnchor(), config, state.getRotationSteps());
         Map<String, Integer> counts = materialCountsForMissingOffsets(
                 config, state.getRotationSteps(), missingOffsets,
-                id -> com.wsteam.wandscape.shared.registry.WandscapeApis.getElementApi().hasElementMapping(id));
+                id -> com.wsteam.wandscape.api.WandscapeApis.getElementApi().hasElementMapping(id));
         if (counts.isEmpty()) return;
 
         int total = 0;

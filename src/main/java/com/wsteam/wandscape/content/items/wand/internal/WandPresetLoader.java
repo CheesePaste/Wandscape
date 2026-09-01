@@ -9,7 +9,7 @@ import com.wsteam.wandscape.core.types.AttributeType;
 import com.wsteam.wandscape.core.types.ModifierOperation;
 import com.wsteam.wandscape.foundation.registry.dataconfig.internal.WandscapeDataLoader;
 import com.wsteam.wandscape.engine.attribute.WandscapeAttributes;
-import com.wsteam.wandscape.shared.registry.WandscapeDataRegistry;
+import com.wsteam.wandscape.foundation.registry.WandscapeDataRegistry;
 import net.minecraft.core.Holder;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;

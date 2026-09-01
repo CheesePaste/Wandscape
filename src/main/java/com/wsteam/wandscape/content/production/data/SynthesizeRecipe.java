@@ -1,10 +1,11 @@
 package com.wsteam.wandscape.content.production.data;
+import com.wsteam.wandscape.foundation.registry.WandscapeConstants;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.wsteam.wandscape.content.element.internal.ElementMappingConfig;
 import com.wsteam.wandscape.content.element.internal.ElementMaps;
-import com.wsteam.wandscape.shared.data.ElementType;
+import com.wsteam.wandscape.content.element.data.ElementType;
 
 import java.util.Map;
 public record SynthesizeRecipe(
@@ -32,7 +33,7 @@ public record SynthesizeRecipe(
         if (totalCost() <= 2) {
             return 0; // 价值 <= 2 秒合成
         }
-        return com.wsteam.wandscape.shared.registry.WandscapeConstants.WORKSTATION_CRAFT_TICKS_PER_UNIT * quantity;
+        return com.wsteam.wandscape.foundation.registry.WandscapeConstants.WORKSTATION_CRAFT_TICKS_PER_UNIT * quantity;
     }
 
     /** Build a SynthesizeRecipe from an ElementMappingConfig that has a non-empty build cost. */

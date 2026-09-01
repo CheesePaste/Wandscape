@@ -1,11 +1,11 @@
 package com.wsteam.wandscape.content.warehouse;
 
-import com.wsteam.wandscape.shared.data.ElementType;
-import com.wsteam.wandscape.shared.data.ItemKey;
-import com.wsteam.wandscape.shared.event.ElementBalanceChangedEvent;
-import com.wsteam.wandscape.shared.event.WarehouseElementChangedEvent;
-import com.wsteam.wandscape.shared.event.WarehouseItemChangedEvent;
-import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.content.element.data.ElementType;
+import com.wsteam.wandscape.foundation.util.ItemKey;
+import com.wsteam.wandscape.content.element.event.ElementBalanceChangedEvent;
+import com.wsteam.wandscape.content.warehouse.event.WarehouseElementChangedEvent;
+import com.wsteam.wandscape.content.warehouse.event.WarehouseItemChangedEvent;
+import com.wsteam.wandscape.foundation.log.Log;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;

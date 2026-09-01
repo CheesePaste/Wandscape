@@ -6,7 +6,7 @@ import com.wsteam.wandscape.engine.service.SoundService;
 import com.wsteam.wandscape.engine.sound.WandscapeSounds;
 import com.wsteam.wandscape.content.building.projection.BuildingCentering;
 import com.wsteam.wandscape.content.building.projection.data.BuildingSlot;
-import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.foundation.log.Log;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 

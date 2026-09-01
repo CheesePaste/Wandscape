@@ -2,8 +2,8 @@ package com.wsteam.wandscape.content.building.internal;
 
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.content.building.data.BuildingConfig;
-import com.wsteam.wandscape.shared.event.ColonyEvaluationChangedEvent;
-import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.content.colony.event.ColonyEvaluationChangedEvent;
+import com.wsteam.wandscape.foundation.log.Log;
 import net.neoforged.bus.api.IEventBus;
 
 import javax.annotation.Nullable;

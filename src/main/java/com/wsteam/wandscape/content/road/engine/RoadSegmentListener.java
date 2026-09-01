@@ -1,10 +1,11 @@
 package com.wsteam.wandscape.content.road.engine;
+import com.wsteam.wandscape.content.road.network.RoadAreaSyncPacket;
 
 import com.wsteam.wandscape.core.event.CustomEvent;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.content.road.core.RoadEdge;
-import com.wsteam.wandscape.shared.log.Log;
-import com.wsteam.wandscape.shared.registry.WandscapeApis;
+import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.api.WandscapeApis;
 import com.wsteam.wandscape.content.warehouse.ColonyItemBank;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -106,7 +107,7 @@ public final class RoadSegmentListener {
         edge.setStatus(RoadEdge.EdgeStatus.COMPLETE);
         roadData.markChanged();
         // Broadcast so clients drop this edge from their construction ghost cache.
-        com.wsteam.wandscape.shared.network.RoadAreaSyncPacket.broadcastToServer(level.getServer());
+        com.wsteam.wandscape.content.road.network.RoadAreaSyncPacket.broadcastToServer(level.getServer());
         Log.info(TAG, "[Road] edge {} → COMPLETE", edgeIdStr);
     }
 

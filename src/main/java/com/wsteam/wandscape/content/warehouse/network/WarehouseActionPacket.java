@@ -1,7 +1,7 @@
 package com.wsteam.wandscape.content.warehouse.network;
 
-import com.wsteam.wandscape.shared.data.ItemKey;
-import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.foundation.util.ItemKey;
+import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.content.warehouse.WarehouseMenu;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.RegistryFriendlyByteBuf;

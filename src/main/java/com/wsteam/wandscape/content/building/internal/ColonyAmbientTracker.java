@@ -1,6 +1,6 @@
 package com.wsteam.wandscape.content.building.internal;
 
-import com.wsteam.wandscape.shared.network.ColonyAmbientPacket;
+import com.wsteam.wandscape.content.colony.network.ColonyAmbientPacket;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;

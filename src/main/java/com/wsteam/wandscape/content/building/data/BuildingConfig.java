@@ -1,8 +1,15 @@
 package com.wsteam.wandscape.content.building.data;
+import com.wsteam.wandscape.content.tourist.data.DecorationConfig;
+import com.wsteam.wandscape.content.tourist.data.ServiceConfig;
+import com.wsteam.wandscape.content.tourist.data.AtmConfig;
+import com.wsteam.wandscape.content.tourist.data.WonderConfig;
+import com.wsteam.wandscape.content.tourist.data.ShopConfig;
+import com.wsteam.wandscape.content.tourist.data.RelaxConfig;
+import com.wsteam.wandscape.content.tourist.data.Activity;
 
 import com.google.gson.*;
 import com.google.gson.annotations.SerializedName;
-import com.wsteam.wandscape.shared.data.*;
+// data imports updated
 import net.minecraft.core.Direction;
 
 import javax.annotation.Nullable;

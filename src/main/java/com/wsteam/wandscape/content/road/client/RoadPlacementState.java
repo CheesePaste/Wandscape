@@ -1,8 +1,9 @@
 package com.wsteam.wandscape.content.road.client;
+import com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState;
 
 import com.wsteam.wandscape.content.road.data.RoadPreset;
 import com.wsteam.wandscape.content.road.data.RoadPresetLoader;
-import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.foundation.log.Log;
 import net.minecraft.core.BlockPos;
 
 import java.util.ArrayList;

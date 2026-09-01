@@ -1,6 +1,6 @@
 package com.wsteam.wandscape.content.building.projection.network;
 
-import com.wsteam.wandscape.shared.data.WorkItem;
+import com.wsteam.wandscape.content.building.data.WorkItem;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;

@@ -1,6 +1,6 @@
 package com.wsteam.wandscape.content.warehouse;
 
-import com.wsteam.wandscape.shared.event.ResourceInsufficientEvent;
+import com.wsteam.wandscape.content.warehouse.event.ResourceInsufficientEvent;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
 /**

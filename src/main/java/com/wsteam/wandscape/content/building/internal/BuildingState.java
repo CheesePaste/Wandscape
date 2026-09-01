@@ -1,7 +1,7 @@
 package com.wsteam.wandscape.content.building.internal;
 
-import com.wsteam.wandscape.shared.data.BuildingData;
-import com.wsteam.wandscape.shared.data.WorkItem;
+import com.wsteam.wandscape.content.building.data.BuildingData;
+import com.wsteam.wandscape.content.building.data.WorkItem;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 

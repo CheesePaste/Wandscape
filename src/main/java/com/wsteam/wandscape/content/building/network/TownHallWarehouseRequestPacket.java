@@ -3,7 +3,7 @@ package com.wsteam.wandscape.content.building.network;
 import com.wsteam.wandscape.content.building.internal.BuildingInteractHandler;
 import com.wsteam.wandscape.content.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.content.building.internal.BuildingState;
-import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.foundation.log.Log;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;

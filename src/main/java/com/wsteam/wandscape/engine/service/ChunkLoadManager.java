@@ -2,8 +2,8 @@ package com.wsteam.wandscape.engine.service;
 
 import com.wsteam.wandscape.content.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.content.building.internal.BuildingState;
-import com.wsteam.wandscape.shared.event.BuildingRemovedEvent;
-import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.content.building.event.BuildingRemovedEvent;
+import com.wsteam.wandscape.foundation.log.Log;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
 import net.neoforged.neoforge.common.NeoForge;

@@ -1,6 +1,6 @@
 package com.wsteam.wandscape.content.items.scepter.internal;
 
-import com.wsteam.wandscape.shared.api.ScepterApi;
+import com.wsteam.wandscape.api.ScepterApi;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;

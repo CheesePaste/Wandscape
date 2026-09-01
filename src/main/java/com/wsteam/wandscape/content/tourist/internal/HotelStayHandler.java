@@ -1,4 +1,5 @@
 package com.wsteam.wandscape.content.tourist.internal;
+import com.wsteam.wandscape.foundation.util.TickProfiler;
 
 import com.wsteam.wandscape.content.building.data.BuildingConfig;
 import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
@@ -6,11 +7,11 @@ import com.wsteam.wandscape.content.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.content.building.internal.BuildingState;
 import com.wsteam.wandscape.core.event.NarrativeEventTriggered;
 import com.wsteam.wandscape.engine.WandscapeEngine;
-import com.wsteam.wandscape.shared.data.NarrativeEvent;
-import com.wsteam.wandscape.shared.data.ServiceConfig;
-import com.wsteam.wandscape.shared.log.Log;
-import com.wsteam.wandscape.shared.registry.WandscapeConstants;
-import com.wsteam.wandscape.shared.ui.I18n;
+import com.wsteam.wandscape.content.colony.data.NarrativeEvent;
+import com.wsteam.wandscape.content.tourist.data.ServiceConfig;
+import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.registry.WandscapeConstants;
+import com.wsteam.wandscape.foundation.ui.I18n;
 import com.wsteam.wandscape.content.tourist.entity.TouristEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
@@ -77,7 +78,7 @@ public final class HotelStayHandler {
      * @return true if check-in succeeded
      */
     public boolean checkIn(TouristEntity tourist, UUID buildingId, UUID colonyId) {
-        try (var span = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("hotel.check_in")) {
+        try (var span = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("hotel.check_in")) {
             BuildingConfig config = getBuildingConfig(buildingId);
             if (config == null || config.service() == null) return false;
 
@@ -118,7 +119,7 @@ public final class HotelStayHandler {
      * <p>幂等：heartbeat 在晨间窗口（1000-1200）每 20 tick 跑一次，已醒且已回位的游客跳过。
      */
     public void wakeUp(TouristEntity tourist, ServerLevel level) {
-        try (var span = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("hotel.wake_up")) {
+        try (var span = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("hotel.wake_up")) {
             if (!tourist.isSleeping() && tourist.getWakeUpPos() == null) return;
 
             if (tourist.isSleeping()) {
@@ -159,7 +160,7 @@ public final class HotelStayHandler {
      * {@link #wakeUp} 负责，离场时不再重复计入。
      */
     public void checkOut(TouristEntity tourist, ServerLevel level) {
-        try (var span = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("hotel.check_out")) {
+        try (var span = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("hotel.check_out")) {
             UUID buildingId = touristToHotel.remove(tourist.getUUID());
             if (buildingId == null) return;
 
@@ -199,7 +200,7 @@ public final class HotelStayHandler {
      * 床上睡觉纯视觉（不改床方块占用状态，无占用泄漏），床位分配只记在内存。
      */
     public void settleIntoBed(TouristEntity tourist, ServerLevel level, UUID buildingId) {
-        try (var span = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("hotel.settle_into_bed")) {
+        try (var span = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("hotel.settle_into_bed")) {
             tourist.setWakeUpPos(tourist.blockPosition());
             BlockPos bed = findBed(level, buildingId, tourist.blockPosition(), true);
             if (bed == null) bed = findBed(level, buildingId, tourist.blockPosition(), false); // 床不够 → 躺第一张（最近）
@@ -226,7 +227,7 @@ public final class HotelStayHandler {
      */
     @Nullable
     private BlockPos findBed(ServerLevel level, UUID buildingId, BlockPos near, boolean requireUnassigned) {
-        try (var span = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("hotel.find_bed")) {
+        try (var span = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("hotel.find_bed")) {
             BuildingState state = getBuildingState(buildingId);
             if (state == null) return null;
             BoundingBox box = state.getBounds();
@@ -267,7 +268,7 @@ public final class HotelStayHandler {
     /** Returns the number of currently checked-in tourists in a hotel.
      *  Derived from the shadow registry so unloaded (sim) guests also count. */
     public int getOccupancy(UUID buildingId) {
-        try (var span = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("hotel.get_occupancy")) {
+        try (var span = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("hotel.get_occupancy")) {
             TouristSimSystem sim = TouristSimSystem.getActive();
             if (sim != null && sim.getRegistry() != null) {
                 int n = 0;
@@ -323,7 +324,7 @@ public final class HotelStayHandler {
 
     @SubscribeEvent
     public void onServerTick(ServerTickEvent.Post event) {
-        try (var span = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("hotel.on_server_tick")) {
+        try (var span = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("hotel.on_server_tick")) {
             tickCounter++;
             if (tickCounter % 20 != 0) return; // every second
 

@@ -1,6 +1,6 @@
 package com.wsteam.wandscape.content.tourist.internal;
 
-import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.foundation.log.Log;
 
 import javax.annotation.Nullable;
 import java.util.List;

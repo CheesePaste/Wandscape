@@ -1,4 +1,5 @@
 package com.wsteam.wandscape.content.colony.overview.client;
+import com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.Vec3;

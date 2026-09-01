@@ -1,4 +1,11 @@
 package com.wsteam.wandscape.content.tourist.internal;
+import com.wsteam.wandscape.content.building.data.BuildingData;
+import com.wsteam.wandscape.foundation.util.CharacterNames;
+import com.wsteam.wandscape.content.tourist.data.BarRatio;
+import com.wsteam.wandscape.content.tourist.event.TouristDepartedEvent;
+import com.wsteam.wandscape.foundation.util.TickProfiler;
+import com.wsteam.wandscape.foundation.util.NameStyle;
+import com.wsteam.wandscape.content.colony.data.NarrativeEvent;
 
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
@@ -11,13 +18,13 @@ import com.wsteam.wandscape.engine.colony.ColonyLevelManager;
 import com.wsteam.wandscape.engine.service.ChunkLoadManager;
 import com.wsteam.wandscape.content.road.core.RoadEdge;
 import com.wsteam.wandscape.content.road.core.RoadNetwork;
-import com.wsteam.wandscape.shared.api.BuildingApi;
-import com.wsteam.wandscape.shared.api.ColonyApi;
-import com.wsteam.wandscape.shared.api.RoadApi;
-import com.wsteam.wandscape.shared.api.TouristApi;
-import com.wsteam.wandscape.shared.data.*;
-import com.wsteam.wandscape.shared.log.Log;
-import com.wsteam.wandscape.shared.registry.WandscapeApis;
+import com.wsteam.wandscape.api.BuildingApi;
+import com.wsteam.wandscape.api.ColonyApi;
+import com.wsteam.wandscape.api.RoadApi;
+import com.wsteam.wandscape.api.TouristApi;
+// data imports updated
+import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.api.WandscapeApis;
 import com.wsteam.wandscape.content.tourist.entity.TouristEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
@@ -144,7 +151,7 @@ public final class TouristSpawnSystem {
 
     @SubscribeEvent
     public void onServerTick(ServerTickEvent.Post event) {
-        try (var span = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("tourist.spawn.on_server_tick")) {
+        try (var span = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tourist.spawn.on_server_tick")) {
         MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
         if (server == null) return;
         ServerLevel level = server.overworld();
@@ -599,7 +606,7 @@ public final class TouristSpawnSystem {
         UUID colonyId = t.getColonyId();
         if (colonyId == null) return;
         try {
-            var tavernApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getTavernApi();
+            var tavernApi = com.wsteam.wandscape.api.WandscapeApis.getTavernApi();
             tavernApi.receiveMageResume(colonyId, t.getTouristName(), t.getLevel(),
                     t.getMaxHp(), t.getMoveSpeed(), t.getSpellPower(),
                     t.getWorkSpeed(), t.getSpellSpeed(), t.getArmor(),

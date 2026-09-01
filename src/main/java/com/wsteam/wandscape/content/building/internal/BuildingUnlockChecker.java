@@ -1,9 +1,10 @@
 package com.wsteam.wandscape.content.building.internal;
+import com.wsteam.wandscape.content.colony.network.ColonyStatsSyncPacket;
 
 import com.wsteam.wandscape.content.building.data.BuildingConfig;
 import com.wsteam.wandscape.engine.WandscapeEngine;
-import com.wsteam.wandscape.shared.ui.I18n;
-import com.wsteam.wandscape.shared.ui.panel.WandscapePanelState;
+import com.wsteam.wandscape.foundation.ui.I18n;
+import com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState;
 import net.minecraft.network.chat.Component;
 import net.neoforged.fml.loading.FMLEnvironment;
 

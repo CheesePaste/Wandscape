@@ -5,7 +5,7 @@ import com.wsteam.wandscape.core.types.BlockType;
 import com.wsteam.wandscape.core.types.GridPos;
 import com.wsteam.wandscape.engine.service.ChunkLoadManager;
 import com.wsteam.wandscape.engine.service.SoundService;
-import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.foundation.log.Log;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;

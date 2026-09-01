@@ -1,4 +1,6 @@
 package com.wsteam.wandscape.content.building.internal;
+import com.wsteam.wandscape.content.building.network.BuildingAreaSyncPacket;
+import com.wsteam.wandscape.content.colony.event.ColonyEvaluationChangedEvent;
 
 import com.wsteam.wandscape.content.building.data.BlockOffset;
 import com.wsteam.wandscape.content.building.data.BuildingConfig;
@@ -6,8 +8,8 @@ import com.wsteam.wandscape.content.building.projection.BuildingRotation;
 import com.wsteam.wandscape.core.event.CustomEvent;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.service.ParticleService;
-import com.wsteam.wandscape.shared.event.BuildingPlacedEvent;
-import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.content.building.event.BuildingPlacedEvent;
+import com.wsteam.wandscape.foundation.log.Log;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -83,7 +85,7 @@ public final class BuildCompleteListener {
         data.setDirty();
 
         // Refresh client caches: a completed building's construction ghost clears.
-        com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket.broadcastToColony(
+        com.wsteam.wandscape.content.building.network.BuildingAreaSyncPacket.broadcastToColony(
                 ServerLifecycleHooks.getCurrentServer(), anchor);
 
         if (damaged.isEmpty()) {
@@ -95,8 +97,8 @@ public final class BuildCompleteListener {
         }
 
         // Assign colony via ColonyApi
-        com.wsteam.wandscape.shared.api.ColonyApi colonyApi =
-                com.wsteam.wandscape.shared.registry.WandscapeApis.getColonyApiSilently();
+        com.wsteam.wandscape.api.ColonyApi colonyApi =
+                com.wsteam.wandscape.api.WandscapeApis.getColonyApiSilently();
         if (colonyApi != null) {
             UUID assignedColonyId = colonyApi.onBuildingIntact(state);
             if (assignedColonyId != null && !assignedColonyId.equals(state.getColonyId())) {

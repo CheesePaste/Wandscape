@@ -6,9 +6,9 @@ import com.google.gson.JsonElement;
 import com.wsteam.wandscape.content.building.data.BlockOffset;
 import com.wsteam.wandscape.content.building.data.BuildingConfig;
 import com.wsteam.wandscape.foundation.registry.dataconfig.internal.WandscapeDataLoader;
-import com.wsteam.wandscape.shared.data.WonderEffect;
-import com.wsteam.wandscape.shared.log.Log;
-import com.wsteam.wandscape.shared.registry.WandscapeDataRegistry;
+import com.wsteam.wandscape.content.tourist.data.WonderEffect;
+import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.registry.WandscapeDataRegistry;
 
 import javax.annotation.Nullable;
 import java.util.Map;

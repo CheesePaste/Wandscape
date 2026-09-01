@@ -154,7 +154,7 @@ public final class PublishBlueprintCommand {
         try {
             long taskId = world.taskPool.addTask(
                     new TaskRequest(blueprintId, params, priority,
-                            com.wsteam.wandscape.shared.registry.WandscapeApis.colonyAt(
+                            com.wsteam.wandscape.api.WandscapeApis.colonyAt(
                                     src.getPlayer() != null ? src.getPlayer().blockPosition() : null)));
             final int finalPriority = priority;
             final int paramCount = params.size();

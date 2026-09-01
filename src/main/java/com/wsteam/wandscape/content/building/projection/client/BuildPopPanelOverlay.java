@@ -1,9 +1,9 @@
 package com.wsteam.wandscape.content.building.projection.client;
 
-import com.wsteam.wandscape.shared.ui.I18n;
-import com.wsteam.wandscape.shared.ui.panel.WandscapePanelOverlay;
-import com.wsteam.wandscape.shared.ui.panel.WandscapePanelState;
-import com.wsteam.wandscape.shared.ui.theme.WandscapeTheme;
+import com.wsteam.wandscape.foundation.ui.I18n;
+import com.wsteam.wandscape.foundation.ui.panel.WandscapePanelOverlay;
+import com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState;
+import com.wsteam.wandscape.foundation.ui.theme.WandscapeTheme;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;

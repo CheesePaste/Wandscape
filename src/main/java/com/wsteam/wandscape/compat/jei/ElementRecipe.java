@@ -1,6 +1,6 @@
 package com.wsteam.wandscape.compat.jei;
 
-import com.wsteam.wandscape.shared.data.ElementType;
+import com.wsteam.wandscape.content.element.data.ElementType;
 import net.minecraft.nbt.CompoundTag;
 
 import javax.annotation.Nullable;

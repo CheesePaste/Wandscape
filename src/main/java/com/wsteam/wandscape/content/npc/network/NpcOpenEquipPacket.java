@@ -2,7 +2,7 @@ package com.wsteam.wandscape.content.npc.network;
 
 import com.wsteam.wandscape.content.npc.NpcMenu;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
-import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.foundation.log.Log;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.StreamCodec;

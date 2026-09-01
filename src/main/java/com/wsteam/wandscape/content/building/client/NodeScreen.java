@@ -4,12 +4,12 @@ import com.wsteam.wandscape.content.building.network.NodeDataPacket;
 import com.wsteam.wandscape.content.building.network.RequestGatherTaskPacket;
 import com.wsteam.wandscape.content.building.network.TaskQueueDataPacket;
 import com.wsteam.wandscape.content.building.network.TaskQueueModifyPacket;
-import com.wsteam.wandscape.shared.log.Log;
-import com.wsteam.wandscape.shared.ui.component.MedievalButton;
-import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
-import com.wsteam.wandscape.shared.ui.component.Slider;
-import com.wsteam.wandscape.shared.ui.component.TaskQueuePanel;
-import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
+import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.ui.component.MedievalButton;
+import com.wsteam.wandscape.foundation.ui.component.MedievalScreen;
+import com.wsteam.wandscape.foundation.ui.component.Slider;
+import com.wsteam.wandscape.foundation.ui.component.TaskQueuePanel;
+import com.wsteam.wandscape.foundation.ui.theme.MedievalColors;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.core.BlockPos;
@@ -60,7 +60,7 @@ public class NodeScreen extends MedievalScreen {
         this.amountPerHarvest = packet.amountPerHarvest();
         this.channelTicks = packet.channelTicks();
         setCreator(packet.creator());
-        setTitleBar(com.wsteam.wandscape.shared.ui.I18n.name(
+        setTitleBar(com.wsteam.wandscape.foundation.ui.I18n.name(
                 "building.wandscape." + packet.buildingTypeId(), packet.buildingTypeId()));
         if (slider != null) {
             slider.setMax(MAX_HARVESTS);
@@ -135,7 +135,7 @@ public class NodeScreen extends MedievalScreen {
         addRenderableWidget(slider);
 
         submitBtn = new MedievalButton(contentX + contentW - 70, controlY + 4, 70, 18,
-                com.wsteam.wandscape.shared.ui.I18n.name("gui.wandscape.node.publish_gather", "Publish Gather"),
+                com.wsteam.wandscape.foundation.ui.I18n.name("gui.wandscape.node.publish_gather", "Publish Gather"),
                 this::onSubmit);
         addRenderableWidget(submitBtn);
 
@@ -175,7 +175,7 @@ public class NodeScreen extends MedievalScreen {
     }
 
     private static String i18n(String key, String fallback, Object... args) {
-        return com.wsteam.wandscape.shared.ui.I18n.name(key, fallback, args).getString();
+        return com.wsteam.wandscape.foundation.ui.I18n.name(key, fallback, args).getString();
     }
 
     private void drawInfoLine(GuiGraphics g, int y, String label, String value) {

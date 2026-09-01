@@ -1,9 +1,9 @@
 package com.wsteam.wandscape.content.tourist.internal;
 
-import com.wsteam.wandscape.shared.api.TouristApi;
-import com.wsteam.wandscape.shared.data.BarRatio;
-import com.wsteam.wandscape.shared.event.TouristArrivedEvent;
-import com.wsteam.wandscape.shared.event.TouristDepartedEvent;
+import com.wsteam.wandscape.api.TouristApi;
+import com.wsteam.wandscape.content.tourist.data.BarRatio;
+import com.wsteam.wandscape.content.tourist.event.TouristArrivedEvent;
+import com.wsteam.wandscape.content.tourist.event.TouristDepartedEvent;
 import net.neoforged.neoforge.common.NeoForge;
 
 import java.util.List;

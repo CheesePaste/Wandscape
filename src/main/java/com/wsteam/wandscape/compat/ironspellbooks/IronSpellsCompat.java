@@ -1,6 +1,6 @@
 package com.wsteam.wandscape.compat.ironspellbooks;
 
-import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.foundation.log.Log;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModList;
 

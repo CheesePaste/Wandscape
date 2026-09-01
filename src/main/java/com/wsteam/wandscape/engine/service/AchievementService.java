@@ -1,14 +1,21 @@
 package com.wsteam.wandscape.engine.service;
+import com.wsteam.wandscape.content.colony.event.ColonyRaidVictoryEvent;
+import com.wsteam.wandscape.content.tourist.event.TouristArrivedEvent;
+import com.wsteam.wandscape.content.tourist.event.TouristDepartedEvent;
+import com.wsteam.wandscape.content.building.event.BuildingPlacedEvent;
+import com.wsteam.wandscape.content.colony.event.ColonyLevelUpEvent;
+import com.wsteam.wandscape.content.tourist.event.ShopRestockedEvent;
+import com.wsteam.wandscape.content.tourist.event.DailySettlementEvent;
 
 import com.wsteam.wandscape.content.building.data.BuildingConfig;
 import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.content.building.internal.ShopStockManager;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.colony.ColonyLevelManager;
-import com.wsteam.wandscape.shared.api.*;
-import com.wsteam.wandscape.shared.event.*;
-import com.wsteam.wandscape.shared.log.Log;
-import com.wsteam.wandscape.shared.registry.WandscapeApis;
+import com.wsteam.wandscape.api.*;
+// event imports updated
+import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.api.WandscapeApis;
 import com.wsteam.wandscape.content.tourist.internal.HotelStayHandler;
 import net.minecraft.advancements.AdvancementHolder;
 import net.minecraft.resources.ResourceLocation;

@@ -10,8 +10,8 @@ import com.wsteam.wandscape.content.road.core.SplineModel;
 import com.wsteam.wandscape.content.road.core.SplinePoint;
 import com.wsteam.wandscape.content.road.core.SplineVec3;
 import com.wsteam.wandscape.content.road.data.RoadPreset;
-import com.wsteam.wandscape.shared.log.Log;
-import com.wsteam.wandscape.shared.ui.I18n;
+import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.ui.I18n;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -1158,8 +1158,8 @@ public final class RoadStudioOverlay {
                 I18n.name("gui.wandscape.roadstudio.tpl_help",
                         "打开操作指南 (H)").getString(),
                 22, StudioColors.BUTTON_NORMAL, StudioColors.BUTTON_HOVER)) {
-            String content = com.wsteam.wandscape.shared.ui.markdown.navigation.DocumentLoader.loadMarkdown("road_spline_guide");
-            mc.setScreen(new com.wsteam.wandscape.shared.ui.guide.GuideTestScreen(null, content, "road_spline_guide"));
+            String content = com.wsteam.wandscape.foundation.ui.markdown.navigation.DocumentLoader.loadMarkdown("road_spline_guide");
+            mc.setScreen(new com.wsteam.wandscape.foundation.ui.guide.GuideTestScreen(null, content, "road_spline_guide"));
         }
 
         StudioWidgets.spacing();

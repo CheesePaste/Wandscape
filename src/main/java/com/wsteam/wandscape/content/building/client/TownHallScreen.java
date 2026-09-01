@@ -2,12 +2,12 @@ package com.wsteam.wandscape.content.building.client;
 
 import com.wsteam.wandscape.content.building.network.TownHallNameStylePacket;
 import com.wsteam.wandscape.content.building.network.TownHallWarehouseRequestPacket;
-import com.wsteam.wandscape.shared.data.NameStyle;
-import com.wsteam.wandscape.shared.network.ColonyNameUpdatePacket;
-import com.wsteam.wandscape.shared.ui.I18n;
-import com.wsteam.wandscape.shared.ui.component.MedievalButton;
-import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
-import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
+import com.wsteam.wandscape.foundation.util.NameStyle;
+import com.wsteam.wandscape.content.colony.network.ColonyNameUpdatePacket;
+import com.wsteam.wandscape.foundation.ui.I18n;
+import com.wsteam.wandscape.foundation.ui.component.MedievalButton;
+import com.wsteam.wandscape.foundation.ui.component.MedievalScreen;
+import com.wsteam.wandscape.foundation.ui.theme.MedievalColors;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.core.BlockPos;

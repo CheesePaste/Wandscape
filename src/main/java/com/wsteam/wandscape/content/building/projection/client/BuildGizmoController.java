@@ -1,7 +1,7 @@
 package com.wsteam.wandscape.content.building.projection.client;
 
 import com.wsteam.wandscape.content.road.client.RoadPlacementController;
-import com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket;
+import com.wsteam.wandscape.content.building.network.BuildingAreaSyncPacket;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
