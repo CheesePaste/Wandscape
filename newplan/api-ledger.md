@@ -13,7 +13,7 @@
 
 ## 总览
 
-- 接口数：**17 个**（16 个功能/扩展接口 + 1 个窄 accessor `WandscapeApis`）＋ 标注 `@Unimplemented`。
+- 接口数：**18 个**（17 个功能/扩展接口 + 1 个窄 accessor `WandscapeApis`）＋ 标注 `@Unimplemented`。
 - **已实现 vs 桩**：功能接口里大部分"读/查询/平衡值"已实现；**本轮新增的能力动词全是桩**。
 - **⚠️ 隐式桩（重点慎用）**：`NpcApi.assignHouse`（恒 false）、`TouristApi.spawnTourist`（空 nil）、`TavernApi.recruitMage`（只取简历不生实体）——三者**编译通过但行为是空/假**，addon 一用就踩坑，建议优先处理。
 - **本体自消费合计**：约 **139 处** `WandscapeApis.getXxxApi()*`。BuildingApi(35)/ColonyApi(39) 最重，ProductionApi(0) 最轻。
@@ -288,6 +288,22 @@
 - 每个 API 一对 `getXxxApi()`（未加载抛 `IllegalStateException`）+ `getXxxApiSilently()`（null 安全）+ `setXxxApi()`（装配用）。
 - 另有便捷 `UUID colonyAt(BlockPos pos)`：位置→所在殖民地 id（调用 `colonyApi.getColonyId`）。
 - **定位器性质**：只暴露 17 个 API getter（**窄**），与已解散的 `WandscapeEngine`（暴露全部内部服务）不同。**本体自消费走它安全**；但不要把纯内部管道（ECS tick/SavedData 读写/队列内部）塞进来。
+
+---
+
+## 19. CurioApi（新增 2026-09-01：法师 Curios 饰品槽位/装备契约）
+
+> 面向整合包/附属："给法师加/减饰品槽、查已佩戴饰品、装备/卸下"。**零 Curios import**（仅 vanilla 类型），避免未装 Curios 的 addon 加载即崩。实现方在 `compat/curios`（仅 Curios 已加载时装配）；未安装时 `getCurioApi()` 抛 / `getCurioApiSilently()` 返 null。接入点已存在于 `CuriosCommand`（`/wandscape curios list/set/add/remove`）：槽位读 `ICuriosItemHandler.getCurios()`、增删 `growSlotType/shrinkSlotType`（注意 `@SuppressWarnings("removal")`——Curios 1.22 将移除，1.21 可用）。
+
+| 方法 | 用途 | 状态 | dogfood |
+|---|---|---|---|
+| `Map<String,List<ItemStack>> getCurioContents(UUID)` | 槽类型→各槽物品 | 🔶 桩 | 🔧 本体绕开：`handler.getCurios()`+`IDynamicStackHandler`（CuriosCommand/menu） |
+| `Map<String,Integer> getSlotCounts(UUID)` / `int getSlotCount(UUID,String)` | 槽类型→槽数 | 🔶 桩 | 🔧 本体绕开：`getStacksHandler(...).getSlots()`（CuriosCommand list） |
+| `isEquipped(UUID, Item/Predicate)` | 是否佩戴某物 | 🔶 桩 | 🔧 本体已有 `CuriosCompat.isEquipped(LivingEntity,...)`，加 UUID 重载 |
+| `boolean addSlots/removeSlots/setSlots(UUID,String,int)` | 增/减/设槽（实例级持久化） | 🔶 桩 | 🔧 本体绕开：`CuriosCommand` `grow/shrinkSlotType` |
+| `boolean equipCurio(UUID, ItemStack, String)` / `@Nullable ItemStack unequipCurio(UUID,String,int)` | 装备/卸下（经 Curios 校验） | 🔶 桩 | 🔧 本体绕开：`IDynamicStackHandler.setStackInSlot/extractItem`（menu） |
+
+本体自消费：`getCurioApi` 未接（实现层未落地，接入点在 CuriosCompatImpl）。**命名注**：取单数 `CurioApi` 避开 Curios 自身 `top.theillusivec4.curios.api.CuriosApi` 撞名。
 
 ---
 

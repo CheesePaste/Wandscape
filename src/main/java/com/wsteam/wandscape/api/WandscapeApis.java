@@ -128,6 +128,16 @@ public final class WandscapeApis {
     public static MagicApi getMagicApiSilently() { return magicApi; }
     public static void setMagicApi(MagicApi api) { magicApi = api; }
 
+    /** 法师饰品（Curios）槽位/装备。仅 Curios 已加载时装配；未安装时 {@code getCurioApi} 抛、Silently 返 null。 */
+    private static CurioApi curioApi;
+    public static CurioApi getCurioApi() {
+        if (curioApi == null) throw new IllegalStateException("CurioApi not loaded — Curios not installed or not initialized");
+        return curioApi;
+    }
+    @javax.annotation.Nullable
+    public static CurioApi getCurioApiSilently() { return curioApi; }
+    public static void setCurioApi(CurioApi api) { curioApi = api; }
+
     /**
      * 位置所在殖民地 id（位置检测，256 格内最近殖民地原点）；殖民地 API 未就绪或位置不在
      * 任何殖民地范围内返回 null。玩家/道路/地形/调试命令发布任务时统一用此解析任务殖民地
