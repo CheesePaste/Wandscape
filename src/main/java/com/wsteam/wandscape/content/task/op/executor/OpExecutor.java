@@ -1,7 +1,7 @@
-package com.wsteam.wandscape.op.executor;
+package com.wsteam.wandscape.content.task.op.executor;
 
 import com.wsteam.wandscape.core.ecs.World;
-import com.wsteam.wandscape.op.api.AtomicOp;
+import com.wsteam.wandscape.content.task.op.api.AtomicOp;
 
 import java.util.concurrent.CompletableFuture;
 /**

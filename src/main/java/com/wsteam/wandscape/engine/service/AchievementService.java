@@ -1,15 +1,15 @@
 package com.wsteam.wandscape.engine.service;
 
-import com.wsteam.wandscape.building.data.BuildingConfig;
-import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
-import com.wsteam.wandscape.building.internal.ShopStockManager;
+import com.wsteam.wandscape.content.building.data.BuildingConfig;
+import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
+import com.wsteam.wandscape.content.building.internal.ShopStockManager;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.colony.ColonyLevelManager;
 import com.wsteam.wandscape.shared.api.*;
 import com.wsteam.wandscape.shared.event.*;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
-import com.wsteam.wandscape.tourist.internal.HotelStayHandler;
+import com.wsteam.wandscape.content.tourist.internal.HotelStayHandler;
 import net.minecraft.advancements.AdvancementHolder;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;

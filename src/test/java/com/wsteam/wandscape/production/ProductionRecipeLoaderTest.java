@@ -3,8 +3,9 @@ package com.wsteam.wandscape.production;
 import java.util.List;
 import java.util.Map;
 
-import com.wsteam.wandscape.element.internal.ElementMappingConfig;
-import com.wsteam.wandscape.production.data.SynthesizeRecipe;
+import com.wsteam.wandscape.content.element.internal.ElementMappingConfig;
+import com.wsteam.wandscape.content.production.ProductionRecipeLoader;
+import com.wsteam.wandscape.content.production.data.SynthesizeRecipe;
 import com.wsteam.wandscape.shared.data.ElementType;
 
 import org.junit.jupiter.api.Test;

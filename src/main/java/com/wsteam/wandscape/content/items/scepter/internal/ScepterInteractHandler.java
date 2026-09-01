@@ -1,9 +1,9 @@
-package com.wsteam.wandscape.scepter.internal;
+package com.wsteam.wandscape.content.items.scepter.internal;
 
-import com.wsteam.wandscape.npc.entity.WandscapeNpc;
-import com.wsteam.wandscape.scepter.OmniScepterItem;
-import com.wsteam.wandscape.scepter.ScepterItem;
-import com.wsteam.wandscape.scepter.ScepterKind;
+import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
+import com.wsteam.wandscape.content.items.scepter.OmniScepterItem;
+import com.wsteam.wandscape.content.items.scepter.ScepterItem;
+import com.wsteam.wandscape.content.items.scepter.ScepterKind;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;

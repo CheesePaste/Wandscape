@@ -1,6 +1,6 @@
-package com.wsteam.wandscape.overview.network;
+package com.wsteam.wandscape.content.colony.overview.network;
 
-import com.wsteam.wandscape.npc.entity.WandscapeNpc;
+import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.content.tourist.entity.TouristEntity;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;

@@ -2,8 +2,9 @@ package com.wsteam.wandscape.shared.ui.util;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.wsteam.wandscape.projection.client.BuildingDebugClientState;
-import com.wsteam.wandscape.projection.network.BuildingDebugResponsePacket;
+import com.wsteam.wandscape.content.tourist.entity.TouristEntity;
+import com.wsteam.wandscape.content.building.projection.client.BuildingDebugClientState;
+import com.wsteam.wandscape.content.building.projection.network.BuildingDebugResponsePacket;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket;
 import com.wsteam.wandscape.shared.ui.panel.WandscapePanelState;
@@ -74,8 +75,8 @@ public final class WandscapeHighlightRenderer {
         // 2. NPC Outline (if looking at a Wandscape NPC or Tourist)
         Entity entity = mc.crosshairPickEntity;
         if (entity != null && entity.isAlive()
-                && (entity instanceof com.wsteam.wandscape.npc.entity.WandscapeNpc
-                || entity instanceof com.wsteam.wandscape.tourist.entity.TouristEntity)) {
+                && (entity instanceof com.wsteam.wandscape.content.npc.entity.WandscapeNpc
+                || entity instanceof TouristEntity)) {
             renderEntityBox(buf, pose, entity.getBoundingBox(), LINE_R, LINE_G, LINE_B, LINE_A);
         }
 

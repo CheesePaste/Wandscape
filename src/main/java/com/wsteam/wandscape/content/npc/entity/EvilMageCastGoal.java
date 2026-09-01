@@ -1,6 +1,6 @@
 package com.wsteam.wandscape.content.npc.entity;
 
-import com.wsteam.wandscape.guard.executor.GuardCombat;
+import com.wsteam.wandscape.content.npc.guard.executor.GuardCombat;
 import com.wsteam.wandscape.content.magic.entity.MagicBeamEntity;
 import com.wsteam.wandscape.content.magic.internal.MagicCaster;
 import net.minecraft.server.level.ServerLevel;

@@ -1,10 +1,10 @@
-package com.wsteam.wandscape.tourist.internal;
+package com.wsteam.wandscape.content.tourist.internal;
 
 import com.wsteam.wandscape.Config;
-import com.wsteam.wandscape.building.internal.BuildingState;
-import com.wsteam.wandscape.road.core.PathPoint;
-import com.wsteam.wandscape.road.core.RoadEdge;
-import com.wsteam.wandscape.road.core.RoadNetwork;
+import com.wsteam.wandscape.content.building.internal.BuildingState;
+import com.wsteam.wandscape.content.road.core.PathPoint;
+import com.wsteam.wandscape.content.road.core.RoadEdge;
+import com.wsteam.wandscape.content.road.core.RoadNetwork;
 import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.api.RoadApi;
 import com.wsteam.wandscape.shared.data.BuildingData;

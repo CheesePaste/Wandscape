@@ -4,10 +4,11 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.wsteam.wandscape.element.internal.ElementValueGenerator.IngredientSlot;
-import com.wsteam.wandscape.element.internal.ElementValueGenerator.RecipeKind;
-import com.wsteam.wandscape.element.internal.ElementValueGenerator.RecipeNode;
-import com.wsteam.wandscape.element.internal.ElementValueGenerator.Resolution;
+import com.wsteam.wandscape.content.element.internal.ElementValueGenerator;
+import com.wsteam.wandscape.content.element.internal.ElementValueGenerator.IngredientSlot;
+import com.wsteam.wandscape.content.element.internal.ElementValueGenerator.RecipeKind;
+import com.wsteam.wandscape.content.element.internal.ElementValueGenerator.RecipeNode;
+import com.wsteam.wandscape.content.element.internal.ElementValueGenerator.Resolution;
 import com.wsteam.wandscape.shared.data.ElementType;
 
 import org.junit.jupiter.api.Test;

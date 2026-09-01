@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.tourist.internal;
+package com.wsteam.wandscape.content.tourist.internal;
 
 /**
  * 夜晚「无空闲旅店」闩锁（纯逻辑，可单测）：当晚所有旅店满员或过远传送失败后闩上，

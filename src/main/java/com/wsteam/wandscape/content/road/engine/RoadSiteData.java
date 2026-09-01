@@ -1,12 +1,12 @@
-package com.wsteam.wandscape.road.engine;
+package com.wsteam.wandscape.content.road.engine;
 
-import com.wsteam.wandscape.building.network.ConstructionSiteDataPacket;
-import com.wsteam.wandscape.building.network.ConstructionSiteDataPacket.MaterialEntry;
+import com.wsteam.wandscape.content.building.network.ConstructionSiteDataPacket;
+import com.wsteam.wandscape.content.building.network.ConstructionSiteDataPacket.MaterialEntry;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.system.ResourceSupplySystem;
-import com.wsteam.wandscape.road.core.PathPoint;
-import com.wsteam.wandscape.road.core.RoadEdge;
-import com.wsteam.wandscape.road.data.RoadPreset;
+import com.wsteam.wandscape.content.road.core.PathPoint;
+import com.wsteam.wandscape.content.road.core.RoadEdge;
+import com.wsteam.wandscape.content.road.data.RoadPreset;
 import com.wsteam.wandscape.shared.data.ItemKey;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.registry.WandscapeConstants;

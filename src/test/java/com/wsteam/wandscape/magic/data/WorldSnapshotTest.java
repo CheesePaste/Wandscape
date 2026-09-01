@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.List;
 import java.util.Set;
 
+import com.wsteam.wandscape.content.magic.data.WorldSnapshot;
 import org.junit.jupiter.api.Test;
 
 class WorldSnapshotTest {

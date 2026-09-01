@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.stats.internal;
+package com.wsteam.wandscape.content.colony.stats.internal;
 
 import com.wsteam.wandscape.shared.api.ColonyApi;
 import com.wsteam.wandscape.shared.event.ColonyEvaluationChangedEvent;
@@ -8,9 +8,9 @@ import com.wsteam.wandscape.shared.event.TouristDepartedEvent;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.network.PanelStateTracker;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
-import com.wsteam.wandscape.stats.data.ColonyDailySnapshot;
-import com.wsteam.wandscape.stats.data.ColonyStatsSummary;
-import com.wsteam.wandscape.stats.network.StatsSyncPacket;
+import com.wsteam.wandscape.content.colony.stats.data.ColonyDailySnapshot;
+import com.wsteam.wandscape.content.colony.stats.data.ColonyStatsSummary;
+import com.wsteam.wandscape.content.colony.stats.network.StatsSyncPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;

@@ -2,7 +2,7 @@ package com.wsteam.wandscape.compat.curios.client;
 
 import com.wsteam.wandscape.compat.curios.NpcCurioSlot;
 import com.wsteam.wandscape.compat.curios.NpcCuriosMenu;
-import com.wsteam.wandscape.npc.network.NpcOpenEquipPacket;
+import com.wsteam.wandscape.content.npc.network.NpcOpenEquipPacket;
 import com.wsteam.wandscape.shared.ui.I18n;
 import com.wsteam.wandscape.shared.ui.component.MedievalButton;
 import com.wsteam.wandscape.shared.ui.vanilla.VanillaPlayerInventory;

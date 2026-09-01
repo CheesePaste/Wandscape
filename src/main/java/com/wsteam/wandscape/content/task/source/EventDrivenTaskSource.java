@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.task.source;
+package com.wsteam.wandscape.content.task.source;
 
 import com.google.gson.JsonElement;
 import com.wsteam.wandscape.core.boundary.EventBus;
@@ -9,11 +9,11 @@ import com.wsteam.wandscape.core.types.BlockType;
 import com.wsteam.wandscape.core.types.GridPos;
 import com.wsteam.wandscape.core.types.ResourceId;
 import com.wsteam.wandscape.core.types.ResourceStack;
-import com.wsteam.wandscape.op.api.AtomicOp;
+import com.wsteam.wandscape.content.task.op.api.AtomicOp;
 import com.wsteam.wandscape.shared.log.Log;
-import com.wsteam.wandscape.task.engine.dsl.BlueprintRegistry;
-import com.wsteam.wandscape.task.engine.pool.GlobalTaskPool;
-import com.wsteam.wandscape.task.runtime.TaskSequence;
+import com.wsteam.wandscape.content.task.engine.dsl.BlueprintRegistry;
+import com.wsteam.wandscape.content.task.engine.pool.GlobalTaskPool;
+import com.wsteam.wandscape.content.task.runtime.TaskSequence;
 
 import java.util.List;
 import java.util.Map;

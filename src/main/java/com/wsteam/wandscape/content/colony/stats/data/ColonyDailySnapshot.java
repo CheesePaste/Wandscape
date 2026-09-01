@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.stats.data;
+package com.wsteam.wandscape.content.colony.stats.data;
 
 import net.minecraft.nbt.CompoundTag;
 

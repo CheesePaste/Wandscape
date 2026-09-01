@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.road.engine;
+package com.wsteam.wandscape.content.road.engine;
 
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;

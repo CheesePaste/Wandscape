@@ -1,8 +1,8 @@
-package com.wsteam.wandscape.road.client;
+package com.wsteam.wandscape.content.road.client;
 
-import com.wsteam.wandscape.road.core.SplineModel;
-import com.wsteam.wandscape.road.core.SplinePoint;
-import com.wsteam.wandscape.road.core.SplineVec3;
+import com.wsteam.wandscape.content.road.core.SplineModel;
+import com.wsteam.wandscape.content.road.core.SplinePoint;
+import com.wsteam.wandscape.content.road.core.SplineVec3;
 import com.wsteam.wandscape.shared.log.Log;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
@@ -34,7 +34,7 @@ public final class SplineEditorInputHandler {
 
     public static void onLeftPress(Minecraft mc) {
         if (!SplineEditorClientState.isEditing()) return;
-        if (com.wsteam.wandscape.road.client.RoadPlacementState.getActiveTool() != com.wsteam.wandscape.road.client.RoadPlacementState.ToolMode.SPLINE) return;
+        if (RoadPlacementState.getActiveTool() != RoadPlacementState.ToolMode.SPLINE) return;
 
         Vec3 rayOrigin = mc.gameRenderer.getMainCamera().getPosition();
         Vec3 rayDir = getMouseWorldRay(mc);

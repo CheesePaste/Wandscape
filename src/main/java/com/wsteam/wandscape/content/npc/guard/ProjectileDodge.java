@@ -1,7 +1,7 @@
-package com.wsteam.wandscape.guard;
+package com.wsteam.wandscape.content.npc.guard;
 
 import com.wsteam.wandscape.core.ecs.World;
-import com.wsteam.wandscape.guard.executor.GuardCombat;
+import com.wsteam.wandscape.content.npc.guard.executor.GuardCombat;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.content.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.shared.log.Log;

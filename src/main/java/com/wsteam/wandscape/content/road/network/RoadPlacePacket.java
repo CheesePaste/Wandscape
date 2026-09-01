@@ -1,16 +1,17 @@
-package com.wsteam.wandscape.road.network;
+package com.wsteam.wandscape.content.road.network;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
+import com.wsteam.wandscape.content.road.core.*;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.service.SoundService;
 import com.wsteam.wandscape.engine.sound.WandscapeSounds;
-import com.wsteam.wandscape.road.core.RoadNetwork;
-import com.wsteam.wandscape.road.data.RoadPreset;
-import com.wsteam.wandscape.road.engine.RoadPlaceAttribution;
-import com.wsteam.wandscape.road.engine.RoadSavedData;
+import com.wsteam.wandscape.content.road.core.RoadNetwork;
+import com.wsteam.wandscape.content.road.data.RoadPreset;
+import com.wsteam.wandscape.content.road.engine.RoadPlaceAttribution;
+import com.wsteam.wandscape.content.road.engine.RoadSavedData;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.network.ScreenFeedbackPacket;
 import com.wsteam.wandscape.shared.ui.I18n;
@@ -136,30 +137,30 @@ public record RoadPlacePacket(String presetId, BlockPos startPos, BlockPos endPo
 
         int startY = targetY;
         int endY = targetY;
-        com.wsteam.wandscape.road.core.SplineModel model = new com.wsteam.wandscape.road.core.SplineModel();
-        com.wsteam.wandscape.road.core.SplineVec3 pA = new com.wsteam.wandscape.road.core.SplineVec3(start.getX() + 0.5, startY + 0.5, start.getZ() + 0.5);
-        com.wsteam.wandscape.road.core.SplineVec3 pB = new com.wsteam.wandscape.road.core.SplineVec3(end.getX() + 0.5, endY + 0.5, end.getZ() + 0.5);
+        SplineModel model = new SplineModel();
+        SplineVec3 pA = new SplineVec3(start.getX() + 0.5, startY + 0.5, start.getZ() + 0.5);
+        SplineVec3 pB = new SplineVec3(end.getX() + 0.5, endY + 0.5, end.getZ() + 0.5);
 
         double distXZ = Math.sqrt(Math.pow(end.getX() - start.getX(), 2) + Math.pow(end.getZ() - start.getZ(), 2));
         if (distXZ > 16) {
             int intermediateSamples = Math.min(6, (int) (distXZ / 12));
-            model.getPoints().add(new com.wsteam.wandscape.road.core.SplinePoint(pA, pA, pA, true));
+            model.getPoints().add(new SplinePoint(pA, pA, pA, true));
             for (int i = 1; i <= intermediateSamples; i++) {
                 double factor = (double) i / (intermediateSamples + 1);
                 int ix = (int) Math.round(start.getX() + (end.getX() - start.getX()) * factor);
                 int iz = (int) Math.round(start.getZ() + (end.getZ() - start.getZ()) * factor);
                 int iy = targetY;
-                com.wsteam.wandscape.road.core.SplineVec3 pMid = new com.wsteam.wandscape.road.core.SplineVec3(ix + 0.5, iy + 0.5, iz + 0.5);
-                model.getPoints().add(new com.wsteam.wandscape.road.core.SplinePoint(pMid, pMid, pMid, true));
+                SplineVec3 pMid = new SplineVec3(ix + 0.5, iy + 0.5, iz + 0.5);
+                model.getPoints().add(new SplinePoint(pMid, pMid, pMid, true));
             }
-            model.getPoints().add(new com.wsteam.wandscape.road.core.SplinePoint(pB, pB, pB, true));
+            model.getPoints().add(new SplinePoint(pB, pB, pB, true));
         } else {
-            model.getPoints().add(new com.wsteam.wandscape.road.core.SplinePoint(pA, pA, pA, true));
-            model.getPoints().add(new com.wsteam.wandscape.road.core.SplinePoint(pB, pB, pB, true));
+            model.getPoints().add(new SplinePoint(pA, pA, pA, true));
+            model.getPoints().add(new SplinePoint(pB, pB, pB, true));
         }
 
-        com.wsteam.wandscape.road.core.PathPoint startPt = new com.wsteam.wandscape.road.core.PathPoint(start.getX(), startY, start.getZ());
-        com.wsteam.wandscape.road.core.PathPoint endPt = new com.wsteam.wandscape.road.core.PathPoint(end.getX(), endY, end.getZ());
+        PathPoint startPt = new PathPoint(start.getX(), startY, start.getZ());
+        PathPoint endPt = new PathPoint(end.getX(), endY, end.getZ());
 
         UUID fromNodeId;
         UUID toNodeId;
@@ -168,7 +169,7 @@ public record RoadPlacePacket(String presetId, BlockPos startPos, BlockPos endPo
             fromNodeId = startNode.nodeId();
         } else {
             fromNodeId = UUID.randomUUID();
-            network.addNode(new com.wsteam.wandscape.road.core.RoadNode(fromNodeId, new com.wsteam.wandscape.core.types.GridPos(startPt.x(), startPt.y(), startPt.z()), com.wsteam.wandscape.road.core.RoadNode.NodeType.ORPHAN));
+            network.addNode(new RoadNode(fromNodeId, new com.wsteam.wandscape.core.types.GridPos(startPt.x(), startPt.y(), startPt.z()), RoadNode.NodeType.ORPHAN));
         }
 
         var endNode = network.findNearestNode(endPt.xz());
@@ -176,20 +177,20 @@ public record RoadPlacePacket(String presetId, BlockPos startPos, BlockPos endPo
             toNodeId = endNode.nodeId();
         } else {
             toNodeId = UUID.randomUUID();
-            network.addNode(new com.wsteam.wandscape.road.core.RoadNode(toNodeId, new com.wsteam.wandscape.core.types.GridPos(endPt.x(), endPt.y(), endPt.z()), com.wsteam.wandscape.road.core.RoadNode.NodeType.ORPHAN));
+            network.addNode(new RoadNode(toNodeId, new com.wsteam.wandscape.core.types.GridPos(endPt.x(), endPt.y(), endPt.z()), RoadNode.NodeType.ORPHAN));
         }
 
         UUID edgeId = UUID.randomUUID();
-        com.wsteam.wandscape.road.core.RoadEdge edge = new com.wsteam.wandscape.road.core.RoadEdge(edgeId, fromNodeId, toNodeId, packet.presetId(), model);
-        edge.setStatus(com.wsteam.wandscape.road.core.RoadEdge.EdgeStatus.BUILDING);
+        RoadEdge edge = new RoadEdge(edgeId, fromNodeId, toNodeId, packet.presetId(), model);
+        edge.setStatus(RoadEdge.EdgeStatus.BUILDING);
         edge.setWidth(Math.max(1, Math.min(maxX - minX + 1, maxZ - minZ + 1)));
 
-        java.util.List<com.wsteam.wandscape.road.core.PathPoint> placedList = new java.util.ArrayList<>();
+        java.util.List<PathPoint> placedList = new java.util.ArrayList<>();
         for (JsonElement tileEl : tiles) {
             JsonObject tileObj = tileEl.getAsJsonObject();
             if (tileObj.has("pos")) {
                 JsonArray posArr = tileObj.getAsJsonArray("pos");
-                placedList.add(new com.wsteam.wandscape.road.core.PathPoint(posArr.get(0).getAsInt(), posArr.get(1).getAsInt(), posArr.get(2).getAsInt()));
+                placedList.add(new PathPoint(posArr.get(0).getAsInt(), posArr.get(1).getAsInt(), posArr.get(2).getAsInt()));
             }
         }
         edge.addPlacedBlocks(placedList);
@@ -249,7 +250,7 @@ public record RoadPlacePacket(String presetId, BlockPos startPos, BlockPos endPo
     // ── Helper ──
 
     private static RoadPreset findPreset(String id) {
-        return com.wsteam.wandscape.road.data.RoadPreset.parseOrGet(id);
+        return RoadPreset.parseOrGet(id);
     }
 
     // ── StreamCodec ──

@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.guard.executor;
+package com.wsteam.wandscape.content.npc.guard.executor;
 
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.Wandscape;

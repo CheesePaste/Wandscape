@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.road.client;
+package com.wsteam.wandscape.content.road.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;

@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.guard;
+package com.wsteam.wandscape.content.npc.guard;
 
 /**
  * 守卫区域：建筑包围盒水平（X/Z）扩展 {@code horizontalExpand} 格、Y 保持原包围盒高度的轴对齐盒。

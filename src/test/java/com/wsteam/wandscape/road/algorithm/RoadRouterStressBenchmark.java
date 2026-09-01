@@ -1,12 +1,13 @@
 package com.wsteam.wandscape.road.algorithm;
 
-import com.wsteam.wandscape.road.core.PathPoint;
-import com.wsteam.wandscape.road.core.RoadEdge;
-import com.wsteam.wandscape.road.core.RoadNetwork;
-import com.wsteam.wandscape.road.core.SplineLeg;
-import com.wsteam.wandscape.road.core.SplineModel;
-import com.wsteam.wandscape.road.core.SplineVec3;
-import com.wsteam.wandscape.road.core.TransportRoute;
+import com.wsteam.wandscape.content.road.algorithm.RoadRouter;
+import com.wsteam.wandscape.content.road.core.PathPoint;
+import com.wsteam.wandscape.content.road.core.RoadEdge;
+import com.wsteam.wandscape.content.road.core.RoadNetwork;
+import com.wsteam.wandscape.content.road.core.SplineLeg;
+import com.wsteam.wandscape.content.road.core.SplineModel;
+import com.wsteam.wandscape.content.road.core.SplineVec3;
+import com.wsteam.wandscape.content.road.core.TransportRoute;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 

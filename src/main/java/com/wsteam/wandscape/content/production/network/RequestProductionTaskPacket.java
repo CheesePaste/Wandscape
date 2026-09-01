@@ -1,12 +1,13 @@
-package com.wsteam.wandscape.production.network;
+package com.wsteam.wandscape.content.production.network;
 
 import com.google.gson.JsonPrimitive;
 import com.wsteam.wandscape.Wandscape;
-import com.wsteam.wandscape.building.internal.BuildingSavedData;
-import com.wsteam.wandscape.building.internal.BuildingState;
-import com.wsteam.wandscape.production.ProductionRecipeLoader;
-import com.wsteam.wandscape.production.data.CraftRecipeView;
-import com.wsteam.wandscape.production.internal.RecipeUnlockChecker;
+import com.wsteam.wandscape.content.building.internal.BuildingSavedData;
+import com.wsteam.wandscape.content.building.internal.BuildingState;
+import com.wsteam.wandscape.content.production.ProductionRecipeLoader;
+import com.wsteam.wandscape.content.production.data.CraftRecipeView;
+import com.wsteam.wandscape.content.production.internal.RecipeUnlockChecker;
+import com.wsteam.wandscape.content.warehouse.ColonyItemBank;
 import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.data.WorkItem;
 import com.wsteam.wandscape.shared.log.Log;
@@ -153,7 +154,7 @@ public record RequestProductionTaskPacket(
 
             // A player-published synthesize request counts toward onboarding step 5.
             if ("synthesize".equals(pkt.action) && state.getColonyId() != null) {
-                var bank = com.wsteam.wandscape.warehouse.ColonyItemBank.get(level);
+                var bank = ColonyItemBank.get(level);
                 if (bank != null) bank.recordPlayerSynthesize(state.getColonyId());
                 var guideApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getGuideProgressApiSilently();
                 if (guideApi != null) guideApi.sendToPlayer(sp, state.getColonyId());

@@ -1,4 +1,5 @@
 package com.wsteam.wandscape.core.ecs;
+import com.wsteam.wandscape.content.task.runtime.*;
 import com.wsteam.wandscape.core.boundary.MockBoundary;
 import java.lang.System;
 
@@ -10,23 +11,21 @@ import com.wsteam.wandscape.core.types.GridPos;
 import com.wsteam.wandscape.core.types.NpcAttributes;
 import com.wsteam.wandscape.core.types.ResourceId;
 import com.wsteam.wandscape.core.types.RitualId;
-import com.wsteam.wandscape.task.engine.dsl.Blueprint;
-import com.wsteam.wandscape.task.engine.dsl.BlueprintRegistry;
-import com.wsteam.wandscape.task.engine.dsl.BlueprintSteps;
+import com.wsteam.wandscape.content.task.engine.dsl.Blueprint;
+import com.wsteam.wandscape.content.task.engine.dsl.BlueprintRegistry;
+import com.wsteam.wandscape.content.task.engine.dsl.BlueprintSteps;
 import com.wsteam.wandscape.core.component.TaskExecutor;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
-import com.wsteam.wandscape.task.engine.pool.GlobalTask;
-import com.wsteam.wandscape.task.engine.pool.TaskRequest;
-import com.wsteam.wandscape.task.runtime.*;
+import com.wsteam.wandscape.content.task.engine.pool.GlobalTask;
+import com.wsteam.wandscape.content.task.engine.pool.TaskRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import com.wsteam.wandscape.core.ecs.World;
-import com.wsteam.wandscape.op.api.AtomicOp;
-import com.wsteam.wandscape.task.scheduler.TaskExecutionSystem;
-import com.wsteam.wandscape.op.executor.DefaultOpExecutors;
-import com.wsteam.wandscape.task.scheduler.SystemBlueprintRegistry;
+import com.wsteam.wandscape.content.task.op.api.AtomicOp;
+import com.wsteam.wandscape.content.task.scheduler.TaskExecutionSystem;
+import com.wsteam.wandscape.content.task.op.executor.DefaultOpExecutors;
+import com.wsteam.wandscape.content.task.scheduler.SystemBlueprintRegistry;
 
 import java.util.*;
 

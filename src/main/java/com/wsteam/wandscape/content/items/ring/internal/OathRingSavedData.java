@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.ring.internal;
+package com.wsteam.wandscape.content.items.ring.internal;
 
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;

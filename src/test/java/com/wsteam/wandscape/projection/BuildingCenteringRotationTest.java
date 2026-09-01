@@ -6,11 +6,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import com.wsteam.wandscape.content.building.projection.BuildingCentering;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import com.wsteam.wandscape.building.data.BlockOffset;
-import com.wsteam.wandscape.building.data.BuildingConfig;
+import com.wsteam.wandscape.content.building.data.BlockOffset;
+import com.wsteam.wandscape.content.building.data.BuildingConfig;
 import com.wsteam.wandscape.shared.data.AtmConfig;
 import com.wsteam.wandscape.shared.data.RelaxConfig;
 import com.wsteam.wandscape.shared.data.ServiceConfig;

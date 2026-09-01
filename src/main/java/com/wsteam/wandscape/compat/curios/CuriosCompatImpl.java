@@ -1,12 +1,12 @@
 package com.wsteam.wandscape.compat.curios;
 
 import com.wsteam.wandscape.Wandscape;
-import com.wsteam.wandscape.compass.CompassService;
+import com.wsteam.wandscape.content.items.compass.CompassService;
 import com.wsteam.wandscape.compat.curios.client.NpcCuriosScreen;
 import com.wsteam.wandscape.compat.ironspellbooks.IronSpellsAttributes;
 import com.wsteam.wandscape.core.types.AttributeType;
 import com.wsteam.wandscape.engine.attribute.WandscapeAttributes;
-import com.wsteam.wandscape.npc.entity.WandscapeNpc;
+import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import net.minecraft.core.Holder;
 import net.minecraft.core.NonNullList;
 import net.minecraft.core.registries.Registries;

@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.scepter;
+package com.wsteam.wandscape.content.items.scepter;
 
 /**
  * 玩家权杖种类：决定右键行为与 3D 头部主题色（染色走 ItemColors tintindex 0）。

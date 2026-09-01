@@ -1,6 +1,6 @@
 package com.wsteam.wandscape.compat.curios;
 
-import com.wsteam.wandscape.npc.entity.WandscapeNpc;
+import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.network.ScreenFeedbackPacket;
 import com.wsteam.wandscape.shared.ui.I18n;

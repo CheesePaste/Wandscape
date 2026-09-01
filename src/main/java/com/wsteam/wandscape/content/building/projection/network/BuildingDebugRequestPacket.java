@@ -1,5 +1,9 @@
 package com.wsteam.wandscape.content.building.projection.network;
 
+import com.wsteam.wandscape.content.building.internal.BuildCompleteListener;
+import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
+import com.wsteam.wandscape.content.building.internal.BuildingSavedData;
+import com.wsteam.wandscape.content.building.internal.ShopStockManager;
 import com.wsteam.wandscape.shared.data.WorkItem;
 import com.wsteam.wandscape.shared.log.Log;
 import net.minecraft.core.BlockPos;
@@ -33,7 +37,7 @@ public record BuildingDebugRequestPacket(BlockPos pos) implements CustomPacketPa
     }
 
     public static void handleServer(BuildingDebugRequestPacket packet, ServerPlayer player) {
-        var sd = com.wsteam.wandscape.building.internal.BuildingSavedData.get(player.level());
+        var sd = BuildingSavedData.get(player.level());
         if (sd == null) {
             Log.warn(TAG, "[Debug] No BuildingSavedData for player {}", player.getGameProfile().getName());
             return;
@@ -51,7 +55,7 @@ public record BuildingDebugRequestPacket(BlockPos pos) implements CustomPacketPa
 
         // For shops, add in-stock goods bonuses so the V panel reflects effective values
         if ("shop".equals(state.getCategory())) {
-            var stockMgr = com.wsteam.wandscape.building.internal.ShopStockManager.getActive();
+            var stockMgr = ShopStockManager.getActive();
             if (stockMgr != null) {
                 comfort += stockMgr.getGoodsBonusComfort(state.getBuildingId());
                 magic += stockMgr.getGoodsBonusMagic(state.getBuildingId());
@@ -61,13 +65,13 @@ public record BuildingDebugRequestPacket(BlockPos pos) implements CustomPacketPa
 
         List<WorkItem> queueSnapshot = new ArrayList<>(state.getTaskQueue());
         String typeId = state.getBuildingTypeId();
-        var config = com.wsteam.wandscape.building.internal.BuildingConfigLoader.getInstance().get(typeId);
+        var config = BuildingConfigLoader.getInstance().get(typeId);
         String displayName = (config != null && config.displayName() != null && !config.displayName().isEmpty())
                 ? config.displayName() : typeId;
 
         // Whether the building has any damaged pattern blocks (minor < 1/3 or broken
         // >= 1/3) — drives the client-side Repair button availability.
-        boolean needsRepair = config != null && !com.wsteam.wandscape.building.internal.BuildCompleteListener
+        boolean needsRepair = config != null && !BuildCompleteListener
                 .findDamagedBlocks(player.level(), state.getAnchor(), config, state.getRotationSteps())
                 .isEmpty();
 

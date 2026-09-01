@@ -1,7 +1,9 @@
 package com.wsteam.wandscape.shared.ui.panel;
 
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.wsteam.wandscape.projection.client.BuildingDebugClientState;
+import com.wsteam.wandscape.content.building.projection.client.BuildPopPanelOverlay;
+import com.wsteam.wandscape.content.building.projection.client.BuildingDebugClientState;
+import com.wsteam.wandscape.content.building.projection.client.ProjectionClientState;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.ui.I18n;
 import com.wsteam.wandscape.shared.ui.theme.WandscapeTheme;
@@ -73,7 +75,7 @@ public final class WandscapePanelOverlay {
         BuildingSelectionOverlay.render(g, mc.font, screenW, screenH, mx, my);
 
         // Build mode right pop panel
-        com.wsteam.wandscape.projection.client.BuildPopPanelOverlay.render(g, mc.font, screenW, screenH, mx, my);
+        BuildPopPanelOverlay.render(g, mc.font, screenW, screenH, mx, my);
 
         // Task & Mage Management Hub (dedicated spacious overlay — hides top bar & sidebar)
         if (WandscapePanelState.getActiveSubMode() == WandscapePanelState.SubMode.TASKS) {
@@ -172,7 +174,7 @@ public final class WandscapePanelOverlay {
             boolean buildMode = WandscapePanelState.getActiveSubMode() == WandscapePanelState.SubMode.BUILD_PROJECTION;
             boolean isPlacing = WandscapePanelState.getBuildPhase() == WandscapePanelState.BuildPhase.PLACING;
             boolean isBar = WandscapePanelState.getBuildPhase() == WandscapePanelState.BuildPhase.BAR;
-            boolean isPinned = com.wsteam.wandscape.projection.client.ProjectionClientState.isPinned();
+            boolean isPinned = ProjectionClientState.isPinned();
             com.wsteam.wandscape.shared.ui.guidance.GuideRenderer.render(g, font, screenW, screenH, mx, my,
                     com.wsteam.wandscape.shared.ui.guidance.GuideRegistry.step(
                             com.wsteam.wandscape.shared.ui.guidance.GuideSession.currentStep()),

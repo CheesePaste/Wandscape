@@ -8,6 +8,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Set;
 
+import com.wsteam.wandscape.content.magic.data.SpellConditions;
+import com.wsteam.wandscape.content.magic.data.WorldSnapshot;
 import org.junit.jupiter.api.Test;
 
 import com.google.gson.JsonParser;

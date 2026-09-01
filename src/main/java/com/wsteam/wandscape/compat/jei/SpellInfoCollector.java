@@ -1,6 +1,6 @@
 package com.wsteam.wandscape.compat.jei;
 
-import com.wsteam.wandscape.magic.data.MagicDef;
+import com.wsteam.wandscape.content.magic.data.MagicDef;
 
 import java.util.ArrayList;
 import java.util.Collection;

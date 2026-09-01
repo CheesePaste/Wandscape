@@ -1,8 +1,8 @@
 package com.wsteam.wandscape.compat.jei;
 
 import com.wsteam.wandscape.Wandscape;
-import com.wsteam.wandscape.magic.internal.SpellbookLoader;
-import com.wsteam.wandscape.magic.item.SpellItem;
+import com.wsteam.wandscape.content.magic.internal.SpellbookLoader;
+import com.wsteam.wandscape.content.items.SpellItem;
 import mezz.jei.api.IModPlugin;
 import mezz.jei.api.JeiPlugin;
 import mezz.jei.api.registration.IAdvancedRegistration;

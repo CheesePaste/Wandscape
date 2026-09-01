@@ -1,6 +1,6 @@
 package com.wsteam.wandscape.content.building.projection.client;
 
-import com.wsteam.wandscape.building.data.BuildingConfig;
+import com.wsteam.wandscape.content.building.data.BuildingConfig;
 import com.wsteam.wandscape.content.building.projection.network.ProjectionPlacePacket;
 import com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket;
 import com.wsteam.wandscape.shared.ui.I18n;

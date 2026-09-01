@@ -1,6 +1,7 @@
 package com.wsteam.wandscape.mixin;
 
-import com.wsteam.wandscape.overview.client.OverviewClientState;
+import com.wsteam.wandscape.content.colony.overview.client.OverviewClientState;
+import com.wsteam.wandscape.content.road.client.SplineEditorClientState;
 import net.minecraft.client.Camera;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.BlockGetter;
@@ -22,7 +23,7 @@ public abstract class MixinOverviewCamera {
     @Inject(method = "setup", at = @At("TAIL"))
     private void onSetupTail(BlockGetter level, Entity entity, boolean detached,
                              boolean thirdPersonReverse, float partialTick, CallbackInfo ci) {
-        if (OverviewClientState.isActive() && !com.wsteam.wandscape.road.client.SplineEditorClientState.isEditing()) {
+        if (OverviewClientState.isActive() && !SplineEditorClientState.isEditing()) {
             setPosition(
                     OverviewClientState.getCamX(),
                     OverviewClientState.getCamY(),

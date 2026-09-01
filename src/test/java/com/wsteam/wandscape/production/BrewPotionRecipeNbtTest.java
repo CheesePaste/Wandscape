@@ -1,13 +1,11 @@
 package com.wsteam.wandscape.production;
 
 import java.util.List;
-import java.util.UUID;
 
 import com.google.gson.JsonParser;
-import com.wsteam.wandscape.production.data.BrewPotionRecipe;
+import com.wsteam.wandscape.content.production.data.BrewPotionRecipe;
 import com.wsteam.wandscape.shared.data.ElementType;
 
-import net.minecraft.nbt.CompoundTag;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;

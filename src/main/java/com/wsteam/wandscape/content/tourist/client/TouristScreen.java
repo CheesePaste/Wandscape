@@ -1,11 +1,11 @@
-package com.wsteam.wandscape.tourist.client;
+package com.wsteam.wandscape.content.tourist.client;
 
 import com.wsteam.wandscape.shared.registry.WandscapeConstants;
 import com.wsteam.wandscape.shared.ui.I18n;
 import com.wsteam.wandscape.shared.ui.component.MedievalButton;
 import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
 import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
-import com.wsteam.wandscape.tourist.network.TouristDataPacket;
+import com.wsteam.wandscape.content.tourist.network.TouristDataPacket;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.core.registries.BuiltInRegistries;

@@ -9,6 +9,9 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 
+import com.wsteam.wandscape.content.building.internal.BuildingApiImpl;
+import com.wsteam.wandscape.content.building.internal.BuildingSavedData;
+import com.wsteam.wandscape.content.building.internal.BuildingState;
 import org.junit.jupiter.api.Test;
 
 import com.google.gson.JsonArray;

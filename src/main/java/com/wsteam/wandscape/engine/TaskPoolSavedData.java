@@ -2,13 +2,14 @@ package com.wsteam.wandscape.engine;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
+import com.wsteam.wandscape.content.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.core.types.ResourceId;
 import com.wsteam.wandscape.core.types.ResourceStack;
 import com.wsteam.wandscape.shared.log.Log;
-import com.wsteam.wandscape.task.engine.pool.GlobalTask;
-import com.wsteam.wandscape.task.engine.pool.GlobalTaskPool;
-import com.wsteam.wandscape.task.engine.pool.TaskRequest;
-import com.wsteam.wandscape.task.runtime.TaskState;
+import com.wsteam.wandscape.content.task.engine.pool.GlobalTask;
+import com.wsteam.wandscape.content.task.engine.pool.GlobalTaskPool;
+import com.wsteam.wandscape.content.task.engine.pool.TaskRequest;
+import com.wsteam.wandscape.content.task.runtime.TaskState;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
@@ -209,7 +210,7 @@ public final class TaskPoolSavedData extends SavedData {
 
         // Defense-in-depth: If this is a building task for a building that was deleted/undone, drop it
         if (level != null) {
-            var buildingSd = com.wsteam.wandscape.building.internal.BuildingSavedData.get(level);
+            var buildingSd = BuildingSavedData.get(level);
             if (buildingSd != null) {
                 java.util.UUID bid = null;
                 if (tag.contains("bid")) {

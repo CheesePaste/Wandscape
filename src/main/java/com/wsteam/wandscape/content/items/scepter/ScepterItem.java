@@ -1,6 +1,6 @@
-package com.wsteam.wandscape.scepter;
+package com.wsteam.wandscape.content.items.scepter;
 
-import com.wsteam.wandscape.scepter.internal.ScepterService;
+import com.wsteam.wandscape.content.items.scepter.internal.ScepterService;
 import com.wsteam.wandscape.shared.api.MageWandItem;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;

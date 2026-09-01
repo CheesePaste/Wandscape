@@ -6,13 +6,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
+import com.wsteam.wandscape.content.task.source.EventDrivenTaskSource;
 import com.wsteam.wandscape.core.types.ResourceId;
-import com.wsteam.wandscape.core.types.ResourceStack;
-import com.wsteam.wandscape.op.api.AtomicOp;
-import com.wsteam.wandscape.task.engine.dsl.Blueprint;
-import com.wsteam.wandscape.task.engine.dsl.BlueprintRegistry;
-import com.wsteam.wandscape.task.engine.dsl.BlueprintSteps;
-import com.wsteam.wandscape.task.runtime.TaskSequence;
+import com.wsteam.wandscape.content.task.op.api.AtomicOp;
+import com.wsteam.wandscape.content.task.engine.dsl.Blueprint;
+import com.wsteam.wandscape.content.task.engine.dsl.BlueprintRegistry;
+import com.wsteam.wandscape.content.task.engine.dsl.BlueprintSteps;
+import com.wsteam.wandscape.content.task.runtime.TaskSequence;
 
 import java.util.Map;
 

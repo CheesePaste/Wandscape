@@ -3,7 +3,8 @@ package com.wsteam.wandscape.element.internal;
 import java.util.List;
 import java.util.Set;
 
-import com.wsteam.wandscape.element.internal.ElementAuditor.AuditReport;
+import com.wsteam.wandscape.content.element.internal.ElementAuditor;
+import com.wsteam.wandscape.content.element.internal.ElementAuditor.AuditReport;
 
 import org.junit.jupiter.api.Test;
 

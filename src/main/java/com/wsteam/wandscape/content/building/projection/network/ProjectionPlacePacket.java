@@ -1,7 +1,7 @@
 package com.wsteam.wandscape.content.building.projection.network;
 
-import com.wsteam.wandscape.building.data.BuildingConfig;
-import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
+import com.wsteam.wandscape.content.building.data.BuildingConfig;
+import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.engine.service.SoundService;
 import com.wsteam.wandscape.engine.sound.WandscapeSounds;
 import com.wsteam.wandscape.content.building.projection.data.BuildingSlot;

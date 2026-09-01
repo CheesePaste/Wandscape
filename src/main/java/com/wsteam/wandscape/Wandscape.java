@@ -1,22 +1,45 @@
 package com.wsteam.wandscape;
 
-import com.wsteam.wandscape.building.internal.*;
-import com.wsteam.wandscape.building.network.*;
-import com.wsteam.wandscape.building.scanner.CreativeScannerBlock;
-import com.wsteam.wandscape.building.scanner.CreativeScannerBlockEntity;
-import com.wsteam.wandscape.building.scanner.ScannerBlock;
-import com.wsteam.wandscape.building.scanner.ScannerBlockEntity;
-import com.wsteam.wandscape.building.scanner.network.ScannerExportPacket;
-import com.wsteam.wandscape.building.scanner.network.ScannerSyncPacket;
+import com.wsteam.wandscape.content.building.internal.*;
+import com.wsteam.wandscape.content.building.network.*;
+import com.wsteam.wandscape.content.building.scanner.CreativeScannerBlock;
+import com.wsteam.wandscape.content.building.scanner.CreativeScannerBlockEntity;
+import com.wsteam.wandscape.content.building.scanner.ScannerBlock;
+import com.wsteam.wandscape.content.building.scanner.ScannerBlockEntity;
+import com.wsteam.wandscape.content.building.scanner.InteractSpotMarkerBlock;
+import com.wsteam.wandscape.content.building.scanner.network.ScannerExportPacket;
+import com.wsteam.wandscape.content.building.scanner.network.ScannerSyncPacket;
 import com.wsteam.wandscape.command.*;
-import com.wsteam.wandscape.compass.CompassSyncHandler;
-import com.wsteam.wandscape.compass.CompassTier;
-import com.wsteam.wandscape.compass.MagicCompassItem;
-import com.wsteam.wandscape.compass.network.CompassTargetPacket;
-import com.wsteam.wandscape.dataconfig.internal.WandscapeDataLoader;
-import com.wsteam.wandscape.element.internal.ElementApiImpl;
-import com.wsteam.wandscape.element.internal.ElementMappingLoader;
-import com.wsteam.wandscape.element.item.ElementItem;
+import com.wsteam.wandscape.content.building.projection.network.*;
+import com.wsteam.wandscape.content.building.scanner.network.ScannerValuePacket;
+import com.wsteam.wandscape.content.colony.raid.ColonyRaidTracker;
+import com.wsteam.wandscape.content.colony.raid.RaidTriggerScanner;
+import com.wsteam.wandscape.content.colony.stats.network.StatsSyncPacket;
+import com.wsteam.wandscape.content.items.compass.CompassSyncHandler;
+import com.wsteam.wandscape.content.items.compass.CompassTier;
+import com.wsteam.wandscape.content.items.compass.MagicCompassItem;
+import com.wsteam.wandscape.content.items.compass.network.CompassTargetPacket;
+import com.wsteam.wandscape.content.items.ring.OathRingItem;
+import com.wsteam.wandscape.content.items.ring.RingTier;
+import com.wsteam.wandscape.content.items.ring.internal.OathRingSyncHandler;
+import com.wsteam.wandscape.content.items.ring.network.OathRingDataPacket;
+import com.wsteam.wandscape.content.items.scepter.OmniScepterItem;
+import com.wsteam.wandscape.content.items.scepter.ScepterItem;
+import com.wsteam.wandscape.content.items.scepter.ScepterKind;
+import com.wsteam.wandscape.content.items.scepter.internal.ScepterApiImpl;
+import com.wsteam.wandscape.content.items.scepter.internal.ScepterDeathHandler;
+import com.wsteam.wandscape.content.items.scepter.internal.ScepterInteractHandler;
+import com.wsteam.wandscape.content.items.scepter.internal.ScepterMarksSavedData;
+import com.wsteam.wandscape.content.magic.internal.WandscapeEffects;
+import com.wsteam.wandscape.content.npc.guard.*;
+import com.wsteam.wandscape.content.road.data.RoadPresetLoader;
+import com.wsteam.wandscape.content.road.network.*;
+import com.wsteam.wandscape.content.tourist.internal.*;
+import com.wsteam.wandscape.content.tourist.network.TouristBubblePacket;
+import com.wsteam.wandscape.foundation.registry.dataconfig.internal.WandscapeDataLoader;
+import com.wsteam.wandscape.content.element.internal.ElementApiImpl;
+import com.wsteam.wandscape.content.element.internal.ElementMappingLoader;
+import com.wsteam.wandscape.content.element.item.ElementItem;
 import com.wsteam.wandscape.engine.*;
 import com.wsteam.wandscape.engine.bootstrap.EngineBootstrap;
 import com.wsteam.wandscape.engine.boundary.ProductionEligibility;
@@ -29,57 +52,52 @@ import com.wsteam.wandscape.engine.sound.WandscapeSounds;
 import com.wsteam.wandscape.engine.source.blueprint.BlueprintConfigLoader;
 import com.wsteam.wandscape.engine.transport.TransportItemEntity;
 import com.wsteam.wandscape.engine.transport.TransportStartPacket;
-import com.wsteam.wandscape.guidebook.item.GuideBookItem;
-import com.wsteam.wandscape.guidebook.network.GuideBookOpenPacket;
-import com.wsteam.wandscape.magic.data.MagicDef;
-import com.wsteam.wandscape.magic.entity.MagicBeamEntity;
-import com.wsteam.wandscape.magic.internal.MagicCastManager;
-import com.wsteam.wandscape.magic.internal.MagicCircleLoader;
-import com.wsteam.wandscape.magic.internal.SpellbookLoader;
-import com.wsteam.wandscape.magic.internal.SpellcastingApiImpl;
-import com.wsteam.wandscape.magic.item.SpellItem;
-import com.wsteam.wandscape.npc.NpcMenu;
-import com.wsteam.wandscape.npc.NpcStrategyMenu;
-import com.wsteam.wandscape.npc.entity.EvilMage;
-import com.wsteam.wandscape.npc.entity.WandscapeNpc;
-import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
-import com.wsteam.wandscape.npc.internal.NpcApiImpl;
-import com.wsteam.wandscape.npc.network.*;
-import com.wsteam.wandscape.overview.network.OverviewEntityInteractPacket;
-import com.wsteam.wandscape.overview.network.OverviewInteractPacket;
-import com.wsteam.wandscape.production.ProductionRecipeLoader;
-import com.wsteam.wandscape.production.network.CraftingStationPacket;
-import com.wsteam.wandscape.production.network.MagicStationPacket;
-import com.wsteam.wandscape.production.network.RequestProductionTaskPacket;
-import com.wsteam.wandscape.production.network.WorkstationDataPacket;
-import com.wsteam.wandscape.projection.network.*;
-import com.wsteam.wandscape.ring.internal.OathRingSavedData;
-import com.wsteam.wandscape.road.engine.RoadApiImpl;
-import com.wsteam.wandscape.road.engine.RoadSavedData;
-import com.wsteam.wandscape.road.engine.RoadSegmentListener;
-import com.wsteam.wandscape.road.network.DestroyFillPacket;
-import com.wsteam.wandscape.road.network.FillBoxPacket;
-import com.wsteam.wandscape.road.network.RoadPlacePacket;
+import com.wsteam.wandscape.content.items.guidebook.item.GuideBookItem;
+import com.wsteam.wandscape.content.items.guidebook.network.GuideBookOpenPacket;
+import com.wsteam.wandscape.content.magic.data.MagicDef;
+import com.wsteam.wandscape.content.magic.entity.MagicBeamEntity;
+import com.wsteam.wandscape.content.magic.internal.MagicCastManager;
+import com.wsteam.wandscape.content.magic.internal.MagicCircleLoader;
+import com.wsteam.wandscape.content.magic.internal.SpellbookLoader;
+import com.wsteam.wandscape.content.magic.internal.SpellcastingApiImpl;
+import com.wsteam.wandscape.content.items.SpellItem;
+import com.wsteam.wandscape.content.npc.NpcMenu;
+import com.wsteam.wandscape.content.npc.NpcStrategyMenu;
+import com.wsteam.wandscape.content.npc.entity.EvilMage;
+import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
+import com.wsteam.wandscape.content.npc.internal.EntityComponentBridge;
+import com.wsteam.wandscape.content.npc.internal.NpcApiImpl;
+import com.wsteam.wandscape.content.npc.network.*;
+import com.wsteam.wandscape.content.colony.overview.network.OverviewEntityInteractPacket;
+import com.wsteam.wandscape.content.colony.overview.network.OverviewInteractPacket;
+import com.wsteam.wandscape.content.production.ProductionRecipeLoader;
+import com.wsteam.wandscape.content.production.network.CraftingStationPacket;
+import com.wsteam.wandscape.content.production.network.MagicStationPacket;
+import com.wsteam.wandscape.content.production.network.RequestProductionTaskPacket;
+import com.wsteam.wandscape.content.production.network.WorkstationDataPacket;
+import com.wsteam.wandscape.content.items.ring.internal.OathRingSavedData;
+import com.wsteam.wandscape.content.road.engine.RoadApiImpl;
+import com.wsteam.wandscape.content.road.engine.RoadSavedData;
+import com.wsteam.wandscape.content.road.engine.RoadSegmentListener;
 import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.network.MagicCircleCastPacket;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
-import com.wsteam.wandscape.stats.internal.StatisticsCollector;
-import com.wsteam.wandscape.task.source.PlayerManualSource;
-import com.wsteam.wandscape.tourist.entity.TouristEntity;
-import com.wsteam.wandscape.tourist.internal.*;
-import com.wsteam.wandscape.tourist.network.TouristDataPacket;
-import com.wsteam.wandscape.wand.internal.WandApiImpl;
-import com.wsteam.wandscape.wand.internal.WandPresetLoader;
-import com.wsteam.wandscape.wand.internal.WandPresetLoader.WandPreset;
-import com.wsteam.wandscape.wand.item.WandItem;
-import com.wsteam.wandscape.warehouse.WarehouseManager;
-import com.wsteam.wandscape.warehouse.WarehouseMenu;
-import com.wsteam.wandscape.warehouse.WarehouseNotificationHandler;
-import com.wsteam.wandscape.warehouse.WarehouseTerminalItem;
-import com.wsteam.wandscape.warehouse.network.WarehouseActionPacket;
-import com.wsteam.wandscape.warehouse.network.WarehouseDataPacket;
-import com.wsteam.wandscape.warehouse.network.WarehouseTerminalKeyPacket;
+import com.wsteam.wandscape.content.colony.stats.internal.StatisticsCollector;
+import com.wsteam.wandscape.content.task.source.PlayerManualSource;
+import com.wsteam.wandscape.content.tourist.entity.TouristEntity;
+import com.wsteam.wandscape.content.tourist.network.TouristDataPacket;
+import com.wsteam.wandscape.content.items.wand.internal.WandApiImpl;
+import com.wsteam.wandscape.content.items.wand.internal.WandPresetLoader;
+import com.wsteam.wandscape.content.items.wand.internal.WandPresetLoader.WandPreset;
+import com.wsteam.wandscape.content.items.wand.item.WandItem;
+import com.wsteam.wandscape.content.warehouse.WarehouseManager;
+import com.wsteam.wandscape.content.warehouse.WarehouseMenu;
+import com.wsteam.wandscape.content.warehouse.WarehouseNotificationHandler;
+import com.wsteam.wandscape.content.warehouse.WarehouseTerminalItem;
+import com.wsteam.wandscape.content.warehouse.network.WarehouseActionPacket;
+import com.wsteam.wandscape.content.warehouse.network.WarehouseDataPacket;
+import com.wsteam.wandscape.content.warehouse.network.WarehouseTerminalKeyPacket;
 import net.minecraft.commands.Commands;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
@@ -293,46 +311,46 @@ public class Wandscape {
     // ---- ring: 盟誓戒指（同玩家共享固定槽存储，见 ring/internal/）----
     public static final DeferredItem<Item> OATH_RING =
             ITEMS.register("oath_ring", () ->
-                    new com.wsteam.wandscape.ring.OathRingItem(
+                    new OathRingItem(
                             new Item.Properties().stacksTo(1),
-                            com.wsteam.wandscape.ring.RingTier.LOW));
+                            RingTier.LOW));
     public static final DeferredItem<Item> OATH_RING_MID =
             ITEMS.register("oath_ring_mid", () ->
-                    new com.wsteam.wandscape.ring.OathRingItem(
+                    new OathRingItem(
                             new Item.Properties().stacksTo(1),
-                            com.wsteam.wandscape.ring.RingTier.MID));
+                            RingTier.MID));
     public static final DeferredItem<Item> OATH_RING_HIGH =
             ITEMS.register("oath_ring_high", () ->
-                    new com.wsteam.wandscape.ring.OathRingItem(
+                    new OathRingItem(
                             new Item.Properties().stacksTo(1),
-                            com.wsteam.wandscape.ring.RingTier.HIGH));
+                            RingTier.HIGH));
 
     // ---- scepter: 玩家权杖（和平/跟随/庇护/敌对，合成站 1 级配方产出，见 scepter/）----
     public static final DeferredItem<Item> PEACE_WAND =
             ITEMS.register("peace_wand", () ->
-                    new com.wsteam.wandscape.scepter.ScepterItem(
+                    new ScepterItem(
                             new Item.Properties().stacksTo(1),
-                            com.wsteam.wandscape.scepter.ScepterKind.PEACE));
+                            ScepterKind.PEACE));
     public static final DeferredItem<Item> FOLLOW_WAND =
             ITEMS.register("follow_wand", () ->
-                    new com.wsteam.wandscape.scepter.ScepterItem(
+                    new ScepterItem(
                             new Item.Properties().stacksTo(1),
-                            com.wsteam.wandscape.scepter.ScepterKind.FOLLOW));
+                            ScepterKind.FOLLOW));
     public static final DeferredItem<Item> SHELTER_WAND =
             ITEMS.register("shelter_wand", () ->
-                    new com.wsteam.wandscape.scepter.ScepterItem(
+                    new ScepterItem(
                             new Item.Properties().stacksTo(1),
-                            com.wsteam.wandscape.scepter.ScepterKind.SHELTER));
+                            ScepterKind.SHELTER));
     public static final DeferredItem<Item> HOSTILE_WAND =
             ITEMS.register("hostile_wand", () ->
-                    new com.wsteam.wandscape.scepter.ScepterItem(
+                    new ScepterItem(
                             new Item.Properties().stacksTo(1),
-                            com.wsteam.wandscape.scepter.ScepterKind.HOSTILE));
+                            ScepterKind.HOSTILE));
     public static final DeferredItem<Item> OMNI_SCEPTER =
             ITEMS.register("omni_scepter", () ->
-                    new com.wsteam.wandscape.scepter.OmniScepterItem(new Item.Properties().stacksTo(1)));
-    public static final com.wsteam.wandscape.scepter.internal.ScepterApiImpl SCEPTER_API =
-            new com.wsteam.wandscape.scepter.internal.ScepterApiImpl();
+                    new OmniScepterItem(new Item.Properties().stacksTo(1)));
+    public static final ScepterApiImpl SCEPTER_API =
+            new ScepterApiImpl();
 
     // ---- compass: 魔法指南针（三档，指针指向玩家自己殖民地的市政厅，合成站 1/10/20 级配方产出）----
     public static final DeferredItem<Item> MAGIC_COMPASS =
@@ -384,7 +402,7 @@ public class Wandscape {
             ITEMS.register("building_scanner", () -> new BlockItem(BUILDING_SCANNER.get(), new Item.Properties()));
 
     public static final DeferredHolder<Block, Block> INTERACT_SPOT_MARKER = BLOCKS.register("interact_spot_marker",
-            () -> new com.wsteam.wandscape.building.scanner.InteractSpotMarkerBlock(
+            () -> new InteractSpotMarkerBlock(
                     BlockBehaviour.Properties.of().strength(2.0f).noOcclusion()));
     public static final DeferredItem<Item> INTERACT_SPOT_MARKER_ITEM =
             ITEMS.register("interact_spot_marker", () -> new BlockItem(INTERACT_SPOT_MARKER.get(), new Item.Properties()));
@@ -445,8 +463,8 @@ public class Wandscape {
     private final BuildingApiImpl buildingApi = new BuildingApiImpl();
     private final BuildingConfigLoader configLoader = BuildingConfigLoader.getInstance();
     public static final BlueprintConfigLoader BLUEPRINT_CONFIG_LOADER = new BlueprintConfigLoader();
-    public static final com.wsteam.wandscape.road.data.RoadPresetLoader ROAD_PRESET_LOADER =
-            com.wsteam.wandscape.road.data.RoadPresetLoader.getInstance();
+    public static final RoadPresetLoader ROAD_PRESET_LOADER =
+            RoadPresetLoader.getInstance();
     private final DecorationBonusSystem decorationBonusSystem;
     private final ShopStockManager shopStockManager;
     private final TavernApiImpl tavernApi;
@@ -467,19 +485,19 @@ public class Wandscape {
         MENUS.register(modEventBus);
         WandscapeSounds.SOUNDS.register(modEventBus);
         com.wsteam.wandscape.engine.attribute.WandscapeAttributes.ATTRIBUTES.register(modEventBus);
-        com.wsteam.wandscape.magic.internal.WandscapeEffects.PETRIFICATION.getId();
+        WandscapeEffects.PETRIFICATION.getId();
 
         NeoForge.EVENT_BUS.register(this);
         NeoForge.EVENT_BUS.register(HostileTargetingHandler.class);
         NeoForge.EVENT_BUS.register(BuildingNoSpawnZoneHandler.class);
-        NeoForge.EVENT_BUS.register(com.wsteam.wandscape.ring.internal.OathRingSyncHandler.class);
+        NeoForge.EVENT_BUS.register(OathRingSyncHandler.class);
         NeoForge.EVENT_BUS.register(CompassSyncHandler.class);
-        NeoForge.EVENT_BUS.register(com.wsteam.wandscape.scepter.internal.ScepterInteractHandler.class);
-        NeoForge.EVENT_BUS.register(com.wsteam.wandscape.scepter.internal.ScepterDeathHandler.class);
-        NeoForge.EVENT_BUS.register(com.wsteam.wandscape.guard.SelfDefenseHandler.class);
-        NeoForge.EVENT_BUS.register(com.wsteam.wandscape.guard.FollowAttackHandler.class);
-        NeoForge.EVENT_BUS.register(com.wsteam.wandscape.guard.NpcSpellPowerHandler.class);
-        NeoForge.EVENT_BUS.register(com.wsteam.wandscape.npc.internal.NpcDeathHandler.class);
+        NeoForge.EVENT_BUS.register(ScepterInteractHandler.class);
+        NeoForge.EVENT_BUS.register(ScepterDeathHandler.class);
+        NeoForge.EVENT_BUS.register(SelfDefenseHandler.class);
+        NeoForge.EVENT_BUS.register(FollowAttackHandler.class);
+        NeoForge.EVENT_BUS.register(NpcSpellPowerHandler.class);
+        NeoForge.EVENT_BUS.register(com.wsteam.wandscape.content.npc.internal.NpcDeathHandler.class);
         NeoForge.EVENT_BUS.register(BuildingInteractHandler.class);
         NeoForge.EVENT_BUS.register(com.wsteam.wandscape.shared.network.PanelStateTracker.class);
         NeoForge.EVENT_BUS.register(com.wsteam.wandscape.shared.network.tasks.TaskPanelSyncTracker.class);
@@ -559,9 +577,9 @@ public class Wandscape {
                         ShopOpenPacket.STREAM_CODEC,
                         (packet, ctx) -> ShopOpenPacket.handleClient(packet))
                 .playToClient(
-                        com.wsteam.wandscape.building.network.BuildingConfigSyncChunkPacket.TYPE,
-                        com.wsteam.wandscape.building.network.BuildingConfigSyncChunkPacket.STREAM_CODEC,
-                        (packet, ctx) -> com.wsteam.wandscape.building.network.BuildingConfigSyncChunkPacket.handleClient(packet))
+                        BuildingConfigSyncChunkPacket.TYPE,
+                        BuildingConfigSyncChunkPacket.STREAM_CODEC,
+                        (packet, ctx) -> BuildingConfigSyncChunkPacket.handleClient(packet))
                 .playToServer(
                         ShopMaxStockPacket.TYPE,
                         ShopMaxStockPacket.STREAM_CODEC,
@@ -610,9 +628,9 @@ public class Wandscape {
                         RoadPlacePacket.STREAM_CODEC,
                         (packet, ctx) -> RoadPlacePacket.handleServer(packet, (net.minecraft.server.level.ServerPlayer) ctx.player()))
                 .playToClient(
-                        com.wsteam.wandscape.ring.network.OathRingDataPacket.TYPE,
-                        com.wsteam.wandscape.ring.network.OathRingDataPacket.STREAM_CODEC,
-                        (packet, ctx) -> com.wsteam.wandscape.ring.network.OathRingDataPacket.handleClient(packet))
+                        OathRingDataPacket.TYPE,
+                        OathRingDataPacket.STREAM_CODEC,
+                        (packet, ctx) -> OathRingDataPacket.handleClient(packet))
                 .playToClient(
                         CompassTargetPacket.TYPE,
                         CompassTargetPacket.STREAM_CODEC,
@@ -728,22 +746,22 @@ public class Wandscape {
                         (packet, ctx) -> ScannerExportPacket.handleServer(packet,
                                 (ServerPlayer) ctx.player()))
                 .playToServer(
-                        com.wsteam.wandscape.building.scanner.network.ScannerValuePacket.TYPE,
-                        com.wsteam.wandscape.building.scanner.network.ScannerValuePacket.STREAM_CODEC,
-                        (packet, ctx) -> com.wsteam.wandscape.building.scanner.network.ScannerValuePacket.handleServer(packet,
+                        ScannerValuePacket.TYPE,
+                        ScannerValuePacket.STREAM_CODEC,
+                        (packet, ctx) -> ScannerValuePacket.handleServer(packet,
                                 (ServerPlayer) ctx.player()))
                 .playToServer(
-                        com.wsteam.wandscape.road.network.SplineBuildPacket.TYPE,
-                        com.wsteam.wandscape.road.network.SplineBuildPacket.STREAM_CODEC,
-                        (packet, ctx) -> com.wsteam.wandscape.road.network.SplineBuildPacket.handleServer(packet, (ServerPlayer) ctx.player()))
+                        SplineBuildPacket.TYPE,
+                        SplineBuildPacket.STREAM_CODEC,
+                        (packet, ctx) -> SplineBuildPacket.handleServer(packet, (ServerPlayer) ctx.player()))
                 .playToServer(
-                        com.wsteam.wandscape.road.network.RoadInteractPacket.TYPE,
-                        com.wsteam.wandscape.road.network.RoadInteractPacket.STREAM_CODEC,
-                        (packet, ctx) -> com.wsteam.wandscape.road.network.RoadInteractPacket.handleServer(packet, (ServerPlayer) ctx.player()))
+                        RoadInteractPacket.TYPE,
+                        RoadInteractPacket.STREAM_CODEC,
+                        (packet, ctx) -> RoadInteractPacket.handleServer(packet, (ServerPlayer) ctx.player()))
                 .playToServer(
-                        com.wsteam.wandscape.road.network.RoadWithdrawPacket.TYPE,
-                        com.wsteam.wandscape.road.network.RoadWithdrawPacket.STREAM_CODEC,
-                        (packet, ctx) -> com.wsteam.wandscape.road.network.RoadWithdrawPacket.handleServer(packet, (ServerPlayer) ctx.player()))
+                        RoadWithdrawPacket.TYPE,
+                        RoadWithdrawPacket.STREAM_CODEC,
+                        (packet, ctx) -> RoadWithdrawPacket.handleServer(packet, (ServerPlayer) ctx.player()))
                 // ── Wandscape Panel ──
                 .playToServer(
                         com.wsteam.wandscape.shared.network.PanelStateTogglePacket.TYPE,
@@ -757,9 +775,9 @@ public class Wandscape {
                                 .handleClient(packet))
                 // ── Stats ──
                 .playToClient(
-                        com.wsteam.wandscape.stats.network.StatsSyncPacket.TYPE,
-                        com.wsteam.wandscape.stats.network.StatsSyncPacket.STREAM_CODEC,
-                        (packet, ctx) -> com.wsteam.wandscape.stats.network.StatsSyncPacket
+                        StatsSyncPacket.TYPE,
+                        StatsSyncPacket.STREAM_CODEC,
+                        (packet, ctx) -> StatsSyncPacket
                                 .handleClient(packet))
                 // ── Building interaction area overlay ──
                 .playToClient(
@@ -815,9 +833,9 @@ public class Wandscape {
                         (packet, ctx) -> TouristDataPacket.handleClient(packet))
                 // ── Tourist purchase / service bubble ──
                 .playToClient(
-                        com.wsteam.wandscape.tourist.network.TouristBubblePacket.TYPE,
-                        com.wsteam.wandscape.tourist.network.TouristBubblePacket.STREAM_CODEC,
-                        (packet, ctx) -> com.wsteam.wandscape.tourist.network.TouristBubblePacket.handleClient(packet))
+                        TouristBubblePacket.TYPE,
+                        TouristBubblePacket.STREAM_CODEC,
+                        (packet, ctx) -> TouristBubblePacket.handleClient(packet))
                 // ── Colony day/night ambient ──
                 .playToClient(
                         com.wsteam.wandscape.shared.network.ColonyAmbientPacket.TYPE,
@@ -832,9 +850,9 @@ public class Wandscape {
                                 .handleServer(packet, (net.minecraft.server.level.ServerPlayer) ctx.player()))
                 // ── Town hall naming rule switch ──
                 .playToServer(
-                        com.wsteam.wandscape.building.network.TownHallNameStylePacket.TYPE,
-                        com.wsteam.wandscape.building.network.TownHallNameStylePacket.STREAM_CODEC,
-                        (packet, ctx) -> com.wsteam.wandscape.building.network.TownHallNameStylePacket
+                        TownHallNameStylePacket.TYPE,
+                        TownHallNameStylePacket.STREAM_CODEC,
+                        (packet, ctx) -> TownHallNameStylePacket
                                 .handleServer(packet, (net.minecraft.server.level.ServerPlayer) ctx.player()))
                 // ── Colony create (town hall naming flow) ──
                 .playToServer(
@@ -884,14 +902,14 @@ public class Wandscape {
                                 (net.minecraft.server.level.ServerPlayer) ctx.player()))
                 // ── Spline Road Editor ──
                 .playToClient(
-                        com.wsteam.wandscape.road.network.SplineEditorEnterPacket.TYPE,
-                        com.wsteam.wandscape.road.network.SplineEditorEnterPacket.STREAM_CODEC,
-                        com.wsteam.wandscape.road.network.SplineEditorEnterPacket::handleClient)
+                        SplineEditorEnterPacket.TYPE,
+                        SplineEditorEnterPacket.STREAM_CODEC,
+                        SplineEditorEnterPacket::handleClient)
                 // ── Native Road Studio ──
                 .playToClient(
-                        com.wsteam.wandscape.road.network.RoadStudioEnterPacket.TYPE,
-                        com.wsteam.wandscape.road.network.RoadStudioEnterPacket.STREAM_CODEC,
-                        com.wsteam.wandscape.road.network.RoadStudioEnterPacket::handleClient)
+                        RoadStudioEnterPacket.TYPE,
+                        RoadStudioEnterPacket.STREAM_CODEC,
+                        RoadStudioEnterPacket::handleClient)
                 // ── Task & Mage Management Panel ──
                 .playToServer(
                         com.wsteam.wandscape.shared.network.tasks.TaskPanelSubscribePacket.TYPE,
@@ -1020,7 +1038,7 @@ public class Wandscape {
         // Oath ring per-player storage (eagerly load so ring interactions never hit a null instance)
         OathRingSavedData.get(event.getServer());
         // Scepter marks per-colony storage (庇护/敌对 标记长期持久化；预载避免首次使用读档延迟)
-        com.wsteam.wandscape.scepter.internal.ScepterMarksSavedData.get(event.getServer());
+        ScepterMarksSavedData.get(event.getServer());
         Log.info(TAG, "Oath ring storage wired");
 
         // Colony level data
@@ -1088,7 +1106,7 @@ public class Wandscape {
                 .then(TouristCommand.node())
                 .then(com.wsteam.wandscape.command.TavernCommand.node())
                 .then(TransportCommand.node())
-                .then(com.wsteam.wandscape.guard.GuardCommand.node())
+                .then(GuardCommand.node())
                 .then(com.wsteam.wandscape.command.GuideCommand.node())
                 .then(com.wsteam.wandscape.command.SplineEditorCommand.node())
                 .then(com.wsteam.wandscape.command.MagicCommand.node())
@@ -1115,7 +1133,7 @@ public class Wandscape {
         try {
             // Colony ambient: 建筑包围盒+20格内玩家昼夜环境音门控（服务端判断+发包）
             try (var s = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("tick.ambient")) {
-                com.wsteam.wandscape.building.internal.ColonyAmbientTracker.tick(event.getServer());
+                ColonyAmbientTracker.tick(event.getServer());
             }
 
             // Magic cast: 法阵动画结束后生成信标光束（不依赖 ECS）
@@ -1125,7 +1143,7 @@ public class Wandscape {
 
             // Altar: 每 tick 推进所有祭坛的魔法冷却（SavedData，按祭坛独立）
             try (var s = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("tick.altar_cast")) {
-                com.wsteam.wandscape.building.internal.AltarCastHandler.tick(event.getServer().overworld());
+                AltarCastHandler.tick(event.getServer().overworld());
             }
 
             // Iron's Spells compat: 推进持续施法与长蓄力法术
@@ -1196,7 +1214,7 @@ public class Wandscape {
 
             // ①g1 Tick projectile dodge (walk away from incoming hostile arrows/skulls; throttled)
             try (var s = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("tick.projectile_dodge")) {
-                com.wsteam.wandscape.guard.ProjectileDodge.tick(world);
+                ProjectileDodge.tick(world);
             }
 
             // ①g2 Tick altar cast channeling countdowns (altar-only magic channel → effect fire)
@@ -1211,8 +1229,8 @@ public class Wandscape {
             var raidLevel = event.getServer().overworld();
             if (raidLevel != null) {
                 try (var s = com.wsteam.wandscape.shared.util.TickProfiler.INSTANCE.start("tick.raid")) {
-                    com.wsteam.wandscape.raid.RaidTriggerScanner.INSTANCE.tick(raidLevel);
-                    com.wsteam.wandscape.raid.ColonyRaidTracker.INSTANCE.tick(raidLevel);
+                    RaidTriggerScanner.INSTANCE.tick(raidLevel);
+                    ColonyRaidTracker.INSTANCE.tick(raidLevel);
                 }
             }
 
@@ -1239,7 +1257,7 @@ public class Wandscape {
                     var overworld = event.getServer().overworld();
                     if (overworld != null) {
                         for (var colonyId : colonyApi.getAllColonyIds()) {
-                            com.wsteam.wandscape.npc.internal.ReviveHandler.checkAndAutoReviveColony(overworld, colonyId);
+                            com.wsteam.wandscape.content.npc.internal.ReviveHandler.checkAndAutoReviveColony(overworld, colonyId);
                         }
                     }
                 }
@@ -1269,16 +1287,16 @@ public class Wandscape {
         int totalCompressedBytes = 0;
         int configIndex = 0;
         for (String json : jsonList) {
-            byte[] compressed = com.wsteam.wandscape.building.network.BuildingConfigCompressor.compress(json);
+            byte[] compressed = BuildingConfigCompressor.compress(json);
             totalCompressedBytes += compressed.length;
             int totalChunks = Math.max(1, (compressed.length
-                    + com.wsteam.wandscape.building.network.BuildingConfigSyncChunkPacket.CHUNK_BYTES - 1)
-                    / com.wsteam.wandscape.building.network.BuildingConfigSyncChunkPacket.CHUNK_BYTES);
+                    + BuildingConfigSyncChunkPacket.CHUNK_BYTES - 1)
+                    / BuildingConfigSyncChunkPacket.CHUNK_BYTES);
             int chunkIndex = 0;
-            for (int off = 0; off < compressed.length; off += com.wsteam.wandscape.building.network.BuildingConfigSyncChunkPacket.CHUNK_BYTES) {
-                int len = Math.min(com.wsteam.wandscape.building.network.BuildingConfigSyncChunkPacket.CHUNK_BYTES,
+            for (int off = 0; off < compressed.length; off += BuildingConfigSyncChunkPacket.CHUNK_BYTES) {
+                int len = Math.min(BuildingConfigSyncChunkPacket.CHUNK_BYTES,
                         compressed.length - off);
-                var pkt = new com.wsteam.wandscape.building.network.BuildingConfigSyncChunkPacket(
+                var pkt = new BuildingConfigSyncChunkPacket(
                         configIndex, chunkIndex, totalChunks, totalConfigs,
                         java.util.Arrays.copyOfRange(compressed, off, off + len));
                 if (event.getPlayer() != null) {

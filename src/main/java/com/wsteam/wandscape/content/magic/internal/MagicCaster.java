@@ -3,7 +3,7 @@ package com.wsteam.wandscape.content.magic.internal;
 import com.wsteam.wandscape.content.magic.data.MagicCircleSpec;
 import com.wsteam.wandscape.content.magic.data.MagicDef;
 import com.wsteam.wandscape.content.magic.entity.MagicBeamEntity;
-import com.wsteam.wandscape.npc.entity.WandscapeNpc;
+import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.network.MagicCircleCastPacket;
 import net.minecraft.core.BlockPos;

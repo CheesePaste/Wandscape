@@ -1,6 +1,6 @@
 package com.wsteam.wandscape.content.building.projection.network;
 
-import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
+import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.content.building.projection.data.BuildingSlot;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
@@ -27,7 +27,7 @@ public final class ProjectionNetwork {
         try {
             Log.info(TAG, "[Init] Loading ProjectionNetwork class...");
             // Force-resolve key dependencies to catch linkage errors early
-            Class.forName("com.wsteam.wandscape.building.internal.BuildingConfigLoader");
+            Class.forName("com.wsteam.wandscape.content.building.internal.BuildingConfigLoader");
             Class.forName("com.wsteam.wandscape.shared.registry.WandscapeApis");
             Log.info(TAG, "[Init] Dependencies resolved successfully");
         } catch (Throwable t) {

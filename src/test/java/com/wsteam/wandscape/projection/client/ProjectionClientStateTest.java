@@ -2,6 +2,7 @@ package com.wsteam.wandscape.projection.client;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import com.wsteam.wandscape.content.building.projection.client.ProjectionClientState;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 

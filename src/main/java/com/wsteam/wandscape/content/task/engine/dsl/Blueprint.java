@@ -1,6 +1,6 @@
-package com.wsteam.wandscape.task.engine.dsl;
+package com.wsteam.wandscape.content.task.engine.dsl;
 
-import com.wsteam.wandscape.task.runtime.TaskSequence;
+import com.wsteam.wandscape.content.task.runtime.TaskSequence;
 
 import javax.annotation.Nullable;
 import java.util.Collections;

@@ -1,5 +1,6 @@
 package com.wsteam.wandscape.mixin;
 
+import com.wsteam.wandscape.content.road.client.SplineEditorClientState;
 import net.minecraft.client.Camera;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.BlockGetter;
@@ -27,13 +28,13 @@ public abstract class MixinSplineEditorCamera {
     @Inject(method = "setup", at = @At("TAIL"))
     private void onSetupTail(BlockGetter level, Entity entity, boolean detached,
                              boolean thirdPersonReverse, float partialTick, CallbackInfo ci) {
-        if (!com.wsteam.wandscape.road.client.SplineEditorClientState.isEditing()) return;
+        if (!SplineEditorClientState.isEditing()) return;
         setPosition(
-                com.wsteam.wandscape.road.client.SplineEditorClientState.getCamX(),
-                com.wsteam.wandscape.road.client.SplineEditorClientState.getCamY(),
-                com.wsteam.wandscape.road.client.SplineEditorClientState.getCamZ());
+                SplineEditorClientState.getCamX(),
+                SplineEditorClientState.getCamY(),
+                SplineEditorClientState.getCamZ());
         setRotation(
-                com.wsteam.wandscape.road.client.SplineEditorClientState.getCamYaw(),
-                com.wsteam.wandscape.road.client.SplineEditorClientState.getCamPitch());
+                SplineEditorClientState.getCamYaw(),
+                SplineEditorClientState.getCamPitch());
     }
 }

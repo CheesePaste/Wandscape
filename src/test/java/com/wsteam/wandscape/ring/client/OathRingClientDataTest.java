@@ -1,5 +1,6 @@
 package com.wsteam.wandscape.ring.client;
 
+import com.wsteam.wandscape.content.items.ring.client.OathRingClientData;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 

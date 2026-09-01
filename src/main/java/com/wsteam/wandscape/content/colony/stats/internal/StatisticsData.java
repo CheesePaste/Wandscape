@@ -1,7 +1,7 @@
-package com.wsteam.wandscape.stats.internal;
+package com.wsteam.wandscape.content.colony.stats.internal;
 
-import com.wsteam.wandscape.stats.data.ColonyDailySnapshot;
-import com.wsteam.wandscape.stats.data.ColonyStatsSummary;
+import com.wsteam.wandscape.content.colony.stats.data.ColonyDailySnapshot;
+import com.wsteam.wandscape.content.colony.stats.data.ColonyStatsSummary;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;

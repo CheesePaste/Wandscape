@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.production.internal;
+package com.wsteam.wandscape.content.production.internal;
 
 /**
  * Computes the windowed quantity range shown by the production quantity slider.

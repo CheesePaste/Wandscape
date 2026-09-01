@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.tourist.internal;
+package com.wsteam.wandscape.content.tourist.internal;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;

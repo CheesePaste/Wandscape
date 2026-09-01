@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.guard;
+package com.wsteam.wandscape.content.npc.guard;
 
 /**
  * 守卫模块固定常量。可调数值（半径等）在 {@code Config.java}（TOML）。

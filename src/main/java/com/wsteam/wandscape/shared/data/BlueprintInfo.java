@@ -1,6 +1,6 @@
 package com.wsteam.wandscape.shared.data;
 
-import com.wsteam.wandscape.task.engine.dsl.BlueprintDefinition;
+import com.wsteam.wandscape.content.task.engine.dsl.BlueprintDefinition;
 
 import java.util.Map;
 /**

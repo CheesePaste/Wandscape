@@ -1,10 +1,10 @@
-package com.wsteam.wandscape.tourist.internal;
+package com.wsteam.wandscape.content.tourist.internal;
 
 import com.wsteam.wandscape.Wandscape;
-import com.wsteam.wandscape.building.scanner.InteractSpotMarkerBlock;
+import com.wsteam.wandscape.content.building.scanner.InteractSpotMarkerBlock;
 import com.wsteam.wandscape.shared.data.Activity;
 import com.wsteam.wandscape.shared.log.Log;
-import com.wsteam.wandscape.tourist.entity.TouristEntity;
+import com.wsteam.wandscape.content.tourist.entity.TouristEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;

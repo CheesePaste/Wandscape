@@ -1,8 +1,7 @@
 package com.wsteam.wandscape.element.internal;
 
-import java.util.List;
-
 import com.wsteam.wandscape.Wandscape;
+import com.wsteam.wandscape.content.element.internal.ElementApiImpl;
 import com.wsteam.wandscape.shared.data.ElementType;
 
 import org.junit.jupiter.api.BeforeEach;

@@ -1,8 +1,8 @@
-package com.wsteam.wandscape.overview.network;
+package com.wsteam.wandscape.content.colony.overview.network;
 
-import com.wsteam.wandscape.building.internal.BuildingInteractHandler;
-import com.wsteam.wandscape.building.internal.BuildingSavedData;
-import com.wsteam.wandscape.building.internal.BuildingState;
+import com.wsteam.wandscape.content.building.internal.BuildingInteractHandler;
+import com.wsteam.wandscape.content.building.internal.BuildingSavedData;
+import com.wsteam.wandscape.content.building.internal.BuildingState;
 import com.wsteam.wandscape.shared.log.Log;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;

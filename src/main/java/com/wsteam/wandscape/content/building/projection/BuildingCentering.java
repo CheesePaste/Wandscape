@@ -1,7 +1,7 @@
 package com.wsteam.wandscape.content.building.projection;
 
-import com.wsteam.wandscape.building.data.BlockOffset;
-import com.wsteam.wandscape.building.data.BuildingConfig;
+import com.wsteam.wandscape.content.building.data.BlockOffset;
+import com.wsteam.wandscape.content.building.data.BuildingConfig;
 
 import java.util.List;
 

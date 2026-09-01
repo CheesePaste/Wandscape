@@ -1,8 +1,8 @@
-package com.wsteam.wandscape.task.source;
+package com.wsteam.wandscape.content.task.source;
 
 import com.wsteam.wandscape.core.ecs.World;
-import com.wsteam.wandscape.task.engine.pool.GlobalTaskPool;
-import com.wsteam.wandscape.task.engine.pool.TaskRequest;
+import com.wsteam.wandscape.content.task.engine.pool.GlobalTaskPool;
+import com.wsteam.wandscape.content.task.engine.pool.TaskRequest;
 /**
  * Adapter-facing API for player-created tasks.
  * Not a polling source - the adapter calls {@link #publish(TaskRequest)} directly.

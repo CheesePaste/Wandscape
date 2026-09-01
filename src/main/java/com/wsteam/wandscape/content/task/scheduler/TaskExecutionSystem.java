@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.task.scheduler;
+package com.wsteam.wandscape.content.task.scheduler;
 
 import com.wsteam.wandscape.core.boundary.ColonyResourceAccess;
 import com.wsteam.wandscape.core.boundary.MovementOps;
@@ -8,16 +8,16 @@ import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.types.GridPos;
 import com.wsteam.wandscape.core.types.ResourceStack;
 import com.wsteam.wandscape.core.types.RitualId;
-import com.wsteam.wandscape.op.api.AtomicOp;
-import com.wsteam.wandscape.op.executor.OpExecutor;
-import com.wsteam.wandscape.op.executor.OpExecutorRegistry;
-import com.wsteam.wandscape.op.executor.ResourceShortageException;
+import com.wsteam.wandscape.content.task.op.api.AtomicOp;
+import com.wsteam.wandscape.content.task.op.executor.OpExecutor;
+import com.wsteam.wandscape.content.task.op.executor.OpExecutorRegistry;
+import com.wsteam.wandscape.content.task.op.executor.ResourceShortageException;
 import com.wsteam.wandscape.shared.log.Log;
-import com.wsteam.wandscape.task.engine.pool.GlobalTask;
-import com.wsteam.wandscape.task.engine.pool.GlobalTaskPool;
-import com.wsteam.wandscape.task.runtime.ExecutorState;
-import com.wsteam.wandscape.task.runtime.NpcTaskPackage;
-import com.wsteam.wandscape.task.runtime.TaskSequence;
+import com.wsteam.wandscape.content.task.engine.pool.GlobalTask;
+import com.wsteam.wandscape.content.task.engine.pool.GlobalTaskPool;
+import com.wsteam.wandscape.content.task.runtime.ExecutorState;
+import com.wsteam.wandscape.content.task.runtime.NpcTaskPackage;
+import com.wsteam.wandscape.content.task.runtime.TaskSequence;
 
 import javax.annotation.Nullable;
 import java.util.List;

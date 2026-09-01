@@ -2,9 +2,10 @@ package com.wsteam.wandscape.tourist.internal;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import com.wsteam.wandscape.content.tourist.internal.TouristSimSystem;
 import org.junit.jupiter.api.Test;
 
-import com.wsteam.wandscape.tourist.internal.TouristSimSystem.NightOutcome;
+import com.wsteam.wandscape.content.tourist.internal.TouristSimSystem.NightOutcome;
 
 /** 夜间快进判定（玩家睡觉跳过夜晚时游客的夜间结果）纯逻辑单测。 */
 class TouristNightFastForwardTest {

@@ -1,15 +1,16 @@
-package com.wsteam.wandscape.tourist.entity;
+package com.wsteam.wandscape.content.tourist.entity;
 
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.Wandscape;
+import com.wsteam.wandscape.content.tourist.internal.*;
 import com.wsteam.wandscape.engine.nav.WandscapeNavigation;
 import com.wsteam.wandscape.shared.data.*;
 import com.wsteam.wandscape.shared.entity.ColonyVisitor;
 import com.wsteam.wandscape.shared.entity.VillagerLike;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.shared.registry.WandscapeConstants;
-import com.wsteam.wandscape.tourist.internal.*;
-import com.wsteam.wandscape.tourist.network.TouristDataPacket;
+import com.wsteam.wandscape.content.tourist.internal.*;
+import com.wsteam.wandscape.content.tourist.network.TouristDataPacket;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -45,8 +46,8 @@ import java.util.stream.Stream;
  * A tourist NPC that visits the colony to interact with shops and service buildings.
  *
  * <p>Extends {@link PathfinderMob} to use player-model rendering with custom skins.
- * Managed by {@link com.wsteam.wandscape.tourist.internal.TouristSpawnSystem} (time-scheduled spawn/despawn).
- * Uses {@link com.wsteam.wandscape.tourist.internal.TouristMoveGoal} for unified movement.
+ * Managed by {@link TouristSpawnSystem} (time-scheduled spawn/despawn).
+ * Uses {@link TouristMoveGoal} for unified movement.
  *
  * <p>95% tourist appearance (skins from {@code textures/entity/tourist}),
  * 5% mage appearance (skins from {@code textures/entity/wizard}).
@@ -286,7 +287,7 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new FloatGoal(this));
         this.goalSelector.addGoal(1, new OpenDoorGoal(this, true));
-        this.goalSelector.addGoal(2, new com.wsteam.wandscape.tourist.internal.TouristMoveGoal(this, 0.5, 0.35));
+        this.goalSelector.addGoal(2, new TouristMoveGoal(this, 0.5, 0.35));
         this.goalSelector.addGoal(3, new RandomLookAroundGoal(this));
     }
 
@@ -417,7 +418,7 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
         // Re-establish active building spot occupation when entity is loaded from disk (e.g. resting on chairs/browsing shops)
         if (targetBuildingId != null && occupiedSpot >= 0 && getCurrentActivity() != null && activityTicks > 0 && !level().isClientSide) {
             if (level() instanceof net.minecraft.server.level.ServerLevel sl) {
-                int claimed = com.wsteam.wandscape.tourist.internal.TouristSimulation.claimSpotAt(sl, targetBuildingId, occupiedSpot, getUUID());
+                int claimed = TouristSimulation.claimSpotAt(sl, targetBuildingId, occupiedSpot, getUUID());
                 if (claimed < 0) {
                     // Spot already claimed or building no longer valid — clear activity state safely
                     occupiedSpot = -1;
@@ -951,11 +952,11 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
 
     public Set<UUID> getVisitedBuildings() { return visitedBuildings; }
     public void addVisitedBuilding(UUID buildingId) {
-        if (com.wsteam.wandscape.tourist.internal.TouristCooldownDebug.skipVisitedBuildings) return;
+        if (TouristCooldownDebug.skipVisitedBuildings) return;
         visitedBuildings.add(buildingId);
     }
     public boolean hasVisitedBuilding(UUID buildingId) {
-        if (com.wsteam.wandscape.tourist.internal.TouristCooldownDebug.skipVisitedBuildings) return false;
+        if (TouristCooldownDebug.skipVisitedBuildings) return false;
         return visitedBuildings.contains(buildingId);
     }
 

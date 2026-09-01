@@ -4,7 +4,7 @@ import com.mojang.brigadier.Command;
 import com.mojang.brigadier.context.CommandContext;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.boundary.WandscapeMovementOps;
-import com.wsteam.wandscape.npc.entity.WandscapeNpc;
+import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;

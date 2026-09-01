@@ -1,7 +1,8 @@
-package com.wsteam.wandscape.road.network;
+package com.wsteam.wandscape.content.road.network;
 
-import com.wsteam.wandscape.road.client.SplineEditorClientState;
-import com.wsteam.wandscape.road.client.studio.RoadStudioOverlay;
+import com.wsteam.wandscape.content.road.client.RoadPlacementState;
+import com.wsteam.wandscape.content.road.client.SplineEditorClientState;
+import com.wsteam.wandscape.content.road.client.studio.RoadStudioOverlay;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -29,12 +30,12 @@ public record SplineEditorEnterPacket(boolean enter) implements CustomPacketPayl
     public static void handleClient(SplineEditorEnterPacket packet, IPayloadContext ctx) {
         ctx.enqueueWork(() -> {
             if (packet.enter()) {
-                com.wsteam.wandscape.road.client.RoadPlacementState.setActiveTool(com.wsteam.wandscape.road.client.RoadPlacementState.ToolMode.SPLINE);
-                com.wsteam.wandscape.road.client.RoadPlacementState.enterProjection();
+                RoadPlacementState.setActiveTool(RoadPlacementState.ToolMode.SPLINE);
+                RoadPlacementState.enterProjection();
                 SplineEditorClientState.enterEditMode();
                 RoadStudioOverlay.open();
             } else {
-                com.wsteam.wandscape.road.client.RoadPlacementState.exitProjection();
+                RoadPlacementState.exitProjection();
                 SplineEditorClientState.exitEditMode();
                 RoadStudioOverlay.close();
             }

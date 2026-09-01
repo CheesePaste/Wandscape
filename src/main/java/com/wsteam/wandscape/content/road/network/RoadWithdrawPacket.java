@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.road.network;
+package com.wsteam.wandscape.content.road.network;
 
 import com.wsteam.wandscape.shared.api.RoadApi;
 import com.wsteam.wandscape.shared.log.Log;

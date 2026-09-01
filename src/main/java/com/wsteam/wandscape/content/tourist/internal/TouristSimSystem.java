@@ -1,8 +1,8 @@
-package com.wsteam.wandscape.tourist.internal;
+package com.wsteam.wandscape.content.tourist.internal;
 
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.Wandscape;
-import com.wsteam.wandscape.building.internal.BuildingState;
+import com.wsteam.wandscape.content.building.internal.BuildingState;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.colony.ColonyActivation;
 import com.wsteam.wandscape.engine.colony.ColonyLevelManager;
@@ -13,7 +13,7 @@ import com.wsteam.wandscape.shared.data.BuildingData;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.shared.registry.WandscapeConstants;
-import com.wsteam.wandscape.tourist.entity.TouristEntity;
+import com.wsteam.wandscape.content.tourist.entity.TouristEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -379,7 +379,7 @@ public final class TouristSimSystem {
         e.ensureStayWindow(e.level().getGameTime());
         for (UUID id : s.getVisitedBuildings()) e.addVisitedBuilding(id);
         for (var v : s.getRecentVisits()) e.addVisitMemory(v);
-        e.applyState(com.wsteam.wandscape.tourist.internal.TouristState.VISITING);
+        e.applyState(TouristState.VISITING);
     }
 
     private void exportToShadow(TouristEntity e, TouristShadow s) {

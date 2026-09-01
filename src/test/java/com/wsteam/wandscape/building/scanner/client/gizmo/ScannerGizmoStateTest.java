@@ -1,5 +1,6 @@
 package com.wsteam.wandscape.building.scanner.client.gizmo;
 
+import com.wsteam.wandscape.content.building.scanner.client.gizmo.ScannerGizmoState;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;

@@ -1,16 +1,16 @@
 package com.wsteam.wandscape.engine;
 
-import com.wsteam.wandscape.building.executor.AltarCastExecutor;
+import com.wsteam.wandscape.content.building.executor.AltarCastExecutor;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.engine.bootstrap.EngineBootstrap;
 import com.wsteam.wandscape.engine.boundary.*;
 import com.wsteam.wandscape.engine.colony.ColonyLevelManager;
 import com.wsteam.wandscape.engine.source.blueprint.BlueprintConfigLoader;
 import com.wsteam.wandscape.engine.transport.ItemTransportManager;
-import com.wsteam.wandscape.guard.executor.GuardAttackExecutor;
-import com.wsteam.wandscape.guard.executor.SelfDefenseExecutor;
-import com.wsteam.wandscape.road.engine.RoadSavedData;
-import com.wsteam.wandscape.task.source.PlayerManualSource;
+import com.wsteam.wandscape.content.npc.guard.executor.GuardAttackExecutor;
+import com.wsteam.wandscape.content.npc.guard.executor.SelfDefenseExecutor;
+import com.wsteam.wandscape.content.road.engine.RoadSavedData;
+import com.wsteam.wandscape.content.task.source.PlayerManualSource;
 
 import javax.annotation.Nullable;
 /**

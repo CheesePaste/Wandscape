@@ -1,13 +1,15 @@
-package com.wsteam.wandscape.tourist.internal;
+package com.wsteam.wandscape.content.tourist.internal;
 
 import com.wsteam.wandscape.Config;
-import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
-import com.wsteam.wandscape.building.internal.BuildingState;
+import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
+import com.wsteam.wandscape.content.building.internal.BuildingState;
+import com.wsteam.wandscape.content.road.core.RoadEdge;
+import com.wsteam.wandscape.content.road.engine.RoadSavedData;
 import com.wsteam.wandscape.core.event.NarrativeEventTriggered;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.colony.ColonyActivation;
 import com.wsteam.wandscape.engine.service.ParticleService;
-import com.wsteam.wandscape.road.engine.WandscapeTags;
+import com.wsteam.wandscape.content.road.engine.WandscapeTags;
 import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.data.Activity;
 import com.wsteam.wandscape.shared.data.BuildingData;
@@ -15,8 +17,8 @@ import com.wsteam.wandscape.shared.data.NarrativeEvent;
 import com.wsteam.wandscape.shared.data.VisitMemory;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
-import com.wsteam.wandscape.tourist.entity.TouristEntity;
-import com.wsteam.wandscape.tourist.network.TouristBubblePacket;
+import com.wsteam.wandscape.content.tourist.entity.TouristEntity;
+import com.wsteam.wandscape.content.tourist.network.TouristBubblePacket;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
@@ -1607,11 +1609,11 @@ public class TouristMoveGoal extends Goal {
     private BlockPos pickWanderTarget(BlockPos anchor, int radius) {
         // 1. Prefer points sampled along structured RoadNetwork edges
         if (tourist.level() instanceof ServerLevel sl) {
-            var network = com.wsteam.wandscape.road.engine.RoadSavedData.getOrCreate(sl).getNetwork();
+            var network = RoadSavedData.getOrCreate(sl).getNetwork();
             if (network != null && !network.isEmpty()) {
                 List<BlockPos> edgePoints = new ArrayList<>();
                 for (var edge : network.getEdges().values()) {
-                    if (edge.getStatus() == com.wsteam.wandscape.road.core.RoadEdge.EdgeStatus.COMPLETE) {
+                    if (edge.getStatus() == RoadEdge.EdgeStatus.COMPLETE) {
                         for (var pt : edge.getPath()) {
                             int distSq = (pt.x() - anchor.getX()) * (pt.x() - anchor.getX())
                                     + (pt.z() - anchor.getZ()) * (pt.z() - anchor.getZ());

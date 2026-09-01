@@ -1,8 +1,8 @@
-package com.wsteam.wandscape.element.internal;
+package com.wsteam.wandscape.content.element.internal;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import com.wsteam.wandscape.dataconfig.internal.WandscapeDataLoader;
+import com.wsteam.wandscape.foundation.registry.dataconfig.internal.WandscapeDataLoader;
 import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.registry.WandscapeDataRegistry;
 import net.minecraft.core.registries.BuiltInRegistries;

@@ -2,6 +2,7 @@ package com.wsteam.wandscape.magic.internal;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import com.wsteam.wandscape.content.magic.internal.MagicSpellExecutors;
 import org.junit.jupiter.api.Test;
 
 class MagicSpellExecutorsTest {

@@ -1,8 +1,8 @@
-package com.wsteam.wandscape.road.network;
+package com.wsteam.wandscape.content.road.network;
 
-import com.wsteam.wandscape.road.client.RoadPlacementState;
-import com.wsteam.wandscape.road.client.SplineEditorClientState;
-import com.wsteam.wandscape.road.client.studio.RoadStudioOverlay;
+import com.wsteam.wandscape.content.road.client.RoadPlacementState;
+import com.wsteam.wandscape.content.road.client.SplineEditorClientState;
+import com.wsteam.wandscape.content.road.client.studio.RoadStudioOverlay;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;

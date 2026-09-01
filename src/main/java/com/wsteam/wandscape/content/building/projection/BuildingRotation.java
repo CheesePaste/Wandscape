@@ -1,7 +1,7 @@
 package com.wsteam.wandscape.content.building.projection;
 
-import com.wsteam.wandscape.building.data.BlockOffset;
-import com.wsteam.wandscape.building.data.BuildingConfig;
+import com.wsteam.wandscape.content.building.data.BlockOffset;
+import com.wsteam.wandscape.content.building.data.BuildingConfig;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;

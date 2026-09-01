@@ -1,14 +1,20 @@
-package com.wsteam.wandscape.overview.client;
+package com.wsteam.wandscape.content.colony.overview.client;
 
 import com.mojang.blaze3d.platform.InputConstants;
+import com.wsteam.wandscape.content.building.projection.client.BuildGizmoController;
+import com.wsteam.wandscape.content.building.projection.client.BuildPopPanelOverlay;
+import com.wsteam.wandscape.content.road.client.RoadEditorInputHelper;
+import com.wsteam.wandscape.content.road.client.SplineEditorClientState;
+import com.wsteam.wandscape.content.road.client.studio.RoadStudioOverlay;
+import com.wsteam.wandscape.content.road.network.RoadInteractPacket;
 import com.wsteam.wandscape.content.tourist.entity.TouristEntity;
 import com.wsteam.wandscape.engine.service.SoundService;
 import com.wsteam.wandscape.engine.sound.WandscapeSounds;
-import com.wsteam.wandscape.overview.network.OverviewEntityInteractPacket;
-import com.wsteam.wandscape.overview.network.OverviewInteractPacket;
-import com.wsteam.wandscape.projection.BuildPlacement;
-import com.wsteam.wandscape.projection.client.ProjectionClientState;
-import com.wsteam.wandscape.road.client.RoadPlacementState;
+import com.wsteam.wandscape.content.colony.overview.network.OverviewEntityInteractPacket;
+import com.wsteam.wandscape.content.colony.overview.network.OverviewInteractPacket;
+import com.wsteam.wandscape.content.building.projection.BuildPlacement;
+import com.wsteam.wandscape.content.building.projection.client.ProjectionClientState;
+import com.wsteam.wandscape.content.road.client.RoadPlacementState;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket;
 import net.minecraft.client.Camera;
@@ -413,12 +419,12 @@ public final class OverviewFlightController {
 
     /** Whether the cursor is hovering or dragging a gizmo axis — that click belongs to the gizmo. */
     private static boolean isOverGizmo() {
-        com.wsteam.wandscape.projection.client.BuildGizmoController.AxisDrag hovered =
-                com.wsteam.wandscape.projection.client.BuildGizmoController.getHoveredAxis();
-        com.wsteam.wandscape.projection.client.BuildGizmoController.AxisDrag dragging =
-                com.wsteam.wandscape.projection.client.BuildGizmoController.getDraggingAxis();
-        return hovered != com.wsteam.wandscape.projection.client.BuildGizmoController.AxisDrag.NONE
-                || dragging != com.wsteam.wandscape.projection.client.BuildGizmoController.AxisDrag.NONE;
+        BuildGizmoController.AxisDrag hovered =
+                BuildGizmoController.getHoveredAxis();
+        BuildGizmoController.AxisDrag dragging =
+                BuildGizmoController.getDraggingAxis();
+        return hovered != BuildGizmoController.AxisDrag.NONE
+                || dragging != BuildGizmoController.AxisDrag.NONE;
     }
 
     /**
@@ -432,7 +438,7 @@ public final class OverviewFlightController {
         int screenW = mc.getWindow().getGuiScaledWidth();
         int screenH = mc.getWindow().getGuiScaledHeight();
 
-        if (com.wsteam.wandscape.projection.client.BuildPopPanelOverlay.isOverPanel(mouseX, mouseY, screenW)) return true;
+        if (BuildPopPanelOverlay.isOverPanel(mouseX, mouseY, screenW)) return true;
         if (com.wsteam.wandscape.shared.ui.panel.BuildingSelectionOverlay.isActive()) {
             int barY = com.wsteam.wandscape.shared.ui.panel.BuildingSelectionOverlay.getBarY(screenH);
             if (mouseY >= barY && mouseY <= barY + com.wsteam.wandscape.shared.ui.panel.BuildingSelectionOverlay.BAR_HEIGHT) {
@@ -469,10 +475,10 @@ public final class OverviewFlightController {
         if (mc.screen != null) return;
 
         // If spline editor or road placement is active or cursor is over a UI panel, don't intercept scroll!
-        if (com.wsteam.wandscape.road.client.SplineEditorClientState.isEditing()
-                || com.wsteam.wandscape.road.client.RoadPlacementState.isProjecting()
-                || com.wsteam.wandscape.road.client.studio.RoadStudioOverlay.isVisible()
-                || com.wsteam.wandscape.road.client.RoadEditorInputHelper.wantsMouse()) {
+        if (SplineEditorClientState.isEditing()
+                || RoadPlacementState.isProjecting()
+                || RoadStudioOverlay.isVisible()
+                || RoadEditorInputHelper.wantsMouse()) {
             return;
         }
 
@@ -531,13 +537,13 @@ public final class OverviewFlightController {
         if (mc.screen != null) return;
 
         // If spline editor or road placement is active, don't intercept mouse clicks!
-        if (com.wsteam.wandscape.road.client.SplineEditorClientState.isEditing()
-                || com.wsteam.wandscape.road.client.RoadPlacementState.isProjecting()
-                || com.wsteam.wandscape.road.client.studio.RoadStudioOverlay.isVisible()) {
+        if (SplineEditorClientState.isEditing()
+                || RoadPlacementState.isProjecting()
+                || RoadStudioOverlay.isVisible()) {
             return;
         }
 
-        boolean uiWantsMouse = com.wsteam.wandscape.road.client.RoadEditorInputHelper.wantsMouse();
+        boolean uiWantsMouse = RoadEditorInputHelper.wantsMouse();
         if (uiWantsMouse) return;
 
         double guiScale = mc.getWindow().getGuiScale();
@@ -580,7 +586,7 @@ public final class OverviewFlightController {
         AABB searchBox = new AABB(origin, end).inflate(2.0);
         java.util.List<net.minecraft.world.entity.Entity> entities = mc.level.getEntities(
                 mc.player, searchBox,
-                e -> (e instanceof com.wsteam.wandscape.npc.entity.WandscapeNpc
+                e -> (e instanceof com.wsteam.wandscape.content.npc.entity.WandscapeNpc
                         || e instanceof TouristEntity)
                         && e.isAlive());
 
@@ -665,7 +671,7 @@ public final class OverviewFlightController {
         // Ray hits under-construction road → open road construction panel
         BlockPos road = OverviewClientState.getTargetRoadPos();
         if (road != null) {
-            PacketDistributor.sendToServer(new com.wsteam.wandscape.road.network.RoadInteractPacket(road));
+            PacketDistributor.sendToServer(new RoadInteractPacket(road));
             Log.info(TAG, "[Overview] Interacting with road at {}", road);
             return;
         }

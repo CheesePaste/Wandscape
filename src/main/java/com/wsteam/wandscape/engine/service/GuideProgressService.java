@@ -1,14 +1,14 @@
 package com.wsteam.wandscape.engine.service;
 
-import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
-import com.wsteam.wandscape.building.internal.BuildingSavedData;
+import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
+import com.wsteam.wandscape.content.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.shared.api.GuideProgressApi;
 import com.wsteam.wandscape.shared.data.BuildingData;
 import com.wsteam.wandscape.shared.data.GuideProgressSavedData;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.network.GuideProgressSyncPacket;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
-import com.wsteam.wandscape.warehouse.ColonyItemBank;
+import com.wsteam.wandscape.content.warehouse.ColonyItemBank;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.PacketDistributor;

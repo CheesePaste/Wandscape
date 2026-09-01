@@ -1,18 +1,18 @@
 package com.wsteam.wandscape.task.engine.dsl;
 
-import com.wsteam.wandscape.core.boundary.MockBoundary;
+import com.wsteam.wandscape.content.task.engine.dsl.*;
+
 import java.util.*;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
-import com.wsteam.wandscape.op.api.AtomicOp;
-import com.wsteam.wandscape.task.engine.dsl.*;
+import com.wsteam.wandscape.content.task.op.api.AtomicOp;
 import com.wsteam.wandscape.core.types.BlockType;
 import com.wsteam.wandscape.core.types.GridPos;
 
-import com.wsteam.wandscape.task.runtime.TaskSequence;
+import com.wsteam.wandscape.content.task.runtime.TaskSequence;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;

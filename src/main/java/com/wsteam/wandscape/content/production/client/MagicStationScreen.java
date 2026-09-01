@@ -1,12 +1,12 @@
-package com.wsteam.wandscape.production.client;
+package com.wsteam.wandscape.content.production.client;
 
-import com.wsteam.wandscape.building.network.OpenWarehousePacket;
-import com.wsteam.wandscape.building.network.TaskQueueDataPacket;
-import com.wsteam.wandscape.building.network.TaskQueueModifyPacket;
-import com.wsteam.wandscape.magic.item.SpellItem;
-import com.wsteam.wandscape.production.network.MagicStationPacket;
-import com.wsteam.wandscape.production.network.MagicStationPacket.SpellEntry;
-import com.wsteam.wandscape.production.network.RequestProductionTaskPacket;
+import com.wsteam.wandscape.content.building.network.OpenWarehousePacket;
+import com.wsteam.wandscape.content.building.network.TaskQueueDataPacket;
+import com.wsteam.wandscape.content.building.network.TaskQueueModifyPacket;
+import com.wsteam.wandscape.content.items.SpellItem;
+import com.wsteam.wandscape.content.production.network.MagicStationPacket;
+import com.wsteam.wandscape.content.production.network.MagicStationPacket.SpellEntry;
+import com.wsteam.wandscape.content.production.network.RequestProductionTaskPacket;
 import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.ui.I18n;
 import com.wsteam.wandscape.shared.ui.component.*;

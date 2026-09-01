@@ -8,6 +8,7 @@ import java.util.concurrent.CompletableFuture;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
+import com.wsteam.wandscape.content.task.engine.pool.TaskRequest;
 import com.wsteam.wandscape.core.CoreBootstrap;
 import com.wsteam.wandscape.core.CoreBootstrapConfig;
 import com.wsteam.wandscape.core.boundary.MockBoundary;
@@ -15,11 +16,11 @@ import com.wsteam.wandscape.core.boundary.MovementOps;
 import com.wsteam.wandscape.core.component.TaskExecutor;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.types.NpcAttributes;
-import com.wsteam.wandscape.task.engine.dsl.BlueprintRegistry;
-import com.wsteam.wandscape.task.runtime.NpcTaskPackage;
-import com.wsteam.wandscape.task.runtime.TaskSequence;
-import com.wsteam.wandscape.task.runtime.TaskState;
-import com.wsteam.wandscape.task.scheduler.SystemBlueprintRegistry;
+import com.wsteam.wandscape.content.task.engine.dsl.BlueprintRegistry;
+import com.wsteam.wandscape.content.task.runtime.NpcTaskPackage;
+import com.wsteam.wandscape.content.task.runtime.TaskSequence;
+import com.wsteam.wandscape.content.task.runtime.TaskState;
+import com.wsteam.wandscape.content.task.scheduler.SystemBlueprintRegistry;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

@@ -4,6 +4,12 @@ import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.tree.CommandNode;
+import com.wsteam.wandscape.content.road.algorithm.RoadRouter;
+import com.wsteam.wandscape.content.road.core.PathPoint;
+import com.wsteam.wandscape.content.road.core.RoadEdge;
+import com.wsteam.wandscape.content.road.core.SplineLeg;
+import com.wsteam.wandscape.content.road.core.TransportRoute;
+import com.wsteam.wandscape.content.road.engine.RoadSavedData;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.transport.ItemTransportManager;
 import com.wsteam.wandscape.engine.transport.TransportItemEntity;
@@ -248,12 +254,12 @@ public final class TransportCommand {
         var level = src.getLevel();
         BlockPos center = BlockPos.containing(src.getPosition());
 
-        var roadData = com.wsteam.wandscape.road.engine.RoadSavedData.getOrCreate(level);
+        var roadData = RoadSavedData.getOrCreate(level);
         var network = roadData.getNetwork();
 
         int totalEdges = network.edgeCount();
         long completeEdges = network.getEdges().values().stream()
-                .filter(e -> e.getStatus() == com.wsteam.wandscape.road.core.RoadEdge.EdgeStatus.COMPLETE
+                .filter(e -> e.getStatus() == RoadEdge.EdgeStatus.COMPLETE
                         && e.getSpline() != null && e.getSpline().getSegmentsCount() > 0)
                 .count();
 
@@ -264,7 +270,7 @@ public final class TransportCommand {
 
         // Random queries within [center - radius, center + radius]
         java.util.Random rand = new java.util.Random(System.currentTimeMillis());
-        java.util.List<com.wsteam.wandscape.road.core.PathPoint[]> pairs = new java.util.ArrayList<>(iterations);
+        java.util.List<PathPoint[]> pairs = new java.util.ArrayList<>(iterations);
         for (int i = 0; i < iterations; i++) {
             int sx = center.getX() + rand.nextInt(radius * 2 + 1) - radius;
             int sz = center.getZ() + rand.nextInt(radius * 2 + 1) - radius;
@@ -274,16 +280,16 @@ public final class TransportCommand {
             int ez = center.getZ() + rand.nextInt(radius * 2 + 1) - radius;
             int ey = center.getY();
 
-            pairs.add(new com.wsteam.wandscape.road.core.PathPoint[]{
-                    new com.wsteam.wandscape.road.core.PathPoint(sx, sy, sz),
-                    new com.wsteam.wandscape.road.core.PathPoint(ex, ey, ez)
+            pairs.add(new PathPoint[]{
+                    new PathPoint(sx, sy, sz),
+                    new PathPoint(ex, ey, ez)
             });
         }
 
         // Warm-up
         for (int i = 0; i < Math.min(50, iterations); i++) {
-            com.wsteam.wandscape.road.core.PathPoint[] p = pairs.get(i);
-            com.wsteam.wandscape.road.algorithm.RoadRouter.plan(network, p[0], p[1]);
+            PathPoint[] p = pairs.get(i);
+            RoadRouter.plan(network, p[0], p[1]);
         }
 
         // Benchmark
@@ -296,16 +302,16 @@ public final class TransportCommand {
 
         long tStart = System.nanoTime();
         for (int i = 0; i < iterations; i++) {
-            com.wsteam.wandscape.road.core.PathPoint[] p = pairs.get(i);
+            PathPoint[] p = pairs.get(i);
             long t0 = System.nanoTime();
-            com.wsteam.wandscape.road.core.TransportRoute route = com.wsteam.wandscape.road.algorithm.RoadRouter.plan(network, p[0], p[1]);
+            TransportRoute route = RoadRouter.plan(network, p[0], p[1]);
             long t1 = System.nanoTime();
             latencies[i] = t1 - t0;
 
             int legs = route.legs().size();
             totalLegs += legs;
             long onRoadLegs = route.legs().stream().filter(l -> !l.offRoad()).count();
-            long offRoadLegs = route.legs().stream().filter(com.wsteam.wandscape.road.core.SplineLeg::offRoad).count();
+            long offRoadLegs = route.legs().stream().filter(SplineLeg::offRoad).count();
             totalOnRoadLegs += onRoadLegs;
             totalOffRoadLegs += offRoadLegs;
 

@@ -1,7 +1,7 @@
-package com.wsteam.wandscape.production.data;
+package com.wsteam.wandscape.content.production.data;
 
-import com.wsteam.wandscape.magic.item.SpellItem;
-import com.wsteam.wandscape.production.ProductionRecipeLoader;
+import com.wsteam.wandscape.content.items.SpellItem;
+import com.wsteam.wandscape.content.production.ProductionRecipeLoader;
 import com.wsteam.wandscape.shared.data.ElementType;
 import net.minecraft.nbt.CompoundTag;
 

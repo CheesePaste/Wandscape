@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.tourist.internal;
+package com.wsteam.wandscape.content.tourist.internal;
 
 /**
  * Movement state label for tourist entities.

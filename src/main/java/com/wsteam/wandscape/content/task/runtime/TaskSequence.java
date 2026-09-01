@@ -1,6 +1,6 @@
-package com.wsteam.wandscape.task.runtime;
+package com.wsteam.wandscape.content.task.runtime;
 
-import com.wsteam.wandscape.op.api.AtomicOp;
+import com.wsteam.wandscape.content.task.op.api.AtomicOp;
 
 import java.util.List;
 /**

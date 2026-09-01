@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.task.engine.pool;
+package com.wsteam.wandscape.content.task.engine.pool;
 
 import com.wsteam.wandscape.shared.data.WorkItem;
 

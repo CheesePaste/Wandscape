@@ -1,7 +1,7 @@
-package com.wsteam.wandscape.production.internal;
+package com.wsteam.wandscape.content.production.internal;
 
 import com.wsteam.wandscape.engine.WandscapeEngine;
-import com.wsteam.wandscape.production.data.RecipeUnlockRequirement;
+import com.wsteam.wandscape.content.production.data.RecipeUnlockRequirement;
 
 import javax.annotation.Nullable;
 import java.util.UUID;

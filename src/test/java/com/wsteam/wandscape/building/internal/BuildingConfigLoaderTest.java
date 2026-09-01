@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
+import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
 import org.junit.jupiter.api.Test;
 
 class BuildingConfigLoaderTest {

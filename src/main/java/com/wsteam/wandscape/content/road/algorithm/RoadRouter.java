@@ -1,6 +1,7 @@
-package com.wsteam.wandscape.road.algorithm;
+package com.wsteam.wandscape.content.road.algorithm;
 
-import com.wsteam.wandscape.road.core.*;
+import com.wsteam.wandscape.content.road.core.*;
+import com.wsteam.wandscape.content.road.core.*;
 
 import java.util.*;
 

@@ -1,8 +1,9 @@
-package com.wsteam.wandscape.road.data;
+package com.wsteam.wandscape.content.road.data;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
+import com.wsteam.wandscape.foundation.registry.dataconfig.internal.WandscapeDataLoader;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.registry.WandscapeDataRegistry;
 
@@ -15,7 +16,7 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * <p>Seeded with {@link RoadPreset#DEFAULT_PRESETS}, then augmented by any
  * {@code data/wandscape/road_presets/*.json} files from the datapack (mod jar / world datapacks),
- * auto-refreshed on /reload via {@link com.wsteam.wandscape.dataconfig.internal.WandscapeDataLoader}.
+ * auto-refreshed on /reload via {@link WandscapeDataLoader}.
  * The scanner export registers exported presets at runtime so they are usable immediately.
  */
 public final class RoadPresetLoader {
@@ -46,7 +47,7 @@ public final class RoadPresetLoader {
      * Call once during mod construction.
      */
     public WandscapeDataRegistry<RoadPreset> registerWith(
-            com.wsteam.wandscape.dataconfig.internal.WandscapeDataLoader loader) {
+            WandscapeDataLoader loader) {
         return loader.register("road_presets", (id, json) -> parsePreset(json));
     }
 

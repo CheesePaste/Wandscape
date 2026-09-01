@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.raid;
+package com.wsteam.wandscape.content.colony.raid;
 
 import com.wsteam.wandscape.shared.data.BuildingData;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;

@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.compass.client;
+package com.wsteam.wandscape.content.items.compass.client;
 
 import net.minecraft.core.GlobalPos;
 

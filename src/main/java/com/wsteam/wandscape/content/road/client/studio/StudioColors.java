@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.road.client.studio;
+package com.wsteam.wandscape.content.road.client.studio;
 
 /**
  * Color palette for the Road Studio overlay panel.

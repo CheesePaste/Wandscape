@@ -5,6 +5,8 @@ import static org.junit.jupiter.api.Assertions.*;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 
+import com.wsteam.wandscape.content.building.network.BuildingConfigCompressor;
+import com.wsteam.wandscape.content.building.network.BuildingConfigSyncChunkPacket;
 import org.junit.jupiter.api.Test;
 
 /**

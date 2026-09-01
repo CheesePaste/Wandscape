@@ -1,13 +1,13 @@
-package com.wsteam.wandscape.task.engine.pool;
+package com.wsteam.wandscape.content.task.engine.pool;
 
 import com.google.gson.JsonElement;
 import com.wsteam.wandscape.core.boundary.EventBus;
 import com.wsteam.wandscape.core.types.ResourceStack;
-import com.wsteam.wandscape.task.engine.dsl.TriggerDeclaration;
-import com.wsteam.wandscape.task.runtime.ApprovalInfo;
-import com.wsteam.wandscape.task.runtime.InterruptRecord;
-import com.wsteam.wandscape.task.runtime.TaskSequence;
-import com.wsteam.wandscape.task.runtime.TaskState;
+import com.wsteam.wandscape.content.task.engine.dsl.TriggerDeclaration;
+import com.wsteam.wandscape.content.task.runtime.ApprovalInfo;
+import com.wsteam.wandscape.content.task.runtime.InterruptRecord;
+import com.wsteam.wandscape.content.task.runtime.TaskSequence;
+import com.wsteam.wandscape.content.task.runtime.TaskState;
 
 import javax.annotation.Nullable;
 import java.util.*;

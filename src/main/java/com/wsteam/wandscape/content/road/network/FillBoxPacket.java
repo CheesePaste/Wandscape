@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.road.network;
+package com.wsteam.wandscape.content.road.network;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -7,7 +7,7 @@ import com.google.gson.JsonPrimitive;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.service.SoundService;
 import com.wsteam.wandscape.engine.sound.WandscapeSounds;
-import com.wsteam.wandscape.road.data.RoadPreset;
+import com.wsteam.wandscape.content.road.data.RoadPreset;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.network.ScreenFeedbackPacket;
 import com.wsteam.wandscape.shared.ui.I18n;
@@ -166,7 +166,7 @@ public record FillBoxPacket(String presetId, BlockPos startPos, BlockPos endPos)
     // ── Helper ──
 
     private static RoadPreset findPreset(String id) {
-        return com.wsteam.wandscape.road.data.RoadPreset.parseOrGet(id);
+        return RoadPreset.parseOrGet(id);
     }
 
     // ── StreamCodec ──

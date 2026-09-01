@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.guard;
+package com.wsteam.wandscape.content.npc.guard;
 
 import com.wsteam.wandscape.core.types.AttributeType;
 import com.wsteam.wandscape.content.magic.internal.MagicSpellExecutors;

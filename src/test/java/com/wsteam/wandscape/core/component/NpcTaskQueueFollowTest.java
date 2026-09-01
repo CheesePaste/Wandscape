@@ -10,9 +10,9 @@ import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
-import com.wsteam.wandscape.op.api.AtomicOp;
-import com.wsteam.wandscape.task.runtime.NpcTaskPackage;
-import com.wsteam.wandscape.task.runtime.TaskSequence;
+import com.wsteam.wandscape.content.task.op.api.AtomicOp;
+import com.wsteam.wandscape.content.task.runtime.NpcTaskPackage;
+import com.wsteam.wandscape.content.task.runtime.TaskSequence;
 
 /**
  * 跟随模式队列门控：{@code dropGlobalPackages} 丢弃所有 {@code global:*} 包

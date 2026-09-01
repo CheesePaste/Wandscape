@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.compass;
+package com.wsteam.wandscape.content.items.compass;
 
 /**
  * 魔法指南针的档位。决定解锁等级、是否在 tooltip 显示市政厅坐标、是否右键传送。

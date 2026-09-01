@@ -2,7 +2,7 @@ package com.wsteam.wandscape.command;
 
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.tree.CommandNode;
-import com.wsteam.wandscape.road.network.SplineEditorEnterPacket;
+import com.wsteam.wandscape.content.road.network.SplineEditorEnterPacket;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;

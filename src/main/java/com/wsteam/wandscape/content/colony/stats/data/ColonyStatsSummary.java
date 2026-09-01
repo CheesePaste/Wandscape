@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.stats.data;
+package com.wsteam.wandscape.content.colony.stats.data;
 
 /**
  * Pre-computed aggregate summary of the 30-day rolling statistics window

@@ -3,6 +3,7 @@ package com.wsteam.wandscape.warehouse;
 import java.util.Comparator;
 import java.util.List;
 
+import com.wsteam.wandscape.content.warehouse.WarehousePager;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;

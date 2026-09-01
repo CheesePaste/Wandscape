@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.wand.internal;
+package com.wsteam.wandscape.content.items.wand.internal;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -7,7 +7,7 @@ import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.core.types.AttributeModifier;
 import com.wsteam.wandscape.core.types.AttributeType;
 import com.wsteam.wandscape.core.types.ModifierOperation;
-import com.wsteam.wandscape.dataconfig.internal.WandscapeDataLoader;
+import com.wsteam.wandscape.foundation.registry.dataconfig.internal.WandscapeDataLoader;
 import com.wsteam.wandscape.engine.attribute.WandscapeAttributes;
 import com.wsteam.wandscape.shared.registry.WandscapeDataRegistry;
 import net.minecraft.core.Holder;

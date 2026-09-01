@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.road.data;
+package com.wsteam.wandscape.content.road.data;
 
 import com.google.gson.*;
 import net.minecraft.world.level.block.Block;

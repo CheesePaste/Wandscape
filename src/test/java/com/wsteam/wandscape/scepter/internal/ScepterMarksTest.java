@@ -2,6 +2,7 @@ package com.wsteam.wandscape.scepter.internal;
 
 import java.util.UUID;
 
+import com.wsteam.wandscape.content.items.scepter.internal.ScepterMarks;
 import org.junit.jupiter.api.Test;
 
 import net.minecraft.nbt.CompoundTag;

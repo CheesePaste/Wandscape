@@ -7,8 +7,9 @@ import java.util.Map;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.wsteam.wandscape.building.data.BlockOffset;
-import com.wsteam.wandscape.building.data.BuildingConfig;
+import com.wsteam.wandscape.content.building.data.BlockOffset;
+import com.wsteam.wandscape.content.building.data.BuildingConfig;
+import com.wsteam.wandscape.content.building.internal.BuildingApiImpl;
 import com.wsteam.wandscape.shared.registry.WandscapeConstants;
 
 import org.junit.jupiter.api.Test;

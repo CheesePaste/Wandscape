@@ -1,8 +1,9 @@
-package com.wsteam.wandscape.ring.internal;
+package com.wsteam.wandscape.content.items.ring.internal;
 
 import com.wsteam.wandscape.Wandscape;
-import com.wsteam.wandscape.npc.entity.WandscapeNpc;
-import com.wsteam.wandscape.ring.RingTier;
+import com.wsteam.wandscape.content.items.ring.network.OathRingDataPacket;
+import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
+import com.wsteam.wandscape.content.items.ring.RingTier;
 import com.wsteam.wandscape.shared.log.Log;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
@@ -193,7 +194,7 @@ public final class OathRingService {
     private static void syncToClient(ServerPlayer player) {
         byte mask = OathRingSavedData.get(player.getServer()).maskFor(player.getUUID());
         net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(
-                player, new com.wsteam.wandscape.ring.network.OathRingDataPacket(mask));
+                player, new OathRingDataPacket(mask));
     }
 
     private static String shortId(UUID id) {

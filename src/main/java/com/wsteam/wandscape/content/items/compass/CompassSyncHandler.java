@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.compass;
+package com.wsteam.wandscape.content.items.compass;
 
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;

@@ -1,6 +1,6 @@
-package com.wsteam.wandscape.compass.network;
+package com.wsteam.wandscape.content.items.compass.network;
 
-import com.wsteam.wandscape.compass.client.CompassTargetClientCache;
+import com.wsteam.wandscape.content.items.compass.client.CompassTargetClientCache;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;

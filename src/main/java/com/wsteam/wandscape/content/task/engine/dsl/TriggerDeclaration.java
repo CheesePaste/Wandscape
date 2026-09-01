@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.task.engine.dsl;
+package com.wsteam.wandscape.content.task.engine.dsl;
 
 import com.wsteam.wandscape.core.event.CustomEvent;
 

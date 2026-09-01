@@ -2,8 +2,8 @@ package com.wsteam.wandscape.content.npc.internal;
 
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.Wandscape;
-import com.wsteam.wandscape.building.internal.BuildingSavedData;
-import com.wsteam.wandscape.building.internal.BuildingState;
+import com.wsteam.wandscape.content.building.internal.BuildingSavedData;
+import com.wsteam.wandscape.content.building.internal.BuildingState;
 import com.wsteam.wandscape.core.component.ColonyMember;
 import com.wsteam.wandscape.core.component.Inventory;
 import com.wsteam.wandscape.core.ecs.World;

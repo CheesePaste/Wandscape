@@ -2,7 +2,7 @@ package com.wsteam.wandscape.core.boundary;
 
 import com.wsteam.wandscape.core.types.GridPos;
 import com.wsteam.wandscape.core.types.ResourceId;
-import com.wsteam.wandscape.task.source.EventDrivenTaskSource;
+import com.wsteam.wandscape.content.task.source.EventDrivenTaskSource;
 /**
  * Core-layer boundary for handling resource shortages with module-specific strategies.
  *

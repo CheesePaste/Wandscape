@@ -3,6 +3,7 @@ package com.wsteam.wandscape.tourist.internal;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.wsteam.wandscape.content.tourist.internal.TouristSimulation;
 import org.junit.jupiter.api.Test;
 
 /**

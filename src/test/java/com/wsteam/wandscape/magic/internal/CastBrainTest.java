@@ -8,13 +8,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.List;
 import java.util.Set;
 
+import com.wsteam.wandscape.content.magic.internal.CastBrain;
 import org.junit.jupiter.api.Test;
 
 import com.google.gson.JsonParser;
 import com.wsteam.wandscape.core.component.CastStrategyComponent;
-import com.wsteam.wandscape.magic.data.MagicDef;
-import com.wsteam.wandscape.magic.data.SpellRef;
-import com.wsteam.wandscape.magic.data.WorldSnapshot;
+import com.wsteam.wandscape.content.magic.data.MagicDef;
+import com.wsteam.wandscape.content.magic.data.SpellRef;
+import com.wsteam.wandscape.content.magic.data.WorldSnapshot;
 
 class CastBrainTest {
 

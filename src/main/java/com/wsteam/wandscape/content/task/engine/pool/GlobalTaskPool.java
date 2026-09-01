@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.task.engine.pool;
+package com.wsteam.wandscape.content.task.engine.pool;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
@@ -14,12 +14,12 @@ import com.wsteam.wandscape.core.types.GridPos;
 import com.wsteam.wandscape.core.types.ResourceId;
 import com.wsteam.wandscape.core.types.ResourceStack;
 import com.wsteam.wandscape.shared.log.Log;
-import com.wsteam.wandscape.task.engine.dsl.CompiledBlueprint;
-import com.wsteam.wandscape.task.engine.dsl.TaskCompiler;
-import com.wsteam.wandscape.task.engine.dsl.TriggerDeclaration;
-import com.wsteam.wandscape.task.runtime.ApprovalInfo;
-import com.wsteam.wandscape.task.runtime.TaskSequence;
-import com.wsteam.wandscape.task.runtime.TaskState;
+import com.wsteam.wandscape.content.task.engine.dsl.CompiledBlueprint;
+import com.wsteam.wandscape.content.task.engine.dsl.TaskCompiler;
+import com.wsteam.wandscape.content.task.engine.dsl.TriggerDeclaration;
+import com.wsteam.wandscape.content.task.runtime.ApprovalInfo;
+import com.wsteam.wandscape.content.task.runtime.TaskSequence;
+import com.wsteam.wandscape.content.task.runtime.TaskState;
 
 import javax.annotation.Nullable;
 import java.util.*;

@@ -1,12 +1,15 @@
-package com.wsteam.wandscape.road.client.studio;
+package com.wsteam.wandscape.content.road.client.studio;
 
-import com.wsteam.wandscape.road.client.RoadPlacementState;
-import com.wsteam.wandscape.road.client.SplineEditorClientState;
-import com.wsteam.wandscape.road.client.SplineEditorController;
-import com.wsteam.wandscape.road.core.SplineModel;
-import com.wsteam.wandscape.road.core.SplinePoint;
-import com.wsteam.wandscape.road.core.SplineVec3;
-import com.wsteam.wandscape.road.data.RoadPreset;
+import com.wsteam.wandscape.content.road.network.DestroyFillPacket;
+import com.wsteam.wandscape.content.road.network.FillBoxPacket;
+import com.wsteam.wandscape.content.road.network.RoadPlacePacket;
+import com.wsteam.wandscape.content.road.client.RoadPlacementState;
+import com.wsteam.wandscape.content.road.client.SplineEditorClientState;
+import com.wsteam.wandscape.content.road.client.SplineEditorController;
+import com.wsteam.wandscape.content.road.core.SplineModel;
+import com.wsteam.wandscape.content.road.core.SplinePoint;
+import com.wsteam.wandscape.content.road.core.SplineVec3;
+import com.wsteam.wandscape.content.road.data.RoadPreset;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.ui.I18n;
 import net.minecraft.client.Minecraft;
@@ -1228,7 +1231,7 @@ public final class RoadStudioOverlay {
         BlockPos end = RoadPlacementState.getEndPos();
         String presetId = RoadPlacementState.getActivePresetId();
         PacketDistributor.sendToServer(
-                new com.wsteam.wandscape.road.network.RoadPlacePacket(presetId, start, end));
+                new RoadPlacePacket(presetId, start, end));
         Log.info(TAG, "[RoadReplace] Published: preset={} start={} end={}", presetId, start, end);
         if (mc.player != null) {
             mc.player.displayClientMessage(Component.literal("[Road] §aRoad task submitted!"), true);
@@ -1242,7 +1245,7 @@ public final class RoadStudioOverlay {
         BlockPos end = RoadPlacementState.getEndPos();
         String presetId = RoadPlacementState.getActivePresetId();
         PacketDistributor.sendToServer(
-                new com.wsteam.wandscape.road.network.FillBoxPacket(presetId, start, end));
+                new FillBoxPacket(presetId, start, end));
         Log.info(TAG, "[FillBox] Published: preset={} start={} end={}", presetId, start, end);
         if (mc.player != null) {
             mc.player.displayClientMessage(Component.literal("[Fill] §aFill task submitted!"), true);
@@ -1256,7 +1259,7 @@ public final class RoadStudioOverlay {
         BlockPos end = RoadPlacementState.getEndPos();
         boolean fillDep = RoadPlacementState.isFillDepressions();
         PacketDistributor.sendToServer(
-                new com.wsteam.wandscape.road.network.DestroyFillPacket(start, end, fillDep));
+                new DestroyFillPacket(start, end, fillDep));
         Log.info(TAG, "[DestroyFill] Published: start={} end={} fillDep={}", start, end, fillDep);
         if (mc.player != null) {
             mc.player.displayClientMessage(Component.literal("[Destroy/Fill] §aTerrain flatten task submitted!"), true);

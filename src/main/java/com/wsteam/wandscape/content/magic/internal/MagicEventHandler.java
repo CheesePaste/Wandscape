@@ -1,7 +1,7 @@
 package com.wsteam.wandscape.content.magic.internal;
 
 import com.wsteam.wandscape.Wandscape;
-import com.wsteam.wandscape.npc.entity.WandscapeNpc;
+import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.shared.log.Log;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.DustParticleOptions;

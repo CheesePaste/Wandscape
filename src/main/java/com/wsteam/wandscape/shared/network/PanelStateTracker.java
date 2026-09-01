@@ -1,5 +1,6 @@
 package com.wsteam.wandscape.shared.network;
 
+import com.wsteam.wandscape.content.building.internal.BuildingInteractHandler;
 import com.wsteam.wandscape.shared.api.ColonyApi;
 import com.wsteam.wandscape.shared.api.ColonyMetricsApi;
 import com.wsteam.wandscape.shared.data.ColonyMetricsSnapshot;
@@ -22,7 +23,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Server-side tracker of which players have the Wandscape panel open.
- * Used by {@link com.wsteam.wandscape.building.internal.BuildingInteractHandler}
+ * Used by {@link BuildingInteractHandler}
  * to gate right-click building interactions.
  *
  * <p>Pushes {@link ColonyStatsSyncPacket} on colony evaluation change, tourist

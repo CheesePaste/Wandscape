@@ -6,15 +6,15 @@ import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.event.SimpleEventBus;
 import com.wsteam.wandscape.core.types.GridPos;
 import com.wsteam.wandscape.core.types.NpcAttributes;
-import com.wsteam.wandscape.op.executor.OpExecutorRegistry;
+import com.wsteam.wandscape.content.task.op.executor.OpExecutorRegistry;
 import com.wsteam.wandscape.shared.log.Log;
-import com.wsteam.wandscape.task.engine.pool.BuildingTaskPool;
-import com.wsteam.wandscape.task.engine.pool.GlobalTaskPool;
-import com.wsteam.wandscape.task.scheduler.SchedulerSystem;
-import com.wsteam.wandscape.task.scheduler.SystemBlueprintRegistry;
-import com.wsteam.wandscape.task.scheduler.SystemBlueprintSystem;
-import com.wsteam.wandscape.task.scheduler.TaskExecutionSystem;
-import com.wsteam.wandscape.task.source.TaskSourcePoller;
+import com.wsteam.wandscape.content.task.engine.pool.BuildingTaskPool;
+import com.wsteam.wandscape.content.task.engine.pool.GlobalTaskPool;
+import com.wsteam.wandscape.content.task.scheduler.SchedulerSystem;
+import com.wsteam.wandscape.content.task.scheduler.SystemBlueprintRegistry;
+import com.wsteam.wandscape.content.task.scheduler.SystemBlueprintSystem;
+import com.wsteam.wandscape.content.task.scheduler.TaskExecutionSystem;
+import com.wsteam.wandscape.content.task.source.TaskSourcePoller;
 
 import java.util.UUID;
 

@@ -2,9 +2,9 @@ package com.wsteam.wandscape.core.component;
 
 import com.google.gson.JsonElement;
 import com.wsteam.wandscape.core.types.GridPos;
-import com.wsteam.wandscape.task.runtime.ExecutorState;
-import com.wsteam.wandscape.task.runtime.NpcTaskPackage;
-import com.wsteam.wandscape.task.runtime.TaskSequence;
+import com.wsteam.wandscape.content.task.runtime.ExecutorState;
+import com.wsteam.wandscape.content.task.runtime.NpcTaskPackage;
+import com.wsteam.wandscape.content.task.runtime.TaskSequence;
 
 import javax.annotation.Nullable;
 import java.util.Map;

@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.scepter.internal;
+package com.wsteam.wandscape.content.items.scepter.internal;
 
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;

@@ -1,7 +1,7 @@
 package com.wsteam.wandscape.shared.ui.panel;
 
-import com.wsteam.wandscape.overview.client.OverviewClientState;
-import com.wsteam.wandscape.overview.client.OverviewFlightController;
+import com.wsteam.wandscape.content.colony.overview.client.OverviewClientState;
+import com.wsteam.wandscape.content.colony.overview.client.OverviewFlightController;
 import com.wsteam.wandscape.shared.network.tasks.*;
 import com.wsteam.wandscape.shared.ui.theme.WandscapeTheme;
 import net.minecraft.client.Minecraft;

@@ -4,7 +4,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import com.google.gson.JsonParser;
-import com.wsteam.wandscape.magic.data.MagicDef;
+import com.wsteam.wandscape.content.magic.data.MagicDef;
 
 import org.junit.jupiter.api.Test;
 

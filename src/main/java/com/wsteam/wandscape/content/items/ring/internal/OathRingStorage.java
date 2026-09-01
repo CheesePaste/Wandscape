@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.ring.internal;
+package com.wsteam.wandscape.content.items.ring.internal;
 
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;

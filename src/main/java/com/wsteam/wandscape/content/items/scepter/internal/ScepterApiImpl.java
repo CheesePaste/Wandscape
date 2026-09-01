@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.scepter.internal;
+package com.wsteam.wandscape.content.items.scepter.internal;
 
 import com.wsteam.wandscape.shared.api.ScepterApi;
 import net.minecraft.server.level.ServerLevel;

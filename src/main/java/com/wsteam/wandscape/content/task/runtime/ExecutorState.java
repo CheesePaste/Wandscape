@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.task.runtime;
+package com.wsteam.wandscape.content.task.runtime;
 
 /**
  * NPC-local execution state, distinct from GlobalTask's lifecycle.

@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.dataconfig.internal;
+package com.wsteam.wandscape.foundation.registry.dataconfig.internal;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;

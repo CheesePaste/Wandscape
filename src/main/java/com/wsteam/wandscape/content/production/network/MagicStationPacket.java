@@ -1,8 +1,8 @@
-package com.wsteam.wandscape.production.network;
+package com.wsteam.wandscape.content.production.network;
 
-import com.wsteam.wandscape.production.data.CraftSpellRecipe;
-import com.wsteam.wandscape.production.data.RecipeUnlockRequirement;
-import com.wsteam.wandscape.production.internal.ProductionAffordability;
+import com.wsteam.wandscape.content.production.data.CraftSpellRecipe;
+import com.wsteam.wandscape.content.production.data.RecipeUnlockRequirement;
+import com.wsteam.wandscape.content.production.internal.ProductionAffordability;
 import com.wsteam.wandscape.shared.data.ElementType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
@@ -42,7 +42,7 @@ public record MagicStationPacket(BlockPos stationPos, ListTag recipes, String cr
                                           String creator) {
         ListTag list = new ListTag();
         for (CraftSpellRecipe r : recipes) {
-            boolean unlocked = com.wsteam.wandscape.production.internal.RecipeUnlockChecker
+            boolean unlocked = com.wsteam.wandscape.content.production.internal.RecipeUnlockChecker
                     .isUnlocked(colonyId, r.unlockRequirement());
             int maxAffordable = ProductionAffordability.computeMaxAffordable(r.cost(), elementMap);
 

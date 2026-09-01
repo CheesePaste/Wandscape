@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.road.core;
+package com.wsteam.wandscape.content.road.core;
 
 /**
  * A spline control point (anchor point + 2 handle control points).

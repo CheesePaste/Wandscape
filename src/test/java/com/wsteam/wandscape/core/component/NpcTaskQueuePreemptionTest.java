@@ -9,9 +9,9 @@ import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
-import com.wsteam.wandscape.op.api.AtomicOp;
-import com.wsteam.wandscape.task.runtime.NpcTaskPackage;
-import com.wsteam.wandscape.task.runtime.TaskSequence;
+import com.wsteam.wandscape.content.task.op.api.AtomicOp;
+import com.wsteam.wandscape.content.task.runtime.NpcTaskPackage;
+import com.wsteam.wandscape.content.task.runtime.TaskSequence;
 
 /**
  * 自防御抢占依赖的核心队列机制：{@code suspendCurrent} 暂停当前包 → 注入自防御包 →

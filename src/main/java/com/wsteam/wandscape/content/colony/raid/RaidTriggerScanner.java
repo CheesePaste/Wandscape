@@ -1,8 +1,8 @@
-package com.wsteam.wandscape.raid;
+package com.wsteam.wandscape.content.colony.raid;
 
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.engine.service.ParticleService;
-import com.wsteam.wandscape.guard.GuardZone;
+import com.wsteam.wandscape.content.npc.guard.GuardZone;
 import com.wsteam.wandscape.shared.data.BuildingData;
 import com.wsteam.wandscape.shared.event.ColonyRaidStartedEvent;
 import com.wsteam.wandscape.shared.log.Log;

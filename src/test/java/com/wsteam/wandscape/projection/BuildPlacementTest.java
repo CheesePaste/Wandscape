@@ -1,5 +1,6 @@
 package com.wsteam.wandscape.projection;
 
+import com.wsteam.wandscape.content.building.projection.BuildPlacement;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import org.junit.jupiter.api.Test;

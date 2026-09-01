@@ -2,7 +2,7 @@ package com.wsteam.wandscape.wand.internal;
 
 import com.google.gson.JsonParser;
 import com.wsteam.wandscape.core.types.AttributeType;
-import com.wsteam.wandscape.wand.internal.WandPresetLoader.WandPreset;
+import com.wsteam.wandscape.content.items.wand.internal.WandPresetLoader.WandPreset;
 
 import org.junit.jupiter.api.Test;
 

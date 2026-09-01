@@ -1,10 +1,10 @@
 package com.wsteam.wandscape.compat.jei;
 
-import com.wsteam.wandscape.element.internal.ElementMappingConfig;
-import com.wsteam.wandscape.production.data.BrewPotionRecipe;
-import com.wsteam.wandscape.production.data.CraftSpellRecipe;
-import com.wsteam.wandscape.production.data.CraftWandRecipe;
-import com.wsteam.wandscape.production.data.MiscRecipe;
+import com.wsteam.wandscape.content.element.internal.ElementMappingConfig;
+import com.wsteam.wandscape.content.production.data.BrewPotionRecipe;
+import com.wsteam.wandscape.content.production.data.CraftSpellRecipe;
+import com.wsteam.wandscape.content.production.data.CraftWandRecipe;
+import com.wsteam.wandscape.content.production.data.MiscRecipe;
 import com.wsteam.wandscape.shared.data.ElementType;
 import net.minecraft.nbt.CompoundTag;
 

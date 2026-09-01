@@ -1,7 +1,7 @@
-package com.wsteam.wandscape.scepter.internal;
+package com.wsteam.wandscape.content.items.scepter.internal;
 
-import com.wsteam.wandscape.npc.entity.WandscapeNpc;
-import com.wsteam.wandscape.scepter.ScepterKind;
+import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
+import com.wsteam.wandscape.content.items.scepter.ScepterKind;
 import com.wsteam.wandscape.shared.log.Log;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;

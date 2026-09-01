@@ -5,10 +5,11 @@ import static org.junit.jupiter.api.Assertions.*;
 import java.util.List;
 import java.util.Map;
 
-import com.wsteam.wandscape.building.data.BlockOffset;
-import com.wsteam.wandscape.building.data.BuildingConfig;
-import com.wsteam.wandscape.building.data.BuildingConfig.BoundaryBox;
-import com.wsteam.wandscape.building.network.ConstructionSiteDataPacket;
+import com.wsteam.wandscape.content.building.data.BlockOffset;
+import com.wsteam.wandscape.content.building.data.BuildingConfig;
+import com.wsteam.wandscape.content.building.data.BuildingConfig.BoundaryBox;
+import com.wsteam.wandscape.content.building.internal.EnqueueHelper;
+import com.wsteam.wandscape.content.building.network.ConstructionSiteDataPacket;
 import com.wsteam.wandscape.shared.api.ElementApi;
 import com.wsteam.wandscape.shared.data.AtmConfig;
 import com.wsteam.wandscape.shared.data.ElementType;

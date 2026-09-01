@@ -1,5 +1,6 @@
 package com.wsteam.wandscape.ring.internal;
 
+import com.wsteam.wandscape.content.items.ring.internal.OathRingStorage;
 import org.junit.jupiter.api.Test;
 
 import net.minecraft.nbt.CompoundTag;

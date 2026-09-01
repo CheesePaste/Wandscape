@@ -7,7 +7,7 @@ import java.util.Map;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
-import com.wsteam.wandscape.building.network.TaskQueueModifyPacket;
+import com.wsteam.wandscape.content.building.network.TaskQueueModifyPacket;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

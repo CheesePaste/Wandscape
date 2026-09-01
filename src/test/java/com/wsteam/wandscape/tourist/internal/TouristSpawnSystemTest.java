@@ -2,6 +2,7 @@ package com.wsteam.wandscape.tourist.internal;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import com.wsteam.wandscape.content.tourist.internal.TouristSpawnSystem;
 import org.junit.jupiter.api.Test;
 
 class TouristSpawnSystemTest {

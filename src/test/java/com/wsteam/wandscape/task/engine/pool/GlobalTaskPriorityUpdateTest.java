@@ -1,10 +1,11 @@
 package com.wsteam.wandscape.task.engine.pool;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
+import com.wsteam.wandscape.content.task.engine.pool.GlobalTask;
+import com.wsteam.wandscape.content.task.engine.pool.TaskRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -13,10 +14,9 @@ import com.wsteam.wandscape.core.CoreBootstrapConfig;
 import com.wsteam.wandscape.core.boundary.MockBoundary;
 import com.wsteam.wandscape.core.boundary.MovementOps;
 import com.wsteam.wandscape.core.ecs.World;
-import com.wsteam.wandscape.task.engine.dsl.BlueprintRegistry;
-import com.wsteam.wandscape.task.runtime.TaskSequence;
-import com.wsteam.wandscape.task.runtime.TaskState;
-import com.wsteam.wandscape.task.scheduler.SystemBlueprintRegistry;
+import com.wsteam.wandscape.content.task.engine.dsl.BlueprintRegistry;
+import com.wsteam.wandscape.content.task.runtime.TaskSequence;
+import com.wsteam.wandscape.content.task.scheduler.SystemBlueprintRegistry;
 
 import static org.junit.jupiter.api.Assertions.*;
 

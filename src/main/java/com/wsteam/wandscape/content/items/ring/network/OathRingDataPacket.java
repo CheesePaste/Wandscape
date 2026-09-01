@@ -1,6 +1,6 @@
-package com.wsteam.wandscape.ring.network;
+package com.wsteam.wandscape.content.items.ring.network;
 
-import com.wsteam.wandscape.ring.client.OathRingClientData;
+import com.wsteam.wandscape.content.items.ring.client.OathRingClientData;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;

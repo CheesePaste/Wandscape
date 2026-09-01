@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.raid;
+package com.wsteam.wandscape.content.colony.raid;
 
 import com.wsteam.wandscape.engine.service.ParticleService;
 import com.wsteam.wandscape.shared.event.ColonyRaidVictoryEvent;

@@ -1,8 +1,8 @@
-package com.wsteam.wandscape.op.executor;
+package com.wsteam.wandscape.content.task.op.executor;
 
 import com.wsteam.wandscape.core.types.ResourceStack;
-import com.wsteam.wandscape.task.runtime.TaskState;
-import com.wsteam.wandscape.task.scheduler.TaskExecutionSystem;
+import com.wsteam.wandscape.content.task.runtime.TaskState;
+import com.wsteam.wandscape.content.task.scheduler.TaskExecutionSystem;
 
 import java.util.List;
 /**

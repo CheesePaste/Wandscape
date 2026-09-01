@@ -1,6 +1,6 @@
-package com.wsteam.wandscape.guidebook.item;
+package com.wsteam.wandscape.content.items.guidebook.item;
 
-import com.wsteam.wandscape.guidebook.network.GuideBookOpenPacket;
+import com.wsteam.wandscape.content.items.guidebook.network.GuideBookOpenPacket;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;

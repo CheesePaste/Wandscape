@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.element.item;
+package com.wsteam.wandscape.content.element.item;
 
 import com.wsteam.wandscape.engine.service.SoundService;
 import com.wsteam.wandscape.engine.sound.WandscapeSounds;

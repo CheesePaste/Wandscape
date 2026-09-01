@@ -1,6 +1,6 @@
-package com.wsteam.wandscape.production.client;
+package com.wsteam.wandscape.content.production.client;
 
-import com.wsteam.wandscape.production.internal.QuantityWindow;
+import com.wsteam.wandscape.content.production.internal.QuantityWindow;
 import com.wsteam.wandscape.shared.ui.component.MedievalButton;
 import com.wsteam.wandscape.shared.ui.component.Slider;
 import net.minecraft.network.chat.Component;

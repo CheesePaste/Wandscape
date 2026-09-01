@@ -1,13 +1,13 @@
-package com.wsteam.wandscape.task.engine.dsl;
+package com.wsteam.wandscape.content.task.engine.dsl;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 import com.wsteam.wandscape.core.types.*;
-import com.wsteam.wandscape.op.api.AtomicOp;
+import com.wsteam.wandscape.content.task.op.api.AtomicOp;
 import com.wsteam.wandscape.shared.log.Log;
-import com.wsteam.wandscape.task.runtime.TaskSequence;
+import com.wsteam.wandscape.content.task.runtime.TaskSequence;
 
 import java.util.*;
 

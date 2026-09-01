@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.production.internal;
+package com.wsteam.wandscape.content.production.internal;
 
 import org.junit.jupiter.api.Test;
 

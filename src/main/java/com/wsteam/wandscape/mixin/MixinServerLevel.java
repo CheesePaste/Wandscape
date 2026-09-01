@@ -1,7 +1,7 @@
 package com.wsteam.wandscape.mixin;
 
 import com.wsteam.wandscape.Config;
-import com.wsteam.wandscape.raid.RaidTownHall;
+import com.wsteam.wandscape.content.colony.raid.RaidTownHall;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import org.spongepowered.asm.mixin.Mixin;

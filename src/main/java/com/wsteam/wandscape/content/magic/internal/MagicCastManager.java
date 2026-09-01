@@ -3,7 +3,7 @@ package com.wsteam.wandscape.content.magic.internal;
 import com.wsteam.wandscape.engine.service.SoundService;
 import com.wsteam.wandscape.engine.sound.WandscapeSounds;
 import com.wsteam.wandscape.content.magic.entity.MagicBeamEntity;
-import com.wsteam.wandscape.npc.entity.WandscapeNpc;
+import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.shared.log.Log;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundSource;

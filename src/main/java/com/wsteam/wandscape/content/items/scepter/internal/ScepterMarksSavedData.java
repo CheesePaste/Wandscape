@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.scepter.internal;
+package com.wsteam.wandscape.content.items.scepter.internal;
 
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;

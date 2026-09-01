@@ -4,6 +4,7 @@ import java.util.Map;
 
 import com.google.gson.JsonParser;
 
+import com.wsteam.wandscape.foundation.registry.dataconfig.internal.SimpleDataRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

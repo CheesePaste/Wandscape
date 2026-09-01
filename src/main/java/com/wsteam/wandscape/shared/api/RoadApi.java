@@ -1,7 +1,7 @@
 package com.wsteam.wandscape.shared.api;
 
-import com.wsteam.wandscape.road.core.RoadEdge;
-import com.wsteam.wandscape.road.core.RoadNetwork;
+import com.wsteam.wandscape.content.road.core.RoadEdge;
+import com.wsteam.wandscape.content.road.core.RoadNetwork;
 
 import java.util.List;
 import java.util.UUID;

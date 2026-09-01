@@ -1,6 +1,6 @@
-package com.wsteam.wandscape.road.client;
+package com.wsteam.wandscape.content.road.client;
 
-import com.wsteam.wandscape.road.client.studio.RoadStudioOverlay;
+import com.wsteam.wandscape.content.road.client.studio.RoadStudioOverlay;
 
 /**
  * Unified input capture query for the native Road Studio overlay.

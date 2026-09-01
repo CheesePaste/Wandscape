@@ -1,7 +1,7 @@
-package com.wsteam.wandscape.task.runtime;
+package com.wsteam.wandscape.content.task.runtime;
 
 import com.wsteam.wandscape.core.types.GridPos;
-import com.wsteam.wandscape.op.api.AtomicOp;
+import com.wsteam.wandscape.content.task.op.api.AtomicOp;
 
 import javax.annotation.Nullable;
 /**

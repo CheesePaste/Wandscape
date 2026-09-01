@@ -1,7 +1,7 @@
 package com.wsteam.wandscape.engine;
 
-import com.wsteam.wandscape.building.internal.BuildingSavedData;
-import com.wsteam.wandscape.building.internal.BuildingState;
+import com.wsteam.wandscape.content.building.internal.BuildingSavedData;
+import com.wsteam.wandscape.content.building.internal.BuildingState;
 import com.wsteam.wandscape.engine.colony.ColonySavedData;
 import com.wsteam.wandscape.shared.api.ColonyApi;
 import com.wsteam.wandscape.shared.data.BuildingData;

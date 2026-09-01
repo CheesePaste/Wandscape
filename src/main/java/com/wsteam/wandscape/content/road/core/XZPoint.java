@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.road.core;
+package com.wsteam.wandscape.content.road.core;
 
 /**
  * A 2D point in the XZ plane, used for path generation

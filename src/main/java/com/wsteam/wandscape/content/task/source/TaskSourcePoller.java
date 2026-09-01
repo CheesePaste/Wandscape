@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.task.source;
+package com.wsteam.wandscape.content.task.source;
 
 import com.wsteam.wandscape.core.ecs.System;
 import com.wsteam.wandscape.core.ecs.World;

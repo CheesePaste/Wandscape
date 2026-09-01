@@ -1,7 +1,7 @@
-package com.wsteam.wandscape.op.api;
+package com.wsteam.wandscape.content.task.op.api;
 
 import com.wsteam.wandscape.core.types.*;
-import com.wsteam.wandscape.op.executor.ResourceShortageException;
+import com.wsteam.wandscape.content.task.op.executor.ResourceShortageException;
 
 import javax.annotation.Nullable;
 import java.util.Collections;

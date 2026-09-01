@@ -1,7 +1,7 @@
-package com.wsteam.wandscape.op.executor;
+package com.wsteam.wandscape.content.task.op.executor;
 
-import com.wsteam.wandscape.op.api.AtomicOp;
-import com.wsteam.wandscape.op.api.ConditionEvaluator;
+import com.wsteam.wandscape.content.task.op.api.AtomicOp;
+import com.wsteam.wandscape.content.task.op.api.ConditionEvaluator;
 
 import java.util.HashMap;
 import java.util.Map;

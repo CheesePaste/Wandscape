@@ -5,6 +5,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.wsteam.wandscape.content.building.data.BlockOffset;
 import com.wsteam.wandscape.content.building.data.BuildingConfig;
+import com.wsteam.wandscape.foundation.registry.dataconfig.internal.WandscapeDataLoader;
 import com.wsteam.wandscape.shared.data.WonderEffect;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.registry.WandscapeDataRegistry;
@@ -18,7 +19,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * and provides lookup by building type id.
  *
  * <p>Initialized once during mod construction, auto-refreshed on /reload
- * via {@link com.wsteam.wandscape.dataconfig.internal.WandscapeDataLoader}.
+ * via {@link WandscapeDataLoader}.
  */
 public final class BuildingConfigLoader {
     private static final String TAG = "BuildingConfigLoader";
@@ -62,7 +63,7 @@ public final class BuildingConfigLoader {
      * Call once during mod construction.
      */
     public WandscapeDataRegistry<BuildingConfig> registerWith(
-            com.wsteam.wandscape.dataconfig.internal.WandscapeDataLoader loader) {
+            WandscapeDataLoader loader) {
         return loader.register("buildings", (id, json) -> parseConfig(json));
     }
 

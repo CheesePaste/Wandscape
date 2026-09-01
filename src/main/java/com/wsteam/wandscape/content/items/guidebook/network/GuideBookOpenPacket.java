@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.guidebook.network;
+package com.wsteam.wandscape.content.items.guidebook.network;
 
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;

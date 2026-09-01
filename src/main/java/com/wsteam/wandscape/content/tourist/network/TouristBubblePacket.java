@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.tourist.network;
+package com.wsteam.wandscape.content.tourist.network;
 
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;

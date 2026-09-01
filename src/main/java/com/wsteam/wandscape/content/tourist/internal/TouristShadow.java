@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.tourist.internal;
+package com.wsteam.wandscape.content.tourist.internal;
 
 import com.wsteam.wandscape.shared.data.Activity;
 import com.wsteam.wandscape.shared.data.Emotion;

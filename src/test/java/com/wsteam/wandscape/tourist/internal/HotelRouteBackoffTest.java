@@ -2,6 +2,7 @@ package com.wsteam.wandscape.tourist.internal;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import com.wsteam.wandscape.content.tourist.internal.HotelRouteBackoff;
 import org.junit.jupiter.api.Test;
 
 /** 夜晚「无空闲旅店」闩锁（当晚旅店全满/过远传送失败后不再搜索）纯逻辑单测。 */

@@ -1,13 +1,13 @@
-package com.wsteam.wandscape.production.client;
+package com.wsteam.wandscape.content.production.client;
 
 import com.wsteam.wandscape.Config;
-import com.wsteam.wandscape.building.network.OpenWarehousePacket;
-import com.wsteam.wandscape.building.network.TaskQueueDataPacket;
-import com.wsteam.wandscape.building.network.TaskQueueModifyPacket;
-import com.wsteam.wandscape.production.network.RequestProductionTaskPacket;
-import com.wsteam.wandscape.production.network.WorkstationDataPacket;
-import com.wsteam.wandscape.production.network.WorkstationDataPacket.DecomposableEntry;
-import com.wsteam.wandscape.production.network.WorkstationDataPacket.SynthesizeEntry;
+import com.wsteam.wandscape.content.building.network.OpenWarehousePacket;
+import com.wsteam.wandscape.content.building.network.TaskQueueDataPacket;
+import com.wsteam.wandscape.content.building.network.TaskQueueModifyPacket;
+import com.wsteam.wandscape.content.production.network.RequestProductionTaskPacket;
+import com.wsteam.wandscape.content.production.network.WorkstationDataPacket;
+import com.wsteam.wandscape.content.production.network.WorkstationDataPacket.DecomposableEntry;
+import com.wsteam.wandscape.content.production.network.WorkstationDataPacket.SynthesizeEntry;
 import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.ui.I18n;

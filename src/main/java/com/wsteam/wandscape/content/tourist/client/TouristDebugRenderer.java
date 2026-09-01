@@ -1,10 +1,10 @@
-package com.wsteam.wandscape.tourist.client;
+package com.wsteam.wandscape.content.tourist.client;
 
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexFormat;
-import com.wsteam.wandscape.tourist.entity.TouristEntity;
+import com.wsteam.wandscape.content.tourist.entity.TouristEntity;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderStateShard;

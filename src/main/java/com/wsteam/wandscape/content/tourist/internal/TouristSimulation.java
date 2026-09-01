@@ -1,20 +1,21 @@
-package com.wsteam.wandscape.tourist.internal;
+package com.wsteam.wandscape.content.tourist.internal;
 
 import com.wsteam.wandscape.Config;
-import com.wsteam.wandscape.building.data.BlockOffset;
-import com.wsteam.wandscape.building.data.BuildingConfig;
-import com.wsteam.wandscape.building.internal.BuildingSavedData;
-import com.wsteam.wandscape.building.internal.BuildingState;
-import com.wsteam.wandscape.building.internal.ShopInteractionHandler;
-import com.wsteam.wandscape.building.internal.ShopStockManager;
+import com.wsteam.wandscape.content.building.data.BlockOffset;
+import com.wsteam.wandscape.content.building.data.BuildingConfig;
+import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
+import com.wsteam.wandscape.content.building.internal.BuildingSavedData;
+import com.wsteam.wandscape.content.building.internal.BuildingState;
+import com.wsteam.wandscape.content.building.internal.ShopInteractionHandler;
+import com.wsteam.wandscape.content.building.internal.ShopStockManager;
 import com.wsteam.wandscape.engine.colony.ColonyActivation;
-import com.wsteam.wandscape.projection.BuildingRotation;
+import com.wsteam.wandscape.content.building.projection.BuildingRotation;
 import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.data.*;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.shared.registry.WandscapeConstants;
-import com.wsteam.wandscape.warehouse.ColonyItemBank;
+import com.wsteam.wandscape.content.warehouse.ColonyItemBank;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
@@ -65,7 +66,7 @@ public final class TouristSimulation {
     public static BuildingConfig getConfig(ServerLevel level, UUID buildingId) {
         BuildingState state = getState(level, buildingId);
         if (state == null) return null;
-        return com.wsteam.wandscape.building.internal.BuildingConfigLoader.getInstance().get(state.getBuildingTypeId());
+        return BuildingConfigLoader.getInstance().get(state.getBuildingTypeId());
     }
 
     @Nullable

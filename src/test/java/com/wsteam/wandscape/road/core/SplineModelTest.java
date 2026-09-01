@@ -4,6 +4,10 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.List;
 
+import com.wsteam.wandscape.content.road.core.CurveSample;
+import com.wsteam.wandscape.content.road.core.SplineModel;
+import com.wsteam.wandscape.content.road.core.SplinePoint;
+import com.wsteam.wandscape.content.road.core.SplineVec3;
 import org.junit.jupiter.api.Test;
 
 public class SplineModelTest {

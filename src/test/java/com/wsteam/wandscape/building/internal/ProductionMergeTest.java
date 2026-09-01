@@ -6,12 +6,12 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
+import com.wsteam.wandscape.content.building.internal.BuildingApiImpl;
 import com.wsteam.wandscape.shared.data.WorkItem;
 
 import org.junit.jupiter.api.DisplayName;

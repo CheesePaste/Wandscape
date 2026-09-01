@@ -1,8 +1,9 @@
-package com.wsteam.wandscape.guard;
+package com.wsteam.wandscape.content.npc.guard;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
 import com.wsteam.wandscape.Config;
+import com.wsteam.wandscape.content.npc.guard.executor.GuardAttackExecutor;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.content.npc.internal.EntityComponentBridge;
@@ -26,7 +27,7 @@ import java.util.Map;
  * 任一区域内有存活敌对生物且无活跃守卫任务时，发布 {@code guard:attack} 任务。
  *
  * <p>同一时间仅一个活跃守卫任务（用 {@link GlobalTaskPool#isActive} 去重）；
- * 任务本体是持续循环（见 {@link com.wsteam.wandscape.guard.executor.GuardAttackExecutor}），
+ * 任务本体是持续循环（见 {@link GuardAttackExecutor}），
  * 会一直守到脱离区（±guard.releaseRange）无怪才完成，源无需额外限速。
  */
 public final class GuardTaskSource implements TaskSource {

@@ -1,6 +1,6 @@
-package com.wsteam.wandscape.compass;
+package com.wsteam.wandscape.content.items.compass;
 
-import com.wsteam.wandscape.compass.client.CompassTargetClientCache;
+import com.wsteam.wandscape.content.items.compass.client.CompassTargetClientCache;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.network.chat.Component;

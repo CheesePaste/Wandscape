@@ -7,15 +7,17 @@ import java.util.UUID;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
+import com.wsteam.wandscape.content.task.engine.pool.BuildingTaskPool;
+import com.wsteam.wandscape.content.task.engine.pool.GlobalTaskPool;
 import com.wsteam.wandscape.core.CoreBootstrap;
 import com.wsteam.wandscape.core.CoreBootstrapConfig;
 import com.wsteam.wandscape.core.boundary.MockBoundary;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.shared.data.WorkItem;
-import com.wsteam.wandscape.task.engine.dsl.BlueprintRegistry;
-import com.wsteam.wandscape.task.runtime.TaskSequence;
-import com.wsteam.wandscape.task.runtime.TaskState;
-import com.wsteam.wandscape.task.scheduler.SystemBlueprintRegistry;
+import com.wsteam.wandscape.content.task.engine.dsl.BlueprintRegistry;
+import com.wsteam.wandscape.content.task.runtime.TaskSequence;
+import com.wsteam.wandscape.content.task.runtime.TaskState;
+import com.wsteam.wandscape.content.task.scheduler.SystemBlueprintRegistry;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

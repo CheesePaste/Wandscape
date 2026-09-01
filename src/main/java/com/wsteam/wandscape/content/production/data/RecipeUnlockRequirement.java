@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.production.data;
+package com.wsteam.wandscape.content.production.data;
 
 import com.google.gson.JsonObject;
 /**

@@ -1,7 +1,7 @@
 package com.wsteam.wandscape.compat.ironspellbooks;
 
 import com.wsteam.wandscape.core.types.AttributeType;
-import com.wsteam.wandscape.npc.entity.WandscapeNpc;
+import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.shared.log.Log;
 import io.redspace.ironsspellbooks.api.magic.MagicData;
 import io.redspace.ironsspellbooks.api.registry.SpellRegistry;

@@ -1,6 +1,7 @@
 package com.wsteam.wandscape.shared.network;
 
 import com.wsteam.wandscape.command.ColonyCommand;
+import com.wsteam.wandscape.content.building.internal.BuildingState;
 import com.wsteam.wandscape.shared.api.ColonyApi;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.ui.I18n;
@@ -94,7 +95,7 @@ public record ColonyCreateRequestPacket(BlockPos townHallAnchor, String name)
         var buildingApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getBuildingApi();
         if (buildingApi == null) return;
         var building = buildingApi.getBuildingAt(anchor);
-        if (building instanceof com.wsteam.wandscape.building.internal.BuildingState state) {
+        if (building instanceof BuildingState state) {
             state.setColonyId(colonyId);
             colonyApi.assignColonyIfPossible(building);
             colonyApi.onBuildingIntact(building);

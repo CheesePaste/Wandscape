@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.guard;
+package com.wsteam.wandscape.content.npc.guard;
 
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.context.CommandContext;

@@ -1,7 +1,7 @@
 package com.wsteam.wandscape.engine.service;
 
-import com.wsteam.wandscape.building.internal.BuildingSavedData;
-import com.wsteam.wandscape.building.internal.BuildingState;
+import com.wsteam.wandscape.content.building.internal.BuildingSavedData;
+import com.wsteam.wandscape.content.building.internal.BuildingState;
 import com.wsteam.wandscape.shared.event.BuildingRemovedEvent;
 import com.wsteam.wandscape.shared.log.Log;
 import net.minecraft.server.level.ServerLevel;

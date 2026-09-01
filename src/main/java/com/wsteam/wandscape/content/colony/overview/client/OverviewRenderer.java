@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.overview.client;
+package com.wsteam.wandscape.content.colony.overview.client;
 
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -122,7 +122,7 @@ public final class OverviewRenderer {
         if (entityId >= 0) {
             Entity entity = mc.level.getEntity(entityId);
             if (entity != null && entity.isAlive()
-                    && (entity instanceof com.wsteam.wandscape.npc.entity.WandscapeNpc
+                    && (entity instanceof com.wsteam.wandscape.content.npc.entity.WandscapeNpc
                     || entity instanceof TouristEntity)) {
                 renderEntityBox(buf, pose, entity.getBoundingBox(), LINE_R, LINE_G, LINE_B, LINE_A);
             }

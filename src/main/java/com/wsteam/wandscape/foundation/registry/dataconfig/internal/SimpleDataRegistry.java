@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.dataconfig.internal;
+package com.wsteam.wandscape.foundation.registry.dataconfig.internal;
 
 import com.google.gson.JsonElement;
 import com.wsteam.wandscape.shared.registry.WandscapeDataRegistry;

@@ -18,12 +18,12 @@ import com.wsteam.wandscape.shared.data.BuildingData;
 import com.wsteam.wandscape.shared.data.WorkItem;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.shared.registry.WandscapeConstants;
-import com.wsteam.wandscape.task.engine.dsl.BlueprintRegistry;
-import com.wsteam.wandscape.task.engine.pool.GlobalTask;
-import com.wsteam.wandscape.task.engine.pool.TaskRequest;
-import com.wsteam.wandscape.task.runtime.TaskSequence;
-import com.wsteam.wandscape.task.runtime.TaskState;
-import com.wsteam.wandscape.task.scheduler.SystemBlueprintRegistry;
+import com.wsteam.wandscape.content.task.engine.dsl.BlueprintRegistry;
+import com.wsteam.wandscape.content.task.engine.pool.GlobalTask;
+import com.wsteam.wandscape.content.task.engine.pool.TaskRequest;
+import com.wsteam.wandscape.content.task.runtime.TaskSequence;
+import com.wsteam.wandscape.content.task.runtime.TaskState;
+import com.wsteam.wandscape.content.task.scheduler.SystemBlueprintRegistry;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;

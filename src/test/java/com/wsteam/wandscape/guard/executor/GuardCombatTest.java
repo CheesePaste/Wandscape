@@ -2,6 +2,7 @@ package com.wsteam.wandscape.guard.executor;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
+import com.wsteam.wandscape.content.npc.guard.executor.GuardCombat;
 import org.junit.jupiter.api.Test;
 
 class GuardCombatTest {

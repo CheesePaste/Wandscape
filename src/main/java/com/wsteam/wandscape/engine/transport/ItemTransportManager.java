@@ -1,11 +1,12 @@
 package com.wsteam.wandscape.engine.transport;
 
 import com.wsteam.wandscape.Config;
-import com.wsteam.wandscape.road.algorithm.RoadRouter;
-import com.wsteam.wandscape.road.core.PathPoint;
-import com.wsteam.wandscape.road.core.RoadNetwork;
-import com.wsteam.wandscape.road.core.TransportRoute;
-import com.wsteam.wandscape.road.engine.RoadSavedData;
+import com.wsteam.wandscape.content.warehouse.ColonyItemBank;
+import com.wsteam.wandscape.content.road.algorithm.RoadRouter;
+import com.wsteam.wandscape.content.road.core.PathPoint;
+import com.wsteam.wandscape.content.road.core.RoadNetwork;
+import com.wsteam.wandscape.content.road.core.TransportRoute;
+import com.wsteam.wandscape.content.road.engine.RoadSavedData;
 import com.wsteam.wandscape.shared.data.ItemKey;
 import com.wsteam.wandscape.shared.log.Log;
 import net.minecraft.core.BlockPos;
@@ -105,7 +106,7 @@ public class ItemTransportManager {
      * separately by {@code ResourceRequestExecutor.cancelForNpc}.
      */
     public void cancelForNpc(long npcId,
-                             com.wsteam.wandscape.warehouse.ColonyItemBank bank,
+                             ColonyItemBank bank,
                              UUID colonyId) {
         var toCancel = new ArrayList<ActiveTransport>();
         for (ActiveTransport t : active) {

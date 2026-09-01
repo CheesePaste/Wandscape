@@ -8,8 +8,8 @@ import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 
-import com.wsteam.wandscape.tourist.internal.TouristShadow;
-import com.wsteam.wandscape.tourist.internal.TouristSimSystem;
+import com.wsteam.wandscape.content.tourist.internal.TouristShadow;
+import com.wsteam.wandscape.content.tourist.internal.TouristSimSystem;
 
 /**
  * 孤儿身体清除判定纯逻辑单测。

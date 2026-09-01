@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.road.client.studio;
+package com.wsteam.wandscape.content.road.client.studio;
 
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;

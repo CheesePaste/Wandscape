@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.road.network;
+package com.wsteam.wandscape.content.road.network;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;

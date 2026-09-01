@@ -1,11 +1,12 @@
-package com.wsteam.wandscape.road.client;
+package com.wsteam.wandscape.content.road.client;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.wsteam.wandscape.content.colony.overview.client.OverviewClientState;
-import com.wsteam.wandscape.road.core.SplineModel;
-import com.wsteam.wandscape.road.core.SplinePoint;
-import com.wsteam.wandscape.road.core.SplineVec3;
+import com.wsteam.wandscape.content.road.core.RoadTemplate;
+import com.wsteam.wandscape.content.road.core.SplineModel;
+import com.wsteam.wandscape.content.road.core.SplinePoint;
+import com.wsteam.wandscape.content.road.core.SplineVec3;
 import com.wsteam.wandscape.shared.log.Log;
 import net.minecraft.client.Minecraft;
 import org.lwjgl.glfw.GLFW;
@@ -146,11 +147,11 @@ public final class SplineEditorClientState {
     private static volatile double arrayOffsetYaw = 0.0;
     
     // Registry of loaded/exported road templates
-    private static final java.util.Map<String, com.wsteam.wandscape.road.core.RoadTemplate> templateRegistry = new java.util.LinkedHashMap<>();
+    private static final java.util.Map<String, RoadTemplate> templateRegistry = new java.util.LinkedHashMap<>();
     private static volatile String activeTemplateId = "vpanel_preset_dynamic";
 
     static {
-        com.wsteam.wandscape.road.core.RoadTemplate testTemplate = new com.wsteam.wandscape.road.core.RoadTemplate("test_road_5x1");
+        RoadTemplate testTemplate = new RoadTemplate("test_road_5x1");
         testTemplate.addBlock(-2, 0, 0, "minecraft:stone_bricks");
         testTemplate.addBlock(-1, 0, 0, "minecraft:stone_bricks");
         testTemplate.addBlock( 0, 0, 0, "minecraft:stone_bricks");
@@ -192,7 +193,7 @@ public final class SplineEditorClientState {
         if (preset == null) return;
 
         String id = "vpanel_preset_dynamic";
-        com.wsteam.wandscape.road.core.RoadTemplate template = new com.wsteam.wandscape.road.core.RoadTemplate(id);
+        RoadTemplate template = new RoadTemplate(id);
 
         int width = dynamicWidth;
         int halfW = width / 2;
@@ -327,7 +328,7 @@ public final class SplineEditorClientState {
     public static double getArrayOffsetYaw() { return arrayOffsetYaw; }
     public static void setArrayOffsetYaw(double yaw) { arrayOffsetYaw = yaw; }
 
-    public static com.wsteam.wandscape.road.core.RoadTemplate getActiveTemplate() {
+    public static RoadTemplate getActiveTemplate() {
         return templateRegistry.get(activeTemplateId);
     }
 
@@ -341,7 +342,7 @@ public final class SplineEditorClientState {
         }
     }
 
-    public static void registerTemplate(com.wsteam.wandscape.road.core.RoadTemplate template) {
+    public static void registerTemplate(RoadTemplate template) {
         templateRegistry.put(template.getId(), template);
         activeTemplateId = template.getId();
     }

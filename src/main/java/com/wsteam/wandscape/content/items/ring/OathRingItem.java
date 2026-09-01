@@ -1,7 +1,7 @@
-package com.wsteam.wandscape.ring;
+package com.wsteam.wandscape.content.items.ring;
 
-import com.wsteam.wandscape.ring.client.OathRingClientData;
-import com.wsteam.wandscape.ring.internal.OathRingService;
+import com.wsteam.wandscape.content.items.ring.client.OathRingClientData;
+import com.wsteam.wandscape.content.items.ring.internal.OathRingService;
 import com.wsteam.wandscape.shared.api.NpcBindingItem;
 import com.wsteam.wandscape.shared.log.Log;
 import net.minecraft.core.BlockPos;
@@ -47,7 +47,7 @@ public class OathRingItem extends Item implements NpcBindingItem {
 
     @Override
     public void onShiftClickNpc(ServerPlayer player, Mob npc, InteractionHand hand) {
-        if (npc instanceof com.wsteam.wandscape.npc.entity.WandscapeNpc mage) {
+        if (npc instanceof com.wsteam.wandscape.content.npc.entity.WandscapeNpc mage) {
             OathRingService.tryStore(player, mage, tier);
         } else {
             // 当前仅潜行右键法师会走到这里；其它生物不可绑（不反馈，防止误报）

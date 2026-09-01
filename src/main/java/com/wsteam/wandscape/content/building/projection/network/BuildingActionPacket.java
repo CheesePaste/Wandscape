@@ -1,8 +1,8 @@
 package com.wsteam.wandscape.content.building.projection.network;
 
-import com.wsteam.wandscape.building.internal.BuildingRepairHandler;
-import com.wsteam.wandscape.building.internal.BuildingSavedData;
-import com.wsteam.wandscape.building.internal.BuildingState;
+import com.wsteam.wandscape.content.building.internal.BuildingRepairHandler;
+import com.wsteam.wandscape.content.building.internal.BuildingSavedData;
+import com.wsteam.wandscape.content.building.internal.BuildingState;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import net.minecraft.network.RegistryFriendlyByteBuf;

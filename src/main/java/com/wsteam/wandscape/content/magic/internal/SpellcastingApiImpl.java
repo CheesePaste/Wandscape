@@ -2,8 +2,8 @@ package com.wsteam.wandscape.content.magic.internal;
 
 import com.wsteam.wandscape.core.component.CastStrategyComponent;
 import com.wsteam.wandscape.core.component.EquippedMagicComponent;
-import com.wsteam.wandscape.npc.entity.WandscapeNpc;
-import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
+import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
+import com.wsteam.wandscape.content.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.shared.api.SpellcastingApi;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;

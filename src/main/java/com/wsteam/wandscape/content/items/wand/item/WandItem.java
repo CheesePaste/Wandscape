@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.wand.item;
+package com.wsteam.wandscape.content.items.wand.item;
 
 import com.wsteam.wandscape.shared.api.WandApi;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;

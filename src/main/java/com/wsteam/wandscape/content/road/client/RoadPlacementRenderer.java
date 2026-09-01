@@ -1,8 +1,9 @@
-package com.wsteam.wandscape.road.client;
+package com.wsteam.wandscape.content.road.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.wsteam.wandscape.road.data.RoadPreset;
+import com.wsteam.wandscape.content.road.client.studio.RoadStudioOverlay;
+import com.wsteam.wandscape.content.road.data.RoadPreset;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.ui.util.BuildingPreviewRenderer;
 import net.minecraft.client.Minecraft;
@@ -62,7 +63,7 @@ public final class RoadPlacementRenderer {
     // ═══════════════════════════════════════════════════════════════
 
     static void onRenderLevelStage(RenderLevelStageEvent event) {
-        if (!RoadPlacementState.isProjecting() && !SplineEditorClientState.isEditing() && !com.wsteam.wandscape.road.client.studio.RoadStudioOverlay.isVisible()) return;
+        if (!RoadPlacementState.isProjecting() && !SplineEditorClientState.isEditing() && !RoadStudioOverlay.isVisible()) return;
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRIPWIRE_BLOCKS) return;
 
         Minecraft mc = Minecraft.getInstance();

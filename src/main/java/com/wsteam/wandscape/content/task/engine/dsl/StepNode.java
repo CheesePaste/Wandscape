@@ -1,6 +1,6 @@
-package com.wsteam.wandscape.task.engine.dsl;
+package com.wsteam.wandscape.content.task.engine.dsl;
 
-import com.wsteam.wandscape.op.api.AtomicOp;
+import com.wsteam.wandscape.content.task.op.api.AtomicOp;
 
 import java.util.List;
 import java.util.Map;

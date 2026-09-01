@@ -1,6 +1,7 @@
 package com.wsteam.wandscape.engine.bootstrap;
 
-import com.wsteam.wandscape.building.executor.AltarCastExecutor;
+import com.wsteam.wandscape.content.building.executor.AltarCastExecutor;
+import com.wsteam.wandscape.content.warehouse.WarehouseManager;
 import com.wsteam.wandscape.core.CoreBootstrap;
 import com.wsteam.wandscape.core.CoreBootstrapConfig;
 import com.wsteam.wandscape.core.boundary.ColonyResourceAccess;
@@ -16,20 +17,20 @@ import com.wsteam.wandscape.engine.source.blueprint.BlueprintConfigLoader;
 import com.wsteam.wandscape.engine.system.NavigationSystem;
 import com.wsteam.wandscape.engine.system.ResourceSupplySystem;
 import com.wsteam.wandscape.engine.transport.ItemTransportManager;
-import com.wsteam.wandscape.guard.GuardBlueprints;
-import com.wsteam.wandscape.guard.GuardTaskSource;
-import com.wsteam.wandscape.guard.executor.GuardAttackExecutor;
-import com.wsteam.wandscape.guard.executor.SelfDefenseExecutor;
-import com.wsteam.wandscape.op.executor.DefaultOpExecutors;
+import com.wsteam.wandscape.content.npc.guard.GuardBlueprints;
+import com.wsteam.wandscape.content.npc.guard.GuardTaskSource;
+import com.wsteam.wandscape.content.npc.guard.executor.GuardAttackExecutor;
+import com.wsteam.wandscape.content.npc.guard.executor.SelfDefenseExecutor;
+import com.wsteam.wandscape.content.task.op.executor.DefaultOpExecutors;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
-import com.wsteam.wandscape.task.engine.dsl.BlueprintInterpreter;
-import com.wsteam.wandscape.task.engine.dsl.BlueprintRegistry;
-import com.wsteam.wandscape.task.engine.pool.BuildingTaskPool;
-import com.wsteam.wandscape.task.scheduler.SystemBlueprintRegistry;
-import com.wsteam.wandscape.task.source.EventDrivenTaskSource;
-import com.wsteam.wandscape.task.source.TaskSource;
-import com.wsteam.wandscape.task.source.WorkbenchSource;
+import com.wsteam.wandscape.content.task.engine.dsl.BlueprintInterpreter;
+import com.wsteam.wandscape.content.task.engine.dsl.BlueprintRegistry;
+import com.wsteam.wandscape.content.task.engine.pool.BuildingTaskPool;
+import com.wsteam.wandscape.content.task.scheduler.SystemBlueprintRegistry;
+import com.wsteam.wandscape.content.task.source.EventDrivenTaskSource;
+import com.wsteam.wandscape.content.task.source.TaskSource;
+import com.wsteam.wandscape.content.task.source.WorkbenchSource;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
 
 import java.util.ArrayList;
@@ -121,7 +122,7 @@ public final class EngineBootstrap {
         World world = CoreBootstrap.bootstrap(config);
 
         // 6a. Wire resource-added callback so warehouse additions wake AWAITING_RESOURCES tasks
-        if (colonyResources instanceof com.wsteam.wandscape.warehouse.WarehouseManager wm) {
+        if (colonyResources instanceof WarehouseManager wm) {
             wm.setResourceAddedListener(world.taskPool::onResourceAdded);
             Log.info(TAG, "  WarehouseManager ResourceAddedListener wired");
         }

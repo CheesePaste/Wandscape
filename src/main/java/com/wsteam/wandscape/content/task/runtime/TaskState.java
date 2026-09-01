@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.task.runtime;
+package com.wsteam.wandscape.content.task.runtime;
 
 /**
  * Lifecycle states for a GlobalTask.

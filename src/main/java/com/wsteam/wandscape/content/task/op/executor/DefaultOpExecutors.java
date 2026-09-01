@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.op.executor;
+package com.wsteam.wandscape.content.task.op.executor;
 
 import com.google.gson.JsonElement;
 import com.wsteam.wandscape.core.TemplateResolver;
@@ -13,8 +13,8 @@ import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.event.CustomEvent;
 import com.wsteam.wandscape.core.types.ResourceId;
 import com.wsteam.wandscape.core.types.ResourceStack;
-import com.wsteam.wandscape.op.api.AtomicOp;
-import com.wsteam.wandscape.op.api.ConditionEvaluator;
+import com.wsteam.wandscape.content.task.op.api.AtomicOp;
+import com.wsteam.wandscape.content.task.op.api.ConditionEvaluator;
 
 import java.util.ArrayList;
 import java.util.HashMap;

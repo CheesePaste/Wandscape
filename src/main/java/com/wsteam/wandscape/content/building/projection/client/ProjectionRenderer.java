@@ -2,9 +2,9 @@ package com.wsteam.wandscape.content.building.projection.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.wsteam.wandscape.building.data.BlockOffset;
-import com.wsteam.wandscape.building.data.BuildingConfig;
-import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
+import com.wsteam.wandscape.content.building.data.BlockOffset;
+import com.wsteam.wandscape.content.building.data.BuildingConfig;
+import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.content.building.projection.BuildingRotation;
 import com.wsteam.wandscape.content.building.projection.data.BuildingSlot;
 import com.wsteam.wandscape.shared.client.render.BuildingGhostRenderer;

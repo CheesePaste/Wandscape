@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.road.core;
+package com.wsteam.wandscape.content.road.core;
 
 /**
  * A pure Java 3D double vector for spline math, ensuring zero Minecraft dependencies.

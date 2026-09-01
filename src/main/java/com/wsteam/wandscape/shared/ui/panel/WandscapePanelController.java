@@ -1,9 +1,16 @@
 package com.wsteam.wandscape.shared.ui.panel;
 
-import com.wsteam.wandscape.building.data.BuildingConfig;
-import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
-import com.wsteam.wandscape.building.internal.BuildingUnlockChecker;
-import com.wsteam.wandscape.projection.client.ProjectionClientState;
+import com.wsteam.wandscape.content.building.data.BuildingConfig;
+import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
+import com.wsteam.wandscape.content.building.internal.BuildingUnlockChecker;
+import com.wsteam.wandscape.content.building.projection.client.BuildPopPanelOverlay;
+import com.wsteam.wandscape.content.building.projection.client.ProjectionFlightController;
+import com.wsteam.wandscape.content.colony.overview.client.OverviewClientState;
+import com.wsteam.wandscape.content.colony.overview.network.OverviewInteractPacket;
+import com.wsteam.wandscape.content.road.client.SplineEditorClientState;
+import com.wsteam.wandscape.content.road.client.SplineEditorController;
+import com.wsteam.wandscape.content.road.network.RoadInteractPacket;
+import com.wsteam.wandscape.content.building.projection.client.ProjectionClientState;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket;
 import net.minecraft.client.Minecraft;
@@ -111,7 +118,7 @@ public final class WandscapePanelController {
         // 隐藏时视为光标落回游戏层：grab 鼠标，且不把当前（受控）位置计入「自由位置」缓存，
         // 这样恢复时回到隐藏前抬起位置。
         boolean cursorLifted = WandscapePanelState.isCursorLifted() && !WandscapePanelState.isPanelHidden();
-        boolean splineCam = com.wsteam.wandscape.road.client.SplineEditorController.isCameraActive();
+        boolean splineCam = SplineEditorController.isCameraActive();
         // RMB 按住 = 视角旋转（V 面板 overview / 样条相机共用），此时必须把 OS 光标锁住
         // 才能拿到连续 GLFW delta；松开后恢复自由。远程对账器没有这一分支，因为那边
         // 没有「持久自由光标 + RMB 旋转」交互——合并时补回（本分支 5650adb6 的核心设计）。
@@ -182,7 +189,7 @@ public final class WandscapePanelController {
             boolean buildMode = WandscapePanelState.getActiveSubMode() == WandscapePanelState.SubMode.BUILD_PROJECTION;
             boolean isPlacing = WandscapePanelState.getBuildPhase() == WandscapePanelState.BuildPhase.PLACING;
             boolean isBar = WandscapePanelState.getBuildPhase() == WandscapePanelState.BuildPhase.BAR;
-            boolean isPinned = com.wsteam.wandscape.projection.client.ProjectionClientState.isPinned();
+            boolean isPinned = ProjectionClientState.isPinned();
             var step = com.wsteam.wandscape.shared.ui.guidance.GuideRegistry.step(
                     com.wsteam.wandscape.shared.ui.guidance.GuideSession.currentStep());
             if (com.wsteam.wandscape.shared.ui.guidance.GuideRenderer.isCloseClicked(mc.font, mouseX, mouseY,
@@ -200,24 +207,24 @@ public final class WandscapePanelController {
         }
 
         // ── Build mode right pop panel handling ──
-        if (com.wsteam.wandscape.projection.client.BuildPopPanelOverlay.isActive()) {
-            if (com.wsteam.wandscape.projection.client.BuildPopPanelOverlay.isOverLockButton(mouseX, mouseY, screenW)) {
-                boolean curPinned = com.wsteam.wandscape.projection.client.ProjectionClientState.isPinned();
-                com.wsteam.wandscape.projection.client.ProjectionClientState.setPinned(!curPinned);
+        if (BuildPopPanelOverlay.isActive()) {
+            if (BuildPopPanelOverlay.isOverLockButton(mouseX, mouseY, screenW)) {
+                boolean curPinned = ProjectionClientState.isPinned();
+                ProjectionClientState.setPinned(!curPinned);
                 mc.getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(
                         net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK, 1.0f));
                 event.setCanceled(true);
                 return;
             }
-            if (com.wsteam.wandscape.projection.client.BuildPopPanelOverlay.isOverSubmitButton(mouseX, mouseY, screenW)) {
-                if (com.wsteam.wandscape.projection.client.ProjectionClientState.getGhostPos() == null) {
+            if (BuildPopPanelOverlay.isOverSubmitButton(mouseX, mouseY, screenW)) {
+                if (ProjectionClientState.getGhostPos() == null) {
                     mc.player.displayClientMessage(
                             net.minecraft.network.chat.Component.literal("§c")
                                     .append(com.wsteam.wandscape.shared.ui.I18n.name(
                                             "message.wandscape.projection.no_target",
                                             "没有可施工的位置 — 先对准地面")), true);
                 } else {
-                    com.wsteam.wandscape.projection.client.ProjectionFlightController.openConstructionScreen(mc);
+                    ProjectionFlightController.openConstructionScreen(mc);
                 }
                 mc.getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(
                         net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK, 1.0f));
@@ -226,9 +233,9 @@ public final class WandscapePanelController {
             }
             // 六个轴微调按钮（X-/X+/Y-/Y+/Z-/Z+，每步一格）：沿轴平移虚影一格并自动锁定，
             // 避免准星跟随下一帧覆盖位移
-            int nudgeIdx = com.wsteam.wandscape.projection.client.BuildPopPanelOverlay.hitTestNudge(mouseX, mouseY, screenW);
+            int nudgeIdx = BuildPopPanelOverlay.hitTestNudge(mouseX, mouseY, screenW);
             if (nudgeIdx >= 0) {
-                net.minecraft.core.BlockPos ghost = com.wsteam.wandscape.projection.client.ProjectionClientState.getGhostPos();
+                net.minecraft.core.BlockPos ghost = ProjectionClientState.getGhostPos();
                 if (ghost == null) {
                     mc.player.displayClientMessage(
                             net.minecraft.network.chat.Component.literal("§c")
@@ -236,11 +243,11 @@ public final class WandscapePanelController {
                                             "message.wandscape.projection.no_target",
                                             "没有可施工的位置 — 先对准地面")), true);
                 } else {
-                    int[] d = com.wsteam.wandscape.projection.client.BuildPopPanelOverlay.nudgeDelta(nudgeIdx);
+                    int[] d = BuildPopPanelOverlay.nudgeDelta(nudgeIdx);
                     net.minecraft.core.BlockPos nudgePos = ghost.offset(d[0], d[1], d[2]);
-                    com.wsteam.wandscape.projection.client.ProjectionClientState.setGhostPos(nudgePos);
-                    com.wsteam.wandscape.projection.client.ProjectionClientState.setPinned(true);
-                    com.wsteam.wandscape.projection.client.ProjectionClientState.setOverlapDetected(
+                    ProjectionClientState.setGhostPos(nudgePos);
+                    ProjectionClientState.setPinned(true);
+                    ProjectionClientState.setOverlapDetected(
                             com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket.findBuildingIdAt(nudgePos) != null);
                 }
                 mc.getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(
@@ -248,7 +255,7 @@ public final class WandscapePanelController {
                 event.setCanceled(true);
                 return;
             }
-            if (com.wsteam.wandscape.projection.client.BuildPopPanelOverlay.isOverPanel(mouseX, mouseY, screenW)) {
+            if (BuildPopPanelOverlay.isOverPanel(mouseX, mouseY, screenW)) {
                 event.setCanceled(true);
                 return;
             }
@@ -370,12 +377,12 @@ public final class WandscapePanelController {
 
         if (roadHit != null && roadDist <= buildingDist) {
             PacketDistributor.sendToServer(
-                    new com.wsteam.wandscape.road.network.RoadInteractPacket(roadHit.pos()));
+                    new RoadInteractPacket(roadHit.pos()));
             Log.info(TAG, "[Panel] Ground right-click on under-construction road → open construction UI at {}",
                     roadHit.pos());
         } else {
             PacketDistributor.sendToServer(
-                    new com.wsteam.wandscape.overview.network.OverviewInteractPacket(boxHit.pos()));
+                    new OverviewInteractPacket(boxHit.pos()));
             Log.info(TAG, "[Panel] Ground right-click on empty construction site → open building UI at {}",
                     boxHit.pos());
         }
@@ -429,7 +436,7 @@ public final class WandscapePanelController {
         if (current == targetMode) {
             // Clicking an already-active tab clean-exits the sub-mode (same as pressing ESC).
             WandscapePanelState.exitCurrentSubMode();
-            if (!com.wsteam.wandscape.overview.client.OverviewClientState.isActive()) {
+            if (!OverviewClientState.isActive()) {
                 WandscapePanelState.setSubMode(WandscapePanelState.SubMode.NONE);
             }
             Log.info(TAG, "[Panel] Tab {} clicked again → exited SubMode {}", tabIndex, targetMode);
@@ -496,9 +503,9 @@ public final class WandscapePanelController {
         if ((key == GLFW.GLFW_KEY_ENTER || key == GLFW.GLFW_KEY_KP_ENTER)
                 && WandscapePanelState.isPanelOpen()
                 && WandscapePanelState.getActiveSubMode() == WandscapePanelState.SubMode.BUILD_PROJECTION
-                && com.wsteam.wandscape.projection.client.ProjectionClientState.isProjecting()) {
-            boolean curPinned = com.wsteam.wandscape.projection.client.ProjectionClientState.isPinned();
-            com.wsteam.wandscape.projection.client.ProjectionClientState.setPinned(!curPinned);
+                && ProjectionClientState.isProjecting()) {
+            boolean curPinned = ProjectionClientState.isPinned();
+            ProjectionClientState.setPinned(!curPinned);
             mc.getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(
                     net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK, 1.0f));
             return;
@@ -589,8 +596,8 @@ public final class WandscapePanelController {
 
     private static void handlePanelEscape() {
         // 1. Spline road editor: ESC exits edit mode, stays in the ROAD selection bar
-        if (com.wsteam.wandscape.road.client.SplineEditorClientState.isEditing()) {
-            com.wsteam.wandscape.road.client.SplineEditorClientState.exitEditMode();
+        if (SplineEditorClientState.isEditing()) {
+            SplineEditorClientState.exitEditMode();
             return;
         }
 
@@ -599,8 +606,8 @@ public final class WandscapePanelController {
         // 2.5 Build projection pinned (gizmo phase): ESC first unpins back to aiming phase.
         //     Covers both ground and overview (overview keeps the BUILD_PROJECTION sub-mode).
         if (sub == WandscapePanelState.SubMode.BUILD_PROJECTION
-                && com.wsteam.wandscape.projection.client.ProjectionClientState.isPinned()) {
-            com.wsteam.wandscape.projection.client.ProjectionClientState.setPinned(false);
+                && ProjectionClientState.isPinned()) {
+            ProjectionClientState.setPinned(false);
             return;
         }
 

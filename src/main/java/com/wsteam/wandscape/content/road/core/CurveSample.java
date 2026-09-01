@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.road.core;
+package com.wsteam.wandscape.content.road.core;
 
 /**
  * A sample point along a spline curve, containing its position and tangent direction.

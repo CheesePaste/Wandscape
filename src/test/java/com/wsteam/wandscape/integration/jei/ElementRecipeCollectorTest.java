@@ -6,11 +6,11 @@ import java.util.Map;
 import com.wsteam.wandscape.compat.jei.ElementRecipe;
 import com.wsteam.wandscape.compat.jei.ElementRecipeCollector;
 import com.wsteam.wandscape.compat.jei.ElementRecipeKind;
-import com.wsteam.wandscape.element.internal.ElementMappingConfig;
-import com.wsteam.wandscape.production.data.BrewPotionRecipe;
-import com.wsteam.wandscape.production.data.CraftSpellRecipe;
-import com.wsteam.wandscape.production.data.CraftWandRecipe;
-import com.wsteam.wandscape.production.data.RecipeUnlockRequirement;
+import com.wsteam.wandscape.content.element.internal.ElementMappingConfig;
+import com.wsteam.wandscape.content.production.data.BrewPotionRecipe;
+import com.wsteam.wandscape.content.production.data.CraftSpellRecipe;
+import com.wsteam.wandscape.content.production.data.CraftWandRecipe;
+import com.wsteam.wandscape.content.production.data.RecipeUnlockRequirement;
 import com.wsteam.wandscape.shared.data.ElementType;
 
 import net.minecraft.nbt.CompoundTag;

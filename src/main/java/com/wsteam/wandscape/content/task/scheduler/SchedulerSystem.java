@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.task.scheduler;
+package com.wsteam.wandscape.content.task.scheduler;
 
 import com.google.gson.JsonElement;
 import com.wsteam.wandscape.core.component.ColonyMember;
@@ -9,11 +9,11 @@ import com.wsteam.wandscape.core.ecs.System;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.types.GridPos;
 import com.wsteam.wandscape.shared.log.Log;
-import com.wsteam.wandscape.task.engine.pool.GlobalTask;
-import com.wsteam.wandscape.task.engine.pool.GlobalTaskPool;
-import com.wsteam.wandscape.task.runtime.ExecutorState;
-import com.wsteam.wandscape.task.runtime.NpcTaskPackage;
-import com.wsteam.wandscape.task.runtime.TaskState;
+import com.wsteam.wandscape.content.task.engine.pool.GlobalTask;
+import com.wsteam.wandscape.content.task.engine.pool.GlobalTaskPool;
+import com.wsteam.wandscape.content.task.runtime.ExecutorState;
+import com.wsteam.wandscape.content.task.runtime.NpcTaskPackage;
+import com.wsteam.wandscape.content.task.runtime.TaskState;
 
 import javax.annotation.Nullable;
 import java.util.*;

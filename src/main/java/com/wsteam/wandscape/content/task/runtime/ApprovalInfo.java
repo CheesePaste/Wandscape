@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.task.runtime;
+package com.wsteam.wandscape.content.task.runtime;
 
 import com.wsteam.wandscape.core.types.GridPos;
 /** Approval metadata for large tasks. */

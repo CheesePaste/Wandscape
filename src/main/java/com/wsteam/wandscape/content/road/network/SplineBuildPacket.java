@@ -1,14 +1,11 @@
-package com.wsteam.wandscape.road.network;
+package com.wsteam.wandscape.content.road.network;
 
 import com.google.gson.*;
+import com.wsteam.wandscape.content.road.core.*;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.service.SoundService;
 import com.wsteam.wandscape.engine.sound.WandscapeSounds;
-import com.wsteam.wandscape.road.core.PathPoint;
-import com.wsteam.wandscape.road.core.RoadEdge;
-import com.wsteam.wandscape.road.core.RoadNetwork;
-import com.wsteam.wandscape.road.core.RoadNode;
-import com.wsteam.wandscape.road.engine.RoadSavedData;
+import com.wsteam.wandscape.content.road.engine.RoadSavedData;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.network.ScreenFeedbackPacket;
 import com.wsteam.wandscape.shared.ui.I18n;
@@ -65,7 +62,7 @@ public record SplineBuildPacket(String tilesJson, String splineJson) implements 
             }
 
             JsonElement splineParsed = JsonParser.parseString(packet.splineJson());
-            com.wsteam.wandscape.road.core.SplineModel model = new com.wsteam.wandscape.road.core.SplineModel();
+            SplineModel model = new SplineModel();
             
             if (splineParsed.isJsonArray()) {
                 JsonArray splineArr = splineParsed.getAsJsonArray();
@@ -76,11 +73,11 @@ public record SplineBuildPacket(String tilesJson, String splineJson) implements 
                     JsonArray nArr = obj.getAsJsonArray("n");
                     boolean locked = obj.has("l") && obj.get("l").getAsBoolean();
                     
-                    com.wsteam.wandscape.road.core.SplineVec3 a = new com.wsteam.wandscape.road.core.SplineVec3(aArr.get(0).getAsDouble(), aArr.get(1).getAsDouble(), aArr.get(2).getAsDouble());
-                    com.wsteam.wandscape.road.core.SplineVec3 p = new com.wsteam.wandscape.road.core.SplineVec3(pArr.get(0).getAsDouble(), pArr.get(1).getAsDouble(), pArr.get(2).getAsDouble());
-                    com.wsteam.wandscape.road.core.SplineVec3 n = new com.wsteam.wandscape.road.core.SplineVec3(nArr.get(0).getAsDouble(), nArr.get(1).getAsDouble(), nArr.get(2).getAsDouble());
+                    SplineVec3 a = new SplineVec3(aArr.get(0).getAsDouble(), aArr.get(1).getAsDouble(), aArr.get(2).getAsDouble());
+                    SplineVec3 p = new SplineVec3(pArr.get(0).getAsDouble(), pArr.get(1).getAsDouble(), pArr.get(2).getAsDouble());
+                    SplineVec3 n = new SplineVec3(nArr.get(0).getAsDouble(), nArr.get(1).getAsDouble(), nArr.get(2).getAsDouble());
                     
-                    model.getPoints().add(new com.wsteam.wandscape.road.core.SplinePoint(a, p, n, locked));
+                    model.getPoints().add(new SplinePoint(a, p, n, locked));
                 }
             }
 
@@ -99,9 +96,9 @@ public record SplineBuildPacket(String tilesJson, String splineJson) implements 
             RoadSavedData savedData = RoadSavedData.getOrCreate(player.serverLevel());
             RoadNetwork network = savedData.getNetwork();
 
-            com.wsteam.wandscape.road.core.SplineVec3 sPos = model.evaluate(0.0).position();
+            SplineVec3 sPos = model.evaluate(0.0).position();
             PathPoint startPt = new PathPoint((int) Math.floor(sPos.x()), (int) Math.floor(sPos.y()), (int) Math.floor(sPos.z()));
-            com.wsteam.wandscape.road.core.SplineVec3 ePos = model.evaluate(model.getSegmentsCount()).position();
+            SplineVec3 ePos = model.evaluate(model.getSegmentsCount()).position();
             PathPoint endPt = new PathPoint((int) Math.floor(ePos.x()), (int) Math.floor(ePos.y()), (int) Math.floor(ePos.z()));
 
             UUID fromNodeId = null;

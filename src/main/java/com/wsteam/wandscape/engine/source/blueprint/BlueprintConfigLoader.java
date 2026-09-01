@@ -1,10 +1,12 @@
 package com.wsteam.wandscape.engine.source.blueprint;
 
 import com.google.gson.*;
+import com.wsteam.wandscape.content.task.engine.dsl.*;
 import com.wsteam.wandscape.core.types.GridPos;
+import com.wsteam.wandscape.foundation.registry.dataconfig.internal.WandscapeDataLoader;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.registry.WandscapeDataRegistry;
-import com.wsteam.wandscape.task.engine.dsl.*;
+import com.wsteam.wandscape.content.task.engine.dsl.*;
 
 import javax.annotation.Nullable;
 import java.util.*;
@@ -32,7 +34,7 @@ public final class BlueprintConfigLoader {
      * Register the "blueprints" category with the data loader.
      */
     public WandscapeDataRegistry<BlueprintDefinition> registerWith(
-            com.wsteam.wandscape.dataconfig.internal.WandscapeDataLoader loader) {
+            WandscapeDataLoader loader) {
         return loader.register("blueprints", (id, json) -> parseDefinition(json));
     }
 

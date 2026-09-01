@@ -1,10 +1,14 @@
 package com.wsteam.wandscape.shared.ui.panel;
 
-import com.wsteam.wandscape.projection.client.BuildingDebugClientState;
-import com.wsteam.wandscape.projection.client.ProjectionClientState;
-import com.wsteam.wandscape.projection.network.ProjectionEnterPacket;
-import com.wsteam.wandscape.projection.network.ProjectionExitPacket;
-import com.wsteam.wandscape.road.client.RoadPlacementState;
+import com.wsteam.wandscape.content.colony.overview.client.OverviewClientState;
+import com.wsteam.wandscape.content.colony.overview.client.OverviewFlightController;
+import com.wsteam.wandscape.content.road.client.SplineEditorClientState;
+import com.wsteam.wandscape.content.road.client.studio.RoadStudioOverlay;
+import com.wsteam.wandscape.content.building.projection.client.BuildingDebugClientState;
+import com.wsteam.wandscape.content.building.projection.client.ProjectionClientState;
+import com.wsteam.wandscape.content.building.projection.network.ProjectionEnterPacket;
+import com.wsteam.wandscape.content.building.projection.network.ProjectionExitPacket;
+import com.wsteam.wandscape.content.road.client.RoadPlacementState;
 import com.wsteam.wandscape.shared.network.PanelStateTogglePacket;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.level.Level;
@@ -223,8 +227,8 @@ public final class WandscapePanelState {
     public static void closePanel() {
         exitCurrentSubMode();
         // Ensure overview is properly exited on panel close
-        if (com.wsteam.wandscape.overview.client.OverviewClientState.isActive()) {
-            com.wsteam.wandscape.overview.client.OverviewFlightController.exit();
+        if (OverviewClientState.isActive()) {
+            OverviewFlightController.exit();
         }
         if (buildingBarOpen) {
             closeBuildingBar();
@@ -248,18 +252,18 @@ public final class WandscapePanelState {
      * performs no network sends and no cursor/mouse changes.
      */
     public static void reset() {
-        com.wsteam.wandscape.overview.client.OverviewFlightController.exit();
+        OverviewFlightController.exit();
         // 清空空中视角相机缓存（exitOverview 是 suspend 语义、保留缓存），
         // 防止上一世界的相机位置泄漏到下一世界
-        com.wsteam.wandscape.overview.client.OverviewClientState.hardReset();
+        OverviewClientState.hardReset();
         if (ProjectionClientState.isProjecting()) {
             ProjectionClientState.exitProjection();
         }
         if (RoadPlacementState.isProjecting()) {
             RoadPlacementState.exitProjection();
         }
-        if (com.wsteam.wandscape.road.client.SplineEditorClientState.isEditing()) {
-            com.wsteam.wandscape.road.client.SplineEditorClientState.exitEditMode();
+        if (SplineEditorClientState.isEditing()) {
+            SplineEditorClientState.exitEditMode();
         }
         BuildingDebugClientState.setActive(false);
 
@@ -437,8 +441,8 @@ public final class WandscapePanelState {
                 }
                 case ROAD_PROJECTION -> {
                     RoadPlacementState.enterProjection();
-                    com.wsteam.wandscape.road.client.SplineEditorClientState.enterEditMode();
-                    com.wsteam.wandscape.road.client.studio.RoadStudioOverlay.open();
+                    SplineEditorClientState.enterEditMode();
+                    RoadStudioOverlay.open();
                     liftCursorForUI();
                 }
                 case TASKS -> {
@@ -461,15 +465,15 @@ public final class WandscapePanelState {
             }
             case ROAD_PROJECTION -> {
                 RoadPlacementState.enterProjection();
-                com.wsteam.wandscape.road.client.SplineEditorClientState.enterEditMode();
-                com.wsteam.wandscape.road.client.studio.RoadStudioOverlay.open();
+                SplineEditorClientState.enterEditMode();
+                RoadStudioOverlay.open();
                 liftCursorForUI();
             }
             case TASKS -> {
                 PacketDistributor.sendToServer(new com.wsteam.wandscape.shared.network.tasks.TaskPanelSubscribePacket(true));
                 liftCursorForUI();
             }
-            case OVERVIEW -> com.wsteam.wandscape.overview.client.OverviewFlightController.enter();
+            case OVERVIEW -> OverviewFlightController.enter();
         }
         syncCursorToState();
     }
@@ -486,7 +490,7 @@ public final class WandscapePanelState {
                     ProjectionClientState.suspendProjection();
                 }
                 // If entered from overview, go back to pure overview
-                if (com.wsteam.wandscape.overview.client.OverviewClientState.isActive()) {
+                if (OverviewClientState.isActive()) {
                     activeSubMode = SubMode.OVERVIEW;
                     syncCursorToState();
                     return;
@@ -494,16 +498,16 @@ public final class WandscapePanelState {
             }
             case ROAD_PROJECTION -> {
                 // Closing the ROAD mode / panel leaves the embedded spline editor.
-                if (com.wsteam.wandscape.road.client.SplineEditorClientState.isEditing()) {
-                    com.wsteam.wandscape.road.client.SplineEditorClientState.exitEditMode();
+                if (SplineEditorClientState.isEditing()) {
+                    SplineEditorClientState.exitEditMode();
                 }
                 if (RoadPlacementState.isProjecting()) {
                     RoadPlacementState.suspendProjection();
-                    com.wsteam.wandscape.road.client.SplineEditorClientState.exitEditMode();
-                    com.wsteam.wandscape.road.client.studio.RoadStudioOverlay.close();
+                    SplineEditorClientState.exitEditMode();
+                    RoadStudioOverlay.close();
                 }
                 // If entered from overview, go back to pure overview
-                if (com.wsteam.wandscape.overview.client.OverviewClientState.isActive()) {
+                if (OverviewClientState.isActive()) {
                     activeSubMode = SubMode.OVERVIEW;
                     syncCursorToState();
                     return;
@@ -512,7 +516,7 @@ public final class WandscapePanelState {
             case STATS -> {
                 // STATS is a pure overlay tab: entered from overview the camera stays active,
                 // so leaving must return to pure overview (handlePanelEscape/G-key rely on this).
-                if (com.wsteam.wandscape.overview.client.OverviewClientState.isActive()) {
+                if (OverviewClientState.isActive()) {
                     activeSubMode = SubMode.OVERVIEW;
                     syncCursorToState();
                     return;
@@ -521,14 +525,14 @@ public final class WandscapePanelState {
             case TASKS -> {
                 PacketDistributor.sendToServer(new com.wsteam.wandscape.shared.network.tasks.TaskPanelSubscribePacket(false));
                 TaskManagementClientState.reset();
-                if (com.wsteam.wandscape.overview.client.OverviewClientState.isActive()) {
+                if (OverviewClientState.isActive()) {
                     activeSubMode = SubMode.OVERVIEW;
                     syncCursorToState();
                     return;
                 }
             }
             case OVERVIEW -> {
-                com.wsteam.wandscape.overview.client.OverviewFlightController.exit();
+                OverviewFlightController.exit();
             }
         }
         syncCursorToState();

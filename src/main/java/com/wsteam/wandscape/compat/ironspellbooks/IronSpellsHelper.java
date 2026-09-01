@@ -1,7 +1,7 @@
 package com.wsteam.wandscape.compat.ironspellbooks;
 
-import com.wsteam.wandscape.magic.data.MagicDef;
-import com.wsteam.wandscape.magic.data.SpellConditions;
+import com.wsteam.wandscape.content.magic.data.MagicDef;
+import com.wsteam.wandscape.content.magic.data.SpellConditions;
 import io.redspace.ironsspellbooks.api.registry.SpellRegistry;
 import io.redspace.ironsspellbooks.api.spells.AbstractSpell;
 import io.redspace.ironsspellbooks.api.spells.ISpellContainer;

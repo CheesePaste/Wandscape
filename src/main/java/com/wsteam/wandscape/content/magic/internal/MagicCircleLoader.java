@@ -1,6 +1,6 @@
 package com.wsteam.wandscape.content.magic.internal;
 
-import com.wsteam.wandscape.dataconfig.internal.WandscapeDataLoader;
+import com.wsteam.wandscape.foundation.registry.dataconfig.internal.WandscapeDataLoader;
 import com.wsteam.wandscape.content.magic.data.MagicCircleSpec;
 import com.wsteam.wandscape.shared.registry.WandscapeDataRegistry;
 

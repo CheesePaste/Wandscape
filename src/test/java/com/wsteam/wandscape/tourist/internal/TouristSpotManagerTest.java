@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.UUID;
 
+import com.wsteam.wandscape.content.tourist.internal.TouristSpotManager;
 import org.junit.jupiter.api.Test;
 
 class TouristSpotManagerTest {

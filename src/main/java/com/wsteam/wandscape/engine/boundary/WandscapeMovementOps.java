@@ -5,8 +5,8 @@ import com.wsteam.wandscape.core.component.NavigationState;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.types.GridPos;
 import com.wsteam.wandscape.engine.WandscapeEngine;
-import com.wsteam.wandscape.npc.entity.WandscapeNpc;
-import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
+import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
+import com.wsteam.wandscape.content.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.shared.log.Log;
 
 import java.util.concurrent.CompletableFuture;

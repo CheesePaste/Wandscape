@@ -1,8 +1,8 @@
-package com.wsteam.wandscape.production.network;
+package com.wsteam.wandscape.content.production.network;
 
-import com.wsteam.wandscape.production.data.RecipeUnlockRequirement;
-import com.wsteam.wandscape.production.data.SynthesizeRecipe;
-import com.wsteam.wandscape.production.internal.ProductionAffordability;
+import com.wsteam.wandscape.content.production.data.RecipeUnlockRequirement;
+import com.wsteam.wandscape.content.production.data.SynthesizeRecipe;
+import com.wsteam.wandscape.content.production.internal.ProductionAffordability;
 import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.data.ItemKey;
 import net.minecraft.core.BlockPos;
@@ -71,7 +71,7 @@ public record WorkstationDataPacket(BlockPos stationPos, ListTag items, ListTag 
             // The client renders locked vs unlocked state locally using the
             // locked_reason NBT.  Server-side re-validation happens in
             // RequestProductionTaskPacket.handleServer() to prevent tampering.
-            boolean unlocked = com.wsteam.wandscape.production.internal.RecipeUnlockChecker
+            boolean unlocked = com.wsteam.wandscape.content.production.internal.RecipeUnlockChecker
                     .isUnlocked(colonyId, r.unlockRequirement());
             int maxAffordable = ProductionAffordability.computeMaxAffordable(r.cost(), elementMap);
             CompoundTag tag = new CompoundTag();

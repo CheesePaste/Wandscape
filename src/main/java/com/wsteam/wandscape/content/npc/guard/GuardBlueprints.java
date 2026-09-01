@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.guard;
+package com.wsteam.wandscape.content.npc.guard;
 
 import com.google.gson.JsonElement;
 import com.wsteam.wandscape.Config;

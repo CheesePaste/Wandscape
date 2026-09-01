@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
+import com.wsteam.wandscape.content.magic.data.MagicCircleSpec;
 import org.junit.jupiter.api.Test;
 
 import com.google.gson.JsonParser;

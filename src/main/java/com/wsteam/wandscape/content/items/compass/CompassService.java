@@ -1,7 +1,7 @@
-package com.wsteam.wandscape.compass;
+package com.wsteam.wandscape.content.items.compass;
 
-import com.wsteam.wandscape.compass.network.CompassTargetPacket;
-import com.wsteam.wandscape.raid.RaidTownHall;
+import com.wsteam.wandscape.content.items.compass.network.CompassTargetPacket;
+import com.wsteam.wandscape.content.colony.raid.RaidTownHall;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import net.minecraft.core.BlockPos;

@@ -1,8 +1,13 @@
-package com.wsteam.wandscape.road.client;
+package com.wsteam.wandscape.content.road.client;
 
 import com.mojang.blaze3d.platform.InputConstants;
-import com.wsteam.wandscape.road.client.studio.RoadStudioOverlay;
-import com.wsteam.wandscape.road.core.SplineVec3;
+import com.wsteam.wandscape.content.road.client.studio.RoadStudioOverlay;
+import com.wsteam.wandscape.content.road.core.CurveSample;
+import com.wsteam.wandscape.content.road.core.RoadTemplate;
+import com.wsteam.wandscape.content.road.core.SplineModel;
+import com.wsteam.wandscape.content.road.core.SplinePoint;
+import com.wsteam.wandscape.content.road.network.SplineBuildPacket;
+import com.wsteam.wandscape.content.road.core.SplineVec3;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.ui.panel.WandscapePanelState;
 import net.minecraft.client.KeyMapping;
@@ -471,8 +476,8 @@ public final class SplineEditorController {
     }
 
     public static void doBuildArray() {
-        com.wsteam.wandscape.road.core.SplineModel model = SplineEditorClientState.getModel();
-        com.wsteam.wandscape.road.core.RoadTemplate activeTemplate = SplineEditorClientState.getActiveTemplate();
+        SplineModel model = SplineEditorClientState.getModel();
+        RoadTemplate activeTemplate = SplineEditorClientState.getActiveTemplate();
         double stepDistance = SplineEditorClientState.getArrayStepDistance();
 
         if (model.getPoints().isEmpty() || activeTemplate == null || activeTemplate.getBlocks().isEmpty()) {
@@ -483,13 +488,13 @@ public final class SplineEditorController {
             return;
         }
 
-        java.util.List<com.wsteam.wandscape.road.core.CurveSample> samples = model.tessellate(stepDistance);
+        java.util.List<CurveSample> samples = model.tessellate(stepDistance);
         if (samples.isEmpty()) return;
 
         java.util.Map<net.minecraft.core.BlockPos, String> uniqueTiles = new java.util.LinkedHashMap<>();
 
         com.google.gson.JsonArray splineJson = new com.google.gson.JsonArray();
-        for (com.wsteam.wandscape.road.core.SplinePoint pt : model.getPoints()) {
+        for (SplinePoint pt : model.getPoints()) {
             com.google.gson.JsonObject ptObj = new com.google.gson.JsonObject();
             com.google.gson.JsonArray a = new com.google.gson.JsonArray();
             a.add(pt.getAnchor().x()); a.add(pt.getAnchor().y()); a.add(pt.getAnchor().z());
@@ -505,7 +510,7 @@ public final class SplineEditorController {
             splineJson.add(ptObj);
         }
 
-        for (com.wsteam.wandscape.road.core.CurveSample sample : samples) {
+        for (CurveSample sample : samples) {
             SplineVec3 pos = sample.position();
             
             SplineVec3 tan = sample.tangent();
@@ -533,7 +538,7 @@ public final class SplineEditorController {
             if (pitch != 0) m.rotateLocalX(pitch);
             if (yaw != 0) m.rotateLocalY(yaw);
 
-            for (com.wsteam.wandscape.road.core.RoadTemplate.RoadTemplateBlock b : activeTemplate.getBlocks()) {
+            for (RoadTemplate.RoadTemplateBlock b : activeTemplate.getBlocks()) {
                 org.joml.Vector4f localPos = new org.joml.Vector4f((float)b.x() + 0.5f, (float)b.y(), (float)b.z() + 0.5f, 1.0f);
                 localPos.mul(m);
 
@@ -560,7 +565,7 @@ public final class SplineEditorController {
         
         if (tiles.isEmpty()) return;
 
-        net.neoforged.neoforge.network.PacketDistributor.sendToServer(new com.wsteam.wandscape.road.network.SplineBuildPacket(tiles.toString(), splineJson.toString()));
+        net.neoforged.neoforge.network.PacketDistributor.sendToServer(new SplineBuildPacket(tiles.toString(), splineJson.toString()));
 
         Minecraft mc = Minecraft.getInstance();
         if (mc.player != null) {

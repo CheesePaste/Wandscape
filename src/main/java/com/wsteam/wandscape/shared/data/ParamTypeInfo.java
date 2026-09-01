@@ -1,6 +1,6 @@
 package com.wsteam.wandscape.shared.data;
 
-import com.wsteam.wandscape.task.engine.dsl.ParamType;
+import com.wsteam.wandscape.content.task.engine.dsl.ParamType;
 
 /**
  * Client-safe mirror of {@link ParamType}.

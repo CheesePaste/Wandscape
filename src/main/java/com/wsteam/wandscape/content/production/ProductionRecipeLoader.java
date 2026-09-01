@@ -1,11 +1,11 @@
-package com.wsteam.wandscape.production;
+package com.wsteam.wandscape.content.production;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.wsteam.wandscape.dataconfig.internal.WandscapeDataLoader;
+import com.wsteam.wandscape.foundation.registry.dataconfig.internal.WandscapeDataLoader;
 import com.wsteam.wandscape.content.element.internal.ElementMappingConfig;
 import com.wsteam.wandscape.content.element.internal.ElementMappingLoader;
-import com.wsteam.wandscape.production.data.*;
+import com.wsteam.wandscape.content.production.data.*;
 import com.wsteam.wandscape.shared.registry.WandscapeDataRegistry;
 
 import javax.annotation.Nullable;

@@ -1,11 +1,11 @@
-package com.wsteam.wandscape.road.network;
+package com.wsteam.wandscape.content.road.network;
 
-import com.wsteam.wandscape.building.network.ConstructionSiteDataPacket;
+import com.wsteam.wandscape.content.building.network.ConstructionSiteDataPacket;
 import com.wsteam.wandscape.content.colony.overview.network.OverviewInteractPacket;
-import com.wsteam.wandscape.road.core.PathPoint;
-import com.wsteam.wandscape.road.core.RoadEdge;
-import com.wsteam.wandscape.road.engine.RoadSavedData;
-import com.wsteam.wandscape.road.engine.RoadSiteData;
+import com.wsteam.wandscape.content.road.core.PathPoint;
+import com.wsteam.wandscape.content.road.core.RoadEdge;
+import com.wsteam.wandscape.content.road.engine.RoadSavedData;
+import com.wsteam.wandscape.content.road.engine.RoadSiteData;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import net.minecraft.core.BlockPos;

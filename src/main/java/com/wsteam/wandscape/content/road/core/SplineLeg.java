@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.road.core;
+package com.wsteam.wandscape.content.road.core;
 
 /**
  * A spline-based leg in a transport route.

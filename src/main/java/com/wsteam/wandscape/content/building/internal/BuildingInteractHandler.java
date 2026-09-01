@@ -2,7 +2,7 @@ package com.wsteam.wandscape.content.building.internal;
 
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.content.building.data.BuildingConfig;
-import com.wsteam.wandscape.building.network.*;
+import com.wsteam.wandscape.content.building.network.*;
 import com.wsteam.wandscape.content.building.network.*;
 import com.wsteam.wandscape.content.production.network.CraftingStationPacket;
 import com.wsteam.wandscape.content.production.network.MagicStationPacket;

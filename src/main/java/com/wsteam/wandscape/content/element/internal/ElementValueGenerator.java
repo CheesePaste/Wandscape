@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.element.internal;
+package com.wsteam.wandscape.content.element.internal;
 
 import com.google.gson.*;
 import com.wsteam.wandscape.shared.data.ElementType;

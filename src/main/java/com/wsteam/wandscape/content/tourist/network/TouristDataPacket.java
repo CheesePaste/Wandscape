@@ -1,7 +1,7 @@
-package com.wsteam.wandscape.tourist.network;
+package com.wsteam.wandscape.content.tourist.network;
 
 import com.wsteam.wandscape.shared.data.Activity;
-import com.wsteam.wandscape.tourist.entity.TouristEntity;
+import com.wsteam.wandscape.content.tourist.entity.TouristEntity;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;

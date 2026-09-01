@@ -1,8 +1,8 @@
-package com.wsteam.wandscape.magic.item;
+package com.wsteam.wandscape.content.items;
 
-import com.wsteam.wandscape.magic.data.MagicDef;
-import com.wsteam.wandscape.magic.internal.MagicSpellExecutors;
-import com.wsteam.wandscape.magic.internal.SpellbookLoader;
+import com.wsteam.wandscape.content.magic.data.MagicDef;
+import com.wsteam.wandscape.content.magic.internal.MagicSpellExecutors;
+import com.wsteam.wandscape.content.magic.internal.SpellbookLoader;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;

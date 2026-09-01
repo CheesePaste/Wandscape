@@ -1,8 +1,8 @@
 package com.wsteam.wandscape.shared.network;
 
-import com.wsteam.wandscape.building.data.BuildingConfig;
-import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
-import com.wsteam.wandscape.projection.BuildingRotation;
+import com.wsteam.wandscape.content.building.data.BuildingConfig;
+import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
+import com.wsteam.wandscape.content.building.projection.BuildingRotation;
 import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.api.ColonyApi;
 import com.wsteam.wandscape.shared.data.BuildingData;

@@ -5,6 +5,9 @@ import static org.junit.jupiter.api.Assertions.*;
 import java.util.List;
 import java.util.UUID;
 
+import com.wsteam.wandscape.content.road.core.PathPoint;
+import com.wsteam.wandscape.content.road.core.RoadEdge;
+import com.wsteam.wandscape.content.road.core.RoadNetwork;
 import org.junit.jupiter.api.Test;
 
 /**

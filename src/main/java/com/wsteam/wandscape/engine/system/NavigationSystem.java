@@ -9,10 +9,10 @@ import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.types.GridPos;
 import com.wsteam.wandscape.core.types.RitualId;
 import com.wsteam.wandscape.engine.boundary.WandscapeRitualOps;
-import com.wsteam.wandscape.magic.data.MagicDef;
-import com.wsteam.wandscape.magic.internal.SpellbookLoader;
-import com.wsteam.wandscape.npc.entity.WandscapeNpc;
-import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
+import com.wsteam.wandscape.content.magic.data.MagicDef;
+import com.wsteam.wandscape.content.magic.internal.SpellbookLoader;
+import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
+import com.wsteam.wandscape.content.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.shared.log.Log;
 import net.minecraft.core.BlockPos;
 

@@ -1,9 +1,9 @@
-package com.wsteam.wandscape.tourist.internal;
+package com.wsteam.wandscape.content.tourist.internal;
 
-import com.wsteam.wandscape.building.data.BuildingConfig;
-import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
-import com.wsteam.wandscape.building.internal.BuildingSavedData;
-import com.wsteam.wandscape.building.internal.BuildingState;
+import com.wsteam.wandscape.content.building.data.BuildingConfig;
+import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
+import com.wsteam.wandscape.content.building.internal.BuildingSavedData;
+import com.wsteam.wandscape.content.building.internal.BuildingState;
 import com.wsteam.wandscape.core.event.NarrativeEventTriggered;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.shared.data.NarrativeEvent;
@@ -11,7 +11,7 @@ import com.wsteam.wandscape.shared.data.ServiceConfig;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.registry.WandscapeConstants;
 import com.wsteam.wandscape.shared.ui.I18n;
-import com.wsteam.wandscape.tourist.entity.TouristEntity;
+import com.wsteam.wandscape.content.tourist.entity.TouristEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;

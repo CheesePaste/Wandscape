@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.road.client;
+package com.wsteam.wandscape.content.road.client;
 
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.ui.panel.WandscapePanelState;

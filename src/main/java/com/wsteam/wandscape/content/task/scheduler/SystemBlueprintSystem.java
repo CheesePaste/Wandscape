@@ -1,12 +1,12 @@
-package com.wsteam.wandscape.task.scheduler;
+package com.wsteam.wandscape.content.task.scheduler;
 
 import com.wsteam.wandscape.core.ecs.System;
 import com.wsteam.wandscape.core.ecs.World;
-import com.wsteam.wandscape.op.api.AtomicOp;
-import com.wsteam.wandscape.op.executor.OpExecutor;
-import com.wsteam.wandscape.op.executor.OpExecutorRegistry;
-import com.wsteam.wandscape.task.engine.dsl.Blueprint;
-import com.wsteam.wandscape.task.runtime.TaskSequence;
+import com.wsteam.wandscape.content.task.op.api.AtomicOp;
+import com.wsteam.wandscape.content.task.op.executor.OpExecutor;
+import com.wsteam.wandscape.content.task.op.executor.OpExecutorRegistry;
+import com.wsteam.wandscape.content.task.engine.dsl.Blueprint;
+import com.wsteam.wandscape.content.task.runtime.TaskSequence;
 
 import java.util.Collections;
 import java.util.HashMap;

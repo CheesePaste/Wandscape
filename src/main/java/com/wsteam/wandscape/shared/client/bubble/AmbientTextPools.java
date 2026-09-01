@@ -1,11 +1,11 @@
 package com.wsteam.wandscape.shared.client.bubble;
 
-import com.wsteam.wandscape.npc.entity.WandscapeNpc;
+import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.shared.data.Emotion;
 import com.wsteam.wandscape.shared.data.VisitMemory;
 import com.wsteam.wandscape.shared.ui.I18n;
-import com.wsteam.wandscape.tourist.entity.TouristEntity;
-import com.wsteam.wandscape.tourist.internal.TouristState;
+import com.wsteam.wandscape.content.tourist.entity.TouristEntity;
+import com.wsteam.wandscape.content.tourist.internal.TouristState;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.LivingEntity;
 

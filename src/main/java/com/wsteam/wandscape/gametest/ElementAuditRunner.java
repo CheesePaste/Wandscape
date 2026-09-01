@@ -1,7 +1,7 @@
 package com.wsteam.wandscape.gametest;
 
 import com.wsteam.wandscape.Wandscape;
-import com.wsteam.wandscape.element.internal.ElementAuditor;
+import com.wsteam.wandscape.content.element.internal.ElementAuditor;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;

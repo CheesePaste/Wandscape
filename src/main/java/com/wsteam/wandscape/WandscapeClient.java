@@ -1,31 +1,41 @@
 package com.wsteam.wandscape;
 
 import com.mojang.blaze3d.platform.InputConstants;
-import com.wsteam.wandscape.building.client.*;
-import com.wsteam.wandscape.building.network.*;
-import com.wsteam.wandscape.building.scanner.client.ScannerRenderer;
-import com.wsteam.wandscape.compass.client.CompassTargetClientCache;
+import com.wsteam.wandscape.content.building.client.*;
+import com.wsteam.wandscape.content.building.network.*;
+import com.wsteam.wandscape.content.building.scanner.client.ScannerRenderer;
+import com.wsteam.wandscape.content.building.projection.client.*;
+import com.wsteam.wandscape.content.building.projection.network.BuildingDebugResponsePacket;
+import com.wsteam.wandscape.content.building.projection.network.ProjectionEnterResponsePacket;
+import com.wsteam.wandscape.content.building.scanner.client.gizmo.ScannerGizmoController;
+import com.wsteam.wandscape.content.building.scanner.client.gizmo.ScannerGizmoOverlay;
+import com.wsteam.wandscape.content.building.scanner.client.gizmo.ScannerGizmoRenderer;
+import com.wsteam.wandscape.content.items.compass.client.CompassTargetClientCache;
+import com.wsteam.wandscape.content.items.guidebook.network.GuideBookOpenPacket;
+import com.wsteam.wandscape.content.items.scepter.OmniScepterItem;
+import com.wsteam.wandscape.content.items.scepter.ScepterKind;
+import com.wsteam.wandscape.content.road.client.SplineEditorController;
+import com.wsteam.wandscape.content.road.client.SplineEditorRenderer;
+import com.wsteam.wandscape.content.road.client.studio.RoadStudioOverlay;
+import com.wsteam.wandscape.content.tourist.network.TouristBubblePacket;
 import com.wsteam.wandscape.engine.sound.ColonyAmbientSystem;
-import com.wsteam.wandscape.magic.client.MagicBeamEntityRenderer;
-import com.wsteam.wandscape.magic.client.MagicCircleDotParticle;
-import com.wsteam.wandscape.magic.client.MagicCircleEmitter;
-import com.wsteam.wandscape.npc.client.*;
-import com.wsteam.wandscape.npc.network.NpcDataPacket;
-import com.wsteam.wandscape.overview.client.OverviewFlightController;
-import com.wsteam.wandscape.overview.client.OverviewRenderer;
-import com.wsteam.wandscape.production.client.CraftingStationScreen;
-import com.wsteam.wandscape.production.client.MagicStationScreen;
-import com.wsteam.wandscape.production.client.WorkstationScreen;
-import com.wsteam.wandscape.production.network.CraftingStationPacket;
-import com.wsteam.wandscape.production.network.MagicStationPacket;
-import com.wsteam.wandscape.production.network.WorkstationDataPacket;
-import com.wsteam.wandscape.projection.client.BuildingDebugController;
-import com.wsteam.wandscape.projection.client.BuildingDebugOverlay;
-import com.wsteam.wandscape.projection.client.ProjectionFlightController;
-import com.wsteam.wandscape.projection.client.ProjectionRenderer;
-import com.wsteam.wandscape.road.client.RoadConstructionGhost;
-import com.wsteam.wandscape.road.client.RoadPlacementController;
-import com.wsteam.wandscape.road.client.RoadPlacementRenderer;
+import com.wsteam.wandscape.content.magic.client.MagicBeamEntityRenderer;
+import com.wsteam.wandscape.content.magic.client.MagicCircleDotParticle;
+import com.wsteam.wandscape.content.magic.client.MagicCircleEmitter;
+import com.wsteam.wandscape.content.npc.client.*;
+import com.wsteam.wandscape.content.npc.network.NpcDataPacket;
+import com.wsteam.wandscape.content.colony.overview.client.OverviewFlightController;
+import com.wsteam.wandscape.content.colony.overview.client.OverviewRenderer;
+import com.wsteam.wandscape.content.production.client.CraftingStationScreen;
+import com.wsteam.wandscape.content.production.client.MagicStationScreen;
+import com.wsteam.wandscape.content.production.client.WorkstationScreen;
+import com.wsteam.wandscape.content.production.network.CraftingStationPacket;
+import com.wsteam.wandscape.content.production.network.MagicStationPacket;
+import com.wsteam.wandscape.content.production.network.WorkstationDataPacket;
+import com.wsteam.wandscape.content.building.projection.client.ProjectionFlightController;
+import com.wsteam.wandscape.content.road.client.RoadConstructionGhost;
+import com.wsteam.wandscape.content.road.client.RoadPlacementController;
+import com.wsteam.wandscape.content.road.client.RoadPlacementRenderer;
 import com.wsteam.wandscape.shared.client.render.BuildingGhostVboCache;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket;
@@ -33,12 +43,12 @@ import com.wsteam.wandscape.shared.ui.panel.WandscapePanelController;
 import com.wsteam.wandscape.shared.ui.panel.WandscapePanelOverlay;
 import com.wsteam.wandscape.shared.ui.panel.WandscapePanelState;
 import com.wsteam.wandscape.shared.ui.util.BuildingPreviewGifCache;
-import com.wsteam.wandscape.tourist.client.TouristDebugRenderer;
-import com.wsteam.wandscape.tourist.client.TouristRenderer;
-import com.wsteam.wandscape.tourist.client.TouristScreen;
-import com.wsteam.wandscape.tourist.network.TouristDataPacket;
-import com.wsteam.wandscape.warehouse.client.WarehouseScreen;
-import com.wsteam.wandscape.warehouse.network.WarehouseDataPacket;
+import com.wsteam.wandscape.content.tourist.client.TouristDebugRenderer;
+import com.wsteam.wandscape.content.tourist.client.TouristRenderer;
+import com.wsteam.wandscape.content.tourist.client.TouristScreen;
+import com.wsteam.wandscape.content.tourist.network.TouristDataPacket;
+import com.wsteam.wandscape.content.warehouse.client.WarehouseScreen;
+import com.wsteam.wandscape.content.warehouse.network.WarehouseDataPacket;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.item.CompassItemPropertyFunction;
@@ -129,8 +139,8 @@ public class WandscapeClient {
         RoadConstructionGhost.register();
         ProjectionRenderer.register();
         ProjectionFlightController.register();
-        com.wsteam.wandscape.projection.client.BuildGizmoController.register();
-        com.wsteam.wandscape.projection.client.BuildGizmoRenderer.register();
+        BuildGizmoController.register();
+        BuildGizmoRenderer.register();
         BuildingDebugController.register();
         BuildingDebugOverlay.register();
         TouristDebugRenderer.register();
@@ -152,14 +162,14 @@ public class WandscapeClient {
         OverviewRenderer.register();
 
         // Spline Road Editor (Native visual editor + world interaction)
-        com.wsteam.wandscape.road.client.SplineEditorController.register();
-        com.wsteam.wandscape.road.client.SplineEditorRenderer.register();
-        com.wsteam.wandscape.road.client.studio.RoadStudioOverlay.register();
+        SplineEditorController.register();
+        SplineEditorRenderer.register();
+        RoadStudioOverlay.register();
 
         // Building Scanner 3D Gizmo Visual Adjuster
-        com.wsteam.wandscape.building.scanner.client.gizmo.ScannerGizmoController.register();
-        com.wsteam.wandscape.building.scanner.client.gizmo.ScannerGizmoRenderer.register();
-        com.wsteam.wandscape.building.scanner.client.gizmo.ScannerGizmoOverlay.register();
+        ScannerGizmoController.register();
+        ScannerGizmoRenderer.register();
+        ScannerGizmoOverlay.register();
     }
 
     @SubscribeEvent
@@ -305,7 +315,7 @@ public class WandscapeClient {
         // Town hall screen
         TownHallOpenPacket.setClientHandler(packet -> {
             net.minecraft.client.Minecraft.getInstance().setScreen(
-                    new com.wsteam.wandscape.building.client.TownHallScreen(
+                    new TownHallScreen(
                             packet.buildingPos(), packet.colonyId(),
                             packet.colonyName(), packet.level(), packet.experience(),
                             packet.expToNext(), packet.founderName(), packet.canUseWarehouse(),
@@ -315,7 +325,7 @@ public class WandscapeClient {
         // Colony create prompt: town hall right-clicked but no colony exists
         com.wsteam.wandscape.shared.network.ColonyCreatePromptPacket.setClientHandler(packet -> {
             net.minecraft.client.Minecraft.getInstance().setScreen(
-                    new com.wsteam.wandscape.building.client.TownHallCreateScreen(packet.townHallAnchor(), packet.creator()));
+                    new TownHallCreateScreen(packet.townHallAnchor(), packet.creator()));
         });
 
         // Guide test screen
@@ -325,7 +335,7 @@ public class WandscapeClient {
         });
 
         // Guide book: right-click opens the tutorial home (index_guide), locale-resolved
-        com.wsteam.wandscape.guidebook.network.GuideBookOpenPacket.setClientHandler(packet -> {
+        GuideBookOpenPacket.setClientHandler(packet -> {
             String docPath = packet.docPath();
             String content = com.wsteam.wandscape.shared.ui.markdown.navigation.DocumentLoader.loadMarkdown(docPath);
             net.minecraft.client.Minecraft.getInstance().setScreen(
@@ -355,24 +365,24 @@ public class WandscapeClient {
             level.addEntity(entity);
         });
 
-        com.wsteam.wandscape.projection.network.BuildingDebugResponsePacket.setClientHandler(packet -> {
+        BuildingDebugResponsePacket.setClientHandler(packet -> {
             Minecraft.getInstance().execute(() -> {
-                boolean active = com.wsteam.wandscape.projection.client.BuildingDebugClientState.isActive();
-                boolean hasPos = com.wsteam.wandscape.projection.client.BuildingDebugClientState.getLastRequestedPos() != null;
+                boolean active = BuildingDebugClientState.isActive();
+                boolean hasPos = BuildingDebugClientState.getLastRequestedPos() != null;
                 if (active && hasPos) {
-                    com.wsteam.wandscape.projection.client.BuildingDebugClientState.setCachedData(packet);
+                    BuildingDebugClientState.setCachedData(packet);
                 }
             });
         });
 
-        com.wsteam.wandscape.projection.network.ProjectionEnterResponsePacket.setClientHandler(packet -> {
+        ProjectionEnterResponsePacket.setClientHandler(packet -> {
             var mc = Minecraft.getInstance();
             if (mc.player == null) return;
             if (packet.granted()) {
-                com.wsteam.wandscape.projection.client.ProjectionClientState.enterProjection(packet.bodyAnchor(), packet.buildingSlots());
+                ProjectionClientState.enterProjection(packet.bodyAnchor(), packet.buildingSlots());
                 com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.openBuildingBar();
             } else {
-                com.wsteam.wandscape.projection.client.ProjectionClientState.exitProjection();
+                ProjectionClientState.exitProjection();
                 com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.closeBuildingBar();
                 if (com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.isPanelOpen()) {
                     com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.setSubMode(com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.SubMode.NONE);
@@ -385,7 +395,7 @@ public class WandscapeClient {
         com.wsteam.wandscape.shared.network.MagicCircleCastPacket.setClientHandler(packet -> {
             var mc = Minecraft.getInstance();
             if (mc.level instanceof net.minecraft.client.multiplayer.ClientLevel cl) {
-                com.wsteam.wandscape.magic.client.MagicCircleEmitter.add(cl, packet.effectId(), packet.pos(), packet.axis(), packet.circleId(), packet.casterUuid());
+                MagicCircleEmitter.add(cl, packet.effectId(), packet.pos(), packet.axis(), packet.circleId(), packet.casterUuid());
             }
         });
 
@@ -413,13 +423,13 @@ public class WandscapeClient {
                     vy = Math.cos(phi) * sp * 0.5 + 0.03;
                     vz = Math.sin(phi) * Math.sin(theta) * sp;
                 }
-                com.wsteam.wandscape.magic.client.MagicCircleDotParticle.spawnMoving(cl, packet.pos().x + ox, packet.pos().y + oy, packet.pos().z + oz,
+                MagicCircleDotParticle.spawnMoving(cl, packet.pos().x + ox, packet.pos().y + oy, packet.pos().z + oz,
                         vx, vy, vz, packet.r(), packet.g(), packet.b(),
                         packet.size(), 0.9f, packet.lifetime());
             }
         });
 
-        com.wsteam.wandscape.tourist.network.TouristBubblePacket.setClientHandler(packet -> {
+        TouristBubblePacket.setClientHandler(packet -> {
             var mc = Minecraft.getInstance();
             if (mc.level == null) return;
             var e = mc.level.getEntity(packet.entityId());
@@ -428,8 +438,8 @@ public class WandscapeClient {
                     e.getUUID(), packet.iconId(), packet.count(), e.tickCount);
         });
 
-        com.wsteam.wandscape.building.network.BuildingConfigSyncChunkPacket.setClientHandler(
-                com.wsteam.wandscape.building.client.BuildingConfigSyncReceiver::onChunk);
+        BuildingConfigSyncChunkPacket.setClientHandler(
+                BuildingConfigSyncReceiver::onChunk);
 
         // Transient feedback: show on the open MedievalScreen if any, else the action bar.
         com.wsteam.wandscape.shared.network.ScreenFeedbackPacket.setClientHandler(packet -> {
@@ -521,7 +531,7 @@ public class WandscapeClient {
         while (WAREHOUSE_TERMINAL_KEY.consumeClick()) {
             if (searchFocused) continue;
             if (mc != null && mc.screen == null) {
-                PacketDistributor.sendToServer(new com.wsteam.wandscape.warehouse.network.WarehouseTerminalKeyPacket());
+                PacketDistributor.sendToServer(new com.wsteam.wandscape.content.warehouse.network.WarehouseTerminalKeyPacket());
             }
         }
     }
@@ -590,20 +600,20 @@ public class WandscapeClient {
         }, Wandscape.WAND.get());
         // 玩家权杖：4 件共用模板 + 固定主题色（ItemColors tintindex 0 染头部）
         event.register((stack, tintIndex) -> tintIndex == 0
-                        ? com.wsteam.wandscape.scepter.ScepterKind.PEACE.themeColor() : 0xFFFFFFFF,
+                        ? ScepterKind.PEACE.themeColor() : 0xFFFFFFFF,
                 Wandscape.PEACE_WAND.get());
         event.register((stack, tintIndex) -> tintIndex == 0
-                        ? com.wsteam.wandscape.scepter.ScepterKind.FOLLOW.themeColor() : 0xFFFFFFFF,
+                        ? ScepterKind.FOLLOW.themeColor() : 0xFFFFFFFF,
                 Wandscape.FOLLOW_WAND.get());
         event.register((stack, tintIndex) -> tintIndex == 0
-                        ? com.wsteam.wandscape.scepter.ScepterKind.SHELTER.themeColor() : 0xFFFFFFFF,
+                        ? ScepterKind.SHELTER.themeColor() : 0xFFFFFFFF,
                 Wandscape.SHELTER_WAND.get());
         event.register((stack, tintIndex) -> tintIndex == 0
-                        ? com.wsteam.wandscape.scepter.ScepterKind.HOSTILE.themeColor() : 0xFFFFFFFF,
+                        ? ScepterKind.HOSTILE.themeColor() : 0xFFFFFFFF,
                 Wandscape.HOSTILE_WAND.get());
         // 万能权杖：模式染头（tintindex 0 读物品 NBT 模式的 themeColor，色随模式变）
         event.register((stack, tintIndex) -> tintIndex == 0
-                        ? com.wsteam.wandscape.scepter.OmniScepterItem.getMode(stack).themeColor() : 0xFFFFFFFF,
+                        ? OmniScepterItem.getMode(stack).themeColor() : 0xFFFFFFFF,
                 Wandscape.OMNI_SCEPTER.get());
     }
 

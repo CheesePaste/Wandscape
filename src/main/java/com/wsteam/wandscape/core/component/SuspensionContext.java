@@ -1,6 +1,6 @@
 package com.wsteam.wandscape.core.component;
 
-import com.wsteam.wandscape.task.runtime.NpcTaskPackage;
+import com.wsteam.wandscape.content.task.runtime.NpcTaskPackage;
 /**
  * Snapshot of a suspended task package, stored on the NPC's suspension stack.
  * When the interruption is resolved, the NPC resumes from this point

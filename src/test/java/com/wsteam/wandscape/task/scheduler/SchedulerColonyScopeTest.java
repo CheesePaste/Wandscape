@@ -7,6 +7,7 @@ import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
 
+import com.wsteam.wandscape.content.task.scheduler.SystemBlueprintRegistry;
 import com.wsteam.wandscape.core.CoreBootstrap;
 import com.wsteam.wandscape.core.CoreBootstrapConfig;
 import com.wsteam.wandscape.core.boundary.MockBoundary;
@@ -17,13 +18,13 @@ import com.wsteam.wandscape.core.types.FriendlyForce;
 import com.wsteam.wandscape.core.types.GridPos;
 import com.wsteam.wandscape.core.types.InteractAction;
 import com.wsteam.wandscape.core.types.NpcAttributes;
-import com.wsteam.wandscape.op.api.AtomicOp;
-import com.wsteam.wandscape.task.engine.dsl.BlueprintRegistry;
-import com.wsteam.wandscape.task.engine.pool.GlobalTask;
-import com.wsteam.wandscape.task.engine.pool.TaskRequest;
-import com.wsteam.wandscape.task.runtime.NpcTaskPackage;
-import com.wsteam.wandscape.task.runtime.TaskSequence;
-import com.wsteam.wandscape.task.runtime.TaskState;
+import com.wsteam.wandscape.content.task.op.api.AtomicOp;
+import com.wsteam.wandscape.content.task.engine.dsl.BlueprintRegistry;
+import com.wsteam.wandscape.content.task.engine.pool.GlobalTask;
+import com.wsteam.wandscape.content.task.engine.pool.TaskRequest;
+import com.wsteam.wandscape.content.task.runtime.NpcTaskPackage;
+import com.wsteam.wandscape.content.task.runtime.TaskSequence;
+import com.wsteam.wandscape.content.task.runtime.TaskState;
 
 import com.google.gson.JsonElement;
 

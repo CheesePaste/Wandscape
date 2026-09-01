@@ -1,10 +1,10 @@
 package com.wsteam.wandscape.shared.ui.panel;
 
-import com.wsteam.wandscape.building.data.BuildingConfig;
-import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
-import com.wsteam.wandscape.building.internal.BuildingUnlockChecker;
-import com.wsteam.wandscape.projection.client.ProjectionClientState;
-import com.wsteam.wandscape.projection.data.BuildingSlot;
+import com.wsteam.wandscape.content.building.data.BuildingConfig;
+import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
+import com.wsteam.wandscape.content.building.internal.BuildingUnlockChecker;
+import com.wsteam.wandscape.content.building.projection.client.ProjectionClientState;
+import com.wsteam.wandscape.content.building.projection.data.BuildingSlot;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.ui.util.BuildingPreviewGifCache;
 import net.minecraft.client.Minecraft;

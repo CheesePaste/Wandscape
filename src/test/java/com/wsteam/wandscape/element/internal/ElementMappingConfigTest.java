@@ -3,6 +3,7 @@ package com.wsteam.wandscape.element.internal;
 import java.util.Map;
 
 import com.google.gson.JsonParser;
+import com.wsteam.wandscape.content.element.internal.ElementMappingConfig;
 import com.wsteam.wandscape.shared.data.ElementType;
 
 import org.junit.jupiter.api.Test;

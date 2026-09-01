@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.overview.client;
+package com.wsteam.wandscape.content.colony.overview.client;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.Vec3;

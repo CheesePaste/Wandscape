@@ -1,7 +1,7 @@
-package com.wsteam.wandscape.road.client;
+package com.wsteam.wandscape.content.road.client;
 
-import com.wsteam.wandscape.road.data.RoadPreset;
-import com.wsteam.wandscape.road.data.RoadPresetLoader;
+import com.wsteam.wandscape.content.road.data.RoadPreset;
+import com.wsteam.wandscape.content.road.data.RoadPresetLoader;
 import com.wsteam.wandscape.shared.log.Log;
 import net.minecraft.core.BlockPos;
 

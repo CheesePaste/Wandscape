@@ -8,7 +8,7 @@ import com.mojang.brigadier.Command;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.tree.CommandNode;
 import com.wsteam.wandscape.Wandscape;
-import com.wsteam.wandscape.element.internal.ElementAuditor;
+import com.wsteam.wandscape.content.element.internal.ElementAuditor;
 import com.wsteam.wandscape.shared.log.Log;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;

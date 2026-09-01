@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.task.scheduler;
+package com.wsteam.wandscape.content.task.scheduler;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
@@ -6,13 +6,13 @@ import com.wsteam.wandscape.core.TemplateResolver;
 import com.wsteam.wandscape.core.boundary.EventBus;
 import com.wsteam.wandscape.core.event.CustomEvent;
 import com.wsteam.wandscape.shared.log.Log;
-import com.wsteam.wandscape.task.engine.dsl.Blueprint;
-import com.wsteam.wandscape.task.engine.dsl.BlueprintSteps;
-import com.wsteam.wandscape.task.engine.dsl.TriggerDeclaration;
-import com.wsteam.wandscape.task.engine.pool.GlobalTask;
-import com.wsteam.wandscape.task.engine.pool.GlobalTaskPool;
-import com.wsteam.wandscape.task.engine.pool.TaskRequest;
-import com.wsteam.wandscape.task.runtime.TaskState;
+import com.wsteam.wandscape.content.task.engine.dsl.Blueprint;
+import com.wsteam.wandscape.content.task.engine.dsl.BlueprintSteps;
+import com.wsteam.wandscape.content.task.engine.dsl.TriggerDeclaration;
+import com.wsteam.wandscape.content.task.engine.pool.GlobalTask;
+import com.wsteam.wandscape.content.task.engine.pool.GlobalTaskPool;
+import com.wsteam.wandscape.content.task.engine.pool.TaskRequest;
+import com.wsteam.wandscape.content.task.runtime.TaskState;
 
 import java.util.*;
 

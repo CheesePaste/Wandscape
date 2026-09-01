@@ -2,12 +2,13 @@ package com.wsteam.wandscape.projection;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import com.wsteam.wandscape.content.building.projection.BuildingRotation;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import com.wsteam.wandscape.building.data.BlockOffset;
+import com.wsteam.wandscape.content.building.data.BlockOffset;
 
 @DisplayName("BuildingRotation")
 class BuildingRotationTest {

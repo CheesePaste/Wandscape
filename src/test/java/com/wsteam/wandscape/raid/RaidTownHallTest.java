@@ -3,6 +3,7 @@ package com.wsteam.wandscape.raid;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.wsteam.wandscape.content.colony.raid.RaidTownHall;
 import org.junit.jupiter.api.Test;
 
 class RaidTownHallTest {
