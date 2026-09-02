@@ -460,6 +460,8 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
                 }
             }
         }
+        // 同步饰品槽（含 Curios 魔法书槽）的铁魔法属性加成
+        com.wsteam.wandscape.compat.curios.CuriosCompat.syncIronCurioAttributes(this);
     }
 
     /**

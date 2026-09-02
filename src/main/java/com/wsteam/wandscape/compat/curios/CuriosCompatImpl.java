@@ -98,6 +98,13 @@ public final class CuriosCompatImpl {
                 .orElse(false);
     }
 
+    /** 获取实体在 Curios 魔法书槽佩戴的物品堆（未佩戴返回 ItemStack.EMPTY）。 */
+    public static ItemStack getEquippedSpellbook(LivingEntity entity) {
+        return CuriosApi.getCuriosInventory(entity)
+                .flatMap(inv -> inv.findCurio("spellbook", 0).map(top.theillusivec4.curios.api.SlotResult::stack))
+                .orElse(ItemStack.EMPTY);
+    }
+
     private static void onRegisterCapabilities(RegisterCapabilitiesEvent event) {
         // 为魔法指南针注册 ICurio capability：戴在护符槽时服务端每 100 tick 自动重同步市政厅坐标
         event.registerItem(
@@ -168,7 +175,7 @@ public final class CuriosCompatImpl {
      * <p>触发：Curios 在任一槽换装/卸载/加载（含存档读入后首次 tick 的 prevStack 对比）时于服务端
      * 广播 {@link CurioChangeEvent}，{@link ServerHooks#onCurioChange} 收到即全量重建，无空窗。
      */
-    static void syncIronCurioAttributes(WandscapeNpc npc) {
+    public static void syncIronCurioAttributes(WandscapeNpc npc) {
         if (npc == null || npc.level() == null || npc.level().isClientSide) {
             return;
         }

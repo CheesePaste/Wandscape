@@ -197,7 +197,7 @@ public final class GuardCombat {
         // known = 玩家策略解析出的法术级优先级（SpellRef 携带策略组）；快照（敌数/自血/友方最低血/状态）
         // 驱动目标规则与 conditions；敌数门控按策略组（单体组 ≤3 / 群攻组 ≥3，防御·支援无门槛）
         List<SpellRef> known = CastBrain.resolvePriority(npc.castStrategy,
-                CastBrain.knownSpells(npc.equippedMagic));
+                CastBrain.knownSpells(npc.equippedMagic, npc));
         WorldSnapshot snapshot = buildSnapshot(level, npc);
         SpellRef chosen = CastBrain.select(known,
                 def -> com.wsteam.wandscape.content.npc.component.MagicState.isFreeCast()

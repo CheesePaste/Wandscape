@@ -42,6 +42,12 @@ public class NpcCurioSlot extends SlotItemHandler {
         return 1;
     }
 
+    @Override
+    public boolean mayPlace(@Nonnull ItemStack stack) {
+        if (!super.mayPlace(stack)) return false;
+        return CuriosApi.isStackValid(this.slotContext, stack);
+    }
+
     /** 槽类型标识（如 {@code ring}），用于显示槽名称（{@code curios.identifier.<id>}）。 */
     public String getIdentifier() {
         return identifier;
