@@ -96,8 +96,17 @@ public class NpcMenu extends AbstractContainerMenu {
                 return ItemStack.EMPTY;
             }
         }
-        // Shift 移动可能改动盔甲槽（铁魔法属性桥进 ECS），同步一次。
+        // Shift 移动可能改动装备/法杖槽，同步一次。
         if (npc != null) {
+            ItemStack wandStack = wandContainer.getItem(0);
+            if (wandStack.isEmpty()) {
+                npc.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Wandscape.WAND.get()));
+                npc.setHasDefaultWand(true);
+            } else {
+                npc.setItemInHand(InteractionHand.MAIN_HAND, wandStack);
+                npc.setHasDefaultWand(false);
+            }
+            npc.syncWandAttributes();
             npc.syncIronArmorAttributes();
         }
         return result;
@@ -126,6 +135,7 @@ public class NpcMenu extends AbstractContainerMenu {
             npc.setItemInHand(InteractionHand.MAIN_HAND, stack);
             npc.setHasDefaultWand(false);
         }
+        npc.syncWandAttributes();
         npc.syncIronArmorAttributes();
     }
 

@@ -124,6 +124,8 @@ public final class OathRingService {
                 fail(player, "message.wandscape.ring.release_failed");
                 return;
             }
+            npc.syncWandAttributes();
+            npc.syncIronArmorAttributes();
             Component name = npc.getDisplayName();
             storage.remove(slot);
             data.setDirty();

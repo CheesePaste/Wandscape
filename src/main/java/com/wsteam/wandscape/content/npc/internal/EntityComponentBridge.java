@@ -140,6 +140,7 @@ public final class EntityComponentBridge {
             npcByEcsId.put(npc.ecsEntityId, npc);
             ecsIdByUuid.put(npc.getUUID(), npc.ecsEntityId);
             fillDeferredInventory(npc, world);
+            npc.syncWandAttributes();
             npc.syncIronArmorAttributes();
             return;
         }
@@ -176,7 +177,8 @@ public final class EntityComponentBridge {
 
         // Fill deferred inventory items (e.g. from colony creation command)
         fillDeferredInventory(npc, world);
-        // Seed iron-spells attribute bridge (armor lives in vanilla slots; vanilla owns the rest)
+        // Seed iron-spells and wand attribute bridges
+        npc.syncWandAttributes();
         npc.syncIronArmorAttributes();
     }
 

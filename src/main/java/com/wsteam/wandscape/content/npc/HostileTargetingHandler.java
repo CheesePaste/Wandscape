@@ -15,9 +15,6 @@ import net.minecraft.world.entity.player.Player;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 
-import javax.annotation.Nullable;
-import java.lang.reflect.Field;
-
 /**
  * 让原版**敌对生物**（{@link Enemy}）把 {@link PlayerLike} 实体（NPC）当**玩家**索敌、把
  * {@link VillagerLike} 实体（游客）当**村民**索敌。
@@ -46,9 +43,12 @@ public final class HostileTargetingHandler {
 
     private static final String TAG = "HostileTargetingHandler";
 
-    /** NearestAttackableTargetGoal#targetType（protected 字段，历版稳定）——反射读取索敌目标类。 */
-    @Nullable
-    private static final Field TARGET_TYPE = findField(NearestAttackableTargetGoal.class, "targetType");
+    /**
+     * 是否可直读 {@link NearestAttackableTargetGoal#targetType}。该字段经 NeoForge
+     * AccessTransformer（{@code META-INF/accesstransformer.cfg}）从 protected 提为 public，
+     * 不使用反射。若 AT 因版本变动未生效（字段改名等），置 false 禁用增强而非崩溃。
+     */
+    private static boolean atActive = true;
 
     private HostileTargetingHandler() {}
 
@@ -56,7 +56,7 @@ public final class HostileTargetingHandler {
     public static void onEntityJoinLevel(EntityJoinLevelEvent event) {
         if (event.getLevel().isClientSide()) return;
         if (!(event.getEntity() instanceof Mob mob)) return;
-        if (TARGET_TYPE == null) return;
+        if (!atActive) return; // AT 未生效：跳过增强（锦上添花，缺了不伤功能）
         // 只增强敌对生物（Enemy）：北极熊/铁傀儡/狼等中立·防御生物虽带 Player 索敌 goal，
         // 但那是条件性的（愤怒/声望），追加无条件 PlayerLike 索敌会让它们无端攻击 NPC（仇恨吸引）。
         if (!(mob instanceof Enemy)) return;
@@ -68,8 +68,15 @@ public final class HostileTargetingHandler {
         for (WrappedGoal wrapped : mob.targetSelector.getAvailableGoals()) {
             Goal goal = wrapped.getGoal();
             if (!(goal instanceof NearestAttackableTargetGoal<?> targetGoal)) continue;
-            Class<?> type = targetTypeOf(targetGoal);
-            if (type == null) continue;
+            Class<?> type;
+            try {
+                type = targetGoal.targetType; // AT 提权后直读；异常仅在 AT 未生效时出现
+            } catch (Throwable t) {
+                Log.error(TAG, "Reading targetType failed (AT not applied?) — disabling monster "
+                        + "targeting enhancement: {}", t.getMessage());
+                atActive = false;
+                return;
+            }
             if (AbstractVillager.class.isAssignableFrom(type)) {
                 huntsVillagers = true;
                 lowestNativePriority = Math.max(lowestNativePriority, wrapped.getPriority());
@@ -114,33 +121,10 @@ public final class HostileTargetingHandler {
     private static boolean hasBroadTargetGoal(Mob mob) {
         for (WrappedGoal wrapped : mob.targetSelector.getAvailableGoals()) {
             if (wrapped.getGoal() instanceof NearestAttackableTargetGoal<?> goal
-                    && targetTypeOf(goal) == PathfinderMob.class) {
+                    && goal.targetType == PathfinderMob.class) {
                 return true;
             }
         }
         return false;
-    }
-
-    @Nullable
-    private static Class<?> targetTypeOf(NearestAttackableTargetGoal<?> goal) {
-        if (TARGET_TYPE == null) return null;
-        try {
-            return (Class<?>) TARGET_TYPE.get(goal);
-        } catch (IllegalAccessException e) {
-            Log.warn(TAG, "反射读取索敌目标类失败: {}", e.getMessage());
-            return null;
-        }
-    }
-
-    @Nullable
-    private static Field findField(Class<?> owner, String name) {
-        try {
-            Field f = owner.getDeclaredField(name);
-            f.setAccessible(true);
-            return f;
-        } catch (ReflectiveOperationException e) {
-            Log.warn(TAG, "找不到字段 {}#{} — 跳过原版生物玩家/村民级索敌增强", owner.getSimpleName(), name);
-            return null;
-        }
     }
 }

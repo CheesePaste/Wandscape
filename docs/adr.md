@@ -11,6 +11,7 @@
 
 | 日期 | 决策摘要 | 一句话原因 (Why) | 关联模块 / 代码 |
 |---|---|---|---|
+| 2026-09-02 | **原版私有字段改 NeoForge AT 读取**：`NearestAttackableTargetGoal#targetType` 经 AccessTransformer 提为 public 直读，AT 失效时禁用增强而非反射兜底。 | 消除反射读取原版私有字段的最后一处残留，维持零反射契约。 | `content/npc/HostileTargetingHandler`, `META-INF/accesstransformer.cfg` |
 | 2026-09-02 | **天平配置持久化覆盖**：`wandscape_balance.json` 扁平键根文件由专用 Loader 在 `/reload` 时确定性重置覆盖。 | 整合包作者需文件级一劳永逸修改数值，避免仅限运行时 API 覆盖而在重启后失效。 | `foundation/util/BalanceValues`, `WandscapeBalanceLoader` |
 | 2026-09-02 | **新手引导与指南书解耦**：新手引导系统更名为 `Tutorial` 并独立成域，彻底分离指南书手册 `Guidebook`。 | 消除共用 `Guide*` 词根引发的概念模糊与 API 混杂。 | `content/tutorial/`, `content/items/` |
 | 2026-09-01 | **日志治理接入 SLF4J**：16 域细粒度分类 + 毫秒节流，移除 JUL 劫持，全仓高频日志降噪。 | 杜绝每秒高频刷屏与静默异常，提供游戏内动态调级能力。 | `foundation/log/Log`, `content/command/LogCommand` |
@@ -30,6 +31,8 @@
 
 | 日期 | 决策摘要 | 一句话原因 (Why) | 关联模块 / 代码 |
 |---|---|---|---|
+| 2026-09-02 | **法杖属性 Tooltip 显式渲染**：默认 attribute modifiers 为空导致 Tooltip 不列属性，在 `appendHoverText` 手动渲染主手属性块。 | 玩家手持虽无法杖加成但需可查阅属性，修复自动结算废除后 Tooltip 消失。 | `content/items/wand/item/WandItem` |
+| 2026-09-02 | **NPC 法杖属性桥接补全 NBT 加载/放出行**：`onAddedToLevel`、戒指放出、菜单 Shift 均显式 `syncWandAttributes`。 | 实体从 NBT 恢复（区块加载/戒指放出）不经 `setItemSlot`，否则法杖属性加成静默丢失。 | `content/npc/entity/WandscapeNpc`, `content/items/ring/internal/OathRingService` |
 | 2026-08-29 | **CurseForge 审核去风险**：法师 Curios 槽位改数据包声明，彻底移除反射镜像与任务面板反射块。 | 消除自动扫描器高危反射特征，确保平稳过审与跨版本安全。 | `compat/curios/`, `data/curios/` |
 | 2026-08-29 | **建筑扫描器保真分层**：生存扫描器导出为纯建筑（剥离方块 NBT 与展示框物品），创造扫描器完整保真。 | 从导出源头封死生存模式利用容器 NBT 刷物品漏洞，创造端保留全保真。 | `content/building/scanner/` |
 | 2026-08-28 | **权杖范围限定本殖民地**：庇护权杖并入 `isFriendlyForce` 边界，敌对权杖单槽最高优先集火，仅持久化 UUID。 | 保持"只能指挥自己殖民地 NPC"语义，存 UUID 杜绝实体引用内存泄漏。 | `content/items/scepter/`, `content/npc/` |

@@ -498,6 +498,10 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
             inst.addTransientModifier(new net.minecraft.world.entity.ai.attributes.AttributeModifier(id, mod.amount(), op));
             activeWandMods.add(new WandMod(vanillaAttr, id));
         }
+        // NBT 加载路径先恢复属性表再桥接，桥后 MAX_HP 提高但血量仍是旧值——钳制避免超上限。
+        if (getHealth() > getMaxHealth()) {
+            setHealth(getMaxHealth());
+        }
     }
 
     /** 当前已桥接的法杖修饰符（属性 + 唯一 id），换法杖/卸下时据此撤销。 */
@@ -1468,11 +1472,15 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
             }
             // Prevent vanilla despawn — NPC persistence is managed by the colony/engine
             this.setPersistenceRequired();
+
+            // 属性桥接：实体从 NBT 加载（如区块加载/戒指放出）时不走 setItemSlot，在此主动同步法杖与铁魔法护甲
+            syncWandAttributes();
+            syncIronArmorAttributes();
+
             if (isColonyNpc()) {
                 World world = com.wsteam.wandscape.content.task.ecs.World.getActive();
                 if (world != null) {
                     EntityComponentBridge.INSTANCE.onNpcJoinWorld(this, world);
-                    syncIronArmorAttributes();
                 } else {
                     // Engine not yet bootstrapped — entity loaded before ServerStartingEvent.
                     // Defer registration until the next tick.
