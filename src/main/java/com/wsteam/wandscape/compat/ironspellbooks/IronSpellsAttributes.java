@@ -23,30 +23,34 @@ import java.util.Map;
  * KNOCKBACK_RESISTANCE/MOVEMENT_SPEED），但铁魔法**自有属性**不在 NPC 的 AttributeMap
  * 中（{@code AttributeSupplier.createInstance} 对未注册属性返回 null → 原版静默跳过），
  * 且 Wandscape 的魔力/法强读取走自己的 core 枚举（ECS {@code EquipmentComponent}），
- * 不从原版属性实例读——所以这里只桥 Wandscape 自有属性：
+ * 不从原版属性实例读——所以这里只桥 Wandscape 自有属性。
+ *
+ * <p>2026-09-02 起**只桥资源类属性**：
  * <ul>
  *   <li>{@code MAX_MANA}（如流浪法师兜帽 +25 最大法力）→ {@link AttributeType#MAX_MANA}</li>
- *   <li>{@code SPELL_POWER}（如 +5% 法术强度）→ {@link AttributeType#SPELL_POWER}</li>
- *   <li>{@code COOLDOWN_REDUCTION}（法术冷却缩减）→ {@link AttributeType#SPELL_SPEED}</li>
- *   <li>{@code CAST_TIME_REDUCTION}（法术吟唱缩减）→ {@link AttributeType#SPELL_SPEED}</li>
+ *   <li>{@code MANA_REGEN}（魔力恢复倍率）→ {@link AttributeType#MANA_REGEN}</li>
  * </ul>
- * 百分比加成（{@code ADD_MULTIPLIED_BASE}）映射为 {@link ModifierOperation#MULTIPLY_BASE}，
- * 使提升随 NPC 基础值正确放大、且在基础值被重新播种（法师小屋训练/复活）后仍正确。
+ * 这两项是装备对 NPC 资源池的合理投入——NPC 用铁魔法/原生施法都消耗同一魔力池，铁魔法加蓝/回蓝装备
+ * 应当生效。
  *
- * <p>冷却/吟唱缩减折叠进 {@code SPELL_SPEED}：Wandscape 冷却 = 基础 ÷ SPELL_SPEED、
- * 铁魔法吟唱锁时长 = 基础 ÷ SPELL_SPEED（见 {@code IronSpellsCaster}）——两个缩减与
- * {@code SPELL_SPEED} 都是"除以速度"语义，方向一致。常见护甲幅度（+5%~15%）下与铁魔法
- * 自身公式（{@code 基础×(2−值)}）近似等价（0.10 → ÷1.10 ≈ ×0.909 vs ×0.90）。注意
- * 折叠只影响冷却与铁魔法吟唱；原生 Wandscape 法术的锁时长固定（{@code durationTicks/2}
- * 不随 SPELL_SPEED 缩放）。
+ * <p>**伤害/节奏类属性一律不桥**：{@code SPELL_POWER}（法术强度）、{@code COOLDOWN_REDUCTION}
+ * （冷却缩减）、{@code CAST_TIME_REDUCTION}（吟唱缩减）**不再**映射为
+ * {@link AttributeType#SPELL_POWER}/{@link AttributeType#SPELL_SPEED}。原因：铁魔法库内部
+ * 已按施法者（NPC）的 iron 属性结算法术强度——若再把 iron spell_power 桥进我们的 SPELL_POWER，
+ * 铁魔法法伤 = iron原生 × (我们 base + 桥进的iron) 会把同一份铁魔法加成算两次（伤害按强度成方增长）；
+ * 冷却/吟唱同理会经 SPELL_SPEED 泄漏进我们法术与铁魔法冷却。独立结算规则后，铁魔法法术吃铁魔法
+ * 自身属性，我们法术只吃我们自有属性，互不放大。
+ *
+ * <p>百分比加成（{@code ADD_MULTIPLIED_BASE}）映射为 {@link ModifierOperation#MULTIPLY_BASE}，
+ * 使提升随 NPC 基础值正确放大、且在基础值被重新播种（法师小屋训练/复活）后仍正确。
  *
  * <p>{@code MOVEMENT_SPEED} 不再映射——盔甲进 vanilla 槽后原版直接结算移速加成，
  * 再映射会与 base 推送双重叠加。
  *
  * <p>其余铁魔法特色属性没有 Wandscape 对应属性，一律不映射：各学派 {@code *_spell_power}
  * （某系法术增强，折进通用 SPELL_POWER 会语义错——学派加成 buff 一切）、
- * {@code casting_movespeed}（施法时移速）、{@code mana_regen}（Wandscape 回蓝是配置驱动）、
- * {@code summon_damage}、{@code spell_resist} 与各系抗性（无受击减伤钩子）。
+ * {@code casting_movespeed}（施法时移速）、{@code summon_damage}、{@code spell_resist}
+ * 与各系抗性（无受击减伤钩子）。
  */
 public final class IronSpellsAttributes {
 
@@ -100,10 +104,9 @@ public final class IronSpellsAttributes {
     static AttributeType mapType(String registeredName) {
         return switch (registeredName) {
             case "irons_spellbooks:max_mana" -> AttributeType.MAX_MANA;
-            case "irons_spellbooks:spell_power" -> AttributeType.SPELL_POWER;
-            case "irons_spellbooks:cooldown_reduction" -> AttributeType.SPELL_SPEED;
-            case "irons_spellbooks:cast_time_reduction" -> AttributeType.SPELL_SPEED;
             case "irons_spellbooks:mana_regen" -> AttributeType.MANA_REGEN;
+            // spell_power/cooldown_reduction/cast_time_reduction 故意不映射：铁魔法库内部已按施法者
+            // iron 属性结算，再桥进我们的 SPELL_POWER/SPELL_SPEED 会把铁魔法加成算两次（见类级 Javadoc）。
             default -> null;
         };
     }

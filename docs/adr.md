@@ -33,6 +33,8 @@
 |---|---|---|---|
 | 2026-09-02 | **法杖属性 Tooltip 显式渲染**：默认 attribute modifiers 为空导致 Tooltip 不列属性，在 `appendHoverText` 手动渲染主手属性块。 | 玩家手持虽无法杖加成但需可查阅属性，修复自动结算废除后 Tooltip 消失。 | `content/items/wand/item/WandItem` |
 | 2026-09-02 | **NPC 法杖属性桥接补全 NBT 加载/放出行**：`onAddedToLevel`、戒指放出、菜单 Shift 均显式 `syncWandAttributes`。 | 实体从 NBT 恢复（区块加载/戒指放出）不经 `setItemSlot`，否则法杖属性加成静默丢失。 | `content/npc/entity/WandscapeNpc`, `content/items/ring/internal/OathRingService` |
+| 2026-09-02 | **铁魔法装备属性桥收窄为资源类**：只桥 `max_mana→MAX_MANA`、`mana_regen→MANA_REGEN`；豁免 `spell_power→SPELL_POWER`、`cooldown_reduction/cast_time_reduction→SPELL_SPEED`。 | 铁魔法库已按施法者 iron 属性表结算法伤，再把 iron 加成桥进我们 SPELL_POWER 会把铁魔法法伤算两次（伤害按强度成方增长）、冷却/吟唱缩减经 SPELL_SPEED 泄漏进我们法术；独立结算后铁魔法法术吃铁魔法自身属性、我们法术只吃自有属性，互不放大；魔力/回蓝属装备对资源池的合理投入故保留。 | `compat/ironspellbooks/IronSpellsAttributes`, `content/npc/entity/WandscapeNpc`, `compat/curios/CuriosCompatImpl` |
+| 2026-09-02 | **陨石法伤倍率收归伤害入口单处结算**：删除 `castMeteor` 施法时的 SPELL_POWER×魔力强化预乘，统一由 `NpcSpellPowerHandler` 在落地结算时乘一次。 | 与光束一致（光束只在伤害入口乘），否则陨石预乘 + `hurt()` 再乘，原生法伤也按强度成方增长；倍率在伤害核算唯一入口核算，任何新法术自动生效不漏写。 | `content/magic/internal/MagicSpellExecutors` |
 | 2026-08-29 | **CurseForge 审核去风险**：法师 Curios 槽位改数据包声明，彻底移除反射镜像与任务面板反射块。 | 消除自动扫描器高危反射特征，确保平稳过审与跨版本安全。 | `compat/curios/`, `data/curios/` |
 | 2026-08-29 | **建筑扫描器保真分层**：生存扫描器导出为纯建筑（剥离方块 NBT 与展示框物品），创造扫描器完整保真。 | 从导出源头封死生存模式利用容器 NBT 刷物品漏洞，创造端保留全保真。 | `content/building/scanner/` |
 | 2026-08-28 | **权杖范围限定本殖民地**：庇护权杖并入 `isFriendlyForce` 边界，敌对权杖单槽最高优先集火，仅持久化 UUID。 | 保持"只能指挥自己殖民地 NPC"语义，存 UUID 杜绝实体引用内存泄漏。 | `content/items/scepter/`, `content/npc/` |

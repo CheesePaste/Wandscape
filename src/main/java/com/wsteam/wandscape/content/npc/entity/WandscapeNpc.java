@@ -379,8 +379,10 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
     // so vanilla/other mods read the worn armor and vanilla applies the item
     // attribute modifiers + enchantment effects each tick. The wizard robe
     // appearance is preserved because WandscapeNpcRenderer adds no armor layer.
-    // Iron Spells' custom attributes (MAX_MANA/SPELL_SPEED/MANA_REGEN) are
-    // bridged into the NPC's vanilla AttributeMap by {@link #syncIronArmorAttributes}.
+    // Iron Spells' custom resource attributes (MAX_MANA/MANA_REGEN) are
+    // bridged into the NPC's vanilla AttributeMap by {@link #syncIronArmorAttributes};
+    // its damage/cooldown attributes (spell_power/cooldown_reduction/cast_time_reduction)
+    // are deliberately NOT bridged — see IronSpellsAttributes class Javadoc.
     // ============================================================
 
     public static final int ARMOR_SLOT_COUNT = 4;
@@ -414,9 +416,14 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
      */
 
     /**
-     * 把 4 个 vanilla 盔甲格中铁魔法装备的 MAX_MANA/SPELL_SPEED/MANA_REGEN 加成桥进
-     * 实体属性表（transient 修饰符）。护甲值/韧性/击退/移速等原版属性由原版每 tick 装备
-     * 结算自动应用（盔甲就在 vanilla 槽）。空槽或非铁魔法盔甲自动移除旧修饰符。
+     * 把 4 个 vanilla 盔甲格中铁魔法装备的属性加成桥进实体属性表（transient 修饰符）。
+     *
+     * <p>2026-09-02 设计变更：**只桥资源类属性**——铁魔法的 spell_power/cooldown_reduction/
+     * cast_time_reduction **不再**灌进 Wandscape 的 SPELL_POWER/SPELL_SPEED（否则铁魔法法伤被算两次、
+     * 冷却/吟唱缩短泄漏）；铁魔法 max_mana/mana_regen 仍桥进 MAX_MANA/MANA_REGEN（装备加蓝/回蓝
+     * 是玩家对 NPC 的合理投入）。清理循环覆盖全部 4 类，确保旧版桥残留的 spell_power/spell_speed
+     * 放大被移除；添加动作因 {@code IronSpellsAttributes.mapType} 已豁免那三项，天然只落资源类。
+     * 护甲值/韧性/击退/移速等原版属性由原版每 tick 装备结算自动应用（盔甲就在 vanilla 槽）。
      */
     public void syncIronArmorAttributes() {
         if (level().isClientSide) return;

@@ -202,9 +202,9 @@ public final class MagicSpellExecutors {
             return false;
         }
 
-        float damage = (def.effectDamage() != null ? def.effectDamage().floatValue() : METEOR_DEFAULT_DAMAGE)
-                * Math.max(0f, npc.getEffectiveAttribute(AttributeType.SPELL_POWER))
-                * magicEnhanceMultiplier(npc);
+        // SPELL_POWER/魔力强化倍率由 NpcSpellPowerHandler 在伤害核算入口统一应用，不在此处单独乘
+        //（与光束一致；否则陨石落地经 hurt() 又乘一次，法伤按强度成方增长——曾有的 double 放大）。
+        float damage = def.effectDamage() != null ? def.effectDamage().floatValue() : METEOR_DEFAULT_DAMAGE;
         Vec3 pos = npc.position();
         UUID effectId = UUID.randomUUID();
 
