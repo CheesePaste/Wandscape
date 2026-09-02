@@ -6,6 +6,7 @@ import com.wsteam.wandscape.content.npc.data.RecruitmentCandidate;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -18,8 +19,9 @@ import java.util.concurrent.ConcurrentHashMap;
  * <ul>
  *   <li>7 个可见属性（{@link #ORDER}）：有上下界/每级加成/训练步进，可招募掷点、可训练、
  *       可随等级提升，在法师小屋等面板显示。</li>
- *   <li>2 个隐藏属性（HEALTH_REGEN / MANA_REGEN）：不显示、不可训练、无 SPECS，base 恒为
- *       默认 1.0，只被装备/外部模组的修饰符改动（回血/回蓝倍率）。</li>
+ *   <li>2 个隐藏属性（HEALTH_REGEN / MANA_REGEN）：不显示、不可训练，SPECS 为恒等曲线
+ *       （lower=upper、perLevel=trainStep=0），base 恒为中值 1.0，只被装备/外部模组的
+ *       修饰符改动（回血/回蓝倍率）。</li>
  * </ul>
  *
  * <p>各规则表是「默认值 + 覆盖层」结构：整合包/附属模组经 {@code WandscapeApis.getNpcAttributesApi()}
@@ -62,7 +64,7 @@ public final class NpcAttributes {
             AttributeType.MAX_MANA);
 
     // ============================================================
-    // 上下界 / 每级加成 / 训练步进（SPECS，仅 7 个可见属性）
+    // 上下界 / 每级加成 / 训练步进（SPECS，9 项全覆盖：7 可见 + 2 隐藏恒等曲线）
     // ============================================================
 
     private static final float EPS = 1e-4f;
@@ -70,20 +72,23 @@ public final class NpcAttributes {
     /** Per-attribute curve: base range, per-level bonus, per-train step. */
     public record AttrSpec(float lower, float upper, float perLevel, float trainStep) {}
 
-    /** 默认曲线。MOVE_SPEED / ARMOR_VALUE 的每级加成是废案（perLevel=0），不应用。 */
+    /** 默认曲线：9 项全覆盖。隐藏属性用恒等曲线占位（lower=upper / perLevel / trainStep 全 0），
+     *  保证 spec() 对现有属性恒非空；默认值与招募掷点全部派生自这张表。 */
     private static final Map<AttributeType, AttrSpec> BASE_SPECS = Map.of(
-            AttributeType.MAX_HP,       new AttrSpec(20f, 40f,  2f,    1f),
-            AttributeType.MOVE_SPEED,   new AttrSpec(0.2f, 0.4f, 0f, 0.01f),
+            AttributeType.MAX_HP,       new AttrSpec(20f,  40f,  2f,    1f),
+            AttributeType.MOVE_SPEED,   new AttrSpec(0.2f, 0.4f, 0.01f, 0.01f),
             AttributeType.SPELL_POWER,  new AttrSpec(0.5f, 1.5f, 0.05f, 0.05f),
             AttributeType.WORK_SPEED,   new AttrSpec(0.5f, 1.5f, 0.05f, 0.05f),
             AttributeType.SPELL_SPEED,  new AttrSpec(0.5f, 1.5f, 0.05f, 0.05f),
-            AttributeType.ARMOR_VALUE,  new AttrSpec(0f,   10f,  0f,  0.5f),
-            AttributeType.MAX_MANA,     new AttrSpec(150f, 250f, 15f,   5f));
+            AttributeType.ARMOR_VALUE,  new AttrSpec(0f,   10f,  0f,   0.5f),
+            AttributeType.MAX_MANA,     new AttrSpec(100f, 200f, 10f,  5f),
+            AttributeType.HEALTH_REGEN, new AttrSpec(1f,   1f,   0f,   0f),
+            AttributeType.MANA_REGEN,   new AttrSpec(1f,   1f,   0f,   0f));
 
     /** API/整合包覆盖层（mod 初始化时写入，运行期只读）。 */
     private static final Map<AttributeType, AttrSpec> SPEC_OVERRIDES = new ConcurrentHashMap<>();
 
-    /** 有效曲线 = 覆盖优先，未覆盖用默认。隐藏属性无 SPECS，返回 null。 */
+    /** 有效曲线 = 覆盖优先，未覆盖用默认。9 项属性全覆盖（隐藏属性为恒等曲线），返回非空。 */
     public static AttrSpec spec(AttributeType type) {
         AttrSpec override = SPEC_OVERRIDES.get(type);
         return override != null ? override : BASE_SPECS.get(type);
@@ -105,27 +110,18 @@ public final class NpcAttributes {
     }
 
     // ============================================================
-    // 默认值（实体 base 未招募/未覆盖时用）
+    // 默认值（实体 base 未招募/未覆盖时用）＝ SPECS 上下界中值，不再单独成表
     // ============================================================
-
-    /** 默认 base。隐藏属性恒为 1.0（无招募掷点、无训练）。ARMOR 默认 5。 */
-    private static final Map<AttributeType, Float> BASE_DEFAULTS = Map.of(
-            AttributeType.MAX_HP,       30f,
-            AttributeType.MOVE_SPEED,   0.3f,
-            AttributeType.SPELL_POWER,  1f,
-            AttributeType.WORK_SPEED,   1f,
-            AttributeType.SPELL_SPEED,  1f,
-            AttributeType.ARMOR_VALUE,  5f,
-            AttributeType.MAX_MANA,     200f,
-            AttributeType.HEALTH_REGEN, 1f,
-            AttributeType.MANA_REGEN,   1f);
 
     private static final Map<AttributeType, Float> DEFAULT_OVERRIDES = new ConcurrentHashMap<>();
 
-    /** 每属性默认 base（覆盖优先）。 */
+    /** 每属性默认 base（覆盖优先）；未覆盖时取 (lower+upper)/2，随 BASE_SPECS 自动跟随。 */
     public static float defaultFor(AttributeType type) {
         Float override = DEFAULT_OVERRIDES.get(type);
-        return override != null ? override : BASE_DEFAULTS.get(type);
+        if (override != null) return override;
+        AttrSpec s = spec(type);
+        // 兜底：BASE_SPECS 全覆盖下不会为 null；仅防未来新增枚举漏配曲线，回落 1.0 而非崩溃。
+        return s != null ? (s.lower() + s.upper()) * 0.5f : 1f;
     }
 
     /** 覆盖单属性默认 base（mod 初始化时调用）。 */
@@ -139,27 +135,41 @@ public final class NpcAttributes {
     }
 
     // ============================================================
-    // 招募 roll（游客与酒馆招募共用同一公式）
+    // 招募 roll（游客与酒馆招募共用同一公式，取数与舍入全部派生自 BASE_SPECS）
     // ============================================================
 
+    /** 掷点结果取整为整数的属性（量级大、整数更直观）；其余保留两位小数。 */
+    private static final Set<AttributeType> INTEGER_ROUNDED = Set.of(
+            AttributeType.MAX_HP,
+            AttributeType.MAX_MANA,
+            AttributeType.ARMOR_VALUE);
+
     /**
-     * Roll a mage candidate at the given level. Each attribute draws an
-     * independent random factor — skew (r²) for most, uniform for move speed —
-     * within its SPECS range; the level adds {@code perLevel × (level−1)}.
-     * MOVE_SPEED / ARMOR_VALUE 的每级加成是废案（perLevel=0），不加。
+     * Roll a mage candidate at the given level. Each attribute draws an independent
+     * random factor — skew (r²) for most, uniform for move speed — within its SPECS
+     * range, then adds {@code perLevel × (level−1)}. 改数值只动 BASE_SPECS 一张表。
      */
     public static RecruitmentCandidate roll(int level, Random random) {
         int safeLevel = Math.max(1, level);
         int lvl = safeLevel - 1;
-        float maxHp = (float) Math.round(20 + 20 * skew(random)) + lvl * 2f;        // 20–40 + 2/级
-        float maxMana = (float) Math.round(150 + 100 * skew(random)) + lvl * 15f;   // 150–250 + 15/级
-        float moveSpeed = 0.2f + random.nextFloat() * 0.2f;                         // 0.2–0.4，每级 0
-        float spellPower = round2(0.5f + (float) skew(random) + lvl * 0.05f);       // 0.5–1.5 + 0.05/级
-        float workSpeed = round2(0.5f + (float) skew(random) + lvl * 0.05f);
-        float spellSpeed = round2(0.5f + (float) skew(random) + lvl * 0.05f);
-        float armorValue = (float) Math.round(10 * skew(random));                   // 0–10，每级 0
-        return new RecruitmentCandidate(safeLevel, maxHp, moveSpeed, spellPower,
-                workSpeed, spellSpeed, armorValue, maxMana, List.of());
+        return new RecruitmentCandidate(safeLevel,
+                rollValue(AttributeType.MAX_HP, lvl, random),
+                rollValue(AttributeType.MOVE_SPEED, lvl, random),
+                rollValue(AttributeType.SPELL_POWER, lvl, random),
+                rollValue(AttributeType.WORK_SPEED, lvl, random),
+                rollValue(AttributeType.SPELL_SPEED, lvl, random),
+                rollValue(AttributeType.ARMOR_VALUE, lvl, random),
+                rollValue(AttributeType.MAX_MANA, lvl, random),
+                List.of());
+    }
+
+    /** 单属性掷点：SPECS 范围内随机因子 + perLevel×lvl，舍入精度按 {@link #INTEGER_ROUNDED}。 */
+    private static float rollValue(AttributeType type, int lvl, Random random) {
+        AttrSpec s = spec(type);
+        // 速度用均匀散布，其余偏斜 r²（多数偏低、偶发高值 → 自然出专精）。
+        double factor = type == AttributeType.MOVE_SPEED ? random.nextDouble() : skew(random);
+        float value = (float) (s.lower() + (s.upper() - s.lower()) * factor) + s.perLevel() * lvl;
+        return INTEGER_ROUNDED.contains(type) ? (float) Math.round(value) : round2(value);
     }
 
     /** 偏斜随机因子：random×random ∈ [0,1)，多数偏向低值、偶发接近 1。 */

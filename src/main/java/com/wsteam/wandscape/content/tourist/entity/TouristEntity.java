@@ -359,7 +359,7 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
 
                 if (mage) {
                     variant = random.nextInt(WIZARD_SKIN_COUNT);
-                    // 偏斜分布 random⁴（多数偏低、偶发高值 → 自然出专精），等级做加法叠加（更公平）
+                    // 偏斜分布 random²（多数偏低、偶发高值 → 自然出专精），等级做加法叠加（更公平）
                     RecruitmentCandidate roll = NpcAttributes.roll(level,
                             new java.util.Random(random.nextLong()));
                     maxHp = roll.maxHp();

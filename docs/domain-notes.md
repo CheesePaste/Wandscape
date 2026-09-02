@@ -10,9 +10,9 @@
 ## 一、NPC 域 (`content/npc`)
 
 1. **属性全套规则唯一事实源**：
-   - 所有 9 项 NPC 属性规则收敛在 `content/npc/attributes/NpcAttributes.java`。包含 7 项可见属性（`ORDER`，可特训/可升级/有 SPECS）与 2 项隐藏属性（`HEALTH_REGEN/MANA_REGEN`，基础值恒 1.0）。
-   - 严禁在其他类中硬编码属性默认值或范围；修改属性规则只改 `NpcAttributes`。
-   - `MOVE_SPEED` 与 `ARMOR_VALUE` 每级加成是废案（`perLevel = 0`）；`ARMOR` 默认值为 5.0。
+   - 所有 9 项 NPC 属性规则收敛在 `content/npc/attributes/NpcAttributes.java`，**数据唯一源是 `BASE_SPECS`**（9 项全覆盖：7 可见 + 2 隐藏恒等曲线）。默认值取其上下界中值 `(lower+upper)/2`，招募掷点与每级加成也全部派生自它，没有第二张数值表。
+   - 严禁在其他类中硬编码属性默认值或范围；修改属性规则只动 `NpcAttributes.BASE_SPECS`。
+   - `MOVE_SPEED` 每级加成 0.01、`ARMOR_VALUE` 为 0（废案）；`ARMOR` 默认值为上下界中值 5.0。
 2. **原版装备槽与耐久手动扣减**：
    - NPC 盔甲放原版装备槽以兼容外部属性与附魔计算。但原版 `LivingEntity` 不对非玩家生物扣除盔甲耐久，必须在 `WandscapeNpc.hurtArmor` 中手动调用 `hurtAndBreak` 结算。
 3. **幽灵 NPC 守卫（区块卸载）**：
