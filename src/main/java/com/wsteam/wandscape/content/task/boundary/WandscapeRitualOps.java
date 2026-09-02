@@ -149,7 +149,7 @@ public class WandscapeRitualOps implements RitualOps {
     public static int channelTicks(RitualId ritual) {
         return switch (ritual.id()) {
             case "self_teleport" -> teleportChannelTicks();
-            case "item_teleport", "player_summon" -> 1; // TODO: restore to 600 after testing
+            case "item_teleport", "player_summon" -> 1;
             case "warding" -> 200;
             case "group_vigor" -> 400;
             case "rain_call", "clear_weather" -> 1200;
