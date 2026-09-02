@@ -1,4 +1,6 @@
 package com.wsteam.wandscape.content.npc.internal;
+import com.wsteam.wandscape.api.NpcApi;
+import com.wsteam.wandscape.api.WandscapeApis;
 import com.wsteam.wandscape.content.npc.attributes.NpcAttributes.AttributeType;
 
 import com.wsteam.wandscape.content.task.component.NpcInventory;
@@ -43,7 +45,9 @@ public final class NpcDeathHandler {
             }
         }
 
-        UUID colony = npc.colonyId != null ? npc.colonyId : EntityComponentBridge.PLACEHOLDER_COLONY;
+        NpcApi npcApi = WandscapeApis.getNpcApiSilently();
+        UUID colony = npcApi != null ? npcApi.getNpcColony(npc.getUUID()) : null;
+        if (colony == null) colony = EntityComponentBridge.PLACEHOLDER_COLONY;
         DeathRecord rec = new DeathRecord(
                 npc.getUUID(),
                 npc.getNpcName(),

@@ -1,4 +1,5 @@
 package com.wsteam.wandscape.content.items.scepter.internal;
+import com.wsteam.wandscape.api.NpcApi;
 import com.wsteam.wandscape.content.task.ecs.World;
 
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
@@ -127,7 +128,8 @@ public final class ScepterService {
             fail(player, "message.wandscape.scepter.no_colony");
             return false;
         }
-        if (!npc.isColonyNpc() || !colonyId.equals(npc.colonyId)) {
+        NpcApi npcApi = com.wsteam.wandscape.api.WandscapeApis.getNpcApiSilently();
+        if (!npc.isColonyNpc() || npcApi == null || !colonyId.equals(npcApi.getNpcColony(npc.getUUID()))) {
             fail(player, "message.wandscape.scepter.other_colony");
             return false;
         }
@@ -155,10 +157,12 @@ public final class ScepterService {
     }
 
     private static void log(ServerPlayer player, String action, boolean value, WandscapeNpc npc) {
+        NpcApi npcApi = com.wsteam.wandscape.api.WandscapeApis.getNpcApiSilently();
+        UUID npcColony = npcApi != null ? npcApi.getNpcColony(npc.getUUID()) : null;
         Log.info(TAG, "Player {} {} -> {} for mage {} (colony {})",
                 shortId(player.getUUID()), action, value,
                 shortId(npc.getUUID()),
-                npc.colonyId != null ? shortId(npc.colonyId) : "none");
+                npcColony != null ? shortId(npcColony) : "none");
     }
 
     private static String shortId(UUID id) {

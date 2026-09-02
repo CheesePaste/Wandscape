@@ -1,6 +1,8 @@
 package com.wsteam.wandscape.content.building.internal;
 
 import com.wsteam.wandscape.api.MageHutApi;
+import com.wsteam.wandscape.api.NpcApi;
+import com.wsteam.wandscape.api.WandscapeApis;
 import com.wsteam.wandscape.content.npc.attributes.NpcAttributes;
 import com.wsteam.wandscape.content.npc.attributes.NpcAttributes.AttributeType;
 import com.wsteam.wandscape.content.npc.data.MageHutResident;
@@ -52,7 +54,8 @@ public class MageHutApiImpl implements MageHutApi {
         if (colonyId == null) return false;
 
         if (!(level.getEntity(npcId) instanceof WandscapeNpc npc)) return false;
-        if (!npc.isColonyNpc() || npc.colonyId == null || !npc.colonyId.equals(colonyId)) return false;
+        NpcApi npcApi = WandscapeApis.getNpcApiSilently();
+        if (!npc.isColonyNpc() || npcApi == null || !colonyId.equals(npcApi.getNpcColony(npcId))) return false;
 
         // 已经是这间小屋的入住者 → 幂等成功（顺带补 homeHut 指针）
         MageHutResident existing = data.getMageHutResident(buildingId);

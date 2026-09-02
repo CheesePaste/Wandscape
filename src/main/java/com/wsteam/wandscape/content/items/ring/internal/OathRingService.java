@@ -1,4 +1,6 @@
 package com.wsteam.wandscape.content.items.ring.internal;
+import com.wsteam.wandscape.api.NpcApi;
+import com.wsteam.wandscape.api.WandscapeApis;
 import com.wsteam.wandscape.content.task.ecs.World;
 
 import com.wsteam.wandscape.Wandscape;
@@ -43,7 +45,8 @@ public final class OathRingService {
             fail(player, "message.wandscape.ring.no_colony");
             return;
         }
-        if (!mage.isColonyNpc() || !playerColony.equals(mage.colonyId)) {
+        NpcApi npcApi = WandscapeApis.getNpcApiSilently();
+        if (!mage.isColonyNpc() || npcApi == null || !playerColony.equals(npcApi.getNpcColony(mage.getUUID()))) {
             fail(player, "message.wandscape.ring.other_colony");
             return;
         }

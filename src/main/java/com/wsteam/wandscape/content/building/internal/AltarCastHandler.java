@@ -14,6 +14,7 @@ import com.wsteam.wandscape.content.magic.data.AltarSpellInfo;
 import com.wsteam.wandscape.content.building.data.BuildingData;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.foundation.networking.ScreenFeedbackPacket;
+import com.wsteam.wandscape.api.NpcApi;
 import com.wsteam.wandscape.api.WandscapeApis;
 import com.wsteam.wandscape.foundation.registry.WandscapeConstants;
 import com.wsteam.wandscape.foundation.ui.I18n;
@@ -140,9 +141,10 @@ public final class AltarCastHandler {
 
     /** 检查祭坛所属殖民地内是否有任意 NPC 当前法力 >= manaCost（无 NPC 在场则不允许发布）。 */
     private static boolean hasCasterWithMana(ServerLevel level, @Nullable UUID colonyId, int manaCost) {
+        NpcApi npcApi = WandscapeApis.getNpcApiSilently();
         for (WandscapeNpc npc : EntityComponentBridge.INSTANCE.allNpcs().values()) {
             if (npc.isRemoved() || npc.level() != level) continue;
-            if (colonyId != null && (npc.colonyId == null || !npc.colonyId.equals(colonyId))) continue;
+            if (colonyId != null && (npcApi == null || !colonyId.equals(npcApi.getNpcColony(npc.getUUID())))) continue;
             if (npc.getCurrentMana() >= manaCost) return true;
         }
         return false;

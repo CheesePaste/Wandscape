@@ -1,11 +1,11 @@
 package com.wsteam.wandscape.content.npc.guard;
 
 import com.wsteam.wandscape.api.ColonyApi;
+import com.wsteam.wandscape.api.NpcApi;
 import com.wsteam.wandscape.api.WandscapeApis;
 import com.wsteam.wandscape.content.npc.attributes.NpcAttributes.AttributeType;
 import com.wsteam.wandscape.content.magic.internal.MagicSpellExecutors;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
-import com.wsteam.wandscape.content.npc.internal.EntityComponentBridge;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
@@ -111,8 +111,9 @@ public final class NpcSpellPowerHandler {
         if (server == null) return;
 
         ServerPlayer credited = null;
-        UUID colonyId = npc.colonyId;
-        if (colonyId != null && !EntityComponentBridge.PLACEHOLDER_COLONY.equals(colonyId)) {
+        NpcApi npcApi = WandscapeApis.getNpcApiSilently();
+        UUID colonyId = npcApi != null ? npcApi.getNpcColony(npc.getUUID()) : null;
+        if (colonyId != null) {
             ColonyApi colonyApi = WandscapeApis.getColonyApiSilently();
             if (colonyApi != null) {
                 UUID founder = colonyApi.getFounder(colonyId);

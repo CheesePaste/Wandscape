@@ -16,6 +16,7 @@ import com.wsteam.wandscape.content.npc.attributes.NpcAttributes;
 import com.wsteam.wandscape.content.npc.data.MageHutResident;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.foundation.networking.ScreenFeedbackPacket;
+import com.wsteam.wandscape.api.NpcApi;
 import com.wsteam.wandscape.api.WandscapeApis;
 import com.wsteam.wandscape.foundation.registry.WandscapeConstants;
 import com.wsteam.wandscape.foundation.ui.I18n;
@@ -112,7 +113,9 @@ public final class MageHutServerHandler {
                     "[Wandscape] That mage was not found."), true);
             return;
         }
-        if (!npc.isColonyNpc() || npc.colonyId == null || !npc.colonyId.equals(colonyId)) {
+        NpcApi npcApi = WandscapeApis.getNpcApiSilently();
+        if (!npc.isColonyNpc() || colonyId == null || npcApi == null
+                || !colonyId.equals(npcApi.getNpcColony(npc.getUUID()))) {
             ScreenFeedbackPacket.send(sp, I18n.name("message.wandscape.mage_hut.not_colony_mage",
                     "[Wandscape] That mage is not part of this colony."), true);
             return;
