@@ -879,7 +879,7 @@ public class Wandscape {
                 .playToClient(
                         TransportStartPacket.TYPE,
                         TransportStartPacket.STREAM_CODEC,
-                        (packet, ctx) -> TransportStartPacket.handleClient(packet))
+                        (packet, ctx) -> ctx.enqueueWork(() -> TransportStartPacket.handleClient(packet)))
                 // ── Magic circle cast ──
                 .playToClient(
                         MagicCircleCastPacket.TYPE,
