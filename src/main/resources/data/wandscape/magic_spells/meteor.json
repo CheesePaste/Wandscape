@@ -10,7 +10,7 @@
   "effect": {
     "circle_id": "meteor_magic_circle",
     "color": "#E74C3C",
-    "damage": 7.5
+    "damage": 6
   },
   "description": "法阵持续期间逐颗轰下六颗陨石，对落点附近的敌人造成群体伤害。"
 }
