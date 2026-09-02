@@ -82,10 +82,8 @@ Craft the **Guide Book** from a few bits of dirt, logs, cobblestone and seeds, t
 ## Dev Environment
 
 ```bash
-./gradlew runClient            # start a test client
-./gradlew build                # compile
-./gradlew test                 # unit tests
-./gradlew runGameTestServer    # run GameTest
+./gradlew runClient            # start a test client (run neoForgeIdeSync first / if it errors)
+./gradlew build                # compile (no unit tests maintained — build is the full check)
 ./gradlew neoForgeIdeSync      # run before first launch / when runClient reports a missing clientRunVmArgs.txt
 ```
 
@@ -96,7 +94,7 @@ Craft the **Guide Book** from a few bits of dirt, logs, cobblestone and seeds, t
 
 ### AI-assisted dev tool (optional but recommended)
 
-If you develop with Claude Code, install **codebase-memory-mcp**: it indexes the codebase into a semantic knowledge graph so structural queries (call chains, impact analysis, architecture, dead code) are far faster and more token-efficient than grepping. It also backs the "code discovery" workflow in `CLAUDE.md` (`search_graph` → `trace_path` → `get_code_snippet`).
+If you develop with Claude Code, install **codebase-memory-mcp**: it indexes the codebase into a semantic knowledge graph so structural queries (call chains, impact analysis, architecture, dead code) are far faster and more token-efficient than grepping. It also backs this project's recommended code-discovery flow (`search_graph` → `trace_path` → `get_code_snippet`).
 
 Open source: <https://github.com/DeusData/codebase-memory-mcp> (MIT, single static binary, zero deps). After install it auto-detects Claude Code and writes the MCP config:
 
@@ -116,21 +114,20 @@ Restart Claude Code after installing; on first use, index the repo first: `index
 ## Project Layout
 
 ```
-src/main/java/com/wsteam/wandscape/   # modules (core/engine/shared/building/wand/npc/tourist/magic/...)
-src/main/resources/data/wandscape/    # JSON configs (buildings/recipes/element mappings/blueprints/magic circles/narratives)
-docs/                                 # module docs & data formats (source of truth, written against the real code)
-architecture/                         # legacy structure snapshot (partly outdated — trust docs/)
-architecture/magic/                   # magic circle contract (spec/principles/examples)
+src/main/java/com/wsteam/wandscape/   # source: content/<13 domains>, foundation/, api/, compat/, impl/
+src/main/resources/data/wandscape/    # JSON configs (buildings/recipes/element mappings/blueprints/magic/narratives/tags)
+src/main/resources/assets/wandscape/  # assets (lang en_us/zh_cn, models, textures, sounds)
+docs/                                 # developer docs & data formats (navigation: docs/README.md; code is source of truth)
 ```
 
 ## Design Principles
 
-1. **High compatibility** — no vanilla behavior changes; JSON data-driven; block mapping via tags; `/reload` hot-reload
-2. **Atomic design** — modules communicate via `WandscapeApis` + EventBus, no cross-package direct references
-3. **Stability first** — every failure path has a fallback; no crashes or soft-locks; building damage protection
-4. **Engine requests, adapters implement** — `core/` has zero MC dependency; MC implementations live in `engine/`
+1. **High compatibility** — no vanilla behavior changes, purely additive content & mechanics; JSON data-driven; block mapping via tags; `/reload` hot-reload
+2. **Aggregate by feature, call directly** — one domain per package; cross-domain code calls business classes directly, no bridge layers, no event-bus overuse
+3. **Stability first** — every failure path has a fallback; no crashes or soft-locks; key infrastructure (town hall / warehouse / workstation) is protected when only one remains
+4. **Pure logic stays MC-free** — core algorithms, blueprint parsing and task scoring never import Minecraft classes, keeping them portable
 5. **Don't punish players** — remote management panel, mages work on their own, everything recoverable
-6. **Performance** — single-entity logistics merging with gold-framed bubble counters to avoid entity-spawn lag
+6. **Performance** — single-entity logistics merging with bubble counters to avoid entity-spawn lag
 
 ## License
 

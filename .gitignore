@@ -75,7 +75,7 @@ reasonix.toml
 .reasonix/
 
 ### Third-party reference examples (GPL-3.0, read-only, not part of the mod) ###
-architecture/magic/usefulmagic-examples/
+_refs/magic/usefulmagic-examples/
 
 ### Python cache ###
 __pycache__/

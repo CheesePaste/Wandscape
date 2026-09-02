@@ -52,7 +52,7 @@ Wandscape —— 魔法殖民地自动化与模拟经营模组。
 
 殖民地走上正轨后，游客沿道路入城：商店进货售卖回笼元素、服务建筑与宾馆接待过夜、装饰建筑范围辐射加成、奇观建筑改写全局规则，形成完整的经济闭环。
 
-配置全部由 JSON 数据驱动，/reload 热重载，不修改原版行为。
+配置由Config与 JSON 数据驱动，/reload 热重载，不修改原版行为。
 '''
 
 # The [[mixins]] block allows you to declare your mixin config to FML so that it gets loaded.

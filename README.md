@@ -82,11 +82,9 @@ Wandscape 是一个**魔法 × 小镇建设 × 模拟经营**模组（Minecraft 
 ## 开发环境
 
 ```bash
-./gradlew runClient            # 启动测试客户端
-./gradlew build                # 编译
-./gradlew test                 # 单元测试
-./gradlew runGameTestServer    # 运行 GameTest
-./gradlew neoForgeIdeSync      # 首次运行前/runClient 报错时执行
+./gradlew runClient            # 启动测试客户端（首次或报错时先执行 neoForgeIdeSync）
+./gradlew build                # 编译（项目不维护单元测试，build 即全量验证）
+./gradlew neoForgeIdeSync      # 首次运行前 / runClient 报 clientRunVmArgs.txt 缺失时执行
 ```
 
 - **MC 版本**：1.21.1
@@ -96,7 +94,7 @@ Wandscape 是一个**魔法 × 小镇建设 × 模拟经营**模组（Minecraft 
 
 ### AI 辅助开发工具（可选但推荐）
 
-用 Claude Code 开发时建议安装 **codebase-memory-mcp**：它把代码库索引成语义知识图谱，结构查询（调用链、影响面、架构、死代码）比逐个 grep 更快、更省 token，也是本项目 `CLAUDE.md`「代码发现」工作流（`search_graph` → `trace_path` → `get_code_snippet`）的基础。
+用 Claude Code 开发时建议安装 **codebase-memory-mcp**：它把代码库索引成语义知识图谱，结构查询（调用链、影响面、架构、死代码）比逐个 grep 更快、更省 token，也是本项目推荐的代码发现流程（`search_graph` → `trace_path` → `get_code_snippet`）的基础。
 
 开源地址：<https://github.com/DeusData/codebase-memory-mcp>（MIT，单静态二进制，零依赖）。安装后会自动检测 Claude Code 并写入 MCP 配置：
 
@@ -116,21 +114,20 @@ curl -fsSL https://raw.githubusercontent.com/DeusData/codebase-memory-mcp/main/i
 ## 项目结构
 
 ```
-src/main/java/com/wsteam/wandscape/   # 模块源码（core/engine/shared/building/wand/npc/tourist/magic/...）
-src/main/resources/data/wandscape/    # JSON 配置（建筑/配方/元素映射/蓝图/魔法阵/叙事）
-docs/                                 # 模块文档与数据格式（以真实代码为准，权威）
-architecture/                         # 旧结构快照（部分过时，以 docs/ 为准）
-architecture/magic/                   # 魔法阵契约（spec/原则/示例/设计原则）
+src/main/java/com/wsteam/wandscape/   # 源码：content/<13 个功能域>、foundation/ 基建、api/ 契约、compat/ 集成、impl/ 装配
+src/main/resources/data/wandscape/    # JSON 配置（建筑/配方/元素映射/蓝图/魔法/叙事/标签）
+src/main/resources/assets/wandscape/  # 资源（语言 en_us/zh_cn、模型、纹理、音效）
+docs/                                 # 开发者文档与数据格式（导航见 docs/README.md，以代码为准）
 ```
 
 ## 设计原则
 
-1. **高兼容性** — 不修改原版行为，JSON 数据驱动，方块映射用标签，`/reload` 热重载
-2. **原子化设计** — 模块间通过 `WandscapeApis` + EventBus 通信，不跨包直接引用
-3. **稳定优先** — 所有失败路径有兜底，不崩溃、不卡死，建筑损坏保护
-4. **引擎是请求层，适配层是实现** — `core/` 零 MC 依赖，MC 实现集中在 `engine/`
+1. **高兼容性** — 不修改原版行为，纯新增内容与机制；JSON 数据驱动，方块映射用标签，`/reload` 热重载
+2. **按功能聚合，直接协作** — 一个功能域一个包；跨域直接调用业务类，不建搭桥层、不滥用事件解耦
+3. **稳定优先** — 所有失败路径有兜底，不崩溃、不卡死；关键设施（市政厅/仓库/工作站）拆到只剩最后一座时受保护
+4. **纯逻辑与 MC 解耦** — 核心算法、蓝图解析、任务评分不依赖 Minecraft 类，保持可移植
 5. **不折磨玩家** — 远程管理面板，NPC 自动干活，一切可恢复
-6. **性能优化** — 物流用单实体视觉合并 + 金边气泡计数，避免大量实体掉落掉帧
+6. **性能优化** — 物流用单实体视觉合并 + 气泡计数，避免大量实体掉落掉帧
 
 ## 许可证
 
