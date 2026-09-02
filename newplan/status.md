@@ -113,3 +113,12 @@
 - 2026-09-02：**guide 双概念拆分 Step 1 落地（新手引导独立成域）**。用户点题：`GuideProgress`（新手引导系统内核）与 `GuideBook`（指南书手册）共用 `Guide*` 词根、彼此无关、无法区分。拍板：**A 新手引导→`Tutorial`**（独立域 `content/tutorial` 迁出 items，类 `Guide*`→`Tutorial*`，含 Service/ServerContext/SavedData/SyncPacket/UpdatePacket/Step/Registry/Renderer/Session + `api/TutorialApi`；网络 id `tutorial_progress_*`、SavedData `wandscape_tutorial_progress`、lang `tutorial.wandscape.*`、`getTutorialApiSilently`、TUTORIAL_FOLD_TOGGLE），**B 指南书→`Guidebook`**（Step 2 待做）。全链一次性（Tier 2）。**删 `TutorialApi.openGuide`**（@Unimplemented、属 B 指南书操作、混进 A/API 病灶、零调用方）。`./gradlew build` 全绿。待办：Step 2 指南书化（类/包/资源目录/lang key/文档前缀）；Step 3 文档收尾。
 
 - 2026-09-02：**BalanceValues 持久化 JSON 覆盖（整合包作者改文件一劳永逸）**。用户点题：`foundation/util/BalanceValues` 的可调值只能经领域 API `setXxx` 运行时覆盖（`ConcurrentHashMap` OVERRIDES），**零持久化、重启即回默认**——整合包作者（只编辑文件）没法改。拍板三点：**扁平键**（JSON 键 = BalanceValues 内部 override 名，无映射表）；**根文件+专用 loader**（`data/wandscape/wandscape_balance.json`，不走现有 category 扫描）；**ship 模板**（文件带 `_comment` 说明 + 全部默认值，改之即覆盖）。实现：`BalanceValues` 加 `KNOWN_KEYS` 集、`apply(key,value)`（仅已知键/未知返 false）、`reset()`；新增 `foundation/registry/dataconfig/internal/WandscapeBalanceLoader`（`SimpleJsonResourceReloadListener`，on reload 先 `reset()` 再灌文件=文件为唯一持久源、`/reload` 确定性；`_` 前缀键=注释忽略；未知键/非数值 `Log.warn` 跳过）；`Wandscape` 加 `BALANCE_LOADER` 字段 + `onAddReloadListener` 注册，`WandscapeClient.onRegisterClientReloadListeners` 同步挂（与 DATA_LOADER 双挂一致）。**语义定板**：reload 即 `reset()`+灌文件（文件权威、addon 运行时 setXxx 为会话级、下次 reload 被覆盖）；整数语义字段小数部分截断。`./gradlew build` 验证。
+
+- 2026-09-02：**重构新文档规范体系落地并归档旧 docs（`docs_archive/` + `docs/`）**。依据 `newplan/docs.md` 定调，将 20+ 个历史漂移与过时的旧文档全量归档至 `docs_archive/`，并在根级 `docs/` 重建紧凑高效的开发者文档体系：
+  - `docs/README.md`：文档入口导航与 5 顶层 + 11 功能域 1 分钟认知速查。
+  - `docs/legacy-audit.md`：旧文档过时审计与真实事实对照表（系统梳理彻底废弃项、已重构升级项与依然有效保留项）。
+  - `docs/adr.md`：架构决策记录表（ADR），收敛提炼自 1800+ 行旧 `decisions.md` 与近期重构拍板，按"日期 + 决策 + 一句话原因 + 关联代码"压缩为表格。
+  - `docs/domain-notes.md`：核心功能域避坑手册（覆盖 NPC/游客/魔法/任务/建筑/仓库/道路/新手引导），只记常识无法推断的反直觉陷阱与硬红线。
+  - `docs/data-formats.md`：数据格式与迁移纪律，系统记载天平 JSON、建筑 JSON、合成配方、元素映射/种子、魔法与法阵等规范。
+  - `docs/checklists.md`：迁移与重构活清单，包含已完成/待办的重构阶梯（划 `~~` 留痕）、PR 提交守门员核对项及发版 Release 流程。
+  - 全部文档严格标注【何时读】与【不包含什么】并附有时效声明，严禁 emoji 与装饰符号。
