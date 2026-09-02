@@ -35,8 +35,13 @@ import java.util.zip.GZIPOutputStream;
  * On load, tasks are recompiled from their blueprint; stepIndex and state are
  * restored so partially-completed tasks resume where they left off.
  *
- * <p>TODO: this should use {@code HolderLookup.Provider} for NBT codec support
- * in future MC versions. Current implementation uses raw CompoundTag.
+ * <p>Serialisation deliberately uses hand-rolled CompoundTag rather than NBT codecs:
+ * every field stored is a primitive scalar (long/int/String/UUID or gzip'd Gson JSON),
+ * so nothing needs a {@code HolderLookup.Provider} — and the {@code Factory} already
+ * threads {@code registries} through, keeping the signature future-proof. A codec migration
+ * would not shrink this code nor lift the 64KB-per-StringTag cap (large blueprint JSON must
+ * stay gzip'd either way). Revisit with NBT codecs only if a field starts storing
+ * registry-bound data (ResourceKey / registry entries) after a Minecraft upgrade.
  */
 public final class TaskPoolSavedData extends SavedData {
 
