@@ -1,10 +1,19 @@
 package com.wsteam.wandscape.content.npc.guard;
 
+import com.wsteam.wandscape.api.ColonyApi;
+import com.wsteam.wandscape.api.WandscapeApis;
 import com.wsteam.wandscape.content.npc.attributes.NpcAttributes.AttributeType;
 import com.wsteam.wandscape.content.magic.internal.MagicSpellExecutors;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
+import com.wsteam.wandscape.content.npc.internal.EntityComponentBridge;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
+import net.neoforged.neoforge.server.ServerLifecycleHooks;
+
+import java.util.UUID;
 
 /**
  * NPC 伤害统一入口：先按友伤边界过滤，再对有效目标按施法 NPC 的 SPELL_POWER 倍率乘算
@@ -30,6 +39,10 @@ import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
  * <p>注意：L2 物理普攻（GuardCombat.normalAttack）也走此钩子（来源是 NPC），因此
  * 会一并被 SPELL_POWER 与魔力强化放大——这是「所有乘 SPELL_POWER 处都乘魔力强化」
  * 的既定行为，普攻兜底本就很低（5 点基础）。
+ *
+ * <p>击杀归属：同一入口对通过友伤边界的伤害调用 {@link #grantKillCredit}，把
+ * lastHurtByPlayer 记为殖民地主人——只影响玩家击杀才掉落的战利品判定，不改伤害来源，
+ * 详见该方法注释。
  *
  * <p>契约：任何 NPC 伤害源必须让 {@code source.getEntity()} 解析为施法 NPC——
  * 弹射物/光束类伤害用 {@code damageSources().source(key, 直接实体, 施法NPC)}
@@ -73,5 +86,45 @@ public final class NpcSpellPowerHandler {
         if (enhance != 1f) {
             event.setAmount(event.getAmount() * enhance);
         }
+
+        // 玩家击杀归属：只对真正结算的伤害（友伤/和平已在上方拦截）挂主人归属，
+        // 让 killed_by_player 掉落与经验按玩家击杀结算。不改 damage source，仇恨与
+        // 上方倍率判定不受影响。
+        grantKillCredit(event.getEntity(), npc);
+    }
+
+    /**
+     * 把「最近被玩家击伤」标志写到受击目标，使 killed_by_player 掉落（烈焰棒、凋灵骷髅头、
+     * 亡灵装备掉落率，见 {@code LivingEntity#dropFromLootTable} → LAST_DAMAGE_PLAYER）
+     * 与经验球在 NPC 击杀时按玩家击杀结算。刻意不改 damage source——{@code source.getEntity()}
+     * 仍是施法 NPC：怪物仇恨（hurt → setLastHurtByMob）与上方 SPELL_POWER/魔力强化倍率判定
+     * 均不受影响，只补 vanilla 独独认玩家来源的 lastHurtByPlayer。
+     *
+     * <p>归属：殖民地主人 {@link ColonyApi#getFounder} 优先；无殖民地记录（自由法师）或
+     * 主人无效时，有且仅有一名在线玩家则记给他（与 AchievementService 兜底同口径）；
+     * 敌对测试法师等 {@code isColonyNpc()==false} 不授予。目标已有同一玩家归属则跳过
+     * （光束每 tick 结算时避免重复刷新）。
+     */
+    private static void grantKillCredit(LivingEntity target, WandscapeNpc npc) {
+        if (!npc.isColonyNpc()) return; // 敌对法师等不授击杀归属
+        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+        if (server == null) return;
+
+        ServerPlayer credited = null;
+        UUID colonyId = npc.colonyId;
+        if (colonyId != null && !EntityComponentBridge.PLACEHOLDER_COLONY.equals(colonyId)) {
+            ColonyApi colonyApi = WandscapeApis.getColonyApiSilently();
+            if (colonyApi != null) {
+                UUID founder = colonyApi.getFounder(colonyId);
+                if (founder != null) {
+                    credited = server.getPlayerList().getPlayer(founder);
+                }
+            }
+        }
+        if (credited == null && server.getPlayerList().getPlayers().size() == 1) {
+            credited = server.getPlayerList().getPlayers().getFirst();
+        }
+        if (credited == null || target.getKillCredit() == credited) return;
+        target.setLastHurtByPlayer(credited);
     }
 }

@@ -31,6 +31,7 @@
 
 | 日期 | 决策摘要 | 一句话原因 (Why) | 关联模块 / 代码 |
 |---|---|---|---|
+| 2026-09-02 | **NPC 击杀归属殖民地主人**：伤害入口把目标 `lastHurtByPlayer` 记为殖民地创始人玩家（无殖民地记录时单在线玩家兜底），damage source 实体保持施法 NPC 不变。 | `killed_by_player` 掉落条件只认 `lastHurtByPlayer` 而 NPC 来源伤害从不写它——烈焰棒/凋灵骷髅头/亡灵装备掉落率与经验球全丢；挂归属而不改 source 实体，掉落得解的同时怪物仇恨与法术强度判定原样。 | `content/npc/guard/NpcSpellPowerHandler`, `api/NpcApi` |
 | 2026-09-02 | **法杖属性 Tooltip 显式渲染**：默认 attribute modifiers 为空导致 Tooltip 不列属性，在 `appendHoverText` 手动渲染主手属性块。 | 玩家手持虽无法杖加成但需可查阅属性，修复自动结算废除后 Tooltip 消失。 | `content/items/wand/item/WandItem` |
 | 2026-09-02 | **NPC 法杖属性桥接补全 NBT 加载/放出行**：`onAddedToLevel`、戒指放出、菜单 Shift 均显式 `syncWandAttributes`。 | 实体从 NBT 恢复（区块加载/戒指放出）不经 `setItemSlot`，否则法杖属性加成静默丢失。 | `content/npc/entity/WandscapeNpc`, `content/items/ring/internal/OathRingService` |
 | 2026-09-02 | **铁魔法装备属性桥收窄为资源类**：只桥 `max_mana→MAX_MANA`、`mana_regen→MANA_REGEN`；豁免 `spell_power→SPELL_POWER`、`cooldown_reduction/cast_time_reduction→SPELL_SPEED`。 | 铁魔法库已按施法者 iron 属性表结算法伤，再把 iron 加成桥进我们 SPELL_POWER 会把铁魔法法伤算两次（伤害按强度成方增长）、冷却/吟唱缩减经 SPELL_SPEED 泄漏进我们法术；独立结算后铁魔法法术吃铁魔法自身属性、我们法术只吃自有属性，互不放大；魔力/回蓝属装备对资源池的合理投入故保留。 | `compat/ironspellbooks/IronSpellsAttributes`, `content/npc/entity/WandscapeNpc`, `compat/curios/CuriosCompatImpl` |

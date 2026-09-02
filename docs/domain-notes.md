@@ -19,6 +19,9 @@
    - 区块卸载后实体处于 `isRemoved() == true` 状态。调度器必须通过 `EntityOps.isNpcAlive` 过滤，执行器遇幽灵实体立即退还任务，杜绝幽灵 NPC 接活死循环。
 4. **NBT 数据安全**：
    - 对外暴露复合标签必须使用 `return tag.copy()`。
+5. **NPC 击杀归属殖民地主人**：
+   - 所有 NPC 来源伤害（光束/普攻/陨石/铁魔法）经 `NpcSpellPowerHandler`（NPC 伤害统一入口）把目标的 `lastHurtByPlayer` 记为殖民地创始人玩家；无殖民地记录时单在线玩家兜底，敌对法师等 `isColonyNpc()==false` 不授予。
+   - 只补「最近被玩家击伤」标志，**damage source 实体恒为施法 NPC**——怪物仇恨与 SPELL_POWER 倍率判定（都读 `source.getEntity()`）不受影响；否则烈焰棒/凋灵骷髅头/亡灵装备率等 killed_by_player 掉落，装备掉落率与经验球全会因 NPC 击杀丢失。
 
 ---
 

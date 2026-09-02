@@ -4,6 +4,7 @@ import com.wsteam.wandscape.content.npc.attributes.NpcAttributes.AttributeType;
 import com.wsteam.wandscape.content.npc.data.NpcData;
 import net.minecraft.core.BlockPos;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -20,6 +21,13 @@ public interface NpcApi {
     default int getIdleNpcCount(UUID colonyId) {
         return getIdleNpcs(colonyId).size();
     }
+
+    /**
+     * 查询一名 NPC 所属殖民地的 UUID（反查，与 {@link #getColonyNpcs} 互补）。
+     * 未归属任何殖民地（独立/敌对法师等非殖民地实体）返回 null。
+     */
+    @Nullable
+    UUID getNpcColony(UUID npcId);
 
     NpcData getNpc(UUID npcId);
 

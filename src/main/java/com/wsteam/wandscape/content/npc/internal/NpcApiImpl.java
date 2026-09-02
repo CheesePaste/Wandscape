@@ -68,6 +68,21 @@ public class NpcApiImpl implements NpcApi {
         return npc != null ? NpcDataImpl.from(npc) : null;
     }
 
+    /** NPC → 所属殖民地反向查询：读实体权威源 {@link WandscapeNpc#colonyId}
+     *  （NBT 持久化），未归属/占位 ID 一律 null。 */
+    @Override
+    @Nullable
+    public UUID getNpcColony(UUID npcId) {
+        if (npcId == null) return null;
+        Long ecsId = EntityComponentBridge.INSTANCE.getEcsId(npcId);
+        if (ecsId == null) return null;
+        WandscapeNpc npc = EntityComponentBridge.INSTANCE.getNpc(ecsId);
+        if (npc == null || npc.isRemoved()) return null;
+        UUID colony = npc.colonyId;
+        if (colony == null || EntityComponentBridge.PLACEHOLDER_COLONY.equals(colony)) return null;
+        return colony;
+    }
+
     // ── 存活/复活 ──
 
     @Override
