@@ -23,7 +23,9 @@ public final class SpellcastingApiImpl implements MagicApi {
     @Override
     public List<String> getKnownSpells(UUID npcId) {
         WandscapeNpc npc = resolve(npcId);
-        return npc != null ? npc.equippedMagic.flattened() : List.of();
+        if (npc == null) return List.of();
+        return CastBrain.knownSpells(npc.equippedMagic, npc)
+                .stream().map(ref -> ref.def().id()).toList();
     }
 
     @Override
@@ -37,7 +39,7 @@ public final class SpellcastingApiImpl implements MagicApi {
         WandscapeNpc npc = resolve(npcId);
         if (npc == null) return List.of();
         return CastBrain.resolvePriority(npc.castStrategy,
-                CastBrain.knownSpells(npc.equippedMagic))
+                CastBrain.knownSpells(npc.equippedMagic, npc))
                 .stream().map(ref -> ref.def().id()).toList();
     }
 

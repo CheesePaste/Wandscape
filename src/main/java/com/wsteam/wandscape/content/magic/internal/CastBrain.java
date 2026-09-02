@@ -42,18 +42,48 @@ public final class CastBrain {
      * 动态合成）；{@code group} = 法术实际所在的桶名，驱动敌数门控与预设排序。
      */
     public static List<SpellRef> knownSpells(EquippedMagicComponent equipped) {
+        return knownSpells(equipped, null);
+    }
+
+    /**
+     * 把 NPC 的 EquippedMagicComponent 容器与 Curios 魔法书槽中的铭刻法术解析为带策略组的法术引用列表
+     * （支持原生魔法与铁魔法动态合成）；{@code group} = 法术实际所在的桶名，驱动敌数门控与预设排序。
+     */
+    public static List<SpellRef> knownSpells(EquippedMagicComponent equipped, @Nullable com.wsteam.wandscape.content.npc.entity.WandscapeNpc npc) {
         List<SpellRef> out = new ArrayList<>();
-        if (equipped == null) return out;
-        for (String group : EquippedMagicComponent.CATEGORIES) {
-            for (EquippedMagicComponent.SpellEntry entry : equipped.listEntries(group)) {
-                MagicDef def = SpellbookLoader.getSpec(entry.id());
-                if (def != null) {
-                    out.add(new SpellRef(def, group));
-                } else if (com.wsteam.wandscape.compat.ironspellbooks.IronSpellsCompat.isLoaded()) {
-                    MagicDef syn = com.wsteam.wandscape.compat.ironspellbooks.IronSpellsHelper
-                            .getSyntheticDef(entry.id(), entry.level(), group);
-                    if (syn != null) {
-                        out.add(new SpellRef(syn, group));
+        if (equipped != null) {
+            for (String group : EquippedMagicComponent.CATEGORIES) {
+                for (EquippedMagicComponent.SpellEntry entry : equipped.listEntries(group)) {
+                    MagicDef def = SpellbookLoader.getSpec(entry.id());
+                    if (def != null) {
+                        out.add(new SpellRef(def, group));
+                    } else if (com.wsteam.wandscape.compat.ironspellbooks.IronSpellsCompat.isLoaded()) {
+                        MagicDef syn = com.wsteam.wandscape.compat.ironspellbooks.IronSpellsHelper
+                                .getSyntheticDef(entry.id(), entry.level(), group);
+                        if (syn != null) {
+                            out.add(new SpellRef(syn, group));
+                        }
+                    }
+                }
+            }
+        }
+        if (npc != null && com.wsteam.wandscape.compat.curios.CuriosCompat.isLoaded()
+                && com.wsteam.wandscape.compat.ironspellbooks.IronSpellsCompat.isLoaded()) {
+            net.minecraft.world.item.ItemStack spellbook = com.wsteam.wandscape.compat.curios.CuriosCompat.getEquippedSpellbook(npc);
+            if (!spellbook.isEmpty()) {
+                var entries = com.wsteam.wandscape.compat.ironspellbooks.IronSpellsHelper.getSpellsFromSpellbook(spellbook);
+                java.util.Set<String> alreadyKnown = new java.util.HashSet<>();
+                for (SpellRef ref : out) {
+                    alreadyKnown.add(ref.def().id());
+                }
+                for (var entry : entries) {
+                    if (alreadyKnown.add(entry.id())) {
+                        String group = com.wsteam.wandscape.compat.ironspellbooks.IronSpellsHelper.inferCategory(entry.id());
+                        MagicDef syn = com.wsteam.wandscape.compat.ironspellbooks.IronSpellsHelper
+                                .getSyntheticDef(entry.id(), entry.level(), group);
+                        if (syn != null) {
+                            out.add(new SpellRef(syn, group));
+                        }
                     }
                 }
             }

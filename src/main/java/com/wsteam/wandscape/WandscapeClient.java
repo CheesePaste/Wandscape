@@ -354,6 +354,13 @@ public class WandscapeClient {
             var mc = Minecraft.getInstance();
             var level = mc.level;
             if (level == null) return;
+            if (com.wsteam.wandscape.content.warehouse.transport.TransportItemEntity.getActiveCount() >= com.wsteam.wandscape.content.warehouse.transport.TransportItemEntity.MAX_ACTIVE_VISUALS) {
+                return;
+            }
+            var player = mc.player;
+            if (player != null && player.distanceToSqr(net.minecraft.world.phys.Vec3.atCenterOf(packet.from())) > 9216.0) {
+                return;
+            }
             var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.ResourceLocation.tryParse(packet.itemKey().itemId()));
             if (item == null) return;
             var stack = new net.minecraft.world.item.ItemStack(item, packet.count());
@@ -364,7 +371,8 @@ public class WandscapeClient {
             var center = net.minecraft.world.phys.Vec3.atCenterOf(packet.from());
             var entity = new com.wsteam.wandscape.content.warehouse.transport.TransportItemEntity(level, center.x, center.y + 0.5, center.z, stack);
             entity.setRoute(packet.route());
-            entity.setId(-level.random.nextInt(Integer.MAX_VALUE));
+            entity.setId(com.wsteam.wandscape.content.warehouse.transport.TransportItemEntity.nextClientEntityId());
+            entity.markCounted();
             level.addEntity(entity);
         });
 
@@ -565,6 +573,7 @@ public class WandscapeClient {
         // 建筑区域缓存在服务器重新同步前不清空，会带着上一世界（存档）的建筑边界框进入
         // 下一世界，导致新存档首次建建筑时误报“与旧存档建筑重叠”。
         BuildingAreaSyncPacket.clear();
+        com.wsteam.wandscape.content.warehouse.transport.TransportItemEntity.resetActiveCount();
     }
 
     @SubscribeEvent

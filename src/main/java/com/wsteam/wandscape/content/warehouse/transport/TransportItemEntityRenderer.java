@@ -11,6 +11,20 @@ import org.joml.Matrix4f;
 
 public class TransportItemEntityRenderer extends ItemEntityRenderer {
 
+    private static final double MAX_BUBBLE_DISTANCE_SQR = 24.0 * 24.0; // 24 blocks max for bubble billboard
+
+    private static final int SEGMENTS = 16;
+    private static final float[] COS_TABLE = new float[SEGMENTS + 1];
+    private static final float[] SIN_TABLE = new float[SEGMENTS + 1];
+
+    static {
+        for (int i = 0; i <= SEGMENTS; i++) {
+            double angle = 2.0 * Math.PI * i / SEGMENTS;
+            COS_TABLE[i] = (float) Math.cos(angle);
+            SIN_TABLE[i] = (float) Math.sin(angle);
+        }
+    }
+
     public TransportItemEntityRenderer(EntityRendererProvider.Context context) {
         super(context);
     }
@@ -22,7 +36,7 @@ public class TransportItemEntityRenderer extends ItemEntityRenderer {
 
         if (entity instanceof TransportItemEntity transportEntity) {
             int count = transportEntity.getItem().getCount();
-            if (count > 0) {
+            if (count > 0 && this.entityRenderDispatcher.distanceToSqr(transportEntity) <= MAX_BUBBLE_DISTANCE_SQR) {
                 renderBubble(transportEntity, count, poseStack, buffer, packedLight);
             }
         }
@@ -58,20 +72,17 @@ public class TransportItemEntityRenderer extends ItemEntityRenderer {
         float rx = bubbleW / 2F;
         float ry = bubbleH / 2F;
         
-        int segments = 16;
         VertexConsumer vc = buffer.getBuffer(net.minecraft.client.renderer.RenderType.debugQuads());
         
         // 1. Render Gold Outline (slightly larger ellipse)
         float border = 0.8F;
         float orx = rx + border;
         float ory = ry + border;
-        for (int i = 0; i < segments; i++) {
-            double a1 = 2 * Math.PI * i / segments;
-            double a2 = 2 * Math.PI * (i + 1) / segments;
-            float px1 = (float)(ex + orx * Math.cos(a1));
-            float py1 = (float)(ey + ory * Math.sin(a1));
-            float px2 = (float)(ex + orx * Math.cos(a2));
-            float py2 = (float)(ey + ory * Math.sin(a2));
+        for (int i = 0; i < SEGMENTS; i++) {
+            float px1 = ex + orx * COS_TABLE[i];
+            float py1 = ey + ory * SIN_TABLE[i];
+            float px2 = ex + orx * COS_TABLE[i + 1];
+            float py2 = ey + ory * SIN_TABLE[i + 1];
             
             vc.addVertex(matrix, ex, ey, 0.0F).setColor(0.78F, 0.61F, 0.23F, 0.9F); // Gold color
             vc.addVertex(matrix, px1, py1, 0.0F).setColor(0.78F, 0.61F, 0.23F, 0.9F);
@@ -81,13 +92,11 @@ public class TransportItemEntityRenderer extends ItemEntityRenderer {
         
         // 2. Render Dark Background (inner ellipse, offset Z slightly forward to prevent z-fighting)
         float zOffset = 0.02F;
-        for (int i = 0; i < segments; i++) {
-            double a1 = 2 * Math.PI * i / segments;
-            double a2 = 2 * Math.PI * (i + 1) / segments;
-            float px1 = (float)(ex + rx * Math.cos(a1));
-            float py1 = (float)(ey + ry * Math.sin(a1));
-            float px2 = (float)(ex + rx * Math.cos(a2));
-            float py2 = (float)(ey + ry * Math.sin(a2));
+        for (int i = 0; i < SEGMENTS; i++) {
+            float px1 = ex + rx * COS_TABLE[i];
+            float py1 = ey + ry * SIN_TABLE[i];
+            float px2 = ex + rx * COS_TABLE[i + 1];
+            float py2 = ey + ry * SIN_TABLE[i + 1];
             
             vc.addVertex(matrix, ex, ey, zOffset).setColor(0.12F, 0.12F, 0.14F, 0.85F); // Dark grey
             vc.addVertex(matrix, px1, py1, zOffset).setColor(0.12F, 0.12F, 0.14F, 0.85F);

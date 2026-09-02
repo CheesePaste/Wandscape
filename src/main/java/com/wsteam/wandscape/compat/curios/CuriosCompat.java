@@ -77,4 +77,18 @@ public final class CuriosCompat {
         }
         CuriosCompatImpl.registerPayloads(registrar);
     }
+
+    /** 同步法师全部饰品（含魔法书）的铁魔法属性加成。未安装 Curios 时为空操作。 */
+    public static void syncIronCurioAttributes(LivingEntity entity) {
+        if (!loaded || entity == null) return;
+        if (entity instanceof com.wsteam.wandscape.content.npc.entity.WandscapeNpc npc) {
+            CuriosCompatImpl.syncIronCurioAttributes(npc);
+        }
+    }
+
+    /** 获取法师在 Curios 魔法书槽佩戴的物品堆（未佩戴 / 未安装 Curios 返回 ItemStack.EMPTY）。 */
+    public static ItemStack getEquippedSpellbook(LivingEntity entity) {
+        if (!loaded || entity == null) return ItemStack.EMPTY;
+        return CuriosCompatImpl.getEquippedSpellbook(entity);
+    }
 }

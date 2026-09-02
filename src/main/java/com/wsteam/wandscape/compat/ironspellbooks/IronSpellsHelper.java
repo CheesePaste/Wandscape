@@ -137,4 +137,51 @@ public final class IronSpellsHelper {
         Component baseName = spell.getDisplayName(null);
         return level > 1 ? Component.translatable("%s Lv.%s", baseName, level) : baseName;
     }
+
+    /** 从魔法书物品堆中提取所有已铭刻的有效法术条目。未安装铁魔法或非魔法书返回空列表。 */
+    public static java.util.List<com.wsteam.wandscape.content.npc.component.EquippedMagicComponent.SpellEntry> getSpellsFromSpellbook(ItemStack stack) {
+        if (!IronSpellsCompat.isLoaded() || stack == null || stack.isEmpty()) return java.util.List.of();
+        if (ISpellContainer.isSpellContainer(stack)) {
+            ISpellContainer container = ISpellContainer.get(stack);
+            if (container != null && !container.isEmpty()) {
+                java.util.List<com.wsteam.wandscape.content.npc.component.EquippedMagicComponent.SpellEntry> list = new java.util.ArrayList<>();
+                for (var slot : container.getActiveSpells()) {
+                    if (slot != null && slot.getSpell() != null && slot.getSpell() != SpellRegistry.none()) {
+                        String id = slot.getSpell().getSpellId();
+                        int lvl = Math.max(1, slot.getLevel());
+                        if (isValidSpell(id)) {
+                            list.add(new com.wsteam.wandscape.content.npc.component.EquippedMagicComponent.SpellEntry(id, lvl));
+                        }
+                    }
+                }
+                return list;
+            }
+        }
+        return java.util.List.of();
+    }
+
+    /** 根据铁魔法法术名称智能推导其所属策略组（single_target/aoe/defense/support）。 */
+    public static String inferCategory(String spellId) {
+        if (spellId == null || spellId.isBlank()) return "single_target";
+        String lower = spellId.toLowerCase(java.util.Locale.ROOT);
+        if (lower.contains("heal") || lower.contains("blessing") || lower.contains("cleanse")
+                || lower.contains("haste") || lower.contains("charge") || lower.contains("absorb")
+                || lower.contains("regen")) {
+            return "support";
+        }
+        if (lower.contains("shield") || lower.contains("armor") || lower.contains("ward")
+                || lower.contains("barrier") || lower.contains("evasion") || lower.contains("fortify")
+                || lower.contains("heartstop") || lower.contains("invisibility") || lower.contains("teleport")) {
+            return "defense";
+        }
+        if (lower.contains("breath") || lower.contains("ball") || lower.contains("meteor")
+                || lower.contains("black_hole") || lower.contains("chain") || lower.contains("storm")
+                || lower.contains("cone") || lower.contains("slash") || lower.contains("wave")
+                || lower.contains("pillar") || lower.contains("eruption") || lower.contains("wall")
+                || lower.contains("blizzard") || lower.contains("earthquake") || lower.contains("shockwave")
+                || lower.contains("ring") || lower.contains("quake") || lower.contains("barrage")) {
+            return "aoe";
+        }
+        return "single_target";
+    }
 }
