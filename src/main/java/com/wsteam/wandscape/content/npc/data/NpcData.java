@@ -23,10 +23,8 @@ public interface NpcData {
     float getSpellSpeed();
     float getArmorValue();
     boolean isIdle();
-    UUID getAssignedHouseId();
     UUID getCurrentTaskId();
     boolean isDead();
-    UUID getGraveBlockEntityId();
 
     // ── 未实现（重设计阶段声明，见 @Unimplemented）──
 

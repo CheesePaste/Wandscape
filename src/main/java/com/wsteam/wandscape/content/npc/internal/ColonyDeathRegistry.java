@@ -70,6 +70,15 @@ public class ColonyDeathRegistry extends SavedData {
         return DeathRecord.latestInColony(records, colonyId);
     }
 
+    /** 按 npcId 查找该法师的待复活死亡记录（每个 NPC 同一时刻至多一条）；无则 null。NpcApi 复活用。 */
+    @Nullable
+    public DeathRecord getByNpcId(UUID npcId) {
+        for (DeathRecord r : records) {
+            if (npcId.equals(r.npcId())) return r;
+        }
+        return null;
+    }
+
     // ── NBT ──
 
     @Override

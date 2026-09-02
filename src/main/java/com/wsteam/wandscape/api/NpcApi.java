@@ -22,8 +22,23 @@ public interface NpcApi {
     }
 
     NpcData getNpc(UUID npcId);
-    boolean assignHouse(UUID npcId, UUID houseId);
 
+    /**
+     * 该 npcId 是否指向一名在世法师（实体存在、未移除、isAlive）。
+     * 与 {@link NpcData#isDead()}（实体级）不同——这是按 uuid 直接查存活，常用于"这个法师（可能已死/待复活）还在吗"。
+     */
+    boolean isNpcAlive(UUID npcId);
+
+    /**
+     * 复活一名法师：需先存在其死亡记录（{@code ColonyDeathRegistry}），且当前不存活，否则返回 false。
+     * 位置自动解析到其所在殖民地的市政厅门口（与全灭保底/保卫复活同定位逻辑）；复活免费，成本由调用方自理。
+     *
+     * @return 成功生成新实体 true；无死亡记录 / 仍存活 / 生成失败 false
+     */
+    boolean reviveNpc(UUID npcId);
+
+    /** 复活到调用方指定的确切位置（其余条件同 {@link #reviveNpc(UUID)}）。 */
+    boolean reviveNpc(UUID npcId, BlockPos pos);
     // ── 可调平衡值（委托 BalanceValues；运行时生效，不追溯已生成实体）──
 
     int getGuardRange();

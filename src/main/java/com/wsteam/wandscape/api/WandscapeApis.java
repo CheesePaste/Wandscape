@@ -138,6 +138,16 @@ public final class WandscapeApis {
     public static CurioApi getCurioApiSilently() { return curioApi; }
     public static void setCurioApi(CurioApi api) { curioApi = api; }
 
+    /** 法师小屋入住绑定。装配于 mod 初始化；未装配时 {@code getMageHutApi} 抛、Silently 返 null。 */
+    private static MageHutApi mageHutApi;
+    public static MageHutApi getMageHutApi() {
+        if (mageHutApi == null) throw new IllegalStateException("MageHutApi not loaded");
+        return mageHutApi;
+    }
+    @javax.annotation.Nullable
+    public static MageHutApi getMageHutApiSilently() { return mageHutApi; }
+    public static void setMageHutApi(MageHutApi api) { mageHutApi = api; }
+
     /**
      * 位置所在殖民地 id（位置检测，256 格内最近殖民地原点）；殖民地 API 未就绪或位置不在
      * 任何殖民地范围内返回 null。玩家/道路/地形/调试命令发布任务时统一用此解析任务殖民地

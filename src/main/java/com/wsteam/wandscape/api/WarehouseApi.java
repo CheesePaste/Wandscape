@@ -9,6 +9,18 @@ import net.minecraft.world.item.ItemStack;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+
+/**
+ * Public API for a colony's warehouse (items + elements).
+ *
+ * <p>Notable events broadcast to {@code NeoForge.EVENT_BUS} (subscribe directly):
+ * <ul>
+ *   <li>{@link com.wsteam.wandscape.content.warehouse.event.WarehouseItemChangedEvent}
+ *       — 物品入库/出仓/消耗，携带 colonyId、itemKey、newCount、delta，供附属做增量同步；</li>
+ *   <li>{@link com.wsteam.wandscape.content.warehouse.event.WarehouseElementChangedEvent}
+ *       — 元素充入/消耗，携带 colonyId、elementType、newAmount、delta。</li>
+ * </ul>
+ */
 public interface WarehouseApi {
     long getElement(UUID colonyId, ElementType type);
     Map<ElementType, Long> getAllElements(UUID colonyId);

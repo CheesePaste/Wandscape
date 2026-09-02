@@ -530,6 +530,7 @@ public class Wandscape {
         WandscapeApis.setNpcAttributesApi(new NpcAttributesApiImpl());
         WandscapeApis.setScepterApi(SCEPTER_API);
         WandscapeApis.setWarehouseApi(new WarehouseManager());
+        WandscapeApis.setMageHutApi(new com.wsteam.wandscape.content.building.internal.MageHutApiImpl());
         WandscapeApis.setColonyApi(ColonyApiImpl.get());
         WandscapeApis.setTouristApi(new TouristApiImpl());
         tavernApi = new TavernApiImpl();

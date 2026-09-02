@@ -4,7 +4,6 @@ import com.wsteam.wandscape.content.npc.attributes.NpcAttributes.AttributeType;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.content.npc.data.NpcData;
 
-import javax.annotation.Nullable;
 import java.util.UUID;
 /**
  * Implementation of {@link NpcData} wrapping a {@link WandscapeNpc}.
@@ -20,16 +19,12 @@ public class NpcDataImpl implements NpcData {
     private final float spellSpeed;
     private final float armorValue;
     private final boolean isIdle;
-    @Nullable private final UUID assignedHouseId;
-    @Nullable private final UUID currentTaskId;
+    private final UUID currentTaskId;
     private final boolean isDead;
-    @Nullable private final UUID graveBlockEntityId;
 
     NpcDataImpl(UUID npcId, String name, int maxHealth, int currentHealth,
                 float spellPower, float workSpeed, float spellSpeed, float armorValue,
-                boolean isIdle,
-                @Nullable UUID assignedHouseId, @Nullable UUID currentTaskId,
-                boolean isDead, @Nullable UUID graveBlockEntityId) {
+                boolean isIdle, UUID currentTaskId, boolean isDead) {
         this.npcId = npcId;
         this.name = name;
         this.maxHealth = maxHealth;
@@ -39,10 +34,8 @@ public class NpcDataImpl implements NpcData {
         this.spellSpeed = spellSpeed;
         this.armorValue = armorValue;
         this.isIdle = isIdle;
-        this.assignedHouseId = assignedHouseId;
         this.currentTaskId = currentTaskId;
         this.isDead = isDead;
-        this.graveBlockEntityId = graveBlockEntityId;
     }
 
     /** Build from a live NPC entity. */
@@ -57,10 +50,8 @@ public class NpcDataImpl implements NpcData {
                 npc.getEffectiveAttribute(com.wsteam.wandscape.content.npc.attributes.NpcAttributes.AttributeType.SPELL_SPEED),
                 npc.getEffectiveArmorValue(),
                 npc.isEngineIdle(),
-                null,            // stage 4+: house binding
                 npc.getCurrentTaskId(),
-                npc.isDeadOrDying(),
-                null             // stage 4+: grave BE
+                npc.isDeadOrDying()
         );
     }
 
@@ -75,8 +66,6 @@ public class NpcDataImpl implements NpcData {
     @Override public float getSpellSpeed() { return spellSpeed; }
     @Override public float getArmorValue() { return armorValue; }
     @Override public boolean isIdle() { return isIdle; }
-    @Override @Nullable public UUID getAssignedHouseId() { return assignedHouseId; }
-    @Override @Nullable public UUID getCurrentTaskId() { return currentTaskId; }
+    @Override public UUID getCurrentTaskId() { return currentTaskId; }
     @Override public boolean isDead() { return isDead; }
-    @Override @Nullable public UUID getGraveBlockEntityId() { return graveBlockEntityId; }
 }

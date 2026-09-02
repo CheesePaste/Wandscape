@@ -6,7 +6,13 @@ import com.wsteam.wandscape.content.npc.data.NpcDataImpl;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.api.NpcApi;
 import com.wsteam.wandscape.foundation.util.BalanceValues;
+import com.wsteam.wandscape.content.npc.data.DeathRecord;
 import com.wsteam.wandscape.content.npc.data.NpcData;
+import com.wsteam.wandscape.foundation.log.Log;
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
+import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -62,11 +68,47 @@ public class NpcApiImpl implements NpcApi {
         return npc != null ? NpcDataImpl.from(npc) : null;
     }
 
+    // ── 存活/复活 ──
+
     @Override
-    public boolean assignHouse(UUID npcId, UUID houseId) {
-        // Stage 4: bind NPC to house building → ECS component update
-        return false;
+    public boolean isNpcAlive(UUID npcId) {
+        if (npcId == null) return false;
+        ServerLevel level = getServerLevel();
+        if (level == null) return false;
+        return level.getEntity(npcId) instanceof WandscapeNpc npc
+                && !npc.isRemoved() && npc.isAlive();
     }
+
+    @Override
+    public boolean reviveNpc(UUID npcId) {
+        return reviveNpc(npcId, null);
+    }
+
+    @Override
+    public boolean reviveNpc(UUID npcId, @Nullable BlockPos pos) {
+        if (npcId == null || isNpcAlive(npcId)) return false;
+        ServerLevel level = getServerLevel();
+        if (level == null) return false;
+
+        ColonyDeathRegistry reg = ColonyDeathRegistry.get(level);
+        DeathRecord rec = reg.getByNpcId(npcId);
+        if (rec == null) {
+            Log.debug(TAG, "reviveNpc: 无死亡记录 {}", npcId);
+            return false;
+        }
+
+        BlockPos at = pos != null ? pos
+                : ReviveHandler.resolveTownHallDoorOrAnchor(level, rec.colonyId(),
+                        new BlockPos(rec.x(), rec.y(), rec.z()));
+        return ReviveHandler.spawnFromRecordAt(level, rec, at);
+    }
+
+    @Nullable
+    private static ServerLevel getServerLevel() {
+        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+        return server != null ? server.overworld() : null;
+    }
+
 
     // ── 可调平衡值（委托 BalanceValues；运行时生效，不追溯已生成实体）──
     @Override public int getGuardRange() { return BalanceValues.guardRange(); }

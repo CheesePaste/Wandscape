@@ -123,8 +123,8 @@ public final class ReviveHandler {
         return dx * dx + dy * dy + dz * dz;
     }
 
-    /** 定位小镇市政厅门口：category=government 建筑优先用 door_offsets 的可站入口点。 */
-    private static BlockPos resolveTownHallDoorOrAnchor(ServerLevel level, UUID colonyId, BlockPos fallback) {
+    /** 定位小镇市政厅门口：category=government 建筑优先用 door_offsets 的可站入口点。包内可见（NpcApi 复活默认位复用）。 */
+    static BlockPos resolveTownHallDoorOrAnchor(ServerLevel level, UUID colonyId, BlockPos fallback) {
         BuildingSavedData savedData = BuildingSavedData.get(level);
         if (savedData != null) {
             for (BuildingState b : savedData.getAllBuildings()) {
@@ -142,13 +142,13 @@ public final class ReviveHandler {
         return fallback;
     }
 
-    /** 在指定位置生成新 NPC，恢复死亡快照，删除记录。 */
-    public static void spawnFromRecordAt(ServerLevel level, DeathRecord rec, BlockPos desiredPos) {
+    /** 在指定位置生成新 NPC，恢复死亡快照，删除记录。返回是否成功生成（失败保留记录，可重试）。 */
+    public static boolean spawnFromRecordAt(ServerLevel level, DeathRecord rec, BlockPos desiredPos) {
         BlockPos spawnPos = resolveSpawnPos(level, desiredPos);
         WandscapeNpc npc = Wandscape.WANDSCAPE_NPC.get().spawn(level, spawnPos, MobSpawnType.COMMAND);
         if (npc == null) {
             Log.warn(TAG, "复活失败：无法在 {} 生成 NPC（记录保留，可重试）", spawnPos.toShortString());
-            return;
+            return false;
         }
         npc.setPersistenceRequired();
         npc.colonyId = rec.colonyId();
@@ -183,6 +183,7 @@ public final class ReviveHandler {
         Log.info(TAG, "NPC {} ({}) 已复活 at {}（恢复 {} 格背包）",
                 npc.getUUID().toString().substring(0, 8), rec.name(),
                 spawnPos.toShortString(), rec.inventory().size());
+        return true;
     }
 
     /** spawn() 已用默认属性注册 ECS——这里按死亡快照重新设置小镇与背包。 */
