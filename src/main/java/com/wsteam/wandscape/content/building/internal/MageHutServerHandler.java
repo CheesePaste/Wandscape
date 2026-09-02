@@ -365,7 +365,7 @@ public final class MageHutServerHandler {
         try {
             var npcApi = WandscapeApis.getNpcApi();
             for (var npcData : npcApi.getColonyNpcs(colonyId)) {
-                if (level.getEntity(npcData.getNpcId()) instanceof WandscapeNpc npc
+                if (level.getEntity(npcData.npcId()) instanceof WandscapeNpc npc
                         && npc.isColonyNpc() && npc.getHomeHutId() == null) {
                     out.add(new MageCandidate(npc.getUUID(), npc.getNpcName(), npc.isEngineIdle()));
                 }

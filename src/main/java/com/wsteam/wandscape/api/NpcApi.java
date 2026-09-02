@@ -1,12 +1,10 @@
 package com.wsteam.wandscape.api;
 
-import com.wsteam.wandscape.content.npc.attributes.NpcAttributes.AttributeType;
 import com.wsteam.wandscape.content.npc.data.NpcData;
 import net.minecraft.core.BlockPos;
 
 import javax.annotation.Nullable;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 public interface NpcApi {
     List<NpcData> getColonyNpcs(UUID colonyId);
@@ -83,10 +81,6 @@ public interface NpcApi {
     void setNpcManaRegenFraction(double v);
     int getReviveNearBuildingRange();
     void setReviveNearBuildingRange(int v);
-    double getScepterHostileRange();
-    void setScepterHostileRange(double v);
-    int getMageHutRestTicks();
-    void setMageHutRestTicks(int v);
 
     // ── 未实现（重设计阶段声明，见 @Unimplemented）──
 

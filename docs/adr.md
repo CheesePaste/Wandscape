@@ -11,6 +11,7 @@
 
 | 日期 | 决策摘要 | 一句话原因 (Why) | 关联模块 / 代码 |
 |---|---|---|---|
+| 2026-09-02 | **NpcData 转纯字段读模型 + 属性读写分离**：NpcData 由 interface 转 `record` 只放字段，属性读面唯一化为 `attributes()`（effective 全量，含隐藏），删全部逐属性读法（getSpellPower/getWorkSpeed/getSpellSpeed/getArmorValue/getMaxHealth/getMaxMana 共 6 个）；写路径完整保留在 `NpcAttributesApi`（setNpcAttributes/setNpcLevel/trainNpc/levelUpNpc），其读桩 getNpcAttributes 删除；scepterHostileRange/mageHutRestTicks 归位各自域 API。 | 属性增减不再改读模型形状；读写边界清晰（单实体快照投影=字段、跨实体/改状态=API 方法）；兑现 ledger 悬置的「读面二选一去重」裁定。 | `content/npc/data/NpcData`, `api/NpcAttributesApi`, `api/NpcApi`, `api/ScepterApi`, `api/MageHutApi` |
 | 2026-09-02 | **原版私有字段改 NeoForge AT 读取**：`NearestAttackableTargetGoal#targetType` 经 AccessTransformer 提为 public 直读，AT 失效时禁用增强而非反射兜底。 | 消除反射读取原版私有字段的最后一处残留，维持零反射契约。 | `content/npc/HostileTargetingHandler`, `META-INF/accesstransformer.cfg` |
 | 2026-09-02 | **天平配置持久化覆盖**：`wandscape_balance.json` 扁平键根文件由专用 Loader 在 `/reload` 时确定性重置覆盖。 | 整合包作者需文件级一劳永逸修改数值，避免仅限运行时 API 覆盖而在重启后失效。 | `foundation/util/BalanceValues`, `WandscapeBalanceLoader` |
 | 2026-09-02 | **新手引导与指南书解耦**：新手引导系统更名为 `Tutorial` 并独立成域，彻底分离指南书手册 `Guidebook`。 | 消除共用 `Guide*` 词根引发的概念模糊与 API 混杂。 | `content/tutorial/`, `content/items/` |

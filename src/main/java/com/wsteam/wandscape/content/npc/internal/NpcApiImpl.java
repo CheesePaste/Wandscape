@@ -2,12 +2,11 @@ package com.wsteam.wandscape.content.npc.internal;
 
 import com.wsteam.wandscape.content.task.component.ColonyMember;
 import com.wsteam.wandscape.content.task.ecs.World;
-import com.wsteam.wandscape.content.npc.data.NpcDataImpl;
+import com.wsteam.wandscape.content.npc.data.NpcData;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.api.NpcApi;
 import com.wsteam.wandscape.foundation.util.BalanceValues;
 import com.wsteam.wandscape.content.npc.data.DeathRecord;
-import com.wsteam.wandscape.content.npc.data.NpcData;
 import com.wsteam.wandscape.foundation.log.Log;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
@@ -46,7 +45,7 @@ public class NpcApiImpl implements NpcApi {
 
             ColonyMember member = world.get(entry.getKey(), ColonyMember.class);
             if (member != null && colonyId.equals(member.colonyId())) {
-                result.add(NpcDataImpl.from(npc));
+                result.add(NpcData.from(npc));
             }
         }
         return result;
@@ -65,7 +64,7 @@ public class NpcApiImpl implements NpcApi {
         Long ecsId = EntityComponentBridge.INSTANCE.getEcsId(npcId);
         if (ecsId == null) return null;
         WandscapeNpc npc = EntityComponentBridge.INSTANCE.getNpc(ecsId);
-        return npc != null ? NpcDataImpl.from(npc) : null;
+        return npc != null ? NpcData.from(npc) : null;
     }
 
     /** NPC → 所属殖民地反向查询：读实体权威源 {@link WandscapeNpc#colonyId}
@@ -160,8 +159,4 @@ public class NpcApiImpl implements NpcApi {
     @Override public void setNpcManaRegenFraction(double v) { BalanceValues.setNpcManaRegenFraction(v); }
     @Override public int getReviveNearBuildingRange() { return BalanceValues.reviveNearBuildingRange(); }
     @Override public void setReviveNearBuildingRange(int v) { BalanceValues.setReviveNearBuildingRange(v); }
-    @Override public double getScepterHostileRange() { return BalanceValues.scepterHostileRange(); }
-    @Override public void setScepterHostileRange(double v) { BalanceValues.setScepterHostileRange(v); }
-    @Override public int getMageHutRestTicks() { return BalanceValues.mageHutRestTicks(); }
-    @Override public void setMageHutRestTicks(int v) { BalanceValues.setMageHutRestTicks(v); }
 }

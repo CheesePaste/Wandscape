@@ -37,4 +37,16 @@ public final class ScepterApiImpl implements ScepterApi {
         Entity e = level.getEntity(target);
         return (e instanceof LivingEntity le && le.isAlive() && !le.isRemoved()) ? le : null;
     }
+
+    // ── 可调平衡值（委托 BalanceValues）──
+
+    @Override
+    public double getScepterHostileRange() {
+        return com.wsteam.wandscape.foundation.util.BalanceValues.scepterHostileRange();
+    }
+
+    @Override
+    public void setScepterHostileRange(double v) {
+        com.wsteam.wandscape.foundation.util.BalanceValues.setScepterHostileRange(v);
+    }
 }

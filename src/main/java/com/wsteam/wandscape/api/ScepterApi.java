@@ -31,6 +31,12 @@ public interface ScepterApi {
     @Nullable
     LivingEntity forcedHostile(ServerLevel level, UUID colonyId);
 
+    // ── 可调平衡值（委托 BalanceValues；运行时生效，不追溯已生成实体）──
+
+    /** 权杖指定敌对目标时，殖民地法师开始集火该目标的最大距离。 */
+    double getScepterHostileRange();
+    void setScepterHostileRange(double v);
+
     // ── 未实现（重设计阶段声明，见 @Unimplemented）──
 
     /** 设置目标实体是否被指定殖民地庇护（法师视其为盟友）。same colony hostile 互斥由实现侧处理。 */

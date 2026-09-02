@@ -46,4 +46,10 @@ public interface MageHutApi {
      * @return 解除成功 true；NPC 未绑定 false
      */
     boolean forceUnbindNpc(UUID npcId);
+
+    // ── 可调平衡值（委托 BalanceValues；运行时生效，不追溯受影响实体）──
+
+    /** 法师小屋单次休息时长（tick）。 */
+    int getMageHutRestTicks();
+    void setMageHutRestTicks(int v);
 }

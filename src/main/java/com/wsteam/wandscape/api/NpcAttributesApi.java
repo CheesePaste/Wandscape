@@ -13,6 +13,12 @@ import java.util.UUID;
  * 训练步进、默认 base，以及训练/升级成本曲线。覆盖在后续的招募掷点、训练、升级、复活重算中
  * 生效；已生成实体的 base 由 vanilla AttributeMap 持有，不受覆盖回写影响。
  *
+ * <p><b>读/写边界（2026-09-02 裁定）</b>：本接口只做<b>规则读取与实例级写操作</b>；
+ * 一位 NPC 的属性<b>读面唯一入口</b>在 {@code NpcData.attributes()}（{@code Map<AttributeType,Float>}
+ * effective 全量快照，含隐藏属性）——与本接口旧读桩同能力，二选一后读桩已删，避免重复定义。
+ * 「改属性」的写路径全在本接口：{@link #setNpcAttributes}/{@link #setNpcLevel}/{@link #trainNpc}/
+ * {@link #levelUpNpc}。
+ *
  * <p>获取：{@code WandscapeApis.getNpcAttributesApi()}。
  */
 public interface NpcAttributesApi {
@@ -63,22 +69,11 @@ public interface NpcAttributesApi {
     /** 撤销成本覆盖，恢复默认。 */
     void resetCosts();
 
-    // ── 属性整体存取（2 方法，替代逐属性 18 个）──
+    // ── 实例级属性整设（读面在 NpcData.attributes()，effective 全量快照，不在此重复设读桩）──
 
     /**
-     * 整取一名 NPC 的**基础**属性值（{@code Map<AttributeType,Float>} 全量，含隐藏属性）。
-     * 返回的是 base（不叠加等级/装备加成），修改后按 {@code NpcAttributes.effective} 公式重算生效值。
-     *
-     * @return 全属性 base map；NPC 不存在返回空 map
-     */
-    @Unimplemented("重设计阶段——待接入 WandscapeNpc base attribute 映射")
-    default Map<AttributeType, Float> getNpcAttributes(UUID npcId) {
-        throw new UnsupportedOperationException("NpcAttributesApi.getNpcAttributes not yet implemented");
-    }
-
-    /**
-     * 整设一名 NPC 的**基础**属性值（全量覆盖；缺省 key 视为 0 或保持？——实现方按「缺省保持不动」处理，
-     * 仅更新传入的 key）。建议按各属性 SPEC 上下界 clamp，避免产出非法值。
+     * 整设一名 NPC 的**基础**属性值（只更新传入的 key，缺省保持不动）。建议按各属性 SPEC
+     * 上下界 clamp，避免产出非法值。
      *
      * @return 是否全量成功设置；NPC 不存在或因 clamp 全拒返回 false
      */

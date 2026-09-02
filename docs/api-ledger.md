@@ -2,7 +2,7 @@
 
 > 目的（用户三重用途）：① 逐条实现未实现的 API；② 检查模组本体相关用法能否走 API（**保证 API 鲜活性**——被本体调用才不腐烂）；③ 为未来 `docs/` 新版提供素材。
 > 生成：2026-09-01。状态基于当前 `refactor` 分支 `api/` 包，`compileJava` 绿。
-> 更新：2026-09-02。① NpcApi 的属性整存取/等级/训练/升级挪入 NpcAttributesApi（§2/§16 同步）；② NpcData 明确定位为 NpcApi 的读返回契约（§3），删除无实体的 `getAssignedHouseId`/`getGraveBlockEntityId`；③ WarehouseApi 声明两个仓库变更事件为公开契约（§8）；④ 新增 MageHutApi（§20）+ NpcApi 存活/复活（§2）。
+> 更新：2026-09-02。① NpcApi 的属性整存取/等级/训练/升级挪入 NpcAttributesApi（§2/§16 同步）；② NpcData 明确定位为 NpcApi 的读返回契约（§3），删除无实体的 `getAssignedHouseId`/`getGraveBlockEntityId`；③ WarehouseApi 声明两个仓库变更事件为公开契约（§8）；④ 新增 MageHutApi（§20）+ NpcApi 存活/复活（§2）；⑤（同日再动）NpcData 转 record 纯字段读模型：删 6 个逐属性读法（getSpellPower/getWorkSpeed/getSpellSpeed/getArmorValue/getMaxHealth/getMaxMana），读面唯一化为 `attributes()`（effective 全量）——`NpcAttributesApi.getNpcAttributes` 读桩同删（二选一去重落地，写路径保留）；`scepterHostileRange`→ScepterApi、`mageHutRestTicks`→MageHutApi 归位（§3/§6/§16/§20 同步）。
 
 ## 图例
 
@@ -53,29 +53,30 @@
 | `NpcData getNpc(UUID)` | 单个 NPC 数据 | ✅ | 已走 |
 | `getGuardRange/setGuardRange` …（18 个守卫战斗平衡对） | guard 战斗/风筝/自防距离值 | ✅ | BalanceValues 委托 |
 | `getNpcRegenGraceTicks`…（6 个回血/魔力平衡对） | NPC 回血/魔力节奏 | ✅ | BalanceValues |
-| `getReviveNearBuildingRange` / `getScepterHostileRange` / `getMageHutRestTicks`（3 对） | 复活/权杖/休息 | ✅ | BalanceValues |
+| `getReviveNearBuildingRange`（1 对） | 复活范围 | ✅ | BalanceValues 委托 |
 | `UUID spawnNpc(UUID colonyId, BlockPos)` | 生成殖民地 NPC | 🔶 桩 | 🔧 本体绕开（3 处）：`Wandscape.WANDSCAPE_NPC.spawn` + `fixEcsAfterSpawn`（`TavernRecruitPacket.java:199`、`ColonyCommand.java:190`、`ReviveHandler.java:148`）——**分散复制，最该收敛到 API** |
 | `boolean removeNpc(UUID)` | 解雇/移除 NPC | 🔶 桩 | 🔧 本体绕开：`WandscapeNpc.dismissFromColony`（`WandscapeNpc.java:993`，仅 `NpcDismissPacket`） |
 | `boolean isNpcAlive(UUID)` | npcId 是否指向在世法师（实体存在+未移除+isAlive） | ✅ `NpcApiImpl`（overworld 实体查询） | 🔧 无现成直接入口（各系统直调实体判断） |
 | `boolean reviveNpc(UUID)` / `reviveNpc(UUID, BlockPos)` | 复活法师：需死亡记录+当前不存活；pos 可空默认市政厅门口，免费 | ✅ `NpcApiImpl`（经 `ReviveHandler.spawnFromRecordAt` + `ColonyDeathRegistry.getByNpcId`） | 🔧 本体绕开：`ReviveHandler` 三条路径（祭坛/全灭保底/保卫复活）——API 是程序化强制入口，本体路径保留 |
 
-本体自消费：`getNpcApi` 3。**2026-09-02：**属性整存取（`get/setNpcAttributes`）、等级自由设置（`setNpcLevel`）、训练/升级（`trainNpc`/`levelUpNpc`）已挪入 NpcAttributesApi（见 §16），本接口不再持有。
+本体自消费：`getNpcApi` 3。**2026-09-02：**属性整存取（`get/setNpcAttributes`）、等级自由设置（`setNpcLevel`）、训练/升级（`trainNpc`/`levelUpNpc`）已挪入 NpcAttributesApi（见 §16），本接口不再持有。**同日再动：**`getScepterHostileRange`/`getMageHutRestTicks` 归位 ScepterApi（§6）/MageHutApi（§20）——本接口剩"殖民地查询 + 单 npc 查询/存活/复活 + NPC 战斗/恢复平衡"。
 
 ---
 
 ## 3. NpcData（NpcApi 的只读数据契约，`content/npc/data`——非独立 API）
 
-> **定位（2026-09-02 裁定）**：NpcData 不是独立功能 API，是 `NpcApi` 读方法的返回类型（addon 经 `NpcApi.getNpc/getColonyNpcs/getIdleNpcs` 获得）——与 `BuildingState`/`ColonyStatusSnapshot`/`MageResume` 同为"读模型留域、经 api 接口暴露"的模式。**相关读功能已在 API 中，无需另加 API 方法**；NpcData 留在 `content/npc/data` 不搬 `api/`。缺口是映射实现而非接口设计。
+> **定位（2026-09-02 裁定）**：NpcData 不是独立功能 API，是 `NpcApi` 读方法的返回类型（addon 经 `NpcApi.getNpc/getColonyNpcs/getIdleNpcs` 获得）——与 `BuildingState`/`ColonyStatusSnapshot`/`MageResume` 同为"读模型留域、经 api 接口暴露"的模式。**相关读功能已在 API 中，无需另加 API 方法**；NpcData 留在 `content/npc/data` 不搬 `api/`。
+>
+> **2026-09-02（同日重构）：interface → `record` 纯字段快照**（`NpcDataImpl.java` 已删，`NpcData.from(WandscapeNpc)` 组装）。原则：单个实体单快照时刻的投影 = 字段；跨实体/跨系统判定、要上下文、或改状态 = `NpcApi`/`NpcAttributesApi` 方法。**逐属性读法全部删除，属性读面唯一化到 `attributes()`**。
 
-| 方法 | 用途 | 状态 | dogfood |
+| 字段 | 用途 | 状态 | dogfood |
 |---|---|---|---|
-| `getNpcId/getName/getMaxHealth/getCurrentHealth/getSpellPower/getWorkSpeed/getSpellSpeed/getArmorValue/isIdle/getCurrentTaskId/isDead` | 现有读取器 | ✅ `NpcDataImpl.from` 实现 | `NpcDataPacket` |
-| `int getLevel()` | NPC 等级 | 🔶 桩 | 🔧 实现绕开：`WandscapeNpc.getLevel()`（`WandscapeNpc.java:860`）未映射 |
-| `float getMana()` / `getMaxMana()` | 当前/最大魔力 | 🔶 桩 | 🔧 `npc.getCurrentMana/getMaxMana`（`WandscapeNpc.java:158/:163`）未映射 |
-| `List<String> getSpells()` | 已装备魔法 | 🔶 桩 | 🔧 `npc.equippedMagic.flattenedEntries()`（`:985`）未映射 |
-| `Map<AttributeType,Float> getAttributes()` | 全属性基础值快照 | 🔶 桩 | 🔧 `WandscapeNpc` base 映射未映射 —— ⚠️ **与 `NpcAttributesApi.getNpcAttributes` 是同一能力**，实现时二选一去重，避免重复定义 |
+| `npcId/name/currentHealth/isIdle/currentTaskId/isDead` | 身份/状态 | ✅ `NpcData.from` | `NpcApiImpl`/`NpcDataPacket` |
+| `int level` / `float mana` | 等级/当前魔力 | ✅（原桩已实现） | `NpcDataPacket` |
+| `List<String> spells` | 已装备魔法 id（`SpellEntry.id`） | ✅（原桩已实现） | `NpcDataPacket` |
+| `Map<AttributeType,Float> attributes` | **唯一属性读面**：effective 全量（含隐藏） | ✅ `from` 经 `npc.getEffectiveAttribute` | 面板 |
 
-本体自消费：经 `NpcApi` 间接（`NpcDataPacket`）。**2026-09-02：**删除无实体的 `getAssignedHouseId`/`getGraveBlockEntityId`（恒 null；现无 House 只有法师小屋，坟墓 BE 更属子虚乌有），接口与 `NpcDataImpl` 同步清理。
+**删除（读模型不逐属性开槽）**：`getSpellPower/getWorkSpeed/getSpellSpeed/getArmorValue/getMaxHealth/getMaxMana`——一律改经 `attributes().get(type)` 读，数值同源（`ARMOR_VALUE↔Attributes.ARMOR`、`MAX_HP↔maxHealth`、`MAX_MANA` 直读，均已核对）；增删 `AttributeType` 时 NpcData 形状零改动。**二选一去重落地**：`NpcAttributesApi.getNpcAttributes`（base 读桩）已删，读面唯一 = `attributes()`；写路径（训练/升级/设属性）仍在 `NpcAttributesApi`，未受影响。
 
 ---
 
@@ -129,11 +130,12 @@
 | `boolean isSheltered(UUID colonyId, UUID entityUuid, Level)` | 是否被殖民地庇护 | ✅ | `WandscapeNpc.isFriendlyForce`（:261）已走 |
 | `boolean isShelteredForAny(UUID, Level)` | 是否被任意殖民地庇护 | ✅ | `GuardTaskSource`（:90）已走 |
 | `LivingEntity forcedHostile(ServerLevel, UUID)` | 殖民地强制仇恨目标 | ✅ | guard 已走 |
+| `double getScepterHostileRange()` / `setScepterHostileRange(double)` | 权杖敌对触发集火距离（平衡） | ✅ | `BalanceValues` 委托 |
 | `void setSheltered(UUID, UUID, boolean)` | 设/撤庇护（**要补的写侧**） | 🔶 桩 | 🔧 **本体绕开**：`ScepterMarks.toggleShelter`（`ScepterMarks.java:60`，经 `ScepterService` 右键触发）——**这就是只读 bug 的根源** |
 | `void setForcedHostile(UUID, UUID)` | 设强制仇恨目标 | 🔶 桩 | 🔧 本体绕开：`ScepterMarks.toggleForcedHostile`（`:94`） |
 | `UUID clearForcedHostile(UUID)` | 清强制仇恨目标 | 🔶 桩 | 🔧 本体绕开：`ScepterMarks.clearForcedHostile`（`:116`） |
 
-本体自消费：`getScepterApiSilently` 4。**最高优先 dogfood 项**：把 `ScepterService` 的右键写路径改走 `ScepterApi.setSheltered/setForcedHostile`，addon 立刻获得完整写能力。
+本体自消费：`getScepterApiSilently` 4。**2026-09-02：**`get/setScepterHostileRange` 从 NpcApi 归位（BalanceValues 委托）。**最高优先 dogfood 项**：把 `ScepterService` 的右键写路径改走 `ScepterApi.setSheltered/setForcedHostile`，addon 立刻获得完整写能力。
 
 ---
 
@@ -272,13 +274,12 @@
 | `isVisible/visible` | 可见性/可见列表 | ✅ | 面板 |
 | `lower/upper/perLevel/trainStep/defaultFor/effective` | 规则读取 | ✅ | 招募/训练 |
 | `overrideSpec/resetSpec/setDefault/resetDefault/overrideCosts/resetCosts` | **mod 初始化时覆盖规则** | ✅ | 整合包用 |
-| `Map<AttributeType,Float> getNpcAttributes(UUID)` | 整取基础属性（全量） | 🔶 桩 | 🔧 本体绕开：`WandscapeNpc.getEffectiveAttribute`（读生效值）/base 映射 —— ⚠️ 与 `NpcData.getAttributes` 同能力，二选一 |
 | `boolean setNpcAttributes(UUID, Map)` | 整设基础属性 | 🔶 桩 | 🔧 本体绕开：`WandscapeNpc.setBaseAttributeValue` 逐个写（`TavernRecruitPacket.java:213` 手动拼） |
 | `void setNpcLevel(UUID, int)` | 自由设等级（可降级） | 🔶 桩 | 🔧 本体绕开：`WandscapeNpc.setLevel`（`TavernRecruitPacket.java:221`） |
 | `boolean trainNpc(UUID, AttributeType, steps)` | 训练属性（耗元素） | 🔶 桩 | 🔧 本体绕开：`MageHutServerHandler.onTrain`（`MageHutServerHandler.java:174`） |
 | `boolean levelUpNpc(UUID)` | 升级 | 🔶 桩 | 🔧 本体绕开：`MageHutServerHandler.onUpgrade`（`:146`） |
 
-本体自消费：`getNpcAttributesApi` 1。**覆盖层模式（默认值+覆盖），改规则只碰这一个文件**。
+本体自消费：`getNpcAttributesApi` 1。**覆盖层模式（默认值+覆盖），改规则只碰这一个文件**。**2026-09-02（同日二改）：**`getNpcAttributes` 读桩已删——读面唯一在 `NpcData.attributes()`（effective 全量，同能力二选一去重落地）；本接口只留规则 + **写操作**（`setNpcAttributes`/`setNpcLevel`/`trainNpc`/`levelUpNpc`，改属性/升降级能力完整保留）。
 
 ---
 
@@ -327,8 +328,9 @@
 | `boolean forceBind(UUID buildingId, UUID npcId)` | 强绑：顶替+自动解旧+保留 colony 校验+活体 | ✅ | 🔧 本体绕开：`MageHutServerHandler.onAssign`（含全部校验，GUI 路径）——API 为其程序化版，本体保留 GUI 软绑 |
 | `boolean forceUnbind(UUID buildingId)` | 解绑（hut 原语） | ✅ | 🔧 本体绕开：`NpcDismissPacket:74-76`（离职清理） |
 | `boolean forceUnbindNpc(UUID)` | 解绑（npc 便捷，先反查再解） | ✅ | 🔧 同上 |
+| `int getMageHutRestTicks()` / `setMageHutRestTicks(int)` | 法师小屋休息时长（平衡） | ✅ | `BalanceValues` 委托 |
 
-本体自消费：`getMageHutApi` 未接（新建纯 addon 能力；本体 GUI/离职路径保留原逻辑）。
+本体自消费：`getMageHutApi` 未接（新建纯 addon 能力；本体 GUI/离职路径保留原逻辑）。**2026-09-02：**`get/setMageHutRestTicks` 从 NpcApi 归位（BalanceValues 委托）。
 
 ---
 
@@ -366,7 +368,7 @@
 1. `ScepterApi` 写侧（对接 `ScepterMarks`，一对一转，风险最低）→ dogfood #1
 2. `NpcApi.spawnNpc`（收敛 3 处复制，需调 `fixEcsAfterSpawn`）→ dogfood #2
 3. `ColonyApi.setColonyName/getColonyName/setColonyLevel`（对接 `ColonyLevelManager`）→ dogfood #3
-4. `NpcAttributesApi.getNpcAttributes/setNpcAttributes`（对接 `WandscapeNpc.setBaseAttributeValue` 逐个写；实现时与 `NpcData.getAttributes` 二选一去重）
+4. `NpcAttributesApi.setNpcAttributes`（对接 `WandscapeNpc.setBaseAttributeValue` 逐个写；读面已在 `NpcData.attributes()`，`getNpcAttributes` 读桩已删，只需实现写侧）
 5. 其余（生产/道路/游客/仓库）价值高但涉及跨域装配，靠后逐步做。
 
 ---
@@ -383,7 +385,7 @@
 
 ### ✅ 确认全走 API（无绕过）
 - **ScepterApi 3 读**：`isSheltered`/`isShelteredForAny`/`forcedHostile` 全部经 `WandscapeApis.getScepterApiSilently()`（`WandscapeNpc.isFriendlyForce`、`GuardTaskSource:91`、`GuardAttackExecutor:139`、`SelfDefenseExecutor:173`）。`ScepterMarks` 直读仅限 scepter 子系统自身。
-- **NpcApi 查询**：`NpcDataImpl.from` 只在 `NpcApiImpl`；`EntityComponentBridge.allNpcs()` 用户全为各子系统内部活体逻辑。
+- **NpcApi 查询**：`NpcData.from`（record 静态工厂）只在 `NpcApiImpl`；`EntityComponentBridge.allNpcs()` 用户全为各子系统内部活体逻辑。
 - **TouristApi 读**、**TavernApi 读/招/拒**、**GuideProgressApi.sendToPlayer**、**RoadApi 增/减/撤**、**ElementApi 命名方法**、**BuildingApi 拆/撤/快照**、**ColonyApi getAllColonyIds/getColonyByFounder/setNamingStyle**。
 
 ### ⚠️ 真绕过 → 已修正
