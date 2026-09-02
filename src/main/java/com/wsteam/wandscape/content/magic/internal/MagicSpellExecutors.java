@@ -145,7 +145,7 @@ public final class MagicSpellExecutors {
     public static final int METEOR_TOTAL = 6;
 
     /** 连落陨石默认每颗伤害（MagicDef.effectDamage 为 null 时保底）。 */
-    public static final float METEOR_DEFAULT_DAMAGE = 10.0f;
+    public static final float METEOR_DEFAULT_DAMAGE = 6.0f;
 
     /** 陨石重瞄扫描半径（方块）。 */
     public static final double METEOR_SCAN_RADIUS = 32.0;
