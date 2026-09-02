@@ -503,6 +503,7 @@ public class Wandscape {
         NeoForge.EVENT_BUS.register(SelfDefenseHandler.class);
         NeoForge.EVENT_BUS.register(FollowAttackHandler.class);
         NeoForge.EVENT_BUS.register(NpcSpellPowerHandler.class);
+        NeoForge.EVENT_BUS.register(com.wsteam.wandscape.content.npc.guard.FriendlyTargetingHandler.class);
         NeoForge.EVENT_BUS.register(com.wsteam.wandscape.content.npc.internal.NpcDeathHandler.class);
         NeoForge.EVENT_BUS.register(BuildingInteractHandler.class);
         NeoForge.EVENT_BUS.register(com.wsteam.wandscape.foundation.ui.panel.PanelStateTracker.class);
@@ -532,6 +533,7 @@ public class Wandscape {
         WandscapeApis.setWarehouseApi(new WarehouseManager());
         WandscapeApis.setMageHutApi(new com.wsteam.wandscape.content.building.internal.MageHutApiImpl());
         WandscapeApis.setColonyApi(ColonyApiImpl.get());
+        WandscapeApis.setFriendlyForceApi(new com.wsteam.wandscape.content.npc.internal.FriendlyForceApiImpl());
         WandscapeApis.setTouristApi(new TouristApiImpl());
         tavernApi = new TavernApiImpl();
         WandscapeApis.setTavernApi(tavernApi);

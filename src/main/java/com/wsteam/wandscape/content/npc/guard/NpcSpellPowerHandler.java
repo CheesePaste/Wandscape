@@ -30,8 +30,9 @@ import java.util.UUID;
  * {@code IronSpellsDamageHandler} 已因该 bug 移除，勿在 compat 包重新引入。
  *
  * <p>友伤边界（L0，先于倍率）：**友军名单管辖**——伤害源实体是 {@link WandscapeNpc} 时，
- * 目标为友军（玩家 + 同殖民地 NPC/铁魔法随从/游客，见 {@code WandscapeNpc#isFriendlyForce}）
- * 则整伤取消；非友军一律结算（不再限于 {@link Enemy}，与 {@code canBeamHurt} 放宽一致）。
+ * 目标为友军（玩家 + 玩家侧宠物/守护召唤/玩家随从 + 同殖民地 NPC/铁魔法随从/游客 + 其它模组注册友军，
+ * 见 {@code WandscapeNpc#isFriendlyForce}）则整伤取消；非友军一律结算（不再限于 {@link Enemy}，
+ * 与 {@code canBeamHurt} 放宽一致）。
  * 铁魔法（Iron's Spells）由其库内部结算伤害，不检查此边界，会在 AoE/溅射里打到友军——
  * 这里在伤害入口统一**取消**友军伤害，使铁魔法与原生魔法（施法前已按 canBeamHurt 过滤目标）
  * 边界一致；和平模式同理整伤取消。

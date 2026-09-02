@@ -14,7 +14,7 @@
 
 ## 总览
 
-- 接口数：**19 个**（18 个功能/扩展接口 + 1 个窄 accessor `WandscapeApis`）＋ 标注 `@Unimplemented`。
+- 接口数：**20 个**（19 个功能/扩展接口 + 1 个窄 accessor `WandscapeApis`）＋ 标注 `@Unimplemented`。
 - **已实现 vs 桩**：功能接口里大部分"读/查询/平衡值"已实现；**本轮新增的能力动词全是桩**。
 - **⚠️ 隐式桩（重点慎用）**：`NpcApi.assignHouse`（恒 false）、`TouristApi.spawnTourist`（空 nil）、`TavernApi.recruitMage`（只取简历不生实体）——三者**编译通过但行为是空/假**，addon 一用就踩坑，建议优先处理。
 - **本体自消费合计**：约 **139 处** `WandscapeApis.getXxxApi()*`。BuildingApi(35)/ColonyApi(39) 最重，ProductionApi(0) 最轻。
@@ -331,6 +331,19 @@
 | `int getMageHutRestTicks()` / `setMageHutRestTicks(int)` | 法师小屋休息时长（平衡） | ✅ | `BalanceValues` 委托 |
 
 本体自消费：`getMageHutApi` 未接（新建纯 addon 能力；本体 GUI/离职路径保留原逻辑）。**2026-09-02：**`get/setMageHutRestTicks` 从 NpcApi 归位（BalanceValues 委托）。
+
+---
+
+## 21. FriendlyForceApi（新增 2026-09-02：友军名单外部注册契约）
+
+> 面向 addon/其它模组：把己方实体（召唤物/宠物/守护单位）登记为**所有殖民地的友军**，殖民地 NPC 不会攻击/溅射误伤这些实体。实现 `content/npc/internal/FriendlyForceApiImpl`；内部判定兜底在 `WandscapeNpc.classify()`（命中返回 `AllyKind.EXTERNAL_ALLY`）。
+
+| 方法 | 用途 | 状态 | dogfood |
+|---|---|---|---|
+| `void registerAlly(Predicate<LivingEntity>)` | 注册友军判定器（幂等累加，任一命中即友军） | ✅ `FriendlyForceApiImpl` | 🔧 纯 addon 能力，本体无同类（铁魔法随从走 `IronSpellsCompat.getSummoner` 内置）。**做其它模组兼容必须走它** |
+| `boolean isExternalAlly(LivingEntity)` | 命中任一注册判定器（内部兜底查询） | ✅ | 🔧 本体自消费：`WandscapeNpc.classify` |
+
+本体自消费：`getFriendlyForceApiSilently` 1（`WandscapeNpc.classify`，非 API 包）。⚠️ 判定器须轻量（instanceof 优先），它在每次友军判定/目标过滤时被查询。
 
 ---
 

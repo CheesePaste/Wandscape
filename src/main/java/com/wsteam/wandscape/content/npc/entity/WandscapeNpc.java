@@ -30,6 +30,7 @@ import com.wsteam.wandscape.content.tourist.entity.ColonyVisitor;
 import com.wsteam.wandscape.content.tourist.entity.PlayerLike;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.api.WandscapeApis;
+import com.wsteam.wandscape.api.FriendlyForceApi;
 import com.wsteam.wandscape.content.task.engine.pool.GlobalTask;
 import com.wsteam.wandscape.content.task.runtime.ExecutorState;
 import com.wsteam.wandscape.content.task.runtime.NpcTaskPackage;
@@ -52,6 +53,8 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.*;
+import net.minecraft.world.entity.animal.IronGolem;
+import net.minecraft.world.entity.animal.SnowGolem;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -214,8 +217,8 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
     }
 
     /**
-     * 该法师的魔法光束能伤害的目标判定钩子——**友军名单管辖**：友军（玩家 + 同殖民地 NPC /
-     * 铁魔法随从 / 游客，见 {@link #isFriendlyForce}）以外的一切实体都能伤害。与
+     * 该法师的魔法光束能伤害的目标判定钩子——**友军名单管辖**：友军（玩家 + 玩家侧宠物/守护召唤/
+     * 玩家随从 + 同殖民地 NPC/其铁魔法随从/游客，见 {@link #isFriendlyForce}）以外的一切实体都能伤害。与
      * {@link #isHostileTarget}（主动索敌，仍仅 Enemy）分开：战斗中 NPC 不会主动锁定非敌对
      * 生物，但一旦交战（跟随玩家攻击的目标 / 受击反击 / 守卫对怪），光束/陨石溅射对束内
      * 非友军一律结算伤害。敌对法师等子类覆盖为「非友军 或 生存玩家」，用于实战测试。
@@ -228,7 +231,7 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
 
     /**
      * 目标是否属于本 NPC 所在殖民地的友军名单（派生）：同 {@code colonyId} 的 NPC + 所有玩家
-     * + 同殖民地 NPC 召唤的铁魔法随从 + 同殖民地游客。
+     * + 玩家侧宠物/守护召唤/玩家随从 + 同殖民地 NPC 召唤的铁魔法随从 + 同殖民地游客。
      * 友军不记仇、不受本 NPC 任何攻击伤害——仇恨记录（{@code SelfDefenseHandler}）与伤害判定
      * （{@link #canBeamHurt} / {@code NpcSpellPowerHandler} 伤害入口）统一走此方法，边界唯一。
      */
@@ -242,26 +245,9 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
      * 依赖某个具体 NPC 实例。
      */
     public static boolean isFriendlyForce(LivingEntity other, UUID colonyId) {
-        if (other instanceof Player) {
-            return FriendlyForce.isAlly(colonyId, null, FriendlyForce.AllyKind.PLAYER);
-        }
-        if (other instanceof WandscapeNpc npc) {
-            return FriendlyForce.isAlly(colonyId, npc.colonyId, FriendlyForce.AllyKind.WANDSCAPE_NPC);
-        }
-        // 铁魔法召唤物：召唤者为「本 NPC 或同殖民地 NPC」→ 友军（施法不误伤自己/同殖民地召唤的
-        // 亡灵随从）。instanceof 前置 isLoaded 守卫——模组未加载时类不在类路径，直接 instanceof
-        // 会抛 NoClassDefFoundError。玩家/其它模组施法者的召唤物不在豁免范围（仅豁免 NPC 召唤的）；
-        // 不同殖民地 NPC 召唤的仍是敌对目标。
-        Entity summoner = IronSpellsCompat.getSummoner(other);
-        if (summoner != null) {
-            if (summoner instanceof WandscapeNpc ownerNpc) {
-                return FriendlyForce.isAlly(colonyId, ownerNpc.colonyId, FriendlyForce.AllyKind.MAGIC_SUMMON);
-            }
-            return false;
-        }
-        // 游客：同殖民地游客 → 友军（避免战斗溅射误伤短居访客）
-        if (other instanceof ColonyVisitor visitor) {
-            return FriendlyForce.isAlly(colonyId, visitor.getColonyId(), FriendlyForce.AllyKind.TOURIST);
+        FriendlyForce.Classified c = classify(other);
+        if (FriendlyForce.isAlly(colonyId, c.colony(), c.kind())) {
+            return true;
         }
         // 庇护名单：被玩家用庇护权杖标记的生物视作盟友（按殖民地名下长期持久化）——
         // 法师不主动攻击、不误伤（守卫/光束/陨石/自防御/跟随攻击全部经本方法过滤）。未装配 API
@@ -270,7 +256,75 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
         if (scepterApi != null && scepterApi.isSheltered(colonyId, other.getUUID(), other.level())) {
             return true;
         }
-        return FriendlyForce.isAlly(colonyId, null, FriendlyForce.AllyKind.OTHER);
+        return false;
+    }
+
+    /**
+     * 实体在友军名单中的类别（静态重载，供 {@link #isFriendlyForce} 与
+     * {@link #isMutuallyFriendly} 共用，边界唯一）。判定顺序：玩家 > 本模组 NPC > 玩家训养的宠物
+     * > 守护召唤（铁/雪傀儡）> 铁魔法召唤物（召唤者为玩家/王国 NPC）> 游客 > 其它模组经
+     * {@code FriendlyForceApi} 注册的友军（{@code EXTERNAL_ALLY}）> 其它。
+     *
+     * <p>铁魔法调用前置 {@code IronSpellsCompat#isLoaded} 守卫——模组未加载时 {@code IMagicSummon}
+     * 不在类路径，直接 instanceof 会抛 {@code NoClassDefFoundError}。
+     */
+    static FriendlyForce.Classified classify(LivingEntity e) {
+        if (e instanceof Player) return new FriendlyForce.Classified(FriendlyForce.AllyKind.PLAYER, null);
+        if (e instanceof WandscapeNpc npc) {
+            return new FriendlyForce.Classified(FriendlyForce.AllyKind.WANDSCAPE_NPC, npc.colonyId);
+        }
+        if (e instanceof OwnableEntity o && o.getOwnerUUID() != null) {
+            return new FriendlyForce.Classified(FriendlyForce.AllyKind.PET, null);
+        }
+        if (e instanceof IronGolem || e instanceof SnowGolem) {
+            return new FriendlyForce.Classified(FriendlyForce.AllyKind.GOLEM, null);
+        }
+        Entity summoner = IronSpellsCompat.getSummoner(e);
+        if (summoner != null) {
+            if (summoner instanceof Player) {
+                return new FriendlyForce.Classified(FriendlyForce.AllyKind.PLAYER_SUMMON, null);
+            }
+            if (summoner instanceof WandscapeNpc ownerNpc) {
+                return new FriendlyForce.Classified(FriendlyForce.AllyKind.MAGIC_SUMMON, ownerNpc.colonyId);
+            }
+        }
+        if (e instanceof ColonyVisitor visitor) {
+            return new FriendlyForce.Classified(FriendlyForce.AllyKind.TOURIST, visitor.getColonyId());
+        }
+        // 其它模组经 FriendlyForceApi 注册的友军（其召唤物/宠物等）：恒友军。谓词轻量（instanceof）。
+        FriendlyForceApi allyApi = WandscapeApis.getFriendlyForceApiSilently();
+        if (allyApi != null && allyApi.isExternalAlly(e)) {
+            return new FriendlyForce.Classified(FriendlyForce.AllyKind.EXTERNAL_ALLY, null);
+        }
+        return new FriendlyForce.Classified(FriendlyForce.AllyKind.OTHER, null);
+    }
+
+    /**
+     * 实体是否属「真实殖民地侧」成员：殖民地 NPC（{@code isColonyNpc()}）、其铁魔法随从、
+     * 持殖民地的游客。敌对生物（EvilMage 等 {@code isColonyNpc()==false}）与普通怪不算——
+     * 它们与玩家的对抗是敌意而非误伤，互不侵犯判定刻意不覆盖，否则 EvilMage 抢不到生存玩家目标。
+     */
+    private static boolean isColonySide(LivingEntity e) {
+        if (e instanceof WandscapeNpc npc) return npc.isColonyNpc();
+        if (e instanceof ColonyVisitor visitor) return visitor.getColonyId() != null;
+        Entity summoner = IronSpellsCompat.getSummoner(e);
+        return summoner instanceof WandscapeNpc owner && owner.isColonyNpc();
+    }
+
+    /**
+     * 两个实体是否互为友军（**双向**互不侵犯，供「宠物/玩家随从不攻击 NPC、NPC 随从不攻击玩家」
+     * 的目标过滤 {@code FriendlyTargetingHandler} 用）。仅当至少一侧为真实殖民地成员
+     * （{@link #isColonySide}）时判定——敌对生物（EvilMage）、普通怪物、野外中立生物与玩家的
+     * 对抗是敌意而非误伤，刻意排除。
+     *
+     * <p>判定：任一方恒友军（玩家/宠物/守护召唤/玩家随从）取另一侧殖民地为参考；两侧均殖民地侧
+     * 须同一殖民地。与单向 {@link #isFriendlyForce} 共用 {@link #classify}，规则不散落。
+     */
+    public static boolean isMutuallyFriendly(LivingEntity a, LivingEntity b) {
+        if (!isColonySide(a) && !isColonySide(b)) return false;
+        FriendlyForce.Classified ca = classify(a);
+        FriendlyForce.Classified cb = classify(b);
+        return FriendlyForce.areMutuallyAlly(ca.colony(), ca.kind(), cb.colony(), cb.kind());
     }
 
     /**
@@ -286,8 +340,8 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
     /**
      * 受击反击目标判定：NPC 被该攻击者打伤时是否应当还手。
      * 与 {@link #isHostileTarget}（主动索敌，仅 Enemy）区分——反击不要求 Enemy：
-     * 北极熊/铁傀儡/狼等中立生物主动攻击 NPC 时同样记仇还手。友军（玩家与同殖民地 NPC）
-     * 不反击（友伤）；不同殖民地 NPC 属非友军，可按此反击。
+     * 北极熊/铁傀儡/狼等中立生物主动攻击 NPC 时同样记仇还手。友军（玩家、玩家侧宠物/守护召唤/
+     * 玩家随从与同殖民地 NPC）不反击（友伤）；不同殖民地 NPC 属非友军，可按此反击。
      */
     public boolean isRetaliationTarget(LivingEntity attacker) {
         return !isFriendlyForce(attacker);

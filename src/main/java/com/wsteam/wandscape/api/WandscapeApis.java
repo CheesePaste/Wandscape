@@ -148,6 +148,16 @@ public final class WandscapeApis {
     public static MageHutApi getMageHutApiSilently() { return mageHutApi; }
     public static void setMageHutApi(MageHutApi api) { mageHutApi = api; }
 
+    /** 友军名单外部注册（其它模组的召唤物/宠物加入殖民地友军，避免误伤）。未装配时 Silently 返 null。 */
+    private static FriendlyForceApi friendlyForceApi;
+    public static FriendlyForceApi getFriendlyForceApi() {
+        if (friendlyForceApi == null) throw new IllegalStateException("FriendlyForceApi not loaded");
+        return friendlyForceApi;
+    }
+    @javax.annotation.Nullable
+    public static FriendlyForceApi getFriendlyForceApiSilently() { return friendlyForceApi; }
+    public static void setFriendlyForceApi(FriendlyForceApi api) { friendlyForceApi = api; }
+
     /**
      * 位置所在殖民地 id（位置检测，256 格内最近殖民地原点）；殖民地 API 未就绪或位置不在
      * 任何殖民地范围内返回 null。玩家/道路/地形/调试命令发布任务时统一用此解析任务殖民地

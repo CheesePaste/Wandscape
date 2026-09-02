@@ -224,8 +224,9 @@ public class MagicBeamEntity extends Entity {
     }
 
     /**
-     * 光束能否伤害该目标。NPC 施法的光束**友军名单管辖**——友军（玩家 + 同殖民地
-     * NPC/铁魔法随从/游客，见 {@code WandscapeNpc#isFriendlyForce}）恒不伤，非友军一律结算；
+     * 光束能否伤害该目标。NPC 施法的光束**友军名单管辖**——友军（玩家 + 玩家侧宠物/守护召唤/
+     * 玩家随从 + 同殖民地 NPC/铁魔法随从/游客 + 其它模组注册友军，见 {@code WandscapeNpc#isFriendlyForce}）
+     * 恒不伤，非友军一律结算；
      * 玩家/静态施法（无施法者）保持只伤敌对生物（{@link Enemy}），不因 NPC 边界放宽而影响
      * 玩家自身行为。敌对法师等子类覆盖 {@code canBeamHurt} 为也伤生存玩家。
      */
