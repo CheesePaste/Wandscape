@@ -23,7 +23,8 @@
    - 所有 NPC 来源伤害（光束/普攻/陨石/铁魔法）经 `NpcSpellPowerHandler`（NPC 伤害统一入口）把目标的 `lastHurtByPlayer` 记为殖民地创始人玩家；无殖民地记录时单在线玩家兜底，敌对法师等 `isColonyNpc()==false` 不授予。
    - 只补「最近被玩家击伤」标志，**damage source 实体恒为施法 NPC**——怪物仇恨与 SPELL_POWER 倍率判定（都读 `source.getEntity()`）不受影响；否则烈焰棒/凋灵骷髅头/亡灵装备率等 killed_by_player 掉落，装备掉落率与经验球全会因 NPC 击杀丢失。
 6. **友军名单（盟友集）唯一判据收敛在 `WandscapeNpc.classify()` + `FriendlyForce`（纯判定）**：
-   - 成员：所有玩家、同殖民地 NPC / 其铁魔法随从 / 游客、玩家训养的宠物（`OwnableEntity` 有主：狼/猫/鹦鹉/马/骆驼/羊驼）、守护召唤（铁傀儡/雪傀儡）、玩家召唤的铁魔法随从、其它模组经 `FriendlyForceApi.registerAlly` 注册的友军。
+   - 成员：所有玩家、同殖民地 NPC / 其铁魔法或诡厄随从 / 游客、玩家训养的宠物（`OwnableEntity` 有主：狼/猫/鹦鹉/马/骆驼/羊驼）、守护召唤（铁傀儡/雪傀儡）、玩家召唤的铁魔法或诡厄随从、其它模组经 `FriendlyForceApi.registerAlly` 注册的友军。
+   - ⚠️ **判定顺序：召唤者解析先于宠物兜底**——诡厄等第三方 `Owned` 召唤同时实现原版 `OwnableEntity`，若主人是敌对生物（如使徒召唤的黑曜石巨柱）必须按召唤者身份判敌我，不能凭「有主」就当玩家宠物豁免；宠物兜底另排除 `Enemy`。
    - **单向**（NPC 不攻击/不记仇/不溅射友军）走 `isFriendlyForce`；**双向互不侵犯**（玩家宠物/随从不打殖民地单位、殖民地随从不打玩家）走 `FriendlyTargetingHandler` 监听 `Mob.setTarget` 的 `LivingChangeTargetEvent`。只覆盖「真实殖民地侧」，`EvilMage` 等 `isColonyNpc()==false` 的敌意行为刻意保留。
    - ⚠️ **做其他模组兼容时，务必把该模组的召唤物/宠物经 `FriendlyForceApi.registerAlly` 加入盟友名单，避免殖民地 NPC 误伤**——这是硬性提醒，遗漏会导致兼容模组的召唤生物被己方法师当敌人打死。
 

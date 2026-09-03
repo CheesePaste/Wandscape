@@ -261,9 +261,17 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
 
     /**
      * 实体在友军名单中的类别（静态重载，供 {@link #isFriendlyForce} 与
-     * {@link #isMutuallyFriendly} 共用，边界唯一）。判定顺序：玩家 > 本模组 NPC > 玩家训养的宠物
-     * > 守护召唤（铁/雪傀儡）> 铁魔法召唤物（召唤者为玩家/王国 NPC）> 游客 > 其它模组经
-     * {@code FriendlyForceApi} 注册的友军（{@code EXTERNAL_ALLY}）> 其它。
+     * {@link #isMutuallyFriendly} 共用，边界唯一）。判定顺序：玩家 > 本模组 NPC > 守护召唤
+     * （铁/雪傀儡）> 召唤者解析（铁魔法 / 诡厄 {@code IOwned}：召唤者为玩家 → 玩家侧召唤恒友军、
+     * 本模组法师 → 其殖民地的召唤随从）> 玩家训养的宠物（{@code OwnableEntity} 有主）> 游客 >
+     * 其它模组经 {@code FriendlyForceApi} 注册的友军（{@code EXTERNAL_ALLY}）> 其它。
+     *
+     * <p>⚠️ 宠物判定必须**先解析召唤者**再按「有主」认定：诡厄等第三方 {@code Owned} 召唤同样实现
+     * 原版 {@code OwnableEntity}，但主人可能是敌对生物（如 Goety 使徒召唤的黑曜石巨柱，owner 即使徒）。
+     * 若只凭「有主」就当玩家训养宠物（恒友军），敌方召唤会被误豁免——殖民地 NPC 不攻击/不误伤它，
+     * 敌对权杖也无法把它标记为敌对。召唤者既非玩家也非本模组法师时按非友军落入下方判定；宠物兜底
+     * 另排除 {@code Enemy}——敌对单位绝不可能是玩家训养宠物，防 owner 暂不可解析（换维度/离线）时
+     * 敌对召唤再漏判为宠物。
      *
      * <p>铁魔法调用前置 {@code IronSpellsCompat#isLoaded} 守卫——模组未加载时 {@code IMagicSummon}
      * 不在类路径，直接 instanceof 会抛 {@code NoClassDefFoundError}。
@@ -273,9 +281,6 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
         if (e instanceof WandscapeNpc npc) {
             return new FriendlyForce.Classified(FriendlyForce.AllyKind.WANDSCAPE_NPC, npc.colonyId);
         }
-        if (e instanceof OwnableEntity o && o.getOwnerUUID() != null) {
-            return new FriendlyForce.Classified(FriendlyForce.AllyKind.PET, null);
-        }
         if (e instanceof IronGolem || e instanceof SnowGolem) {
             return new FriendlyForce.Classified(FriendlyForce.AllyKind.GOLEM, null);
         }
@@ -283,13 +288,14 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
         if (summoner == null && com.wsteam.wandscape.compat.goety.GoetyCompat.isLoaded()) {
             summoner = com.wsteam.wandscape.compat.goety.GoetyCompat.getMasterOwner(e);
         }
-        if (summoner != null) {
-            if (summoner instanceof Player) {
-                return new FriendlyForce.Classified(FriendlyForce.AllyKind.PLAYER_SUMMON, null);
-            }
-            if (summoner instanceof WandscapeNpc ownerNpc) {
-                return new FriendlyForce.Classified(FriendlyForce.AllyKind.MAGIC_SUMMON, ownerNpc.colonyId);
-            }
+        if (summoner instanceof Player) {
+            return new FriendlyForce.Classified(FriendlyForce.AllyKind.PLAYER_SUMMON, null);
+        }
+        if (summoner instanceof WandscapeNpc ownerNpc) {
+            return new FriendlyForce.Classified(FriendlyForce.AllyKind.MAGIC_SUMMON, ownerNpc.colonyId);
+        }
+        if (summoner == null && !(e instanceof Enemy) && e instanceof OwnableEntity o && o.getOwnerUUID() != null) {
+            return new FriendlyForce.Classified(FriendlyForce.AllyKind.PET, null);
         }
         if (e instanceof ColonyVisitor visitor) {
             return new FriendlyForce.Classified(FriendlyForce.AllyKind.TOURIST, visitor.getColonyId());

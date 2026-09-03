@@ -29,11 +29,11 @@ public final class FriendlyForce {
         PLAYER,
         /** 本模组 NPC：同殖民地才算友军（不同殖民地 NPC 互不视为友军）。 */
         WANDSCAPE_NPC,
-        /** 铁魔法召唤物（{@code IMagicSummon}）：召唤者为同殖民地 NPC → 友军（施法不误伤自己/同殖民地召唤的亡灵随从）。 */
+        /** 殖民地 NPC 召唤的第三方召唤物（铁魔法 {@code IMagicSummon} / 诡厄 {@code IOwned}）：召唤者为同殖民地 NPC → 友军（施法不误伤自己/同殖民地召唤的随从）。 */
         MAGIC_SUMMON,
-        /** 玩家召唤的铁魔法召唤物：玩家恒为友军，其召唤物一并豁免（玩家随从不误伤殖民地单位）。 */
+        /** 玩家召唤的第三方召唤物（铁魔法 / 诡厄）：玩家恒为友军，其召唤物一并豁免（玩家随从不误伤殖民地单位）。 */
         PLAYER_SUMMON,
-        /** 玩家训养的宠物（{@code OwnableEntity} 持有 owner，如狼/猫/鹦鹉/马/骆驼/羊驼）：恒为友军。 */
+        /** 玩家训养的宠物（{@code OwnableEntity} 持有 owner、主人为玩家且非 {@code Enemy}，如狼/猫/鹦鹉/马/骆驼/羊驼）：恒为友军。诡厄等第三方 {@code Owned} 召唤虽也实现 {@code OwnableEntity}，但归属按召唤者解析走 {@code PLAYER_SUMMON}/{@code MAGIC_SUMMON}，不会落入此类。 */
         PET,
         /** 玩家/村民召唤的原版守护（铁傀儡/雪傀儡）：恒为友军（避免战斗溅射误伤守护单位）。 */
         GOLEM,
