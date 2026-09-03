@@ -519,6 +519,7 @@ public class Wandscape {
         HotelStayHandler.register();
         MarkerPreviewManager.register();
         com.wsteam.wandscape.compat.ironspellbooks.IronSpellsCompat.init(modEventBus);
+        com.wsteam.wandscape.compat.goety.GoetyCompat.init(modEventBus);
         com.wsteam.wandscape.compat.curios.CuriosCompat.init(modEventBus);
         modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
         modContainer.registerConfig(ModConfig.Type.CLIENT, ClientConfig.SPEC);
@@ -1153,6 +1154,11 @@ public class Wandscape {
             // Iron's Spells compat: 推进持续施法与长蓄力法术
             if (com.wsteam.wandscape.compat.ironspellbooks.IronSpellsCompat.isLoaded()) {
                 com.wsteam.wandscape.compat.ironspellbooks.IronSpellsCaster.tickAll();
+            }
+
+            // Goety compat: 推进持续引导与长蓄力法术
+            if (com.wsteam.wandscape.compat.goety.GoetyCompat.isLoaded()) {
+                com.wsteam.wandscape.compat.goety.GoetyCaster.tickAll();
             }
 
             var rt = com.wsteam.wandscape.content.task.runtime.TaskRuntime.getActive();

@@ -147,6 +147,9 @@ dependencies {
     // Curios API — 可选兼容依赖，compileOnly 不打包；玩家自行装 Curios。未装时法师饰品功能自动隐藏。
     compileOnly "top.theillusivec4.curios:curios-neoforge:${curios_version}"
 
+    // 诡厄巫法 (Goety) — 可选兼容依赖，compileOnly 不打包
+    compileOnly fileTree(dir: 'run/mods', include: ['*goety*.jar', '*Goety*.jar'])
+
     // Example project dependency using a sister or child project:
     // implementation project(":myproject")
 

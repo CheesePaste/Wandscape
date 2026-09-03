@@ -129,5 +129,15 @@ public class Config {
             .comment("游客精力上限：初始 100、清晨晨起回满 100，耗尽(=0)只能去 relax 恢复建筑。")
             .defineInRange("tourist.maxEnergy", 100, 1, 1000);
 
+    // ---- Goety Compatibility (诡厄巫法兼容) ----
+
+    public static final ModConfigSpec.DoubleValue GOETY_SOUL_TO_MANA_MULTIPLIER = BUILDER
+            .comment("诡厄巫法 (Goety) 灵魂消耗转 NPC 魔力消耗系数。默认 1.0 (1 灵魂 = 1 魔力)")
+            .defineInRange("goety.soulToManaMultiplier", 1.0, 0.0, 100.0);
+
+    public static final ModConfigSpec.DoubleValue GOETY_COOLDOWN_MULTIPLIER = BUILDER
+            .comment("诡厄巫法 (Goety) 聚晶法术基础冷却换算系数。默认 1.0 (按原版 tick 换算)")
+            .defineInRange("goety.cooldownMultiplier", 1.0, 0.1, 10.0);
+
     static final ModConfigSpec SPEC = BUILDER.build();
 }

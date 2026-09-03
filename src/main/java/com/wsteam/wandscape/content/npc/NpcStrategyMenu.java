@@ -86,6 +86,9 @@ public class NpcStrategyMenu extends AbstractContainerMenu {
         if (com.wsteam.wandscape.compat.ironspellbooks.IronSpellsCompat.isLoaded()
                 && com.wsteam.wandscape.compat.ironspellbooks.IronSpellsHelper.isValidSpell(entry.id())) {
             return com.wsteam.wandscape.compat.ironspellbooks.IronSpellsHelper.createScroll(entry.id(), entry.level());
+        } else if (com.wsteam.wandscape.compat.goety.GoetyCompat.isLoaded()
+                && com.wsteam.wandscape.compat.goety.GoetyHelper.isValidSpell(entry.id())) {
+            return com.wsteam.wandscape.compat.goety.GoetyHelper.deserializeFocus(entry.id(), entry.customData());
         }
         ItemStack scroll = new ItemStack(Wandscape.SPELL_SCROLL.get());
         SpellItem.setMagicId(scroll, entry.id());
@@ -98,12 +101,12 @@ public class NpcStrategyMenu extends AbstractContainerMenu {
         if (slot == null || !slot.hasItem()) return ItemStack.EMPTY;
         ItemStack result = slot.getItem().copy();
         if (index >= SPELL_SLOT_COUNT) {
-            // 玩家卷轴 → 策略槽（mayPlace 校验分类/去重/上限）
+            // 玩家卷轴/聚晶 → 策略槽（mayPlace 校验分类/去重/上限）
             if (!moveItemStackTo(slot.getItem(), 0, SPELL_SLOT_COUNT, false)) {
                 return ItemStack.EMPTY;
             }
         } else {
-            // 策略槽 → 玩家背包（拿回卷轴）
+            // 策略槽 → 玩家背包（拿回卷轴/聚晶）
             if (!moveItemStackTo(slot.getItem(), SPELL_SLOT_COUNT, this.slots.size(), true)) {
                 return ItemStack.EMPTY;
             }
@@ -154,6 +157,13 @@ public class NpcStrategyMenu extends AbstractContainerMenu {
                     if (spellId != null && com.wsteam.wandscape.compat.ironspellbooks.IronSpellsHelper.isValidSpell(spellId)) {
                         newEquipped.equip(categoryName, spellId, level);
                     }
+                } else if (com.wsteam.wandscape.compat.goety.GoetyCompat.isLoaded()
+                        && com.wsteam.wandscape.compat.goety.GoetyHelper.isFocus(item)) {
+                    String focusId = com.wsteam.wandscape.compat.goety.GoetyHelper.getFocusId(item);
+                    String customData = com.wsteam.wandscape.compat.goety.GoetyHelper.serializeFocus(item);
+                    if (focusId != null && com.wsteam.wandscape.compat.goety.GoetyHelper.isValidSpell(focusId)) {
+                        newEquipped.equip(categoryName, new EquippedMagicComponent.SpellEntry(focusId, 1, customData));
+                    }
                 }
             }
         }
@@ -167,7 +177,7 @@ public class NpcStrategyMenu extends AbstractContainerMenu {
                 npc.getUUID().toString().substring(0, 8), newEquipped.flattened().size());
     }
 
-    /** 卷轴槽：接受原生魔法卷轴与铁魔法卷轴，且去重、每类 ≤ 上限。 */
+    /** 卷轴槽：接受原生魔法卷轴、铁魔法卷轴与 Goety 聚晶，且去重、每类 ≤ 上限。 */
     public static final class SpellSlot extends Slot {
         private final String category;
 
@@ -201,6 +211,13 @@ public class NpcStrategyMenu extends AbstractContainerMenu {
                     return false;
                 }
                 // 铁魔法卷轴可自由放置于任意 4 大门类槽位中
+            } else if (com.wsteam.wandscape.compat.goety.GoetyCompat.isLoaded()
+                    && com.wsteam.wandscape.compat.goety.GoetyHelper.isFocus(stack)) {
+                magicId = com.wsteam.wandscape.compat.goety.GoetyHelper.getFocusId(stack);
+                if (magicId == null || !com.wsteam.wandscape.compat.goety.GoetyHelper.isValidSpell(magicId)) {
+                    return false;
+                }
+                // 诡厄巫法聚晶可自由放置于任意 4 大门类槽位中
             } else {
                 return false;
             }
@@ -215,6 +232,9 @@ public class NpcStrategyMenu extends AbstractContainerMenu {
                 } else if (com.wsteam.wandscape.compat.ironspellbooks.IronSpellsCompat.isLoaded()
                         && com.wsteam.wandscape.compat.ironspellbooks.IronSpellsHelper.isScroll(s)) {
                     existingId = com.wsteam.wandscape.compat.ironspellbooks.IronSpellsHelper.getSpellId(s);
+                } else if (com.wsteam.wandscape.compat.goety.GoetyCompat.isLoaded()
+                        && com.wsteam.wandscape.compat.goety.GoetyHelper.isFocus(s)) {
+                    existingId = com.wsteam.wandscape.compat.goety.GoetyHelper.getFocusId(s);
                 }
                 if (magicId.equals(existingId)) return false;
 

@@ -14,7 +14,7 @@ com/wsteam/wandscape/
 │               npc production road task tourist tutorial warehouse
 ├── foundation/ 跨域基建：log ui networking registry service util nav sound
 ├── api/        公开契约（addon/整合包面）：极薄接口 + WandscapeApis
-├── compat/     第三方模组集成（JEI/Curios/Iron's Spells，compileOnly 门禁）
+├── compat/     第三方模组集成（JEI/Curios/Iron's Spells/Goety，compileOnly 门禁）
 ├── impl/       @ApiStatus.Internal 装配与生命周期（CoreBootstrap/EngineBootstrap）
 └── mixin/      少量必要 mixin（相机/存档/袭击）
 ```

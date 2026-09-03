@@ -91,6 +91,7 @@ public final class GuardCombat {
         npc.exitCombatSway();
         npc.setAiWanderingEnabled(true);
         npc.endManualCast();
+        npc.setTarget(null);
     }
 
     // ── 单轮战斗动作：光束重定向 / LOS / 寻路 / 施法 ──
@@ -130,6 +131,9 @@ public final class GuardCombat {
 
         // 战斗态：禁 wandering，走位由本引擎的导航驱动（战斗结束由执行器 markCombatEnd）
         markInCombat(npc);
+        if (target != null && target.isAlive() && !target.isRemoved()) {
+            npc.setTarget(target);
+        }
 
         // ── 低血逃跑态（guard.flee*，保命优先）：血量比例低于阈值 → 走位距离改用逃跑档
         //    （fleeStartDist/fleeStandoff），LOS 被墙挡也继续后撤不走近交战；光束边走边打仍在输出。

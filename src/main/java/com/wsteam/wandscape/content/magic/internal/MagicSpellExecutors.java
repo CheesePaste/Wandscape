@@ -84,6 +84,14 @@ public final class MagicSpellExecutors {
                     yield com.wsteam.wandscape.compat.ironspellbooks.IronSpellsCaster.cast(
                             level, npc, target, def.id(), spellLevel);
                 }
+                if (com.wsteam.wandscape.compat.goety.GoetyCompat.isLoaded()
+                        && com.wsteam.wandscape.compat.goety.GoetyHelper.isValidSpell(def.id())) {
+                    com.wsteam.wandscape.content.npc.component.EquippedMagicComponent.SpellEntry entry =
+                            npc.equippedMagic.getEntry(def.id());
+                    String customData = entry != null ? entry.customData() : null;
+                    yield com.wsteam.wandscape.compat.goety.GoetyCaster.cast(
+                            level, npc, target, def.id(), customData);
+                }
                 Log.warn(TAG, "未知魔法执行器 id={}", def.id());
                 yield false;
             }
