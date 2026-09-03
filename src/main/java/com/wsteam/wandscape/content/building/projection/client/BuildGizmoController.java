@@ -209,8 +209,7 @@ public final class BuildGizmoController {
         BlockPos newPos = dragStartGhostPos.offset(shiftX, shiftY, shiftZ);
         ProjectionClientState.setGhostPos(newPos);
 
-        boolean overlap = BuildingAreaSyncPacket.findBuildingIdAt(newPos) != null;
-        ProjectionClientState.setOverlapDetected(overlap);
+        ProjectionClientState.setOverlapDetected(ProjectionClientState.currentSelectionConflicts(newPos));
     }
 
     private static void finishGizmoDrag() {

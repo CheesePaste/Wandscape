@@ -80,6 +80,16 @@
    - 全世界范围内仅剩最后 1 座市政厅（government）、仓库（storage）或工作站（workstation）时，禁止拆除或取消，防止殖民地系统运转瘫痪。
 3. **向下兼容目录不可删**：
    - `src/main/resources/data/wandscape/buildings/deprecated/` 包含旧存档兼容建筑载荷，属于必须加载项，禁止删除。
+4. **重叠规则——盒可叠、方块不可叠（判定唯一源 `BuildingVoxels`）**：
+   - 建筑注册的唯一限制是「同一世界坐标不能被两座建筑 pattern 共用」；boundary 包围盒可任意重叠，室内/贴墙/嵌套建筑都允许。
+   - 归属：建筑自注册起拥有其 pattern 所占每个格。建造=放、拆除=清、修复=补都只落 pattern 坐标；盒内非 pattern（空气/家具/装饰/嵌套建筑的墙）永不触碰。玩家替换进 pattern 格的方块会照拆、修复也会覆盖回原样（该格归建筑）。
+   - 重叠判定是两阶段：先拿 pattern 所占 AABB 粗筛、不相交直接放行，只有相交对才精判格子。服务端 register 与客户端幽灵预览**共用** `BuildingVoxels`，改重叠逻辑只动这一处，别在两处各自写一套。
+   - 旋转：pattern/精判/预览全部按 `rotationSteps` 旋转后的世界坐标算，动手前先查 `BuildingRotation` 调用链。
+5. **建造不再清整盒**：
+   - `build:clear_and_build` 已不再把 boundary 体积置 air（退化纯放置），`EnqueueHelper` 也不注入 clear_offsets。新建筑叠进已有建筑内部不会清除其内容；非平地放置时盒内残土会保留，玩家需自行选平地。
+6. **锚点与查询不再依赖盒互斥**：
+   - anchor 落在其它建筑盒内是合法的（室内建筑的前提）。完成/拆除事件优先按 `building_id` 定位（`EnqueueHelper`/repair 都带该参），别只靠 anchor 反查。
+   - posIndex 加载时从持久化 pattern 重建，重启后点 pattern 格仍精确归属；盒兜底/交互区查询取「最内层（体积最小）」建筑。
 
 ---
 

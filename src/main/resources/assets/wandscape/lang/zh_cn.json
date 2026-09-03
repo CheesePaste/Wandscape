@@ -200,7 +200,7 @@
   "gui.wandscape.altar.casting": "施法中",
   "gui.wandscape.construction.title": "施工",
   "gui.wandscape.construction.coord": "坐标",
-  "gui.wandscape.construction.overlap": "该位置与现有建筑重叠",
+  "gui.wandscape.construction.overlap": "该位置与已有建筑方块重叠，不能占用同一格",
   "gui.wandscape.construction.invalid": "坐标无效（Y 需在 -64 ~ 320）",
   "gui.wandscape.shop.no_goods": "未配置货物",
   "gui.wandscape.tavern.recruit_npc": "招募法师",

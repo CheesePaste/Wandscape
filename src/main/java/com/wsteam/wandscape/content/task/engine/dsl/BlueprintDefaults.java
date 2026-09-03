@@ -78,13 +78,16 @@ public final class BlueprintDefaults {
         data.put("building_name", str(p, "name"));
         data.put("blocks_placed", String.valueOf(offsets.size()));
         data.put("anchor", str(p, "anchor"));
+        putBuildingId(data, p);
         ops.add(new AtomicOp.EmitEventOp("build_complete", data));
 
         return new TaskSequence(ops, label("Build Structure", p));
     }
 
     // ─────────────────────────────────────────────────────────────────
-    // build:clear_and_build  (clear boundary volume, then inline place_structure)
+    // build:clear_and_build  (legacy name kept for data compat; no longer clears
+    // the boundary volume — construction only places the building's own pattern
+    // blocks, so overlapping interiors are never wiped)
     // ─────────────────────────────────────────────────────────────────
 
     private static TaskSequence clearAndBuild(Map<String, JsonElement> p) {
@@ -94,9 +97,6 @@ public final class BlueprintDefaults {
         Map<String, String> blockNbt = strMap(p, "block_nbt");
         List<AtomicOp> ops = new ArrayList<>();
 
-        for (GridPos off : posList(p, "clear_offsets")) {
-            ops.add(AtomicOp.TransformOp.place(anchor.add(off), BlockType.AIR));
-        }
         // Inline of the former `call build:place_structure` macro-expansion.
         addMaterialRequest(ops, p);
         for (GridPos off : offsets) {
@@ -119,6 +119,7 @@ public final class BlueprintDefaults {
         data.put("building_name", str(p, "name"));
         data.put("blocks_placed", String.valueOf(offsets.size()));
         data.put("anchor", str(p, "anchor"));
+        putBuildingId(data, p);
         ops.add(new AtomicOp.EmitEventOp("build_complete", data));
 
         return new TaskSequence(ops, label("Clear and Build", p));
@@ -310,6 +311,18 @@ public final class BlueprintDefaults {
 
     private static String key(GridPos pos) {
         return pos.x() + "," + pos.y() + "," + pos.z();
+    }
+
+    /**
+     * Attach {@code building_id} to an emitted event when the work item carries it,
+     * so completion listeners can resolve the building by id (anchors are no longer
+     * unique once bounding boxes may overlap). No-op for legacy work items.
+     */
+    private static void putBuildingId(Map<String, String> data, Map<String, JsonElement> p) {
+        JsonElement bid = p.get("building_id");
+        if (bid != null && bid.isJsonPrimitive() && !bid.getAsString().isEmpty()) {
+            data.put("building_id", bid.getAsString());
+        }
     }
 
     private static GridPos pos(Map<String, JsonElement> p, String key) {

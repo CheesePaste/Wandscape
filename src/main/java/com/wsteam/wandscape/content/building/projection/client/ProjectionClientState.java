@@ -4,6 +4,7 @@ import com.wsteam.wandscape.content.task.ecs.World;
 
 import com.wsteam.wandscape.content.building.data.BuildingConfig;
 import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
+import com.wsteam.wandscape.content.building.network.BuildingAreaSyncPacket;
 import com.wsteam.wandscape.foundation.sound.SoundService;
 import com.wsteam.wandscape.foundation.registry.WandscapeSounds;
 import com.wsteam.wandscape.content.building.projection.BuildingCentering;
@@ -207,6 +208,15 @@ public final class ProjectionClientState {
 
     public static void setOverlapDetected(boolean overlapped) {
         overlapDetected = overlapped;
+    }
+
+    /**
+     * Whether placing the currently selected building (with the current rotation)
+     * at {@code anchor} would collide with an existing building's pattern voxels.
+     * Bounding boxes may overlap freely — only a shared world voxel counts.
+     */
+    public static boolean currentSelectionConflicts(BlockPos anchor) {
+        return BuildingAreaSyncPacket.voxelConflicts(getSelectedConfig(), anchor, rotationSteps);
     }
 
     // ── Pinned ghost ──

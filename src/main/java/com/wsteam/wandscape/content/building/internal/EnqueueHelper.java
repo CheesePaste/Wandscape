@@ -64,9 +64,6 @@ public final class EnqueueHelper {
     public static BuildingState registerIfAbsent(BlockPos pos, BuildingConfig config, String buildingTypeId, int rotationSteps) {
         try {
             BuildingApiImpl api = BuildingApiImpl.get();
-            if (api.getBuildingAt(pos) != null) {
-                return null;
-            }
 
             UUID buildingId = UUID.randomUUID();
             BoundingBox bounds;
@@ -109,7 +106,8 @@ public final class EnqueueHelper {
 
     /**
      * Build a WorkItem for the given building at the given position.
-     * Clear-offsets are unfiltered (may include other buildings' blocks).
+     * Construction only places the building's own pattern blocks — no boundary
+     * volume clearing (so overlapping interiors are never wiped).
      */
     public static WorkItem buildWorkItem(BuildingConfig config, BlockPos pos,
                                           String buildingTypeId, int priority) {
@@ -117,9 +115,9 @@ public final class EnqueueHelper {
     }
 
     /**
-     * Build a WorkItem with optional other-building filtering for clear_offsets.
-     * When sd and buildingId are provided, positions belonging to other buildings
-     * are excluded from the clear list (prevents damaging nearby structures).
+     * Build a WorkItem, tagging {@code building_id} when the owning building is
+     * known so construction-complete events resolve by id (bounding boxes may
+     * overlap, so anchors are no longer unique).
      */
     public static WorkItem buildWorkItem(BuildingConfig config, BlockPos pos,
                                           String buildingTypeId, int priority,
@@ -130,8 +128,8 @@ public final class EnqueueHelper {
 
     /**
      * Build a WorkItem with rotation support. When {@code rotationSteps > 0},
-     * the pattern offsets, block_mapping keys and values, and clear_offsets are
-     * all rotated 90° CCW around the Y axis by the specified number of steps.
+     * the pattern offsets and block_mapping keys and values are all rotated
+     * 90° CCW around the Y axis by the specified number of steps.
      */
     public static WorkItem buildWorkItem(BuildingConfig config, BlockPos pos,
                                           String buildingTypeId, int priority,
@@ -155,6 +153,11 @@ public final class EnqueueHelper {
         Map<String, JsonElement> params = new HashMap<>();
 
         params.put("anchor", posToJsonArray(pos));
+        // Tag the owning building on construction/repair work so completion events
+        // resolve by id — anchors are no longer unique once bounding boxes may overlap.
+        if (buildingId != null) {
+            params.put("building_id", new JsonPrimitive(buildingId.toString()));
+        }
 
         BuildingConfig.BlueprintRef bpRef = config.blueprint();
         String blueprintId;
@@ -178,13 +181,8 @@ public final class EnqueueHelper {
             if (!params.containsKey("entities")) {
                 params.put("entities", entitiesToJson(config));
             }
-            if (config.boundary() != null) {
-                if (sd != null && buildingId != null) {
-                    params.put("clear_offsets", computeClearOffsetsFiltered(config, sd, pos, buildingId));
-                } else {
-                    params.put("clear_offsets", computeClearOffsets(config));
-                }
-            }
+            // No clear_offsets injected: 建造只放 pattern 方块、永不清 boundary 整盒，
+            // 使新建筑能叠进已有建筑内部而不清除其内容。蓝图 clear_and_build 不读此参。
             // material_list + material_counts: auto-computed from pattern → block_mapping
             // When skipMaterials is true, emit empty arrays so the blueprint
             // always has the param; the NPC simply requests nothing.
@@ -231,11 +229,6 @@ public final class EnqueueHelper {
                 if (params.containsKey("entities")) {
                     params.put("entities", rotateEntitiesJson(
                             params.get("entities").getAsJsonArray(), rotationSteps));
-                }
-                // Rotate clear_offsets
-                if (params.containsKey("clear_offsets")) {
-                    params.put("clear_offsets", rotateOffsetsJson(
-                            params.get("clear_offsets").getAsJsonArray(), rotationSteps));
                 }
                 // Rotate door_offsets (list of [x,y,z])
                 if (params.containsKey("door_offsets")) {
@@ -403,46 +396,6 @@ public final class EnqueueHelper {
         return obj;
     }
 
-    /**
-     * Compute offsets to clear: ALL positions within the AABB boundary.
-     * Anchor is now a vanilla block — no special skip needed.
-     */
-    static JsonElement computeClearOffsets(BuildingConfig config) {
-        JsonArray arr = new JsonArray();
-        for (BlockOffset off : config.boundary().allPositions()) {
-            arr.add(offsetToJson(off));
-        }
-        return arr;
-    }
-
-    /**
-     * Compute clear offsets but exclude positions that are occupied by other
-     * buildings' pattern blocks (or AABB for legacy buildings without pattern).
-     * Prevents the clear step from damaging nearby structures.
-     *
-     * @param config         the building being placed
-     * @param sd             the building saved data (for querying other buildings)
-     * @param anchor         world anchor of the building being placed
-     * @param selfBuildingId UUID of the building being placed (to exclude from checks)
-     * @return a JSON array of offset positions safe to clear
-     */
-    static JsonElement computeClearOffsetsFiltered(BuildingConfig config, BuildingSavedData sd,
-                                                    BlockPos anchor, UUID selfBuildingId) {
-        JsonArray arr = computeClearOffsets(config).getAsJsonArray();
-        JsonArray filtered = new JsonArray();
-        for (int i = 0; i < arr.size(); i++) {
-            JsonArray posArr = arr.get(i).getAsJsonArray();
-            BlockPos worldPos = anchor.offset(
-                    posArr.get(0).getAsInt(),
-                    posArr.get(1).getAsInt(),
-                    posArr.get(2).getAsInt());
-            if (!sd.isPositionOccupiedByOtherBuilding(worldPos, selfBuildingId)) {
-                filtered.add(arr.get(i));
-            }
-        }
-        return filtered;
-    }
-
     private static JsonArray offsetToJson(BlockOffset off) {
         JsonArray arr = new JsonArray();
         arr.add(off.x());
@@ -558,18 +511,6 @@ public final class EnqueueHelper {
                 rotatedEnt.addProperty("nbt", ent.get("nbt").getAsString());
             }
             result.add(rotatedEnt);
-        }
-        return result;
-    }
-
-    /** Rotate a JSON array of [x,y,z] clear offsets. */
-    private static JsonArray rotateOffsetsJson(JsonArray offsets, int steps) {
-        JsonArray result = new JsonArray();
-        for (int i = 0; i < offsets.size(); i++) {
-            JsonArray pos = offsets.get(i).getAsJsonArray();
-            BlockOffset off = new BlockOffset(pos.get(0).getAsInt(), pos.get(1).getAsInt(), pos.get(2).getAsInt());
-            BlockOffset rotated = BuildingRotation.rotateOffset(off, steps);
-            result.add(offsetToJson(rotated));
         }
         return result;
     }

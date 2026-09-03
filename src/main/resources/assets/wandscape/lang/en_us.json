@@ -200,7 +200,7 @@
   "gui.wandscape.altar.casting": "Casting",
   "gui.wandscape.construction.title": "Construction",
   "gui.wandscape.construction.coord": "Coordinate",
-  "gui.wandscape.construction.overlap": "This position overlaps an existing building",
+  "gui.wandscape.construction.overlap": "This position shares a block with an existing building",
   "gui.wandscape.construction.invalid": "Invalid coordinates (Y must be -64 to 320)",
   "gui.wandscape.shop.no_goods": "No goods configured.",
   "gui.wandscape.tavern.recruit_npc": "Recruit Mage",

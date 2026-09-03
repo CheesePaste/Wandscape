@@ -64,9 +64,10 @@ public final class ProjectionRenderer {
         BuildingGhostRenderer.renderGhostAnimated(mc, event.getPoseStack(),
                 mc.renderBuffers().bufferSource(), camPos, ghostPos, config, rotationSteps, false);
 
-        // 2. Render Boundary Wireframe
+        // 2. Render Boundary Wireframe (red only when the ghost shares a voxel with an
+        // existing building — boundary boxes may now overlap freely)
         if (config.boundary() != null) {
-            boolean overlap = ProjectionClientState.isOverlapDetected();
+            boolean conflict = ProjectionClientState.isOverlapDetected();
             boolean pinned = ProjectionClientState.isPinned();
 
             BuildingConfig.BoundaryBox boundary =
@@ -78,12 +79,12 @@ public final class ProjectionRenderer {
             poseStack.pushPose();
             poseStack.translate(-camPos.x, -camPos.y, -camPos.z);
 
-            if (pinned && !overlap) {
+            if (pinned && !conflict) {
                 VertexConsumer lineVc = bufferSource.getBuffer(RenderType.lines());
                 drawAABBOutline(lineVc, poseStack.last(), ghostPos,
                         boundary.min(), boundary.max(), 255, 255, 255);
                 bufferSource.endBatch(RenderType.lines());
-            } else if (overlap) {
+            } else if (conflict) {
                 VertexConsumer lineVc = bufferSource.getBuffer(RenderType.lines());
                 drawAABBOutline(lineVc, poseStack.last(), ghostPos,
                         boundary.min(), boundary.max(), 255, 40, 40);

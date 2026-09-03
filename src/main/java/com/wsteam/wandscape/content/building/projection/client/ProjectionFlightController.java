@@ -128,11 +128,11 @@ public final class ProjectionFlightController {
     // ── Ghost position ──
 
     private static void updateGhostPosition(Minecraft mc) {
-        // Pinned: ghost stays fixed — only re-check overlap against the fixed position
+        // Pinned: ghost stays fixed — only re-check voxel conflict against the fixed position
         if (ProjectionClientState.isPinned()) {
             BlockPos fixed = ProjectionClientState.getGhostPos();
             if (fixed != null) {
-                ProjectionClientState.setOverlapDetected(BuildingAreaSyncPacket.findBuildingIdAt(fixed) != null);
+                ProjectionClientState.setOverlapDetected(ProjectionClientState.currentSelectionConflicts(fixed));
             }
             return;
         }
@@ -167,8 +167,8 @@ public final class ProjectionFlightController {
 
         BlockPos curGhost = ProjectionClientState.getGhostPos();
         if (curGhost != null) {
-            boolean overlap = BuildingAreaSyncPacket.findBuildingIdAt(curGhost) != null;
-            ProjectionClientState.setOverlapDetected(overlap);
+            boolean conflict = ProjectionClientState.currentSelectionConflicts(curGhost);
+            ProjectionClientState.setOverlapDetected(conflict);
         }
     }
 

@@ -14,7 +14,9 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
+import javax.annotation.Nullable;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * Subscribes to the engine-internal {@code EventBus} for {@code demolish_complete} events.
@@ -62,7 +64,10 @@ public final class DemolishCompleteListener {
         BuildingSavedData sd = BuildingSavedData.get(level);
         if (sd == null) return;
 
-        BuildingState state = findByAnchor(sd, anchor);
+        // Resolve by building_id first — anchors are no longer unique once bounding
+        // boxes may overlap. Fall back to the anchor search for legacy events.
+        BuildingState state = findById(sd, params.get("building_id"));
+        if (state == null) state = findByAnchor(sd, anchor);
         if (state == null) {
             return;
         }
@@ -109,6 +114,17 @@ public final class DemolishCompleteListener {
             if (state.getAnchor().equals(anchor)) return state;
         }
         return null;
+    }
+
+    /** Find a building by its id string (from a demolish event); null when absent/invalid. */
+    @Nullable
+    private static BuildingState findById(BuildingSavedData data, String buildingIdStr) {
+        if (buildingIdStr == null || buildingIdStr.isEmpty()) return null;
+        try {
+            return data.getBuilding(UUID.fromString(buildingIdStr));
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
     }
 
     private static Level getServerLevel() {

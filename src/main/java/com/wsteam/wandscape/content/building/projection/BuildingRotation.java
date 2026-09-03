@@ -223,7 +223,7 @@ public final class BuildingRotation {
     }
 
     /**
-     * Rotate a list of offset positions by {@code steps}.
+     * Rotate a list of offset positions (e.g. a building pattern) by {@code steps}.
      */
     public static java.util.List<BlockOffset> rotateOffsets(java.util.List<BlockOffset> offsets, int steps) {
         if (steps <= 0 || offsets.isEmpty()) return offsets;

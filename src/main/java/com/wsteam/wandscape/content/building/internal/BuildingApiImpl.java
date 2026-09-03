@@ -887,7 +887,9 @@ public class BuildingApiImpl implements BuildingApi {
         // directly instead of re-locating the building by position.
         BuildingState state = EnqueueHelper.registerIfAbsent(anchor, config, buildingTypeId, rotationSteps);
         if (state == null) {
-            return PlacementResult.fail(Component.literal("Cannot place here — overlaps with an existing building"));
+            // Building bounding boxes may overlap freely, but two buildings can never
+            // occupy the same world voxel — that is the only thing that fails here.
+            return PlacementResult.fail(Component.literal("该位置与已有建筑方块重叠，不能占用同一格"));
         }
 
         UUID colonyId = state.getColonyId();

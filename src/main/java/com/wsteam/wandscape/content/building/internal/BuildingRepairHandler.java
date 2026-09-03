@@ -83,6 +83,9 @@ public final class BuildingRepairHandler {
                                                JsonObject blocksNbt, int rotationSteps) {
         Map<String, JsonElement> params = new HashMap<>();
         params.put("anchor", posToJsonArray(state.getAnchor()));
+        // Tag the repaired building so build_complete resolves by id (anchors are no
+        // longer unique once bounding boxes may overlap).
+        params.put("building_id", new JsonPrimitive(state.getBuildingId().toString()));
         params.put("offsets", offsets);
         params.put("blocks", blocks);
         params.put("blocks_nbt", blocksNbt);

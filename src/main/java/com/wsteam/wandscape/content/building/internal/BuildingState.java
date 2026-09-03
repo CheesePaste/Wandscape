@@ -36,6 +36,13 @@ public class BuildingState implements BuildingData {
     private final Deque<WorkItem> taskQueue = new ArrayDeque<>();
     @Nullable
     private Set<BlockPos> patternPositions;
+    /**
+     * World-space AABB over {@link #patternPositions} (the building's occupied
+     * voxels), used as the cheap broad-phase box in two-phase overlap checks.
+     * Null when the building occupies no voxels or has no stored pattern.
+     */
+    @Nullable
+    private BoundingBox patternExtent;
     @Nullable
     private UUID currentTaskId;
     private int rotationSteps;
@@ -90,6 +97,12 @@ public class BuildingState implements BuildingData {
     public Set<BlockPos> getPatternPositions() { return patternPositions; }
 
     public void setPatternPositions(@Nullable Set<BlockPos> positions) { this.patternPositions = positions; }
+
+    /** Broad-phase AABB over the occupied voxels; null when the building has no stored pattern. */
+    @Nullable
+    public BoundingBox getPatternExtent() { return patternExtent; }
+
+    public void setPatternExtent(@Nullable BoundingBox extent) { this.patternExtent = extent; }
 
     // ── Setters ──
 

@@ -139,9 +139,9 @@ public class ConstructionScreen extends MedievalScreen {
             return;
         }
         ProjectionClientState.setGhostPos(pos);
-        boolean overlap = BuildingAreaSyncPacket.findBuildingIdAt(pos) != null;
-        ProjectionClientState.setOverlapDetected(overlap);
-        status = overlap ? I18n.name("gui.wandscape.construction.overlap", "该位置与现有建筑重叠") : null;
+        boolean conflict = BuildingAreaSyncPacket.voxelConflicts(config, pos, rotationSteps);
+        ProjectionClientState.setOverlapDetected(conflict);
+        status = conflict ? I18n.name("gui.wandscape.construction.overlap", "该位置与已有建筑方块重叠") : null;
     }
 
     private void submit() {
@@ -150,8 +150,8 @@ public class ConstructionScreen extends MedievalScreen {
             status = I18n.name("gui.wandscape.construction.invalid", "坐标无效（Y 需在 -64 ~ 320）");
             return;
         }
-        if (BuildingAreaSyncPacket.findBuildingIdAt(pos) != null) {
-            status = I18n.name("gui.wandscape.construction.overlap", "该位置与现有建筑重叠");
+        if (BuildingAreaSyncPacket.voxelConflicts(config, pos, rotationSteps)) {
+            status = I18n.name("gui.wandscape.construction.overlap", "该位置与已有建筑方块重叠");
             return;
         }
 

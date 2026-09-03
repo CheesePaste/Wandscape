@@ -4,6 +4,7 @@ import com.wsteam.wandscape.content.task.ecs.World;
 
 import com.wsteam.wandscape.content.building.data.BuildingConfig;
 import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
+import com.wsteam.wandscape.content.building.internal.BuildingVoxels;
 import com.wsteam.wandscape.content.building.projection.BuildingRotation;
 import com.wsteam.wandscape.api.BuildingApi;
 import com.wsteam.wandscape.api.ColonyApi;
@@ -23,7 +24,9 @@ import net.neoforged.neoforge.network.PacketDistributor;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -50,6 +53,9 @@ public record BuildingAreaSyncPacket(List<BuildingEntry> buildings) implements C
     /** Client-side cache, updated each time the panel opens. */
     private static volatile List<BuildingEntry> cached = List.of();
 
+    /** Cached world-space occupancy of cached buildings, keyed "typeId|anchor|rotation". */
+    private static final Map<String, BuildingVoxels.Occupancy> entryOccupancies = new HashMap<>();
+
     public static List<BuildingEntry> getCached() {
         return cached;
     }
@@ -57,6 +63,56 @@ public record BuildingAreaSyncPacket(List<BuildingEntry> buildings) implements C
     /** Clear the client cache (e.g. when the client leaves a world/save). */
     public static void clear() {
         cached = List.of();
+        entryOccupancies.clear();
+    }
+
+    /**
+     * Whether placing the building {@code config} at {@code anchor} with
+     * {@code rotationSteps} (90° CCW) would put a pattern voxel on top of an
+     * existing building's pattern voxel. Two-phase: broad-phase boundary-AABB
+     * overlap first, then a precise rotated-pattern compare — sharing the exact
+     * {@link BuildingVoxels} rule the server {@code register} gate uses: bounding
+     * boxes may overlap freely, a world voxel may belong to at most one building.
+     * Advisory preview; the server is authoritative.
+     */
+    public static boolean voxelConflicts(@Nullable BuildingConfig config, BlockPos anchor, int rotationSteps) {
+        if (config == null || config.pattern() == null || config.pattern().isEmpty()) return false;
+        BuildingVoxels.Occupancy mine = BuildingVoxels.compute(config, anchor, rotationSteps);
+        if (mine.isEmpty()) return false;
+
+        for (BuildingEntry entry : cached) {
+            if (!entry.hasBoundary()) continue;
+            // Broad phase: existing building's boundary AABB (already rotated world-space).
+            if (!extentHitsBoundary(mine.extent(), entry)) continue;
+            // Narrow phase: precise voxel compare against the existing building's pattern.
+            if (BuildingVoxels.overlaps(mine, entryOccupancy(entry))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Whether a voxel-extent AABB touches a cached entry's boundary box. */
+    private static boolean extentHitsBoundary(@Nullable net.minecraft.world.level.levelgen.structure.BoundingBox ext,
+                                              BuildingEntry entry) {
+        if (ext == null) return false;
+        BlockPos a = entry.anchor();
+        return ext.maxX() >= a.getX() + entry.bMinX() && ext.minX() <= a.getX() + entry.bMaxX()
+                && ext.maxY() >= a.getY() + entry.bMinY() && ext.minY() <= a.getY() + entry.bMaxY()
+                && ext.maxZ() >= a.getZ() + entry.bMinZ() && ext.minZ() <= a.getZ() + entry.bMaxZ();
+    }
+
+    /** Lazy, cached world-space occupancy of a cached building entry (rotation applied). */
+    private static BuildingVoxels.Occupancy entryOccupancy(BuildingEntry entry) {
+        String key = entry.buildingTypeId() + '|' + entry.anchor() + '|' + (entry.rotationSteps() & 3);
+        BuildingVoxels.Occupancy occ = entryOccupancies.get(key);
+        if (occ != null) return occ;
+        BuildingConfig cfg = BuildingConfigLoader.getInstance().get(entry.buildingTypeId());
+        occ = (cfg == null || cfg.pattern() == null || cfg.pattern().isEmpty())
+                ? BuildingVoxels.computeFromOffsets(List.of(), entry.anchor())
+                : BuildingVoxels.compute(cfg, entry.anchor(), entry.rotationSteps());
+        entryOccupancies.put(key, occ);
+        return occ;
     }
 
     /**
@@ -165,6 +221,9 @@ public record BuildingAreaSyncPacket(List<BuildingEntry> buildings) implements C
 
     public static void handleClient(BuildingAreaSyncPacket packet) {
         cached = packet.buildings;
+        // Entries changed — drop rebuilt occupancy caches so voxel-conflict previews
+        // never compare against stale building shapes.
+        entryOccupancies.clear();
         Log.info(TAG, "[Area] Cached {} building areas", packet.buildings.size());
     }
 

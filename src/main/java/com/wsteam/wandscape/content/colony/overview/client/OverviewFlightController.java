@@ -343,8 +343,8 @@ public final class OverviewFlightController {
 
         BlockPos curGhost = ProjectionClientState.getGhostPos();
         if (curGhost != null) {
-            boolean overlap = findBuildingAt(curGhost) != null;
-            ProjectionClientState.setOverlapDetected(overlap);
+            boolean conflict = ProjectionClientState.currentSelectionConflicts(curGhost);
+            ProjectionClientState.setOverlapDetected(conflict);
         }
     }
 
@@ -636,12 +636,12 @@ public final class OverviewFlightController {
                 UUID buildingId = findBuildingAt(hitPos);
                 OverviewClientState.setTarget(hitPos, buildingId);
 
-                // When build mode is projecting in overview, check overlap for pinned ghost
+                // When build mode is projecting in overview, check voxel conflict for pinned ghost
                 // (Ghost position update is handled per-frame in updateGhostPositionPerFrame)
                 if (ProjectionClientState.isProjecting() && ProjectionClientState.isPinned()) {
                     BlockPos fixed = ProjectionClientState.getGhostPos();
                     if (fixed != null) {
-                        ProjectionClientState.setOverlapDetected(findBuildingAt(fixed) != null);
+                        ProjectionClientState.setOverlapDetected(ProjectionClientState.currentSelectionConflicts(fixed));
                     }
                 }
             } else {

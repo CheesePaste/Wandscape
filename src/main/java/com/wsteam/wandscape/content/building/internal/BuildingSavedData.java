@@ -285,20 +285,37 @@ public class BuildingSavedData extends SavedData {
         UUID id = posIndex.get(pos);
         if (id != null) return id;
 
-        // Fallback via chunkIndex: after server restart, posIndex is not rebuilt
-        // (requires BuildingConfig pattern). Walk buildings in the same chunk
-        // and check bounding box containment.
+        // Fallback: posIndex is rebuilt at load from persisted pattern positions, so
+        // this path only fires before that (or for positions that are inside a
+        // building's box but not on one of its pattern voxels). Prefer the exact
+        // pattern-voxel owner; otherwise the innermost containing box wins, so a
+        // position inside nested buildings resolves deterministically.
         ChunkPos cp = new ChunkPos(pos);
         Set<UUID> chunkIds = chunkIndex.get(cp);
         if (chunkIds == null) return null;
 
+        UUID boundsMatch = null;
+        long bestVolume = Long.MAX_VALUE;
         for (UUID candidate : chunkIds) {
             BuildingState state = buildings.get(candidate);
-            if (state != null && state.getBounds().isInside(pos)) {
+            if (state == null) continue;
+            Set<BlockPos> pattern = state.getPatternPositions();
+            if (pattern != null && pattern.contains(pos)) {
                 // Cache in posIndex for next lookup
                 posIndex.put(pos, candidate);
                 return candidate;
             }
+            if (state.getBounds().isInside(pos)) {
+                long volume = boxVolume(state.getBounds());
+                if (volume < bestVolume) {
+                    bestVolume = volume;
+                    boundsMatch = candidate;
+                }
+            }
+        }
+        if (boundsMatch != null) {
+            posIndex.put(pos, boundsMatch);
+            return boundsMatch;
         }
         return null;
     }
@@ -308,6 +325,10 @@ public class BuildingSavedData extends SavedData {
      * Clicking inside any building's bounding box (not just on pattern blocks)
      * counts as interacting with that building.
      *
+     * <p>When multiple intact buildings' boxes cover the position (nested /
+     * overlapping buildings are allowed), the <b>innermost</b> (smallest) box
+     * wins, so clicking inside a room inside a larger shell targets the room.
+     *
      * @return buildingId if pos is within boundary of an intact building
      */
     @Nullable
@@ -316,15 +337,28 @@ public class BuildingSavedData extends SavedData {
         Set<UUID> chunkIds = chunkIndex.get(cp);
         if (chunkIds == null) return null;
 
+        UUID best = null;
+        long bestVolume = Long.MAX_VALUE;
         for (UUID candidate : chunkIds) {
             BuildingState state = buildings.get(candidate);
             if (state == null || !state.isStructureIntact()) continue;
 
             if (state.getBounds().isInside(pos)) {
-                return candidate;
+                long volume = boxVolume(state.getBounds());
+                if (volume < bestVolume) {
+                    bestVolume = volume;
+                    best = candidate;
+                }
             }
         }
-        return null;
+        return best;
+    }
+
+    /** Inclusive volume of a bounding box (counted in voxels). */
+    private static long boxVolume(BoundingBox b) {
+        return (long) (b.maxX() - b.minX() + 1)
+                * (b.maxY() - b.minY() + 1)
+                * (b.maxZ() - b.minZ() + 1);
     }
 
     /**
@@ -500,30 +534,30 @@ public class BuildingSavedData extends SavedData {
     // ── Register / Unregister ──
 
     /**
-     * Register a new building. Builds all indexes, checks overlap using
-     * precise pattern positions.
+     * Register a new building. Builds all indexes and reserves the building's
+     * occupied voxels. Two-phase overlap check: a world voxel may belong to at
+     * most one building, but bounding boxes may overlap freely.
      *
-     * @throws BuildingOverlapException if the building overlaps an existing one
+     * @throws BuildingOverlapException if the building shares an occupied voxel
+     *                                  with an existing one
      */
     public void register(BuildingState state, BuildingConfig config) {
-        // Apply rotation to pattern
-        java.util.List<BlockOffset> pattern = BuildingRotation
-                .rotateOffsets(config.pattern(), state.getRotationSteps());
+        BlockPos anchor = state.getAnchor();
+        // Occupied voxels of the rotated building + their broad-phase AABB.
+        BuildingVoxels.Occupancy occupancy =
+                BuildingVoxels.compute(config, anchor, state.getRotationSteps());
+        state.setPatternPositions(occupancy.positions());
+        state.setPatternExtent(occupancy.extent());
 
-        // Build pattern positions from rotated pattern
-        Set<BlockPos> newPattern = new HashSet<>();
-        for (BlockOffset off : pattern) {
-            newPattern.add(state.getAnchor().offset(off.x(), off.y(), off.z()));
-        }
-        state.setPatternPositions(Collections.unmodifiableSet(newPattern));
-
-        // Precise overlap check: pattern vs pattern (or AABB fallback for legacy)
+        // Two-phase overlap gate (shared logic in BuildingVoxels): reject a
+        // building whose occupied voxels collide with an existing one — bounding
+        // boxes may overlap freely, a world voxel may not be shared.
         for (BuildingState existing : buildings.values()) {
             // A building being demolished no longer occupies the space — don't block placement.
             if (existing.isDemolishing()) continue;
-            if (overlapsPattern(newPattern, existing)) {
+            if (conflictsWith(occupancy, existing)) {
                 throw new BuildingOverlapException(
-                        "Building " + state.getBuildingTypeId() + " at " + state.getAnchor()
+                        "Building " + state.getBuildingTypeId() + " at " + anchor
                         + " overlaps with " + existing.getBuildingTypeId()
                         + " at " + existing.getAnchor());
             }
@@ -532,8 +566,7 @@ public class BuildingSavedData extends SavedData {
         buildings.put(state.getBuildingId(), state);
 
         // Build posIndex from rotated pattern
-        for (BlockOffset off : pattern) {
-            BlockPos worldPos = state.getAnchor().offset(off.x(), off.y(), off.z());
+        for (BlockPos worldPos : occupancy.positions()) {
             posIndex.put(worldPos, state.getBuildingId());
         }
 
@@ -547,22 +580,24 @@ public class BuildingSavedData extends SavedData {
     }
 
     /**
-     * Check whether a set of world positions overlaps an existing building's
-     * occupied blocks. Uses pattern positions for precise detection.
+     * Whether the new building's occupied voxels collide with an existing one
+     * (BuildingVoxels two-phase test). Legacy buildings without a stored pattern
+     * conservatively occupy their whole boundary box.
      */
-    private static boolean overlapsPattern(Set<BlockPos> newPattern, BuildingState existing) {
+    private static boolean conflictsWith(BuildingVoxels.Occupancy mine, BuildingState existing) {
         Set<BlockPos> existingPattern = existing.getPatternPositions();
-        // Iterate the smaller set for efficiency
-        if (newPattern.size() <= existingPattern.size()) {
-            for (BlockPos pos : newPattern) {
-                if (existingPattern.contains(pos)) return true;
+        if (existingPattern == null) {
+            // Legacy building without a persisted pattern — we cannot know its exact
+            // voxels, so conservatively treat its whole boundary box as occupied.
+            BoundingBox existingBox = existing.getBounds();
+            if (mine.extent() == null || !BuildingVoxels.extentsIntersect(mine.extent(), existingBox)) return false;
+            for (BlockPos pos : mine.positions()) {
+                if (existingBox.isInside(pos)) return true;
             }
-        } else {
-            for (BlockPos pos : existingPattern) {
-                if (newPattern.contains(pos)) return true;
-            }
+            return false;
         }
-        return false;
+        if (existingPattern.isEmpty() || mine.isEmpty()) return false;
+        return BuildingVoxels.overlaps(mine.positions(), mine.extent(), existingPattern, existing.getPatternExtent());
     }
 
     /**
@@ -918,19 +953,24 @@ public class BuildingSavedData extends SavedData {
         return data;
     }
 
-    /** Rebuild posIndex and chunkIndex for a single building (used during load). */
+    /**
+     * Rebuild posIndex and chunkIndex for a single building (used during load).
+     * posIndex is filled from the persisted pattern positions, so exact
+     * voxel-owner lookups stay precise even under overlapping bounding boxes
+     * (no box-containment ambiguity after a restart).
+     */
     private void rebuildIndexes(BuildingState state) {
         state.getBounds().intersectingChunks().forEach(cp -> {
             chunkIndex.computeIfAbsent(cp, k -> ConcurrentHashMap.newKeySet())
                     .add(state.getBuildingId());
         });
-        // Note: posIndex cannot be fully rebuilt without BuildingConfig pattern.
-        // The posIndex is rebuilt on register(), not on load(). This means after
-        // a server restart, posIndex won't have entries until re-registration.
-        // Right-click lookups during this window use chunkIndex fallback.
-        // In practice, buildings should not be queried via posIndex between
-        // load and re-registration — and re-registration happens via
-        // EnqueueHelper.registerIfAbsent which is a no-op if building exists.
+        Set<BlockPos> positions = state.getPatternPositions();
+        if (positions != null) {
+            for (BlockPos pos : positions) {
+                posIndex.put(pos, state.getBuildingId());
+            }
+            state.setPatternExtent(BuildingVoxels.boundingBoxOf(positions));
+        }
     }
 
     /** Rebuild posIndex entry for a building (used when BuildingConfig is available). */
@@ -1075,21 +1115,5 @@ public class BuildingSavedData extends SavedData {
                 anchor.getX() + boundary.max().x(),
                 anchor.getY() + boundary.max().y(),
                 anchor.getZ() + boundary.max().z());
-    }
-
-    /**
-     * Check if a world position is occupied by any building that is NOT the
-     * excluded one. Uses pattern positions for precise detection.
-     *
-     * @param pos              world position to check
-     * @param excludeBuildingId building to skip (the one being placed)
-     * @return true if occupied by another building
-     */
-    public boolean isPositionOccupiedByOtherBuilding(BlockPos pos, UUID excludeBuildingId) {
-        for (BuildingState existing : buildings.values()) {
-            if (existing.getBuildingId().equals(excludeBuildingId)) continue;
-            if (existing.getPatternPositions().contains(pos)) return true;
-        }
-        return false;
     }
 }

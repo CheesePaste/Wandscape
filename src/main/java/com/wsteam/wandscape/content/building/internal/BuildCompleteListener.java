@@ -19,6 +19,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
+import javax.annotation.Nullable;
 import java.util.*;
 
 /**
@@ -65,7 +66,11 @@ public final class BuildCompleteListener {
         if (level == null) return;
 
         BuildingSavedData data = BuildingSavedData.get(level);
-        BuildingState state = findByAnchor(data, anchor);
+        // Resolve by building_id first — anchors are no longer unique once bounding
+        // boxes may overlap. Fall back to the anchor search for legacy events that
+        // predate the id tag.
+        BuildingState state = findById(data, params.get("building_id"));
+        if (state == null) state = findByAnchor(data, anchor);
         if (state == null) {
             return;
         }
@@ -156,6 +161,17 @@ public final class BuildCompleteListener {
             if (state.getAnchor().equals(anchor)) return state;
         }
         return null;
+    }
+
+    /** Find a building by its id string (from a completion event); null when absent/invalid. */
+    @Nullable
+    private static BuildingState findById(BuildingSavedData data, String buildingIdStr) {
+        if (buildingIdStr == null || buildingIdStr.isEmpty()) return null;
+        try {
+            return data.getBuilding(UUID.fromString(buildingIdStr));
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
     }
 
     /**

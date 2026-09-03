@@ -252,8 +252,7 @@ public final class WandscapePanelController {
                     net.minecraft.core.BlockPos nudgePos = ghost.offset(d[0], d[1], d[2]);
                     ProjectionClientState.setGhostPos(nudgePos);
                     ProjectionClientState.setPinned(true);
-                    ProjectionClientState.setOverlapDetected(
-                            com.wsteam.wandscape.content.building.network.BuildingAreaSyncPacket.findBuildingIdAt(nudgePos) != null);
+                    ProjectionClientState.setOverlapDetected(ProjectionClientState.currentSelectionConflicts(nudgePos));
                 }
                 mc.getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(
                         net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK, 1.0f));
