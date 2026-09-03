@@ -56,7 +56,8 @@ import static com.wsteam.wandscape.content.warehouse.WarehouseMenu.PANEL_W;
  * so the panel is centred like a vanilla container; on short screens the top is
  * clamped so the toolbar stays visible.
  */
-public class WarehouseScreen extends AbstractContainerScreen<WarehouseMenu> implements ReplayProtectedScreen {
+public class WarehouseScreen extends AbstractContainerScreen<WarehouseMenu>
+        implements ReplayProtectedScreen, com.wsteam.wandscape.foundation.ui.component.ScreenFeedbackHost {
 
     // ── 面板：与市政厅统一 300×230；Exchange 左侧贴原版 6 行箱(generic_54) 纹理 ──
     private static final int CHEST_W = 176;

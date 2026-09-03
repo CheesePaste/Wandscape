@@ -18,7 +18,7 @@ import java.util.List;
  * Base screen for all Wandscape single-page UIs.
  * Provides gradient glass panel, glow border, purple header, and {@link MedievalColors} palette.
  */
-public abstract class MedievalScreen extends Screen implements ReplayProtectedScreen {
+public abstract class MedievalScreen extends Screen implements ReplayProtectedScreen, ScreenFeedbackHost {
 
     protected int leftPos, topPos;
     protected final int panelWidth;
