@@ -26,5 +26,10 @@ public final class ClientConfig {
                     + "（4 秒转一圈 → 帧数 = fps×4，默认 12 = 48 帧）。改后需重启游戏重新烘焙。")
             .defineInRange("preview.fps", 12, 4, 60);
 
+    public static final ModConfigSpec.BooleanValue ROAD_GRID = BUILDER
+            .comment("道路放置/样条编辑模式下，相机周围地面是否显示半透明灰色 1×1 方块网格辅助线。"
+                    + "默认关闭：网格是叠加在场景上的透明覆盖层，与部分光影包不兼容。")
+            .define("road.showTerrainGrid", false);
+
     static final ModConfigSpec SPEC = BUILDER.build();
 }
