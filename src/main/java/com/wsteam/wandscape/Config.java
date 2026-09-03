@@ -147,5 +147,14 @@ public class Config {
             .comment("诡厄巫法 (Goety) 聚晶法术基础冷却换算系数。默认 1.0 (按原版 tick 换算)")
             .defineInRange("goety.cooldownMultiplier", 1.0, 0.1, 1000000.0);
 
+    // ---- NPC 死亡消息 ----
+
+    public static final ModConfigSpec.BooleanValue NPC_DEATH_MESSAGE_GLOBAL = BUILDER
+            .comment("法师阵亡消息：设为 true（默认）时，法师阵亡会像玩家死亡那样把死亡消息"
+                    + "广播给全服在线玩家；设为 false 时只发送给其所属小镇的创建者玩家"
+                    + "（类似驯养宠物死亡只通知主人）。两种模式均受 showDeathMessages 游戏规则门控："
+                    + "该规则关闭时一律不显示。")
+            .define("npc.deathMessageGlobal", true);
+
     static final ModConfigSpec SPEC = BUILDER.build();
 }
