@@ -123,7 +123,7 @@ public class Config {
 
     public static final ModConfigSpec.IntValue TAVERN_RECRUIT_COST_PER_ELEMENT = BUILDER
             .comment("酒馆「招募 NPC」自第二次起每种元素的价格。")
-            .defineInRange("tavern.recruitCostPerElement", 10_000, 0, 100_000_000);
+            .defineInRange("tavern.recruitCostPerElement", 10000, 0, 2147483647);
 
     public static final ModConfigSpec.IntValue TOURIST_MAX_ENERGY = BUILDER
             .comment("游客精力上限：初始 100、清晨晨起回满 100，耗尽(=0)只能去 relax 恢复建筑。")
