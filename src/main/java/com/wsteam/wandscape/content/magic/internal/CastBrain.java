@@ -144,7 +144,7 @@ public final class CastBrain {
      */
     public static List<SpellRef> resolvePriority(@Nullable CastStrategyComponent strategy, List<SpellRef> known) {
         CastStrategyComponent s = strategy != null ? strategy : new CastStrategyComponent();
-        if (s.configured()) {
+        if (s.configured() && !s.customPriority().isEmpty()) {
             return filterToKnown(s.customPriority(), known);
         }
         return resolvePreset(s.preset(), known);

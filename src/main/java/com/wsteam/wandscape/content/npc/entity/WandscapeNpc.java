@@ -1788,11 +1788,13 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
             castStrategy.setPreset(tag.getString("castStrategyPreset"));
             if (tag.contains("castStrategyPriority")) {
                 ListTag pl = tag.getList("castStrategyPriority", Tag.TAG_STRING);
-                List<String> pri = new ArrayList<>(pl.size());
-                for (int i = 0; i < pl.size(); i++) {
-                    pri.add(pl.getString(i));
+                if (!pl.isEmpty()) {
+                    List<String> pri = new ArrayList<>(pl.size());
+                    for (int i = 0; i < pl.size(); i++) {
+                        pri.add(pl.getString(i));
+                    }
+                    castStrategy.setCustomPriority(pri);
                 }
-                castStrategy.setCustomPriority(pri);
             }
             if (tag.contains("castStrategyConfigured")) {
                 castStrategy.setConfigured(tag.getBoolean("castStrategyConfigured"));

@@ -151,13 +151,33 @@ public final class GoetyHelper {
 
         // 冷却换算（tick，支持 Config 比例系数配置；SPELL_SPEED 在 MagicState 进一步缩短）
         int rawCooldown = spell.defaultSpellCooldown();
+        if (spell instanceof IChargingSpell charging && rawCooldown <= 0) {
+            rawCooldown = charging.Cooldown();
+        }
         double cdRatio = Config.GOETY_COOLDOWN_MULTIPLIER.get();
         int baseCooldown = Math.max(10, (int) Math.round(rawCooldown * cdRatio));
 
         int castTime = (spell instanceof IChargingSpell charging)
                 ? Math.min(60, Math.max(20, charging.defaultCastUp()))
                 : 0;
-        double range = 32.0;
+
+        int rawRange = spell.defaultStats().getRange();
+        double range = rawRange > 0 ? (double) rawRange : 16.0;
+
+        // 若聚晶附魔了 RANGE，动态叠加射程
+        ItemStack focusStack = deserializeFocus(focusId, customData);
+        if (!focusStack.isEmpty()) {
+            MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+            if (server != null) {
+                var lookup = server.registryAccess().lookup(Registries.ENCHANTMENT);
+                if (lookup.isPresent()) {
+                    var rng = lookup.get().get(ModEnchantments.RANGE);
+                    if (rng.isPresent()) {
+                        range += focusStack.getEnchantmentLevel(rng.get()) * 2;
+                    }
+                }
+            }
+        }
 
         MagicDef.TargetMode targetMode;
         SpellConditions conditions;
