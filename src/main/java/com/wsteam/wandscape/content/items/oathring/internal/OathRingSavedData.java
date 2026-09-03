@@ -1,5 +1,4 @@
-package com.wsteam.wandscape.content.items.ring.internal;
-import com.wsteam.wandscape.content.task.ecs.World;
+package com.wsteam.wandscape.content.items.oathring.internal;
 
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;

@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.content.items.ring;
+package com.wsteam.wandscape.content.items.oathring;
 
 /**
  * 盟誓戒指档位定义。

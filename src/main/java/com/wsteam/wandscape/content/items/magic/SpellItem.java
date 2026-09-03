@@ -1,5 +1,4 @@
-package com.wsteam.wandscape.content.items;
-import com.wsteam.wandscape.content.task.ecs.World;
+package com.wsteam.wandscape.content.items.magic;
 
 import com.wsteam.wandscape.content.magic.data.MagicDef;
 import com.wsteam.wandscape.content.magic.internal.MagicSpellExecutors;

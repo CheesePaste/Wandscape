@@ -1,11 +1,10 @@
 package com.wsteam.wandscape.content.npc;
-import com.wsteam.wandscape.content.task.ecs.World;
 
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.content.npc.component.EquippedMagicComponent;
 import com.wsteam.wandscape.content.magic.data.MagicDef;
 import com.wsteam.wandscape.content.magic.internal.SpellbookLoader;
-import com.wsteam.wandscape.content.items.SpellItem;
+import com.wsteam.wandscape.content.items.magic.SpellItem;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.foundation.ui.vanilla.VanillaPlayerInventory;

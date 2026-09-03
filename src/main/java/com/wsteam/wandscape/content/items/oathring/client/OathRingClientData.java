@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.content.items.ring.client;
+package com.wsteam.wandscape.content.items.oathring.client;
 
 /**
  * 客户端缓存的盟誓戒指共享空间占用掩码（由 {@code OathRingDataPacket} 服务端→客户端同步）。

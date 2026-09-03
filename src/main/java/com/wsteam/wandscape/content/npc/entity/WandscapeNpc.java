@@ -21,7 +21,7 @@ import com.wsteam.wandscape.content.magic.data.MagicDef;
 import com.wsteam.wandscape.content.magic.internal.MagicCaster;
 import com.wsteam.wandscape.content.magic.internal.MagicSpellExecutors;
 import com.wsteam.wandscape.content.magic.internal.SpellbookLoader;
-import com.wsteam.wandscape.content.items.SpellItem;
+import com.wsteam.wandscape.content.items.magic.SpellItem;
 import com.wsteam.wandscape.content.npc.NpcMenu;
 import com.wsteam.wandscape.content.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.content.npc.network.NpcDataPacket;

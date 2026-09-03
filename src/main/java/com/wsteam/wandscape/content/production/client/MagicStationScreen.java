@@ -1,10 +1,9 @@
 package com.wsteam.wandscape.content.production.client;
-import com.wsteam.wandscape.content.task.ecs.World;
 
 import com.wsteam.wandscape.content.building.network.OpenWarehousePacket;
 import com.wsteam.wandscape.content.building.network.TaskQueueDataPacket;
 import com.wsteam.wandscape.content.building.network.TaskQueueModifyPacket;
-import com.wsteam.wandscape.content.items.SpellItem;
+import com.wsteam.wandscape.content.items.magic.SpellItem;
 import com.wsteam.wandscape.content.production.network.MagicStationPacket;
 import com.wsteam.wandscape.content.production.network.MagicStationPacket.SpellEntry;
 import com.wsteam.wandscape.content.production.network.RequestProductionTaskPacket;

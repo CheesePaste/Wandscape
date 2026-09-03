@@ -1,6 +1,6 @@
-package com.wsteam.wandscape.content.items.ring.internal;
+package com.wsteam.wandscape.content.items.oathring.internal;
 
-import com.wsteam.wandscape.content.items.ring.network.OathRingDataPacket;
+import com.wsteam.wandscape.content.items.oathring.network.OathRingDataPacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;

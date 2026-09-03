@@ -1,8 +1,7 @@
-package com.wsteam.wandscape.content.items.ring;
-import com.wsteam.wandscape.content.task.ecs.World;
+package com.wsteam.wandscape.content.items.oathring;
 
-import com.wsteam.wandscape.content.items.ring.client.OathRingClientData;
-import com.wsteam.wandscape.content.items.ring.internal.OathRingService;
+import com.wsteam.wandscape.content.items.oathring.client.OathRingClientData;
+import com.wsteam.wandscape.content.items.oathring.internal.OathRingService;
 import com.wsteam.wandscape.api.NpcSneakInteractHook;
 import com.wsteam.wandscape.foundation.log.Log;
 import net.minecraft.core.BlockPos;

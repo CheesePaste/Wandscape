@@ -9,7 +9,7 @@ import com.wsteam.wandscape.content.element.data.ElementType;
 import com.wsteam.wandscape.foundation.util.ItemKey;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.api.WandscapeApis;
-import com.wsteam.wandscape.content.items.wand.internal.WandPresetLoader.WandPreset;
+import com.wsteam.wandscape.content.items.magic.wand.internal.WandPresetLoader.WandPreset;
 import com.wsteam.wandscape.content.warehouse.ColonyItemBank;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
