@@ -280,6 +280,9 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
             return new FriendlyForce.Classified(FriendlyForce.AllyKind.GOLEM, null);
         }
         Entity summoner = IronSpellsCompat.getSummoner(e);
+        if (summoner == null && com.wsteam.wandscape.compat.goety.GoetyCompat.isLoaded()) {
+            summoner = com.wsteam.wandscape.compat.goety.GoetyCompat.getMasterOwner(e);
+        }
         if (summoner != null) {
             if (summoner instanceof Player) {
                 return new FriendlyForce.Classified(FriendlyForce.AllyKind.PLAYER_SUMMON, null);
@@ -300,7 +303,7 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
     }
 
     /**
-     * 实体是否属「真实殖民地侧」成员：殖民地 NPC（{@code isColonyNpc()}）、其铁魔法随从、
+     * 实体是否属「真实殖民地侧」成员：殖民地 NPC（{@code isColonyNpc()}）、其铁魔法/Goety随从、
      * 持殖民地的游客。敌对生物（EvilMage 等 {@code isColonyNpc()==false}）与普通怪不算——
      * 它们与玩家的对抗是敌意而非误伤，互不侵犯判定刻意不覆盖，否则 EvilMage 抢不到生存玩家目标。
      */
@@ -308,6 +311,9 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
         if (e instanceof WandscapeNpc npc) return npc.isColonyNpc();
         if (e instanceof ColonyVisitor visitor) return visitor.getColonyId() != null;
         Entity summoner = IronSpellsCompat.getSummoner(e);
+        if (summoner == null && com.wsteam.wandscape.compat.goety.GoetyCompat.isLoaded()) {
+            summoner = com.wsteam.wandscape.compat.goety.GoetyCompat.getMasterOwner(e);
+        }
         return summoner instanceof WandscapeNpc owner && owner.isColonyNpc();
     }
 
@@ -328,12 +334,15 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
     }
 
     /**
-     * 是否为任意殖民地 NPC 召唤的铁魔法随从（守卫触发扫描用）：殖民地随从不构成对建筑的威胁，
+     * 是否为任意殖民地 NPC 召唤的随从（守卫触发扫描用）：殖民地随从不构成对建筑的威胁，
      * 不触发守卫任务——否则发布后立即被守卫执行器过滤为空目标而 stand-down，反复发布空转。
      * 敌对施法者（{@code isColonyNpc() == false}，如 EvilMage）召唤的不在此列，仍是威胁。
      */
     public static boolean isColonyNpcSummon(Entity entity) {
         Entity summoner = IronSpellsCompat.getSummoner(entity);
+        if (summoner == null && com.wsteam.wandscape.compat.goety.GoetyCompat.isLoaded()) {
+            summoner = com.wsteam.wandscape.compat.goety.GoetyCompat.getMasterOwner(entity);
+        }
         return summoner instanceof WandscapeNpc ownerNpc && ownerNpc.isColonyNpc();
     }
 
@@ -1054,6 +1063,9 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
                 if (com.wsteam.wandscape.compat.ironspellbooks.IronSpellsCompat.isLoaded()
                         && com.wsteam.wandscape.compat.ironspellbooks.IronSpellsHelper.isValidSpell(entry.id())) {
                     spawnAtLocation(com.wsteam.wandscape.compat.ironspellbooks.IronSpellsHelper.createScroll(entry.id(), entry.level()));
+                } else if (com.wsteam.wandscape.compat.goety.GoetyCompat.isLoaded()
+                        && com.wsteam.wandscape.compat.goety.GoetyHelper.isValidSpell(entry.id())) {
+                    spawnAtLocation(com.wsteam.wandscape.compat.goety.GoetyHelper.deserializeFocus(entry.id(), entry.customData()));
                 } else {
                     ItemStack scroll = new ItemStack(Wandscape.SPELL_SCROLL.get());
                     SpellItem.setMagicId(scroll, entry.id());

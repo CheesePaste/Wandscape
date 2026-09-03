@@ -35,22 +35,41 @@ public class EquippedMagicComponent {
             this(id, 1, null);
         }
 
-        /** 格式化为用于网络包/调试的紧凑字符串（如 "beam" 或 "irons_spellbooks:firebolt@5"）。 */
+        /** 格式化为用于网络包/调试的紧凑字符串（如 "beam"、"irons_spellbooks:firebolt@5" 或 "goety:fang_focus#base64"）。 */
         public String toFlatString() {
-            return level > 1 ? (id + "@" + level) : id;
+            String base = level > 1 ? (id + "@" + level) : id;
+            if (customData != null && !customData.isBlank()) {
+                String encoded = java.util.Base64.getUrlEncoder().withoutPadding()
+                        .encodeToString(customData.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                return base + "#" + encoded;
+            }
+            return base;
         }
 
-        /** 从紧凑字符串解析（如 "irons_spellbooks:firebolt@5" -> id="irons_spellbooks:firebolt", level=5）。 */
+        /** 从紧凑字符串解析（支持 @level 与 #base64CustomData）。 */
         public static SpellEntry parse(String flat) {
             if (flat == null || flat.isBlank()) return new SpellEntry("", 1, null);
-            int atIdx = flat.lastIndexOf('@');
-            if (atIdx > 0 && atIdx < flat.length() - 1) {
+            String raw = flat;
+            String custom = null;
+            int hashIdx = raw.indexOf('#');
+            if (hashIdx >= 0) {
+                String b64 = raw.substring(hashIdx + 1);
+                raw = raw.substring(0, hashIdx);
+                if (!b64.isBlank()) {
+                    try {
+                        byte[] bytes = java.util.Base64.getUrlDecoder().decode(b64);
+                        custom = new String(bytes, java.nio.charset.StandardCharsets.UTF_8);
+                    } catch (IllegalArgumentException ignored) {}
+                }
+            }
+            int atIdx = raw.lastIndexOf('@');
+            if (atIdx > 0 && atIdx < raw.length() - 1) {
                 try {
-                    int lvl = Integer.parseInt(flat.substring(atIdx + 1));
-                    return new SpellEntry(flat.substring(0, atIdx), lvl, null);
+                    int lvl = Integer.parseInt(raw.substring(atIdx + 1));
+                    return new SpellEntry(raw.substring(0, atIdx), lvl, custom);
                 } catch (NumberFormatException ignored) {}
             }
-            return new SpellEntry(flat, 1, null);
+            return new SpellEntry(raw, 1, custom);
         }
     }
 

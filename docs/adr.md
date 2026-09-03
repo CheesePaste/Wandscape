@@ -32,6 +32,7 @@
 
 | 日期 | 决策摘要 | 一句话原因 (Why) | 关联模块 / 代码 |
 |---|---|---|---|
+| 2026-09-03 | **诡厄巫法 (Goety) 聚晶兼容与随从免误伤**：聚晶无限制装入 4 大策略栏，附魔保真（Base64 存 `customData`），灵魂能量转魔力/冷却可配置；随从识别为友军，法伤由 `NpcSpellPowerHandler` 单一入口乘算防成方膨胀。 | 贯彻高兼容与无感降级原则，复用策略槽管线与实体友军判定；单一入口乘算法伤彻底杜绝二次方膨胀 Bug。 | `compat/goety/`, `content/npc/NpcStrategyMenu`, `content/npc/component/EquippedMagicComponent`, `content/magic/internal/CastBrain`, `content/npc/entity/WandscapeNpc` |
 | 2026-09-02 | **友军名单扩玩家侧 + 双向互不侵犯**：`isFriendlyForce` 扩成员（玩家宠物/守护召唤/玩家铁魔法随从），新增 `FriendlyTargetingHandler` 监听 `Mob.setTarget` 的 `LivingChangeTargetEvent` 做双向目标过滤，仅限真实殖民地侧（`isColonyNpc()` 王国 NPC/其随从/游客）。 | 单向友军名单管不住 Vanilla/铁魔法 AI——宠物会记仇 NPC、玩家随从会索敌 NPC、殖民地亡灵随从会打玩家；在目标切换层统一拦截「互不为敌」，且 EvilMage 等 `isColonyNpc()==false` 的敌意行为刻意保留。 | `content/npc/entity/WandscapeNpc`, `content/npc/types/FriendlyForce`, `content/npc/guard/FriendlyTargetingHandler`, `api/FriendlyForceApi` |
 | 2026-09-02 | **NPC 击杀归属殖民地主人**：伤害入口把目标 `lastHurtByPlayer` 记为殖民地创始人玩家（无殖民地记录时单在线玩家兜底），damage source 实体保持施法 NPC 不变。 | `killed_by_player` 掉落条件只认 `lastHurtByPlayer` 而 NPC 来源伤害从不写它——烈焰棒/凋灵骷髅头/亡灵装备掉落率与经验球全丢；挂归属而不改 source 实体，掉落得解的同时怪物仇恨与法术强度判定原样。 | `content/npc/guard/NpcSpellPowerHandler`, `api/NpcApi` |
 | 2026-09-02 | **法杖属性 Tooltip 显式渲染**：默认 attribute modifiers 为空导致 Tooltip 不列属性，在 `appendHoverText` 手动渲染主手属性块。 | 玩家手持虽无法杖加成但需可查阅属性，修复自动结算废除后 Tooltip 消失。 | `content/items/wand/item/WandItem` |

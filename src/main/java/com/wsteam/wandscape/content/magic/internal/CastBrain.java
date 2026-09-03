@@ -57,9 +57,17 @@ public final class CastBrain {
                     MagicDef def = SpellbookLoader.getSpec(entry.id());
                     if (def != null) {
                         out.add(new SpellRef(def, group));
-                    } else if (com.wsteam.wandscape.compat.ironspellbooks.IronSpellsCompat.isLoaded()) {
+                    } else if (com.wsteam.wandscape.compat.ironspellbooks.IronSpellsCompat.isLoaded()
+                            && com.wsteam.wandscape.compat.ironspellbooks.IronSpellsHelper.isValidSpell(entry.id())) {
                         MagicDef syn = com.wsteam.wandscape.compat.ironspellbooks.IronSpellsHelper
                                 .getSyntheticDef(entry.id(), entry.level(), group);
+                        if (syn != null) {
+                            out.add(new SpellRef(syn, group));
+                        }
+                    } else if (com.wsteam.wandscape.compat.goety.GoetyCompat.isLoaded()
+                            && com.wsteam.wandscape.compat.goety.GoetyHelper.isValidSpell(entry.id())) {
+                        MagicDef syn = com.wsteam.wandscape.compat.goety.GoetyHelper
+                                .getSyntheticDef(entry.id(), group, entry.customData());
                         if (syn != null) {
                             out.add(new SpellRef(syn, group));
                         }
@@ -104,9 +112,17 @@ public final class CastBrain {
                 MagicDef def = SpellbookLoader.getSpec(entry.id());
                 if (def != null) {
                     out.add(new SpellRef(def, SpellbookLoader.equippableCategoryOf(entry.id())));
-                } else if (com.wsteam.wandscape.compat.ironspellbooks.IronSpellsCompat.isLoaded()) {
+                } else if (com.wsteam.wandscape.compat.ironspellbooks.IronSpellsCompat.isLoaded()
+                        && com.wsteam.wandscape.compat.ironspellbooks.IronSpellsHelper.isValidSpell(entry.id())) {
                     MagicDef syn = com.wsteam.wandscape.compat.ironspellbooks.IronSpellsHelper
                             .getSyntheticDef(entry.id(), entry.level(), "single_target");
+                    if (syn != null) {
+                        out.add(new SpellRef(syn, "single_target"));
+                    }
+                } else if (com.wsteam.wandscape.compat.goety.GoetyCompat.isLoaded()
+                        && com.wsteam.wandscape.compat.goety.GoetyHelper.isValidSpell(entry.id())) {
+                    MagicDef syn = com.wsteam.wandscape.compat.goety.GoetyHelper
+                            .getSyntheticDef(entry.id(), "single_target", entry.customData());
                     if (syn != null) {
                         out.add(new SpellRef(syn, "single_target"));
                     }

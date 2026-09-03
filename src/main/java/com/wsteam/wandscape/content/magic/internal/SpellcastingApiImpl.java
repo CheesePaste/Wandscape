@@ -64,8 +64,16 @@ public final class SpellcastingApiImpl implements MagicApi {
                 EquippedMagicComponent.SpellEntry entry = EquippedMagicComponent.SpellEntry.parse(spellToken);
                 if (entry.id().isBlank()) continue;
                 if (targetCat == null) {
-                    // 无显式分类前缀时按注册表推断（ALTAR/SPECIAL 系统固有魔法由此排除）
-                    targetCat = SpellbookLoader.equippableCategoryOf(entry.id());
+                    if (com.wsteam.wandscape.compat.ironspellbooks.IronSpellsCompat.isLoaded()
+                            && com.wsteam.wandscape.compat.ironspellbooks.IronSpellsHelper.isValidSpell(entry.id())) {
+                        targetCat = com.wsteam.wandscape.compat.ironspellbooks.IronSpellsHelper.inferCategory(entry.id());
+                    } else if (com.wsteam.wandscape.compat.goety.GoetyCompat.isLoaded()
+                            && com.wsteam.wandscape.compat.goety.GoetyHelper.isValidSpell(entry.id())) {
+                        targetCat = "single_target";
+                    } else {
+                        // 无显式分类前缀时按注册表推断（ALTAR/SPECIAL 系统固有魔法由此排除）
+                        targetCat = SpellbookLoader.equippableCategoryOf(entry.id());
+                    }
                 }
                 if (EquippedMagicComponent.isCategory(targetCat)) {
                     validated.equip(targetCat, entry);
