@@ -160,8 +160,8 @@ public class NpcStrategyMenu extends AbstractContainerMenu {
     // 诡厄聚晶：需主手（法杖栏）持诡厄法杖，全栏上限 1（goetyFocusCap）。
     // 原生魔法卷轴不受门控；cap==-1（未知）放行，由服务端权威兜底。
 
-    private static final int KIND_IRON = 1;
-    private static final int KIND_GOETY = 2;
+    public static final int KIND_IRON = 1;
+    public static final int KIND_GOETY = 2;
 
     /** 按 NPC 与种类算门控上限；npc==null（客户端构造）为 -1，收到 NpcDataPacket 后由屏幕补设。 */
     private static int capForNpc(@Nullable WandscapeNpc npc, int kind) {

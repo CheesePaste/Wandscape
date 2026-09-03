@@ -13,6 +13,7 @@ import com.wsteam.wandscape.foundation.ui.component.HelpButton;
 import com.wsteam.wandscape.foundation.ui.component.MedievalButton;
 import com.wsteam.wandscape.foundation.ui.skin.SkinRender;
 import com.wsteam.wandscape.foundation.ui.theme.MedievalColors;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -20,8 +21,11 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.PacketDistributor;
 
+import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -55,6 +59,10 @@ public class NpcStrategyScreen extends AbstractContainerScreen<NpcStrategyMenu>
     /** 第三方魔法策略栏门控上限（NpcDataPacket 补设：-1 未收到；0 装备缺失禁用）。 */
     private int ironSpellSlots = -1;
     private int goetyFocusSlots = -1;
+
+    /** 底部状态栏矩形区域与停用提示 key（用于悬停底部提示时展示门控 Tooltip）。 */
+    private int footerX, footerY, footerW, footerH;
+    private String footerWarnKey;
 
     public NpcStrategyScreen(NpcStrategyMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
@@ -201,29 +209,102 @@ public class NpcStrategyScreen extends AbstractContainerScreen<NpcStrategyMenu>
                 MedievalColors.TEXT_DIM);
     }
 
+    @Override
+    protected void renderTooltip(GuiGraphics g, int mouseX, int mouseY) {
+        String gateReason = currentGateReason(mouseX, mouseY);
+        if (gateReason != null) {
+            g.renderComponentTooltip(font, buildGateReasonTooltip(gateReason), mouseX, mouseY);
+            return;
+        }
+
+        super.renderTooltip(g, mouseX, mouseY);
+
+        if (this.menu.getCarried().isEmpty() && this.hoveredSlot == null) {
+            if (footerWarnKey != null && isInRect(mouseX, mouseY, footerX, footerY, footerW, footerH)) {
+                g.renderComponentTooltip(font, buildGateReasonTooltip(footerWarnKey), mouseX, mouseY);
+            }
+        }
+    }
+
+    @Override
+    protected List<Component> getTooltipFromContainerItem(ItemStack stack) {
+        List<Component> lines = super.getTooltipFromContainerItem(stack);
+        if (hoveredSlot != null && hoveredSlot.index < NpcStrategyMenu.SPELL_SLOT_COUNT) {
+            int kind = NpcStrategyMenu.kindOf(stack);
+            if (kind == NpcStrategyMenu.KIND_IRON && ironSpellSlots <= 0) {
+                List<Component> copy = new ArrayList<>(lines);
+                copy.add(Component.literal("──────────────────────").withStyle(ChatFormatting.DARK_GRAY));
+                copy.add(I18n.name("gui.wandscape.strategy.iron.no_book_inert", "无法术书：铁魔法停用").copy().withStyle(ChatFormatting.RED, ChatFormatting.BOLD));
+                copy.add(Component.literal("• ").withStyle(ChatFormatting.RED).append(reasonKey("iron.needs_spellbook").copy().withStyle(ChatFormatting.RED)));
+                return copy;
+            } else if (kind == NpcStrategyMenu.KIND_GOETY && goetyFocusSlots <= 0) {
+                List<Component> copy = new ArrayList<>(lines);
+                copy.add(Component.literal("──────────────────────").withStyle(ChatFormatting.DARK_GRAY));
+                copy.add(I18n.name("gui.wandscape.strategy.goety.no_wand_inert", "无法杖：聚晶停用").copy().withStyle(ChatFormatting.RED, ChatFormatting.BOLD));
+                copy.add(Component.literal("• ").withStyle(ChatFormatting.RED).append(reasonKey("goety.needs_wand").copy().withStyle(ChatFormatting.RED)));
+                return copy;
+            }
+        }
+        return lines;
+    }
+
+    @Nullable
+    private String currentGateReason(double mouseX, double mouseY) {
+        NpcStrategyMenu menu = this.menu;
+        int hovered = hoveredSlot != null ? hoveredSlot.index : slotIndexAt(mouseX, mouseY);
+        if (hovered >= 0) {
+            if (hovered < NpcStrategyMenu.SPELL_SLOT_COUNT && !menu.getCarried().isEmpty()) {
+                return menu.gateReasonForCarried(hovered);
+            } else if (hovered >= NpcStrategyMenu.SPELL_SLOT_COUNT && hasShiftDown()
+                    && !menu.slots.get(hovered).getItem().isEmpty()) {
+                return menu.gateReasonForQuickAdd(menu.slots.get(hovered).getItem());
+            }
+        }
+        return null;
+    }
+
     /**
-     * 底部信息行（几何命中 + 酒馆 toast 配色惯例）：悬停策略槽手持铁卷轴/聚晶被装备门控拦截时红字显示
-     * 原因；否则常驻显示铁魔法 / 诡厄聚晶的容量或停用状态。无第三方魔法、无实际占用或数据未到则不画。
+     * 构建仿法师小屋（MageHutScreen）风格的门控提示 Tooltip：
+     * 标金粗体标题 + 红字拦截原因 + 暗灰分隔线 + 灰斜体指引建议。
+     */
+    private List<Component> buildGateReasonTooltip(String key) {
+        List<Component> tooltip = new ArrayList<>();
+        boolean isIron = key.startsWith("iron.");
+        String title = isIron
+                ? I18n.name("gui.wandscape.strategy.iron.title", "铁魔法").getString()
+                : I18n.name("gui.wandscape.strategy.goety.title", "诡厄魔法").getString();
+        String sub = I18n.name("gui.wandscape.strategy.restriction_title", "装备门控").getString();
+        tooltip.add(Component.literal(title + " " + sub).withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
+        tooltip.add(Component.literal("• ").withStyle(ChatFormatting.RED)
+                .append(reasonKey(key).copy().withStyle(ChatFormatting.RED)));
+        tooltip.add(Component.literal("──────────────────────").withStyle(ChatFormatting.DARK_GRAY));
+
+        String hint = switch (key) {
+            case "iron.needs_spellbook" -> I18n.name("gui.wandscape.strategy.iron.needs_spellbook.hint", "需在法师饰品栏 (Curios) 装备法术书以启用槽位").getString();
+            case "iron.cap_full" -> I18n.name("gui.wandscape.strategy.iron.cap_full.hint", "卷轴数量已达到当前法术书的容量上限").getString();
+            case "goety.needs_wand" -> I18n.name("gui.wandscape.strategy.goety.needs_wand.hint", "需在法师主手装备诡厄法杖后配置聚晶").getString();
+            case "goety.one_only" -> I18n.name("gui.wandscape.strategy.goety.one_only.hint", "全施法策略栏最多仅允许配置 1 枚聚晶").getString();
+            default -> "";
+        };
+        if (!hint.isEmpty()) {
+            tooltip.add(Component.literal(hint).withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC));
+        }
+        return tooltip;
+    }
+
+    /**
+     * 底部信息行：常驻显示铁魔法 / 诡厄聚晶的容量或停用状态。
+     * 门控拦截原因改由 {@link #renderTooltip} 以仿法师小屋 Tooltip 形式直接在光标处呈现。
      */
     private void renderThirdPartyFooter(GuiGraphics g, int mouseX, int mouseY) {
+        footerWarnKey = null;
+        footerW = 0;
+        footerH = 0;
         boolean ironOn = com.wsteam.wandscape.compat.ironspellbooks.IronSpellsCompat.isLoaded();
         boolean goetyOn = com.wsteam.wandscape.compat.goety.GoetyCompat.isLoaded();
         if ((!ironOn && !goetyOn) || (ironSpellSlots < 0 && goetyFocusSlots < 0)) return;
         NpcStrategyMenu menu = this.menu;
-        int hovered = slotIndexAt(mouseX, mouseY);
-        String reason = null;
-        if (hovered >= 0) {
-            if (hovered < NpcStrategyMenu.SPELL_SLOT_COUNT && !menu.getCarried().isEmpty()) {
-                reason = menu.gateReasonForCarried(hovered);
-            } else if (hovered >= NpcStrategyMenu.SPELL_SLOT_COUNT && hasShiftDown()
-                    && !menu.slots.get(hovered).getItem().isEmpty()) {
-                reason = menu.gateReasonForQuickAdd(menu.slots.get(hovered).getItem());
-            }
-        }
-        if (reason != null) {
-            drawInfoLine(g, reasonKey(reason).getString(), 0xFFFF6B6B);
-            return;
-        }
+
         java.util.List<String> segs = new java.util.ArrayList<>(2);
         boolean warn = false;
         if (ironOn) {
@@ -236,6 +317,7 @@ public class NpcStrategyScreen extends AbstractContainerScreen<NpcStrategyMenu>
                     segs.add(I18n.name("gui.wandscape.strategy.iron.no_book_inert",
                             "No spell book: Iron off", used).getString());
                     warn = true;
+                    if (footerWarnKey == null) footerWarnKey = "iron.needs_spellbook";
                 }
             }
         }
@@ -249,6 +331,7 @@ public class NpcStrategyScreen extends AbstractContainerScreen<NpcStrategyMenu>
                     segs.add(I18n.name("gui.wandscape.strategy.goety.no_wand_inert",
                             "No wand: focus off", used).getString());
                     warn = true;
+                    if (footerWarnKey == null) footerWarnKey = "goety.needs_wand";
                 }
             }
         }
@@ -257,13 +340,15 @@ public class NpcStrategyScreen extends AbstractContainerScreen<NpcStrategyMenu>
                 warn ? MedievalColors.ACCENT_GOLD : MedievalColors.TEXT_WARM_WHITE);
     }
 
-    /** 底部单行信息（裁宽、压暗底，防玻璃底不可读）。 */
+    /** 底部单行信息（裁宽、压暗底，防玻璃底不可读，并记录包围盒供 Tooltip 悬停判定）。 */
     private void drawInfoLine(GuiGraphics g, String text, int color) {
         text = font.plainSubstrByWidth(text, imageWidth - 60);
-        int x = leftPos + 8;
-        int y = topPos + imageHeight - font.lineHeight - 3;
-        g.fill(x - 1, y - 2, x + font.width(text) + 1, y + font.lineHeight + 1, 0x88000000);
-        g.drawString(font, text, x, y, color);
+        footerX = leftPos + 8;
+        footerY = topPos + imageHeight - font.lineHeight - 3;
+        footerW = font.width(text);
+        footerH = font.lineHeight;
+        g.fill(footerX - 1, footerY - 2, footerX + footerW + 1, footerY + footerH + 1, 0x88000000);
+        g.drawString(font, text, footerX, footerY, color);
     }
 
     /** 门控拦截原因文案（key = 平台前缀，如 iron.needs_spellbook / goety.one_only）。 */
