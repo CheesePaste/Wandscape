@@ -3,6 +3,7 @@ package com.wsteam.wandscape.content.tutorial.service;
 /**
  * Pure view of colony state consumed by {@link TutorialProgressService#computeStep}.
  * Kept MC-free so the step logic is unit-testable with a fake implementation.
+ * Check order must match {@code TutorialRegistry.STEPS}.
  */
 public interface TutorialServerContext {
 
@@ -14,15 +15,18 @@ public interface TutorialServerContext {
     /** Player has published at least one workstation synthesize request (step 5). */
     boolean hasPlayerSynthesized();
 
-    /** Player has manually placed at least one road (step 6). */
-    boolean hasPlayerPlacedRoad();
-
-    /** A bakery is built AND has at least one stocked good (step 7). */
+    /** A bakery is built AND has at least one stocked good (step 6). */
     boolean hasBakeryStocked();
 
-    /** A node is built AND the player has published at least one gather task (step 8). */
-    boolean hasNodeGatherPublished();
+    /** An altar is built (step 7). */
+    boolean hasAltar();
 
-    /** Any service building with max_occupancy > 0 AND a tourist is staying overnight. */
+    /** A tavern is built AND the player has recruited at least one mage there (step 8). */
+    boolean hasTavernRecruited();
+
+    /** A mage hut is built AND a mage has moved in as its resident (step 9). */
+    boolean hasMageHutResident();
+
+    /** Any service building with max_occupancy > 0 AND a tourist is staying overnight (step 10). */
     boolean hasInnWithStay();
 }

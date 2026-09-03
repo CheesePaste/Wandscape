@@ -56,10 +56,10 @@ public final class TutorialProgressService implements TutorialApi {
         if (ctx.hasPlayerDeposited()) step++;             // 3 存入一个物品
         if (ctx.hasCategory("workstation")) step++;       // 4 建造工作站
         if (ctx.hasPlayerSynthesized()) step++;           // 5 合成一样物品
-        if (ctx.hasPlayerPlacedRoad()) step++;            // 6 铺设一条道路
-        if (ctx.hasBakeryStocked()) step++;             // 7 面包店补充货物
-        if (ctx.hasNodeGatherPublished()) step++;         // 8 节点发布采集任务
-        if (ctx.hasCategory("altar")) step++;             // 9 建造祭坛
+        if (ctx.hasBakeryStocked()) step++;               // 6 面包店补充货物
+        if (ctx.hasAltar()) step++;                       // 7 建造祭坛
+        if (ctx.hasTavernRecruited()) step++;             // 8 建立酒馆，招募一名法师
+        if (ctx.hasMageHutResident()) step++;             // 9 建造法师小屋，指派法师入住
         if (ctx.hasInnWithStay()) step++;                 // 10 青年旅舍游客入住
         return step;
     }
@@ -96,11 +96,6 @@ public final class TutorialProgressService implements TutorialApi {
         }
 
         @Override
-        public boolean hasPlayerPlacedRoad() {
-            return ColonyItemBank.get(level).getPlayerRoadPlaceCount(colonyId) > 0;
-        }
-
-        @Override
         public boolean hasBakeryStocked() {
             BuildingSavedData savedData = BuildingSavedData.get(level);
             if (savedData == null) return false;
@@ -114,9 +109,28 @@ public final class TutorialProgressService implements TutorialApi {
         }
 
         @Override
-        public boolean hasNodeGatherPublished() {
-            return hasCategory("node")
-                    && ColonyItemBank.get(level).getGatherPublishedCount(colonyId) > 0;
+        public boolean hasAltar() {
+            return hasCategory("altar");
+        }
+
+        @Override
+        public boolean hasTavernRecruited() {
+            if (!hasCategory("tavern")) return false;
+            var tavernApi = WandscapeApis.getTavernApiSilently();
+            return tavernApi != null && tavernApi.getRecruitCount(colonyId) > 0;
+        }
+
+        @Override
+        public boolean hasMageHutResident() {
+            BuildingSavedData savedData = BuildingSavedData.get(level);
+            if (savedData == null) return false;
+            for (BuildingData b : buildings) {
+                if ("mage_hut".equals(b.getCategory())
+                        && savedData.getMageHutResident(b.getBuildingId()) != null) {
+                    return true;
+                }
+            }
+            return false;
         }
 
         @Override
