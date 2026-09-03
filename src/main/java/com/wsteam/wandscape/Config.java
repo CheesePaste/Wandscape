@@ -129,6 +129,16 @@ public class Config {
             .comment("游客精力上限：初始 100、清晨晨起回满 100，耗尽(=0)只能去 relax 恢复建筑。")
             .defineInRange("tourist.maxEnergy", 100, 1, 1000);
 
+    // ---- Iron Spells Compatibility (铁魔法兼容) ----
+
+    public static final ModConfigSpec.DoubleValue IRON_MANA_COST_MULTIPLIER = BUILDER
+            .comment("铁魔法 (Iron's Spells) 魔力消耗倍率：NPC 施铁魔法时扣减的魔力 × 该系数。默认 1.0")
+            .defineInRange("iron.manaCostMultiplier", 1.0, 0.0, 100.0);
+
+    public static final ModConfigSpec.DoubleValue IRON_COOLDOWN_MULTIPLIER = BUILDER
+            .comment("铁魔法 (Iron's Spells) 冷却倍率：基础冷却 tick × 该系数（SPELL_SPEED 缩短前）。默认 1.0")
+            .defineInRange("iron.cooldownMultiplier", 1.0, 0.1, 10.0);
+
     // ---- Goety Compatibility (诡厄巫法兼容) ----
 
     public static final ModConfigSpec.DoubleValue GOETY_SOUL_TO_MANA_MULTIPLIER = BUILDER

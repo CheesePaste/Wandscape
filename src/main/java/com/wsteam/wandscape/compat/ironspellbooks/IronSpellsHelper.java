@@ -2,6 +2,7 @@ package com.wsteam.wandscape.compat.ironspellbooks;
 import com.wsteam.wandscape.content.npc.component.MagicState;
 import com.wsteam.wandscape.content.task.ecs.World;
 
+import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.content.magic.data.MagicDef;
 import com.wsteam.wandscape.content.magic.data.SpellConditions;
 import io.redspace.ironsspellbooks.api.registry.SpellRegistry;
@@ -66,6 +67,25 @@ public final class IronSpellsHelper {
     }
 
     /**
+     * 铁魔法魔力消耗（对等 NPC 魔力池）× {@code iron.manaCostMultiplier}。
+     * 门控（{@link #getSyntheticDef} 的 MagicDef）与实扣（IronSpellsCaster）同走本方法保证一致；
+     * 倍率默认 1.0 时与原裸算逐位相同（raw<=0 保持 0，不人为抬到 1）。
+     */
+    public static int scaledManaCost(AbstractSpell spell, int level) {
+        int raw = spell.getManaCost(level);
+        return raw <= 0 ? 0 : Math.max(1, (int) Math.round(raw * Config.IRON_MANA_COST_MULTIPLIER.get()));
+    }
+
+    /**
+     * 铁魔法基础冷却 tick（{@code getSpellCooldown()} 已返回 tick = 秒 × 20；cd<=0 兜底 40）
+     * × {@code iron.cooldownMultiplier}；SPELL_SPEED 的缩短在 MagicState 里做。默认 1.0 时与原裸算相同。
+     */
+    public static int scaledCooldown(AbstractSpell spell) {
+        int raw = spell.getSpellCooldown() > 0 ? spell.getSpellCooldown() : 40;
+        return Math.max(1, (int) Math.round(raw * Config.IRON_COOLDOWN_MULTIPLIER.get()));
+    }
+
+    /**
      * 根据铁魔法法术与装备放入的策略组，构造动态合成的 {@link MagicDef}。
      * {@code categoryName} 现为策略组名（single_target/aoe/defense/support），只决定合成 def 的
      * targetMode/conditions；合成 def 的 {@code category} 恒为 NORMAL（性质），实际策略组由
@@ -79,9 +99,11 @@ public final class IronSpellsHelper {
 
         // 蓝耗 1:1：铁魔法蓝耗直接对等 NPC 魔力池（2026-08-26 用户要求），不再按 0.25/0.10 缩放 / 下限钳制。
         // 昂贵的铁魔法（黑洞 300、传送门 200 等）会超过 NPC 默认蓝池 200，经 CastBrain 门控自动跳过。
-        int manaCost = spell.getManaCost(level);
+        // 消耗/冷却乘 Config 平衡倍率（iron.manaCostMultiplier / iron.cooldownMultiplier），
+        // 与 IronSpellsCaster 实扣同源（scaledManaCost/scaledCooldown），保证门控与扣费一致。
+        int manaCost = scaledManaCost(spell, level);
         // 冷却：getSpellCooldown() 已返回 tick（COOLDOWN_IN_SECONDS × 20），直接用；SPELL_SPEED 在 MagicState 缩短。
-        int baseCooldown = spell.getSpellCooldown() > 0 ? spell.getSpellCooldown() : 40;
+        int baseCooldown = scaledCooldown(spell);
         int castTime = Math.max(0, spell.getCastTime(level));
         double range = 32.0;
 

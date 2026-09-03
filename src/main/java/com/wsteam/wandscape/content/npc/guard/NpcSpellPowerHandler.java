@@ -52,6 +52,16 @@ import java.util.UUID;
  * {@code (directEntity, causingEntity)} 错位，{@code getEntity()} 返回第二个参数）。
  * 漏掉则倍率静默不生效（铁魔法召唤物经 {@code getDamageSource(直接实体, 施法NPC)}
  * 已满足——causing 恒为施法 NPC）。
+ *
+ * <p><b>TODO（铁/诡厄伤害倍率不提供的局限）</b>：曾计划为铁魔法/诡厄巫法加 Config 伤害倍率，
+ * 但两者的伤害算术都在外部模组内部执行（{@code IronSpellsCaster}/{@code GoetyCaster} 只是触发
+ * onCast/SpellResult，弹道命中、持续领域、召唤物后续伤害均发生在施法调用之后很久）。本入口虽能
+ * 拦截全部 NPC 来源伤害（source.getEntity() 恒为施法 NPC），却无法在延迟伤害到达时可靠归因到学派——
+ * 只能靠脆弱的「施法窗口瞬态标记」或按弹体/随从实体归属猜学派：前者漏掉弹道与召唤物、还会在异常
+ * 路径留下残留倍率，后者正踩中本入口曾发生过的 SPELL_POWER 重复乘算 bug。因此暂不提供伤害倍率，
+ * 只提供魔力消耗/冷却倍率（Config 的 {@code iron.manaCostMultiplier}/{@code iron.cooldownMultiplier}
+ * 与诡厄侧 soulToMana/cooldown 两键）。将来若要做，需先给伤害源引入可靠的学派标注（如自建 DamageType
+ * 携带学派），勿在此按窗口/实体归属近似乘算。
  */
 public final class NpcSpellPowerHandler {
     private static final String TAG = "NpcSpellPower";
