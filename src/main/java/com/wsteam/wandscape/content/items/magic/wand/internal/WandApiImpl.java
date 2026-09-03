@@ -1,10 +1,9 @@
-package com.wsteam.wandscape.content.items.wand.internal;
-import com.wsteam.wandscape.content.task.ecs.World;
+package com.wsteam.wandscape.content.items.magic.wand.internal;
 
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.content.npc.types.NpcAttributeModifier;
 import com.wsteam.wandscape.api.WandApi;
-import com.wsteam.wandscape.content.items.wand.internal.WandPresetLoader.WandPreset;
+import com.wsteam.wandscape.content.items.magic.wand.internal.WandPresetLoader.WandPreset;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;

@@ -1,5 +1,4 @@
-package com.wsteam.wandscape.content.element.item;
-import com.wsteam.wandscape.content.task.ecs.World;
+package com.wsteam.wandscape.content.items.element;
 
 import com.wsteam.wandscape.foundation.sound.SoundService;
 import com.wsteam.wandscape.foundation.registry.WandscapeSounds;

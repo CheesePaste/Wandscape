@@ -1,10 +1,9 @@
 package com.wsteam.wandscape.content.npc;
-import com.wsteam.wandscape.content.task.ecs.World;
 
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.foundation.ui.vanilla.VanillaPlayerInventory;
-import com.wsteam.wandscape.content.items.wand.item.WandItem;
+import com.wsteam.wandscape.content.items.magic.wand.item.WandItem;
 import net.minecraft.world.Container;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.SimpleContainer;

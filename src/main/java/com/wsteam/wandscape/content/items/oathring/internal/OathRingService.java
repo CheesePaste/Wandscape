@@ -1,12 +1,11 @@
-package com.wsteam.wandscape.content.items.ring.internal;
+package com.wsteam.wandscape.content.items.oathring.internal;
 import com.wsteam.wandscape.api.NpcApi;
 import com.wsteam.wandscape.api.WandscapeApis;
-import com.wsteam.wandscape.content.task.ecs.World;
 
 import com.wsteam.wandscape.Wandscape;
-import com.wsteam.wandscape.content.items.ring.network.OathRingDataPacket;
+import com.wsteam.wandscape.content.items.oathring.network.OathRingDataPacket;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
-import com.wsteam.wandscape.content.items.ring.RingTier;
+import com.wsteam.wandscape.content.items.oathring.RingTier;
 import com.wsteam.wandscape.foundation.log.Log;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;

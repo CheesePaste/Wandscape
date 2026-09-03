@@ -1,6 +1,5 @@
-package com.wsteam.wandscape.content.items.wand.internal;
+package com.wsteam.wandscape.content.items.magic.wand.internal;
 import com.wsteam.wandscape.content.npc.types.NpcAttributeModifier;
-import com.wsteam.wandscape.content.task.ecs.World;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
