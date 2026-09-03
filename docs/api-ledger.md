@@ -3,6 +3,7 @@
 > 目的（用户三重用途）：① 逐条实现未实现的 API；② 检查模组本体相关用法能否走 API（**保证 API 鲜活性**——被本体调用才不腐烂）；③ 为未来 `docs/` 新版提供素材。
 > 生成：2026-09-01。状态基于当前 `refactor` 分支 `api/` 包，`compileJava` 绿。
 > 更新：2026-09-02。① NpcApi 的属性整存取/等级/训练/升级挪入 NpcAttributesApi（§2/§16 同步）；② NpcData 明确定位为 NpcApi 的读返回契约（§3），删除无实体的 `getAssignedHouseId`/`getGraveBlockEntityId`；③ WarehouseApi 声明两个仓库变更事件为公开契约（§8）；④ 新增 MageHutApi（§20）+ NpcApi 存活/复活（§2）；⑤（同日再动）NpcData 转 record 纯字段读模型：删 6 个逐属性读法（getSpellPower/getWorkSpeed/getSpellSpeed/getArmorValue/getMaxHealth/getMaxMana），读面唯一化为 `attributes()`（effective 全量）——`NpcAttributesApi.getNpcAttributes` 读桩同删（二选一去重落地，写路径保留）；`scepterHostileRange`→ScepterApi、`mageHutRestTicks`→MageHutApi 归位（§3/§6/§16/§20 同步）。
+> 更新：2026-09-03。⑥ 新增 NpcMainHandApi（§22）：法师装备栏「法杖槽」放开为**带过滤的主手槽**——准入 = 本模组 `WandItem` ∪ 注册式判定器 ∪ `wandscape:mage_main_hand_tools` 标签；铁魔法 `irons_spellbooks:staff` / 诡厄 `goety:wands` 标签由 compat 层按加载态预注册；本体唯一消费点 `NpcMenu.MainHandSlot`。
 
 ## 图例
 
@@ -344,6 +345,19 @@
 | `boolean isExternalAlly(LivingEntity)` | 命中任一注册判定器（内部兜底查询） | ✅ | 🔧 本体自消费：`WandscapeNpc.classify` |
 
 本体自消费：`getFriendlyForceApiSilently` 1（`WandscapeNpc.classify`，非 API 包）。⚠️ 判定器须轻量（instanceof 优先），它在每次友军判定/目标过滤时被查询。
+
+---
+
+## 22. NpcMainHandApi（新增 2026-09-03：法师主手（法杖）槽准入契约）
+
+> 面向 addon/其它模组：把己方施法杖/法杖登记为**可放进法师装备栏主手（法杖）槽**的物品。法师法杖槽本质是主手装备槽（物品真进主手、原版属性自动结算、与施法逻辑解耦——我们的 WandItem 只是加数值的槽位），故准入做成注册式判定器。实现 `content/npc/internal/NpcMainHandApiImpl`。内置放行：本模组 `WandItem` + `wandscape:mage_main_hand_tools` 标签；铁魔法 `irons_spellbooks:staff` / 诡厄 `goety:wands` 标签由 compat 层加载时预注册。
+
+| 方法 | 用途 | 状态 | dogfood |
+|---|---|---|---|
+| `void registerAllowedItem(Predicate<ItemStack>)` | 注册主手槽准入判定器（幂等累加，任一命中即放行） | ✅ `NpcMainHandApiImpl` | 🔧 本体预注册：`IronSpellsCompat`/`GoetyCompat.registerAllowedMainHandItems`（按模组加载态）。**其它模组兼容直接走它** |
+| `boolean isAllowedItem(ItemStack)` | 是否可放入主手（法杖）槽（内置 + 外部判定统一裁决） | ✅ | 🔧 本体自消费：`NpcMenu`（`MainHandSlot.mayPlace` + shift 双击路由） |
+
+本体自消费：`getNpcMainHandApiSilently` 1（`NpcMenu`，非 API 包）。⚠️ 判定器须轻量（instanceof / 标签优先），它在每次槽位放置判定与 shift 路由时被查询。数据包只加物品不想写 Java 的，把物品 id 加进 `wandscape:mage_main_hand_tools` 标签即可。
 
 ---
 

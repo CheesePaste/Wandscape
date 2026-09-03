@@ -58,6 +58,16 @@ public final class WandscapeApis {
     public static NpcAttributesApi getNpcAttributesApiSilently() { return npcAttributesApi; }
     public static void setNpcAttributesApi(NpcAttributesApi api) { npcAttributesApi = api; }
 
+    /** 法师主手（法杖）槽装备准入。始终装配（无外来模组依赖）。 */
+    private static NpcMainHandApi npcMainHandApi;
+    public static NpcMainHandApi getNpcMainHandApi() {
+        if (npcMainHandApi == null) throw new IllegalStateException("Module NpcSystem not loaded");
+        return npcMainHandApi;
+    }
+    @javax.annotation.Nullable
+    public static NpcMainHandApi getNpcMainHandApiSilently() { return npcMainHandApi; }
+    public static void setNpcMainHandApi(NpcMainHandApi api) { npcMainHandApi = api; }
+
     public static BuildingApi getBuildingApi() {
         if (buildingApi == null) throw new IllegalStateException("Module BuildingCore not loaded");
         return buildingApi;

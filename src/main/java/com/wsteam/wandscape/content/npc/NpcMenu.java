@@ -1,6 +1,7 @@
 package com.wsteam.wandscape.content.npc;
 
 import com.wsteam.wandscape.Wandscape;
+import com.wsteam.wandscape.api.WandscapeApis;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.foundation.ui.vanilla.VanillaPlayerInventory;
 import com.wsteam.wandscape.content.items.magic.wand.item.WandItem;
@@ -19,7 +20,9 @@ import javax.annotation.Nullable;
 
 /**
  * NPC 装备容器菜单：4 盔甲槽（原版 ArmorSlot 语义，直接写 NPC 的 vanilla 装备槽，
- * 经 {@code setItemSlot} 由原版装备结算接管属性）+ 1 法杖槽（变更同步手持/默认法杖）
+ * 经 {@code setItemSlot} 由原版装备结算接管属性）+ 1 主手（法杖）槽（变更同步手持/默认法杖，
+ * 准入按「带过滤的主手槽」：本模组法杖 ∪ {@link com.wsteam.wandscape.api.NpcMainHandApi} 注册的
+ * 施法杖 ∪ {@code wandscape:mage_main_hand_tools} 标签）
  * + 原版玩家背包槽（{@link VanillaPlayerInventory}）。全部槽位都是真实 vanilla 槽——
  * 左键/右键/Shift/拖拽与快捷键全部生效，与原版背包装备槽位一致。
  *
@@ -68,7 +71,7 @@ public class NpcMenu extends AbstractContainerMenu {
             addSlot(new NpcArmorSlot(armorContainer, i, EQUIP_X, EQUIP_Y + i * SLOT,
                     WandscapeNpc.ARMOR_VANILLA_SLOTS[i], npc));
         }
-        addSlot(new WandSlot(wandContainer, 0, EQUIP_X, EQUIP_Y + WAND_SLOT_INDEX * SLOT));
+        addSlot(new MainHandSlot(wandContainer, 0, EQUIP_X, EQUIP_Y + WAND_SLOT_INDEX * SLOT));
         VanillaPlayerInventory.addTo(this::addSlot, playerInventory, PLAYER_INV_Y, PLAYER_HOTBAR_Y);
     }
 
@@ -82,8 +85,8 @@ public class NpcMenu extends AbstractContainerMenu {
         if (slot == null || !slot.hasItem()) return ItemStack.EMPTY;
         ItemStack result = slot.getItem().copy();
         if (index >= EQUIP_SLOT_COUNT) {
-            // 玩家槽 → 装备区（法杖 → 法杖槽，其余 → 盔甲槽，moveItemStackTo 尊重 mayPlace）
-            boolean toWand = slot.getItem().getItem() instanceof WandItem;
+            // 玩家槽 → 装备区（施法杖 → 主手槽，其余 → 盔甲槽，moveItemStackTo 尊重 mayPlace）
+            boolean toWand = isAllowedMainHandItem(slot.getItem());
             if (!moveItemStackTo(slot.getItem(),
                     toWand ? WAND_SLOT_INDEX : 0,
                     toWand ? EQUIP_SLOT_COUNT : ARMOR_COUNT, false)) {
@@ -95,7 +98,7 @@ public class NpcMenu extends AbstractContainerMenu {
                 return ItemStack.EMPTY;
             }
         }
-        // Shift 移动可能改动装备/法杖槽，同步一次。
+        // Shift 移动可能改动装备/主手槽，同步一次。
         if (npc != null) {
             ItemStack wandStack = wandContainer.getItem(0);
             if (wandStack.isEmpty()) {
@@ -252,9 +255,12 @@ public class NpcMenu extends AbstractContainerMenu {
         }
     }
 
-    /** 法杖槽：只接受法杖，单格。 */
-    public static final class WandSlot extends Slot {
-        public WandSlot(Container container, int index, int x, int y) {
+    /**
+     * 主手（法杖）槽：带过滤的主手装备槽，单格。准入 = {@link com.wsteam.wandscape.api.NpcMainHandApi}
+     * 判定（本模组法杖 ∪ 外部注册施法杖 ∪ wandscape 标签），API 未装配时回退只认本模组法杖。
+     */
+    public static final class MainHandSlot extends Slot {
+        public MainHandSlot(Container container, int index, int x, int y) {
             super(container, index, x, y);
         }
 
@@ -265,7 +271,14 @@ public class NpcMenu extends AbstractContainerMenu {
 
         @Override
         public boolean mayPlace(ItemStack stack) {
-            return stack.getItem() instanceof WandItem;
+            return isAllowedMainHandItem(stack);
         }
+    }
+
+    /** 主手槽准入：走 NpcMainHandApi（API 未装配时回退只认本模组法杖，保持旧行为）。 */
+    private static boolean isAllowedMainHandItem(ItemStack stack) {
+        com.wsteam.wandscape.api.NpcMainHandApi api = WandscapeApis.getNpcMainHandApiSilently();
+        if (api != null) return api.isAllowedItem(stack);
+        return stack.getItem() instanceof WandItem;
     }
 }

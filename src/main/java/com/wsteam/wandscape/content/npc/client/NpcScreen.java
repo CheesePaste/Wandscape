@@ -354,11 +354,11 @@ public class NpcScreen extends AbstractContainerScreen<NpcMenu> implements Repla
 
     @Override
     protected void renderSlot(GuiGraphics g, Slot slot) {
-        if (slot instanceof NpcMenu.NpcArmorSlot || slot instanceof NpcMenu.WandSlot) {
+        if (slot instanceof NpcMenu.NpcArmorSlot || slot instanceof NpcMenu.MainHandSlot) {
             VanillaPlayerInventory.blitSlotBackground(g, slot.x, slot.y);
         }
-        // 空法杖槽显示默认法杖图标（默认法杖不可卸，暗示槽位用途）
-        if (slot instanceof NpcMenu.WandSlot && slot.getItem().isEmpty()) {
+        // 空主手（法杖）槽显示默认法杖图标（默认法杖不可卸，暗示槽位用途）
+        if (slot instanceof NpcMenu.MainHandSlot && slot.getItem().isEmpty()) {
             g.renderItem(new ItemStack(Wandscape.WAND.get()), slot.x, slot.y,
                     slot.x + slot.y * imageWidth);
             return;

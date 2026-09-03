@@ -1,9 +1,14 @@
 package com.wsteam.wandscape.compat.goety;
 
 import com.Polarice3.Goety.api.entities.IOwned;
+import com.wsteam.wandscape.api.NpcMainHandApi;
 import com.wsteam.wandscape.foundation.log.Log;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.Item;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModList;
 
@@ -27,6 +32,18 @@ public final class GoetyCompat {
     /** 是否已安装并加载诡厄巫法模组。 */
     public static boolean isLoaded() {
         return loaded;
+    }
+
+    /**
+     * 法师主手（法杖）槽的诡厄巫法施法杖判定：官方物品标签 {@code goety:wands}
+     * （= {@code dark_wand} + {@code #goety:staffs} 全 11 把权杖）。纯标签判定、零引用 Goety 类，
+     * 未装模组时标签恒空 → 恒 false。
+     */
+    public static void registerAllowedMainHandItems(NpcMainHandApi api) {
+        if (!loaded || api == null) return;
+        TagKey<Item> wands = TagKey.create(Registries.ITEM,
+                ResourceLocation.fromNamespaceAndPath(MOD_ID, "wands"));
+        api.registerAllowedItem(stack -> stack.is(wands));
     }
 
     /**

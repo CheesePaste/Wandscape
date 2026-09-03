@@ -103,6 +103,8 @@ import com.wsteam.wandscape.content.warehouse.network.WarehouseActionPacket;
 import com.wsteam.wandscape.content.warehouse.network.WarehouseDataPacket;
 import com.wsteam.wandscape.content.warehouse.network.WarehouseTerminalKeyPacket;
 import com.wsteam.wandscape.content.npc.internal.FriendlyForceApiImpl;
+import com.wsteam.wandscape.api.NpcMainHandApi;
+import com.wsteam.wandscape.content.npc.internal.NpcMainHandApiImpl;
 import net.minecraft.commands.Commands;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
@@ -536,6 +538,11 @@ public class Wandscape {
         WandscapeApis.setMageHutApi(new com.wsteam.wandscape.content.building.internal.MageHutApiImpl());
         WandscapeApis.setColonyApi(ColonyApiImpl.get());
         WandscapeApis.setFriendlyForceApi(new FriendlyForceApiImpl());
+        // 法师主手（法杖）槽准入：先装 API，再让 compat 层按模组加载态预注册铁魔法/诡厄法杖标签判定
+        NpcMainHandApi mainHandApi = new NpcMainHandApiImpl();
+        WandscapeApis.setNpcMainHandApi(mainHandApi);
+        com.wsteam.wandscape.compat.ironspellbooks.IronSpellsCompat.registerAllowedMainHandItems(mainHandApi);
+        com.wsteam.wandscape.compat.goety.GoetyCompat.registerAllowedMainHandItems(mainHandApi);
         WandscapeApis.setTouristApi(new TouristApiImpl());
         tavernApi = new TavernApiImpl();
         WandscapeApis.setTavernApi(tavernApi);
