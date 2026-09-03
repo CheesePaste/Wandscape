@@ -123,9 +123,11 @@ public class WarehouseMenu extends AbstractContainerMenu {
         return result;
     }
 
+    // 恒有效：仓库是殖民地级抽象账本（仓库终端便携可远距开、V 面板远距点开），
+    // 物理距离不该关菜单——由玩家主动关或重开其它菜单替代。
     @Override
     public boolean stillValid(Player player) {
-        return buildingPos == null || player.canInteractWithBlock(buildingPos, 64.0);
+        return true;
     }
 
     // ── Server-side actions (dispatched from WarehouseActionPacket) ──
