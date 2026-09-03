@@ -10,8 +10,10 @@ import io.redspace.ironsspellbooks.api.spells.AbstractSpell;
 import io.redspace.ironsspellbooks.api.spells.ISpellContainer;
 import io.redspace.ironsspellbooks.api.spells.SpellData;
 import io.redspace.ironsspellbooks.item.Scroll;
+import io.redspace.ironsspellbooks.item.SpellBook;
 import io.redspace.ironsspellbooks.registries.ItemRegistry;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 
 import javax.annotation.Nullable;
@@ -160,26 +162,35 @@ public final class IronSpellsHelper {
         return level > 1 ? Component.translatable("%s Lv.%s", baseName, level) : baseName;
     }
 
-    /** 从魔法书物品堆中提取所有已铭刻的有效法术条目。未安装铁魔法或非魔法书返回空列表。 */
-    public static java.util.List<com.wsteam.wandscape.content.npc.component.EquippedMagicComponent.SpellEntry> getSpellsFromSpellbook(ItemStack stack) {
-        if (!IronSpellsCompat.isLoaded() || stack == null || stack.isEmpty()) return java.util.List.of();
+    /**
+     * 铁魔法法术书（Curios「法术书」槽可装备的 {@code SpellBook} 一族）的槽位容量。
+     * 优先读物品堆上 spell container 的 {@code getMaxSpellCount()}（含 SpellSlotUpgrade 扩容，
+     * 与该书的物品 Tooltip 显示一致）；尚无 container 的空白书回退到 {@code SpellBook.getMaxSpellSlots()}。
+     * 非法术书 / 空堆 / 未安装铁魔法返回 0。
+     *
+     * <p>语义：NPC 施法策略栏的铁魔法卷轴上限 = 该容量。见 {@link #equippedSpellbookSlots} 与 ADR。
+     */
+    public static int spellbookSlots(ItemStack stack) {
+        if (!IronSpellsCompat.isLoaded() || stack == null || stack.isEmpty()) return 0;
         if (ISpellContainer.isSpellContainer(stack)) {
             ISpellContainer container = ISpellContainer.get(stack);
-            if (container != null && !container.isEmpty()) {
-                java.util.List<com.wsteam.wandscape.content.npc.component.EquippedMagicComponent.SpellEntry> list = new java.util.ArrayList<>();
-                for (var slot : container.getActiveSpells()) {
-                    if (slot != null && slot.getSpell() != null && slot.getSpell() != SpellRegistry.none()) {
-                        String id = slot.getSpell().getSpellId();
-                        int lvl = Math.max(1, slot.getLevel());
-                        if (isValidSpell(id)) {
-                            list.add(new com.wsteam.wandscape.content.npc.component.EquippedMagicComponent.SpellEntry(id, lvl));
-                        }
-                    }
-                }
-                return list;
-            }
+            if (container != null) return Math.max(0, container.getMaxSpellCount());
         }
-        return java.util.List.of();
+        if (stack.getItem() instanceof SpellBook sb) {
+            return Math.max(0, sb.getMaxSpellSlots());
+        }
+        return 0;
+    }
+
+    /**
+     * 实体（NPC）当前策略栏可用铁魔法卷轴槽位：读 Curios「法术书」槽容量。
+     * 未装 Curios / 铁魔法或未佩戴法术书返回 0（铁魔法禁用）。服务端与客户端同口径，
+     * 是 {@code CastBrain}/{@code NpcStrategyMenu} 门控与策略屏状态行共同的数据源。
+     */
+    public static int equippedSpellbookSlots(LivingEntity entity) {
+        if (!IronSpellsCompat.isLoaded() || entity == null) return 0;
+        if (!com.wsteam.wandscape.compat.curios.CuriosCompat.isLoaded()) return 0;
+        return spellbookSlots(com.wsteam.wandscape.compat.curios.CuriosCompat.getEquippedSpellbook(entity));
     }
 
     /** 根据铁魔法法术名称智能推导其所属策略组（single_target/aoe/defense/support）。 */

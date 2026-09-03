@@ -48,6 +48,13 @@ public class NpcStrategyMenu extends AbstractContainerMenu {
     private final WandscapeNpc npc;
     private final SimpleContainer spellSlots = new SimpleContainer(SPELL_SLOT_COUNT);
 
+    /**
+     * 第三方魔法策略栏门控上限（服务端打开时按 NPC 算出；-1 = 客户端未知，NpcDataPacket 后补设）。
+     * 铁魔法卷轴：Curios「法术书」槽容量，0 = 无书禁用；诡厄聚晶：主手持诡厄法杖为 1，否则 0。
+     */
+    private int ironScrollCap = -1;
+    private int goetyFocusCap = -1;
+
     /** Client-side factory (MenuType): contents arrive via sync. */
     public NpcStrategyMenu(int containerId, Inventory playerInventory) {
         this(containerId, playerInventory, null);
@@ -57,6 +64,8 @@ public class NpcStrategyMenu extends AbstractContainerMenu {
     public NpcStrategyMenu(int containerId, Inventory playerInventory, @Nullable WandscapeNpc npc) {
         super(Wandscape.NPC_STRATEGY_MENU.get(), containerId);
         this.npc = npc;
+        this.ironScrollCap = capForNpc(npc, KIND_IRON);
+        this.goetyFocusCap = capForNpc(npc, KIND_GOETY);
         if (npc != null) {
             for (int cat = 0; cat < CATEGORY_COUNT; cat++) {
                 List<EquippedMagicComponent.SpellEntry> bucket =
@@ -68,7 +77,7 @@ public class NpcStrategyMenu extends AbstractContainerMenu {
         }
         for (int cat = 0; cat < CATEGORY_COUNT; cat++) {
             for (int s = 0; s < SLOTS_PER_CATEGORY; s++) {
-                addSlot(new SpellSlot(spellSlots, cat * SLOTS_PER_CATEGORY + s,
+                addSlot(new SpellSlot(this, spellSlots, cat * SLOTS_PER_CATEGORY + s,
                         SPELL_X + s * SLOT, SPELL_Y + cat * ROW_PITCH,
                         EquippedMagicComponent.CATEGORIES.get(cat)));
             }
@@ -126,6 +135,14 @@ public class NpcStrategyMenu extends AbstractContainerMenu {
     /** 任意槽操作（放卷轴/取出/Shift/拖拽）后重建装备态写回 NPC。 */
     @Override
     public void clicked(int slotId, int dragType, net.minecraft.world.inventory.ClickType clickType, Player player) {
+        // 服务端权威防绕过：手持第三方卷轴/聚晶直接点已占策略槽（换走非同类条目 → 同类占用净增）且
+        // 突破门控时整吞本次点击——物品留在光标不入槽。空槽放入/Shift 由 mayPlace 拦（见 SpellSlot）。
+        if (clickType == net.minecraft.world.inventory.ClickType.PICKUP
+                && slotId >= 0 && slotId < SPELL_SLOT_COUNT
+                && !spellSlots.getItem(slotId).isEmpty()
+                && gateReasonForCarried(slotId) != null) {
+            return;
+        }
         super.clicked(slotId, dragType, clickType, player);
         if (npc == null || npc.isRemoved()) return;
         // 拖拽多格结束会以 slotId=-999 回调，仍需同步。QUICK_MOVE（Shift 快速转移）的
@@ -136,6 +153,116 @@ public class NpcStrategyMenu extends AbstractContainerMenu {
                 || clickType == net.minecraft.world.inventory.ClickType.QUICK_CRAFT) {
             syncEquipped();
         }
+    }
+
+    // ── 第三方魔法门控：装进策略栏需装备门（2026-09-03，见 ADR）──
+    // 铁魔法卷轴：需 Curios「法术书」槽，容量 = 法术书槽位（ironScrollCap）。
+    // 诡厄聚晶：需主手（法杖栏）持诡厄法杖，全栏上限 1（goetyFocusCap）。
+    // 原生魔法卷轴不受门控；cap==-1（未知）放行，由服务端权威兜底。
+
+    private static final int KIND_IRON = 1;
+    private static final int KIND_GOETY = 2;
+
+    /** 按 NPC 与种类算门控上限；npc==null（客户端构造）为 -1，收到 NpcDataPacket 后由屏幕补设。 */
+    private static int capForNpc(@Nullable WandscapeNpc npc, int kind) {
+        if (npc == null) return -1;
+        if (kind == KIND_IRON) {
+            if (!com.wsteam.wandscape.compat.ironspellbooks.IronSpellsCompat.isLoaded()) return 0; // 未装 → 无此类条目
+            return com.wsteam.wandscape.compat.ironspellbooks.IronSpellsHelper.equippedSpellbookSlots(npc);
+        }
+        if (kind == KIND_GOETY) {
+            if (!com.wsteam.wandscape.compat.goety.GoetyCompat.isLoaded()) return 0;
+            return com.wsteam.wandscape.compat.goety.GoetyCompat.isHoldingGoetyWand(npc) ? 1 : 0;
+        }
+        return 0;
+    }
+
+    /** 客户端收到 NpcDataPacket 后补设上限（服务端已由构造算好）。 */
+    public void setIronScrollCap(int cap) {
+        this.ironScrollCap = cap;
+    }
+
+    public void setGoetyFocusCap(int cap) {
+        this.goetyFocusCap = cap;
+    }
+
+    private int capForKind(int kind) {
+        return kind == KIND_GOETY ? goetyFocusCap : ironScrollCap;
+    }
+
+    /** 条目归属：{@link #KIND_IRON} 铁魔法卷轴 / {@link #KIND_GOETY} 诡厄聚晶 / 0 原生或未知。 */
+    public static int kindOf(ItemStack stack) {
+        if (stack == null || stack.isEmpty()) return 0;
+        if (com.wsteam.wandscape.compat.ironspellbooks.IronSpellsCompat.isLoaded()
+                && com.wsteam.wandscape.compat.ironspellbooks.IronSpellsHelper.isScroll(stack)) return KIND_IRON;
+        if (com.wsteam.wandscape.compat.goety.GoetyCompat.isLoaded()
+                && com.wsteam.wandscape.compat.goety.GoetyHelper.isFocus(stack)) return KIND_GOETY;
+        return 0;
+    }
+
+    /** 该种类当前已占策略栏槽位数（跨 4 类合计）。 */
+    public int countKind(int kind) {
+        int n = 0;
+        for (int i = 0; i < SPELL_SLOT_COUNT; i++) {
+            if (kindOf(spellSlots.getItem(i)) == kind) n++;
+        }
+        return n;
+    }
+
+    /** 策略栏内当前铁魔法卷轴条目数（{@link #KIND_IRON}）。 */
+    public int countIronScrolls() {
+        return countKind(KIND_IRON);
+    }
+
+    /** 策略栏内当前诡厄聚晶条目数（{@link #KIND_GOETY}）。 */
+    public int countGoetyFocuses() {
+        return countKind(KIND_GOETY);
+    }
+
+    /**
+     * mayPlace 用：第三方条目放入（空）策略槽是否被门控拦截（调用方保证目标槽为空）。
+     * cap==-1 放行；cap==0 禁入；已达上限禁入。
+     */
+    public boolean gateBlocksEmptyInsert(ItemStack stack) {
+        int kind = kindOf(stack);
+        if (kind == 0) return false;
+        int cap = capForKind(kind);
+        if (cap < 0) return false;
+        if (cap <= 0) return true;
+        return countKind(kind) >= cap;
+    }
+
+    /**
+     * 手持第三方条目对某策略槽「放入/换入」的门控原因：null=放行，否则 reason key
+     * （iron.needs_spellbook / iron.cap_full / goety.needs_wand / goety.one_only）。
+     * 换走槽内同种类条目时占用不变。读本菜单 spellSlots 与 carried，服务端与客户端同口径：
+     * 服务端用于 {@link #clicked} 整吞防绕过，客户端用于策略屏红字提示。
+     */
+    @Nullable
+    public String gateReasonForCarried(int targetSlot) {
+        int kind = kindOf(this.getCarried());
+        if (kind == 0) return null;
+        int cap = capForKind(kind);
+        if (cap < 0) return null;
+        if (cap <= 0) return kind == KIND_GOETY ? "goety.needs_wand" : "iron.needs_spellbook";
+        int used = countKind(kind);
+        ItemStack target = targetSlot >= 0 && targetSlot < spellSlots.getContainerSize()
+                ? spellSlots.getItem(targetSlot) : ItemStack.EMPTY;
+        if (kindOf(target) == kind) used--;
+        if (used + 1 > cap) return kind == KIND_GOETY ? "goety.one_only" : "iron.cap_full";
+        return null;
+    }
+
+    /** Shift 快放（玩家背包第三方条目 → 策略栏）的门控原因：null=放行。 */
+    @Nullable
+    public String gateReasonForQuickAdd(ItemStack source) {
+        int kind = kindOf(source);
+        if (kind == 0) return null;
+        int cap = capForKind(kind);
+        if (cap < 0) return null;
+        if (cap <= 0) return kind == KIND_GOETY ? "goety.needs_wand" : "iron.needs_spellbook";
+        return countKind(kind) + 1 > cap
+                ? (kind == KIND_GOETY ? "goety.one_only" : "iron.cap_full") : null;
     }
 
     private void syncEquipped() {
@@ -180,9 +307,11 @@ public class NpcStrategyMenu extends AbstractContainerMenu {
     /** 卷轴槽：接受原生魔法卷轴、铁魔法卷轴与 Goety 聚晶，且去重、每类 ≤ 上限。 */
     public static final class SpellSlot extends Slot {
         private final String category;
+        private final NpcStrategyMenu owner;
 
-        public SpellSlot(Container container, int index, int x, int y, String category) {
+        public SpellSlot(NpcStrategyMenu owner, Container container, int index, int x, int y, String category) {
             super(container, index, x, y);
+            this.owner = owner;
             this.category = category;
         }
 
@@ -210,6 +339,8 @@ public class NpcStrategyMenu extends AbstractContainerMenu {
                 if (magicId == null || !com.wsteam.wandscape.compat.ironspellbooks.IronSpellsHelper.isValidSpell(magicId)) {
                     return false;
                 }
+                // 铁魔法卷轴门控：需 NPC 佩戴可用法术书且未超其槽位容量（原生卷轴/诡厄聚晶不受限）。
+                if (owner.gateBlocksEmptyInsert(stack)) return false;
                 // 铁魔法卷轴可自由放置于任意 4 大门类槽位中
             } else if (com.wsteam.wandscape.compat.goety.GoetyCompat.isLoaded()
                     && com.wsteam.wandscape.compat.goety.GoetyHelper.isFocus(stack)) {
@@ -217,6 +348,8 @@ public class NpcStrategyMenu extends AbstractContainerMenu {
                 if (magicId == null || !com.wsteam.wandscape.compat.goety.GoetyHelper.isValidSpell(magicId)) {
                     return false;
                 }
+                // 诡厄聚晶门控：主手（法杖栏）持诡厄法杖才可放入，且全栏只装 1 个。
+                if (owner.gateBlocksEmptyInsert(stack)) return false;
                 // 诡厄巫法聚晶可自由放置于任意 4 大门类槽位中
             } else {
                 return false;

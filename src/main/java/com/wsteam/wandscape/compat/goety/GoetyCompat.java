@@ -25,6 +25,14 @@ public final class GoetyCompat {
     private static final String TAG = "GoetyCompat";
     public static final String MOD_ID = "goety";
 
+    /**
+     * 诡厄巫法施法杖物品标签 {@code goety:wands}（= {@code dark_wand} + {@code #goety:staffs}
+     * 全 11 把权杖）：既是法师主手（法杖）槽准入的判定，也是「主手持法杖 → 策略栏可放聚晶」
+     * 门控的同一数据源。纯标签、零引用 Goety 类。
+     */
+    public static final TagKey<Item> WANDS_TAG =
+            TagKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath(MOD_ID, "wands"));
+
     private static boolean loaded = false;
 
     private GoetyCompat() {}
@@ -41,9 +49,16 @@ public final class GoetyCompat {
      */
     public static void registerAllowedMainHandItems(NpcMainHandApi api) {
         if (!loaded || api == null) return;
-        TagKey<Item> wands = TagKey.create(Registries.ITEM,
-                ResourceLocation.fromNamespaceAndPath(MOD_ID, "wands"));
-        api.registerAllowedItem(stack -> stack.is(wands));
+        api.registerAllowedItem(stack -> stack.is(WANDS_TAG));
+    }
+
+    /**
+     * 法师主手（法杖栏）当前是否手持诡厄巫法施法杖（{@link #WANDS_TAG}）。
+     * 诡厄聚晶门控数据源：持杖 → 策略栏可放 1 个聚晶；否则 0。未装 Goety 恒 false。
+     */
+    public static boolean isHoldingGoetyWand(LivingEntity entity) {
+        if (!loaded || entity == null) return false;
+        return entity.getItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND).is(WANDS_TAG);
     }
 
     /**

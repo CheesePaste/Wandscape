@@ -46,12 +46,23 @@ public final class CastBrain {
     }
 
     /**
-     * 把 NPC 的 EquippedMagicComponent 容器与 Curios 魔法书槽中的铭刻法术解析为带策略组的法术引用列表
-     * （支持原生魔法与铁魔法动态合成）；{@code group} = 法术实际所在的桶名，驱动敌数门控与预设排序。
+     * 把 NPC 的 {@code EquippedMagicComponent} 容器解析为带策略组的法术引用列表（支持原生魔法、
+     * 铁魔法与诡厄巫法动态合成）；{@code group} = 法术实际所在的桶名，驱动敌数门控与预设排序。
+     *
+     * <p>第三方魔法只认策略栏卷轴/聚晶且受装备门控（2026-09-03，见 ADR）：
+     * <ul>
+     *   <li>铁魔法卷轴需 Curios「法术书」槽容量 &gt; 0，且按容量计入前 {@code cap} 个；</li>
+     *   <li>诡厄聚晶需主手（法杖栏）持诡厄法杖（{@code goety:wands}），全栏只计入 1 个。</li>
+     * </ul>
+     * 装备缺失 / 超出上限的残留条目保持惰性不施放、不删除——补书 / 持杖自动恢复。
      */
     public static List<SpellRef> knownSpells(EquippedMagicComponent equipped, @Nullable com.wsteam.wandscape.content.npc.entity.WandscapeNpc npc) {
         List<SpellRef> out = new ArrayList<>();
         if (equipped != null) {
+            int ironCap = ironScrollCap(npc);
+            int ironUsed = 0;
+            int goetyCap = goetyFocusCap(npc);
+            int goetyUsed = 0;
             for (String group : EquippedMagicComponent.CATEGORIES) {
                 for (EquippedMagicComponent.SpellEntry entry : equipped.listEntries(group)) {
                     MagicDef def = SpellbookLoader.getSpec(entry.id());
@@ -59,44 +70,50 @@ public final class CastBrain {
                         out.add(new SpellRef(def, group));
                     } else if (com.wsteam.wandscape.compat.ironspellbooks.IronSpellsCompat.isLoaded()
                             && com.wsteam.wandscape.compat.ironspellbooks.IronSpellsHelper.isValidSpell(entry.id())) {
+                        // 铁魔法门控：cap==0（无可用书）→ 全部不施放；cap>0 → 只计入前 cap 个
+                        // （策略栏已装卷轴里超容的保持惰性）。npc==null 表示无门控信息，放行。
+                        if (ironCap >= 0 && ironUsed >= ironCap) continue;
                         MagicDef syn = com.wsteam.wandscape.compat.ironspellbooks.IronSpellsHelper
                                 .getSyntheticDef(entry.id(), entry.level(), group);
                         if (syn != null) {
                             out.add(new SpellRef(syn, group));
+                            if (ironCap >= 0) ironUsed++;
                         }
                     } else if (com.wsteam.wandscape.compat.goety.GoetyCompat.isLoaded()
                             && com.wsteam.wandscape.compat.goety.GoetyHelper.isValidSpell(entry.id())) {
+                        // 诡厄巫法门控：主手持诡厄法杖才可施放，且全策略栏只装 1 个聚晶（超出的惰性保留）。
+                        if (goetyCap >= 0 && goetyUsed >= goetyCap) continue;
                         MagicDef syn = com.wsteam.wandscape.compat.goety.GoetyHelper
                                 .getSyntheticDef(entry.id(), group, entry.customData());
                         if (syn != null) {
                             out.add(new SpellRef(syn, group));
-                        }
-                    }
-                }
-            }
-        }
-        if (npc != null && com.wsteam.wandscape.compat.curios.CuriosCompat.isLoaded()
-                && com.wsteam.wandscape.compat.ironspellbooks.IronSpellsCompat.isLoaded()) {
-            net.minecraft.world.item.ItemStack spellbook = com.wsteam.wandscape.compat.curios.CuriosCompat.getEquippedSpellbook(npc);
-            if (!spellbook.isEmpty()) {
-                var entries = com.wsteam.wandscape.compat.ironspellbooks.IronSpellsHelper.getSpellsFromSpellbook(spellbook);
-                java.util.Set<String> alreadyKnown = new java.util.HashSet<>();
-                for (SpellRef ref : out) {
-                    alreadyKnown.add(ref.def().id());
-                }
-                for (var entry : entries) {
-                    if (alreadyKnown.add(entry.id())) {
-                        String group = com.wsteam.wandscape.compat.ironspellbooks.IronSpellsHelper.inferCategory(entry.id());
-                        MagicDef syn = com.wsteam.wandscape.compat.ironspellbooks.IronSpellsHelper
-                                .getSyntheticDef(entry.id(), entry.level(), group);
-                        if (syn != null) {
-                            out.add(new SpellRef(syn, group));
+                            if (goetyCap >= 0) goetyUsed++;
                         }
                     }
                 }
             }
         }
         return out;
+    }
+
+    /**
+     * NPC 当前策略栏可用铁魔法卷轴槽位：读 Curios「法术书」槽容量（见 {@code IronSpellsHelper}）。
+     * {@code npc == null}（纯容器视图、无实体句柄）返回 -1 = 不门控。
+     */
+    private static int ironScrollCap(@Nullable com.wsteam.wandscape.content.npc.entity.WandscapeNpc npc) {
+        if (npc == null) return -1;
+        if (!com.wsteam.wandscape.compat.ironspellbooks.IronSpellsCompat.isLoaded()) return 0;
+        return com.wsteam.wandscape.compat.ironspellbooks.IronSpellsHelper.equippedSpellbookSlots(npc);
+    }
+
+    /**
+     * NPC 当前策略栏可用诡厄聚晶槽位：主手（法杖栏）持诡厄法杖为 1，否则 0。
+     * {@code npc == null}（纯容器视图、无实体句柄）返回 -1 = 不门控。
+     */
+    private static int goetyFocusCap(@Nullable com.wsteam.wandscape.content.npc.entity.WandscapeNpc npc) {
+        if (npc == null) return -1;
+        if (!com.wsteam.wandscape.compat.goety.GoetyCompat.isLoaded()) return 0;
+        return com.wsteam.wandscape.compat.goety.GoetyCompat.isHoldingGoetyWand(npc) ? 1 : 0;
     }
 
     /**

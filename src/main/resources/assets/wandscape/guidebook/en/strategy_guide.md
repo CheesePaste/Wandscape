@@ -27,6 +27,14 @@ How to open: **aim your crosshair at a wizard and right-click → info screen �
 - Once you have configured a wizard (toggled or reordered), your configuration is used; wizards you never configured follow the preset.
 - Altar spells (like Revive) are not in auto-casting — see the [Altar](altar_guide.md).
 
+## Third-party spells need the right gear
+
+**Iron's Spells scrolls** can only be given to a wizard who wears a **spell book** in their curio slot. The number of **Iron spell scrolls** you can place = the spell book's **spell slots** (larger books hold more). Without a spell book equipped, Iron spell scrolls cannot be placed into the strategy bar, and any already placed ones stop being cast — they are kept and resume once a book is equipped.
+
+**Goety focuses** require the wizard to hold a **Goety wand in their main hand** (the staff slot), and only **one focus** fits in the whole strategy bar at a time. Without a wand, focuses can't be placed and any placed ones stop being cast until a wand is equipped.
+
+Native Wandscape scrolls are not affected.
+
 ---
 
 [Wizard NPC Guide](npc_guide.md)  

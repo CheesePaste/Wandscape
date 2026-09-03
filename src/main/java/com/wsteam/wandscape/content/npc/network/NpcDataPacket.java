@@ -47,7 +47,9 @@ public record NpcDataPacket(
         int hatColor,
         boolean peaceMode,
         boolean followMode,
-        Map<String, String> magicCatalog
+        Map<String, String> magicCatalog,
+        int ironSpellSlots,
+        int goetyFocusSlots
 ) implements CustomPacketPayload {
 
     public static final Type<NpcDataPacket> TYPE =
@@ -104,6 +106,8 @@ public record NpcDataPacket(
         buf.writeBoolean(pkt.peaceMode);
         buf.writeBoolean(pkt.followMode);
         buf.writeMap(pkt.magicCatalog, (b, s) -> b.writeUtf(s), (b, s) -> b.writeUtf(s));
+        buf.writeVarInt(pkt.ironSpellSlots);
+        buf.writeVarInt(pkt.goetyFocusSlots);
     }
 
     private static void writeStringList(RegistryFriendlyByteBuf buf, List<String> list) {
@@ -141,11 +145,13 @@ public record NpcDataPacket(
         boolean peaceMode = buf.readBoolean();
         boolean followMode = buf.readBoolean();
         Map<String, String> magicCatalog = buf.readMap(HashMap::new, b -> b.readUtf(), b -> b.readUtf());
+        int ironSpellSlots = buf.readVarInt();
+        int goetyFocusSlots = buf.readVarInt();
         return new NpcDataPacket(entityId, npcName, currentHealth, maxHealth,
                 currentMana, maxMana, moveSpeed, spellPower, workSpeed, spellSpeed,
                 armorValue, wandStack, isDefaultWand, strategyPreset, knownSpells,
                 spellCategories, priority, armorStacks, skinVariant, hatColor,
-                peaceMode, followMode, magicCatalog);
+                peaceMode, followMode, magicCatalog, ironSpellSlots, goetyFocusSlots);
     }
 
     private static List<String> readStringList(RegistryFriendlyByteBuf buf) {
@@ -206,6 +212,14 @@ public record NpcDataPacket(
             magicCatalog.put(e.getKey(), def.category().name().toLowerCase(Locale.ROOT));
         }
 
+        // 铁魔法策略栏门控容量 = Curios 法术书槽容量（无书为 0）；策略屏据此渲染状态行与拦截红字。
+        int ironSpellSlots = com.wsteam.wandscape.compat.ironspellbooks.IronSpellsCompat.isLoaded()
+                ? com.wsteam.wandscape.compat.ironspellbooks.IronSpellsHelper.equippedSpellbookSlots(npc)
+                : 0;
+        // 诡厄聚晶策略栏门控 = 主手（法杖栏）持诡厄法杖 ? 1 : 0。
+        int goetyFocusSlots = com.wsteam.wandscape.compat.goety.GoetyCompat.isLoaded()
+                && com.wsteam.wandscape.compat.goety.GoetyCompat.isHoldingGoetyWand(npc) ? 1 : 0;
+
         return new NpcDataPacket(
                 npc.getId(),
                 npc.getNpcName(),
@@ -229,7 +243,9 @@ public record NpcDataPacket(
                 npc.getHatColor(),
                 npc.isPeaceMode(),
                 npc.isFollowMode(),
-                magicCatalog
+                magicCatalog,
+                ironSpellSlots,
+                goetyFocusSlots
         );
     }
 }

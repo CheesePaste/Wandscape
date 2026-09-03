@@ -19,6 +19,7 @@ import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.inventory.Slot;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.List;
@@ -51,16 +52,26 @@ public class NpcStrategyScreen extends AbstractContainerScreen<NpcStrategyMenu>
     private final String helpDocumentPath = "strategy_guide";
     private final java.util.Map<String, int[]> presetButtonBounds = new java.util.LinkedHashMap<>();
 
+    /** 第三方魔法策略栏门控上限（NpcDataPacket 补设：-1 未收到；0 装备缺失禁用）。 */
+    private int ironSpellSlots = -1;
+    private int goetyFocusSlots = -1;
+
     public NpcStrategyScreen(NpcStrategyMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
         this.imageWidth = NpcStrategyMenu.PANEL_W;
         this.imageHeight = NpcStrategyMenu.PANEL_H;
     }
 
-    /** 服务端回发策略数据时刷新预设高亮与实体 id。 */
+    /** 服务端回发策略数据时刷新预设高亮、实体 id 与第三方魔法门控上限。 */
     public void apply(NpcDataPacket packet) {
         this.entityId = packet.entityId();
         this.preset = packet.strategyPreset() != null ? packet.strategyPreset() : "BALANCED";
+        this.ironSpellSlots = packet.ironSpellSlots();
+        this.goetyFocusSlots = packet.goetyFocusSlots();
+        if (this.menu != null) {
+            this.menu.setIronScrollCap(packet.ironSpellSlots());
+            this.menu.setGoetyFocusCap(packet.goetyFocusSlots());
+        }
     }
 
     @Override
@@ -122,6 +133,7 @@ public class NpcStrategyScreen extends AbstractContainerScreen<NpcStrategyMenu>
         renderInventoryBackground(g);
         renderCategoryRows(g);
         renderSpecialPanel(g);
+        renderThirdPartyFooter(g, mouseX, mouseY);
     }
 
     private void renderHeader(GuiGraphics g, int mouseX, int mouseY) {
@@ -187,6 +199,93 @@ public class NpcStrategyScreen extends AbstractContainerScreen<NpcStrategyMenu>
                 I18n.name("gui.wandscape.strategy.special.note", "默认使用，不可更换").getString(),
                 colX, startY + 3 * NpcStrategyMenu.ROW_PITCH + (NpcStrategyMenu.SLOT - font.lineHeight) / 2,
                 MedievalColors.TEXT_DIM);
+    }
+
+    /**
+     * 底部信息行（几何命中 + 酒馆 toast 配色惯例）：悬停策略槽手持铁卷轴/聚晶被装备门控拦截时红字显示
+     * 原因；否则常驻显示铁魔法 / 诡厄聚晶的容量或停用状态。无第三方魔法、无实际占用或数据未到则不画。
+     */
+    private void renderThirdPartyFooter(GuiGraphics g, int mouseX, int mouseY) {
+        boolean ironOn = com.wsteam.wandscape.compat.ironspellbooks.IronSpellsCompat.isLoaded();
+        boolean goetyOn = com.wsteam.wandscape.compat.goety.GoetyCompat.isLoaded();
+        if ((!ironOn && !goetyOn) || (ironSpellSlots < 0 && goetyFocusSlots < 0)) return;
+        NpcStrategyMenu menu = this.menu;
+        int hovered = slotIndexAt(mouseX, mouseY);
+        String reason = null;
+        if (hovered >= 0) {
+            if (hovered < NpcStrategyMenu.SPELL_SLOT_COUNT && !menu.getCarried().isEmpty()) {
+                reason = menu.gateReasonForCarried(hovered);
+            } else if (hovered >= NpcStrategyMenu.SPELL_SLOT_COUNT && hasShiftDown()
+                    && !menu.slots.get(hovered).getItem().isEmpty()) {
+                reason = menu.gateReasonForQuickAdd(menu.slots.get(hovered).getItem());
+            }
+        }
+        if (reason != null) {
+            drawInfoLine(g, reasonKey(reason).getString(), 0xFFFF6B6B);
+            return;
+        }
+        java.util.List<String> segs = new java.util.ArrayList<>(2);
+        boolean warn = false;
+        if (ironOn) {
+            int used = menu.countIronScrolls();
+            if (used > 0) {
+                if (ironSpellSlots > 0) {
+                    segs.add(I18n.name("gui.wandscape.strategy.iron.cap_used",
+                            "Iron " + used + "/" + ironSpellSlots, used, ironSpellSlots).getString());
+                } else {
+                    segs.add(I18n.name("gui.wandscape.strategy.iron.no_book_inert",
+                            "No spell book: Iron off", used).getString());
+                    warn = true;
+                }
+            }
+        }
+        if (goetyOn) {
+            int used = menu.countGoetyFocuses();
+            if (used > 0) {
+                if (goetyFocusSlots > 0) {
+                    segs.add(I18n.name("gui.wandscape.strategy.goety.cap_used",
+                            "Focus " + used + "/1", used, 1).getString());
+                } else {
+                    segs.add(I18n.name("gui.wandscape.strategy.goety.no_wand_inert",
+                            "No wand: focus off", used).getString());
+                    warn = true;
+                }
+            }
+        }
+        if (segs.isEmpty()) return;
+        drawInfoLine(g, String.join("   ", segs),
+                warn ? MedievalColors.ACCENT_GOLD : MedievalColors.TEXT_WARM_WHITE);
+    }
+
+    /** 底部单行信息（裁宽、压暗底，防玻璃底不可读）。 */
+    private void drawInfoLine(GuiGraphics g, String text, int color) {
+        text = font.plainSubstrByWidth(text, imageWidth - 60);
+        int x = leftPos + 8;
+        int y = topPos + imageHeight - font.lineHeight - 3;
+        g.fill(x - 1, y - 2, x + font.width(text) + 1, y + font.lineHeight + 1, 0x88000000);
+        g.drawString(font, text, x, y, color);
+    }
+
+    /** 门控拦截原因文案（key = 平台前缀，如 iron.needs_spellbook / goety.one_only）。 */
+    private net.minecraft.network.chat.Component reasonKey(String key) {
+        String fallback = switch (key) {
+            case "iron.needs_spellbook" -> "Equip an Iron's spell book (curio) to place Iron scrolls";
+            case "iron.cap_full" -> "No free spell-book slot";
+            case "goety.needs_wand" -> "Equip a Goety wand in the main hand to place focuses";
+            case "goety.one_only" -> "Only one focus fits in the strategy bar";
+            default -> key;
+        };
+        return I18n.name("gui.wandscape.strategy." + key, fallback);
+    }
+
+    /** 鼠标下的第一个菜单槽索引（几何命中，同酒馆 isInRect 惯例）；无返回 -1。 */
+    private int slotIndexAt(double mouseX, double mouseY) {
+        for (int i = 0; i < this.menu.slots.size(); i++) {
+            Slot slot = this.menu.slots.get(i);
+            if (isInRect(mouseX, mouseY, leftPos + slot.x, topPos + slot.y,
+                    NpcStrategyMenu.SLOT, NpcStrategyMenu.SLOT)) return i;
+        }
+        return -1;
     }
 
     @Override

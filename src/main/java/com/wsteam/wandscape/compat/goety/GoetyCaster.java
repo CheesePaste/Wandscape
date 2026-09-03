@@ -165,6 +165,10 @@ public final class GoetyCaster {
                 return true;
             } else {
                 // 持续引导或蓄力法术（如喷吐法术等）
+                // TODO：诡厄巫法的持续聚晶（EverChargeSpell，如箭雨聚晶 goety:arrow_rain_focus）无法正确释放——
+                //  玩家侧需持续蓄力施法、过程中逐释放周期触发 SpellResult 分批放出（见 Goety DarkWand.MagicResults），
+                //  这里的「一次 startSpell + 固定 channelTicks 引导 + 每 20t 补一发 SpellResult」模型对这类法术不成立，
+                //  表现为箭雨聚晶引导到点即 stopSpell，放不出应有的持续箭雨。仅记录问题，不在此讨论解法。
                 int channelTicks = Math.min(60, Math.max(20, (int) Math.ceil(30.0 / spellSpeed)));
                 if (!npc.tryCastSpell(focusId, baseCooldown, manaCost, channelTicks)) {
                     return false;
