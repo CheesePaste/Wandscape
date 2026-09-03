@@ -27,54 +27,54 @@ public class Config {
 
     public static final ModConfigSpec.IntValue INITIAL_ELEMENT_COUNT = BUILDER
             .comment("每种元素在小镇仓库首次建立时的初始数量（每小镇一次，只种一次）。")
-            .defineInRange("colony.initialElementCount", 6000, 0, 1000000);
+            .defineInRange("colony.initialElementCount", 6000, 0, 2147483647);
 
     // ---- Element system ----
 
     public static final ModConfigSpec.DoubleValue ELEMENT_DECOMPOSE_DIVISOR = BUILDER
             .comment("Workstation 分解产出除数：分解物品返回其映射元素值的 1/N。"
                     + "默认 5 = 1/5（原为硬编码 1/10，回收率偏低）。")
-            .defineInRange("element.decomposeDivisor", 5.0, 1.0, 100.0);
+            .defineInRange("element.decomposeDivisor", 5.0, 1.0, 1000000.0);
 
     public static final ModConfigSpec.DoubleValue ELEMENT_CRAFT_COST_MULTIPLIER = BUILDER
             .comment("合成/制作消耗倍率：Workstation 合成、法杖制作、酿造消耗的元素 × 该系数。"
                     + "默认 1.0；设为 2.0 则消耗翻倍（消耗向上取整，不会少扣）。"
                     + "警告：修改会导致利润率低于该数值的商店不盈利。")
-            .defineInRange("element.craftCostMultiplier", 1.0, 0.1, 10.0);
+            .defineInRange("element.craftCostMultiplier", 1.0, 1.0, 1000000.0);
 
     // ---- Tourist system ----
 
     public static final ModConfigSpec.IntValue TOURIST_MAX_PER_COLONY = BUILDER
             .comment("Maximum simultaneous tourists per colony")
-            .defineInRange("tourist.maxPerColony", 150, 5, 500);
+            .defineInRange("tourist.maxPerColony", 150, 1, 1000000);
 
     public static final ModConfigSpec.IntValue TOURIST_BASE_SPAWN_COUNT = BUILDER
             .comment("Daily spawn count lower bound at colony level 1. "
                     + "每日新增数 = 均匀区间 [base+(lv-1)×levelSpawnBonus, base+(lv-1)×levelSpawnBonus+spawnRangeWidth-1]")
-            .defineInRange("tourist.baseSpawnCount", 5, 1, 100);
+            .defineInRange("tourist.baseSpawnCount", 5, 1, 1000000);
 
     public static final ModConfigSpec.IntValue TOURIST_LEVEL_SPAWN_BONUS = BUILDER
             .comment("Additional tourists per colony level (both lower and upper bounds +1 per level)")
-            .defineInRange("tourist.levelSpawnBonus", 1, 0, 10);
+            .defineInRange("tourist.levelSpawnBonus", 1, 0, 1000000);
 
     public static final ModConfigSpec.IntValue TOURIST_SPAWN_RANGE_WIDTH = BUILDER
             .comment("Daily spawn count fluctuation width: target ∈ [lower, lower+width-1]. "
                     + "默认 3 = 1 级 5~7、2 级 6~8、3 级 7~9")
-            .defineInRange("tourist.spawnRangeWidth", 3, 0, 50);
+            .defineInRange("tourist.spawnRangeWidth", 3, 0, 1000000);
 
     public static final ModConfigSpec.IntValue COLONY_EXP_EQUAL_LEVEL = BUILDER
             .comment("Experience granted when tourist level == colony level (满条离场时)。"
                     + "700/1400（上调自 250/500）+ 低于小镇等级给一半 + expToNext 二次曲线，"
                     + "标定：5级≈5天、10级≈12天、15级≈22天、20级≈34天、30级满≈68天（sim 保守口径）。")
-            .defineInRange("colony.expEqualLevel", 700, 0, 10000);
+            .defineInRange("colony.expEqualLevel", 700, 0, 1000000);
 
     public static final ModConfigSpec.IntValue COLONY_EXP_ABOVE_LEVEL = BUILDER
             .comment("Experience granted when tourist level > colony level")
-            .defineInRange("colony.expAboveLevel", 1400, 0, 10000);
+            .defineInRange("colony.expAboveLevel", 1400, 0, 1000000);
 
     public static final ModConfigSpec.IntValue COLONY_MAX_LEVEL = BUILDER
             .comment("城镇等级上限：达到后不再累积经验、不再升级")
-            .defineInRange("colony.maxLevel", 30, 1, 100);
+            .defineInRange("colony.maxLevel", 30, 1, 1000000);
 
     // ---- Service system ----
 
@@ -95,20 +95,20 @@ public class Config {
 
     public static final ModConfigSpec.IntValue TOURIST_STAY_MIN_DAYS = BUILDER
             .comment("游客最少停留天数（离境截止下限）。")
-            .defineInRange("tourist.stayMinDays", 2, 1, 7);
+            .defineInRange("tourist.stayMinDays", 2, 1, 1000000);
 
     public static final ModConfigSpec.IntValue TOURIST_STAY_MAX_DAYS = BUILDER
             .comment("游客最多停留天数（离境截止上限）。")
-            .defineInRange("tourist.stayMaxDays", 4, 1, 7);
+            .defineInRange("tourist.stayMaxDays", 4, 1, 1000000);
 
     public static final ModConfigSpec.IntValue TOURIST_NEED_BASE = BUILDER
             .comment("游客总需求基数：totalNeed = BASE + (level-1)×PER_LEVEL，等级越高越难满足。默认 60 = 1 级均衡 20/20/20。")
-            .defineInRange("tourist.needBase", 60, 50, 2000);
+            .defineInRange("tourist.needBase", 60, 50, 1000000);
 
     public static final ModConfigSpec.IntValue TOURIST_NEED_PER_LEVEL = BUILDER
             .comment("游客每级需求增量。默认 10（原 20）——需求增长放缓使高级游客可被喂满，"
                     + "配合经验上调达到 5级≈5天、10级≈10天、20级≈30-40天、30级满≈60-80天。")
-            .defineInRange("tourist.needPerLevel", 10, 0, 500);
+            .defineInRange("tourist.needPerLevel", 10, 0, 1000000);
 
     public static final ModConfigSpec.ConfigValue<String> PARTICLE_LEVEL = BUILDER
             .comment("Particle effect level: OFF disables all mod particles, LOW halves count, "
@@ -127,27 +127,27 @@ public class Config {
 
     public static final ModConfigSpec.IntValue TOURIST_MAX_ENERGY = BUILDER
             .comment("游客精力上限：初始 100、清晨晨起回满 100，耗尽(=0)只能去 relax 恢复建筑。")
-            .defineInRange("tourist.maxEnergy", 100, 1, 1000);
+            .defineInRange("tourist.maxEnergy", 100, 1, 1000000);
 
     // ---- Iron Spells Compatibility (铁魔法兼容) ----
 
     public static final ModConfigSpec.DoubleValue IRON_MANA_COST_MULTIPLIER = BUILDER
             .comment("铁魔法 (Iron's Spells) 魔力消耗倍率：NPC 施铁魔法时扣减的魔力 × 该系数。默认 1.0")
-            .defineInRange("iron.manaCostMultiplier", 1.0, 0.0, 100.0);
+            .defineInRange("iron.manaCostMultiplier", 1.0, 0.0, 1000000.0);
 
     public static final ModConfigSpec.DoubleValue IRON_COOLDOWN_MULTIPLIER = BUILDER
             .comment("铁魔法 (Iron's Spells) 冷却倍率：基础冷却 tick × 该系数（SPELL_SPEED 缩短前）。默认 1.0")
-            .defineInRange("iron.cooldownMultiplier", 1.0, 0.1, 10.0);
+            .defineInRange("iron.cooldownMultiplier", 1.0, 0.1, 1000000.0);
 
     // ---- Goety Compatibility (诡厄巫法兼容) ----
 
     public static final ModConfigSpec.DoubleValue GOETY_SOUL_TO_MANA_MULTIPLIER = BUILDER
             .comment("诡厄巫法 (Goety) 灵魂消耗转 NPC 魔力消耗系数。默认 1.0 (1 灵魂 = 1 魔力)")
-            .defineInRange("goety.soulToManaMultiplier", 1.0, 0.0, 100.0);
+            .defineInRange("goety.soulToManaMultiplier", 5.0, 0.0, 1000000.0);
 
     public static final ModConfigSpec.DoubleValue GOETY_COOLDOWN_MULTIPLIER = BUILDER
             .comment("诡厄巫法 (Goety) 聚晶法术基础冷却换算系数。默认 1.0 (按原版 tick 换算)")
-            .defineInRange("goety.cooldownMultiplier", 1.0, 0.1, 10.0);
+            .defineInRange("goety.cooldownMultiplier", 1.0, 0.1, 1000000.0);
 
     static final ModConfigSpec SPEC = BUILDER.build();
 }
