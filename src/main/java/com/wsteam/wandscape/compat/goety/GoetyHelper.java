@@ -1,13 +1,17 @@
 package com.wsteam.wandscape.compat.goety;
 
 import com.Polarice3.Goety.api.items.magic.IFocus;
+import com.Polarice3.Goety.api.magic.IChargingSpell;
 import com.Polarice3.Goety.api.magic.ISpell;
+import com.Polarice3.Goety.api.magic.SpellType;
 import com.Polarice3.Goety.common.enchantments.ModEnchantments;
 import com.Polarice3.Goety.common.items.ModItems;
 import com.Polarice3.Goety.common.magic.SpellStat;
+import com.Polarice3.Goety.config.SpellConfig;
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.content.magic.data.MagicDef;
 import com.wsteam.wandscape.content.magic.data.SpellConditions;
+import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.foundation.log.Log;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponents;
@@ -23,11 +27,14 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.ItemContainerContents;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.ItemEnchantments;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
+import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -147,7 +154,9 @@ public final class GoetyHelper {
         double cdRatio = Config.GOETY_COOLDOWN_MULTIPLIER.get();
         int baseCooldown = Math.max(10, (int) Math.round(rawCooldown * cdRatio));
 
-        int castTime = Math.max(0, spell.defaultCastDuration());
+        int castTime = (spell instanceof IChargingSpell charging)
+                ? Math.min(60, Math.max(20, charging.defaultCastUp()))
+                : 0;
         double range = 32.0;
 
         MagicDef.TargetMode targetMode;
@@ -193,12 +202,48 @@ public final class GoetyHelper {
     }
 
     /**
-     * 根据聚晶物品堆上所附魔的 Goety 附魔等级，强化并返回 SpellStat。
+     * 根据法术类型构造对应的 Goety 法杖/权杖，并将聚晶注入法杖容器中，
+     * 以满足 rightStaff 校验并提供完整的法术派生强化效果。
      */
-    public static SpellStat buildSpellStat(ServerLevel level, ISpell spell, ItemStack focusStack) {
+    @NotNull
+    public static ItemStack getStaffForSpell(@Nullable ISpell spell, @Nullable ItemStack focusStack) {
+        if (!GoetyCompat.isLoaded() || spell == null) return ItemStack.EMPTY;
+        SpellType type = spell.getSpellType();
+        ItemStack staff;
+        if (type == null) {
+            staff = new ItemStack(ModItems.DARK_WAND.get());
+        } else {
+            staff = switch (type) {
+                case ILL -> new ItemStack(ModItems.OMINOUS_STAFF.get());
+                case NECROMANCY -> new ItemStack(ModItems.NECRO_STAFF.get());
+                case GEOMANCY -> new ItemStack(ModItems.GEO_STAFF.get());
+                case WIND -> new ItemStack(ModItems.WIND_STAFF.get());
+                case STORM -> new ItemStack(ModItems.STORM_STAFF.get());
+                case FROST -> new ItemStack(ModItems.FROST_STAFF.get());
+                case WILD -> new ItemStack(ModItems.WILD_STAFF.get());
+                case ABYSS -> new ItemStack(ModItems.ABYSS_STAFF.get());
+                case VOID -> new ItemStack(ModItems.VOID_STAFF.get());
+                case NETHER -> new ItemStack(ModItems.NETHER_STAFF.get());
+                default -> new ItemStack(ModItems.DARK_WAND.get());
+            };
+        }
+        if (focusStack != null && !focusStack.isEmpty()) {
+            staff.set(DataComponents.CONTAINER, ItemContainerContents.fromItems(List.of(focusStack)));
+        }
+        return staff;
+    }
+
+    /**
+     * 根据聚晶物品堆上所附魔的 Goety 附魔等级，强化并返回 SpellStat。
+     * 基础 duration 强制不低于 1，防止随从生成后因 lifespan=0 瞬间暴毙。
+     */
+    public static SpellStat buildSpellStat(ServerLevel level, WandscapeNpc npc, ISpell spell, ItemStack focusStack) {
         SpellStat stat = spell.defaultStats();
         if (stat == null) {
-            stat = new SpellStat(0, 0, 0, 0.0, 0, 0.0f);
+            stat = new SpellStat(0, 1, 16, 0.0, 0, 0.0f);
+        }
+        if (stat.getDuration() < 1) {
+            stat.setDuration(1);
         }
         if (focusStack == null || focusStack.isEmpty()) {
             return stat;
@@ -211,9 +256,14 @@ public final class GoetyHelper {
         int burning = getEnchantmentLevel(level, focusStack, ModEnchantments.BURNING);
         int velocity = getEnchantmentLevel(level, focusStack, ModEnchantments.VELOCITY);
 
-        if (potency > 0) stat.increasePotency(potency * 2);
+        int potencyPower = 1;
+        try {
+            potencyPower = SpellConfig.PotencyPower.get();
+        } catch (Exception ignored) {}
+
+        if (potency > 0) stat.increasePotency(potency * potencyPower);
         if (range > 0) stat.increaseRange(range * 2);
-        if (duration > 0) stat.increaseDuration(duration * 20);
+        if (duration > 0) stat.increaseDuration(duration);
         if (radius > 0) stat.increaseRadius(radius * 0.5);
         if (burning > 0) stat.increaseBurning(burning);
         if (velocity > 0) stat.increaseVelocity(velocity * 0.2f);
