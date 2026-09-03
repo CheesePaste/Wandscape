@@ -62,6 +62,11 @@ public class WarehouseScreen extends AbstractContainerScreen<WarehouseMenu> impl
     private static final int CHEST_W = 176;
     private static final int CHEST_H = 222;
 
+    // X 销毁格：Exchange 右列底部 18×18（照抄创造模式 X，销毁光标上的物品）
+    private static final int TRASH_SIZE = 18;
+    private static final int TRASH_RIGHT_MARGIN = 14;
+    private static final int TRASH_BOTTOM_MARGIN = 14;
+
     private static final int TOOLBAR_H = 20;
     private static final int OVERVIEW_PAD = 8;
     private static final int FOOTER_RESERVE = 28;
@@ -93,6 +98,10 @@ public class WarehouseScreen extends AbstractContainerScreen<WarehouseMenu> impl
     private List<ItemStack> visibleStacks = new ArrayList<>();
     private Map<ElementType, Long> elements = new LinkedHashMap<>();
 
+    // 仓库容量读数（随每次 WarehouseDataPacket 刷新；cap<=0 = 未设上限，不显示）
+    private long usedCapacity;
+    private int capacity;
+
     // ── Overview widgets ──
     private ElementPanel elementPanel;
     private SearchBox searchInput;
@@ -111,6 +120,7 @@ public class WarehouseScreen extends AbstractContainerScreen<WarehouseMenu> impl
     private int nextX, nextY, nextW, nextH;
     private boolean prevActive;
     private boolean nextActive;
+    private int trashX, trashY;
 
     // ── 通用皮肤状态 ──
     private String buildingCreator = "";
@@ -133,6 +143,8 @@ public class WarehouseScreen extends AbstractContainerScreen<WarehouseMenu> impl
         if (packet.creator() != null && !packet.creator().isBlank()) {
             setCreator(packet.creator());
         }
+        this.usedCapacity = packet.usedCapacity();
+        this.capacity = packet.capacity();
         this.allItems = new ArrayList<>(packet.itemEntries());
         this.allItems.sort(BY_ID);
         this.elements = new LinkedHashMap<>(packet.elementMap());
@@ -293,6 +305,12 @@ public class WarehouseScreen extends AbstractContainerScreen<WarehouseMenu> impl
         nextX = baseX + prevW + 6;
     }
 
+    /** X 销毁格几何：Exchange 右列底部、与面板右下角留边距。 */
+    private void computeTrash() {
+        trashX = leftPos + PANEL_W - TRASH_RIGHT_MARGIN - TRASH_SIZE;
+        trashY = topPos + PANEL_H - TRASH_BOTTOM_MARGIN - TRASH_SIZE;
+    }
+
     private void renderToolbar(GuiGraphics g, int mouseX, int mouseY) {
         computeToolbar();
         g.fillGradient(leftPos, toolbarY, leftPos + imageWidth, toolbarY + TOOLBAR_H,
@@ -365,6 +383,22 @@ public class WarehouseScreen extends AbstractContainerScreen<WarehouseMenu> impl
         return false;
     }
 
+    /** X 销毁格点击：左键销毁整叠、右键销毁 1 个（仅 Exchange 页、需光标持有物品）。 */
+    private boolean handleTrashClick(double mouseX, double mouseY, int button) {
+        if (button != 0 && button != 1) return false;
+        if (activeTab != 1) return false;
+        computeTrash();
+        if (!isInRect(mouseX, mouseY, trashX, trashY, TRASH_SIZE, TRASH_SIZE)) return false;
+        // 区域命中即吞掉点击；无光标物品时无事发生（服务端同款守卫）。
+        if (menu.getCarried().isEmpty()) return true;
+        String action = button == 1
+                ? WarehouseActionPacket.ACTION_CURSOR_DESTROY_ONE
+                : WarehouseActionPacket.ACTION_CURSOR_DESTROY_ALL;
+        PacketDistributor.sendToServer(new WarehouseActionPacket(
+                menu.containerId, action, "", null, 0));
+        return true;
+    }
+
     // ── 渲染 ──
 
     @Override
@@ -373,6 +407,7 @@ public class WarehouseScreen extends AbstractContainerScreen<WarehouseMenu> impl
         renderCreatorFooter(g);
         renderFeedback(g);
         renderTooltip(g, mouseX, mouseY);
+        renderTrashTooltip(g, mouseX, mouseY);
     }
 
     @Override
@@ -382,6 +417,7 @@ public class WarehouseScreen extends AbstractContainerScreen<WarehouseMenu> impl
             g.fillGradient(leftPos, topPos, leftPos + PANEL_W, topPos + PANEL_H,
                     GLASS_TOP, GLASS_BOTTOM);
             drawGlowBorder(g, leftPos, topPos, PANEL_W, PANEL_H, MedievalColors.BORDER_GOLD);
+            drawOverviewCapacity(g);
         } else {
             renderChest(g, mouseX, mouseY);
         }
@@ -392,7 +428,36 @@ public class WarehouseScreen extends AbstractContainerScreen<WarehouseMenu> impl
         g.blit(CHEST_TEXTURE, leftPos, topPos, 0, 0, CHEST_W, CHEST_H);
         g.drawString(font, I18n.name("gui.wandscape.warehouse.title", "Colony Warehouse").getString(),
                 leftPos + 8, topPos + 6, 0x404040);
+        drawExchangeCapacity(g);
         renderPager(g, mouseX, mouseY);
+        renderTrash(g, mouseX, mouseY);
+    }
+
+    /** 总览页：元素 7 行下方画容量读数（未设上限则隐藏）。 */
+    private void drawOverviewCapacity(GuiGraphics g) {
+        if (capacity <= 0) return;
+        int x = leftPos + OVERVIEW_PAD;
+        int y = topPos + OVERVIEW_PAD + 7 * 18 + 4;
+        g.drawString(font, capacityText(), x, y, capacityColor());
+    }
+
+    /** Exchange 页：\"仓库\"标题右侧画容量读数（未设上限则隐藏）。 */
+    private void drawExchangeCapacity(GuiGraphics g) {
+        if (capacity <= 0) return;
+        String title = I18n.name("gui.wandscape.warehouse.title", "Colony Warehouse").getString();
+        int titleW = font.width(title);
+        g.drawString(font, capacityText(), leftPos + 8 + titleW + 12, topPos + 6, capacityColor());
+    }
+
+    private String capacityText() {
+        return I18n.name("gui.wandscape.warehouse.capacity", "Space %s/%s",
+                usedCapacity, capacity).getString();
+    }
+
+    /** 已满（used>=cap>0）时用警示色，否则常规暗色；未设上限返回正常色（不显示）。 */
+    private int capacityColor() {
+        if (capacity <= 0) return MedievalColors.TEXT_MUTED;
+        return usedCapacity >= capacity ? 0xFFFF6B5E : MedievalColors.TEXT_MUTED;
     }
 
     private void renderPager(GuiGraphics g, int mouseX, int mouseY) {
@@ -403,6 +468,40 @@ public class WarehouseScreen extends AbstractContainerScreen<WarehouseMenu> impl
         String pageText = I18n.name("gui.wandscape.warehouse.page", "%s / %s",
                 page + 1, totalPages).getString();
         g.drawString(font, pageText, x, topPos + 64, MedievalColors.TEXT_MUTED);
+    }
+
+    /** X 销毁格：槽位式小按钮 + 红 ×；光标有物品时点亮（可销毁），否则置灰提示先拾起。 */
+    private void renderTrash(GuiGraphics g, int mouseX, int mouseY) {
+        computeTrash();
+        boolean hovered = isInRect(mouseX, mouseY, trashX, trashY, TRASH_SIZE, TRASH_SIZE);
+        drawMinimalBox(g, trashX, trashY, TRASH_SIZE, TRASH_SIZE, false, hovered);
+        int iconColor = menu.getCarried().isEmpty()
+                ? MedievalColors.TEXT_DIM
+                : hovered ? 0xFFFF7A6B : 0xFFE05040;
+        drawTrashGlyph(g, iconColor);
+    }
+
+    /** 把字体 × 放大居中画进销毁格（18px 格内约居其 2/3）。 */
+    private void drawTrashGlyph(GuiGraphics g, int color) {
+        String glyph = "×";
+        float scale = 1.8F;
+        g.pose().pushPose();
+        g.pose().translate(trashX + TRASH_SIZE / 2F, trashY + TRASH_SIZE / 2F, 100F);
+        g.pose().scale(scale, scale, 1F);
+        g.drawString(font, glyph, -font.width(glyph) / 2, -font.lineHeight / 2, color, false);
+        g.pose().popPose();
+    }
+
+    /** 悬停 X 时提示用途（仅 Exchange 页）。 */
+    private void renderTrashTooltip(GuiGraphics g, int mouseX, int mouseY) {
+        if (activeTab != 1) return;
+        computeTrash();
+        if (!isInRect(mouseX, mouseY, trashX, trashY, TRASH_SIZE, TRASH_SIZE)) return;
+        List<Component> lines = List.of(
+                I18n.name("gui.wandscape.warehouse.trash", "Delete item"),
+                I18n.name("gui.wandscape.warehouse.trash_hint",
+                        "Pick up an item, then click here to delete it"));
+        g.renderComponentTooltip(font, lines, mouseX, mouseY);
     }
 
     @Override
@@ -490,6 +589,9 @@ public class WarehouseScreen extends AbstractContainerScreen<WarehouseMenu> impl
             return true;
         }
         if (handlePagerClick(mouseX, mouseY, button)) {
+            return true;
+        }
+        if (handleTrashClick(mouseX, mouseY, button)) {
             return true;
         }
         if (activeTab == 1 && (button == 0 || button == 1)) {

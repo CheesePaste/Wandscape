@@ -12,6 +12,8 @@ import com.wsteam.wandscape.api.WandscapeApis;
 import com.wsteam.wandscape.foundation.ui.vanilla.ToggleableSlot;
 import com.wsteam.wandscape.foundation.ui.vanilla.VanillaPlayerInventory;
 import com.wsteam.wandscape.content.warehouse.network.WarehouseDataPacket;
+import com.wsteam.wandscape.foundation.networking.ScreenFeedbackPacket;
+import com.wsteam.wandscape.foundation.ui.I18n;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -111,16 +113,12 @@ public class WarehouseMenu extends AbstractContainerMenu {
         if (index < WAREHOUSE_SLOT_COUNT || colonyId == null) return ItemStack.EMPTY;
         if (!(player instanceof ServerPlayer sp)) return ItemStack.EMPTY;
 
-        var api = WandscapeApis.getWarehouseApiSilently();
-        if (api == null) return ItemStack.EMPTY;
-
         ItemStack stack = slot.getItem();
+        // 满仓拒收：物品留在玩家背包原槽，仅给一次性提示。
+        if (!deposit(sp, stack)) return ItemStack.EMPTY;
         ItemStack result = stack.copy();
-        api.insertItems(colonyId, List.of(stack));
         stack.setCount(0);
         slot.setChanged();
-        recordDeposit(sp);
-        playSound(sp);
         sendRefresh(sp);
         return result;
     }
@@ -178,17 +176,42 @@ public class WarehouseMenu extends AbstractContainerMenu {
 
     /** Click a warehouse slot with a carried stack: deposit the whole cursor. */
     public void cursorDepositAll(ServerPlayer player) {
-        if (getCarried().isEmpty()) return;
-        depositCursor(player, getCarried());
-        setCarried(ItemStack.EMPTY);
+        ItemStack carried = getCarried();
+        if (carried.isEmpty()) return;
+        // 整叠入仓；满仓拒收时整叠留在光标上不拆散。
+        if (deposit(player, carried.copy())) {
+            setCarried(ItemStack.EMPTY);
+        }
     }
 
     /** Right-click a warehouse slot with a carried stack: deposit one item. */
     public void cursorDepositOne(ServerPlayer player) {
         ItemStack carried = getCarried();
         if (carried.isEmpty()) return;
-        // split() shrinks the carried stack in place; the remainder stays on the cursor.
-        depositCursor(player, carried.split(1));
+        // 先试放 1 件副本，成功后才从光标减 1（满仓拒收不丢这件）。
+        if (deposit(player, carried.copyWithCount(1))) {
+            carried.shrink(1);
+        }
+    }
+
+    /**
+     * Exchange 页 X 销毁格：服务端权威销毁光标上的物品（照抄创造模式 X）。
+     * 左键整叠、右键 1 个；只能销毁玩家已拾到光标的东西（自背包或从仓库取出），
+     * 光标清空靠容器每 tick 的 carried 广播同步回客户端。
+     */
+    public void destroyCarried(ServerPlayer player, boolean whole) {
+        ItemStack carried = getCarried();
+        if (carried.isEmpty()) return;
+        var rl = BuiltInRegistries.ITEM.getKey(carried.getItem());
+        int amount = whole ? carried.getCount() : 1;
+        if (carried.getCount() <= 1 || whole) {
+            setCarried(ItemStack.EMPTY);
+        } else {
+            carried.shrink(1);
+        }
+        Log.debug(LogCategory.WAREHOUSE, "menu", "X trash destroyed {}x {} (cursor)",
+                amount, rl != null ? rl : "?");
+        playSound(player);
     }
 
     /** 玩家背包中同类型物品全部存入仓库（RS 滚轮: INVENTORY_TO_GRID）。 */
@@ -198,17 +221,20 @@ public class WarehouseMenu extends AbstractContainerMenu {
         if (api == null) return;
         Inventory inv = player.getInventory();
         List<ItemStack> found = new ArrayList<>();
+        List<Integer> foundSlots = new ArrayList<>();
         for (int i = 0; i < inv.getContainerSize(); i++) {
             ItemStack s = inv.getItem(i);
             if (!s.isEmpty() && matches(s, key)) {
                 found.add(s.copy());
-                inv.setItem(i, ItemStack.EMPTY);
+                foundSlots.add(i);
             }
         }
         if (found.isEmpty()) return;
-        api.insertItems(colonyId, found);
-        recordDeposit(player);
-        playSound(player);
+        // 先入仓成功再清空背包槽——整批放不下时整体拒绝，不吞玩家物品。
+        if (!depositBatch(player, found)) return;
+        for (int slotIdx : foundSlots) {
+            inv.setItem(slotIdx, ItemStack.EMPTY);
+        }
     }
 
     /** 指定玩家槽全部存入仓库（RS 滚轮在玩家槽上移）。 */
@@ -220,10 +246,9 @@ public class WarehouseMenu extends AbstractContainerMenu {
         if (slotIndex < 0 || slotIndex >= inv.getContainerSize()) return;
         ItemStack stack = inv.getItem(slotIndex);
         if (stack.isEmpty()) return;
-        api.insertItems(colonyId, List.of(stack.copy()));
-        inv.setItem(slotIndex, ItemStack.EMPTY);
-        recordDeposit(player);
-        playSound(player);
+        if (deposit(player, stack.copy())) {
+            inv.setItem(slotIndex, ItemStack.EMPTY);
+        }
     }
 
     /** 仓库条目取到指定玩家槽（尽量填满 64；目标槽为空或同类型才可）。 */
@@ -257,17 +282,38 @@ public class WarehouseMenu extends AbstractContainerMenu {
         return Objects.equals(nbt, key.nbt());
     }
 
-    private void depositCursor(ServerPlayer player, ItemStack toDeposit) {
-        if (colonyId == null || toDeposit.isEmpty()) return;
-        var api = WandscapeApis.getWarehouseApiSilently();
-        if (api == null) return;
+    /** 单叠尝试入仓；成功返回 true（已记账/播音），满仓拒收时提示并返回 false（物品不动）。 */
+    private boolean deposit(ServerPlayer player, ItemStack toDeposit) {
+        if (colonyId == null || toDeposit.isEmpty()) return false;
+        return depositBatch(player, List.of(toDeposit));
+    }
 
-        var rl = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(toDeposit.getItem());
-        Log.debug(LogCategory.WAREHOUSE, "menu", "{}x {} deposited from cursor (colony={})",
-                toDeposit.getCount(), rl != null ? rl : "?", colonyId.toString().substring(0, 8));
-        api.insertItems(colonyId, List.of(toDeposit));
+    /**
+     * 整批尝试入仓（原子判定：容量放得下整批才存）。成功返回 true；满仓拒收返回 false，
+     * 物品保持原处，仅给玩家一次\"仓库容量不足\"提示。
+     */
+    private boolean depositBatch(ServerPlayer player, List<ItemStack> stacks) {
+        if (colonyId == null || stacks.isEmpty()) return false;
+        var api = WandscapeApis.getWarehouseApiSilently();
+        if (api == null) return false;
+
+        var rl = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stacks.get(0).getItem());
+        Log.debug(LogCategory.WAREHOUSE, "menu", "{}x {} deposit batch (colony={})",
+                stacks.stream().mapToInt(ItemStack::getCount).sum(), rl != null ? rl : "?",
+                colonyId.toString().substring(0, 8));
+        if (!api.insertItems(colonyId, stacks)) {
+            notifyCapacityFull(player);
+            return false;
+        }
         recordDeposit(player);
         playSound(player);
+        return true;
+    }
+
+    private void notifyCapacityFull(ServerPlayer player) {
+        ScreenFeedbackPacket.send(player, I18n.name(
+                "message.wandscape.warehouse.capacity_full",
+                "[Wandscape] Warehouse capacity is full."), true);
     }
 
     /** Push a fresh data packet so the client refreshes elements and the item list. */

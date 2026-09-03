@@ -78,6 +78,12 @@ public class ResourceSupplySystem implements EcsSystem {
                 continue;
             }
 
+            // 仓库满仓等待的任务（伪资源 warehouse_capacity）：不尝试自动补产/补采，
+            // 等容量空出后由 BuildingTaskSource 按队列资格重发。
+            if (isCapacityBlockedWait(task.awaitingResource)) {
+                continue;
+            }
+
             boolean allAvailable = true;
             for (ResourceStack need : task.awaitingResource) {
                 if (world.colonyResources.available(need.resource()) < need.amount()) {
@@ -209,6 +215,10 @@ public class ResourceSupplySystem implements EcsSystem {
         params.put("anchor", posToJsonArray(pos));
         params.put("recipe_id", new JsonPrimitive(itemId));
         params.put("count", new JsonPrimitive(count));
+        // 补货驱动的合成标记 supply=restock：仓库满仓时该任务豁免（防殖民地瘫痪）。
+        if (atFront) {
+            params.put("supply", new JsonPrimitive("restock"));
+        }
         int channelTicks = com.wsteam.wandscape.Wandscape.PRODUCTION_RECIPE_LOADER != null
                 ? com.wsteam.wandscape.Wandscape.PRODUCTION_RECIPE_LOADER.computeSynthesizeChannelTicks(itemId, count)
                 : com.wsteam.wandscape.foundation.util.BalanceValues.workstationCraftTicksPerUnit() * count;
@@ -402,6 +412,15 @@ public class ResourceSupplySystem implements EcsSystem {
     private static boolean sameRecipe(String strippedKey, JsonElement recipeParam) {
         return recipeParam != null && recipeParam.isJsonPrimitive()
                 && strippedKey.equals(stripMcPrefix(recipeParam.getAsString()));
+    }
+
+    /** 任务是否因仓库满仓在等待（伪资源 warehouse_capacity，无实体可补）。 */
+    private static boolean isCapacityBlockedWait(List<ResourceStack> needs) {
+        if (needs == null) return false;
+        for (ResourceStack need : needs) {
+            if (ColonyItemBank.CAPACITY_SHORTAGE_RESOURCE.equals(need.resource().id())) return true;
+        }
+        return false;
     }
 
     private static int intParam(JsonElement el) {

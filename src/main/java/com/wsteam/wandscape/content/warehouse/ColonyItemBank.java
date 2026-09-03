@@ -1,4 +1,5 @@
 package com.wsteam.wandscape.content.warehouse;
+import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.content.task.ecs.World;
 
 import com.wsteam.wandscape.content.element.data.ElementType;
@@ -53,6 +54,8 @@ public class ColonyItemBank extends SavedData {
     private static final String TAG_PLAYER_ROAD_PLACES = "player_road_places";
     // colonyId → items
     private final Map<UUID, Map<ItemKey, Long>> storage = new ConcurrentHashMap<>();
+    // colonyId → used item capacity (total item count across all ledger entries; element ledger excluded)
+    private final Map<UUID, Long> usedCounts = new ConcurrentHashMap<>();
     // colonyId → elements
     private final Map<UUID, Map<ElementType, Long>> elementStorage = new ConcurrentHashMap<>();
     /** Colonies that already received the initial element seed (persisted). */
@@ -145,6 +148,48 @@ public class ColonyItemBank extends SavedData {
     public Map<ItemKey, Long> getSnapshot(UUID colonyId) {
         Map<ItemKey, Long> items = storage.get(colonyId);
         return items != null ? Map.copyOf(items) : Map.of();
+    }
+
+    // ── 仓库容量（物品账本总量上限；元素独立存储不计入）──
+
+    /** 容量短缺的伪资源 id：把满仓的生产任务标记为\"仓库容量不足\"并回队列等待。 */
+    public static final String CAPACITY_SHORTAGE_RESOURCE = "warehouse_capacity";
+
+    /** Config 仓库物品容量上限；0 = 不设上限。 */
+    public static int capacity() {
+        return Config.WAREHOUSE_ITEM_CAPACITY.get();
+    }
+
+    /** 殖民地当前已占用物品容量（物品账本所有条目 count 之和）。 */
+    public long usedItems(UUID colonyId) {
+        return usedCounts.getOrDefault(colonyId, 0L);
+    }
+
+    /** 剩余容量；上限设为 0（无限）时恒为 Long.MAX_VALUE。 */
+    public long remainingCapacity(UUID colonyId) {
+        int cap = capacity();
+        if (cap <= 0) return Long.MAX_VALUE;
+        return Math.max(0, (long) cap - usedItems(colonyId));
+    }
+
+    /** 再入账 amount 件物品是否会超出容量上限（上限 0 = 无限，恒可）。 */
+    public boolean hasCapacity(UUID colonyId, long amount) {
+        if (amount <= 0) return true;
+        int cap = capacity();
+        if (cap <= 0) return true;
+        return usedItems(colonyId) + amount <= cap;
+    }
+
+    /**
+     * 带容量校验的入账：放得下则入账并返回 true；放不下返回 false 且不产生任何变更。
+     * 供\"新物品入仓\"路径（玩家存入、NPC 合成/制作产出）使用；净零归还/退款路径走 {@link #add}，
+     * 只把刚从仓库取出的东西还回，不允许它们把殖民地资产卡死。
+     */
+    public boolean tryAdd(UUID colonyId, ItemKey key, long amount) {
+        if (amount <= 0) return true;
+        if (!hasCapacity(colonyId, amount)) return false;
+        add(colonyId, key, amount);
+        return true;
     }
 
     /** All colonies that have items stored. */
@@ -273,6 +318,7 @@ public class ColonyItemBank extends SavedData {
         if (amount <= 0) return;
         long newCount = storage.computeIfAbsent(colonyId, k -> new ConcurrentHashMap<>())
                 .merge(key, amount, Long::sum);
+        usedCounts.merge(colonyId, amount, Long::sum);
         setDirty();
         if (itemChangeNotifier != null) {
             itemChangeNotifier.onItemChanged(colonyId, key, newCount, amount);
@@ -289,6 +335,11 @@ public class ColonyItemBank extends SavedData {
             items.remove(key);
         } else {
             items.put(key, newCount);
+        }
+        usedCounts.computeIfPresent(colonyId, (id, used) -> Math.max(0, used - amount));
+        if (items.isEmpty()) {
+            storage.remove(colonyId);
+            usedCounts.remove(colonyId);
         }
         setDirty();
         if (itemChangeNotifier != null) {
@@ -436,6 +487,7 @@ public class ColonyItemBank extends SavedData {
                     items.put(ItemKey.of(key, nbt), count);
                 }
                 bank.storage.put(colonyId, items);
+                bank.usedCounts.put(colonyId, items.values().stream().mapToLong(Long::longValue).sum());
             }
 
             // Elements

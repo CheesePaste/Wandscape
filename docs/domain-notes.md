@@ -106,6 +106,12 @@
    - 仓库终端支持 Curios 手饰槽（`hands`/`bracelet`）或快捷键开仓，开仓前必须服务端验证佩戴状态或背包持有。
 2. **大数量渲染限制**：
    - 原版 Minecraft 浮动物品数量渲染上限为 999（`renderItemDecorations`），仓库中大于 999 的物品显示为 `999+` 属正常原版行为。
+3. **仓库容量机制（物品账本总量）**：
+   - 容量 = 每殖民地**物品账本**所有条目 count 之和；**1 物品占 1**（不可堆叠也占 1）；**元素独立账本不计入**。上限走 `Config.WAREHOUSE_ITEM_CAPACITY`（默认 50000，0 = 不设限）。`ColonyItemBank` 维护 `usedCounts` 缓存并在 load 重建。
+   - **拦截口径 = 净新增入仓，集中在银行 `tryAdd` 入口**：玩家全部存入路径（`insertItems`/交换页各手势，先入仓成功才清背包槽，整批放不下整体拒收 + ScreenFeedback 提示「仓库容量不足」）与 NPC 生产产物（synthesize/craft/craft_spell 前置 `checkCapacity` 守卫、产物 `tryAdd` 提交）满仓即拒；**净零归还放行**（分解回滚、拆迁/建造取消退款、任务材料退还、运输孤儿返还——只还刚取走的原物，绝不把殖民地资产卡死）。
+   - **补货豁免**：商店补货驱动的自动合成（`ResourceSupplySystem.enqueueSynthesize(atFront=true)`）在 WorkItem 参数带 `supply=restock`，满仓仍可合成入仓（容量可被短暂超出），保货架不断供、防殖民地瘫痪。判定处（发布资格、队列徽标、op 守卫）统一看该参数。
+   - **满仓生产任务 = 镜像「缺元素」**：合成/制作队列条目满仓不可发布、面板标「仓库容量不足」（`capacityBlocked` 走 TaskQueueDataPacket），执行期撞上满仓以伪资源 `warehouse_capacity` 抛 `ResourceShortageException` → BuildingTaskSource 回收回队列（`isCapacityShortage`），容量空出后按发布资格自动续跑；ResourceSupplySystem 对这类等待不尝试自动补产。
+   - **拆迁/回收掉落满仓不丢**：`performSalvage` 产物 `tryAdd` 失败时改为在拆除点生成掉落物（等价箱满溢出），不吞物品也不阻塞平地。
 
 ---
 

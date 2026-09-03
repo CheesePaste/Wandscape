@@ -44,6 +44,10 @@ public record WarehouseActionPacket(
     public static final String ACTION_CURSOR_DEPOSIT_ALL = "cursor_deposit_all";
     /** Right-click with a carried stack: deposit one item from the cursor. */
     public static final String ACTION_CURSOR_DEPOSIT_ONE = "cursor_deposit_one";
+    /** X 销毁格（左键）：销毁光标上的整叠物品。 */
+    public static final String ACTION_CURSOR_DESTROY_ALL = "cursor_destroy_all";
+    /** X 销毁格（右键）：从光标堆叠销毁 1 个。 */
+    public static final String ACTION_CURSOR_DESTROY_ONE = "cursor_destroy_one";
     /** Scroll (shift+up) on a grid entry: deposit all matching player-inventory items. */
     public static final String ACTION_DEPOSIT_INVENTORY_TYPE = "deposit_inventory_type";
     /** Scroll (shift+up) on a player slot: deposit that slot. param = slot index. */
@@ -81,6 +85,8 @@ public record WarehouseActionPacket(
                 case ACTION_TAKE_TO_INVENTORY -> menu.takeToInventory(key, sp);
                 case ACTION_CURSOR_DEPOSIT_ALL -> menu.cursorDepositAll(sp);
                 case ACTION_CURSOR_DEPOSIT_ONE -> menu.cursorDepositOne(sp);
+                case ACTION_CURSOR_DESTROY_ALL -> menu.destroyCarried(sp, true);
+                case ACTION_CURSOR_DESTROY_ONE -> menu.destroyCarried(sp, false);
                 case ACTION_DEPOSIT_INVENTORY_TYPE -> menu.depositInventoryType(key, sp);
                 case ACTION_DEPOSIT_SLOT -> menu.depositSlot(pkt.param, sp);
                 case ACTION_TAKE_TO_SLOT -> menu.takeToSlot(key, sp, pkt.param);

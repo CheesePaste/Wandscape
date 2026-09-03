@@ -148,10 +148,34 @@ public class WarehouseManager implements WarehouseApi, ColonyResourceAccess {
         return actualTaken;
     }
 
+    /**
+     * Deposit a batch of item stacks into the colony warehouse.
+     *
+     * <p>Capacity-gated: every item counts 1 against the colony's warehouse
+     * capacity (unstackable items included). When the whole batch would exceed
+     * the remaining capacity, nothing is deposited and {@code false} is returned
+     * — the caller keeps its items and notifies the player. This is the central
+     * gate for all player deposits.
+     *
+     * @return true if the whole batch was deposited; false when the warehouse
+     *         lacks the capacity (batch left untouched)
+     */
     @Override
     public boolean insertItems(UUID colonyId, List<ItemStack> stacks) {
         ColonyItemBank bank = getBank();
         if (bank == null) return false;
+        long units = 0;
+        for (ItemStack stack : stacks) {
+            if (stack.isEmpty()) continue;
+            units += stack.getCount();
+        }
+        if (units <= 0) return true;
+        if (!bank.hasCapacity(colonyId, units)) {
+            Log.debug(LogCategory.WAREHOUSE, "storage",
+                    "insertItems refused: colony {} batch of {} items over capacity (used={}/cap={})",
+                    colonyId.toString().substring(0, 8), units, bank.usedItems(colonyId), bank.capacity());
+            return false;
+        }
         Set<String> emitted = new HashSet<>();
         for (ItemStack stack : stacks) {
             if (stack.isEmpty()) continue;

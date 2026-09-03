@@ -41,6 +41,16 @@ public class Config {
                     + "警告：修改会导致利润率低于该数值的商店不盈利。")
             .defineInRange("element.craftCostMultiplier", 1.0, 1.0, 1000000.0);
 
+    // ---- 仓库容量 ----
+
+    public static final ModConfigSpec.IntValue WAREHOUSE_ITEM_CAPACITY = BUILDER
+            .comment("殖民地仓库的物品容量上限：物品账本总量（每种物品的计件数之和，"
+                    + "不可堆叠物品每件也计 1）不得超过该值。满仓后玩家无法再存入、"
+                    + "NPC 合成/制作类生产任务显示\"仓库容量不足\"并等待（商店补货驱动的自动合成为豁免，"
+                    + "避免殖民地经济瘫痪）。元素独立存储，不计入容量。"
+                    + "设为 0 = 不设上限（容量机制关闭）。")
+            .defineInRange("warehouse.itemCapacity", 50000, 0, Integer.MAX_VALUE);
+
     // ---- 游客系统 ----
 
     public static final ModConfigSpec.IntValue TOURIST_MAX_PER_COLONY = BUILDER
