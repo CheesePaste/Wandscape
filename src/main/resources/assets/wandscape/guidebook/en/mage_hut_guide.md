@@ -22,17 +22,17 @@ Resident mages can undergo targeted training across 7 core attributes:
 
 Each training session consumes 2 specific elements from the colony warehouse (e.g. Health = Earth + Metal, Spell Power = Fire + Dark); the per-session cost rises exponentially with training progress — cheap near the bottom, very expensive near the cap. Each attribute has 20 uniform steps to its cap, making the late-game training a sink for surplus elements.
 
-## Rank Promotion
+## Promotion & Commands
 
-- When a mage's level is below the colony level, click "**Promote**" to raise their rank.
+Once a mage moves in, the "**Promotion & Commands**" card on the right of the hut screen holds the rank promotion and the commands below:
+
+- Click "**Promote**" while the mage's level does not exceed the colony level — the mage can climb up to one level above the colony (level 31 at a max-level colony of 30).
 - Promoting rank increases overall attribute bonuses across all stats.
 - Promotion costs all 7 elements, `150 × target level` each (Lv1→2 costs 300 each, Lv9→10 costs 1,500 each) — a gentle, level-scaled cost that never blocks progression.
-
-## Quick Commands
-
-- **Equip**: Inspect and swap robes and wands.
-- **Strategy**: Customize smart spellcasting and task priority routines.
+- **Equip**: Inspect and swap the mage's robe, wand, and trinkets.
+- **Strategy**: Open this mage's [Cast Strategy](strategy_guide.md) screen.
 - **Rest**: Call the mage back to the hut to rest and recover.
+- "**Open Warehouse**": peek at the colony warehouse's element and item stock.
 
 ---
 

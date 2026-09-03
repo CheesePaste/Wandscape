@@ -24,7 +24,7 @@ Wand bonuses apply **the moment they're equipped** — Spell Power decides casti
 | **Craftsman Wand** | Level 20 | Earth ×45000 + Wood ×45000 | Work Speed +0.9, Max Mana +100 |
 | **Bastion Wand** | Level 20 | Earth ×45000 + Metal ×35000 + Wood ×25000 | Move Speed −0.18, Max HP +55, Armor +8 |
 | **Arcane Wand** | Level 20 | Fire ×35000 + Dark ×30000 + Water ×30000 | Spell Power +0.8, Cast Speed +0.3 |
-| **Oblivion Wand** | Level 30 | Fire ×75000 + Dark ×60000 + Metal ×45000 | Spell Power +2.0 (Max HP −40, Armor −5) |
+| **Oblivion Wand** | Level 30 | Fire ×75000 + Dark ×60000 + Metal ×45000 | Spell Power +2.0 (Max HP −40, Armor −15) |
 | **Genesis Wand** | Level 30 | Wood ×95000 + Earth ×70000 + Water ×50000 | Work Speed +1.6, Max Mana +200 (Spell Power −1.0) |
 
 ## Tips

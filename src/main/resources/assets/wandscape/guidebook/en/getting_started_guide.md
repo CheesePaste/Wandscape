@@ -39,10 +39,11 @@ Elements are the town's currency: building and crafting both cost them. **Elemen
 
 ## Step 5: Build Production Workshops
 
-Two big things live in the **Workshop** category of the build panel:
+Three production buildings live in the **Workshop** category of the build panel:
 
 - The **Crafting Station** makes **wands** — wands decide a wizard's combat strength. 12 preset wands unlock across colony levels 1/5/10/20/30, each with different bonuses.
 - The **Workstation** **decomposes** unneeded high-tier building materials into elements (about a 1/5 return — for emergencies), and can also **synthesize** high-tier blocks and equipment from elements.
+- The **Magic Workshop** synthesizes **magic scrolls** from elements — wizards only cast what is loaded into their [strategy bar](strategy_guide.md), so build one and mass-produce scrolls for a fighting squad. See [Magic Workshop](magic_station_guide.md).
 
 ## Step 6: Build Shops, a Hotel, and Supplies
 

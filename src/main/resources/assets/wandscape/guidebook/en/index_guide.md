@@ -26,6 +26,7 @@ Tourists only walk on paved roads. No roads means no tourists; shops won't get v
 - [Town Hall](townhall_guide.md)
 - [Warehouse](warehouse_guide.md)
 - [Crafting Station (Wands)](crafting_guide.md)
+- [Magic Workshop (Magic Scrolls)](magic_station_guide.md)
 - [Workstation (Decompose & Synthesize)](workstation_guide.md)
 - [Element Node](node_guide.md)
 - [Altar (Revive)](altar_guide.md)

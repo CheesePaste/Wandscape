@@ -11,8 +11,10 @@ Wizards carry out the colony's building, gathering, crafting, and combat. How mu
 
 **Left side · Equipment (5 slots)**
 
-- **Wand slot**: equip a better wand to raise **Spell Power** (casting might). The wand list is in the [Crafting Station](crafting_guide.md).
+- **Wand slot**: equip a better wand to raise **Spell Power** (casting might). Wandscape's own wands are listed in the [Crafting Station](crafting_guide.md); with Iron's Spells or Goety installed, their wands fit here too (a Goety wand is required before any Goety focus can be cast — see [Cast Strategy](strategy_guide.md)). The **starter wand** a wizard comes with cannot be removed.
 - **Armor slots (4)**: helmet / chestplate / leggings / boots, raising armor damage reduction. Armor only affects the numbers; the robe appearance stays the same.
+
+The "**Trinkets**" button at the top-left of the wizard model opens the Curios trinket container: necklaces, rings, belts and more go here. With Iron's Spells installed, the container gains a **spell book** slot — a wizard must wear a spell book here to cast Iron's scrolls.
 
 **Right side · Attributes**
 
@@ -31,7 +33,8 @@ Wizards carry out the colony's building, gathering, crafting, and combat. How mu
 ## Combat
 
 - Wizards **guard** the colony: monsters appearing near buildings trigger auto-casting, and they fight back in self-defense when hit.
-- In fights they pick spells by your [Cast Strategy](strategy_guide.md).
+- In fights they pick spells by your [Cast Strategy](strategy_guide.md) — a wizard with no scrolls loaded won't attack, so set up the strategy before sending it into battle.
+- Tamed pets, iron golems, and your summoned allies count as **friendly**: wizards never attack them and AoE spells won't hit them.
 - A **nameplate** above the head shows the name and status, so you can see what each wizard is doing.
 
 ## Behavior Settings (Bottom of the Panel)

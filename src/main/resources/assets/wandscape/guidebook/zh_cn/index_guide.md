@@ -26,6 +26,7 @@ Wandscape 是个模拟经营模组：你放下建筑，**法师 NPC 替你干活
 - [市政厅 Town Hall](townhall_guide.md)
 - [仓库 Warehouse](warehouse_guide.md)
 - [合成台 Crafting Station（造法杖）](crafting_guide.md)
+- [魔法工坊 Magic Workshop（合成魔法卷轴）](magic_station_guide.md)
 - [工作站 Workstation（分解与合成）](workstation_guide.md)
 - [元素节点 Node](node_guide.md)
 - [祭坛 Altar（复活）](altar_guide.md)

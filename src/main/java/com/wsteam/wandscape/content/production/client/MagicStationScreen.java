@@ -46,6 +46,8 @@ public class MagicStationScreen extends MedievalScreen {
         super(Component.literal("Magic Station"), PW, PH);
         setTitleBar(I18n.name("gui.wandscape.magic_station.title", "Magic Station"));
         this.showCloseButton = true;
+        this.showHelpButton = true;
+        this.helpDocumentPath = "magic_station_guide";
     }
 
     public void updateData(MagicStationPacket packet) {
