@@ -70,6 +70,25 @@ public class MagicState {
     }
 
     /**
+     * 只扣魔力：供按节拍持续消耗（如 Goety volley 每批扣费），不动冷却/互斥锁。
+     * 封顶到 0；调用方应先用 {@link #getMana()} 核对足够再扣。
+     */
+    public void spendMana(float cost) {
+        currentMana = Math.max(0f, currentMana - Math.max(0f, cost));
+    }
+
+    /**
+     * 事后给某魔法置冷却（Goety volley 打满一轮后上 CD）：不扣蓝、不占互斥锁，按 spellSpeed
+     * 缩短（向上取整，语义同 {@link #tryCast} 的 CD 段；锁占用期间该 CD 自然冻结）。
+     * {@code baseCooldown <= 0} 表示无冷却，不记录。
+     */
+    public void applyCooldown(String magicId, int baseCooldown, float spellSpeed) {
+        if (magicId == null || magicId.isBlank() || baseCooldown <= 0) return;
+        int eff = spellSpeed > 1f ? (int) Math.ceil(baseCooldown / spellSpeed) : baseCooldown;
+        cooldowns.merge(magicId, Math.max(1, eff), Math::max);
+    }
+
+    /**
      * 祭坛施法：扣蓝 + 占互斥锁，但**不设置本 NPC 的每魔法 CD**。
      *
      * <p>祭坛施法的冷却按祭坛（building）独立存放（见 AltarCastState），与 NPC 自身的

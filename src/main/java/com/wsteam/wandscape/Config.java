@@ -140,7 +140,7 @@ public class Config {
     // ---- 诡厄巫法兼容 ----
 
     public static final ModConfigSpec.DoubleValue GOETY_SOUL_TO_MANA_MULTIPLIER = BUILDER
-            .comment("诡厄巫法 (Goety) 灵魂消耗转 NPC 魔力消耗系数。默认 1.0 (1 灵魂 = 1 魔力)")
+            .comment("诡厄巫法 (Goety) 灵魂消耗转 NPC 魔力消耗系数。默认 5.0 (1 灵魂 = 5 魔力)")
             .defineInRange("goety.soulToManaMultiplier", 5.0, 0.0, 1000000.0);
 
     public static final ModConfigSpec.DoubleValue GOETY_COOLDOWN_MULTIPLIER = BUILDER

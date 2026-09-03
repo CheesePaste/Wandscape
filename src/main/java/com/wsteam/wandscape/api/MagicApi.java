@@ -98,4 +98,8 @@ public interface MagicApi {
     void setCastSingleTargetMaxEnemies(int v);
     int getCastAoeMinEnemies();
     void setCastAoeMinEnemies(int v);
+
+    /** 第三方（Goety）持续/连发（volley）魔法单轮最大齐射时长（tick，自 charge 完成起计）。 */
+    int getSustainedCastMaxTicks();
+    void setSustainedCastMaxTicks(int v);
 }

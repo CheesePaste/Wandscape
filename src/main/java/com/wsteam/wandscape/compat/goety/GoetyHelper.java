@@ -135,6 +135,40 @@ public final class GoetyHelper {
     }
 
     /**
+     * 灵魂消耗换算 NPC 魔力（defaultSoulCost × {@code goety.soulToManaMultiplier}，至少 1）。
+     * 供合成 def 与施法共用，避免两处重复换算漂移。
+     */
+    public static int manaCost(ISpell spell) {
+        int rawSoul = Math.max(0, spell.defaultSoulCost());
+        double ratio = Config.GOETY_SOUL_TO_MANA_MULTIPLIER.get();
+        return Math.max(1, (int) Math.round(rawSoul * ratio));
+    }
+
+    /**
+     * Goety 法术基础冷却（tick，打完一轮后上 CD 用）：
+     * <ul>
+     *   <li>{@code IChargingSpell}（蓄力/持续/呼吸 volley）：= round(defaultSpellCooldown() ×
+     *       {@code goety.cooldownMultiplier})，**不退回 Cooldown()**（那是齐射节拍不是冷却），也**不设 10t
+     *       下限**——无冷却的聚晶打满后应能立即再起；SPELL_SPEED 的缩短在 MagicState 做。</li>
+     *   <li>纯 instant（非 IChargingSpell）：维持 ≥10 保底，避免无冷却秒发。</li>
+     * </ul>
+     */
+    public static int baseCooldown(ISpell spell) {
+        int raw = Math.max(0, spell.defaultSpellCooldown());
+        double ratio = Config.GOETY_COOLDOWN_MULTIPLIER.get();
+        int cd = (int) Math.round(raw * ratio);
+        if (spell instanceof IChargingSpell) {
+            return Math.max(0, cd);
+        }
+        return Math.max(10, cd);
+    }
+
+    /** 是否 EverCharge/呼吸 计费风格（每 20 发扣一次 {@link #manaCost}；否则每发扣一次）。 */
+    public static boolean everStyle(ISpell spell) {
+        return spell instanceof IChargingSpell charging && charging.everCharge();
+    }
+
+    /**
      * 根据聚晶法术与装备所在的策略组，构造动态合成的 {@link MagicDef}。
      * 对齐铁魔法设计：由策略槽分类（aoe/defense/support/single_target）覆盖目标与施法门控。
      */
@@ -145,17 +179,10 @@ public final class GoetyHelper {
         if (spell == null) return null;
 
         // 灵魂消耗换算为魔力消耗（支持 Config 比例系数配置）
-        int rawSoul = spell.defaultSoulCost();
-        double soulRatio = Config.GOETY_SOUL_TO_MANA_MULTIPLIER.get();
-        int manaCost = Math.max(1, (int) Math.round(rawSoul * soulRatio));
+        int manaCost = manaCost(spell);
 
         // 冷却换算（tick，支持 Config 比例系数配置；SPELL_SPEED 在 MagicState 进一步缩短）
-        int rawCooldown = spell.defaultSpellCooldown();
-        if (spell instanceof IChargingSpell charging && rawCooldown <= 0) {
-            rawCooldown = charging.Cooldown();
-        }
-        double cdRatio = Config.GOETY_COOLDOWN_MULTIPLIER.get();
-        int baseCooldown = Math.max(10, (int) Math.round(rawCooldown * cdRatio));
+        int baseCooldown = baseCooldown(spell);
 
         int castTime = (spell instanceof IChargingSpell charging)
                 ? Math.min(60, Math.max(20, charging.defaultCastUp()))

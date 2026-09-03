@@ -89,6 +89,8 @@ public final class SpellcastingApiImpl implements MagicApi {
     @Override public void setCastSingleTargetMaxEnemies(int v) { BalanceValues.setCastSingleTargetMaxEnemies(v); }
     @Override public int getCastAoeMinEnemies() { return BalanceValues.castAoeMinEnemies(); }
     @Override public void setCastAoeMinEnemies(int v) { BalanceValues.setCastAoeMinEnemies(v); }
+    @Override public int getSustainedCastMaxTicks() { return BalanceValues.sustainedCastMaxTicks(); }
+    @Override public void setSustainedCastMaxTicks(int v) { BalanceValues.setSustainedCastMaxTicks(v); }
 
     private static WandscapeNpc resolve(UUID npcId) {
         if (npcId == null) return null;

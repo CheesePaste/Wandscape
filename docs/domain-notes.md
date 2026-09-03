@@ -58,6 +58,12 @@
 3. **祭坛施法约束**：
    - 声明 `altar_only: true` 的魔法（如 revive）严禁被 NPC 直接自动决策施放，必须由玩家在祭坛 UI 发布任务后 NPC 走到祭坛中心施放。
    - 祭坛 CD 独立存储于 `AltarCastState`（按祭坛 buildingId 独立，不跨祭坛共享）。
+4. **第三方（Goety）聚晶施法 volley 化**（`compat/goety/`）：
+   - `IChargingSpell`（EverCharge 持续 / 蓄力连发如 Steam / 呼吸）按 Goety 玩家侧语义：充能（`castUp/speed`）→ 按 `Cooldown(caster,staff,shots)` 节拍逐发 `SpellResult` → 打到 `shotsNumber()` 或单轮齐射硬顶自然收尾并上 `defaultSpellCooldown` 冷却。
+   - 单轮齐射硬顶默认 100t，走 `MagicApi.get/setSustainedCastMaxTicks`（内部 BalanceValues，可被 wandscape_balance.json 覆盖），**不进 Config TOML**。
+   - volley 全程**不占施法互斥锁**：各魔法 CD 照走；GuardCombat 每轮复选只让位「严格更高优先」法术，选回同 focus / 选不到都保持 volley；L0 紧急奶等其它施法经 `MagicSpellExecutors.dispatch` 打断 volley。
+   - 魔力按 Goety 扣费节拍（EverCharge/呼吸每 20 发扣一次 `manaCost`、Steam 类每发扣一次），不足自动停、不罚 CD。
+   - 遗留：非 `IChargingSpell` 但 `defaultCastDuration()>0` 的蓄力弹（PrismaBeam 类走 useSpell/stopSpell）仍被 instant 分支秒发，待修。
 
 ---
 
