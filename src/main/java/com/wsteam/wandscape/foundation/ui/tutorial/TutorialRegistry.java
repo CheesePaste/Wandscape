@@ -34,185 +34,185 @@ public final class TutorialRegistry {
     // ── Shared keys (reused across steps) ──
 
     private static final List<String> AIMING_LINES = List.of(
-            "guide.wandscape.common.aim_drag_place",
-            "guide.wandscape.common.aim_rotate_submit");
+            "tutorial.wandscape.common.aim_drag_place",
+            "tutorial.wandscape.common.aim_rotate_submit");
 
     private static final List<String> PINNED_LINES = List.of(
-            "guide.wandscape.common.pinned_locked",
-            "guide.wandscape.common.pinned_submit");
+            "tutorial.wandscape.common.pinned_locked",
+            "tutorial.wandscape.common.pinned_submit");
 
     private static final TutorialStep TOWN_HALL = new TutorialStep(
             "townhall",
-            "guide.wandscape.townhall.title",
+            "tutorial.wandscape.townhall.title",
             List.of(
-                    "guide.wandscape.common.open_build",
-                    "guide.wandscape.townhall.line2",
-                    "guide.wandscape.townhall.line3",
-                    "guide.wandscape.townhall.line4",
-                    "guide.wandscape.townhall.line5"),
+                    "tutorial.wandscape.common.open_build",
+                    "tutorial.wandscape.townhall.line2",
+                    "tutorial.wandscape.townhall.line3",
+                    "tutorial.wandscape.townhall.line4",
+                    "tutorial.wandscape.townhall.line5"),
             List.of(
-                    "guide.wandscape.common.build_list_open",
-                    "guide.wandscape.townhall.bar2"),
+                    "tutorial.wandscape.common.build_list_open",
+                    "tutorial.wandscape.townhall.bar2"),
             AIMING_LINES,
             PINNED_LINES,
-            "guide.wandscape.townhall.hint");
+            "tutorial.wandscape.townhall.hint");
 
     private static final TutorialStep WAREHOUSE = new TutorialStep(
             "warehouse",
-            "guide.wandscape.warehouse.title",
+            "tutorial.wandscape.warehouse.title",
             List.of(
-                    "guide.wandscape.common.open_build",
-                    "guide.wandscape.warehouse.line2",
-                    "guide.wandscape.common.drag_position_rotate",
-                    "guide.wandscape.common.submit_line"),
+                    "tutorial.wandscape.common.open_build",
+                    "tutorial.wandscape.warehouse.line2",
+                    "tutorial.wandscape.common.drag_position_rotate",
+                    "tutorial.wandscape.common.submit_line"),
             List.of(
-                    "guide.wandscape.common.build_list_open",
-                    "guide.wandscape.warehouse.bar2"),
+                    "tutorial.wandscape.common.build_list_open",
+                    "tutorial.wandscape.warehouse.bar2"),
             AIMING_LINES,
             PINNED_LINES,
-            "guide.wandscape.warehouse.hint");
+            "tutorial.wandscape.warehouse.hint");
 
     private static final TutorialStep DEPOSIT = new TutorialStep(
             "deposit",
-            "guide.wandscape.deposit.title",
+            "tutorial.wandscape.deposit.title",
             List.of(
-                    "guide.wandscape.common.exit_build",
-                    "guide.wandscape.deposit.line2",
-                    "guide.wandscape.deposit.line3"),
+                    "tutorial.wandscape.common.exit_build",
+                    "tutorial.wandscape.deposit.line2",
+                    "tutorial.wandscape.deposit.line3"),
             List.of(
-                    "guide.wandscape.common.exit_build",
-                    "guide.wandscape.deposit.line2",
-                    "guide.wandscape.deposit.line3"),
+                    "tutorial.wandscape.common.exit_build",
+                    "tutorial.wandscape.deposit.line2",
+                    "tutorial.wandscape.deposit.line3"),
             List.of(
-                    "guide.wandscape.common.exit_build",
-                    "guide.wandscape.deposit.line2",
-                    "guide.wandscape.deposit.line3"),
+                    "tutorial.wandscape.common.exit_build",
+                    "tutorial.wandscape.deposit.line2",
+                    "tutorial.wandscape.deposit.line3"),
             List.of(
-                    "guide.wandscape.common.exit_build",
-                    "guide.wandscape.deposit.line2",
-                    "guide.wandscape.deposit.line3"),
-            "guide.wandscape.deposit.hint");
+                    "tutorial.wandscape.common.exit_build",
+                    "tutorial.wandscape.deposit.line2",
+                    "tutorial.wandscape.deposit.line3"),
+            "tutorial.wandscape.deposit.hint");
 
     private static final TutorialStep WORKSTATION = new TutorialStep(
             "workstation",
-            "guide.wandscape.workstation.title",
+            "tutorial.wandscape.workstation.title",
             List.of(
-                    "guide.wandscape.common.open_build",
-                    "guide.wandscape.workstation.line2",
-                    "guide.wandscape.common.drag_position_rotate",
-                    "guide.wandscape.common.submit_line"),
+                    "tutorial.wandscape.common.open_build",
+                    "tutorial.wandscape.workstation.line2",
+                    "tutorial.wandscape.common.drag_position_rotate",
+                    "tutorial.wandscape.common.submit_line"),
             List.of(
-                    "guide.wandscape.common.build_list_open",
-                    "guide.wandscape.workstation.bar2"),
+                    "tutorial.wandscape.common.build_list_open",
+                    "tutorial.wandscape.workstation.bar2"),
             AIMING_LINES,
             PINNED_LINES,
-            "guide.wandscape.workstation.hint");
+            "tutorial.wandscape.workstation.hint");
 
     private static final TutorialStep SYNTHESIZE = new TutorialStep(
             "synthesize",
-            "guide.wandscape.synthesize.title",
+            "tutorial.wandscape.synthesize.title",
             List.of(
-                    "guide.wandscape.common.exit_build",
-                    "guide.wandscape.synthesize.line2",
-                    "guide.wandscape.synthesize.line3",
-                    "guide.wandscape.synthesize.line4"),
+                    "tutorial.wandscape.common.exit_build",
+                    "tutorial.wandscape.synthesize.line2",
+                    "tutorial.wandscape.synthesize.line3",
+                    "tutorial.wandscape.synthesize.line4"),
             List.of(
-                    "guide.wandscape.common.exit_build",
-                    "guide.wandscape.synthesize.line2",
-                    "guide.wandscape.synthesize.line3",
-                    "guide.wandscape.synthesize.line4"),
+                    "tutorial.wandscape.common.exit_build",
+                    "tutorial.wandscape.synthesize.line2",
+                    "tutorial.wandscape.synthesize.line3",
+                    "tutorial.wandscape.synthesize.line4"),
             List.of(
-                    "guide.wandscape.common.exit_build",
-                    "guide.wandscape.synthesize.line2",
-                    "guide.wandscape.synthesize.line3",
-                    "guide.wandscape.synthesize.line4"),
+                    "tutorial.wandscape.common.exit_build",
+                    "tutorial.wandscape.synthesize.line2",
+                    "tutorial.wandscape.synthesize.line3",
+                    "tutorial.wandscape.synthesize.line4"),
             List.of(
-                    "guide.wandscape.common.exit_build",
-                    "guide.wandscape.synthesize.line2",
-                    "guide.wandscape.synthesize.line3",
-                    "guide.wandscape.synthesize.line4"),
-            "guide.wandscape.synthesize.hint");
+                    "tutorial.wandscape.common.exit_build",
+                    "tutorial.wandscape.synthesize.line2",
+                    "tutorial.wandscape.synthesize.line3",
+                    "tutorial.wandscape.synthesize.line4"),
+            "tutorial.wandscape.synthesize.hint");
 
     private static final TutorialStep ROAD = new TutorialStep(
             "road",
-            "guide.wandscape.road.title",
+            "tutorial.wandscape.road.title",
             List.of(
-                    "guide.wandscape.road.line1",
-                    "guide.wandscape.road.line2",
-                    "guide.wandscape.road.line3"),
+                    "tutorial.wandscape.road.line1",
+                    "tutorial.wandscape.road.line2",
+                    "tutorial.wandscape.road.line3"),
             List.of(
-                    "guide.wandscape.road.line1",
-                    "guide.wandscape.road.line2",
-                    "guide.wandscape.road.line3"),
+                    "tutorial.wandscape.road.line1",
+                    "tutorial.wandscape.road.line2",
+                    "tutorial.wandscape.road.line3"),
             List.of(
-                    "guide.wandscape.road.line1",
-                    "guide.wandscape.road.line2",
-                    "guide.wandscape.road.line3"),
+                    "tutorial.wandscape.road.line1",
+                    "tutorial.wandscape.road.line2",
+                    "tutorial.wandscape.road.line3"),
             List.of(
-                    "guide.wandscape.road.line1",
-                    "guide.wandscape.road.line2",
-                    "guide.wandscape.road.line3"),
-            "guide.wandscape.road.hint");
+                    "tutorial.wandscape.road.line1",
+                    "tutorial.wandscape.road.line2",
+                    "tutorial.wandscape.road.line3"),
+            "tutorial.wandscape.road.hint");
 
     private static final TutorialStep BAKERY = new TutorialStep(
             "bakery",
-            "guide.wandscape.bakery.title",
+            "tutorial.wandscape.bakery.title",
             List.of(
-                    "guide.wandscape.common.open_build",
-                    "guide.wandscape.bakery.line2",
-                    "guide.wandscape.common.drag_position_submit",
-                    "guide.wandscape.bakery.line4"),
+                    "tutorial.wandscape.common.open_build",
+                    "tutorial.wandscape.bakery.line2",
+                    "tutorial.wandscape.common.drag_position_submit",
+                    "tutorial.wandscape.bakery.line4"),
             List.of(
-                    "guide.wandscape.common.build_list_open",
-                    "guide.wandscape.bakery.bar2"),
+                    "tutorial.wandscape.common.build_list_open",
+                    "tutorial.wandscape.bakery.bar2"),
             AIMING_LINES,
             PINNED_LINES,
-            "guide.wandscape.bakery.hint");
+            "tutorial.wandscape.bakery.hint");
 
     private static final TutorialStep NODE = new TutorialStep(
             "node",
-            "guide.wandscape.node.title",
+            "tutorial.wandscape.node.title",
             List.of(
-                    "guide.wandscape.common.open_build",
-                    "guide.wandscape.node.line2",
-                    "guide.wandscape.common.drag_position_submit",
-                    "guide.wandscape.node.line4"),
+                    "tutorial.wandscape.common.open_build",
+                    "tutorial.wandscape.node.line2",
+                    "tutorial.wandscape.common.drag_position_submit",
+                    "tutorial.wandscape.node.line4"),
             List.of(
-                    "guide.wandscape.common.build_list_open",
-                    "guide.wandscape.node.bar2"),
+                    "tutorial.wandscape.common.build_list_open",
+                    "tutorial.wandscape.node.bar2"),
             AIMING_LINES,
             PINNED_LINES,
-            "guide.wandscape.node.hint");
+            "tutorial.wandscape.node.hint");
 
     private static final TutorialStep ALTAR = new TutorialStep(
             "altar",
-            "guide.wandscape.altar.title",
+            "tutorial.wandscape.altar.title",
             List.of(
-                    "guide.wandscape.common.open_build",
-                    "guide.wandscape.altar.line2",
-                    "guide.wandscape.common.drag_position_submit",
-                    "guide.wandscape.altar.line4"),
+                    "tutorial.wandscape.common.open_build",
+                    "tutorial.wandscape.altar.line2",
+                    "tutorial.wandscape.common.drag_position_submit",
+                    "tutorial.wandscape.altar.line4"),
             List.of(
-                    "guide.wandscape.common.build_list_open",
-                    "guide.wandscape.altar.bar2"),
+                    "tutorial.wandscape.common.build_list_open",
+                    "tutorial.wandscape.altar.bar2"),
             AIMING_LINES,
             PINNED_LINES,
-            "guide.wandscape.altar.hint");
+            "tutorial.wandscape.altar.hint");
 
     private static final TutorialStep INN = new TutorialStep(
             "youth_hostel",
-            "guide.wandscape.youth_hostel.title",
+            "tutorial.wandscape.youth_hostel.title",
             List.of(
-                    "guide.wandscape.common.open_build",
-                    "guide.wandscape.youth_hostel.line2",
-                    "guide.wandscape.common.drag_position_submit",
-                    "guide.wandscape.youth_hostel.line4"),
+                    "tutorial.wandscape.common.open_build",
+                    "tutorial.wandscape.youth_hostel.line2",
+                    "tutorial.wandscape.common.drag_position_submit",
+                    "tutorial.wandscape.youth_hostel.line4"),
             List.of(
-                    "guide.wandscape.common.build_list_open",
-                    "guide.wandscape.youth_hostel.bar2"),
+                    "tutorial.wandscape.common.build_list_open",
+                    "tutorial.wandscape.youth_hostel.bar2"),
             AIMING_LINES,
             PINNED_LINES,
-            "guide.wandscape.youth_hostel.hint");
+            "tutorial.wandscape.youth_hostel.hint");
 
     public static final List<TutorialStep> STEPS = List.of(
             TOWN_HALL, WAREHOUSE, DEPOSIT, WORKSTATION, SYNTHESIZE,
