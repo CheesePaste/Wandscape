@@ -173,7 +173,8 @@ public class WarehouseManager implements WarehouseApi, ColonyResourceAccess {
         if (!bank.hasCapacity(colonyId, units)) {
             Log.debug(LogCategory.WAREHOUSE, "storage",
                     "insertItems refused: colony {} batch of {} items over capacity (used={}/cap={})",
-                    colonyId.toString().substring(0, 8), units, bank.usedItems(colonyId), bank.capacity());
+                    colonyId.toString().substring(0, 8), units, bank.usedItems(colonyId),
+                    ColonyItemBank.capacityFor(colonyId));
             return false;
         }
         Set<String> emitted = new HashSet<>();

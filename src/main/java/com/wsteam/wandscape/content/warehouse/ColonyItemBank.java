@@ -155,9 +155,38 @@ public class ColonyItemBank extends SavedData {
     /** 容量短缺的伪资源 id：把满仓的生产任务标记为\"仓库容量不足\"并回队列等待。 */
     public static final String CAPACITY_SHORTAGE_RESOURCE = "warehouse_capacity";
 
-    /** Config 仓库物品容量上限；0 = 不设上限。 */
-    public static int capacity() {
+    /** Config 每座仓库的建筑容量；0 = 关闭容量机制（不设限）。 */
+    public static int capacityPerWarehouse() {
         return Config.WAREHOUSE_ITEM_CAPACITY.get();
+    }
+
+    /**
+     * 殖民地仓库容量上限 = 该殖民地「仓库(storage)」建筑数 × 每座容量；没有独立仓库
+     * 建筑（市政厅临时存取期）按 1 座计，保证容量概念始终成立。容量机制关闭(Config=0)时
+     * 返回 0，调用方按不设限处理。
+     */
+    public static long capacityFor(UUID colonyId) {
+        int per = capacityPerWarehouse();
+        if (per <= 0) return 0;
+        long buildings = countStorageBuildings(colonyId);
+        if (buildings < 1) buildings = 1;
+        return buildings * (long) per;
+    }
+
+    /** 该殖民地已注册的仓库建筑数量；建筑查询不可用/异常时按 1 座兜底（不因统计失败锁死）。 */
+    private static long countStorageBuildings(UUID colonyId) {
+        var api = com.wsteam.wandscape.api.WandscapeApis.getBuildingApiSilently();
+        if (api == null || colonyId == null) return 1;
+        try {
+            long count = 0;
+            for (var bd : api.getColonyBuildings(colonyId)) {
+                if ("storage".equals(bd.getCategory())) count++;
+            }
+            return count;
+        } catch (Throwable t) {
+            Log.warn(TAG, "countStorageBuildings failed: {}", t.getMessage());
+            return 1;
+        }
     }
 
     /** 殖民地当前已占用物品容量（物品账本所有条目 count 之和）。 */
@@ -165,17 +194,17 @@ public class ColonyItemBank extends SavedData {
         return usedCounts.getOrDefault(colonyId, 0L);
     }
 
-    /** 剩余容量；上限设为 0（无限）时恒为 Long.MAX_VALUE。 */
+    /** 剩余容量；上限返回 0（机制关闭 = 不限）时恒为 Long.MAX_VALUE。 */
     public long remainingCapacity(UUID colonyId) {
-        int cap = capacity();
+        long cap = capacityFor(colonyId);
         if (cap <= 0) return Long.MAX_VALUE;
-        return Math.max(0, (long) cap - usedItems(colonyId));
+        return Math.max(0, cap - usedItems(colonyId));
     }
 
-    /** 再入账 amount 件物品是否会超出容量上限（上限 0 = 无限，恒可）。 */
+    /** 再入账 amount 件物品是否会超出容量上限（机制关闭 = 不限，恒可）。 */
     public boolean hasCapacity(UUID colonyId, long amount) {
         if (amount <= 0) return true;
-        int cap = capacity();
+        long cap = capacityFor(colonyId);
         if (cap <= 0) return true;
         return usedItems(colonyId) + amount <= cap;
     }

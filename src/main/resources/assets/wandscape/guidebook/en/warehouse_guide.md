@@ -32,7 +32,7 @@ The inventory area behaves exactly like a vanilla container: hotbar keys 1-9, Q 
 
 ## Warehouse Capacity
 
-Each colony warehouse has a capacity of **50000**: **every item counts 1**, and unstackable wands / scrolls count 1 too. Elements live in their own element ledger and do **not** count against capacity.
+Warehouse capacity scales with your **warehouse buildings**: **each warehouse adds 50000** (a colony with no dedicated warehouse yet counts as one), so the more you build, the more you can store. **Every item counts 1** — unstackable wands / scrolls count 1 too; elements live in their own ledger and do **not** count.
 
 | State | Behavior |
 |---|---|

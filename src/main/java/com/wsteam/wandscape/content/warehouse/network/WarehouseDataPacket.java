@@ -24,7 +24,7 @@ import static com.wsteam.wandscape.Wandscape.MODID;
  */
 public record WarehouseDataPacket(BlockPos buildingPos, UUID colonyId,
                                    ListTag items, ListTag elements, String creator,
-                                   long usedCapacity, int capacity)
+                                   long usedCapacity, long capacity)
         implements CustomPacketPayload {
 
     public static final Type<WarehouseDataPacket> TYPE =
@@ -72,7 +72,7 @@ public record WarehouseDataPacket(BlockPos buildingPos, UUID colonyId,
         }
 
         return new WarehouseDataPacket(buildingPos, colonyId, itemList, elemList, creator,
-                used, com.wsteam.wandscape.content.warehouse.ColonyItemBank.capacity());
+                used, com.wsteam.wandscape.content.warehouse.ColonyItemBank.capacityFor(colonyId));
     }
 
     /** Decode item list for client rendering. */
@@ -134,7 +134,7 @@ public record WarehouseDataPacket(BlockPos buildingPos, UUID colonyId,
         wrapper.put("elems", pkt.elements);
         wrapper.putString("creator", pkt.creator != null ? pkt.creator : "");
         wrapper.putLong("used", pkt.usedCapacity);
-        wrapper.putInt("cap", pkt.capacity);
+        wrapper.putLong("cap", pkt.capacity);
         buf.writeNbt(wrapper);
     }
 
@@ -150,7 +150,7 @@ public record WarehouseDataPacket(BlockPos buildingPos, UUID colonyId,
         ListTag elems = wrapper.getList("elems", Tag.TAG_COMPOUND);
         String creator = wrapper.getString("creator");
         long used = wrapper.contains("used") ? wrapper.getLong("used") : 0;
-        int cap = wrapper.contains("cap") ? wrapper.getInt("cap") : 0;
+        long cap = wrapper.contains("cap") ? wrapper.getLong("cap") : 0;
         return new WarehouseDataPacket(buildingPos, colonyId, items, elems, creator, used, cap);
     }
 }

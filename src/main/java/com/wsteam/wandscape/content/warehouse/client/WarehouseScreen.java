@@ -100,7 +100,7 @@ public class WarehouseScreen extends AbstractContainerScreen<WarehouseMenu> impl
 
     // 仓库容量读数（随每次 WarehouseDataPacket 刷新；cap<=0 = 未设上限，不显示）
     private long usedCapacity;
-    private int capacity;
+    private long capacity;
 
     // ── Overview widgets ──
     private ElementPanel elementPanel;
