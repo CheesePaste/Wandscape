@@ -77,7 +77,7 @@ public final class MagicCommand {
                 boolean cur = MagicState.isFreeCast();
                 ctx.getSource().sendSuccess(() -> I18n.name(
                         "message.wandscape.command.magic_freecast_status",
-                        "[Wandscape] 魔法测试模式（无CD无耗蓝）当前状态: %s", cur ? "开启 (ON)" : "关闭 (OFF)"), false);
+                        "[魔法小镇] 魔法测试模式（无CD无耗蓝）当前状态: %s", cur ? "开启 (ON)" : "关闭 (OFF)"), false);
                 return cur ? 1 : 0;
             }
             newState = "on".equals(s) || "true".equals(s) || "1".equals(s);
@@ -86,7 +86,7 @@ public final class MagicCommand {
 
         ctx.getSource().sendSuccess(() -> I18n.name(
                 "message.wandscape.command.magic_freecast_toggled",
-                "[Wandscape] 魔法测试模式（无CD无耗蓝）已: %s", newState ? "开启 (ON)" : "关闭 (OFF)"), true);
+                "[魔法小镇] 魔法测试模式（无CD无耗蓝）已: %s", newState ? "开启 (ON)" : "关闭 (OFF)"), true);
         return newState ? 1 : 0;
     }
 
@@ -105,12 +105,12 @@ public final class MagicCommand {
             int finalCount = count;
             ctx.getSource().sendSuccess(() -> I18n.name(
                     "message.wandscape.command.magic_cd_cleared",
-                    "[Wandscape] 已重置附近 %d 名法师的冷却与施法互斥锁", finalCount), true);
+                    "[魔法小镇] 已重置附近 %d 名法师的冷却与施法互斥锁", finalCount), true);
             return count;
         } catch (Exception e) {
             ctx.getSource().sendFailure(I18n.name(
                     "message.wandscape.command.magic_players_only",
-                    "[Wandscape] 仅玩家可执行该命令"));
+                    "[魔法小镇] 仅玩家可执行该命令"));
             return 0;
         }
     }
@@ -129,12 +129,12 @@ public final class MagicCommand {
             int finalCount = count;
             ctx.getSource().sendSuccess(() -> I18n.name(
                     "message.wandscape.command.magic_mana_filled",
-                    "[Wandscape] 已补满附近 %d 名法师的法力值", finalCount), true);
+                    "[魔法小镇] 已补满附近 %d 名法师的法力值", finalCount), true);
             return count;
         } catch (Exception e) {
             ctx.getSource().sendFailure(I18n.name(
                     "message.wandscape.command.magic_players_only",
-                    "[Wandscape] 仅玩家可执行该命令"));
+                    "[魔法小镇] 仅玩家可执行该命令"));
             return 0;
         }
     }
@@ -148,7 +148,7 @@ public final class MagicCommand {
             if (def == null) {
                 ctx.getSource().sendFailure(I18n.name(
                         "message.wandscape.command.magic_not_found",
-                        "[Wandscape] 未找到魔法: %s", spellId));
+                        "[魔法小镇] 未找到魔法: %s", spellId));
                 return 0;
             }
 
@@ -156,18 +156,18 @@ public final class MagicCommand {
             if (ok) {
                 ctx.getSource().sendSuccess(() -> I18n.name(
                         "message.wandscape.command.magic_cast_ok",
-                        "[Wandscape] 已对玩家成功施加魔法: %s", spellId), true);
+                        "[魔法小镇] 已对玩家成功施加魔法: %s", spellId), true);
                 return 1;
             } else {
                 ctx.getSource().sendFailure(I18n.name(
                         "message.wandscape.command.magic_cast_failed",
-                        "[Wandscape] 施加魔法失败: %s", spellId));
+                        "[魔法小镇] 施加魔法失败: %s", spellId));
                 return 0;
             }
         } catch (Exception e) {
             ctx.getSource().sendFailure(I18n.name(
                     "message.wandscape.command.magic_players_only",
-                    "[Wandscape] 仅玩家可执行该魔法测试命令"));
+                    "[魔法小镇] 仅玩家可执行该魔法测试命令"));
             return 0;
         }
     }

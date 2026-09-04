@@ -12,6 +12,7 @@ import com.wsteam.wandscape.content.production.network.WorkstationDataPacket.Syn
 import com.wsteam.wandscape.content.element.data.ElementType;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.foundation.ui.I18n;
+import com.wsteam.wandscape.foundation.util.ItemKey;
 import com.wsteam.wandscape.foundation.ui.component.*;
 import com.wsteam.wandscape.foundation.ui.theme.MedievalColors;
 import com.wsteam.wandscape.foundation.ui.theme.WandscapeTheme;
@@ -167,16 +168,16 @@ public class WorkstationScreen extends MedievalScreen {
             protected void renderRow(GuiGraphics g, DecomposableEntry item, int x, int y, int index,
                                      boolean selected, boolean hovered) {
                 boolean canAfford = item.count() > 0;
-                var registryItem = BuiltInRegistries.ITEM.get(ResourceLocation.tryParse(item.itemId()));
-                if (registryItem != null && registryItem != Items.AIR) {
-                    g.renderItem(new ItemStack(registryItem), x, y + 1);
+                ItemStack display = decomposeDisplay(item);
+                if (!display.isEmpty()) {
+                    g.renderItem(display, x, y + 1);
                 }
                 int textColor = !canAfford ? MedievalColors.TEXT_DIM
                         : selected ? MedievalColors.ACCENT_GOLD
                         : hovered ? MedievalColors.TEXT_WARM_WHITE
                         : MedievalColors.TEXT_MUTED;
-                Component name = (registryItem != null && registryItem != Items.AIR)
-                        ? new ItemStack(registryItem).getHoverName()
+                Component name = !display.isEmpty()
+                        ? display.getHoverName()
                         : Component.literal(item.itemId());
                 g.drawString(Minecraft.getInstance().font, name, x + 20, y + 2, textColor);
                 String count = "x" + formatCount(item.count());
@@ -187,7 +188,7 @@ public class WorkstationScreen extends MedievalScreen {
             }
         };
         decomposeList.setOnSelect(i -> updateSliderForDecompose(decomposeFiltered.get(i)));
-        decomposeList.setTooltipProvider((item, index) -> ItemStackUtil.fromIdWithNbt(item.itemId(), item.nbt()));
+        decomposeList.setTooltipProvider((item, index) -> decomposeDisplay(item));
 
         synthesizeList = new ScrollableList<>(contentX, listY, contentW, listH, 20) {
             @Override
@@ -415,5 +416,14 @@ public class WorkstationScreen extends MedievalScreen {
         if (n < 1000) return String.valueOf(n);
         if (n < 1_000_000) return String.format("%.1fK", n / 1000.0);
         return String.format("%.1fM", n / 1_000_000.0);
+    }
+
+    /** 分解列表图标/悬停：仓库载荷是完整物品序列化（ItemKey 语义），解码还原全组件。 */
+    private static ItemStack decomposeDisplay(DecomposableEntry entry) {
+        var registryItem = BuiltInRegistries.ITEM.get(ResourceLocation.tryParse(entry.itemId()));
+        if (registryItem == null || registryItem == Items.AIR) return ItemStack.EMPTY;
+        var level = Minecraft.getInstance().level;
+        if (level == null) return new ItemStack(registryItem, 1);
+        return ItemKey.of(entry.itemId(), entry.nbt()).toStack(1, level.registryAccess());
     }
 }

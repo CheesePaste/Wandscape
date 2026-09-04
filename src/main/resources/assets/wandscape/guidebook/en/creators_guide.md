@@ -34,10 +34,15 @@ List the architects who have provided buildings for the mod:
 
 List the programmers who took part in developing the mod:
 
-- **(Developer name)** — role: xxx — [personal link](https://example.com)
+- **RawNuke** [Github](https://github.com/RawNuke)
+- **RainyLetter** [Github](https://github.com/RainyLetter)
+
 
 ## Special Thanks
-
+- **Ruo_que**
+- **爱发电用户_hcYF**
+- **Tasty_Kara卡拉**
+- **Hymisc**
 - ...
 
 ## Support Us

@@ -55,7 +55,7 @@ public final class GuideCommand {
         if (player == null) {
             ctx.getSource().sendFailure(I18n.name(
                     "message.wandscape.command.guide_players_only",
-                    "[Wandscape] 该指令只能由玩家在游戏内执行"));
+                    "[魔法小镇] 该指令只能由玩家在游戏内执行"));
             return 0;
         }
         PacketDistributor.sendToPlayer(player, new GuideBookOpenPacket(page));

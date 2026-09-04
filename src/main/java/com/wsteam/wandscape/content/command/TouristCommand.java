@@ -93,12 +93,12 @@ public final class TouristCommand {
         UUID colonyId = CommandUtil.resolveColony(src);
         if (colonyId == null) {
             src.sendFailure(Component.literal(
-                    "[Wandscape] 未检测到小镇：请在小镇范围内使用，或先创建小镇"));
+                    "[魔法小镇] 未检测到小镇：请在小镇范围内使用，或先创建小镇"));
             return 0;
         }
         TouristApi touristApi = WandscapeApis.getTouristApiSilently();
         if (touristApi == null) {
-            src.sendFailure(Component.literal("[Wandscape] 游客系统未就绪"));
+            src.sendFailure(Component.literal("[魔法小镇] 游客系统未就绪"));
             return 0;
         }
         // 记录清空前后数量，供反馈。
@@ -106,7 +106,7 @@ public final class TouristCommand {
         touristApi.despawnAll(colonyId);
         String cid = CommandUtil.shortId(colonyId);
         src.sendSuccess(() -> Component.literal(
-                "[Wandscape] 已清空小镇 " + cid + " 的游客（" + before + " 名离城）"), true);
+                "[魔法小镇] 已清空小镇 " + cid + " 的游客（" + before + " 名离城）"), true);
         return Command.SINGLE_SUCCESS;
     }
 

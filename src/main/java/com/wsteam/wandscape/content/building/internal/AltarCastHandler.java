@@ -67,20 +67,20 @@ public final class AltarCastHandler {
         MagicDef def = SpellbookLoader.getSpec(magicId);
         if (def == null || !def.altarOnly()) {
             ScreenFeedbackPacket.send(player, I18n.name("message.wandscape.altar.not_altar_only",
-                    "[Wandscape] 该魔法不可在祭坛施放"), true);
+                    "[魔法小镇] 该魔法不可在祭坛施放"), true);
             return;
         }
         var buildingApi = WandscapeApis.getBuildingApiSilently();
         if (buildingApi == null) {
             ScreenFeedbackPacket.send(player, I18n.name("message.wandscape.altar.build_system_not_ready",
-                    "[Wandscape] 建筑系统未就绪"), true);
+                    "[魔法小镇] 建筑系统未就绪"), true);
             return;
         }
         BuildingData building = buildingApi.getBuilding(buildingId);
         BoundingBox bounds = buildingApi.getBuildingBounds(buildingId);
         if (building == null || bounds == null) {
             ScreenFeedbackPacket.send(player, I18n.name("message.wandscape.altar.not_found",
-                    "[Wandscape] 祭坛不存在或未完工"), true);
+                    "[魔法小镇] 祭坛不存在或未完工"), true);
             return;
         }
 
@@ -88,25 +88,25 @@ public final class AltarCastHandler {
         int cd = state.getCooldown(buildingId, magicId);
         if (cd > 0) {
             ScreenFeedbackPacket.send(player, I18n.name("message.wandscape.altar.on_cooldown",
-                    "[Wandscape] 祭坛冷却中（剩余 %.1f 秒）", cd / 20.0), true);
+                    "[魔法小镇] 祭坛冷却中（剩余 %.1f 秒）", cd / 20.0), true);
             return;
         }
         if (isAltarCastLocked(buildingId, magicId)) {
             // 已发布未施放 / 正在施法 —— 发布即锁定，直到施放结束
             ScreenFeedbackPacket.send(player, I18n.name("message.wandscape.altar.already_casting",
-                    "[Wandscape] 该祭坛正在施法中"), true);
+                    "[魔法小镇] 该祭坛正在施法中"), true);
             return;
         }
         UUID colonyId = building.getColonyId();
         if (ReviveHandler.REVIVE_MAGIC_ID.equals(magicId)
                 && ColonyDeathRegistry.get(level).latestInColony(colonyId) == null) {
             ScreenFeedbackPacket.send(player, I18n.name("message.wandscape.altar.no_revive_record",
-                    "[Wandscape] 该小镇没有可复活的死亡记录"), true);
+                    "[魔法小镇] 该小镇没有可复活的死亡记录"), true);
             return;
         }
         if (!hasCasterWithMana(level, colonyId, def.manaCost())) {
             ScreenFeedbackPacket.send(player, I18n.name("message.wandscape.altar.no_adequate_mage",
-                    "[Wandscape] 没有魔力足够（≥%d）的法师 NPC", def.manaCost()), true);
+                    "[魔法小镇] 没有魔力足够（≥%d）的法师 NPC", def.manaCost()), true);
             return;
         }
 
@@ -121,7 +121,7 @@ public final class AltarCastHandler {
         World world = World.getActive();
         if (world == null || world.taskPool == null) {
             ScreenFeedbackPacket.send(player, I18n.name("message.wandscape.altar.task_system_not_ready",
-                    "[Wandscape] 任务系统未就绪"), true);
+                    "[魔法小镇] 任务系统未就绪"), true);
             return;
         }
         // 殖民地归属经 TaskRequest.colonyId 显式传递（GlobalTaskPool 统一写入 colony_id 参数）
@@ -131,7 +131,7 @@ public final class AltarCastHandler {
                 player.getName().getString(), buildingId.toString().substring(0, 8),
                 magicId, def.manaCost());
         ScreenFeedbackPacket.send(player, I18n.name("message.wandscape.altar.cast_scheduled",
-                "[Wandscape] 已安排祭坛施法：%s", magicId), false);
+                "[魔法小镇] 已安排祭坛施法：%s", magicId), false);
     }
 
     /** 每 server tick：推进所有祭坛冷却。 */

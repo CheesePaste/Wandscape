@@ -229,7 +229,7 @@ public class WarehouseMenu extends AbstractContainerMenu {
         List<Integer> foundSlots = new ArrayList<>();
         for (int i = 0; i < inv.getContainerSize(); i++) {
             ItemStack s = inv.getItem(i);
-            if (!s.isEmpty() && matches(s, key)) {
+            if (!s.isEmpty() && matches(s, key, player.serverLevel().registryAccess())) {
                 found.add(s.copy());
                 foundSlots.add(i);
             }
@@ -279,12 +279,10 @@ public class WarehouseMenu extends AbstractContainerMenu {
         playSound(player);
     }
 
-    private static boolean matches(ItemStack stack, ItemKey key) {
+    private static boolean matches(ItemStack stack, ItemKey key, net.minecraft.core.HolderLookup.Provider registries) {
         var rl = BuiltInRegistries.ITEM.getKey(stack.getItem());
         if (rl == null || !rl.toString().equals(key.itemId())) return false;
-        CompoundTag nbt = stack.has(DataComponents.CUSTOM_DATA)
-                ? stack.get(DataComponents.CUSTOM_DATA).copyTag() : null;
-        return Objects.equals(nbt, key.nbt());
+        return key.matches(stack, registries);
     }
 
     /** 单叠尝试入仓；成功返回 true（已记账/播音），满仓拒收时提示并返回 false（物品不动）。 */

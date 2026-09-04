@@ -31,6 +31,12 @@ public class WandscapeDataLoader extends SimpleJsonResourceReloadListener {
     private final Map<String, List<SimpleDataRegistry<?>>> registries = new HashMap<>();
 
     /**
+     * 最近一次 reload 按类目分组的原始 JSON（只含确实加载过的条目，id 已去重）。
+     * 服务端用其把数据同步给专用服务器客户端；可能为 null（尚未 reload，如启动早期）。
+     */
+    private volatile Map<String, Map<String, JsonElement>> lastDataByCategory;
+
+    /**
      * Directory passed to super is unused because we override
      * {@link #prepare(ResourceManager, ProfilerFiller)} to scan per-category.
      */
@@ -105,6 +111,7 @@ public class WandscapeDataLoader extends SimpleJsonResourceReloadListener {
                 .toList();
 
         Set<String> seenIds = new HashSet<>();
+        Map<String, Map<String, JsonElement>> grouped = new HashMap<>();
         int loaded = 0;
         for (var entry : sorted) {
             ResourceLocation loc = entry.getKey();
@@ -118,6 +125,7 @@ public class WandscapeDataLoader extends SimpleJsonResourceReloadListener {
 
             List<SimpleDataRegistry<?>> list = registries.get(category);
             if (list == null) continue;
+            grouped.computeIfAbsent(category, k -> new HashMap<>()).put(id, entry.getValue());
 
             for (SimpleDataRegistry<?> registry : list) {
                 try {
@@ -128,7 +136,42 @@ public class WandscapeDataLoader extends SimpleJsonResourceReloadListener {
                 }
             }
         }
+        lastDataByCategory = grouped;
         Log.info(TAG, "WandscapeDataLoader reloaded: {} files across {} categories",
                 loaded, registries.size());
+    }
+
+    /** 最近一次 reload 的原始 JSON（类目 → id → JSON），供服务端 datapack 同步转发；未 reload 过为 null。 */
+    public Map<String, Map<String, JsonElement>> getRawByCategory() {
+        return lastDataByCategory;
+    }
+
+    /**
+     * 把服务端同步来的某一类目原始 JSON 灌进对应 registry（专用服务器客户端恢复 JEI /
+     * 创造栏 / tooltip 数据的入口；客户端 reload 只扫 assets/，扫不到 data/）。
+     * 幂等：先清该类目所有 registry 再按 id 排序载入，与服务端 apply 的确定性一致。
+     */
+    public void applyCategoryFrom(String category, Map<String, JsonElement> entriesById) {
+        List<SimpleDataRegistry<?>> list = registries.get(category);
+        if (list == null) {
+            Log.warn(TAG, "applyCategoryFrom: unknown category '{}'", category);
+            return;
+        }
+        for (SimpleDataRegistry<?> registry : list) {
+            registry.clear();
+        }
+        List<Map.Entry<String, JsonElement>> sorted = new ArrayList<>(entriesById.entrySet());
+        sorted.sort(Map.Entry.comparingByKey());
+        for (Map.Entry<String, JsonElement> entry : sorted) {
+            for (SimpleDataRegistry<?> registry : list) {
+                try {
+                    registry.loadEntry(entry.getKey(), entry.getValue());
+                } catch (Exception e) {
+                    Log.warn(TAG, "Failed to parse synced config '{}' in '{}': {}",
+                            entry.getKey(), category, e.getMessage());
+                }
+            }
+        }
+        Log.info(TAG, "Applied {} server configs for category '{}'", sorted.size(), category);
     }
 }

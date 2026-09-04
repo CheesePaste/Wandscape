@@ -616,7 +616,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         if (outputNbt != null) {
             substitutePlaceholders(outputNbt, colonyId);
         }
-        ItemKey outputKey = ItemKey.of(recipe.outputItem(), outputNbt);
+        ItemKey outputKey = ItemKey.fromLegacy(recipe.outputItem(), outputNbt, level.registryAccess());
         if (!depositOutput(bank, colonyId, params, outputKey, count)) {
             // 罕见竞态：通道期内容量被占满 → 回滚已扣元素与物品原料，任务按容量短缺回收等待。
             for (var entry : recipe.cost().entrySet()) {

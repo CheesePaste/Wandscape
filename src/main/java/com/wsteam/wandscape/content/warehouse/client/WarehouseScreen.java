@@ -4,6 +4,7 @@ import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.WandscapeClient;
 import com.wsteam.wandscape.content.element.data.ElementType;
 import com.wsteam.wandscape.foundation.ui.I18n;
+import com.wsteam.wandscape.foundation.util.ItemKey;
 import com.wsteam.wandscape.foundation.ui.ReplayProtectedScreen;
 import com.wsteam.wandscape.foundation.ui.component.ElementPanel;
 import com.wsteam.wandscape.foundation.ui.component.HelpButton;
@@ -22,7 +23,6 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
@@ -31,7 +31,6 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.component.CustomData;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.*;
@@ -727,8 +726,10 @@ public class WarehouseScreen extends AbstractContainerScreen<WarehouseMenu>
                 ItemStack stack = hoveredSlot.getItem();
                 var rl = BuiltInRegistries.ITEM.getKey(stack.getItem());
                 if (rl != null) {
-                    CompoundTag nbt = stack.has(DataComponents.CUSTOM_DATA)
-                            ? stack.get(DataComponents.CUSTOM_DATA).copyTag() : null;
+                    // 发送完整物品键（含全部组件），服务端据此与账本条目精确匹配。
+                    CompoundTag nbt = (minecraft != null && minecraft.level != null && !stack.isEmpty())
+                            ? ItemKey.fromStack(stack, minecraft.level.registryAccess()).nbt()
+                            : null;
                     PacketDistributor.sendToServer(new WarehouseActionPacket(menu.containerId,
                             WarehouseActionPacket.ACTION_TAKE_TO_SLOT, rl.toString(), nbt, slotIndex));
                     return true;
@@ -768,15 +769,13 @@ public class WarehouseScreen extends AbstractContainerScreen<WarehouseMenu>
         return visibleStacks.get(slotIndex);
     }
 
-    private static ItemStack toStack(ItemEntry entry) {
+    private ItemStack toStack(ItemEntry entry) {
         var registryItem = BuiltInRegistries.ITEM.get(ResourceLocation.tryParse(entry.itemId()));
         if (registryItem == null || registryItem == Items.AIR) return ItemStack.EMPTY;
         int count = (int) Math.min(Math.max(entry.count(), 1), Integer.MAX_VALUE);
-        ItemStack stack = new ItemStack(registryItem, count);
-        if (entry.nbt() != null && !entry.nbt().isEmpty()) {
-            stack.set(DataComponents.CUSTOM_DATA, CustomData.of(entry.nbt().copy()));
-        }
-        return stack;
+        if (minecraft == null || minecraft.level == null) return new ItemStack(registryItem, count);
+        // 账本载荷是完整物品序列化（ItemKey 语义）；用当前 level 的 registry 解码还原全组件。
+        return ItemKey.of(entry.itemId(), entry.nbt()).toStack(count, minecraft.level.registryAccess());
     }
 
     // ── 皮肤绘制工具 ──

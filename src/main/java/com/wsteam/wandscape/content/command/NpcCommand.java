@@ -41,20 +41,20 @@ public final class NpcCommand {
         UUID colonyId = CommandUtil.resolveColony(src);
         if (colonyId == null) {
             src.sendFailure(Component.literal(
-                    "[Wandscape] 未检测到小镇：请在小镇范围内使用，或先创建小镇"));
+                    "[魔法小镇] 未检测到小镇：请在小镇范围内使用，或先创建小镇"));
             return 0;
         }
 
         NpcApi npcApi = WandscapeApis.getNpcApiSilently();
         if (npcApi == null) {
-            src.sendFailure(Component.literal("[Wandscape] 法师系统未就绪"));
+            src.sendFailure(Component.literal("[魔法小镇] 法师系统未就绪"));
             return 0;
         }
 
         List<NpcData> npcs = idleOnly ? npcApi.getIdleNpcs(colonyId) : npcApi.getColonyNpcs(colonyId);
         String cid = CommandUtil.shortId(colonyId);
         MutableComponent header = I18n.name("message.wandscape.command.npc_list_header",
-                "[Wandscape] 小镇 %s 法师 (%s，共 %d 名)：",
+                "[魔法小镇] 小镇 %s 法师 (%s，共 %d 名)：",
                 cid, idleOnly ? "空闲" : "全部", npcs.size());
         src.sendSuccess(() -> header, false);
 

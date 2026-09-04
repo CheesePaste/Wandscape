@@ -4,6 +4,8 @@ import com.wsteam.wandscape.content.warehouse.transport.TransportItemEntityRende
 import com.mojang.blaze3d.platform.InputConstants;
 import com.wsteam.wandscape.content.building.client.*;
 import com.wsteam.wandscape.content.building.network.*;
+import com.wsteam.wandscape.foundation.registry.dataconfig.internal.DatapackDataSyncChunkPacket;
+import com.wsteam.wandscape.foundation.registry.dataconfig.internal.DatapackDataSyncReceiver;
 import com.wsteam.wandscape.content.building.scanner.client.ScannerRenderer;
 import com.wsteam.wandscape.content.building.projection.client.*;
 import com.wsteam.wandscape.content.building.projection.network.BuildingDebugResponsePacket;
@@ -358,13 +360,8 @@ public class WandscapeClient {
             if (player != null && player.distanceToSqr(net.minecraft.world.phys.Vec3.atCenterOf(packet.from())) > 9216.0) {
                 return;
             }
-            var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.ResourceLocation.tryParse(packet.itemKey().itemId()));
-            if (item == null) return;
-            var stack = new net.minecraft.world.item.ItemStack(item, packet.count());
-            if (packet.itemKey().nbt() != null && !packet.itemKey().nbt().isEmpty()) {
-                stack.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA,
-                        net.minecraft.world.item.component.CustomData.of(packet.itemKey().nbt().copy()));
-            }
+            var stack = packet.itemKey().toStack(packet.count(), level.registryAccess());
+            if (stack.isEmpty()) return;
             var center = net.minecraft.world.phys.Vec3.atCenterOf(packet.from());
             var entity = new com.wsteam.wandscape.content.warehouse.transport.TransportItemEntity(level, center.x, center.y + 0.5, center.z, stack);
             entity.setRoute(packet.route());
@@ -447,6 +444,9 @@ public class WandscapeClient {
 
         BuildingConfigSyncChunkPacket.setClientHandler(
                 BuildingConfigSyncReceiver::onChunk);
+
+        DatapackDataSyncChunkPacket.setClientHandler(
+                DatapackDataSyncReceiver::onChunk);
 
         // Transient feedback: show on the open feedback-capable screen (MedievalScreen /
         // WarehouseScreen), else the action bar.

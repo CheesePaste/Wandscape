@@ -158,7 +158,7 @@ public final class ColonyCommand {
         if (founder != null && WandscapeApis.getColonyApi().getColonyByFounder(founder) != null) {
             return ColonyCreateOutcome.failure(I18n.name(
                     "message.wandscape.command.colony_already_owned",
-                    "[Wandscape] Failed: 你已拥有小镇，不能创建第二个。"));
+                    "[魔法小镇] Failed: 你已拥有小镇，不能创建第二个。"));
         }
         // 小镇间不设隔离距离——可相距任意近；建筑/命名归属跟「放置者」，不跟空间最近镇，
         // 近镇各建各的也不会串归属/串物资。
@@ -302,7 +302,7 @@ public final class ColonyCommand {
         if (colonyId == null) {
             ctx.getSource().sendFailure(I18n.name(
                     "message.wandscape.command.colony_none_found",
-                    "[Wandscape] 你当前没有所属的小镇，附近 256 格内也没有发现小镇。"));
+                    "[魔法小镇] 你当前没有所属的小镇，附近 256 格内也没有发现小镇。"));
             return 0;
         }
 
@@ -310,7 +310,7 @@ public final class ColonyCommand {
         colonyApi.deleteColony(targetColonyId);
         ctx.getSource().sendSuccess(() -> I18n.name(
                 "message.wandscape.command.colony_destroyed",
-                "[Wandscape] 成功销毁小镇 %s",
+                "[魔法小镇] 成功销毁小镇 %s",
                 targetColonyId.toString().substring(0, 8)), true);
         return Command.SINGLE_SUCCESS;
     }
@@ -334,7 +334,7 @@ public final class ColonyCommand {
 
         if (!colonyApi.setColonyLevel(colonyId, level)) {
             ctx.getSource().sendFailure(Component.literal(
-                    "[Wandscape] 设置等级失败：越界（有效 1.." + colonyApi.getMaxLevel()
+                    "[魔法小镇] 设置等级失败：越界（有效 1.." + colonyApi.getMaxLevel()
                             + "）或小镇不存在"));
             return 0;
         }
@@ -350,13 +350,13 @@ public final class ColonyCommand {
         UUID colonyId = CommandUtil.resolveColony(src);
         if (colonyId == null) {
             src.sendFailure(Component.literal(
-                    "[Wandscape] 未检测到小镇：请在小镇范围内使用，或先创建小镇"));
+                    "[魔法小镇] 未检测到小镇：请在小镇范围内使用，或先创建小镇"));
             return 0;
         }
 
         ColonyStatusApi statusApi = WandscapeApis.getColonyStatusApiSilently();
         if (statusApi == null) {
-            src.sendFailure(Component.literal("[Wandscape] 小镇状态系统未就绪"));
+            src.sendFailure(Component.literal("[魔法小镇] 小镇状态系统未就绪"));
             return 0;
         }
         ColonyStatusSnapshot snap = statusApi.getSnapshotSafe(colonyId);
@@ -364,7 +364,7 @@ public final class ColonyCommand {
         String name = snap.colonyName() != null && !snap.colonyName().isEmpty()
                 ? snap.colonyName() : "(未命名)";
         src.sendSuccess(() -> Component.literal(
-                "[Wandscape] 小镇 " + name + " (" + cid + ") Lv." + snap.colonyLevel()
+                "[魔法小镇] 小镇 " + name + " (" + cid + ") Lv." + snap.colonyLevel()
                         + " · 经验 " + snap.colonyExperience()), false);
         src.sendSuccess(() -> Component.literal(
                 "  三值: 舒适 " + snap.comfort() + " · 魔法 " + snap.magic()
@@ -386,12 +386,12 @@ public final class ColonyCommand {
         CommandSourceStack src = ctx.getSource();
         ColonyApi colonyApi = WandscapeApis.getColonyApiSilently();
         if (colonyApi == null) {
-            src.sendFailure(Component.literal("[Wandscape] 小镇系统未就绪"));
+            src.sendFailure(Component.literal("[魔法小镇] 小镇系统未就绪"));
             return 0;
         }
         var ids = colonyApi.getAllColonyIds();
         src.sendSuccess(() -> Component.literal(
-                "[Wandscape] 已注册小镇（共 " + ids.size() + " 个）："), false);
+                "[魔法小镇] 已注册小镇（共 " + ids.size() + " 个）："), false);
         if (ids.isEmpty()) {
             src.sendSuccess(() -> Component.literal("  （无小镇）"), false);
             return Command.SINGLE_SUCCESS;
@@ -417,7 +417,7 @@ public final class ColonyCommand {
         ColonyApi colonyApi = WandscapeApis.getColonyApi();
         colonyApi.grantExperience(colonyId, amount);
         src.sendSuccess(() -> Component.literal(
-                "[Wandscape] 已授予小镇 " + CommandUtil.shortId(colonyId) + " " + amount
+                "[魔法小镇] 已授予小镇 " + CommandUtil.shortId(colonyId) + " " + amount
                         + " 经验（当前 Lv." + colonyApi.getColonyLevel(colonyId)
                         + " / " + colonyApi.getColonyExp(colonyId) + "）"),
                 true);
@@ -432,7 +432,7 @@ public final class ColonyCommand {
         if (colonyId == null) return 0;
         WandscapeApis.getColonyApi().setColonyName(colonyId, name);
         src.sendSuccess(() -> Component.literal(
-                "[Wandscape] 已重命名小镇 " + CommandUtil.shortId(colonyId) + " → " + name), true);
+                "[魔法小镇] 已重命名小镇 " + CommandUtil.shortId(colonyId) + " → " + name), true);
         return Command.SINGLE_SUCCESS;
     }
 

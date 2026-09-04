@@ -12,12 +12,10 @@ import com.wsteam.wandscape.foundation.util.ItemKey;
 import com.wsteam.wandscape.content.warehouse.event.ResourceInsufficientEvent;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.foundation.log.LogCategory;
-import net.minecraft.core.component.DataComponents;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.Container;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
@@ -182,8 +180,9 @@ public class WarehouseManager implements WarehouseApi, ColonyResourceAccess {
             if (stack.isEmpty()) continue;
             var rl = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem());
             if (rl == null) continue;
-            CompoundTag nbt = extractNbt(stack);
-            ItemKey key = ItemKey.of(rl.toString(), nbt);
+            HolderLookup.Provider registries = serverRegistries();
+            if (registries == null) continue;
+            ItemKey key = ItemKey.fromStack(stack, registries);
             bank.add(colonyId, key, stack.getCount());
             // Notify listener once per unique resource type
             if (resourceAddedListener != null && emitted.add(rl.toString())) {
@@ -459,22 +458,20 @@ public class WarehouseManager implements WarehouseApi, ColonyResourceAccess {
         NeoForge.EVENT_BUS.post(new ResourceInsufficientEvent(resource, amount, (int) avail));
     }
 
-    @Nullable
-    /** Build an {@link ItemStack} (count may exceed 64) from a bank entry key. */
+    /**
+     * Build an {@link ItemStack} (count may exceed 64) from a bank entry key.
+     * Only used server-side (menu/commands); restores the full item data recorded at deposit.
+     */
     public static ItemStack toItemStack(ItemKey key, int count) {
-        var item = net.minecraft.core.registries.BuiltInRegistries.ITEM
-                .get(net.minecraft.resources.ResourceLocation.tryParse(key.itemId()));
-        if (item == null) return ItemStack.EMPTY;
-        ItemStack stack = new ItemStack(item, count);
-        if (key.nbt() != null && !key.nbt().isEmpty()) {
-            stack.set(DataComponents.CUSTOM_DATA, CustomData.of(key.nbt().copy()));
-        }
-        return stack;
+        HolderLookup.Provider registries = serverRegistries();
+        if (registries == null) return ItemStack.EMPTY;
+        return key.toStack(count, registries);
     }
 
+    /** 当前服务端 RegistryAccess（账本编码/重建只在服务端进行）。 */
     @Nullable
-    private static CompoundTag extractNbt(ItemStack stack) {
-        CustomData data = stack.get(DataComponents.CUSTOM_DATA);
-        return data != null ? data.copyTag() : null;
+    private static HolderLookup.Provider serverRegistries() {
+        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+        return server != null ? server.registryAccess() : null;
     }
 }

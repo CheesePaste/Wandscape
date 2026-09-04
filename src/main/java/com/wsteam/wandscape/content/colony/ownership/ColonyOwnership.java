@@ -57,7 +57,7 @@ public final class ColonyOwnership {
      * @param what 简短操作描述（如「建筑」「法师」「仓库」），用于玩家反馈文案。
      */
     public static void deny(ServerPlayer player, String what) {
-        Component msg = Component.literal("§c[小镇] 你没有权限操作别人的小镇（" + what + "）");
+        Component msg = Component.literal("§c[魔法小镇] 你没有权限操作别人的小镇（" + what + "）");
         player.displayClientMessage(msg, true);
         ScreenFeedbackPacket.send(player, msg, true);
         try {

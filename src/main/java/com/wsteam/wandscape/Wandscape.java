@@ -8,6 +8,7 @@ import com.wsteam.wandscape.content.colony.ColonyApiImpl;
 
 import com.wsteam.wandscape.content.building.internal.*;
 import com.wsteam.wandscape.content.building.network.*;
+import com.wsteam.wandscape.foundation.registry.dataconfig.internal.DatapackDataSyncChunkPacket;
 import com.wsteam.wandscape.content.building.scanner.CreativeScannerBlock;
 import com.wsteam.wandscape.content.building.scanner.CreativeScannerBlockEntity;
 import com.wsteam.wandscape.content.building.scanner.ScannerBlock;
@@ -609,6 +610,10 @@ public class Wandscape {
                         BuildingConfigSyncChunkPacket.TYPE,
                         BuildingConfigSyncChunkPacket.STREAM_CODEC,
                         (packet, ctx) -> BuildingConfigSyncChunkPacket.handleClient(packet))
+                .playToClient(
+                        DatapackDataSyncChunkPacket.TYPE,
+                        DatapackDataSyncChunkPacket.STREAM_CODEC,
+                        (packet, ctx) -> DatapackDataSyncChunkPacket.handleClient(packet))
                 .playToServer(
                         ShopMaxStockPacket.TYPE,
                         ShopMaxStockPacket.STREAM_CODEC,
@@ -1285,5 +1290,57 @@ public class Wandscape {
         }
         Log.info(TAG, "Synced {} building configs ({} chunks, {} compressed bytes) on DatapackSync",
                 totalConfigs, totalChunksSent, totalCompressedBytes);
+
+        // 其余 datapack 类目（魔法定/法杖预设/生产配方/元素映射等）同步给客户端：这些只在服务端
+        // reload 读到 data/，专用服务器客户端进程拿不到（JEI 无配方、创造栏 NBT 变体缺失），
+        // 故每类目原始 JSON 压成一个载荷分块下发。建筑配置已走上面的独立同步，这里排除。
+        var rawByCategory = DATA_LOADER.getRawByCategory();
+        if (rawByCategory != null && !rawByCategory.isEmpty()) {
+            java.util.List<String> filesToSync = new java.util.ArrayList<>();
+            for (var cat : rawByCategory.keySet()) {
+                if ("buildings".equals(cat)) continue;
+                if (rawByCategory.get(cat) != null && !rawByCategory.get(cat).isEmpty()) {
+                    filesToSync.add(cat);
+                }
+            }
+            filesToSync.sort(String::compareTo);
+            int fileIndex = 0;
+            int syncChunks = 0;
+            long syncBytes = 0;
+            for (String category : filesToSync) {
+                var files = rawByCategory.get(category);
+                com.google.gson.JsonObject root = new com.google.gson.JsonObject();
+                root.addProperty("category", category);
+                com.google.gson.JsonObject data = new com.google.gson.JsonObject();
+                java.util.List<String> ids = new java.util.ArrayList<>(files.keySet());
+                ids.sort(String::compareTo);
+                for (String id : ids) {
+                    data.add(id, files.get(id));
+                }
+                root.add("data", data);
+                byte[] compressed = BuildingConfigCompressor.compress(root.toString());
+                syncBytes += compressed.length;
+                int totalChunks = Math.max(1, (compressed.length
+                        + DatapackDataSyncChunkPacket.CHUNK_BYTES - 1)
+                        / DatapackDataSyncChunkPacket.CHUNK_BYTES);
+                int chunkIndex = 0;
+                for (int off = 0; off < compressed.length; off += DatapackDataSyncChunkPacket.CHUNK_BYTES) {
+                    int len = Math.min(DatapackDataSyncChunkPacket.CHUNK_BYTES, compressed.length - off);
+                    var pkt = new DatapackDataSyncChunkPacket(
+                            fileIndex, chunkIndex, totalChunks, filesToSync.size(),
+                            java.util.Arrays.copyOfRange(compressed, off, off + len));
+                    if (event.getPlayer() != null) {
+                        net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(event.getPlayer(), pkt);
+                    } else {
+                        net.neoforged.neoforge.network.PacketDistributor.sendToAllPlayers(pkt);
+                    }
+                    chunkIndex++;
+                    syncChunks++;
+                }
+                fileIndex++;
+            }
+            Log.info(TAG, "Synced {} datapack data categories ({} chunks, {} compressed bytes) on DatapackSync",
+                    fileIndex, syncChunks, syncBytes);
+        }
     }
 }

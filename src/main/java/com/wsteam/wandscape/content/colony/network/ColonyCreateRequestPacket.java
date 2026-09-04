@@ -63,10 +63,10 @@ public record ColonyCreateRequestPacket(BlockPos townHallAnchor, String name)
             if (near != null && near.equals(founderOwn)) {
                 linkTownHall(packet.townHallAnchor, founderOwn);
                 sendMessage(player, I18n.name("message.wandscape.colony.attached",
-                        "[Wandscape] 市政厅已关联至现有小镇。"));
+                        "[魔法小镇] 市政厅已关联至现有小镇。"));
             } else {
                 sendMessage(player, I18n.name("message.wandscape.command.colony_already_owned",
-                        "[Wandscape] 你已拥有小镇，这里不是你的小镇范围，不能创建/关联另一个小镇。"));
+                        "[魔法小镇] 你已拥有小镇，这里不是你的小镇范围，不能创建/关联另一个小镇。"));
             }
             return;
         }
@@ -76,7 +76,7 @@ public record ColonyCreateRequestPacket(BlockPos townHallAnchor, String name)
                 ColonyCommand.createColonyAt(level, packet.townHallAnchor, name, player.getUUID());
         if (outcome == null || !outcome.success()) {
             sendMessage(player, outcome != null ? outcome.message()
-                    : I18n.name("message.wandscape.colony.create_failed", "[Wandscape] 创建小镇失败。"));
+                    : I18n.name("message.wandscape.colony.create_failed", "[魔法小镇] 创建小镇失败。"));
             return;
         }
 

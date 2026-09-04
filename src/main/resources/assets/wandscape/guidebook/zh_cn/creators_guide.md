@@ -34,10 +34,14 @@ Wandscape 由热爱Minecraft与模拟经营的开发者、建筑师与玩家们�
 
 在这里列出参与模组开发的程序员：
 
-- **（开发者名）** —— 职责：xxx —— [个人链接](https://example.com)
+- **RawNuke** [Github链接](https://github.com/RawNuke)
+- **RainyLetter** [Github链接](https://github.com/RainyLetter)
 
 ## 特别感谢
-
+- **Ruo_que**
+- **爱发电用户_hcYF**
+- **Tasty_Kara卡拉**
+- **Hymisc**
 - ...
 ## 支持我们
 - [在爱发电支持我们](https://ifdian.net/a/CheesePaste)

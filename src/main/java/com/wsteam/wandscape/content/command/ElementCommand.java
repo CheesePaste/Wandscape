@@ -64,7 +64,7 @@ public final class ElementCommand {
         if (api == null) return 0;
 
         var elems = api.getAllElements(colonyId);
-        StringBuilder sb = new StringBuilder("[Wandscape] 小镇 " + CommandUtil.shortId(colonyId) + " 元素：");
+        StringBuilder sb = new StringBuilder("[魔法小镇] 小镇 " + CommandUtil.shortId(colonyId) + " 元素：");
         for (ElementType t : ElementType.values()) {
             sb.append("  ").append(t.getId()).append("=").append(elems.getOrDefault(t, 0L));
         }
@@ -88,17 +88,17 @@ public final class ElementCommand {
             api.addElement(colonyId, type, Math.max(0, amount));
         } else {
             if (amount <= 0) {
-                src.sendSuccess(() -> Component.literal("[Wandscape] 无变更"), false);
+                src.sendSuccess(() -> Component.literal("[魔法小镇] 无变更"), false);
                 return Command.SINGLE_SUCCESS;
             }
             if (!api.consumeElement(colonyId, type, amount)) {
-                src.sendFailure(Component.literal("[Wandscape] 元素不足：" + id
+                src.sendFailure(Component.literal("[魔法小镇] 元素不足：" + id
                         + " 现有 " + api.getElement(colonyId, type)));
                 return 0;
             }
         }
 
-        src.sendSuccess(() -> Component.literal("[Wandscape] " + (add ? "增加" : "减少") + "元素 "
+        src.sendSuccess(() -> Component.literal("[魔法小镇] " + (add ? "增加" : "减少") + "元素 "
                 + id + " x" + amount + "（小镇 " + CommandUtil.shortId(colonyId) + "）"), true);
         return Command.SINGLE_SUCCESS;
     }
@@ -114,7 +114,7 @@ public final class ElementCommand {
         long total = elems.values().stream().mapToLong(Long::longValue).sum();
         api.clearElements(colonyId);
         src.sendSuccess(() -> Component.literal(
-                "[Wandscape] 已清空小镇 " + CommandUtil.shortId(colonyId) + " 元素（" + total + " 点）"),
+                "[魔法小镇] 已清空小镇 " + CommandUtil.shortId(colonyId) + " 元素（" + total + " 点）"),
                 true);
         return Command.SINGLE_SUCCESS;
     }
@@ -125,7 +125,7 @@ public final class ElementCommand {
             if (t.getId().equalsIgnoreCase(id)) return t;
         }
         src.sendFailure(I18n.name("message.wandscape.command.element_unknown",
-                "[Wandscape] 未知元素：%s（可选：earth/wood/water/fire/metal/wind/dark）", id));
+                "[魔法小镇] 未知元素：%s（可选：earth/wood/water/fire/metal/wind/dark）", id));
         return null;
     }
 
@@ -133,14 +133,14 @@ public final class ElementCommand {
     private static WarehouseApi api(CommandSourceStack src) {
         WarehouseApi api = WandscapeApis.getWarehouseApiSilently();
         if (api == null) {
-            src.sendFailure(Component.literal("[Wandscape] 仓库系统未就绪"));
+            src.sendFailure(Component.literal("[魔法小镇] 仓库系统未就绪"));
         }
         return api;
     }
 
     private static int notInColony(CommandSourceStack src) {
         src.sendFailure(Component.literal(
-                "[Wandscape] 未检测到小镇：请在小镇范围内使用，或先创建小镇"));
+                "[魔法小镇] 未检测到小镇：请在小镇范围内使用，或先创建小镇"));
         return 0;
     }
 }

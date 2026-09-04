@@ -69,13 +69,13 @@ public final class TavernCommand {
         var player = src.getPlayer();
         if (player == null) {
             src.sendFailure(I18n.name("message.wandscape.command.tavern_players_only",
-                    "[Wandscape] 仅玩家可招募法师"));
+                    "[魔法小镇] 仅玩家可招募法师"));
             return 0;
         }
         UUID colonyId = resolveColonyId(src.getPosition());
         if (colonyId == null) {
             src.sendFailure(I18n.name("message.wandscape.command.tavern_no_colony_detailed",
-                    "[Wandscape] 未检测到小镇，请在小镇范围内使用或先创建小镇"));
+                    "[魔法小镇] 未检测到小镇，请在小镇范围内使用或先创建小镇"));
             return 0;
         }
         UUID npcId = null;
@@ -87,13 +87,13 @@ public final class TavernCommand {
         }
         if (npcId == null) {
             src.sendFailure(I18n.name("message.wandscape.command.tavern_recruit_failed",
-                    "[Wandscape] 招募失败：元素不足（首次免费，之后每种元素 %d）或系统未就绪",
+                    "[魔法小镇] 招募失败：元素不足（首次免费，之后每种元素 %d）或系统未就绪",
                     com.wsteam.wandscape.Config.TAVERN_RECRUIT_COST_PER_ELEMENT.get()));
             return 0;
         }
         String shortId = npcId.toString().substring(0, 8);
         src.sendSuccess(() -> I18n.name("message.wandscape.command.tavern_recruited",
-                "[Wandscape] 已招募法师（%s），小镇 %s",
+                "[魔法小镇] 已招募法师（%s），小镇 %s",
                 shortId, colonyId.toString().substring(0, 8)), true);
         return Command.SINGLE_SUCCESS;
     }
@@ -106,7 +106,7 @@ public final class TavernCommand {
         UUID colonyId = resolveColonyId(pos);
         if (colonyId == null) {
             src.sendFailure(I18n.name("message.wandscape.command.tavern_no_colony_detailed",
-                    "[Wandscape] 未检测到小镇，请在小镇范围内使用或先创建小镇"));
+                    "[魔法小镇] 未检测到小镇，请在小镇范围内使用或先创建小镇"));
             return 0;
         }
 
@@ -144,7 +144,7 @@ public final class TavernCommand {
         UUID colonyId = resolveColonyId(pos);
         if (colonyId == null) {
             src.sendFailure(I18n.name("message.wandscape.command.tavern_no_colony",
-                    "[Wandscape] 未检测到小镇"));
+                    "[魔法小镇] 未检测到小镇"));
             return 0;
         }
 
@@ -175,7 +175,7 @@ public final class TavernCommand {
             return Command.SINGLE_SUCCESS;
         } catch (Exception e) {
             src.sendFailure(I18n.name("message.wandscape.command.tavern_list_failed",
-                    "[Wandscape] 获取酒馆简历失败: %s", e.getMessage()));
+                    "[魔法小镇] 获取酒馆简历失败: %s", e.getMessage()));
             return 0;
         }
     }

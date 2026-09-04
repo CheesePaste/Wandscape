@@ -29,7 +29,7 @@ public final class RoadCommand {
 
     private RoadCommand() {}
 
-    private static final String ROAD_API_MSG = "[Wandscape] 道路系统未就绪";
+    private static final String ROAD_API_MSG = "[魔法小镇] 道路系统未就绪";
 
     /** RoadApi 无 silently 变体；在未装配早期启动窗口安全取用。 */
     @javax.annotation.Nullable
@@ -69,7 +69,7 @@ public final class RoadCommand {
 
         String cid = CommandUtil.shortId(colonyId);
         src.sendSuccess(() -> Component.literal(
-                "[Wandscape] 小镇 " + cid + " 路网：" + edges.size() + " 段"
+                "[魔法小镇] 小镇 " + cid + " 路网：" + edges.size() + " 段"
                         + "（已建成 " + complete + "，" + "在建 " + building
                         + "，" + "待施工 " + planned + "）"
                         + "，铺装总长 " + totalLen + " 格"), false);
@@ -96,14 +96,14 @@ public final class RoadCommand {
             }
         }
         if (target == null) {
-            src.sendFailure(Component.literal("[Wandscape] 找不到 id 为 '" + fragment + "' 的路段"));
+            src.sendFailure(Component.literal("[魔法小镇] 找不到 id 为 '" + fragment + "' 的路段"));
             return 0;
         }
 
         boolean ok = api.cancelEdge(colonyId, target.getEdgeId());
         final RoadEdge ft = target;
         src.sendSuccess(() -> Component.literal(
-                "[Wandscape] " + (ok
+                "[魔法小镇] " + (ok
                         ? ("已撤回路段 " + ft.getEdgeId().toString().substring(0, 8) + "（材料已退还）")
                         : "撤回失败：路段不存在或已建成")),
                 true);
@@ -112,7 +112,7 @@ public final class RoadCommand {
 
     private static int notInColony(CommandSourceStack src) {
         src.sendFailure(Component.literal(
-                "[Wandscape] 未检测到小镇：请在小镇范围内使用，或先创建小镇"));
+                "[魔法小镇] 未检测到小镇：请在小镇范围内使用，或先创建小镇"));
         return 0;
     }
 }

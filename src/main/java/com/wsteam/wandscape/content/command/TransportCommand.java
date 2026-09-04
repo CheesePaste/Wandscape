@@ -264,7 +264,7 @@ public final class TransportCommand {
                 .count();
 
         if (completeEdges == 0) {
-            src.sendFailure(Component.literal("§c[Wandscape Road Bench] 当前世界路网中暂无已建成的道路！请先使用道路工具建造道路。"));
+            src.sendFailure(Component.literal("§c[魔法小镇 Road Bench] 当前世界路网中暂无已建成的道路！请先使用道路工具建造道路。"));
             return 0;
         }
 

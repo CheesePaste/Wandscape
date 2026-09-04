@@ -133,7 +133,7 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
 
             ScreenFeedbackPacket.send(sp,
                     I18n.name("message.wandscape.tavern.recruited_direct",
-                            "[Wandscape] Mage recruited! Lv.%d 强度:%.1f 工速:%.1f 施速:%.1f 护甲:%.1f %s",
+                            "[魔法小镇] Mage recruited! Lv.%d 强度:%.1f 工速:%.1f 施速:%.1f 护甲:%.1f %s",
                             lvl, spPow, ws, cs, ar, spawnPos.toShortString()),
                     false);
 
@@ -178,7 +178,7 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
 
         ScreenFeedbackPacket.send(sp,
                 I18n.name("message.wandscape.tavern.recruited_resume",
-                        "[Wandscape] Mage %s recruited! Lv.%d 强度:%.1f 工速:%.1f 施速:%.1f 护甲:%.1f",
+                        "[魔法小镇] Mage %s recruited! Lv.%d 强度:%.1f 工速:%.1f 施速:%.1f 护甲:%.1f",
                         resume.touristName(), resume.level(), resume.spellPower(),
                         resume.workSpeed(), resume.spellSpeed(), resume.armorValue()),
                 false);
@@ -217,7 +217,7 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
                         removed.touristName(), colonyId.toString().substring(0, 8));
                 ScreenFeedbackPacket.send(sp,
                         I18n.name("message.wandscape.tavern.rejected",
-                                "[Wandscape] 已拒绝 %s 的求职简历", removed.touristName()),
+                                "[魔法小镇] 已拒绝 %s 的求职简历", removed.touristName()),
                         false);
             }
 

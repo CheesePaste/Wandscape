@@ -57,7 +57,7 @@ public final class WarehouseCommand {
         long total = items.values().stream().mapToLong(Long::longValue).sum();
         String cid = CommandUtil.shortId(colonyId);
         src.sendSuccess(() -> Component.literal(
-                "[Wandscape] 小镇 " + cid + " 仓库：物品 " + items.size() + " 类 / " + total + " 件"), false);
+                "[魔法小镇] 小镇 " + cid + " 仓库：物品 " + items.size() + " 类 / " + total + " 件"), false);
 
         long used = api.getUsedItemCapacity(colonyId);
         long cap = api.getItemCapacity(colonyId);
@@ -81,12 +81,12 @@ public final class WarehouseCommand {
         ItemKey key = ItemKey.of(id, null);
         boolean ok = add ? api.addItem(colonyId, key, amount) : api.removeItem(colonyId, key, amount);
         if (!ok) {
-            src.sendFailure(Component.literal("[Wandscape] "
+            src.sendFailure(Component.literal("[魔法小镇] "
                     + (add ? "增加物品失败（账本未就绪）"
                            : ("物品不足：" + id + " 现有 " + api.getItemCount(colonyId, key)))));
             return 0;
         }
-        src.sendSuccess(() -> Component.literal("[Wandscape] " + (add ? "增加" : "减少") + "物品 "
+        src.sendSuccess(() -> Component.literal("[魔法小镇] " + (add ? "增加" : "减少") + "物品 "
                 + id + " x" + amount + "（小镇 " + CommandUtil.shortId(colonyId) + "）"), true);
         return Command.SINGLE_SUCCESS;
     }
@@ -102,7 +102,7 @@ public final class WarehouseCommand {
         long total = items.values().stream().mapToLong(Long::longValue).sum();
         api.clearItems(colonyId);
         src.sendSuccess(() -> Component.literal(
-                "[Wandscape] 已清空小镇 " + CommandUtil.shortId(colonyId) + " 仓库物品（" + total + " 件）"),
+                "[魔法小镇] 已清空小镇 " + CommandUtil.shortId(colonyId) + " 仓库物品（" + total + " 件）"),
                 true);
         return Command.SINGLE_SUCCESS;
     }
@@ -111,14 +111,14 @@ public final class WarehouseCommand {
     private static WarehouseApi api(CommandSourceStack src, String label) {
         WarehouseApi api = WandscapeApis.getWarehouseApiSilently();
         if (api == null) {
-            src.sendFailure(Component.literal("[Wandscape] " + label + "系统未就绪"));
+            src.sendFailure(Component.literal("[魔法小镇] " + label + "系统未就绪"));
         }
         return api;
     }
 
     private static int notInColony(CommandSourceStack src) {
         src.sendFailure(Component.literal(
-                "[Wandscape] 未检测到小镇：请在小镇范围内使用，或先创建小镇"));
+                "[魔法小镇] 未检测到小镇：请在小镇范围内使用，或先创建小镇"));
         return 0;
     }
 }

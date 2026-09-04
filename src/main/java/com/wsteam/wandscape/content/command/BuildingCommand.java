@@ -63,7 +63,7 @@ public final class BuildingCommand {
 
         BuildingApi api = WandscapeApis.getBuildingApiSilently();
         if (api == null) {
-            src.sendFailure(Component.literal("[Wandscape] 建筑系统未就绪"));
+            src.sendFailure(Component.literal("[魔法小镇] 建筑系统未就绪"));
             return 0;
         }
 
@@ -75,7 +75,7 @@ public final class BuildingCommand {
                 : api.getColonyBuildings(colonyId);
 
         String cid = CommandUtil.shortId(colonyId);
-        src.sendSuccess(() -> Component.literal("[Wandscape] 小镇 " + cid + " 建筑 ("
+        src.sendSuccess(() -> Component.literal("[魔法小镇] 小镇 " + cid + " 建筑 ("
                 + (category == null ? "全部" : category) + "，共 " + builds.size() + " 座)："), false);
         if (builds.isEmpty()) {
             src.sendSuccess(() -> Component.literal("  （无建筑）"), false);
@@ -102,12 +102,12 @@ public final class BuildingCommand {
         if (buildingId == null) return 0;
         BuildingApi api = WandscapeApis.getBuildingApiSilently();
         if (api == null) {
-            src.sendFailure(Component.literal("[Wandscape] 建筑系统未就绪"));
+            src.sendFailure(Component.literal("[魔法小镇] 建筑系统未就绪"));
             return 0;
         }
         boolean ok = api.cancelBuilding(buildingId);
         src.sendSuccess(() -> Component.literal(
-                "[Wandscape] " + (ok ? "已取消在建建筑（材料已退还）" : "取消失败：建筑不存在或已建成")),
+                "[魔法小镇] " + (ok ? "已取消在建建筑（材料已退还）" : "取消失败：建筑不存在或已建成")),
                 true);
         return Command.SINGLE_SUCCESS;
     }
@@ -118,16 +118,16 @@ public final class BuildingCommand {
         if (buildingId == null) return 0;
         BuildingApi api = WandscapeApis.getBuildingApiSilently();
         if (api == null) {
-            src.sendFailure(Component.literal("[Wandscape] 建筑系统未就绪"));
+            src.sendFailure(Component.literal("[魔法小镇] 建筑系统未就绪"));
             return 0;
         }
         Component block = api.demolishBlockReason(buildingId);
         if (block != null) {
-            src.sendFailure(Component.literal("[Wandscape] 无法拆除：" + block.getString()));
+            src.sendFailure(Component.literal("[魔法小镇] 无法拆除：" + block.getString()));
             return 0;
         }
         api.demolishBuilding(buildingId);
-        src.sendSuccess(() -> Component.literal("[Wandscape] 已开始拆除建筑（掉落归仓库）"), true);
+        src.sendSuccess(() -> Component.literal("[魔法小镇] 已开始拆除建筑（掉落归仓库）"), true);
         return Command.SINGLE_SUCCESS;
     }
 
@@ -143,7 +143,7 @@ public final class BuildingCommand {
         }
         BuildingApi api = WandscapeApis.getBuildingApiSilently();
         if (api == null) {
-            src.sendFailure(Component.literal("[Wandscape] 建筑系统未就绪"));
+            src.sendFailure(Component.literal("[魔法小镇] 建筑系统未就绪"));
             return null;
         }
         String f = fragment.trim();
@@ -154,7 +154,7 @@ public final class BuildingCommand {
                 return b.getBuildingId();
             }
         }
-        src.sendFailure(Component.literal("[Wandscape] 找不到 id 为 '" + fragment + "' 的建筑"));
+        src.sendFailure(Component.literal("[魔法小镇] 找不到 id 为 '" + fragment + "' 的建筑"));
         return null;
     }
 
@@ -164,7 +164,7 @@ public final class BuildingCommand {
 
     private static int notInColony(CommandSourceStack src) {
         src.sendFailure(Component.literal(
-                "[Wandscape] 未检测到小镇：请在小镇范围内使用，或先创建小镇"));
+                "[魔法小镇] 未检测到小镇：请在小镇范围内使用，或先创建小镇"));
         return 0;
     }
 }
