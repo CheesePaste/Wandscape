@@ -56,6 +56,13 @@ public class Config {
                     + "Warning: changing this can make shops with a profit margin below this value unprofitable.")
             .defineInRange("element.craftCostMultiplier", 1.0, 1.0, 1000000.0);
 
+    public static final ModConfigSpec.BooleanValue AUTO_GATHER_ON_ELEMENT_SHORTAGE = BUILDER
+            .comment("元素不足时自动下发采集任务：当生产队列或等待任务因元素不足受阻时，是否自动向对应元素节点下发采集任务（node:gather）。"
+                    + "默认 false（关闭）。开启后，系统会自动在对应元素节点排队采集任务以补足元素缺口。")
+            .comment("Auto-dispatch gather tasks on element shortage: whether to automatically dispatch gather tasks (node:gather) to element nodes when production queues or waiting tasks are blocked due to missing elements. "
+                    + "Default false (disabled). When enabled, the system automatically queues gather tasks at corresponding element nodes to cover element deficits.")
+            .define("element.autoGatherOnShortage", false);
+
     // ---- 仓库容量 Warehouse Capacity ----
 
     public static final ModConfigSpec.IntValue WAREHOUSE_ITEM_CAPACITY = BUILDER
@@ -232,5 +239,9 @@ public class Config {
                     + "when that rule is off, nothing is shown.")
             .define("npc.deathMessageGlobal", true);
 
-    static final ModConfigSpec SPEC = BUILDER.build();
+    public static final ModConfigSpec SPEC = BUILDER.build();
+
+    public static boolean autoGatherOnShortage() {
+        return SPEC.isLoaded() && AUTO_GATHER_ON_ELEMENT_SHORTAGE.get();
+    }
 }

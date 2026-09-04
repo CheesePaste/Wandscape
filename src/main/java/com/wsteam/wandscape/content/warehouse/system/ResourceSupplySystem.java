@@ -4,6 +4,7 @@ import com.wsteam.wandscape.content.building.source.BuildingTaskSource;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
+import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.content.building.data.BuildingConfig;
 import com.wsteam.wandscape.content.building.data.BuildingConfig.NodeConfig;
@@ -111,6 +112,7 @@ public class ResourceSupplySystem implements EcsSystem {
      * 原位（面板可见「缺元素」），补齐后由 BuildingTaskSource 的发布扫描自然挑中。
      */
     private void scanProductionQueues(World world) {
+        if (!isAutoGatherEnabled()) return;
         var api = getBuildingApi();
         var server = ServerLifecycleHooks.getCurrentServer();
         if (api == null || server == null) return;
@@ -434,7 +436,12 @@ public class ResourceSupplySystem implements EcsSystem {
         return id != null && id.startsWith("minecraft:") ? id.substring("minecraft:".length()) : id;
     }
 
+    private static boolean isAutoGatherEnabled() {
+        return Config.autoGatherOnShortage();
+    }
+
     private void tryGatherElement(ResourceId resource, int deficit, @Nullable World world) {
+        if (!isAutoGatherEnabled()) return;
         ElementType element;
         try {
             element = ElementType.valueOf(resource.id().toUpperCase());
