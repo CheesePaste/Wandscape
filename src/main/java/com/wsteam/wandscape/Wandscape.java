@@ -875,6 +875,12 @@ public class Wandscape {
                         TownHallNameStylePacket.STREAM_CODEC,
                         (packet, ctx) -> TownHallNameStylePacket
                                 .handleServer(packet, (net.minecraft.server.level.ServerPlayer) ctx.player()))
+                // ── Town hall tourist-spawn toggle ──
+                .playToServer(
+                        TownHallTouristSpawnPacket.TYPE,
+                        TownHallTouristSpawnPacket.STREAM_CODEC,
+                        (packet, ctx) -> TownHallTouristSpawnPacket
+                                .handleServer(packet, (net.minecraft.server.level.ServerPlayer) ctx.player()))
                 // ── Colony create (town hall naming flow) ──
                 .playToServer(
                         com.wsteam.wandscape.content.colony.network.ColonyCreateRequestPacket.TYPE,
@@ -901,11 +907,6 @@ public class Wandscape {
                         com.wsteam.wandscape.foundation.networking.ParticleBurstPacket.TYPE,
                         com.wsteam.wandscape.foundation.networking.ParticleBurstPacket.STREAM_CODEC,
                         (packet, ctx) -> com.wsteam.wandscape.foundation.networking.ParticleBurstPacket.handleClient(packet))
-                // ── Guide doc open ──
-                .playToClient(
-                        com.wsteam.wandscape.content.items.guidebook.network.GuidebookDocOpenPacket.TYPE,
-                        com.wsteam.wandscape.content.items.guidebook.network.GuidebookDocOpenPacket.STREAM_CODEC,
-                        (packet, ctx) -> com.wsteam.wandscape.content.items.guidebook.network.GuidebookDocOpenPacket.handleClient(packet))
                 // ── Guide book (right-click to open tutorial home) ──
                 .playToClient(
                         GuideBookOpenPacket.TYPE,
@@ -1102,28 +1103,37 @@ public class Wandscape {
     @SubscribeEvent
     public void onRegisterCommands(RegisterCommandsEvent event) {
         var dispatcher = event.getDispatcher();
+
+        // ── 面向玩家：玩法指令（只读免 op；变更类在各自 node 内以 hasPermission(2) 门控） ──
         var root = Commands.literal("wandscape")
-                .then(GenerateElementMappingsCommand.node())
-                .then(AuditElementsCommand.node())
-                .then(LogCommand.node())
-                .then(LogFilterCommand.node())
-                .then(FillBuildingCommand.fillNode())
-                .then(NavTestCommand.node())
                 .then(ColonyCommand.node())
-                .then(PublishBlueprintCommand.buildNode())
-                .then(RecoveryCommand.node())
-                .then(SeedWarehouseCommand.node())
-                .then(ConsumeWarehouseCommand.node())
-                .then(StressTestCommand.buildNode())
+                .then(ElementCommand.node())
+                .then(WarehouseCommand.node())
+                .then(BuildingCommand.node())
+                .then(RoadCommand.node())
+                .then(NpcCommand.node())
                 .then(TouristCommand.node())
                 .then(TavernCommand.node())
-                .then(TransportCommand.node())
+                .then(RecoveryCommand.node())
                 .then(GuardCommand.node())
-                .then(GuidebookCommand.node())
-                .then(SplineEditorCommand.node())
+                .then(GuideCommand.node());
+
+        // ── 开发者/调试：一律藏到 /wandscape test（整棵 op-2，普通玩家补全里不可见） ──
+        root.then(Commands.literal("test")
+                .requires(src -> src.hasPermission(2))
+                .then(LogCommand.node())
+                .then(ProfileCommand.node())
+                .then(AuditElementsCommand.node())
+                .then(GenerateElementMappingsCommand.node())
+                .then(FillBuildingCommand.fillNode())
+                .then(PublishBlueprintCommand.buildNode())
                 .then(MagicCommand.node())
+                .then(TransportCommand.node())
+                .then(TouristCommand.devNode())
+                .then(TavernCommand.devNode())
                 .then(RoadStudioCommand.node())
-                .then(ProfileCommand.node());
+                .then(SplineEditorCommand.node()));
+
         // ── Curios 兼容：法师饰品槽位管理（仅 Curios 加载时注册，避免无 Curios 时缺类崩溃） ──
         if (com.wsteam.wandscape.compat.curios.CuriosCompat.isLoaded()) {
             root.then(com.wsteam.wandscape.compat.curios.CuriosCommand.node());

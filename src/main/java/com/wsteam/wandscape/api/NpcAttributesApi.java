@@ -1,9 +1,11 @@
 package com.wsteam.wandscape.api;
 
 import com.wsteam.wandscape.content.npc.attributes.NpcAttributes.AttributeType;
+import com.wsteam.wandscape.content.npc.data.RecruitmentCandidate;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.UUID;
 
 /**
@@ -48,6 +50,18 @@ public interface NpcAttributesApi {
 
     /** effective = base + perLevel×(level−1) + equipBonus。 */
     float effective(AttributeType type, float base, int level, float equipBonus);
+
+    // ── 招募掷点 ──
+
+    /**
+     * 按等级掷出一份真实招募档案（{@link RecruitmentCandidate}）：默认随机源。
+     * 配合 {@link NpcSpawnSpec#fromCandidate} 与 {@link NpcApi#spawnNpc} 可生成「真实掷点」的法师；
+     * 或直接手填 {@link NpcSpawnSpec#attributes} 做特殊 NPC。
+     */
+    RecruitmentCandidate roll(int level);
+
+    /** 按等级掷点，使用指定随机源（可复现）。 */
+    RecruitmentCandidate roll(int level, Random random);
 
     // ── 覆盖（mod 初始化时调用）──
 

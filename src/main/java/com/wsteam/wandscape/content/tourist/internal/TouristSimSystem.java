@@ -1034,7 +1034,12 @@ public final class TouristSimSystem {
         int scaled = (int) ColonyActivation.scaleIncome(contribution,
                 ColonyActivation.getIncomeMultiplier(s.getColonyId()));
         if (scaled > 0) {
-            lm.addExperience(s.getColonyId(), scaled);
+            var api = com.wsteam.wandscape.api.WandscapeApis.getColonyApiSilently();
+            if (api != null) {
+                api.grantExperience(s.getColonyId(), scaled);
+            } else {
+                lm.addExperience(s.getColonyId(), scaled);
+            }
         }
     }
 

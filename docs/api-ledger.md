@@ -4,6 +4,13 @@
 > 生成：2026-09-01。状态基于当前 `refactor` 分支 `api/` 包，`compileJava` 绿。
 > 更新：2026-09-02。① NpcApi 的属性整存取/等级/训练/升级挪入 NpcAttributesApi（§2/§16 同步）；② NpcData 明确定位为 NpcApi 的读返回契约（§3），删除无实体的 `getAssignedHouseId`/`getGraveBlockEntityId`；③ WarehouseApi 声明两个仓库变更事件为公开契约（§8）；④ 新增 MageHutApi（§20）+ NpcApi 存活/复活（§2）；⑤（同日再动）NpcData 转 record 纯字段读模型：删 6 个逐属性读法（getSpellPower/getWorkSpeed/getSpellSpeed/getArmorValue/getMaxHealth/getMaxMana），读面唯一化为 `attributes()`（effective 全量）——`NpcAttributesApi.getNpcAttributes` 读桩同删（二选一去重落地，写路径保留）；`scepterHostileRange`→ScepterApi、`mageHutRestTicks`→MageHutApi 归位（§3/§6/§16/§20 同步）。
 > 更新：2026-09-03。⑥ 新增 NpcMainHandApi（§22）：法师装备栏「法杖槽」放开为**带过滤的主手槽**——准入 = 本模组 `WandItem` ∪ 注册式判定器 ∪ `wandscape:mage_main_hand_tools` 标签；铁魔法 `irons_spellbooks:staff` / 诡厄 `goety:wands` 标签由 compat 层按加载态预注册；本体唯一消费点 `NpcMenu.MainHandSlot`。
+> 更新：2026-09-04。**指令体系重构 + 读写面 dogfood 闭合（狗啃自身）**：
+> ⑦ `NpcApi.spawnNpc` 实现（默认/`NpcSpawnSpec` 覆盖），生成路径（酒馆付费/简历招募、命令）收敛到它，新增 `NpcSpawnSpec`（§2b）；
+> ⑧ `NpcAttributesApi.roll(level[,random])` 公开掷点（§16）；
+> ⑨ `TavernApi.recruitMage` 改**真生成 NPC**（非隐式桩）+ `recruitMage(...,spec)`、`chargeRecruit(colonyId,cost)`、`recruitForColony(colonyId,pos[,spec,cost])`（§12）；
+> ⑩ `WarehouseApi` 补 `addItem/removeItem/clearItems/clearElements/clearAll`（`clearAll` 桩→真）+ `getItemCapacity/getUsedItemCapacity`，`warehouse/element` 指令改走 API（§8）；
+> ⑪ `ColonyApi` 全部未实现方法补齐（`getColonyName/setColonyName/getMaxLevel/getExpToNext/isActive/setActive/setColonyLevel`），`colony level/exp/name` 指令 + 内部全部读/写点（NpcApi/MageHut/Recipe/BuildUnlock/Interact/Status/Achievement/Tourist*）改走 API，`ColonyActivation` 加 per-colony 强制冻结覆盖（§4）。
+> 同步：`docs/plan/command-refactor-api-gaps.md` 状态更新。
 
 ## 图例
 
@@ -16,8 +23,8 @@
 ## 总览
 
 - 接口数：**20 个**（19 个功能/扩展接口 + 1 个窄 accessor `WandscapeApis`）＋ 标注 `@Unimplemented`。
-- **已实现 vs 桩**：功能接口里大部分"读/查询/平衡值"已实现；**本轮新增的能力动词全是桩**。
-- **⚠️ 隐式桩（重点慎用）**：`NpcApi.assignHouse`（恒 false）、`TouristApi.spawnTourist`（空 nil）、`TavernApi.recruitMage`（只取简历不生实体）——三者**编译通过但行为是空/假**，addon 一用就踩坑，建议优先处理。
+- **已实现 vs 桩**：功能接口里大部分"读/查询/平衡值"已实现；**新增能力动词**（Npc 生成/属性掷点/酒馆招募/仓库增删清/殖民地名等级激活）已大部分为真（2026-09-04 闭合），仍桩的集中在：生产派单、道路建边、仓库转账、游客生成、魔法施法、Curio 读写。
+- **⚠️ 隐式桩（重点慎用）**：`NpcApi.assignHouse`（恒 false）、`TouristApi.spawnTourist`（空 nil）——二者**编译通过但行为是空/假**，addon 一用就踩坑。（`TavernApi.recruitMage` 已于 2026-09-04 由隐式桩转真。）
 - **本体自消费合计**：约 **139 处** `WandscapeApis.getXxxApi()*`。BuildingApi(35)/ColonyApi(39) 最重，ProductionApi(0) 最轻。
 - **API 鲜活性结论**：读面已自消费充分；**写面（能力动词）几乎全部绕开 API**（见各表 dogfood 列）——这正是 `ScepterApi` 只读的根源，是下一步 dogfood 改造的核心。
 
@@ -55,7 +62,8 @@
 | `getGuardRange/setGuardRange` …（18 个守卫战斗平衡对） | guard 战斗/风筝/自防距离值 | ✅ | BalanceValues 委托 |
 | `getNpcRegenGraceTicks`…（6 个回血/魔力平衡对） | NPC 回血/魔力节奏 | ✅ | BalanceValues |
 | `getReviveNearBuildingRange`（1 对） | 复活范围 | ✅ | BalanceValues 委托 |
-| `UUID spawnNpc(UUID colonyId, BlockPos)` | 生成殖民地 NPC | 🔶 桩 | 🔧 本体绕开（3 处）：`Wandscape.WANDSCAPE_NPC.spawn` + `fixEcsAfterSpawn`（`TavernRecruitPacket.java:199`、`ColonyCommand.java:190`、`ReviveHandler.java:148`）——**分散复制，最该收敛到 API** |
+| `UUID spawnNpc(UUID colonyId, BlockPos)` | 生成殖民地 NPC（默认：按小镇等级掷点 + 默认名字/皮肤/满蓝 + 修 ECS 归属） | ✅ `NpcApiImpl` | ✅ 收敛：酒馆付费/简历招募、`tavern recruit` 命令走它；`ColonyCommand` 初始 builder（冷启动+法杖/铁甲）与 `ReviveHandler` 复活路径保留原实现（特殊设备/复活语义，见 §2b 注） |
+| `UUID spawnNpc(UUID colonyId, BlockPos, NpcSpawnSpec)` | 生成 + 自定义覆盖（属性/等级/皮肤/帽色/名字/习得魔法/策略） | ✅ | 🔧 纯 addon 能力（`NpcSpawnSpec` = 最大灵活性） |
 | `boolean removeNpc(UUID)` | 解雇/移除 NPC | 🔶 桩 | 🔧 本体绕开：`WandscapeNpc.dismissFromColony`（`WandscapeNpc.java:993`，仅 `NpcDismissPacket`） |
 | `boolean isNpcAlive(UUID)` | npcId 是否指向在世法师（实体存在+未移除+isAlive） | ✅ `NpcApiImpl`（overworld 实体查询） | 🔧 无现成直接入口（各系统直调实体判断） |
 | `boolean reviveNpc(UUID)` / `reviveNpc(UUID, BlockPos)` | 复活法师：需死亡记录+当前不存活；pos 可空默认市政厅门口，免费 | ✅ `NpcApiImpl`（经 `ReviveHandler.spawnFromRecordAt` + `ColonyDeathRegistry.getByNpcId`） | 🔧 本体绕开：`ReviveHandler` 三条路径（祭坛/全灭保底/保卫复活）——API 是程序化强制入口，本体路径保留 |
@@ -63,6 +71,15 @@
 本体自消费：`getNpcApi` 3。**2026-09-02：**属性整存取（`get/setNpcAttributes`）、等级自由设置（`setNpcLevel`）、训练/升级（`trainNpc`/`levelUpNpc`）已挪入 NpcAttributesApi（见 §16），本接口不再持有。**同日再动：**`getScepterHostileRange`/`getMageHutRestTicks` 归位 ScepterApi（§6）/MageHutApi（§20）——本接口剩"殖民地查询 + 单 npc 查询/存活/复活 + NPC 战斗/恢复平衡"。
 
 ---
+
+## 2b. NpcSpawnSpec（生成规格，`api` 包——新增 2026-09-04）
+
+> 生成殖民地法师时的**可选覆盖规格**（全字段 `@Nullable`，null=不覆盖/走默认）。供 `NpcApi.spawnNpc` 与酒馆招募（`TavernApi`）使用——整合包/附属可借此生成指定属性/等级/皮肤/帽色/名字/习得魔法/策略的法师（更强的自定义 NPC）；或 `fromCandidate(RecruitmentCandidate)` 由 `roll` 真档案生成"真实掷点"法师。`attributes` 是**基础值**（非 effective），缺席的键走按小镇等级掷点默认。
+
+| 成员 | 用途 |
+|---|---|
+| `name / level / skinVariant / hatColor / strategyPreset / spells / attributes` | 各维度覆盖（null=默认） |
+| `builder()` / `fromCandidate(RecruitmentCandidate)` / `withSpells(List)` | 流式构造 / 由掷点档案生成 / 拷贝替换 spells |
 
 ## 3. NpcData（NpcApi 的只读数据契约，`content/npc/data`——非独立 API）
 
@@ -94,13 +111,13 @@
 | `get/setNamingStyle(UUID, NameStyle)` | 英文/中文/奇幻取名风格 | ✅ | `ColonySavedData` |
 | `getColonyLevel(UUID)` / `getColonyExp(UUID)` | 本级/经验 | ✅ | `ColonyLevelManager` 委托 |
 | `grantExperience(UUID, int)` | 加经验（正向） | ✅ | `ColonyLevelManager.addExperience` |
-| `String getColonyName(UUID)` | 殖民地显示名 | 🔶 桩 | 🔧 本体绕开：`ColonyLevelManager.getColonyName`（`ColonyLevelManager.java:76`），且已被 `ColonyStatusService` 读到（`ColonyStatusSnapshot.colonyName`） |
-| `void setColonyName(UUID, String)` | 设显示名 | 🔶 桩 | 🔧 本体绕开：`ColonyLevelManager.setColonyName`（`:87`，`ColonyCommand.java:163` 命名面板） |
-| `int getMaxLevel()` | 等级上限 | 🔶 桩 | 🔧 本体绕开：`Config.COLONY_MAX_LEVEL` |
-| `int getExpToNext(UUID)` | 升下级所需经验 | 🔶 桩 | 🔧 本体绕开：`ColonyLevelManager.expToNextLevel`（`:102`） |
-| `boolean isActive(UUID)` | 殖民地是否激活（创始人在线+未冻结） | 🔶 桩 | 🔧 本体绕开：`ColonyActivation.isColonyActive`（`ColonyActivation.java:32`）——**本体 58 处在建工/游客/结算判活跃，正是该走 API 的热点** |
-| `void setActive(UUID, boolean)` | 冻结/解冻（覆盖派生） | 🔶 桩 | 🔧 本体无（现无 per-colony 覆盖）——`setActive` 是纯新能力 |
-| `boolean setColonyLevel(UUID, int)` | 自由设等级（**可降到 1**） | 🔶 桩 | 🔧 本体绕开：`ColonyLevelManager.setLevel`（`ColonyLevelManager.java:81`，调试用） |
+| `String getColonyName(UUID)` | 殖民地显示名 | ✅ `ColonyApiImpl` | ✅ 本体走 API（`ColonyStatusService`/`BuildingInteractHandler`/`colony list` 改走） |
+| `void setColonyName(UUID, String)` | 设显示名 | ✅ | ✅ 本体走 API（命名面板`ColonyNameUpdatePacket`/`colony name` 命令/`createColonyAt`/`ensureColonyNear`） |
+| `int getMaxLevel()` | 等级上限 | ✅ `Config.COLONY_MAX_LEVEL` | 👶 非写点（纯查询） |
+| `int getExpToNext(UUID)` | 升下级所需经验 | ✅ `ColonyLevelManager.expToNextLevel` | ✅ `BuildingInteractHandler` 走 |
+| `boolean isActive(UUID)` | 殖民地是否激活（创始人在线+未冻结） | ✅ `ColonyActivation.isColonyActive`（含 per-colony 强制覆盖） | 🔧 **本体 58 处仍直调 `ColonyActivation.isColonyActive`（未改为走 API）**——留待 dogfood #5 |
+| `void setActive(UUID, boolean)` | 冻结/解冻（覆盖派生；仅 JVM 生命周期内驻留） | ✅ `ColonyActivation.setForcedActive` | 🔧 纯新能力（本体现无 per-colony 覆盖） |
+| `boolean setColonyLevel(UUID, int)` | 自由设等级（**可降到 1**） | ✅ `ColonyLevelManager.setLevel`（校验 1..max） | ✅ `colony level` 命令走 |
 
 本体自消费：`getColonyApi` 39（最重之一）。
 
@@ -160,7 +177,10 @@
 | `getElement/getAllElements/consumeElement/addElement/addAllElements` | 元素读写（现含 boolean 返回） | ✅ | 经济循环 |
 | `getItemCount/getItemSnapshot/extractItem/insertItems` | 物品读写 | ✅ | 经济循环 |
 | `get/setTransportTicksPerBlockOnRoad/OffRoad` | 运输耗时（平衡） | ✅ | BalanceValues |
-| `void clearAll(UUID)` | 清空仓库 | 🔶 桩 | 🔧 本体绕开：`ColonyItemBank.consume` 全量（`ConsumeWarehouseCommand.java:78-91`） |
+| `boolean addItem(UUID, ItemKey, long)` | 单物品**无条件**入账（绕过容量门——管理/整合包授权语义；生产/建造产出走 `insertItems` 容量门控） | ✅ `WarehouseManager` | ✅ `warehouse add` 命令走 |
+| `boolean removeItem(UUID, ItemKey, long)` | 单物品消耗（不足不动返回 false） | ✅ | ✅ `warehouse remove` 命令走 |
+| `boolean clearItems(UUID)` / `clearElements(UUID)` / `clearAll(UUID)` | 清空物品 / 元素 / 全部 | ✅ `clearAll` 由桩转真 | ✅ `warehouse clear` / `element clear` 命令走（旧 `ConsumeWarehouseCommand` 已删） |
+| `long getItemCapacity(UUID)` / `getUsedItemCapacity(UUID)` | 物品容量查询（0=不限） | ✅ | ✅ `warehouse view` 走 |
 | `boolean transferElements(fromUUID, toUUID, Map)` | **跨殖民地原子转账** | 🔶 桩 | 🔧 本体无（现只能两次调用拼接，非原子，B 未就绪会蒸发达部分） |
 
 **公开事件（2026-09-02 契约声明，`WarehouseApi` javadoc 列出；域事件留域 `content/warehouse/event`，广播于 `NeoForge.EVENT_BUS`，附属直接订阅做增量同步）**：
@@ -220,11 +240,15 @@
 | 方法 | 用途 | 状态 | dogfood |
 |---|---|---|---|
 | `getMageResumes(UUID)` | 简历列表（新→旧） | ✅ | 酒馆 GUI |
-| `MageResume recruitMage(UUID tavernId, UUID, index)` | 取走一份简历 | ⚠️ **只取简历，不生成实体** | 🔧 本体绕开：真 `spawn` 在 `TavernRecruitPacket.handleRecruitMage:199`（GUI 包路径），API 不产法师 |
+| `MageResume recruitMage(UUID tavernId, UUID, index)` | 招一份简历并**真生成法师**（经 `NpcApi.spawnNpc`，酒馆门口落点；生成成功才消耗简历） | ✅ 由隐式桩转真 | ✅ GUI 包 `TavernRecruitPacket.handleRecruitMage` 走 |
+| `MageResume recruitMage(UUID tavernId, UUID, index, NpcSpawnSpec)` | 简历招募 + spec 覆盖（属性/名字/皮肤等，覆盖优先） | ✅ | 🔧 纯 addon 能力 |
 | `rejectMage(UUID, index)` | 拒绝简历 | ✅ | 酒馆 GUI |
 | `getRecruitCount(UUID)` | 招募次数 | ✅ | — |
 | `canAffordRecruit(UUID)` / `chargeRecruit(UUID)` | 能否/扣费招募 | ✅ | — |
-| `void addResume(UUID colonyId, MageResume)` | 向简历池注入 | 🔶 桩 | 🔧 本体绕开：`TavernRecruitStorage.addResume`（`TavernCommand.java:78-82` 调试命令） |
+| `chargeRecruit(UUID, int costPerElement)` | 按自定义花费扣费（首次免费） | ✅ | 🔧 纯 addon 能力（整合包调价） |
+| `UUID recruitForColony(UUID, BlockPos)` | 付费招募（默认掷点+默认花费，生成+计数） | ✅ | ✅ GUI 付费招募分支 + `tavern recruit` 命令走 |
+| `UUID recruitForColony(UUID, BlockPos, NpcSpawnSpec, int cost)` | 付费招募 + 自定义 NPC/花费（更强的特殊 NPC） | ✅ | 🔧 纯 addon 能力 |
+| `void addResume(UUID colonyId, MageResume)` | 向简历池注入 | 🔶 桩 | 🔧 本体绕开：`TavernRecruitStorage.addResume`（`test tavern add_resume` 用） |
 
 本体自消费：`getTavernApi` 7。**⚠️ recruitMage 不产实体**。
 
@@ -275,6 +299,7 @@
 | `isVisible/visible` | 可见性/可见列表 | ✅ | 面板 |
 | `lower/upper/perLevel/trainStep/defaultFor/effective` | 规则读取 | ✅ | 招募/训练 |
 | `overrideSpec/resetSpec/setDefault/resetDefault/overrideCosts/resetCosts` | **mod 初始化时覆盖规则** | ✅ | 整合包用 |
+| `RecruitmentCandidate roll(int)` / `roll(int, Random)` | 按等级掷点真实档案（默认随机/可复现） | ✅ 新增 | 🔧 配合 `NpcSpawnSpec.fromCandidate` + `NpcApi.spawnNpc`：真实掷点法师 |
 | `boolean setNpcAttributes(UUID, Map)` | 整设基础属性 | 🔶 桩 | 🔧 本体绕开：`WandscapeNpc.setBaseAttributeValue` 逐个写（`TavernRecruitPacket.java:213` 手动拼） |
 | `void setNpcLevel(UUID, int)` | 自由设等级（可降级） | 🔶 桩 | 🔧 本体绕开：`WandscapeNpc.setLevel`（`TavernRecruitPacket.java:221`） |
 | `boolean trainNpc(UUID, AttributeType, steps)` | 训练属性（耗元素） | 🔶 桩 | 🔧 本体绕开：`MageHutServerHandler.onTrain`（`MageHutServerHandler.java:174`） |
@@ -386,17 +411,17 @@
 |---|---|---|
 | `NpcApi.assignHouse` | 恒 false | 实现（`EntityComponentBridge` 写 house 组件）或改标 `@Unimplemented` |
 | `TouristApi.spawnTourist` | 空 nil | 接真生成（`TouristSpawnSystem.forceSpawn`）或改标 `@Unimplemented` |
-| `TavernApi.recruitMage` | 只取简历不生实体 | 让内部走 `NpcApi.spawnNpc`，API 真产 NPC |
+| `TavernApi.recruitMage` | 只取简历不生实体 | ✅ **已闭合（2026-09-04）**：经 `NpcApi.spawnNpc` 真生成，GUI/命令走 API |
 | `NpcData.getAssignedHouseId/getGraveBlockEntityId` | 恒 null | ✅ 已删除（2026-09-02，无 House 只有法师小屋、无坟墓概念） |
 | `getTouristsInColony` vs `getTouristCount` | 数据源不一致 | 统一读持久化 shadow |
 
 ## 四、实现优先级建议（先做底部能力强、风险低）
 
 1. `ScepterApi` 写侧（对接 `ScepterMarks`，一对一转，风险最低）→ dogfood #1
-2. `NpcApi.spawnNpc`（收敛 3 处复制，需调 `fixEcsAfterSpawn`）→ dogfood #2
-3. `ColonyApi.setColonyName/getColonyName/setColonyLevel`（对接 `ColonyLevelManager`）→ dogfood #3
+2. `NpcApi.spawnNpc`（收敛 3 处复制，需调 `fixEcsAfterSpawn`）→ dogfood #2 —— ✅ **已闭合（2026-09-04）**，酒馆/命令收敛，新增 `NpcSpawnSpec` 覆盖
+3. `ColonyApi.setColonyName/getColonyName/setColonyLevel`（对接 `ColonyLevelManager`）→ dogfood #3 —— ✅ **已闭合（2026-09-04）**，全部未实现方法补齐，读写点走 API
 4. `NpcAttributesApi.setNpcAttributes`（对接 `WandscapeNpc.setBaseAttributeValue` 逐个写；读面已在 `NpcData.attributes()`，`getNpcAttributes` 读桩已删，只需实现写侧）
-5. 其余（生产/道路/游客/仓库）价值高但涉及跨域装配，靠后逐步做。
+5. 其余（生产/道路/游客/仓库转账）价值高但涉及跨域装配，靠后逐步做。仓库增删清已闭合（2026-09-04）但 `transferElements` 仍桩。
 
 ---
 

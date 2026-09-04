@@ -31,7 +31,6 @@ public final class GuardCommand {
     public static CommandNode<CommandSourceStack> node() {
         return Commands.literal("guard")
                 .then(Commands.literal("status")
-                        .requires(src -> src.hasPermission(2))
                         .executes(GuardCommand::status))
                 .build();
     }

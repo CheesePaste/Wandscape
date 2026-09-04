@@ -23,9 +23,9 @@ public final class RecipeUnlockChecker {
     public static boolean isUnlocked(@Nullable UUID colonyId, RecipeUnlockRequirement req) {
         if (colonyId == null) return false;
         if (req == null || req == RecipeUnlockRequirement.NONE) return true;
-        var levelMgr = com.wsteam.wandscape.content.colony.ColonyLevelManager.get();
-        if (levelMgr == null) return false;
-        return levelMgr.getLevel(colonyId) >= req.minColonyLevel();
+        var colonyApi = com.wsteam.wandscape.api.WandscapeApis.getColonyApiSilently();
+        if (colonyApi == null) return false;
+        return colonyApi.getColonyLevel(colonyId) >= req.minColonyLevel();
     }
 
     /**
@@ -35,9 +35,9 @@ public final class RecipeUnlockChecker {
     @Nullable
     public static String getLockReason(@Nullable UUID colonyId, RecipeUnlockRequirement req) {
         if (req == null || req == RecipeUnlockRequirement.NONE) return null;
-        var levelMgr = com.wsteam.wandscape.content.colony.ColonyLevelManager.get();
-        if (levelMgr == null) return "Level system not available";
-        int current = levelMgr.getLevel(colonyId);
+        var colonyApi = com.wsteam.wandscape.api.WandscapeApis.getColonyApiSilently();
+        if (colonyApi == null) return "Level system not available";
+        int current = colonyApi.getColonyLevel(colonyId);
         int required = req.minColonyLevel();
         if (current < required)
             return "Requires colony level %d (current: %d)".formatted(required, current);

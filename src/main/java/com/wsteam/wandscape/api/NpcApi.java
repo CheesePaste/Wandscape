@@ -85,14 +85,19 @@ public interface NpcApi {
     // ── 未实现（重设计阶段声明，见 @Unimplemented）──
 
     /**
-     * 在指定位置生成一名属于指定殖民地的 NPC（等级/fixEcsAfterSpawn 由实现方处理）。
+     * 在指定位置生成一名属于指定殖民地的法师（默认属性：按小镇等级掷点 + 默认名字/皮肤/空战斗载荷）。
      *
-     * @return 新 NPC 的 UUID；位置无效或生成失败返回 null
+     * @return 新法师的 UUID；位置无效、系统未就绪或生成失败返回 null
      */
-    @Unimplemented("重设计阶段——待接入 WandscapeNpc.spawn + fixEcsAfterSpawn")
-    default UUID spawnNpc(UUID colonyId, BlockPos spawnPos) {
-        throw new UnsupportedOperationException("NpcApi.spawnNpc not yet implemented");
-    }
+    UUID spawnNpc(UUID colonyId, BlockPos spawnPos);
+
+    /**
+     * 在指定位置生成一名法师，用 {@link NpcSpawnSpec} 覆盖维度（属性/等级/皮肤/帽色/名字/习得魔法/策略）。
+     * {@code spec} 为 null 或全空时即默认生成。整合包/附属模组可借此生成自定义法师。
+     *
+     * @return 新法师的 UUID；位置无效、系统未就绪或生成失败返回 null
+     */
+    UUID spawnNpc(UUID colonyId, BlockPos spawnPos, @Nullable NpcSpawnSpec spec);
 
     /** 把一名 NPC 移出殖民地（掉落装备、不留死亡记录）。 */
     @Unimplemented("重设计阶段——待接入 WandscapeNpc.dismissFromColony")

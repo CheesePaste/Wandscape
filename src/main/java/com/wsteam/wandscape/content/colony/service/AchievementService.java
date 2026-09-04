@@ -12,7 +12,6 @@ import com.wsteam.wandscape.content.tourist.event.DailySettlementEvent;
 import com.wsteam.wandscape.content.building.data.BuildingConfig;
 import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.content.building.internal.ShopStockManager;
-import com.wsteam.wandscape.content.colony.ColonyLevelManager;
 import com.wsteam.wandscape.api.*;
 // event imports updated
 import com.wsteam.wandscape.foundation.log.Log;
@@ -187,9 +186,9 @@ public final class AchievementService {
     }
 
     private static void checkLevel(UUID colonyId) {
-        ColonyLevelManager mgr = ColonyLevelManager.get();
-        if (mgr == null) return;
-        int level = mgr.getLevel(colonyId);
+        var colonyApi = com.wsteam.wandscape.api.WandscapeApis.getColonyApiSilently();
+        if (colonyApi == null) return;
+        int level = colonyApi.getColonyLevel(colonyId);
         if (level >= 2) grant(colonyId, LEVEL_UP);
         if (level >= 5) grant(colonyId, RENOWNED);
         if (level >= 10) grant(colonyId, WELL_KNOWN);

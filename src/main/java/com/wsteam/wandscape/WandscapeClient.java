@@ -322,19 +322,13 @@ public class WandscapeClient {
                             packet.buildingPos(), packet.colonyId(),
                             packet.colonyName(), packet.level(), packet.experience(),
                             packet.expToNext(), packet.founderName(), packet.canUseWarehouse(),
-                            packet.namingStyle(), packet.creator()));
+                            packet.namingStyle(), packet.creator(), packet.touristSpawning()));
         });
 
         // Colony create prompt: town hall right-clicked but no colony exists
         com.wsteam.wandscape.content.colony.network.ColonyCreatePromptPacket.setClientHandler(packet -> {
             net.minecraft.client.Minecraft.getInstance().setScreen(
                     new TownHallCreateScreen(packet.townHallAnchor(), packet.creator()));
-        });
-
-        // Guide test screen
-        com.wsteam.wandscape.content.items.guidebook.network.GuidebookDocOpenPacket.setClientHandler(packet -> {
-            net.minecraft.client.Minecraft.getInstance().setScreen(
-                    new com.wsteam.wandscape.foundation.ui.guidebook.GuidebookScreen(packet.markdownContent()));
         });
 
         // Guide book: right-click opens the tutorial home (index_guide), locale-resolved

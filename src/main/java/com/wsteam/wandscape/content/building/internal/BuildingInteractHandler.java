@@ -8,6 +8,7 @@ import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.content.building.data.BuildingConfig;
 import com.wsteam.wandscape.content.building.network.*;
 import com.wsteam.wandscape.content.building.network.*;
+import com.wsteam.wandscape.content.colony.ColonySavedData;
 import com.wsteam.wandscape.content.production.network.CraftingStationPacket;
 import com.wsteam.wandscape.content.production.network.MagicStationPacket;
 import com.wsteam.wandscape.content.production.network.WorkstationDataPacket;
@@ -122,20 +123,21 @@ public final class BuildingInteractHandler {
 
         // Town hall with linked colony: show colony level & exp info
         if ("government".equals(category) && state.getColonyId() != null) {
-            var levelMgr = com.wsteam.wandscape.content.colony.ColonyLevelManager.get();
-            int lvl = levelMgr != null ? levelMgr.getLevel(colonyId) : 1;
-            int exp = levelMgr != null ? levelMgr.getExperience(colonyId) : 0;
-            int expNext = levelMgr != null ? levelMgr.expToNextLevel(colonyId) : 1000;
-            String name = levelMgr != null ? levelMgr.getColonyName(colonyId) : "";
+            var colonyApi = com.wsteam.wandscape.api.WandscapeApis.getColonyApiSilently();
+            int lvl = colonyApi != null ? colonyApi.getColonyLevel(colonyId) : 1;
+            int exp = colonyApi != null ? colonyApi.getColonyExp(colonyId) : 0;
+            int expNext = colonyApi != null ? colonyApi.getExpToNext(colonyId) : 1000;
+            String name = colonyApi != null ? colonyApi.getColonyName(colonyId) : "";
             String founderName = resolveFounderName(player, colonyId);
             boolean canUseWarehouse = com.wsteam.wandscape.api.WandscapeApis.getBuildingApi()
                     .getBuildingsByCategory(colonyId, "storage").isEmpty();
-            var colonyApi = com.wsteam.wandscape.api.WandscapeApis.getColonyApiSilently();
             int namingStyle = colonyApi != null ? colonyApi.getNamingStyle(colonyId).ordinal() : 0;
+            boolean touristSpawning = ColonySavedData.getOrCreate(level)
+                    .isTouristSpawningEnabled(colonyId);
             PacketDistributor.sendToPlayer(player,
                     new TownHallOpenPacket(
                             pos, colonyId, name, lvl, exp, expNext, founderName, canUseWarehouse, namingStyle,
-                            creator));
+                            creator, touristSpawning));
             return;
         }
 

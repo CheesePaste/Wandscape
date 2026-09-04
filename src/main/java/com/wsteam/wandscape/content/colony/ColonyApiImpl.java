@@ -254,6 +254,51 @@ public final class ColonyApiImpl implements ColonyApi {
         if (colonyLevelManager != null) colonyLevelManager.addExperience(colonyId, amount);
     }
 
+    // ── ColonyApi 补齐：名字 / 上限 / 下一级经验 / 激活 / 等级设置 ──
+
+    @Override
+    public String getColonyName(UUID colonyId) {
+        if (colonyId == null || !colonyToOrigin.containsKey(colonyId)) return "";
+        return colonyLevelManager != null ? colonyLevelManager.getColonyName(colonyId) : "";
+    }
+
+    @Override
+    public void setColonyName(UUID colonyId, String name) {
+        if (colonyId == null || !colonyToOrigin.containsKey(colonyId)) return;
+        if (colonyLevelManager != null) colonyLevelManager.setColonyName(colonyId, name);
+    }
+
+    @Override
+    public int getMaxLevel() {
+        return com.wsteam.wandscape.Config.COLONY_MAX_LEVEL.get();
+    }
+
+    @Override
+    public int getExpToNext(UUID colonyId) {
+        if (colonyId == null || !colonyToOrigin.containsKey(colonyId)) return 0;
+        return colonyLevelManager != null ? colonyLevelManager.expToNextLevel(colonyId) : 0;
+    }
+
+    @Override
+    public boolean isActive(UUID colonyId) {
+        return ColonyActivation.isColonyActive(colonyId);
+    }
+
+    @Override
+    public void setActive(UUID colonyId, boolean active) {
+        ColonyActivation.setForcedActive(colonyId, active);
+    }
+
+    @Override
+    public boolean setColonyLevel(UUID colonyId, int level) {
+        if (colonyId == null || !colonyToOrigin.containsKey(colonyId)) return false;
+        if (colonyLevelManager == null) return false;
+        int max = com.wsteam.wandscape.Config.COLONY_MAX_LEVEL.get();
+        if (level < 1 || level > max) return false;
+        colonyLevelManager.setLevel(colonyId, level);
+        return true;
+    }
+
     // ── Singleton ─────────────────────────────────────────────────────────
 
     public static ColonyApiImpl get() {

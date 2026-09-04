@@ -92,12 +92,21 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
                 return;
             }
 
-            // 2.5 招募计费门控（仅「招募 NPC」收费）：每小镇首次免费，之后每次需每种元素 10000
+            // 2.5 付费招募（「招募 NPC」）：走 TavernApi.recruitForColony —— 首次免费，之后每种元素
+            //     Config 价；整合包可经 recruitForColony(colonyId, pos, spec, cost) 覆盖花费与自定义 NPC。
             com.wsteam.wandscape.api.TavernApi tavernApi = null;
             try {
                 tavernApi = com.wsteam.wandscape.api.WandscapeApis.getTavernApi();
             } catch (IllegalStateException ignored) {}
-            if (tavernApi != null && !tavernApi.canAffordRecruit(colonyId)) {
+            if (tavernApi == null) {
+                ScreenFeedbackPacket.send(sp, I18n.name("message.wandscape.tavern.system_unavailable",
+                        "[Wandscape] Tavern system not available."), true);
+                return;
+            }
+
+            BlockPos spawnPos = findSpawnPos(level, pkt.buildingPos);
+            UUID npcId = tavernApi.recruitForColony(colonyId, spawnPos);
+            if (npcId == null) {
                 ScreenFeedbackPacket.send(sp, I18n.name("message.wandscape.tavern.insufficient_elements",
                         "[Wandscape] Insufficient elements: recruiting costs %d of every element "
                                 + "(first recruit free).",
@@ -105,68 +114,29 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
                 return;
             }
 
-            // 3. Roll recruit attributes: random² 偏斜分布 + 小镇等级加成
-            //    （模拟小镇等级游客投出的简历——与法师游客掷简历同一公式）
-            var levelMgr = com.wsteam.wandscape.content.colony.ColonyLevelManager.get();
-            int colonyLevel = levelMgr != null ? levelMgr.getLevel(colonyId) : 1;
-            var candidate = NpcAttributes.roll(colonyLevel,
-                    new Random(level.random.nextLong()));
-
-            // 4. Find spawn position near the tavern
-            BlockPos spawnPos = findSpawnPos(level, pkt.buildingPos);
-
-            // 5. Spawn NPC
-            var npc = Wandscape.WANDSCAPE_NPC.get().spawn(level, spawnPos, MobSpawnType.COMMAND);
-            if (npc == null) {
-                ScreenFeedbackPacket.send(sp, I18n.name("message.wandscape.tavern.recruit_failed",
-                        "[Wandscape] Failed to recruit NPC."), true);
-                return;
-            }
-            npc.setPersistenceRequired();
-            npc.colonyId = colonyId;
-            // 酒馆招募的法师无起始战斗魔法（仅特殊区 heal/teleport 系统固有）：经 MagicApi 清空
-            // onAddedToLevel 种的默认载荷（空装备态 + 当前预设，走权威校验）。
-            com.wsteam.wandscape.api.WandscapeApis.getMagicApi()
-                    .setEquippedAndStrategy(npc.getUUID(), npc.castStrategy.preset().name(), java.util.List.of());
-
-            // 6. Apply rolled attributes + 满蓝入职
-            npc.setBaseAttributeValue(AttributeType.MAX_HP, candidate.maxHp());
-            npc.setBaseAttributeValue(AttributeType.MOVE_SPEED, candidate.moveSpeed());
-            npc.setBaseAttributeValue(AttributeType.SPELL_POWER, candidate.spellPower());
-            npc.setBaseAttributeValue(AttributeType.WORK_SPEED, candidate.workSpeed());
-            npc.setBaseAttributeValue(AttributeType.SPELL_SPEED, candidate.spellSpeed());
-            npc.setBaseAttributeValue(AttributeType.ARMOR_VALUE, candidate.armorValue());
-            npc.setBaseAttributeValue(AttributeType.MAX_MANA, candidate.maxMana());
-            npc.magic.setMana(candidate.maxMana());
-            npc.setLevel(candidate.level());
-
-            // 7. Fix ECS state (spawn() already triggered onNpcJoinWorld)
-            fixEcsAfterSpawn(npc, colonyId);
-
-            // 7.5 生成成功后再扣费计数（首次免费）
-            if (tavernApi != null) {
-                tavernApi.chargeRecruit(colonyId);
-            }
+            // 反馈用新生成 NPC 快照（等级 + 属性），避免重复掷点。
+            var npcApi = com.wsteam.wandscape.api.WandscapeApis.getNpcApiSilently();
+            var npcData = npcApi != null ? npcApi.getNpc(npcId) : null;
+            int lvl = npcData != null ? npcData.level() : 1;
+            float spPow = npcData != null ? npcData.attributes().getOrDefault(AttributeType.SPELL_POWER, 0f) : 0f;
+            float ws = npcData != null ? npcData.attributes().getOrDefault(AttributeType.WORK_SPEED, 0f) : 0f;
+            float cs = npcData != null ? npcData.attributes().getOrDefault(AttributeType.SPELL_SPEED, 0f) : 0f;
+            float ar = npcData != null ? npcData.attributes().getOrDefault(AttributeType.ARMOR_VALUE, 0f) : 0f;
 
             Log.info(TAG, "[Tourist] Recruited mage Lv.{} for colony {} at {}",
-                    candidate.level(),
-                    colonyId.toString().substring(0, 8),
-                    spawnPos.toShortString());
+                    lvl, colonyId.toString().substring(0, 8), spawnPos.toShortString());
 
             ScreenFeedbackPacket.send(sp,
                     I18n.name("message.wandscape.tavern.recruited_direct",
                             "[Wandscape] Mage recruited! Lv.%d 强度:%.1f 工速:%.1f 施速:%.1f 护甲:%.1f %s",
-                            candidate.level(), candidate.spellPower(), candidate.workSpeed(),
-                            candidate.spellSpeed(), candidate.armorValue(), spawnPos.toShortString()),
+                            lvl, spPow, ws, cs, ar, spawnPos.toShortString()),
                     false);
 
-            if (tavernApi != null) {
-                PacketDistributor.sendToPlayer(sp,
-                        new TavernOpenPacket(pkt.buildingPos, colonyId,
-                                tavernApi.getRecruitCount(colonyId),
-                                tavernApi.getMageResumes(colonyId),
-                                BuildingInteractHandler.resolveCreator(sp.serverLevel(), pkt.buildingPos)));
-            }
+            PacketDistributor.sendToPlayer(sp,
+                    new TavernOpenPacket(pkt.buildingPos, colonyId,
+                            tavernApi.getRecruitCount(colonyId),
+                            tavernApi.getMageResumes(colonyId),
+                            BuildingInteractHandler.resolveCreator(sp.serverLevel(), pkt.buildingPos)));
         });
     }
 
@@ -197,38 +167,9 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
             return;
         }
 
-        BlockPos spawnPos = findSpawnPos(level, pkt.buildingPos);
-        var npc = Wandscape.WANDSCAPE_NPC.get().spawn(level, spawnPos, MobSpawnType.COMMAND);
-        if (npc == null) {
-            ScreenFeedbackPacket.send(sp, I18n.name("message.wandscape.tavern.recruit_mage_failed",
-                    "[Wandscape] Failed to recruit mage."), true);
-            return;
-        }
-        npc.setPersistenceRequired();
-        npc.colonyId = colonyId;
-        // 酒馆招募的法师无起始战斗魔法：经 MagicApi 清空默认载荷（空装备态 + 当前预设，走权威校验）。
-        com.wsteam.wandscape.api.WandscapeApis.getMagicApi()
-                .setEquippedAndStrategy(npc.getUUID(), npc.castStrategy.preset().name(), java.util.List.of());
-
-        // Apply mage stats from resume
-        npc.setCustomName(Component.literal(resume.touristName()));
-        npc.setCustomNameVisible(true);
-        npc.setBaseAttributeValue(AttributeType.MAX_HP, resume.maxHp());
-        npc.setBaseAttributeValue(AttributeType.MOVE_SPEED, resume.moveSpeed());
-        npc.setBaseAttributeValue(AttributeType.SPELL_POWER, resume.spellPower());
-        npc.setBaseAttributeValue(AttributeType.WORK_SPEED, resume.workSpeed());
-        npc.setBaseAttributeValue(AttributeType.SPELL_SPEED, resume.spellSpeed());
-        npc.setBaseAttributeValue(AttributeType.ARMOR_VALUE, resume.armorValue());
-        npc.setBaseAttributeValue(AttributeType.MAX_MANA, resume.maxMana());
-        npc.magic.setMana(resume.maxMana()); // 满蓝入职
-        npc.setLevel(resume.level());
-
-        fixEcsAfterSpawn(npc, colonyId);
-
-        Log.info(TAG, "[Tourist] Recruited mage {} (Lv.{}) from resume for colony {} at {}",
-                resume.touristName(), resume.level(),
-                colonyId.toString().substring(0, 8),
-                spawnPos.toShortString());
+        // recruitMage 已在酒馆位置生成实体（经 NpcApi.spawnNpc），此处只反馈 + 刷新。
+        Log.info(TAG, "[Tourist] Recruited mage {} (Lv.{}) from resume for colony {}",
+                resume.touristName(), resume.level(), colonyId.toString().substring(0, 8));
 
         ScreenFeedbackPacket.send(sp,
                 I18n.name("message.wandscape.tavern.recruited_resume",

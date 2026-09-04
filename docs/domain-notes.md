@@ -44,6 +44,10 @@
    - 游客 `visitedBuildings` 在整个停留期间**不重置**（防挂机刷分）；仅 ATM（缺钱）与 relax（精力低于阈值）享有重复访问豁免。
 4. **结算与经验发放**：
    - 交互结算（`fillBars`）无倒扣惩罚；只有在停留期内 Comfort / Magic / Wonder 三条全部填满时，离场才发放殖民地升级经验。
+5. **生成双开关（全局 Config + 殖民地级市政厅）**：
+   - 全局 `Config.TOURIST_SPAWN_ENABLED`（`tourist.spawnEnabled`，默认 true）关闭时，**所有殖民地一律不生成游客**，无视市民政厅开关。
+   - 殖民地级开关存于 `ColonySavedData.touristSpawnDisabled`（缺省 = 开启），由市政厅 UI 的「生成游客」按钮控制；只在全局开关开启时生效。
+   - 两道闸都只在 `TouristSpawnSystem.createSchedule`（每日排期）与生成窗口内生效，只拦**新增**游客，不清理已在场的游客；开关中途关闭会清掉当日已排计划，避免重新开启时一次性倾泻。
 
 ---
 

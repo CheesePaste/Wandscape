@@ -60,8 +60,8 @@ public final class BuildingUnlockChecker {
      * level 1 and stay locked even at max colony level.
      */
     private static int resolveLevel(@Nullable UUID colonyId) {
-        var levelMgr = com.wsteam.wandscape.content.colony.ColonyLevelManager.get();
-        if (levelMgr != null) return levelMgr.getLevel(colonyId);
+        var colonyApi = com.wsteam.wandscape.api.WandscapeApis.getColonyApiSilently();
+        if (colonyApi != null) return colonyApi.getColonyLevel(colonyId);
         if (FMLEnvironment.dist.isClient()) {
             return WandscapePanelState.getColonyLevel();
         }

@@ -194,6 +194,67 @@ public class WarehouseManager implements WarehouseApi, ColonyResourceAccess {
     }
 
     // ════════════════════════════════════════════════════════════
+    //  warehouse 增删清（colony 级；管理/整合包 / 指令共用）
+    // ════════════════════════════════════════════════════════════
+
+    @Override
+    public boolean addItem(UUID colonyId, ItemKey key, long amount) {
+        if (amount <= 0) return true;
+        ColonyItemBank bank = getBank();
+        if (bank == null) return false;
+        bank.add(colonyId, key, amount);
+        return true;
+    }
+
+    @Override
+    public boolean removeItem(UUID colonyId, ItemKey key, long amount) {
+        if (amount <= 0) return true;
+        ColonyItemBank bank = getBank();
+        if (bank == null) return false;
+        if (bank.count(colonyId, key) < amount) return false;
+        bank.consume(colonyId, key, amount);
+        return true;
+    }
+
+    @Override
+    public boolean clearItems(UUID colonyId) {
+        ColonyItemBank bank = getBank();
+        if (bank == null) return false;
+        bank.getSnapshot(colonyId).forEach((k, v) -> {
+            if (v != null && v > 0) bank.consume(colonyId, k, v);
+        });
+        return true;
+    }
+
+    @Override
+    public boolean clearElements(UUID colonyId) {
+        ColonyItemBank bank = getBank();
+        if (bank == null) return false;
+        bank.getElementSnapshot(colonyId).forEach((t, v) -> {
+            if (v != null && v > 0) bank.consumeElement(colonyId, t, v);
+        });
+        return true;
+    }
+
+    @Override
+    public boolean clearAll(UUID colonyId) {
+        boolean a = clearItems(colonyId);
+        boolean b = clearElements(colonyId);
+        return a || b;
+    }
+
+    @Override
+    public long getItemCapacity(UUID colonyId) {
+        return ColonyItemBank.capacityFor(colonyId);
+    }
+
+    @Override
+    public long getUsedItemCapacity(UUID colonyId) {
+        ColonyItemBank bank = getBank();
+        return bank != null ? bank.usedItems(colonyId) : 0;
+    }
+
+    // ════════════════════════════════════════════════════════════
     //  ColonyResourceAccess
     // ════════════════════════════════════════════════════════════
 

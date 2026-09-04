@@ -1,6 +1,5 @@
 package com.wsteam.wandscape.content.colony.service;
 
-import com.wsteam.wandscape.content.colony.ColonyLevelManager;
 import com.wsteam.wandscape.api.BuildingApi;
 import com.wsteam.wandscape.api.BuildingApi.ColonySnapshot;
 import com.wsteam.wandscape.api.ColonyStatusApi;
@@ -35,10 +34,10 @@ public final class ColonyStatusService implements ColonyStatusApi {
         int wonder = eval != null ? eval.wonder() : 0;
 
         // 2. Colony level and experience
-        ColonyLevelManager levelMgr = ColonyLevelManager.get();
-        int lvl = levelMgr != null ? levelMgr.getLevel(colonyId) : 1;
-        int exp = levelMgr != null ? levelMgr.getExperience(colonyId) : 0;
-        String name = levelMgr != null ? levelMgr.getColonyName(colonyId) : "";
+        var colonyApi = WandscapeApis.getColonyApiSilently();
+        int lvl = colonyApi != null ? colonyApi.getColonyLevel(colonyId) : 1;
+        int exp = colonyApi != null ? colonyApi.getColonyExp(colonyId) : 0;
+        String name = colonyApi != null ? colonyApi.getColonyName(colonyId) : "";
 
         // 3. Tourist metrics
         int touristCount = 0;

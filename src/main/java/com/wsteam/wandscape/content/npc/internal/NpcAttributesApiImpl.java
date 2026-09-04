@@ -3,11 +3,23 @@ package com.wsteam.wandscape.content.npc.internal;
 import com.wsteam.wandscape.api.NpcAttributesApi;
 import com.wsteam.wandscape.content.npc.attributes.NpcAttributes;
 import com.wsteam.wandscape.content.npc.attributes.NpcAttributes.AttributeType;
+import com.wsteam.wandscape.content.npc.data.RecruitmentCandidate;
 
 import java.util.List;
+import java.util.Random;
 
 /** {@link NpcAttributesApi} 装配实现：直接读写 {@link NpcAttributes} 规则表（单一事实源）。 */
 public final class NpcAttributesApiImpl implements NpcAttributesApi {
+
+    @Override
+    public RecruitmentCandidate roll(int level) {
+        return NpcAttributes.roll(level, new Random());
+    }
+
+    @Override
+    public RecruitmentCandidate roll(int level, Random random) {
+        return NpcAttributes.roll(level, random);
+    }
 
     @Override
     public boolean isVisible(AttributeType type) {

@@ -51,43 +51,25 @@ public interface ColonyApi {
     /** Programmatically grant experience to a colony (respects max level, may trigger level-up). */
     void grantExperience(UUID colonyId, int amount);
 
-    // ── 未实现（重设计阶段声明，见 @Unimplemented）──
+    // ── 名字 / 上限 / 下一级经验 / 激活 / 等级设置（实现方：ColonyApiImpl）──
 
-    /** 殖民地显示名（当前经内部 ColonyLevelManager；未知殖民地返回空串）。 */
-    @Unimplemented("重设计阶段——待接入 ColonyLevelManager.getColonyName")
-    default String getColonyName(UUID colonyId) {
-        throw new UnsupportedOperationException("ColonyApi.getColonyName not yet implemented");
-    }
+    /** 殖民地显示名（未知殖民地返回空串）。 */
+    String getColonyName(UUID colonyId);
 
     /** 设置殖民地显示名。 */
-    @Unimplemented("重设计阶段——待接入 ColonyLevelManager.setColonyName")
-    default void setColonyName(UUID colonyId, String name) {
-        throw new UnsupportedOperationException("ColonyApi.setColonyName not yet implemented");
-    }
+    void setColonyName(UUID colonyId, String name);
 
     /** 殖民地等级上限（全局配置）。 */
-    @Unimplemented("重设计阶段——待接入 Config.COLONY_MAX_LEVEL")
-    default int getMaxLevel() {
-        throw new UnsupportedOperationException("ColonyApi.getMaxLevel not yet implemented");
-    }
+    int getMaxLevel();
 
     /** 升至下一级所需经验（未知殖民地返回 0）。 */
-    @Unimplemented("重设计阶段——待接入 ColonyLevelManager.expToNextLevel")
-    default int getExpToNext(UUID colonyId) {
-        throw new UnsupportedOperationException("ColonyApi.getExpToNext not yet implemented");
-    }
+    int getExpToNext(UUID colonyId);
 
-    /** 殖民地当前是否激活（创始人在线且殖民地未冻结）。 */
-    @Unimplemented("重设计阶段——待接入 ColonyActivation.isColonyActive")
-    default boolean isActive(UUID colonyId) {
-        throw new UnsupportedOperationException("ColonyApi.isActive not yet implemented");
-    }
+    /** 殖民地当前是否激活（创始人在线且殖民地未冻结；含 per-colony 强制覆盖）。 */
+    boolean isActive(UUID colonyId);
 
-    /** 强制冻结/解冻殖民地（覆盖默认派生规则）。 */
-    @Unimplemented("重设计阶段——待接入 per-colony 冻结开关")
-    default void setActive(UUID colonyId, boolean active) {
-        throw new UnsupportedOperationException("ColonyApi.setActive not yet implemented");
-    }
+    /** 强制冻结/解冻殖民地（覆盖默认派生规则；仅 JVM 生命周期内驻留，重启后回到派生判定）。 */
+    void setActive(UUID colonyId, boolean active);
 
     /**
      * 自由设置殖民地等级（1..{@link #getMaxLevel()}），**升级/降级统一入口**：
@@ -95,8 +77,5 @@ public interface ColonyApi {
      *
      * @return 设置成功返回 true；殖民地不存在或越界返回 false
      */
-    @Unimplemented("重设计阶段——待接入 ColonyLevelManager.setLevel")
-    default boolean setColonyLevel(UUID colonyId, int level) {
-        throw new UnsupportedOperationException("ColonyApi.setColonyLevel not yet implemented");
-    }
+    boolean setColonyLevel(UUID colonyId, int level);
 }

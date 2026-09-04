@@ -1,6 +1,7 @@
 package com.wsteam.wandscape.content.building.client;
 
 import com.wsteam.wandscape.content.building.network.TownHallNameStylePacket;
+import com.wsteam.wandscape.content.building.network.TownHallTouristSpawnPacket;
 import com.wsteam.wandscape.content.building.network.TownHallWarehouseRequestPacket;
 import com.wsteam.wandscape.foundation.util.NameStyle;
 import com.wsteam.wandscape.content.colony.network.ColonyNameUpdatePacket;
@@ -37,15 +38,18 @@ public class TownHallScreen extends MedievalScreen {
     private final String founderName;
     /** True when the colony has no storage building — show the warehouse access button. */
     private final boolean canUseWarehouse;
+    /** Colony's town hall 「生成游客」 toggle (default enabled server-side). */
+    private boolean touristSpawning;
 
     private EditBox nameBox;
     private NameStyle namingStyle;
     private final MedievalButton[] styleButtons = new MedievalButton[NameStyle.values().length];
+    private MedievalButton touristButton;
 
     public TownHallScreen(BlockPos buildingPos, UUID colonyId,
                           String colonyName, int level, int experience, int expToNext,
                           String founderName, boolean canUseWarehouse, int namingStyleOrdinal,
-                          String creator) {
+                          String creator, boolean touristSpawning) {
         super(I18n.name("gui.wandscape.townhall.title", "Town Hall"), PW, PH);
         setTitleBar(I18n.name("gui.wandscape.townhall.title", "市政厅"));
         this.showCloseButton = true;
@@ -60,6 +64,7 @@ public class TownHallScreen extends MedievalScreen {
         this.founderName = founderName;
         this.canUseWarehouse = canUseWarehouse;
         this.namingStyle = ordinalToStyle(namingStyleOrdinal);
+        this.touristSpawning = touristSpawning;
         setCreator(creator);
     }
 
@@ -101,12 +106,24 @@ public class TownHallScreen extends MedievalScreen {
             addRenderableWidget(styleButtons[i]);
         }
 
+        // Bottom row: colony settings buttons (「生成游客」toggle + optional warehouse access).
+        // 左上留创建者页脚 → 双按钮时从 leftPos+96 起排，避免盖住「创建者：…」。
+        int bh = 16;
+        int gap = 6;
+        int by = topPos + PH - bh - 12;
+        int bw;
+        int startX;
         if (canUseWarehouse) {
-            int bw = 120;
-            int bh = 16;
-            int bx = leftPos + (PW - bw) / 2;
-            int by = topPos + PH - bh - 12;
-            addRenderableWidget(new MedievalButton(bx, by, bw, bh,
+            bw = (PW - 96 - 8 - gap) / 2;
+            startX = leftPos + 96;
+        } else {
+            bw = 116;
+            startX = leftPos + (PW - bw) / 2;
+        }
+        touristButton = new MedievalButton(startX, by, bw, bh, spawnTouristsLabel(), this::toggleTouristSpawning);
+        addRenderableWidget(touristButton);
+        if (canUseWarehouse) {
+            addRenderableWidget(new MedievalButton(startX + bw + gap, by, bw, bh,
                     I18n.name("gui.wandscape.townhall.warehouse", "仓库存取"),
                     this::onWarehouseAccess));
         }
@@ -130,6 +147,18 @@ public class TownHallScreen extends MedievalScreen {
         PacketDistributor.sendToServer(new TownHallWarehouseRequestPacket(buildingPos, colonyId));
     }
 
+    private Component spawnTouristsLabel() {
+        return touristSpawning
+                ? I18n.name("gui.wandscape.townhall.spawn_tourists_on", "生成游客：已开启")
+                : I18n.name("gui.wandscape.townhall.spawn_tourists_off", "生成游客：已关闭");
+    }
+
+    private void toggleTouristSpawning() {
+        touristSpawning = !touristSpawning;
+        touristButton.setMessage(spawnTouristsLabel());
+        PacketDistributor.sendToServer(new TownHallTouristSpawnPacket(colonyId, touristSpawning));
+    }
+
     private void onNameChanged(String newName) {
         String trimmed = newName.trim();
         if (!trimmed.isEmpty() && !trimmed.equals(colonyName)) {
@@ -142,6 +171,24 @@ public class TownHallScreen extends MedievalScreen {
     protected void renderContent(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         renderContent(g);
         renderSelectedStyleHighlight(g);
+        renderTouristToggleHighlight(g);
+    }
+
+    /** Gold border around the 「生成游客」 button while it is enabled — mirror of the style selector. */
+    private void renderTouristToggleHighlight(GuiGraphics g) {
+        if (!touristSpawning || touristButton == null || !touristButton.visible) return;
+        renderButtonGoldBorder(g, touristButton);
+    }
+
+    private void renderButtonGoldBorder(GuiGraphics g, MedievalButton btn) {
+        int bx = btn.getX();
+        int by = btn.getY();
+        int bw = btn.getWidth();
+        int bh = btn.getHeight();
+        g.fill(bx, by, bx + bw, by + 1, MedievalColors.BORDER_GOLD);
+        g.fill(bx, by + bh - 1, bx + bw, by + bh, MedievalColors.BORDER_GOLD);
+        g.fill(bx, by, bx + 1, by + bh, MedievalColors.BORDER_GOLD);
+        g.fill(bx + bw - 1, by, bx + bw, by + bh, MedievalColors.BORDER_GOLD);
     }
 
     /** Gold border around the currently active naming-rule button. */

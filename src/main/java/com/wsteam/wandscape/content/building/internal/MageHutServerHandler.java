@@ -53,8 +53,7 @@ public final class MageHutServerHandler {
                                    BuildingState state) {
         UUID colonyId = state.getColonyId();
         if (colonyId == null) return;
-        var colonyLevel = com.wsteam.wandscape.content.colony.ColonyLevelManager.get() != null
-                ? com.wsteam.wandscape.content.colony.ColonyLevelManager.get().getLevel(colonyId) : 1;
+        var colonyLevel = colonyLevelOf(colonyId);
         PacketDistributor.sendToPlayer(sp,
                 buildPacket(level, buildingId, state, colonyId, colonyLevel));
     }
@@ -152,8 +151,7 @@ public final class MageHutServerHandler {
         WandscapeNpc npc = requireAlive(sp, level, resident);
         if (npc == null) return;
 
-        int colonyLevel = com.wsteam.wandscape.content.colony.ColonyLevelManager.get() != null
-                ? com.wsteam.wandscape.content.colony.ColonyLevelManager.get().getLevel(colonyId) : 1;
+        int colonyLevel = colonyLevelOf(colonyId);
         if (!NpcAttributes.canLevelUp(resident.level(), colonyLevel)) {
             ScreenFeedbackPacket.send(sp, I18n.name("message.wandscape.mage_hut.max_level",
                     "[Wandscape] The mage is already at the colony level (%d).", colonyLevel), true);
@@ -326,10 +324,15 @@ public final class MageHutServerHandler {
 
     private static void sendRefresh(ServerPlayer sp, ServerLevel level, UUID buildingId,
                                     BuildingState state, UUID colonyId) {
-        var colonyLevel = com.wsteam.wandscape.content.colony.ColonyLevelManager.get() != null
-                ? com.wsteam.wandscape.content.colony.ColonyLevelManager.get().getLevel(colonyId) : 1;
+        var colonyLevel = colonyLevelOf(colonyId);
         PacketDistributor.sendToPlayer(sp,
                 buildPacket(level, buildingId, state, colonyId, colonyLevel));
+    }
+
+    /** 殖民地等级（经 ColonyApi；未装配时按 1）。 */
+    private static int colonyLevelOf(UUID colonyId) {
+        var colonyApi = com.wsteam.wandscape.api.WandscapeApis.getColonyApiSilently();
+        return colonyApi != null ? colonyApi.getColonyLevel(colonyId) : 1;
     }
 
     private static MageHutDataPacket buildPacket(ServerLevel level, UUID buildingId,

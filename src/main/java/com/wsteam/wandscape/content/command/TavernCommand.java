@@ -38,12 +38,20 @@ public final class TavernCommand {
 
     private TavernCommand() {}
 
+    /** 玩家面向：酒馆简历（只读）+ 招募法师（op-2）。 */
     public static CommandNode<CommandSourceStack> node() {
         return Commands.literal("tavern")
+                .then(Commands.literal("list")
+                        .executes(TavernCommand::listResumes))
                 .then(Commands.literal("recruit")
-                        .executes(ctx -> TouristCommand.spawnRecruitableMage(ctx, 1))
-                        .then(Commands.argument("level", IntegerArgumentType.integer(1, 10))
-                                .executes(ctx -> TouristCommand.spawnRecruitableMage(ctx, IntegerArgumentType.getInteger(ctx, "level")))))
+                        .requires(src -> src.hasPermission(2))
+                        .executes(TavernCommand::recruit))
+                .build();
+    }
+
+    /** 开发者：生成满条法师 / 直接注入简历（挂于 {@code /wandscape test}）。 */
+    public static CommandNode<CommandSourceStack> devNode() {
+        return Commands.literal("tavern")
                 .then(Commands.literal("spawn_mage")
                         .executes(ctx -> TouristCommand.spawnRecruitableMage(ctx, 1))
                         .then(Commands.argument("level", IntegerArgumentType.integer(1, 10))
@@ -52,9 +60,42 @@ public final class TavernCommand {
                         .executes(ctx -> addResumeDirectly(ctx, 1))
                         .then(Commands.argument("level", IntegerArgumentType.integer(1, 10))
                                 .executes(ctx -> addResumeDirectly(ctx, IntegerArgumentType.getInteger(ctx, "level")))))
-                .then(Commands.literal("list")
-                        .executes(TavernCommand::listResumes))
                 .build();
+    }
+
+    /** 招募一名法师（经 TavernApi；首次免费，之后每种元素 Config 价）。op-2。 */
+    private static int recruit(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack src = ctx.getSource();
+        var player = src.getPlayer();
+        if (player == null) {
+            src.sendFailure(I18n.name("message.wandscape.command.tavern_players_only",
+                    "[Wandscape] 仅玩家可招募法师"));
+            return 0;
+        }
+        UUID colonyId = resolveColonyId(src.getPosition());
+        if (colonyId == null) {
+            src.sendFailure(I18n.name("message.wandscape.command.tavern_no_colony_detailed",
+                    "[Wandscape] 未检测到小镇，请在小镇范围内使用或先创建小镇"));
+            return 0;
+        }
+        UUID npcId = null;
+        try {
+            var tavernApi = WandscapeApis.getTavernApi();
+            npcId = tavernApi.recruitForColony(colonyId, BlockPos.containing(player.position()));
+        } catch (IllegalStateException e) {
+            npcId = null;
+        }
+        if (npcId == null) {
+            src.sendFailure(I18n.name("message.wandscape.command.tavern_recruit_failed",
+                    "[Wandscape] 招募失败：元素不足（首次免费，之后每种元素 %d）或系统未就绪",
+                    com.wsteam.wandscape.Config.TAVERN_RECRUIT_COST_PER_ELEMENT.get()));
+            return 0;
+        }
+        String shortId = npcId.toString().substring(0, 8);
+        src.sendSuccess(() -> I18n.name("message.wandscape.command.tavern_recruited",
+                "[Wandscape] 已招募法师（%s），小镇 %s",
+                shortId, colonyId.toString().substring(0, 8)), true);
+        return Command.SINGLE_SUCCESS;
     }
 
     private static int addResumeDirectly(CommandContext<CommandSourceStack> ctx, int level) {

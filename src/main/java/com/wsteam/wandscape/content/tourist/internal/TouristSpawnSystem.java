@@ -12,6 +12,7 @@ import com.wsteam.wandscape.content.building.internal.BuildingState;
 import com.wsteam.wandscape.content.task.event.NarrativeEventTriggered;
 import com.wsteam.wandscape.content.colony.ColonyActivation;
 import com.wsteam.wandscape.content.colony.ColonyLevelManager;
+import com.wsteam.wandscape.content.colony.ColonySavedData;
 import com.wsteam.wandscape.content.building.ChunkLoadManager;
 import com.wsteam.wandscape.content.road.core.RoadEdge;
 import com.wsteam.wandscape.content.road.core.RoadNetwork;
@@ -185,11 +186,17 @@ public final class TouristSpawnSystem {
         boolean inSpawnWindow = dayTime >= TOURIST_SPAWN_WINDOW_START
                 && dayTime < TOURIST_SPAWN_WINDOW_END;
         if (inSpawnWindow && !colonyFrozen) {
-            if (!scheduleCreated || scheduleDay != day) {
-                createSchedule(level);
-                scheduleDay = day;
+            if (touristSpawningEnabled(level, colonyId)) {
+                if (!scheduleCreated || scheduleDay != day) {
+                    createSchedule(level);
+                    scheduleDay = day;
+                }
+                flushPendingSpawns(level);
+            } else if (scheduleCreated) {
+                // 开关中途关闭：清掉今日已排计划，避免重新开启时一次性倾泻游客
+                scheduleCreated = false;
+                pendingSpawns.clear();
             }
-            flushPendingSpawns(level);
         }
 
         // ── 周期性重型工作（每 CHECK_INTERVAL tick）──
@@ -224,6 +231,12 @@ public final class TouristSpawnSystem {
         scheduleCreated = true;
         pendingSpawns.clear();
 
+        // 全局开关：关闭则无论各市政厅设置如何一律不生成游客
+        if (!Config.TOURIST_SPAWN_ENABLED.get()) {
+            Log.info(TAG, "[Tourist] Spawn schedule skipped — tourist spawning disabled globally (config)");
+            return;
+        }
+
         BuildingApi buildingApi = getBuildingApi();
         if (buildingApi == null) {
             Log.warn(TAG, "[Tourist] BuildingApi not available — cannot create spawn schedule");
@@ -250,6 +263,13 @@ public final class TouristSpawnSystem {
         if (colonyId == null) {
             Log.warn(TAG, "[Tourist] No colony registered — tourists cannot spawn. "
                     + "Use '/wandscape colony create' to create a colony, then build a town hall within range.");
+            return;
+        }
+
+        // 该殖民地市政厅「生成游客」关闭 → 本殖民地不排每日游客计划
+        if (!touristSpawningEnabled(level, colonyId)) {
+            Log.info(TAG, "[Tourist] Spawn schedule skipped — town hall tourist spawning disabled for colony {}",
+                    colonyId.toString().substring(0, 8));
             return;
         }
 
@@ -601,7 +621,8 @@ public final class TouristSpawnSystem {
         int scaled = (int) ColonyActivation.scaleIncome(contribution,
                 ColonyActivation.getIncomeMultiplier(colonyId));
         if (scaled > 0) {
-            levelManager.addExperience(colonyId, scaled);
+            var api = com.wsteam.wandscape.api.WandscapeApis.getColonyApiSilently();
+            if (api != null) api.grantExperience(colonyId, scaled);
             Log.info(TAG, "[Tourist] {} (Lv.{}) granted {} exp to colony Lv.{} (满条)",
                     t.getTouristName(), t.getLevel(), scaled, colonyLevel);
         }
@@ -836,6 +857,14 @@ public final class TouristSpawnSystem {
     }
 
     // ── Colony ID helper ──
+
+    /** 该殖民地当前是否允许生成游客：全局配置开启，且该殖民地市政厅「生成游客」开关开启。 */
+    private static boolean touristSpawningEnabled(ServerLevel level, @Nullable UUID colonyId) {
+        if (!Config.TOURIST_SPAWN_ENABLED.get()) return false;
+        if (colonyId == null) return true;
+        ColonySavedData csd = ColonySavedData.getOrCreate(level);
+        return csd.isTouristSpawningEnabled(colonyId);
+    }
 
     @javax.annotation.Nullable
     private static UUID getColonyId() {

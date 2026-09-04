@@ -25,11 +25,10 @@ public record ColonyNameUpdatePacket(UUID colonyId, String name) implements Cust
     public Type<? extends CustomPacketPayload> type() { return TYPE; }
 
     public static void handleServer(ColonyNameUpdatePacket packet, ServerPlayer player) {
-        var levelMgr = com.wsteam.wandscape.content.colony.ColonyLevelManager.get();
-        if (levelMgr == null) return;
+        var colonyApi = com.wsteam.wandscape.api.WandscapeApis.getColonyApiSilently();
         String name = packet.name().trim();
         if (name.length() > 30) name = name.substring(0, 30);
-        levelMgr.setColonyName(packet.colonyId(), name);
+        if (colonyApi != null) colonyApi.setColonyName(packet.colonyId(), name);
 
         var metricsApi = com.wsteam.wandscape.api.WandscapeApis.getColonyStatusApiSilently();
         if (metricsApi != null) {

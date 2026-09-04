@@ -2,8 +2,10 @@ package com.wsteam.wandscape.content.tourist.internal;
 
 import com.wsteam.wandscape.api.TouristApi;
 import com.wsteam.wandscape.content.tourist.data.BarRatio;
+import com.wsteam.wandscape.content.tourist.entity.TouristEntity;
 import com.wsteam.wandscape.content.tourist.event.TouristArrivedEvent;
 import com.wsteam.wandscape.content.tourist.event.TouristDepartedEvent;
+import com.wsteam.wandscape.foundation.log.Log;
 import net.neoforged.neoforge.common.NeoForge;
 
 import java.util.List;
@@ -17,6 +19,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * Full spawn logic will be implemented in Phase C (TouristSpawnSystem).
  */
 public class TouristApiImpl implements TouristApi {
+    private static final String TAG = "TouristApiImpl";
     private static volatile TouristApiImpl instance;
 
     public TouristApiImpl() {
@@ -72,6 +75,38 @@ public class TouristApiImpl implements TouristApi {
     public void spawnTourist(UUID colonyId, net.minecraft.core.BlockPos spawnPos) {
         // Phase C: TouristSpawnSystem will handle actual entity spawning
         // For now, this is a placeholder that the spawn system will call
+    }
+
+    /**
+     * 清空指定殖民地的全部游客（触发正常离城流程，而非直接删实体）。
+     *
+     * <p>已加载的实体身体走 {@code discard()} → {@code onRemovedFromLevel(DISCARDED)}，
+     * 由实体侧清理 shadow、释放交互占位、幂等登记离场事件；未加载身体但 shadow 仍在
+     * 注册表的游客（随世界卸载残留）在此兜底移除 shadow，避免 sim 在原位置重生。
+     */
+    @Override
+    public void despawnAll(UUID colonyId) {
+        if (colonyId == null) return;
+        // 1) 已加载实体：discard 触发标准离场清理。
+        for (TouristEntity t : TouristSimSystem.getLiveTourists()) {
+            if (colonyId.equals(t.getColonyId()) && t.isAlive()) {
+                t.discard();
+            }
+        }
+        // 2) 兜底：清理无身体影子的残留 shadow。
+        TouristSimSystem sim = TouristSimSystem.getActive();
+        if (sim != null && sim.getRegistry() != null) {
+            for (TouristShadow s : java.util.List.copyOf(sim.getRegistry().getShadows().values())) {
+                if (colonyId.equals(s.getColonyId())) {
+                    sim.removeShadow(s.getTouristId());
+                }
+            }
+        }
+        Log.info(TAG, "[Tourist] clearAll: colony {} tourists despawned", shortId(colonyId));
+    }
+
+    private static String shortId(UUID id) {
+        return id == null ? "?" : id.toString().substring(0, 8);
     }
 
     public void registerArrival(UUID touristId, UUID colonyId) {

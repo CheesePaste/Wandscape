@@ -9,6 +9,7 @@ import com.wsteam.wandscape.content.tourist.data.BarRatio;
 import com.wsteam.wandscape.content.npc.attributes.NpcAttributes;
 import com.wsteam.wandscape.content.npc.data.RecruitmentCandidate;
 import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.api.TouristApi;
 import com.wsteam.wandscape.api.WandscapeApis;
 import com.wsteam.wandscape.foundation.ui.I18n;
 import com.wsteam.wandscape.content.tourist.entity.TouristEntity;
@@ -45,10 +46,19 @@ public final class TouristCommand {
 
     private TouristCommand() {}
 
+    /** 玩家面向：游客名单（只读）+ 清空小镇游客（救命用，免权限）。 */
     public static com.mojang.brigadier.tree.CommandNode<CommandSourceStack> node() {
         return Commands.literal("tourist")
                 .then(Commands.literal("list")
                         .executes(TouristCommand::list))
+                .then(Commands.literal("clear")
+                        .executes(TouristCommand::clear))
+                .build();
+    }
+
+    /** 开发者：强制生成 / 状态切换 / 冷却开关（挂于 {@code /wandscape test}）。 */
+    public static com.mojang.brigadier.tree.CommandNode<CommandSourceStack> devNode() {
+        return Commands.literal("tourist")
                 .then(Commands.literal("spawn")
                         .executes(TouristCommand::forceSpawn)
                         .then(Commands.literal("mage")
@@ -75,6 +85,29 @@ public final class TouristCommand {
                                         .suggests(TouristCommand::suggestToggle)
                                         .executes(TouristCommand::cooldownToggle))))
                 .build();
+    }
+
+    /** 清空小镇全部游客（走 {@link com.wsteam.wandscape.api.TouristApi#despawnAll}；免权限——游客卡死/过多时的救命入口）。 */
+    private static int clear(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack src = ctx.getSource();
+        UUID colonyId = CommandUtil.resolveColony(src);
+        if (colonyId == null) {
+            src.sendFailure(Component.literal(
+                    "[Wandscape] 未检测到小镇：请在小镇范围内使用，或先创建小镇"));
+            return 0;
+        }
+        TouristApi touristApi = WandscapeApis.getTouristApiSilently();
+        if (touristApi == null) {
+            src.sendFailure(Component.literal("[Wandscape] 游客系统未就绪"));
+            return 0;
+        }
+        // 记录清空前后数量，供反馈。
+        int before = touristApi.getTouristCount(colonyId);
+        touristApi.despawnAll(colonyId);
+        String cid = CommandUtil.shortId(colonyId);
+        src.sendSuccess(() -> Component.literal(
+                "[Wandscape] 已清空小镇 " + cid + " 的游客（" + before + " 名离城）"), true);
+        return Command.SINGLE_SUCCESS;
     }
 
     // ── list / spawn / state ──

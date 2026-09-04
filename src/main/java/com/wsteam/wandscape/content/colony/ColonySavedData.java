@@ -17,6 +17,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -38,12 +39,15 @@ public class ColonySavedData extends SavedData {
     private static final String KEY_Z = "z";
     private static final String KEY_FOUNDER = "founder";
     private static final String KEY_NAMING_STYLE = "namingStyle";
+    private static final String KEY_TOURIST_SPAWN_DISABLED = "touristSpawnDisabled";
 
     private final Map<UUID, BlockPos> colonies = new ConcurrentHashMap<>();
     /** colonyId → founding player UUID (informational; permissions remain shared). */
     private final Map<UUID, UUID> founders = new ConcurrentHashMap<>();
     /** colonyId → character naming rule (defaults to FANTASY when absent). */
     private final Map<UUID, NameStyle> namingStyles = new ConcurrentHashMap<>();
+    /** Colony IDs whose town hall 「生成游客」 toggle is OFF (absent = enabled). */
+    private final Set<UUID> touristSpawnDisabled = ConcurrentHashMap.newKeySet();
 
     private static final Factory<ColonySavedData> FACTORY = new Factory<>(
             ColonySavedData::new,
@@ -76,6 +80,7 @@ public class ColonySavedData extends SavedData {
         BlockPos removed = colonies.remove(colonyId);
         founders.remove(colonyId);
         namingStyles.remove(colonyId);
+        touristSpawnDisabled.remove(colonyId);
         if (removed != null) {
             setDirty();
             Log.info(TAG, "[Colony] Removed colony {} from persistence", colonyId.toString().substring(0, 8));
@@ -112,6 +117,20 @@ public class ColonySavedData extends SavedData {
         setDirty();
         Log.info(TAG, "[Colony] Naming style for colony {} → {}",
                 colonyId.toString().substring(0, 8), style);
+    }
+
+    /** True when the colony's town hall has 「生成游客」 enabled (default true). */
+    public boolean isTouristSpawningEnabled(UUID colonyId) {
+        return !touristSpawnDisabled.contains(colonyId);
+    }
+
+    public void setTouristSpawningEnabled(UUID colonyId, boolean enabled) {
+        boolean changed = enabled ? touristSpawnDisabled.remove(colonyId)
+                : touristSpawnDisabled.add(colonyId);
+        if (!changed) return;
+        setDirty();
+        Log.info(TAG, "[Colony] Tourist spawning for colony {} → {}",
+                colonyId.toString().substring(0, 8), enabled ? "enabled" : "disabled");
     }
 
     public Map<UUID, BlockPos> getAllColonies() {
@@ -178,6 +197,14 @@ public class ColonySavedData extends SavedData {
             list.add(entryTag);
         }
         tag.put(KEY_COLONIES, list);
+
+        if (!touristSpawnDisabled.isEmpty()) {
+            ListTag disabled = new ListTag();
+            for (UUID id : touristSpawnDisabled) {
+                disabled.add(net.minecraft.nbt.StringTag.valueOf(id.toString()));
+            }
+            tag.put(KEY_TOURIST_SPAWN_DISABLED, disabled);
+        }
         return tag;
     }
 
@@ -204,6 +231,18 @@ public class ColonySavedData extends SavedData {
             }
         }
         Log.info(TAG, "Loaded {} colonies from saved data", data.colonies.size());
+
+        if (tag.contains(KEY_TOURIST_SPAWN_DISABLED)) {
+            ListTag disabled = tag.getList(KEY_TOURIST_SPAWN_DISABLED, Tag.TAG_STRING);
+            for (int i = 0; i < disabled.size(); i++) {
+                try {
+                    data.touristSpawnDisabled.add(UUID.fromString(disabled.getString(i)));
+                } catch (IllegalArgumentException e) {
+                    Log.warn(TAG, "[Colony] Bad tourist-spawn-disabled UUID '{}', skipped",
+                            disabled.getString(i));
+                }
+            }
+        }
         return data;
     }
 }

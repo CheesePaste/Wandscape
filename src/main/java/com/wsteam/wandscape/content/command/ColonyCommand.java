@@ -13,11 +13,12 @@ import com.wsteam.wandscape.content.task.component.ColonyMetadata;
 import com.wsteam.wandscape.content.task.component.NpcInventory;
 import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.content.task.types.GridPos;
-import com.wsteam.wandscape.content.colony.ColonyLevelManager;
 import com.wsteam.wandscape.foundation.service.ParticleService;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.content.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.api.ColonyApi;
+import com.wsteam.wandscape.api.ColonyStatusApi;
+import com.wsteam.wandscape.content.colony.data.ColonyStatusSnapshot;
 import com.wsteam.wandscape.content.colony.event.ColonyCreatedEvent;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.api.WandscapeApis;
@@ -79,14 +80,29 @@ public final class ColonyCommand {
 
     public static CommandNode<CommandSourceStack> node() {
         return Commands.literal("colony")
+                .then(Commands.literal("status")
+                        .executes(ColonyCommand::status))
+                .then(Commands.literal("list")
+                        .executes(ColonyCommand::list))
                 .then(Commands.literal("create")
+                        .requires(src -> src.hasPermission(2))
                         .then(Commands.argument("name", StringArgumentType.word())
                                 .executes(ColonyCommand::createColony)))
                 .then(Commands.literal("destroy")
+                        .requires(src -> src.hasPermission(2))
                         .executes(ColonyCommand::destroyColony))
                 .then(Commands.literal("level")
+                        .requires(src -> src.hasPermission(2))
                         .then(Commands.argument("level", IntegerArgumentType.integer(1))
                                 .executes(ColonyCommand::setColonyLevel)))
+                .then(Commands.literal("exp")
+                        .requires(src -> src.hasPermission(2))
+                        .then(Commands.argument("amount", IntegerArgumentType.integer(0))
+                                .executes(ColonyCommand::grantExp)))
+                .then(Commands.literal("name")
+                        .requires(src -> src.hasPermission(2))
+                        .then(Commands.argument("name", StringArgumentType.greedyString())
+                                .executes(ColonyCommand::rename)))
                 .build();
     }
 
@@ -157,9 +173,8 @@ public final class ColonyCommand {
         // ── Step 2: create colonyId ─────────────────────────────────────────
         ColonyApi colonyApi = WandscapeApis.getColonyApi();
         UUID colonyId = colonyApi.createColony(origin, founder);
-        var levelMgr = ColonyLevelManager.get();
-        if (levelMgr != null && name != null && !name.isBlank()) {
-            levelMgr.setColonyName(colonyId, name);
+        if (name != null && !name.isBlank()) {
+            colonyApi.setColonyName(colonyId, name);
         }
         Log.info(TAG, "[Colony] Creating colony '{}' id={} at {}", name,
                 colonyId.toString().substring(0, 8), origin);
@@ -268,10 +283,7 @@ public final class ColonyCommand {
 
         UUID created = colonyApi.getColonyId(origin);
         if (created != null) {
-            var levelMgr = ColonyLevelManager.get();
-            if (levelMgr != null) {
-                levelMgr.setColonyName(created, name);
-            }
+            colonyApi.setColonyName(created, name);
         }
         return created;
     }
@@ -322,16 +334,125 @@ public final class ColonyCommand {
             return 0;
         }
 
-        var levelMgr = ColonyLevelManager.get();
-        if (levelMgr == null) {
-            ctx.getSource().sendFailure(Component.literal("[Wandscape] Level manager not ready"));
+        if (!colonyApi.setColonyLevel(colonyId, level)) {
+            ctx.getSource().sendFailure(Component.literal(
+                    "[Wandscape] 设置等级失败：越界（有效 1.." + colonyApi.getMaxLevel()
+                            + "）或小镇不存在"));
             return 0;
         }
-        levelMgr.setLevel(colonyId, level);
         ctx.getSource().sendSuccess(() -> Component.literal(
                 "[Wandscape] Colony " + colonyId.toString().substring(0, 8)
                         + " level → " + level), true);
         return Command.SINGLE_SUCCESS;
+    }
+
+    /** 小镇状态概览（只读，玩家无需权限）。 */
+    private static int status(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack src = ctx.getSource();
+        UUID colonyId = CommandUtil.resolveColony(src);
+        if (colonyId == null) {
+            src.sendFailure(Component.literal(
+                    "[Wandscape] 未检测到小镇：请在小镇范围内使用，或先创建小镇"));
+            return 0;
+        }
+
+        ColonyStatusApi statusApi = WandscapeApis.getColonyStatusApiSilently();
+        if (statusApi == null) {
+            src.sendFailure(Component.literal("[Wandscape] 小镇状态系统未就绪"));
+            return 0;
+        }
+        ColonyStatusSnapshot snap = statusApi.getSnapshotSafe(colonyId);
+        String cid = CommandUtil.shortId(colonyId);
+        String name = snap.colonyName() != null && !snap.colonyName().isEmpty()
+                ? snap.colonyName() : "(未命名)";
+        src.sendSuccess(() -> Component.literal(
+                "[Wandscape] 小镇 " + name + " (" + cid + ") Lv." + snap.colonyLevel()
+                        + " · 经验 " + snap.colonyExperience()), false);
+        src.sendSuccess(() -> Component.literal(
+                "  三值: 舒适 " + snap.comfort() + " · 魔法 " + snap.magic()
+                        + " · 奇观 " + snap.wonder()), false);
+        src.sendSuccess(() -> Component.literal(
+                "  游客 " + snap.touristCount() + "（过夜 " + snap.overnightStayerCount()
+                        + "） · 法师 " + snap.npcTotalCount()
+                        + "（空闲 " + snap.npcIdleCount() + "） · 在建 " + snap.underConstructionCount()), false);
+        src.sendSuccess(() -> Component.literal(
+                "  元素: 土 " + snap.earthAmount() + " 木 " + snap.woodAmount()
+                        + " 水 " + snap.waterAmount() + " 火 " + snap.fireAmount()
+                        + " 金 " + snap.metalAmount() + " 风 " + snap.windAmount()
+                        + " 暗 " + snap.darkAmount()), false);
+        return Command.SINGLE_SUCCESS;
+    }
+
+    /** 列出全部已注册小镇（只读，玩家无需权限）。 */
+    private static int list(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack src = ctx.getSource();
+        ColonyApi colonyApi = WandscapeApis.getColonyApiSilently();
+        if (colonyApi == null) {
+            src.sendFailure(Component.literal("[Wandscape] 小镇系统未就绪"));
+            return 0;
+        }
+        var ids = colonyApi.getAllColonyIds();
+        src.sendSuccess(() -> Component.literal(
+                "[Wandscape] 已注册小镇（共 " + ids.size() + " 个）："), false);
+        if (ids.isEmpty()) {
+            src.sendSuccess(() -> Component.literal("  （无小镇）"), false);
+            return Command.SINGLE_SUCCESS;
+        }
+        for (UUID id : ids) {
+            final UUID fid = id;
+            String nm = colonyApi.getColonyName(fid);
+            if (nm == null) nm = "";
+            final String name = nm.isEmpty() ? "(未命名)" : nm;
+            final int lv = colonyApi.getColonyLevel(fid);
+            src.sendSuccess(() -> Component.literal(
+                    String.format("  %s [%s] Lv.%d", name, fid.toString().substring(0, 8), lv)), false);
+        }
+        return Command.SINGLE_SUCCESS;
+    }
+
+    /** 授予小镇经验（op-2；可能触发升级）。 */
+    private static int grantExp(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack src = ctx.getSource();
+        int amount = IntegerArgumentType.getInteger(ctx, "amount");
+        UUID colonyId = resolvePlayerColony(ctx, "未找到可授经验的小镇");
+        if (colonyId == null) return 0;
+        ColonyApi colonyApi = WandscapeApis.getColonyApi();
+        colonyApi.grantExperience(colonyId, amount);
+        src.sendSuccess(() -> Component.literal(
+                "[Wandscape] 已授予小镇 " + CommandUtil.shortId(colonyId) + " " + amount
+                        + " 经验（当前 Lv." + colonyApi.getColonyLevel(colonyId)
+                        + " / " + colonyApi.getColonyExp(colonyId) + "）"),
+                true);
+        return Command.SINGLE_SUCCESS;
+    }
+
+    /** 重命名小镇（op-2）。 */
+    private static int rename(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack src = ctx.getSource();
+        String name = StringArgumentType.getString(ctx, "name").trim();
+        UUID colonyId = resolvePlayerColony(ctx, "未找到可重命名的小镇");
+        if (colonyId == null) return 0;
+        WandscapeApis.getColonyApi().setColonyName(colonyId, name);
+        src.sendSuccess(() -> Component.literal(
+                "[Wandscape] 已重命名小镇 " + CommandUtil.shortId(colonyId) + " → " + name), true);
+        return Command.SINGLE_SUCCESS;
+    }
+
+    /** 解析执行者所属小镇（创始人优先，其次位置），玩家-only；失败输出给定提示并返回 null。 */
+    @javax.annotation.Nullable
+    private static UUID resolvePlayerColony(CommandContext<CommandSourceStack> ctx, String failMsg) {
+        CommandSourceStack src = ctx.getSource();
+        var player = src.getPlayer();
+        ColonyApi colonyApi = WandscapeApis.getColonyApiSilently();
+        if (player != null && colonyApi != null) {
+            UUID owned = colonyApi.getColonyByFounder(player.getUUID());
+            if (owned != null) return owned;
+        }
+        UUID near = colonyApi != null
+                ? colonyApi.getColonyId(BlockPos.containing(src.getPosition())) : null;
+        if (near != null) return near;
+        src.sendFailure(Component.literal("[Wandscape] " + failMsg));
+        return null;
     }
 
     /**

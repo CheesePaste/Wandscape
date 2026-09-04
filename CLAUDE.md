@@ -34,6 +34,7 @@ com/wsteam/wandscape/
 7. **改数据格式要么带版本号迁移、要么断档**：禁新增"缺 key 补默认"的无版本号兜底分支；删字段就真删，不留兼容别名。SavedData 顶层存 `version` 走显式迁移链。开发期不承诺存档兼容。
 8. **上屏/聊天只留错误与完成反馈**，其余用 Log。
 9. **禁 emoji 与装饰图标**：面向玩家文本（`lang/*`、`guide/**`、I18n、Screen 内联、叙事 JSON）与源码注释都禁；只留 →←↑↓、×、⌊⌋。
+10. **Config 注释中英双语**：`Config.java`/`ClientConfig.java`（及任何 `ModConfigSpec` `.comment()`）每条必须保留中文原文并紧跟一条英文翻译；新增键同样，禁只写单语。这些注释会生成进 config TOML 供玩家/整合包作者阅读。
 
 ## 三、易踩的代码事实（改这些代码前先读）
 

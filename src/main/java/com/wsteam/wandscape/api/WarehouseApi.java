@@ -60,6 +60,38 @@ public interface WarehouseApi {
      */
     boolean insertItems(UUID colonyId, List<ItemStack> items);
 
+    // ── 物品/元素 增删清（colony 级；管理/整合包用，给最大自由度）──
+
+    /**
+     * 向殖民地仓库追加一件物品（<b>不设容量门槛</b>——这是给管理/整合包直接授权物品的语义；
+     * 正常运行的生产/建造产出请走 {@link #insertItems}(容量门控)，task 资源供给走 ColonyResourceAccess）。
+     *
+     * @return true 当账本就绪且已入账；false 账本未初始化
+     */
+    boolean addItem(UUID colonyId, ItemKey key, long amount);
+
+    /**
+     * 从殖民地仓库移除一件物品（消耗）；不足时不移除任何并返回 false。
+     *
+     * @return true 已足量移除；false 不足或账本未就绪
+     */
+    boolean removeItem(UUID colonyId, ItemKey key, long amount);
+
+    /** 清空殖民地仓库的全部物品。返回 true 当账本就绪。 */
+    boolean clearItems(UUID colonyId);
+
+    /** 清空殖民地仓库的全部元素。返回 true 当账本就绪。 */
+    boolean clearElements(UUID colonyId);
+
+    /** 清空殖民地仓库的全部物品与元素（不可逆）。返回 true 当账本就绪。 */
+    boolean clearAll(UUID colonyId);
+
+    /** 殖民地物品容量上限（0 = 机制关闭/不限）。 */
+    long getItemCapacity(UUID colonyId);
+
+    /** 殖民地当前已占用物品容量。 */
+    long getUsedItemCapacity(UUID colonyId);
+
     // ── 可调平衡值（委托 BalanceValues；运行时生效，不追溯已生成实体）──
 
     int getTransportTicksPerBlockOnRoad();
@@ -68,12 +100,6 @@ public interface WarehouseApi {
     void setTransportTicksPerBlockOffRoad(int v);
 
     // ── 未实现（重设计阶段声明，见 @Unimplemented）──
-
-    /** 清空指定殖民地的全部物品与元素（不可逆）。 */
-    @Unimplemented("重设计阶段——待接入 ColonyItemBank 清空")
-    default void clearAll(UUID colonyId) {
-        throw new UnsupportedOperationException("WarehouseApi.clearAll not yet implemented");
-    }
 
     /**
      * 跨殖民地原子转账元素（A 扣除 + B 到账，失败整体回滚）。
