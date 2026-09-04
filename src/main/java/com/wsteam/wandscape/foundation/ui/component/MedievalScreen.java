@@ -394,15 +394,7 @@ public abstract class MedievalScreen extends Screen implements ReplayProtectedSc
 
         btnDemolish = new MedievalButton(bx + btnW + gap, by, btnW, btnH,
                 I18n.name("gui.wandscape.building_action.destroy", "拆除"),
-                this::onBuildingDemolishClicked) {
-            @Override
-            protected void renderWidget(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-                super.renderWidget(g, mouseX, mouseY, partialTick);
-                if (visible && active) {
-                    g.fill(getX() + 2, getY() + height - 3, getX() + width - 2, getY() + height - 2, 0xAA8B0000);
-                }
-            }
-        };
+                this::onBuildingDemolishClicked);
 
         addRenderableWidget(btnRepair);
         addRenderableWidget(btnDemolish);
