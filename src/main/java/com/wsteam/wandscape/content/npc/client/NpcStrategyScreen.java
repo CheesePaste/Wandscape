@@ -6,6 +6,7 @@ import com.wsteam.wandscape.content.npc.component.EquippedMagicComponent;
 import com.wsteam.wandscape.content.magic.data.MagicDef;
 import com.wsteam.wandscape.content.npc.NpcStrategyMenu;
 import com.wsteam.wandscape.content.npc.network.NpcDataPacket;
+import com.wsteam.wandscape.content.npc.network.NpcOpenEquipPacket;
 import com.wsteam.wandscape.content.npc.network.NpcStrategyPacket;
 import com.wsteam.wandscape.foundation.ui.I18n;
 import com.wsteam.wandscape.foundation.ui.ReplayProtectedScreen;
@@ -91,6 +92,12 @@ public class NpcStrategyScreen extends AbstractContainerScreen<NpcStrategyMenu>
                 this::openHelpDocument);
         addRenderableWidget(helpButton);
 
+        // 顶部 header 返回按钮
+        int headerBackW = 46;
+        int headerBackX = closeBtnX - 14 - 4 - headerBackW - 4;
+        addRenderableWidget(new MedievalButton(headerBackX, topPos + (HEADER_H - 16) / 2, headerBackW, 16,
+                I18n.name("gui.wandscape.curios.back", "Back"), this::onBack));
+
         presetButtonBounds.clear();
         int x = leftPos + 12;
         int presetY = topPos + 28;
@@ -108,10 +115,25 @@ public class NpcStrategyScreen extends AbstractContainerScreen<NpcStrategyMenu>
             x += BTN_W + 6;
         }
 
+        // 底部按钮：返回与关闭
+        addRenderableWidget(new MedievalButton(
+                leftPos + imageWidth - 116, topPos + imageHeight - 22, 46, 16,
+                I18n.name("gui.wandscape.curios.back", "Back"),
+                this::onBack));
         addRenderableWidget(new MedievalButton(
                 leftPos + imageWidth - 66, topPos + imageHeight - 22, 46, 16,
                 I18n.name("gui.wandscape.common.close", "Close"),
                 () -> Minecraft.getInstance().setScreen(null)));
+    }
+
+    private void onBack() {
+        int id = this.entityId >= 0 ? this.entityId : NpcScreenNavigator.getLastEntityId();
+        if (id >= 0 && minecraft != null) {
+            NpcScreenNavigator.prepareTransition(id);
+            PacketDistributor.sendToServer(new NpcOpenEquipPacket(id));
+        } else if (minecraft != null && minecraft.player != null) {
+            minecraft.player.closeContainer();
+        }
     }
 
     public void openHelpDocument() {
@@ -342,7 +364,7 @@ public class NpcStrategyScreen extends AbstractContainerScreen<NpcStrategyMenu>
 
     /** 底部单行信息（裁宽、压暗底，防玻璃底不可读，并记录包围盒供 Tooltip 悬停判定）。 */
     private void drawInfoLine(GuiGraphics g, String text, int color) {
-        text = font.plainSubstrByWidth(text, imageWidth - 60);
+        text = font.plainSubstrByWidth(text, imageWidth - 122);
         footerX = leftPos + 8;
         footerY = topPos + imageHeight - font.lineHeight - 3;
         footerW = font.width(text);

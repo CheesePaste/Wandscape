@@ -157,6 +157,9 @@ public class WandscapeClient {
         // Replay mod compat: don't open UI screens during ReplayMod/ReforgedPlay playback
         com.wsteam.wandscape.foundation.ui.ReplayScreenGuard.register();
 
+        // NPC UI navigation: prevent cursor centering and screen flicker on menu transitions
+        com.wsteam.wandscape.content.npc.client.NpcScreenNavigator.register();
+
         // Overview mode
         OverviewFlightController.register();
         OverviewRenderer.register();

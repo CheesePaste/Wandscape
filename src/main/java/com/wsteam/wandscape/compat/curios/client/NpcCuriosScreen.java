@@ -4,6 +4,7 @@ import com.wsteam.wandscape.content.task.types.EntityId;
 
 import com.wsteam.wandscape.compat.curios.NpcCurioSlot;
 import com.wsteam.wandscape.compat.curios.NpcCuriosMenu;
+import com.wsteam.wandscape.content.npc.client.NpcScreenNavigator;
 import com.wsteam.wandscape.content.npc.network.NpcOpenEquipPacket;
 import com.wsteam.wandscape.foundation.ui.I18n;
 import com.wsteam.wandscape.foundation.ui.component.MedievalButton;
@@ -51,8 +52,9 @@ public class NpcCuriosScreen extends AbstractContainerScreen<NpcCuriosMenu> {
     }
 
     private void onBack() {
-        int entityId = menu.getEntityId();
+        int entityId = menu.getEntityId() >= 0 ? menu.getEntityId() : NpcScreenNavigator.getLastEntityId();
         if (entityId >= 0 && minecraft != null) {
+            NpcScreenNavigator.prepareTransition(entityId);
             PacketDistributor.sendToServer(new NpcOpenEquipPacket(entityId));
         } else if (minecraft != null && minecraft.player != null) {
             minecraft.player.closeContainer();
