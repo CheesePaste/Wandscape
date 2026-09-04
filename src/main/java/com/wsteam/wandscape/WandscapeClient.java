@@ -450,11 +450,12 @@ public class WandscapeClient {
         BuildingConfigSyncChunkPacket.setClientHandler(
                 BuildingConfigSyncReceiver::onChunk);
 
-        // Transient feedback: show on the open MedievalScreen if any, else the action bar.
+        // Transient feedback: show on the open feedback-capable screen (MedievalScreen /
+        // WarehouseScreen), else the action bar.
         com.wsteam.wandscape.foundation.networking.ScreenFeedbackPacket.setClientHandler(packet -> {
             var mc = Minecraft.getInstance();
-            if (mc.screen instanceof com.wsteam.wandscape.foundation.ui.component.MedievalScreen ms) {
-                ms.showFeedback(packet.message(),
+            if (mc.screen instanceof com.wsteam.wandscape.foundation.ui.component.ScreenFeedbackHost host) {
+                host.showFeedback(packet.message(),
                         packet.isError()
                                 ? com.wsteam.wandscape.foundation.ui.theme.MedievalColors.DANGER_RED
                                 : com.wsteam.wandscape.foundation.ui.theme.MedievalColors.ACCENT_GOLD);

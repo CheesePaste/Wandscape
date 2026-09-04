@@ -63,6 +63,15 @@ public final class MagicSpellExecutors {
     public static boolean dispatch(ServerLevel level, WandscapeNpc npc, @Nullable LivingEntity target,
                                    MagicDef def, String circleId, int color) {
         if (def == null) return false;
+        // Goety volley（持续/连发施法）：任何新的非当前 volley 魔法分发（L1 更高优先 / L0 紧急奶 /
+        // 逃生等）都先打断 volley；同 focus 复选由 GuardCombat keep 分支拦截，不进这里。
+        if (npc != null && com.wsteam.wandscape.compat.goety.GoetyCompat.isLoaded()
+                && com.wsteam.wandscape.compat.goety.GoetyCaster.isActive(npc)) {
+            String goetyActive = com.wsteam.wandscape.compat.goety.GoetyCaster.activeFocusId(npc);
+            if (goetyActive != null && !def.id().equals(goetyActive)) {
+                com.wsteam.wandscape.compat.goety.GoetyCaster.interrupt(npc);
+            }
+        }
         String effCircle = def.effectCircleId() != null ? def.effectCircleId() : circleId;
         int effColor = def.effectColor() != null ? def.effectColor() : color;
 

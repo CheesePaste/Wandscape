@@ -17,11 +17,14 @@ import java.util.function.Consumer;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
 /**
- * Server→client packet carrying warehouse item and element data for GUI display.
- * Sent once when the player opens the warehouse screen.
+ * Server→client packet carrying warehouse item and element data for GUI display,
+ * plus the colony warehouse capacity readout (used/total).
+ * Sent once when the player opens the warehouse screen and on every refresh
+ * (so the Overview/Exchange capacity line stays live after each deposit).
  */
 public record WarehouseDataPacket(BlockPos buildingPos, UUID colonyId,
-                                   ListTag items, ListTag elements, String creator)
+                                   ListTag items, ListTag elements, String creator,
+                                   long usedCapacity, long capacity)
         implements CustomPacketPayload {
 
     public static final Type<WarehouseDataPacket> TYPE =
@@ -48,6 +51,7 @@ public record WarehouseDataPacket(BlockPos buildingPos, UUID colonyId,
                                             Map<ElementType, Long> elementSnapshot,
                                             String creator) {
         ListTag itemList = new ListTag();
+        long used = 0;
         for (var entry : itemSnapshot.entrySet()) {
             CompoundTag tag = new CompoundTag();
             tag.putString("key", entry.getKey().itemId());
@@ -56,6 +60,7 @@ public record WarehouseDataPacket(BlockPos buildingPos, UUID colonyId,
             }
             tag.putLong("count", entry.getValue());
             itemList.add(tag);
+            used += entry.getValue();
         }
 
         ListTag elemList = new ListTag();
@@ -66,7 +71,8 @@ public record WarehouseDataPacket(BlockPos buildingPos, UUID colonyId,
             elemList.add(tag);
         }
 
-        return new WarehouseDataPacket(buildingPos, colonyId, itemList, elemList, creator);
+        return new WarehouseDataPacket(buildingPos, colonyId, itemList, elemList, creator,
+                used, com.wsteam.wandscape.content.warehouse.ColonyItemBank.capacityFor(colonyId));
     }
 
     /** Decode item list for client rendering. */
@@ -127,6 +133,8 @@ public record WarehouseDataPacket(BlockPos buildingPos, UUID colonyId,
         wrapper.put("itms", pkt.items);
         wrapper.put("elems", pkt.elements);
         wrapper.putString("creator", pkt.creator != null ? pkt.creator : "");
+        wrapper.putLong("used", pkt.usedCapacity);
+        wrapper.putLong("cap", pkt.capacity);
         buf.writeNbt(wrapper);
     }
 
@@ -134,13 +142,15 @@ public record WarehouseDataPacket(BlockPos buildingPos, UUID colonyId,
         CompoundTag wrapper = buf.readNbt();
         if (wrapper == null) {
             return new WarehouseDataPacket(BlockPos.ZERO, new UUID(0, 0),
-                    new ListTag(), new ListTag(), "");
+                    new ListTag(), new ListTag(), "", 0, 0);
         }
         BlockPos buildingPos = BlockPos.of(wrapper.getLong("pos"));
         UUID colonyId = wrapper.contains("colony") ? wrapper.getUUID("colony") : new UUID(0, 0);
         ListTag items = wrapper.getList("itms", Tag.TAG_COMPOUND);
         ListTag elems = wrapper.getList("elems", Tag.TAG_COMPOUND);
         String creator = wrapper.getString("creator");
-        return new WarehouseDataPacket(buildingPos, colonyId, items, elems, creator);
+        long used = wrapper.contains("used") ? wrapper.getLong("used") : 0;
+        long cap = wrapper.contains("cap") ? wrapper.getLong("cap") : 0;
+        return new WarehouseDataPacket(buildingPos, colonyId, items, elems, creator, used, cap);
     }
 }

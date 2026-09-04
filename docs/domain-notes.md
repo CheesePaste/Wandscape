@@ -58,6 +58,12 @@
 3. **祭坛施法约束**：
    - 声明 `altar_only: true` 的魔法（如 revive）严禁被 NPC 直接自动决策施放，必须由玩家在祭坛 UI 发布任务后 NPC 走到祭坛中心施放。
    - 祭坛 CD 独立存储于 `AltarCastState`（按祭坛 buildingId 独立，不跨祭坛共享）。
+4. **第三方（Goety）聚晶施法 volley 化**（`compat/goety/`）：
+   - `IChargingSpell`（EverCharge 持续 / 蓄力连发如 Steam / 呼吸）按 Goety 玩家侧语义：充能（`castUp/speed`）→ 按 `Cooldown(caster,staff,shots)` 节拍逐发 `SpellResult` → 打到 `shotsNumber()` 或单轮齐射硬顶自然收尾并上 `defaultSpellCooldown` 冷却。
+   - 单轮齐射硬顶默认 100t，走 `MagicApi.get/setSustainedCastMaxTicks`（内部 BalanceValues，可被 wandscape_balance.json 覆盖），**不进 Config TOML**。
+   - volley 全程**不占施法互斥锁**：各魔法 CD 照走；GuardCombat 每轮复选只让位「严格更高优先」法术，选回同 focus / 选不到都保持 volley；L0 紧急奶等其它施法经 `MagicSpellExecutors.dispatch` 打断 volley。
+   - 魔力按 Goety 扣费节拍（EverCharge/呼吸每 20 发扣一次 `manaCost`、Steam 类每发扣一次），不足自动停、不罚 CD。
+   - 遗留：非 `IChargingSpell` 但 `defaultCastDuration()>0` 的蓄力弹（PrismaBeam 类走 useSpell/stopSpell）仍被 instant 分支秒发，待修。
 
 ---
 
@@ -100,6 +106,12 @@
    - 仓库终端支持 Curios 手饰槽（`hands`/`bracelet`）或快捷键开仓，开仓前必须服务端验证佩戴状态或背包持有。
 2. **大数量渲染限制**：
    - 原版 Minecraft 浮动物品数量渲染上限为 999（`renderItemDecorations`），仓库中大于 999 的物品显示为 `999+` 属正常原版行为。
+3. **仓库容量机制（物品账本总量）**：
+   - 容量 = 每殖民地**物品账本**所有条目 count 之和；**1 物品占 1**（不可堆叠也占 1）；**元素独立账本不计入**。上限 = 殖民地「仓库(storage)」建筑数 × `Config.WAREHOUSE_ITEM_CAPACITY`（默认每座 50000，**多建一座仓库 +50000**；无独立仓库按 1 座计；0 = 关闭机制不设限）。`ColonyItemBank` 维护 `usedCounts` 缓存并在 load 重建；上限按 `capacityFor(colonyId)` 每次查询建筑数现算（放下/拆除仓库即时生效，不缓存）。
+   - **拦截口径 = 净新增入仓，集中在银行 `tryAdd` 入口**：玩家全部存入路径（`insertItems`/交换页各手势，先入仓成功才清背包槽，整批放不下整体拒收 + ScreenFeedback 提示「仓库容量不足」）与 NPC 生产产物（synthesize/craft/craft_spell 前置 `checkCapacity` 守卫、产物 `tryAdd` 提交）满仓即拒；**净零归还放行**（分解回滚、拆迁/建造取消退款、任务材料退还、运输孤儿返还——只还刚取走的原物，绝不把殖民地资产卡死）。
+   - **补货豁免**：商店补货驱动的自动合成（`ResourceSupplySystem.enqueueSynthesize(atFront=true)`）在 WorkItem 参数带 `supply=restock`，满仓仍可合成入仓（容量可被短暂超出），保货架不断供、防殖民地瘫痪。判定处（发布资格、队列徽标、op 守卫）统一看该参数。
+   - **满仓生产任务 = 镜像「缺元素」**：合成/制作队列条目满仓不可发布、面板标「仓库容量不足」（`capacityBlocked` 走 TaskQueueDataPacket），执行期撞上满仓以伪资源 `warehouse_capacity` 抛 `ResourceShortageException` → BuildingTaskSource 回收回队列（`isCapacityShortage`），容量空出后按发布资格自动续跑；ResourceSupplySystem 对这类等待不尝试自动补产。
+   - **拆迁/回收掉落满仓不丢**：`performSalvage` 产物 `tryAdd` 失败时改为在拆除点生成掉落物（等价箱满溢出），不吞物品也不阻塞平地。
 
 ---
 

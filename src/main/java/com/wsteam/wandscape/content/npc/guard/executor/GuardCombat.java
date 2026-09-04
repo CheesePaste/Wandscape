@@ -202,10 +202,32 @@ public final class GuardCombat {
         // 驱动目标规则与 conditions；敌数门控按策略组（单体组 ≤3 / 群攻组 ≥3，防御·支援无门槛）
         List<SpellRef> known = CastBrain.resolvePriority(npc.castStrategy,
                 CastBrain.knownSpells(npc.equippedMagic, npc));
+
+        // ── Goety volley 让位语义（持续施法可打断，见 docs/adr.md）──
+        // volley 全程不占施法互斥锁、各魔法 CD 照走；这里每轮只打断「严格更高优先」就绪的法术：
+        // 选回同 focus / 选不到都保持 volley 继续放，绝不切到更低/同优先、也不 L2 近战。
+        String goetyVolleyId = com.wsteam.wandscape.compat.goety.GoetyCompat.isLoaded()
+                ? com.wsteam.wandscape.compat.goety.GoetyCaster.activeFocusId(npc) : null;
+        if (goetyVolleyId != null && rankOf(known, goetyVolleyId) < 0) {
+            // 聚晶中途被移出装备 → 打断，回正常决策
+            com.wsteam.wandscape.compat.goety.GoetyCaster.interrupt(npc);
+            goetyVolleyId = null;
+        }
+
         WorldSnapshot snapshot = buildSnapshot(level, npc);
         SpellRef chosen = CastBrain.select(known,
                 def -> com.wsteam.wandscape.content.npc.component.MagicState.isFreeCast()
                         || (npc.magic.canCast(def.id()) && npc.magic.getMana() >= def.manaCost()), snapshot);
+
+        if (goetyVolleyId != null) {
+            if (chosen == null) return; // 无更高优先就绪 → 保持 volley
+            if (chosen.def().id().equals(goetyVolleyId)) return; // 复选同 focus → 保持（不重起、无 FX）
+            if (rankOf(known, chosen.def().id()) >= rankOf(known, goetyVolleyId)) {
+                return; // 更低/同优先被临时选中（volley 自身蓝瞬低等）→ 保持 volley
+            }
+            com.wsteam.wandscape.compat.goety.GoetyCaster.interrupt(npc); // 严格更高优先 → 让位
+        }
+
         if (chosen == null) {
             // L2 兜底：无有效魔法（列表全不可施 / conditions 不满足）→ 普通攻击（物理，不耗蓝，2s 攻速）
             normalAttack(level, npc, target);
@@ -221,6 +243,14 @@ public final class GuardCombat {
             SoundService.playAt(level, npc.getX(), npc.getY(), npc.getZ(),
                     WandscapeSounds.GUARD_FIRE, SoundSource.NEUTRAL, 0.6f, 1.0f);
         }
+    }
+
+    /** magicId 在 known（已按玩家策略排序）中的位次；不在返回 -1。 */
+    private static int rankOf(List<SpellRef> known, String magicId) {
+        for (int i = 0; i < known.size(); i++) {
+            if (known.get(i).def().id().equals(magicId)) return i;
+        }
+        return -1;
     }
 
     /** 0xAARRGGBB → [r,g,b]（0-1）。 */

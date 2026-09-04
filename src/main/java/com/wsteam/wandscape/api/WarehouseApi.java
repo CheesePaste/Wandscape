@@ -50,8 +50,13 @@ public interface WarehouseApi {
     /**
      * Insert item stacks into a colony's warehouse.
      *
-     * @return true when the bank is ready and the stacks were inserted; false when
-     *         it is not initialized and nothing was inserted.
+     * <p>Capacity-gated: each item counts 1 against the colony warehouse capacity
+     * (unstackable items included). When the whole batch would exceed the remaining
+     * capacity, nothing is inserted.
+     *
+     * @return true when the bank is ready and the whole batch was inserted; false
+     *         when the bank is not initialized, or the warehouse lacks capacity for
+     *         the batch (batch left untouched).
      */
     boolean insertItems(UUID colonyId, List<ItemStack> items);
 

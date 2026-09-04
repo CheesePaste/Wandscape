@@ -23,24 +23,6 @@ public final class ProjectionNetwork {
 
     private ProjectionNetwork() {}
 
-    static {
-        try {
-            Log.info(TAG, "[Init] Loading ProjectionNetwork class...");
-            // Force-resolve key dependencies to catch linkage errors early
-            Class.forName("com.wsteam.wandscape.content.building.internal.BuildingConfigLoader");
-            Class.forName("com.wsteam.wandscape.api.WandscapeApis");
-            Log.info(TAG, "[Init] Dependencies resolved successfully");
-        } catch (Throwable t) {
-            try {
-                Log.error(TAG, "[Init] FAILED to resolve dependency", t);
-            } catch (Throwable logFallback) {
-                System.err.println("[ProjectionNetwork] FATAL init error (Log unavailable): " + t);
-                t.printStackTrace();
-            }
-            throw new ExceptionInInitializerError(t);
-        }
-    }
-
     // ── Player tracking ──
 
     public static void addProjecting(ServerPlayer player) {

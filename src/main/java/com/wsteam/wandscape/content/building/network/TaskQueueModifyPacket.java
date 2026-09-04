@@ -107,8 +107,9 @@ public record TaskQueueModifyPacket(
             List<WorkItem> queue = api.getQueue(buildingId);
             BuildingState bState = data.getBuilding(buildingId);
             UUID colonyId = bState != null ? bState.getColonyId() : null;
+            ColonyItemBank bank = ColonyItemBank.get(sp.serverLevel());
             Map<ElementType, Long> elementSnapshot = colonyId != null
-                    ? ColonyItemBank.get(sp.serverLevel()).getElementSnapshot(colonyId) : Map.of();
+                    ? bank.getElementSnapshot(colonyId) : Map.of();
             List<TaskQueueDataPacket.QueueEntry> entries = new ArrayList<>();
             for (int i = 0; i < queue.size(); i++) {
                 WorkItem item = queue.get(i);
@@ -121,7 +122,8 @@ public record TaskQueueModifyPacket(
                 entries.add(new TaskQueueDataPacket.QueueEntry(
                         i, category, itemOrRecipeId, quantity, bid, summarizeWorkItem(bid, params),
                         isInsufficient(bid, params, elementSnapshot),
-                        missingElements(bid, params, elementSnapshot)
+                        missingElements(bid, params, elementSnapshot),
+                        isCapacityBlocked(bid, params, bank, colonyId)
                 ));
             }
 
@@ -331,6 +333,21 @@ public record TaskQueueModifyPacket(
         return ProductionEligibility.missingElements(
                         ProductionEligibility.requiredElements(bid, params), elementSnapshot)
                 .stream().map(ElementType::getId).toList();
+    }
+
+    /**
+     * Whether an item-producing queue entry cannot run because the colony warehouse is
+     * full (mirrors {@link #isInsufficient}). Restock-driven synthesis ({@code supply=restock})
+     * is exempt so the shop economy never deadlocks on a full warehouse.
+     */
+    private static boolean isCapacityBlocked(String bid, Map<String, JsonElement> params,
+                                             @Nullable ColonyItemBank bank,
+                                             @Nullable UUID colonyId) {
+        if (!ProductionEligibility.isElementCosting(bid)) return false;
+        if ("restock".equalsIgnoreCase(paramStr(params, "supply"))) return false;
+        int count = paramInt(params, "count", 1);
+        if (colonyId == null || bank == null || count <= 0) return false;
+        return !bank.hasCapacity(colonyId, count);
     }
 
     static void write(RegistryFriendlyByteBuf buf, TaskQueueModifyPacket pkt) {

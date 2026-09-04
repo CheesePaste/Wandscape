@@ -260,9 +260,15 @@ public final class BlueprintDefaults {
     }
 
     private static TaskSequence productionSynthesize(Map<String, JsonElement> p) {
+        Map<String, String> params = interactParams(p, "recipe_id", "count");
+        // 补货驱动的合成带 supply=restock：容量豁免标（见 WarehouseCapacity 判定）。
+        JsonElement supply = p.get("supply");
+        if (supply != null && supply.isJsonPrimitive() && !supply.getAsString().isEmpty()) {
+            params.put("supply", supply.getAsString());
+        }
         List<AtomicOp> ops = List.of(new AtomicOp.BlockInteractOp(
                 pos(p, "anchor"), new InteractAction("synthesize"),
-                interactParams(p, "recipe_id", "count"), asInt(p, "channel_ticks")));
+                params, asInt(p, "channel_ticks")));
         return new TaskSequence(ops, label("合成物品", p));
     }
 

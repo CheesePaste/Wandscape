@@ -79,7 +79,8 @@ public class NodeScreen extends MedievalScreen {
             for (TaskQueueDataPacket.QueueEntry qe : packet.entries()) {
                 entries.add(new TaskQueuePanel.Entry(
                         qe.index(), qe.category(), qe.itemOrRecipeId(), qe.quantity(),
-                        qe.blueprintId(), qe.summary(), qe.insufficient(), qe.missingElements()));
+                        qe.blueprintId(), qe.summary(), qe.insufficient(), qe.missingElements(),
+                        qe.capacityBlocked()));
             }
             taskQueuePanel.setEntries(entries);
             taskQueuePanel.setCurrents(toPanelCurrents(packet.currents()));
@@ -95,7 +96,7 @@ public class NodeScreen extends MedievalScreen {
             TaskQueueDataPacket.QueueEntry e = ct.entry();
             result.add(new TaskQueuePanel.CurrentInfo(
                     new TaskQueuePanel.Entry(e.index(), e.category(), e.itemOrRecipeId(),
-                            e.quantity(), e.blueprintId(), e.summary(), false, List.of()),
+                            e.quantity(), e.blueprintId(), e.summary(), false, List.of(), false),
                     ct.stepIndex(), ct.totalSteps(),
                     ct.channelRemainingTicks(), ct.channelTotalTicks(),
                     ct.pending()));

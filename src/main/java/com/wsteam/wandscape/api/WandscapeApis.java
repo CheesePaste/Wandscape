@@ -80,6 +80,8 @@ public final class WandscapeApis {
         if (tavernApi == null) throw new IllegalStateException("Module TavernRecruitment not loaded");
         return tavernApi;
     }
+    @javax.annotation.Nullable
+    public static TavernApi getTavernApiSilently() { return tavernApi; }
     public static void setTavernApi(TavernApi api) { tavernApi = api; }
 
     public static ColonyApi getColonyApi() {

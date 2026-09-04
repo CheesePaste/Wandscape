@@ -228,13 +228,29 @@ public class AsyncTransformExecutor implements OpExecutor<AtomicOp.TransformOp> 
             String itemId = BuiltInRegistries.ITEM.getKey(drop.getItem()).toString();
             ItemKey key = ItemKey.of(itemId, null);
             int count = drop.getCount();
-            // Direct deposit — no flying-item animation. Batch demolition would spawn
-            // hundreds of transport entities on the client, so shattered blocks just
-            // bank their drops instantly.
-            bank.add(colonyId, key, count);
+            if (!bank.tryAdd(colonyId, key, count)) {
+                // 满仓：不入仓库也不吞物品——掉落物落回拆除点（等价箱满溢出，损失为零，
+                // 也不让拆迁/平地被满仓卡死）。见 ColonyItemBank 容量机制。
+                Log.info(TAG, "[Salvage] warehouse full — dropped {} x{} at {} (colony={})",
+                        key.itemId(), count, bp, colonyId.toString().substring(0, 8));
+                dropSalvageOnGround(sl, bp, drop);
+                continue;
+            }
             Log.info(TAG, "[Salvage] Dismantled item returned to warehouse: {} x{} (colony={})",
                     key.itemId(), count, colonyId.toString().substring(0, 8));
         }
+    }
+
+    /** 满仓时把拆迁/回收掉落物生成在拆除点上（等价箱满溢出，不丢物品、不阻塞平地）。 */
+    private static void dropSalvageOnGround(ServerLevel level, BlockPos pos, ItemStack drop) {
+        double x = pos.getX() + 0.5;
+        double y = pos.getY() + 0.5;
+        double z = pos.getZ() + 0.5;
+        net.minecraft.world.entity.item.ItemEntity entity =
+                new net.minecraft.world.entity.item.ItemEntity(level, x, y, z, drop.copy());
+        entity.setDeltaMovement(0, 0.1, 0);
+        entity.setPickUpDelay(10);
+        level.addFreshEntity(entity);
     }
 
     private boolean isSalvageable(BlockState oldState, ServerLevel sl, BlockPos bp, BlockType toType) {

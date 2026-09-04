@@ -33,7 +33,7 @@ public final class BalanceValues {
             "transportTicksPerBlockOnRoad", "transportTicksPerBlockOffRoad", "decorationBonusCap",
             "workstationCraftTicksPerUnit", "craftingStationCraftTicksPerUnit",
             "constructionPlaceTicksPerUnit", "castSingleTargetMaxEnemies", "castAoeMinEnemies",
-            "mageHutRestTicks");
+            "mageHutRestTicks", "sustainedCastMaxTicks");
 
     // ============================================================
     // npc 回血回蓝
@@ -127,6 +127,9 @@ public final class BalanceValues {
     private static final int DEFAULT_CAST_SINGLE_TARGET_MAX_ENEMIES = 3;
     private static final int DEFAULT_CAST_AOE_MIN_ENEMIES = 3;
     private static final int DEFAULT_MAGE_HUT_REST_TICKS = 2400;
+    /** Goety 持续（volley）单轮最大齐射时长（tick，自 charge 完成起计）：束缚 shotsNumber=0 的无限型，
+     *  不截箭雨标准一轮（20 charge + 100 齐射）。addon 经 MagicApi.setSustainedCastMaxTicks 调。 */
+    private static final int DEFAULT_SUSTAINED_CAST_MAX_TICKS = 100;
 
     public static int workstationCraftTicksPerUnit() { return (int)(double) OVERRIDES.getOrDefault("workstationCraftTicksPerUnit", (double) DEFAULT_WORKSTATION_CRAFT_TICKS_PER_UNIT); }
     public static void setWorkstationCraftTicksPerUnit(int v) { OVERRIDES.put("workstationCraftTicksPerUnit", (double) v); }
@@ -140,6 +143,8 @@ public final class BalanceValues {
     public static void setCastAoeMinEnemies(int v) { OVERRIDES.put("castAoeMinEnemies", (double) v); }
     public static int mageHutRestTicks() { return (int)(double) OVERRIDES.getOrDefault("mageHutRestTicks", (double) DEFAULT_MAGE_HUT_REST_TICKS); }
     public static void setMageHutRestTicks(int v) { OVERRIDES.put("mageHutRestTicks", (double) v); }
+    public static int sustainedCastMaxTicks() { return (int)(double) OVERRIDES.getOrDefault("sustainedCastMaxTicks", (double) DEFAULT_SUSTAINED_CAST_MAX_TICKS); }
+    public static void setSustainedCastMaxTicks(int v) { OVERRIDES.put("sustainedCastMaxTicks", (double) v); }
 
     // ============================================================
     // 持久化 JSON 覆盖（data/wandscape/wandscape_balance.json）驱动

@@ -293,6 +293,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
 
     private void checkSynthesizePreconditions(Map<String, String> params, long npcId) {
         checkElements("production:synthesize", params, npcId);
+        checkCapacity("production:synthesize", params, npcId);
     }
 
     private void checkDecomposePreconditions(Map<String, String> params, long npcId) {
@@ -326,6 +327,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
                         List.of(new ResourceStack(new ResourceId(shortId), count)));
             }
         }
+        checkCapacity("production:" + action, params, npcId);
     }
 
     /** Element shortage check shared by every element-costing production blueprint. */
@@ -512,6 +514,9 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
 
         UUID colonyId = findStorageColonyId();
 
+        // 容量守卫（与预检同口径）：产物入仓需剩余容量；补货驱动豁免。
+        checkCapacity("production:synthesize", params, npcId);
+
         for (var entry : recipe.cost().entrySet()) {
             long needed = scaledCraftCost(entry.getValue() * count);
             if (bank.countElement(colonyId, entry.getKey()) < needed) {
@@ -527,7 +532,16 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         }
 
         ItemKey outputKey = ItemKey.of(recipe.outputItem(), null);
-        bank.add(colonyId, outputKey, count);
+        if (!depositOutput(bank, colonyId, params, outputKey, count)) {
+            // 罕见竞态：通道期内容量被占满 → 回滚已扣元素，任务按容量短缺回收等待。
+            for (var entry : recipe.cost().entrySet()) {
+                bank.addElement(colonyId, entry.getKey(), scaledCraftCost(entry.getValue() * count));
+            }
+            Log.warn(TAG, "synthesize: warehouse full at commit, rolled back {} x{}",
+                    recipe.outputItem(), count);
+            throw new ResourceShortageException(
+                    List.of(new ResourceStack(new ResourceId(ColonyItemBank.CAPACITY_SHORTAGE_RESOURCE), 1)));
+        }
 
         // ── Transport visualization: crafted item flies NPC → warehouse ──
         launchItemTransport(outputKey, count, world, npcId);
@@ -565,6 +579,9 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
 
         UUID colonyId = findStorageColonyId();
 
+        // 容量守卫（与预检同口径）：产物入仓需剩余容量。
+        checkCapacity("production:" + action, params, npcId);
+
         for (var entry : recipe.cost().entrySet()) {
             long needed = scaledCraftCost(entry.getValue() * count);
             if (bank.countElement(colonyId, entry.getKey()) < needed) {
@@ -588,8 +605,11 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         for (var entry : recipe.cost().entrySet()) {
             bank.consumeElement(colonyId, entry.getKey(), scaledCraftCost(entry.getValue() * count));
         }
+        List<ItemKey> consumedInputs = new ArrayList<>();
         for (String inputItemId : recipe.inputItems()) {
-            bank.consume(colonyId, ItemKey.of(inputItemId, null), count);
+            ItemKey key = ItemKey.of(inputItemId, null);
+            bank.consume(colonyId, key, count);
+            consumedInputs.add(key);
         }
 
         CompoundTag outputNbt = recipe.outputNbt() != null ? recipe.outputNbt().copy() : null;
@@ -597,7 +617,19 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
             substitutePlaceholders(outputNbt, colonyId);
         }
         ItemKey outputKey = ItemKey.of(recipe.outputItem(), outputNbt);
-        bank.add(colonyId, outputKey, count);
+        if (!depositOutput(bank, colonyId, params, outputKey, count)) {
+            // 罕见竞态：通道期内容量被占满 → 回滚已扣元素与物品原料，任务按容量短缺回收等待。
+            for (var entry : recipe.cost().entrySet()) {
+                bank.addElement(colonyId, entry.getKey(), scaledCraftCost(entry.getValue() * count));
+            }
+            for (ItemKey inputKey : consumedInputs) {
+                bank.add(colonyId, inputKey, count);
+            }
+            Log.warn(TAG, "{}: warehouse full at commit, rolled back {} x{}",
+                    action, recipe.outputItem(), count);
+            throw new ResourceShortageException(
+                    List.of(new ResourceStack(new ResourceId(ColonyItemBank.CAPACITY_SHORTAGE_RESOURCE), 1)));
+        }
 
         // ── Transport visualization: crafted item flies NPC → warehouse ──
         launchItemTransport(outputKey, count, world, npcId);
@@ -726,6 +758,42 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
             }
         }
         return new UUID(0, 0);
+    }
+
+    /** 补货驱动合成（WorkItem 参数 supply=restock）→ 满仓豁免，保货架不断供。 */
+    private static boolean isRestockSupply(Map<String, String> params) {
+        return params != null && "restock".equalsIgnoreCase(params.get("supply"));
+    }
+
+    /**
+     * 仓库容量预检：合成/制作产物会入账 {@code count} 件；殖民地仓库剩余容量不足即抛
+     * 容量短缺（补货驱动豁免）。镜像 {@link #checkElements}：满仓任务被回收、面板标
+     * \"仓库容量不足\"，容量空出后由 BuildingTaskSource 重新发布。
+     */
+    private void checkCapacity(String blueprintId, Map<String, String> params, long npcId) {
+        if (isRestockSupply(params)) return;
+        int count = parseCount(params);
+        if (count <= 0) return;
+        Level level = getNpcLevel(npcId);
+        if (level == null) return;
+        ColonyItemBank bank = ColonyItemBank.get(level);
+        if (bank == null) return;
+        UUID colonyId = findStorageColonyId();
+        if (bank.hasCapacity(colonyId, count)) return;
+        Log.warn(TAG, "{}: warehouse capacity full (need {} items, free={})", blueprintId,
+                count, bank.remainingCapacity(colonyId));
+        throw new ResourceShortageException(
+                List.of(new ResourceStack(new ResourceId(ColonyItemBank.CAPACITY_SHORTAGE_RESOURCE), 1)));
+    }
+
+    /** 产物入仓：补货驱动（supply=restock）豁免容量直接入账，否则容量校验入账。 */
+    private static boolean depositOutput(ColonyItemBank bank, UUID colonyId, Map<String, String> params,
+                                         ItemKey outputKey, int count) {
+        if (isRestockSupply(params)) {
+            bank.add(colonyId, outputKey, count);
+            return true;
+        }
+        return bank.tryAdd(colonyId, outputKey, count);
     }
 
     private static UUID resolveColonyId(WandscapeNpc npc, World world) {

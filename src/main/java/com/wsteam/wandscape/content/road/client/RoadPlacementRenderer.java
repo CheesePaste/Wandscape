@@ -79,7 +79,10 @@ public final class RoadPlacementRenderer {
         poseStack.translate(-camPos.x, -camPos.y, -camPos.z);
 
         // 0. Base terrain grid overlay (semi-transparent gray 1x1 block grid around camera)
-        renderTerrainGrid(mc.level, bufferSource, poseStack, camPos);
+        // Config-gated (ClientConfig.ROAD_GRID, default off): translucent overlay clashes with some shader packs.
+        if (com.wsteam.wandscape.ClientConfig.ROAD_GRID.get()) {
+            renderTerrainGrid(mc.level, bufferSource, poseStack, camPos);
+        }
 
         // Start marker (green outline)
         BlockPos startPos = RoadPlacementState.getStartPos();

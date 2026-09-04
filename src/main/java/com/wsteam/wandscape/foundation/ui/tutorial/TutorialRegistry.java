@@ -133,27 +133,6 @@ public final class TutorialRegistry {
                     "tutorial.wandscape.synthesize.line4"),
             "tutorial.wandscape.synthesize.hint");
 
-    private static final TutorialStep ROAD = new TutorialStep(
-            "road",
-            "tutorial.wandscape.road.title",
-            List.of(
-                    "tutorial.wandscape.road.line1",
-                    "tutorial.wandscape.road.line2",
-                    "tutorial.wandscape.road.line3"),
-            List.of(
-                    "tutorial.wandscape.road.line1",
-                    "tutorial.wandscape.road.line2",
-                    "tutorial.wandscape.road.line3"),
-            List.of(
-                    "tutorial.wandscape.road.line1",
-                    "tutorial.wandscape.road.line2",
-                    "tutorial.wandscape.road.line3"),
-            List.of(
-                    "tutorial.wandscape.road.line1",
-                    "tutorial.wandscape.road.line2",
-                    "tutorial.wandscape.road.line3"),
-            "tutorial.wandscape.road.hint");
-
     private static final TutorialStep BAKERY = new TutorialStep(
             "bakery",
             "tutorial.wandscape.bakery.title",
@@ -169,21 +148,6 @@ public final class TutorialRegistry {
             PINNED_LINES,
             "tutorial.wandscape.bakery.hint");
 
-    private static final TutorialStep NODE = new TutorialStep(
-            "node",
-            "tutorial.wandscape.node.title",
-            List.of(
-                    "tutorial.wandscape.common.open_build",
-                    "tutorial.wandscape.node.line2",
-                    "tutorial.wandscape.common.drag_position_submit",
-                    "tutorial.wandscape.node.line4"),
-            List.of(
-                    "tutorial.wandscape.common.build_list_open",
-                    "tutorial.wandscape.node.bar2"),
-            AIMING_LINES,
-            PINNED_LINES,
-            "tutorial.wandscape.node.hint");
-
     private static final TutorialStep ALTAR = new TutorialStep(
             "altar",
             "tutorial.wandscape.altar.title",
@@ -198,6 +162,36 @@ public final class TutorialRegistry {
             AIMING_LINES,
             PINNED_LINES,
             "tutorial.wandscape.altar.hint");
+
+    private static final TutorialStep TAVERN = new TutorialStep(
+            "tavern",
+            "tutorial.wandscape.tavern.title",
+            List.of(
+                    "tutorial.wandscape.common.open_build",
+                    "tutorial.wandscape.tavern.line2",
+                    "tutorial.wandscape.common.drag_position_submit",
+                    "tutorial.wandscape.tavern.line4"),
+            List.of(
+                    "tutorial.wandscape.common.build_list_open",
+                    "tutorial.wandscape.tavern.bar2"),
+            AIMING_LINES,
+            PINNED_LINES,
+            "tutorial.wandscape.tavern.hint");
+
+    private static final TutorialStep MAGE_HUT = new TutorialStep(
+            "mage_hut",
+            "tutorial.wandscape.mage_hut.title",
+            List.of(
+                    "tutorial.wandscape.common.open_build",
+                    "tutorial.wandscape.mage_hut.line2",
+                    "tutorial.wandscape.common.drag_position_submit",
+                    "tutorial.wandscape.mage_hut.line4"),
+            List.of(
+                    "tutorial.wandscape.common.build_list_open",
+                    "tutorial.wandscape.mage_hut.bar2"),
+            AIMING_LINES,
+            PINNED_LINES,
+            "tutorial.wandscape.mage_hut.hint");
 
     private static final TutorialStep INN = new TutorialStep(
             "youth_hostel",
@@ -216,7 +210,7 @@ public final class TutorialRegistry {
 
     public static final List<TutorialStep> STEPS = List.of(
             TOWN_HALL, WAREHOUSE, DEPOSIT, WORKSTATION, SYNTHESIZE,
-            ROAD, BAKERY, NODE, ALTAR, INN);
+            BAKERY, ALTAR, TAVERN, MAGE_HUT, INN);
 
     public static TutorialStep step(int index) {
         return STEPS.get(index);

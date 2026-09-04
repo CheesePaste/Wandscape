@@ -51,6 +51,8 @@ public record TaskQueueDataPacket(
      * @param summary         human-readable fallback label
      * @param insufficient    true when an element-costing recipe cannot afford its quantity with current elements
      * @param missingElements element ids (lowercase, e.g. "wood") that are short — rendered as icons client-side
+     * @param capacityBlocked true when the colony warehouse is full and this craft output cannot be deposited
+     *                        (restock-driven synthesis is exempt)
      */
     public record QueueEntry(
             int index,
@@ -60,12 +62,13 @@ public record TaskQueueDataPacket(
             String blueprintId,
             String summary,
             boolean insufficient,
-            List<String> missingElements
+            List<String> missingElements,
+            boolean capacityBlocked
     ) {
-        /** Compact constructor defaulting the insufficient marker (legacy / non-production entries). */
+        /** Compact constructor defaulting the shortage markers (legacy / non-production entries). */
         public QueueEntry(int index, String category, String itemOrRecipeId, int quantity,
                           String blueprintId, String summary) {
-            this(index, category, itemOrRecipeId, quantity, blueprintId, summary, false, List.of());
+            this(index, category, itemOrRecipeId, quantity, blueprintId, summary, false, List.of(), false);
         }
     }
 
@@ -131,6 +134,7 @@ public record TaskQueueDataPacket(
         for (String el : entry.missingElements) {
             buf.writeUtf(el);
         }
+        buf.writeBoolean(entry.capacityBlocked);
     }
 
     static TaskQueueDataPacket read(RegistryFriendlyByteBuf buf) {
@@ -167,6 +171,8 @@ public record TaskQueueDataPacket(
         for (int i = 0; i < missingCount; i++) {
             missing.add(buf.readUtf());
         }
-        return new QueueEntry(index, category, itemOrRecipeId, quantity, blueprintId, summary, insufficient, missing);
+        boolean capacityBlocked = buf.readBoolean();
+        return new QueueEntry(index, category, itemOrRecipeId, quantity, blueprintId, summary,
+                insufficient, missing, capacityBlocked);
     }
 }

@@ -48,11 +48,12 @@ public class TaskQueuePanel extends AbstractWidget {
             String blueprintId,
             String summary,
             boolean insufficient,
-            List<String> missingElements
+            List<String> missingElements,
+            boolean capacityBlocked
     ) {
         /** Legacy constructor kept for backward compatibility. */
         public Entry(int index, String blueprintId, String summary) {
-            this(index, categorize(blueprintId), extractItemId(blueprintId, summary), 0, blueprintId, summary, false, List.of());
+            this(index, categorize(blueprintId), extractItemId(blueprintId, summary), 0, blueprintId, summary, false, List.of(), false);
         }
 
         private static String categorize(String bid) {
@@ -364,15 +365,16 @@ public class TaskQueuePanel extends AbstractWidget {
             g.drawString(Minecraft.getInstance().font, label,
                     labelX, centerY - 4, MedievalColors.TEXT_DIM);
 
-            // ── Insufficient marker: dark-red "缺元素" tag + missing element icons ──
+            // ── 受阻标记：缺元素(暗红标签+元素图标) / 仓库容量不足(红标签) ──
             int textColEnd = colRightStart - 2;
+            int statusX = labelX + Minecraft.getInstance().font.width(label) + 2;
             if (e.insufficient) {
                 Component shortTag = I18n.name("gui.wandscape.queue.insufficient", "缺元素");
-                int tagX = labelX + Minecraft.getInstance().font.width(label) + 2;
                 int tagW = Minecraft.getInstance().font.width(shortTag);
                 g.drawString(Minecraft.getInstance().font, shortTag,
-                        tagX, centerY - 4, MedievalColors.TEXT_DIM);
-                int iconX = tagX + tagW + 2;
+                        statusX, centerY - 4, MedievalColors.TEXT_DIM);
+                statusX += tagW + 2;
+                int iconX = statusX;
                 for (String el : e.missingElements) {
                     if (iconX + 11 > textColEnd) break; // clip at quantity column
                     ResourceLocation ico = WandscapeTheme.elementIcon(el);
@@ -380,6 +382,16 @@ public class TaskQueuePanel extends AbstractWidget {
                         WandscapeTheme.drawIcon(g, ico, iconX, centerY - 5, 9, 9, WandscapeTheme.elementColor(el));
                         iconX += 11;
                     }
+                }
+                if (iconX > statusX) statusX = iconX + 2;
+            }
+            if (e.capacityBlocked) {
+                Component shortTag = I18n.name("gui.wandscape.queue.capacity", "容量不足");
+                int tagW = Minecraft.getInstance().font.width(shortTag);
+                if (statusX + tagW <= textColEnd) {
+                    g.drawString(Minecraft.getInstance().font, shortTag,
+                            statusX, centerY - 4, 0xFFE05040);
+                    statusX += tagW + 2;
                 }
             }
 
