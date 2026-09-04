@@ -160,16 +160,8 @@ public final class ColonyCommand {
                     "message.wandscape.command.colony_already_owned",
                     "[Wandscape] Failed: 你已拥有小镇，不能创建第二个。"));
         }
-        // 小镇间最小隔离距离：新镇 origin 须离所有已有小镇 origin ≥ MIN_COLONY_SEPARATION，
-        // 保证各镇工作圈（≤256）永不交叠——从根本上杜绝「建筑/道路/仓库误归属到邻近别人的小镇」，
-        // 也避免近邻镇归属判定串扰。
-        if (com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.foundingTooClose(level, origin)) {
-            return ColonyCreateOutcome.failure(I18n.name(
-                    "message.wandscape.command.colony_too_close",
-                    "[Wandscape] Failed: 设镇点离已有小镇太近，请在至少 "
-                            + com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.MIN_COLONY_SEPARATION
-                            + " 格外选址（两镇工作圈不重叠）。"));
-        }
+        // 小镇间不设隔离距离——可相距任意近；建筑/命名归属跟「放置者」，不跟空间最近镇，
+        // 近镇各建各的也不会串归属/串物资。
 
         // ── Step 1: load config ─────────────────────────────────────────────
         BuildingConfig townHallConfig = BuildingConfigLoader.getInstance()

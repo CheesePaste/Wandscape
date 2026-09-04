@@ -54,16 +54,24 @@ public record ColonyCreateRequestPacket(BlockPos townHallAnchor, String name)
         ServerLevel level = player.serverLevel();
         ColonyApi colonyApi = WandscapeApis.getColonyApi();
 
-        // If this town hall's position is ALREADY linked to an existing colony, link and notify
-        UUID existing = colonyApi.getColonyId(packet.townHallAnchor);
-        if (existing != null) {
-            linkTownHall(packet.townHallAnchor, existing);
-            sendMessage(player, I18n.name("message.wandscape.colony.attached",
-                    "[Wandscape] 市政厅已关联至现有小镇。"));
+        // 命名即归属/建镇，且归属跟玩家，不再按空间自动并入最近小镇：
+        UUID founderOwn = colonyApi.getColonyByFounder(player.getUUID());
+        if (founderOwn != null) {
+            // 已有小镇的玩家：仅当这座无归属市政厅就落在自己镇上时关联它；
+            // 否则拒绝——不能建第二个镇，也不收编/并入别人的无主市政厅。
+            UUID near = colonyApi.getColonyId(packet.townHallAnchor);
+            if (near != null && near.equals(founderOwn)) {
+                linkTownHall(packet.townHallAnchor, founderOwn);
+                sendMessage(player, I18n.name("message.wandscape.colony.attached",
+                        "[Wandscape] 市政厅已关联至现有小镇。"));
+            } else {
+                sendMessage(player, I18n.name("message.wandscape.command.colony_already_owned",
+                        "[Wandscape] 你已拥有小镇，这里不是你的小镇范围，不能创建/关联另一个小镇。"));
+            }
             return;
         }
 
-        // Create new colony at townHallAnchor using ColonyCommand.createColonyAt
+        // 无自有小镇 → 命名即建镇（即使紧邻其它小镇也照建：两镇可相距任意近，归属跟放置者）
         ColonyCommand.ColonyCreateOutcome outcome =
                 ColonyCommand.createColonyAt(level, packet.townHallAnchor, name, player.getUUID());
         if (outcome == null || !outcome.success()) {

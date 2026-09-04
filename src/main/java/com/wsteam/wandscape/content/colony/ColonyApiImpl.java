@@ -126,6 +126,12 @@ public final class ColonyApiImpl implements ColonyApi {
 
     @Nullable
     public UUID onBuildingIntact(BuildingData data) {
+        // 归属跟放置者：建筑已有归属（放置/命名时确定）则保留，绝不被「空间最近原点」改写——
+        // 否则近邻小镇各建各的也会被串到对方镇、消耗对方物资。
+        UUID current = data.getColonyId();
+        if (current != null) {
+            return current;
+        }
         if ("government".equals(data.getCategory())) {
             // NEVER auto-create colonies here — colony creation is explicit
             // (command or the town-hall naming panel). If a town hall is built
@@ -168,6 +174,12 @@ public final class ColonyApiImpl implements ColonyApi {
         if (colonyId != null) {
             setColonyId(data, colonyId);
         }
+    }
+
+    /** 直接把建筑归属到指定小镇（放置者归属），与空间最近原点无关。 */
+    public void assignToColony(BuildingData data, @Nullable UUID colonyId) {
+        if (data == null || colonyId == null) return;
+        setColonyId(data, colonyId);
     }
 
     @Override

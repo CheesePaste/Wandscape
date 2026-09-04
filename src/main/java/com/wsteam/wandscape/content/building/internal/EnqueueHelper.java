@@ -62,6 +62,18 @@ public final class EnqueueHelper {
      */
     @Nullable
     public static BuildingState registerIfAbsent(BlockPos pos, BuildingConfig config, String buildingTypeId, int rotationSteps) {
+        return registerIfAbsent(pos, config, buildingTypeId, rotationSteps, null);
+    }
+
+    /**
+     * Register a building with optional rotation and explicit owner colony.
+     *
+     * <p>归属跟「放置者」：{@code ownerColony} 非空时直接归属该镇（与空间最近原点无关，近邻小镇也
+     * 各归各的）；为空时按旧行为就近归属（非政府），政府建筑为空则暂不归属、留待建镇命名。
+     */
+    @Nullable
+    public static BuildingState registerIfAbsent(BlockPos pos, BuildingConfig config, String buildingTypeId, int rotationSteps,
+                                                 @Nullable UUID ownerColony) {
         try {
             BuildingApiImpl api = BuildingApiImpl.get();
 
@@ -87,8 +99,13 @@ public final class EnqueueHelper {
             state.setRotationSteps(rotationSteps);
             api.registerBuilding(state);
 
-            // Assign colony if one exists nearby
-            ColonyApiImpl.get().assignColonyIfPossible(state);
+            // 归属：优先「放置者的小镇」；无放置者时政府建筑不就近归属（建镇/命名路径），
+            // 非政府退回按空间最近归属（旧行为：fill/scanner 等无玩家语境）。
+            if (ownerColony != null) {
+                ColonyApiImpl.get().assignToColony(state, ownerColony);
+            } else if (!"government".equals(config.category())) {
+                ColonyApiImpl.get().assignColonyIfPossible(state);
+            }
 
             // First building registered for this colony → seed warehouse with starter
             // elements (per-colony, persisted in ColonyItemBank).

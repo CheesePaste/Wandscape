@@ -864,14 +864,22 @@ public class BuildingApiImpl implements BuildingApi {
 
     @Override
     public PlacementResult placeBuilding(BlockPos anchor, String buildingTypeId, int rotationSteps) {
+        return placeBuilding(anchor, buildingTypeId, rotationSteps, null);
+    }
+
+    @Override
+    public PlacementResult placeBuilding(BlockPos anchor, String buildingTypeId, int rotationSteps,
+                                         @javax.annotation.Nullable UUID ownerColony) {
         BuildingConfig config = BuildingConfigLoader.getInstance().get(buildingTypeId);
         if (config == null) {
             return PlacementResult.fail(Component.literal("Unknown building type: " + buildingTypeId));
         }
 
-        UUID tempColonyId = com.wsteam.wandscape.content.colony.ColonyApiImpl.get().getColonyId(anchor);
-        if (!BuildingUnlockChecker.isUnlocked(tempColonyId, config)) {
-            Component reason = BuildingUnlockChecker.getLockReason(tempColonyId, config);
+        // 归属跟放置者：解锁判定也按归属镇（ownerColony），而不是空间最近原点——近邻镇互不干扰。
+        UUID unlockColony = ownerColony != null ? ownerColony
+                : com.wsteam.wandscape.content.colony.ColonyApiImpl.get().getColonyId(anchor);
+        if (!BuildingUnlockChecker.isUnlocked(unlockColony, config)) {
+            Component reason = BuildingUnlockChecker.getLockReason(unlockColony, config);
             return PlacementResult.fail(reason != null ? reason : Component.literal("Building is locked"));
         }
 
@@ -885,7 +893,7 @@ public class BuildingApiImpl implements BuildingApi {
         // The anchor is a reference point only (may sit outside the building's own
         // boundary, e.g. scanner placed in front), so use the returned state
         // directly instead of re-locating the building by position.
-        BuildingState state = EnqueueHelper.registerIfAbsent(anchor, config, buildingTypeId, rotationSteps);
+        BuildingState state = EnqueueHelper.registerIfAbsent(anchor, config, buildingTypeId, rotationSteps, ownerColony);
         if (state == null) {
             // Building bounding boxes may overlap freely, but two buildings can never
             // occupy the same world voxel — that is the only thing that fails here.

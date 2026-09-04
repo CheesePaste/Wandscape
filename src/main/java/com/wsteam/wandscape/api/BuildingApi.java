@@ -101,6 +101,16 @@ public interface BuildingApi {
     PlacementResult placeBuilding(BlockPos anchor, String buildingTypeId, int rotationSteps);
 
     /**
+     * 带归属的放置：新建筑归属 {@code ownerColony}（放置者自己的小镇），与空间最近原点无关——
+     * 近邻小镇各建各的也互不串归属。{@code ownerColony == null} 时退化为按位置就近归属（旧行为，
+     * 供无玩家语境的调用方使用；政府建筑不就近归属，留待建镇命名）。
+     *
+     * @see #placeBuilding(BlockPos, String, int)
+     */
+    PlacementResult placeBuilding(BlockPos anchor, String buildingTypeId, int rotationSteps,
+                                  @javax.annotation.Nullable java.util.UUID ownerColony);
+
+    /**
      * Whether this colony has already claimed the first-free build of a building type
      * (i.e. {@code first_free: true} in its config, and a building of that type has
      * already been placed for free here). Returns false when the first build is still free.
