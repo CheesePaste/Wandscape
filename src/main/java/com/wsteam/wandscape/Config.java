@@ -244,4 +244,30 @@ public class Config {
     public static boolean autoGatherOnShortage() {
         return SPEC.isLoaded() && AUTO_GATHER_ON_ELEMENT_SHORTAGE.get();
     }
+    // ---- 友军误伤 Friendly Fire ----
+
+    public static final ModConfigSpec.BooleanValue NPC_FRIENDLY_FIRE_PROTECTION = BUILDER
+            .comment("误伤保护：true（默认）时，玩家（及玩家侧宠物/召唤/弹射物）不会误伤自己殖民地的 NPC；"
+                    + "其他殖民地的 NPC 仍可能被误伤。设为 false 恢复可伤自己殖民地 NPC。")
+            .comment("Friendly-fire protection: when true (default), the player (and player-side pets/"
+                    + "summons/projectiles) cannot friendly-fire the NPCs of their own colony; other colonies' "
+                    + "NPCs can still be hit. Set false to allow damaging your own colony's NPCs.")
+            .define("npc.friendlyFireProtection", false);
+
+    // ---- PVP 阵营 PvP Faction ----
+
+    public static final ModConfigSpec.BooleanValue PVP = BUILDER
+            .comment("PVP 阵营：true（默认）时，只有属于同一殖民地的玩家（及其宠物/召唤物）才算友军；"
+                    + "其他殖民地的玩家、无殖民地玩家以及它们的宠物/召唤物都判非友军——"
+                    + "NPC 被打会还手、可用敌对权杖强制标记。false 时（原行为）所有玩家及玩家侧宠物/召唤物恒为友军。"
+                    + "注意：殖民地与创始人是 1:1；无创始人（控制台创建）的殖民地在 PVP 下无法识别己方玩家。")
+            .comment("PVP faction: when true (default), only players of the same colony (and their pets/summons) "
+                    + "count as friendly; players of other colonies and colony-less players (with their pets/summons) "
+                    + "are non-friendly — NPCs fight back when attacked and can be marked hostile. "
+                    + "When false (original), all players and player-side pets/summons are always friendly. "
+                    + "Note: colonies map 1:1 to founders; a colony with no founder (console-created) cannot "
+                    + "identify its own players under PVP.")
+            .define("npc.pvp", true);
+
+    static final ModConfigSpec SPEC = BUILDER.build();
 }
