@@ -95,12 +95,19 @@ public final class BuildingInteractHandler {
      */
     public static void handleInteraction(ServerPlayer player, Level level,
                                           net.minecraft.core.BlockPos pos, BuildingState state) {
+        String category = state.getCategory();
+        UUID colonyId = state.getColonyId();
+
+        // 完全平行隔离：建筑 GUI 的咽喉——目标建筑不属于操作者本人（且非无归属建镇/野建筑）则拒止。
+        if (colonyId != null
+                && !com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.isOwnColonyOf(colonyId, player)) {
+            com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(player, "建筑");
+            return;
+        }
+
         // Sync building snapshot to client so building UI headers & action buttons have full context
         var debugPkt = com.wsteam.wandscape.content.building.projection.network.BuildingDebugRequestPacket.buildResponse(level, state);
         PacketDistributor.sendToPlayer(player, debugPkt);
-
-        String category = state.getCategory();
-        UUID colonyId = state.getColonyId();
 
         // Town hall with no colony linked → ask the player to name & create one (even if under construction).
         if ("government".equals(category) && colonyId == null) {

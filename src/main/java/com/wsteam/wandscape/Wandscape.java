@@ -516,6 +516,7 @@ public class Wandscape {
         NeoForge.EVENT_BUS.register(com.wsteam.wandscape.content.npc.guard.FriendlyTargetingHandler.class);
         NeoForge.EVENT_BUS.register(com.wsteam.wandscape.content.npc.internal.NpcDeathHandler.class);
         NeoForge.EVENT_BUS.register(BuildingInteractHandler.class);
+        NeoForge.EVENT_BUS.register(com.wsteam.wandscape.content.colony.guard.ColonyLandProtectionHandler.class);
         NeoForge.EVENT_BUS.register(com.wsteam.wandscape.foundation.ui.panel.PanelStateTracker.class);
         NeoForge.EVENT_BUS.register(com.wsteam.wandscape.content.task.network.TaskPanelSyncTracker.class);
         DailySettlementSystem.register();

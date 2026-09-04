@@ -160,6 +160,21 @@ public final class ColonyCommand {
                     "message.wandscape.command.colony_already_owned",
                     "[Wandscape] Failed: 你已拥有小镇，不能创建第二个。"));
         }
+        // ── 可选：小镇隔离距离（当前注释保留，未启用；镇可建任意近，靠归属判定隔离）──
+        // 若启用：新镇 origin 须与所有已有小镇 origin 保持隔离距离（两倍工作半径），
+        // 保证各镇工作圈永不交叠，彻底杜绝「建筑/道路/仓库误归属到邻近别人的小镇」这类跨镇串扰。
+        //
+        // int minSep = 512; // 2 × ColonyApiImpl.MAX_COLONY_RANGE(256)
+        // var csd = ColonySavedData.getOrCreate(level);
+        // for (UUID cid : WandscapeApis.getColonyApi().getAllColonyIds()) {
+        //     BlockPos otherOrigin = csd.getOrigin(cid);
+        //     if (otherOrigin != null && otherOrigin.distSqr(origin) < (long) minSep * minSep) {
+        //         return ColonyCreateOutcome.failure(I18n.name(
+        //                 "message.wandscape.command.colony_too_close",
+        //                 "[Wandscape] Failed: 与已有小镇距离过近，请在至少 " + minSep
+        //                         + " 格外选址（两镇工作圈不重叠）。"));
+        //     }
+        // }
 
         // ── Step 1: load config ─────────────────────────────────────────────
         BuildingConfig townHallConfig = BuildingConfigLoader.getInstance()

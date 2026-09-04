@@ -77,6 +77,11 @@ public record NpcStrategyPacket(int entityId, String preset, List<String> equipp
             Log.warn(TAG, "Strategy target entity {} is not a WandscapeNpc", packet.entityId());
             return;
         }
+        // 完全平行隔离：只能修改自己小镇法师的策略预设。
+        if (!com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.isOwn(npc.colonyId, player)) {
+            com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(player, "法师");
+            return;
+        }
         // 预设切换经 MagicApi.setEquippedAndStrategy（校验一致的写入，装备态不变但重验）：
         // 取代直写 castStrategy，保证与 API 一致。
         com.wsteam.wandscape.api.WandscapeApis.getMagicApi()

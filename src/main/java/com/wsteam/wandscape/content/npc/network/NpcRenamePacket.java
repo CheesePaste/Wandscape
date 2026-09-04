@@ -52,6 +52,11 @@ public record NpcRenamePacket(int entityId, String name) implements CustomPacket
             Log.warn(TAG, "Rename target entity {} is not a WandscapeNpc", packet.entityId());
             return;
         }
+        // 完全平行隔离：只能重命名自己小镇的法师。
+        if (!com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.isOwn(npc.colonyId, player)) {
+            com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(player, "法师");
+            return;
+        }
 
         String name = packet.name() == null ? "" : packet.name().trim();
         if (name.isEmpty()) return;

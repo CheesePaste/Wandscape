@@ -108,12 +108,9 @@ public final class PanelStateTracker {
         for (UUID playerId : panelOpenPlayers) {
             ServerPlayer player = server.getPlayerList().getPlayer(playerId);
             if (player == null) continue;
-            // 面板永远操作玩家自己的小镇（与 PanelStateTogglePacket 打开时一致）：先按 founder
-            // 匹配（无视距离，远程俯视/Sim 态也收得到），无则退化为就近殖民地。
+            // 完全平行隔离：HUD 只推送给「该殖民地属于其本人」的开面板玩家；
+            // 无镇玩家收不到任何殖民地数据。绝不退化为就近殖民地。
             UUID playerColony = colonyApi.getColonyByFounder(playerId);
-            if (playerColony == null) {
-                playerColony = colonyApi.getColonyId(player.blockPosition());
-            }
             if (snap.colonyId() != null && snap.colonyId().equals(playerColony)) {
                 PacketDistributor.sendToPlayer(player, ColonyStatsSyncPacket.fromSnapshot(snap));
             }

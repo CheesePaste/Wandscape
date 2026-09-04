@@ -60,6 +60,11 @@ public record MageModeActionPacket(
             Log.warn(TAG, "Target entity {} is not WandscapeNpc", packet.entityId);
             return;
         }
+        // 完全平行隔离：只能切换自己小镇法师的模式。
+        if (!com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.isOwn(npc.colonyId, player)) {
+            com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(player, "法师");
+            return;
+        }
 
         switch (packet.mode) {
             case MODE_FOLLOW -> {

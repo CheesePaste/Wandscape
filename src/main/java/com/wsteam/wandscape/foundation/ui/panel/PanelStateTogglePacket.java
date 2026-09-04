@@ -46,12 +46,9 @@ public record PanelStateTogglePacket(boolean open) implements CustomPacketPayloa
             UUID colonyId = null;
             ColonyApi colonyApi = WandscapeApis.getColonyApiSilently();
             if (colonyApi != null) {
-                // 小镇与玩家绑定：优先返回玩家自己的小镇（无论距离），面板永远操作自己的小镇。
-                // 否则玩家已有小镇时走空间查找，在远处按 V 会新建第二个小镇。
+                // 完全平行隔离：面板永远只绑定玩家自己的小镇；没有小镇 = 建镇引导态，
+                // 绝不回退到空间「最近小镇」（否则无镇玩家会观察到别人的小镇数据）。
                 colonyId = colonyApi.getColonyByFounder(playerId);
-                if (colonyId == null) {
-                    colonyId = colonyApi.getColonyId(player.blockPosition());
-                }
                 // Always sync building areas（无小镇时发空包清空客户端缓存）——否则缓存会带着
                 // 上一世界（存档）的建筑边界框进入新存档，首次建建筑时误报重叠。
                 BuildingAreaSyncPacket.sendToPlayer(player, colonyId);

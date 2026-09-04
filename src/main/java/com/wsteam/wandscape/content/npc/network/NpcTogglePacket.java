@@ -61,6 +61,11 @@ public record NpcTogglePacket(int entityId, String flag, boolean enabled) implem
             Log.warn(TAG, "Toggle target entity {} is not a WandscapeNpc", packet.entityId());
             return;
         }
+        // 完全平行隔离：只能操作自己小镇的法师。
+        if (!com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.isOwn(npc.colonyId, player)) {
+            com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(player, "法师");
+            return;
+        }
 
         boolean enabled = packet.enabled();
         switch (packet.flag()) {

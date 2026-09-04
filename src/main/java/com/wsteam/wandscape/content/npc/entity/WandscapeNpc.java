@@ -1645,6 +1645,14 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
             hook.onInteractNpc((ServerPlayer) player, this, hand);
             return InteractionResult.CONSUME;
         }
+        // 完全平行隔离：只能打开自己小镇法师的装备/信息菜单；他人法师一律拒止。
+        if (colonyId != null
+                && !com.wsteam.wandscape.content.npc.internal.EntityComponentBridge.PLACEHOLDER_COLONY.equals(colonyId)
+                && player instanceof ServerPlayer sp
+                && !com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.isOwn(colonyId, sp)) {
+            com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(sp, "法师");
+            return InteractionResult.CONSUME;
+        }
         // 打开 NPC 装备容器菜单（4 盔甲 + 1 法杖 + 玩家背包，全部真实 vanilla 槽）
         if (player instanceof ServerPlayer sp) {
             sp.openMenu(new net.minecraft.world.SimpleMenuProvider(

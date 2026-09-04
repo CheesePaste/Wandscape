@@ -73,6 +73,24 @@ public record ProjectionPlacePacket(
             return;
         }
 
+        // 完全平行隔离：只能在自己的小镇范围内建造；未归属地只允许建市政厅（建镇）。禁止在别人小镇放建筑。
+        boolean isGov = "government".equals(config.category());
+        var colonyApiCheck = com.wsteam.wandscape.api.WandscapeApis.getColonyApiSilently();
+        UUID anchorColony = colonyApiCheck != null ? colonyApiCheck.getColonyId(packet.anchorPos) : null;
+        UUID ownColony = com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.ownColony(player);
+        if (anchorColony != null) {
+            if (!anchorColony.equals(ownColony)) {
+                com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(player, "建筑");
+                return;
+            }
+        } else if (!isGov) {
+            ScreenFeedbackPacket.send(player, I18n.name("message.wandscape.projection.place_failed",
+                    "[Projection] §c请先创建小镇或在小镇范围内建造"), true);
+            Log.warn(TAG, "[Projection] Player {} tried to place non-government '{}' outside any colony",
+                    player.getGameProfile().getName(), packet.buildingTypeId);
+            return;
+        }
+
         BuildingApi.PlacementResult result = api.placeBuilding(
                 packet.anchorPos, packet.buildingTypeId, packet.rotationSteps);
 

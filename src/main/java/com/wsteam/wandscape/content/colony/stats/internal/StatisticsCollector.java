@@ -139,7 +139,8 @@ public final class StatisticsCollector {
 
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             if (!PanelStateTracker.isPanelOpen(player)) continue;
-            UUID playerColony = colonyApi.getColonyId(player.blockPosition());
+            // 完全平行隔离：统计只推给拥有该殖民地本人的开面板玩家，绝不按位置就近。
+            UUID playerColony = colonyApi.getColonyByFounder(player.getUUID());
             if (colonyId.equals(playerColony)) {
                 PacketDistributor.sendToPlayer(player, new StatsSyncPacket(summary));
             }

@@ -47,6 +47,12 @@ public record BuildingActionPacket(UUID buildingId, String action) implements Cu
             return;
         }
 
+        // 完全平行隔离：只能对自己小镇的建筑执行销毁/撤销/维修。
+        if (!com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.isOwn(state.getColonyId(), player)) {
+            com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(player, "建筑");
+            return;
+        }
+
         var api = WandscapeApis.getBuildingApi();
 
         String name = state.getDisplayName();

@@ -64,6 +64,11 @@ public record NpcDismissPacket(int entityId) implements CustomPacketPayload {
             Log.warn(TAG, "Dismiss target {} is not a colony NPC", npc.getUUID().toString().substring(0, 8));
             return;
         }
+        // 完全平行隔离：只能解雇自己小镇的法师。
+        if (!com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.isOwn(npc.colonyId, player)) {
+            com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(player, "法师");
+            return;
+        }
 
         String name = npc.getNpcName();
 

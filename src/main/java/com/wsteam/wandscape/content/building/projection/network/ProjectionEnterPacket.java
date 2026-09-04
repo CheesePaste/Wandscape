@@ -63,7 +63,8 @@ public record ProjectionEnterPacket() implements CustomPacketPayload {
         UUID colonyId = null;
         var colonyApi = WandscapeApis.getColonyApiSilently();
         if (colonyApi != null) {
-            colonyId = colonyApi.getColonyId(player.blockPosition());
+            // 完全平行隔离：投影/建筑槽永远只关联玩家自己的小镇；无镇则空（建镇引导态）。
+            colonyId = colonyApi.getColonyByFounder(player.getUUID());
         }
         if (colonyId != null) {
             var metricsApi = WandscapeApis.getColonyStatusApiSilently();
