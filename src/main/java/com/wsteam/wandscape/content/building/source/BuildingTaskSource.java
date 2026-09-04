@@ -121,7 +121,13 @@ public class BuildingTaskSource implements TaskSource {
             //（建筑的排队工作与占地保留，上线后由下一次 poll 继续处理）
             com.wsteam.wandscape.content.building.data.BuildingData bd = api.getBuilding(buildingId);
             UUID colonyId = bd != null ? bd.getColonyId() : null;
-            if (colonyId != null && !com.wsteam.wandscape.content.colony.ColonyActivation.isColonyActive(colonyId)) {
+            // 建筑尚无归属（建镇市政厅在命名/建镇前）→ 不发布任务：否则无主任务会变成「不限小镇」，
+            // 让别的镇的法师（如邻镇的 A）跑过来建 B 的市政厅。命名建镇归属后由下一次 poll 发布，
+            // 归属镇的法师才会来建。
+            if (colonyId == null) {
+                continue;
+            }
+            if (!com.wsteam.wandscape.content.colony.ColonyActivation.isColonyActive(colonyId)) {
                 continue;
             }
 

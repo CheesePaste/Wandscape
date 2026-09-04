@@ -133,21 +133,9 @@ public final class ColonyApiImpl implements ColonyApi {
             return current;
         }
         if ("government".equals(data.getCategory())) {
-            // NEVER auto-create colonies here — colony creation is explicit
-            // (command or the town-hall naming panel). If a town hall is built
-            // within an existing colony, link it; otherwise leave it unassigned:
-            // the player can right-click it to open the naming panel, which
-            // creates the colony and links this town hall.
-            UUID existing = getColonyId(data.getPosition());
-            if (existing != null) {
-                colonyOrigins.put(data.getPosition(), existing);
-                colonyToOrigin.put(existing, data.getPosition());
-                setColonyId(data, existing);
-                Log.info(TAG, "[Colony] Town hall at {} linked to colony {}",
-                        data.getPosition(), existing.toString().substring(0, 8));
-                return existing;
-            }
-            Log.info(TAG, "[Colony] Town hall at {} intact but no colony nearby — "
+            // 无主市政厅绝不在建成时并入「空间最近」的别人的小镇：它属于放下它的建镇玩家。
+            // 保持未归属，玩家随时可右键发起命名建镇（ColonyCreatePrompt → createColonyAt 归属自己）。
+            Log.info(TAG, "[Colony] Town hall at {} intact but unassigned — "
                     + "right-click it to name & create the colony.",
                     data.getPosition());
             return null;
