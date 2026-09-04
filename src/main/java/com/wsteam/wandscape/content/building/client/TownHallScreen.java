@@ -61,6 +61,7 @@ public class TownHallScreen extends MedievalScreen {
         this.canUseWarehouse = canUseWarehouse;
         this.namingStyle = ordinalToStyle(namingStyleOrdinal);
         setCreator(creator);
+        setBuildingContext(null, buildingPos);
     }
 
     private static NameStyle ordinalToStyle(int ordinal) {
@@ -70,6 +71,7 @@ public class TownHallScreen extends MedievalScreen {
 
     @Override
     protected void init() {
+        setActionButtonsOffset(PW - 14 - 92, PH - 20);
         super.init();
 
         int cx = leftPos + PW / 2;
@@ -102,10 +104,10 @@ public class TownHallScreen extends MedievalScreen {
         }
 
         if (canUseWarehouse) {
-            int bw = 120;
+            int bw = 84;
             int bh = 16;
-            int bx = leftPos + (PW - bw) / 2;
-            int by = topPos + PH - bh - 12;
+            int bx = leftPos + PW - 14 - 92 - bw - 6;
+            int by = topPos + PH - 20;
             addRenderableWidget(new MedievalButton(bx, by, bw, bh,
                     I18n.name("gui.wandscape.townhall.warehouse", "仓库存取"),
                     this::onWarehouseAccess));

@@ -94,6 +94,10 @@ public final class BuildingInteractHandler {
      */
     public static void handleInteraction(ServerPlayer player, Level level,
                                           net.minecraft.core.BlockPos pos, BuildingState state) {
+        // Sync building snapshot to client so building UI headers & action buttons have full context
+        var debugPkt = com.wsteam.wandscape.content.building.projection.network.BuildingDebugRequestPacket.buildResponse(level, state);
+        PacketDistributor.sendToPlayer(player, debugPkt);
+
         String category = state.getCategory();
         UUID colonyId = state.getColonyId();
 
@@ -134,7 +138,7 @@ public final class BuildingInteractHandler {
             int namingStyle = colonyApi != null ? colonyApi.getNamingStyle(colonyId).ordinal() : 0;
             PacketDistributor.sendToPlayer(player,
                     new TownHallOpenPacket(
-                            pos, colonyId, name, lvl, exp, expNext, founderName, canUseWarehouse, namingStyle,
+                            state.getAnchor(), colonyId, name, lvl, exp, expNext, founderName, canUseWarehouse, namingStyle,
                             creator));
             return;
         }
@@ -149,15 +153,15 @@ public final class BuildingInteractHandler {
                     ? hotel.getGuestNames(state.getBuildingId(), level)
                     : java.util.List.<String>of();
             PacketDistributor.sendToPlayer(player,
-                    new HotelOpenPacket(pos, colonyId, state.getBuildingId(), creator, maxOcc, occupancy, guestNames));
+                    new HotelOpenPacket(state.getAnchor(), colonyId, state.getBuildingId(), creator, maxOcc, occupancy, guestNames));
             return;
         }
 
         switch (category) {
-            case "storage" -> openWarehouseMenu(player, colonyId, pos, creator);
-            case "workstation" -> openWorkstationGui(level, colonyId, player, pos, creator);
-            case "crafting_station" -> openCraftingStationGui(level, colonyId, player, pos, creator);
-            case "node" -> openNodeGui(level, player, pos, state);
+            case "storage" -> openWarehouseMenu(player, colonyId, state.getAnchor(), creator);
+            case "workstation" -> openWorkstationGui(level, colonyId, player, state.getAnchor(), creator);
+            case "crafting_station" -> openCraftingStationGui(level, colonyId, player, state.getAnchor(), creator);
+            case "node" -> openNodeGui(level, player, state.getAnchor(), state);
             case "shop" -> {
                 if (shopStockManager != null) {
                     shopStockManager.ensureStockInitialized(state.getBuildingId());
@@ -167,7 +171,7 @@ public final class BuildingInteractHandler {
                 Map<String, Integer> maxStocks = shopStockManager != null
                         ? shopStockManager.getAllMaxStocks(state.getBuildingId()) : Map.of();
                 PacketDistributor.sendToPlayer(player,
-                        new ShopOpenPacket(pos, colonyId, state.getBuildingId(), creator, stock, maxStocks));
+                        new ShopOpenPacket(state.getAnchor(), colonyId, state.getBuildingId(), creator, stock, maxStocks));
                 // Opening a shop triggers its first restock — push onboarding progress (step 7).
                 var tutorialApi = com.wsteam.wandscape.api.WandscapeApis.getTutorialApiSilently();
                 if (tutorialApi != null) tutorialApi.sendToPlayer(player, colonyId);
@@ -181,18 +185,18 @@ public final class BuildingInteractHandler {
                     recruitCount = tavernApi.getRecruitCount(colonyId);
                 } catch (IllegalStateException ignored) {}
                 PacketDistributor.sendToPlayer(player,
-                        new TavernOpenPacket(pos, colonyId, recruitCount, mageResumes, creator));
+                        new TavernOpenPacket(state.getAnchor(), colonyId, recruitCount, mageResumes, creator));
             }
             case "mage_hut" -> {
                 if (level instanceof net.minecraft.server.level.ServerLevel sl) {
                     MageHutServerHandler.openMageHut(player, sl, state.getBuildingId(), state);
                 }
             }
-            case "magic_station" -> openMagicStationGui(level, colonyId, player, pos, creator);
+            case "magic_station" -> openMagicStationGui(level, colonyId, player, state.getAnchor(), creator);
             case "altar" -> {
                 if (level instanceof net.minecraft.server.level.ServerLevel sl) {
                     PacketDistributor.sendToPlayer(player,
-                            new AltarOpenPacket(pos, colonyId, state.getBuildingId(), creator,
+                            new AltarOpenPacket(state.getAnchor(), colonyId, state.getBuildingId(), creator,
                                     AltarCastHandler.listSpells(sl, state.getBuildingId())));
                 }
             }

@@ -143,7 +143,6 @@ public class WandscapeClient {
         BuildGizmoController.register();
         BuildGizmoRenderer.register();
         BuildingDebugController.register();
-        BuildingDebugOverlay.register();
         TouristDebugRenderer.register();
         BuildingAreaRenderer.register();
         ConstructionGhostRenderer.register();
@@ -378,10 +377,9 @@ public class WandscapeClient {
 
         BuildingDebugResponsePacket.setClientHandler(packet -> {
             Minecraft.getInstance().execute(() -> {
-                boolean active = BuildingDebugClientState.isActive();
-                boolean hasPos = BuildingDebugClientState.getLastRequestedPos() != null;
-                if (active && hasPos) {
-                    BuildingDebugClientState.setCachedData(packet);
+                BuildingDebugClientState.setCachedData(packet);
+                if (Minecraft.getInstance().screen instanceof com.wsteam.wandscape.foundation.ui.component.MedievalScreen ms) {
+                    ms.setBuildingData(packet);
                 }
             });
         });

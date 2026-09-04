@@ -10,6 +10,7 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.UUID;
 
@@ -106,6 +107,13 @@ public record BuildingActionPacket(UUID buildingId, String action) implements Cu
                 }
             }
             default -> Log.warn(TAG, "Unknown action: {}", packet.action());
+        }
+
+        // Resend updated building snapshot to player so client UI updates immediately
+        var updatedState = sd.getBuilding(packet.buildingId());
+        if (updatedState != null) {
+            var updatedPkt = BuildingDebugRequestPacket.buildResponse(player.level(), updatedState);
+            PacketDistributor.sendToPlayer(player, updatedPkt);
         }
     }
 

@@ -70,6 +70,11 @@ public final class BuildingDebugClientState {
         }
     }
 
+    @Nullable
+    public static BuildingDebugResponsePacket getCachedData() {
+        return cachedData;
+    }
+
     public static void clearCachedData() {
         cachedData = null;
     }

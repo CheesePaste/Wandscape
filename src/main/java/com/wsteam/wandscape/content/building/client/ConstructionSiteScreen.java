@@ -81,6 +81,9 @@ public class ConstructionSiteScreen extends MedievalScreen {
         this.kind = packet.kind();
         setCreator(packet.creator());
         setTitleBar(I18n.name("building.wandscape." + buildingTypeId, buildingName));
+        if (kind != ConstructionSiteDataPacket.KIND_ROAD) {
+            setBuildingContext(packet.buildingId(), null);
+        }
         if (list != null) {
             list.setItems(materials);
         }
@@ -88,6 +91,7 @@ public class ConstructionSiteScreen extends MedievalScreen {
 
     @Override
     protected void init() {
+        setActionButtonsOffset(PW - 16 - 92, PH - 20);
         super.init();
         int contentX = leftPos + 8;
         int listY = topPos + headerHeight + TIME_STRIP_H + 2;
@@ -123,9 +127,9 @@ public class ConstructionSiteScreen extends MedievalScreen {
         list.setItems(materials);
         addRenderableWidget(list);
 
-        // Withdraw button — only for under-construction sites (already-completed ones
-        // show nothing and can't be withdrawn). Bottom-right, clear of the creator label.
-        if (!completed) {
+        // Withdraw button — road construction sites keep dedicated withdraw button;
+        // buildings use MedievalScreen's unified cancel/demolish buttons.
+        if (!completed && kind == ConstructionSiteDataPacket.KIND_ROAD) {
             int btnW = 80, btnH = 18;
             int btnX = leftPos + PW - 8 - btnW;
             int btnY = topPos + PH - CREATOR_FOOTER_H + 2;

@@ -63,11 +63,13 @@ public class WorkstationScreen extends MedievalScreen {
         this.showCloseButton = true;
         this.showHelpButton = true;
         this.helpDocumentPath = "workstation_guide";
+        this.isBuildingScreen = true;
     }
 
     public void updateData(WorkstationDataPacket packet) {
         this.stationPos = packet.stationPos();
         setCreator(packet.creator());
+        setBuildingContext(null, packet.stationPos());
         this.decomposableItems = packet.decomposableEntries();
         this.synthesizeRecipes = packet.synthesizeEntries();
         // Re-apply the current search filter to the refreshed data
@@ -255,8 +257,8 @@ public class WorkstationScreen extends MedievalScreen {
         applySearch(searchInput.getValue());
 
         // ── Right panel: Task Queue ──
-        // Shorter panel: header + 4px top + 4px bottom = 8px total vertical padding (was 12px)
-        int queuePh = PH - headerHeight - 8;
+        // Shorter panel: leaves footer space for action buttons
+        int queuePh = PH - headerHeight - 8 - 24;
         int queueX = leftPos + LEFT_PW + 4;
         int queueY = topPos + headerHeight + 4;
         taskQueuePanel = new TaskQueuePanel(queueX, queueY, QUEUE_PW, queuePh);

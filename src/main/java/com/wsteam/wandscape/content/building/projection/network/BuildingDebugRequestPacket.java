@@ -4,6 +4,7 @@ import com.wsteam.wandscape.content.task.component.Position;
 import com.wsteam.wandscape.content.building.internal.BuildCompleteListener;
 import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.content.building.internal.BuildingSavedData;
+import com.wsteam.wandscape.content.building.internal.BuildingState;
 import com.wsteam.wandscape.content.building.internal.ShopStockManager;
 import com.wsteam.wandscape.content.building.data.WorkItem;
 import com.wsteam.wandscape.foundation.log.Log;
@@ -50,6 +51,14 @@ public record BuildingDebugRequestPacket(BlockPos pos) implements CustomPacketPa
             return;
         }
 
+        var response = buildResponse(player.level(), state);
+        net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player, response);
+
+        Log.info(TAG, "[Debug] Sent debug data for '{}' at {} to {}",
+                state.getBuildingTypeId(), packet.pos(), player.getGameProfile().getName());
+    }
+
+    public static BuildingDebugResponsePacket buildResponse(net.minecraft.world.level.Level level, BuildingState state) {
         int comfort = state.getComfort();
         int magic = state.getMagic();
         int wonder = state.getWonder();
@@ -73,10 +82,10 @@ public record BuildingDebugRequestPacket(BlockPos pos) implements CustomPacketPa
         // Whether the building has any damaged pattern blocks (minor < 1/3 or broken
         // >= 1/3) — drives the client-side Repair button availability.
         boolean needsRepair = config != null && !BuildCompleteListener
-                .findDamagedBlocks(player.level(), state.getAnchor(), config, state.getRotationSteps())
+                .findDamagedBlocks(level, state.getAnchor(), config, state.getRotationSteps())
                 .isEmpty();
 
-        var response = new BuildingDebugResponsePacket(
+        return new BuildingDebugResponsePacket(
                 state.getBuildingId(), typeId, displayName, state.getCategory(),
                 state.getColonyId(), state.getAnchor(),
                 state.isStructureIntact(), needsRepair,
@@ -85,10 +94,6 @@ public record BuildingDebugRequestPacket(BlockPos pos) implements CustomPacketPa
                 comfort, magic, wonder,
                 queueSnapshot, state.getCurrentTaskId()
         );
-        net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player, response);
-
-        Log.info(TAG, "[Debug] Sent debug data for '{}' at {} to {}",
-                state.getBuildingTypeId(), packet.pos(), player.getGameProfile().getName());
     }
 
     static void write(RegistryFriendlyByteBuf buf, BuildingDebugRequestPacket pkt) {

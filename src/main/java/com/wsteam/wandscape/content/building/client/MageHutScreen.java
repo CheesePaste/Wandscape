@@ -102,6 +102,7 @@ public class MageHutScreen extends MedievalScreen {
         this.equip = packet.equipBonus() != null && packet.equipBonus().length >= NpcAttributes.ORDER.size() ? packet.equipBonus() : new float[NpcAttributes.ORDER.size()];
         this.candidates = packet.candidates() != null ? packet.candidates() : List.of();
         setCreator(packet.creator());
+        setBuildingContext(null, packet.buildingPos());
 
         if (selectedTrain >= NpcAttributes.ORDER.size()) selectedTrain = 0;
         if (selectedCandidate >= candidates.size()) selectedCandidate = Math.max(0, candidates.size() - 1);
@@ -151,6 +152,7 @@ public class MageHutScreen extends MedievalScreen {
 
     @Override
     protected void init() {
+        setActionButtonsOffset(PW - 198, PH - 20);
         super.init();
         rebuildPreviewNpc();
 

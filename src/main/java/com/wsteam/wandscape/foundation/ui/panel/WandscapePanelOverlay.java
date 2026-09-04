@@ -100,17 +100,11 @@ public final class WandscapePanelOverlay {
     // ═══════════════════════════════════════════════════════════════
 
     private static void renderFills(GuiGraphics g, Font font, int screenW, int screenH, double mx, double my) {
-        // 建筑信息顶栏仅在俯瞰(OVERVIEW)模式显示——操作型子模式下不弹、也不隐藏殖民地带
-        boolean lookingAtBuilding = BuildingDebugClientState.getDisplayData() != null
-                && WandscapePanelState.isInspectContext();
-
         // 1. Top bar background
-        if (!lookingAtBuilding) {
-            UUID cid = WandscapePanelState.getColonyId();
-            if (cid != null) {
-                g.fill(RenderType.guiOverlay(), 0, 0, screenW, TOP_BAR_H, 0, BAR_BG);
-                g.fill(RenderType.guiOverlay(), 0, TOP_BAR_H - 1, screenW, TOP_BAR_H, 0, 0xFFC8A040);
-            }
+        UUID cid = WandscapePanelState.getColonyId();
+        if (cid != null) {
+            g.fill(RenderType.guiOverlay(), 0, 0, screenW, TOP_BAR_H, 0, BAR_BG);
+            g.fill(RenderType.guiOverlay(), 0, TOP_BAR_H - 1, screenW, TOP_BAR_H, 0, 0xFFC8A040);
         }
 
         // 2. Sidebar
@@ -160,15 +154,9 @@ public final class WandscapePanelOverlay {
     // ═══════════════════════════════════════════════════════════════
 
     private static void renderTexts(GuiGraphics g, Font font, int screenW, int screenH, double mx, double my) {
-        // 与 renderFills 同口径：非俯瞰模式不视为「看着建筑」，殖民地带照常显示
-        boolean lookingAtBuilding = BuildingDebugClientState.getDisplayData() != null
-                && WandscapePanelState.isInspectContext();
-
-        if (!lookingAtBuilding) {
-            UUID cid = WandscapePanelState.getColonyId();
-            if (cid != null) {
-                renderTopBar(g, font, screenW, mx, my);
-            }
+        UUID cid = WandscapePanelState.getColonyId();
+        if (cid != null) {
+            renderTopBar(g, font, screenW, mx, my);
         }
 
         // First-time guidance

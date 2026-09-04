@@ -47,6 +47,7 @@ public class BuildingInfoScreen extends MedievalScreen {
         this.energyRestore = packet.energyRestore();
         this.interactionDurationTicks = packet.interactionDurationTicks();
         setCreator(packet.creator());
+        setBuildingContext(null, packet.pos());
     }
 
     @Override

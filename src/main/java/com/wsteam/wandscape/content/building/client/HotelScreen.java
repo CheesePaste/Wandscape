@@ -34,6 +34,7 @@ public class HotelScreen extends MedievalScreen {
         this.maxOccupancy = maxOccupancy;
         this.currentOccupancy = currentOccupancy;
         this.guestNames = guestNames;
+        setBuildingContext(buildingId, buildingPos);
     }
 
     @Override

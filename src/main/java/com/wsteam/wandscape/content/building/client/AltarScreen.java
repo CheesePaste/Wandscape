@@ -46,10 +46,12 @@ public class AltarScreen extends MedievalScreen {
         this.buildingId = buildingId;
         setCreator(creator);
         this.spells = List.copyOf(spells);
+        setBuildingContext(buildingId, buildingPos);
     }
 
     @Override
     protected void init() {
+        setActionButtonsOffset(PW - 106 - 92, PH - 22);
         super.init();
         addRenderableWidget(new MedievalButton(
                 leftPos + PW - 106, topPos + PH - 22, 46, 16,
