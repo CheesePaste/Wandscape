@@ -75,10 +75,16 @@ public class NpcScreen extends AbstractContainerScreen<NpcMenu> implements Repla
     private String lastServerName = "";
     private MedievalButton peaceButton;
     private MedievalButton followButton;
+    private boolean pickupItems = false;
+    private boolean autoPickupItems = false;
+    private MedievalButton pickupButton;
+    private MedievalButton autoPickupButton;
     private final MedievalConfirmDialog confirmDialog = new MedievalConfirmDialog();
     /** 法师 3D 缩略图左上角的 Curios 饰品按钮（仅 Curios 加载时创建）；模型底会在 widget 之后绘制，
      *  故不加入 renderable widget 列表，由 render 手动绘制、mouseClicked 手动处理。 */
     private NpcCuriosButton curiosButton;
+    /** 法师 3D 缩略图左上角的背包按钮，点击打开法师背包。 */
+    private NpcInventoryButton inventoryButton;
 
     public NpcScreen(NpcMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
@@ -106,6 +112,8 @@ public class NpcScreen extends AbstractContainerScreen<NpcMenu> implements Repla
         this.hatColor = packet.hatColor();
         this.peaceMode = packet.peaceMode();
         this.followMode = packet.followMode();
+        this.pickupItems = packet.pickupItems();
+        this.autoPickupItems = packet.autoPickupItems();
         refreshToggleButtons();
         rebuildDisplayNpc();
         this.lastServerName = packet.npcName();
@@ -158,6 +166,14 @@ public class NpcScreen extends AbstractContainerScreen<NpcMenu> implements Repla
             });
         }
 
+        // 背包按钮：模型框左上角（若有饰品按钮则并排位于其右侧，无饰品按钮则居首），点击打开法师背包
+        int invBtnX = modelX + (CuriosCompat.isLoaded() ? 18 : 6);
+        inventoryButton = new NpcInventoryButton(invBtnX, modelY + 6, () -> {
+            if (entityId >= 0) {
+                PacketDistributor.sendToServer(new NpcOpenInventoryPacket(entityId));
+            }
+        });
+
         // 名字框（header 内）
         int boxH = font.lineHeight + 2;
         nameBox = new EditBox(font, leftPos + 10, topPos + (HEADER_H - boxH) / 2,
@@ -203,6 +219,29 @@ public class NpcScreen extends AbstractContainerScreen<NpcMenu> implements Repla
         addRenderableWidget(new MedievalButton(bx + 238, btnY, 42, 16,
                 I18n.name("gui.wandscape.common.close", "Close"),
                 this::onClose));
+
+        // 右侧掉落物设置区域按钮（位于玩家背包右侧）
+        int dropBoxX = leftPos + 176;
+        pickupButton = new MedievalButton(dropBoxX + 4, topPos + 166, 108, 16,
+                pickupLabel(), () -> {
+            pickupItems = !pickupItems;
+            if (!pickupItems) {
+                autoPickupItems = false;
+            }
+            refreshToggleButtons();
+            PacketDistributor.sendToServer(new NpcTogglePacket(entityId, NpcTogglePacket.FLAG_PICKUP, pickupItems));
+        });
+        autoPickupButton = new MedievalButton(dropBoxX + 4, topPos + 190, 108, 16,
+                autoPickupLabel(), () -> {
+            autoPickupItems = !autoPickupItems;
+            if (autoPickupItems) {
+                pickupItems = true;
+            }
+            refreshToggleButtons();
+            PacketDistributor.sendToServer(new NpcTogglePacket(entityId, NpcTogglePacket.FLAG_AUTO_PICKUP, autoPickupItems));
+        });
+        addRenderableWidget(pickupButton);
+        addRenderableWidget(autoPickupButton);
     }
 
     private Component peaceLabel() {
@@ -215,9 +254,21 @@ public class NpcScreen extends AbstractContainerScreen<NpcMenu> implements Repla
                 followMode ? "Cancel Follow" : "Follow");
     }
 
+    private Component pickupLabel() {
+        return I18n.name(pickupItems ? "gui.wandscape.npc.pickup_on" : "gui.wandscape.npc.pickup_off",
+                pickupItems ? "Pickup: ON" : "Pickup: OFF");
+    }
+
+    private Component autoPickupLabel() {
+        return I18n.name(autoPickupItems ? "gui.wandscape.npc.auto_pickup_on" : "gui.wandscape.npc.auto_pickup_off",
+                autoPickupItems ? "Auto Pickup: ON" : "Auto Pickup: OFF");
+    }
+
     private void refreshToggleButtons() {
         if (peaceButton != null) peaceButton.setMessage(peaceLabel());
         if (followButton != null) followButton.setMessage(followLabel());
+        if (pickupButton != null) pickupButton.setMessage(pickupLabel());
+        if (autoPickupButton != null) autoPickupButton.setMessage(autoPickupLabel());
     }
 
     private void onNameChanged(String newName) {
@@ -262,6 +313,10 @@ public class NpcScreen extends AbstractContainerScreen<NpcMenu> implements Repla
         if (curiosButton != null && CuriosCompat.isLoaded()) {
             curiosButton.render(g, mouseX, mouseY, partialTick);
         }
+        // 背包按钮同样绘制在模型之上
+        if (inventoryButton != null) {
+            inventoryButton.render(g, mouseX, mouseY, partialTick);
+        }
         // 与仓库一致：原版 render 不画 tooltip，需显式调用（悬停物品显示介绍）
         if (!confirmDialog.isOpen()) {
             renderTooltip(g, mouseX, mouseY);
@@ -269,6 +324,21 @@ public class NpcScreen extends AbstractContainerScreen<NpcMenu> implements Repla
         // Curios 按钮悬停提示（置于物品 tooltip 之后保证浮在最上）
         if (curiosButton != null && CuriosCompat.isLoaded() && curiosButton.isHovered()) {
             g.renderTooltip(font, I18n.name("gui.wandscape.curios.open", "Trinkets"),
+                    mouseX, mouseY);
+        }
+        // 背包按钮悬停提示
+        if (inventoryButton != null && inventoryButton.isHovered()) {
+            g.renderTooltip(font, I18n.name("gui.wandscape.npc.inventory", "Inventory"),
+                    mouseX, mouseY);
+        }
+        // 拾取按钮悬停提示
+        if (pickupButton != null && pickupButton.isHovered()) {
+            g.renderTooltip(font, I18n.name("gui.wandscape.npc.pickup_tooltip", "开启后，法师能像玩家一样拾取周围掉落物"),
+                    mouseX, mouseY);
+        }
+        // 自动拾取按钮悬停提示
+        if (autoPickupButton != null && autoPickupButton.isHovered()) {
+            g.renderTooltip(font, I18n.name("gui.wandscape.npc.auto_pickup_tooltip", "开启后，空闲且安全时法师会自动走向并拾取周围掉落物"),
                     mouseX, mouseY);
         }
         // 确认框置于最顶层
@@ -284,9 +354,21 @@ public class NpcScreen extends AbstractContainerScreen<NpcMenu> implements Repla
         drawGlowBorder(g, leftPos, topPos, imageWidth, imageHeight, MedievalColors.BORDER_GOLD);
         renderHeader(g, mouseX, mouseY);
         renderInventoryBackground(g);
+        renderPickupSettingsBackground(g);
         // 分隔线（装备区与背包之间）
         g.fill(leftPos + 8, topPos + 143, leftPos + imageWidth - 8, topPos + 144,
                 MedievalColors.BORDER_GOLD_DARK);
+    }
+
+    private void renderPickupSettingsBackground(GuiGraphics g) {
+        int dropBoxX = leftPos + 176;
+        int dropBoxY = topPos + NpcMenu.PLAYER_INV_Y;
+        int dropBoxW = 116;
+        int dropBoxH = 76;
+        g.fill(dropBoxX, dropBoxY, dropBoxX + dropBoxW, dropBoxY + dropBoxH, MedievalColors.PARCHMENT_DEEPEST);
+        drawGlowBorder(g, dropBoxX, dropBoxY, dropBoxW, dropBoxH, MedievalColors.BORDER_GOLD_DARK);
+        g.drawCenteredString(font, I18n.name("gui.wandscape.npc.pickup_settings", "掉落物"),
+                dropBoxX + dropBoxW / 2, dropBoxY + 5, MedievalColors.ACCENT_GOLD);
     }
 
     private void renderHeader(GuiGraphics g, int mouseX, int mouseY) {
@@ -391,6 +473,11 @@ public class NpcScreen extends AbstractContainerScreen<NpcMenu> implements Repla
         // Curios 饰品按钮（点击发 NpcOpenCuriosPacket 打开法师饰品栏）
         if (curiosButton != null && CuriosCompat.isLoaded()
                 && curiosButton.mouseClicked(mouseX, mouseY, button)) {
+            return true;
+        }
+        // 背包按钮（点击发 NpcOpenInventoryPacket 打开法师背包）
+        if (inventoryButton != null
+                && inventoryButton.mouseClicked(mouseX, mouseY, button)) {
             return true;
         }
         if (button == 0 && isInRect(mouseX, mouseY, closeBtnX, closeBtnY, CLOSE_W, CLOSE_H)) {

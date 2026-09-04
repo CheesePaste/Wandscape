@@ -49,7 +49,9 @@ public record NpcDataPacket(
         boolean followMode,
         Map<String, String> magicCatalog,
         int ironSpellSlots,
-        int goetyFocusSlots
+        int goetyFocusSlots,
+        boolean pickupItems,
+        boolean autoPickupItems
 ) implements CustomPacketPayload {
 
     public static final Type<NpcDataPacket> TYPE =
@@ -108,6 +110,8 @@ public record NpcDataPacket(
         buf.writeMap(pkt.magicCatalog, (b, s) -> b.writeUtf(s), (b, s) -> b.writeUtf(s));
         buf.writeVarInt(pkt.ironSpellSlots);
         buf.writeVarInt(pkt.goetyFocusSlots);
+        buf.writeBoolean(pkt.pickupItems);
+        buf.writeBoolean(pkt.autoPickupItems);
     }
 
     private static void writeStringList(RegistryFriendlyByteBuf buf, List<String> list) {
@@ -147,11 +151,14 @@ public record NpcDataPacket(
         Map<String, String> magicCatalog = buf.readMap(HashMap::new, b -> b.readUtf(), b -> b.readUtf());
         int ironSpellSlots = buf.readVarInt();
         int goetyFocusSlots = buf.readVarInt();
+        boolean pickupItems = buf.readBoolean();
+        boolean autoPickupItems = buf.readBoolean();
         return new NpcDataPacket(entityId, npcName, currentHealth, maxHealth,
                 currentMana, maxMana, moveSpeed, spellPower, workSpeed, spellSpeed,
                 armorValue, wandStack, isDefaultWand, strategyPreset, knownSpells,
                 spellCategories, priority, armorStacks, skinVariant, hatColor,
-                peaceMode, followMode, magicCatalog, ironSpellSlots, goetyFocusSlots);
+                peaceMode, followMode, magicCatalog, ironSpellSlots, goetyFocusSlots,
+                pickupItems, autoPickupItems);
     }
 
     private static List<String> readStringList(RegistryFriendlyByteBuf buf) {
@@ -245,7 +252,9 @@ public record NpcDataPacket(
                 npc.isFollowMode(),
                 magicCatalog,
                 ironSpellSlots,
-                goetyFocusSlots
+                goetyFocusSlots,
+                npc.isPickupItems(),
+                npc.isAutoPickupItems()
         );
     }
 }

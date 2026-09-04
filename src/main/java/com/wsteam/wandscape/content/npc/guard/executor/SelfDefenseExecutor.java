@@ -196,7 +196,7 @@ public final class SelfDefenseExecutor implements OpExecutor<AtomicOp.SelfDefens
     /** 半径内最近可见存活敌对目标（球面距离 + LOS）；无则 null。中立生物须已发怒才算。
      *  友军（含己方/同殖民地召唤物、同殖民地游客）不索敌——否则 NPC 会锁定自己召唤的亡灵随从。 */
     @Nullable
-    private static LivingEntity nearestVisibleEnemyAround(WandscapeNpc npc, ServerLevel level, double radius) {
+    public static LivingEntity nearestVisibleEnemyAround(WandscapeNpc npc, ServerLevel level, double radius) {
         LivingEntity nearest = null;
         double bestSq = radius * radius;
         Vec3 pos = npc.position();
