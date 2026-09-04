@@ -18,6 +18,7 @@
 | [checklists.md](checklists.md) | 迁移与重构活清单（NeoForge 适配、重构阶梯、PR 守则） | 版本迁移、大重构、发版或提交 PR 时 |
 | [fabric-port-survey.md](fabric-port-survey.md) | **Fabric 1.21.1 官方移植考察报告**：规模/耦合量、六条平台接缝、事件映射表、难度分级、仓库结构选择面 | 评估双 loader 官方版可行性或规划长期仓库演进时 |
 | [neoforge-26-upgrade-survey.md](neoforge-26-upgrade-survey.md) | **NeoForge 26.1 升级考察报告**：版本线/工具链变化、全库契约改名与深水重写分区、分项难度表、与 fabric 移植横评 | 评估升级到 Minecraft 26.1 / NeoForge 26.1 的体量与难易，规划升级顺序时 |
+| [multiplayer-isolation-survey.md](multiplayer-isolation-survey.md) | **多人生存隔离现状评估与权限组系统演进方案**：玩家隔离代码事实、安全隐患漏洞盘点、角色权限矩阵架构与工作量拆解 | 规划多人生存联机功能、修复服务器交互漏洞、设计殖民地权限组前 |
 
 ---
 
