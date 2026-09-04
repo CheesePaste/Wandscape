@@ -53,6 +53,7 @@ public class NodeScreen extends MedievalScreen {
         this.showCloseButton = true;
         this.showHelpButton = true;
         this.helpDocumentPath = "node_guide";
+        this.isBuildingScreen = true;
     }
 
     public void updateData(NodeDataPacket packet) {
@@ -61,6 +62,7 @@ public class NodeScreen extends MedievalScreen {
         this.amountPerHarvest = packet.amountPerHarvest();
         this.channelTicks = packet.channelTicks();
         setCreator(packet.creator());
+        setBuildingContext(null, packet.nodePos());
         setTitleBar(com.wsteam.wandscape.foundation.ui.I18n.name(
                 "building.wandscape." + packet.buildingTypeId(), packet.buildingTypeId()));
         if (slider != null) {
@@ -142,7 +144,7 @@ public class NodeScreen extends MedievalScreen {
         addRenderableWidget(submitBtn);
 
         // ── Right panel: Task Queue (cancel / reorder gather tasks) ──
-        int queuePh = PH - headerHeight - 8;
+        int queuePh = PH - headerHeight - 8 - 24;
         int queueX = leftPos + LEFT_PW + 4;
         int queueY = topPos + headerHeight + 4;
         taskQueuePanel = new TaskQueuePanel(queueX, queueY, QUEUE_PW, queuePh);

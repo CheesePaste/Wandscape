@@ -66,6 +66,7 @@ public class TownHallScreen extends MedievalScreen {
         this.namingStyle = ordinalToStyle(namingStyleOrdinal);
         this.touristSpawning = touristSpawning;
         setCreator(creator);
+        setBuildingContext(null, buildingPos);
     }
 
     private static NameStyle ordinalToStyle(int ordinal) {
@@ -75,6 +76,7 @@ public class TownHallScreen extends MedievalScreen {
 
     @Override
     protected void init() {
+        setActionButtonsOffset(PW - 14 - 92, PH - 20);
         super.init();
 
         int cx = leftPos + PW / 2;

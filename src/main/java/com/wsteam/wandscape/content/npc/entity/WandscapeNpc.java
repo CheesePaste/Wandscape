@@ -53,6 +53,7 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.*;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.animal.IronGolem;
 import net.minecraft.world.entity.animal.SnowGolem;
 import net.minecraft.world.entity.ai.attributes.Attribute;
@@ -888,6 +889,105 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
         this.followerUuid = uuid;
     }
 
+    @Nullable
+    public Player getFollowerPlayer() {
+        if (followerUuid == null) return null;
+        if (!(level() instanceof ServerLevel serverLevel)) return null;
+        Entity e = serverLevel.getEntity(followerUuid);
+        return (e instanceof Player p && p.isAlive() && !p.isRemoved()) ? p : null;
+    }
+
+    // ============================================================
+    // 掉落物拾取模式（玩家在 NPC 面板右侧切换，NBT 持久化）
+    // ============================================================
+
+    /** 是否拾取周围掉落物（像玩家一样触摸拾取，范围与逻辑照搬玩家）。 */
+    private boolean pickupItems = false;
+
+    /** 是否自动拾取周围掉落物（空闲且安全时自动走向掉落物拾取）。 */
+    private boolean autoPickupItems = false;
+
+    public boolean isPickupItems() {
+        return pickupItems;
+    }
+
+    public void setPickupItems(boolean value) {
+        this.pickupItems = value;
+    }
+
+    public boolean isAutoPickupItems() {
+        return autoPickupItems;
+    }
+
+    public void setAutoPickupItems(boolean value) {
+        this.autoPickupItems = value;
+    }
+
+    /** 背包是否能容纳该掉落物（有空槽或有同类型可堆叠槽未满）。 */
+    public boolean canPickupItem(ItemStack stack) {
+        if (stack.isEmpty()) return false;
+        return this.inventory.canAddItem(stack);
+    }
+
+    /**
+     * 像玩家一样拾取周围掉落物：
+     * 范围、延迟与堆叠逻辑完全照搬玩家，捡起后放入 NPC 背包并播放拾取音效与动画。
+     */
+    private void tickItemPickup() {
+        if (!isAlive()) return;
+        List<ItemEntity> items = level().getEntitiesOfClass(
+                ItemEntity.class,
+                getBoundingBox().inflate(1.0, 0.5, 1.0),
+                EntitySelector.ENTITY_STILL_ALIVE
+        );
+        for (ItemEntity item : items) {
+            if (item.isRemoved() || item.hasPickUpDelay()) continue;
+            UUID target = item.getTarget();
+            if (target != null && !target.equals(getUUID())) continue;
+
+            ItemStack stack = item.getItem();
+            if (stack.isEmpty() || !canPickupItem(stack)) continue;
+
+            int originalCount = stack.getCount();
+            ItemStack remainder = this.inventory.addItem(stack.copy());
+            int taken = originalCount - remainder.getCount();
+            if (taken > 0) {
+                this.take(item, taken);
+                level().playSound(null, getX(), getY(), getZ(),
+                        net.minecraft.sounds.SoundEvents.ITEM_PICKUP,
+                        net.minecraft.sounds.SoundSource.PLAYERS,
+                        0.2F, (random.nextFloat() - random.nextFloat()) * 0.2F + 1.0F);
+                if (remainder.isEmpty()) {
+                    item.discard();
+                } else {
+                    item.setItem(remainder);
+                }
+            }
+        }
+    }
+
+    /**
+     * 当前是否有战斗威胁（强制敌对权杖、跟随攻击目标、被攻击仇恨目标、或自防御范围内的可见敌对生物）。
+     * 优先级高于自动拾取，让 NPC 优先战斗，战后再考虑捡东西。
+     */
+    public boolean hasCombatThreat() {
+        if (!(level() instanceof ServerLevel sl)) return false;
+        if (isPeaceMode()) {
+            return com.wsteam.wandscape.content.npc.guard.executor.SelfDefenseExecutor
+                    .nearestVisibleEnemyAround(this, sl,
+                            com.wsteam.wandscape.foundation.util.BalanceValues.guardFleeStartDist()) != null;
+        }
+        var scepterApi = WandscapeApis.getScepterApiSilently();
+        if (scepterApi != null && scepterApi.forcedHostile(sl, colonyId) != null) {
+            return true;
+        }
+        if (getFollowAttackTarget(sl) != null) return true;
+        if (getHatedAttacker(sl) != null) return true;
+        int defenseRange = com.wsteam.wandscape.foundation.util.BalanceValues.guardSelfDefenseRange();
+        return com.wsteam.wandscape.content.npc.guard.executor.SelfDefenseExecutor
+                .nearestVisibleEnemyAround(this, sl, defenseRange) != null;
+    }
+
     // ============================================================
     // 跟随战斗目标：跟随者玩家攻击的生物 → 本 NPC 获得仇恨并攻击（原版狼 OwnerHurtTarget 行为）。
     // 瞬态不持久化（与 hatedAttacker 同类战斗态）；目标死亡/过期/出追击范围后自然失效，回落
@@ -1050,6 +1150,15 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
                 setItemSlot(ARMOR_VANILLA_SLOTS[i], ItemStack.EMPTY);
             }
         }
+
+        // 3. 掉落背包物品（SimpleContainer）
+        for (int i = 0; i < inventory.getContainerSize(); i++) {
+            ItemStack item = inventory.getItem(i);
+            if (!item.isEmpty()) {
+                spawnAtLocation(item.copy());
+                inventory.setItem(i, ItemStack.EMPTY);
+            }
+        }
     }
 
     /**
@@ -1124,6 +1233,8 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
         this.goalSelector.addGoal(2, new RestGoal());
         // Priority 2: 跟随模式——目标玩家距离 >5 格时走向玩家（休息/被 ECS 任务/施法接管时让路）
         this.goalSelector.addGoal(2, new FollowPlayerGoal());
+        // Priority 3: 自动拾取掉落物（空闲时走向掉落物拾取，优先级低于跟随和自防御）
+        this.goalSelector.addGoal(3, new AutoPickupItemGoal());
         // Priority 5: wander around when idle (suppressed when MovementOps controls navigation
         // or the engine is busy / casting — casting no longer roots movement via tickCastingState)
         this.goalSelector.addGoal(5, new RandomStrollGoal(this, 0.6) {
@@ -1168,6 +1279,11 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
     public void tick() {
         super.tick();
         if (level().isClientSide) return;
+
+        // 像玩家一样拾取周围掉落物（范围与逻辑照搬玩家）
+        if (pickupItems) {
+            tickItemPickup();
+        }
 
         // 传送引导：定身（法阵展开期间不跑不躲，靠 SelfDefenseHandler 的减伤 75% 硬吃）
         if (isTeleportChanneling(level().getGameTime())) {
@@ -1671,6 +1787,8 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
         tag.putBoolean("hasDefaultWand", hasDefaultWand);
         tag.putBoolean("PeaceMode", peaceMode);
         tag.putBoolean("FollowMode", followMode);
+        tag.putBoolean("PickupItems", pickupItems);
+        tag.putBoolean("AutoPickupItems", autoPickupItems);
         if (followerUuid != null) {
             tag.putUUID("FollowerUuid", followerUuid);
         }
@@ -1702,7 +1820,7 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
         if (homeHutId != null) {
             tag.putUUID("homeHutId", homeHutId);
         }
-        // NpcInventory save deferred to stage 3+ (wand contents)
+        tag.put("Inventory", this.inventory.createTag(registryAccess()));
     }
 
     @Override
@@ -1750,6 +1868,12 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
         hasDefaultWand = tag.getBoolean("hasDefaultWand");
         peaceMode = tag.getBoolean("PeaceMode");
         followMode = tag.getBoolean("FollowMode");
+        if (tag.contains("PickupItems")) {
+            pickupItems = tag.getBoolean("PickupItems");
+        }
+        if (tag.contains("AutoPickupItems")) {
+            autoPickupItems = tag.getBoolean("AutoPickupItems");
+        }
         if (tag.hasUUID("FollowerUuid")) {
             followerUuid = tag.getUUID("FollowerUuid");
         } else {
@@ -1816,6 +1940,9 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
         }
         if (tag.hasUUID("homeHutId")) {
             homeHutId = tag.getUUID("homeHutId");
+        }
+        if (tag.contains("Inventory", Tag.TAG_LIST)) {
+            this.inventory.fromTag(tag.getList("Inventory", Tag.TAG_COMPOUND), registryAccess());
         }
     }
 
@@ -1971,10 +2098,7 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
 
         @Nullable
         private Player follower() {
-            if (followerUuid == null) return null;
-            if (!(level() instanceof ServerLevel serverLevel)) return null;
-            Entity e = serverLevel.getEntity(followerUuid);
-            return (e instanceof Player p && p.isAlive() && !p.isRemoved()) ? p : null;
+            return getFollowerPlayer();
         }
 
         /** ECS 任务/施法/手动引导/休息接管时让路，跟随不抢导航。
@@ -2016,6 +2140,167 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
             if (!suppressWandering && !isCasting()) {
                 getNavigation().stop();
             }
+        }
+    }
+
+    // ============================================================
+    // 自动拾取掉落物目标：
+    // 当处于空闲状态且周围（默认 16 格）有可拾取掉落物时，走到掉落物位置拾取。
+    // 优先级低于自防御（优先战斗，战斗完才捡东西）。
+    // ============================================================
+
+    public static final double AUTO_PICKUP_RANGE = 16.0;
+
+    private class AutoPickupItemGoal extends Goal {
+        private static final int SEARCH_INTERVAL_TICKS = 10;
+        private static final int STUCK_LIMIT_TICKS = 100;
+
+        @Nullable
+        private ItemEntity targetItem = null;
+        private int repathCooldown = 0;
+        private int searchCooldown = 0;
+        private int stuckTicks = 0;
+        private Vec3 lastPos = Vec3.ZERO;
+        private final Map<UUID, Long> unreachableCooldowns = new HashMap<>();
+
+        AutoPickupItemGoal() {
+            setFlags(EnumSet.of(Goal.Flag.MOVE));
+        }
+
+        private boolean isBusyOrThreatened() {
+            return !isEngineIdle() || suppressWandering || isCasting() || manualCastTicks > 0
+                    || resting || hasCombatThreat();
+        }
+
+        @Override
+        public boolean canUse() {
+            if (!autoPickupItems || !pickupItems || isBusyOrThreatened()) {
+                return false;
+            }
+            if (--searchCooldown > 0) return false;
+            searchCooldown = SEARCH_INTERVAL_TICKS;
+
+            if (followMode) {
+                Player player = getFollowerPlayer();
+                if (player != null && distanceToSqr(player) > FOLLOW_START_DIST_SQ) {
+                    return false;
+                }
+            }
+
+            cleanCooldowns();
+            targetItem = findNearestValidItem();
+            return targetItem != null;
+        }
+
+        @Override
+        public boolean canContinueToUse() {
+            if (!autoPickupItems || !pickupItems || isBusyOrThreatened()) {
+                return false;
+            }
+            if (followMode) {
+                Player player = getFollowerPlayer();
+                if (player != null && distanceToSqr(player) > FOLLOW_START_DIST_SQ) {
+                    return false;
+                }
+            }
+            return targetItem != null && !targetItem.isRemoved() && targetItem.isAlive()
+                    && canPickupItem(targetItem.getItem())
+                    && distanceToSqr(targetItem) <= AUTO_PICKUP_RANGE * AUTO_PICKUP_RANGE;
+        }
+
+        @Override
+        public void start() {
+            repathCooldown = 0;
+            stuckTicks = 0;
+            lastPos = position();
+            if (targetItem != null) {
+                getNavigation().moveTo(targetItem, 1.0);
+            }
+        }
+
+        @Override
+        public void tick() {
+            if (targetItem == null || targetItem.isRemoved() || !targetItem.isAlive()
+                    || !canPickupItem(targetItem.getItem())) {
+                targetItem = findNearestValidItem();
+                stuckTicks = 0;
+                if (targetItem == null) {
+                    getNavigation().stop();
+                    return;
+                }
+            }
+
+            getLookControl().setLookAt(targetItem, 30.0f, 30.0f);
+
+            if (getNavigation().isDone() || --repathCooldown <= 0) {
+                getNavigation().moveTo(targetItem, 1.0);
+                repathCooldown = 10;
+            }
+
+            if (position().distanceToSqr(lastPos) < 0.04) {
+                if (++stuckTicks >= STUCK_LIMIT_TICKS) {
+                    if (targetItem != null) {
+                        unreachableCooldowns.put(targetItem.getUUID(), level().getGameTime() + 100);
+                    }
+                    targetItem = null;
+                    stuckTicks = 0;
+                    getNavigation().stop();
+                }
+            } else {
+                stuckTicks = 0;
+                lastPos = position();
+            }
+        }
+
+        @Override
+        public void stop() {
+            targetItem = null;
+            stuckTicks = 0;
+            if (!suppressWandering && !isCasting()) {
+                getNavigation().stop();
+            }
+        }
+
+        @Nullable
+        private ItemEntity findNearestValidItem() {
+            if (!(level() instanceof ServerLevel sl)) return null;
+            List<ItemEntity> items = sl.getEntitiesOfClass(
+                    ItemEntity.class,
+                    getBoundingBox().inflate(AUTO_PICKUP_RANGE, 8.0, AUTO_PICKUP_RANGE),
+                    EntitySelector.ENTITY_STILL_ALIVE
+            );
+            long now = level().getGameTime();
+            ItemEntity nearest = null;
+            double nearestDistSq = Double.MAX_VALUE;
+
+            for (ItemEntity item : items) {
+                if (item.isRemoved() || item.hasPickUpDelay()) continue;
+                if (item.isInLava() || item.isOnFire()) continue;
+                UUID target = item.getTarget();
+                if (target != null && !target.equals(getUUID())) continue;
+
+                Long cd = unreachableCooldowns.get(item.getUUID());
+                if (cd != null && now < cd) continue;
+
+                if (!canPickupItem(item.getItem())) continue;
+
+                double dSq = distanceToSqr(item);
+                if (dSq <= AUTO_PICKUP_RANGE * AUTO_PICKUP_RANGE && dSq < nearestDistSq) {
+                    var path = getNavigation().createPath(item, 0);
+                    if (path == null || !path.canReach()) {
+                        unreachableCooldowns.put(item.getUUID(), now + 100);
+                        continue;
+                    }
+                    nearestDistSq = dSq;
+                    nearest = item;
+                }
+            }
+            return nearest;
+        }
+
+        private void cleanCooldowns() {
+            long now = level().getGameTime();
+            unreachableCooldowns.entrySet().removeIf(e -> e.getValue() < now);
         }
     }
 }

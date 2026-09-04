@@ -2,6 +2,7 @@ package com.wsteam.wandscape.api;
 
 import com.wsteam.wandscape.content.npc.data.NpcData;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.item.ItemStack;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -45,6 +46,32 @@ public interface NpcApi {
 
     /** 复活到调用方指定的确切位置（其余条件同 {@link #reviveNpc(UUID)}）。 */
     boolean reviveNpc(UUID npcId, BlockPos pos);
+
+    // ── NPC 背包（实体级 27 格 SimpleContainer）+ 拾取开关 ──
+
+    /** 读 NPC 背包全部槽位（含空槽 {@link ItemStack#EMPTY}，防御性拷贝；NPC 不存在/已移除返回空列表）。 */
+    List<ItemStack> getNpcInventory(UUID npcId);
+
+    /** NPC 背包槽数（默认 27；NPC 不存在返回 0）。 */
+    int getNpcInventorySize(UUID npcId);
+
+    /** 写指定槽位（index 0..size-1）；返回 true 当 NPC 存在且 index 合法。 */
+    boolean setNpcInventorySlot(UUID npcId, int index, ItemStack stack);
+
+    /** 向 NPC 背包追加一件物品（vanilla addItem 语义），返回未能放入的剩余（全放完为 {@link ItemStack#EMPTY}）。 */
+    ItemStack addToNpcInventory(UUID npcId, ItemStack stack);
+
+    /** 清空 NPC 背包全部槽位。 */
+    void clearNpcInventory(UUID npcId);
+
+    /** 是否开启「拾取」开关。 */
+    boolean isPickupEnabled(UUID npcId);
+    void setPickupEnabled(UUID npcId, boolean enabled);
+
+    /** 是否开启「自动拾取」开关。 */
+    boolean isAutoPickupEnabled(UUID npcId);
+    void setAutoPickupEnabled(UUID npcId, boolean enabled);
+
     // ── 可调平衡值（委托 BalanceValues；运行时生效，不追溯已生成实体）──
 
     int getGuardRange();

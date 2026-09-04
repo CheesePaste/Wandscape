@@ -22,6 +22,8 @@ public record NpcTogglePacket(int entityId, String flag, boolean enabled) implem
 
     public static final String FLAG_PEACE = "peace";
     public static final String FLAG_FOLLOW = "follow";
+    public static final String FLAG_PICKUP = "pickup";
+    public static final String FLAG_AUTO_PICKUP = "auto_pickup";
 
     public static final Type<NpcTogglePacket> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath(MODID, "npc_toggle"));
@@ -77,6 +79,24 @@ public record NpcTogglePacket(int entityId, String flag, boolean enabled) implem
                 } else {
                     npc.setFollowMode(false);
                     npc.setFollowerUuid(null);
+                }
+            }
+            case FLAG_PICKUP -> {
+                var npcApi = com.wsteam.wandscape.api.WandscapeApis.getNpcApiSilently();
+                if (npcApi != null) {
+                    npcApi.setPickupEnabled(npc.getUUID(), enabled);
+                } else {
+                    npc.setPickupItems(enabled);
+                    if (!enabled) npc.setAutoPickupItems(false);
+                }
+            }
+            case FLAG_AUTO_PICKUP -> {
+                var npcApi = com.wsteam.wandscape.api.WandscapeApis.getNpcApiSilently();
+                if (npcApi != null) {
+                    npcApi.setAutoPickupEnabled(npc.getUUID(), enabled);
+                } else {
+                    npc.setAutoPickupItems(enabled);
+                    if (enabled) npc.setPickupItems(true);
                 }
             }
             default -> {

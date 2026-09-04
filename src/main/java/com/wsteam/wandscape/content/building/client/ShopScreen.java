@@ -54,6 +54,7 @@ public class ShopScreen extends MedievalScreen {
         this.colonyId = colonyId;
         this.buildingId = buildingId;
         setCreator(creator);
+        setBuildingContext(buildingId, buildingPos);
         this.stock = new LinkedHashMap<>(stock);
         this.maxStocks = new LinkedHashMap<>(maxStocks);
         this.itemIds = this.maxStocks.keySet().toArray(new String[0]);

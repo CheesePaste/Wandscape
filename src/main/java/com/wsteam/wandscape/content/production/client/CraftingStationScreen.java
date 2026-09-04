@@ -50,11 +50,13 @@ public class CraftingStationScreen extends MedievalScreen {
         this.showCloseButton = true;
         this.showHelpButton = true;
         this.helpDocumentPath = "crafting_guide";
+        this.isBuildingScreen = true;
     }
 
     public void updateData(CraftingStationPacket packet) {
         this.stationPos = packet.stationPos();
         setCreator(packet.creator());
+        setBuildingContext(null, packet.stationPos());
         this.recipes = packet.entries().stream().sorted((a, b)->{
             int levelA = a.unlockRequirement() != null ? a.unlockRequirement().minColonyLevel() : 0;
             int levelB = b.unlockRequirement() != null ? b.unlockRequirement().minColonyLevel() : 0;
@@ -213,9 +215,8 @@ public class CraftingStationScreen extends MedievalScreen {
 
         applySearch(searchInput.getValue());
 
-        // ── Right panel: Task Queue ──
-        // Shorter panel: header + 4px top + 4px bottom = 8px total vertical padding
-        int queuePh = PH - headerHeight - 8;
+        // Shorter panel: leaves footer space for action buttons
+        int queuePh = PH - headerHeight - 8 - 24;
         int queueX = leftPos + LEFT_PW + 4;
         int queueY = topPos + headerHeight + 4;
         taskQueuePanel = new TaskQueuePanel(queueX, queueY, QUEUE_PW, queuePh);

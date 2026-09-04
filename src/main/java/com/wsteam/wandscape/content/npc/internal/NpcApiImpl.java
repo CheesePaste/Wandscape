@@ -18,6 +18,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.MobSpawnType;
+import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
 import javax.annotation.Nullable;
@@ -225,6 +226,82 @@ public class NpcApiImpl implements NpcApi {
         return id == null ? "?" : id.toString().substring(0, 8);
     }
 
+    // ── NPC 背包（实体级 27 格 SimpleContainer）+ 拾取开关 ──
+
+    /** 取活体 WandscapeNpc 实体（不存在/已移除返回 null）。 */
+    @Nullable
+    private static WandscapeNpc npcEntity(UUID npcId) {
+        if (npcId == null) return null;
+        ServerLevel level = getServerLevel();
+        if (level == null) return null;
+        return level.getEntity(npcId) instanceof WandscapeNpc npc && !npc.isRemoved() ? npc : null;
+    }
+
+    @Override
+    public List<ItemStack> getNpcInventory(UUID npcId) {
+        WandscapeNpc npc = npcEntity(npcId);
+        if (npc == null) return List.of();
+        List<ItemStack> result = new ArrayList<>(npc.inventory.getContainerSize());
+        for (int i = 0; i < npc.inventory.getContainerSize(); i++) {
+            result.add(npc.inventory.getItem(i).copy());
+        }
+        return result;
+    }
+
+    @Override
+    public int getNpcInventorySize(UUID npcId) {
+        WandscapeNpc npc = npcEntity(npcId);
+        return npc != null ? npc.inventory.getContainerSize() : 0;
+    }
+
+    @Override
+    public boolean setNpcInventorySlot(UUID npcId, int index, ItemStack stack) {
+        WandscapeNpc npc = npcEntity(npcId);
+        if (npc == null || index < 0 || index >= npc.inventory.getContainerSize()) return false;
+        npc.inventory.setItem(index, stack == null ? ItemStack.EMPTY : stack.copy());
+        return true;
+    }
+
+    @Override
+    public ItemStack addToNpcInventory(UUID npcId, ItemStack stack) {
+        WandscapeNpc npc = npcEntity(npcId);
+        if (npc == null || stack == null || stack.isEmpty()) return ItemStack.EMPTY;
+        return npc.inventory.addItem(stack.copy());
+    }
+
+    @Override
+    public void clearNpcInventory(UUID npcId) {
+        WandscapeNpc npc = npcEntity(npcId);
+        if (npc != null) npc.inventory.clearContent();
+    }
+
+    @Override
+    public boolean isPickupEnabled(UUID npcId) {
+        WandscapeNpc npc = npcEntity(npcId);
+        return npc != null && npc.isPickupItems();
+    }
+
+    @Override
+    public void setPickupEnabled(UUID npcId, boolean enabled) {
+        WandscapeNpc npc = npcEntity(npcId);
+        if (npc == null) return;
+        npc.setPickupItems(enabled);
+        if (!enabled) npc.setAutoPickupItems(false); // 关拾取 → 自动拾取一并关（与 NpcTogglePacket 一致）
+    }
+
+    @Override
+    public boolean isAutoPickupEnabled(UUID npcId) {
+        WandscapeNpc npc = npcEntity(npcId);
+        return npc != null && npc.isAutoPickupItems();
+    }
+
+    @Override
+    public void setAutoPickupEnabled(UUID npcId, boolean enabled) {
+        WandscapeNpc npc = npcEntity(npcId);
+        if (npc == null) return;
+        npc.setAutoPickupItems(enabled);
+        if (enabled) npc.setPickupItems(true); // 开自动拾取 → 拾取一并开（与 NpcTogglePacket 一致）
+    }
 
     // ── 可调平衡值（委托 BalanceValues；运行时生效，不追溯已生成实体）──
     @Override public int getGuardRange() { return BalanceValues.guardRange(); }

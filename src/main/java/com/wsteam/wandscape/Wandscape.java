@@ -68,6 +68,7 @@ import com.wsteam.wandscape.content.magic.internal.SpellcastingApiImpl;
 import com.wsteam.wandscape.content.items.magic.SpellItem;
 import com.wsteam.wandscape.content.npc.NpcMenu;
 import com.wsteam.wandscape.content.npc.NpcStrategyMenu;
+import com.wsteam.wandscape.content.npc.NpcInventoryMenu;
 import com.wsteam.wandscape.content.npc.entity.EvilMage;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.content.npc.internal.EntityComponentBridge;
@@ -139,6 +140,7 @@ import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.neoforge.common.DeferredSpawnEggItem;
 import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.common.extensions.IMenuTypeExtension;
 import net.neoforged.neoforge.event.AddReloadListenerEvent;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
@@ -199,6 +201,10 @@ public class Wandscape {
     public static final DeferredHolder<MenuType<?>, MenuType<NpcStrategyMenu>> NPC_STRATEGY_MENU =
             MENUS.register("npc_strategy", () ->
                     new MenuType<>(NpcStrategyMenu::new, FeatureFlags.VANILLA_SET));
+    /** NPC 背包容器菜单（27 格法师背包 + 玩家槽，见 npc/NpcInventoryMenu）。 */
+    public static final DeferredHolder<MenuType<?>, MenuType<NpcInventoryMenu>> NPC_INVENTORY_MENU =
+            MENUS.register("npc_inventory", () ->
+                    IMenuTypeExtension.create(NpcInventoryMenu::new));
 
     // ---- Debug target ----
     public static BlockPos debugDiamondTarget = null;
@@ -827,6 +833,10 @@ public class Wandscape {
                         NpcOpenStrategyPacket.TYPE,
                         NpcOpenStrategyPacket.STREAM_CODEC,
                         (packet, ctx) -> NpcOpenStrategyPacket.handleServer(packet, ctx))
+                .playToServer(
+                        NpcOpenInventoryPacket.TYPE,
+                        NpcOpenInventoryPacket.STREAM_CODEC,
+                        (packet, ctx) -> NpcOpenInventoryPacket.handleServer(packet, ctx))
                 .playToServer(
                         NpcStrategyPacket.TYPE,
                         NpcStrategyPacket.STREAM_CODEC,

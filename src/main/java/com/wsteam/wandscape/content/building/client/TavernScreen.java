@@ -64,6 +64,7 @@ public class TavernScreen extends MedievalScreen {
         this.recruitCount = recruitCount;
         this.mageResumes.addAll(mageResumes);
         setCreator(creator);
+        setBuildingContext(null, buildingPos);
     }
 
     /** Smoothly update data from server sync packet without reopening screen. */

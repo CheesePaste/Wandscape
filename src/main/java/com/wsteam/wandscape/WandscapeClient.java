@@ -143,7 +143,6 @@ public class WandscapeClient {
         BuildGizmoController.register();
         BuildGizmoRenderer.register();
         BuildingDebugController.register();
-        BuildingDebugOverlay.register();
         TouristDebugRenderer.register();
         BuildingAreaRenderer.register();
         ConstructionGhostRenderer.register();
@@ -178,6 +177,7 @@ public class WandscapeClient {
         event.register(Wandscape.WAREHOUSE_MENU.get(), WarehouseScreen::new);
         event.register(Wandscape.NPC_MENU.get(), NpcScreen::new);
         event.register(Wandscape.NPC_STRATEGY_MENU.get(), NpcStrategyScreen::new);
+        event.register(Wandscape.NPC_INVENTORY_MENU.get(), NpcInventoryScreen::new);
         // Curios 兼容：法师饰品栏（仅 Curios 加载时在实现类内注册，避免无 Curios 时缺类崩溃）
         com.wsteam.wandscape.compat.curios.CuriosCompat.registerNpcMenuScreens(event);
     }
@@ -372,10 +372,9 @@ public class WandscapeClient {
 
         BuildingDebugResponsePacket.setClientHandler(packet -> {
             Minecraft.getInstance().execute(() -> {
-                boolean active = BuildingDebugClientState.isActive();
-                boolean hasPos = BuildingDebugClientState.getLastRequestedPos() != null;
-                if (active && hasPos) {
-                    BuildingDebugClientState.setCachedData(packet);
+                BuildingDebugClientState.setCachedData(packet);
+                if (Minecraft.getInstance().screen instanceof com.wsteam.wandscape.foundation.ui.component.MedievalScreen ms) {
+                    ms.setBuildingData(packet);
                 }
             });
         });

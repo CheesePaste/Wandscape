@@ -46,6 +46,7 @@ public class MagicStationScreen extends MedievalScreen {
         super(Component.literal("Magic Station"), PW, PH);
         setTitleBar(I18n.name("gui.wandscape.magic_station.title", "Magic Station"));
         this.showCloseButton = true;
+        this.isBuildingScreen = true;
         this.showHelpButton = true;
         this.helpDocumentPath = "magic_station_guide";
     }
@@ -53,6 +54,7 @@ public class MagicStationScreen extends MedievalScreen {
     public void updateData(MagicStationPacket packet) {
         this.stationPos = packet.stationPos();
         setCreator(packet.creator());
+        setBuildingContext(null, packet.stationPos());
         this.recipes = packet.entries();
         applySearch(searchInput != null ? searchInput.getValue() : "");
         if (stepper != null) {
@@ -200,7 +202,7 @@ public class MagicStationScreen extends MedievalScreen {
         applySearch(searchInput.getValue());
 
         // ── Right panel: Task Queue ──
-        int queuePh = PH - headerHeight - 8;
+        int queuePh = PH - headerHeight - 8 - 24;
         int queueX = leftPos + LEFT_PW + 4;
         int queueY = topPos + headerHeight + 4;
         taskQueuePanel = new TaskQueuePanel(queueX, queueY, QUEUE_PW, queuePh);
