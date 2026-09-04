@@ -953,11 +953,11 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
     // 掉落物拾取模式（玩家在 NPC 面板右侧切换，NBT 持久化）
     // ============================================================
 
-    /** 是否拾取周围掉落物（像玩家一样触摸拾取，范围与逻辑照搬玩家）。 */
-    private boolean pickupItems = false;
+    /** 是否拾取周围掉落物（像玩家一样触摸拾取，范围与逻辑照搬玩家）。默认开启。 */
+    private boolean pickupItems = true;
 
-    /** 是否自动拾取周围掉落物（空闲且安全时自动走向掉落物拾取）。 */
-    private boolean autoPickupItems = false;
+    /** 是否自动拾取周围掉落物（空闲且安全时自动走向掉落物拾取）。默认开启。 */
+    private boolean autoPickupItems = true;
 
     public boolean isPickupItems() {
         return pickupItems;

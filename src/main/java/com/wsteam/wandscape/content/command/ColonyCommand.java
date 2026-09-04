@@ -225,10 +225,6 @@ public final class ColonyCommand {
             // PLACEHOLDER_COLONY. Fix it now.
             fixEcsAfterSpawn(npc, colonyId);
 
-            // Seed carpenter_wand into NPC's MC inventory so WandEquip can
-            // shortfill it without needing a storage building (cold-start
-            // bootstrap). All initial NPCs are universal workers.
-            seedBuilderWand(npc);
             // 早期法师太脆容易死：给初始法师赠送铁套（仅护甲数值生效，外观不渲染）
             equipStarterArmor(npc);
             spawnedNpcs.add(npc);
@@ -533,20 +529,6 @@ public final class ColonyCommand {
             result.add(last);
         }
         return result;
-    }
-
-    /** Seed a builder wand (Lv1 work-type) into the NPC's MC inventory (cold-start bootstrap). */
-    private static void seedBuilderWand(WandscapeNpc npc) {
-        var wandPreset = Wandscape.WAND_PRESET_LOADER.getPreset("carpenter_wand");
-        if (wandPreset == null) return;
-        var wandRegItem = net.minecraft.core.registries.BuiltInRegistries.ITEM
-                .get(net.minecraft.resources.ResourceLocation.tryParse("wandscape:wand"));
-        if (wandRegItem == null) return;
-        var wandStack = new net.minecraft.world.item.ItemStack(wandRegItem);
-        wandStack.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA,
-                net.minecraft.world.item.component.CustomData.of(wandPreset.nbt().copy()));
-        npc.inventory.addItem(wandStack);
-        Log.info(TAG, "[Colony] Seeded carpenter_wand into NPC inventory");
     }
 
     /**
