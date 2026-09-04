@@ -161,6 +161,7 @@ public class NpcScreen extends AbstractContainerScreen<NpcMenu> implements Repla
         if (CuriosCompat.isLoaded()) {
             curiosButton = new NpcCuriosButton(modelX + 6, modelY + 6, () -> {
                 if (entityId >= 0) {
+                    NpcScreenNavigator.prepareTransition(entityId);
                     PacketDistributor.sendToServer(new NpcOpenCuriosPacket(entityId));
                 }
             });
@@ -170,6 +171,7 @@ public class NpcScreen extends AbstractContainerScreen<NpcMenu> implements Repla
         int invBtnX = modelX + (CuriosCompat.isLoaded() ? 18 : 6);
         inventoryButton = new NpcInventoryButton(invBtnX, modelY + 6, () -> {
             if (entityId >= 0) {
+                NpcScreenNavigator.prepareTransition(entityId);
                 PacketDistributor.sendToServer(new NpcOpenInventoryPacket(entityId));
             }
         });
@@ -212,7 +214,12 @@ public class NpcScreen extends AbstractContainerScreen<NpcMenu> implements Repla
         addRenderableWidget(followButton);
         addRenderableWidget(new MedievalButton(bx + 140, btnY, 48, 16,
                 I18n.name("gui.wandscape.npc.strategy", "Strategy"),
-                () -> PacketDistributor.sendToServer(new NpcOpenStrategyPacket(entityId))));
+                () -> {
+                    if (entityId >= 0) {
+                        NpcScreenNavigator.prepareTransition(entityId);
+                        PacketDistributor.sendToServer(new NpcOpenStrategyPacket(entityId));
+                    }
+                }));
         addRenderableWidget(new MedievalButton(bx + 190, btnY, 46, 16,
                 I18n.name("gui.wandscape.npc.dismiss", "Dismiss"),
                 this::onDismiss));
