@@ -26,6 +26,8 @@
    - 成员：所有玩家、同殖民地 NPC / 其铁魔法或诡厄随从 / 游客、玩家训养的宠物（`OwnableEntity` 有主：狼/猫/鹦鹉/马/骆驼/羊驼）、守护召唤（铁傀儡/雪傀儡）、玩家召唤的铁魔法或诡厄随从、其它模组经 `FriendlyForceApi.registerAlly` 注册的友军。
    - ⚠️ **判定顺序：召唤者解析先于宠物兜底**——诡厄等第三方 `Owned` 召唤同时实现原版 `OwnableEntity`，若主人是敌对生物（如使徒召唤的黑曜石巨柱）必须按召唤者身份判敌我，不能凭「有主」就当玩家宠物豁免；宠物兜底另排除 `Enemy`。
    - **单向**（NPC 不攻击/不记仇/不溅射友军）走 `isFriendlyForce`；**双向互不侵犯**（玩家宠物/随从不打殖民地单位、殖民地随从不打玩家）走 `FriendlyTargetingHandler` 监听 `Mob.setTarget` 的 `LivingChangeTargetEvent`。只覆盖「真实殖民地侧」，`EvilMage` 等 `isColonyNpc()==false` 的敌意行为刻意保留。
+   - **PVP 分化**：`Config.PVP`（`npc.pvp`，默认 true）开启时玩家侧实体（`PLAYER`/`PLAYER_SUMMON`/`PET`）的「恒友军」收紧为「仅同殖民地」——`classify()` 需把玩家/召唤者/宠物主人的殖民地解析进 `Classified.colony`（`getColonyByFounder`，殖民地↔创始人 1:1；无殖民地→ null→判非友军），`FriendlyForce.isAlly/areMutuallyAlly` 增 `pvp` 参数做 `sameColony` 判定。改动时必须同步贯通 `isRetaliationTarget`（还手）、`canBeamHurt`（光束伤害）与 `ScepterService.toggleHostile`（可标记敌对玩家）四条边界——只改一处会阻塞。`EvilMage.canBeamHurt` 已覆盖「非友军 或 生存玩家」，不受 PVP 影响。
+   - **第三方魔法模组误伤（源头修复）**：`WandscapeNpc.isAlliedTo` 覆写（vanilla 中立钩子，基于 `Entity#isAlliedTo`）让 Goety `MobUtil.areAllies` 与铁魔法 `isFriendlyFireBetween` 在源头就不索敌/不误伤本殖民地 NPC——两类模组的友伤判定最终都汇到 `isAlliedTo`，故不必逐模组打补丁。玩家分支只豁免本殖民地创始人（`colonyFounder()`，`ColonyApi.getFounder`，PvP 无关），非玩家分支沿用 PvP 感知的 `isFriendlyForce`，所以「自家殖民地受保护、其他殖民地仍可被误伤」，与 PvP 的「跨殖民地敌对」同向。配套 `Config.NPC_FRIENDLY_FIRE_PROTECTION`（`npc.friendlyFireProtection`，默认 true）经 `NpcFriendlyFireHandler`（`LivingIncomingDamageEvent`：伤害链解析回攻击者玩家，仅取消「攻击者拥有该殖民地」的伤害）兜底覆盖近战/箭矢/其它不走 `isAlliedTo` 的来源；关闭后可再伤自家殖民地 NPC。
    - ⚠️ **做其他模组兼容时，务必把该模组的召唤物/宠物经 `FriendlyForceApi.registerAlly` 加入盟友名单，避免殖民地 NPC 误伤**——这是硬性提醒，遗漏会导致兼容模组的召唤生物被己方法师当敌人打死。
 
 ---
