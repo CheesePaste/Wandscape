@@ -2,7 +2,7 @@
 
 > 创建日期：2026-09-04 | 对应分支：`multiplayer-isolation`（基于 `c37edc05` 前的基座）
 > 性质：活清单文档——按「已完成 / 待实测 / 后续可选」推进，每步落到代码事实（文件 + 方法），随时可接续。
-> 关联：[多人生存隔离现状评估与 RBAC 演进](../multiplayer-isolation-survey.md)、[架构决策记录](../adr.md)
+> 关联：[架构决策记录](../adr.md)
 
 ---
 
@@ -123,7 +123,7 @@ B 在交叠区（判定属 A）内放建筑/开物会被拦——这是预期。
      `TaskQueueModifyPacket`、`TaskManagementActionPacket`、`WarehouseActionPacket`（取物部分）、
      `SplineBuildPacket`/`RoadWithdrawPacket`/`FillBoxPacket`/`DestroyFillPacket`（若决定道路查归属）。
    - 两种做法：逐个用 `ColonyOwnership` 加一行判定+`deny`；或（推荐与 RBAC 一并）做统一入口（见 3）。
-3. **统一判定入口 + 多人权限系统（RBAC）** —— 参考 `docs/multiplayer-isolation-survey.md`
+3. **统一判定入口 + 多人权限系统（RBAC）** —— 角色权限矩阵 + `ColonyPermissionService`（原「多人生存隔离现状评估」的 RBAC 演化思路已并入本路线图）
    - 网络注册包装：把 `Wandscape.java` 40 处 `.playToServer` 收敛为 `regServer(...)` 单 helper，
      每个包实现 `@Nullable UUID resolveColony(ServerLevel, ServerPlayer)`，分发处**一次**判定归属。
    - `ColonyOwnership` 演化为 `ColonyPermissionService`（角色权限矩阵）；`ColonySavedData` 增成员与版本迁移；
