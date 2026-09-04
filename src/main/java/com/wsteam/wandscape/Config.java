@@ -240,7 +240,7 @@ public class Config {
             .comment("Friendly-fire protection: when true (default), the player (and player-side pets/"
                     + "summons/projectiles) cannot friendly-fire the NPCs of their own colony; other colonies' "
                     + "NPCs can still be hit. Set false to allow damaging your own colony's NPCs.")
-            .define("npc.friendlyFireProtection", true);
+            .define("npc.friendlyFireProtection", false);
 
     // ---- PVP 阵营 PvP Faction ----
 
