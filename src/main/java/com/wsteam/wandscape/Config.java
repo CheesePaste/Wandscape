@@ -269,5 +269,4 @@ public class Config {
                     + "identify its own players under PVP.")
             .define("npc.pvp", true);
 
-    static final ModConfigSpec SPEC = BUILDER.build();
 }
