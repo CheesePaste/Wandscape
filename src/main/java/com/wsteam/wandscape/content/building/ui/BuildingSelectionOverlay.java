@@ -31,7 +31,7 @@ import java.util.*;
  */
 public final class BuildingSelectionOverlay {
 
-    public static final int BAR_HEIGHT = 58;
+    public static final int VISIBLE_ROWS = 2;
     public static final int CATEGORY_ROW_H = 16;
     public static final int GRID_TOP_OFFSET = CATEGORY_ROW_H + 2;
     static final int CELL_W = 42;
@@ -44,7 +44,7 @@ public final class BuildingSelectionOverlay {
     static final int SCROLLBAR_W = 6;
 
     private static final int GRID_LEFT = WandscapePanelOverlay.SIDEBAR_W + GRID_PAD_X; // Clear sidebar
-    private static final int VISIBLE_ROWS = (BAR_HEIGHT - GRID_TOP_OFFSET) / CELL_H;
+    public static final int BAR_HEIGHT = GRID_TOP_OFFSET + VISIBLE_ROWS * CELL_H + 4;
 
     private static final int BAR_BG = 0xEE14161C;
     private static final int BAR_BORDER = 0xFF3A3E47;
@@ -141,11 +141,13 @@ public final class BuildingSelectionOverlay {
         List<BuildingSlot> filtered = getFilteredSlots();
         int cols = Math.max(1, (screenW - GRID_LEFT - GRID_PAD_X - SCROLLBAR_W) / CELL_W);
         int scrollOffset = WandscapePanelState.getBuildingBarScrollOffset();
+        int totalRows = (filtered.size() + cols - 1) / cols;
+        int startRow = Math.min(scrollOffset, Math.max(0, totalRows - VISIBLE_ROWS));
         int col = (int) ((mouseX - GRID_LEFT) / CELL_W);
         int row = (int) ((mouseY - gridY) / CELL_H);
         if (col < 0 || col >= cols || row < 0 || row >= VISIBLE_ROWS) return -1;
 
-        int index = (scrollOffset + row) * cols + col;
+        int index = (startRow + row) * cols + col;
         if (index < 0 || index >= filtered.size()) return -1;
 
         BuildingSlot slot = filtered.get(index);
