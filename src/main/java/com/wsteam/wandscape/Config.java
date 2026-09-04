@@ -239,7 +239,6 @@ public class Config {
                     + "when that rule is off, nothing is shown.")
             .define("npc.deathMessageGlobal", true);
 
-    public static final ModConfigSpec SPEC = BUILDER.build();
 
     public static boolean autoGatherOnShortage() {
         return SPEC.isLoaded() && AUTO_GATHER_ON_ELEMENT_SHORTAGE.get();
