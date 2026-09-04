@@ -53,18 +53,22 @@ public final class BuildingUnlockChecker {
     /**
      * Resolve the colony's current level.
      *
-     * <p>Server side: {@link com.wsteam.wandscape.content.colony.ColonyLevelManager#get()} is populated.
-     * Client side: the level manager is server-only ({@code null}), so fall back to the
-     * colony level already synced via {@code ColonyStatsSyncPacket} into
-     * {@link WandscapePanelState} — otherwise every level-gated building would read
-     * level 1 and stay locked even at max colony level.
+     * <p>Server side: {@link com.wsteam.wandscape.content.colony.ColonyApiImpl} has the
+     * spatial colony index populated (via {@code rebuildFromSavedData()} and
+     * {@code createColony()}), so {@code colonyApi.getColonyLevel(colonyId)} is exact.
+     * Client side: that {@code colonyToOrigin} index is empty (server-only), so the same
+     * call returns 0 for every colony — use the level already synced via
+     * {@code ColonyStatsSyncPacket} into {@link WandscapePanelState} instead, otherwise
+     * every level-gated building reads level 0 and stays locked even at max colony level.
      */
     private static int resolveLevel(@Nullable UUID colonyId) {
-        var colonyApi = com.wsteam.wandscape.api.WandscapeApis.getColonyApiSilently();
-        if (colonyApi != null) return colonyApi.getColonyLevel(colonyId);
+        // Client first: the client's ColonyApiImpl has no level manager and no spatial
+        // index, so getColonyLevel() always returns 0 → everything locked.
         if (FMLEnvironment.dist.isClient()) {
             return WandscapePanelState.getColonyLevel();
         }
+        var colonyApi = com.wsteam.wandscape.api.WandscapeApis.getColonyApiSilently();
+        if (colonyApi != null) return colonyApi.getColonyLevel(colonyId);
         return 1;
     }
 
