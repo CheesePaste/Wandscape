@@ -68,7 +68,6 @@ public final class ColonyOwnership {
     public static boolean isOwn(@Nullable UUID colonyId, @Nullable ServerPlayer player) {
         if (player == null) return false;
         if (colonyId == null) return true;                 // 无归属：建镇流程/未关联建筑
-        if (player.hasPermissions(2)) return true;         // 管理员旁路
         UUID own = ownColony(player);
         return own != null && own.equals(colonyId);
     }
@@ -93,7 +92,6 @@ public final class ColonyOwnership {
     public static boolean isOwnColonyOf(@Nullable UUID colonyId, @Nullable ServerPlayer player) {
         if (player == null) return false;
         if (colonyId == null) return false;
-        if (player.hasPermissions(2)) return true;
         UUID own = ownColony(player);
         return own != null && own.equals(colonyId);
     }
