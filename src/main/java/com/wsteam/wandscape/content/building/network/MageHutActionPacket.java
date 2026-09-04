@@ -9,6 +9,8 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
+import java.util.UUID;
+
 import static com.wsteam.wandscape.Wandscape.MODID;
 
 /**
@@ -50,6 +52,17 @@ public record MageHutActionPacket(BlockPos buildingPos, String action)
 
     public static void handleServer(MageHutActionPacket pkt, IPayloadContext ctx) {
         if (!(ctx.player() instanceof ServerPlayer sp)) return;
+        // 完全平行隔离：只能操作自己小镇的法师小屋（按建筑归属判定）。
+        var data = com.wsteam.wandscape.content.building.internal.BuildingSavedData.get(sp.serverLevel());
+        if (data != null) {
+            UUID bid = data.getBuildingIdAt(pkt.buildingPos);
+            var st = bid != null ? data.getBuilding(bid) : null;
+            if (st != null && st.getColonyId() != null
+                    && !com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.isOwn(st.getColonyId(), sp)) {
+                com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(sp, "法师小屋");
+                return;
+            }
+        }
         sp.getServer().execute(() ->
                 MageHutServerHandler.handleAction(sp, sp.serverLevel(), pkt));
     }

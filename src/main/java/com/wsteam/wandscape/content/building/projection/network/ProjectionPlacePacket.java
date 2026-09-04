@@ -73,22 +73,36 @@ public record ProjectionPlacePacket(
             return;
         }
 
-        // 完全平行隔离：只能在自己的小镇范围内建造；未归属地只允许建市政厅（建镇）。禁止在别人小镇放建筑。
+        // 完全平行隔离：
+        //  - 建镇（政府 + 无自有镇）：必须离所有已有小镇 ≥ MIN_COLONY_SEPARATION，否则提示「距离太近」；
+        //  - 其它：目标必须是自己镇内的地块，禁止放进别人小镇或未归属地（孤儿建筑）。
         boolean isGov = "government".equals(config.category());
-        var colonyApiCheck = com.wsteam.wandscape.api.WandscapeApis.getColonyApiSilently();
-        UUID anchorColony = colonyApiCheck != null ? colonyApiCheck.getColonyId(packet.anchorPos) : null;
-        UUID ownColony = com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.ownColony(player);
-        if (anchorColony != null) {
-            if (!anchorColony.equals(ownColony)) {
+        UUID own = com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.ownColony(player);
+        if (isGov && own == null) {
+            if (com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.foundingTooClose(
+                    player.serverLevel(), packet.anchorPos)) {
+                ScreenFeedbackPacket.send(player, I18n.name("message.wandscape.projection.found_too_close",
+                        "[Projection] §c设镇点离已有小镇太近，请至少 "
+                                + com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.MIN_COLONY_SEPARATION
+                                + " 格外选址"), true);
+                Log.warn(TAG, "[Projection] Player {} tried to found a colony too close at {}",
+                        player.getGameProfile().getName(), packet.anchorPos);
+                return;
+            }
+        } else {
+            var colonyApiCheck = com.wsteam.wandscape.api.WandscapeApis.getColonyApiSilently();
+            UUID anchorColony = colonyApiCheck != null ? colonyApiCheck.getColonyId(packet.anchorPos) : null;
+            if (anchorColony == null) {
+                ScreenFeedbackPacket.send(player, I18n.name("message.wandscape.projection.place_failed",
+                        "[Projection] §c请先创建小镇或在小镇范围内建造"), true);
+                Log.warn(TAG, "[Projection] Player {} tried to place '{}' outside any colony",
+                        player.getGameProfile().getName(), packet.buildingTypeId);
+                return;
+            }
+            if (!anchorColony.equals(own)) {
                 com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(player, "建筑");
                 return;
             }
-        } else if (!isGov) {
-            ScreenFeedbackPacket.send(player, I18n.name("message.wandscape.projection.place_failed",
-                    "[Projection] §c请先创建小镇或在小镇范围内建造"), true);
-            Log.warn(TAG, "[Projection] Player {} tried to place non-government '{}' outside any colony",
-                    player.getGameProfile().getName(), packet.buildingTypeId);
-            return;
         }
 
         BuildingApi.PlacementResult result = api.placeBuilding(

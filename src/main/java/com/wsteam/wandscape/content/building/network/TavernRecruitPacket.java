@@ -79,6 +79,11 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
                         "[Wandscape] This tavern is not assigned to any colony."), true);
                 return;
             }
+            // 完全平行隔离：只能在自己小镇的酒馆招募/拒绝。
+            if (!com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.isOwn(colonyId, sp)) {
+                com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(sp, "酒馆");
+                return;
+            }
 
             // 2. Handle recruit_mage action
             if (pkt.action.startsWith("recruit_mage:")) {

@@ -28,6 +28,11 @@ public record TownHallTouristSpawnPacket(UUID colonyId, boolean enabled) impleme
 
     public static void handleServer(TownHallTouristSpawnPacket packet, ServerPlayer player) {
         if (packet.colonyId == null) return;
+        // 完全平行隔离：只能改自己小镇的游客生成开关。
+        if (!com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.isOwn(packet.colonyId, player)) {
+            com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(player, "小镇");
+            return;
+        }
         player.getServer().execute(() -> {
             ColonySavedData csd = ColonySavedData.getOrCreate(player.serverLevel());
             csd.setTouristSpawningEnabled(packet.colonyId, packet.enabled);

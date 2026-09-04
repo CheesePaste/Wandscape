@@ -29,6 +29,14 @@ public record AltarCastRequestPacket(UUID buildingId, String magicId)
     public Type<? extends CustomPacketPayload> type() { return TYPE; }
 
     public static void handleServer(AltarCastRequestPacket packet, ServerPlayer player) {
+        // 完全平行隔离：只能在自己小镇的祭坛下重大法术（消耗该镇元素/魔力）。
+        var sd = com.wsteam.wandscape.content.building.internal.BuildingSavedData.get(player.serverLevel());
+        var st = sd != null ? sd.getBuilding(packet.buildingId()) : null;
+        if (st != null && st.getColonyId() != null
+                && !com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.isOwn(st.getColonyId(), player)) {
+            com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(player, "祭坛");
+            return;
+        }
         AltarCastHandler.onCastRequest(player, packet.buildingId, packet.magicId());
     }
 

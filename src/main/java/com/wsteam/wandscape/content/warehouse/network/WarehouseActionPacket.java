@@ -77,6 +77,11 @@ public record WarehouseActionPacket(
                         pkt.containerId, sp.containerMenu);
                 return;
             }
+            // 完全平行隔离：仓库动作（含取/销毁）只对本人的小镇仓库放行。
+            if (!com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.isOwn(menu.getColonyId(), sp)) {
+                com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(sp, "仓库");
+                return;
+            }
 
             ItemKey key = ItemKey.of(pkt.itemId, pkt.nbt);
             switch (pkt.action) {

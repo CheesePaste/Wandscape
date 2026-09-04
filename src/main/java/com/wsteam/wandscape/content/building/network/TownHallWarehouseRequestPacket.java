@@ -64,6 +64,11 @@ public record TownHallWarehouseRequestPacket(BlockPos buildingPos, UUID colonyId
                 Log.warn(TAG, "[TownHallWarehouse] colony mismatch for {}", buildingId);
                 return;
             }
+            // 完全平行隔离：只能打开自己小镇市政厅的仓库。
+            if (!com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.isOwn(colonyId, sp)) {
+                com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(sp, "仓库");
+                return;
+            }
 
             BuildingInteractHandler.openWarehouseMenu(sp, colonyId, pkt.buildingPos(),
                     BuildingInteractHandler.resolveCreator(level, pkt.buildingPos()));

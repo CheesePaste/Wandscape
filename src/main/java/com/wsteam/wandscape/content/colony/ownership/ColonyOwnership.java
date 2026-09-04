@@ -2,9 +2,12 @@ package com.wsteam.wandscape.content.colony.ownership;
 
 import com.wsteam.wandscape.api.ColonyApi;
 import com.wsteam.wandscape.api.WandscapeApis;
+import com.wsteam.wandscape.content.colony.ColonySavedData;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.foundation.networking.ScreenFeedbackPacket;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -23,7 +26,25 @@ public final class ColonyOwnership {
 
     private static final String TAG = "ColonyOwnership";
 
+    /** 小镇间最小隔离距离（两倍工作半径），保证各镇工作圈永不交叠、归属判定不串。 */
+    public static final int MIN_COLONY_SEPARATION = 512;
+
     private ColonyOwnership() {}
+
+    /** 该位置是否距任一已有小镇 origin 小于最小隔离距离（用于建镇前置校验）。 */
+    public static boolean foundingTooClose(ServerLevel level, BlockPos origin) {
+        ColonyApi api = WandscapeApis.getColonyApiSilently();
+        if (api == null || origin == null) return false;
+        ColonySavedData csd = ColonySavedData.getOrCreate(level);
+        long minSqr = (long) MIN_COLONY_SEPARATION * MIN_COLONY_SEPARATION;
+        for (UUID cid : api.getAllColonyIds()) {
+            BlockPos otherOrigin = csd.getOrigin(cid);
+            if (otherOrigin != null && otherOrigin.distSqr(origin) < minSqr) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     /**
      * 玩家自己的小镇（按 founder 绑定，无视距离），没有则返回 null。

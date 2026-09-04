@@ -25,6 +25,11 @@ public record ColonyNameUpdatePacket(UUID colonyId, String name) implements Cust
     public Type<? extends CustomPacketPayload> type() { return TYPE; }
 
     public static void handleServer(ColonyNameUpdatePacket packet, ServerPlayer player) {
+        // 完全平行隔离：只能改名自己小镇。
+        if (!com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.isOwn(packet.colonyId(), player)) {
+            com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(player, "小镇");
+            return;
+        }
         var colonyApi = com.wsteam.wandscape.api.WandscapeApis.getColonyApiSilently();
         String name = packet.name().trim();
         if (name.length() > 30) name = name.substring(0, 30);

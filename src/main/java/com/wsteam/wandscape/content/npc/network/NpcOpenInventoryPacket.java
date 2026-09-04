@@ -49,6 +49,13 @@ public record NpcOpenInventoryPacket(int entityId) implements CustomPacketPayloa
             Log.warn(TAG, "Inventory target entity {} is not a valid WandscapeNpc", pkt.entityId());
             return;
         }
+        // 完全平行隔离：只能打开自己小镇法师的背包栏。
+        if (npc.colonyId != null
+                && !com.wsteam.wandscape.content.npc.internal.EntityComponentBridge.PLACEHOLDER_COLONY.equals(npc.colonyId)
+                && !com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.isOwn(npc.colonyId, sp)) {
+            com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(sp, "法师");
+            return;
+        }
         sp.openMenu(new SimpleMenuProvider(
                 (id, inv, p) -> new NpcInventoryMenu(id, inv, npc),
                 I18n.name("gui.wandscape.npc.inventory", "Inventory")),

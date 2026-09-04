@@ -52,6 +52,13 @@ public record NpcOpenStrategyPacket(int entityId) implements CustomPacketPayload
             Log.warn(TAG, "Strategy target entity {} is not a WandscapeNpc", pkt.entityId());
             return;
         }
+        // 完全平行隔离：只能打开自己小镇法师的策略栏。
+        if (npc.colonyId != null
+                && !com.wsteam.wandscape.content.npc.internal.EntityComponentBridge.PLACEHOLDER_COLONY.equals(npc.colonyId)
+                && !com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.isOwn(npc.colonyId, sp)) {
+            com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(sp, "法师");
+            return;
+        }
         sp.openMenu(new SimpleMenuProvider(
                 (id, inv, p) -> new NpcStrategyMenu(id, inv, npc),
                 Component.literal("Cast Strategy")));

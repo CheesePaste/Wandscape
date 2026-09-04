@@ -65,6 +65,9 @@ public class WarehouseMenu extends AbstractContainerMenu {
 
     @Nullable
     private final UUID colonyId;
+
+    /** 该仓库所属殖民地（用于归属判定）。 */
+    public UUID getColonyId() { return colonyId; }
     @Nullable
     private final BlockPos buildingPos;
     /** 玩家背包 36 槽（可显隐），由共享组件构建。 */

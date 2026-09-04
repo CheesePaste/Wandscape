@@ -70,6 +70,12 @@ public record RequestGatherTaskPacket(
                 Log.warn(TAG, "RequestGatherTask: building {} has no node_config", state.getBuildingTypeId());
                 return;
             }
+            // 完全平行隔离：只能在自己小镇的节点下发采集任务（消耗该镇元素）。
+            if (state.getColonyId() != null
+                    && !com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.isOwn(state.getColonyId(), sp)) {
+                com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(sp, "采集");
+                return;
+            }
 
             WorkItem work = NodeGatherTaskFactory.buildWorkItem(pkt.nodePos, config.nodeConfig(), pkt.harvests);
             BuildingApi api = WandscapeApis.getBuildingApi();

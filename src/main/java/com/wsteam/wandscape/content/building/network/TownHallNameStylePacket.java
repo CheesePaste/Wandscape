@@ -31,6 +31,11 @@ public record TownHallNameStylePacket(UUID colonyId, int namingStyle) implements
 
     public static void handleServer(TownHallNameStylePacket packet, ServerPlayer player) {
         if (packet.namingStyle < 0 || packet.namingStyle >= NameStyle.values().length) return;
+        // 完全平行隔离：只能改自己小镇的起名风格。
+        if (!com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.isOwn(packet.colonyId(), player)) {
+            com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(player, "小镇");
+            return;
+        }
         var colonyApi = WandscapeApis.getColonyApiSilently();
         if (colonyApi == null) return;
         colonyApi.setNamingStyle(packet.colonyId(), NameStyle.values()[packet.namingStyle]);

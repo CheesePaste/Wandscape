@@ -36,6 +36,11 @@ public record ShopMaxStockPacket(UUID buildingId, BlockPos buildingPos,
     public static void handleServer(ShopMaxStockPacket packet, ServerPlayer player) {
         ShopStockManager manager = ShopStockManager.getActive();
         if (manager == null) return;
+        // 完全平行隔离：只能调自己小镇商店的最大库存。
+        if (!com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.isOwn(packet.colonyId(), player)) {
+            com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(player, "商店");
+            return;
+        }
 
         manager.setMaxStock(packet.buildingId, packet.itemId, packet.newMax);
 

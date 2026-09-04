@@ -59,6 +59,17 @@ public record TaskManagementActionPacket(
         long taskId = packet.taskId();
         String action = packet.action();
 
+        // 完全平行隔离：只能取消/加急/调优先级自己小镇的任务。
+        var gt = world.taskPool.get(taskId);
+        if (gt != null) {
+            java.util.UUID taskColony = resolveTaskColony(gt, player);
+            if (taskColony != null
+                    && !com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.isOwn(taskColony, player)) {
+                com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(player, "任务");
+                return;
+            }
+        }
+
         switch (action) {
             case ACTION_CANCEL -> {
                 long releasedNpc = world.taskPool.cancelTask(taskId, world);
@@ -80,5 +91,24 @@ public record TaskManagementActionPacket(
             }
             default -> Log.warn(TAG, "Unknown task action: {}", action);
         }
+    }
+
+    /** 解析任务所属殖民地：优先任务参数 colony_id，其次任务关联的建筑归属。 */
+    private static java.util.UUID resolveTaskColony(
+            com.wsteam.wandscape.content.task.engine.pool.GlobalTask task, ServerPlayer player) {
+        var ce = task.taskParams.get("colony_id");
+        if (ce instanceof com.google.gson.JsonPrimitive p && p.isString()) {
+            try {
+                return java.util.UUID.fromString(p.getAsString());
+            } catch (Exception ignored) {}
+        }
+        if (task.buildingId != null) {
+            var sd = com.wsteam.wandscape.content.building.internal.BuildingSavedData.get(player.serverLevel());
+            if (sd != null) {
+                var st = sd.getBuilding(task.buildingId);
+                if (st != null) return st.getColonyId();
+            }
+        }
+        return null;
     }
 }

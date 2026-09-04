@@ -76,6 +76,13 @@ public record TaskQueueModifyPacket(
                         pkt.stationPos, pkt.action, pkt.index);
                 return;
             }
+            // 完全平行隔离：只能修改自己小镇建筑的生产队列。
+            BuildingState qState = data.getBuilding(buildingId);
+            if (qState != null && qState.getColonyId() != null
+                    && !com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.isOwn(qState.getColonyId(), sp)) {
+                com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(sp, "队列");
+                return;
+            }
             Log.info(TAG, "TaskQueueModify: buildingId={} action={} index={}",
                     buildingId.toString().substring(0, 8), pkt.action, pkt.index);
 
