@@ -55,9 +55,8 @@ public class ProductionRecipeLoader {
     }
 
     /**
-     * Compute synthesize channel duration in ticks for an item and quantity.
-     * Items with total element value <= 2 take 0 ticks (instant).
-     * Higher-tier items take WORKSTATION_CRAFT_TICKS_PER_UNIT (5 ticks) per unit.
+     * Compute synthesize channel duration in ticks for an item and quantity:
+     * WORKSTATION_CRAFT_TICKS_PER_UNIT per unit for every synthesize (no instant shortcut).
      */
     public int computeSynthesizeChannelTicks(String id, int quantity) {
         SynthesizeRecipe recipe = getSynthesizeRecipe(id);

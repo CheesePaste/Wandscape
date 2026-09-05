@@ -137,7 +137,7 @@ public record RequestProductionTaskPacket(
                 params.put("output_item", new JsonPrimitive(outputItem));
             }
             params.put("count", new JsonPrimitive(pkt.quantity));
-            // Channel duration scales with quantity: workstation 5 ticks/item (<=2 value is instant/0),
+            // Channel duration scales with quantity: workstation 2 ticks/item（合成与分解统一，无低价值 0 tick 特判），
             // crafting station 1200 ticks/item (per unit).
             int channelTicks = switch (pkt.action) {
                 case "synthesize" ->

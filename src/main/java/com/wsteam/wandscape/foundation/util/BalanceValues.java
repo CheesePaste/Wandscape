@@ -121,7 +121,7 @@ public final class BalanceValues {
     // ============================================================
     // craft / construction / cast / mage
     // ============================================================
-    private static final int DEFAULT_WORKSTATION_CRAFT_TICKS_PER_UNIT = 5;
+    private static final int DEFAULT_WORKSTATION_CRAFT_TICKS_PER_UNIT = 2;
     private static final int DEFAULT_CRAFTING_STATION_CRAFT_TICKS_PER_UNIT = 1200;
     private static final int DEFAULT_CONSTRUCTION_PLACE_TICKS_PER_UNIT = 1;
     private static final int DEFAULT_CAST_SINGLE_TARGET_MAX_ENEMIES = 3;
