@@ -2205,16 +2205,6 @@
   "entities": [
     {
       "offset": [
-        8,
-        3,
-        3
-      ],
-      "type": "minecraft:painting",
-      "facing": "south",
-      "nbt": "H4sIAAAAAAAA/1WPwWrCQBCG/2QbXUsotG/Qe5/Ak0Wx9NQgPVhvY7KWgXVG1419/HRDAuJ/me+HbwbmEcgwOVDN8puo/JRr68UF2nuHHOadQ/aWwX7JR9BWGhg8VRoi+aWqb/RPkDKD3WikyCpFqjnGFCjX5P2KL5GkdoNqKr1MEpnF62AtyvuZ42HNwXWdxfRKgUkino8srg50iPM9BT23zqD4Zu9++ksjbxNbi5wbvNz8E7HE9N4o7foF/AOh/cRe+AAAAA=="
-    },
-    {
-      "offset": [
         7,
         3,
         8

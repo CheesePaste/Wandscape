@@ -2112,36 +2112,6 @@
   "entities": [
     {
       "offset": [
-        8,
-        4,
-        3
-      ],
-      "type": "minecraft:painting",
-      "facing": "south",
-      "nbt": "H4sIAAAAAAAA/02PsW7CQBBExz4MB7IoKOjT8wVUICIQVVBEATRoY5/RSsdetBzw+eSQXWSaeSvNaDUjIEO/oYrlkqjcyuPuxSn9eIccZsmazTLYL9louEsNg/EuaCS/CsHX4SlIGsJ+h0iRgxTpzNGpQLkm7z/5Fkkq10bNLtz6iczio00tJp2XreforVnd62UxeJAyScT0yuIqpSbOf5VY2Z2Va2dQ7Nm7Y2r1Oj4kthY515j8KxFLTBu70On9H38t2lcJ/QAAAA=="
-    },
-    {
-      "offset": [
-        8,
-        2,
-        3
-      ],
-      "type": "minecraft:painting",
-      "facing": "south",
-      "nbt": "H4sIAAAAAAAA/02PsQrCQBBEJzmjpwQL/8DeL7BSlIiVIhZqtyanLJx7crno5+tJUjjNvIUHw46ABP0blSz3SPlWXo0V4+lqDVKoJftklkDvZONdIxUUxnvnA9mVc7Zyb0HMEPrgAgV2ksUzRZcMeUHWrrkOJKVpVbV3dT+SWkxba9HrOm87Ra9gbz4fjcGLPJMEjB8spvR0C/NnHFbIjmzN+Wd3fIqsNVKuMPmTiSXE3zrp8tvFF3QOT8/1AAAA"
-    },
-    {
-      "offset": [
-        7,
-        4,
-        3
-      ],
-      "type": "minecraft:painting",
-      "facing": "south",
-      "nbt": "H4sIAAAAAAAA/0WPQQrCMBBFfxurVYoLD+AJPIGrilJxpYgLdTdtowzEiaSpHl8jLfg3/314MMwEiDC8UcVyD5Tt5NUa0Y5KoxFDrdhFiwjpXrbOtlJDYXqwzpNZW2tq+xaEjJEerSfPVpIwY/RJkBVkzIYbT1LpTlUH2wwDqXzeWfms76zrGIOCnf58Uoxe5JjEY/pg0ZWjm1+WbeMVkhMbfQn2oOdz4FGKmGvM/vKTWHz4rZeuv7v4Akgm2yf1AAAA"
-    },
-    {
-      "offset": [
         7,
         3,
         8

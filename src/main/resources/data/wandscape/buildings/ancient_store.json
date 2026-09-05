@@ -38390,36 +38390,6 @@
     {
       "offset": [
         13,
-        9,
-        19
-      ],
-      "type": "minecraft:painting",
-      "facing": "north",
-      "nbt": "H4sIAAAAAAAA/0WPMWsCQRCF3+3m9BKMkPgTUsZOq1SKolhFQopoN96NYWCdDXuraf3nuuqBr3nfg4+BeQIytLZUiv6aDJ2FHvZOOdDGMQzsWELWz1B86jz4vVaw6C59iOQm3rvK/ytSHlF8+UhRvOZpmskQ1+TozMi5qdSRtOSbape+biWyo/ebNXprenC8tsHDTAKfTgXaBwpCGvGyE+Uy0DZ+lIF5w9Ei/xbHq8vNhn8SPxcwUuH17v+RaEzvNdI6ST2cAYWcOz34AAAA"
-    },
-    {
-      "offset": [
-        12,
-        10,
-        19
-      ],
-      "type": "minecraft:painting",
-      "facing": "north",
-      "nbt": "H4sIAAAAAAAA/02PMW/CMBCFX+wGXBQxwG/ogMQGU6dUVKBORYih7XYkTnWSe64cJ137z8GCDLzlfU/6pNNNgAyjhiqWb5WheJO+c2IDnZyFgn7hkC0zmHfZBd9JDY3p3odIbuO9q/2fIOUR5uAjRfaSp6k2a1yTo9iSc6/cRpLK3lS99+0okS4XN6t8Gnr1f22Fhy0Hez4bjHsKTBIx/WGxVaAmPv+mwxr5kZ39TPZk4I/EhYHiGrM7mVhi+m2QvpI0xwXqv60k9QAAAA=="
-    },
-    {
-      "offset": [
-        13,
-        8,
-        15
-      ],
-      "type": "minecraft:painting",
-      "facing": "south",
-      "nbt": "H4sIAAAAAAAA/02PMWsCQRCF393mdCMXBQv71Amkt7pgMFgpYpGkCZO7PRlYZ2Vczc/XhbvC17xv4HvFjIAMg5Zqln2iciWXsxen9Ocdcph31uw1g13Lp4azNDAYb4JG8osQfBP+BSmPsNsQKXKQIp05+hQol+T9B58iSe061WzCaZDIVC+dVT33/dZ1joclq7teLYYXUiaJmB1YXK3UxvlRiZXdr3LjDIode/edVrbnr8RPFjk3mN6NiCWmH3vpJ0kT3ABCgFvT/QAAAA=="
-    },
-    {
-      "offset": [
-        13,
         7,
         19
       ],
@@ -38469,16 +38439,6 @@
     },
     {
       "offset": [
-        10,
-        15,
-        17
-      ],
-      "type": "minecraft:painting",
-      "facing": "west",
-      "nbt": "H4sIAAAAAAAA/0WPwWoCQRBEa3ayZiOi6D/kJojXnIwJSk5KyMHk1u6O0jDpjuOsXv2o/J8OumBd6hW8PnQbMGhtqGTZGoPOhxxqLy7Q2jtksK8czNCgWMg8aC0VLLpLDZH8m6qv9ChIeULxqZEiq+RpZtN/XJOjMyPv33kfSUp3U+1S961EdvJ8syajpsena2d4mHFw53OBxwMFJono/7K4MtAmvqy13tUuWuRf7N13Oug1vErcLpBxhcHd/yOWmN5rpJ8k9XEBgEFIpfgAAAA="
-    },
-    {
-      "offset": [
         9,
         15,
         20
@@ -38486,16 +38446,6 @@
       "type": "minecraft:item_frame",
       "facing": "west",
       "nbt": "H4sIAAAAAAAA/0WPsU7DQAyG/8slVVpV7dI3YEViYWKh0CqIiQp1ABZ0JFewdPGhy7Uw9qF4v+Jrg/Bi+5d/f/YIUBhUpiZ+zxXG99G2jz6aSJ6Ret5tHdtg3pxFBn1DQZ0rlA98F/yWG2hMVj5E4xbeu8Z/MSSGKP+WFNJmtz84RoFxZZxbUhcN1zZJI+SJqVHUsi+Kokpk1GDaEts6mE28MrwjJ+ZJmlwG/7n4SPbrfSLple8GYtPzsxNkftHny/0xZ8grCvZwEMaanH0WbdrXT+lYhaG8SR2lH0/w2T+chPm6Caa1vedFPDOFoqJv2wC/A5EwnUIBAAA="
-    },
-    {
-      "offset": [
-        10,
-        11,
-        15
-      ],
-      "type": "minecraft:painting",
-      "facing": "south",
-      "nbt": "H4sIAAAAAAAA/0WPQWvCQBCFX7JGVytK/Q+ll0LvniwWiydFemh7myRrGVhn6mZjf74uJOC7vO/BN4eZABmGR6pYfhNNt3JpvbhApXfIYd44ZC8Z7E4+grZSw2C21xDJr1V9rf+ClDHsQSNFVinSzNGnwHRD3r9zE0kq16lmr80wkVk9ddbque/XrnMMNhzc9WoxulBgkojHE4urAh3jsqSg59YZFJ/s3Xc6eOj5K/HEIucai7v/RywxvddLP0ma4wbLyfHi+AAAAA=="
     },
     {
       "offset": [
@@ -38529,36 +38479,6 @@
     },
     {
       "offset": [
-        10,
-        16,
-        9
-      ],
-      "type": "minecraft:painting",
-      "facing": "west",
-      "nbt": "H4sIAAAAAAAA/0WPT2vCQBTEZ7NGo4RS6kcovXnw7Ml/KD01lB6st9dklQfrW9ls9NoP5fezSyJ0Lm8GfgNvRoBC/0Aly1Ep5O9yaawYTz/WIIFesFcThexDtt41UkHjqXA+kF05Zyt3FUQNkX26QIGdpDEmyxtapcg3ZO2a60BSmg7Vhav70en5W0fNp7/dfe1ygt6GvbnfMwwu5JkkYHxiMaWnQ5hdqQ7GklQa6Rdb8x0rzw+/i36UIeEKL/+NM7GEOPAB7ds3/gDdGr7o+gAAAA=="
-    },
-    {
-      "offset": [
-        10,
-        17,
-        10
-      ],
-      "type": "minecraft:painting",
-      "facing": "west",
-      "nbt": "H4sIAAAAAAAA/0XPsW7CQBAE0DlfDA6yQPAPdGnSpiIhAlFhRRQk3cY+opUue+g4E4mKj+L/zBFbYpqdkV6zA0Cht6OS5Ucp5Cs51laMp29rkEC/sldPCtlalt7VUkFjWDgfyM6ds5X7E8Q8IvtwgQI7SeNM3i74T4p8Qda+8yGQlKalunCHXmx6Nm3V7Pnc3m4neFiwN02ToX8kzyQBo18WU3rahRc6BVNqpBu25jPycde3sQ8yJFxhctd7YgnxuQ593RCunvkCKPYAAAA="
-    },
-    {
-      "offset": [
-        9,
-        19,
-        7
-      ],
-      "type": "minecraft:painting",
-      "facing": "south",
-      "nbt": "H4sIAAAAAAAA/0WPMW/CQAyFX3KEpAghUfYurGzdOgW1omICVR1KN5MclaXDbi8XuvLP4VAi8RZ/T/psySMgwfBAFctPpPFaTq0T62nvLFKYJftkkaDYyLvXVmoYTLbqA7lXVVfrvyDmAcWHBgqsksWaok+G8Yqce+MmkFS2U81Wm2EkU847q3w+d/Op6ykGK/b2cimQn8gzScD0yGIrT4fwsievf601yD7Z2V1cmPX8dbtfIOUaj3f/l1hCfK+XvqOU4wryAUHW+AAAAA=="
-    },
-    {
-      "offset": [
         3,
         14,
         19
@@ -38569,16 +38489,6 @@
     },
     {
       "offset": [
-        6,
-        14,
-        21
-      ],
-      "type": "minecraft:painting",
-      "facing": "east",
-      "nbt": "H4sIAAAAAAAA/0XPMW/CMBAF4OeYhIAQqiqx9De0IwsTCETVqQh1KN2OxKCTzBk5Dqxs/dnUJJH6lvdO+pYbAgrZgQqWo1YYfciltmI87a1BAr1gr14V8k95966WEhrjjfOB7NI5W7qrIGaAfOsCBXaSxjNZ/qJJitGarF1xFUgK01K9cVUWl56/tGr+1vX01nSC3pq9ud9z9C/kmSTg6cRiCk+HMKtqqUzQSL/Yml30425/x53lSLjE8z8/E0t4fNein4gm+AO5Zpzi9wAAAA=="
-    },
-    {
-      "offset": [
         7,
         13,
         20
@@ -38586,26 +38496,6 @@
       "type": "minecraft:item_frame",
       "facing": "east",
       "nbt": "H4sIAAAAAAAA/y2OsW4CMRBEx+cYDgSpqPMDUFJRgYgOUQUhiiQNMncLWsm3lnwmoaTjs4kDN828Xc1I0wcUOoUtWU5GYbCWn7MTCvbgCBn0goOaKOQfsgr+LBU0Xjc+ROuW3rvK/wqSesi3PtrIXkw6s+UNDxkMCuvcOzfRSknPqN74ppNIz9+eqfm49en14RleCg50v2uYHTv6Sr9hy5+Juwq9tJMb/h+ZI+MKo5qFymCPccaR6v0x2JraznfqjBRMwReqgD8wwc0B8wAAAA=="
-    },
-    {
-      "offset": [
-        6,
-        15,
-        17
-      ],
-      "type": "minecraft:painting",
-      "facing": "east",
-      "nbt": "H4sIAAAAAAAA/0WPsW7CQBBEx77YOJEVAiXfgIRoUxERgahiRSmAbrEPstKxF53PpKXjs+FiI2WaeSO9YvcJiJDuqWQ5qAj5Sk6NEe1oZzRiqDd20ThC9iFLZxupoPBcWOfJzK01lf0VhDwi+7SePFtJwoznF7RJkC/ImHeuPUmpO1UVtk4Dqdmos2aTe0/Pbcd4WLDT12uG3okck3i8HFl06WjvX7+bYzhOIfliozfB7995HTjNEHOF4b/+Qyz+77tO2gZpgBsY0GQz9wAAAA=="
-    },
-    {
-      "offset": [
-        6,
-        14,
-        14
-      ],
-      "type": "minecraft:painting",
-      "facing": "east",
-      "nbt": "H4sIAAAAAAAA/1WPwa4BQRBF70ybMURELH0DG0srQshbkRcL7MpMk0patfQ0Ej/wPptmXiLupk4l5y5uE4iQHihnOaoIrR+5XoxoR3ujEUNN2EX9CNlSFs5epIBCe2WdJzO11hT2JghpIPu1njxbScIbT//wToLWnIyZcelJcl2pamXLNJAa9yprPPi+MWpzdvrxyFC/kmMSj86JReeODn5Ed6/zoUKyZqO3wW//8yZwmiHmAt2PfiYW/1pXSbtXAU/3KyLd9wAAAA=="
     },
     {
       "offset": [
@@ -38629,26 +38519,6 @@
     },
     {
       "offset": [
-        7,
-        14,
-        7
-      ],
-      "type": "minecraft:painting",
-      "facing": "south",
-      "nbt": "H4sIAAAAAAAA/0WPQQ4BQRREa6YNQ4TEAZyAC1gRQqyIWGD3Z6bJj/ZbehrHp0UnalOvkrepDpCgeaaS5RKou5bnw4h2VBiNFGrGLhklyDeycvYhFRR6W+s8mbm1prIvQUgb+c568mwlCzNFTIbukoxZcO1JSv1T1dbWzUBqOvxZ03HsuFM0luz0+52j9STHJB79G4suHZ395KoLKhSyPRt9DHov8iFwK0fKFQZ/+04sPpyL0ukr4QMrqWtj9gAAAA=="
-    },
-    {
-      "offset": [
-        6,
-        15,
-        7
-      ],
-      "type": "minecraft:painting",
-      "facing": "south",
-      "nbt": "H4sIAAAAAAAA/0WPQQsBURSFz8wzY0jI0sIvUMrSioisSBbYXTOPbj336Xkof55XM+Vsznfq25wmECG9UM5yDdRay+tpRDs6G40YasYuGkbINrJy9ikFFNpb6zyZubWmsG9BSAPZznrybCUJM0aVBK0lGbPghyfJdamqrX2kgdS0X1rTUdWDsmPUluz095uh/iLHJB7dG4vOHV38hD5e52OFZM9GH4PfqfgQOM0Qc4HeX78Tiw/vKukUpDp+ARO/2fcAAAA="
-    },
-    {
-      "offset": [
         8,
         19,
         11
@@ -38656,16 +38526,6 @@
       "type": "minecraft:item_frame",
       "facing": "north",
       "nbt": "H4sIAAAAAAAA/0WPMU/DQAyF3+WaKi1VGeAPdGJhg4mFolRBTFSIgbKgI7mCpYsPXa6Fsf+8+JoivNjvyc+fPAYUhpWpiT8yhclDtO2TjyaSZyTN241jG8y7s8ig7yioS4Xike+D33ADjenSh2hc6b1r/DdDaoTi70guMiuvcagck8o4t6AuGq5tssYYJKZGXsu9KI4qkFGD05bY1sGs443hLTkJT9PmIviv8jPFb3eJpJe+G0pMz2c9ZH616/tFrzMMKgp2vxfGMzm7Eu/sOL/IXCiM5E3qKP3Yw8//4STMt3UwrT1mXiVzopBX9GMb4BcQTJARQgEAAA=="
-    },
-    {
-      "offset": [
-        10,
-        5,
-        29
-      ],
-      "type": "minecraft:painting",
-      "facing": "west",
-      "nbt": "H4sIAAAAAAAA/02PsW7CQBBE53wxOBZykSIdJR1fgIQEJAJRxUIpAt1iH2ily150PqDlo/g/OMBFppm30pNGmwMKnR1VLHul0FvK8WDFeNpagwR6yl4NFbIvWXh3kBoaRel8IPvhnK3dSRDzimzlAgV2ksYzmV3wSIrenKz95CaQVOap6tI1nUh6Mnhak/e2x+dHJ3iZszfXa4bukTyTBBS/LKbytAujvziskX6zNev7Rss/kfMMCdd4+ycTS4i/tdImSn3cAOgT+k31AAAA"
     },
     {
       "offset": [
@@ -38706,16 +38566,6 @@
       "type": "minecraft:item_frame",
       "facing": "west",
       "nbt": "H4sIAAAAAAAA/y1OMW7CQBCc82HLjlCqKC2izwtoQiByRAWKKIAmOux1tNJ5TzofSUoelf/BgT3NzK5mRvMAKGSlqVi+RwrjlfycrJA3R0tIoN/YqxeFfC0f3p2khsbjxvlg7NI5W7tfQUSB/NMFE9hJGs9k8Y87UoxLY+07d8FIRb1Vb1yXRaXnz71rPh349XznBKOSPV0uGumWLe3jLx/07taqUMSd3PFtZI6Eazy1LFR504QZB2q/Gm9aGjKHmJkopCX/UQ1cAU7l1VrzAAAA"
-    },
-    {
-      "offset": [
-        8,
-        6,
-        31
-      ],
-      "type": "minecraft:painting",
-      "facing": "east",
-      "nbt": "H4sIAAAAAAAA/0WPMU8CQRCF391yx0KIiZY0xN5fYAMEgrGSEAq0G+4WM8kyo8setHb+bFw4El/zvpd8U0wfyFDuqGL5NBkGr3JsvLhAW++Qw0w5ZE8Z7Ju8BG2khsHdUkMkP1P1tZ4EKT3YlUaKrFKkmc9+cU2BwYK8n/MhklSuVc1SD2UiM3lsrcnw1uOfa+foLDi489mie6TAJBH3exZXBdrF5y0F/W6cQbFm797TQXnjTWJrkXONh3//i1ji5b1W+kjSCH/DwcZh+AAAAA=="
     },
     {
       "offset": [
@@ -38769,16 +38619,6 @@
     },
     {
       "offset": [
-        10,
-        19,
-        36
-      ],
-      "type": "minecraft:painting",
-      "facing": "west",
-      "nbt": "H4sIAAAAAAAA/0WPMU8CQRCF3956cBJioZU9dnZ0VCcaiJWEWKgNGe8WM3GdMbt70Pqj/H+44Uh8zfsm+V4xI8BgsKWG5cMYjB9l13lxgd69QwF7x8HcGlRPsgzaSQuLi5WGRP5e1be6F+Sco1prosQqZT6L+S+OKTFekPcPHBNJ43rVrjQOMtn6prfq6U/f8/rYBc4WHNzhUGG4o8AkCddfLK4JtE2z+Nl5vyFpN0GjixblM3v3modXJ37JPKpQcIvL/903saT85kl6y9IEf+QkWlkAAQAA"
-    },
-    {
-      "offset": [
         13,
         11,
         22
@@ -38786,26 +38626,6 @@
       "type": "minecraft:item_frame",
       "facing": "east",
       "nbt": "H4sIAAAAAAAA/0WPMU/DQAyF3+WaKi2lLIi/wAAzAwtFqYKYqCoGYEFHcgVLFx+6XAtjN3528bVBeLH95Pc+eQwoDCtTE7/nCpP7aNuljyaSZ6SdN2vHNpg3Z5FB31JQlwrFA98Fv+YGGtOFD9G40nvX+C+G1AjFX0gua1b+YF85JpVxbk5dNFzbJI0xSEyNvJa8KIoqkFGDk5bY1sGs4rXhDTkxT9PlPPjP8iPZb7aJpBe+G4pNzy4OkNl536+2+55hUFGwu50wHsnZZ9GO+vlJ5mOFkbxJHaUfD/DTfzgJ83UVTGt7z4t4zhTyir5tA/wCMmPtrEIBAAA="
-    },
-    {
-      "offset": [
-        10,
-        15,
-        23
-      ],
-      "type": "minecraft:painting",
-      "facing": "west",
-      "nbt": "H4sIAAAAAAAA/0WPMWsCQRCF39565iISSZr8gnQBS8FKk6BYKcHCpBvv1jCwzui6Z9r8KP+fLnqQ17zvwTfFdACD9oZKlh9j0J3JsfbiAq29QwY75mBeDYq5TIPWUsHiYaEhkn9X9ZX+ClLuUXxqpMgqeZrZ2wnX5OhOyPsPPkSS0t1Uu9BDO5EdvdysUb/pwd+1M7QmHNz5XODuSIFJIh63LK4MtInDNQXd184iX7J3X+mg1/AqcadAxhWe/v0dscT0XiN9J+kZFx3ZARH4AAAA"
-    },
-    {
-      "offset": [
-        9,
-        11,
-        24
-      ],
-      "type": "minecraft:painting",
-      "facing": "north",
-      "nbt": "H4sIAAAAAAAA/02PsW7CQBBEx3ex4wSUIhU9BQ0lBUplRESUCoQoIN1iH2ily160HNDmz8kBLjLNzEpvtJpnIEOxo5plbzJ0P+V09OKUtt7BwE5Ys2GGci4fGo7SwOJlETSSn4bgm3AWJD2hXIZIkYPk6TTTEW7K0Z2R9+98iCS1u6N2EQ5FSrbq36lq0Pr49+YGDzNWd7mUeDyRMknE6zeLq5V28e1M0jh1apGv2LtNanTavL4+KGG4+V/4IZaY9rXQV4J6+APzQNB4+QAAAA=="
     },
     {
       "offset": [
@@ -38866,36 +38686,6 @@
       "type": "minecraft:item_frame",
       "facing": "west",
       "nbt": "H4sIAAAAAAAA/0WPQUvDQBCF32aTkpZSQQQv/QneBRGstkQ8WcRD9SJrstWBzaxsttVjf5T/r86ainOZmce8+XgjQGFQmZr4LVcY30XbPvhoInlG2nm7cWyDeXUWGfQ1BXWmUN7zbfAbbqAxWfoQjZt77xr/yZAaovx7Usia3XzjtwqMK+PcgrpouLZJGiFPTI2iln9RFFUiowZHLbGtg1nHC8NbcmKepMtF8B/z92S/2iWSXvpuIDY9O+4hs/Nd3y/7niGvKNj9XhiP5OyTaKeHeSWzxB5KTOooZezhJ/9wEubLOpjWHjzP4pkqFBV92Qb4ARAasNRCAQAA"
-    },
-    {
-      "offset": [
-        6,
-        14,
-        23
-      ],
-      "type": "minecraft:painting",
-      "facing": "east",
-      "nbt": "H4sIAAAAAAAA/0XPMa8BQRQF4LM7b9d6ERKNxG+glqgIISoiCnTX7pCbjDsyBq3Oz2ZYidOcc5Ovuf9AhHRPOctBRajN5Hoxoh3tjEYMNWQXdSJkc5k6e5ECCvWFdZ7MyFpT2JsgpIpsaT15tpKEMx498EmC2oSMGfPZk+S6pGphz2lYatAu1aD77d790zH+Juz085mhciXHJB6NI4vOHe19n8yORCFZsdGbwOvfvQ47zRBzgeZPn4jFv58r0TagFl5BaKJO9gAAAA=="
-    },
-    {
-      "offset": [
-        6,
-        15,
-        22
-      ],
-      "type": "minecraft:painting",
-      "facing": "east",
-      "nbt": "H4sIAAAAAAAA/0XPsW7CQBAE0LEvNgYRkCgo8g2R0qWgAoEcUYGiFEC3sc/RSsdedD6cNl0+2zmwJaaZWek1OwIipBUVLF8qwngrzcWIdvRpNGKoFbvoOUK2kzdnL1JCYbK3zpNZW2tK+yMIGSJ7t548W0nCGa//cEuCcU7GbLj2JIXuqNrbOg1LLZ86tXzp+/X31jEecna6bTMMGnJM4vF4ZtGFo8ovak0KyQcbfQx42u9D2GmGmEvM7vabWPz1tQ6dAprjH+ilu9/0AAAA"
-    },
-    {
-      "offset": [
-        7,
-        12,
-        24
-      ],
-      "type": "minecraft:painting",
-      "facing": "north",
-      "nbt": "H4sIAAAAAAAA/02PMa8BQRSFz85YlmxIVCq9RKkQlRcv5FVEFOiu3SE3GXdkDFr/3JuwhdOc79x8zW0BCepHKlhOKkH+J/ebFePpYA0U9A/7ZJggW8rCu5uU0GivnA9kZ87Z0j0EMU1kaxcosJM0TjUb4Z0U+Zys/eVrICnMR9Urd61H0tP+x5oOqh4/361Qm7M3r1eGxp08kwR0ziym8HQMk4uNB410w9bsop5XvI3cyKC4RPfLJpYQn6ukfZR6+Aeyv4GI9gAAAA=="
     },
     {
       "offset": [
@@ -39006,26 +38796,6 @@
       "type": "minecraft:item_frame",
       "facing": "south",
       "nbt": "H4sIAAAAAAAA/0WPTU/DMAyG3zTr1E1lCIl/AReuXCjaVMSJCe0AXFBoM7CUOijNBsf98+HQInzxh/z4keeAwrQ2DfG7Vijvo+0efTSRPCP1vN85tsG8OYsM+paCulQoHvgu+B230FisfYjGLb13rf9iSMxQ/B3Jpc0wRo6yNs6tqI+GG5tGc0ySUyNv5F6UiSqQUYvTjtg2wWzjteE9OYEXaXMV/OfyI+E3h2TSa99PBdPV1eFXUpWDrLoYcoZJTcEej+LYkLPPaXmsn6Q+U5jJm9RT+nGQn//LSZyv22A6OzIvwpwo5DV92xb4AXcoJw9CAQAA"
-    },
-    {
-      "offset": [
-        14,
-        9,
-        16
-      ],
-      "type": "minecraft:painting",
-      "facing": "west",
-      "nbt": "H4sIAAAAAAAA/0WPwWrCQBRF72QaTUtIS3/BrYLrrmyViKuKdKHunskoD6ZvymRUcOVH+X92qoHezT0XDg/eE6DQ2VLFslMK+UwOeyvG08YaJNDv7FVfIfuUqXd7qaFRzJ0PZMfO2dodBTGPyBYuUGAnaZzJxwW3pMhLsnbCTSCpzF3Vc9d0IunR4G6Nem0Pz7dO8FCyN9drhu6BPJMEPH+zmMrTNrzRKZhKI/1ia1Z/F1teRi4yJFzj9d/+IZYQn2uldZRe8AtdGPi+9gAAAA=="
-    },
-    {
-      "offset": [
-        14,
-        10,
-        17
-      ],
-      "type": "minecraft:painting",
-      "facing": "west",
-      "nbt": "H4sIAAAAAAAA/0XPsW7CQBAE0DkfBoMso+Qf6JIiLRWQCEQVC1EEurV9RKtc9tBxkDYfxf+RE7aUaWZWes2OAIX+gWqWT6WQr+VytmI8VdYggZ6zV08K2busvDtLA42idD6QfXXONu5HEDNEtnGBAjtJ45ksrrgnRb4ka9/4FEhq01JdulM/Lj17btVs0vXL770T9Jbsze2WYXAhzyQB428WU3s6hOmXqajSSLdszS7yUbc/4i4yJNzg8V8fiSXE5zq0j+gBfxfE0xj2AAAA"
     },
     {
       "offset": [

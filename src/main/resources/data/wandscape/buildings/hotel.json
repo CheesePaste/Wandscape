@@ -8759,48 +8759,7 @@
     "5,6,7": "H4sIAAAAAAAA/+NiYGBmYKxgYGDwAtKV////PwWkq4B8Bg4GpswUBt7czLzU5KLEtBKrpNQUBgDgK5ArMAAAAA==",
     "5,6,8": "H4sIAAAAAAAA/+NiYGBmYKxgYGDwAtKV////PwWkq4B8Rg4GpswUBt7czLzU5KLEtBKrpNQUBgAgT7g8MAAAAA=="
   },
-  "entities": [
-    {
-      "offset": [
-        8,
-        2,
-        9
-      ],
-      "type": "minecraft:painting",
-      "facing": "north",
-      "nbt": "H4sIAAAAAAAA/0WPQWsCQQyF3864dioi2H9Qeu2xp54UxeJJKT3Y3uLuWAJjouOs/fk6ugt9l/cFvkAyAAr0d1Sx/JoCw6WcmyA+0jZ4GNgpx+K1gFvJR9RGaliM1hoThZlqqPVPkPMI96mJEquUeTSzN9xTYrigEOZ8SiSVb1W71lM/k508t9ak1/VL2wa9BUd/uTg8nCkyScJ4z+KrSLv0vqWox8ZblF8c/PdtoeNNZudguMbTv38glpTf66Sf+xFXcRVDFvgAAAA="
-    },
-    {
-      "offset": [
-        5,
-        8,
-        7
-      ],
-      "type": "minecraft:painting",
-      "facing": "west",
-      "nbt": "H4sIAAAAAAAA/0WNwU4CQRBEa3ZcGAzhYKJHEu98ASdQg+EEMRzUC2l3B9Jh7DbDAOG/+D8cXaJ1qerkvfQ1YNBaUcWyNgbdqex3QXykj+BRwI45moGBm8lz1J3UsOjNNSYKj6qh1oMgpwP3ookSq5T5LB5O+E2J7oRCeOJtIql8g9q5blt52dFdQ43uL91vusDVhKM/nx3ae4pMknD7yeKrSKs0rFU2/rjcqKwtygUH/5Yld9mvP28dCq5x8+98EUviP+E9Q218A5APFD78AAAA"
-    },
-    {
-      "offset": [
-        5,
-        14,
-        8
-      ],
-      "type": "minecraft:painting",
-      "facing": "west",
-      "nbt": "H4sIAAAAAAAA/0WPwU4CQRBEa3ZYHAgh0YN37/oDngANhJOEcFBvze5gOhm6dZiFH+P/cGQ3sS5VnbxKpYeAQX9HFcuXMRgt5dgE8ZG2waOAnXI0jwbuTRZRG6lhMV5pTBReVEOtJ0HWAG6tiRKrlPksZmdcVWI0pxBe+ZBIKt+idqWHfk52ct9Sk6fOH1ov0Jtz9JeLw82RIpMk3O5ZfBVpl563FPWn8RblhoP/yIVxl9//Jh0KrnH3z38TS8rvddBnhhx+AVp+te74AAAA"
-    },
-    {
-      "offset": [
-        5,
-        14,
-        4
-      ],
-      "type": "minecraft:painting",
-      "facing": "west",
-      "nbt": "H4sIAAAAAAAA/0WPwWoCQRBEa3ZcswniQcSvMD+Qkyai5KQED+qtszsrDZPuMDurP5b/00l2IXWpanhFU0+AwbCmkuVsDEbvcmm9uECf3iGDXXIwc4NiK5ugrVSwGO80RPJvqr7SqyDpEcWHRoqskqcze/3Bn3KM1uT9iptIUroOtTtthinZxayjFs+9TzrPMFhzcLdbgYcLBSaJmH6xuDJQHV+aVmqvVxcai3zP3h1TZ9znw+/XAhlXmPxXvoklpoU9dErQAHed27ai+wAAAA=="
-    }
-  ],
+  "entities": [],
   "comfort": 18,
   "magic": 5,
   "wonder": 6,

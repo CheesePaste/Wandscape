@@ -2593,16 +2593,6 @@
     },
     {
       "offset": [
-        8,
-        3,
-        3
-      ],
-      "type": "minecraft:painting",
-      "facing": "south",
-      "nbt": "H4sIAAAAAAAA/1WPQQ4BQRBF/0wbmkxI3MDeCawIIVZELLArMz1U0qqlNY5Pi0nE39T7yatKqgMkaFZUsJwi5Ut53K0YT0drkEJN2CfDBHolC+/uUkKhu3Y+kJ06Z0v3FMS0oTcuUGAnWawp6mTI52TtjG+BpDBfVa3drRlJjQdfa5z/zxSNOXvzemm0HuSZJKB3YTGFpyqMLhSKs0K2ZWv2nzs17yJrjZRL9H/2lVhCfK6WDp8FvAHaJiWN9gAAAA=="
-    },
-    {
-      "offset": [
         7,
         3,
         8

@@ -95397,38 +95397,7 @@
     "9,7,19": "H4sIAAAAAAAA/+NiYGBmYKz4////RyBdCaSvcjKwepak5hYzgABQsAoo+JeDgSkzhUEgNzMvNbkoMa3EKimxqCg1hwEATlRqskAAAAA=",
     "9,9,11": "H4sIAAAAAAAA/xWMMQ5AQBBFPxsJaqWTuIFTyFojNpZNzBS4qHMo1IzXvOQVrwQMqmBZOr8KbdYJDR2HKK9ikOyqW32orwJZK7QwfjSeGp8cqR9QL34lt9lRGjd5pqCbPsaZJwojPvpK9MRnAAAA"
   },
-  "entities": [
-    {
-      "offset": [
-        19,
-        11,
-        11
-      ],
-      "type": "minecraft:painting",
-      "facing": "south",
-      "nbt": "H4sIAAAAAAAA/1WPMW/CMBCFX+wmGBpVFfwIFjY2JlArKqZGVYfCdiQGTjLnyhhY+eep20aq+pb7Tvre8AZAhmJHNcs+UbmSy9mJDbR1Fgp6wSGbZDCv8hL8WRpoPFQ+RHJP3rvGXwUpfZg3Hymylzy9Cl1ylEty7plPkaS2v6qu/KlIpOfT2481H+PfVbhbcrBta9C7UGCSiMcji60D7eLsyvFgg0b+zs6uk3/f8UfikYHiBsM//ZNYYlrXSZvvAr4ApLfhm/cAAAA="
-    },
-    {
-      "offset": [
-        9,
-        10,
-        15
-      ],
-      "type": "minecraft:painting",
-      "facing": "east",
-      "nbt": "H4sIAAAAAAAA/02PwWoCQRBEa3eym4mIQn5BcgvknpPBoHhSQg7qrbM7GxrG7jA76if42Tq6e0hdqhpe0dQAyFA2VLH8mgzDpRwPXlygH++Qw3xwyF4z2JUsgh6khsForSGSn6n6Wk+CpCfYL40UWaVIZz47464Cwzl5/8ltJKlch5q1tmVKZjrpqOlL72+d53iYc3CXi8XjkQKTRDzvWVwVqInvevJur9IaFN/s3TY1Bn3e3B5Y5Fz/L/wRS7zt66Bdgsa4Ajk3GOL5AAAA"
-    },
-    {
-      "offset": [
-        14,
-        18,
-        11
-      ],
-      "type": "minecraft:painting",
-      "facing": "south",
-      "nbt": "H4sIAAAAAAAA/0WPQWvCQBCFX7JG01Yi+Ce8tJcee0pRLJ4U8WB7myZrGdjOymaTXvvP40ACvsv7HnwwzCOQYHqhiuVHab6TrnViA307ixTmnUPynCDfy0fwrdQwKA4+RHJr713t/wSaB+RHHymyl0xnijEZ5ltybsNNJKnsoJqDb6ZKpnwZrPL1f+jVsFNMthxs3+eYdRSYJGLxy2KrQJf4VuklMchO7Oyn6suRz8pFjpRrLO/2lViiPjdKXyo94QbHGom/9gAAAA=="
-    }
-  ],
+  "entities": [],
   "comfort": 31,
   "magic": 23,
   "wonder": 23,

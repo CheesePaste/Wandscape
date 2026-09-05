@@ -35563,18 +35563,7 @@
     "9,7,7": "H4sIAAAAAAAA/+NiYGBmYKz4////PyBdCaSvAukqEJ+DgSkzhUEwNzMvNbkoMa3EKic1uSS1KI8BAAg5kTs0AAAA",
     "9,7,8": "H4sIAAAAAAAA/+NiYGBmYKz4////PyBdCaSvAukqIP2fg4EpM4VBMDczLzW5KDGtxConNbkktSiPAQCfn4zcNAAAAA=="
   },
-  "entities": [
-    {
-      "offset": [
-        24,
-        8,
-        6
-      ],
-      "type": "minecraft:painting",
-      "facing": "west",
-      "nbt": "H4sIAAAAAAAA/0XPsU4CQRAG4H9vvWM1xEQqY2fvAxirUwzESmIslG64W8wk64wse9DyULwfbjgS/mb+Sb4p5gowqJbUsPwYg+GbbLogPtIieBSwzxzNg4F7l2nUTlpYXM80Jgpj1dDqVpBzCfehiRKrlHktXvY4psRwQiG88jqRNL6ndqbrKjdbP+6Oqr7vdX3XzwIXE47+cHAYbCgyScLNL4tvIi3T00K7VeeTRfnJwX/nA3fqX7nfOhTcYnT2f8SS8nsnNM+owj8eeczq+AAAAA=="
-    }
-  ],
+  "entities": [],
   "comfort": 22,
   "magic": 12,
   "wonder": 12,
