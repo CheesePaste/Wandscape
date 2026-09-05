@@ -72,7 +72,6 @@ public final class RecoveryCommand {
 
         int total = world.taskPool.size();
         int assignable = world.taskPool.assignableCount();
-        int pendingApproval = world.taskPool.getByState(TaskState.PENDING_APPROVAL).size();
         int inProgress = world.taskPool.getByState(TaskState.IN_PROGRESS).size();
         int awaiting = world.taskPool.getByState(TaskState.AWAITING_RESOURCES).size();
         int completed = world.taskPool.getByState(TaskState.COMPLETED).size();
@@ -83,7 +82,6 @@ public final class RecoveryCommand {
                 "[Wandscape] ── Task Pool Status ──\n" +
                         "  Total active:  " + total + "\n" +
                         "  Assignable:    " + assignable + "\n" +
-                        "  Pending appr:  " + pendingApproval + "\n" +
                         "  In progress:   " + inProgress + "\n" +
                         "  Awaiting res:  " + awaiting + "\n" +
                         "  Completed:     " + completed + "\n" +

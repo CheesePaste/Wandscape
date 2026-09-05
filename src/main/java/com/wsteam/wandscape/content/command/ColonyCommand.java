@@ -217,7 +217,7 @@ public final class ColonyCommand {
             // PLACEHOLDER_COLONY. Fix it now.
             fixEcsAfterSpawn(npc, colonyId);
 
-            // 早期法师太脆容易死：给初始法师赠送铁套（仅护甲数值生效，外观不渲染）
+            // 给初始法师赠送皮革套（仅护甲数值生效，外观不渲染）
             equipStarterArmor(npc);
             spawnedNpcs.add(npc);
         }
@@ -524,17 +524,17 @@ public final class ColonyCommand {
     }
 
     /**
-     * 给初始法师配一套铁甲（写 vanilla 装备槽——护甲值/韧性/附魔由原版每 tick 装备结算生效，
-     * 其它模组可见；巫师袍外观不受影响，渲染器无盔甲层）。早期法师太脆容易死，赠送铁套提升
-     * 开局生存。铁魔法属性桥由 {@code onNpcJoinWorld → syncIronArmorAttributes} 兜底。
+     * 给初始法师配一套皮革套（写 vanilla 装备槽——护甲值/韧性/附魔由原版每 tick 装备结算生效，
+     * 其它模组可见；巫师袍外观不受影响，渲染器无盔甲层）。赠送皮革套提供开局基础护甲。
+     * 铁魔法属性桥由 {@code onNpcJoinWorld → syncIronArmorAttributes} 兜底。
      */
     private static void equipStarterArmor(WandscapeNpc npc) {
-        npc.setItemSlot(WandscapeNpc.ARMOR_VANILLA_SLOTS[0], new ItemStack(Items.IRON_HELMET));
-        npc.setItemSlot(WandscapeNpc.ARMOR_VANILLA_SLOTS[1], new ItemStack(Items.IRON_CHESTPLATE));
-        npc.setItemSlot(WandscapeNpc.ARMOR_VANILLA_SLOTS[2], new ItemStack(Items.IRON_LEGGINGS));
-        npc.setItemSlot(WandscapeNpc.ARMOR_VANILLA_SLOTS[3], new ItemStack(Items.IRON_BOOTS));
+        npc.setItemSlot(WandscapeNpc.ARMOR_VANILLA_SLOTS[0], new ItemStack(Items.LEATHER_HELMET));
+        npc.setItemSlot(WandscapeNpc.ARMOR_VANILLA_SLOTS[1], new ItemStack(Items.LEATHER_CHESTPLATE));
+        npc.setItemSlot(WandscapeNpc.ARMOR_VANILLA_SLOTS[2], new ItemStack(Items.LEATHER_LEGGINGS));
+        npc.setItemSlot(WandscapeNpc.ARMOR_VANILLA_SLOTS[3], new ItemStack(Items.LEATHER_BOOTS));
         npc.syncIronArmorAttributes();
-        Log.info(TAG, "[Colony] Equipped starter iron armor on NPC {}",
+        Log.info(TAG, "[Colony] Equipped starter leather armor on NPC {}",
                 npc.getUUID().toString().substring(0, 8));
     }
 }

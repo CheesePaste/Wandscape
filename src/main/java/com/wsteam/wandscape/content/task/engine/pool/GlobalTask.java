@@ -4,7 +4,6 @@ import com.google.gson.JsonElement;
 import com.wsteam.wandscape.content.task.boundary.EventBus;
 import com.wsteam.wandscape.content.task.types.ResourceStack;
 import com.wsteam.wandscape.content.task.engine.dsl.TriggerDeclaration;
-import com.wsteam.wandscape.content.task.runtime.ApprovalInfo;
 import com.wsteam.wandscape.content.task.runtime.InterruptRecord;
 import com.wsteam.wandscape.content.task.runtime.TaskSequence;
 import com.wsteam.wandscape.content.task.runtime.TaskState;
@@ -49,7 +48,6 @@ public class GlobalTask {
     @Nullable
     public List<ResourceStack> awaitingResource;
     public final Deque<InterruptRecord> interruptHistory;
-    public final ApprovalInfo approval;
 
     /**
      * Persisted channel checkpoint: remaining ticks of the in-flight
@@ -81,8 +79,7 @@ public class GlobalTask {
             int stepIndex,
             Long assignedNpcId,
             @Nullable List<ResourceStack> awaitingResource,
-            Deque<InterruptRecord> interruptHistory,
-            ApprovalInfo approval
+            Deque<InterruptRecord> interruptHistory
     ) {
         this.id = id;
         this.sequence = sequence;
@@ -96,32 +93,18 @@ public class GlobalTask {
         this.assignedNpcId = assignedNpcId;
         this.awaitingResource = awaitingResource != null ? List.copyOf(awaitingResource) : null;
         this.interruptHistory = interruptHistory != null ? interruptHistory : new ArrayDeque<>();
-        this.approval = approval;
     }
 
     // Convenience constructors
 
     public static GlobalTask create(long id, TaskSequence sequence,
                                      int priority, List<TriggerDeclaration> triggers,
-                                     Map<String, JsonElement> taskParams,
-                                     TaskState initialState,
-                                     ApprovalInfo approval) {
-        return new GlobalTask(id, sequence, priority,
-                System.currentTimeMillis(),
-                triggers, new ArrayList<>(), taskParams,
-                initialState, 0, null, null,
-                new ArrayDeque<>(), approval);
-    }
-
-    /** Create a small task that skips approval. */
-    public static GlobalTask createSmall(long id, TaskSequence sequence,
-                                          int priority, List<TriggerDeclaration> triggers,
-                                          Map<String, JsonElement> taskParams) {
+                                     Map<String, JsonElement> taskParams) {
         return new GlobalTask(id, sequence, priority,
                 System.currentTimeMillis(),
                 triggers, new ArrayList<>(), taskParams,
                 TaskState.PENDING_ASSIGN, 0, null, null,
-                new ArrayDeque<>(), null);
+                new ArrayDeque<>());
     }
 
     public boolean isComplete() {

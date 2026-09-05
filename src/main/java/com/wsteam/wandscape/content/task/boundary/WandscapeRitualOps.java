@@ -21,6 +21,7 @@ import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.network.PacketDistributor;
 
@@ -177,9 +178,17 @@ public class WandscapeRitualOps implements RitualOps {
                 Vec3 dest = null;
                 if (npc.level() instanceof ServerLevel serverLevel) {
                     dest = findSafeLanding(serverLevel, target);
+                    // 若目标原点未能找到安全落点，且 NPC 处于跟随模式，尝试以跟随玩家实时位置重试搜索
+                    if (dest == null && npc.isFollowMode()) {
+                        Player follower = npc.getFollowerPlayer();
+                        if (follower != null) {
+                            dest = findSafeLanding(serverLevel, new GridPos(follower.getBlockX(), follower.getBlockY(), follower.getBlockZ()));
+                        }
+                    }
                 }
                 if (dest != null) {
                     npc.teleportTo(dest.x, dest.y, dest.z);
+                    npc.getNavigation().stop();
                     // 落点可能超出到达半径，把导航状态拨回 PATHFINDING，让 NavigationSystem 走完剩余距离
                     //（已到则下一 tick 判到），避免停在 TELEPORT_RITUAL 空转
                     NavigationState nav = world.get(casterId, NavigationState.class);
@@ -213,7 +222,7 @@ public class WandscapeRitualOps implements RitualOps {
      * 两遍搜索：先要求严格双层实心地面（首选，落地即站稳）；失败后放宽为单层实心/台阶支撑面（但绝不悬空）。
      * 返回 {@code null} 表示附近无可立足处（调用方取消传送，防止悬空坠亡或卡墙窒息）。
      */
-    private static Vec3 findSafeLanding(ServerLevel level, GridPos target) {
+    public static Vec3 findSafeLanding(ServerLevel level, GridPos target) {
         for (int r = 0; r <= 4; r++) {
             Vec3 spot = scanShell(level, target, r, true);
             if (spot != null) return spot;

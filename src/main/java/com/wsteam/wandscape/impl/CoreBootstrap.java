@@ -72,8 +72,7 @@ public final class CoreBootstrap {
         world.blueprintRegistry = config.blueprints();
 
         // 4. Create global task pool
-        world.taskPool = new GlobalTaskPool(world.eventBus, world.blueprintRegistry, world.colonyResources,
-                config.autoApproveTasks());
+        world.taskPool = new GlobalTaskPool(world.eventBus, world.blueprintRegistry, world.colonyResources);
 
         // 4.5 Building task pool (per-building head tracking)
         world.buildingTaskPool = config.buildingTaskPool() != null ? config.buildingTaskPool() : new BuildingTaskPool();

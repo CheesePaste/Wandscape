@@ -39,7 +39,7 @@ public final class FriendlyForce {
         /** 玩家训养的宠物（{@code OwnableEntity} 持有 owner、主人为玩家且非 {@code Enemy}，如狼/猫/鹦鹉/马/骆驼/羊驼）：默认恒为友军；
          *  PVP 开启时仅主人为同殖民地玩家的宠物为友军。诡厄等第三方 {@code Owned} 召唤虽也实现 {@code OwnableEntity}，但归属按召唤者解析走 {@code PLAYER_SUMMON}/{@code MAGIC_SUMMON}，不会落入此类。 */
         PET,
-        /** 玩家/村民召唤的原版守护（铁傀儡/雪傀儡）：恒为友军（避免战斗溅射误伤守护单位）。 */
+        /** 玩家搭建的原版守护（玩家创建的铁傀儡 / 雪傀儡）：恒为友军（避免战斗溅射误伤守护单位）。村庄自然生成的铁傀儡归为 OTHER。 */
         GOLEM,
         /** 游客（{@code ColonyVisitor}）：同殖民地游客 → 友军（避免战斗溅射误伤短居访客）。 */
         TOURIST,

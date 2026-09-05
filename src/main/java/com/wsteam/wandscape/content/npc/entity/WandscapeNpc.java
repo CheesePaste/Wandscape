@@ -30,12 +30,17 @@ import com.wsteam.wandscape.api.NpcInteractHook;
 import com.wsteam.wandscape.content.tourist.entity.ColonyVisitor;
 import com.wsteam.wandscape.content.tourist.entity.PlayerLike;
 import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.log.LogCategory;
 import com.wsteam.wandscape.api.WandscapeApis;
 import com.wsteam.wandscape.api.ColonyApi;
 import com.wsteam.wandscape.api.FriendlyForceApi;
+import com.wsteam.wandscape.content.task.boundary.WandscapeRitualOps;
 import com.wsteam.wandscape.content.task.engine.pool.GlobalTask;
 import com.wsteam.wandscape.content.task.runtime.ExecutorState;
 import com.wsteam.wandscape.content.task.runtime.NpcTaskPackage;
+import com.wsteam.wandscape.content.task.runtime.TaskRuntime;
+import com.wsteam.wandscape.content.task.types.GridPos;
+import com.wsteam.wandscape.content.task.types.RitualId;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.particles.ParticleTypes;
@@ -298,11 +303,11 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
     /**
      * 实体在友军名单中的类别（静态重载，供 {@link #isFriendlyForce} 与
      * {@link #isMutuallyFriendly} 共用，边界唯一）。判定顺序：玩家 > 本模组 NPC > 守护召唤
-     * （铁/雪傀儡）> 召唤者解析（铁魔法 / 诡厄 {@code IOwned}：召唤者为玩家 → 玩家侧召唤恒友军、
+     * （玩家创建的铁傀儡 / 雪傀儡）> 召唤者解析（铁魔法 / 诡厄 {@code IOwned}：召唤者为玩家 → 玩家侧召唤恒友军、
      * 本模组法师 → 其殖民地的召唤随从）> 玩家训养的宠物（{@code OwnableEntity} 有主）> 游客 >
-     * 其它模组经 {@code FriendlyForceApi} 注册的友军（{@code EXTERNAL_ALLY}）> 其它。
+     * 其它模组经 {@code FriendlyForceApi} 注册的友军（{@code EXTERNAL_ALLY}）> 其它（含村庄自然生成的铁傀儡）。
      *
-     * <p>⚠️ 宠物判定必须**先解析召唤者**再按「有主」认定：诡厄等第三方 {@code Owned} 召唤同样实现
+     * <p>[注意] 宠物判定必须**先解析召唤者**再按「有主」认定：诡厄等第三方 {@code Owned} 召唤同样实现
      * 原版 {@code OwnableEntity}，但主人可能是敌对生物（如 Goety 使徒召唤的黑曜石巨柱，owner 即使徒）。
      * 若只凭「有主」就当玩家训养宠物（恒友军），敌方召唤会被误豁免——殖民地 NPC 不攻击/不误伤它，
      * 敌对权杖也无法把它标记为敌对。召唤者既非玩家也非本模组法师时按非友军落入下方判定；宠物兜底
@@ -319,7 +324,10 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
         if (e instanceof WandscapeNpc npc) {
             return new FriendlyForce.Classified(FriendlyForce.AllyKind.WANDSCAPE_NPC, npc.colonyId);
         }
-        if (e instanceof IronGolem || e instanceof SnowGolem) {
+        if (e instanceof IronGolem golem && golem.isPlayerCreated()) {
+            return new FriendlyForce.Classified(FriendlyForce.AllyKind.GOLEM, null);
+        }
+        if (e instanceof SnowGolem) {
             return new FriendlyForce.Classified(FriendlyForce.AllyKind.GOLEM, null);
         }
         Entity summoner = IronSpellsCompat.getSummoner(e);
@@ -945,8 +953,10 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
     public Player getFollowerPlayer() {
         if (followerUuid == null) return null;
         if (!(level() instanceof ServerLevel serverLevel)) return null;
+        Player p = serverLevel.getPlayerByUUID(followerUuid);
+        if (p != null && p.isAlive() && !p.isRemoved()) return p;
         Entity e = serverLevel.getEntity(followerUuid);
-        return (e instanceof Player p && p.isAlive() && !p.isRemoved()) ? p : null;
+        return (e instanceof Player p2 && p2.isAlive() && !p2.isRemoved()) ? p2 : null;
     }
 
     // ============================================================
@@ -2097,6 +2107,14 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
     private static final double FOLLOW_STOP_DIST_SQ = 3.0 * 3.0;
     /** 跟随移动速度系数（作用于基础移速）。 */
     private static final double FOLLOW_SPEED = 1.0;
+    /** 跟随远距离直接传送阈值平方（24² = 576）：超出此距离直接启动传送仪式。 */
+    private static final double FOLLOW_TELEPORT_FAR_DIST_SQ = 24.0 * 24.0;
+    /** 跟随寻路失败/卡住时触发传送的最小距离平方（10² = 100）：防止贴脸卡住微移乱传。 */
+    private static final double FOLLOW_TELEPORT_MIN_DIST_SQ = 10.0 * 10.0;
+    /** 跟随卡住判定最大容忍 tick（60 tick = 3秒无明显位移且在寻路中）。 */
+    private static final int FOLLOW_STUCK_LIMIT_TICKS = 60;
+    /** 寻路连续失败判定传送最大重试次数（3 次寻路失败）。 */
+    private static final int FOLLOW_MAX_FAILED_PATHS = 3;
 
     // ── 休息目标（法师小屋）：回到休息点停住，期间回满血/蓝，到点结束恢复空闲 ──
     // 与跟随/游荡互斥（跟随与游荡的 canUse 在休息时返回 false）。休息用 vanilla 寻路直走，
@@ -2151,6 +2169,9 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
 
     private class FollowPlayerGoal extends Goal {
         private int repathCooldown = 0;
+        private int stuckTicks = 0;
+        private int failedPathAttempts = 0;
+        private Vec3 lastPos = Vec3.ZERO;
 
         FollowPlayerGoal() {
             setFlags(EnumSet.of(Goal.Flag.MOVE));
@@ -2161,10 +2182,11 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
             return getFollowerPlayer();
         }
 
-        /** ECS 任务/施法/手动引导/休息接管时让路，跟随不抢导航。
+        /** ECS 任务/施法/手动引导/传送/休息接管时让路，跟随不抢导航。
          *  isEngineIdle 直读 ECS（无轮询延迟），任务一入队立即让路。 */
         private boolean busy() {
-            return !isEngineIdle() || suppressWandering || isCasting() || manualCastTicks > 0;
+            return !isEngineIdle() || suppressWandering || isCasting() || manualCastTicks > 0
+                    || isTeleportChanneling(level().getGameTime());
         }
 
         @Override
@@ -2182,24 +2204,130 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
         }
 
         @Override
+        public void start() {
+            this.repathCooldown = 0;
+            this.stuckTicks = 0;
+            this.failedPathAttempts = 0;
+            this.lastPos = position();
+        }
+
+        @Override
         public void tick() {
             Player p = follower();
             if (p == null) return;
-            if (getNavigation().isDone()) {
-                getNavigation().moveTo(p, FOLLOW_SPEED);
-            } else if (--repathCooldown <= 0) {
-                getNavigation().moveTo(p, FOLLOW_SPEED);
+
+            if (isTeleportChanneling(level().getGameTime())) {
+                getNavigation().stop();
+                return;
+            }
+
+            double distSq = distanceToSqr(p);
+
+            // 1. 距离过远（>= 24 格）：超出正常地面跟随视野范围，直接启动自传送仪式
+            if (distSq >= FOLLOW_TELEPORT_FAR_DIST_SQ) {
+                if (tryTeleportToPlayer(p)) {
+                    return;
+                }
+            }
+
+            // 2. 采样当前坐标，检测是否在寻路移动中卡住
+            if (position().distanceToSqr(lastPos) < 0.04) {
+                stuckTicks++;
+            } else {
+                stuckTicks = 0;
+                lastPos = position();
+            }
+
+            // 3. 卡住超时判定（>= 10 格且 60 tick 卡在障碍处无法前移）
+            if (distSq >= FOLLOW_TELEPORT_MIN_DIST_SQ && stuckTicks >= FOLLOW_STUCK_LIMIT_TICKS) {
+                if (tryTeleportToPlayer(p)) {
+                    stuckTicks = 0;
+                    return;
+                }
+            }
+
+            // 4. 周期寻路推进与寻路失败判定
+            if (getNavigation().isDone() || --repathCooldown <= 0) {
                 repathCooldown = 10;
+                boolean ok = getNavigation().moveTo(p, FOLLOW_SPEED);
+                if (!ok || getNavigation().getPath() == null) {
+                    failedPathAttempts++;
+                    if (distSq >= FOLLOW_TELEPORT_MIN_DIST_SQ && failedPathAttempts >= FOLLOW_MAX_FAILED_PATHS) {
+                        if (tryTeleportToPlayer(p)) {
+                            failedPathAttempts = 0;
+                            return;
+                        }
+                    }
+                } else {
+                    failedPathAttempts = 0;
+                }
             }
         }
 
         @Override
         public void stop() {
+            this.stuckTicks = 0;
+            this.failedPathAttempts = 0;
             // 任务/施法接管时不清 navigation（NavigationSystem 自己会驱动/重寻路）；
             // 仅在空闲状态下取消（如玩家取消跟随）。
-            if (!suppressWandering && !isCasting()) {
+            if (!suppressWandering && !isCasting() && !isTeleportChanneling(level().getGameTime())) {
                 getNavigation().stop();
             }
+        }
+
+        /** 尝试复用 self_teleport 自传送仪式传送至跟随玩家身旁。 */
+        private boolean tryTeleportToPlayer(Player p) {
+            if (!onGround()) return false;
+            if (isTeleportChanneling(level().getGameTime())) return false;
+            if (!(level() instanceof ServerLevel serverLevel)) return false;
+
+            TaskRuntime runtime = TaskRuntime.getActive();
+            World world = runtime != null ? runtime.getWorld() : null;
+            if (world == null || world.ritualOps == null) return false;
+
+            long casterId = ecsEntityId;
+            if (casterId <= 0) {
+                Long mapped = EntityComponentBridge.INSTANCE.getEcsId(getUUID());
+                if (mapped != null && mapped > 0) {
+                    casterId = mapped;
+                    ecsEntityId = mapped;
+                } else {
+                    return false;
+                }
+            }
+
+            double distSq = distanceToSqr(p);
+            boolean emergency = distSq >= 48.0 * 48.0 || stuckTicks >= 200;
+
+            MagicDef tp = SpellbookLoader.getSpec("teleport");
+            int tpCd = tp != null ? tp.baseCooldown() : 150;
+            int tpMana = tp != null ? tp.manaCost() : 30;
+            int channelTicks = WandscapeRitualOps.channelTicks(RitualId.SELF_TELEPORT);
+
+            boolean castSuccess = tryCastSpell("teleport", tpCd, tpMana, channelTicks);
+            if (!castSuccess) {
+                if (emergency) {
+                    // 紧急情况（超出寻路范围或严重卡死）：即使魔力不足或 CD 中也强制执行兜底传送
+                    magic.spendMana(magic.getMana());
+                    startManualCast("teleport", channelTicks);
+                } else {
+                    return false;
+                }
+            } else {
+                setCastSpellId("teleport");
+            }
+
+            markTeleportChanneling(serverLevel.getGameTime(), channelTicks);
+            getNavigation().stop();
+            setDeltaMovement(Vec3.ZERO);
+
+            GridPos target = new GridPos(p.getBlockX(), p.getBlockY(), p.getBlockZ());
+            world.ritualOps.beginRitual(RitualId.SELF_TELEPORT, target, world, casterId, Map.of());
+
+            Log.debug(LogCategory.NPC, "follow",
+                    "NPC {} follow-teleport ritual started → player {} at ({},{},{}), distSq={}",
+                    casterId, p.getName().getString(), target.x(), target.y(), target.z(), String.format("%.1f", distSq));
+            return true;
         }
     }
 

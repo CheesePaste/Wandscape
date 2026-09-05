@@ -25,7 +25,7 @@ import java.util.UUID;
  */
 public final class BuildingRepairHandler {
     private static final String TAG = "BuildingRepairHandler";
-    // 49 = below the PENDING_APPROVAL gate (>= 50) but above node supply (15).
+    // Priority 49: above node supply (15) but below player-initiated direct tasks.
     // addFirst in the building queue guarantees repair tasks are dequeued first.
     static final int REPAIR_PRIORITY = 49;
 

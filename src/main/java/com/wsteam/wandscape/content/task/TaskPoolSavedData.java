@@ -144,18 +144,6 @@ public final class TaskPoolSavedData extends SavedData {
             tag.put("await", awaitList);
         }
 
-        // approval info (for PENDING_APPROVAL tasks)
-        if (task.approval != null && task.approval.suggestedPosition() != null) {
-            CompoundTag appr = new CompoundTag();
-            var pos = task.approval.suggestedPosition();
-            appr.putInt("sx", pos.x());
-            appr.putInt("sy", pos.y());
-            appr.putInt("sz", pos.z());
-            appr.putLong("deadline", task.approval.deadline());
-            appr.putBoolean("autoApproved", task.approval.autoApproved());
-            tag.put("approval", appr);
-        }
-
         return tag;
     }
 
