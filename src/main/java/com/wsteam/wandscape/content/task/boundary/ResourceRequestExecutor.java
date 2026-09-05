@@ -71,6 +71,7 @@ public class ResourceRequestExecutor implements OpExecutor<AtomicOp.ResourceRequ
         final List<CompletableFuture<Void>> inFlight; // send() futures
         final List<ResourceStack> needs;     // reserved resources (for rollback)
         final ColonyResourceAccess resources;
+        final UUID colonyId;
         final long npcId;
         final World world;
         final int totalItems;                // total items in this batch (for logging)
@@ -78,13 +79,14 @@ public class ResourceRequestExecutor implements OpExecutor<AtomicOp.ResourceRequ
         PendingBatch(CompletableFuture<Void> doneFuture, int launchCountdown,
                      List<LaunchEntry> remaining, List<CompletableFuture<Void>> inFlight,
                      List<ResourceStack> needs, ColonyResourceAccess resources,
-                     long npcId, World world, int totalItems) {
+                     UUID colonyId, long npcId, World world, int totalItems) {
             this.doneFuture = doneFuture;
             this.launchCountdown = launchCountdown;
             this.remaining = remaining;
             this.inFlight = inFlight;
             this.needs = needs;
             this.resources = resources;
+            this.colonyId = colonyId;
             this.npcId = npcId;
             this.world = world;
             this.totalItems = totalItems;
@@ -120,37 +122,39 @@ public class ResourceRequestExecutor implements OpExecutor<AtomicOp.ResourceRequ
             return CompletableFuture.completedFuture(null);
         }
 
+        WandscapeNpc npc = EntityComponentBridge.INSTANCE.getNpc(npcId);
+        if (npc == null || npc.isRemoved()) {
+            return CompletableFuture.failedFuture(
+                    new IllegalStateException("[ResourceReq] NPC " + npcId + " not found"));
+        }
+        UUID colonyId = resolveColonyId(npc, world);
+        if (colonyId == null) {
+            return CompletableFuture.failedFuture(
+                    new IllegalStateException("[ResourceReq] NPC " + npcId + " has no colony"));
+        }
+
         // ── 2. All-or-nothing check: verify ALL warehouse stock before reserving any ──
         for (ResourceStack need : needs) {
-            if (!resources.hasEnough(need.resource(), need.amount())) {
+            if (!resources.hasEnough(colonyId, need.resource(), need.amount())) {
                 return CompletableFuture.failedFuture(new ResourceShortageException(items));
             }
         }
 
         // ── 3. Reserve ALL ──
         for (ResourceStack need : needs) {
-            if (!resources.reserve(need.resource(), need.amount())) {
+            if (!resources.reserve(colonyId, need.resource(), need.amount())) {
                 for (int j = 0; j < needs.indexOf(need); j++) {
-                    resources.release(needs.get(j).resource(), needs.get(j).amount());
+                    resources.release(colonyId, needs.get(j).resource(), needs.get(j).amount());
                 }
                 return CompletableFuture.failedFuture(new ResourceShortageException(items));
             }
         }
 
         // ── 4. Resolve positions ──
-        WandscapeNpc npc = EntityComponentBridge.INSTANCE.getNpc(npcId);
-        if (npc == null || npc.isRemoved()) {
-            for (ResourceStack need : needs) {
-                resources.release(need.resource(), need.amount());
-            }
-            return CompletableFuture.failedFuture(
-                    new IllegalStateException("[ResourceReq] NPC " + npcId + " not found"));
-        }
-        UUID colonyId = resolveColonyId(npc, world);
         BlockPos warehousePos = findNearestStorage(colonyId, npc.blockPosition());
         if (warehousePos == null) {
             for (ResourceStack need : needs) {
-                resources.release(need.resource(), need.amount());
+                resources.release(colonyId, need.resource(), need.amount());
             }
             return CompletableFuture.failedFuture(
                     new IllegalStateException("[ResourceReq] no storage for colony " + colonyId));
@@ -179,11 +183,11 @@ public class ResourceRequestExecutor implements OpExecutor<AtomicOp.ResourceRequ
         if (remainingCount > 0) {
             batches.add(new PendingBatch(doneFuture, STAGGER_TICKS,
                     entries, inFlight, List.copyOf(needs),
-                    resources, npcId, world, totalItems));
+                    resources, colonyId, npcId, world, totalItems));
         } else {
             // Only 1 item — complete when it arrives
             inFlight.get(0).thenRun(() ->
-                    finish(doneFuture, needs, resources, world, npcId));
+                    finish(doneFuture, needs, resources, colonyId, world, npcId));
         }
 
         Log.info(TAG, "[ResourceReq] NPC {} requesting {} items ({} types, {} of {} staggered)",
@@ -214,7 +218,7 @@ public class ResourceRequestExecutor implements OpExecutor<AtomicOp.ResourceRequ
                     i--;
                     CompletableFuture.allOf(b.inFlight.toArray(new CompletableFuture[0]))
                             .thenRun(() -> finish(b.doneFuture, b.needs,
-                                    b.resources, b.world, b.npcId));
+                                    b.resources, b.colonyId, b.world, b.npcId));
                 }
             } else if (!b.remaining.isEmpty()) {
                 b.launchCountdown = cd;
@@ -238,7 +242,7 @@ public class ResourceRequestExecutor implements OpExecutor<AtomicOp.ResourceRequ
 
         for (PendingBatch b : toRemove) {
             for (ResourceStack rs : b.needs) {
-                b.resources.release(rs.resource(), rs.amount());
+                b.resources.release(b.colonyId, rs.resource(), rs.amount());
             }
             for (CompletableFuture<Void> f : b.inFlight) {
                 f.cancel(false);
@@ -251,12 +255,12 @@ public class ResourceRequestExecutor implements OpExecutor<AtomicOp.ResourceRequ
     }
 
     private void finish(CompletableFuture<Void> doneFuture, List<ResourceStack> needs,
-                        ColonyResourceAccess resources, World world, long npcId) {
+                        ColonyResourceAccess resources, UUID colonyId, World world, long npcId) {
         // Materials are deducted here (construction start) — they never enter the
         // NPC backpack, so a full inventory can't block the charge.
         for (ResourceStack need : needs) {
-            if (!resources.commit(need.resource(), need.amount())) {
-                resources.release(need.resource(), need.amount());
+            if (!resources.commit(colonyId, need.resource(), need.amount())) {
+                resources.release(colonyId, need.resource(), need.amount());
                 Log.warn(TAG, "[ResourceReq] commit failed for {} x{}, released reservation",
                         need.resource().id(), need.amount());
             }

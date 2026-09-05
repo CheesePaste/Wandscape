@@ -27,6 +27,7 @@ import com.wsteam.wandscape.content.task.runtime.TaskSequence;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -479,6 +480,17 @@ public class TaskExecutionSystem implements EcsSystem {
         ColonyResourceAccess colony = world.colonyResources;
         if (inv == null || colony == null) return;
 
+        ColonyMember member = world.get(npcId, ColonyMember.class);
+        UUID colonyId = member != null ? member.colonyId() : null;
+        if (colonyId == null && task.taskParams != null) {
+            var el = task.taskParams.get("colony_id");
+            if (el != null && el.isJsonPrimitive()) {
+                try {
+                    colonyId = UUID.fromString(el.getAsString());
+                } catch (IllegalArgumentException ignored) {}
+            }
+        }
+
         int firstReqIdx = -1;
 
         for (int i = 0; i < task.sequence.size() && i < currentStep; i++) {
@@ -487,9 +499,9 @@ public class TaskExecutionSystem implements EcsSystem {
                     int count = inv.count(item.resource());
                     if (count > 0) {
                         inv.remove(item.resource(), count);
-                        colony.addResource(item.resource(), count);
-                        Log.debug(LogCategory.TASK, "exec", "NPC %d — returned %d x %s to warehouse on release",
-                                npcId, count, item.resource().id());
+                        colony.addResource(colonyId, item.resource(), count);
+                        Log.debug(LogCategory.TASK, "exec", "NPC %d — returned %d x %s to warehouse of colony %s on release",
+                                npcId, count, item.resource().id(), colonyId);
                     }
                 }
                 if (firstReqIdx < 0) {

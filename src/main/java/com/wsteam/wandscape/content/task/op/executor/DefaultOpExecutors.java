@@ -12,6 +12,7 @@ import com.wsteam.wandscape.content.task.boundary.BlockOps;
 import com.wsteam.wandscape.content.task.boundary.ColonyResourceAccess;
 import com.wsteam.wandscape.content.task.boundary.EntityOps;
 import com.wsteam.wandscape.content.task.boundary.RitualOps;
+import com.wsteam.wandscape.content.task.component.ColonyMember;
 import com.wsteam.wandscape.content.task.component.NpcInventory;
 import com.wsteam.wandscape.content.task.component.Position;
 import com.wsteam.wandscape.content.task.component.TaskExecutor;
@@ -26,6 +27,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 /**
  * Default OpExecutor implementations — all synchronous (return completed futures).
@@ -179,9 +181,16 @@ public final class DefaultOpExecutors {
                 return CompletableFuture.completedFuture(null);
             }
 
+            ColonyMember member = world.get(npcId, ColonyMember.class);
+            UUID colonyId = member != null ? member.colonyId() : null;
+            if (colonyId == null) {
+                return CompletableFuture.failedFuture(
+                        new IllegalStateException("[ResourceReq] NPC " + npcId + " has no colony"));
+            }
+
             // ── Phase 2: check ALL warehouse stock before reserving any ──
             for (ResourceStack need : needs) {
-                if (!resources.hasEnough(need.resource(), need.amount())) {
+                if (!resources.hasEnough(colonyId, need.resource(), need.amount())) {
                     return CompletableFuture.failedFuture(
                             new ResourceShortageException(items));
                 }
@@ -189,10 +198,10 @@ public final class DefaultOpExecutors {
 
             // ── Phase 3: reserve ALL ──
             for (ResourceStack need : needs) {
-                if (!resources.reserve(need.resource(), need.amount())) {
+                if (!resources.reserve(colonyId, need.resource(), need.amount())) {
                     // Roll back previously reserved items
                     for (int j = 0; j < needs.indexOf(need); j++) {
-                        resources.release(needs.get(j).resource(), needs.get(j).amount());
+                        resources.release(colonyId, needs.get(j).resource(), needs.get(j).amount());
                     }
                     return CompletableFuture.failedFuture(
                             new ResourceShortageException(items));
@@ -203,8 +212,8 @@ public final class DefaultOpExecutors {
             // Materials never enter the NPC backpack — a full inventory can't
             // block the charge.
             for (ResourceStack need : needs) {
-                if (!resources.commit(need.resource(), need.amount())) {
-                    resources.release(need.resource(), need.amount());
+                if (!resources.commit(colonyId, need.resource(), need.amount())) {
+                    resources.release(colonyId, need.resource(), need.amount());
                     return CompletableFuture.failedFuture(
                             new IllegalStateException("Resource commit failed for " + need));
                 }
@@ -297,7 +306,9 @@ public final class DefaultOpExecutors {
             String resourceName = params.get("resource");
             String thresholdStr = params.get("threshold");
             if (resourceName == null || thresholdStr == null) return false;
-            try { return resources.available(new ResourceId(resourceName)) < Integer.parseInt(thresholdStr); }
+            ColonyMember member = world.get(npcId, ColonyMember.class);
+            UUID colonyId = member != null ? member.colonyId() : null;
+            try { return resources.available(colonyId, new ResourceId(resourceName)) < Integer.parseInt(thresholdStr); }
             catch (NumberFormatException e) { return false; }
         }
     }

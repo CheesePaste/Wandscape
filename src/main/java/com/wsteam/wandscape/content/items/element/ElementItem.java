@@ -56,16 +56,18 @@ public class ElementItem extends Item {
         ColonyApi colonyApi = WandscapeApis.getColonyApiSilently();
         WarehouseApi warehouseApi = WandscapeApis.getWarehouseApiSilently();
         if (colonyApi == null || warehouseApi == null) return;
-        UUID colonyId = colonyApi.getColonyId(player.blockPosition());
-        if (colonyId == null) return; // 不在小镇范围，保留物品等待进入小镇
+        UUID ownColonyId = com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.ownColony(player);
+        if (ownColonyId == null) return; // 未拥有小镇，保留代币物品
+        UUID posColonyId = colonyApi.getColonyId(player.blockPosition());
+        if (!ownColonyId.equals(posColonyId)) return; // 必须在自己的小镇范围内才转化，防止误入或在别人物品泄露
         int count = stack.getCount();
         if (count <= 0) return;
-        warehouseApi.addElement(colonyId, elementType, count);
+        warehouseApi.addElement(ownColonyId, elementType, count);
         stack.shrink(count);
         SoundService.playAt(player.serverLevel(), player.blockPosition(),
                 WandscapeSounds.WAREHOUSE, SoundSource.PLAYERS, 0.6f, 1.0f);
         Log.info(TAG, "{} x{} -> warehouse {}", elementType.getId(), count,
-                colonyId.toString().substring(0, 8));
+                ownColonyId.toString().substring(0, 8));
     }
 
     @Override

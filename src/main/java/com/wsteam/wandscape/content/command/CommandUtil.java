@@ -26,7 +26,8 @@ final class CommandUtil {
 
     /**
      * 解析 `src` 执行者当前应绑定的殖民地 id。
-     * 按「创始人所拥有 → 位置所在 → 任意第一个」解析；殖民地系统未就绪或全空返回 null。
+     * 玩家：创始人所拥有 → 若为 OP 允许所在位置殖民地 → 否则 null（绝不回退至其他玩家小镇）。
+     * 控制台/命令方块：位置所在 → 任意第一个 → null。
      */
     @Nullable
     static UUID resolveColony(CommandSourceStack src) {
@@ -36,6 +37,9 @@ final class CommandUtil {
         if (p != null) {
             UUID owned = colonyApi.getColonyByFounder(p.getUUID());
             if (owned != null) return owned;
+            UUID at = colonyApi.getColonyId(BlockPos.containing(src.getPosition()));
+            if (at != null && p.hasPermissions(2)) return at;
+            return null;
         }
         UUID at = colonyApi.getColonyId(BlockPos.containing(src.getPosition()));
         if (at != null) return at;

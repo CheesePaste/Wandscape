@@ -253,81 +253,111 @@ public class WarehouseManager implements WarehouseApi, ColonyResourceAccess {
         return bank != null ? bank.usedItems(colonyId) : 0;
     }
 
+    @Override
+    public boolean transferElements(UUID fromColonyId, UUID toColonyId, Map<ElementType, Long> amounts) {
+        if (fromColonyId == null || toColonyId == null || amounts == null || amounts.isEmpty()) {
+            return false;
+        }
+        if (fromColonyId.equals(toColonyId)) return true;
+        ColonyItemBank bank = getBank();
+        if (bank == null) return false;
+
+        // Verify fromColonyId has all required elements
+        for (var entry : amounts.entrySet()) {
+            ElementType type = entry.getKey();
+            Long amount = entry.getValue();
+            if (type == null || amount == null || amount <= 0) continue;
+            if (bank.countElement(fromColonyId, type) < amount) {
+                return false;
+            }
+        }
+
+        // Atomically deduct from fromColonyId and add to toColonyId
+        List<Map.Entry<ElementType, Long>> deducted = new ArrayList<>();
+        for (var entry : amounts.entrySet()) {
+            ElementType type = entry.getKey();
+            Long amount = entry.getValue();
+            if (type == null || amount == null || amount <= 0) continue;
+            if (!bank.consumeElement(fromColonyId, type, amount)) {
+                for (var rollback : deducted) {
+                    bank.addElement(fromColonyId, rollback.getKey(), rollback.getValue());
+                }
+                return false;
+            }
+            deducted.add(entry);
+        }
+
+        for (var entry : deducted) {
+            bank.addElement(toColonyId, entry.getKey(), entry.getValue());
+        }
+        return true;
+    }
+
     // ════════════════════════════════════════════════════════════
     //  ColonyResourceAccess
     // ════════════════════════════════════════════════════════════
 
     @Override
-    public boolean hasEnough(ResourceId resource, int amount) {
+    public boolean hasEnough(@Nullable UUID colonyId, ResourceId resource, int amount) {
+        if (colonyId == null) return false;
         ColonyItemBank bank = getBank();
         if (bank == null) return false;
 
         // Element resource (no colon)
         ElementType elem = tryParseElement(resource);
         if (elem != null) {
-            for (UUID colonyId : bank.getColonyIds()) {
-                if (bank.countElement(colonyId, elem) >= amount) return true;
-            }
-            notifyElementShortage(resource, amount, elem, bank);
+            if (bank.countElement(colonyId, elem) >= amount) return true;
+            notifyElementShortage(colonyId, resource, amount, elem, bank);
             return false;
         }
 
         // Item resource
         ItemKey key = ItemKey.of(resource.stripBlockStateSuffix().id(), null);
-        for (UUID colonyId : bank.getColonyIds()) {
-            if (bank.available(colonyId, key) >= amount) return true;
-        }
-        notifyItemShortage(resource, amount, key, bank);
+        if (bank.available(colonyId, key) >= amount) return true;
+        notifyItemShortage(colonyId, resource, amount, key, bank);
         return false;
     }
 
     @Override
-    public boolean reserve(ResourceId resource, int amount) {
+    public boolean reserve(@Nullable UUID colonyId, ResourceId resource, int amount) {
+        if (colonyId == null) return false;
         ColonyItemBank bank = getBank();
         if (bank == null) return false;
 
         ElementType elem = tryParseElement(resource);
         if (elem != null) {
             // Elements don't have reservations — just check availability
-            for (UUID colonyId : bank.getColonyIds()) {
-                if (bank.countElement(colonyId, elem) >= amount) return true;
-            }
-            return false;
+            return bank.countElement(colonyId, elem) >= amount;
         }
 
         ItemKey key = ItemKey.of(resource.stripBlockStateSuffix().id(), null);
-        for (UUID colonyId : bank.getColonyIds()) {
-            if (bank.available(colonyId, key) >= amount) {
-                return bank.reserve(colonyId, key, amount);
-            }
+        if (bank.available(colonyId, key) >= amount) {
+            return bank.reserve(colonyId, key, amount);
         }
         return false;
     }
 
     @Override
-    public boolean commit(ResourceId resource, int amount) {
+    public boolean commit(@Nullable UUID colonyId, ResourceId resource, int amount) {
+        if (colonyId == null) return false;
         ColonyItemBank bank = getBank();
         if (bank == null) return false;
 
         ElementType elem = tryParseElement(resource);
         if (elem != null) {
-            for (UUID colonyId : bank.getColonyIds()) {
-                if (bank.countElement(colonyId, elem) >= amount) {
-                    return bank.consumeElement(colonyId, elem, amount);
-                }
+            if (bank.countElement(colonyId, elem) >= amount) {
+                return bank.consumeElement(colonyId, elem, amount);
             }
             return false;
         }
 
         ItemKey key = ItemKey.of(resource.stripBlockStateSuffix().id(), null);
-        for (UUID colonyId : bank.getColonyIds()) {
-            if (bank.commit(colonyId, key, amount)) return true;
-        }
-        return false;
+        return bank.commit(colonyId, key, amount);
     }
 
     @Override
-    public void release(ResourceId resource, int amount) {
+    public void release(@Nullable UUID colonyId, ResourceId resource, int amount) {
+        if (colonyId == null) return;
         ColonyItemBank bank = getBank();
         if (bank == null) return;
 
@@ -335,35 +365,30 @@ public class WarehouseManager implements WarehouseApi, ColonyResourceAccess {
         if (tryParseElement(resource) != null) return;
 
         ItemKey key = ItemKey.of(resource.stripBlockStateSuffix().id(), null);
-        for (UUID colonyId : bank.getColonyIds()) {
-            bank.release(colonyId, key, amount);
-        }
+        bank.release(colonyId, key, amount);
     }
 
     @Override
-    public int available(ResourceId resource) {
+    public int available(@Nullable UUID colonyId, ResourceId resource) {
+        if (colonyId == null) return 0;
         ColonyItemBank bank = getBank();
         if (bank == null) return 0;
 
         ElementType elem = tryParseElement(resource);
         if (elem != null) {
-            long total = 0;
-            for (UUID colonyId : bank.getColonyIds()) {
-                total += bank.countElement(colonyId, elem);
-            }
-            return (int) total;
+            return (int) bank.countElement(colonyId, elem);
         }
 
         ItemKey key = ItemKey.of(resource.stripBlockStateSuffix().id(), null);
-        long total = 0;
-        for (UUID colonyId : bank.getColonyIds()) {
-            total += bank.available(colonyId, key);
-        }
-        return (int) total;
+        return (int) bank.available(colonyId, key);
     }
 
     @Override
-    public void addResource(ResourceId resource, int amount) {
+    public void addResource(@Nullable UUID colonyId, ResourceId resource, int amount) {
+        if (colonyId == null) {
+            Log.warn(TAG, "addResource({}, {}): colonyId is null", resource, amount);
+            return;
+        }
         ColonyItemBank bank = getBank();
         if (bank == null) {
             Log.warn(TAG, "addResource({}, {}): ColonyItemBank not available", resource, amount);
@@ -372,13 +397,11 @@ public class WarehouseManager implements WarehouseApi, ColonyResourceAccess {
 
         ElementType elem = tryParseElement(resource);
         if (elem != null) {
-            UUID colonyId = findStorageColony();
             bank.addElement(colonyId, elem, amount);
             Log.debug(LogCategory.WAREHOUSE, "storage", "addResource: {} x{} → colony {} warehouse ({} total)",
                     resource.id(), amount, colonyId, bank.countElement(colonyId, elem));
         } else {
             ItemKey key = ItemKey.of(resource.stripBlockStateSuffix().id(), null);
-            UUID colonyId = findStorageColony();
             bank.add(colonyId, key, amount);
             Log.debug(LogCategory.WAREHOUSE, "storage", "addResource: {} x{} → colony {} warehouse ({} total)",
                     resource.id(), amount, colonyId, bank.count(colonyId, key));
@@ -422,39 +445,21 @@ public class WarehouseManager implements WarehouseApi, ColonyResourceAccess {
         }
     }
 
-    /** Find the first storage building's colony ID, or fallback to default. */
-    private static UUID findStorageColony() {
-        var api = com.wsteam.wandscape.api.WandscapeApis.getBuildingApi();
-        for (var bd : api.getColonyBuildings(null)) {
-            if ("storage".equals(bd.getCategory())) {
-                UUID cid = bd.getColonyId();
-                return cid != null ? cid : new UUID(0, 0);
-            }
-        }
-        return new UUID(0, 0);
-    }
-
-    private void notifyElementShortage(ResourceId resource, int amount, ElementType elem, ColonyItemBank bank) {
+    private void notifyElementShortage(UUID colonyId, ResourceId resource, int amount, ElementType elem, ColonyItemBank bank) {
         long now = System.currentTimeMillis();
         long last = lastShortageNotify.getOrDefault(resource, 0L);
         if (now - last < SHORTAGE_NOTIFY_COOLDOWN_MS) return;
         lastShortageNotify.put(resource, now);
-        long avail = 0;
-        for (UUID colonyId : bank.getColonyIds()) {
-            avail += bank.countElement(colonyId, elem);
-        }
+        long avail = bank.countElement(colonyId, elem);
         NeoForge.EVENT_BUS.post(new ResourceInsufficientEvent(resource, amount, (int) avail));
     }
 
-    private void notifyItemShortage(ResourceId resource, int amount, ItemKey key, ColonyItemBank bank) {
+    private void notifyItemShortage(UUID colonyId, ResourceId resource, int amount, ItemKey key, ColonyItemBank bank) {
         long now = System.currentTimeMillis();
         long last = lastShortageNotify.getOrDefault(resource, 0L);
         if (now - last < SHORTAGE_NOTIFY_COOLDOWN_MS) return;
         lastShortageNotify.put(resource, now);
-        long avail = 0;
-        for (UUID colonyId : bank.getColonyIds()) {
-            avail += bank.available(colonyId, key);
-        }
+        long avail = bank.available(colonyId, key);
         NeoForge.EVENT_BUS.post(new ResourceInsufficientEvent(resource, amount, (int) avail));
     }
 

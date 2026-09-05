@@ -397,6 +397,20 @@ public class GlobalTaskPool {
         }
     }
 
+    /** 任务参数里的 colony_id（字符串）→ UUID；缺失或格式非法返回 null（无主任务）。 */
+    @Nullable
+    private static UUID resolveColonyId(GlobalTask task) {
+        if (task.taskParams != null) {
+            JsonElement el = task.taskParams.get("colony_id");
+            if (el != null && el.isJsonPrimitive()) {
+                try {
+                    return UUID.fromString(el.getAsString());
+                } catch (IllegalArgumentException ignored) {}
+            }
+        }
+        return null;
+    }
+
     /** 资源消耗型/建筑型蓝图前缀——必须归属殖民地，否则无法从仓库供料。 */
     private static boolean isColonyBoundBlueprint(@Nullable String blueprintId) {
         if (blueprintId == null) return false;
@@ -483,8 +497,9 @@ public class GlobalTaskPool {
             relevant++;
 
             boolean allAvailable = true;
+            UUID colonyId = resolveColonyId(task);
             for (ResourceStack need : task.awaitingResource) {
-                if (colonyResources.available(need.resource()) < need.amount()) {
+                if (colonyResources.available(colonyId, need.resource()) < need.amount()) {
                     allAvailable = false;
                     break;
                 }
