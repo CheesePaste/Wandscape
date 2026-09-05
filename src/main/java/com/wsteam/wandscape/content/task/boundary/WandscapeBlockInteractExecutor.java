@@ -33,6 +33,7 @@ import com.wsteam.wandscape.api.WandscapeApis;
 import com.wsteam.wandscape.content.task.engine.pool.GlobalTask;
 import com.wsteam.wandscape.content.task.runtime.TaskState;
 import com.wsteam.wandscape.content.task.scheduler.TaskExecutionSystem;
+import com.wsteam.wandscape.content.colony.ColonyActivation;
 import com.wsteam.wandscape.content.warehouse.ColonyItemBank;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
@@ -391,18 +392,21 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
             return;
         }
 
-        bank.addElement(colonyId, elem, amount);
+        // 创始人离线时采集元素节点产出也按 offlineIncomeMultiplier 折减（与商店/服务设施同口径）。
+        int scaled = (int) ColonyActivation.scaleIncome(amount,
+                ColonyActivation.getIncomeMultiplier(colonyId));
+        bank.addElement(colonyId, elem, scaled);
 
         // Notify listener to wake any AWAITING_RESOURCES tasks
-        world.taskPool.onResourceAdded(new ResourceId(element), amount);
+        world.taskPool.onResourceAdded(new ResourceId(element), scaled);
 
         // ── Transport visualization: elements fly NPC → warehouse ──
-        launchElementTransport(element, amount, world, npcId, colonyId);
+        launchElementTransport(element, scaled, world, npcId, colonyId);
 
         spawnCompletionParticles(npcId);
 
         Log.debug(LogCategory.TASK, "interact", "block_interact gather complete: {} x{} → colony {} warehouse ({} total)",
-                element, amount, colonyId.toString().substring(0, 8), bank.countElement(colonyId, elem));
+                element, scaled, colonyId.toString().substring(0, 8), bank.countElement(colonyId, elem));
     }
 
     // ── Production action implementations ──
