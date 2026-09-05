@@ -65,6 +65,13 @@ public final class CompassService {
         }
         BlockPos spot = findSafeSpawn(overworld, hall);
         if (spot == null) {
+            // 远距离回城时目标区块未加载，isSafe 会对整片区域判 false（hasChunkAt）——
+            // 先同步加载市政厅周边区块再搜。服务端传送本就会加载目标区块，这里只是提前加载判定所需的地形；
+            // 已加载时 getChunk 是缓存命中，开销可忽略。
+            loadAround(overworld, hall);
+            spot = findSafeSpawn(overworld, hall);
+        }
+        if (spot == null) {
             fail(player, "message.wandscape.compass.no_spot");
             return;
         }
@@ -114,6 +121,17 @@ public final class CompassService {
         if (!level.hasChunkAt(pos)) return false;
         if (!level.getBlockState(pos).isAir() || !level.getBlockState(pos.above()).isAir()) return false;
         return !level.getBlockState(pos.below()).getCollisionShape(level, pos.below()).isEmpty();
+    }
+
+    /** 同步加载锚点周边 3×3 区块：搜索半径 6 的落点可能落在相邻区块，缺块会整片判 false。 */
+    private static void loadAround(ServerLevel level, BlockPos center) {
+        int chunkX = center.getX() >> 4;
+        int chunkZ = center.getZ() >> 4;
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dz = -1; dz <= 1; dz++) {
+                level.getChunk(chunkX + dx, chunkZ + dz);
+            }
+        }
     }
 
     private static void ok(ServerPlayer player, String key, Object... args) {

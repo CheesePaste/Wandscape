@@ -14,11 +14,8 @@ import com.wsteam.wandscape.content.colony.ColonyActivation;
 import com.wsteam.wandscape.content.colony.ColonyLevelManager;
 import com.wsteam.wandscape.content.colony.ColonySavedData;
 import com.wsteam.wandscape.content.building.ChunkLoadManager;
-import com.wsteam.wandscape.content.road.core.RoadEdge;
-import com.wsteam.wandscape.content.road.core.RoadNetwork;
 import com.wsteam.wandscape.api.BuildingApi;
 import com.wsteam.wandscape.api.ColonyApi;
-import com.wsteam.wandscape.api.RoadApi;
 import com.wsteam.wandscape.api.TouristApi;
 // data imports updated
 import com.wsteam.wandscape.foundation.log.Log;
@@ -70,7 +67,8 @@ public final class TouristSpawnSystem {
 
     // ── Daily spawn schedule ──
 
-    record PendingSpawn(int level, int spawnTime, BlockPos spawnPos, UUID buildingId) {}
+    /** 一次待生成的游客：显式绑定所属殖民地（排期按镇隔离，绝不跨镇错绑）。 */
+    record PendingSpawn(UUID colonyId, int level, int spawnTime, BlockPos spawnPos, UUID buildingId) {}
 
     private int tickCounter;
     private boolean scheduleCreated;
@@ -119,6 +117,11 @@ public final class TouristSpawnSystem {
         instance.pendingSpawns.clear();
         BuildingApi buildingApi = getBuildingApi();
         for (PendingSpawn ps : all) {
+            // 排期只含活跃殖民地；防御性跳过已冻结/关闭的镇
+            if (!ColonyActivation.isColonyActive(ps.colonyId())
+                    || !touristSpawningEnabled(level, ps.colonyId())) {
+                continue;
+            }
             var target = buildingApi != null ? buildingApi.getBuilding(ps.buildingId()) : null;
             if (target == null || !target.isStructureIntact() || target.isDemolishing()) {
                 continue;
@@ -129,18 +132,18 @@ public final class TouristSpawnSystem {
             try {
                 // Reuse the stuck-rescue picker so a spawn never lands on a roof or
                 // inside a building: road first, then safe ground near the building.
-                BlockPos ground = TouristTeleport.findSafeSpot(level, ps.spawnPos(), target.getColonyId(), ps.buildingId());
+                BlockPos ground = TouristTeleport.findSafeSpot(level, ps.spawnPos(), ps.colonyId(), ps.buildingId());
                 if (ground == null) continue;
                 TouristEntity tourist = new TouristEntity(
                         com.wsteam.wandscape.Wandscape.TOURIST.get(), level);
-                tourist.setTouristName(generateRandomTouristName(target.getColonyId()));
+                tourist.setTouristName(generateRandomTouristName(ps.colonyId()));
                 tourist.setPos(ground.getX() + 0.5, ground.getY(), ground.getZ() + 0.5);
                 tourist.setLevel(ps.level);
                 tourist.setWallet(startingWallet(ps.level));
                 tourist.setInitialWallet(startingWallet(ps.level));
                 // Block 2：生成默认值（画像 need / 停留截止 / 总旅费）；不指派初始目标，出生即闲逛，目标由 Block 3 视野内 Find-Best-Action 决定。
                 instance.applySpawnDefaults(tourist, ps.level, level.getGameTime());
-                tourist.setColonyId(target.getColonyId());
+                tourist.setColonyId(ps.colonyId());
                 tourist.setArrivalTime(level.getGameTime());
                 tourist.applyState(TouristState.VISITING);
                 level.addFreshEntity(tourist);
@@ -166,11 +169,6 @@ public final class TouristSpawnSystem {
         long dayTime = level.getDayTime() % 24000;
         long day = level.getDayTime() / 24000;
 
-        // 创始人不在线且关闭离线运行 → 冻结小镇：不生成新游客、不清冻结游客
-        UUID colonyId = getColonyId();
-        boolean colonyFrozen = colonyId != null
-                && !ColonyActivation.isColonyActive(colonyId);
-
         // ── Morning: reset schedule flag + count overnight stayers（每 tick 检查，便宜）──
         if (dayTime < 1000 && scheduleDay != day) {
             scheduleCreated = false;
@@ -183,17 +181,19 @@ public final class TouristSpawnSystem {
         // 高 tick rate（如 1000）下游戏时间推进更快：若只在每 CHECK_INTERVAL tick 才
         // flush，生成窗口可能被跳过去、每日游客「来不及生成」。改为每 tick flush，
         // 每个 pending 的随机 spawnTime 一到就立即生成，窗口内绝不漏。
+        // 多殖民地平行：冻结/市政厅开关不再取"任意单镇"当全局门，逐镇在
+        // createSchedule（排期）与 flushPendingSpawns（落生）里判定。
         boolean inSpawnWindow = dayTime >= TOURIST_SPAWN_WINDOW_START
                 && dayTime < TOURIST_SPAWN_WINDOW_END;
-        if (inSpawnWindow && !colonyFrozen) {
-            if (touristSpawningEnabled(level, colonyId)) {
+        if (inSpawnWindow) {
+            if (Config.TOURIST_SPAWN_ENABLED.get()) {
                 if (!scheduleCreated || scheduleDay != day) {
                     createSchedule(level);
                     scheduleDay = day;
                 }
                 flushPendingSpawns(level);
             } else if (scheduleCreated) {
-                // 开关中途关闭：清掉今日已排计划，避免重新开启时一次性倾泻游客
+                // 全局开关中途关闭：清掉今日已排计划，避免重新开启时一次性倾泻游客
                 scheduleCreated = false;
                 pendingSpawns.clear();
             }
@@ -224,8 +224,14 @@ public final class TouristSpawnSystem {
     // ════════════════════════════════════════════════════════════════
 
     /**
-     * Calculate today's target spawn count and create pending spawns with
-     * distributed spawn times across the spawn window.
+     * Calculate today's spawn schedule per colony (multi-colony parallel).
+     *
+     * <p>Every active colony with intact tourist-target buildings schedules its own
+     * tourists: spawn count and level distribution come from <b>that</b> colony's
+     * level, targets and spawn points are taken from <b>that</b> colony's buildings
+     * only, and every spawned tourist is bound to that colony. 出生点取本镇建筑锚点
+     * （道路是 level-global、无归属的有意设计，取全服路端点会把游客排到别的殖民地），
+     * 保证出生殖民地与绑定一致，游客一出生就在自己镇内。
      */
     private void createSchedule(ServerLevel level) {
         scheduleCreated = true;
@@ -243,37 +249,44 @@ public final class TouristSpawnSystem {
             return;
         }
 
-        List<BuildingState> allBuildings = buildingApi.getColonyBuildings(null);
-        if (allBuildings.isEmpty()) {
-            Log.warn(TAG, "[Tourist] No buildings found in colony — cannot spawn tourists. "
-                    + "Build a town hall and register a colony first.");
+        ColonyApi colonyApi = WandscapeApis.getColonyApiSilently();
+        if (colonyApi == null) {
+            Log.warn(TAG, "[Tourist] ColonyApi not available — cannot create spawn schedule");
             return;
         }
-
-        // Collect valid four-category tourist targets (shop/service/relax/atm)
-        List<BuildingState> touristTargets = getTouristTargets(level, allBuildings);
-        if (touristTargets.isEmpty()) {
-            Log.warn(TAG, "[Tourist] No intact tourist-target buildings available — "
-                    + "tourists have no targets. Build shop/service/relax/atm buildings to attract tourists.");
-            return;
-        }
-
-        // Get colony ID to query colony level
-        UUID colonyId = getColonyId();
-        if (colonyId == null) {
+        Collection<UUID> colonyIds = colonyApi.getAllColonyIds();
+        if (colonyIds.isEmpty()) {
             Log.warn(TAG, "[Tourist] No colony registered — tourists cannot spawn. "
                     + "Use '/wandscape colony create' to create a colony, then build a town hall within range.");
             return;
         }
 
-        // 该殖民地市政厅「生成游客」关闭 → 本殖民地不排每日游客计划
-        if (!touristSpawningEnabled(level, colonyId)) {
-            Log.info(TAG, "[Tourist] Spawn schedule skipped — town hall tourist spawning disabled for colony {}",
-                    colonyId.toString().substring(0, 8));
-            return;
+        int scheduledColonies = 0;
+        for (UUID colonyId : colonyIds) {
+            // 冻结小镇（创始人不在线且关闭离线运行）不新增游客；市政厅「生成游客」关同样跳过
+            if (!ColonyActivation.isColonyActive(colonyId)) continue;
+            if (!touristSpawningEnabled(level, colonyId)) continue;
+            List<BuildingState> buildings = buildingApi.getColonyBuildings(colonyId);
+            List<BuildingState> touristTargets = getTouristTargets(level, buildings);
+            // 该镇无 intact 游客目标建筑 → 安静跳过（游客没有可逛的目标），提示交给整体兜底
+            if (touristTargets.isEmpty()) continue;
+            if (scheduleColony(colonyId, touristTargets)) scheduledColonies++;
         }
 
-        // 每天固定新增这批游客，不因小镇已有游客（含住店客）而扣减
+        if (scheduledColonies == 0) {
+            Log.warn(TAG, "[Tourist] No colony scheduled today — every active colony lacks an intact "
+                    + "tourist-target building (shop/service/relax/atm) or has spawning disabled.");
+        } else if (!pendingSpawns.isEmpty()) {
+            Log.info(TAG, "[Tourist] Schedule created: {} tourists across {} colony(ies)",
+                    pendingSpawns.size(), scheduledColonies);
+        }
+    }
+
+    /**
+     * 排一个殖民地的当日游客计划。配额与游客等级按该镇等级算，目标建筑与出生点
+     * 只取本镇。返回是否实际排入（配额被 clamp 到 0 或全镇无可用出生点时 false）。
+     */
+    private boolean scheduleColony(UUID colonyId, List<BuildingState> touristTargets) {
         int colonyLevel = levelManager != null ? levelManager.getLevel(colonyId) : 1;
         int lower = Config.TOURIST_BASE_SPAWN_COUNT.get()
                 + (colonyLevel - 1) * Config.TOURIST_LEVEL_SPAWN_BONUS.get();
@@ -281,36 +294,36 @@ public final class TouristSpawnSystem {
         int toSpawn = lower + (upper > lower ? random.nextInt(upper - lower) : 0);
         toSpawn = Math.max(1, Math.min(toSpawn, Config.TOURIST_MAX_PER_COLONY.get()));
 
-        // Collect spawn positions
-        List<BlockPos> spawnCandidates = collectSpawnPositions(level, allBuildings);
+        // 出生点取本镇游客目标建筑锚点（不用全服道路网络——路网无归属）
+        List<BlockPos> spawnCandidates = collectSpawnPositions(touristTargets);
 
-        // Create pending spawns. 生成时间在 [windowStart, windowEnd) 内随机取，
-        // 每天游客错峰到达。高 tick rate 防护在 onServerTick（每 tick flush），
-        // 不在这里——这里只负责把到达时间随机分布到生成窗口内。
         int windowStart = TOURIST_SPAWN_WINDOW_START;
         int windowDuration = TOURIST_SPAWN_WINDOW_END - windowStart;
+        int added = 0;
         for (int i = 0; i < toSpawn; i++) {
             BlockPos spawnPos = pickSpawnPos(spawnCandidates);
             if (spawnPos == null) continue;
 
-            // Pick tourist level based on colony level distribution
+            // Pick tourist level based on this colony's level distribution
             int touristLevel = rollTouristLevel(colonyLevel);
 
-            // Pick target building weighted by preference. Only the buildingId is
-            // stored — the target is re-validated and interaction point re-derived
-            // at spawn time, so a building demolished after scheduling can't ghost it.
+            // Pick a target building within this colony. Only the buildingId is stored —
+            // the target is re-validated and interaction point re-derived at spawn time,
+            // so a building demolished after scheduling can't ghost it.
             BuildingState target = touristTargets.get(random.nextInt(touristTargets.size()));
 
             int spawnTime = windowDuration > 0
                     ? windowStart + random.nextInt(windowDuration) : windowStart;
 
-            pendingSpawns.add(new PendingSpawn(touristLevel, spawnTime, spawnPos, target.getBuildingId()));
+            pendingSpawns.add(new PendingSpawn(colonyId, touristLevel, spawnTime, spawnPos, target.getBuildingId()));
+            added++;
         }
 
-        if (!pendingSpawns.isEmpty()) {
-            Log.info(TAG, "[Tourist] Schedule created: {} tourists (colony Lv.{}), dailyArrivals={}",
-                    pendingSpawns.size(), colonyLevel, toSpawn);
+        if (added > 0) {
+            Log.info(TAG, "[Tourist] Schedule created: {} tourists (colony Lv.{}, colony {})",
+                    added, colonyLevel, colonyId.toString().substring(0, 8));
         }
+        return added > 0;
     }
 
     /** Spawn pending tourists whose spawn time has passed. */
@@ -324,10 +337,20 @@ public final class TouristSpawnSystem {
         List<PendingSpawn> remaining = new ArrayList<>();
         for (PendingSpawn ps : pendingSpawns) {
             if (dayTime >= ps.spawnTime()) {
+                // 排期后该殖民地被冻结 / 市政厅关闭 → 丢弃本次计划（游客经济暂停，等价"开关中途关闭清计划"）
+                if (!ColonyActivation.isColonyActive(ps.colonyId())
+                        || !touristSpawningEnabled(level, ps.colonyId())) {
+                    continue;
+                }
+
                 // Re-validate the target at spawn time — the building may have been
                 // demolished after scheduling. Never spawn a tourist near a ghost.
                 var target = buildingApi.getBuilding(ps.buildingId());
                 if (target == null || !target.isStructureIntact() || target.isDemolishing()) {
+                    continue;
+                }
+                // 防御：目标建筑必须属于排期殖民地（排期本身只取本镇建筑，此处双重保险）
+                if (!java.util.Objects.equals(ps.colonyId(), target.getColonyId())) {
                     continue;
                 }
 
@@ -340,18 +363,18 @@ public final class TouristSpawnSystem {
                 try {
                     // Reuse the stuck-rescue picker so a spawn never lands on a roof or
                     // inside a building: road first, then safe ground near the building.
-                    BlockPos ground = TouristTeleport.findSafeSpot(level, ps.spawnPos(), target.getColonyId(), ps.buildingId());
+                    BlockPos ground = TouristTeleport.findSafeSpot(level, ps.spawnPos(), ps.colonyId(), ps.buildingId());
                     if (ground == null) continue;
                     TouristEntity tourist = new TouristEntity(
                             com.wsteam.wandscape.Wandscape.TOURIST.get(), level);
-                    tourist.setTouristName(generateRandomTouristName(target.getColonyId()));
+                    tourist.setTouristName(generateRandomTouristName(ps.colonyId()));
                     tourist.setPos(ground.getX() + 0.5, ground.getY(), ground.getZ() + 0.5);
                     tourist.setLevel(ps.level);
                     tourist.setWallet(startingWallet(ps.level));
                     tourist.setInitialWallet(startingWallet(ps.level));
                     // Block 2：生成默认值（画像 need / 停留截止 / 总旅费）；不指派初始目标，出生即闲逛，目标由 Block 3 视野内 Find-Best-Action 决定。
                     applySpawnDefaults(tourist, ps.level, level.getGameTime());
-                    tourist.setColonyId(target.getColonyId());
+                    tourist.setColonyId(ps.colonyId());
                     tourist.setArrivalTime(level.getGameTime());
                     tourist.applyState(TouristState.VISITING);
                     level.addFreshEntity(tourist);
@@ -363,7 +386,7 @@ public final class TouristSpawnSystem {
 
                     Log.info(TAG, "[Tourist] {} (Lv.{}) spawned at {} (colony {})",
                             tourist.getTouristName(), ps.level, ground.toShortString(),
-                            target.getColonyId());
+                            ps.colonyId().toString().substring(0, 8));
                 } finally {
                     ChunkLoadManager.get().releaseChunk(cp);
                 }
@@ -788,30 +811,16 @@ public final class TouristSpawnSystem {
         }
     }
 
-    private List<BlockPos> collectSpawnPositions(ServerLevel level, List<BuildingState> buildings) {
+    /**
+     * 出生点候选 = 本镇游客目标建筑的锚点。道路是 level-global、无归属的有意设计
+     * （见 docs/plan/multiplayer-parallel-isolation.md），不能取全服路端点——那会把
+     * 游客排到别的殖民地的路上。锚点选后由 findSafeSpot 就近落到建筑旁道路，保留
+     * "沿路入城"观感。
+     */
+    private List<BlockPos> collectSpawnPositions(List<BuildingState> touristTargets) {
         List<BlockPos> positions = new ArrayList<>();
-        RoadApi roadApi = getRoadApiSilently();
-        if (roadApi != null) {
-            RoadNetwork network = roadApi.getNetwork(null);
-            if (network != null && !network.isEmpty()) {
-                for (RoadEdge edge : network.getEdges().values()) {
-                    if (edge.getStatus() != RoadEdge.EdgeStatus.COMPLETE) continue;
-                    var path = edge.getPath();
-                    if (path.size() >= 2) {
-                        positions.add(new BlockPos(
-                                path.get(0).x(), path.get(0).y(), path.get(0).z()));
-                        positions.add(new BlockPos(
-                                path.get(path.size() - 1).x(),
-                                path.get(path.size() - 1).y(),
-                                path.get(path.size() - 1).z()));
-                    }
-                }
-            }
-        }
-        if (positions.isEmpty()) {
-            for (BuildingData b : buildings) {
-                positions.add(b.getPosition());
-            }
+        for (BuildingState b : touristTargets) {
+            positions.add(b.getPosition());
         }
         return positions;
     }
@@ -866,27 +875,11 @@ public final class TouristSpawnSystem {
         return csd.isTouristSpawningEnabled(colonyId);
     }
 
-    @javax.annotation.Nullable
-    private static UUID getColonyId() {
-        ColonyApi colonyApi = WandscapeApis.getColonyApiSilently();
-        if (colonyApi == null) return null;
-        var ids = colonyApi.getAllColonyIds();
-        if (ids.isEmpty()) return null;
-        // Single-colony MVP: return the first colony UUID
-        return ids.iterator().next();
-    }
-
     // ── API helpers ──
 
     @javax.annotation.Nullable
     private static BuildingApi getBuildingApi() {
         try { return WandscapeApis.getBuildingApi(); }
-        catch (IllegalStateException e) { return null; }
-    }
-
-    @javax.annotation.Nullable
-    private static RoadApi getRoadApiSilently() {
-        try { return WandscapeApis.getRoadApi(); }
         catch (IllegalStateException e) { return null; }
     }
 
