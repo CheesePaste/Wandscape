@@ -85,9 +85,16 @@ public final class BlueprintDefaults {
     }
 
     // ─────────────────────────────────────────────────────────────────
-    // build:clear_and_build  (legacy name kept for data compat; no longer clears
-    // the boundary volume — construction only places the building's own pattern
-    // blocks, so overlapping interiors are never wiped)
+    // build:clear_and_build  (legacy name kept for data compat; generic over the
+    // offsets/blocks it is given)
+    //
+    // Whether the boundary box is cleared is decided upstream in EnqueueHelper: when
+    // box clearing is on (default), it expands offsets/blocks to the whole rotated
+    // boundary with non-pattern voxels mapped to "minecraft:air", so this loop single-
+    // passes the box exactly like the pre-overlap "clear then build" did. When off,
+    // only the pattern voxels arrive and construction is pure placement (overlapping
+    // interiors untouched). This method itself always just places each given offset's
+    // mapped block — an air mapping is a normal (free) place.
     // ─────────────────────────────────────────────────────────────────
 
     private static TaskSequence clearAndBuild(Map<String, JsonElement> p) {

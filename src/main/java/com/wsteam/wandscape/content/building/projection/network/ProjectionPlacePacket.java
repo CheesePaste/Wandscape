@@ -38,7 +38,8 @@ import static com.wsteam.wandscape.Wandscape.MODID;
 public record ProjectionPlacePacket(
         String buildingTypeId,
         BlockPos anchorPos,
-        int rotationSteps) implements CustomPacketPayload {
+        int rotationSteps,
+        boolean clearBox) implements CustomPacketPayload {
 
     private static final String TAG = "ProjectionPlacePacket";
 
@@ -88,7 +89,7 @@ public record ProjectionPlacePacket(
         }
 
         BuildingApi.PlacementResult result = api.placeBuilding(
-                packet.anchorPos, packet.buildingTypeId, packet.rotationSteps, owner);
+                packet.anchorPos, packet.buildingTypeId, packet.rotationSteps, owner, packet.clearBox);
 
         if (!result.success()) {
             ScreenFeedbackPacket.send(player, I18n.name("message.wandscape.projection.place_failed",
@@ -150,9 +151,10 @@ public record ProjectionPlacePacket(
         buf.writeUtf(pkt.buildingTypeId);
         buf.writeBlockPos(pkt.anchorPos);
         buf.writeVarInt(pkt.rotationSteps & 3);
+        buf.writeBoolean(pkt.clearBox);
     }
 
     static ProjectionPlacePacket read(RegistryFriendlyByteBuf buf) {
-        return new ProjectionPlacePacket(buf.readUtf(), buf.readBlockPos(), buf.readVarInt());
+        return new ProjectionPlacePacket(buf.readUtf(), buf.readBlockPos(), buf.readVarInt(), buf.readBoolean());
     }
 }

@@ -95,11 +95,15 @@
    - `src/main/resources/data/wandscape/buildings/deprecated/` 包含旧存档兼容建筑载荷，属于必须加载项，禁止删除。
 4. **重叠规则——盒可叠、方块不可叠（判定唯一源 `BuildingVoxels`）**：
    - 建筑注册的唯一限制是「同一世界坐标不能被两座建筑 pattern 共用」；boundary 包围盒可任意重叠，室内/贴墙/嵌套建筑都允许。
-   - 归属：建筑自注册起拥有其 pattern 所占每个格。建造=放、拆除=清、修复=补都只落 pattern 坐标；盒内非 pattern（空气/家具/装饰/嵌套建筑的墙）永不触碰。玩家替换进 pattern 格的方块会照拆、修复也会覆盖回原样（该格归建筑）。
+   - 归属：建筑自注册起拥有其 pattern 所占每个格。拆除=清、修复=补只落 pattern 坐标；盒内非 pattern（空气/家具/装饰/嵌套建筑的墙）**在清盒开关关闭时**永不触碰。玩家替换进 pattern 格的方块会照拆、修复也会覆盖回原样（该格归建筑）。
+   - 建造默认「清整盒」（见规则 5）：开着会把盒内非 pattern 方块清掉，室内/嵌套内容会被扫——要叠放/嵌套必须先关清盒开关。拆/修不受清盒开关影响。
    - 重叠判定是两阶段：先拿 pattern 所占 AABB 粗筛、不相交直接放行，只有相交对才精判格子。服务端 register 与客户端幽灵预览**共用** `BuildingVoxels`，改重叠逻辑只动这一处，别在两处各自写一套。
    - 旋转：pattern/精判/预览全部按 `rotationSteps` 旋转后的世界坐标算，动手前先查 `BuildingRotation` 调用链。
-5. **建造不再清整盒**：
-   - `build:clear_and_build` 已不再把 boundary 体积置 air（退化纯放置），`EnqueueHelper` 也不注入 clear_offsets。新建筑叠进已有建筑内部不会清除其内容；非平地放置时盒内残土会保留，玩家需自行选平地。
+5. **建造清盒默认开，可关（Build 子模式右侧参数栏开关，本次会话记忆）**：
+   - 默认「是」= 等价 7a254bca 之前行为（整盒清后砌墙）：`EnqueueHelper.buildWorkItem` 组 params 时把**旋转后 boundary 盒内无 pattern 映射的格**补成 `minecraft:air` 映射并前置进 offsets，`clear_and_build` 单遍放格即得「先清盒后砌墙」的最终世界态；air 免费、不耗材料，且 op 数=盒体积一遍（比旧 clear_offsets 双遍法省一半）。
+   - 关掉「否」= 纯 pattern 放置（7a254bca 之后行为）：盒内残留/叠放内容不清扫，室内、紧凑、嵌套建筑可建。**叠放前务必关清盒**——开着会把盒内别座已注册建筑的方块清掉（注册只挡 pattern 同格，不挡盒）。
+   - 修复（`place_structure`）、拆除（`demolish_structure`）自组 params、只落 pattern 格，与清盒开关无关，永不清整盒。
+   - 无客户端开关的路径（fill 调试指令、建镇脚手架等）默认按「是」处理。
 6. **锚点与查询不再依赖盒互斥**：
    - anchor 落在其它建筑盒内是合法的（室内建筑的前提）。完成/拆除事件优先按 `building_id` 定位（`EnqueueHelper`/repair 都带该参），别只靠 anchor 反查。
    - posIndex 加载时从持久化 pattern 重建，重启后点 pattern 格仍精确归属；盒兜底/交互区查询取「最内层（体积最小）」建筑。

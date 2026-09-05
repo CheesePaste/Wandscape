@@ -221,6 +221,14 @@ public final class WandscapePanelController {
                 event.setCanceled(true);
                 return;
             }
+            // 建造清盒开关：是=整盒清（默认），否=纯放（可叠放）。仅影响本次会话的建造参数。
+            if (BuildPopPanelOverlay.isOverClearToggleButton(mouseX, mouseY, screenW)) {
+                ProjectionClientState.setClearBoxBeforeBuild(!ProjectionClientState.isClearBoxBeforeBuild());
+                mc.getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(
+                        net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK, 1.0f));
+                event.setCanceled(true);
+                return;
+            }
             if (BuildPopPanelOverlay.isOverSubmitButton(mouseX, mouseY, screenW)) {
                 if (ProjectionClientState.getGhostPos() == null) {
                     mc.player.displayClientMessage(

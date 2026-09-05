@@ -1320,6 +1320,8 @@
   "gui.wandscape.buildpop.lock": "Lock",
   "gui.wandscape.buildpop.rotation": "§7Rotation: §e%d°",
   "gui.wandscape.buildpop.submit": "Submit Build",
+  "gui.wandscape.buildpop.clear_on": "§aClear box: yes",
+  "gui.wandscape.buildpop.clear_off": "§eClear box: no",
   "message.wandscape.projection.no_target": "No placeable position — aim at the ground first",
   "message.wandscape.unlock.need_townhall": "You must first build the Town Hall to create a town",
   "message.wandscape.unlock.need_level": "Need town level %d (current: %d)",

@@ -155,7 +155,8 @@ public class ConstructionScreen extends MedievalScreen {
             return;
         }
 
-        PacketDistributor.sendToServer(new ProjectionPlacePacket(buildingTypeId, pos, rotationSteps));
+        PacketDistributor.sendToServer(new ProjectionPlacePacket(
+                buildingTypeId, pos, rotationSteps, ProjectionClientState.isClearBoxBeforeBuild()));
         ProjectionClientState.setPinned(false);
         ProjectionClientState.setGhostPos(null); // placed building is now real; drop preview
 

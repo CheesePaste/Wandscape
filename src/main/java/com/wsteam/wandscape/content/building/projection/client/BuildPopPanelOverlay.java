@@ -15,28 +15,40 @@ import net.minecraft.core.BlockPos;
  * Right-side pop panel for Build Projection mode.
  * Displays target building coordinates (X, Y, Z), Lock/Unlock button, rotation
  * angle readout, six axis nudge buttons (X/Y/Z ±1, move the ghost by one block,
- * auto-locking so the nudge sticks), and a Submit button (always shown —
- * construction does not require pinning first). Rotation itself is done with
- * left-click on the ghost.
+ * auto-locking so the nudge sticks), a「建造清盒」toggle (is=clear whole boundary
+ * box like the pre-overlap build, default; off=pure placement allowing nesting),
+ * and a Submit button (always shown — construction does not require pinning
+ * first). Rotation itself is done with left-click on the ghost. Kept compact so
+ * the panel bottom never reaches the bottom building-selection bar.
  */
 public final class BuildPopPanelOverlay {
 
     public static final int PANEL_W = 164;
-    public static final int PANEL_H = 132;
+    public static final int PANEL_H = 114;
     public static final int PANEL_RIGHT_MARGIN = 8;
-    public static final int PANEL_TOP_MARGIN = WandscapePanelOverlay.TOP_BAR_H + 8;
+    public static final int PANEL_TOP_MARGIN = WandscapePanelOverlay.TOP_BAR_H + 2;
 
-    // Layout Y offsets from panelY
-    private static final int HEADER_Y = 6;
-    private static final int POS_Y = HEADER_Y + 18;
-    private static final int STATUS_Y = POS_Y + 16;
-    private static final int ROT_Y = STATUS_Y + 20;
-    private static final int NUDGE_Y = ROT_Y + 18;
-    private static final int SUBMIT_Y = NUDGE_Y + 24;
+    // Layout Y offsets from panelY (compact vertical rhythm so the panel bottom stays
+    // above the bottom building-selection bar)
+    private static final int HEADER_Y = 3;
+    private static final int POS_Y = HEADER_Y + 16;
+    private static final int STATUS_Y = POS_Y + 13;
+    private static final int ROT_Y = STATUS_Y + 17;
+    private static final int NUDGE_Y = ROT_Y + 13;
+    private static final int CLEAR_Y = NUDGE_Y + 16;
+    private static final int SUBMIT_Y = CLEAR_Y + 17;
 
     private static final int BTN_W = 58;
     private static final int BTN_H = 16;
     private static final int BTN_RIGHT_PAD = 8;
+
+    // 建造清盒开关按钮背景（是=绿 / 否=金）
+    private static final int CLEAR_BG_ON = 0xFF1A4D2E;
+    private static final int CLEAR_BG_ON_HOVER = 0xFF2A6B3E;
+    private static final int CLEAR_BG_OFF = 0xFF3A3423;
+    private static final int CLEAR_BG_OFF_HOVER = 0xFF4A4230;
+    private static final int CLEAR_ACCENT_ON = 0xFF28A745;
+    private static final int CLEAR_ACCENT_OFF = 0xFFC8A040;
 
     // 六个轴微调按钮（X-/X+/Y-/Y+/Z-/Z+，每步一格）几何；NUDGE_LABELS 下标与 nudgeDelta() 一一对应
     private static final int NUDGE_BTN_W = 22;
@@ -136,6 +148,26 @@ public final class BuildPopPanelOverlay {
             nudgeX += NUDGE_BTN_W + NUDGE_GAP;
         }
 
+        // 建造清盒开关（是=整盒清≈旧版，否=纯放可叠放）— 常驻于提交按钮上方
+        y = panelY + CLEAR_Y;
+        boolean clearBox = ProjectionClientState.isClearBoxBeforeBuild();
+        int clearW = PANEL_W - 16;
+        int clearX = panelX + 8;
+        int clearY = y;
+
+        boolean hoverClear = mouseX >= clearX && mouseX <= clearX + clearW
+                && mouseY >= clearY && mouseY <= clearY + BTN_H;
+        int clearBg = hoverClear
+                ? (clearBox ? CLEAR_BG_ON_HOVER : CLEAR_BG_OFF_HOVER)
+                : (clearBox ? CLEAR_BG_ON : CLEAR_BG_OFF);
+        int clearAccent = clearBox ? CLEAR_ACCENT_ON : CLEAR_ACCENT_OFF;
+        g.fill(RenderType.guiOverlay(), clearX, clearY, clearX + clearW, clearY + BTN_H, 0, clearBg);
+        g.fill(RenderType.guiOverlay(), clearX, clearY + BTN_H - 1, clearX + clearW, clearY + BTN_H, 0, clearAccent);
+        g.drawCenteredString(font, (clearBox
+                        ? I18n.name("gui.wandscape.buildpop.clear_on", "清理盒内方块：是").getString()
+                        : I18n.name("gui.wandscape.buildpop.clear_off", "清理盒内方块：否").getString()),
+                clearX + clearW / 2, clearY + 4, hoverClear ? 0xFFFFFFFF : 0xFFDDDDDD);
+
         // Submit button (always shown — construction does not require pinning first)
         y = panelY + SUBMIT_Y;
         int submitW = PANEL_W - 16;
@@ -174,6 +206,17 @@ public final class BuildPopPanelOverlay {
         int submitX = panelX + 8;
         int submitY = panelY + SUBMIT_Y;
         return mouseX >= submitX && mouseX <= submitX + submitW && mouseY >= submitY && mouseY <= submitY + BTN_H;
+    }
+
+    /** 命中「建造清盒」开关按钮。 */
+    public static boolean isOverClearToggleButton(double mouseX, double mouseY, int screenW) {
+        if (!isActive()) return false;
+        int panelX = getPanelX(screenW);
+        int panelY = getPanelY();
+        int clearW = PANEL_W - 16;
+        int clearX = panelX + 8;
+        int clearY = panelY + CLEAR_Y;
+        return mouseX >= clearX && mouseX <= clearX + clearW && mouseY >= clearY && mouseY <= clearY + BTN_H;
     }
 
     /**

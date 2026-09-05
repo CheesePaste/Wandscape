@@ -160,6 +160,7 @@ public final class EnqueueHelper {
      * Build a WorkItem with rotation support and optional material skip.
      * When {@code skipMaterials} is true, material_list and material_counts
      * are omitted so the NPC does not request any items from the warehouse.
+     * Box clearing defaults to on ({@code clearBox = true}).
      */
     public static WorkItem buildWorkItem(BuildingConfig config, BlockPos pos,
                                           String buildingTypeId, int priority,
@@ -167,6 +168,26 @@ public final class EnqueueHelper {
                                           @Nullable UUID buildingId,
                                           int rotationSteps,
                                           boolean skipMaterials) {
+        return buildWorkItem(config, pos, buildingTypeId, priority, sd, buildingId,
+                rotationSteps, skipMaterials, true);
+    }
+
+    /**
+     * Build a WorkItem with rotation support, optional material skip, and optional
+     * boundary clearing. When {@code clearBox} is true the build enqueue expands the
+     * placed voxel set to the whole rotated boundary box — every non-pattern voxel
+     * becomes an air mapping — so {@code build:clear_and_build} single-passes the box
+     * exactly like the pre-overlap build used to (whole box cleared, then walls placed).
+     * When false the params stay pattern-only (pure placement, overlapping interiors
+     * untouched). Repair/demolish assemble their own WorkItems and never pass this.
+     */
+    public static WorkItem buildWorkItem(BuildingConfig config, BlockPos pos,
+                                          String buildingTypeId, int priority,
+                                          @Nullable BuildingSavedData sd,
+                                          @Nullable UUID buildingId,
+                                          int rotationSteps,
+                                          boolean skipMaterials,
+                                          boolean clearBox) {
         Map<String, JsonElement> params = new HashMap<>();
 
         params.put("anchor", posToJsonArray(pos));
@@ -198,8 +219,11 @@ public final class EnqueueHelper {
             if (!params.containsKey("entities")) {
                 params.put("entities", entitiesToJson(config));
             }
-            // No clear_offsets injected: 建造只放 pattern 方块、永不清 boundary 整盒，
-            // 使新建筑能叠进已有建筑内部而不清除其内容。蓝图 clear_and_build 不读此参。
+            // Box clearing: when the BUILD panel toggle is on (clearBox, default),
+            // the non-pattern voxels inside the boundary are expanded into the placed
+            // set as air mappings — clear_and_build then single-passes the whole box,
+            // reproducing the pre-overlap "clear the box, then build" outcome.
+            // When off, offsets/blocks stay pattern-only (pure placement).
             // material_list + material_counts: auto-computed from pattern → block_mapping
             // When skipMaterials is true, emit empty arrays so the blueprint
             // always has the param; the NPC simply requests nothing.
@@ -269,7 +293,55 @@ public final class EnqueueHelper {
             params.put("z", new JsonPrimitive(pos.getZ()));
         }
 
+        if (clearBox) {
+            fillBoundaryAsAir(params, config, rotationSteps);
+        }
+
         return new WorkItem(blueprintId, params, priority);
+    }
+
+    /**
+     * Expand the build params' placed set to the whole rotated boundary box when box
+     * clearing is enabled: every boundary voxel that has no pattern mapping gets an
+     * {@code "minecraft:air"} mapping (free, no material) appended to {@code offsets}
+     * ahead of the pattern voxels, so {@code clear_and_build} single-passes the box the
+     * way the pre-overlap "clear then build" used to. Voxels belonging to the pattern
+     * (already present in {@code offsets}) are left untouched. Air coords are rotated
+     * with the same {@link BuildingRotation#rotateOffset} used for pattern offsets.
+     * No-op when the building has no boundary or its blueprint has no offsets/blocks.
+     */
+    private static void fillBoundaryAsAir(Map<String, JsonElement> params, BuildingConfig config, int rotationSteps) {
+        BuildingConfig.BoundaryBox boundary = config.boundary();
+        if (boundary == null) return;
+        JsonElement offsetsEl = params.get("offsets");
+        JsonElement blocksEl = params.get("blocks");
+        if (!(offsetsEl instanceof JsonArray) || !(blocksEl instanceof JsonObject)) return;
+        JsonArray offsets = offsetsEl.getAsJsonArray();
+        JsonObject blocks = blocksEl.getAsJsonObject();
+
+        int steps = rotationSteps & 3;
+        Set<String> existing = new HashSet<>(offsets.size() * 2);
+        for (JsonElement el : offsets) {
+            JsonArray arr = el.getAsJsonArray();
+            existing.add(arr.get(0).getAsInt() + "," + arr.get(1).getAsInt() + "," + arr.get(2).getAsInt());
+        }
+
+        JsonArray airs = new JsonArray();
+        for (BlockOffset off : boundary.allPositions()) {
+            BlockOffset r = BuildingRotation.rotateOffset(off, steps);
+            String key = r.x() + "," + r.y() + "," + r.z();
+            if (existing.contains(key)) continue;
+            existing.add(key);
+            blocks.addProperty(key, "minecraft:air");
+            airs.add(offsetToJson(r));
+        }
+
+        if (!airs.isEmpty()) {
+            JsonArray merged = new JsonArray();
+            for (JsonElement el : airs) merged.add(el);
+            for (JsonElement el : offsets) merged.add(el);
+            params.put("offsets", merged);
+        }
     }
 
     private static JsonElement resolveField(BuildingConfig config, String fieldName) {

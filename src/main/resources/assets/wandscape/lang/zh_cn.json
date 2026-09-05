@@ -1285,6 +1285,8 @@
   "gui.wandscape.buildpop.lock": "锁定",
   "gui.wandscape.buildpop.rotation": "§7朝向: §e%d°",
   "gui.wandscape.buildpop.submit": "提交施工",
+  "gui.wandscape.buildpop.clear_on": "§a清理盒内方块：是",
+  "gui.wandscape.buildpop.clear_off": "§e清理盒内方块：否",
   "message.wandscape.projection.no_target": "没有可施工的位置 — 先对准地面",
   "message.wandscape.unlock.need_townhall": "需要先建造市政厅建立小镇",
   "message.wandscape.unlock.need_level": "需要小镇等级 %d (当前: %d)",

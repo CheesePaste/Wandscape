@@ -209,8 +209,8 @@ public final class BuildingRotation {
     }
 
     /**
-     * Rotate an array of offset positions (pattern) by {@code steps}.
-     * Used for clear_offsets and pattern lists.
+     * Rotate an array of offset positions (pattern / boundary box) by {@code steps}.
+     * Pattern lists and the box-air fill in EnqueueHelper share this same transform.
      */
     public static BlockOffset[] rotateOffsets(BlockOffset[] offsets, int steps) {
         if (steps <= 0) return offsets;

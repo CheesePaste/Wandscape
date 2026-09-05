@@ -870,6 +870,13 @@ public class BuildingApiImpl implements BuildingApi {
     @Override
     public PlacementResult placeBuilding(BlockPos anchor, String buildingTypeId, int rotationSteps,
                                          @javax.annotation.Nullable UUID ownerColony) {
+        return placeBuilding(anchor, buildingTypeId, rotationSteps, ownerColony, true);
+    }
+
+    @Override
+    public PlacementResult placeBuilding(BlockPos anchor, String buildingTypeId, int rotationSteps,
+                                         @javax.annotation.Nullable UUID ownerColony,
+                                         boolean clearBox) {
         BuildingConfig config = BuildingConfigLoader.getInstance().get(buildingTypeId);
         if (config == null) {
             return PlacementResult.fail(Component.literal("Unknown building type: " + buildingTypeId));
@@ -917,7 +924,7 @@ public class BuildingApiImpl implements BuildingApi {
         WorkItem workItem = EnqueueHelper.buildWorkItem(
                 config, anchor, buildingTypeId, 0,
                 sd, buildingId, rotationSteps,
-                firstFree);
+                firstFree, clearBox);
 
         if (firstFree && sd != null && colonyId != null) {
             sd.claimFirstFree(colonyId, buildingTypeId);
@@ -925,8 +932,8 @@ public class BuildingApiImpl implements BuildingApi {
 
         enqueueWork(buildingId, workItem);
 
-        Log.info(TAG, "[Placement] '{}' at {} firstFree={}",
-                config.displayName(), anchor, firstFree);
+        Log.info(TAG, "[Placement] '{}' at {} firstFree={} clearBox={}",
+                config.displayName(), anchor, firstFree, clearBox);
         return PlacementResult.ok(buildingId, firstFree);
     }
 

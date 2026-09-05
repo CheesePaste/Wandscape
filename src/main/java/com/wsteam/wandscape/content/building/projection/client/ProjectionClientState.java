@@ -51,6 +51,15 @@ public final class ProjectionClientState {
     /** Number of 90° counter-clockwise rotations (0-3). 0 = original orientation. */
     private static volatile int rotationSteps = 0;
 
+    /**
+     * Build-mode toggle「建造时清空盒内方块」(BuildPopPanelOverlay): whether a new build
+     * clears the whole boundary box first (true, default = pre-overlap behaviour) or
+     * places pattern blocks only (false, allows overlap/nesting). Session-scoped:
+     * static default true; intentionally NOT cleared on projection exit/suspend so a
+     * player's choice survives submode switches within this game session.
+     */
+    private static volatile boolean clearBoxBeforeBuild = true;
+
     private ProjectionClientState() {}
 
     // ── Projection mode ──
@@ -259,6 +268,17 @@ public final class ProjectionClientState {
     /** Reset rotation to 0 (original orientation). */
     public static void resetRotation() {
         rotationSteps = 0;
+    }
+
+    // ── Build box clearing toggle ──
+
+    /** Whether the next new build clears the whole boundary box (true) or places pure pattern (false). */
+    public static boolean isClearBoxBeforeBuild() {
+        return clearBoxBeforeBuild;
+    }
+
+    public static void setClearBoxBeforeBuild(boolean clear) {
+        clearBoxBeforeBuild = clear;
     }
 
 }

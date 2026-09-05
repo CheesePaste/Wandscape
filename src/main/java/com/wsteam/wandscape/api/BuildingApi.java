@@ -111,6 +111,15 @@ public interface BuildingApi {
                                   @javax.annotation.Nullable java.util.UUID ownerColony);
 
     /**
+     * 带归属 + 清盒开关的放置：同 {@link #placeBuilding(BlockPos, String, int, java.util.UUID)}，
+     * 额外决定建造是否清掉包围盒内方块（{@code clearBox}）。true=整盒清（默认，等价 pre-overlap
+     * 行为）；false=纯 pattern 放置（允许叠放/嵌套）。修复/拆除不受此参数影响。
+     */
+    PlacementResult placeBuilding(BlockPos anchor, String buildingTypeId, int rotationSteps,
+                                  @javax.annotation.Nullable java.util.UUID ownerColony,
+                                  boolean clearBox);
+
+    /**
      * Whether this colony has already claimed the first-free build of a building type
      * (i.e. {@code first_free: true} in its config, and a building of that type has
      * already been placed for free here). Returns false when the first build is still free.
