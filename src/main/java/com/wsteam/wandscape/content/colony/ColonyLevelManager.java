@@ -26,8 +26,10 @@ import java.util.function.Consumer;
  *   <li>tourist level &gt; colony level → {@link Config#COLONY_EXP_ABOVE_LEVEL}</li>
  * </ul>
  *
- * <p>Level-up formula: expToNext(level) = 300×(level+1) + 55×(level+1)² —— 二次曲线,
- * 前期便宜后期贵 → 小镇等级前快后慢（标定：5级≈5天、10级≈12天、15级≈22天、20级≈34天、30级满≈68天）。
+ * <p>Level-up formula: expToNext(m) = 440×m + 20×m²（m = level+1）—— 二次曲线,
+ * 前期便宜后期贵 → 小镇等级前快后慢。2026-09 调整：A 300→440、B 25→20，
+ * 提 1→5 所需经验约 +30%（开局别急着到 5 级，留足前中期探索），二阶项微降以抵消、
+ * 令 m=30（30 级满）处新旧公式相等、后期节奏与原标定一致。
  * 等级上限见 {@link Config#COLONY_MAX_LEVEL}。
  */
 public final class ColonyLevelManager {
@@ -92,10 +94,10 @@ public final class ColonyLevelManager {
 
     /** Calculate experience needed to reach the next level from the given level. */
     public static int expToNext(int currentLevel) {
-        // 二次曲线: 前期便宜后期贵（A=300, B=25）。B 从 55 降到 25 加速后期升级
-        //（外部 sim 实测: 5级≈3天 10级≈9天 15级≈18天 20级≈32天 30级满≈76天）
+        // 二次曲线: 前期便宜后期贵（A=440, B=20）。B 曾从 55 降到 25 加速后期；
+        // A 300→440 提 1→5 门槛（开局别太快到 5 级），B 25→20 抵消、钉住 30 级满的旧节奏
         int m = currentLevel + 1;
-        return 300 * m + 25 * m * m;
+        return 440 * m + 20 * m * m;
     }
 
     /** Calculate experience needed for the colony's next level. */

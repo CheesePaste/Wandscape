@@ -43590,7 +43590,7 @@
         "wonder": 0
       }
     ],
-    "profit_rate": 0.8,
+    "profit_rate": 1.0,
     "interaction_duration_ticks": 2400
   },
   "blueprint": {

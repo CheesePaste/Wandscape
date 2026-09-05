@@ -2690,7 +2690,7 @@
         "wonder": 0
       },
       {
-        "item_id": "minecraft:cookie",
+        "item_id": "minecraft:honey_bottle",
         "comfort": 1,
         "magic": 0,
         "wonder": 0
@@ -2708,7 +2708,7 @@
         "wonder": 0
       }
     ],
-    "profit_rate": 0.3,
+    "profit_rate": 0.5,
     "interaction_duration_ticks": 1200
   },
   "blueprint": {

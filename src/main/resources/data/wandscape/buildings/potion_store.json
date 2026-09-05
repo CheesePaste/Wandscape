@@ -2787,7 +2787,7 @@
         "wonder": 0
       },
       {
-        "item_id": "minecraft:bone",
+        "item_id": "minecraft:gold_nugget",
         "comfort": 0,
         "magic": 0,
         "wonder": 1
@@ -2805,7 +2805,7 @@
         "wonder": 2
       }
     ],
-    "profit_rate": 0.3,
+    "profit_rate": 0.5,
     "interaction_duration_ticks": 1200
   },
   "blueprint": {

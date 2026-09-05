@@ -6590,8 +6590,8 @@
     "max_occupancy": 4,
     "interaction_duration_ticks": 1200,
     "element_output": {
-      "earth": 19,
-      "wood": 19
+      "earth": 20,
+      "metal": 25
     }
   },
   "blueprint": {

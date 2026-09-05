@@ -1502,7 +1502,7 @@
   "node_config": {
     "blueprint": "node:gather",
     "element": "water",
-    "amount_per_harvest": 30,
+    "amount_per_harvest": 60,
     "channel_ticks": 1200
   },
   "blueprint": {

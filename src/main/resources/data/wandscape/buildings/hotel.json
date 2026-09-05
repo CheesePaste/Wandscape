@@ -8815,10 +8815,8 @@
   "service": {
     "energy_per_use": 20,
     "element_output": {
-      "earth": 78,
-      "wind": 78,
-      "wood": 78,
-      "metal": 79
+      "earth": 110,
+      "wood": 110
     },
     "max_occupancy": 8,
     "interaction_duration_ticks": 1200
