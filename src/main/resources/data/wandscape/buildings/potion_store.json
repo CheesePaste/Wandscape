@@ -2775,7 +2775,7 @@
   "shop": {
     "goods": [
       {
-        "item_id": "minecraft:potion",
+        "item_id": "minecraft:glass_bottle",
         "comfort": 1,
         "magic": 0,
         "wonder": 0
