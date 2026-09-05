@@ -46,6 +46,17 @@ public class NavigationState {
     public int lastCheckTick;
     public double lastCheckX, lastCheckZ;
 
+    // ---- 水中脱困探测（NavigationSystem 维护）----
+    // 位移卡死判据只看“每区间动了多少”，对高岸水池这类能四处游但永远爬不上去的困局
+    // 判定失灵（每区间位移都够大，却始终逼近不了目标）。此处在位移判据之外补“净逼近”
+    // 判据：记录到目标到达中心的历史最低 3D 距离（含垂直，兼容潜水下潜），逼近停滞连续
+    // 达限即认为被困、切自传送脱困。渡河/水下工作全程净逼近（每区间都创新低），不受影响。
+
+    /** 本段 PATHFINDING 中到目标到达中心的历史最低 3D 距离（格）；-1 = 尚未取样（首区间惰性初始化）。 */
+    public double waterBestDist = -1.0;
+    /** 水中逼近停滞的连续区间计数（每 STUCK_CHECK_INTERVAL_TICKS 判一次），达上限切传送。 */
+    public int waterStallCount;
+
     /** Reset to idle, clearing all state. */
     public void reset() {
         if (future != null && !future.isDone()) {
@@ -60,5 +71,7 @@ public class NavigationState {
         lastCheckTick = 0;
         lastCheckX = 0;
         lastCheckZ = 0;
+        waterBestDist = -1.0;
+        waterStallCount = 0;
     }
 }

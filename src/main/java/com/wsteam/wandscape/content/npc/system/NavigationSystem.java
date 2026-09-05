@@ -50,6 +50,17 @@ public class NavigationSystem implements EcsSystem {
     /** 传送固定魔力消耗。 */
     private static final int TELEPORT_MANA_COST = 30;
 
+    /**
+     * 水中逼近判定：要算“已逼近目标”，到目标到达中心的历史最低 3D 距离须创新低 ≥ 该格数。
+     * 慢泳渡河/潜水下潜每区间推进远超此值；水面原地扑腾/贴壁晃动噪声 < 1 格，不会误清停滞计数。
+     */
+    private static final double WATER_APPROACH_MIN_DIST = 1.0;
+    /**
+     * 水中逼近停滞连续区间数（每 STUCK_CHECK_INTERVAL_TICKS 判一次）达此值即切自传送脱困。
+     * 约 4×60 = 240 tick 卡在无法再靠近目标的点才触发，正常渡河/水下工作全程持续逼近永不累积。
+     */
+    private static final int WATER_STALL_LIMIT = 4;
+
     private int tickCounter;
 
     @Override
@@ -142,7 +153,8 @@ public class NavigationSystem implements EcsSystem {
 
         // 渡水是合法的慢移动：原版水中移速（即便本模组把 WATER_MOVEMENT_EFFICIENCY 提到 1.0）
         // 仍明显慢于陆地，固定超时会把正在游过河/湖的 NPC 提前判死并触发传送。水中改靠下方
-        // 卡死进度检测（STUCK_* 三连）兜底——真正卡死（无水平推进）照样会被传送，慢但前进的不受影响。
+        // 卡死进度检测兜底——无水平推进（STUCK_* 三连）或有位移但逼近不了目标（水中净逼近判据，
+        // 高岸水池这类游得动却爬不出去的困局）都会被传送；慢但持续逼近目标的不受影响。
         if (elapsed > PATHFIND_TIMEOUT && !npc.isInWater()) {
             Log.debug(LogCategory.NPC, "nav", "NPC {} — timeout {} ticks, switching to teleport", npcId, elapsed);
             switchToRitualTeleport(nav, npcId, world);
@@ -164,6 +176,42 @@ public class NavigationSystem implements EcsSystem {
                 }
             } else {
                 nav.stuckChecks = 0;
+                if (npc.isInWater()) {
+                    GridPos waterTarget = nav.target;
+                    if (waterTarget != null) {
+                        // 到达中心与顶楼 arrive 判据一致：(x+0.5, y+1, z+0.5)。用 3D 距离而非仅水平——
+                        // 潜水下潜/攀爬对目标只有垂直推进，若只看水平会误判成“逼近停滞”触发无效传送。
+                        double dcx = waterTarget.x() + 0.5;
+                        double dcy = waterTarget.y() + 1.0;
+                        double dcz = waterTarget.z() + 0.5;
+                        double vx = npc.getX() - dcx;
+                        double vy = npc.getY() - dcy;
+                        double vz = npc.getZ() - dcz;
+                        double d = Math.sqrt(vx * vx + vy * vy + vz * vz);
+                        if (nav.waterBestDist < 0) {
+                            nav.waterBestDist = d; // 首区间惰性初始化，不计数
+                        } else if (d < nav.waterBestDist - WATER_APPROACH_MIN_DIST) {
+                            nav.waterBestDist = d;
+                            nav.waterStallCount = 0; // 有新推进 → 正常渡河/水下，清零
+                        } else {
+                            nav.waterStallCount++;
+                            Log.debug(LogCategory.NPC, "nav", "NPC {} — in water, best dist to target {}, stall #{}/{}",
+                                    npcId, String.format("%.2f", nav.waterBestDist),
+                                    nav.waterStallCount, WATER_STALL_LIMIT);
+                            if (nav.waterStallCount >= WATER_STALL_LIMIT) {
+                                Log.debug(LogCategory.NPC, "nav",
+                                        "NPC {} — swimming but cannot approach target (high-bank water trap), teleporting",
+                                        npcId);
+                                switchToRitualTeleport(nav, npcId, world);
+                                return;
+                            }
+                        }
+                    }
+                } else if (nav.waterStallCount > 0 || nav.waterBestDist >= 0) {
+                    // 回到陆地：清掉水中探测状态，避免同一段 nav 跨两片水域时拿前一片的更近记录误判
+                    nav.waterBestDist = -1.0;
+                    nav.waterStallCount = 0;
+                }
             }
             nav.lastCheckTick = tickCounter;
             nav.lastCheckX = npc.getX();
@@ -236,8 +284,12 @@ public class NavigationSystem implements EcsSystem {
     private void switchToRitualTeleport(NavigationState nav, long npcId, World world) {
         // 空中（被怪击退/下落）：原版寻路对悬空起点必失败，此刻传送会白烧 CD+30 蓝——
         // 等落地后重试。战斗怪贴脸反复击退会让 NPC 频繁短暂离地，而 moveTo 每轮必失败→传送。
+        // 水中游泳例外：浮在水里 onGround() 恒 false 但并非“被击退悬空”。若照常拦截，困在高岸
+        // 深水池的 NPC 即使判定卡死也永远无法借自传送脱困（onGround false → 每轮直接 return，
+        // startTick=0 复位 → 下轮又从寻路重新来，死循环）。游泳中同样放行，落点安全由
+        // findSafeLanding 保证。
         WandscapeNpc airborne = EntityComponentBridge.INSTANCE.getNpc(npcId);
-        if (airborne != null && !airborne.onGround()) {
+        if (airborne != null && !airborne.onGround() && !airborne.isInWater()) {
             nav.startTick = 0;
             return;
         }

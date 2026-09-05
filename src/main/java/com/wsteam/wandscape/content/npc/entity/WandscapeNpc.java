@@ -2277,7 +2277,9 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
 
         /** 尝试复用 self_teleport 自传送仪式传送至跟随玩家身旁。 */
         private boolean tryTeleportToPlayer(Player p) {
-            if (!onGround()) return false;
+            // onGround 守卫为“不被击退悬空才传送”；水中游泳同样 onGround 恒 false 但非击退——
+            // 不豁免的话，困在高岸水池里的跟随法师（玩家 >10 格外）会每 tick 尝试传送却永远失败。
+            if (!onGround() && !isInWater()) return false;
             if (isTeleportChanneling(level().getGameTime())) return false;
             if (!(level() instanceof ServerLevel serverLevel)) return false;
 

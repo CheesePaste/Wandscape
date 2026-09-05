@@ -29,6 +29,9 @@
    - **PVP 分化**：`Config.PVP`（`npc.pvp`，默认 true）开启时玩家侧实体（`PLAYER`/`PLAYER_SUMMON`/`PET`）的「恒友军」收紧为「仅同殖民地」——`classify()` 需把玩家/召唤者/宠物主人的殖民地解析进 `Classified.colony`（`getColonyByFounder`，殖民地↔创始人 1:1；无殖民地→ null→判非友军），`FriendlyForce.isAlly/areMutuallyAlly` 增 `pvp` 参数做 `sameColony` 判定。改动时必须同步贯通 `isRetaliationTarget`（还手）、`canBeamHurt`（光束伤害）与 `ScepterService.toggleHostile`（可标记敌对玩家）四条边界——只改一处会阻塞。`EvilMage.canBeamHurt` 已覆盖「非友军 或 生存玩家」，不受 PVP 影响。
    - **第三方魔法模组误伤（源头修复）**：`WandscapeNpc.isAlliedTo` 覆写（vanilla 中立钩子，基于 `Entity#isAlliedTo`）让 Goety `MobUtil.areAllies` 与铁魔法 `isFriendlyFireBetween` 在源头就不索敌/不误伤本殖民地 NPC——两类模组的友伤判定最终都汇到 `isAlliedTo`，故不必逐模组打补丁。玩家分支只豁免本殖民地创始人（`colonyFounder()`，`ColonyApi.getFounder`，PvP 无关），非玩家分支沿用 PvP 感知的 `isFriendlyForce`，所以「自家殖民地受保护、其他殖民地仍可被误伤」，与 PvP 的「跨殖民地敌对」同向。配套 `Config.NPC_FRIENDLY_FIRE_PROTECTION`（`npc.friendlyFireProtection`，默认 true）经 `NpcFriendlyFireHandler`（`LivingIncomingDamageEvent`：伤害链解析回攻击者玩家，仅取消「攻击者拥有该殖民地」的伤害）兜底覆盖近战/箭矢/其它不走 `isAlliedTo` 的来源；关闭后可再伤自家殖民地 NPC。
    - ⚠️ **做其他模组兼容时，务必把该模组的召唤物/宠物经 `FriendlyForceApi.registerAlly` 加入盟友名单，避免殖民地 NPC 误伤**——这是硬性提醒，遗漏会导致兼容模组的召唤生物被己方法师当敌人打死。
+7. **NPC 寻路水中脱困是「双层卡死判据 + 游泳免 onGround」**（`content/npc/system/NavigationSystem`）：
+   - 位移卡死判据（每 60 tick 水平位移 < 2 格、连 3 次）只覆盖「没在动」；高岸水池这类「游得动但永远逼近不了目标」的困局需补**净逼近判据**：水中每区间游动够大时，记录到目标到达中心的**历史最低 3D 距离**（含垂直，兼容潜水下潜），连续 4 个区间（≈240 tick）不再创新低即切自传送脱困。渡河/水下工作全程单调逼近（每区间创新低），永不触发。
+   - `switchToRitualTeleport`（及跟随兜底 `FollowPlayerGoal.tryTeleportToPlayer`）的门控是 `onGround()`，但游泳时 `onGround()` 恒 false——必须放行水中 NPC（`|| isInWater()`），否则水池困局判定卡死后每轮被门控拦下死循环，永远传送不出去（任务走 NavigationSystem、跟随走 FollowPlayerGoal 两路都会中招）；落点安全由 `findSafeLanding` 保证。
 
 ---
 
