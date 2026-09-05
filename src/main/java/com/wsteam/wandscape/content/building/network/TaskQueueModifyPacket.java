@@ -15,6 +15,9 @@ import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.api.WandscapeApis;
 import com.wsteam.wandscape.content.task.engine.pool.GlobalTask;
 import com.wsteam.wandscape.content.warehouse.ColonyItemBank;
+import com.wsteam.wandscape.content.production.data.CraftRecipeView;
+import com.wsteam.wandscape.foundation.util.ItemKey;
+import com.wsteam.wandscape.Wandscape;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -128,7 +131,7 @@ public record TaskQueueModifyPacket(
                 int quantity = paramInt(params, "count", 0);
                 entries.add(new TaskQueueDataPacket.QueueEntry(
                         i, category, itemOrRecipeId, quantity, bid, summarizeWorkItem(bid, params),
-                        isInsufficient(bid, params, elementSnapshot),
+                        isInsufficient(bid, params, elementSnapshot, bank, colonyId),
                         missingElements(bid, params, elementSnapshot),
                         isCapacityBlocked(bid, params, bank, colonyId)
                 ));
@@ -325,12 +328,33 @@ public record TaskQueueModifyPacket(
         return fallback;
     }
 
-    /** Whether an element-costing queue entry currently lacks enough elements (mirrors the publish scan). */
+    /** Whether an element-costing queue entry currently lacks enough elements or item materials (mirrors the publish scan). */
     private static boolean isInsufficient(String bid, Map<String, JsonElement> params,
-                                          Map<ElementType, Long> elementSnapshot) {
+                                          Map<ElementType, Long> elementSnapshot,
+                                          @Nullable ColonyItemBank bank,
+                                          @Nullable UUID colonyId) {
         if (!ProductionEligibility.isElementCosting(bid)) return false;
-        return !ProductionEligibility.isAffordable(
-                ProductionEligibility.requiredElements(bid, params), elementSnapshot);
+        if (!ProductionEligibility.isAffordable(
+                ProductionEligibility.requiredElements(bid, params), elementSnapshot)) {
+            return true;
+        }
+        if (bank != null && colonyId != null && "production:craft".equals(bid)) {
+            String recipeId = paramStr(params, "recipe_id");
+            int count = paramInt(params, "count", 1);
+            if (recipeId != null && count > 0) {
+                var loader = Wandscape.PRODUCTION_RECIPE_LOADER;
+                CraftRecipeView recipe = CraftRecipeView.resolve(loader, recipeId);
+                if (recipe != null && !recipe.inputItems().isEmpty()) {
+                    for (String inputItemId : recipe.inputItems()) {
+                        ItemKey key = ItemKey.of(inputItemId, null);
+                        if (bank.available(colonyId, key) < count) {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     /** Missing element ids (lowercase) for an element-short queue entry; empty otherwise. */

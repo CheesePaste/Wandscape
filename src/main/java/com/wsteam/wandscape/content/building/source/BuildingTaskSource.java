@@ -18,6 +18,9 @@ import com.wsteam.wandscape.content.task.engine.pool.TaskRequest;
 import com.wsteam.wandscape.content.task.runtime.TaskState;
 import com.wsteam.wandscape.content.task.source.TaskSource;
 import com.wsteam.wandscape.content.warehouse.ColonyItemBank;
+import com.wsteam.wandscape.content.production.data.CraftRecipeView;
+import com.wsteam.wandscape.foundation.util.ItemKey;
+import com.wsteam.wandscape.Wandscape;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
 import javax.annotation.Nullable;
@@ -137,10 +140,11 @@ public class BuildingTaskSource implements TaskSource {
             // 先判队列里有没有现在能跑的条目：元素不足或仓库满仓的合成/制作任务不会发布，
             // 因此不能为了「排队但跑不了」的队列强制加载区块（否则每 20 tick 一次
             // 强制加载/释放，造成区块抖动）。
+            ColonyItemBank bank = bank();
             Map<ElementType, Long> elementSnapshot = elementSnapshot(colonyId);
             Long capacityRemaining = capacityRemaining(colonyId);
-            if (!hasEligibleWork(api, buildingId, elementSnapshot, capacityRemaining)) {
-                continue; // 元素/容量不足 → 不发布 → 相关 NPC 自然空闲，等补齐/容量空出
+            if (!hasEligibleWork(api, buildingId, elementSnapshot, capacityRemaining, bank, colonyId)) {
+                continue; // 元素/材料/容量不足 → 不发布 → 相关 NPC 自然空闲，等补齐/容量空出
             }
 
             // Force-load the footprint when a building is newly activated. No concurrency cap —
@@ -155,7 +159,7 @@ public class BuildingTaskSource implements TaskSource {
             // 合成/制作任务留在队列原位被跳过（面板可见「缺元素/容量不足」），
             // 分解/建造/采集等非元素任务恒可发布。
             WorkItem item = api.dequeueWorkEligible(buildingId,
-                    work -> isEligible(work, elementSnapshot, capacityRemaining));
+                    work -> isEligible(work, elementSnapshot, capacityRemaining, bank, colonyId));
             if (item == null) {
                 // 预检通过到真正弹队列之间元素被并发任务消耗光的竞态 → 放弃本轮。
                 chunkLoad.releaseBuilding(buildingId);
@@ -231,23 +235,60 @@ public class BuildingTaskSource implements TaskSource {
         return remaining >= jsonParamInt(work.params(), "count", 1);
     }
 
-    /** 非元素工作恒可发布；消耗元素的生产配方需元素足够且产物放得进仓库才可发布。 */
+    /** 非元素工作恒可发布；消耗元素的生产配方需元素足够、原料物品足够且产物放得进仓库才可发布。 */
     private static boolean isEligible(WorkItem work, @Nullable Map<ElementType, Long> elementSnapshot,
-                                      @Nullable Long capacityRemaining) {
+                                      @Nullable Long capacityRemaining,
+                                      @Nullable ColonyItemBank bank,
+                                      @Nullable UUID colonyId) {
         if (!ProductionEligibility.isElementCosting(work.blueprintId())) return true;
         Map<ElementType, Long> required = ProductionEligibility.requiredElements(work.blueprintId(), work.params());
         if (!ProductionEligibility.isAffordable(required, elementSnapshot)) return false;
+        if (!materialsOk(work, bank, colonyId)) return false;
         return capacityOk(work, capacityRemaining);
+    }
+
+    /** 制作站配方的额外物品原料（如药水玻璃瓶）是否充足。 */
+    private static boolean materialsOk(WorkItem work, @Nullable ColonyItemBank bank, @Nullable UUID colonyId) {
+        if (bank == null || colonyId == null) return true;
+        if (!"production:craft".equals(work.blueprintId())) return true;
+        String recipeId = jsonParamStr(work.params(), "recipe_id");
+        int count = jsonParamInt(work.params(), "count", 1);
+        if (recipeId == null || count <= 0) return true;
+        var loader = Wandscape.PRODUCTION_RECIPE_LOADER;
+        CraftRecipeView recipe = CraftRecipeView.resolve(loader, recipeId);
+        if (recipe == null || recipe.inputItems().isEmpty()) return true;
+        for (String inputItemId : recipe.inputItems()) {
+            ItemKey key = ItemKey.of(inputItemId, null);
+            if (bank.available(colonyId, key) < count) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /** 队列里是否存在现在能发布的条目（读队列，不弹）。 */
     private static boolean hasEligibleWork(com.wsteam.wandscape.content.building.internal.BuildingApiImpl api, UUID buildingId,
                                            @Nullable Map<ElementType, Long> elementSnapshot,
-                                           @Nullable Long capacityRemaining) {
+                                           @Nullable Long capacityRemaining,
+                                           @Nullable ColonyItemBank bank,
+                                           @Nullable UUID colonyId) {
         for (WorkItem item : api.getQueue(buildingId)) {
-            if (isEligible(item, elementSnapshot, capacityRemaining)) return true;
+            if (isEligible(item, elementSnapshot, capacityRemaining, bank, colonyId)) return true;
         }
         return false;
+    }
+
+    @Nullable
+    private static ColonyItemBank bank() {
+        var server = ServerLifecycleHooks.getCurrentServer();
+        if (server == null) return null;
+        return ColonyItemBank.get(server.overworld());
+    }
+
+    @Nullable
+    private static String jsonParamStr(Map<String, JsonElement> params, String key) {
+        JsonElement el = params.get(key);
+        return (el instanceof JsonPrimitive p && p.isString()) ? p.getAsString() : null;
     }
 
     /** 殖民地仓库当前剩余容量（上限 0 = 无限返回 MAX）；银行不可用返回 null。 */

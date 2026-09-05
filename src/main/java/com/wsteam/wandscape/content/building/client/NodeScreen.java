@@ -32,7 +32,7 @@ public class NodeScreen extends MedievalScreen {
     private static final int PW = 400;
     private static final int PH = 220;
     private static final int LEFT_PW = 240;
-    private static final int QUEUE_PW = 140;
+    private static final int QUEUE_PW = 152;
     private static final int MAX_HARVESTS = 10;
     private static final int INFO_ROWS = 4;
     private static final int INFO_ROW_H = 12;
@@ -176,6 +176,13 @@ public class NodeScreen extends MedievalScreen {
                 amountPerHarvest * n);
         g.drawString(Minecraft.getInstance().font, totals,
                 contentX, controlY + 26, MedievalColors.TEXT_MUTED);
+    }
+
+    @Override
+    protected void renderForeground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        if (taskQueuePanel != null) {
+            taskQueuePanel.renderTooltip(g, mouseX, mouseY);
+        }
     }
 
     private static String i18n(String key, String fallback, Object... args) {

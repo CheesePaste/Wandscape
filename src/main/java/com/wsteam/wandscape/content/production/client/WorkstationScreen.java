@@ -39,7 +39,7 @@ public class WorkstationScreen extends MedievalScreen {
     // Left panel width (existing content)
     private static final int LEFT_PW = 240;
     // Right panel (TaskQueuePanel) — narrower to stay inside the PW=400 window
-    private static final int QUEUE_PW = 148;
+    private static final int QUEUE_PW = 152;
 
     private BlockPos stationPos = BlockPos.ZERO;
     private int activeTab = 0;
@@ -194,7 +194,7 @@ public class WorkstationScreen extends MedievalScreen {
             @Override
             protected void renderRow(GuiGraphics g, SynthesizeEntry item, int x, int y, int index,
                                      boolean selected, boolean hovered) {
-                boolean isLocked = !"unlocked".equals(item.lockedReason());
+                boolean isLocked = "colony".equals(item.lockedReason());
                 boolean canAfford = !isLocked && item.maxAffordable() > 0;
 
                 var registryItem = BuiltInRegistries.ITEM.get(ResourceLocation.tryParse(item.outputItem()));
@@ -212,7 +212,9 @@ public class WorkstationScreen extends MedievalScreen {
                             : MedievalColors.TEXT_MUTED;
                 } else {
                     // elements insufficient but recipe is unlocked
-                    nameColor = MedievalColors.TEXT_DIM;
+                    nameColor = selected ? MedievalColors.ACCENT_GOLD
+                            : hovered ? MedievalColors.TEXT_WARM_WHITE
+                            : MedievalColors.TEXT_DIM;
                 }
 
                 int textX = x + 20;
@@ -283,9 +285,10 @@ public class WorkstationScreen extends MedievalScreen {
             stepper.setTotalMax(1);
             return;
         }
-        // Locked recipes (colony / elements) show max_affordable=0; keep slider at 1
-        boolean locked = !"unlocked".equals(entry.lockedReason());
-        int max = locked ? 1 : entry.maxAffordable();
+        // Locked recipes (colony level unmet) keep slider at 1.
+        // Unlocked recipes allow ordering even if elements are currently insufficient.
+        boolean locked = "colony".equals(entry.lockedReason());
+        int max = locked ? 1 : Math.max(999, entry.maxAffordable());
         stepper.setTotalMax(max);
     }
 
@@ -312,6 +315,8 @@ public class WorkstationScreen extends MedievalScreen {
         ItemStack tooltip = currentList != null ? currentList.hoveredTooltipStack() : null;
         if (tooltip != null) {
             g.renderTooltip(font, tooltip, mouseX, mouseY);
+        } else if (taskQueuePanel != null) {
+            taskQueuePanel.renderTooltip(g, mouseX, mouseY);
         }
     }
 
@@ -324,8 +329,8 @@ public class WorkstationScreen extends MedievalScreen {
                     stationPos, "decompose", sel.itemId(), qty));
         } else {
             SynthesizeEntry sel = synthesizeList.getSelected();
-            // Block submission when recipe is locked (colony / elements)
-            if (sel == null || !"unlocked".equals(sel.lockedReason())) return;
+            // Block submission only when recipe is locked by colony level
+            if (sel == null || "colony".equals(sel.lockedReason())) return;
             PacketDistributor.sendToServer(new RequestProductionTaskPacket(
                     stationPos, "synthesize", sel.recipeId(), qty));
         }

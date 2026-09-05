@@ -128,8 +128,12 @@ public class TaskQueuePanel extends AbstractWidget {
     // Item-icon cache: itemOrRecipeId → ItemStack (or null if not found)
     private final Map<String, ItemStack> iconCache = new HashMap<>();
 
+    // Hover tooltip tracking
+    private ItemStack hoveredTooltipStack;
+    private List<Component> hoveredTooltipLines;
+
     // Layout constants
-    private static final int ICON_SIZE   = 12;   // icon cell: 12×12 px
+    private static final int ICON_SIZE   = 16;   // icon cell: 16×16 px
     private static final int ICON_GAP    = 2;    // gap between icon and label
     private static final int BTN_W       = 14;
     private static final int BTN_H       = 14;
@@ -299,13 +303,16 @@ public class TaskQueuePanel extends AbstractWidget {
     /** Render an icon stack at (x, y), centred vertically within a rowHeight tall cell. */
     private void renderIcon(GuiGraphics g, ItemStack stack, int x, int y, int rowHeight) {
         if (stack.isEmpty()) return;
-        int iconY = y + (rowHeight - ICON_SIZE) / 2 + 1;
+        int iconY = y + (rowHeight - ICON_SIZE) / 2;
         g.renderItem(stack, x, iconY);
     }
 
     @Override
     protected void renderWidget(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         if (!visible) return;
+
+        hoveredTooltipStack = null;
+        hoveredTooltipLines = null;
 
         // Background panel
         SkinRender.drawPanel9Slice(g, SkinSprite.PANEL_B, getX(), getY(), width, height);
@@ -320,7 +327,7 @@ public class TaskQueuePanel extends AbstractWidget {
 
         // ── Current (executing) tasks — top rows, locked, each with a progress bar ──
         for (int i = 0; i < currents.size(); i++) {
-            renderCurrentRow(g, textY + i * CURRENT_ROW_H, currents.get(i));
+            renderCurrentRow(g, textY + i * CURRENT_ROW_H, currents.get(i), mouseX, mouseY);
         }
 
         // ── Pending entries — scrollable region below the current rows ──
@@ -359,48 +366,78 @@ public class TaskQueuePanel extends AbstractWidget {
                 renderIcon(g, icon, contentX, rowBaseY, rowHeight);
             }
 
-            // ── Category label + quantity ──
+            // ── Category label + item quantity ──
             int labelX = contentX + ICON_SIZE + ICON_GAP;
             Component label = categoryLabel(e.category);
             g.drawString(Minecraft.getInstance().font, label,
                     labelX, centerY - 4, MedievalColors.TEXT_DIM);
 
-            // ── 受阻标记：缺元素(暗红标签+元素图标) / 仓库容量不足(红标签) ──
-            int textColEnd = colRightStart - 2;
-            int statusX = labelX + Minecraft.getInstance().font.width(label) + 2;
-            if (e.insufficient) {
-                Component shortTag = I18n.name("gui.wandscape.queue.insufficient", "缺元素");
-                int tagW = Minecraft.getInstance().font.width(shortTag);
-                g.drawString(Minecraft.getInstance().font, shortTag,
-                        statusX, centerY - 4, MedievalColors.TEXT_DIM);
-                statusX += tagW + 2;
-                int iconX = statusX;
-                for (String el : e.missingElements) {
-                    if (iconX + 11 > textColEnd) break; // clip at quantity column
-                    ResourceLocation ico = WandscapeTheme.elementIcon(el);
-                    if (ico != null) {
-                        WandscapeTheme.drawIcon(g, ico, iconX, centerY - 5, 9, 9, WandscapeTheme.elementColor(el));
-                        iconX += 11;
-                    }
-                }
-                if (iconX > statusX) statusX = iconX + 2;
+            int curX = labelX + Minecraft.getInstance().font.width(label);
+            if (e.quantity > 0) {
+                String qtyStr = " x" + e.quantity;
+                g.drawString(Minecraft.getInstance().font, qtyStr,
+                        curX, centerY - 4, MedievalColors.TEXT_MUTED);
+                curX += Minecraft.getInstance().font.width(qtyStr);
             }
+
+            // ── Blockage status tag (right-aligned before action buttons) ──
+            int textColEnd = colRightStart - 2;
+            int statusBlockX = textColEnd;
+
             if (e.capacityBlocked) {
                 Component shortTag = I18n.name("gui.wandscape.queue.capacity", "容量不足");
                 int tagW = Minecraft.getInstance().font.width(shortTag);
-                if (statusX + tagW <= textColEnd) {
+                statusBlockX = textColEnd - tagW;
+                if (statusBlockX >= curX + 2) {
                     g.drawString(Minecraft.getInstance().font, shortTag,
-                            statusX, centerY - 4, 0xFFE05040);
-                    statusX += tagW + 2;
+                            statusBlockX, centerY - 4, 0xFFE05040);
+                }
+            } else if (e.insufficient) {
+                if (e.missingElements != null && !e.missingElements.isEmpty()) {
+                    Component shortTag = I18n.name("gui.wandscape.queue.insufficient", "缺");
+                    int tagW = Minecraft.getInstance().font.width(shortTag);
+                    int iconCount = e.missingElements.size();
+                    int totalBlockW = tagW + 2 + iconCount * 11 - 2;
+                    statusBlockX = textColEnd - totalBlockW;
+                    if (statusBlockX < curX + 2) statusBlockX = curX + 2;
+
+                    g.drawString(Minecraft.getInstance().font, shortTag,
+                            statusBlockX, centerY - 4, 0xFFE05040);
+
+                    int iconX = statusBlockX + tagW + 2;
+                    for (String el : e.missingElements) {
+                        if (iconX + 9 > textColEnd) break;
+                        ResourceLocation ico = WandscapeTheme.elementIcon(el);
+                        if (ico != null) {
+                            WandscapeTheme.drawIcon(g, ico, iconX, centerY - 5, 9, 9, WandscapeTheme.elementColor(el));
+                        }
+                        iconX += 11;
+                    }
+                } else {
+                    Component shortTag = I18n.name("gui.wandscape.queue.missing_materials", "缺材料");
+                    int tagW = Minecraft.getInstance().font.width(shortTag);
+                    statusBlockX = textColEnd - tagW;
+                    if (statusBlockX >= curX + 2) {
+                        g.drawString(Minecraft.getInstance().font, shortTag,
+                                statusBlockX, centerY - 4, 0xFFE05040);
+                    }
                 }
             }
 
-            // Quantity right-aligned in the text column (left of buttons)
-            if (e.quantity > 0) {
-                String qtyStr = "x" + e.quantity;
-                int qtyW = Minecraft.getInstance().font.width(qtyStr);
-                g.drawString(Minecraft.getInstance().font, qtyStr,
-                        textColEnd - qtyW, centerY - 4, MedievalColors.TEXT_MUTED);
+            // ── Hover tooltip tracking ──
+            if (mouseX >= getX() && mouseX < colRightStart && mouseY >= rowBaseY && mouseY < rowBaseY + rowHeight) {
+                if ((e.capacityBlocked || e.insufficient) && mouseX >= statusBlockX && mouseX <= textColEnd) {
+                    if (e.capacityBlocked) {
+                        hoveredTooltipLines = List.of(I18n.name("gui.wandscape.queue.tooltip.capacity", "殖民地仓库容量不足"));
+                    } else if (e.missingElements != null && !e.missingElements.isEmpty()) {
+                        String elNames = formatElements(e.missingElements);
+                        hoveredTooltipLines = List.of(I18n.name("gui.wandscape.queue.tooltip.missing_elements", "缺少元素: %s", elNames));
+                    } else {
+                        hoveredTooltipLines = List.of(I18n.name("gui.wandscape.queue.tooltip.missing_materials", "缺少原料，等待输入"));
+                    }
+                } else if (icon != null && !icon.isEmpty()) {
+                    hoveredTooltipStack = icon;
+                }
             }
 
             // ── Action buttons ──
@@ -427,7 +464,7 @@ public class TaskQueuePanel extends AbstractWidget {
     }
 
     /** Draw a locked current-task row: icon + label + remaining time + progress bar. */
-    private void renderCurrentRow(GuiGraphics g, int rowY, Current c) {
+    private void renderCurrentRow(GuiGraphics g, int rowY, Current c, int mouseX, int mouseY) {
         // Gold-tinted highlight so the running task stands out from pending rows
         g.fill(getX() + 1, rowY, getX() + width - 1, rowY + CURRENT_ROW_H - 1, 0x44D4A840);
 
@@ -442,7 +479,13 @@ public class TaskQueuePanel extends AbstractWidget {
         }
 
         int labelX = contentX + ICON_SIZE + ICON_GAP;
-        g.drawString(Minecraft.getInstance().font, categoryLabel(c.entry.category()), labelX, rowY + 2, MedievalColors.ACCENT_GOLD);
+        Component catLabel = categoryLabel(c.entry.category());
+        g.drawString(Minecraft.getInstance().font, catLabel, labelX, rowY + 2, MedievalColors.ACCENT_GOLD);
+
+        int curX = labelX + Minecraft.getInstance().font.width(catLabel);
+        if (c.entry.quantity() > 0) {
+            g.drawString(Minecraft.getInstance().font, " x" + c.entry.quantity(), curX, rowY + 2, MedievalColors.TEXT_MUTED);
+        }
 
         String time = timeLabel(c);
         if (!time.isEmpty()) {
@@ -456,6 +499,35 @@ public class TaskQueuePanel extends AbstractWidget {
             int barW = Math.max(8, textRight - labelX);
             drawProgressBar(g, labelX, rowY + 13, barW, 3, progressFraction(c));
         }
+
+        if (mouseX >= getX() && mouseX < getX() + width && mouseY >= rowY && mouseY < rowY + CURRENT_ROW_H) {
+            if (icon != null && !icon.isEmpty()) {
+                hoveredTooltipStack = icon;
+            }
+        }
+    }
+
+    /**
+     * Render tooltip if hovering over a queue row item or shortage tag.
+     * Call from Screen's {@code renderForeground}.
+     */
+    public void renderTooltip(GuiGraphics g, int mouseX, int mouseY) {
+        if (hoveredTooltipStack != null && !hoveredTooltipStack.isEmpty()) {
+            g.renderTooltip(Minecraft.getInstance().font, hoveredTooltipStack, mouseX, mouseY);
+        } else if (hoveredTooltipLines != null && !hoveredTooltipLines.isEmpty()) {
+            g.renderComponentTooltip(Minecraft.getInstance().font, hoveredTooltipLines, mouseX, mouseY);
+        }
+    }
+
+    private static String formatElements(List<String> elements) {
+        if (elements == null || elements.isEmpty()) return "";
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < elements.size(); i++) {
+            if (i > 0) sb.append(", ");
+            String id = elements.get(i);
+            sb.append(I18n.name("element.wandscape." + id, id).getString());
+        }
+        return sb.toString();
     }
 
     /**
