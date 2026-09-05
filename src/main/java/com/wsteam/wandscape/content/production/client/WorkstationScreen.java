@@ -39,7 +39,7 @@ public class WorkstationScreen extends MedievalScreen {
     // Left panel width (existing content)
     private static final int LEFT_PW = 240;
     // Right panel (TaskQueuePanel) — narrower to stay inside the PW=400 window
-    private static final int QUEUE_PW = 148;
+    private static final int QUEUE_PW = 152;
 
     private BlockPos stationPos = BlockPos.ZERO;
     private int activeTab = 0;
@@ -315,6 +315,8 @@ public class WorkstationScreen extends MedievalScreen {
         ItemStack tooltip = currentList != null ? currentList.hoveredTooltipStack() : null;
         if (tooltip != null) {
             g.renderTooltip(font, tooltip, mouseX, mouseY);
+        } else if (taskQueuePanel != null) {
+            taskQueuePanel.renderTooltip(g, mouseX, mouseY);
         }
     }
 

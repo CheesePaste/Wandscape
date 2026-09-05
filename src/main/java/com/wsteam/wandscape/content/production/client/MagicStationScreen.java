@@ -31,7 +31,7 @@ public class MagicStationScreen extends MedievalScreen {
     private static final int PH = 220;
     private static final int LEFT_PW = 240;
     // Right panel (TaskQueuePanel) — narrower to stay inside the PW=400 window
-    private static final int QUEUE_PW = 148;
+    private static final int QUEUE_PW = 152;
     private static final int QUEUE_PH = PH - 28; // headerHeight (20) + padding (8)
     private BlockPos stationPos = BlockPos.ZERO;
     private List<SpellEntry> recipes = new ArrayList<>();
@@ -220,6 +220,8 @@ public class MagicStationScreen extends MedievalScreen {
         ItemStack tooltip = recipeList != null ? recipeList.hoveredTooltipStack() : null;
         if (tooltip != null) {
             g.renderTooltip(font, tooltip, mouseX, mouseY);
+        } else if (taskQueuePanel != null) {
+            taskQueuePanel.renderTooltip(g, mouseX, mouseY);
         }
     }
 
