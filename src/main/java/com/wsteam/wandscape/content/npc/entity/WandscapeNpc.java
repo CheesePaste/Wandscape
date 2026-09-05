@@ -303,11 +303,11 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
     /**
      * 实体在友军名单中的类别（静态重载，供 {@link #isFriendlyForce} 与
      * {@link #isMutuallyFriendly} 共用，边界唯一）。判定顺序：玩家 > 本模组 NPC > 守护召唤
-     * （铁/雪傀儡）> 召唤者解析（铁魔法 / 诡厄 {@code IOwned}：召唤者为玩家 → 玩家侧召唤恒友军、
+     * （玩家创建的铁傀儡 / 雪傀儡）> 召唤者解析（铁魔法 / 诡厄 {@code IOwned}：召唤者为玩家 → 玩家侧召唤恒友军、
      * 本模组法师 → 其殖民地的召唤随从）> 玩家训养的宠物（{@code OwnableEntity} 有主）> 游客 >
-     * 其它模组经 {@code FriendlyForceApi} 注册的友军（{@code EXTERNAL_ALLY}）> 其它。
+     * 其它模组经 {@code FriendlyForceApi} 注册的友军（{@code EXTERNAL_ALLY}）> 其它（含村庄自然生成的铁傀儡）。
      *
-     * <p>⚠️ 宠物判定必须**先解析召唤者**再按「有主」认定：诡厄等第三方 {@code Owned} 召唤同样实现
+     * <p>[注意] 宠物判定必须**先解析召唤者**再按「有主」认定：诡厄等第三方 {@code Owned} 召唤同样实现
      * 原版 {@code OwnableEntity}，但主人可能是敌对生物（如 Goety 使徒召唤的黑曜石巨柱，owner 即使徒）。
      * 若只凭「有主」就当玩家训养宠物（恒友军），敌方召唤会被误豁免——殖民地 NPC 不攻击/不误伤它，
      * 敌对权杖也无法把它标记为敌对。召唤者既非玩家也非本模组法师时按非友军落入下方判定；宠物兜底
@@ -324,7 +324,10 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
         if (e instanceof WandscapeNpc npc) {
             return new FriendlyForce.Classified(FriendlyForce.AllyKind.WANDSCAPE_NPC, npc.colonyId);
         }
-        if (e instanceof IronGolem || e instanceof SnowGolem) {
+        if (e instanceof IronGolem golem && golem.isPlayerCreated()) {
+            return new FriendlyForce.Classified(FriendlyForce.AllyKind.GOLEM, null);
+        }
+        if (e instanceof SnowGolem) {
             return new FriendlyForce.Classified(FriendlyForce.AllyKind.GOLEM, null);
         }
         Entity summoner = IronSpellsCompat.getSummoner(e);
