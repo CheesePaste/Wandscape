@@ -11,13 +11,6 @@ public class Config {
             .define("general.debug", false);
     // ---- 殖民地自治 Colony Autonomy ----
 
-    public static final ModConfigSpec.BooleanValue AUTO_APPROVE_TASKS = BUILDER
-            .comment("设为 true 时，所有殖民地任务跳过玩家审批闸门，自动派发。")
-            .comment("When true, all colony tasks skip the player-approval gate and are dispatched automatically.")
-            .comment("设为 false 可让大型建造/重建任务在 NPC 动工前先经玩家审阅。")
-            .comment("When false, large build/rebuild tasks are reviewed by the player before NPCs start work.")
-            .define("general.autoApproveTasks", false);
-
     public static final ModConfigSpec.DoubleValue COLONY_OFFLINE_INCOME_MULTIPLIER = BUILDER
             .comment("创始人不在线时小镇的离线收益系数（0~1）：商店利润、服务设施元素产出、殖民地经验获取 × 该系数。"
                     + "默认 0.2 = 离线收益降为 20%（1.0 = 离线与在线同收益）。"

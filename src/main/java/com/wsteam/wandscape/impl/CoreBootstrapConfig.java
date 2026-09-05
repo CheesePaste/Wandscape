@@ -22,7 +22,6 @@ public record CoreBootstrapConfig(
         List<TaskSource> taskSources,
         BlueprintRegistry blueprints,
         SystemBlueprintRegistry systemBlueprints,
-        boolean autoApproveTasks,
         int schedulerHeartbeatTicks,
         @Nullable BuildingTaskPool buildingTaskPool
 ) {
@@ -42,10 +41,9 @@ public record CoreBootstrapConfig(
             ColonyResourceAccess colonyResources,
             List<TaskSource> taskSources,
             BlueprintRegistry blueprints,
-            SystemBlueprintRegistry systemBlueprints,
-            boolean autoApproveTasks) {
+            SystemBlueprintRegistry systemBlueprints) {
         this(blockOps, entityOps, ritualOps, movementOps, colonyResources,
-                taskSources, blueprints, systemBlueprints, autoApproveTasks, 2, null);
+                taskSources, blueprints, systemBlueprints, 2, null);
     }
 
     /** Convenience constructor with BuildingTaskPool (scheduler heartbeat defaults to 2). */
@@ -58,9 +56,8 @@ public record CoreBootstrapConfig(
             List<TaskSource> taskSources,
             BlueprintRegistry blueprints,
             SystemBlueprintRegistry systemBlueprints,
-            boolean autoApproveTasks,
             @Nullable BuildingTaskPool buildingTaskPool) {
         this(blockOps, entityOps, ritualOps, movementOps, colonyResources,
-                taskSources, blueprints, systemBlueprints, autoApproveTasks, 2, buildingTaskPool);
+                taskSources, blueprints, systemBlueprints, 2, buildingTaskPool);
     }
 }

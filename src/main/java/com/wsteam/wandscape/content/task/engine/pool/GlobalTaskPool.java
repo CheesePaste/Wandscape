@@ -18,7 +18,6 @@ import com.wsteam.wandscape.foundation.log.LogCategory;
 import com.wsteam.wandscape.content.task.engine.dsl.CompiledBlueprint;
 import com.wsteam.wandscape.content.task.engine.dsl.TaskCompiler;
 import com.wsteam.wandscape.content.task.engine.dsl.TriggerDeclaration;
-import com.wsteam.wandscape.content.task.runtime.ApprovalInfo;
 import com.wsteam.wandscape.content.task.runtime.TaskSequence;
 import com.wsteam.wandscape.content.task.runtime.TaskState;
 
@@ -55,7 +54,6 @@ public class GlobalTaskPool {
     private final EventBus eventBus;
     private final TaskCompiler compiler;
     private final ColonyResourceAccess colonyResources;
-    private final boolean autoApprove;
     private long nextTaskId = 1;
 
     /** Optional handler for resource shortages (synthesize / gather). */
@@ -70,12 +68,10 @@ public class GlobalTaskPool {
     @javax.annotation.Nullable
     public Runnable onChanged;
 
-    public GlobalTaskPool(EventBus eventBus, TaskCompiler compiler, ColonyResourceAccess colonyResources, boolean autoApprove) {
+    public GlobalTaskPool(EventBus eventBus, TaskCompiler compiler, ColonyResourceAccess colonyResources) {
         this.eventBus = eventBus;
         this.compiler = compiler;
         this.colonyResources = colonyResources;
-        this.autoApprove = autoApprove;
-
     }
 
     // ── Queue maintenance ──
@@ -120,16 +116,7 @@ public class GlobalTaskPool {
         TaskSequence seq = compiled.sequence();
         if (id >= nextTaskId) nextTaskId = id + 1;
 
-        TaskState initialState;
-        ApprovalInfo approval = null;
-        if (!autoApprove && request.priority() >= 50) {
-            initialState = TaskState.PENDING_APPROVAL;
-            GridPos suggestedPos = parseGridPos(request.params());
-            approval = new ApprovalInfo(suggestedPos, Long.MAX_VALUE, false);
-        } else {
-            initialState = TaskState.PENDING_ASSIGN;
-        }
-
+        TaskState initialState = TaskState.PENDING_ASSIGN;
         long createdAt = System.currentTimeMillis();
 
         // ── 殖民地归属归一化（params["colony_id"] 的唯一写入点）──
@@ -149,7 +136,7 @@ public class GlobalTaskPool {
                 compiled.triggers(), new ArrayList<>(),
                 taskParams,
                 initialState, 0, null, null,
-                new ArrayDeque<>(), approval);
+                new ArrayDeque<>());
         task.blueprintId = request.blueprintId();
         tasksById.put(id, task);
         addToAssignable(task);
@@ -169,8 +156,7 @@ public class GlobalTaskPool {
                 new HashMap<>(task.taskParams),
                 task.state, task.stepIndex, null,
                 task.awaitingResource,
-                task.interruptHistory != null ? new ArrayDeque<>(task.interruptHistory) : new ArrayDeque<>(),
-                task.approval);
+                task.interruptHistory != null ? new ArrayDeque<>(task.interruptHistory) : new ArrayDeque<>());
         tasksById.put(id, t);
         t.channelRemainingTicks = task.channelRemainingTicks; // preserve any mid-channel checkpoint
         addToAssignable(t);
@@ -190,31 +176,8 @@ public class GlobalTaskPool {
         if (task != null) {
             task.buildingId = buildingId;
             task.isBuildingHead = true;
-            if (task.state == TaskState.PENDING_APPROVAL) {
-                transitionToPendingAssign(task);
-            }
         }
         return taskId;
-    }
-
-    // ── Approval ──
-
-    public void approve(long taskId) {
-        GlobalTask task = tasksById.get(taskId);
-        if (task != null && task.state == TaskState.PENDING_APPROVAL) {
-            transitionToPendingAssign(task);
-            notifyChanged();
-            Log.info(TAG, "approve #%d '%s' → PENDING_ASSIGN", taskId, task.sequence.label());
-        }
-    }
-
-    public void reject(long taskId) {
-        GlobalTask task = tasksById.get(taskId);
-        if (task != null && task.state == TaskState.PENDING_APPROVAL) {
-            task.state = TaskState.COMPLETED;
-            notifyChanged();
-            Log.info(TAG, "reject #%d '%s' → COMPLETED", taskId, task.sequence.label());
-        }
     }
 
     // ── Assignment ──
@@ -671,21 +634,5 @@ public class GlobalTaskPool {
         nextTaskId = 1;
         notifyChanged();
         Log.info(TAG, "clearAll — %d tasks removed", count);
-    }
-
-    // ── Helpers ──
-
-    private static GridPos parseGridPos(Map<String, JsonElement> params) {
-        if (params == null) return null;
-        try {
-            var xEl = params.get("x");
-            var yEl = params.get("y");
-            var zEl = params.get("z");
-            if (xEl != null && yEl != null && zEl != null) {
-                return new GridPos(xEl.getAsInt(), yEl.getAsInt(), zEl.getAsInt());
-            }
-        } catch (NumberFormatException | IllegalStateException ignored) {
-        }
-        return null;
     }
 }

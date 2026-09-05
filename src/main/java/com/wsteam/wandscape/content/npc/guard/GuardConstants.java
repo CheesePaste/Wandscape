@@ -6,7 +6,7 @@ package com.wsteam.wandscape.content.npc.guard;
 public final class GuardConstants {
     private GuardConstants() {}
 
-    /** 守卫任务优先级：< 50 避开 PENDING_APPROVAL 审批门（autoApproveTasks 默认 false），且高于普通建造任务(~40)。 */
+    /** 守卫任务优先级：高于普通建造任务(~40)，确保战斗自卫/巡逻优先调度。 */
     public static final int GUARD_PRIORITY = 49;
     /** 守卫任务源轮询间隔（tick）。 */
     public static final int POLL_INTERVAL_TICKS = 20;

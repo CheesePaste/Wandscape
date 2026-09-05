@@ -4,9 +4,6 @@ package com.wsteam.wandscape.content.task.runtime;
  * Lifecycle states for a GlobalTask.
  */
 public enum TaskState {
-    /** Awaiting player approval (large tasks only). */
-    PENDING_APPROVAL,
-
     /** Ready to be assigned by the scheduler. */
     PENDING_ASSIGN,
 
