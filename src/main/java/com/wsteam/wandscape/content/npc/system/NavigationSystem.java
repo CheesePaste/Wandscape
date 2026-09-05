@@ -82,10 +82,9 @@ public class NavigationSystem implements EcsSystem {
             double dx = npc.getX() - (nav.target.x() + 0.5);
             double dz = npc.getZ() - (nav.target.z() + 0.5);
             double hDistSq = dx * dx + dz * dz;
-            double dy = Math.abs(npc.getY() - (nav.target.y() + 1.0));
 
-            // Arrived (all modes): 水平距离 <= 5格 且 垂直高度差 <= 3.5格（避免身处地下矿洞/屋顶盲区时误判已到达）
-            if (hDistSq <= STOP_RANGE_SQ && dy <= 3.5) {
+            // Arrived (all modes): 水平距离 <= 5格（垂直高度任意）
+            if (hDistSq <= STOP_RANGE_SQ) {
                 arrive(nav, npc);
                 continue;
             }
@@ -99,8 +98,7 @@ public class NavigationSystem implements EcsSystem {
 
                 // Distance > walkThreshold → skip pathfinding, use self_teleport ritual
                 if (nav.mode == NavigationState.Mode.PATHFINDING
-                        && (hDistSq > (long) WandscapeConstants.NPC_WALK_THRESHOLD * WandscapeConstants.NPC_WALK_THRESHOLD
-                            || dy > WandscapeConstants.NPC_WALK_THRESHOLD)) {
+                        && hDistSq > (long) WandscapeConstants.NPC_WALK_THRESHOLD * WandscapeConstants.NPC_WALK_THRESHOLD) {
                     switchToRitualTeleport(nav, npcId, world);
                     continue;
                 }

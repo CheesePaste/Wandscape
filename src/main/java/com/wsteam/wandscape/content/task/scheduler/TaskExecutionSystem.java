@@ -217,9 +217,8 @@ public class TaskExecutionSystem implements EcsSystem {
             Position pos = world.get(npcId, Position.class);
             if (pos != null) {
                 double dx = pos.pos().x() - pkg.stance().x();
-                double dy = pos.pos().y() - pkg.stance().y();
                 double dz = pos.pos().z() - pkg.stance().z();
-                if (dx * dx + dz * dz > NAV_RANGE_SQ || Math.abs(dy) > 4.0) {
+                if (dx * dx + dz * dz > NAV_RANGE_SQ) {
                     MovementOps mov = world.movementOps;
                     CompletableFuture<Void> navFuture = mov.navigateTo(
                             npcId, pkg.stance().x(), pkg.stance().y(), pkg.stance().z());
@@ -261,9 +260,8 @@ public class TaskExecutionSystem implements EcsSystem {
                 Position pos = world.get(npcId, Position.class);
                 if (pos != null) {
                     double dx = pos.pos().x() - target.x();
-                    double dy = pos.pos().y() - target.y();
                     double dz = pos.pos().z() - target.z();
-                    if (dx * dx + dz * dz > NAV_RANGE_SQ || Math.abs(dy) > 4.0) {
+                    if (dx * dx + dz * dz > NAV_RANGE_SQ) {
                         MovementOps mov = world.movementOps;
                         CompletableFuture<Void> navFuture = mov.navigateTo(
                                 npcId, target.x(), target.y(), target.z());
