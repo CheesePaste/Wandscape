@@ -30,6 +30,11 @@ public final class TaskManagementOverlay {
     private static final int PROD_CARD_H = 76;
     private static final int MAGE_CARD_H = 80;
 
+    // Header layout (shared between render & mouse hit-test so nothing drifts).
+    private static final int HEADER_CLOSE_W = 110;
+    private static final int HEADER_CLOSE_GAP = 16;
+    private static final int HEADER_TITLE_GAP = 16;
+
     private static final int BG_BACKDROP = 0xAA080B10;
     private static final int HEADER_BG = 0xEE11151D;
     private static final int TOOLBAR_BG = 0xCC161B24;
@@ -86,62 +91,62 @@ public final class TaskManagementOverlay {
         g.fill(RenderType.guiOverlay(), 0, 0, screenW, HEADER_H, 0, HEADER_BG);
         g.fill(RenderType.guiOverlay(), 0, HEADER_H - 1, screenW, HEADER_H, 0, BORDER_GOLD);
 
-        int curX = 16;
         int btnY = 6;
         int btnH = 22;
+        int closeW = HEADER_CLOSE_W;
+        int closeX = screenW - closeW - HEADER_CLOSE_GAP;
 
-        // Colony / Hub Title
-        String colonyName = WandscapePanelState.getColonyName();
-        String title = colonyName.isEmpty() ? "魔法小镇" : colonyName;
-        g.drawString(font, title, curX, 12, WandscapeTheme.COLOR_TEXT_ACTIVE, false);
-        curX += font.width(title) + 16;
+        HeaderLayout lo = layoutHeader(font, screenW);
+
+        // Colony / Hub Title (dropped on narrow screens so the tabs stay clear of the exit button)
+        if (!lo.titleDraw().isEmpty()) {
+            g.drawString(font, lo.titleDraw(), 16, 12, WandscapeTheme.COLOR_TEXT_ACTIVE, false);
+        }
 
         TaskManagementClientState.SubTab tab = TaskManagementClientState.getActiveTab();
+        int curX = lo.startX();
 
         // Tab 1: Tasks
         boolean tasksActive = tab == TaskManagementClientState.SubTab.TASKS;
-        int tabTaskW = 96;
-        boolean taskHover = mx >= curX && mx <= curX + tabTaskW && my >= btnY && my <= btnY + btnH;
+        boolean taskHover = mx >= curX && mx <= curX + lo.taskW() && my >= btnY && my <= btnY + btnH;
         int taskBg = tasksActive ? 0xFF2A3240 : (taskHover ? 0x883E4A5E : 0x441E242E);
-        g.fill(RenderType.guiOverlay(), curX, btnY, curX + tabTaskW, btnY + btnH, 0, taskBg);
+        g.fill(RenderType.guiOverlay(), curX, btnY, curX + lo.taskW(), btnY + btnH, 0, taskBg);
         if (tasksActive) {
-            g.fill(RenderType.guiOverlay(), curX, btnY + btnH - 2, curX + tabTaskW, btnY + btnH, 0, BORDER_GOLD);
+            g.fill(RenderType.guiOverlay(), curX, btnY + btnH - 2, curX + lo.taskW(), btnY + btnH, 0, BORDER_GOLD);
         }
-        String taskLabel = "任务大厅 (" + TaskManagementClientState.getTotalActiveTasks() + ")";
         int taskColor = tasksActive ? WandscapeTheme.COLOR_TEXT_ACTIVE : WandscapeTheme.COLOR_TEXT_NORMAL;
-        g.drawString(font, taskLabel, curX + (tabTaskW - font.width(taskLabel)) / 2, btnY + 7, taskColor, false);
-        curX += tabTaskW + 8;
+        g.drawString(font, lo.taskLabel(), curX + (lo.taskW() - font.width(lo.taskLabel())) / 2, btnY + 7, taskColor, false);
+        curX += lo.taskW() + lo.gap();
 
         // Tab 2: Production
         boolean prodActive = tab == TaskManagementClientState.SubTab.PRODUCTION;
-        int tabProdW = 106;
-        boolean prodHover = mx >= curX && mx <= curX + tabProdW && my >= btnY && my <= btnY + btnH;
+        boolean prodHover = mx >= curX && mx <= curX + lo.prodW() && my >= btnY && my <= btnY + btnH;
         int prodBg = prodActive ? 0xFF2A3240 : (prodHover ? 0x883E4A5E : 0x441E242E);
-        g.fill(RenderType.guiOverlay(), curX, btnY, curX + tabProdW, btnY + btnH, 0, prodBg);
+        g.fill(RenderType.guiOverlay(), curX, btnY, curX + lo.prodW(), btnY + btnH, 0, prodBg);
         if (prodActive) {
-            g.fill(RenderType.guiOverlay(), curX, btnY + btnH - 2, curX + tabProdW, btnY + btnH, 0, BORDER_GOLD);
+            g.fill(RenderType.guiOverlay(), curX, btnY + btnH - 2, curX + lo.prodW(), btnY + btnH, 0, BORDER_GOLD);
         }
-        String prodLabel = "工坊流水线 (" + TaskManagementClientState.getTotalProductionItemCount() + ")";
         int prodColor = prodActive ? WandscapeTheme.COLOR_TEXT_ACTIVE : WandscapeTheme.COLOR_TEXT_NORMAL;
-        g.drawString(font, prodLabel, curX + (tabProdW - font.width(prodLabel)) / 2, btnY + 7, prodColor, false);
-        curX += tabProdW + 8;
+        g.drawString(font, lo.prodLabel(), curX + (lo.prodW() - font.width(lo.prodLabel())) / 2, btnY + 7, prodColor, false);
+        curX += lo.prodW() + lo.gap();
 
         // Tab 3: Mages
         boolean magesActive = tab == TaskManagementClientState.SubTab.MAGES;
-        int tabMageW = 96;
-        boolean mageHover = mx >= curX && mx <= curX + tabMageW && my >= btnY && my <= btnY + btnH;
+        boolean mageHover = mx >= curX && mx <= curX + lo.mageW() && my >= btnY && my <= btnY + btnH;
         int mageBg = magesActive ? 0xFF2A3240 : (mageHover ? 0x883E4A5E : 0x441E242E);
-        g.fill(RenderType.guiOverlay(), curX, btnY, curX + tabMageW, btnY + btnH, 0, mageBg);
+        g.fill(RenderType.guiOverlay(), curX, btnY, curX + lo.mageW(), btnY + btnH, 0, mageBg);
         if (magesActive) {
-            g.fill(RenderType.guiOverlay(), curX, btnY + btnH - 2, curX + tabMageW, btnY + btnH, 0, BORDER_GOLD);
+            g.fill(RenderType.guiOverlay(), curX, btnY + btnH - 2, curX + lo.mageW(), btnY + btnH, 0, BORDER_GOLD);
         }
-        String mageLabel = "法师名册 (" + TaskManagementClientState.getTotalMageCount() + ")";
         int mageColor = magesActive ? WandscapeTheme.COLOR_TEXT_ACTIVE : WandscapeTheme.COLOR_TEXT_NORMAL;
-        g.drawString(font, mageLabel, curX + (tabMageW - font.width(mageLabel)) / 2, btnY + 7, mageColor, false);
-        curX += tabMageW + 24;
+        g.drawString(font, lo.mageLabel(), curX + (lo.mageW() - font.width(lo.mageLabel())) / 2, btnY + 7, mageColor, false);
+        curX += lo.mageW() + 24;
 
-        // Live Metric Badges (Center)
-        if (curX < screenW - 320) {
+        // Live Metric Badges (Center): drawn in the gap between tabs and the exit button, elided
+        // so it never runs underneath the exit button.
+        int metricsAvail = closeX - 12 - curX;
+        if (metricsAvail >= 90) {
+            String metrics;
             if (tab == TaskManagementClientState.SubTab.PRODUCTION) {
                 int running = 0, queued = 0, missing = 0;
                 for (ProductionGroupDto gDto : TaskManagementClientState.getAllProductionGroups()) {
@@ -151,9 +156,8 @@ public final class TaskManagementOverlay {
                         else queued++;
                     }
                 }
-                String metrics = String.format("工坊建筑: %d  |  制作中: %d  |  排队: %d  |  缺元素: %d",
+                metrics = String.format("工坊建筑: %d  |  制作中: %d  |  排队: %d  |  缺元素: %d",
                         TaskManagementClientState.getAllProductionGroups().size(), running, queued, missing);
-                g.drawString(font, metrics, curX, 12, WandscapeTheme.COLOR_TEXT_DIM, false);
             } else {
                 int inProgress = 0, awaiting = 0, pending = 0;
                 for (TaskSummaryDto t : TaskManagementClientState.getAllTasks()) {
@@ -161,22 +165,76 @@ public final class TaskManagementOverlay {
                     else if ("AWAITING_RESOURCES".equalsIgnoreCase(t.state())) awaiting++;
                     else if ("PENDING_ASSIGN".equalsIgnoreCase(t.state())) pending++;
                 }
-                String metrics = String.format("运行中: %d  |  缺资源: %d  |  排队: %d  |  空闲法师: %d/%d",
+                metrics = String.format("运行中: %d  |  缺资源: %d  |  排队: %d  |  空闲法师: %d/%d",
                         inProgress, awaiting, pending,
                         TaskManagementClientState.getIdleMageCount(), TaskManagementClientState.getTotalMageCount());
-                g.drawString(font, metrics, curX, 12, WandscapeTheme.COLOR_TEXT_DIM, false);
             }
+            if (font.width(metrics) > metricsAvail) {
+                metrics = font.plainSubstrByWidth(metrics, metricsAvail);
+            }
+            g.drawString(font, metrics, curX, 12, WandscapeTheme.COLOR_TEXT_DIM, false);
         }
 
         // Close / Exit Button [返回鸟瞰 (ESC)] (Right)
-        int closeW = 110;
-        int closeX = screenW - closeW - 16;
         boolean closeHover = mx >= closeX && mx <= closeX + closeW && my >= btnY && my <= btnY + btnH;
         int closeBg = closeHover ? 0xCCE53935 : 0x883A2020;
         g.fill(RenderType.guiOverlay(), closeX, btnY, closeX + closeW, btnY + btnH, 0, closeBg);
         String closeText = "返回鸟瞰 (ESC)";
         g.drawString(font, closeText, closeX + (closeW - font.width(closeText)) / 2, btnY + 7, 0xFFFFFFFF, false);
     }
+
+    /**
+     * Measures the header's title/tab geometry once, shared by rendering & hit-testing, so the tab
+     * row can never reach the right-pinned exit button. On narrow screens the colony title is
+     * dropped first, then tab padding/gaps shrink.
+     */
+    private static HeaderLayout layoutHeader(Font font, int screenW) {
+        int closeX = screenW - HEADER_CLOSE_W - HEADER_CLOSE_GAP;
+        int contentRight = closeX - 12; // nothing left of the exit button may pass this
+
+        String colony = WandscapePanelState.getColonyName();
+        String title = colony.isEmpty() ? "魔法小镇" : colony;
+
+        String taskLabel = "任务大厅 (" + TaskManagementClientState.getTotalActiveTasks() + ")";
+        String prodLabel = "工坊流水线 (" + TaskManagementClientState.getTotalProductionItemCount() + ")";
+        String mageLabel = "法师名册 (" + TaskManagementClientState.getTotalMageCount() + ")";
+
+        int titleW = font.width(title);
+        int pad = 24;
+        int gap = 8;
+        int taskW = font.width(taskLabel) + pad;
+        int prodW = font.width(prodLabel) + pad;
+        int mageW = font.width(mageLabel) + pad;
+
+        // Room from the left margin x=16 to contentRight: title first, then the tabs.
+        int avail = contentRight - 16;
+        boolean dropTitle = false;
+        for (int pass = 0; pass < 8; pass++) {
+            int tabsTotal = taskW + gap + prodW + gap + mageW;
+            int need = (dropTitle ? 0 : titleW + HEADER_TITLE_GAP) + tabsTotal;
+            if (need <= avail) break;
+            if (!dropTitle) {
+                dropTitle = true;
+            } else if (pad > 12) {
+                pad -= 4;
+                taskW = font.width(taskLabel) + pad;
+                prodW = font.width(prodLabel) + pad;
+                mageW = font.width(mageLabel) + pad;
+            } else if (gap > 4) {
+                gap -= 2;
+            } else {
+                break;
+            }
+        }
+
+        int startX = dropTitle ? 16 : 16 + titleW + HEADER_TITLE_GAP;
+        return new HeaderLayout(dropTitle ? "" : title, startX, taskW, prodW, mageW, gap,
+                taskLabel, prodLabel, mageLabel);
+    }
+
+    /** Measured header geometry shared by rendering & hit-testing. */
+    private record HeaderLayout(String titleDraw, int startX, int taskW, int prodW, int mageW,
+                                int gap, String taskLabel, String prodLabel, String mageLabel) {}
 
     // ═══════════════════════════════════════════════════════════════════
     // ── 2. Toolbar & Filters ──
@@ -233,8 +291,7 @@ public final class TaskManagementOverlay {
                 curX += btnW + 6;
             }
         } else {
-            String hint = "点击 [聚焦] 或 [跟踪] 可联动 3D 镜头观测法师工作，键盘 WASD 移动即刻脱离跟踪。";
-            g.drawString(font, hint, curX, btnY + 5, 0xFF90CAF9, false);
+            // Mages 页：无工具栏筛选/提示（[聚焦]/[跟踪] 入口已移除）。
         }
     }
 
@@ -690,37 +747,21 @@ public final class TaskManagementOverlay {
         g.drawString(font, attrStr, x + 8, y + 36, WandscapeTheme.COLOR_TEXT_DIM, false);
 
         // Line 4: Action Buttons (Right Aligned)
-        renderMageActionButtons(g, font, x + w - 210, y + 52, mage, mx, my);
+        renderMageActionButtons(g, font, x + w - 108, y + 52, mage, mx, my);
     }
 
     private static void renderMageActionButtons(GuiGraphics g, Font font, int x, int y, MageSummaryDto mage, double mx, double my) {
         int btnH = 20;
 
-        // [聚焦]
-        int btnW = 44;
-        boolean focusHover = mx >= x && mx <= x + btnW && my >= y && my <= y + btnH;
-        g.fill(RenderType.guiOverlay(), x, y, x + btnW, y + btnH, 0, focusHover ? 0xEE3E4A5E : 0x882A313D);
-        g.drawString(font, "聚焦", x + 5, y + 6, 0xFFFFFFFF, false);
-
-        // [跟踪]
-        int trackX = x + 48;
-        int trackW = 44;
-        boolean isTracking = TaskManagementClientState.getTrackingEntityId() == mage.entityId();
-        boolean trackHover = mx >= trackX && mx <= trackX + trackW && my >= y && my <= y + btnH;
-        int trackBg = isTracking ? 0xFFC8A040 : (trackHover ? 0xEE3E4A5E : 0x882A313D);
-        g.fill(RenderType.guiOverlay(), trackX, y, trackX + trackW, y + btnH, 0, trackBg);
-        g.drawString(font, "跟踪", trackX + 5, y + 6, isTracking ? 0xFF111214 : 0xFFFFFFFF, false);
-
         // [跟随]
-        int followX = x + 96;
         int followW = 48;
-        boolean followHover = mx >= followX && mx <= followX + followW && my >= y && my <= y + btnH;
+        boolean followHover = mx >= x && mx <= x + followW && my >= y && my <= y + btnH;
         int followBg = mage.followMode() ? 0xFF4CAF50 : (followHover ? 0xEE3E4A5E : 0x882A313D);
-        g.fill(RenderType.guiOverlay(), followX, y, followX + followW, y + btnH, 0, followBg);
-        g.drawString(font, mage.followMode() ? "取消跟随" : "跟随", followX + 5, y + 6, 0xFFFFFFFF, false);
+        g.fill(RenderType.guiOverlay(), x, y, x + followW, y + btnH, 0, followBg);
+        g.drawString(font, mage.followMode() ? "取消跟随" : "跟随", x + 5, y + 6, 0xFFFFFFFF, false);
 
         // [和平]
-        int peaceX = x + 148;
+        int peaceX = x + 52;
         int peaceW = 48;
         boolean peaceHover = mx >= peaceX && mx <= peaceX + peaceW && my >= y && my <= y + btnH;
         int peaceBg = mage.peaceMode() ? 0xFF42A5F5 : (peaceHover ? 0xEE3E4A5E : 0x882A313D);
@@ -761,43 +802,37 @@ public final class TaskManagementOverlay {
         }
 
         // 1. Header Tab Switcher & Exit
-        int curX = 16;
-        String colonyName = WandscapePanelState.getColonyName();
-        String title = colonyName.isEmpty() ? "魔法小镇" : colonyName;
-        curX += Minecraft.getInstance().font.width(title) + 16;
-
+        HeaderLayout lo = layoutHeader(Minecraft.getInstance().font, screenW);
+        int curX = lo.startX();
         int btnY = 6;
         int btnH = 22;
 
         // Tab 1: Tasks
-        int tabTaskW = 96;
-        if (mx >= curX && mx <= curX + tabTaskW && my >= btnY && my <= btnY + btnH) {
+        if (mx >= curX && mx <= curX + lo.taskW() && my >= btnY && my <= btnY + btnH) {
             TaskManagementClientState.setActiveTab(TaskManagementClientState.SubTab.TASKS);
             playClickSound();
             return true;
         }
-        curX += tabTaskW + 8;
+        curX += lo.taskW() + lo.gap();
 
         // Tab 2: Production
-        int tabProdW = 106;
-        if (mx >= curX && mx <= curX + tabProdW && my >= btnY && my <= btnY + btnH) {
+        if (mx >= curX && mx <= curX + lo.prodW() && my >= btnY && my <= btnY + btnH) {
             TaskManagementClientState.setActiveTab(TaskManagementClientState.SubTab.PRODUCTION);
             playClickSound();
             return true;
         }
-        curX += tabProdW + 8;
+        curX += lo.prodW() + lo.gap();
 
         // Tab 3: Mages
-        int tabMageW = 96;
-        if (mx >= curX && mx <= curX + tabMageW && my >= btnY && my <= btnY + btnH) {
+        if (mx >= curX && mx <= curX + lo.mageW() && my >= btnY && my <= btnY + btnH) {
             TaskManagementClientState.setActiveTab(TaskManagementClientState.SubTab.MAGES);
             playClickSound();
             return true;
         }
 
         // Close Button
-        int closeW = 110;
-        int closeX = screenW - closeW - 16;
+        int closeW = HEADER_CLOSE_W;
+        int closeX = screenW - closeW - HEADER_CLOSE_GAP;
         if (mx >= closeX && mx <= closeX + closeW && my >= btnY && my <= btnY + btnH) {
             collapseDrawerToOverview();
             playClickSound();
@@ -953,35 +988,12 @@ public final class TaskManagementOverlay {
 
                 if (my >= cy && my <= cy + MAGE_CARD_H) {
                     MageSummaryDto m = mages.get(i);
-                    int btnBaseX = cx + cardW - 210;
+                    int btnBaseX = cx + cardW - 108;
                     int btnBaseY = cy + 52;
                     int btnH2 = 20;
 
-                    // [聚焦]
-                    if (mx >= btnBaseX && mx <= btnBaseX + 44 && my >= btnBaseY && my <= btnBaseY + btnH2) {
-                        flyToTarget(m.posX(), m.posY(), m.posZ());
-                        collapseDrawerToOverview();
-                        playClickSound();
-                        return true;
-                    }
-
-                    // [跟踪]
-                    int trackX = btnBaseX + 48;
-                    if (mx >= trackX && mx <= trackX + 44 && my >= btnBaseY && my <= btnBaseY + btnH2) {
-                        int current = TaskManagementClientState.getTrackingEntityId();
-                        int next = current == m.entityId() ? -1 : m.entityId();
-                        TaskManagementClientState.setTrackingEntityId(next);
-                        if (next != -1) {
-                            flyToTarget(m.posX(), m.posY(), m.posZ());
-                            collapseDrawerToOverview();
-                        }
-                        playClickSound();
-                        return true;
-                    }
-
                     // [跟随]
-                    int followX = btnBaseX + 96;
-                    if (mx >= followX && mx <= followX + 48 && my >= btnBaseY && my <= btnBaseY + btnH2) {
+                    if (mx >= btnBaseX && mx <= btnBaseX + 48 && my >= btnBaseY && my <= btnBaseY + btnH2) {
                         PacketDistributor.sendToServer(new MageModeActionPacket(
                                 m.entityId(), MageModeActionPacket.MODE_FOLLOW, !m.followMode()));
                         playClickSound();
@@ -989,7 +1001,7 @@ public final class TaskManagementOverlay {
                     }
 
                     // [和平]
-                    int peaceX = btnBaseX + 148;
+                    int peaceX = btnBaseX + 52;
                     if (mx >= peaceX && mx <= peaceX + 48 && my >= btnBaseY && my <= btnBaseY + btnH2) {
                         PacketDistributor.sendToServer(new MageModeActionPacket(
                                 m.entityId(), MageModeActionPacket.MODE_PEACE, !m.peaceMode()));

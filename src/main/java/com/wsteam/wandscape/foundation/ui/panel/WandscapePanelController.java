@@ -336,14 +336,11 @@ public final class WandscapePanelController {
             }
         }
 
-        // ── Sidebar tabs ──
+        // ── Sidebar tabs (建造/道路/任务；统计、警告弃用页已删) ──
         if (mouseX <= WandscapePanelOverlay.SIDEBAR_W && mouseY >= WandscapePanelOverlay.TOP_BAR_H) {
             int sidebarIconIndex = getSidebarIconAt(mouseX, mouseY, screenW, screenH);
-            if (sidebarIconIndex >= 0 && sidebarIconIndex < 4) {
+            if (sidebarIconIndex >= 0) {
                 handleTabClick(sidebarIconIndex);
-                event.setCanceled(true);
-            } else if (sidebarIconIndex == 4) {
-                Minecraft.getInstance().setScreen(new AnomalyScreen());
                 event.setCanceled(true);
             }
         }
@@ -418,15 +415,11 @@ public final class WandscapePanelController {
         int startY = WandscapePanelOverlay.TOP_BAR_H + 8;
         int totalH = WandscapePanelOverlay.SIDEBAR_ICON_S + WandscapePanelOverlay.SIDEBAR_GAP;
 
-        // Tabs 0–3 (Build, Road, Stats, Tasks)
-        for (int i = 0; i < 4; i++) {
+        // 建造 / 道路 / 任务（统计、警告弃用已删，编号 0-2 对齐 1/2/3 数字键）
+        for (int i = 0; i < 3; i++) {
             int iy = startY + i * totalH;
             if (mouseY >= iy && mouseY <= iy + WandscapePanelOverlay.SIDEBAR_ICON_S) return i;
         }
-
-        // Warning icon (index 4)
-        int warnY = startY + 4 * totalH + 12;
-        if (mouseY >= warnY && mouseY <= warnY + WandscapePanelOverlay.SIDEBAR_ICON_S) return 4;
 
         return -1;
     }
@@ -437,8 +430,7 @@ public final class WandscapePanelController {
         WandscapePanelState.SubMode targetMode = switch (tabIndex) {
             case 0 -> WandscapePanelState.SubMode.BUILD_PROJECTION;
             case 1 -> WandscapePanelState.SubMode.ROAD_PROJECTION;
-            case 2 -> WandscapePanelState.SubMode.STATS;
-            case 3 -> WandscapePanelState.SubMode.TASKS;
+            case 2 -> WandscapePanelState.SubMode.TASKS;
             default -> null;
         };
 
@@ -559,27 +551,22 @@ public final class WandscapePanelController {
             return;
         }
 
-        // 1/2/3/4/5: quick-switch into Build/Road/Stats/Tasks/Warning（吞掉原版快捷栏切换）。
-        // 面板开着时数字键切子模式，面板关着则保持原版快捷栏。
+        // 1/2/3: quick-switch into Build/Road/Tasks（吞掉原版快捷栏切换）。
+        // 统计、警告两个弃用页已删，只剩三个 tab，故只拦 1-3；4/5 及以后交还原版快捷栏。
+        // 面板开着才拦数字键切子模式，面板关着则保持原版快捷栏。
         if (WandscapePanelState.isPanelOpen()) {
-            int digit = switch (key) {
+            int tabIndex = switch (key) {
                 case GLFW.GLFW_KEY_1 -> 0;
                 case GLFW.GLFW_KEY_2 -> 1;
                 case GLFW.GLFW_KEY_3 -> 2;
-                case GLFW.GLFW_KEY_4 -> 3;
-                case GLFW.GLFW_KEY_5 -> 4;
                 default -> -1;
             };
-            if (digit >= 0) {
+            if (tabIndex >= 0) {
                 // InputEvent.Key fires after KeyMapping.click() but before the next
                 // handleKeybinds(), so consuming the hotbar click here suppresses the
                 // vanilla hotbar slot switch for this digit.
-                mc.options.keyHotbarSlots[digit].consumeClick();
-                if (digit < 4) {
-                    handleTabClick(digit);
-                } else {
-                    mc.setScreen(new AnomalyScreen());
-                }
+                mc.options.keyHotbarSlots[tabIndex].consumeClick();
+                handleTabClick(tabIndex);
                 return;
             }
         }

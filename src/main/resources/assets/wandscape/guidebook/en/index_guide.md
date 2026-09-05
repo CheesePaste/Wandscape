@@ -44,7 +44,7 @@ Tourists only walk on paved roads. No roads means no tourists; shops won't get v
 
 ## Operations & Failures
 
-- [Building Failures](anomaly_guide.md)
+- [Building Maintenance & Repair](anomaly_guide.md)
 
 ## Creator Tools
 

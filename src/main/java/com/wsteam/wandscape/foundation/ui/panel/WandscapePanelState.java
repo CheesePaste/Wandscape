@@ -115,7 +115,7 @@ public final class WandscapePanelState {
 
     /**
      * 是否处于建筑巡检上下文：仅俯瞰(OVERVIEW)模式显示建筑信息顶栏。
-     * 建造/道路/统计/任务是操作型子模式——准心对准建筑时不弹建筑信息
+     * 建造/道路/任务是操作型子模式——准心对准建筑时不弹建筑信息
      * （含修复/拆除两按钮），避免误触与界面混淆。
      */
     public static boolean isInspectContext() {

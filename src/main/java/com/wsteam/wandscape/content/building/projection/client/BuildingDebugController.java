@@ -53,7 +53,7 @@ public final class BuildingDebugController {
 
     static void onClientTickPost(ClientTickEvent.Post event) {
         if (!BuildingDebugClientState.isActive()) return;
-        // 建筑巡检仅在俯瞰(OVERVIEW)模式进行——建造/道路/统计/任务是操作型子模式，
+        // 建筑巡检仅在俯瞰(OVERVIEW)模式进行——建造/道路/任务是操作型子模式，
         // 不弹建筑信息顶栏（避免误触操作按钮），也不做无谓的 raycast/发包。
         if (!WandscapePanelState.isInspectContext()) return;
 

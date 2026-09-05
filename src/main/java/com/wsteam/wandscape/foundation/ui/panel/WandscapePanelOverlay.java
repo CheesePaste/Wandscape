@@ -128,25 +128,19 @@ public final class WandscapePanelOverlay {
         net.minecraft.resources.ResourceLocation[] tabIcons = {
             WandscapeTheme.ICON_TAB_BUILD,
             WandscapeTheme.ICON_TAB_ROAD,
-            WandscapeTheme.ICON_TAB_STATS,
             WandscapeTheme.ICON_TAB_EDITOR
         };
 
         WandscapePanelState.SubMode activeMode = WandscapePanelState.getActiveSubMode();
         int hoveredIcon = getSidebarHoveredIcon(mx, my, screenH);
 
-        // Build / Road / Stats / Tasks tabs
-        for (int i = 0; i < 4; i++) {
+        // 建造 / 道路 / 任务三个 tab（统计、警告两弃用页已从侧栏移除，位置 0-2 对齐 1/2/3 数字键）
+        for (int i = 0; i < 3; i++) {
             int iy = startY + i * totalIconH;
             int ix = (SIDEBAR_W - SIDEBAR_ICON_S) / 2;
             int color = isTabActive(i, activeMode) ? WandscapeTheme.COLOR_TEXT_ACTIVE : WandscapeTheme.COLOR_TEXT_NORMAL;
             WandscapeTheme.drawIcon(g, tabIcons[i], ix, iy, SIDEBAR_ICON_S, SIDEBAR_ICON_S, color);
         }
-
-        // Warning icon (with gap below tabs)
-        int warnY = startY + 4 * totalIconH + 12;
-        int ix = (SIDEBAR_W - SIDEBAR_ICON_S) / 2;
-        WandscapeTheme.drawIcon(g, WandscapeTheme.ICON_WARNING, ix, warnY, SIDEBAR_ICON_S, SIDEBAR_ICON_S, WandscapeTheme.COLOR_TEXT_NORMAL);
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -359,15 +353,11 @@ public final class WandscapePanelOverlay {
         int startY = TOP_BAR_H + 8;
         int totalH = SIDEBAR_ICON_S + SIDEBAR_GAP;
 
-        // Tabs 0–3 (Build, Road, Stats, Tasks)
-        for (int i = 0; i < 4; i++) {
+        // 建造 / 道路 / 任务（统计、警告弃用已删，编号 0-2 对齐 1/2/3 数字键）
+        for (int i = 0; i < 3; i++) {
             int iy = startY + i * totalH;
             if (my >= iy && my <= iy + SIDEBAR_ICON_S) return i;
         }
-
-        // Warning icon (index 4)
-        int warnY = startY + 4 * totalH + 12;
-        if (my >= warnY && my <= warnY + SIDEBAR_ICON_S) return 4;
 
         return -1;
     }
@@ -380,8 +370,7 @@ public final class WandscapePanelOverlay {
         return switch (tabIndex) {
             case 0 -> activeMode == WandscapePanelState.SubMode.BUILD_PROJECTION;
             case 1 -> activeMode == WandscapePanelState.SubMode.ROAD_PROJECTION;
-            case 2 -> activeMode == WandscapePanelState.SubMode.STATS;
-            case 3 -> activeMode == WandscapePanelState.SubMode.TASKS;
+            case 2 -> activeMode == WandscapePanelState.SubMode.TASKS;
             default -> false;
         };
     }

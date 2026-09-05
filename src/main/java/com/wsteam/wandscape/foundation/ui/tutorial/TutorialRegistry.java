@@ -21,7 +21,8 @@ import java.util.List;
  *       build/road sub-modes, so the interaction steps never claim that.</li>
  *   <li>After placing a building the building bar reopens (still build mode), so every
  *       interaction step first tells the player to exit build mode (press 1 or ESC).</li>
- *   <li>Switching tabs uses the hard-coded number keys 1/2/3/4 (建造/道路/统计/异常).</li>
+ *   <li>Switching tabs uses the hard-coded number keys 1/2/3 (建造/道路/任务；
+ *       统计/警告两个弃用页签已从面板移除)。</li>
  * </ul>
  *
  * <p>Readability: every character must be clearly visible — no gray/dark text (§7/§8).
