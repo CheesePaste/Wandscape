@@ -369,7 +369,9 @@ public class TaskQueuePanel extends AbstractWidget {
             int textColEnd = colRightStart - 2;
             int statusX = labelX + Minecraft.getInstance().font.width(label) + 2;
             if (e.insufficient) {
-                Component shortTag = I18n.name("gui.wandscape.queue.insufficient", "缺元素");
+                Component shortTag = (e.missingElements == null || e.missingElements.isEmpty())
+                        ? I18n.name("gui.wandscape.queue.missing_materials", "缺材料")
+                        : I18n.name("gui.wandscape.queue.insufficient", "缺元素");
                 int tagW = Minecraft.getInstance().font.width(shortTag);
                 g.drawString(Minecraft.getInstance().font, shortTag,
                         statusX, centerY - 4, MedievalColors.TEXT_DIM);

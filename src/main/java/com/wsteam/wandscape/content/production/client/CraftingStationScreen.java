@@ -146,7 +146,7 @@ public class CraftingStationScreen extends MedievalScreen {
             @Override
             protected void renderRow(GuiGraphics g, RecipeEntry item, int x, int y, int index,
                                      boolean selected, boolean hovered) {
-                boolean isLocked = !"unlocked".equals(item.lockedReason());
+                boolean isLocked = "colony".equals(item.lockedReason());
                 boolean canAfford = !isLocked && item.maxAffordable() > 0;
 
                 var registryItem = BuiltInRegistries.ITEM.get(ResourceLocation.tryParse(item.outputItem()));
@@ -164,7 +164,9 @@ public class CraftingStationScreen extends MedievalScreen {
                             : MedievalColors.TEXT_MUTED;
                 } else {
                     // elements insufficient but recipe is unlocked
-                    nameColor = MedievalColors.TEXT_DIM;
+                    nameColor = selected ? MedievalColors.ACCENT_GOLD
+                            : hovered ? MedievalColors.TEXT_WARM_WHITE
+                            : MedievalColors.TEXT_DIM;
                 }
 
                 int textX = x + 20;
@@ -256,16 +258,17 @@ public class CraftingStationScreen extends MedievalScreen {
             stepper.setTotalMax(1);
             return;
         }
-        // Locked recipes (colony / elements) show max_affordable=0; keep slider at 1
-        boolean locked = !"unlocked".equals(entry.lockedReason());
-        int max = locked ? 1 : entry.maxAffordable();
+        // Locked recipes (colony level unmet) keep slider at 1.
+        // Unlocked recipes allow ordering even if elements/materials are currently insufficient.
+        boolean locked = "colony".equals(entry.lockedReason());
+        int max = locked ? 1 : Math.max(999, entry.maxAffordable());
         stepper.setTotalMax(max);
     }
 
     private void onSubmit() {
         RecipeEntry sel = recipeList.getSelected();
-        // Block submission when recipe is locked (colony / elements)
-        if (sel == null || !"unlocked".equals(sel.lockedReason())) return;
+        // Block submission only when recipe is locked by colony level
+        if (sel == null || "colony".equals(sel.lockedReason())) return;
         int qty = stepper.getValue();
         // 制作站统一 craft 动作：法杖/权杖/药水配方都走 production:craft（服务端按 recipe_id 解析）。
         String action = "craft";

@@ -134,7 +134,7 @@ public class MagicStationScreen extends MedievalScreen {
             @Override
             protected void renderRow(GuiGraphics g, SpellEntry item, int x, int y, int index,
                                      boolean selected, boolean hovered) {
-                boolean isLocked = !"unlocked".equals(item.lockedReason());
+                boolean isLocked = "colony".equals(item.lockedReason());
                 boolean canAfford = !isLocked && item.maxAffordable() > 0;
 
                 ItemStack scroll = new ItemStack(BuiltInRegistries.ITEM.get(
@@ -151,7 +151,9 @@ public class MagicStationScreen extends MedievalScreen {
                             : hovered ? MedievalColors.TEXT_WARM_WHITE
                             : MedievalColors.TEXT_MUTED;
                 } else {
-                    nameColor = MedievalColors.TEXT_DIM;
+                    nameColor = selected ? MedievalColors.ACCENT_GOLD
+                            : hovered ? MedievalColors.TEXT_WARM_WHITE
+                            : MedievalColors.TEXT_DIM;
                 }
 
                 int textX = x + 20;
@@ -238,14 +240,17 @@ public class MagicStationScreen extends MedievalScreen {
             stepper.setTotalMax(1);
             return;
         }
-        boolean locked = !"unlocked".equals(entry.lockedReason());
-        int max = locked ? 1 : entry.maxAffordable();
+        // Locked recipes (colony level unmet) keep slider at 1.
+        // Unlocked recipes allow ordering even if elements are currently insufficient.
+        boolean locked = "colony".equals(entry.lockedReason());
+        int max = locked ? 1 : Math.max(999, entry.maxAffordable());
         stepper.setTotalMax(max);
     }
 
     private void onSubmit() {
         SpellEntry sel = recipeList.getSelected();
-        if (sel == null || !"unlocked".equals(sel.lockedReason())) return;
+        // Block submission only when recipe is locked by colony level
+        if (sel == null || "colony".equals(sel.lockedReason())) return;
         int qty = stepper.getValue();
         PacketDistributor.sendToServer(new RequestProductionTaskPacket(
                 stationPos, "craft_spell", sel.recipeId(), qty));

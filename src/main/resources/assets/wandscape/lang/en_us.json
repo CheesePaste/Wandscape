@@ -371,6 +371,7 @@
   "gui.wandscape.queue.pending.transcribe": "Awaiting Transcription...",
   "gui.wandscape.queue.pending.other": "Pending...",
   "gui.wandscape.queue.insufficient": "Elements missing",
+  "gui.wandscape.queue.missing_materials": "Materials missing",
   "gui.wandscape.queue.capacity": "Storage full",
   "gui.wandscape.recipe.colony_level": "Town Lv>=%s",
   "gui.wandscape.node.publish_gather": "Publish Gather",
