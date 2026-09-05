@@ -85,9 +85,11 @@ public class ResourceSupplySystem implements EcsSystem {
                 continue;
             }
 
+            UUID colonyId = resolveColonyId(task);
+
             boolean allAvailable = true;
             for (ResourceStack need : task.awaitingResource) {
-                if (world.colonyResources.available(need.resource()) < need.amount()) {
+                if (world.colonyResources.available(colonyId, need.resource()) < need.amount()) {
                     allAvailable = false;
                     break;
                 }
@@ -99,15 +101,15 @@ public class ResourceSupplySystem implements EcsSystem {
             }
 
             for (ResourceStack need : task.awaitingResource) {
-                int available = world.colonyResources.available(need.resource());
+                int available = world.colonyResources.available(colonyId, need.resource());
                 if (available >= need.amount()) continue;
-                trySupplyResource(need.resource(), need.amount() - available, world);
+                trySupplyResource(need.resource(), need.amount() - available, colonyId, world);
             }
         }
     }
 
     /**
-     * 扫描工作站/合成站/魔法工坊队列里元素不足的生产配方：聚合每种元素的缺口，
+     * 扫描工作站/合成站/魔法工坊队列里元素不足的生产配方：按殖民地聚合每种元素的缺口，
      * 走 {@link #trySupplyResource}（先合成、回退节点采集）自动补齐。这些条目留在队列
      * 原位（面板可见「缺元素」），补齐后由 BuildingTaskSource 的发布扫描自然挑中。
      */
@@ -119,7 +121,7 @@ public class ResourceSupplySystem implements EcsSystem {
         ColonyItemBank bank = ColonyItemBank.get(server.overworld());
         if (bank == null) return;
 
-        Map<ElementType, Long> deficits = new LinkedHashMap<>();
+        Map<UUID, Map<ElementType, Long>> deficitsByColony = new LinkedHashMap<>();
         Set<String> seenGroups = new HashSet<>();
         for (String category : List.of("workstation", "crafting_station", "magic_station")) {
             for (UUID buildingId : api.getBuildingsByCategory(null, category)) {
@@ -138,24 +140,28 @@ public class ResourceSupplySystem implements EcsSystem {
                     Map<ElementType, Long> required = ProductionEligibility.requiredElements(bid, item.params());
                     for (ElementType el : ProductionEligibility.missingElements(required, available)) {
                         long deficit = required.get(el) - available.getOrDefault(el, 0L);
-                        deficits.merge(el, Math.max(1, deficit), Long::sum);
+                        deficitsByColony.computeIfAbsent(colonyId, k -> new LinkedHashMap<>())
+                                .merge(el, Math.max(1, deficit), Long::sum);
                     }
                 }
             }
         }
 
-        for (var e : deficits.entrySet()) {
-            trySupplyResource(new ResourceId(e.getKey().getId()), e.getValue().intValue(), world);
+        for (var colonyEntry : deficitsByColony.entrySet()) {
+            UUID colonyId = colonyEntry.getKey();
+            for (var e : colonyEntry.getValue().entrySet()) {
+                trySupplyResource(new ResourceId(e.getKey().getId()), e.getValue().intValue(), colonyId, world);
+            }
         }
     }
 
     /**
-     * Try to create a supply task for the given resource shortfall.
+     * Try to create a supply task for the given resource shortfall in the specified colony.
      * Prefers synthesize (elements → items) over raw node gathering.
      */
-    private void trySupplyResource(ResourceId resource, int deficit, World world) {
-        if (enqueueSynthesize(resource.id(), deficit, world)) return;
-        tryGatherElement(resource, deficit, world);
+    private void trySupplyResource(ResourceId resource, int deficit, @Nullable UUID colonyId, World world) {
+        if (enqueueSynthesize(resource.id(), deficit, colonyId, world)) return;
+        tryGatherElement(resource, deficit, colonyId, world);
     }
 
     /**
@@ -252,6 +258,7 @@ public class ResourceSupplySystem implements EcsSystem {
             for (GlobalTask t : world.taskPool.all()) {
                 if (t.state == TaskState.COMPLETED) continue;
                 if (!"production:synthesize".equals(t.blueprintId)) continue;
+                if (colonyId != null && !colonyId.equals(resolveColonyId(t))) continue;
                 if (!sameRecipe(key, t.taskParams.get("recipe_id"))) continue;
                 total += intParam(t.taskParams.get("count"));
             }
@@ -295,6 +302,7 @@ public class ResourceSupplySystem implements EcsSystem {
             for (GlobalTask t : world.taskPool.all()) {
                 if (t.state == TaskState.COMPLETED) continue;
                 if (!"production:synthesize".equals(t.blueprintId)) continue;
+                if (colonyId != null && !colonyId.equals(resolveColonyId(t))) continue;
                 JsonElement anchor = t.taskParams.get("anchor");
                 if (anchor != null && anchor.isJsonArray() && anchor.getAsJsonArray().size() >= 3) {
                     JsonArray a = anchor.getAsJsonArray();
@@ -440,8 +448,8 @@ public class ResourceSupplySystem implements EcsSystem {
         return Config.autoGatherOnShortage();
     }
 
-    private void tryGatherElement(ResourceId resource, int deficit, @Nullable World world) {
-        if (!isAutoGatherEnabled()) return;
+    private void tryGatherElement(ResourceId resource, int deficit, @Nullable UUID colonyId, @Nullable World world) {
+        if (!isAutoGatherEnabled() || colonyId == null) return;
         ElementType element;
         try {
             element = ElementType.valueOf(resource.id().toUpperCase());
@@ -453,7 +461,7 @@ public class ResourceSupplySystem implements EcsSystem {
         if (api == null) return;
 
         BuildingConfigLoader configLoader = BuildingConfigLoader.getInstance();
-        List<UUID> nodeBuildings = api.getBuildingsByCategory(null, "node");
+        List<UUID> nodeBuildings = api.getBuildingsByCategory(colonyId, "node");
 
         // A representative node producing this element. All nodes of an element share one
         // queue, so the picked node only needs to be a valid member of that element's group.
@@ -485,7 +493,7 @@ public class ResourceSupplySystem implements EcsSystem {
 
         // How many harvests are still needed beyond what's already queued/running — so
         // repeated shortfall scans don't pile up redundant gathers.
-        int inFlight = countGatherInFlight(element, world);
+        int inFlight = countGatherInFlight(element, colonyId, world);
         int remaining = Math.max(0, deficit - inFlight);
         int harvests = (remaining + perHarvest - 1) / perHarvest; // ceil
         if (harvests <= 0) return;
@@ -512,12 +520,13 @@ public class ResourceSupplySystem implements EcsSystem {
      * shared queue or running in the pool. Counts each shared queue once (deduped by
      * colony + element) so fan-out doesn't double-enqueue.
      */
-    private static int countGatherInFlight(ElementType element, @Nullable World world) {
+    private static int countGatherInFlight(ElementType element, @Nullable UUID colonyId, @Nullable World world) {
         int total = 0;
         if (world != null) {
             for (GlobalTask t : world.taskPool.all()) {
                 if (t.state == TaskState.COMPLETED) continue;
                 if (!"node:gather".equals(t.blueprintId)) continue;
+                if (colonyId != null && !colonyId.equals(resolveColonyId(t))) continue;
                 if (!sameElement(element, t.taskParams.get("element"))) continue;
                 total += intParam(t.taskParams.get("amount"));
             }
@@ -526,7 +535,7 @@ public class ResourceSupplySystem implements EcsSystem {
         var api = getBuildingApi();
         if (api == null) return total;
         Set<String> seen = new HashSet<>();
-        for (UUID nodeId : api.getBuildingsByCategory(null, "node")) {
+        for (UUID nodeId : api.getBuildingsByCategory(colonyId, "node")) {
             BuildingData bd = api.getBuilding(nodeId);
             if (bd == null) continue;
             String nodeElem = nodeElement(bd);
@@ -540,6 +549,28 @@ public class ResourceSupplySystem implements EcsSystem {
             }
         }
         return total;
+    }
+
+    @Nullable
+    private static UUID resolveColonyId(GlobalTask task) {
+        if (task.taskParams != null) {
+            JsonElement el = task.taskParams.get("colony_id");
+            if (el != null && el.isJsonPrimitive()) {
+                try {
+                    return UUID.fromString(el.getAsString());
+                } catch (IllegalArgumentException ignored) {}
+            }
+        }
+        if (task.buildingId != null) {
+            var api = getBuildingApi();
+            if (api != null) {
+                var bd = api.getBuilding(task.buildingId);
+                if (bd != null && bd.getColonyId() != null) {
+                    return bd.getColonyId();
+                }
+            }
+        }
+        return null;
     }
 
     /** The element a node building produces, or null if it's not a node / has no node_config. */

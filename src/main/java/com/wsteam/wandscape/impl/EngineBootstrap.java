@@ -96,12 +96,12 @@ public final class EngineBootstrap {
             Log.info(TAG, "  ColonyResourceAccess: WarehouseManager (live)");
         } else {
             colonyResources = new ColonyResourceAccess() {
-                @Override public boolean hasEnough(ResourceId r, int a) { return true; }
-                @Override public boolean reserve(ResourceId r, int a) { return true; }
-                @Override public boolean commit(ResourceId r, int a) { return true; }
-                @Override public void release(ResourceId r, int a) {}
-                @Override public int available(ResourceId r) { return Integer.MAX_VALUE; }
-                @Override public void addResource(ResourceId r, int a) {}
+                @Override public boolean hasEnough(java.util.UUID c, ResourceId r, int a) { return true; }
+                @Override public boolean reserve(java.util.UUID c, ResourceId r, int a) { return true; }
+                @Override public boolean commit(java.util.UUID c, ResourceId r, int a) { return true; }
+                @Override public void release(java.util.UUID c, ResourceId r, int a) {}
+                @Override public int available(java.util.UUID c, ResourceId r) { return Integer.MAX_VALUE; }
+                @Override public void addResource(java.util.UUID c, ResourceId r, int a) {}
             };
             Log.info(TAG, "  ColonyResourceAccess: stub (warehouse not loaded)");
         }
