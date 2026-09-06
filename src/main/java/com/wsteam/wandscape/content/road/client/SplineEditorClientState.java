@@ -10,7 +10,6 @@ import com.wsteam.wandscape.content.road.core.SplinePoint;
 import com.wsteam.wandscape.content.road.core.SplineVec3;
 import com.wsteam.wandscape.foundation.log.Log;
 import net.minecraft.client.Minecraft;
-import org.lwjgl.glfw.GLFW;
 
 import java.io.File;
 import java.io.FileReader;
@@ -48,7 +47,6 @@ public final class SplineEditorClientState {
     private static volatile boolean topDown = false;
     private static double topDownPrevX, topDownPrevY, topDownPrevZ;
     private static float topDownPrevYaw, topDownPrevPitch;
-    private static double lastMouseX, lastMouseY;
 
     public static double getCamX() { return camX; }
     public static double getCamY() { return camY; }
@@ -83,13 +81,6 @@ public final class SplineEditorClientState {
         topDownPrevPitch = camPitch;
         camY += 20;
         camPitch = 90;
-        // Reset mouse baseline so the grab transition does not snap the camera
-        Minecraft mc = Minecraft.getInstance();
-        long window = mc.getWindow().getWindow();
-        double[] mx = new double[1], my = new double[1];
-        GLFW.glfwGetCursorPos(window, mx, my);
-        lastMouseX = mx[0];
-        lastMouseY = my[0];
         topDown = true;
         Log.info(TAG, "[SplineEditor] Top-down view enabled");
     }
@@ -103,19 +94,6 @@ public final class SplineEditorClientState {
         camYaw = topDownPrevYaw;
         camPitch = topDownPrevPitch;
         Log.info(TAG, "[SplineEditor] Top-down view disabled");
-    }
-
-    public static double getLastMouseX() {
-        return lastMouseX;
-    }
-
-    public static double getLastMouseY() {
-        return lastMouseY;
-    }
-
-    public static void setLastMouse(double x, double y) {
-        lastMouseX = x;
-        lastMouseY = y;
     }
 
     public static void addCamRotation(float yawDelta, float pitchDelta) {

@@ -8,7 +8,8 @@
   ],
   "client": [
     "MixinOverviewCamera",
-    "MixinSplineEditorCamera"
+    "MixinSplineEditorCamera",
+    "MixinMouseHandler"
   ],
   "injectors": {
     "defaultRequire": 1

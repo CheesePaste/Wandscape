@@ -70,10 +70,8 @@ public final class BuildGizmoController {
 
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null || mc.player == null) return;
-        long window = mc.getWindow().getWindow();
-        if (window == 0L) return;
 
-        boolean leftDown = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS;
+        boolean leftDown = mc.mouseHandler.isLeftPressed();
         boolean leftClicked = leftDown && !wasLeftDown;
         boolean leftReleased = !leftDown && wasLeftDown;
         wasLeftDown = leftDown;

@@ -154,11 +154,9 @@ public final class RoadStudioOverlay {
 
     private static void updateMousePos() {
         Minecraft mc = Minecraft.getInstance();
-        double[] mx = new double[1], my = new double[1];
-        GLFW.glfwGetCursorPos(mc.getWindow().getWindow(), mx, my);
         double guiScale = mc.getWindow().getGuiScale();
-        frameMouseX = (int) (mx[0] / guiScale);
-        frameMouseY = (int) (my[0] / guiScale);
+        frameMouseX = (int) (mc.mouseHandler.xpos() / guiScale);
+        frameMouseY = (int) (mc.mouseHandler.ypos() / guiScale);
     }
 
     // ════════════════════════════════════════════════════════════════
@@ -172,8 +170,7 @@ public final class RoadStudioOverlay {
         if (mc.screen != null) return;
 
         updateMousePos();
-        long window = mc.getWindow().getWindow();
-        boolean leftDown = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS;
+        boolean leftDown = mc.mouseHandler.isLeftPressed();
         boolean clicked = leftDown && !wasMouseDown;
         boolean released = !leftDown && wasMouseDown;
         wasMouseDown = leftDown;

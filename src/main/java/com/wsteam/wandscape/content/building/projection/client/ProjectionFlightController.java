@@ -84,8 +84,8 @@ public final class ProjectionFlightController {
         // Baseline the button edge-detection whenever a screen just closed.
         boolean screenOpen = mc.screen != null;
         if (wasScreenOpen && !screenOpen) {
-            wasLeftDown = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS;
-            wasRightDown = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_RIGHT) == GLFW.GLFW_PRESS;
+            wasLeftDown = mc.mouseHandler.isLeftPressed();
+            wasRightDown = mc.mouseHandler.isRightPressed();
         }
         wasScreenOpen = screenOpen;
         if (screenOpen) return;
@@ -106,7 +106,7 @@ public final class ProjectionFlightController {
 
         // ── Walking mode: ghost preview, handle clicks, drain only attack/use ──
         updateGhostPosition(mc);
-        handleClicks(mc, window);
+        handleClicks(mc);
         handleEscape(mc, window);
         drainAttackUse(mc);
     }
@@ -137,8 +137,7 @@ public final class ProjectionFlightController {
             return;
         }
 
-        long window = mc.getWindow().getWindow();
-        boolean rightDown = window != 0L && GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_RIGHT) == GLFW.GLFW_PRESS;
+        boolean rightDown = mc.mouseHandler.isRightPressed();
 
         // Perform a long-range raycast from camera center
         Camera camera = mc.gameRenderer.getMainCamera();
@@ -174,9 +173,9 @@ public final class ProjectionFlightController {
 
     // ── Click handling ──
 
-    private static void handleClicks(Minecraft mc, long window) {
-        boolean leftDown = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS;
-        boolean rightDown = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_RIGHT) == GLFW.GLFW_PRESS;
+    private static void handleClicks(Minecraft mc) {
+        boolean leftDown = mc.mouseHandler.isLeftPressed();
+        boolean rightDown = mc.mouseHandler.isRightPressed();
 
         boolean leftClicked = leftDown && !wasLeftDown;
         boolean rightClicked = rightDown && !wasRightDown;

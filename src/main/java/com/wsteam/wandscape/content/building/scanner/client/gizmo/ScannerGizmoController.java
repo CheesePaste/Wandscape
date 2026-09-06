@@ -71,11 +71,9 @@ public final class ScannerGizmoController {
         int button = event.getButton();
         int action = event.getAction();
 
-        double[] mxArr = new double[1], myArr = new double[1];
-        GLFW.glfwGetCursorPos(window, mxArr, myArr);
         double scale = mc.getWindow().getGuiScale();
-        double mx = mxArr[0] / scale;
-        double my = myArr[0] / scale;
+        double mx = mc.mouseHandler.xpos() / scale;
+        double my = mc.mouseHandler.ypos() / scale;
 
         boolean overPanel = ScannerGizmoOverlay.isMouseOverPanel(mx, my);
 
@@ -83,8 +81,8 @@ public final class ScannerGizmoController {
         if (button == GLFW.GLFW_MOUSE_BUTTON_RIGHT) {
             if (action == GLFW.GLFW_PRESS) {
                 if (!cameraActive && !overPanel) {
-                    savedCursorX = mxArr[0];
-                    savedCursorY = myArr[0];
+                    savedCursorX = mc.mouseHandler.xpos();
+                    savedCursorY = mc.mouseHandler.ypos();
                     hasSavedCursor = true;
                     cameraActive = true;
                     mc.mouseHandler.grabMouse();
@@ -285,16 +283,15 @@ public final class ScannerGizmoController {
     }
 
     public static Vec3 getMouseWorldRay(Minecraft mc) {
-        long window = mc.getWindow().getWindow();
-        double[] mx = new double[1], my = new double[1];
-        GLFW.glfwGetCursorPos(window, mx, my);
+        double mx = mc.mouseHandler.xpos();
+        double my = mc.mouseHandler.ypos();
         int screenW = mc.getWindow().getScreenWidth();
         int screenH = mc.getWindow().getScreenHeight();
         if (screenW <= 0) screenW = 1;
         if (screenH <= 0) screenH = 1;
 
-        float ndcX = (float) (2.0 * mx[0] / screenW - 1.0);
-        float ndcY = (float) (1.0 - 2.0 * my[0] / screenH);
+        float ndcX = (float) (2.0 * mx / screenW - 1.0);
+        float ndcY = (float) (1.0 - 2.0 * my / screenH);
 
         Camera cam = mc.gameRenderer.getMainCamera();
         float baseFov = (float) mc.options.fov().get();

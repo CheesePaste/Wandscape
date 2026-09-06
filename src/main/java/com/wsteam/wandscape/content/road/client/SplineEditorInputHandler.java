@@ -81,16 +81,15 @@ public final class SplineEditorInputHandler {
     }
 
     public static Vec3 getMouseWorldRay(Minecraft mc) {
-        long window = mc.getWindow().getWindow();
-        double[] mx = new double[1], my = new double[1];
-        GLFW.glfwGetCursorPos(window, mx, my);
+        double mx = mc.mouseHandler.xpos();
+        double my = mc.mouseHandler.ypos();
         int screenW = mc.getWindow().getScreenWidth();
         int screenH = mc.getWindow().getScreenHeight();
         if (screenW <= 0) screenW = 1;
         if (screenH <= 0) screenH = 1;
 
-        float ndcX = (float) (2.0 * mx[0] / screenW - 1.0);
-        float ndcY = (float) (1.0 - 2.0 * my[0] / screenH);
+        float ndcX = (float) (2.0 * mx / screenW - 1.0);
+        float ndcY = (float) (1.0 - 2.0 * my / screenH);
 
         Camera cam = mc.gameRenderer.getMainCamera();
         float baseFov = (float) mc.options.fov().get();

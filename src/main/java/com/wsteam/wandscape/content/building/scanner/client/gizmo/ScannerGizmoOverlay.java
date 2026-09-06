@@ -51,11 +51,9 @@ public final class ScannerGizmoOverlay {
         GuiGraphics gui = event.getGuiGraphics();
         Font font = mc.font;
 
-        double[] mxArr = new double[1], myArr = new double[1];
-        GLFW.glfwGetCursorPos(mc.getWindow().getWindow(), mxArr, myArr);
         double scale = mc.getWindow().getGuiScale();
-        int mx = (int) (mxArr[0] / scale);
-        int my = (int) (myArr[0] / scale);
+        int mx = (int) (mc.mouseHandler.xpos() / scale);
+        int my = (int) (mc.mouseHandler.ypos() / scale);
 
         int screenW = mc.getWindow().getGuiScaledWidth();
         int panelX = screenW - PANEL_W - 10;
