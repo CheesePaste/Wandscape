@@ -64,6 +64,16 @@ public record RoadPlacePacket(String presetId, BlockPos startPos, BlockPos endPo
         if (player == null || player.level() == null) return;
         Level level = player.level();
 
+        // Colony ownership check: must own a colony to place roads
+        UUID colonyId = com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.ownColony(player);
+        if (colonyId == null) {
+            ScreenFeedbackPacket.send(player, I18n.name("message.wandscape.road.place_failed_no_colony",
+                    "§c[魔法小镇] 请先创建小镇（先放置市政厅并命名）"), true);
+            Log.warn(TAG, "[Road] Player {} tried to place road with no colony",
+                    player.getGameProfile().getName());
+            return;
+        }
+
         // 1. Find preset
         RoadPreset preset = findPreset(packet.presetId());
         if (preset == null) {
@@ -181,7 +191,7 @@ public record RoadPlacePacket(String presetId, BlockPos startPos, BlockPos endPo
         }
 
         UUID edgeId = UUID.randomUUID();
-        RoadEdge edge = new RoadEdge(edgeId, fromNodeId, toNodeId, packet.presetId(), model);
+        RoadEdge edge = new RoadEdge(edgeId, colonyId, fromNodeId, toNodeId, packet.presetId(), model);
         edge.setStatus(RoadEdge.EdgeStatus.BUILDING);
         edge.setWidth(Math.max(1, Math.min(maxX - minX + 1, maxZ - minZ + 1)));
 
@@ -221,8 +231,7 @@ public record RoadPlacePacket(String presetId, BlockPos startPos, BlockPos endPo
         params.put("material_counts", counts);
 
         try {
-            long taskId = world.taskPool.addTask(new TaskRequest("road:build_segment", params, 10,
-                    com.wsteam.wandscape.api.WandscapeApis.colonyAt(player.blockPosition())));
+            long taskId = world.taskPool.addTask(new TaskRequest("road:build_segment", params, 10, colonyId));
             // Capture demand + live task id on the edge so withdraw can cancel & refund.
             edge.setMaterialCounts(materials);
             edge.addSegmentTaskId(taskId);
@@ -237,11 +246,7 @@ public record RoadPlacePacket(String presetId, BlockPos startPos, BlockPos endPo
             // Manual road placement counts toward onboarding step 6 — but only once
             // the road is actually built, so register a pending attribution that
             // RoadSegmentListener consumes on road_segment_complete.
-            var colonyApi = com.wsteam.wandscape.api.WandscapeApis.getColonyApiSilently();
-            UUID colonyId = colonyApi != null ? colonyApi.getColonyId(player.blockPosition()) : null;
-            if (colonyId != null) {
-                RoadPlaceAttribution.register(segmentId, player.getUUID(), colonyId);
-            }
+            RoadPlaceAttribution.register(segmentId, player.getUUID(), colonyId);
         } catch (Exception e) {
             Log.warn(TAG, "[Road] Failed to publish road task: {}", e.getMessage());
         }

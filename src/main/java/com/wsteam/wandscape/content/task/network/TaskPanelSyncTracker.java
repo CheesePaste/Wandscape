@@ -121,12 +121,26 @@ public final class TaskPanelSyncTracker {
         for (GlobalTask task : world.taskPool.all()) {
             if (task.state == TaskState.COMPLETED) continue;
 
-            // Check colony ownership: if buildingId present, match building's colony; otherwise match player's colony
-            if (task.buildingId != null) {
+            // Check colony ownership: prefer explicit taskParams "colony_id", fall back to building ownership
+            UUID taskColony = null;
+            var ce = task.taskParams.get("colony_id");
+            if (ce instanceof JsonPrimitive p && p.isString()) {
+                try {
+                    taskColony = UUID.fromString(p.getAsString());
+                } catch (IllegalArgumentException ignored) {}
+            }
+
+            if (taskColony != null) {
+                if (!colonyId.equals(taskColony)) {
+                    continue;
+                }
+            } else if (task.buildingId != null) {
                 BuildingState bs = buildingData.getBuilding(task.buildingId);
                 if (bs != null && !colonyId.equals(bs.getColonyId())) {
                     continue;
                 }
+            } else {
+                continue;
             }
 
             activeTaskCount++;

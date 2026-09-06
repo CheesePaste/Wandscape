@@ -25,6 +25,7 @@ import net.minecraft.world.level.block.Blocks;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
 
@@ -56,6 +57,16 @@ public record FillBoxPacket(String presetId, BlockPos startPos, BlockPos endPos)
     public static void handleServer(FillBoxPacket packet, ServerPlayer player) {
         if (player == null || player.level() == null) return;
         Level level = player.level();
+
+        // Colony ownership check: must own a colony to publish fill task
+        UUID colonyId = com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.ownColony(player);
+        if (colonyId == null) {
+            ScreenFeedbackPacket.send(player, I18n.name("message.wandscape.road.place_failed_no_colony",
+                    "§c[魔法小镇] 请先创建小镇（先放置市政厅并命名）"), true);
+            Log.warn(TAG, "[Fill] Player {} tried to publish fill task with no colony",
+                    player.getGameProfile().getName());
+            return;
+        }
 
         // 1. Find preset
         RoadPreset preset = findPreset(packet.presetId());
@@ -152,8 +163,7 @@ public record FillBoxPacket(String presetId, BlockPos startPos, BlockPos endPos)
         params.put("material_counts", counts);
 
         try {
-            long taskId = world.taskPool.addTask(new TaskRequest("terrain:fill_box", params, 10,
-                    com.wsteam.wandscape.api.WandscapeApis.colonyAt(player.blockPosition())));
+            long taskId = world.taskPool.addTask(new TaskRequest("terrain:fill_box", params, 10, colonyId));
             SoundService.playAt(player.serverLevel(), player.getX(), player.getY(), player.getZ(),
                     WandscapeSounds.TASK_PUBLISH, SoundSource.PLAYERS, 0.4f, 1.0f);
             Log.info(TAG, "[Fill] Published task #{}: preset={} box=({},{},{})→({},{},{}) tiles={}",

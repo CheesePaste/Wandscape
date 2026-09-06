@@ -136,29 +136,30 @@ public record RoadAreaSyncPacket(List<RoadEntry> roads) implements CustomPacketP
 
     // ── Factory: server-side creation ──
 
-    private static List<RoadEntry> buildEntries() {
+    private static List<RoadEntry> buildEntries(@Nullable java.util.UUID colonyId) {
+        if (colonyId == null) return List.of();
         RoadApi roadApi = WandscapeApis.getRoadApi();
         if (roadApi == null) return List.of();
         List<RoadEntry> entries = new ArrayList<>();
-        for (RoadEdge edge : roadApi.getEdges(null)) {
+        for (RoadEdge edge : roadApi.getEdges(colonyId)) {
             if (edge.getStatus() == RoadEdge.EdgeStatus.COMPLETE) continue;
             entries.add(new RoadEntry(edge.getTier(), new ArrayList<>(edge.getPlacedBlocks())));
         }
         return entries;
     }
 
-    /** Send the under-construction road sync to a single player. */
+    /** Send the under-construction road sync to a single player for their own colony. */
     public static void sendToPlayer(ServerPlayer player) {
         if (player == null || player.level() == null) return;
-        PacketDistributor.sendToPlayer(player, new RoadAreaSyncPacket(buildEntries()));
+        java.util.UUID colonyId = com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.ownColony(player);
+        PacketDistributor.sendToPlayer(player, new RoadAreaSyncPacket(buildEntries(colonyId)));
     }
 
-    /** Broadcast the under-construction road sync to every player on the server. */
+    /** Broadcast the under-construction road sync to every player on the server (each receives their own colony's roads). */
     public static void broadcastToServer(MinecraftServer server) {
         if (server == null) return;
-        RoadAreaSyncPacket packet = new RoadAreaSyncPacket(buildEntries());
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
-            PacketDistributor.sendToPlayer(player, packet);
+            sendToPlayer(player);
         }
     }
 
