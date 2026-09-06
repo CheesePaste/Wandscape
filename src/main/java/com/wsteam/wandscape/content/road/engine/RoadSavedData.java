@@ -54,6 +54,9 @@ public final class RoadSavedData extends SavedData {
         for (RoadEdge edge : network.getEdges().values()) {
             CompoundTag e = new CompoundTag();
             e.putUUID("edgeId", edge.getEdgeId());
+            if (edge.getColonyId() != null) {
+                e.putUUID("colonyId", edge.getColonyId());
+            }
             e.putUUID("fromNodeId", edge.getFromNodeId());
             e.putUUID("toNodeId", edge.getToNodeId());
             e.putString("tier", edge.getTier());
@@ -182,7 +185,8 @@ public final class RoadSavedData extends SavedData {
                 taskIds.add(tid);
             }
 
-            RoadEdge edge = new RoadEdge(edgeId, fromNodeId, toNodeId,
+            UUID colonyId = e.hasUUID("colonyId") ? e.getUUID("colonyId") : null;
+            RoadEdge edge = new RoadEdge(edgeId, colonyId, fromNodeId, toNodeId,
                     tier, model, taskIds, status);
 
             if (e.contains("width")) {

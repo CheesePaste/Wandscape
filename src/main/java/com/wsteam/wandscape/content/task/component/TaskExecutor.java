@@ -78,6 +78,19 @@ public class TaskExecutor {
     /** Tick when this NPC last performed work. Used for idle detection. */
     public long lastWorkTick = 0;
 
+    /**
+     * Active package source token currently executing (e.g. "global:123" or "self_defense").
+     * Used by TaskExecutionSystem to detect when a new or resumed package starts.
+     */
+    @Nullable
+    public String activePackageSource = null;
+
+    /**
+     * Whether the initial navigation toward the task stance/target has completed.
+     * When true, task ops execute without distance checks.
+     */
+    public boolean initialNavDone = false;
+
     /** Reset all state. */
     public void reset() {
         npcQueue.clear();
@@ -92,6 +105,8 @@ public class TaskExecutor {
         stance = null;
         lastWorkTick = 0;
         state = ExecutorState.IDLE;
+        activePackageSource = null;
+        initialNavDone = false;
     }
 
     /** Clear global task state (used when task is interrupted or completes). */
@@ -106,5 +121,7 @@ public class TaskExecutor {
         currentOpKind = null;
         stance = null;
         state = ExecutorState.IDLE;
+        activePackageSource = null;
+        initialNavDone = false;
     }
 }

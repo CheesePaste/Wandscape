@@ -23,6 +23,7 @@ public class RoadEdge {
     }
 
     private final UUID edgeId;
+    private final UUID colonyId;
     private final UUID fromNodeId;
     private final UUID toNodeId;
     private final String tier;
@@ -39,9 +40,11 @@ public class RoadEdge {
     /** Per-material demand (bare block id → count) for this edge's build segment. */
     private Map<String, Integer> materialCounts = Map.of();
 
-    public RoadEdge(UUID edgeId, UUID fromNodeId, UUID toNodeId,
+    public RoadEdge(UUID edgeId, @javax.annotation.Nullable UUID colonyId,
+                    UUID fromNodeId, UUID toNodeId,
                     String tier, SplineModel spline) {
         this.edgeId = edgeId;
+        this.colonyId = colonyId;
         this.fromNodeId = fromNodeId;
         this.toNodeId = toNodeId;
         this.tier = tier;
@@ -52,11 +55,18 @@ public class RoadEdge {
         this.width = 3;
     }
 
-    /** Full constructor with status and existing task IDs (used by NBT load). */
     public RoadEdge(UUID edgeId, UUID fromNodeId, UUID toNodeId,
+                    String tier, SplineModel spline) {
+        this(edgeId, null, fromNodeId, toNodeId, tier, spline);
+    }
+
+    /** Full constructor with status and existing task IDs (used by NBT load). */
+    public RoadEdge(UUID edgeId, @javax.annotation.Nullable UUID colonyId,
+                    UUID fromNodeId, UUID toNodeId,
                     String tier, SplineModel spline,
                     List<Long> segmentTaskIds, EdgeStatus status) {
         this.edgeId = edgeId;
+        this.colonyId = colonyId;
         this.fromNodeId = fromNodeId;
         this.toNodeId = toNodeId;
         this.tier = tier;
@@ -65,6 +75,12 @@ public class RoadEdge {
         this.segmentTaskIds = new ArrayList<>(segmentTaskIds);
         this.status = status;
         this.width = 3;
+    }
+
+    public RoadEdge(UUID edgeId, UUID fromNodeId, UUID toNodeId,
+                    String tier, SplineModel spline,
+                    List<Long> segmentTaskIds, EdgeStatus status) {
+        this(edgeId, null, fromNodeId, toNodeId, tier, spline, segmentTaskIds, status);
     }
 
     private static List<PathPoint> generatePathCache(SplineModel spline) {
@@ -81,6 +97,8 @@ public class RoadEdge {
     // ---- Getters ----
 
     public UUID getEdgeId() { return edgeId; }
+    @javax.annotation.Nullable
+    public UUID getColonyId() { return colonyId; }
     public UUID getFromNodeId() { return fromNodeId; }
     public UUID getToNodeId() { return toNodeId; }
     public String getTier() { return tier; }
@@ -162,7 +180,8 @@ public class RoadEdge {
 
     @Override
     public String toString() {
-        return "RoadEdge[id=" + edgeId + " from=" + fromNodeId
+        return "RoadEdge[id=" + edgeId + " colony=" + colonyId
+                + " from=" + fromNodeId
                 + " to=" + toNodeId + " tier=" + tier
                 + " status=" + status + " pathLen=" + cachedPath.size()
                 + " width=" + width

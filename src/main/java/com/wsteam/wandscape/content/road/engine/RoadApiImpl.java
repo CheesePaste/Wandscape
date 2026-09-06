@@ -37,7 +37,13 @@ public class RoadApiImpl implements RoadApi {
 
     @Override
     public List<RoadEdge> getEdges(UUID colonyId) {
-        return new ArrayList<>(getNetwork(colonyId).getEdges().values());
+        var edges = getNetwork(colonyId).getEdges().values();
+        if (colonyId == null) {
+            return new ArrayList<>(edges);
+        }
+        return edges.stream()
+                .filter(e -> colonyId.equals(e.getColonyId()))
+                .toList();
     }
 
     @Override
@@ -62,6 +68,13 @@ public class RoadApiImpl implements RoadApi {
         RoadEdge edge = network.getEdge(edgeId);
         if (edge == null) return false;                 // idempotent: already withdrawn
         if (edge.getStatus() == RoadEdge.EdgeStatus.COMPLETE) return false; // completed can't withdraw
+
+        if (edge.getColonyId() != null && colonyId != null && !edge.getColonyId().equals(colonyId)) {
+            Log.warn(TAG, "[Cancel] Colony mismatch for edge {}: edge colony {} vs caller {}",
+                    edgeId, edge.getColonyId(), colonyId);
+            return false;
+        }
+        UUID refundColonyId = edge.getColonyId() != null ? edge.getColonyId() : colonyId;
 
         // 1. Cancel the live segment task(s) so an NPC stops building it.
         var world = com.wsteam.wandscape.content.task.ecs.World.getActive();
@@ -92,14 +105,14 @@ public class RoadApiImpl implements RoadApi {
         // 3. Refund the full material demand exactly once, only if construction
         //    actually started (≥1 road tile present). Refunding only when started
         //    avoids minting materials that were never charged.
-        if (placedTiles > 0 && colonyId != null) {
+        if (placedTiles > 0 && refundColonyId != null) {
             ColonyItemBank bank = ColonyItemBank.get(level);
             if (bank != null) {
                 for (var e : edge.getMaterialCounts().entrySet()) {
-                    bank.add(colonyId, ItemKey.of(e.getKey(), null), e.getValue());
+                    bank.add(refundColonyId, ItemKey.of(e.getKey(), null), e.getValue());
                 }
                 Log.info(TAG, "[Cancel] Refunded road edge {} materials ({}) to colony {}",
-                        edgeId, edge.getMaterialCounts().size(), colonyId.toString().substring(0, 8));
+                        edgeId, edge.getMaterialCounts().size(), refundColonyId.toString().substring(0, 8));
             }
         }
 

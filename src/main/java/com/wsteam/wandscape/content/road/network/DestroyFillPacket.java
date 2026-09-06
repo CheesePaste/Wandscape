@@ -22,8 +22,12 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
 
+import com.wsteam.wandscape.foundation.networking.ScreenFeedbackPacket;
+import com.wsteam.wandscape.foundation.ui.I18n;
+
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
 
@@ -60,6 +64,16 @@ public record DestroyFillPacket(BlockPos refPos, BlockPos endPos, boolean fillDe
     public static void handleServer(DestroyFillPacket packet, ServerPlayer player) {
         if (player == null || player.level() == null) return;
         Level level = player.level();
+
+        // Colony ownership check: must own a colony to publish flatten task
+        UUID colonyId = com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.ownColony(player);
+        if (colonyId == null) {
+            ScreenFeedbackPacket.send(player, I18n.name("message.wandscape.road.place_failed_no_colony",
+                    "§c[魔法小镇] 请先创建小镇（先放置市政厅并命名）"), true);
+            Log.warn(TAG, "[DestroyFill] Player {} tried to publish flatten task with no colony",
+                    player.getGameProfile().getName());
+            return;
+        }
 
         BlockPos ref = packet.refPos();
         BlockPos end = packet.endPos();
@@ -177,8 +191,7 @@ public record DestroyFillPacket(BlockPos refPos, BlockPos endPos, boolean fillDe
         params.put("fill_count", new JsonPrimitive(fillCount));
 
         try {
-            long taskId = world.taskPool.addTask(new TaskRequest("terrain:flatten", params, 10,
-                    com.wsteam.wandscape.api.WandscapeApis.colonyAt(player.blockPosition())));
+            long taskId = world.taskPool.addTask(new TaskRequest("terrain:flatten", params, 10, colonyId));
             SoundService.playAt(player.serverLevel(), player.getX(), player.getY(), player.getZ(),
                     WandscapeSounds.TASK_PUBLISH, SoundSource.PLAYERS, 0.4f, 1.0f);
             Log.info(TAG, "[DestroyFill] Published task #{}: ref={} refBlock={} from=({},{})→({},{}) breaks={} fills={} fillDep={}",

@@ -38,6 +38,16 @@ public record SplineBuildPacket(String tilesJson, String splineJson) implements 
 
     public static void handleServer(SplineBuildPacket packet, ServerPlayer player) {
         if (player == null || player.level() == null) return;
+
+        // Colony ownership check: must own a colony to place spline road
+        UUID colonyId = com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.ownColony(player);
+        if (colonyId == null) {
+            ScreenFeedbackPacket.send(player, I18n.name("message.wandscape.road.place_failed_no_colony",
+                    "§c[魔法小镇] 请先创建小镇（先放置市政厅并命名）"), true);
+            Log.warn(TAG, "[Spline] Player {} tried to place spline road with no colony",
+                    player.getGameProfile().getName());
+            return;
+        }
         
         try {
             JsonElement parsed = JsonParser.parseString(packet.tilesJson());
@@ -122,7 +132,7 @@ public record SplineBuildPacket(String tilesJson, String splineJson) implements 
             }
 
             UUID edgeId = UUID.randomUUID();
-            RoadEdge edge = new RoadEdge(edgeId, fromNodeId, toNodeId, "dirt", model);
+            RoadEdge edge = new RoadEdge(edgeId, colonyId, fromNodeId, toNodeId, "dirt", model);
             edge.setStatus(RoadEdge.EdgeStatus.BUILDING);
             
             // Register placed blocks footprint
@@ -168,8 +178,7 @@ public record SplineBuildPacket(String tilesJson, String splineJson) implements 
             params.put("material_list", list);
             params.put("material_counts", counts);
 
-            long taskId = world.taskPool.addTask(new TaskRequest("road:build_segment", params, 10,
-                    com.wsteam.wandscape.api.WandscapeApis.colonyAt(player.blockPosition())));
+            long taskId = world.taskPool.addTask(new TaskRequest("road:build_segment", params, 10, colonyId));
             // Capture demand + live task id on the edge so withdraw can cancel & refund.
             edge.setMaterialCounts(materials);
             edge.addSegmentTaskId(taskId);
@@ -177,6 +186,9 @@ public record SplineBuildPacket(String tilesJson, String splineJson) implements 
                     WandscapeSounds.TASK_PUBLISH, SoundSource.PLAYERS, 0.4f, 1.0f);
             edge.incrementPendingSegments(1);
             savedData.setDirty();
+
+            // Sync the new under-construction road edge to clients.
+            com.wsteam.wandscape.content.road.network.RoadAreaSyncPacket.broadcastToServer(player.serverLevel().getServer());
 
             Log.info(TAG, "[Spline] Published task #{} for RoadEdge {}: tiles={}, spline nodes={}", taskId, edgeId, tiles.size(), model.getPoints().size());
         } catch (Exception e) {

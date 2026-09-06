@@ -60,16 +60,19 @@ public record RoadInteractPacket(BlockPos pos) implements CustomPacketPayload {
             return; // completed roads show no construction panel
         }
 
-        UUID colonyId = resolveColonyId(player);
+        UUID edgeColonyId = edge.getColonyId();
+        if (!com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.isOwn(edgeColonyId, player)) {
+            com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(player, "道路");
+            return;
+        }
+
+        UUID colonyId = com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.ownColony(player);
+        if (colonyId == null) {
+            colonyId = edgeColonyId;
+        }
         ConstructionSiteDataPacket siteData = RoadSiteData.fromEdge(level, edge, colonyId);
         PacketDistributor.sendToPlayer(player, siteData);
         Log.info(TAG, "[Interact] Opened road construction panel for edge {}", edge.getEdgeId());
-    }
-
-    private static UUID resolveColonyId(ServerPlayer player) {
-        var colonyApi = WandscapeApis.getColonyApiSilently();
-        UUID colonyId = colonyApi != null ? colonyApi.getColonyId(player.blockPosition()) : null;
-        return colonyId != null ? colonyId : new UUID(0, 0);
     }
 
     // ── StreamCodec ──
