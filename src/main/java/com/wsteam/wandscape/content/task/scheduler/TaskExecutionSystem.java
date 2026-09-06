@@ -42,8 +42,8 @@ import java.util.concurrent.CompletableFuture;
  *   <li>No work → IDLE</li>
  *   <li>Pending async future → wait or advance</li>
  *   <li>No current package → start next from queue</li>
- *   <li>Navigate to package stance if out of range</li>
- *   <li>Execute current op → handle resources, async</li>
+ *   <li>Initial navigation toward task stance/target if far away</li>
+ *   <li>Execute current op → handle resources, async (no distance limit once started)</li>
  * </ol>
  */
 public class TaskExecutionSystem implements EcsSystem {
@@ -120,6 +120,8 @@ public class TaskExecutionSystem implements EcsSystem {
                 exec.state = ExecutorState.IDLE;
                 exec.currentOpTarget = null;
                 exec.currentOpKind = null;
+                exec.activePackageSource = null;
+                exec.initialNavDone = false;
                 if (world.movementOps != null && exec.pendingFuture != null) {
                     world.movementOps.cancelNavigation(npcId);
                     exec.pendingFuture = null;
@@ -148,7 +150,6 @@ public class TaskExecutionSystem implements EcsSystem {
         NpcTaskPackage pkg = queue.currentPackage();
 
         // ── 2. Pending async future from previous tick? ──
-        boolean navJustResolved = false;
         if (exec.pendingFuture != null) {
             if (!exec.pendingFuture.isDone()) {
                 return; // still waiting
@@ -182,6 +183,8 @@ public class TaskExecutionSystem implements EcsSystem {
                 exec.state = ExecutorState.IDLE;
                 exec.currentOpTarget = null;
                 exec.currentOpKind = null;
+                exec.activePackageSource = null;
+                exec.initialNavDone = false;
                 return;
             }
 
@@ -190,8 +193,8 @@ public class TaskExecutionSystem implements EcsSystem {
                 syncStepToPool(exec, queue);
                 exec.lastWorkTick = worldTick(world);
             } else {
-                Log.debug(LogCategory.TASK, "exec", "NPC %d — nav resolved, continuing to execute op", npcId);
-                navJustResolved = true;
+                Log.debug(LogCategory.TASK, "exec", "NPC %d — initial nav resolved, starting work (no distance limit)", npcId);
+                exec.initialNavDone = true;
             }
             if (queue.isCurrentPackageDone()) {
                 finishOrReleaseCurrentPackage(exec, queue, npcId, world);
@@ -205,32 +208,41 @@ public class TaskExecutionSystem implements EcsSystem {
             exec.state = ExecutorState.IDLE;
             exec.currentOpTarget = null;
             exec.currentOpKind = null;
+            exec.activePackageSource = null;
+            exec.initialNavDone = false;
             return;
         }
 
-        // ── 3. Navigate to package stance if far away ──
-        // Skip when the nav just resolved — NavigationSystem already confirmed arrival.
-        // The per-op range check in step 4d is the fallback if the NPC is somehow still
-        // out of position.
-        if (!navJustResolved && pkg.stance() != null && exec.pendingFuture == null
-                && !exec.pendingFutureIsNav && world.movementOps != null) {
-            Position pos = world.get(npcId, Position.class);
-            if (pos != null) {
-                double dx = pos.pos().x() - pkg.stance().x();
-                double dz = pos.pos().z() - pkg.stance().z();
-                if (dx * dx + dz * dz > NAV_RANGE_SQ) {
-                    MovementOps mov = world.movementOps;
-                    CompletableFuture<Void> navFuture = mov.navigateTo(
-                            npcId, pkg.stance().x(), pkg.stance().y(), pkg.stance().z());
-                    exec.pendingFuture = navFuture;
-                    exec.pendingFutureIsNav = true;
-                    exec.state = ExecutorState.ACTIVE;
-                    return;
-                }
-            }
+        // Detect new or resumed package
+        if (!java.util.Objects.equals(exec.activePackageSource, pkg.source())) {
+            exec.activePackageSource = pkg.source();
+            exec.initialNavDone = false;
         }
 
-        // ── 4. Execute op loop (batch pure ops, one side-effect per tick) ──
+        // ── 3. Initial navigation toward task stance/target if far away ──
+        if (!exec.initialNavDone && exec.pendingFuture == null && world.movementOps != null) {
+            GridPos navTarget = resolveTaskNavTarget(pkg);
+            if (navTarget != null) {
+                Position pos = world.get(npcId, Position.class);
+                if (pos != null) {
+                    double dx = pos.pos().x() - navTarget.x();
+                    double dz = pos.pos().z() - navTarget.z();
+                    if (dx * dx + dz * dz > NAV_RANGE_SQ) {
+                        MovementOps mov = world.movementOps;
+                        CompletableFuture<Void> navFuture = mov.navigateTo(
+                                npcId, navTarget.x(), navTarget.y(), navTarget.z());
+                        exec.pendingFuture = navFuture;
+                        exec.pendingFutureIsNav = true;
+                        exec.state = ExecutorState.ACTIVE;
+                        return;
+                    }
+                }
+            }
+            // In range or positionless: mark initial navigation completed
+            exec.initialNavDone = true;
+        }
+
+        // ── 4. Execute op loop (batch pure ops, one side-effect per tick, no distance limit) ──
         while (queue.peekCurrentOp() != null) {
             AtomicOp currentOp = queue.peekCurrentOp();
 
@@ -253,31 +265,11 @@ public class TaskExecutionSystem implements EcsSystem {
             // ── 4c. Pure-op classification (no mana gate — magic is time-gated) ──
             boolean isPure = isPureOp(currentOp);
 
-            // ── 4d. Range check (for per-op nav, when no stance is set) ──
-            GridPos target = currentOp.target();
-            if (target != null && world.movementOps != null && pkg.stance() == null
-                    && !(currentOp instanceof AtomicOp.RitualOp)) {
-                Position pos = world.get(npcId, Position.class);
-                if (pos != null) {
-                    double dx = pos.pos().x() - target.x();
-                    double dz = pos.pos().z() - target.z();
-                    if (dx * dx + dz * dz > NAV_RANGE_SQ) {
-                        MovementOps mov = world.movementOps;
-                        CompletableFuture<Void> navFuture = mov.navigateTo(
-                                npcId, target.x(), target.y(), target.z());
-                        exec.pendingFuture = navFuture;
-                        exec.pendingFutureIsNav = true;
-                        exec.state = ExecutorState.ACTIVE;
-                        return;
-                    }
-                }
-            }
-
-            // ── 4e. Visual feedback ──
+            // ── 4d. Visual feedback ──
             exec.currentOpTarget = currentOp.target();
             exec.currentOpKind = opKind(currentOp);
 
-            // ── 4f. Execute → get future ──
+            // ── 4e. Execute → get future ──
             @SuppressWarnings("unchecked")
             OpExecutor<AtomicOp> executor = (OpExecutor<AtomicOp>) registry.get(currentOp.getClass());
             if (executor == null) return;
@@ -416,6 +408,8 @@ public class TaskExecutionSystem implements EcsSystem {
             exec.state = ExecutorState.IDLE;
             exec.currentOpTarget = null;
             exec.currentOpKind = null;
+            exec.activePackageSource = null;
+            exec.initialNavDone = false;
         }
     }
 
@@ -458,6 +452,8 @@ public class TaskExecutionSystem implements EcsSystem {
         exec.state = ExecutorState.IDLE;
         exec.currentOpTarget = null;
         exec.currentOpKind = null;
+        exec.activePackageSource = null;
+        exec.initialNavDone = false;
     }
 
     /**
@@ -651,6 +647,22 @@ public class TaskExecutionSystem implements EcsSystem {
     /** Approximate tick counter from system time (for lastWorkTick tracking). */
     private static long worldTick(World world) {
         return java.lang.System.currentTimeMillis() / 50;
+    }
+
+    /**
+     * Resolve the target position for the initial navigation toward a task.
+     * Uses the package stance if present, falling back to bounding-box stance
+     * computed from the sequence. Returns null if the task has no position-bearing ops.
+     */
+    @Nullable
+    public static GridPos resolveTaskNavTarget(NpcTaskPackage pkg) {
+        if (pkg.stance() != null) {
+            return pkg.stance();
+        }
+        if (pkg.sequence() != null) {
+            return computeTaskStance(pkg.sequence());
+        }
+        return null;
     }
 
     /**
