@@ -73,7 +73,9 @@ public final class BuildingSelectionOverlay {
 
     public static boolean isActive() {
         Minecraft mc = Minecraft.getInstance();
-        boolean rightDown = mc != null && mc.mouseHandler != null && mc.mouseHandler.isRightPressed();
+        long window = (mc != null && mc.getWindow() != null) ? mc.getWindow().getWindow() : 0L;
+        boolean rightDown = (window != 0L && org.lwjgl.glfw.GLFW.glfwGetMouseButton(window, org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_RIGHT) == org.lwjgl.glfw.GLFW.GLFW_PRESS)
+                || (mc != null && mc.mouseHandler != null && mc.mouseHandler.isRightPressed());
         return WandscapePanelState.isPanelOpen()
                 && ProjectionClientState.isProjecting()
                 && WandscapePanelState.getActiveSubMode() == WandscapePanelState.SubMode.BUILD_PROJECTION

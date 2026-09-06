@@ -159,7 +159,9 @@ public final class OverviewFlightController {
         // When cursor is lifted to panel, only rotate if holding right mouse button
         boolean cursorLifted = com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState.isPanelOpen()
                 && com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState.isCursorLifted();
-        boolean rightDown = mc.mouseHandler.isRightPressed();
+        long window = mc.getWindow().getWindow();
+        boolean rightDown = (window != 0L && org.lwjgl.glfw.GLFW.glfwGetMouseButton(window, org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_RIGHT) == org.lwjgl.glfw.GLFW.GLFW_PRESS)
+                || mc.mouseHandler.isRightPressed();
         if (cursorLifted && !rightDown) return;
 
         double sens = mc.options.sensitivity().get() * 0.6 + 0.2;
@@ -264,7 +266,9 @@ public final class OverviewFlightController {
         ClipContext centerCtx = new ClipContext(origin, centerEnd, ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, mc.player);
         BlockHitResult centerHit = mc.level.clip(centerCtx);
 
-        boolean rightDown = mc.mouseHandler.isRightPressed();
+        long window = mc.getWindow().getWindow();
+        boolean rightDown = (window != 0L && org.lwjgl.glfw.GLFW.glfwGetMouseButton(window, org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_RIGHT) == org.lwjgl.glfw.GLFW.GLFW_PRESS)
+                || mc.mouseHandler.isRightPressed();
 
         if (centerHit.getType() == HitResult.Type.BLOCK) {
             // 命中草/花/蘑菇/树叶等不能立足的方块时，向下吸附到真正的地面
@@ -313,8 +317,10 @@ public final class OverviewFlightController {
         // closes the Construction UI must not re-appear as a fresh world left-click.
         boolean screenOpen = mc.screen != null;
         if (wasScreenOpen && !screenOpen) {
-            wasLeftDown = mc.mouseHandler.isLeftPressed();
-            wasRightDown = mc.mouseHandler.isRightPressed();
+            wasLeftDown = (window != 0L && org.lwjgl.glfw.GLFW.glfwGetMouseButton(window, org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_LEFT) == org.lwjgl.glfw.GLFW.GLFW_PRESS)
+                    || mc.mouseHandler.isLeftPressed();
+            wasRightDown = (window != 0L && org.lwjgl.glfw.GLFW.glfwGetMouseButton(window, org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_RIGHT) == org.lwjgl.glfw.GLFW.GLFW_PRESS)
+                    || mc.mouseHandler.isRightPressed();
         }
         wasScreenOpen = screenOpen;
         if (screenOpen) return;
@@ -324,8 +330,10 @@ public final class OverviewFlightController {
 
         // ── Click handling (skip when road mode is active — road controller handles it) ──
         if (!RoadPlacementState.isProjecting()) {
-            boolean leftDown = mc.mouseHandler.isLeftPressed();
-            boolean rightDown = mc.mouseHandler.isRightPressed();
+            boolean leftDown = (window != 0L && org.lwjgl.glfw.GLFW.glfwGetMouseButton(window, org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_LEFT) == org.lwjgl.glfw.GLFW.GLFW_PRESS)
+                    || mc.mouseHandler.isLeftPressed();
+            boolean rightDown = (window != 0L && org.lwjgl.glfw.GLFW.glfwGetMouseButton(window, org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_RIGHT) == org.lwjgl.glfw.GLFW.GLFW_PRESS)
+                    || mc.mouseHandler.isRightPressed();
 
             boolean leftClicked = leftDown && !wasLeftDown;
             boolean rightClicked = rightDown && !wasRightDown;

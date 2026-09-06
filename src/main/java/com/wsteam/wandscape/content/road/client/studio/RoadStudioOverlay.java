@@ -170,7 +170,9 @@ public final class RoadStudioOverlay {
         if (mc.screen != null) return;
 
         updateMousePos();
-        boolean leftDown = mc.mouseHandler.isLeftPressed();
+        long window = mc.getWindow().getWindow();
+        boolean leftDown = (window != 0L && org.lwjgl.glfw.GLFW.glfwGetMouseButton(window, org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_LEFT) == org.lwjgl.glfw.GLFW.GLFW_PRESS)
+                || mc.mouseHandler.isLeftPressed();
         boolean clicked = leftDown && !wasMouseDown;
         boolean released = !leftDown && wasMouseDown;
         wasMouseDown = leftDown;

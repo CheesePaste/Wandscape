@@ -159,7 +159,8 @@ public final class SplineEditorController {
         if (mc.level == null || mc.player == null) return;
 
         long window = mc.getWindow().getWindow();
-        boolean rightDown = mc.mouseHandler.isRightPressed();
+        boolean rightDown = (window != 0L && GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_RIGHT) == GLFW.GLFW_PRESS)
+                || mc.mouseHandler.isRightPressed();
         boolean uiWantsKb = RoadEditorInputHelper.wantsKeyboard();
         boolean uiWantsMouse = RoadEditorInputHelper.wantsMouse();
 
@@ -195,10 +196,12 @@ public final class SplineEditorController {
         }
 
         // Defensive: if dragging but LMB is not down, finish drag
-        if (SplineEditorClientState.isDragging() && !mc.mouseHandler.isLeftPressed()) {
+        boolean leftDown = (window != 0L && GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS)
+                || mc.mouseHandler.isLeftPressed();
+        if (SplineEditorClientState.isDragging() && !leftDown) {
             SplineEditorInputHandler.onLeftRelease(mc);
         }
-        if (RoadPlacementState.isDraggingGizmo() && !mc.mouseHandler.isLeftPressed()) {
+        if (RoadPlacementState.isDraggingGizmo() && !leftDown) {
             RoadPlacementController.onLeftRelease(mc);
         }
 

@@ -62,7 +62,8 @@ public final class RoadPlacementController {
 
         // While dragging box with LMB, update endPos as ghost moves
         if (isLmbDragging && !RoadPlacementState.isDraggingGizmo()) {
-            boolean leftDown = mc.mouseHandler.isLeftPressed();
+            boolean leftDown = (window != 0L && GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS)
+                    || mc.mouseHandler.isLeftPressed();
             if (leftDown) {
                 BlockPos ghostPos = RoadPlacementState.getGhostPos();
                 if (ghostPos != null) {

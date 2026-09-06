@@ -25,6 +25,22 @@ public abstract class MixinMouseHandler {
     @Shadow
     private double accumulatedDY;
 
+    @Shadow
+    private boolean isLeftPressed;
+
+    @Shadow
+    private boolean isRightPressed;
+
+    @Shadow
+    private boolean isMiddlePressed;
+
+    @Inject(method = "onPress", at = @At("HEAD"))
+    private void wandscape$onPress(long windowPointer, int button, int action, int modifiers, CallbackInfo ci) {
+        if (button == 0) this.isLeftPressed = (action != 0);
+        if (button == 1) this.isRightPressed = (action != 0);
+        if (button == 2) this.isMiddlePressed = (action != 0);
+    }
+
     @Inject(method = "turnPlayer", at = @At("HEAD"), cancellable = true)
     private void wandscape$onTurnPlayer(double movementTime, CallbackInfo ci) {
         // 1. Overview flight camera (V-panel overview, including Build projection while in overview)

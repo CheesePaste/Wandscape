@@ -84,8 +84,10 @@ public final class ProjectionFlightController {
         // Baseline the button edge-detection whenever a screen just closed.
         boolean screenOpen = mc.screen != null;
         if (wasScreenOpen && !screenOpen) {
-            wasLeftDown = mc.mouseHandler.isLeftPressed();
-            wasRightDown = mc.mouseHandler.isRightPressed();
+            wasLeftDown = (window != 0L && GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS)
+                    || mc.mouseHandler.isLeftPressed();
+            wasRightDown = (window != 0L && GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_RIGHT) == GLFW.GLFW_PRESS)
+                    || mc.mouseHandler.isRightPressed();
         }
         wasScreenOpen = screenOpen;
         if (screenOpen) return;
@@ -106,7 +108,7 @@ public final class ProjectionFlightController {
 
         // ── Walking mode: ghost preview, handle clicks, drain only attack/use ──
         updateGhostPosition(mc);
-        handleClicks(mc);
+        handleClicks(mc, window);
         handleEscape(mc, window);
         drainAttackUse(mc);
     }
@@ -137,7 +139,9 @@ public final class ProjectionFlightController {
             return;
         }
 
-        boolean rightDown = mc.mouseHandler.isRightPressed();
+        long window = mc.getWindow().getWindow();
+        boolean rightDown = (window != 0L && GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_RIGHT) == GLFW.GLFW_PRESS)
+                || mc.mouseHandler.isRightPressed();
 
         // Perform a long-range raycast from camera center
         Camera camera = mc.gameRenderer.getMainCamera();
@@ -173,9 +177,11 @@ public final class ProjectionFlightController {
 
     // ── Click handling ──
 
-    private static void handleClicks(Minecraft mc) {
-        boolean leftDown = mc.mouseHandler.isLeftPressed();
-        boolean rightDown = mc.mouseHandler.isRightPressed();
+    private static void handleClicks(Minecraft mc, long window) {
+        boolean leftDown = (window != 0L && GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS)
+                || mc.mouseHandler.isLeftPressed();
+        boolean rightDown = (window != 0L && GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_RIGHT) == GLFW.GLFW_PRESS)
+                || mc.mouseHandler.isRightPressed();
 
         boolean leftClicked = leftDown && !wasLeftDown;
         boolean rightClicked = rightDown && !wasRightDown;

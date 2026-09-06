@@ -127,7 +127,8 @@ public final class WandscapePanelController {
         // RMB 按住 = 视角旋转（V 面板 overview / 样条相机共用），此时必须把 OS 光标锁住
         // 才能拿到连续 GLFW delta；松开后恢复自由。远程对账器没有这一分支，因为那边
         // 没有「持久自由光标 + RMB 旋转」交互——合并时补回（本分支 5650adb6 的核心设计）。
-        boolean rightDown = mc.mouseHandler.isRightPressed();
+        boolean rightDown = (window != 0L && GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_RIGHT) == GLFW.GLFW_PRESS)
+                || mc.mouseHandler.isRightPressed();
         lastScreenOpen = screenOpen;
 
         // Record the cursor's free position whenever it is genuinely visible/free:
