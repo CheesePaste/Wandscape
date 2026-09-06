@@ -127,6 +127,11 @@ public class TouristMoveGoal extends Goal {
     private static final int WANDER_STUCK_TICKS = 120;
     /** Last path-node index seen while wandering — the primary stuck-detection signal. */
     private int lastNodeIndex = -1;
+    /** 当前闲逛目标（nav.moveTo 的 dest）；用于失败寻路兜底判定。 */
+    @Nullable
+    private BlockPos wanderNavTarget;
+    /** 连续「导航已完成但仍离目标远」的 tick 数（寻路失败 → 传回锚点重挑）。 */
+    private int wanderFailTicks;
     /** Min ticks before re-picking a wander target after the current path finishes. */
     private static final int WANDER_RECHOOSE_TICKS = 80;
     /** Min game ticks between re-issuing navigation when the navigator reports done
@@ -1472,6 +1477,8 @@ public class TouristMoveGoal extends Goal {
         lastPos = null;
         noMoveTicks = 0;
         lastNodeIndex = -1;
+        wanderNavTarget = null;
+        wanderFailTicks = 0;
         wanderOrigin = tourist.blockPosition();
     }
 
@@ -1536,6 +1543,36 @@ public class TouristMoveGoal extends Goal {
             noMoveTicks = 0;
         }
 
+        // ── 失败寻路兜底：导航已 done 但仍离目标远（nav.moveTo 找不到路 → 人与目的点隔墙/断崖）。
+        //    node-index 与位移判定在 nav.isDone 时都被短路，这里单独累计「到不了目标」的站定，超时传回锚点重挑，
+        //    避免游客面无朝向死钉在固定点（也不在交互位/队列上）。 ──
+        if (nav.isDone()) {
+            BlockPos wTarget = wanderNavTarget;
+            boolean nearTarget = wTarget != null && pos.distSqr(wTarget) <= 16.0;
+            if (wTarget != null && !nearTarget) {
+                if (++wanderFailTicks > WANDER_STUCK_TICKS) {
+                    wanderFailTicks = 0;
+                    wanderNavTarget = null;
+                    nav.stop();
+                    BlockPos tp = TouristTeleport.findSafeSpot(serverLevel(), anchor, tourist.getColonyId(), null);
+                    if (tp != null) {
+                        Log.info(TAG, "[Tourist] {} wander target unreachable, teleporting to anchor {}",
+                                tourist.getTouristName(), tp.toShortString());
+                        tourist.setPos(tp.getX() + 0.5, tp.getY(), tp.getZ() + 0.5);
+                        tourist.resetFallDistance();
+                        tourist.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+                    }
+                    lastNodeIndex = -1;
+                    lastPos = null;
+                    return;
+                }
+            } else {
+                wanderFailTicks = 0;
+            }
+        } else {
+            wanderFailTicks = 0;
+        }
+
         // ── Hard cap: never drift more than WANDER_MAX_ORIGIN_DIST from where this
         //    wander session started. Head back to a road near the origin. ──
         if (wanderOrigin != null && pos.distSqr(wanderOrigin) > WANDER_MAX_ORIGIN_DIST * WANDER_MAX_ORIGIN_DIST) {
@@ -1590,6 +1627,8 @@ public class TouristMoveGoal extends Goal {
             BlockPos g = pickWanderTarget(anchor, radius);
             if (g != null) {
                 stampRepath();
+                wanderNavTarget = g;
+                wanderFailTicks = 0;
                 nav.moveTo(g.getX() + 0.5, g.getY(), g.getZ() + 0.5, wanderSpeed);
             }
             wanderCooldown = 60 + tourist.getRandom().nextInt(120);

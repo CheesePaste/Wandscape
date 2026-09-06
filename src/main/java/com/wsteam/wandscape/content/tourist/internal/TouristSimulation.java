@@ -373,15 +373,19 @@ public final class TouristSimulation {
         BuildingConfig cfg = getConfig(level, buildingId);
         if (cfg == null || cfg.atm() == AtmConfig.NONE) return null;
 
-        // 单次取现 = 初始钱包的随机 20%~50%（封顶 travelFund 池子）——单次取不完，配合取现冷却分批取。
-        double ratio = ATM_WITHDRAW_MIN_RATIO + level.getRandom().nextDouble()
-                * (ATM_WITHDRAW_MAX_RATIO - ATM_WITHDRAW_MIN_RATIO);
-        int desired = Math.max(1, (int) Math.round(t.getInitialWallet() * ratio));
-        int amount = Math.min(desired, t.getTravelFund());
-        if (amount > 0) {
-            t.setWallet(t.getWallet() + amount);
-            t.setTravelFund(t.getTravelFund() - amount);
-            t.setLastAtmWithdrawTime(t.timeBase());
+        // 取现只在「钱包不足」时发生：复刻选目标用的 atmReusable 门槛（钱包<初始1/4 + 池子有余额 + 冷却已过）。
+        // 否则一个钱包并不紧的游客（甚至把 ATM 当景点逛进来）也会被吐钱、越补越多——这正是"有钱还取"的根因。
+        if (atmReusable(t, cfg.atm(), TOURIST_ATM_WITHDRAW_COOLDOWN_TICKS)) {
+            // 单次取现 = 初始钱包的随机 20%~50%（封顶 travelFund 池子）——单次取不完，配合取现冷却分批取。
+            double ratio = ATM_WITHDRAW_MIN_RATIO + level.getRandom().nextDouble()
+                    * (ATM_WITHDRAW_MAX_RATIO - ATM_WITHDRAW_MIN_RATIO);
+            int desired = Math.max(1, (int) Math.round(t.getInitialWallet() * ratio));
+            int amount = Math.min(desired, t.getTravelFund());
+            if (amount > 0) {
+                t.setWallet(t.getWallet() + amount);
+                t.setTravelFund(t.getTravelFund() - amount);
+                t.setLastAtmWithdrawTime(t.timeBase());
+            }
         }
         // 三值每建筑只加一次；ATM 重访只取钱，不再加三值（唯一可重复来源是酒店晨起）。
         int[] delta = t.getVisitedBuildings().contains(buildingId)
@@ -513,6 +517,10 @@ public final class TouristSimulation {
             double dz = state.getAnchor().getZ() - touristPos.getZ();
             if (dx * dx + dz * dz > visionSq) continue;
             if (requireLoaded && !level.isLoaded(state.getAnchor())) continue;
+
+            // ATM 是纯取现机：钱包不足（atmReusable）才值得去；否则不当景点候选——避免游客
+            // 把 ATM 当一般建筑逛、走到跟前还顺手取钱（"有钱还取 / 第一个建筑就跑 ATM"）。
+            if (cfg.atm() != AtmConfig.NONE && !atmReusable(t, cfg.atm(), atmCooldown)) continue;
 
             boolean hotel = cfg.service() != ServiceConfig.NONE && cfg.service().maxOccupancy() > 0;
             if (nightHotel) {
