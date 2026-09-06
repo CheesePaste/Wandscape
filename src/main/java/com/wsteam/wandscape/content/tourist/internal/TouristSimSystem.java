@@ -450,16 +450,21 @@ public final class TouristSimSystem {
                 return;
             }
             if (dayTime < 1200) {
-                // 清晨晨起：住店晚数 +1、精力回 100、结算一晚满意值、回入住前站位；**保持登记**（名单不删）
-                s.setHotelCheckinTime(0);
-                s.setNightsStayed(s.getNightsStayed() + 1);
-                s.setEnergy(com.wsteam.wandscape.Config.TOURIST_MAX_ENERGY.get());
-                TouristSimulation.grantHotelNightStay(level, s, hotel);
-                s.setCommuteTarget(null);
-                BlockPos wake = s.getWakeUpPos();
-                if (wake != null) {
-                    s.setPosition(wake.getX() + 0.5, wake.getY(), wake.getZ() + 0.5);
-                    s.setWakeUpPos(null);
+                // 清晨晨起（1000-1200）：住店晚数 +1、精力回 100、结算一晚满意值、回入住前站位；
+                // **保持登记**（名单不删）。只在当天第一次进入该窗口时结算一次——否则每个 sim tick
+                // 都会 +1 晚/回满精力/叠加满意值（一早上就刷出 200 晚、行程全青年旅社、满意度堆满）。
+                if (s.wakeDay() != (int) (level.getGameTime() / 24000L)) {
+                    s.setWakeDay((int) (level.getGameTime() / 24000L));
+                    s.setHotelCheckinTime(0);
+                    s.setNightsStayed(s.getNightsStayed() + 1);
+                    s.setEnergy(com.wsteam.wandscape.Config.TOURIST_MAX_ENERGY.get());
+                    TouristSimulation.grantHotelNightStay(level, s, hotel);
+                    s.setCommuteTarget(null);
+                    BlockPos wake = s.getWakeUpPos();
+                    if (wake != null) {
+                        s.setPosition(wake.getX() + 0.5, wake.getY(), wake.getZ() + 0.5);
+                        s.setWakeUpPos(null);
+                    }
                 }
                 // 晨起后白天外出 → fall through 到正常 sim
             } else if (isNight) {
@@ -798,6 +803,7 @@ public final class TouristSimSystem {
      */
     private void fastForwardNight(ServerLevel level, long skippedTicks) {
         long wakeGameTime = level.getGameTime() + skippedTicks; // 模拟「醒来」时刻（用于截止判定）
+        int wakeDay = (int) (wakeGameTime / 24000L); // 醒来当天的日历天（晨起幂等标记）
         Log.info(TAG, "[Tourist] 玩家睡觉跳过夜晚：快进 {} tick 模拟夜间（{} 名游客）",
                 skippedTicks, registry.getShadows().size());
         Map<UUID, TouristEntity> live = new java.util.HashMap<>();
@@ -834,10 +840,10 @@ public final class TouristSimSystem {
                     depart(level, s);
                     continue;
                 }
-                case WAKE -> wakeUpShadow(level, s);
+                case WAKE -> wakeUpShadow(level, s, wakeDay);
                 case CHECKIN_WAKE -> {
                     checkInAtNight(s, hotelTarget.getBuildingId());
-                    wakeUpShadow(level, s);
+                    wakeUpShadow(level, s, wakeDay);
                 }
             }
 
@@ -869,8 +875,10 @@ public final class TouristSimSystem {
         return hotelFound ? NightOutcome.CHECKIN_WAKE : NightOutcome.DEPART_NO_HOTEL;
     }
 
-    /** 晨起：精力回 100、住店晚数 +1、结算一晚满意值、回入住前站位、保留登记（镜像 simStep 晨起分支）。 */
-    private void wakeUpShadow(ServerLevel level, TouristShadow s) {
+    /** 晨起：精力回 100、住店晚数 +1、结算一晚满意值、回入住前站位、保留登记（镜像 simStep 晨起分支）。
+     *  {@code wakeDay} 标记醒来当天，供 simStep 晨起幂等，避免同一天重复结算。 */
+    private void wakeUpShadow(ServerLevel level, TouristShadow s, int wakeDay) {
+        s.setWakeDay(wakeDay);
         s.setHotelCheckinTime(0);
         s.setNightsStayed(s.getNightsStayed() + 1);
         s.setEnergy(com.wsteam.wandscape.Config.TOURIST_MAX_ENERGY.get());

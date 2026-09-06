@@ -39,6 +39,8 @@ public final class TouristTeleport {
     private static final int TOURIST_RESCUE_ROAD_RADIUS = 96;
     /** Max blocks a rescue teleport scans outward for open ground. */
     private static final int TOURIST_RESCUE_PERIPHERY_RADIUS = 24;
+    /** 出生落点离目标建筑的最大水平距离（格）。出生必须紧贴建筑，绝不因远处道路/临水拉到镇外。 */
+    private static final int TOURIST_SPAWN_NEAR_BUILDING_DIST = 8;
 
     private TouristTeleport() {
     }
@@ -84,6 +86,26 @@ public final class TouristTeleport {
         BlockPos near = walkableOutsideBuilding(level, entry.getX(), entry.getY(), entry.getZ(), colonyId);
         if (near != null) return near;
         return findSafeSpot(level, entry, colonyId, null);
+        }
+    }
+
+    /**
+     * 游客出生落点：限定在该目标建筑周边（≤{@link #TOURIST_SPAWN_NEAR_BUILDING_DIST} 格）的安全地面。
+     * 复用 {@link #findSafeSpot} 的「最近路 → 建筑外围 → 原地」逻辑，但结果离建筑太远（如最近的路在
+     * 96 格外、或城镇边缘临水无落点）时返回 null 放弃本次生成——游客只从建筑周围出现，不刷海里/镇外。
+     */
+    @Nullable
+    public static BlockPos findSpawnSpotNearBuilding(ServerLevel level, UUID colonyId,
+            UUID buildingId, BlockPos origin) {
+        try (var span = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tourist.teleport.find_spawn_spot")) {
+            BlockPos safe = findSafeSpot(level, origin, colonyId, buildingId);
+            if (safe == null) return null;
+            BoundingBox box = boundsOf(buildingId);
+            if (box == null) return safe; // 无 bbox 信息（极少）→ 信任 findSafeSpot
+            int nx = Math.max(box.minX(), Math.min(safe.getX(), box.maxX()));
+            int nz = Math.max(box.minZ(), Math.min(safe.getZ(), box.maxZ()));
+            double d = Math.hypot(safe.getX() - nx, safe.getZ() - nz);
+            return d <= TOURIST_SPAWN_NEAR_BUILDING_DIST ? safe : null;
         }
     }
 

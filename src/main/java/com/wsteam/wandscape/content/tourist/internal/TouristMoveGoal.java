@@ -136,11 +136,8 @@ public class TouristMoveGoal extends Goal {
     private static final int REPATH_COOLDOWN_TICKS = 20;
     /** Game tick of the last navigation re-issue; repaths are throttled against this. */
     private int lastRepathTick = Integer.MIN_VALUE;
-    /** 连续对同一目标物理卡死（>100 tick 无水平推进）触发硬兜底的次数：达到阈值直接传送到目标点，
-     *  不再传安全点重走老路。目标到达/切换/传送成功即清零。 */
+    /** 连续卡死计数已随「卡死即传送」策略弃用：保留字段仅为各处 start() 的清零复位（写而不读）。 */
     private int stuckFallbacks;
-    /** 物理卡死硬兜底触发多少次后强制传送到目标点（不作废目标）。 */
-    private static final int STUCK_FALLBACK_TELEPORT_THRESHOLD = 3;
     /** 夜晚「无空闲旅店」闩锁：一旦当晚找不到可路由旅店/过远传送失败即闩上，当晚不再搜索
      *  （夜晚无退宿，重扫白费 CPU），次日白天由 {@link #tick()} 解除。 */
     private final HotelRouteBackoff hotelRouteBackoff = new HotelRouteBackoff();
@@ -450,18 +447,16 @@ public class TouristMoveGoal extends Goal {
         // 卡死判定：硬超时在水中放宽——渡水是合法慢移动，游泳前进的游客不该被 600 tick 硬上限
         // 强制传送；水中只认水平不动（noMoveTicks，见 sameHorizontal 注释）。
         if (noMoveTicks > 100 || (totalNavTicks > 600 && !tourist.isInWater())) {
-            // 卡死 → 作废当前路径（停导航、清 waypoint）+ 之前的防卡死传送（传安全点）。
-            // 连续第 STUCK_FALLBACK_TELEPORT_THRESHOLD 次卡死 → 直接传送到目标入口，不作废目标
-            // （目标保留，由到达判定接管，避免反复重走同一卡死点后放弃）。
+            // 卡死 → 作废当前路径（停导航、清 waypoint），**直接传送到目标入口**（不作废目标，
+            // 由到达判定接管，避免反复重走同一卡死点）。不再等三轮 / 先传当前位置附近安全点。
             noMoveTicks = 0;
             totalNavTicks = 0;
             lastPos = null;
             nav.stop();
             outdoorWaypoints = null;
             currentWaypointIndex = 0;
-            if (++stuckFallbacks >= STUCK_FALLBACK_TELEPORT_THRESHOLD) {
-                if (teleportToNavTarget(target)) return;
-            }
+            if (teleportToNavTarget(target)) return;
+            // 目标侧找不到落点 → 退回当前位置附近安全点兜底
             BlockPos tp = TouristTeleport.findSafeSpot(serverLevel(), pos, tourist.getColonyId(), tourist.getTargetBuildingId());
             if (tp != null) {
                 Log.info(TAG, "[Tourist] {} outdoor nav hard fallback. Teleporting to {}", tourist.getTouristName(), tp.toShortString());
@@ -583,9 +578,8 @@ public class TouristMoveGoal extends Goal {
                 tourist.resetFallDistance();
                 tourist.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
             } else {
-                // 去 spot 途中卡死 → 作废路径 + 传安全点；连续第 STUCK_FALLBACK_TELEPORT_THRESHOLD 次
-                // 直接传送到 spot 开始交互（不作废本次访问）。
-                if (++stuckFallbacks >= STUCK_FALLBACK_TELEPORT_THRESHOLD && interactPoint != null) {
+                // 去 spot 途中卡死 → 直接传送到交互 spot 开始活动（不作废本次访问，不等三轮）。
+                if (interactPoint != null) {
                     teleportToIndoorTarget(interactPoint);
                     startActivityAtSpot();
                     return;
@@ -1367,15 +1361,12 @@ public class TouristMoveGoal extends Goal {
             }
 
             if (noMoveTicks > 100 || (totalNavTicks > 400 && !tourist.isInWater())) {
-                // 卡死 → 作废路径（停导航）+ 之前的防卡死传送（传安全点）；连续第
-                // STUCK_FALLBACK_TELEPORT_THRESHOLD 次卡死 → 直接传送到该 POI，不作废目标。
+                // 卡死 → 作废路径（停导航），**直接传送到该 POI 目标**（不作废目标，不等三轮）。
                 noMoveTicks = 0;
                 totalNavTicks = 0;
                 lastPos = null;
                 nav.stop();
-                if (++stuckFallbacks >= STUCK_FALLBACK_TELEPORT_THRESHOLD) {
-                    if (teleportToNavTarget(navTarget)) return;
-                }
+                if (teleportToNavTarget(navTarget)) return;
                 BlockPos tp = TouristTeleport.findSafeSpot(serverLevel(), pos, tourist.getColonyId(), null);
                 if (tp != null) {
                     Log.info(TAG, "[Tourist] {} POI nav hard fallback. Teleporting to {}", tourist.getTouristName(), tp.toShortString());
@@ -2075,8 +2066,8 @@ public class TouristMoveGoal extends Goal {
     }
 
     /**
-     * 连续第 STUCK_FALLBACK_TELEPORT_THRESHOLD 次卡死时传送到目标入口附近的安全点（不作废目标），
-     * 让到达判定接管；并清掉旧路线/卡死计数。找不到安全点返回 false（退回安全点传送）。
+     * 卡死时传送到目标入口附近的安全点（不作废目标），让到达判定接管；并清掉旧路线/卡死计数。
+     * 找不到安全点返回 false（退回当前位置附近安全点）。
      */
     private boolean teleportToNavTarget(@Nullable BlockPos dest) {
         if (dest == null) return false;
@@ -2087,8 +2078,8 @@ public class TouristMoveGoal extends Goal {
             tp = TouristTeleport.findSafeSpot(level, dest, tourist.getColonyId(), tourist.getTargetBuildingId());
         }
         if (tp == null) return false;
-        Log.info(TAG, "[Tourist] {} nav stuck x{}, teleporting to target {}",
-                tourist.getTouristName(), STUCK_FALLBACK_TELEPORT_THRESHOLD, tp.toShortString());
+        Log.info(TAG, "[Tourist] {} nav hard stuck, teleporting to target {}",
+                tourist.getTouristName(), tp.toShortString());
         tourist.setPos(tp.getX() + 0.5, tp.getY(), tp.getZ() + 0.5);
         tourist.resetFallDistance();
         tourist.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
@@ -2103,8 +2094,7 @@ public class TouristMoveGoal extends Goal {
         return true;
     }
 
-    /** 连续第 STUCK_FALLBACK_TELEPORT_THRESHOLD 次卡死时直接落到交互 spot（spot 是已校验可站立点），
-     *  由调用方 startActivityAtSpot 接手。 */
+    /** 卡死时直接落到交互 spot（spot 是已校验可站立点），由调用方 startActivityAtSpot 接手。 */
     private void teleportToIndoorTarget(BlockPos spot) {
         ServerLevel level = serverLevel();
         if (level == null || spot == null) return;
@@ -2113,8 +2103,8 @@ public class TouristMoveGoal extends Goal {
         tourist.resetFallDistance();
         tourist.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
         tourist.getNavigation().stop();
-        Log.info(TAG, "[Tourist] {} indoor nav stuck x{}, teleporting to spot {}",
-                tourist.getTouristName(), STUCK_FALLBACK_TELEPORT_THRESHOLD, spot.toShortString());
+        Log.info(TAG, "[Tourist] {} indoor nav hard stuck, teleporting to spot {}",
+                tourist.getTouristName(), spot.toShortString());
         lastPos = null;
         noMoveTicks = 0;
         totalNavTicks = 0;

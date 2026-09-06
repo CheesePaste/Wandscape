@@ -130,9 +130,8 @@ public final class TouristSpawnSystem {
             ChunkPos cp = new ChunkPos(ps.spawnPos);
             ChunkLoadManager.get().acquireChunk(cp);
             try {
-                // Reuse the stuck-rescue picker so a spawn never lands on a roof or
-                // inside a building: road first, then safe ground near the building.
-                BlockPos ground = TouristTeleport.findSafeSpot(level, ps.spawnPos(), ps.colonyId(), ps.buildingId());
+                // 出生点固定在该目标建筑周边（≤8 格）的安全地面：就近路→建筑外围，绝不拉到远处/海里。
+                BlockPos ground = TouristTeleport.findSpawnSpotNearBuilding(level, ps.colonyId(), ps.buildingId(), ps.spawnPos());
                 if (ground == null) continue;
                 TouristEntity tourist = new TouristEntity(
                         com.wsteam.wandscape.Wandscape.TOURIST.get(), level);
@@ -361,9 +360,8 @@ public final class TouristSpawnSystem {
                 ChunkPos cp = new ChunkPos(ps.spawnPos);
                 ChunkLoadManager.get().acquireChunk(cp);
                 try {
-                    // Reuse the stuck-rescue picker so a spawn never lands on a roof or
-                    // inside a building: road first, then safe ground near the building.
-                    BlockPos ground = TouristTeleport.findSafeSpot(level, ps.spawnPos(), ps.colonyId(), ps.buildingId());
+                    // 出生点固定在该目标建筑周边（≤8 格）的安全地面：就近路→建筑外围，绝不拉到远处/海里。
+                    BlockPos ground = TouristTeleport.findSpawnSpotNearBuilding(level, ps.colonyId(), ps.buildingId(), ps.spawnPos());
                     if (ground == null) continue;
                     TouristEntity tourist = new TouristEntity(
                             com.wsteam.wandscape.Wandscape.TOURIST.get(), level);
@@ -784,13 +782,15 @@ public final class TouristSpawnSystem {
         return targets;
     }
 
-    /** Count tourists currently checked into hotels per colony and store as overnight stayers. */
+    /** Count tourists currently checked into hotels per colony and store as overnight stayers.
+     *  同一游客可能同时以实体 + shadow 存在（观察中的住店客每 tick 把 checkedIn 回写 shadow），
+     *  必须按 tourist UUID 去重再计数，否则在线玩家殖民地会被双计（实测 27 → 70）。 */
     private void countOvernightStayers(ServerLevel level) {
-        java.util.Map<UUID, Integer> overnightCounts = new java.util.HashMap<>();
+        java.util.Map<UUID, java.util.Set<UUID>> residentIds = new java.util.HashMap<>();
         for (TouristEntity t : TouristSimSystem.getLiveTourists()) {
-            if (t.isAlive() && t.getCheckedInBuildingId() != null) {
-                UUID colonyId = t.getColonyId();
-                if (colonyId != null) overnightCounts.merge(colonyId, 1, Integer::sum);
+            if (t.isAlive() && t.getCheckedInBuildingId() != null && t.getColonyId() != null) {
+                residentIds.computeIfAbsent(t.getColonyId(), k -> java.util.concurrent.ConcurrentHashMap.newKeySet())
+                        .add(t.getUUID());
             }
         }
         // Include unloaded (sim) guests — their shadows carry the check-in state.
@@ -798,9 +798,14 @@ public final class TouristSpawnSystem {
         if (sim != null && sim.getRegistry() != null) {
             for (TouristShadow s : sim.getRegistry().getShadows().values()) {
                 if (s.getCheckedInBuildingId() != null && s.getColonyId() != null) {
-                    overnightCounts.merge(s.getColonyId(), 1, Integer::sum);
+                    residentIds.computeIfAbsent(s.getColonyId(), k -> java.util.concurrent.ConcurrentHashMap.newKeySet())
+                            .add(s.getTouristId());
                 }
             }
+        }
+        java.util.Map<UUID, Integer> overnightCounts = new java.util.HashMap<>();
+        for (var entry : residentIds.entrySet()) {
+            overnightCounts.put(entry.getKey(), entry.getValue().size());
         }
         var touristApi = getTouristApi();
         if (touristApi instanceof TouristApiImpl impl) {

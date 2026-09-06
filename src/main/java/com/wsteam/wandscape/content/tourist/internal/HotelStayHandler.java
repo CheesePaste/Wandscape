@@ -303,22 +303,35 @@ public final class HotelStayHandler {
         return touristToHotel.containsKey(touristId);
     }
 
-    /** Returns the names of all guests currently checked into a hotel. */
+    /** Returns the names of all guests currently checked into a hotel.
+     *  单一事实源是 sim shadow 注册表：sim 与实体路径的入住都会回写 shadow 的
+     *  {@code checkedInBuildingId}，因此覆盖未加载（sim）住店客与实体住店客。
+     *  in-memory {@code occupancy} map 仅在注册表缺失时兜底（磁盘加载重登记后同 tick 被点名）。 */
     public List<String> getGuestNames(UUID buildingId, net.minecraft.world.level.Level level) {
+        java.util.LinkedHashMap<UUID, String> byId = new java.util.LinkedHashMap<>();
+        TouristSimSystem sim = TouristSimSystem.getActive();
+        if (sim != null && sim.getRegistry() != null) {
+            for (TouristShadow s : sim.getRegistry().getShadows().values()) {
+                if (buildingId.equals(s.getCheckedInBuildingId())) {
+                    byId.putIfAbsent(s.getTouristId(), s.getTouristName());
+                }
+            }
+        }
         Set<UUID> guests = occupancy.get(buildingId);
-        if (guests == null || guests.isEmpty()) return List.of();
-        List<String> names = new java.util.ArrayList<>();
-        if (level instanceof net.minecraft.server.level.ServerLevel sl) {
-            for (UUID touristId : guests) {
-                for (var entity : sl.getAllEntities()) {
-                    if (entity instanceof TouristEntity t && t.getUUID().equals(touristId)) {
-                        names.add(t.getTouristName());
-                        break;
+        if (guests != null && !guests.isEmpty()) {
+            if (level instanceof net.minecraft.server.level.ServerLevel sl) {
+                for (UUID touristId : guests) {
+                    if (byId.containsKey(touristId)) continue;
+                    for (var entity : sl.getAllEntities()) {
+                        if (entity instanceof TouristEntity t && t.getUUID().equals(touristId)) {
+                            byId.put(touristId, t.getTouristName());
+                            break;
+                        }
                     }
                 }
             }
         }
-        return names;
+        return List.copyOf(byId.values());
     }
 
     // ── Heartbeat ──

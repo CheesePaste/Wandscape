@@ -131,6 +131,12 @@ public final class TouristShadow implements TouristStateHost {
     public void markHydrated() { this.hydrated = true; }
     public void markUnhydrated() { this.hydrated = false; }
 
+    /** 每晨已醒标记的日历天（sim 晨起幂等：同一日历天只结算一次；-1 = 尚未醒过）。不持久化。 */
+    private transient int wakeDay = -1;
+
+    public int wakeDay() { return wakeDay; }
+    public void setWakeDay(int d) { this.wakeDay = d; }
+
     // ── Transient night "no free hotel" latch (not persisted) ──
     // Mirrors the entity's TouristMoveGoal latch: once all hotels are full / a far
     // teleport fails one night, stop re-scanning every sim tick (SIM_INTERVAL=1) — no
