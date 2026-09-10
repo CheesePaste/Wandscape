@@ -42,5 +42,5 @@ public final class ClientConfig {
                     + "Default off: the grid is a transparent overlay on the scene and is incompatible with some shader packs.")
             .define("road.showTerrainGrid", false);
 
-    static final ModConfigSpec SPEC = BUILDER.build();
+    public static final ModConfigSpec SPEC = BUILDER.build();
 }

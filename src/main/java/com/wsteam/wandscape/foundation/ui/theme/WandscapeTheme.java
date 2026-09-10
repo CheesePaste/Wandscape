@@ -30,6 +30,7 @@ public final class WandscapeTheme {
     public static final ResourceLocation ICON_TAB_BUILD = ResourceLocation.fromNamespaceAndPath(Wandscape.MODID, "textures/gui/icons/tab_build.png");
     public static final ResourceLocation ICON_TAB_ROAD = ResourceLocation.fromNamespaceAndPath(Wandscape.MODID, "textures/gui/icons/tab_road.png");
     public static final ResourceLocation ICON_TAB_EDITOR = ResourceLocation.fromNamespaceAndPath(Wandscape.MODID, "textures/gui/icons/tab_editor.png");
+    public static final ResourceLocation ICON_TAB_SETTINGS = ResourceLocation.fromNamespaceAndPath(Wandscape.MODID, "textures/gui/icons/tab_settings.png");
     public static final ResourceLocation ICON_TAB_STATS = ResourceLocation.fromNamespaceAndPath(Wandscape.MODID, "textures/gui/icons/tab_stats.png");
     public static final ResourceLocation ICON_COLONY = ResourceLocation.fromNamespaceAndPath(Wandscape.MODID, "textures/gui/icons/icon_colony.png");
     public static final ResourceLocation ICON_COMFORT = ResourceLocation.fromNamespaceAndPath(Wandscape.MODID, "textures/gui/icons/icon_comfort.png");

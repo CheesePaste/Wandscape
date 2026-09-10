@@ -2086,5 +2086,16 @@
   "gui.wandscape.scanner.corner_step3": "3. 返回 SAVE 主扫描器点击“匹配角点”，系统将自动连接",
   "gui.wandscape.scanner.corner_step4": "   并框选出完整的 3D 建筑包围盒范围。",
   "gui.wandscape.scanner.export_road_btn": "导出道路 JSON",
-  "gui.wandscape.scanner.export_building_btn": "导出建筑 JSON"
+  "gui.wandscape.scanner.export_building_btn": "导出建筑 JSON",
+  "gui.wandscape.panel.tab.build": "建造 (1)",
+  "gui.wandscape.panel.tab.road": "道路 (2)",
+  "gui.wandscape.panel.tab.tasks": "任务 (3)",
+  "gui.wandscape.panel.tab.settings": "设置中心 (4)",
+  "gui.wandscape.settings.tab.visual": "视效控制",
+  "gui.wandscape.settings.tab.colony": "城镇经营",
+  "gui.wandscape.settings.tab.tourist": "游客生态",
+  "gui.wandscape.settings.tab.rules": "规则防护",
+  "gui.wandscape.settings.title": "%s 设置中心",
+  "gui.wandscape.settings.reset_tab": "恢复本页默认",
+  "gui.wandscape.settings.reset_tab_toast": "已恢复本页默认设置"
 }
