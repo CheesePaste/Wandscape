@@ -124,4 +124,48 @@ class BuildingPackageTest {
         assertEquals("default", all.get(0).id());
         assertEquals("pack_a", all.get(1).id());
     }
+
+    @Test
+    void testScannerExportPackageRegistration() {
+        BuildingConfigLoader loader = BuildingConfigLoader.getInstance();
+
+        // Simulate package metadata auto-registration from scanner export
+        JsonObject pkgJson = new JsonObject();
+        pkgJson.addProperty("id", "steampunk");
+        pkgJson.addProperty("name", "Steampunk Era");
+        pkgJson.addProperty("author", "Engineer");
+        BuildingPackage pkgMeta = BuildingPackage.fromJson("steampunk", pkgJson);
+        loader.registerPackage(pkgMeta);
+
+        // Simulate building JSON exported by scanner
+        JsonObject buildingJson = new JsonObject();
+        buildingJson.addProperty("id", "clock_tower");
+        buildingJson.addProperty("package_id", "steampunk");
+        buildingJson.addProperty("display_name", "Clock Tower");
+        buildingJson.addProperty("category", "wonder");
+        com.google.gson.JsonArray palette = new com.google.gson.JsonArray();
+        palette.add("minecraft:copper_block");
+        buildingJson.add("palette", palette);
+        buildingJson.add("block_indices", new com.google.gson.JsonArray());
+        buildingJson.add("pattern", new com.google.gson.JsonArray());
+
+        loader.registerFromJson("steampunk", buildingJson);
+
+        // Verify package exists and is listed
+        BuildingPackage foundPkg = loader.getPackage("steampunk");
+        assertNotNull(foundPkg);
+        assertEquals("Steampunk Era", foundPkg.name());
+
+        // Verify building is registered under canonical ID
+        BuildingConfig config = loader.get("steampunk:clock_tower");
+        assertNotNull(config);
+        assertEquals("steampunk:clock_tower", config.id());
+        assertEquals("steampunk", config.packageId());
+        assertEquals("Clock Tower", config.displayName());
+
+        // Verify package filtering
+        List<BuildingConfig> list = loader.getConfigsByPackage("steampunk");
+        assertEquals(1, list.size());
+        assertEquals("steampunk:clock_tower", list.get(0).id());
+    }
 }

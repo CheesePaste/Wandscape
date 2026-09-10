@@ -2037,6 +2037,7 @@
   "gui.wandscape.scanner.road_desc_body": "导出后将自动计算包围盒内各方块权重并生成 road_preset JSON，热注册到道路工坊与建造法杖中，可立即使用。",
   "gui.wandscape.scanner.id_label": "ID:",
   "gui.wandscape.scanner.name_label": "名称:",
+  "gui.wandscape.scanner.package_label": "包:",
   "gui.wandscape.scanner.author_label": "作者:",
   "gui.wandscape.scanner.category_label": "分类:",
   "gui.wandscape.scanner.survival_category_locked": "自定义建筑 (custom) [生存模式固定]",

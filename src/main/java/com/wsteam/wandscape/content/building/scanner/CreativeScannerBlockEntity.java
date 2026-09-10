@@ -52,6 +52,7 @@ public class CreativeScannerBlockEntity extends BlockEntity {
     private static final String KEY_ATM_DURATION = "atm_duration";
 
     // ── New field NBT keys ──
+    private static final String KEY_PACKAGE_ID = "package_id";
     private static final String KEY_NODE_CONFIG = "node_config";
     private static final String KEY_SHOP_GOODS = "shop_goods";
     private static final String KEY_SERVICE_ELEMENT_OUTPUT = "service_element_output";
@@ -81,6 +82,7 @@ public class CreativeScannerBlockEntity extends BlockEntity {
     private BlockOffset boundaryMax = BlockOffset.of(1, 1, 1);
     private final List<BlockOffset> doorOffsets = new ArrayList<>();
     private String buildingId = "";
+    private String packageId = "default";
     private String displayName = "";
     private String creator = "";
     private String category = "basic";
@@ -270,6 +272,13 @@ public class CreativeScannerBlockEntity extends BlockEntity {
     public String getBuildingId() { return buildingId; }
     public void setBuildingId(String id) { this.buildingId = id; }
 
+    public String getPackageId() { return (packageId == null || packageId.isBlank()) ? "default" : packageId; }
+    public void setPackageId(String id) {
+        this.packageId = (id == null || id.isBlank()) ? "default" : id.trim().toLowerCase(java.util.Locale.ROOT);
+    }
+    public String getTargetPackage() { return getPackageId(); }
+    public void setTargetPackage(String id) { setPackageId(id); }
+
     public String getDisplayName() { return displayName; }
     public void setDisplayName(String name) { this.displayName = name; }
 
@@ -414,6 +423,7 @@ public class CreativeScannerBlockEntity extends BlockEntity {
             tag.put(KEY_DOOR_OFFSETS, doorList);
         }
         tag.putString(KEY_BUILDING_ID, buildingId);
+        tag.putString(KEY_PACKAGE_ID, getPackageId());
         tag.putString(KEY_DISPLAY_NAME, displayName);
         tag.putString(KEY_CREATOR, creator);
         tag.putString(KEY_CATEGORY, category);
@@ -503,6 +513,8 @@ public class CreativeScannerBlockEntity extends BlockEntity {
             doorOffsets.add(readOffsetArray(tag, KEY_DOOR_OFFSET));
         }
         buildingId = tag.getString(KEY_BUILDING_ID);
+        packageId = tag.contains(KEY_PACKAGE_ID) ? tag.getString(KEY_PACKAGE_ID) : "default";
+        if (packageId.isBlank()) packageId = "default";
         displayName = tag.getString(KEY_DISPLAY_NAME);
         creator = tag.getString(KEY_CREATOR);
         category = tag.contains(KEY_CATEGORY) ? tag.getString(KEY_CATEGORY) : "basic";

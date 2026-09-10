@@ -2036,6 +2036,7 @@
   "gui.wandscape.scanner.road_desc_body": "Exporting calculates block weights within the bounding box and generates a road_preset JSON, hot-registered into Road Studio and Wand.",
   "gui.wandscape.scanner.id_label": "ID:",
   "gui.wandscape.scanner.name_label": "Name:",
+  "gui.wandscape.scanner.package_label": "Package:",
   "gui.wandscape.scanner.author_label": "Author:",
   "gui.wandscape.scanner.category_label": "Category:",
   "gui.wandscape.scanner.survival_category_locked": "Custom Building (custom) [Locked in Survival]",
