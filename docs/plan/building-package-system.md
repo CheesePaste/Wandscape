@@ -219,14 +219,14 @@ graph TD
     E --> F[阶段 6: 联调、验证与构建测试]
 ```
 
-### 阶段 1：数据模型与核心加载器 (`BuildingPackageLoader`)
+### 阶段 1：数据模型与核心加载器 (`BuildingPackageLoader`) [已完成]
 1. 新建 `BuildingPackage.java` 数据模型。
 2. 改造 `WandscapeDataLoader`：
    - 遍历 `buildings/` 时识别子目录层级，优先加载 `package.json`。
    - 为根目录内置建筑注入 `default` 核心包。
 3. 单元测试验证：验证内置 50+ 个建筑正确关联至 `default` 包。
 
-### 阶段 2：双轨别名机制与向下兼容
+### 阶段 2：双轨别名机制与向下兼容 [已完成]
 1. 改造 `BuildingConfigLoader`：
    - 引入规范 ID 格式 `<package_id>:<building_id>`。
    - 注入 `aliasToFullId`，为 `default` 包自动注入短名映射。
@@ -234,27 +234,27 @@ graph TD
    - 验证 `BuildingSavedData` 读取历史存档（无前缀 ID）时能否正常通过 `get()` 取出。
    - 验证 NPC 寻路、游客行为、酒馆住宿等 50+ 个 `BuildingConfigLoader.get()` 调用点均无需重构。
 
-### 阶段 3：网络同步协议适配
+### 阶段 3：网络同步协议适配 [已完成]
 1. 在 `ProjectionNetwork` 同步包中包含包元数据或在 `BuildingSlot` 中附带 `packageId`。
 2. 改造 `ProjectionClientState`：
    - 支持按包过滤与索引建筑槽位列表。
 
-### 阶段 4：客户端建筑选择栏 UI (`BuildingSelectionOverlay`)
+### 阶段 4：客户端建筑选择栏 UI (`BuildingSelectionOverlay`) [已完成]
 1. 在 `BuildingSelectionOverlay` 增加包选择器控件（绘制与鼠标点击响应）。
 2. 在 `WandscapePanelState` 维护当前选中的 `currentPackageId`（默认为 `ALL` 或 `default`）。
 3. 过滤逻辑：按 `(packageId == null || slot.packageId().equals(currentPackageId))` 进行级联过滤。
 
-### 阶段 5：扫描器成套打包与导出支持
+### 阶段 5：扫描器成套打包与导出支持 [已完成]
 1. 在 `CreativeScannerBlockEntity` 与 `CreativeScannerScreen` 增加 `targetPackage` 字段与 UI 输入框。
 2. 改造 `ScannerExportPacket`：
    - 按目标包路径创建子目录。
    - 自动生成初始 `package.json`。
    - 运行时向客户端与服务端即时注册新建筑包。
 
-### 阶段 6：回归验证与构建测试
+### 阶段 6：回归验证与构建测试 [已完成]
 1. 执行 `./gradlew build` 保证编译通过。
-2. 验证存量世界存档加载。
-3. 验证创造模式扫描器导出到新包，并在建筑栏中即时出现且可通过包筛选器过滤。
+2. 验证存量世界存档加载兼容性与双轨别名映射。
+3. 单元测试覆盖包解析、隔离、排序与运行时动态注册。
 
 ---
 
