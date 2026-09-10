@@ -45,7 +45,11 @@ public class WandscapeDataLoader extends SimpleJsonResourceReloadListener {
     }
 
     public <T> WandscapeDataRegistry<T> register(String category, BiFunction<String, JsonElement, T> parser) {
-        SimpleDataRegistry<T> registry = new SimpleDataRegistry<>(parser);
+        return register(category, parser, null);
+    }
+
+    public <T> WandscapeDataRegistry<T> register(String category, BiFunction<String, JsonElement, T> parser, Runnable onClear) {
+        SimpleDataRegistry<T> registry = new SimpleDataRegistry<>(parser, onClear);
         registries.computeIfAbsent(category, k -> new ArrayList<>()).add(registry);
         return registry;
     }

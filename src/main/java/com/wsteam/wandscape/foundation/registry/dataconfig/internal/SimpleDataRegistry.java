@@ -9,9 +9,15 @@ import java.util.function.BiFunction;
 class SimpleDataRegistry<T> implements WandscapeDataRegistry<T> {
     private final Map<String, T> entries = new HashMap<>();
     private final BiFunction<String, JsonElement, T> parser;
+    private final Runnable onClear;
 
     SimpleDataRegistry(BiFunction<String, JsonElement, T> parser) {
+        this(parser, null);
+    }
+
+    SimpleDataRegistry(BiFunction<String, JsonElement, T> parser, Runnable onClear) {
         this.parser = parser;
+        this.onClear = onClear;
     }
 
     @Override
@@ -38,5 +44,8 @@ class SimpleDataRegistry<T> implements WandscapeDataRegistry<T> {
 
     void clear() {
         entries.clear();
+        if (onClear != null) {
+            onClear.run();
+        }
     }
 }

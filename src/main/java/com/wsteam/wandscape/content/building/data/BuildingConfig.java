@@ -21,6 +21,7 @@ import java.util.*;
  */
 public record BuildingConfig(
         String id,
+        @SerializedName("package_id") String packageId,
         @SerializedName("display_name") String displayName,
         @SerializedName("creator") String creator,
         String category,
@@ -47,6 +48,58 @@ public record BuildingConfig(
         @SerializedName("deprecated") boolean deprecated,
         @SerializedName("entities") List<DecorationEntity> entities
 ) {
+    /** 26-argument compatibility constructor defaulting packageId to default. */
+    public BuildingConfig(
+            String id,
+            String displayName,
+            String creator,
+            String category,
+            List<BlockOffset> pattern,
+            List<String> palette,
+            List<Integer> blockIndices,
+            Map<String, String> blockNbt,
+            int comfort,
+            int magic,
+            int wonder,
+            UnlockRequirement unlockRequirement,
+            @Nullable BoundaryBox boundary,
+            @Nullable BlueprintRef blueprint,
+            @Nullable NodeConfig nodeConfig,
+            DecorationConfig decoration,
+            WonderConfig wonderConfig,
+            ShopConfig shop,
+            ServiceConfig service,
+            RelaxConfig relax,
+            AtmConfig atm,
+            List<BlockOffset> doorOffsets,
+            List<InteractSpot> interactSpots,
+            boolean firstFree,
+            boolean deprecated,
+            List<DecorationEntity> entities
+    ) {
+        this(id, BuildingPackage.DEFAULT_ID, displayName, creator, category,
+                pattern, palette, blockIndices, blockNbt, comfort, magic, wonder,
+                unlockRequirement, boundary, blueprint, nodeConfig, decoration,
+                wonderConfig, shop, service, relax, atm, doorOffsets, interactSpots,
+                firstFree, deprecated, entities);
+    }
+
+    public BuildingConfig withPackageId(String newPackageId) {
+        return new BuildingConfig(id, newPackageId, displayName, creator, category,
+                pattern, palette, blockIndices, blockNbt, comfort, magic, wonder,
+                unlockRequirement, boundary, blueprint, nodeConfig, decoration,
+                wonderConfig, shop, service, relax, atm, doorOffsets, interactSpots,
+                firstFree, deprecated, entities);
+    }
+
+    public BuildingConfig withIdAndPackageId(String newId, String newPackageId) {
+        return new BuildingConfig(newId, newPackageId, displayName, creator, category,
+                pattern, palette, blockIndices, blockNbt, comfort, magic, wonder,
+                unlockRequirement, boundary, blueprint, nodeConfig, decoration,
+                wonderConfig, shop, service, relax, atm, doorOffsets, interactSpots,
+                firstFree, deprecated, entities);
+    }
+
     public record UnlockRequirement(
             @SerializedName("min_colony_level") int minColonyLevel
     ) {
@@ -171,6 +224,7 @@ public record BuildingConfig(
             JsonObject obj = json.getAsJsonObject();
 
             String id = getString(obj, "id", "");
+            String packageId = getString(obj, "package_id", BuildingPackage.DEFAULT_ID);
             String displayName = getString(obj, "display_name", "");
             String creator = getString(obj, "creator", "");
             String category = getString(obj, "category", "basic");
@@ -372,7 +426,7 @@ public record BuildingConfig(
                 entities = List.copyOf(ents);
             }
 
-            return new BuildingConfig(id, displayName, creator, category,
+            return new BuildingConfig(id, packageId, displayName, creator, category,
                     pattern, palette, blockIndices, blockNbt,
                     comfort, magic, wonder,
                     unlockRequirement, boundary, blueprint, nodeConfig,
