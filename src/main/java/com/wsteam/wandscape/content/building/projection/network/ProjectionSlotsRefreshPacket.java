@@ -41,6 +41,7 @@ public record ProjectionSlotsRefreshPacket(
         buf.writeVarInt(pkt.buildingSlots.size());
         for (BuildingSlot slot : pkt.buildingSlots) {
             buf.writeUtf(slot.id());
+            buf.writeUtf(slot.packageId());
             buf.writeUtf(slot.displayName());
             buf.writeUtf(slot.category());
             buf.writeBoolean(slot.firstFreeAvailable());
@@ -51,7 +52,7 @@ public record ProjectionSlotsRefreshPacket(
         int count = buf.readVarInt();
         List<BuildingSlot> slots = new ArrayList<>(count);
         for (int i = 0; i < count; i++) {
-            slots.add(new BuildingSlot(buf.readUtf(), buf.readUtf(), buf.readUtf(), buf.readBoolean()));
+            slots.add(new BuildingSlot(buf.readUtf(), buf.readUtf(), buf.readUtf(), buf.readUtf(), buf.readBoolean()));
         }
         return new ProjectionSlotsRefreshPacket(slots);
     }

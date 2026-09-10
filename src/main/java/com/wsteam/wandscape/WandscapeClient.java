@@ -396,7 +396,7 @@ public class WandscapeClient {
             var mc = Minecraft.getInstance();
             if (mc.player == null) return;
             if (packet.granted()) {
-                ProjectionClientState.enterProjection(packet.bodyAnchor(), packet.buildingSlots());
+                ProjectionClientState.enterProjection(packet.bodyAnchor(), packet.buildingSlots(), packet.packages());
                 com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState.openBuildingBar();
             } else {
                 ProjectionClientState.exitProjection();

@@ -1,6 +1,8 @@
 package com.wsteam.wandscape.content.building.projection.network;
 import com.wsteam.wandscape.content.colony.network.ColonyStatsSyncPacket;
 
+import com.wsteam.wandscape.content.building.data.BuildingPackage;
+import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.content.building.projection.data.BuildingSlot;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.api.WandscapeApis;
@@ -53,7 +55,7 @@ public record ProjectionEnterPacket() implements CustomPacketPayload {
             ProjectionNetwork.removeProjecting(player);
             // Restore abilities — player should return to anchor at last known body pos
             // The client handles the teleport + ability restore on receive of denied response
-            var deny = new ProjectionEnterResponsePacket(false, List.of(), BlockPos.ZERO);
+            var deny = new ProjectionEnterResponsePacket(false, List.of(), List.of(), BlockPos.ZERO);
             sendResponse(player, deny);
             return;
         }
@@ -80,7 +82,8 @@ public record ProjectionEnterPacket() implements CustomPacketPayload {
         Log.info(TAG, "[Projection] Granting entry to {}: {} buildings available, body at {}",
                 player.getGameProfile().getName(), slots.size(), bodyAnchor);
 
-        var response = new ProjectionEnterResponsePacket(true, slots, bodyAnchor);
+        List<BuildingPackage> pkgs = BuildingConfigLoader.getInstance().getAllPackages();
+        var response = new ProjectionEnterResponsePacket(true, slots, pkgs, bodyAnchor);
         sendResponse(player, response);
     }
 
