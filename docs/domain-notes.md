@@ -67,6 +67,7 @@
 3. **祭坛施法约束**：
    - 声明 `altar_only: true` 的魔法（如 revive）严禁被 NPC 直接自动决策施放，必须由玩家在祭坛 UI 发布任务后 NPC 走到祭坛中心施放。
    - 祭坛 CD 独立存储于 `AltarCastState`（按祭坛 buildingId 独立，不跨祭坛共享）。
+   - **祭坛需要一名在世法师**，所以全员阵亡时祭坛跟着停摆。唯一的自举出口是市政厅面板的「复活法师」按钮（`ReviveHandler.reviveLatestAtTownHall`，全灭 + 该殖民地 5 分钟冷却），一次只救回一名，其余死者仍由他回祭坛接回。**不要再加回任何被动自动复活**：心跳轮询的全灭判定会因远处法师所在区块卸载而被误判为「全灭」。全灭判定必须走 ECS 桥（`onRemovedFromLevel` 只在 KILLED/DISCARDED 移除条目，区块卸载保留），不要用「已加载实体」枚举。
 4. **第三方（Goety）聚晶施法 volley 化**（`compat/goety/`）：
    - `IChargingSpell`（EverCharge 持续 / 蓄力连发如 Steam / 呼吸）按 Goety 玩家侧语义：充能（`castUp/speed`）→ 按 `Cooldown(caster,staff,shots)` 节拍逐发 `SpellResult` → 打到 `shotsNumber()` 或单轮齐射硬顶自然收尾并上 `defaultSpellCooldown` 冷却。
    - 单轮齐射硬顶默认 100t，走 `MagicApi.get/setSustainedCastMaxTicks`（内部 BalanceValues，可被 wandscape_balance.json 覆盖），**不进 Config TOML**。

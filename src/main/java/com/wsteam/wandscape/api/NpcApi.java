@@ -38,7 +38,7 @@ public interface NpcApi {
 
     /**
      * 复活一名法师：需先存在其死亡记录（{@code ColonyDeathRegistry}），且当前不存活，否则返回 false。
-     * 位置自动解析到其所在殖民地的市政厅门口（与全灭保底/保卫复活同定位逻辑）；复活免费，成本由调用方自理。
+     * 位置自动解析到其所在殖民地的市政厅门口（与市政厅保底复活同定位逻辑）；复活免费，成本由调用方自理。
      *
      * @return 成功生成新实体 true；无死亡记录 / 仍存活 / 生成失败 false
      */
@@ -106,8 +106,6 @@ public interface NpcApi {
     void setNpcManaRegenTicks(int v);
     double getNpcManaRegenFraction();
     void setNpcManaRegenFraction(double v);
-    int getReviveNearBuildingRange();
-    void setReviveNearBuildingRange(int v);
 
     // ── 未实现（重设计阶段声明，见 @Unimplemented）──
 

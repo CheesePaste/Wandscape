@@ -158,6 +158,7 @@ import net.neoforged.neoforge.registries.NeoForgeRegistries;
 
 import java.nio.charset.StandardCharsets;
 import java.util.EnumMap;
+import java.util.List;
 import java.util.Map;
 
 @Mod(Wandscape.MODID)
@@ -898,6 +899,17 @@ public class Wandscape {
                         TownHallTouristSpawnPacket.STREAM_CODEC,
                         (packet, ctx) -> TownHallTouristSpawnPacket
                                 .handleServer(packet, (net.minecraft.server.level.ServerPlayer) ctx.player()))
+                // ── Town hall bootstrap revive (anti-deadlock, all wizards dead) ──
+                .playToServer(
+                        com.wsteam.wandscape.content.building.network.TownHallReviveRequestPacket.TYPE,
+                        com.wsteam.wandscape.content.building.network.TownHallReviveRequestPacket.STREAM_CODEC,
+                        (packet, ctx) -> com.wsteam.wandscape.content.building.network.TownHallReviveRequestPacket
+                                .handleServer(packet, ctx))
+                .playToClient(
+                        com.wsteam.wandscape.content.building.network.TownHallReviveStatePacket.TYPE,
+                        com.wsteam.wandscape.content.building.network.TownHallReviveStatePacket.STREAM_CODEC,
+                        (packet, ctx) -> com.wsteam.wandscape.content.building.network.TownHallReviveStatePacket
+                                .handleClient(packet))
                 // ── Colony create (town hall naming flow) ──
                 .playToServer(
                         com.wsteam.wandscape.content.colony.network.ColonyCreateRequestPacket.TYPE,
@@ -1231,15 +1243,6 @@ public class Wandscape {
 
             // Heartbeat every ~5 seconds (100 MC ticks)
             if (mcTickCount % 100 == 0) {
-                var colonyApi = WandscapeApis.getColonyApiSilently();
-                if (colonyApi != null) {
-                    var overworld = event.getServer().overworld();
-                    if (overworld != null) {
-                        for (var colonyId : colonyApi.getAllColonyIds()) {
-                            com.wsteam.wandscape.content.npc.internal.ReviveHandler.checkAndAutoReviveColony(overworld, colonyId);
-                        }
-                    }
-                }
                 Log.debug(com.wsteam.wandscape.foundation.log.LogCategory.BOOTSTRAP, "engine", "engineTick=#{} mcTick=#{} — entities={} tasks_in_pool={} pendingAsync={}",
                         engineTickCount, mcTickCount,
                         world.getNextEntityId() - 1,
@@ -1257,7 +1260,7 @@ public class Wandscape {
     @SubscribeEvent
     public void onDatapackSync(net.neoforged.neoforge.event.OnDatapackSyncEvent event) {
         var rawJsons = configLoader.getRawJsons();
-        java.util.List<String> jsonList = new java.util.ArrayList<>();
+        List<String> jsonList = new java.util.ArrayList<>();
         for (var json : rawJsons.values()) {
             jsonList.add(json.toString());
         }

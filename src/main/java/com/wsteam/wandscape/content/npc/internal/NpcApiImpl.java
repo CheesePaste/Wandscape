@@ -336,6 +336,4 @@ public class NpcApiImpl implements NpcApi {
     @Override public void setNpcManaRegenTicks(int v) { BalanceValues.setNpcManaRegenTicks(v); }
     @Override public double getNpcManaRegenFraction() { return BalanceValues.npcManaRegenFraction(); }
     @Override public void setNpcManaRegenFraction(double v) { BalanceValues.setNpcManaRegenFraction(v); }
-    @Override public int getReviveNearBuildingRange() { return BalanceValues.reviveNearBuildingRange(); }
-    @Override public void setReviveNearBuildingRange(int v) { BalanceValues.setReviveNearBuildingRange(v); }
 }

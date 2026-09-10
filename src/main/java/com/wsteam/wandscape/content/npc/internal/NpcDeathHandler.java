@@ -78,11 +78,10 @@ public final class NpcDeathHandler {
         // 像玩家/驯养宠物一样把阵亡消息送上聊天区（文案用原版战斗记录，受众受 Config 控制）
         broadcastDeathMessage(level, npc, colony);
 
-        // 保卫殖民地复活：阵亡于距本殖民地建筑 ≤REVIVE_NEAR_BUILDING_RANGE 格 → 直接在市政厅门口复活
-        //（复用全灭保底的市政厅门口定位 + 虚弱复活；复活后该法师存活，下方全灭检测自然不触发）
-        ReviveHandler.checkAndReviveNearColonyBuilding(level, rec);
-        // NPC 阵亡时立即轮询全灭检测：若全员阵亡，自动在市政厅门口释放复活魔法
-        ReviveHandler.checkAndAutoReviveColony(level, colony);
+        // 复活只走祭坛（或全灭时玩家按市政厅的保底按钮），阵亡本身不触发任何自动复活。
+        // 阵亡会改变小镇人口，推送最新状态让已打开的市政厅面板刷新保底按钮可用性。
+        com.wsteam.wandscape.content.building.network.TownHallReviveStatePacket
+                .broadcast(level, colony);
     }
 
     /**

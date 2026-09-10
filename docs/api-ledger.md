@@ -61,12 +61,11 @@
 | `NpcData getNpc(UUID)` | 单个 NPC 数据 | ✅ | 已走 |
 | `getGuardRange/setGuardRange` …（18 个守卫战斗平衡对） | guard 战斗/风筝/自防距离值 | ✅ | BalanceValues 委托 |
 | `getNpcRegenGraceTicks`…（6 个回血/魔力平衡对） | NPC 回血/魔力节奏 | ✅ | BalanceValues |
-| `getReviveNearBuildingRange`（1 对） | 复活范围 | ✅ | BalanceValues 委托 |
 | `UUID spawnNpc(UUID colonyId, BlockPos)` | 生成殖民地 NPC（默认：按小镇等级掷点 + 默认名字/皮肤/满蓝 + 修 ECS 归属） | ✅ `NpcApiImpl` | ✅ 收敛：酒馆付费/简历招募、`tavern recruit` 命令走它；`ColonyCommand` 初始 builder（冷启动+法杖/铁甲）与 `ReviveHandler` 复活路径保留原实现（特殊设备/复活语义，见 §2b 注） |
 | `UUID spawnNpc(UUID colonyId, BlockPos, NpcSpawnSpec)` | 生成 + 自定义覆盖（属性/等级/皮肤/帽色/名字/习得魔法/策略） | ✅ | 🔧 纯 addon 能力（`NpcSpawnSpec` = 最大灵活性） |
 | `boolean removeNpc(UUID)` | 解雇/移除 NPC | 🔶 桩 | 🔧 本体绕开：`WandscapeNpc.dismissFromColony`（`WandscapeNpc.java:993`，仅 `NpcDismissPacket`） |
 | `boolean isNpcAlive(UUID)` | npcId 是否指向在世法师（实体存在+未移除+isAlive） | ✅ `NpcApiImpl`（overworld 实体查询） | 🔧 无现成直接入口（各系统直调实体判断） |
-| `boolean reviveNpc(UUID)` / `reviveNpc(UUID, BlockPos)` | 复活法师：需死亡记录+当前不存活；pos 可空默认市政厅门口，免费 | ✅ `NpcApiImpl`（经 `ReviveHandler.spawnFromRecordAt` + `ColonyDeathRegistry.getByNpcId`） | 🔧 本体绕开：`ReviveHandler` 三条路径（祭坛/全灭保底/保卫复活）——API 是程序化强制入口，本体路径保留 |
+| `boolean reviveNpc(UUID)` / `reviveNpc(UUID, BlockPos)` | 复活法师：需死亡记录+当前不存活；pos 可空默认市政厅门口，免费 | ✅ `NpcApiImpl`（经 `ReviveHandler.spawnFromRecordAt` + `ColonyDeathRegistry.getByNpcId`） | 🔧 本体绕开：`ReviveHandler` 两条路径（祭坛 / 市政厅全灭保底按钮）——API 是程序化强制入口，本体路径保留 |
 | `List<ItemStack> getNpcInventory(UUID)` / `getNpcInventorySize(UUID)` | 读法师背包（实体级 27 格 `SimpleContainer`） | ✅ 新增 | 🔧 本体：`NpcInventoryMenu` 直绑 `npc.inventory`（UI 流程，非 API 操作） |
 | `setNpcInventorySlot(UUID,int,ItemStack)` / `addToNpcInventory(UUID,ItemStack)` / `clearNpcInventory(UUID)` | 改背包（放指定格 / 追加 / 清空） | ✅ 新增 | 🔧 纯 addon 能力 |
 | `isPickupEnabled/setPickupEnabled`、`isAutoPickupEnabled/setAutoPickupEnabled` | 拾取 / 自动拾取开关（联动语义与 NpcTogglePacket 一致） | ✅ 新增 | ✅ 本体走：`NpcTogglePacket` 的拾取/自动拾取分支改走 API |

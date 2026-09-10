@@ -39,6 +39,7 @@ public class ColonySavedData extends SavedData {
     private static final String KEY_Z = "z";
     private static final String KEY_FOUNDER = "founder";
     private static final String KEY_NAMING_STYLE = "namingStyle";
+    private static final String KEY_REVIVE_COOLDOWN_UNTIL = "reviveCooldownUntil";
     private static final String KEY_TOURIST_SPAWN_DISABLED = "touristSpawnDisabled";
 
     private final Map<UUID, BlockPos> colonies = new ConcurrentHashMap<>();
@@ -48,6 +49,8 @@ public class ColonySavedData extends SavedData {
     private final Map<UUID, NameStyle> namingStyles = new ConcurrentHashMap<>();
     /** Colony IDs whose town hall 「生成游客」 toggle is OFF (absent = enabled). */
     private final Set<UUID> touristSpawnDisabled = ConcurrentHashMap.newKeySet();
+    /** colonyId → game time until which the town hall 「复活法师」 bootstrap revive stays on cooldown (absent = ready). */
+    private final Map<UUID, Long> reviveCooldownUntil = new ConcurrentHashMap<>();
 
     private static final Factory<ColonySavedData> FACTORY = new Factory<>(
             ColonySavedData::new,
@@ -133,6 +136,21 @@ public class ColonySavedData extends SavedData {
                 colonyId.toString().substring(0, 8), enabled ? "enabled" : "disabled");
     }
 
+    /** Game time until which the town hall 「复活法师」 bootstrap revive is on cooldown; 0 = ready. */
+    public long getReviveCooldownUntil(UUID colonyId) {
+        return reviveCooldownUntil.getOrDefault(colonyId, 0L);
+    }
+
+    public void setReviveCooldownUntil(UUID colonyId, long gameTime) {
+        if (reviveCooldownUntil.getOrDefault(colonyId, 0L) == gameTime) return;
+        if (gameTime <= 0) {
+            reviveCooldownUntil.remove(colonyId);
+        } else {
+            reviveCooldownUntil.put(colonyId, gameTime);
+        }
+        setDirty();
+    }
+
     public Map<UUID, BlockPos> getAllColonies() {
         return Collections.unmodifiableMap(colonies);
     }
@@ -194,6 +212,10 @@ public class ColonySavedData extends SavedData {
             if (style != null) {
                 entryTag.putString(KEY_NAMING_STYLE, style.name());
             }
+            Long cooldownUntil = reviveCooldownUntil.get(entry.getKey());
+            if (cooldownUntil != null && cooldownUntil > 0) {
+                entryTag.putLong(KEY_REVIVE_COOLDOWN_UNTIL, cooldownUntil);
+            }
             list.add(entryTag);
         }
         tag.put(KEY_COLONIES, list);
@@ -228,6 +250,9 @@ public class ColonySavedData extends SavedData {
                     Log.warn(TAG, "[Colony] Unknown naming style '{}' for colony {}, using FANTASY",
                             entry.getString(KEY_NAMING_STYLE), id);
                 }
+            }
+            if (entry.contains(KEY_REVIVE_COOLDOWN_UNTIL)) {
+                data.reviveCooldownUntil.put(id, entry.getLong(KEY_REVIVE_COOLDOWN_UNTIL));
             }
         }
         Log.info(TAG, "Loaded {} colonies from saved data", data.colonies.size());

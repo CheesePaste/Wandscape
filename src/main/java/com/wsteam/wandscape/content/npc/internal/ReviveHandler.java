@@ -1,9 +1,9 @@
 package com.wsteam.wandscape.content.npc.internal;
 
-import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.content.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.content.building.internal.BuildingState;
+import com.wsteam.wandscape.content.colony.ColonySavedData;
 import com.wsteam.wandscape.content.task.component.ColonyMember;
 import com.wsteam.wandscape.content.task.component.NpcInventory;
 import com.wsteam.wandscape.content.task.ecs.World;
@@ -24,19 +24,23 @@ import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.MobSpawnType;
-import net.minecraft.world.level.levelgen.structure.BoundingBox;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.UUID;
 
 /**
  * 复活效果：祭坛施法引导完成后在指定位置（祭坛中心最上方）生成新 WandscapeNpc，
- * 恢复身份/外观/属性/装备/背包。入口已迁移为**祭坛唯一**（AltarCastExecutor 调用
- * {@link #spawnFromRecordAt}）；shift+右键直接施放已移除（MagicInteractHandler 删除）。
+ * 恢复身份/外观/属性/装备/背包。入口两条，均经 {@link #spawnFromRecordAt}：
+ * <ul>
+ *   <li><b>祭坛</b>（常规）：AltarCastExecutor 在祭坛施法引导结束后调用。</li>
+ *   <li><b>市政厅保底</b>（防卡死）：小镇全灭时玩家在市政厅面板按「复活法师」按钮，
+ *       经 {@link #reviveLatestAtTownHall} 复活最近阵亡者——没有存活法师就没人能跑祭坛，
+ *       这是唯一的自举出口。</li>
+ * </ul>
+ * shift+右键直接施放已移除（MagicInteractHandler 删除）。
  *
- * <p>全灭保底：当小镇所有 NPC 均已阵亡时，全灭保底自动在市政厅门口释放复活魔法复活离世成员。
- * 保卫殖民地复活：法师战死若距本殖民地建筑 ≤ {@link Config#REVIVE_NEAR_BUILDING_RANGE} 格，同样直接在市政厅门口复活。
- * 虚弱复活：生成即 1 血 0 蓝，靠脱战回血与魔力回复缓慢恢复。
+ * <p>虚弱复活：生成即 1 血 0 蓝，靠脱战回血与魔力回复缓慢恢复。
  */
 public final class ReviveHandler {
 
@@ -45,82 +49,105 @@ public final class ReviveHandler {
     /** revive 魔法 id（magic_spells/revive.json 的 key）。 */
     public static final String REVIVE_MAGIC_ID = "revive";
 
+    /** 市政厅保底复活冷却（tick，5 分钟）——防止「全员送死 → 按钮拉人」反复刷。 */
+    public static final long TOWN_HALL_REVIVE_COOLDOWN_TICKS = 5 * 60 * 20L;
+
+    /** 市政厅保底复活的结果，供 UI 回执区分文案。 */
+    public enum TownHallReviveResult {
+        /** 复活成功。 */
+        OK,
+        /** 该小镇没有待复活的死亡记录。 */
+        NO_DEATH_RECORD,
+        /** 仍有存活法师——保底按钮只在全灭时可用。 */
+        STILL_ALIVE,
+        /** 冷却中。 */
+        COOLDOWN,
+        /** 定位成功但实体生成失败（记录保留，可重试）。 */
+        SPAWN_FAILED
+    }
+
     private ReviveHandler() {}
 
-    /**
-     * 检查并执行小镇全灭自动复活保底。
-     * 当某小镇存活 NPC 为 0、但存在死亡记录时，自动在市政厅门口释放复活魔法复活最近死亡的一名 NPC。
-     */
-    public static boolean checkAndAutoReviveColony(ServerLevel level, UUID colonyId) {
-        if (colonyId == null) return false;
-        ColonyDeathRegistry deathReg = ColonyDeathRegistry.get(level);
-        DeathRecord latestRec = deathReg.latestInColony(colonyId);
-        if (latestRec == null) return false;
+    // ── 全灭判定与保底复活（市政厅 UI）──
 
-        // 检查世界上该小镇活着的 NPC 数量
+    /**
+     * 小镇在世法师数量。**负载无关**：桥条目只在实体真正销毁（KILLED/DISCARDED，即
+     * {@link net.minecraft.world.entity.Entity.RemovalReason#shouldDestroy()}）时才被
+     * {@code onNpcLeaveWorld} 摘掉，区块卸载/跨维度只标记 removed、条目照留——所以按桥条目
+     * 判定，不受远处法师所在区块是否加载影响。
+     *
+     * <p>两个必须绕开的坑：①阵亡后桥条目还会残留约 20 tick（死亡动画结束才 setRemoved），
+     * 期间 {@code isAlive()} 已为 false，故不能只看条目存在；②实体引用丢失时保守算在世，
+     * 宁可按钮不可按，也不能误判全灭而多生成一名法师。
+     */
+    public static int aliveCount(UUID colonyId) {
+        if (colonyId == null) return 0;
         World world = com.wsteam.wandscape.content.task.ecs.World.getActive();
-        if (world != null) {
-            for (var entry : EntityComponentBridge.INSTANCE.allNpcs().entrySet()) {
-                WandscapeNpc npc = entry.getValue();
-                if (npc != null && !npc.isRemoved() && npc.isAlive()) {
-                    ColonyMember member = world.get(entry.getKey(), ColonyMember.class);
-                    if (member != null && colonyId.equals(member.colonyId())) {
-                        return false; // 尚有幸存者，不触发保底
-                    }
-                }
+        if (world == null) return 0;
+        int n = 0;
+        for (var entry : EntityComponentBridge.INSTANCE.allNpcs().entrySet()) {
+            ColonyMember member = world.get(entry.getKey(), ColonyMember.class);
+            if (member != null && colonyId.equals(member.colonyId())
+                    && isBridgeEntryAlive(entry.getValue())) {
+                n++;
             }
         }
+        return n;
+    }
 
-        // 确认全灭：定位市政厅门口/入口
-        BlockPos townHallPos = resolveTownHallDoorOrAnchor(level, colonyId, new BlockPos(latestRec.x(), latestRec.y(), latestRec.z()));
-        spawnFromRecordAt(level, latestRec, townHallPos);
-        Log.info(TAG, "全灭保底触发：小镇 {} 成员全灭，已自动在市政厅门口 ({}) 释放复活魔法唤醒 {}",
-                colonyId.toString().substring(0, 8), townHallPos.toShortString(), latestRec.name());
-        return true;
+    /** 桥条目是否代表一名在世法师（见 {@link #aliveCount} 的两条注意事项）。 */
+    private static boolean isBridgeEntryAlive(WandscapeNpc npc) {
+        if (npc == null) return true;
+        if (!npc.isRemoved()) return npc.isAlive();
+        var reason = npc.getRemovalReason();
+        return reason != null && !reason.shouldDestroy(); // 仅卸载/跨维度：人还在，只是没加载
+    }
+
+    /** 小镇待复活人数（死亡记录条数）。 */
+    public static int deadCount(Level level, UUID colonyId) {
+        if (level == null || colonyId == null) return 0;
+        return ColonyDeathRegistry.get(level).countInColony(colonyId);
+    }
+
+    /** 市政厅保底复活剩余冷却（tick）；未在冷却返回 0。 */
+    public static long townHallReviveCooldownRemaining(Level level, UUID colonyId) {
+        if (level == null || colonyId == null) return 0;
+        long until = ColonySavedData.getOrCreate(level).getReviveCooldownUntil(colonyId);
+        return Math.max(0L, until - level.getGameTime());
+    }
+
+    /** 市政厅保底复活剩余冷却（秒，向上取整）——UI 倒计时与回执文案共用，避免两处各写一遍换算。 */
+    public static int townHallReviveCooldownSeconds(Level level, UUID colonyId) {
+        return (int) ((townHallReviveCooldownRemaining(level, colonyId) + 19L) / 20L);
     }
 
     /**
-     * 保卫殖民地复活：法师战死时若距本殖民地任一建筑 AABB ≤ {@link Config#REVIVE_NEAR_BUILDING_RANGE} 格，
-     * 立即在市政厅门口复活（复用全灭保底的市政厅门口定位 + 虚弱复活 {@link #spawnFromRecordAt}），无需祭坛仪式。
-     * 阵亡点距建筑 ≤ range 时尝试复活并返回 true；生成失败时记录保留，可由祭坛/全灭保底重试。
+     * 市政厅保底复活：全灭且不在冷却时，把该小镇最近阵亡者拉回市政厅门口（虚弱状态）。
+     * 免费，代价是 5 分钟冷却；只有全灭才能触发，所以复活出的这一个是玩家唯一的自举起点，
+     * 其余死者仍须由他跑祭坛逐个救回。
      */
-    public static boolean checkAndReviveNearColonyBuilding(ServerLevel level, DeathRecord rec) {
-        int range = com.wsteam.wandscape.foundation.util.BalanceValues.reviveNearBuildingRange();
-        if (!isWithinRangeOfColonyBuilding(level, rec.colonyId(), rec.x(), rec.y(), rec.z(), range)) {
-            return false;
+    public static TownHallReviveResult reviveLatestAtTownHall(ServerLevel level, UUID colonyId) {
+        if (level == null || colonyId == null) return TownHallReviveResult.NO_DEATH_RECORD;
+        DeathRecord rec = ColonyDeathRegistry.get(level).latestInColony(colonyId);
+        if (rec == null) return TownHallReviveResult.NO_DEATH_RECORD;
+        if (aliveCount(colonyId) > 0) return TownHallReviveResult.STILL_ALIVE;
+        if (townHallReviveCooldownRemaining(level, colonyId) > 0) return TownHallReviveResult.COOLDOWN;
+        // 双保险：桥未收录但实体仍活在某个已加载区块（例如桥刚被重建）时不再生成第二个实体
+        if (level.getEntity(rec.npcId()) instanceof WandscapeNpc) {
+            Log.warn(TAG, "市政厅保底复活中止：{} 的原始实体仍存活，跳过以免生成重复实体", rec.name());
+            return TownHallReviveResult.STILL_ALIVE;
         }
-        BlockPos deathPos = new BlockPos(rec.x(), rec.y(), rec.z());
-        BlockPos townHallPos = resolveTownHallDoorOrAnchor(level, rec.colonyId(), deathPos);
-        spawnFromRecordAt(level, rec, townHallPos);
-        Log.info(TAG, "保卫殖民地复活：法师 {} 阵亡于距建筑 ≤{} 格处，已在市政厅门口 ({}) 复活",
-                rec.name(), range, townHallPos.toShortString());
-        return true;
-    }
 
-    /** 阵亡位置距本殖民地任一建筑 AABB 的 3D 距离是否 ≤ range（点在盒内视为 0）。 */
-    private static boolean isWithinRangeOfColonyBuilding(ServerLevel level, UUID colonyId,
-                                                         int x, int y, int z, int range) {
-        BuildingSavedData savedData = BuildingSavedData.get(level);
-        if (savedData == null) return false;
-        int rangeSq = range * range;
-        for (BuildingState b : savedData.getAllBuildings()) {
-            if (!colonyId.equals(b.getColonyId())) continue;
-            BoundingBox box = b.getBounds();
-            if (distSqToAabb(x, y, z,
-                    box.minX(), box.minY(), box.minZ(), box.maxX(), box.maxY(), box.maxZ()) <= rangeSq) {
-                return true;
-            }
-        }
-        return false;
-    }
+        BlockPos at = resolveTownHallDoorOrAnchor(level, colonyId,
+                new BlockPos(rec.x(), rec.y(), rec.z()));
+        if (!spawnFromRecordAt(level, rec, at)) return TownHallReviveResult.SPAWN_FAILED;
 
-    /** 点到轴对齐盒的 3D 距离平方（点在盒内为 0）。纯逻辑，可单测。 */
-    static long distSqToAabb(int x, int y, int z,
-                             int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {
-        long dx = Math.max(minX - x, Math.max(0, x - maxX));
-        long dy = Math.max(minY - y, Math.max(0, y - maxY));
-        long dz = Math.max(minZ - z, Math.max(0, z - maxZ));
-        return dx * dx + dy * dy + dz * dz;
+        ColonySavedData.getOrCreate(level).setReviveCooldownUntil(colonyId,
+                level.getGameTime() + TOWN_HALL_REVIVE_COOLDOWN_TICKS);
+        Log.info(TAG, "市政厅保底复活：小镇 {} 全灭，已在市政厅门口 {} 唤醒 {}（冷却 {} tick）",
+                colonyId.toString().substring(0, 8), at.toShortString(), rec.name(),
+                TOWN_HALL_REVIVE_COOLDOWN_TICKS);
+        return TownHallReviveResult.OK;
     }
 
     /** 定位小镇市政厅门口：category=government 建筑优先用 door_offsets 的可站入口点。包内可见（NpcApi 复活默认位复用）。 */

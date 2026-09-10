@@ -9,6 +9,7 @@ import com.wsteam.wandscape.content.building.data.BuildingConfig;
 import com.wsteam.wandscape.content.building.network.*;
 import com.wsteam.wandscape.content.building.network.*;
 import com.wsteam.wandscape.content.colony.ColonySavedData;
+import com.wsteam.wandscape.content.npc.internal.ReviveHandler;
 import com.wsteam.wandscape.content.production.network.CraftingStationPacket;
 import com.wsteam.wandscape.content.production.network.MagicStationPacket;
 import com.wsteam.wandscape.content.production.network.WorkstationDataPacket;
@@ -145,10 +146,14 @@ public final class BuildingInteractHandler {
             int namingStyle = colonyApi != null ? colonyApi.getNamingStyle(colonyId).ordinal() : 0;
             boolean touristSpawning = ColonySavedData.getOrCreate(level)
                     .isTouristSpawningEnabled(colonyId);
+            // 保底复活按钮初值：全灭判定 + 该殖民地冷却（后续变化由 TownHallReviveStatePacket 推送）
             PacketDistributor.sendToPlayer(player,
                     new TownHallOpenPacket(
                             pos, colonyId, name, lvl, exp, expNext, founderName, canUseWarehouse, namingStyle,
-                            creator, touristSpawning));
+                            creator, touristSpawning,
+                            ReviveHandler.aliveCount(colonyId),
+                            ReviveHandler.deadCount(level, colonyId),
+                            ReviveHandler.townHallReviveCooldownSeconds(level, colonyId)));
             return;
         }
 

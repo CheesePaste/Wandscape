@@ -51,7 +51,7 @@ Craft the **Guide Book** from a few bits of dirt, logs, cobblestone and seeds, t
 - Every cast is a little show: particle-driven animation, no shaders required (though it looks gorgeous under any shader pack).
 - Forge wands at the crafting station and equip them on your mages — Basic, Adept, Master, each tier boosting their spell power. Wands never break.
 - Every mage carries their own stats — spell power, casting speed, work speed, armor and more.
-- Fallen mages can be **revived** at the altar — and if your whole colony falls in battle, a final safety spell brings everyone back at the town hall door.
+- Fallen mages can only be **revived** at the altar, and the altar needs a living mage to cast. If your whole colony is wiped out, the **Revive Wizard** button on the town hall panel lights up — use it to bring one back, then send that mage to the altar for the rest.
 
 ## ⚔️ Even wizards need a militia
 

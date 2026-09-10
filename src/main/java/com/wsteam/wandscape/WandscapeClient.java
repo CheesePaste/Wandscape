@@ -327,7 +327,20 @@ public class WandscapeClient {
                             packet.buildingPos(), packet.colonyId(),
                             packet.colonyName(), packet.level(), packet.experience(),
                             packet.expToNext(), packet.founderName(), packet.canUseWarehouse(),
-                            packet.namingStyle(), packet.creator(), packet.touristSpawning()));
+                            packet.namingStyle(), packet.creator(), packet.touristSpawning(),
+                            packet.aliveNpcCount(), packet.deadNpcCount(),
+                            packet.reviveCooldownSeconds()));
+        });
+
+        // Bootstrap-revive state push: refresh the already-open town hall panel's button.
+        // Ignored unless the matching colony's panel is currently on screen.
+        com.wsteam.wandscape.content.building.network.TownHallReviveStatePacket.setClientHandler(packet -> {
+            if (Minecraft.getInstance().screen
+                    instanceof com.wsteam.wandscape.content.building.client.TownHallScreen townHall
+                    && packet.colonyId().equals(townHall.colonyId())) {
+                townHall.applyReviveState(packet.aliveNpcCount(), packet.deadNpcCount(),
+                        packet.cooldownSeconds());
+            }
         });
 
         // Colony create prompt: town hall right-clicked but no colony exists

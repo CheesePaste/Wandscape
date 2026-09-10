@@ -70,6 +70,16 @@ public class ColonyDeathRegistry extends SavedData {
         return DeathRecord.latestInColony(records, colonyId);
     }
 
+    /** 某小镇待复活的死亡记录条数（不等同于人口——被解雇者不留记录）。colonyId 为 null 时返回 0。 */
+    public int countInColony(@Nullable UUID colonyId) {
+        if (colonyId == null) return 0;
+        int n = 0;
+        for (DeathRecord r : records) {
+            if (colonyId.equals(r.colonyId())) n++;
+        }
+        return n;
+    }
+
     /** 按 npcId 查找该法师的待复活死亡记录（每个 NPC 同一时刻至多一条）；无则 null。NpcApi 复活用。 */
     @Nullable
     public DeathRecord getByNpcId(UUID npcId) {

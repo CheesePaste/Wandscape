@@ -29,7 +29,7 @@ public final class BalanceValues {
             "guardHateDurationTicks", "guardFollowAttackDurationTicks", "guardKiteStartDist",
             "guardKiteStandoff", "guardEngageStandoff", "guardFleeHpThreshold", "guardFleeStartDist",
             "guardFleeStandoff",
-            "reviveNearBuildingRange", "scepterHostileRange",
+            "scepterHostileRange",
             "transportTicksPerBlockOnRoad", "transportTicksPerBlockOffRoad", "decorationBonusCap",
             "workstationCraftTicksPerUnit", "craftingStationCraftTicksPerUnit",
             "constructionPlaceTicksPerUnit", "castSingleTargetMaxEnemies", "castAoeMinEnemies",
@@ -94,13 +94,10 @@ public final class BalanceValues {
     public static void setGuardFleeStandoff(double v) { OVERRIDES.put("guardFleeStandoff", v); }
 
     // ============================================================
-    // revive / scepter
+    // scepter
     // ============================================================
-    private static final int DEFAULT_REVIVE_NEAR_BUILDING_RANGE = 20;
     private static final double DEFAULT_SCEPTER_HOSTILE_RANGE = 128.0;
 
-    public static int reviveNearBuildingRange() { return (int)(double) OVERRIDES.getOrDefault("reviveNearBuildingRange", (double) DEFAULT_REVIVE_NEAR_BUILDING_RANGE); }
-    public static void setReviveNearBuildingRange(int v) { OVERRIDES.put("reviveNearBuildingRange", (double) v); }
     public static double scepterHostileRange() { return OVERRIDES.getOrDefault("scepterHostileRange", DEFAULT_SCEPTER_HOSTILE_RANGE); }
     public static void setScepterHostileRange(double v) { OVERRIDES.put("scepterHostileRange", v); }
 
