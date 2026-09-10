@@ -48,9 +48,6 @@ public final class OverviewClientState {
     private static double prevX, prevY, prevZ;
     private static float prevYaw, prevPitch;
 
-    /** Mouse state for rotation delta tracking. */
-    static double lastMouseX, lastMouseY;
-
     /** Entity ID currently under the crosshair (-1 = none). */
     private static volatile int targetEntityId = -1;
 

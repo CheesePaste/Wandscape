@@ -73,7 +73,8 @@ public final class BuildGizmoController {
         long window = mc.getWindow().getWindow();
         if (window == 0L) return;
 
-        boolean leftDown = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS;
+        boolean leftDown = (GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS)
+                || mc.mouseHandler.isLeftPressed();
         boolean leftClicked = leftDown && !wasLeftDown;
         boolean leftReleased = !leftDown && wasLeftDown;
         wasLeftDown = leftDown;

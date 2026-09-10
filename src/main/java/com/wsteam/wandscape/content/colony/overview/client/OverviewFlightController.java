@@ -61,17 +61,6 @@ public final class OverviewFlightController {
     private static final double REACH = 512.0;
     /** 滚轮缩放步长（格/格），飞行速度见 Config.panel.flySpeed。 */
     private static final double SCROLL_SPEED = 4.0;
-    private static final float MOUSE_SENSITIVITY = 0.15f;
-    /**
-     * 单帧鼠标位移阈值（像素）。超过即视为光标被 OS / 对账器强制 warp
-     * （grabMouse 把光标甩到窗口中心、release 后 setCursorPos 回位）。
-     * 疯狂右键连点时 tick 与渲染帧先后顺序随机：若按下后的首帧先于 tick，
-     * 边沿检测的 skipFrames 被提前消费，warp 的跳变 delta 会在下一帧被当成
-     * 正常旋转 → 镜头猛转。阈值兜底：正常甩动单帧不可能超过，warp 必然超过，
-     * 命中即丢弃该帧 delta 并重置基线。
-     */
-    private static final double MOUSE_JUMP_THRESHOLD = 100.0;
-
     private static boolean registered = false;
 
     /** 进入前玩家的相机类型，退出时恢复（渲染玩家实体用第三人称）。 */
@@ -85,15 +74,6 @@ public final class OverviewFlightController {
     /** True while a {@code Screen} (e.g. the Construction UI) is open — used to baseline
      *  button edge-detection when it closes so a UI click isn't re-read as a world click. */
     private static boolean wasScreenOpen = false;
-    /**
-     * Tracks whether the cursor was in "grabbed" state last frame.
-     * Cursor is "free" when a Screen is open or the panel cursor is lifted.
-     * When transitioning from free → grabbed, grabMouse() re-centers the
-     * cursor, so the mouse baseline must be reset to prevent a camera jump.
-     */
-    private static boolean wasGrabbed = false;
-    private static int skipFrames = 0;
-    private static double rmbDragDistance = 0.0;
 
     // ── Frame-time tracking for smooth movement ──
     private static long lastFrameNanos = 0;
@@ -130,14 +110,7 @@ public final class OverviewFlightController {
         mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
         lastHealth = mc.player.getHealth();
         SoundService.playUI(WandscapeSounds.OVERVIEW_ENTER, 1.0f);
-        // Initialize last mouse position to current cursor
-        long window = mc.getWindow().getWindow();
-        double[] mx = new double[1], my = new double[1];
-        GLFW.glfwGetCursorPos(window, mx, my);
-        OverviewClientState.lastMouseX = mx[0];
-        OverviewClientState.lastMouseY = my[0];
         lastFrameNanos = System.nanoTime();
-        wasGrabbed = false;
     }
 
     public static void exit() {
@@ -147,14 +120,12 @@ public final class OverviewFlightController {
             mc.options.setCameraType(prevCameraType);
             prevCameraType = null;
         }
-        // 显式落定玩家旋转到进入快照：每帧冻结只在 active 时跑，退出瞬间 active 已落，
-        // 残留的鼠标漂移会让视角「甩头」，故在此强制写回快照值
+        // 显式落定玩家旋转到进入快照
         if (mc.player != null) {
             freezePlayerRotation(mc.player);
         }
         OverviewClientState.exitOverview();
         lastFrameNanos = 0;
-        wasGrabbed = false;
     }
 
     /**
@@ -176,8 +147,35 @@ public final class OverviewFlightController {
         player.xRotO = pitch;
     }
 
+    /**
+     * Called by {@link com.wsteam.wandscape.mixin.MixinMouseHandler} when mouse delta is accumulated while in Overview mode.
+     * Replaces direct GLFW.glfwGetCursorPos polling in the render loop, compatible with raw input dispatchers such as Ixeris.
+     */
+    public static void onMouseTurn(double dx, double dy) {
+        if (!OverviewClientState.isActive()) return;
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.screen != null) return;
+
+        // When cursor is lifted to panel, only rotate if holding right mouse button
+        boolean cursorLifted = com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState.isPanelOpen()
+                && com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState.isCursorLifted();
+        long window = mc.getWindow().getWindow();
+        boolean rightDown = (window != 0L && org.lwjgl.glfw.GLFW.glfwGetMouseButton(window, org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_RIGHT) == org.lwjgl.glfw.GLFW.GLFW_PRESS)
+                || mc.mouseHandler.isRightPressed();
+        if (cursorLifted && !rightDown) return;
+
+        double sens = mc.options.sensitivity().get() * 0.6 + 0.2;
+        double mult = sens * sens * sens * 8.0;
+        int invertY = mc.options.invertYMouse().get() ? -1 : 1;
+
+        float deltaYaw = (float) (dx * mult * 0.15);
+        float deltaPitch = (float) (dy * mult * 0.15 * invertY);
+
+        OverviewClientState.addCamRotation(deltaYaw, deltaPitch);
+    }
+
     // ═══════════════════════════════════════════════════════════════════
-    // ── Render-Level Stage: camera movement + mouse look ──
+    // ── Render-Level Stage: camera movement + ghost tracking ──
     // ═══════════════════════════════════════════════════════════════════
 
     static void onRenderLevelStage(RenderLevelStageEvent event) {
@@ -200,62 +198,6 @@ public final class OverviewFlightController {
         double elapsed = (now - lastFrameNanos) / 1_000_000_000.0;
         lastFrameNanos = now;
         if (elapsed > 0.05) elapsed = 0.05;
-
-        // ── Mouse look ──
-        double[] mx = new double[1], my = new double[1];
-        GLFW.glfwGetCursorPos(window, mx, my);
-        double dx = mx[0] - OverviewClientState.lastMouseX;
-        double dy = my[0] - OverviewClientState.lastMouseY;
-
-        // Only rotate when no screen open and cursor not lifted to panel (or holding RMB)
-        if (mc.screen == null) {
-            boolean cursorLifted = com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState.isPanelOpen()
-                    && com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState.isCursorLifted();
-            boolean rightDown = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_RIGHT) == GLFW.GLFW_PRESS;
-            boolean grabbed = !cursorLifted || rightDown;
-
-            if (rightDown) {
-                rmbDragDistance += Math.abs(dx) + Math.abs(dy);
-            }
-
-            // Detect cursor transition: free → grabbed. The cursor is "free"
-            // whenever a Screen is open or the panel cursor is lifted.
-            // grabMouse() re-centers the cursor on re-grab; without resetting
-            // the baseline the delta from the old free position to center
-            // causes a sudden camera rotation.
-            if (!wasGrabbed && grabbed) {
-                skipFrames = 2;
-                OverviewClientState.lastMouseX = mx[0];
-                OverviewClientState.lastMouseY = my[0];
-                dx = 0;
-                dy = 0;
-            } else if (skipFrames > 0) {
-                skipFrames--;
-                OverviewClientState.lastMouseX = mx[0];
-                OverviewClientState.lastMouseY = my[0];
-                dx = 0;
-                dy = 0;
-            }
-            wasGrabbed = grabbed;
-
-            if (grabbed && skipFrames == 0) {
-                // 兜底：单帧位移超阈值 = 光标被强制 warp（grab/release 过渡的时序竞态），
-                // 丢弃该帧 delta 并重置基线，下一帧即恢复。正常旋转不会触发。
-                if (Math.abs(dx) > MOUSE_JUMP_THRESHOLD || Math.abs(dy) > MOUSE_JUMP_THRESHOLD) {
-                    OverviewClientState.lastMouseX = mx[0];
-                    OverviewClientState.lastMouseY = my[0];
-                } else {
-                    OverviewClientState.addCamRotation((float) dx * MOUSE_SENSITIVITY, (float) dy * MOUSE_SENSITIVITY);
-                }
-            }
-        } else {
-            // Screen is open → cursor is free
-            wasGrabbed = false;
-            skipFrames = 0;
-        }
-
-        OverviewClientState.lastMouseX = mx[0];
-        OverviewClientState.lastMouseY = my[0];
 
         // ── WASD + Shift/Space movement (frame-rate independent, render-smooth) ──
         // Only process flight movement when no Screen GUI is open!
@@ -306,10 +248,6 @@ public final class OverviewFlightController {
 
         // ── Update building ghost position every render frame (not just 20Hz tick) ──
         updateGhostPositionPerFrame(mc);
-
-        // 冻结玩家旋转到进入快照（AFTER_SKY 早于实体渲染，时机正好）：
-        // 抵消 MouseHandler.turnPlayer 污染 + 稳定第三人称玩家模型朝向
-        freezePlayerRotation(mc.player);
     }
 
     /**
@@ -329,7 +267,8 @@ public final class OverviewFlightController {
         BlockHitResult centerHit = mc.level.clip(centerCtx);
 
         long window = mc.getWindow().getWindow();
-        boolean rightDown = window != 0L && GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_RIGHT) == GLFW.GLFW_PRESS;
+        boolean rightDown = (window != 0L && org.lwjgl.glfw.GLFW.glfwGetMouseButton(window, org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_RIGHT) == org.lwjgl.glfw.GLFW.GLFW_PRESS)
+                || mc.mouseHandler.isRightPressed();
 
         if (centerHit.getType() == HitResult.Type.BLOCK) {
             // 命中草/花/蘑菇/树叶等不能立足的方块时，向下吸附到真正的地面
@@ -378,8 +317,10 @@ public final class OverviewFlightController {
         // closes the Construction UI must not re-appear as a fresh world left-click.
         boolean screenOpen = mc.screen != null;
         if (wasScreenOpen && !screenOpen) {
-            wasLeftDown = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS;
-            wasRightDown = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_RIGHT) == GLFW.GLFW_PRESS;
+            wasLeftDown = (window != 0L && org.lwjgl.glfw.GLFW.glfwGetMouseButton(window, org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_LEFT) == org.lwjgl.glfw.GLFW.GLFW_PRESS)
+                    || mc.mouseHandler.isLeftPressed();
+            wasRightDown = (window != 0L && org.lwjgl.glfw.GLFW.glfwGetMouseButton(window, org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_RIGHT) == org.lwjgl.glfw.GLFW.GLFW_PRESS)
+                    || mc.mouseHandler.isRightPressed();
         }
         wasScreenOpen = screenOpen;
         if (screenOpen) return;
@@ -389,17 +330,15 @@ public final class OverviewFlightController {
 
         // ── Click handling (skip when road mode is active — road controller handles it) ──
         if (!RoadPlacementState.isProjecting()) {
-            boolean leftDown = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS;
-            boolean rightDown = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_RIGHT) == GLFW.GLFW_PRESS;
+            boolean leftDown = (window != 0L && org.lwjgl.glfw.GLFW.glfwGetMouseButton(window, org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_LEFT) == org.lwjgl.glfw.GLFW.GLFW_PRESS)
+                    || mc.mouseHandler.isLeftPressed();
+            boolean rightDown = (window != 0L && org.lwjgl.glfw.GLFW.glfwGetMouseButton(window, org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_RIGHT) == org.lwjgl.glfw.GLFW.GLFW_PRESS)
+                    || mc.mouseHandler.isRightPressed();
 
             boolean leftClicked = leftDown && !wasLeftDown;
             boolean rightClicked = rightDown && !wasRightDown;
             wasLeftDown = leftDown;
             wasRightDown = rightDown;
-
-            if (rightClicked) {
-                rmbDragDistance = 0.0;
-            }
 
             // Build submode (projecting): left-click rotates the building — works pinned or not.
             // Skip when aiming at a gizmo axis (drag) or clicking any panel/bar/sidebar UI region,
@@ -505,16 +444,16 @@ public final class OverviewFlightController {
     }
 
     private static Vec3 getMouseWorldRay(Minecraft mc) {
-        long window = mc.getWindow().getWindow();
-        double[] mx = new double[1], my = new double[1];
-        GLFW.glfwGetCursorPos(window, mx, my);
         int screenW = mc.getWindow().getScreenWidth();
         int screenH = mc.getWindow().getScreenHeight();
         if (screenW <= 0) screenW = 1;
         if (screenH <= 0) screenH = 1;
 
-        float ndcX = (float) (2.0 * mx[0] / screenW - 1.0);
-        float ndcY = (float) (1.0 - 2.0 * my[0] / screenH);
+        double mx = mc.mouseHandler.xpos();
+        double my = mc.mouseHandler.ypos();
+
+        float ndcX = (float) (2.0 * mx / screenW - 1.0);
+        float ndcY = (float) (1.0 - 2.0 * my / screenH);
 
         Camera cam = mc.gameRenderer.getMainCamera();
         float baseFov = (float) mc.options.fov().get();

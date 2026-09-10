@@ -31,8 +31,6 @@ public final class SplineEditorController {
     private static boolean wasGDown = false;
     private static boolean wasDeleteDown = false;
     private static boolean cameraActive = false;
-    private static int skipFrames = 0;
-    private static boolean topDownWasGrabbed = false;
     private static boolean registered = false;
 
     private SplineEditorController() {}
@@ -40,6 +38,26 @@ public final class SplineEditorController {
     /** True while the player is holding RMB to rotate the editor camera (cursor grabbed). */
     public static boolean isCameraActive() {
         return cameraActive;
+    }
+
+    /**
+     * Called by {@link com.wsteam.wandscape.mixin.MixinMouseHandler} when mouse delta is accumulated while holding RMB in Spline Editor.
+     * Replaces direct GLFW.glfwGetCursorPos polling in the render loop, compatible with raw input dispatchers such as Ixeris.
+     */
+    public static void onMouseTurn(double dx, double dy) {
+        if (!SplineEditorClientState.isEditing()) return;
+        if (!cameraActive) return;
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.screen != null) return;
+
+        double sens = mc.options.sensitivity().get() * 0.6 + 0.2;
+        double mult = sens * sens * sens * 8.0;
+        int invertY = mc.options.invertYMouse().get() ? -1 : 1;
+
+        float deltaYaw = (float) (dx * mult * 0.15);
+        float deltaPitch = (float) (dy * mult * 0.15 * invertY);
+
+        SplineEditorClientState.addCamRotation(deltaYaw, deltaPitch);
     }
 
     public static void register() {
@@ -59,12 +77,10 @@ public final class SplineEditorController {
 
     public static void resetInputState() {
         cameraActive = false;
-        skipFrames = 0;
         wasEscapeDown = false;
         wasHelpDown = false;
         wasGDown = false;
         wasDeleteDown = false;
-        topDownWasGrabbed = false;
         hasSavedCursor = false;
     }
 
@@ -90,10 +106,8 @@ public final class SplineEditorController {
             if (action == GLFW.GLFW_PRESS) {
                 // If over panel, don't grab camera
                 if (!cameraActive && !uiWantsMouse) {
-                    double[] mx = new double[1], my = new double[1];
-                    GLFW.glfwGetCursorPos(window, mx, my);
-                    savedCursorX = mx[0];
-                    savedCursorY = my[0];
+                    savedCursorX = mc.mouseHandler.xpos();
+                    savedCursorY = mc.mouseHandler.ypos();
                     hasSavedCursor = true;
 
                     cameraActive = true;
@@ -145,25 +159,22 @@ public final class SplineEditorController {
         if (mc.level == null || mc.player == null) return;
 
         long window = mc.getWindow().getWindow();
-        boolean rightDown = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_RIGHT) == GLFW.GLFW_PRESS;
+        boolean rightDown = (window != 0L && GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_RIGHT) == GLFW.GLFW_PRESS)
+                || mc.mouseHandler.isRightPressed();
         boolean uiWantsKb = RoadEditorInputHelper.wantsKeyboard();
         boolean uiWantsMouse = RoadEditorInputHelper.wantsMouse();
 
         // Track cursor position while free so we have a reliable restore point
         if (!cameraActive && mc.screen == null && !mc.mouseHandler.isMouseGrabbed()) {
-            double[] mx = new double[1], my = new double[1];
-            GLFW.glfwGetCursorPos(window, mx, my);
-            savedCursorX = mx[0];
-            savedCursorY = my[0];
+            savedCursorX = mc.mouseHandler.xpos();
+            savedCursorY = mc.mouseHandler.ypos();
             hasSavedCursor = true;
         }
 
         // ── Right-click camera rotation fallback ──
         if (!cameraActive && rightDown && !uiWantsMouse && mc.screen == null) {
-            double[] mx = new double[1], my = new double[1];
-            GLFW.glfwGetCursorPos(window, mx, my);
-            savedCursorX = mx[0];
-            savedCursorY = my[0];
+            savedCursorX = mc.mouseHandler.xpos();
+            savedCursorY = mc.mouseHandler.ypos();
             hasSavedCursor = true;
 
             cameraActive = true;
@@ -185,10 +196,12 @@ public final class SplineEditorController {
         }
 
         // Defensive: if dragging but LMB is not down, finish drag
-        if (SplineEditorClientState.isDragging() && GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_LEFT) != GLFW.GLFW_PRESS) {
+        boolean leftDown = (window != 0L && GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS)
+                || mc.mouseHandler.isLeftPressed();
+        if (SplineEditorClientState.isDragging() && !leftDown) {
             SplineEditorInputHandler.onLeftRelease(mc);
         }
-        if (RoadPlacementState.isDraggingGizmo() && GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_LEFT) != GLFW.GLFW_PRESS) {
+        if (RoadPlacementState.isDraggingGizmo() && !leftDown) {
             RoadPlacementController.onLeftRelease(mc);
         }
 
@@ -212,7 +225,6 @@ public final class SplineEditorController {
     }
 
     private static long lastFrameNanos = 0;
-    private static boolean wasCameraActive = false;
 
     static void onRenderLevelStage(net.neoforged.neoforge.client.event.RenderLevelStageEvent event) {
         if (!SplineEditorClientState.isEditing()) return;
@@ -257,30 +269,6 @@ public final class SplineEditorController {
             return;
         }
 
-        // 3D freecam mouse look while holding right-click
-        if (cameraActive) {
-            double[] mx = new double[1], my = new double[1];
-            GLFW.glfwGetCursorPos(window, mx, my);
-            if (!wasCameraActive) {
-                SplineEditorClientState.setLastMouse(mx[0], my[0]);
-                wasCameraActive = true;
-                skipFrames = 2;
-            }
-            double dx = mx[0] - SplineEditorClientState.getLastMouseX();
-            double dy = my[0] - SplineEditorClientState.getLastMouseY();
-
-            if (skipFrames > 0) {
-                skipFrames--;
-                SplineEditorClientState.setLastMouse(mx[0], my[0]);
-            } else {
-                SplineEditorClientState.addCamRotation((float) dx * 0.15f, (float) dy * 0.15f);
-                SplineEditorClientState.setLastMouse(mx[0], my[0]);
-            }
-        } else {
-            wasCameraActive = false;
-            skipFrames = 0;
-        }
-
         if (mc.screen != null || uiWantsKb) return;
 
         float forward = 0, strafe = 0, vertical = 0;
@@ -309,23 +297,6 @@ public final class SplineEditorController {
     }
 
     private static void handleTopDownCamera(Minecraft mc, long window, double elapsed, boolean uiWantsKb) {
-        double[] mx = new double[1], my = new double[1];
-        GLFW.glfwGetCursorPos(window, mx, my);
-
-        boolean rightDown = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_RIGHT) == GLFW.GLFW_PRESS;
-
-        if (!topDownWasGrabbed && rightDown) {
-            SplineEditorClientState.setLastMouse(mx[0], my[0]);
-        }
-        topDownWasGrabbed = rightDown;
-
-        if (rightDown) {
-            double dx = mx[0] - SplineEditorClientState.getLastMouseX();
-            double dy = my[0] - SplineEditorClientState.getLastMouseY();
-            SplineEditorClientState.addCamRotation((float) dx * 0.15f, (float) dy * 0.15f);
-        }
-        SplineEditorClientState.setLastMouse(mx[0], my[0]);
-
         if (mc.screen != null || uiWantsKb) return;
 
         float forward = 0, strafe = 0, vertical = 0;
