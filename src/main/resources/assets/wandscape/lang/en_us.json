@@ -2,6 +2,8 @@
   "wandscape.pack.all": "All Packs",
   "wandscape.pack.default.name": "Core Pack",
   "wandscape.pack.default.desc": "Built-in core buildings of Wandscape",
+  "wandscape.pack.oriental.name": "Oriental Bamboo",
+  "wandscape.pack.oriental.desc": "Traditional oriental and bamboo style buildings",
   "gui.wandscape.scanner.target_package": "Package",
   "gui.wandscape.scanner.target_package.tooltip": "Target building package directory (e.g. default, oriental)",
   "attribute.name.wandscape.spell_power": "Spell Power",
@@ -2100,6 +2102,7 @@
   "gui.wandscape.settings.tab.colony": "Colony Autonomy",
   "gui.wandscape.settings.tab.tourist": "Tourists & Economy",
   "gui.wandscape.settings.tab.rules": "Rules & Security",
+  "gui.wandscape.settings.tab.packages": "Building Packs",
   "gui.wandscape.settings.title": "%s Settings Center",
   "gui.wandscape.settings.reset_tab": "Reset Page Defaults",
   "gui.wandscape.settings.reset_tab_toast": "Restored tab settings to default"

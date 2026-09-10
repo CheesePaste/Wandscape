@@ -32,13 +32,19 @@ public interface SettingItem {
 
     default void onModified(String stringValue) {
         if (isClientOnly()) {
-            ClientConfig.SPEC.save();
-        } else {
-            Config.SPEC.save();
-            Minecraft mc = Minecraft.getInstance();
-            if (mc.getConnection() != null) {
-                PacketDistributor.sendToServer(new ConfigUpdatePacket(key(), stringValue));
+            if (ClientConfig.SPEC.isLoaded()) {
+                ClientConfig.SPEC.save();
             }
+        } else {
+            if (Config.SPEC.isLoaded()) {
+                Config.SPEC.save();
+            }
+            try {
+                Minecraft mc = Minecraft.getInstance();
+                if (mc != null && mc.getConnection() != null) {
+                    PacketDistributor.sendToServer(new ConfigUpdatePacket(key(), stringValue));
+                }
+            } catch (Throwable ignored) {}
         }
     }
 
@@ -52,6 +58,9 @@ public interface SettingItem {
         private final boolean clientOnly;
         private final boolean hotReloadable;
         private final ModConfigSpec.BooleanValue configValue;
+        private final java.util.function.Supplier<Boolean> getter;
+        private final java.util.function.Consumer<Boolean> setter;
+        private final boolean defaultValue;
 
         public BooleanSetting(String key, String title, String description, SettingTab tab,
                               boolean clientOnly, boolean hotReloadable, ModConfigSpec.BooleanValue configValue) {
@@ -62,6 +71,26 @@ public interface SettingItem {
             this.clientOnly = clientOnly;
             this.hotReloadable = hotReloadable;
             this.configValue = configValue;
+            this.getter = configValue::get;
+            this.setter = configValue::set;
+            this.defaultValue = configValue.getDefault();
+        }
+
+        public BooleanSetting(String key, String title, String description, SettingTab tab,
+                              boolean clientOnly, boolean hotReloadable,
+                              java.util.function.Supplier<Boolean> getter,
+                              java.util.function.Consumer<Boolean> setter,
+                              boolean defaultValue) {
+            this.key = key;
+            this.title = title;
+            this.description = description;
+            this.tab = tab;
+            this.clientOnly = clientOnly;
+            this.hotReloadable = hotReloadable;
+            this.configValue = null;
+            this.getter = getter;
+            this.setter = setter;
+            this.defaultValue = defaultValue;
         }
 
         @Override public String key() { return key; }
@@ -72,9 +101,9 @@ public interface SettingItem {
         @Override public boolean isClientOnly() { return clientOnly; }
         @Override public boolean isHotReloadable() { return hotReloadable; }
 
-        public boolean get() { return configValue.get(); }
+        public boolean get() { return getter.get(); }
         public void set(boolean value) {
-            configValue.set(value);
+            setter.accept(value);
             onModified(String.valueOf(value));
         }
 
@@ -87,15 +116,15 @@ public interface SettingItem {
         }
 
         @Override public String rangeHint() {
-            return "默认: " + (configValue.getDefault() ? "开启" : "关闭");
+            return "默认: " + (defaultValue ? "开启" : "关闭");
         }
 
         @Override public boolean isDefault() {
-            return get() == configValue.getDefault();
+            return get() == defaultValue;
         }
 
         @Override public void resetToDefault() {
-            set(configValue.getDefault());
+            set(defaultValue);
         }
     }
 

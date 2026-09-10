@@ -9,6 +9,9 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.PacketDistributor;
 
+import java.util.Arrays;
+import java.util.List;
+
 import static com.wsteam.wandscape.Wandscape.MODID;
 
 /**
@@ -61,7 +64,18 @@ public record ConfigUpdatePacket(String path, String value) implements CustomPac
 
     public static boolean applyConfig(String path, String value) {
         try {
+            if (path.startsWith("building.package.")) {
+                String packId = path.substring("building.package.".length());
+                boolean enabled = Boolean.parseBoolean(value);
+                Config.setPackageEnabled(packId, enabled);
+                return true;
+            }
             switch (path) {
+                case "building.disabledPackages" -> {
+                    List<String> list = value.isEmpty() ? List.of() : Arrays.asList(value.split(","));
+                    Config.setDisabledPackages(list);
+                    return true;
+                }
                 case "general.debug" -> {
                     boolean val = Boolean.parseBoolean(value);
                     Config.DEBUG.set(val);

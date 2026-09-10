@@ -1,4 +1,5 @@
 package com.wsteam.wandscape.content.building.ui;
+import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState;
 import com.wsteam.wandscape.foundation.ui.panel.WandscapePanelOverlay;
 
@@ -93,6 +94,12 @@ public final class BuildingSelectionOverlay {
                                double mouseX, double mouseY) {
         if (!isActive()) {
             return;
+        }
+
+        // Auto-fallback if currently selected package was disabled
+        String curPkg = WandscapePanelState.getBuildingBarPackage();
+        if (!WandscapePanelState.PACKAGE_ALL.equals(curPkg) && !Config.isPackageEnabled(curPkg)) {
+            WandscapePanelState.setBuildingBarPackage(WandscapePanelState.PACKAGE_ALL);
         }
 
         int barY = screenH - BAR_HEIGHT;
@@ -230,6 +237,7 @@ public final class BuildingSelectionOverlay {
         String currentPkg = WandscapePanelState.getBuildingBarPackage();
         Set<String> present = new LinkedHashSet<>();
         for (BuildingSlot slot : ProjectionClientState.getBuildingSlots()) {
+            if (!Config.isPackageEnabled(slot.packageId())) continue;
             if (WandscapePanelState.PACKAGE_ALL.equals(currentPkg) || currentPkg.equals(slot.packageId())) {
                 present.add(BuildingSort.tabOf(slot.category()));
             }
@@ -249,6 +257,7 @@ public final class BuildingSelectionOverlay {
         String cat = WandscapePanelState.getBuildingBarCategory();
         String search = WandscapePanelState.getBuildingBarSearch().toLowerCase();
         return ProjectionClientState.getBuildingSlots().stream()
+                .filter(s -> Config.isPackageEnabled(s.packageId()))
                 .filter(s -> WandscapePanelState.PACKAGE_ALL.equals(pkg) || pkg.equals(s.packageId()))
                 .filter(s -> "All".equals(cat) || matchesCategory(s.category(), cat))
                 .filter(s -> search.isEmpty() || s.displayName().toLowerCase().contains(search))
@@ -556,9 +565,15 @@ public final class BuildingSelectionOverlay {
         g.drawString(font, title, x + 4, y + 2, textColor);
     }
 
+    private static List<BuildingPackage> getEnabledPackages() {
+        return ProjectionClientState.getBuildingPackages().stream()
+                .filter(p -> Config.isPackageEnabled(p.id()))
+                .toList();
+    }
+
     private static void renderPackageDropdown(GuiGraphics g, Font font, int x, int barY, int btnW,
                                                double mouseX, double mouseY) {
-        var pkgs = ProjectionClientState.getBuildingPackages();
+        var pkgs = getEnabledPackages();
         int totalItems = 1 + pkgs.size();
         int itemH = 14;
         int dropH = totalItems * itemH + 4;
@@ -620,7 +635,7 @@ public final class BuildingSelectionOverlay {
         }
 
         if (open) {
-            var pkgs = ProjectionClientState.getBuildingPackages();
+            var pkgs = getEnabledPackages();
             int totalItems = 1 + pkgs.size();
             int itemH = 14;
             int dropH = totalItems * itemH + 4;

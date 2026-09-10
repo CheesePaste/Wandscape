@@ -110,8 +110,12 @@ public final class SettingsOverlay {
         int btnH = 22;
 
         // Tabs
-        int curX = Math.max(titleEnd, (screenW - 480) / 2);
         SettingTab[] tabs = SettingTab.values();
+        int totalTabsW = 0;
+        for (SettingTab tab : tabs) {
+            totalTabsW += font.width(tab.getDisplayName()) + 26;
+        }
+        int curX = Math.max(titleEnd, (screenW - totalTabsW) / 2);
         for (SettingTab tab : tabs) {
             String label = tab.getDisplayName();
             int tabW = font.width(label) + 20;
@@ -144,7 +148,9 @@ public final class SettingsOverlay {
         g.fill(RenderType.guiOverlay(), 0, y, screenW, y + TOOLBAR_H, 0, TOOLBAR_BG);
 
         // Status / prompt
-        String hint = "配置项修改即时生效并自动持久化保存（支持热重载）";
+        String hint = (activeTab == SettingTab.PACKAGES)
+                ? "管理已加载的建筑包。停用的建筑包将不会在建造栏中显示（即时生效）"
+                : "配置项修改即时生效并自动持久化保存（支持热重载）";
         g.drawString(font, hint, 20, y + 8, WandscapeTheme.COLOR_TEXT_DIM, false);
 
         // Reset Page Defaults button on the right
@@ -372,7 +378,11 @@ public final class SettingsOverlay {
             String colony = WandscapePanelState.getColonyName();
             String fullTitle = (colony != null && !colony.isEmpty() ? colony : "魔法小镇") + " 设置中心";
             int titleEnd = 16 + Minecraft.getInstance().font.width(fullTitle) + 24;
-            int curX = Math.max(titleEnd, (screenW - 480) / 2);
+            int totalTabsW = 0;
+            for (SettingTab tab : SettingTab.values()) {
+                totalTabsW += Minecraft.getInstance().font.width(tab.getDisplayName()) + 26;
+            }
+            int curX = Math.max(titleEnd, (screenW - totalTabsW) / 2);
 
             for (SettingTab tab : SettingTab.values()) {
                 int tabW = Minecraft.getInstance().font.width(tab.getDisplayName()) + 20;

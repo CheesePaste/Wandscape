@@ -2,9 +2,14 @@ package com.wsteam.wandscape.content.building;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.content.building.data.BuildingConfig;
 import com.wsteam.wandscape.content.building.data.BuildingPackage;
 import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
+import com.wsteam.wandscape.foundation.ui.settings.SettingItem;
+import com.wsteam.wandscape.foundation.ui.settings.SettingTab;
+import com.wsteam.wandscape.foundation.ui.settings.SettingsRegistry;
+import com.wsteam.wandscape.foundation.ui.settings.network.ConfigUpdatePacket;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -167,5 +172,126 @@ class BuildingPackageTest {
         List<BuildingConfig> list = loader.getConfigsByPackage("steampunk");
         assertEquals(1, list.size());
         assertEquals("steampunk:clock_tower", list.get(0).id());
+    }
+
+    @Test
+    void testPackageEnableDisableConfig() {
+        Config.setDisabledPackages(List.of());
+        assertTrue(Config.isPackageEnabled("oriental"));
+        assertTrue(Config.isPackageEnabled("default"));
+
+        Config.setPackageEnabled("oriental", false);
+        assertFalse(Config.isPackageEnabled("oriental"));
+        assertTrue(Config.isPackageEnabled("default"));
+
+        Config.setPackageEnabled("oriental", true);
+        assertTrue(Config.isPackageEnabled("oriental"));
+    }
+
+    @Test
+    void testConfigUpdatePacketPackageIntegration() {
+        Config.setDisabledPackages(List.of());
+        Config.setPackageEnabled("oriental", true);
+
+        // Disable via packet apply
+        assertTrue(ConfigUpdatePacket.applyConfig("building.package.oriental", "false"));
+        assertFalse(Config.isPackageEnabled("oriental"));
+
+        // Enable via packet apply
+        assertTrue(ConfigUpdatePacket.applyConfig("building.package.oriental", "true"));
+        assertTrue(Config.isPackageEnabled("oriental"));
+
+        // Bulk disable via disabledPackages
+        assertTrue(ConfigUpdatePacket.applyConfig("building.disabledPackages", "oriental,steampunk"));
+        assertFalse(Config.isPackageEnabled("oriental"));
+        assertFalse(Config.isPackageEnabled("steampunk"));
+        assertTrue(Config.isPackageEnabled("default"));
+
+        // Reset
+        assertTrue(ConfigUpdatePacket.applyConfig("building.disabledPackages", ""));
+        assertTrue(Config.isPackageEnabled("oriental"));
+        assertTrue(Config.isPackageEnabled("steampunk"));
+    }
+
+    @Test
+    void testSettingsRegistryPackagesTab() {
+        Config.setDisabledPackages(List.of());
+        BuildingConfigLoader loader = BuildingConfigLoader.getInstance();
+        loader.registerPackage(new BuildingPackage("oriental", "东风竹韵包", "东方风格建筑", "Wandscape", "1.0.0", "minecraft:bamboo", 50, List.of()));
+
+        List<SettingItem> items = SettingsRegistry.getItems(SettingTab.PACKAGES);
+        assertNotNull(items);
+        assertFalse(items.isEmpty());
+
+        SettingItem orientalItem = items.stream()
+                .filter(it -> it.key().equals("building.package.oriental"))
+                .findFirst()
+                .orElse(null);
+        assertNotNull(orientalItem);
+        assertEquals(SettingItem.Type.BOOLEAN, orientalItem.type());
+
+        SettingItem.BooleanSetting bs = (SettingItem.BooleanSetting) orientalItem;
+        assertTrue(bs.get());
+
+        // Toggle off
+        bs.set(false);
+        assertFalse(Config.isPackageEnabled("oriental"));
+        assertFalse(bs.get());
+        assertEquals("已关闭", bs.formatValue());
+
+        // Reset tab
+        SettingsRegistry.resetTab(SettingTab.PACKAGES);
+        assertTrue(Config.isPackageEnabled("oriental"));
+        assertTrue(bs.get());
+    }
+
+    @Test
+    void testLoadOrientalPackageAndBuildings() {
+        BuildingConfigLoader loader = BuildingConfigLoader.getInstance();
+
+        // 1. Load oriental package metadata
+        JsonObject pkgMetaJson = new JsonObject();
+        pkgMetaJson.addProperty("id", "oriental");
+        pkgMetaJson.addProperty("name", "wandscape.pack.oriental.name");
+        pkgMetaJson.addProperty("description", "wandscape.pack.oriental.desc");
+        pkgMetaJson.addProperty("author", "Wandscape");
+        pkgMetaJson.addProperty("icon", "minecraft:bamboo");
+        pkgMetaJson.addProperty("priority", 50);
+        loader.loadFromDataPath("oriental/package", pkgMetaJson);
+
+        BuildingPackage orientalPkg = loader.getPackage("oriental");
+        assertNotNull(orientalPkg);
+        assertEquals("oriental", orientalPkg.id());
+        assertEquals("wandscape.pack.oriental.name", orientalPkg.name());
+        assertEquals(50, orientalPkg.priority());
+
+        // 2. Load oriental building: e.g. bamboo_hall
+        JsonObject buildingJson = new JsonObject();
+        buildingJson.addProperty("id", "bamboo_hall");
+        buildingJson.addProperty("display_name", "Bamboo Hall");
+        buildingJson.addProperty("category", "basic");
+        com.google.gson.JsonArray palette = new com.google.gson.JsonArray();
+        palette.add("minecraft:bamboo_planks");
+        buildingJson.add("palette", palette);
+        buildingJson.add("block_indices", new com.google.gson.JsonArray());
+        buildingJson.add("pattern", new com.google.gson.JsonArray());
+
+        loader.loadFromDataPath("oriental/bamboo_hall", buildingJson);
+
+        // Verify full ID and package ID
+        BuildingConfig config = loader.get("oriental:bamboo_hall");
+        assertNotNull(config);
+        assertEquals("oriental:bamboo_hall", config.id());
+        assertEquals("oriental", config.packageId());
+
+        // Verify alias lookup
+        BuildingConfig byAlias = loader.get("bamboo_hall");
+        assertNotNull(byAlias);
+        assertSame(config, byAlias);
+
+        // Verify package configs list
+        List<BuildingConfig> orientalList = loader.getConfigsByPackage("oriental");
+        assertEquals(1, orientalList.size());
+        assertEquals("oriental:bamboo_hall", orientalList.get(0).id());
     }
 }

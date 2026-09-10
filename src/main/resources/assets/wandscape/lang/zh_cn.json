@@ -2,6 +2,8 @@
   "wandscape.pack.all": "全部建筑包",
   "wandscape.pack.default.name": "核心建筑包",
   "wandscape.pack.default.desc": "魔法小镇模组内置核心建筑集合",
+  "wandscape.pack.oriental.name": "东风竹韵包",
+  "wandscape.pack.oriental.desc": "东方传统竹制与古风建筑集合",
   "gui.wandscape.scanner.target_package": "目标建筑包",
   "gui.wandscape.scanner.target_package.tooltip": "导出归属的建筑包目录名（如 default、oriental）",
   "attribute.name.wandscape.spell_power": "法术强度",
@@ -2101,6 +2103,7 @@
   "gui.wandscape.settings.tab.colony": "城镇经营",
   "gui.wandscape.settings.tab.tourist": "游客生态",
   "gui.wandscape.settings.tab.rules": "规则防护",
+  "gui.wandscape.settings.tab.packages": "建筑包库",
   "gui.wandscape.settings.title": "%s 设置中心",
   "gui.wandscape.settings.reset_tab": "恢复本页默认",
   "gui.wandscape.settings.reset_tab_toast": "已恢复本页默认设置"

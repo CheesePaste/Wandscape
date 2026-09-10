@@ -285,18 +285,72 @@ public final class SettingsRegistry {
 
     public static List<SettingItem> getItems(SettingTab tab) {
         init();
+        if (tab == SettingTab.PACKAGES) {
+            return getPackageItems();
+        }
         return ITEMS_BY_TAB.getOrDefault(tab, List.of());
     }
 
     public static List<SettingItem> getAllItems() {
         init();
-        return Collections.unmodifiableList(ALL_ITEMS);
+        List<SettingItem> all = new ArrayList<>(ALL_ITEMS);
+        all.addAll(getPackageItems());
+        return Collections.unmodifiableList(all);
     }
 
     public static void resetTab(SettingTab tab) {
         init();
+        if (tab == SettingTab.PACKAGES) {
+            Config.setDisabledPackages(List.of());
+            if (Config.SPEC.isLoaded()) {
+                Config.SPEC.save();
+            }
+            try {
+                net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
+                if (mc != null && mc.getConnection() != null) {
+                    net.neoforged.neoforge.network.PacketDistributor.sendToServer(
+                            new com.wsteam.wandscape.foundation.ui.settings.network.ConfigUpdatePacket("building.disabledPackages", ""));
+                }
+            } catch (Throwable ignored) {}
+            return;
+        }
         for (SettingItem item : getItems(tab)) {
             item.resetToDefault();
         }
+    }
+
+    private static List<SettingItem> getPackageItems() {
+        List<com.wsteam.wandscape.content.building.data.BuildingPackage> packages =
+                com.wsteam.wandscape.content.building.projection.client.ProjectionClientState.getBuildingPackages();
+        List<SettingItem> items = new ArrayList<>();
+        for (com.wsteam.wandscape.content.building.data.BuildingPackage pkg : packages) {
+            String pkgId = pkg.id();
+            String rawName = pkg.name();
+            String title = (rawName != null && !rawName.isEmpty())
+                    ? com.wsteam.wandscape.foundation.ui.I18n.string(rawName, rawName)
+                    : pkgId;
+            String rawDesc = pkg.description();
+            String desc = (rawDesc != null && !rawDesc.isEmpty())
+                    ? com.wsteam.wandscape.foundation.ui.I18n.string(rawDesc, rawDesc)
+                    : ("建筑包 ID: " + pkgId);
+            if (pkg.author() != null && !pkg.author().isEmpty()) {
+                desc += " | 作者: " + pkg.author();
+            }
+            if (pkg.version() != null && !pkg.version().isEmpty()) {
+                desc += " | v" + pkg.version();
+            }
+            items.add(new SettingItem.BooleanSetting(
+                    "building.package." + pkgId,
+                    title,
+                    desc,
+                    SettingTab.PACKAGES,
+                    false,
+                    true,
+                    () -> Config.isPackageEnabled(pkgId),
+                    enabled -> Config.setPackageEnabled(pkgId, enabled),
+                    true
+            ));
+        }
+        return items;
     }
 }
