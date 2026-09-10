@@ -1,0 +1,28 @@
+{
+  "name": "魔法工坊",
+  "category": "wandscape:building",
+  "icon": "wandscape:spell_scroll",
+  "sortnum": 3,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "魔法工坊用元素把$(bold)魔法卷轴$()造出来——法师只会施放$(l:wandscape:strategy_guide)施法策略$(/l)栏里装着的魔法，造出卷轴给它装上，它才有对应的战斗能力。"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(li)在建造面板放一座$(bold)魔法工坊$()，法师会按队列执行合成任务。$(li)$(bold)准心对准工坊，右键$()打开面板：左侧列出可合成的魔法条目（可按名搜索），右侧显示任务队列。$(li)选一个魔法 → 设数量 → $(bold)Submit$()。做好的魔法卷轴进殖民地$(bold)仓库$()。$(li)从仓库取出卷轴放到自己背包，再到法师的$(l:wandscape:strategy_guide)策略栏$(/l)拖进对应分类槽装备。",
+      "title": "操作"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(bold)魔法卷轴  解锁等级  元素消耗$()$(li)$(bold)光束$() — 1 级 — 火 ×650 + 土 ×550$(li)$(bold)治疗$() — 1 级 — 水 ×650 + 木 ×550$(li)$(bold)陨石$() — 1 级 — 火 ×700 + 金 ×500$(li)$(bold)石化$() — 1 级 — 土 ×700 + 金 ×500$(li)$(bold)虚弱力场$() — 10 级 — 暗 ×8000 + 风 ×7000$(li)$(bold)防御强化$() — 10 级 — 金 ×8000 + 土 ×7000$(li)$(bold)魅惑$() — 20 级 — 暗 ×24000 + 火 ×23000$(li)$(bold)背水一战$() — 20 级 — 暗 ×24000 + 火 ×13000 + 水 ×10000",
+      "title": "可合成的魔法卷轴"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(li)卷轴进的是殖民地仓库，$(l:wandscape:crafting_guide)法杖$(/l)也是——装备给谁、按什么顺序放，由你在$(l:wandscape:npc_guide)法师 NPC 面板$(/l)和$(l:wandscape:strategy_guide)施法策略$(/l)里决定。$(li)传送、复活等魔法没有卷轴配方：复活走$(l:wandscape:altar_guide)祭坛$(/l)。$(br2)$(l:wandscape:npc_guide)法师 NPC 指南$(/l)$(br2)$(l:wandscape:strategy_guide)施法策略指南$(/l)$(br2)$(l:wandscape:crafting_guide)合成台（造法杖）$(/l)$(br2)$(l:wandscape:index_guide)返回指南首页$(/l)",
+      "title": "提示"
+    }
+  ]
+}

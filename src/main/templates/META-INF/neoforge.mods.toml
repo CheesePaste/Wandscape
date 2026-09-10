@@ -110,6 +110,15 @@ file="META-INF/accesstransformer.cfg"
     ordering="AFTER"
     side="BOTH"
 
+# Patchouli（帕秋莉手册）— 可选依赖：提供跟玩版手册 wandscape:guide（含目录、条目跳转、配方页）。
+# 不装 Patchouli 时由模组自带的 Markdown 指南书只读兜底，内容同源同份。
+[[dependencies.${mod_id}]]
+    modId="patchouli"
+    type="optional"
+    versionRange="[1.21,)"
+    ordering="AFTER"
+    side="BOTH"
+
 # Features are specific properties of the game environment, that you may want to declare you require. This example declares
 # that your mod requires GL version 3.2 or higher. Other features will be added. They are side aware so declaring this won't
 # stop your mod loading on the server for example.

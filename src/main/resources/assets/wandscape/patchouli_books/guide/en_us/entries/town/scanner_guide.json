@@ -1,0 +1,33 @@
+{
+  "name": "Building Scanner",
+  "category": "wandscape:town",
+  "icon": "minecraft:spyglass",
+  "sortnum": 1,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "Turn a building you have finished into a blueprint, and wizards can rebuild it elsewhere from that blueprint. The scanner can be crafted in $(bold)survival mode$()."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(bold)Gold ingots$() in the four corners, $(bold)amethyst shards$() on the four sides, and a $(bold)crafting table$() in the middle.",
+      "title": "Crafting Recipe"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "The scanner stores buildings under the $(bold)custom$() category:$(br2)$(li)$(bold)No tourists come$() — no three-stat contribution, not part of the economy.$(br2)This kind of building produces no income and draws no tourists; it only copies a building you placed by hand so NPCs can rebuild it.",
+      "title": "Scanned Buildings"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(li)$(bold)Box it in$(): place the scanner and set the $(bold)bounding box$() manually in the panel so it covers the whole building you want to copy.$(li)$(bold)Identify$(): give the building an $(bold)English ID$() (something like $(#8a5a2b)player_castle$(), which you'll use to pick this blueprint later) and a $(bold)display name$(); click \"Auto-Detect Door\" to pick the door's position — that is the entrance NPCs use.$(li)$(bold)Export$(): click \"Scan Area\" to count the blocks, then click \"$(bold)Export Building JSON$()\". Once the chat bar reports success, the building is a blueprint — you can select it in the build panel from now on and have NPCs rebuild it.$(br2)To copy a stretch of road: switch to $(bold)ROAD mode$(), fill in the road preset ID and display name, and export.",
+      "title": "Steps"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "The feature-packed $(bold)Creative Building Scanner$() is for creators and map makers (it can configure interact spots, business parameters, and decoration export) and is $(bold)unavailable in survival mode$(); those settings are of no use for normal play. Map makers can go to the $(l:wandscape:creative_scanner_guide)Creative Building Scanner Guide$(/l).$(br2)$(l:wandscape:overview_guide)Panel & Overview$(/l)$(br2)$(l:wandscape:index_guide)Back to the Guide Index$(/l)",
+      "title": "Creative Building Scanner"
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "name": "Wandscape Guide",
+  "category": "wandscape:contents",
+  "icon": "wandscape:guide_book",
+  "sortnum": 0,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "Welcome to Wandscape. Turning it into a magic town starts here.$(br2)Wandscape is a management sim mod: you place buildings, and $(bold)wizard NPCs do the work for you$() (building, gathering, crafting, guarding), while $(bold)tourists walk along the roads to spend in town$(). Your job is to decide where the town goes. This book can be opened at any time with the $(bold)H$() key.$(br2)$(italic)$(#6b5a45)Playing for the first time? Read $(l:wandscape:getting_started_guide)Getting Started: From Empty Land to a Tourist Town$(/l)$(italic)$(#6b5a45) first — it walks through the full game loop.$()"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(li)$(l:wandscape:overview_guide)Panel & Overview$(/l) — press V, everything starts here$(li)$(l:wandscape:scanner_guide)Building Scanner$(/l) — survival players turn houses they built into blueprints so NPCs can rebuild them$(li)$(l:wandscape:creative_scanner_guide)Creative Building Scanner$(/l) — a creator tool: interact spots, business parameters, decoration export",
+      "title": "Building & Town"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Tourists only walk on paved roads. No roads means no tourists; shops won't get visitors even when open.$(br2)$(li)$(l:wandscape:road_guide)Road System Overview$(/l)$(li)$(l:wandscape:road_replace_guide)Replace Mode (Surface Paving)$(/l)$(li)$(l:wandscape:road_fill_guide)Fill & Destroy$(/l)$(li)$(l:wandscape:road_spline_guide)Spline Editor (Curves & Interchanges)$(/l)",
+      "title": "Road System"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(li)$(l:wandscape:townhall_guide)Town Hall$(/l)$(li)$(l:wandscape:warehouse_guide)Warehouse$(/l)$(li)$(l:wandscape:crafting_guide)Crafting Station (Wands)$(/l)$(li)$(l:wandscape:magic_station_guide)Magic Workshop (Magic Scrolls)$(/l)$(li)$(l:wandscape:workstation_guide)Workstation (Decompose & Synthesize)$(/l)$(li)$(l:wandscape:node_guide)Element Node$(/l)$(li)$(l:wandscape:altar_guide)Altar (Revive)$(/l)$(li)$(l:wandscape:mage_hut_guide)Mage Hut (Residence & Training)$(/l)$(li)$(l:wandscape:tavern_guide)Tavern (Recruiting Wizards)$(/l)$(li)$(l:wandscape:shop_guide)Shop (Selling to Tourists)$(/l)$(li)$(l:wandscape:hotel_guide)Hotel & Service Buildings (Overnight / Element Production)$(/l)$(li)Relax buildings (bathhouses etc., restore energy) and ATMs (refill travel money) — see the $(l:wandscape:tourist_guide)Tourist System Guide$(/l)",
+      "title": "Buildings & Facilities"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(li)$(l:wandscape:npc_guide)Wizard NPC Guide$(/l)$(li)$(l:wandscape:strategy_guide)Cast Strategy Guide$(/l)$(li)$(l:wandscape:tourist_guide)Tourist System Guide$(/l) — the three need bars, profiles, and four types of tourist buildings",
+      "title": "NPCs & Tourists"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(li)$(l:wandscape:anomaly_guide)Building Maintenance & Repair$(/l)",
+      "title": "Operations & Failures"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(li)$(l:wandscape:magic_circle_editor_guide)Magic Circle Web Editor$(/l)",
+      "title": "Creator Tools"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(li)$(l:wandscape:creators_guide)Creators & Special Thanks$(/l)",
+      "title": "About"
+    }
+  ]
+}

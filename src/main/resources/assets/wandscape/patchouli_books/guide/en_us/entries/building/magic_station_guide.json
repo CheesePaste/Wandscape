@@ -1,0 +1,28 @@
+{
+  "name": "Magic Workshop",
+  "category": "wandscape:building",
+  "icon": "wandscape:spell_scroll",
+  "sortnum": 3,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "The Magic Workshop synthesizes $(bold)magic scrolls$() from elements. A wizard only casts what is loaded into the $(l:wandscape:strategy_guide)Cast Strategy$(/l) bar — craft a scroll and equip it on a wizard to give it that combat spell."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(li)Place a $(bold)Magic Workshop$() from the build panel; wizards run the synthesis jobs in queue order.$(li)$(bold)Aim your crosshair at it and right-click$() to open the panel: the left side lists the craftable spells (searchable by name), the right side shows the task queue.$(li)Pick a spell → set the quantity → $(bold)Submit$(). Finished scrolls go into the colony $(bold)warehouse$().$(li)Take the scroll from the warehouse into your own inventory, then drag it into the matching category slot on the wizard's $(l:wandscape:strategy_guide)strategy bar$(/l).",
+      "title": "Using It"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(bold)Scroll  Colony level required  Element cost$()$(li)$(bold)Beam$() — Level 1 — Fire ×650 + Earth ×550$(li)$(bold)Heal$() — Level 1 — Water ×650 + Wood ×550$(li)$(bold)Meteor$() — Level 1 — Fire ×700 + Metal ×500$(li)$(bold)Petrification$() — Level 1 — Earth ×700 + Metal ×500$(li)$(bold)Enfeeble Field$() — Level 10 — Dark ×8000 + Wind ×7000$(li)$(bold)Fortification$() — Level 10 — Metal ×8000 + Earth ×7000$(li)$(bold)Conversion$() — Level 20 — Dark ×24000 + Fire ×23000$(li)$(bold)Desperation$() — Level 20 — Dark ×24000 + Fire ×13000 + Water ×10000",
+      "title": "Craftable Spell Scrolls"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(li)Scrolls land in the colony warehouse, just like $(l:wandscape:crafting_guide)wands$(/l) — who wears what and in which order is up to you in the $(l:wandscape:npc_guide)Wizard Panel$(/l) and $(l:wandscape:strategy_guide)Cast Strategy$(/l).$(li)Teleport, Revive, and similar spells have no scroll recipe: Revive goes through the $(l:wandscape:altar_guide)Altar$(/l).$(br2)$(l:wandscape:npc_guide)Wizard NPC Guide$(/l)$(br2)$(l:wandscape:strategy_guide)Cast Strategy Guide$(/l)$(br2)$(l:wandscape:crafting_guide)Crafting Station (Wands)$(/l)$(br2)$(l:wandscape:index_guide)Back to the Guide Index$(/l)",
+      "title": "Tips"
+    }
+  ]
+}

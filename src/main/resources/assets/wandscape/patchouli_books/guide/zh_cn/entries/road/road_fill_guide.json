@@ -1,0 +1,28 @@
+{
+  "name": "填充与清理模式",
+  "category": "wandscape:road",
+  "icon": "minecraft:shovel",
+  "sortnum": 2,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "这两个模式处理立体地形：$(bold)填充（FILL）$()用于架桥、填坑、搭基座；$(bold)清理（DESTROY）$()用于拆掉错铺的方块、整平地形。"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(li)进模式：按 $(bold)V$() → $(bold)道路$()图标 → 模式栏选$(bold)填充（FILL）$() → 双击挑材质。$(li)拉立体区域：鼠标瞄准地面，$(bold)按住左键拖框$()拉出立体包围盒预览（从起点拖到对角），松开完成。$(li)提交：按 $(bold)Enter$()，范围内填满选定材质。",
+      "title": "填充（FILL）"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(li)模式栏切$(bold)清理（DESTROY）$()。$(li)$(bold)左键$()点击一个参照方块（例如错铺的石砖），将其设为基准高度。$(li)$(bold)按住左键拖框$()选范围按 $(bold)Enter$()：高于参照的方块被拆掉，低于参照的方块被填到参照高度，实现整平。",
+      "title": "清理（DESTROY）"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(bold)填错了想删？$() 切$(bold)清理$()模式，左键点错填的方块当参照，拖框回车，即可清除。$(br2)$(bold)清理会不会拆掉建筑？$() 它只处理框选范围内与参照方块同类的方块，选准范围即可。$(br2)$(l:wandscape:road_replace_guide)替换模式（地表铺路）$(/l)$(br2)$(l:wandscape:road_guide)道路系统总览$(/l)$(br2)$(l:wandscape:index_guide)返回指南首页$(/l)",
+      "title": "常见问题"
+    }
+  ]
+}

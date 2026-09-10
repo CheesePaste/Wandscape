@@ -1,0 +1,23 @@
+{
+  "name": "Replace Mode",
+  "category": "wandscape:road",
+  "icon": "minecraft:smooth_stone",
+  "sortnum": 1,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "Used for everyday paving: frame an area of ground and replace the surface grass, dirt, sand, and stone directly with the chosen road material."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(li)Enter the mode: press $(bold)V$() → the $(bold)Roads$() icon → select $(bold)Replace (REPLACE)$() in the mode bar → double-click a card in the bottom bar to pick a material.$(li)Frame the area: aim at the ground and $(bold)hold left-click and drag a box$() over the area to pave (the start lights up red, dragging pulls out a green selection), release to finish.$(li)Submit: check the selection and press $(bold)Enter$(). Wizard NPCs will execute the paving; once done it becomes a walkable road.$(br2)Picked the wrong spot? $(bold)Backspace$() to undo, or just drag a new box to overwrite. The paving reach is about $(bold)64 blocks$() — fly closer before selecting if the target is out of range.",
+      "title": "Three Steps to Pave a Stretch of Road"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(bold)Picked the wrong start point?$() $(bold)Backspace$() to undo, or hold left-click and drag a new box to overwrite.$(br2)$(bold)Paved in the wrong place?$() Switch to $(bold)Destroy (DESTROY)$() mode and remove it with a reference block.$(br2)$(l:wandscape:road_fill_guide)Fill & Destroy$(/l)$(br2)$(l:wandscape:road_spline_guide)Spline Editor$(/l)$(br2)$(l:wandscape:road_guide)Road System Overview$(/l)$(br2)$(l:wandscape:index_guide)Back to the Guide Index$(/l)",
+      "title": "Common Questions"
+    }
+  ]
+}

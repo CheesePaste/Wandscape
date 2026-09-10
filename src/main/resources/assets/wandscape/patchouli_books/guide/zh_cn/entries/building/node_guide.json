@@ -1,0 +1,28 @@
+{
+  "name": "元素节点",
+  "category": "wandscape:building",
+  "icon": "wandscape:element_earth",
+  "sortnum": 5,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "产出元素的采集设施。法师会自动到节点采集，将元素送入仓库。"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "小镇有 $(bold)7 种元素$()：$(bold)土 / 木 / 水 / 火 / 金 / 风 / 暗$()。每种元素都有对应的节点建筑（火焰节点、暗元素节点等），$(bold)每种节点固定产出一种元素$()。",
+      "title": "元素与节点"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "放置节点 → $(bold)准心对准节点，右键$()打开面板：$(br2)$(li)面板显示该节点产出物、单次采集量、吟唱时长。$(li)滑条设$(bold)采集数量$()（1~10），面板会算出总产量。$(li)点$(bold)发布采集$()，法师前来引导吟唱。$(bold)数量越大，吟唱越久$()，单次产出也更多。$(li)右侧任务队列显示采集中的法师，可取消或调整顺序。",
+      "title": "操作"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(li)节点建成后自动发布采集任务；仓库元素低于日耗时，系统自动$(bold)加派高优先采集$()补货。$(li)采集结果进入$(bold)仓库$()，在$(l:wandscape:warehouse_guide)仓库面板$(/l)查看存量。$(li)缺哪种元素就多建对应节点；急用时可用$(l:wandscape:workstation_guide)工作站$(/l)分解补充。$(br2)$(l:wandscape:warehouse_guide)仓库与物资$(/l)$(br2)$(l:wandscape:workstation_guide)工作站（分解与合成）$(/l)$(br2)$(l:wandscape:getting_started_guide)新手入门：从空城到游客小镇$(/l)$(br2)$(l:wandscape:index_guide)返回指南首页$(/l)",
+      "title": "提示"
+    }
+  ]
+}

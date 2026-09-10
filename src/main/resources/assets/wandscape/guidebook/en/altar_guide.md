@@ -19,7 +19,7 @@ The facility for casting **ritual spells**. The currently available ritual spell
 | Cost | The revived wizard is **weak** — 1 HP and 0 mana, recovered through out-of-combat regeneration and mana regen |
 | Prerequisite | A death record must exist (death records are kept permanently, and only removed after a successful revive) |
 
-If a wizard dies near a building (within 20 blocks), that counts as defending the colony — no altar needed; they are revived automatically at the town hall door (also weakened).
+The altar needs a **living wizard** to walk over and cast it. So a **total wipe stalls the altar too** — when that happens, open the [Town Hall](townhall_guide.md); its **Revive Wizard** button lights up.
 
 ## Tips
 

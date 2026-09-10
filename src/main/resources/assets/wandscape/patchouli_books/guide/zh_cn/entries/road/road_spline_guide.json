@@ -1,0 +1,43 @@
+{
+  "name": "样条线编辑器",
+  "category": "wandscape:road",
+  "icon": "minecraft:lead",
+  "sortnum": 3,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "替换模式只能拉矩形，画弧度需要用$(bold)样条线$()：通过在世界里点锚点画曲线，用于修建弯道、环形路与立交。"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "按 $(bold)V$() → $(bold)道路$()图标 → 点 $(bold)Spline$()，屏幕右侧出现编辑面板。$(bold)ESC$() 或点面板「关闭」退出。",
+      "title": "进入与退出"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "进入编辑器后，$(bold)WASD 不再移动角色，而是控制镜头$()。飞行操作与鸟瞰一致：$(bold)WASD/空格/Shift$() 随时飞行、$(bold)右键拖动$()旋转视角、$(bold)滚轮$()缩放。飞行速度固定，可在模组配置 $(#8a5a2b)panel.flySpeed$() 调整。$(br2)两个编辑器专属键：$(bold)G$() 切 2D 俯视，$(bold)H$() 打开本指南。$(br2)不按右键时光标自由，可直接点面板或点世界里的控制点；按住右键拖动旋转视角。",
+      "title": "镜头操作"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(li)面板「$(bold)点击添加点$()」模式，$(bold)左键$()点世界里的方块表面——加一个锚点。连点两个以上，曲线预览就出来了。$(li)$(bold)左键$()点锚点选中，周围出现 $(bold)RGB 三维轴$()（红 X / 绿 Y / 蓝 Z）。$(bold)按住轴拖$()，锚点就沿那个轴移动。两端的$(bold)切线手柄$()控制弧度。$(li)想让两侧对称弯，保持「对称切线手柄锁定」开启；按住 $(bold)Shift$() 拖，临时只动一侧。$(li)删点：选中按 $(bold)Delete$() / $(bold)Backspace$()，或面板「删除节点」。",
+      "title": "画一条曲线"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "「$(bold)阵列生成$()」页签把曲线变成路：$(br2)$(li)$(bold)材质$()跟随 V 面板底栏选的预设，切材质右侧实时更新。$(li)$(bold)宽度$()（1~15 格）、$(bold)基层厚度$()（1~3 层）、$(bold)路肩石边$()（勾上两侧镶石砖）。$(li)$(bold)采样步距$()调小更平滑，$(bold)3D 预览$()开着看效果。$(li)确认后点「$(bold)下发建造任务$()」，法师执行铺设。",
+      "title": "生成道路"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "「模板与工具」页签输入名字就能把当前曲线存成模板，放在 $(#8a5a2b)<游戏目录>/config/wandscape/splines/$()。下次读取以你当前位置为原点载入。",
+      "title": "存模板"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(bold)弯角处方块断裂？$() 控制柄拉太长、曲率太急。缩短控制柄（2~4 格），或把采样步距调小（比如 1.0）。$(br2)$(bold)拖一个轴另一侧跟着动？$() 那是「对称切线手柄锁定」。按住 Shift 拖临时解除，或在面板取消勾选。$(br2)$(l:wandscape:road_replace_guide)替换模式（地表铺路）$(/l)$(br2)$(l:wandscape:road_guide)道路系统总览$(/l)$(br2)$(l:wandscape:index_guide)返回指南首页$(/l)",
+      "title": "常见问题"
+    }
+  ]
+}

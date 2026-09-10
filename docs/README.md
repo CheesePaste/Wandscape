@@ -19,6 +19,8 @@
 | [fabric-port-survey.md](fabric-port-survey.md) | **Fabric 1.21.1 官方移植考察报告**：规模/耦合量、六条平台接缝、事件映射表、难度分级、仓库结构选择面 | 评估双 loader 官方版可行性或规划长期仓库演进时 |
 | [neoforge-26-upgrade-survey.md](neoforge-26-upgrade-survey.md) | **NeoForge 26.1 升级考察报告**：版本线/工具链变化、全库契约改名与深水重写分区、分项难度表、与 fabric 移植横评 | 评估升级到 Minecraft 26.1 / NeoForge 26.1 的体量与难易，规划升级顺序时 |
 | [multiplayer-parallel-isolation.md](plan/multiplayer-parallel-isolation.md) | **「完全平行」殖民地隔离的方案与可持续推进路线图**：已完成/待实测/后续可选（own-context 绑定 + 咽喉归属判定 + 领地方块防破坏；防恶意客户端与统一入口的时机） | 接续多人生存隔离实现、实测验收、或规划后续多人权限系统前 |
+| [guidebook-patchouli-transform.md](plan/guidebook-patchouli-transform.md) | **手册改造与引导合并方案评估**：教程 HUD 并入 Patchouli 跟玩手册（advancement 解锁/quest 打勾）+ Markdown 只读兜底，奖励去掉；含逐项修改难度表与分阶段路线 | 规划"跟着书玩"改造、评估工作量、或动手前读决策点 D1–D5 |
+| [guidebook-patchouli.md](guidebook-patchouli.md) | **手册落实现状（md 单源 → 帕秋莉 JSON 生成管线）**：生成命令、目录结构、md→帕秋莉映射表、样式栈两个坑、书皮/配图/模型素材坐标与重画规格、后续未做项 | 改 `guidebook/*.md` 内容、重生成手册、替换手册美术素材、或接续解锁与入口收口时 |
 
 ---
 

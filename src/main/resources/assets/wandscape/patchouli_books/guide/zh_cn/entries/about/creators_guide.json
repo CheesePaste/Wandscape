@@ -1,0 +1,53 @@
+{
+  "name": "关于我们 & 反馈",
+  "category": "wandscape:about",
+  "icon": "minecraft:golden_apple",
+  "sortnum": 0,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "Wandscape 由热爱Minecraft与模拟经营的开发者、建筑师与玩家们共同浇灌。感谢每一位为这座魔法小镇添砖加瓦的人。$(br2)当前版本截止到1.8.22，在这之后的贡献者暂时未收录进去。"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(li)$(bold)CheesePaste$()$(li)$(l:https://space.bilibili.com/514121566)访问他的 Bilibili 个人主页$(/l)",
+      "title": "主策划 & 主开发"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(li)$(bold)Victory FX$()$(li)$(l:https://space.bilibili.com/630432283)访问他的 Bilibili 个人主页$(/l)$(li)$(bold)Flamtingo$()$(li)$(l:https://space.bilibili.com/1506072626)访问他的 Bilibili 个人主页$(/l)",
+      "title": "主开发"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "在这里列出为模组提供了建筑的建筑师们：$(br2)$(li)$(bold)CheesePaste$()$(li)$(l:https://space.bilibili.com/514121566)访问他的 Bilibili 个人主页$(/l)$(li)$(bold)次位神$()$(li)$(l:https://space.bilibili.com/3494371208988823)访问他的 Bilibili 个人主页$(/l)$(li)$(bold)小咸鱼$()$(li)$(l:https://m.bilibili.com/space/1217676935)访问他的 Bilibili 个人主页$(/l)$(li)$(bold)Silentstsky_星空$()$(li)$(l:https://space.bilibili.com/272480941)访问他的 Bilibili 个人主页$(/l)$(li)$(bold)西米柚QAQ$()$(li)$(l:https://space.bilibili.com/3461582591888090)访问他的 Bilibili 个人主页$(/l)$(li)$(bold)仍是异乡人_$()$(li)$(l:https://space.bilibili.com/1948778109)访问他的 Bilibili 个人主页$(/l)$(li)$(bold)qic$()",
+      "title": "建筑师"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "在这里列出参与模组开发的程序员：$(br2)$(li)$(bold)RawNuke$() $(l:https://github.com/RawNuke)Github链接$(/l)$(li)$(bold)RainyLetter$() $(l:https://github.com/RainyLetter)Github链接$(/l)",
+      "title": "开发"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(li)$(bold)Ruo_que$()$(li)$(bold)爱发电用户_hcYF$()$(li)$(bold)Tasty_Kara卡拉$()$(li)$(bold)Hymisc$()$(li)...",
+      "title": "特别感谢"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(li)$(l:https://ifdian.net/a/CheesePaste)在爱发电支持我们$(/l)",
+      "title": "支持我们"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(li)$(bold)bilibili$():$(l:https://space.bilibili.com/514121566)个人主页$(/l)$(li)$(bold)discord$():$(l:https://discord.gg/da8ZPuQ7Ys)Discord 服务器$(/l)$(li)$(bold)github$():$(l:https://github.com/CheesePaste/Wandscape)项目仓库$(/l)$(li)$(bold)curseforge$():$(l:https://www.curseforge.com/minecraft/mc-mods/wandscape)模组页面$(/l)$(li)$(bold)modrinth$():等待补充$(li)$(bold)mc百科$():等待补充",
+      "title": "官方平台(部分)"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(li)$(l:https://github.com/CheesePaste/Wandscape/issues)点我反馈问题$(/l)$(br2)$(l:wandscape:index_guide)返回指南首页$(/l)",
+      "title": "反馈"
+    }
+  ]
+}

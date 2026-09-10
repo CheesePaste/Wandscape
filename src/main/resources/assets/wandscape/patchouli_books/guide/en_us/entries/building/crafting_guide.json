@@ -1,0 +1,28 @@
+{
+  "name": "Crafting Station",
+  "category": "wandscape:building",
+  "icon": "wandscape:wand",
+  "sortnum": 2,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "The dedicated facility for making $(bold)wands$(). Wands decide a wizard's combat strength."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Place the Crafting Station → $(bold)aim your crosshair at it and right-click$() to open the panel → pick a wand blueprint (searchable by name) → set the quantity → $(bold)Submit$().$(br2)The task queue panel shows the wizards' crafting progress. One wand takes about $(bold)1 minute$() of channeling; batch orders process in queue order.",
+      "title": "Using It"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Wand bonuses apply $(bold)the moment they're equipped$() — Spell Power decides casting might, Work Speed decides building efficiency. Recipes have level gates; when the colony level is insufficient, the corresponding recipe stays locked. New wizards come with a $(bold)Basic Wand$() (no bonus); the Crafting Station can craft any of the 12 preset wands to replace it:$(br2)$(bold)Wand  Colony level required  Cost  Bonus$()$(li)$(bold)Carpenter Wand$() — Level 1 — Earth ×1100 + Wood ×1300 — Work Speed +0.4$(li)$(bold)Apprentice Wand$() — Level 1 — Fire ×800 + Water ×800 + Wood ×800 — Spell Power +0.25, Max Mana +30$(li)$(bold)Pyromancer Wand$() — Level 5 — Fire ×7000 + Metal ×5000 — Spell Power +0.7$(li)$(bold)Workshop Wand$() — Level 5 — Earth ×6000 + Wood ×6000 — Work Speed +0.5, Cast Speed +0.15$(li)$(bold)Bulwark Wand$() — Level 10 — Earth ×14000 + Metal ×9000 + Water ×7000 — Max HP +40, Armor +5$(li)$(bold)Mana Spring Wand$() — Level 10 — Water ×17000 + Wood ×13000 — Max Mana +150, Cast Speed +0.2$(li)$(bold)Gale Wand$() — Level 10 — Wind ×17000 + Fire ×13000 — Move Speed +0.2, Cast Speed +0.4$(li)$(bold)Craftsman Wand$() — Level 20 — Earth ×45000 + Wood ×45000 — Work Speed +0.9, Max Mana +100$(li)$(bold)Bastion Wand$() — Level 20 — Earth ×45000 + Metal ×35000 + Wood ×25000 — Move Speed −0.18, Max HP +55, Armor +8$(li)$(bold)Arcane Wand$() — Level 20 — Fire ×35000 + Dark ×30000 + Water ×30000 — Spell Power +0.8, Cast Speed +0.3$(li)$(bold)Oblivion Wand$() — Level 30 — Fire ×75000 + Dark ×60000 + Metal ×45000 — Spell Power +2.0 (Max HP −40, Armor −15)$(li)$(bold)Genesis Wand$() — Level 30 — Wood ×95000 + Earth ×70000 + Water ×50000 — Work Speed +1.6, Max Mana +200 (Spell Power −1.0)",
+      "title": "Wands"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(li)Finished wands go into the $(bold)warehouse$(); equip them on wizards in the $(l:wandscape:npc_guide)Wizard Panel$(/l). Wands can be swapped freely — one wand serves the whole squad.$(li)Wands never lose durability.$(li)Recipes at Level 20+ cost a lot of Metal and Dark elements — late-game savings goals.$(br2)$(l:wandscape:workstation_guide)Workstation (Decompose & Synthesize)$(/l)$(br2)$(l:wandscape:npc_guide)Wizard NPC Guide$(/l)$(br2)$(l:wandscape:index_guide)Back to the Guide Index$(/l)",
+      "title": "Tips"
+    }
+  ]
+}

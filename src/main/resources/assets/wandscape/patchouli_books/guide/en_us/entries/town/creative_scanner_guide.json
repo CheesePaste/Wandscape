@@ -1,0 +1,43 @@
+{
+  "name": "Creative Building Scanner",
+  "category": "wandscape:town",
+  "icon": "minecraft:structure_block",
+  "sortnum": 2,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "This page is for creators and map makers. $(bold)The Creative Building Scanner is a creative-mode tool, unavailable in survival mode$() — it can export a building together with its $(bold)tourist interact spots, decoration entities, and the whole set of business parameters$(), producing buildings with \"soul\". For regular players, the $(l:wandscape:scanner_guide)Building Scanner$(/l) is enough to copy houses."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Place two blocks: $(bold)SAVE (main)$() and $(bold)CORNER (corner point)$(), fill in the same structure name, and they auto-pair within 64 blocks to compute the bounding box — no need to enter coordinates manually.",
+      "title": "Structure Pairing"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(li)$(bold)Boundary$(): ±1 buttons for X/Y/Z to fine-tune the bounding box size.$(li)$(bold)Door Offset$(): auto-detect doors; cycle through multiple doors.$(li)$(bold)Metadata$(): building ID, name, creator, the Comfort/Magic/Wonder values, unlock level.$(li)$(bold)Preset Saving$(): save the whole configuration as a preset and load it directly next time.",
+      "title": "Fitting the Building Out in the Panel"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Want tourists to $(bold)actually perform actions$() inside the building (instead of standing around doing nothing)? Use the $(#8a5a2b)interact_spot_marker$() block to mark a \"spot\" in the world:$(br2)$(li)$(bold)Place$(): put a marker on the ground and you have an interact spot — a $(bold)preview dummy$() immediately stands on it, looping through the actions of this spot.$(li)$(bold)Right-click$(): cycles through actions — $(bold)Browse / Eat / Bathe / View / Pay / Rest / Withdraw$().$(li)$(bold)Sneak right-click$(): cycles through facing directions (North/East/South/West); tourists will face this direction when performing actions.$(li)$(bold)Break it$(): removes the interact spot.$(br2)A few conventions: $(bold)the number of interact spots = the maximum number of tourists who can interact here at the same time$() (once full, later arrivals queue up); the block occupied by an interact spot is automatically left empty in the blueprint — don't put critical structure blocks underneath it; when the building rotates, interact spot facings rotate along with it.",
+      "title": "Tourist Interact Spots"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Entities like item frames and paintings (not blocks) can also be scanned in: on export, their type, facing, and contents are captured, and NPCs restore them exactly when rebuilding. Wall decorations will never be lost again.",
+      "title": "Decoration Entities"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(bold)Type  What you can configure$()$(li)$(bold)Shop$() — Profit rate, interaction duration, $(bold)the list of goods on sale$() (each good with Comfort/Magic/Wonder values)$(li)$(bold)Service$() — How much tourist energy each use consumes, elements produced, $(bold)max occupancy$() (>0 makes it a hotel), interaction duration$(li)$(bold)Relax$() — How much tourist energy each use restores, interaction duration$(li)$(bold)ATM$() — How much money each use dispenses, interaction duration",
+      "title": "Business Parameters for the Four Tourist Building Types"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "When configured, click \"$(bold)Export Building JSON$()\" — the export carries the interact spots, decoration entities, and the whole set of business parameters, $(bold)takes effect in-game immediately$(), and survives $(#8a5a2b)/reload$().$(br2)$(l:wandscape:scanner_guide)Building Scanner (Copying Buildings in Survival)$(/l)$(br2)$(l:wandscape:tourist_guide)Tourist System Guide$(/l)$(br2)$(l:wandscape:index_guide)Back to the Guide Index$(/l)",
+      "title": "Export"
+    }
+  ]
+}
