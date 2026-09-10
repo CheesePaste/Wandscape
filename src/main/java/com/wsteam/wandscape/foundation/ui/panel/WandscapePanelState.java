@@ -87,6 +87,9 @@ public final class WandscapePanelState {
     public static void toggleBuildingAreas() { showBuildingAreas = !showBuildingAreas; }
 
     // ── Building selection bar ──
+    public static final String PACKAGE_ALL = "ALL";
+    private static volatile String buildingBarPackage = PACKAGE_ALL;
+    private static volatile boolean buildingBarPackageDropdownOpen = false;
     private static volatile boolean buildingBarOpen = false;
     private static volatile boolean buildingBarSearchFocused = false;
     private static volatile String buildingBarCategory = "All";
@@ -302,6 +305,8 @@ public final class WandscapePanelState {
         showBuildingAreas = false;
         buildingBarOpen = false;
         buildingBarSearchFocused = false;
+        buildingBarPackage = PACKAGE_ALL;
+        buildingBarPackageDropdownOpen = false;
         buildingBarCategory = "All";
         buildingBarSearch = "";
         buildingBarSelectedIndex = -1;
@@ -366,6 +371,7 @@ public final class WandscapePanelState {
     public static void closeBuildingBar() {
         buildingBarOpen = false;
         buildingBarSearchFocused = false;
+        buildingBarPackageDropdownOpen = false;
         // Preserve category/search/scroll (selection cache). selectedIndex resyncs on reopen.
         buildingBarSelectedIndex = -1;
         lastClickTime = 0;
@@ -385,6 +391,18 @@ public final class WandscapePanelState {
         buildPhase = BuildPhase.BAR;
         openBuildingBar();
     }
+
+    public static String getBuildingBarPackage() { return buildingBarPackage; }
+    public static void setBuildingBarPackage(String pkgId) {
+        buildingBarPackage = (pkgId != null && !pkgId.isBlank()) ? pkgId : PACKAGE_ALL;
+        buildingBarCategory = "All";
+        buildingBarScrollOffset = 0;
+        buildingBarSelectedIndex = -1;
+    }
+
+    public static boolean isBuildingBarPackageDropdownOpen() { return buildingBarPackageDropdownOpen; }
+    public static void setBuildingBarPackageDropdownOpen(boolean open) { buildingBarPackageDropdownOpen = open; }
+    public static void toggleBuildingBarPackageDropdown() { buildingBarPackageDropdownOpen = !buildingBarPackageDropdownOpen; }
 
     public static String getBuildingBarCategory() { return buildingBarCategory; }
     public static void setBuildingBarCategory(String cat) {

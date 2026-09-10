@@ -296,6 +296,11 @@ public final class WandscapePanelController {
                 event.setCanceled(true);
                 return;
             }
+            // Package dropdown / button click
+            if (BuildingSelectionOverlay.handlePackageClick(mouseX, mouseY, screenW, screenH)) {
+                event.setCanceled(true);
+                return;
+            }
             // Category tab click
             int catIdx = BuildingSelectionOverlay.getCategoryAt(mouseX, mouseY, screenW, screenH);
             if (catIdx >= 0) {

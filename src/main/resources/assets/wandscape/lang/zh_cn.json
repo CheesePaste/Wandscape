@@ -1,4 +1,9 @@
 {
+  "wandscape.pack.all": "全部建筑包",
+  "wandscape.pack.default.name": "核心建筑包",
+  "wandscape.pack.default.desc": "魔法小镇模组内置核心建筑集合",
+  "gui.wandscape.scanner.target_package": "目标建筑包",
+  "gui.wandscape.scanner.target_package.tooltip": "导出归属的建筑包目录名（如 default、oriental）",
   "attribute.name.wandscape.spell_power": "法术强度",
   "attribute.name.wandscape.work_speed": "工作速度",
   "attribute.name.wandscape.spell_speed": "施法速度",

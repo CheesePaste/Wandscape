@@ -1,4 +1,9 @@
 {
+  "wandscape.pack.all": "All Packs",
+  "wandscape.pack.default.name": "Core Pack",
+  "wandscape.pack.default.desc": "Built-in core buildings of Wandscape",
+  "gui.wandscape.scanner.target_package": "Package",
+  "gui.wandscape.scanner.target_package.tooltip": "Target building package directory (e.g. default, oriental)",
   "attribute.name.wandscape.spell_power": "Spell Power",
   "attribute.name.wandscape.work_speed": "Work Speed",
   "attribute.name.wandscape.spell_speed": "Spell Speed",
