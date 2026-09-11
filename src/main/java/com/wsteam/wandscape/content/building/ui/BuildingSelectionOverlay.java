@@ -1,4 +1,5 @@
 package com.wsteam.wandscape.content.building.ui;
+import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState;
 import com.wsteam.wandscape.foundation.ui.panel.WandscapePanelOverlay;
 
@@ -9,6 +10,7 @@ import com.wsteam.wandscape.content.building.projection.client.ProjectionClientS
 import com.wsteam.wandscape.content.building.projection.data.BuildingSlot;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.content.building.preview.BuildingPreviewGifCache;
+import com.wsteam.wandscape.content.building.data.BuildingPackage;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -94,6 +96,12 @@ public final class BuildingSelectionOverlay {
             return;
         }
 
+        // Auto-fallback if currently selected package was disabled
+        String curPkg = WandscapePanelState.getBuildingBarPackage();
+        if (!WandscapePanelState.PACKAGE_ALL.equals(curPkg) && !Config.isPackageEnabled(curPkg)) {
+            WandscapePanelState.setBuildingBarPackage(WandscapePanelState.PACKAGE_ALL);
+        }
+
         int barY = screenH - BAR_HEIGHT;
 
         // Background
@@ -101,9 +109,12 @@ public final class BuildingSelectionOverlay {
 
         List<BuildingSlot> filtered = getFilteredSlots();
 
-        // Category tabs + search on same line
+        // Package button + Category tabs + search on same line
         List<String> categories = getCategories();
-        int searchX = renderCategoryTabs(g, font, categories, barY, screenW, mouseX, mouseY);
+        int pkgW = getPackageButtonWidth(font);
+        renderPackageButton(g, font, GRID_LEFT, barY, pkgW, mouseX, mouseY);
+
+        int searchX = renderCategoryTabs(g, font, categories, barY, screenW, GRID_LEFT + pkgW + 4, mouseX, mouseY);
         renderSearchBar(g, font, searchX, barY + 2, mouseX, mouseY);
 
         // Scrollable multi-row building grid
@@ -111,6 +122,11 @@ public final class BuildingSelectionOverlay {
         int cols = Math.max(1, (screenW - GRID_LEFT - GRID_PAD_X - SCROLLBAR_W) / CELL_W);
         renderBuildingGrid(g, font, filtered, GRID_LEFT, gridY, cols, screenW, mouseX, mouseY);
         renderScrollbar(g, filtered, cols, screenW, barY, gridY);
+
+        // Floating package dropdown on top if open
+        if (WandscapePanelState.isBuildingBarPackageDropdownOpen()) {
+            renderPackageDropdown(g, font, GRID_LEFT, barY, pkgW, mouseX, mouseY);
+        }
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -181,9 +197,10 @@ public final class BuildingSelectionOverlay {
         int barY = getBarY(screenH);
         if (mouseY < barY || mouseY >= barY + CATEGORY_ROW_H) return -1;
 
-        List<String> cats = getCategories();
-        int x = GRID_LEFT;
         Font font = Minecraft.getInstance().font;
+        int pkgW = getPackageButtonWidth(font);
+        int x = GRID_LEFT + pkgW + 4;
+        List<String> cats = getCategories();
         int searchX = screenW - GRID_PAD_X - SEARCH_W;
         for (int i = 0; i < cats.size(); i++) {
             String label = getCategoryDisplayName(cats.get(i));
@@ -217,9 +234,13 @@ public final class BuildingSelectionOverlay {
     // ═══════════════════════════════════════════════════════════════
 
     public static List<String> getCategories() {
+        String currentPkg = WandscapePanelState.getBuildingBarPackage();
         Set<String> present = new LinkedHashSet<>();
         for (BuildingSlot slot : ProjectionClientState.getBuildingSlots()) {
-            present.add(BuildingSort.tabOf(slot.category()));
+            if (!Config.isPackageEnabled(slot.packageId())) continue;
+            if (WandscapePanelState.PACKAGE_ALL.equals(currentPkg) || currentPkg.equals(slot.packageId())) {
+                present.add(BuildingSort.tabOf(slot.category()));
+            }
         }
         List<String> sorted = new ArrayList<>();
         sorted.add("All");
@@ -232,9 +253,12 @@ public final class BuildingSelectionOverlay {
     }
 
     private static List<BuildingSlot> getFilteredSlots() {
+        String pkg = WandscapePanelState.getBuildingBarPackage();
         String cat = WandscapePanelState.getBuildingBarCategory();
         String search = WandscapePanelState.getBuildingBarSearch().toLowerCase();
         return ProjectionClientState.getBuildingSlots().stream()
+                .filter(s -> Config.isPackageEnabled(s.packageId()))
+                .filter(s -> WandscapePanelState.PACKAGE_ALL.equals(pkg) || pkg.equals(s.packageId()))
                 .filter(s -> "All".equals(cat) || matchesCategory(s.category(), cat))
                 .filter(s -> search.isEmpty() || s.displayName().toLowerCase().contains(search))
                 .sorted(BuildingSelectionOverlay::compareSlots)
@@ -264,8 +288,8 @@ public final class BuildingSelectionOverlay {
     }
 
     private static int renderCategoryTabs(GuiGraphics g, Font font, List<String> cats,
-                                           int barY, int screenW, double mouseX, double mouseY) {
-        int x = GRID_LEFT;
+                                           int barY, int screenW, int startX, double mouseX, double mouseY) {
+        int x = startX;
         int y = barY + 1;
         int searchX = screenW - GRID_PAD_X - SEARCH_W;
         String activeCat = WandscapePanelState.getBuildingBarCategory();
@@ -506,4 +530,147 @@ public final class BuildingSelectionOverlay {
         g.fill(net.minecraft.client.renderer.RenderType.guiOverlay(), scrollbarX + 1, thumbY, scrollbarX + SCROLLBAR_W - 1, thumbY + thumbH, 0, com.wsteam.wandscape.foundation.ui.theme.WandscapeTheme.COLOR_BORDER_NORMAL);
     }
 
+    // ═══════════════════════════════════════════════════════════════
+    // ── Package selector UI ──
+    // ═══════════════════════════════════════════════════════════════
+
+    public static String getPackageTitle(String pkgId) {
+        if (WandscapePanelState.PACKAGE_ALL.equals(pkgId)) {
+            return com.wsteam.wandscape.foundation.ui.I18n.name("wandscape.pack.all", "全部建筑包").getString();
+        }
+        for (BuildingPackage p : ProjectionClientState.getBuildingPackages()) {
+            if (p.id().equals(pkgId)) {
+                return com.wsteam.wandscape.foundation.ui.I18n.name(p.name(), p.name()).getString();
+            }
+        }
+        return pkgId;
+    }
+
+    public static int getPackageButtonWidth(Font font) {
+        String title = getPackageTitle(WandscapePanelState.getBuildingBarPackage());
+        return Math.max(68, font.width(title) + 16);
+    }
+
+    private static void renderPackageButton(GuiGraphics g, Font font, int x, int barY, int w,
+                                             double mouseX, double mouseY) {
+        int y = barY + 1;
+        int h = CATEGORY_ROW_H - 2;
+        boolean open = WandscapePanelState.isBuildingBarPackageDropdownOpen();
+        boolean hovered = mouseX >= x && mouseX < x + w && mouseY >= y && mouseY < y + h;
+
+        com.wsteam.wandscape.foundation.ui.theme.WandscapeTheme.drawRtsBox(g, x, y, w, h, open, hovered);
+        String title = getPackageTitle(WandscapePanelState.getBuildingBarPackage()) + (open ? " ^" : " v");
+        int textColor = open ? com.wsteam.wandscape.foundation.ui.theme.WandscapeTheme.COLOR_TEXT_NORMAL
+                : com.wsteam.wandscape.foundation.ui.theme.WandscapeTheme.COLOR_TEXT_DIM;
+        g.drawString(font, title, x + 4, y + 2, textColor);
+    }
+
+    private static List<BuildingPackage> getEnabledPackages() {
+        return ProjectionClientState.getBuildingPackages().stream()
+                .filter(p -> Config.isPackageEnabled(p.id()))
+                .toList();
+    }
+
+    private static void renderPackageDropdown(GuiGraphics g, Font font, int x, int barY, int btnW,
+                                               double mouseX, double mouseY) {
+        var pkgs = getEnabledPackages();
+        int totalItems = 1 + pkgs.size();
+        int itemH = 14;
+        int dropH = totalItems * itemH + 4;
+        int dropW = Math.max(btnW, 110);
+        for (BuildingPackage p : pkgs) {
+            dropW = Math.max(dropW, font.width(getPackageTitle(p.id())) + 12);
+        }
+        int dropX = x;
+        int dropY = barY - dropH - 1;
+
+        // Background box
+        com.wsteam.wandscape.foundation.ui.theme.WandscapeTheme.drawRtsBox(g, dropX, dropY, dropW, dropH, true, false);
+
+        String curPkg = WandscapePanelState.getBuildingBarPackage();
+
+        // Item 0: All
+        int itemY = dropY + 2;
+        boolean allSelected = WandscapePanelState.PACKAGE_ALL.equals(curPkg);
+        boolean allHovered = mouseX >= dropX && mouseX < dropX + dropW && mouseY >= itemY && mouseY < itemY + itemH;
+        if (allHovered) {
+            g.fill(net.minecraft.client.renderer.RenderType.guiOverlay(), dropX + 1, itemY, dropX + dropW - 1, itemY + itemH, 0, CAT_HOVER_BG);
+        } else if (allSelected) {
+            g.fill(net.minecraft.client.renderer.RenderType.guiOverlay(), dropX + 1, itemY, dropX + dropW - 1, itemY + itemH, 0, CAT_INACTIVE_BG);
+        }
+        int allColor = allSelected ? CAT_TEXT_SELECTED : CAT_TEXT_NORMAL;
+        g.drawString(font, getPackageTitle(WandscapePanelState.PACKAGE_ALL), dropX + 4, itemY + 3, allColor);
+
+        // Subsequent items
+        for (int i = 0; i < pkgs.size(); i++) {
+            BuildingPackage p = pkgs.get(i);
+            itemY = dropY + 2 + (i + 1) * itemH;
+            boolean selected = p.id().equals(curPkg);
+            boolean hovered = mouseX >= dropX && mouseX < dropX + dropW && mouseY >= itemY && mouseY < itemY + itemH;
+            if (hovered) {
+                g.fill(net.minecraft.client.renderer.RenderType.guiOverlay(), dropX + 1, itemY, dropX + dropW - 1, itemY + itemH, 0, CAT_HOVER_BG);
+            } else if (selected) {
+                g.fill(net.minecraft.client.renderer.RenderType.guiOverlay(), dropX + 1, itemY, dropX + dropW - 1, itemY + itemH, 0, CAT_INACTIVE_BG);
+            }
+            int color = selected ? CAT_TEXT_SELECTED : CAT_TEXT_NORMAL;
+            g.drawString(font, getPackageTitle(p.id()), dropX + 4, itemY + 3, color);
+        }
+    }
+
+    public static boolean handlePackageClick(double mouseX, double mouseY, int screenW, int screenH) {
+        if (!isActive()) return false;
+        Font font = Minecraft.getInstance().font;
+        int barY = getBarY(screenH);
+        int pkgW = getPackageButtonWidth(font);
+        int btnX = GRID_LEFT;
+        int btnY = barY + 1;
+        int btnH = CATEGORY_ROW_H - 2;
+
+        boolean open = WandscapePanelState.isBuildingBarPackageDropdownOpen();
+
+        if (mouseX >= btnX && mouseX < btnX + pkgW && mouseY >= btnY && mouseY < btnY + btnH) {
+            WandscapePanelState.toggleBuildingBarPackageDropdown();
+            playClickSound();
+            return true;
+        }
+
+        if (open) {
+            var pkgs = getEnabledPackages();
+            int totalItems = 1 + pkgs.size();
+            int itemH = 14;
+            int dropH = totalItems * itemH + 4;
+            int dropW = Math.max(pkgW, 110);
+            for (BuildingPackage p : pkgs) {
+                dropW = Math.max(dropW, font.width(getPackageTitle(p.id())) + 12);
+            }
+            int dropX = btnX;
+            int dropY = barY - dropH - 1;
+
+            if (mouseX >= dropX && mouseX < dropX + dropW && mouseY >= dropY && mouseY < dropY + dropH) {
+                int clickedIndex = (int) ((mouseY - (dropY + 2)) / itemH);
+                if (clickedIndex == 0) {
+                    WandscapePanelState.setBuildingBarPackage(WandscapePanelState.PACKAGE_ALL);
+                } else if (clickedIndex > 0 && clickedIndex - 1 < pkgs.size()) {
+                    WandscapePanelState.setBuildingBarPackage(pkgs.get(clickedIndex - 1).id());
+                }
+                WandscapePanelState.setBuildingBarPackageDropdownOpen(false);
+                playClickSound();
+                return true;
+            } else {
+                WandscapePanelState.setBuildingBarPackageDropdownOpen(false);
+                return false;
+            }
+        }
+
+        return false;
+    }
+
+    private static void playClickSound() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc != null && mc.getSoundManager() != null) {
+            mc.getSoundManager().play(
+                    net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(
+                            net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK, 1.0f));
+        }
+    }
 }

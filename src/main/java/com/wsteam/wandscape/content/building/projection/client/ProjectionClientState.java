@@ -3,6 +3,7 @@ import com.wsteam.wandscape.content.task.component.Position;
 import com.wsteam.wandscape.content.task.ecs.World;
 
 import com.wsteam.wandscape.content.building.data.BuildingConfig;
+import com.wsteam.wandscape.content.building.data.BuildingPackage;
 import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.content.building.network.BuildingAreaSyncPacket;
 import com.wsteam.wandscape.foundation.sound.SoundService;
@@ -48,6 +49,10 @@ public final class ProjectionClientState {
     private static final List<BuildingSlot> buildingSlots =
             Collections.synchronizedList(new ArrayList<>());
 
+    /** Available building packages received from server. */
+    private static final List<BuildingPackage> buildingPackages =
+            Collections.synchronizedList(new ArrayList<>());
+
     /** Number of 90° counter-clockwise rotations (0-3). 0 = original orientation. */
     private static volatile int rotationSteps = 0;
 
@@ -68,6 +73,24 @@ public final class ProjectionClientState {
         return projecting;
     }
 
+    public static List<BuildingPackage> getBuildingPackages() {
+        synchronized (buildingPackages) {
+            if (buildingPackages.isEmpty()) {
+                return BuildingConfigLoader.getInstance().getAllPackages();
+            }
+            return List.copyOf(buildingPackages);
+        }
+    }
+
+    public static void setBuildingPackages(List<BuildingPackage> packages) {
+        synchronized (buildingPackages) {
+            buildingPackages.clear();
+            if (packages != null) {
+                buildingPackages.addAll(packages);
+            }
+        }
+    }
+
     /**
      * Clamp a slot index into {@code [0, size)}. Out-of-range (negative, or {@code >= size},
      * including any index when {@code size == 0}) folds back to 0. Package-private so the
@@ -80,9 +103,13 @@ public final class ProjectionClientState {
 
     /**
      * Enter projection mode. Called from {@code ProjectionEnterResponsePacket} client handler.
-     * Saves current player state, enablestransl flight, stores building slots.
+     * Saves current player state, enables flight, stores building slots.
      */
     public static void enterProjection(BlockPos anchor, List<BuildingSlot> slots) {
+        enterProjection(anchor, slots, List.of());
+    }
+
+    public static void enterProjection(BlockPos anchor, List<BuildingSlot> slots, List<BuildingPackage> packages) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
 
@@ -92,6 +119,9 @@ public final class ProjectionClientState {
         synchronized (buildingSlots) {
             buildingSlots.clear();
             buildingSlots.addAll(slots);
+        }
+        if (packages != null && !packages.isEmpty()) {
+            setBuildingPackages(packages);
         }
         // Preserve selection across suspend/resume within a session: only clamp the
         // slot index into the (possibly changed) list; keep rotation and pin.
@@ -128,6 +158,9 @@ public final class ProjectionClientState {
         pinned = false;
         synchronized (buildingSlots) {
             buildingSlots.clear();
+        }
+        synchronized (buildingPackages) {
+            buildingPackages.clear();
         }
 
         Log.info(TAG, "[Projection] Exited projection mode");

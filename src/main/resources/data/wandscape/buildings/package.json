@@ -1,0 +1,9 @@
+{
+  "id": "default",
+  "name": "wandscape.pack.default.name",
+  "description": "wandscape.pack.default.desc",
+  "author": "Wandscape",
+  "version": "1.0.0",
+  "icon": "wandscape:building_scanner",
+  "priority": 0
+}

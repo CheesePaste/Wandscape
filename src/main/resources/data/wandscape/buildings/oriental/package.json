@@ -1,0 +1,9 @@
+{
+  "id": "oriental",
+  "name": "wandscape.pack.oriental.name",
+  "description": "wandscape.pack.oriental.desc",
+  "author": "Wandscape",
+  "version": "1.0.0",
+  "icon": "minecraft:bamboo",
+  "priority": 50
+}

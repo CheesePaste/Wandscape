@@ -1,6 +1,8 @@
 package com.wsteam.wandscape.content.building.scanner.client;
 
 import com.wsteam.wandscape.content.building.data.BlockOffset;
+import com.wsteam.wandscape.content.building.data.BuildingPackage;
+import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.content.building.scanner.CreativeScannerBlockEntity;
 import com.wsteam.wandscape.content.building.scanner.CreativeScannerBlockEntity.BlockMode;
 import com.wsteam.wandscape.content.building.scanner.CreativeScannerBlockEntity.ShopGoodData;
@@ -326,15 +328,20 @@ public class CreativeScannerScreen extends MedievalScreen {
         // ── BUILDING Mode Properties ──
         if (isSurvival) {
             // Survival mode: category is locked to custom, stats are block-calculated
-            mkEdit(lx + 24, y, 100, 16, scanner.getBuildingId().isEmpty() ? "custom_building" : scanner.getBuildingId(), s -> {
+            mkEdit(lx + 22, y, 56, 16, scanner.getBuildingId().isEmpty() ? "custom_building" : scanner.getBuildingId(), s -> {
                 scanner.setBuildingId(s);
                 syncToServer();
             });
-            mkEdit(lx + 154, y, 92, 16, scanner.getDisplayName().isEmpty() ? "自定义建筑" : scanner.getDisplayName(), s -> {
+            mkEdit(lx + 110, y, 64, 16, scanner.getDisplayName().isEmpty() ? "自定义建筑" : scanner.getDisplayName(), s -> {
                 scanner.setDisplayName(s);
                 syncToServer();
             });
-            mkEdit(lx + 276, y, 88, 16, scanner.getCreator(), s -> {
+            EditBox survPkgEdit = mkEdit(lx + 196, y, 60, 16, scanner.getPackageId(), s -> {
+                scanner.setPackageId(s);
+                syncToServer();
+            });
+            addBtn(lx + 258, y, 14, 16, "▾", () -> cyclePackage(survPkgEdit));
+            mkEdit(lx + 304, y, 56, 16, scanner.getCreator(), s -> {
                 scanner.setCreator(s);
                 syncToServer();
             });
@@ -350,16 +357,21 @@ public class CreativeScannerScreen extends MedievalScreen {
         }
 
         // Creative mode: Full configurable category and attributes
-        // Row 1: ID, Name, Creator
-        mkEdit(lx + 24, y, 100, 16, scanner.getBuildingId(), s -> {
+        // Row 1: ID, Name, Package, Creator
+        mkEdit(lx + 22, y, 56, 16, scanner.getBuildingId(), s -> {
             scanner.setBuildingId(s);
             syncToServer();
         });
-        mkEdit(lx + 154, y, 92, 16, scanner.getDisplayName(), s -> {
+        mkEdit(lx + 110, y, 64, 16, scanner.getDisplayName(), s -> {
             scanner.setDisplayName(s);
             syncToServer();
         });
-        mkEdit(lx + 276, y, 88, 16, scanner.getCreator(), s -> {
+        EditBox creatPkgEdit = mkEdit(lx + 196, y, 60, 16, scanner.getPackageId(), s -> {
+            scanner.setPackageId(s);
+            syncToServer();
+        });
+        addBtn(lx + 258, y, 14, 16, "▾", () -> cyclePackage(creatPkgEdit));
+        mkEdit(lx + 304, y, 56, 16, scanner.getCreator(), s -> {
             scanner.setCreator(s);
             syncToServer();
         });
@@ -806,8 +818,9 @@ public class CreativeScannerScreen extends MedievalScreen {
         if (isSurvival) {
             drawMinimalBox(gui, lx, y - 2, 364, 48, false, false);
             gui.drawString(font, I18n.string("gui.wandscape.scanner.id_label", "ID:"), lx + 6, y + 4, MedievalColors.TEXT_MUTED);
-            gui.drawString(font, I18n.string("gui.wandscape.scanner.name_label", "名称:"), lx + 128, y + 4, MedievalColors.TEXT_MUTED);
-            gui.drawString(font, I18n.string("gui.wandscape.scanner.author_label", "作者:"), lx + 250, y + 4, MedievalColors.TEXT_MUTED);
+            gui.drawString(font, I18n.string("gui.wandscape.scanner.name_label", "名称:"), lx + 82, y + 4, MedievalColors.TEXT_MUTED);
+            gui.drawString(font, I18n.string("gui.wandscape.scanner.package_label", "包:"), lx + 178, y + 4, MedievalColors.TEXT_MUTED);
+            gui.drawString(font, I18n.string("gui.wandscape.scanner.author_label", "作者:"), lx + 276, y + 4, MedievalColors.TEXT_MUTED);
 
             gui.drawString(font, I18n.string("gui.wandscape.scanner.category_label", "分类:"), lx + 6, y + 27, MedievalColors.TEXT_MUTED);
             gui.drawString(font, I18n.string("gui.wandscape.scanner.survival_category_locked", "自定义建筑 (custom) [生存模式固定]"), lx + 36, y + 27, MedievalColors.BORDER_GOLD);
@@ -834,8 +847,9 @@ public class CreativeScannerScreen extends MedievalScreen {
         // Creative mode: Full configurable category and attributes
         drawMinimalBox(gui, lx, y - 2, 364, 68, false, false);
         gui.drawString(font, I18n.string("gui.wandscape.scanner.id_label", "ID:"), lx + 6, y + 4, MedievalColors.TEXT_MUTED);
-        gui.drawString(font, I18n.string("gui.wandscape.scanner.name_label", "名称:"), lx + 128, y + 4, MedievalColors.TEXT_MUTED);
-        gui.drawString(font, I18n.string("gui.wandscape.scanner.author_label", "作者:"), lx + 250, y + 4, MedievalColors.TEXT_MUTED);
+        gui.drawString(font, I18n.string("gui.wandscape.scanner.name_label", "名称:"), lx + 82, y + 4, MedievalColors.TEXT_MUTED);
+        gui.drawString(font, I18n.string("gui.wandscape.scanner.package_label", "包:"), lx + 178, y + 4, MedievalColors.TEXT_MUTED);
+        gui.drawString(font, I18n.string("gui.wandscape.scanner.author_label", "作者:"), lx + 276, y + 4, MedievalColors.TEXT_MUTED);
 
         gui.drawString(font, I18n.string("gui.wandscape.scanner.category_label", "分类:"), lx + 6, y + 27, MedievalColors.TEXT_MUTED);
 
@@ -951,7 +965,10 @@ public class CreativeScannerScreen extends MedievalScreen {
 
         String idStr = scanner.getBuildingId().isEmpty() ? "未命名ID" : scanner.getBuildingId();
         String nameStr = scanner.getDisplayName().isEmpty() ? "—" : scanner.getDisplayName();
-        gui.drawString(font, I18n.string("gui.wandscape.scanner.overview_id_name", "标识: %s (%s)", font.plainSubstrByWidth(idStr, 130), font.plainSubstrByWidth(nameStr, 120)), lx + 12, y + 34, MedievalColors.TEXT_WARM_WHITE);
+        String pkgStr = scanner.getPackageId().isEmpty() ? "default" : scanner.getPackageId();
+        gui.drawString(font, I18n.string("gui.wandscape.scanner.overview_id_name", "标识: %s (%s) | 包: %s",
+                font.plainSubstrByWidth(idStr, 90), font.plainSubstrByWidth(nameStr, 80), font.plainSubstrByWidth(pkgStr, 70)),
+                lx + 12, y + 34, MedievalColors.TEXT_WARM_WHITE);
 
         BlockOffset bMin = scanner.getBoundaryMin();
         BlockOffset bMax = scanner.getBoundaryMax();
@@ -1157,6 +1174,29 @@ public class CreativeScannerScreen extends MedievalScreen {
         rebuild();
     }
 
+    private void cyclePackage(EditBox packageEdit) {
+        List<BuildingPackage> pkgs = BuildingConfigLoader.getInstance().getAllPackages();
+        if (pkgs.isEmpty()) {
+            return;
+        }
+        String curId = scanner.getPackageId();
+        int curIdx = -1;
+        for (int i = 0; i < pkgs.size(); i++) {
+            if (pkgs.get(i).id().equalsIgnoreCase(curId)) {
+                curIdx = i;
+                break;
+            }
+        }
+        int nextIdx = (curIdx + 1) % pkgs.size();
+        BuildingPackage nextPkg = pkgs.get(nextIdx);
+        scanner.setPackageId(nextPkg.id());
+        if (packageEdit != null) {
+            packageEdit.setValue(nextPkg.id());
+        }
+        syncToServer();
+        showFeedback(Component.literal("§e目标包: " + nextPkg.name() + " (" + nextPkg.id() + ")"), 0xFFD4A840);
+    }
+
     private void onPresetSave() {
         if (presetNameEdit == null) return;
         String name = presetNameEdit.getValue().trim();
@@ -1228,9 +1268,9 @@ public class CreativeScannerScreen extends MedievalScreen {
             scanResult = I18n.name("gui.wandscape.scanner.result_need_id", "§c导出失败: 请先在属性配置页设置建筑 ID！");
             return;
         }
-        PacketDistributor.sendToServer(new ScannerExportPacket(scanner.getBlockPos()));
-        showFeedback(I18n.name("gui.wandscape.scanner.result_export_started", "§a已发起导出与热注册: %s！", id), 0xFF55FF55);
-        scanResult = I18n.name("gui.wandscape.scanner.result_export_started", "§a已发起导出与热注册: %s (详见游戏聊天区)", id);
+        PacketDistributor.sendToServer(new ScannerExportPacket(scanner.getBlockPos(), scanner.getPackageId()));
+        showFeedback(I18n.name("gui.wandscape.scanner.result_export_started", "§a已发起导出与热注册: %s (包: %s)！", id, scanner.getPackageId()), 0xFF55FF55);
+        scanResult = I18n.name("gui.wandscape.scanner.result_export_started", "§a已发起导出与热注册: %s [包: %s] (详见游戏聊天区)", id, scanner.getPackageId());
     }
 
     private void doValue() {
@@ -1275,6 +1315,7 @@ public class CreativeScannerScreen extends MedievalScreen {
         }
 
         tag.putString("building_id", scanner.getBuildingId());
+        tag.putString("package_id", scanner.getPackageId());
         tag.putString("display_name", scanner.getDisplayName());
         tag.putString("creator", scanner.getCreator());
         tag.putString("category", scanner.getCategory());
@@ -1339,6 +1380,7 @@ public class CreativeScannerScreen extends MedievalScreen {
             else scanner.setCategory(tag.getString("category"));
         }
         if (tag.contains("building_id")) scanner.setBuildingId(tag.getString("building_id"));
+        if (tag.contains("package_id")) scanner.setPackageId(tag.getString("package_id"));
         if (tag.contains("display_name")) scanner.setDisplayName(tag.getString("display_name"));
         if (tag.contains("creator")) scanner.setCreator(tag.getString("creator"));
         if (tag.contains("comfort")) scanner.setComfort(tag.getInt("comfort"));

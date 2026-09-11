@@ -5,6 +5,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.wsteam.wandscape.content.building.data.BlockOffset;
+import com.wsteam.wandscape.content.building.data.BuildingPackage;
 import com.wsteam.wandscape.content.building.scanner.CreativeScannerBlockEntity;
 import com.wsteam.wandscape.content.building.scanner.CreativeScannerBlockEntity.ShopGoodData;
 import com.wsteam.wandscape.content.building.scanner.InteractSpotMarkerBlock;
@@ -44,7 +45,11 @@ import static com.wsteam.wandscape.Wandscape.MODID;
  * The server reads the scanner BE, scans world blocks, builds a JSON matching
  * the building config format, and writes it to wandscape_buildings/&lt;id&gt;.json.
  */
-public record ScannerExportPacket(BlockPos pos) implements CustomPacketPayload {
+public record ScannerExportPacket(BlockPos pos, String targetPackage) implements CustomPacketPayload {
+
+    public ScannerExportPacket(BlockPos pos) {
+        this(pos, "");
+    }
 
     private static final String TAG = "ScannerExport";
 
@@ -82,6 +87,13 @@ public record ScannerExportPacket(BlockPos pos) implements CustomPacketPayload {
             player.sendSystemMessage(I18n.name("message.wandscape.scanner.set_building_id",
                     "§cSet a building ID before exporting"));
             return;
+        }
+
+        String targetPkg = (packet.targetPackage != null && !packet.targetPackage.isBlank())
+                ? packet.targetPackage.trim().toLowerCase(Locale.ROOT)
+                : scanner.getPackageId();
+        if (targetPkg == null || targetPkg.isBlank()) {
+            targetPkg = BuildingPackage.DEFAULT_ID;
         }
 
         // 导出保真分级：生存扫描器（isSafeExport=true）导出为纯建筑，连方块 NBT 都不写，
@@ -222,6 +234,7 @@ public record ScannerExportPacket(BlockPos pos) implements CustomPacketPayload {
         // Build JSON
         JsonObject root = new JsonObject();
         root.addProperty("id", id);
+        root.addProperty("package_id", targetPkg);
         root.addProperty("display_name", scanner.getDisplayName());
         if (scanner.getCreator() != null && !scanner.getCreator().isBlank()) {
             root.addProperty("creator", scanner.getCreator());
@@ -404,20 +417,50 @@ public record ScannerExportPacket(BlockPos pos) implements CustomPacketPayload {
         // Write file into the datapack-readable buildings directory so it can be built immediately
         // and ships with the mod jar (dev source resources) or stays readable via /reload (world datapack).
         try {
-            Path exportDir = resolveDatapackDir(level, "buildings", "wandscape_builds");
+            Path buildingsDir = resolveDatapackDir(level, "buildings", "wandscape_builds");
+            Path exportDir = buildingsDir.resolve(targetPkg);
             Files.createDirectories(exportDir);
             Path outFile = exportDir.resolve(sanitizeFileName(id) + ".json");
+
+            // Ensure package.json exists in target package directory
+            Path pkgJsonFile = exportDir.resolve("package.json");
+            JsonObject pkgJson;
+            if (!Files.exists(pkgJsonFile)) {
+                pkgJson = new JsonObject();
+                pkgJson.addProperty("id", targetPkg);
+                String displayName = targetPkg.substring(0, 1).toUpperCase(Locale.ROOT) + targetPkg.substring(1);
+                pkgJson.addProperty("name", displayName);
+                pkgJson.addProperty("description", "Custom building package");
+                pkgJson.addProperty("author", player.getGameProfile().getName());
+                pkgJson.addProperty("version", "1.0.0");
+                pkgJson.addProperty("icon", "minecraft:stone_bricks");
+                pkgJson.addProperty("priority", 100);
+                Files.writeString(pkgJsonFile, new GsonBuilder().setPrettyPrinting().create().toJson(pkgJson));
+            } else {
+                try {
+                    pkgJson = com.google.gson.JsonParser.parseString(Files.readString(pkgJsonFile)).getAsJsonObject();
+                } catch (Exception e) {
+                    pkgJson = new JsonObject();
+                    pkgJson.addProperty("id", targetPkg);
+                    pkgJson.addProperty("name", targetPkg);
+                }
+            }
+            BuildingPackage pkgMeta = BuildingPackage.fromJson(targetPkg, pkgJson);
+            BuildingConfigLoader.getInstance().registerPackage(pkgMeta);
 
             String json = new GsonBuilder().setPrettyPrinting().create().toJson(root);
             Files.writeString(outFile, json);
 
             // Register in-memory so the building is buildable right now, no /reload needed.
-            BuildingConfigLoader.getInstance().registerFromJson(root);
+            BuildingConfigLoader.getInstance().registerFromJson(targetPkg, root);
 
-            Log.info(TAG, "Exported building '{}' to {} (runtime-registered)", id, outFile.toAbsolutePath());
-            player.sendSystemMessage(I18n.name("message.wandscape.scanner.export_building_ok", "§a已导出建筑 '%s' 到 §e%s§a — 可立即建造，/reload 后依然有效", id, outFile.toAbsolutePath()));
+            Log.info(TAG, "Exported building '{}' to package '{}' at {} (runtime-registered)",
+                    id, targetPkg, outFile.toAbsolutePath());
+            player.sendSystemMessage(I18n.name("message.wandscape.scanner.export_building_ok",
+                    "§a已导出建筑 '%s' 到包 §b[%s]§a (路径: §e%s§a) — 可立即建造，/reload 后依然有效",
+                    id, targetPkg, outFile.toAbsolutePath()));
         } catch (IOException e) {
-            Log.warn(TAG, "Failed to export building '{}'", id, e);
+            Log.warn(TAG, "Failed to export building '{}' to package '{}'", id, targetPkg, e);
             player.sendSystemMessage(I18n.name("message.wandscape.scanner.export_building_fail",
                     "§cFailed to export: %s", e.getMessage()));
         }
@@ -547,9 +590,12 @@ public record ScannerExportPacket(BlockPos pos) implements CustomPacketPayload {
 
     private static void write(RegistryFriendlyByteBuf buf, ScannerExportPacket pkt) {
         buf.writeBlockPos(pkt.pos);
+        buf.writeUtf(pkt.targetPackage != null ? pkt.targetPackage : "");
     }
 
     private static ScannerExportPacket read(RegistryFriendlyByteBuf buf) {
-        return new ScannerExportPacket(buf.readBlockPos());
+        BlockPos pos = buf.readBlockPos();
+        String targetPackage = buf.readUtf();
+        return new ScannerExportPacket(pos, targetPackage);
     }
 }

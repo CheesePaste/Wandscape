@@ -981,7 +981,18 @@ public class Wandscape {
                 .playToServer(
                         NpcOpenEquipPacket.TYPE,
                         NpcOpenEquipPacket.STREAM_CODEC,
-                        (packet, ctx) -> NpcOpenEquipPacket.handleServer(packet, ctx));
+                        (packet, ctx) -> NpcOpenEquipPacket.handleServer(packet, ctx))
+                // ── 设置中心配置同步 ──
+                .playToServer(
+                        com.wsteam.wandscape.foundation.ui.settings.network.ConfigUpdatePacket.TYPE,
+                        com.wsteam.wandscape.foundation.ui.settings.network.ConfigUpdatePacket.STREAM_CODEC,
+                        (packet, ctx) -> com.wsteam.wandscape.foundation.ui.settings.network.ConfigUpdatePacket
+                                .handleServer(packet, (net.minecraft.server.level.ServerPlayer) ctx.player()))
+                .playToClient(
+                        com.wsteam.wandscape.foundation.ui.settings.network.ConfigSyncPacket.TYPE,
+                        com.wsteam.wandscape.foundation.ui.settings.network.ConfigSyncPacket.STREAM_CODEC,
+                        (packet, ctx) -> com.wsteam.wandscape.foundation.ui.settings.network.ConfigSyncPacket
+                                .handleClient(packet));
         // Curios 兼容：法师饰品栏打开请求（仅 Curios 加载时在实现类内注册；无 Curios 时此处不引用任何 Curios 类）
         com.wsteam.wandscape.compat.curios.CuriosCompat.registerPayloads(registrar);
     }

@@ -93,7 +93,7 @@ public final class ProjectionNetwork {
                                 && buildingApi != null
                                 && !buildingApi.isFirstFreeClaimed(colonyId, c.id());
                     }
-                    return new BuildingSlot(c.id(), c.displayName(), c.category(), firstFreeAvailable);
+                    return new BuildingSlot(c.id(), c.packageId(), c.displayName(), c.category(), firstFreeAvailable);
                 })
                 .sorted(java.util.Comparator.comparingInt((BuildingSlot s) -> categoryPriority(s.category()))
                         .thenComparing(BuildingSlot::displayName))

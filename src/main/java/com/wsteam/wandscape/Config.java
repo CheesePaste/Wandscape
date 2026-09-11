@@ -1,9 +1,72 @@
 package com.wsteam.wandscape;
 import com.wsteam.wandscape.foundation.log.Log;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 import net.neoforged.neoforge.common.ModConfigSpec;
 public class Config {
     private static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
+
+    // ---- 建筑包控制 Building Packages ----
+
+    public static final ModConfigSpec.ConfigValue<List<? extends String>> DISABLED_BUILDING_PACKAGES = BUILDER
+            .comment("被禁用的建筑包 ID 列表（默认空，即全部启用）。停用的建筑包不会在建造栏中显示，但世界中已有建筑不受影响。")
+            .comment("List of disabled building package IDs (default empty = all enabled). Disabled packages are hidden from the building bar, but existing world buildings are unaffected.")
+            .defineListAllowEmpty("building.disabledPackages", Collections::emptyList, () -> "", o -> o instanceof String);
+
+    private static final java.util.Set<String> TEST_DISABLED_PACKAGES = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
+    public static boolean isPackageEnabled(String packageId) {
+        if (packageId == null || packageId.isEmpty()) return true;
+        if (!SPEC.isLoaded()) {
+            return !TEST_DISABLED_PACKAGES.contains(packageId);
+        }
+        try {
+            List<? extends String> disabled = DISABLED_BUILDING_PACKAGES.get();
+            return disabled == null || !disabled.contains(packageId);
+        } catch (Exception e) {
+            return true;
+        }
+    }
+
+    public static synchronized void setPackageEnabled(String packageId, boolean enabled) {
+        if (packageId == null || packageId.isEmpty()) return;
+        if (!SPEC.isLoaded()) {
+            if (enabled) {
+                TEST_DISABLED_PACKAGES.remove(packageId);
+            } else {
+                TEST_DISABLED_PACKAGES.add(packageId);
+            }
+            return;
+        }
+        List<String> list;
+        if (DISABLED_BUILDING_PACKAGES.get() != null) {
+            list = new ArrayList<>(DISABLED_BUILDING_PACKAGES.get());
+        } else {
+            list = new ArrayList<>();
+        }
+        if (enabled) {
+            list.remove(packageId);
+        } else {
+            if (!list.contains(packageId)) {
+                list.add(packageId);
+            }
+        }
+        DISABLED_BUILDING_PACKAGES.set(list);
+    }
+
+    public static synchronized void setDisabledPackages(List<String> packages) {
+        if (!SPEC.isLoaded()) {
+            TEST_DISABLED_PACKAGES.clear();
+            if (packages != null) {
+                TEST_DISABLED_PACKAGES.addAll(packages);
+            }
+            return;
+        }
+        DISABLED_BUILDING_PACKAGES.set(packages != null ? packages : List.of());
+    }
 
     public static final ModConfigSpec.BooleanValue DEBUG = BUILDER
             .comment("详细日志：输出 INFO/DEBUG 日志消息。设为 false（默认）时只记录 WARN/ERROR。")

@@ -1,4 +1,11 @@
 {
+  "wandscape.pack.all": "全部建筑包",
+  "wandscape.pack.default.name": "核心建筑包",
+  "wandscape.pack.default.desc": "魔法小镇模组内置核心建筑集合",
+  "wandscape.pack.oriental.name": "东风竹韵包",
+  "wandscape.pack.oriental.desc": "东方传统竹制与古风建筑集合",
+  "gui.wandscape.scanner.target_package": "目标建筑包",
+  "gui.wandscape.scanner.target_package.tooltip": "导出归属的建筑包目录名（如 default、oriental）",
   "attribute.name.wandscape.spell_power": "法术强度",
   "attribute.name.wandscape.work_speed": "工作速度",
   "attribute.name.wandscape.spell_speed": "施法速度",
@@ -2032,6 +2039,7 @@
   "gui.wandscape.scanner.road_desc_body": "导出后将自动计算包围盒内各方块权重并生成 road_preset JSON，热注册到道路工坊与建造法杖中，可立即使用。",
   "gui.wandscape.scanner.id_label": "ID:",
   "gui.wandscape.scanner.name_label": "名称:",
+  "gui.wandscape.scanner.package_label": "包:",
   "gui.wandscape.scanner.author_label": "作者:",
   "gui.wandscape.scanner.category_label": "分类:",
   "gui.wandscape.scanner.survival_category_locked": "自定义建筑 (custom) [生存模式固定]",
@@ -2086,5 +2094,17 @@
   "gui.wandscape.scanner.corner_step3": "3. 返回 SAVE 主扫描器点击“匹配角点”，系统将自动连接",
   "gui.wandscape.scanner.corner_step4": "   并框选出完整的 3D 建筑包围盒范围。",
   "gui.wandscape.scanner.export_road_btn": "导出道路 JSON",
-  "gui.wandscape.scanner.export_building_btn": "导出建筑 JSON"
+  "gui.wandscape.scanner.export_building_btn": "导出建筑 JSON",
+  "gui.wandscape.panel.tab.build": "建造 (1)",
+  "gui.wandscape.panel.tab.road": "道路 (2)",
+  "gui.wandscape.panel.tab.tasks": "任务 (3)",
+  "gui.wandscape.panel.tab.settings": "设置中心 (4)",
+  "gui.wandscape.settings.tab.visual": "视效控制",
+  "gui.wandscape.settings.tab.colony": "城镇经营",
+  "gui.wandscape.settings.tab.tourist": "游客生态",
+  "gui.wandscape.settings.tab.rules": "规则防护",
+  "gui.wandscape.settings.tab.packages": "建筑包库",
+  "gui.wandscape.settings.title": "%s 设置中心",
+  "gui.wandscape.settings.reset_tab": "恢复本页默认",
+  "gui.wandscape.settings.reset_tab_toast": "已恢复本页默认设置"
 }

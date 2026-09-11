@@ -26,7 +26,7 @@ import java.util.UUID;
  */
 public final class WandscapePanelState {
 
-    public enum SubMode { NONE, BUILD_PROJECTION, ROAD_PROJECTION, STATS, OVERVIEW, TASKS }
+    public enum SubMode { NONE, BUILD_PROJECTION, ROAD_PROJECTION, STATS, OVERVIEW, TASKS, SETTINGS }
 
     /** Build projection phase: BAR = selecting building (UI, no ghost), PLACING = in-world placement (ghost visible). */
     public enum BuildPhase { BAR, PLACING }
@@ -87,6 +87,9 @@ public final class WandscapePanelState {
     public static void toggleBuildingAreas() { showBuildingAreas = !showBuildingAreas; }
 
     // ── Building selection bar ──
+    public static final String PACKAGE_ALL = "ALL";
+    private static volatile String buildingBarPackage = PACKAGE_ALL;
+    private static volatile boolean buildingBarPackageDropdownOpen = false;
     private static volatile boolean buildingBarOpen = false;
     private static volatile boolean buildingBarSearchFocused = false;
     private static volatile String buildingBarCategory = "All";
@@ -302,6 +305,8 @@ public final class WandscapePanelState {
         showBuildingAreas = false;
         buildingBarOpen = false;
         buildingBarSearchFocused = false;
+        buildingBarPackage = PACKAGE_ALL;
+        buildingBarPackageDropdownOpen = false;
         buildingBarCategory = "All";
         buildingBarSearch = "";
         buildingBarSelectedIndex = -1;
@@ -366,6 +371,7 @@ public final class WandscapePanelState {
     public static void closeBuildingBar() {
         buildingBarOpen = false;
         buildingBarSearchFocused = false;
+        buildingBarPackageDropdownOpen = false;
         // Preserve category/search/scroll (selection cache). selectedIndex resyncs on reopen.
         buildingBarSelectedIndex = -1;
         lastClickTime = 0;
@@ -385,6 +391,18 @@ public final class WandscapePanelState {
         buildPhase = BuildPhase.BAR;
         openBuildingBar();
     }
+
+    public static String getBuildingBarPackage() { return buildingBarPackage; }
+    public static void setBuildingBarPackage(String pkgId) {
+        buildingBarPackage = (pkgId != null && !pkgId.isBlank()) ? pkgId : PACKAGE_ALL;
+        buildingBarCategory = "All";
+        buildingBarScrollOffset = 0;
+        buildingBarSelectedIndex = -1;
+    }
+
+    public static boolean isBuildingBarPackageDropdownOpen() { return buildingBarPackageDropdownOpen; }
+    public static void setBuildingBarPackageDropdownOpen(boolean open) { buildingBarPackageDropdownOpen = open; }
+    public static void toggleBuildingBarPackageDropdown() { buildingBarPackageDropdownOpen = !buildingBarPackageDropdownOpen; }
 
     public static String getBuildingBarCategory() { return buildingBarCategory; }
     public static void setBuildingBarCategory(String cat) {
@@ -431,10 +449,10 @@ public final class WandscapePanelState {
     public static void enterSubMode(SubMode mode) {
         SubMode prev = activeSubMode;
 
-        // OVERVIEW → BUILD_PROJECTION / ROAD_PROJECTION / STATS / TASKS: keep overview camera active
-        // (STATS and TASKS are overlay tabs — closing them must return to the overview camera, not kill it)
+        // OVERVIEW → BUILD_PROJECTION / ROAD_PROJECTION / STATS / TASKS / SETTINGS: keep overview camera active
+        // (STATS, TASKS, and SETTINGS are overlay tabs — closing them must return to the overview camera, not kill it)
         if (prev == SubMode.OVERVIEW && (mode == SubMode.BUILD_PROJECTION || mode == SubMode.ROAD_PROJECTION
-                || mode == SubMode.STATS || mode == SubMode.TASKS)) {
+                || mode == SubMode.STATS || mode == SubMode.TASKS || mode == SubMode.SETTINGS)) {
             activeSubMode = mode;
             switch (mode) {
                 case BUILD_PROJECTION -> {
@@ -452,6 +470,9 @@ public final class WandscapePanelState {
                 }
                 case TASKS -> {
                     PacketDistributor.sendToServer(new com.wsteam.wandscape.content.task.network.TaskPanelSubscribePacket(true));
+                    liftCursorForUI();
+                }
+                case SETTINGS -> {
                     liftCursorForUI();
                 }
             }
@@ -476,6 +497,9 @@ public final class WandscapePanelState {
             }
             case TASKS -> {
                 PacketDistributor.sendToServer(new com.wsteam.wandscape.content.task.network.TaskPanelSubscribePacket(true));
+                liftCursorForUI();
+            }
+            case SETTINGS -> {
                 liftCursorForUI();
             }
             case OVERVIEW -> OverviewFlightController.enter();
@@ -530,6 +554,13 @@ public final class WandscapePanelState {
             case TASKS -> {
                 PacketDistributor.sendToServer(new com.wsteam.wandscape.content.task.network.TaskPanelSubscribePacket(false));
                 TaskManagementClientState.reset();
+                if (OverviewClientState.isActive()) {
+                    activeSubMode = SubMode.OVERVIEW;
+                    syncCursorToState();
+                    return;
+                }
+            }
+            case SETTINGS -> {
                 if (OverviewClientState.isActive()) {
                     activeSubMode = SubMode.OVERVIEW;
                     syncCursorToState();

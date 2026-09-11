@@ -44,7 +44,7 @@ public final class WandscapePanelController {
     // Tab layout constants — keep in sync with WandscapePanelOverlay
     public static final int TAB_W = 24;
     public static final int TAB_GAP = 4;
-    public static final int TAB_COUNT = 3;
+    public static final int TAB_COUNT = 4;
     public static final int TOP_BAR_HEIGHT = 26;
 
     private static boolean registered = false;
@@ -296,6 +296,11 @@ public final class WandscapePanelController {
                 event.setCanceled(true);
                 return;
             }
+            // Package dropdown / button click
+            if (BuildingSelectionOverlay.handlePackageClick(mouseX, mouseY, screenW, screenH)) {
+                event.setCanceled(true);
+                return;
+            }
             // Category tab click
             int catIdx = BuildingSelectionOverlay.getCategoryAt(mouseX, mouseY, screenW, screenH);
             if (catIdx >= 0) {
@@ -321,6 +326,13 @@ public final class WandscapePanelController {
         // ── Task & Mage Management Hub ──
         if (TaskManagementOverlay.isActive()) {
             TaskManagementOverlay.handleMouseClick(mouseX, mouseY, screenW, screenH);
+            event.setCanceled(true);
+            return;
+        }
+
+        // ── Settings Center Hub ──
+        if (com.wsteam.wandscape.foundation.ui.settings.SettingsOverlay.isActive()) {
+            com.wsteam.wandscape.foundation.ui.settings.SettingsOverlay.handleMouseClick(mouseX, mouseY, screenW, screenH);
             event.setCanceled(true);
             return;
         }
@@ -414,8 +426,8 @@ public final class WandscapePanelController {
         int startY = WandscapePanelOverlay.TOP_BAR_H + 8;
         int totalH = WandscapePanelOverlay.SIDEBAR_ICON_S + WandscapePanelOverlay.SIDEBAR_GAP;
 
-        // 建造 / 道路 / 任务（统计、警告弃用已删，编号 0-2 对齐 1/2/3 数字键）
-        for (int i = 0; i < 3; i++) {
+        // 建造 / 道路 / 任务 / 设置（编号 0-3 对齐 1/2/3/4 数字键）
+        for (int i = 0; i < 4; i++) {
             int iy = startY + i * totalH;
             if (mouseY >= iy && mouseY <= iy + WandscapePanelOverlay.SIDEBAR_ICON_S) return i;
         }
@@ -430,6 +442,7 @@ public final class WandscapePanelController {
             case 0 -> WandscapePanelState.SubMode.BUILD_PROJECTION;
             case 1 -> WandscapePanelState.SubMode.ROAD_PROJECTION;
             case 2 -> WandscapePanelState.SubMode.TASKS;
+            case 3 -> WandscapePanelState.SubMode.SETTINGS;
             default -> null;
         };
 
@@ -550,14 +563,14 @@ public final class WandscapePanelController {
             return;
         }
 
-        // 1/2/3: quick-switch into Build/Road/Tasks（吞掉原版快捷栏切换）。
-        // 统计、警告两个弃用页已删，只剩三个 tab，故只拦 1-3；4/5 及以后交还原版快捷栏。
+        // 1/2/3/4: quick-switch into Build/Road/Tasks/Settings（吞掉原版快捷栏切换）。
         // 面板开着才拦数字键切子模式，面板关着则保持原版快捷栏。
         if (WandscapePanelState.isPanelOpen()) {
             int tabIndex = switch (key) {
                 case GLFW.GLFW_KEY_1 -> 0;
                 case GLFW.GLFW_KEY_2 -> 1;
                 case GLFW.GLFW_KEY_3 -> 2;
+                case GLFW.GLFW_KEY_4 -> 3;
                 default -> -1;
             };
             if (tabIndex >= 0) {
@@ -617,9 +630,10 @@ public final class WandscapePanelController {
             if (after == WandscapePanelState.SubMode.BUILD_PROJECTION
                     || after == WandscapePanelState.SubMode.ROAD_PROJECTION
                     || after == WandscapePanelState.SubMode.STATS
-                    || after == WandscapePanelState.SubMode.TASKS) {
+                    || after == WandscapePanelState.SubMode.TASKS
+                    || after == WandscapePanelState.SubMode.SETTINGS) {
                 WandscapePanelState.setSubMode(WandscapePanelState.SubMode.NONE);
-                // 地面/STATS/TASKS 退出后子模式清空 → 回常态抓取
+                // 地面/STATS/TASKS/SETTINGS 退出后子模式清空 → 回常态抓取
                 WandscapePanelState.syncCursorToState();
             }
             return;
@@ -657,6 +671,13 @@ public final class WandscapePanelController {
 
         if (TaskManagementOverlay.isActive()) {
             if (TaskManagementOverlay.handleMouseScroll(event.getScrollDeltaY())) {
+                event.setCanceled(true);
+                return;
+            }
+        }
+
+        if (com.wsteam.wandscape.foundation.ui.settings.SettingsOverlay.isActive()) {
+            if (com.wsteam.wandscape.foundation.ui.settings.SettingsOverlay.handleMouseScroll(event.getScrollDeltaY())) {
                 event.setCanceled(true);
                 return;
             }

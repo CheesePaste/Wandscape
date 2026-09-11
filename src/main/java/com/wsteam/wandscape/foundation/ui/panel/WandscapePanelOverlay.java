@@ -87,6 +87,14 @@ public final class WandscapePanelOverlay {
             return;
         }
 
+        // Settings Center Hub (dedicated spacious overlay — hides top bar & sidebar)
+        if (WandscapePanelState.getActiveSubMode() == WandscapePanelState.SubMode.SETTINGS) {
+            com.wsteam.wandscape.foundation.ui.settings.SettingsOverlay.render(g, mc.font, screenW, screenH, mx, my);
+            g.bufferSource().endBatch(RenderType.guiOverlay());
+            g.flush();
+            return;
+        }
+
         renderFills(g, mc.font, screenW, screenH, mx, my);
         g.bufferSource().endBatch(RenderType.guiOverlay());
         renderTexts(g, mc.font, screenW, screenH, mx, my);
@@ -128,14 +136,15 @@ public final class WandscapePanelOverlay {
         net.minecraft.resources.ResourceLocation[] tabIcons = {
             WandscapeTheme.ICON_TAB_BUILD,
             WandscapeTheme.ICON_TAB_ROAD,
-            WandscapeTheme.ICON_TAB_EDITOR
+            WandscapeTheme.ICON_TAB_EDITOR,
+            WandscapeTheme.ICON_TAB_SETTINGS
         };
 
         WandscapePanelState.SubMode activeMode = WandscapePanelState.getActiveSubMode();
         int hoveredIcon = getSidebarHoveredIcon(mx, my, screenH);
 
-        // 建造 / 道路 / 任务三个 tab（统计、警告两弃用页已从侧栏移除，位置 0-2 对齐 1/2/3 数字键）
-        for (int i = 0; i < 3; i++) {
+        // 建造 / 道路 / 任务 / 设置四个 tab（位置 0-3 对齐 1/2/3/4 数字键）
+        for (int i = 0; i < 4; i++) {
             int iy = startY + i * totalIconH;
             int ix = (SIDEBAR_W - SIDEBAR_ICON_S) / 2;
             int color = isTabActive(i, activeMode) ? WandscapeTheme.COLOR_TEXT_ACTIVE : WandscapeTheme.COLOR_TEXT_NORMAL;
@@ -168,6 +177,21 @@ public final class WandscapePanelOverlay {
         // Stats content (shifted right of sidebar)
         if (WandscapePanelState.getActiveSubMode() == WandscapePanelState.SubMode.STATS) {
             renderStatsContent(g, font, screenW, screenH);
+        }
+
+        // Sidebar tab tooltips
+        int hoveredIcon = getSidebarHoveredIcon(mx, my, screenH);
+        if (hoveredIcon >= 0 && WandscapePanelState.isCursorLifted()) {
+            net.minecraft.network.chat.Component tip = switch (hoveredIcon) {
+                case 0 -> I18n.name("gui.wandscape.panel.tab.build", "建造 (1)");
+                case 1 -> I18n.name("gui.wandscape.panel.tab.road", "道路 (2)");
+                case 2 -> I18n.name("gui.wandscape.panel.tab.tasks", "任务 (3)");
+                case 3 -> I18n.name("gui.wandscape.panel.tab.settings", "设置中心 (4)");
+                default -> null;
+            };
+            if (tip != null) {
+                g.renderTooltip(font, tip, (int) mx, (int) my);
+            }
         }
     }
 
@@ -353,8 +377,8 @@ public final class WandscapePanelOverlay {
         int startY = TOP_BAR_H + 8;
         int totalH = SIDEBAR_ICON_S + SIDEBAR_GAP;
 
-        // 建造 / 道路 / 任务（统计、警告弃用已删，编号 0-2 对齐 1/2/3 数字键）
-        for (int i = 0; i < 3; i++) {
+        // 建造 / 道路 / 任务 / 设置四个 tab（编号 0-3 对齐 1/2/3/4 数字键）
+        for (int i = 0; i < 4; i++) {
             int iy = startY + i * totalH;
             if (my >= iy && my <= iy + SIDEBAR_ICON_S) return i;
         }
@@ -371,6 +395,7 @@ public final class WandscapePanelOverlay {
             case 0 -> activeMode == WandscapePanelState.SubMode.BUILD_PROJECTION;
             case 1 -> activeMode == WandscapePanelState.SubMode.ROAD_PROJECTION;
             case 2 -> activeMode == WandscapePanelState.SubMode.TASKS;
+            case 3 -> activeMode == WandscapePanelState.SubMode.SETTINGS;
             default -> false;
         };
     }
