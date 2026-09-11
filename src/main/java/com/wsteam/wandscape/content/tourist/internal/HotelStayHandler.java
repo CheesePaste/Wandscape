@@ -151,8 +151,28 @@ public final class HotelStayHandler {
                 emitNarrativeEvent(wakeupEvent);
             }
 
+            // 把「今晨已醒」同步给 sim 影子：实体路径的守卫是基于状态的
+            // （!isSleeping && wakeUpPos==null），影子用的是按日历天的 wakeDay——
+            // 两个信号互不相通。不同步的话，游客醒来后若在 1000-1200 窗口内区块卸载，
+            // 影子接手时 wakeDay 还是旧的，sim 会在同一清晨再结算一次晨起
+            // （+2 晚、多填一次旅店三值，足以把低级游客顶成满条提前离场）。
+            markShadowWoken(tourist, level);
+
             Log.info(TAG, "[Tourist] {} woke up at {} (still resident, energy → 100)",
                     tourist.getTouristName(), tourist.blockPosition().toShortString());
+        }
+    }
+
+    /**
+     * 令 sim 的晨起幂等与实体路径对齐：把「今天」写进该游客的影子，
+     * 使影子当天不再重复结算晨起。影子未登记时静默跳过（新登记的影子本就从 -1 起算）。
+     */
+    private void markShadowWoken(TouristEntity tourist, ServerLevel level) {
+        TouristSimSystem sim = TouristSimSystem.getActive();
+        if (sim == null || sim.getRegistry() == null) return;
+        TouristShadow shadow = sim.getRegistry().getShadows().get(tourist.getUUID());
+        if (shadow != null) {
+            shadow.setWakeDay((int) (level.getGameTime() / 24000L));
         }
     }
 
