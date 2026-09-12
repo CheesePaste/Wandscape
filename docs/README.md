@@ -22,6 +22,7 @@
 | [guidebook-patchouli-transform.md](plan/guidebook-patchouli-transform.md) | **手册改造与引导合并方案评估**：教程 HUD 并入 Patchouli 跟玩手册（advancement 解锁/quest 打勾）+ Markdown 只读兜底，奖励去掉；含逐项修改难度表与分阶段路线 | 规划"跟着书玩"改造、评估工作量、或动手前读决策点 D1–D5 |
 | [guidebook-patchouli.md](guidebook-patchouli.md) | **手册落实现状（md 单源 → 帕秋莉 JSON 生成管线）**：生成命令、目录结构、md→帕秋莉映射表、样式栈两个坑、书皮/配图/模型素材坐标与重画规格、后续未做项 | 改 `guidebook/*.md` 内容、重生成手册、替换手册美术素材、或接续解锁与入口收口时 |
 | [patchouli-art-asset-spec.md](plan/patchouli-art-asset-spec.md) | **帕秋莉手册美术资产规格书**：书皮 512×256 图集 23 类槽位全表、配方图集 6 槽位、插图 256×256/内容限左上 200×200、字号行高与各页型文字区、`_refs` 六本手册的装饰手法与用量实测 | 设计/重画手册美术、调整排版字号、或用模板做自定义版面时 |
+| [touhou-little-maid-compat.md](plan/touhou-little-maid-compat.md) | **车万女仆兼容可行性与分阶段方案**：两侧扩展面与硬耦合点、阶段一（盟友 + 女仆工作模式）的三步落地与难度表、阶段二（法师小屋/法杖施法/策略槽）改造清单、七项风险与三项动手前验证 | 做第三方实体兼容、抽 `ColonyWorker` 缝、或评估女仆/附属模组接入前 |
 
 ---
 

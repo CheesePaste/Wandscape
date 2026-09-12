@@ -1,0 +1,299 @@
+# 车万女仆（Touhou Little Maid）兼容 —— 可行性与分阶段方案
+
+> 创建日期：2026-09-12 | 对应分支：`newGuide`（未开工，本文只做可行性分析）
+> 性质：可行性评估 + 分阶段路线。阶段一（盟友 + 工作模式）拟实现，阶段二（法师小屋 / 法杖施法 / 策略槽）**只评估不实现**。
+> 关联：[架构决策记录](../adr.md)、[逐域避坑](../domain-notes.md)
+> 参考源码：`_refs/TouhouLittleMaid`（TLM 1.5.3-neoforge+mc1.21.1 完整检出）、`run/mods/[车万女仆] touhoulittlemaid-1.5.3-neoforge+mc1.21.1.jar`
+
+---
+
+## 一、目标与分期
+
+| 期 | 目标 | 状态 |
+|---|---|---|
+| **阶段一** | ① 女仆**默认属于盟友**（殖民地 NPC 不攻击、不溅射误伤）。② 女仆可**进入工作模式**，工作模式下和法师一样参与城镇建设、接取任务。 | 本文评估，待实现 |
+| 阶段二 | ③ 女仆可进入**法师小屋**升级训练。④ 手持法杖时能**普攻 + 释放法术**。⑤ 有和 NPC 一样的**策略槽**。 | 只评估，不实现 |
+
+阶段一是阶段二的前置：两者共用同一个"把第三方实体接进殖民地系统"的抽象缝（§3.3）。先把缝抽对，阶段二才不至于二次返工。
+
+---
+
+## 二、结论速览
+
+**可行性：高。** 两侧都留了正门：
+
+- TLM 侧有官方扩展面（`@LittleMaidExtension` + `ILittleMaid#addMaidTask`），第三方新增"女仆任务"是其一等公民用法，**不需要 mixin、不需要改 TLM**。
+- Wandscape 侧的耦合虽然散布（37 处 `instanceof WandscapeNpc`），但**任务执行链的实体访问面意外地窄**——边界执行器只用到约 **11 个**实体专有方法（§3.3 表）。抽一个 `ColonyWorker` 接口即可把工作链解锁，无需重写 ECS。
+
+**难度：阶段一 中等偏大但不失控。** 拆成三步，第一步（盟友）30 行以内可独立交付；第二步是**行为不变的纯重构**，`./gradlew build` 即可验证；第三步才引入 TLM 依赖与女仆适配。
+
+**阶段二难度：大。** 施法层与策略槽的实体类型写死在 4 个施法入口 + 3 个菜单/网络入口 + 1 个 UUID 解析器上，且女仆没有承载"7 项殖民地属性"的 vanilla 属性表（§4.2）。属于独立立项量级，本文只给出改造清单与风险。
+
+---
+
+## 三、阶段一：盟友 + 工作模式
+
+### 3.1 盟友（低成本，可与主线解耦先交付）
+
+**现状**：`FriendlyForceApi.registerAlly(Predicate<LivingEntity>)`（`api/FriendlyForceApi.java:27`）是唯一入口，判定在 `WandscapeNpc.classify()` 的**最后一步**兜底（`content/npc/entity/WandscapeNpc.java:350-353`），命中即 `AllyKind.EXTERNAL_ALLY`，而 `FriendlyForce.java:66` 的 `case GOLEM, EXTERNAL_ALLY -> true` 表示**恒友军**——不受 PVP 开关收紧、不校验殖民地。
+
+**方案**：新增 `compat/tlm/TlmCompat.java`（`MOD_ID = "touhou_little_maid"` + `ModList.get().isLoaded` 门禁），在 `Wandscape.java:533-536` 的 compat 初始化区加一行 `TlmCompat.init(modEventBus)`，内部注册
+
+```java
+api.registerAlly(e -> e instanceof EntityMaid);
+```
+
+**需要注意的语义变化**：`EntityMaid extends TamableAnimal`（`_refs/.../entity/passive/EntityMaid.java:172`），即已实现 `OwnableEntity`，所以**有主女仆当前已落 PET 分支**（`WandscapeNpc.java:343`）：PVP 关 → 恒友军；**PVP 开 → 仅同殖民地友军**。注册后统一升为 `EXTERNAL_ALLY` 恒友军：PVP 开启时**别人的女仆也不会被你的殖民地打**。这是"默认属于盟友"的自然读法，但属于全局行为放宽，需确认接受。
+
+**兼容纪律**：谓词里出现 `EntityMaid` 类型，该 lambda 所在的类不能被无条件加载（否则 TLM 未装时 `NoClassDefFoundError`）。沿用仓库既有写法——`GoetyCompat.java:3` 顶部直接 import 外部类型 + 方法内 `if (!loaded) return;` 早退守卫；Curios/Patchouli 那种更严的"门面零外部类型 + Impl 隔离"是更保险的模板，`TlmCompat` 建议照后者。
+
+**难度**：极低。约 30-60 行，单文件 + 装配点一行 + `build.gradle`/`gradle.properties` 依赖声明。**可独立提交，不阻塞主线。**
+
+---
+
+### 3.2 工作模式的核心矛盾
+
+殖民地的工作流水线是 **ECS 驱动**的，不是 goal 驱动的：
+
+```
+建筑队列 → TaskRequest → GlobalTaskPool
+                              ↓
+        SchedulerSystem 查询 {Position, TaskExecutor, NpcInventory, ColonyMember}
+                              ↓  NpcTaskPackage 塞进 TaskExecutor.npcQueue
+        TaskExecutionSystem → OpExecutor.execute(op, world, ecsId)
+                              ↓  MC 边界执行器
+        EntityComponentBridge.getNpc(ecsId) → WandscapeNpc → 走位/挖放/动画
+```
+
+关键事实（均已核对行号）：
+
+| 环节 | 位置 | 对实体类型的假设 |
+|---|---|---|
+| ECS 实体登记 | `content/npc/internal/EntityComponentBridge.java:54` | `Map<Long, WandscapeNpc>` 写死双向表 |
+| 登记入口 | `WandscapeNpc.java:1747`（仅 `isColonyNpc()` 为真时）+ `:1780` 注销只看 `RemovalReason` | 女仆不走这两个回调 → 永不进 ECS |
+| ECS 建工 | `impl/CoreBootstrap.java:103-114` | `Position + TaskExecutor + NpcInventory + ColonyMember`，**纯 ECS 组件，与实体类型无关** |
+| 派活筛选 | `content/task/scheduler/SchedulerSystem.java:54` | 组件查询；`:61` `entityOps.isNpcAlive(ecsId)` 经桥反查 |
+| 实体存活判定 | `boundary/WandscapeEntityOps.java:82-85` | 经 `getNpc(ecsId)`，女仆会被判"幽灵 NPC"跳过 |
+| 移动 | `boundary/WandscapeMovementOps.java:28` + `content/npc/system/NavigationSystem.java:76/130/239` | 368 行写死 `WandscapeNpc`，驱动 `getNavigation().moveTo(...)` |
+| 挖放/搬运/仪式 | `boundary/WandscapeBlockInteractExecutor`、`AsyncTransformExecutor`、`ResourceRequestExecutor`、`WandscapeRitualOps` | 均经 `getNpc(ecsId)` |
+
+**好消息**：`OpExecutor` 接口本身就是解耦的——`OpExecutor.execute(T op, World world, long npcId)`（`content/task/op/executor/OpExecutor.java:32`）只收 `long ecsId`，**原子操作的类型系统里没有实体类型**。类型墙只在"ecsId → 实体"这一个解析点上。
+
+**因此不需要重写调度器**：只要把解析点泛化，女仆挂上那 4 个组件就能被正常派活，且任务的资源结算、进度同步、殖民地仓库产出**全部自动复用**。
+
+---
+
+### 3.3 方案：抽一个 `ColonyWorker` 缝
+
+实测边界执行器用到的实体专有方法**只有这些**（逐文件扫 `npc.xxx(` 得到）：
+
+| 方法 | 用途 | 女仆可否满足 |
+|---|---|---|
+| `level()` / `blockPosition()` / `getX/Y/Z()` / `isRemoved()` / `getRandom()` | 通用 | 是（`Entity` 已有） |
+| `getNavigation()` / `teleportTo()` / `isInWater()` / `onGround()` / `maxUpStep()` | 导航 | 是（`PathfinderMob` 已有） |
+| `setAiWanderingEnabled(boolean)` | 抑制游荡 | **否** → 女仆侧转译为"工作时不随机走动"（TLM `IMaidTask#enableLookAndRandomWalk` 返回 false） |
+| `doWorkAnimation(BlockPos)` | 挥手 + 粒子 | 否 → 适配器实现（`maid.swing(MAIN_HAND)` + 同款粒子；建议把 `WandscapeNpc.java:2086` 的粒子段抽成共用工具） |
+| `isFollowMode()` / `isResting()` / `isPeaceMode()` | 调度门槛 | 否 → 女仆恒 `false`（工作模式下）
+| `getFollowerPlayer()` | 跟随者解析 | 否 → 女仆返回主人或 null |
+| `getCurrentMana()` / `getMaxMana()` / `getEffectiveAttribute(AttributeType)` / `getEffectiveArmorValue()` | 魔力门槛与工作速度评分 | 否 → 读女仆自有状态容器（§3.5） |
+
+合计约 **11 个专有方法** + 一组 `Entity` 通用方法。抽成：
+
+```java
+// content/npc/worker/ColonyWorker.java（新）
+public interface ColonyWorker {
+    UUID workerId(); Level level(); BlockPos blockPosition();
+    double getX(); double getY(); double getZ(); boolean isRemoved();
+    boolean isFollowMode(); boolean isResting(); boolean isPeaceMode();
+    @Nullable UUID followerUuid();
+    // 导航：两种机制
+    void applyWalkTarget(GridPos target);  boolean isNavigationDone();  void stopNavigation();
+    boolean isInWater(); boolean onGround(); float maxUpStep();
+    boolean teleportTo(double x, double y, double z);
+    void doWorkAnimation(BlockPos target);
+    // 资源/属性（女仆读自有容器）
+    float getCurrentMana(); float getMaxMana();
+    float getEffectiveAttribute(NpcAttributes.AttributeType type);
+    float getEffectiveArmorValue();
+    boolean tryEscapeTeleport(/* 脱困自传送 */);
+}
+```
+
+- `WandscapeNpc implements ColonyWorker`：全部委托现有实现，**行为零变化**。
+- `EntityComponentBridge`：字段泛化为 `Map<Long, ColonyWorker>`；新增 `getWorker(long)` 与 `onWorkerJoinWorld/onWorkerLeaveWorld`。**保留 `getNpc(long)` 现状语义**（只返 `WandscapeNpc`，女仆返回 null），这样 37 处 `instanceof WandscapeNpc` 的交互/网络/UI 路径**一行不动**；只有工作链（5 个 boundary 执行器 + `NavigationSystem` + `WandscapeEntityOps`）切到 `getWorker()`。
+
+**导航的两种机制（关键设计点）**：`WandscapeNpc` 由 `NavigationSystem` 直接 `getNavigation().moveTo(...)`；但 TLM 女仆的移动由 **Brain** 驱动（`WalkTarget` 记忆 + 行为）。若对女仆也用同一套 `moveTo`，会与 TLM WORK activity 里硬编码的 `MaidStealEdibleMoveBlockTask`(优先级 8) 等行为**争抢导航**。推荐：
+
+- 女仆侧 `applyWalkTarget` 只写一个"我方行走目标"字段；由我们 task 的一个 **brain behavior（优先级 5，早于 TLM 的 6/7/8/20）** 每 tick 读该目标并写 `WALK_TARGET` 记忆。即"用 TLM 原生的移动方式搬运我们的导航意图"，从机制上避免争抢。
+- `NavigationSystem` 的卡死检测 / 净逼近判据 / 脱困自传送（`NavigationSystem.java:130-360`）**逻辑保留**，只把"施加移动"与"读位置"两处下沉到 `ColonyWorker`。女仆的 `tryEscapeTeleport` 可返回 false（不做自传送）或映射到 TLM 的传送。
+
+**这一步是纯重构、行为不变**，`./gradlew build` + 现有 NPC 玩法实测即可验证，不引入任何 TLM 依赖。这是本方案最重要的风险隔离。
+
+---
+
+### 3.4 女仆侧：进入 / 退出工作模式
+
+**入口用 TLM 官方任务机制**，而不是我们自己造开关——玩家在女仆 GUI 里选任务就是"进入工作模式"，语义与 TLM 一致：
+
+| 项 | 做法 | 依据 |
+|---|---|---|
+| 扩展注册 | `@LittleMaidExtension public class TlmExtension implements ILittleMaid`，覆写 `addMaidTask(TaskManager manager)` | `api/ILittleMaid.java:51`；ASM 扫描 + 无参构造（`util/AnnotatedInstanceUtil.java:23-38`） |
+| 注册时机 | TLM 在 `FMLCommonSetupEvent` 调 `TaskManager.init()`，之后任务表 `ImmutableMap.copyOf` **冻结** | `entity/task/TaskManager.java:59-64` |
+| 任务本体 | `implements IMaidTask`：`getUid()` / `getIcon()` / `getAmbientSound()` / `createBrainTasks()` 四个必需方法 | `api/task/IMaidTask.java:36/43/52/60` |
+| 关随机走动 | `enableLookAndRandomWalk(maid)` 返回 false（工作时） | `IMaidTask.java:101`；消费点 `MaidBrain.java:144` |
+| 注册/注销 ECS | **不用 task 生命周期钩子**（TLM 的 task 无 onStart/onStop）→ 用对账式 sweep：每 N tick 扫注册表，任务已非我们的女仆注销、任务为我们且归属殖民地可解析的注册 | TLM 提供 `MaidTickEvent`（`api/event/MaidTickEvent.java:7`，每 tick 可取消） |
+| 工作配置界面 | `getTaskConfigGuiProvider(maid)` 返回自定义 `MenuProvider`（TLM 内置 `TaskFeedAnimal` 就是这么做的） | `IMaidTask.java:196`；先例 `entity/task/TaskFeedAnimal.java:111` |
+
+`createBrainTasks` 返回的行为列表（建议极简）：
+1. 优先级 5：读 ECS `NavigationState` → 写 `WALK_TARGET`（§3.3 的导航落地）。
+2. 优先级 5：`IMaidTask#workPointTask` / 在自家的站位范围内活动（可选）。
+
+**不要**复用 TLM 的 `MaidShootTargetTask` 之类战斗行为——工作模式下女仆不参与战斗（战斗是阶段二的事）。
+
+**对账式 sweep 而非精确生命周期**的理由：TLM 的 `EntityMaid#setTask`（`EntityMaid.java:2344`）会 `refreshBrain` 重建整个 WORK activity，但没有回调解绑；女仆又可能被魂符收走、被其它模组杀死、区块卸载。定期对账（比较"应当注册"与"实际注册"）比追每一条消失路径可靠得多，也符合仓库"所有可能失败路径必有兜底"的硬规则。
+
+---
+
+### 3.5 女仆的殖民地属性与状态载体
+
+**问题**：`WandscapeNpc.getEffectiveAttribute(type)` 读的是 **vanilla `AttributeMap`**（`WandscapeNpc.java:141` → `getAttribute(attr).getValue()`），而 7 项属性里 6 项是本模组注册的自定义属性（`content/npc/WandscapeAttributes.java:26-42`）。`EntityMaid` 的属性表由 TLM 提供，**不含我们的自定义属性**，`getAttribute` 返回 null。
+
+**结论：不要试图把属性写进女仆的 vanilla 属性表。** NeoForge 的 `EntityAttributeCreationEvent` 只在注册期生效，无法事后替换一个已注册 EntityType 的属性供给器；用反射改 `AttributeSupplier` 又撞上仓库 2026-08-29 的"彻底移除反射镜像"过审决策（`docs/adr.md:50`）。
+
+**方案**：女仆的 7 项殖民地属性 + 魔力 + 冷却**全部存进我们自己的状态容器** `MaidColonyState`，由 `MaidColonyWorker.getEffectiveAttribute()` 读取。共用 `NpcAttributes.computeEffective(type, base, level, equipBonus)` 这套纯函数（`content/npc/attributes/NpcAttributes.java:263`），所以升级/训练/装备加成的数学与 NPC 完全一致。
+
+**持久化载体（待验证项）**：候选两条——
+
+| 方案 | 优点 | 风险 |
+|---|---|---|
+| **A. NeoForge `AttachmentType`（Data Attachment）** | 随实体 NBT 持久化、可配 `copyOnDeath`、无需自管清理 | 仓库从未用过；需先读 MC/NeoForge 源码确认 `EntityMaid` 的存档路径确实写出 attachments（`Entity#saveWithoutId` 链） |
+| B. 自建 `SavedData`：`Map<UUID, MaidColonyState>` | 与仓库既有 SavedData 风格一致 | 需自管生命周期（女仆被移除/魂符收走/换维度要清理）；跨维度需指定主世界存储 |
+
+**推荐 A**（若源码验证通过），否则回落 B。无论哪条，**按硬规则 7 存 `version` 顶层走显式迁移**。
+
+---
+
+### 3.6 归属殖民地与"工作站"
+
+女仆归哪个殖民地、在哪个范围干活，复用两侧现成概念：
+
+- **殖民地归属**：默认按女仆位置经 `ColonyApi.getColonyId(BlockPos)`（256 格内最近殖民地）解析；解析不到则不注册（或注册为 `PLACEHOLDER_COLONY` 但不派活，因为 `SchedulerSystem.java:86` 会挡住占位殖民地）。
+- **工作范围**：TLM 女仆自带站位/家概念——`restrictTo(pos, distance)` / `hasRestriction()` / `getRestrictRadius()`（`EntityMaid.java:2109/2130/2120`）。这正好对应"女仆的工作范围"，**无需新造概念**：女仆只接自己范围附近的任务（SchedulerSystem 的 `proximity = 10/(10+dist)` 评分天然就把远处的任务分给了更近的法师）。
+- **可选**：给权杖加一个"收编/指派"动作。注意 `ScepterKind` 四个动作里 `SHELTER`/`HOSTILE` 已经对任意 `LivingEntity` 生效（`ScepterService.java:73-120`），而 `PEACE`/`FOLLOW` 硬依赖 `WandscapeNpc`（`:29` 第一行 `instanceof`）。阶段一**建议先不做**，用默认归属，避免扩大改造面。
+
+---
+
+### 3.7 落地步骤与难度
+
+| 步 | 内容 | 触及 | 难度 | 风险 | 可独立验证 |
+|---|---|---|---|---|---|
+| **1** | 盟友注册（`compat/tlm/TlmCompat` + 依赖声明） | 新增 ~1 文件 + 装配点 1 行 + build 文件 | 低 | 低 | 游戏内：殖民地 NPC 不攻击女仆 |
+| **2** | 抽 `ColonyWorker` + 泛化 `EntityComponentBridge`/`NavigationSystem`/5 个 boundary 执行器 | 改 ~10 文件、~600-900 行 | 中 | 中（纯重构，行为须零变化） | `./gradlew build` + 原 NPC 玩法回归 |
+| **3** | TLM 女仆接入：`@LittleMaidExtension` + 工作模式 task + `MaidColonyWorker` 适配器 + `MaidColonyState` + 对账 sweep | 新增 `compat/tlm/**` ~600-900 行 | 中高 | 中高（§五 R1/R2/R3） | 游戏内：女仆选任务后接活、走到工地、执行原子操作、产出进殖民地仓库 |
+
+合计改动量约 **1200-1700 行**（新增为主）。第 2 步是"让第 3 步可行"的投资，本身不改玩法。
+
+---
+
+## 四、阶段二：只评估不做
+
+### 4.1 法师小屋升级训练
+
+**准入写死**：`MageHutApiImpl.forceBind` 要求 `level.getEntity(npcId) instanceof WandscapeNpc && npc.isColonyNpc() && 同殖民地`（`content/building/internal/MageHutApiImpl.java:56-58`），`MageHutServerHandler.onAssign` 同（`:110-116`）；候选列表 `collectCandidates` 只收 `getColonyNpcs`（`:369-381`）。
+
+**改造面**：`MageHutResident.npcId` 的语义从"NPC UUID"泛化为"worker UUID"，准入改判 `ColonyWorker`；`applyResidentAttributes`（`MageHutServerHandler.java:307-313`）里的 `setBaseAttributeValue` 下沉到 `ColonyWorker`（NPC 写 vanilla 属性，女仆写 `MaidColonyState`）。
+
+**好消息**：升级/训练**只改 level 与 7 项 base 属性，不碰法术、不碰装备**（`docs` 与代码均已确认），所以阶段二里这一块是本方案中最容易的——属性数学（`NpcAttributes.computeEffective/canLevelUp/upgradeCostPerElement/trainCostPerElement`）是纯函数，直接复用。
+
+**难度**：中。定位在阶段一的 `ColonyWorker` 缝之上。
+
+### 4.2 手持法杖施法（含普攻）
+
+**核心阻力：施法层实体类型写死 4 处**：
+
+| 入口 | 签名 | 位置 |
+|---|---|---|
+| 总分发 | `dispatch(ServerLevel, WandscapeNpc, LivingEntity, MagicDef, String, int)` | `content/magic/internal/MagicSpellExecutors.java:63` |
+| 光束 | `castNpcAt(ServerLevel, WandscapeNpc, LivingEntity, String, Integer)` | `content/magic/internal/MagicCaster.java:87` |
+| 铁魔法 | `cast(ServerLevel, WandscapeNpc, LivingEntity, String, int)` | `compat/ironspellbooks/IronSpellsCaster.java:73` |
+| 诡厄 | `cast(ServerLevel, WandscapeNpc, LivingEntity, String, String)` | `compat/goety/GoetyCaster.java:165` |
+
+`dispatch` 对施法者真正**不可替代的要求只有四组**（逐行核对得出）：`equippedMagic`（读等级/customData）、`tryCastSpell`（资源门控，`WandscapeNpc.java:192` → `MagicState.tryCast`）、`getStaffPosition`/`faceTarget`（施法几何）、`isFriendlyForce`/`canBeamHurt`（敌我边界）。其余（`position/getUUID/addEffect/distanceToSqr/getArmorValue`）`LivingEntity` 全有。
+
+**决策内核零耦合，可直接复用**：`CastBrain.select` / `resolvePriority` / `knownSpells`（`content/magic/internal/CastBrain.java:44/162/213`）是纯函数；`IronSpellsHelper.equippedSpellbookSlots(LivingEntity)`（`:190`）与 `GoetyCompat.isHoldingGoetyWand(LivingEntity)`（`:59`）**已经是 `LivingEntity` 签名**；第三方魔法用 `getSyntheticDef` 伪造成 `MagicDef` 喂给 `CastBrain` 的 adapter 模式现成（`IronSpellsHelper.java:97`、`GoetyHelper`）。`MagicApi` 本身也已是 UUID 抽象（`api/MagicApi.java:28-44`）。
+
+**TLM 侧施法入口是正门**：`EntityMaid#performRangedAttack`（`EntityMaid.java:1209`）会把调用转发给当前 task——只要 task `instanceof IRangedAttackTask`（`:1211/1217`），无需改 TLM。**但**索敌行为里**不能用** `MaidShootTargetTask`：它硬性要求主手是原版 `ProjectileWeaponItem`（`entity/ai/brain/task/MaidShootTargetTask.java:49`）。正确选择是 `MaidShootTargetAnyItemTask(int cooldown, int chargeTicks, Predicate<ItemStack> weaponTest)`（`.../MaidShootTargetAnyItemTask.java:20`），`weaponTest` 判我们的 `WandItem`。TLM 自带的 KubeJS 层 `RangedAttackTaskJS` 就是这套的现成样例。普攻（L2 兜底）可复用 `GuardCombat.normalAttack` 的语义。
+
+**魔力/冷却/已学法术**：同 §3.5，挂在 `MaidColonyState` 上。
+
+**施法动画**：TLM 提供 `IMagicCastingAnimationProvider`（`api/animation/IMagicCastingAnimationProvider.java:24`），经 `ILittleMaid#registerMagicCastingAnimation`（`ILittleMaid.java:218`，**仅客户端**）注册。TLM 内部**零实现**，纯留给附属；状态（咏唱 tick、相位）**必须自管并自行同步**——TLM 的 javadoc 明说"本模组不记录或缓存任何施法数据"。若要出动画，需额外加一条服务端→客户端的状态同步包。
+
+**难度**：大。改造集中在"把 4 个施法入口的形参从 `WandscapeNpc` 收到 `SpellCaster` 接口"，但连带 `GuardCombat`（NPC 专有的战斗编排：站位/让位/打断）需要女仆侧另写一套。
+
+### 4.3 策略槽
+
+**结构**：`NpcStrategyMenu extends AbstractContainerMenu`，12 槽 = 4 策略组 × 3（`content/npc/component/EquippedMagicComponent.java:77-80`），行=策略组、列=类内优先级。
+
+**写死点清单**：
+
+| # | 位置 | 内容 |
+|---|---|---|
+| 1 | `content/npc/NpcStrategyMenu.java:48` | 字段 `@Nullable WandscapeNpc npc`；构造 `:64`、`stillValid` `:127`、`syncEquipped` `:300`（读 `npc.getUUID()`/`npc.castStrategy`） |
+| 2 | `NpcStrategyMenu.java:167` `capForNpc(WandscapeNpc, int)` | 参数类型写死，但内部两个调用点已是 `LivingEntity` 签名 → **易改** |
+| 3 | `network/NpcOpenStrategyPacket.java:51`、`network/NpcStrategyPacket.java:76` | `instanceof WandscapeNpc` 硬校验 |
+| 4 | `network/NpcDataPacket.java:177` `from(WandscapeNpc)` | 27 字段里含 `getEffectiveAttribute/getEffectiveArmorValue/getSkinVariant/getHatColor/getItemBySlot(ARMOR_VANILLA_SLOTS)/getItemInHand(MAIN_HAND)/hasDefaultWand` |
+| 5 | `content/magic/internal/SpellcastingApiImpl.java:95` `resolve(UUID)` | 依赖 `EntityComponentBridge`/`WandscapeNpc`，需加"非 NPC caster"解析 |
+| 6 | `WandscapeClient.java:294` | handler 只认 `NpcStrategyScreen`/`NpcScreen` 两类屏 |
+
+**好消息**：`NpcStrategyScreen` 本身**不持实体引用**（只用 `entityId`，`client/NpcStrategyScreen.java:53`；另有 `NpcScreenNavigator.getLastEntityId()` 兜底 `:130`）→ **屏幕侧天然可复用，零改动**。`SpellSlot.mayPlace` 的门控逻辑也全是数据判定。
+
+**难度**：中。以"把 `@Nullable WandscapeNpc` 字段收成接口 + 通用 entityId 解析"为主，属于机械改造。
+
+---
+
+## 五、风险与验证清单
+
+| # | 风险 | 影响 | 缓解 / 验证 |
+|---|---|---|---|
+| **R1** | TLM WORK activity 硬编码行为（`MaidBegTask` 6 / `MaidWorkMealTask` 7 / `MaidStealEdible*` 8 / 随机走动 20，`MaidBrain.java:138-145`）与我们的工作移动争抢 | 女仆跑去做饭/偷吃/乞讨而不去工地 | 我方 brain behavior 放优先级 5（早于 6/7/8/20）；`enableLookAndRandomWalk` 返回 false 关随机走动。**偷吃/工作餐无法从 API 关闭**——必须实测确认竞争程度，必要时再评估侵入性手段 |
+| **R2** | 女仆被移除（死亡/魂符收走/换维度/被其它模组处理）时 ECS 残留 | 幽灵 worker 占任务、任务卡死 | 对账式 sweep（§3.4）而非精确生命周期；sweep 检测 `isRemoved()` 即注销并 `releaseTaskForReassign` |
+| **R3** | `AttachmentType` 能否随 `EntityMaid` 存档持久化 | 女仆状态重启即丢 | **动手前必须用 `minecraft-source` skill 读 `Entity#saveWithoutId` / NeoForge attachment 序列化链确认**；不通过则回落自建 SavedData（§3.5 表 B） |
+| **R4** | 女仆无 vanilla 属性表承载 7 项殖民地属性 | 工作速度/魔力结算无源 | 自有 `MaidColonyState` + 复用 `NpcAttributes.computeEffective` 纯函数（§3.5） |
+| **R5** | TLM 未安装时的类加载 | `NoClassDefFoundError` 崩服 | 沿用 `compat/curios` 的门面+Impl 隔离模板，门面零外部类型引用 |
+| **R6** | TLM API 漂移 | 升级 TLM 后兼容层编译失败 | `IMaidTask`/`ILittleMaid` 是 TLM 官方 api 包（非 internal），但仍非冻结契约；`gradle.properties` 锁版本并在升级时回归 |
+| **R7** | 两套库存（ECS `NpcInventory` vs 实体物品栏）不互通 | 女仆挖到的材料不进她自己的背包 | **这不是新问题**——NPC 现在同样如此（`WandscapeNpc.java:505` 的 `SimpleContainer` 与 ECS `NpcInventory` 无互转代码）。女仆与法师行为一致，属可接受 |
+
+**动手前的三项验证**（按序）：
+1. `AttachmentType` 对第三方实体的持久化可行性（R3）——决定 §3.5 走 A 还是 B。
+2. TLM WORK activity 行为争抢的实测（R1）——决定是否需要额外抑制手段。
+3. `EntityMaid` 的 `getNavigation()` 在 Brain 未设 `WALK_TARGET` 时是否可被直接驱动——决定 §3.3 导航方案是否必须走 brain memory 路线。
+
+---
+
+## 六、待决问题
+
+| # | 问题 | 备选 | 倾向 |
+|---|---|---|---|
+| D1 | 盟友范围是否包含**无主/未驯服**女仆？ | 全部 `EntityMaid` / 仅有主女仆 | 全部（用户原话"默认属于盟友"） |
+| D2 | 女仆归属殖民地的方式 | 按位置自动解析最近殖民地 / 权杖指派 / 女仆站位绑定 | 自动解析为主（低摩擦），后续再评估权杖指派 |
+| D3 | 是否接受 PVP 开启时"别人的女仆"也不再被己方殖民地攻击 | 接受 / 收窄为仅同殖民地 | 接受（`EXTERNAL_ALLY` 的既有语义） |
+| D4 | 女仆工作态是否要在任务面板/概览里与 NPC 并列显示 | 显示 / 不显示 | 显示（否则玩家看不出女仆在干活）；涉及 `TaskPanelSyncTracker`，属阶段一可选项 |
+| D5 | 阶段一是否一并做"女仆专用工作配置界面"（`getTaskConfigGuiProvider`） | 做 / 先不做 | 先不做，等 R1 实测后再定界面需要暴露什么 |
+| D6 | 第 2 步重构是否单独成 commit/分支 | 独立提交 / 与第 3 步合并 | 独立提交——行为不变、可单独回滚，是第 3 步的保险 |
+
+---
+
+## 七、被否决的替代方案
+
+| 方案 | 否决理由 |
+|---|---|
+| **把女仆"转生"成 `WandscapeNpc`**（换模型贴图冒充） | 丢失 TLM 的全部生态：模型包（geckolib/资源包）、背包、好感度、饰品、AI 任务、`tlm_custom_pack`。等于让玩家二选一，兼容性反而最差 |
+| **女仆侧平行实现一套 worker/施法/策略槽** | 重复实现同一概念，违背"一个概念收敛进该域唯一命名类"的增量约束；且从此每次改动工作链都要改两处 |
+| **只做盟友，不参与工作** | 不满足目标①的"参与城镇建设、接取任务" |
+| **给 ECS 再开一条"女仆专用"任务通道** | 与 SchedulerSystem 并行的第二套调度会分叉任务分配与产出结算，违背"任务派发唯一通道"的既有约束 |
+
+---
+
+## 八、下一步
+
+阶段一按 §3.7 三步推进，第 1 步（盟友）可立即独立提交。第 2 步动手前先完成 §五 的三项验证；第 3 步完成后按 §六 D4/D5 决定收尾范围。阶段二在阶段一落地并实测后再单独立项。
