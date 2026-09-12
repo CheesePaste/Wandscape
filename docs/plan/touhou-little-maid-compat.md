@@ -148,7 +148,7 @@ public interface ColonyWorker {
 
 **导航的两种机制（关键设计点）**：`WandscapeNpc` 由 `NavigationSystem` 直接 `getNavigation().moveTo(...)`；但 TLM 女仆的移动由 **Brain** 驱动（`WalkTarget` 记忆 + 行为）。若对女仆也用同一套 `moveTo`，会与 TLM WORK activity 里硬编码的 `MaidStealEdibleMoveBlockTask`(优先级 8) 等行为**争抢导航**。推荐：
 
-- 女仆侧 `applyWalkTarget` 只写一个"我方行走目标"字段；由我们 task 的一个 **brain behavior（优先级 5，早于 TLM 的 6/7/8/20）** 每 tick 读该目标并写 `WALK_TARGET` 记忆。即"用 TLM 原生的移动方式搬运我们的导航意图"，从机制上避免争抢。
+- 女仆侧 `applyWalkTarget` **直接写 `WALK_TARGET` 记忆**（`BehaviorUtils.setWalkAndLookTargetMemories`，与 TLM 自己的移动任务同一通道），由 CORE 活动的 `MoveToTargetSink` 驱动导航。**不要直接 `getNavigation().moveTo()`**——理由见 §五 验证 3/4：写 `WALK_TARGET` 会让 TLM 那一族移动任务（声明 `WALK_TARGET ABSENT` 为前提）无法启动，互斥免费拿到；直接驱动则留着记忆缺席，TLM 的任务照跑照抢。
 - `NavigationSystem` 的卡死检测 / 净逼近判据 / 脱困自传送（`NavigationSystem.java:130-360`）**逻辑保留**，只把"施加移动"与"读位置"两处下沉到 `ColonyWorker`。女仆的 `tryEscapeTeleport` 可返回 false（不做自传送）或映射到 TLM 的传送。
 
 **这一步是纯重构、行为不变**，`./gradlew build` + 现有 NPC 玩法实测即可验证，不引入任何 TLM 依赖。这是本方案最重要的风险隔离。
@@ -168,9 +168,7 @@ public interface ColonyWorker {
 | 注册/注销 ECS | **不用 task 生命周期钩子**（TLM 的 task 无 onStart/onStop）→ 用对账式 sweep：每 N tick 扫注册表，任务已非我们的女仆注销、任务为我们且**主人殖民地可解析**的注册（§3.6） | TLM 提供 `MaidTickEvent`（`api/event/MaidTickEvent.java:7`，每 tick 可取消） |
 | 工作配置界面 | `getTaskConfigGuiProvider(maid)` 返回自定义 `MenuProvider`（TLM 内置 `TaskFeedAnimal` 就是这么做的） | `IMaidTask.java:196`；先例 `entity/task/TaskFeedAnimal.java:111` |
 
-`createBrainTasks` 返回的行为列表（建议极简）：
-1. 优先级 5：读 ECS `NavigationState` → 写 `WALK_TARGET`（§3.3 的导航落地）。
-2. 优先级 5：`IMaidTask#workPointTask` / 在自家的站位范围内活动（可选）。
+`createBrainTasks`：**不需要移动行为**——工作移动由 `NavigationSystem` 经 `applyWalkTarget` 直接写 `WALK_TARGET` 记忆（§3.3），CORE 活动的 `MoveToTargetSink` 负责落地。返回列表可以极简（甚至空列表，只靠 `enableLookAndRandomWalk` 等开关控制工作态）。
 
 **不要**复用 TLM 的 `MaidShootTargetTask` 之类战斗行为——工作模式下女仆不参与战斗（战斗是阶段二的事）。
 
@@ -186,14 +184,14 @@ public interface ColonyWorker {
 
 **方案**：女仆的 7 项殖民地属性 + 魔力 + 冷却**全部存进我们自己的状态容器** `MaidColonyState`，由 `MaidColonyWorker.getEffectiveAttribute()` 读取。共用 `NpcAttributes.computeEffective(type, base, level, equipBonus)` 这套纯函数（`content/npc/attributes/NpcAttributes.java:263`），所以升级/训练/装备加成的数学与 NPC 完全一致。
 
-**持久化载体（待验证项）**：候选两条——
+**持久化载体（已验证，采用方案 A）**：
 
-| 方案 | 优点 | 风险 |
-|---|---|---|
-| **A. NeoForge `AttachmentType`（Data Attachment）** | 随实体 NBT 持久化、可配 `copyOnDeath`、无需自管清理 | 仓库从未用过；需先读 MC/NeoForge 源码确认 `EntityMaid` 的存档路径确实写出 attachments（`Entity#saveWithoutId` 链） |
-| B. 自建 `SavedData`：`Map<UUID, MaidColonyState>` | 与仓库既有 SavedData 风格一致 | 需自管生命周期（女仆被移除/魂符收走/换维度要清理）；跨维度需指定主世界存储 |
+| 方案 | 结论 |
+|---|---|
+| **A. NeoForge `AttachmentType`（Data Attachment）** | **采用。** 已核实附件在 `Entity` 层序列化（`Entity.java:131/1795/1883`，见 §五 验证 2），`EntityMaid` 同样生效；随实体 NBT 持久化，无需自管清理 |
+| B. 自建 `SavedData`：`Map<UUID, MaidColonyState>` | 备选（若将来发现附件与 TLM 的实体复制/魂符路径冲突）。缺省不用——需自管生命周期（女仆被移除/魂符收走/换维度要清理） |
 
-**推荐 A**（若源码验证通过），否则回落 B。无论哪条，**按硬规则 7 存 `version` 顶层走显式迁移**。
+无论走哪条，**按硬规则 7 存 `version` 顶层走显式迁移**（附件内的 NBT 同样适用）。
 
 ---
 
@@ -317,20 +315,38 @@ public interface ColonyWorker {
 
 | # | 风险 | 影响 | 缓解 / 验证 |
 |---|---|---|---|
-| **R1** | TLM WORK activity 硬编码行为（`MaidBegTask` 6 / `MaidWorkMealTask` 7 / `MaidStealEdible*` 8 / 随机走动 20，`MaidBrain.java:138-145`）与我们的工作移动争抢 | 女仆跑去做饭/偷吃/乞讨而不去工地 | 我方 brain behavior 放优先级 5（早于 6/7/8/20）；`enableLookAndRandomWalk` 返回 false 关随机走动。**偷吃/工作餐无法从 API 关闭**——必须实测确认竞争程度，必要时再评估侵入性手段 |
+| **R1** | TLM WORK activity 里硬编码的行为（`MaidBegTask` 6 / `MaidWorkMealTask` 7 / `MaidStealEdible*` 8 / 随机走动 20，`MaidBrain.java:138-145`）与我们的工作移动争抢 | 女仆跑去做饭/偷吃/乞讨而不去工地 | **已基本解决**：走 `WALK_TARGET` 记忆通道后，声明 `WALK_TARGET ABSENT` 前提的 `MaidMoveToBlockTask` 一族（含偷吃）自动无法启动；随机走动由 `enableLookAndRandomWalk` 返回 false 关掉；`MaidBegTask` 注册在 IDLE，工作时不活跃。残余仅 `MaidBegTask`/`MaidWorkMealTask` 的苛刻触发条件，实测确认即可（§五 验证 3） |
 | **R2** | 女仆被移除（死亡/魂符收走/换维度/被其它模组处理）时 ECS 残留 | 幽灵 worker 占任务、任务卡死 | 对账式 sweep（§3.4）而非精确生命周期；sweep 检测 `isRemoved()` 即注销并 `releaseTaskForReassign` |
-| **R3** | `AttachmentType` 能否随 `EntityMaid` 存档持久化 | 女仆状态重启即丢 | **动手前必须用 `minecraft-source` skill 读 `Entity#saveWithoutId` / NeoForge attachment 序列化链确认**；不通过则回落自建 SavedData（§3.5 表 B） |
+| **R3** | ~~`AttachmentType` 能否随 `EntityMaid` 存档持久化~~ | — | **已验证通过**（§五 验证 2）：附件在 `Entity` 层序列化，`EntityMaid` 同样生效。§3.5 走方案 A |
 | **R4** | 女仆无 vanilla 属性表承载 7 项殖民地属性 | 工作速度/魔力结算无源 | 自有 `MaidColonyState` + 复用 `NpcAttributes.computeEffective` 纯函数（§3.5） |
 | **R5** | TLM 未安装时的类加载 | `NoClassDefFoundError` 崩服 | 门面+Impl 隔离，门面零外部类型引用。**本例风险最高**：`TlmCompat.getOwnerUuid` 被挂在 `classify()` 这个判定咽喉上，是全库最热路径之一，不能用 `GoetyCompat` 那种顶部直接 import 的写法（见 §3.1） |
 | **R6** | TLM API 漂移 | 升级 TLM 后兼容层编译失败 | `IMaidTask`/`ILittleMaid` 是 TLM 官方 api 包（非 internal），但仍非冻结契约；`gradle.properties` 锁版本并在升级时回归 |
 | **R7** | 两套库存（ECS `NpcInventory` vs 实体物品栏）不互通 | 女仆挖到的材料不进她自己的背包 | **这不是新问题**——NPC 现在同样如此（`WandscapeNpc.java:505` 的 `SimpleContainer` 与 ECS `NpcInventory` 无互转代码）。女仆与法师行为一致，属可接受 |
 | **R8** | `npc.pvp = false` 时玩家侧实体（含女仆）跨殖民地恒友军 | 「只认自己小镇的女仆」在该配置下失效 | 属**既有**设计、非本次引入；不在 TLM 兼容里顺带修，记为待办 A（§3.1.1） |
 
-**动手前的四项验证**（按序）：
-1. 盟友行为的实测确认（§3.1，零代码项的验收）——本镇女仆不被攻击、别人镇的/无主的照旧。
-2. `AttachmentType` 对第三方实体的持久化可行性（R3）——决定 §3.5 走 A 还是 B。
-3. TLM WORK activity 行为争抢的实测（R1）——决定是否需要额外抑制手段。
-4. `EntityMaid` 的 `getNavigation()` 在 Brain 未设 `WALK_TARGET` 时是否可被直接驱动——决定 §3.3 导航方案是否必须走 brain memory 路线。
+**动手前的四项验证（已全部完成，2026-09-12）**：
+
+| # | 项 | 结果 |
+|---|---|---|
+| 1 | 盟友行为 | **通过（静态核实）**。`EntityMaid extends TamableAnimal`（`EntityMaid.java:172`）→ 继承 `OwnableEntity`；TLM 自身在 `:1071/1082/1536/1546/2722` 都用继承来的 `getOwnerUUID()`，未覆写 owner 存储；驯服走 vanilla `this.tame(player)`（`:688`）。故有主女仆落 `classify()` 的 PET 分支（`WandscapeNpc.java:343`）→ `pvpColony(ownerUUID)`。游戏内实测仍待做，但代码路径无歧义。 |
+| 2 | `AttachmentType` 持久化 | **通过**。`Entity extends AttachmentHolder`（`Entity.java:131`），`saveWithoutId` 内 `serializeAttachments(registryAccess())` 写入 `neoforge:attachments`（`:1795-1796`），`load` 内读回（`:1883`）。均在 `Entity` 层、且在 `addAdditionalSaveData` **之外**，子类无法绕过 → 女仆同样持久化。**§3.5 走方案 A。** |
+| 3 | TLM WORK 行为争抢 | **通过，且找到了根治手段**（见下）。 |
+| 4 | 能否驱动女仆导航 | **通过**。`Mob.serverAiStep()` 内 `this.navigation.tick()`（`Mob.java:797`）无条件执行；且女仆在 CORE 活动注册了 `MoveToTargetSink`（`MaidBrain.java:98`）。 |
+
+**验证 3/4 的关键发现（纠正了本文初稿的一个错误假设）**：
+
+1. **vanilla `Brain` 的 priority 不产生互斥。** `availableBehaviorsByPriority` 是 `TreeMap<Integer, Map<Activity, Set<BehaviorControl>>>`（`Brain.java:51`），`startEachNonRunningBehavior` 会把活跃活动里**所有** STOPPED 行为都启动——初稿"我们放优先级 5 就早于 TLM 的 6/7/8/20 从而获胜"的说法**是错的**。
+2. **TLM 用「记忆状态」做互斥，而不是 priority。** `MaidMoveToBlockTask` 的构造把 `WALK_TARGET, VALUE_ABSENT` 声明为**启动前提**（`MaidMoveToBlockTask.java:30-36`）——只要 `WALK_TARGET` 存在，这一族移动任务（种田/偷吃/找家饭……）就**不会启动**。`MaidStealEdibleMoveBlockTask` 正是它的子类。
+3. **`WALK_TARGET` 才是女仆移动的正门。** 消费者是 vanilla 的 `MoveToTargetSink`，TLM 把它注册在 **`Activity.CORE`**（`MaidBrain.java:98`，CORE 恒活跃，`MaidBrain.java:68-71`）。写 `WALK_TARGET` → `MoveToTargetSink` 驱动导航。
+
+**因此导航方案定为：女仆侧经 `WALK_TARGET` 记忆驱动，而不是直接 `getNavigation().moveTo()`。**
+
+- **直接驱动**虽然技术上可行（navigation 每 tick 都被 tick），但 `WALK_TARGET` 保持缺席 → TLM 的移动任务照常启动并覆盖我们的路径，**R1 成立**。
+- **记忆通道**反过来把 R1 顺手解掉：写 `WALK_TARGET` 本身就阻断了那一族任务，**互斥免费拿到**，且用的是 TLM 自己的机制（不越权、不 mixin）。
+
+**实现落点**：`BehaviorUtils.setWalkAndLookTargetMemories(maid, pos, speed, closeEnoughDist)`（TLM 自己的移动任务用的就是这个）。注意 `MoveToTargetSink` 到达后会擦除该记忆，所以工作移动需要**每 tick 续写**（或按 `PathNavigation.isDone()` 续写）——这正好与 `NavigationSystem` 现有的「每轮重发」节奏合拍。
+
+**R1 收窄后的残余风险**：`MaidBegTask` 声明的要求里**没有** `WALK_TARGET ABSENT`（只要求 `NEAREST_VISIBLE_LIVING_ENTITIES` 存在），因此它仍可能覆写我们的记忆。触发条件苛刻（主人在 2-6 格内、在其站位范围内、且**手持诱惑物**），实测确认即可，不必额外抑制。另注意 `MaidBegTask` 注册在 IDLE 活动，而工作时活跃活动是 {CORE, WORK} → IDLE 不活跃，**实际上它也不会跑**。
 
 ---
 
