@@ -165,7 +165,7 @@ public interface ColonyWorker {
 | 注册时机 | TLM 在 `FMLCommonSetupEvent` 调 `TaskManager.init()`，之后任务表 `ImmutableMap.copyOf` **冻结** | `entity/task/TaskManager.java:59-64` |
 | 任务本体 | `implements IMaidTask`：`getUid()` / `getIcon()` / `getAmbientSound()` / `createBrainTasks()` 四个必需方法 | `api/task/IMaidTask.java:36/43/52/60` |
 | 关随机走动 | `enableLookAndRandomWalk(maid)` 返回 false（工作时） | `IMaidTask.java:101`；消费点 `MaidBrain.java:144` |
-| 注册/注销 ECS | **不用 task 生命周期钩子**（TLM 的 task 无 onStart/onStop）→ 用对账式 sweep：每 N tick 扫注册表，任务已非我们的女仆注销、任务为我们且归属殖民地可解析的注册 | TLM 提供 `MaidTickEvent`（`api/event/MaidTickEvent.java:7`，每 tick 可取消） |
+| 注册/注销 ECS | **不用 task 生命周期钩子**（TLM 的 task 无 onStart/onStop）→ 用对账式 sweep：每 N tick 扫注册表，任务已非我们的女仆注销、任务为我们且**主人殖民地可解析**的注册（§3.6） | TLM 提供 `MaidTickEvent`（`api/event/MaidTickEvent.java:7`，每 tick 可取消） |
 | 工作配置界面 | `getTaskConfigGuiProvider(maid)` 返回自定义 `MenuProvider`（TLM 内置 `TaskFeedAnimal` 就是这么做的） | `IMaidTask.java:196`；先例 `entity/task/TaskFeedAnimal.java:111` |
 
 `createBrainTasks` 返回的行为列表（建议极简）：
@@ -197,23 +197,61 @@ public interface ColonyWorker {
 
 ---
 
-### 3.6 归属殖民地与"工作站"
+### 3.6 归属殖民地：直接进主人的殖民地
 
-女仆归哪个殖民地、在哪个范围干活，复用两侧现成概念：
+**裁定（D2）**：女仆进**主人的殖民地**——`ColonyApi.getColonyByFounder(maid.getOwnerUUID())`，与 §3.1 的盟友判定**同一个解析、同一个口径**。
 
-- **殖民地归属**：默认按女仆位置经 `ColonyApi.getColonyId(BlockPos)`（256 格内最近殖民地）解析；解析不到则不注册（或注册为 `PLACEHOLDER_COLONY` 但不派活，因为 `SchedulerSystem.java:86` 会挡住占位殖民地）。
-- **工作范围**：TLM 女仆自带站位/家概念——`restrictTo(pos, distance)` / `hasRestriction()` / `getRestrictRadius()`（`EntityMaid.java:2109/2130/2120`）。这正好对应"女仆的工作范围"，**无需新造概念**：女仆只接自己范围附近的任务（SchedulerSystem 的 `proximity = 10/(10+dist)` 评分天然就把远处的任务分给了更近的法师）。
-- **可选**：给权杖加一个"收编/指派"动作。注意 `ScepterKind` 四个动作里 `SHELTER`/`HOSTILE` 已经对任意 `LivingEntity` 生效（`ScepterService.java:73-120`），而 `PEACE`/`FOLLOW` 硬依赖 `WandscapeNpc`（`:29` 第一行 `instanceof`）。阶段一**建议先不做**，用默认归属，避免扩大改造面。
+相比"按位置解析最近殖民地"，这条更好：
+
+- **稳定**：不随女仆走动漂移（位置方案会在她跑出 256 格时静默换镇、跑太远时静默掉出）。
+- **自洽**：一个女仆**是她盟友的那个殖民地**的工作者——盟友判定与工作归属不会打架。这是选它的主要理由。
+- **主人离线仍可解析**：`getOwnerUUID()` 是持久化字段（§3.1 已核实）。
+- 与 `pvpColony` 口径一致，代码上就是复用它已经用过的那次 `getColonyByFounder` 查询。
+
+边界情况：
+
+| 情况 | 结果 |
+|---|---|
+| 主人是本殖民地创始人 | 进该殖民地，成为工人 |
+| 主人不是任何殖民地创始人（殖民地↔创始人 1:1） | 解析为 `null` → **不注册为工人**（建镇前女仆不参与劳作） |
+| 一只主人有多只女仆 | 全部进同一殖民地，等价于多招了几个工人 |
+| 无主 / 未驯服女仆 | `getOwnerUUID() == null` → **不归属、不劳作**，与"无主的不算盟友"一致 |
+
+**不注册 `PLACEHOLDER_COLONY` 兜底**：解析不到殖民地时就干脆不注册，不要造出"占位殖民地工人"这种必须靠 `SchedulerSystem.java:86` 拦下的中间状态。
+
+**工作范围**：不新造"工作站"概念。
+
+- 殖民地侧：`SchedulerSystem` 的 `proximity = 10/(10+dist)` 评分天然把远处的任务分给更近的法师，女仆不会被派到天边去。
+- 女仆侧：TLM 自带的站位/家概念就是她的工作范围（`restrictTo(pos, distance)` / `hasRestriction()` / `getRestrictRadius()`，`EntityMaid.java:2109/2130/2120`）。玩家想让女仆常驻工地，用 TLM 原生站位功能即可。
+
+**可选（后续，本次不做）**：给权杖加"收编/指派"动作。`ScepterKind` 四动作里 `SHELTER`/`HOSTILE` 已对任意 `LivingEntity` 生效（`ScepterService.java:73-120`），而 `PEACE`/`FOLLOW` 硬依赖 `WandscapeNpc`（`:29` 第一行 `instanceof`）。
 
 ---
 
-### 3.7 落地步骤与难度
+### 3.7 任务面板并排显示（D5）
+
+**裁定（D5）**：女仆在任务与法师管理面板里**与 NPC 并列显示**——否则玩家看不出女仆在干活。
+
+**改动面很小，且是第 2 步泛化的自然产物。** `TaskPanelSyncTracker`（`content/task/network/TaskPanelSyncTracker.java`，551 行）构建每一行用到的字段，**几乎就是 `ColonyWorker` 的接口面**：
+
+- `getName` / `getHealth` / `getMaxHealth`（`Entity`/`LivingEntity` 已有）
+- `getCurrentMana` / `getMaxMana` / `getEffectiveAttribute`×3 / `getEffectiveArmorValue`（§3.3 已定为接口方法）
+- `isFollowMode` / `isResting` / `isPeaceMode`（§3.3 已定为接口方法）
+- `getX/Y/Z` / `getUUID` / `getId`（`Entity` 已有）
+
+三处遍历 `EntityComponentBridge.allNpcs()` / `getNpc()`（`:215`、`:345`、`:156`/`:423`）在切到 worker 版后自动涵盖女仆。
+
+**唯一需要新增的**：`MageSummaryDto`（`content/task/network/MageSummaryDto.java:11`）加一个 `kind` 字段（NPC / 女仆），供客户端区分图标与标签；连带 `TaskManagementSyncPacket` 的 codec 与客户端渲染分支。字段名**不要用 `isMaid`**——那会把 TLM 概念焊进通用 DTO；用 `kind`，与同 record 里既有的 `state`（String）风格一致。
+
+---
+
+### 3.8 落地步骤与难度
 
 | 步 | 内容 | 触及 | 难度 | 风险 | 可独立验证 |
 |---|---|---|---|---|---|
 | **1** | 盟友：**零代码**。默认配置（`npc.pvp = true`）下女仆已落 `PET` 分支并按主人殖民地判定（§3.1）。只做实测确认 + 记录 `npc.pvp = false` 的既有问题 | 0 行 | 极低 | 无 | 实测：本镇女仆不被攻击；别人小镇的、无主的女仆照旧 |
-| **2** | 抽 `ColonyWorker` + 泛化 `EntityComponentBridge`/`NavigationSystem`/5 个 boundary 执行器 | 改 ~10 文件、~600-900 行 | 中 | 中（纯重构，行为须零变化） | `./gradlew build` + 原 NPC 玩法回归 |
-| **3** | TLM 女仆接入：`@LittleMaidExtension` + 工作模式 task + `MaidColonyWorker` 适配器 + `MaidColonyState` + 对账 sweep | 新增 `compat/tlm/**` ~600-900 行 | 中高 | 中高（§五 R1/R2/R3） | 游戏内：女仆选任务后接活、走到工地、执行原子操作、产出进殖民地仓库 |
+| **2** | 抽 `ColonyWorker` + 泛化 `EntityComponentBridge`/`NavigationSystem`/5 个 boundary 执行器 + `TaskPanelSyncTracker` 三处遍历（D5 一并做，避免二次改同一批文件） | 改 ~11 文件、~600-900 行 | 中 | 中（纯重构，行为须零变化） | `./gradlew build` + 原 NPC 玩法回归 |
+| **3** | TLM 女仆接入：`@LittleMaidExtension` + 工作模式 task + `MaidColonyWorker` 适配器 + `MaidColonyState`（按主人殖民地归属）+ 对账 sweep + `MageSummaryDto.kind` 与面板图标 | 新增 `compat/tlm/**` ~600-900 行 + 面板 DTO/客户端小改 | 中高 | 中高（§五 R1/R2/R3） | 游戏内：女仆选任务后接活、走到工地、执行原子操作、产出进殖民地仓库；面板与法师并排显示 |
 
 合计改动量约 **1200-1700 行**（新增为主）。第 2 步是"让第 3 步可行"的投资，本身不改玩法。
 
@@ -301,10 +339,10 @@ public interface ColonyWorker {
 | # | 问题 | 备选 | 倾向 |
 |---|---|---|---|
 | D1 | 盟友范围 | 全部 `EntityMaid` / 仅有主女仆 / 仅本殖民地主人的女仆 | **已裁定**：只含主人属于本殖民地的女仆；别人小镇的、无主/未驯服的都**不是**盟友。默认配置下**已自动满足、零代码**（§3.1） |
-| D2 | 女仆归属殖民地的方式 | 按位置自动解析最近殖民地 / 权杖指派 / 女仆站位绑定 | 自动解析为主（低摩擦），后续再评估权杖指派 |
+| D2 | 女仆归属殖民地的方式 | 按位置解析最近殖民地 / 主人殖民地 / 权杖指派 | **已裁定**：直接进**主人的殖民地**（`getColonyByFounder(getOwnerUUID())`），与盟友判定同源；不做位置解析、不做占位兜底（§3.6） |
 | D3 | 别人家的女仆是否算友军 | 算（全局恒友军）/ 不算 | **已裁定**：不算。默认配置（`npc.pvp = true`）下天然成立 |
 | D4 | `npc.pvp = false` 时玩家侧全局友军（含女仆、宠物、召唤物、玩家本人） | 顺带修 / 记录待办 | **已裁定**：不在本次顺带修（会把风险外溢到所有玩家侧实体），记为待办 A（§3.1.1） |
-| D5 | 女仆工作态是否要在任务面板/概览里与 NPC 并列显示 | 显示 / 不显示 | 显示（否则玩家看不出女仆在干活）；涉及 `TaskPanelSyncTracker`，属阶段一可选项 |
+| D5 | 女仆工作态是否要在任务面板/概览里与 NPC 并列显示 | 显示 / 不显示 | **已裁定**：**并列显示**。改动面即第 2 步泛化的自然产物（`TaskPanelSyncTracker` 建行字段≈`ColonyWorker` 接口面），只需加 `MageSummaryDto.kind` + 客户端图标分支（§3.7） |
 | D6 | 阶段一是否一并做"女仆专用工作配置界面"（`getTaskConfigGuiProvider`） | 做 / 先不做 | 先不做，等 R1 实测后再定界面需要暴露什么 |
 | D7 | 第 2 步重构是否单独成 commit/分支 | 独立提交 / 与第 3 步合并 | 独立提交——行为不变、可单独回滚，是第 3 步的保险 |
 
@@ -325,4 +363,4 @@ public interface ColonyWorker {
 
 ## 八、下一步
 
-阶段一按 §3.7 三步推进。第 1 步（盟友）**零代码**，先跑 §五 验证项 1 实测确认即算完成。第 2 步动手前完成 §五 验证项 2-4；第 3 步完成后按 §六 D5/D6 决定收尾范围。阶段二在阶段一落地并实测后再单独立项。
+阶段一按 §3.8 三步推进。第 1 步（盟友）**零代码**，先跑 §五 验证项 1 实测确认即算完成。第 2 步动手前完成 §五 验证项 2-4；第 3 步完成后按 §六 D6 决定收尾范围。阶段二在阶段一落地并实测后再单独立项。
