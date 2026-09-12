@@ -39,6 +39,10 @@ final class PatchouliCompatImpl {
 
     private PatchouliCompatImpl() {}
 
+    static void initClient() {
+        PatchouliBookRenderer.init();
+    }
+
     private static void register(String docName, String category) {
         ResourceLocation entryId = ResourceLocation.fromNamespaceAndPath("wandscape", category + "/" + docName);
         DOC_TO_ENTRY.put(docName, entryId);

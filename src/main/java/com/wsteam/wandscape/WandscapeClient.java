@@ -482,6 +482,9 @@ public class WandscapeClient {
                     new CompassItemPropertyFunction(compassTarget));
         }
 
+        // 帕秋莉手册客户端初始化（原生代码绘制等）
+        com.wsteam.wandscape.compat.patchouli.PatchouliCompat.initClient();
+
         Log.info("Wandscape", "Wandscape client setup complete");
     }
 

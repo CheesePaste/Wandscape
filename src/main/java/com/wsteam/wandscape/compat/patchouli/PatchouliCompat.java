@@ -42,6 +42,14 @@ public final class PatchouliCompat {
     }
 
     /**
+     * 在客户端初始化阶段调用（注册原生代码绘制渲染器等）。
+     */
+    public static void initClient() {
+        if (!loaded) return;
+        PatchouliCompatImpl.initClient();
+    }
+
+    /**
      * 打开指定文档对应的帕秋莉手册条目；若 docPath 为空或 index 则打开手册主页。
      */
     public static void openBook(String docPath) {
