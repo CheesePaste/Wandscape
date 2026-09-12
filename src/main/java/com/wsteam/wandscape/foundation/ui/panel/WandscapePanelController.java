@@ -724,14 +724,10 @@ public final class WandscapePanelController {
     }
 
     public static void openPanelHelpDocument() {
-        Minecraft mc = Minecraft.getInstance();
-        if (mc != null) {
-            String docPath = "overview_guide";
-            if (WandscapePanelState.getActiveSubMode() == WandscapePanelState.SubMode.ROAD_PROJECTION) {
-                docPath = "road_guide";
-            }
-            String content = com.wsteam.wandscape.foundation.ui.markdown.navigation.DocumentLoader.loadMarkdown(docPath);
-            mc.setScreen(new com.wsteam.wandscape.foundation.ui.guidebook.GuidebookScreen(null, content, docPath));
+        String docPath = "overview_guide";
+        if (WandscapePanelState.getActiveSubMode() == WandscapePanelState.SubMode.ROAD_PROJECTION) {
+            docPath = "road_guide";
         }
+        com.wsteam.wandscape.foundation.ui.guidebook.GuideFacade.open(docPath);
     }
 }

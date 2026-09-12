@@ -212,9 +212,7 @@ public abstract class MedievalScreen extends Screen implements ReplayProtectedSc
 
     public void openHelpDocument() {
         if (helpDocumentPath != null && minecraft != null) {
-            String content = com.wsteam.wandscape.foundation.ui.markdown.navigation.DocumentLoader.loadMarkdown(helpDocumentPath);
-            var screen = new com.wsteam.wandscape.foundation.ui.guidebook.GuidebookScreen(this, content, helpDocumentPath);
-            minecraft.setScreen(screen);
+            com.wsteam.wandscape.foundation.ui.guidebook.GuideFacade.open(this, helpDocumentPath);
         }
     }
 

@@ -351,10 +351,7 @@ public class WandscapeClient {
 
         // Guide book: right-click opens the tutorial home (index_guide), locale-resolved
         GuideBookOpenPacket.setClientHandler(packet -> {
-            String docPath = packet.docPath();
-            String content = com.wsteam.wandscape.foundation.ui.markdown.navigation.DocumentLoader.loadMarkdown(docPath);
-            net.minecraft.client.Minecraft.getInstance().setScreen(
-                    new com.wsteam.wandscape.foundation.ui.guidebook.GuidebookScreen(null, content, docPath));
+            com.wsteam.wandscape.foundation.ui.guidebook.GuideFacade.open(packet.docPath());
         });
 
         // Guide progress seed — apply saved tutorial step/dismissal on panel open
@@ -559,11 +556,7 @@ public class WandscapeClient {
 
     /** Opens the guide index page (callable from anywhere). */
     public static void openGuideIndex() {
-        Minecraft mc = Minecraft.getInstance();
-        if (mc != null) {
-            String content = com.wsteam.wandscape.foundation.ui.markdown.navigation.DocumentLoader.loadMarkdown("index_guide");
-            mc.setScreen(new com.wsteam.wandscape.foundation.ui.guidebook.GuidebookScreen(null, content, "index_guide"));
-        }
+        com.wsteam.wandscape.foundation.ui.guidebook.GuideFacade.open("index_guide");
     }
 
     /** Welcome message on world join — points new players at the V-key building panel. */

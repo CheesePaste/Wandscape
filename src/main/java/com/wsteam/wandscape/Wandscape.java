@@ -533,6 +533,7 @@ public class Wandscape {
         com.wsteam.wandscape.compat.ironspellbooks.IronSpellsCompat.init(modEventBus);
         com.wsteam.wandscape.compat.goety.GoetyCompat.init(modEventBus);
         com.wsteam.wandscape.compat.curios.CuriosCompat.init(modEventBus);
+        com.wsteam.wandscape.compat.patchouli.PatchouliCompat.init(modEventBus);
         modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
         modContainer.registerConfig(ModConfig.Type.CLIENT, ClientConfig.SPEC);
 

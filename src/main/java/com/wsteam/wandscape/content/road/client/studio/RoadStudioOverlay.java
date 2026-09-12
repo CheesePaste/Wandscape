@@ -1159,8 +1159,7 @@ public final class RoadStudioOverlay {
                 I18n.name("gui.wandscape.roadstudio.tpl_help",
                         "打开操作指南 (H)").getString(),
                 22, StudioColors.BUTTON_NORMAL, StudioColors.BUTTON_HOVER)) {
-            String content = com.wsteam.wandscape.foundation.ui.markdown.navigation.DocumentLoader.loadMarkdown("road_spline_guide");
-            mc.setScreen(new com.wsteam.wandscape.foundation.ui.guidebook.GuidebookScreen(null, content, "road_spline_guide"));
+            com.wsteam.wandscape.foundation.ui.guidebook.GuideFacade.open("road_spline_guide");
         }
 
         StudioWidgets.spacing();
