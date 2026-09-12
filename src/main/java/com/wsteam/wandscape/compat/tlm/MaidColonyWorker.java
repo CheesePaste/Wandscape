@@ -6,28 +6,26 @@ import com.wsteam.wandscape.content.npc.worker.ColonyWorker;
 import com.wsteam.wandscape.content.npc.worker.WorkerFx;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.ai.behavior.BehaviorUtils;
-import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 
 import java.util.UUID;
 
 /**
  * 车万女仆的 {@link ColonyWorker} 适配器：让女仆接入殖民地工作链。
  *
- * <p>关键在于**导航走 Brain 的 {@code WALK_TARGET} 记忆，而不是直接 {@code getNavigation().moveTo()}**：
- * <ul>
- *   <li>TLM 把 vanilla 的 {@code MoveToTargetSink} 注册在恒活跃的 {@code Activity.CORE}
- *       （{@code MaidBrain.registerCoreGoals}），它读 {@code WALK_TARGET} 并驱动导航——这是女仆移动的正门。</li>
- *   <li>写这个记忆会顺带**阻断 TLM 那一族移动任务**（`MaidMoveToBlockTask` 把
- *       {@code WALK_TARGET, VALUE_ABSENT} 声明为启动前提），偷吃/种田/找家饭等行为因此无法启动，
- *       与我们的工作走位互斥免费拿到，不必用 mixin 去关它们。</li>
- * </ul>
+ * <p>**导航**走原版 {@code getNavigation()}，与法师的 {@code WandscapeNpc} 同机制。曾经试过走 Brain 的
+ * {@code WALK_TARGET} 记忆通道，被实测否决——原因写在 {@link #moveTo} 上（TLM 的 `MaidAwaitTask`
+ * 会擦掉超出女仆站位半径的行走目标，而工地基本都在站位半径之外）。
  *
- * <p>导航速度与"够近"判定沿用 TLM 自己的 {@code setWalkAndLookTargetMemories} 口径。
- *
- * <p>**前置：女仆必须开启站位模式**（TLM 的 home mode）。否则 CORE 里的 {@code MaidFollowOwnerTask}
- * 会一直把她拉向主人——它声明的是 {@code WALK_TARGET, REGISTERED}（不是 ABSENT），挡不住。
+ * <p>**前置：女仆必须开启 Home 模式**（TLM 的叫法，见其 lang `gui.touhou_little_maid.button.home.true`）。
+ * 否则 CORE 里的 {@code MaidFollowOwnerTask} 会一直把她拉向主人（它声明的是
+ * {@code WALK_TARGET, REGISTERED} 而非 ABSENT，挡不住），表现为在主人与工地之间来回横跳。
  * 这一点由 {@code ColonyWorkerMaidTask.isEnable} 把关。
+ *
+ * <p>**视觉/动画**：工作动作走 {@link #doWorkAnimation(BlockPos)}——这是留给工作动画的统一接口
+ * （{@code ColonyWorker} 上定义、{@code AsyncTransformExecutor} 在每个变形操作时调用），
+ * 当前女仆与法师共用 {@link WorkerFx} 的挥手 + 目标点粒子，**尚未做**朝向与施法射线那类持续表现。
+ * 若要补，落点在 {@link TlmCompatImpl#onMaidTick}（每女仆 tick，可读 ECS 执行器的
+ * {@code currentOpTarget}），对齐法师的 {@code WandscapeNpc.tickCastingState}。
  *
  * <p>属性读 {@link MaidColonyState}（女仆的 vanilla 属性表不含本模组的自定义属性）；
  * 阶段一没有殖民地法术体系，{@link #canCastColonyMagic()} 与 {@link #tryEscapeCast} 恒 false，
@@ -38,6 +36,9 @@ public final class MaidColonyWorker implements ColonyWorker {
     private final EntityMaid maid;
     private final UUID colonyId;
 
+    /** 工人模式的法杖是不是我们给的（只有是我们给的，离开时才清掉，不碰玩家自己给的东西）。 */
+    private boolean gaveWand;
+
     public MaidColonyWorker(EntityMaid maid, UUID colonyId) {
         this.maid = maid;
         this.colonyId = colonyId;
@@ -45,6 +46,14 @@ public final class MaidColonyWorker implements ColonyWorker {
 
     public EntityMaid maid() {
         return maid;
+    }
+
+    public boolean gaveWand() {
+        return gaveWand;
+    }
+
+    public void setGaveWand(boolean gaveWand) {
+        this.gaveWand = gaveWand;
     }
 
     @Override
@@ -102,15 +111,23 @@ public final class MaidColonyWorker implements ColonyWorker {
 
     @Override
     public boolean moveTo(BlockPos target, double speed) {
-        // TLM 自己的移动任务用的就是这个入口（见 MaidMoveToBlockTask.searchForDestination）
-        BehaviorUtils.setWalkAndLookTargetMemories(maid, target, (float) speed, 0);
-        return true;
+        // **直接驱动原版寻路**，与法师的 WandscapeNpc.moveTo 完全同机制。
+        //
+        // 曾经想过走 WALK_TARGET 记忆通道（理由是它能顺带阻断 TLM 声明 WALK_TARGET ABSENT 的移动任务），
+        // 但实测打脸：TLM 在 CORE 里注册了 MaidAwaitTask（优先级 1，早于 MoveToTargetSink 的 2），
+        // 它会把**目标超出女仆站位半径**的 WALK_TARGET 连同 PATH 记忆一起擦掉。而殖民地工地基本
+        // 都在站位半径之外 —— 结果就是开了 Home 模式后女仆被钉死在原地、一步不动。
+        // 直接驱动既不写记忆、也不受该擦除影响，走位表现与法师一致。
+        //
+        // 代价：TLM 那几个声明 WALK_TARGET ABSENT 的移动任务（偷吃等）因此不再被自动挡住。
+        // 它们是条件触发 + 900 tick 节流的（附近有可食用方块才会启动），见文档 R1 残余项。
+        return maid.getNavigation().moveTo(
+                target.getX() + 0.5, target.getY() + 1, target.getZ() + 0.5, speed);
     }
 
     @Override
     public void stopNavigation() {
         maid.getNavigation().stop();
-        maid.getBrain().eraseMemory(MemoryModuleType.WALK_TARGET);
     }
 
     // ── 脱困施法：阶段一无魔法体系 ──

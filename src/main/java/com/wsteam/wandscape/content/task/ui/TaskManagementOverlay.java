@@ -721,7 +721,7 @@ public final class TaskManagementOverlay {
         // 第三方模组登记的殖民地工作者（如车万女仆）标出来——她们与法师并排显示，
         // 但不吃法师那套属性/魔力，不标一下玩家会以为数据错了
         if (!"npc".equals(mage.kind())) {
-            name = "[工作者] " + name;
+            name = "[小镇工人] " + name;
         }
         g.drawString(font, name, x + 8, y + 6, WandscapeTheme.COLOR_TEXT_ACTIVE, false);
 

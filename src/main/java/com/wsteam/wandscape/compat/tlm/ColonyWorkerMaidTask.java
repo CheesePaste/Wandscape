@@ -15,21 +15,19 @@ import java.util.List;
 import java.util.function.Predicate;
 
 /**
- * 官方女仆任务「殖民地工作」：玩家在女仆界面选中它，女仆即进入**工作模式**——
+ * 官方女仆任务「小镇工作」：玩家在女仆界面选中它，女仆即进入**工作模式**——
  * 被登记为殖民地工作者（见 {@link TlmCompatImpl}），与殖民地法师共用同一条工作链
  * （调度器派活 → 原子操作执行器 → 产出进殖民地仓库），并在任务与法师管理面板里并排显示。
  *
- * <p>**为什么需要站位模式（home mode）**：TLM 在恒活跃的 CORE 活动里挂了
- * {@code MaidFollowOwnerTask}，它声明的是 {@code WALK_TARGET, REGISTERED}（不是 ABSENT），
- * 挡不住；没开站位模式时女仆会一路跟着主人跑，与工作走位直接打架。所以
- * {@link #isEnable} 要求站位模式已开——玩家的"工作范围"就是 TLM 原生的站位半径，
- * 我们不再另造一套"工作站"概念。
+ * <p>**为什么需要 Home 模式**：TLM 在恒活跃的 CORE 活动里挂了 {@code MaidFollowOwnerTask}，
+ * 它声明的是 {@code WALK_TARGET, REGISTERED}（不是 ABSENT），挡不住；没开 Home 模式时女仆会
+ * 一路跟着主人跑，表现为在主人与工地之间来回横跳。所以 {@link #isEnable} 要求 Home 模式已开，
+ * 并用 {@link #getEnableConditionDesc} 明确告诉玩家缺什么。
  *
  * <p>**为什么 {@code createBrainTasks} 是空的**：工作移动不走 brain 行为，而是由 ECS 的
- * {@code NavigationSystem} 经 {@code MaidColonyWorker.moveTo} 直接写 {@code WALK_TARGET} 记忆，
- * 再由 CORE 的 {@code MoveToTargetSink} 落地——那是女仆移动的正门，且写它会顺带阻断
- * TLM 那一族声明 {@code WALK_TARGET ABSENT} 的移动任务（偷吃/种田等），互斥免费拿到。
+ * {@code NavigationSystem} 经 {@code MaidColonyWorker.moveTo} 直接驱动原版寻路——与法师完全同机制。
  * 返回空列表时 TLM 会补上一个"按作息切活动"的行为，正是我们想要的。
+ * 面朝工作点与手到工作点的粒子线由 {@link TlmCompatImpl#syncWorkVisual} 每 tick 同步。
  */
 public final class ColonyWorkerMaidTask implements IMaidTask {
 

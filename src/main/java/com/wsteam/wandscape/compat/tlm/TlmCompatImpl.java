@@ -2,11 +2,14 @@ package com.wsteam.wandscape.compat.tlm;
 
 import com.github.tartaricacid.touhoulittlemaid.api.event.MaidTickEvent;
 import com.github.tartaricacid.touhoulittlemaid.entity.passive.EntityMaid;
+import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.api.WandscapeApis;
 import com.wsteam.wandscape.content.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.foundation.log.LogCategory;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.item.ItemStack;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.common.NeoForge;
 
@@ -74,6 +77,24 @@ public final class TlmCompatImpl {
         reconcile(maid, tickCounter % COLONY_RECHECK_INTERVAL == 0);
     }
 
+    /**
+     * 工人模式下手里渲染法杖（与法师一致）。**只在空手时给**——玩家已经给她东西就不去动；
+     * 离开时也只清掉"确实是我们给的那把"。
+     */
+    private static void giveWorkWandIfEmpty(EntityMaid maid, MaidColonyWorker worker) {
+        if (!maid.getMainHandItem().isEmpty()) return;
+        maid.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Wandscape.WAND.get()));
+        worker.setGaveWand(true);
+    }
+
+    private static void clearWorkWand(MaidColonyWorker worker) {
+        if (!worker.gaveWand()) return;
+        EntityMaid maid = worker.maid();
+        if (maid.getMainHandItem().is(Wandscape.WAND.get())) {
+            maid.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+        }
+    }
+
     private static void reconcile(EntityMaid maid, boolean recheckColony) {
         UUID uuid = maid.getUUID();
         MaidColonyWorker existing = ENLISTED.get(uuid);
@@ -126,11 +147,13 @@ public final class TlmCompatImpl {
         MaidColonyWorker worker = new MaidColonyWorker(maid, colony);
         ENLISTED.put(uuid, worker);
         EntityComponentBridge.INSTANCE.onWorkerJoinWorld(worker, world);
+        giveWorkWandIfEmpty(maid, worker);
         Log.info(TAG, "maid {} enlisted as colony worker of {}", shortId(uuid), shortId(colony));
     }
 
     private static void teardown(UUID uuid, MaidColonyWorker worker, @Nullable World world) {
         ENLISTED.remove(uuid);
+        clearWorkWand(worker);
         if (world != null) {
             EntityComponentBridge.INSTANCE.onWorkerLeaveWorld(worker, world);
         }

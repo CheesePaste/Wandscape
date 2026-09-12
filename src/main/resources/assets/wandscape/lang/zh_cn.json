@@ -2107,7 +2107,7 @@
   "gui.wandscape.settings.title": "%s 设置中心",
   "gui.wandscape.settings.reset_tab": "恢复本页默认",
   "gui.wandscape.settings.reset_tab_toast": "已恢复本页默认设置",
-  "task.wandscape.colony_worker": "殖民地工作",
-  "task.wandscape.colony_worker.desc": "像法师一样为小镇干活：接取建造、采集、合成等任务，产出进殖民地仓库。需要主人已建立小镇，并开启女仆的「站位」模式——工作范围就是站位半径。",
-  "task.wandscape.colony_worker.enable_condition.home_mode": "已开启「站位」模式（否则女仆会一直跟着主人跑，无法留在工地）"
+  "task.wandscape.colony_worker": "小镇工作",
+  "task.wandscape.colony_worker.desc": "像法师一样为小镇干活：接取建造、采集、合成等任务，产出进殖民地仓库。需要主人已建立小镇，并开启女仆的 Home 模式（否则她会一直跟着主人跑）。",
+  "task.wandscape.colony_worker.enable_condition.home_mode": "已开启 Home 模式（不跟随玩家）"
 }
