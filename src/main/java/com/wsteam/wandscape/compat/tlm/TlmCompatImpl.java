@@ -40,10 +40,14 @@ public final class TlmCompatImpl {
     private static final Map<UUID, MaidColonyWorker> ENLISTED = new ConcurrentHashMap<>();
 
     /**
-     * 已登记女仆复查殖民地归属的间隔（tick）。殖民地↔创始人是 1:1、不会频繁变，
-     * 而 {@code getColonyByFounder} 要查 SavedData——不必每 tick 都做。
+     * 复查/尝试登记的间隔（tick）。殖民地↔创始人是 1:1、不会频繁变，而
+     * {@code getColonyByFounder} 要查 SavedData——不必每 tick 都做。注销路径不受此限制
+     * （任务换走 / 实体移除是每 tick 都查的廉价判断），所以只有"登记"最多晚 1 秒。
      */
-    private static final int COLONY_RECHECK_INTERVAL = 40;
+    private static final int COLONY_RECHECK_INTERVAL = 20;
+
+    /** 已就"主人没有小镇"告警过的女仆，避免每 {@value #COLONY_RECHECK_INTERVAL} tick 刷屏。 */
+    private static final java.util.Set<UUID> NO_COLONY_WARNED = ConcurrentHashMap.newKeySet();
 
     private static int tickCounter;
 
@@ -79,10 +83,12 @@ public final class TlmCompatImpl {
                 teardown(uuid, existing, World.getActive());
                 Log.debug(LogCategory.NPC, "worker", "maid {} removed — dismissed", shortId(uuid));
             }
+            NO_COLONY_WARNED.remove(uuid);
             return;
         }
 
         if (!(maid.getTask() instanceof ColonyWorkerMaidTask)) {
+            NO_COLONY_WARNED.remove(uuid);
             if (existing != null) {
                 teardown(uuid, existing, World.getActive());
                 Log.info(TAG, "maid {} left colony work mode — dismissed", shortId(uuid));
@@ -90,20 +96,26 @@ public final class TlmCompatImpl {
             return;
         }
 
-        // 已登记且本轮不复查：跳过下面那次 SavedData 查询
-        if (existing != null && !recheckColony) return;
+        // 登记/复查都限速：殖民地解析要查 SavedData，不必每 tick 做
+        if (!recheckColony) return;
 
         UUID colony = ownerColonyOf(maid);
         if (colony == null) {
             if (existing != null) {
                 teardown(uuid, existing, World.getActive());
                 Log.info(TAG, "maid {} owner has no colony — dismissed", shortId(uuid));
+            } else if (NO_COLONY_WARNED.add(uuid)) {
+                // 只提示一次。任务描述里已写明"需要主人有小镇"，这条是给服务端日志留的兜底诊断
+                // （玩家在游戏里只会看到女仆站着不动，不该是静默失败）。
+                Log.warn(TAG, "maid {} selected colony work but her owner has no colony — she will idle",
+                        shortId(uuid));
             }
             return;
         }
+        NO_COLONY_WARNED.remove(uuid);
 
         World world = World.getActive();
-        if (world == null) return; // 引擎未就绪：下 tick 再来
+        if (world == null) return; // 引擎未就绪：下轮再来
 
         if (existing != null && colony.equals(existing.colonyId())) return; // 归属没变
 

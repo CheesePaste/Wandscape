@@ -2107,7 +2107,6 @@
   "gui.wandscape.settings.reset_tab": "Reset Page Defaults",
   "gui.wandscape.settings.reset_tab_toast": "Restored tab settings to default",
   "task.wandscape.colony_worker": "Colony Work",
-  "task.wandscape.colony_worker.desc": "Work for the town like a mage: takes building, gathering and crafting tasks, with output going to the colony warehouse. Her work area is her maid home radius.",
-  "task.wandscape.colony_worker.enable_condition.home_mode": "Home (station) mode is enabled — otherwise she keeps following her owner instead of staying on site",
-  "task.wandscape.colony_worker.enable_condition.owner_colony": "Owner has founded a town"
+  "task.wandscape.colony_worker.desc": "Work for the town like a mage: takes building, gathering and crafting tasks, with output going to the colony warehouse. Requires the owner to have founded a town and the maid's home (station) mode to be on — her work area is the station radius.",
+  "task.wandscape.colony_worker.enable_condition.home_mode": "Home (station) mode is enabled — otherwise she keeps following her owner instead of staying on site"
 }

@@ -170,7 +170,7 @@ public interface ColonyWorker {
 | 任务本体 | `implements IMaidTask`：`getUid()` / `getIcon()` / `getAmbientSound()` / `createBrainTasks()` 四个必需方法 | `api/task/IMaidTask.java:36/43/52/60` |
 | 关随机走动 | `enableLookAndRandomWalk(maid)` 返回 false（工作时） | `IMaidTask.java:101`；消费点 `MaidBrain.java:144` |
 | 注册/注销 ECS | **不用 task 生命周期钩子**（TLM 的 task 无 onStart/onStop）→ 用对账式 sweep：每 tick 对账「应当登记」与「实际登记」，任务换走/主人无镇/实体已移除即注销；殖民地归属每 40 tick 才复查一次（`getColonyByFounder` 要查 SavedData）。已实现，走 `MaidTickEvent` | TLM 提供 `MaidTickEvent`（`api/event/MaidTickEvent.java:7`，`EntityMaid.tick()` 内发出，**双端**——必须 `isClientSide` 早退） |
-| **站位模式前置** | `isEnable` 要求 `maid.isHomeModeEnable()`：TLM 在恒活跃的 CORE 里挂了 `MaidFollowOwnerTask`（声明 `WALK_TARGET, REGISTERED`，挡不住），没开站位时女仆会一路跟着主人跑。用 `getEnableConditionDesc` 把这条与「主人有小镇」逐条显示给玩家（绿的满足、红的未满足） | `MaidFollowOwnerTask.java:73`；见 §五 R9 |
+| **站位模式前置** | `isEnable` 要求 `maid.isHomeModeEnable()`：TLM 在恒活跃的 CORE 里挂了 `MaidFollowOwnerTask`（声明 `WALK_TARGET, REGISTERED`，挡不住），没开站位时女仆会一路跟着主人跑。⚠️ `isEnable` 在**客户端**被调用，只能判客户端同步数据——「主人有小镇」**不能**放进去（专用服务器客户端查不到殖民地 SavedData，会把任务永久置灰），它由服务端对账把关 + 任务描述告知玩家 | `MaidFollowOwnerTask.java:73`；见 §五 R9 / R10 |
 | 工作配置界面 | `getTaskConfigGuiProvider(maid)` 返回自定义 `MenuProvider`（TLM 内置 `TaskFeedAnimal` 就是这么做的） | `IMaidTask.java:196`；先例 `entity/task/TaskFeedAnimal.java:111` |
 
 `createBrainTasks`：**不需要移动行为**——工作移动由 `NavigationSystem` 经 `applyWalkTarget` 直接写 `WALK_TARGET` 记忆（§3.3），CORE 活动的 `MoveToTargetSink` 负责落地。返回列表可以极简（甚至空列表，只靠 `enableLookAndRandomWalk` 等开关控制工作态）。
@@ -282,8 +282,8 @@ public interface ColonyWorker {
 
 **第 3 步的实测清单**（§五 验证项之外的新增项，都需要在游戏里确认）：
 
-1. 女仆界面能看到「殖民地工作」任务；未开站位模式 / 主人无小镇时任务置灰，悬停显示红的未满足条件（本站位模式那条）。
-2. 开启站位 + 有小镇后能选中；选中即应看到日志 `maid xxx enlisted as colony worker of yyy`。
+1. 女仆界面能看到「殖民地工作」任务；未开站位模式时任务置灰，悬停显示红的未满足条件（站位模式那条）。
+2. 开启站位 + 有小镇后能选中；选中后 1 秒内应看到日志 `maid xxx enlisted as colony worker of yyy`。**若主人没有小镇**：任务仍可选中（客户端判不了），但控制台应有一条一次性的 `selected colony work but her owner has no colony — she will idle` warn。
 3. 女仆能被派到建筑/采集任务、走过去、执行、产出进殖民地仓库；任务面板里她与法师并排、名字前带 `[工作者]`。
 4. 把任务切回「待命」→ 日志 `left colony work mode — dismissed`，且她身上不再占用全局任务。
 5. 观察 §五 R1 的残余：偷吃/工作餐行为是否在她空闲间隙把她带走、以及 R9 的站位模式前提是否如预期生效。
@@ -359,6 +359,7 @@ public interface ColonyWorker {
 | **R7** | 两套库存（ECS `NpcInventory` vs 实体物品栏）不互通 | 女仆挖到的材料不进她自己的背包 | **这不是新问题**——NPC 现在同样如此（`WandscapeNpc.java:505` 的 `SimpleContainer` 与 ECS `NpcInventory` 无互转代码）。女仆与法师行为一致，属可接受 |
 | **R8** | `npc.pvp = false` 时玩家侧实体（含女仆）跨殖民地恒友军 | 「只认自己小镇的女仆」在该配置下失效 | 属**既有**设计、非本次引入；不在 TLM 兼容里顺带修，记为待办 A（§3.1.1） |
 | **R9** | **女仆必须开启站位模式（home mode）才能工作** —— 落地时才发现的硬前置 | 没开站位时女仆一路跟着主人跑，与工作走位直接打架 | `MaidFollowOwnerTask` 注册在**恒活跃的 CORE**（`MaidBrain.java:97`），声明的是 `WALK_TARGET, REGISTERED`（**不是 ABSENT**），所以写 `WALK_TARGET` **挡不住它**（对比 R1 里那一族声明 ABSENT 的能被挡住）。它只在 `!maid.isHomeModeEnable()` 时启动（`MaidFollowOwnerTask.java:73`）。**解法不是压制而是要求**：任务 `isEnable` 要求站位模式已开，并用 `getEnableConditionDesc` 明确告诉玩家缺什么；女仆的站位半径正好就是她的工作范围，与 §3.6「不新造工作站概念」一致 |
+| **R10** | **`IMaidTask#isEnable` / `getEnableConditionDesc` 在客户端被调用**，只能用客户端拿得到的同步数据 | 落地时踩到：原版把「主人有小镇」也写进 `isEnable`，而它查的是 `ColonyApi.getColonyByFounder` → `getColonySavedData()` → `ServerLifecycleHooks.getCurrentServer()`——在**专用服务器的客户端恒为 null**，任务会被永久置灰、点不动（单机因有集成服务端而看不出来，典型的"单机试不出来"陷阱，与既有「客户端殖民等级陷阱」同族） | `AbstractMaidContainerGui.drawPerTaskButton` 客户端直接调 `maidTask.isEnable(maid)` 决定按钮可否点。**解法**：`isEnable` 只保留客户端同步可判定的条件（`maid.isHomeModeEnable()`，走 `MaidConfigManager` 的 `SynchedEntityData`，已核实同步）；殖民地限制移到服务端对账把关，并写进任务描述让玩家事先看得到，另加一条**一次性** `Log.warn` 兜底（避免"选了任务女仆站着不动"变成静默失败） |
 
 **动手前的四项验证（已全部完成，2026-09-12）**：
 

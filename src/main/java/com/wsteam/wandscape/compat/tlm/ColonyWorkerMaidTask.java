@@ -63,21 +63,30 @@ public final class ColonyWorkerMaidTask implements IMaidTask {
         return false;
     }
 
-    /** 只有「主人有小镇」+「已开站位模式」的女仆才能选中这个任务。 */
+    /**
+     * 只有**已开站位模式**的女仆才能选中这个任务。
+     *
+     * <p>⚠️ 本方法会在**客户端**被调用（TLM 的女仆 GUI 用它决定按钮是否可点，
+     * `AbstractMaidContainerGui.drawPerTaskButton`），所以条件必须是客户端拿得到的同步数据。
+     * 「主人有小镇」**刻意不放进这里**：它要查殖民地 SavedData（`ColonyApi.getColonyByFounder`
+     * 走 `ServerLifecycleHooks.getCurrentServer()`），在**专用服务器的客户端恒为 null**——
+     * 放进来会让任务在多人游戏里永久置灰、点不动。那条限制改由服务端对账把关（见
+     * {@link TlmCompatImpl#reconcile}），并写进任务描述让玩家事先看得到。
+     */
     @Override
     public boolean isEnable(EntityMaid maid) {
-        return maid.isHomeModeEnable() && TlmCompatImpl.ownerColonyOf(maid) != null;
+        return maid.isHomeModeEnable();
     }
 
     /**
      * 启用条件的逐条说明（未启用时由女仆界面强制显示，绿的满足、红的未满足）。
      * 语言键形如 {@code task.wandscape.colony_worker.enable_condition.<key>}。
+     *
+     * <p>同样只列客户端可判定的条件——原因见 {@link #isEnable}。
      */
     @Override
     public List<Pair<String, Predicate<EntityMaid>>> getEnableConditionDesc(EntityMaid maid) {
-        return List.of(
-                Pair.of("home_mode", EntityMaid::isHomeModeEnable),
-                Pair.of("owner_colony", m -> TlmCompatImpl.ownerColonyOf(m) != null));
+        return List.of(Pair.of("home_mode", EntityMaid::isHomeModeEnable));
     }
 
     /** 供 AI 对话/概览面板读取的一句话动作摘要。 */
