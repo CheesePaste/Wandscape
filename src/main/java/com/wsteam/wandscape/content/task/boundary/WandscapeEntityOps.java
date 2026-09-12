@@ -4,7 +4,7 @@ import com.wsteam.wandscape.content.task.types.EffectId;
 import com.wsteam.wandscape.content.task.types.EntityId;
 import com.wsteam.wandscape.content.task.types.GridPos;
 import com.wsteam.wandscape.content.building.ChunkLoadManager;
-import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
+import com.wsteam.wandscape.content.npc.worker.ColonyWorker;
 import com.wsteam.wandscape.content.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.foundation.log.Log;
 import net.minecraft.core.BlockPos;
@@ -43,26 +43,28 @@ public class WandscapeEntityOps implements EntityOps {
 
     @Override
     public float getCurrentMana(long npcId) {
-        WandscapeNpc npc = EntityComponentBridge.INSTANCE.getNpc(npcId);
-        return npc != null ? npc.getCurrentMana() : 0f;
+        ColonyWorker worker = EntityComponentBridge.INSTANCE.getWorker(npcId);
+        return worker != null ? worker.getCurrentMana() : 0f;
     }
 
     @Override
     public float getWorkSpeed(long npcId) {
-        WandscapeNpc npc = EntityComponentBridge.INSTANCE.getNpc(npcId);
-        return npc != null ? npc.getEffectiveAttribute(com.wsteam.wandscape.content.npc.attributes.NpcAttributes.AttributeType.WORK_SPEED) : 1f;
+        ColonyWorker worker = EntityComponentBridge.INSTANCE.getWorker(npcId);
+        return worker != null
+                ? worker.getEffectiveAttribute(com.wsteam.wandscape.content.npc.attributes.NpcAttributes.AttributeType.WORK_SPEED)
+                : 1f;
     }
 
     @Override
     public boolean isFollowing(long npcId) {
-        WandscapeNpc npc = EntityComponentBridge.INSTANCE.getNpc(npcId);
-        return npc != null && npc.isFollowMode();
+        ColonyWorker worker = EntityComponentBridge.INSTANCE.getWorker(npcId);
+        return worker != null && worker.isFollowMode();
     }
 
     @Override
     public boolean isResting(long npcId) {
-        WandscapeNpc npc = EntityComponentBridge.INSTANCE.getNpc(npcId);
-        return npc != null && npc.isResting();
+        ColonyWorker worker = EntityComponentBridge.INSTANCE.getWorker(npcId);
+        return worker != null && worker.isResting();
     }
 
     @Override
@@ -80,8 +82,8 @@ public class WandscapeEntityOps implements EntityOps {
 
     @Override
     public boolean isNpcAlive(long npcId) {
-        WandscapeNpc npc = EntityComponentBridge.INSTANCE.getNpc(npcId);
-        return npc != null && !npc.isRemoved();
+        ColonyWorker worker = EntityComponentBridge.INSTANCE.getWorker(npcId);
+        return worker != null && !worker.entity().isRemoved();
     }
 
     @Override

@@ -8,7 +8,7 @@ import com.wsteam.wandscape.content.task.types.GridPos;
 import com.wsteam.wandscape.content.task.types.RitualId;
 import com.wsteam.wandscape.content.magic.data.MagicCircleSpec;
 import com.wsteam.wandscape.content.magic.internal.MagicCircleLoader;
-import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
+import com.wsteam.wandscape.content.npc.worker.ColonyWorker;
 import com.wsteam.wandscape.content.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.content.task.op.api.AtomicOp;
 import com.wsteam.wandscape.foundation.log.Log;
@@ -91,8 +91,9 @@ public class WandscapeRitualOps implements RitualOps {
      * 法阵时长即引导时长（见 {@link #teleportChannelTicks()}），引导结束触发传送。
      */
     private void sendTeleportCircles(GridPos target, long casterId) {
-        WandscapeNpc npc = EntityComponentBridge.INSTANCE.getNpc(casterId);
-        if (npc == null || npc.isRemoved() || !(npc.level() instanceof ServerLevel level)) return;
+        ColonyWorker worker = EntityComponentBridge.INSTANCE.getWorker(casterId);
+        if (worker == null || worker.entity().isRemoved()
+                || !(worker.entity().level() instanceof ServerLevel level)) return;
 
         MagicCircleSpec spec = MagicCircleLoader.getSpec(SELF_TELEPORT_CIRCLE);
         if (spec == null) {
@@ -102,10 +103,10 @@ public class WandscapeRitualOps implements RitualOps {
 
         double h = spec.height;
         Vec3 axis = new Vec3(0, 1, 0); // 水平地面法阵
-        Vec3 origin = new Vec3(npc.getX(), npc.getY() + h, npc.getZ());
+        Vec3 origin = new Vec3(worker.entity().getX(), worker.entity().getY() + h, worker.entity().getZ());
         Vec3 dest = new Vec3(target.x() + 0.5, target.y() + h, target.z() + 0.5);
 
-        PacketDistributor.sendToPlayersTrackingEntity(npc,
+        PacketDistributor.sendToPlayersTrackingEntity(worker.entity(),
                 new MagicCircleCastPacket(UUID.randomUUID(), origin, axis, SELF_TELEPORT_CIRCLE));
         PacketDistributor.sendToPlayersTrackingChunk(level, new ChunkPos(BlockPos.containing(dest)),
                 new MagicCircleCastPacket(UUID.randomUUID(), dest, axis, SELF_TELEPORT_CIRCLE));
@@ -169,26 +170,27 @@ public class WandscapeRitualOps implements RitualOps {
 
     private void executeRitual(RitualId ritual, GridPos target, World world, long casterId) {
         if ("self_teleport".equals(ritual.id())) {
-            WandscapeNpc npc = EntityComponentBridge.INSTANCE.getNpc(casterId);
-            if (npc != null && !npc.isRemoved()) {
-                double fromX = npc.getX();
-                double fromY = npc.getY();
-                double fromZ = npc.getZ();
+            ColonyWorker worker = EntityComponentBridge.INSTANCE.getWorker(casterId);
+            if (worker != null && !worker.entity().isRemoved()) {
+                var e = worker.entity();
+                double fromX = e.getX();
+                double fromY = e.getY();
+                double fromZ = e.getZ();
                 // 传送到安全落点，避免落进实体方块/建筑内部窒息；找不到安全落点则放弃传送，避免进墙窒息或高空坠亡
                 Vec3 dest = null;
-                if (npc.level() instanceof ServerLevel serverLevel) {
+                if (e.level() instanceof ServerLevel serverLevel) {
                     dest = findSafeLanding(serverLevel, target);
-                    // 若目标原点未能找到安全落点，且 NPC 处于跟随模式，尝试以跟随玩家实时位置重试搜索
-                    if (dest == null && npc.isFollowMode()) {
-                        Player follower = npc.getFollowerPlayer();
+                    // 若目标原点未能找到安全落点，且工作者处于跟随模式，尝试以跟随玩家实时位置重试搜索
+                    if (dest == null && worker.isFollowMode() && worker.getFollowerUuid() != null) {
+                        var follower = serverLevel.getPlayerByUUID(worker.getFollowerUuid());
                         if (follower != null) {
                             dest = findSafeLanding(serverLevel, new GridPos(follower.getBlockX(), follower.getBlockY(), follower.getBlockZ()));
                         }
                     }
                 }
                 if (dest != null) {
-                    npc.teleportTo(dest.x, dest.y, dest.z);
-                    npc.getNavigation().stop();
+                    e.teleportTo(dest.x, dest.y, dest.z);
+                    worker.stopNavigation();
                     // 落点可能超出到达半径，把导航状态拨回 PATHFINDING，让 NavigationSystem 走完剩余距离
                     //（已到则下一 tick 判到），避免停在 TELEPORT_RITUAL 空转
                     NavigationState nav = world.get(casterId, NavigationState.class);
@@ -197,8 +199,8 @@ public class WandscapeRitualOps implements RitualOps {
                         nav.startTick = 0;
                     }
                     // 末影人式传送爆点：起点（消失）+ 终点（出现）
-                    spawnPortalBurst(npc.level(), fromX, fromY, fromZ);
-                    spawnPortalBurst(npc.level(), npc.getX(), npc.getY(), npc.getZ());
+                    spawnPortalBurst(e.level(), fromX, fromY, fromZ);
+                    spawnPortalBurst(e.level(), e.getX(), e.getY(), e.getZ());
                     Log.debug(LogCategory.TASK, "ritual", "self_teleport: NPC {} → {} (dest {},{},{})",
                             casterId, target, dest.x, dest.y, dest.z);
                 } else {
@@ -209,7 +211,7 @@ public class WandscapeRitualOps implements RitualOps {
                     }
                 }
             } else {
-                Log.warn(TAG, "[RitualOps] self_teleport: NPC not found for casterId {}", casterId);
+                Log.warn(TAG, "[RitualOps] self_teleport: worker not found for casterId {}", casterId);
             }
             return;
         }

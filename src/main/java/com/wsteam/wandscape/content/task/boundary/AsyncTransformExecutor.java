@@ -9,7 +9,7 @@ import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.content.task.types.BlockType;
 import com.wsteam.wandscape.foundation.sound.SoundService;
 import com.wsteam.wandscape.foundation.registry.WandscapeSounds;
-import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
+import com.wsteam.wandscape.content.npc.worker.ColonyWorker;
 import com.wsteam.wandscape.content.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.content.task.op.api.AtomicOp;
 import com.wsteam.wandscape.content.task.op.executor.OpExecutor;
@@ -134,13 +134,13 @@ public class AsyncTransformExecutor implements OpExecutor<AtomicOp.TransformOp> 
                 p.world().blockOps.setBlockEntityData(p.op().target(), p.op().blockNbtBase64());
             }
             // Visual feedback on the NPC that performed the work
-            WandscapeNpc npc = EntityComponentBridge.INSTANCE.getNpc(p.npcId());
-            if (npc != null) {
-                npc.doWorkAnimation(new BlockPos(
+            ColonyWorker worker = EntityComponentBridge.INSTANCE.getWorker(p.npcId());
+            if (worker != null) {
+                worker.doWorkAnimation(new BlockPos(
                         p.op().target().x(), p.op().target().y(), p.op().target().z()));
                 // NPC 施法放置音（守卫/自防御不走这里，避免与 GuardCombat 开火音重叠）
                 // 节流与方块放置/拆除音同频：整栋楼连续施工时不会每块都响
-                if (npc.level() instanceof ServerLevel sl) {
+                if (worker.entity().level() instanceof ServerLevel sl) {
                     SoundService.playAtThrottled(sl, p.op().target().x() + 0.5,
                             p.op().target().y() + 0.5, p.op().target().z() + 0.5,
                             WandscapeSounds.NPC_CAST, SoundSource.NEUTRAL, 0.5f, 1.0f,
@@ -196,8 +196,8 @@ public class AsyncTransformExecutor implements OpExecutor<AtomicOp.TransformOp> 
     // ════════════════════════════════════════════════════════════
 
     private void performSalvage(AtomicOp.TransformOp op, World world, long npcId) {
-        WandscapeNpc npc = EntityComponentBridge.INSTANCE.getNpc(npcId);
-        Level level = npc != null ? npc.level() : null;
+        ColonyWorker worker = EntityComponentBridge.INSTANCE.getWorker(npcId);
+        Level level = worker != null ? worker.entity().level() : null;
         if (level == null && ServerLifecycleHooks.getCurrentServer() != null) {
             level = ServerLifecycleHooks.getCurrentServer().overworld();
         }
@@ -208,7 +208,8 @@ public class AsyncTransformExecutor implements OpExecutor<AtomicOp.TransformOp> 
         if (!isSalvageable(oldState, sl, bp, op.to())) return;
 
         BlockEntity be = sl.getBlockEntity(bp);
-        List<ItemStack> drops = Block.getDrops(oldState, sl, bp, be, npc, ItemStack.EMPTY);
+        List<ItemStack> drops = Block.getDrops(oldState, sl, bp, be,
+                worker != null ? worker.entity() : null, ItemStack.EMPTY);
         if (drops.isEmpty()) {
             if (!oldState.canBeReplaced()) {
                 Item item = oldState.getBlock().asItem();
@@ -219,7 +220,7 @@ public class AsyncTransformExecutor implements OpExecutor<AtomicOp.TransformOp> 
         }
         if (drops.isEmpty()) return;
 
-        UUID colonyId = resolveColonyId(npc, world, bp);
+        UUID colonyId = resolveColonyId(worker, world, bp);
         ColonyItemBank bank = ColonyItemBank.get(sl);
         if (bank == null || colonyId == null) return;
 
@@ -266,11 +267,12 @@ public class AsyncTransformExecutor implements OpExecutor<AtomicOp.TransformOp> 
         return true;
     }
 
-    private UUID resolveColonyId(@Nullable WandscapeNpc npc, World world, BlockPos bp) {
-        if (npc != null) {
-            var member = world.get(npc.ecsEntityId, ColonyMember.class);
+    private UUID resolveColonyId(@Nullable ColonyWorker worker, World world, BlockPos bp) {
+        if (worker != null) {
+            Long ecsId = EntityComponentBridge.INSTANCE.getEcsId(worker.workerId());
+            var member = ecsId != null ? world.get(ecsId, ColonyMember.class) : null;
             if (member != null && member.colonyId() != null) return member.colonyId();
-            if (npc.colonyId != null) return npc.colonyId;
+            if (worker.colonyId() != null) return worker.colonyId();
         }
         var colonyApi = WandscapeApis.getColonyApiSilently();
         if (colonyApi != null) {

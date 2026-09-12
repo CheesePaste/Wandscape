@@ -12,7 +12,7 @@ import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.content.npc.attributes.NpcAttributes.AttributeType;
 import com.wsteam.wandscape.content.task.types.ResourceStack;
 import com.wsteam.wandscape.content.production.ProductionEligibility;
-import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
+import com.wsteam.wandscape.content.npc.worker.ColonyWorker;
 import com.wsteam.wandscape.content.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.api.ColonyApi;
 import com.wsteam.wandscape.api.WarehouseApi;
@@ -153,10 +153,10 @@ public final class TaskPanelSyncTracker {
             UUID assignedNpcUuid = null;
             String assignedNpcName = "";
             if (assignedNpcId >= 0) {
-                WandscapeNpc npc = EntityComponentBridge.INSTANCE.getNpc(assignedNpcId);
-                if (npc != null) {
-                    assignedNpcUuid = npc.getUUID();
-                    assignedNpcName = npc.getName().getString();
+                ColonyWorker worker = EntityComponentBridge.INSTANCE.getWorker(assignedNpcId);
+                if (worker != null) {
+                    assignedNpcUuid = worker.workerId();
+                    assignedNpcName = worker.entity().getName().getString();
                 }
             }
 
@@ -212,10 +212,10 @@ public final class TaskPanelSyncTracker {
         int idleMageCount = 0;
         int totalMageCount = 0;
 
-        for (Map.Entry<Long, WandscapeNpc> entry : EntityComponentBridge.INSTANCE.allNpcs().entrySet()) {
+        for (Map.Entry<Long, ColonyWorker> entry : EntityComponentBridge.INSTANCE.allWorkers().entrySet()) {
             long ecsId = entry.getKey();
-            WandscapeNpc npc = entry.getValue();
-            if (npc == null || npc.isRemoved()) continue;
+            ColonyWorker worker = entry.getValue();
+            if (worker == null || worker.entity().isRemoved()) continue;
 
             ColonyMember member = world.get(ecsId, ColonyMember.class);
             if (member == null || !colonyId.equals(member.colonyId())) continue;
@@ -224,28 +224,29 @@ public final class TaskPanelSyncTracker {
 
             TaskExecutor exec = world.get(ecsId, TaskExecutor.class);
             boolean isIdle = exec == null || (exec.state == ExecutorState.IDLE && exec.npcQueue.isIdle() && exec.globalTaskId == null);
-            if (isIdle && !npc.isFollowMode() && !npc.isResting()) {
+            if (isIdle && !worker.isFollowMode() && !worker.isResting()) {
                 idleMageCount++;
             }
 
             String state = "IDLE";
-            if (npc.isFollowMode()) {
+            if (worker.isFollowMode()) {
                 state = "FOLLOWING";
-            } else if (npc.isResting()) {
+            } else if (worker.isResting()) {
                 state = "RESTING";
             } else if (exec != null && exec.state != ExecutorState.IDLE) {
                 state = exec.pendingFutureIsNav ? "MOVING" : "CASTING";
             }
 
-            float hp = npc.getHealth();
-            float maxHp = npc.getMaxHealth();
-            float mana = npc.getCurrentMana();
-            float maxMana = npc.getMaxMana();
-            float sp = npc.getEffectiveAttribute(AttributeType.SPELL_POWER);
-            float ws = npc.getEffectiveAttribute(AttributeType.WORK_SPEED);
-            float ss = npc.getEffectiveAttribute(AttributeType.SPELL_SPEED);
+            var e = worker.entity();
+            float hp = e.getHealth();
+            float maxHp = e.getMaxHealth();
+            float mana = worker.getCurrentMana();
+            float maxMana = worker.getMaxMana();
+            float sp = worker.getEffectiveAttribute(AttributeType.SPELL_POWER);
+            float ws = worker.getEffectiveAttribute(AttributeType.WORK_SPEED);
+            float ss = worker.getEffectiveAttribute(AttributeType.SPELL_SPEED);
             // 护甲显示总护甲 = vanilla ARMOR 有效值（槽内盔甲由原版结算，包含天生+法杖+槽内盔甲）
-            float ar = npc.getEffectiveArmorValue();
+            float ar = worker.getEffectiveArmorValue();
 
             String currentTaskTitle = "";
             long currentTaskId = exec != null && exec.globalTaskId != null ? exec.globalTaskId : -1;
@@ -257,19 +258,19 @@ public final class TaskPanelSyncTracker {
             }
 
             String equippedWand = "";
-            var mainHand = npc.getMainHandItem();
+            var mainHand = e.getMainHandItem();
             if (!mainHand.isEmpty()) {
                 equippedWand = mainHand.getHoverName().getString();
             }
 
             mageDtos.add(new MageSummaryDto(
-                    ecsId, npc.getUUID(), npc.getId(),
-                    npc.getName().getString(), state,
+                    ecsId, worker.workerId(), e.getId(),
+                    e.getName().getString(), state,
                     hp, maxHp, mana, maxMana,
                     sp, ws, ss, ar,
                     currentTaskTitle, currentTaskId, equippedWand,
-                    npc.getX(), npc.getY(), npc.getZ(),
-                    npc.isFollowMode(), npc.isPeaceMode()
+                    e.getX(), e.getY(), e.getZ(),
+                    worker.isFollowMode(), worker.isPeaceMode()
             ));
         }
 
@@ -342,7 +343,7 @@ public final class TaskPanelSyncTracker {
         }
         if (task.state == TaskState.PENDING_ASSIGN) {
             int idleMages = 0;
-            for (Map.Entry<Long, WandscapeNpc> entry : EntityComponentBridge.INSTANCE.allNpcs().entrySet()) {
+            for (Map.Entry<Long, ColonyWorker> entry : EntityComponentBridge.INSTANCE.allWorkers().entrySet()) {
                 ColonyMember m = world.get(entry.getKey(), ColonyMember.class);
                 if (m != null && colonyId.equals(m.colonyId())) {
                     TaskExecutor exec = world.get(entry.getKey(), TaskExecutor.class);
@@ -420,8 +421,8 @@ public final class TaskPanelSyncTracker {
                         long assignedNpcId = head.assignedNpcId != null ? head.assignedNpcId : -1;
                         String assignedNpcName = "";
                         if (assignedNpcId >= 0) {
-                            WandscapeNpc npc = EntityComponentBridge.INSTANCE.getNpc(assignedNpcId);
-                            if (npc != null) assignedNpcName = npc.getName().getString();
+                            ColonyWorker worker = EntityComponentBridge.INSTANCE.getWorker(assignedNpcId);
+                            if (worker != null) assignedNpcName = worker.entity().getName().getString();
                         }
                         int totalSteps = head.sequence != null ? head.sequence.size() : 1;
                         float progress = totalSteps > 0 ? (float) (head.stepIndex + 1) / totalSteps : 0.5f;

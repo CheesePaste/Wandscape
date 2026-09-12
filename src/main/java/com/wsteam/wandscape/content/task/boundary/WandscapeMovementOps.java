@@ -5,7 +5,7 @@ import com.wsteam.wandscape.content.task.boundary.MovementOps;
 import com.wsteam.wandscape.content.task.component.NavigationState;
 import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.content.task.types.GridPos;
-import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
+import com.wsteam.wandscape.content.npc.worker.ColonyWorker;
 import com.wsteam.wandscape.content.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.foundation.log.LogCategory;
@@ -25,9 +25,9 @@ public class WandscapeMovementOps implements MovementOps {
 
     @Override
     public CompletableFuture<Void> navigateTo(long npcId, int x, int y, int z) {
-        WandscapeNpc npc = EntityComponentBridge.INSTANCE.getNpc(npcId);
-        if (npc == null || npc.isRemoved()) {
-            Log.warn(TAG, "[MovementOps] navigateTo: unknown or removed NPC {}", npcId);
+        ColonyWorker worker = EntityComponentBridge.INSTANCE.getWorker(npcId);
+        if (worker == null || worker.entity().isRemoved()) {
+            Log.warn(TAG, "[MovementOps] navigateTo: unknown or removed worker {}", npcId);
             return CompletableFuture.completedFuture(null);
         }
 
@@ -39,8 +39,8 @@ public class WandscapeMovementOps implements MovementOps {
         // Cancel any existing nav for this NPC
         cancelNavigation(npcId);
 
-        double dx = npc.getX() - (x + 0.5);
-        double dz = npc.getZ() - (z + 0.5);
+        double dx = worker.entity().getX() - (x + 0.5);
+        double dz = worker.entity().getZ() - (z + 0.5);
         double hDistSq = dx * dx + dz * dz;
 
         Log.debug(LogCategory.TASK, "move", "navigateTo npc={} → ({},{},{}) hDist={}",
@@ -64,14 +64,14 @@ public class WandscapeMovementOps implements MovementOps {
 
     @Override
     public void cancelNavigation(long npcId) {
-        WandscapeNpc npc = EntityComponentBridge.INSTANCE.getNpc(npcId);
+        ColonyWorker worker = EntityComponentBridge.INSTANCE.getWorker(npcId);
         World world = com.wsteam.wandscape.content.task.ecs.World.getActive();
         if (world != null) {
             NavigationState nav = world.get(npcId, NavigationState.class);
             if (nav != null) nav.reset();
         }
-        if (npc != null && !npc.isRemoved()) {
-            npc.setAiWanderingEnabled(true);
+        if (worker != null && !worker.entity().isRemoved()) {
+            worker.setAiWanderingEnabled(true);
         }
     }
 }

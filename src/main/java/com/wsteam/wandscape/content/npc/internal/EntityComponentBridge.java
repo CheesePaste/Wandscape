@@ -12,6 +12,7 @@ import com.wsteam.wandscape.content.npc.types.FriendlyForce;
 import com.wsteam.wandscape.content.task.types.GridPos;
 import com.wsteam.wandscape.content.task.types.ResourceStack;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
+import com.wsteam.wandscape.content.npc.worker.ColonyWorker;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.foundation.log.LogCategory;
 
@@ -50,8 +51,8 @@ public final class EntityComponentBridge {
     /** Stage 2 placeholder colony — allows engine scheduling without real colonies. */
     public static final UUID PLACEHOLDER_COLONY = FriendlyForce.PLACEHOLDER_COLONY;
 
-    // ecsEntityId → MC entity
-    private final Map<Long, WandscapeNpc> npcByEcsId = new ConcurrentHashMap<>();
+    // ecsEntityId → 工作者（本模组法师即 WandscapeNpc；第三方实体经 ColonyWorker 适配接入）
+    private final Map<Long, ColonyWorker> workerByEcsId = new ConcurrentHashMap<>();
     // MC entity UUID → ecsEntityId
     private final Map<UUID, Long> ecsIdByUuid = new ConcurrentHashMap<>();
 
@@ -121,40 +122,52 @@ public final class EntityComponentBridge {
     // ================================================================
 
     /**
-     * Register this NPC in the ECS World. Handles both fresh creation and
-     * same-session reconnection after chunk reload.
+     * 通用登记：把任意 {@link ColonyWorker} 接入 ECS。本模组法师与第三方实体共用。
      *
-     * <p>Uses {@code ecsIdByUuid.containsKey()} to distinguish genuine
-     * same-session reconnection from cross-session ECS entity ID collisions.
-     * After a world reset, all stale mappings are cleared by {@link #clear()}
-     * so every NPC takes the fresh-registration path.
+     * <p>用 {@code ecsIdByUuid.containsKey()} 区分「同会话重连（区块卸载后重载）」与
+     * 「跨会话 ECS id 碰撞」——{@link #clear()} 在换档时清空映射，故跨会话一律走新建分支。
+     *
+     * <p>不做殖民地自动探测——那是刷怪蛋法师的专有行为，见 {@link #onNpcJoinWorld}。
+     * 殖民地完全取 {@link ColonyWorker#colonyId()}，为 null 时落占位殖民地。
      */
-    public void onNpcJoinWorld(WandscapeNpc npc, World world) {
-        // Same-session reconnection: NPC was already registered in THIS session
-        // (chunk unload/reload). Only trust this path if the UUID is still known.
-        if (npc.ecsEntityId > 0 && ecsIdByUuid.containsKey(npc.getUUID())
-                && world.has(npc.ecsEntityId, Position.class)) {
-            world.addComponent(npc.ecsEntityId,
-                    new Position(
-                            new GridPos(npc.getBlockX(), npc.getBlockY(), npc.getBlockZ())));
-            npcByEcsId.put(npc.ecsEntityId, npc);
-            ecsIdByUuid.put(npc.getUUID(), npc.ecsEntityId);
-            fillDeferredInventory(npc, world);
-            npc.syncWandAttributes();
-            npc.syncIronArmorAttributes();
+    public void onWorkerJoinWorld(ColonyWorker worker, World world) {
+        UUID uuid = worker.workerId();
+        var e = worker.entity();
+        if (e.isRemoved()) return;
+
+        Long known = ecsIdByUuid.get(uuid);
+        if (known != null && world.has(known, Position.class)) {
+            // Same-session reconnection (chunk unload/reload): refresh Position only.
+            world.addComponent(known,
+                    new Position(new GridPos(e.getBlockX(), e.getBlockY(), e.getBlockZ())));
+            workerByEcsId.put(known, worker);
+            fillDeferredInventory(worker, world);
             return;
         }
 
-        // Fresh registration (or cross-session: stale ecsEntityId from NBT)
-        UUID colony = npc.colonyId != null ? npc.colonyId : PLACEHOLDER_COLONY;
+        // Fresh registration (or cross-session: stale mapping already cleared)
+        UUID colony = worker.colonyId() != null ? worker.colonyId() : PLACEHOLDER_COLONY;
+        long ecsId = CoreBootstrap.createNpc(world, e.getBlockX(), e.getBlockY(), e.getBlockZ(), colony);
+        workerByEcsId.put(ecsId, worker);
+        ecsIdByUuid.put(uuid, ecsId);
 
-        // Auto-detect colony for spawn-egg NPCs that still have the default
-        if (PLACEHOLDER_COLONY.equals(colony)) {
+        Log.debug(LogCategory.NPC, "bridge", "Worker {} joined ECS as entity {} (colony={})",
+                uuid.toString().substring(0, 8), ecsId, colony.toString().substring(0, 8));
+
+        // Fill deferred inventory items (e.g. from colony creation command)
+        fillDeferredInventory(worker, world);
+    }
+
+    /**
+     * 本模组法师的登记入口：先做 NPC 专有前置（无殖民地时按位置自动探测——刷怪蛋召唤入镇），
+     * 再走 {@link #onWorkerJoinWorld} 通用登记，最后桥接法杖/盔甲属性修饰符。
+     */
+    public void onNpcJoinWorld(WandscapeNpc npc, World world) {
+        if (npc.colonyId == null || PLACEHOLDER_COLONY.equals(npc.colonyId)) {
             var colonyApi = com.wsteam.wandscape.api.WandscapeApis.getColonyApiSilently();
             if (colonyApi != null) {
                 UUID detected = colonyApi.getColonyId(npc.blockPosition());
                 if (detected != null) {
-                    colony = detected;
                     npc.colonyId = detected;
                     Log.debug(LogCategory.NPC, "bridge", "NPC {} auto-assigned to colony {} (spawn-egg detection)",
                             npc.getUUID().toString().substring(0, 8),
@@ -163,38 +176,29 @@ public final class EntityComponentBridge {
             }
         }
 
-        long ecsId = CoreBootstrap.createNpc(world,
-                npc.getBlockX(), npc.getBlockY(), npc.getBlockZ(),
-                colony);
+        onWorkerJoinWorld(npc, world);
 
-        npc.ecsEntityId = ecsId;
-        npcByEcsId.put(ecsId, npc);
-        ecsIdByUuid.put(npc.getUUID(), ecsId);
+        Long ecsId = ecsIdByUuid.get(npc.getUUID());
+        if (ecsId != null) npc.ecsEntityId = ecsId;
 
-        Log.debug(LogCategory.NPC, "bridge", "NPC {} joined ECS as entity {} (colony={})",
-                npc.getUUID().toString().substring(0, 8), ecsId,
-                colony.toString().substring(0, 8));
-
-        // Fill deferred inventory items (e.g. from colony creation command)
-        fillDeferredInventory(npc, world);
         // Seed iron-spells and wand attribute bridges
         npc.syncWandAttributes();
         npc.syncIronArmorAttributes();
     }
 
     /** Fill inventory items that were scheduled before ECS registration. */
-    private void fillDeferredInventory(WandscapeNpc npc, World world) {
+    private void fillDeferredInventory(ColonyWorker worker, World world) {
         java.util.List<ResourceStack> items =
-                deferredInventory.remove(npc.getUUID());
+                deferredInventory.remove(worker.workerId());
         if (items == null || items.isEmpty()) return;
 
-        Long ecsId = ecsIdByUuid.get(npc.getUUID());
+        Long ecsId = ecsIdByUuid.get(worker.workerId());
         if (ecsId == null) return;
 
         NpcInventory inv = world.get(ecsId, NpcInventory.class);
         if (inv == null) {
-            Log.warn(TAG, "[Bridge] Cannot fill inventory — NPC {} has no NpcInventory component",
-                    npc.getUUID().toString().substring(0, 8));
+            Log.warn(TAG, "[Bridge] Cannot fill inventory — worker {} has no NpcInventory component",
+                    worker.workerId().toString().substring(0, 8));
             return;
         }
 
@@ -202,34 +206,74 @@ public final class EntityComponentBridge {
         for (ResourceStack stack : items) {
             if (inv.add(stack)) added++;
         }
-        Log.debug(LogCategory.NPC, "bridge", "Filled NPC {} inventory with {} stacks (colony={})",
-                npc.getUUID().toString().substring(0, 8), added,
-                npc.colonyId != null ? npc.colonyId.toString().substring(0, 8) : "?");
+        Log.debug(LogCategory.NPC, "bridge", "Filled worker {} inventory with {} stacks (colony={})",
+                worker.workerId().toString().substring(0, 8), added,
+                worker.colonyId() != null ? worker.colonyId().toString().substring(0, 8) : "?");
     }
 
-    /** Clear all NPC→ECS mappings. Called on world reset to prevent cross-session collisions. */
+    /** Clear all worker→ECS mappings. Called on world reset to prevent cross-session collisions. */
     public void clear() {
-        npcByEcsId.clear();
+        workerByEcsId.clear();
         ecsIdByUuid.clear();
         deferredInventory.clear();
-        Log.debug(LogCategory.NPC, "bridge", "EntityComponentBridge cleared — {} NPCs, {} UUIDs",
-                npcByEcsId.size(), ecsIdByUuid.size());
+        Log.debug(LogCategory.NPC, "bridge", "EntityComponentBridge cleared — {} workers, {} UUIDs",
+                workerByEcsId.size(), ecsIdByUuid.size());
     }
 
     /**
-     * Remove this NPC from the ECS World. Only called on KILLED / DISCARDED.
-     * Chunk unloads (UNLOADED_TO_CHUNK) keep ECS components alive.
+     * 工作者退出 ECS：释放全局任务（保留 stepIndex 供重派）+ 取消资源预留与在途运输 + 移除全部组件。
+     *
+     * <p>只在实体**真正销毁**（KILLED / DISCARDED）时调用。区块卸载（UNLOADED_TO_CHUNK）不清理——
+     * 实体仍在，ECS 组件须保留以便重载后重连。
+     *
+     * <p>清理集中在此而非各实体自己的 {@code onRemovedFromLevel}：第三方工作者走同一份清理，
+     * 避免「新接一个实体就漏掉释放任务/取消运输」，制造幽灵工作者占着全局任务不干活。
      */
-    public void onNpcLeaveWorld(WandscapeNpc npc, World world) {
-        if (npc.ecsEntityId < 0) return;
+    public void onWorkerLeaveWorld(ColonyWorker worker, World world) {
+        Long ecsIdBoxed = ecsIdByUuid.get(worker.workerId());
+        if (ecsIdBoxed == null) return;
+        long ecsId = ecsIdBoxed;
+
+        // Release global task for reassignment (preserve stepIndex)
+        var exec = world.get(ecsId, TaskExecutor.class);
+        if (exec != null && exec.globalTaskId != null) {
+            world.taskPool.releaseTaskForReassign(exec.globalTaskId, ecsId, world);
+        }
+
+        // Release resource reservations from pending transports.
+        // Items were reserved but never consumed — just dropping the
+        // reservation is correct (no items need to be returned to bank).
+        var rt = com.wsteam.wandscape.content.task.runtime.TaskRuntime.getActive();
+        var resourceReqExec = rt != null ? rt.getResourceReqExec() : null;
+        if (resourceReqExec != null) {
+            resourceReqExec.cancelForNpc(ecsId);
+        }
+
+        // Orphan recovery: cancel all in-flight transports for this worker
+        var transporter = com.wsteam.wandscape.content.warehouse.transport.ItemTransportManager.getInstance();
+        if (transporter != null) {
+            var bank = com.wsteam.wandscape.content.warehouse.ColonyItemBank.get(worker.entity().level());
+            if (bank != null) {
+                UUID cid = worker.colonyId() != null ? worker.colonyId() : PLACEHOLDER_COLONY;
+                var member = world.get(ecsId, ColonyMember.class);
+                if (member != null && member.colonyId() != null) cid = member.colonyId();
+                transporter.cancelForNpc(ecsId, bank, cid);
+            }
+        }
 
         for (Class<?> comp : NPC_COMPONENTS) {
-            world.removeComponent(npc.ecsEntityId, comp);
+            world.removeComponent(ecsId, comp);
         }
-        npcByEcsId.remove(npc.ecsEntityId);
-        ecsIdByUuid.remove(npc.getUUID());
+        workerByEcsId.remove(ecsId);
+        ecsIdByUuid.remove(worker.workerId());
 
-        Log.debug(LogCategory.NPC, "bridge", "NPC {} left ECS (entity {})", npc.getUUID().toString().substring(0, 8), npc.ecsEntityId);
+        Log.debug(LogCategory.NPC, "bridge", "Worker {} left ECS (entity {})",
+                worker.workerId().toString().substring(0, 8), ecsId);
+    }
+
+    /** 本模组法师的退出入口（保留旧签名；语义与清理内容同 {@link #onWorkerLeaveWorld}）。 */
+    public void onNpcLeaveWorld(WandscapeNpc npc, World world) {
+        onWorkerLeaveWorld(npc, world);
     }
 
     // ================================================================
@@ -241,12 +285,14 @@ public final class EntityComponentBridge {
      * Called every MC tick, before the engine tick gate.
      */
     public void syncPositions(World world) {
-        for (var entry : npcByEcsId.entrySet()) {
-            WandscapeNpc npc = entry.getValue();
-            if (npc != null && !npc.isRemoved()) {
+        for (var entry : workerByEcsId.entrySet()) {
+            ColonyWorker worker = entry.getValue();
+            if (worker != null && !worker.entity().isRemoved()) {
                 world.addComponent(entry.getKey(),
-                        new Position(
-                                new GridPos(npc.getBlockX(), npc.getBlockY(), npc.getBlockZ())));
+                        new Position(new GridPos(
+                                worker.entity().getBlockX(),
+                                worker.entity().getBlockY(),
+                                worker.entity().getBlockZ())));
             }
         }
     }
@@ -255,9 +301,22 @@ public final class EntityComponentBridge {
     // Lookup
     // ================================================================
 
+    /**
+     * 按 ECS id 取工作者——**任务执行链（导航/挖放/搬运/仪式/属性）的唯一解析入口**。
+     * 第三方工作者（车万女仆等）由此进入同一套原子操作执行器。
+     */
+    @Nullable
+    public ColonyWorker getWorker(long ecsId) {
+        return workerByEcsId.get(ecsId);
+    }
+
+    /**
+     * 按 ECS id 取**本模组法师**。第三方工作者返回 null——交互/网络/UI 等 NPC 专有路径
+     * 仍用本方法做严格判定，不受第三方实体接入影响。
+     */
     @Nullable
     public WandscapeNpc getNpc(long ecsId) {
-        return npcByEcsId.get(ecsId);
+        return workerByEcsId.get(ecsId) instanceof WandscapeNpc npc ? npc : null;
     }
 
     @Nullable
@@ -265,8 +324,17 @@ public final class EntityComponentBridge {
         return ecsIdByUuid.get(uuid);
     }
 
-    /** All mapped NPCs (for iteration, e.g. NpcApiImpl). */
+    /** 全部已映射工作者（含第三方）——任务面板等需要「并排显示」的场景用。 */
+    public Map<Long, ColonyWorker> allWorkers() {
+        return Map.copyOf(workerByEcsId);
+    }
+
+    /** 全部已映射法师（不含第三方工作者）。 */
     public Map<Long, WandscapeNpc> allNpcs() {
-        return Map.copyOf(npcByEcsId);
+        Map<Long, WandscapeNpc> out = new java.util.HashMap<>();
+        workerByEcsId.forEach((id, w) -> {
+            if (w instanceof WandscapeNpc npc) out.put(id, npc);
+        });
+        return Map.copyOf(out);
     }
 }

@@ -15,7 +15,7 @@ import com.wsteam.wandscape.content.task.types.ResourceId;
 import com.wsteam.wandscape.content.task.types.ResourceStack;
 import com.wsteam.wandscape.content.element.internal.ElementMappingLoader;
 import com.wsteam.wandscape.content.warehouse.transport.ItemTransportManager;
-import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
+import com.wsteam.wandscape.content.npc.worker.ColonyWorker;
 import com.wsteam.wandscape.content.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.content.task.op.api.AtomicOp;
 import com.wsteam.wandscape.content.task.op.executor.OpExecutor;
@@ -677,8 +677,8 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
      * Elements are abstract — map to a representative block for the visual ItemEntity.
      */
     private void launchElementTransport(String elementName, int amount, World world, long npcId, @Nullable UUID colonyId) {
-        WandscapeNpc npc = EntityComponentBridge.INSTANCE.getNpc(npcId);
-        if (npc == null || npc.isRemoved()) return;
+        ColonyWorker worker = EntityComponentBridge.INSTANCE.getWorker(npcId);
+        if (worker == null || worker.entity().isRemoved()) return;
 
         String itemId = resolveElementItem(elementName);
         if (itemId == null) {
@@ -686,25 +686,25 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         }
 
         UUID cid = colonyId != null ? colonyId : resolveColonyId(world, npcId, null);
-        BlockPos storagePos = cid != null ? findNearestStorage(cid, npc.blockPosition()) : null;
-        BlockPos to = storagePos != null ? storagePos : npc.blockPosition().offset(0, 2, 0);
-        BlockPos from = npc.blockPosition();
+        BlockPos storagePos = cid != null ? findNearestStorage(cid, worker.entity().blockPosition()) : null;
+        BlockPos to = storagePos != null ? storagePos : worker.entity().blockPosition().offset(0, 2, 0);
+        BlockPos from = worker.entity().blockPosition();
 
         ItemKey key = ItemKey.of(itemId, null);
-        transporter.send(key, amount, from, to, npc.level(), npcId);
+        transporter.send(key, amount, from, to, worker.entity().level(), npcId);
     }
 
     /** Launch transport animation for produced items (synthesize/craft/craft_spell). */
     private void launchItemTransport(ItemKey outputKey, int count, World world, long npcId, @Nullable UUID colonyId) {
-        WandscapeNpc npc = EntityComponentBridge.INSTANCE.getNpc(npcId);
-        if (npc == null || npc.isRemoved()) return;
+        ColonyWorker worker = EntityComponentBridge.INSTANCE.getWorker(npcId);
+        if (worker == null || worker.entity().isRemoved()) return;
 
         UUID cid = colonyId != null ? colonyId : resolveColonyId(world, npcId, null);
-        BlockPos storagePos = cid != null ? findNearestStorage(cid, npc.blockPosition()) : null;
-        BlockPos to = storagePos != null ? storagePos : npc.blockPosition().offset(0, 2, 0);
-        BlockPos from = npc.blockPosition();
+        BlockPos storagePos = cid != null ? findNearestStorage(cid, worker.entity().blockPosition()) : null;
+        BlockPos to = storagePos != null ? storagePos : worker.entity().blockPosition().offset(0, 2, 0);
+        BlockPos from = worker.entity().blockPosition();
 
-        transporter.send(outputKey, count, from, to, npc.level(), npcId);
+        transporter.send(outputKey, count, from, to, worker.entity().level(), npcId);
     }
 
     /** Map an element name to a representative MC block ID for visual transport. */
@@ -745,20 +745,21 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
 
     @Nullable
     private static Level getNpcLevel(long npcId) {
-        WandscapeNpc npc = EntityComponentBridge.INSTANCE.getNpc(npcId);
-        return npc != null ? npc.level() : null;
+        ColonyWorker worker = EntityComponentBridge.INSTANCE.getWorker(npcId);
+        return worker != null ? worker.entity().level() : null;
     }
 
     /** Brief sparkle particles on action completion. Transport handles the main visual. */
     private void spawnCompletionParticles(long npcId) {
-        WandscapeNpc npc = EntityComponentBridge.INSTANCE.getNpc(npcId);
-        if (npc != null && !npc.isRemoved()) {
+        ColonyWorker worker = EntityComponentBridge.INSTANCE.getWorker(npcId);
+        if (worker != null && !worker.entity().isRemoved()) {
+            var e = worker.entity();
             for (int i = 0; i < 5; i++) {
-                double ox = (npc.getRandom().nextDouble() - 0.5);
-                double oy = npc.getRandom().nextDouble() * 2.0;
-                double oz = (npc.getRandom().nextDouble() - 0.5);
-                npc.level().addParticle(ParticleTypes.HAPPY_VILLAGER,
-                        npc.getX() + ox, npc.getY() + oy, npc.getZ() + oz,
+                double ox = (e.getRandom().nextDouble() - 0.5);
+                double oy = e.getRandom().nextDouble() * 2.0;
+                double oz = (e.getRandom().nextDouble() - 0.5);
+                e.level().addParticle(ParticleTypes.HAPPY_VILLAGER,
+                        e.getX() + ox, e.getY() + oy, e.getZ() + oz,
                         0, 0, 0);
             }
         }
@@ -805,9 +806,9 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         if (member != null && member.colonyId() != null) {
             return member.colonyId();
         }
-        WandscapeNpc npc = EntityComponentBridge.INSTANCE.getNpc(npcId);
-        if (npc != null && npc.colonyId != null) {
-            return npc.colonyId;
+        ColonyWorker worker = EntityComponentBridge.INSTANCE.getWorker(npcId);
+        if (worker != null && worker.colonyId() != null) {
+            return worker.colonyId();
         }
         if (anchor != null) {
             BuildingApi api = WandscapeApis.getBuildingApi();
