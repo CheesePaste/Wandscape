@@ -485,6 +485,8 @@ public class Wandscape {
     private final DecorationBonusSystem decorationBonusSystem;
     private final ShopStockManager shopStockManager;
     private final TavernApiImpl tavernApi;
+    /** 外部模组登记殖民地工人的 API 实现；每 tick 对账清理被外部移除的工作者。 */
+    private final com.wsteam.wandscape.content.npc.internal.ColonyWorkerApiImpl colonyWorkerApi;
 
     public Wandscape(IEventBus modEventBus, ModContainer modContainer) {
         modEventBus.addListener(this::commonSetup);
@@ -549,6 +551,9 @@ public class Wandscape {
         WandscapeApis.setMageHutApi(new com.wsteam.wandscape.content.building.internal.MageHutApiImpl());
         WandscapeApis.setColonyApi(ColonyApiImpl.get());
         WandscapeApis.setFriendlyForceApi(new FriendlyForceApiImpl());
+        // 殖民地工作者登记：其它模组把自己的生物变成殖民地工人（走同一条工作链）
+        colonyWorkerApi = new com.wsteam.wandscape.content.npc.internal.ColonyWorkerApiImpl();
+        WandscapeApis.setColonyWorkerApi(colonyWorkerApi);
         // 法师主手（法杖）槽准入：先装 API，再让 compat 层按模组加载态预注册铁魔法/诡厄法杖标签判定
         NpcMainHandApi mainHandApi = new NpcMainHandApiImpl();
         WandscapeApis.setNpcMainHandApi(mainHandApi);
@@ -1242,6 +1247,13 @@ public class Wandscape {
             // ② Sync MC entity positions → ECS
             try (var s = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tick.bridge_sync_pos")) {
                 EntityComponentBridge.INSTANCE.syncPositions(world);
+            }
+
+            // ②a 对账清理被外部模组移除的第三方工作者（它们不会走本模组的 onRemovedFromLevel）
+            if (colonyWorkerApi != null) {
+                try (var s = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tick.worker_reconcile")) {
+                    colonyWorkerApi.tick();
+                }
             }
 
             // ②b Flush any NPCs that loaded before the engine was ready

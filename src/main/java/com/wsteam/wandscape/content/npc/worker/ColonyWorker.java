@@ -101,4 +101,17 @@ public interface ColonyWorker {
 
     /** 工作动作表现（挥手 + 粒子）。 */
     void doWorkAnimation(BlockPos target);
+
+    /**
+     * 该工作者能否承担**需要施放殖民地法术**的任务（守卫 {@code guard:attack}、祭坛施法）。
+     *
+     * <p>这类任务的执行器（{@code GuardAttackExecutor} / {@code AltarCastExecutor}）只认本模组法师，
+     * 拿不到法师时会立刻把任务判为完成——若让不具备该能力的工作者接取，会变成"接了不动、
+     * 威胁没处理、源再发布"的空转。故调度侧用本方法把候选挡在门外（任务源在 {@code params} 里
+     * 声明 {@code caster_only}，见 {@code SchedulerSystem}）。
+     *
+     * <p>本模组法师恒 true。没有殖民地法术体系的工作者（如阶段一的车万女仆、通用外部工作者）
+     * 返回 false——阶段二女仆接上魔法后把它翻成 true 即可自动接取守卫任务，无需再动调度器。
+     */
+    boolean canCastColonyMagic();
 }

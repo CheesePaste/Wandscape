@@ -213,6 +213,12 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike, ColonyWor
         markTeleportChanneling(gameTime, ticks);
     }
 
+    /** 本模组法师恒可承担需要施法的任务（守卫 / 祭坛）。 */
+    @Override
+    public boolean canCastColonyMagic() {
+        return true;
+    }
+
     // ============================================================
     // 魔力值 + 每魔法独立 CD + 施法互斥锁（纯逻辑在 core/component/MagicState）
     // 魔力上限 = 第 7 属性 MAX_MANA（vanilla 属性权威，getEffectiveAttribute 读取）
@@ -2122,17 +2128,8 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike, ColonyWor
      * Called from AsyncTransformExecutor when a block op finishes.
      */
     public void doWorkAnimation(BlockPos target) {
-        this.swing(InteractionHand.MAIN_HAND);
-        if (level().isClientSide) return;
-        // Spawn particles at the target block position (server syncs to clients)
-        for (int i = 0; i < 5; i++) {
-            level().addParticle(
-                    ParticleTypes.WITCH,
-                    target.getX() + 0.5 + (random.nextDouble() - 0.5) * 0.5,
-                    target.getY() + 0.5 + (random.nextDouble() - 0.5) * 0.5,
-                    target.getZ() + 0.5 + (random.nextDouble() - 0.5) * 0.5,
-                    0, 0, 0);
-        }
+        // 与第三方工作者共用同一套表现，避免两处粒子参数各自漂移
+        com.wsteam.wandscape.content.npc.worker.WorkerFx.playWorkAnimation(this, target);
     }
 
     // ============================================================

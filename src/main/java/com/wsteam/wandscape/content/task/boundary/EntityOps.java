@@ -27,6 +27,15 @@ public interface EntityOps {
     float getWorkSpeed(long npcId);
 
     /**
+     * 该工作者能否承担**需要施放殖民地法术**的任务（守卫 {@code guard:attack} / 祭坛施法）。
+     *
+     * <p>这类任务的 MC 执行器（{@code GuardAttackExecutor} / {@code AltarCastExecutor}）只认本模组
+     * 法师，拿不到法师时会把任务立刻判为完成——不具备该能力的工作者（第三方实体）若接取，
+     * 会变成"接了不动、威胁没处理、任务源再发布"的空转，故调度侧据此提前挡掉候选。
+     */
+    boolean canCastColonyMagic(long npcId);
+
+    /**
      * Whether the NPC is in follow mode (following a player). A following NPC
      * must not be assigned colony tasks, and any in-hand global task is
      * released so only personal behavior (e.g. self-defense) continues.

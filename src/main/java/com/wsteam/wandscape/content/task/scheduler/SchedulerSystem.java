@@ -115,6 +115,7 @@ public class SchedulerSystem implements EcsSystem {
                     continue;
                 }
                 int manaRequirement = taskManaRequirement(task);
+                boolean casterOnly = taskIsCasterOnly(task);
 
                 // Find the best NPC for this task
                 long bestNpc = -1;
@@ -122,6 +123,13 @@ public class SchedulerSystem implements EcsSystem {
                 double bestDist = -1;
 
                 for (long npcId : colonyNpcs) {
+                    // 施法者门槛：守卫/祭坛等任务由只认本模组法师的执行器实现，其它工作者接不了
+                    // （接了执行器拿不到实体，任务会瞬间"完成"并空转）
+                    if (casterOnly && (world.entityOps == null
+                            || !world.entityOps.canCastColonyMagic(npcId))) {
+                        continue;
+                    }
+
                     // 魔力门槛：接取前当前魔力 ≥ 任务蓝耗（否则跳过，等魔力恢复后下轮再评）
                     if (manaRequirement > 0 && (world.entityOps == null
                             || world.entityOps.getCurrentMana(npcId) < manaRequirement)) {
@@ -209,6 +217,18 @@ public class SchedulerSystem implements EcsSystem {
             }
         }
         return 0;
+    }
+
+    /**
+     * 任务是否**只能由会施放殖民地法术的工作者**接取（params["caster_only"]；任务源声明）。
+     *
+     * <p>守卫 {@code guard:attack} 与祭坛施法的 MC 执行器只认本模组法师——拿不到法师时会把任务
+     * 立刻判为完成。若让第三方工作者（车万女仆等）接取，会变成"接了不动、威胁没处理、
+     * 任务源再发布"的空转，故在候选阶段就挡掉（判定见 {@code ColonyWorker#canCastColonyMagic}）。
+     */
+    private static boolean taskIsCasterOnly(GlobalTask task) {
+        JsonElement el = task.taskParams.get("caster_only");
+        return el != null && el.isJsonPrimitive() && el.getAsBoolean();
     }
 
     /** Manually trigger a scheduling heartbeat (for testing). */

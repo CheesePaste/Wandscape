@@ -170,6 +170,16 @@ public final class WandscapeApis {
     public static FriendlyForceApi getFriendlyForceApiSilently() { return friendlyForceApi; }
     public static void setFriendlyForceApi(FriendlyForceApi api) { friendlyForceApi = api; }
 
+    /** 殖民地工作者登记（其它模组把自己的生物变成殖民地工人）。始终装配。 */
+    private static ColonyWorkerApi colonyWorkerApi;
+    public static ColonyWorkerApi getColonyWorkerApi() {
+        if (colonyWorkerApi == null) throw new IllegalStateException("ColonyWorkerApi not loaded");
+        return colonyWorkerApi;
+    }
+    @javax.annotation.Nullable
+    public static ColonyWorkerApi getColonyWorkerApiSilently() { return colonyWorkerApi; }
+    public static void setColonyWorkerApi(ColonyWorkerApi api) { colonyWorkerApi = api; }
+
     /**
      * 位置所在殖民地 id（位置检测，256 格内最近殖民地原点）；殖民地 API 未就绪或位置不在
      * 任何殖民地范围内返回 null。玩家/道路/地形/调试命令发布任务时统一用此解析任务殖民地

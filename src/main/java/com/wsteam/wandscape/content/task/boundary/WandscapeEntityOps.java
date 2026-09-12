@@ -62,6 +62,12 @@ public class WandscapeEntityOps implements EntityOps {
     }
 
     @Override
+    public boolean canCastColonyMagic(long npcId) {
+        ColonyWorker worker = EntityComponentBridge.INSTANCE.getWorker(npcId);
+        return worker != null && worker.canCastColonyMagic();
+    }
+
+    @Override
     public boolean isResting(long npcId) {
         ColonyWorker worker = EntityComponentBridge.INSTANCE.getWorker(npcId);
         return worker != null && worker.isResting();
