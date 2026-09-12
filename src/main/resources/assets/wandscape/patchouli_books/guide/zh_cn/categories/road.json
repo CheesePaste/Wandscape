@@ -1,6 +1,0 @@
-{
-  "name": "道路系统",
-  "description": "游客只走铺好的路。没有路就没有游客。",
-  "icon": "minecraft:dirt_path",
-  "sortnum": 20
-}

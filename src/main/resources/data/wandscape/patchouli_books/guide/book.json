@@ -1,9 +1,0 @@
-{
-  "name": "wandscape.guide_book.name",
-  "landing_text": "wandscape.guide_book.landing",
-  "subtitle": "wandscape.guide_book.subtitle",
-  "book_texture": "wandscape:textures/gui/guidebook/book.png",
-  "use_resource_pack": true,
-  "show_progress": false,
-  "text_overflow_mode": "resize"
-}
