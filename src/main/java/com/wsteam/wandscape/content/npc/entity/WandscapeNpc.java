@@ -219,6 +219,12 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike, ColonyWor
         return true;
     }
 
+    /** 任务面板标签：法师（第三方工作者用 ColonyWorker 的默认值 "worker"）。 */
+    @Override
+    public String panelKind() {
+        return "npc";
+    }
+
     // ============================================================
     // 魔力值 + 每魔法独立 CD + 施法互斥锁（纯逻辑在 core/component/MagicState）
     // 魔力上限 = 第 7 属性 MAX_MANA（vanilla 属性权威，getEffectiveAttribute 读取）

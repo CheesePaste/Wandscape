@@ -505,6 +505,9 @@ public class Wandscape {
         WandscapeSounds.SOUNDS.register(modEventBus);
         com.wsteam.wandscape.content.npc.WandscapeAttributes.ATTRIBUTES.register(modEventBus);
         WandscapeEffects.PETRIFICATION.getId();
+        // 本模组挂在第三方实体上的数据附件（女仆的殖民地工作者状态）。附件类型是我们的全局注册项，
+        // 注册不依赖车万女仆是否加载，故无条件注册。
+        com.wsteam.wandscape.compat.tlm.MaidColonyAttachments.register(modEventBus);
 
         NeoForge.EVENT_BUS.register(this);
         NeoForge.EVENT_BUS.register(HostileTargetingHandler.class);
@@ -536,6 +539,7 @@ public class Wandscape {
         com.wsteam.wandscape.compat.goety.GoetyCompat.init(modEventBus);
         com.wsteam.wandscape.compat.curios.CuriosCompat.init(modEventBus);
         com.wsteam.wandscape.compat.patchouli.PatchouliCompat.init(modEventBus);
+        com.wsteam.wandscape.compat.tlm.TlmCompat.init(modEventBus);
         modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
         modContainer.registerConfig(ModConfig.Type.CLIENT, ClientConfig.SPEC);
 

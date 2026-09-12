@@ -29,7 +29,12 @@ public record MageSummaryDto(
         double posY,
         double posZ,
         boolean followMode,
-        boolean peaceMode
+        boolean peaceMode,
+        /**
+         * 工作者种类标签（面板显示用）：{@code "npc"} = 本模组法师，{@code "worker"} = 其它模组登记的
+         * 殖民地工作者（如车万女仆）。仅供 UI 区分图标/标签，无行为含义。
+         */
+        String kind
 ) {
 
     public float getHealthRatio() {
@@ -62,6 +67,7 @@ public record MageSummaryDto(
         buf.writeDouble(dto.posZ);
         buf.writeBoolean(dto.followMode);
         buf.writeBoolean(dto.peaceMode);
+        buf.writeUtf(dto.kind != null ? dto.kind : "npc");
     }
 
     public static MageSummaryDto read(RegistryFriendlyByteBuf buf) {
@@ -86,13 +92,14 @@ public record MageSummaryDto(
         double posZ = buf.readDouble();
         boolean followMode = buf.readBoolean();
         boolean peaceMode = buf.readBoolean();
+        String kind = buf.readUtf();
 
         return new MageSummaryDto(
                 ecsId, npcUuid, entityId, name, state,
                 currentHp, maxHp, currentMana, maxMana,
                 spellPower, workSpeed, spellSpeed, armorValue,
                 currentTaskTitle, currentTaskId, equippedWand,
-                posX, posY, posZ, followMode, peaceMode
+                posX, posY, posZ, followMode, peaceMode, kind
         );
     }
 }

@@ -270,7 +270,8 @@ public final class TaskPanelSyncTracker {
                     sp, ws, ss, ar,
                     currentTaskTitle, currentTaskId, equippedWand,
                     e.getX(), e.getY(), e.getZ(),
-                    worker.isFollowMode(), worker.isPeaceMode()
+                    worker.isFollowMode(), worker.isPeaceMode(),
+                    worker.panelKind()
             ));
         }
 

@@ -114,4 +114,15 @@ public interface ColonyWorker {
      * 返回 false——阶段二女仆接上魔法后把它翻成 true 即可自动接取守卫任务，无需再动调度器。
      */
     boolean canCastColonyMagic();
+
+    /**
+     * 任务面板里的**种类标签**（仅供 UI 区分图标/文案，无任何行为含义）：
+     * 本模组法师 {@code "npc"}，其它模组登记的工作者用默认值 {@code "worker"}。
+     *
+     * <p>刻意用通用的 {@code "worker"} 而不是 {@code "maid"} 之类——把某个具体第三方模组的概念
+     * 焊进通用 DTO 字段里，会让下一个接入的模组变成特例。
+     */
+    default String panelKind() {
+        return "worker";
+    }
 }
