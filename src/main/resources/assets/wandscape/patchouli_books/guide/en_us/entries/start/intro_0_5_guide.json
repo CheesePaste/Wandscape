@@ -7,7 +7,15 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "The starter tutorial only covers the Town Hall, Warehouse, and Crafting Station. Here are additional essential features.$(br2)$(l:wandscape:system/economy_guide)《Elements and Values》$(/l) Understand the economy system$(br2)$(l:wandscape:system/mages_guide)《Mages》$(/l) Workers and combatants of the town$(br2)《Altar》 Revive fallen mages, crucial in the early game$(br2)《Crafting Station》 Powerful wands, exploration tools, and boss fight equipment$(br2)《Tavern》 Recruit more mages$(br2)《Mage Hut》 Train mage attributes, the core of town combat power$(br2)《Road Sub-Mode》 Level terrain and pave roads"
+      "text": "The starter tutorial only covers the Town Hall, Warehouse, and Crafting Station. Here are additional essential features.$(br2)$(l:wandscape:system/economy_guide)《Elements and Values》$(/l) Understand the economy system$(br2)$(l:wandscape:system/mages_guide)《Mages》$(/l) Workers and combatants of the town"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "《Altar》 Revive fallen mages, crucial in the early game$(br2)《Crafting Station》 Powerful wands, exploration tools, and boss fight equipment$(br2)《Tavern》 Recruit more mages"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "《Mage Hut》 Train mage attributes, the core of town combat power$(br2)《Road Sub-Mode》 Level terrain and pave roads"
     }
   ]
 }

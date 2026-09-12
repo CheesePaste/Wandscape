@@ -7,7 +7,15 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "The management panel is the interaction core of the mod.$(br2)Open the panel: By default, press V to open. The state is shown below.$(br2)(Show image, next page)$(br2)Basic Operations:$(br2)Interaction: Aim at a mage or building to see a white bounding box. Right-click to open its details page.$(br2)Switch Modes: Press 1, 2, 3, 4 to switch sub-modes on the left:$(br2)1→《Building Sub-Mode》: Construct buildings$(br2)2→《Road Sub-Mode》: Pave roads and shape terrain$(br2)3→《Quest Hall》: Manage tasks and mage status$(br2)4→《Settings》: Modify mod settings"
+      "text": "The management panel is the interaction core of the mod.$(br2)Open the panel: By default, press V to open. The state is shown below."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Basic Operations:$(br2)Interaction: Aim at a mage or building to see a white bounding box. Right-click to open its details page.$(br2)Switch Modes: Press 1, 2, 3, 4 to switch sub-modes on the left:$(br2)1→《Building Sub-Mode》: Construct buildings"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "2→《Road Sub-Mode》: Pave roads and shape terrain$(br2)3→《Quest Hall》: Manage tasks and mage status$(br2)4→《Settings》: Modify mod settings"
     }
   ]
 }

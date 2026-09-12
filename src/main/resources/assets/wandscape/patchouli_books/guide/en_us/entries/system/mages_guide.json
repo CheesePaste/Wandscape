@@ -7,7 +7,11 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "Mages are the backbone of the town. Constructing, crafting, and defending all rely on them.$(br2)Right-click a mage to open the mage panel, where you can set equipment and view inventory (in the top-left of the mage preview).$(br2)(Show image, next page)$(br2)Follow Mode: When enabled, the mage follows you and ignores town tasks.$(br2)Peaceful Mode: When enabled, the mage will not attack any entity.$(br2)Cast Strategy: Configure spells and casting order, see 《Cast Strategy》.$(br2)Dismiss: Dismiss the mage permanently."
+      "text": "Mages are the backbone of the town. Constructing, crafting, and defending all rely on them.$(br2)Right-click a mage to open the mage panel, where you can set equipment and view inventory (in the top-left of the mage preview)."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Follow Mode: When enabled, the mage follows you and ignores town tasks.$(br2)Peaceful Mode: When enabled, the mage will not attack any entity.$(br2)Cast Strategy: Configure spells and casting order, see 《Cast Strategy》.$(br2)Dismiss: Dismiss the mage permanently."
     }
   ]
 }

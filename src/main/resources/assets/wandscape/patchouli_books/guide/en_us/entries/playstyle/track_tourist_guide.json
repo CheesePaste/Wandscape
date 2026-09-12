@@ -7,7 +7,15 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "The tourist track is a relaxing path focused on management simulation. Once you build your first tourist-interactive building, tourists arrive the next day.$(br2)Tourist Track Goals:$(br2)Satisfy tourists → Upgrade town level$(br2)Deploy shops and ATMs wisely → Earn elements from visitors$(br2)Build hotels and resting facilities → Keep tourists from leaving due to exhaustion or lack of lodging.$(br2)Recommended reading order:$(br2)$(l:wandscape:system/tourists_guide)《Tourists》$(/l)$(br2)《Shops》$(br2)《Service Facilities and Hotels》$(br2)《ATMs》"
+      "text": "The tourist track is a relaxing path focused on management simulation. Once you build your first tourist-interactive building, tourists arrive the next day.$(br2)Tourist Track Goals:$(br2)Satisfy tourists → Upgrade town level"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Deploy shops and ATMs wisely → Earn elements from visitors$(br2)Build hotels and resting facilities → Keep tourists from leaving due to exhaustion or lack of lodging."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Recommended reading order:$(br2)$(l:wandscape:system/tourists_guide)《Tourists》$(/l)$(br2)《Shops》$(br2)《Service Facilities and Hotels》$(br2)《ATMs》"
     }
   ]
 }
