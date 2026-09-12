@@ -3,6 +3,7 @@ import com.wsteam.wandscape.content.task.ecs.World;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.wsteam.wandscape.ClientConfig;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -56,6 +57,9 @@ public final class SpeechBubbleRenderer {
             renderEventBubble(entity, event, poseStack, buffer, packedLight);
             return;
         }
+
+        // Ambient chatter is client-configurable；事件气泡在其上方已提前返回，不受此开关影响
+        if (!ClientConfig.SHOW_SPEECH_BUBBLES.get()) return;
 
         UUID uuid = entity.getUUID();
         BubbleState state = STATES.computeIfAbsent(uuid, k -> new BubbleState(entity));

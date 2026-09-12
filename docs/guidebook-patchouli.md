@@ -94,6 +94,9 @@ python gen_patchouli.py textures --force   # 强制覆盖书皮
 
 ## 四、素材规格（占位 → 待重画）
 
+> 完整的槽位全表、排版几何与字号规则、各参考手册的装饰手法实测见
+> [plan/patchouli-art-asset-spec.md](plan/patchouli-art-asset-spec.md)。本节只保留接入侧的结论。
+
 ### 4.1 书皮：`assets/wandscape/textures/gui/guidebook/book.png` 【占位，待重画】
 
 **硬约束**：必须**恰好 512×256**。帕秋莉 `GuiBook.drawFromTexture` 把尺寸硬编码成 `(512, 256)`，没有任何缩放配置项；换了尺寸就会取到错位的贴图。底图透明，GUI 逻辑尺寸 272×180 的双页框画在 `(0,0)`。
