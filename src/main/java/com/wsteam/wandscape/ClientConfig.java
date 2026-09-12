@@ -42,5 +42,12 @@ public final class ClientConfig {
                     + "Default off: the grid is a transparent overlay on the scene and is incompatible with some shader packs.")
             .define("road.showTerrainGrid", false);
 
+    public static final ModConfigSpec.BooleanValue SHOW_SPEECH_BUBBLES = BUILDER
+            .comment("法师与游客头顶的随机闲聊气泡是否显示。关闭后不影响消费/服务反馈的瞬时事件气泡"
+                    + "（物品图标 × 数量），也不影响头顶名牌与状态文字。")
+            .comment("Show the random ambient chatter bubbles above mages and tourists. Turning this off does not affect "
+                    + "transient event bubbles (purchase / service feedback: item icon × count), nor the nameplate and status text.")
+            .define("ui.speechBubbles", true);
+
     public static final ModConfigSpec SPEC = BUILDER.build();
 }

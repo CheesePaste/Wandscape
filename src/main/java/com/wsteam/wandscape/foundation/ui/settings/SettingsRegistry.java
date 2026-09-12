@@ -59,6 +59,15 @@ public final class SettingsRegistry {
                 List.of("关闭 (OFF)", "精简 (LOW)", "标准 (NORMAL)", "极致 (HIGH)")
         ));
 
+        register(new SettingItem.BooleanSetting(
+                "ui.speechBubbles",
+                "闲聊气泡",
+                "法师与游客头顶的随机闲聊气泡。关闭后不影响消费/服务反馈的事件气泡与头顶名牌。",
+                SettingTab.VISUAL,
+                true, true,
+                ClientConfig.SHOW_SPEECH_BUBBLES
+        ));
+
         register(new SettingItem.IntSetting(
                 "preview.resolution",
                 "建筑预览清晰度",
