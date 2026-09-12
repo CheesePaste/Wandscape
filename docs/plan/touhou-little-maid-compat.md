@@ -153,6 +153,10 @@ public interface ColonyWorker {
 
 **这一步是纯重构、行为不变**，`./gradlew build` + 现有 NPC 玩法实测即可验证，不引入任何 TLM 依赖。这是本方案最重要的风险隔离。
 
+**对外 API（已实现）**：缝抽好后，顺手把"让别的生物当工人"开成公开契约——新增 `api/ColonyWorkerApi`，**只暴露 5 个方法**（`enlist` / `dismiss` / `isEnlisted` / `getWorkerColony` / `getWorkerEcsId`），内部 `ColonyWorker` **不公开**，通用适配器 `MobColonyWorker` 也留在 `content/npc/worker/`。别家模组一行 `enlist(colonyId, myCreature)` 即可让自己的生物干活，走的是与法师完全相同的链路。选"薄登记面"而非"把 17 个方法的适配器接口搬进 api/"的理由：公开面小、以后好改，且唯一已知的非平凡适配器（车万女仆）本来就在我们自己的 `compat/` 里，能直接实现内部接口。
+
+`MobColonyWorker` 的明确语义与限制（已写进 `ColonyWorkerApi` 的 javadoc，登记方需自行确认可接受）：走位走原版寻路；属性取中性常量（工作速度 1、魔力 0、护甲取原版有效值）；**登记期间关掉该生物 `goalSelector` 的 MOVE 控制位**（否则它自己的游荡/逃跑会与工作走位打架，代价是它不再自主追击或逃跑，`dismiss` 时恢复）；不支持脱困自传送。
+
 ---
 
 ### 3.4 女仆侧：进入 / 退出工作模式
@@ -224,6 +228,27 @@ public interface ColonyWorker {
 
 **可选（后续，本次不做）**：给权杖加"收编/指派"动作。`ScepterKind` 四动作里 `SHELTER`/`HOSTILE` 已对任意 `LivingEntity` 生效（`ScepterService.java:73-120`），而 `PEACE`/`FOLLOW` 硬依赖 `WandscapeNpc`（`:29` 第一行 `instanceof`）。
 
+#### 3.6.1 任务类型准入：不是所有活女仆都能接（`caster_only`）
+
+**问题（已实测确认，非推测）**：女仆登记后就是合法的 ECS 工作者，而**施法类任务的执行器只认本模组法师**，拿不到法师时会**把任务立刻判为完成**：
+
+| 执行器 | 位置 | 拿不到法师时 |
+|---|---|---|
+| `GuardAttackExecutor` | `content/npc/guard/executor/:66,111` | `getNpc` → null → 立即 `completedFuture`，任务被判完成 |
+| `AltarCastExecutor` | `content/building/executor/:61` | 同上 |
+| `SelfDefenseExecutor` | `content/npc/guard/executor/:74,251` | 同上（但**不是全局任务**，由 `WandscapeNpc` 内部直接调 `:1102/:1113`，女仆碰不到，无需处理） |
+
+守卫任务尤其危险：它的 `TaskRequest` **刻意 `colonyId = null`**（`GuardTaskSource.java:77`，守卫区由全殖民地建筑包围盒并集生成、可能横跨多镇），`SchedulerSystem` 视为"不限小镇" → 女仆成为候选 → 接上后原地不动、威胁没处理、源下一轮再发布 → **反复空转**（与 `GuardTaskSource.java:96` 注释描述的空转模式同类）。祭坛任务虽已有 `mana_cost` 门槛能挡住魔力为 0 的第三方工作者，但不该依赖"它们的魔力恰好是 0"。
+
+**修法（通用能力位，不做任务枚举）**：
+
+1. `ColonyWorker.canCastColonyMagic()`——法师恒 `true`，无殖民地法术体系的工作者（阶段一女仆、通用外部工作者）`false`。
+2. `EntityOps.canCastColonyMagic(long)` + `WandscapeEntityOps` 实现，保持核心/ MC 分层的既有约定。
+3. 任务源在 `params` 里声明 `caster_only: true`（`GuardTaskSource`、`AltarCastHandler`），`SchedulerSystem` 在候选筛选里据此跳过——紧挨既有的 `mana_cost` 门槛（数据驱动，符合硬规则 3；`params` 本就被持久化，无需改数据格式）。
+4. **阶段二女仆接上魔法后，只要把这个位翻成 `true` 就自动能接守卫任务，不用再动调度器**——这是选能力位而非"调度器里写死 `guard:attack`"的理由。
+
+**遗留待确认**：`TaskPoolSavedData` 从旧档恢复的任务是否带 `caster_only`——旧档任务没有这个 key，会按"不限"处理（`taskIsCasterOnly` 对缺失 key 返回 false），即旧档里的守卫任务仍可能派给女仆。开发期不承诺存档兼容（硬规则 7），且守卫任务短命（脱战即完成），**接受**；若要收口，可在任务恢复时按 `blueprintId` 补该标记。
+
 ---
 
 ### 3.7 任务面板并排显示（D5）
@@ -245,13 +270,14 @@ public interface ColonyWorker {
 
 ### 3.8 落地步骤与难度
 
-| 步 | 内容 | 触及 | 难度 | 风险 | 可独立验证 |
-|---|---|---|---|---|---|
-| **1** | 盟友：**零代码**。默认配置（`npc.pvp = true`）下女仆已落 `PET` 分支并按主人殖民地判定（§3.1）。只做实测确认 + 记录 `npc.pvp = false` 的既有问题 | 0 行 | 极低 | 无 | 实测：本镇女仆不被攻击；别人小镇的、无主的女仆照旧 |
-| **2** | 抽 `ColonyWorker` + 泛化 `EntityComponentBridge`/`NavigationSystem`/5 个 boundary 执行器 + `TaskPanelSyncTracker` 三处遍历（D5 一并做，避免二次改同一批文件） | 改 ~11 文件、~600-900 行 | 中 | 中（纯重构，行为须零变化） | `./gradlew build` + 原 NPC 玩法回归 |
-| **3** | TLM 女仆接入：`@LittleMaidExtension` + 工作模式 task + `MaidColonyWorker` 适配器 + `MaidColonyState`（按主人殖民地归属）+ 对账 sweep + `MageSummaryDto.kind` 与面板图标 | 新增 `compat/tlm/**` ~600-900 行 + 面板 DTO/客户端小改 | 中高 | 中高（§五 R1/R2/R3） | 游戏内：女仆选任务后接活、走到工地、执行原子操作、产出进殖民地仓库；面板与法师并排显示 |
+| 步 | 内容 | 触及 | 难度 | 状态 |
+|---|---|---|---|---|
+| **1** | 盟友：**零代码**。默认配置（`npc.pvp = true`）下女仆已落 `PET` 分支并按主人殖民地判定（§3.1）。只做实测确认 + 记录 `npc.pvp = false` 的既有问题 | 0 行 | 极低 | 代码路径已静态核实；游戏内实测待做 |
+| **2** | 抽 `ColonyWorker` + 泛化 `EntityComponentBridge`/`NavigationSystem`/6 个 boundary 执行器 + `TaskPanelSyncTracker` 三处遍历 | 改 11 文件、新增 2 | 中 | **已完成**（`081af89f`），`build` 通过，行为不变 |
+| **2b** | 顺带开放对外 API：`api/ColonyWorkerApi`（薄登记面）+ `MobColonyWorker` 通用适配器 + `WorkerFx` 共用表现 + 施法者能力位（§3.6.1） | 新增 3 文件、改 6 文件 | 中 | **已完成**（`c25964cf`），`build` 通过 |
+| **3** | TLM 女仆接入：`@LittleMaidExtension` + 工作模式 task + `MaidColonyWorker` 适配器（走 `WALK_TARGET`）+ `MaidColonyState`（按主人殖民地归属）+ 对账 sweep + `MageSummaryDto.kind` 与面板图标 | 新增 `compat/tlm/**` | 中高 | 未开始；风险见 §五 R1/R2/R6 |
 
-合计改动量约 **1200-1700 行**（新增为主）。第 2 步是"让第 3 步可行"的投资，本身不改玩法。
+第 2 / 2b 步是"让第 3 步可行"的投资，本身不改玩法。第 2b 步的 API 让**任何**模组都能登记工作者（不限于女仆），所以它同时也把"第三方实体接入殖民地工作链"这件事从一次性兼容变成了可复用能力。
 
 ---
 
@@ -359,8 +385,9 @@ public interface ColonyWorker {
 | D3 | 别人家的女仆是否算友军 | 算（全局恒友军）/ 不算 | **已裁定**：不算。默认配置（`npc.pvp = true`）下天然成立 |
 | D4 | `npc.pvp = false` 时玩家侧全局友军（含女仆、宠物、召唤物、玩家本人） | 顺带修 / 记录待办 | **已裁定**：不在本次顺带修（会把风险外溢到所有玩家侧实体），记为待办 A（§3.1.1） |
 | D5 | 女仆工作态是否要在任务面板/概览里与 NPC 并列显示 | 显示 / 不显示 | **已裁定**：**并列显示**。改动面即第 2 步泛化的自然产物（`TaskPanelSyncTracker` 建行字段≈`ColonyWorker` 接口面），只需加 `MageSummaryDto.kind` + 客户端图标分支（§3.7） |
-| D6 | 阶段一是否一并做"女仆专用工作配置界面"（`getTaskConfigGuiProvider`） | 做 / 先不做 | 先不做，等 R1 实测后再定界面需要暴露什么 |
-| D7 | 第 2 步重构是否单独成 commit/分支 | 独立提交 / 与第 3 步合并 | 独立提交——行为不变、可单独回滚，是第 3 步的保险 |
+| D6 | 阶段一是否一并做"女仆专用工作配置界面"（`getTaskConfigGuiProvider`） | 做 / 先不做 | **已裁定**：先不做。等 R1 实测后再定界面需要暴露什么 |
+| D7 | 第 2 步重构是否单独成 commit/分支 | 独立提交 / 与第 3 步合并 | **已裁定并执行**：独立提交 `081af89f`（行为不变、可单独回滚，是第 3 步的保险） |
+| D8 | `ColonyWorker` 的 API 化做到哪一档 | 薄登记面 / 薄登记面+自定义适配器 / 先不做 | **已裁定并执行**：薄登记面——`api/ColonyWorkerApi` 只暴露 5 个方法，内部 `ColonyWorker` 不公开（§3.3） |
 
 ---
 
@@ -379,4 +406,4 @@ public interface ColonyWorker {
 
 ## 八、下一步
 
-阶段一按 §3.8 三步推进。第 1 步（盟友）**零代码**，先跑 §五 验证项 1 实测确认即算完成。第 2 步动手前完成 §五 验证项 2-4；第 3 步完成后按 §六 D6 决定收尾范围。阶段二在阶段一落地并实测后再单独立项。
+阶段一按 §3.8 推进。第 1 步（盟友）**零代码**，只剩游戏内实测确认；第 2 / 2b 步（`ColonyWorker` 缝 + 工作者 API + 施法者能力位）**已完成并 build 通过**。第 3 步（TLM 女仆接入）是接下来的主体工作。阶段二在阶段一落地并实测后再单独立项。
