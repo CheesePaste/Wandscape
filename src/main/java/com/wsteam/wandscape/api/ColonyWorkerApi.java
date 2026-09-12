@@ -14,9 +14,12 @@ import java.util.UUID;
  * <p>用法（在模组初始化完成、拿到殖民地 UUID 后调用；某个殖民地用
  * {@link ColonyApi#getColonyByFounder(UUID)} 或 {@link WandscapeApis#colonyAt} 解析）：
  * <pre>{@code
- * WandscapeApis.getColonyWorkerApiSilently().ifPresent(api ->
- *     api.enlist(myColonyId, myCreature));
+ * ColonyWorkerApi api = WandscapeApis.getColonyWorkerApiSilently();
+ * if (api != null) api.enlist(myColonyId, myCreature);
  * }</pre>
+ *
+ * <p><b>只在服务端调用</b>：客户端没有 ECS 引擎（{@code World.getActive()} 为 null），
+ * {@link #enlist} 会记一条 warn 后返回 false。这与 {@link ColonyApi} 那条"客户端陷阱"同源。
  *
  * <p><b>能力与限制</b>（登记前请确认这些对你是可接受的）：
  * <ul>
@@ -24,9 +27,12 @@ import java.util.UUID;
  *   <li>通用适配器按「原版寻路 + 中性属性」工作：走位走 {@code getNavigation()}，工作速度为 1、
  *       魔力为 0（即不参与需要魔力门槛的任务）、护甲取原版有效值。没有本模组法师那套
  *       7 项属性 / 已学法术 / 策略槽——那些是阶段二的事。</li>
- *   <li>登记期间会关闭该生物自身的 AI 移动（{@code GoalSelector} 的 MOVE 控制位），
- *       否则它自己的游荡/逃跑会与工作走位互相打架。**这会让它不再自主追击或逃跑**，
- *       是"当工人"的代价；{@link #dismiss} 时恢复。</li>
+ *   <li>**只能用这个内置适配器**：想接自带属性成长 / 魔力 / 殖民地法术 / 自定义导航的实体，
+ *       目前没有工厂或注册扩展点——那类适配器得住在本仓库的 {@code compat/} 下（先例：车万女仆），
+ *       即需要改本模组源码，而不是在你自己的 jar 里完成。</li>
+ *   <li>登记后**首次派活**（首次启动工作导航）时关闭该生物自身的 AI 移动（{@code GoalSelector}
+ *       的 MOVE 控制位）——注意是惰性的，登记到第一次接活之间它照常自主游荡/追击/逃跑。
+ *       关闭后它**不再自主追击或逃跑**，是"当工人"的代价；{@link #dismiss} 时恢复。</li>
  *   <li>解除登记（{@link #dismiss}）会注销 ECS 工作者、释放它占用的全局任务、取消在途运输。
  *       生物被其它模组移除（死亡/删除）时也会自动清理，无需手动调用。</li>
  * </ul>

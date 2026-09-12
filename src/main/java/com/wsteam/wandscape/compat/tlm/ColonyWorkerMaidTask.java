@@ -25,9 +25,13 @@ import java.util.function.Predicate;
  * 并用 {@link #getEnableConditionDesc} 明确告诉玩家缺什么。
  *
  * <p>**为什么 {@code createBrainTasks} 是空的**：工作移动不走 brain 行为，而是由 ECS 的
- * {@code NavigationSystem} 经 {@code MaidColonyWorker.moveTo} 直接驱动原版寻路——与法师完全同机制。
- * 返回空列表时 TLM 会补上一个"按作息切活动"的行为，正是我们想要的。
- * 面朝工作点与手到工作点的粒子线由 {@link TlmCompatImpl#syncWorkVisual} 每 tick 同步。
+ * {@code NavigationSystem} 经 {@code MaidColonyWorker}（继承 {@code ColonyWorker} 的默认导航）
+ * 直接驱动原版寻路——与法师完全同机制。
+ *
+ * <p>注意 TLM 在 WORK 活动里**无条件**追加这几个行为，返回空列表也躲不掉：作息切换
+ * （{@code MaidUpdateActivityFromSchedule}，活动切换时会把她拉回站位点）、工作餐、偷吃
+ * （900 tick 节流）、以及随机走动（已由 {@link #enableLookAndRandomWalk} 关掉）。前三个都是
+ * 条件触发的，属已知残余冲突，见兼容文档的 R1。
  */
 public final class ColonyWorkerMaidTask implements IMaidTask {
 
@@ -62,7 +66,7 @@ public final class ColonyWorkerMaidTask implements IMaidTask {
     }
 
     /**
-     * 只有**已开站位模式**的女仆才能选中这个任务。
+     * 只有**已开 Home 模式**的女仆才能选中这个任务。
      *
      * <p>⚠️ 本方法会在**客户端**被调用（TLM 的女仆 GUI 用它决定按钮是否可点，
      * `AbstractMaidContainerGui.drawPerTaskButton`），所以条件必须是客户端拿得到的同步数据。

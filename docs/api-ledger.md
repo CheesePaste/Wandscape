@@ -23,7 +23,7 @@
 
 ## 总览
 
-- 接口数：**20 个**（19 个功能/扩展接口 + 1 个窄 accessor `WandscapeApis`）＋ 标注 `@Unimplemented`。
+- 接口数：**22 个**（20 个功能/扩展接口 + 2 个 hook：`NpcInteractHook` / `NpcSneakInteractHook`）＋窄 accessor `WandscapeApis`（18 个 `getXxxApi()` getter 族）。
 - **已实现 vs 桩**：功能接口里大部分"读/查询/平衡值"已实现；**新增能力动词**（Npc 生成/属性掷点/酒馆招募/仓库增删清/殖民地名等级激活）已大部分为真（2026-09-04 闭合），仍桩的集中在：生产派单、道路建边、仓库转账、游客生成、魔法施法、Curio 读写。
 - **⚠️ 隐式桩（重点慎用）**：`NpcApi.assignHouse`（恒 false）、`TouristApi.spawnTourist`（空 nil）——二者**编译通过但行为是空/假**，addon 一用就踩坑。（`TavernApi.recruitMage` 已于 2026-09-04 由隐式桩转真。）
 - **本体自消费合计**：约 **139 处** `WandscapeApis.getXxxApi()*`。BuildingApi(35)/ColonyApi(39) 最重，ProductionApi(0) 最轻。
@@ -393,11 +393,11 @@
 
 > 面向 addon/其它模组：把己方生物登记为**殖民地工人**，与殖民地法师共用同一条工作链（`SchedulerSystem` 派活 → `TaskExecutionSystem` 执行原子操作），并一并出现在任务与法师管理面板里。实现 `content/npc/internal/ColonyWorkerApiImpl`；内部适配器 `content/npc/worker/MobColonyWorker`（通用）与 `WandscapeNpc`；ECS 登记走 `EntityComponentBridge.onWorkerJoinWorld`。
 >
-> 内部 `ColonyWorker` 接口**刻意不公开**——公开面只留 5 个登记方法，以后好改；唯一已知的非平凡适配器（车万女仆，走 `WALK_TARGET` 记忆而非 `getNavigation`）本来就在本仓库 `compat/` 内，能直接实现内部接口。
+> 内部 `ColonyWorker` 接口（`content/npc/worker/`）**公开面只留 5 个登记方法**，以后好改；但那句"刻意不公开"只是**意图、没有机制**——它是 `public interface` 且 javadoc 主动招呼第三方在 `compat/` 下实现它，全仓无 `@ApiStatus.Internal`，也拦不住别人 import `content.npc.worker` + `content.npc.internal.EntityComponentBridge`。**复核（2026-09-12）：唯一已知的非平凡适配器（车万女仆）走的是直接驱动 `getNavigation()`（不是 `WALK_TARGET` 记忆——那条路被实测否决，见 `compat/tlm/MaidColonyWorker` 的 javadoc），且它绕过本 API、直调 `EntityComponentBridge.onWorkerJoinWorld`。**
 
 | 方法 | 用途 | 状态 | dogfood |
 |---|---|---|---|
-| `boolean enlist(UUID colonyId, LivingEntity)` | 登记为某殖民地的工作者（幂等；已登记但换镇则改归属） | ✅ `ColonyWorkerApiImpl` | 🔧 纯 addon 能力。骨架已就位，等 TLM 女仆接入作为第一个真实用例 |
+| `boolean enlist(UUID colonyId, LivingEntity)` | 登记为某殖民地的工作者（幂等；已登记但换镇则改归属） | ✅ `ColonyWorkerApiImpl` | ⚠️ **零外部消费者**（2026-09-12 复核）：纯 addon 能力，骨架已就位但**尚无任何调用方**——车万女仆走 `compat/` 直调 `EntityComponentBridge`，不经过这里。**只能在服务端调用**（客户端 `World.getActive()` 为 null → warn + false） |
 | `void dismiss(LivingEntity)` | 解除登记：注销 ECS、释放全局任务、取消在途运输、恢复该生物自身 AI 移动 | ✅ | 🔧 同上 |
 | `boolean isEnlisted(LivingEntity)` | 是否已登记 | ✅ | 🔧 同上 |
 | `UUID getWorkerColony(LivingEntity)` | 所属殖民地；未登记 null | ✅ | 🔧 同上 |
@@ -405,7 +405,9 @@
 
 本体自消费：无（纯对外能力）。第三方实体被外部移除时不会走本模组的 `onRemovedFromLevel`，故 `ColonyWorkerApiImpl.tick()` 每 MC tick 对账清理（`Wandscape.onServerTick` 内 `tick.worker_reconcile`）——**这是本契约唯一的隐性成本**，漏了会留下幽灵工作者占着全局任务。
 
-⚠️ 登记要求：目标底层须为 `Mob`（需原版寻路）；殖民地须为**已注册的真实殖民地**（占位/已删殖民地会被调度器 `isColonyRegistered` 挡住，登记了也拿不到任务，故当场拒绝）。登记期间会关掉该生物 `goalSelector` 的 MOVE 控制位（代价：不再自主追击/逃跑），`dismiss` 时恢复。
+⚠️ 登记要求：目标底层须为 `Mob`（需原版寻路，`ColonyWorker#entity()` 的类型就是 `Mob`）；殖民地须为**已注册的真实殖民地**（占位/已删殖民地会被调度器 `isColonyRegistered` 挡住，登记了也拿不到任务，故当场拒绝）。**首次派活**（首次启动工作导航）时会关掉该生物 `goalSelector` 的 MOVE 控制位（代价：不再自主追击/逃跑），`dismiss` 时恢复——注意是**惰性**的，登记到第一次接活之间它照常自主游荡。
+
+⚠️ **扩展性缺口**：`enlist` 写死 `new MobColonyWorker(...)`，没有工厂/注册点，接口也不在 `api/`。想接自带属性成长 / 魔力 / 殖民地法术 / 自定义导航的实体，只能来本仓库 `compat/` 下写适配器（先例：车万女仆），**不能在自己的 jar 里完成**。是否补一个适配器供体、还是先把本 API 收回内部，等真有第三方需求时再定（硬规则 6：不给投机性 API）。
 
 ⚠️ 施法类任务（守卫 `guard:attack` / 祭坛施法）由只认本模组法师的执行器实现（`GuardAttackExecutor` / `AltarCastExecutor`），第三方工作者接取会「瞬间完成并空转」。故调度侧按任务 `params["caster_only"]` + `ColonyWorker#canCastColonyMagic()` 提前挡掉候选。第三方工作者若要承担这类任务，等阶段二把该能力位翻成 true。
 

@@ -156,7 +156,7 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike, ColonyWor
     // ============================================================
 
     @Override
-    public LivingEntity entity() {
+    public Mob entity() {
         return this;
     }
 

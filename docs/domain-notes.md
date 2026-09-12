@@ -34,6 +34,9 @@
 7. **NPC 寻路水中脱困是「双层卡死判据 + 游泳免 onGround」**（`content/npc/system/NavigationSystem`）：
    - 位移卡死判据（每 60 tick 水平位移 < 2 格、连 3 次）只覆盖「没在动」；高岸水池这类「游得动但永远逼近不了目标」的困局需补**净逼近判据**：水中每区间游动够大时，记录到目标到达中心的**历史最低 3D 距离**（含垂直，兼容潜水下潜），连续 4 个区间（≈240 tick）不再创新低即切自传送脱困。渡河/水下工作全程单调逼近（每区间创新低），永不触发。
    - `switchToRitualTeleport`（及跟随兜底 `FollowPlayerGoal.tryTeleportToPlayer`）的门控是 `onGround()`，但游泳时 `onGround()` 恒 false——必须放行水中 NPC（`|| isInWater()`），否则水池困局判定卡死后每轮被门控拦下死循环，永远传送不出去（任务走 NavigationSystem、跟随走 FollowPlayerGoal 两路都会中招）；落点安全由 `findSafeLanding` 保证。
+8. **殖民地数据在客户端恒不可用——客户端判定点只能用同步数据**（「客户端殖民等级陷阱」同族，2026-09-12 在第三方 GUI 上又踩一次）：
+   - `ColonyApi.getColonyByFounder` / `getColonyLevel` / `getAllColonyIds` 都走 `getColonySavedData()` → `ServerLifecycleHooks.getCurrentServer()`，**专用服务器的客户端恒为 null**（单机因带有集成服务端而试不出来，属典型"单机复现不了"陷阱）；`ColonyWorkerApi.enlist` 一类引擎侧 api 在客户端也会因 `World.getActive() == null` 直接失败。
+   - 典型翻车：把「主人有小镇」这类服务端事实写进**第三方 GUI 的可用性判定**里（车万女仆的 `IMaidTask#isEnable` 就是在客户端被调用来决定按钮可否点），结果任务在多人局里永久置灰、点不动。**做法**：客户端条件只用 `SynchedEntityData` / 同步包里的数据；服务端事实留给服务端把关，并用描述文案 + 一次性 `Log.warn` 兜底，别让它变成"选了任务却站着不动"的静默失败。
 
 ---
 
@@ -87,6 +90,11 @@
    - `content/task` 内的核心 ECS、任务评分、调度算法、状态计算严禁 import 任何 Minecraft / NeoForge 类，保持纯 Java 运行与快速测试能力。
 3. **蓝图 Java-lambda 化**：
    - 蓝图 DSL 解释器已废除，默认蓝图全部收敛为 `content/task/engine/dsl/BlueprintDefaults.java` 中的 Java lambda 函数注册。
+4. **任务链的实体解析只有一个点：`content/npc/worker/ColonyWorker`**（2026-09-12 起）：
+   - 原子操作执行器只收 `ecsId`，类型墙就在这一处。7 个 MC 边界适配器（`EntityOps` / `MovementOps` / `RitualOps` / `BlockInteractExecutor` / `AsyncTransformExecutor` / `ResourceRequestExecutor` / `NavigationSystem`）一律经 `EntityComponentBridge.getWorker(ecsId)` 拿 `ColonyWorker`，**不要再写 `instanceof WandscapeNpc`**；确需法师专有能力时另取 `getNpc()`（它只认本模组法师，第三方工作者返回 null）。
+   - 接口只有 `entity()` / `colonyId()` 两个抽象方法，其余全是 default——default 就是"普通 Mob 当工人"的基线（原版寻路、中性属性、无魔力无法术），`MobColonyWorker` 几乎不覆写任何方法即是证明。实现新适配器先看 `compat/tlm`（车万女仆）与 `api/ColonyWorkerApi`。
+   - **两个已知缺口**：`ColonyWorker` 在 `content/` 而非 `api/` 且无 `@ApiStatus.Internal`（公开面与内部包的边界是意图、没有机制）；`enlist` 写死 `MobColonyWorker`、无工厂扩展点——想接自带属性成长/魔力/法术/自定义导航的实体，只能改本仓库。动手前先确认这是不是真需求（硬规则 6）。
+   - ⚠️ **殖民地归属有两处真相**：适配器上的 `colonyId()` 与 ECS 的 `ColonyMember` 组件。`AsyncTransformExecutor.resolveColonyId` 优先读组件；换镇时两者都要更新（女仆的适配器 `colonyId` 是 final，换镇走"拆掉重建"）。新写任何"改归属"的代码都要同时处理这两处。
 
 ---
 

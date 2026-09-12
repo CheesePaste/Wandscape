@@ -16,8 +16,9 @@ import net.neoforged.neoforge.common.util.INBTSerializable;
  * 的供给器。所以女仆的殖民地属性存在这里，语义与法师一致（同一套 {@link NpcAttributes#computeEffective}
  * 纯函数），只是换了个容器。
  *
- * <p>**只存不可推导的东西**：殖民地本身由主人推导（{@link TlmCompatImpl#resolveOwnerColony}），
- * 是唯一权威，不在这里冗余一份。这里只有等级与 7 项 base——阶段二的魔力/冷却也挂这里。
+ * <p>**只存不可推导的东西**：殖民地本身由主人推导（{@link TlmCompatImpl#ownerColonyOf}），
+ * 是唯一权威，不在这里冗余一份。这里只有等级与 7 项 base——**魔力/冷却（阶段二）也挂这里，
+ * 现在还没有这两个字段**。
  *
  * <p>存档格式带 {@code v} 顶层版本号，走显式迁移链（硬规则 7）。
  */
