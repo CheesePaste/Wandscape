@@ -7,7 +7,11 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "Wandscape（魔法小镇）是一个大型模组，以魔法与城镇建设为主题$(br2)玩法导航$(br2)$(l:wandscape:start/intro_0_guide)《0，入门》$(/l)$(br2)$(l:wandscape:start/intro_0_5_guide)《0.5，推荐了解的功能》$(/l)$(br2)$(l:wandscape:playstyle/track_tourist_guide)《1，游客线》$(/l)推荐休闲玩家观看$(br2)《2，冒险线》推荐冒险玩家观看$(br2)《3，科技线》只做了一点$(br2)《4，外交线》还没做$(br2)通用功能导航$(br2)$(l:wandscape:system/economy_guide)《元素与三值》$(/l)经济系统介绍$(br2)$(l:wandscape:system/panel_guide)《管理面板》$(/l)交互，管理与建造城镇$(br2)《建筑》模组各类型建筑介绍$(br2)$(l:wandscape:system/mages_guide)《法师》$(/l)工人与战斗单位介绍$(br2)《魔法》魔法与战斗系统介绍$(br2)《装备与物品》模组装备与物品介绍$(br2)其他$(br2)《关于我们》开发组与反馈/支持渠道"
+      "text": "Wandscape（魔法小镇）是一个大型模组，以魔法与城镇建设为主题$(br2)玩法导航$(br2)$(l:wandscape:start/intro_0_guide)《0，入门》$(/l)$(br2)$(l:wandscape:start/intro_0_5_guide)《0.5，推荐了解的功能》$(/l)$(br2)$(l:wandscape:playstyle/track_tourist_guide)《1，游客线》$(/l)推荐休闲玩家观看$(br2)《2，冒险线》推荐冒险玩家观看$(br2)《3，科技线》只做了一点$(br2)《4，外交线》还没做"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "通用功能导航$(br2)$(l:wandscape:system/economy_guide)《元素与三值》$(/l)经济系统介绍$(br2)$(l:wandscape:system/panel_guide)《管理面板》$(/l)交互，管理与建造城镇$(br2)《建筑》模组各类型建筑介绍$(br2)$(l:wandscape:system/mages_guide)《法师》$(/l)工人与战斗单位介绍$(br2)《魔法》魔法与战斗系统介绍$(br2)《装备与物品》模组装备与物品介绍$(br2)其他$(br2)《关于我们》开发组与反馈/支持渠道"
     }
   ]
 }

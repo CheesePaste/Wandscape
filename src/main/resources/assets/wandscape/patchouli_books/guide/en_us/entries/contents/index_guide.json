@@ -7,7 +7,23 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "Wandscape is a large mod themed around magic and town construction.$(br2)Gameplay Navigation$(br2)$(l:wandscape:start/intro_0_guide)《0. Getting Started》$(/l)$(br2)$(l:wandscape:start/intro_0_5_guide)《0.5 Recommended Features》$(/l)$(br2)$(l:wandscape:playstyle/track_tourist_guide)《1. Tourist Track》$(/l) Recommended for casual players$(br2)《2. Adventure Track》 Recommended for adventure players$(br2)《3. Tech Track》 Work in progress$(br2)《4. Diplomacy Track》 Coming soon$(br2)System Features Navigation$(br2)$(l:wandscape:system/economy_guide)《Elements and Values》$(/l) Introduction to the economy system$(br2)$(l:wandscape:system/panel_guide)《Management Panel》$(/l) Interaction, town management and building$(br2)《Buildings》 Introduction to mod building types$(br2)$(l:wandscape:system/mages_guide)《Mages》$(/l) Introduction to workers and combat units$(br2)《Magic》 Introduction to magic and combat systems$(br2)《Equipment and Items》 Introduction to mod equipment and items$(br2)Other$(br2)《About Us》 Development team and feedback / support channels"
+      "text": "Wandscape is a large mod themed around magic and town construction.$(br2)Gameplay Navigation$(br2)$(l:wandscape:start/intro_0_guide)《0. Getting Started》$(/l)$(br2)$(l:wandscape:start/intro_0_5_guide)《0.5 Recommended Features》$(/l)$(br2)$(l:wandscape:playstyle/track_tourist_guide)《1. Tourist Track》$(/l) Recommended for casual players"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "《2. Adventure Track》 Recommended for adventure players$(br2)《3. Tech Track》 Work in progress$(br2)《4. Diplomacy Track》 Coming soon"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "System Features Navigation$(br2)$(l:wandscape:system/economy_guide)《Elements and Values》$(/l) Introduction to the economy system$(br2)$(l:wandscape:system/panel_guide)《Management Panel》$(/l) Interaction, town management and building$(br2)《Buildings》 Introduction to mod building types$(br2)$(l:wandscape:system/mages_guide)《Mages》$(/l) Introduction to workers and combat units"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "《Magic》 Introduction to magic and combat systems$(br2)《Equipment and Items》 Introduction to mod equipment and items"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Other$(br2)《About Us》 Development team and feedback / support channels"
     }
   ]
 }

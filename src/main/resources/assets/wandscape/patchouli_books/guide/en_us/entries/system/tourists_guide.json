@@ -7,7 +7,15 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "Attributes:$(br2)$(li)Three Values (Satisfaction, Magic, Wonder): Increases as tourists interact with buildings. When all three are maxed out, town experience increases, and special tourists leave resumes.$(br2)$(li)Wallet: Affects purchase quantity in shops, directly impacting town revenue.$(br2)$(li)Lodging: Affects maximum days stayed.$(br2)$(li)Energy: Affects the number of buildings visited.$(br2)Behavior: Tourists interact at building interact spots. If a spot is in use, tourists queue up.$(br2)At night, tourists seek hotels. If no room is available, they leave town.$(br2)Right-click a tourist to view the above information."
+      "text": "Attributes:$(br2)$(li)Three Values (Satisfaction, Magic, Wonder): Increases as tourists interact with buildings. When all three are maxed out, town experience increases, and special tourists leave resumes."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(li)Wallet: Affects purchase quantity in shops, directly impacting town revenue.$(br2)$(li)Lodging: Affects maximum days stayed.$(br2)$(li)Energy: Affects the number of buildings visited."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Behavior: Tourists interact at building interact spots. If a spot is in use, tourists queue up.$(br2)At night, tourists seek hotels. If no room is available, they leave town.$(br2)Right-click a tourist to view the above information."
     }
   ]
 }
