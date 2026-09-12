@@ -11,7 +11,7 @@
 
 | 期 | 目标 | 状态 |
 |---|---|---|
-| **阶段一** | ① 女仆**默认属于盟友**（殖民地 NPC 不攻击、不溅射误伤）。② 女仆可**进入工作模式**，工作模式下和法师一样参与城镇建设、接取任务。 | 本文评估，待实现 |
+| **阶段一** | ① **本小镇的女仆**默认属于盟友（殖民地 NPC 不攻击、不溅射误伤）；别人小镇的、无主的女仆不是盟友。② 女仆可**进入工作模式**，工作模式下和法师一样参与城镇建设、接取任务。 | 本文评估，待实现 |
 | 阶段二 | ③ 女仆可进入**法师小屋**升级训练。④ 手持法杖时能**普攻 + 释放法术**。⑤ 有和 NPC 一样的**策略槽**。 | 只评估，不实现 |
 
 阶段一是阶段二的前置：两者共用同一个"把第三方实体接进殖民地系统"的抽象缝（§3.3）。先把缝抽对，阶段二才不至于二次返工。
@@ -25,7 +25,7 @@
 - TLM 侧有官方扩展面（`@LittleMaidExtension` + `ILittleMaid#addMaidTask`），第三方新增"女仆任务"是其一等公民用法，**不需要 mixin、不需要改 TLM**。
 - Wandscape 侧的耦合虽然散布（37 处 `instanceof WandscapeNpc`），但**任务执行链的实体访问面意外地窄**——边界执行器只用到约 **11 个**实体专有方法（§3.3 表）。抽一个 `ColonyWorker` 接口即可把工作链解锁，无需重写 ECS。
 
-**难度：阶段一 中等偏大但不失控。** 拆成三步，第一步（盟友）30 行以内可独立交付；第二步是**行为不变的纯重构**，`./gradlew build` 即可验证；第三步才引入 TLM 依赖与女仆适配。
+**难度：阶段一 中等偏大但不失控。** 拆成三步，第一步（盟友）约 3 文件 60-90 行可独立交付；第二步是**行为不变的纯重构**，`./gradlew build` 即可验证；第三步才引入 TLM 依赖与女仆适配。
 
 **阶段二难度：大。** 施法层与策略槽的实体类型写死在 4 个施法入口 + 3 个菜单/网络入口 + 1 个 UUID 解析器上，且女仆没有承载"7 项殖民地属性"的 vanilla 属性表（§4.2）。属于独立立项量级，本文只给出改造清单与风险。
 
@@ -33,21 +33,45 @@
 
 ## 三、阶段一：盟友 + 工作模式
 
-### 3.1 盟友（低成本，可与主线解耦先交付）
+### 3.1 盟友：只认「自己小镇的女仆」
 
-**现状**：`FriendlyForceApi.registerAlly(Predicate<LivingEntity>)`（`api/FriendlyForceApi.java:27`）是唯一入口，判定在 `WandscapeNpc.classify()` 的**最后一步**兜底（`content/npc/entity/WandscapeNpc.java:350-353`），命中即 `AllyKind.EXTERNAL_ALLY`，而 `FriendlyForce.java:66` 的 `case GOLEM, EXTERNAL_ALLY -> true` 表示**恒友军**——不受 PVP 开关收紧、不校验殖民地。
+**裁定（D1/D3）**：盟友**只包含主人属于本殖民地的女仆**；别人小镇的女仆、无主/未驯服女仆**都不是盟友**。
 
-**方案**：新增 `compat/tlm/TlmCompat.java`（`MOD_ID = "touhou_little_maid"` + `ModList.get().isLoaded` 门禁），在 `Wandscape.java:533-536` 的 compat 初始化区加一行 `TlmCompat.init(modEventBus)`，内部注册
+**因此不能用 `FriendlyForceApi.registerAlly`**：那条路登记的是"所有殖民地的**恒**友军"——`FriendlyForce.java:66` 的 `case GOLEM, EXTERNAL_ALLY -> true` 不受 PVP 收紧、不校验殖民地，语义与需求正好相反。（该 API 仍保留给"无主也应当友军"的第三方模组，本次不用。）
+
+**也不能靠既有的 PET 分支**：`EntityMaid extends TamableAnimal`（`_refs/.../entity/passive/EntityMaid.java:172`）已实现 `OwnableEntity`，所以有主女仆**当前就已落 PET 分支**（`WandscapeNpc.java:343`）——但 `PET` 在 `isAlly` 里是 `pvp ? sameColony(...) : true`（`FriendlyForce.java:65`），PVP 关闭时**别人家的女仆同样是恒友军**，不满足"只认自己的"。
+
+**方案**：给 `FriendlyForce.AllyKind` 新增一项 **`COLONY_COMPANION`**（殖民地成员的第三方随从：**同殖民地才友军，与 PVP 开关无关**），`isAlly` 把它并入 `WANDSCAPE_NPC`/`MAGIC_SUMMON`/`TOURIST` 那一组 `sameColony(selfColony, otherColony)`（`FriendlyForce.java:67`），并在 `classify()` 的 **PET 兜底之前**接一条 TLM 分支：
 
 ```java
-api.registerAlly(e -> e instanceof EntityMaid);
+// 车万女仆：有主且主人属于某殖民地 → 仅该殖民地的友军（只查一次 SavedData，与 pvpColony 同口径）
+UUID maidOwner = TlmCompat.getOwnerUuid(e);   // 非女仆 / 无主 → null
+if (maidOwner != null) {
+    var api = WandscapeApis.getColonyApiSilently();
+    return new FriendlyForce.Classified(FriendlyForce.AllyKind.COLONY_COMPANION,
+            api != null ? api.getColonyByFounder(maidOwner) : null);
+}
 ```
 
-**需要注意的语义变化**：`EntityMaid extends TamableAnimal`（`_refs/.../entity/passive/EntityMaid.java:172`），即已实现 `OwnableEntity`，所以**有主女仆当前已落 PET 分支**（`WandscapeNpc.java:343`）：PVP 关 → 恒友军；**PVP 开 → 仅同殖民地友军**。注册后统一升为 `EXTERNAL_ALLY` 恒友军：PVP 开启时**别人的女仆也不会被你的殖民地打**。这是"默认属于盟友"的自然读法，但属于全局行为放宽，需确认接受。
+判定结果逐条对齐需求：
 
-**兼容纪律**：谓词里出现 `EntityMaid` 类型，该 lambda 所在的类不能被无条件加载（否则 TLM 未装时 `NoClassDefFoundError`）。沿用仓库既有写法——`GoetyCompat.java:3` 顶部直接 import 外部类型 + 方法内 `if (!loaded) return;` 早退守卫；Curios/Patchouli 那种更严的"门面零外部类型 + Impl 隔离"是更保险的模板，`TlmCompat` 建议照后者。
+| 实体 | 判定 |
+|---|---|
+| 本殖民地玩家的女仆 | `COLONY_COMPANION` + 同殖民地 → **友军** |
+| 别人小镇玩家的女仆 | `COLONY_COMPANION` + 不同殖民地 → **非友军** |
+| 无主 / 未驯服女仆 | `getOwnerUUID() == null` → 本条不命中，落 PET（同样要求 owner 非空）→ `OTHER` → **非友军** |
+| 主人无小镇的女仆 | 解析为 `null` → `sameColony(本镇, null)` 为假 → **非友军** |
 
-**难度**：极低。约 30-60 行，单文件 + 装配点一行 + `build.gradle`/`gradle.properties` 依赖声明。**可独立提交，不阻塞主线。**
+**「非友军」不等于「会被主动攻击」**：殖民地 NPC 的索敌需要目标是 `Enemy`、被敌对权杖标记、或处于记仇状态；`EntityMaid` 都不是。所以别人家的/无主的女仆对殖民地而言是**中性**——不受友军规则保护（会被法术溅射、会被迫还手、可被敌对权杖标记），但不会被主动追杀。这正是"不是盟友"的应有含义。
+
+**两处必须连带改的**：
+
+1. **用 `getOwnerUUID()` 而非 `getOwner()`**。`EntityMaid.getOwner()` 经 PlayerList 查找（`EntityMaid.java:2719`），主人离线时返回 null，会让离线的自家女仆掉出友军名单；`OwnableEntity.getOwnerUUID()` 是持久化的 UUID。殖民地与创始人 1:1（`ColonyApi.getColonyByFounder`，`api/ColonyApi.java:25`）。
+2. **`isColonySide()` 也要认女仆**（`WandscapeNpc.java:375-382`）。该方法是双向互不侵犯（`isMutuallyFriendly` → `FriendlyTargetingHandler`）的准入门槛，语义是「是否属真实殖民地侧成员」——殖民地成员的女仆属于此类，漏了会让规则自相矛盾。
+
+**兼容纪律（本步最关键的点）**：`classify()` 是友军判定的**唯一咽喉**，每次索敌、伤害结算、记仇都会走到，是全库最热路径之一。因此 `TlmCompat.getOwnerUuid` **必须做到门面零外部类型引用**（照 `compat/curios`、`compat/patchouli` 的「门面 + Impl 隔离」模板，`loaded == true` 才委派 Impl），**不能**照 `GoetyCompat` 那种顶部直接 import 外部类型的写法——TLM 未安装时这个方法每 tick 被调用成千上万次，任何一次触发 `NoClassDefFoundError` 都是崩服。既有先例 `classify()` 第 333/335 行调 `IronSpellsCompat.getSummoner` / `GoetyCompat.getMasterOwner` 是低频调用点，本处要求比它们更严。
+
+**难度**：低。约 3 文件、60-90 行（`FriendlyForce` 枚举 +1 项与 `isAlly` +1 分支、`classify()` +4 行、`isColonySide` +1 行、新增 `compat/tlm/TlmCompat` 门面与 Impl、`build.gradle`/`gradle.properties` 依赖声明）。**可独立提交，不阻塞主线。**
 
 ---
 
@@ -87,15 +111,15 @@ api.registerAlly(e -> e instanceof EntityMaid);
 
 实测边界执行器用到的实体专有方法**只有这些**（逐文件扫 `npc.xxx(` 得到）：
 
-| 方法 | 用途 | 女仆可否满足 |
-|---|---|---|
-| `level()` / `blockPosition()` / `getX/Y/Z()` / `isRemoved()` / `getRandom()` | 通用 | 是（`Entity` 已有） |
-| `getNavigation()` / `teleportTo()` / `isInWater()` / `onGround()` / `maxUpStep()` | 导航 | 是（`PathfinderMob` 已有） |
-| `setAiWanderingEnabled(boolean)` | 抑制游荡 | **否** → 女仆侧转译为"工作时不随机走动"（TLM `IMaidTask#enableLookAndRandomWalk` 返回 false） |
-| `doWorkAnimation(BlockPos)` | 挥手 + 粒子 | 否 → 适配器实现（`maid.swing(MAIN_HAND)` + 同款粒子；建议把 `WandscapeNpc.java:2086` 的粒子段抽成共用工具） |
-| `isFollowMode()` / `isResting()` / `isPeaceMode()` | 调度门槛 | 否 → 女仆恒 `false`（工作模式下）
-| `getFollowerPlayer()` | 跟随者解析 | 否 → 女仆返回主人或 null |
-| `getCurrentMana()` / `getMaxMana()` / `getEffectiveAttribute(AttributeType)` / `getEffectiveArmorValue()` | 魔力门槛与工作速度评分 | 否 → 读女仆自有状态容器（§3.5） |
+| 方法                                                                                                        | 用途          | 女仆可否满足                                                                            |
+|-----------------------------------------------------------------------------------------------------------|-------------|-----------------------------------------------------------------------------------|
+| `level()` / `blockPosition()` / `getX/Y/Z()` / `isRemoved()` / `getRandom()`                              | 通用          | 是（`Entity` 已有）                                                                    |
+| `getNavigation()` / `teleportTo()` / `isInWater()` / `onGround()` / `maxUpStep()`                         | 导航          | 是（`PathfinderMob` 已有）                                                             |
+| `setAiWanderingEnabled(boolean)`                                                                          | 抑制游荡        | **否** → 女仆侧转译为"工作时不随机走动"（TLM `IMaidTask#enableLookAndRandomWalk` 返回 false）        |
+| `doWorkAnimation(BlockPos)`                                                                               | 挥手 + 粒子     | 否 → 适配器实现（`maid.swing(MAIN_HAND)` + 同款粒子；建议把 `WandscapeNpc.java:2086` 的粒子段抽成共用工具） |
+| `isFollowMode()` / `isResting()` / `isPeaceMode()`                                                        | 调度门槛        | 否 → 女仆恒 `false`（工作模式下）                                                            |
+| `getFollowerPlayer()`                                                                                     | 跟随者解析       | 否 → 女仆返回主人或 null                                                                  |
+| `getCurrentMana()` / `getMaxMana()` / `getEffectiveAttribute(AttributeType)` / `getEffectiveArmorValue()` | 魔力门槛与工作速度评分 | 否 → 读女仆自有状态容器（§3.5）                                                               |
 
 合计约 **11 个专有方法** + 一组 `Entity` 通用方法。抽成：
 
@@ -187,7 +211,7 @@ public interface ColonyWorker {
 
 | 步 | 内容 | 触及 | 难度 | 风险 | 可独立验证 |
 |---|---|---|---|---|---|
-| **1** | 盟友注册（`compat/tlm/TlmCompat` + 依赖声明） | 新增 ~1 文件 + 装配点 1 行 + build 文件 | 低 | 低 | 游戏内：殖民地 NPC 不攻击女仆 |
+| **1** | 盟友：新增 `AllyKind.COLONY_COMPANION` + `classify()`/`isColonySide()` 接 TLM 分支 + `compat/tlm/TlmCompat` 门面与 Impl | 改 2 文件、增 2 文件；~60-90 行 | 低 | 低（但触及判定咽喉，门面隔离必须严格） | 游戏内：本镇女仆不被攻击；别人小镇的、无主的女仆仍会被攻击 |
 | **2** | 抽 `ColonyWorker` + 泛化 `EntityComponentBridge`/`NavigationSystem`/5 个 boundary 执行器 | 改 ~10 文件、~600-900 行 | 中 | 中（纯重构，行为须零变化） | `./gradlew build` + 原 NPC 玩法回归 |
 | **3** | TLM 女仆接入：`@LittleMaidExtension` + 工作模式 task + `MaidColonyWorker` 适配器 + `MaidColonyState` + 对账 sweep | 新增 `compat/tlm/**` ~600-900 行 | 中高 | 中高（§五 R1/R2/R3） | 游戏内：女仆选任务后接活、走到工地、执行原子操作、产出进殖民地仓库 |
 
@@ -259,7 +283,7 @@ public interface ColonyWorker {
 | **R2** | 女仆被移除（死亡/魂符收走/换维度/被其它模组处理）时 ECS 残留 | 幽灵 worker 占任务、任务卡死 | 对账式 sweep（§3.4）而非精确生命周期；sweep 检测 `isRemoved()` 即注销并 `releaseTaskForReassign` |
 | **R3** | `AttachmentType` 能否随 `EntityMaid` 存档持久化 | 女仆状态重启即丢 | **动手前必须用 `minecraft-source` skill 读 `Entity#saveWithoutId` / NeoForge attachment 序列化链确认**；不通过则回落自建 SavedData（§3.5 表 B） |
 | **R4** | 女仆无 vanilla 属性表承载 7 项殖民地属性 | 工作速度/魔力结算无源 | 自有 `MaidColonyState` + 复用 `NpcAttributes.computeEffective` 纯函数（§3.5） |
-| **R5** | TLM 未安装时的类加载 | `NoClassDefFoundError` 崩服 | 沿用 `compat/curios` 的门面+Impl 隔离模板，门面零外部类型引用 |
+| **R5** | TLM 未安装时的类加载 | `NoClassDefFoundError` 崩服 | 门面+Impl 隔离，门面零外部类型引用。**本例风险最高**：`TlmCompat.getOwnerUuid` 被挂在 `classify()` 这个判定咽喉上，是全库最热路径之一，不能用 `GoetyCompat` 那种顶部直接 import 的写法（见 §3.1） |
 | **R6** | TLM API 漂移 | 升级 TLM 后兼容层编译失败 | `IMaidTask`/`ILittleMaid` 是 TLM 官方 api 包（非 internal），但仍非冻结契约；`gradle.properties` 锁版本并在升级时回归 |
 | **R7** | 两套库存（ECS `NpcInventory` vs 实体物品栏）不互通 | 女仆挖到的材料不进她自己的背包 | **这不是新问题**——NPC 现在同样如此（`WandscapeNpc.java:505` 的 `SimpleContainer` 与 ECS `NpcInventory` 无互转代码）。女仆与法师行为一致，属可接受 |
 
@@ -274,9 +298,9 @@ public interface ColonyWorker {
 
 | # | 问题 | 备选 | 倾向 |
 |---|---|---|---|
-| D1 | 盟友范围是否包含**无主/未驯服**女仆？ | 全部 `EntityMaid` / 仅有主女仆 | 全部（用户原话"默认属于盟友"） |
+| D1 | 盟友范围 | 全部 `EntityMaid` / 仅有主女仆 / 仅本殖民地主人的女仆 | **已裁定**：只含主人属于本殖民地的女仆；别人小镇的、无主/未驯服的都**不是**盟友（§3.1） |
 | D2 | 女仆归属殖民地的方式 | 按位置自动解析最近殖民地 / 权杖指派 / 女仆站位绑定 | 自动解析为主（低摩擦），后续再评估权杖指派 |
-| D3 | 是否接受 PVP 开启时"别人的女仆"也不再被己方殖民地攻击 | 接受 / 收窄为仅同殖民地 | 接受（`EXTERNAL_ALLY` 的既有语义） |
+| D3 | PVP 开启时别人家的女仆是否算友军 | 算（全局恒友军）/ 不算 | **已裁定**：不算。`COLONY_COMPANION` 恒按「同殖民地」判定，与 PVP 开关无关 |
 | D4 | 女仆工作态是否要在任务面板/概览里与 NPC 并列显示 | 显示 / 不显示 | 显示（否则玩家看不出女仆在干活）；涉及 `TaskPanelSyncTracker`，属阶段一可选项 |
 | D5 | 阶段一是否一并做"女仆专用工作配置界面"（`getTaskConfigGuiProvider`） | 做 / 先不做 | 先不做，等 R1 实测后再定界面需要暴露什么 |
 | D6 | 第 2 步重构是否单独成 commit/分支 | 独立提交 / 与第 3 步合并 | 独立提交——行为不变、可单独回滚，是第 3 步的保险 |
@@ -287,6 +311,8 @@ public interface ColonyWorker {
 
 | 方案 | 否决理由 |
 |---|---|
+| **走 `FriendlyForceApi.registerAlly` 注册全部女仆**（本文初稿方案） | 该 API 登记的是「所有殖民地的**恒**友军」（`FriendlyForce.java:66` 不受 PVP 收紧、不校验殖民地），会让**别人小镇的、无主的女仆**也免疫殖民地攻击，与"只认自己小镇的女仆"相悖。改为在 `classify()` 接殖民地级分支（§3.1） |
+| **复用既有 `PET` 分支，只把 colony 解析出来** | `PET` 在 `isAlly` 里是 `pvp ? sameColony : true`，PVP 关闭时无论如何都恒为友军，表达不了「与 PVP 无关、恒按殖民地判定」（§3.1） |
 | **把女仆"转生"成 `WandscapeNpc`**（换模型贴图冒充） | 丢失 TLM 的全部生态：模型包（geckolib/资源包）、背包、好感度、饰品、AI 任务、`tlm_custom_pack`。等于让玩家二选一，兼容性反而最差 |
 | **女仆侧平行实现一套 worker/施法/策略槽** | 重复实现同一概念，违背"一个概念收敛进该域唯一命名类"的增量约束；且从此每次改动工作链都要改两处 |
 | **只做盟友，不参与工作** | 不满足目标①的"参与城镇建设、接取任务" |
