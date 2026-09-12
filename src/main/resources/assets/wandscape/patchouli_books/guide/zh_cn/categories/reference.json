@@ -1,0 +1,6 @@
+{
+  "name": "指令与工具",
+  "description": "模组指令速查、施法策略、故障排查与创作者工具。",
+  "icon": "minecraft:command_block",
+  "sortnum": 50
+}

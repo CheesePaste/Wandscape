@@ -1,0 +1,18 @@
+{
+  "name": "0.5 Recommended Features",
+  "category": "wandscape:start",
+  "icon": "minecraft:knowledge_book",
+  "sortnum": 1,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "The starter tutorial only covers the town hall, warehouse, and crafting station. Here is a summary of other essential features."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(li)$(l:wandscape:system/economy_guide)Elements & Values$(/l): The economic and magic resource system.$(li)$(l:wandscape:system/mages_guide)Mages$(/l): Town workers and defensive units.$(li)$(l:wandscape:building/altar_guide)Altar$(/l): Revives defeated mages.$(li)$(l:wandscape:building/crafting_guide)Crafting Station$(/l): Weapons, wands, and exploration gear.$(li)$(l:wandscape:building/tavern_guide)Tavern$(/l): Recruit new mage residents.$(li)$(l:wandscape:building/mage_hut_guide)Mage Hut$(/l): Train mage stats and attributes.$(li)$(l:wandscape:road/road_guide)Road System$(/l): Level terrain and pave routes for tourists.",
+      "title": "Highlights"
+    }
+  ]
+}

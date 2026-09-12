@@ -1,0 +1,43 @@
+{
+  "name": "Town Hall",
+  "category": "wandscape:building",
+  "icon": "minecraft:bell",
+  "sortnum": 0,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "The core facility of the colony. It manages the town name, colony level, experience, and reputation, and is the key to attracting wizard NPCs to join. The Town Hall must be built and the colony created before other buildings can operate."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Press $(bold)V$() to open the panel → the $(bold)Government$() category of the build panel → place it. $(bold)Free on first build$().$(br2)After placement, $(bold)right-click$() the Town Hall; the first interaction asks you to $(bold)name the town and create a colony$().",
+      "title": "Building & Enabling"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(bold)Item  Description$()$(li)Town name — Change any time$(li)Level — The colony level; higher levels raise the population cap and unlock more buildings$(li)Experience bar — Progress of running the town; levels up automatically when full$(li)Reputation — Accumulated from tourists leaving satisfied; the higher the reputation, the rarer and richer the tourists entering the gate each day$(li)Blueprint selection — Opens the building selection panel to pick buildings and publish construction plans",
+      "title": "Panel"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "When the colony has no warehouse building, the Town Hall panel gains a $(bold)Warehouse Access$() button — clicking it opens the warehouse deposit/withdraw screen so you can supply materials for later construction. Once a warehouse is built, the button disappears and the warehouse building takes over.",
+      "title": "Acting as a Warehouse When None Exists"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "The bottom of the Town Hall panel has a $(bold)Spawn Tourists$() toggle, $(bold)on by default$() — $(bold)a gold border around the button means it is currently on$(). Turning it off stops this colony from spawning new tourists (tourists already present are unaffected and still tour, shop, and leave normally); click again to turn it back on.$(br2)$(italic)$(#6b5a45)This toggle only controls this colony. A separate global switch, $(#8a5a2b)tourist.spawnEnabled$()$(italic)$(#6b5a45) (default $(#8a5a2b)true$()$(italic)$(#6b5a45)), lives in the config file — turning it off stops $(bold)every$()$(italic)$(#6b5a45) colony from spawning tourists, regardless of each town hall's own toggle.$()",
+      "title": "Spawn Tourists Toggle"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Fallen wizards can only be revived at the $(l:wandscape:building/altar_guide)Altar$(/l), and the altar needs a $(bold)living wizard$() to walk over and cast. So a $(bold)total wipe stalls the altar too$() — when that happens, the $(bold)Revive Wizard$() button at the bottom of this panel lights up with a gold border. One click brings this colony's $(bold)most recently fallen wizard$() back at the $(bold)town hall door$() (also weakened, at 1 HP and 0 mana).$(br2)$(bold)Item  Description$()$(li)Requires — $(bold)Not a single wizard left$() in this colony, and a death record must exist$(li)How many — One click revives $(bold)one$() wizard — the button greys out immediately afterwards$(li)Cooldown — $(bold)5 minutes$(), tracked per colony; the button shows a countdown while it runs$(li)Cost — Free — consumes no materials$(br2)The wizard you get back is your $(bold)only bootstrap point$(): the remaining dead still have to be fetched one by one at the altar by that wizard. So make sure the town has a working altar.",
+      "title": "Fallback Revive After a Total Wipe"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "When tourists with $(bold)all three need bars full$() leave satisfied at night, the town gains experience. The higher a tourist's level relative to the town, the more experience they give. When experience is full, you level up automatically, unlocking advanced building blueprints and raising the population cap.$(br2)$(italic)$(#6b5a45)Advanced buildings require a sufficient colony level; when your level is insufficient, the corresponding blueprints show as locked in the build bar.$()$(br2)$(l:wandscape:building/warehouse_guide)Warehouse & Materials$(/l)$(br2)$(l:wandscape:start/getting_started_guide)Getting Started: From Empty Land to a Tourist Town$(/l)$(br2)$(l:wandscape:contents/index_guide)Back to the Guide Index$(/l)",
+      "title": "Leveling Up"
+    }
+  ]
+}

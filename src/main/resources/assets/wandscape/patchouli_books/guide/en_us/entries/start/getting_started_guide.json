@@ -1,0 +1,58 @@
+{
+  "name": "Getting Started: From Empty Land to a Tourist Town",
+  "category": "wandscape:start",
+  "icon": "minecraft:torch",
+  "sortnum": 2,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "From an empty plot of land to a magic town that earns money, it only takes eight steps. Don't panic — someone else does the work at every step; you only decide what to build and where.$(br2)$(italic)$(#6b5a45)Press $(bold)H$()$(italic)$(#6b5a45) at any time to open this guide, and $(bold)V$()$(italic)$(#6b5a45) to open the panel.$()"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Press $(bold)V$() to open the panel → the $(bold)Build$() icon on the left → the $(bold)Government$() category → select the Town Hall, $(bold)double-click$() to enter placement → move the ghost preview to an empty spot, $(bold)left-click$() to rotate the facing if needed → press $(bold)Submit$() on the right panel to open the construction screen, then $(bold)Submit$() to build. If the position needs fine-tuning: press $(bold)Lock$() (or $(bold)Enter$()) to pin it first, drag the $(bold)3D axis gizmo$() to move it, then submit.$(br2)The Town Hall is the brain of the town — without it you haven't built a town, just a pile of buildings. Once it is built, $(bold)aim your crosshair at it and right-click$() to name your town — that counts as opening for business.$(br2)(By the way: most buildings are $(bold)free on first build$(), and the build bar marks them with a \"First Free\" badge. When you place your first building, the warehouse automatically receives $(bold)6000 of each element$() as startup funds — don't squander them.)",
+      "title": "Step 1: Place the Town Hall"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "There is a $(bold)Warehouse$() in the $(bold)Storage$() category of the build panel — build one.$(br2)All money and materials pass through the warehouse: NPC building, crafting, and gathering all take supplies from here. Open the warehouse to see the town's stock of $(bold)7 elements$() (Earth / Wood / Water / Fire / Metal / Wind / Dark). Deposit the building materials from your inventory so the wizards have materials to use.",
+      "title": "Step 2: Build a Warehouse for Materials"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Tourists $(bold)only walk on paved roads$(). No roads means no tourists — a shop can open its doors and nobody comes in.$(br2)$(li)Press $(bold)V$() → the $(bold)Roads$() icon on the left.$(li)Select $(bold)Replace Mode (REPLACE)$(), and double-click a surface material (stone-brick roads are just fine).$(li)$(bold)Hold left-click and drag a box$() over the ground to select the area to pave, release to finish, then $(bold)Enter$() to pave.$(li)Want curves? Draw them with the $(bold)Spline (SPLINE)$() tool, and let the wizards pave what you drew.$(br2)$(italic)$(#6b5a45)If materials are short, wait for NPCs to automatically synthesize the required building blocks.$()",
+      "title": "Step 3: Pave Roads (The Step You Can't Skip)"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Elements are the town's currency: building and crafting both cost them. $(bold)Element nodes$() are the mint — each type of node produces one fixed element, and wizards will come to harvest automatically.$(br2)$(bold)Aim your crosshair at a node and right-click$() to open its panel, set the harvest count, and click $(bold)Publish Gather$(). Short on an element? Build a few more matching nodes.",
+      "title": "Step 4: Build Element Nodes"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Three production buildings live in the $(bold)Workshop$() category of the build panel:$(br2)$(li)The $(bold)Crafting Station$() makes $(bold)wands$() — wands decide a wizard's combat strength. 12 preset wands unlock across colony levels 1/5/10/20/30, each with different bonuses.$(li)The $(bold)Workstation$() $(bold)decomposes$() unneeded high-tier building materials into elements (about a 1/5 return — for emergencies), and can also $(bold)synthesize$() high-tier blocks and equipment from elements.$(li)The $(bold)Magic Workshop$() synthesizes $(bold)magic scrolls$() from elements — wizards only cast what is loaded into their $(l:wandscape:reference/strategy_guide)strategy bar$(/l), so build one and mass-produce scrolls for a fighting squad. See $(l:wandscape:building/magic_station_guide)Magic Workshop$(/l).",
+      "title": "Step 5: Build Production Workshops"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "For tourists to fill their three need bars (Comfort/Magic/Wonder) here, you need a few supporting buildings:$(br2)$(li)$(bold)Shop$(): tourists buy things, you earn elements — see the $(l:wandscape:building/shop_guide)Shop Guide$(/l).$(li)$(bold)Hotel$(): tourists sleep overnight to restore energy, and also produce elements for the town — see the $(l:wandscape:building/hotel_guide)Hotel Guide$(/l).$(li)$(bold)Relax buildings$() (bathhouses etc.) and $(bold)ATMs$(): the former restores energy, the latter refills travel money — with energy to move around and money to spend, tourists won't leave halfway.",
+      "title": "Step 6: Build Shops, a Hotel, and Supplies"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Wizards don't fall from the sky — recruit them at the $(bold)Tavern$():$(br2)$(li)The Tavern's \"Recruit NPC\" button $(bold)hires a wizard immediately$() (stats rolled from the town's current level). The $(bold)first recruit is free$() per colony; afterwards each recruit costs 10000 of each of the 7 elements — this is how you build up your workforce.$(li)Also, about 5% of tourists are mage tourists: when their $(bold)three need bars are all full$(), they leave a resume at the tavern, where they can be recruited $(bold)for free$().",
+      "title": "Step 7: Build a Tavern and Recruit Wizards"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Tourists with $(bold)all three need bars full$() leave satisfied at night, and the town gains experience; when the experience is full, the Town Hall $(bold)levels up$(), unlocking advanced buildings and raising the population cap. The more satisfied your tourists, the higher the $(bold)reputation$() you accumulate — and the richer the tourists who come to town afterwards. It is a positive loop: better town → more satisfied tourists → even better town.",
+      "title": "Step 8: Leveling Up & Reputation"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Buildings $(bold)never stop working from damage or manual shutdown$() — being hit only loses some blocks visually while the building keeps operating and contributing. To fill in missing blocks, aim at the building in overview mode and click $(bold)Repair$(). The daily settlement still runs as usual — shops restock daily.$(br2)$(l:wandscape:system/overview_guide)Panel & Overview$(/l)$(br2)$(l:wandscape:road/road_guide)Road System Overview$(/l)$(br2)$(l:wandscape:contents/index_guide)Back to the Guide Index$(/l)",
+      "title": "Don't Forget"
+    }
+  ]
+}

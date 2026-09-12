@@ -1,0 +1,28 @@
+{
+  "name": "Mage Hut",
+  "category": "wandscape:building",
+  "icon": "minecraft:red_bed",
+  "sortnum": 7,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "The Mage Hut is the dedicated residence for a colony mage. Assigning a mage to a hut enables $(bold)Attribute Training$(), $(bold)Rank Promotion$(), and $(bold)Management Commands$()."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "When opened while empty:$(br2)$(li)The left panel shows all unassigned colony mages.$(li)Select a candidate and click \"$(bold)Assign to Hut$()\" to move them in.$(li)If no mages are available, recruit new mages at the $(l:wandscape:building/tavern_guide)Tavern$(/l).",
+      "title": "Assigning a Resident"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Resident mages can undergo targeted training across 7 core attributes:$(br2)$(li)$(bold)Health (Max HP)$(): Enhances survivability.$(li)$(bold)Mana (Max Mana)$(): Increases maximum mana capacity.$(li)$(bold)Spell Power$(): Amplifies spell damage and efficacy.$(li)$(bold)Work Speed$(): Speeds up wand building and harvesting.$(li)$(bold)Spell Speed$(): Reduces spell casting and cooldown delays.$(li)$(bold)Armor$(): Reduces incoming physical and magic damage.$(li)$(bold)Movement Speed$(): Increases movement and patrol speed.$(br2)Each training session consumes 2 specific elements from the colony warehouse (e.g. Health = Earth + Metal, Spell Power = Fire + Dark); the per-session cost rises exponentially with training progress — cheap near the bottom, very expensive near the cap. Each attribute has 20 uniform steps to its cap, making the late-game training a sink for surplus elements.",
+      "title": "Attribute Training"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Once a mage moves in, the \"$(bold)Promotion & Commands$()\" card on the right of the hut screen holds the rank promotion and the commands below:$(br2)$(li)Click \"$(bold)Promote$()\" while the mage's level does not exceed the colony level — the mage can climb up to one level above the colony (level 31 at a max-level colony of 30).$(li)Promoting rank increases overall attribute bonuses across all stats.$(li)Promotion costs all 7 elements, $(#8a5a2b)150 × target level$() each (Lv1→2 costs 300 each, Lv9→10 costs 1,500 each) — a gentle, level-scaled cost that never blocks progression.$(li)$(bold)Equip$(): Inspect and swap the mage's robe, wand, and trinkets.$(li)$(bold)Strategy$(): Open this mage's $(l:wandscape:reference/strategy_guide)Cast Strategy$(/l) screen.$(li)$(bold)Rest$(): Call the mage back to the hut to rest and recover.$(li)\"$(bold)Open Warehouse$()\": peek at the colony warehouse's element and item stock.$(br2)$(l:wandscape:reference/npc_guide)Mage NPC Guide$(/l)$(br2)$(l:wandscape:building/tavern_guide)Tavern Guide$(/l)$(br2)$(l:wandscape:reference/strategy_guide)Strategy Guide$(/l)$(br2)$(l:wandscape:contents/index_guide)Return to Index$(/l)",
+      "title": "Promotion & Commands"
+    }
+  ]
+}

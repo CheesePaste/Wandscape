@@ -1,0 +1,28 @@
+{
+  "name": "祭坛",
+  "category": "wandscape:building",
+  "icon": "minecraft:enchanting_table",
+  "sortnum": 6,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "施放$(bold)仪式魔法$()的设施。目前可施放的仪式魔法为$(bold)复活$()。仪式魔法不会由法师在战斗中自动施放，需在祭坛下达。"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(li)按 $(bold)V$() 打开面板，$(bold)准心对准祭坛，右键$()打开祭坛面板。$(li)列表列出可施放的魔法，每行标注$(bold)名称 / 蓝耗 / 冷却 / 引导时长$()。$(li)$(bold)单击$()选中一行（仅高亮，不施放）。$(li)点右下角 $(bold)Submit$()——殖民地派遣一名魔力足够的法师走到祭坛旁施放，法阵在祭坛中心展开。$(li)施放结束前显示「施法中」；每个祭坛的每种魔法$(bold)独立冷却$()，互不干扰。",
+      "title": "施放仪式魔法"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(bold)项目  说明$()$(li)目标 — 本殖民地$(bold)最近死去的一名法师$()，不限死亡地点$(li)效果 — 法师在$(bold)祭坛中心$()重生，名字、外观、属性、背包原样恢复$(li)代价 — 复活状态为$(bold)虚弱$()——1 血 0 蓝，靠脱战回血与魔力回复逐步恢复$(li)前提 — 需存在死亡记录（死亡记录永久留存，复活成功后才删除）$(br2)祭坛需要一名$(bold)在世法师$()走到祭坛旁施放。所以$(bold)全员阵亡时祭坛也停摆$()——这时去$(l:wandscape:building/townhall_guide)市政厅$(/l)，面板上的$(bold)「复活法师」$()按钮会亮起。",
+      "title": "复活"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(li)施放消耗的是$(bold)执行任务的法师$()的魔力；殖民地无魔力足够的法师时无法提交。$(li)$(bold)发布即锁定$()：提交后锁定至施放结束，避免重复施放。$(li)祭坛魔法不在法师的自动施法策略中，需手动到祭坛下达。$(br2)$(l:wandscape:reference/npc_guide)法师 NPC 指南$(/l)$(br2)$(l:wandscape:reference/strategy_guide)施法策略指南$(/l)$(br2)$(l:wandscape:contents/index_guide)返回指南首页$(/l)",
+      "title": "提示"
+    }
+  ]
+}

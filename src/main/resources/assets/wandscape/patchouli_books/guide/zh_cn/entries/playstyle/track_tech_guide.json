@@ -1,0 +1,18 @@
+{
+  "name": "3，科技线",
+  "category": "wandscape:playstyle",
+  "icon": "minecraft:redstone",
+  "sortnum": 2,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "科技线专注于自动化魔力提取、工业化生产流水线与全自动仓储物流网络。"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(li)$(bold)魔力枢纽与节点$()：通过 $(l:wandscape:building/node_guide)魔力节点$(/l) 与 $(l:wandscape:building/altar_guide)祭坛$(/l) 构建自动化魔力传输网络。$(li)$(bold)生产与工坊$()：利用 $(l:wandscape:building/workstation_guide)工坊$(/l) 与 $(l:wandscape:building/crafting_guide)合成站$(/l) 委托法师全天候自动加工。$(li)$(bold)仓储总线$()：$(l:wandscape:building/warehouse_guide)仓库网络$(/l) 自动调配物资，实现自给自足。",
+      "title": "科技主干"
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "name": "Wandscape 引导系统 Markdown 测试",
+  "category": "wandscape:reference",
+  "icon": "minecraft:debug_stick",
+  "sortnum": 7,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "欢迎来到 $(bold)Wandscape$() 模组内置的 Markdown 视窗测试页面！本渲染器专门为 Minecraft NeoForge 界面打造。"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(li)$(bold)加粗样式$()：这是 $(bold)Bold Text$() 示范。$(li)$(italic)斜体样式$()：这是 $(italic)Italic Text$() 示范。$(li)$(strike)删除线$()：这是 $(strike)Strikethrough$() 示范。$(li)行内代码：可以通过 $(#8a5a2b)WandscapeApis.getColonyApi()$() 访问接口。$(br2)$(italic)$(#6b5a45)$(bold)中世纪智慧$()$(italic)$(#6b5a45)：保持良好的游客声望与充足的元素积累，是拓展魔法小镇领土与科技的决定性关键。$()",
+      "title": "1. 排版与富文本样式"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "点击下方链接体验文档间跳转与游戏内动作：$(br2)$(l:wandscape:building/townhall_guide)跳转至 市政厅指南$(/l)$(br2)$(l:wandscape:building/warehouse_guide)跳转至 仓库与物流指南$(/l)$(br2)开启选建鸟瞰模式",
+      "title": "2. 交互动作与跨文档跳转"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "以下展示渲染器对图像及动态动画的自动切片支持：",
+      "title": "3. 动态图像与动画"
+    },
+    {
+      "type": "patchouli:image",
+      "images": [
+        "wandscape:textures/gui/guidebook/sample.png"
+      ],
+      "text": "测试演示纹理"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(li)支持读取 Minecraft 资源包中的静态 PNG 图片$(li)支持自动金边画框修饰与水平居中排版$(li)支持 $(#8a5a2b).gif$() 格式多帧动态动画序列播放$(br2)$(li)第一步：放置市政厅与初始建筑$(li)第二步：铺设连接道路引导游客入城$(li)第三步：建造商店与酒馆赚取元素收益"
+    }
+  ]
+}

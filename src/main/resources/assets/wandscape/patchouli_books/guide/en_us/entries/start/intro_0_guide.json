@@ -1,0 +1,23 @@
+{
+  "name": "0. Getting Started",
+  "category": "wandscape:start",
+  "icon": "minecraft:writable_book",
+  "sortnum": 0,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "This chapter covers the in-game starter tutorial. Players who have completed it can skip this page."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Press the $(bold)V key$() (default binding) to enter the top-down town management panel.$(br2)From here, you can survey your terrain and switch sub-modes to plan constructions.",
+      "title": "Step 1: Open the Management Panel"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(li)Press $(bold)1$() to enter building sub-mode.$(li)Select the $(bold)Town Hall$() and place it on the ground.$(li)Build a $(bold)Warehouse$() to store supplies and currency.$(li)Build a $(bold)Crafting Station$() for mages to craft supplies.",
+      "title": "Step 2: Build Core Buildings"
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "name": "Overview",
+  "category": "wandscape:contents",
+  "icon": "wandscape:guide_book",
+  "sortnum": 0,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "Wandscape is a simulation and colony mod themed around magic and town building."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(li)$(l:wandscape:start/intro_0_guide)0. Getting Started$(/l)$(li)$(l:wandscape:start/intro_0_5_guide)0.5 Recommended Features$(/l)$(li)$(l:wandscape:playstyle/track_tourist_guide)1. Tourist Track$(/l)$(li)$(l:wandscape:playstyle/track_adventure_guide)2. Adventure Track$(/l)$(li)$(l:wandscape:playstyle/track_tech_guide)3. Tech Track$(/l)$(li)$(l:wandscape:playstyle/track_diplomacy_guide)4. Diplomacy Track$(/l)",
+      "title": "Gameplay Tracks"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(li)$(l:wandscape:system/economy_guide)Elements and Values$(/l)$(li)$(l:wandscape:system/panel_guide)Management Panel$(/l)$(li)$(l:wandscape:system/buildings_guide)Buildings$(/l)$(li)$(l:wandscape:system/mages_guide)Mages$(/l)$(li)$(l:wandscape:system/tourists_guide)Tourists$(/l)",
+      "title": "System Features"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(li)$(l:wandscape:reference/commands_guide)Command Reference$(/l)$(li)$(l:wandscape:about/creators_guide)About Us$(/l)",
+      "title": "Miscellaneous"
+    }
+  ]
+}

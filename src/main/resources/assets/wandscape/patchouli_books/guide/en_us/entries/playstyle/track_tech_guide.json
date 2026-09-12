@@ -1,0 +1,18 @@
+{
+  "name": "3. Tech Track",
+  "category": "wandscape:playstyle",
+  "icon": "minecraft:redstone",
+  "sortnum": 2,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "The tech track focuses on automation, production lines, and warehouse distribution."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(li)$(bold)Mana Grid$(): Transfer energy automatically using $(l:wandscape:building/node_guide)Mana Nodes$(/l) and the $(l:wandscape:building/altar_guide)Altar$(/l).$(li)$(bold)Workshops$(): Delegate mass production to mages via $(l:wandscape:building/workstation_guide)Workstations$(/l).$(li)$(bold)Logistics$(): The $(l:wandscape:building/warehouse_guide)Warehouse Network$(/l) automates transport and supply.",
+      "title": "Core Pillars"
+    }
+  ]
+}

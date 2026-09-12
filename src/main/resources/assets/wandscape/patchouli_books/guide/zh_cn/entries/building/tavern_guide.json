@@ -1,0 +1,28 @@
+{
+  "name": "酒馆",
+  "category": "wandscape:building",
+  "icon": "minecraft:brewing_stand",
+  "sortnum": 8,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "招募法师的建筑，提供「招募 NPC」和「法师简历」两个页签。"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "点「$(bold)招募 NPC$()」按钮，立即生成一名法师，属性按小镇$(bold)当前等级$()掷点。$(br2)$(bold)项目  说明$()$(li)首次 — 每殖民地$(bold)免费$()一次$(li)之后 — 每次消耗 $(bold)7 种元素各 10000$()$(li)属性 — 按当前等级掷点，可能掷出高属性专精",
+      "title": "招募 NPC"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "约 $(bold)5% 的游客是法师游客$()。他们三条需求条$(bold)全满$()时会在酒馆留下简历，可$(bold)免费雇佣$()——这是攒法师的主力渠道。$(br2)$(li)每份简历最多保留 $(bold)5 份$()，不想要的简历选中后点「$(bold)拒绝$()」即可移除（会弹确认框）。",
+      "title": "法师简历"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(li)招募成功的法师满蓝入职，立即开始工作。$(li)想增加简历来源：见$(l:wandscape:reference/tourist_guide)游客指南$(/l)了解如何让游客填满需求条。$(li)法师的属性、装备与战斗策略见$(l:wandscape:reference/npc_guide)法师 NPC 指南$(/l)。$(br2)$(l:wandscape:reference/npc_guide)法师 NPC 指南$(/l)$(br2)$(l:wandscape:reference/tourist_guide)游客系统指南$(/l)$(br2)$(l:wandscape:start/getting_started_guide)新手入门：从空城到游客小镇$(/l)$(br2)$(l:wandscape:contents/index_guide)返回指南首页$(/l)",
+      "title": "提示"
+    }
+  ]
+}

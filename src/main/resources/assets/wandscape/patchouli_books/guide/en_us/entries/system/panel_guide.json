@@ -1,0 +1,23 @@
+{
+  "name": "Management Panel",
+  "category": "wandscape:system",
+  "icon": "minecraft:compass",
+  "sortnum": 1,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "The management panel is your master console for town interaction."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Press the $(bold)V key$() (configurable in controls) to enter the top-down view and open the console.",
+      "title": "How to Open"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(li)$(bold)Target Focus$(): Hover over any mage or building to see a white bounding box. $(bold)Right-click$() to open their detail screen.$(li)$(bold)Sub-mode Keys$(): Press number keys 1-4:$(li)$(bold)1 -> Building Mode$(): Select, rotate, and place buildings.$(li)$(bold)2 -> Road Mode$(): Level ground and pave paths.$(li)$(bold)3 -> Task Hall$(): Inspect ongoing jobs and mage tasks.$(li)$(bold)4 -> Settings$(): Configure mod options.",
+      "title": "Basic Operations"
+    }
+  ]
+}

@@ -4,6 +4,6 @@
   "subtitle": "wandscape.guide_book.subtitle",
   "book_texture": "wandscape:textures/gui/guidebook/book.png",
   "use_resource_pack": true,
-  "show_progress": true,
+  "show_progress": false,
   "text_overflow_mode": "resize"
 }

@@ -1,0 +1,23 @@
+{
+  "name": "Tourists",
+  "category": "wandscape:system",
+  "icon": "minecraft:emerald",
+  "sortnum": 5,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "Tourists are your primary economic engine and popularity benchmark."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(li)$(bold)Three Needs (Satisfaction, Magic, Wonder)$(): Interactions increase these values, contributing town XP when maxed out.$(li)$(bold)Wallet$(): Maximum element coin spending ceiling.$(li)$(bold)Stay$(): Maximum consecutive days the tourist will reside in town.$(li)$(bold)Energy$(): Number of facilities the tourist visits each day.",
+      "title": "Four Attributes"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Tourists queue up at interaction spots. At dusk, they seek beds in a $(l:wandscape:building/hotel_guide)Hotel$(/l). If no rooms are vacant, they depart disappointed at dawn.",
+      "title": "Routines"
+    }
+  ]
+}

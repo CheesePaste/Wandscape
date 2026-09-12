@@ -1,0 +1,18 @@
+{
+  "name": "2. Adventure Track",
+  "category": "wandscape:playstyle",
+  "icon": "minecraft:iron_sword",
+  "sortnum": 1,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "The adventure track is tailored for combat, spell development, and wilderness exploration."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(li)$(bold)Recruit Wizards$(): Hire battle mages at the $(l:wandscape:building/tavern_guide)Tavern$(/l) and train them at the $(l:wandscape:building/mage_hut_guide)Mage Hut$(/l).$(li)$(bold)Gear & Spell Tactics$(): Craft wands at the $(l:wandscape:building/crafting_guide)Crafting Station$(/l) and set spell triggers in $(l:wandscape:reference/strategy_guide)Tactics$(/l).$(li)$(bold)Wilderness Cleansing$(): Lead mage followers into hostile camps to claim rare elements.",
+      "title": "Progression"
+    }
+  ]
+}

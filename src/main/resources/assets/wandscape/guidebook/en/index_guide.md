@@ -1,55 +1,25 @@
-# Wandscape Guide
+# Overview
 
-Welcome to Wandscape. Turning it into a magic town starts here.
+Wandscape is a simulation and colony mod themed around magic and town building.
 
-Wandscape is a management sim mod: you place buildings, and **wizard NPCs do the work for you** (building, gathering, crafting, guarding), while **tourists walk along the roads to spend in town**. Your job is to decide where the town goes. This book can be opened at any time with the **H** key.
+## Gameplay Tracks
 
-> Playing for the first time? Read [Getting Started: From Empty Land to a Tourist Town](getting_started_guide.md) first — it walks through the full game loop.
+- [0. Getting Started](guidebook:intro_0_guide)
+- [0.5 Recommended Features](guidebook:intro_0_5_guide)
+- [1. Tourist Track](guidebook:track_tourist_guide)
+- [2. Adventure Track](guidebook:track_adventure_guide)
+- [3. Tech Track](guidebook:track_tech_guide)
+- [4. Diplomacy Track](guidebook:track_diplomacy_guide)
 
-## Building & Town
+## System Features
 
-- [Panel & Overview](overview_guide.md) — press V, everything starts here
-- [Building Scanner](scanner_guide.md) — survival players turn houses they built into blueprints so NPCs can rebuild them
-- [Creative Building Scanner](creative_scanner_guide.md) — a creator tool: interact spots, business parameters, decoration export
+- [Elements and Values](guidebook:economy_guide)
+- [Management Panel](guidebook:panel_guide)
+- [Buildings](guidebook:buildings_guide)
+- [Mages](guidebook:mages_guide)
+- [Tourists](guidebook:tourists_guide)
 
-## Road System
+## Miscellaneous
 
-Tourists only walk on paved roads. No roads means no tourists; shops won't get visitors even when open.
-
-- [Road System Overview](road_guide.md)
-- [Replace Mode (Surface Paving)](road_replace_guide.md)
-- [Fill & Destroy](road_fill_guide.md)
-- [Spline Editor (Curves & Interchanges)](road_spline_guide.md)
-
-## Buildings & Facilities
-
-- [Town Hall](townhall_guide.md)
-- [Warehouse](warehouse_guide.md)
-- [Crafting Station (Wands)](crafting_guide.md)
-- [Magic Workshop (Magic Scrolls)](magic_station_guide.md)
-- [Workstation (Decompose & Synthesize)](workstation_guide.md)
-- [Element Node](node_guide.md)
-- [Altar (Revive)](altar_guide.md)
-- [Mage Hut (Residence & Training)](mage_hut_guide.md)
-- [Tavern (Recruiting Wizards)](tavern_guide.md)
-- [Shop (Selling to Tourists)](shop_guide.md)
-- [Hotel & Service Buildings (Overnight / Element Production)](hotel_guide.md)
-- Relax buildings (bathhouses etc., restore energy) and ATMs (refill travel money) — see the [Tourist System Guide](tourist_guide.md)
-
-## NPCs & Tourists
-
-- [Wizard NPC Guide](npc_guide.md)
-- [Cast Strategy Guide](strategy_guide.md)
-- [Tourist System Guide](tourist_guide.md) — the three need bars, profiles, and four types of tourist buildings
-
-## Operations & Failures
-
-- [Building Maintenance & Repair](anomaly_guide.md)
-
-## Creator Tools
-
-- [Magic Circle Web Editor](magic_circle_editor_guide.md)
-
-## About
-
-- [Creators & Special Thanks](guidebook:creators_guide)
+- [Command Reference](guidebook:commands_guide)
+- [About Us](guidebook:creators_guide)

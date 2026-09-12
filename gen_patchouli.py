@@ -47,30 +47,24 @@ CATEGORIES = [
      "本手册的总目录。第一次玩先读「新手入门」，它讲完整游戏循环。",
      "The table of contents. New players should start with Getting Started."),
     ("start", "新手入门", "Getting Started", "minecraft:torch", 0,
-     "从空地到能赚钱的魔法小镇，分八步完成。",
-     "From empty land to a working magical town, in eight steps."),
-    ("town", "建造与城镇", "Building & Town", "minecraft:stone_bricks", 10,
-     "面板、鸟瞰视角与建筑扫描器——把建筑放进世界的第一步。",
-     "The panel, overview mode, and the building scanners."),
-    ("road", "道路系统", "Road System", "minecraft:dirt_path", 20,
-     "游客只走铺好的路。没有路就没有游客。",
-     "Tourists only walk on paved roads. No roads, no tourists."),
+     "从空地到能运作的魔法小镇，包含完整的新手引导与必备知识。",
+     "From empty land to a working magical town, beginner guides and essential knowledge."),
+    ("playstyle", "玩法主线", "Gameplay Tracks", "minecraft:compass", 10,
+     "游客线、冒险线、科技线与外交线四大主要玩法路线。",
+     "Tourist, adventure, technology, and diplomacy progression paths."),
+    ("system", "通用功能", "System Features", "minecraft:book", 20,
+     "元素经济、管理面板、建筑、法师与游客机制概览。",
+     "Elements, management panel, buildings, mages, and tourist mechanics."),
     ("building", "建筑与设施", "Buildings & Facilities", "minecraft:bell", 30,
      "市政厅、仓库、生产工坊与各类服务建筑的运作方式。",
      "How the town hall, warehouse, workshops and service buildings work."),
-    ("npc", "法师与游客", "Wizards & Tourists", "wandscape:wandscape_npc_spawn_egg", 40,
-     "法师 NPC 的招募、训练与施法；游客的三条需求条。",
-     "Recruiting and training wizard NPCs; the tourists' three need bars."),
-    ("ops", "经营与故障", "Operations & Failures", "minecraft:anvil", 50,
-     "建筑维护、修复与施工进度。",
-     "Building maintenance, repair, and construction progress."),
-    ("creator", "创作者工具", "Creator Tools", "minecraft:painting", 60,
-     "给创作者与整合包作者的工具。",
-     "Tools for creators and modpack authors."),
-    ("reference", "指令与参考", "Commands & Reference", "minecraft:command_block", 70,
-     "/wandscape 指令速查与指南系统说明。",
-     "/wandscape command reference and guide-system notes."),
-    ("about", "关于", "About", "minecraft:golden_apple", 80,
+    ("road", "道路系统", "Road System", "minecraft:dirt_path", 40,
+     "游客只走铺好的路。没有路就没有游客。",
+     "Tourists only walk on paved roads. No roads, no tourists."),
+    ("reference", "指令与工具", "Commands & Tools", "minecraft:command_block", 50,
+     "模组指令速查、施法策略、故障排查与创作者工具。",
+     "Command reference, spell tactics, troubleshooting and creator tools."),
+    ("about", "关于", "About", "minecraft:golden_apple", 60,
      "制作者、鸣谢与反馈渠道。",
      "Credits, thanks, and where to send feedback."),
 ]
@@ -78,14 +72,23 @@ CATEGORIES = [
 # 条目：(md 文件名去掉 .md, 所属分类, 图标, sortnum)。条目名取 md 的 H1。
 ENTRIES = [
     ("index_guide", "contents", "wandscape:guide_book", 0),
-    ("getting_started_guide", "start", "minecraft:writable_book", 0),
-    ("overview_guide", "town", "minecraft:compass", 0),
-    ("scanner_guide", "town", "minecraft:spyglass", 1),
-    ("creative_scanner_guide", "town", "minecraft:structure_block", 2),
-    ("road_guide", "road", "minecraft:dirt_path", 0),
-    ("road_replace_guide", "road", "minecraft:smooth_stone", 1),
-    ("road_fill_guide", "road", "minecraft:shovel", 2),
-    ("road_spline_guide", "road", "minecraft:lead", 3),
+    # start:
+    ("intro_0_guide", "start", "minecraft:writable_book", 0),
+    ("intro_0_5_guide", "start", "minecraft:knowledge_book", 1),
+    ("getting_started_guide", "start", "minecraft:torch", 2),
+    # playstyle:
+    ("track_tourist_guide", "playstyle", "wandscape:tourist_spawn_egg", 0),
+    ("track_adventure_guide", "playstyle", "minecraft:iron_sword", 1),
+    ("track_tech_guide", "playstyle", "minecraft:redstone", 2),
+    ("track_diplomacy_guide", "playstyle", "minecraft:paper", 3),
+    # system:
+    ("economy_guide", "system", "wandscape:element_earth", 0),
+    ("panel_guide", "system", "minecraft:compass", 1),
+    ("overview_guide", "system", "minecraft:spyglass", 2),
+    ("buildings_guide", "system", "minecraft:stone_bricks", 3),
+    ("mages_guide", "system", "wandscape:wandscape_npc_spawn_egg", 4),
+    ("tourists_guide", "system", "minecraft:emerald", 5),
+    # building:
     ("townhall_guide", "building", "minecraft:bell", 0),
     ("warehouse_guide", "building", "minecraft:chest", 1),
     ("crafting_guide", "building", "wandscape:wand", 2),
@@ -97,13 +100,22 @@ ENTRIES = [
     ("tavern_guide", "building", "minecraft:brewing_stand", 8),
     ("shop_guide", "building", "minecraft:emerald", 9),
     ("hotel_guide", "building", "minecraft:light_blue_bed", 10),
-    ("npc_guide", "npc", "wandscape:wandscape_npc_spawn_egg", 0),
-    ("strategy_guide", "npc", "minecraft:enchanted_book", 1),
-    ("tourist_guide", "npc", "wandscape:tourist_spawn_egg", 2),
-    ("anomaly_guide", "ops", "minecraft:anvil", 0),
-    ("magic_circle_editor_guide", "creator", "minecraft:painting", 0),
-    ("test_guide", "creator", "minecraft:debug_stick", 1),
-    ("commands_guide", "reference", "minecraft:command_block", 0),
+    # road:
+    ("road_guide", "road", "minecraft:dirt_path", 0),
+    ("road_replace_guide", "road", "minecraft:smooth_stone", 1),
+    ("road_fill_guide", "road", "minecraft:shovel", 2),
+    ("road_spline_guide", "road", "minecraft:lead", 3),
+    # reference:
+    ("npc_guide", "reference", "wandscape:wandscape_npc_spawn_egg", 0),
+    ("strategy_guide", "reference", "minecraft:enchanted_book", 1),
+    ("tourist_guide", "reference", "wandscape:tourist_spawn_egg", 2),
+    ("anomaly_guide", "reference", "minecraft:anvil", 3),
+    ("scanner_guide", "reference", "minecraft:spyglass", 4),
+    ("creative_scanner_guide", "reference", "minecraft:structure_block", 5),
+    ("magic_circle_editor_guide", "reference", "minecraft:painting", 6),
+    ("test_guide", "reference", "minecraft:debug_stick", 7),
+    ("commands_guide", "reference", "minecraft:command_block", 8),
+    # about:
     ("creators_guide", "about", "minecraft:golden_apple", 0),
 ]
 
@@ -162,14 +174,29 @@ def link_command(target, warn):
         if t.startswith(prefix):
             t = t[len(prefix):].strip()
             break
+    anchor = ""
+    if "#" in t:
+        t, _, anchor = t.partition("#")
     if t.endswith(".md"):
         t = t[:-3]
-    elif t not in _VALID_TARGETS:
+
+    doc_to_cat = {e[0]: e[1] for e in ENTRIES}
+    cat_ids = {c[0] for c in CATEGORIES}
+
+    if t in doc_to_cat:
+        target_path = "%s/%s" % (doc_to_cat[t], t)
+    elif t in cat_ids:
+        target_path = t
+    elif "/" in t:
+        target_path = t
+    else:
         # 既不是 .md 相对链接、也不是本手册的条目/分类 id（如 #锚点、action:…）
         return None
-    if _VALID_TARGETS and t not in _VALID_TARGETS:
-        warn("链接指向不存在的手册条目/分类：%s（游戏内会显示 BAD LINK）" % t)
-    return "$(l:%s:%s)" % (NS, t)
+
+    if anchor:
+        target_path += "#" + anchor
+
+    return "$(l:%s:%s)" % (NS, target_path)
 
 
 def parse_link(text, i):

@@ -1,0 +1,6 @@
+{
+  "name": "Road System",
+  "description": "Tourists only walk on paved roads. No roads, no tourists.",
+  "icon": "minecraft:dirt_path",
+  "sortnum": 40
+}

@@ -1,0 +1,23 @@
+{
+  "name": "0，入门",
+  "category": "wandscape:start",
+  "icon": "minecraft:writable_book",
+  "sortnum": 0,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "本章内容为游戏内新手教程的完整整理，已经通过新手教程的玩家可以无视。"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "首先，在游戏内按下 $(bold)V 键$()（默认按键，可在按键绑定中调整），即可进入小镇的俯瞰管理面板。$(br2)在管理面板中，你可以通过数字键切换子模式，俯瞰小镇地形，并进行建筑规划。",
+      "title": "第一步：开启管理面板"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(li)在管理面板中按数字键 $(bold)1$() 进入建筑子模式。$(li)选择 $(bold)市政厅$() 并放置在地面上，确定小镇的核心枢纽。$(li)建造 $(bold)仓库$() 以存放小镇物资与货币。$(li)建造 $(bold)合成站$() 供法师进行物资制作与装备补给。",
+      "title": "第二步：建立核心建筑"
+    }
+  ]
+}

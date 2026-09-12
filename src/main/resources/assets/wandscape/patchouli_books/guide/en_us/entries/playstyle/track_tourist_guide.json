@@ -1,0 +1,23 @@
+{
+  "name": "1. Tourist Track",
+  "category": "wandscape:playstyle",
+  "icon": "wandscape:tourist_spawn_egg",
+  "sortnum": 0,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "The tourist track focuses on casual town management. Once your first visitor-interactive building is ready, tourists will arrive the next morning."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(li)$(bold)Satisfy Tourists$(): Boost Satisfaction, Magic, and Wonder to increase town experience.$(li)$(bold)Deploy Shops & Services$(): Balance $(l:wandscape:building/shop_guide)Shops$(/l) to earn element coins.$(li)$(bold)Build Hotels$(): Keep tourists overnight with $(l:wandscape:building/hotel_guide)Hotels$(/l).",
+      "title": "Core Goals"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(li)$(l:wandscape:system/tourists_guide)Tourists Guide$(/l)$(li)$(l:wandscape:building/shop_guide)Shop Guide$(/l)$(li)$(l:wandscape:building/hotel_guide)Hotel Guide$(/l)",
+      "title": "Recommended Reading"
+    }
+  ]
+}

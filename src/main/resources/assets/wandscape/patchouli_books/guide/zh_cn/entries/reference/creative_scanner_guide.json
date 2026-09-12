@@ -1,0 +1,43 @@
+{
+  "name": "创造建筑扫描器",
+  "category": "wandscape:reference",
+  "icon": "minecraft:structure_block",
+  "sortnum": 5,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "这篇写给创作者和地图作者。$(bold)创造建筑扫描器是创造模式工具，生存模式拿不到$()——它能把建筑连同$(bold)游客交互位、装饰实体、整套经营参数$()一起导出，做出\"有灵魂\"的建筑。普通玩家用$(l:wandscape:reference/scanner_guide)建筑扫描器$(/l)复制房子就够了。"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "放两个方块：$(bold)SAVE（主）$() 和 $(bold)CORNER（角点）$()，填相同的结构名，64 格内自动配对算出包围盒，不用手动录坐标。",
+      "title": "结构配对"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(li)$(bold)边界$()：X/Y/Z 各 ±1 按钮微调包围盒大小。$(li)$(bold)门偏移$()：自动检门，多扇门循环切换。$(li)$(bold)元数据$()：建筑 ID、名称、制作者、舒适/魔法/奇观三值、解锁等级。$(li)$(bold)预设预存$()：把整套配置存成预设，下次直接加载。",
+      "title": "在面板里把建筑\"装修\"齐全"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "想让游客在建筑里$(bold)真的做动作$()（而不是站桩发呆）？用 $(#8a5a2b)interact_spot_marker$() 方块在世界里标记一个\"站位\"：$(br2)$(li)$(bold)放置$()：往地上放一个 marker，就是一个交互位——立刻会有一个$(bold)预览假人$()站上去，循环演示这个位置的动作。$(li)$(bold)右键$()：循环切换动作——$(bold)浏览 / 用餐 / 泡澡 / 看展 / 冥想 / 歇脚 / 取现$()。$(li)$(bold)潜行右键$()：循环切换朝向（北/东/南/西），游客做动作时会面朝这个方向。$(li)$(bold)敲掉$()：移除该交互位。$(br2)几条约定：$(bold)交互位数量 = 同一时间最多能在这交互的游客数$()（满了后面的人排队）；交互位占的那格在蓝图里自动留空，别把关键结构方块压在它下面；建筑旋转时，交互位朝向会跟着一起转。",
+      "title": "游客交互位（interact spots）"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "物品展示框、画这类$(bold)实体$()（不是方块）也能被扫进去：导出时会捕获它们的种类、朝向和内容，NPC 重建时原样还原。挂墙上的装饰从此不会丢。",
+      "title": "装饰实体"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(bold)类别  能配什么$()$(li)$(bold)商店 shop$() — 利润率、交互时长、$(bold)上架商品列表$()（每件商品带舒适/魔法/奇观三值）$(li)$(bold)服务 service$() — 每次消耗游客多少精力、产出的元素、$(bold)最大住宿$()（>0 就是旅店）、交互时长$(li)$(bold)放松 relax$() — 每次恢复游客多少精力、交互时长$(li)$(bold)取现 atm$() — 每次可取多少钱、交互时长",
+      "title": "四类游客建筑的经营参数"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "配完点「$(bold)导出建筑 JSON$()」——导出会带上交互位、装饰实体和整套经营参数，$(bold)立即在游戏内生效$()，$(#8a5a2b)/reload$() 也在。$(br2)$(l:wandscape:reference/scanner_guide)建筑扫描器（生存玩家复制建筑）$(/l)$(br2)$(l:wandscape:reference/tourist_guide)游客系统指南$(/l)$(br2)$(l:wandscape:contents/index_guide)返回指南首页$(/l)",
+      "title": "导出"
+    }
+  ]
+}

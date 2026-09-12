@@ -1,0 +1,28 @@
+{
+  "name": "概览",
+  "category": "wandscape:contents",
+  "icon": "wandscape:guide_book",
+  "sortnum": 0,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "Wandscape（魔法小镇）是一个以魔法与城镇建设为主题的模拟经营模组。"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(li)$(l:wandscape:start/intro_0_guide)0，入门$(/l)$(li)$(l:wandscape:start/intro_0_5_guide)0.5，推荐了解的功能$(/l)$(li)$(l:wandscape:playstyle/track_tourist_guide)1，游客线$(/l)$(li)$(l:wandscape:playstyle/track_adventure_guide)2，冒险线$(/l)$(li)$(l:wandscape:playstyle/track_tech_guide)3，科技线$(/l)$(li)$(l:wandscape:playstyle/track_diplomacy_guide)4，外交线$(/l)",
+      "title": "玩法导航"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(li)$(l:wandscape:system/economy_guide)元素与三值$(/l)$(li)$(l:wandscape:system/panel_guide)管理面板$(/l)$(li)$(l:wandscape:system/buildings_guide)建筑体系$(/l)$(li)$(l:wandscape:system/mages_guide)法师$(/l)$(li)$(l:wandscape:system/tourists_guide)游客$(/l)",
+      "title": "通用功能导航"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(li)$(l:wandscape:reference/commands_guide)指令速查$(/l)$(li)$(l:wandscape:about/creators_guide)关于我们$(/l)",
+      "title": "其他"
+    }
+  ]
+}
