@@ -59,7 +59,13 @@ public final class AltarCastExecutor implements OpExecutor<AtomicOp.AltarCastOp>
     @Override
     public CompletableFuture<Void> execute(AtomicOp.AltarCastOp op, World world, long npcId) {
         WandscapeNpc npc = EntityComponentBridge.INSTANCE.getNpc(npcId);
-        if (npc == null || npc.isRemoved() || !(npc.level() instanceof ServerLevel level)) {
+        if (npc == null) {
+            // 同 GuardAttackExecutor：祭坛施法只认本模组法师，拿不到就是空转完成。
+            // 调度侧有 caster_only 挡着，走到这里说明是从别的入口发的任务，别静默。
+            Log.warn(TAG, "altar cast: worker {} is not a colony mage — task completes without effect", npcId);
+            return CompletableFuture.completedFuture(null);
+        }
+        if (npc.isRemoved() || !(npc.level() instanceof ServerLevel level)) {
             return CompletableFuture.completedFuture(null);
         }
         MagicDef def = SpellbookLoader.getSpec(op.magicId());

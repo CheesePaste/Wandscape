@@ -182,7 +182,7 @@ public class WandscapeRitualOps implements RitualOps {
                     dest = findSafeLanding(serverLevel, target);
                     // 若目标原点未能找到安全落点，且工作者处于跟随模式，尝试以跟随玩家实时位置重试搜索
                     if (dest == null && worker.isFollowMode() && worker.getFollowerUuid() != null) {
-                        var follower = serverLevel.getPlayerByUUID(worker.getFollowerUuid());
+                        Player follower = resolveFollower(serverLevel, worker.getFollowerUuid());
                         if (follower != null) {
                             dest = findSafeLanding(serverLevel, new GridPos(follower.getBlockX(), follower.getBlockY(), follower.getBlockZ()));
                         }
@@ -217,6 +217,21 @@ public class WandscapeRitualOps implements RitualOps {
         }
 
         Log.warn(TAG, "[RitualOps] Unknown ritual '{}' at {} — no-op", ritual.id(), target);
+    }
+
+    /**
+     * 解析跟随者玩家，供"原点无安全落点时以跟随者位置重试"用。
+     *
+     * <p>等价于旧的 {@code WandscapeNpc.getFollowerPlayer()}：先查玩家表，被玩家表漏掉但存在于
+     * 实体表的目标（fake player 等）再兜一次，且两处都要求**存活且未被移除**——否则会以尸体的
+     * 位置当传送锚点。{@code ColonyWorker} 只给 UUID（把"解析玩家"留给调用方），这几条守卫
+     * 就得由调用方自己带上。
+     */
+    private static Player resolveFollower(ServerLevel level, java.util.UUID uuid) {
+        Player p = level.getPlayerByUUID(uuid);
+        if (p != null && p.isAlive() && !p.isRemoved()) return p;
+        net.minecraft.world.entity.Entity e = level.getEntity(uuid);
+        return (e instanceof Player p2 && p2.isAlive() && !p2.isRemoved()) ? p2 : null;
     }
 
     /**

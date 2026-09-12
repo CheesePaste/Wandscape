@@ -64,7 +64,14 @@ public final class GuardAttackExecutor implements OpExecutor<AtomicOp.AttackMons
     @Override
     public CompletableFuture<Void> execute(AtomicOp.AttackMonsterOp op, World world, long npcId) {
         WandscapeNpc npc = EntityComponentBridge.INSTANCE.getNpc(npcId);
-        if (npc == null || npc.level().isClientSide) {
+        if (npc == null) {
+            // 守卫执行器只认本模组法师，拿不到就"瞬间完成"。调度侧已按 params["caster_only"]
+            // 把非施法者挡在候选外，能走到这里说明任务是从别的入口发出来的（如 /wandscape publish）
+            // 或工作者中途被换掉——这条路径不能是静默的。
+            Log.warn(TAG, "guard_attack: worker {} is not a colony mage — task completes without effect", npcId);
+            return CompletableFuture.completedFuture(null);
+        }
+        if (npc.level().isClientSide) {
             return CompletableFuture.completedFuture(null);
         }
         CompletableFuture<Void> future = world.startAsyncOp("guard_attack");

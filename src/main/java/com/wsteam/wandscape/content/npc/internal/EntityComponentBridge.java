@@ -37,7 +37,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * <p>Calling convention:
  * <ul>
  *   <li>{@link #onNpcJoinWorld} — called from WandscapeNpc.onAddedToLevel</li>
- *   <li>{@link #onNpcLeaveWorld} — called from WandscapeNpc.onRemovedFromLevel
+ *   <li>{@link #onWorkerLeaveWorld} — called from WandscapeNpc.onRemovedFromLevel
  *       (KILLED / DISCARDED only; UNLOADED_TO_CHUNK is skipped)</li>
  *   <li>{@link #syncPositions} — called from Wandscape.onServerTick, before the
  *       engine tick gate</li>
@@ -135,12 +135,13 @@ public final class EntityComponentBridge {
         var e = worker.entity();
         if (e.isRemoved()) return;
 
-        Long known = ecsIdByUuid.get(uuid);
-        if (known != null && world.has(known, Position.class)) {
+        Long reconnected = reconnectEcsId(uuid, world);
+        if (reconnected != null) {
             // Same-session reconnection (chunk unload/reload): refresh Position only.
-            world.addComponent(known,
+            // 刻意不碰 ColonyMember——见 onNpcJoinWorld 里的说明。
+            world.addComponent(reconnected,
                     new Position(new GridPos(e.getBlockX(), e.getBlockY(), e.getBlockZ())));
-            workerByEcsId.put(known, worker);
+            workerByEcsId.put(reconnected, worker);
             fillDeferredInventory(worker, world);
             return;
         }
@@ -159,11 +160,28 @@ public final class EntityComponentBridge {
     }
 
     /**
+     * 同会话重连（区块卸载后重载）判定：返回已知的 ECS id，非重连返回 null。
+     *
+     * <p>重连分支**只刷新 Position**，不重写 {@code ColonyMember} 等其它组件。调用方
+     * （{@link #onNpcJoinWorld} 的殖民地自动探测）必须用同一个判定来对齐这个边界——
+     * 否则会出现「字段改了、组件没改」的分歧：面板按 {@code npc.colonyId} 显示他已入镇，
+     * 调度器按 {@code ColonyMember} 分组则永不派活。
+     */
+    @Nullable
+    private Long reconnectEcsId(UUID uuid, World world) {
+        Long known = ecsIdByUuid.get(uuid);
+        return known != null && world.has(known, Position.class) ? known : null;
+    }
+
+    /**
      * 本模组法师的登记入口：先做 NPC 专有前置（无殖民地时按位置自动探测——刷怪蛋召唤入镇），
      * 再走 {@link #onWorkerJoinWorld} 通用登记，最后桥接法杖/盔甲属性修饰符。
      */
     public void onNpcJoinWorld(WandscapeNpc npc, World world) {
-        if (npc.colonyId == null || PLACEHOLDER_COLONY.equals(npc.colonyId)) {
+        // 只在「新建登记」时探测：重连分支不写 ColonyMember，此时改 npc.colonyId 会让字段与
+        // 组件永久分歧（探测结果本应同时进 createNpc 的 colony 实参，重连路径上则没有这一步）。
+        boolean reconnecting = reconnectEcsId(npc.getUUID(), world) != null;
+        if (!reconnecting && (npc.colonyId == null || PLACEHOLDER_COLONY.equals(npc.colonyId))) {
             var colonyApi = com.wsteam.wandscape.api.WandscapeApis.getColonyApiSilently();
             if (colonyApi != null) {
                 UUID detected = colonyApi.getColonyId(npc.blockPosition());
@@ -269,11 +287,6 @@ public final class EntityComponentBridge {
 
         Log.debug(LogCategory.NPC, "bridge", "Worker {} left ECS (entity {})",
                 worker.workerId().toString().substring(0, 8), ecsId);
-    }
-
-    /** 本模组法师的退出入口（保留旧签名；语义与清理内容同 {@link #onWorkerLeaveWorld}）。 */
-    public void onNpcLeaveWorld(WandscapeNpc npc, World world) {
-        onWorkerLeaveWorld(npc, world);
     }
 
     // ================================================================
