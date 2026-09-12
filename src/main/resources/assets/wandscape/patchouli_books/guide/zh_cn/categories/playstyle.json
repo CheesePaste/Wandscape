@@ -1,6 +1,6 @@
 {
   "name": "玩法主线",
-  "description": "游客线、冒险线、科技线与外交线四大主要玩法路线。",
+  "description": "主要玩法路线。",
   "icon": "minecraft:compass",
   "sortnum": 10
 }

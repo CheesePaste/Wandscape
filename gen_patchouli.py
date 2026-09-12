@@ -44,29 +44,17 @@ LANGS = [("zh_cn", "zh_cn"), ("en", "en_us")]
 # 分类：(id, 中文名, 英文名, 图标, sortnum, zh 描述, en 描述)
 CATEGORIES = [
     ("contents", "指南", "Guide", "minecraft:bookshelf", -100,
-     "本手册的总目录。第一次玩先读「新手入门」，它讲完整游戏循环。",
-     "The table of contents. New players should start with Getting Started."),
+     "本手册的总目录。",
+     "The table of contents."),
     ("start", "新手入门", "Getting Started", "minecraft:torch", 0,
-     "从空地到能运作的魔法小镇，包含完整的新手引导与必备知识。",
+     "从空地到能运作的魔法小镇，包含新手引导与必备知识。",
      "From empty land to a working magical town, beginner guides and essential knowledge."),
     ("playstyle", "玩法主线", "Gameplay Tracks", "minecraft:compass", 10,
-     "游客线、冒险线、科技线与外交线四大主要玩法路线。",
-     "Tourist, adventure, technology, and diplomacy progression paths."),
+     "主要玩法路线。",
+     "Gameplay progression paths."),
     ("system", "通用功能", "System Features", "minecraft:book", 20,
-     "元素经济、管理面板、建筑、法师与游客机制概览。",
-     "Elements, management panel, buildings, mages, and tourist mechanics."),
-    ("building", "建筑与设施", "Buildings & Facilities", "minecraft:bell", 30,
-     "市政厅、仓库、生产工坊与各类服务建筑的运作方式。",
-     "How the town hall, warehouse, workshops and service buildings work."),
-    ("road", "道路系统", "Road System", "minecraft:dirt_path", 40,
-     "游客只走铺好的路。没有路就没有游客。",
-     "Tourists only walk on paved roads. No roads, no tourists."),
-    ("reference", "指令与工具", "Commands & Tools", "minecraft:command_block", 50,
-     "模组指令速查、施法策略、故障排查与创作者工具。",
-     "Command reference, spell tactics, troubleshooting and creator tools."),
-    ("about", "关于", "About", "minecraft:golden_apple", 60,
-     "制作者、鸣谢与反馈渠道。",
-     "Credits, thanks, and where to send feedback."),
+     "元素经济、管理面板、法师与游客机制概览。",
+     "Elements, management panel, mages, and tourist mechanics."),
 ]
 
 # 条目：(md 文件名去掉 .md, 所属分类, 图标, sortnum)。条目名取 md 的 H1。
@@ -75,49 +63,35 @@ ENTRIES = [
     # start:
     ("intro_0_guide", "start", "minecraft:writable_book", 0),
     ("intro_0_5_guide", "start", "minecraft:knowledge_book", 1),
-    ("getting_started_guide", "start", "minecraft:torch", 2),
     # playstyle:
     ("track_tourist_guide", "playstyle", "wandscape:tourist_spawn_egg", 0),
-    ("track_adventure_guide", "playstyle", "minecraft:iron_sword", 1),
-    ("track_tech_guide", "playstyle", "minecraft:redstone", 2),
-    ("track_diplomacy_guide", "playstyle", "minecraft:paper", 3),
     # system:
     ("economy_guide", "system", "wandscape:element_earth", 0),
     ("panel_guide", "system", "minecraft:compass", 1),
-    ("overview_guide", "system", "minecraft:spyglass", 2),
-    ("buildings_guide", "system", "minecraft:stone_bricks", 3),
-    ("mages_guide", "system", "wandscape:wandscape_npc_spawn_egg", 4),
-    ("tourists_guide", "system", "minecraft:emerald", 5),
-    # building:
-    ("townhall_guide", "building", "minecraft:bell", 0),
-    ("warehouse_guide", "building", "minecraft:chest", 1),
-    ("crafting_guide", "building", "wandscape:wand", 2),
-    ("magic_station_guide", "building", "wandscape:spell_scroll", 3),
-    ("workstation_guide", "building", "minecraft:crafting_table", 4),
-    ("node_guide", "building", "wandscape:element_earth", 5),
-    ("altar_guide", "building", "minecraft:enchanting_table", 6),
-    ("mage_hut_guide", "building", "minecraft:red_bed", 7),
-    ("tavern_guide", "building", "minecraft:brewing_stand", 8),
-    ("shop_guide", "building", "minecraft:emerald", 9),
-    ("hotel_guide", "building", "minecraft:light_blue_bed", 10),
-    # road:
-    ("road_guide", "road", "minecraft:dirt_path", 0),
-    ("road_replace_guide", "road", "minecraft:smooth_stone", 1),
-    ("road_fill_guide", "road", "minecraft:shovel", 2),
-    ("road_spline_guide", "road", "minecraft:lead", 3),
-    # reference:
-    ("npc_guide", "reference", "wandscape:wandscape_npc_spawn_egg", 0),
-    ("strategy_guide", "reference", "minecraft:enchanted_book", 1),
-    ("tourist_guide", "reference", "wandscape:tourist_spawn_egg", 2),
-    ("anomaly_guide", "reference", "minecraft:anvil", 3),
-    ("scanner_guide", "reference", "minecraft:spyglass", 4),
-    ("creative_scanner_guide", "reference", "minecraft:structure_block", 5),
-    ("magic_circle_editor_guide", "reference", "minecraft:painting", 6),
-    ("test_guide", "reference", "minecraft:debug_stick", 7),
-    ("commands_guide", "reference", "minecraft:command_block", 8),
-    # about:
-    ("creators_guide", "about", "minecraft:golden_apple", 0),
+    ("mages_guide", "system", "wandscape:wandscape_npc_spawn_egg", 2),
+    ("tourists_guide", "system", "minecraft:emerald", 3),
 ]
+
+TITLE_TO_DOC = {
+    # zh_cn
+    "0，入门": "intro_0_guide",
+    "0.5，推荐了解的功能": "intro_0_5_guide",
+    "1，游客线": "track_tourist_guide",
+    "元素与三值": "economy_guide",
+    "管理面板": "panel_guide",
+    "法师": "mages_guide",
+    "游客": "tourists_guide",
+    "概览": "index_guide",
+    # en_us
+    "0. Getting Started": "intro_0_guide",
+    "0.5 Recommended Features": "intro_0_5_guide",
+    "1. Tourist Track": "track_tourist_guide",
+    "Elements and Values": "economy_guide",
+    "Management Panel": "panel_guide",
+    "Mages": "mages_guide",
+    "Tourists": "tourists_guide",
+    "Overview": "index_guide",
+}
 
 # 内联代码的着色（帕秋莉没有等宽字体，用颜色区分）
 CODE_COLOR = "$(#8a5a2b)"
@@ -287,6 +261,17 @@ def convert_inline(text, warn, resume=""):
                                + "$(/l)" + resume)
                 i = end
                 continue
+        if c == "《":
+            j = text.find("》", i + 1)
+            if j != -1:
+                title = text[i + 1:j].strip()
+                target_doc = TITLE_TO_DOC.get(title)
+                if target_doc:
+                    cmd = link_command(target_doc, warn)
+                    if cmd:
+                        out.append(cmd + "《" + title + "》" + "$(/l)" + resume)
+                        i = j + 1
+                        continue
         if c == "$":
             warn("正文出现字面 '$'，可能与帕秋莉命令语法冲突：%s" % text)
         out.append(c)
@@ -540,9 +525,7 @@ def build_books():
                 "pages": pages,
             })
 
-        extra = sorted(p.stem for p in lang_dir.glob("*.md") if p.stem not in known_docs)
-        if extra:
-            warn("%s 下有未纳入清单的 md（不会进手册）：%s" % (md_lang, ", ".join(extra)))
+
 
     write_json(OUT_DATA / "book.json", {
         "name": "wandscape.guide_book.name",

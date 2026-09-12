@@ -1,13 +1,17 @@
 # 0.5 Recommended Features
 
-The starter tutorial only covers the town hall, warehouse, and crafting station. Here is a summary of other essential features.
+The starter tutorial only covers the Town Hall, Warehouse, and Crafting Station. Here are additional essential features.
 
-## Highlights
+《Elements and Values》 Understand the economy system
 
-- [Elements & Values](guidebook:economy_guide): The economic and magic resource system.
-- [Mages](guidebook:mages_guide): Town workers and defensive units.
-- [Altar](guidebook:altar_guide): Revives defeated mages.
-- [Crafting Station](guidebook:crafting_guide): Weapons, wands, and exploration gear.
-- [Tavern](guidebook:tavern_guide): Recruit new mage residents.
-- [Mage Hut](guidebook:mage_hut_guide): Train mage stats and attributes.
-- [Road System](guidebook:road_guide): Level terrain and pave routes for tourists.
+《Mages》 Workers and combatants of the town
+
+《Altar》 Revive fallen mages, crucial in the early game
+
+《Crafting Station》 Powerful wands, exploration tools, and boss fight equipment
+
+《Tavern》 Recruit more mages
+
+《Mage Hut》 Train mage attributes, the core of town combat power
+
+《Road Sub-Mode》 Level terrain and pave roads

@@ -1,17 +1,5 @@
 # Elements and Values
 
-Elements are the universal currency and energy of your magical town.
+Elements are the town currency. There are seven element types, none of which convert directly to another. Check amounts in the warehouse or the top bar of the overview mode.
 
-## Elemental Currency
-
-Elements come in 7 types (Earth, Water, Fire, Wind, Light, Dark, Arcane) and cannot be directly converted into one another.
-
-Check current reserves and generation rates in the [Warehouse](guidebook:warehouse_guide) or the top bar of the V-panel.
-
-## Building Values
-
-Each building card displays three key rating icons:
-
-- **Satisfaction (Green)**: Influences tourist mood and stay duration.
-- **Magic (Blue)**: Affects spell efficiency and high-tier visitor rates.
-- **Wonder (Yellow)**: Represents decoration and scale, driving town tier upgrades.
+The three values are the three icons displayed in the top-left of buildings. Green is satisfaction, blue is magic, and yellow is wonder, used primarily in the tourist track.

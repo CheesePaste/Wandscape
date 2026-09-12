@@ -2,22 +2,12 @@
   "name": "Mages",
   "category": "wandscape:system",
   "icon": "wandscape:wandscape_npc_spawn_egg",
-  "sortnum": 4,
+  "sortnum": 2,
   "read_by_default": true,
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "Wizards and mages are the backbone of your settlement."
-    },
-    {
-      "type": "patchouli:text",
-      "text": "$(bold)Right-click$() a mage to open their equipment panel (helmet, chestplate, leggings, boots, wand).$(br2)Click the backpack icon on the model preview to view their inventory.",
-      "title": "Interaction & Equipment"
-    },
-    {
-      "type": "patchouli:text",
-      "text": "$(li)$(bold)Follow Mode$(): The mage follows you as a combat bodyguard and pauses town jobs.$(li)$(bold)Peace Mode$(): The mage will not attack creatures and focuses purely on production.$(li)$(bold)Tactics$(): Open $(l:wandscape:reference/strategy_guide)Spell Tactics$(/l) to configure battle skill triggers.$(li)$(bold)Dismiss$(): Terminate the contract; the mage permanently departs.",
-      "title": "Operating Modes"
+      "text": "Mages are the backbone of the town. Constructing, crafting, and defending all rely on them.$(br2)Right-click a mage to open the mage panel, where you can set equipment and view inventory (in the top-left of the mage preview).$(br2)(Show image, next page)$(br2)Follow Mode: When enabled, the mage follows you and ignores town tasks.$(br2)Peaceful Mode: When enabled, the mage will not attack any entity.$(br2)Cast Strategy: Configure spells and casting order, see 《Cast Strategy》.$(br2)Dismiss: Dismiss the mage permanently."
     }
   ]
 }

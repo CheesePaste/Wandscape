@@ -1,25 +1,35 @@
 # 概览
 
-Wandscape（魔法小镇）是一个以魔法与城镇建设为主题的模拟经营模组。
+Wandscape（魔法小镇）是一个大型模组，以魔法与城镇建设为主题
 
-## 玩法导航
+玩法导航
 
-- [0，入门](guidebook:intro_0_guide)
-- [0.5，推荐了解的功能](guidebook:intro_0_5_guide)
-- [1，游客线](guidebook:track_tourist_guide)
-- [2，冒险线](guidebook:track_adventure_guide)
-- [3，科技线](guidebook:track_tech_guide)
-- [4，外交线](guidebook:track_diplomacy_guide)
+《0，入门》
 
-## 通用功能导航
+《0.5，推荐了解的功能》
 
-- [元素与三值](guidebook:economy_guide)
-- [管理面板](guidebook:panel_guide)
-- [建筑体系](guidebook:buildings_guide)
-- [法师](guidebook:mages_guide)
-- [游客](guidebook:tourists_guide)
+《1，游客线》推荐休闲玩家观看
 
-## 其他
+《2，冒险线》推荐冒险玩家观看
 
-- [指令速查](guidebook:commands_guide)
-- [关于我们](guidebook:creators_guide)
+《3，科技线》只做了一点
+
+《4，外交线》还没做
+
+通用功能导航
+
+《元素与三值》经济系统介绍
+
+《管理面板》交互，管理与建造城镇
+
+《建筑》模组各类型建筑介绍
+
+《法师》工人与战斗单位介绍
+
+《魔法》魔法与战斗系统介绍
+
+《装备与物品》模组装备与物品介绍
+
+其他
+
+《关于我们》开发组与反馈/支持渠道

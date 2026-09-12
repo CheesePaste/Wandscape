@@ -1,16 +1,15 @@
 # Mages
 
-Wizards and mages are the backbone of your settlement.
+Mages are the backbone of the town. Constructing, crafting, and defending all rely on them.
 
-## Interaction & Equipment
+Right-click a mage to open the mage panel, where you can set equipment and view inventory (in the top-left of the mage preview).
 
-**Right-click** a mage to open their equipment panel (helmet, chestplate, leggings, boots, wand).
+(Show image, next page)
 
-Click the backpack icon on the model preview to view their inventory.
+Follow Mode: When enabled, the mage follows you and ignores town tasks.
 
-## Operating Modes
+Peaceful Mode: When enabled, the mage will not attack any entity.
 
-- **Follow Mode**: The mage follows you as a combat bodyguard and pauses town jobs.
-- **Peace Mode**: The mage will not attack creatures and focuses purely on production.
-- **Tactics**: Open [Spell Tactics](guidebook:strategy_guide) to configure battle skill triggers.
-- **Dismiss**: Terminate the contract; the mage permanently departs.
+Cast Strategy: Configure spells and casting order, see 《Cast Strategy》.
+
+Dismiss: Dismiss the mage permanently.

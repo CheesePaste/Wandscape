@@ -2,22 +2,12 @@
   "name": "Tourists",
   "category": "wandscape:system",
   "icon": "minecraft:emerald",
-  "sortnum": 5,
+  "sortnum": 3,
   "read_by_default": true,
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "Tourists are your primary economic engine and popularity benchmark."
-    },
-    {
-      "type": "patchouli:text",
-      "text": "$(li)$(bold)Three Needs (Satisfaction, Magic, Wonder)$(): Interactions increase these values, contributing town XP when maxed out.$(li)$(bold)Wallet$(): Maximum element coin spending ceiling.$(li)$(bold)Stay$(): Maximum consecutive days the tourist will reside in town.$(li)$(bold)Energy$(): Number of facilities the tourist visits each day.",
-      "title": "Four Attributes"
-    },
-    {
-      "type": "patchouli:text",
-      "text": "Tourists queue up at interaction spots. At dusk, they seek beds in a $(l:wandscape:building/hotel_guide)Hotel$(/l). If no rooms are vacant, they depart disappointed at dawn.",
-      "title": "Routines"
+      "text": "Attributes:$(br2)$(li)Three Values (Satisfaction, Magic, Wonder): Increases as tourists interact with buildings. When all three are maxed out, town experience increases, and special tourists leave resumes.$(br2)$(li)Wallet: Affects purchase quantity in shops, directly impacting town revenue.$(br2)$(li)Lodging: Affects maximum days stayed.$(br2)$(li)Energy: Affects the number of buildings visited.$(br2)Behavior: Tourists interact at building interact spots. If a spot is in use, tourists queue up.$(br2)At night, tourists seek hotels. If no room is available, they leave town.$(br2)Right-click a tourist to view the above information."
     }
   ]
 }

@@ -1,14 +1,17 @@
 # Tourists
 
-Tourists are your primary economic engine and popularity benchmark.
+Attributes:
 
-## Four Attributes
+1. Three Values (Satisfaction, Magic, Wonder): Increases as tourists interact with buildings. When all three are maxed out, town experience increases, and special tourists leave resumes.
 
-- **Three Needs (Satisfaction, Magic, Wonder)**: Interactions increase these values, contributing town XP when maxed out.
-- **Wallet**: Maximum element coin spending ceiling.
-- **Stay**: Maximum consecutive days the tourist will reside in town.
-- **Energy**: Number of facilities the tourist visits each day.
+2. Wallet: Affects purchase quantity in shops, directly impacting town revenue.
 
-## Routines
+3. Lodging: Affects maximum days stayed.
 
-Tourists queue up at interaction spots. At dusk, they seek beds in a [Hotel](guidebook:hotel_guide). If no rooms are vacant, they depart disappointed at dawn.
+4. Energy: Affects the number of buildings visited.
+
+Behavior: Tourists interact at building interact spots. If a spot is in use, tourists queue up.
+
+At night, tourists seek hotels. If no room is available, they leave town.
+
+Right-click a tourist to view the above information.

@@ -1,25 +1,35 @@
 # Overview
 
-Wandscape is a simulation and colony mod themed around magic and town building.
+Wandscape is a large mod themed around magic and town construction.
 
-## Gameplay Tracks
+Gameplay Navigation
 
-- [0. Getting Started](guidebook:intro_0_guide)
-- [0.5 Recommended Features](guidebook:intro_0_5_guide)
-- [1. Tourist Track](guidebook:track_tourist_guide)
-- [2. Adventure Track](guidebook:track_adventure_guide)
-- [3. Tech Track](guidebook:track_tech_guide)
-- [4. Diplomacy Track](guidebook:track_diplomacy_guide)
+《0. Getting Started》
 
-## System Features
+《0.5 Recommended Features》
 
-- [Elements and Values](guidebook:economy_guide)
-- [Management Panel](guidebook:panel_guide)
-- [Buildings](guidebook:buildings_guide)
-- [Mages](guidebook:mages_guide)
-- [Tourists](guidebook:tourists_guide)
+《1. Tourist Track》 Recommended for casual players
 
-## Miscellaneous
+《2. Adventure Track》 Recommended for adventure players
 
-- [Command Reference](guidebook:commands_guide)
-- [About Us](guidebook:creators_guide)
+《3. Tech Track》 Work in progress
+
+《4. Diplomacy Track》 Coming soon
+
+System Features Navigation
+
+《Elements and Values》 Introduction to the economy system
+
+《Management Panel》 Interaction, town management and building
+
+《Buildings》 Introduction to mod building types
+
+《Mages》 Introduction to workers and combat units
+
+《Magic》 Introduction to magic and combat systems
+
+《Equipment and Items》 Introduction to mod equipment and items
+
+Other
+
+《About Us》 Development team and feedback / support channels

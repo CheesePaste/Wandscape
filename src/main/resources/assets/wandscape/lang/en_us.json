@@ -18,7 +18,7 @@
   "item.wandscape.guide_book.tooltip": "Right-click to open the mod guidebook",
   "wandscape.guide_book.name": "Wandscape Guidebook",
   "wandscape.guide_book.subtitle": "From Empty Land to a Tourist Town",
-  "wandscape.guide_book.landing": "Welcome to Wandscape! You place the buildings, your wizards do the work, and tourists walk in along the roads to spend.$(br2)New here? Start with $(l:wandscape:start/getting_started_guide)Getting Started$(/l), or pick a chapter from the $(l:wandscape:contents)contents$(/l).",
+  "wandscape.guide_book.landing": "Welcome to Wandscape! You place the buildings, your wizards do the work, and tourists walk in along the roads to spend.$(br2)New here? Start with $(l:wandscape:start/intro_0_guide)0. Getting Started$(/l), or pick a chapter from the $(l:wandscape:contents)contents$(/l).",
   "item.wandscape.oath_ring": "Oath Ring",
   "item.wandscape.oath_ring_mid": "Oath Ring (Mid)",
   "item.wandscape.oath_ring_high": "Oath Ring (High)",

@@ -20,48 +20,21 @@ final class PatchouliCompatImpl {
         // start
         register("intro_0_guide", "start");
         register("intro_0_5_guide", "start");
-        register("getting_started_guide", "start");
         // playstyle
         register("track_tourist_guide", "playstyle");
-        register("track_adventure_guide", "playstyle");
-        register("track_tech_guide", "playstyle");
-        register("track_diplomacy_guide", "playstyle");
         // system
         register("economy_guide", "system");
         register("panel_guide", "system");
-        register("overview_guide", "system");
-        register("buildings_guide", "system");
         register("mages_guide", "system");
         register("tourists_guide", "system");
-        // building
-        register("townhall_guide", "building");
-        register("warehouse_guide", "building");
-        register("crafting_guide", "building");
-        register("magic_station_guide", "building");
-        register("workstation_guide", "building");
-        register("node_guide", "building");
-        register("altar_guide", "building");
-        register("mage_hut_guide", "building");
-        register("tavern_guide", "building");
-        register("shop_guide", "building");
-        register("hotel_guide", "building");
-        // road
-        register("road_guide", "road");
-        register("road_replace_guide", "road");
-        register("road_fill_guide", "road");
-        register("road_spline_guide", "road");
-        // reference
-        register("npc_guide", "reference");
-        register("strategy_guide", "reference");
-        register("tourist_guide", "reference");
-        register("anomaly_guide", "reference");
-        register("scanner_guide", "reference");
-        register("creative_scanner_guide", "reference");
-        register("magic_circle_editor_guide", "reference");
-        register("test_guide", "reference");
-        register("commands_guide", "reference");
-        // about
-        register("creators_guide", "about");
+
+        // 为原有通用界面入口提供别名映射
+        DOC_TO_ENTRY.put("overview_guide", DOC_TO_ENTRY.get("panel_guide"));
+        DOC_TO_ENTRY.put("overview", DOC_TO_ENTRY.get("panel_guide"));
+        DOC_TO_ENTRY.put("npc_guide", DOC_TO_ENTRY.get("mages_guide"));
+        DOC_TO_ENTRY.put("npc", DOC_TO_ENTRY.get("mages_guide"));
+        DOC_TO_ENTRY.put("tourist_guide", DOC_TO_ENTRY.get("tourists_guide"));
+        DOC_TO_ENTRY.put("tourist", DOC_TO_ENTRY.get("tourists_guide"));
     }
 
     private PatchouliCompatImpl() {}

@@ -1,16 +1,21 @@
 # Management Panel
 
-The management panel is your master console for town interaction.
+The management panel is the interaction core of the mod.
 
-## How to Open
+Open the panel: By default, press V to open. The state is shown below.
 
-Press the **V key** (configurable in controls) to enter the top-down view and open the console.
+(Show image, next page)
 
-## Basic Operations
+Basic Operations:
 
-- **Target Focus**: Hover over any mage or building to see a white bounding box. **Right-click** to open their detail screen.
-- **Sub-mode Keys**: Press number keys 1-4:
-  - **1 -> Building Mode**: Select, rotate, and place buildings.
-  - **2 -> Road Mode**: Level ground and pave paths.
-  - **3 -> Task Hall**: Inspect ongoing jobs and mage tasks.
-  - **4 -> Settings**: Configure mod options.
+Interaction: Aim at a mage or building to see a white bounding box. Right-click to open its details page.
+
+Switch Modes: Press 1, 2, 3, 4 to switch sub-modes on the left:
+
+1→《Building Sub-Mode》: Construct buildings
+
+2→《Road Sub-Mode》: Pave roads and shape terrain
+
+3→《Quest Hall》: Manage tasks and mage status
+
+4→《Settings》: Modify mod settings

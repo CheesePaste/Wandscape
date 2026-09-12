@@ -1,6 +1,6 @@
 {
   "name": "System Features",
-  "description": "Elements, management panel, buildings, mages, and tourist mechanics.",
+  "description": "Elements, management panel, mages, and tourist mechanics.",
   "icon": "minecraft:book",
   "sortnum": 20
 }

@@ -1,6 +1,6 @@
 {
   "name": "Guide",
-  "description": "The table of contents. New players should start with Getting Started.",
+  "description": "The table of contents.",
   "icon": "minecraft:bookshelf",
   "sortnum": -100
 }

@@ -1,15 +1,21 @@
 # 1. Tourist Track
 
-The tourist track focuses on casual town management. Once your first visitor-interactive building is ready, tourists will arrive the next morning.
+The tourist track is a relaxing path focused on management simulation. Once you build your first tourist-interactive building, tourists arrive the next day.
 
-## Core Goals
+Tourist Track Goals:
 
-1. **Satisfy Tourists**: Boost Satisfaction, Magic, and Wonder to increase town experience.
-2. **Deploy Shops & Services**: Balance [Shops](guidebook:shop_guide) to earn element coins.
-3. **Build Hotels**: Keep tourists overnight with [Hotels](guidebook:hotel_guide).
+Satisfy tourists → Upgrade town level
 
-## Recommended Reading
+Deploy shops and ATMs wisely → Earn elements from visitors
 
-- [Tourists Guide](guidebook:tourists_guide)
-- [Shop Guide](guidebook:shop_guide)
-- [Hotel Guide](guidebook:hotel_guide)
+Build hotels and resting facilities → Keep tourists from leaving due to exhaustion or lack of lodging.
+
+Recommended reading order:
+
+《Tourists》
+
+《Shops》
+
+《Service Facilities and Hotels》
+
+《ATMs》
