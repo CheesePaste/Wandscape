@@ -169,7 +169,8 @@ public interface ColonyWorker {
 | 注册时机 | TLM 在 `FMLCommonSetupEvent` 调 `TaskManager.init()`，之后任务表 `ImmutableMap.copyOf` **冻结** | `entity/task/TaskManager.java:59-64` |
 | 任务本体 | `implements IMaidTask`：`getUid()` / `getIcon()` / `getAmbientSound()` / `createBrainTasks()` 四个必需方法 | `api/task/IMaidTask.java:36/43/52/60` |
 | 关随机走动 | `enableLookAndRandomWalk(maid)` 返回 false（工作时） | `IMaidTask.java:101`；消费点 `MaidBrain.java:144` |
-| 注册/注销 ECS | **不用 task 生命周期钩子**（TLM 的 task 无 onStart/onStop）→ 用对账式 sweep：每 N tick 扫注册表，任务已非我们的女仆注销、任务为我们且**主人殖民地可解析**的注册（§3.6） | TLM 提供 `MaidTickEvent`（`api/event/MaidTickEvent.java:7`，每 tick 可取消） |
+| 注册/注销 ECS | **不用 task 生命周期钩子**（TLM 的 task 无 onStart/onStop）→ 用对账式 sweep：每 tick 对账「应当登记」与「实际登记」，任务换走/主人无镇/实体已移除即注销；殖民地归属每 40 tick 才复查一次（`getColonyByFounder` 要查 SavedData）。已实现，走 `MaidTickEvent` | TLM 提供 `MaidTickEvent`（`api/event/MaidTickEvent.java:7`，`EntityMaid.tick()` 内发出，**双端**——必须 `isClientSide` 早退） |
+| **站位模式前置** | `isEnable` 要求 `maid.isHomeModeEnable()`：TLM 在恒活跃的 CORE 里挂了 `MaidFollowOwnerTask`（声明 `WALK_TARGET, REGISTERED`，挡不住），没开站位时女仆会一路跟着主人跑。用 `getEnableConditionDesc` 把这条与「主人有小镇」逐条显示给玩家（绿的满足、红的未满足） | `MaidFollowOwnerTask.java:73`；见 §五 R9 |
 | 工作配置界面 | `getTaskConfigGuiProvider(maid)` 返回自定义 `MenuProvider`（TLM 内置 `TaskFeedAnimal` 就是这么做的） | `IMaidTask.java:196`；先例 `entity/task/TaskFeedAnimal.java:111` |
 
 `createBrainTasks`：**不需要移动行为**——工作移动由 `NavigationSystem` 经 `applyWalkTarget` 直接写 `WALK_TARGET` 记忆（§3.3），CORE 活动的 `MoveToTargetSink` 负责落地。返回列表可以极简（甚至空列表，只靠 `enableLookAndRandomWalk` 等开关控制工作态）。
@@ -275,9 +276,17 @@ public interface ColonyWorker {
 | **1** | 盟友：**零代码**。默认配置（`npc.pvp = true`）下女仆已落 `PET` 分支并按主人殖民地判定（§3.1）。只做实测确认 + 记录 `npc.pvp = false` 的既有问题 | 0 行 | 极低 | 代码路径已静态核实；游戏内实测待做 |
 | **2** | 抽 `ColonyWorker` + 泛化 `EntityComponentBridge`/`NavigationSystem`/6 个 boundary 执行器 + `TaskPanelSyncTracker` 三处遍历 | 改 11 文件、新增 2 | 中 | **已完成**（`081af89f`），`build` 通过，行为不变 |
 | **2b** | 顺带开放对外 API：`api/ColonyWorkerApi`（薄登记面）+ `MobColonyWorker` 通用适配器 + `WorkerFx` 共用表现 + 施法者能力位（§3.6.1） | 新增 3 文件、改 6 文件 | 中 | **已完成**（`c25964cf`），`build` 通过 |
-| **3** | TLM 女仆接入：`@LittleMaidExtension` + 工作模式 task + `MaidColonyWorker` 适配器（走 `WALK_TARGET`）+ `MaidColonyState`（按主人殖民地归属）+ 对账 sweep + `MageSummaryDto.kind` 与面板图标 | 新增 `compat/tlm/**` | 中高 | 未开始；风险见 §五 R1/R2/R6 |
+| **3** | TLM 女仆接入：`@LittleMaidExtension` + 工作模式 task「殖民地工作」+ `MaidColonyWorker`（走 `WALK_TARGET`）+ `MaidColonyState`（附件持久化）+ `TlmCompat`/`TlmCompatImpl` 对账 + 面板 `kind` 与 `[工作者]` 标签 + 中英文 lang | 新增 `compat/tlm/**` 7 文件、改 8 文件 | 中高 | **已完成**（`9359953c`），`build` 通过；游戏内实测待做 |
 
 第 2 / 2b 步是"让第 3 步可行"的投资，本身不改玩法。第 2b 步的 API 让**任何**模组都能登记工作者（不限于女仆），所以它同时也把"第三方实体接入殖民地工作链"这件事从一次性兼容变成了可复用能力。
+
+**第 3 步的实测清单**（§五 验证项之外的新增项，都需要在游戏里确认）：
+
+1. 女仆界面能看到「殖民地工作」任务；未开站位模式 / 主人无小镇时任务置灰，悬停显示红的未满足条件（本站位模式那条）。
+2. 开启站位 + 有小镇后能选中；选中即应看到日志 `maid xxx enlisted as colony worker of yyy`。
+3. 女仆能被派到建筑/采集任务、走过去、执行、产出进殖民地仓库；任务面板里她与法师并排、名字前带 `[工作者]`。
+4. 把任务切回「待命」→ 日志 `left colony work mode — dismissed`，且她身上不再占用全局任务。
+5. 观察 §五 R1 的残余：偷吃/工作餐行为是否在她空闲间隙把她带走、以及 R9 的站位模式前提是否如预期生效。
 
 ---
 
@@ -349,6 +358,7 @@ public interface ColonyWorker {
 | **R6** | TLM API 漂移 | 升级 TLM 后兼容层编译失败 | `IMaidTask`/`ILittleMaid` 是 TLM 官方 api 包（非 internal），但仍非冻结契约；`gradle.properties` 锁版本并在升级时回归 |
 | **R7** | 两套库存（ECS `NpcInventory` vs 实体物品栏）不互通 | 女仆挖到的材料不进她自己的背包 | **这不是新问题**——NPC 现在同样如此（`WandscapeNpc.java:505` 的 `SimpleContainer` 与 ECS `NpcInventory` 无互转代码）。女仆与法师行为一致，属可接受 |
 | **R8** | `npc.pvp = false` 时玩家侧实体（含女仆）跨殖民地恒友军 | 「只认自己小镇的女仆」在该配置下失效 | 属**既有**设计、非本次引入；不在 TLM 兼容里顺带修，记为待办 A（§3.1.1） |
+| **R9** | **女仆必须开启站位模式（home mode）才能工作** —— 落地时才发现的硬前置 | 没开站位时女仆一路跟着主人跑，与工作走位直接打架 | `MaidFollowOwnerTask` 注册在**恒活跃的 CORE**（`MaidBrain.java:97`），声明的是 `WALK_TARGET, REGISTERED`（**不是 ABSENT**），所以写 `WALK_TARGET` **挡不住它**（对比 R1 里那一族声明 ABSENT 的能被挡住）。它只在 `!maid.isHomeModeEnable()` 时启动（`MaidFollowOwnerTask.java:73`）。**解法不是压制而是要求**：任务 `isEnable` 要求站位模式已开，并用 `getEnableConditionDesc` 明确告诉玩家缺什么；女仆的站位半径正好就是她的工作范围，与 §3.6「不新造工作站概念」一致 |
 
 **动手前的四项验证（已全部完成，2026-09-12）**：
 
@@ -406,4 +416,4 @@ public interface ColonyWorker {
 
 ## 八、下一步
 
-阶段一按 §3.8 推进。第 1 步（盟友）**零代码**，只剩游戏内实测确认；第 2 / 2b 步（`ColonyWorker` 缝 + 工作者 API + 施法者能力位）**已完成并 build 通过**。第 3 步（TLM 女仆接入）是接下来的主体工作。阶段二在阶段一落地并实测后再单独立项。
+阶段一的代码**已全部落地**（`081af89f` 重构 → `c25964cf` API 与施法者门槛 → `9359953c` 女仆接入），`build` 全绿。剩下的是**游戏内实测**：§五 验证项 1（盟友）与 §3.8 的实测清单 1-5。实测通过后阶段一收口；阶段二（法师小屋训练 / 手持法杖普攻与施法 / 策略槽）在实测结论上再单独立项。
