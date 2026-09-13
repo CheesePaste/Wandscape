@@ -927,6 +927,7 @@
   "gui.wandscape.curios.title": "法师饰品",
   "gui.wandscape.curios.open": "饰品栏",
   "gui.wandscape.curios.back": "返回",
+  "gui.wandscape.task.worker_tag": "[小镇工人]",
   "message.wandscape.curios.no_slots": "[魔法小镇] 该法师没有可用的饰品栏——未检测到 Curios 或其未给法师分配槽位。",
   "gui.wandscape.strategy.title": "施法策略",
   "gui.wandscape.strategy.preset.balanced": "均衡",
