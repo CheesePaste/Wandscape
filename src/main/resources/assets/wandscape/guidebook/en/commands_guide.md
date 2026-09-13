@@ -1,5 +1,7 @@
 # /wandscape Commands
 
+> Deprecated: this page may be out of date. The in-game guide is the source of truth.
+
 This page documents every `/wandscape` command. Player-facing commands are grouped by domain; developer/debug commands live under `/wandscape test` (op-2 only).
 
 > Permissions:

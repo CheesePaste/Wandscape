@@ -1,5 +1,7 @@
 # Creative Building Scanner
 
+> Deprecated: this page may be out of date. The in-game guide is the source of truth.
+
 This page is for creators and map makers. **The Creative Building Scanner is a creative-mode tool, unavailable in survival mode** — it can export a building together with its **tourist interact spots, decoration entities, and the whole set of business parameters**, producing buildings with "soul". For regular players, the [Building Scanner](scanner_guide.md) is enough to copy houses.
 
 ## Structure Pairing

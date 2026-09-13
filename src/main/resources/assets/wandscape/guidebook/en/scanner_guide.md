@@ -1,5 +1,7 @@
 # Building Scanner
 
+> Deprecated: this page may be out of date. The in-game guide is the source of truth.
+
 Turn a building you have finished into a blueprint, and wizards can rebuild it elsewhere from that blueprint. The scanner can be crafted in **survival mode**.
 
 ## Crafting Recipe

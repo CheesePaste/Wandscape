@@ -1,5 +1,7 @@
 # Spline Editor
 
+> Deprecated: this page may be out of date. The in-game guide is the source of truth.
+
 Replace mode can only pull rectangles; drawing arcs requires **splines**: click anchors in the world to draw curves, used for building curves, loops, and interchanges.
 
 ## Entering & Exiting

@@ -12,7 +12,7 @@
 
 ```
 内容唯一来源（作者只改这里）
-    src/main/resources/assets/wandscape/guidebook/{zh_cn,en}/*.md     54 篇 × 2 语（其中 27 篇编进手册，其余只兜底屏可读）
+    src/main/resources/assets/wandscape/guidebook/{zh_cn,en}/*.md     65 篇 × 2 语（其中 50 篇编进手册，其余 15 篇已标注弃用、只兜底屏可读）
                     │
                     │  gen_patchouli.py（本机跑，生成物提交进仓库）
                     ▼
@@ -26,6 +26,19 @@
 
 **硬约束**：md 是唯一内容来源。**不要**手改 `patchouli_books/**` 下的 JSON——它们会被下次生成整体覆盖。
 改内容 = 改 md + 重跑脚本，不存在「改两遍」的路径，两处渲染因此不可能不一致。
+
+### 旧 guidebook 已弃用，不要拿它当参考
+
+这一版之前写的那些长篇 md（`getting_started` / `npc_guide` / `tourist_guide` / `strategy_guide` /
+`overview_guide` / `road_*` / `scanner_guide` / `commands_guide` / `creators_guide` /
+`magic_circle_editor_guide` / `creative_scanner_guide` / `test_guide`，共 15 篇）**内容已经过时**，
+和现在的实现对不上。它们**没有编进手册**，开头一律标了「本页已弃用」。
+
+- **写新内容时不要读它们**——照抄会把过时的机制带进新手册。要写某一页，先读代码和 `data/` 里的实际数据。
+- **方向是反的**：先把手册（即编进手册的那 50 篇 md）写好，将来再**按手册内容反向更新**这些旧文档，
+  而不是拿旧文档去填手册。
+- 它们目前仍留在 `guidebook/` 里，只是因为没装 Patchouli 时兜底屏还能读到；**不要据此认为它们是可信来源**。
+- 手册里若还有链接指向这些文档，生成器会打印「链接无帕秋莉等价形式」——那是在提醒你目标已不在手册里。
 
 ---
 

@@ -1,5 +1,7 @@
 # Magic Circle Web Editor
 
+> Deprecated: this page may be out of date. The in-game guide is the source of truth.
+
 This page is for creators. Regular players can skip it — the pretty magic circles in-game are drawn with this web tool.
 
 The Magic Circle Editor (`tools/magic-circle-editor/`) is a standalone web page for visually designing particle effects; export JSON, drop it into the mod's `magic_circles/` directory, and it becomes usable in-game.

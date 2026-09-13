@@ -1,5 +1,7 @@
 # Tourists
 
+> Deprecated: this page may be out of date. The in-game guide is the source of truth.
+
 Tourists walk into town along roads in the morning and leave once their three need bars are full. The management loop revolves around their three need bars.
 
 ## Three Need Bars

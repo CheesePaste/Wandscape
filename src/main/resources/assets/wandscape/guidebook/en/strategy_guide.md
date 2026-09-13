@@ -1,5 +1,7 @@
 # Cast Strategy
 
+> Deprecated: this page may be out of date. The in-game guide is the source of truth.
+
 What a wizard casts in combat is decided by two things: which **magic scrolls sit in the strategy bar**, and the **overall preset** you pick.
 
 How to open: **aim your crosshair at a wizard and right-click → info screen → the "Strategy" button**; the Strategy button in the Mage Hut's Promotion & Commands card opens the same screen.

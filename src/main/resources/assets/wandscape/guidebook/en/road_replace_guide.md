@@ -1,5 +1,7 @@
 # Replace Mode
 
+> Deprecated: this page may be out of date. The in-game guide is the source of truth.
+
 Used for everyday paving: frame an area of ground and replace the surface grass, dirt, sand, and stone directly with the chosen road material.
 
 ## Three Steps to Pave a Stretch of Road

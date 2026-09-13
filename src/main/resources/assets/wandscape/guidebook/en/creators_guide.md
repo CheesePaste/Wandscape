@@ -1,5 +1,7 @@
 # About Us & Feedback
 
+> Deprecated: this page may be out of date. The in-game guide is the source of truth.
+
 Wandscape is grown by developers, architects and players who love Minecraft and management sims. Thank you to everyone who has added a brick to this magic town.
 As of the current version up to 1.8.22, contributors after this date have not yet been included.
 ## Lead Designer & Lead Developer

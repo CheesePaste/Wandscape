@@ -1,5 +1,7 @@
 # Panel & Overview
 
+> Deprecated: this page may be out of date. The in-game guide is the source of truth.
+
 The panel opened with **V** is used to manage the town: place buildings, lay roads, and manage tasks and wizards. It opens in **overview mode** by default: the camera rises above your head to survey the whole town.
 
 The panel has two states — understand these and you have the basics:

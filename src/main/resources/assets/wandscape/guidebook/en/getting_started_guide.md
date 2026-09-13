@@ -1,5 +1,7 @@
 # Getting Started: From Empty Land to a Tourist Town
 
+> Deprecated: this page may be out of date. The in-game guide is the source of truth.
+
 From an empty plot of land to a magic town that earns money, it only takes eight steps. Don't panic — someone else does the work at every step; you only decide what to build and where.
 
 > Press **H** at any time to open this guide, and **V** to open the panel.

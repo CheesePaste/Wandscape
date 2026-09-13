@@ -1,5 +1,7 @@
 # Wizard NPC
 
+> Deprecated: this page may be out of date. The in-game guide is the source of truth.
+
 Wizards carry out the colony's building, gathering, crafting, and combat. How much the colony can do depends on how many wizards you have and the gear you give them.
 
 ## How to Recruit

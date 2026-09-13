@@ -1,5 +1,7 @@
 # Fill & Destroy Modes
 
+> Deprecated: this page may be out of date. The in-game guide is the source of truth.
+
 These two modes handle 3D terrain: **Fill (FILL)** is used for bridges, pits, and foundations; **Destroy (DESTROY)** is used to remove wrongly paved blocks and flatten terrain.
 
 ## Fill (FILL)

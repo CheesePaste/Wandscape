@@ -1,5 +1,7 @@
 # Wandscape 引导系统 Markdown 测试
 
+> 本页已弃用，内容可能已经过时。新内容以游戏内手册为准。
+
 欢迎来到 **Wandscape** 模组内置的 Markdown 视窗测试页面！本渲染器专门为 Minecraft NeoForge 界面打造。
 
 ## 1. 排版与富文本样式

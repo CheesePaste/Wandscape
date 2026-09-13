@@ -1,5 +1,7 @@
 # Wandscape Guide System Markdown Test
 
+> Deprecated: this page may be out of date. The in-game guide is the source of truth.
+
 Welcome to the Markdown viewer test page built into the **Wandscape** mod! This renderer is built specifically for Minecraft NeoForge interfaces.
 
 ## 1. Typography & Rich Text Styles
