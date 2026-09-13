@@ -65,11 +65,169 @@ public final class SettingsOverlay {
                 SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0f));
     }
 
+    private static Boolean testPermissionOverride = null;
+
+    public static void setTestPermissionOverride(Boolean override) {
+        testPermissionOverride = override;
+    }
+
+    public static boolean canModifySettings() {
+        if (testPermissionOverride != null) {
+            return testPermissionOverride;
+        }
+        Minecraft mc = Minecraft.getInstance();
+        if (mc == null || mc.player == null) {
+            return true;
+        }
+        if (mc.isLocalServer()) {
+            return true;
+        }
+        return mc.player.hasPermissions(2);
+    }
+
     public static void collapseToPrevious() {
         WandscapePanelState.exitCurrentSubMode();
         if (!OverviewClientState.isActive()) {
             WandscapePanelState.setSubMode(WandscapePanelState.SubMode.NONE);
         }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // ── Header Layout Engine (prevents tab & close button overlap) ──
+    // ═══════════════════════════════════════════════════════════════
+
+    public record HeaderLayout(
+            String titleDraw,
+            int titleX,
+            int titleY,
+            int[] tabX,
+            int[] tabW,
+            int closeX,
+            int closeY,
+            int closeW,
+            int closeH
+    ) {
+        public int getTabAt(double mx, double my) {
+            int btnY = 6;
+            int btnH = 22;
+            if (my < btnY || my > btnY + btnH) return -1;
+            for (int i = 0; i < tabX.length; i++) {
+                if (mx >= tabX[i] && mx <= tabX[i] + tabW[i]) {
+                    return i;
+                }
+            }
+            return -1;
+        }
+
+        public boolean isCloseHovered(double mx, double my) {
+            return mx >= closeX && mx <= closeX + closeW && my >= closeY && my <= closeY + closeH;
+        }
+    }
+
+    public static HeaderLayout layoutHeader(Font font, int screenW) {
+        String closeText = "返回 (ESC)";
+        int closeW = Math.max(76, strWidth(font, closeText) + 16);
+        int closeX = screenW - closeW - 12;
+        int closeY = 6;
+        int closeH = 22;
+        int contentRight = closeX - 10;
+        int leftMargin = 16;
+        int avail = Math.max(50, contentRight - leftMargin);
+
+        String colony = WandscapePanelState.getColonyName();
+        String fullTitle = (colony != null && !colony.isEmpty()) ? (colony + " 设置中心") : "魔法小镇 设置中心";
+        String shortTitle = "设置中心";
+
+        SettingTab[] tabs = SettingTab.values();
+        int tabCount = tabs.length;
+        int[] rawW = new int[tabCount];
+        for (int i = 0; i < tabCount; i++) {
+            rawW[i] = strWidth(font, tabs[i].getDisplayName());
+        }
+
+        String chosenTitle = "";
+        int pad = 16;
+        int gap = 6;
+
+        int fullTitleW = strWidth(font, fullTitle);
+        int shortTitleW = strWidth(font, shortTitle);
+
+        int tabsW16 = sumWidths(rawW, 16, 6);
+        int tabsW12 = sumWidths(rawW, 12, 4);
+
+        if (fullTitleW + 16 + tabsW16 <= avail) {
+            chosenTitle = fullTitle;
+            pad = 16;
+            gap = 6;
+        } else if (shortTitleW + 16 + tabsW16 <= avail) {
+            chosenTitle = shortTitle;
+            pad = 16;
+            gap = 6;
+        } else if (shortTitleW + 12 + tabsW12 <= avail) {
+            chosenTitle = shortTitle;
+            pad = 12;
+            gap = 4;
+        } else if (tabsW16 <= avail) {
+            chosenTitle = "";
+            pad = 16;
+            gap = 6;
+        } else if (tabsW12 <= avail) {
+            chosenTitle = "";
+            pad = 12;
+            gap = 4;
+        } else {
+            chosenTitle = "";
+            pad = 8;
+            gap = 3;
+        }
+
+        int totalTabsW = sumWidths(rawW, pad, gap);
+        int titleEnd = chosenTitle.isEmpty() ? leftMargin : (leftMargin + strWidth(font, chosenTitle) + 16);
+
+        int startX;
+        if (!chosenTitle.isEmpty()) {
+            int remaining = contentRight - titleEnd;
+            startX = titleEnd + Math.max(0, (remaining - totalTabsW) / 2);
+            if (startX + totalTabsW > contentRight) {
+                startX = contentRight - totalTabsW;
+            }
+            if (startX < titleEnd) {
+                startX = titleEnd;
+            }
+        } else {
+            startX = leftMargin + Math.max(0, (avail - totalTabsW) / 2);
+            if (startX + totalTabsW > contentRight) {
+                startX = contentRight - totalTabsW;
+            }
+            if (startX < leftMargin) {
+                startX = leftMargin;
+            }
+        }
+
+        int[] tabX = new int[tabCount];
+        int[] tabW = new int[tabCount];
+        int curX = startX;
+        for (int i = 0; i < tabCount; i++) {
+            tabX[i] = curX;
+            tabW[i] = rawW[i] + pad;
+            curX += tabW[i] + gap;
+        }
+
+        return new HeaderLayout(chosenTitle, leftMargin, 12, tabX, tabW, closeX, closeY, closeW, closeH);
+    }
+
+    private static int strWidth(Font font, String str) {
+        if (str == null || str.isEmpty()) return 0;
+        return (font != null) ? font.width(str) : str.length() * 6;
+    }
+
+    private static int sumWidths(int[] rawW, int pad, int gap) {
+        int sum = 0;
+        for (int w : rawW) {
+            sum += w + pad;
+        }
+        sum += gap * (rawW.length - 1);
+        return sum;
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -99,70 +257,70 @@ public final class SettingsOverlay {
         g.fill(RenderType.guiOverlay(), 0, 0, screenW, HEADER_H, 0, HEADER_BG);
         g.fill(RenderType.guiOverlay(), 0, HEADER_H - 1, screenW, HEADER_H, 0, BORDER_GOLD);
 
-        // Title on the left
-        String colony = WandscapePanelState.getColonyName();
-        String titlePrefix = (colony != null && !colony.isEmpty()) ? colony : "魔法小镇";
-        String fullTitle = titlePrefix + " 设置中心";
-        g.drawString(font, fullTitle, 16, 12, WandscapeTheme.COLOR_TEXT_ACTIVE, false);
+        HeaderLayout lo = layoutHeader(font, screenW);
 
-        int titleEnd = 16 + font.width(fullTitle) + 24;
-        int btnY = 6;
-        int btnH = 22;
+        // Title on the left (if visible)
+        if (!lo.titleDraw().isEmpty()) {
+            g.drawString(font, lo.titleDraw(), lo.titleX(), lo.titleY(), WandscapeTheme.COLOR_TEXT_ACTIVE, false);
+        }
+
+        int btnY = lo.closeY();
+        int btnH = lo.closeH();
 
         // Tabs
         SettingTab[] tabs = SettingTab.values();
-        int totalTabsW = 0;
-        for (SettingTab tab : tabs) {
-            totalTabsW += font.width(tab.getDisplayName()) + 26;
-        }
-        int curX = Math.max(titleEnd, (screenW - totalTabsW) / 2);
-        for (SettingTab tab : tabs) {
+        for (int i = 0; i < tabs.length; i++) {
+            SettingTab tab = tabs[i];
             String label = tab.getDisplayName();
-            int tabW = font.width(label) + 20;
+            int tabX = lo.tabX()[i];
+            int tabW = lo.tabW()[i];
             boolean active = (tab == activeTab);
-            boolean hover = mx >= curX && mx <= curX + tabW && my >= btnY && my <= btnY + btnH;
+            boolean hover = mx >= tabX && mx <= tabX + tabW && my >= btnY && my <= btnY + btnH;
 
             int bg = active ? 0xFF2A3240 : (hover ? 0x883E4A5E : 0x441E242E);
-            g.fill(RenderType.guiOverlay(), curX, btnY, curX + tabW, btnY + btnH, 0, bg);
+            g.fill(RenderType.guiOverlay(), tabX, btnY, tabX + tabW, btnY + btnH, 0, bg);
             if (active) {
-                g.fill(RenderType.guiOverlay(), curX, btnY + btnH - 2, curX + tabW, btnY + btnH, 0, BORDER_GOLD);
+                g.fill(RenderType.guiOverlay(), tabX, btnY + btnH - 2, tabX + tabW, btnY + btnH, 0, BORDER_GOLD);
             }
             int textColor = active ? WandscapeTheme.COLOR_TEXT_ACTIVE : (hover ? 0xFFFFFFFF : WandscapeTheme.COLOR_TEXT_NORMAL);
-            g.drawString(font, label, curX + 10, btnY + 7, textColor, false);
-
-            curX += tabW + 6;
+            g.drawString(font, label, tabX + (tabW - font.width(label)) / 2, btnY + 7, textColor, false);
         }
 
         // Close / Exit Button [返回 (ESC)]
-        int closeW = HEADER_CLOSE_W;
-        int closeX = screenW - closeW - HEADER_CLOSE_GAP;
-        boolean closeHover = mx >= closeX && mx <= closeX + closeW && my >= btnY && my <= btnY + btnH;
+        boolean closeHover = lo.isCloseHovered(mx, my);
         int closeBg = closeHover ? 0xCCE53935 : 0x883A2020;
-        g.fill(RenderType.guiOverlay(), closeX, btnY, closeX + closeW, btnY + btnH, 0, closeBg);
+        g.fill(RenderType.guiOverlay(), lo.closeX(), lo.closeY(), lo.closeX() + lo.closeW(), lo.closeY() + lo.closeH(), 0, closeBg);
         String closeText = "返回 (ESC)";
-        g.drawString(font, closeText, closeX + (closeW - font.width(closeText)) / 2, btnY + 7, 0xFFFFFFFF, false);
+        g.drawString(font, closeText, lo.closeX() + (lo.closeW() - font.width(closeText)) / 2, lo.closeY() + 7, 0xFFFFFFFF, false);
     }
 
     private static void renderToolbar(GuiGraphics g, Font font, int screenW, double mx, double my) {
         int y = HEADER_H;
         g.fill(RenderType.guiOverlay(), 0, y, screenW, y + TOOLBAR_H, 0, TOOLBAR_BG);
 
+        boolean canEdit = canModifySettings();
+
         // Status / prompt
-        String hint = (activeTab == SettingTab.PACKAGES)
-                ? "管理已加载的建筑包。停用的建筑包将不会在建造栏中显示（即时生效）"
-                : "配置项修改即时生效并自动持久化保存（支持热重载）";
-        g.drawString(font, hint, 20, y + 8, WandscapeTheme.COLOR_TEXT_DIM, false);
+        if (!canEdit) {
+            String hint = "只读模式：仅管理员 (OP 等级 2) 可修改设置";
+            g.drawString(font, hint, 20, y + 8, 0xFFFFB74D, false);
+        } else {
+            String hint = (activeTab == SettingTab.PACKAGES)
+                    ? "管理已加载的建筑包。停用的建筑包将不会在建造栏中显示（即时生效）"
+                    : "配置项修改即时生效并自动持久化保存（支持热重载）";
+            g.drawString(font, hint, 20, y + 8, WandscapeTheme.COLOR_TEXT_DIM, false);
+        }
 
         // Reset Page Defaults button on the right
         int rBtnW = 110;
         int rBtnH = 18;
         int rBtnX = screenW - rBtnW - 20;
         int rBtnY = y + 4;
-        boolean rHover = mx >= rBtnX && mx <= rBtnX + rBtnW && my >= rBtnY && my <= rBtnY + rBtnH;
-        int rBg = rHover ? 0xFFC8A040 : 0x44262E3B;
-        int rTextColor = rHover ? 0xFF111214 : WandscapeTheme.COLOR_TEXT_NORMAL;
+        boolean rHover = canEdit && mx >= rBtnX && mx <= rBtnX + rBtnW && my >= rBtnY && my <= rBtnY + rBtnH;
+        int rBg = canEdit ? (rHover ? 0xFFC8A040 : 0x44262E3B) : 0x221E242E;
+        int rTextColor = canEdit ? (rHover ? 0xFF111214 : WandscapeTheme.COLOR_TEXT_NORMAL) : 0xFF555555;
         g.fill(RenderType.guiOverlay(), rBtnX, rBtnY, rBtnX + rBtnW, rBtnY + rBtnH, 0, rBg);
-        String rText = "恢复本页默认";
+        String rText = canEdit ? "恢复本页默认" : "锁定 (需 OP)";
         g.drawString(font, rText, rBtnX + (rBtnW - font.width(rText)) / 2, rBtnY + 5, rTextColor, false);
     }
 
@@ -207,11 +365,19 @@ public final class SettingsOverlay {
         g.fill(RenderType.guiOverlay(), x, y, x + w, y + 1, 0, cardHover ? BORDER_GOLD : WandscapeTheme.COLOR_BORDER_NORMAL);
         g.fill(RenderType.guiOverlay(), x, y + h - 1, x + w, y + h, 0, WandscapeTheme.COLOR_BORDER_NORMAL);
 
+        boolean canEdit = canModifySettings();
+
         // ── Left: Info ──
         int titleColor = cardHover ? WandscapeTheme.COLOR_TEXT_ACTIVE : 0xFFFFFFFF;
         g.drawString(font, item.title(), x + 10, y + 8, titleColor, false);
 
         int badgeX = x + 10 + font.width(item.title()) + 8;
+
+        // Badge 0: Read-only tag if not OP
+        if (!canEdit) {
+            drawBadge(g, font, badgeX, y + 6, "[只读]", 0xFFFFB74D, 0x33FFB74D);
+            badgeX += font.width("[只读]") + 6;
+        }
 
         // Badge 1: Hot-reload tag
         if (item.isHotReloadable()) {
@@ -253,7 +419,7 @@ public final class SettingsOverlay {
         int rstBtnY = y + 16;
 
         // [默认] Reset button
-        boolean canReset = !item.isDefault();
+        boolean canReset = canEdit && !item.isDefault();
         boolean rstHover = canReset && mx >= rstBtnX && mx <= rstBtnX + rstBtnW && my >= rstBtnY && my <= rstBtnY + rstBtnH;
         int rstBg = canReset ? (rstHover ? 0xFFC8A040 : 0x663E4A5E) : 0x221E242E;
         int rstTextColor = canReset ? (rstHover ? 0xFF111214 : 0xFFFFFFFF) : 0xFF555555;
@@ -269,11 +435,18 @@ public final class SettingsOverlay {
                 int btnH = 22;
                 int btnX = controlAreaRight - btnW;
                 int btnY = y + 16;
-                boolean bHover = mx >= btnX && mx <= btnX + btnW && my >= btnY && my <= btnY + btnH;
+                boolean bHover = canEdit && mx >= btnX && mx <= btnX + btnW && my >= btnY && my <= btnY + btnH;
                 boolean val = bs.get();
 
-                int bg = val ? (bHover ? 0xFFD4AF37 : 0xFFC8A040) : (bHover ? 0x883E4A5E : 0x44262E3B);
-                int txtColor = val ? 0xFF111214 : (bHover ? 0xFFFFFFFF : 0xFF888888);
+                int bg;
+                int txtColor;
+                if (!canEdit) {
+                    bg = val ? 0x66C8A040 : 0x22262E3B;
+                    txtColor = 0xFF777777;
+                } else {
+                    bg = val ? (bHover ? 0xFFD4AF37 : 0xFFC8A040) : (bHover ? 0x883E4A5E : 0x44262E3B);
+                    txtColor = val ? 0xFF111214 : (bHover ? 0xFFFFFFFF : 0xFF888888);
+                }
                 g.fill(RenderType.guiOverlay(), btnX, btnY, btnX + btnW, btnY + btnH, 0, bg);
                 String btnText = val ? "开启 [ON]" : "关闭 [OFF]";
                 g.drawString(font, btnText, btnX + (btnW - font.width(btnText)) / 2, btnY + 7, txtColor, false);
@@ -286,23 +459,25 @@ public final class SettingsOverlay {
                 int minusX = valX - btnSize - 4;
                 int btnY = y + 16;
 
-                boolean minusHover = mx >= minusX && mx <= minusX + btnSize && my >= btnY && my <= btnY + btnSize;
-                boolean plusHover = mx >= plusX && mx <= plusX + btnSize && my >= btnY && my <= btnY + btnSize;
+                boolean minusHover = canEdit && mx >= minusX && mx <= minusX + btnSize && my >= btnY && my <= btnY + btnSize;
+                boolean plusHover = canEdit && mx >= plusX && mx <= plusX + btnSize && my >= btnY && my <= btnY + btnSize;
 
                 // [-]
-                g.fill(RenderType.guiOverlay(), minusX, btnY, minusX + btnSize, btnY + btnSize, 0,
-                        minusHover ? 0x883E4A5E : 0x44262E3B);
-                g.drawString(font, "-", minusX + (btnSize - font.width("-")) / 2, btnY + 7, 0xFFFFFFFF, false);
+                int minusBg = canEdit ? (minusHover ? 0x883E4A5E : 0x44262E3B) : 0x221E242E;
+                int minusTxt = canEdit ? 0xFFFFFFFF : 0xFF555555;
+                g.fill(RenderType.guiOverlay(), minusX, btnY, minusX + btnSize, btnY + btnSize, 0, minusBg);
+                g.drawString(font, "-", minusX + (btnSize - font.width("-")) / 2, btnY + 7, minusTxt, false);
 
                 // Value box
                 g.fill(RenderType.guiOverlay(), valX, btnY, valX + valBoxW, btnY + btnSize, 0, 0x66161B24);
                 String valStr = item.formatValue();
-                g.drawString(font, valStr, valX + (valBoxW - font.width(valStr)) / 2, btnY + 7, 0xFFFFFFFF, false);
+                g.drawString(font, valStr, valX + (valBoxW - font.width(valStr)) / 2, btnY + 7, canEdit ? 0xFFFFFFFF : 0xFFAAAAAA, false);
 
                 // [+]
-                g.fill(RenderType.guiOverlay(), plusX, btnY, plusX + btnSize, btnY + btnSize, 0,
-                        plusHover ? 0x883E4A5E : 0x44262E3B);
-                g.drawString(font, "+", plusX + (btnSize - font.width("+")) / 2, btnY + 7, 0xFFFFFFFF, false);
+                int plusBg = canEdit ? (plusHover ? 0x883E4A5E : 0x44262E3B) : 0x221E242E;
+                int plusTxt = canEdit ? 0xFFFFFFFF : 0xFF555555;
+                g.fill(RenderType.guiOverlay(), plusX, btnY, plusX + btnSize, btnY + btnSize, 0, plusBg);
+                g.drawString(font, "+", plusX + (btnSize - font.width("+")) / 2, btnY + 7, plusTxt, false);
             }
             case OPTIONS -> {
                 int btnSize = 22;
@@ -312,23 +487,25 @@ public final class SettingsOverlay {
                 int prevX = valX - btnSize - 4;
                 int btnY = y + 16;
 
-                boolean prevHover = mx >= prevX && mx <= prevX + btnSize && my >= btnY && my <= btnY + btnSize;
-                boolean nextHover = mx >= nextX && mx <= nextX + btnSize && my >= btnY && my <= btnY + btnSize;
+                boolean prevHover = canEdit && mx >= prevX && mx <= prevX + btnSize && my >= btnY && my <= btnY + btnSize;
+                boolean nextHover = canEdit && mx >= nextX && mx <= nextX + btnSize && my >= btnY && my <= btnY + btnSize;
 
                 // [<]
-                g.fill(RenderType.guiOverlay(), prevX, btnY, prevX + btnSize, btnY + btnSize, 0,
-                        prevHover ? 0x883E4A5E : 0x44262E3B);
-                g.drawString(font, "<", prevX + (btnSize - font.width("<")) / 2, btnY + 7, 0xFFFFFFFF, false);
+                int prevBg = canEdit ? (prevHover ? 0x883E4A5E : 0x44262E3B) : 0x221E242E;
+                int prevTxt = canEdit ? 0xFFFFFFFF : 0xFF555555;
+                g.fill(RenderType.guiOverlay(), prevX, btnY, prevX + btnSize, btnY + btnSize, 0, prevBg);
+                g.drawString(font, "<", prevX + (btnSize - font.width("<")) / 2, btnY + 7, prevTxt, false);
 
                 // Value box
                 g.fill(RenderType.guiOverlay(), valX, btnY, valX + valBoxW, btnY + btnSize, 0, 0x66161B24);
                 String optStr = item.formatValue();
-                g.drawString(font, optStr, valX + (valBoxW - font.width(optStr)) / 2, btnY + 7, 0xFFFFFFFF, false);
+                g.drawString(font, optStr, valX + (valBoxW - font.width(optStr)) / 2, btnY + 7, canEdit ? 0xFFFFFFFF : 0xFFAAAAAA, false);
 
                 // [>]
-                g.fill(RenderType.guiOverlay(), nextX, btnY, nextX + btnSize, btnY + btnSize, 0,
-                        nextHover ? 0x883E4A5E : 0x44262E3B);
-                g.drawString(font, ">", nextX + (btnSize - font.width(">")) / 2, btnY + 7, 0xFFFFFFFF, false);
+                int nextBg = canEdit ? (nextHover ? 0x883E4A5E : 0x44262E3B) : 0x221E242E;
+                int nextTxt = canEdit ? 0xFFFFFFFF : 0xFF555555;
+                g.fill(RenderType.guiOverlay(), nextX, btnY, nextX + btnSize, btnY + btnSize, 0, nextBg);
+                g.drawString(font, ">", nextX + (btnSize - font.width(">")) / 2, btnY + 7, nextTxt, false);
             }
         }
     }
@@ -362,36 +539,21 @@ public final class SettingsOverlay {
 
         // 1. Header Clicks
         if (my <= HEADER_H) {
-            int btnY = 6;
-            int btnH = 22;
+            HeaderLayout lo = layoutHeader(Minecraft.getInstance().font, screenW);
 
             // Close button
-            int closeW = HEADER_CLOSE_W;
-            int closeX = screenW - closeW - HEADER_CLOSE_GAP;
-            if (mx >= closeX && mx <= closeX + closeW && my >= btnY && my <= btnY + btnH) {
+            if (lo.isCloseHovered(mx, my)) {
                 collapseToPrevious();
                 playClickSound();
                 return true;
             }
 
             // Tab buttons
-            String colony = WandscapePanelState.getColonyName();
-            String fullTitle = (colony != null && !colony.isEmpty() ? colony : "魔法小镇") + " 设置中心";
-            int titleEnd = 16 + Minecraft.getInstance().font.width(fullTitle) + 24;
-            int totalTabsW = 0;
-            for (SettingTab tab : SettingTab.values()) {
-                totalTabsW += Minecraft.getInstance().font.width(tab.getDisplayName()) + 26;
-            }
-            int curX = Math.max(titleEnd, (screenW - totalTabsW) / 2);
-
-            for (SettingTab tab : SettingTab.values()) {
-                int tabW = Minecraft.getInstance().font.width(tab.getDisplayName()) + 20;
-                if (mx >= curX && mx <= curX + tabW && my >= btnY && my <= btnY + btnH) {
-                    setActiveTab(tab);
-                    playClickSound();
-                    return true;
-                }
-                curX += tabW + 6;
+            int clickedTab = lo.getTabAt(mx, my);
+            if (clickedTab >= 0 && clickedTab < SettingTab.values().length) {
+                setActiveTab(SettingTab.values()[clickedTab]);
+                playClickSound();
+                return true;
             }
             return true;
         }
@@ -403,6 +565,11 @@ public final class SettingsOverlay {
             int rBtnX = screenW - rBtnW - 20;
             int rBtnY = HEADER_H + 4;
             if (mx >= rBtnX && mx <= rBtnX + rBtnW && my >= rBtnY && my <= rBtnY + rBtnH) {
+                if (!canModifySettings()) {
+                    showToast("权限不足：仅管理员 (OP) 可修改设置");
+                    playClickSound();
+                    return true;
+                }
                 SettingsRegistry.resetTab(activeTab);
                 showToast("已恢复本页默认设置");
                 playClickSound();
@@ -433,6 +600,11 @@ public final class SettingsOverlay {
 
                     // Reset button
                     if (!item.isDefault() && mx >= rstBtnX && mx <= rstBtnX + rstBtnW && my >= rstBtnY && my <= rstBtnY + rstBtnH) {
+                        if (!canModifySettings()) {
+                            showToast("权限不足：仅管理员 (OP) 可修改设置");
+                            playClickSound();
+                            return true;
+                        }
                         item.resetToDefault();
                         showToast("已重置默认: " + item.title());
                         playClickSound();
@@ -440,6 +612,15 @@ public final class SettingsOverlay {
                     }
 
                     int controlAreaRight = rstBtnX - 8;
+
+                    // If not permitted to modify, clicking anywhere in control area triggers toast and aborts
+                    if (!canModifySettings()) {
+                        if (mx >= controlAreaRight - 150 && mx <= ctrlRight && my >= cy + 16 && my <= cy + 38) {
+                            showToast("权限不足：仅管理员 (OP) 可修改设置");
+                            playClickSound();
+                        }
+                        return true;
+                    }
 
                     switch (item.type()) {
                         case BOOLEAN -> {

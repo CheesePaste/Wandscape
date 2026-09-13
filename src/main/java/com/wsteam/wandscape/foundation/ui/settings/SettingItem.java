@@ -31,6 +31,9 @@ public interface SettingItem {
     void resetToDefault();
 
     default void onModified(String stringValue) {
+        if (!SettingsOverlay.canModifySettings()) {
+            return;
+        }
         if (isClientOnly()) {
             if (ClientConfig.SPEC.isLoaded()) {
                 ClientConfig.SPEC.save();
@@ -103,6 +106,7 @@ public interface SettingItem {
 
         public boolean get() { return getter.get(); }
         public void set(boolean value) {
+            if (!SettingsOverlay.canModifySettings()) return;
             setter.accept(value);
             onModified(String.valueOf(value));
         }
@@ -170,6 +174,7 @@ public interface SettingItem {
 
         public double get() { return configValue.get(); }
         public void set(double value) {
+            if (!SettingsOverlay.canModifySettings()) return;
             double clamped = Math.max(min, Math.min(max, Math.round(value * 1000.0) / 1000.0));
             configValue.set(clamped);
             onModified(String.valueOf(clamped));
@@ -240,6 +245,7 @@ public interface SettingItem {
 
         public int get() { return configValue.get(); }
         public void set(int value) {
+            if (!SettingsOverlay.canModifySettings()) return;
             int clamped = Math.max(min, Math.min(max, value));
             configValue.set(clamped);
             onModified(String.valueOf(clamped));
@@ -303,6 +309,7 @@ public interface SettingItem {
 
         public String get() { return configValue.get(); }
         public void set(String value) {
+            if (!SettingsOverlay.canModifySettings()) return;
             configValue.set(value);
             onModified(value);
         }
