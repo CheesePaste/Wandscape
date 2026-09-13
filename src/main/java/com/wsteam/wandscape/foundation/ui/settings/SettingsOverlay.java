@@ -88,6 +88,14 @@ public final class SettingsOverlay {
         return mc.player.hasPermissions(2);
     }
 
+/** 本页是否至少有一项当前可改：客户端专属项不受管理员门控，所以只读横幅不能只看 canModifySettings()。 */
+    private static boolean tabHasEditableItem() {
+        for (SettingItem item : SettingsRegistry.getItems(activeTab)) {
+            if (item.canModify()) return true;
+        }
+        return false;
+    }
+
     public static void collapseToPrevious() {
         WandscapePanelState.exitCurrentSubMode();
         if (!OverviewClientState.isActive()) {
@@ -307,7 +315,7 @@ public final class SettingsOverlay {
         boolean canEdit = canModifySettings();
 
         // Status / prompt
-        if (!canEdit) {
+        if (!tabHasEditableItem()) {
             String hint = I18n.string("gui.wandscape.settings.hint.readonly", "只读模式：仅管理员 (OP 等级 2) 可修改设置");
             g.drawString(font, hint, 20, y + 8, 0xFFFFB74D, false);
         } else {
@@ -375,7 +383,7 @@ public final class SettingsOverlay {
         g.fill(RenderType.guiOverlay(), x, y, x + w, y + 1, 0, cardHover ? BORDER_GOLD : WandscapeTheme.COLOR_BORDER_NORMAL);
         g.fill(RenderType.guiOverlay(), x, y + h - 1, x + w, y + h, 0, WandscapeTheme.COLOR_BORDER_NORMAL);
 
-        boolean canEdit = canModifySettings();
+        boolean canEdit = item.canModify();
 
         // ── Left: Info ──
         int titleColor = cardHover ? WandscapeTheme.COLOR_TEXT_ACTIVE : 0xFFFFFFFF;
@@ -611,7 +619,7 @@ public final class SettingsOverlay {
 
                     // Reset button
                     if (!item.isDefault() && mx >= rstBtnX && mx <= rstBtnX + rstBtnW && my >= rstBtnY && my <= rstBtnY + rstBtnH) {
-                        if (!canModifySettings()) {
+                        if (!item.canModify()) {
                             showToast(I18n.string("gui.wandscape.settings.toast.no_permission",
                                 "权限不足：仅管理员 (OP) 可修改设置"));
                             playClickSound();
@@ -627,7 +635,7 @@ public final class SettingsOverlay {
                     int controlAreaRight = rstBtnX - 8;
 
                     // If not permitted to modify, clicking anywhere in control area triggers toast and aborts
-                    if (!canModifySettings()) {
+                    if (!item.canModify()) {
                         if (mx >= controlAreaRight - 150 && mx <= ctrlRight && my >= cy + 16 && my <= cy + 38) {
                             showToast(I18n.string("gui.wandscape.settings.toast.no_permission",
                                 "权限不足：仅管理员 (OP) 可修改设置"));

@@ -48,8 +48,16 @@ public interface SettingItem {
     /** 值成功写入本地 config 之后的副作用钩子，两端都会跑。默认无。 */
     default void onApplied() {}
 
+    /**
+     * 本项现在能不能改。**客户端专属项只影响本机、从不发包，因此不受管理员门控**；
+     * 通用配置以服务端为准，非 OP 改了也会被拒，索性先在本地拦下。
+     */
+    default boolean canModify() {
+        return isClientOnly() || SettingsOverlay.canModifySettings();
+    }
+
     default void onModified(String stringValue) {
-        if (!SettingsOverlay.canModifySettings()) {
+        if (!canModify()) {
             return;
         }
         if (isClientOnly()) {
@@ -124,7 +132,7 @@ public interface SettingItem {
 
         public boolean get() { return getter.get(); }
         public void set(boolean value) {
-            if (!SettingsOverlay.canModifySettings()) return;
+            if (!canModify()) return;
             setter.accept(value);
             onModified(String.valueOf(value));
         }
@@ -209,7 +217,7 @@ public interface SettingItem {
         }
 
         public void set(double value) {
-            if (!SettingsOverlay.canModifySettings()) return;
+            if (!canModify()) return;
             onModified(String.valueOf(write(value)));
         }
 
@@ -290,7 +298,7 @@ public interface SettingItem {
         }
 
         public void set(int value) {
-            if (!SettingsOverlay.canModifySettings()) return;
+            if (!canModify()) return;
             onModified(String.valueOf(write(value)));
         }
 
@@ -357,7 +365,7 @@ public interface SettingItem {
         public String get() { return configValue.get(); }
 
         public void set(String value) {
-            if (!SettingsOverlay.canModifySettings()) return;
+            if (!canModify()) return;
             configValue.set(value);
             onModified(value);
         }
