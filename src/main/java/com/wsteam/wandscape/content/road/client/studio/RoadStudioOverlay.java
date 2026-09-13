@@ -418,9 +418,11 @@ public final class RoadStudioOverlay {
             if (!itemStack.isEmpty() && itemStack.getItem() instanceof net.minecraft.world.item.BlockItem bi) {
                 String blockId = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(bi.getBlock()).toString();
                 RoadPlacementState.addProceduralEntry(blockId, 3);
-                mc.player.displayClientMessage(Component.literal("§a[混合调色板] 已添加手中方块: " + formatBlockName(blockId)), true);
+                mc.player.displayClientMessage(Component.literal(I18n.name("gui.wandscape.roadstudio.palette.add_held",
+                        "§a[混合调色板] 已添加手中方块: %s", formatBlockName(blockId)).getString()), true);
             } else {
-                mc.player.displayClientMessage(Component.literal("§c[混合调色板] 主手未持有可放置的方块物品"), true);
+                mc.player.displayClientMessage(Component.literal(I18n.name("gui.wandscape.roadstudio.palette.no_block",
+                        "§c[混合调色板] 主手未持有可放置的方块物品").getString()), true);
             }
         }
     }
@@ -433,7 +435,8 @@ public final class RoadStudioOverlay {
                 String blockId = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(st.getBlock()).toString();
                 RoadPlacementState.addProceduralEntry(blockId, 3);
                 if (mc.player != null) {
-                    mc.player.displayClientMessage(Component.literal("§a[混合调色板] 已添加脚下方块: " + formatBlockName(blockId)), true);
+                    mc.player.displayClientMessage(Component.literal(I18n.name("gui.wandscape.roadstudio.palette.add_feet",
+                            "§a[混合调色板] 已添加脚下方块: %s", formatBlockName(blockId)).getString()), true);
                 }
             }
         }
@@ -492,7 +495,8 @@ public final class RoadStudioOverlay {
                 int btnW = 46;
                 int by = StudioWidgets.getY();
                 int bx = StudioWidgets.getLayoutX() + StudioWidgets.getLayoutW() - btnW;
-                if (StudioWidgets.buttonAt("删除", bx, by - 16, btnW, 14,
+                if (StudioWidgets.buttonAt(I18n.name("gui.wandscape.roadstudio.palette.remove", "删除").getString(),
+                        bx, by - 16, btnW, 14,
                         StudioColors.BUTTON_RED, StudioColors.BUTTON_RED_HOVER, StudioColors.BUTTON_RED_HOVER)) {
                     RoadPlacementState.removeProceduralEntry(i);
                     break;
@@ -505,11 +509,13 @@ public final class RoadStudioOverlay {
         int x = StudioWidgets.getLayoutX();
         int halfW = (StudioWidgets.getLayoutW() - 4) / 2;
 
-        if (StudioWidgets.buttonAt("捕捉手中方块", x, y, halfW, 20,
+        if (StudioWidgets.buttonAt(I18n.name("gui.wandscape.roadstudio.palette.capture_held", "捕捉手中方块").getString(),
+                x, y, halfW, 20,
                 StudioColors.BUTTON_BLUE, StudioColors.BUTTON_HOVER, StudioColors.BUTTON_ACTIVE)) {
             captureHeldBlock(mc);
         }
-        if (StudioWidgets.buttonAt("捕捉脚下方块", x + halfW + 4, y, halfW, 20,
+        if (StudioWidgets.buttonAt(I18n.name("gui.wandscape.roadstudio.palette.capture_feet", "捕捉脚下方块").getString(),
+                x + halfW + 4, y, halfW, 20,
                 StudioColors.BUTTON_BLUE_ALT, StudioColors.BUTTON_HOVER, StudioColors.BUTTON_ACTIVE)) {
             captureFeetBlock(mc);
         }
@@ -520,7 +526,7 @@ public final class RoadStudioOverlay {
                 .map(RoadStudioOverlay::formatBlockName)
                 .toArray(String[]::new);
         String[] comboOptions = new String[blockNames.length + 1];
-        comboOptions[0] = "+ 添加常用建材...";
+        comboOptions[0] = I18n.name("gui.wandscape.roadstudio.palette.add_common", "+ 添加常用建材...").getString();
         System.arraycopy(blockNames, 0, comboOptions, 1, blockNames.length);
 
         StudioWidgets.combo("##addCommonBlock", comboOptions, 0, 20);
@@ -865,9 +871,15 @@ public final class RoadStudioOverlay {
                 "整体平移偏移量:").getString());
 
         // Global shift sliders
-        globalShiftX = StudioWidgets.sliderFloat("##gsX", "X 偏移", (float) globalShiftX, -32f, 32f, "%.1f");
-        globalShiftY = StudioWidgets.sliderFloat("##gsY", "Y 偏移", (float) globalShiftY, -32f, 32f, "%.1f");
-        globalShiftZ = StudioWidgets.sliderFloat("##gsZ", "Z 偏移", (float) globalShiftZ, -32f, 32f, "%.1f");
+        globalShiftX = StudioWidgets.sliderFloat("##gsX",
+                I18n.name("gui.wandscape.roadstudio.curve_shift_x", "X 偏移").getString(),
+                (float) globalShiftX, -32f, 32f, "%.1f");
+        globalShiftY = StudioWidgets.sliderFloat("##gsY",
+                I18n.name("gui.wandscape.roadstudio.curve_shift_y", "Y 偏移").getString(),
+                (float) globalShiftY, -32f, 32f, "%.1f");
+        globalShiftZ = StudioWidgets.sliderFloat("##gsZ",
+                I18n.name("gui.wandscape.roadstudio.curve_shift_z", "Z 偏移").getString(),
+                (float) globalShiftZ, -32f, 32f, "%.1f");
 
         if (StudioWidgets.buttonFull(
                 I18n.name("gui.wandscape.roadstudio.curve_shift_btn", "执行整体平移").getString(),
@@ -895,7 +907,9 @@ public final class RoadStudioOverlay {
             for (int i = 0; i < model.getPoints().size(); i++) {
                 SplinePoint pt = model.getPoints().get(i);
                 SplineVec3 anchor = pt.getAnchor();
-                String symTag = pt.isLocked() ? "[对称]" : "[自由]";
+                String symTag = pt.isLocked()
+                        ? I18n.name("gui.wandscape.roadstudio.curve_sym_tag_locked", "[对称]").getString()
+                        : I18n.name("gui.wandscape.roadstudio.curve_sym_tag_free", "[自由]").getString();
                 pointLabels[i] = String.format("#%d (%.1f, %.1f, %.1f) %s",
                         i, anchor.x(), anchor.y(), anchor.z(), symTag);
             }
@@ -951,8 +965,11 @@ public final class RoadStudioOverlay {
             default -> null;
         };
         if (targetPos != null) {
-            StudioWidgets.text(String.format("  坐标: (%.2f, %.2f, %.2f)",
-                    targetPos.x(), targetPos.y(), targetPos.z()));
+            StudioWidgets.text(I18n.name("gui.wandscape.roadstudio.curve_handle_coords",
+                    "  坐标: (%s, %s, %s)",
+                    String.format("%.2f", targetPos.x()),
+                    String.format("%.2f", targetPos.y()),
+                    String.format("%.2f", targetPos.z())).getString());
         }
 
         // Symmetry lock
@@ -1085,7 +1102,8 @@ public final class RoadStudioOverlay {
         SplineEditorClientState.setArrayOffsetYaw(yaw);
 
         // Reset rotation button
-        if (StudioWidgets.buttonFull("重置旋转为 0°", 18,
+        if (StudioWidgets.buttonFull(
+                I18n.name("gui.wandscape.roadstudio.array_reset_rotation", "重置旋转为 0°").getString(), 18,
                 StudioColors.BUTTON_NORMAL, StudioColors.BUTTON_HOVER)) {
             SplineEditorClientState.setArrayOffsetRoll(0);
             SplineEditorClientState.setArrayOffsetPitch(0);
@@ -1119,8 +1137,8 @@ public final class RoadStudioOverlay {
                 StudioColors.BUTTON_BLUE, StudioColors.BUTTON_HOVER, StudioColors.BUTTON_ACTIVE)) {
             SplineEditorClientState.saveTemplate("native_export");
             if (mc.player != null) {
-                mc.player.displayClientMessage(Component.literal(
-                        "§aSaved to config/wandscape/splines/native_export.json"), true);
+                mc.player.displayClientMessage(Component.literal(I18n.name("gui.wandscape.roadstudio.tpl_saved",
+                        "§a已保存到 config/wandscape/splines/native_export.json").getString()), true);
             }
         }
         if (StudioWidgets.buttonAt(I18n.name("gui.wandscape.roadstudio.tpl_load",
@@ -1234,7 +1252,8 @@ public final class RoadStudioOverlay {
                 new RoadPlacePacket(presetId, start, end));
         Log.info(TAG, "[RoadReplace] Published: preset={} start={} end={}", presetId, start, end);
         if (mc.player != null) {
-            mc.player.displayClientMessage(Component.literal("[Road] §aRoad task submitted!"), true);
+            mc.player.displayClientMessage(Component.literal(I18n.name("gui.wandscape.roadstudio.task_submitted_road",
+                    "[道路] §a铺设任务已下发").getString()), true);
         }
         RoadPlacementState.clearAll();
     }
@@ -1248,7 +1267,8 @@ public final class RoadStudioOverlay {
                 new FillBoxPacket(presetId, start, end));
         Log.info(TAG, "[FillBox] Published: preset={} start={} end={}", presetId, start, end);
         if (mc.player != null) {
-            mc.player.displayClientMessage(Component.literal("[Fill] §aFill task submitted!"), true);
+            mc.player.displayClientMessage(Component.literal(I18n.name("gui.wandscape.roadstudio.task_submitted_fill",
+                    "[填充] §a填充任务已下发").getString()), true);
         }
         RoadPlacementState.clearAll();
     }
@@ -1262,7 +1282,8 @@ public final class RoadStudioOverlay {
                 new DestroyFillPacket(start, end, fillDep));
         Log.info(TAG, "[DestroyFill] Published: start={} end={} fillDep={}", start, end, fillDep);
         if (mc.player != null) {
-            mc.player.displayClientMessage(Component.literal("[Destroy/Fill] §aTerrain flatten task submitted!"), true);
+            mc.player.displayClientMessage(Component.literal(I18n.name("gui.wandscape.roadstudio.task_submitted_flatten",
+                    "[平整] §a地形平整任务已下发").getString()), true);
         }
         RoadPlacementState.clearAll();
     }
