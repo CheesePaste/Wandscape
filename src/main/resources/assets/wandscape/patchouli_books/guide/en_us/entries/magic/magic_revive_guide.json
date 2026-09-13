@@ -7,7 +7,7 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "$(italic)$(#6b5a45)Altar-only — no crafting. Ordered from the altar panel and cast by a living mage.$()$(br2)Wakes a fallen mage at the altar, bringing them back in a weakened state."
+      "text": "$(italic)$(#6b5a45)Altar-only, with no scroll to craft. You order it from the altar panel, and a living mage walks over and casts it.$()$(br2)Wakes a fallen mage at the altar, bringing them back in a weakened state."
     }
   ]
 }

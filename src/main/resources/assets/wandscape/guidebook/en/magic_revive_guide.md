@@ -1,5 +1,5 @@
 # Revive
 
-> Altar-only — no crafting. Ordered from the altar panel and cast by a living mage.
+> Altar-only, with no scroll to craft. You order it from the altar panel, and a living mage walks over and casts it.
 
 Wakes a fallen mage at the altar, bringing them back in a weakened state.

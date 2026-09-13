@@ -59,9 +59,13 @@ python gen_patchouli.py textures --force   # 强制覆盖书皮
 | `magic` | 魔法 | magic_beam / magic_meteor / magic_desperation / magic_enfeeble_field / magic_conversion / magic_petrification / magic_fortification / magic_heal / magic_teleport / magic_revive |
 | `items` | 装备与物品 | wand / oath_ring / scepter / magic_compass / warehouse_terminal |
 
-**每条的开头都有一行「怎么做」**：md 里写成 `> 制作：…`，编译后是引用的样式（斜体 + 棕字），
-排在条目名下方、正文上方。写「在哪做 + 殖民地等级门槛」，**不写元素成本**——具体价格在合成站
-GUI 里现成可见，写进手册只会随平衡调整过期。天生自带或祭坛专属的（传送/复活）就照实写「不需制作」。
+**每条的开头都有一行「怎么做」**：md 里写成 `> 在合成站制作，低、中、高级分别需要殖民地达到 1 级、10 级和 20 级。`
+这样的引用行，编译后是引用样式（斜体 + 棕字），排在条目名下方、正文上方。写「在哪做 + 殖民地等级门槛」，
+**不写元素成本**——具体价格在合成站 GUI 里现成可见，写进手册只会随平衡调整过期。天生自带或祭坛专属的
+（传送/复活）就照实写「不需要制作」。
+
+**手册文案一律写成通顺的话，不要为了塞进一行把句子压成电报**（「指向市政厅；高级显坐标，终极可右键传送」
+这种分号堆叠、缺主语的写法不算一句话）。一句话就是一整句完整的话，宁可长一点。
 
 `magic` 分类一条魔法一页，正文**照搬 `magic_spells/<id>.json` 的 `description`**——即 JEI 卷轴信息页
 （`WandscapeJeiPlugin` 经 `magic.wandscape.<id>.desc` 本地化）那句。`items` 分类把 3 档戒指 /

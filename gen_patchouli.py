@@ -56,11 +56,11 @@ CATEGORIES = [
      "元素经济、管理面板、法师与游客机制概览。",
      "Elements, management panel, mages, and tourist mechanics."),
     ("magic", "魔法", "Spells", "wandscape:spell_scroll", 30,
-     "每个魔法的效果与用途，与 JEI 卷轴信息页同文。",
-     "What each spell does — same text as the JEI scroll info page."),
+     "每个魔法能干什么，以及对应的卷轴从哪里来。",
+     "What each spell does and where its scroll comes from."),
     ("items", "装备与物品", "Equipment and Items", "wandscape:wand", 40,
-     "法杖、权杖、戒指、罗盘与终端：怎么拿、拿来干什么。",
-     "Wands, scepters, rings, compasses and terminals — how to get them and what they are for."),
+     "法杖、权杖、戒指、罗盘和终端该怎么拿到，以及它们各自能干什么。",
+     "How to get the mod's wands, scepters, rings, compasses and terminals, and what each one is for."),
 ]
 
 # 条目：(md 文件名去掉 .md, 所属分类, 图标, sortnum)。条目名取 md 的 H1。

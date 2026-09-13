@@ -1,5 +1,5 @@
 # Magic Compass
 
-> Crafted at the Crafting Station. The three tiers require colony level 1 / 10 / 20.
+> Crafted at the Crafting Station; the three tiers need colony level 1, 10 and 20 respectively.
 
-Always points at your colony's town hall: the advanced tier shows its coordinates in the tooltip, and the ultimate tier right-click teleports you there.
+A magic compass always points at your colony's town hall, so you never lose your way home. The advanced tier also shows the town hall's coordinates in its tooltip, and the ultimate tier goes one step further: right-click and it teleports you straight there.

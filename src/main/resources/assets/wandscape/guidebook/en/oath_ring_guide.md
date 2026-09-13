@@ -1,5 +1,5 @@
 # Oath Ring
 
-> Crafted at the Crafting Station. Low / Mid / High require colony level 1 / 10 / 20.
+> Crafted at the Crafting Station; Low, Mid and High need colony level 1, 10 and 20 respectively.
 
-Carries a mage of your own colony in your pocket: shift+right-click a mage to store it, then right-click a block or the air to release it there. Low / Mid / High hold 1 / 2 / 4 mages.
+An oath ring stores a mage of your own colony inside it so you can carry them around. Shift+right-click a mage to store them, then right-click a block or the air to release them there. The Low, Mid and High rings hold 1, 2 and 4 mages respectively.
