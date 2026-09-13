@@ -117,6 +117,9 @@ public final class AltarCastHandler {
         params.put("altar", new JsonPrimitive(buildingId.toString()));
         params.put("mana_cost", new JsonPrimitive(def.manaCost()));
         params.put("duration", new JsonPrimitive(def.altarDuration()));
+        // 祭坛施法的执行器只认本模组法师（同 guard:attack）。mana_cost 门槛已能挡住魔力为 0 的
+        // 第三方工作者，这里再显式声明一次，语义更清楚、也不依赖"它们的魔力恰好是 0"。
+        params.put("caster_only", new JsonPrimitive(true));
 
         World world = World.getActive();
         if (world == null || world.taskPool == null) {

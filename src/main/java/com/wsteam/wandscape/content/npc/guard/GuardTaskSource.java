@@ -71,6 +71,9 @@ public final class GuardTaskSource implements TaskSource {
         Map<String, JsonElement> params = new LinkedHashMap<>();
         params.put("attackRange", new JsonPrimitive(com.wsteam.wandscape.foundation.util.BalanceValues.guardRange()));
         params.put("releaseRange", new JsonPrimitive(com.wsteam.wandscape.foundation.util.BalanceValues.guardReleaseRange()));
+        // 守卫战斗编排（GuardCombat → CastBrain → MagicSpellExecutors）只认本模组法师；第三方工作者
+        // 接取会因执行器拿不到实体而"瞬间完成"并空转，故声明 caster_only 让调度器挡掉它们。
+        params.put("caster_only", new JsonPrimitive(true));
         // 守卫任务刻意不绑定殖民地：守卫区由全殖民地建筑包围盒并集生成，可能横跨多个小镇，
         // 执行器（GuardAttackExecutor）防守所有区域。colonyId=null → 无主任务，
         // 由距威胁最近的真实殖民地 NPC 接取（调度器按邻近评分）；占位殖民地 NPC 永不接取。

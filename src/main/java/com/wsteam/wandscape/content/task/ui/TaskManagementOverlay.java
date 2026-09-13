@@ -718,6 +718,11 @@ public final class TaskManagementOverlay {
 
         // Line 1: Name + State Tag
         String name = mage.name();
+        // 第三方模组登记的殖民地工作者（如车万女仆）标出来——她们与法师并排显示，
+        // 但不吃法师那套属性/魔力，不标一下玩家会以为数据错了
+        if (!"npc".equals(mage.kind())) {
+            name = "[小镇工人] " + name;
+        }
         g.drawString(font, name, x + 8, y + 6, WandscapeTheme.COLOR_TEXT_ACTIVE, false);
 
         String stateTag = formatMageState(mage);
@@ -746,8 +751,12 @@ public final class TaskManagementOverlay {
         }
         g.drawString(font, attrStr, x + 8, y + 36, WandscapeTheme.COLOR_TEXT_DIM, false);
 
-        // Line 4: Action Buttons (Right Aligned)
-        renderMageActionButtons(g, font, x + w - 108, y + 52, mage, mx, my);
+        // Line 4: Action Buttons (Right Aligned) —— 仅法师。
+        // 跟随/和平是 WandscapeNpc 的模式开关（服务端 MageModeActionPacket 对非法师直接 warn+return），
+        // 面板里还并列着第三方工作者（女仆等），给她们画这两个按钮只会是点不动的死按钮。
+        if ("npc".equals(mage.kind())) {
+            renderMageActionButtons(g, font, x + w - 108, y + 52, mage, mx, my);
+        }
     }
 
     private static void renderMageActionButtons(GuiGraphics g, Font font, int x, int y, MageSummaryDto mage, double mx, double my) {
@@ -988,6 +997,9 @@ public final class TaskManagementOverlay {
 
                 if (my >= cy && my <= cy + MAGE_CARD_H) {
                     MageSummaryDto m = mages.get(i);
+                    // 跟随/和平按钮只画给法师（见 renderMageCard）；这里同步挡掉命中判定，
+                    // 否则非法师卡片上会出现一块"看不见但能点、点了没反应"的死区。
+                    if (!"npc".equals(m.kind())) continue;
                     int btnBaseX = cx + cardW - 108;
                     int btnBaseY = cy + 52;
                     int btnH2 = 20;

@@ -17,6 +17,7 @@ import com.wsteam.wandscape.content.npc.attributes.NpcAttributes.AttributeType;
 import com.wsteam.wandscape.content.npc.types.FollowAttackDecision;
 import com.wsteam.wandscape.content.npc.types.FriendlyForce;
 import com.wsteam.wandscape.content.npc.WandscapeAttributes;
+import com.wsteam.wandscape.content.npc.worker.ColonyWorker;
 import com.wsteam.wandscape.foundation.nav.WandscapeNavigation;
 import com.wsteam.wandscape.content.magic.data.MagicDef;
 import com.wsteam.wandscape.content.magic.internal.MagicCaster;
@@ -98,7 +99,7 @@ import java.util.stream.Stream;
  * <p>Stage 2 (V1 minimal): basic idle AI, no task-driven movement.
  * Subsequent stages add stuck detection, death/grave, house binding, etc.
  */
-public class WandscapeNpc extends PathfinderMob implements PlayerLike {
+public class WandscapeNpc extends PathfinderMob implements PlayerLike, ColonyWorker {
 
     private static final String TAG = "WandscapeNpc";
 
@@ -147,6 +148,81 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
 
     public float getEffectiveArmorValue() {
         return (float) getAttributeValue(Attributes.ARMOR);
+    }
+
+    // ============================================================
+    // ColonyWorker — ECS 任务链的实体解析缝（见 ColonyWorker javadoc）
+    // 全部委托既有实现，行为与改造前完全一致。
+    // ============================================================
+
+    @Override
+    public Mob entity() {
+        return this;
+    }
+
+    @Override
+    public UUID workerId() {
+        return getUUID();
+    }
+
+    @Override
+    public UUID colonyId() {
+        return colonyId;
+    }
+
+    @Override
+    public boolean isNavigationDone() {
+        return getNavigation().isDone();
+    }
+
+    @Override
+    public boolean moveTo(BlockPos target, double speed) {
+        // 与改造前 NavigationSystem.startPathfinding / tickPathfinding 的调法逐字一致：
+        // 方块中心 (x+0.5, y+1, z+0.5)。
+        boolean ok = getNavigation().moveTo(
+                target.getX() + 0.5, target.getY() + 1, target.getZ() + 0.5, speed);
+        if (!ok) {
+            // 诊断：moveTo 返回 false（createPath 未找到路径）。打失败瞬间状态定位根因。
+            // 从 NavigationSystem 挪到这里——两边的移动机制不同，诊断字段也不同。
+            var path = getNavigation().getPath();
+            com.wsteam.wandscape.foundation.log.Log.debug(
+                    com.wsteam.wandscape.foundation.log.LogCategory.NPC, "nav",
+                    "NPC {} moveTo FAIL dest=({},{},{}) from=({},{},{}) "
+                            + "onGround={} y={} stepH={} loaded={} pathNodes={}",
+                    getUUID().toString().substring(0, 8),
+                    target.getX(), target.getY(), target.getZ(),
+                    getBlockX(), getBlockY(), getBlockZ(),
+                    onGround(), getY(), maxUpStep(), level().isLoaded(target),
+                    path != null ? path.getNodeCount() : -1);
+        }
+        return ok;
+    }
+
+    @Override
+    public void stopNavigation() {
+        getNavigation().stop();
+    }
+
+    @Override
+    public boolean tryEscapeCast(String magicId, int baseCooldown, int manaCost, int lockTicks) {
+        return tryCastSpell(magicId, baseCooldown, manaCost, lockTicks);
+    }
+
+    @Override
+    public void markEscapeChanneling(long gameTime, int ticks) {
+        markTeleportChanneling(gameTime, ticks);
+    }
+
+    /** 本模组法师恒可承担需要施法的任务（守卫 / 祭坛）。 */
+    @Override
+    public boolean canCastColonyMagic() {
+        return true;
+    }
+
+    /** 任务面板标签：法师（第三方工作者用 ColonyWorker 的默认值 "worker"）。 */
+    @Override
+    public String panelKind() {
+        return "npc";
     }
 
     // ============================================================
@@ -1793,37 +1869,11 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
             // Release global task for reassignment (preserve stepIndex),
             // then destroy ECS components. Private queue is discarded.
             if (reason == RemovalReason.KILLED || reason == RemovalReason.DISCARDED) {
-                if (world != null && ecsEntityId > 0) {
-                    var exec = world.get(ecsEntityId,
-                            TaskExecutor.class);
-                    if (exec != null && exec.globalTaskId != null) {
-                        world.taskPool.releaseTaskForReassign(
-                                exec.globalTaskId, ecsEntityId, world);
-                    }
-
-                    // Release resource reservations from pending transports.
-                    // Items were reserved but never consumed — just dropping the
-                    // reservation is correct (no items need to be returned to bank).
-                    var rt = com.wsteam.wandscape.content.task.runtime.TaskRuntime.getActive();
-                    var resourceReqExec = rt != null ? rt.getResourceReqExec() : null;
-                    if (resourceReqExec != null) {
-                        resourceReqExec.cancelForNpc(ecsEntityId);
-                    }
-
-                    // Orphan recovery: cancel all in-flight transports for this NPC
-                    var transporter = com.wsteam.wandscape.content.warehouse.transport.ItemTransportManager.getInstance();
-                    if (transporter != null) {
-                        var bank = ColonyItemBank.get(level());
-                        if (bank != null) {
-                            UUID cid = this.colonyId != null ? this.colonyId : new UUID(0, 0);
-                            var member = world.get(ecsEntityId,
-                                    ColonyMember.class);
-                            if (member != null && member.colonyId() != null) cid = member.colonyId();
-                            transporter.cancelForNpc(ecsEntityId, bank, cid);
-                        }
-                    }
-
-                    EntityComponentBridge.INSTANCE.onNpcLeaveWorld(this, world);
+                if (world != null) {
+                    // 释放全局任务供重派 / 取消资源预留 / 取消在途运输 / 移除 ECS 组件——
+                    // 四件事全部集中在桥的 onWorkerLeaveWorld，第三方工作者（车万女仆等）
+                    // 走同一份清理，不会漏项造出「幽灵工作者占着全局任务不干活」。
+                    EntityComponentBridge.INSTANCE.onWorkerLeaveWorld(this, world);
                 }
             }
             // UNLOADED_TO_CHUNK / UNLOADED_WITH_PLAYER:
@@ -2084,17 +2134,8 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
      * Called from AsyncTransformExecutor when a block op finishes.
      */
     public void doWorkAnimation(BlockPos target) {
-        this.swing(InteractionHand.MAIN_HAND);
-        if (level().isClientSide) return;
-        // Spawn particles at the target block position (server syncs to clients)
-        for (int i = 0; i < 5; i++) {
-            level().addParticle(
-                    ParticleTypes.WITCH,
-                    target.getX() + 0.5 + (random.nextDouble() - 0.5) * 0.5,
-                    target.getY() + 0.5 + (random.nextDouble() - 0.5) * 0.5,
-                    target.getZ() + 0.5 + (random.nextDouble() - 0.5) * 0.5,
-                    0, 0, 0);
-        }
+        // 与第三方工作者共用同一套表现，避免两处粒子参数各自漂移
+        com.wsteam.wandscape.content.npc.worker.WorkerFx.playWorkAnimation(this, target);
     }
 
     // ============================================================

@@ -152,6 +152,10 @@ dependencies {
 
     // 帕秋莉手册 (Patchouli) — 可选软依赖，compileOnly 不打包；提供文档指南 API
     compileOnly "vazkii.patchouli:Patchouli:${patchouli_version}:api"
+
+    // 车万女仆 (Touhou Little Maid) — 可选软依赖，compileOnly 不打包；玩家自行装 TLM。
+    // 仅编译期用其 api 包（ILittleMaid / IMaidTask），未装时 compat 层整体静默降级。
+    compileOnly "maven.modrinth:touhou-little-maid:${touhou_little_maid_version}"
     localRuntime "vazkii.patchouli:Patchouli:${patchouli_version}"
 
     // Example project dependency using a sister or child project:

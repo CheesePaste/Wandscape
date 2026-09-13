@@ -20,7 +20,16 @@ public interface ColonyApi {
     @Nullable
     UUID getFounder(UUID colonyId);
 
-    /** The colony founded by the given player (one player = one colony), or null. */
+    /**
+     * The colony founded by the given player (one player = one colony), or null.
+     *
+     * <p>⚠️ **服务端专用**：实现查的是殖民地 SavedData（`ServerLifecycleHooks.getCurrentServer()`），
+     * 在**专用服务器的客户端恒返回 null**（单机因有集成服务端而看不出来）。
+     * 因此**绝不要**在客户端也会跑到的判定里用它——典型翻车：第三方实体任务的
+     * {@code isEnable} 在客户端被调用，用它判"主人有小镇"会让任务在多人游戏里永久置灰、点不动。
+     * 客户端只能用同步下来的数据（如 `WandscapePanelState`），殖民地归属这类服务端事实
+     * 要放到服务端路径去把关。同类陷阱：[{@code getColonyLevel} 客户端恒 0]。
+     */
     @Nullable
     UUID getColonyByFounder(UUID founder);
 

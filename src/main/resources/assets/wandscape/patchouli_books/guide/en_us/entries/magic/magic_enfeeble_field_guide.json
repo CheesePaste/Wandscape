@@ -1,0 +1,13 @@
+{
+  "name": "Enfeeble Field",
+  "category": "wandscape:magic",
+  "icon": "minecraft:fermented_spider_eye",
+  "sortnum": 3,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "$(italic)$(#6b5a45)Crafted at the Magic Workshop; needs colony level 10.$()$(br2)Unfolds an enfeeble field, slowing and weakening all enemies within 5.8 blocks and shredding their armor for 15 seconds."
+    }
+  ]
+}

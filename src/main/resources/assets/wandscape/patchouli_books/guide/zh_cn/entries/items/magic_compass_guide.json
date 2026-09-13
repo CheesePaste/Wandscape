@@ -1,0 +1,13 @@
+{
+  "name": "魔法指南针",
+  "category": "wandscape:items",
+  "icon": "wandscape:magic_compass",
+  "sortnum": 3,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "$(italic)$(#6b5a45)在合成站制作，三档分别需要殖民地达到 1 级、10 级和 20 级。$()$(br2)魔法指南针的指针始终指着本殖民地的市政厅，不管走到哪里都不会找不到家。高级版还会在物品提示里显示市政厅的具体坐标，终极版更进一步，右键就能直接传送到市政厅。"
+    }
+  ]
+}

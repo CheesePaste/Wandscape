@@ -1,0 +1,13 @@
+{
+  "name": "Fortification",
+  "category": "wandscape:magic",
+  "icon": "minecraft:shield",
+  "sortnum": 6,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "$(italic)$(#6b5a45)Crafted at the Magic Workshop; needs colony level 10.$()$(br2)Fortifies the caster: +4 armor, Magic Enhancement I (magic damage +20%) and Speed I for 15 seconds."
+    }
+  ]
+}

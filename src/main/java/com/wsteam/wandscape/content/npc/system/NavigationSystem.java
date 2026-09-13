@@ -15,7 +15,7 @@ import com.wsteam.wandscape.content.task.types.RitualId;
 import com.wsteam.wandscape.content.task.boundary.WandscapeRitualOps;
 import com.wsteam.wandscape.content.magic.data.MagicDef;
 import com.wsteam.wandscape.content.magic.internal.SpellbookLoader;
-import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
+import com.wsteam.wandscape.content.npc.worker.ColonyWorker;
 import com.wsteam.wandscape.content.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.foundation.log.LogCategory;
@@ -73,19 +73,20 @@ public class NavigationSystem implements EcsSystem {
             NavigationState nav = world.get(npcId, NavigationState.class);
             if (nav == null || nav.mode == NavigationState.Mode.IDLE) continue;
 
-            WandscapeNpc npc = EntityComponentBridge.INSTANCE.getNpc(npcId);
-            if (npc == null || npc.isRemoved()) {
+            ColonyWorker worker = EntityComponentBridge.INSTANCE.getWorker(npcId);
+            if (worker == null || worker.entity().isRemoved()) {
                 nav.reset();
                 continue;
             }
+            var e = worker.entity();
 
-            double dx = npc.getX() - (nav.target.x() + 0.5);
-            double dz = npc.getZ() - (nav.target.z() + 0.5);
+            double dx = e.getX() - (nav.target.x() + 0.5);
+            double dz = e.getZ() - (nav.target.z() + 0.5);
             double hDistSq = dx * dx + dz * dz;
 
             // Arrived (all modes): 水平距离 <= 5格（垂直高度任意）
             if (hDistSq <= STOP_RANGE_SQ) {
-                arrive(nav, npc);
+                arrive(nav, worker);
                 continue;
             }
 
@@ -93,8 +94,8 @@ public class NavigationSystem implements EcsSystem {
             if (nav.startTick == 0) {
                 nav.startTick = tickCounter;
                 nav.lastCheckTick = tickCounter;
-                nav.lastCheckX = npc.getX();
-                nav.lastCheckZ = npc.getZ();
+                nav.lastCheckX = e.getX();
+                nav.lastCheckZ = e.getZ();
 
                 // Distance > walkThreshold → skip pathfinding, use self_teleport ritual
                 if (nav.mode == NavigationState.Mode.PATHFINDING
@@ -103,12 +104,12 @@ public class NavigationSystem implements EcsSystem {
                     continue;
                 }
 
-                npc.setAiWanderingEnabled(false);
+                worker.setAiWanderingEnabled(false);
 
                 if (nav.mode == NavigationState.Mode.PATHFINDING) {
-                    boolean ok = startPathfinding(nav, npc, npcId);
+                    boolean ok = startPathfinding(nav, worker, npcId);
                     if (!ok) {
-                        Log.debug(LogCategory.NPC, "nav", "NPC {} — pathfinding init failed, switching to teleport", npcId);
+                        Log.debug(LogCategory.NPC, "nav", "Worker {} — pathfinding init failed, switching to teleport", npcId);
                         switchToRitualTeleport(nav, npcId, world);
                     }
                     continue;
@@ -117,7 +118,7 @@ public class NavigationSystem implements EcsSystem {
             }
 
             switch (nav.mode) {
-                case PATHFINDING -> tickPathfinding(nav, npc, npcId, world);
+                case PATHFINDING -> tickPathfinding(nav, worker, npcId, world);
                 case TELEPORT_WAITING -> tickTeleportWaiting(nav, npcId, world);
                 case TELEPORT_RITUAL -> { /* ritual in private queue; arrival checked at top */ }
             }
@@ -127,23 +128,23 @@ public class NavigationSystem implements EcsSystem {
 
     // ---- PATHFINDING ----
 
-    private void tickPathfinding(NavigationState nav, WandscapeNpc npc, long npcId, World world) {
+    private void tickPathfinding(NavigationState nav, ColonyWorker worker, long npcId, World world) {
         int elapsed = tickCounter - nav.startTick;
+        var e = worker.entity();
 
-        if (npc.getNavigation().isDone()) {
+        if (worker.isNavigationDone()) {
             if (nav.repathCount < MAX_REPATH) {
                 nav.repathCount++;
-                BlockPos to = resolveWalkTarget(npc, nav.target);
-                boolean ok = npc.getNavigation().moveTo(
-                        to.getX() + 0.5, to.getY() + 1, to.getZ() + 0.5, NAV_SPEED);
-                Log.debug(LogCategory.NPC, "nav", "NPC {} re-path #{}, elapsed={} ok={}",
+                BlockPos to = resolveWalkTarget(worker, nav.target);
+                boolean ok = worker.moveTo(to, NAV_SPEED);
+                Log.debug(LogCategory.NPC, "nav", "Worker {} re-path #{}, elapsed={} ok={}",
                         npcId, nav.repathCount, elapsed, ok);
                 if (!ok) {
-                    Log.debug(LogCategory.NPC, "nav", "NPC {} — re-path failed, switching to teleport", npcId);
+                    Log.debug(LogCategory.NPC, "nav", "Worker {} — re-path failed, switching to teleport", npcId);
                     switchToRitualTeleport(nav, npcId, world);
                 }
             } else {
-                Log.debug(LogCategory.NPC, "nav", "NPC {} — re-paths exhausted, switching to teleport", npcId);
+                Log.debug(LogCategory.NPC, "nav", "Worker {} — re-paths exhausted, switching to teleport", npcId);
                 switchToRitualTeleport(nav, npcId, world);
             }
             return;
@@ -153,28 +154,28 @@ public class NavigationSystem implements EcsSystem {
         // 仍明显慢于陆地，固定超时会把正在游过河/湖的 NPC 提前判死并触发传送。水中改靠下方
         // 卡死进度检测兜底——无水平推进（STUCK_* 三连）或有位移但逼近不了目标（水中净逼近判据，
         // 高岸水池这类游得动却爬不出去的困局）都会被传送；慢但持续逼近目标的不受影响。
-        if (elapsed > PATHFIND_TIMEOUT && !npc.isInWater()) {
-            Log.debug(LogCategory.NPC, "nav", "NPC {} — timeout {} ticks, switching to teleport", npcId, elapsed);
+        if (elapsed > PATHFIND_TIMEOUT && !e.isInWater()) {
+            Log.debug(LogCategory.NPC, "nav", "Worker {} — timeout {} ticks, switching to teleport", npcId, elapsed);
             switchToRitualTeleport(nav, npcId, world);
             return;
         }
 
         // Stuck check
         if (tickCounter - nav.lastCheckTick >= WandscapeConstants.STUCK_CHECK_INTERVAL_TICKS) {
-            double progress = Math.abs(npc.getX() - nav.lastCheckX)
-                    + Math.abs(npc.getZ() - nav.lastCheckZ);
+            double progress = Math.abs(e.getX() - nav.lastCheckX)
+                    + Math.abs(e.getZ() - nav.lastCheckZ);
             if (progress < WandscapeConstants.STUCK_MIN_MOVE_DISTANCE) {
                 nav.stuckChecks++;
-                Log.debug(LogCategory.NPC, "nav", "NPC {} — stuck check #{}, progress={}",
+                Log.debug(LogCategory.NPC, "nav", "Worker {} — stuck check #{}, progress={}",
                         npcId, nav.stuckChecks, String.format("%.2f", progress));
                 if (nav.stuckChecks >= WandscapeConstants.STUCK_MAX_RETRIES) {
-                    Log.debug(LogCategory.NPC, "nav", "NPC {} — stuck, switching to teleport", npcId);
+                    Log.debug(LogCategory.NPC, "nav", "Worker {} — stuck, switching to teleport", npcId);
                     switchToRitualTeleport(nav, npcId, world);
                     return;
                 }
             } else {
                 nav.stuckChecks = 0;
-                if (npc.isInWater()) {
+                if (e.isInWater()) {
                     GridPos waterTarget = nav.target;
                     if (waterTarget != null) {
                         // 到达中心与顶楼 arrive 判据一致：(x+0.5, y+1, z+0.5)。用 3D 距离而非仅水平——
@@ -182,9 +183,9 @@ public class NavigationSystem implements EcsSystem {
                         double dcx = waterTarget.x() + 0.5;
                         double dcy = waterTarget.y() + 1.0;
                         double dcz = waterTarget.z() + 0.5;
-                        double vx = npc.getX() - dcx;
-                        double vy = npc.getY() - dcy;
-                        double vz = npc.getZ() - dcz;
+                        double vx = e.getX() - dcx;
+                        double vy = e.getY() - dcy;
+                        double vz = e.getZ() - dcz;
                         double d = Math.sqrt(vx * vx + vy * vy + vz * vz);
                         if (nav.waterBestDist < 0) {
                             nav.waterBestDist = d; // 首区间惰性初始化，不计数
@@ -193,12 +194,12 @@ public class NavigationSystem implements EcsSystem {
                             nav.waterStallCount = 0; // 有新推进 → 正常渡河/水下，清零
                         } else {
                             nav.waterStallCount++;
-                            Log.debug(LogCategory.NPC, "nav", "NPC {} — in water, best dist to target {}, stall #{}/{}",
+                            Log.debug(LogCategory.NPC, "nav", "Worker {} — in water, best dist to target {}, stall #{}/{}",
                                     npcId, String.format("%.2f", nav.waterBestDist),
                                     nav.waterStallCount, WATER_STALL_LIMIT);
                             if (nav.waterStallCount >= WATER_STALL_LIMIT) {
                                 Log.debug(LogCategory.NPC, "nav",
-                                        "NPC {} — swimming but cannot approach target (high-bank water trap), teleporting",
+                                        "Worker {} — swimming but cannot approach target (high-bank water trap), teleporting",
                                         npcId);
                                 switchToRitualTeleport(nav, npcId, world);
                                 return;
@@ -212,8 +213,8 @@ public class NavigationSystem implements EcsSystem {
                 }
             }
             nav.lastCheckTick = tickCounter;
-            nav.lastCheckX = npc.getX();
-            nav.lastCheckZ = npc.getZ();
+            nav.lastCheckX = e.getX();
+            nav.lastCheckZ = e.getZ();
         }
     }
 
@@ -221,11 +222,12 @@ public class NavigationSystem implements EcsSystem {
      * Resolves a walkable destination for pathfinding.
      * If the target block is solid (e.g. wall or in-ground foundation), targets the block above if clear.
      */
-    private BlockPos resolveWalkTarget(WandscapeNpc npc, GridPos target) {
+    private BlockPos resolveWalkTarget(ColonyWorker worker, GridPos target) {
+        var level = worker.entity().level();
         BlockPos to = new BlockPos(target.x(), target.y(), target.z());
-        if (npc.level().isLoaded(to) && npc.level().getBlockState(to).isSolid()) {
+        if (level.isLoaded(to) && level.getBlockState(to).isSolid()) {
             BlockPos above = to.above();
-            if (npc.level().isLoaded(above) && !npc.level().getBlockState(above).isSolid()) {
+            if (level.isLoaded(above) && !level.getBlockState(above).isSolid()) {
                 return above;
             }
         }
@@ -235,26 +237,13 @@ public class NavigationSystem implements EcsSystem {
     /**
      * Initialise pathfinding for a fresh request: vanilla A* to the target.
      * Returns false if movement cannot start at all.
+     *
+     * <p>失败瞬间的详细诊断（起点/落点/踏高/区块加载/路径节点数）由各 {@code ColonyWorker} 的
+     * {@code moveTo} 实现自行打印——两边的移动机制不同，诊断字段也不同。
      */
-    private boolean startPathfinding(NavigationState nav, WandscapeNpc npc, long npcId) {
-        GridPos target = nav.target;
-        BlockPos to = resolveWalkTarget(npc, target);
-        BlockPos from = npc.blockPosition();
-
-        boolean ok = npc.getNavigation().moveTo(
-                to.getX() + 0.5, to.getY() + 1, to.getZ() + 0.5, NAV_SPEED);
-        if (!ok) {
-            // 诊断：moveTo 返回 false（createPath 未找到路径）。打失败瞬间状态定位根因。
-            var navPath = npc.getNavigation().getPath();
-            Log.debug(LogCategory.NPC, "nav", "NPC {} moveTo FAIL dest=({},{},{}) from=({},{},{}) "
-                            + "onGround={} y={} stepH={} loaded={} pathNodes={}",
-                    npcId, to.getX(), to.getY(), to.getZ(),
-                    from.getX(), from.getY(), from.getZ(),
-                    npc.onGround(), npc.getY(), npc.maxUpStep(),
-                    npc.level().isLoaded(to),
-                    navPath != null ? navPath.getNodeCount() : -1);
-        }
-        return ok;
+    private boolean startPathfinding(NavigationState nav, ColonyWorker worker, long npcId) {
+        BlockPos to = resolveWalkTarget(worker, nav.target);
+        return worker.moveTo(to, NAV_SPEED);
     }
 
     // ---- TELEPORT WAITING (spell-cooldown-gated, placeholder mode) ----
@@ -286,8 +275,8 @@ public class NavigationSystem implements EcsSystem {
         // 深水池的 NPC 即使判定卡死也永远无法借自传送脱困（onGround false → 每轮直接 return，
         // startTick=0 复位 → 下轮又从寻路重新来，死循环）。游泳中同样放行，落点安全由
         // findSafeLanding 保证。
-        WandscapeNpc airborne = EntityComponentBridge.INSTANCE.getNpc(npcId);
-        if (airborne != null && !airborne.onGround() && !airborne.isInWater()) {
+        var airborne = EntityComponentBridge.INSTANCE.getWorker(npcId);
+        if (airborne != null && !airborne.entity().onGround() && !airborne.entity().isInWater()) {
             nav.startTick = 0;
             return;
         }
@@ -295,22 +284,23 @@ public class NavigationSystem implements EcsSystem {
         TaskExecutor exec = world.get(npcId, TaskExecutor.class);
         GridPos target = nav.target;
 
-        WandscapeNpc npc = EntityComponentBridge.INSTANCE.getNpc(npcId);
+        ColonyWorker worker = EntityComponentBridge.INSTANCE.getWorker(npcId);
         // 门控：施法互斥锁 + 传送独立 CD + 固定魔力（magic_spells/teleport.json 数据驱动，缺失回退常量），
         // 任一不满足回退走路（而不是站等）。锁时长 = self_teleport 引导 tick（与 WandscapeRitualOps 引导时长对齐，防止引导期间并发施法）。
+        // 无施法能力的工作者（如仅工作态的车万女仆）tryEscapeCast 恒 false → 走下面的回退分支继续走路。
         MagicDef tp = SpellbookLoader.getSpec("teleport");
         int tpCd = tp != null ? tp.baseCooldown() : TELEPORT_COOLDOWN_TICKS;
         int tpMana = tp != null ? tp.manaCost() : TELEPORT_MANA_COST;
-        if (npc != null && !npc.tryCastSpell("teleport", tpCd, tpMana,
+        if (worker != null && !worker.tryEscapeCast("teleport", tpCd, tpMana,
                 WandscapeRitualOps.channelTicks(RitualId.SELF_TELEPORT))) {
-            Log.debug(LogCategory.NPC, "nav", "NPC {} — teleport gated (lock/CD/mana), walking instead", npcId);
+            Log.debug(LogCategory.NPC, "nav", "Worker {} — teleport gated (lock/CD/mana), walking instead", npcId);
             // 门控未通过（CD/锁/蓝）：真正开始走路，而不是站桩等 CD。startTick 保持非 0，
             // 避免下一 tick init 块再次进传送分支形成每 tick 空转（旧行为 startTick=0 → 每 tick
             // 重试门控 + 该走路时站着，直到 CD 结束才一次性传送）。中途 CD 就绪由
             // PATHFIND_TIMEOUT/卡住/重寻路失败后再切传送兜住。
             nav.mode = NavigationState.Mode.PATHFINDING;
             nav.startTick = tickCounter;
-            if (!startPathfinding(nav, npc, npcId)) {
+            if (!startPathfinding(nav, worker, npcId)) {
                 // 连走路都起不来（如区块未加载）→ 退回原逻辑：下 tick 重试传送门控
                 nav.startTick = 0;
             }
@@ -335,8 +325,8 @@ public class NavigationSystem implements EcsSystem {
         // ── Direct ritual teleport — NO package queue manipulation ──
         if (world.ritualOps != null && target != null) {
             // 引导期间定身 + 减伤 75%（SelfDefenseHandler 消费；与 tryCastSpell 的锁时长对齐）
-            if (npc != null) {
-                npc.markTeleportChanneling(npc.level().getGameTime(),
+            if (worker != null) {
+                worker.markEscapeChanneling(worker.entity().level().getGameTime(),
                         WandscapeRitualOps.channelTicks(RitualId.SELF_TELEPORT));
             }
             CompletableFuture<Void> ritualFuture = world.ritualOps.beginRitual(
@@ -358,8 +348,8 @@ public class NavigationSystem implements EcsSystem {
 
     // ---- Internal ----
 
-    private void arrive(NavigationState nav, WandscapeNpc npc) {
-        npc.setAiWanderingEnabled(true);
+    private void arrive(NavigationState nav, ColonyWorker worker) {
+        worker.setAiWanderingEnabled(true);
         if (nav.future != null && !nav.future.isDone()) {
             nav.future.complete(null);
         }

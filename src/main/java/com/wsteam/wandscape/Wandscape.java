@@ -485,6 +485,8 @@ public class Wandscape {
     private final DecorationBonusSystem decorationBonusSystem;
     private final ShopStockManager shopStockManager;
     private final TavernApiImpl tavernApi;
+    /** 外部模组登记殖民地工人的 API 实现；每 tick 对账清理被外部移除的工作者。 */
+    private final com.wsteam.wandscape.content.npc.internal.ColonyWorkerApiImpl colonyWorkerApi;
 
     public Wandscape(IEventBus modEventBus, ModContainer modContainer) {
         modEventBus.addListener(this::commonSetup);
@@ -503,6 +505,9 @@ public class Wandscape {
         WandscapeSounds.SOUNDS.register(modEventBus);
         com.wsteam.wandscape.content.npc.WandscapeAttributes.ATTRIBUTES.register(modEventBus);
         WandscapeEffects.PETRIFICATION.getId();
+        // 本模组挂在第三方实体上的数据附件（女仆的殖民地工作者状态）。附件类型是我们的全局注册项，
+        // 注册不依赖车万女仆是否加载，故无条件注册。
+        com.wsteam.wandscape.compat.tlm.MaidColonyAttachments.register(modEventBus);
 
         NeoForge.EVENT_BUS.register(this);
         NeoForge.EVENT_BUS.register(HostileTargetingHandler.class);
@@ -534,6 +539,7 @@ public class Wandscape {
         com.wsteam.wandscape.compat.goety.GoetyCompat.init(modEventBus);
         com.wsteam.wandscape.compat.curios.CuriosCompat.init(modEventBus);
         com.wsteam.wandscape.compat.patchouli.PatchouliCompat.init(modEventBus);
+        com.wsteam.wandscape.compat.tlm.TlmCompat.init(modEventBus);
         modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
         modContainer.registerConfig(ModConfig.Type.CLIENT, ClientConfig.SPEC);
 
@@ -549,6 +555,9 @@ public class Wandscape {
         WandscapeApis.setMageHutApi(new com.wsteam.wandscape.content.building.internal.MageHutApiImpl());
         WandscapeApis.setColonyApi(ColonyApiImpl.get());
         WandscapeApis.setFriendlyForceApi(new FriendlyForceApiImpl());
+        // 殖民地工作者登记：其它模组把自己的生物变成殖民地工人（走同一条工作链）
+        colonyWorkerApi = new com.wsteam.wandscape.content.npc.internal.ColonyWorkerApiImpl();
+        WandscapeApis.setColonyWorkerApi(colonyWorkerApi);
         // 法师主手（法杖）槽准入：先装 API，再让 compat 层按模组加载态预注册铁魔法/诡厄法杖标签判定
         NpcMainHandApi mainHandApi = new NpcMainHandApiImpl();
         WandscapeApis.setNpcMainHandApi(mainHandApi);
@@ -1242,6 +1251,13 @@ public class Wandscape {
             // ② Sync MC entity positions → ECS
             try (var s = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tick.bridge_sync_pos")) {
                 EntityComponentBridge.INSTANCE.syncPositions(world);
+            }
+
+            // ②a 对账清理被外部模组移除的第三方工作者（它们不会走本模组的 onRemovedFromLevel）
+            if (colonyWorkerApi != null) {
+                try (var s = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tick.worker_reconcile")) {
+                    colonyWorkerApi.tick();
+                }
             }
 
             // ②b Flush any NPCs that loaded before the engine was ready

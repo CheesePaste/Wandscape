@@ -1,0 +1,13 @@
+{
+  "name": "传送",
+  "category": "wandscape:magic",
+  "icon": "minecraft:ender_pearl",
+  "sortnum": 8,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "$(italic)$(#6b5a45)每个法师天生就会，不需要制作卷轴，也不会出现在施法策略里。跟随你时掉队，或者战斗中脱身逃跑，法师都会自己传送过去。$()$(br2)将施法者瞬间传送到目标位置。"
+    }
+  ]
+}

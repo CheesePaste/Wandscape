@@ -7,7 +7,7 @@ import com.wsteam.wandscape.content.task.component.TaskExecutor;
 import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.content.task.types.ResourceStack;
 import com.wsteam.wandscape.content.warehouse.transport.ItemTransportManager;
-import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
+import com.wsteam.wandscape.content.npc.worker.ColonyWorker;
 import com.wsteam.wandscape.content.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.content.task.op.api.AtomicOp;
 import com.wsteam.wandscape.content.task.op.executor.OpExecutor;
@@ -122,12 +122,12 @@ public class ResourceRequestExecutor implements OpExecutor<AtomicOp.ResourceRequ
             return CompletableFuture.completedFuture(null);
         }
 
-        WandscapeNpc npc = EntityComponentBridge.INSTANCE.getNpc(npcId);
-        if (npc == null || npc.isRemoved()) {
+        ColonyWorker worker = EntityComponentBridge.INSTANCE.getWorker(npcId);
+        if (worker == null || worker.entity().isRemoved()) {
             return CompletableFuture.failedFuture(
-                    new IllegalStateException("[ResourceReq] NPC " + npcId + " not found"));
+                    new IllegalStateException("[ResourceReq] worker " + npcId + " not found"));
         }
-        UUID colonyId = resolveColonyId(npc, world);
+        UUID colonyId = resolveColonyId(worker, world);
         if (colonyId == null) {
             return CompletableFuture.failedFuture(
                     new IllegalStateException("[ResourceReq] NPC " + npcId + " has no colony"));
@@ -151,7 +151,7 @@ public class ResourceRequestExecutor implements OpExecutor<AtomicOp.ResourceRequ
         }
 
         // ── 4. Resolve positions ──
-        BlockPos warehousePos = findNearestStorage(colonyId, npc.blockPosition());
+        BlockPos warehousePos = findNearestStorage(colonyId, worker.entity().blockPosition());
         if (warehousePos == null) {
             for (ResourceStack need : needs) {
                 resources.release(colonyId, need.resource(), need.amount());
@@ -160,8 +160,8 @@ public class ResourceRequestExecutor implements OpExecutor<AtomicOp.ResourceRequ
                     new IllegalStateException("[ResourceReq] no storage for colony " + colonyId));
         }
 
-        BlockPos npcPos = npc.blockPosition();
-        Level level = npc.level();
+        BlockPos npcPos = worker.entity().blockPosition();
+        Level level = worker.entity().level();
 
         // ── 5. Build flat launch entry list (one entry per item-entity) ──
         List<LaunchEntry> entries = new ArrayList<>();
@@ -279,10 +279,11 @@ public class ResourceRequestExecutor implements OpExecutor<AtomicOp.ResourceRequ
 
     // ── Helpers ──
 
-    private static UUID resolveColonyId(WandscapeNpc npc, World world) {
-        var member = world.get(npc.ecsEntityId, ColonyMember.class);
+    private static UUID resolveColonyId(ColonyWorker worker, World world) {
+        Long ecsId = EntityComponentBridge.INSTANCE.getEcsId(worker.workerId());
+        var member = ecsId != null ? world.get(ecsId, ColonyMember.class) : null;
         if (member != null && member.colonyId() != null) return member.colonyId();
-        return npc.colonyId != null ? npc.colonyId : new UUID(0, 0);
+        return worker.colonyId() != null ? worker.colonyId() : new UUID(0, 0);
     }
 
     private static BlockPos findNearestStorage(UUID colonyId, BlockPos npcPos) {

@@ -1,0 +1,13 @@
+{
+  "name": "权杖",
+  "category": "wandscape:items",
+  "icon": "wandscape:omni_scepter",
+  "sortnum": 2,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "$(italic)$(#6b5a45)在合成站制作，四种单模式权杖殖民地 1 级就能做，万能权杖要 10 级。$()$(br2)权杖是用来指挥本殖民地法师的道具。你可以让某个法师切换和平或者跟随状态，可以把一个生物标记成盟友让法师不去打它，也可以让法师们集中火力打某一个目标。万能权杖把这几种功能合到了一起，按住 shift 右键就能切换当前用的是哪一种。"
+    }
+  ]
+}

@@ -27,6 +27,23 @@ final class PatchouliCompatImpl {
         register("panel_guide", "system");
         register("mages_guide", "system");
         register("tourists_guide", "system");
+        // magic（每条一个魔法，正文与 JEI 卷轴信息页同文）
+        register("magic_beam_guide", "magic");
+        register("magic_meteor_guide", "magic");
+        register("magic_desperation_guide", "magic");
+        register("magic_enfeeble_field_guide", "magic");
+        register("magic_conversion_guide", "magic");
+        register("magic_petrification_guide", "magic");
+        register("magic_fortification_guide", "magic");
+        register("magic_heal_guide", "magic");
+        register("magic_teleport_guide", "magic");
+        register("magic_revive_guide", "magic");
+        // items（小道具按类归并成条，法杖整族一条）
+        register("wand_guide", "items");
+        register("oath_ring_guide", "items");
+        register("scepter_guide", "items");
+        register("magic_compass_guide", "items");
+        register("warehouse_terminal_guide", "items");
 
         // 为原有通用界面入口提供别名映射
         DOC_TO_ENTRY.put("overview_guide", DOC_TO_ENTRY.get("panel_guide"));
