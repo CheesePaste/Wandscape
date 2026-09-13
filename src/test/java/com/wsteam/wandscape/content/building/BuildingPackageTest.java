@@ -8,6 +8,7 @@ import com.wsteam.wandscape.content.building.data.BuildingPackage;
 import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.foundation.ui.settings.SettingItem;
 import com.wsteam.wandscape.foundation.ui.settings.SettingTab;
+import com.wsteam.wandscape.foundation.ui.settings.SettingsOverlay;
 import com.wsteam.wandscape.foundation.ui.settings.SettingsRegistry;
 import com.wsteam.wandscape.foundation.ui.settings.network.ConfigUpdatePacket;
 import org.junit.jupiter.api.BeforeEach;
@@ -293,5 +294,88 @@ class BuildingPackageTest {
         List<BuildingConfig> orientalList = loader.getConfigsByPackage("oriental");
         assertEquals(1, orientalList.size());
         assertEquals("oriental:bamboo_hall", orientalList.get(0).id());
+    }
+
+    @Test
+    void testHeaderLayoutTabAndCloseButtonNeverOverlap() {
+        int[] screenWidths = {320, 427, 480, 640, 854, 960, 1280, 1920};
+        int tabCount = SettingTab.values().length;
+
+        for (int screenW : screenWidths) {
+            SettingsOverlay.HeaderLayout lo = SettingsOverlay.layoutHeader(null, screenW);
+
+            assertNotNull(lo);
+            // Close button inside screen
+            assertTrue(lo.closeX() + lo.closeW() <= screenW, "Close button must stay within screen bounds at screenW=" + screenW);
+
+            // Last tab must stay strictly to the left of close button with at least 10px margin
+            int lastTabEnd = lo.tabX()[tabCount - 1] + lo.tabW()[tabCount - 1];
+            assertTrue(lastTabEnd <= lo.closeX() - 10,
+                    String.format("Tab right edge (%d) overlapped or exceeded close button (%d) at screenW=%d",
+                            lastTabEnd, lo.closeX(), screenW));
+
+            // Clicking inside close button must trigger isCloseHovered and NOT getTabAt
+            assertTrue(lo.isCloseHovered(lo.closeX() + 5, lo.closeY() + 5));
+            assertEquals(-1, lo.getTabAt(lo.closeX() + 5, lo.closeY() + 5));
+
+            // Clicking on each tab must return exactly its index
+            for (int i = 0; i < tabCount; i++) {
+                assertEquals(i, lo.getTabAt(lo.tabX()[i] + 2, lo.closeY() + 5),
+                        "Tab index click mismatch at tab " + i + ", screenW=" + screenW);
+            }
+        }
+    }
+
+    @Test
+    void testSettingsPermissionFilter() {
+        try {
+            // 1. In test environment (no player), defaults to true (unrestricted)
+            SettingsOverlay.setTestPermissionOverride(null);
+            assertTrue(SettingsOverlay.canModifySettings());
+
+            BuildingConfigLoader loader = BuildingConfigLoader.getInstance();
+            loader.registerPackage(new BuildingPackage("oriental", "东风竹韵包", "", "", "1.0", "", 50, List.of()));
+            Config.setPackageEnabled("oriental", true);
+
+            List<SettingItem> items = SettingsRegistry.getItems(SettingTab.PACKAGES);
+            SettingItem.BooleanSetting bs = (SettingItem.BooleanSetting) items.stream()
+                    .filter(it -> it.key().equals("building.package.oriental"))
+                    .findFirst()
+                    .orElseThrow();
+            assertTrue(bs.get());
+
+            // 2. Override permission to FALSE (simulate non-OP player)
+            SettingsOverlay.setTestPermissionOverride(false);
+            assertFalse(SettingsOverlay.canModifySettings());
+
+            // Setting modification must be blocked
+            bs.set(false);
+            assertTrue(bs.get(), "Non-OP player must not be able to modify setting");
+            assertTrue(Config.isPackageEnabled("oriental"), "Config must not change when non-OP");
+
+            // Reset tab must also be blocked
+            Config.setPackageEnabled("oriental", false); // force in config directly for test
+            SettingsRegistry.resetTab(SettingTab.PACKAGES);
+            assertFalse(Config.isPackageEnabled("oriental"), "resetTab must not execute when non-OP");
+
+            // 3. Override permission to TRUE (simulate OP player)
+            SettingsOverlay.setTestPermissionOverride(true);
+            assertTrue(SettingsOverlay.canModifySettings());
+
+            // Reset tab executes
+            SettingsRegistry.resetTab(SettingTab.PACKAGES);
+            assertTrue(Config.isPackageEnabled("oriental"), "resetTab must execute when OP");
+
+            // Toggle works
+            bs.set(false);
+            assertFalse(bs.get());
+            assertFalse(Config.isPackageEnabled("oriental"));
+
+            bs.set(true);
+            assertTrue(bs.get());
+            assertTrue(Config.isPackageEnabled("oriental"));
+        } finally {
+            SettingsOverlay.setTestPermissionOverride(null);
+        }
     }
 }

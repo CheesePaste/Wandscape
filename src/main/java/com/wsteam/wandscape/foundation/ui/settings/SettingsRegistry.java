@@ -342,6 +342,9 @@ public final class SettingsRegistry {
 
     public static void resetTab(SettingTab tab) {
         init();
+        if (!SettingsOverlay.canModifySettings()) {
+            return;
+        }
         if (tab == SettingTab.PACKAGES) {
             Config.setDisabledPackages(List.of());
             if (Config.SPEC.isLoaded()) {

@@ -1,242 +1,262 @@
 {
   "gui.wandscape.settings.badge.client": {
-    "zh_cn": "[客户端]",
-    "en_us": "[Client]"
+    "en_us": "[Client]",
+    "zh_cn": "[客户端]"
   },
   "gui.wandscape.settings.badge.general": {
-    "zh_cn": "[通用配置]",
-    "en_us": "[Global]"
+    "en_us": "[Global]",
+    "zh_cn": "[通用配置]"
   },
   "gui.wandscape.settings.badge.hot_reload": {
-    "zh_cn": "[即时生效]",
-    "en_us": "[Instant]"
+    "en_us": "[Instant]",
+    "zh_cn": "[即时生效]"
+  },
+  "gui.wandscape.settings.badge.readonly": {
+    "en_us": "[Read-only]",
+    "zh_cn": "[只读]"
   },
   "gui.wandscape.settings.badge.restart": {
-    "zh_cn": "[需重启]",
-    "en_us": "[Restart]"
+    "en_us": "[Restart]",
+    "zh_cn": "[需重启]"
   },
   "gui.wandscape.settings.building.noSpawnInBuildingArea": {
-    "zh_cn": "建筑区域防刷怪",
-    "en_us": "No mob spawning in building areas"
+    "en_us": "No mob spawning in building areas",
+    "zh_cn": "建筑区域防刷怪"
   },
   "gui.wandscape.settings.close": {
-    "zh_cn": "返回 (ESC)",
-    "en_us": "Back (ESC)"
+    "en_us": "Back (ESC)",
+    "zh_cn": "返回 (ESC)"
   },
   "gui.wandscape.settings.colony.offlineIncomeMultiplier": {
-    "zh_cn": "创始人离线收益系数",
-    "en_us": "Founder offline income multiplier"
+    "en_us": "Founder offline income multiplier",
+    "zh_cn": "创始人离线收益系数"
   },
   "gui.wandscape.settings.default_hint": {
-    "zh_cn": "默认: %s",
-    "en_us": "Default: %s"
+    "en_us": "Default: %s",
+    "zh_cn": "默认: %s"
   },
   "gui.wandscape.settings.default_town_name": {
-    "zh_cn": "魔法小镇",
-    "en_us": "Wandscape"
+    "en_us": "Wandscape",
+    "zh_cn": "魔法小镇"
   },
   "gui.wandscape.settings.element.autoGatherOnShortage": {
-    "zh_cn": "元素短缺自动采集",
-    "en_us": "Auto-gather on element shortage"
+    "en_us": "Auto-gather on element shortage",
+    "zh_cn": "元素短缺自动采集"
   },
   "gui.wandscape.settings.element.craftCostMultiplier": {
-    "zh_cn": "合成制作元素倍率",
-    "en_us": "Crafting element cost multiplier"
+    "en_us": "Crafting element cost multiplier",
+    "zh_cn": "合成制作元素倍率"
   },
   "gui.wandscape.settings.element.decomposeDivisor": {
-    "zh_cn": "物品分解产出除数",
-    "en_us": "Item decompose output divisor"
+    "en_us": "Item decompose output divisor",
+    "zh_cn": "物品分解产出除数"
   },
   "gui.wandscape.settings.general.debug": {
-    "zh_cn": "详细调试日志",
-    "en_us": "Verbose debug logging"
+    "en_us": "Verbose debug logging",
+    "zh_cn": "详细调试日志"
   },
   "gui.wandscape.settings.hint.general": {
-    "zh_cn": "配置项修改即时生效并自动持久化保存（支持热重载）",
-    "en_us": "Changes take effect immediately and are saved automatically (hot-reload supported)."
+    "en_us": "Changes take effect immediately and are saved automatically (hot-reload supported).",
+    "zh_cn": "配置项修改即时生效并自动持久化保存（支持热重载）"
   },
   "gui.wandscape.settings.hint.packages": {
-    "zh_cn": "管理已加载的建筑包。停用的建筑包将不会在建造栏中显示（即时生效）",
-    "en_us": "Manage the loaded building packs. A disabled pack no longer shows up in the build bar (takes effect immediately)."
+    "en_us": "Manage the loaded building packs. A disabled pack no longer shows up in the build bar (takes effect immediately).",
+    "zh_cn": "管理已加载的建筑包。停用的建筑包将不会在建造栏中显示（即时生效）"
+  },
+  "gui.wandscape.settings.hint.readonly": {
+    "en_us": "Read-only: only admins (permission level 2) can change settings",
+    "zh_cn": "只读模式：仅管理员 (OP 等级 2) 可修改设置"
   },
   "gui.wandscape.settings.npc.deathMessageGlobal": {
-    "zh_cn": "法师阵亡全服广播",
-    "en_us": "Broadcast mage deaths server-wide"
+    "en_us": "Broadcast mage deaths server-wide",
+    "zh_cn": "法师阵亡全服广播"
   },
   "gui.wandscape.settings.npc.friendlyFireProtection": {
-    "zh_cn": "NPC 友军误伤保护",
-    "en_us": "NPC friendly-fire protection"
+    "en_us": "NPC friendly-fire protection",
+    "zh_cn": "NPC 友军误伤保护"
   },
   "gui.wandscape.settings.npc.pvp": {
-    "zh_cn": "PVP 殖民地阵营识别",
-    "en_us": "PVP colony faction recognition"
+    "en_us": "PVP colony faction recognition",
+    "zh_cn": "PVP 殖民地阵营识别"
   },
   "gui.wandscape.settings.option.particle_high": {
-    "zh_cn": "极致 (HIGH)",
-    "en_us": "Max"
+    "en_us": "Max",
+    "zh_cn": "极致 (HIGH)"
   },
   "gui.wandscape.settings.option.particle_low": {
-    "zh_cn": "精简 (LOW)",
-    "en_us": "Low"
+    "en_us": "Low",
+    "zh_cn": "精简 (LOW)"
   },
   "gui.wandscape.settings.option.particle_normal": {
-    "zh_cn": "标准 (NORMAL)",
-    "en_us": "Normal"
+    "en_us": "Normal",
+    "zh_cn": "标准 (NORMAL)"
   },
   "gui.wandscape.settings.option.particle_off": {
-    "zh_cn": "关闭 (OFF)",
-    "en_us": "Off"
+    "en_us": "Off",
+    "zh_cn": "关闭 (OFF)"
   },
   "gui.wandscape.settings.panel.flySpeed": {
-    "zh_cn": "相机飞行速度",
-    "en_us": "Camera flight speed"
+    "en_us": "Camera flight speed",
+    "zh_cn": "相机飞行速度"
   },
   "gui.wandscape.settings.particle.level": {
-    "zh_cn": "粒子效果等级",
-    "en_us": "Particle effect level"
+    "en_us": "Particle effect level",
+    "zh_cn": "粒子效果等级"
   },
   "gui.wandscape.settings.preview.fps": {
-    "zh_cn": "建筑预览帧率",
-    "en_us": "Building preview frame rate"
+    "en_us": "Building preview frame rate",
+    "zh_cn": "建筑预览帧率"
   },
   "gui.wandscape.settings.preview.resolution": {
-    "zh_cn": "建筑预览清晰度",
-    "en_us": "Building preview resolution"
+    "en_us": "Building preview resolution",
+    "zh_cn": "建筑预览清晰度"
   },
   "gui.wandscape.settings.reset": {
-    "zh_cn": "默认",
-    "en_us": "Default"
+    "en_us": "Default",
+    "zh_cn": "默认"
   },
   "gui.wandscape.settings.reset_item_toast": {
-    "zh_cn": "已重置默认: %s",
-    "en_us": "Reset to default: %s"
+    "en_us": "Reset to default: %s",
+    "zh_cn": "已重置默认: %s"
+  },
+  "gui.wandscape.settings.reset_locked": {
+    "en_us": "Locked (admin only)",
+    "zh_cn": "锁定 (需 OP)"
   },
   "gui.wandscape.settings.reset_tab": {
-    "zh_cn": "恢复本页默认",
-    "en_us": "Reset Page Defaults"
+    "en_us": "Reset Page Defaults",
+    "zh_cn": "恢复本页默认"
   },
   "gui.wandscape.settings.reset_tab_toast": {
-    "zh_cn": "已恢复本页默认设置",
-    "en_us": "Restored tab settings to default"
+    "en_us": "Restored tab settings to default",
+    "zh_cn": "已恢复本页默认设置"
   },
   "gui.wandscape.settings.road.showTerrainGrid": {
-    "zh_cn": "道路网格辅助线",
-    "en_us": "Road terrain grid"
+    "en_us": "Road terrain grid",
+    "zh_cn": "道路网格辅助线"
   },
   "gui.wandscape.settings.tab.colony": {
-    "zh_cn": "城镇经营",
-    "en_us": "Colony Autonomy"
+    "en_us": "Colony Autonomy",
+    "zh_cn": "城镇经营"
   },
   "gui.wandscape.settings.tab.packages": {
-    "zh_cn": "建筑包库",
-    "en_us": "Building Packs"
+    "en_us": "Building Packs",
+    "zh_cn": "建筑包库"
   },
   "gui.wandscape.settings.tab.rules": {
-    "zh_cn": "规则防护",
-    "en_us": "Rules & Security"
+    "en_us": "Rules & Security",
+    "zh_cn": "规则防护"
   },
   "gui.wandscape.settings.tab.tourist": {
-    "zh_cn": "游客生态",
-    "en_us": "Tourists & Economy"
+    "en_us": "Tourists & Economy",
+    "zh_cn": "游客生态"
   },
   "gui.wandscape.settings.tab.visual": {
-    "zh_cn": "视效控制",
-    "en_us": "Visual & Controls"
+    "en_us": "Visual & Controls",
+    "zh_cn": "视效控制"
   },
   "gui.wandscape.settings.tavern.recruitCostPerElement": {
-    "zh_cn": "酒馆法师招募单价",
-    "en_us": "Tavern recruit cost per element"
+    "en_us": "Tavern recruit cost per element",
+    "zh_cn": "酒馆法师招募单价"
   },
   "gui.wandscape.settings.title": {
-    "zh_cn": "%s 设置中心",
-    "en_us": "%s Settings Center"
+    "en_us": "%s Settings Center",
+    "zh_cn": "%s 设置中心"
+  },
+  "gui.wandscape.settings.title_short": {
+    "en_us": "Settings",
+    "zh_cn": "设置中心"
+  },
+  "gui.wandscape.settings.toast.no_permission": {
+    "en_us": "Not permitted: only admins (permission level 2) can change settings",
+    "zh_cn": "权限不足：仅管理员 (OP) 可修改设置"
   },
   "gui.wandscape.settings.toggle_off": {
-    "zh_cn": "关闭 [OFF]",
-    "en_us": "OFF"
+    "en_us": "OFF",
+    "zh_cn": "关闭 [OFF]"
   },
   "gui.wandscape.settings.toggle_on": {
-    "zh_cn": "开启 [ON]",
-    "en_us": "ON"
+    "en_us": "ON",
+    "zh_cn": "开启 [ON]"
   },
   "gui.wandscape.settings.tourist.baseSpawnCount": {
-    "zh_cn": "每日基础新增游客",
-    "en_us": "Base new tourists per day"
+    "en_us": "Base new tourists per day",
+    "zh_cn": "每日基础新增游客"
   },
   "gui.wandscape.settings.tourist.baseWallet": {
-    "zh_cn": "游客初始钱包基数",
-    "en_us": "Tourist starting wallet"
+    "en_us": "Tourist starting wallet",
+    "zh_cn": "游客初始钱包基数"
   },
   "gui.wandscape.settings.tourist.maxEnergy": {
-    "zh_cn": "游客每日精力上限",
-    "en_us": "Max tourist energy per day"
+    "en_us": "Max tourist energy per day",
+    "zh_cn": "游客每日精力上限"
   },
   "gui.wandscape.settings.tourist.maxPerColony": {
-    "zh_cn": "单镇游客同时上限",
-    "en_us": "Max tourists per colony"
+    "en_us": "Max tourists per colony",
+    "zh_cn": "单镇游客同时上限"
   },
   "gui.wandscape.settings.tourist.spawnEnabled": {
-    "zh_cn": "全局游客生成开关",
-    "en_us": "Global tourist spawning"
+    "en_us": "Global tourist spawning",
+    "zh_cn": "全局游客生成开关"
   },
   "gui.wandscape.settings.tourist.stayMaxDays": {
-    "zh_cn": "游客最多停留天数",
-    "en_us": "Maximum tourist stay (days)"
+    "en_us": "Maximum tourist stay (days)",
+    "zh_cn": "游客最多停留天数"
   },
   "gui.wandscape.settings.tourist.stayMinDays": {
-    "zh_cn": "游客最少停留天数",
-    "en_us": "Minimum tourist stay (days)"
+    "en_us": "Minimum tourist stay (days)",
+    "zh_cn": "游客最少停留天数"
   },
   "gui.wandscape.settings.ui.speechBubbles": {
-    "zh_cn": "闲聊气泡",
-    "en_us": "Chatter bubbles"
+    "en_us": "Chatter bubbles",
+    "zh_cn": "闲聊气泡"
   },
   "gui.wandscape.settings.unit.blocks_per_second": {
-    "zh_cn": "%s 格/秒",
-    "en_us": "%s blocks/s"
+    "en_us": "%s blocks/s",
+    "zh_cn": "%s 格/秒"
   },
   "gui.wandscape.settings.unit.days": {
-    "zh_cn": "%s 天",
-    "en_us": "%s days"
+    "en_us": "%s days",
+    "zh_cn": "%s 天"
   },
   "gui.wandscape.settings.unit.elements": {
-    "zh_cn": "%s 元素",
-    "en_us": "%s elements"
+    "en_us": "%s elements",
+    "zh_cn": "%s 元素"
   },
   "gui.wandscape.settings.unit.items": {
-    "zh_cn": "%s 件",
-    "en_us": "%s items"
+    "en_us": "%s items",
+    "zh_cn": "%s 件"
   },
   "gui.wandscape.settings.unit.people": {
-    "zh_cn": "%s 人",
-    "en_us": "%s people"
+    "en_us": "%s people",
+    "zh_cn": "%s 人"
   },
   "gui.wandscape.settings.unit.people_per_day": {
-    "zh_cn": "%s 人/日",
-    "en_us": "%s people/day"
+    "en_us": "%s people/day",
+    "zh_cn": "%s 人/日"
   },
   "gui.wandscape.settings.unit.points": {
-    "zh_cn": "%s 点",
-    "en_us": "%s points"
+    "en_us": "%s points",
+    "zh_cn": "%s 点"
   },
   "gui.wandscape.settings.value.off": {
-    "zh_cn": "已关闭",
-    "en_us": "Off"
+    "en_us": "Off",
+    "zh_cn": "已关闭"
   },
   "gui.wandscape.settings.value.off_short": {
-    "zh_cn": "关闭",
-    "en_us": "Off"
+    "en_us": "Off",
+    "zh_cn": "关闭"
   },
   "gui.wandscape.settings.value.on": {
-    "zh_cn": "已开启",
-    "en_us": "On"
+    "en_us": "On",
+    "zh_cn": "已开启"
   },
   "gui.wandscape.settings.value.on_short": {
-    "zh_cn": "开启",
-    "en_us": "On"
+    "en_us": "On",
+    "zh_cn": "开启"
   },
   "gui.wandscape.settings.warehouse.itemCapacity": {
-    "zh_cn": "单座仓库基础容量",
-    "en_us": "Base capacity per warehouse"
+    "en_us": "Base capacity per warehouse",
+    "zh_cn": "单座仓库基础容量"
   }
 }

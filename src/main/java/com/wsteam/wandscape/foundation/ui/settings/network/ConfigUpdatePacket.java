@@ -63,6 +63,7 @@ public record ConfigUpdatePacket(String path, String value) implements CustomPac
         if (!isOp) {
             Log.warn(TAG, "Player {} attempted to modify config {} without permissions",
                     player.getName().getString(), packet.path);
+            player.sendSystemMessage(net.minecraft.network.chat.Component.literal("§c[Wandscape] 权限不足：仅管理员 (OP) 可修改设置"));
             reject(player, packet.path);
             return;
         }

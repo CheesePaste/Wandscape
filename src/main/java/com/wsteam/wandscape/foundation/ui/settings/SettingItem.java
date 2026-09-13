@@ -49,6 +49,9 @@ public interface SettingItem {
     default void onApplied() {}
 
     default void onModified(String stringValue) {
+        if (!SettingsOverlay.canModifySettings()) {
+            return;
+        }
         if (isClientOnly()) {
             // 客户端配置只在本机生效，改完即落盘。
             if (ClientConfig.SPEC.isLoaded()) {
@@ -121,6 +124,7 @@ public interface SettingItem {
 
         public boolean get() { return getter.get(); }
         public void set(boolean value) {
+            if (!SettingsOverlay.canModifySettings()) return;
             setter.accept(value);
             onModified(String.valueOf(value));
         }
@@ -197,7 +201,6 @@ public interface SettingItem {
         @Override public boolean isHotReloadable() { return hotReloadable; }
 
         public double get() { return configValue.get(); }
-
         /** 夹取到 config 声明的范围后写入。返回真正落下去的值，供回包与提示用同一份。 */
         private double write(double value) {
             double clamped = Math.max(min, Math.min(max, Math.round(value * 1000.0) / 1000.0));
@@ -206,6 +209,7 @@ public interface SettingItem {
         }
 
         public void set(double value) {
+            if (!SettingsOverlay.canModifySettings()) return;
             onModified(String.valueOf(write(value)));
         }
 
@@ -278,7 +282,6 @@ public interface SettingItem {
         @Override public boolean isHotReloadable() { return hotReloadable; }
 
         public int get() { return configValue.get(); }
-
         /** 夹取到 config 声明的范围后写入。返回真正落下去的值，供回包与提示用同一份。 */
         private int write(int value) {
             int clamped = Math.max(min, Math.min(max, value));
@@ -287,6 +290,7 @@ public interface SettingItem {
         }
 
         public void set(int value) {
+            if (!SettingsOverlay.canModifySettings()) return;
             onModified(String.valueOf(write(value)));
         }
 
@@ -353,6 +357,7 @@ public interface SettingItem {
         public String get() { return configValue.get(); }
 
         public void set(String value) {
+            if (!SettingsOverlay.canModifySettings()) return;
             configValue.set(value);
             onModified(value);
         }
