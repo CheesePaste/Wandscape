@@ -6,6 +6,7 @@ import com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState;
 import com.wsteam.wandscape.content.colony.overview.client.OverviewClientState;
 import com.wsteam.wandscape.content.colony.overview.client.OverviewFlightController;
 import com.wsteam.wandscape.content.task.network.*;
+import com.wsteam.wandscape.foundation.ui.I18n;
 import com.wsteam.wandscape.foundation.ui.theme.WandscapeTheme;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -157,8 +158,10 @@ public final class TaskManagementOverlay {
                         else queued++;
                     }
                 }
-                metrics = String.format("工坊建筑: %d  |  制作中: %d  |  排队: %d  |  缺元素: %d",
-                        TaskManagementClientState.getAllProductionGroups().size(), running, queued, missing);
+                metrics = I18n.string("gui.wandscape.task.metrics.production",
+                        "工坊建筑: %s  |  制作中: %s  |  排队: %s  |  缺元素: %s",
+                        String.valueOf(TaskManagementClientState.getAllProductionGroups().size()),
+                        String.valueOf(running), String.valueOf(queued), String.valueOf(missing));
             } else {
                 int inProgress = 0, awaiting = 0, pending = 0;
                 for (TaskSummaryDto t : TaskManagementClientState.getAllTasks()) {
@@ -166,9 +169,11 @@ public final class TaskManagementOverlay {
                     else if ("AWAITING_RESOURCES".equalsIgnoreCase(t.state())) awaiting++;
                     else if ("PENDING_ASSIGN".equalsIgnoreCase(t.state())) pending++;
                 }
-                metrics = String.format("运行中: %d  |  缺资源: %d  |  排队: %d  |  空闲法师: %d/%d",
-                        inProgress, awaiting, pending,
-                        TaskManagementClientState.getIdleMageCount(), TaskManagementClientState.getTotalMageCount());
+                metrics = I18n.string("gui.wandscape.task.metrics.tasks",
+                        "运行中: %s  |  缺资源: %s  |  排队: %s  |  空闲法师: %s/%s",
+                        String.valueOf(inProgress), String.valueOf(awaiting), String.valueOf(pending),
+                        String.valueOf(TaskManagementClientState.getIdleMageCount()),
+                        String.valueOf(TaskManagementClientState.getTotalMageCount()));
             }
             if (font.width(metrics) > metricsAvail) {
                 metrics = font.plainSubstrByWidth(metrics, metricsAvail);
@@ -180,7 +185,7 @@ public final class TaskManagementOverlay {
         boolean closeHover = mx >= closeX && mx <= closeX + closeW && my >= btnY && my <= btnY + btnH;
         int closeBg = closeHover ? 0xCCE53935 : 0x883A2020;
         g.fill(RenderType.guiOverlay(), closeX, btnY, closeX + closeW, btnY + btnH, 0, closeBg);
-        String closeText = "返回鸟瞰 (ESC)";
+        String closeText = I18n.string("gui.wandscape.task.close", "返回鸟瞰 (ESC)");
         g.drawString(font, closeText, closeX + (closeW - font.width(closeText)) / 2, btnY + 7, 0xFFFFFFFF, false);
     }
 
@@ -194,11 +199,16 @@ public final class TaskManagementOverlay {
         int contentRight = closeX - 12; // nothing left of the exit button may pass this
 
         String colony = WandscapePanelState.getColonyName();
-        String title = colony.isEmpty() ? "魔法小镇" : colony;
+        String title = colony.isEmpty()
+                ? I18n.string("gui.wandscape.task.default_town_name", "魔法小镇")
+                : colony;
 
-        String taskLabel = "任务大厅 (" + TaskManagementClientState.getTotalActiveTasks() + ")";
-        String prodLabel = "工坊流水线 (" + TaskManagementClientState.getTotalProductionItemCount() + ")";
-        String mageLabel = "法师名册 (" + TaskManagementClientState.getTotalMageCount() + ")";
+        String taskLabel = I18n.string("gui.wandscape.task.tab.tasks", "任务大厅 (%s)",
+                String.valueOf(TaskManagementClientState.getTotalActiveTasks()));
+        String prodLabel = I18n.string("gui.wandscape.task.tab.production", "工坊流水线 (%s)",
+                String.valueOf(TaskManagementClientState.getTotalProductionItemCount()));
+        String mageLabel = I18n.string("gui.wandscape.task.tab.mages", "法师名册 (%s)",
+                String.valueOf(TaskManagementClientState.getTotalMageCount()));
 
         int titleW = font.width(title);
         int pad = 24;
@@ -255,13 +265,7 @@ public final class TaskManagementOverlay {
             TaskManagementClientState.TaskFilter[] filters = TaskManagementClientState.TaskFilter.values();
 
             for (TaskManagementClientState.TaskFilter f : filters) {
-                String label = switch (f) {
-                    case ALL -> "全部";
-                    case IN_PROGRESS -> "进行中";
-                    case AWAITING_RESOURCES -> "缺前置资源";
-                    case PENDING -> "排队等待";
-                    case QUEUED -> "建筑待办";
-                };
+                String label = taskFilterLabel(f);
                 int btnW = font.width(label) + 14;
                 boolean active = f == currentFilter;
                 boolean hover = mx >= curX && mx <= curX + btnW && my >= btnY && my <= btnY + btnH;
@@ -276,12 +280,7 @@ public final class TaskManagementOverlay {
             TaskManagementClientState.ProductionFilter[] filters = TaskManagementClientState.ProductionFilter.values();
 
             for (TaskManagementClientState.ProductionFilter f : filters) {
-                String label = switch (f) {
-                    case ALL -> "全部";
-                    case RUNNING -> "正在制作";
-                    case QUEUED -> "排队等待";
-                    case MISSING_ELEMENTS -> "缺元素/受阻";
-                };
+                String label = productionFilterLabel(f);
                 int btnW = font.width(label) + 14;
                 boolean active = f == currentFilter;
                 boolean hover = mx >= curX && mx <= curX + btnW && my >= btnY && my <= btnY + btnH;
@@ -304,7 +303,7 @@ public final class TaskManagementOverlay {
         List<TaskSummaryDto> tasks = TaskManagementClientState.getFilteredTasks();
 
         if (tasks.isEmpty()) {
-            String empty = "当前筛选分类下暂无任务";
+            String empty = I18n.string("gui.wandscape.task.empty.tasks", "当前筛选分类下暂无任务");
             g.drawString(font, empty, x + (w - font.width(empty)) / 2, y + 50, WandscapeTheme.COLOR_TEXT_DIM, false);
             return;
         }
@@ -362,8 +361,11 @@ public final class TaskManagementOverlay {
         // Line 2: Status Details
         int statusY = y + 20;
         if ("IN_PROGRESS".equalsIgnoreCase(task.state())) {
-            String mage = task.assignedNpcName().isEmpty() ? "法师" : task.assignedNpcName();
-            String status = "正在执行: " + mage + " (步骤 " + (task.stepIndex() + 1) + "/" + task.totalSteps() + ")";
+            String mage = task.assignedNpcName().isEmpty()
+                    ? I18n.string("gui.wandscape.task.default_mage", "法师")
+                    : task.assignedNpcName();
+            String status = I18n.string("gui.wandscape.task.status.executing", "正在执行: %s (步骤 %s/%s)",
+                    mage, String.valueOf(task.stepIndex() + 1), String.valueOf(task.totalSteps()));
             g.drawString(font, status, x + 8, statusY, 0xFF81C784, false);
 
             // Progress Bar
@@ -375,16 +377,23 @@ public final class TaskManagementOverlay {
         } else if ("AWAITING_RESOURCES".equalsIgnoreCase(task.state())) {
             if (task.shortages() != null && !task.shortages().isEmpty()) {
                 ResourceShortageDto s = task.shortages().getFirst();
-                String shortStr = "缺少前置: " + s.displayName() + " x" + s.getMissingAmount() + " (库存: " + s.currentAmount() + " / 需: " + s.requiredAmount() + ")";
+                String shortStr = I18n.string("gui.wandscape.task.status.missing_prereq",
+                        "缺少前置: %s x%s (库存: %s / 需: %s)",
+                        s.displayName(), String.valueOf(s.getMissingAmount()),
+                        String.valueOf(s.currentAmount()), String.valueOf(s.requiredAmount()));
                 g.drawString(font, shortStr, x + 8, statusY, 0xFFE57373, false);
             } else {
-                g.drawString(font, "缺少前置资源", x + 8, statusY, 0xFFE57373, false);
+                g.drawString(font, I18n.string("gui.wandscape.task.status.missing_prereq_short", "缺少前置资源"),
+                        x + 8, statusY, 0xFFE57373, false);
             }
         } else if ("PENDING_ASSIGN".equalsIgnoreCase(task.state())) {
-            String reason = "WAITING_NPC".equals(task.blockerReason()) ? "暂无空闲法师，等待调度认领" : "排队等待调度中";
+            String reason = "WAITING_NPC".equals(task.blockerReason())
+                    ? I18n.string("gui.wandscape.task.status.no_idle_mage", "暂无空闲法师，等待调度认领")
+                    : I18n.string("gui.wandscape.task.status.queued_dispatch", "排队等待调度中");
             g.drawString(font, reason, x + 8, statusY, 0xFFFFD54F, false);
         } else if ("QUEUED".equalsIgnoreCase(task.state())) {
-            g.drawString(font, "建筑队列排队中 (待办阶段)", x + 8, statusY, 0xFFB0BEC5, false);
+            g.drawString(font, I18n.string("gui.wandscape.task.status.building_queued", "建筑队列排队中 (待办阶段)"),
+                    x + 8, statusY, 0xFFB0BEC5, false);
         }
 
         // Line 3: Action Buttons (Right Aligned)
@@ -399,7 +408,7 @@ public final class TaskManagementOverlay {
             int btnW = 44;
             boolean hover = mx >= x && mx <= x + btnW && my >= y && my <= y + btnH;
             g.fill(RenderType.guiOverlay(), x, y, x + btnW, y + btnH, 0, hover ? 0xEE3E4A5E : 0x882A313D);
-            g.drawString(font, "定位", x + 6, y + 6, 0xFFFFFFFF, false);
+            g.drawString(font, locateLabel(), x + 6, y + 6, 0xFFFFFFFF, false);
         }
 
         // [加急]
@@ -407,14 +416,14 @@ public final class TaskManagementOverlay {
         int rushW = 44;
         boolean rushHover = mx >= rushX && mx <= rushX + rushW && my >= y && my <= y + btnH;
         g.fill(RenderType.guiOverlay(), rushX, y, rushX + rushW, y + btnH, 0, rushHover ? 0xEEC8A040 : 0x885C4B20);
-        g.drawString(font, "加急", rushX + 6, y + 6, 0xFFFFFFFF, false);
+        g.drawString(font, I18n.string("gui.wandscape.task.action.rush", "加急"), rushX + 6, y + 6, 0xFFFFFFFF, false);
 
         // [取消]
         int cancelX = x + 96;
         int cancelW = 44;
         boolean cancelHover = mx >= cancelX && mx <= cancelX + cancelW && my >= y && my <= btnH;
         g.fill(RenderType.guiOverlay(), cancelX, y, cancelX + cancelW, y + btnH, 0, cancelHover ? 0xEEE53935 : 0x885C2020);
-        g.drawString(font, "取消", cancelX + 6, y + 6, 0xFFFFFFFF, false);
+        g.drawString(font, I18n.string("gui.wandscape.task.action.cancel", "取消"), cancelX + 6, y + 6, 0xFFFFFFFF, false);
     }
 
     // ═══════════════════════════════════════════════════════════════════
@@ -425,7 +434,7 @@ public final class TaskManagementOverlay {
         List<ProductionGroupDto> groups = TaskManagementClientState.getFilteredProductionGroups();
 
         if (groups.isEmpty()) {
-            String empty = "当前筛选分类下暂无工坊生产任务";
+            String empty = I18n.string("gui.wandscape.task.empty.production", "当前筛选分类下暂无工坊生产任务");
             g.drawString(font, empty, x + (w - font.width(empty)) / 2, y + 50, WandscapeTheme.COLOR_TEXT_DIM, false);
             return;
         }
@@ -477,16 +486,17 @@ public final class TaskManagementOverlay {
         g.fill(RenderType.guiOverlay(), x, y, x + 3, y + 26, 0, BORDER_GOLD);
 
         String catName = switch (group.category().toLowerCase()) {
-            case "workstation" -> "工作站";
-            case "alchemy" -> "炼药工坊";
-            case "magic_workshop" -> "魔法工坊";
-            case "node" -> "元素节点";
-            default -> "生产工坊";
+            case "workstation" -> I18n.string("gui.wandscape.task.group.workstation", "工作站");
+            case "alchemy" -> I18n.string("gui.wandscape.task.group.alchemy", "炼药工坊");
+            case "magic_workshop" -> I18n.string("gui.wandscape.task.group.magic_workshop", "魔法工坊");
+            case "node" -> I18n.string("gui.wandscape.task.group.node", "元素节点");
+            default -> I18n.string("gui.wandscape.task.group.default", "生产工坊");
         };
 
         int active = group.activeWorkers();
         int queued = Math.max(0, group.items().size() - active);
-        String title = String.format("🏛️ [%s] %s  (制作中: %d | 排队: %d)", catName, group.buildingName(), active, queued);
+        String title = I18n.string("gui.wandscape.task.group.header", "[%s] %s  (制作中: %s | 排队: %s)",
+                catName, group.buildingName(), String.valueOf(active), String.valueOf(queued));
         g.drawString(font, title, x + 8, y + 8, WandscapeTheme.COLOR_TEXT_ACTIVE, false);
 
         // [定位] Button
@@ -495,7 +505,7 @@ public final class TaskManagementOverlay {
         int btnY = y + 4;
         boolean hover = mx >= btnX && mx <= btnX + btnW && my >= btnY && my <= btnY + 18;
         g.fill(RenderType.guiOverlay(), btnX, btnY, btnX + btnW, btnY + 18, 0, hover ? 0xEE3E4A5E : 0x882A313D);
-        g.drawString(font, "定位", btnX + 6, btnY + 5, 0xFFFFFFFF, false);
+        g.drawString(font, locateLabel(), btnX + 6, btnY + 5, 0xFFFFFFFF, false);
     }
 
     private static void renderProductionItemCard(GuiGraphics g, Font font, int x, int y, int w, ProductionItemDto item, double mx, double my) {
@@ -510,7 +520,10 @@ public final class TaskManagementOverlay {
         g.fill(RenderType.guiOverlay(), x, y, x + 3, y + PROD_CARD_H, 0, accentColor);
 
         // Line 1: Index + Display Name × Count + Category Tag
-        String prefix = item.queueIndex() == 0 ? "[进行中] " : "[#" + item.queueIndex() + " 排队] ";
+        String prefix = item.queueIndex() == 0
+                ? I18n.string("gui.wandscape.task.prod.running_prefix", "[进行中] ")
+                : I18n.string("gui.wandscape.task.prod.queued_prefix", "[#%s 排队] ",
+                        String.valueOf(item.queueIndex()));
         String title = prefix + item.displayName() + " × " + item.count();
         g.drawString(font, title, x + 8, y + 6, WandscapeTheme.COLOR_TEXT_NORMAL, false);
 
@@ -520,8 +533,11 @@ public final class TaskManagementOverlay {
         // Line 2: Status Details & Elements
         int statusY = y + 22;
         if ("RUNNING".equalsIgnoreCase(item.status())) {
-            String npcName = item.assignedNpcName().isEmpty() ? "工坊法师" : item.assignedNpcName();
-            g.drawString(font, "正在制作: " + npcName, x + 8, statusY, 0xFF81C784, false);
+            String npcName = item.assignedNpcName().isEmpty()
+                    ? I18n.string("gui.wandscape.task.default_workshop_mage", "工坊法师")
+                    : item.assignedNpcName();
+            g.drawString(font, I18n.string("gui.wandscape.task.prod.making", "正在制作: %s", npcName),
+                    x + 8, statusY, 0xFF81C784, false);
 
             // Progress Bar
             int barW = w - 160;
@@ -530,28 +546,37 @@ public final class TaskManagementOverlay {
             int fillW = (int) (barW * Math.clamp(item.progress(), 0f, 1f));
             g.fill(RenderType.guiOverlay(), x + 8, barY, x + 8 + fillW, barY + 4, 0, 0xFF81C784);
         } else if ("MISSING_ELEMENTS".equalsIgnoreCase(item.status())) {
-            StringBuilder sb = new StringBuilder("缺少元素: ");
+            StringBuilder sb = new StringBuilder(
+                    I18n.string("gui.wandscape.task.prod.missing_elements", "缺少元素: "));
             if (item.elementCosts() != null) {
                 for (ResourceShortageDto s : item.elementCosts()) {
                     if (s.getMissingAmount() > 0) {
-                        sb.append(s.displayName()).append(" (缺 ").append(s.getMissingAmount()).append(")  ");
+                        sb.append(I18n.string("gui.wandscape.task.prod.short_amount", "%s (缺 %s)  ",
+                                s.displayName(), String.valueOf(s.getMissingAmount())));
                     }
                 }
             }
             g.drawString(font, sb.toString().trim(), x + 8, statusY, 0xFFE57373, false);
         } else {
-            g.drawString(font, "元素充足，等待工坊空闲开工", x + 8, statusY, 0xFFFFD54F, false);
+            g.drawString(font, I18n.string("gui.wandscape.task.prod.elements_ready", "元素充足，等待工坊空闲开工"),
+                    x + 8, statusY, 0xFFFFD54F, false);
         }
 
         // Line 3: Supply Chain / Auto-Gather status / Upstream Source
         int line3Y = y + 38;
         if (item.activeSupplyingGather()) {
-            g.drawString(font, "⚡ 元素节点正在自动采集补齐中...", x + 8, line3Y, 0xFF80DEEA, false);
+            g.drawString(font, I18n.string("gui.wandscape.task.prod.gathering", "元素节点正在自动采集补齐中..."),
+                    x + 8, line3Y, 0xFF80DEEA, false);
         } else if ("MISSING_ELEMENTS".equalsIgnoreCase(item.status())) {
-            g.drawString(font, "⚠️ 暂无采集进行中 (需建造元素节点或等待空闲法师)", x + 8, line3Y, 0xFFFFB74D, false);
+            g.drawString(font, I18n.string("gui.wandscape.task.prod.not_gathering",
+                            "暂无采集进行中 (需建造元素节点或等待空闲法师)"),
+                    x + 8, line3Y, 0xFFFFB74D, false);
         } else {
-            String src = item.dependencySource().isEmpty() ? "工坊手动排队" : item.dependencySource();
-            g.drawString(font, "📦 来源: " + src, x + 8, line3Y, 0xFFB0BEC5, false);
+            String src = item.dependencySource().isEmpty()
+                    ? I18n.string("gui.wandscape.task.source.manual", "工坊手动排队")
+                    : item.dependencySource();
+            g.drawString(font, I18n.string("gui.wandscape.task.prod.source", "来源: %s", src),
+                    x + 8, line3Y, 0xFFB0BEC5, false);
         }
 
         // Action Button: [ 依赖链 ] (Right aligned)
@@ -561,7 +586,7 @@ public final class TaskManagementOverlay {
         int btnH = 20;
         boolean btnHover = mx >= btnX && mx <= btnX + btnW && my >= btnY && my <= btnY + btnH;
         g.fill(RenderType.guiOverlay(), btnX, btnY, btnX + btnW, btnY + btnH, 0, btnHover ? 0xEEC8A040 : 0x885C4B20);
-        g.drawString(font, "依赖链", btnX + 7, btnY + 6, 0xFFFFFFFF, false);
+        g.drawString(font, I18n.string("gui.wandscape.task.action.deps", "依赖链"), btnX + 7, btnY + 6, 0xFFFFFFFF, false);
     }
 
     private static void renderDependencyModal(GuiGraphics g, Font font, int screenW, int screenH, double mx, double my) {
@@ -601,59 +626,81 @@ public final class TaskManagementOverlay {
         g.fill(RenderType.guiOverlay(), mx0 + modalW - 2, my0, mx0 + modalW, my0 + modalH, 0, BORDER_GOLD);
 
         // Header Title
-        g.drawString(font, "🔗 【全链路供应链与依赖溯源】", mx0 + 16, my0 + 14, WandscapeTheme.COLOR_TEXT_ACTIVE, false);
+        g.drawString(font, I18n.string("gui.wandscape.task.deps.title", "【全链路供应链与依赖溯源】"),
+                mx0 + 16, my0 + 14, WandscapeTheme.COLOR_TEXT_ACTIVE, false);
 
         // Close [X] top right
         int closeX = mx0 + modalW - 24;
         int closeY = my0 + 10;
         boolean closeHover = mx >= closeX && mx <= closeX + 16 && my >= closeY && my <= closeY + 16;
-        g.drawString(font, "✕", closeX, closeY, closeHover ? 0xFFE53935 : 0xFFB0BEC5, false);
+        g.drawString(font, "×", closeX, closeY, closeHover ? 0xFFE53935 : 0xFFB0BEC5, false);
 
         int contentY = my0 + 36;
 
         // Step 1: Upstream Trigger
         g.fill(RenderType.guiOverlay(), mx0 + 16, contentY, mx0 + modalW - 16, contentY + 44, 0, 0xEE1E2430);
-        g.drawString(font, "1. 需求发起源头 (Upstream Trigger)", mx0 + 24, contentY + 6, 0xFFFFD54F, false);
-        String srcText = targetItem.dependencySource().isEmpty() ? "工坊手动排队生产" : targetItem.dependencySource();
-        g.drawString(font, "🏛️ 来源: " + srcText, mx0 + 24, contentY + 22, 0xFFE0E0E0, false);
+        g.drawString(font, I18n.string("gui.wandscape.task.deps.step1", "1. 需求发起源头 (Upstream Trigger)"),
+                mx0 + 24, contentY + 6, 0xFFFFD54F, false);
+        String srcText = targetItem.dependencySource().isEmpty()
+                ? I18n.string("gui.wandscape.task.source.manual_production", "工坊手动排队生产")
+                : targetItem.dependencySource();
+        g.drawString(font, I18n.string("gui.wandscape.task.deps.source", "来源: %s", srcText),
+                mx0 + 24, contentY + 22, 0xFFE0E0E0, false);
         contentY += 50;
 
         // Step 2: Workshop & Recipe
         g.fill(RenderType.guiOverlay(), mx0 + 16, contentY, mx0 + modalW - 16, contentY + 44, 0, 0xEE1E2430);
-        g.drawString(font, "2. 当前生产工坊 (Workshop Node)", mx0 + 24, contentY + 6, 0xFF81C784, false);
-        String statusText = "RUNNING".equalsIgnoreCase(targetItem.status()) ? "🟢 正在制作中"
-                : ("MISSING_ELEMENTS".equalsIgnoreCase(targetItem.status()) ? "🔴 缺少元素等待补齐" : "🟡 队列排队就绪");
-        String wsText = String.format("⚙️ 工坊: %s | 产物: %s × %d | 状态: %s",
-                targetGroup.buildingName(), targetItem.displayName(), targetItem.count(), statusText);
+        g.drawString(font, I18n.string("gui.wandscape.task.deps.step2", "2. 当前生产工坊 (Workshop Node)"),
+                mx0 + 24, contentY + 6, 0xFF81C784, false);
+        String statusText = "RUNNING".equalsIgnoreCase(targetItem.status())
+                ? I18n.string("gui.wandscape.task.deps.state.running", "正在制作中")
+                : ("MISSING_ELEMENTS".equalsIgnoreCase(targetItem.status())
+                        ? I18n.string("gui.wandscape.task.deps.state.missing", "缺少元素等待补齐")
+                        : I18n.string("gui.wandscape.task.deps.state.queued", "队列排队就绪"));
+        String wsText = I18n.string("gui.wandscape.task.deps.workshop", "工坊: %s | 产物: %s × %s | 状态: %s",
+                targetGroup.buildingName(), targetItem.displayName(),
+                String.valueOf(targetItem.count()), statusText);
         g.drawString(font, wsText, mx0 + 24, contentY + 22, 0xFFE0E0E0, false);
         contentY += 50;
 
         // Step 3: Elements Requirement Breakdown
         g.fill(RenderType.guiOverlay(), mx0 + 16, contentY, mx0 + modalW - 16, contentY + 64, 0, 0xEE1E2430);
-        g.drawString(font, "3. 元素消耗与库存核算 (Element Cost & Stock)", mx0 + 24, contentY + 6, 0xFF4FC3F7, false);
+        g.drawString(font, I18n.string("gui.wandscape.task.deps.step3", "3. 元素消耗与库存核算 (Element Cost & Stock)"),
+                mx0 + 24, contentY + 6, 0xFF4FC3F7, false);
         if (targetItem.elementCosts() != null && !targetItem.elementCosts().isEmpty()) {
             int elemY = contentY + 22;
             for (ResourceShortageDto cost : targetItem.elementCosts()) {
-                String elemStr = String.format("• %s: 需求 %d | 仓库库存 %d | %s",
-                        cost.displayName(), cost.requiredAmount(), cost.currentAmount(),
-                        cost.getMissingAmount() > 0 ? "§c缺 " + cost.getMissingAmount() : "§a满足");
+                String elemStr = I18n.string("gui.wandscape.task.deps.element_row",
+                        "• %s: 需求 %s | 仓库库存 %s | %s",
+                        cost.displayName(), String.valueOf(cost.requiredAmount()), String.valueOf(cost.currentAmount()),
+                        cost.getMissingAmount() > 0
+                                ? I18n.string("gui.wandscape.task.deps.short", "§c缺 %s", String.valueOf(cost.getMissingAmount()))
+                                : I18n.string("gui.wandscape.task.deps.ok", "§a满足"));
                 g.drawString(font, elemStr, mx0 + 24, elemY, 0xFFE0E0E0, false);
                 elemY += 14;
             }
         } else {
-            g.drawString(font, "• 本配方无元素消耗（如物品分解/初级转换）", mx0 + 24, contentY + 22, 0xFFB0BEC5, false);
+            g.drawString(font, I18n.string("gui.wandscape.task.deps.no_elements", "• 本配方无元素消耗（如物品分解/初级转换）"),
+                    mx0 + 24, contentY + 22, 0xFFB0BEC5, false);
         }
         contentY += 70;
 
         // Step 4: Downstream Auto-Supply
         g.fill(RenderType.guiOverlay(), mx0 + 16, contentY, mx0 + modalW - 16, contentY + 44, 0, 0xEE1E2430);
-        g.drawString(font, "4. 自动化补料闭环 (Downstream Auto-Supply)", mx0 + 24, contentY + 6, 0xFFCE93D8, false);
+        g.drawString(font, I18n.string("gui.wandscape.task.deps.step4", "4. 自动化补料闭环 (Downstream Auto-Supply)"),
+                mx0 + 24, contentY + 6, 0xFFCE93D8, false);
         if (targetItem.activeSupplyingGather()) {
-            g.drawString(font, "⚡ 闭环运转中: 元素节点已自动发布 node:gather 采集任务，法师正在采集中！", mx0 + 24, contentY + 22, 0xFF80DEEA, false);
+            g.drawString(font, I18n.string("gui.wandscape.task.deps.loop_active",
+                            "闭环运转中: 元素节点已自动发布 node:gather 采集任务，法师正在采集中！"),
+                    mx0 + 24, contentY + 22, 0xFF80DEEA, false);
         } else if ("MISSING_ELEMENTS".equalsIgnoreCase(targetItem.status())) {
-            g.drawString(font, "⚠️ 采集阻塞: 当前殖民地缺少对应元素节点建筑，或所有法师均忙碌中。", mx0 + 24, contentY + 22, 0xFFFFB74D, false);
+            g.drawString(font, I18n.string("gui.wandscape.task.deps.loop_blocked",
+                            "采集阻塞: 当前殖民地缺少对应元素节点建筑，或所有法师均忙碌中。"),
+                    mx0 + 24, contentY + 22, 0xFFFFB74D, false);
         } else {
-            g.drawString(font, "✅ 物资已就绪: 所需元素已全部齐备，排队就绪即可自动开工。", mx0 + 24, contentY + 22, 0xFF81C784, false);
+            g.drawString(font, I18n.string("gui.wandscape.task.deps.loop_ready",
+                            "物资已就绪: 所需元素已全部齐备，排队就绪即可自动开工。"),
+                    mx0 + 24, contentY + 22, 0xFF81C784, false);
         }
 
         // Bottom [关闭] Button
@@ -663,7 +710,7 @@ public final class TaskManagementOverlay {
         int okY = my0 + modalH - 26;
         boolean okHover = mx >= okX && mx <= okX + okW && my >= okY && my <= okY + okH;
         g.fill(RenderType.guiOverlay(), okX, okY, okX + okW, okY + okH, 0, okHover ? 0xEE3E4A5E : 0x882A313D);
-        g.drawString(font, "关闭 (ESC)", okX + 16, okY + 6, 0xFFFFFFFF, false);
+        g.drawString(font, I18n.string("gui.wandscape.task.action.close", "关闭 (ESC)"), okX + 16, okY + 6, 0xFFFFFFFF, false);
     }
 
     // ═══════════════════════════════════════════════════════════════════
@@ -674,7 +721,7 @@ public final class TaskManagementOverlay {
         List<MageSummaryDto> mages = TaskManagementClientState.getFilteredMages();
 
         if (mages.isEmpty()) {
-            String empty = "当前小镇暂无法师";
+            String empty = I18n.string("gui.wandscape.task.empty.mages", "当前小镇暂无法师");
             g.drawString(font, empty, x + (w - font.width(empty)) / 2, y + 50, WandscapeTheme.COLOR_TEXT_DIM, false);
             return;
         }
@@ -746,7 +793,10 @@ public final class TaskManagementOverlay {
         g.fill(RenderType.guiOverlay(), mpX + 18, barY + 2, mpX + 18 + manaFill, barY + 6, 0, 0xFF2196F3);
 
         // Line 3: Attributes + Wand
-        String attrStr = String.format("法强:%.1f  工速:%.1f  护甲:%.0f", mage.spellPower(), mage.workSpeed(), mage.armorValue());
+        String attrStr = I18n.string("gui.wandscape.task.mage.attrs", "法强:%s  工速:%s  护甲:%s",
+                String.format("%.1f", mage.spellPower()),
+                String.format("%.1f", mage.workSpeed()),
+                String.format("%.0f", mage.armorValue()));
         if (!mage.equippedWand().isEmpty()) {
             attrStr += "  |  " + mage.equippedWand();
         }
@@ -768,7 +818,10 @@ public final class TaskManagementOverlay {
         boolean followHover = mx >= x && mx <= x + followW && my >= y && my <= y + btnH;
         int followBg = mage.followMode() ? 0xFF4CAF50 : (followHover ? 0xEE3E4A5E : 0x882A313D);
         g.fill(RenderType.guiOverlay(), x, y, x + followW, y + btnH, 0, followBg);
-        g.drawString(font, mage.followMode() ? "取消跟随" : "跟随", x + 5, y + 6, 0xFFFFFFFF, false);
+        g.drawString(font, mage.followMode()
+                        ? I18n.string("gui.wandscape.task.mage.unfollow", "取消跟随")
+                        : I18n.string("gui.wandscape.task.mage.follow", "跟随"),
+                x + 5, y + 6, 0xFFFFFFFF, false);
 
         // [和平]
         int peaceX = x + 52;
@@ -776,7 +829,10 @@ public final class TaskManagementOverlay {
         boolean peaceHover = mx >= peaceX && mx <= peaceX + peaceW && my >= y && my <= y + btnH;
         int peaceBg = mage.peaceMode() ? 0xFF42A5F5 : (peaceHover ? 0xEE3E4A5E : 0x882A313D);
         g.fill(RenderType.guiOverlay(), peaceX, y, peaceX + peaceW, y + btnH, 0, peaceBg);
-        g.drawString(font, mage.peaceMode() ? "取消和平" : "和平", peaceX + 5, y + 6, 0xFFFFFFFF, false);
+        g.drawString(font, mage.peaceMode()
+                        ? I18n.string("gui.wandscape.task.mage.unpeace", "取消和平")
+                        : I18n.string("gui.wandscape.task.mage.peace", "和平"),
+                peaceX + 5, y + 6, 0xFFFFFFFF, false);
     }
 
     // ═══════════════════════════════════════════════════════════════════
@@ -860,13 +916,7 @@ public final class TaskManagementOverlay {
 
             if (tab == TaskManagementClientState.SubTab.TASKS) {
                 for (TaskManagementClientState.TaskFilter f : TaskManagementClientState.TaskFilter.values()) {
-                    String label = switch (f) {
-                        case ALL -> "全部";
-                        case IN_PROGRESS -> "进行中";
-                        case AWAITING_RESOURCES -> "缺前置资源";
-                        case PENDING -> "排队等待";
-                        case QUEUED -> "建筑待办";
-                    };
+                    String label = taskFilterLabel(f);
                     int btnW = font.width(label) + 14;
                     if (mx >= fx && mx <= fx + btnW && my >= fBtnY && my <= fBtnY + fBtnH) {
                         TaskManagementClientState.setActiveFilter(f);
@@ -877,12 +927,7 @@ public final class TaskManagementOverlay {
                 }
             } else if (tab == TaskManagementClientState.SubTab.PRODUCTION) {
                 for (TaskManagementClientState.ProductionFilter f : TaskManagementClientState.ProductionFilter.values()) {
-                    String label = switch (f) {
-                        case ALL -> "全部";
-                        case RUNNING -> "正在制作";
-                        case QUEUED -> "排队等待";
-                        case MISSING_ELEMENTS -> "缺元素/受阻";
-                    };
+                    String label = productionFilterLabel(f);
                     int btnW = font.width(label) + 14;
                     if (mx >= fx && mx <= fx + btnW && my >= fBtnY && my <= fBtnY + fBtnH) {
                         TaskManagementClientState.setActiveProductionFilter(f);
@@ -1068,17 +1113,49 @@ public final class TaskManagementOverlay {
         }
     }
 
+    /**
+     * 筛选按钮文案。渲染与点击命中都调这里——两处各写一份 switch 时，改了文案却漏改命中判定，
+     * 按钮的宽度和可点区域就会错位。
+     */
+    private static String taskFilterLabel(TaskManagementClientState.TaskFilter f) {
+        return switch (f) {
+            case ALL -> I18n.string("gui.wandscape.task.filter.all", "全部");
+            case IN_PROGRESS -> I18n.string("gui.wandscape.task.filter.in_progress", "进行中");
+            case AWAITING_RESOURCES -> I18n.string("gui.wandscape.task.filter.awaiting", "缺前置资源");
+            case PENDING -> I18n.string("gui.wandscape.task.filter.queued", "排队等待");
+            case QUEUED -> I18n.string("gui.wandscape.task.filter.building_queue", "建筑待办");
+        };
+    }
+
+    /** 生产页筛选按钮文案，见 {@link #taskFilterLabel}。 */
+    private static String productionFilterLabel(TaskManagementClientState.ProductionFilter f) {
+        return switch (f) {
+            case ALL -> I18n.string("gui.wandscape.task.filter.all", "全部");
+            case RUNNING -> I18n.string("gui.wandscape.task.filter.running", "正在制作");
+            case QUEUED -> I18n.string("gui.wandscape.task.filter.queued", "排队等待");
+            case MISSING_ELEMENTS -> I18n.string("gui.wandscape.task.filter.missing", "缺元素/受阻");
+        };
+    }
+
+    /**
+     * 定位按钮文案。动作按钮的宽度是写死的（44/48/54 px），渲染与命中判定两处共用同一份常量，
+     * 所以文案得短——换语言时别把标签写长，否则会溢出按钮。
+     */
+    private static String locateLabel() {
+        return I18n.string("gui.wandscape.task.action.locate", "定位");
+    }
+
     private static String formatCategory(String category) {
         return switch (category.toLowerCase()) {
-            case "build" -> "建造";
-            case "gather" -> "采集";
-            case "craft" -> "合成";
-            case "decompose" -> "分解";
-            case "guard" -> "守卫";
-            case "altar" -> "祭坛";
-            case "repair" -> "维修";
-            case "queued" -> "待办";
-            default -> "任务";
+            case "build" -> I18n.string("gui.wandscape.task.cat.build", "建造");
+            case "gather" -> I18n.string("gui.wandscape.task.cat.gather", "采集");
+            case "craft" -> I18n.string("gui.wandscape.task.cat.craft", "合成");
+            case "decompose" -> I18n.string("gui.wandscape.task.cat.decompose", "分解");
+            case "guard" -> I18n.string("gui.wandscape.task.cat.guard", "守卫");
+            case "altar" -> I18n.string("gui.wandscape.task.cat.altar", "祭坛");
+            case "repair" -> I18n.string("gui.wandscape.task.cat.repair", "维修");
+            case "queued" -> I18n.string("gui.wandscape.task.cat.queued", "待办");
+            default -> I18n.string("gui.wandscape.task.cat.default", "任务");
         };
     }
 
@@ -1112,11 +1189,14 @@ public final class TaskManagementOverlay {
 
     private static String formatMageState(MageSummaryDto mage) {
         return switch (mage.state().toUpperCase()) {
-            case "CASTING" -> "施法中" + (mage.currentTaskTitle().isEmpty() ? "" : ": " + mage.currentTaskTitle());
-            case "MOVING" -> "前往工作中";
-            case "FOLLOWING" -> "跟随中";
-            case "RESTING" -> "回屋休息中";
-            default -> "空闲待命中";
+            case "CASTING" -> mage.currentTaskTitle().isEmpty()
+                    ? I18n.string("gui.wandscape.task.mage_state.casting", "施法中")
+                    : I18n.string("gui.wandscape.task.mage_state.casting_with_task", "施法中: %s",
+                            mage.currentTaskTitle());
+            case "MOVING" -> I18n.string("gui.wandscape.task.mage_state.moving", "前往工作中");
+            case "FOLLOWING" -> I18n.string("gui.wandscape.task.mage_state.following", "跟随中");
+            case "RESTING" -> I18n.string("gui.wandscape.task.mage_state.resting", "回屋休息中");
+            default -> I18n.string("gui.wandscape.task.mage_state.idle", "空闲待命中");
         };
     }
 }
