@@ -2,6 +2,7 @@ package com.wsteam.wandscape.foundation.ui.settings;
 
 import com.wsteam.wandscape.ClientConfig;
 import com.wsteam.wandscape.Config;
+import com.wsteam.wandscape.foundation.ui.I18n;
 import com.wsteam.wandscape.foundation.ui.settings.network.ConfigUpdatePacket;
 import net.neoforged.neoforge.common.ModConfigSpec;
 import net.neoforged.neoforge.network.PacketDistributor;
@@ -136,11 +137,16 @@ public interface SettingItem {
         }
 
         @Override public String formatValue() {
-            return get() ? "已开启" : "已关闭";
+            return get()
+                    ? I18n.string("gui.wandscape.settings.value.on", "已开启")
+                    : I18n.string("gui.wandscape.settings.value.off", "已关闭");
         }
 
         @Override public String defaultHint() {
-            return "默认: " + (defaultValue ? "开启" : "关闭");
+            return I18n.string("gui.wandscape.settings.default_hint", "默认: %s",
+                    defaultValue
+                            ? I18n.string("gui.wandscape.settings.value.on_short", "开启")
+                            : I18n.string("gui.wandscape.settings.value.off_short", "关闭"));
         }
 
         @Override public boolean isDefault() {
@@ -220,7 +226,8 @@ public interface SettingItem {
         }
 
         @Override public String defaultHint() {
-            return "默认: " + formatter.apply(configValue.getDefault());
+            return I18n.string("gui.wandscape.settings.default_hint", "默认: %s",
+                    formatter.apply(configValue.getDefault()));
         }
 
         @Override public boolean isDefault() {
@@ -300,7 +307,8 @@ public interface SettingItem {
         }
 
         @Override public String defaultHint() {
-            return "默认: " + formatter.apply(configValue.getDefault());
+            return I18n.string("gui.wandscape.settings.default_hint", "默认: %s",
+                    formatter.apply(configValue.getDefault()));
         }
 
         @Override public boolean isDefault() {
@@ -371,7 +379,7 @@ public interface SettingItem {
         @Override public String defaultHint() {
             int defIdx = options.indexOf(configValue.getDefault());
             String defLabel = (defIdx >= 0 && defIdx < optionLabels.size()) ? optionLabels.get(defIdx) : configValue.getDefault();
-            return "默认: " + defLabel;
+            return I18n.string("gui.wandscape.settings.default_hint", "默认: %s", defLabel);
         }
 
         @Override public boolean isDefault() {

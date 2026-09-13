@@ -1,6 +1,7 @@
 package com.wsteam.wandscape.foundation.ui.settings;
 
 import com.wsteam.wandscape.content.colony.overview.client.OverviewClientState;
+import com.wsteam.wandscape.foundation.ui.I18n;
 import com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState;
 import com.wsteam.wandscape.foundation.ui.theme.WandscapeTheme;
 import net.minecraft.client.Minecraft;
@@ -103,8 +104,10 @@ public final class SettingsOverlay {
 
         // Title on the left
         String colony = WandscapePanelState.getColonyName();
-        String titlePrefix = (colony != null && !colony.isEmpty()) ? colony : "魔法小镇";
-        String fullTitle = titlePrefix + " 设置中心";
+        String titlePrefix = (colony != null && !colony.isEmpty())
+                ? colony
+                : I18n.string("gui.wandscape.settings.default_town_name", "魔法小镇");
+        String fullTitle = I18n.string("gui.wandscape.settings.title", "%s 设置中心", titlePrefix);
         g.drawString(font, fullTitle, 16, 12, WandscapeTheme.COLOR_TEXT_ACTIVE, false);
 
         int titleEnd = 16 + font.width(fullTitle) + 24;
@@ -141,7 +144,7 @@ public final class SettingsOverlay {
         boolean closeHover = mx >= closeX && mx <= closeX + closeW && my >= btnY && my <= btnY + btnH;
         int closeBg = closeHover ? 0xCCE53935 : 0x883A2020;
         g.fill(RenderType.guiOverlay(), closeX, btnY, closeX + closeW, btnY + btnH, 0, closeBg);
-        String closeText = "返回 (ESC)";
+        String closeText = I18n.string("gui.wandscape.settings.close", "返回 (ESC)");
         g.drawString(font, closeText, closeX + (closeW - font.width(closeText)) / 2, btnY + 7, 0xFFFFFFFF, false);
     }
 
@@ -151,8 +154,10 @@ public final class SettingsOverlay {
 
         // Status / prompt
         String hint = (activeTab == SettingTab.PACKAGES)
-                ? "管理已加载的建筑包。停用的建筑包将不会在建造栏中显示（即时生效）"
-                : "配置项修改即时生效并自动持久化保存（支持热重载）";
+                ? I18n.string("gui.wandscape.settings.hint.packages",
+                        "管理已加载的建筑包。停用的建筑包将不会在建造栏中显示（即时生效）")
+                : I18n.string("gui.wandscape.settings.hint.general",
+                        "配置项修改即时生效并自动持久化保存（支持热重载）");
         g.drawString(font, hint, 20, y + 8, WandscapeTheme.COLOR_TEXT_DIM, false);
 
         // Reset Page Defaults button on the right
@@ -164,7 +169,7 @@ public final class SettingsOverlay {
         int rBg = rHover ? 0xFFC8A040 : 0x44262E3B;
         int rTextColor = rHover ? 0xFF111214 : WandscapeTheme.COLOR_TEXT_NORMAL;
         g.fill(RenderType.guiOverlay(), rBtnX, rBtnY, rBtnX + rBtnW, rBtnY + rBtnH, 0, rBg);
-        String rText = "恢复本页默认";
+        String rText = I18n.string("gui.wandscape.settings.reset_tab", "恢复本页默认");
         g.drawString(font, rText, rBtnX + (rBtnW - font.width(rText)) / 2, rBtnY + 5, rTextColor, false);
     }
 
@@ -216,21 +221,25 @@ public final class SettingsOverlay {
         int badgeX = x + 10 + font.width(item.title()) + 8;
 
         // Badge 1: Hot-reload tag
+        String hotBadge = I18n.string("gui.wandscape.settings.badge.hot_reload", "[即时生效]");
+        String restartBadge = I18n.string("gui.wandscape.settings.badge.restart", "[需重启]");
         if (item.isHotReloadable()) {
-            drawBadge(g, font, badgeX, y + 6, "[即时生效]", 0xFF4CAF50, 0x334CAF50);
-            badgeX += font.width("[即时生效]") + 6;
+            drawBadge(g, font, badgeX, y + 6, hotBadge, 0xFF4CAF50, 0x334CAF50);
+            badgeX += font.width(hotBadge) + 6;
         } else {
-            drawBadge(g, font, badgeX, y + 6, "[需重启]", 0xFFFFA000, 0x33FFA000);
-            badgeX += font.width("[需重启]") + 6;
+            drawBadge(g, font, badgeX, y + 6, restartBadge, 0xFFFFA000, 0x33FFA000);
+            badgeX += font.width(restartBadge) + 6;
         }
 
         // Badge 2: Scope tag
+        String clientBadge = I18n.string("gui.wandscape.settings.badge.client", "[客户端]");
+        String generalBadge = I18n.string("gui.wandscape.settings.badge.general", "[通用配置]");
         if (item.isClientOnly()) {
-            drawBadge(g, font, badgeX, y + 6, "[客户端]", 0xFF42A5F5, 0x3342A5F5);
-            badgeX += font.width("[客户端]") + 6;
+            drawBadge(g, font, badgeX, y + 6, clientBadge, 0xFF42A5F5, 0x3342A5F5);
+            badgeX += font.width(clientBadge) + 6;
         } else {
-            drawBadge(g, font, badgeX, y + 6, "[通用配置]", 0xFF9E9E9E, 0x339E9E9E);
-            badgeX += font.width("[通用配置]") + 6;
+            drawBadge(g, font, badgeX, y + 6, generalBadge, 0xFF9E9E9E, 0x339E9E9E);
+            badgeX += font.width(generalBadge) + 6;
         }
 
         // Key path
@@ -252,7 +261,8 @@ public final class SettingsOverlay {
         int rstBg = canReset ? (rstHover ? 0xFFC8A040 : 0x663E4A5E) : 0x221E242E;
         int rstTextColor = canReset ? (rstHover ? 0xFF111214 : 0xFFFFFFFF) : 0xFF555555;
         g.fill(RenderType.guiOverlay(), rstBtnX, rstBtnY, rstBtnX + rstBtnW, rstBtnY + rstBtnH, 0, rstBg);
-        g.drawString(font, "默认", rstBtnX + (rstBtnW - font.width("默认")) / 2, rstBtnY + 7, rstTextColor, false);
+        String rstLabel = I18n.string("gui.wandscape.settings.reset", "默认");
+        g.drawString(font, rstLabel, rstBtnX + (rstBtnW - font.width(rstLabel)) / 2, rstBtnY + 7, rstTextColor, false);
 
         int controlAreaRight = rstBtnX - 8;
 
@@ -269,7 +279,9 @@ public final class SettingsOverlay {
                 int bg = val ? (bHover ? 0xFFD4AF37 : 0xFFC8A040) : (bHover ? 0x883E4A5E : 0x44262E3B);
                 int txtColor = val ? 0xFF111214 : (bHover ? 0xFFFFFFFF : 0xFF888888);
                 g.fill(RenderType.guiOverlay(), btnX, btnY, btnX + btnW, btnY + btnH, 0, bg);
-                String btnText = val ? "开启 [ON]" : "关闭 [OFF]";
+                String btnText = val
+                        ? I18n.string("gui.wandscape.settings.toggle_on", "开启 [ON]")
+                        : I18n.string("gui.wandscape.settings.toggle_off", "关闭 [OFF]");
                 g.drawString(font, btnText, btnX + (btnW - font.width(btnText)) / 2, btnY + 7, txtColor, false);
             }
             case DOUBLE_STEP, INT_STEP -> {
@@ -370,7 +382,10 @@ public final class SettingsOverlay {
 
             // Tab buttons
             String colony = WandscapePanelState.getColonyName();
-            String fullTitle = (colony != null && !colony.isEmpty() ? colony : "魔法小镇") + " 设置中心";
+            String fullTitle = I18n.string("gui.wandscape.settings.title", "%s 设置中心",
+                    (colony != null && !colony.isEmpty())
+                            ? colony
+                            : I18n.string("gui.wandscape.settings.default_town_name", "魔法小镇"));
             int titleEnd = 16 + Minecraft.getInstance().font.width(fullTitle) + 24;
             int totalTabsW = 0;
             for (SettingTab tab : SettingTab.values()) {
@@ -398,7 +413,7 @@ public final class SettingsOverlay {
             int rBtnY = HEADER_H + 4;
             if (mx >= rBtnX && mx <= rBtnX + rBtnW && my >= rBtnY && my <= rBtnY + rBtnH) {
                 SettingsRegistry.resetTab(activeTab);
-                showToast("已恢复本页默认设置");
+                showToast(I18n.string("gui.wandscape.settings.reset_tab_toast", "已恢复本页默认设置"));
                 playClickSound();
                 return true;
             }
@@ -428,7 +443,8 @@ public final class SettingsOverlay {
                     // Reset button
                     if (!item.isDefault() && mx >= rstBtnX && mx <= rstBtnX + rstBtnW && my >= rstBtnY && my <= rstBtnY + rstBtnH) {
                         item.resetToDefault();
-                        showToast("已重置默认: " + item.title());
+                        showToast(I18n.string("gui.wandscape.settings.reset_item_toast",
+                                "已重置默认: %s", item.title()));
                         playClickSound();
                         return true;
                     }

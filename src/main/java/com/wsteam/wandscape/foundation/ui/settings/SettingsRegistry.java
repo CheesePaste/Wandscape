@@ -3,6 +3,7 @@ package com.wsteam.wandscape.foundation.ui.settings;
 import com.wsteam.wandscape.ClientConfig;
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.ui.I18n;
 
 import javax.annotation.Nullable;
 import java.util.*;
@@ -16,6 +17,10 @@ import java.util.*;
  *
  * <p>每项只登记「标题 + tab + 归属 config + 步进」，取值区间由 {@link SettingItem} 从 config 的
  * {@code defineInRange} 自取；卡片不显示介绍文案，说明写在各自 config 项的 comment 里。
+ *
+ * <p>标题与单位串走 {@code gui.wandscape.settings.<key>} / {@code gui.wandscape.settings.unit.*}
+ * 两组 lang 键，中文原文留作缺键时的兜底（{@link I18n#string}）。本类可能在服务端被
+ * {@code ConfigUpdatePacket} 触发初始化，那里取不到语言表，兜底分支保证不会炸。
  *
  * <p>This class is the single source of truth for "setting key → item": {@code ConfigUpdatePacket}
  * resolves keys through it instead of keeping its own switch list.
@@ -31,6 +36,19 @@ public final class SettingsRegistry {
 
     private SettingsRegistry() {}
 
+    /** 设置项标题：lang 键由设置项 key 派生，缺键回退中文原文。 */
+    private static String title(String key, String fallback) {
+        return I18n.string("gui.wandscape.settings." + key, fallback);
+    }
+
+    /**
+     * 带数字的单位串。lang 值里写 {@code %s 格/秒} 这种（MC 的可翻译串只认 {@code %s}），
+     * 数字先在外面格式化好再传进来，兜底分支的 printf 原文也用 {@code %s}，两种路径才一致。
+     */
+    private static String unit(String suffix, String fallback, String number) {
+        return I18n.string("gui.wandscape.settings." + suffix, fallback, number);
+    }
+
     public static synchronized void init() {
         if (initialized) return;
         initialized = true;
@@ -45,17 +63,17 @@ public final class SettingsRegistry {
 
         register(new SettingItem.DoubleSetting(
                 "panel.flySpeed",
-                "相机飞行速度",
+                title("panel.flySpeed", "相机飞行速度"),
                 SettingTab.VISUAL,
                 true, true,
                 ClientConfig.FLY_SPEED,
                 1.0, 5.0,
-                val -> String.format("%.1f 格/秒", val)
+                val -> unit("unit.blocks_per_second", "%s 格/秒", String.format("%.1f", val))
         ));
 
         register(new SettingItem.BooleanSetting(
                 "road.showTerrainGrid",
-                "道路网格辅助线",
+                title("road.showTerrainGrid", "道路网格辅助线"),
                 SettingTab.VISUAL,
                 true, true,
                 ClientConfig.ROAD_GRID
@@ -63,17 +81,21 @@ public final class SettingsRegistry {
 
         register(new SettingItem.OptionsSetting(
                 "particle.level",
-                "粒子效果等级",
+                title("particle.level", "粒子效果等级"),
                 SettingTab.VISUAL,
                 false, true,
                 Config.PARTICLE_LEVEL,
                 List.of("OFF", "LOW", "NORMAL", "HIGH"),
-                List.of("关闭 (OFF)", "精简 (LOW)", "标准 (NORMAL)", "极致 (HIGH)")
+                List.of(
+                        I18n.string("gui.wandscape.settings.option.particle_off", "关闭 (OFF)"),
+                        I18n.string("gui.wandscape.settings.option.particle_low", "精简 (LOW)"),
+                        I18n.string("gui.wandscape.settings.option.particle_normal", "标准 (NORMAL)"),
+                        I18n.string("gui.wandscape.settings.option.particle_high", "极致 (HIGH)"))
         ));
 
         register(new SettingItem.BooleanSetting(
                 "ui.speechBubbles",
-                "闲聊气泡",
+                title("ui.speechBubbles", "闲聊气泡"),
                 SettingTab.VISUAL,
                 true, true,
                 ClientConfig.SHOW_SPEECH_BUBBLES
@@ -81,7 +103,7 @@ public final class SettingsRegistry {
 
         register(new SettingItem.IntSetting(
                 "preview.resolution",
-                "建筑预览清晰度",
+                title("preview.resolution", "建筑预览清晰度"),
                 SettingTab.VISUAL,
                 true, false,
                 ClientConfig.PREVIEW_RESOLUTION,
@@ -91,7 +113,7 @@ public final class SettingsRegistry {
 
         register(new SettingItem.IntSetting(
                 "preview.fps",
-                "建筑预览帧率",
+                title("preview.fps", "建筑预览帧率"),
                 SettingTab.VISUAL,
                 true, false,
                 ClientConfig.PREVIEW_FPS,
@@ -101,7 +123,7 @@ public final class SettingsRegistry {
 
         register(new SettingItem.BooleanSetting(
                 "general.debug",
-                "详细调试日志",
+                title("general.debug", "详细调试日志"),
                 SettingTab.VISUAL,
                 false, true,
                 Config.DEBUG
@@ -122,7 +144,7 @@ public final class SettingsRegistry {
 
         register(new SettingItem.DoubleSetting(
                 "colony.offlineIncomeMultiplier",
-                "创始人离线收益系数",
+                title("colony.offlineIncomeMultiplier", "创始人离线收益系数"),
                 SettingTab.COLONY,
                 false, true,
                 Config.COLONY_OFFLINE_INCOME_MULTIPLIER,
@@ -132,17 +154,17 @@ public final class SettingsRegistry {
 
         register(new SettingItem.IntSetting(
                 "warehouse.itemCapacity",
-                "单座仓库基础容量",
+                title("warehouse.itemCapacity", "单座仓库基础容量"),
                 SettingTab.COLONY,
                 false, true,
                 Config.WAREHOUSE_ITEM_CAPACITY,
                 5000, 25000,
-                val -> String.format("%,d 件", val)
+                val -> unit("unit.items", "%s 件", String.format("%,d", val))
         ));
 
         register(new SettingItem.BooleanSetting(
                 "element.autoGatherOnShortage",
-                "元素短缺自动采集",
+                title("element.autoGatherOnShortage", "元素短缺自动采集"),
                 SettingTab.COLONY,
                 false, true,
                 Config.AUTO_GATHER_ON_ELEMENT_SHORTAGE
@@ -150,7 +172,7 @@ public final class SettingsRegistry {
 
         register(new SettingItem.DoubleSetting(
                 "element.decomposeDivisor",
-                "物品分解产出除数",
+                title("element.decomposeDivisor", "物品分解产出除数"),
                 SettingTab.COLONY,
                 false, true,
                 Config.ELEMENT_DECOMPOSE_DIVISOR,
@@ -160,7 +182,7 @@ public final class SettingsRegistry {
 
         register(new SettingItem.DoubleSetting(
                 "element.craftCostMultiplier",
-                "合成制作元素倍率",
+                title("element.craftCostMultiplier", "合成制作元素倍率"),
                 SettingTab.COLONY,
                 false, true,
                 Config.ELEMENT_CRAFT_COST_MULTIPLIER,
@@ -170,12 +192,12 @@ public final class SettingsRegistry {
 
         register(new SettingItem.IntSetting(
                 "tavern.recruitCostPerElement",
-                "酒馆法师招募单价",
+                title("tavern.recruitCostPerElement", "酒馆法师招募单价"),
                 SettingTab.COLONY,
                 false, true,
                 Config.TAVERN_RECRUIT_COST_PER_ELEMENT,
                 1000, 5000,
-                val -> String.format("%,d 元素", val)
+                val -> unit("unit.elements", "%s 元素", String.format("%,d", val))
         ));
 
         // ═══════════════════════════════════════════════════════════════
@@ -184,7 +206,7 @@ public final class SettingsRegistry {
 
         register(new SettingItem.BooleanSetting(
                 "tourist.spawnEnabled",
-                "全局游客生成开关",
+                title("tourist.spawnEnabled", "全局游客生成开关"),
                 SettingTab.TOURIST,
                 false, true,
                 Config.TOURIST_SPAWN_ENABLED
@@ -192,62 +214,62 @@ public final class SettingsRegistry {
 
         register(new SettingItem.IntSetting(
                 "tourist.maxPerColony",
-                "单镇游客同时上限",
+                title("tourist.maxPerColony", "单镇游客同时上限"),
                 SettingTab.TOURIST,
                 false, true,
                 Config.TOURIST_MAX_PER_COLONY,
                 10, 50,
-                val -> val + " 人"
+                val -> unit("unit.people", "%s 人", String.valueOf(val))
         ));
 
         register(new SettingItem.IntSetting(
                 "tourist.baseSpawnCount",
-                "每日基础新增游客",
+                title("tourist.baseSpawnCount", "每日基础新增游客"),
                 SettingTab.TOURIST,
                 false, true,
                 Config.TOURIST_BASE_SPAWN_COUNT,
                 1, 5,
-                val -> val + " 人/日"
+                val -> unit("unit.people_per_day", "%s 人/日", String.valueOf(val))
         ));
 
         register(new SettingItem.IntSetting(
                 "tourist.stayMinDays",
-                "游客最少停留天数",
+                title("tourist.stayMinDays", "游客最少停留天数"),
                 SettingTab.TOURIST,
                 false, true,
                 Config.TOURIST_STAY_MIN_DAYS,
                 1, 2,
-                val -> val + " 天"
+                val -> unit("unit.days", "%s 天", String.valueOf(val))
         ));
 
         register(new SettingItem.IntSetting(
                 "tourist.stayMaxDays",
-                "游客最多停留天数",
+                title("tourist.stayMaxDays", "游客最多停留天数"),
                 SettingTab.TOURIST,
                 false, true,
                 Config.TOURIST_STAY_MAX_DAYS,
                 1, 2,
-                val -> val + " 天"
+                val -> unit("unit.days", "%s 天", String.valueOf(val))
         ));
 
         register(new SettingItem.IntSetting(
                 "tourist.baseWallet",
-                "游客初始钱包基数",
+                title("tourist.baseWallet", "游客初始钱包基数"),
                 SettingTab.TOURIST,
                 false, true,
                 Config.TOURIST_BASE_WALLET,
                 50, 200,
-                val -> String.format("%,d 元素", val)
+                val -> unit("unit.elements", "%s 元素", String.format("%,d", val))
         ));
 
         register(new SettingItem.IntSetting(
                 "tourist.maxEnergy",
-                "游客每日精力上限",
+                title("tourist.maxEnergy", "游客每日精力上限"),
                 SettingTab.TOURIST,
                 false, true,
                 Config.TOURIST_MAX_ENERGY,
                 10, 50,
-                val -> val + " 点"
+                val -> unit("unit.points", "%s 点", String.valueOf(val))
         ));
 
         // ═══════════════════════════════════════════════════════════════
@@ -256,7 +278,7 @@ public final class SettingsRegistry {
 
         register(new SettingItem.BooleanSetting(
                 "building.noSpawnInBuildingArea",
-                "建筑区域防刷怪",
+                title("building.noSpawnInBuildingArea", "建筑区域防刷怪"),
                 SettingTab.RULES,
                 false, true,
                 Config.BUILDING_NO_SPAWN_IN_AREA
@@ -264,7 +286,7 @@ public final class SettingsRegistry {
 
         register(new SettingItem.BooleanSetting(
                 "npc.friendlyFireProtection",
-                "NPC 友军误伤保护",
+                title("npc.friendlyFireProtection", "NPC 友军误伤保护"),
                 SettingTab.RULES,
                 false, true,
                 Config.NPC_FRIENDLY_FIRE_PROTECTION
@@ -272,7 +294,7 @@ public final class SettingsRegistry {
 
         register(new SettingItem.BooleanSetting(
                 "npc.deathMessageGlobal",
-                "法师阵亡全服广播",
+                title("npc.deathMessageGlobal", "法师阵亡全服广播"),
                 SettingTab.RULES,
                 false, true,
                 Config.NPC_DEATH_MESSAGE_GLOBAL
@@ -280,7 +302,7 @@ public final class SettingsRegistry {
 
         register(new SettingItem.BooleanSetting(
                 "npc.pvp",
-                "PVP 殖民地阵营识别",
+                title("npc.pvp", "PVP 殖民地阵营识别"),
                 SettingTab.RULES,
                 false, true,
                 Config.PVP
@@ -347,7 +369,7 @@ public final class SettingsRegistry {
             String pkgId = pkg.id();
             String rawName = pkg.name();
             String title = (rawName != null && !rawName.isEmpty())
-                    ? com.wsteam.wandscape.foundation.ui.I18n.string(rawName, rawName)
+                    ? I18n.string(rawName, rawName)
                     : pkgId;
             items.add(new SettingItem.BooleanSetting(
                     "building.package." + pkgId,
