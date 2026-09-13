@@ -12,7 +12,7 @@
 
 ```
 内容唯一来源（作者只改这里）
-    src/main/resources/assets/wandscape/guidebook/{zh_cn,en}/*.md     50 篇 × 2 语（其中 23 篇编进手册，其余只兜底屏可读）
+    src/main/resources/assets/wandscape/guidebook/{zh_cn,en}/*.md     54 篇 × 2 语（其中 27 篇编进手册，其余只兜底屏可读）
                     │
                     │  gen_patchouli.py（本机跑，生成物提交进仓库）
                     ▼
@@ -58,6 +58,7 @@ python gen_patchouli.py textures --force   # 强制覆盖书皮
 | `system` | 通用功能 | economy / panel / mages / tourists |
 | `magic` | 魔法 | magic_beam / magic_meteor / magic_desperation / magic_enfeeble_field / magic_conversion / magic_petrification / magic_fortification / magic_heal / magic_teleport / magic_revive |
 | `items` | 装备与物品 | wand / oath_ring / scepter / magic_compass / warehouse_terminal |
+| `compat` | 联动与兼容 | curios / irons_spells / goety / tlm |
 
 **每条的开头都有一行「怎么做」**：md 里写成 `> 在合成站制作，低、中、高级分别需要殖民地达到 1 级、10 级和 20 级。`
 这样的引用行，编译后是引用样式（斜体 + 棕字），排在条目名下方、正文上方。写「在哪做 + 殖民地等级门槛」，
@@ -75,8 +76,11 @@ python gen_patchouli.py textures --force   # 强制覆盖书皮
 `item.wandscape.<id>.desc`）管 JEI 信息页，改文案要两边一起改，管线不做同步校验。
 
 「目录页」= `contents` 分类下的 `index_guide` 条目：原 `index_guide.md` 的每节标题成为一页，节内文档链接转成帕秋莉可点击链接，点进去直接跳条目。
-首页的《魔法》《装备与物品》链到对应 **分类**（`TITLE_TO_DOC` 的值可以是分类 id，帕秋莉支持链分类），
+首页的《魔法》《装备与物品》《联动与兼容》链到对应 **分类**（`TITLE_TO_DOC` 的值可以是分类 id，帕秋莉支持链分类），
 其余未编进手册的标题（《建筑》《关于我们》等）仍是不可点的纯文本。
+
+**`compat` 分类只写玩家看得见的效果**（能做什么、要在哪里装什么、有什么前提），不写内部机制——
+正文依据是 `compat/{curios,ironspellbooks,goety,tlm}/` 的实际行为，改兼容代码后这几页要跟着复核。
 
 ---
 

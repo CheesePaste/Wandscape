@@ -61,6 +61,9 @@ CATEGORIES = [
     ("items", "装备与物品", "Equipment and Items", "wandscape:wand", 40,
      "法杖、权杖、戒指、罗盘和终端该怎么拿到，以及它们各自能干什么。",
      "How to get the mod's wands, scepters, rings, compasses and terminals, and what each one is for."),
+    ("compat", "联动与兼容", "Integration & Compatibility", "minecraft:crafting_table", 50,
+     "本模组和 Curios、铁魔法、诡厄巫法、车万女仆这些模组之间能做什么。",
+     "What this mod does together with Curios, Iron's Spells, Goety and Touhou Little Maid."),
 ]
 
 # 条目：(md 文件名去掉 .md, 所属分类, 图标, sortnum)。条目名取 md 的 H1。
@@ -94,6 +97,11 @@ ENTRIES = [
     ("scepter_guide", "items", "wandscape:omni_scepter", 2),
     ("magic_compass_guide", "items", "wandscape:magic_compass", 3),
     ("warehouse_terminal_guide", "items", "wandscape:warehouse_terminal", 4),
+    # compat: 每个第三方模组一条，正文只讲玩家看得见的效果
+    ("curios_guide", "compat", "minecraft:gold_ingot", 0),
+    ("irons_spells_guide", "compat", "minecraft:enchanted_book", 1),
+    ("goety_guide", "compat", "minecraft:soul_lantern", 2),
+    ("tlm_guide", "compat", "minecraft:name_tag", 3),
 ]
 
 # 《标题》→ 链接目标（条目 id 或分类 id，link_command 两者都认）。条目名与标题同文时才会命中。
@@ -107,6 +115,7 @@ TITLE_TO_DOC = {
     "法师": "mages_guide",
     "魔法": "magic",
     "装备与物品": "items",
+    "联动与兼容": "compat",
     "游客": "tourists_guide",
     "概览": "index_guide",
     # en_us
@@ -118,6 +127,7 @@ TITLE_TO_DOC = {
     "Mages": "mages_guide",
     "Magic": "magic",
     "Equipment and Items": "items",
+    "Integration & Compatibility": "compat",
     "Tourists": "tourists_guide",
     "Overview": "index_guide",
 }

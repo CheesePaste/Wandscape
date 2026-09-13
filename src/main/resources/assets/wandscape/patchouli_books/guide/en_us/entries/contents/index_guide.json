@@ -23,7 +23,7 @@
     },
     {
       "type": "patchouli:text",
-      "text": "Other$(br2)《About Us》 Development team and feedback / support channels"
+      "text": "$(l:wandscape:compat)《Integration & Compatibility》$(/l) What this mod does with Curios, Iron's Spells, Goety and Touhou Little Maid$(br2)Other$(br2)《About Us》 Development team and feedback / support channels"
     }
   ]
 }

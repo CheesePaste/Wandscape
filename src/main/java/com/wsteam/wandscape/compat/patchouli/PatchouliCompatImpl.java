@@ -44,6 +44,11 @@ final class PatchouliCompatImpl {
         register("scepter_guide", "items");
         register("magic_compass_guide", "items");
         register("warehouse_terminal_guide", "items");
+        // compat（每个第三方模组一条）
+        register("curios_guide", "compat");
+        register("irons_spells_guide", "compat");
+        register("goety_guide", "compat");
+        register("tlm_guide", "compat");
 
         // 为原有通用界面入口提供别名映射
         DOC_TO_ENTRY.put("overview_guide", DOC_TO_ENTRY.get("panel_guide"));

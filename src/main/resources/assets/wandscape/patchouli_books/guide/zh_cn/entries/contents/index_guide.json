@@ -19,7 +19,7 @@
     },
     {
       "type": "patchouli:text",
-      "text": "$(l:wandscape:items)《装备与物品》$(/l)模组装备与物品介绍$(br2)其他$(br2)《关于我们》开发组与反馈/支持渠道"
+      "text": "$(l:wandscape:items)《装备与物品》$(/l)模组装备与物品介绍$(br2)$(l:wandscape:compat)《联动与兼容》$(/l)和 Curios、铁魔法、诡厄巫法、车万女仆等模组的兼容内容$(br2)其他$(br2)《关于我们》开发组与反馈/支持渠道"
     }
   ]
 }

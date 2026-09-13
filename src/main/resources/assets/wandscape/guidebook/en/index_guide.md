@@ -30,6 +30,8 @@ System Features Navigation
 
 《Equipment and Items》 Introduction to mod equipment and items
 
+《Integration & Compatibility》 What this mod does with Curios, Iron's Spells, Goety and Touhou Little Maid
+
 Other
 
 《About Us》 Development team and feedback / support channels
