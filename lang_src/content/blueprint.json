@@ -1,0 +1,90 @@
+{
+  "blueprint.wandscape.build:clear_and_build": {
+    "zh_cn": "清除并建造",
+    "en_us": "Clear and Build"
+  },
+  "blueprint.wandscape.build:clear_and_build.desc": {
+    "zh_cn": "先清除边界 AABB 内非图案方块，再调用 build:place_structure 放置图案方块。clear_offsets 由 EnqueueHelper 预计算为边界体积减去图案偏移。",
+    "en_us": "First clears non-pattern blocks within the boundary AABB, then calls build:place_structure to place pattern blocks. clear_offsets is pre-computed by EnqueueHelper as boundary volume minus pattern offsets."
+  },
+  "blueprint.wandscape.build:demolish_structure": {
+    "zh_cn": "拆除建筑",
+    "en_us": "Demolish Structure"
+  },
+  "blueprint.wandscape.build:demolish_structure.desc": {
+    "zh_cn": "移除建筑的全部图案方块并发出 demolish_complete 事件。",
+    "en_us": "Remove all pattern blocks of a building and emit demolish_complete event."
+  },
+  "blueprint.wandscape.build:place_structure": {
+    "zh_cn": "建造建筑",
+    "en_us": "Build Structure"
+  },
+  "blueprint.wandscape.build:place_structure.desc": {
+    "zh_cn": "遍历建筑图案偏移，从 block_mapping 放置每个方块。完成时发出 build_complete 事件。",
+    "en_us": "Iterate over building pattern offsets, placing each block from block_mapping. Emits build_complete event when done."
+  },
+  "blueprint.wandscape.node:gather": {
+    "zh_cn": "节点采集",
+    "en_us": "Node Gather"
+  },
+  "blueprint.wandscape.node:gather.desc": {
+    "zh_cn": "NPC 站在节点建筑旁引导施法。完成后元素直接注入魔法小镇仓库。引导刻数与魔力消耗可按建筑配置。",
+    "en_us": "NPC stands beside a node building and channels. On completion, elements are injected directly into the town warehouse. Channel ticks and mana cost are configurable per building."
+  },
+  "blueprint.wandscape.production:craft": {
+    "zh_cn": "制作物品",
+    "en_us": "Craft Item"
+  },
+  "blueprint.wandscape.production:craft.desc": {
+    "zh_cn": "NPC 在合成站引导施法，从元素制作法杖/权杖等物品。",
+    "en_us": "NPC channels at the crafting station to create wands, scepters or potions from elements."
+  },
+  "blueprint.wandscape.production:craft_spell": {
+    "zh_cn": "制作魔法卷轴",
+    "en_us": "Craft Spell Scroll"
+  },
+  "blueprint.wandscape.production:craft_spell.desc": {
+    "zh_cn": "NPC 在魔法工坊引导施法，从元素合成魔法卷轴。",
+    "en_us": "NPC channels at the magic station to synthesize spell scrolls from elements."
+  },
+  "blueprint.wandscape.production:decompose": {
+    "zh_cn": "分解物品",
+    "en_us": "Decompose"
+  },
+  "blueprint.wandscape.production:decompose.desc": {
+    "zh_cn": "NPC 在工作站引导施法，将物品分解为元素成分。",
+    "en_us": "NPC channels at the workstation to break down items into their elemental components."
+  },
+  "blueprint.wandscape.production:synthesize": {
+    "zh_cn": "合成物品",
+    "en_us": "Synthesize"
+  },
+  "blueprint.wandscape.production:synthesize.desc": {
+    "zh_cn": "NPC 在工作站引导施法，从元素合成物品。",
+    "en_us": "NPC channels at the workstation to synthesize items from elements."
+  },
+  "blueprint.wandscape.road:build_segment": {
+    "zh_cn": "铺设道路",
+    "en_us": "Road Segment"
+  },
+  "blueprint.wandscape.road:build_segment.desc": {
+    "zh_cn": "沿预生成的路径段铺设道路方块。方块以运行时参数注入。",
+    "en_us": "Places road tiles along a pre-generated path segment. Tiles are injected as runtime param."
+  },
+  "blueprint.wandscape.terrain:fill_box": {
+    "zh_cn": "填充方块区域",
+    "en_us": "Fill Box"
+  },
+  "blueprint.wandscape.terrain:fill_box.desc": {
+    "zh_cn": "用预设方块填充 3D 盒状区域。方块以运行时参数注入。",
+    "en_us": "Fills a 3D box region with the preset block. Tiles are injected as runtime param."
+  },
+  "blueprint.wandscape.terrain:flatten": {
+    "zh_cn": "地形平整",
+    "en_us": "Terrain Flatten"
+  },
+  "blueprint.wandscape.terrain:flatten.desc": {
+    "zh_cn": "平整矩形地形：破坏目标高度以上的方块，用参考方块填补下方。",
+    "en_us": "Flattens terrain within a rectangle: breaks blocks above target height, fills with reference block below."
+  }
+}

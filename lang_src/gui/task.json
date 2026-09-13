@@ -1,0 +1,342 @@
+{
+  "gui.wandscape.task.action.cancel": {
+    "zh_cn": "取消",
+    "en_us": "Cancel"
+  },
+  "gui.wandscape.task.action.close": {
+    "zh_cn": "关闭 (ESC)",
+    "en_us": "Close (ESC)"
+  },
+  "gui.wandscape.task.action.deps": {
+    "zh_cn": "依赖链",
+    "en_us": "Deps"
+  },
+  "gui.wandscape.task.action.locate": {
+    "zh_cn": "定位",
+    "en_us": "Locate"
+  },
+  "gui.wandscape.task.action.rush": {
+    "zh_cn": "加急",
+    "en_us": "Rush"
+  },
+  "gui.wandscape.task.cat.altar": {
+    "zh_cn": "祭坛",
+    "en_us": "Altar"
+  },
+  "gui.wandscape.task.cat.build": {
+    "zh_cn": "建造",
+    "en_us": "Build"
+  },
+  "gui.wandscape.task.cat.craft": {
+    "zh_cn": "合成",
+    "en_us": "Craft"
+  },
+  "gui.wandscape.task.cat.decompose": {
+    "zh_cn": "分解",
+    "en_us": "Decompose"
+  },
+  "gui.wandscape.task.cat.default": {
+    "zh_cn": "任务",
+    "en_us": "Task"
+  },
+  "gui.wandscape.task.cat.gather": {
+    "zh_cn": "采集",
+    "en_us": "Gather"
+  },
+  "gui.wandscape.task.cat.guard": {
+    "zh_cn": "守卫",
+    "en_us": "Guard"
+  },
+  "gui.wandscape.task.cat.queued": {
+    "zh_cn": "待办",
+    "en_us": "Backlog"
+  },
+  "gui.wandscape.task.cat.repair": {
+    "zh_cn": "维修",
+    "en_us": "Repair"
+  },
+  "gui.wandscape.task.close": {
+    "zh_cn": "返回鸟瞰 (ESC)",
+    "en_us": "Back to overview (ESC)"
+  },
+  "gui.wandscape.task.default_mage": {
+    "zh_cn": "法师",
+    "en_us": "Mage"
+  },
+  "gui.wandscape.task.default_town_name": {
+    "zh_cn": "魔法小镇",
+    "en_us": "Wandscape"
+  },
+  "gui.wandscape.task.default_workshop_mage": {
+    "zh_cn": "工坊法师",
+    "en_us": "Workshop mage"
+  },
+  "gui.wandscape.task.deps.element_row": {
+    "zh_cn": "• %s: 需求 %s | 仓库库存 %s | %s",
+    "en_us": "• %s: need %s | in stock %s | %s"
+  },
+  "gui.wandscape.task.deps.loop_active": {
+    "zh_cn": "闭环运转中: 元素节点已自动发布 node:gather 采集任务，法师正在采集中！",
+    "en_us": "Loop running: an element node has posted a node:gather task and mages are gathering."
+  },
+  "gui.wandscape.task.deps.loop_blocked": {
+    "zh_cn": "采集阻塞: 当前殖民地缺少对应元素节点建筑，或所有法师均忙碌中。",
+    "en_us": "Gathering blocked: the colony has no matching element node, or every mage is busy."
+  },
+  "gui.wandscape.task.deps.loop_ready": {
+    "zh_cn": "物资已就绪: 所需元素已全部齐备，排队就绪即可自动开工。",
+    "en_us": "Materials ready: every required element is in stock, so the job starts as soon as it is queued."
+  },
+  "gui.wandscape.task.deps.no_elements": {
+    "zh_cn": "• 本配方无元素消耗（如物品分解/初级转换）",
+    "en_us": "• This recipe costs no elements (decomposition or basic conversion, for example)"
+  },
+  "gui.wandscape.task.deps.ok": {
+    "zh_cn": "§a满足",
+    "en_us": "§aok"
+  },
+  "gui.wandscape.task.deps.short": {
+    "zh_cn": "§c缺 %s",
+    "en_us": "§cshort %s"
+  },
+  "gui.wandscape.task.deps.source": {
+    "zh_cn": "来源: %s",
+    "en_us": "Source: %s"
+  },
+  "gui.wandscape.task.deps.state.missing": {
+    "zh_cn": "缺少元素等待补齐",
+    "en_us": "Short on elements"
+  },
+  "gui.wandscape.task.deps.state.queued": {
+    "zh_cn": "队列排队就绪",
+    "en_us": "Queued and ready"
+  },
+  "gui.wandscape.task.deps.state.running": {
+    "zh_cn": "正在制作中",
+    "en_us": "In production"
+  },
+  "gui.wandscape.task.deps.step1": {
+    "zh_cn": "1. 需求发起源头 (Upstream Trigger)",
+    "en_us": "1. Upstream trigger"
+  },
+  "gui.wandscape.task.deps.step2": {
+    "zh_cn": "2. 当前生产工坊 (Workshop Node)",
+    "en_us": "2. Workshop node"
+  },
+  "gui.wandscape.task.deps.step3": {
+    "zh_cn": "3. 元素消耗与库存核算 (Element Cost & Stock)",
+    "en_us": "3. Element cost and stock"
+  },
+  "gui.wandscape.task.deps.step4": {
+    "zh_cn": "4. 自动化补料闭环 (Downstream Auto-Supply)",
+    "en_us": "4. Automatic resupply loop"
+  },
+  "gui.wandscape.task.deps.title": {
+    "zh_cn": "【全链路供应链与依赖溯源】",
+    "en_us": "Supply chain and dependency trace"
+  },
+  "gui.wandscape.task.deps.workshop": {
+    "zh_cn": "工坊: %s | 产物: %s × %s | 状态: %s",
+    "en_us": "Workshop: %s | Output: %s × %s | Status: %s"
+  },
+  "gui.wandscape.task.empty.mages": {
+    "zh_cn": "当前小镇暂无法师",
+    "en_us": "This town has no mages yet"
+  },
+  "gui.wandscape.task.empty.production": {
+    "zh_cn": "当前筛选分类下暂无工坊生产任务",
+    "en_us": "No workshop jobs under this filter"
+  },
+  "gui.wandscape.task.empty.tasks": {
+    "zh_cn": "当前筛选分类下暂无任务",
+    "en_us": "No tasks under this filter"
+  },
+  "gui.wandscape.task.filter.all": {
+    "zh_cn": "全部",
+    "en_us": "All"
+  },
+  "gui.wandscape.task.filter.awaiting": {
+    "zh_cn": "缺前置资源",
+    "en_us": "Missing input"
+  },
+  "gui.wandscape.task.filter.building_queue": {
+    "zh_cn": "建筑待办",
+    "en_us": "Build backlog"
+  },
+  "gui.wandscape.task.filter.in_progress": {
+    "zh_cn": "进行中",
+    "en_us": "In progress"
+  },
+  "gui.wandscape.task.filter.missing": {
+    "zh_cn": "缺元素/受阻",
+    "en_us": "Missing elements"
+  },
+  "gui.wandscape.task.filter.queued": {
+    "zh_cn": "排队等待",
+    "en_us": "Queued"
+  },
+  "gui.wandscape.task.filter.running": {
+    "zh_cn": "正在制作",
+    "en_us": "In production"
+  },
+  "gui.wandscape.task.group.alchemy": {
+    "zh_cn": "炼药工坊",
+    "en_us": "Alchemy workshop"
+  },
+  "gui.wandscape.task.group.default": {
+    "zh_cn": "生产工坊",
+    "en_us": "Workshop"
+  },
+  "gui.wandscape.task.group.header": {
+    "zh_cn": "[%s] %s  (制作中: %s | 排队: %s)",
+    "en_us": "[%s] %s  (making: %s | queued: %s)"
+  },
+  "gui.wandscape.task.group.magic_workshop": {
+    "zh_cn": "魔法工坊",
+    "en_us": "Magic workshop"
+  },
+  "gui.wandscape.task.group.node": {
+    "zh_cn": "元素节点",
+    "en_us": "Element node"
+  },
+  "gui.wandscape.task.group.workstation": {
+    "zh_cn": "工作站",
+    "en_us": "Workstation"
+  },
+  "gui.wandscape.task.mage.attrs": {
+    "zh_cn": "法强:%s  工速:%s  护甲:%s",
+    "en_us": "Power:%s  Work:%s  Armor:%s"
+  },
+  "gui.wandscape.task.mage.follow": {
+    "zh_cn": "跟随",
+    "en_us": "Follow"
+  },
+  "gui.wandscape.task.mage.peace": {
+    "zh_cn": "和平",
+    "en_us": "Peace"
+  },
+  "gui.wandscape.task.mage.unfollow": {
+    "zh_cn": "取消跟随",
+    "en_us": "Unfollow"
+  },
+  "gui.wandscape.task.mage.unpeace": {
+    "zh_cn": "取消和平",
+    "en_us": "Peace Off"
+  },
+  "gui.wandscape.task.mage_state.casting": {
+    "zh_cn": "施法中",
+    "en_us": "Casting"
+  },
+  "gui.wandscape.task.mage_state.casting_with_task": {
+    "zh_cn": "施法中: %s",
+    "en_us": "Casting: %s"
+  },
+  "gui.wandscape.task.mage_state.following": {
+    "zh_cn": "跟随中",
+    "en_us": "Following"
+  },
+  "gui.wandscape.task.mage_state.idle": {
+    "zh_cn": "空闲待命中",
+    "en_us": "Idle"
+  },
+  "gui.wandscape.task.mage_state.moving": {
+    "zh_cn": "前往工作中",
+    "en_us": "Heading to work"
+  },
+  "gui.wandscape.task.mage_state.resting": {
+    "zh_cn": "回屋休息中",
+    "en_us": "Resting at home"
+  },
+  "gui.wandscape.task.metrics.production": {
+    "zh_cn": "工坊建筑: %s  |  制作中: %s  |  排队: %s  |  缺元素: %s",
+    "en_us": "Workshops: %s  |  Making: %s  |  Queued: %s  |  Missing: %s"
+  },
+  "gui.wandscape.task.metrics.tasks": {
+    "zh_cn": "运行中: %s  |  缺资源: %s  |  排队: %s  |  空闲法师: %s/%s",
+    "en_us": "Running: %s  |  Starved: %s  |  Queued: %s  |  Idle mages: %s/%s"
+  },
+  "gui.wandscape.task.prod.elements_ready": {
+    "zh_cn": "元素充足，等待工坊空闲开工",
+    "en_us": "Elements ready; waiting for a free workshop"
+  },
+  "gui.wandscape.task.prod.gathering": {
+    "zh_cn": "元素节点正在自动采集补齐中...",
+    "en_us": "Element nodes are gathering to fill the gap..."
+  },
+  "gui.wandscape.task.prod.making": {
+    "zh_cn": "正在制作: %s",
+    "en_us": "Making: %s"
+  },
+  "gui.wandscape.task.prod.missing_elements": {
+    "zh_cn": "缺少元素: ",
+    "en_us": "Missing elements: "
+  },
+  "gui.wandscape.task.prod.not_gathering": {
+    "zh_cn": "暂无采集进行中 (需建造元素节点或等待空闲法师)",
+    "en_us": "Nothing is gathering right now (build an element node, or wait for a free mage)"
+  },
+  "gui.wandscape.task.prod.queued_prefix": {
+    "zh_cn": "[#%s 排队] ",
+    "en_us": "[#%s queued] "
+  },
+  "gui.wandscape.task.prod.running_prefix": {
+    "zh_cn": "[进行中] ",
+    "en_us": "[Running] "
+  },
+  "gui.wandscape.task.prod.short_amount": {
+    "zh_cn": "%s (缺 %s)  ",
+    "en_us": "%s (short %s)  "
+  },
+  "gui.wandscape.task.prod.source": {
+    "zh_cn": "来源: %s",
+    "en_us": "Source: %s"
+  },
+  "gui.wandscape.task.source.manual": {
+    "zh_cn": "工坊手动排队",
+    "en_us": "Queued by hand"
+  },
+  "gui.wandscape.task.source.manual_production": {
+    "zh_cn": "工坊手动排队生产",
+    "en_us": "Queued by hand in the workshop"
+  },
+  "gui.wandscape.task.status.building_queued": {
+    "zh_cn": "建筑队列排队中 (待办阶段)",
+    "en_us": "In the build queue (backlog stage)"
+  },
+  "gui.wandscape.task.status.executing": {
+    "zh_cn": "正在执行: %s (步骤 %s/%s)",
+    "en_us": "Running: %s (step %s/%s)"
+  },
+  "gui.wandscape.task.status.missing_prereq": {
+    "zh_cn": "缺少前置: %s x%s (库存: %s / 需: %s)",
+    "en_us": "Missing input: %s x%s (stock: %s / need: %s)"
+  },
+  "gui.wandscape.task.status.missing_prereq_short": {
+    "zh_cn": "缺少前置资源",
+    "en_us": "Missing input"
+  },
+  "gui.wandscape.task.status.no_idle_mage": {
+    "zh_cn": "暂无空闲法师，等待调度认领",
+    "en_us": "No idle mage; waiting to be claimed"
+  },
+  "gui.wandscape.task.status.queued_dispatch": {
+    "zh_cn": "排队等待调度中",
+    "en_us": "Queued for dispatch"
+  },
+  "gui.wandscape.task.tab.mages": {
+    "zh_cn": "法师名册 (%s)",
+    "en_us": "Mages (%s)"
+  },
+  "gui.wandscape.task.tab.production": {
+    "zh_cn": "工坊流水线 (%s)",
+    "en_us": "Workshop Lines (%s)"
+  },
+  "gui.wandscape.task.tab.tasks": {
+    "zh_cn": "任务大厅 (%s)",
+    "en_us": "Tasks (%s)"
+  },
+  "gui.wandscape.task.worker_tag": {
+    "zh_cn": "[小镇工人]",
+    "en_us": "[Town Worker]"
+  }
+}

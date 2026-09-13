@@ -1,0 +1,30 @@
+{
+  "element.wandscape.dark": {
+    "zh_cn": "暗",
+    "en_us": "Dark"
+  },
+  "element.wandscape.earth": {
+    "zh_cn": "土",
+    "en_us": "Earth"
+  },
+  "element.wandscape.fire": {
+    "zh_cn": "火",
+    "en_us": "Fire"
+  },
+  "element.wandscape.metal": {
+    "zh_cn": "金",
+    "en_us": "Metal"
+  },
+  "element.wandscape.water": {
+    "zh_cn": "水",
+    "en_us": "Water"
+  },
+  "element.wandscape.wind": {
+    "zh_cn": "风",
+    "en_us": "Wind"
+  },
+  "element.wandscape.wood": {
+    "zh_cn": "木",
+    "en_us": "Wood"
+  }
+}

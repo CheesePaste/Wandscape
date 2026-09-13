@@ -1,0 +1,14 @@
+{
+  "gui.wandscape.curios.back": {
+    "zh_cn": "返回",
+    "en_us": "Back"
+  },
+  "gui.wandscape.curios.open": {
+    "zh_cn": "饰品栏",
+    "en_us": "Trinkets"
+  },
+  "gui.wandscape.curios.title": {
+    "zh_cn": "法师饰品",
+    "en_us": "Mage Trinkets"
+  }
+}

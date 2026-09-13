@@ -1,0 +1,30 @@
+{
+  "gui.wandscape.jei.decompose": {
+    "zh_cn": "元素分解",
+    "en_us": "Element Decompose"
+  },
+  "gui.wandscape.jei.decompose.divide": {
+    "zh_cn": "÷%s",
+    "en_us": "÷%s"
+  },
+  "gui.wandscape.jei.station.crafting": {
+    "zh_cn": "合成站",
+    "en_us": "Crafting Station"
+  },
+  "gui.wandscape.jei.station.magic": {
+    "zh_cn": "魔法工坊",
+    "en_us": "Magic Station"
+  },
+  "gui.wandscape.jei.station.workstation": {
+    "zh_cn": "工作站",
+    "en_us": "Workstation"
+  },
+  "gui.wandscape.jei.synthesize": {
+    "zh_cn": "元素合成",
+    "en_us": "Element Synthesize"
+  },
+  "gui.wandscape.jei.title": {
+    "zh_cn": "魔法小镇",
+    "en_us": "Wandscape"
+  }
+}

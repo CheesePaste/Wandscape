@@ -1,0 +1,38 @@
+{
+  "gui.wandscape.warehouse.capacity": {
+    "zh_cn": "空间 %s/%s",
+    "en_us": "Space %s/%s"
+  },
+  "gui.wandscape.warehouse.exchange": {
+    "zh_cn": "交换",
+    "en_us": "Exchange"
+  },
+  "gui.wandscape.warehouse.overview": {
+    "zh_cn": "总览",
+    "en_us": "Overview"
+  },
+  "gui.wandscape.warehouse.page": {
+    "zh_cn": "%s / %s",
+    "en_us": "%s / %s"
+  },
+  "gui.wandscape.warehouse.player_inventory": {
+    "zh_cn": "玩家背包",
+    "en_us": "Player Inventory"
+  },
+  "gui.wandscape.warehouse.search": {
+    "zh_cn": "搜索物品…",
+    "en_us": "Search items..."
+  },
+  "gui.wandscape.warehouse.title": {
+    "zh_cn": "仓库",
+    "en_us": "Warehouse"
+  },
+  "gui.wandscape.warehouse.trash": {
+    "zh_cn": "销毁物品",
+    "en_us": "Delete item"
+  },
+  "gui.wandscape.warehouse.trash_hint": {
+    "zh_cn": "拿起物品后点击此处销毁（左键整叠、右键单个）",
+    "en_us": "Click here with an item picked up to delete it (left-click: whole stack, right-click: one)"
+  }
+}

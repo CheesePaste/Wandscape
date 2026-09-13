@@ -1,0 +1,58 @@
+{
+  "gui.wandscape.gizmo.anchor_label": {
+    "zh_cn": "编辑锚点 (Tab 切换):",
+    "en_us": "Active Anchor (Tab):"
+  },
+  "gui.wandscape.gizmo.anchor_max": {
+    "zh_cn": "Max 角点",
+    "en_us": "Max Corner"
+  },
+  "gui.wandscape.gizmo.anchor_min": {
+    "zh_cn": "Min 角点",
+    "en_us": "Min Corner"
+  },
+  "gui.wandscape.gizmo.cancel": {
+    "zh_cn": "还原 (Esc)",
+    "en_us": "Revert (Esc)"
+  },
+  "gui.wandscape.gizmo.confirm": {
+    "zh_cn": "确定 (Enter)",
+    "en_us": "Confirm (Enter)"
+  },
+  "gui.wandscape.gizmo.help_keys": {
+    "zh_cn": "Enter 保存 | Esc 还原",
+    "en_us": "Enter: Save | Esc: Revert"
+  },
+  "gui.wandscape.gizmo.help_mouse": {
+    "zh_cn": "右键拖动视角 | 左键拖轴",
+    "en_us": "RMB: Look | LMB: Drag Axis"
+  },
+  "gui.wandscape.gizmo.stepper_title": {
+    "zh_cn": "坐标微调 (%s):",
+    "en_us": "Coord Nudge (%s):"
+  },
+  "gui.wandscape.gizmo.subtitle": {
+    "zh_cn": "建筑 3D 包围盒实时编辑",
+    "en_us": "Real-time Bounding Box Editing"
+  },
+  "gui.wandscape.gizmo.title": {
+    "zh_cn": "3D 可视化调整 (Gizmo)",
+    "en_us": "3D Gizmo Adjuster"
+  },
+  "gui.wandscape.gizmo.toast_anchor_switched": {
+    "zh_cn": "已切换编辑锚点: %s",
+    "en_us": "Switched anchor: %s"
+  },
+  "gui.wandscape.gizmo.toast_cancelled": {
+    "zh_cn": "§6已还原原始 3D 边界配置。",
+    "en_us": "§6Reverted to original 3D bounds."
+  },
+  "gui.wandscape.gizmo.toast_confirmed": {
+    "zh_cn": "§a3D 包围盒已更新并同步！(%d×%d×%d)",
+    "en_us": "§a3D Bounds updated and synced! (%d×%d×%d)"
+  },
+  "gui.wandscape.gizmo.toast_enter": {
+    "zh_cn": "§a已进入 3D 可视化调整模式 (右键旋转视角, 左键拖拽轴向)",
+    "en_us": "§aEntered 3D Gizmo mode (RMB look, LMB drag axis)"
+  }
+}

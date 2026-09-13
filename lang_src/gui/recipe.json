@@ -1,0 +1,6 @@
+{
+  "gui.wandscape.recipe.colony_level": {
+    "zh_cn": "魔法小镇等级>=%s",
+    "en_us": "Town Lv>=%s"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "gui.wandscape.building_action.cancel": {
+    "zh_cn": "撤销",
+    "en_us": "Undo"
+  },
+  "gui.wandscape.building_action.demolishing": {
+    "zh_cn": "拆除中...",
+    "en_us": "Demolishing..."
+  },
+  "gui.wandscape.building_action.destroy": {
+    "zh_cn": "拆除",
+    "en_us": "Destroy"
+  },
+  "gui.wandscape.building_action.repair": {
+    "zh_cn": "修复",
+    "en_us": "Repair"
+  },
+  "gui.wandscape.building_action.repair_sent": {
+    "zh_cn": "已下发修复任务",
+    "en_us": "Repair task issued"
+  }
+}

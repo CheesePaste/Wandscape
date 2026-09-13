@@ -1,0 +1,22 @@
+{
+  "tourist.wandscape.state.exploring": {
+    "zh_cn": "游览中",
+    "en_us": "Exploring"
+  },
+  "tourist.wandscape.state.idle": {
+    "zh_cn": "空闲",
+    "en_us": "Idle"
+  },
+  "tourist.wandscape.state.sleeping": {
+    "zh_cn": "睡眠中",
+    "en_us": "Sleeping"
+  },
+  "tourist.wandscape.state.visiting": {
+    "zh_cn": "前往建筑",
+    "en_us": "Visiting"
+  },
+  "tourist.wandscape.state.wandering": {
+    "zh_cn": "闲逛中",
+    "en_us": "Wandering"
+  }
+}

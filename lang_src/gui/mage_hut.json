@@ -1,0 +1,162 @@
+{
+  "gui.wandscape.mage_hut.assign_btn": {
+    "zh_cn": "指派入住小屋",
+    "en_us": "Assign to Hut"
+  },
+  "gui.wandscape.mage_hut.assign_desc_1": {
+    "zh_cn": "指派后该法师将以此小屋为居所。",
+    "en_us": "The mage will move into this hut as permanent resident."
+  },
+  "gui.wandscape.mage_hut.assign_desc_2": {
+    "zh_cn": "• 开启 7 项属性专项特训",
+    "en_us": "• Unlock training for all 7 attributes"
+  },
+  "gui.wandscape.mage_hut.assign_desc_3": {
+    "zh_cn": "• 随小镇等级晋升职业等阶",
+    "en_us": "• Promote rank up to colony level"
+  },
+  "gui.wandscape.mage_hut.assign_desc_4": {
+    "zh_cn": "• 获得专属休息与恢复据点",
+    "en_us": "• Exclusive home & rest location"
+  },
+  "gui.wandscape.mage_hut.assign_title": {
+    "zh_cn": "法师入住指派",
+    "en_us": "Assign Resident"
+  },
+  "gui.wandscape.mage_hut.attr_armor": {
+    "zh_cn": "护甲",
+    "en_us": "Armor"
+  },
+  "gui.wandscape.mage_hut.attr_cast": {
+    "zh_cn": "施速",
+    "en_us": "Cast"
+  },
+  "gui.wandscape.mage_hut.attr_hp": {
+    "zh_cn": "生命",
+    "en_us": "Health"
+  },
+  "gui.wandscape.mage_hut.attr_mana": {
+    "zh_cn": "魔力",
+    "en_us": "Mana"
+  },
+  "gui.wandscape.mage_hut.attr_power": {
+    "zh_cn": "法强",
+    "en_us": "Power"
+  },
+  "gui.wandscape.mage_hut.attr_speed": {
+    "zh_cn": "速度",
+    "en_us": "Speed"
+  },
+  "gui.wandscape.mage_hut.attr_work": {
+    "zh_cn": "工速",
+    "en_us": "Work"
+  },
+  "gui.wandscape.mage_hut.candidate_list": {
+    "zh_cn": "小镇法师名单",
+    "en_us": "Colony Mages"
+  },
+  "gui.wandscape.mage_hut.colony_level": {
+    "zh_cn": "城镇 Lv.%d",
+    "en_us": "Colony Lv.%d"
+  },
+  "gui.wandscape.mage_hut.command_title": {
+    "zh_cn": "晋升与指令",
+    "en_us": "Commands & Progression"
+  },
+  "gui.wandscape.mage_hut.dossier_title": {
+    "zh_cn": "法师档案",
+    "en_us": "Mage Dossier"
+  },
+  "gui.wandscape.mage_hut.empty_hint": {
+    "zh_cn": "尚无法师入住",
+    "en_us": "No mage yet"
+  },
+  "gui.wandscape.mage_hut.empty_sub": {
+    "zh_cn": "选择左侧法师指派入住此小屋",
+    "en_us": "Select a mage on the left to move in"
+  },
+  "gui.wandscape.mage_hut.equip": {
+    "zh_cn": "装备",
+    "en_us": "Equip"
+  },
+  "gui.wandscape.mage_hut.level": {
+    "zh_cn": "等级 Lv.%d",
+    "en_us": "Level Lv.%d"
+  },
+  "gui.wandscape.mage_hut.maxed_attr": {
+    "zh_cn": "已达属性上限",
+    "en_us": "Attribute Maxed"
+  },
+  "gui.wandscape.mage_hut.maxed_level": {
+    "zh_cn": "等阶已达小镇上限",
+    "en_us": "Max Level Reached"
+  },
+  "gui.wandscape.mage_hut.no_candidate": {
+    "zh_cn": "小镇暂无空闲法师",
+    "en_us": "No available mages"
+  },
+  "gui.wandscape.mage_hut.no_candidate_sub": {
+    "zh_cn": "在酒馆招募法师后\n可在此指派入住",
+    "en_us": "Recruit mages at Tavern\nthen assign them here"
+  },
+  "gui.wandscape.mage_hut.rest": {
+    "zh_cn": "休息",
+    "en_us": "Rest"
+  },
+  "gui.wandscape.mage_hut.status_dead": {
+    "zh_cn": "已阵亡",
+    "en_us": "Deceased"
+  },
+  "gui.wandscape.mage_hut.status_idle": {
+    "zh_cn": "正常执勤",
+    "en_us": "On Duty"
+  },
+  "gui.wandscape.mage_hut.status_resting": {
+    "zh_cn": "休息中",
+    "en_us": "Resting"
+  },
+  "gui.wandscape.mage_hut.strategy": {
+    "zh_cn": "策略",
+    "en_us": "Strategy"
+  },
+  "gui.wandscape.mage_hut.title": {
+    "zh_cn": "法师小屋",
+    "en_us": "Mage Hut"
+  },
+  "gui.wandscape.mage_hut.toast_assigned": {
+    "zh_cn": "法师已成功入住小屋！",
+    "en_us": "Mage moved into the hut!"
+  },
+  "gui.wandscape.mage_hut.toast_resting": {
+    "zh_cn": "法师已前往小屋休息...",
+    "en_us": "Mage is heading back to rest..."
+  },
+  "gui.wandscape.mage_hut.toast_trained": {
+    "zh_cn": "已完成属性特训！",
+    "en_us": "Stat training completed!"
+  },
+  "gui.wandscape.mage_hut.toast_upgraded": {
+    "zh_cn": "法师已晋升至 Lv.%d！",
+    "en_us": "Mage promoted to Lv.%d!"
+  },
+  "gui.wandscape.mage_hut.train_btn": {
+    "zh_cn": "强化特训",
+    "en_us": "Train Stat"
+  },
+  "gui.wandscape.mage_hut.train_step": {
+    "zh_cn": "单次特训: +%s",
+    "en_us": "Per Training: +%s"
+  },
+  "gui.wandscape.mage_hut.training_title": {
+    "zh_cn": "属性特训",
+    "en_us": "Stat Training"
+  },
+  "gui.wandscape.mage_hut.upgrade": {
+    "zh_cn": "⬆ 晋升等阶 (Lv.%d)",
+    "en_us": "⬆ Promote (Lv.%d)"
+  },
+  "gui.wandscape.mage_hut.upgrade_cost": {
+    "zh_cn": "消耗 7 系元素各 %d",
+    "en_us": "Costs %d of each of the 7 elements"
+  }
+}

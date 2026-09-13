@@ -1,0 +1,242 @@
+{
+  "gui.wandscape.settings.badge.client": {
+    "zh_cn": "[客户端]",
+    "en_us": "[Client]"
+  },
+  "gui.wandscape.settings.badge.general": {
+    "zh_cn": "[通用配置]",
+    "en_us": "[Global]"
+  },
+  "gui.wandscape.settings.badge.hot_reload": {
+    "zh_cn": "[即时生效]",
+    "en_us": "[Instant]"
+  },
+  "gui.wandscape.settings.badge.restart": {
+    "zh_cn": "[需重启]",
+    "en_us": "[Restart]"
+  },
+  "gui.wandscape.settings.building.noSpawnInBuildingArea": {
+    "zh_cn": "建筑区域防刷怪",
+    "en_us": "No mob spawning in building areas"
+  },
+  "gui.wandscape.settings.close": {
+    "zh_cn": "返回 (ESC)",
+    "en_us": "Back (ESC)"
+  },
+  "gui.wandscape.settings.colony.offlineIncomeMultiplier": {
+    "zh_cn": "创始人离线收益系数",
+    "en_us": "Founder offline income multiplier"
+  },
+  "gui.wandscape.settings.default_hint": {
+    "zh_cn": "默认: %s",
+    "en_us": "Default: %s"
+  },
+  "gui.wandscape.settings.default_town_name": {
+    "zh_cn": "魔法小镇",
+    "en_us": "Wandscape"
+  },
+  "gui.wandscape.settings.element.autoGatherOnShortage": {
+    "zh_cn": "元素短缺自动采集",
+    "en_us": "Auto-gather on element shortage"
+  },
+  "gui.wandscape.settings.element.craftCostMultiplier": {
+    "zh_cn": "合成制作元素倍率",
+    "en_us": "Crafting element cost multiplier"
+  },
+  "gui.wandscape.settings.element.decomposeDivisor": {
+    "zh_cn": "物品分解产出除数",
+    "en_us": "Item decompose output divisor"
+  },
+  "gui.wandscape.settings.general.debug": {
+    "zh_cn": "详细调试日志",
+    "en_us": "Verbose debug logging"
+  },
+  "gui.wandscape.settings.hint.general": {
+    "zh_cn": "配置项修改即时生效并自动持久化保存（支持热重载）",
+    "en_us": "Changes take effect immediately and are saved automatically (hot-reload supported)."
+  },
+  "gui.wandscape.settings.hint.packages": {
+    "zh_cn": "管理已加载的建筑包。停用的建筑包将不会在建造栏中显示（即时生效）",
+    "en_us": "Manage the loaded building packs. A disabled pack no longer shows up in the build bar (takes effect immediately)."
+  },
+  "gui.wandscape.settings.npc.deathMessageGlobal": {
+    "zh_cn": "法师阵亡全服广播",
+    "en_us": "Broadcast mage deaths server-wide"
+  },
+  "gui.wandscape.settings.npc.friendlyFireProtection": {
+    "zh_cn": "NPC 友军误伤保护",
+    "en_us": "NPC friendly-fire protection"
+  },
+  "gui.wandscape.settings.npc.pvp": {
+    "zh_cn": "PVP 殖民地阵营识别",
+    "en_us": "PVP colony faction recognition"
+  },
+  "gui.wandscape.settings.option.particle_high": {
+    "zh_cn": "极致 (HIGH)",
+    "en_us": "Max"
+  },
+  "gui.wandscape.settings.option.particle_low": {
+    "zh_cn": "精简 (LOW)",
+    "en_us": "Low"
+  },
+  "gui.wandscape.settings.option.particle_normal": {
+    "zh_cn": "标准 (NORMAL)",
+    "en_us": "Normal"
+  },
+  "gui.wandscape.settings.option.particle_off": {
+    "zh_cn": "关闭 (OFF)",
+    "en_us": "Off"
+  },
+  "gui.wandscape.settings.panel.flySpeed": {
+    "zh_cn": "相机飞行速度",
+    "en_us": "Camera flight speed"
+  },
+  "gui.wandscape.settings.particle.level": {
+    "zh_cn": "粒子效果等级",
+    "en_us": "Particle effect level"
+  },
+  "gui.wandscape.settings.preview.fps": {
+    "zh_cn": "建筑预览帧率",
+    "en_us": "Building preview frame rate"
+  },
+  "gui.wandscape.settings.preview.resolution": {
+    "zh_cn": "建筑预览清晰度",
+    "en_us": "Building preview resolution"
+  },
+  "gui.wandscape.settings.reset": {
+    "zh_cn": "默认",
+    "en_us": "Default"
+  },
+  "gui.wandscape.settings.reset_item_toast": {
+    "zh_cn": "已重置默认: %s",
+    "en_us": "Reset to default: %s"
+  },
+  "gui.wandscape.settings.reset_tab": {
+    "zh_cn": "恢复本页默认",
+    "en_us": "Reset Page Defaults"
+  },
+  "gui.wandscape.settings.reset_tab_toast": {
+    "zh_cn": "已恢复本页默认设置",
+    "en_us": "Restored tab settings to default"
+  },
+  "gui.wandscape.settings.road.showTerrainGrid": {
+    "zh_cn": "道路网格辅助线",
+    "en_us": "Road terrain grid"
+  },
+  "gui.wandscape.settings.tab.colony": {
+    "zh_cn": "城镇经营",
+    "en_us": "Colony Autonomy"
+  },
+  "gui.wandscape.settings.tab.packages": {
+    "zh_cn": "建筑包库",
+    "en_us": "Building Packs"
+  },
+  "gui.wandscape.settings.tab.rules": {
+    "zh_cn": "规则防护",
+    "en_us": "Rules & Security"
+  },
+  "gui.wandscape.settings.tab.tourist": {
+    "zh_cn": "游客生态",
+    "en_us": "Tourists & Economy"
+  },
+  "gui.wandscape.settings.tab.visual": {
+    "zh_cn": "视效控制",
+    "en_us": "Visual & Controls"
+  },
+  "gui.wandscape.settings.tavern.recruitCostPerElement": {
+    "zh_cn": "酒馆法师招募单价",
+    "en_us": "Tavern recruit cost per element"
+  },
+  "gui.wandscape.settings.title": {
+    "zh_cn": "%s 设置中心",
+    "en_us": "%s Settings Center"
+  },
+  "gui.wandscape.settings.toggle_off": {
+    "zh_cn": "关闭 [OFF]",
+    "en_us": "OFF"
+  },
+  "gui.wandscape.settings.toggle_on": {
+    "zh_cn": "开启 [ON]",
+    "en_us": "ON"
+  },
+  "gui.wandscape.settings.tourist.baseSpawnCount": {
+    "zh_cn": "每日基础新增游客",
+    "en_us": "Base new tourists per day"
+  },
+  "gui.wandscape.settings.tourist.baseWallet": {
+    "zh_cn": "游客初始钱包基数",
+    "en_us": "Tourist starting wallet"
+  },
+  "gui.wandscape.settings.tourist.maxEnergy": {
+    "zh_cn": "游客每日精力上限",
+    "en_us": "Max tourist energy per day"
+  },
+  "gui.wandscape.settings.tourist.maxPerColony": {
+    "zh_cn": "单镇游客同时上限",
+    "en_us": "Max tourists per colony"
+  },
+  "gui.wandscape.settings.tourist.spawnEnabled": {
+    "zh_cn": "全局游客生成开关",
+    "en_us": "Global tourist spawning"
+  },
+  "gui.wandscape.settings.tourist.stayMaxDays": {
+    "zh_cn": "游客最多停留天数",
+    "en_us": "Maximum tourist stay (days)"
+  },
+  "gui.wandscape.settings.tourist.stayMinDays": {
+    "zh_cn": "游客最少停留天数",
+    "en_us": "Minimum tourist stay (days)"
+  },
+  "gui.wandscape.settings.ui.speechBubbles": {
+    "zh_cn": "闲聊气泡",
+    "en_us": "Chatter bubbles"
+  },
+  "gui.wandscape.settings.unit.blocks_per_second": {
+    "zh_cn": "%s 格/秒",
+    "en_us": "%s blocks/s"
+  },
+  "gui.wandscape.settings.unit.days": {
+    "zh_cn": "%s 天",
+    "en_us": "%s days"
+  },
+  "gui.wandscape.settings.unit.elements": {
+    "zh_cn": "%s 元素",
+    "en_us": "%s elements"
+  },
+  "gui.wandscape.settings.unit.items": {
+    "zh_cn": "%s 件",
+    "en_us": "%s items"
+  },
+  "gui.wandscape.settings.unit.people": {
+    "zh_cn": "%s 人",
+    "en_us": "%s people"
+  },
+  "gui.wandscape.settings.unit.people_per_day": {
+    "zh_cn": "%s 人/日",
+    "en_us": "%s people/day"
+  },
+  "gui.wandscape.settings.unit.points": {
+    "zh_cn": "%s 点",
+    "en_us": "%s points"
+  },
+  "gui.wandscape.settings.value.off": {
+    "zh_cn": "已关闭",
+    "en_us": "Off"
+  },
+  "gui.wandscape.settings.value.off_short": {
+    "zh_cn": "关闭",
+    "en_us": "Off"
+  },
+  "gui.wandscape.settings.value.on": {
+    "zh_cn": "已开启",
+    "en_us": "On"
+  },
+  "gui.wandscape.settings.value.on_short": {
+    "zh_cn": "开启",
+    "en_us": "On"
+  },
+  "gui.wandscape.settings.warehouse.itemCapacity": {
+    "zh_cn": "单座仓库基础容量",
+    "en_us": "Base capacity per warehouse"
+  }
+}

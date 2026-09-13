@@ -1,0 +1,26 @@
+{
+  "gui.wandscape.anomaly.badge_under_construction": {
+    "zh_cn": "建造中",
+    "en_us": "Building"
+  },
+  "gui.wandscape.anomaly.badge_waiting_materials": {
+    "zh_cn": "等待材料",
+    "en_us": "Waiting for Materials"
+  },
+  "gui.wandscape.anomaly.col_building": {
+    "zh_cn": "建筑名称",
+    "en_us": "Building"
+  },
+  "gui.wandscape.anomaly.col_status": {
+    "zh_cn": "状态",
+    "en_us": "Status"
+  },
+  "gui.wandscape.anomaly.summary": {
+    "zh_cn": "建造中: %s 项",
+    "en_us": "Building: %s"
+  },
+  "gui.wandscape.anomaly.title": {
+    "zh_cn": "异常报告",
+    "en_us": "Anomaly Report"
+  }
+}

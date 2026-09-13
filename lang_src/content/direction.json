@@ -1,0 +1,18 @@
+{
+  "direction.wandscape.east": {
+    "zh_cn": "东",
+    "en_us": "East"
+  },
+  "direction.wandscape.north": {
+    "zh_cn": "北",
+    "en_us": "North"
+  },
+  "direction.wandscape.south": {
+    "zh_cn": "南",
+    "en_us": "South"
+  },
+  "direction.wandscape.west": {
+    "zh_cn": "西",
+    "en_us": "West"
+  }
+}

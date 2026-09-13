@@ -1,0 +1,34 @@
+{
+  "category.wandscape.all": {
+    "zh_cn": "全部",
+    "en_us": "All"
+  },
+  "category.wandscape.atm": {
+    "zh_cn": "ATM",
+    "en_us": "ATM"
+  },
+  "category.wandscape.decoration": {
+    "zh_cn": "装饰",
+    "en_us": "Decorations"
+  },
+  "category.wandscape.infrastructure": {
+    "zh_cn": "基础设施",
+    "en_us": "Infrastructure"
+  },
+  "category.wandscape.node": {
+    "zh_cn": "采集节点",
+    "en_us": "Harvest Nodes"
+  },
+  "category.wandscape.relax": {
+    "zh_cn": "休憩",
+    "en_us": "Relax"
+  },
+  "category.wandscape.service": {
+    "zh_cn": "服务设施",
+    "en_us": "Services"
+  },
+  "category.wandscape.shop": {
+    "zh_cn": "商店",
+    "en_us": "Shops"
+  }
+}

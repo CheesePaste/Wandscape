@@ -1,0 +1,34 @@
+{
+  "gui.wandscape.constructionsite.complete_time": {
+    "zh_cn": "预计完工",
+    "en_us": "Est. complete"
+  },
+  "gui.wandscape.constructionsite.completed": {
+    "zh_cn": "已完工",
+    "en_us": "Completed"
+  },
+  "gui.wandscape.constructionsite.ready_now": {
+    "zh_cn": "即刻开工",
+    "en_us": "Ready now"
+  },
+  "gui.wandscape.constructionsite.start_time": {
+    "zh_cn": "预计开工",
+    "en_us": "Est. start"
+  },
+  "gui.wandscape.constructionsite.status.crafting": {
+    "zh_cn": "制作中",
+    "en_us": "Crafting"
+  },
+  "gui.wandscape.constructionsite.status.pending": {
+    "zh_cn": "待制作",
+    "en_us": "Pending"
+  },
+  "gui.wandscape.constructionsite.status.ready": {
+    "zh_cn": "已备齐",
+    "en_us": "Ready"
+  },
+  "gui.wandscape.constructionsite.waiting_workstation": {
+    "zh_cn": "等待工作站",
+    "en_us": "Waiting for workstation"
+  }
+}

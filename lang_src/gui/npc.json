@@ -1,0 +1,130 @@
+{
+  "gui.wandscape.npc.armor": {
+    "zh_cn": "护甲值",
+    "en_us": "Armor"
+  },
+  "gui.wandscape.npc.attributes": {
+    "zh_cn": "属性",
+    "en_us": "Attributes"
+  },
+  "gui.wandscape.npc.auto_pickup_off": {
+    "zh_cn": "自动拾取: 关",
+    "en_us": "Auto Pickup: OFF"
+  },
+  "gui.wandscape.npc.auto_pickup_on": {
+    "zh_cn": "自动拾取: 开",
+    "en_us": "Auto Pickup: ON"
+  },
+  "gui.wandscape.npc.auto_pickup_tooltip": {
+    "zh_cn": "开启后，空闲且安全时法师会自动走向并拾取周围掉落物",
+    "en_us": "When enabled, the NPC will autonomously walk to and pick up nearby items when idle and safe."
+  },
+  "gui.wandscape.npc.dismiss": {
+    "zh_cn": "解雇",
+    "en_us": "Dismiss"
+  },
+  "gui.wandscape.npc.dismiss_confirm": {
+    "zh_cn": "确定解雇法师 %s？其装备将掉落。",
+    "en_us": "Dismiss mage %s? Their equipment will drop."
+  },
+  "gui.wandscape.npc.dismiss_title": {
+    "zh_cn": "解雇法师",
+    "en_us": "Dismiss Mage"
+  },
+  "gui.wandscape.npc.equipment": {
+    "zh_cn": "装备",
+    "en_us": "Equipment"
+  },
+  "gui.wandscape.npc.follow": {
+    "zh_cn": "跟随",
+    "en_us": "Follow"
+  },
+  "gui.wandscape.npc.followOff": {
+    "zh_cn": "取消跟随",
+    "en_us": "Cancel Follow"
+  },
+  "gui.wandscape.npc.health": {
+    "zh_cn": "生命值",
+    "en_us": "Health"
+  },
+  "gui.wandscape.npc.inventory": {
+    "zh_cn": "背包",
+    "en_us": "Inventory"
+  },
+  "gui.wandscape.npc.mana": {
+    "zh_cn": "魔力值",
+    "en_us": "Mana"
+  },
+  "gui.wandscape.npc.moveSpeed": {
+    "zh_cn": "移动速度",
+    "en_us": "Move Speed"
+  },
+  "gui.wandscape.npc.peace": {
+    "zh_cn": "和平",
+    "en_us": "Peace"
+  },
+  "gui.wandscape.npc.peaceOff": {
+    "zh_cn": "取消和平",
+    "en_us": "Cancel Peace"
+  },
+  "gui.wandscape.npc.pickup_off": {
+    "zh_cn": "拾取掉落物: 关",
+    "en_us": "Pickup: OFF"
+  },
+  "gui.wandscape.npc.pickup_on": {
+    "zh_cn": "拾取掉落物: 开",
+    "en_us": "Pickup: ON"
+  },
+  "gui.wandscape.npc.pickup_settings": {
+    "zh_cn": "掉落物",
+    "en_us": "Drops"
+  },
+  "gui.wandscape.npc.pickup_tooltip": {
+    "zh_cn": "开启后，法师能像玩家一样拾取周围掉落物",
+    "en_us": "When enabled, the NPC picks up nearby dropped items like a player."
+  },
+  "gui.wandscape.npc.spell": {
+    "zh_cn": "法术强度",
+    "en_us": "Spell Power"
+  },
+  "gui.wandscape.npc.spellSpeed": {
+    "zh_cn": "施法速度",
+    "en_us": "Cast Speed"
+  },
+  "gui.wandscape.npc.strategy": {
+    "zh_cn": "策略",
+    "en_us": "Strategy"
+  },
+  "gui.wandscape.npc.tip.cannot_unequip_default": {
+    "zh_cn": "初始默认法杖无法卸下",
+    "en_us": "Cannot unequip default wand"
+  },
+  "gui.wandscape.npc.tip.equip_success": {
+    "zh_cn": "已装备：%s",
+    "en_us": "Equipped: %s"
+  },
+  "gui.wandscape.npc.tip.not_equippable": {
+    "zh_cn": "该物品无法装备",
+    "en_us": "Cannot equip this item"
+  },
+  "gui.wandscape.npc.tip.swap_success": {
+    "zh_cn": "已替换：%s → %s",
+    "en_us": "Swapped: %s → %s"
+  },
+  "gui.wandscape.npc.tip.unequip_success": {
+    "zh_cn": "已卸下：%s",
+    "en_us": "Unequipped: %s"
+  },
+  "gui.wandscape.npc.title": {
+    "zh_cn": "法师信息",
+    "en_us": "Mage Info"
+  },
+  "gui.wandscape.npc.wand": {
+    "zh_cn": "法杖",
+    "en_us": "Wand"
+  },
+  "gui.wandscape.npc.work": {
+    "zh_cn": "工作速度",
+    "en_us": "Work Speed"
+  }
+}

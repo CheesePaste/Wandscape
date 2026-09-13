@@ -1,0 +1,30 @@
+{
+  "gui.wandscape.road.preset.cobblestone": {
+    "zh_cn": "圆石",
+    "en_us": "Cobblestone"
+  },
+  "gui.wandscape.road.preset.dirt_path": {
+    "zh_cn": "土径",
+    "en_us": "Dirt Path"
+  },
+  "gui.wandscape.road.preset.grass": {
+    "zh_cn": "草方块",
+    "en_us": "Grass Block"
+  },
+  "gui.wandscape.road.preset.gravel": {
+    "zh_cn": "砂砾",
+    "en_us": "Gravel"
+  },
+  "gui.wandscape.road.preset.oak_planks": {
+    "zh_cn": "橡木木板",
+    "en_us": "Oak Planks"
+  },
+  "gui.wandscape.road.preset.road": {
+    "zh_cn": "路面",
+    "en_us": "Road"
+  },
+  "gui.wandscape.road.preset.water": {
+    "zh_cn": "水源",
+    "en_us": "Water"
+  }
+}

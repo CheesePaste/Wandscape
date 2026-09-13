@@ -1,0 +1,14 @@
+{
+  "gui.wandscape.hotel.guests": {
+    "zh_cn": "住客",
+    "en_us": "Guests"
+  },
+  "gui.wandscape.hotel.no_guests": {
+    "zh_cn": "暂无入住游客",
+    "en_us": "No guests checked in."
+  },
+  "gui.wandscape.hotel.title": {
+    "zh_cn": "旅馆",
+    "en_us": "Hotel"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "mode.wandscape.scepter.follow": {
+    "zh_cn": "跟随",
+    "en_us": "Follow"
+  },
+  "mode.wandscape.scepter.hostile": {
+    "zh_cn": "敌对",
+    "en_us": "Hostile"
+  },
+  "mode.wandscape.scepter.peace": {
+    "zh_cn": "和平",
+    "en_us": "Peace"
+  },
+  "mode.wandscape.scepter.shelter": {
+    "zh_cn": "庇护",
+    "en_us": "Shelter"
+  }
+}

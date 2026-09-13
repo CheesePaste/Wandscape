@@ -1,0 +1,26 @@
+{
+  "gui.wandscape.common.close": {
+    "zh_cn": "关闭",
+    "en_us": "Close"
+  },
+  "gui.wandscape.common.colony_label": {
+    "zh_cn": "魔法小镇",
+    "en_us": "Town"
+  },
+  "gui.wandscape.common.creator_label": {
+    "zh_cn": "制作者",
+    "en_us": "Creator"
+  },
+  "gui.wandscape.common.open_warehouse": {
+    "zh_cn": "打开仓库",
+    "en_us": "Open Warehouse"
+  },
+  "gui.wandscape.common.search": {
+    "zh_cn": "搜索",
+    "en_us": "Search"
+  },
+  "gui.wandscape.common.submit": {
+    "zh_cn": "提交",
+    "en_us": "Submit"
+  }
+}

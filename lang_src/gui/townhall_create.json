@@ -1,0 +1,26 @@
+{
+  "gui.wandscape.townhall_create.create": {
+    "zh_cn": "创建",
+    "en_us": "Create"
+  },
+  "gui.wandscape.townhall_create.default_name": {
+    "zh_cn": "魔法小镇",
+    "en_us": "Magic Town"
+  },
+  "gui.wandscape.townhall_create.name_hint": {
+    "zh_cn": "输入魔法小镇名称",
+    "en_us": "Enter a town name"
+  },
+  "gui.wandscape.townhall_create.name_label": {
+    "zh_cn": "魔法小镇名称",
+    "en_us": "Town name"
+  },
+  "gui.wandscape.townhall_create.prompt": {
+    "zh_cn": "你的市政厅已建成，但还没有魔法小镇",
+    "en_us": "Your town hall is built, but no town exists yet."
+  },
+  "gui.wandscape.townhall_create.title": {
+    "zh_cn": "创建魔法小镇",
+    "en_us": "Create Town"
+  }
+}

@@ -1,0 +1,98 @@
+{
+  "wandscape.configuration.section.wandscape.common.toml": {
+    "zh_cn": "魔法小镇配置",
+    "en_us": "Wandscape Configs"
+  },
+  "wandscape.configuration.section.wandscape.common.toml.title": {
+    "zh_cn": "魔法小镇配置",
+    "en_us": "Wandscape Configs"
+  },
+  "wandscape.configuration.title": {
+    "zh_cn": "魔法小镇配置",
+    "en_us": "Wandscape Configs"
+  },
+  "wandscape.guide_book.landing": {
+    "zh_cn": "欢迎来到 Wandscape！你放下建筑，法师替你干活，游客沿路入城消费。$(br2)第一次玩？先读$(l:wandscape:start/intro_0_guide)0，入门$(/l)，或从$(l:wandscape:contents)指南目录$(/l)挑一节。",
+    "en_us": "Welcome to Wandscape! You place the buildings, your wizards do the work, and tourists walk in along the roads to spend.$(br2)New here? Start with $(l:wandscape:start/intro_0_guide)0. Getting Started$(/l), or pick a chapter from the $(l:wandscape:contents)contents$(/l)."
+  },
+  "wandscape.guide_book.name": {
+    "zh_cn": "魔法小镇建设指南",
+    "en_us": "Wandscape Guidebook"
+  },
+  "wandscape.guide_book.subtitle": {
+    "zh_cn": "从空地到游客小镇",
+    "en_us": "From Empty Land to a Tourist Town"
+  },
+  "wandscape.pack.all": {
+    "zh_cn": "全部建筑包",
+    "en_us": "All Packs"
+  },
+  "wandscape.pack.default.desc": {
+    "zh_cn": "魔法小镇模组内置核心建筑集合",
+    "en_us": "Built-in core buildings of Wandscape"
+  },
+  "wandscape.pack.default.name": {
+    "zh_cn": "核心建筑包",
+    "en_us": "Core Pack"
+  },
+  "wandscape.pack.oriental.desc": {
+    "zh_cn": "东方传统竹制与古风建筑集合",
+    "en_us": "Traditional oriental and bamboo style buildings"
+  },
+  "wandscape.pack.oriental.name": {
+    "zh_cn": "东风竹韵包",
+    "en_us": "Oriental Bamboo"
+  },
+  "wandscape.subtitle.building_place": {
+    "zh_cn": "放置建筑蓝图",
+    "en_us": "Building blueprint placed"
+  },
+  "wandscape.subtitle.colony_level_up": {
+    "zh_cn": "魔法小镇升级",
+    "en_us": "Town level up"
+  },
+  "wandscape.subtitle.guard_fire": {
+    "zh_cn": "守卫开火",
+    "en_us": "Guard fires"
+  },
+  "wandscape.subtitle.magic_beam": {
+    "zh_cn": "魔法光束发射",
+    "en_us": "Magic beam fires"
+  },
+  "wandscape.subtitle.magic_cast": {
+    "zh_cn": "法杖施法",
+    "en_us": "Wand cast"
+  },
+  "wandscape.subtitle.npc_cast": {
+    "zh_cn": "法师施法",
+    "en_us": "Mage casts"
+  },
+  "wandscape.subtitle.overview_enter": {
+    "zh_cn": "进入俯瞰视角",
+    "en_us": "Enter overview mode"
+  },
+  "wandscape.subtitle.projection_enter": {
+    "zh_cn": "进入投影模式",
+    "en_us": "Enter projection mode"
+  },
+  "wandscape.subtitle.projection_exit": {
+    "zh_cn": "退出投影模式",
+    "en_us": "Exit projection mode"
+  },
+  "wandscape.subtitle.road_place": {
+    "zh_cn": "铺设道路",
+    "en_us": "Road placed"
+  },
+  "wandscape.subtitle.task_publish": {
+    "zh_cn": "发布任务",
+    "en_us": "Task published"
+  },
+  "wandscape.subtitle.warehouse": {
+    "zh_cn": "仓库元素存取",
+    "en_us": "Warehouse transfer"
+  },
+  "wandscape.subtitle.wonder_effect": {
+    "zh_cn": "奇观生效",
+    "en_us": "Wonder active"
+  }
+}

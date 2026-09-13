@@ -1,0 +1,38 @@
+{
+  "activity.wandscape.bathe": {
+    "zh_cn": "泡澡",
+    "en_us": "Bathe"
+  },
+  "activity.wandscape.browse": {
+    "zh_cn": "浏览",
+    "en_us": "Browse"
+  },
+  "activity.wandscape.eat": {
+    "zh_cn": "用餐",
+    "en_us": "Eat"
+  },
+  "activity.wandscape.pay": {
+    "zh_cn": "付钱",
+    "en_us": "Pay"
+  },
+  "activity.wandscape.read": {
+    "zh_cn": "看书",
+    "en_us": "Read"
+  },
+  "activity.wandscape.rest": {
+    "zh_cn": "歇脚",
+    "en_us": "Rest"
+  },
+  "activity.wandscape.take": {
+    "zh_cn": "拿取",
+    "en_us": "Take"
+  },
+  "activity.wandscape.view": {
+    "zh_cn": "看展",
+    "en_us": "View"
+  },
+  "activity.wandscape.withdraw": {
+    "zh_cn": "取现",
+    "en_us": "Withdraw"
+  }
+}

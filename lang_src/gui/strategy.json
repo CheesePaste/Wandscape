@@ -1,0 +1,146 @@
+{
+  "gui.wandscape.strategy.already_equipped": {
+    "zh_cn": "该魔法已装备",
+    "en_us": "Already equipped"
+  },
+  "gui.wandscape.strategy.category.aoe": {
+    "zh_cn": "群体攻击",
+    "en_us": "AoE"
+  },
+  "gui.wandscape.strategy.category.defense": {
+    "zh_cn": "防御",
+    "en_us": "Defense"
+  },
+  "gui.wandscape.strategy.category.single_target": {
+    "zh_cn": "单体攻击",
+    "en_us": "Single"
+  },
+  "gui.wandscape.strategy.category.special": {
+    "zh_cn": "特殊",
+    "en_us": "Special"
+  },
+  "gui.wandscape.strategy.category.support": {
+    "zh_cn": "增益",
+    "en_us": "Support"
+  },
+  "gui.wandscape.strategy.empty_slot": {
+    "zh_cn": "点击右侧卷轴装备",
+    "en_us": "Click a scroll on the right to equip"
+  },
+  "gui.wandscape.strategy.equip_label": {
+    "zh_cn": "已装备（每类最多 3 个，槽位序 = 类内优先级）",
+    "en_us": "Equipped (max 3 per category, slot order = priority)"
+  },
+  "gui.wandscape.strategy.equipped": {
+    "zh_cn": "已装备：",
+    "en_us": "Equipped: "
+  },
+  "gui.wandscape.strategy.goety.cap_used": {
+    "zh_cn": "聚晶 %1$s/%2$s",
+    "en_us": "Focus %1$s/%2$s"
+  },
+  "gui.wandscape.strategy.goety.needs_wand": {
+    "zh_cn": "诡厄聚晶需主手持诡厄法杖",
+    "en_us": "Equip a Goety wand in the main hand to place focuses"
+  },
+  "gui.wandscape.strategy.goety.needs_wand.hint": {
+    "zh_cn": "需在法师主手装备诡厄法杖后配置聚晶",
+    "en_us": "Equip a Goety wand in the mage's main hand before placing focuses"
+  },
+  "gui.wandscape.strategy.goety.no_wand_inert": {
+    "zh_cn": "无法杖：聚晶停用",
+    "en_us": "No wand: focus off"
+  },
+  "gui.wandscape.strategy.goety.one_only": {
+    "zh_cn": "聚晶全栏只能放 1 个",
+    "en_us": "Only one focus fits in the strategy bar"
+  },
+  "gui.wandscape.strategy.goety.one_only.hint": {
+    "zh_cn": "全施法策略栏最多仅允许配置 1 枚聚晶",
+    "en_us": "Only 1 focus is allowed across the entire strategy bar"
+  },
+  "gui.wandscape.strategy.goety.title": {
+    "zh_cn": "诡厄魔法",
+    "en_us": "Goety Magic"
+  },
+  "gui.wandscape.strategy.iron.cap_full": {
+    "zh_cn": "法术书槽位已满",
+    "en_us": "No free spell-book slot"
+  },
+  "gui.wandscape.strategy.iron.cap_full.hint": {
+    "zh_cn": "卷轴数量已达到当前法术书的容量上限",
+    "en_us": "Scroll count has reached the capacity limit of the equipped spell book"
+  },
+  "gui.wandscape.strategy.iron.cap_used": {
+    "zh_cn": "铁魔法 %1$s/%2$s",
+    "en_us": "Iron %1$s/%2$s"
+  },
+  "gui.wandscape.strategy.iron.needs_spellbook": {
+    "zh_cn": "铁魔法需法术书：请在饰品栏装备法术书",
+    "en_us": "Equip an Iron's spell book (curio) to place Iron scrolls"
+  },
+  "gui.wandscape.strategy.iron.needs_spellbook.hint": {
+    "zh_cn": "需在法师饰品栏 (Curios) 装备法术书以启用槽位",
+    "en_us": "Equip a spell book in the NPC Curios slot to enable slots"
+  },
+  "gui.wandscape.strategy.iron.no_book_inert": {
+    "zh_cn": "无法术书：铁魔法停用",
+    "en_us": "No spell book: Iron off"
+  },
+  "gui.wandscape.strategy.iron.title": {
+    "zh_cn": "铁魔法",
+    "en_us": "Iron's Spells"
+  },
+  "gui.wandscape.strategy.not_bound": {
+    "zh_cn": "未绑定魔法的卷轴",
+    "en_us": "Unbound scroll"
+  },
+  "gui.wandscape.strategy.not_equippable": {
+    "zh_cn": "不可装备的魔法（仅四类战斗魔法可装备）",
+    "en_us": "Not equippable (combat spells only)"
+  },
+  "gui.wandscape.strategy.preset.balanced": {
+    "zh_cn": "均衡",
+    "en_us": "Balanced"
+  },
+  "gui.wandscape.strategy.preset.defensive": {
+    "zh_cn": "防御",
+    "en_us": "Defensive"
+  },
+  "gui.wandscape.strategy.preset.offensive": {
+    "zh_cn": "火力",
+    "en_us": "Offensive"
+  },
+  "gui.wandscape.strategy.preset.support": {
+    "zh_cn": "支援",
+    "en_us": "Support"
+  },
+  "gui.wandscape.strategy.restriction_title": {
+    "zh_cn": "装备门控",
+    "en_us": "Equipment Gating"
+  },
+  "gui.wandscape.strategy.slot_full": {
+    "zh_cn": "该分类已满（每类最多 3 个）",
+    "en_us": "Category full (max 3)"
+  },
+  "gui.wandscape.strategy.source_label": {
+    "zh_cn": "背包卷轴",
+    "en_us": "Scrolls"
+  },
+  "gui.wandscape.strategy.special.note": {
+    "zh_cn": "默认使用，不可更换",
+    "en_us": "Used by default, cannot be changed"
+  },
+  "gui.wandscape.strategy.tip.unequip": {
+    "zh_cn": " — 点击卸载",
+    "en_us": " — click to unequip"
+  },
+  "gui.wandscape.strategy.title": {
+    "zh_cn": "施法策略",
+    "en_us": "Cast Strategy"
+  },
+  "gui.wandscape.strategy.unequipped": {
+    "zh_cn": "已卸载：",
+    "en_us": "Unequipped: "
+  }
+}

@@ -1,0 +1,270 @@
+{
+  "building.wandscape.advanced_street_light1": {
+    "zh_cn": "高级路灯 1",
+    "en_us": "Advanced Street Light 1"
+  },
+  "building.wandscape.advanced_street_light2": {
+    "zh_cn": "高级路灯 2",
+    "en_us": "Advanced Street Light 2"
+  },
+  "building.wandscape.advanced_street_light3": {
+    "zh_cn": "高级路灯 3",
+    "en_us": "Advanced Street Light 3"
+  },
+  "building.wandscape.adventures_union": {
+    "zh_cn": "冒险者公会",
+    "en_us": "Adventurer's Guild"
+  },
+  "building.wandscape.altar1": {
+    "zh_cn": "祭坛",
+    "en_us": "Altar"
+  },
+  "building.wandscape.ancient_store": {
+    "zh_cn": "远古商店",
+    "en_us": "Ancient Store"
+  },
+  "building.wandscape.arrow_store": {
+    "zh_cn": "箭铺",
+    "en_us": "Arrow Store"
+  },
+  "building.wandscape.atm": {
+    "zh_cn": "ATM",
+    "en_us": "ATM"
+  },
+  "building.wandscape.atm1": {
+    "zh_cn": "ATM",
+    "en_us": "ATM"
+  },
+  "building.wandscape.autumn_wind_station": {
+    "zh_cn": "秋风车站",
+    "en_us": "Autumn Wind Station"
+  },
+  "building.wandscape.bakery": {
+    "zh_cn": "面包店",
+    "en_us": "Bakery"
+  },
+  "building.wandscape.bamboo_hall": {
+    "zh_cn": "竹厅",
+    "en_us": "Bamboo Hall"
+  },
+  "building.wandscape.bamboo_house": {
+    "zh_cn": "竹茶居",
+    "en_us": "Bamboo Tea House"
+  },
+  "building.wandscape.bathhouse": {
+    "zh_cn": "澡堂",
+    "en_us": "Bathhouse"
+  },
+  "building.wandscape.beekeepers_house": {
+    "zh_cn": "养蜂人小屋",
+    "en_us": "Beekeeper's House"
+  },
+  "building.wandscape.book_shop": {
+    "zh_cn": "书店",
+    "en_us": "Book Shop"
+  },
+  "building.wandscape.bookshop": {
+    "zh_cn": "书店",
+    "en_us": "Book Shop"
+  },
+  "building.wandscape.breadshop": {
+    "zh_cn": "面包店",
+    "en_us": "Bread Shop"
+  },
+  "building.wandscape.cellar": {
+    "zh_cn": "酒窖",
+    "en_us": "Cellar"
+  },
+  "building.wandscape.craftstation1": {
+    "zh_cn": "合成站",
+    "en_us": "Crafting Station"
+  },
+  "building.wandscape.creature_store": {
+    "zh_cn": "奇珍商店",
+    "en_us": "Creature Store"
+  },
+  "building.wandscape.decoration_garden": {
+    "zh_cn": "装饰花园",
+    "en_us": "Decorative Garden"
+  },
+  "building.wandscape.explorers_grocery": {
+    "zh_cn": "探险者杂货铺",
+    "en_us": "Explorer's Grocery"
+  },
+  "building.wandscape.farm": {
+    "zh_cn": "农场",
+    "en_us": "Farm"
+  },
+  "building.wandscape.fishing_point": {
+    "zh_cn": "钓鱼点",
+    "en_us": "Fishing Point"
+  },
+  "building.wandscape.flower_shop": {
+    "zh_cn": "花店",
+    "en_us": "Flower Shop"
+  },
+  "building.wandscape.flowershop": {
+    "zh_cn": "花店",
+    "en_us": "Flower Shop"
+  },
+  "building.wandscape.forge_plant": {
+    "zh_cn": "锻造厂",
+    "en_us": "Forge Plant"
+  },
+  "building.wandscape.fountain_plaza": {
+    "zh_cn": "喷泉广场",
+    "en_us": "Fountain Plaza"
+  },
+  "building.wandscape.fur_store": {
+    "zh_cn": "皮草商店",
+    "en_us": "Fur Store"
+  },
+  "building.wandscape.hotel": {
+    "zh_cn": "旅馆",
+    "en_us": "Hotel"
+  },
+  "building.wandscape.inn1": {
+    "zh_cn": "旅馆",
+    "en_us": "Inn"
+  },
+  "building.wandscape.latern_shop": {
+    "zh_cn": "灯具店",
+    "en_us": "Lamp Store"
+  },
+  "building.wandscape.long_chair": {
+    "zh_cn": "长椅",
+    "en_us": "Long Chair"
+  },
+  "building.wandscape.luxury_hotel_cyan": {
+    "zh_cn": "豪华旅馆（青）",
+    "en_us": "Luxury Hotel (Cyan)"
+  },
+  "building.wandscape.luxury_hotel_green": {
+    "zh_cn": "豪华旅馆（绿）",
+    "en_us": "Luxury Hotel (Green)"
+  },
+  "building.wandscape.mage_hut1": {
+    "zh_cn": "法师小屋",
+    "en_us": "Mage Hut"
+  },
+  "building.wandscape.magicshop": {
+    "zh_cn": "魔法商店",
+    "en_us": "Magic Shop"
+  },
+  "building.wandscape.nodedark": {
+    "zh_cn": "暗元素节点",
+    "en_us": "Dark Node"
+  },
+  "building.wandscape.nodeearth": {
+    "zh_cn": "土元素节点",
+    "en_us": "Earth Node"
+  },
+  "building.wandscape.nodefire": {
+    "zh_cn": "火元素节点",
+    "en_us": "Fire Node"
+  },
+  "building.wandscape.nodemetal": {
+    "zh_cn": "金元素节点",
+    "en_us": "Metal Node"
+  },
+  "building.wandscape.nodewater": {
+    "zh_cn": "水元素节点",
+    "en_us": "Water Node"
+  },
+  "building.wandscape.nodewind": {
+    "zh_cn": "风元素节点",
+    "en_us": "Wind Node"
+  },
+  "building.wandscape.nodewood": {
+    "zh_cn": "木元素节点",
+    "en_us": "Wood Node"
+  },
+  "building.wandscape.post_station": {
+    "zh_cn": "驿站",
+    "en_us": "Post Station"
+  },
+  "building.wandscape.potion_store": {
+    "zh_cn": "魔药商店",
+    "en_us": "Potion Store"
+  },
+  "building.wandscape.potionstation1": {
+    "zh_cn": "魔法工坊",
+    "en_us": "Magic Station"
+  },
+  "building.wandscape.redstone_shop": {
+    "zh_cn": "红石商店",
+    "en_us": "Redstone Shop"
+  },
+  "building.wandscape.relax_pavilion": {
+    "zh_cn": "歇脚亭",
+    "en_us": "Rest Pavilion"
+  },
+  "building.wandscape.sea_store": {
+    "zh_cn": "海洋商店",
+    "en_us": "Sea Store"
+  },
+  "building.wandscape.service_booth": {
+    "zh_cn": "元素服务小屋",
+    "en_us": "Element Service Booth"
+  },
+  "building.wandscape.service_hall": {
+    "zh_cn": "服务大厅",
+    "en_us": "Service Hall"
+  },
+  "building.wandscape.signboard": {
+    "zh_cn": "告示板",
+    "en_us": "Signboard"
+  },
+  "building.wandscape.smithy": {
+    "zh_cn": "铁匠铺",
+    "en_us": "Smithy"
+  },
+  "building.wandscape.street_light": {
+    "zh_cn": "路灯",
+    "en_us": "Street Light"
+  },
+  "building.wandscape.tavern": {
+    "zh_cn": "冒险者酒馆",
+    "en_us": "Tavern"
+  },
+  "building.wandscape.tavern1": {
+    "zh_cn": "酒馆",
+    "en_us": "Tavern"
+  },
+  "building.wandscape.townhall1": {
+    "zh_cn": "市政厅",
+    "en_us": "Town Hall"
+  },
+  "building.wandscape.unknown": {
+    "zh_cn": "建筑",
+    "en_us": "Unnamed Building"
+  },
+  "building.wandscape.warehouse": {
+    "zh_cn": "仓库",
+    "en_us": "Warehouse"
+  },
+  "building.wandscape.warehouse1": {
+    "zh_cn": "仓库",
+    "en_us": "Warehouse"
+  },
+  "building.wandscape.watch_tower": {
+    "zh_cn": "瞭望塔",
+    "en_us": "Watch Tower"
+  },
+  "building.wandscape.windmill": {
+    "zh_cn": "风车磨坊",
+    "en_us": "Gristmill"
+  },
+  "building.wandscape.windmill1": {
+    "zh_cn": "风车",
+    "en_us": "Windmill"
+  },
+  "building.wandscape.workstation1": {
+    "zh_cn": "工作站",
+    "en_us": "Workstation"
+  },
+  "building.wandscape.youth_hostel": {
+    "zh_cn": "青年旅舍",
+    "en_us": "Youth Hostel"
+  }
+}

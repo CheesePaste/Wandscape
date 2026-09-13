@@ -1,0 +1,38 @@
+{
+  "gui.wandscape.stats.arrived": {
+    "zh_cn": "到达: %s",
+    "en_us": "In: %s"
+  },
+  "gui.wandscape.stats.departed": {
+    "zh_cn": "离开: %s",
+    "en_us": "Out: %s"
+  },
+  "gui.wandscape.stats.elements_30d": {
+    "zh_cn": "元素(30天)",
+    "en_us": "Elements (30d)"
+  },
+  "gui.wandscape.stats.none": {
+    "zh_cn": "暂无统计数据",
+    "en_us": "No statistics available yet."
+  },
+  "gui.wandscape.stats.title": {
+    "zh_cn": "魔法小镇统计 | 第 %s 天",
+    "en_us": "Town Statistics  |  Day %s"
+  },
+  "gui.wandscape.stats.tourist_comfort": {
+    "zh_cn": "舒适填充: %s%%",
+    "en_us": "Fill C: %s%%"
+  },
+  "gui.wandscape.stats.tourist_magic": {
+    "zh_cn": "魔法填充: %s%%",
+    "en_us": "Fill M: %s%%"
+  },
+  "gui.wandscape.stats.tourist_wonder": {
+    "zh_cn": "奇观填充: %s%%",
+    "en_us": "Fill W: %s%%"
+  },
+  "gui.wandscape.stats.tourists": {
+    "zh_cn": "游客",
+    "en_us": "Tourists"
+  }
+}

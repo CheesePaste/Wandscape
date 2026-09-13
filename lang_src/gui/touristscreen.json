@@ -1,0 +1,62 @@
+{
+  "gui.wandscape.touristscreen.comfort": {
+    "zh_cn": "舒适:",
+    "en_us": "Comfort:"
+  },
+  "gui.wandscape.touristscreen.energy": {
+    "zh_cn": "精力:",
+    "en_us": "Energy:"
+  },
+  "gui.wandscape.touristscreen.level": {
+    "zh_cn": "等级:",
+    "en_us": "Level:"
+  },
+  "gui.wandscape.touristscreen.magic": {
+    "zh_cn": "魔法:",
+    "en_us": "Magic:"
+  },
+  "gui.wandscape.touristscreen.no_visits": {
+    "zh_cn": "暂无行程记录",
+    "en_us": "No visit records yet"
+  },
+  "gui.wandscape.touristscreen.persona_balanced": {
+    "zh_cn": "均衡",
+    "en_us": "Balanced"
+  },
+  "gui.wandscape.touristscreen.persona_comfort": {
+    "zh_cn": "偏爱舒适",
+    "en_us": "Prefers Comfort"
+  },
+  "gui.wandscape.touristscreen.persona_magic": {
+    "zh_cn": "偏爱魔法",
+    "en_us": "Prefers Magic"
+  },
+  "gui.wandscape.touristscreen.persona_wonder": {
+    "zh_cn": "偏爱奇观",
+    "en_us": "Prefers Wonder"
+  },
+  "gui.wandscape.touristscreen.stay": {
+    "zh_cn": "停留:",
+    "en_us": "Stay:"
+  },
+  "gui.wandscape.touristscreen.stay_detail": {
+    "zh_cn": "已住 %d 晚 / 共 %d 天",
+    "en_us": "%d nights stayed / %d days total"
+  },
+  "gui.wandscape.touristscreen.visit_outcomes": {
+    "zh_cn": "舒适%s 魔法%s 奇观%s · 精力%s",
+    "en_us": "Comfort%s Magic%s Wonder%s · Energy%s"
+  },
+  "gui.wandscape.touristscreen.visits": {
+    "zh_cn": "行程",
+    "en_us": "Visits"
+  },
+  "gui.wandscape.touristscreen.wallet": {
+    "zh_cn": "钱包:",
+    "en_us": "Wallet:"
+  },
+  "gui.wandscape.touristscreen.wonder": {
+    "zh_cn": "奇观:",
+    "en_us": "Wonder:"
+  }
+}

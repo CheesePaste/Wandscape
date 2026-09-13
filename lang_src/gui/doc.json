@@ -1,0 +1,6 @@
+{
+  "gui.wandscape.doc.notfound": {
+    "zh_cn": "# 404 文档未找到\n\n无法读取指定文档: `%s`",
+    "en_us": "# 404 Document Not Found\n\nCould not read the requested document: `%1$s`"
+  }
+}

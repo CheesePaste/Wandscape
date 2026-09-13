@@ -1,0 +1,14 @@
+{
+  "block.wandscape.building_scanner": {
+    "zh_cn": "建筑扫描器",
+    "en_us": "Building Scanner"
+  },
+  "block.wandscape.creative_building_scanner": {
+    "zh_cn": "创造建筑扫描器",
+    "en_us": "Creative Building Scanner"
+  },
+  "block.wandscape.interact_spot_marker": {
+    "zh_cn": "交互位标记",
+    "en_us": "Interact Spot Marker"
+  }
+}

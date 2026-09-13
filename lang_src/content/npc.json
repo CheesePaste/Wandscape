@@ -1,0 +1,78 @@
+{
+  "npc.wandscape.state.breaking": {
+    "zh_cn": "破坏中",
+    "en_us": "Breaking"
+  },
+  "npc.wandscape.state.casting": {
+    "zh_cn": "施法中",
+    "en_us": "Casting"
+  },
+  "npc.wandscape.state.clear_weather": {
+    "zh_cn": "驱云",
+    "en_us": "Clearing Weather"
+  },
+  "npc.wandscape.state.combat": {
+    "zh_cn": "战斗中",
+    "en_us": "Fighting"
+  },
+  "npc.wandscape.state.executing": {
+    "zh_cn": "执行中",
+    "en_us": "Executing"
+  },
+  "npc.wandscape.state.gathering": {
+    "zh_cn": "采集中",
+    "en_us": "Gathering"
+  },
+  "npc.wandscape.state.guiding": {
+    "zh_cn": "引导中",
+    "en_us": "Guiding"
+  },
+  "npc.wandscape.state.idle": {
+    "zh_cn": "空闲",
+    "en_us": "Idle"
+  },
+  "npc.wandscape.state.interacting": {
+    "zh_cn": "交互中",
+    "en_us": "Interacting"
+  },
+  "npc.wandscape.state.moving": {
+    "zh_cn": "移动中",
+    "en_us": "Moving"
+  },
+  "npc.wandscape.state.placing": {
+    "zh_cn": "放置中",
+    "en_us": "Placing"
+  },
+  "npc.wandscape.state.portal_gate": {
+    "zh_cn": "开启传送门",
+    "en_us": "Opening Portal"
+  },
+  "npc.wandscape.state.rain_call": {
+    "zh_cn": "祈雨",
+    "en_us": "Calling Rain"
+  },
+  "npc.wandscape.state.summon_lightning": {
+    "zh_cn": "召唤雷电",
+    "en_us": "Summoning Lightning"
+  },
+  "npc.wandscape.state.teleporting": {
+    "zh_cn": "传送中",
+    "en_us": "Teleporting"
+  },
+  "npc.wandscape.state.transforming": {
+    "zh_cn": "建造中",
+    "en_us": "Building"
+  },
+  "npc.wandscape.state.waiting": {
+    "zh_cn": "等待中",
+    "en_us": "Waiting"
+  },
+  "npc.wandscape.state.waiting_magic": {
+    "zh_cn": "等待魔力",
+    "en_us": "Waiting for Mana"
+  },
+  "npc.wandscape.state.waiting_teleport": {
+    "zh_cn": "等待传送",
+    "en_us": "Waiting to Teleport"
+  }
+}

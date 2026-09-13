@@ -1,0 +1,682 @@
+{
+  "gui.wandscape.roadstudio.array_active_tmpl": {
+    "zh_cn": "当前使用模板: %s (单段含 %d 个方块)",
+    "en_us": "Current template: %s (single segment %d blocks)"
+  },
+  "gui.wandscape.roadstudio.array_border": {
+    "zh_cn": "加装路肩石边 (Side Border)",
+    "en_us": "Install Road Shoulder Border (Side Border)"
+  },
+  "gui.wandscape.roadstudio.array_border_tip": {
+    "zh_cn": "勾选后，道路左右两侧最边缘自动铺设石砖护栏包裹。",
+    "en_us": "When checked, the two outermost edges automatically get stone-brick shoulder borders."
+  },
+  "gui.wandscape.roadstudio.array_build": {
+    "zh_cn": "下发道路建造任务",
+    "en_us": "Queue Road Build Task"
+  },
+  "gui.wandscape.roadstudio.array_build_tip": {
+    "zh_cn": "将打包好的道路方块发送给服务器，由小镇建筑法师 NPC 自动建造！",
+    "en_us": "Sends the packed road blocks to the server for the town mage NPCs to build automatically!"
+  },
+  "gui.wandscape.roadstudio.array_deg_fmt": {
+    "zh_cn": "%.1f 度",
+    "en_us": "%.1f°"
+  },
+  "gui.wandscape.roadstudio.array_depth": {
+    "zh_cn": "基层厚度 (Depth)",
+    "en_us": "Base Depth (Depth)"
+  },
+  "gui.wandscape.roadstudio.array_depth_fmt": {
+    "zh_cn": "%d 层深",
+    "en_us": "%d layers"
+  },
+  "gui.wandscape.roadstudio.array_depth_tip": {
+    "zh_cn": "调节道路垂直向下铺设的基础层数 (1 ~ 3 层)",
+    "en_us": "Adjusts how many base layers the road lays downward (1 ~ 3 layers)"
+  },
+  "gui.wandscape.roadstudio.array_dynamic_header": {
+    "zh_cn": "动态道路规格生成器:",
+    "en_us": "Dynamic Road Spec Generator:"
+  },
+  "gui.wandscape.roadstudio.array_json_label": {
+    "zh_cn": "选择 JSON 模板:",
+    "en_us": "Select JSON template:"
+  },
+  "gui.wandscape.roadstudio.array_json_tip": {
+    "zh_cn": "选择读取到的 JSON 结构文件进行排布。",
+    "en_us": "Pick a loaded JSON structure template to arrange."
+  },
+  "gui.wandscape.roadstudio.array_no_json": {
+    "zh_cn": "暂无可用的 JSON 蓝图模板。",
+    "en_us": "No JSON blueprint templates available."
+  },
+  "gui.wandscape.roadstudio.array_pitch": {
+    "zh_cn": "俯仰角 Pitch",
+    "en_us": "Pitch"
+  },
+  "gui.wandscape.roadstudio.array_preview_header": {
+    "zh_cn": "实时 3D 预览与调整",
+    "en_us": "Real-time 3D Preview & Adjust"
+  },
+  "gui.wandscape.roadstudio.array_preview_on": {
+    "zh_cn": "开启阵列 3D 实时预览",
+    "en_us": "Enable real-time 3D array preview"
+  },
+  "gui.wandscape.roadstudio.array_preview_on_tip": {
+    "zh_cn": "在游戏世界中以 3D 包围盒的形式实时渲染沿曲线排列的方块位姿。",
+    "en_us": "Renders the arrayed block poses in-game as 3D bounding boxes in real time."
+  },
+  "gui.wandscape.roadstudio.array_reset": {
+    "zh_cn": "0° 重置",
+    "en_us": "0° Reset"
+  },
+  "gui.wandscape.roadstudio.array_reset_rotation": {
+    "zh_cn": "重置旋转为 0°",
+    "en_us": "Reset rotation to 0°"
+  },
+  "gui.wandscape.roadstudio.array_reset_tip": {
+    "zh_cn": "快捷重置所有旋转角为 0°",
+    "en_us": "Quickly reset all rotation angles to 0°"
+  },
+  "gui.wandscape.roadstudio.array_roll": {
+    "zh_cn": "滚动角 Roll",
+    "en_us": "Roll"
+  },
+  "gui.wandscape.roadstudio.array_rot_label": {
+    "zh_cn": "3D 阵列姿态旋转微调:",
+    "en_us": "3D array pose rotation fine-tune:"
+  },
+  "gui.wandscape.roadstudio.array_source_header": {
+    "zh_cn": "模板来源与 V 面板联动",
+    "en_us": "Template Source & V Panel Link"
+  },
+  "gui.wandscape.roadstudio.array_source_json": {
+    "zh_cn": "JSON 预设文件",
+    "en_us": "JSON Preset File"
+  },
+  "gui.wandscape.roadstudio.array_source_json_tip": {
+    "zh_cn": "使用硬盘中的 JSON 结构模板做阵列排布。",
+    "en_us": "Use a JSON structure template from disk for arraying."
+  },
+  "gui.wandscape.roadstudio.array_source_vpanel": {
+    "zh_cn": "V 面板方块预设 (推荐)",
+    "en_us": "V Panel Block Preset (Recommended)"
+  },
+  "gui.wandscape.roadstudio.array_source_vpanel_tip": {
+    "zh_cn": "与概览 (V) 面板选中的方块预设直接联动，并允许实时动态调节宽度与厚度。",
+    "en_us": "Links directly to the block preset selected in the Overview (V) panel, and allows live width/depth tuning."
+  },
+  "gui.wandscape.roadstudio.array_step": {
+    "zh_cn": "采样步距 (格)",
+    "en_us": "Sample Step (blocks)"
+  },
+  "gui.wandscape.roadstudio.array_step_tip": {
+    "zh_cn": "沿 Bezier 曲线采样的间距（单位：方块）。越小生成越平滑密实。",
+    "en_us": "Spacing between samples along the Bezier curve (in blocks). Smaller = smoother, denser."
+  },
+  "gui.wandscape.roadstudio.array_vpanel_label": {
+    "zh_cn": "V 面板选中的方块:",
+    "en_us": "V panel selected block:"
+  },
+  "gui.wandscape.roadstudio.array_vpanel_tip": {
+    "zh_cn": "在 ImGui 里选择道路方块会实时同步更新 V 面板选中的预设！",
+    "en_us": "Picking a road block in ImGui live-syncs the preset selected in the V panel!"
+  },
+  "gui.wandscape.roadstudio.array_width": {
+    "zh_cn": "道路宽度 (Width)",
+    "en_us": "Road Width (Width)"
+  },
+  "gui.wandscape.roadstudio.array_width_fmt": {
+    "zh_cn": "%d 格方块",
+    "en_us": "%d blocks"
+  },
+  "gui.wandscape.roadstudio.array_width_tip": {
+    "zh_cn": "调节生成道路横向铺设的方块宽度 (1 ~ 15 格)",
+    "en_us": "Adjusts the horizontal road width to lay (1 ~ 15 blocks)"
+  },
+  "gui.wandscape.roadstudio.array_yaw": {
+    "zh_cn": "偏航角 Yaw",
+    "en_us": "Yaw"
+  },
+  "gui.wandscape.roadstudio.banner": {
+    "zh_cn": "WANDSCAPE 道路制作工坊",
+    "en_us": "WANDSCAPE Road Studio"
+  },
+  "gui.wandscape.roadstudio.cost_estimate": {
+    "zh_cn": "• 本次预计消耗: %d × %s",
+    "en_us": "• Est. Cost: %d × %s"
+  },
+  "gui.wandscape.roadstudio.cost_free": {
+    "zh_cn": "• 本次预计消耗: 无 (0 方块 / 0 元素)",
+    "en_us": "• Est. Cost: None (0 blocks / 0 elements)"
+  },
+  "gui.wandscape.roadstudio.curve_add_point": {
+    "zh_cn": "点击添加点",
+    "en_us": "Click to Add Point"
+  },
+  "gui.wandscape.roadstudio.curve_add_point_tip": {
+    "zh_cn": "【添加模式】在游戏世界中左键点击方块表面，可顺序放置新的道路控制点。",
+    "en_us": "[Add mode] Left-click a block surface in the world to place road control points in sequence."
+  },
+  "gui.wandscape.roadstudio.curve_anchor": {
+    "zh_cn": "主锚点",
+    "en_us": "Main Anchor"
+  },
+  "gui.wandscape.roadstudio.curve_anchor_tip": {
+    "zh_cn": "移动控制点在世界中的主中心位置",
+    "en_us": "Move the control point's main center position in the world"
+  },
+  "gui.wandscape.roadstudio.curve_closed": {
+    "zh_cn": "闭合环形道路 (连接首尾)",
+    "en_us": "Closed Ring Road (Connect Ends)"
+  },
+  "gui.wandscape.roadstudio.curve_closed_tip": {
+    "zh_cn": "勾选后自动连接道路首尾点，构建无缝闭合的环形道路。",
+    "en_us": "Auto-connects the road's first and last points into a seamless closed loop."
+  },
+  "gui.wandscape.roadstudio.curve_coord_label": {
+    "zh_cn": "三维精确坐标:",
+    "en_us": "Precise 3D coordinates:"
+  },
+  "gui.wandscape.roadstudio.curve_delete_btn": {
+    "zh_cn": "删除节点 #%d",
+    "en_us": "Delete Node #%d"
+  },
+  "gui.wandscape.roadstudio.curve_delete_tip": {
+    "zh_cn": "移除当前选中的控制节点 (快捷键 Delete / Backspace)。",
+    "en_us": "Remove the currently selected control node (Delete / Backspace)."
+  },
+  "gui.wandscape.roadstudio.curve_edit_mode": {
+    "zh_cn": "编辑模式切换",
+    "en_us": "Edit Mode Switch"
+  },
+  "gui.wandscape.roadstudio.curve_focus": {
+    "zh_cn": "视角聚焦",
+    "en_us": "Focus View"
+  },
+  "gui.wandscape.roadstudio.curve_focus_tip": {
+    "zh_cn": "将自由视角摄像机瞬间移至选中的控制点附近。",
+    "en_us": "Instantly moves the free camera to the selected control point."
+  },
+  "gui.wandscape.roadstudio.curve_free": {
+    "zh_cn": "[自由]",
+    "en_us": "[Free]"
+  },
+  "gui.wandscape.roadstudio.curve_geom_header": {
+    "zh_cn": "曲线几何与平移",
+    "en_us": "Curve Geometry & Shift"
+  },
+  "gui.wandscape.roadstudio.curve_handle_coords": {
+    "zh_cn": "  坐标: (%s, %s, %s)",
+    "en_us": "  Coords: (%s, %s, %s)"
+  },
+  "gui.wandscape.roadstudio.curve_handle_next": {
+    "zh_cn": "后手柄",
+    "en_us": "Next Handle"
+  },
+  "gui.wandscape.roadstudio.curve_handle_next_tip": {
+    "zh_cn": "调整出向 Bezier 切线控制点",
+    "en_us": "Adjust the outgoing Bezier tangent control point"
+  },
+  "gui.wandscape.roadstudio.curve_handle_prev": {
+    "zh_cn": "前手柄",
+    "en_us": "Prev Handle"
+  },
+  "gui.wandscape.roadstudio.curve_handle_prev_tip": {
+    "zh_cn": "调整入向 Bezier 切线控制点",
+    "en_us": "Adjust the incoming Bezier tangent control point"
+  },
+  "gui.wandscape.roadstudio.curve_inspector_header": {
+    "zh_cn": "节点属性检查器 #%d",
+    "en_us": "Node Inspector #%d"
+  },
+  "gui.wandscape.roadstudio.curve_list_empty1": {
+    "zh_cn": "  当前无控制点。",
+    "en_us": "  No control points."
+  },
+  "gui.wandscape.roadstudio.curve_list_empty2": {
+    "zh_cn": "  请在世界中左键点击方块添加。",
+    "en_us": "  Left-click a block in the world to add one."
+  },
+  "gui.wandscape.roadstudio.curve_list_header": {
+    "zh_cn": "控制点列表 (%d)",
+    "en_us": "Control Points (%d)"
+  },
+  "gui.wandscape.roadstudio.curve_select_drag": {
+    "zh_cn": "选择与拖拽",
+    "en_us": "Select & Drag"
+  },
+  "gui.wandscape.roadstudio.curve_select_drag_tip": {
+    "zh_cn": "【选择编辑模式】在世界中或下方列表中点击控制点，通过 3D 坐标轴手柄拖拽调控曲线轨迹。",
+    "en_us": "[Select edit mode] Click a control point in the world or the list below, then drag the 3D axis gizmo to shape the curve."
+  },
+  "gui.wandscape.roadstudio.curve_selected_tip": {
+    "zh_cn": "当前选中的控制点 #%d。可在下方检查器中精确修改。",
+    "en_us": "Selected control point #%d. Fine-tune it in the inspector below."
+  },
+  "gui.wandscape.roadstudio.curve_shift_btn": {
+    "zh_cn": "整体平移",
+    "en_us": "Shift All"
+  },
+  "gui.wandscape.roadstudio.curve_shift_btn_tip": {
+    "zh_cn": "将整条曲线上的所有控制点按照输入的 (X, Y, Z) 偏移量一并平移。",
+    "en_us": "Shifts every control point on the curve by the entered (X, Y, Z) offsets."
+  },
+  "gui.wandscape.roadstudio.curve_shift_label": {
+    "zh_cn": "整体平移偏移量 (X, Y, Z):",
+    "en_us": "Overall shift offsets (X, Y, Z):"
+  },
+  "gui.wandscape.roadstudio.curve_shift_x": {
+    "zh_cn": "X 偏移",
+    "en_us": "X offset"
+  },
+  "gui.wandscape.roadstudio.curve_shift_x_tip": {
+    "zh_cn": "X 轴平移增量 (方块)",
+    "en_us": "X axis shift (blocks)"
+  },
+  "gui.wandscape.roadstudio.curve_shift_y": {
+    "zh_cn": "Y 偏移",
+    "en_us": "Y offset"
+  },
+  "gui.wandscape.roadstudio.curve_shift_y_tip": {
+    "zh_cn": "Y 轴高程增量 (方块)",
+    "en_us": "Y axis elevation shift (blocks)"
+  },
+  "gui.wandscape.roadstudio.curve_shift_z": {
+    "zh_cn": "Z 偏移",
+    "en_us": "Z offset"
+  },
+  "gui.wandscape.roadstudio.curve_shift_z_tip": {
+    "zh_cn": "Z 轴平移增量 (方块)",
+    "en_us": "Z axis shift (blocks)"
+  },
+  "gui.wandscape.roadstudio.curve_sym": {
+    "zh_cn": "[对称]",
+    "en_us": "[Symmetric]"
+  },
+  "gui.wandscape.roadstudio.curve_sym_lock": {
+    "zh_cn": "对称切线手柄锁定",
+    "en_us": "Symmetric Tangent Handles Lock"
+  },
+  "gui.wandscape.roadstudio.curve_sym_lock_tip": {
+    "zh_cn": "保持前后切线控制手柄对称镜像联动，确保平滑过渡。",
+    "en_us": "Keeps the front/back tangent handles mirrored for a smooth transition."
+  },
+  "gui.wandscape.roadstudio.curve_sym_tag_free": {
+    "zh_cn": "[自由]",
+    "en_us": "[Free]"
+  },
+  "gui.wandscape.roadstudio.curve_sym_tag_locked": {
+    "zh_cn": "[对称]",
+    "en_us": "[Sym]"
+  },
+  "gui.wandscape.roadstudio.curve_target_label": {
+    "zh_cn": "调整句柄目标:",
+    "en_us": "Adjust handle target:"
+  },
+  "gui.wandscape.roadstudio.destroy_area": {
+    "zh_cn": "平整面积: %d 平方方块",
+    "en_us": "Flatten area: %d sq blocks"
+  },
+  "gui.wandscape.roadstudio.destroy_area_header": {
+    "zh_cn": "平整区域边界",
+    "en_us": "Flatten Area Boundary"
+  },
+  "gui.wandscape.roadstudio.destroy_baseline_height": {
+    "zh_cn": "基准平面高度 (Y)",
+    "en_us": "Baseline Plane Height (Y)"
+  },
+  "gui.wandscape.roadstudio.destroy_break_count": {
+    "zh_cn": "预计削平挖除: %d 个方块",
+    "en_us": "Est. Blocks Removed: %d"
+  },
+  "gui.wandscape.roadstudio.destroy_capture_feet": {
+    "zh_cn": "捕捉脚下方块为参照",
+    "en_us": "Capture Block Under Feet as Reference"
+  },
+  "gui.wandscape.roadstudio.destroy_end": {
+    "zh_cn": "边界终点 (End)",
+    "en_us": "Boundary End (End)"
+  },
+  "gui.wandscape.roadstudio.destroy_eval_header": {
+    "zh_cn": "平整面积评估",
+    "en_us": "Flatten Area Assessment"
+  },
+  "gui.wandscape.roadstudio.destroy_fill_count": {
+    "zh_cn": "预计垫平填补: %d 个方块 (%s)",
+    "en_us": "Est. Blocks Filled: %d (%s)"
+  },
+  "gui.wandscape.roadstudio.destroy_fill_depressions": {
+    "zh_cn": "垫平洼地 (自动填补低于基准面的凹坑)",
+    "en_us": "Fill Hollows (Fill depressions below reference height)"
+  },
+  "gui.wandscape.roadstudio.destroy_fill_disabled": {
+    "zh_cn": "垫平填补: 已关闭 (纯削平模式)",
+    "en_us": "Hollow Filling: Disabled (Pure Clear Mode)"
+  },
+  "gui.wandscape.roadstudio.destroy_hint": {
+    "zh_cn": "提示: 请选择起点与终点以确定平整区域",
+    "en_us": "Hint: select start and end to define the flatten area"
+  },
+  "gui.wandscape.roadstudio.destroy_no_ref": {
+    "zh_cn": "未捕获参照方块 (在世界中右键点击方块捕获)",
+    "en_us": "No reference block captured (right-click a block in the world to capture)"
+  },
+  "gui.wandscape.roadstudio.destroy_ref_fmt": {
+    "zh_cn": "参照方块: %s",
+    "en_us": "Reference block: %s"
+  },
+  "gui.wandscape.roadstudio.destroy_ref_header": {
+    "zh_cn": "参照基准与平面",
+    "en_us": "Reference Base & Plane"
+  },
+  "gui.wandscape.roadstudio.destroy_size": {
+    "zh_cn": "底面尺寸: %d × %d 方块",
+    "en_us": "Base size: %d × %d blocks"
+  },
+  "gui.wandscape.roadstudio.destroy_start": {
+    "zh_cn": "边界起点 (Start)",
+    "en_us": "Boundary Start (Start)"
+  },
+  "gui.wandscape.roadstudio.destroy_submit": {
+    "zh_cn": "下发地形平整任务",
+    "en_us": "Queue Terrain Flatten Task"
+  },
+  "gui.wandscape.roadstudio.destroy_submit_tip": {
+    "zh_cn": "下发地形铲平/垫平任务给法师 NPC",
+    "en_us": "Queues a terrain flatten/level task for the mage NPC"
+  },
+  "gui.wandscape.roadstudio.end_label": {
+    "zh_cn": "终点坐标 (End)",
+    "en_us": "End Coordinates (End)"
+  },
+  "gui.wandscape.roadstudio.fill_corner1": {
+    "zh_cn": "角点 1 (Start)",
+    "en_us": "Corner 1 (Start)"
+  },
+  "gui.wandscape.roadstudio.fill_corner2": {
+    "zh_cn": "角点 2 (End)",
+    "en_us": "Corner 2 (End)"
+  },
+  "gui.wandscape.roadstudio.fill_corners_header": {
+    "zh_cn": "3D 立方体对角点",
+    "en_us": "3D Cube Opposite Corners"
+  },
+  "gui.wandscape.roadstudio.fill_eval_header": {
+    "zh_cn": "立方体体积评估",
+    "en_us": "Cube Volume Assessment"
+  },
+  "gui.wandscape.roadstudio.fill_hint": {
+    "zh_cn": "提示: 请选择两个对角点（可在世界中右键/左键点击）",
+    "en_us": "Hint: select two opposite corners (right/left-click in the world)"
+  },
+  "gui.wandscape.roadstudio.fill_preset_header": {
+    "zh_cn": "填充方块预设",
+    "en_us": "Fill Block Preset"
+  },
+  "gui.wandscape.roadstudio.fill_size": {
+    "zh_cn": "尺寸: %d (宽) × %d (高) × %d (深)",
+    "en_us": "Size: %d (W) × %d (H) × %d (D)"
+  },
+  "gui.wandscape.roadstudio.fill_submit": {
+    "zh_cn": "下发立方体填充任务",
+    "en_us": "Queue Cube Fill Task"
+  },
+  "gui.wandscape.roadstudio.fill_submit_tip": {
+    "zh_cn": "下发 3D 立方体填充任务给法师 NPC",
+    "en_us": "Queues a 3D cube fill task for the mage NPC"
+  },
+  "gui.wandscape.roadstudio.fill_volume": {
+    "zh_cn": "总体积: %d 个方块",
+    "en_us": "Total volume: %d blocks"
+  },
+  "gui.wandscape.roadstudio.footer": {
+    "zh_cn": " [右键按住] 旋转视角 | [G] 俯瞰 | [H] 指南 | [ESC] 退出",
+    "en_us": " [Hold right-click] Rotate view | [G] Top-down | [H] Guide | [ESC] Exit"
+  },
+  "gui.wandscape.roadstudio.mix_active_hint": {
+    "zh_cn": "生成方式: 按配置比例程序化随机混合",
+    "en_us": "Mode: Procedural weighted random blend"
+  },
+  "gui.wandscape.roadstudio.mix_header": {
+    "zh_cn": "方块混合种类与权重",
+    "en_us": "Block Blend & Weights"
+  },
+  "gui.wandscape.roadstudio.mode_destroy": {
+    "zh_cn": "铲平",
+    "en_us": "Flatten"
+  },
+  "gui.wandscape.roadstudio.mode_fill": {
+    "zh_cn": "填充",
+    "en_us": "Fill"
+  },
+  "gui.wandscape.roadstudio.mode_format": {
+    "zh_cn": "模式: %s  |  视角: %s",
+    "en_us": "Mode: %s  |  View: %s"
+  },
+  "gui.wandscape.roadstudio.mode_replace": {
+    "zh_cn": "替换",
+    "en_us": "Replace"
+  },
+  "gui.wandscape.roadstudio.mode_spline": {
+    "zh_cn": "样条",
+    "en_us": "Spline"
+  },
+  "gui.wandscape.roadstudio.mode_title": {
+    "zh_cn": "模式选择",
+    "en_us": "Mode"
+  },
+  "gui.wandscape.roadstudio.output_estimate": {
+    "zh_cn": "• 本次预计产出: %d 个方块 (NPC 拆除返还)",
+    "en_us": "• Est. Output: %d blocks (NPC salvage return)"
+  },
+  "gui.wandscape.roadstudio.palette.add_common": {
+    "zh_cn": "+ 添加常用建材...",
+    "en_us": "+ Add a common building block..."
+  },
+  "gui.wandscape.roadstudio.palette.add_feet": {
+    "zh_cn": "§a[混合调色板] 已添加脚下方块: %s",
+    "en_us": "§a[Mixed palette] Added the block underfoot: %s"
+  },
+  "gui.wandscape.roadstudio.palette.add_held": {
+    "zh_cn": "§a[混合调色板] 已添加手中方块: %s",
+    "en_us": "§a[Mixed palette] Added the block in your hand: %s"
+  },
+  "gui.wandscape.roadstudio.palette.capture_feet": {
+    "zh_cn": "捕捉脚下方块",
+    "en_us": "Grab block underfoot"
+  },
+  "gui.wandscape.roadstudio.palette.capture_held": {
+    "zh_cn": "捕捉手中方块",
+    "en_us": "Grab held block"
+  },
+  "gui.wandscape.roadstudio.palette.no_block": {
+    "zh_cn": "§c[混合调色板] 主手未持有可放置的方块物品",
+    "en_us": "§c[Mixed palette] Nothing placeable in your main hand"
+  },
+  "gui.wandscape.roadstudio.palette.remove": {
+    "zh_cn": "删除",
+    "en_us": "Remove"
+  },
+  "gui.wandscape.roadstudio.palette_mode_header": {
+    "zh_cn": "方块调色板模式",
+    "en_us": "Block Palette Mode"
+  },
+  "gui.wandscape.roadstudio.palette_mode_preset": {
+    "zh_cn": "固定预设",
+    "en_us": "Fixed Preset"
+  },
+  "gui.wandscape.roadstudio.palette_mode_procedural": {
+    "zh_cn": "程序化混合",
+    "en_us": "Procedural Blend"
+  },
+  "gui.wandscape.roadstudio.pos_capture": {
+    "zh_cn": "捕捉脚下位点",
+    "en_us": "Capture Feet Point"
+  },
+  "gui.wandscape.roadstudio.pos_clear": {
+    "zh_cn": "清除",
+    "en_us": "Clear"
+  },
+  "gui.wandscape.roadstudio.pos_unset": {
+    "zh_cn": "  [未设置点位]",
+    "en_us": "  [No point set]"
+  },
+  "gui.wandscape.roadstudio.replace_dist": {
+    "zh_cn": "直线距离: %.1f 方块",
+    "en_us": "Straight-line distance: %.1f blocks"
+  },
+  "gui.wandscape.roadstudio.replace_eval_header": {
+    "zh_cn": "铺设数据评估",
+    "en_us": "Placement Data Assessment"
+  },
+  "gui.wandscape.roadstudio.replace_hint": {
+    "zh_cn": "提示: 请选择起点与终点（可在世界中右键/左键点击）",
+    "en_us": "Hint: select start and end (right/left-click in the world)"
+  },
+  "gui.wandscape.roadstudio.replace_points_header": {
+    "zh_cn": "铺设路线起终点",
+    "en_us": "Placement Start & End"
+  },
+  "gui.wandscape.roadstudio.replace_preset_header": {
+    "zh_cn": "铺设方块预设",
+    "en_us": "Road Block Preset"
+  },
+  "gui.wandscape.roadstudio.replace_span": {
+    "zh_cn": "覆盖跨度: %d × %d 方块范围",
+    "en_us": "Coverage span: %d × %d block range"
+  },
+  "gui.wandscape.roadstudio.replace_submit": {
+    "zh_cn": "下发直线铺设任务",
+    "en_us": "Queue Straight Road Task"
+  },
+  "gui.wandscape.roadstudio.replace_submit_tip": {
+    "zh_cn": "下发直线地表道路替换任务给法师 NPC",
+    "en_us": "Queues a straight road surface-replace task for the mage NPC"
+  },
+  "gui.wandscape.roadstudio.start_label": {
+    "zh_cn": "起点坐标 (Start)",
+    "en_us": "Start Coordinates (Start)"
+  },
+  "gui.wandscape.roadstudio.tab_array": {
+    "zh_cn": "阵列生成",
+    "en_us": "Array Generate"
+  },
+  "gui.wandscape.roadstudio.tab_curve": {
+    "zh_cn": "曲线编辑",
+    "en_us": "Curve Edit"
+  },
+  "gui.wandscape.roadstudio.tab_templates": {
+    "zh_cn": "模板与工具",
+    "en_us": "Templates & Tools"
+  },
+  "gui.wandscape.roadstudio.task_submitted_fill": {
+    "zh_cn": "[填充] §a填充任务已下发",
+    "en_us": "[Fill] §aFill task submitted"
+  },
+  "gui.wandscape.roadstudio.task_submitted_flatten": {
+    "zh_cn": "[平整] §a地形平整任务已下发",
+    "en_us": "[Destroy/Fill] §aTerrain flatten task submitted"
+  },
+  "gui.wandscape.roadstudio.task_submitted_road": {
+    "zh_cn": "[道路] §a铺设任务已下发",
+    "en_us": "[Road] §aRoad task submitted"
+  },
+  "gui.wandscape.roadstudio.tool_destroy": {
+    "zh_cn": "铲平垫平",
+    "en_us": "Flatten"
+  },
+  "gui.wandscape.roadstudio.tool_fill": {
+    "zh_cn": "立方体填充",
+    "en_us": "Cube Fill"
+  },
+  "gui.wandscape.roadstudio.tool_replace": {
+    "zh_cn": "直线替换",
+    "en_us": "Straight Replace"
+  },
+  "gui.wandscape.roadstudio.tool_spline": {
+    "zh_cn": "样条曲线",
+    "en_us": "Spline"
+  },
+  "gui.wandscape.roadstudio.tpl_clear": {
+    "zh_cn": "清空画布",
+    "en_us": "Clear Canvas"
+  },
+  "gui.wandscape.roadstudio.tpl_clear_tip": {
+    "zh_cn": "清空当前画布上的所有控制节点。",
+    "en_us": "Clears all control nodes on the current canvas."
+  },
+  "gui.wandscape.roadstudio.tpl_close": {
+    "zh_cn": "关闭 Studio",
+    "en_us": "Close Studio"
+  },
+  "gui.wandscape.roadstudio.tpl_close_tip": {
+    "zh_cn": "退出道路制作工坊 (快捷键 ESC)。",
+    "en_us": "Exits the Road Studio (ESC)."
+  },
+  "gui.wandscape.roadstudio.tpl_enter_topdown": {
+    "zh_cn": "切换 2D 俯瞰视角 (G)",
+    "en_us": "Switch to 2D Top-down (G)"
+  },
+  "gui.wandscape.roadstudio.tpl_exit_topdown": {
+    "zh_cn": "退出 2D 俯瞰视角 (G)",
+    "en_us": "Exit 2D Top-down (G)"
+  },
+  "gui.wandscape.roadstudio.tpl_header": {
+    "zh_cn": "模板文件管理",
+    "en_us": "Template File Management"
+  },
+  "gui.wandscape.roadstudio.tpl_help": {
+    "zh_cn": "打开操作指南 (H)",
+    "en_us": "Open Manual (H)"
+  },
+  "gui.wandscape.roadstudio.tpl_help_tip": {
+    "zh_cn": "打开道路制作与 Spline 曲线操作说明文档 (快捷键 H)",
+    "en_us": "Opens the road-building & spline curve manual (H)."
+  },
+  "gui.wandscape.roadstudio.tpl_load": {
+    "zh_cn": "读取 JSON 模板",
+    "en_us": "Load JSON Template"
+  },
+  "gui.wandscape.roadstudio.tpl_load_tip": {
+    "zh_cn": "从 config/wandscape/splines/ 中读取曲线模板并放置在当前玩家位置。",
+    "en_us": "Loads a curve template from config/wandscape/splines/ and places it at the player's position."
+  },
+  "gui.wandscape.roadstudio.tpl_name_hint": {
+    "zh_cn": "输入模板名称 (例如: main_road)",
+    "en_us": "Enter template name (e.g. main_road)"
+  },
+  "gui.wandscape.roadstudio.tpl_save": {
+    "zh_cn": "保存 JSON 模板",
+    "en_us": "Save JSON Template"
+  },
+  "gui.wandscape.roadstudio.tpl_save_tip": {
+    "zh_cn": "将当前绘制好的曲线节点导出保存至 config/wandscape/splines/",
+    "en_us": "Exports the current curve nodes to config/wandscape/splines/"
+  },
+  "gui.wandscape.roadstudio.tpl_saved": {
+    "zh_cn": "§a已保存到 config/wandscape/splines/native_export.json",
+    "en_us": "§aSaved to config/wandscape/splines/native_export.json"
+  },
+  "gui.wandscape.roadstudio.tpl_topdown_tip": {
+    "zh_cn": "在 2D 鸟瞰视角与 3D 自由视角间切换 (快捷键 G)",
+    "en_us": "Switches between 2D top-down and 3D free view (G)"
+  },
+  "gui.wandscape.roadstudio.tpl_view_header": {
+    "zh_cn": "视图与快捷工具",
+    "en_us": "View & Shortcuts"
+  },
+  "gui.wandscape.roadstudio.view_free": {
+    "zh_cn": "3D 自由",
+    "en_us": "3D Free"
+  },
+  "gui.wandscape.roadstudio.view_topdown": {
+    "zh_cn": "2D 俯瞰",
+    "en_us": "2D Top-down"
+  },
+  "gui.wandscape.roadstudio.window": {
+    "zh_cn": "道路制作工坊",
+    "en_us": "Road Studio"
+  }
+}

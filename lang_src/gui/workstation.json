@@ -1,0 +1,14 @@
+{
+  "gui.wandscape.workstation.decompose": {
+    "zh_cn": "分解",
+    "en_us": "Decompose"
+  },
+  "gui.wandscape.workstation.synthesize": {
+    "zh_cn": "合成",
+    "en_us": "Synthesize"
+  },
+  "gui.wandscape.workstation.title": {
+    "zh_cn": "工作站",
+    "en_us": "Workstation"
+  }
+}

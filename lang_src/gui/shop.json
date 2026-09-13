@@ -1,0 +1,10 @@
+{
+  "gui.wandscape.shop.no_goods": {
+    "zh_cn": "未配置货物",
+    "en_us": "No goods configured."
+  },
+  "gui.wandscape.shop.title": {
+    "zh_cn": "商店",
+    "en_us": "Shop"
+  }
+}

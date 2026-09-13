@@ -1,0 +1,574 @@
+{
+  "message.wandscape.altar.already_casting": {
+    "zh_cn": "[魔法小镇] 该祭坛正在施法中",
+    "en_us": "[Wandscape] This altar is already casting"
+  },
+  "message.wandscape.altar.build_system_not_ready": {
+    "zh_cn": "[魔法小镇] 建筑系统未就绪",
+    "en_us": "[Wandscape] Building system is not ready"
+  },
+  "message.wandscape.altar.cast_scheduled": {
+    "zh_cn": "[魔法小镇] 已安排祭坛施法：%s",
+    "en_us": "[Wandscape] Altar cast scheduled: %s"
+  },
+  "message.wandscape.altar.no_adequate_mage": {
+    "zh_cn": "[魔法小镇] 没有魔力足够（≥%d）的法师 NPC",
+    "en_us": "[Wandscape] No mage with enough mana (≥%d)"
+  },
+  "message.wandscape.altar.no_revive_record": {
+    "zh_cn": "[魔法小镇] 该小镇没有可复活的死亡记录",
+    "en_us": "[Wandscape] This town has no death record to revive"
+  },
+  "message.wandscape.altar.not_altar_only": {
+    "zh_cn": "[魔法小镇] 该魔法不可在祭坛施放",
+    "en_us": "[Wandscape] This spell cannot be cast at the altar"
+  },
+  "message.wandscape.altar.not_found": {
+    "zh_cn": "[魔法小镇] 祭坛不存在或未完工",
+    "en_us": "[Wandscape] Altar not found or not finished"
+  },
+  "message.wandscape.altar.on_cooldown": {
+    "zh_cn": "[魔法小镇] 祭坛冷却中（剩余 %.1f 秒）",
+    "en_us": "[Wandscape] Altar cooling down (%.1f s remaining)"
+  },
+  "message.wandscape.altar.task_system_not_ready": {
+    "zh_cn": "[魔法小镇] 任务系统未就绪",
+    "en_us": "[Wandscape] Task system is not ready"
+  },
+  "message.wandscape.building.cancel_failed": {
+    "zh_cn": "§c[建筑] 无法撤销「%s」的建造",
+    "en_us": "§c[Building] Cannot cancel construction of '%s'"
+  },
+  "message.wandscape.building.cancelled": {
+    "zh_cn": "§e[建筑] 已撤销「%s」的建造",
+    "en_us": "§e[Building] Cancelled construction of '%s'"
+  },
+  "message.wandscape.building.demolishing": {
+    "zh_cn": "§c[建筑] 正在拆除「%s」... 已下发拆除任务",
+    "en_us": "§c[Building] Demolishing '%s'... task enqueued"
+  },
+  "message.wandscape.building.no_node_config": {
+    "zh_cn": "[魔法小镇] %s — 缺少 node_config",
+    "en_us": "[Wandscape] %s — no node_config"
+  },
+  "message.wandscape.building.repair_failed": {
+    "zh_cn": "§e[建筑]「%s」当前无需维修",
+    "en_us": "§e[Building] '%s' does not need repair"
+  },
+  "message.wandscape.building.repairing": {
+    "zh_cn": "§a[建筑] 正在维修「%s」... 已下发修复任务",
+    "en_us": "§a[Building] Repairing '%s'... repair task enqueued"
+  },
+  "message.wandscape.colony.attached": {
+    "zh_cn": "[魔法小镇] 市政厅已关联至现有小镇。",
+    "en_us": "[Wandscape] Town hall linked to the existing town."
+  },
+  "message.wandscape.colony.create_failed": {
+    "zh_cn": "[魔法小镇] 创建小镇失败。",
+    "en_us": "[Wandscape] Failed to create town."
+  },
+  "message.wandscape.command.colony_already_owned": {
+    "zh_cn": "[魔法小镇] 失败：你已拥有小镇，不能创建第二个。",
+    "en_us": "[Wandscape] You already own a town; you cannot create a second one."
+  },
+  "message.wandscape.command.colony_destroyed": {
+    "zh_cn": "[魔法小镇] 成功销毁小镇 %s",
+    "en_us": "[Wandscape] Successfully destroyed town %1$s"
+  },
+  "message.wandscape.command.colony_none_found": {
+    "zh_cn": "[魔法小镇] 你当前没有所属的小镇，附近 256 格内也没有发现小镇。",
+    "en_us": "[Wandscape] You have no town of your own, and none was found within 256 blocks."
+  },
+  "message.wandscape.command.element_unknown": {
+    "zh_cn": "[魔法小镇] 未知元素：%s（可选：earth/wood/water/fire/metal/wind/dark）",
+    "en_us": "[Wandscape] Unknown element: %s (choices: earth/wood/water/fire/metal/wind/dark)"
+  },
+  "message.wandscape.command.guide_players_only": {
+    "zh_cn": "[魔法小镇] 该指令只能由玩家在游戏内执行",
+    "en_us": "[Wandscape] This command can only be run by a player in-game"
+  },
+  "message.wandscape.command.guidebook_opened": {
+    "zh_cn": "[魔法小镇] 已成功打开 Markdown 指南书测试视窗",
+    "en_us": "[Wandscape] Markdown guidebook test screen opened"
+  },
+  "message.wandscape.command.guidebook_players_only": {
+    "zh_cn": "[魔法小镇] 该指令只能由玩家在游戏内执行",
+    "en_us": "[Wandscape] This command can only be run by a player in-game"
+  },
+  "message.wandscape.command.magic_cast_failed": {
+    "zh_cn": "[魔法小镇] 施加魔法失败: %s",
+    "en_us": "[Wandscape] Failed to cast spell: %1$s"
+  },
+  "message.wandscape.command.magic_cast_ok": {
+    "zh_cn": "[魔法小镇] 已对玩家成功施加魔法: %s",
+    "en_us": "[Wandscape] Spell successfully cast on player: %1$s"
+  },
+  "message.wandscape.command.magic_not_found": {
+    "zh_cn": "[魔法小镇] 未找到魔法: %s",
+    "en_us": "[Wandscape] Spell not found: %1$s"
+  },
+  "message.wandscape.command.magic_players_only": {
+    "zh_cn": "[魔法小镇] 仅玩家可执行该魔法测试命令",
+    "en_us": "[Wandscape] Only a player can run this spell test command"
+  },
+  "message.wandscape.command.npc_list_header": {
+    "zh_cn": "[魔法小镇] 小镇 %s 法师 (%s，共 %d 名)：",
+    "en_us": "[Wandscape] Colony %s mages (%s, %d total):"
+  },
+  "message.wandscape.command.tavern_list_failed": {
+    "zh_cn": "[魔法小镇] 获取酒馆简历失败: %s",
+    "en_us": "[Wandscape] Failed to fetch tavern resumes: %1$s"
+  },
+  "message.wandscape.command.tavern_no_colony": {
+    "zh_cn": "[魔法小镇] 未检测到小镇",
+    "en_us": "[Wandscape] No town detected"
+  },
+  "message.wandscape.command.tavern_no_colony_detailed": {
+    "zh_cn": "[魔法小镇] 未检测到小镇，请在小镇范围内使用或先创建小镇",
+    "en_us": "[Wandscape] No town detected — run this inside a town or create one first"
+  },
+  "message.wandscape.command.tavern_no_resumes": {
+    "zh_cn": "[魔法小镇] 小镇 %s 当前无待招聘法师简历",
+    "en_us": "[Tavern] Town %1$s currently has no mage resumes for hire"
+  },
+  "message.wandscape.command.tavern_players_only": {
+    "zh_cn": "[魔法小镇] 仅玩家可招募法师",
+    "en_us": "[Wandscape] Only players can recruit mages"
+  },
+  "message.wandscape.command.tavern_recruit_failed": {
+    "zh_cn": "[魔法小镇] 招募失败：元素不足（首次免费，之后每种元素 %d）或系统未就绪",
+    "en_us": "[Wandscape] Recruit failed: insufficient elements (first free, then %d of every element) or system unavailable"
+  },
+  "message.wandscape.command.tavern_recruited": {
+    "zh_cn": "[魔法小镇] 已招募法师（%s），小镇 %s",
+    "en_us": "[Wandscape] Recruited mage (%s) to colony %s"
+  },
+  "message.wandscape.command.tavern_resume_added": {
+    "zh_cn": "[魔法小镇] 已向小镇 %s 酒馆添加法师简历：%s (Lv.%s)\n  属性: 生命 %s, 魔力 %s, 强度 %s, 工速 %s, 施速 %s, 护甲 %s\n  可直接前往酒馆打开「法师简历」标签页招聘",
+    "en_us": "[Tavern] Added mage resume to town %1$s: %2$s (Lv.%3$s)\n  Stats: HP %4$s, Mana %5$s, Power %6$s, Work %7$s, Cast %8$s, Armor %9$s\n  Visit the Tavern's Mage Resumes tab to hire"
+  },
+  "message.wandscape.command.tavern_resume_header": {
+    "zh_cn": "=== 酒馆法师简历 (%s 份) ===\n",
+    "en_us": "=== Tavern Mage Resumes (%1$s) ===\n"
+  },
+  "message.wandscape.command.tavern_resume_line": {
+    "zh_cn": "[%s] %s (Lv.%s) - 强度:%s 工速:%s 施速:%s 护甲:%s 生命:%s\n",
+    "en_us": "[%1$s] %2$s (Lv.%3$s) - Power:%4$s Work:%5$s Cast:%6$s Armor:%7$s HP:%8$s\n"
+  },
+  "message.wandscape.command.tavern_unavailable": {
+    "zh_cn": "[魔法小镇] 酒馆系统不可用: %s",
+    "en_us": "[Wandscape] Tavern system unavailable: %1$s"
+  },
+  "message.wandscape.command.tourist_list_line": {
+    "zh_cn": "  %s | %s | %s | Lv.%s | 精力%s | C%s%% M%s%% W%s%%",
+    "en_us": "  %1$s | %2$s | %3$s | Lv.%4$s | Energy%5$s | C%6$s%% M%7$s%% W%8$s%%"
+  },
+  "message.wandscape.command.tourist_role_citizen": {
+    "zh_cn": "市民",
+    "en_us": "Citizen"
+  },
+  "message.wandscape.command.tourist_role_mage": {
+    "zh_cn": "法师",
+    "en_us": "Mage"
+  },
+  "message.wandscape.command.tourist_spawn_colony": {
+    "zh_cn": "小镇 %s",
+    "en_us": "town %1$s"
+  },
+  "message.wandscape.command.tourist_spawn_no_colony": {
+    "zh_cn": "无绑定小镇",
+    "en_us": "no town"
+  },
+  "message.wandscape.command.tourist_spawn_result": {
+    "zh_cn": "[魔法小镇] 已生成三值全满法师：%s (Lv.%s, %s)\n  满意度三值: 舒适 100%% | 魔法 100%% | 奇观 100%%\n  法师属性: 生命 %s, 魔力 %s, 强度 %s, 工速 %s, 施速 %s, 护甲 %s\n  酒馆简历: %s",
+    "en_us": "[Tourist] Spawned full-satisfaction mage: %1$s (Lv.%2$s, %3$s)\n  Satisfaction: Comfort 100%% | Magic 100%% | Wonder 100%%\n  Mage stats: HP %4$s, Mana %5$s, Power %6$s, Work %7$s, Cast %8$s, Armor %9$s\n  Tavern resume: %10$s"
+  },
+  "message.wandscape.command.tourist_spawn_resume_linked": {
+    "zh_cn": "已录入酒馆「法师简历」列表，可前往酒馆查看与招聘",
+    "en_us": "Resume recorded in the Tavern's Mage Resumes tab — visit the tavern to view and hire"
+  },
+  "message.wandscape.command.tourist_spawn_resume_none": {
+    "zh_cn": "未录入（未找到小镇）",
+    "en_us": "Not recorded (no town found)"
+  },
+  "message.wandscape.compass.no_colony": {
+    "zh_cn": "你没有创建殖民地，无法使用指南针",
+    "en_us": "You have no colony — the compass cannot be used"
+  },
+  "message.wandscape.compass.no_spot": {
+    "zh_cn": "市政厅附近没有安全的落脚点",
+    "en_us": "No safe spot near the town hall"
+  },
+  "message.wandscape.compass.no_town_hall": {
+    "zh_cn": "当前没有可用的市政厅",
+    "en_us": "No town hall is currently available"
+  },
+  "message.wandscape.compass.tp": {
+    "zh_cn": "已传送到市政厅 (%s, %s, %s)",
+    "en_us": "Teleported to the town hall (%s, %s, %s)"
+  },
+  "message.wandscape.curios.no_slots": {
+    "zh_cn": "[魔法小镇] 该法师没有可用的饰品栏——未检测到 Curios 或其未给法师分配槽位。",
+    "en_us": "[Wandscape] This mage has no trinket slots — Curios not detected or no slots assigned."
+  },
+  "message.wandscape.fill.disabled_block": {
+    "zh_cn": "§c填充包含禁用方块：%s",
+    "en_us": "§cFill contains a disabled block: %s"
+  },
+  "message.wandscape.mage_hut.already_housed": {
+    "zh_cn": "[魔法小镇] 那位法师已经住在别的小屋了。",
+    "en_us": "[Wandscape] That mage already lives in another hut."
+  },
+  "message.wandscape.mage_hut.assigned": {
+    "zh_cn": "[魔法小镇] %s 已搬入！",
+    "en_us": "[Wandscape] %s moved in!"
+  },
+  "message.wandscape.mage_hut.dead": {
+    "zh_cn": "[魔法小镇] 法师已死亡，无法操作。",
+    "en_us": "[Wandscape] The mage is dead and cannot act."
+  },
+  "message.wandscape.mage_hut.empty": {
+    "zh_cn": "[魔法小镇] 小屋还没有法师。",
+    "en_us": "[Wandscape] The hut has no mage yet."
+  },
+  "message.wandscape.mage_hut.insufficient_elements": {
+    "zh_cn": "[魔法小镇] 元素不足：%s。",
+    "en_us": "[Wandscape] Insufficient elements: %s."
+  },
+  "message.wandscape.mage_hut.leveled": {
+    "zh_cn": "[魔法小镇] %s 现在是 Lv.%d！",
+    "en_us": "[Wandscape] %s is now Lv.%d!"
+  },
+  "message.wandscape.mage_hut.mage_not_found": {
+    "zh_cn": "[魔法小镇] 找不到那位法师。",
+    "en_us": "[Wandscape] That mage was not found."
+  },
+  "message.wandscape.mage_hut.max_base": {
+    "zh_cn": "[魔法小镇] %s 已经达到基础上限。",
+    "en_us": "[Wandscape] %s is already at its base cap."
+  },
+  "message.wandscape.mage_hut.max_level": {
+    "zh_cn": "[魔法小镇] 法师已达小镇等级上限（%d）。",
+    "en_us": "[Wandscape] The mage is already at the colony level (%d)."
+  },
+  "message.wandscape.mage_hut.no_bank": {
+    "zh_cn": "[魔法小镇] 仓库不可用。",
+    "en_us": "[Wandscape] The warehouse is unavailable."
+  },
+  "message.wandscape.mage_hut.no_colony": {
+    "zh_cn": "[魔法小镇] 这座法师小屋尚未归属任何小镇。",
+    "en_us": "[Wandscape] This mage hut is not assigned to any colony."
+  },
+  "message.wandscape.mage_hut.not_colony_mage": {
+    "zh_cn": "[魔法小镇] 那位法师不属于这个小镇。",
+    "en_us": "[Wandscape] That mage is not part of this colony."
+  },
+  "message.wandscape.mage_hut.occupied": {
+    "zh_cn": "[魔法小镇] 这间法师小屋已经有人入住。",
+    "en_us": "[Wandscape] This mage hut is already occupied."
+  },
+  "message.wandscape.mage_hut.resting": {
+    "zh_cn": "[魔法小镇] 正在休息——法师将回到小屋休息。",
+    "en_us": "[Wandscape] Now resting — the mage returns to the hut."
+  },
+  "message.wandscape.mage_hut.trained": {
+    "zh_cn": "[魔法小镇] %s 已训练 +%s。",
+    "en_us": "[Wandscape] %s trained +%s."
+  },
+  "message.wandscape.npc.dismissed": {
+    "zh_cn": "[魔法小镇] 已解雇 %s",
+    "en_us": "[Wandscape] Dismissed %s"
+  },
+  "message.wandscape.npc.inventory_full_drop": {
+    "zh_cn": "§c（背包已满，物品已掉落于地面）",
+    "en_us": "§c(Inventory full, item dropped on the ground)"
+  },
+  "message.wandscape.overview.cannot_pin": {
+    "zh_cn": "无法固定 — 准星没有对准方块",
+    "en_us": "Cannot pin — no block under the crosshair"
+  },
+  "message.wandscape.panel.overworld_only": {
+    "zh_cn": "暂时不支持在主世界以外世界打开管理面板",
+    "en_us": "The management panel can only be opened in the Overworld"
+  },
+  "message.wandscape.projection.api_unavailable": {
+    "zh_cn": "[Projection] §c建筑系统不可用",
+    "en_us": "[Projection] §cBuilding API unavailable"
+  },
+  "message.wandscape.projection.cannot_pin": {
+    "zh_cn": "无法固定 — 准星没有对准方块",
+    "en_us": "Cannot pin — no block under the crosshair"
+  },
+  "message.wandscape.projection.enter_failed": {
+    "zh_cn": "[Projection] %s",
+    "en_us": "[Projection] %s"
+  },
+  "message.wandscape.projection.no_target": {
+    "zh_cn": "没有可施工的位置 — 先对准地面",
+    "en_us": "No placeable position — aim at the ground first"
+  },
+  "message.wandscape.projection.place_failed": {
+    "zh_cn": "[Projection] §c%s",
+    "en_us": "[Projection] §c%s"
+  },
+  "message.wandscape.projection.unknown_type": {
+    "zh_cn": "[Projection] §c未知建筑类型：%s",
+    "en_us": "[Projection] §cUnknown building type: %s"
+  },
+  "message.wandscape.ring.empty": {
+    "zh_cn": "戒指内没有已存法师",
+    "en_us": "The ring holds no stored mage"
+  },
+  "message.wandscape.ring.inaccessible": {
+    "zh_cn": "已存法师超出本戒指档位可存取范围（本档位只能存取前 %s 个法师）",
+    "en_us": "Stored mages are beyond this ring tier (this tier can access the first %s mages)"
+  },
+  "message.wandscape.ring.no_colony": {
+    "zh_cn": "你没有创建殖民地，无法使用盟誓戒指",
+    "en_us": "You have no colony — the oath ring cannot be used"
+  },
+  "message.wandscape.ring.no_spot": {
+    "zh_cn": "附近没有可放出的安全位置",
+    "en_us": "No safe place nearby to release the mage"
+  },
+  "message.wandscape.ring.other_colony": {
+    "zh_cn": "只能存入属于你自己殖民地的法师",
+    "en_us": "Only mages of your own colony can be stored"
+  },
+  "message.wandscape.ring.release.success": {
+    "zh_cn": "已放出法师 %s",
+    "en_us": "Released mage %s"
+  },
+  "message.wandscape.ring.release_failed": {
+    "zh_cn": "无法放出法师，请重试",
+    "en_us": "Could not release the mage, please try again"
+  },
+  "message.wandscape.ring.slots_full": {
+    "zh_cn": "戒指内法师位已满（本档位只能存取前 %s 个法师）",
+    "en_us": "The ring is full (this tier can access the first %s mages)"
+  },
+  "message.wandscape.ring.store.success": {
+    "zh_cn": "已存入法师 %s",
+    "en_us": "Stored mage %s"
+  },
+  "message.wandscape.ring.store_failed": {
+    "zh_cn": "无法将法师存入戒指",
+    "en_us": "Could not store the mage into the ring"
+  },
+  "message.wandscape.road.disabled_block": {
+    "zh_cn": "§c道路包含禁用方块：%s",
+    "en_us": "§cRoad contains a disabled block: %s"
+  },
+  "message.wandscape.road.place_failed_no_colony": {
+    "zh_cn": "§c[魔法小镇] 请先创建小镇（先放置市政厅并命名）",
+    "en_us": "§c[Wandscape] Please establish a colony first (place Town Hall and name it)"
+  },
+  "message.wandscape.road.withdraw.failed": {
+    "zh_cn": "§c无法撤回该道路",
+    "en_us": "§cCannot withdraw road"
+  },
+  "message.wandscape.road.withdraw.success": {
+    "zh_cn": "§a已撤回道路",
+    "en_us": "§aRoad withdrawn"
+  },
+  "message.wandscape.scanner.export_building_fail": {
+    "zh_cn": "§c导出失败：%s",
+    "en_us": "§cFailed to export: %s"
+  },
+  "message.wandscape.scanner.export_building_ok": {
+    "zh_cn": "§a已导出建筑 '%s' 到 §e%s§a — 可立即建造，/reload 后依然有效",
+    "en_us": "§aExported building '%s' to §e%s§a — ready to build now, persists after /reload"
+  },
+  "message.wandscape.scanner.export_road_fail": {
+    "zh_cn": "§c导出道路预设失败：%s",
+    "en_us": "§cFailed to export road preset: %s"
+  },
+  "message.wandscape.scanner.export_road_ok": {
+    "zh_cn": "§a已导出道路预设 '%s' 到 §e%s§a — 可立即使用，/reload 后依然有效",
+    "en_us": "§aExported road preset '%s' to §e%s§a — ready to use now, persists after /reload"
+  },
+  "message.wandscape.scanner.no_boundary": {
+    "zh_cn": "§c未定义边界",
+    "en_us": "§cNo boundary defined"
+  },
+  "message.wandscape.scanner.no_road_blocks": {
+    "zh_cn": "§c边界内未找到道路方块",
+    "en_us": "§cNo road blocks found inside boundary box"
+  },
+  "message.wandscape.scanner.no_scanner": {
+    "zh_cn": "§c未找到扫描器方块 @ %s",
+    "en_us": "§cNo scanner found at %s"
+  },
+  "message.wandscape.scanner.set_building_id": {
+    "zh_cn": "§c导出前请先设置建筑 ID",
+    "en_us": "§cSet a building ID before exporting"
+  },
+  "message.wandscape.scanner.value_block_count": {
+    "zh_cn": "  §8(%s 方块)",
+    "en_us": "  §8(%s blocks)"
+  },
+  "message.wandscape.scanner.value_grand_total": {
+    "zh_cn": "  §6总价值 §e%s",
+    "en_us": "  §6Grand total §e%s"
+  },
+  "message.wandscape.scanner.value_no_blocks": {
+    "zh_cn": "§c区域内无有效方块（已排除扫描器与交互位）",
+    "en_us": "§cNo valid blocks in the area (scanner & interact spots excluded)"
+  },
+  "message.wandscape.scanner.value_no_boundary": {
+    "zh_cn": "§c未定义 3D 边界",
+    "en_us": "§cNo 3D boundary defined"
+  },
+  "message.wandscape.scanner.value_no_mapping": {
+    "zh_cn": "§c区域内方块均无元素映射，价值为 0",
+    "en_us": "§cNo block has an element mapping — value is 0"
+  },
+  "message.wandscape.scanner.value_no_scanner": {
+    "zh_cn": "§c未找到扫描器方块 @ %s",
+    "en_us": "§cNo scanner found at %s"
+  },
+  "message.wandscape.scanner.value_total_header": {
+    "zh_cn": "§a区域元素价值: ",
+    "en_us": "§aArea element value: "
+  },
+  "message.wandscape.scepter.follow_off": {
+    "zh_cn": "法师 %s 已取消跟随",
+    "en_us": "Mage %s is no longer following"
+  },
+  "message.wandscape.scepter.follow_on": {
+    "zh_cn": "法师 %s 已开始跟随你",
+    "en_us": "Mage %s is now following you"
+  },
+  "message.wandscape.scepter.hostile_ally": {
+    "zh_cn": "生物 %s 是你的盟友，不能标记为敌对",
+    "en_us": "Creature %s is your ally and cannot be marked hostile"
+  },
+  "message.wandscape.scepter.hostile_off": {
+    "zh_cn": "生物 %s 的强制仇恨已解除",
+    "en_us": "Forced hate on creature %s is cleared"
+  },
+  "message.wandscape.scepter.hostile_on": {
+    "zh_cn": "生物 %s 被标记为强制仇恨目标",
+    "en_us": "Creature %s is marked as a forced hate target"
+  },
+  "message.wandscape.scepter.hostile_transfer": {
+    "zh_cn": "强制仇恨已转移到生物 %s",
+    "en_us": "Forced hate transferred to creature %s"
+  },
+  "message.wandscape.scepter.no_colony": {
+    "zh_cn": "你没有创建殖民地，无法使用权杖",
+    "en_us": "You have no colony — the wand cannot be used"
+  },
+  "message.wandscape.scepter.other_colony": {
+    "zh_cn": "只能对你自己殖民地的法师使用权杖",
+    "en_us": "Only mages of your own colony can be commanded"
+  },
+  "message.wandscape.scepter.peace_off": {
+    "zh_cn": "法师 %s 已取消和平状态",
+    "en_us": "Mage %s is no longer at peace"
+  },
+  "message.wandscape.scepter.peace_on": {
+    "zh_cn": "法师 %s 已进入和平状态",
+    "en_us": "Mage %s is now at peace"
+  },
+  "message.wandscape.scepter.shelter_off": {
+    "zh_cn": "生物 %s 已解除庇护",
+    "en_us": "Creature %s is no longer sheltered"
+  },
+  "message.wandscape.scepter.shelter_on": {
+    "zh_cn": "生物 %s 已被庇护（法师不再攻击/误伤）",
+    "en_us": "Creature %s is now sheltered (mages won't attack/hurt it)"
+  },
+  "message.wandscape.spline.disabled_block": {
+    "zh_cn": "§c样条道路包含禁用方块：%s",
+    "en_us": "§cSpline road contains a disabled block: %s"
+  },
+  "message.wandscape.tavern.insufficient_elements": {
+    "zh_cn": "[魔法小镇] 元素不足：招募需每种元素 %d（首次招募免费）",
+    "en_us": "[Wandscape] Insufficient elements: recruiting costs %d of every element (first recruit free)."
+  },
+  "message.wandscape.tavern.invalid_selection": {
+    "zh_cn": "[魔法小镇] 无效的法师选择",
+    "en_us": "[Wandscape] Invalid mage selection."
+  },
+  "message.wandscape.tavern.no_colony": {
+    "zh_cn": "[魔法小镇] 该酒馆尚未关联到任何小镇",
+    "en_us": "[Wandscape] This tavern is not assigned to any colony."
+  },
+  "message.wandscape.tavern.recruit_failed": {
+    "zh_cn": "[魔法小镇] 招募 NPC 失败",
+    "en_us": "[Wandscape] Failed to recruit NPC."
+  },
+  "message.wandscape.tavern.recruit_mage_failed": {
+    "zh_cn": "[魔法小镇] 招募法师失败",
+    "en_us": "[Wandscape] Failed to recruit mage."
+  },
+  "message.wandscape.tavern.recruited_direct": {
+    "zh_cn": "[魔法小镇] 法师招募成功！Lv.%d 强度:%.1f 工速:%.1f 施速:%.1f 护甲:%.1f %s",
+    "en_us": "[Wandscape] Mage recruited! Lv.%d Power:%.1f Work:%.1f Cast:%.1f Armor:%.1f %s"
+  },
+  "message.wandscape.tavern.recruited_resume": {
+    "zh_cn": "[魔法小镇] 法师 %s 招募成功！Lv.%d 强度:%.1f 工速:%.1f 施速:%.1f 护甲:%.1f",
+    "en_us": "[Wandscape] Mage %s recruited! Lv.%d Power:%.1f Work:%.1f Cast:%.1f Armor:%.1f"
+  },
+  "message.wandscape.tavern.rejected": {
+    "zh_cn": "[魔法小镇] 已拒绝 %s 的求职简历",
+    "en_us": "[Wandscape] Rejected %s's resume"
+  },
+  "message.wandscape.tavern.system_unavailable": {
+    "zh_cn": "[魔法小镇] 酒馆系统不可用",
+    "en_us": "[Wandscape] Tavern system not available."
+  },
+  "message.wandscape.tourist.inn": {
+    "zh_cn": "旅馆",
+    "en_us": "Inn"
+  },
+  "message.wandscape.tourist.what_atm": {
+    "zh_cn": "取钱",
+    "en_us": "Withdrew cash"
+  },
+  "message.wandscape.tourist.what_hotel_stay": {
+    "zh_cn": "住宿",
+    "en_us": "Stayed overnight"
+  },
+  "message.wandscape.tourist.what_relax": {
+    "zh_cn": "歇脚恢复精力",
+    "en_us": "Rested to restore energy"
+  },
+  "message.wandscape.tourist.what_service": {
+    "zh_cn": "服务",
+    "en_us": "Used a service"
+  },
+  "message.wandscape.tourist.what_shop_empty": {
+    "zh_cn": "进去逛了一圈，什么也没买",
+    "en_us": "Walked in but bought nothing"
+  },
+  "message.wandscape.town.welcome": {
+    "zh_cn": "[魔法小镇] 欢迎！按 V 键打开建筑面板，开始建设你的魔法小镇吧！面板打开后，按 C 键抬起鼠标操作界面，按 H 键打开新手教程。\n本模组尚在早期版本，自带魔法较少，推荐搭配 irons_spellbooks（铁魔法）游玩。",
+    "en_us": "[Wandscape] Welcome! Press V to open the building panel and start building your town. Once the panel is open, press C to release the mouse and H to open the tutorial.\nThis mod is still in its early versions with few built-in spells — playing alongside irons_spellbooks (Iron Spells) is recommended."
+  },
+  "message.wandscape.tutorial.toast": {
+    "zh_cn": "§e[新手引导] §f跟随引导，逐步建设你的魔法小镇！",
+    "en_us": "§e[Newcomer Guide] §fFollow the guide to build your magic town step by step!"
+  },
+  "message.wandscape.unlock.need_level": {
+    "zh_cn": "需要小镇等级 %d (当前: %d)",
+    "en_us": "Need town level %d (current: %d)"
+  },
+  "message.wandscape.unlock.need_townhall": {
+    "zh_cn": "需要先建造市政厅建立小镇",
+    "en_us": "You must first build the Town Hall to create a town"
+  },
+  "message.wandscape.warehouse.capacity_full": {
+    "zh_cn": "仓库容量不足",
+    "en_us": "Warehouse capacity is full"
+  },
+  "message.wandscape.warehouse_terminal.no_colony": {
+    "zh_cn": "你没有创建殖民地，无法打开仓库",
+    "en_us": "You have no colony — the warehouse cannot be opened"
+  },
+  "message.wandscape.warehouse_terminal.not_equipped": {
+    "zh_cn": "未穿戴或持有仓库终端",
+    "en_us": "Warehouse Terminal is not equipped or held"
+  }
+}

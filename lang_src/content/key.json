@@ -1,0 +1,34 @@
+{
+  "key.categories.wandscape": {
+    "zh_cn": "魔法小镇",
+    "en_us": "Wandscape"
+  },
+  "key.wandscape.building_areas": {
+    "zh_cn": "切换建筑区域",
+    "en_us": "Toggle Building Areas"
+  },
+  "key.wandscape.guide": {
+    "zh_cn": "打开指南书",
+    "en_us": "Open Guidebook"
+  },
+  "key.wandscape.guide_fold": {
+    "zh_cn": "折叠/展开新手引导",
+    "en_us": "Fold / Expand Tutorial Guide"
+  },
+  "key.wandscape.panel_hide": {
+    "zh_cn": "隐藏/显示面板",
+    "en_us": "Hide / Show Panel"
+  },
+  "key.wandscape.projection": {
+    "zh_cn": "切换灵魂出窍",
+    "en_us": "Toggle Soul Projection"
+  },
+  "key.wandscape.raise_cursor": {
+    "zh_cn": "抬起光标",
+    "en_us": "Raise Cursor"
+  },
+  "key.wandscape.warehouse_terminal": {
+    "zh_cn": "打开仓库终端",
+    "en_us": "Open Warehouse Terminal"
+  }
+}

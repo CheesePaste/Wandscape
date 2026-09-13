@@ -1,0 +1,90 @@
+{
+  "gui.wandscape.townhall.exp_eq": {
+    "zh_cn": "游客等级 = 魔法小镇等级 → 200 经验",
+    "en_us": "Tourist level = town level → 200 XP"
+  },
+  "gui.wandscape.townhall.exp_gt": {
+    "zh_cn": "游客等级 > 魔法小镇等级 → 500 经验",
+    "en_us": "Tourist level > town level → 500 XP"
+  },
+  "gui.wandscape.townhall.exp_lt": {
+    "zh_cn": "游客等级 < 魔法小镇等级 → 0 经验",
+    "en_us": "Tourist level < town level → 0 XP"
+  },
+  "gui.wandscape.townhall.exp_source": {
+    "zh_cn": "经验来源（游客三条需求全满时）：",
+    "en_us": "Experience source (when a tourist's three bars are full):"
+  },
+  "gui.wandscape.townhall.founder": {
+    "zh_cn": "创建者：%s",
+    "en_us": "Founder: %s"
+  },
+  "gui.wandscape.townhall.hint": {
+    "zh_cn": "点击名称框修改魔法小镇名称，输入完成自动保存",
+    "en_us": "Click the name box to change the town name; it saves automatically when done"
+  },
+  "gui.wandscape.townhall.level": {
+    "zh_cn": "魔法小镇等级 %s",
+    "en_us": "Town Level %s"
+  },
+  "gui.wandscape.townhall.name_hint": {
+    "zh_cn": "魔法小镇名称",
+    "en_us": "Town name"
+  },
+  "gui.wandscape.townhall.naming_style": {
+    "zh_cn": "命名风格",
+    "en_us": "Naming Style"
+  },
+  "gui.wandscape.townhall.revive": {
+    "zh_cn": "复活法师",
+    "en_us": "Revive Wizard"
+  },
+  "gui.wandscape.townhall.revive_cooldown": {
+    "zh_cn": "复活冷却中，还需 %s 秒",
+    "en_us": "Revive on cooldown, %s s remaining"
+  },
+  "gui.wandscape.townhall.revive_cooldown_label": {
+    "zh_cn": "复活 %s",
+    "en_us": "Revive %s"
+  },
+  "gui.wandscape.townhall.revive_failed": {
+    "zh_cn": "复活失败，死亡记录已保留，请稍后重试",
+    "en_us": "Revive failed; the death record is kept, try again shortly"
+  },
+  "gui.wandscape.townhall.revive_no_record": {
+    "zh_cn": "没有待复活的法师",
+    "en_us": "No wizard is waiting to be revived"
+  },
+  "gui.wandscape.townhall.revive_ok": {
+    "zh_cn": "已复活一名法师（虚弱状态），其余阵亡者请由他前往祭坛复活",
+    "en_us": "Revived one wizard (weakened). Send them to the altar to revive the rest."
+  },
+  "gui.wandscape.townhall.revive_still_alive": {
+    "zh_cn": "尚有法师存活，保底复活只在全员阵亡时可用",
+    "en_us": "Wizards are still alive; the fallback revive only works when the colony is wiped out"
+  },
+  "gui.wandscape.townhall.spawn_tourists": {
+    "zh_cn": "生成游客",
+    "en_us": "Tourists"
+  },
+  "gui.wandscape.townhall.style_chinese": {
+    "zh_cn": "中文",
+    "en_us": "Chinese"
+  },
+  "gui.wandscape.townhall.style_english": {
+    "zh_cn": "英文",
+    "en_us": "English"
+  },
+  "gui.wandscape.townhall.style_fantasy": {
+    "zh_cn": "西幻",
+    "en_us": "Fantasy"
+  },
+  "gui.wandscape.townhall.title": {
+    "zh_cn": "市政厅",
+    "en_us": "Town Hall"
+  },
+  "gui.wandscape.townhall.warehouse": {
+    "zh_cn": "仓库存取",
+    "en_us": "Warehouse Access"
+  }
+}

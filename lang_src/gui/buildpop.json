@@ -1,0 +1,46 @@
+{
+  "gui.wandscape.buildpop.aiming": {
+    "zh_cn": "§e[瞄准中]",
+    "en_us": "§e[Aiming]"
+  },
+  "gui.wandscape.buildpop.clear_off": {
+    "zh_cn": "§e清理盒内方块：否",
+    "en_us": "§eClear box: no"
+  },
+  "gui.wandscape.buildpop.clear_on": {
+    "zh_cn": "§a清理盒内方块：是",
+    "en_us": "§aClear box: yes"
+  },
+  "gui.wandscape.buildpop.lock": {
+    "zh_cn": "锁定",
+    "en_us": "Lock"
+  },
+  "gui.wandscape.buildpop.locked": {
+    "zh_cn": "§a[已锁定]",
+    "en_us": "§a[Locked]"
+  },
+  "gui.wandscape.buildpop.position": {
+    "zh_cn": "§7位置: §f%s",
+    "en_us": "§7Position: §f%s"
+  },
+  "gui.wandscape.buildpop.rotation": {
+    "zh_cn": "§7朝向: §e%d°",
+    "en_us": "§7Rotation: §e%d°"
+  },
+  "gui.wandscape.buildpop.status": {
+    "zh_cn": "§7状态: %s",
+    "en_us": "§7Status: %s"
+  },
+  "gui.wandscape.buildpop.submit": {
+    "zh_cn": "提交施工",
+    "en_us": "Submit Build"
+  },
+  "gui.wandscape.buildpop.title": {
+    "zh_cn": "§6§l建筑参数",
+    "en_us": "§6§lBuilding Info"
+  },
+  "gui.wandscape.buildpop.unlock": {
+    "zh_cn": "解锁",
+    "en_us": "Unlock"
+  }
+}

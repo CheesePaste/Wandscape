@@ -1,0 +1,82 @@
+{
+  "magic.wandscape.beam": {
+    "zh_cn": "光束",
+    "en_us": "Beam"
+  },
+  "magic.wandscape.beam.desc": {
+    "zh_cn": "发射一道光束，每 tick 对目标造成正相关于光束宽度的伤害，无视无敌帧。光束不可穿透墙壁。",
+    "en_us": "Fires a beam that damages the target every tick, scaling with the beam's width and ignoring invulnerability frames. The beam cannot pass through walls."
+  },
+  "magic.wandscape.conversion": {
+    "zh_cn": "魅惑",
+    "en_us": "Conversion"
+  },
+  "magic.wandscape.conversion.desc": {
+    "zh_cn": "将最近的三个敌方单位转化为友军，持续一段时间；被魅惑的单位受到伤害后失去该效果。",
+    "en_us": "Converts the three nearest enemies into allies for a while; charmed units lose the effect upon taking damage."
+  },
+  "magic.wandscape.desperation": {
+    "zh_cn": "背水一战",
+    "en_us": "Desperation"
+  },
+  "magic.wandscape.desperation.desc": {
+    "zh_cn": "将护甲降低至原来的 -50%（如 20 护甲值会降低到 -10），根据降低的护甲值提供魔力强化效果，提升魔法伤害。",
+    "en_us": "Reduces armor to -50% of its original value (e.g. 20 armor drops to -10), granting magic enhancement based on the penalty to boost magic damage."
+  },
+  "magic.wandscape.enfeeble_field": {
+    "zh_cn": "虚弱力场",
+    "en_us": "Enfeeble Field"
+  },
+  "magic.wandscape.enfeeble_field.desc": {
+    "zh_cn": "在自身周围展开虚弱力场，使半径 5.8 格内的所有敌人陷入迟缓与虚弱，并削减护甲，持续 15 秒。",
+    "en_us": "Unfolds an enfeeble field, slowing and weakening all enemies within 5.8 blocks and shredding their armor for 15 seconds."
+  },
+  "magic.wandscape.fortification": {
+    "zh_cn": "防御强化",
+    "en_us": "Fortification"
+  },
+  "magic.wandscape.fortification.desc": {
+    "zh_cn": "为自身施加防御强化：护甲 +4、魔力强化 I（魔法伤害 +20%）与迅捷 I，持续 15 秒。",
+    "en_us": "Fortifies the caster: +4 armor, Magic Enhancement I (magic damage +20%) and Speed I for 15 seconds."
+  },
+  "magic.wandscape.heal": {
+    "zh_cn": "治疗",
+    "en_us": "Heal"
+  },
+  "magic.wandscape.heal.desc": {
+    "zh_cn": "持续一段时间，治疗施法者周围一定半径内的友方单位。",
+    "en_us": "Over time, heals friendly units within a radius around the caster."
+  },
+  "magic.wandscape.meteor": {
+    "zh_cn": "陨石",
+    "en_us": "Meteor"
+  },
+  "magic.wandscape.meteor.desc": {
+    "zh_cn": "法阵持续期间逐颗轰下六颗陨石，对落点附近的敌人造成群体伤害。",
+    "en_us": "Calls down six meteors one by one, dealing area damage to enemies near the impact points."
+  },
+  "magic.wandscape.petrification": {
+    "zh_cn": "石化",
+    "en_us": "Petrification"
+  },
+  "magic.wandscape.petrification.desc": {
+    "zh_cn": "给予自身石化效果，受到的伤害降低 2 点。",
+    "en_us": "Grants the caster petrification, reducing damage taken by 2."
+  },
+  "magic.wandscape.revive": {
+    "zh_cn": "复活",
+    "en_us": "Revive"
+  },
+  "magic.wandscape.revive.desc": {
+    "zh_cn": "在祭坛上唤醒一位死去的法师，使其以虚弱之躯重生。",
+    "en_us": "Wakes a fallen mage at the altar, bringing them back in a weakened state."
+  },
+  "magic.wandscape.teleport": {
+    "zh_cn": "传送",
+    "en_us": "Teleport"
+  },
+  "magic.wandscape.teleport.desc": {
+    "zh_cn": "将施法者瞬间传送到目标位置。",
+    "en_us": "Instantly teleports the caster to the target location."
+  }
+}

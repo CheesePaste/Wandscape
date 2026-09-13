@@ -1,0 +1,18 @@
+{
+  "gui.wandscape.construction.coord": {
+    "zh_cn": "坐标",
+    "en_us": "Coordinate"
+  },
+  "gui.wandscape.construction.invalid": {
+    "zh_cn": "坐标无效（Y 需在 -64 ~ 320）",
+    "en_us": "Invalid coordinates (Y must be -64 to 320)"
+  },
+  "gui.wandscape.construction.overlap": {
+    "zh_cn": "该位置与已有建筑方块重叠，不能占用同一格",
+    "en_us": "This position shares a block with an existing building"
+  },
+  "gui.wandscape.construction.title": {
+    "zh_cn": "施工",
+    "en_us": "Construction"
+  }
+}

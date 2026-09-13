@@ -1,0 +1,226 @@
+{
+  "item.wandscape.advanced_magic_compass": {
+    "zh_cn": "高级魔法指南针",
+    "en_us": "Advanced Magic Compass"
+  },
+  "item.wandscape.advanced_magic_compass.desc": {
+    "zh_cn": "指针始终指着本殖民地的市政厅，并且在物品提示里显示市政厅的坐标。",
+    "en_us": "Its needle always points at your colony's town hall, and its tooltip also shows the town hall's coordinates."
+  },
+  "item.wandscape.compass.tooltip.coords": {
+    "zh_cn": "市政厅坐标: %s, %s, %s",
+    "en_us": "Town hall: %s, %s, %s"
+  },
+  "item.wandscape.compass.tooltip.points_to_town_hall": {
+    "zh_cn": "始终指向城镇市政厅的位置",
+    "en_us": "Always points toward your colony's town hall"
+  },
+  "item.wandscape.compass.tooltip.right_click_tp": {
+    "zh_cn": "右键传送到市政厅位置",
+    "en_us": "Right-click to teleport to the town hall"
+  },
+  "item.wandscape.element.tooltip": {
+    "zh_cn": "获得后自动存入所在小镇的仓库元素栏",
+    "en_us": "Auto-deposits into the nearest town's warehouse when obtained"
+  },
+  "item.wandscape.evil_mage_spawn_egg": {
+    "zh_cn": "邪恶法师刷怪蛋",
+    "en_us": "Evil Mage Spawn Egg"
+  },
+  "item.wandscape.follow_wand": {
+    "zh_cn": "跟随权杖",
+    "en_us": "Follow Wand"
+  },
+  "item.wandscape.follow_wand.desc": {
+    "zh_cn": "对着你自己的法师右键，就能切换他的跟随状态。开启后他会跟着你走，不再接取城镇任务。",
+    "en_us": "Right-click one of your own mages to toggle follow mode; while it is on they tag along with you instead of taking town tasks."
+  },
+  "item.wandscape.follow_wand.tooltip": {
+    "zh_cn": "右键你的法师：切换跟随/非跟随",
+    "en_us": "Right-click a mage: toggle follow / no-follow"
+  },
+  "item.wandscape.guide_book": {
+    "zh_cn": "魔法小镇建设指南",
+    "en_us": "Wandscape Guidebook"
+  },
+  "item.wandscape.guide_book.tooltip": {
+    "zh_cn": "右键打开模组教程",
+    "en_us": "Right-click to open the mod guidebook"
+  },
+  "item.wandscape.hostile_wand": {
+    "zh_cn": "敌对权杖",
+    "en_us": "Hostile Wand"
+  },
+  "item.wandscape.hostile_wand.desc": {
+    "zh_cn": "对着生物右键，你殖民地的法师就会集中火力打它。再右键一次或者目标死亡就会解除，右键另一个生物则把目标转移过去。",
+    "en_us": "Right-click a creature and your colony's mages will focus their fire on it. Right-click it again, or let it die, to clear the order; right-clicking another creature moves the focus there."
+  },
+  "item.wandscape.hostile_wand.tooltip": {
+    "zh_cn": "右键生物：本殖民地法师集火它（再次右键/目标死亡解除，右键另一生物转移）",
+    "en_us": "Right-click a creature: colony mages focus it (right-click again / target death clears; right-click another transfers)"
+  },
+  "item.wandscape.magic_compass": {
+    "zh_cn": "魔法指南针",
+    "en_us": "Magic Compass"
+  },
+  "item.wandscape.magic_compass.desc": {
+    "zh_cn": "指针始终指着本殖民地的市政厅。",
+    "en_us": "Its needle always points at your colony's town hall."
+  },
+  "item.wandscape.oath_ring": {
+    "zh_cn": "低级盟誓戒指",
+    "en_us": "Oath Ring"
+  },
+  "item.wandscape.oath_ring.desc": {
+    "zh_cn": "可以把本殖民地的一名法师收进戒指里随身带着走。按住 shift 右键法师把他存进去，之后右键方块或者空气把他放出来。这一档能存取 1 名法师。",
+    "en_us": "Stores a mage of your own colony inside the ring so you can carry them around. Shift+right-click a mage to store them, then right-click a block or the air to release them. This tier holds 1 mage."
+  },
+  "item.wandscape.oath_ring.tooltip": {
+    "zh_cn": "已存法师：%s/%s",
+    "en_us": "Stored mages: %s/%s"
+  },
+  "item.wandscape.oath_ring_high": {
+    "zh_cn": "高级盟誓戒指",
+    "en_us": "Oath Ring (High)"
+  },
+  "item.wandscape.oath_ring_high.desc": {
+    "zh_cn": "可以把本殖民地的一名法师收进戒指里随身带着走。按住 shift 右键法师把他存进去，之后右键方块或者空气把他放出来。这一档能存取 4 名法师。",
+    "en_us": "Stores a mage of your own colony inside the ring so you can carry them around. Shift+right-click a mage to store them, then right-click a block or the air to release them. This tier holds 4 mages."
+  },
+  "item.wandscape.oath_ring_mid": {
+    "zh_cn": "中级盟誓戒指",
+    "en_us": "Oath Ring (Mid)"
+  },
+  "item.wandscape.oath_ring_mid.desc": {
+    "zh_cn": "可以把本殖民地的一名法师收进戒指里随身带着走。按住 shift 右键法师把他存进去，之后右键方块或者空气把他放出来。这一档能存取 2 名法师。",
+    "en_us": "Stores a mage of your own colony inside the ring so you can carry them around. Shift+right-click a mage to store them, then right-click a block or the air to release them. This tier holds 2 mages."
+  },
+  "item.wandscape.omni_scepter": {
+    "zh_cn": "万能权杖",
+    "en_us": "Omni Scepter"
+  },
+  "item.wandscape.omni_scepter.desc": {
+    "zh_cn": "万能权杖把和平、跟随、庇护、敌对四种权杖的功能合在了一起。按住 shift 右键切换模式，右键使用当前模式。",
+    "en_us": "The omni scepter folds peace, follow, shelter and hostile into a single item. Shift+right-click to switch modes, and right-click to use the current one."
+  },
+  "item.wandscape.omni_scepter.mode_current": {
+    "zh_cn": "当前模式：%s",
+    "en_us": "Mode: %s"
+  },
+  "item.wandscape.omni_scepter.tooltip": {
+    "zh_cn": "shift+右键切换模式；右键使用当前模式",
+    "en_us": "Shift+Right-Click to switch mode; Right-Click to use the current mode"
+  },
+  "item.wandscape.peace_wand": {
+    "zh_cn": "和平权杖",
+    "en_us": "Peace Wand"
+  },
+  "item.wandscape.peace_wand.desc": {
+    "zh_cn": "对着你自己的法师右键，就能切换他的和平状态，让他不再攻击任何生物。",
+    "en_us": "Right-click one of your own mages to toggle peace mode, so they stop attacking anything."
+  },
+  "item.wandscape.peace_wand.tooltip": {
+    "zh_cn": "右键你的法师：切换和平/取消和平",
+    "en_us": "Right-click a mage: toggle peace / no-peace"
+  },
+  "item.wandscape.shelter_wand": {
+    "zh_cn": "庇护权杖",
+    "en_us": "Shelter Wand"
+  },
+  "item.wandscape.shelter_wand.desc": {
+    "zh_cn": "对着生物右键，就能把它标记为盟友，你的法师既不会攻击它也不会误伤它。再右键一次即可解除。",
+    "en_us": "Right-click a creature to mark it as an ally, so your mages will neither attack it nor hit it by accident. Right-click it again to release."
+  },
+  "item.wandscape.shelter_wand.tooltip": {
+    "zh_cn": "右键生物：标记为盟友（法师不攻击/不误伤），再次右键解除",
+    "en_us": "Right-click a creature: mark as ally (mages won't attack/hurt it); right-click again to release"
+  },
+  "item.wandscape.spell.cast_failed": {
+    "zh_cn": "施放失败",
+    "en_us": "Cast failed"
+  },
+  "item.wandscape.spell.cast_time": {
+    "zh_cn": "施法时间：%1$s 秒",
+    "en_us": "Cast time: %1$s s"
+  },
+  "item.wandscape.spell.cooldown": {
+    "zh_cn": "冷却：%1$s 秒",
+    "en_us": "Cooldown: %1$s s"
+  },
+  "item.wandscape.spell.creative_hint": {
+    "zh_cn": "创造模式：右键在当前位置施放",
+    "en_us": "Creative: right-click to cast in place"
+  },
+  "item.wandscape.spell.creative_only": {
+    "zh_cn": "仅创造模式可右键施放（测试用）",
+    "en_us": "Creative mode only for right-click casting (test)"
+  },
+  "item.wandscape.spell.invalid": {
+    "zh_cn": "绑定的魔法无效或不可直接施放",
+    "en_us": "Bound spell is invalid or not direct-castable"
+  },
+  "item.wandscape.spell.mana_cost": {
+    "zh_cn": "耗蓝：%1$s",
+    "en_us": "Mana cost: %1$s"
+  },
+  "item.wandscape.spell.name": {
+    "zh_cn": "魔法：%1$s",
+    "en_us": "Spell: %1$s"
+  },
+  "item.wandscape.spell.not_bound": {
+    "zh_cn": "此魔法卷轴未绑定任何魔法",
+    "en_us": "This spell scroll has no spell bound"
+  },
+  "item.wandscape.spell.unbound": {
+    "zh_cn": "未绑定魔法",
+    "en_us": "Unbound"
+  },
+  "item.wandscape.spell.unknown_data": {
+    "zh_cn": "魔法数据缺失",
+    "en_us": "Spell data missing"
+  },
+  "item.wandscape.spell_scroll": {
+    "zh_cn": "魔法卷轴",
+    "en_us": "Spell Scroll"
+  },
+  "item.wandscape.tourist_spawn_egg": {
+    "zh_cn": "游客刷怪蛋",
+    "en_us": "Tourist Spawn Egg"
+  },
+  "item.wandscape.ultimate_magic_compass": {
+    "zh_cn": "终极魔法指南针",
+    "en_us": "Ultimate Magic Compass"
+  },
+  "item.wandscape.ultimate_magic_compass.desc": {
+    "zh_cn": "指针始终指着本殖民地的市政厅，右键还能直接传送到那里。",
+    "en_us": "Its needle always points at your colony's town hall, and right-clicking teleports you straight there."
+  },
+  "item.wandscape.wand": {
+    "zh_cn": "法杖",
+    "en_us": "Wand"
+  },
+  "item.wandscape.wand.desc": {
+    "zh_cn": "法杖是法师的主手装备，装到法师手上之后，它带的属性加成才会生效，比如提升法术强度、建造速度或者最大法力。玩家自己拿在手里是没有任何加成的。",
+    "en_us": "A wand is a mage's main-hand item, and the attribute bonus it carries only takes effect once it is equipped on a mage. A player holding one gains nothing from it."
+  },
+  "item.wandscape.wandscape_npc_spawn_egg": {
+    "zh_cn": "法师刷怪蛋",
+    "en_us": "Mage Spawn Egg"
+  },
+  "item.wandscape.warehouse_terminal": {
+    "zh_cn": "仓库终端",
+    "en_us": "Warehouse Terminal"
+  },
+  "item.wandscape.warehouse_terminal.desc": {
+    "zh_cn": "右键就能打开本殖民地的仓库面板。放进 Curios 的手饰槽后，还可以用快捷键打开。",
+    "en_us": "Right-click to open your colony's warehouse panel. Put it in a Curios hands slot and you can also open it with a hotkey."
+  },
+  "item.wandscape.warehouse_terminal.tooltip": {
+    "zh_cn": "右键打开本殖民地的仓库面板",
+    "en_us": "Right-click to open your colony's warehouse panel"
+  },
+  "item.wandscape.warehouse_terminal.tooltip_curios": {
+    "zh_cn": "可放入 Curios 手饰槽；穿戴后可使用快捷键打开",
+    "en_us": "Can be placed in Curios hands slot; press key to open while equipped"
+  }
+}

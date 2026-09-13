@@ -1,0 +1,22 @@
+{
+  "gui.wandscape.building_status.demolishing": {
+    "zh_cn": "拆除中",
+    "en_us": "Demolishing"
+  },
+  "gui.wandscape.building_status.needs_repair": {
+    "zh_cn": "受损需修",
+    "en_us": "Needs Repair"
+  },
+  "gui.wandscape.building_status.ok": {
+    "zh_cn": "正常",
+    "en_us": "Operational"
+  },
+  "gui.wandscape.building_status.under_construction": {
+    "zh_cn": "建造中",
+    "en_us": "Under Construction"
+  },
+  "gui.wandscape.building_status.waiting_materials": {
+    "zh_cn": "等待材料",
+    "en_us": "Waiting for Materials"
+  }
+}

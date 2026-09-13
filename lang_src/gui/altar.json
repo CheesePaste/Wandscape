@@ -1,0 +1,26 @@
+{
+  "gui.wandscape.altar.casting": {
+    "zh_cn": "施法中",
+    "en_us": "Casting"
+  },
+  "gui.wandscape.altar.cooldown": {
+    "zh_cn": "冷却中 {}",
+    "en_us": "Cooldown {}"
+  },
+  "gui.wandscape.altar.cost_duration": {
+    "zh_cn": "蓝 %d · CD %s · 时长 %s",
+    "en_us": "Mana %d · CD %s · Duration %s"
+  },
+  "gui.wandscape.altar.ready": {
+    "zh_cn": "可施放",
+    "en_us": "Ready"
+  },
+  "gui.wandscape.altar.submitted": {
+    "zh_cn": "已安排",
+    "en_us": "Queued"
+  },
+  "gui.wandscape.altar.title": {
+    "zh_cn": "祭坛",
+    "en_us": "Altar"
+  }
+}

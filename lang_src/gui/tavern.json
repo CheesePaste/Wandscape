@@ -1,0 +1,138 @@
+{
+  "gui.wandscape.tavern.attr_armor": {
+    "zh_cn": "护甲: %s",
+    "en_us": "Armor: %s"
+  },
+  "gui.wandscape.tavern.attr_hp": {
+    "zh_cn": "生命: %s",
+    "en_us": "HP: %s"
+  },
+  "gui.wandscape.tavern.attr_mana": {
+    "zh_cn": "魔力: %s",
+    "en_us": "Mana: %s"
+  },
+  "gui.wandscape.tavern.attr_move_speed": {
+    "zh_cn": "速度: %s",
+    "en_us": "Speed: %s"
+  },
+  "gui.wandscape.tavern.attr_spell_power": {
+    "zh_cn": "强度: %s",
+    "en_us": "Power: %s"
+  },
+  "gui.wandscape.tavern.attr_spell_speed": {
+    "zh_cn": "施速: %s",
+    "en_us": "Cast: %s"
+  },
+  "gui.wandscape.tavern.attr_work_speed": {
+    "zh_cn": "工速: %s",
+    "en_us": "Work: %s"
+  },
+  "gui.wandscape.tavern.candidates_list": {
+    "zh_cn": "求职候选人",
+    "en_us": "Applicants"
+  },
+  "gui.wandscape.tavern.first_free": {
+    "zh_cn": "首次招募免费",
+    "en_us": "First Recruit is Free"
+  },
+  "gui.wandscape.tavern.hire": {
+    "zh_cn": "聘用该法师",
+    "en_us": "Hire Mage"
+  },
+  "gui.wandscape.tavern.hired_success": {
+    "zh_cn": "已成功聘用法师：%s！",
+    "en_us": "Successfully hired mage: %s!"
+  },
+  "gui.wandscape.tavern.no_resumes": {
+    "zh_cn": "暂无法师简历",
+    "en_us": "No mage resumes available."
+  },
+  "gui.wandscape.tavern.no_selection": {
+    "zh_cn": "请先选择一位法师",
+    "en_us": "Please select a mage first"
+  },
+  "gui.wandscape.tavern.publish_recruit": {
+    "zh_cn": "发布招募令",
+    "en_us": "Publish Recruit Order"
+  },
+  "gui.wandscape.tavern.rank": {
+    "zh_cn": "等阶: Lv.%d",
+    "en_us": "Rank: Lv.%d"
+  },
+  "gui.wandscape.tavern.recruit_arrive": {
+    "zh_cn": "招募后法师将即刻抵达酒馆并加入小镇",
+    "en_us": "The mage will arrive at the tavern and join the town immediately"
+  },
+  "gui.wandscape.tavern.recruit_cost_future": {
+    "zh_cn": "（此后每次招募将消耗 6 种元素各 %d）",
+    "en_us": "(Each later recruit costs %d of each of the 6 elements)"
+  },
+  "gui.wandscape.tavern.recruit_cost_now": {
+    "zh_cn": "招募代价：6 种基础元素各 %d",
+    "en_us": "Recruit cost: %d of each of the 6 basic elements"
+  },
+  "gui.wandscape.tavern.recruit_count": {
+    "zh_cn": "已累计招募：%d 位法师",
+    "en_us": "Mages recruited so far: %d"
+  },
+  "gui.wandscape.tavern.recruit_deduct": {
+    "zh_cn": "将自动从小镇仓库中结算扣除所需元素",
+    "en_us": "Required elements will be deducted automatically from the town warehouse"
+  },
+  "gui.wandscape.tavern.recruit_npc": {
+    "zh_cn": "招募法师",
+    "en_us": "Recruit Mage"
+  },
+  "gui.wandscape.tavern.recruit_published": {
+    "zh_cn": "已发布招募令，正在派遣法师...",
+    "en_us": "Recruit order published, dispatching a mage..."
+  },
+  "gui.wandscape.tavern.recruit_subtitle": {
+    "zh_cn": "招募新冒险者加入小镇",
+    "en_us": "Recruit a new adventurer for the town"
+  },
+  "gui.wandscape.tavern.reject": {
+    "zh_cn": "拒绝",
+    "en_us": "Reject"
+  },
+  "gui.wandscape.tavern.reject_confirm": {
+    "zh_cn": "确定拒绝 %s 的求职简历？",
+    "en_us": "Reject %s's resume?"
+  },
+  "gui.wandscape.tavern.resume_hint": {
+    "zh_cn": "满条法师游客离城时\n会在此留下求职简历",
+    "en_us": "Mages with full bars leave on departure\nand drop their resume here"
+  },
+  "gui.wandscape.tavern.specialty_balanced": {
+    "zh_cn": "全能均衡型",
+    "en_us": "Balanced All-Rounder"
+  },
+  "gui.wandscape.tavern.specialty_cast": {
+    "zh_cn": "施法专精 (施速 %.1f)",
+    "en_us": "Cast Mastery (Speed %.1f)"
+  },
+  "gui.wandscape.tavern.specialty_power": {
+    "zh_cn": "法术专精 (强度 %.1f)",
+    "en_us": "Spell Mastery (Power %.1f)"
+  },
+  "gui.wandscape.tavern.specialty_work": {
+    "zh_cn": "建造专精 (工速 %.1f)",
+    "en_us": "Build Mastery (Speed %.1f)"
+  },
+  "gui.wandscape.tavern.status_pending": {
+    "zh_cn": "状态: 待聘用",
+    "en_us": "Status: Awaiting Hire"
+  },
+  "gui.wandscape.tavern.tab_recruit": {
+    "zh_cn": "快速招募",
+    "en_us": "Direct Recruit"
+  },
+  "gui.wandscape.tavern.tab_resumes": {
+    "zh_cn": "法师简历",
+    "en_us": "Mage Resumes"
+  },
+  "gui.wandscape.tavern.title": {
+    "zh_cn": "冒险者酒馆",
+    "en_us": "Tavern"
+  }
+}

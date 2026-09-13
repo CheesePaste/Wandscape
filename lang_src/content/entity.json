@@ -1,0 +1,14 @@
+{
+  "entity.wandscape.evil_mage": {
+    "zh_cn": "邪恶法师",
+    "en_us": "Evil Mage"
+  },
+  "entity.wandscape.tourist": {
+    "zh_cn": "游客",
+    "en_us": "Tourist"
+  },
+  "entity.wandscape.wandscape_npc": {
+    "zh_cn": "法师",
+    "en_us": "Mage"
+  }
+}

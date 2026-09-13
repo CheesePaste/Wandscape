@@ -1,0 +1,26 @@
+{
+  "effect.wandscape.armor_shred": {
+    "zh_cn": "护甲削减",
+    "en_us": "Armor Shred"
+  },
+  "effect.wandscape.conversion": {
+    "zh_cn": "魅惑",
+    "en_us": "Conversion"
+  },
+  "effect.wandscape.desperation": {
+    "zh_cn": "背水一战",
+    "en_us": "Desperation"
+  },
+  "effect.wandscape.fortification": {
+    "zh_cn": "防御强化",
+    "en_us": "Fortification"
+  },
+  "effect.wandscape.magic_enhance": {
+    "zh_cn": "魔力强化",
+    "en_us": "Magic Enhancement"
+  },
+  "effect.wandscape.petrification": {
+    "zh_cn": "石化",
+    "en_us": "Petrification"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "gui.wandscape.node.channel": {
+    "zh_cn": "引导",
+    "en_us": "Channel"
+  },
+  "gui.wandscape.node.channel_ticks": {
+    "zh_cn": "%s tick",
+    "en_us": "%s ticks"
+  },
+  "gui.wandscape.node.element": {
+    "zh_cn": "元素",
+    "en_us": "Element"
+  },
+  "gui.wandscape.node.per_harvest": {
+    "zh_cn": "每次采集",
+    "en_us": "Per Harvest"
+  },
+  "gui.wandscape.node.publish_gather": {
+    "zh_cn": "发布采集",
+    "en_us": "Publish Gather"
+  },
+  "gui.wandscape.node.total": {
+    "zh_cn": "合计",
+    "en_us": "Total"
+  },
+  "gui.wandscape.node.total_line": {
+    "zh_cn": "合计 %1$s",
+    "en_us": "Total %1$s"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "gui.wandscape.info.atm_intro": {
+    "zh_cn": "游客可通过 ATM 从旅行经费中取现，补充钱包余额。",
+    "en_us": "Tourists can withdraw money from the ATM to top up their wallet."
+  },
+  "gui.wandscape.info.decoration_intro": {
+    "zh_cn": "装饰建筑向曼哈顿距离内的功能建筑辐射舒适/魔法/奇观加成，提升其效果。",
+    "en_us": "Decoration buildings radiate Comfort/Magic/Wonder bonuses to nearby functional buildings."
+  },
+  "gui.wandscape.info.duration": {
+    "zh_cn": "消耗时间",
+    "en_us": "Duration"
+  },
+  "gui.wandscape.info.element_output": {
+    "zh_cn": "产出元素",
+    "en_us": "Element Output"
+  },
+  "gui.wandscape.info.energy_cost": {
+    "zh_cn": "消耗精力",
+    "en_us": "Energy Cost"
+  },
+  "gui.wandscape.info.energy_restore": {
+    "zh_cn": "回复精力",
+    "en_us": "Energy Restore"
+  }
+}

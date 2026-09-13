@@ -1,0 +1,250 @@
+{
+  "advancements.wandscape.a_wizards_interest.description": {
+    "zh_cn": "有法师游客在酒馆留下简历",
+    "en_us": "A mage tourist leaves a resume at the tavern"
+  },
+  "advancements.wandscape.a_wizards_interest.title": {
+    "zh_cn": "口碑相传",
+    "en_us": "A Mage's Interest"
+  },
+  "advancements.wandscape.big_town.description": {
+    "zh_cn": "建立 50 个建筑",
+    "en_us": "Build 50 buildings"
+  },
+  "advancements.wandscape.big_town.title": {
+    "zh_cn": "大城镇",
+    "en_us": "Big Town"
+  },
+  "advancements.wandscape.bustling.description": {
+    "zh_cn": "同时有 10 位游客在镇上",
+    "en_us": "Have 10 tourists in town at once"
+  },
+  "advancements.wandscape.bustling.title": {
+    "zh_cn": "络绎不绝",
+    "en_us": "Bustling"
+  },
+  "advancements.wandscape.dragons_hoard.description": {
+    "zh_cn": "仓库中某一种元素达到 500000",
+    "en_us": "Hold 500000 of a single element"
+  },
+  "advancements.wandscape.dragons_hoard.title": {
+    "zh_cn": "富可敌国",
+    "en_us": "Dragon's Hoard"
+  },
+  "advancements.wandscape.famous.description": {
+    "zh_cn": "魔法小镇等级达到 20",
+    "en_us": "Reach town level 20"
+  },
+  "advancements.wandscape.famous.title": {
+    "zh_cn": "名扬海外",
+    "en_us": "Famous Far and Wide"
+  },
+  "advancements.wandscape.first_roads.description": {
+    "zh_cn": "路网拥有 15 条路段",
+    "en_us": "Grow the road network to 15 segments"
+  },
+  "advancements.wandscape.first_roads.title": {
+    "zh_cn": "初具路网",
+    "en_us": "First Roads"
+  },
+  "advancements.wandscape.first_visitor.description": {
+    "zh_cn": "第一位游客到访",
+    "en_us": "Welcome your first tourist"
+  },
+  "advancements.wandscape.first_visitor.title": {
+    "zh_cn": "开门迎客",
+    "en_us": "First Visitor"
+  },
+  "advancements.wandscape.full_coffers.description": {
+    "zh_cn": "仓库中某一种元素达到 50000",
+    "en_us": "Hold 50000 of a single element"
+  },
+  "advancements.wandscape.full_coffers.title": {
+    "zh_cn": "盆满钵满",
+    "en_us": "Full Coffers"
+  },
+  "advancements.wandscape.full_house.description": {
+    "zh_cn": "有一座旅馆住满",
+    "en_us": "Fill an inn to maximum occupancy"
+  },
+  "advancements.wandscape.full_house.title": {
+    "zh_cn": "抢票",
+    "en_us": "Full House"
+  },
+  "advancements.wandscape.full_roster.description": {
+    "zh_cn": "魔法小镇拥有 10 名法师",
+    "en_us": "Have 10 mages in the town"
+  },
+  "advancements.wandscape.full_roster.title": {
+    "zh_cn": "人才济济",
+    "en_us": "Full Roster"
+  },
+  "advancements.wandscape.fully_stocked.description": {
+    "zh_cn": "有一座商店的全部货物都补充到上限（64）",
+    "en_us": "Stock every good of a shop to its cap (64)"
+  },
+  "advancements.wandscape.fully_stocked.title": {
+    "zh_cn": "物资充盈",
+    "en_us": "Fully Stocked"
+  },
+  "advancements.wandscape.grand_wonder.description": {
+    "zh_cn": "拥有一座大小超过 50×50 的建筑",
+    "en_us": "Own a building larger than 50×50"
+  },
+  "advancements.wandscape.grand_wonder.title": {
+    "zh_cn": "奇观",
+    "en_us": "Wonder"
+  },
+  "advancements.wandscape.guest_of_honor.description": {
+    "zh_cn": "一位游客满满意离场",
+    "en_us": "A tourist departs fully satisfied"
+  },
+  "advancements.wandscape.guest_of_honor.title": {
+    "zh_cn": "宾至如归",
+    "en_us": "Guest of Honor"
+  },
+  "advancements.wandscape.hamlet.description": {
+    "zh_cn": "建立 5 个建筑",
+    "en_us": "Build 5 buildings"
+  },
+  "advancements.wandscape.hamlet.title": {
+    "zh_cn": "小聚落",
+    "en_us": "Small Settlement"
+  },
+  "advancements.wandscape.hero_of_wandscape.description": {
+    "zh_cn": "击退一场袭击",
+    "en_us": "Repel a raid"
+  },
+  "advancements.wandscape.hero_of_wandscape.title": {
+    "zh_cn": "那样的事，我绝不容许",
+    "en_us": "Never Again"
+  },
+  "advancements.wandscape.legendary.description": {
+    "zh_cn": "魔法小镇等级达到 30",
+    "en_us": "Reach town level 30"
+  },
+  "advancements.wandscape.legendary.title": {
+    "zh_cn": "流传千古",
+    "en_us": "Legendary"
+  },
+  "advancements.wandscape.level_up.description": {
+    "zh_cn": "魔法小镇等级达到 2",
+    "en_us": "Reach town level 2"
+  },
+  "advancements.wandscape.level_up.title": {
+    "zh_cn": "升级！",
+    "en_us": "Level Up!"
+  },
+  "advancements.wandscape.master_builder.description": {
+    "zh_cn": "建成一座用扫描器导出的建筑",
+    "en_us": "Build a structure from a scanned blueprint"
+  },
+  "advancements.wandscape.master_builder.title": {
+    "zh_cn": "妙手天工",
+    "en_us": "Master Builder"
+  },
+  "advancements.wandscape.new_recruit.description": {
+    "zh_cn": "在酒馆招募一位法师",
+    "en_us": "Recruit a mage at the tavern"
+  },
+  "advancements.wandscape.new_recruit.title": {
+    "zh_cn": "招贤纳士",
+    "en_us": "New Recruit"
+  },
+  "advancements.wandscape.overnight_guest.description": {
+    "zh_cn": "第一位游客在旅馆过夜",
+    "en_us": "A tourist checks into an inn for the night"
+  },
+  "advancements.wandscape.overnight_guest.title": {
+    "zh_cn": "留住客人",
+    "en_us": "Overnight Guest"
+  },
+  "advancements.wandscape.prosperous_town.description": {
+    "zh_cn": "建立 20 个建筑",
+    "en_us": "Build 20 buildings"
+  },
+  "advancements.wandscape.prosperous_town.title": {
+    "zh_cn": "繁华城镇",
+    "en_us": "Prosperous Town"
+  },
+  "advancements.wandscape.raid_veteran.description": {
+    "zh_cn": "在不祥之兆等级 5 及以上的袭击中获胜",
+    "en_us": "Win a raid at Bad Omen level 5 or higher"
+  },
+  "advancements.wandscape.raid_veteran.title": {
+    "zh_cn": "风雨同舟",
+    "en_us": "Raid Veteran"
+  },
+  "advancements.wandscape.renowned.description": {
+    "zh_cn": "魔法小镇等级达到 5",
+    "en_us": "Reach town level 5"
+  },
+  "advancements.wandscape.renowned.title": {
+    "zh_cn": "声名鹊起",
+    "en_us": "Rising Fame"
+  },
+  "advancements.wandscape.rising_force.description": {
+    "zh_cn": "魔法小镇拥有 5 名法师",
+    "en_us": "Have 5 mages in the town"
+  },
+  "advancements.wandscape.rising_force.title": {
+    "zh_cn": "渐成气候",
+    "en_us": "Rising Force"
+  },
+  "advancements.wandscape.rush_hour.description": {
+    "zh_cn": "同时有 50 位游客在镇上",
+    "en_us": "Have 50 tourists in town at once"
+  },
+  "advancements.wandscape.rush_hour.title": {
+    "zh_cn": "车水马龙",
+    "en_us": "Rush Hour"
+  },
+  "advancements.wandscape.start.description": {
+    "zh_cn": "建立 1 个建筑",
+    "en_us": "Build your first building"
+  },
+  "advancements.wandscape.start.title": {
+    "zh_cn": "魔法小镇",
+    "en_us": "Wandscape"
+  },
+  "advancements.wandscape.steady_hand.description": {
+    "zh_cn": "连续 7 天维持殖民地运转",
+    "en_us": "Operate for 7 consecutive days"
+  },
+  "advancements.wandscape.steady_hand.title": {
+    "zh_cn": "安居乐业",
+    "en_us": "Steady Hand"
+  },
+  "advancements.wandscape.tourist_boom.description": {
+    "zh_cn": "同时有 30 位游客在镇上",
+    "en_us": "Have 30 tourists in town at once"
+  },
+  "advancements.wandscape.tourist_boom.title": {
+    "zh_cn": "门庭若市",
+    "en_us": "Tourist Boom"
+  },
+  "advancements.wandscape.town.description": {
+    "zh_cn": "建立 10 个建筑",
+    "en_us": "Build 10 buildings"
+  },
+  "advancements.wandscape.town.title": {
+    "zh_cn": "小城镇",
+    "en_us": "Small Town"
+  },
+  "advancements.wandscape.well_connected.description": {
+    "zh_cn": "路网拥有 50 条路段",
+    "en_us": "Grow the road network to 50 segments"
+  },
+  "advancements.wandscape.well_connected.title": {
+    "zh_cn": "四通八达",
+    "en_us": "Well-Connected"
+  },
+  "advancements.wandscape.well_known.description": {
+    "zh_cn": "魔法小镇等级达到 10",
+    "en_us": "Reach town level 10"
+  },
+  "advancements.wandscape.well_known.title": {
+    "zh_cn": "远近皆知",
+    "en_us": "Widely Known"
+  }
+}

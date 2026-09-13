@@ -1,0 +1,26 @@
+{
+  "attribute.name.wandscape.health_regen": {
+    "zh_cn": "生命回复",
+    "en_us": "Health Regeneration"
+  },
+  "attribute.name.wandscape.mana_regen": {
+    "zh_cn": "法力回复",
+    "en_us": "Mana Regeneration"
+  },
+  "attribute.name.wandscape.max_mana": {
+    "zh_cn": "法力上限",
+    "en_us": "Max Mana"
+  },
+  "attribute.name.wandscape.spell_power": {
+    "zh_cn": "法术强度",
+    "en_us": "Spell Power"
+  },
+  "attribute.name.wandscape.spell_speed": {
+    "zh_cn": "施法速度",
+    "en_us": "Spell Speed"
+  },
+  "attribute.name.wandscape.work_speed": {
+    "zh_cn": "工作速度",
+    "en_us": "Work Speed"
+  }
+}

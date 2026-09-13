@@ -1,0 +1,10 @@
+{
+  "marker.wandscape.spot_action": {
+    "zh_cn": "该交互位：%s",
+    "en_us": "This interact spot: %s"
+  },
+  "marker.wandscape.spot_facing": {
+    "zh_cn": "该交互位朝向：%s",
+    "en_us": "This interact spot faces: %s"
+  }
+}

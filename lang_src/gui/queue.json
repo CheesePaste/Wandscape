@@ -1,0 +1,86 @@
+{
+  "gui.wandscape.queue.capacity": {
+    "zh_cn": "容量不足",
+    "en_us": "Full"
+  },
+  "gui.wandscape.queue.category.brew": {
+    "zh_cn": "炼制",
+    "en_us": "Brew"
+  },
+  "gui.wandscape.queue.category.build": {
+    "zh_cn": "建造",
+    "en_us": "Build"
+  },
+  "gui.wandscape.queue.category.craft": {
+    "zh_cn": "制作",
+    "en_us": "Craft"
+  },
+  "gui.wandscape.queue.category.decompose": {
+    "zh_cn": "分解",
+    "en_us": "Decompose"
+  },
+  "gui.wandscape.queue.category.gather": {
+    "zh_cn": "采集",
+    "en_us": "Gather"
+  },
+  "gui.wandscape.queue.category.synthesize": {
+    "zh_cn": "合成",
+    "en_us": "Synthesize"
+  },
+  "gui.wandscape.queue.category.transcribe": {
+    "zh_cn": "抄录",
+    "en_us": "Transcribe"
+  },
+  "gui.wandscape.queue.insufficient": {
+    "zh_cn": "缺",
+    "en_us": "No "
+  },
+  "gui.wandscape.queue.missing_materials": {
+    "zh_cn": "缺材料",
+    "en_us": "No Mats"
+  },
+  "gui.wandscape.queue.pending.brew": {
+    "zh_cn": "待炼制",
+    "en_us": "Brewing..."
+  },
+  "gui.wandscape.queue.pending.build": {
+    "zh_cn": "待建造",
+    "en_us": "Building..."
+  },
+  "gui.wandscape.queue.pending.craft": {
+    "zh_cn": "待制作",
+    "en_us": "Crafting..."
+  },
+  "gui.wandscape.queue.pending.decompose": {
+    "zh_cn": "待分解",
+    "en_us": "Decomposing..."
+  },
+  "gui.wandscape.queue.pending.gather": {
+    "zh_cn": "待采集",
+    "en_us": "Gathering..."
+  },
+  "gui.wandscape.queue.pending.other": {
+    "zh_cn": "待执行",
+    "en_us": "Pending..."
+  },
+  "gui.wandscape.queue.pending.synthesize": {
+    "zh_cn": "待合成",
+    "en_us": "Synthesizing..."
+  },
+  "gui.wandscape.queue.pending.transcribe": {
+    "zh_cn": "待抄录",
+    "en_us": "Awaiting Transcription..."
+  },
+  "gui.wandscape.queue.tooltip.capacity": {
+    "zh_cn": "殖民地仓库容量不足",
+    "en_us": "Colony storage full"
+  },
+  "gui.wandscape.queue.tooltip.missing_elements": {
+    "zh_cn": "缺少元素: %s",
+    "en_us": "Missing elements: %s"
+  },
+  "gui.wandscape.queue.tooltip.missing_materials": {
+    "zh_cn": "缺少原料，等待输入",
+    "en_us": "Missing raw materials, waiting for input"
+  }
+}

@@ -1,0 +1,662 @@
+{
+  "gui.wandscape.scanner.add_good": {
+    "zh_cn": "+ 添加商品",
+    "en_us": "+ Add Good"
+  },
+  "gui.wandscape.scanner.add_output": {
+    "zh_cn": "+ 添加产出",
+    "en_us": "+ Add Output"
+  },
+  "gui.wandscape.scanner.atm_desc": {
+    "zh_cn": "游客金币不足时在此取款后继续消费",
+    "en_us": "Visitors withdraw coins when low on cash"
+  },
+  "gui.wandscape.scanner.atm_duration": {
+    "zh_cn": "交互时长Ticks:",
+    "en_us": "Duration Ticks:"
+  },
+  "gui.wandscape.scanner.atm_params_header": {
+    "zh_cn": "ATM 参数",
+    "en_us": "ATM Parameters"
+  },
+  "gui.wandscape.scanner.atm_withdraw": {
+    "zh_cn": "取现上限/次:",
+    "en_us": "Max Withdraw:"
+  },
+  "gui.wandscape.scanner.author_label": {
+    "zh_cn": "作者:",
+    "en_us": "Author:"
+  },
+  "gui.wandscape.scanner.auto_detect_door": {
+    "zh_cn": "自动检门",
+    "en_us": "Auto-Detect Doors"
+  },
+  "gui.wandscape.scanner.blueprint_export_header": {
+    "zh_cn": "蓝图与道路导出",
+    "en_us": "Blueprint & Road Export"
+  },
+  "gui.wandscape.scanner.boundary_size": {
+    "zh_cn": "尺寸 %d×%d×%d  (Min:%d,%d,%d Max:%d,%d,%d)",
+    "en_us": "Size %d×%d×%d  (Min:%d,%d,%d Max:%d,%d,%d)"
+  },
+  "gui.wandscape.scanner.bounds_header": {
+    "zh_cn": "3D 边界坐标 (相对于扫描器)",
+    "en_us": "3D Boundary Coordinates (Relative to Scanner)"
+  },
+  "gui.wandscape.scanner.building_id_header": {
+    "zh_cn": "建筑标识",
+    "en_us": "Building Identity"
+  },
+  "gui.wandscape.scanner.calc_area_value": {
+    "zh_cn": "计算区域价值",
+    "en_us": "Calc Area Value"
+  },
+  "gui.wandscape.scanner.cat_default_desc": {
+    "zh_cn": "放置后直接作为标准功能或装饰建筑运作。",
+    "en_us": "Operates directly as a standard functional or decorative building."
+  },
+  "gui.wandscape.scanner.cat_default_title": {
+    "zh_cn": "该建筑类别无需额外特定参数。",
+    "en_us": "This category requires no extra parameters."
+  },
+  "gui.wandscape.scanner.category_label": {
+    "zh_cn": "分类:",
+    "en_us": "Category:"
+  },
+  "gui.wandscape.scanner.category_locked_custom": {
+    "zh_cn": "类别: 自定义",
+    "en_us": "Category: Custom"
+  },
+  "gui.wandscape.scanner.clear": {
+    "zh_cn": "清除",
+    "en_us": "Clear"
+  },
+  "gui.wandscape.scanner.comfort_label": {
+    "zh_cn": "舒适:",
+    "en_us": "Comfort:"
+  },
+  "gui.wandscape.scanner.comfort_short": {
+    "zh_cn": "舒:",
+    "en_us": "Comf:"
+  },
+  "gui.wandscape.scanner.corner_line1": {
+    "zh_cn": "1. 请在上方输入与 SAVE 扫描器相同的暗号。",
+    "en_us": "1. Enter the same passphrase as the SAVE scanner above."
+  },
+  "gui.wandscape.scanner.corner_line2": {
+    "zh_cn": "2. 将此方块放置在建筑 3D 对角线的另一个顶点位置。",
+    "en_us": "2. Place this block at the opposite vertex of the building's 3D diagonal."
+  },
+  "gui.wandscape.scanner.corner_mode_title": {
+    "zh_cn": "CORNER 辅角点模式",
+    "en_us": "CORNER Helper Mode"
+  },
+  "gui.wandscape.scanner.corner_step1": {
+    "zh_cn": "1. 在上方输入框输入与 SAVE 主扫描器完全一致的暗号。",
+    "en_us": "1. Enter the exact same passphrase as the SAVE scanner above."
+  },
+  "gui.wandscape.scanner.corner_step2": {
+    "zh_cn": "2. 将此方块放置在建筑 3D 对角线的另一个角点顶点位置。",
+    "en_us": "2. Place this block at the opposite diagonal corner vertex of the 3D building."
+  },
+  "gui.wandscape.scanner.corner_step3": {
+    "zh_cn": "3. 返回 SAVE 主扫描器点击“匹配角点”，系统将自动连接",
+    "en_us": "3. Return to the SAVE scanner and click 'Match Corners'."
+  },
+  "gui.wandscape.scanner.corner_step4": {
+    "zh_cn": "   并框选出完整的 3D 建筑包围盒范围。",
+    "en_us": "   The complete 3D bounding box will be automatically enclosed."
+  },
+  "gui.wandscape.scanner.corner_title": {
+    "zh_cn": "CORNER 辅角点模式已激活",
+    "en_us": "CORNER Helper Mode Active"
+  },
+  "gui.wandscape.scanner.creator": {
+    "zh_cn": "制作作者:",
+    "en_us": "Creator:"
+  },
+  "gui.wandscape.scanner.custom_road": {
+    "zh_cn": "自定义道路",
+    "en_us": "Custom Road"
+  },
+  "gui.wandscape.scanner.delete_preset": {
+    "zh_cn": "删除预设",
+    "en_us": "Delete Preset"
+  },
+  "gui.wandscape.scanner.display_name": {
+    "zh_cn": "显示名称:",
+    "en_us": "Display Name:"
+  },
+  "gui.wandscape.scanner.done": {
+    "zh_cn": "完成",
+    "en_us": "Done"
+  },
+  "gui.wandscape.scanner.door_count": {
+    "zh_cn": "%s 扇门: ",
+    "en_us": "%s doors: "
+  },
+  "gui.wandscape.scanner.door_offset_count_header": {
+    "zh_cn": "门偏移 (%d 扇)",
+    "en_us": "Door Offsets (%d)"
+  },
+  "gui.wandscape.scanner.door_offset_header": {
+    "zh_cn": "门偏移 (Door Offset)",
+    "en_us": "Door Offset"
+  },
+  "gui.wandscape.scanner.doors_recorded": {
+    "zh_cn": "已录入: ",
+    "en_us": "Recorded: "
+  },
+  "gui.wandscape.scanner.duration": {
+    "zh_cn": "时长:",
+    "en_us": "Duration:"
+  },
+  "gui.wandscape.scanner.duration_ticks": {
+    "zh_cn": "时长Ticks:",
+    "en_us": "Duration Ticks:"
+  },
+  "gui.wandscape.scanner.element_output_header": {
+    "zh_cn": "元素产出",
+    "en_us": "Element Output"
+  },
+  "gui.wandscape.scanner.energy": {
+    "zh_cn": "能耗:",
+    "en_us": "Energy:"
+  },
+  "gui.wandscape.scanner.export_building_btn": {
+    "zh_cn": "导出建筑 JSON",
+    "en_us": "Export Building JSON"
+  },
+  "gui.wandscape.scanner.export_building_json": {
+    "zh_cn": "导出建筑 JSON",
+    "en_us": "Export Building JSON"
+  },
+  "gui.wandscape.scanner.export_fixed_custom_header": {
+    "zh_cn": "导出 (类别固定 custom)",
+    "en_us": "Export (Category Fixed: custom)"
+  },
+  "gui.wandscape.scanner.export_hotregister_road": {
+    "zh_cn": "导出与热注册道路 JSON",
+    "en_us": "Export & Hot-Register Road JSON"
+  },
+  "gui.wandscape.scanner.export_road_btn": {
+    "zh_cn": "导出道路 JSON",
+    "en_us": "Export Road JSON"
+  },
+  "gui.wandscape.scanner.first_door": {
+    "zh_cn": "首门:",
+    "en_us": "First Door:"
+  },
+  "gui.wandscape.scanner.gizmo_btn": {
+    "zh_cn": "可视化调整",
+    "en_us": "3D Gizmo"
+  },
+  "gui.wandscape.scanner.id_label": {
+    "zh_cn": "ID:",
+    "en_us": "ID:"
+  },
+  "gui.wandscape.scanner.interact_spot_hint": {
+    "zh_cn": "放置 marker 标记交互位（面朝游客朝向）；右键循环动作，潜行右键循环朝向，敲掉=移除。",
+    "en_us": "Place markers to mark interact spots (facing tourists); right-click cycles action, sneak-right-click cycles facing, breaking removes."
+  },
+  "gui.wandscape.scanner.interact_spots_count_header": {
+    "zh_cn": "交互位 (%s)",
+    "en_us": "Interact Spots (%s)"
+  },
+  "gui.wandscape.scanner.interact_spots_header": {
+    "zh_cn": "交互位 Marker",
+    "en_us": "Interact Spots"
+  },
+  "gui.wandscape.scanner.item_label": {
+    "zh_cn": "物品:",
+    "en_us": "Item:"
+  },
+  "gui.wandscape.scanner.label_channel_ticks": {
+    "zh_cn": "引导Ticks",
+    "en_us": "Channel Ticks"
+  },
+  "gui.wandscape.scanner.label_element": {
+    "zh_cn": "元素",
+    "en_us": "Element"
+  },
+  "gui.wandscape.scanner.label_energy_per_use": {
+    "zh_cn": "能量消耗/次",
+    "en_us": "Energy/Use"
+  },
+  "gui.wandscape.scanner.label_energy_restore": {
+    "zh_cn": "回精力/次",
+    "en_us": "Energy Restore/Use"
+  },
+  "gui.wandscape.scanner.label_interact_duration": {
+    "zh_cn": "交互时长",
+    "en_us": "Interact Duration"
+  },
+  "gui.wandscape.scanner.label_max_occupancy": {
+    "zh_cn": "最大容纳人数",
+    "en_us": "Max Occupancy"
+  },
+  "gui.wandscape.scanner.label_min_level": {
+    "zh_cn": "最低等级",
+    "en_us": "Min Level"
+  },
+  "gui.wandscape.scanner.label_output_per_use": {
+    "zh_cn": "产出/次",
+    "en_us": "Output/Use"
+  },
+  "gui.wandscape.scanner.label_profit_rate": {
+    "zh_cn": "利润率%",
+    "en_us": "Profit %"
+  },
+  "gui.wandscape.scanner.label_withdraw_limit": {
+    "zh_cn": "取现上限",
+    "en_us": "Withdraw Limit"
+  },
+  "gui.wandscape.scanner.level_range": {
+    "zh_cn": "(1~10)",
+    "en_us": "(1~10)"
+  },
+  "gui.wandscape.scanner.load_preset": {
+    "zh_cn": "加载预设",
+    "en_us": "Load Preset"
+  },
+  "gui.wandscape.scanner.magic_label": {
+    "zh_cn": "魔法:",
+    "en_us": "Magic:"
+  },
+  "gui.wandscape.scanner.magic_short": {
+    "zh_cn": "魔:",
+    "en_us": "Mag:"
+  },
+  "gui.wandscape.scanner.match_corners": {
+    "zh_cn": "匹配角点",
+    "en_us": "Match Corners"
+  },
+  "gui.wandscape.scanner.max_label": {
+    "zh_cn": "Max(大):",
+    "en_us": "Max:"
+  },
+  "gui.wandscape.scanner.min_label": {
+    "zh_cn": "Min(小):",
+    "en_us": "Min:"
+  },
+  "gui.wandscape.scanner.mode_corner": {
+    "zh_cn": "模式: CORNER ▾",
+    "en_us": "Mode: CORNER ▾"
+  },
+  "gui.wandscape.scanner.mode_save": {
+    "zh_cn": "模式: SAVE ▾",
+    "en_us": "Mode: SAVE ▾"
+  },
+  "gui.wandscape.scanner.name_label": {
+    "zh_cn": "名称:",
+    "en_us": "Name:"
+  },
+  "gui.wandscape.scanner.next_page": {
+    "zh_cn": "下一页 ▶",
+    "en_us": "Next ▶"
+  },
+  "gui.wandscape.scanner.next_page_short": {
+    "zh_cn": "下页 ▶",
+    "en_us": "Next ▶"
+  },
+  "gui.wandscape.scanner.no_door_hint": {
+    "zh_cn": "未设门: 游客沿包围盒外进入",
+    "en_us": "No doors set: Visitors enter from perimeter"
+  },
+  "gui.wandscape.scanner.no_element_output": {
+    "zh_cn": "暂无元素产出，点击右上角“+ 产出”添加",
+    "en_us": "No element output. Click '+ Output' above"
+  },
+  "gui.wandscape.scanner.no_goods": {
+    "zh_cn": "暂无商品，请点击右上角“+ 上架商品”",
+    "en_us": "No goods. Click '+ Add Good' in the top right"
+  },
+  "gui.wandscape.scanner.no_interact_spot_warning": {
+    "zh_cn": "§c无交互位 = 游客不选该建筑",
+    "en_us": "§cNo interact spots = tourists won't pick this building"
+  },
+  "gui.wandscape.scanner.no_presets_1": {
+    "zh_cn": "暂无保存的预设模板。",
+    "en_us": "No saved presets found."
+  },
+  "gui.wandscape.scanner.no_presets_2": {
+    "zh_cn": "在上方输入名称并点击“保存当前为预设”，",
+    "en_us": "Enter a name above and click 'Save Preset',"
+  },
+  "gui.wandscape.scanner.no_presets_3": {
+    "zh_cn": "即可将当前包围盒、分类与属性保存为模板存档。",
+    "en_us": "to save current bounds, category, and properties as template."
+  },
+  "gui.wandscape.scanner.no_spots_detail": {
+    "zh_cn": "§c游客将无法在此互动消费",
+    "en_us": "§cVisitors cannot interact/spend here"
+  },
+  "gui.wandscape.scanner.no_spots_warn": {
+    "zh_cn": "§c无交互位！",
+    "en_us": "§cNo interact spots!"
+  },
+  "gui.wandscape.scanner.node_amount": {
+    "zh_cn": "产出量/次:",
+    "en_us": "Amount/Harvest:"
+  },
+  "gui.wandscape.scanner.node_channel": {
+    "zh_cn": "引导Ticks:",
+    "en_us": "Channel Ticks:"
+  },
+  "gui.wandscape.scanner.node_config_header": {
+    "zh_cn": "节点配置",
+    "en_us": "Node Config"
+  },
+  "gui.wandscape.scanner.node_desc": {
+    "zh_cn": "市民法师在此节点引导采集元素能量",
+    "en_us": "Citizen wizards channel elemental energy here"
+  },
+  "gui.wandscape.scanner.occupancy": {
+    "zh_cn": "容纳:",
+    "en_us": "Capacity:"
+  },
+  "gui.wandscape.scanner.output_amount": {
+    "zh_cn": "产出量:",
+    "en_us": "Output:"
+  },
+  "gui.wandscape.scanner.overview_header": {
+    "zh_cn": "当前扫描配置概览",
+    "en_us": "Scan Configuration Overview"
+  },
+  "gui.wandscape.scanner.overview_id_name": {
+    "zh_cn": "标识: %s (%s)",
+    "en_us": "ID: %s (%s)"
+  },
+  "gui.wandscape.scanner.overview_stats": {
+    "zh_cn": "尺寸: %d×%d×%d (%s格) | 门: %d扇 | 交互位: %d个",
+    "en_us": "Size: %d×%d×%d (%s blocks) | Doors: %d | Spots: %d"
+  },
+  "gui.wandscape.scanner.overview_target_cat": {
+    "zh_cn": "目标: %s | 分类: %s",
+    "en_us": "Target: %s | Category: %s"
+  },
+  "gui.wandscape.scanner.package_label": {
+    "zh_cn": "包:",
+    "en_us": "Package:"
+  },
+  "gui.wandscape.scanner.page_format": {
+    "zh_cn": "第 %d/%d 页",
+    "en_us": "Page %d/%d"
+  },
+  "gui.wandscape.scanner.passphrase": {
+    "zh_cn": "暗号:",
+    "en_us": "Passphrase:"
+  },
+  "gui.wandscape.scanner.passphrase_corner_hint": {
+    "zh_cn": "暗号 (需与SAVE扫描器一致)",
+    "en_us": "Passphrase (must match SAVE scanner)"
+  },
+  "gui.wandscape.scanner.passphrase_hint": {
+    "zh_cn": "暗号",
+    "en_us": "Passphrase"
+  },
+  "gui.wandscape.scanner.placement_meta_header": {
+    "zh_cn": "放置元数据",
+    "en_us": "Placement Metadata"
+  },
+  "gui.wandscape.scanner.preset_name_label": {
+    "zh_cn": "预设名称:",
+    "en_us": "Preset Name:"
+  },
+  "gui.wandscape.scanner.presets_header": {
+    "zh_cn": "预设预存",
+    "en_us": "Presets"
+  },
+  "gui.wandscape.scanner.presets_saved_count": {
+    "zh_cn": "已保存的扫描预设模板 (%d 个)",
+    "en_us": "Saved Presets (%d)"
+  },
+  "gui.wandscape.scanner.prev_page": {
+    "zh_cn": "◀ 上一页",
+    "en_us": "◀ Prev"
+  },
+  "gui.wandscape.scanner.prev_page_short": {
+    "zh_cn": "◀ 上页",
+    "en_us": "◀ Prev"
+  },
+  "gui.wandscape.scanner.profit_rate": {
+    "zh_cn": "利润%:",
+    "en_us": "Profit %:"
+  },
+  "gui.wandscape.scanner.relax_desc": {
+    "zh_cn": "游客在此建筑放松时恢复精力值",
+    "en_us": "Visitors restore energy when relaxing here"
+  },
+  "gui.wandscape.scanner.relax_duration": {
+    "zh_cn": "交互时长Ticks:",
+    "en_us": "Duration Ticks:"
+  },
+  "gui.wandscape.scanner.relax_energy": {
+    "zh_cn": "恢复精力/次:",
+    "en_us": "Energy Restored:"
+  },
+  "gui.wandscape.scanner.relax_params_header": {
+    "zh_cn": "放松参数",
+    "en_us": "Relax Parameters"
+  },
+  "gui.wandscape.scanner.result_doors_found": {
+    "zh_cn": "已检门 %s 扇，游客从任意一扇门进（编辑框仅改首门）",
+    "en_us": "Detected %s doors — tourists enter from any door (edits apply to the first only)"
+  },
+  "gui.wandscape.scanner.result_export_started": {
+    "zh_cn": "已发起导出: %s",
+    "en_us": "Export started: %s"
+  },
+  "gui.wandscape.scanner.result_header": {
+    "zh_cn": "执行结果 / 状态反馈",
+    "en_us": "Execution Result / Feedback"
+  },
+  "gui.wandscape.scanner.result_initial": {
+    "zh_cn": "尚未扫描",
+    "en_us": "Not scanned yet"
+  },
+  "gui.wandscape.scanner.result_need_id": {
+    "zh_cn": "请先设置 ID",
+    "en_us": "Please set an ID first"
+  },
+  "gui.wandscape.scanner.result_need_preset_name": {
+    "zh_cn": "请先输入预设名",
+    "en_us": "Please enter a preset name"
+  },
+  "gui.wandscape.scanner.result_no_boundary": {
+    "zh_cn": "未定义 3D 边界",
+    "en_us": "No 3D boundary defined"
+  },
+  "gui.wandscape.scanner.result_no_door_found": {
+    "zh_cn": "未在包围盒内检测到门方块",
+    "en_us": "No doors detected in the bounding box"
+  },
+  "gui.wandscape.scanner.result_preset_deleted": {
+    "zh_cn": "预设已删除: %s",
+    "en_us": "Preset deleted: %s"
+  },
+  "gui.wandscape.scanner.result_preset_loaded": {
+    "zh_cn": "预设已加载: %s",
+    "en_us": "Preset loaded: %s"
+  },
+  "gui.wandscape.scanner.result_preset_not_found": {
+    "zh_cn": "未找到预设: %s",
+    "en_us": "Preset not found: %s"
+  },
+  "gui.wandscape.scanner.result_preset_saved": {
+    "zh_cn": "预设已保存: %s",
+    "en_us": "Preset saved: %s"
+  },
+  "gui.wandscape.scanner.result_scanned": {
+    "zh_cn": "已扫描 %s 个有效方块 (不含扫描器)",
+    "en_us": "Scanned %s valid blocks (excluding scanners)"
+  },
+  "gui.wandscape.scanner.result_value_started": {
+    "zh_cn": "已发起价值计算，结果见聊天区",
+    "en_us": "Value calculation started — see chat"
+  },
+  "gui.wandscape.scanner.road_desc_body": {
+    "zh_cn": "导出后将自动计算包围盒内各方块权重并生成 road_preset JSON，热注册到道路工坊与建造法杖中，可立即使用。",
+    "en_us": "Exporting calculates block weights within the bounding box and generates a road_preset JSON, hot-registered into Road Studio and Wand."
+  },
+  "gui.wandscape.scanner.road_desc_header": {
+    "zh_cn": "道路预设说明",
+    "en_us": "Road Preset Info"
+  },
+  "gui.wandscape.scanner.road_export_header": {
+    "zh_cn": "道路 JSON 导出与热注册",
+    "en_us": "Road JSON Export & Hot-Register"
+  },
+  "gui.wandscape.scanner.road_id": {
+    "zh_cn": "道路ID:",
+    "en_us": "Road ID:"
+  },
+  "gui.wandscape.scanner.road_preset_header": {
+    "zh_cn": "道路预设属性 (Road Preset)",
+    "en_us": "Road Preset Properties"
+  },
+  "gui.wandscape.scanner.save_preset": {
+    "zh_cn": "保存预设",
+    "en_us": "Save Preset"
+  },
+  "gui.wandscape.scanner.scan_area": {
+    "zh_cn": "扫描区域",
+    "en_us": "Scan Area"
+  },
+  "gui.wandscape.scanner.service_params_header": {
+    "zh_cn": "服务参数",
+    "en_us": "Service Parameters"
+  },
+  "gui.wandscape.scanner.shop_goods_count_header": {
+    "zh_cn": "上架商品 (%s)",
+    "en_us": "Listed Goods (%s)"
+  },
+  "gui.wandscape.scanner.shop_goods_header": {
+    "zh_cn": "上架商品",
+    "en_us": "Listed Goods"
+  },
+  "gui.wandscape.scanner.shop_params_header": {
+    "zh_cn": "商店参数",
+    "en_us": "Shop Parameters"
+  },
+  "gui.wandscape.scanner.size_format": {
+    "zh_cn": "尺寸: %d×%d×%d",
+    "en_us": "Size: %d×%d×%d"
+  },
+  "gui.wandscape.scanner.specs_header": {
+    "zh_cn": "%s 专属配置",
+    "en_us": "%s Specs"
+  },
+  "gui.wandscape.scanner.spots_count": {
+    "zh_cn": "已放置: %d 个交互位",
+    "en_us": "Placed: %d spots"
+  },
+  "gui.wandscape.scanner.spots_hint": {
+    "zh_cn": "§7右键换动作, 潜行换朝向",
+    "en_us": "§7RMB cycle action, Sneak+RMB facing"
+  },
+  "gui.wandscape.scanner.spots_optional": {
+    "zh_cn": "§7基础/功能建筑可选填交互位",
+    "en_us": "§7Optional for functional buildings"
+  },
+  "gui.wandscape.scanner.spots_ready": {
+    "zh_cn": "§a交互位已就绪",
+    "en_us": "§aInteract spots ready"
+  },
+  "gui.wandscape.scanner.structure_name_label": {
+    "zh_cn": "暗号",
+    "en_us": "Passphrase"
+  },
+  "gui.wandscape.scanner.survival_category_locked": {
+    "zh_cn": "自定义建筑 (custom) [生存模式固定]",
+    "en_us": "Custom Building (custom) [Locked in Survival]"
+  },
+  "gui.wandscape.scanner.survival_desc_header": {
+    "zh_cn": "生存建筑属性与蓝图说明",
+    "en_us": "Survival Building & Blueprint Info"
+  },
+  "gui.wandscape.scanner.survival_note1": {
+    "zh_cn": "• 生存模式下扫描的建筑类别固定为 custom (自定义)。",
+    "en_us": "• Scanned buildings in survival mode are permanently set to custom category."
+  },
+  "gui.wandscape.scanner.survival_note2": {
+    "zh_cn": "• 建筑的舒适度、魔法值、奇观值与维护费用在建造时由其内部方块属性自动评估，无需手动配置。",
+    "en_us": "• Comfort, magic, wonder, and maintenance are auto-evaluated from internal blocks."
+  },
+  "gui.wandscape.scanner.survival_note3": {
+    "zh_cn": "• 导出的蓝图可直接在蓝图工坊、建造法杖及建筑列表中使用，支持市民法师全自动建造。",
+    "en_us": "• Exported blueprints can be crafted and placed via Blueprints Workshop and Wand."
+  },
+  "gui.wandscape.scanner.survival_note4": {
+    "zh_cn": "• 如需配置商店出售商品、服务元素产出等深度经济系统，请在创造模式使用创造建筑扫描器。",
+    "en_us": "• To configure shops, service elemental output, or nodes, use the Creative Scanner."
+  },
+  "gui.wandscape.scanner.switch_to_building": {
+    "zh_cn": "切换为建筑模式",
+    "en_us": "Switch to Building"
+  },
+  "gui.wandscape.scanner.switch_to_road": {
+    "zh_cn": "切换为道路模式",
+    "en_us": "Switch to Road"
+  },
+  "gui.wandscape.scanner.tab_bounds": {
+    "zh_cn": "范围结构",
+    "en_us": "Bounds"
+  },
+  "gui.wandscape.scanner.tab_export": {
+    "zh_cn": "导出操作",
+    "en_us": "Export"
+  },
+  "gui.wandscape.scanner.tab_presets": {
+    "zh_cn": "预设管理",
+    "en_us": "Presets"
+  },
+  "gui.wandscape.scanner.tab_properties": {
+    "zh_cn": "属性配置",
+    "en_us": "Properties"
+  },
+  "gui.wandscape.scanner.target_building": {
+    "zh_cn": "目标: 建筑 ▾",
+    "en_us": "Target: Building ▾"
+  },
+  "gui.wandscape.scanner.target_package": {
+    "zh_cn": "目标建筑包",
+    "en_us": "Package"
+  },
+  "gui.wandscape.scanner.target_package.tooltip": {
+    "zh_cn": "导出归属的建筑包目录名（如 default、oriental）",
+    "en_us": "Target building package directory (e.g. default, oriental)"
+  },
+  "gui.wandscape.scanner.target_road": {
+    "zh_cn": "目标: 道路 ▾",
+    "en_us": "Target: Road ▾"
+  },
+  "gui.wandscape.scanner.title": {
+    "zh_cn": "创造建筑扫描器",
+    "en_us": "Creative Building Scanner"
+  },
+  "gui.wandscape.scanner.title_survival": {
+    "zh_cn": "建筑扫描器",
+    "en_us": "Building Scanner"
+  },
+  "gui.wandscape.scanner.unlock_level_label": {
+    "zh_cn": "解锁等级:",
+    "en_us": "Unlock Level:"
+  },
+  "gui.wandscape.scanner.unlock_requirement_header": {
+    "zh_cn": "解锁门槛",
+    "en_us": "Unlock Requirement"
+  },
+  "gui.wandscape.scanner.vol_format": {
+    "zh_cn": "体积: %s格",
+    "en_us": "Volume: %s blocks"
+  },
+  "gui.wandscape.scanner.wonder_label": {
+    "zh_cn": "奇观:",
+    "en_us": "Wonder:"
+  },
+  "gui.wandscape.scanner.wonder_short": {
+    "zh_cn": "奇:",
+    "en_us": "Wond:"
+  }
+}
