@@ -1,7 +1,7 @@
 # 手册（Patchouli）× 兜底指南书
 
 > 信息截至 2026-09-10 | Minecraft NeoForge 1.21.1 | 分支 1.21.1
-> 方案与分阶段路线见 [plan/guidebook-patchouli-transform.md](plan/guidebook-patchouli-transform.md)；本文只记**已落地实况、映射规则与素材规格**。
+> 文案怎么写见 [guidebook-writing.md](guidebook-writing.md)；本文只记**已落地实况、映射规则与素材规格**。
 
 - **【何时读】**：改 `guidebook/*.md` 内容、重新生成手册、替换手册美术素材、或接续「跟玩/解锁/入口收口」后续阶段时。
 - **【不包含什么】**：玩家向玩法说明（在游戏内手册里）、Patchouli 自身的机制科普（读 `_refs/patchouli`）。
@@ -60,13 +60,8 @@ python gen_patchouli.py textures --force   # 强制覆盖书皮
 | `items` | 装备与物品 | wand / oath_ring / scepter / magic_compass / warehouse_terminal |
 | `compat` | 联动与兼容 | curios / irons_spells / goety / tlm |
 
-**每条的开头都有一行「怎么做」**：md 里写成 `> 在合成站制作，低、中、高级分别需要殖民地达到 1 级、10 级和 20 级。`
-这样的引用行，编译后是引用样式（斜体 + 棕字），排在条目名下方、正文上方。写「在哪做 + 殖民地等级门槛」，
-**不写元素成本**——具体价格在合成站 GUI 里现成可见，写进手册只会随平衡调整过期。天生自带或祭坛专属的
-（传送/复活）就照实写「不需要制作」。
-
-**手册文案一律写成通顺的话，不要为了塞进一行把句子压成电报**（「指向市政厅；高级显坐标，终极可右键传送」
-这种分号堆叠、缺主语的写法不算一句话）。一句话就是一整句完整的话，宁可长一点。
+**条目文案怎么写**——只写「做了什么」不写能力清单、开头那行「怎么做」的写法、文风与篇幅——
+见 [guidebook-writing.md](guidebook-writing.md)。本文只负责管线与结构，不重复文风约定。
 
 `magic` 分类一条魔法一页，正文**照搬 `magic_spells/<id>.json` 的 `description`**——即 JEI 卷轴信息页
 （`WandscapeJeiPlugin` 经 `magic.wandscape.<id>.desc` 本地化）那句。`items` 分类把 3 档戒指 /
@@ -195,10 +190,23 @@ python gen_patchouli.py textures --force   # 强制覆盖书皮
 
 | 项 | 现状 | 说明 |
 |---|---|---|
-| **入口收口** | H 键 / `guide_book` 物品 / `/wandscape guide [page]` / 各建筑屏 `?` 帮助**仍直接开 md 兜底屏** | 装 Patchouli 时应改走帕秋莉条目，GuidebookScreen 退居兜底。需要新增 `GuideFacade` + `compat/patchouli`（`compileOnly` 门禁，照 JEI/Curios 模式） |
-| **解锁与跟玩** | 无 | 条目 `advancement` 锁定 + `turnin` 待办 + `patchouli:quest` 打勾；需先做 `intro_*` 成就 |
+| **解锁与跟玩** | 无 | 条目 `advancement` 锁定 + `turnin` 待办 + `patchouli:quest` 打勾；需先做 `intro_*` 成就。相关未决点见下表 |
 | **配方页** | 12 支法杖现为文本表 | 可换成 `patchouli:crafting` 页自动展示配方并接入 JEI |
 | **美术** | 书皮 / 配图 / 模型 / 图标全是占位 | 见 §四 |
-| **旧引导删除** | `content/tutorial` + `foundation/ui/tutorial`（HUD 浮层）仍在 | 见方案文档 §5 P2 |
+| **旧引导删除** | `content/tutorial` + `foundation/ui/tutorial`（HUD 浮层）仍在 | 教学步并入手册后即可删 |
+
+**入口收口已完成**：H 键、`guide_book` 物品、`/wandscape guide`、各建筑屏 `?` 全部经
+`foundation/ui/guidebook/GuideFacade` 路由——装了 Patchouli 走条目，没装退 `GuidebookScreen` 只读兜底。
+
+### 尚未决的几个问题
+
+原先这些记在 `plan/guidebook-patchouli-transform.md`（方案评估文档，已删）。**已定的两条**：
+教程不设领取式奖励（激励回归游戏自身）；内容继续走 md 单源 + 生成器（就是现在的管线）。
+
+| 编号 | 问题 | 现状 |
+|---|---|---|
+| D3 | 行为类教学步的成就授予「操作玩家」，状态类沿用 `AchievementService` 授予 **founder**；多人服两条语义并存需先定 | 待定 |
+| D4 | 无 Patchouli 时的 md 兜底保持**只读**，不模拟锁定 / 打勾 | 待定 |
+| D5 | 法杖讲解放哪：新手第一步进新手条目阶梯，还是把 `crafting_guide` 富化成 crafting 页 | 未决 |
 
 游戏内验证当前进度：`/openbook wandscape:guide`（需要管理员权限）。
