@@ -242,8 +242,12 @@ public final class SettingsOverlay {
         }
         g.drawString(font, desc, x + 10, y + 23, 0xFFAAAAAA, false);
 
-        // Line 3: Range / Default hint
-        g.drawString(font, item.rangeHint(), x + 10, y + 38, 0xFF777777, false);
+        // Line 3: Range / Default hint（范围直接取自 Config 的 defineInRange，可能很长，同样截断）
+        String hint = item.rangeHint();
+        if (font.width(hint) > maxDescW) {
+            hint = font.plainSubstrByWidth(hint, maxDescW - 10) + "...";
+        }
+        g.drawString(font, hint, x + 10, y + 38, 0xFF777777, false);
 
         // ── Right: Controls ──
         int ctrlRight = x + w - 10;

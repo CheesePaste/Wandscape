@@ -2,16 +2,29 @@ package com.wsteam.wandscape.foundation.ui.settings;
 
 import com.wsteam.wandscape.ClientConfig;
 import com.wsteam.wandscape.Config;
+import com.wsteam.wandscape.foundation.log.Log;
 
+import javax.annotation.Nullable;
 import java.util.*;
 
 /**
  * Registry of configurable settings available in the V panel Settings Center.
+ *
+ * <p>本类是「设置项 key → 项」的唯一来源：{@code ConfigUpdatePacket} 也按 key 来这里查，
+ * 不再自备一份 switch 名单。新增一项只需在这里 register，两端自动都能改到；
+ * 忘了登记只会被 {@link #findByKey} 判为未知路径并告警，不会出现「面板改了、服务端不认」。
+ *
+ * <p>This class is the single source of truth for "setting key → item": {@code ConfigUpdatePacket}
+ * resolves keys through it instead of keeping its own switch list. Registering an item here is all it
+ * takes for both sides to handle it.
  */
 public final class SettingsRegistry {
 
+    private static final String TAG = "SettingsRegistry";
+
     private static final List<SettingItem> ALL_ITEMS = new ArrayList<>();
     private static final Map<SettingTab, List<SettingItem>> ITEMS_BY_TAB = new EnumMap<>(SettingTab.class);
+    private static final Map<String, SettingItem> BY_KEY = new HashMap<>();
     private static boolean initialized = false;
 
     private SettingsRegistry() {}
@@ -35,7 +48,7 @@ public final class SettingsRegistry {
                 SettingTab.VISUAL,
                 true, true,
                 ClientConfig.FLY_SPEED,
-                1.0, 200.0, 1.0, 5.0,
+                1.0, 5.0,
                 val -> String.format("%.1f 格/秒", val)
         ));
 
@@ -75,7 +88,7 @@ public final class SettingsRegistry {
                 SettingTab.VISUAL,
                 true, false,
                 ClientConfig.PREVIEW_RESOLUTION,
-                48, 256, 16, 32,
+                16, 32,
                 val -> val + " px"
         ));
 
@@ -86,7 +99,7 @@ public final class SettingsRegistry {
                 SettingTab.VISUAL,
                 true, false,
                 ClientConfig.PREVIEW_FPS,
-                4, 60, 2, 4,
+                2, 4,
                 val -> val + " FPS"
         ));
 
@@ -97,7 +110,16 @@ public final class SettingsRegistry {
                 SettingTab.VISUAL,
                 false, true,
                 Config.DEBUG
-        ));
+        ) {
+            @Override
+            public void onApplied() {
+                // 本项除了写 config，还要同步日志级别；两端都要跟着变。
+                com.wsteam.wandscape.foundation.log.LogConfig.setRootLevel(
+                        Config.DEBUG.get()
+                                ? com.wsteam.wandscape.foundation.log.LogLevel.DEBUG
+                                : com.wsteam.wandscape.foundation.log.LogLevel.INFO);
+            }
+        });
 
         // ═══════════════════════════════════════════════════════════════
         // Tab 1: 城镇经营 (COLONY)
@@ -110,7 +132,7 @@ public final class SettingsRegistry {
                 SettingTab.COLONY,
                 false, true,
                 Config.COLONY_OFFLINE_INCOME_MULTIPLIER,
-                0.0, 1.0, 0.05, 0.20,
+                0.05, 0.20,
                 val -> Math.round(val * 100) + "%"
         ));
 
@@ -121,8 +143,8 @@ public final class SettingsRegistry {
                 SettingTab.COLONY,
                 false, true,
                 Config.WAREHOUSE_ITEM_CAPACITY,
-                0, 200000, 5000, 25000,
-                val -> val == 0 ? "无上限" : String.format("%,d 件", val)
+                5000, 25000,
+                val -> String.format("%,d 件", val)
         ));
 
         register(new SettingItem.BooleanSetting(
@@ -141,7 +163,7 @@ public final class SettingsRegistry {
                 SettingTab.COLONY,
                 false, true,
                 Config.ELEMENT_DECOMPOSE_DIVISOR,
-                1.0, 20.0, 0.5, 2.0,
+                0.5, 2.0,
                 val -> String.format("1/%.1f", val)
         ));
 
@@ -152,7 +174,7 @@ public final class SettingsRegistry {
                 SettingTab.COLONY,
                 false, true,
                 Config.ELEMENT_CRAFT_COST_MULTIPLIER,
-                1.0, 10.0, 0.1, 0.5,
+                0.1, 0.5,
                 val -> String.format("%.1f×", val)
         ));
 
@@ -163,7 +185,7 @@ public final class SettingsRegistry {
                 SettingTab.COLONY,
                 false, true,
                 Config.TAVERN_RECRUIT_COST_PER_ELEMENT,
-                0, 100000, 1000, 5000,
+                1000, 5000,
                 val -> String.format("%,d 元素", val)
         ));
 
@@ -187,7 +209,7 @@ public final class SettingsRegistry {
                 SettingTab.TOURIST,
                 false, true,
                 Config.TOURIST_MAX_PER_COLONY,
-                10, 500, 10, 50,
+                10, 50,
                 val -> val + " 人"
         ));
 
@@ -198,7 +220,7 @@ public final class SettingsRegistry {
                 SettingTab.TOURIST,
                 false, true,
                 Config.TOURIST_BASE_SPAWN_COUNT,
-                1, 50, 1, 5,
+                1, 5,
                 val -> val + " 人/日"
         ));
 
@@ -209,7 +231,7 @@ public final class SettingsRegistry {
                 SettingTab.TOURIST,
                 false, true,
                 Config.TOURIST_STAY_MIN_DAYS,
-                1, 14, 1, 2,
+                1, 2,
                 val -> val + " 天"
         ));
 
@@ -220,7 +242,7 @@ public final class SettingsRegistry {
                 SettingTab.TOURIST,
                 false, true,
                 Config.TOURIST_STAY_MAX_DAYS,
-                1, 30, 1, 2,
+                1, 2,
                 val -> val + " 天"
         ));
 
@@ -231,7 +253,7 @@ public final class SettingsRegistry {
                 SettingTab.TOURIST,
                 false, true,
                 Config.TOURIST_BASE_WALLET,
-                50, 5000, 50, 200,
+                50, 200,
                 val -> String.format("%,d 元素", val)
         ));
 
@@ -242,7 +264,7 @@ public final class SettingsRegistry {
                 SettingTab.TOURIST,
                 false, true,
                 Config.TOURIST_MAX_ENERGY,
-                20, 500, 10, 50,
+                10, 50,
                 val -> val + " 点"
         ));
 
@@ -288,8 +310,19 @@ public final class SettingsRegistry {
     }
 
     private static void register(SettingItem item) {
+        SettingItem previous = BY_KEY.put(item.key(), item);
+        if (previous != null) {
+            Log.warn(TAG, "Duplicate setting key '{}' — the later registration wins", item.key());
+        }
         ALL_ITEMS.add(item);
         ITEMS_BY_TAB.get(item.tab()).add(item);
+    }
+
+    /** 按 key 找已注册的设置项；建筑包那两条是动态项，不在这里（见 ConfigUpdatePacket）。 */
+    @Nullable
+    public static SettingItem findByKey(String key) {
+        init();
+        return BY_KEY.get(key);
     }
 
     public static List<SettingItem> getItems(SettingTab tab) {

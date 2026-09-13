@@ -2,6 +2,8 @@ package com.wsteam.wandscape.foundation.ui.settings.network;
 
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.ui.settings.SettingItem;
+import com.wsteam.wandscape.foundation.ui.settings.SettingsRegistry;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -17,10 +19,21 @@ import static com.wsteam.wandscape.Wandscape.MODID;
 /**
  * Client->Server: Requests updating a common config value.
  * Validates player permissions (OP level 2 or singleplayer host) before applying.
+ *
+ * <p>通用配置只有服务端说了算：客户端把「请求」发过来，服务端校验通过才落盘，并把权威值广播回去；
+ * 校验不通过则把服务端当前值回吐给发起者，让客户端撤回那笔乐观改动。
+ *
+ * <p>Common config is server-authoritative: the client sends a request, the server validates, persists,
+ * and broadcasts the authoritative value back. On rejection the server echoes its current value to the
+ * requester so the client can roll back its optimistic edit.
  */
 public record ConfigUpdatePacket(String path, String value) implements CustomPacketPayload {
 
     private static final String TAG = "ConfigUpdatePacket";
+
+    /** 建筑包相关路径不是注册设置项（包 ID 由客户端建筑包动态生成），单独处理。 */
+    private static final String PACKAGE_PREFIX = "building.package.";
+    private static final String DISABLED_PACKAGES = "building.disabledPackages";
 
     public static final Type<ConfigUpdatePacket> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath(MODID, "config_update"));
@@ -50,120 +63,82 @@ public record ConfigUpdatePacket(String path, String value) implements CustomPac
         if (!isOp) {
             Log.warn(TAG, "Player {} attempted to modify config {} without permissions",
                     player.getName().getString(), packet.path);
+            reject(player, packet.path);
             return;
         }
 
-        boolean applied = applyConfig(packet.path, packet.value);
-        if (applied) {
+        if (applyConfig(packet.path, packet.value)) {
             Config.SPEC.save();
             Log.info(TAG, "Config {} updated to {} by player {}",
                     packet.path, packet.value, player.getName().getString());
-            PacketDistributor.sendToAllPlayers(new ConfigSyncPacket(packet.path, packet.value));
+            // 广播的是服务端落盘后的值，不是客户端报上来的值：夹取/取整只在这里发生一次，两端才不会各持一份。
+            PacketDistributor.sendToAllPlayers(new ConfigSyncPacket(packet.path, readConfig(packet.path), true));
+        } else {
+            // 未知路径 / 客户端专属项 / 值解析失败：同样回吐权威值，客户端据此撤回。
+            reject(player, packet.path);
         }
+    }
+
+    /** 拒绝一次修改：只回吐给发起者，带上服务端当前的权威值让他还原。 */
+    private static void reject(ServerPlayer player, String path) {
+        PacketDistributor.sendToPlayer(player, new ConfigSyncPacket(path, readConfig(path), false));
     }
 
     public static boolean applyConfig(String path, String value) {
         try {
-            if (path.startsWith("building.package.")) {
-                String packId = path.substring("building.package.".length());
-                boolean enabled = Boolean.parseBoolean(value);
-                Config.setPackageEnabled(packId, enabled);
-                return true;
+            Boolean special = applySpecial(path, value);
+            if (special != null) return special;
+
+            SettingItem item = SettingsRegistry.findByKey(path);
+            if (item == null) {
+                Log.warn(TAG, "Unknown config path: {}", path);
+                return false;
             }
-            switch (path) {
-                case "building.disabledPackages" -> {
-                    List<String> list = value.isEmpty() ? List.of() : Arrays.asList(value.split(","));
-                    Config.setDisabledPackages(list);
-                    return true;
-                }
-                case "general.debug" -> {
-                    boolean val = Boolean.parseBoolean(value);
-                    Config.DEBUG.set(val);
-                    com.wsteam.wandscape.foundation.log.LogConfig.setRootLevel(
-                            val ? com.wsteam.wandscape.foundation.log.LogLevel.DEBUG
-                                : com.wsteam.wandscape.foundation.log.LogLevel.INFO);
-                    return true;
-                }
-                case "colony.offlineIncomeMultiplier" -> {
-                    Config.COLONY_OFFLINE_INCOME_MULTIPLIER.set(Double.parseDouble(value));
-                    return true;
-                }
-                case "warehouse.itemCapacity" -> {
-                    Config.WAREHOUSE_ITEM_CAPACITY.set(Integer.parseInt(value));
-                    return true;
-                }
-                case "element.autoGatherOnShortage" -> {
-                    Config.AUTO_GATHER_ON_ELEMENT_SHORTAGE.set(Boolean.parseBoolean(value));
-                    return true;
-                }
-                case "element.decomposeDivisor" -> {
-                    Config.ELEMENT_DECOMPOSE_DIVISOR.set(Double.parseDouble(value));
-                    return true;
-                }
-                case "element.craftCostMultiplier" -> {
-                    Config.ELEMENT_CRAFT_COST_MULTIPLIER.set(Double.parseDouble(value));
-                    return true;
-                }
-                case "tavern.recruitCostPerElement" -> {
-                    Config.TAVERN_RECRUIT_COST_PER_ELEMENT.set(Integer.parseInt(value));
-                    return true;
-                }
-                case "tourist.spawnEnabled" -> {
-                    Config.TOURIST_SPAWN_ENABLED.set(Boolean.parseBoolean(value));
-                    return true;
-                }
-                case "tourist.maxPerColony" -> {
-                    Config.TOURIST_MAX_PER_COLONY.set(Integer.parseInt(value));
-                    return true;
-                }
-                case "tourist.baseSpawnCount" -> {
-                    Config.TOURIST_BASE_SPAWN_COUNT.set(Integer.parseInt(value));
-                    return true;
-                }
-                case "tourist.stayMinDays" -> {
-                    Config.TOURIST_STAY_MIN_DAYS.set(Integer.parseInt(value));
-                    return true;
-                }
-                case "tourist.stayMaxDays" -> {
-                    Config.TOURIST_STAY_MAX_DAYS.set(Integer.parseInt(value));
-                    return true;
-                }
-                case "tourist.baseWallet" -> {
-                    Config.TOURIST_BASE_WALLET.set(Integer.parseInt(value));
-                    return true;
-                }
-                case "tourist.maxEnergy" -> {
-                    Config.TOURIST_MAX_ENERGY.set(Integer.parseInt(value));
-                    return true;
-                }
-                case "particle.level" -> {
-                    Config.PARTICLE_LEVEL.set(value);
-                    return true;
-                }
-                case "building.noSpawnInBuildingArea" -> {
-                    Config.BUILDING_NO_SPAWN_IN_AREA.set(Boolean.parseBoolean(value));
-                    return true;
-                }
-                case "npc.friendlyFireProtection" -> {
-                    Config.NPC_FRIENDLY_FIRE_PROTECTION.set(Boolean.parseBoolean(value));
-                    return true;
-                }
-                case "npc.deathMessageGlobal" -> {
-                    Config.NPC_DEATH_MESSAGE_GLOBAL.set(Boolean.parseBoolean(value));
-                    return true;
-                }
-                case "npc.pvp" -> {
-                    Config.PVP.set(Boolean.parseBoolean(value));
-                    return true;
-                }
-                default -> {
-                    Log.warn(TAG, "Unknown config path: {}", path);
-                    return false;
-                }
+            if (item.isClientOnly()) {
+                // 客户端专属项没有跨端同步的意义，且 dedicated server 上它的 spec 未加载。
+                Log.warn(TAG, "Refusing client-only config from network: {}", path);
+                return false;
             }
+            if (!item.applyFromString(value)) {
+                Log.warn(TAG, "Failed to apply config {}={}", path, value);
+                return false;
+            }
+            item.onApplied();
+            return true;
         } catch (Exception e) {
             Log.warn(TAG, "Failed to apply config {}={}: {}", path, value, e.getMessage());
             return false;
         }
+    }
+
+    /** path 对应的权威当前值，用于拒绝时回吐、以及广播时避免回传未夹取的原始输入。 */
+    public static String readConfig(String path) {
+        try {
+            if (path.startsWith(PACKAGE_PREFIX)) {
+                return String.valueOf(Config.isPackageEnabled(path.substring(PACKAGE_PREFIX.length())));
+            }
+            if (DISABLED_PACKAGES.equals(path)) {
+                List<? extends String> disabled = Config.DISABLED_BUILDING_PACKAGES.get();
+                return disabled == null ? "" : String.join(",", disabled);
+            }
+            SettingItem item = SettingsRegistry.findByKey(path);
+            return item == null ? "" : item.rawValue();
+        } catch (Exception e) {
+            Log.warn(TAG, "Failed to read config {}: {}", path, e.getMessage());
+            return "";
+        }
+    }
+
+    /** 建筑包那两条不是注册设置项，单独处理。返回 null 表示不是特例。 */
+    private static Boolean applySpecial(String path, String value) {
+        if (path.startsWith(PACKAGE_PREFIX)) {
+            Config.setPackageEnabled(path.substring(PACKAGE_PREFIX.length()), Boolean.parseBoolean(value));
+            return true;
+        }
+        if (DISABLED_PACKAGES.equals(path)) {
+            Config.setDisabledPackages(value.isEmpty() ? List.of() : Arrays.asList(value.split(",")));
+            return true;
+        }
+        return null;
     }
 }
