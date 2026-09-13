@@ -7,7 +7,7 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "Fortifies the caster: +4 armor, Magic Enhancement I (magic damage +20%) and Speed I for 15 seconds."
+      "text": "$(italic)$(#6b5a45)Crafted at the Magic Workshop. Requires colony level 10.$()$(br2)Fortifies the caster: +4 armor, Magic Enhancement I (magic damage +20%) and Speed I for 15 seconds."
     }
   ]
 }

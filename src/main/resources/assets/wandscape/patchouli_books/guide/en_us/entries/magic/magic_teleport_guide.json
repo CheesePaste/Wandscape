@@ -7,7 +7,7 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "Instantly teleports the caster to the target location."
+      "text": "$(italic)$(#6b5a45)Innate to every mage — no crafting. Not part of a cast strategy; it triggers on its own when a mage falls behind or breaks off to escape.$()$(br2)Instantly teleports the caster to the target location."
     }
   ]
 }

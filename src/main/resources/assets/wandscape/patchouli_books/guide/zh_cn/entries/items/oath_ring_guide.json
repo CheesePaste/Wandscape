@@ -1,0 +1,13 @@
+{
+  "name": "盟誓戒指",
+  "category": "wandscape:items",
+  "icon": "wandscape:oath_ring",
+  "sortnum": 1,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "$(italic)$(#6b5a45)制作：合成站，低/中/高级分别需殖民地 1/10/20 级$()$(br2)把本殖民地的法师收进戒指随身带着走：shift+右键法师存入，右键方块或空气把他放到那里；低/中/高级分别可存取 1/2/4 名法师。"
+    }
+  ]
+}

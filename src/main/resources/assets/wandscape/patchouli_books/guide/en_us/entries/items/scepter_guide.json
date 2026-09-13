@@ -1,0 +1,13 @@
+{
+  "name": "Scepters",
+  "category": "wandscape:items",
+  "icon": "wandscape:omni_scepter",
+  "sortnum": 2,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "$(italic)$(#6b5a45)Crafted at the Crafting Station. The four single-mode scepters need colony level 1; the Omni Scepter needs 10.$()$(br2)Items for commanding your colony's mages: toggle peace or follow, mark a creature as an ally, or force the colony to focus a target. The Omni Scepter rolls all four into one — shift+right-click to switch mode."
+    }
+  ]
+}

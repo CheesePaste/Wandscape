@@ -1,0 +1,13 @@
+{
+  "name": "Magic Compass",
+  "category": "wandscape:items",
+  "icon": "wandscape:magic_compass",
+  "sortnum": 3,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "$(italic)$(#6b5a45)Crafted at the Crafting Station. The three tiers require colony level 1 / 10 / 20.$()$(br2)Always points at your colony's town hall: the advanced tier shows its coordinates in the tooltip, and the ultimate tier right-click teleports you there."
+    }
+  ]
+}

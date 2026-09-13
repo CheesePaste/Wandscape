@@ -7,7 +7,7 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "Fires a beam that damages the target every tick, scaling with the beam's width and ignoring invulnerability frames. The beam cannot pass through walls."
+      "text": "$(italic)$(#6b5a45)Crafted at the Magic Workshop. Requires colony level 1.$()$(br2)Fires a beam that damages the target every tick, scaling with the beam's width and ignoring invulnerability frames. The beam cannot pass through walls."
     }
   ]
 }

@@ -7,7 +7,7 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "Wakes a fallen mage at the altar, bringing them back in a weakened state."
+      "text": "$(italic)$(#6b5a45)Altar-only — no crafting. Ordered from the altar panel and cast by a living mage.$()$(br2)Wakes a fallen mage at the altar, bringing them back in a weakened state."
     }
   ]
 }

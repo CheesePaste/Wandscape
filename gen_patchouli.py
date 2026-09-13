@@ -58,6 +58,9 @@ CATEGORIES = [
     ("magic", "魔法", "Spells", "wandscape:spell_scroll", 30,
      "每个魔法的效果与用途，与 JEI 卷轴信息页同文。",
      "What each spell does — same text as the JEI scroll info page."),
+    ("items", "装备与物品", "Equipment and Items", "wandscape:wand", 40,
+     "法杖、权杖、戒指、罗盘与终端：怎么拿、拿来干什么。",
+     "Wands, scepters, rings, compasses and terminals — how to get them and what they are for."),
 ]
 
 # 条目：(md 文件名去掉 .md, 所属分类, 图标, sortnum)。条目名取 md 的 H1。
@@ -85,6 +88,12 @@ ENTRIES = [
     ("magic_heal_guide", "magic", "minecraft:golden_apple", 7),
     ("magic_teleport_guide", "magic", "minecraft:ender_pearl", 8),
     ("magic_revive_guide", "magic", "minecraft:totem_of_undying", 9),
+    # items: 小道具按类归并成条（3 档戒指 / 5 种权杖 / 3 档罗盘各自共用一条），法杖整族一条
+    ("wand_guide", "items", "wandscape:wand", 0),
+    ("oath_ring_guide", "items", "wandscape:oath_ring", 1),
+    ("scepter_guide", "items", "wandscape:omni_scepter", 2),
+    ("magic_compass_guide", "items", "wandscape:magic_compass", 3),
+    ("warehouse_terminal_guide", "items", "wandscape:warehouse_terminal", 4),
 ]
 
 # 《标题》→ 链接目标（条目 id 或分类 id，link_command 两者都认）。条目名与标题同文时才会命中。
@@ -97,6 +106,7 @@ TITLE_TO_DOC = {
     "管理面板": "panel_guide",
     "法师": "mages_guide",
     "魔法": "magic",
+    "装备与物品": "items",
     "游客": "tourists_guide",
     "概览": "index_guide",
     # en_us
@@ -107,6 +117,7 @@ TITLE_TO_DOC = {
     "Management Panel": "panel_guide",
     "Mages": "mages_guide",
     "Magic": "magic",
+    "Equipment and Items": "items",
     "Tourists": "tourists_guide",
     "Overview": "index_guide",
 }

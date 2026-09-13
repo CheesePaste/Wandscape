@@ -38,6 +38,12 @@ final class PatchouliCompatImpl {
         register("magic_heal_guide", "magic");
         register("magic_teleport_guide", "magic");
         register("magic_revive_guide", "magic");
+        // items（小道具按类归并成条，法杖整族一条）
+        register("wand_guide", "items");
+        register("oath_ring_guide", "items");
+        register("scepter_guide", "items");
+        register("magic_compass_guide", "items");
+        register("warehouse_terminal_guide", "items");
 
         // 为原有通用界面入口提供别名映射
         DOC_TO_ENTRY.put("overview_guide", DOC_TO_ENTRY.get("panel_guide"));

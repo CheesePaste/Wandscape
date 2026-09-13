@@ -12,7 +12,7 @@
 
 ```
 内容唯一来源（作者只改这里）
-    src/main/resources/assets/wandscape/guidebook/{zh_cn,en}/*.md     45 篇 × 2 语（其中 18 篇编进手册，其余只兜底屏可读）
+    src/main/resources/assets/wandscape/guidebook/{zh_cn,en}/*.md     50 篇 × 2 语（其中 23 篇编进手册，其余只兜底屏可读）
                     │
                     │  gen_patchouli.py（本机跑，生成物提交进仓库）
                     ▼
@@ -57,14 +57,22 @@ python gen_patchouli.py textures --force   # 强制覆盖书皮
 | `playstyle` | 玩法主线 | track_tourist |
 | `system` | 通用功能 | economy / panel / mages / tourists |
 | `magic` | 魔法 | magic_beam / magic_meteor / magic_desperation / magic_enfeeble_field / magic_conversion / magic_petrification / magic_fortification / magic_heal / magic_teleport / magic_revive |
+| `items` | 装备与物品 | wand / oath_ring / scepter / magic_compass / warehouse_terminal |
+
+**每条的开头都有一行「怎么做」**：md 里写成 `> 制作：…`，编译后是引用的样式（斜体 + 棕字），
+排在条目名下方、正文上方。写「在哪做 + 殖民地等级门槛」，**不写元素成本**——具体价格在合成站
+GUI 里现成可见，写进手册只会随平衡调整过期。天生自带或祭坛专属的（传送/复活）就照实写「不需制作」。
 
 `magic` 分类一条魔法一页，正文**照搬 `magic_spells/<id>.json` 的 `description`**——即 JEI 卷轴信息页
-（`WandscapeJeiPlugin` 经 `magic.wandscape.<id>.desc` 本地化）那句。改魔法描述要**同时改两处**：
-md 管手册、lang 管 JEI，管线不做同步校验。
+（`WandscapeJeiPlugin` 经 `magic.wandscape.<id>.desc` 本地化）那句。`items` 分类把 3 档戒指 /
+5 种权杖 / 3 档罗盘各自归并成一条，法杖整族一条（12 支预设不展开）。
+
+两个分类的文案都**同时存在于 md 与 lang**：md 管手册、lang（`magic.wandscape.<id>.desc` /
+`item.wandscape.<id>.desc`）管 JEI 信息页，改文案要两边一起改，管线不做同步校验。
 
 「目录页」= `contents` 分类下的 `index_guide` 条目：原 `index_guide.md` 的每节标题成为一页，节内文档链接转成帕秋莉可点击链接，点进去直接跳条目。
-首页的《魔法》链到 `magic` **分类**（`TITLE_TO_DOC` 的值可以是分类 id，帕秋莉支持链分类），其余未编进手册的
-标题（《建筑》《装备与物品》等）仍是不可点的纯文本。
+首页的《魔法》《装备与物品》链到对应 **分类**（`TITLE_TO_DOC` 的值可以是分类 id，帕秋莉支持链分类），
+其余未编进手册的标题（《建筑》《关于我们》等）仍是不可点的纯文本。
 
 ---
 
