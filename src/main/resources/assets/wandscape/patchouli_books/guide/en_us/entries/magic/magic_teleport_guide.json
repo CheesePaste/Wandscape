@@ -1,0 +1,13 @@
+{
+  "name": "Teleport",
+  "category": "wandscape:magic",
+  "icon": "minecraft:ender_pearl",
+  "sortnum": 8,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "Instantly teleports the caster to the target location."
+    }
+  ]
+}

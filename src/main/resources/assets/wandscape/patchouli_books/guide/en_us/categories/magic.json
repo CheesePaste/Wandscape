@@ -1,0 +1,6 @@
+{
+  "name": "Spells",
+  "description": "What each spell does — same text as the JEI scroll info page.",
+  "icon": "wandscape:spell_scroll",
+  "sortnum": 30
+}

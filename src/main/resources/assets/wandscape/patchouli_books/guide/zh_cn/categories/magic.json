@@ -1,0 +1,6 @@
+{
+  "name": "魔法",
+  "description": "每个魔法的效果与用途，与 JEI 卷轴信息页同文。",
+  "icon": "wandscape:spell_scroll",
+  "sortnum": 30
+}

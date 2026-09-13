@@ -15,11 +15,11 @@
     },
     {
       "type": "patchouli:text",
-      "text": "System Features Navigation$(br2)$(l:wandscape:system/economy_guide)《Elements and Values》$(/l) Introduction to the economy system$(br2)$(l:wandscape:system/panel_guide)《Management Panel》$(/l) Interaction, town management and building$(br2)《Buildings》 Introduction to mod building types$(br2)$(l:wandscape:system/mages_guide)《Mages》$(/l) Introduction to workers and combat units"
+      "text": "System Features Navigation$(br2)$(l:wandscape:system/economy_guide)《Elements and Values》$(/l) Introduction to the economy system$(br2)$(l:wandscape:system/panel_guide)《Management Panel》$(/l) Interaction, town management and building$(br2)《Buildings》 Introduction to mod building types"
     },
     {
       "type": "patchouli:text",
-      "text": "《Magic》 Introduction to magic and combat systems$(br2)《Equipment and Items》 Introduction to mod equipment and items"
+      "text": "$(l:wandscape:system/mages_guide)《Mages》$(/l) Introduction to workers and combat units$(br2)$(l:wandscape:magic)《Magic》$(/l) Introduction to magic and combat systems$(br2)《Equipment and Items》 Introduction to mod equipment and items"
     },
     {
       "type": "patchouli:text",

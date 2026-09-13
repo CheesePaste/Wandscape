@@ -1,0 +1,13 @@
+{
+  "name": "陨石",
+  "category": "wandscape:magic",
+  "icon": "minecraft:fire_charge",
+  "sortnum": 1,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "法阵持续期间逐颗轰下六颗陨石，对落点附近的敌人造成群体伤害。"
+    }
+  ]
+}

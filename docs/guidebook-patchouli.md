@@ -12,7 +12,7 @@
 
 ```
 内容唯一来源（作者只改这里）
-    src/main/resources/assets/wandscape/guidebook/{zh_cn,en}/*.md     28 篇 × 2 语
+    src/main/resources/assets/wandscape/guidebook/{zh_cn,en}/*.md     45 篇 × 2 语（其中 18 篇编进手册，其余只兜底屏可读）
                     │
                     │  gen_patchouli.py（本机跑，生成物提交进仓库）
                     ▼
@@ -32,11 +32,16 @@
 ## 二、生成管线
 
 ```bash
-python gen_patchouli.py              # 编译手册 JSON（会先清空上一次的生成物）
-python gen_patchouli.py textures     # 生成占位书皮（已存在则跳过）
+python gen_patchouli.py                    # 编译手册 JSON（会先清空上一次的生成物）
+python paginate_patchouli_json.py          # 把超长页切分；紧跟在 gen 之后，必跑
+python gen_patchouli.py textures           # 生成占位书皮（已存在则跳过）
 python gen_patchouli.py textures --force   # 强制覆盖书皮
 ```
 
+- **两步都不能省**：`gen_patchouli.py` 的 `render_pages` 一节只出一页，长节全靠
+  `paginate_patchouli_json.py` 事后按 `$(br2)`/`$(li)` 切分。gen 会**整体重写**所有条目，
+  所以只跑 gen 不跑 paginate = 悄悄把整本书退回「一节一巨页」，而且 git diff 里看着像内容变更。
+  分页脚本可 `--dry-run` 先看切分计划，`--max-lines` / `--max-chars` 调阈值。
 - 脚本只依赖 Python 标准库（含自写的 PNG 编码），不进构建流程，产物提交进仓库可审计。
 - 脚本末尾会对每条生成文本做**静态自检**：未知 `$(命令)`、样式栈下溢都会打印警告（帕秋莉对前者原样显示 `$(xxx)`，对后者抛异常渲染 `[ERROR]`）。
 - 语言目录映射：md 的 `en` → 帕秋莉的 `en_us`。帕秋莉以 `en_us` 目录为**枚举索引**、其他语言只做覆盖，所以两套目录必须完整生成，不能只放 `zh_cn`。
@@ -45,20 +50,21 @@ python gen_patchouli.py textures --force   # 强制覆盖书皮
 
 分类与「条目 → 分类 / 图标 / 排序」写在 `gen_patchouli.py` 的 `CATEGORIES` / `ENTRIES` 两张表里——这是**结构**元数据，不是内容。条目名取各自 md 的 H1，因此不用双语重复维护。
 
-| 分类 id | 中文名 | 条目 |
+| 分类 id | 中文名 | 条目（md 文件名去掉 `_guide`） |
 |---|---|---|
-| `contents` | 指南 | index_guide |
-| `start` | 新手入门 | getting_started_guide |
-| `town` | 建造与城镇 | overview / scanner / creative_scanner |
-| `road` | 道路系统 | road / road_replace / road_fill / road_spline |
-| `building` | 建筑与设施 | townhall / warehouse / crafting / magic_station / workstation / node / altar / mage_hut / tavern / shop / hotel |
-| `npc` | 法师与游客 | npc / strategy / tourist |
-| `ops` | 经营与故障 | anomaly |
-| `creator` | 创作者工具 | magic_circle_editor / test |
-| `reference` | 指令与参考 | commands |
-| `about` | 关于 | creators |
+| `contents` | 指南 | index |
+| `start` | 新手入门 | intro_0 / intro_0_5 |
+| `playstyle` | 玩法主线 | track_tourist |
+| `system` | 通用功能 | economy / panel / mages / tourists |
+| `magic` | 魔法 | magic_beam / magic_meteor / magic_desperation / magic_enfeeble_field / magic_conversion / magic_petrification / magic_fortification / magic_heal / magic_teleport / magic_revive |
+
+`magic` 分类一条魔法一页，正文**照搬 `magic_spells/<id>.json` 的 `description`**——即 JEI 卷轴信息页
+（`WandscapeJeiPlugin` 经 `magic.wandscape.<id>.desc` 本地化）那句。改魔法描述要**同时改两处**：
+md 管手册、lang 管 JEI，管线不做同步校验。
 
 「目录页」= `contents` 分类下的 `index_guide` 条目：原 `index_guide.md` 的每节标题成为一页，节内文档链接转成帕秋莉可点击链接，点进去直接跳条目。
+首页的《魔法》链到 `magic` **分类**（`TITLE_TO_DOC` 的值可以是分类 id，帕秋莉支持链分类），其余未编进手册的
+标题（《建筑》《装备与物品》等）仍是不可点的纯文本。
 
 ---
 

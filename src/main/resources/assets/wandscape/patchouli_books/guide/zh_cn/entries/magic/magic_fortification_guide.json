@@ -1,0 +1,13 @@
+{
+  "name": "防御强化",
+  "category": "wandscape:magic",
+  "icon": "minecraft:shield",
+  "sortnum": 6,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "为自身施加防御强化：护甲 +4、魔力强化 I（魔法伤害 +20%）与迅捷 I，持续 15 秒。"
+    }
+  ]
+}

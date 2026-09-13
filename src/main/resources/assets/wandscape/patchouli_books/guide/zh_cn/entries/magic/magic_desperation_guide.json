@@ -1,0 +1,13 @@
+{
+  "name": "背水一战",
+  "category": "wandscape:magic",
+  "icon": "minecraft:diamond_sword",
+  "sortnum": 2,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "将护甲降低至原来的 -50%（如 20 护甲值会降低到 -10），根据降低的护甲值提供魔力强化效果，提升魔法伤害。"
+    }
+  ]
+}

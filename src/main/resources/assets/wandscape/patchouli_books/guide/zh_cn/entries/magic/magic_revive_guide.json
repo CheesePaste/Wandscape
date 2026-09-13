@@ -1,0 +1,13 @@
+{
+  "name": "复活",
+  "category": "wandscape:magic",
+  "icon": "minecraft:totem_of_undying",
+  "sortnum": 9,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "在祭坛上唤醒一位死去的法师，使其以虚弱之躯重生。"
+    }
+  ]
+}

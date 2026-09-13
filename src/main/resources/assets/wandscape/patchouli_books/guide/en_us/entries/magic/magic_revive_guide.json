@@ -1,0 +1,13 @@
+{
+  "name": "Revive",
+  "category": "wandscape:magic",
+  "icon": "minecraft:totem_of_undying",
+  "sortnum": 9,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "Wakes a fallen mage at the altar, bringing them back in a weakened state."
+    }
+  ]
+}

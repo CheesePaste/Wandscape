@@ -1,0 +1,13 @@
+{
+  "name": "传送",
+  "category": "wandscape:magic",
+  "icon": "minecraft:ender_pearl",
+  "sortnum": 8,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "将施法者瞬间传送到目标位置。"
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "name": "石化",
+  "category": "wandscape:magic",
+  "icon": "minecraft:stone",
+  "sortnum": 5,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "给予自身石化效果，受到的伤害降低 2 点。"
+    }
+  ]
+}

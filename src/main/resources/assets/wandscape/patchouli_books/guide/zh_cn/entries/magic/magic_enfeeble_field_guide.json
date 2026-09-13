@@ -1,0 +1,13 @@
+{
+  "name": "虚弱力场",
+  "category": "wandscape:magic",
+  "icon": "minecraft:fermented_spider_eye",
+  "sortnum": 3,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "在自身周围展开虚弱力场，使半径 5.8 格内的所有敌人陷入迟缓与虚弱，并削减护甲，持续 15 秒。"
+    }
+  ]
+}

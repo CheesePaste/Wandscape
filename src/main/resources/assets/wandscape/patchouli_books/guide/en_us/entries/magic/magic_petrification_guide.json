@@ -1,0 +1,13 @@
+{
+  "name": "Petrification",
+  "category": "wandscape:magic",
+  "icon": "minecraft:stone",
+  "sortnum": 5,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "Grants the caster petrification, reducing damage taken by 2."
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "name": "魅惑",
+  "category": "wandscape:magic",
+  "icon": "minecraft:lead",
+  "sortnum": 4,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "将最近的三个敌方单位转化为友军，持续一段时间；被魅惑的单位受到伤害后失去该效果。"
+    }
+  ]
+}

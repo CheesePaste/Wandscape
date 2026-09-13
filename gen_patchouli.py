@@ -55,6 +55,9 @@ CATEGORIES = [
     ("system", "通用功能", "System Features", "minecraft:book", 20,
      "元素经济、管理面板、法师与游客机制概览。",
      "Elements, management panel, mages, and tourist mechanics."),
+    ("magic", "魔法", "Spells", "wandscape:spell_scroll", 30,
+     "每个魔法的效果与用途，与 JEI 卷轴信息页同文。",
+     "What each spell does — same text as the JEI scroll info page."),
 ]
 
 # 条目：(md 文件名去掉 .md, 所属分类, 图标, sortnum)。条目名取 md 的 H1。
@@ -70,8 +73,21 @@ ENTRIES = [
     ("panel_guide", "system", "minecraft:compass", 1),
     ("mages_guide", "system", "wandscape:wandscape_npc_spawn_egg", 2),
     ("tourists_guide", "system", "minecraft:emerald", 3),
+    # magic: 一条魔法一页，正文照搬 magic_spells/<id>.json 的 description（即 JEI 卷轴信息页原文）；
+    # 图标用原版物品（模组无 per-magic 图标，10 条共用 spell_scroll 会让分类页不可读）。
+    ("magic_beam_guide", "magic", "minecraft:spectral_arrow", 0),
+    ("magic_meteor_guide", "magic", "minecraft:fire_charge", 1),
+    ("magic_desperation_guide", "magic", "minecraft:diamond_sword", 2),
+    ("magic_enfeeble_field_guide", "magic", "minecraft:fermented_spider_eye", 3),
+    ("magic_conversion_guide", "magic", "minecraft:lead", 4),
+    ("magic_petrification_guide", "magic", "minecraft:stone", 5),
+    ("magic_fortification_guide", "magic", "minecraft:shield", 6),
+    ("magic_heal_guide", "magic", "minecraft:golden_apple", 7),
+    ("magic_teleport_guide", "magic", "minecraft:ender_pearl", 8),
+    ("magic_revive_guide", "magic", "minecraft:totem_of_undying", 9),
 ]
 
+# 《标题》→ 链接目标（条目 id 或分类 id，link_command 两者都认）。条目名与标题同文时才会命中。
 TITLE_TO_DOC = {
     # zh_cn
     "0，入门": "intro_0_guide",
@@ -80,6 +96,7 @@ TITLE_TO_DOC = {
     "元素与三值": "economy_guide",
     "管理面板": "panel_guide",
     "法师": "mages_guide",
+    "魔法": "magic",
     "游客": "tourists_guide",
     "概览": "index_guide",
     # en_us
@@ -89,6 +106,7 @@ TITLE_TO_DOC = {
     "Elements and Values": "economy_guide",
     "Management Panel": "panel_guide",
     "Mages": "mages_guide",
+    "Magic": "magic",
     "Tourists": "tourists_guide",
     "Overview": "index_guide",
 }
