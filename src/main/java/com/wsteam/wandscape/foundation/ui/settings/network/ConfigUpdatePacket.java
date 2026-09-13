@@ -2,6 +2,7 @@ package com.wsteam.wandscape.foundation.ui.settings.network;
 
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.ui.I18n;
 import com.wsteam.wandscape.foundation.ui.settings.SettingItem;
 import com.wsteam.wandscape.foundation.ui.settings.SettingsRegistry;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -63,7 +64,8 @@ public record ConfigUpdatePacket(String path, String value) implements CustomPac
         if (!isOp) {
             Log.warn(TAG, "Player {} attempted to modify config {} without permissions",
                     player.getName().getString(), packet.path);
-            player.sendSystemMessage(net.minecraft.network.chat.Component.literal("§c[Wandscape] 权限不足：仅管理员 (OP) 可修改设置"));
+            player.sendSystemMessage(I18n.name("message.wandscape.settings.no_permission",
+                    "§c[Wandscape] 权限不足：仅管理员 (OP) 可修改设置"));
             reject(player, packet.path);
             return;
         }

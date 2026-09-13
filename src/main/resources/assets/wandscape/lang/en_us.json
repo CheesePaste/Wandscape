@@ -1479,6 +1479,7 @@
   "message.wandscape.scepter.peace_on": "Mage %s is now at peace",
   "message.wandscape.scepter.shelter_off": "Creature %s is no longer sheltered",
   "message.wandscape.scepter.shelter_on": "Creature %s is now sheltered (mages won't attack/hurt it)",
+  "message.wandscape.settings.no_permission": "§c[Wandscape] Not permitted: only admins (permission level 2) can change settings",
   "message.wandscape.spline.disabled_block": "§cSpline road contains a disabled block: %s",
   "message.wandscape.tavern.insufficient_elements": "[Wandscape] Insufficient elements: recruiting costs %d of every element (first recruit free).",
   "message.wandscape.tavern.invalid_selection": "[Wandscape] Invalid mage selection.",

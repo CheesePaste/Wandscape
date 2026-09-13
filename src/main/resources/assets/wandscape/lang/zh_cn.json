@@ -1479,6 +1479,7 @@
   "message.wandscape.scepter.peace_on": "法师 %s 已进入和平状态",
   "message.wandscape.scepter.shelter_off": "生物 %s 已解除庇护",
   "message.wandscape.scepter.shelter_on": "生物 %s 已被庇护（法师不再攻击/误伤）",
+  "message.wandscape.settings.no_permission": "§c[Wandscape] 权限不足：仅管理员 (OP) 可修改设置",
   "message.wandscape.spline.disabled_block": "§c样条道路包含禁用方块：%s",
   "message.wandscape.tavern.insufficient_elements": "[魔法小镇] 元素不足：招募需每种元素 %d（首次招募免费）",
   "message.wandscape.tavern.invalid_selection": "[魔法小镇] 无效的法师选择",
