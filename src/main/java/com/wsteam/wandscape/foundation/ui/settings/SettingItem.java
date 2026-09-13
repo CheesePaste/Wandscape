@@ -13,13 +13,13 @@ import java.util.function.Function;
 /**
  * Represents a single configurable setting item in the Wandscape Settings Center.
  *
- * <p>取值上下限不在这里另写一套：{@link #rangeHint()} 与加减夹取都直接读 Config 里
- * {@code defineInRange} 声明的那份范围（见 {@link #declaredRange}），面板只额外决定步进大小。
- * 面板比 config 夹得更紧会让玩家改了 TOML 却在面板里被悄悄改回去。
+ * <p>卡片上只显示标题与默认值：介绍文案与取值区间都不上屏（横排一行的宽度本来就放不下，
+ * 截断后只剩半句废话）。取值区间改为只从 Config 的 {@code defineInRange} 读一份，
+ * 用于加减夹取，不在面板里另写一套。要说明一项是干什么的，写在 Config 的 comment 里。
  *
- * <p>Value bounds are not duplicated here: {@link #rangeHint()} and the stepper clamping both read the
- * range declared by {@code defineInRange} in Config (see {@link #declaredRange}); the panel only decides
- * step sizes. A tighter clamp in the panel silently reverts values players set in the TOML.
+ * <p>Cards show only the title and the default value: descriptions and value ranges are not rendered
+ * (a single horizontal line cannot fit them, and truncation leaves half a sentence). The range is read
+ * once from {@code defineInRange} in Config and used for clamping only. Explain a setting in its Config comment.
  */
 public interface SettingItem {
 
@@ -27,14 +27,14 @@ public interface SettingItem {
 
     String key();
     String title();
-    String description();
     SettingTab tab();
     Type type();
     boolean isClientOnly();
     boolean isHotReloadable();
 
     String formatValue();
-    String rangeHint();
+    /** 卡片副行：形如 {@code 默认: 50,000 件}。 */
+    String defaultHint();
     boolean isDefault();
     void resetToDefault();
 
@@ -83,7 +83,6 @@ public interface SettingItem {
     class BooleanSetting implements SettingItem {
         private final String key;
         private final String title;
-        private final String description;
         private final SettingTab tab;
         private final boolean clientOnly;
         private final boolean hotReloadable;
@@ -91,20 +90,19 @@ public interface SettingItem {
         private final java.util.function.Consumer<Boolean> setter;
         private final boolean defaultValue;
 
-        public BooleanSetting(String key, String title, String description, SettingTab tab,
+        public BooleanSetting(String key, String title, SettingTab tab,
                               boolean clientOnly, boolean hotReloadable, ModConfigSpec.BooleanValue configValue) {
-            this(key, title, description, tab, clientOnly, hotReloadable,
+            this(key, title, tab, clientOnly, hotReloadable,
                     configValue::get, configValue::set, configValue.getDefault());
         }
 
-        public BooleanSetting(String key, String title, String description, SettingTab tab,
+        public BooleanSetting(String key, String title, SettingTab tab,
                               boolean clientOnly, boolean hotReloadable,
                               java.util.function.Supplier<Boolean> getter,
                               java.util.function.Consumer<Boolean> setter,
                               boolean defaultValue) {
             this.key = key;
             this.title = title;
-            this.description = description;
             this.tab = tab;
             this.clientOnly = clientOnly;
             this.hotReloadable = hotReloadable;
@@ -115,7 +113,6 @@ public interface SettingItem {
 
         @Override public String key() { return key; }
         @Override public String title() { return title; }
-        @Override public String description() { return description; }
         @Override public SettingTab tab() { return tab; }
         @Override public Type type() { return Type.BOOLEAN; }
         @Override public boolean isClientOnly() { return clientOnly; }
@@ -142,7 +139,7 @@ public interface SettingItem {
             return get() ? "已开启" : "已关闭";
         }
 
-        @Override public String rangeHint() {
+        @Override public String defaultHint() {
             return "默认: " + (defaultValue ? "开启" : "关闭");
         }
 
@@ -158,31 +155,27 @@ public interface SettingItem {
     class DoubleSetting implements SettingItem {
         private final String key;
         private final String title;
-        private final String description;
         private final SettingTab tab;
         private final boolean clientOnly;
         private final boolean hotReloadable;
         private final ModConfigSpec.DoubleValue configValue;
-        private final boolean rangeDeclared;
         private final double min;
         private final double max;
         private final double step;
         private final double largeStep;
         private final Function<Double, String> formatter;
 
-        public DoubleSetting(String key, String title, String description, SettingTab tab,
+        public DoubleSetting(String key, String title, SettingTab tab,
                              boolean clientOnly, boolean hotReloadable, ModConfigSpec.DoubleValue configValue,
                              double step, double largeStep,
                              Function<Double, String> formatter) {
             this.key = key;
             this.title = title;
-            this.description = description;
             this.tab = tab;
             this.clientOnly = clientOnly;
             this.hotReloadable = hotReloadable;
             this.configValue = configValue;
             ModConfigSpec.Range<Double> range = SettingItem.declaredRange(configValue);
-            this.rangeDeclared = range != null;
             this.min = range != null ? range.getMin() : -Double.MAX_VALUE;
             this.max = range != null ? range.getMax() : Double.MAX_VALUE;
             this.step = step;
@@ -192,7 +185,6 @@ public interface SettingItem {
 
         @Override public String key() { return key; }
         @Override public String title() { return title; }
-        @Override public String description() { return description; }
         @Override public SettingTab tab() { return tab; }
         @Override public Type type() { return Type.DOUBLE_STEP; }
         @Override public boolean isClientOnly() { return clientOnly; }
@@ -227,10 +219,8 @@ public interface SettingItem {
             return formatter.apply(get());
         }
 
-        @Override public String rangeHint() {
-            String base = "默认: " + formatter.apply(configValue.getDefault());
-            // 没声明范围时不硬凑一个 ±MAX_VALUE 的假区间
-            return rangeDeclared ? base + "  |  范围: " + formatter.apply(min) + " ~ " + formatter.apply(max) : base;
+        @Override public String defaultHint() {
+            return "默认: " + formatter.apply(configValue.getDefault());
         }
 
         @Override public boolean isDefault() {
@@ -245,31 +235,27 @@ public interface SettingItem {
     class IntSetting implements SettingItem {
         private final String key;
         private final String title;
-        private final String description;
         private final SettingTab tab;
         private final boolean clientOnly;
         private final boolean hotReloadable;
         private final ModConfigSpec.IntValue configValue;
-        private final boolean rangeDeclared;
         private final int min;
         private final int max;
         private final int step;
         private final int largeStep;
         private final Function<Integer, String> formatter;
 
-        public IntSetting(String key, String title, String description, SettingTab tab,
+        public IntSetting(String key, String title, SettingTab tab,
                           boolean clientOnly, boolean hotReloadable, ModConfigSpec.IntValue configValue,
                           int step, int largeStep,
                           Function<Integer, String> formatter) {
             this.key = key;
             this.title = title;
-            this.description = description;
             this.tab = tab;
             this.clientOnly = clientOnly;
             this.hotReloadable = hotReloadable;
             this.configValue = configValue;
             ModConfigSpec.Range<Integer> range = SettingItem.declaredRange(configValue);
-            this.rangeDeclared = range != null;
             this.min = range != null ? range.getMin() : Integer.MIN_VALUE;
             this.max = range != null ? range.getMax() : Integer.MAX_VALUE;
             this.step = step;
@@ -279,7 +265,6 @@ public interface SettingItem {
 
         @Override public String key() { return key; }
         @Override public String title() { return title; }
-        @Override public String description() { return description; }
         @Override public SettingTab tab() { return tab; }
         @Override public Type type() { return Type.INT_STEP; }
         @Override public boolean isClientOnly() { return clientOnly; }
@@ -314,10 +299,8 @@ public interface SettingItem {
             return formatter.apply(get());
         }
 
-        @Override public String rangeHint() {
-            String base = "默认: " + formatter.apply(configValue.getDefault());
-            // 没声明范围时不硬凑一个 MIN/MAX_VALUE 的假区间
-            return rangeDeclared ? base + "  |  范围: " + formatter.apply(min) + " ~ " + formatter.apply(max) : base;
+        @Override public String defaultHint() {
+            return "默认: " + formatter.apply(configValue.getDefault());
         }
 
         @Override public boolean isDefault() {
@@ -332,7 +315,6 @@ public interface SettingItem {
     class OptionsSetting implements SettingItem {
         private final String key;
         private final String title;
-        private final String description;
         private final SettingTab tab;
         private final boolean clientOnly;
         private final boolean hotReloadable;
@@ -340,12 +322,11 @@ public interface SettingItem {
         private final List<String> options;
         private final List<String> optionLabels;
 
-        public OptionsSetting(String key, String title, String description, SettingTab tab,
+        public OptionsSetting(String key, String title, SettingTab tab,
                               boolean clientOnly, boolean hotReloadable, ModConfigSpec.ConfigValue<String> configValue,
                               List<String> options, List<String> optionLabels) {
             this.key = key;
             this.title = title;
-            this.description = description;
             this.tab = tab;
             this.clientOnly = clientOnly;
             this.hotReloadable = hotReloadable;
@@ -356,7 +337,6 @@ public interface SettingItem {
 
         @Override public String key() { return key; }
         @Override public String title() { return title; }
-        @Override public String description() { return description; }
         @Override public SettingTab tab() { return tab; }
         @Override public Type type() { return Type.OPTIONS; }
         @Override public boolean isClientOnly() { return clientOnly; }
@@ -388,7 +368,7 @@ public interface SettingItem {
             return (idx >= 0 && idx < optionLabels.size()) ? optionLabels.get(idx) : get();
         }
 
-        @Override public String rangeHint() {
+        @Override public String defaultHint() {
             int defIdx = options.indexOf(configValue.getDefault());
             String defLabel = (defIdx >= 0 && defIdx < optionLabels.size()) ? optionLabels.get(defIdx) : configValue.getDefault();
             return "默认: " + defLabel;

@@ -21,8 +21,10 @@ public final class SettingsOverlay {
 
     private static final int HEADER_H = 34;
     private static final int TOOLBAR_H = 26;
-    private static final int CARD_H = 54;
+    private static final int CARD_H = 44;
     private static final int CARD_GAP = 6;
+    /** 卡片内控件（默认/开关/加减）顶边相对卡片顶的距离。渲染与点击命中都要用，只留这一处。 */
+    private static final int CONTROL_Y = 11;
     private static final int HEADER_CLOSE_W = 100;
     private static final int HEADER_CLOSE_GAP = 16;
 
@@ -234,27 +236,15 @@ public final class SettingsOverlay {
         // Key path
         g.drawString(font, item.key(), badgeX + 4, y + 8, 0xFF666666, false);
 
-        // Line 2: Description
-        int maxDescW = w - 260;
-        String desc = item.description();
-        if (font.width(desc) > maxDescW) {
-            desc = font.plainSubstrByWidth(desc, maxDescW - 10) + "...";
-        }
-        g.drawString(font, desc, x + 10, y + 23, 0xFFAAAAAA, false);
-
-        // Line 3: Range / Default hint（范围直接取自 Config 的 defineInRange，可能很长，同样截断）
-        String hint = item.rangeHint();
-        if (font.width(hint) > maxDescW) {
-            hint = font.plainSubstrByWidth(hint, maxDescW - 10) + "...";
-        }
-        g.drawString(font, hint, x + 10, y + 38, 0xFF777777, false);
+        // Line 2: 默认值。介绍文案与取值区间都不上屏——横排一行放不下，截断后只剩半句废话。
+        g.drawString(font, item.defaultHint(), x + 10, y + 24, 0xFFAAAAAA, false);
 
         // ── Right: Controls ──
         int ctrlRight = x + w - 10;
         int rstBtnW = 34;
         int rstBtnH = 22;
         int rstBtnX = ctrlRight - rstBtnW;
-        int rstBtnY = y + 16;
+        int rstBtnY = y + CONTROL_Y;
 
         // [默认] Reset button
         boolean canReset = !item.isDefault();
@@ -272,7 +262,7 @@ public final class SettingsOverlay {
                 int btnW = 80;
                 int btnH = 22;
                 int btnX = controlAreaRight - btnW;
-                int btnY = y + 16;
+                int btnY = y + CONTROL_Y;
                 boolean bHover = mx >= btnX && mx <= btnX + btnW && my >= btnY && my <= btnY + btnH;
                 boolean val = bs.get();
 
@@ -288,7 +278,7 @@ public final class SettingsOverlay {
                 int plusX = controlAreaRight - btnSize;
                 int valX = plusX - valBoxW - 4;
                 int minusX = valX - btnSize - 4;
-                int btnY = y + 16;
+                int btnY = y + CONTROL_Y;
 
                 boolean minusHover = mx >= minusX && mx <= minusX + btnSize && my >= btnY && my <= btnY + btnSize;
                 boolean plusHover = mx >= plusX && mx <= plusX + btnSize && my >= btnY && my <= btnY + btnSize;
@@ -314,7 +304,7 @@ public final class SettingsOverlay {
                 int nextX = controlAreaRight - btnSize;
                 int valX = nextX - valBoxW - 4;
                 int prevX = valX - btnSize - 4;
-                int btnY = y + 16;
+                int btnY = y + CONTROL_Y;
 
                 boolean prevHover = mx >= prevX && mx <= prevX + btnSize && my >= btnY && my <= btnY + btnSize;
                 boolean nextHover = mx >= nextX && mx <= nextX + btnSize && my >= btnY && my <= btnY + btnSize;
@@ -433,7 +423,7 @@ public final class SettingsOverlay {
                     int rstBtnW = 34;
                     int rstBtnH = 22;
                     int rstBtnX = ctrlRight - rstBtnW;
-                    int rstBtnY = cy + 16;
+                    int rstBtnY = cy + CONTROL_Y;
 
                     // Reset button
                     if (!item.isDefault() && mx >= rstBtnX && mx <= rstBtnX + rstBtnW && my >= rstBtnY && my <= rstBtnY + rstBtnH) {
@@ -451,7 +441,7 @@ public final class SettingsOverlay {
                             int btnW = 80;
                             int btnH = 22;
                             int btnX = controlAreaRight - btnW;
-                            int btnY = cy + 16;
+                            int btnY = cy + CONTROL_Y;
                             if (mx >= btnX && mx <= btnX + btnW && my >= btnY && my <= btnY + btnH) {
                                 bs.toggle();
                                 showToast(bs.title() + ": " + bs.formatValue());
@@ -466,7 +456,7 @@ public final class SettingsOverlay {
                             int plusX = controlAreaRight - btnSize;
                             int valX = plusX - valBoxW - 4;
                             int minusX = valX - btnSize - 4;
-                            int btnY = cy + 16;
+                            int btnY = cy + CONTROL_Y;
 
                             if (mx >= minusX && mx <= minusX + btnSize && my >= btnY && my <= btnY + btnSize) {
                                 ds.adjust(false, shift);
@@ -488,7 +478,7 @@ public final class SettingsOverlay {
                             int plusX = controlAreaRight - btnSize;
                             int valX = plusX - valBoxW - 4;
                             int minusX = valX - btnSize - 4;
-                            int btnY = cy + 16;
+                            int btnY = cy + CONTROL_Y;
 
                             if (mx >= minusX && mx <= minusX + btnSize && my >= btnY && my <= btnY + btnSize) {
                                 is.adjust(false, shift);
@@ -510,7 +500,7 @@ public final class SettingsOverlay {
                             int nextX = controlAreaRight - btnSize;
                             int valX = nextX - valBoxW - 4;
                             int prevX = valX - btnSize - 4;
-                            int btnY = cy + 16;
+                            int btnY = cy + CONTROL_Y;
 
                             if (mx >= prevX && mx <= prevX + btnSize && my >= btnY && my <= btnY + btnSize) {
                                 os.cycle(false);
