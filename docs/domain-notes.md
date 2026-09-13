@@ -2,7 +2,7 @@
 
 > 信息截至 2026-09-02 | Minecraft NeoForge 1.21.1
 
-- **【何时读】**：第一次接触或修改某个具体功能域（NPC/游客/魔法/任务/建筑/仓库/道路/新手引导）代码前。
+- **【何时读】**：第一次接触或修改某个具体功能域（NPC/游客/魔法/任务/建筑/仓库/道路/新手引导/第三方兼容）代码前。
 - **【不包含什么】**：各域基础概念百科、原版 Minecraft 常识、无特殊约定的常规 Java 代码流程。
 
 ---
@@ -155,3 +155,14 @@
    - **Tutorial**（`content/tutorial`）：新手引导系统内核，包含引导步骤（`TutorialStep`）、服务端会话（`TutorialSession`）、网络同步与 HUD 引导框渲染。
    - **Guidebook**（`content/items`）：指南书物品与 Markdown 手册文档阅读器。
    - 两个系统各自自治，严禁混用 `Guide*` 泛名。
+
+---
+
+## 九、第三方兼容 (`compat/`)
+
+1. **兼容插件类的静态字段里不要调 `DeferredHolder.get()`**：JEI 的 `@JeiPlugin`、Patchouli 的书等
+   由第三方在**注解扫描期**加载，早于物品/方块注册事件——此时取值会抛
+   `NullPointerException: Trying to access unbound value: ResourceKey[minecraft:item / wandscape:xxx]`，
+   且是在类初始化里炸，堆栈看不出是哪个清单惹的。
+   - 做法：静态字段只存持有者本身（`DeferredItem<Item>` 等），到 `registerRecipes` 这类回调里再 `.get()`。
+   - `WandscapeJeiPlugin.INFO_ITEMS` 踩过这个坑（开局必崩）。文案清单、图标清单同理，别图省事在字段里就取成 `Item`。
