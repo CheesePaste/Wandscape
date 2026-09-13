@@ -1,0 +1,13 @@
+{
+  "name": "0. Getting Started",
+  "category": "wandscape:playstyle",
+  "icon": "minecraft:writable_book",
+  "sortnum": 1,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "This chapter mirrors the in-game tutorial. Players who have completed it can skip this.$(br2)First, press the V key (configurable in key bindings) to open the management panel.$(br2)(Starter tutorial placeholder)"
+    }
+  ]
+}

@@ -2,7 +2,7 @@
   "name": "虚弱力场",
   "category": "wandscape:magic",
   "icon": "minecraft:fermented_spider_eye",
-  "sortnum": 3,
+  "sortnum": 5,
   "read_by_default": true,
   "pages": [
     {

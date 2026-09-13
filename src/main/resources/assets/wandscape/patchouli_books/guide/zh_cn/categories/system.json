@@ -1,6 +1,6 @@
 {
   "name": "通用功能",
-  "description": "元素经济、管理面板、法师与游客机制概览。",
+  "description": "元素经济、管理面板、法师、游客、施法、建筑、装备与物品、自定义这些大功能的入口。",
   "icon": "minecraft:book",
-  "sortnum": 20
+  "sortnum": 10
 }

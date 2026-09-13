@@ -1,6 +1,6 @@
 {
   "name": "Gameplay Tracks",
-  "description": "Gameplay progression paths.",
+  "description": "The mod's gameplay tracks, and what to read in what order.",
   "icon": "minecraft:compass",
-  "sortnum": 10
+  "sortnum": 0
 }

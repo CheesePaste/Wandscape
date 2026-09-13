@@ -1,0 +1,6 @@
+{
+  "name": "管理",
+  "description": "管理面板本身，以及建造、道路、任务、设置四个子模式。",
+  "icon": "minecraft:lever",
+  "sortnum": 30
+}

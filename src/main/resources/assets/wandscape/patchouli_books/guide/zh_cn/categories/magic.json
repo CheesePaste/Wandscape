@@ -1,6 +1,6 @@
 {
   "name": "魔法",
-  "description": "每个魔法能干什么，以及对应的卷轴从哪里来。",
+  "description": "法师怎么打、放什么魔法由什么决定，以及每个魔法能干什么。",
   "icon": "wandscape:spell_scroll",
-  "sortnum": 30
+  "sortnum": 40
 }

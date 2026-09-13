@@ -1,0 +1,13 @@
+{
+  "name": "自定义",
+  "category": "wandscape:system",
+  "icon": "minecraft:structure_block",
+  "sortnum": 7,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "$(italic)$(#6b5a45)本页还没写完。$()"
+    }
+  ]
+}

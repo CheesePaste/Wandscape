@@ -1,0 +1,6 @@
+{
+  "name": "自定义",
+  "description": "导入自己的建筑与建筑包，改元素价值。",
+  "icon": "minecraft:structure_block",
+  "sortnum": 60
+}

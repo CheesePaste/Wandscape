@@ -2,7 +2,7 @@
   "name": "盟誓戒指",
   "category": "wandscape:items",
   "icon": "wandscape:oath_ring",
-  "sortnum": 1,
+  "sortnum": 2,
   "read_by_default": true,
   "pages": [
     {

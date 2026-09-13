@@ -1,0 +1,13 @@
+{
+  "name": "设置中心",
+  "category": "wandscape:management",
+  "icon": "minecraft:redstone_torch",
+  "sortnum": 4,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "$(italic)$(#6b5a45)本页还没写完。$()"
+    }
+  ]
+}

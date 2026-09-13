@@ -1,0 +1,6 @@
+{
+  "name": "Management",
+  "description": "The management panel itself, plus its four sub-modes: building, roads, tasks and settings.",
+  "icon": "minecraft:lever",
+  "sortnum": 30
+}

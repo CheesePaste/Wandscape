@@ -2,7 +2,7 @@
   "name": "Fortification",
   "category": "wandscape:magic",
   "icon": "minecraft:shield",
-  "sortnum": 6,
+  "sortnum": 8,
   "read_by_default": true,
   "pages": [
     {

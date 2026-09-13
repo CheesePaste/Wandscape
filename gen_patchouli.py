@@ -42,62 +42,109 @@ LANGS = [("zh_cn", "zh_cn"), ("en", "en_us")]
 
 # ---------------------------------------------------------------- 结构清单
 # 分类：(id, 中文名, 英文名, 图标, sortnum, zh 描述, en 描述)
+#
+# 手册只有两大块 + 若干细分类别：
+#   「玩法主线」只放路线与阅读顺序，不放具体内容；
+#   「通用功能」放各大功能的入口页（关键讲解），内容特别多的再拆出独立分类放详细条目。
+#   同一个功能因此在两个地方各有一条同名条目——由同一篇 md 生成，内容同源不会漂移。
 CATEGORIES = [
-    ("contents", "指南", "Guide", "minecraft:bookshelf", -100,
-     "本手册的总目录。",
-     "The table of contents."),
-    ("start", "新手入门", "Getting Started", "minecraft:torch", 0,
-     "从空地到能运作的魔法小镇，包含新手引导与必备知识。",
-     "From empty land to a working magical town, beginner guides and essential knowledge."),
-    ("playstyle", "玩法主线", "Gameplay Tracks", "minecraft:compass", 10,
-     "主要玩法路线。",
-     "Gameplay progression paths."),
-    ("system", "通用功能", "System Features", "minecraft:book", 20,
-     "元素经济、管理面板、法师与游客机制概览。",
-     "Elements, management panel, mages, and tourist mechanics."),
-    ("magic", "魔法", "Spells", "wandscape:spell_scroll", 30,
-     "每个魔法能干什么，以及对应的卷轴从哪里来。",
-     "What each spell does and where its scroll comes from."),
-    ("items", "装备与物品", "Equipment and Items", "wandscape:wand", 40,
-     "法杖、权杖、戒指、罗盘和终端该怎么拿到，以及它们各自能干什么。",
-     "How to get the mod's wands, scepters, rings, compasses and terminals, and what each one is for."),
-    ("compat", "联动与兼容", "Integration & Compatibility", "minecraft:crafting_table", 50,
+    ("playstyle", "玩法主线", "Gameplay Tracks", "minecraft:compass", 0,
+     "模组的几条玩法路线，以及先读哪几篇的顺序。",
+     "The mod's gameplay tracks, and what to read in what order."),
+    ("system", "通用功能", "System Features", "minecraft:book", 10,
+     "元素经济、管理面板、法师、游客、施法、建筑、装备与物品、自定义这些大功能的入口。",
+     "Entry points to the mod's big features: elements, the management panel, mages, tourists, casting, buildings, equipment and customization."),
+    ("buildings", "建筑", "Buildings", "minecraft:stone_bricks", 20,
+     "小镇里能盖的建筑，以及每一类各自怎么用。",
+     "What you can build in town, and how each kind works."),
+    ("management", "管理", "Management", "minecraft:lever", 30,
+     "管理面板本身，以及建造、道路、任务、设置四个子模式。",
+     "The management panel itself, plus its four sub-modes: building, roads, tasks and settings."),
+    ("magic", "魔法", "Spells", "wandscape:spell_scroll", 40,
+     "法师怎么打、放什么魔法由什么决定，以及每个魔法能干什么。",
+     "How mages fight and what decides their spells, plus what each spell does."),
+    ("items", "装备与物品", "Equipment and Items", "wandscape:wand", 50,
+     "法师的装备和玩家自己的小道具，各自怎么拿到、拿来干什么。",
+     "Mage gear and the player's own gadgets — how to get each one and what it is for."),
+    ("custom", "自定义", "Customization", "minecraft:structure_block", 60,
+     "导入自己的建筑与建筑包，改元素价值。",
+     "Import your own buildings and building packs, and edit element values."),
+    ("compat", "联动与兼容", "Integration & Compatibility", "minecraft:crafting_table", 70,
      "本模组和 Curios、铁魔法、诡厄巫法、车万女仆这些模组之间能做什么。",
      "What this mod does together with Curios, Iron's Spells, Goety and Touhou Little Maid."),
 ]
 
 # 条目：(md 文件名去掉 .md, 所属分类, 图标, sortnum)。条目名取 md 的 H1。
+# 同一篇 md 可以登记多次、挂到不同分类——会生成内容相同的多份条目（内容同源，不存在两份要维护）。
 ENTRIES = [
-    ("index_guide", "contents", "wandscape:guide_book", 0),
-    # start:
-    ("intro_0_guide", "start", "minecraft:writable_book", 0),
-    ("intro_0_5_guide", "start", "minecraft:knowledge_book", 1),
-    # playstyle:
-    ("track_tourist_guide", "playstyle", "wandscape:tourist_spawn_egg", 0),
-    # system:
+    # ── 玩法主线：只放路线与阅读顺序，不放具体内容 ──
+    ("index_guide", "playstyle", "wandscape:guide_book", 0),
+    ("intro_0_guide", "playstyle", "minecraft:writable_book", 1),
+    ("intro_0_5_guide", "playstyle", "minecraft:knowledge_book", 2),
+    ("track_tourist_guide", "playstyle", "wandscape:tourist_spawn_egg", 3),
+
+    # ── 通用功能：大功能的入口页。下面的细分类别会再登记一次同名条目 ──
     ("economy_guide", "system", "wandscape:element_earth", 0),
     ("panel_guide", "system", "minecraft:compass", 1),
     ("mages_guide", "system", "wandscape:wandscape_npc_spawn_egg", 2),
     ("tourists_guide", "system", "minecraft:emerald", 3),
-    # magic: 一条魔法一页，正文照搬 magic_spells/<id>.json 的 description（即 JEI 卷轴信息页原文）；
-    # 图标用原版物品（模组无 per-magic 图标，10 条共用 spell_scroll 会让分类页不可读）。
-    ("magic_beam_guide", "magic", "minecraft:spectral_arrow", 0),
-    ("magic_meteor_guide", "magic", "minecraft:fire_charge", 1),
-    ("magic_desperation_guide", "magic", "minecraft:diamond_sword", 2),
-    ("magic_enfeeble_field_guide", "magic", "minecraft:fermented_spider_eye", 3),
-    ("magic_conversion_guide", "magic", "minecraft:lead", 4),
-    ("magic_petrification_guide", "magic", "minecraft:stone", 5),
-    ("magic_fortification_guide", "magic", "minecraft:shield", 6),
-    ("magic_heal_guide", "magic", "minecraft:golden_apple", 7),
-    ("magic_teleport_guide", "magic", "minecraft:ender_pearl", 8),
-    ("magic_revive_guide", "magic", "minecraft:totem_of_undying", 9),
-    # items: 小道具按类归并成条（3 档戒指 / 5 种权杖 / 3 档罗盘各自共用一条），法杖整族一条
-    ("wand_guide", "items", "wandscape:wand", 0),
-    ("oath_ring_guide", "items", "wandscape:oath_ring", 1),
-    ("scepter_guide", "items", "wandscape:omni_scepter", 2),
-    ("magic_compass_guide", "items", "wandscape:magic_compass", 3),
-    ("warehouse_terminal_guide", "items", "wandscape:warehouse_terminal", 4),
-    # compat: 每个第三方模组一条，正文只讲玩家看得见的效果
+    ("casting_guide", "system", "minecraft:blaze_rod", 4),
+    ("buildings_guide", "system", "minecraft:bricks", 5),
+    ("equipment_guide", "system", "minecraft:armor_stand", 6),
+    ("custom_guide", "system", "minecraft:structure_block", 7),
+
+    # ── 建筑：总览 + 每一类建筑 ──
+    ("buildings_guide", "buildings", "minecraft:bricks", 0),
+    ("townhall_guide", "buildings", "minecraft:bell", 1),
+    ("warehouse_guide", "buildings", "minecraft:chest", 2),
+    ("crafting_guide", "buildings", "wandscape:wand", 3),
+    ("magic_station_guide", "buildings", "wandscape:spell_scroll", 4),
+    ("workstation_guide", "buildings", "minecraft:crafting_table", 5),
+    ("node_guide", "buildings", "wandscape:element_earth", 6),
+    ("altar_guide", "buildings", "minecraft:enchanting_table", 7),
+    ("mage_hut_guide", "buildings", "minecraft:red_bed", 8),
+    ("tavern_guide", "buildings", "minecraft:brewing_stand", 9),
+    ("shop_guide", "buildings", "minecraft:emerald", 10),
+    ("hotel_guide", "buildings", "minecraft:light_blue_bed", 11),
+    ("anomaly_guide", "buildings", "minecraft:anvil", 12),
+
+    # ── 管理：面板本身 + 四个子模式 ──
+    ("panel_guide", "management", "minecraft:compass", 0),
+    ("panel_build_guide", "management", "minecraft:scaffolding", 1),
+    ("panel_road_guide", "management", "minecraft:dirt_path", 2),
+    ("panel_tasks_guide", "management", "minecraft:paper", 3),
+    ("panel_settings_guide", "management", "minecraft:redstone_torch", 4),
+
+    # ── 魔法：法师 + 施法 + 每个魔法一条 ──
+    # 魔法图标用原版物品（模组无 per-magic 图标，10 条共用 spell_scroll 会让分类页不可读）
+    ("mages_guide", "magic", "wandscape:wandscape_npc_spawn_egg", 0),
+    ("casting_guide", "magic", "minecraft:blaze_rod", 1),
+    ("magic_beam_guide", "magic", "minecraft:spectral_arrow", 2),
+    ("magic_meteor_guide", "magic", "minecraft:fire_charge", 3),
+    ("magic_desperation_guide", "magic", "minecraft:diamond_sword", 4),
+    ("magic_enfeeble_field_guide", "magic", "minecraft:fermented_spider_eye", 5),
+    ("magic_conversion_guide", "magic", "minecraft:lead", 6),
+    ("magic_petrification_guide", "magic", "minecraft:stone", 7),
+    ("magic_fortification_guide", "magic", "minecraft:shield", 8),
+    ("magic_heal_guide", "magic", "minecraft:golden_apple", 9),
+    ("magic_teleport_guide", "magic", "minecraft:ender_pearl", 10),
+    ("magic_revive_guide", "magic", "minecraft:totem_of_undying", 11),
+
+    # ── 装备与物品：总览 + 各类条目（小道具按类归并，法杖整族一条） ──
+    ("equipment_guide", "items", "minecraft:armor_stand", 0),
+    ("wand_guide", "items", "wandscape:wand", 1),
+    ("oath_ring_guide", "items", "wandscape:oath_ring", 2),
+    ("scepter_guide", "items", "wandscape:omni_scepter", 3),
+    ("magic_compass_guide", "items", "wandscape:magic_compass", 4),
+    ("warehouse_terminal_guide", "items", "wandscape:warehouse_terminal", 5),
+
+    # ── 自定义：总览 + 三个方向 ──
+    ("custom_guide", "custom", "minecraft:structure_block", 0),
+    ("custom_buildings_guide", "custom", "minecraft:scaffolding", 1),
+    ("custom_packs_guide", "custom", "minecraft:bundle", 2),
+    ("custom_elements_guide", "custom", "wandscape:element_earth", 3),
+
+    # ── 联动与兼容：每个第三方模组一条，只讲玩家看得见的效果 ──
     ("curios_guide", "compat", "minecraft:gold_ingot", 0),
     ("irons_spells_guide", "compat", "minecraft:enchanted_book", 1),
     ("goety_guide", "compat", "minecraft:soul_lantern", 2),
@@ -107,16 +154,22 @@ ENTRIES = [
 # 《标题》→ 链接目标（条目 id 或分类 id，link_command 两者都认）。条目名与标题同文时才会命中。
 TITLE_TO_DOC = {
     # zh_cn
+    # 「建筑 / 装备与物品 / 自定义」既是大功能的条目名、也是细分类别名——这里一律指向**分类**：
+    # 分类页里第一条就是那篇总览，往下才是各条细节，比直接跳条目更顺手。
     "0，入门": "intro_0_guide",
     "0.5，推荐了解的功能": "intro_0_5_guide",
     "1，游客线": "track_tourist_guide",
     "元素与三值": "economy_guide",
     "管理面板": "panel_guide",
     "法师": "mages_guide",
+    "游客": "tourists_guide",
+    "施法": "casting_guide",
+    "建筑": "buildings",
+    "管理": "management",
     "魔法": "magic",
     "装备与物品": "items",
+    "自定义": "custom",
     "联动与兼容": "compat",
-    "游客": "tourists_guide",
     "概览": "index_guide",
     # en_us
     "0. Getting Started": "intro_0_guide",
@@ -125,10 +178,14 @@ TITLE_TO_DOC = {
     "Elements and Values": "economy_guide",
     "Management Panel": "panel_guide",
     "Mages": "mages_guide",
-    "Magic": "magic",
-    "Equipment and Items": "items",
-    "Integration & Compatibility": "compat",
     "Tourists": "tourists_guide",
+    "Casting": "casting_guide",
+    "Buildings": "buildings",
+    "Management": "management",
+    "Spells": "magic",
+    "Equipment and Items": "items",
+    "Customization": "custom",
+    "Integration & Compatibility": "compat",
     "Overview": "index_guide",
 }
 

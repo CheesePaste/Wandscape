@@ -1,0 +1,13 @@
+{
+  "name": "Buildings",
+  "category": "wandscape:system",
+  "icon": "minecraft:bricks",
+  "sortnum": 5,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "$(italic)$(#6b5a45)This page has not been written yet.$()"
+    }
+  ]
+}

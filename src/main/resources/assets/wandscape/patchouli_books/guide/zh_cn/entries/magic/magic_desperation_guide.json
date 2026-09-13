@@ -2,7 +2,7 @@
   "name": "背水一战",
   "category": "wandscape:magic",
   "icon": "minecraft:diamond_sword",
-  "sortnum": 2,
+  "sortnum": 4,
   "read_by_default": true,
   "pages": [
     {

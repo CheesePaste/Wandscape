@@ -2,7 +2,7 @@
   "name": "魔法指南针",
   "category": "wandscape:items",
   "icon": "wandscape:magic_compass",
-  "sortnum": 3,
+  "sortnum": 4,
   "read_by_default": true,
   "pages": [
     {

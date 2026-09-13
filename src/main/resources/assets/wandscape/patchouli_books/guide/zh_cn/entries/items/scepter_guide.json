@@ -2,7 +2,7 @@
   "name": "权杖",
   "category": "wandscape:items",
   "icon": "wandscape:omni_scepter",
-  "sortnum": 2,
+  "sortnum": 3,
   "read_by_default": true,
   "pages": [
     {

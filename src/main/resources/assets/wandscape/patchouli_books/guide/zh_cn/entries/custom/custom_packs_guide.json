@@ -1,0 +1,13 @@
+{
+  "name": "自定义建筑包",
+  "category": "wandscape:custom",
+  "icon": "minecraft:bundle",
+  "sortnum": 2,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "$(italic)$(#6b5a45)本页还没写完。$()"
+    }
+  ]
+}

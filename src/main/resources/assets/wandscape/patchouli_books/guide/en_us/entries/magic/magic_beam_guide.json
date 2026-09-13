@@ -2,7 +2,7 @@
   "name": "Beam",
   "category": "wandscape:magic",
   "icon": "minecraft:spectral_arrow",
-  "sortnum": 0,
+  "sortnum": 2,
   "read_by_default": true,
   "pages": [
     {

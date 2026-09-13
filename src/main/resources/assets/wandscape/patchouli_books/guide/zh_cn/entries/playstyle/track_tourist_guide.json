@@ -2,7 +2,7 @@
   "name": "1，游客线",
   "category": "wandscape:playstyle",
   "icon": "wandscape:tourist_spawn_egg",
-  "sortnum": 0,
+  "sortnum": 3,
   "read_by_default": true,
   "pages": [
     {

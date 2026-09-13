@@ -1,0 +1,29 @@
+{
+  "name": "Overview",
+  "category": "wandscape:playstyle",
+  "icon": "wandscape:guide_book",
+  "sortnum": 0,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "Wandscape is a large mod themed around magic and town construction.$(br2)Gameplay Tracks$(br2)$(l:wandscape:playstyle/intro_0_guide)《0. Getting Started》$(/l)$(br2)$(l:wandscape:playstyle/intro_0_5_guide)《0.5 Recommended Features》$(/l)$(br2)$(l:wandscape:playstyle/track_tourist_guide)《1. Tourist Track》$(/l) Recommended for casual players"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Features and Categories$(br2)$(l:wandscape:system/economy_guide)《Elements and Values》$(/l) Introduction to the economy system$(br2)$(l:wandscape:management/panel_guide)《Management Panel》$(/l) Interaction, town management and building$(br2)$(l:wandscape:magic/mages_guide)《Mages》$(/l) Introduction to workers and combat units"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(l:wandscape:system/tourists_guide)《Tourists》$(/l) Short-stay visitors to your town$(br2)$(l:wandscape:magic/casting_guide)《Casting》$(/l) What decides which spells a mage casts$(br2)$(l:wandscape:buildings)《Buildings》$(/l) What you can put up, and how each kind works"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(l:wandscape:management)《Management》$(/l) The panel, and its four sub-modes: building, roads, tasks and settings$(br2)$(l:wandscape:magic)《Spells》$(/l) Mages, casting, and what each spell does$(br2)$(l:wandscape:items)《Equipment and Items》$(/l) Mage gear and the player's own gadgets"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(l:wandscape:custom)《Customization》$(/l) Import your own buildings and packs, edit element values$(br2)$(l:wandscape:compat)《Integration & Compatibility》$(/l) Playing alongside other mods"
+    }
+  ]
+}

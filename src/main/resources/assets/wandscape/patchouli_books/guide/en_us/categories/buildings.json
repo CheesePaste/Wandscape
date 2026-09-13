@@ -1,0 +1,6 @@
+{
+  "name": "Buildings",
+  "description": "What you can build in town, and how each kind works.",
+  "icon": "minecraft:stone_bricks",
+  "sortnum": 20
+}

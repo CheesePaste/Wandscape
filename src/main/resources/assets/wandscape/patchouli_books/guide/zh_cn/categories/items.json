@@ -1,6 +1,6 @@
 {
   "name": "装备与物品",
-  "description": "法杖、权杖、戒指、罗盘和终端该怎么拿到，以及它们各自能干什么。",
+  "description": "法师的装备和玩家自己的小道具，各自怎么拿到、拿来干什么。",
   "icon": "wandscape:wand",
-  "sortnum": 40
+  "sortnum": 50
 }

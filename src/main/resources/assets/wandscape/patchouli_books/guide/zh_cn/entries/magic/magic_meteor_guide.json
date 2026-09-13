@@ -2,7 +2,7 @@
   "name": "陨石",
   "category": "wandscape:magic",
   "icon": "minecraft:fire_charge",
-  "sortnum": 1,
+  "sortnum": 3,
   "read_by_default": true,
   "pages": [
     {

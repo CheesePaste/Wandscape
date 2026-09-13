@@ -15,18 +15,41 @@ final class PatchouliCompatImpl {
     private static final Map<String, ResourceLocation> DOC_TO_ENTRY = new HashMap<>();
 
     static {
-        // 与 gen_patchouli.py 生成的分类与条目保持一致
-        register("index_guide", "contents");
-        // start
-        register("intro_0_guide", "start");
-        register("intro_0_5_guide", "start");
+        // 与 gen_patchouli.py 生成的分类与条目保持一致。
+        // 有几篇 md 同时登记在「通用功能」和细分类别下（生成两份同名条目），这里只登记**首次**
+        // 出现的那一份——/wandscape guide <doc> 打开哪一份内容都一样，取先写的那个即可。
         // playstyle
+        register("index_guide", "playstyle");
+        register("intro_0_guide", "playstyle");
+        register("intro_0_5_guide", "playstyle");
         register("track_tourist_guide", "playstyle");
-        // system
+        // system（大功能入口）
         register("economy_guide", "system");
         register("panel_guide", "system");
         register("mages_guide", "system");
         register("tourists_guide", "system");
+        register("casting_guide", "system");
+        register("buildings_guide", "system");
+        register("equipment_guide", "system");
+        register("custom_guide", "system");
+        // buildings（每类建筑一条）
+        register("townhall_guide", "buildings");
+        register("warehouse_guide", "buildings");
+        register("crafting_guide", "buildings");
+        register("magic_station_guide", "buildings");
+        register("workstation_guide", "buildings");
+        register("node_guide", "buildings");
+        register("altar_guide", "buildings");
+        register("mage_hut_guide", "buildings");
+        register("tavern_guide", "buildings");
+        register("shop_guide", "buildings");
+        register("hotel_guide", "buildings");
+        register("anomaly_guide", "buildings");
+        // management（面板 + 四个子模式）
+        register("panel_build_guide", "management");
+        register("panel_road_guide", "management");
+        register("panel_tasks_guide", "management");
+        register("panel_settings_guide", "management");
         // magic（每条一个魔法，正文与 JEI 卷轴信息页同文）
         register("magic_beam_guide", "magic");
         register("magic_meteor_guide", "magic");
@@ -44,6 +67,10 @@ final class PatchouliCompatImpl {
         register("scepter_guide", "items");
         register("magic_compass_guide", "items");
         register("warehouse_terminal_guide", "items");
+        // custom
+        register("custom_buildings_guide", "custom");
+        register("custom_packs_guide", "custom");
+        register("custom_elements_guide", "custom");
         // compat（每个第三方模组一条）
         register("curios_guide", "compat");
         register("irons_spells_guide", "compat");
@@ -57,6 +84,10 @@ final class PatchouliCompatImpl {
         DOC_TO_ENTRY.put("npc", DOC_TO_ENTRY.get("mages_guide"));
         DOC_TO_ENTRY.put("tourist_guide", DOC_TO_ENTRY.get("tourists_guide"));
         DOC_TO_ENTRY.put("tourist", DOC_TO_ENTRY.get("tourists_guide"));
+        DOC_TO_ENTRY.put("buildings", DOC_TO_ENTRY.get("buildings_guide"));
+        DOC_TO_ENTRY.put("casting", DOC_TO_ENTRY.get("casting_guide"));
+        DOC_TO_ENTRY.put("equipment", DOC_TO_ENTRY.get("equipment_guide"));
+        DOC_TO_ENTRY.put("custom", DOC_TO_ENTRY.get("custom_guide"));
     }
 
     private PatchouliCompatImpl() {}
@@ -66,6 +97,10 @@ final class PatchouliCompatImpl {
     }
 
     private static void register(String docName, String category) {
+        // 同一篇 md 可能挂在多个分类下；取先登记的那一份，后面的忽略
+        if (DOC_TO_ENTRY.containsKey(docName)) {
+            return;
+        }
         ResourceLocation entryId = ResourceLocation.fromNamespaceAndPath("wandscape", category + "/" + docName);
         DOC_TO_ENTRY.put(docName, entryId);
         if (docName.endsWith("_guide")) {

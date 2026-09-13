@@ -1,0 +1,13 @@
+{
+  "name": "0，入门",
+  "category": "wandscape:playstyle",
+  "icon": "minecraft:writable_book",
+  "sortnum": 1,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "本章内容为游戏内新手教程的重复，已经通过新手教程的玩家可以无视。$(br2)首先，按下V键（按键绑定可调整），进入管理面板。$(br2)（放入新手教程）"
+    }
+  ]
+}

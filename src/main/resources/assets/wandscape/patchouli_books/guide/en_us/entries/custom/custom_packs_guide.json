@@ -1,0 +1,13 @@
+{
+  "name": "Custom Building Packs",
+  "category": "wandscape:custom",
+  "icon": "minecraft:bundle",
+  "sortnum": 2,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "$(italic)$(#6b5a45)This page has not been written yet.$()"
+    }
+  ]
+}

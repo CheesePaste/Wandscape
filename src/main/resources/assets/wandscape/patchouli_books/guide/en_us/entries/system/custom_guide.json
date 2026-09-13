@@ -1,0 +1,13 @@
+{
+  "name": "Customization",
+  "category": "wandscape:system",
+  "icon": "minecraft:structure_block",
+  "sortnum": 7,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "$(italic)$(#6b5a45)This page has not been written yet.$()"
+    }
+  ]
+}

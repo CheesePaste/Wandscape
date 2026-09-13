@@ -2,7 +2,7 @@
   "name": "Warehouse Terminal",
   "category": "wandscape:items",
   "icon": "wandscape:warehouse_terminal",
-  "sortnum": 4,
+  "sortnum": 5,
   "read_by_default": true,
   "pages": [
     {

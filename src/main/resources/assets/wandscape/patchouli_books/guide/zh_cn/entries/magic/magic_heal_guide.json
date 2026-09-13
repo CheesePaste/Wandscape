@@ -2,7 +2,7 @@
   "name": "治疗",
   "category": "wandscape:magic",
   "icon": "minecraft:golden_apple",
-  "sortnum": 7,
+  "sortnum": 9,
   "read_by_default": true,
   "pages": [
     {

@@ -1,6 +1,6 @@
 {
   "name": "Spells",
-  "description": "What each spell does and where its scroll comes from.",
+  "description": "How mages fight and what decides their spells, plus what each spell does.",
   "icon": "wandscape:spell_scroll",
-  "sortnum": 30
+  "sortnum": 40
 }

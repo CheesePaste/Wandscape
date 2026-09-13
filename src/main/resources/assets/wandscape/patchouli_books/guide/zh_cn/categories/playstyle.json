@@ -1,6 +1,6 @@
 {
   "name": "玩法主线",
-  "description": "主要玩法路线。",
+  "description": "模组的几条玩法路线，以及先读哪几篇的顺序。",
   "icon": "minecraft:compass",
-  "sortnum": 10
+  "sortnum": 0
 }

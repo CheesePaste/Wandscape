@@ -2,7 +2,7 @@
   "name": "Wand",
   "category": "wandscape:items",
   "icon": "wandscape:wand",
-  "sortnum": 0,
+  "sortnum": 1,
   "read_by_default": true,
   "pages": [
     {

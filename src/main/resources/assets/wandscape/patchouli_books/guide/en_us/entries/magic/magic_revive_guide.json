@@ -2,7 +2,7 @@
   "name": "Revive",
   "category": "wandscape:magic",
   "icon": "minecraft:totem_of_undying",
-  "sortnum": 9,
+  "sortnum": 11,
   "read_by_default": true,
   "pages": [
     {

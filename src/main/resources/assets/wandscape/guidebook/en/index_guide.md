@@ -2,7 +2,7 @@
 
 Wandscape is a large mod themed around magic and town construction.
 
-Gameplay Navigation
+Gameplay Tracks
 
 《0. Getting Started》
 
@@ -10,28 +10,26 @@ Gameplay Navigation
 
 《1. Tourist Track》 Recommended for casual players
 
-《2. Adventure Track》 Recommended for adventure players
-
-《3. Tech Track》 Work in progress
-
-《4. Diplomacy Track》 Coming soon
-
-System Features Navigation
+Features and Categories
 
 《Elements and Values》 Introduction to the economy system
 
 《Management Panel》 Interaction, town management and building
 
-《Buildings》 Introduction to mod building types
-
 《Mages》 Introduction to workers and combat units
 
-《Magic》 Introduction to magic and combat systems
+《Tourists》 Short-stay visitors to your town
 
-《Equipment and Items》 Introduction to mod equipment and items
+《Casting》 What decides which spells a mage casts
 
-《Integration & Compatibility》 What this mod does with Curios, Iron's Spells, Goety and Touhou Little Maid
+《Buildings》 What you can put up, and how each kind works
 
-Other
+《Management》 The panel, and its four sub-modes: building, roads, tasks and settings
 
-《About Us》 Development team and feedback / support channels
+《Spells》 Mages, casting, and what each spell does
+
+《Equipment and Items》 Mage gear and the player's own gadgets
+
+《Customization》 Import your own buildings and packs, edit element values
+
+《Integration & Compatibility》 Playing alongside other mods

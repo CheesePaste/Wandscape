@@ -2,7 +2,7 @@
   "name": "石化",
   "category": "wandscape:magic",
   "icon": "minecraft:stone",
-  "sortnum": 5,
+  "sortnum": 7,
   "read_by_default": true,
   "pages": [
     {

@@ -1,0 +1,6 @@
+{
+  "name": "建筑",
+  "description": "小镇里能盖的建筑，以及每一类各自怎么用。",
+  "icon": "minecraft:stone_bricks",
+  "sortnum": 20
+}

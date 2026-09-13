@@ -1,0 +1,6 @@
+{
+  "name": "Customization",
+  "description": "Import your own buildings and building packs, and edit element values.",
+  "icon": "minecraft:structure_block",
+  "sortnum": 60
+}
