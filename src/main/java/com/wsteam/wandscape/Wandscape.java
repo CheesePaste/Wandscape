@@ -1176,7 +1176,8 @@ public class Wandscape {
                 .then(TavernCommand.node())
                 .then(RecoveryCommand.node())
                 .then(GuardCommand.node())
-                .then(GuideCommand.node());
+                .then(GuideCommand.node())
+                .then(TestChestCommand.rootNode());
 
         // ── 开发者/调试：一律藏到 /wandscape test（整棵 op-2，普通玩家补全里不可见） ──
         root.then(Commands.literal("test")
@@ -1192,7 +1193,9 @@ public class Wandscape {
                 .then(TouristCommand.devNode())
                 .then(TavernCommand.devNode())
                 .then(RoadStudioCommand.node())
-                .then(SplineEditorCommand.node()));
+                .then(SplineEditorCommand.node())
+                .then(TestChestCommand.node())
+                .then(TestChestCommand.spawnChestNode()));
 
         // ── Curios 兼容：法师饰品槽位管理（仅 Curios 加载时注册，避免无 Curios 时缺类崩溃） ──
         if (com.wsteam.wandscape.compat.curios.CuriosCompat.isLoaded()) {
