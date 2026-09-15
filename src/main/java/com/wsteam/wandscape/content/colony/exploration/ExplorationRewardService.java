@@ -3,6 +3,7 @@ package com.wsteam.wandscape.content.colony.exploration;
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.content.colony.ColonyLevelManager;
+import com.wsteam.wandscape.content.colony.exploration.event.ExplorationChestRewardEvent;
 import com.wsteam.wandscape.content.colony.exploration.network.ExplorationRewardPacket;
 import com.wsteam.wandscape.content.colony.ownership.ColonyOwnership;
 import com.wsteam.wandscape.content.element.data.ElementType;
@@ -10,30 +11,34 @@ import com.wsteam.wandscape.content.warehouse.ColonyItemBank;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.foundation.networking.ScreenFeedbackPacket;
 import com.wsteam.wandscape.foundation.service.ParticleService;
-import com.wsteam.wandscape.foundation.sound.SoundService;
-import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.storage.loot.LootParams;
 import net.minecraft.world.level.storage.loot.LootTable;
-import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
-import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.common.NeoForge;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Random;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Server-side service managing exploration chest expectation precomputation,
  * cache lookup, and reward processing.
+ *
+ * <p>What a chest is worth comes entirely from data: the matched region's {@code reward}
+ * block decides between sampling the loot table, using a declared value, or both. This
+ * class only resolves that rule, rolls the result, gives listeners a last chance to change
+ * it, and credits it.
  */
 public class ExplorationRewardService {
     private static final String TAG = "ExplorationRewardService";
@@ -66,6 +71,9 @@ public class ExplorationRewardService {
 
     /**
      * Get or compute the exploration reward range for a given loot table key.
+     *
+     * <p>Cached because deriving a range samples the loot table {@code sampleCount} times;
+     * a region declaring {@code reward.mode = fixed} skips that sampling entirely.
      */
     public ExplorationRewardRange getOrCreateRewardRange(ServerLevel level, ResourceKey<LootTable> lootKey) {
         return rewardCache.computeIfAbsent(lootKey, k -> computeRewardRange(level, k));
@@ -77,43 +85,22 @@ public class ExplorationRewardService {
         ExplorationRegionConfig config = loader != null ? loader.findMatchingRegion(lootTableId) : null;
 
         String regionName = config != null ? config.name() : ExplorationRegionConfig.deriveDisplayName(lootTableId);
-        double danger = config != null ? config.dangerMultiplier() : 1.0;
-        double variance = config != null ? config.variance() : 0.25;
-        double ratio = config != null ? config.elementToExpRatio() : 15.0;
+        ExplorationRewardSpec spec = config != null ? config.reward() : ExplorationRewardSpec.DEFAULT;
 
-        MinecraftServer server = level.getServer();
-        LootTable lootTable = server.reloadableRegistries().getLootTable(lootKey);
-        if (lootTable == null || lootTable == LootTable.EMPTY) {
-            return ExplorationExpectationCalculator.calculate(regionName, List.of(), danger, variance, ratio);
-        }
-
-        int sampleCount = Config.SPEC.isLoaded() ? Config.EXPLORATION_CHEST_SAMPLE_COUNT.get() : 50;
-        List<Map<ElementType, Long>> sampleDraws = new ArrayList<>(sampleCount);
-        LootParams params = new LootParams.Builder(level)
-                .withParameter(LootContextParams.ORIGIN, Vec3.ZERO)
-                .create(LootContextParamSets.CHEST);
-
-        for (int i = 0; i < sampleCount; i++) {
-            ObjectArrayList<ItemStack> items = lootTable.getRandomItems(params);
-            Map<ElementType, Long> drawElements = new LinkedHashMap<>();
-            for (ItemStack stack : items) {
-                if (stack == null || stack.isEmpty()) continue;
-                Map<ElementType, Long> cost = Wandscape.ELEMENT_API.getBuildCost(stack);
-                if (cost != null && !cost.isEmpty()) {
-                    int count = stack.getCount();
-                    for (Map.Entry<ElementType, Long> ce : cost.entrySet()) {
-                        drawElements.merge(ce.getKey(), ce.getValue() * count, Long::sum);
-                    }
-                }
+        Map<ElementType, Long> value;
+        if (spec.skipsSampling()) {
+            value = spec.value();
+        } else {
+            value = ExplorationLootSampler.sample(level, lootKey);
+            if (spec.addsToDerived()) {
+                value = ExplorationExpectationCalculator.add(value, spec.value());
             }
-            sampleDraws.add(drawElements);
         }
 
-        ExplorationRewardRange range = ExplorationExpectationCalculator.calculate(
-                regionName, sampleDraws, danger, variance, ratio
-        );
-        Log.info(TAG, "Computed reward range for loot table {}: EXP [{}, {}], elements {} types",
-                lootTableId, range.minExp(), range.maxExp(), range.maxElements().size());
+        ExplorationRewardRange range = ExplorationExpectationCalculator.fromValue(regionName, value, spec);
+        Log.info(TAG, "Resolved reward for {} [{} / {}]: EXP [{}, {}], {} element types{}",
+                lootTableId, regionName, spec.mode(), range.minExp(), range.maxExp(),
+                range.maxElements().size(), range.degenerate() ? " (degenerate fallback)" : "");
         return range;
     }
 
@@ -159,6 +146,16 @@ public class ExplorationRewardService {
             }
             elements = Collections.unmodifiableMap(scaled);
         }
+
+        // Last chance to change or suppress the payout before it is credited and shown.
+        ExplorationChestRewardEvent event = new ExplorationChestRewardEvent(
+                player, colonyId, lootKey, immutablePos, range.regionName(), range.degenerate(), exp, elements);
+        if (NeoForge.EVENT_BUS.post(event).isCanceled()) {
+            Log.info(TAG, "Reward for chest at {} suppressed by a listener", immutablePos);
+            return;
+        }
+        exp = event.exp();
+        elements = event.elements();
 
         // Deposit colony exp
         ColonyLevelManager levelMgr = ColonyLevelManager.get();

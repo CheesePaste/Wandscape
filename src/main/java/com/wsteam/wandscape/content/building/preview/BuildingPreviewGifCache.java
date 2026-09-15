@@ -43,7 +43,7 @@ import java.util.*;
  * frames once, then displayed as a cheap 2D flipbook — the per-frame cost is a
  * single texture blit per cell instead of re-tessellating every block.
  *
- * <p>Frames are persisted to {@code <gameDir>/wandscape/previews/} (PNG strip per
+ * <p>Frames are persisted to {@code <gameDir>/config/wandscape/previews/} (PNG strip per
  * building, one file per frame), so the off-screen bake happens exactly once per
  * building ever; later sessions just read the files back. Buildings are
  * data-driven, so data-pack-added buildings auto-generate their cache on first use.
@@ -78,7 +78,7 @@ public final class BuildingPreviewGifCache {
         FRAME_COUNT = Math.max(10, fps * (LOOP_MS / 1000));
     }
 
-    private static final String CACHE_SUBDIR = "wandscape/previews";
+    private static final String CACHE_SUBDIR = "config/wandscape/previews";
     private static final String TEX_NAME = "wandscape_building_preview";
 
     private static final Map<BuildingConfig, BuildingGif> CACHE = new LinkedHashMap<>();

@@ -15,7 +15,7 @@ import java.util.stream.Stream;
 
 /**
  * Client-side file storage for scanner presets.
- * Each preset is an individual .nbt file in {@code <gameDir>/wandscape/scanner_presets/}.
+ * Each preset is an individual .nbt file in {@code <gameDir>/config/wandscape/scanner_presets/}.
  * All methods are safe to call from the client thread only.
  */
 public class ScannerPresetStore {
@@ -24,7 +24,7 @@ public class ScannerPresetStore {
     private static final String EXT = ".nbt";
 
     private static Path getDir() {
-        return Minecraft.getInstance().gameDirectory.toPath().resolve("wandscape/scanner_presets");
+        return Minecraft.getInstance().gameDirectory.toPath().resolve("config/wandscape/scanner_presets");
     }
 
     /** List all available preset names, sorted alphabetically. */

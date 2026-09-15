@@ -53,6 +53,7 @@ import com.wsteam.wandscape.content.production.ProductionEligibility;
 import com.wsteam.wandscape.content.task.boundary.WandscapeBlockInteractExecutor;
 import com.wsteam.wandscape.content.colony.ColonyLevelData;
 import com.wsteam.wandscape.content.colony.ColonyLevelManager;
+import com.wsteam.wandscape.content.colony.exploration.ExplorationRegionGenerator;
 import com.wsteam.wandscape.content.colony.exploration.ExplorationRegionLoader;
 import com.wsteam.wandscape.content.colony.exploration.ExplorationRewardService;
 import com.wsteam.wandscape.content.colony.exploration.network.ExplorationRewardPacket;
@@ -1133,6 +1134,15 @@ public class Wandscape {
         // Tourist sim — drives unloaded tourists from data shadows.
         TouristSimSystem.register(level);
         Log.info(TAG, "Tourist sim system wired");
+
+        // Exploration regions: point the loader at this world's generated tier, then sample and
+        // write down a region for every chest loot table nothing declares — so an unknown mod's
+        // chest pays out something sensible instead of the flat fallback, without re-sampling
+        // on every opening. Declared regions always win over these.
+        if (EXPLORATION_REGION_LOADER != null) {
+            EXPLORATION_REGION_LOADER.setGeneratedDir(ExplorationRegionGenerator.generatedDir(level));
+        }
+        ExplorationRegionGenerator.generateMissing(level);
     }
 
     @SubscribeEvent

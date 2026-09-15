@@ -1,9 +1,12 @@
 {
   "name": "沙漠神殿",
-  "danger_multiplier": 1.2,
-  "variance": 0.25,
-  "element_to_exp_ratio": 15.0,
   "loot_table_patterns": [
     ".*/desert_pyramid$"
-  ]
+  ],
+  "reward": {
+    "mode": "derived",
+    "exp_ratio": 15.0,
+    "danger_multiplier": 1.2,
+    "variance": 0.25
+  }
 }

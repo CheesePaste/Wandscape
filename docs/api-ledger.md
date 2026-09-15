@@ -413,6 +413,22 @@
 
 ---
 
+## 24. 探索宝箱奖励（新增 2026-09-15：结算前可变事件契约）
+
+> 面向 addon/整合包：玩家在野外发现未开封的自然宝箱、且其属于某个殖民地时，奖励在入账与 HUD 上屏**之前**经过这个事件，订阅者可以改数值、追加产出或整个拦掉。定义在 `content/colony/exploration/event/ExplorationChestRewardEvent`（域事件留域，同 §8 的惯例），广播于 `NeoForge.EVENT_BUS`（`ExplorationRewardService.processReward` 内 post）。实现 `ICancellableEvent`——取消后后续监听者不再收到（NeoForge 语义），本次不入账、不发 HUD。
+
+| 成员 | 用途 |
+|---|---|
+| `player()` / `colonyId()` / `lootTable()` / `pos()` / `regionName()` / `degenerate()` | 只读上下文；`degenerate()` = 本次是算不出价值的兜底值 |
+| `exp()` / `setExp(int)` | 即将发给殖民地的经验（负数被夹到 0） |
+| `elements()` / `setElements(Map)` / `addElement(ElementType, long)` | 即将存入金库的元素（非正值被丢弃、空即不发元素） |
+
+**定位（硬规则 6）**：数据包能表达的一律不进代码——改数值走 region JSON 的 `reward` 块（`mode` / `value` / `exp_ratio` / `danger_multiplier` / `variance`）。这个事件只补数据包做不到的三件事：按运行时状态决定、追加非元素产出（自己给物品/发命令）、整个拦掉。
+
+本体自消费：无（纯对外能力）。**无殖民地路径不触发**：玩家没有殖民地时直接走 Action Bar 提示分支并保留原版战利品，不 post 事件——那时没有任何东西可改。
+
+---
+
 ## 二、Dogfood 改造清单（保证 API 新鲜度，按价值排序）
 
 > 原则：让 mod 的操作本体**也走 API**，写面才不会藏私；纯内部管道（ECS/SavedData/事件总线）**不过 API**。

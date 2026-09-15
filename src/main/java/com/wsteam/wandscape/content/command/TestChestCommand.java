@@ -7,7 +7,11 @@ import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import com.mojang.brigadier.tree.CommandNode;
 import com.wsteam.wandscape.Wandscape;
+import com.wsteam.wandscape.content.colony.exploration.ExplorationLootSampler;
 import com.wsteam.wandscape.content.colony.exploration.ExplorationRegionConfig;
+import com.wsteam.wandscape.content.colony.exploration.ExplorationRegionGenerator;
+import com.wsteam.wandscape.content.element.data.ElementType;
+import com.wsteam.wandscape.foundation.log.Log;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
@@ -36,6 +40,7 @@ import net.minecraft.world.level.storage.loot.LootTable;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -52,6 +57,8 @@ import java.util.concurrent.CompletableFuture;
  * </pre>
  */
 public final class TestChestCommand {
+
+    private static final String TAG = "TestChestCommand";
 
     private TestChestCommand() {}
 
@@ -81,7 +88,56 @@ public final class TestChestCommand {
     public static CommandNode<CommandSourceStack> rootNode() {
         return buildNode("chest")
                 .requires(src -> src.hasPermission(2))
+                .then(bakeNode())
                 .build();
+    }
+
+    /**
+     * {@code /wandscape chest bake <region|all>} — sample a loot table and print the region
+     * JSON to paste into {@code data/<namespace>/exploration_regions/}.
+     *
+     * <p>Only the game can expand a loot table's pools, random counts and enchantment
+     * functions, so the built-in regions' {@code reward.value} blocks are produced here
+     * rather than computed offline.
+     */
+    public static CommandNode<CommandSourceStack> bakeNode() {
+        return Commands.literal("bake")
+                .then(Commands.argument("region", StringArgumentType.word())
+                        .suggests((ctx, builder) -> suggestRegions(ctx, builder, List.of("all")))
+                        .executes(ctx -> bake(ctx, StringArgumentType.getString(ctx, "region"))))
+                .build();
+    }
+
+    private static int bake(CommandContext<CommandSourceStack> ctx, String regionArg) {
+        CommandSourceStack src = ctx.getSource();
+        ServerLevel level = src.getLevel();
+
+        List<ChestPreset> targets = new ArrayList<>();
+        if (regionArg.equalsIgnoreCase("all")) {
+            targets.addAll(PRESETS);
+        } else {
+            targets.add(resolvePreset(regionArg, level.random));
+        }
+
+        for (ChestPreset preset : targets) {
+            String lootTableId = preset.lootTable().location().toString();
+            // Keep the declared region's name and tuning; only the value comes from sampling.
+            ExplorationRegionConfig declared = Wandscape.EXPLORATION_REGION_LOADER != null
+                    ? Wandscape.EXPLORATION_REGION_LOADER.findMatchingRegion(lootTableId)
+                    : null;
+            Map<ElementType, Long> value = ExplorationLootSampler.sample(level, preset.lootTable());
+            String json = ExplorationRegionGenerator.renderRegion(lootTableId, declared, value);
+
+            Log.info(TAG, "Baked region for {}:\n{}", lootTableId, json);
+            src.sendSystemMessage(Component.literal("§7--- " + lootTableId + " ---"));
+            for (String line : json.split("\n")) {
+                src.sendSystemMessage(Component.literal("§f" + line));
+            }
+        }
+
+        int count = targets.size();
+        src.sendSuccess(() -> Component.literal("§a已烘焙 " + count + " 个区域，完整 JSON 也在服务端日志里。"), false);
+        return count;
     }
 
     private static LiteralArgumentBuilder<CommandSourceStack> buildNode(String name) {
@@ -97,7 +153,12 @@ public final class TestChestCommand {
     }
 
     private static CompletableFuture<Suggestions> suggestRegions(CommandContext<CommandSourceStack> ctx, SuggestionsBuilder builder) {
-        List<String> suggestions = new ArrayList<>();
+        return suggestRegions(ctx, builder, List.of());
+    }
+
+    private static CompletableFuture<Suggestions> suggestRegions(
+            CommandContext<CommandSourceStack> ctx, SuggestionsBuilder builder, List<String> extra) {
+        List<String> suggestions = new ArrayList<>(extra);
         suggestions.add("random");
         for (ChestPreset p : PRESETS) {
             suggestions.add(p.regionId());

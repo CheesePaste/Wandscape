@@ -13,16 +13,26 @@ import java.util.regex.Pattern;
 
 /**
  * Configuration definition for an exploration region loaded from JSON.
- * Defines danger multiplier, variance spread, element-to-EXP ratio, and loot table regex patterns.
+ *
+ * <p>Split in two: the top level says <b>which region this is</b> ({@code name} plus the
+ * loot-table patterns that select it), the {@code reward} block says <b>what it pays out</b>
+ * (see {@link ExplorationRewardSpec}).
+ *
+ * <pre>
+ * {
+ *   "name": "远古之城",
+ *   "loot_table_patterns": [".*chests/ancient_city.*"],
+ *   "reward": { "mode": "fixed", "value": { "dark": 200 }, "exp_ratio": 15.0, ... }
+ * }
+ * </pre>
  */
 public record ExplorationRegionConfig(
         String id,
         String name,
-        double dangerMultiplier,
-        double variance,
-        double elementToExpRatio,
+        ExplorationRewardSpec reward,
         List<String> lootTablePatterns,
-        List<Pattern> compiledPatterns
+        List<Pattern> compiledPatterns,
+        boolean degenerate
 ) {
     /** Display name used when a loot table id carries no readable structure name at all. */
     public static final String FALLBACK_NAME = "荒野遗迹";
@@ -32,13 +42,12 @@ public record ExplorationRegionConfig(
 
     public static ExplorationRegionConfig fromJson(String id, JsonElement json) {
         if (json == null || !json.isJsonObject()) {
-            return new ExplorationRegionConfig(id, id, 1.0, 0.25, 15.0, List.of(), List.of());
+            return new ExplorationRegionConfig(id, id, ExplorationRewardSpec.DEFAULT, List.of(), List.of(), false);
         }
         JsonObject obj = json.getAsJsonObject();
         String name = obj.has("name") ? obj.get("name").getAsString() : id;
-        double dangerMultiplier = obj.has("danger_multiplier") ? obj.get("danger_multiplier").getAsDouble() : 1.0;
-        double variance = obj.has("variance") ? obj.get("variance").getAsDouble() : 0.25;
-        double elementToExpRatio = obj.has("element_to_exp_ratio") ? obj.get("element_to_exp_ratio").getAsDouble() : 15.0;
+        ExplorationRewardSpec reward = ExplorationRewardSpec.fromJson(id, obj);
+        boolean degenerate = obj.has("degenerate") && obj.get("degenerate").getAsBoolean();
 
         List<String> rawPatterns = new ArrayList<>();
         List<Pattern> compiled = new ArrayList<>();
@@ -57,9 +66,10 @@ public record ExplorationRegionConfig(
             }
         }
         return new ExplorationRegionConfig(
-                id, name, dangerMultiplier, variance, elementToExpRatio,
+                id, name, reward,
                 Collections.unmodifiableList(rawPatterns),
-                Collections.unmodifiableList(compiled)
+                Collections.unmodifiableList(compiled),
+                degenerate
         );
     }
 

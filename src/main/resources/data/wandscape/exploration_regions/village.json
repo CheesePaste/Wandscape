@@ -1,9 +1,12 @@
 {
   "name": "村庄",
-  "danger_multiplier": 0.8,
-  "variance": 0.25,
-  "element_to_exp_ratio": 15.0,
   "loot_table_patterns": [
     ".*chests/village/.*"
-  ]
+  ],
+  "reward": {
+    "mode": "derived",
+    "exp_ratio": 15.0,
+    "danger_multiplier": 0.8,
+    "variance": 0.25
+  }
 }

@@ -174,15 +174,46 @@
 1. **野外自然宝箱与探索奖励判定（原生状态自闭环）**：
    - 监听 `RightClickBlock` / `BreakEvent` / `EntityInteract` 触发探索奖励。
    - **防刷核心**：依靠 Minecraft 1.21.1 容器未开封状态下的 `getLootTable() != null`。开箱触发生成原版物品后，原版逻辑立即将其置 null；玩家自放箱子恒为 null。无需在磁盘维护海量坐标数据库。
-   - **期望预热计算**：在服务端通过 `ExplorationRewardService` 模拟抽样 50 次，结合 `ElementMappingLoader` 提取元素价值向量并叠加大地牢高危系数，动态生成 `[min, max]` 区间常驻内存，零磁盘 I/O 负担。
+   - **奖励数据显式化（region JSON 的 `reward` 块）**：顶层只说「这是哪个区域」（`name` + `loot_table_patterns`），`reward` 块说「发什么」。
+     `mode` 决定元素价值向量从哪来：`derived`（默认，抽样战利品表）、`fixed`（直接用 `value` 里写的，完全不抽样）、`additive`（抽样值 + `value`）；
+     `exp_ratio` / `danger_multiplier` / `variance` 不分模式始终作用在这个向量上（经验 = 向量总和 ÷ 比值 × 危险，危险只放大经验、不放大元素）。
+     内置 10 个区域用 `fixed` 把 value 写死，原版宝箱因此零抽样。写了 `value` 却没写 `mode` 时按 `derived` 处理并 `Log.warn`——"写了却不生效"是最贵的静默。
+     value 的数值由游戏内 `/wandscape chest bake <region|all>` 产出：只有游戏能正确展开战利品表的池权重、随机数量与附魔函数，离线脚本算不出来。
+   - **没被声明的战利品表，启动时自动生成 region**：`ExplorationRegionGenerator` 挂在 `ServerStartingEvent`（此时战利品表与 region 数据都已加载完），
+     枚举 `reloadableRegistries().getKeys(Registries.LOOT_TABLE)`，挑出路径段含 `chest`/`chests` 且没有任何 region 命中的表，抽样一次写成**标准 region JSON**（`mode: fixed` + 采样值），
+     落在 `<world>/wandscape/generated_regions/`。放世界下不放 config：战利品表值取决于该世界跑的数据包集合。
+     查找是**两层，声明层优先、生成层兜底**（`ExplorationRegionLoader.findMatchingRegion`）——手工写一个 region 就自动接管同名表，自动文件永远盖不住数据包的意图。
+     注意首次启动会为所有没人覆盖的宝箱表各抽 50 次样并各落一个文件（原版 `chests/village/*` 那族就不少），是一次性开销。
+   - **代码侧唯一介入点**：`ExplorationChestRewardEvent`——摇完奖之后、入账与 HUD 之前触发，可改 `exp`/`elements`、可取消，所以上屏的就是最终值。
+     数据包能表达的（改数值）一律不进代码，它只负责数据包做不到的：按运行时状态决定、追加物品类产出、整个拦掉。
    - **地域名与地区匹配**：`exploration_regions/*.json` 的正则是**按特异性取胜**的——`ExplorationRegionLoader.findMatchingRegion` 遍历全部命中项取「字面字符最多」的那条（同分按地区 id 排序），
      因为 `SimpleDataRegistry.getAll()` 是 `Map.copyOf(HashMap)`、**迭代顺序不确定**，原来那个「先命中先返回」在整合包加 `.*` 兜底条目时会随机生效。
      内置正则一律不绑命名空间（`.*/simple_dungeon$` 这类），别的模组 / 数据包用同名路径也能对上号。
      真匹配不到时不再统一叫「荒野遗迹」，由 `ExplorationRegionConfig.deriveDisplayName` 从战利品表 id 现推名字（`somemod:chests/dragon_den` → `Dragon Den`，`/wandscape test chest` 生成的箱子显示同一个名字）。
-   - **未知地区只有 4 个参数走默认值**：危险 1.0、方差 0.25、比值 15.0、名字现推。抽样 / 期望 / 发奖 / 上屏的代码路径完全相同，没有第二条分支——
-     唯一真正的分叉在 `ExplorationExpectationCalculator.createFallback`：战利品表缺失或折算出的元素总值为 0 时（模组物品没有 `element_mappings`，价值记 0，很容易触发），
-     经验固定 `50 × 危险系数`、元素固定只给土 10~30，箱子本身多肥都不再影响结果。
+   - **算不出价值的兜底**：未被任何 region 命中的表只有 4 个参数走默认值（危险 1.0、方差 0.25、比值 15.0、名字由 `deriveDisplayName` 现推），
+     抽样 / 期望 / 发奖 / 上屏路径完全相同，唯一真正的分叉在 `ExplorationExpectationCalculator.createFallback`：
+     战利品表缺失或折算出的元素总值为 0 时（模组物品没有 `element_mappings`，价值记 0，很容易触发），经验固定 `50 × 危险系数`、元素固定只给土 10~30，箱子多肥都不再影响结果。
+     这个兜底照常发奖，但生成的文件会被打上 `degenerate: true`、加载时 `Log.warn`——退化必须看得见，不能伪装成正常数据。它同时意味着补了元素映射也不会自愈：删掉那个文件重启才会重算。
    - **元素分配一半看战利品表、一半随机撒**：原版宝箱战利品以金属（铁/铜/金）为主，纯按战利品表折算会让所有箱子都给金属。
      `ExplorationRewardRange.rollElements` 只让**总额的一半**沿用战利品表比例，另一半按随机权重（0.5~1.5 抖动、最大余数法配平）平摊到七元素，期望仍各占 1/7；
      总额与经验折算不受影响（经验是按元素总值算的，没变）。
    - **双轨入库**：经验直加小镇等级，元素直入小镇 `ColonyItemBank` 金库；无小镇玩家由 Action Bar 提示并保留原版物品。
+
+---
+
+## 十一、运行时输出目录（按作用域分桶）
+
+会往磁盘写东西的地方，按**作用域**归三个桶，别再造第四处：
+
+| 桶 | 位置 | 放什么 |
+|---|---|---|
+| 世界 | `<world>/wandscape/` | 只对这个世界成立、又不算正式数据的：自动生成的探索 region（`generated_regions/`，值取决于该世界的数据包集合） |
+| 世界 | `<world>/datapacks/<pack>/data/wandscape/` | 导出成正式数据包的东西（建筑扫描器 `buildings/`、道路预设 `road_presets/`）——玩家 `/datapack enable` 后直接当数据用 |
+| 世界 | `<world>/data/` | `SavedData`（`wandscape_colony.dat`），原版标准位置 |
+| 全局 | `<gameDir>/config/wandscape/` | 与机器/客户端绑定、跨存档共享的：`splines/`（道路样条）、`previews/`（建筑预览帧缓存）、`scanner_presets/`（扫描器预设） |
+| 诊断 | `<gameDir>/logs/` | 性能剖析 CSV 一类，跟着日志走 |
+
+- 判断标准只有一条：**这份数据换一个世界还成立吗？** 成立 → `config/wandscape/`；不成立 → 世界目录下。
+- 历史包袱：`previews/` 与 `scanner_presets/` 原来写在 `<gameDir>/wandscape/`，既不在 config 也不在世界下，已统一进 `config/wandscape/`——**没做老数据迁移**，升级后旧的扫描器预设要手动拷过去。
+- 开发期产物不算运行时输出、不受此表约束：写源码树的生成命令（`/wandscape` 的 element mapping 生成）、仓库根的 `gen_*.py`。
+- `logs/` 是明知的第三桶：诊断数据跟着日志走是生态惯例，但它不属于上面那条二分法。

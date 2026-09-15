@@ -17,7 +17,8 @@ public record ExplorationRewardRange(
         int minExp,
         int maxExp,
         Map<ElementType, Long> minElements,
-        Map<ElementType, Long> maxElements
+        Map<ElementType, Long> maxElements,
+        boolean degenerate
 ) {
     /**
      * Fraction of the rolled element total that keeps the loot-table distribution.
