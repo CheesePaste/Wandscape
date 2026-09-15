@@ -19,6 +19,7 @@ import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
 
 import net.neoforged.fml.common.EventBusSubscriber;
+import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.Wandscape;
 
 /**
@@ -28,8 +29,13 @@ import com.wsteam.wandscape.Wandscape;
 @EventBusSubscriber(modid = Wandscape.MODID)
 public final class ExplorationEventListener {
 
+    private static boolean isEnabled() {
+        return !Config.SPEC.isLoaded() || Config.EXPLORATION_CHEST_ENABLED.get();
+    }
+
     @SubscribeEvent
     public static void onRightClickBlock(PlayerInteractEvent.RightClickBlock event) {
+        if (!isEnabled()) return;
         if (event.getSide().isClient()) return;
         if (event.getHand() != InteractionHand.MAIN_HAND) return;
         if (event.getEntity().isSpectator()) return;
@@ -66,6 +72,7 @@ public final class ExplorationEventListener {
 
     @SubscribeEvent
     public static void onBlockBreak(BlockEvent.BreakEvent event) {
+        if (!isEnabled()) return;
         if (event.getLevel().isClientSide()) return;
         if (event.isCanceled()) return;
         if (!(event.getPlayer() instanceof ServerPlayer player)) return;
@@ -83,6 +90,7 @@ public final class ExplorationEventListener {
 
     @SubscribeEvent
     public static void onEntityInteract(PlayerInteractEvent.EntityInteract event) {
+        if (!isEnabled()) return;
         if (event.getSide().isClient()) return;
         if (event.getHand() != InteractionHand.MAIN_HAND) return;
         if (event.getEntity().isSpectator()) return;

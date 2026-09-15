@@ -1,5 +1,6 @@
 package com.wsteam.wandscape.content.colony.exploration;
 
+import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.content.colony.ColonyLevelManager;
 import com.wsteam.wandscape.content.colony.exploration.network.ExplorationRewardPacket;
@@ -86,12 +87,13 @@ public class ExplorationRewardService {
             return ExplorationExpectationCalculator.calculate(regionName, List.of(), danger, variance, ratio);
         }
 
-        List<Map<ElementType, Long>> sampleDraws = new ArrayList<>(50);
+        int sampleCount = Config.SPEC.isLoaded() ? Config.EXPLORATION_CHEST_SAMPLE_COUNT.get() : 50;
+        List<Map<ElementType, Long>> sampleDraws = new ArrayList<>(sampleCount);
         LootParams params = new LootParams.Builder(level)
                 .withParameter(LootContextParams.ORIGIN, Vec3.ZERO)
                 .create(LootContextParamSets.CHEST);
 
-        for (int i = 0; i < 50; i++) {
+        for (int i = 0; i < sampleCount; i++) {
             ObjectArrayList<ItemStack> items = lootTable.getRandomItems(params);
             Map<ElementType, Long> drawElements = new LinkedHashMap<>();
             for (ItemStack stack : items) {
@@ -144,8 +146,19 @@ public class ExplorationRewardService {
         }
 
         ExplorationRewardRange range = getOrCreateRewardRange(level, lootKey);
-        int exp = range.rollExp(random);
+        double expMult = Config.SPEC.isLoaded() ? Config.EXPLORATION_CHEST_EXP_MULTIPLIER.get() : 1.0;
+        double elemMult = Config.SPEC.isLoaded() ? Config.EXPLORATION_CHEST_ELEMENT_MULTIPLIER.get() : 1.0;
+
+        int exp = (int) Math.round(range.rollExp(random) * expMult);
         Map<ElementType, Long> elements = range.rollElements(random);
+        if (elemMult != 1.0) {
+            Map<ElementType, Long> scaled = new LinkedHashMap<>();
+            for (Map.Entry<ElementType, Long> entry : elements.entrySet()) {
+                long val = Math.round(entry.getValue() * elemMult);
+                if (val > 0) scaled.put(entry.getKey(), val);
+            }
+            elements = Collections.unmodifiableMap(scaled);
+        }
 
         // Deposit colony exp
         ColonyLevelManager levelMgr = ColonyLevelManager.get();

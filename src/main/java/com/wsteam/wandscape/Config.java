@@ -324,6 +324,28 @@ public class Config {
                     + "identify its own players under PVP.")
             .define("npc.pvp", true);
 
+    // ---- 野外宝箱探索奖励 Exploration Chest Reward ----
+
+    public static final ModConfigSpec.BooleanValue EXPLORATION_CHEST_ENABLED = BUILDER
+            .comment("野外自然宝箱探索奖励开关：true（默认）时，玩家打开或破坏未开封的自然宝箱时为小镇增加经验与元素；false 时关闭此功能。")
+            .comment("Wilderness natural chest exploration reward toggle: when true (default), opening or breaking an unopened natural chest grants colony experience and elements; when false, disables this feature.")
+            .define("exploration.chestEnabled", true);
+
+    public static final ModConfigSpec.DoubleValue EXPLORATION_CHEST_EXP_MULTIPLIER = BUILDER
+            .comment("野外宝箱探索经验全局倍率：最终获得的小镇经验 × 该系数。默认 1.0（0 = 不给经验，2.0 = 经验翻倍）。")
+            .comment("Global exploration chest experience multiplier: final gained colony EXP × this factor. Default 1.0 (0 = no EXP, 2.0 = double EXP).")
+            .defineInRange("exploration.expMultiplier", 1.0, 0.0, 1000.0);
+
+    public static final ModConfigSpec.DoubleValue EXPLORATION_CHEST_ELEMENT_MULTIPLIER = BUILDER
+            .comment("野外宝箱探索元素全局倍率：最终获得的小镇元素奖励 × 该系数。默认 1.0（0 = 不给元素，2.0 = 元素翻倍）。")
+            .comment("Global exploration chest element multiplier: final gained colony elements × this factor. Default 1.0 (0 = no elements, 2.0 = double elements).")
+            .defineInRange("exploration.elementMultiplier", 1.0, 0.0, 1000.0);
+
+    public static final ModConfigSpec.IntValue EXPLORATION_CHEST_SAMPLE_COUNT = BUILDER
+            .comment("战利品表期望计算蒙特卡洛抽样次数：默认 50 次。次数越多期望越平滑，启动/重载时开销略微增加。")
+            .comment("Monte Carlo sample count for loot table expectation calculation: default 50. Higher values yield smoother expectation at slight startup/reload cost.")
+            .defineInRange("exploration.sampleCount", 50, 5, 500);
+
     public static final ModConfigSpec SPEC = BUILDER.build();
 
 }
