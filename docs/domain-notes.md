@@ -181,6 +181,8 @@
    - **价值是「读权重算期望」，不是抽样**：`ExplorationLootEstimator` 不 roll。它遍历战利品表的 pool / entry，按 `weight / 总权重 × rolls` 求每个 entry 期望命中几次，再把物品过一遍 `element_mappings` 定价求和。
      能这么算是因为原版数值提供器全是均匀分布，而 `LootContext.Builder.withOptionalRandomSource` 允许注入随机源：`ExplorationProbeRandom` 对任何区间都答中点，于是**一次遍历得到的正是数学期望**——`set_count` 给出的也是期望数量而非某一次抽样的值。没有随机、不造中间 `ItemStack`、没有循环，启动价一遍是毫秒级。
      结构不用手写类遍历：原版公开了 `LootPoolEntryContainer#expand`（展开容器树，自带 conditions 与 alternatives/sequence/group 语义；mod 自定义 entry 类型也能被正确展开）与 `LootPoolEntry#getWeight`；真正缺的只有 `LootTable#pools` / `LootPool#entries` 两个无 getter 的字段，走 AT 提 public（`META-INF/accesstransformer.cfg`，第二个用例）。
+     **估算值整体 ×2**（`ESTIMATE_SCALE`）：元素映射是按「造它要多少料」定价的，它诚实反映了箱子的**价值**，但低于"发现一个箱子该有多值"的手感——实测发出来只有预期的一半。
+     放在这里而不是 `exp_ratio`，是因为经验就是元素总量除以那个比值：动比值只抬经验、元素照旧小，动价值才是一起抬。**只乘估算出来的部分**，开发者手写的 `reward.value` 一律原样使用。
      已知近似：entry 引用另一张战利品表时只有一次探针通过，嵌套表自身的加权选择会塌到单个分支——原版宝箱表极少这样嵌套，命中时是偏差不是归零。
    - **价值算不出来 = 什么都不给**：战利品表缺失、或折算出的元素总值为 0 时（模组物品没有 `element_mappings`，很容易触发），`createFallback` 返回经验 0、元素空。
      以前给 `经验 50 × 危险系数` + `土 10~30`——那只会让"没数据"看起来像"便宜箱子"，何况那点量本来也没有存在意义。现在零就是零：不发奖、不放粒子音效、不上 HUD，只 `Log.info` 记一行（带 `degenerate` 标记）。

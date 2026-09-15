@@ -48,6 +48,22 @@ public final class ExplorationLootEstimator {
 
     private static final String TAG = "ExplorationLootEstimator";
 
+    /**
+     * Calibration applied to what a loot table is worth before it reaches the reward maths.
+     *
+     * <p>Element mappings price an item by what it costs to build with. That measures a chest's
+     * worth honestly, but it turns out to undershoot how rewarding finding one should feel — the
+     * payouts came out roughly half of what they wanted to be.
+     *
+     * <p>It belongs here rather than in {@code exp_ratio} because EXP is the element total divided
+     * by that ratio: scaling the ratio would move EXP alone and leave the elements small, while
+     * scaling the value moves both together, which is what "the chests pay too little" means.
+     *
+     * <p>Only estimates are scaled. A declared {@code reward.value} is never touched — whoever
+     * writes a number means that number.
+     */
+    private static final double ESTIMATE_SCALE = 2.0;
+
     private ExplorationLootEstimator() {}
 
     /**
@@ -133,7 +149,7 @@ public final class ExplorationLootEstimator {
     private static Map<ElementType, Long> round(Map<ElementType, Double> expected) {
         Map<ElementType, Long> out = new LinkedHashMap<>();
         for (ElementType type : ElementType.values()) {
-            long value = Math.round(expected.getOrDefault(type, 0.0));
+            long value = Math.round(expected.getOrDefault(type, 0.0) * ESTIMATE_SCALE);
             if (value > 0) out.put(type, value);
         }
         return out;
