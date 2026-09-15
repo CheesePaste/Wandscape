@@ -1,0 +1,10 @@
+{
+  "name": "下界遗迹",
+  "danger_multiplier": 1.8,
+  "variance": 0.25,
+  "element_to_exp_ratio": 15.0,
+  "loot_table_patterns": [
+    ".*chests/nether_bridge.*",
+    ".*chests/bastion.*"
+  ]
+}

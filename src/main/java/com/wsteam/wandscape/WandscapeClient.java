@@ -50,6 +50,8 @@ import com.wsteam.wandscape.content.tourist.client.TouristDebugRenderer;
 import com.wsteam.wandscape.content.tourist.client.TouristRenderer;
 import com.wsteam.wandscape.content.tourist.client.TouristScreen;
 import com.wsteam.wandscape.content.tourist.network.TouristDataPacket;
+import com.wsteam.wandscape.content.colony.exploration.client.ExplorationHudOverlay;
+import com.wsteam.wandscape.content.colony.exploration.network.ExplorationRewardPacket;
 import com.wsteam.wandscape.content.warehouse.client.WarehouseScreen;
 import com.wsteam.wandscape.content.warehouse.network.WarehouseDataPacket;
 import net.minecraft.client.KeyMapping;
@@ -175,6 +177,9 @@ public class WandscapeClient {
         ScannerGizmoController.register();
         ScannerGizmoRenderer.register();
         ScannerGizmoOverlay.register();
+
+        // Exploration chest reward HUD overlay
+        ExplorationHudOverlay.register();
     }
 
     @SubscribeEvent
@@ -194,6 +199,7 @@ public class WandscapeClient {
         int fps = ClientConfig.SPEC.isLoaded() ? ClientConfig.PREVIEW_FPS.get() : 12;
         BuildingPreviewGifCache.configure(res, fps);
         // Wire server→client packet handlers — open MedievalScreen directly.
+        ExplorationRewardPacket.setClientHandler(ExplorationHudOverlay::showReward);
         WarehouseDataPacket.setClientHandler(packet -> {
             // The warehouse screen opens through the vanilla menu flow (openMenu +
             // RegisterMenuScreensEvent); the data packet only refreshes an open screen.

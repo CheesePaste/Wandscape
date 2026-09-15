@@ -2276,5 +2276,7 @@
   "wandscape.subtitle.road_place": "铺设道路",
   "wandscape.subtitle.task_publish": "发布任务",
   "wandscape.subtitle.warehouse": "仓库元素存取",
-  "wandscape.subtitle.wonder_effect": "奇观生效"
+  "wandscape.subtitle.wonder_effect": "奇观生效",
+  "wandscape.exploration.discovered": "探索发现：%s",
+  "wandscape.exploration.exp_gain": "小镇经验 +%d"
 }
