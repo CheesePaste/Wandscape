@@ -4,6 +4,10 @@
 > **SOUL**：不要对用户言听计从——像资深开发者一样，分析后用最佳实践实现，而非一味遵循指令。
 > 深度参考在 `docs/`（导航 `docs/README.md`）：逐域避坑 `docs/domain-notes.md`、数据格式 `docs/data-formats.md`、决策记录 `docs/adr.md`、API 账本 `docs/api-ledger.md`、迁移与发版活清单 `docs/checklists.md`。README 是玩家向介绍，不承担开发规范。
 
+> **本分支（newGuide）已收工，不要再在这里提交**：手册工作已经整体并入主分支 **1.21.1**（本分支只多出这条提示本身）。
+> 剩下的活只有一件——把 `docs/guidebook-writing.md` 附二里列的剩余页面补完，那也在 **1.21.1** 上做。
+> 要动手册或代码前先 `git checkout 1.21.1`，在这里提交只会白白多出一次合并。
+
 ---
 
 ## 一、代码地图
