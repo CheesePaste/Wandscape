@@ -28,23 +28,23 @@ The three values are comfort, magic and wonder; they decide which need the build
 
 ## Harvest Nodes
 
-Pick "Harvest Nodes" as the category and the building becomes an element source: choose which element it yields and how much per harvest, then set how long a mage must channel, and citizen mages will come here to harvest. Pick the wrong category and it is just decoration that nobody ever comes to.
+Set the category to "Harvest Nodes" and the screen gains this block: the dropdown on the left picks which element gets harvested, Amount/Harvest is how much comes out per trip, and Channel Ticks is how long a mage spends channelling before the elements arrive. Under any other category the block does not appear and the building produces no elements.
 
 ## Shops
 
-Pick "Shops" as the category and tourists will come here to buy. Add goods one at a time, each with the item itself and the three values it provides, and tourists pick according to their own needs. The profit rate decides how much a sale earns. A shop with no goods listed gives tourists nothing to buy.
+Set the category to "Shops" and the screen gains this block: each row in the goods list holds an item together with the Comf, Mag and Wond values it provides, and tourists pick according to their own needs — no rows at all means nothing in stock. Profit % is what one sale earns, and Duration Ticks is how long a tourist spends buying.
 
 ## Services
 
-Pick "Services" as the category and tourists spend energy here, trading it back to the colony as elemental output — set how much energy each use costs, how many tourists it holds at once and how long a visit lasts, then add which element is produced and how much per use. If you fill in Max Occupancy here, the building also becomes an inn at night and tourists will come to stay.
+Set the category to "Services" and the screen gains this block: Energy is what a tourist spends per visit, Capacity is how many fit inside at once, and Duration is how long one visit lasts; each row of the element output underneath holds which element is produced and its Output amount. Any Capacity above 0 also turns the building into an inn at night.
 
 ## Relax
 
-Pick "Relax" as the category and tourists who have walked themselves tired come here to recover energy, and energy is what decides how much longer she can keep visiting. Just set how much energy each visit restores and how long the visit lasts.
+Set the category to "Relax" and the screen gains this block: Energy Restored is how much a tourist gets back per visit, and Duration Ticks is how long she sits.
 
 ## ATM
 
-Pick "ATM" as the category and tourists whose wallets run dry come here to withdraw, then carry on spending. The withdraw limit caps how much one visit takes out, and the duration is how long she stays to do it. A town with plenty of shops especially needs one: once tourists are out of coin with nowhere to draw more, they simply leave early.
+Set the category to "ATM" and the screen gains this block: Max Withdraw caps how much one visit takes out, and Duration Ticks is how long that visit takes.
 
 ## Exporting
 

@@ -1,3 +1,5 @@
 # Warehouse
 
-> This page has not been written yet.
+A Warehouse does not keep its contents in the block — it is the town-wide stock of elements and materials that mages draw on to build, craft and gather, and where the results go back. The stock is kept on the town's books, so breaking the warehouse block loses nothing.
+
+Building more of them is worthwhile: how much the town can store scales with the number of warehouses. Besides right-clicking one, you can reach the stock from the Town Hall panel when you have none, or carry a warehouse terminal (see [Warehouse Terminal](warehouse_terminal_guide.md)).
