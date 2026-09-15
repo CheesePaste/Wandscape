@@ -1,0 +1,10 @@
+{
+  "name": "沉船与宝藏",
+  "danger_multiplier": 1.1,
+  "variance": 0.25,
+  "element_to_exp_ratio": 15.0,
+  "loot_table_patterns": [
+    ".*chests/shipwreck.*",
+    "minecraft:chests/buried_treasure"
+  ]
+}

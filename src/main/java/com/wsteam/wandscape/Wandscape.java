@@ -53,6 +53,9 @@ import com.wsteam.wandscape.content.production.ProductionEligibility;
 import com.wsteam.wandscape.content.task.boundary.WandscapeBlockInteractExecutor;
 import com.wsteam.wandscape.content.colony.ColonyLevelData;
 import com.wsteam.wandscape.content.colony.ColonyLevelManager;
+import com.wsteam.wandscape.content.colony.exploration.ExplorationRegionLoader;
+import com.wsteam.wandscape.content.colony.exploration.ExplorationRewardService;
+import com.wsteam.wandscape.content.colony.exploration.network.ExplorationRewardPacket;
 import com.wsteam.wandscape.content.building.ChunkLoadManager;
 import com.wsteam.wandscape.content.colony.service.ColonyStatusService;
 import com.wsteam.wandscape.foundation.registry.WandscapeSounds;
@@ -215,6 +218,8 @@ public class Wandscape {
     public static final WandscapeDataLoader DATA_LOADER = new WandscapeDataLoader();
     /** 加载 data/wandscape/wandscape_balance.json，把可调平衡值灌进 BalanceValues（reload 时确定性重载）。 */
     public static final WandscapeBalanceLoader BALANCE_LOADER = new WandscapeBalanceLoader();
+    /** 加载 data/wandscape/exploration_regions/*.json，野外宝箱地域配置。 */
+    public static final ExplorationRegionLoader EXPLORATION_REGION_LOADER = new ExplorationRegionLoader(DATA_LOADER);
 
     // ---- 02 wand-system ----
     public static final DeferredItem<Item> WAND = ITEMS.register("wand",
@@ -625,6 +630,10 @@ public class Wandscape {
                         DatapackDataSyncChunkPacket.TYPE,
                         DatapackDataSyncChunkPacket.STREAM_CODEC,
                         (packet, ctx) -> DatapackDataSyncChunkPacket.handleClient(packet))
+                .playToClient(
+                        ExplorationRewardPacket.TYPE,
+                        ExplorationRewardPacket.STREAM_CODEC,
+                        (packet, ctx) -> ExplorationRewardPacket.handleClient(packet))
                 .playToServer(
                         ShopMaxStockPacket.TYPE,
                         ShopMaxStockPacket.STREAM_CODEC,
@@ -1135,6 +1144,7 @@ public class Wandscape {
         TouristSpotManager.getActive().clear(); // 静态单例跨世界存活，需清空幽灵占位/排队
         com.wsteam.wandscape.content.task.runtime.TaskRuntime.reset();
         ColonyLevelManager.reset();
+        ExplorationRewardService.get().clearCache();
         com.wsteam.wandscape.content.warehouse.transport.ItemTransportManager.reset();
         EntityComponentBridge.INSTANCE.clear();
     }
@@ -1166,7 +1176,8 @@ public class Wandscape {
                 .then(TavernCommand.node())
                 .then(RecoveryCommand.node())
                 .then(GuardCommand.node())
-                .then(GuideCommand.node());
+                .then(GuideCommand.node())
+                .then(TestChestCommand.rootNode());
 
         // ── 开发者/调试：一律藏到 /wandscape test（整棵 op-2，普通玩家补全里不可见） ──
         root.then(Commands.literal("test")
@@ -1182,7 +1193,9 @@ public class Wandscape {
                 .then(TouristCommand.devNode())
                 .then(TavernCommand.devNode())
                 .then(RoadStudioCommand.node())
-                .then(SplineEditorCommand.node()));
+                .then(SplineEditorCommand.node())
+                .then(TestChestCommand.node())
+                .then(TestChestCommand.spawnChestNode()));
 
         // ── Curios 兼容：法师饰品槽位管理（仅 Curios 加载时注册，避免无 Curios 时缺类崩溃） ──
         if (com.wsteam.wandscape.compat.curios.CuriosCompat.isLoaded()) {

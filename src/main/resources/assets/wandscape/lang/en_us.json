@@ -2276,5 +2276,7 @@
   "wandscape.subtitle.road_place": "Road placed",
   "wandscape.subtitle.task_publish": "Task published",
   "wandscape.subtitle.warehouse": "Warehouse transfer",
-  "wandscape.subtitle.wonder_effect": "Wonder active"
+  "wandscape.subtitle.wonder_effect": "Wonder active",
+  "wandscape.exploration.discovered": "Exploration Discovery: %s",
+  "wandscape.exploration.exp_gain": "Colony EXP +%d"
 }
