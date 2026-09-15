@@ -2,7 +2,7 @@
   "name": "Tavern",
   "category": "wandscape:buildings",
   "icon": "minecraft:brewing_stand",
-  "sortnum": 6,
+  "sortnum": 7,
   "read_by_default": true,
   "pages": [
     {

@@ -2,7 +2,7 @@
   "name": "Relax",
   "category": "wandscape:buildings",
   "icon": "minecraft:oak_stairs",
-  "sortnum": 13,
+  "sortnum": 14,
   "read_by_default": true,
   "pages": [
     {

@@ -2,7 +2,7 @@
   "name": "Element Node",
   "category": "wandscape:buildings",
   "icon": "wandscape:element_earth",
-  "sortnum": 9,
+  "sortnum": 10,
   "read_by_default": true,
   "pages": [
     {

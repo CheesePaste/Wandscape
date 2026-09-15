@@ -2,7 +2,7 @@
   "name": "魔法工坊",
   "category": "wandscape:buildings",
   "icon": "wandscape:spell_scroll",
-  "sortnum": 5,
+  "sortnum": 6,
   "read_by_default": true,
   "pages": [
     {

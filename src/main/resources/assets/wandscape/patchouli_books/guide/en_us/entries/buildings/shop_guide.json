@@ -2,7 +2,7 @@
   "name": "Shop",
   "category": "wandscape:buildings",
   "icon": "minecraft:emerald",
-  "sortnum": 11,
+  "sortnum": 12,
   "read_by_default": true,
   "pages": [
     {

@@ -2,7 +2,7 @@
   "name": "商店",
   "category": "wandscape:buildings",
   "icon": "minecraft:emerald",
-  "sortnum": 11,
+  "sortnum": 12,
   "read_by_default": true,
   "pages": [
     {

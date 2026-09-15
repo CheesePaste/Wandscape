@@ -2,7 +2,7 @@
   "name": "法师小屋",
   "category": "wandscape:buildings",
   "icon": "minecraft:red_bed",
-  "sortnum": 8,
+  "sortnum": 9,
   "read_by_default": true,
   "pages": [
     {

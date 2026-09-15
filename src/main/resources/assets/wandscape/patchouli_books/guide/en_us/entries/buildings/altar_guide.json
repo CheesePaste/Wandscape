@@ -2,7 +2,7 @@
   "name": "Altar",
   "category": "wandscape:buildings",
   "icon": "minecraft:enchanting_table",
-  "sortnum": 7,
+  "sortnum": 8,
   "read_by_default": true,
   "pages": [
     {

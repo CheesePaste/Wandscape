@@ -2,7 +2,7 @@
   "name": "工作站",
   "category": "wandscape:buildings",
   "icon": "minecraft:crafting_table",
-  "sortnum": 3,
+  "sortnum": 4,
   "read_by_default": true,
   "pages": [
     {

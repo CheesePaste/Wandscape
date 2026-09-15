@@ -2,7 +2,7 @@
   "name": "Warehouse",
   "category": "wandscape:buildings",
   "icon": "minecraft:chest",
-  "sortnum": 2,
+  "sortnum": 3,
   "read_by_default": true,
   "pages": [
     {

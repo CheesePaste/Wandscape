@@ -2,7 +2,7 @@
   "name": "Town Hall",
   "category": "wandscape:buildings",
   "icon": "minecraft:bell",
-  "sortnum": 1,
+  "sortnum": 2,
   "read_by_default": true,
   "pages": [
     {

@@ -160,7 +160,7 @@ python gen_patchouli.py && python paginate_patchouli_json.py   # 两步都不能
 |---|---|---|---|
 | 玩法主线 | 4 | 0 | — |
 | 通用功能 | 9 | 4 | 建筑 `buildings_guide`、施法 `casting_guide`、装备与物品 `equipment_guide`、自定义 `custom_guide` |
-| 建筑 | 17 | 1 | 建筑 `buildings_guide`（总览；14 类建筑各一条已写完，另有「建筑维护」`anomaly_guide` 与「建筑扫描器」`building_scanner_guide`） |
+| 建筑 | 17 | 1 | 建筑 `buildings_guide`（总览；顺序是总览 → 建筑维护 `anomaly_guide` → 14 类建筑各一条 → 建筑扫描器 `building_scanner_guide`） |
 | 管理 | 5 | 4 | 建造子模式 `panel_build_guide`、道路子模式 `panel_road_guide`、任务子模式 `panel_tasks_guide`、设置中心 `panel_settings_guide` |
 | 魔法 | 12 | 1 | 施法 `casting_guide` |
 | 装备与物品 | 6 | 1 | 装备与物品 `equipment_guide` |
@@ -171,8 +171,9 @@ python gen_patchouli.py && python paginate_patchouli_json.py   # 两步都不能
 
 **「建筑」这一屏与 `buildings/*.json` 的 category 一一对应**（government→市政厅、storage→仓库、
 workstation、crafting_station、magic_station、tavern、altar、mage_hut、node、decoration、shop、
-service、relax、atm），顺序照建造面板的分类顺序。新增一类建筑时要同时补三处：`ENTRIES` 的
-buildings 段、`PatchouliCompatImpl` 的 buildings 段、以及一条 md（zh/en 各一份）。
+service、relax、atm），顺序照建造面板的分类顺序，前后各夹一条非类别的：**建筑维护**（受损建筑怎么
+修，排在所有建筑之前）与**建筑扫描器**（把自建房导入成建筑，排在最后）。新增一类建筑时要同时补三处：
+`ENTRIES` 的 buildings 段、`PatchouliCompatImpl` 的 buildings 段、以及一条 md（zh/en 各一份）。
 
 两点值得先说：
 
