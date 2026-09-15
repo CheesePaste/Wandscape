@@ -133,3 +133,33 @@ python gen_patchouli.py && python paginate_patchouli_json.py   # 两步都不能
 
 用户的原话值得留着：**「我们不是介绍产品，是告诉玩家一个简要的做了什么内容，让他们自己探索，
 只标明那些可能影响游戏体验的误区。」**
+
+---
+
+## 附二：还没写的条目（截至 2026-09-15）
+
+手册登记 **56 个条目位**，来自 50 篇 md——`buildings_guide` / `casting_guide` / `equipment_guide` /
+`custom_guide` 这 4 篇总览页各登了两处（「通用功能」+ 对应细分类）。
+其中 **23 篇是占位页**，正文只有一句「本页还没写完」，占 **27 个条目位**。zh/en 两侧完全一致。
+
+| 分类 | 登记 | 缺 | 条目名（md 文件） |
+|---|---|---|---|
+| 玩法主线 | 4 | 0 | — |
+| 通用功能 | 8 | 4 | 建筑 `buildings_guide`、施法 `casting_guide`、装备与物品 `equipment_guide`、自定义 `custom_guide` |
+| 建筑 | 13 | 13 | 建筑 `buildings_guide`、市政厅 `townhall_guide`、仓库 `warehouse_guide`、合成台 `crafting_guide`、魔法工坊 `magic_station_guide`、工作站 `workstation_guide`、元素节点 `node_guide`、祭坛 `altar_guide`、法师小屋 `mage_hut_guide`、酒馆 `tavern_guide`、商店 `shop_guide`、旅馆与服务建筑 `hotel_guide`、建筑维护 `anomaly_guide` |
+| 管理 | 5 | 4 | 建造子模式 `panel_build_guide`、道路子模式 `panel_road_guide`、任务子模式 `panel_tasks_guide`、设置中心 `panel_settings_guide` |
+| 魔法 | 12 | 1 | 施法 `casting_guide` |
+| 装备与物品 | 6 | 1 | 装备与物品 `equipment_guide` |
+| 自定义 | 4 | 4 | 自定义 `custom_guide`、导入自定义建筑 `custom_buildings_guide`、自定义建筑包 `custom_packs_guide`、修改元素价值 `custom_elements_guide` |
+| 联动与兼容 | 4 | 0 | — |
+
+写掉一篇就删一行；数字对不上，说明 `gen_patchouli.py` 的 `ENTRIES` 里加了新条目而这里没跟上。
+
+两点值得先说：
+
+- **「建筑」是唯一整类全缺的一级分类**——点进去第一屏全是「还没写完」，观感比缺两三篇严重得多。要动手先动这里。
+- 那 4 篇总览页写一篇补两个位置，性价比最高：先写总览，细分类第一屏至少是能看的。
+
+不在表里的 15 篇（`npc_guide` `tourist_guide` `strategy_guide` `overview_guide` `getting_started` `road_*`
+`scanner_guide` `commands_guide` `creators_guide` `creative_scanner_guide` `magic_circle_editor_guide` `test_guide`）
+是**已弃用旧文**，不登记进手册，因此不算缺——处理方式见 §一。
