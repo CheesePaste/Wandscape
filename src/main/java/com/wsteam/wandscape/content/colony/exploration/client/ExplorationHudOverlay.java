@@ -9,6 +9,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.neoforged.neoforge.client.event.RenderGuiEvent;
+import net.neoforged.neoforge.client.event.ScreenEvent;
 import net.neoforged.neoforge.common.NeoForge;
 
 import java.util.Map;
@@ -16,6 +17,7 @@ import java.util.Map;
 /**
  * Client HUD notification overlay for exploration chest discoveries.
  * Slides down smoothly from the top of the screen and displays gained EXP and elements.
+ * Renders on the absolute top layer above any open screens (e.g. chest container GUI).
  * Strictly adheres to project styling: zero emoji/decoration symbols, clean medieval palette.
  */
 public final class ExplorationHudOverlay {
@@ -42,8 +44,11 @@ public final class ExplorationHudOverlay {
     public static void register() {
         if (registered) return;
         registered = true;
+        // In-game HUD when no screen is open
         NeoForge.EVENT_BUS.addListener(RenderGuiEvent.Post.class, ExplorationHudOverlay::onRenderGuiPost);
-        Log.info(TAG, "ExplorationHudOverlay registered");
+        // On top of any open screen (chest GUI, inventory, etc.)
+        NeoForge.EVENT_BUS.addListener(ScreenEvent.Render.Post.class, ExplorationHudOverlay::onScreenRenderPost);
+        Log.info(TAG, "ExplorationHudOverlay registered (top-layer)");
     }
 
     public static void showReward(ExplorationRewardPacket packet) {
@@ -57,12 +62,25 @@ public final class ExplorationHudOverlay {
     }
 
     private static void onRenderGuiPost(RenderGuiEvent.Post event) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.screen != null) return; // Let onScreenRenderPost handle rendering on top of the open screen
+        if (mc.getWindow() == null) return;
+
+        renderNotice(event.getGuiGraphics(), mc.getWindow().getGuiScaledWidth());
+    }
+
+    private static void onScreenRenderPost(ScreenEvent.Render.Post event) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.getWindow() == null) return;
+
+        renderNotice(event.getGuiGraphics(), mc.getWindow().getGuiScaledWidth());
+    }
+
+    private static void renderNotice(GuiGraphics gui, int screenW) {
         ActiveNotice notice = currentNotice;
         if (notice == null) return;
 
         Minecraft mc = Minecraft.getInstance();
-        if (mc.getWindow() == null) return;
-
         long elapsed = System.currentTimeMillis() - notice.startTimeMs();
         if (elapsed >= DURATION_MS) {
             currentNotice = null;
@@ -78,9 +96,7 @@ public final class ExplorationHudOverlay {
         float ease = 1.0f - (1.0f - slideProgress) * (1.0f - slideProgress);
         int y = (int) (-CARD_HEIGHT + (TARGET_Y + CARD_HEIGHT) * ease);
 
-        GuiGraphics gui = event.getGuiGraphics();
         Font font = mc.font;
-        int screenW = mc.getWindow().getGuiScaledWidth();
 
         String title = I18n.string("wandscape.exploration.discovered", "探索发现：%s", notice.regionName());
 
@@ -100,14 +116,19 @@ public final class ExplorationHudOverlay {
         int cardW = Math.max(180, contentW + 24);
         int x = (screenW - cardW) / 2;
 
-        int bgAlpha = (int) (alpha * 220);
-        int borderAlpha = (int) (alpha * 240);
+        int bgAlpha = (int) (alpha * 230);
+        int borderAlpha = (int) (alpha * 255);
         int textAlpha = (int) (alpha * 255);
 
         int bgColor = (bgAlpha << 24) | 0x1A0E04;
         int borderColor = (borderAlpha << 24) | (MedievalColors.BORDER_GOLD & 0x00FFFFFF);
         int titleColor = (textAlpha << 24) | 0xDEC478;
         int detailColor = (textAlpha << 24) | 0x88EE88;
+
+        // Elevate to top-most z layer (800) so nothing in any screen can dim or cover it
+        gui.flush();
+        gui.pose().pushPose();
+        gui.pose().translate(0, 0, 800);
 
         // Background
         gui.fill(x, y, x + cardW, y + CARD_HEIGHT, bgColor);
@@ -124,5 +145,8 @@ public final class ExplorationHudOverlay {
 
         gui.drawString(font, title, titleX, y + 6, titleColor, false);
         gui.drawString(font, detail, detailX, y + 18, detailColor, false);
+
+        gui.pose().popPose();
+        gui.flush();
     }
 }
