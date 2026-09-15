@@ -76,7 +76,7 @@ public class ExplorationRewardService {
         ExplorationRegionLoader loader = Wandscape.EXPLORATION_REGION_LOADER;
         ExplorationRegionConfig config = loader != null ? loader.findMatchingRegion(lootTableId) : null;
 
-        String regionName = config != null ? config.name() : "荒野遗迹";
+        String regionName = config != null ? config.name() : ExplorationRegionConfig.deriveDisplayName(lootTableId);
         double danger = config != null ? config.dangerMultiplier() : 1.0;
         double variance = config != null ? config.variance() : 0.25;
         double ratio = config != null ? config.elementToExpRatio() : 15.0;

@@ -194,13 +194,10 @@ public final class TestChestCommand {
         ResourceLocation rl = ResourceLocation.tryParse(candidateLoc);
         if (rl != null) {
             ResourceKey<LootTable> customKey = ResourceKey.create(Registries.LOOT_TABLE, rl);
-            String customName = regionArg;
-            if (Wandscape.EXPLORATION_REGION_LOADER != null) {
-                ExplorationRegionConfig cfg = Wandscape.EXPLORATION_REGION_LOADER.findMatchingRegion(candidateLoc);
-                if (cfg != null) {
-                    customName = cfg.name();
-                }
-            }
+            // Same naming the HUD uses: matched region name, else derived from the loot table id.
+            String customName = Wandscape.EXPLORATION_REGION_LOADER != null
+                    ? Wandscape.EXPLORATION_REGION_LOADER.resolveDisplayName(candidateLoc)
+                    : regionArg;
             return new ChestPreset(regionArg, customName, customKey);
         }
 

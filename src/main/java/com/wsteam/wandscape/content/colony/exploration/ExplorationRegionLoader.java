@@ -30,7 +30,11 @@ public class ExplorationRegionLoader {
     }
 
     /**
-     * Find the first matching exploration region configuration for a given loot table ID.
+     * Find the best matching exploration region configuration for a given loot table ID.
+     *
+     * <p>All matching configs are compared and the most specific pattern wins (see
+     * {@link ExplorationRegionConfig#matchSpecificity}), so datapack catch-all regions
+     * always lose to concrete ones no matter which order the registry iterates in.
      *
      * @param lootTableId full resource location string of the loot table (e.g. "minecraft:chests/abandoned_mineshaft")
      * @return the matching {@link ExplorationRegionConfig} or null if no pattern matches
@@ -38,11 +42,26 @@ public class ExplorationRegionLoader {
     @Nullable
     public ExplorationRegionConfig findMatchingRegion(String lootTableId) {
         if (lootTableId == null) return null;
+        ExplorationRegionConfig best = null;
+        int bestScore = -1;
         for (ExplorationRegionConfig config : registry.getAll().values()) {
-            if (config.matches(lootTableId)) {
-                return config;
+            int score = config.matchSpecificity(lootTableId);
+            if (score < 0) continue;
+            // Ties broken by region id so the result is stable across reloads.
+            if (score > bestScore || (score == bestScore && best != null && config.id().compareTo(best.id()) < 0)) {
+                best = config;
+                bestScore = score;
             }
         }
-        return null;
+        return best;
+    }
+
+    /**
+     * Display name for a loot table: the matched region name, or a name derived from the
+     * loot table id itself when no region config matches (e.g. another mod's structure).
+     */
+    public String resolveDisplayName(String lootTableId) {
+        ExplorationRegionConfig config = findMatchingRegion(lootTableId);
+        return config != null ? config.name() : ExplorationRegionConfig.deriveDisplayName(lootTableId);
     }
 }

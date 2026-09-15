@@ -175,6 +175,13 @@
    - 监听 `RightClickBlock` / `BreakEvent` / `EntityInteract` 触发探索奖励。
    - **防刷核心**：依靠 Minecraft 1.21.1 容器未开封状态下的 `getLootTable() != null`。开箱触发生成原版物品后，原版逻辑立即将其置 null；玩家自放箱子恒为 null。无需在磁盘维护海量坐标数据库。
    - **期望预热计算**：在服务端通过 `ExplorationRewardService` 模拟抽样 50 次，结合 `ElementMappingLoader` 提取元素价值向量并叠加大地牢高危系数，动态生成 `[min, max]` 区间常驻内存，零磁盘 I/O 负担。
+   - **地域名与地区匹配**：`exploration_regions/*.json` 的正则是**按特异性取胜**的——`ExplorationRegionLoader.findMatchingRegion` 遍历全部命中项取「字面字符最多」的那条（同分按地区 id 排序），
+     因为 `SimpleDataRegistry.getAll()` 是 `Map.copyOf(HashMap)`、**迭代顺序不确定**，原来那个「先命中先返回」在整合包加 `.*` 兜底条目时会随机生效。
+     内置正则一律不绑命名空间（`.*/simple_dungeon$` 这类），别的模组 / 数据包用同名路径也能对上号。
+     真匹配不到时不再统一叫「荒野遗迹」，由 `ExplorationRegionConfig.deriveDisplayName` 从战利品表 id 现推名字（`somemod:chests/dragon_den` → `Dragon Den`，`/wandscape test chest` 生成的箱子显示同一个名字）。
+   - **未知地区只有 4 个参数走默认值**：危险 1.0、方差 0.25、比值 15.0、名字现推。抽样 / 期望 / 发奖 / 上屏的代码路径完全相同，没有第二条分支——
+     唯一真正的分叉在 `ExplorationExpectationCalculator.createFallback`：战利品表缺失或折算出的元素总值为 0 时（模组物品没有 `element_mappings`，价值记 0，很容易触发），
+     经验固定 `50 × 危险系数`、元素固定只给土 10~30，箱子本身多肥都不再影响结果。
    - **元素分配一半看战利品表、一半随机撒**：原版宝箱战利品以金属（铁/铜/金）为主，纯按战利品表折算会让所有箱子都给金属。
      `ExplorationRewardRange.rollElements` 只让**总额的一半**沿用战利品表比例，另一半按随机权重（0.5~1.5 抖动、最大余数法配平）平摊到七元素，期望仍各占 1/7；
      总额与经验折算不受影响（经验是按元素总值算的，没变）。
