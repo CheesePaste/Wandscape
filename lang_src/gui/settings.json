@@ -51,6 +51,14 @@
     "en_us": "Item decompose output divisor",
     "zh_cn": "物品分解产出除数"
   },
+  "gui.wandscape.settings.exploration.chestElementMultiplier": {
+    "en_us": "Exploration chest element multiplier",
+    "zh_cn": "探索宝箱元素倍率"
+  },
+  "gui.wandscape.settings.exploration.chestExpMultiplier": {
+    "en_us": "Exploration chest EXP multiplier",
+    "zh_cn": "探索宝箱经验倍率"
+  },
   "gui.wandscape.settings.general.debug": {
     "en_us": "Verbose debug logging",
     "zh_cn": "详细调试日志"

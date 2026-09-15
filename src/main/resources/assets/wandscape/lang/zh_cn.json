@@ -999,6 +999,8 @@
   "gui.wandscape.settings.element.autoGatherOnShortage": "元素短缺自动采集",
   "gui.wandscape.settings.element.craftCostMultiplier": "合成制作元素倍率",
   "gui.wandscape.settings.element.decomposeDivisor": "物品分解产出除数",
+  "gui.wandscape.settings.exploration.chestElementMultiplier": "探索宝箱元素倍率",
+  "gui.wandscape.settings.exploration.chestExpMultiplier": "探索宝箱经验倍率",
   "gui.wandscape.settings.general.debug": "详细调试日志",
   "gui.wandscape.settings.hint.general": "配置项修改即时生效并自动持久化保存（支持热重载）",
   "gui.wandscape.settings.hint.packages": "管理已加载的建筑包。停用的建筑包将不会在建造栏中显示（即时生效）",
@@ -2276,7 +2278,5 @@
   "wandscape.subtitle.road_place": "铺设道路",
   "wandscape.subtitle.task_publish": "发布任务",
   "wandscape.subtitle.warehouse": "仓库元素存取",
-  "wandscape.subtitle.wonder_effect": "奇观生效",
-  "wandscape.exploration.discovered": "探索发现：%s",
-  "wandscape.exploration.exp_gain": "小镇经验 +%d"
+  "wandscape.subtitle.wonder_effect": "奇观生效"
 }

@@ -332,14 +332,14 @@ public class Config {
             .define("exploration.chestEnabled", true);
 
     public static final ModConfigSpec.DoubleValue EXPLORATION_CHEST_EXP_MULTIPLIER = BUILDER
-            .comment("野外宝箱探索经验全局倍率：最终获得的小镇经验 × 该系数。默认 1.0（0 = 不给经验，2.0 = 经验翻倍）。")
-            .comment("Global exploration chest experience multiplier: final gained colony EXP × this factor. Default 1.0 (0 = no EXP, 2.0 = double EXP).")
-            .defineInRange("exploration.expMultiplier", 1.0, 0.0, 1000.0);
+            .comment("野外宝箱探索经验全局倍率：最终获得的小镇经验 × 该系数。默认 1.0（0 = 不给经验，2.0 = 经验翻倍）。取值范围 0~10，上线在设置中心「城镇经营」里调整。")
+            .comment("Global exploration chest experience multiplier: final gained colony EXP × this factor. Default 1.0 (0 = no EXP, 2.0 = double EXP). Range 0~10; adjustable in the Settings Center, Colony tab.")
+            .defineInRange("exploration.expMultiplier", 1.0, 0.0, 10.0);
 
     public static final ModConfigSpec.DoubleValue EXPLORATION_CHEST_ELEMENT_MULTIPLIER = BUILDER
-            .comment("野外宝箱探索元素全局倍率：最终获得的小镇元素奖励 × 该系数。默认 1.0（0 = 不给元素，2.0 = 元素翻倍）。")
-            .comment("Global exploration chest element multiplier: final gained colony elements × this factor. Default 1.0 (0 = no elements, 2.0 = double elements).")
-            .defineInRange("exploration.elementMultiplier", 1.0, 0.0, 1000.0);
+            .comment("野外宝箱探索元素全局倍率：最终获得的小镇元素奖励 × 该系数。默认 1.0（0 = 不给元素，2.0 = 元素翻倍）。取值范围 0~10，上线在设置中心「城镇经营」里调整。")
+            .comment("Global exploration chest element multiplier: final gained colony elements × this factor. Default 1.0 (0 = no elements, 2.0 = double elements). Range 0~10; adjustable in the Settings Center, Colony tab.")
+            .defineInRange("exploration.elementMultiplier", 1.0, 0.0, 10.0);
 
     public static final ModConfigSpec SPEC = BUILDER.build();
 

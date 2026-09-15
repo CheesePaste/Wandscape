@@ -200,6 +200,28 @@ public final class SettingsRegistry {
                 val -> unit("unit.elements", "%s 元素", String.format("%,d", val))
         ));
 
+        // 探索宝箱的最终产出倍率。乘在结算的最后一步，所以它同时管「读权重算出来的」和
+        // 数据包手写的 reward.value——是管理员侧的全局旋钮，不是区域设定。
+        register(new SettingItem.DoubleSetting(
+                "exploration.chestExpMultiplier",
+                title("exploration.chestExpMultiplier", "探索宝箱经验倍率"),
+                SettingTab.COLONY,
+                false, true,
+                Config.EXPLORATION_CHEST_EXP_MULTIPLIER,
+                0.1, 0.5,
+                val -> String.format("%.1f×", val)
+        ));
+
+        register(new SettingItem.DoubleSetting(
+                "exploration.chestElementMultiplier",
+                title("exploration.chestElementMultiplier", "探索宝箱元素倍率"),
+                SettingTab.COLONY,
+                false, true,
+                Config.EXPLORATION_CHEST_ELEMENT_MULTIPLIER,
+                0.1, 0.5,
+                val -> String.format("%.1f×", val)
+        ));
+
         // ═══════════════════════════════════════════════════════════════
         // Tab 2: 游客生态 (TOURIST)
         // ═══════════════════════════════════════════════════════════════

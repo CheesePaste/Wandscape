@@ -999,6 +999,8 @@
   "gui.wandscape.settings.element.autoGatherOnShortage": "Auto-gather on element shortage",
   "gui.wandscape.settings.element.craftCostMultiplier": "Crafting element cost multiplier",
   "gui.wandscape.settings.element.decomposeDivisor": "Item decompose output divisor",
+  "gui.wandscape.settings.exploration.chestElementMultiplier": "Exploration chest element multiplier",
+  "gui.wandscape.settings.exploration.chestExpMultiplier": "Exploration chest EXP multiplier",
   "gui.wandscape.settings.general.debug": "Verbose debug logging",
   "gui.wandscape.settings.hint.general": "Changes take effect immediately and are saved automatically (hot-reload supported).",
   "gui.wandscape.settings.hint.packages": "Manage the loaded building packs. A disabled pack no longer shows up in the build bar (takes effect immediately).",
@@ -2276,7 +2278,5 @@
   "wandscape.subtitle.road_place": "Road placed",
   "wandscape.subtitle.task_publish": "Task published",
   "wandscape.subtitle.warehouse": "Warehouse transfer",
-  "wandscape.subtitle.wonder_effect": "Wonder active",
-  "wandscape.exploration.discovered": "Exploration Discovery: %s",
-  "wandscape.exploration.exp_gain": "Colony EXP +%d"
+  "wandscape.subtitle.wonder_effect": "Wonder active"
 }
