@@ -1135,10 +1135,10 @@ public class Wandscape {
         TouristSimSystem.register(level);
         Log.info(TAG, "Tourist sim system wired");
 
-        // Exploration regions: point the loader at this world's generated tier, then sample and
-        // write down a region for every chest loot table nothing declares — so an unknown mod's
-        // chest pays out something sensible instead of the flat fallback, without re-sampling
-        // on every opening. Declared regions always win over these.
+        // Exploration regions: point the loader at this world's generated tier, then price every
+        // chest loot table nothing declares and write it down — so an unknown mod's chest pays out
+        // something sensible instead of nothing, without re-pricing on every opening.
+        // Declared regions always win over these.
         if (EXPLORATION_REGION_LOADER != null) {
             EXPLORATION_REGION_LOADER.setGeneratedDir(ExplorationRegionGenerator.generatedDir(level));
         }

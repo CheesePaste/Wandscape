@@ -341,11 +341,6 @@ public class Config {
             .comment("Global exploration chest element multiplier: final gained colony elements × this factor. Default 1.0 (0 = no elements, 2.0 = double elements).")
             .defineInRange("exploration.elementMultiplier", 1.0, 0.0, 1000.0);
 
-    public static final ModConfigSpec.IntValue EXPLORATION_CHEST_SAMPLE_COUNT = BUILDER
-            .comment("战利品表期望计算蒙特卡洛抽样次数：默认 50 次。次数越多期望越平滑，启动/重载时开销略微增加。")
-            .comment("Monte Carlo sample count for loot table expectation calculation: default 50. Higher values yield smoother expectation at slight startup/reload cost.")
-            .defineInRange("exploration.sampleCount", 50, 5, 500);
-
     public static final ModConfigSpec SPEC = BUILDER.build();
 
 }

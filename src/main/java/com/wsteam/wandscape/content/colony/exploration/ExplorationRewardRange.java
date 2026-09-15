@@ -11,6 +11,12 @@ import java.util.Random;
 /**
  * Immutable reward range definition for a specific exploration region or chest tier.
  * Zero Minecraft imports: pure arithmetic data structure.
+ *
+ * @param degenerate true when no item in the loot table could be priced, so this range is the
+ *                   flat fallback rather than real data
+ * @param lootShare  fraction of the rolled element total that keeps the loot table's
+ *                   distribution; the complement is spread evenly over all seven elements
+ *                   (see {@link #rollElements}). Region-configurable via {@code reward.loot_share}
  */
 public record ExplorationRewardRange(
         String regionName,
@@ -18,15 +24,9 @@ public record ExplorationRewardRange(
         int maxExp,
         Map<ElementType, Long> minElements,
         Map<ElementType, Long> maxElements,
-        boolean degenerate
+        boolean degenerate,
+        double lootShare
 ) {
-    /**
-     * Fraction of the rolled element total that keeps the loot-table distribution.
-     * The complementary share is spread randomly over all seven elements: chest loot is
-     * heavily metal-based, so a pure loot-derived split starves the other six elements.
-     */
-    private static final double LOOT_SHARE = 0.5;
-
     /** Weight jitter of the random share: every element draws a weight in [MIN, MIN + SPAN). */
     private static final double RANDOM_WEIGHT_MIN = 0.5;
     private static final double RANDOM_WEIGHT_SPAN = 1.0;
@@ -44,8 +44,9 @@ public record ExplorationRewardRange(
 
     /**
      * Roll random amounts for all expected elements.
-     * Half of the total follows the loot-table distribution, the other half is split
-     * randomly across all seven elements, so no chest is a single-element payout.
+     * {@link #lootShare()} of the total follows the loot-table distribution and the rest is
+     * split randomly across all seven elements, so no chest is ever a single-element payout.
+     * A share of 1.0 restores the pure loot-derived split, 0.0 makes it fully random.
      */
     public Map<ElementType, Long> rollElements(Random random) {
         Map<ElementType, Long> lootRolled = new EnumMap<>(ElementType.class);
@@ -74,7 +75,7 @@ public record ExplorationRewardRange(
         Map<ElementType, Long> kept = new EnumMap<>(ElementType.class);
         long randomPool = total;
         for (Map.Entry<ElementType, Long> entry : lootRolled.entrySet()) {
-            long amount = Math.min(Math.round(entry.getValue() * LOOT_SHARE), randomPool);
+            long amount = Math.min(Math.round(entry.getValue() * lootShare), randomPool);
             if (amount > 0) {
                 kept.put(entry.getKey(), amount);
                 randomPool -= amount;

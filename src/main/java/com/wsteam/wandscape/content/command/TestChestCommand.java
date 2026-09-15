@@ -7,7 +7,7 @@ import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import com.mojang.brigadier.tree.CommandNode;
 import com.wsteam.wandscape.Wandscape;
-import com.wsteam.wandscape.content.colony.exploration.ExplorationLootSampler;
+import com.wsteam.wandscape.content.colony.exploration.ExplorationLootEstimator;
 import com.wsteam.wandscape.content.colony.exploration.ExplorationRegionConfig;
 import com.wsteam.wandscape.content.colony.exploration.ExplorationRegionGenerator;
 import com.wsteam.wandscape.content.element.data.ElementType;
@@ -93,12 +93,12 @@ public final class TestChestCommand {
     }
 
     /**
-     * {@code /wandscape chest bake <region|all>} — sample a loot table and print the region
+     * {@code /wandscape chest bake <region|all>} — price a loot table and print the region
      * JSON to paste into {@code data/<namespace>/exploration_regions/}.
      *
-     * <p>Only the game can expand a loot table's pools, random counts and enchantment
-     * functions, so the built-in regions' {@code reward.value} blocks are produced here
-     * rather than computed offline.
+     * <p>Only the game can price a loot table: its pools carry weights, conditions, item tags
+     * and count functions that live in registries, so the built-in regions' {@code reward.value}
+     * blocks are produced here rather than computed offline.
      */
     public static CommandNode<CommandSourceStack> bakeNode() {
         return Commands.literal("bake")
@@ -125,7 +125,7 @@ public final class TestChestCommand {
             ExplorationRegionConfig declared = Wandscape.EXPLORATION_REGION_LOADER != null
                     ? Wandscape.EXPLORATION_REGION_LOADER.findMatchingRegion(lootTableId)
                     : null;
-            Map<ElementType, Long> value = ExplorationLootSampler.sample(level, preset.lootTable());
+            Map<ElementType, Long> value = ExplorationLootEstimator.estimate(level, preset.lootTable());
             String json = ExplorationRegionGenerator.renderRegion(lootTableId, declared, value);
 
             Log.info(TAG, "Baked region for {}:\n{}", lootTableId, json);

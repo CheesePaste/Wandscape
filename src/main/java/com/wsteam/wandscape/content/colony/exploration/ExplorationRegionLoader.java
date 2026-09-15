@@ -11,10 +11,8 @@ import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -81,14 +79,11 @@ public class ExplorationRegionLoader {
         Path dir = generatedDir;
         if (dir == null || !Files.isDirectory(dir)) return;
 
-        List<String> degenerateIds = new ArrayList<>();
         try (Stream<Path> files = Files.list(dir)) {
             for (Path file : files.filter(Files::isRegularFile).toList()) {
                 String name = file.getFileName().toString();
                 if (!name.toLowerCase(Locale.ROOT).endsWith(".json")) continue;
-                ExplorationRegionConfig config =
-                        loadGeneratedFile(file, name.substring(0, name.length() - ".json".length()));
-                if (config != null && config.degenerate()) degenerateIds.add(config.id());
+                loadGeneratedFile(file, name.substring(0, name.length() - ".json".length()));
             }
         } catch (Exception e) {
             Log.warn(TAG, "Failed to scan generated regions in {}: {}", dir, e.getMessage());
@@ -97,27 +92,14 @@ public class ExplorationRegionLoader {
         if (!generated.isEmpty()) {
             Log.info(TAG, "Loaded {} generated exploration region(s) from {}", generated.size(), dir);
         }
-        if (!degenerateIds.isEmpty()) {
-            // One aggregate warning: a whole mod's worth of unmapped loot tables would otherwise
-            // print one line each on every single startup.
-            Log.warn(TAG, "{} generated region(s) hold a degenerate fallback payout — no item in their loot "
-                            + "tables could be priced by element_mappings, so the chest pays a flat amount "
-                            + "regardless of loot. Map those items, or declare the regions by hand, then delete "
-                            + "the files from {} and restart. Affected: {}",
-                    degenerateIds.size(), dir, degenerateIds);
-        }
     }
 
-    @Nullable
-    private ExplorationRegionConfig loadGeneratedFile(Path file, String id) {
+    private void loadGeneratedFile(Path file, String id) {
         try (Reader reader = Files.newBufferedReader(file, StandardCharsets.UTF_8)) {
             JsonElement json = JsonParser.parseReader(reader);
-            ExplorationRegionConfig config = ExplorationRegionConfig.fromJson(id, json);
-            generated.put(id, config);
-            return config;
+            generated.put(id, ExplorationRegionConfig.fromJson(id, json));
         } catch (Exception e) {
             Log.warn(TAG, "Skipping unreadable generated region {}: {}", file, e.getMessage());
-            return null;
         }
     }
 

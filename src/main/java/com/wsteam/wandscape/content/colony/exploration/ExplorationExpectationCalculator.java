@@ -20,32 +20,6 @@ public final class ExplorationExpectationCalculator {
 
     private ExplorationExpectationCalculator() {}
 
-    /**
-     * Average element vector over Monte Carlo loot samples.
-     *
-     * @param sampleDraws element totals from simulated loot draws
-     * @return per-element average, zero-valued elements omitted
-     */
-    public static Map<ElementType, Long> expectation(List<Map<ElementType, Long>> sampleDraws) {
-        if (sampleDraws == null || sampleDraws.isEmpty()) return Map.of();
-
-        int sampleCount = sampleDraws.size();
-        Map<ElementType, Long> sums = new EnumMap<>(ElementType.class);
-        for (Map<ElementType, Long> draw : sampleDraws) {
-            if (draw == null) continue;
-            for (Map.Entry<ElementType, Long> entry : draw.entrySet()) {
-                sums.merge(entry.getKey(), entry.getValue(), Long::sum);
-            }
-        }
-
-        Map<ElementType, Long> avg = new LinkedHashMap<>();
-        for (ElementType type : ElementType.values()) {
-            long mean = Math.round((double) sums.getOrDefault(type, 0L) / sampleCount);
-            if (mean > 0) avg.put(type, mean);
-        }
-        return avg;
-    }
-
     /** Per-element sum of two value vectors; the additive mode's "sampled + declared". */
     public static Map<ElementType, Long> add(Map<ElementType, Long> a, Map<ElementType, Long> b) {
         if (b == null || b.isEmpty()) return a == null ? Map.of() : a;
@@ -84,7 +58,7 @@ public final class ExplorationExpectationCalculator {
             String regionName, Map<ElementType, Long> value, ExplorationRewardSpec spec) {
 
         if (isDegenerate(value)) {
-            return createFallback(regionName, spec.dangerMultiplier(), spec.variance());
+            return createFallback(regionName, spec);
         }
 
         long totalElementValue = 0;
@@ -108,26 +82,20 @@ public final class ExplorationExpectationCalculator {
             maxElements.put(entry.getKey(), max);
         }
 
-        return new ExplorationRewardRange(regionName, minExp, maxExp, minElements, maxElements, false);
+        return new ExplorationRewardRange(regionName, minExp, maxExp, minElements, maxElements, false, spec.lootShare());
     }
 
     /**
-     * Last resort when a loot table yields no element value at all — typically another
-     * mod's items with no {@code element_mappings} entry. Pays a flat, loot-independent
-     * amount so opening the chest still does something, and is written out flagged so the
-     * degradation stays visible.
+     * What a chest pays when nothing in its loot table could be priced — typically another
+     * mod's items with no {@code element_mappings} entry.
+     *
+     * <p>Nothing. A flat consolation payout (it used to be {@code 50 × danger} EXP and a
+     * handful of earth) only made an unpriced chest look like a cheap one, which hides the
+     * real problem: the loot is invisible to the element economy. Paying zero is the honest
+     * answer, and {@code degenerate} marks it so the caller can stay quiet instead of
+     * celebrating a payout of nothing.
      */
-    private static ExplorationRewardRange createFallback(String regionName, double dangerMultiplier, double variance) {
-        double safeDanger = Math.max(0.5, dangerMultiplier);
-        double safeVariance = Math.max(0.0, Math.min(0.9, variance));
-
-        int baseExp = (int) Math.round(50 * safeDanger);
-        int minExp = (int) Math.max(15, Math.round(baseExp * (1.0 - safeVariance)));
-        int maxExp = (int) Math.max(minExp, Math.round(baseExp * (1.0 + safeVariance)));
-
-        Map<ElementType, Long> minElements = Map.of(ElementType.EARTH, 10L);
-        Map<ElementType, Long> maxElements = Map.of(ElementType.EARTH, 30L);
-
-        return new ExplorationRewardRange(regionName, minExp, maxExp, minElements, maxElements, true);
+    private static ExplorationRewardRange createFallback(String regionName, ExplorationRewardSpec spec) {
+        return new ExplorationRewardRange(regionName, 0, 0, Map.of(), Map.of(), true, spec.lootShare());
     }
 }

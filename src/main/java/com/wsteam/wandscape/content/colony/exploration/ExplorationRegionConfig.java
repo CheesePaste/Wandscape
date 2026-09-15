@@ -31,8 +31,7 @@ public record ExplorationRegionConfig(
         String name,
         ExplorationRewardSpec reward,
         List<String> lootTablePatterns,
-        List<Pattern> compiledPatterns,
-        boolean degenerate
+        List<Pattern> compiledPatterns
 ) {
     /** Display name used when a loot table id carries no readable structure name at all. */
     public static final String FALLBACK_NAME = "荒野遗迹";
@@ -42,12 +41,11 @@ public record ExplorationRegionConfig(
 
     public static ExplorationRegionConfig fromJson(String id, JsonElement json) {
         if (json == null || !json.isJsonObject()) {
-            return new ExplorationRegionConfig(id, id, ExplorationRewardSpec.DEFAULT, List.of(), List.of(), false);
+            return new ExplorationRegionConfig(id, id, ExplorationRewardSpec.DEFAULT, List.of(), List.of());
         }
         JsonObject obj = json.getAsJsonObject();
         String name = obj.has("name") ? obj.get("name").getAsString() : id;
         ExplorationRewardSpec reward = ExplorationRewardSpec.fromJson(id, obj);
-        boolean degenerate = obj.has("degenerate") && obj.get("degenerate").getAsBoolean();
 
         List<String> rawPatterns = new ArrayList<>();
         List<Pattern> compiled = new ArrayList<>();
@@ -68,8 +66,7 @@ public record ExplorationRegionConfig(
         return new ExplorationRegionConfig(
                 id, name, reward,
                 Collections.unmodifiableList(rawPatterns),
-                Collections.unmodifiableList(compiled),
-                degenerate
+                Collections.unmodifiableList(compiled)
         );
     }
 

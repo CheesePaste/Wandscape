@@ -28,10 +28,11 @@ import java.util.regex.Pattern;
  * Writes a region JSON for every chest loot table that nothing declares.
  *
  * <p>Another mod's structure arrives with no region, so its chests would fall back to a flat
- * payout forever. Rather than sample the loot table on every chest opening, the server
- * samples each uncovered table <b>once at startup</b> and writes the result down as an
- * ordinary region file — the same format a human writes, so a datapack author can read it,
- * edit it, or replace it by declaring that region properly.
+ * payout forever. Rather than price the loot table on every chest opening, the server prices
+ * each uncovered table <b>once at startup</b> — reading its weights, not rolling it, see
+ * {@link ExplorationLootEstimator} — and writes the result down as an ordinary region file,
+ * the same format a human writes, so a datapack author can read it, edit it, or replace it by
+ * declaring that region properly.
  *
  * <p>Files land in {@code <world>/wandscape/generated_regions/}. World-scoped on purpose:
  * what a loot table is worth depends on the pack set the world runs with, not on the
@@ -55,10 +56,16 @@ public final class ExplorationRegionGenerator {
     }
 
     /**
-     * Sample and write a region file for every chest loot table no region declares.
+     * Write a region file for every chest loot table no region declares and that has any
+     * element value to speak of.
      *
      * <p>Runs once when the server starts, after the loot tables and the declared regions are
-     * both loaded. Never throws: a table that fails to sample is logged and skipped.
+     * both loaded. Never throws: a table that fails to price is logged and skipped.
+     *
+     * <p>Tables where nothing could be priced get no file. They pay nothing by design (see
+     * {@code ExplorationExpectationCalculator}), so writing one down would only duplicate the
+     * default — and a modpack with a hundred unmapped chest tables would leave a hundred
+     * identical, useless files behind.
      *
      * @return how many region files were written
      */
@@ -82,14 +89,26 @@ public final class ExplorationRegionGenerator {
         }
 
         Path dir = generatedDir(level);
+        List<String> unpriced = new ArrayList<>();
         int written = 0;
         for (ResourceLocation id : missing) {
-            Map<ElementType, Long> value = ExplorationLootSampler.sample(level, keyOf(id));
+            Map<ElementType, Long> value = ExplorationLootEstimator.estimate(level, keyOf(id));
+            if (ExplorationExpectationCalculator.isDegenerate(value)) {
+                unpriced.add(id.toString());
+                continue;
+            }
             if (writeRegion(dir, id.toString(), value) != null) written++;
         }
 
-        Log.info(TAG, "Generated {} exploration region file(s) for previously uncovered chest loot tables in {}",
-                written, dir);
+        Log.info(TAG, "Priced {} chest loot table(s) into {}", written, dir);
+        if (!unpriced.isEmpty()) {
+            // One line, not one per table: a modpack with a hundred unmapped chest tables would
+            // otherwise print a hundred lines on every startup.
+            Log.info(TAG, "{} chest loot table(s) pay nothing: no item they can drop has an "
+                            + "element_mappings entry, so there is no value to write down. Map their items, "
+                            + "or declare a region with an explicit reward.value, if they should pay out: {}",
+                    unpriced.size(), unpriced);
+        }
         return written;
     }
 
@@ -130,16 +149,13 @@ public final class ExplorationRegionGenerator {
         reward.addProperty("exp_ratio", spec.expRatio());
         reward.addProperty("danger_multiplier", spec.dangerMultiplier());
         reward.addProperty("variance", spec.variance());
+        reward.addProperty("loot_share", spec.lootShare());
 
         JsonObject root = new JsonObject();
         root.addProperty("name", declared != null ? declared.name()
                 : ExplorationRegionConfig.deriveDisplayName(lootTableId));
         root.add("loot_table_patterns", patterns);
         root.add("reward", reward);
-        if (ExplorationExpectationCalculator.isDegenerate(value)) {
-            // Flagged so a human reading the file can tell this is not real data.
-            root.addProperty("degenerate", true);
-        }
         return GSON.toJson(root) + System.lineSeparator();
     }
 

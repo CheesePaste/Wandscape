@@ -72,8 +72,8 @@ public class ExplorationRewardService {
     /**
      * Get or compute the exploration reward range for a given loot table key.
      *
-     * <p>Cached because deriving a range samples the loot table {@code sampleCount} times;
-     * a region declaring {@code reward.mode = fixed} skips that sampling entirely.
+     * <p>Cached because pricing a range reads the whole loot table structure;
+     * a region declaring {@code reward.mode = fixed} skips that entirely.
      */
     public ExplorationRewardRange getOrCreateRewardRange(ServerLevel level, ResourceKey<LootTable> lootKey) {
         return rewardCache.computeIfAbsent(lootKey, k -> computeRewardRange(level, k));
@@ -91,7 +91,7 @@ public class ExplorationRewardService {
         if (spec.skipsSampling()) {
             value = spec.value();
         } else {
-            value = ExplorationLootSampler.sample(level, lootKey);
+            value = ExplorationLootEstimator.estimate(level, lootKey);
             if (spec.addsToDerived()) {
                 value = ExplorationExpectationCalculator.add(value, spec.value());
             }
@@ -156,6 +156,15 @@ public class ExplorationRewardService {
         }
         exp = event.exp();
         elements = event.elements();
+
+        if (exp <= 0 && elements.isEmpty()) {
+            // A chest nothing could be priced for pays nothing on purpose. Showing "0 exp, 0
+            // elements" with particles and a chime would read as a bug, and a small consolation
+            // payout would read as a cheap chest — neither is true, so stay quiet.
+            Log.info(TAG, "Chest at {} [{}] paid nothing{}", immutablePos, range.regionName(),
+                    range.degenerate() ? " (no item in its loot table could be priced)" : "");
+            return;
+        }
 
         // Deposit colony exp
         ColonyLevelManager levelMgr = ColonyLevelManager.get();
