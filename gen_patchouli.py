@@ -107,6 +107,7 @@ ENTRIES = [
     ("shop_guide", "buildings", "minecraft:emerald", 10),
     ("hotel_guide", "buildings", "minecraft:light_blue_bed", 11),
     ("anomaly_guide", "buildings", "minecraft:anvil", 12),
+    ("building_scanner_guide", "buildings", "wandscape:building_scanner", 13),
 
     # ── 管理：面板本身 + 四个子模式 ──
     ("panel_guide", "management", "minecraft:compass", 0),
@@ -143,6 +144,8 @@ ENTRIES = [
     ("custom_buildings_guide", "custom", "minecraft:scaffolding", 1),
     ("custom_packs_guide", "custom", "minecraft:bundle", 2),
     ("custom_elements_guide", "custom", "wandscape:element_earth", 3),
+    # 与 buildings 分类同一篇 md：扫描器既是造建筑的工具，也是自定义建筑唯一的产出途径
+    ("building_scanner_guide", "custom", "wandscape:building_scanner", 4),
 
     # ── 联动与兼容：每个第三方模组一条，只讲玩家看得见的效果 ──
     ("curios_guide", "compat", "minecraft:gold_ingot", 0),

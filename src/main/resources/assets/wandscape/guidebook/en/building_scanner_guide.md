@@ -1,0 +1,55 @@
+# Building Scanner
+
+> The Building Scanner is crafted at a crafting table and works in survival, but everything it scans is filed as "custom" with no economy settings. The Creative Building Scanner only appears in the creative inventory.
+
+Frame a finished house with the scanner and export it as a building file; it then shows up in the Wand and in the overview-mode building list, and citizen mages rebuild it wherever you point them. Houses you built yourself can therefore be turned into proper buildings and mass-produced, instead of being placed by hand a second time.
+
+## Framing the Building
+
+The straightforward way is to fill in Min and Max on the Bounds tab so they form two opposite corners of the box. You can also use corner mode instead: take two scanners, set one to SAVE and the other to CORNER, give both the exact same passphrase, place them at two opposite vertices of the building's 3D diagonal, then go back to the SAVE scanner and click "Match Corners" — the bounding box works itself out. Two scanners more than 64 blocks apart will not find each other.
+
+## Where Tourists Come In
+
+Tourists enter a building through its doors. "Auto-Detect Doors" records every door block inside the box, and one scanner can hold several, so tourists can use any of them; the edit field only changes the first. With no door recorded at all, tourists come in along the edge of the bounding box — so a house that floats in the air or sits buried underground has no entrance they can find.
+
+## Marking Where Tourists Stand
+
+A tourist stands on whichever block carries the Interact Spot Marker, and its facing is the direction she looks while doing her action; when placed, it defaults to the direction you are facing. Right-click cycles the action, sneak-right-click cycles the facing, and breaking the block removes the spot. The marker has no collision, so you can drop a preview dummy into the same block to see the result. A building with no interact spot at all is one tourists simply never pick.
+
+Survival players cannot get the Interact Spot Marker — it has no recipe and only exists in the creative inventory. So a house scanned in survival cannot be given interact spots, and tourists will not go inside to spend.
+
+## Building Identity
+
+The ID is the building's unique name and also the file name used on export; without it the scanner will not let you export. The display name is what players see in the building list, and the author is recorded as you. The package decides which directory it lands in — typing a name that does not exist yet creates a new package, and one package can hold as many buildings as you like.
+
+## Values and Unlock Level
+
+The three values are comfort, magic and wonder; they decide which need the building can satisfy for tourists, and the higher you set them the more willing tourists are to come in. The unlock level is a colony-level gate — every building in the list carries one, and you cannot build it until your colony reaches that level. For a house you built yourself you can set the gate low so you can use it early.
+
+## Harvest Nodes
+
+Pick "Harvest Nodes" as the category and the building becomes an element source: choose which element it yields and how much per harvest, then set how long a mage must channel, and citizen mages will come here to harvest. Pick the wrong category and it is just decoration that nobody ever comes to.
+
+## Shops
+
+Pick "Shops" as the category and tourists will come here to buy. Add goods one at a time, each with the item itself and the three values it provides, and tourists pick according to their own needs. The profit rate decides how much a sale earns. A shop with no goods listed gives tourists nothing to buy.
+
+## Services
+
+Pick "Services" as the category and tourists spend energy here, trading it back to the colony as elemental output — set how much energy each use costs, how many tourists it holds at once and how long a visit lasts, then add which element is produced and how much per use. If you fill in Max Occupancy here, the building also becomes an inn at night and tourists will come to stay.
+
+## Relax
+
+Pick "Relax" as the category and tourists who have walked themselves tired come here to recover energy, and energy is what decides how much longer she can keep visiting. Just set how much energy each visit restores and how long the visit lasts.
+
+## ATM
+
+Pick "ATM" as the category and tourists whose wallets run dry come here to withdraw, then carry on spending. The withdraw limit caps how much one visit takes out, and the duration is how long she stays to do it. A town with plenty of shops especially needs one: once tourists are out of coin with nowhere to draw more, they simply leave early.
+
+## Exporting
+
+Click "Scan Area" first to see how many valid blocks the box holds — scanners and interact spot markers are skipped automatically and never written into the building. Then click "Export Building JSON", and the file is written into a datapack inside your save: it is buildable on the spot and still there after you quit and come back. Switch the same scanner to road mode and you export a road preset instead, hot-registered straight into Road Studio and the Wand.
+
+## Preset Templates
+
+Once the bounding box and properties are the way you want them, save them as a preset template; the next time you scan a house of the same kind you just load the template instead of filling everything in again. Presets live on the client side rather than in the save, so they survive a switch to another world.

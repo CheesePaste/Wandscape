@@ -12,7 +12,7 @@
 
 ```
 内容唯一来源（作者只改这里）
-    src/main/resources/assets/wandscape/guidebook/{zh_cn,en}/*.md     65 篇 × 2 语（其中 50 篇编进手册，其余 15 篇已标注弃用、只兜底屏可读）
+    src/main/resources/assets/wandscape/guidebook/{zh_cn,en}/*.md     66 篇 × 2 语（其中 51 篇编进手册，其余 15 篇已标注弃用、只兜底屏可读）
                     │
                     │  gen_patchouli.py（本机跑，生成物提交进仓库）
                     ▼
