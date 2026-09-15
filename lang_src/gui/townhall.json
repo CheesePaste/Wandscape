@@ -31,10 +31,6 @@
     "zh_cn": "魔法小镇名称",
     "en_us": "Town name"
   },
-  "gui.wandscape.townhall.naming_style": {
-    "zh_cn": "命名风格",
-    "en_us": "Naming Style"
-  },
   "gui.wandscape.townhall.revive": {
     "zh_cn": "复活法师",
     "en_us": "Revive Wizard"
@@ -62,22 +58,6 @@
   "gui.wandscape.townhall.revive_still_alive": {
     "zh_cn": "尚有法师存活，保底复活只在全员阵亡时可用",
     "en_us": "Wizards are still alive; the fallback revive only works when the colony is wiped out"
-  },
-  "gui.wandscape.townhall.spawn_tourists": {
-    "zh_cn": "生成游客",
-    "en_us": "Tourists"
-  },
-  "gui.wandscape.townhall.style_chinese": {
-    "zh_cn": "中文",
-    "en_us": "Chinese"
-  },
-  "gui.wandscape.townhall.style_english": {
-    "zh_cn": "英文",
-    "en_us": "English"
-  },
-  "gui.wandscape.townhall.style_fantasy": {
-    "zh_cn": "西幻",
-    "en_us": "Fantasy"
   },
   "gui.wandscape.townhall.title": {
     "zh_cn": "市政厅",

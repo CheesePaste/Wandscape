@@ -143,14 +143,13 @@ public final class BuildingInteractHandler {
             String founderName = resolveFounderName(player, colonyId);
             boolean canUseWarehouse = com.wsteam.wandscape.api.WandscapeApis.getBuildingApi()
                     .getBuildingsByCategory(colonyId, "storage").isEmpty();
-            int namingStyle = colonyApi != null ? colonyApi.getNamingStyle(colonyId).ordinal() : 0;
-            boolean touristSpawning = ColonySavedData.getOrCreate(level)
-                    .isTouristSpawningEnabled(colonyId);
+            // 命名风格与游客生成开关不在这里下发：它们随殖民地走，走 ColonyStatsSyncPacket，
+            // 修改入口在设置中心的「本镇」页。
             // 保底复活按钮初值：全灭判定 + 该殖民地冷却（后续变化由 TownHallReviveStatePacket 推送）
             PacketDistributor.sendToPlayer(player,
                     new TownHallOpenPacket(
-                            pos, colonyId, name, lvl, exp, expNext, founderName, canUseWarehouse, namingStyle,
-                            creator, touristSpawning,
+                            pos, colonyId, name, lvl, exp, expNext, founderName, canUseWarehouse,
+                            creator,
                             ReviveHandler.aliveCount(colonyId),
                             ReviveHandler.deadCount(level, colonyId),
                             ReviveHandler.townHallReviveCooldownSeconds(level, colonyId)));

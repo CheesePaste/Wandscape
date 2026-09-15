@@ -2,14 +2,19 @@ package com.wsteam.wandscape.foundation.ui.settings;
 
 import com.wsteam.wandscape.ClientConfig;
 import com.wsteam.wandscape.Config;
+import com.wsteam.wandscape.content.colony.network.ColonySettingUpdatePacket;
+import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.foundation.ui.I18n;
+import com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState;
 import com.wsteam.wandscape.foundation.ui.settings.network.ConfigUpdatePacket;
 import net.neoforged.neoforge.common.ModConfigSpec;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 /**
  * Represents a single configurable setting item in the Wandscape Settings Center.
@@ -51,13 +56,35 @@ public interface SettingItem {
     /**
      * 本项现在能不能改。**客户端专属项只影响本机、从不发包，因此不受管理员门控**；
      * 通用配置以服务端为准，非 OP 改了也会被拒，索性先在本地拦下。
+     * **本镇设置（{@link #isColonyScoped()}）人人可改**，只要求面板当前绑定了一个小镇。
      */
     default boolean canModify() {
+        if (isColonyScoped()) {
+            return WandscapePanelState.getColonyId() != null;
+        }
         return isClientOnly() || SettingsOverlay.canModifySettings();
+    }
+
+    /**
+     * 本项作用于「玩家自己的小镇」（殖民地存档里的每镇数据），而非全局 config。
+     * 这类项走 {@link ColonySettingUpdatePacket}：任何玩家都能改，但服务端只认他自己的小镇。
+     */
+    default boolean isColonyScoped() {
+        return false;
     }
 
     default void onModified(String stringValue) {
         if (!canModify()) {
+            return;
+        }
+        if (isColonyScoped()) {
+            // 本镇设置由服务端落盘：值已由取值器乐观写进客户端缓存（点完即刻反馈），
+            // 服务端写入后回推殖民地快照做权威覆盖——被拒时同一路径把值改回来。
+            try {
+                PacketDistributor.sendToServer(new ColonySettingUpdatePacket(key(), stringValue));
+            } catch (Throwable t) {
+                Log.warn("SettingItem", "Failed to send colony setting {}: {}", key(), t.getMessage());
+            }
             return;
         }
         if (isClientOnly()) {
@@ -101,11 +128,12 @@ public interface SettingItem {
         private final java.util.function.Supplier<Boolean> getter;
         private final java.util.function.Consumer<Boolean> setter;
         private final boolean defaultValue;
+        private final boolean colonyScoped;
 
         public BooleanSetting(String key, String title, SettingTab tab,
                               boolean clientOnly, boolean hotReloadable, ModConfigSpec.BooleanValue configValue) {
             this(key, title, tab, clientOnly, hotReloadable,
-                    configValue::get, configValue::set, configValue.getDefault());
+                    configValue::get, configValue::set, configValue.getDefault(), false);
         }
 
         public BooleanSetting(String key, String title, SettingTab tab,
@@ -113,6 +141,13 @@ public interface SettingItem {
                               java.util.function.Supplier<Boolean> getter,
                               java.util.function.Consumer<Boolean> setter,
                               boolean defaultValue) {
+            this(key, title, tab, clientOnly, hotReloadable, getter, setter, defaultValue, false);
+        }
+
+        private BooleanSetting(String key, String title, SettingTab tab,
+                               boolean clientOnly, boolean hotReloadable,
+                               Supplier<Boolean> getter, Consumer<Boolean> setter,
+                               boolean defaultValue, boolean colonyScoped) {
             this.key = key;
             this.title = title;
             this.tab = tab;
@@ -121,6 +156,14 @@ public interface SettingItem {
             this.getter = getter;
             this.setter = setter;
             this.defaultValue = defaultValue;
+            this.colonyScoped = colonyScoped;
+        }
+
+        /** 本镇设置项：值读写客户端殖民地缓存，改动发给服务端（人人可改，但只改自己的小镇）。 */
+        public static BooleanSetting colony(String key, String title, SettingTab tab,
+                                           Supplier<Boolean> getter, Consumer<Boolean> setter,
+                                           boolean defaultValue) {
+            return new BooleanSetting(key, title, tab, false, true, getter, setter, defaultValue, true);
         }
 
         @Override public String key() { return key; }
@@ -129,6 +172,7 @@ public interface SettingItem {
         @Override public Type type() { return Type.BOOLEAN; }
         @Override public boolean isClientOnly() { return clientOnly; }
         @Override public boolean isHotReloadable() { return hotReloadable; }
+        @Override public boolean isColonyScoped() { return colonyScoped; }
 
         public boolean get() { return getter.get(); }
         public void set(boolean value) {
@@ -338,21 +382,45 @@ public interface SettingItem {
         private final SettingTab tab;
         private final boolean clientOnly;
         private final boolean hotReloadable;
-        private final ModConfigSpec.ConfigValue<String> configValue;
+        private final Supplier<String> getter;
+        private final Consumer<String> setter;
+        private final String defaultValue;
         private final List<String> options;
         private final List<String> optionLabels;
+        private final boolean colonyScoped;
 
         public OptionsSetting(String key, String title, SettingTab tab,
                               boolean clientOnly, boolean hotReloadable, ModConfigSpec.ConfigValue<String> configValue,
                               List<String> options, List<String> optionLabels) {
+            this(key, title, tab, clientOnly, hotReloadable,
+                    configValue::get, configValue::set, configValue.getDefault(),
+                    options, optionLabels, false);
+        }
+
+        private OptionsSetting(String key, String title, SettingTab tab,
+                               boolean clientOnly, boolean hotReloadable,
+                               Supplier<String> getter, Consumer<String> setter, String defaultValue,
+                               List<String> options, List<String> optionLabels, boolean colonyScoped) {
             this.key = key;
             this.title = title;
             this.tab = tab;
             this.clientOnly = clientOnly;
             this.hotReloadable = hotReloadable;
-            this.configValue = configValue;
+            this.getter = getter;
+            this.setter = setter;
+            this.defaultValue = defaultValue;
             this.options = options;
             this.optionLabels = optionLabels;
+            this.colonyScoped = colonyScoped;
+        }
+
+        /** 本镇设置项：值读写客户端殖民地缓存，改动发给服务端（人人可改，但只改自己的小镇）。 */
+        public static OptionsSetting colony(String key, String title, SettingTab tab,
+                                            Supplier<String> getter, Consumer<String> setter,
+                                            String defaultValue,
+                                            List<String> options, List<String> optionLabels) {
+            return new OptionsSetting(key, title, tab, false, true, getter, setter, defaultValue,
+                    options, optionLabels, true);
         }
 
         @Override public String key() { return key; }
@@ -361,12 +429,13 @@ public interface SettingItem {
         @Override public Type type() { return Type.OPTIONS; }
         @Override public boolean isClientOnly() { return clientOnly; }
         @Override public boolean isHotReloadable() { return hotReloadable; }
+        @Override public boolean isColonyScoped() { return colonyScoped; }
 
-        public String get() { return configValue.get(); }
+        public String get() { return getter.get(); }
 
         public void set(String value) {
             if (!canModify()) return;
-            configValue.set(value);
+            setter.accept(value);
             onModified(value);
         }
 
@@ -380,7 +449,7 @@ public interface SettingItem {
         @Override public String rawValue() { return get(); }
 
         @Override public boolean applyFromString(String raw) {
-            configValue.set(raw);
+            setter.accept(raw);
             return true;
         }
 
@@ -390,17 +459,17 @@ public interface SettingItem {
         }
 
         @Override public String defaultHint() {
-            int defIdx = options.indexOf(configValue.getDefault());
-            String defLabel = (defIdx >= 0 && defIdx < optionLabels.size()) ? optionLabels.get(defIdx) : configValue.getDefault();
+            int defIdx = options.indexOf(defaultValue);
+            String defLabel = (defIdx >= 0 && defIdx < optionLabels.size()) ? optionLabels.get(defIdx) : defaultValue;
             return I18n.string("gui.wandscape.settings.default_hint", "默认: %s", defLabel);
         }
 
         @Override public boolean isDefault() {
-            return configValue.getDefault().equalsIgnoreCase(get());
+            return defaultValue.equalsIgnoreCase(get());
         }
 
         @Override public void resetToDefault() {
-            set(configValue.getDefault());
+            set(defaultValue);
         }
     }
 }

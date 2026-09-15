@@ -2,8 +2,11 @@ package com.wsteam.wandscape.foundation.ui.settings;
 
 import com.wsteam.wandscape.ClientConfig;
 import com.wsteam.wandscape.Config;
+import com.wsteam.wandscape.content.colony.settings.ColonySettings;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.foundation.ui.I18n;
+import com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState;
+import com.wsteam.wandscape.foundation.util.NameStyle;
 
 import javax.annotation.Nullable;
 import java.util.*;
@@ -58,7 +61,31 @@ public final class SettingsRegistry {
         }
 
         // ═══════════════════════════════════════════════════════════════
-        // Tab 0: 视效控制 (VISUAL)
+        // Tab 0: 本镇 (SETTLEMENT) —— 随殖民地存档走，人人可改，但服务端只认他自己的小镇
+        // ═══════════════════════════════════════════════════════════════
+
+        register(SettingItem.OptionsSetting.colony(
+                ColonySettings.KEY_NAMING_STYLE,
+                title(ColonySettings.KEY_NAMING_STYLE, "命名风格"),
+                SettingTab.SETTLEMENT,
+                () -> String.valueOf(WandscapePanelState.getNamingStyle()),
+                raw -> WandscapePanelState.setNamingStyle(parseNamingStyle(raw)),
+                ColonySettings.defaultRaw(ColonySettings.KEY_NAMING_STYLE),
+                namingStyleValues(),
+                namingStyleLabels()
+        ));
+
+        register(SettingItem.BooleanSetting.colony(
+                ColonySettings.KEY_TOURIST_SPAWN,
+                title(ColonySettings.KEY_TOURIST_SPAWN, "生成游客"),
+                SettingTab.SETTLEMENT,
+                WandscapePanelState::isTouristSpawning,
+                WandscapePanelState::setTouristSpawning,
+                ColonySettings.DEFAULT_TOURIST_SPAWN
+        ));
+
+        // ═══════════════════════════════════════════════════════════════
+        // Tab 1: 视效控制 (VISUAL)
         // ═══════════════════════════════════════════════════════════════
 
         register(new SettingItem.DoubleSetting(
@@ -139,7 +166,7 @@ public final class SettingsRegistry {
         });
 
         // ═══════════════════════════════════════════════════════════════
-        // Tab 1: 城镇经营 (COLONY)
+        // Tab 2: 城镇经营 (COLONY)
         // ═══════════════════════════════════════════════════════════════
 
         register(new SettingItem.DoubleSetting(
@@ -223,7 +250,7 @@ public final class SettingsRegistry {
         ));
 
         // ═══════════════════════════════════════════════════════════════
-        // Tab 2: 游客生态 (TOURIST)
+        // Tab 3: 游客生态 (TOURIST)
         // ═══════════════════════════════════════════════════════════════
 
         register(new SettingItem.BooleanSetting(
@@ -295,7 +322,7 @@ public final class SettingsRegistry {
         ));
 
         // ═══════════════════════════════════════════════════════════════
-        // Tab 3: 规则防护 (RULES)
+        // Tab 4: 规则防护 (RULES)
         // ═══════════════════════════════════════════════════════════════
 
         register(new SettingItem.BooleanSetting(
@@ -331,6 +358,43 @@ public final class SettingsRegistry {
         ));
     }
 
+    /** 起名风格的候选值：枚举 ordinal 的字符串形式，顺序与 {@link NameStyle} 一致。 */
+    private static List<String> namingStyleValues() {
+        List<String> values = new ArrayList<>();
+        for (NameStyle style : NameStyle.values()) {
+            values.add(String.valueOf(style.ordinal()));
+        }
+        return values;
+    }
+
+    private static List<String> namingStyleLabels() {
+        List<String> labels = new ArrayList<>();
+        for (NameStyle style : NameStyle.values()) {
+            labels.add(namingStyleLabel(style));
+        }
+        return labels;
+    }
+
+    private static String namingStyleLabel(NameStyle style) {
+        return switch (style) {
+            case FANTASY -> I18n.string("gui.wandscape.settings.option.naming_fantasy", "西幻");
+            case CHINESE -> I18n.string("gui.wandscape.settings.option.naming_chinese", "中文");
+            case ENGLISH -> I18n.string("gui.wandscape.settings.option.naming_english", "英文");
+        };
+    }
+
+    /** 面板缓存里的 raw → ordinal；非法值退回默认，免得手改缓存把枚举越界。 */
+    private static int parseNamingStyle(String raw) {
+        try {
+            int ordinal = Integer.parseInt(raw);
+            return (ordinal >= 0 && ordinal < NameStyle.values().length)
+                    ? ordinal
+                    : ColonySettings.DEFAULT_NAMING_STYLE.ordinal();
+        } catch (NumberFormatException e) {
+            return ColonySettings.DEFAULT_NAMING_STYLE.ordinal();
+        }
+    }
+
     private static void register(SettingItem item) {
         SettingItem previous = BY_KEY.put(item.key(), item);
         if (previous != null) {
@@ -364,7 +428,8 @@ public final class SettingsRegistry {
 
     public static void resetTab(SettingTab tab) {
         init();
-        if (!SettingsOverlay.canModifySettings()) {
+        // 按「本页能不能恢复默认」判，而不是管理员门控：本镇页非 OP 也要能恢复默认。
+        if (!SettingsOverlay.canResetTab(tab)) {
             return;
         }
         if (tab == SettingTab.PACKAGES) {

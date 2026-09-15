@@ -15,16 +15,17 @@ import static com.wsteam.wandscape.Wandscape.MODID;
  * Server→client packet: opens the Town Hall info screen with colony name, level and experience.
  * {@code canUseWarehouse} is true when the colony has no storage building, so the client
  * shows a "warehouse access" button letting the town hall act as a warehouse.
- * {@code namingStyle} is the colony's character naming rule ({@link
- * com.wsteam.wandscape.foundation.util.NameStyle} ordinal) for the UI switcher.
  * {@code aliveNpcCount} / {@code deadNpcCount} / {@code reviveCooldownSeconds} drive the
  * 「复活法师」 bootstrap-revive button (only usable when the colony is wiped out and off cooldown);
  * later changes arrive via {@link TownHallReviveStatePacket}.
+ *
+ * <p>命名风格与游客生成开关不在这里：它们随殖民地走，由 {@code ColonyStatsSyncPacket} 下发、
+ * 在设置中心的「本镇」页修改。
  */
 public record TownHallOpenPacket(BlockPos buildingPos, UUID colonyId,
                                  String colonyName, int level, int experience, int expToNext,
-                                 String founderName, boolean canUseWarehouse, int namingStyle,
-                                 String creator, boolean touristSpawning,
+                                 String founderName, boolean canUseWarehouse,
+                                 String creator,
                                  int aliveNpcCount, int deadNpcCount, int reviveCooldownSeconds)
         implements CustomPacketPayload {
 
@@ -54,16 +55,14 @@ public record TownHallOpenPacket(BlockPos buildingPos, UUID colonyId,
         buf.writeVarInt(pkt.expToNext);
         buf.writeUtf(pkt.founderName != null ? pkt.founderName : "");
         buf.writeBoolean(pkt.canUseWarehouse);
-        buf.writeVarInt(pkt.namingStyle);
         buf.writeUtf(pkt.creator != null ? pkt.creator : "");
-        buf.writeBoolean(pkt.touristSpawning);
         buf.writeVarInt(pkt.aliveNpcCount);
         buf.writeVarInt(pkt.deadNpcCount);
         buf.writeVarInt(pkt.reviveCooldownSeconds);
     }
 
     static TownHallOpenPacket read(RegistryFriendlyByteBuf buf) {
-        // Field order MUST match write(): long → UUID → utf → varint×3 → utf → boolean → varint → utf → boolean → varint×3.
+        // Field order MUST match write(): long → UUID → utf → varint×3 → utf → boolean → utf → varint×3.
         BlockPos buildingPos = BlockPos.of(buf.readLong());
         UUID colonyId = buf.readUUID();
         String colonyName = buf.readUtf();
@@ -72,14 +71,12 @@ public record TownHallOpenPacket(BlockPos buildingPos, UUID colonyId,
         int expToNext = buf.readVarInt();
         String founderName = buf.readUtf();
         boolean canUseWarehouse = buf.readBoolean();
-        int namingStyle = buf.readVarInt();
         String creator = buf.readUtf();
-        boolean touristSpawning = buf.readBoolean();
         int aliveNpcCount = buf.readVarInt();
         int deadNpcCount = buf.readVarInt();
         int reviveCooldownSeconds = buf.readVarInt();
         return new TownHallOpenPacket(buildingPos, colonyId, colonyName, level, experience, expToNext,
-                founderName.isEmpty() ? null : founderName, canUseWarehouse, namingStyle, creator,
-                touristSpawning, aliveNpcCount, deadNpcCount, reviveCooldownSeconds);
+                founderName.isEmpty() ? null : founderName, canUseWarehouse, creator,
+                aliveNpcCount, deadNpcCount, reviveCooldownSeconds);
     }
 }

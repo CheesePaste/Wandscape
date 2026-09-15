@@ -102,6 +102,12 @@ public record ConfigUpdatePacket(String path, String value) implements CustomPac
                 Log.warn(TAG, "Refusing client-only config from network: {}", path);
                 return false;
             }
+            if (item.isColonyScoped()) {
+                // 本镇设置走 ColonySettingUpdatePacket（那里才有「只改自己小镇」的语义）。
+                // 放它过这里会「写成功」并广播，实际一处也没写。
+                Log.warn(TAG, "Refusing colony-scoped setting on the config channel: {}", path);
+                return false;
+            }
             if (!item.applyFromString(value)) {
                 Log.warn(TAG, "Failed to apply config {}={}", path, value);
                 return false;

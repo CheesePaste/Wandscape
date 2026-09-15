@@ -7,7 +7,7 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "Right-click a Town Hall that belongs to no town yet and give it a name: the colony exists, and only then can other buildings go up. A player can only have one town.$(br2)The panel is also where you rename the town, pick the naming style for future tourists and mages, and switch tourist spawning off — with it off, no new tourists arrive and the tavern stops seeing résumés. See $(l:wandscape:system/town_level_guide)Town Level$(/l) for leveling."
+      "text": "Right-click a Town Hall that belongs to no town yet and give it a name: the colony exists, and only then can other buildings go up. A player can only have one town.$(br2)The panel is also where you rename the town. The naming style for future tourists and mages, and whether tourists keep arriving, live in the $(l:wandscape:management/panel_settings_guide)Settings Center$(/l) under the \"My Town\" tab— those only change your own town. See $(l:wandscape:system/town_level_guide)Town Level$(/l) for leveling."
     }
   ]
 }

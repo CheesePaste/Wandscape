@@ -1,10 +1,7 @@
 package com.wsteam.wandscape.content.building.client;
 
-import com.wsteam.wandscape.content.building.network.TownHallNameStylePacket;
 import com.wsteam.wandscape.content.building.network.TownHallReviveRequestPacket;
-import com.wsteam.wandscape.content.building.network.TownHallTouristSpawnPacket;
 import com.wsteam.wandscape.content.building.network.TownHallWarehouseRequestPacket;
-import com.wsteam.wandscape.foundation.util.NameStyle;
 import com.wsteam.wandscape.content.colony.network.ColonyNameUpdatePacket;
 import com.wsteam.wandscape.foundation.ui.I18n;
 import com.wsteam.wandscape.foundation.ui.component.MedievalButton;
@@ -19,11 +16,12 @@ import net.neoforged.neoforge.network.PacketDistributor;
 import java.util.UUID;
 
 /**
- * Town Hall info screen — colony name (editable), level, experience bar, progression
- * and the character naming rule switcher (western fantasy / Chinese / English).
- * The bottom row also carries the 「生成游客」 toggle, an optional warehouse-access
- * button, and the 「复活法师」 anti-deadlock bootstrap revive (only pressable when every
- * wizard in the colony is dead and the per-colony cooldown has elapsed).
+ * Town Hall info screen — colony name (editable), level, experience bar and progression.
+ * The bottom row shares its line with repair/demolish and carries an optional
+ * warehouse-access button plus the 「复活法师」 anti-deadlock bootstrap revive (only pressable
+ * when every wizard in the colony is dead and the per-colony cooldown has elapsed).
+ *
+ * <p>命名风格与「生成游客」开关已移入设置中心的「本镇」页——它们随殖民地走，在那里人人可改。
  * Uses {@link MedievalScreen} MINIMAL theme with {@link MedievalColors}.
  */
 public class TownHallScreen extends MedievalScreen {
@@ -32,6 +30,14 @@ public class TownHallScreen extends MedievalScreen {
     private static final int PH = 230;
     private static final int EXP_BAR_W = 200;
     private static final int EXP_BAR_H = 12;
+
+    /** 本镇操作按钮的尺寸，与 {@link MedievalScreen} 的「修复/拆除」一致，两者排同一行。 */
+    private static final int ACTION_BTN_W = 44;
+    private static final int ACTION_BTN_H = 16;
+    private static final int ACTION_GAP = 4;
+    /** 「修复/拆除」组的左下角偏移；本镇按钮紧贴其左侧。 */
+    private static final int ACTION_OFFSET_X = PW - 14 - (ACTION_BTN_W * 2 + ACTION_GAP);
+    private static final int ACTION_OFFSET_Y = PH - 20;
 
     private final BlockPos buildingPos;
     private final UUID colonyId;
@@ -42,8 +48,6 @@ public class TownHallScreen extends MedievalScreen {
     private final String founderName;
     /** True when the colony has no storage building — show the warehouse access button. */
     private final boolean canUseWarehouse;
-    /** Colony's town hall 「生成游客」 toggle (default enabled server-side). */
-    private boolean touristSpawning;
     /** Living wizards in this colony — the bootstrap revive button only lights up at 0. */
     private int aliveNpcCount;
     /** Wizards awaiting revival in this colony (death records) — must be > 0 for the button. */
@@ -54,15 +58,12 @@ public class TownHallScreen extends MedievalScreen {
     private int cooldownTickAccum;
 
     private EditBox nameBox;
-    private NameStyle namingStyle;
-    private final MedievalButton[] styleButtons = new MedievalButton[NameStyle.values().length];
-    private MedievalButton touristButton;
     private MedievalButton reviveButton;
 
     public TownHallScreen(BlockPos buildingPos, UUID colonyId,
                           String colonyName, int level, int experience, int expToNext,
-                          String founderName, boolean canUseWarehouse, int namingStyleOrdinal,
-                          String creator, boolean touristSpawning,
+                          String founderName, boolean canUseWarehouse,
+                          String creator,
                           int aliveNpcCount, int deadNpcCount, int reviveCooldownSeconds) {
         super(I18n.name("gui.wandscape.townhall.title", "Town Hall"), PW, PH);
         setTitleBar(I18n.name("gui.wandscape.townhall.title", "市政厅"));
@@ -77,8 +78,6 @@ public class TownHallScreen extends MedievalScreen {
         this.expToNext = expToNext;
         this.founderName = founderName;
         this.canUseWarehouse = canUseWarehouse;
-        this.namingStyle = ordinalToStyle(namingStyleOrdinal);
-        this.touristSpawning = touristSpawning;
         this.aliveNpcCount = aliveNpcCount;
         this.deadNpcCount = deadNpcCount;
         this.reviveCooldownSeconds = reviveCooldownSeconds;
@@ -113,14 +112,9 @@ public class TownHallScreen extends MedievalScreen {
         refreshReviveButton();
     }
 
-    private static NameStyle ordinalToStyle(int ordinal) {
-        NameStyle[] values = NameStyle.values();
-        return ordinal >= 0 && ordinal < values.length ? values[ordinal] : NameStyle.FANTASY;
-    }
-
     @Override
     protected void init() {
-        setActionButtonsOffset(PW - 14 - 92, PH - 20);
+        setActionButtonsOffset(ACTION_OFFSET_X, ACTION_OFFSET_Y);
         super.init();
 
         int cx = leftPos + PW / 2;
@@ -137,79 +131,40 @@ public class TownHallScreen extends MedievalScreen {
         nameBox.setResponder(this::onNameChanged);
         addRenderableWidget(nameBox);
 
-        // Character naming rule switcher (fantasy / chinese / english)
-        int sbW = 64;
-        int sbH = 14;
-        int sbGap = 6;
-        int sbTotal = sbW * styleButtons.length + sbGap * (styleButtons.length - 1);
-        int sbX = leftPos + (PW - sbTotal) / 2;
-        int sbY = ebY + 2 * font.lineHeight + 16;
-        for (int i = 0; i < styleButtons.length; i++) {
-            NameStyle style = NameStyle.values()[i];
-            int x = sbX + i * (sbW + sbGap);
-            styleButtons[i] = new MedievalButton(x, sbY, sbW, sbH,
-                    styleButtonLabel(style), () -> switchNamingStyle(style));
-            addRenderableWidget(styleButtons[i]);
-        }
-
-        // Bottom row: 「生成游客」 / optional 「仓库存取」 / 「复活法师」 (anti-deadlock bootstrap).
-        // 左上留创建者页脚 → 从 leftPos+96 起排，避免盖住「创建者：…」；按钮等分剩余宽度。
-        int bh = 16;
-        int gap = 6;
-        int by = topPos + PH - bh - 12;
-        int buttonCount = canUseWarehouse ? 3 : 2;
-        int bw = (PW - 96 - 8 - gap * (buttonCount - 1)) / buttonCount;
-        int startX = leftPos + 96;
-        // 三按钮时每个仅 ~61px，标签必须短；「生成游客」的开关态由金色描边表达（见 renderTouristToggleHighlight）。
-        touristButton = new MedievalButton(startX, by, bw, bh, spawnTouristsLabel(), this::toggleTouristSpawning);
-        addRenderableWidget(touristButton);
-        int nextX = startX + bw + gap;
+        // Bottom row: optional 「仓库存取」 + 「复活法师」 (anti-deadlock bootstrap). 两者与
+        // 「修复/拆除」同排、紧贴其左侧——自成一行的排法会把底部挤成两层。
+        // 起点不越过 leftPos+96，那是给左下角「创建者：…」页脚留的位置。
+        int buttonCount = canUseWarehouse ? 2 : 1;
+        int rowW = buttonCount * ACTION_BTN_W + (buttonCount - 1) * ACTION_GAP;
+        int startX = leftPos + ACTION_OFFSET_X - ACTION_GAP - rowW;
+        int by = topPos + ACTION_OFFSET_Y;
         if (canUseWarehouse) {
-            addRenderableWidget(new MedievalButton(nextX, by, bw, bh,
+            addRenderableWidget(new MedievalButton(startX, by, ACTION_BTN_W, ACTION_BTN_H,
                     I18n.name("gui.wandscape.townhall.warehouse", "仓库存取"),
                     this::onWarehouseAccess));
-            nextX += bw + gap;
+            startX += ACTION_BTN_W + ACTION_GAP;
         }
-        reviveButton = new MedievalButton(nextX, by, bw, bh, reviveLabel(), this::onReviveRequested);
+        reviveButton = new MedievalButton(startX, by, ACTION_BTN_W, ACTION_BTN_H,
+                reviveLabel(), this::onReviveRequested);
         addRenderableWidget(reviveButton);
         refreshReviveButton();
-    }
-
-    private static Component styleButtonLabel(NameStyle style) {
-        return switch (style) {
-            case FANTASY -> I18n.name("gui.wandscape.townhall.style_fantasy", "西幻");
-            case CHINESE -> I18n.name("gui.wandscape.townhall.style_chinese", "中文");
-            case ENGLISH -> I18n.name("gui.wandscape.townhall.style_english", "英文");
-        };
-    }
-
-    private void switchNamingStyle(NameStyle style) {
-        if (style == namingStyle) return;
-        namingStyle = style;
-        PacketDistributor.sendToServer(new TownHallNameStylePacket(colonyId, style.ordinal()));
     }
 
     private void onWarehouseAccess() {
         PacketDistributor.sendToServer(new TownHallWarehouseRequestPacket(buildingPos, colonyId));
     }
 
-    /** 开关态由金色描边表达（窄按钮放不下「：已开启」后缀），故文案固定。 */
-    private Component spawnTouristsLabel() {
-        return I18n.name("gui.wandscape.townhall.spawn_tourists", "生成游客");
-    }
-
-    private void toggleTouristSpawning() {
-        touristSpawning = !touristSpawning;
-        touristButton.setMessage(spawnTouristsLabel());
-        PacketDistributor.sendToServer(new TownHallTouristSpawnPacket(colonyId, touristSpawning));
-    }
-
     /** 「复活法师」按钮文案：冷却中显示倒计时，其余情况用固定短文案（窄按钮放不下长句）。 */
     private Component reviveLabel() {
         if (reviveCooldownSeconds > 0) {
             int seconds = reviveCooldownSeconds % 60;
-            return I18n.name("gui.wandscape.townhall.revive_cooldown_label", "复活 %s",
-                    reviveCooldownSeconds / 60 + ":" + (seconds < 10 ? "0" : "") + seconds);
+            String clock = reviveCooldownSeconds / 60 + ":" + (seconds < 10 ? "0" : "") + seconds;
+            Component full = I18n.name("gui.wandscape.townhall.revive_cooldown_label", "复活 %s", clock);
+            // 按钮与「修复/拆除」同宽，装不下「复活 1:23」时只留倒计时，别把字挤出按钮外。
+            if (font != null && font.width(full) > ACTION_BTN_W - 4) {
+                return Component.literal(clock);
+            }
+            return full;
         }
         return I18n.name("gui.wandscape.townhall.revive", "复活法师");
     }
@@ -236,8 +191,6 @@ public class TownHallScreen extends MedievalScreen {
     @Override
     protected void renderContent(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         renderContent(g);
-        renderSelectedStyleHighlight(g);
-        renderTouristToggleHighlight(g);
         renderReviveReadyHighlight(g);
     }
 
@@ -247,31 +200,11 @@ public class TownHallScreen extends MedievalScreen {
         renderButtonGoldBorder(g, reviveButton);
     }
 
-    /** Gold border around the 「生成游客」 button while it is enabled — mirror of the style selector. */
-    private void renderTouristToggleHighlight(GuiGraphics g) {
-        if (!touristSpawning || touristButton == null || !touristButton.visible) return;
-        renderButtonGoldBorder(g, touristButton);
-    }
-
     private void renderButtonGoldBorder(GuiGraphics g, MedievalButton btn) {
         int bx = btn.getX();
         int by = btn.getY();
         int bw = btn.getWidth();
         int bh = btn.getHeight();
-        g.fill(bx, by, bx + bw, by + 1, MedievalColors.BORDER_GOLD);
-        g.fill(bx, by + bh - 1, bx + bw, by + bh, MedievalColors.BORDER_GOLD);
-        g.fill(bx, by, bx + 1, by + bh, MedievalColors.BORDER_GOLD);
-        g.fill(bx + bw - 1, by, bx + bw, by + bh, MedievalColors.BORDER_GOLD);
-    }
-
-    /** Gold border around the currently active naming-rule button. */
-    private void renderSelectedStyleHighlight(GuiGraphics g) {
-        MedievalButton sel = styleButtons[namingStyle.ordinal()];
-        if (sel == null || !sel.visible) return;
-        int bx = sel.getX();
-        int by = sel.getY();
-        int bw = sel.getWidth();
-        int bh = sel.getHeight();
         g.fill(bx, by, bx + bw, by + 1, MedievalColors.BORDER_GOLD);
         g.fill(bx, by + bh - 1, bx + bw, by + bh, MedievalColors.BORDER_GOLD);
         g.fill(bx, by, bx + 1, by + bh, MedievalColors.BORDER_GOLD);
@@ -289,14 +222,8 @@ public class TownHallScreen extends MedievalScreen {
         int ebH = font.lineHeight + 6;
         drawInsetField(g, ebX, ebY, ebW, ebH);
 
-        // Naming rule label (buttons are renderables drawn after this)
-        int styleLabelY = ebY + ebH + 6;
-        Component styleLabel = I18n.name("gui.wandscape.townhall.naming_style", "命名风格");
-        g.drawString(font, styleLabel, cx - font.width(styleLabel) / 2, styleLabelY,
-                MedievalColors.TEXT_MUTED);
-
-        // Colony founder
-        int y = styleLabelY + font.lineHeight + 4 + 14 + 8;
+        // Colony founder（命名风格按钮组已移入设置中心的「本镇」页，这里不再为它留位置）
+        int y = ebY + ebH + 14;
         Component founderText = I18n.name("gui.wandscape.townhall.founder", "创建者：%s",
                 founderName != null && !founderName.isEmpty() ? founderName : "—");
         g.drawString(font, founderText, cx - font.width(founderText) / 2, y,

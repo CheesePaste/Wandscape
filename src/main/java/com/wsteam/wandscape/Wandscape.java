@@ -907,17 +907,11 @@ public class Wandscape {
                         com.wsteam.wandscape.content.colony.network.ColonyNameUpdatePacket.STREAM_CODEC,
                         (packet, ctx) -> com.wsteam.wandscape.content.colony.network.ColonyNameUpdatePacket
                                 .handleServer(packet, (net.minecraft.server.level.ServerPlayer) ctx.player()))
-                // ── Town hall naming rule switch ──
+                // ── Colony settings update (settings center 「本镇」page) ──
                 .playToServer(
-                        TownHallNameStylePacket.TYPE,
-                        TownHallNameStylePacket.STREAM_CODEC,
-                        (packet, ctx) -> TownHallNameStylePacket
-                                .handleServer(packet, (net.minecraft.server.level.ServerPlayer) ctx.player()))
-                // ── Town hall tourist-spawn toggle ──
-                .playToServer(
-                        TownHallTouristSpawnPacket.TYPE,
-                        TownHallTouristSpawnPacket.STREAM_CODEC,
-                        (packet, ctx) -> TownHallTouristSpawnPacket
+                        com.wsteam.wandscape.content.colony.network.ColonySettingUpdatePacket.TYPE,
+                        com.wsteam.wandscape.content.colony.network.ColonySettingUpdatePacket.STREAM_CODEC,
+                        (packet, ctx) -> com.wsteam.wandscape.content.colony.network.ColonySettingUpdatePacket
                                 .handleServer(packet, (net.minecraft.server.level.ServerPlayer) ctx.player()))
                 // ── Town hall bootstrap revive (anti-deadlock, all wizards dead) ──
                 .playToServer(

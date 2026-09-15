@@ -36,7 +36,7 @@ public final class SettingsOverlay {
     private static final int CARD_BG = 0xDD181D26;
     private static final int CARD_BG_HOVER = 0xF2222834;
 
-    private static SettingTab activeTab = SettingTab.VISUAL;
+    private static SettingTab activeTab = SettingTab.SETTLEMENT;
     private static int scrollOffset = 0;
     private static String toastMessage = "";
     private static long toastExpiryTime = 0;
@@ -88,12 +88,36 @@ public final class SettingsOverlay {
         return mc.player.hasPermissions(2);
     }
 
-/** 本页是否至少有一项当前可改：客户端专属项不受管理员门控，所以只读横幅不能只看 canModifySettings()。 */
-    private static boolean tabHasEditableItem() {
-        for (SettingItem item : SettingsRegistry.getItems(activeTab)) {
+    /** 本页是否至少有一项当前可改：客户端专属项与本镇项都不受管理员门控，所以只读横幅不能只看 canModifySettings()。 */
+    public static boolean canModifyTab(SettingTab tab) {
+        for (SettingItem item : SettingsRegistry.getItems(tab)) {
             if (item.canModify()) return true;
         }
         return false;
+    }
+
+    /** 本页是否还有需要管理员权限的项（只读横幅与「恢复本页默认」的可用性要看这个）。 */
+    private static boolean tabHasAdminOnlyItem(SettingTab tab) {
+        for (SettingItem item : SettingsRegistry.getItems(tab)) {
+            if (!item.isClientOnly() && !item.isColonyScoped()) return true;
+        }
+        return false;
+    }
+
+    /**
+     * 「恢复本页默认」是否可用：纯本镇 / 客户端页人人可用；只要本页含通用配置项，
+     * 恢复默认就仍是管理员动作——逐项判可用性会让非 OP 点一下只重置了一半，看着像全成功了。
+     */
+    public static boolean canResetTab(SettingTab tab) {
+        return canModifyTab(tab) && (!tabHasAdminOnlyItem(tab) || canModifySettings());
+    }
+
+    /** 本项改不动时的提示：本镇项缺的是「自己的小镇」，通用项缺的是管理员权限。 */
+    private static String cannotModifyMessage(SettingItem item) {
+        return item.isColonyScoped()
+                ? I18n.string("gui.wandscape.settings.toast.no_colony", "你还没有属于自己的小镇")
+                : I18n.string("gui.wandscape.settings.toast.no_permission",
+                        "权限不足：仅管理员 (OP) 可修改设置");
     }
 
     public static void collapseToPrevious() {
@@ -312,31 +336,43 @@ public final class SettingsOverlay {
         int y = HEADER_H;
         g.fill(RenderType.guiOverlay(), 0, y, screenW, y + TOOLBAR_H, 0, TOOLBAR_BG);
 
-        boolean canEdit = canModifySettings();
+        boolean canEdit = canModifyTab(activeTab);
+        // 「恢复本页默认」的可用性比逐项可用性更严，见 canResetTab。
+        boolean canReset = canResetTab(activeTab);
 
         // Status / prompt
-        if (!tabHasEditableItem()) {
-            String hint = I18n.string("gui.wandscape.settings.hint.readonly", "只读模式：仅管理员 (OP 等级 2) 可修改设置");
-            g.drawString(font, hint, 20, y + 8, 0xFFFFB74D, false);
+        String hint;
+        int hintColor = WandscapeTheme.COLOR_TEXT_DIM;
+        if (!canEdit) {
+            // 一项都改不动时，把原因说准：本镇页缺的是「自己的小镇」，其余页缺的是管理员权限。
+            hint = tabHasAdminOnlyItem(activeTab)
+                    ? I18n.string("gui.wandscape.settings.hint.readonly",
+                            "只读模式：仅管理员 (OP 等级 2) 可修改设置")
+                    : I18n.string("gui.wandscape.settings.hint.no_colony",
+                            "你还没有属于自己的小镇：先右键一座市政厅建镇，这里才有可改的东西");
+            hintColor = 0xFFFFB74D;
+        } else if (activeTab == SettingTab.SETTLEMENT) {
+            hint = I18n.string("gui.wandscape.settings.hint.settlement",
+                    "这几项随你自己的小镇走，任何玩家都能改，改完立即生效");
+        } else if (activeTab == SettingTab.PACKAGES) {
+            hint = I18n.string("gui.wandscape.settings.hint.packages",
+                    "管理已加载的建筑包。停用的建筑包将不会在建造栏中显示（即时生效）");
         } else {
-            String hint = (activeTab == SettingTab.PACKAGES)
-                    ? I18n.string("gui.wandscape.settings.hint.packages",
-                            "管理已加载的建筑包。停用的建筑包将不会在建造栏中显示（即时生效）")
-                    : I18n.string("gui.wandscape.settings.hint.general",
-                            "配置项修改即时生效并自动持久化保存（支持热重载）");
-            g.drawString(font, hint, 20, y + 8, WandscapeTheme.COLOR_TEXT_DIM, false);
+            hint = I18n.string("gui.wandscape.settings.hint.general",
+                    "配置项修改即时生效并自动持久化保存（支持热重载）");
         }
+        g.drawString(font, hint, 20, y + 8, hintColor, false);
 
         // Reset Page Defaults button on the right
         int rBtnW = 110;
         int rBtnH = 18;
         int rBtnX = screenW - rBtnW - 20;
         int rBtnY = y + 4;
-        boolean rHover = canEdit && mx >= rBtnX && mx <= rBtnX + rBtnW && my >= rBtnY && my <= rBtnY + rBtnH;
-        int rBg = canEdit ? (rHover ? 0xFFC8A040 : 0x44262E3B) : 0x221E242E;
-        int rTextColor = canEdit ? (rHover ? 0xFF111214 : WandscapeTheme.COLOR_TEXT_NORMAL) : 0xFF555555;
+        boolean rHover = canReset && mx >= rBtnX && mx <= rBtnX + rBtnW && my >= rBtnY && my <= rBtnY + rBtnH;
+        int rBg = canReset ? (rHover ? 0xFFC8A040 : 0x44262E3B) : 0x221E242E;
+        int rTextColor = canReset ? (rHover ? 0xFF111214 : WandscapeTheme.COLOR_TEXT_NORMAL) : 0xFF555555;
         g.fill(RenderType.guiOverlay(), rBtnX, rBtnY, rBtnX + rBtnW, rBtnY + rBtnH, 0, rBg);
-        String rText = canEdit
+        String rText = canReset
                 ? I18n.string("gui.wandscape.settings.reset_tab", "恢复本页默认")
                 : I18n.string("gui.wandscape.settings.reset_locked", "锁定 (需 OP)");
         g.drawString(font, rText, rBtnX + (rBtnW - font.width(rText)) / 2, rBtnY + 5, rTextColor, false);
@@ -409,16 +445,25 @@ public final class SettingsOverlay {
             badgeX += font.width(restartBadge) + 6;
         }
 
-        // Badge 2: Scope tag
-        String clientBadge = I18n.string("gui.wandscape.settings.badge.client", "[客户端]");
-        String generalBadge = I18n.string("gui.wandscape.settings.badge.general", "[通用配置]");
+        // Badge 2: Scope tag — 客户端专属 / 本镇 / 通用配置，三选一
+        String scopeBadge;
+        int scopeColor;
+        int scopeBg;
         if (item.isClientOnly()) {
-            drawBadge(g, font, badgeX, y + 6, clientBadge, 0xFF42A5F5, 0x3342A5F5);
-            badgeX += font.width(clientBadge) + 6;
+            scopeBadge = I18n.string("gui.wandscape.settings.badge.client", "[客户端]");
+            scopeColor = 0xFF42A5F5;
+            scopeBg = 0x3342A5F5;
+        } else if (item.isColonyScoped()) {
+            scopeBadge = I18n.string("gui.wandscape.settings.badge.colony", "[本镇]");
+            scopeColor = 0xFFC8A040;
+            scopeBg = 0x33C8A040;
         } else {
-            drawBadge(g, font, badgeX, y + 6, generalBadge, 0xFF9E9E9E, 0x339E9E9E);
-            badgeX += font.width(generalBadge) + 6;
+            scopeBadge = I18n.string("gui.wandscape.settings.badge.general", "[通用配置]");
+            scopeColor = 0xFF9E9E9E;
+            scopeBg = 0x339E9E9E;
         }
+        drawBadge(g, font, badgeX, y + 6, scopeBadge, scopeColor, scopeBg);
+        badgeX += font.width(scopeBadge) + 6;
 
         // Key path
         g.drawString(font, item.key(), badgeX + 4, y + 8, 0xFF666666, false);
@@ -583,9 +628,12 @@ public final class SettingsOverlay {
             int rBtnX = screenW - rBtnW - 20;
             int rBtnY = HEADER_H + 4;
             if (mx >= rBtnX && mx <= rBtnX + rBtnW && my >= rBtnY && my <= rBtnY + rBtnH) {
-                if (!canModifySettings()) {
-                    showToast(I18n.string("gui.wandscape.settings.toast.no_permission",
-                                "权限不足：仅管理员 (OP) 可修改设置"));
+                if (!canResetTab(activeTab)) {
+                    showToast(tabHasAdminOnlyItem(activeTab)
+                            ? I18n.string("gui.wandscape.settings.toast.no_permission",
+                                    "权限不足：仅管理员 (OP) 可修改设置")
+                            : I18n.string("gui.wandscape.settings.toast.no_colony",
+                                    "你还没有属于自己的小镇"));
                     playClickSound();
                     return true;
                 }
@@ -620,8 +668,7 @@ public final class SettingsOverlay {
                     // Reset button
                     if (!item.isDefault() && mx >= rstBtnX && mx <= rstBtnX + rstBtnW && my >= rstBtnY && my <= rstBtnY + rstBtnH) {
                         if (!item.canModify()) {
-                            showToast(I18n.string("gui.wandscape.settings.toast.no_permission",
-                                "权限不足：仅管理员 (OP) 可修改设置"));
+                            showToast(cannotModifyMessage(item));
                             playClickSound();
                             return true;
                         }
@@ -637,8 +684,7 @@ public final class SettingsOverlay {
                     // If not permitted to modify, clicking anywhere in control area triggers toast and aborts
                     if (!item.canModify()) {
                         if (mx >= controlAreaRight - 150 && mx <= ctrlRight && my >= cy + 16 && my <= cy + 38) {
-                            showToast(I18n.string("gui.wandscape.settings.toast.no_permission",
-                                "权限不足：仅管理员 (OP) 可修改设置"));
+                            showToast(cannotModifyMessage(item));
                             playClickSound();
                         }
                         return true;

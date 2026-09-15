@@ -3,10 +3,14 @@ package com.wsteam.wandscape.content.colony.service;
 import com.wsteam.wandscape.api.BuildingApi;
 import com.wsteam.wandscape.api.BuildingApi.ColonySnapshot;
 import com.wsteam.wandscape.api.ColonyStatusApi;
+import com.wsteam.wandscape.content.colony.ColonySavedData;
 import com.wsteam.wandscape.content.colony.data.ColonyStatusSnapshot;
+import com.wsteam.wandscape.content.colony.settings.ColonySettings;
 import com.wsteam.wandscape.content.element.data.ElementType;
 import com.wsteam.wandscape.api.WandscapeApis;
+import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.UUID;
 
@@ -38,6 +42,16 @@ public final class ColonyStatusService implements ColonyStatusApi {
         int lvl = colonyApi != null ? colonyApi.getColonyLevel(colonyId) : 1;
         int exp = colonyApi != null ? colonyApi.getColonyExp(colonyId) : 0;
         String name = colonyApi != null ? colonyApi.getColonyName(colonyId) : "";
+
+        // 2b. 本镇设置（设置中心「本镇」页的数据源）——客户端缓存这两个值后，
+        // 面板无需另开请求包就能显示与撤回。取不到存档时回退到 ColonySettings 的默认值。
+        int namingStyle = ColonySettings.DEFAULT_NAMING_STYLE.ordinal();
+        boolean touristSpawning = ColonySettings.DEFAULT_TOURIST_SPAWN;
+        ColonySavedData colonyData = colonyData();
+        if (colonyData != null) {
+            namingStyle = colonyData.getNamingStyle(colonyId).ordinal();
+            touristSpawning = colonyData.isTouristSpawningEnabled(colonyId);
+        }
 
         // 3. Tourist metrics
         int touristCount = 0;
@@ -98,10 +112,18 @@ public final class ColonyStatusService implements ColonyStatusApi {
         return new ColonyStatusSnapshot(
                 colonyId, comfort, magic, wonder,
                 name, lvl, exp,
+                namingStyle, touristSpawning,
                 touristCount, overnightStayerCount,
                 npcIdleCount, npcTotalCount,
                 earthAmount, woodAmount, waterAmount, fireAmount, windAmount, metalAmount, darkAmount,
                 underConstructionCount, underConstructionBuildingIds,
                 underConstructionBuildingNames, underConstructionStarted);
+    }
+
+    /** 殖民地存档；服务端未起来（客户端/单测环境）时返回 null。 */
+    @Nullable
+    private static ColonySavedData colonyData() {
+        var server = ServerLifecycleHooks.getCurrentServer();
+        return server != null ? ColonySavedData.getOrCreate(server.overworld()) : null;
     }
 }

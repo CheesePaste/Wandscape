@@ -3,6 +3,10 @@
     "en_us": "[Client]",
     "zh_cn": "[客户端]"
   },
+  "gui.wandscape.settings.badge.colony": {
+    "en_us": "[My Town]",
+    "zh_cn": "[本镇]"
+  },
   "gui.wandscape.settings.badge.general": {
     "en_us": "[Global]",
     "zh_cn": "[通用配置]"
@@ -27,9 +31,17 @@
     "en_us": "Back (ESC)",
     "zh_cn": "返回 (ESC)"
   },
+  "gui.wandscape.settings.colony.namingStyle": {
+    "en_us": "Naming style",
+    "zh_cn": "命名风格"
+  },
   "gui.wandscape.settings.colony.offlineIncomeMultiplier": {
     "en_us": "Founder offline income multiplier",
     "zh_cn": "创始人离线收益系数"
+  },
+  "gui.wandscape.settings.colony.touristSpawning": {
+    "en_us": "Tourist spawning",
+    "zh_cn": "生成游客"
   },
   "gui.wandscape.settings.default_hint": {
     "en_us": "Default: %s",
@@ -67,6 +79,10 @@
     "en_us": "Changes take effect immediately and are saved automatically (hot-reload supported).",
     "zh_cn": "配置项修改即时生效并自动持久化保存（支持热重载）"
   },
+  "gui.wandscape.settings.hint.no_colony": {
+    "en_us": "You have no town of your own yet: right-click a town hall to found one, then there is something to change here",
+    "zh_cn": "你还没有属于自己的小镇：先右键一座市政厅建镇，这里才有可改的东西"
+  },
   "gui.wandscape.settings.hint.packages": {
     "en_us": "Manage the loaded building packs. A disabled pack no longer shows up in the build bar (takes effect immediately).",
     "zh_cn": "管理已加载的建筑包。停用的建筑包将不会在建造栏中显示（即时生效）"
@@ -74,6 +90,10 @@
   "gui.wandscape.settings.hint.readonly": {
     "en_us": "Read-only: only admins (permission level 2) can change settings",
     "zh_cn": "只读模式：仅管理员 (OP 等级 2) 可修改设置"
+  },
+  "gui.wandscape.settings.hint.settlement": {
+    "en_us": "These belong to your own town; anyone can change them and they apply immediately",
+    "zh_cn": "这几项随你自己的小镇走，任何玩家都能改，改完立即生效"
   },
   "gui.wandscape.settings.npc.deathMessageGlobal": {
     "en_us": "Broadcast mage deaths server-wide",
@@ -86,6 +106,18 @@
   "gui.wandscape.settings.npc.pvp": {
     "en_us": "PVP colony faction recognition",
     "zh_cn": "PVP 殖民地阵营识别"
+  },
+  "gui.wandscape.settings.option.naming_chinese": {
+    "en_us": "Chinese",
+    "zh_cn": "中文"
+  },
+  "gui.wandscape.settings.option.naming_english": {
+    "en_us": "English",
+    "zh_cn": "英文"
+  },
+  "gui.wandscape.settings.option.naming_fantasy": {
+    "en_us": "Fantasy",
+    "zh_cn": "西幻"
   },
   "gui.wandscape.settings.option.particle_high": {
     "en_us": "Max",
@@ -155,6 +187,10 @@
     "en_us": "Rules & Security",
     "zh_cn": "规则防护"
   },
+  "gui.wandscape.settings.tab.settlement": {
+    "en_us": "My Town",
+    "zh_cn": "本镇"
+  },
   "gui.wandscape.settings.tab.tourist": {
     "en_us": "Tourists & Economy",
     "zh_cn": "游客生态"
@@ -174,6 +210,10 @@
   "gui.wandscape.settings.title_short": {
     "en_us": "Settings",
     "zh_cn": "设置中心"
+  },
+  "gui.wandscape.settings.toast.no_colony": {
+    "en_us": "You have no town of your own yet",
+    "zh_cn": "你还没有属于自己的小镇"
   },
   "gui.wandscape.settings.toast.no_permission": {
     "en_us": "Not permitted: only admins (permission level 2) can change settings",

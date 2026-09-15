@@ -13,11 +13,14 @@ import java.util.UUID;
 import static com.wsteam.wandscape.Wandscape.MODID;
 /**
  * Server→Client: Syncs colony evaluation values + panel HUD data to the client.
+ * Carries the colony's own settings (naming style / tourist spawning) so the panel's
+ * 「本镇」page can read and roll back them without a dedicated request packet.
  */
 public record ColonyStatsSyncPacket(
         UUID colonyId,
         int comfort, int magic, int wonder,
         String colonyName, int colonyLevel, int colonyExperience,
+        int namingStyle, boolean touristSpawning,
         int touristCount,
         int overnightStayerCount,
         int npcIdleCount, int npcTotalCount,
@@ -42,6 +45,7 @@ public record ColonyStatsSyncPacket(
         return new ColonyStatsSyncPacket(
                 snap.colonyId(), snap.comfort(), snap.magic(), snap.wonder(),
                 snap.colonyName(), snap.colonyLevel(), snap.colonyExperience(),
+                snap.namingStyle(), snap.touristSpawning(),
                 snap.touristCount(), snap.overnightStayerCount(),
                 snap.npcIdleCount(), snap.npcTotalCount(),
                 snap.earthAmount(), snap.woodAmount(), snap.waterAmount(),
@@ -54,6 +58,7 @@ public record ColonyStatsSyncPacket(
         WandscapePanelState.setColonyStats(
                 packet.colonyId, packet.comfort, packet.magic, packet.wonder,
                 packet.colonyName, packet.colonyLevel, packet.colonyExperience,
+                packet.namingStyle, packet.touristSpawning,
                 packet.touristCount, packet.overnightStayerCount,
                 packet.npcIdleCount, packet.npcTotalCount,
                 packet.earthAmount, packet.woodAmount, packet.waterAmount, packet.fireAmount, packet.windAmount,
@@ -71,6 +76,8 @@ public record ColonyStatsSyncPacket(
         buf.writeUtf(pkt.colonyName != null ? pkt.colonyName : "");
         buf.writeVarInt(pkt.colonyLevel);
         buf.writeVarInt(pkt.colonyExperience);
+        buf.writeVarInt(pkt.namingStyle);
+        buf.writeBoolean(pkt.touristSpawning);
         buf.writeVarInt(pkt.touristCount);
         buf.writeVarInt(pkt.overnightStayerCount);
         buf.writeVarInt(pkt.npcIdleCount);
@@ -95,6 +102,7 @@ public record ColonyStatsSyncPacket(
                 colonyId,
                 buf.readVarInt(), buf.readVarInt(), buf.readVarInt(),
                 buf.readUtf(), buf.readVarInt(), buf.readVarInt(),
+                buf.readVarInt(), buf.readBoolean(), // namingStyle, touristSpawning
                 buf.readVarInt(), // touristCount
                 buf.readVarInt(), // overnightStayerCount
                 buf.readVarInt(), buf.readVarInt(), // npcIdle, npcTotal

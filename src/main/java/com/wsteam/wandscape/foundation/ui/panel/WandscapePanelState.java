@@ -4,6 +4,7 @@ import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.content.task.ui.TaskManagementClientState;
 import com.wsteam.wandscape.content.task.network.TaskPanelSubscribePacket;
 import com.wsteam.wandscape.content.colony.network.ColonyStatsSyncPacket;
+import com.wsteam.wandscape.content.colony.settings.ColonySettings;
 
 import com.wsteam.wandscape.content.colony.overview.client.OverviewClientState;
 import com.wsteam.wandscape.content.colony.overview.client.OverviewFlightController;
@@ -42,6 +43,9 @@ public final class WandscapePanelState {
     private static volatile String colonyName = "";
     private static volatile int colonyLevel = 1;
     private static volatile int colonyExperience = 0;
+    /** 本镇设置（设置中心「本镇」页读它显示，写改动时先乐观更新、再由服务端快照校正）。 */
+    private static volatile int namingStyle = ColonySettings.DEFAULT_NAMING_STYLE.ordinal();
+    private static volatile boolean touristSpawning = ColonySettings.DEFAULT_TOURIST_SPAWN;
 
     // ── HUD fields (synced from ColonyStatsSyncPacket) ──
     private static volatile int touristCount = 0;
@@ -131,6 +135,12 @@ public final class WandscapePanelState {
     public static String getColonyName() { return colonyName; }
     public static int getColonyLevel() { return colonyLevel; }
     public static int getColonyExperience() { return colonyExperience; }
+    /** 本镇起名风格（NameStyle ordinal）。 */
+    public static int getNamingStyle() { return namingStyle; }
+    public static void setNamingStyle(int style) { namingStyle = style; }
+    /** 本镇是否继续生成游客。 */
+    public static boolean isTouristSpawning() { return touristSpawning; }
+    public static void setTouristSpawning(boolean enabled) { touristSpawning = enabled; }
 
     // ── HUD field getters ──
     public static int getTouristCount() { return touristCount; }
@@ -155,6 +165,14 @@ public final class WandscapePanelState {
 
     public static void setColonyStats(UUID colonyId, int comfort, int magic, int wonder,
                                       String name, int level, int experience) {
+        setColonyStats(colonyId, comfort, magic, wonder, name, level, experience,
+                namingStyle, touristSpawning);
+    }
+
+    /** 不带本镇设置的重载：这两个值维持原样，等真正带它们的同步包（ColonyStatsSyncPacket）来更新。 */
+    public static void setColonyStats(UUID colonyId, int comfort, int magic, int wonder,
+                                      String name, int level, int experience,
+                                      int namingStyle, boolean touristSpawning) {
         WandscapePanelState.colonyId = colonyId;
         WandscapePanelState.comfort = comfort;
         WandscapePanelState.magic = magic;
@@ -162,10 +180,13 @@ public final class WandscapePanelState {
         WandscapePanelState.colonyName = name;
         WandscapePanelState.colonyLevel = level;
         WandscapePanelState.colonyExperience = experience;
+        WandscapePanelState.namingStyle = namingStyle;
+        WandscapePanelState.touristSpawning = touristSpawning;
     }
 
     public static void setColonyStats(UUID colonyId, int comfort, int magic, int wonder,
                                       String name, int level, int experience,
+                                      int namingStyle, boolean touristSpawning,
                                       int touristCount, int overnightStayerCount,
                                       int npcIdleCount, int npcTotalCount,
                                       int earth, int wood, int water, int fire, int wind,
@@ -174,7 +195,8 @@ public final class WandscapePanelState {
                                       List<UUID> underConstructionIds,
                                       List<String> underConstructionNames,
                                       List<Boolean> underConstructionStarted) {
-        setColonyStats(colonyId, comfort, magic, wonder, name, level, experience);
+        setColonyStats(colonyId, comfort, magic, wonder, name, level, experience,
+                namingStyle, touristSpawning);
         WandscapePanelState.touristCount = touristCount;
         WandscapePanelState.overnightStayerCount = overnightStayerCount;
         WandscapePanelState.npcIdleCount = npcIdleCount;
@@ -286,6 +308,8 @@ public final class WandscapePanelState {
         colonyName = "";
         colonyLevel = 1;
         colonyExperience = 0;
+        namingStyle = ColonySettings.DEFAULT_NAMING_STYLE.ordinal();
+        touristSpawning = ColonySettings.DEFAULT_TOURIST_SPAWN;
         touristCount = 0;
         overnightStayerCount = 0;
         npcIdleCount = 0;

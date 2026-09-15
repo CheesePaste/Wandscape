@@ -333,7 +333,7 @@ public class WandscapeClient {
                             packet.buildingPos(), packet.colonyId(),
                             packet.colonyName(), packet.level(), packet.experience(),
                             packet.expToNext(), packet.founderName(), packet.canUseWarehouse(),
-                            packet.namingStyle(), packet.creator(), packet.touristSpawning(),
+                            packet.creator(),
                             packet.aliveNpcCount(), packet.deadNpcCount(),
                             packet.reviveCooldownSeconds()));
         });
