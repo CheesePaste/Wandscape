@@ -2,7 +2,7 @@
   "name": "Building Scanner",
   "category": "wandscape:buildings",
   "icon": "wandscape:building_scanner",
-  "sortnum": 13,
+  "sortnum": 16,
   "read_by_default": true,
   "pages": [
     {

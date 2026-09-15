@@ -35,7 +35,8 @@ public final class GuideCommand {
             SharedSuggestionProvider.suggest(List.of(
                     "commands_guide", "index_guide", "getting_started_guide", "overview_guide",
                     "road_guide", "warehouse_guide", "npc_guide", "tavern_guide", "tourist_guide",
-                    "townhall_guide", "shop_guide", "hotel_guide", "node_guide", "altar_guide",
+                    "townhall_guide", "shop_guide", "service_guide", "relax_guide", "atm_guide",
+                    "decoration_guide", "node_guide", "altar_guide",
                     "crafting_guide", "magic_station_guide", "workstation_guide", "mage_hut_guide",
                     "strategy_guide", "scanner_guide", "creative_scanner_guide", "road_replace_guide",
                     "road_fill_guide", "road_spline_guide", "magic_circle_editor_guide", "anomaly_guide"),

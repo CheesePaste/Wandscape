@@ -2,7 +2,7 @@
   "name": "建筑",
   "category": "wandscape:system",
   "icon": "minecraft:bricks",
-  "sortnum": 5,
+  "sortnum": 6,
   "read_by_default": true,
   "pages": [
     {

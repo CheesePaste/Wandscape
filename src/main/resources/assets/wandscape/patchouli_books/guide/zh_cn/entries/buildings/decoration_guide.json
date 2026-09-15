@@ -1,0 +1,13 @@
+{
+  "name": "装饰",
+  "category": "wandscape:buildings",
+  "icon": "minecraft:lantern",
+  "sortnum": 10,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "装饰建筑不接待游客，它管的是周围：街灯、招牌会把自身的舒适、魔法、奇观辐射给附近的功能建筑，商店、旅馆被罩到就更好赚。$(br2)范围按每个装饰建筑自己定的半径算，加成也有上限，摆得太远就白搭。装饰建筑自己的三值不计进小镇总量，靠摆灯堆数值是不行的。"
+    }
+  ]
+}

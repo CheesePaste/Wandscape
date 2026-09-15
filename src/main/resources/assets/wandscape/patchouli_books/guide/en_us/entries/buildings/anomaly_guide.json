@@ -2,12 +2,12 @@
   "name": "Building Maintenance",
   "category": "wandscape:buildings",
   "icon": "minecraft:anvil",
-  "sortnum": 12,
+  "sortnum": 15,
   "read_by_default": true,
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "$(italic)$(#6b5a45)This page has not been written yet.$()"
+      "text": "A building that takes damage — monsters, explosions — only loses blocks: it keeps working and keeps contributing to the town's three values as before, and there is no wear or upkeep to pay.$(br2)When you want the missing blocks back, open the building's panel and press Repair: it works out what is missing, asks the warehouse for the materials, and a mage fills them in. Repair never happens on its own. Note that the \"abnormal\" report in the status list is about construction sites that never finished."
     }
   ]
 }

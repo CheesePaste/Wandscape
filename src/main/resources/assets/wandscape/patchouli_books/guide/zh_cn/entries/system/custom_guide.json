@@ -2,7 +2,7 @@
   "name": "自定义",
   "category": "wandscape:system",
   "icon": "minecraft:structure_block",
-  "sortnum": 7,
+  "sortnum": 8,
   "read_by_default": true,
   "pages": [
     {

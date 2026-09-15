@@ -29,7 +29,7 @@ public class HotelScreen extends MedievalScreen {
         setTitleBar(I18n.name("gui.wandscape.hotel.title", "Hotel / Inn"));
         this.showCloseButton = true;
         this.showHelpButton = true;
-        this.helpDocumentPath = "hotel_guide";
+        this.helpDocumentPath = "service_guide";
         setCreator(creator);
         this.maxOccupancy = maxOccupancy;
         this.currentOccupancy = currentOccupancy;

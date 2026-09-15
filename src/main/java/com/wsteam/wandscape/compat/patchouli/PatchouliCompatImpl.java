@@ -28,23 +28,28 @@ final class PatchouliCompatImpl {
         register("panel_guide", "system");
         register("mages_guide", "system");
         register("tourists_guide", "system");
+        register("town_level_guide", "system");
         register("casting_guide", "system");
         register("buildings_guide", "system");
         register("equipment_guide", "system");
         register("custom_guide", "system");
-        // buildings（每类建筑一条）
+        // buildings（每类建筑一条，与 buildings/*.json 的 category 一一对应）
         register("townhall_guide", "buildings");
         register("warehouse_guide", "buildings");
+        register("workstation_guide", "buildings");
         register("crafting_guide", "buildings");
         register("magic_station_guide", "buildings");
-        register("workstation_guide", "buildings");
-        register("node_guide", "buildings");
+        register("tavern_guide", "buildings");
         register("altar_guide", "buildings");
         register("mage_hut_guide", "buildings");
-        register("tavern_guide", "buildings");
+        register("node_guide", "buildings");
+        register("decoration_guide", "buildings");
         register("shop_guide", "buildings");
-        register("hotel_guide", "buildings");
+        register("service_guide", "buildings");
+        register("relax_guide", "buildings");
+        register("atm_guide", "buildings");
         register("anomaly_guide", "buildings");
+        register("building_scanner_guide", "buildings");
         // management（面板 + 四个子模式）
         register("panel_build_guide", "management");
         register("panel_road_guide", "management");
@@ -85,6 +90,9 @@ final class PatchouliCompatImpl {
         DOC_TO_ENTRY.put("tourist_guide", DOC_TO_ENTRY.get("tourists_guide"));
         DOC_TO_ENTRY.put("tourist", DOC_TO_ENTRY.get("tourists_guide"));
         DOC_TO_ENTRY.put("buildings", DOC_TO_ENTRY.get("buildings_guide"));
+        // 「旅馆与服务建筑」已改名为「服务设施」：旅馆是 service 类别下的一类，旧名仍指向同一页
+        DOC_TO_ENTRY.put("hotel_guide", DOC_TO_ENTRY.get("service_guide"));
+        DOC_TO_ENTRY.put("hotel", DOC_TO_ENTRY.get("service_guide"));
         DOC_TO_ENTRY.put("casting", DOC_TO_ENTRY.get("casting_guide"));
         DOC_TO_ENTRY.put("equipment", DOC_TO_ENTRY.get("equipment_guide"));
         DOC_TO_ENTRY.put("custom", DOC_TO_ENTRY.get("custom_guide"));

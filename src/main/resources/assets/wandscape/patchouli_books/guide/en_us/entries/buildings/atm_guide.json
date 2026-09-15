@@ -1,0 +1,13 @@
+{
+  "name": "ATM",
+  "category": "wandscape:buildings",
+  "icon": "minecraft:gold_ingot",
+  "sortnum": 14,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "ATMs are where tourists draw their travel money. Each one arrives with a budget for the trip, and once its purse runs low it looks for an ATM to take out more — not new money, just the rest of what it brought along.$(br2)A town without an ATM simply watches its tourists run dry and stop spending."
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "name": "ATM",
+  "category": "wandscape:buildings",
+  "icon": "minecraft:gold_ingot",
+  "sortnum": 14,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "ATM 让游客取旅费：每个人来时都带着一笔这趟旅行的总经费，钱包花得差不多了就会找 ATM 取现接着消费——取的不是新钱，只是把带来的经费一点点拿出来。$(br2)镇里没有 ATM，游客把身上的钱花完就只能干看着。"
+    }
+  ]
+}

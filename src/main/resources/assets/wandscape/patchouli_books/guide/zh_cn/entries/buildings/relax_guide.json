@@ -1,0 +1,13 @@
+{
+  "name": "休憩",
+  "category": "wandscape:buildings",
+  "icon": "minecraft:oak_stairs",
+  "sortnum": 13,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "休憩建筑是游客坐下来回精力的地方，喷泉广场、长椅、瞭望塔、风车都算。精力见底的游客只会往这里去，缓过来再接着逛。$(br2)同一个休憩建筑，三值只算第一次，之后再来就只回精力了。"
+    }
+  ]
+}

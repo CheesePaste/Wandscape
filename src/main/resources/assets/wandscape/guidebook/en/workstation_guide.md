@@ -1,3 +1,5 @@
 # Workstation
 
-> This page has not been written yet.
+The Workstation turns warehouse elements into items, and breaks warehouse items back down into elements. Breaking down returns only a fraction of what the item cost to make, so it is for clearing out stock you have no use for, not for profit.
+
+Both directions only touch the town warehouse — nothing in your own inventory is involved. When a shop runs short, the Workstation gets called in automatically to craft the missing goods, so seeing it start a job on its own is normal.

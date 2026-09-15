@@ -2,7 +2,7 @@
   "name": "施法",
   "category": "wandscape:system",
   "icon": "minecraft:blaze_rod",
-  "sortnum": 4,
+  "sortnum": 5,
   "read_by_default": true,
   "pages": [
     {

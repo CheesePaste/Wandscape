@@ -1,3 +1,5 @@
 # Building Maintenance
 
-> This page has not been written yet.
+A building that takes damage — monsters, explosions — only loses blocks: it keeps working and keeps contributing to the town's three values as before, and there is no wear or upkeep to pay.
+
+When you want the missing blocks back, open the building's panel and press Repair: it works out what is missing, asks the warehouse for the materials, and a mage fills them in. Repair never happens on its own. Note that the "abnormal" report in the status list is about construction sites that never finished.

@@ -46,6 +46,19 @@
 判据：**玩家自己点两下就能发现的，不用写；会让他做错一次、或者以为坏了，才写。**
 「支持 A/B/C」是后者都算不上——玩家试一下就知道了。
 
+### 判据再往前一步：面板上现成的就别抄
+
+建筑面板会把「能做什么东西、要什么料」当场摊开，玩家点两下就懂。抄进手册既会过期，
+又挤掉了真正该写的**隐藏信息点**——面板上看不到、不问就会做错、或者以为坏了的事。
+
+| 别这么写（面板上现成） | 这么写（面板看不见的） |
+|---|---|
+| 合成站能做法杖、权杖、盟誓戒指、魔法指南针和仓库终端，配方以元素为主，个别还要玻璃瓶 | 合成站合成装备和道具；成品直接进小镇仓库，不会进你的背包，材料也不从你背包里扣 |
+| 仓库能存元素和各类物资 | 仓库是全镇共用的存量，把仓库方块拆了东西也不会丢；多盖几座能扩容，还有仓库终端这种带在身上的开法 |
+
+隐藏信息点的几个常见方向：**成品进谁的包、拆了会不会丢、默认值是不是 0、要不要手动发布、
+名额算在谁头上。**
+
 ---
 
 ## 三、写通顺的话，不写电报体
@@ -138,16 +151,16 @@ python gen_patchouli.py && python paginate_patchouli_json.py   # 两步都不能
 
 ## 附二：还没写的条目（截至 2026-09-15）
 
-手册登记 **58 个条目位**，来自 51 篇 md——`buildings_guide` / `casting_guide` / `equipment_guide` /
+手册登记 **62 个条目位**，来自 55 篇 md——`buildings_guide` / `casting_guide` / `equipment_guide` /
 `custom_guide` 这 4 篇总览页各登了两处（「通用功能」+ 对应细分类），`building_scanner_guide` 登在
 「建筑」和「自定义」两处。
-其中 **23 篇是占位页**，正文只有一句「本页还没写完」，占 **27 个条目位**。zh/en 两侧完全一致。
+其中 **11 篇是占位页**，正文只有一句「本页还没写完」，占 **15 个条目位**。zh/en 两侧完全一致。
 
 | 分类 | 登记 | 缺 | 条目名（md 文件） |
 |---|---|---|---|
 | 玩法主线 | 4 | 0 | — |
-| 通用功能 | 8 | 4 | 建筑 `buildings_guide`、施法 `casting_guide`、装备与物品 `equipment_guide`、自定义 `custom_guide` |
-| 建筑 | 14 | 13 | 建筑 `buildings_guide`、市政厅 `townhall_guide`、仓库 `warehouse_guide`、合成台 `crafting_guide`、魔法工坊 `magic_station_guide`、工作站 `workstation_guide`、元素节点 `node_guide`、祭坛 `altar_guide`、法师小屋 `mage_hut_guide`、酒馆 `tavern_guide`、商店 `shop_guide`、旅馆与服务建筑 `hotel_guide`、建筑维护 `anomaly_guide`（第 14 篇「建筑扫描器」`building_scanner_guide` 已写完） |
+| 通用功能 | 9 | 4 | 建筑 `buildings_guide`、施法 `casting_guide`、装备与物品 `equipment_guide`、自定义 `custom_guide` |
+| 建筑 | 17 | 1 | 建筑 `buildings_guide`（总览；14 类建筑各一条已写完，另有「建筑维护」`anomaly_guide` 与「建筑扫描器」`building_scanner_guide`） |
 | 管理 | 5 | 4 | 建造子模式 `panel_build_guide`、道路子模式 `panel_road_guide`、任务子模式 `panel_tasks_guide`、设置中心 `panel_settings_guide` |
 | 魔法 | 12 | 1 | 施法 `casting_guide` |
 | 装备与物品 | 6 | 1 | 装备与物品 `equipment_guide` |
@@ -156,10 +169,15 @@ python gen_patchouli.py && python paginate_patchouli_json.py   # 两步都不能
 
 写掉一篇就删一行；数字对不上，说明 `gen_patchouli.py` 的 `ENTRIES` 里加了新条目而这里没跟上。
 
+**「建筑」这一屏与 `buildings/*.json` 的 category 一一对应**（government→市政厅、storage→仓库、
+workstation、crafting_station、magic_station、tavern、altar、mage_hut、node、decoration、shop、
+service、relax、atm），顺序照建造面板的分类顺序。新增一类建筑时要同时补三处：`ENTRIES` 的
+buildings 段、`PatchouliCompatImpl` 的 buildings 段、以及一条 md（zh/en 各一份）。
+
 两点值得先说：
 
-- **「建筑」是唯一几乎整类全缺的一级分类**（14 篇只写了「建筑扫描器」一篇）——点进去第一屏还是「还没写完」，观感比缺两三篇严重得多。要动手先动这里。
-- 那 4 篇总览页写一篇补两个位置，性价比最高：先写总览，细分类第一屏至少是能看的。
+- **剩下的缺页里，最贵的是那 4 篇总览页**（`buildings_guide` / `casting_guide` / `equipment_guide` / `custom_guide`）——它们各占两个条目位，且是「通用功能」这一屏的门面。
+- 建筑分类只差总览 `buildings_guide` 一篇：细分类已全部写完，点进去第一屏仍会先看到「还没写完」。
 
 不在表里的 15 篇（`npc_guide` `tourist_guide` `strategy_guide` `overview_guide` `getting_started` `road_*`
 `scanner_guide` `commands_guide` `creators_guide` `creative_scanner_guide` `magic_circle_editor_guide` `test_guide`）

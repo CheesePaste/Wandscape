@@ -2,7 +2,7 @@
   "name": "装备与物品",
   "category": "wandscape:system",
   "icon": "minecraft:armor_stand",
-  "sortnum": 6,
+  "sortnum": 7,
   "read_by_default": true,
   "pages": [
     {

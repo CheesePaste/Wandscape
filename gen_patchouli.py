@@ -88,26 +88,35 @@ ENTRIES = [
     ("panel_guide", "system", "minecraft:compass", 1),
     ("mages_guide", "system", "wandscape:wandscape_npc_spawn_egg", 2),
     ("tourists_guide", "system", "minecraft:emerald", 3),
-    ("casting_guide", "system", "minecraft:blaze_rod", 4),
-    ("buildings_guide", "system", "minecraft:bricks", 5),
-    ("equipment_guide", "system", "minecraft:armor_stand", 6),
-    ("custom_guide", "system", "minecraft:structure_block", 7),
+    ("town_level_guide", "system", "minecraft:experience_bottle", 4),
+    ("casting_guide", "system", "minecraft:blaze_rod", 5),
+    ("buildings_guide", "system", "minecraft:bricks", 6),
+    ("equipment_guide", "system", "minecraft:armor_stand", 7),
+    ("custom_guide", "system", "minecraft:structure_block", 8),
 
-    # ── 建筑：总览 + 每一类建筑 ──
+    # ── 建筑：总览 + 每一类建筑各一条 ──
+    # 与 buildings/*.json 的 category 一一对应（government→市政厅、storage→仓库、
+    # workstation、crafting_station、magic_station、tavern、altar、mage_hut、node、
+    # decoration、shop、service、relax、atm），排序照建造面板的分类顺序。
+    # 末两条 anomaly / building_scanner 不是建筑类别：一个是受损建筑的修复机制，
+    # 一个是把自建房导入成建筑的扫描器。
     ("buildings_guide", "buildings", "minecraft:bricks", 0),
     ("townhall_guide", "buildings", "minecraft:bell", 1),
     ("warehouse_guide", "buildings", "minecraft:chest", 2),
-    ("crafting_guide", "buildings", "wandscape:wand", 3),
-    ("magic_station_guide", "buildings", "wandscape:spell_scroll", 4),
-    ("workstation_guide", "buildings", "minecraft:crafting_table", 5),
-    ("node_guide", "buildings", "wandscape:element_earth", 6),
+    ("workstation_guide", "buildings", "minecraft:crafting_table", 3),
+    ("crafting_guide", "buildings", "wandscape:wand", 4),
+    ("magic_station_guide", "buildings", "wandscape:spell_scroll", 5),
+    ("tavern_guide", "buildings", "minecraft:brewing_stand", 6),
     ("altar_guide", "buildings", "minecraft:enchanting_table", 7),
     ("mage_hut_guide", "buildings", "minecraft:red_bed", 8),
-    ("tavern_guide", "buildings", "minecraft:brewing_stand", 9),
-    ("shop_guide", "buildings", "minecraft:emerald", 10),
-    ("hotel_guide", "buildings", "minecraft:light_blue_bed", 11),
-    ("anomaly_guide", "buildings", "minecraft:anvil", 12),
-    ("building_scanner_guide", "buildings", "wandscape:building_scanner", 13),
+    ("node_guide", "buildings", "wandscape:element_earth", 9),
+    ("decoration_guide", "buildings", "minecraft:lantern", 10),
+    ("shop_guide", "buildings", "minecraft:emerald", 11),
+    ("service_guide", "buildings", "minecraft:light_blue_bed", 12),
+    ("relax_guide", "buildings", "minecraft:oak_stairs", 13),
+    ("atm_guide", "buildings", "minecraft:gold_ingot", 14),
+    ("anomaly_guide", "buildings", "minecraft:anvil", 15),
+    ("building_scanner_guide", "buildings", "wandscape:building_scanner", 16),
 
     # ── 管理：面板本身 + 四个子模式 ──
     ("panel_guide", "management", "minecraft:compass", 0),
@@ -166,6 +175,7 @@ TITLE_TO_DOC = {
     "管理面板": "panel_guide",
     "法师": "mages_guide",
     "游客": "tourists_guide",
+    "城镇等级": "town_level_guide",
     "施法": "casting_guide",
     "建筑": "buildings",
     "管理": "management",
@@ -182,6 +192,7 @@ TITLE_TO_DOC = {
     "Management Panel": "panel_guide",
     "Mages": "mages_guide",
     "Tourists": "tourists_guide",
+    "Town Level": "town_level_guide",
     "Casting": "casting_guide",
     "Buildings": "buildings",
     "Management": "management",

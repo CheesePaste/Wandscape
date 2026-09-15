@@ -1,5 +1,5 @@
 # Tavern
 
-The Tavern does two things: hire a mage outright — free the first time in each town, costing elements from the warehouse after that — or take on a résumé.
+The Tavern is how you recruit mages. You can hire one outright — free the first time in each town — or take on a résumé that is already waiting.
 
-The résumés come from tourist mages: one that tours until all three of its bars are full hands in an application. So a tavern's quality depends on how well you treat your tourists. A new mage joins beside the tavern it was hired at, with no proper spells yet — kit it out with gear and scrolls first. Résumés and the recruitment count belong to the town, so extra taverns will not give you more slots.
+The résumés come from tourist mages: one that tours until all three of its bars are full hands in an application, so a tavern's quality depends on how well you treat your tourists. A new mage joins beside the tavern it was hired at, with no proper spells yet — kit it out with gear and scrolls first. The slots belong to the town, so extra taverns will not give you more.

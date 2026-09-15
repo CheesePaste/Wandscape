@@ -1,0 +1,13 @@
+{
+  "name": "Relax",
+  "category": "wandscape:buildings",
+  "icon": "minecraft:oak_stairs",
+  "sortnum": 13,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "Relax buildings are where tourists sit down to recover energy: the fountain plaza, the benches, the watch tower, the windmill. A tourist whose energy has run out will only go to these, then head back out to spend again.$(br2)At any one relax building the values only count on a first visit; later visits just restore energy."
+    }
+  ]
+}
