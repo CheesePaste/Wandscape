@@ -175,4 +175,7 @@
    - 监听 `RightClickBlock` / `BreakEvent` / `EntityInteract` 触发探索奖励。
    - **防刷核心**：依靠 Minecraft 1.21.1 容器未开封状态下的 `getLootTable() != null`。开箱触发生成原版物品后，原版逻辑立即将其置 null；玩家自放箱子恒为 null。无需在磁盘维护海量坐标数据库。
    - **期望预热计算**：在服务端通过 `ExplorationRewardService` 模拟抽样 50 次，结合 `ElementMappingLoader` 提取元素价值向量并叠加大地牢高危系数，动态生成 `[min, max]` 区间常驻内存，零磁盘 I/O 负担。
+   - **元素分配一半看战利品表、一半随机撒**：原版宝箱战利品以金属（铁/铜/金）为主，纯按战利品表折算会让所有箱子都给金属。
+     `ExplorationRewardRange.rollElements` 只让**总额的一半**沿用战利品表比例，另一半按随机权重（0.5~1.5 抖动、最大余数法配平）平摊到七元素，期望仍各占 1/7；
+     总额与经验折算不受影响（经验是按元素总值算的，没变）。
    - **双轨入库**：经验直加小镇等级，元素直入小镇 `ColonyItemBank` 金库；无小镇玩家由 Action Bar 提示并保留原版物品。
