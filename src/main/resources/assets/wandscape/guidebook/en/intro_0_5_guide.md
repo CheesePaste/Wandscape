@@ -14,4 +14,4 @@ The starter tutorial only covers the Town Hall, Warehouse, and Crafting Station.
 
 《Mage Hut》 Train mage attributes, the core of town combat power
 
-《Road Sub-Mode》 Level terrain and pave roads
+《Road Mode》 Level terrain and pave roads

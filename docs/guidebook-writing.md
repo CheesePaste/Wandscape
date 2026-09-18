@@ -149,22 +149,22 @@ python gen_patchouli.py && python paginate_patchouli_json.py   # 两步都不能
 
 ---
 
-## 附二：还没写的条目（截至 2026-09-15）
+## 附二：还没写的条目（截至 2026-09-18）
 
 手册登记 **62 个条目位**，来自 55 篇 md——`buildings_guide` / `casting_guide` / `equipment_guide` /
 `custom_guide` 这 4 篇总览页各登了两处（「通用功能」+ 对应细分类），`building_scanner_guide` 登在
 「建筑」和「自定义」两处。
-其中 **11 篇是占位页**，正文只有一句「本页还没写完」，占 **15 个条目位**。zh/en 两侧完全一致。
+其中 **6 篇是占位页**，正文只有一句「本页还没写完」，占 **10 个条目位**。zh/en 两侧完全一致。
 
 | 分类 | 登记 | 缺 | 条目名（md 文件） |
 |---|---|---|---|
 | 玩法主线 | 4 | 0 | — |
 | 通用功能 | 9 | 4 | 建筑 `buildings_guide`、施法 `casting_guide`、装备与物品 `equipment_guide`、自定义 `custom_guide` |
 | 建筑 | 17 | 1 | 建筑 `buildings_guide`（总览；顺序是总览 → 建筑维护 `anomaly_guide` → 14 类建筑各一条 → 建筑扫描器 `building_scanner_guide`） |
-| 管理 | 5 | 4 | 建造子模式 `panel_build_guide`、道路子模式 `panel_road_guide`、任务子模式 `panel_tasks_guide`、设置中心 `panel_settings_guide` |
+| 管理 | 5 | 0 | — |
 | 魔法 | 12 | 1 | 施法 `casting_guide` |
 | 装备与物品 | 6 | 1 | 装备与物品 `equipment_guide` |
-| 自定义 | 5 | 4 | 自定义 `custom_guide`、导入自定义建筑 `custom_buildings_guide`、自定义建筑包 `custom_packs_guide`、修改元素价值 `custom_elements_guide`（第 5 篇「建筑扫描器」`building_scanner_guide` 与「建筑」分类共用） |
+| 自定义 | 5 | 3 | 自定义 `custom_guide`、导入自定义建筑 `custom_buildings_guide`、自定义建筑包 `custom_packs_guide`（第 5 篇「建筑扫描器」`building_scanner_guide` 与「建筑」分类共用） |
 | 联动与兼容 | 4 | 0 | — |
 
 写掉一篇就删一行；数字对不上，说明 `gen_patchouli.py` 的 `ENTRIES` 里加了新条目而这里没跟上。

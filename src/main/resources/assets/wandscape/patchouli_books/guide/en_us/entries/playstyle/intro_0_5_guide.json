@@ -11,11 +11,7 @@
     },
     {
       "type": "patchouli:text",
-      "text": "《Altar》 Revive fallen mages, crucial in the early game$(br2)《Crafting Station》 Powerful wands, exploration tools, and boss fight equipment$(br2)《Tavern》 Recruit more mages"
-    },
-    {
-      "type": "patchouli:text",
-      "text": "《Mage Hut》 Train mage attributes, the core of town combat power$(br2)《Road Sub-Mode》 Level terrain and pave roads"
+      "text": "《Altar》 Revive fallen mages, crucial in the early game$(br2)《Crafting Station》 Powerful wands, exploration tools, and boss fight equipment$(br2)《Tavern》 Recruit more mages$(br2)《Mage Hut》 Train mage attributes, the core of town combat power$(br2)$(l:wandscape:management/panel_road_guide)《Road Mode》$(/l) Level terrain and pave roads"
     }
   ]
 }
