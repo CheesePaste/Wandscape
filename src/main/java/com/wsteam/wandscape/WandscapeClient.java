@@ -56,6 +56,9 @@ import com.wsteam.wandscape.content.warehouse.client.WarehouseScreen;
 import com.wsteam.wandscape.content.warehouse.network.WarehouseDataPacket;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.model.PlayerModel;
+import net.minecraft.client.model.geom.builders.CubeDeformation;
+import net.minecraft.client.model.geom.builders.LayerDefinition;
 import net.minecraft.client.renderer.item.CompassItemPropertyFunction;
 import net.minecraft.client.renderer.item.ItemProperties;
 import net.minecraft.core.component.DataComponents;
@@ -603,6 +606,13 @@ public class WandscapeClient {
     @SubscribeEvent
     static void onRegisterLayerDefinitions(EntityRenderersEvent.RegisterLayerDefinitions event) {
         event.registerLayerDefinition(WandscapeNpcRenderer.WIZARD_HAT_LAYER, WizardHatModel::createLayer);
+        // NPC/游客主体层：几何=原版 PLAYER 层同款工厂（经典粗臂 64×64 含 overlay 第二层）。
+        // 不 bakeLayer(ModelLayers.PLAYER)——EMF(Detailed Animations 类包)会替换玩家层几何，
+        // 借层烘焙的实体会被连坐出头身 UV 错位。
+        event.registerLayerDefinition(WandscapeNpcRenderer.MAIN_LAYER,
+                () -> LayerDefinition.create(PlayerModel.createMesh(CubeDeformation.NONE, false), 64, 64));
+        event.registerLayerDefinition(TouristRenderer.MAIN_LAYER,
+                () -> LayerDefinition.create(PlayerModel.createMesh(CubeDeformation.NONE, false), 64, 64));
     }
 
     @SubscribeEvent

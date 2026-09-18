@@ -7,7 +7,7 @@ import com.wsteam.wandscape.foundation.ui.bubble.AmbientTextPools;
 import com.wsteam.wandscape.foundation.ui.bubble.SpeechBubbleRenderer;
 import com.wsteam.wandscape.content.tourist.data.Activity;
 import com.wsteam.wandscape.content.tourist.entity.TouristEntity;
-import net.minecraft.client.model.geom.ModelLayers;
+import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
@@ -27,6 +27,10 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.stream.Stream;
 public class TouristRenderer extends HumanoidMobRenderer<TouristEntity, TouristHumanoidModel> {
+
+    /** 自有主体层：几何与原版 PLAYER 层一致，避免 EMF 等玩家模型替换连坐（同 WandscapeNpcRenderer.MAIN_LAYER）。 */
+    public static final ModelLayerLocation MAIN_LAYER =
+            new ModelLayerLocation(ResourceLocation.fromNamespaceAndPath("wandscape", "tourist"), "main");
 
     private static final ResourceLocation[] TOURIST_TEXTURES = detectTextures(
             "textures/entity/tourist");
@@ -59,7 +63,7 @@ public class TouristRenderer extends HumanoidMobRenderer<TouristEntity, TouristH
     }
 
     public TouristRenderer(EntityRendererProvider.Context ctx) {
-        super(ctx, new TouristHumanoidModel(ctx.bakeLayer(ModelLayers.PLAYER)), 0.5f);
+        super(ctx, new TouristHumanoidModel(ctx.bakeLayer(MAIN_LAYER)), 0.5f);
         // 让手持物品（EAT 时手里的食物）渲染在手上
         this.addLayer(new ItemInHandLayer<>(this, ctx.getItemInHandRenderer()));
     }
