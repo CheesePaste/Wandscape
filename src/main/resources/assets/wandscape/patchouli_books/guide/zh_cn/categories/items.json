@@ -1,6 +1,6 @@
 {
   "name": "装备与物品",
-  "description": "法师的装备和玩家自己的小道具，各自怎么拿到、拿来干什么。",
+  "description": "这一页展示了模组的装备（法杖）与一些物品。对于法术卷轴等法术，见$(l:wandscape:magic)《魔法》$(/l)，对于如何制作它们，见$(l:wandscape:buildings/crafting_guide)《合成站》$(/l)。",
   "icon": "wandscape:wand",
-  "sortnum": 50
+  "sortnum": 40
 }

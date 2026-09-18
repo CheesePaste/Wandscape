@@ -2,12 +2,77 @@
   "name": "导入自定义建筑",
   "category": "wandscape:custom",
   "icon": "minecraft:scaffolding",
-  "sortnum": 1,
+  "sortnum": 2,
   "read_by_default": true,
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "$(italic)$(#6b5a45)本页还没写完。$()"
+      "text": "$(italic)$(#6b5a45)建议先看$(l:wandscape:custom/building_scanner_guide)建筑扫描器$(/l)$(italic)$(#6b5a45)：扫描器导出的那份文件，就是本篇要讲的东西。手写只在要批量生成、或者要精修扫描结果时更划算。$()$(br2)建筑文件放进数据包，$(#8a5a2b)/reload$() 之后它就会出现在建造面板和建造法杖的列表里。$(bold)文件名只决定它归哪个包，文件里的 $(#8a5a2b)id$()$(bold) 才是建筑的权威标识。$()"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "路径是 $(#8a5a2b)data/<命名空间>/buildings/<id>.json$()，命名空间随便取，不必叫 $(#8a5a2b)wandscape$()。要覆盖模组自带的建筑，才必须放进 $(#8a5a2b)wandscape$() 命名空间、用同一个文件名。$(br2)$(#8a5a2b)buildings/$() 下的$(bold)第一层子目录名就是建筑包$()：$(#8a5a2b)data/xxx/buildings/medieval/inn.json$() 属于 $(#8a5a2b)medieval$() 包。放在 $(#8a5a2b)buildings/$() 根下的归 $(#8a5a2b)default$() 包。详见$(l:wandscape:custom/custom_packs_guide)导入建筑包$(/l)。",
+      "title": "文件放哪里"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(bold)键  说明$()$(li)id — 建筑标识，写文件里的这个，不是文件名$(li)category — 分类，面板里归哪一栏$(li)pattern — 方块坐标，每项三个整数$(li)palette — 方块状态列表$(li)block_indices — 与 pattern 等长，指向 palette$(li)blueprint — 施工蓝图，漏了它就不进面板",
+      "title": "最小可用的一份"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(#8a5a2b)blueprint$() 是最容易漏的一项，漏了的表现是：加载日志一切正常，建造面板里却怎么都找不到这个建筑。它的内容从扫描器的导出里原样抄下来就行，两个字段分别是 $(#8a5a2b)id$()（用哪套施工逻辑）与 $(#8a5a2b)bind$()（哪些蓝图参数取建筑的哪个字段）。$(br2)$(#8a5a2b)bind$() 的取值要写成带前缀标记的字段名，形如脚本里的变量引用。自己编排这套绑定没有意义，直接把扫描器那份抄过来。",
+      "title": "蓝图这一项"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(#8a5a2b)pattern$()、$(#8a5a2b)palette$()、$(#8a5a2b)block_indices$() 搭起来才是建筑：pattern 是坐标，palette 是方块状态表，block_indices 把每个坐标指到表里的一项。三者的长度与取值范围会在加载时校验，对不上就整份文件被丢弃并留一条警告。",
+      "title": "几何三个字段"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(#8a5a2b)boundary$() 是包围盒（$(#8a5a2b)min$() 与 $(#8a5a2b)max$() 两个坐标），缺一个都会让文件解析失败。它和 pattern $(bold)不做一致性检查$()：pattern 可以落在盒外，盒内的非 pattern 空间则是建造时\"清盒\"要清理的范围。$(br2)$(#8a5a2b)block_nbt$() 存方块实体数据，生存扫描器导出时会整段剔除。旧格式里的 $(#8a5a2b)block_mapping$() 字段现在写了就直接报错，换成 palette 加 block_indices。",
+      "title": "包围盒与方块数据"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(#8a5a2b)door_offsets$() 是游客进门的候选格（数组，可写多扇）。不写的时候，游客会沿包围盒边缘往里钻——房子悬空或者埋在地下，他们就找不到入口。旧键名是单数的 $(#8a5a2b)door_offset$()，还能读，但别再用。",
+      "title": "门"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(#8a5a2b)interact_spots$() 是游客站的位置，每项三个键：$(#8a5a2b)pos$() 是相对锚点的坐标、$(#8a5a2b)action$() 是做什么、$(#8a5a2b)facing$() 是面朝哪边。$(#8a5a2b)action$() 取 $(#8a5a2b)browse$()、$(#8a5a2b)eat$()、$(#8a5a2b)bathe$()、$(#8a5a2b)view$()、$(#8a5a2b)pay$()、$(#8a5a2b)read$()、$(#8a5a2b)take$()、$(#8a5a2b)rest$()、$(#8a5a2b)withdraw$() 之一；$(#8a5a2b)facing$() 取 $(#8a5a2b)north$()、$(#8a5a2b)east$()、$(#8a5a2b)south$()、$(#8a5a2b)west$() 之一。写错这两个$(bold)不会报错$()，会被静默改成 $(#8a5a2b)browse$() 与 $(#8a5a2b)south$()。",
+      "title": "交互位"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "一个建筑可以有多个交互位，同时能接待的游客数就等于交互位数量，所以$(bold)一个交互位都没有的建筑对游客完全无效$()——它会照常建起来、照常被算进小镇，游客就是不来。",
+      "title": "交互位的数量"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(#8a5a2b)category$() 是一个自由字符串，不校验，但它决定建筑落在建造面板的哪一栏。市政厅、仓库、工作站、合成站、魔法工坊、酒馆、祭坛这几类在代码里另有地位，写错分类会让建筑失去那份身份。",
+      "title": "分类"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "游客相关的参数段有四组：$(#8a5a2b)shop$()、$(#8a5a2b)service$()、$(#8a5a2b)relax$()、$(#8a5a2b)atm$()，采集节点则用 $(#8a5a2b)node_config$()。$(bold)参数段和 $(#8a5a2b)category$()$(bold) 并不联动$()：决定一个建筑算不算游客目标的是它有没有写上那四组之一，$(#8a5a2b)category$() 只影响归类与排序。写了 $(#8a5a2b)shop$() 段却把 $(#8a5a2b)category$() 填成别的，游客照样来买东西。",
+      "title": "参数段"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(#8a5a2b)comfort$()、$(#8a5a2b)magic$()、$(#8a5a2b)wonder$() 是三值，决定它能满足游客哪方面的需求。$(#8a5a2b)unlock_requirement$() 是小镇等级门槛，$(bold)整个省略时不设门槛（等级 1）$()，写成空对象 $(#8a5a2b){}$() 则等于门槛 0——两者语义不同，别随手写成空对象。",
+      "title": "三值与门槛"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(li)缺 $(#8a5a2b)id$()：跳过这一条，日志里一行警告。$(li)语法或几何校验不过：整条丢弃，日志里一行警告，其余建筑照常加载。$(li)方块 id 打错：加载期不报错，建造到那一格时直接跳过，盖出来的房子会缺一块。$(li)$(#8a5a2b)blueprint$() 漏了或者 id 写错：前者是面板里找不到它，后者是建造任务展开时抛异常。这两种都不在加载期出声。",
+      "title": "写错了会怎样"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(#8a5a2b)/reload$() 一次就够：服务端重读、客户端重新同步都包含在里面，不用重启也不用重进。唯一不会自动刷新的是$(bold)已经开着的建造面板$()，退出再进一次建造页才会看到新建筑。$(br2)$(#8a5a2b)/wandscape building list$() 可以列出当前认识的建筑，$(#8a5a2b)/wandscape fill <建筑 id> <间距> <数量>$() 能直接把它摆一片出来做验证——id 打错时这条命令会把所有已知 id 回显给你。",
+      "title": "改完怎么生效"
     }
   ]
 }

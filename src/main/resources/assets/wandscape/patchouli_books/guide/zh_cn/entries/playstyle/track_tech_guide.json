@@ -1,0 +1,13 @@
+{
+  "name": "3，科技线",
+  "category": "wandscape:playstyle",
+  "icon": "minecraft:redstone",
+  "sortnum": 7,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "科技线以科技发展为主线，是一条上限很高的路线，但还没有正式开始做。$(br2)现在能碰到的只有$(l:wandscape:buildings/node_guide)《元素节点》$(/l)——元素先稳定产出来，剩下的还没做。"
+    }
+  ]
+}

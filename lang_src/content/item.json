@@ -4,8 +4,8 @@
     "en_us": "Advanced Magic Compass"
   },
   "item.wandscape.advanced_magic_compass.desc": {
-    "zh_cn": "指针始终指着本殖民地的市政厅，并且在物品提示里显示市政厅的坐标。",
-    "en_us": "Its needle always points at your colony's town hall, and its tooltip also shows the town hall's coordinates."
+    "zh_cn": "指针始终指着本镇的市政厅，并且在物品提示里显示市政厅的坐标。",
+    "en_us": "Its needle always points at your town hall, and its tooltip also shows the town hall's coordinates."
   },
   "item.wandscape.compass.tooltip.coords": {
     "zh_cn": "市政厅坐标: %s, %s, %s",
@@ -13,7 +13,7 @@
   },
   "item.wandscape.compass.tooltip.points_to_town_hall": {
     "zh_cn": "始终指向城镇市政厅的位置",
-    "en_us": "Always points toward your colony's town hall"
+    "en_us": "Always points toward your town hall"
   },
   "item.wandscape.compass.tooltip.right_click_tp": {
     "zh_cn": "右键传送到市政厅位置",
@@ -52,28 +52,28 @@
     "en_us": "Hostile Wand"
   },
   "item.wandscape.hostile_wand.desc": {
-    "zh_cn": "对着生物右键，你殖民地的法师就会集中火力打它。再右键一次或者目标死亡就会解除，右键另一个生物则把目标转移过去。",
-    "en_us": "Right-click a creature and your colony's mages will focus their fire on it. Right-click it again, or let it die, to clear the order; right-clicking another creature moves the focus there."
+    "zh_cn": "对着生物右键，你小镇的法师就会集中火力打它。再右键一次或者目标死亡就会解除，右键另一个生物则把目标转移过去。",
+    "en_us": "Right-click a creature and your town's mages will focus their fire on it. Right-click it again, or let it die, to clear the order; right-clicking another creature moves the focus there."
   },
   "item.wandscape.hostile_wand.tooltip": {
-    "zh_cn": "右键生物：本殖民地法师集火它（再次右键/目标死亡解除，右键另一生物转移）",
-    "en_us": "Right-click a creature: colony mages focus it (right-click again / target death clears; right-click another transfers)"
+    "zh_cn": "右键生物：本镇法师集火它（再次右键/目标死亡解除，右键另一生物转移）",
+    "en_us": "Right-click a creature: town mages focus it (right-click again / target death clears; right-click another transfers)"
   },
   "item.wandscape.magic_compass": {
     "zh_cn": "魔法指南针",
     "en_us": "Magic Compass"
   },
   "item.wandscape.magic_compass.desc": {
-    "zh_cn": "指针始终指着本殖民地的市政厅。",
-    "en_us": "Its needle always points at your colony's town hall."
+    "zh_cn": "指针始终指着本镇的市政厅。",
+    "en_us": "Its needle always points at your town hall."
   },
   "item.wandscape.oath_ring": {
     "zh_cn": "低级盟誓戒指",
     "en_us": "Oath Ring"
   },
   "item.wandscape.oath_ring.desc": {
-    "zh_cn": "可以把本殖民地的一名法师收进戒指里随身带着走。按住 shift 右键法师把他存进去，之后右键方块或者空气把他放出来。这一档能存取 1 名法师。",
-    "en_us": "Stores a mage of your own colony inside the ring so you can carry them around. Shift+right-click a mage to store them, then right-click a block or the air to release them. This tier holds 1 mage."
+    "zh_cn": "可以把本镇的一名法师收进戒指里随身带着走。按住 shift 右键法师把他存进去，之后右键方块或者空气把他放出来。这一档能存取 1 名法师。",
+    "en_us": "Stores a mage of your own town inside the ring so you can carry them around. Shift+right-click a mage to store them, then right-click a block or the air to release them. This tier holds 1 mage."
   },
   "item.wandscape.oath_ring.tooltip": {
     "zh_cn": "已存法师：%s/%s",
@@ -84,16 +84,16 @@
     "en_us": "Oath Ring (High)"
   },
   "item.wandscape.oath_ring_high.desc": {
-    "zh_cn": "可以把本殖民地的一名法师收进戒指里随身带着走。按住 shift 右键法师把他存进去，之后右键方块或者空气把他放出来。这一档能存取 4 名法师。",
-    "en_us": "Stores a mage of your own colony inside the ring so you can carry them around. Shift+right-click a mage to store them, then right-click a block or the air to release them. This tier holds 4 mages."
+    "zh_cn": "可以把本镇的一名法师收进戒指里随身带着走。按住 shift 右键法师把他存进去，之后右键方块或者空气把他放出来。这一档能存取 4 名法师。",
+    "en_us": "Stores a mage of your own town inside the ring so you can carry them around. Shift+right-click a mage to store them, then right-click a block or the air to release them. This tier holds 4 mages."
   },
   "item.wandscape.oath_ring_mid": {
     "zh_cn": "中级盟誓戒指",
     "en_us": "Oath Ring (Mid)"
   },
   "item.wandscape.oath_ring_mid.desc": {
-    "zh_cn": "可以把本殖民地的一名法师收进戒指里随身带着走。按住 shift 右键法师把他存进去，之后右键方块或者空气把他放出来。这一档能存取 2 名法师。",
-    "en_us": "Stores a mage of your own colony inside the ring so you can carry them around. Shift+right-click a mage to store them, then right-click a block or the air to release them. This tier holds 2 mages."
+    "zh_cn": "可以把本镇的一名法师收进戒指里随身带着走。按住 shift 右键法师把他存进去，之后右键方块或者空气把他放出来。这一档能存取 2 名法师。",
+    "en_us": "Stores a mage of your own town inside the ring so you can carry them around. Shift+right-click a mage to store them, then right-click a block or the air to release them. This tier holds 2 mages."
   },
   "item.wandscape.omni_scepter": {
     "zh_cn": "万能权杖",
@@ -192,8 +192,8 @@
     "en_us": "Ultimate Magic Compass"
   },
   "item.wandscape.ultimate_magic_compass.desc": {
-    "zh_cn": "指针始终指着本殖民地的市政厅，右键还能直接传送到那里。",
-    "en_us": "Its needle always points at your colony's town hall, and right-clicking teleports you straight there."
+    "zh_cn": "指针始终指着本镇的市政厅，右键还能直接传送到那里。",
+    "en_us": "Its needle always points at your town hall, and right-clicking teleports you straight there."
   },
   "item.wandscape.wand": {
     "zh_cn": "法杖",
@@ -212,12 +212,12 @@
     "en_us": "Warehouse Terminal"
   },
   "item.wandscape.warehouse_terminal.desc": {
-    "zh_cn": "右键就能打开本殖民地的仓库面板。放进 Curios 的手饰槽后，还可以用快捷键打开。",
-    "en_us": "Right-click to open your colony's warehouse panel. Put it in a Curios hands slot and you can also open it with a hotkey."
+    "zh_cn": "右键就能打开本镇的仓库面板。放进 Curios 的手饰槽后，还可以用快捷键打开。",
+    "en_us": "Right-click to open your town's warehouse panel. Put it in a Curios hands slot and you can also open it with a hotkey."
   },
   "item.wandscape.warehouse_terminal.tooltip": {
-    "zh_cn": "右键打开本殖民地的仓库面板",
-    "en_us": "Right-click to open your colony's warehouse panel"
+    "zh_cn": "右键打开本镇的仓库面板",
+    "en_us": "Right-click to open your town's warehouse panel"
   },
   "item.wandscape.warehouse_terminal.tooltip_curios": {
     "zh_cn": "可放入 Curios 手饰槽；穿戴后可使用快捷键打开",

@@ -7,15 +7,11 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "管理面板是模组交互的核心。$(br2)打开管理面板:管理面板默认使用V键打开，进入后状态如下图。"
+      "text": "管理面板是模组交互的核心。$(br2)打开管理面板:默认按 V 打开。$(br2)基础操作:$(br2)交互:对准法师或建筑，会出现白色的包围盒，此时可以右键交互，打开法师或建筑的详情页。"
     },
     {
       "type": "patchouli:text",
-      "text": "基础操作:$(br2)交互:对准法师或建筑，会出现白色的包围盒，此时可以右键交互，打开法师或建筑的详情页。$(br2)切换模式:按1，2，3，4等数字键，可以进入左侧的子模式:$(br2)1→$(l:wandscape:management/panel_build_guide)《建造子模式》$(/l):负责建造建筑"
-    },
-    {
-      "type": "patchouli:text",
-      "text": "2→$(l:wandscape:management/panel_road_guide)《道路子模式》$(/l):负责铺设道路与地形改造$(br2)3→$(l:wandscape:management/panel_tasks_guide)《任务大厅》$(/l):负责管理任务与法师状态$(br2)4→$(l:wandscape:management/panel_settings_guide)《设置中心》$(/l):负责修改模组设置"
+      "text": "切换模式:按1，2，3，4等数字键，可以进入左侧的子模式:$(br2)1→$(l:wandscape:management/panel_build_guide)《建造子模式》$(/l):负责建造建筑$(br2)2→$(l:wandscape:management/panel_road_guide)《道路子模式》$(/l):负责铺设道路与地形改造$(br2)3→$(l:wandscape:management/panel_tasks_guide)《任务大厅》$(/l):负责管理任务与法师状态$(br2)4→$(l:wandscape:management/panel_settings_guide)《设置中心》$(/l):负责修改模组设置"
     }
   ]
 }

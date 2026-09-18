@@ -2,12 +2,12 @@
   "name": "Meteor",
   "category": "wandscape:magic",
   "icon": "minecraft:fire_charge",
-  "sortnum": 3,
+  "sortnum": 4,
   "read_by_default": true,
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "$(italic)$(#6b5a45)Crafted at the Magic Workshop; needs colony level 1.$()$(br2)Calls down six meteors one by one, dealing area damage to enemies near the impact points."
+      "text": "$(italic)$(#6b5a45)Crafted at the Magic Workshop; needs town level 1.$()$(br2)Calls down six meteors one by one, dealing area damage to enemies near the impact points."
     }
   ]
 }

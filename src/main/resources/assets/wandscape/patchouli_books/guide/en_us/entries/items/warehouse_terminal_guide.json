@@ -2,12 +2,12 @@
   "name": "Warehouse Terminal",
   "category": "wandscape:items",
   "icon": "wandscape:warehouse_terminal",
-  "sortnum": 5,
+  "sortnum": 4,
   "read_by_default": true,
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "$(italic)$(#6b5a45)Crafted at the Crafting Station; needs colony level 20.$()$(br2)Right-click while holding the warehouse terminal to open your colony's warehouse panel without walking back to it. Put it in a Curios hands slot and you can open it with a hotkey instead."
+      "text": "$(italic)$(#6b5a45)Crafted at the Crafting Station; needs town level 20.$()$(br2)Right-click while holding the warehouse terminal to open your town's warehouse panel without walking back to it. Put it in a Curios hands slot and you can open it with a hotkey instead."
     }
   ]
 }

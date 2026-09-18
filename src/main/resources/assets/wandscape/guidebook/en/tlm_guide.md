@@ -2,4 +2,4 @@
 
 > Requires the Touhou Little Maid mod. Tame a maid, turn on Home mode, then switch her task to "Town Work".
 
-As long as the maid's owner is the founder of your colony, she can work as a colony worker, taking town tasks and walking to the work site just like a mage, with her output going to the warehouse as usual. In the task panel she lines up with the mages under the "[Town Worker]" tag. She does not cast spells.
+As long as the maid's owner is the founder of your town, she can work as a town worker, taking town tasks and walking to the work site just like a mage, with her output going to the warehouse as usual. In the task panel she lines up with the mages under the "[Town Worker]" tag. She does not cast spells.

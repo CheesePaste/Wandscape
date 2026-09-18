@@ -112,7 +112,7 @@
     "zh_cn": "[魔法小镇] 仅玩家可执行该魔法测试命令"
   },
   "message.wandscape.command.npc_list_header": {
-    "en_us": "[Wandscape] Colony %s mages (%s, %d total):",
+    "en_us": "[Wandscape] Town %s mages (%s, %d total):",
     "zh_cn": "[魔法小镇] 小镇 %s 法师 (%s，共 %d 名)："
   },
   "message.wandscape.command.tavern_list_failed": {
@@ -140,7 +140,7 @@
     "zh_cn": "[魔法小镇] 招募失败：元素不足（首次免费，之后每种元素 %d）或系统未就绪"
   },
   "message.wandscape.command.tavern_recruited": {
-    "en_us": "[Wandscape] Recruited mage (%s) to colony %s",
+    "en_us": "[Wandscape] Recruited mage (%s) to town %s",
     "zh_cn": "[魔法小镇] 已招募法师（%s），小镇 %s"
   },
   "message.wandscape.command.tavern_resume_added": {
@@ -192,8 +192,8 @@
     "zh_cn": "未录入（未找到小镇）"
   },
   "message.wandscape.compass.no_colony": {
-    "en_us": "You have no colony — the compass cannot be used",
-    "zh_cn": "你没有创建殖民地，无法使用指南针"
+    "en_us": "You have no town — the compass cannot be used",
+    "zh_cn": "你没有创建小镇，无法使用指南针"
   },
   "message.wandscape.compass.no_spot": {
     "en_us": "No safe spot near the town hall",
@@ -248,7 +248,7 @@
     "zh_cn": "[魔法小镇] %s 已经达到基础上限。"
   },
   "message.wandscape.mage_hut.max_level": {
-    "en_us": "[Wandscape] The mage is already at the colony level (%d).",
+    "en_us": "[Wandscape] The mage is already at the town level (%d).",
     "zh_cn": "[魔法小镇] 法师已达小镇等级上限（%d）。"
   },
   "message.wandscape.mage_hut.no_bank": {
@@ -256,11 +256,11 @@
     "zh_cn": "[魔法小镇] 仓库不可用。"
   },
   "message.wandscape.mage_hut.no_colony": {
-    "en_us": "[Wandscape] This mage hut is not assigned to any colony.",
+    "en_us": "[Wandscape] This mage hut is not assigned to any town.",
     "zh_cn": "[魔法小镇] 这座法师小屋尚未归属任何小镇。"
   },
   "message.wandscape.mage_hut.not_colony_mage": {
-    "en_us": "[Wandscape] That mage is not part of this colony.",
+    "en_us": "[Wandscape] That mage is not part of this town.",
     "zh_cn": "[魔法小镇] 那位法师不属于这个小镇。"
   },
   "message.wandscape.mage_hut.occupied": {
@@ -324,16 +324,16 @@
     "zh_cn": "已存法师超出本戒指档位可存取范围（本档位只能存取前 %s 个法师）"
   },
   "message.wandscape.ring.no_colony": {
-    "en_us": "You have no colony — the oath ring cannot be used",
-    "zh_cn": "你没有创建殖民地，无法使用盟誓戒指"
+    "en_us": "You have no town — the oath ring cannot be used",
+    "zh_cn": "你没有创建小镇，无法使用盟誓戒指"
   },
   "message.wandscape.ring.no_spot": {
     "en_us": "No safe place nearby to release the mage",
     "zh_cn": "附近没有可放出的安全位置"
   },
   "message.wandscape.ring.other_colony": {
-    "en_us": "Only mages of your own colony can be stored",
-    "zh_cn": "只能存入属于你自己殖民地的法师"
+    "en_us": "Only mages of your own town can be stored",
+    "zh_cn": "只能存入属于你自己小镇的法师"
   },
   "message.wandscape.ring.release.success": {
     "en_us": "Released mage %s",
@@ -360,7 +360,7 @@
     "zh_cn": "§c道路包含禁用方块：%s"
   },
   "message.wandscape.road.place_failed_no_colony": {
-    "en_us": "§c[Wandscape] Please establish a colony first (place Town Hall and name it)",
+    "en_us": "§c[Wandscape] Please establish a town first (place Town Hall and name it)",
     "zh_cn": "§c[魔法小镇] 请先创建小镇（先放置市政厅并命名）"
   },
   "message.wandscape.road.withdraw.failed": {
@@ -456,12 +456,12 @@
     "zh_cn": "强制仇恨已转移到生物 %s"
   },
   "message.wandscape.scepter.no_colony": {
-    "en_us": "You have no colony — the wand cannot be used",
-    "zh_cn": "你没有创建殖民地，无法使用权杖"
+    "en_us": "You have no town — the wand cannot be used",
+    "zh_cn": "你没有创建小镇，无法使用权杖"
   },
   "message.wandscape.scepter.other_colony": {
-    "en_us": "Only mages of your own colony can be commanded",
-    "zh_cn": "只能对你自己殖民地的法师使用权杖"
+    "en_us": "Only mages of your own town can be commanded",
+    "zh_cn": "只能对你自己小镇的法师使用权杖"
   },
   "message.wandscape.scepter.peace_off": {
     "en_us": "Mage %s is no longer at peace",
@@ -496,7 +496,7 @@
     "zh_cn": "[魔法小镇] 无效的法师选择"
   },
   "message.wandscape.tavern.no_colony": {
-    "en_us": "[Wandscape] This tavern is not assigned to any colony.",
+    "en_us": "[Wandscape] This tavern is not assigned to any town.",
     "zh_cn": "[魔法小镇] 该酒馆尚未关联到任何小镇"
   },
   "message.wandscape.tavern.recruit_failed": {
@@ -568,8 +568,8 @@
     "zh_cn": "仓库容量不足"
   },
   "message.wandscape.warehouse_terminal.no_colony": {
-    "en_us": "You have no colony — the warehouse cannot be opened",
-    "zh_cn": "你没有创建殖民地，无法打开仓库"
+    "en_us": "You have no town — the warehouse cannot be opened",
+    "zh_cn": "你没有创建小镇，无法打开仓库"
   },
   "message.wandscape.warehouse_terminal.not_equipped": {
     "en_us": "Warehouse Terminal is not equipped or held",

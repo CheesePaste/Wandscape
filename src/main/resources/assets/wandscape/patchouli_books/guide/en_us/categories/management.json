@@ -1,6 +1,6 @@
 {
   "name": "Management",
-  "description": "The management panel itself, plus its four sub-modes: building, roads, tasks and settings.",
+  "description": "The mod's management system and how to operate it. For individual buildings, see $(l:wandscape:buildings)《Buildings》$(/l).",
   "icon": "minecraft:lever",
-  "sortnum": 30
+  "sortnum": 20
 }

@@ -2,12 +2,12 @@
   "name": "防御强化",
   "category": "wandscape:magic",
   "icon": "minecraft:shield",
-  "sortnum": 8,
+  "sortnum": 9,
   "read_by_default": true,
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "$(italic)$(#6b5a45)在魔法工坊制作卷轴，需要殖民地达到 10 级。$()$(br2)为自身施加防御强化：护甲 +4、魔力强化 I（魔法伤害 +20%）与迅捷 I，持续 15 秒。"
+      "text": "$(italic)$(#6b5a45)在魔法工坊制作卷轴，需要小镇达到 10 级。$()$(br2)为自身施加防御强化：护甲 +4、魔力强化 I（魔法伤害 +20%）与迅捷 I，持续 15 秒。"
     }
   ]
 }

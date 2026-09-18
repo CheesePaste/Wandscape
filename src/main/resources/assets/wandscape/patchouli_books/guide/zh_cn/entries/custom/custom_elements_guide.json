@@ -1,13 +1,58 @@
 {
-  "name": "修改元素价值",
+  "name": "导入元素定价",
   "category": "wandscape:custom",
   "icon": "wandscape:element_earth",
-  "sortnum": 3,
+  "sortnum": 4,
   "read_by_default": true,
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "$(italic)$(#6b5a45)本页还没写完。$()"
+      "text": "$(italic)$(#6b5a45)文件放进数据包的 $(#8a5a2b)data/<命名空间>/element_mappings/$()$(italic)$(#6b5a45)，$(#8a5a2b)/reload$()$(italic)$(#6b5a45) 生效。$(bold)文件名在这里不起作用$()$(italic)$(#6b5a45)，真正定价的是文件里的 $(#8a5a2b)block$()$(italic)$(#6b5a45)、$(#8a5a2b)item$()$(italic)$(#6b5a45) 与 $(#8a5a2b)build_cost$()$(italic)$(#6b5a45)。$()$(br2)元素映射是\"这件东西值多少元素\"的唯一账本。合成站做它要花多少元素、工作站分解它出多少、商店按什么价卖它、探索宝箱里翻出它算多少钱、乃至它算不算\"要料的建材\"——全都查这一张表。"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(bold)键  说明$()$(li)block — 定价一个方块，写方块注册 id$(li)item — 定价一个物品，写物品注册 id$(li)build_cost — 元素到整数的映射，键取七元素之一$(li)disabled — 布尔值，把它排除出元素经济",
+      "title": "字段"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(#8a5a2b)block$() 与 $(#8a5a2b)item$() 写一个就够，两个都不写等于这份文件没有意义。写成方块时，它的物品形态跟着一起有价；反过来只写 $(#8a5a2b)item$()，方块形态查不到它。",
+      "title": "block 与 item"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(#8a5a2b)build_cost$() 是这个物品的$(bold)标准价值$()，不是\"放它要花多少材料\"。向它要价的地方有好几处：工作站的合成任务按它扣元素；分解一件物品的产出是价值除以分解除数（除数可在设置中心调）；商店在它的基础上加利润卖出；探索宝箱按它给整张战利品表估价；扫描器按它估一块地值多少元素。",
+      "title": "值被谁用"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "建筑和道路只向仓库申请$(bold)有映射$()的方块投料。一个方块没有映射，它永远不会被申请——所以把物品 id 打错一个字母，不会有任何报错，只会让那个方块变成白拿的料，建筑照样盖起来。这是这张表最容易吃亏的地方。",
+      "title": "没有映射就是免费"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(#8a5a2b)disabled$() 不只是\"不参与经济\"：任何含有这个方块的建筑或道路会被$(bold)直接拒绝放置$()——一条\"禁用不能变成免费\"的硬规矩。目录里那个 $(#8a5a2b)disabled/$() 子文件夹没有任何特殊含义，扫描是递归的，里面的文件照常加载；真正的开关只有这个字段。",
+      "title": "disabled 有牙齿"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "要改掉模组已经写好的某个价格，你的文件必须放在 $(bold)$(#8a5a2b)wandscape$()$(bold) 命名空间、用同一个文件名$()，靠数据包优先级盖过去。另起一个文件名不管用：注册的主键是剥掉命名空间后的文件名，撞车时模组自己那份优先，你的文件会被整个丢掉；即便绕过撞车同时留下两份，查表取的是哈希顺序里的第一条，谁生效不确定。",
+      "title": "覆盖模组自带的映射"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "写错一个元素键（比如把 $(#8a5a2b)metal$() 写成 $(#8a5a2b)matel$()），整份文件会解析失败并被丢弃，日志里留一条警告——只有这一种错会出声。",
+      "title": "写错一个键的代价"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "模组里另有一份 $(#8a5a2b)element_seeds.json$()，是一张约四百条的手写基准价目表。它$(bold)只$()是一条开发命令的输入，游戏里不参与定价，也没法被数据包覆盖。",
+      "title": "元素种子"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(#8a5a2b)/wandscape test generate_element_mappings$() 会拿种子作基准、按原版配方反推出一整批映射文件，可以用 $(#8a5a2b)--dry-run$() 先看、$(#8a5a2b)--force$() 强制覆盖已经存在的手写文件。$(br2)注意它写的是$(bold)开发者的源码树$()，只有在自己电脑上改模组数据时才用得上，别在服务器上跑。",
+      "title": "生成命令"
     }
   ]
 }

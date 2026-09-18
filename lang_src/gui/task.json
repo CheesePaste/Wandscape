@@ -80,8 +80,8 @@
     "en_us": "Loop running: an element node has posted a node:gather task and mages are gathering."
   },
   "gui.wandscape.task.deps.loop_blocked": {
-    "zh_cn": "采集阻塞: 当前殖民地缺少对应元素节点建筑，或所有法师均忙碌中。",
-    "en_us": "Gathering blocked: the colony has no matching element node, or every mage is busy."
+    "zh_cn": "采集阻塞: 当前小镇缺少对应元素节点建筑，或所有法师均忙碌中。",
+    "en_us": "Gathering blocked: the town has no matching element node, or every mage is busy."
   },
   "gui.wandscape.task.deps.loop_ready": {
     "zh_cn": "物资已就绪: 所需元素已全部齐备，排队就绪即可自动开工。",

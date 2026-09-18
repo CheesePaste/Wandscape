@@ -1,6 +1,6 @@
 {
   "name": "玩法主线",
-  "description": "模组的几条玩法路线，以及先读哪几篇的顺序。",
+  "description": "这一部分展示了模组的大致官方游玩路线。对于具体内容，见各功能分类。",
   "icon": "minecraft:compass",
   "sortnum": 0
 }

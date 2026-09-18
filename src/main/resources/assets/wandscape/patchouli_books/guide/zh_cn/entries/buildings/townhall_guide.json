@@ -7,7 +7,7 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "右键一座还不属于任何小镇的市政厅，给它起个名字，殖民地就算立起来了，别的建筑也才能开工；一个玩家只能有一个小镇。$(br2)面板里能改小镇名。游客与法师用哪套命名风格、要不要继续放游客进城，在$(l:wandscape:management/panel_settings_guide)设置中心$(/l)的「本镇」页里改——那里动的只是你自己这座镇。等级见$(l:wandscape:system/town_level_guide)城镇等级$(/l)。"
+      "text": "右键一座还不属于任何小镇的市政厅，给它起个名字，小镇就算立起来了，别的建筑也才能开工；一个玩家只能有一个小镇。$(br2)面板里能改小镇名。游客与法师用哪套命名风格、要不要继续放游客进城，在$(l:wandscape:management/panel_settings_guide)设置中心$(/l)的「本镇」页里改——那里动的只是你自己这座镇。等级见$(l:wandscape:playstyle/element_level_guide)元素与城镇等级$(/l)。"
     }
   ]
 }

@@ -1,0 +1,78 @@
+{
+  "name": "导入合成配方",
+  "category": "wandscape:custom",
+  "icon": "minecraft:crafting_table",
+  "sortnum": 5,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "$(italic)$(#6b5a45)文件放进数据包的 $(#8a5a2b)data/<命名空间>/craft_recipes/$()$(italic)$(#6b5a45)，$(#8a5a2b)/reload$()$(italic)$(#6b5a45) 之后重开合成站就生效。$(bold)文件名就是配方 id$()$(italic)$(#6b5a45)，里面的 $(#8a5a2b)id$()$(italic)$(#6b5a45) 字段没人读，改文件名等于改 id。$()$(br2)合成站里的法杖与道具、魔法工坊里的卷轴，背后各是一份 $(#8a5a2b)craft_recipes$() 文件。这些配方不吃原版配方那套 $(#8a5a2b)pattern$()/$(#8a5a2b)key$()，它只写\"要多少元素、出什么东西\"，剩下的由法师在小镇上做。"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "标准数据包路径 $(#8a5a2b)data/<命名空间>/craft_recipes/<id>.json$()，$(#8a5a2b)/reload$() 生效。$(br2)想覆盖模组自带的配方，文件必须放在 $(bold)$(#8a5a2b)wandscape$()$(bold) 命名空间、用同一个文件名$()：注册表的主键是剥掉命名空间后的文件名，跨命名空间重名时模组自己的那份优先，别的命名空间会被静默丢掉。",
+      "title": "文件放哪里"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(bold)键  说明$()$(li)type — $(#8a5a2b)wand$() / $(#8a5a2b)spell$() / $(#8a5a2b)misc$() / $(#8a5a2b)potion$()，缺省是 $(#8a5a2b)wand$()$(li)output — 产物，至少要有 $(#8a5a2b)item$()$(li)cost — 元素到整数的映射$(li)unlock_requirement — 只认 $(#8a5a2b)min_colony_level$()，默认 1$(li)craft_station — 只用来在 JEI 上标\"在哪做\"$(li)display_name — $(bold)没有任何代码读它$()",
+      "title": "通用字段"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(#8a5a2b)type$() 写错一个字，这份文件会被$(bold)静默丢弃$()——不报错、不警告。$(#8a5a2b)cost$() 里写了不存在的元素键，则整份文件解析失败并在日志里留一条警告。",
+      "title": "写错了会怎样"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "配方行显示的既不是 $(#8a5a2b)display_name$() 也不是文件名，而是语言键 $(#8a5a2b)craft_recipe.wandscape.<配方 id>$()；查不到这个键时退回$(bold)产物物品自己的名字$()。所以一份没配语言键的法杖配方，在合成站里一律显示成\"法杖\"。",
+      "title": "界面上的名字"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "语言文件属于 $(#8a5a2b)assets$() 侧，$(bold)纯数据包提供不了$()——要自定义名字，数据包得同时带上 $(#8a5a2b)assets/<命名空间>/lang/zh_cn.json$() 这类文件，写进那个键。",
+      "title": "语言文件在哪"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(#8a5a2b)output.item$() 必须是 $(#8a5a2b)wandscape:wand$()，$(#8a5a2b)wand_color$() 写 $(#8a5a2b)#RRGGBB$()，属性写在 $(#8a5a2b)attributes$() 数组里，每项三个键：$(#8a5a2b)type$()、$(#8a5a2b)operation$()、$(#8a5a2b)amount$()。",
+      "title": "法杖"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(li)$(#8a5a2b)type$() 取九项之一：$(#8a5a2b)max_hp$()、$(#8a5a2b)move_speed$()、$(#8a5a2b)spell_power$()、$(#8a5a2b)work_speed$()、$(#8a5a2b)spell_speed$()、$(#8a5a2b)armor_value$()、$(#8a5a2b)max_mana$()、$(#8a5a2b)health_regen$()、$(#8a5a2b)mana_regen$()。$(li)$(#8a5a2b)operation$() 取 $(#8a5a2b)addition$()（直接加绝对值）或 $(#8a5a2b)multiply_base$()（按基础值的百分比加）；$(#8a5a2b)amount$() 因此有时是 $(#8a5a2b)40.0$()，有时是 $(#8a5a2b)0.2$()，写负数也合法。",
+      "title": "属性怎么写"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "法杖没有品阶或者职业字段，一支杖的\"身份\"就是这组属性加颜色。",
+      "title": "法杖的身份"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "属性$(bold)只对拿着这支杖的法师生效$()，玩家自己拿在手里没有任何加成；而 $(#8a5a2b)attributes$() 里写错一个枚举值，掉的是创造模式物品栏里的预设变体，$(bold)配方本身照旧能合成$()——结果是一支合得出来、却一条加成都没有的杖。",
+      "title": "容易踩的两点"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(#8a5a2b)type$() 写 $(#8a5a2b)spell$()，$(#8a5a2b)output.item$() 用 $(#8a5a2b)wandscape:spell_scroll$()，再用 $(#8a5a2b)output.magic_id$() 指向要绑定的魔法。默认的 $(#8a5a2b)craft_station$() 是 $(#8a5a2b)magic_station$()。",
+      "title": "卷轴"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(#8a5a2b)output.magic_id$() 不写的话，$(bold)默认取配方自己的文件名$()，而不是某个魔法 id——一份叫 $(#8a5a2b)scroll_heal.json$() 的配方不写它，绑到的会是名为 $(#8a5a2b)scroll_heal$() 的魔法，而那多半不存在。装载时没有任何校验，写错的代价是一张点了没反应、提示\"未知数据\"的卷轴。",
+      "title": "卷轴绑定的默认值"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(#8a5a2b)type$() 写 $(#8a5a2b)misc$()，$(#8a5a2b)output.item$() 填任意物品 id，一次产出一件，数量由玩家在界面里自己调。这一类型没有 $(#8a5a2b)count$()、$(#8a5a2b)nbt$() 之类的字段可写。$(br2)另有一个 $(#8a5a2b)potion$() 类型，支持带 NBT 的产物与额外原料，模组自己目前一份都没用到。",
+      "title": "道具"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "写在 $(#8a5a2b)cost$() 里的是$(bold)单价$()。合成时实付会乘上服务器配置的元素合成倍率（默认 1.0，可在设置中心调），然后向上取整；玩家在界面里调整产出数量，成本也按数量线性放大。调平衡时记着这一层，别以为 JSON 里的一千就是玩家付的一千。",
+      "title": "成本会被倍率放大"
+    }
+  ]
+}

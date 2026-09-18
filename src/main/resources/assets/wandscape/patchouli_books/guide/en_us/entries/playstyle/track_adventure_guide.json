@@ -1,0 +1,21 @@
+{
+  "name": "2. Adventure Track",
+  "category": "wandscape:playstyle",
+  "icon": "minecraft:iron_sword",
+  "sortnum": 6,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "The adventure track is about exploring the world. It is playable already, and more of it is still being added.$(br2)Adventure Track Goals:"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Take your mages along when you head out and open the loot chests in the wild→you gain experience and elements, and the town level rises with them$(br2)Spend those on training your mages and making gear and gadgets→a stronger crew, and the reach for more dangerous places"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Recommended reading:$(br2)$(l:wandscape:magic/mages_guide)《Mages》$(/l)$(br2)$(l:wandscape:magic/casting_guide)《Casting》$(/l)$(br2)Buildings:$(br2)$(l:wandscape:buildings/mage_hut_guide)《Mage Hut》$(/l)$(br2)$(l:wandscape:buildings/tavern_guide)《Tavern》$(/l)$(br2)Items:$(br2)$(l:wandscape:items/wand_guide)《Wand》$(/l)$(br2)$(l:wandscape:items/oath_ring_guide)《Oath Ring》$(/l)$(br2)$(l:wandscape:items/scepter_guide)《Scepters》$(/l)"
+    }
+  ]
+}

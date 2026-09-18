@@ -12,7 +12,7 @@
 
 ```
 内容唯一来源（作者只改这里）
-    src/main/resources/assets/wandscape/guidebook/{zh_cn,en}/*.md     66 篇 × 2 语（其中 51 篇编进手册，其余 15 篇已标注弃用、只兜底屏可读）
+    src/main/resources/assets/wandscape/guidebook/{zh_cn,en}/*.md     76 篇 × 2 语（其中 61 篇编进手册，其余 15 篇已标注弃用、只兜底屏可读）
                     │
                     │  gen_patchouli.py（本机跑，生成物提交进仓库）
                     ▼
@@ -35,7 +35,7 @@
 和现在的实现对不上。它们**没有编进手册**，开头一律标了「本页已弃用」。
 
 - **写新内容时不要读它们**——照抄会把过时的机制带进新手册。要写某一页，先读代码和 `data/` 里的实际数据。
-- **方向是反的**：先把手册（即编进手册的那 50 篇 md）写好，将来再**按手册内容反向更新**这些旧文档，
+- **方向是反的**：先把手册（即编进手册的那 61 篇 md）写好，将来再**按手册内容反向更新**这些旧文档，
   而不是拿旧文档去填手册。
 - 它们目前仍留在 `guidebook/` 里，只是因为没装 Patchouli 时兜底屏还能读到；**不要据此认为它们是可信来源**。
 - 手册里若还有链接指向这些文档，生成器会打印「链接无帕秋莉等价形式」——那是在提醒你目标已不在手册里。
@@ -65,13 +65,14 @@ python gen_patchouli.py textures --force   # 强制覆盖书皮
 
 | 分类 id | 中文名 | 条目（md 文件名去掉 `_guide`） |
 |---|---|---|
-| `contents` | 指南 | index |
-| `start` | 新手入门 | intro_0 / intro_0_5 |
-| `playstyle` | 玩法主线 | track_tourist |
-| `system` | 通用功能 | economy / panel / mages / tourists |
-| `magic` | 魔法 | magic_beam / magic_meteor / magic_desperation / magic_enfeeble_field / magic_conversion / magic_petrification / magic_fortification / magic_heal / magic_teleport / magic_revive |
+| `playstyle` | 玩法主线 | index / intro_0 / intro_0_5 / element_level / track_tourist / track_adventure / track_tech / track_diplomacy / tourists |
+| `buildings` | 建筑 | buildings / anomaly / townhall / warehouse / workstation / crafting / magic_station / tavern / altar / mage_hut / node / decoration / shop / service / relax / atm / building_scanner |
+| `management` | 管理 | panel / panel_build / panel_road / panel_tasks / panel_settings |
+| `magic` | 魔法 | mages / casting / advanced_casting / magic_beam / magic_meteor / magic_desperation / magic_enfeeble_field / magic_conversion / magic_petrification / magic_fortification / magic_heal / magic_teleport / magic_revive |
 | `items` | 装备与物品 | wand / oath_ring / scepter / magic_compass / warehouse_terminal |
+| `custom` | 自定义与数据包 | custom / building_scanner / custom_buildings / custom_packs / custom_elements / custom_recipes / custom_magic / custom_loot |
 | `compat` | 联动与兼容 | curios / irons_spells / goety / tlm |
+| `about` | 关于我们 | about |
 
 **条目文案怎么写**——只写「做了什么」不写能力清单、开头那行「怎么做」的写法、文风与篇幅——
 见 [guidebook-writing.md](guidebook-writing.md)。本文只负责管线与结构，不重复文风约定。
@@ -83,9 +84,11 @@ python gen_patchouli.py textures --force   # 强制覆盖书皮
 两个分类的文案都**同时存在于 md 与 lang**：md 管手册、lang（`magic.wandscape.<id>.desc` /
 `item.wandscape.<id>.desc`）管 JEI 信息页，改文案要两边一起改，管线不做同步校验。
 
-「目录页」= `contents` 分类下的 `index_guide` 条目：原 `index_guide.md` 的每节标题成为一页，节内文档链接转成帕秋莉可点击链接，点进去直接跳条目。
-首页的《魔法》《装备与物品》《联动与兼容》链到对应 **分类**（`TITLE_TO_DOC` 的值可以是分类 id，帕秋莉支持链分类），
-其余未编进手册的标题（《建筑》《关于我们》等）仍是不可点的纯文本。
+「目录页」= `playstyle` 分类下的 `index_guide` 条目（条目名「概览」）：原 `index_guide.md` 的每节标题成为一页，节内文档链接转成帕秋莉可点击链接，点进去直接跳条目。
+
+**《标题》自动接链**：正文里写成《建筑》《合成站》这样的书名号，标题只要在 `TITLE_TO_DOC` 里有键就转成可点链接。值可以是**分类 id**（帕秋莉支持链分类，《建筑》直接进分类页），也可以是条目 id（生成器补上分类前缀）。**分类描述也走同一套转换**（`CATEGORIES` 里的描述串经 `convert_inline` 处理），所以描述里同样能写《…》。
+
+**改了条目名/分类名却忘了同步 `TITLE_TO_DOC`，书名号会静默降级成纯文本，没有任何告警**——改完自查一遍：生成的 JSON 里凡是《…》都应被 `$(l:…)…$(/l)` 包住。
 
 **`compat` 分类只写玩家看得见的效果**（能做什么、要在哪里装什么、有什么前提），不写内部机制——
 正文依据是 `compat/{curios,ironspellbooks,goety,tlm}/` 的实际行为，改兼容代码后这几页要跟着复核。
@@ -113,7 +116,7 @@ python gen_patchouli.py textures --force   # 强制覆盖书皮
 | `[文字](doc.md)`、`[文字](guidebook:doc)` | `$(l:wandscape:doc)文字$(/l)` | 文档 id 与条目 id 一致 |
 | `[文字](https://…)` | `$(l:https://…)文字$(/l)` | 外部链接走系统浏览器 |
 | `[文字](action:wandscape:overview_mode)` | 降级为纯文本 + 生成警告 | 帕秋莉没有 action 协议 |
-| `### 三级标题` | 加粗一行 | 当前内容未使用 |
+| `### 三级标题` | 加粗一行（留在同一页里当小标题） | `about_guide.md` 的制作者分组 |
 
 ### 两个必须知道的帕秋莉坑
 

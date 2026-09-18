@@ -1,6 +1,6 @@
 {
   "name": "联动与兼容",
-  "description": "本模组和 Curios、铁魔法、诡厄巫法、车万女仆这些模组之间能做什么。",
+  "description": "这一页展示了模组兼容和联动的其他模组。如果出现了兼容的BUG，见$(l:wandscape:about/about_guide)《关于我们》$(/l)。",
   "icon": "minecraft:crafting_table",
-  "sortnum": 70
+  "sortnum": 60
 }

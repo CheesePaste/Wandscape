@@ -2,7 +2,7 @@
   "name": "1. Tourist Track",
   "category": "wandscape:playstyle",
   "icon": "wandscape:tourist_spawn_egg",
-  "sortnum": 3,
+  "sortnum": 4,
   "read_by_default": true,
   "pages": [
     {
@@ -15,7 +15,7 @@
     },
     {
       "type": "patchouli:text",
-      "text": "Recommended reading order:$(br2)$(l:wandscape:system/tourists_guide)《Tourists》$(/l)$(br2)《Shops》$(br2)《Service Facilities and Hotels》$(br2)《ATMs》"
+      "text": "Recommended reading order:$(br2)$(l:wandscape:playstyle/tourists_guide)《Tourists and Values》$(/l)$(br2)$(l:wandscape:buildings/shop_guide)《Shop》$(/l)$(br2)$(l:wandscape:buildings/service_guide)《Service Facilities and Hotels》$(/l)$(br2)$(l:wandscape:buildings/atm_guide)《ATM》$(/l)"
     }
   ]
 }

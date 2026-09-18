@@ -1,6 +1,6 @@
 {
   "name": "Integration & Compatibility",
-  "description": "What this mod does together with Curios, Iron's Spells, Goety and Touhou Little Maid.",
+  "description": "What this mod does together with other mods. If you run into a compatibility bug, see $(l:wandscape:about/about_guide)《About Us》$(/l).",
   "icon": "minecraft:crafting_table",
-  "sortnum": 70
+  "sortnum": 60
 }

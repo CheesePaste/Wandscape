@@ -1,0 +1,78 @@
+{
+  "name": "Importing Spells",
+  "category": "wandscape:custom",
+  "icon": "wandscape:spell_scroll",
+  "sortnum": 6,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "$(italic)$(#6b5a45)A datapack can only retune a spell that already exists; $(bold)adding a new one takes Java$()$(italic)$(#6b5a45). Read that first, or your new spell will load cleanly, show up in the creative tab and the strategy slots, and then do nothing at all.$()$(br2)Every file under $(#8a5a2b)magic_spells$() describes one spell a mage can cast: how much mana it costs, how long it cools down, how it picks a target, and which magic circle is drawn underfoot. Files go in $(#8a5a2b)data/<namespace>/magic_spells/<id>.json$() and $(#8a5a2b)/reload$() picks them up."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "At cast time the spell id lands in a $(bold)hardcoded$() dispatch branch. The eight spells the mod ships — Beam, Heal, Meteor, Petrification, Enfeeble Field, Fortification, Conversion, Desperation — each have their own executor, and any id outside that list falls to the default branch: one line in the log saying the executor is unknown, and nothing happens.",
+      "title": "Retune, Not Add"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "So what a datapack can change is numbers and looks, not behaviour. For a new spell to actually do something, someone has to add a branch to $(#8a5a2b)MagicSpellExecutors$(), and that is addon code. Teleport and Revive are not implemented through this dispatch at all — a datapack cannot reach them either.",
+      "title": "What a Datapack Can Change"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(bold)The registry key is the file name$(); the $(#8a5a2b)id$() field inside is read only when dispatching. The two must match. When they do not, the scroll resolves by file name and the cast dispatches by the $(#8a5a2b)id$() field, and the result is a scroll you can hold and use that does nothing.",
+      "title": "The File Name Is the Id"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(bold)Key  Meaning$()$(li)id — the spell id, defaulting to the file name$(li)category — $(#8a5a2b)normal$(), $(#8a5a2b)special$() or $(#8a5a2b)altar$(), default $(#8a5a2b)normal$()$(li)default_group — $(#8a5a2b)single_target$(), $(#8a5a2b)aoe$(), $(#8a5a2b)defense$() or $(#8a5a2b)support$(), default $(#8a5a2b)support$()$(li)mana_cost — mana spent per cast$(li)base_cooldown — cooldown in ticks$(li)target_mode — $(#8a5a2b)hostile_nearest$(), $(#8a5a2b)hostile_lowest_hp$(), $(#8a5a2b)ally_lowest_hp$(), $(#8a5a2b)self$(), $(#8a5a2b)none$() or $(#8a5a2b)dead_ally$(), default $(#8a5a2b)none$()",
+      "title": "Fields"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Within $(#8a5a2b)category$(), only $(#8a5a2b)altar$() does anything: it keeps the spell out of the creative tab, JEI, the strategy slots and scroll use.$(br2)Note that it and $(#8a5a2b)altar_only$() are $(bold)two independent checks$() — writing one without the other gives a half-broken spell that some entry points block and others let through. An altar spell needs both.",
+      "title": "category and altar_only"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(bold)Key  Meaning$()$(li)effect — only $(#8a5a2b)circle_id$(), $(#8a5a2b)color$() and $(#8a5a2b)damage$() are read$(li)altar_only — whether it is cast only as an altar rite$(li)altar_cooldown / altar_duration — the altar rite's cooldown and duration$(li)cast_time — one line of text in the scroll tooltip$(li)range — parsed, and read by nothing$(li)description — the JEI page body, used when the language key is missing",
+      "title": "Effect and Altar Fields"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(#8a5a2b)effect$() reads three keys and nothing else; anything else you put there (a heal amount, a radius, a particle, a duration) is never looked at. Heal amount, heal radius and meteor count are code constants, and $(#8a5a2b)damage$() is currently read by Meteor alone. $(#8a5a2b)cast_time$() and $(#8a5a2b)range$() take no part in casting either.",
+      "title": "Keys Nobody Reads"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(#8a5a2b)conditions$() decides when a mage is willing to cast. $(#8a5a2b)self_hp_max$() means cast only $(bold)below$() that health fraction, not above; $(#8a5a2b)ally_hp_max$() works the same way and never holds when there is no ally in range; $(#8a5a2b)no_effect$() requires the caster $(italic)not$() to carry a status effect, and it must be written as a full $(#8a5a2b)namespace:path$() id — a bare name never matches.",
+      "title": "Preconditions"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(#8a5a2b)effect.circle_id$() points at $(#8a5a2b)data/<namespace>/magic_circles/<id>.json$(). $(bold)A missing circle does not stop the cast$(): the server still applies the damage or the heal, it is only the client that has nothing to draw, so the spell looks like it fizzled when it actually landed. Beam is the one exception and refuses to cast without its circle.",
+      "title": "Magic Circles"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "A circle file is its own little geometry recipe — ring, arc, polygon, star and glyph primitives, each with particles, colour and animation curves, and unknown keys are ignored. Circles are a registry of their own, so you can swap one in without touching the spell. Leave $(#8a5a2b)circle_id$() out entirely and the spell falls back to Beam's circle and colour.",
+      "title": "The Circle File"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Mages cast from scrolls, so the spell ultimately needs a $(#8a5a2b)craft_recipes$() entry with $(#8a5a2b)type: \"spell\"$() pointing at it through $(#8a5a2b)output.magic_id$() (see $(l:wandscape:custom/custom_recipes_guide)Importing Crafting Recipes$(/l)). The scroll is one shared item, with no per-spell texture or model.",
+      "title": "Making It a Scroll"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "The name in the scroll tooltip and the JEI page body come from two language keys, $(#8a5a2b)magic.wandscape.<spell id>$() and $(#8a5a2b)magic.wandscape.<spell id>.desc$(), falling back to the raw id and to the file's $(#8a5a2b)description$().",
+      "title": "The Display Name"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "A mage only uses the spell once the scroll sits in one of its cast strategy slots. On the way in the server files it by $(#8a5a2b)default_group$(), keeps at most three per group, and drops duplicates; a scroll whose id resolves to no spell is discarded outright, so the slot can look occupied while holding nothing.",
+      "title": "Getting a Mage to Use It"
+    }
+  ]
+}

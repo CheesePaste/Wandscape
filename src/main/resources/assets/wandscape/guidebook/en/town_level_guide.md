@@ -1,5 +1,0 @@
-# Town Level
-
-The town level is the overall progression: every building in the build panel lists the level it needs, and a mage's rank cap and the Crafting Station blueprints follow it too. You can see the current level in the Town Hall panel.
-
-Levels come from experience, and experience comes mainly from tourists — only a tourist that leaves with all three bars full earns the town any, so keeping tourists happy is how the town grows.

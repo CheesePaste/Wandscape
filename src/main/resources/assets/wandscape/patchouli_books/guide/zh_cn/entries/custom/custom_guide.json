@@ -7,7 +7,21 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "$(italic)$(#6b5a45)本页还没写完。$()"
+      "text": "$(italic)$(#6b5a45)文件都放数据包里，$(#8a5a2b)/reload$()$(italic)$(#6b5a45) 之后生效；从游戏内的建筑扫描器起手最省事。$()$(br2)模组有三条改内容的门路：$(bold)扫描器$()在游戏里把房子框出来导出，不碰文件；$(bold)数据包$()用 JSON 改建筑、元素定价、配方、魔法与箱子；$(bold)API$() 给写 Java 的模组作者，数据包做不到的事才用它。"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "放进存档的 $(#8a5a2b)<存档>/datapacks/<包名>/data/<命名空间>/<类别>/$()。命名空间随便取；要覆盖模组自带的那份，才必须用 $(#8a5a2b)wandscape$() 命名空间加同一个文件名。",
+      "title": "放哪里"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "建筑放 $(#8a5a2b)buildings/<包名>/$()，元素定价放 $(#8a5a2b)element_mappings/$()，配方与卷轴放 $(#8a5a2b)craft_recipes/$()，魔法与法阵放 $(#8a5a2b)magic_spells/$() 和 $(#8a5a2b)magic_circles/$()，野外箱子放 $(#8a5a2b)exploration_regions/$()，平衡数值放 $(#8a5a2b)wandscape_balance.json$()。扫描器导出的就是这里。"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "数据包$(bold)跟世界走$()：每个存档各带一份，扫描器导出的建筑只活在当前存档里。模组自带的内容在 jar 里，不随存档变。$(br2)设置中心的配置是$(bold)全局$()的，存在 $(#8a5a2b)config/wandscape-*.toml$()：服务端的全服共用，客户端那几项只管自己这台机器。扫描器预设和建筑预览也在客户端的 $(#8a5a2b)config/wandscape/$() 下。",
+      "title": "随世界还是全局"
     }
   ]
 }

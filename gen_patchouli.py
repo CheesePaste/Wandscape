@@ -43,56 +43,49 @@ LANGS = [("zh_cn", "zh_cn"), ("en", "en_us")]
 # ---------------------------------------------------------------- 结构清单
 # 分类：(id, 中文名, 英文名, 图标, sortnum, zh 描述, en 描述)
 #
-# 手册只有两大块 + 若干细分类别：
-#   「玩法主线」只放路线与阅读顺序，不放具体内容；
-#   「通用功能」放各大功能的入口页（关键讲解），内容特别多的再拆出独立分类放详细条目。
-#   同一个功能因此在两个地方各有一条同名条目——由同一篇 md 生成，内容同源不会漂移。
+# 手册沿「玩法主线 → 各大功能分类 → 关于我们」一条线铺开：
+#   「玩法主线」只放路线与阅读顺序，外加元素与城镇等级、游客与三值这两页无独立分类的总括内容；
+#   其余每个大功能各占一个分类，分类页第一条就是那篇功能总览。
 CATEGORIES = [
     ("playstyle", "玩法主线", "Gameplay Tracks", "minecraft:compass", 0,
-     "模组的几条玩法路线，以及先读哪几篇的顺序。",
-     "The mod's gameplay tracks, and what to read in what order."),
-    ("system", "通用功能", "System Features", "minecraft:book", 10,
-     "元素经济、管理面板、法师、游客、施法、建筑、装备与物品、自定义这些大功能的入口。",
-     "Entry points to the mod's big features: elements, the management panel, mages, tourists, casting, buildings, equipment and customization."),
-    ("buildings", "建筑", "Buildings", "minecraft:stone_bricks", 20,
-     "小镇里能盖的建筑，以及每一类各自怎么用。",
-     "What you can build in town, and how each kind works."),
-    ("management", "管理", "Management", "minecraft:lever", 30,
-     "管理面板本身，以及建造、道路、任务、设置四个子模式。",
-     "The management panel itself, plus its four sub-modes: building, roads, tasks and settings."),
-    ("magic", "魔法", "Spells", "wandscape:spell_scroll", 40,
-     "法师怎么打、放什么魔法由什么决定，以及每个魔法能干什么。",
-     "How mages fight and what decides their spells, plus what each spell does."),
-    ("items", "装备与物品", "Equipment and Items", "wandscape:wand", 50,
-     "法师的装备和玩家自己的小道具，各自怎么拿到、拿来干什么。",
-     "Mage gear and the player's own gadgets — how to get each one and what it is for."),
-    ("custom", "自定义", "Customization", "minecraft:structure_block", 60,
-     "导入自己的建筑与建筑包，改元素价值、合成配方、魔法与战利品箱子价值。",
-     "Import your own buildings and building packs, and edit element values, crafting recipes, spells and loot chest values."),
-    ("compat", "联动与兼容", "Integration & Compatibility", "minecraft:crafting_table", 70,
-     "本模组和 Curios、铁魔法、诡厄巫法、车万女仆这些模组之间能做什么。",
-     "What this mod does together with Curios, Iron's Spells, Goety and Touhou Little Maid."),
+     "这一部分展示了模组的大致官方游玩路线。对于具体内容，见各功能分类。",
+     "This section shows the mod's general intended route. For the details of a feature, see its own category."),
+    ("buildings", "建筑", "Buildings", "minecraft:stone_bricks", 10,
+     "这一页展示了模组的所有建筑类型和对应功能。对于如何建造，见《0，入门》《管理》《建造子模式》。",
+     "Every building type and what each one does. For how to build, see 《0. Getting Started》, 《Management》 and 《Build Mode》."),
+    ("management", "管理", "Management", "minecraft:lever", 20,
+     "这一页展示了模组的管理系统，操作方式。对于具体建筑，见《建筑》。",
+     "The mod's management system and how to operate it. For individual buildings, see 《Buildings》."),
+    ("magic", "魔法", "Spells", "wandscape:spell_scroll", 30,
+     "这一页展示了法师，施法与具体魔法。对于法杖与魔法道具，见《装备与物品》。",
+     "Mages, casting, and each spell. For wands and magic items, see 《Equipment and Items》."),
+    ("items", "装备与物品", "Equipment and Items", "wandscape:wand", 40,
+     "这一页展示了模组的装备（法杖）与一些物品。对于法术卷轴等法术，见《魔法》，对于如何制作它们，见《合成站》。",
+     "The mod's equipment (wands) and its smaller items. For spells such as scrolls, see 《Spells》; for how to craft them, see 《Crafting Station》."),
+    ("custom", "自定义与数据包", "Customization & Datapacks", "minecraft:structure_block", 50,
+     "这一页展示了模组建筑、物品、魔法、合成配方与战利品等内容的模组方块和数据包的自定义方式。对于相关的模组本体内容，见《建筑》《魔法》《装备与物品》。",
+     "How to customize the mod's own blocks and data packs: buildings, items, spells, crafting recipes and loot. For the mod's own content, see 《Buildings》, 《Spells》 and 《Equipment and Items》."),
+    ("compat", "联动与兼容", "Integration & Compatibility", "minecraft:crafting_table", 60,
+     "这一页展示了模组兼容和联动的其他模组。如果出现了兼容的BUG，见《关于我们》。",
+     "What this mod does together with other mods. If you run into a compatibility bug, see 《About Us》."),
+    ("about", "关于我们", "About Us", "minecraft:name_tag", 70,
+     "制作者名单、官方平台与反馈渠道。",
+     "Credits, official platforms, and where to send feedback."),
 ]
 
 # 条目：(md 文件名去掉 .md, 所属分类, 图标, sortnum)。条目名取 md 的 H1。
 # 同一篇 md 可以登记多次、挂到不同分类——会生成内容相同的多份条目（内容同源，不存在两份要维护）。
 ENTRIES = [
-    # ── 玩法主线：只放路线与阅读顺序，不放具体内容 ──
+    # ── 玩法主线：路线与阅读顺序，外加两页没有独立分类的总括内容 ──
     ("index_guide", "playstyle", "wandscape:guide_book", 0),
     ("intro_0_guide", "playstyle", "minecraft:writable_book", 1),
     ("intro_0_5_guide", "playstyle", "minecraft:knowledge_book", 2),
-    ("track_tourist_guide", "playstyle", "wandscape:tourist_spawn_egg", 3),
-
-    # ── 通用功能：大功能的入口页。下面的细分类别会再登记一次同名条目 ──
-    ("economy_guide", "system", "wandscape:element_earth", 0),
-    ("panel_guide", "system", "minecraft:compass", 1),
-    ("mages_guide", "system", "wandscape:wandscape_npc_spawn_egg", 2),
-    ("tourists_guide", "system", "minecraft:emerald", 3),
-    ("town_level_guide", "system", "minecraft:experience_bottle", 4),
-    ("casting_guide", "system", "minecraft:blaze_rod", 5),
-    ("buildings_guide", "system", "minecraft:bricks", 6),
-    ("equipment_guide", "system", "minecraft:armor_stand", 7),
-    ("custom_guide", "system", "minecraft:structure_block", 8),
+    ("element_level_guide", "playstyle", "wandscape:element_earth", 3),
+    ("track_tourist_guide", "playstyle", "wandscape:tourist_spawn_egg", 4),
+    ("tourists_guide", "playstyle", "minecraft:emerald", 5),
+    ("track_adventure_guide", "playstyle", "minecraft:iron_sword", 6),
+    ("track_tech_guide", "playstyle", "minecraft:redstone", 7),
+    ("track_diplomacy_guide", "playstyle", "minecraft:white_banner", 8),
 
     # ── 建筑：总览 → 建筑维护 → 每一类建筑各一条 → 建筑扫描器 ──
     # 类别条目与 buildings/*.json 的 category 一一对应（government→市政厅、storage→仓库、
@@ -124,28 +117,29 @@ ENTRIES = [
     ("panel_tasks_guide", "management", "minecraft:paper", 3),
     ("panel_settings_guide", "management", "minecraft:redstone_torch", 4),
 
-    # ── 魔法：法师 + 施法 + 每个魔法一条 ──
+    # ── 魔法：法师 + 施法（上手讲怎么放）+ 高级施法管理（策略/锁/门控）+ 每个魔法一条 ──
     # 魔法图标用原版物品（模组无 per-magic 图标，10 条共用 spell_scroll 会让分类页不可读）
     ("mages_guide", "magic", "wandscape:wandscape_npc_spawn_egg", 0),
     ("casting_guide", "magic", "minecraft:blaze_rod", 1),
-    ("magic_beam_guide", "magic", "minecraft:spectral_arrow", 2),
-    ("magic_meteor_guide", "magic", "minecraft:fire_charge", 3),
-    ("magic_desperation_guide", "magic", "minecraft:diamond_sword", 4),
-    ("magic_enfeeble_field_guide", "magic", "minecraft:fermented_spider_eye", 5),
-    ("magic_conversion_guide", "magic", "minecraft:lead", 6),
-    ("magic_petrification_guide", "magic", "minecraft:stone", 7),
-    ("magic_fortification_guide", "magic", "minecraft:shield", 8),
-    ("magic_heal_guide", "magic", "minecraft:golden_apple", 9),
-    ("magic_teleport_guide", "magic", "minecraft:ender_pearl", 10),
-    ("magic_revive_guide", "magic", "minecraft:totem_of_undying", 11),
+    ("advanced_casting_guide", "magic", "minecraft:lectern", 2),
+    ("magic_beam_guide", "magic", "minecraft:spectral_arrow", 3),
+    ("magic_meteor_guide", "magic", "minecraft:fire_charge", 4),
+    ("magic_desperation_guide", "magic", "minecraft:diamond_sword", 5),
+    ("magic_enfeeble_field_guide", "magic", "minecraft:fermented_spider_eye", 6),
+    ("magic_conversion_guide", "magic", "minecraft:lead", 7),
+    ("magic_petrification_guide", "magic", "minecraft:stone", 8),
+    ("magic_fortification_guide", "magic", "minecraft:shield", 9),
+    ("magic_heal_guide", "magic", "minecraft:golden_apple", 10),
+    ("magic_teleport_guide", "magic", "minecraft:ender_pearl", 11),
+    ("magic_revive_guide", "magic", "minecraft:totem_of_undying", 12),
 
-    # ── 装备与物品：总览 + 各类条目（小道具按类归并，法杖整族一条） ──
-    ("equipment_guide", "items", "minecraft:armor_stand", 0),
-    ("wand_guide", "items", "wandscape:wand", 1),
-    ("oath_ring_guide", "items", "wandscape:oath_ring", 2),
-    ("scepter_guide", "items", "wandscape:omni_scepter", 3),
-    ("magic_compass_guide", "items", "wandscape:magic_compass", 4),
-    ("warehouse_terminal_guide", "items", "wandscape:warehouse_terminal", 5),
+    # ── 装备与物品：各类条目（小道具按类归并，法杖整族一条）——
+    # 没有别的分类那样的总览页：这一类的东西就那么几件，底下每条自己就说清了，再写一篇总览是重复。
+    ("wand_guide", "items", "wandscape:wand", 0),
+    ("oath_ring_guide", "items", "wandscape:oath_ring", 1),
+    ("scepter_guide", "items", "wandscape:omni_scepter", 2),
+    ("magic_compass_guide", "items", "wandscape:magic_compass", 3),
+    ("warehouse_terminal_guide", "items", "wandscape:warehouse_terminal", 4),
 
     # ── 自定义：总览 → 建筑扫描器（自定义建筑唯一的产出途径）→ 各条数据导入 ──
     ("custom_guide", "custom", "minecraft:structure_block", 0),
@@ -162,54 +156,95 @@ ENTRIES = [
     ("irons_spells_guide", "compat", "minecraft:enchanted_book", 1),
     ("goety_guide", "compat", "minecraft:soul_lantern", 2),
     ("tlm_guide", "compat", "minecraft:name_tag", 3),
+
+    # ── 关于我们：平台、反馈与制作者，一条打完 ──
+    ("about_guide", "about", "minecraft:name_tag", 0),
 ]
 
 # 《标题》→ 链接目标（条目 id 或分类 id，link_command 两者都认）。条目名与标题同文时才会命中。
 TITLE_TO_DOC = {
     # zh_cn
-    # 「建筑 / 装备与物品 / 自定义」既是大功能的条目名、也是细分类别名——这里一律指向**分类**：
+    # 「建筑 / 管理 / 魔法 / 装备与物品 / 自定义与数据包 / 联动与兼容」既是分类名、也是功能名——一律指向**分类**：
     # 分类页里第一条就是那篇总览，往下才是各条细节，比直接跳条目更顺手。
+    # 玩法主线
     "0，入门": "intro_0_guide",
     "0.5，推荐了解的功能": "intro_0_5_guide",
     "1，游客线": "track_tourist_guide",
-    "元素与三值": "economy_guide",
+    "2，冒险线": "track_adventure_guide",
+    "3，科技线": "track_tech_guide",
+    "4，外交线": "track_diplomacy_guide",
+    "概览": "index_guide",
+    # 分类入口
+    "建筑": "buildings",
+    "管理": "management",
+    "魔法": "magic",
+    "装备与物品": "items",
+    "自定义与数据包": "custom",
+    "联动与兼容": "compat",
+    "关于我们": "about_guide",
+    # 玩法主线里的总括页
+    "元素与城镇等级": "element_level_guide",
+    "游客与三值": "tourists_guide",
+    # 各分类下的具体页
     "管理面板": "panel_guide",
     "建造子模式": "panel_build_guide",
     "道路子模式": "panel_road_guide",
     "任务大厅": "panel_tasks_guide",
     "设置中心": "panel_settings_guide",
     "法师": "mages_guide",
-    "游客": "tourists_guide",
-    "城镇等级": "town_level_guide",
     "施法": "casting_guide",
-    "建筑": "buildings",
-    "管理": "management",
-    "魔法": "magic",
-    "装备与物品": "items",
-    "自定义": "custom",
-    "联动与兼容": "compat",
-    "概览": "index_guide",
+    "高级施法管理": "advanced_casting_guide",
+    "合成站": "crafting_guide",
+    "魔法工坊": "magic_station_guide",
+    "商店": "shop_guide",
+    "服务设施与酒店": "service_guide",
+    "酒馆": "tavern_guide",
+    "祭坛": "altar_guide",
+    "法师小屋": "mage_hut_guide",
+    "ATM": "atm_guide",
+    # 装备与物品
+    "法杖": "wand_guide",
+    "盟誓戒指": "oath_ring_guide",
+    "权杖": "scepter_guide",
+    "元素节点": "node_guide",
     # en_us
     "0. Getting Started": "intro_0_guide",
     "0.5 Recommended Features": "intro_0_5_guide",
     "1. Tourist Track": "track_tourist_guide",
-    "Elements and Values": "economy_guide",
+    "2. Adventure Track": "track_adventure_guide",
+    "3. Tech Track": "track_tech_guide",
+    "4. Diplomacy Track": "track_diplomacy_guide",
+    "Overview": "index_guide",
+    "Buildings": "buildings",
+    "Management": "management",
+    "Spells": "magic",
+    "Equipment and Items": "items",
+    "Customization & Datapacks": "custom",
+    "Integration & Compatibility": "compat",
+    "About Us": "about_guide",
+    "Elements and Town Level": "element_level_guide",
+    "Tourists and Values": "tourists_guide",
     "Management Panel": "panel_guide",
     "Build Mode": "panel_build_guide",
     "Road Mode": "panel_road_guide",
     "Task Hall": "panel_tasks_guide",
     "Settings": "panel_settings_guide",
     "Mages": "mages_guide",
-    "Tourists": "tourists_guide",
-    "Town Level": "town_level_guide",
     "Casting": "casting_guide",
-    "Buildings": "buildings",
-    "Management": "management",
-    "Spells": "magic",
-    "Equipment and Items": "items",
-    "Customization": "custom",
-    "Integration & Compatibility": "compat",
-    "Overview": "index_guide",
+    "Advanced Casting": "advanced_casting_guide",
+    "Magic Workshop": "magic_station_guide",
+    "Crafting Station": "crafting_guide",
+    "Shop": "shop_guide",
+    "Service Facilities and Hotels": "service_guide",
+    "Tavern": "tavern_guide",
+    "Altar": "altar_guide",
+    "Mage Hut": "mage_hut_guide",
+    "ATM": "atm_guide",
+    # Equipment and Items
+    "Wand": "wand_guide",
+    "Oath Ring": "oath_ring_guide",
+    "Scepters": "scepter_guide",
+    "Element Node": "node_guide",
 }
 
 # 内联代码的着色（帕秋莉没有等宽字体，用颜色区分）
@@ -608,18 +643,23 @@ def build_books():
             missing.append(str(lang_dir))
             continue
 
-        # 清掉上一轮生成物，避免改名/删条目后残留
+        # 清掉上一轮生成物，避免改名/删条目后残留（分类被整个删掉时，空目录也要一并带走）
         for sub in ("categories", "entries"):
             target = OUT_ASSETS / book_lang / sub
             if target.exists():
                 for old in sorted(target.rglob("*.json")):
                     old.unlink()
+                for old in sorted(target.rglob("*"), key=lambda p: len(p.parts), reverse=True):
+                    if old.is_dir() and not any(old.iterdir()):
+                        old.rmdir()
 
         for cid, zh, en, icon, sortnum, zh_desc, en_desc in CATEGORIES:
             name, desc = (zh, zh_desc) if md_lang == "zh_cn" else (en, en_desc)
+            # 分类描述同样由帕秋莉的 BookTextRenderer 渲染，所以《》与行内标记要和 md 正文一样转换，
+            # 否则描述里的《建筑》只是纯文本，点不动。
             write_json(OUT_ASSETS / book_lang / "categories" / (cid + ".json"), {
                 "name": name,
-                "description": desc,
+                "description": convert_inline(desc, warn),
                 "icon": icon,
                 "sortnum": sortnum,
             })

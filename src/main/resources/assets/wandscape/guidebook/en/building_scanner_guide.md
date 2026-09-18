@@ -24,7 +24,7 @@ The ID is the building's unique name and also the file name used on export; with
 
 ## Values and Unlock Level
 
-The three values are comfort, magic and wonder; they decide which need the building can satisfy for tourists, and the higher you set them the more willing tourists are to come in. The unlock level is a colony-level gate — every building in the list carries one, and you cannot build it until your colony reaches that level. For a house you built yourself you can set the gate low so you can use it early.
+The three values are comfort, magic and wonder; they decide which need the building can satisfy for tourists, and the higher you set them the more willing tourists are to come in. The unlock level is a town-level gate — every building in the list carries one, and you cannot build it until your town reaches that level. For a house you built yourself you can set the gate low so you can use it early.
 
 ## Harvest Nodes
 

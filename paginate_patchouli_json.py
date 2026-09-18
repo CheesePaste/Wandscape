@@ -292,6 +292,11 @@ def process_entry_file(file_path: Path, max_lines_override=None, max_chars_overr
         split_results = split_text_into_pages(raw_text, max_lines, max_chars, remove_hints=remove_hints)
 
         if len(split_results) <= 1:
+            # 没超长也要清洗：正文里若写了「（下一页）」这类翻页提示而它恰好是本页最后一段，
+            # 提示不会触发切分，走这个分支就会把提示原文印到页面上。它是指令，不是文案。
+            if split_results and split_results[0] != raw_text:
+                file_modified = True
+                page = dict(page, text=split_results[0])
             new_pages.append(page)
         else:
             file_modified = True

@@ -7,15 +7,19 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "Wandscape（魔法小镇）是一个大型模组，以魔法与城镇建设为主题$(br2)玩法主线$(br2)$(l:wandscape:playstyle/intro_0_guide)《0，入门》$(/l)$(br2)$(l:wandscape:playstyle/intro_0_5_guide)《0.5，推荐了解的功能》$(/l)$(br2)$(l:wandscape:playstyle/track_tourist_guide)《1，游客线》$(/l)推荐休闲玩家观看$(br2)功能与类别"
+      "text": "Wandscape（魔法小镇）是一个大型模组，以魔法与城镇建设为主题$(br2)玩法主线$(br2)$(l:wandscape:playstyle/intro_0_guide)《0，入门》$(/l)$(br2)$(l:wandscape:playstyle/intro_0_5_guide)《0.5，推荐了解的功能》$(/l)$(br2)$(l:wandscape:playstyle/track_tourist_guide)《1，游客线》$(/l)推荐休闲玩家观看"
     },
     {
       "type": "patchouli:text",
-      "text": "$(l:wandscape:system/economy_guide)《元素与三值》$(/l)经济系统介绍$(br2)$(l:wandscape:management/panel_guide)《管理面板》$(/l)交互，管理与建造城镇$(br2)$(l:wandscape:magic/mages_guide)《法师》$(/l)工人与战斗单位介绍$(br2)$(l:wandscape:system/tourists_guide)《游客》$(/l)短居小镇的消费者$(br2)$(l:wandscape:magic/casting_guide)《施法》$(/l)法师放什么魔法由什么决定$(br2)$(l:wandscape:buildings)《建筑》$(/l)能盖什么，以及每一类建筑怎么用"
+      "text": "$(l:wandscape:playstyle/track_adventure_guide)《2，冒险线》$(/l)出门探索，打怪开箱$(br2)$(l:wandscape:playstyle/track_tech_guide)《3，科技线》$(/l)还没有正式开始做$(br2)$(l:wandscape:playstyle/track_diplomacy_guide)《4，外交线》$(/l)还没有正式开始做$(br2)功能与类别$(br2)$(l:wandscape:playstyle/element_level_guide)《元素与城镇等级》$(/l)经济系统介绍"
     },
     {
       "type": "patchouli:text",
-      "text": "$(l:wandscape:management)《管理》$(/l)管理面板，以及建造、道路、任务、设置四个子模式$(br2)$(l:wandscape:magic)《魔法》$(/l)法师、施法，与每个魔法能干什么$(br2)$(l:wandscape:items)《装备与物品》$(/l)法师的装备和玩家自己的小道具$(br2)$(l:wandscape:custom)《自定义》$(/l)导入自己的建筑和建筑包，改元素价值$(br2)$(l:wandscape:compat)《联动与兼容》$(/l)和其它模组一起玩"
+      "text": "$(l:wandscape:management/panel_guide)《管理面板》$(/l)交互，管理与建造城镇$(br2)$(l:wandscape:magic/mages_guide)《法师》$(/l)工人与战斗单位介绍$(br2)$(l:wandscape:playstyle/tourists_guide)《游客与三值》$(/l)短居小镇的消费者$(br2)$(l:wandscape:magic/casting_guide)《施法》$(/l)法师放什么魔法由什么决定$(br2)$(l:wandscape:buildings)《建筑》$(/l)能盖什么，以及每一类建筑怎么用"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(l:wandscape:management)《管理》$(/l)管理面板，以及建造、道路、任务、设置四个子模式$(br2)$(l:wandscape:magic)《魔法》$(/l)法师、施法，与每个魔法能干什么$(br2)$(l:wandscape:items)《装备与物品》$(/l)法师的装备和玩家自己的小道具$(br2)$(l:wandscape:custom)《自定义与数据包》$(/l)导入自己的建筑和建筑包，改元素价值$(br2)$(l:wandscape:compat)《联动与兼容》$(/l)和其它模组一起玩"
     }
   ]
 }

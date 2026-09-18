@@ -13,7 +13,7 @@
   },
   "gui.wandscape.mage_hut.assign_desc_3": {
     "zh_cn": "• 随小镇等级晋升职业等阶",
-    "en_us": "• Promote rank up to colony level"
+    "en_us": "• Promote rank up to town level"
   },
   "gui.wandscape.mage_hut.assign_desc_4": {
     "zh_cn": "• 获得专属休息与恢复据点",
@@ -53,11 +53,11 @@
   },
   "gui.wandscape.mage_hut.candidate_list": {
     "zh_cn": "小镇法师名单",
-    "en_us": "Colony Mages"
+    "en_us": "Town Mages"
   },
   "gui.wandscape.mage_hut.colony_level": {
     "zh_cn": "城镇 Lv.%d",
-    "en_us": "Colony Lv.%d"
+    "en_us": "Town Lv.%d"
   },
   "gui.wandscape.mage_hut.command_title": {
     "zh_cn": "晋升与指令",

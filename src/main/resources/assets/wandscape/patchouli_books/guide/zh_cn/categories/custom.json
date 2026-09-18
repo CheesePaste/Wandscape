@@ -1,6 +1,6 @@
 {
-  "name": "自定义",
-  "description": "导入自己的建筑与建筑包，改元素价值。",
+  "name": "自定义与数据包",
+  "description": "这一页展示了模组建筑、物品、魔法、合成配方与战利品等内容的模组方块和数据包的自定义方式。对于相关的模组本体内容，见$(l:wandscape:buildings)《建筑》$(/l)$(l:wandscape:magic)《魔法》$(/l)$(l:wandscape:items)《装备与物品》$(/l)。",
   "icon": "minecraft:structure_block",
-  "sortnum": 60
+  "sortnum": 50
 }

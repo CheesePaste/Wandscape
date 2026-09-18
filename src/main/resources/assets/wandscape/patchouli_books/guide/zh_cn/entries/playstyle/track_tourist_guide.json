@@ -2,7 +2,7 @@
   "name": "1，游客线",
   "category": "wandscape:playstyle",
   "icon": "wandscape:tourist_spawn_egg",
-  "sortnum": 3,
+  "sortnum": 4,
   "read_by_default": true,
   "pages": [
     {
@@ -11,7 +11,7 @@
     },
     {
       "type": "patchouli:text",
-      "text": "建造酒店和休息设施→留住游客，避免无处可住和没有精力逛建筑。$(br2)推荐阅读顺序:$(br2)$(l:wandscape:system/tourists_guide)《游客》$(/l)$(br2)《商店》$(br2)《服务设施与酒店》$(br2)《ATM》"
+      "text": "建造酒店和休息设施→留住游客，避免无处可住和没有精力逛建筑。$(br2)推荐阅读顺序:$(br2)$(l:wandscape:playstyle/tourists_guide)《游客与三值》$(/l)$(br2)$(l:wandscape:buildings/shop_guide)《商店》$(/l)$(br2)$(l:wandscape:buildings/service_guide)《服务设施与酒店》$(/l)$(br2)$(l:wandscape:buildings/atm_guide)《ATM》$(/l)"
     }
   ]
 }

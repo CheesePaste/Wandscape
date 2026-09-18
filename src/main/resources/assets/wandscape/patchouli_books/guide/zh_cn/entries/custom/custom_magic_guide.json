@@ -1,0 +1,78 @@
+{
+  "name": "导入魔法",
+  "category": "wandscape:custom",
+  "icon": "wandscape:spell_scroll",
+  "sortnum": 6,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "$(italic)$(#6b5a45)数据包只能改已有魔法的数值，$(bold)加一个新魔法必须动 Java$()$(italic)$(#6b5a45)。先把这一点看清楚再动手，否则新魔法会装载成功、出现在创造栏和策略栏里，然后什么都不做。$()$(br2)$(#8a5a2b)magic_spells$() 下的每一份文件描述一个法师能施放的魔法：耗多少蓝、冷却多久、怎么挑目标、脚下画哪个法阵。文件放在 $(#8a5a2b)data/<命名空间>/magic_spells/<id>.json$()，$(#8a5a2b)/reload$() 生效。"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "施法时，魔法 id 会落进一个$(bold)写死在代码里$()的派发分支。模组自带的八个魔法（光束、治疗、陨石、石化、虚弱力场、强化、转化、拼命）各有自己的执行器，不在这个名单上的 id 一律走默认分支：日志里留一行\"未知魔法执行器\"，然后什么都不发生。",
+      "title": "只能改，不能加"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "所以数据包能调的是数值与外观，不是行为。想要一个新魔法真的能打人，得在 $(#8a5a2b)MagicSpellExecutors$() 里补一条分支，那是 addon 代码的活。传送与复活这两个魔法的实现也压根不在这套派发里，数据包碰不到它们。",
+      "title": "数据包能改什么"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(bold)注册用的主键是文件名$()，文件里的 $(#8a5a2b)id$() 字段只在派发时被读。两者必须写成一致的：不一致时卷轴按文件名查得到，施法却按 $(#8a5a2b)id$() 字段去派发，结果是一张能拿到手、放出来没反应的卷轴。",
+      "title": "文件名就是 id"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(bold)键  说明$()$(li)id — 魔法 id，缺省取文件名$(li)category — $(#8a5a2b)normal$() / $(#8a5a2b)special$() / $(#8a5a2b)altar$()，缺省 $(#8a5a2b)normal$()$(li)default_group — $(#8a5a2b)single_target$() / $(#8a5a2b)aoe$() / $(#8a5a2b)defense$() / $(#8a5a2b)support$()，缺省 $(#8a5a2b)support$()$(li)mana_cost — 每次施法的蓝耗$(li)base_cooldown — 冷却，单位 tick$(li)target_mode — $(#8a5a2b)hostile_nearest$() / $(#8a5a2b)hostile_lowest_hp$() / $(#8a5a2b)ally_lowest_hp$() / $(#8a5a2b)self$() / $(#8a5a2b)none$() / $(#8a5a2b)dead_ally$()，缺省 $(#8a5a2b)none$()",
+      "title": "字段"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(#8a5a2b)category$() 里只有 $(#8a5a2b)altar$() 有实际作用，它把魔法挡在创造栏、JEI、策略栏和卷轴使用之外。$(br2)注意它和 $(#8a5a2b)altar_only$() 是$(bold)两处独立判定$()：只写一个会得到一个半残的魔法——有的入口挡住了它，有的入口放了进来。祭坛魔法两个都要写。",
+      "title": "category 与 altar_only"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(bold)键  说明$()$(li)effect — 只有 $(#8a5a2b)circle_id$()、$(#8a5a2b)color$()、$(#8a5a2b)damage$() 三个键会被读$(li)altar_only — 是否只作为祭坛仪式施放$(li)altar_cooldown / altar_duration — 祭坛演出的冷却与时长$(li)cast_time — 只写进卷轴提示里的一行字$(li)range — 解析进来，但没有任何地方读它$(li)description — JEI 信息页的正文，语言键缺失时兜底",
+      "title": "效果与祭坛字段"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(#8a5a2b)effect$() 认的键就三个，其余键（治疗量、半径、粒子、时长之类）写进去也没人看。治疗量、治疗半径、陨石的数量都是代码常量；$(#8a5a2b)damage$() 目前只有陨石会读。$(#8a5a2b)cast_time$() 与 $(#8a5a2b)range$() 同样不参与任何施法过程。",
+      "title": "哪些键没人读"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(#8a5a2b)conditions$() 决定法师在什么情况下才肯放这个魔法：$(#8a5a2b)self_hp_max$() 要的是$(bold)低于$()这个血量比例才放，不是高于；$(#8a5a2b)ally_hp_max$() 同理，并且场上没有队友时一律判不成立；$(#8a5a2b)no_effect$() 要求施法者身上没有某个状态，而且必须写完整的 $(#8a5a2b)命名空间:路径$() 形式，写裸名永远不会匹配。",
+      "title": "施法前提"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(#8a5a2b)effect.circle_id$() 指向 $(#8a5a2b)data/<命名空间>/magic_circles/<id>.json$()。$(bold)法阵不存在时服务端照常施法$()，伤害治疗一样结算，只是客户端画不出东西来——看起来像卡住，实际已经生效，很容易误判成魔法坏了。唯一的例外是光束：它找不到法阵会直接拒绝施放。",
+      "title": "法阵"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "法阵文件自己是一套几何配方：环、弧、多边形、星形、符文五种图元，各自带粒子、颜色与动画曲线，未知键一律忽略。它和魔法是两个独立的注册表，可以单独换。完全不写 $(#8a5a2b)circle_id$() 时，用的是光束那套默认法阵与默认颜色。",
+      "title": "法阵文件"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "法师靠卷轴施法，所以新魔法最终要落成一份 $(#8a5a2b)craft_recipes$() 里 $(#8a5a2b)type: \"spell\"$() 的配方，用 $(#8a5a2b)output.magic_id$() 指向它（见$(l:wandscape:custom/custom_recipes_guide)导入合成配方$(/l)）。卷轴是一个共用物品，没有逐个魔法单独的贴图或模型。",
+      "title": "做成卷轴"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "卷轴提示里的名字与 JEI 信息页的正文分别来自 $(#8a5a2b)magic.wandscape.<魔法 id>$() 与 $(#8a5a2b)magic.wandscape.<魔法 id>.desc$() 两个语言键，查不到就退回原始 id 与文件里的 $(#8a5a2b)description$()。",
+      "title": "显示名字"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "把卷轴放进法师的施法策略槽里它才会用。入槽时服务端按 $(#8a5a2b)default_group$() 归档，每组最多三张，重复的会被去掉；id 查不到对应魔法的卷轴会被直接丢弃，槽里看起来放了东西，实际等于没放。",
+      "title": "让法师用上它"
+    }
+  ]
+}

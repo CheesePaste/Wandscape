@@ -12,10 +12,10 @@ Build hotels and resting facilities → Keep tourists from leaving due to exhaus
 
 Recommended reading order:
 
-《Tourists》
+《Tourists and Values》
 
-《Shops》
+《Shop》
 
 《Service Facilities and Hotels》
 
-《ATMs》
+《ATM》

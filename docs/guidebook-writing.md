@@ -25,7 +25,7 @@
 `overview_guide` / `getting_started` / `road_*` / `scanner_guide` 等 15 篇），它们开头都标了
 「本页已弃用」，内容跟现在的实现已经对不上。
 
-**不要读它们、不要照抄它们的说法。** 上面说的「读同类」，指的是**已经编进手册的那 51 篇**。
+**不要读它们、不要照抄它们的说法。** 上面说的「读同类」，指的是**已经编进手册的那 61 篇**。
 
 方向是反的：先按本规范把手册写好，将来再**按手册内容反向更新**那些旧文档。
 细节见 [guidebook-patchouli.md](guidebook-patchouli.md) 的「旧 guidebook 已弃用」一节。
@@ -66,11 +66,11 @@
 「一句话」= **一整句完整的话**，不是字数上限。该有的主语、连接词都保留，宁可写长一点。
 分号堆叠、缺主语，就是没写完。
 
-> 反例（原稿）：始终指向本殖民地市政厅：高级版在提示里显示坐标，终极版还能右键直接传送过去。
+> 反例（原稿）：始终指向本镇市政厅：高级版在提示里显示坐标，终极版还能右键直接传送过去。
 
-> 改后：魔法指南针的指针始终指着本殖民地的市政厅，不管走到哪里都不会找不到家。高级版还会在物品提示里显示市政厅的具体坐标，终极版更进一步，右键就能直接传送到市政厅。
+> 改后：魔法指南针的指针始终指着本镇的市政厅，不管走到哪里都不会找不到家。高级版还会在物品提示里显示市政厅的具体坐标，终极版更进一步，右键就能直接传送到市政厅。
 
-> 反例（原稿）：右键打开本殖民地仓库面板，不用专门跑一趟；放进 Curios 手饰槽后还能用快捷键打开。
+> 反例（原稿）：右键打开本镇仓库面板，不用专门跑一趟；放进 Curios 手饰槽后还能用快捷键打开。
 
 注意这是**两个方向的要求，不要互相抵消**：话要写通顺，但**内容要克制**（见 §二）。
 通顺不等于话多。
@@ -94,7 +94,7 @@
 每个条目的开头都有一行，md 里写成 `> …` 引用，编译后是引用样式（斜体 + 棕字），
 排在条目名下方、正文上方。
 
-- 写「**在哪做 + 殖民地等级门槛**」：`> 在合成站制作，三档分别需要殖民地达到 1 级、10 级和 20 级。`
+- 写「**在哪做 + 小镇等级门槛**」：`> 在合成站制作，三档分别需要小镇达到 1 级、10 级和 20 级。`
 - **不写元素成本**。价格在合成站 GUI 里现成可见，抄进手册只会随平衡调整过期。
 - 天生自带 / 祭坛专属这类没有制作途径的，**照实写**「不需要制作」，不要硬编一个获取方式来凑格式。
 
@@ -149,25 +149,24 @@ python gen_patchouli.py && python paginate_patchouli_json.py   # 两步都不能
 
 ---
 
-## 附二：还没写的条目（截至 2026-09-18）
+## 附二：条目清单（截至 2026-09-18）
 
-手册登记 **62 个条目位**，来自 55 篇 md——`buildings_guide` / `casting_guide` / `equipment_guide` /
-`custom_guide` 这 4 篇总览页各登了两处（「通用功能」+ 对应细分类），`building_scanner_guide` 登在
-「建筑」和「自定义」两处。
-其中 **6 篇是占位页**，正文只有一句「本页还没写完」，占 **10 个条目位**。zh/en 两侧完全一致。
+手册登记 **62 个条目位**，来自 61 篇 md——`building_scanner_guide` 一篇登了两处（「建筑」与
+「自定义与数据包」各一次），其余各登一处。
+**62 个条目位都有正文，占位页已清零**（最后一篇是 `custom_guide`）。zh/en 两侧完全一致。
 
 | 分类 | 登记 | 缺 | 条目名（md 文件） |
 |---|---|---|---|
-| 玩法主线 | 4 | 0 | — |
-| 通用功能 | 9 | 4 | 建筑 `buildings_guide`、施法 `casting_guide`、装备与物品 `equipment_guide`、自定义 `custom_guide` |
-| 建筑 | 17 | 1 | 建筑 `buildings_guide`（总览；顺序是总览 → 建筑维护 `anomaly_guide` → 14 类建筑各一条 → 建筑扫描器 `building_scanner_guide`） |
+| 玩法主线 | 9 | 0 | —（四条路线 `track_tourist` / `track_adventure` / `track_tech` / `track_diplomacy`，外加两页总括与三页入门） |
+| 建筑 | 17 | 0 | —（顺序是总览 `buildings_guide` → 建筑维护 `anomaly_guide` → 14 类建筑各一条 → 建筑扫描器 `building_scanner_guide`） |
 | 管理 | 5 | 0 | — |
-| 魔法 | 12 | 1 | 施法 `casting_guide` |
-| 装备与物品 | 6 | 1 | 装备与物品 `equipment_guide` |
-| 自定义 | 5 | 3 | 自定义 `custom_guide`、导入自定义建筑 `custom_buildings_guide`、自定义建筑包 `custom_packs_guide`（第 5 篇「建筑扫描器」`building_scanner_guide` 与「建筑」分类共用） |
+| 魔法 | 13 | 0 | — |
+| 装备与物品 | 5 | 0 | — |
+| 自定义与数据包 | 8 | 0 | —（第 2 条「建筑扫描器」`building_scanner_guide` 与「建筑」分类共用） |
 | 联动与兼容 | 4 | 0 | — |
+| 关于我们 | 1 | 0 | — |
 
-写掉一篇就删一行；数字对不上，说明 `gen_patchouli.py` 的 `ENTRIES` 里加了新条目而这里没跟上。
+写掉一篇就把对应行的「缺」减一；数字对不上，说明 `gen_patchouli.py` 的 `ENTRIES` 里加了新条目而这里没跟上。
 
 **「建筑」这一屏与 `buildings/*.json` 的 category 一一对应**（government→市政厅、storage→仓库、
 workstation、crafting_station、magic_station、tavern、altar、mage_hut、node、decoration、shop、
@@ -175,10 +174,7 @@ service、relax、atm），顺序照建造面板的分类顺序，前后各夹�
 修，排在所有建筑之前）与**建筑扫描器**（把自建房导入成建筑，排在最后）。新增一类建筑时要同时补三处：
 `ENTRIES` 的 buildings 段、`PatchouliCompatImpl` 的 buildings 段、以及一条 md（zh/en 各一份）。
 
-两点值得先说：
-
-- **剩下的缺页里，最贵的是那 4 篇总览页**（`buildings_guide` / `casting_guide` / `equipment_guide` / `custom_guide`）——它们各占两个条目位，且是「通用功能」这一屏的门面。
-- 建筑分类只差总览 `buildings_guide` 一篇：细分类已全部写完，点进去第一屏仍会先看到「还没写完」。
+没有缺页了——八个分类点进去第一屏都是写完的条目。
 
 不在表里的 15 篇（`npc_guide` `tourist_guide` `strategy_guide` `overview_guide` `getting_started` `road_*`
 `scanner_guide` `commands_guide` `creators_guide` `creative_scanner_guide` `magic_circle_editor_guide` `test_guide`）

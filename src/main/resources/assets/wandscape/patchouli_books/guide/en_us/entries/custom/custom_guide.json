@@ -7,7 +7,21 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "$(italic)$(#6b5a45)This page has not been written yet.$()"
+      "text": "$(italic)$(#6b5a45)Files go into a data pack; $(#8a5a2b)/reload$()$(italic)$(#6b5a45) applies them. The in-game scanner is the easiest way in.$()$(br2)Three ways in: the $(bold)scanner$() exports a house in-game without touching any file; a $(bold)data pack$() changes buildings, element values, recipes, spells and chests with JSON; the $(bold)API$() is for mod authors writing Java."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Into your save's $(#8a5a2b)<world>/datapacks/<pack>/data/<namespace>/<category>/$(). Any namespace will do; you only need $(#8a5a2b)wandscape$() with the same file name to override something the mod ships.",
+      "title": "Where the files go"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Buildings go in $(#8a5a2b)buildings/<pack>/$(), element values in $(#8a5a2b)element_mappings/$(), recipes and scrolls in $(#8a5a2b)craft_recipes/$(), spells and circles in $(#8a5a2b)magic_spells/$() and $(#8a5a2b)magic_circles/$(), wild chests in $(#8a5a2b)exploration_regions/$(), balance numbers in $(#8a5a2b)wandscape_balance.json$(). This is where the scanner exports."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Data packs follow the $(bold)world$(): every save carries its own, and scanner exports live only inside it. The mod's own content sits in the jar.$(br2)The settings centre is $(bold)global$() ($(#8a5a2b)config/wandscape-*.toml$()): server-side keys are shared, client-side ones affect only your machine. Scanner presets are global too.",
+      "title": "World or global"
     }
   ]
 }

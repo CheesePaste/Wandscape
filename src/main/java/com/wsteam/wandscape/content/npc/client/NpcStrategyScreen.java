@@ -54,7 +54,8 @@ public class NpcStrategyScreen extends AbstractContainerScreen<NpcStrategyMenu>
     private String preset = "BALANCED";
     private int closeBtnX, closeBtnY;
     private HelpButton helpButton;
-    private final String helpDocumentPath = "strategy_guide";
+    /** 策略屏的 ? 键开《高级施法管理》（预设 / 锁 / 第三方门控都讲在那页）。 */
+    private final String helpDocumentPath = "advanced_casting_guide";
     private final java.util.Map<String, int[]> presetButtonBounds = new java.util.LinkedHashMap<>();
 
     /** 第三方魔法策略栏门控上限（NpcDataPacket 补设：-1 未收到；0 装备缺失禁用）。 */

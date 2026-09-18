@@ -1,0 +1,13 @@
+{
+  "name": "4，外交线",
+  "category": "wandscape:playstyle",
+  "icon": "minecraft:white_banner",
+  "sortnum": 8,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "外交线是跟村庄、AI 城镇和其他玩家的城镇打交道的路线：你可以征服，也可以结盟，最后建立属于自己的城邦。$(br2)这条线还没有正式开始做，现在进游戏还找不到它的内容。"
+    }
+  ]
+}

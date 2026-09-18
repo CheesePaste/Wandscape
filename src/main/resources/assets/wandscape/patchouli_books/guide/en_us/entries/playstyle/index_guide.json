@@ -11,11 +11,15 @@
     },
     {
       "type": "patchouli:text",
-      "text": "Features and Categories$(br2)$(l:wandscape:system/economy_guide)《Elements and Values》$(/l) Introduction to the economy system$(br2)$(l:wandscape:management/panel_guide)《Management Panel》$(/l) Interaction, town management and building$(br2)$(l:wandscape:magic/mages_guide)《Mages》$(/l) Introduction to workers and combat units"
+      "text": "$(l:wandscape:playstyle/track_adventure_guide)《2. Adventure Track》$(/l) Exploring the world, chests and fights$(br2)$(l:wandscape:playstyle/track_tech_guide)《3. Tech Track》$(/l) Not started yet$(br2)$(l:wandscape:playstyle/track_diplomacy_guide)《4. Diplomacy Track》$(/l) Not started yet$(br2)Features and Categories"
     },
     {
       "type": "patchouli:text",
-      "text": "$(l:wandscape:system/tourists_guide)《Tourists》$(/l) Short-stay visitors to your town$(br2)$(l:wandscape:magic/casting_guide)《Casting》$(/l) What decides which spells a mage casts$(br2)$(l:wandscape:buildings)《Buildings》$(/l) What you can put up, and how each kind works"
+      "text": "$(l:wandscape:playstyle/element_level_guide)《Elements and Town Level》$(/l) Introduction to the economy system$(br2)$(l:wandscape:management/panel_guide)《Management Panel》$(/l) Interaction, town management and building$(br2)$(l:wandscape:magic/mages_guide)《Mages》$(/l) Introduction to workers and combat units"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(l:wandscape:playstyle/tourists_guide)《Tourists and Values》$(/l) Short-stay visitors to your town$(br2)$(l:wandscape:magic/casting_guide)《Casting》$(/l) What decides which spells a mage casts$(br2)$(l:wandscape:buildings)《Buildings》$(/l) What you can put up, and how each kind works"
     },
     {
       "type": "patchouli:text",
@@ -23,7 +27,7 @@
     },
     {
       "type": "patchouli:text",
-      "text": "$(l:wandscape:custom)《Customization》$(/l) Import your own buildings and packs, edit element values$(br2)$(l:wandscape:compat)《Integration & Compatibility》$(/l) Playing alongside other mods"
+      "text": "$(l:wandscape:custom)《Customization & Datapacks》$(/l) Import your own buildings and packs, edit element values$(br2)$(l:wandscape:compat)《Integration & Compatibility》$(/l) Playing alongside other mods"
     }
   ]
 }

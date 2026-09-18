@@ -2,7 +2,7 @@
 
 The starter tutorial only covers the Town Hall, Warehouse, and Crafting Station. Here are additional essential features.
 
-《Elements and Values》 Understand the economy system
+《Elements and Town Level》 Understand the economy system
 
 《Mages》 Workers and combatants of the town
 

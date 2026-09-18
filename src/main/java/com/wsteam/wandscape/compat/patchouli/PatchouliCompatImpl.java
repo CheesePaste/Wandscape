@@ -15,25 +15,22 @@ final class PatchouliCompatImpl {
     private static final Map<String, ResourceLocation> DOC_TO_ENTRY = new HashMap<>();
 
     static {
-        // 与 gen_patchouli.py 生成的分类与条目保持一致。
-        // 有几篇 md 同时登记在「通用功能」和细分类别下（生成两份同名条目），这里只登记**首次**
-        // 出现的那一份——/wandscape guide <doc> 打开哪一份内容都一样，取先写的那个即可。
-        // playstyle
+        // 与 gen_patchouli.py 生成的分类与条目一一对应：手册没有「通用功能」这一层，
+        // 每个大功能只在自己分类下登记一次，分类 id 必须与生成物目录一致。
+        // playstyle（路线与阅读顺序 + 两页没有独立分类的总括内容）
         register("index_guide", "playstyle");
         register("intro_0_guide", "playstyle");
         register("intro_0_5_guide", "playstyle");
+        register("element_level_guide", "playstyle");
         register("track_tourist_guide", "playstyle");
-        // system（大功能入口）
-        register("economy_guide", "system");
-        register("panel_guide", "system");
-        register("mages_guide", "system");
-        register("tourists_guide", "system");
-        register("town_level_guide", "system");
-        register("casting_guide", "system");
-        register("buildings_guide", "system");
-        register("equipment_guide", "system");
-        register("custom_guide", "system");
+        register("track_adventure_guide", "playstyle");
+        register("track_tech_guide", "playstyle");
+        register("track_diplomacy_guide", "playstyle");
+        register("tourists_guide", "playstyle");
+        // about（平台、反馈与制作者）
+        register("about_guide", "about");
         // buildings（每类建筑一条，与 buildings/*.json 的 category 一一对应）
+        register("buildings_guide", "buildings");
         register("townhall_guide", "buildings");
         register("warehouse_guide", "buildings");
         register("workstation_guide", "buildings");
@@ -51,11 +48,15 @@ final class PatchouliCompatImpl {
         register("anomaly_guide", "buildings");
         register("building_scanner_guide", "buildings");
         // management（面板 + 四个子模式）
+        register("panel_guide", "management");
         register("panel_build_guide", "management");
         register("panel_road_guide", "management");
         register("panel_tasks_guide", "management");
         register("panel_settings_guide", "management");
-        // magic（每条一个魔法，正文与 JEI 卷轴信息页同文）
+        // magic（法师 + 施法 + 高级施法管理 + 每条一个魔法，正文与 JEI 卷轴信息页同文）
+        register("mages_guide", "magic");
+        register("casting_guide", "magic");
+        register("advanced_casting_guide", "magic");
         register("magic_beam_guide", "magic");
         register("magic_meteor_guide", "magic");
         register("magic_desperation_guide", "magic");
@@ -66,16 +67,20 @@ final class PatchouliCompatImpl {
         register("magic_heal_guide", "magic");
         register("magic_teleport_guide", "magic");
         register("magic_revive_guide", "magic");
-        // items（小道具按类归并成条，法杖整族一条）
+        // items（小道具按类归并成条，法杖整族一条；这一类没有总览页）
         register("wand_guide", "items");
         register("oath_ring_guide", "items");
         register("scepter_guide", "items");
         register("magic_compass_guide", "items");
         register("warehouse_terminal_guide", "items");
-        // custom
+        // custom（总览 + 建筑扫描器 + 各条数据导入）
+        register("custom_guide", "custom");
         register("custom_buildings_guide", "custom");
         register("custom_packs_guide", "custom");
         register("custom_elements_guide", "custom");
+        register("custom_recipes_guide", "custom");
+        register("custom_magic_guide", "custom");
+        register("custom_loot_guide", "custom");
         // compat（每个第三方模组一条）
         register("curios_guide", "compat");
         register("irons_spells_guide", "compat");
@@ -94,7 +99,6 @@ final class PatchouliCompatImpl {
         DOC_TO_ENTRY.put("hotel_guide", DOC_TO_ENTRY.get("service_guide"));
         DOC_TO_ENTRY.put("hotel", DOC_TO_ENTRY.get("service_guide"));
         DOC_TO_ENTRY.put("casting", DOC_TO_ENTRY.get("casting_guide"));
-        DOC_TO_ENTRY.put("equipment", DOC_TO_ENTRY.get("equipment_guide"));
         DOC_TO_ENTRY.put("custom", DOC_TO_ENTRY.get("custom_guide"));
     }
 

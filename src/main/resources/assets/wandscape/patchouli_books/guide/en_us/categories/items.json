@@ -1,6 +1,6 @@
 {
   "name": "Equipment and Items",
-  "description": "Mage gear and the player's own gadgets — how to get each one and what it is for.",
+  "description": "The mod's equipment (wands) and its smaller items. For spells such as scrolls, see $(l:wandscape:magic)《Spells》$(/l); for how to craft them, see $(l:wandscape:buildings/crafting_guide)《Crafting Station》$(/l).",
   "icon": "wandscape:wand",
-  "sortnum": 50
+  "sortnum": 40
 }

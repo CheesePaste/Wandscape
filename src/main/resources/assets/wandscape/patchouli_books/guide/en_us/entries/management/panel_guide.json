@@ -7,15 +7,11 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "The management panel is the interaction core of the mod.$(br2)Open the panel: By default, press V to open. The state is shown below."
+      "text": "The management panel is the interaction core of the mod.$(br2)Open the panel: By default, press V to open.$(br2)Basic Operations:$(br2)Interaction: Aim at a mage or building to see a white bounding box. Right-click to open its details page."
     },
     {
       "type": "patchouli:text",
-      "text": "Basic Operations:$(br2)Interaction: Aim at a mage or building to see a white bounding box. Right-click to open its details page.$(br2)Switch Modes: Press 1, 2, 3, 4 to switch sub-modes on the left:$(br2)1→$(l:wandscape:management/panel_build_guide)《Build Mode》$(/l): Construct buildings"
-    },
-    {
-      "type": "patchouli:text",
-      "text": "2→$(l:wandscape:management/panel_road_guide)《Road Mode》$(/l): Pave roads and shape terrain$(br2)3→$(l:wandscape:management/panel_tasks_guide)《Task Hall》$(/l): Manage tasks and mage status$(br2)4→$(l:wandscape:management/panel_settings_guide)《Settings》$(/l): Modify mod settings"
+      "text": "Switch Modes: Press 1, 2, 3, 4 to switch sub-modes on the left:$(br2)1→$(l:wandscape:management/panel_build_guide)《Build Mode》$(/l): Construct buildings$(br2)2→$(l:wandscape:management/panel_road_guide)《Road Mode》$(/l): Pave roads and shape terrain$(br2)3→$(l:wandscape:management/panel_tasks_guide)《Task Hall》$(/l): Manage tasks and mage status$(br2)4→$(l:wandscape:management/panel_settings_guide)《Settings》$(/l): Modify mod settings"
     }
   ]
 }

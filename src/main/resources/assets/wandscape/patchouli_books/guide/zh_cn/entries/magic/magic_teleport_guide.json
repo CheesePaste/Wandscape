@@ -2,7 +2,7 @@
   "name": "传送",
   "category": "wandscape:magic",
   "icon": "minecraft:ender_pearl",
-  "sortnum": 10,
+  "sortnum": 11,
   "read_by_default": true,
   "pages": [
     {

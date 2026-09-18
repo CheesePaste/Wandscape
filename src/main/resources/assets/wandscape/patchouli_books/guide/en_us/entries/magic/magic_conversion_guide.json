@@ -2,12 +2,12 @@
   "name": "Conversion",
   "category": "wandscape:magic",
   "icon": "minecraft:lead",
-  "sortnum": 6,
+  "sortnum": 7,
   "read_by_default": true,
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "$(italic)$(#6b5a45)Crafted at the Magic Workshop; needs colony level 20.$()$(br2)Converts the three nearest enemies into allies for a while; charmed units lose the effect upon taking damage."
+      "text": "$(italic)$(#6b5a45)Crafted at the Magic Workshop; needs town level 20.$()$(br2)Converts the three nearest enemies into allies for a while; charmed units lose the effect upon taking damage."
     }
   ]
 }

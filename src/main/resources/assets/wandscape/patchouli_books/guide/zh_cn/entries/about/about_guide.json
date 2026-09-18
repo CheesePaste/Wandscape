@@ -1,0 +1,27 @@
+{
+  "name": "关于我们",
+  "category": "wandscape:about",
+  "icon": "minecraft:name_tag",
+  "sortnum": 0,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "Wandscape 由热爱 Minecraft 与模拟经营的开发者、建筑师与玩家们共同浇灌。$(br2)官方平台:$(br2)$(l:https://space.bilibili.com/514121566)bilibili$(/l) · $(l:https://discord.gg/da8ZPuQ7Ys)discord$(/l) · $(l:https://github.com/CheesePaste/Wandscape)github$(/l) · $(l:https://www.curseforge.com/minecraft/mc-mods/wandscape)curseforge$(/l) · modrinth（等待补充） · mc百科（等待补充）$(br2)反馈：BUG 与建议提到 $(l:https://github.com/CheesePaste/Wandscape/issues)GitHub Issues$(/l)；支持我们走 $(l:https://ifdian.net/a/CheesePaste)爱发电$(/l)。"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(bold)主策划 & 主开发$()$(br2)$(li)$(bold)CheesePaste$()：$(l:https://space.bilibili.com/514121566)Bilibili$(/l)$(br2)$(bold)主开发$()$(br2)$(li)$(bold)Victory FX$()：$(l:https://space.bilibili.com/630432283)Bilibili$(/l)$(li)$(bold)Flamtingo$()：$(l:https://space.bilibili.com/1506072626)Bilibili$(/l)",
+      "title": "主要成员"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(bold)建筑师$()$(br2)$(li)$(bold)CheesePaste$()：$(l:https://space.bilibili.com/514121566)Bilibili$(/l)$(li)$(bold)次位神$()：$(l:https://space.bilibili.com/3494371208988823)Bilibili$(/l)$(li)$(bold)小咸鱼$()：$(l:https://m.bilibili.com/space/1217676935)Bilibili$(/l)$(li)$(bold)Silentstsky_星空$()：$(l:https://space.bilibili.com/272480941)Bilibili$(/l)$(li)$(bold)西米柚QAQ$()：$(l:https://space.bilibili.com/3461582591888090)Bilibili$(/l)$(li)$(bold)仍是异乡人_$()：$(l:https://space.bilibili.com/1948778109)Bilibili$(/l)$(li)$(bold)qic$()",
+      "title": "其他成员"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(bold)程序$()$(br2)$(li)$(bold)RawNuke$()：$(l:https://github.com/RawNuke)GitHub$(/l)$(li)$(bold)RainyLetter$()：$(l:https://github.com/RainyLetter)GitHub$(/l)$(br2)$(bold)特别感谢$()$(br2)Ruo_que · 爱发电用户_hcYF · Tasty_Kara卡拉 · Hymisc · …"
+    }
+  ]
+}

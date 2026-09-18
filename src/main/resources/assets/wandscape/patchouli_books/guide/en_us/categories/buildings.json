@@ -1,6 +1,6 @@
 {
   "name": "Buildings",
-  "description": "What you can build in town, and how each kind works.",
+  "description": "Every building type and what each one does. For how to build, see $(l:wandscape:playstyle/intro_0_guide)《0. Getting Started》$(/l), $(l:wandscape:management)《Management》$(/l) and $(l:wandscape:management/panel_build_guide)《Build Mode》$(/l).",
   "icon": "minecraft:stone_bricks",
-  "sortnum": 20
+  "sortnum": 10
 }

@@ -1,6 +1,6 @@
 {
   "name": "建筑",
-  "description": "小镇里能盖的建筑，以及每一类各自怎么用。",
+  "description": "这一页展示了模组的所有建筑类型和对应功能。对于如何建造，见$(l:wandscape:playstyle/intro_0_guide)《0，入门》$(/l)$(l:wandscape:management)《管理》$(/l)$(l:wandscape:management/panel_build_guide)《建造子模式》$(/l)。",
   "icon": "minecraft:stone_bricks",
-  "sortnum": 20
+  "sortnum": 10
 }

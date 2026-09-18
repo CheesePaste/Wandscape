@@ -2,12 +2,12 @@
   "name": "Petrification",
   "category": "wandscape:magic",
   "icon": "minecraft:stone",
-  "sortnum": 7,
+  "sortnum": 8,
   "read_by_default": true,
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "$(italic)$(#6b5a45)Crafted at the Magic Workshop; needs colony level 1.$()$(br2)Grants the caster petrification, reducing damage taken by 2."
+      "text": "$(italic)$(#6b5a45)Crafted at the Magic Workshop; needs town level 1.$()$(br2)Grants the caster petrification, reducing damage taken by 2."
     }
   ]
 }

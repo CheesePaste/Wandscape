@@ -1,6 +1,6 @@
 {
   "name": "管理",
-  "description": "管理面板本身，以及建造、道路、任务、设置四个子模式。",
+  "description": "这一页展示了模组的管理系统，操作方式。对于具体建筑，见$(l:wandscape:buildings)《建筑》$(/l)。",
   "icon": "minecraft:lever",
-  "sortnum": 30
+  "sortnum": 20
 }

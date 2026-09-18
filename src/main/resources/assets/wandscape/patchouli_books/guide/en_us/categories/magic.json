@@ -1,6 +1,6 @@
 {
   "name": "Spells",
-  "description": "How mages fight and what decides their spells, plus what each spell does.",
+  "description": "Mages, casting, and each spell. For wands and magic items, see $(l:wandscape:items)《Equipment and Items》$(/l).",
   "icon": "wandscape:spell_scroll",
-  "sortnum": 40
+  "sortnum": 30
 }

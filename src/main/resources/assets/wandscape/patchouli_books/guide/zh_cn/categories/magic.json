@@ -1,6 +1,6 @@
 {
   "name": "魔法",
-  "description": "法师怎么打、放什么魔法由什么决定，以及每个魔法能干什么。",
+  "description": "这一页展示了法师，施法与具体魔法。对于法杖与魔法道具，见$(l:wandscape:items)《装备与物品》$(/l)。",
   "icon": "wandscape:spell_scroll",
-  "sortnum": 40
+  "sortnum": 30
 }

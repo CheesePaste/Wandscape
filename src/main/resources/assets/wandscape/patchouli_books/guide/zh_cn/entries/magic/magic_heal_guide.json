@@ -2,12 +2,12 @@
   "name": "治疗",
   "category": "wandscape:magic",
   "icon": "minecraft:golden_apple",
-  "sortnum": 9,
+  "sortnum": 10,
   "read_by_default": true,
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "$(italic)$(#6b5a45)在魔法工坊制作卷轴，需要殖民地达到 1 级。$()$(br2)持续一段时间，治疗施法者周围一定半径内的友方单位。"
+      "text": "$(italic)$(#6b5a45)在魔法工坊制作卷轴，需要小镇达到 1 级。$()$(br2)持续一段时间，治疗施法者周围一定半径内的友方单位。"
     }
   ]
 }

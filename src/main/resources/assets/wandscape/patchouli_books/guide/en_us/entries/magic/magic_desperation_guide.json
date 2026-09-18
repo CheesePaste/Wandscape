@@ -2,12 +2,12 @@
   "name": "Desperation",
   "category": "wandscape:magic",
   "icon": "minecraft:diamond_sword",
-  "sortnum": 4,
+  "sortnum": 5,
   "read_by_default": true,
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "$(italic)$(#6b5a45)Crafted at the Magic Workshop; needs colony level 20.$()$(br2)Reduces armor to -50% of its original value (e.g. 20 armor drops to -10), granting magic enhancement based on the penalty to boost magic damage."
+      "text": "$(italic)$(#6b5a45)Crafted at the Magic Workshop; needs town level 20.$()$(br2)Reduces armor to -50% of its original value (e.g. 20 armor drops to -10), granting magic enhancement based on the penalty to boost magic damage."
     }
   ]
 }

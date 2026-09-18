@@ -1,0 +1,78 @@
+{
+  "name": "Importing Crafting Recipes",
+  "category": "wandscape:custom",
+  "icon": "minecraft:crafting_table",
+  "sortnum": 5,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "$(italic)$(#6b5a45)Put the file in your datapack under $(#8a5a2b)data/<namespace>/craft_recipes/$()$(italic)$(#6b5a45) and reopen the Crafting Station after $(#8a5a2b)/reload$()$(italic)$(#6b5a45). $(bold)The file name is the recipe id$()$(italic)$(#6b5a45); the $(#8a5a2b)id$()$(italic)$(#6b5a45) field inside is read by nothing, so renaming the file renames the recipe.$()$(br2)Every row in the Crafting Station's wand and gadget list, and every row in the Magic Workshop's scroll list, is backed by a $(#8a5a2b)craft_recipes$() file. These recipes do not use the vanilla $(#8a5a2b)pattern$()/$(#8a5a2b)key$() shape: they state only how many elements something costs and what it produces, and a mage does the work in town."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "The ordinary datapack path, $(#8a5a2b)data/<namespace>/craft_recipes/<id>.json$(), takes effect on $(#8a5a2b)/reload$().$(br2)To override a recipe the mod ships, your file $(bold)must sit in the $(#8a5a2b)wandscape$()$(bold) namespace under the same file name$(): the registry key is the file name with the namespace stripped away, and when two namespaces collide the mod's own copy wins while the other is dropped in silence.",
+      "title": "Where the Files Go"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(bold)Key  Meaning$()$(li)type — $(#8a5a2b)wand$(), $(#8a5a2b)spell$(), $(#8a5a2b)misc$() or $(#8a5a2b)potion$(); absent means $(#8a5a2b)wand$()$(li)output — the product, which must carry at least $(#8a5a2b)item$()$(li)cost — a map from element to a whole number$(li)unlock_requirement — only $(#8a5a2b)min_colony_level$() is read, default 1$(li)craft_station — labels the station on the JEI page only$(li)display_name — $(bold)read by no code at all$()",
+      "title": "Fields Every Recipe Shares"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Get $(#8a5a2b)type$() wrong by a single letter and the file is $(bold)dropped in silence$() — no error, no warning. An element key that does not exist makes the whole file fail to parse, which at least leaves a warning in the log.",
+      "title": "What a Typo Costs"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "A recipe row shows neither $(#8a5a2b)display_name$() nor the file name, but the language key $(#8a5a2b)craft_recipe.wandscape.<recipe id>$(), falling back to $(bold)the product item's own name$(). A wand recipe with no language key therefore shows up as plain \"Wand\" next to every other un-named wand.",
+      "title": "The Name on the Screen"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Language files live on the $(#8a5a2b)assets$() side, so $(bold)a pure datapack cannot supply one$(). To choose the name yourself the pack has to ship $(#8a5a2b)assets/<namespace>/lang/en_us.json$() alongside its data and fill in that key.",
+      "title": "Where Language Files Live"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(#8a5a2b)output.item$() must be $(#8a5a2b)wandscape:wand$(), $(#8a5a2b)wand_color$() takes a $(#8a5a2b)#RRGGBB$() string, and the modifiers go in the $(#8a5a2b)attributes$() array, each entry carrying three keys: $(#8a5a2b)type$(), $(#8a5a2b)operation$() and $(#8a5a2b)amount$().",
+      "title": "Wands"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(li)$(#8a5a2b)type$() is one of nine: $(#8a5a2b)max_hp$(), $(#8a5a2b)move_speed$(), $(#8a5a2b)spell_power$(), $(#8a5a2b)work_speed$(), $(#8a5a2b)spell_speed$(), $(#8a5a2b)armor_value$(), $(#8a5a2b)max_mana$(), $(#8a5a2b)health_regen$(), $(#8a5a2b)mana_regen$().$(li)$(#8a5a2b)operation$() is either $(#8a5a2b)addition$(), which adds the amount outright, or $(#8a5a2b)multiply_base$(), which adds a percentage of the base value. $(#8a5a2b)amount$() is therefore sometimes $(#8a5a2b)40.0$() and sometimes $(#8a5a2b)0.2$(), and negative numbers are legal.",
+      "title": "Writing the Modifiers"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "A wand has no tier or class field: what a wand $(italic)is$() is exactly this set of modifiers plus a colour.",
+      "title": "What a Wand Is"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "The modifiers $(bold)apply to a mage holding the wand and to nobody else$() — a player holding one gets nothing. And a misspelled enum value inside $(#8a5a2b)attributes$() costs you the preset variant in the creative inventory while $(bold)the recipe itself still crafts$(), so the result is a wand that exists, crafts fine, and carries no modifiers at all.",
+      "title": "Two Things That Bite"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Set $(#8a5a2b)type$() to $(#8a5a2b)spell$(), use $(#8a5a2b)wandscape:spell_scroll$() for $(#8a5a2b)output.item$(), and point $(#8a5a2b)output.magic_id$() at the magic to bind. The default $(#8a5a2b)craft_station$() is $(#8a5a2b)magic_station$().",
+      "title": "Scrolls"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Omit $(#8a5a2b)output.magic_id$() and it $(bold)defaults to the recipe's own file name$() rather than to any magic id. A recipe called $(#8a5a2b)scroll_heal.json$() that leaves it out binds to a magic named $(#8a5a2b)scroll_heal$(), which very likely does not exist. Nothing validates it at load time, and the price of the typo is a scroll that does nothing when used and reports unknown data.",
+      "title": "What magic_id Defaults To"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Set $(#8a5a2b)type$() to $(#8a5a2b)misc$() and put any item id in $(#8a5a2b)output.item$(). One item comes out per craft and the player picks the quantity in the screen. This type has no $(#8a5a2b)count$() or $(#8a5a2b)nbt$() field to write.$(br2)A $(#8a5a2b)potion$() type also exists, supporting a product with NBT and extra ingredients; the mod itself does not use it anywhere.",
+      "title": "Gadgets"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "What you write into $(#8a5a2b)cost$() is a $(bold)unit price$(). The amount actually paid is multiplied by the server's element craft-cost multiplier (1.0 by default, adjustable in the Settings Center) and rounded up, and a player raising the output quantity scales the cost linearly with it. Keep that layer in mind when tuning: a thousand in the JSON is not a thousand out of the player's warehouse.",
+      "title": "Costs Get Multiplied"
+    }
+  ]
+}

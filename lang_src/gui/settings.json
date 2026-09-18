@@ -104,8 +104,8 @@
     "zh_cn": "NPC 友军误伤保护"
   },
   "gui.wandscape.settings.npc.pvp": {
-    "en_us": "PVP colony faction recognition",
-    "zh_cn": "PVP 殖民地阵营识别"
+    "en_us": "PVP town faction recognition",
+    "zh_cn": "PVP 小镇阵营识别"
   },
   "gui.wandscape.settings.option.naming_chinese": {
     "en_us": "Chinese",
@@ -176,7 +176,7 @@
     "zh_cn": "道路网格辅助线"
   },
   "gui.wandscape.settings.tab.colony": {
-    "en_us": "Colony Autonomy",
+    "en_us": "Town Autonomy",
     "zh_cn": "城镇经营"
   },
   "gui.wandscape.settings.tab.packages": {
@@ -240,7 +240,7 @@
     "zh_cn": "游客每日精力上限"
   },
   "gui.wandscape.settings.tourist.maxPerColony": {
-    "en_us": "Max tourists per colony",
+    "en_us": "Max tourists per town",
     "zh_cn": "单镇游客同时上限"
   },
   "gui.wandscape.settings.tourist.spawnEnabled": {

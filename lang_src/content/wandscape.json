@@ -12,8 +12,8 @@
     "en_us": "Wandscape Configs"
   },
   "wandscape.guide_book.landing": {
-    "zh_cn": "欢迎来到 Wandscape！你放下建筑，法师替你干活，游客沿路入城消费。$(br2)第一次玩？先读$(l:wandscape:start/intro_0_guide)0，入门$(/l)，或从$(l:wandscape:contents)指南目录$(/l)挑一节。",
-    "en_us": "Welcome to Wandscape! You place the buildings, your wizards do the work, and tourists walk in along the roads to spend.$(br2)New here? Start with $(l:wandscape:start/intro_0_guide)0. Getting Started$(/l), or pick a chapter from the $(l:wandscape:contents)contents$(/l)."
+    "zh_cn": "欢迎来到 Wandscape！你放下建筑，法师替你干活，游客沿路入城消费。$(br2)第一次玩？先读$(l:wandscape:playstyle/intro_0_guide)0，入门$(/l)，或从$(l:wandscape:playstyle/index_guide)概览$(/l)挑一节。",
+    "en_us": "Welcome to Wandscape! You place the buildings, your wizards do the work, and tourists walk in along the roads to spend.$(br2)New here? Start with $(l:wandscape:playstyle/intro_0_guide)0. Getting Started$(/l), or pick a chapter from the $(l:wandscape:playstyle/index_guide)overview$(/l)."
   },
   "wandscape.guide_book.name": {
     "zh_cn": "魔法小镇建设指南",

@@ -10,15 +10,21 @@ Gameplay Tracks
 
 《1. Tourist Track》 Recommended for casual players
 
+《2. Adventure Track》 Exploring the world, chests and fights
+
+《3. Tech Track》 Not started yet
+
+《4. Diplomacy Track》 Not started yet
+
 Features and Categories
 
-《Elements and Values》 Introduction to the economy system
+《Elements and Town Level》 Introduction to the economy system
 
 《Management Panel》 Interaction, town management and building
 
 《Mages》 Introduction to workers and combat units
 
-《Tourists》 Short-stay visitors to your town
+《Tourists and Values》 Short-stay visitors to your town
 
 《Casting》 What decides which spells a mage casts
 
@@ -30,6 +36,6 @@ Features and Categories
 
 《Equipment and Items》 Mage gear and the player's own gadgets
 
-《Customization》 Import your own buildings and packs, edit element values
+《Customization & Datapacks》 Import your own buildings and packs, edit element values
 
 《Integration & Compatibility》 Playing alongside other mods

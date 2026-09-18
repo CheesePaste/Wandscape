@@ -10,6 +10,6 @@ Follow Mode: When enabled, the mage follows you and ignores town tasks.
 
 Peaceful Mode: When enabled, the mage will not attack any entity.
 
-Cast Strategy: Configure spells and casting order, see 《Cast Strategy》.
+Cast Strategy: Configure spells and casting order, see 《Advanced Casting》.
 
 Dismiss: Dismiss the mage permanently.

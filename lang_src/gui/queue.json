@@ -72,8 +72,8 @@
     "en_us": "Awaiting Transcription..."
   },
   "gui.wandscape.queue.tooltip.capacity": {
-    "zh_cn": "殖民地仓库容量不足",
-    "en_us": "Colony storage full"
+    "zh_cn": "小镇仓库容量不足",
+    "en_us": "Town storage full"
   },
   "gui.wandscape.queue.tooltip.missing_elements": {
     "zh_cn": "缺少元素: %s",

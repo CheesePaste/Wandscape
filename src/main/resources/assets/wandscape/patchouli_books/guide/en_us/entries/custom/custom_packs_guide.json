@@ -1,13 +1,57 @@
 {
-  "name": "Custom Building Packs",
+  "name": "Importing Building Packs",
   "category": "wandscape:custom",
   "icon": "minecraft:bundle",
-  "sortnum": 2,
+  "sortnum": 3,
   "read_by_default": true,
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "$(italic)$(#6b5a45)This page has not been written yet.$()"
+      "text": "$(italic)$(#6b5a45)A building pack is simply a directory. Create $(#8a5a2b)data/<namespace>/buildings/<pack name>/$()$(italic)$(#6b5a45) and drop building JSON into it and they belong to that pack; add a $(#8a5a2b)package.json$()$(italic)$(#6b5a45) inside and the pack gets a name and an icon.$()$(br2)Once a town has many buildings, one flat list stops being readable. A pack is the unit that groups buildings, ships them as a set, and keeps two authors' same-named buildings from colliding — inside one pack, ids only have to be unique within that pack."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(li)$(#8a5a2b)buildings/cottage.json$() — a building sitting directly under $(#8a5a2b)buildings/$() belongs to the $(#8a5a2b)default$() pack$(li)$(#8a5a2b)buildings/medieval/inn.json$() — the directory name $(#8a5a2b)medieval$() is the pack name$(li)$(#8a5a2b)buildings/medieval/package.json$() — this pack's metadata$(li)$(#8a5a2b)buildings/medieval/tower/watchtower.json$() — deeper nesting is only file organisation, still the $(#8a5a2b)medieval$() pack$(li)$(#8a5a2b)buildings/oriental/tea_house.json$() — a different pack",
+      "title": "The Directory Is the Pack"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Only the $(bold)first$() level of subdirectories under $(#8a5a2b)buildings/$() names a pack; going deeper is tidying, not membership."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "A building JSON may also carry a $(#8a5a2b)package_id$() field of its own, which $(bold)outranks the directory$(). Writing $(#8a5a2b)default$() there is the same as leaving it out, since it falls back to the directory — the field is for pulling one file out of its folder, nothing more.",
+      "title": "Naming One File's Pack"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(#8a5a2b)package.json$() sits in the pack directory, and every key in it may be omitted:$(br2)$(bold)Key  Default$()$(li)id — the directory name$(li)name — the pack id$(li)description — empty$(li)author — empty$(li)version — $(#8a5a2b)1.0.0$()$(li)icon — $(#8a5a2b)minecraft:stone_bricks$()$(li)priority — 100",
+      "title": "Pack Metadata"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(#8a5a2b)name$() takes either a literal string or a language key — both go through the same \"use the lookup if it resolves, otherwise use the text as written\" path, so a plain name is perfectly legal and you need not invent a $(#8a5a2b)wandscape.pack.*$() key.$(br2)$(#8a5a2b)icon$() takes an item id. The lower the $(#8a5a2b)priority$(), the earlier the pack sorts, and the mod's own core pack sits at 0.",
+      "title": "Name and Ordering"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Every building the mod ships lives at the root and belongs to a pack called $(#8a5a2b)default$(), displayed as Core Pack.$(br2)$(bold)A $(#8a5a2b)buildings/package.json$()$(bold) in any namespace is taken as that default pack's metadata$() — to write your own pack's $(#8a5a2b)package.json$(), put it inside the pack directory; one at the root renames the default pack instead.",
+      "title": "The Default Pack"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "A directory with no $(#8a5a2b)package.json$() is not an error; a placeholder pack is created, named after the directory. Writing a $(#8a5a2b)package.json$() whose $(#8a5a2b)id$() differs from its directory name leaves the pack list calling it one thing while its buildings hang off another, matching neither.",
+      "title": "When the Directory and the Id Disagree"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Yes. The Settings Center has a Pack Library page that disables a whole pack. Disabling only affects what the build list shows — buildings already standing in the world keep working and keep paying out. It is there for players tidying a list, not for pack authors to gate features with.",
+      "title": "Can Players Switch a Pack Off"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "The Creative Building Scanner has a target-pack field; type a name that does not exist yet and the export creates that directory and writes a $(#8a5a2b)package.json$() skeleton into it, recording you as the author. The pack name is lowercased, so $(#8a5a2b)Medieval$() and $(#8a5a2b)medieval$() are one and the same pack.$(br2)A scanner export goes into the save's own datapack under $(#8a5a2b)data/wandscape/buildings/<pack name>/$() — the pack and the namespace are two separate things, and an exported file always sits in the $(#8a5a2b)wandscape$() namespace.",
+      "title": "Working With the Scanner"
     }
   ]
 }

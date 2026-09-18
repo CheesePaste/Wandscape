@@ -1,6 +1,0 @@
-{
-  "name": "System Features",
-  "description": "Entry points to the mod's big features: elements, the management panel, mages, tourists, casting, buildings, equipment and customization.",
-  "icon": "minecraft:book",
-  "sortnum": 10
-}
