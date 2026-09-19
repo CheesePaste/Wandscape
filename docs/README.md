@@ -18,10 +18,8 @@
 | [checklists.md](checklists.md) | 迁移与重构活清单（NeoForge 适配、重构阶梯、PR 守则） | 版本迁移、大重构、发版或提交 PR 时 |
 | [fabric-port-survey.md](fabric-port-survey.md) | **Fabric 1.21.1 官方移植考察报告**：规模/耦合量、六条平台接缝、事件映射表、难度分级、仓库结构选择面 | 评估双 loader 官方版可行性或规划长期仓库演进时 |
 | [neoforge-26-upgrade-survey.md](neoforge-26-upgrade-survey.md) | **NeoForge 26.1 升级考察报告**：版本线/工具链变化、全库契约改名与深水重写分区、分项难度表、与 fabric 移植横评 | 评估升级到 Minecraft 26.1 / NeoForge 26.1 的体量与难易，规划升级顺序时 |
-| [multiplayer-parallel-isolation.md](plan/multiplayer-parallel-isolation.md) | **「完全平行」殖民地隔离的方案与可持续推进路线图**：已完成/待实测/后续可选（own-context 绑定 + 咽喉归属判定 + 领地方块防破坏；防恶意客户端与统一入口的时机） | 接续多人生存隔离实现、实测验收、或规划后续多人权限系统前 |
 | [guidebook.md](guidebook.md) | **手册全流程（内容 · 文风 · 管线 · 美术）**：md 单源 → 帕秋莉 JSON / 无帕秋莉时的兜底屏两处渲染、「改什么 = 改哪里」唯一源表、玩家文案文风（只写「做了什么」不写能力清单，附我们踩过的真实反例）、md→帕秋莉映射表与样式栈两个坑、生成与分页自检、书皮 512×256 的 23 类槽位全表与美术产出清单 | **动手写或改任何玩家看得到的文案之前**——手册条目、物品/魔法介绍、JEI 信息页、界面标签；改 `guidebook/*.md`、重生成手册、替换手册美术素材、或接续解锁与入口收口时 |
 | [lang-pipeline.md](lang-pipeline.md) | **语言文件生成管线（lang_src 单源 → lang/zh_cn.json + en_us.json）**：为什么这么拆、源文件分法、编译期校验（中英齐全 / 占位符对齐 / 产物漂移）、以及「为什么不按命名空间拆 / 不自写加载器」的决策留档 | 加或改任何上屏文案、新增界面、或想动 `lang/` 下那两个 JSON 时 |
-| [touhou-little-maid-compat.md](plan/touhou-little-maid-compat.md) | **车万女仆兼容方案与现状**：两侧扩展面与硬耦合点、**阶段一已落地**（友军零代码 + 女仆「小镇工作」模式，硬前置是女仆的 Home 模式；导航走直驱原版寻路，`WALK_TARGET` 方案已被实测否决——见 §3.3 导航定案）、阶段二（法师小屋/法杖施法/策略槽）改造清单、四项前置验证实测、任务类型准入（`caster_only`）。含顺带开放的 `ColonyWorkerApi`（任意 `Mob` 登记为殖民地工人，见 api-ledger §23） | 做第三方实体兼容、抽 `ColonyWorker` 缝、让其它模组的生物当工人、或评估女仆/附属模组接入前 |
 
 ---
 
