@@ -1051,9 +1051,6 @@ BTN_BG_HOVER = (44, 49, 78, 255)
 BTN_RIM_HOVER = (255, 232, 144, 255)
 GLYPH_NORMAL = (229, 195, 120, 255)
 GLYPH_HOVER = (255, 251, 234, 255)
-RIBBON_BODY = (160, 32, 45, 255)
-RIBBON_HIGHLIGHT = (192, 50, 65, 255)
-RIBBON_SHADOW = (110, 16, 26, 255)
 BOOKMARK_BG = (138, 26, 38, 255)
 BOOKMARK_ADD_BG = (110, 16, 26, 255)
 MARK_READ_TICK = (68, 229, 68, 255)
@@ -1166,15 +1163,6 @@ def _draw_page(c, x, y, w, h, is_left):
         col = (0x24, 0x18, 0x0A, int(65 * (t ** 1.6)))
         for yy in range(y, y + h):
             c.over(start + i, yy, col)
-
-
-def _draw_ribbon(c, rx, r_top, r_bottom):
-    """顶端飘垂的真丝书签缎带（垂于中缝书脊深槽内，不压内页）。"""
-    rw = 6
-    _fill(c, rx, r_top, rx + rw, r_bottom, RIBBON_BODY)
-    _vline(c, rx, r_top, r_bottom, RIBBON_HIGHLIGHT)
-    _vline(c, rx + rw - 1, r_top, r_bottom, RIBBON_SHADOW)
-    _fill(c, rx, r_bottom - 2, rx + rw, r_bottom, GOLD_OUTER)
 
 
 # ---- 交互按钮：矢量绘制，烘进帕秋莉硬编码取样的 UV 槽 ----
@@ -1443,9 +1431,6 @@ def build_book_texture():
     _draw_spine(c, 136, 0, 180)
     _draw_page(c, 8, 5, 125, 170, True)
     _draw_page(c, 139, 5, 125, 170, False)
-    # 缎带垂在中缝书脊槽内（spineX-3 起、宽 6）。原代码从 bookTop-8 起画，
-    # 画布没有负坐标，顶端 8px 略去。
-    _draw_ribbon(c, 133, 0, 36)
 
     # ── 着陆页铭牌底条：帕秋莉画在屏幕 (-8,12)，左侧 8px 落在书外 ──
     _draw_landing_nameplate(c, 0, 180, 140, 31)
