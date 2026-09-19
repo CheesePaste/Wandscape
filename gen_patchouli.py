@@ -1051,6 +1051,12 @@ BTN_BG_HOVER = (44, 49, 78, 255)
 BTN_RIM_HOVER = (255, 232, 144, 255)
 GLYPH_NORMAL = (229, 195, 120, 255)
 GLYPH_HOVER = (255, 251, 234, 255)
+RIBBON_BODY = (160, 32, 45, 255)
+RIBBON_HIGHLIGHT = (192, 50, 65, 255)
+RIBBON_SHADOW = (110, 16, 26, 255)
+BOOKMARK_BG = (138, 26, 38, 255)
+BOOKMARK_ADD_BG = (110, 16, 26, 255)
+MARK_READ_TICK = (68, 229, 68, 255)
 
 
 # ---- 绘制原语：语义对齐 MC GuiGraphics 的同名方法 ----
@@ -1163,11 +1169,11 @@ def _draw_page(c, x, y, w, h, is_left):
 
 
 def _draw_ribbon(c, rx, r_top, r_bottom):
-    """顶端飘垂的真丝书签缎带。"""
-    rw = 10
-    _fill(c, rx, r_top, rx + rw, r_bottom, (160, 32, 45, 255))
-    _vline(c, rx, r_top, r_bottom, (192, 50, 65, 255))
-    _vline(c, rx + rw - 1, r_top, r_bottom, (110, 16, 26, 255))
+    """顶端飘垂的真丝书签缎带（垂于中缝书脊深槽内，不压内页）。"""
+    rw = 6
+    _fill(c, rx, r_top, rx + rw, r_bottom, RIBBON_BODY)
+    _vline(c, rx, r_top, r_bottom, RIBBON_HIGHLIGHT)
+    _vline(c, rx + rw - 1, r_top, r_bottom, RIBBON_SHADOW)
     _fill(c, rx, r_bottom - 2, rx + rw, r_bottom, GOLD_OUTER)
 
 
@@ -1212,10 +1218,183 @@ def _draw_back_button(c, x, y, w, h, hovered):
     _vline(c, cx - 2, cy - 3, cy + 1, col)
 
 
-def _draw_bookmark_tab(c, x, y, w, h, hovered):
-    """书签页签。"""
-    _fill(c, x, y, x + w, y + h, (158, 36, 50, 255) if hovered else (122, 20, 32, 255))
+def _draw_bookmark_tab(c, x, y, w, h, is_add, hovered):
+    """书签页签真丝底板（is_add 时空位画加号十字），hovered 时叠外圈微光。"""
+    _fill(c, x, y, x + w, y + h, BOOKMARK_ADD_BG if is_add else BOOKMARK_BG)
     _outline(c, x, y, w, h, GOLD_BRIGHT if hovered else GOLD_OUTER)
+    _vline(c, x + w - 1, y + 1, y + h - 2, GOLD_BRIGHT)
+
+    if is_add:
+        cx = x + w // 2
+        cy = y + h // 2
+        _vline(c, cx, cy - 2, cy + 2, GOLD_BRIGHT)
+        _hline(c, cx - 2, cx + 2, cy, GOLD_BRIGHT)
+
+    if hovered:
+        _fill(c, x - 1, y - 1, x + w + 1, y + h + 1, (212, 175, 55, 0x33))
+
+
+def _draw_small_arrow(c, x, y, is_left, hovered):
+    """图片页微型矢量翻图箭头（5x7，◄ / ►）。"""
+    w, h = 5, 7
+    if hovered:
+        _fill(c, x - 1, y - 1, x + w + 1, y + h + 1, (212, 175, 55, 0x44))
+    _fill(c, x, y, x + w, y + h, BTN_BG_HOVER if hovered else BTN_BG_NORMAL)
+    _outline(c, x, y, w, h, BTN_RIM_HOVER if hovered else GOLD_OUTER)
+    col = GLYPH_HOVER if hovered else GLYPH_NORMAL
+    cy = y + 3
+    if is_left:
+        _vline(c, x + 1, cy, cy, col)
+        _vline(c, x + 2, cy - 1, cy + 1, col)
+        _vline(c, x + 3, cy - 2, cy + 2, col)
+    else:
+        _vline(c, x + 1, cy - 2, cy + 2, col)
+        _vline(c, x + 2, cy - 1, cy + 1, col)
+        _vline(c, x + 3, cy, cy, col)
+
+
+# ---- 11x11 功能图标按钮的 7 种字形 ----
+def _glyph_resize(c, cx, cy, col):
+    _hline(c, cx - 2, cx, cy - 3, col)
+    _hline(c, cx - 2, cx, cy + 1, col)
+    _vline(c, cx - 3, cy - 2, cy, col)
+    _vline(c, cx + 1, cy - 2, cy, col)
+    _fill(c, cx - 1, cy - 2, cx, cy - 1, GOLD_BRIGHT)
+    _fill(c, cx + 2, cy + 2, cx + 3, cy + 3, col)
+    _fill(c, cx + 3, cy + 3, cx + 4, cy + 4, col)
+
+
+def _glyph_config(c, cx, cy, bg, col):
+    _fill(c, cx - 1, cy - 1, cx + 2, cy + 2, col)
+    _hline(c, cx - 1, cx + 1, cy - 3, col)
+    _hline(c, cx - 1, cx + 1, cy + 3, col)
+    _vline(c, cx - 3, cy - 1, cy + 1, col)
+    _vline(c, cx + 3, cy - 1, cy + 1, col)
+    _fill(c, cx, cy, cx + 1, cy + 1, bg)
+
+
+def _glyph_eye(c, cx, cy, col, mark_read):
+    _hline(c, cx - 2, cx + 2, cy - 2, col)
+    _hline(c, cx - 2, cx + 2, cy + 2, col)
+    _vline(c, cx - 3, cy - 1, cy + 1, col)
+    _vline(c, cx + 3, cy - 1, cy + 1, col)
+    _fill(c, cx, cy - 1, cx + 1, cy + 2, col)
+    if mark_read:
+        _vline(c, cx + 3, cy - 4, cy - 1, MARK_READ_TICK)
+        _hline(c, cx + 2, cx + 4, cy - 3, MARK_READ_TICK)
+
+
+def _glyph_history(c, cx, cy, col):
+    _hline(c, cx - 1, cx + 1, cy - 3, col)
+    _hline(c, cx - 1, cx + 1, cy + 3, col)
+    _vline(c, cx - 3, cy - 1, cy + 1, col)
+    _vline(c, cx + 3, cy - 1, cy + 1, col)
+    _fill(c, cx - 2, cy - 2, cx - 1, cy - 1, col)
+    _fill(c, cx + 2, cy - 2, cx + 3, cy - 1, col)
+    _fill(c, cx - 2, cy + 2, cx - 1, cy + 3, col)
+    _fill(c, cx + 2, cy + 2, cx + 3, cy + 3, col)
+    _fill(c, cx, cy, cx + 1, cy + 1, col)
+    _vline(c, cx, cy - 2, cy, col)
+    _hline(c, cx, cx + 2, cy, col)
+
+
+def _glyph_advancements(c, cx, cy, col):
+    _hline(c, cx - 2, cx + 2, cy - 3, col)
+    _hline(c, cx - 2, cx + 2, cy - 2, col)
+    _hline(c, cx - 1, cx + 1, cy - 1, col)
+    _vline(c, cx, cy, cy + 2, col)
+    _hline(c, cx - 2, cx + 2, cy + 3, col)
+    _fill(c, cx - 3, cy - 2, cx - 2, cy - 1, col)
+    _fill(c, cx + 3, cy - 2, cx + 4, cy - 1, col)
+
+
+def _glyph_editor(c, cx, cy, col):
+    _fill(c, cx + 2, cy - 3, cx + 3, cy - 2, col)
+    _fill(c, cx + 1, cy - 2, cx + 2, cy - 1, col)
+    _fill(c, cx, cy - 1, cx + 1, cy, col)
+    _fill(c, cx - 1, cy, cx, cy + 1, col)
+    _fill(c, cx - 2, cy + 1, cx - 1, cy + 2, col)
+    _fill(c, cx - 3, cy + 2, cx - 2, cy + 3, GOLD_BRIGHT)
+    _fill(c, cx + 3, cy - 2, cx + 4, cy - 1, col)
+    _fill(c, cx + 2, cy - 1, cx + 3, cy, col)
+
+
+def _draw_icon_button(c, x, y, kind, hovered):
+    """11x11 功能图标按钮：缩放 / 配置 / 眼睛 / 标记已读 / 历史 / 成就 / 编辑器。"""
+    w = h = 11
+    if hovered:
+        _fill(c, x - 1, y - 1, x + w + 1, y + h + 1, (212, 175, 55, 0x44))
+    bg = BTN_BG_HOVER if hovered else BTN_BG_NORMAL
+    _fill(c, x, y, x + w, y + h, bg)
+    _outline(c, x, y, w, h, BTN_RIM_HOVER if hovered else GOLD_OUTER)
+
+    col = GLYPH_HOVER if hovered else GLYPH_NORMAL
+    cx, cy = x + 5, y + 5
+    if kind == "config":
+        _glyph_config(c, cx, cy, bg, col)
+    elif kind == "eye":
+        _glyph_eye(c, cx, cy, col, False)
+    elif kind == "mark_read":
+        _glyph_eye(c, cx, cy, col, True)
+    elif kind == "resize":
+        _glyph_resize(c, cx, cy, col)
+    elif kind == "history":
+        _glyph_history(c, cx, cy, col)
+    elif kind == "advancements":
+        _glyph_advancements(c, cx, cy, col)
+    elif kind == "editor":
+        _glyph_editor(c, cx, cy, col)
+
+
+def _draw_landing_nameplate(c, x, y, w, h):
+    """着陆页古典真丝描金燕尾飘带铭牌底托。
+
+    深绯红天鹅绒织锦纵向渐变光泽 + 双道古金滚边 + 左端书壳外翻卷折扣环 +
+    右端古典燕尾切角 + 下方六行翻卷下垂阴影。左侧 8px 落在书外（帕秋莉把它
+    画在屏幕 (-8,12)），别在左端放重要图案。
+    """
+    ribbon_h = 24
+    ribbon_w = w
+    tail_cut = 8
+    fold_shadow = (53, 6, 11, 255)
+
+    # 1. 飘带投影（下方柔和双层漫反射）
+    _fill(c, x + 4, y + ribbon_h, x + ribbon_w - tail_cut - 2, y + ribbon_h + 1, (0, 0, 0, 0x30))
+    _fill(c, x + 6, y + ribbon_h + 1, x + ribbon_w - tail_cut - 6, y + ribbon_h + 2, (0, 0, 0, 0x18))
+
+    # 2. 飘带主体（纵向渐变光泽，右端随行渐收出燕尾）
+    for ry in range(ribbon_h):
+        x_end = x + ribbon_w - _tail_cut_at(ry, ribbon_h, tail_cut)
+        f = ry / (ribbon_h - 1)
+        _hline(c, x, x_end - 1, y + ry,
+               (int(0x8A * (1 - f) + 0x5A * f), int(0x18 * (1 - f) + 0x0C * f),
+                int(0x24 * (1 - f) + 0x14 * f), 255))
+
+    # 3. 上下沿双道古金滚边
+    _hline(c, x, x + ribbon_w - 1, y, GOLD_OUTER)
+    _hline(c, x, x + ribbon_w - 2, y + 1, GOLD_INNER)
+    _hline(c, x, x + ribbon_w - 1, y + ribbon_h - 1, GOLD_OUTER)
+    _hline(c, x, x + ribbon_w - 2, y + ribbon_h - 2, GOLD_INNER)
+
+    # 4. 右端燕尾切角描金饰边
+    for ry in range(ribbon_h):
+        x_end = x + ribbon_w - _tail_cut_at(ry, ribbon_h, tail_cut)
+        _vline(c, x_end - 1, y + ry, y + ry, GOLD_BRIGHT)
+        _vline(c, x_end - 2, y + ry, y + ry, GOLD_OUTER)
+
+    # 5. 左端书壳外翻卷折扣环 + 左下翻卷下垂阴影折角
+    clasp_x = x + 6
+    _vline(c, clasp_x - 1, y, y + ribbon_h - 1, GOLD_OUTER)
+    _vline(c, clasp_x, y, y + ribbon_h - 1, GOLD_BRIGHT)
+    _vline(c, clasp_x + 1, y, y + ribbon_h - 1, GOLD_OUTER)
+    for i in range(6):
+        _hline(c, x + i, clasp_x, y + ribbon_h + i, fold_shadow)
+
+
+def _tail_cut_at(ry, ribbon_h, tail_cut):
+    """燕尾切角：行越靠近上下沿，右侧收进越多。"""
+    dy = abs(ry - (ribbon_h - 1) / 2.0)
+    return int((1.0 - dy / ((ribbon_h - 1) / 2.0)) * tail_cut)
 
 
 def _atlas_slot(c, u, v, w, h, painter):
@@ -1228,14 +1407,34 @@ def _atlas_slot(c, u, v, w, h, painter):
 
 
 def build_book_texture():
-    """512×256 书皮 + 按钮图集。
+    """512×256 帕秋莉书皮 + 按钮图集（23 类槽位）。
 
     帕秋莉只认 book_texture 这一张贴图（GuiBook.drawFromTexture 固定 blit 512×256），
-    书本外壳、书脊、羊皮纸页与全部交互按钮因此整体烘在图集里，客户端不再需要任何自绘
-    或反射代码。图集坐标 (0,0) 与书本左上角 (bookLeft, bookTop) 重合。
+    书本外壳、书脊、羊皮纸页、着陆页铭牌与全部交互按钮因此整体烘在图集里，客户端不再
+    需要自绘代码。图集坐标 (0,0) 与书本左上角 (bookLeft, bookTop) 重合；只有着陆页铭牌
+    (0,180) 是例外——帕秋莉把它画在屏幕 (-8,12)，左侧 8px 落在书外。
 
-    封面原本还有一圈落差阴影和 7px/6px 外出血，但帕秋莉只 blit 272×180 一块
-    （原版书皮同样是边缘零留白铺满整块），画布内没有容纳它的余地，故不再绘制。
+    槽位一览（权威表见 docs/plan/patchouli-art-asset-spec.md 一.3）：
+        (0,0)        272×180  双页本体（封皮 + 书脊 + 左右页）
+        (0,180)      140×31   着陆页铭牌底条
+        (140,180)    110×3    分隔条          (140,183)     99×14   搜索框
+        (250,180)    16×16    锁图标
+        (140/148/156,197)     8×8   未读 / 待办 / 已完成标记
+        (272,0 / 10) 18×10    翻页大箭头（右 / 左）
+        (272,20 / 27) 5×7     图片页翻图小箭头（右 / 左）
+        (272,160 / 170) 13×10 书签页签（已存 / 空位加书签）
+        (308,0)      18×9     返回上级
+        (308,9/20/31) 11×11   编辑器 / 配置 / 标记已读
+        (330,9/20/31) 11×11   调整大小 / 成就 / 历史
+        (405,149)    106×106  插图外框（中空）
+    按钮 hover 槽位一律是 u + 宽度，见 GuiButtonBook.renderWidget。
+
+    烘不进来的三处（原先由客户端逐控件实时绘制，静态图集表达不了，已舍弃）：
+        - 封面外侧落差阴影与外出血 7px/6px：帕秋莉只 blit 272×180 一块，
+          画布内没有余地（原版书皮同样边缘零留白铺满整块）
+        - 分类按钮 (20×20) 的常驻金框：那些像素同时属于书页背景，烘进去会在每一页
+          右页的同一格出现；其悬停态又因 GuiButtonCategory 不走 hover 槽位而无法表达
+        - 条目行的悬停金色流光：GuiButtonEntry 不是 GuiButtonBook，没有 hover 槽位
     """
     c = Canvas(512, 256)
 
@@ -1244,14 +1443,34 @@ def build_book_texture():
     _draw_spine(c, 136, 0, 180)
     _draw_page(c, 8, 5, 125, 170, True)
     _draw_page(c, 139, 5, 125, 170, False)
-    _draw_ribbon(c, 80, 0, 16)
+    # 缎带垂在中缝书脊槽内（spineX-3 起、宽 6）。原代码从 bookTop-8 起画，
+    # 画布没有负坐标，顶端 8px 略去。
+    _draw_ribbon(c, 133, 0, 36)
+
+    # ── 着陆页铭牌底条：帕秋莉画在屏幕 (-8,12)，左侧 8px 落在书外 ──
+    _draw_landing_nameplate(c, 0, 180, 140, 31)
 
     # ── 交互按钮：正常/hover 成对落在帕秋莉硬编码的 UV 槽 ──
+    # hover 槽位规则 = u + 宽度，见 GuiButtonBook.renderWidget。
+    # 5×7：图片页翻图小箭头（v=20 右 / v=27 左）
+    _atlas_slot(c, 272, 20, 5, 7, lambda x, y, hv: _draw_small_arrow(c, x, y, False, hv))
+    _atlas_slot(c, 272, 27, 5, 7, lambda x, y, hv: _draw_small_arrow(c, x, y, True, hv))
+    # 18×10：主翻页大箭头（v=0 右 / v=10 左）
     _atlas_slot(c, 272, 0, 18, 10, lambda x, y, hv: _draw_arrow_button(c, x, y, 18, 10, False, hv))
     _atlas_slot(c, 272, 10, 18, 10, lambda x, y, hv: _draw_arrow_button(c, x, y, 18, 10, True, hv))
-    _atlas_slot(c, 272, 160, 13, 10, lambda x, y, hv: _draw_bookmark_tab(c, x, y, 13, 10, hv))
-    _atlas_slot(c, 272, 170, 13, 10, lambda x, y, hv: _draw_bookmark_tab(c, x, y, 13, 10, hv))
+    # 13×10：书签页签（v=160 已存 / v=170 空位加书签）
+    _atlas_slot(c, 272, 160, 13, 10, lambda x, y, hv: _draw_bookmark_tab(c, x, y, 13, 10, False, hv))
+    _atlas_slot(c, 272, 170, 13, 10, lambda x, y, hv: _draw_bookmark_tab(c, x, y, 13, 10, True, hv))
+    # 18×9：返回上级
     _atlas_slot(c, 308, 0, 18, 9, lambda x, y, hv: _draw_back_button(c, x, y, 18, 9, hv))
+    # 11×11 功能图标：编辑器 / 配置 / 标记已读（书籍页脚三连）
+    _atlas_slot(c, 308, 9, 11, 11, lambda x, y, hv: _draw_icon_button(c, x, y, "editor", hv))
+    _atlas_slot(c, 308, 20, 11, 11, lambda x, y, hv: _draw_icon_button(c, x, y, "config", hv))
+    _atlas_slot(c, 308, 31, 11, 11, lambda x, y, hv: _draw_icon_button(c, x, y, "mark_read", hv))
+    # 11×11 功能图标：调整大小 / 成就 / 历史（着陆页底部图标排）
+    _atlas_slot(c, 330, 9, 11, 11, lambda x, y, hv: _draw_icon_button(c, x, y, "resize", hv))
+    _atlas_slot(c, 330, 20, 11, 11, lambda x, y, hv: _draw_icon_button(c, x, y, "advancements", hv))
+    _atlas_slot(c, 330, 31, 11, 11, lambda x, y, hv: _draw_icon_button(c, x, y, "history", hv))
 
     # ── 帕秋莉静态内嵌装饰（硬编码取样，非按钮） ──
     # 140,180 110x3：分隔条（古典双道细金线）
