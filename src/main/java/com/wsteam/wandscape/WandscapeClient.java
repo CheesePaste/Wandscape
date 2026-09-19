@@ -568,11 +568,16 @@ public class WandscapeClient {
         com.wsteam.wandscape.foundation.ui.guidebook.GuideFacade.open("");
     }
 
-    /** Welcome message on world join — points new players at the V-key building panel. */
+    /** Welcome message on world join — points new players at the V-key building panel and the guidebook. */
     private static void onPlayerLoggingIn(ClientPlayerNetworkEvent.LoggingIn event) {
         var player = event.getPlayer();
         if (player != null) {
             player.displayClientMessage(Component.translatable("message.wandscape.town.welcome"), false);
+            // 手册的阅读体验由装没装帕秋莉决定，所以这条提示看的是本机的模组列表
+            if (!com.wsteam.wandscape.compat.patchouli.PatchouliCompat.isLoaded()) {
+                player.displayClientMessage(
+                        Component.translatable("message.wandscape.town.patchouli_hint"), false);
+            }
         }
         // Pre-warm building preview GIFs in the background so the panel is ready early
         BuildingPreviewGifCache.warmAll();

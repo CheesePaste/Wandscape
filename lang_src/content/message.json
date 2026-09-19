@@ -548,8 +548,12 @@
     "zh_cn": "进去逛了一圈，什么也没买"
   },
   "message.wandscape.town.welcome": {
-    "en_us": "[Wandscape] Welcome! Press V to open the building panel and start building your town. Once the panel is open, press C to release the mouse and H to open the tutorial.\nThis mod is still in its early versions with few built-in spells — playing alongside irons_spellbooks (Iron Spells) is recommended.",
-    "zh_cn": "[魔法小镇] 欢迎！按 V 键打开建筑面板，开始建设你的魔法小镇吧！面板打开后，按 C 键抬起鼠标操作界面，按 H 键打开新手教程。\n本模组尚在早期版本，自带魔法较少，推荐搭配 irons_spellbooks（铁魔法）游玩。"
+    "en_us": "[Wandscape] Welcome! Press V to open the building panel and start building your town.\nCraft a \"Wandscape Guidebook\" to learn more about the mod.\nThis mod is still in its early versions with few built-in spells — playing alongside irons_spellbooks (Iron Spells) is recommended.",
+    "zh_cn": "[魔法小镇] 欢迎！按 V 键打开建筑面板，开始建设你的魔法小镇吧！\n制作一本“魔法小镇建设指南”了解模组更多内容。\n本模组尚在早期版本，自带魔法较少，推荐搭配 irons_spellbooks（铁魔法）游玩。"
+  },
+  "message.wandscape.town.patchouli_hint": {
+    "en_us": "[Wandscape] Installing the Patchouli mod is recommended for a better guidebook reading experience.",
+    "zh_cn": "[魔法小镇] 推荐安装帕秋莉手册模组获得更好的手册翻阅体验。"
   },
   "message.wandscape.tutorial.toast": {
     "en_us": "§e[Newcomer Guide] §fFollow the guide to build your magic town step by step!",
