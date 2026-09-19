@@ -7,7 +7,7 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "$(italic)$(#6b5a45)建议先看$(l:wandscape:custom/building_scanner_guide)建筑扫描器$(/l)$(italic)$(#6b5a45)：扫描器导出的那份文件，就是本篇要讲的东西。手写只在要批量生成、或者要精修扫描结果时更划算。$()$(br2)建筑文件放进数据包，$(#8a5a2b)/reload$() 之后它就会出现在建造面板和建造法杖的列表里。$(bold)文件名只决定它归哪个包，文件里的 $(#8a5a2b)id$()$(bold) 才是建筑的权威标识。$()"
+      "text": "$(italic)$(#6b5a45)建议先看$(l:wandscape:buildings/building_scanner_guide)建筑扫描器$(/l)$(italic)$(#6b5a45)：扫描器导出的那份文件，就是本篇要讲的东西。手写只在要批量生成、或者要精修扫描结果时更划算。$()$(br2)建筑文件放进数据包，$(#8a5a2b)/reload$() 之后它就会出现在建造面板和建造法杖的列表里。$(bold)文件名只决定它归哪个包，文件里的 $(#8a5a2b)id$()$(bold) 才是建筑的权威标识。$()"
     },
     {
       "type": "patchouli:text",

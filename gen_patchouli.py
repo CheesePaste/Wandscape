@@ -10,13 +10,19 @@
 生成物（提交进仓库）
     data/wandscape/patchouli_books/guide/book.json
     assets/wandscape/patchouli_books/guide/<patchouli_lang>/{categories,entries}/**.json
+    assets/wandscape/guidebook/runtime/<md_lang>.json     （兜底阅读器读的运行期清单）
     assets/wandscape/textures/gui/guidebook/book.png      （textures 子命令，占位书皮）
+
+运行期清单是给「没装 Patchouli」的兜底阅读器（GuidebookScreen）用的：分类、条目、条目名、
+《…》标题表与着陆文案都按语言各发一份，两套渲染因此看到同一本手册，页面跳转也一致。
+它是生成物，**不要手改**；结构只在下面的 CATEGORIES / ENTRIES / TITLE_TO_DOC 三张表里。
 
 md 语言目录 → Patchouli 语言目录：en → en_us，zh_cn → zh_cn。
 Patchouli 以 en_us 目录为枚举索引，因此两套目录都必须完整生成。
 
 用法
-    python gen_patchouli.py                # 编译手册 JSON
+    python gen_patchouli.py                # 编译手册 JSON + 运行期清单
+    python gen_patchouli.py --check        # 只校验：已提交的生成物是否与当前 md/结构表一致
     python gen_patchouli.py textures       # 生成占位书皮（已存在则不覆盖）
     python gen_patchouli.py textures --force
 """
@@ -28,17 +34,29 @@ import sys
 import zlib
 from pathlib import Path
 
+# --check 要在内存里补做分页（生成物是 gen + paginate 两步的结果），两份脚本都在仓库根、都只用 stdlib
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import paginate_patchouli_json as paginate_module  # noqa: E402
+
 ROOT = Path(__file__).resolve().parent
 SRC_MD = ROOT / "src/main/resources/assets/wandscape/guidebook"
 OUT_DATA = ROOT / "src/main/resources/data/wandscape/patchouli_books/guide"
 OUT_ASSETS = ROOT / "src/main/resources/assets/wandscape/patchouli_books/guide"
+OUT_RUNTIME = SRC_MD / "runtime"
 BOOK_TEXTURE = ROOT / "src/main/resources/assets/wandscape/textures/gui/guidebook/book.png"
+# 着陆文案的唯一来源：book.json 的 landing_text 语言键（中英各一句，内嵌帕秋莉链接命令）
+LANDING_LANG_FILE = ROOT / "lang_src/content/wandscape.json"
+LANDING_LANG_KEY = "wandscape.guide_book.landing"
 
 NS = "wandscape"
 BOOK_ID = "wandscape:guide"
 
 # md 语言目录 → Patchouli 语言目录
 LANGS = [("zh_cn", "zh_cn"), ("en", "en_us")]
+# md 语言目录 → lang_src 里的语言键后缀（两套命名不同，别混用）
+LANG_KEY_SUFFIX = {"zh_cn": "zh_cn", "en": "en_us"}
+# 清单格式版本：Java 侧不认的版本一律走降级路径，不做「缺字段补默认」
+MANIFEST_VERSION = 1
 
 # ---------------------------------------------------------------- 结构清单
 # 分类：(id, 中文名, 英文名, 图标, sortnum, zh 描述, en 描述)
@@ -164,7 +182,10 @@ ENTRIES = [
 ]
 
 # 《标题》→ 链接目标（条目 id 或分类 id，link_command 两者都认）。条目名与标题同文时才会命中。
-TITLE_TO_DOC = {
+#
+# 按语言分开存：md 编译（convert_inline）用合并视图，运行期清单按语言各发一份——
+# 兜底阅读器只拿自己那一种语言的表去把正文里的《…》变成链接，不靠猜。
+TITLE_TO_DOC_ZH = {
     # zh_cn
     # 「建筑 / 管理 / 魔法 / 装备与物品 / 自定义与数据包 / 联动与兼容」既是分类名、也是功能名——一律指向**分类**：
     # 分类页里第一条就是那篇总览，往下才是各条细节，比直接跳条目更顺手。
@@ -209,6 +230,9 @@ TITLE_TO_DOC = {
     "盟誓戒指": "oath_ring_guide",
     "权杖": "scepter_guide",
     "元素节点": "node_guide",
+}
+
+TITLE_TO_DOC_EN = {
     # en_us
     "0. Getting Started": "intro_0_guide",
     "0.5 Recommended Features": "intro_0_5_guide",
@@ -248,6 +272,11 @@ TITLE_TO_DOC = {
     "Scepters": "scepter_guide",
     "Element Node": "node_guide",
 }
+
+# md 正文里两种语言的《…》同时存在（一篇 md 只用一种语言），编译期查合并表即可。
+# 两侧同名标题必须指向同一目标——`check_manifest()` 会断言这一点。
+TITLE_TO_DOC = {**TITLE_TO_DOC_ZH, **TITLE_TO_DOC_EN}
+TITLE_TO_DOC_BY_LANG = {"zh_cn": TITLE_TO_DOC_ZH, "en": TITLE_TO_DOC_EN}
 
 # 内联代码的着色（帕秋莉没有等宽字体，用颜色区分）
 CODE_COLOR = "$(#8a5a2b)"
@@ -293,6 +322,15 @@ def split_row(line):
     return [c.strip() for c in s.split("|")]
 
 
+def doc_to_category():
+    """doc id → 分类 id。同一篇 md 可以登记多次（如 building_scanner_guide），**先出现者胜出**——
+    帕秋莉条目 id 按这个规则定，运行期清单与 md 链接目标都跟着它，三处不许各算各的。"""
+    out = {}
+    for doc, cid, _icon, _sortnum in ENTRIES:
+        out.setdefault(doc, cid)
+    return out
+
+
 def link_command(target, warn):
     """md 链接目标 → 帕秋莉链接命令；无法映射时返回 None（调用方降级为纯文本）。"""
     t = target.strip()
@@ -310,7 +348,7 @@ def link_command(target, warn):
     if t.endswith(".md"):
         t = t[:-3]
 
-    doc_to_cat = {e[0]: e[1] for e in ENTRIES}
+    doc_to_cat = doc_to_category()
     cat_ids = {c[0] for c in CATEGORIES}
 
     if t in doc_to_cat:
@@ -626,9 +664,158 @@ def compile_doc(md, warn):
 
 
 # ---------------------------------------------------------------- 写出
+# --check 模式下不落盘：所有生成物收进内存，跑完与磁盘逐字节比对（见 check_outputs）
+CHECK_MODE = False
+GENERATED = {}
+
+
 def write_json(path, obj):
+    text = json.dumps(obj, ensure_ascii=False, indent=2) + "\n"
+    if CHECK_MODE:
+        GENERATED[str(path)] = text
+        return
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(obj, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    path.write_text(text, encoding="utf-8")
+
+
+# ---------------------------------------------------------------- 运行期清单
+def lang_value(key, md_lang, warn):
+    """读 lang_src 里的语言键（着陆文案与书名的唯一来源）。读不到就出声并返回空串。"""
+    try:
+        data = json.loads(LANDING_LANG_FILE.read_text(encoding="utf-8"))
+        return data[key][LANG_KEY_SUFFIX[md_lang]]
+    except Exception as e:  # 键被删/改名/文件缺失都从这里出声，不静默出一页空着陆
+        warn("读不到语言键 %s[%s]：%s" % (key, LANG_KEY_SUFFIX[md_lang], e))
+        return ""
+
+
+def landing_markdown(md_lang, warn):
+    """着陆文案：lang_src 的帕秋莉语言键 → 兜底阅读器认的 md。
+
+    文案仍然只有一处来源（book.json 的 landing_text 指的那个键），这里只是把
+    `$(l:…:分类/条目)标签$(/l)` 反解成 md 链接、`$(br2)` 反解成空行。其余命令一律出声，
+    免得新增命令后兜底把 `$(…)` 原样画给玩家看。
+    """
+    raw = lang_value(LANDING_LANG_KEY, md_lang, warn)
+    if not raw:
+        return ""
+
+    cat_ids = {c[0] for c in CATEGORIES}
+
+    def link(m):
+        target = m.group(1)
+        label = m.group(2)
+        # 语言键里写的是 `命名空间:分类/条目`；清单只用不带到命名空间的条目 id
+        if ":" in target:
+            target = target.split(":", 1)[1]
+        if "/" in target:
+            target = target.split("/", 1)[1] + ".md"
+        else:
+            target = ("category:" + target) if target in cat_ids else target + ".md"
+        return "[%s](%s)" % (label, target)
+
+    text = re.sub(r"\$\(l:([^)]+)\)(.*?)\$\(/l\)", link, raw)
+    text = text.replace("$(br2)", "\n\n")
+    if "$(" in text:
+        warn("着陆文案里有兜底读不懂的帕秋莉命令，已原样保留：%s" % LANDING_LANG_KEY)
+    return text
+
+
+def build_manifest(md_lang, names_by_doc, warn):
+    """运行期清单：兜底阅读器与帕秋莉条目映射共用的一棵结构树。"""
+    return {
+        "manifest_version": MANIFEST_VERSION,
+        "book": BOOK_ID,
+        "landing": {
+            # 书名与着陆文案都取 book.json 指的那两个语言键，两套渲染因此同名
+            "title": lang_value("wandscape.guide_book.name", md_lang, warn),
+            "text": landing_markdown(md_lang, warn),
+        },
+        "categories": [
+            {
+                "id": cid,
+                "name": zh if md_lang == "zh_cn" else en,
+                "desc": zh_desc if md_lang == "zh_cn" else en_desc,
+                "icon": icon,
+                "sortnum": sortnum,
+            }
+            for cid, zh, en, icon, sortnum, zh_desc, en_desc in CATEGORIES
+        ],
+        # 保持注册顺序：同一篇 md 登记两次时，先出现的那条是它的规范归属
+        "entries": [
+            {
+                "doc": doc,
+                "category": cid,
+                "name": names_by_doc.get(doc, doc),
+                "icon": icon,
+                "sortnum": sortnum,
+            }
+            for doc, cid, icon, sortnum in ENTRIES
+        ],
+        "titles": dict(TITLE_TO_DOC_BY_LANG[md_lang]),
+    }
+
+
+def check_manifest(warn):
+    """清单与正文的自检：能让兜底跳转/链接静默失效的事，都在这里出声。"""
+    doc_to_cat = doc_to_category()
+    cat_ids = {c[0] for c in CATEGORIES}
+
+    for title, target in TITLE_TO_DOC.items():
+        if target not in doc_to_cat and target not in cat_ids:
+            warn("《%s》指向了不存在的目标：%s" % (title, target))
+
+    # 两种语言里恰好同名的标题（如 ATM）必须指向同一处，否则改标题时容易只改一边
+    for title, target in TITLE_TO_DOC_ZH.items():
+        other = TITLE_TO_DOC_EN.get(title)
+        if other is not None and other != target:
+            warn("标题《%s》中英两侧指向不同目标：%s / %s" % (title, target, other))
+
+    # 通用别名（词尾 _guide 去掉）。`index` 是着陆页的保留 id，优先于别名，无需告警；
+    # 别名词撞上分类 id 时（buildings / custom / about），该条目必须正好是该分类的第一条——
+    # 否则玩家敲分类名会拿到别的页。撞上另一个条目 id 同样是歧义，一并出声。
+    first_in_cat = {}
+    for doc, cid, _icon, _sortnum in ENTRIES:
+        first_in_cat.setdefault(cid, doc)
+    for doc, cid in doc_to_cat.items():
+        if not doc.endswith("_guide"):
+            continue
+        alias = doc[: -len("_guide")]
+        if alias == "index":
+            continue
+        if alias in doc_to_cat or (alias in cat_ids and first_in_cat[alias] != doc):
+            warn("别名 %s（来自 %s）与条目/分类撞车，玩家敲它拿到的页面不确定" % (alias, doc))
+
+    for md_lang, _book_lang in LANGS:
+        lang_dir = SRC_MD / md_lang
+        if not lang_dir.is_dir():
+            continue
+        titles = TITLE_TO_DOC_BY_LANG[md_lang]
+        for src in sorted(lang_dir.glob("*.md")):
+            doc = src.stem
+            if doc not in doc_to_cat:
+                warn("md 目录里有未登记的孤儿文档：%s（登记进 ENTRIES 或删掉它）" % src)
+            text = src.read_text(encoding="utf-8")
+            for m in re.finditer(r"《([^》]+)》", text):
+                if m.group(1).strip() not in titles:
+                    warn("%s 里的《%s》不在标题表里，两种渲染都会退化成纯文本"
+                         % (src.relative_to(ROOT), m.group(1).strip()))
+            for m in re.finditer(r"\[[^\]]*\]\(([^)]+)\)", text):
+                target = m.group(1).strip()
+                if target.startswith(("http://", "https://", "action:", "#")):
+                    continue
+                if ":" in target and not target.startswith(("guidebook:", "guide:")):
+                    continue  # 图片走 wandscape: 资源路径，不是文档链接
+                for prefix in ("guidebook:", "guide:"):
+                    if target.startswith(prefix):
+                        target = target[len(prefix):]
+                        break
+                target = target[:-3] if target.endswith(".md") else target
+                if target.startswith("assets/"):
+                    continue
+                if target not in doc_to_cat and target not in cat_ids:
+                    warn("%s 里的链接指向不存在的文档/分类：%s"
+                         % (src.relative_to(ROOT), m.group(1)))
 
 
 def build_books():
@@ -638,6 +825,7 @@ def build_books():
     known_docs = {e[0] for e in ENTRIES}
     missing = []
     _VALID_TARGETS = set(cat_by_id) | known_docs
+    check_manifest(warn)
 
     for md_lang, book_lang in LANGS:
         lang_dir = SRC_MD / md_lang
@@ -646,14 +834,16 @@ def build_books():
             continue
 
         # 清掉上一轮生成物，避免改名/删条目后残留（分类被整个删掉时，空目录也要一并带走）
-        for sub in ("categories", "entries"):
-            target = OUT_ASSETS / book_lang / sub
-            if target.exists():
-                for old in sorted(target.rglob("*.json")):
-                    old.unlink()
-                for old in sorted(target.rglob("*"), key=lambda p: len(p.parts), reverse=True):
-                    if old.is_dir() and not any(old.iterdir()):
-                        old.rmdir()
+        # --check 只读，绝不动磁盘
+        if not CHECK_MODE:
+            for sub in ("categories", "entries"):
+                target = OUT_ASSETS / book_lang / sub
+                if target.exists():
+                    for old in sorted(target.rglob("*.json")):
+                        old.unlink()
+                    for old in sorted(target.rglob("*"), key=lambda p: len(p.parts), reverse=True):
+                        if old.is_dir() and not any(old.iterdir()):
+                            old.rmdir()
 
         for cid, zh, en, icon, sortnum, zh_desc, en_desc in CATEGORIES:
             name, desc = (zh, zh_desc) if md_lang == "zh_cn" else (en, en_desc)
@@ -666,6 +856,7 @@ def build_books():
                 "sortnum": sortnum,
             })
 
+        names_by_doc = {}
         for doc, cid, icon, sortnum in ENTRIES:
             src = lang_dir / (doc + ".md")
             if not src.is_file():
@@ -677,6 +868,7 @@ def build_books():
                 continue
             if cid not in cat_by_id:
                 warn("条目 %s 引用了未定义分类 %s" % (doc, cid))
+            names_by_doc[doc] = to_plain(name)
             write_json(OUT_ASSETS / book_lang / "entries" / cid / (doc + ".json"), {
                 "name": name,
                 "category": "%s:%s" % (NS, cid),
@@ -686,7 +878,9 @@ def build_books():
                 "pages": pages,
             })
 
-
+        # 兜底阅读器读的那一份：分类、条目、书名号表、着陆文案
+        write_json(OUT_RUNTIME / (md_lang + ".json"),
+                   build_manifest(md_lang, names_by_doc, warn))
 
     write_json(OUT_DATA / "book.json", {
         "name": "wandscape.guide_book.name",
@@ -892,19 +1086,62 @@ def build_textures(force):
 
 
 # ---------------------------------------------------------------- 入口
+def expected_output(path, text):
+    """某个生成物「现在应该长什么样」。
+
+    条目 JSON 还要过一遍 paginate（那一趟会把长节切开），所以这里在内存里补做同样的切分；
+    只比对 gen 的输出会把每一篇长条目都误报成过期。两份脚本都是 stdlib-only，直接 import。
+
+    paginate_data 自己会迭代到不动点，所以这里调一次就够。
+    """
+    if "/entries/" not in path.replace("\\", "/"):
+        return text
+    data = json.loads(text)
+    if not paginate_module.paginate_data(data):
+        return text
+    return json.dumps(data, ensure_ascii=False, indent=2) + "\n"
+
+
+def check_outputs():
+    """--check：拿刚生成的内容与磁盘上的生成物逐字节比对，列出缺失/过期/残留。"""
+    problems = []
+    on_disk = set()
+    for base in (OUT_ASSETS, OUT_DATA, OUT_RUNTIME):
+        if base.exists():
+            on_disk |= {str(p) for p in base.rglob("*.json")}
+    for path, text in GENERATED.items():
+        disk = Path(path)
+        if not disk.is_file():
+            problems.append("缺少生成物：%s" % disk.relative_to(ROOT))
+        elif disk.read_text(encoding="utf-8") != expected_output(path, text):
+            problems.append("生成物过期，请重跑 gen_patchouli.py + paginate_patchouli_json.py：%s"
+                            % disk.relative_to(ROOT))
+    for path in sorted(on_disk - set(GENERATED)):
+        problems.append("残留生成物（当前结构里已没有）：%s" % Path(path).relative_to(ROOT))
+    return problems
+
+
 def main(argv):
+    global CHECK_MODE
     if len(argv) > 1 and argv[1] == "textures":
         build_textures("--force" in argv)
         return 0
 
+    CHECK_MODE = "--check" in argv
     warn = build_books()
-    cats_zh = len(list((OUT_ASSETS / "zh_cn/categories").glob("*.json")))
-    ent_zh = len(list((OUT_ASSETS / "zh_cn/entries").rglob("*.json")))
-    ent_en = len(list((OUT_ASSETS / "en_us/entries").rglob("*.json")))
-    print("手册 %s：%d 个分类，zh_cn %d 条目 / en_us %d 条目" % (BOOK_ID, cats_zh, ent_zh, ent_en))
+    problems = check_outputs() if CHECK_MODE else []
+    if not CHECK_MODE:
+        cats_zh = len(list((OUT_ASSETS / "zh_cn/categories").glob("*.json")))
+        ent_zh = len(list((OUT_ASSETS / "zh_cn/entries").rglob("*.json")))
+        ent_en = len(list((OUT_ASSETS / "en_us/entries").rglob("*.json")))
+        print("手册 %s：%d 个分类，zh_cn %d 条目 / en_us %d 条目"
+              % (BOOK_ID, cats_zh, ent_zh, ent_en))
     for m in warn.items:
         print("  警告: %s" % m)
-    return 0
+    for p in problems:
+        print("  不一致: %s" % p)
+    # 警告与不一致都必须清零：警告会在游戏里变成 [ERROR]、纯文本链接或过期的兜底页
+    return 1 if (warn.items or problems) else 0
 
 
 if __name__ == "__main__":

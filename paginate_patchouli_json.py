@@ -261,6 +261,36 @@ def process_entry_file(file_path: Path, max_lines_override=None, max_chars_overr
         print(f" [跳过] 无法读取 JSON 文件 {file_path}: {e}")
         return False
 
+    if not paginate_data(data, max_lines_override, max_chars_override, remove_hints,
+                         verbose=verbose, label=file_path.name):
+        return False
+
+    if not dry_run:
+        file_path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return True
+
+
+def paginate_data(data: dict, max_lines_override=None, max_chars_override=None,
+                  remove_hints=True, verbose=False, label="") -> bool:
+    """就地把条目 dict 的 pages 切开，**一直切到没有超长页为止**；有改动返回 True。
+
+    切出来的承接页可能自己仍然超长，所以必须迭代到不动点——否则结果取决于「这条命令跑过几遍」，
+    而 gen_patchouli.py --check 在内存里做的分页就没法跟磁盘对上。
+    """
+    changed = False
+    # 上限只是防呆：正常两趟就收敛了（第二趟收拾第一趟切出来的承接页）
+    for _ in range(12):
+        if not _paginate_once(data, max_lines_override, max_chars_override,
+                              remove_hints, verbose, label):
+            return changed
+        changed = True
+    print(f" [警告] 分页未收敛（{label or '条目'}），请检查该页正文是否有异常长的单段")
+    return changed
+
+
+def _paginate_once(data: dict, max_lines_override=None, max_chars_override=None,
+                   remove_hints=True, verbose=False, label="") -> bool:
+    """一趟切分：把当前所有超长页各切开一次。"""
     pages = data.get("pages")
     if not pages or not isinstance(pages, list):
         return False
@@ -300,8 +330,8 @@ def process_entry_file(file_path: Path, max_lines_override=None, max_chars_overr
             new_pages.append(page)
         else:
             file_modified = True
-            if verbose or dry_run:
-                print(f" -> 文件 {file_path.name} 第 {page_idx + 1} 页超长，切分为 {len(split_results)} 页:")
+            if verbose and label:
+                print(f" -> 文件 {label} 第 {page_idx + 1} 页超长，切分为 {len(split_results)} 页:")
                 for s_i, sp in enumerate(split_results):
                     print(f"    [子页 {s_i + 1}] 估算行数: {estimate_rendered_lines(sp)}, 字数: {len(strip_formatting(sp))}")
 
@@ -317,8 +347,6 @@ def process_entry_file(file_path: Path, max_lines_override=None, max_chars_overr
 
     if file_modified:
         data["pages"] = new_pages
-        if not dry_run:
-            file_path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         return True
 
     return False

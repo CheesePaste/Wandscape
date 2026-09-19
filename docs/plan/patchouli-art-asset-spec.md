@@ -215,7 +215,9 @@ graphics.blit(images[index], x*2 + 6, y*2 + 6, 0, 0, 200, 200);
 
 - 出 **256×256** 正方形 PNG，**有效内容严格画在左上 200×200**，右/下各 56px 留透明（帕秋莉官方推荐值）。
 - **字号按"最终只显示 100×100"来定**：源图字高至少 **16px**，否则缩到 1/2 后小于 8px 读不了。最细线宽 ≥ 2px。
-- **现状**：`assets/wandscape/textures/gui/guidebook/` 下 6 张图（`road_diagram` / `magic_editor_diagram` / `overview_diagram` / `scanner_diagram` / `scanner_ui` / `sample`）**全是 1376×768**，会被裁成左上 200×200，等于只显示左上角一小块。**全部需要按 256×256 重画。**
+- **现状**：**一张都没有了**。`assets/wandscape/textures/gui/guidebook/` 下原有的 6 张 1376×768 占位图
+  （`road_diagram` / `magic_editor_diagram` / `overview_diagram` / `scanner_diagram` / `scanner_ui` / `sample`）
+  已随引用它们的旧文档一起删除，目录里只剩 `book.png`。将来的配图**从零按 256×256 画**，不要沿用那批老图。
 
 **各参考手册的出图量**（都是 256×256，说明这是社区事实标准）：
 

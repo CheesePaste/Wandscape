@@ -355,7 +355,7 @@ public class WandscapeClient {
                     new TownHallCreateScreen(packet.townHallAnchor(), packet.creator()));
         });
 
-        // Guide book: right-click opens the tutorial home (index_guide), locale-resolved
+        // Guide book: right-click opens the manual landing page (Patchouli if present, else the reader)
         GuideBookOpenPacket.setClientHandler(packet -> {
             com.wsteam.wandscape.foundation.ui.guidebook.GuideFacade.open(packet.docPath());
         });
@@ -563,9 +563,9 @@ public class WandscapeClient {
         }
     }
 
-    /** Opens the guide index page (callable from anywhere). */
+    /** Opens the guide landing page (callable from anywhere). */
     public static void openGuideIndex() {
-        com.wsteam.wandscape.foundation.ui.guidebook.GuideFacade.open("index_guide");
+        com.wsteam.wandscape.foundation.ui.guidebook.GuideFacade.open("");
     }
 
     /** Welcome message on world join — points new players at the V-key building panel. */

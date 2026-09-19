@@ -89,7 +89,7 @@ Both tavern commands pick their colony by **where you are standing**, not by who
 |---|---|
 | `/wandscape guide [page]` | Open the in-game guide book |
 
-Players only. With no page name it opens the commands page; give a page name to jump straight to that page, as in `/wandscape guide warehouse`.
+Players only. With no page name it opens the manual's home page; give a page name to jump straight there — the entry id (`/wandscape guide townhall_guide`), the short form without `_guide` (`/wandscape guide warehouse`), or a category (`/wandscape guide category:buildings`). The same page names work either way: with Patchouli installed it opens the Patchouli book, without it opens the mod's own reader.
 
 ## Curios Only
 

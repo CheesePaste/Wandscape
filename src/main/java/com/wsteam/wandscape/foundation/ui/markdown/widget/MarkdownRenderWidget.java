@@ -427,6 +427,9 @@ public class MarkdownRenderWidget extends AbstractWidget {
             return Component.translatable("gui.wandscape.guidebook.action_tooltip", action.substring(7));
         } else if (action.startsWith("http://") || action.startsWith("https://")) {
             return Component.literal(action);
+        } else if (action.startsWith("category:")) {
+            // 分类页链接：标签本身就是分类名，飘出 `category:buildings` 只会添乱
+            return null;
         } else if (action.endsWith(".md") || action.startsWith("guidebook:")) {
             String doc = action.startsWith("guidebook:") ? action.substring("guidebook:".length()) : action;
             if (doc.endsWith(".md")) {

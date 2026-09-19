@@ -128,12 +128,12 @@ public class CreativeScannerScreen extends MedievalScreen {
         super(Component.literal("Building Scanner"), PW, PH);
         this.scanner = scanner;
         this.isSurvival = isSurvival;
+        // 手册只有一篇扫描器页（《建筑扫描器》），生存/创造两种界面共用它
+        this.helpDocumentPath = "building_scanner_guide";
         if (isSurvival) {
             setTitleBar(I18n.name("gui.wandscape.scanner.title_survival", "建筑扫描器 (生存)"));
-            this.helpDocumentPath = "scanner_guide";
         } else {
             setTitleBar(I18n.name("gui.wandscape.scanner.title", "创造建筑扫描器"));
-            this.helpDocumentPath = "creative_scanner_guide";
         }
         this.showCloseButton = true;
         this.showHelpButton = true;

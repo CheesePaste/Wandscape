@@ -13,8 +13,8 @@ import static com.wsteam.wandscape.Wandscape.MODID;
 /**
  * Server -> Client packet: 请求客户端打开指南书阅读器。
  *
- * <p>负载是文档路径（如 {@code index_guide}），客户端用 {@code DocumentLoader}
- * 按当前语言加载，再交给 {@code GuidebookScreen} 渲染——服务端不读资源、不传大字符串。
+ * <p>负载是页名（条目 id / 别名 / {@code category:<分类>}，空串＝手册首页），客户端由
+ * {@code GuideFacade} 路由到帕秋莉手册或兜底阅读器——服务端不读资源、不传大字符串。
  */
 public record GuideBookOpenPacket(String docPath) implements CustomPacketPayload {
 

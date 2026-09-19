@@ -19,16 +19,14 @@
 我把「戒指戴进饰品槽就能用」当成事实写进草稿，实际它只能拿在主手——这类错读者一试就发现，
 但手册的可信度当场就没了。
 
-### 「同类」只指手册里的条目，不指那些旧文档
+### 「同类」就是这本手册
 
-`guidebook/` 下有一批**已弃用的长篇 md**（`npc_guide` / `tourist_guide` / `strategy_guide` /
-`overview_guide` / `getting_started` / `road_*` / `scanner_guide` 等 15 篇），它们开头都标了
-「本页已弃用」，内容跟现在的实现已经对不上。
+这一版之前写的 15 篇旧文（`npc_guide` / `tourist_guide` / `strategy_guide` / `overview_guide` /
+`getting_started` / `road_*` / `scanner_guide` / `commands_guide` 等）内容跟现在的实现已经对不上，
+**已经删掉了**——`guidebook/` 下现在只有编进手册的那 62 篇 md，没有第二套说法可读。
 
-**不要读它们、不要照抄它们的说法。** 上面说的「读同类」，指的是**已经编进手册的那 62 篇**。
-
-方向是反的：先按本规范把手册写好，将来再**按手册内容反向更新**那些旧文档。
-细节见 [guidebook-patchouli.md](guidebook-patchouli.md) 的「旧 guidebook 已弃用」一节。
+「读同类」= 读这本手册里已有的条目。要旧文里那点内容就去 git 历史取，
+细节见 [guidebook-patchouli.md](guidebook-patchouli.md) 的「旧 guidebook 已彻底删除」一节。
 
 ---
 
@@ -116,6 +114,9 @@ CLAUDE.md §二.9：面向玩家文本（`lang/*`、`guide/**`、I18n、Screen �
 |---|---|---|
 | 魔法/物品的一句话介绍 | md 条目 **和** `lang_src/` 的对应键 | md 管手册，lang 管 JEI 信息页与界面 |
 | 手册条目正文 | `guidebook/{zh_cn,en}/*.md` | 帕秋莉手册（编译产物）+ 没装 Patchouli 时的 md 兜底屏 |
+| 手册书名与着陆文案 | `lang_src/content/wandscape.json` 的 `wandscape.guide_book.*` | 帕秋莉 `book.json` 直接引这个键；兜底清单由生成器把它反解成 md |
+| 分类名与分类描述 | `gen_patchouli.py` 的 `CATEGORIES` | 帕秋莉分类页 + 兜底清单（着陆页与分类页） |
+| 条目名 | md 的 H1 | 帕秋莉条目名 + 兜底清单（目录与标题栏都取它） |
 
 管线不做同步校验，**改一处要记得另一处**。中英同理：md 有两套目录，lang 走 `lang_src` 单源
 （见 [lang-pipeline.md](lang-pipeline.md)）。
@@ -126,9 +127,11 @@ CLAUDE.md §二.9：面向玩家文本（`lang/*`、`guide/**`、I18n、Screen �
 
 ```bash
 python gen_patchouli.py && python paginate_patchouli_json.py   # 两步都不能省，见 guidebook-patchouli.md §二
+python gen_patchouli.py --check                                # 只要没改动：确认生成物与 md/结构表一致
 ```
 
-- 生成器打印的警告必须清零：未知命令、样式栈下溢、链接降级都会在游戏里变成 `[ERROR]` 或纯文本。
+- 生成器打印的警告必须清零（有警告它就非零退出）：未知命令、样式栈下溢、链接降级、md 里出现未登记的文档
+  或指向不存在文档的链接、《…》不在标题表里——这些在游戏里都会变成 `[ERROR]`、纯文本或 404。
 - **没进游戏看过，就不要说「验证过了」**。build 通过只说明能编译——文案是在运行期才渲染的，
   这类改动编译期一个错都不报。
 
@@ -176,6 +179,6 @@ service、relax、atm），顺序照建造面板的分类顺序，前后各夹�
 
 没有缺页了——八个分类点进去第一屏都是写完的条目。
 
-不在表里的 15 篇（`npc_guide` `tourist_guide` `strategy_guide` `overview_guide` `getting_started` `road_*`
-`scanner_guide` `commands_guide` `creators_guide` `creative_scanner_guide` `magic_circle_editor_guide` `test_guide`）
-是**已弃用旧文**，不登记进手册，因此不算缺——处理方式见 §一。
+**md 目录里不该有表外的文档**：`guidebook/{zh_cn,en}/` 下的每一篇都必须登在 `ENTRIES` 里，
+生成器会把孤儿文档当警告报出来（连同失效的《…》与链接，见 §八）。要停掉一篇就删文件并摘掉登记，
+不留「已弃用」的第三态。

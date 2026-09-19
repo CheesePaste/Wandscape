@@ -89,7 +89,7 @@ id 不用敲全：`list` 里显示的 8 位短 id 直接抄过来就行，写其
 |---|---|
 | `/wandscape guide [页名]` | 打开游戏内指南书 |
 
-只能由玩家在游戏里执行。不带页名时打开指令介绍页，给一个页名可以直接跳到那一页，比如 `/wandscape guide warehouse`。
+只能由玩家在游戏里执行。不带页名时打开手册首页，给一个页名可以直接跳到那一页：写条目名（`/wandscape guide townhall_guide`）、去掉 `_guide` 的简称（`/wandscape guide warehouse`），或者写分类（`/wandscape guide category:buildings`）都可以。装没装帕秋莉都是同一套页名，装了就开帕秋莉手册，没装就开模组自带的阅读器。
 
 ## 装了 Curios 才有
 

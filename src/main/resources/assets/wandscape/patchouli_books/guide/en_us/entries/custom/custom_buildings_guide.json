@@ -7,7 +7,7 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "$(italic)$(#6b5a45)Read the $(l:wandscape:custom/building_scanner_guide)Building Scanner$(/l)$(italic)$(#6b5a45) first: what the scanner exports $(italic)is$()$(italic)$(#6b5a45) the file this page describes. Hand-writing only pays off when you want to generate a batch, or to touch up what a scan produced.$()$(br2)Put a building file in your datapack and after $(#8a5a2b)/reload$() it shows up in the build panel and in the Wand's list. $(bold)The file name only decides which package it belongs to; the $(#8a5a2b)id$()$(bold) written inside is the building's real identity.$()"
+      "text": "$(italic)$(#6b5a45)Read the $(l:wandscape:buildings/building_scanner_guide)Building Scanner$(/l)$(italic)$(#6b5a45) first: what the scanner exports $(italic)is$()$(italic)$(#6b5a45) the file this page describes. Hand-writing only pays off when you want to generate a batch, or to touch up what a scan produced.$()$(br2)Put a building file in your datapack and after $(#8a5a2b)/reload$() it shows up in the build panel and in the Wand's list. $(bold)The file name only decides which package it belongs to; the $(#8a5a2b)id$()$(bold) written inside is the building's real identity.$()"
     },
     {
       "type": "patchouli:text",

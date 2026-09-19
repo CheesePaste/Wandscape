@@ -65,7 +65,7 @@
     },
     {
       "type": "patchouli:text",
-      "text": "$(bold)Command  What it does$()$(li)$(#8a5a2b)/wandscape guide [page]$() — Open the in-game guide book$(br2)Players only. With no page name it opens the commands page; give a page name to jump straight to that page, as in $(#8a5a2b)/wandscape guide warehouse$().",
+      "text": "$(bold)Command  What it does$()$(li)$(#8a5a2b)/wandscape guide [page]$() — Open the in-game guide book$(br2)Players only. With no page name it opens the manual's home page; give a page name to jump straight there — the entry id ($(#8a5a2b)/wandscape guide townhall_guide$()), the short form without $(#8a5a2b)_guide$() ($(#8a5a2b)/wandscape guide warehouse$()), or a category ($(#8a5a2b)/wandscape guide category:buildings$()). The same page names work either way: with Patchouli installed it opens the Patchouli book, without it opens the mod's own reader.",
       "title": "The Guide Book"
     },
     {

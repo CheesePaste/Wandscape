@@ -69,7 +69,7 @@ public class NpcScreen extends AbstractContainerScreen<NpcMenu> implements Repla
     private int modelX, modelY, modelW, modelH;
     private int closeBtnX, closeBtnY;
     private HelpButton helpButton;
-    private final String helpDocumentPath = "npc_guide";
+    private final String helpDocumentPath = "mages_guide";
 
     private EditBox nameBox;
     private String lastServerName = "";
