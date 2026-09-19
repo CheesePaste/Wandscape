@@ -237,8 +237,8 @@ public final class PatchouliBookRenderer {
         drawPage(g, bookLeft + 8, bookTop + 5, 125, 170, true);
         drawPage(g, bookLeft + 139, bookTop + 5, 125, 170, false);
 
-        // 5. 顶端真丝书签缎带
-        drawBookmarkRibbon(g, bookLeft + 80, bookTop);
+        // 5. 顶端真丝书签缎带（垂于中央书脊内槽，不再穿过左页顶端）
+        drawBookmarkRibbon(g, spineX - 3, bookTop);
     }
 
     /**
@@ -385,12 +385,12 @@ public final class PatchouliBookRenderer {
     }
 
     /**
-     * 顶端飘垂的真丝书签缎带。
+     * 顶端飘垂的真丝书签缎带（垂于中缝书脊深槽内，自然垂落，不干扰内页任何文本）。
      */
     private static void drawBookmarkRibbon(GuiGraphics g, int rx, int bookTop) {
-        int rw = 10;
-        int rTop = bookTop - 9;
-        int rBottom = bookTop + 16;
+        int rw = 6;
+        int rTop = bookTop - 8;
+        int rBottom = bookTop + 36;
 
         // 缎带主体（绯红织锦）
         g.fill(rx, rTop, rx + rw, rBottom, 0xFFA0202D);
@@ -507,35 +507,64 @@ public final class PatchouliBookRenderer {
     }
 
     /**
-     * 绘制着陆页古典羊皮纸与金属铭牌底托。
+     * 绘制着陆页古典真丝描金燕尾飘带铭牌底托。
+     *
+     * <p>采用深绯红天鹅绒织锦质感，配双道古金滚边、左侧书脊扣环卷折与右端古典燕尾切角，
+     * 与全书缎带及书签色系完全统一，彻底告别生硬突兀的黑块。
      */
     private static void drawLandingNameplate(GuiGraphics g, int x, int y, int w, int h) {
-        // 1. 底层微阴影
-        g.fill(x + 1, y + 1, x + w + 1, y + h + 1, 0x38000000);
+        int ribbonH = 24;
+        int ribbonW = Math.max(w, 148);
+        int tailCut = 8;
 
-        // 2. 秘典曜黑底托（与真皮封皮同色系，带纵向高贵渐变）
-        g.fillGradient(x, y, x + w, y + h, 0xF5171A2C, 0xF50F111E);
+        // 1. 飘带投影（下方柔和双层漫反射下沉阴影）
+        g.fill(x + 4, y + ribbonH, x + ribbonW - tailCut - 2, y + ribbonH + 1, 0x30000000);
+        g.fill(x + 6, y + ribbonH + 1, x + ribbonW - tailCut - 6, y + ribbonH + 2, 0x18000000);
 
-        // 3. 双层古典古金箔边框
-        drawRectOutline(g, x, y, w, h, COLOR_GOLD_OUTER);
-        drawRectOutline(g, x + 2, y + 2, w - 4, h - 4, COLOR_GOLD_INNER);
+        // 2. 飘带主体（绯红天鹅绒织锦纵向渐变光泽）
+        int colShadow = 0xFF35060B;
 
-        // 4. 左侧延伸封皮外侧（8px 外凸挂耳饰条）装订金属扣
-        int ribW = 8;
-        g.fill(x + 1, y + 1, x + ribW, y + h - 1, COLOR_COVER_BG);
-        g.vLine(x + ribW, y + 1, y + h - 1, COLOR_GOLD_OUTER);
-        g.vLine(x + ribW + 1, y + 1, y + h - 1, COLOR_COVER_SHADOW);
+        for (int ry = 0; ry < ribbonH; ry++) {
+            float dy = Math.abs(ry - (ribbonH - 1) / 2.0f);
+            int cut = (int) ((1.0f - dy / ((ribbonH - 1) / 2.0f)) * tailCut);
+            int xEnd = x + ribbonW - cut;
 
-        // 挂耳左侧金色铆钉 3 颗
-        g.fill(x + 3, y + 5, x + 5, y + 7, COLOR_GOLD_BRIGHT);
-        g.fill(x + 3, y + 14, x + 5, y + 16, COLOR_GOLD_BRIGHT);
-        g.fill(x + 3, y + 23, x + 5, y + 25, COLOR_GOLD_BRIGHT);
+            float factor = (float) ry / (ribbonH - 1);
+            int r = (int) (0x8A * (1 - factor) + 0x5A * factor);
+            int gr = (int) (0x18 * (1 - factor) + 0x0C * factor);
+            int b = (int) (0x24 * (1 - factor) + 0x14 * factor);
+            int col = 0xFF000000 | (r << 16) | (gr << 8) | b;
 
-        // 5. 右端古典折角包金饰纹
-        g.hLine(x + w - 6, x + w - 3, y + 3, COLOR_GOLD_BRIGHT);
-        g.vLine(x + w - 3, y + 3, y + 6, COLOR_GOLD_BRIGHT);
-        g.hLine(x + w - 6, x + w - 3, y + h - 4, COLOR_GOLD_BRIGHT);
-        g.vLine(x + w - 3, y + h - 7, y + h - 4, COLOR_GOLD_BRIGHT);
+            g.hLine(x, xEnd - 1, y + ry, col);
+        }
+
+        // 3. 上沿与下沿古金滚边（双道金线）
+        g.hLine(x, x + ribbonW - 1, y, COLOR_GOLD_OUTER);
+        g.hLine(x, x + ribbonW - 2, y + 1, COLOR_GOLD_INNER);
+        g.hLine(x, x + ribbonW - 1, y + ribbonH - 1, COLOR_GOLD_OUTER);
+        g.hLine(x, x + ribbonW - 2, y + ribbonH - 2, COLOR_GOLD_INNER);
+
+        // 4. 右端燕尾切角描金饰边
+        for (int ry = 0; ry < ribbonH; ry++) {
+            float dy = Math.abs(ry - (ribbonH - 1) / 2.0f);
+            int cut = (int) ((1.0f - dy / ((ribbonH - 1) / 2.0f)) * tailCut);
+            int xEnd = x + ribbonW - cut;
+
+            g.vLine(xEnd - 1, y + ry, y + ry, COLOR_GOLD_BRIGHT);
+            g.vLine(xEnd - 2, y + ry, y + ry, COLOR_GOLD_OUTER);
+        }
+
+        // 5. 左端书壳外翻卷折扣环（外侧 8px 处）
+        int claspX = x + 6;
+        g.vLine(claspX - 1, y, y + ribbonH - 1, COLOR_GOLD_OUTER);
+        g.vLine(claspX, y, y + ribbonH - 1, COLOR_GOLD_BRIGHT);
+        g.vLine(claspX + 1, y, y + ribbonH - 1, COLOR_GOLD_OUTER);
+
+        // 左下端翻卷下垂阴影折角
+        for (int i = 0; i < 6; i++) {
+            int foldY = y + ribbonH + i;
+            g.hLine(x + i, claspX, foldY, colShadow);
+        }
     }
 
     /**

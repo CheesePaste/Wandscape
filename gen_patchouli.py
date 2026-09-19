@@ -691,6 +691,7 @@ def build_books():
         "landing_text": "wandscape.guide_book.landing",
         "subtitle": "wandscape.guide_book.subtitle",
         "book_texture": "wandscape:textures/gui/guidebook/book.png",
+        "nameplate_color": "FBE8A6",
         "use_resource_pack": True,
         # 无成就锁定时出版进度条恒为 0%，先关掉；做解锁时再打开
         "show_progress": False,
