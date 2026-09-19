@@ -148,7 +148,7 @@
 | 探索估算缩放 | ×2.0（`ESTIMATE_SCALE`） | `ExplorationLootEstimator` |
 | 探索奖励倍率 | 经验 ×1.0、**元素 ×2.0**（结算最后一步；只乘元素不碰经验） | `Config.exploration.expMultiplier` / `elementMultiplier` |
 | 招募法师 | 每元素 10,000 | `Config.tavern.recruitCostPerElement` |
-| 仓库物品上限 | 50,000 | `Config.warehouse.itemCapacity` |
+| 仓库物品上限 | 20,000 | `Config.warehouse.itemCapacity` |
 
 ---
 

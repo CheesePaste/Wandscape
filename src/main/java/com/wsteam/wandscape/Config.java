@@ -134,7 +134,7 @@ public class Config {
                     + "and NPC crafting / production tasks show \"warehouse capacity is full\" and wait (the auto-crafting driven by shop restock is exempt "
                     + "to avoid paralyzing the colony economy). Elements are stored separately and do not count toward capacity. "
                     + "Set 0 = disable the capacity mechanic (no limit).")
-            .defineInRange("warehouse.itemCapacity", 50000, 0, Integer.MAX_VALUE);
+            .defineInRange("warehouse.itemCapacity", 20000, 0, Integer.MAX_VALUE);
 
     // ---- 游客系统 Tourist System ----
 
