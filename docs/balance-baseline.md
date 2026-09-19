@@ -89,13 +89,13 @@
 
 ## 三、探索线元素产出
 
-口径：每个结构「一张战利品表 = 一箱」的算术平均；exp 与元素同源（`exp = 元素总值 ÷ exp_ratio`，`exp_ratio = 5.0`，无危险乘数）。原版结构走 `derived`，数字由 `balance/explore_reward.py` 复算，已对 22/22 张原版格式表与游戏落盘值逐字节对齐。
+口径：每个结构「一张战利品表 = 一箱」的算术平均；exp 与元素同源（`exp = 元素总值 ÷ exp_ratio`，`exp_ratio = 5.0`，无危险乘数）。模组**不自带声明区域**，原版结构与其他模组一样落在生成档（`mode: fixed`，值 = 估价器算出的期望），数字由 `balance/explore_reward.py` 复算，已对 22/22 张原版格式表与游戏落盘值逐字节对齐。本次删声明区域**不改任何数字**：生成档写下的值就是 `derived` 会现算的那个期望，`exp_ratio` / `variance` / `loot_share` 三项也都仍是 `DEFAULT`。
 
 **元素一律按「玩家实际到手」算，不是估算向量。** 两者差别很大，别混：估价器产出的价值向量是**战利品形状**的（极度偏 metal），而 `ExplorationRewardRange.rollElements` 发放时会按 `loot_share`（默认 0.5）保留一半形状、把另一半总额平摊给七元素。于是到手金额近似 `value[e]/2 + 总额/14`——末地城的估算向量是 100% metal，到手只有 57%。`out/explore_reward.txt` 的 B/C 段列的是**估算向量**，F 段才是到手口径。
 
 表里的元素数字**已乘 `Config.exploration.elementMultiplier`（当前 2.0）**，经验数字已乘 `expMultiplier`（当前 1.0）。想回到「未乘倍率」的估价原值就都除以 2。
 
-### 3.1 声明结构（原版地貌）
+### 3.1 原版地貌（结构汇总）
 
 | 结构 | 表数 | 均/箱 元素 | 均/箱 exp | metal 占比 | 其余六元素各 | 一箱 = 天游客线（Lv.4 / Lv.19） | 按瓶颈元素（Lv.4 wood / Lv.19 dark） |
 |---|---|---|---|---|---|---|---|
@@ -173,6 +173,7 @@ python explore_reward.py                    # 刷新 §3 探索线 → out/explo
 ### 快照本身的已知偏差
 
 - **生成档会与默认值静默分叉**：`<world>/wandscape/generated_regions/` 是「某次运行时」的快照，启动时只要匹配到就跳过重算。改过默认值（如 `exp_ratio`）后，老世界的生成文件仍按旧值结算；本文 §3 引用的是**当前代码默认值**，不是某个存档里的旧值。清掉该目录、下次开服即重写。
-- **`irons_spellbooks` 的战利品表复算不准**（4/44）：它用了自家 entry/function 类型，`balance/explore_reward.py` 没复刻。本文 §3 只覆盖声明区域（原版结构），不受影响。
+  原版结构现在也在这一档（模组不再自带声明区域），所以这条对 §3 的全部数字成立，不再只是「其他模组的表」的问题。
+- **`irons_spellbooks` 的战利品表复算不准**（4/44）：它用了自家 entry/function 类型，`balance/explore_reward.py` 没复刻。本文 §3 只覆盖原版结构，不受影响。
 - **`*/inject/chests/*` 载荷表不折 exp**：那是全局战利品改装的注入目标，估价器只读宿主表的 pools、不跑 loot modifier。共 50 张，已从统计中排除。
 - **A5 不是 sim**：§2 是解析上限口径，真实体验以 `sim_spatial` 为准（后者含视野/移动/排队/精力/visited 约束）。两者对不上时按 sim 保守调整、用 A5 验证方向。

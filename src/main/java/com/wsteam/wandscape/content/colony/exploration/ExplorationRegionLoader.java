@@ -23,12 +23,17 @@ import java.util.stream.Stream;
  * <p>Two tiers, looked up in this order:
  * <ol>
  *   <li><b>Declared</b> — {@code data/<namespace>/exploration_regions/*.json} via
- *       {@link WandscapeDataLoader}. Hand-written intent; the mod's own regions live here
- *       and a datapack overrides them by shipping the same id at a higher pack priority.</li>
+ *       {@link WandscapeDataLoader}. Hand-written intent: <b>the mod ships no file here</b>,
+ *       so this tier is empty until a datapack adds one. A pack's file wins over the generated
+ *       tier outright, which is the whole point of the tier.</li>
  *   <li><b>Generated</b> — {@code <world>/wandscape/generated_regions/*.json}, written once
  *       by {@link ExplorationRegionGenerator} for loot tables nothing declares. Weaker tier
  *       on purpose: adding a declared region later always takes over from a generated one.</li>
  * </ol>
+ *
+ * <p>With the declared tier empty, every chest table — vanilla structures included — is priced
+ * by the generated tier, so a world's own files carry the numbers. A region with no config at
+ * all still pays: {@link ExplorationRewardSpec#DEFAULT} prices it live on first opening.
  */
 public class ExplorationRegionLoader {
     public static final String CATEGORY = "exploration_regions";
@@ -52,7 +57,7 @@ public class ExplorationRegionLoader {
         return declared != null ? declared : generated.get(id);
     }
 
-    /** Declared regions only — what a datapack or this mod ships by hand. */
+    /** Declared regions only — what a datapack ships by hand, empty when none does. */
     public Map<String, ExplorationRegionConfig> getAllRegions() {
         return registry.getAll();
     }

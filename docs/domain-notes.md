@@ -180,7 +180,7 @@
    - **奖励数据显式化（region JSON 的 `reward` 块）**：顶层只说「这是哪个区域」（`name` + `loot_table_patterns`），`reward` 块说「发什么」。
      `mode` 决定元素价值向量从哪来：`derived`（默认，按战利品表算）、`fixed`（直接用 `value` 里写的，完全不碰战利品表）、`additive`（算出来的 + `value`）；
      `exp_ratio` / `variance` 不分模式始终作用在这个向量上（经验 = 向量总和 ÷ `exp_ratio`；`variance` 只决定上下浮动幅度）。**经验没有区域乘数**——危险系数 `danger_multiplier` 已删除，箱子值多少元素就换多少经验，调平衡只剩 `exp_ratio` 一个杠杆（默认 5.0）。
-     内置 10 个区域**目前是 `derived`**（行为与改造前一致），它们要固化的 value 由游戏内 `/wandscape chest bake <region|all>` 产出后填入。写了 `value` 却没写 `mode` 时按 `derived` 处理并 `Log.warn`——"写了却不生效"是最贵的静默。
+     本模组**不自带任何声明区域**（`data/wandscape/exploration_regions/` 已整目录删除）：原版结构与其他模组的表一视同仁，都由生成档按 `DEFAULT` 定价，改动平衡只需动 `ExplorationRewardSpec.DEFAULT` 一处。声明层留给数据包——想单独调某个箱子就写一个 region JSON 进去。写了 `value` 却没写 `mode` 时按 `derived` 处理并 `Log.warn`——"写了却不生效"是最贵的静默。
    - **价值是「读权重算期望」，不是抽样**：`ExplorationLootEstimator` 不 roll。它遍历战利品表的 pool / entry，按 `weight / 总权重 × rolls` 求每个 entry 期望命中几次，再把物品过一遍 `element_mappings` 定价求和。
      能这么算是因为原版数值提供器全是均匀分布，而 `LootContext.Builder.withOptionalRandomSource` 允许注入随机源：`ExplorationProbeRandom` 对任何区间都答中点，于是**一次遍历得到的正是数学期望**——`set_count` 给出的也是期望数量而非某一次抽样的值。没有随机、不造中间 `ItemStack`、没有循环，启动价一遍是毫秒级。
      结构不用手写类遍历：原版公开了 `LootPoolEntryContainer#expand`（展开容器树，自带 conditions 与 alternatives/sequence/group 语义；mod 自定义 entry 类型也能被正确展开）与 `LootPoolEntry#getWeight`；真正缺的只有 `LootTable#pools` / `LootPool#entries` 两个无 getter 的字段，走 AT 提 public（`META-INF/accesstransformer.cfg`，第二个用例）。
@@ -197,9 +197,10 @@
    - **代码侧唯一介入点**：`ExplorationChestRewardEvent`——摇完奖之后、入账与 HUD 之前触发，可改 `exp`/`elements`、可取消，所以上屏的就是最终值。
      数据包能表达的（改数值）一律不进代码，它只负责数据包做不到的：按运行时状态决定、追加物品类产出、整个拦掉。
    - **地域名与地区匹配**：`exploration_regions/*.json` 的正则是**按特异性取胜**的——`ExplorationRegionLoader.findMatchingRegion` 遍历全部命中项取「字面字符最多」的那条（同分按地区 id 排序），
-     因为 `SimpleDataRegistry.getAll()` 是 `Map.copyOf(HashMap)`、**迭代顺序不确定**，原来那个「先命中先返回」在整合包加 `.*` 兜底条目时会随机生效。
-     内置正则一律不绑命名空间（`.*/simple_dungeon$` 这类），别的模组 / 数据包用同名路径也能对上号。
-     真匹配不到时不再统一叫「荒野遗迹」，由 `ExplorationRegionConfig.deriveDisplayName` 从战利品表 id 现推名字（`somemod:chests/dragon_den` → `Dragon Den`，`/wandscape test chest` 生成的箱子显示同一个名字）。
+     因为 `SimpleDataRegistry.getAll()` 是 `Map.copyOf(HashMap)`、**迭代顺序不确定**，原来那个「先命中先返回」在整合包加 `.*` 兜底条目时会随机生效。这条排序只对同一个档内生效，跨档永远是声明层先赢。
+     正则建议不绑命名空间（`.*/simple_dungeon$` 这类），别的模组 / 数据包用同名路径也能对上号。
+     匹配不到（本模组现在等于「没有任何数据包声明」）就由 `ExplorationRegionConfig.deriveDisplayName` 从战利品表 id 现推名字，`somemod:chests/dragon_den` → `Dragon Den`、`minecraft:chests/abandoned_mineshaft` → `Abandoned Mineshaft`。
+     名字是**从 id 现推的英文、不进 lang 不本地化**，这是删掉内置声明区域后接受的取舍——换来的是平衡数值单源、没有一份会与 `DEFAULT` 静默分叉的镜像数据。
    - **元素分配一半看战利品表、一半随机撒**：原版宝箱战利品以金属（铁/铜/金）为主，纯按战利品表折算会让所有箱子都给金属。
      `ExplorationRewardRange.rollElements` 只让**总额的一部分**沿用战利品表比例（比例来自 `reward.loot_share`，默认 0.5，0 = 全随机、1 = 纯战利品），另一半按随机权重（0.5~1.5 抖动、最大余数法配平）平摊到七元素；
      总额与经验折算不受影响（经验是按元素总值算的，没变）。

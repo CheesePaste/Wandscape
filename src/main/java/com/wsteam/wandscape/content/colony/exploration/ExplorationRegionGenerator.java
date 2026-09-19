@@ -27,17 +27,24 @@ import java.util.regex.Pattern;
 /**
  * Writes a region JSON for every chest loot table that nothing declares.
  *
- * <p>Another mod's structure arrives with no region, so its chests would fall back to a flat
- * payout forever. Rather than price the loot table on every chest opening, the server prices
- * each uncovered table <b>once at startup</b> — reading its weights, not rolling it, see
- * {@link ExplorationLootEstimator} — and writes the result down as an ordinary region file,
- * the same format a human writes, so a datapack author can read it, edit it, or replace it by
- * declaring that region properly.
+ * <p>The mod ships no declared region of its own, so in a vanilla-only world this prices every
+ * chest table there is: the mod's balance for exploration lives in
+ * {@link ExplorationRewardSpec#DEFAULT}, and this is where it gets applied, one file per table.
+ * Another mod's structure arrives the same way — nothing declares it — so rather than price the
+ * loot table on every chest opening, the server prices each uncovered table <b>once at startup</b>
+ * — reading its weights, not rolling it, see {@link ExplorationLootEstimator} — and writes the
+ * result down as an ordinary region file, the same format a human writes, so a datapack author
+ * can read it, edit it, or replace it by declaring that region properly.
  *
  * <p>Files land in {@code <world>/wandscape/generated_regions/}. World-scoped on purpose:
  * what a loot table is worth depends on the pack set the world runs with, not on the
  * machine. The declared tier always wins over these (see {@link ExplorationRegionLoader}),
  * so declaring a region by hand takes over from a generated one automatically.
+ *
+ * <p>Once written, a file is skipped on later startups and keeps the value it was priced
+ * with — that is what the world actually pays. Changing {@link ExplorationRewardSpec#DEFAULT}
+ * or the element mappings does <b>not</b> reach an existing world; delete the directory and
+ * the next startup re-prices everything.
  */
 public final class ExplorationRegionGenerator {
 
