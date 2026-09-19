@@ -17,17 +17,16 @@ import java.util.Map;
  * Reward payout rule of an exploration region, parsed from the {@code reward} block of a
  * region JSON. Pure data: no Minecraft imports.
  *
- * <p>The spec only decides where the <b>element value vector</b> comes from — the three
- * parameters ({@code expRatio}, {@code dangerMultiplier}, {@code variance}) shape that
- * vector into EXP and min/max ranges for every mode alike, so a region can switch value
- * source without touching its tuning.
+ * <p>The spec only decides where the <b>element value vector</b> comes from — the two
+ * parameters ({@code expRatio}, {@code variance}) shape that vector into EXP and min/max
+ * ranges for every mode alike, so a region can switch value source without touching its
+ * tuning.
  *
  * <pre>
  * "reward": {
  *   "mode": "derived",                 // value 从哪来
  *   "value": { "dark": 200 },          // fixed 直接用；additive 加在派生值上
- *   "exp_ratio": 15.0,                 // 元素 → 殖民经验的换算比
- *   "danger_multiplier": 2.5,          // 只放大经验，不放大元素
+ *   "exp_ratio": 5.0,                  // 元素 → 殖民经验的换算比
  *   "variance": 0.25                   // 上下限 ±%
  *   "loot_share": 0.5                  // 元素总额里沿用战利品比例的那一半
  * }
@@ -35,12 +34,13 @@ import java.util.Map;
  *
  * <p>Apart from {@code loot_share}, which shapes how the element total is distributed at roll
  * time, every parameter here shapes the value vector into EXP and min/max ranges.
+ *
+ * <p>经验只由箱子价值决定：没有危险系数之类的区域乘数，一个箱子值多少元素就换多少经验。
  */
 public record ExplorationRewardSpec(
         Mode mode,
         Map<ElementType, Long> value,
         double expRatio,
-        double dangerMultiplier,
         double variance,
         double lootShare
 ) {
@@ -65,8 +65,7 @@ public record ExplorationRewardSpec(
 
     private static final String TAG = "ExplorationRewardSpec";
 
-    public static final double DEFAULT_EXP_RATIO = 15.0;
-    public static final double DEFAULT_DANGER = 1.0;
+    public static final double DEFAULT_EXP_RATIO = 5.0;
     public static final double DEFAULT_VARIANCE = 0.25;
     /**
      * Default fraction of the rolled element total that keeps the loot table's distribution;
@@ -77,11 +76,17 @@ public record ExplorationRewardSpec(
 
     /** Rule applied to a region that declares no {@code reward} block: price the loot table, no extras. */
     public static final ExplorationRewardSpec DEFAULT = new ExplorationRewardSpec(
-            Mode.DERIVED, Map.of(), DEFAULT_EXP_RATIO, DEFAULT_DANGER, DEFAULT_VARIANCE, DEFAULT_LOOT_SHARE);
+            Mode.DERIVED, Map.of(), DEFAULT_EXP_RATIO, DEFAULT_VARIANCE, DEFAULT_LOOT_SHARE);
 
     /** Tuning keys that sat at the top level before the {@code reward} block existed. */
     private static final List<String> LEGACY_KEYS =
             List.of("danger_multiplier", "variance", "element_to_exp_ratio");
+
+    /**
+     * Keys that used to live in the {@code reward} block and are gone for good. Kept only so an
+     * old file gets told its tuning no longer counts instead of quietly paying something else.
+     */
+    private static final List<String> RETIRED_KEYS = List.of("danger_multiplier");
 
     public ExplorationRewardSpec {
         value = Collections.unmodifiableMap(new LinkedHashMap<>(value));
@@ -100,10 +105,16 @@ public record ExplorationRewardSpec(
         }
         JsonObject reward = region.getAsJsonObject("reward");
 
+        for (String retired : RETIRED_KEYS) {
+            if (reward.has(retired)) {
+                Log.warn(TAG, "Region '{}' still sets reward.{} — that key was removed; experience now comes "
+                        + "from the chest's element value alone. Delete it from the file.", regionId, retired);
+            }
+        }
+
         Mode mode = Mode.parse(reward.has("mode") ? reward.get("mode").getAsString() : null);
         Map<ElementType, Long> value = ElementMaps.parse(reward, "value");
         double expRatio = readDouble(reward, "exp_ratio", DEFAULT_EXP_RATIO);
-        double danger = readDouble(reward, "danger_multiplier", DEFAULT_DANGER);
         double variance = readDouble(reward, "variance", DEFAULT_VARIANCE);
         double lootShare = readShare(regionId, reward, "loot_share", DEFAULT_LOOT_SHARE);
 
@@ -113,7 +124,7 @@ public record ExplorationRewardSpec(
             value = Map.of();
         }
 
-        return new ExplorationRewardSpec(mode, value, expRatio, danger, variance, lootShare);
+        return new ExplorationRewardSpec(mode, value, expRatio, variance, lootShare);
     }
 
     /** Read a 0..1 ratio, clamping and warning rather than letting a stray 50 silently mean "all loot". */

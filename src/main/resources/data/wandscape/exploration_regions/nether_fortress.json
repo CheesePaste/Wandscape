@@ -6,8 +6,7 @@
   ],
   "reward": {
     "mode": "derived",
-    "exp_ratio": 15.0,
-    "danger_multiplier": 1.8,
+    "exp_ratio": 5.0,
     "variance": 0.25,
     "loot_share": 0.5
   }

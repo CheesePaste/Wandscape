@@ -13,8 +13,8 @@ import java.util.Map;
  *
  * <p>The value vector — how much of each element a chest is worth — is what differs per
  * {@link ExplorationRewardSpec.Mode}: sampled from the loot table, declared in JSON, or
- * both. Everything after that (the EXP conversion, the danger multiplier, the variance
- * spread) is identical for every mode.
+ * both. Everything after that (the EXP conversion, the variance spread) is identical for
+ * every mode.
  */
 public final class ExplorationExpectationCalculator {
 
@@ -44,15 +44,14 @@ public final class ExplorationExpectationCalculator {
     /**
      * Build the reward range from a value vector.
      *
-     * <p>EXP is the vector's total divided by {@code expRatio} and scaled by
-     * {@code dangerMultiplier}; each element keeps its own share of the vector, spread by
-     * {@code variance}. A vector with no value falls back to {@link #createFallback} and
-     * is reported as degenerate by {@link #isDegenerate} — callers that persist the result
-     * must mark it.
+     * <p>EXP is the vector's total divided by {@code expRatio}; each element keeps its own
+     * share of the vector, spread by {@code variance}. A vector with no value falls back to
+     * {@link #createFallback} and is reported as degenerate by {@link #isDegenerate} — callers
+     * that persist the result must mark it.
      *
      * @param regionName display name of the region
      * @param value      element value vector (expected worth of one chest)
-     * @param spec       payout rule supplying ratio, danger and variance
+     * @param spec       payout rule supplying ratio and variance
      */
     public static ExplorationRewardRange fromValue(
             String regionName, Map<ElementType, Long> value, ExplorationRewardSpec spec) {
@@ -65,10 +64,9 @@ public final class ExplorationExpectationCalculator {
         for (long v : value.values()) totalElementValue += v;
 
         double safeRatio = spec.expRatio() <= 0 ? ExplorationRewardSpec.DEFAULT_EXP_RATIO : spec.expRatio();
-        double safeDanger = Math.max(0.1, spec.dangerMultiplier());
         double safeVariance = Math.max(0.0, Math.min(0.9, spec.variance()));
 
-        double baseExp = (totalElementValue / safeRatio) * safeDanger;
+        double baseExp = totalElementValue / safeRatio;
         int minExp = (int) Math.max(15, Math.round(baseExp * (1.0 - safeVariance)));
         int maxExp = (int) Math.max(minExp, Math.round(baseExp * (1.0 + safeVariance)));
 

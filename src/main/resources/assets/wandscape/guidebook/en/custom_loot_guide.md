@@ -36,16 +36,15 @@ The `reward` block says where the value comes from. `mode` picks the source of t
 
 `value` maps an element to an amount, keyed by one of the seven elements. **If you write a `value` without moving `mode` to `fixed` or `additive`, the value is logged as a warning and ignored** — "written but doing nothing" is the expensive kind of quiet, so this one gets loud.
 
-## The Four Parameters
+## The Three Parameters
 
 | Key | Effect |
 |---|---|
-| exp_ratio | experience = the vector's total ÷ this ratio, default 15.0, and never below a floor of 15 |
-| danger_multiplier | a danger factor that scales experience only, never elements, default 1.0 |
+| exp_ratio | experience = the vector's total ÷ this ratio, default 5.0, and never below a floor of 15 |
 | variance | how far the roll spreads, default 0.25 for plus or minus 25% |
 | loot_share | the fraction of the element total that keeps the loot table's proportions; the rest is spread over the seven elements, default 0.5 |
 
-The danger factor multiplies experience alone, so the element total never moves — a dangerous region is "expensive experience, ordinary elements".
+Experience follows the chest's value alone — there is no per-region multiplier such as a danger factor: whatever a chest is worth in elements, that is what it pays in experience.
 
 ## How the Estimate Is Priced
 

@@ -7,7 +7,7 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "$(italic)$(#6b5a45)You edit $(#8a5a2b)exploration_regions$()$(italic)$(#6b5a45) in a datapack and $(#8a5a2b)/reload$()$(italic)$(#6b5a45) picks it up at once. Before you start, look at the files the server writes for itself — whatever you mean to override is probably already in there.$()"
+      "text": "$(italic)$(#6b5a45)You edit $(#8a5a2b)exploration_regions$()$(italic)$(#6b5a45) in a datapack and $(#8a5a2b)/reload$()$(italic)$(#6b5a45) picks it up at once. Before you start, look at the $(br)files the server writes for itself — whatever you mean to override is probably already in there.$()"
     },
     {
       "type": "patchouli:text",
@@ -15,7 +15,7 @@
     },
     {
       "type": "patchouli:text",
-      "text": "it is worked out from the $(bold)loot table$(): the mod reads the whole table's weights, works out the expected yield of one opening, then prices every item through the element mappings and adds it up."
+      "text": "it is worked out from the $(bold)loot table$(): the mod reads the whole table's weights, works out the expected yield of one opening, then prices every item through the element mappings and$(br) adds it up."
     },
     {
       "type": "patchouli:text",
@@ -24,7 +24,7 @@
     },
     {
       "type": "patchouli:text",
-      "text": "There is a second tier the server writes for itself, under $(#8a5a2b)<world>/wandscape/generated_regions/$(): every time the server starts, the mod walks all loot tables, prices the chest tables that no region declares, and writes the result as a file in the same format."
+      "text": "There is a second tier the server writes for itself, under $(#8a5a2b)<world>/wandscape/generated_regions/$(): every time the server starts, the mod walks all loot tables, prices the chest t$(br)ables that no region declares, and writes the result as a file in the same format."
     },
     {
       "type": "patchouli:text",
@@ -32,12 +32,12 @@
     },
     {
       "type": "patchouli:text",
-      "text": "The top level holds just two keys. $(#8a5a2b)name$() is the display name, shown in the HUD notice when a player opens a chest; $(#8a5a2b)loot_table_patterns$() is a list of regexes matched against the loot table's full id, such as $(#8a5a2b)minecraft:chests/simple_dungeon$().",
+      "text": "The top level holds just two keys. $(#8a5a2b)name$() is the display name, shown in the HUD notice when a player opens a chest;$(br) $(#8a5a2b)loot_table_patterns$() is a list of regexes matched against the loot table's full id, such as $(#8a5a2b)minecraft:chests/simple_dungeon$().",
       "title": "Which Chests It Claims"
     },
     {
       "type": "patchouli:text",
-      "text": "Matching is won $(bold)on specificity$(): of every region that matches, the one whose patterns carry the most literal characters wins, ties broken by region id. You can therefore write one $(#8a5a2b).*$() region to catch everything, and it will only take effect wher$(br)e no more specific region fits — the r",
+      "text": "Matching is won $(bold)on specificity$(): of every region that matches, the one whose patterns carry the most literal characters wins, ties broken by region id. You can therefore write one $(br)$(#8a5a2b).*$() region to catch everything, and it will only take effect where no more specific region fits — the r",
       "title": "How a Match Is Chosen"
     },
     {
@@ -55,30 +55,38 @@
     },
     {
       "type": "patchouli:text",
-      "text": "$(#8a5a2b)value$() maps an element to an amount, keyed by one of the seven elements. $(bold)If you write a $(#8a5a2b)value$()$(bold) without moving $(#8a5a2b)mode$()$(bold) to $(#8a5a2b)fixed$()$(bold) or $(#8a5a2b)additive$()$(bold), the value is logged as a warning and ignored$() — \"written but doing nothing\" is the expensive kind of quiet, so this one gets loud.",
+      "text": "$(#8a5a2b)value$() maps an element to an amount, keyed by one of the seven elements. $(bold)If you write a $(#8a5a2b)value$()$(bold) without moving $(#8a5a2b)mode$()$(bold) to $(#8a5a2b)fix",
       "title": "The value Field"
     },
     {
       "type": "patchouli:text",
-      "text": "$(bold)Key  Effect$()$(li)exp_ratio — experience = the vector's total ÷ this ratio, default 15.0, and never below a floor of 15$(li)danger_multiplier — a danger factor that scales experience only, never elements, default 1.0$(li)variance — how far the roll spreads, default 0.25 for plus or minus 25%",
-      "title": "The Four Parameters"
+      "text": "ed$()$(bold) or $(#8a5a2b)additive$()$(bold), the value is logged as a warning and ignored$() — \"written but doing nothing\" is the expensive kind of quiet, so this one gets loud."
     },
     {
       "type": "patchouli:text",
-      "text": "loot_share — the fraction of the element total that keeps the loot table's proportions; the rest is spread over the seven elements, default 0.5$(br2)The danger factor multiplies experience alone, so the element total never moves — a dangerous region is \"expensive experience, ordinary elements\"."
+      "text": "$(bold)Key  Effect$()$(li)exp_ratio — experience = the vector's total ÷ this ratio, default 5.0, and never below a floor of 15$(li)variance — how far the roll spreads, default 0.25 for plus or minus 25%",
+      "title": "The Three Parameters"
     },
     {
       "type": "patchouli:text",
-      "text": "Pricing through the element mappings measures what it costs to build the things in the table. That is an honest reflection of a chest's worth, but it sits below how rewarding finding one should feel, so $(bold)the estimated vector is doubled before it enters the for",
+      "text": "loot_share — the fraction of the element total that keeps the loot table's proportions; the rest is spread over the seven elements, default 0.5"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Experience follows the chest's value alone — there is no per-region multiplier such as a danger factor: whatever a chest is worth in elements, that is what it pays in experience."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Pricing through the element mappings measures what it costs to build the things in the table. That is an honest reflection of a chest's worth, but it sits below how rewarding finding one sh",
       "title": "How the Estimate Is Priced"
     },
     {
       "type": "patchouli:text",
-      "text": "mulas above$().$(br2)A number you wrote into $(#8a5a2b)value$() is used exactly as written — whoever writes a number means that number."
+      "text": "ould feel, so $(bold)the estimated vector is doubled before it enters the formulas above$().$(br2)A number you wrote into $(#8a5a2b)value$() is used exactly as written — whoever writes a number means that number."
     },
     {
       "type": "patchouli:text",
-      "text": "When no item in the loot table has an element mapping — another mod's chests are the usual case — the vector is empty and the payout is zero: no experience, no elements, no particles, no HUD notice, just one line in the log.",
+      "text": "When no item in the loot table has an element mapping — another mod's chests are the usual case — the vector is empty and the payout is zero: no experience, no elements, no particles, no HU$(br)D notice, just one line in the log.",
       "title": "Nothing Priced, Nothing Paid"
     },
     {
@@ -87,21 +95,21 @@
     },
     {
       "type": "patchouli:text",
-      "text": "The payout settles when a player right-clicks a naturally generated container or breaks it, and a given position only ever counts once. What it keys off is the container being $(bold)still unopened, with a loot table still attached$() — vanilla clears the table the",
+      "text": "The payout settles when a player right-clicks a naturally generated container or breaks it, and a given position only ever counts once. What it keys off is the container being $(bold)still $(br)unopened, with a loot table still attached$() — vanilla clears the table the first time a chest is opened, and a ch",
       "title": "When It Settles"
     },
     {
       "type": "patchouli:text",
-      "text": "first time a chest is opened, and a ch$(br2)est a player placed never had one, so there is nothing to farm.$(br2)A double chest counts once for the whole chest, and container entities such as chest minecarts work the same way."
+      "text": "est a player placed never had one, so there is nothing to farm.$(br2)A double chest counts once for the whole chest, and container entities such as chest minecarts work the same way."
     },
     {
       "type": "patchouli:text",
-      "text": "The Settings Center's Town tab carries two dials, an exploration chest experience multiplier and an element multiplier, each settable from 0 to 10 times. They multiply at the very last step, so they cover both the estimate and a hand-written $(#8a5a2b)value$() alike",
+      "text": "The Settings Center's Town tab carries two dials, an exploration chest experience multiplier and an element multiplier, each settable from 0 to 10 times. They multiply at the very last step",
       "title": "Global Multipliers"
     },
     {
       "type": "patchouli:text",
-      "text": "— that is an administrator's global s$(br2)witch, not an region setting, and it is not the way to tune one region."
+      "text": ", so they cover both the estimate and a hand-written $(#8a5a2b)value$() alike — that is an administrator's global s$(br2)witch, not an region setting, and it is not the way to tune one region."
     }
   ]
 }

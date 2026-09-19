@@ -179,7 +179,7 @@
    - **防刷核心**：依靠 Minecraft 1.21.1 容器未开封状态下的 `getLootTable() != null`。开箱触发生成原版物品后，原版逻辑立即将其置 null；玩家自放箱子恒为 null。无需在磁盘维护海量坐标数据库。
    - **奖励数据显式化（region JSON 的 `reward` 块）**：顶层只说「这是哪个区域」（`name` + `loot_table_patterns`），`reward` 块说「发什么」。
      `mode` 决定元素价值向量从哪来：`derived`（默认，按战利品表算）、`fixed`（直接用 `value` 里写的，完全不碰战利品表）、`additive`（算出来的 + `value`）；
-     `exp_ratio` / `danger_multiplier` / `variance` 不分模式始终作用在这个向量上（经验 = 向量总和 ÷ 比值 × 危险，危险只放大经验、不放大元素）。
+     `exp_ratio` / `variance` 不分模式始终作用在这个向量上（经验 = 向量总和 ÷ `exp_ratio`；`variance` 只决定上下浮动幅度）。**经验没有区域乘数**——危险系数 `danger_multiplier` 已删除，箱子值多少元素就换多少经验，调平衡只剩 `exp_ratio` 一个杠杆（默认 5.0）。
      内置 10 个区域**目前是 `derived`**（行为与改造前一致），它们要固化的 value 由游戏内 `/wandscape chest bake <region|all>` 产出后填入。写了 `value` 却没写 `mode` 时按 `derived` 处理并 `Log.warn`——"写了却不生效"是最贵的静默。
    - **价值是「读权重算期望」，不是抽样**：`ExplorationLootEstimator` 不 roll。它遍历战利品表的 pool / entry，按 `weight / 总权重 × rolls` 求每个 entry 期望命中几次，再把物品过一遍 `element_mappings` 定价求和。
      能这么算是因为原版数值提供器全是均匀分布，而 `LootContext.Builder.withOptionalRandomSource` 允许注入随机源：`ExplorationProbeRandom` 对任何区间都答中点，于是**一次遍历得到的正是数学期望**——`set_count` 给出的也是期望数量而非某一次抽样的值。没有随机、不造中间 `ItemStack`、没有循环，启动价一遍是毫秒级。

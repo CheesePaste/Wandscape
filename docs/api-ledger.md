@@ -423,7 +423,7 @@
 | `exp()` / `setExp(int)` | 即将发给殖民地的经验（负数被夹到 0） |
 | `elements()` / `setElements(Map)` / `addElement(ElementType, long)` | 即将存入金库的元素（非正值被丢弃、空即不发元素） |
 
-**定位（硬规则 6）**：数据包能表达的一律不进代码——改数值走 region JSON 的 `reward` 块（`mode` / `value` / `exp_ratio` / `danger_multiplier` / `variance`）。这个事件只补数据包做不到的三件事：按运行时状态决定、追加非元素产出（自己给物品/发命令）、整个拦掉。
+**定位（硬规则 6）**：数据包能表达的一律不进代码——改数值走 region JSON 的 `reward` 块（`mode` / `value` / `exp_ratio` / `variance` / `loot_share`）。这个事件只补数据包做不到的三件事：按运行时状态决定、追加非元素产出（自己给物品/发命令）、整个拦掉。
 
 本体自消费：无（纯对外能力）。**无殖民地路径不触发**：玩家没有殖民地时直接走 Action Bar 提示分支并保留原版战利品，不 post 事件——那时没有任何东西可改。
 

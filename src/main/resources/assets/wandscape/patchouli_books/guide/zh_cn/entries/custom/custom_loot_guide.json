@@ -28,16 +28,17 @@
     },
     {
       "type": "patchouli:text",
-      "text": "$(#8a5a2b)reward$() 块说这份价值从哪来。$(#8a5a2b)mode$() 决定元素价值向量的来源：$(li)$(#8a5a2b)derived$()（默认）：读战利品表的权重算期望，一个字都不用写。$(li)$(#8a5a2b)fixed$()：只用 $(#8a5a2b)value$() 里写的数，完全不碰战利品表。$(li)$(#8a5a2b)additive$()：算出来的期望再加上 $(#8a5a2b)value$()。$(br2)$(bold)写了 value 却没用$()",
+      "text": "$(#8a5a2b)reward$() 块说这份价值从哪来。$(#8a5a2b)mode$() 决定元素价值向量的来源：$(li)$(#8a5a2b)derived$()（默认）：读战利品表的权重算期望，一个字都不用写。$(li)$(#8a5a2b)fixed$()：只用 $(#8a5a2b)value$() 里写的数，完全不碰战利品表。$(li)$(#8a5a2b)additive$()：算出来的期望再加上 $(#8a5a2b)value$()。",
       "title": "发什么"
     },
     {
       "type": "patchouli:text",
-      "text": "$(#8a5a2b)value$() 是元素到数量的映射，键取七元素之一。$(bold)写了 $(#8a5a2b)value$()$(bold) 却没把 $(#8a5a2b)mode$()$(bold) 改成 $(#8a5a2b)fixed$()$(bold) 或 $(#8a5a2b)additive$()$(bold)，这个值会被记一条警告并直接忽略$()——\"写了却不生效\"是最贵的静默，所以这里宁可吵。$(br2)$(bold)四个参数$()$(br2)$(bold)键  作用$()$(li)exp_ratio — 经验 = 向量总和 ÷ 这个比值，默认 15.0，最低不会低于 15 点"
+      "text": "$(bold)写了 value 却没用$()$(br2)$(#8a5a2b)value$() 是元素到数量的映射，键取七元素之一。$(bold)写了 $(#8a5a2b)value$()$(bold) 却没把 $(#8a5a2b)mode$()$(bold) 改成 $(#8a5a2b)fixed$()$(bold) 或 $(#8a5a2b)additive$()$(bold)，这个值会被记一条警告并直接忽略$()——\"写了却不生效\"是最贵的静默，所以这里宁可吵。"
     },
     {
       "type": "patchouli:text",
-      "text": "$(li)danger_multiplier — 危险系数，只放大经验、不动元素，默认 1.0$(br2)variance — 上下浮动幅度，默认 0.25 即 ±25%$(li)loot_share — 元素总额中沿用战利品表比例的那一份，其余平摊给七元素，默认 0.5$(br2)危险系数只乘经验，元素总量因此不变，所以高危区域是「经验贵、元素不贵」。"
+      "text": "$(bold)键  作用$()$(li)exp_ratio — 经验 = 向量总和 ÷ 这个比值，默认 5.0，最低不会低于 15 点$(li)variance — 上下浮动幅度，默认 0.25 即 ±25%$(li)loot_share — 元素总额中沿用战利品表比例的那一份，其余平摊给七元素，默认 0.5$(br2)经验只由箱子价值决定，没有危险系数之类的区域乘数：箱子值多少元素，就换多少经验。",
+      "title": "三个参数"
     },
     {
       "type": "patchouli:text",

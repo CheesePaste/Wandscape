@@ -147,7 +147,6 @@ public final class ExplorationRegionGenerator {
         reward.addProperty("mode", "fixed");
         reward.add("value", renderValue(value));
         reward.addProperty("exp_ratio", spec.expRatio());
-        reward.addProperty("danger_multiplier", spec.dangerMultiplier());
         reward.addProperty("variance", spec.variance());
         reward.addProperty("loot_share", spec.lootShare());
 
