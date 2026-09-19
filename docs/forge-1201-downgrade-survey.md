@@ -189,9 +189,9 @@
 - **编解码函数可以整体复用**：81/86 个载荷已经写成 `static void write(RegistryFriendlyByteBuf, X)` + `static X read(RegistryFriendlyByteBuf)`，用 `StreamCodec.of(X::write, X::read)` 串起来（83 处）——这个形状与 `registerMessage(index, class, encoder, decoder, consumer)` **一一对应**，方法体原样保留，只换形参类型。只有 3 个载荷用了非机械写法（2 个 `StreamCodec.composite`、1 个 `StreamCodec.unit`）。
 - **handler 已经与框架解耦**：每个载荷暴露静态 `handleClient(X)` / `handleServer(X)`，真逻辑由 `WandscapeClient` 在 `FMLClientSetupEvent` 里通过 `setClientHandler(Consumer)` 注入，注册 lambda 本身是空转。只有 14 个文件用到 `IPayloadContext`，其中仅 13 处 `ctx.player()` + 1 处 `ctx.enqueueWork()` 需要真判断。
 
-**建议的落点**：把 185 个发送点收敛到一个 `WandscapeNetwork` 门面（`sendToServer` / `sendToPlayer` / `sendTracking` / `sendToAll` 四个方法），call site 保持不动，改造只发生在门面内部。这既是降级的最短路径，本身也是本项目「网络发送无统一 util（原 fabric 考察已记过同一笔账）」该做的收口。
+**建议的落点**：把 185 个发送点收敛到一个 `WandscapeNetwork` 门面（`sendToServer` / `sendToPlayer` / `sendTracking` / `sendToAll` 四个方法），call site 保持不动，改造只发生在门面内部。这既是降级的最短路径，本身也是本项目「网络发送无统一 util（原 fabric 考察已记过同一笔账）」该做的收口。**具体设计（方法清单、`PayloadRegistry` 划分、以及「别包装缓冲区 / 别加 `WandPayload` 标记接口」的取舍）见 [networking-survey.md](networking-survey.md) §六。**
 
-**残留风险**：`ComponentSerialization.STREAM_CODEC`（1.20.5+）须换成 `buf.writeComponent()/readComponent()`；`ByteBufCodecs.BOOL` 须换成 `buf.writeBoolean()`；`RegistryFriendlyByteBuf` 之所以是「registry 版」是因为 1.20.5 起包同步要带注册表上下文，1.20.1 无此概念，直接降级为 `FriendlyByteBuf` 即可（**但需逐个确认没有依赖注册表上下文的读写**）。
+**残留风险**：`ComponentSerialization.STREAM_CODEC`（1.20.5+）须换成 `buf.writeComponent()/readComponent()`；`ByteBufCodecs.BOOL` 须换成 `buf.writeBoolean()`；`RegistryFriendlyByteBuf` 之所以是「registry 版」是因为 1.20.5 起包同步要带注册表上下文，1.20.1 无此概念，直接降级为 `FriendlyByteBuf` 即可。**「依赖注册表上下文的读写」已实测收敛为 3 个载荷**（`NpcDataPacket` / `ExplorationRewardPacket` / `ScreenFeedbackPacket`），非全部 86 个——见本文「主要行为等价风险」第 1 条订正。
 
 ### 6.2 物品数据组件 → NBT（成本：中）
 
@@ -469,7 +469,9 @@ Forge 1.20.1 是 Java 17，下面这些 Java 21 语法/API 必须替换：
 
 ### 主要行为等价风险
 
-1. **网络协议一致性**：`RegistryFriendlyByteBuf` 降级为 `FriendlyByteBuf` 时，若有载荷依赖了注册表上下文（1.20.5 起才有），会写出读不回来的字节流。须逐个核对 86 个载荷的读写。
+1. **网络协议一致性**：`RegistryFriendlyByteBuf` 降级为 `FriendlyByteBuf` 时，若有载荷依赖了注册表上下文（1.20.5 起才有），会写出读不回来的字节流。
+   > **订正（2026-09-20，据 `networking-survey.md` §6.1 实测）**：本条原写「须逐个核对 86 个载荷的读写」，**高估了核对量**。按类型签名检索，真正用到注册表依赖 codec 的载荷只有 **3 个**——`NpcDataPacket`（`ItemStack.OPTIONAL_STREAM_CODEC` ×4）、`ExplorationRewardPacket` 与 `ScreenFeedbackPacket`（均 `ComponentSerialization.STREAM_CODEC`）。其余 83 个只写基本类型 / `CompoundTag` / 字符串。核对范围从 86 个缩到 3 个。
+   > 口径边界：此为**签名层面**判定，未逐行核验 codec 方法体内是否另有注册表访问；另 `ScreenFeedbackPacket` 属 foundation 通用反馈包，是全库使用面最广的一个，优先核它。
 2. **静默失效**：数据包目录与 JSON 字段错误**不报错**，可能一路带到发布。需要一份「加载后自检」清单。
 3. **AT 与 mixin**：两者失败都只在运行时暴露，且当前 mixin 配置是「必需」级别。
 4. **反射读配置规格**：`SettingItem` 假设了配置规格的形状，Forge 侧访问器同名但需实测。
