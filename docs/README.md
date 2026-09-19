@@ -19,6 +19,7 @@
 | [checklists.md](checklists.md) | 迁移与重构活清单（NeoForge 适配、重构阶梯、PR 守则） | 版本迁移、大重构、发版或提交 PR 时 |
 | [fabric-port-survey.md](fabric-port-survey.md) | **Fabric 1.21.1 官方移植考察报告**：规模/耦合量、六条平台接缝、事件映射表、难度分级、仓库结构选择面 | 评估双 loader 官方版可行性或规划长期仓库演进时 |
 | [neoforge-26-upgrade-survey.md](neoforge-26-upgrade-survey.md) | **NeoForge 26.1 升级考察报告**：版本线/工具链变化、全库契约改名与深水重写分区、分项难度表、与 fabric 移植横评 | 评估升级到 Minecraft 26.1 / NeoForge 26.1 的体量与难易，规划升级顺序时 |
+| [forge-1201-downgrade-survey.md](forge-1201-downgrade-survey.md) | **降级到 Forge 1.20.1 考察报告**：区分「loader 改名」与「MC 版本差」两类成本、64 个 NeoForge 导入逐类判定（47 有对应 / 17 需改造）、数据包静默失效清单、第三方 1.20.1 可用性逐包比对、三者横评 | 评估降级到 Minecraft 1.20.1 / Forge 的体量与难易，或想弄清「哪些改动与 loader 无关」时 |
 | [guidebook.md](guidebook.md) | **手册全流程（内容 · 文风 · 管线 · 美术）**：md 单源 → 帕秋莉 JSON / 无帕秋莉时的兜底屏两处渲染、「改什么 = 改哪里」唯一源表、玩家文案文风（只写「做了什么」不写能力清单，附我们踩过的真实反例）、md→帕秋莉映射表与样式栈两个坑、生成与分页自检、书皮 512×256 的 23 类槽位全表与美术产出清单 | **动手写或改任何玩家看得到的文案之前**——手册条目、物品/魔法介绍、JEI 信息页、界面标签；改 `guidebook/*.md`、重生成手册、替换手册美术素材、或接续解锁与入口收口时 |
 | [lang-pipeline.md](lang-pipeline.md) | **语言文件生成管线（lang_src 单源 → lang/zh_cn.json + en_us.json）**：为什么这么拆、源文件分法、编译期校验（中英齐全 / 占位符对齐 / 产物漂移）、以及「为什么不按命名空间拆 / 不自写加载器」的决策留档 | 加或改任何上屏文案、新增界面、或想动 `lang/` 下那两个 JSON 时 |
 
