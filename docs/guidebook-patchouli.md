@@ -256,7 +256,7 @@ md 里的 `![alt](wandscape:path/x.png =WxH)` 尺寸后缀帕秋莉不认（兜�
 | **解锁与跟玩** | 无 | 条目 `advancement` 锁定 + `turnin` 待办 + `patchouli:quest` 打勾；需先做 `intro_*` 成就。相关未决点见下表 |
 | **配方页** | 12 支法杖现为文本表 | 可换成 `patchouli:crafting` 页自动展示配方并接入 JEI |
 | **美术** | 书皮 / 配图 / 模型 / 图标全是占位 | 见 §四 |
-| **旧引导删除** | `content/tutorial` + `foundation/ui/tutorial`（HUD 浮层）仍在 | 教学步并入手册后即可删 |
+| **旧引导删除** | `content/tutorial` + `foundation/ui/tutorial`（HUD 浮层）仍在，已收到 5 步（市政厅 / 仓库 / 存入物品 / 工作站 / 合成订单），与《0，入门》一章内容重合 | 再往下收就只剩「按 V 打开面板」一句话，HUD 可以整体删掉、只留手册那一章 |
 
 **入口收口已完成**：H 键、`guide_book` 物品、`/wandscape guide`、各建筑屏 `?` 全部经
 `foundation/ui/guidebook/GuideFacade` 路由——装了 Patchouli 走条目，没装退 `GuidebookScreen` 只读兜底。

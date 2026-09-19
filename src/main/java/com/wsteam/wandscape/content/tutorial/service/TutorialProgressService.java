@@ -1,7 +1,5 @@
 package com.wsteam.wandscape.content.tutorial.service;
 
-import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
-import com.wsteam.wandscape.content.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.api.TutorialApi;
 import com.wsteam.wandscape.content.building.data.BuildingData;
 import com.wsteam.wandscape.content.building.internal.BuildingState;
@@ -20,8 +18,8 @@ import java.util.UUID;
 
 /**
  * Server-authoritative onboarding progress. Computes the current step from
- * colony state (buildings, player actions, shop stock, tourist stays) and
- * pushes it to the client, which only renders.
+ * colony state (buildings the colony owns, what the player deposited and queued)
+ * and pushes it to the client, which only renders.
  *
  * <p>{@link #computeStep} is pure and MC-free (over {@link TutorialServerContext})
  * so the ordering logic is unit-testable.
@@ -47,7 +45,7 @@ public final class TutorialProgressService implements TutorialApi {
 
     /**
      * Step completion checks, in order — MUST match {@code TutorialRegistry.STEPS}.
-     * Returns the number of leading steps satisfied (0..10).
+     * Returns the number of leading steps satisfied (0..5).
      */
     public static int computeStep(TutorialServerContext ctx) {
         int step = 0;
@@ -55,12 +53,7 @@ public final class TutorialProgressService implements TutorialApi {
         if (ctx.hasCategory("storage")) step++;           // 2 建造仓库
         if (ctx.hasPlayerDeposited()) step++;             // 3 存入一个物品
         if (ctx.hasCategory("workstation")) step++;       // 4 建造工作站
-        if (ctx.hasPlayerSynthesized()) step++;           // 5 合成一样物品
-        if (ctx.hasBakeryStocked()) step++;               // 6 面包店补充货物
-        if (ctx.hasAltar()) step++;                       // 7 建造祭坛
-        if (ctx.hasTavernRecruited()) step++;             // 8 建立酒馆，招募一名法师
-        if (ctx.hasMageHutResident()) step++;             // 9 建造法师小屋，指派法师入住
-        if (ctx.hasInnWithStay()) step++;                 // 10 青年旅舍游客入住
+        if (ctx.hasPlayerSynthesized()) step++;           // 5 下发一个合成订单
         return step;
     }
 
@@ -93,63 +86,6 @@ public final class TutorialProgressService implements TutorialApi {
         @Override
         public boolean hasPlayerSynthesized() {
             return ColonyItemBank.get(level).getPlayerSynthesizeCount(colonyId) > 0;
-        }
-
-        @Override
-        public boolean hasBakeryStocked() {
-            BuildingSavedData savedData = BuildingSavedData.get(level);
-            if (savedData == null) return false;
-            for (BuildingData b : buildings) {
-                if ("bakery".equals(b.getBuildingTypeId())
-                        && savedData.hasShopStock(b.getBuildingId())) {
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        @Override
-        public boolean hasAltar() {
-            return hasCategory("altar");
-        }
-
-        @Override
-        public boolean hasTavernRecruited() {
-            if (!hasCategory("tavern")) return false;
-            var tavernApi = WandscapeApis.getTavernApiSilently();
-            return tavernApi != null && tavernApi.getRecruitCount(colonyId) > 0;
-        }
-
-        @Override
-        public boolean hasMageHutResident() {
-            BuildingSavedData savedData = BuildingSavedData.get(level);
-            if (savedData == null) return false;
-            for (BuildingData b : buildings) {
-                if ("mage_hut".equals(b.getCategory())
-                        && savedData.getMageHutResident(b.getBuildingId()) != null) {
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        @Override
-        public boolean hasInnWithStay() {
-            if (!hasServiceInn()) return false;
-            var touristApi = WandscapeApis.getTouristApiSilently();
-            return touristApi != null && touristApi.getOvernightStayerCount(colonyId) > 0;
-        }
-
-        private boolean hasServiceInn() {
-            for (BuildingData b : buildings) {
-                if (!"service".equals(b.getCategory())) continue;
-                var config = BuildingConfigLoader.getInstance().get(b.getBuildingTypeId());
-                if (config != null && config.service() != null
-                        && config.service().maxOccupancy() > 0) {
-                    return true;
-                }
-            }
-            return false;
         }
     }
 }

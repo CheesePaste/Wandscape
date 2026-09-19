@@ -7,6 +7,7 @@ package com.wsteam.wandscape.content.tutorial.service;
  */
 public interface TutorialServerContext {
 
+    /** The colony owns at least one building of this category (steps 1, 2 and 4). */
     boolean hasCategory(String category);
 
     /** Player has deposited at least one item into the colony warehouse (step 3). */
@@ -14,19 +15,4 @@ public interface TutorialServerContext {
 
     /** Player has published at least one workstation synthesize request (step 5). */
     boolean hasPlayerSynthesized();
-
-    /** A bakery is built AND has at least one stocked good (step 6). */
-    boolean hasBakeryStocked();
-
-    /** An altar is built (step 7). */
-    boolean hasAltar();
-
-    /** A tavern is built AND the player has recruited at least one mage there (step 8). */
-    boolean hasTavernRecruited();
-
-    /** A mage hut is built AND a mage has moved in as its resident (step 9). */
-    boolean hasMageHutResident();
-
-    /** Any service building with max_occupancy > 0 AND a tourist is staying overnight (step 10). */
-    boolean hasInnWithStay();
 }

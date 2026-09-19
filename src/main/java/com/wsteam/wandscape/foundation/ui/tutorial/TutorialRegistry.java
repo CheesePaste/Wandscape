@@ -9,6 +9,11 @@ import java.util.List;
  * {@code TutorialProgressService.computeStep} — the ORDER here MUST match the checks in that
  * method. Building names mirror the building-bar card names.
  *
+ * <p>Scope: five steps — town hall, warehouse, a deposit, a workstation, one craft order.
+ * Everything past that first craft order (bakery/altar/tavern/mage hut/hostel) was cut from
+ * the HUD and left to the guidebook, which has an entry per topic; the last step's hint
+ * hands the player over to it.
+ *
  * <p>Keys live in {@code assets/wandscape/lang/en_us.json} (English) and {@code zh_cn.json}
  * (Chinese). Content conventions (accuracy-first, from the real interactions):
  * <ul>
@@ -134,84 +139,8 @@ public final class TutorialRegistry {
                     "tutorial.wandscape.synthesize.line4"),
             "tutorial.wandscape.synthesize.hint");
 
-    private static final TutorialStep BAKERY = new TutorialStep(
-            "bakery",
-            "tutorial.wandscape.bakery.title",
-            List.of(
-                    "tutorial.wandscape.common.open_build",
-                    "tutorial.wandscape.bakery.line2",
-                    "tutorial.wandscape.common.drag_position_submit",
-                    "tutorial.wandscape.bakery.line4"),
-            List.of(
-                    "tutorial.wandscape.common.build_list_open",
-                    "tutorial.wandscape.bakery.bar2"),
-            AIMING_LINES,
-            PINNED_LINES,
-            "tutorial.wandscape.bakery.hint");
-
-    private static final TutorialStep ALTAR = new TutorialStep(
-            "altar",
-            "tutorial.wandscape.altar.title",
-            List.of(
-                    "tutorial.wandscape.common.open_build",
-                    "tutorial.wandscape.altar.line2",
-                    "tutorial.wandscape.common.drag_position_submit",
-                    "tutorial.wandscape.altar.line4"),
-            List.of(
-                    "tutorial.wandscape.common.build_list_open",
-                    "tutorial.wandscape.altar.bar2"),
-            AIMING_LINES,
-            PINNED_LINES,
-            "tutorial.wandscape.altar.hint");
-
-    private static final TutorialStep TAVERN = new TutorialStep(
-            "tavern",
-            "tutorial.wandscape.tavern.title",
-            List.of(
-                    "tutorial.wandscape.common.open_build",
-                    "tutorial.wandscape.tavern.line2",
-                    "tutorial.wandscape.common.drag_position_submit",
-                    "tutorial.wandscape.tavern.line4"),
-            List.of(
-                    "tutorial.wandscape.common.build_list_open",
-                    "tutorial.wandscape.tavern.bar2"),
-            AIMING_LINES,
-            PINNED_LINES,
-            "tutorial.wandscape.tavern.hint");
-
-    private static final TutorialStep MAGE_HUT = new TutorialStep(
-            "mage_hut",
-            "tutorial.wandscape.mage_hut.title",
-            List.of(
-                    "tutorial.wandscape.common.open_build",
-                    "tutorial.wandscape.mage_hut.line2",
-                    "tutorial.wandscape.common.drag_position_submit",
-                    "tutorial.wandscape.mage_hut.line4"),
-            List.of(
-                    "tutorial.wandscape.common.build_list_open",
-                    "tutorial.wandscape.mage_hut.bar2"),
-            AIMING_LINES,
-            PINNED_LINES,
-            "tutorial.wandscape.mage_hut.hint");
-
-    private static final TutorialStep INN = new TutorialStep(
-            "youth_hostel",
-            "tutorial.wandscape.youth_hostel.title",
-            List.of(
-                    "tutorial.wandscape.common.open_build",
-                    "tutorial.wandscape.youth_hostel.line2",
-                    "tutorial.wandscape.common.drag_position_submit",
-                    "tutorial.wandscape.youth_hostel.line4"),
-            List.of(
-                    "tutorial.wandscape.common.build_list_open",
-                    "tutorial.wandscape.youth_hostel.bar2"),
-            AIMING_LINES,
-            PINNED_LINES,
-            "tutorial.wandscape.youth_hostel.hint");
-
     public static final List<TutorialStep> STEPS = List.of(
-            TOWN_HALL, WAREHOUSE, DEPOSIT, WORKSTATION, SYNTHESIZE,
-            BAKERY, ALTAR, TAVERN, MAGE_HUT, INN);
+            TOWN_HALL, WAREHOUSE, DEPOSIT, WORKSTATION, SYNTHESIZE);
 
     public static TutorialStep step(int index) {
         return STEPS.get(index);
