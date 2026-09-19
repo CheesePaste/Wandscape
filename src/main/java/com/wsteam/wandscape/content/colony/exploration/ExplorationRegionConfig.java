@@ -70,11 +70,6 @@ public record ExplorationRegionConfig(
         );
     }
 
-    /** Check if this region matches the given loot table ResourceLocation string. */
-    public boolean matches(String lootTableId) {
-        return matchSpecificity(lootTableId) >= 0;
-    }
-
     /**
      * How specific this region's best matching pattern is for the given loot table id,
      * or -1 when no pattern matches. More literal characters means more specific, so a

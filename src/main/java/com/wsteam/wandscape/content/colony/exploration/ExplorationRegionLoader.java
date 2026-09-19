@@ -51,35 +51,14 @@ public class ExplorationRegionLoader {
         this.registry = dataLoader.register(CATEGORY, ExplorationRegionConfig::fromJson);
     }
 
-    @Nullable
-    public ExplorationRegionConfig getRegion(String id) {
-        ExplorationRegionConfig declared = registry.get(id);
-        return declared != null ? declared : generated.get(id);
-    }
-
-    /** Declared regions only — what a datapack ships by hand, empty when none does. */
-    public Map<String, ExplorationRegionConfig> getAllRegions() {
-        return registry.getAll();
-    }
-
-    /** Generated regions only — the auto-written tier, one file per uncovered loot table. */
-    public Collection<ExplorationRegionConfig> getGeneratedRegions() {
-        return generated.values();
-    }
-
     /** Point the loader at the world's generated-region directory and read what is there. */
     public void setGeneratedDir(@Nullable Path dir) {
         this.generatedDir = dir;
         reloadGenerated();
     }
 
-    @Nullable
-    public Path getGeneratedDir() {
-        return generatedDir;
-    }
-
     /** Re-read the generated tier from disk. Never throws: a broken file is skipped and warned. */
-    public void reloadGenerated() {
+    private void reloadGenerated() {
         generated.clear();
         Path dir = generatedDir;
         if (dir == null || !Files.isDirectory(dir)) return;
@@ -143,14 +122,5 @@ public class ExplorationRegionLoader {
             }
         }
         return best;
-    }
-
-    /**
-     * Display name for a loot table: the matched region name, or a name derived from the
-     * loot table id itself when no region config matches (e.g. another mod's structure).
-     */
-    public String resolveDisplayName(String lootTableId) {
-        ExplorationRegionConfig config = findMatchingRegion(lootTableId);
-        return config != null ? config.name() : ExplorationRegionConfig.deriveDisplayName(lootTableId);
     }
 }
