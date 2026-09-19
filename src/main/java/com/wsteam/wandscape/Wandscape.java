@@ -219,7 +219,7 @@ public class Wandscape {
     public static final WandscapeDataLoader DATA_LOADER = new WandscapeDataLoader();
     /** 加载 data/wandscape/wandscape_balance.json，把可调平衡值灌进 BalanceValues（reload 时确定性重载）。 */
     public static final WandscapeBalanceLoader BALANCE_LOADER = new WandscapeBalanceLoader();
-    /** 加载 data/wandscape/exploration_regions/*.json，野外宝箱地域配置。 */
+    /** 加载 data/<命名空间>/exploration_regions/*.json（数据包声明层，本模组不自带任何文件），野外宝箱地域配置。 */
     public static final ExplorationRegionLoader EXPLORATION_REGION_LOADER = new ExplorationRegionLoader(DATA_LOADER);
 
     // ---- 02 wand-system ----
@@ -1185,6 +1185,8 @@ public class Wandscape {
         // ── 开发者/调试：一律藏到 /wandscape test（整棵 op-2，普通玩家补全里不可见） ──
         root.then(Commands.literal("test")
                 .requires(src -> src.hasPermission(2))
+                .executes(SpawnAllBuildingsCommand::startDefault)
+                .then(SpawnAllBuildingsCommand.node())
                 .then(LogCommand.node())
                 .then(ProfileCommand.node())
                 .then(AuditElementsCommand.node())
@@ -1220,6 +1222,11 @@ public class Wandscape {
             // Colony ambient: 建筑包围盒+20格内玩家昼夜环境音门控（服务端判断+发包）
             try (var s = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tick.ambient")) {
                 ColonyAmbientTracker.tick(event.getServer());
+            }
+
+            // Debug: /wandscape test all 的建筑批量生成（按预算摊到多个 tick）
+            try (var s = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tick.test_spawn_all")) {
+                SpawnAllBuildingsCommand.tick();
             }
 
             // Magic cast: 法阵动画结束后生成信标光束（不依赖 ECS）
