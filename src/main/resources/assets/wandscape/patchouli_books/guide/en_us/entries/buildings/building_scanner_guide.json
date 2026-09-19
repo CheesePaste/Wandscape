@@ -7,71 +7,115 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "$(italic)$(#6b5a45)The Building Scanner is crafted at a crafting table and works in survival, but everything it scans is filed as \"custom\" with no economy settings. The Creative Building Scanner only appears in the creative inventory.$()$(br2)Frame a finished house with the scanner and export it as a building file; it then shows up in the Wand and in the overview-mode building list, and citizen mages rebuild it wherever you point them. Houses you built yourself can therefore be turned into proper buildings and mass-produced, instead of being placed by hand a second time."
+      "text": "$(italic)$(#6b5a45)The Building Scanner is crafted at a crafting table and works in survival, but everything it scans is filed as \"custom\" with no economy settings. The Creative Building Sc"
     },
     {
       "type": "patchouli:text",
-      "text": "The straightforward way is to fill in Min and Max on the Bounds tab so they form two opposite corners of the box. You can also use corner mode instead: take two scanners, set one to SAVE and the other to CORNER, give both the exact same passphrase, place them at two opposite vertices of the building's 3D diagonal, then go back to the SAVE scanner and click \"Match Corners\" — the bounding box works itself out. Two scanners more than 64 blocks apart will not find each other.",
+      "text": "anner only appears in the creative inventory.$()$(br2)Frame a finished house with the scanner and export it as a building file;"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "it then shows up in the Wand and in the overview-mode building list, and citizen mages rebuild it wherever you point them. Houses you built yourself can therefore be turned into proper buil$(br)dings and mass-produced, instead of being placed by hand a second time."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "The straightforward way is to fill in Min and Max on the Bounds tab so they form two opposite corners of the box. You can also use corner mode instead: take two scanners, set one to SAVE an",
       "title": "Framing the Building"
     },
     {
       "type": "patchouli:text",
-      "text": "Tourists enter a building through its doors. \"Auto-Detect Doors\" records every door block inside the box, and one scanner can hold several, so tourists can use any of them; the edit field only changes the first. With no door recorded at all, tourists come in along the edge of the bounding box — so a house that floats in the air or sits buried underground has no entrance they can find.",
+      "text": "d the other to CORNER, give both the exact same passphrase, place them at two opposite vertices of the building's 3"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "D diagonal, then go back to the SAVE scanner and click \"Match Corners\" — the bounding box works itself out. Two scanners more than 64 blocks apart will not find each other."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Tourists enter a building through its doors. \"Auto-Detect Doors\" records every door block inside the box, and one scanner can hold several, so tourists can use any of them;",
       "title": "Where Tourists Come In"
     },
     {
       "type": "patchouli:text",
-      "text": "A tourist stands on whichever block carries the Interact Spot Marker, and its facing is the direction she looks while doing her action; when placed, it defaults to the direction you are facing. Right-click cycles the action, sneak-right-click cycles the facing, and breaking the block removes the spot. The marker has no collision, so you can drop a preview dummy into the same block to see the result. A building with no interact spot at all is one tourists simply never pick.",
+      "text": "the edit field only changes the first. With no door recorded at all, tourists come in along the edge of the bounding box — so a house that floats in the air or sits buried underground has n$(br)o entrance they can find."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "A tourist stands on whichever block carries the Interact Spot Marker, and its facing is the direction she looks while doing her action;",
       "title": "Marking Where Tourists Stand"
     },
     {
       "type": "patchouli:text",
-      "text": "Survival players cannot get the Interact Spot Marker — it has no recipe and only exists in the creative inventory. So a house scanned in survival cannot be given interact spots, and tourists will not go inside to spend."
+      "text": "when placed, it defaults to the direction you are facing. Right-click cycles the action, sneak-right-click cycles the facing, and breaking the block removes the spot. The marker has no coll$(br)ision, so you can drop a preview dummy into the same block to see the result. A building with no interact spot at"
     },
     {
       "type": "patchouli:text",
-      "text": "The ID is the building's unique name and also the file name used on export; without it the scanner will not let you export. The display name is what players see in the building list, and the author is recorded as you. The package decides which directory it lands in — typing a name that does not exist yet creates a new package, and one package can hold as many buildings as you like.",
+      "text": "all is one tourists simply never pick.$(br2)Survival players cannot get the Interact Spot Marker — it has no recipe and only exists in the creative inventory. So a house scanned in survival cannot be given interact spots, and tourist$(br)s will not go inside to spend."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "The ID is the building's unique name and also the file name used on export;$(br2)without it the scanner will not let you export. The display name is what players see in the building list, and the author is recorded as you. The package decides which directory it lands in",
       "title": "Building Identity"
     },
     {
       "type": "patchouli:text",
-      "text": "The three values are comfort, magic and wonder; they decide which need the building can satisfy for tourists, and the higher you set them the more willing tourists are to come in. The unlock level is a town-level gate — every building in the list carries one, and you cannot build it until your town reaches that level. For a house you built yourself you can set the gate low so you can use it early.",
+      "text": "— typing a name that does not exist yet creates a new package, and one package can hold as many buildings as you$(br)like."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "The three values are comfort, magic and wonder;$(br2)they decide which need the building can satisfy for tourists, and the higher you set them the more willing tourists are to come in. The unlock level is a town-level gate — every building in",
       "title": "Values and Unlock Level"
     },
     {
       "type": "patchouli:text",
-      "text": "Set the category to \"Harvest Nodes\" and the screen gains this block: the dropdown on the left picks which element gets harvested, Amount/Harvest is how much comes out per trip, and Channel Ticks is how long a mage spends channelling before the elements arrive. Under any other category the block does not appear and the building produces no elements.",
+      "text": "the list carries one, and you cannot build it until your town reaches that level. For a house you built yourself$(br2)you can set the gate low so you can use it early."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Set the category to \"Harvest Nodes\" and the screen gains this block: the dropdown on the left picks which element gets harvested, Amount/Harvest is how much comes out per trip, and Channel",
       "title": "Harvest Nodes"
     },
     {
       "type": "patchouli:text",
-      "text": "Set the category to \"Shops\" and the screen gains this block: each row in the goods list holds an item together with the Comf, Mag and Wond values it provides, and tourists pick according to their own needs — no rows at all means nothing in stock. Profit % is what one sale earns, and Duration Ticks is how long a tourist spends buying.",
-      "title": "Shops"
+      "text": "Ticks is how long a mage spends channelling before the elements arrive. Under any other category the block does not$(br2)$(bold)Shops$()"
     },
     {
       "type": "patchouli:text",
-      "text": "Set the category to \"Services\" and the screen gains this block: Energy is what a tourist spends per visit, Capacity is how many fit inside at once, and Duration is how long one visit lasts; each row of the element output underneath holds which element is produced and its Output amount. Any Capacity above 0 also turns the building into an inn at night.",
+      "text": "Set the category to \"Shops\" and the screen gains this block: each row in the goods list holds an item together with the Comf, Mag and Wond values it provides, and tourists pick according to"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "their own needs — no rows at all means nothing in stock. Profit % is what one sale earns, and Duration Ticks is ho$(br2)appear and the building produces no elements.$(br2)w long a tourist spends buying."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Set the category to \"Services\" and the screen gains this block: Energy is what a tourist spends per visit, Capacity is how many fit inside at once, and Duration is how long one visit lasts;",
       "title": "Services"
     },
     {
       "type": "patchouli:text",
-      "text": "Set the category to \"Relax\" and the screen gains this block: Energy Restored is how much a tourist gets back per visit, and Duration Ticks is how long she sits.",
-      "title": "Relax"
+      "text": "$(bold)Relax$()$(br2)Set the category to \"Relax\" and the screen gains this block: Energy Restored is how much a tourist gets back per visit, and Duration Ticks is how long she sits."
     },
     {
       "type": "patchouli:text",
-      "text": "Set the category to \"ATM\" and the screen gains this block: Max Withdraw caps how much one visit takes out, and Duration Ticks is how long that visit takes.",
-      "title": "ATM"
+      "text": "$(bold)ATM$()$(br2)Set the category to \"ATM\" and the screen gains this block: Max Withdraw caps how much one visit takes out, and Duration Ticks is how long that visit takes."
     },
     {
       "type": "patchouli:text",
-      "text": "Click \"Scan Area\" first to see how many valid blocks the box holds — scanners and interact spot markers are skipped automatically and never written into the building. Then click \"Export Building JSON\", and the file is written into a datapack inside your save: it is buildable on the spot and still there after you quit and come back. Switch the same scanner to road mode and you export a road preset instead, hot-registered straight into Road Studio and the Wand.",
+      "text": "each row of the element output underneath holds which element is produced and its Output amount. Any Capacity above 0 also turns the building into an inn at night."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Click \"Scan Area\" first to see how many valid blocks the box holds — scanners and interact spot markers are skipped automatically and never written into the building. Then click \"Export Bui$(br)lding JSON\", and the file is written into a datapack inside your save: it is buildable on the spot and still there",
       "title": "Exporting"
     },
     {
       "type": "patchouli:text",
-      "text": "Once the bounding box and properties are the way you want them, save them as a preset template; the next time you scan a house of the same kind you just load the template instead of filling everything in again. Presets live on the client side rather than in the save, so they survive a switch to another world.",
-      "title": "Preset Templates"
+      "text": "$(bold)Preset Templates$()$(br2)Once the bounding box and properties are the way you want them, save them as a preset template;$(br2)after you quit and come back. Switch the same scanner to road mode and you export a road preset instead, hot-registered straight into Road Studio and the Wand."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "the next time you scan a house of the same kind you just load the template instead of filling everything in again. Presets live on the client side rather than in the save, so they survive a$(br) switch to another world."
     }
   ]
 }

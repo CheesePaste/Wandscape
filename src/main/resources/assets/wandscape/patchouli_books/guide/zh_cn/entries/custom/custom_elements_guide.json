@@ -7,7 +7,11 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "$(italic)$(#6b5a45)文件放进数据包的 $(#8a5a2b)data/<命名空间>/element_mappings/$()$(italic)$(#6b5a45)，$(#8a5a2b)/reload$()$(italic)$(#6b5a45) 生效。$(bold)文件名在这里不起作用$()$(italic)$(#6b5a45)，真正定价的是文件里的 $(#8a5a2b)block$()$(italic)$(#6b5a45)、$(#8a5a2b)item$()$(italic)$(#6b5a45) 与 $(#8a5a2b)build_cost$()$(italic)$(#6b5a45)。$()$(br2)元素映射是\"这件东西值多少元素\"的唯一账本。合成站做它要花多少元素、工作站分解它出多少、商店按什么价卖它、探索宝箱里翻出它算多少钱、乃至它算不算\"要料的建材\"——全都查这一张表。"
+      "text": "$(italic)$(#6b5a45)文件放进数据包的 $(#8a5a2b)data/<命名空间>/element_mappings/$()$(italic)$(#6b5a45)，$(#8a5a2b)/reload$()$(italic)$(#6b5a45) 生效。$(bold)文件名在这里不起作用$()$(italic)$(#6b5a45)，真正定价的是文件里的 $(#8a5a2b)block$()$(italic)$(#6b5a45)、$(#8a5a2b)item$()$(italic)$(#6b5a45) 与 $(#8a5a2b)build_cost$()$(italic)$(#6b5a45)。$()"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "元素映射是\"这件东西值多少元素\"的唯一账本。合成站做它要花多少元素、工作站分解它出多少、商店按什么价卖它、探索宝箱里翻出它算多少钱、乃至它算不算\"要料的建材\"——全都查这一张表。"
     },
     {
       "type": "patchouli:text",
@@ -16,8 +20,7 @@
     },
     {
       "type": "patchouli:text",
-      "text": "$(#8a5a2b)block$() 与 $(#8a5a2b)item$() 写一个就够，两个都不写等于这份文件没有意义。写成方块时，它的物品形态跟着一起有价；反过来只写 $(#8a5a2b)item$()，方块形态查不到它。",
-      "title": "block 与 item"
+      "text": "$(bold)block 与 item$()$(br2)$(#8a5a2b)block$() 与 $(#8a5a2b)item$() 写一个就够，两个都不写等于这份文件没有意义。写成方块时，它的物品形态跟着一起有价；反过来只写 $(#8a5a2b)item$()，方块形态查不到它。"
     },
     {
       "type": "patchouli:text",
@@ -41,13 +44,8 @@
     },
     {
       "type": "patchouli:text",
-      "text": "写错一个元素键（比如把 $(#8a5a2b)metal$() 写成 $(#8a5a2b)matel$()），整份文件会解析失败并被丢弃，日志里留一条警告——只有这一种错会出声。",
+      "text": "写错一个元素键（比如把 $(#8a5a2b)metal$() 写成 $(#8a5a2b)matel$()），整份文件会解析失败并被丢弃，日志里留一条警告——只有这一种错会出声。$(br2)$(bold)元素种子$()$(br2)模组里另有一份 $(#8a5a2b)element_seeds.json$()，是一张约四百条的手写基准价目表。它$(bold)只$()是一条开发命令的输入，游戏里不参与定价，也没法被数据包覆盖。",
       "title": "写错一个键的代价"
-    },
-    {
-      "type": "patchouli:text",
-      "text": "模组里另有一份 $(#8a5a2b)element_seeds.json$()，是一张约四百条的手写基准价目表。它$(bold)只$()是一条开发命令的输入，游戏里不参与定价，也没法被数据包覆盖。",
-      "title": "元素种子"
     },
     {
       "type": "patchouli:text",

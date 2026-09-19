@@ -7,7 +7,11 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "$(italic)$(#6b5a45)Requires the Goety mod.$()$(br2)A mage has to be holding a Goety wand in its main hand before a Goety focus can go into its cast strategy slots. A focus mounted on the wand is never cast — the mage only uses one that has been placed in a strategy slot, and only one focus fits in the whole bar at a time."
+      "text": "$(italic)$(#6b5a45)Requires the Goety mod.$()$(br2)A mage has to be holding a Goety wand in its main hand before a Goety focus can go into its cast strategy slots. A focus mounted on t"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "he wand is never cast — the mage only uses one that has been placed in a strategy slot, and only one focus fits in the whole bar at a$(br)time."
     }
   ]
 }

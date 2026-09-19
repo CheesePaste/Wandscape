@@ -7,11 +7,11 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "冒险线是以探索世界为主题的路线，现在就能玩，后面的内容还在继续加。$(br2)冒险线的目标是$(br2)让法师跟随你出门，去开野外的探索宝箱→拿到经验与元素，城镇等级跟着涨$(br2)用元素强化法师、做装备和道具→队伍变强，能去更危险的地方"
+      "text": "冒险线是以探索世界为主题的路线，现在就能玩，后面的内容还在继续加。$(br2)$(bold)这一条线要干什么$()$(li)让法师跟随你出门，去开野外的探索宝箱→拿到经验与元素，城镇等级跟着涨$(li)用元素强化法师、做装备和道具→队伍变强，能去更危险的地方"
     },
     {
       "type": "patchouli:text",
-      "text": "推荐阅读:$(br2)$(l:wandscape:magic/mages_guide)《法师》$(/l)$(br2)$(l:wandscape:magic/casting_guide)《施法》$(/l)$(br2)建筑相关:$(br2)$(l:wandscape:buildings/mage_hut_guide)《法师小屋》$(/l)$(br2)$(l:wandscape:buildings/tavern_guide)《酒馆》$(/l)$(br2)物品推荐:$(br2)$(l:wandscape:items/wand_guide)《法杖》$(/l)$(br2)$(l:wandscape:items/oath_ring_guide)《盟誓戒指》$(/l)$(br2)$(l:wandscape:items/scepter_guide)《权杖》$(/l)"
+      "text": "$(bold)出发前先读这几篇$()$(li)推荐阅读:$(l:wandscape:magic/mages_guide)《法师》$(/l)$(l:wandscape:magic/casting_guide)《施法》$(/l)$(li)建筑相关:$(l:wandscape:buildings/mage_hut_guide)《法师小屋》$(/l)$(l:wandscape:buildings/tavern_guide)《酒馆》$(/l)$(li)物品推荐:$(l:wandscape:items/wand_guide)《法杖》$(/l)$(l:wandscape:items/oath_ring_guide)《盟誓戒指》$(/l)$(l:wandscape:items/scepter_guide)《权杖》$(/l)"
     }
   ]
 }

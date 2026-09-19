@@ -2,7 +2,11 @@
 
 > Press 3 with the management panel open; press 3 again or ESC to leave.
 
+## What the three pages do
+
 There are three pages: the Task Hall lists what your town is doing and waiting to do, the Workshop Line groups the queues by building and shows what each is short of, and the Mage Roster shows what every mage is up to. A task card can be located, rushed or cancelled.
+
+## Rushing, cancelling and Follow
 
 A building you just placed queues behind automatic restocking and production, so it sitting still at first is normal; rush it if you want it to start sooner. Rushing only helps work that has not been handed out yet.
 

@@ -631,6 +631,32 @@ def render_pages(title, blocks, warn):
     return pages
 
 
+# 前言（第一个 `##` 之前的那段，通常是 `>` 引用块）短于这个行数就并进第一节。
+# 单占一页会留下半页空白，在首页上表现为「左边只有一句引用」的残页。
+MIN_PREAMBLE_LINES = 8
+
+# 分页例外：(md 语言, 条目 id) → 为什么这一条暂时做不到偶数页。
+#
+# 这五条都是**内容长度**问题，不是排版问题：正文行数正好卡在 2 页与 3 页之间，
+# 摊成 4 页会出现不足 7 行的残页（比末页右半空白更难看），压成 2 页又得砍正文。
+# 分页器已经把能做的都做了（重排、并节、按句级粒度找切点），剩下的要靠增删正文，
+# 而那属于内容决定，不该由排版脚本代劳。
+#
+# 某条例外不再命中时 build_books 会报错提醒删掉它——不留一份会过期的死名单。
+PAGINATION_ODD_EXCEPTIONS = {
+    ("zh_cn", "buildings_guide"):
+        "前言 12 行 + 先盖哪几座 20 行 = 32 行；2 页容量 30 行装不下，4 页每页不足 7 行",
+    ("zh_cn", "panel_settings_guide"):
+        "六个设置页 14 行 + 谁能改 17 行 = 31 行；2 页差 1 行，4 页每页不足 7 行",
+    ("zh_cn", "advanced_casting_guide"):
+        "总体策略 10 行 + 施法锁与装备门控 18 行 = 28 行；后者超过带标题页的 16 行容量",
+    ("en_us", "element_level_guide"):
+        "Town Level 26 行；与前言页合计 36 行，2 页装不下，4 页又切不出四个 7 行以上的页",
+    ("en_us", "tavern_guide"):
+        "单节 30 行；两段的长度让 2 页切不出两个 7 行以上的页，3 页则末页右半空",
+}
+
+
 def compile_doc(md, warn):
     """md 全文 → (条目名, 页面列表)。"""
     name, sections = None, []
@@ -647,11 +673,23 @@ def compile_doc(md, warn):
         cur_lines.append(line)
     sections.append((cur_title, cur_lines))
 
+    rendered = [(title, list(parse_blocks(lines))) for title, lines in sections]
+    rendered = [(t, b) for t, b in rendered if b]
+
+    # 前言太短就并进第一节，不单独成页。
+    # 合并时把第一节的标题降级成加粗行、**排在前言之后**——前言那行 `> …` 是
+    # 「怎么做」的前提行，按规范要跟着条目名走，不能被小节标题挤到下面去。
+    if len(rendered) > 1 and rendered[0][0] is None:
+        preamble = rendered[0][1]
+        preamble_lines = paginate_module.lines_for_text(
+            "$(br2)".join(x for x in (render_block(b, warn) for b in preamble) if x))
+        if preamble_lines < MIN_PREAMBLE_LINES:
+            first_title, first_blocks = rendered[1]
+            rendered[1] = (None, preamble + [("h3", first_title)] + first_blocks)
+            rendered.pop(0)
+
     pages = []
-    for title, lines in sections:
-        blocks = list(parse_blocks(lines))
-        if not blocks:
-            continue
+    for title, blocks in rendered:
         pages.extend(render_pages(title, blocks, warn))
 
     # 帕秋莉首页画的是条目名，不会画页面 title；把首页的 title 降级成加粗首行
@@ -661,6 +699,34 @@ def compile_doc(md, warn):
 
     pages = [p for p in pages if p.get("text", "x") != ""]
     return name, pages
+
+
+def check_pagination(book_lang, doc, pages, warn, used_exceptions=None):
+    """生成期自检：这一篇的页必须都能装进帕秋莉的物理页，页数必须取偶。
+
+    挡的是「内容超容量 → book.json 的 resize 把字号缩小」——那是本书最不能出现的问题
+    （玩家读到的字会小到看不清），必须让 build 直接失败，而不是等进游戏靠肉眼发现。
+    奇数页同理会空掉末页右半，除了记在 PAGINATION_ODD_EXCEPTIONS 里的那几条。
+    """
+    if not pages:
+        warn("[%s] 条目 %s 没有任何页面" % (book_lang, doc))
+        return
+    for i, page in enumerate(pages):
+        if page.get("type") != "patchouli:text":
+            continue
+        lines = paginate_module.lines_for_text(page.get("text", ""))
+        cap = paginate_module.page_capacity(page, i)
+        if lines > cap:
+            warn("[%s] 条目 %s 第 %d 页 %d 行，超过帕秋莉这一页的 %d 行容量（进游戏会被缩小字号）"
+                 % (book_lang, doc, i + 1, lines, cap))
+    if len(pages) > 1 and len(pages) % 2 == 1:
+        key = (book_lang, doc)
+        if key in PAGINATION_ODD_EXCEPTIONS:
+            if used_exceptions is not None:
+                used_exceptions.add(key)
+            return
+        warn("[%s] 条目 %s 共 %d 页（奇数）：帕秋莉左右同时展示，末页右半会空成白纸"
+             % (book_lang, doc, len(pages)))
 
 
 # ---------------------------------------------------------------- 写出
@@ -829,6 +895,7 @@ def build_books():
     cat_by_id = {c[0]: c for c in CATEGORIES}
     known_docs = {e[0] for e in ENTRIES}
     missing = []
+    used_exceptions = set()
     _VALID_TARGETS = set(cat_by_id) | known_docs
     check_manifest(warn)
 
@@ -874,14 +941,20 @@ def build_books():
             if cid not in cat_by_id:
                 warn("条目 %s 引用了未定义分类 %s" % (doc, cid))
             names_by_doc[doc] = to_plain(name)
-            write_json(OUT_ASSETS / book_lang / "entries" / cid / (doc + ".json"), {
+            entry = {
                 "name": name,
                 "category": "%s:%s" % (NS, cid),
                 "icon": icon,
                 "sortnum": sortnum,
                 "read_by_default": True,
                 "pages": pages,
-            })
+            }
+            # 分页是生成的一部分：单跑 gen 就得到最终形态，不必再手动跑一趟 paginate。
+            # 之前那两步的写法出过事——忘了第二步，仓库里就留下「生成物是长节、分页器没跑」的旧状态，
+            # 而 --check 又用同一个分页器在内存里比对，两边一起空转，谁都没发现。
+            paginate_module.paginate_data(entry, label="%s/%s" % (book_lang, doc))
+            check_pagination(book_lang, doc, entry["pages"], warn, used_exceptions)
+            write_json(OUT_ASSETS / book_lang / "entries" / cid / (doc + ".json"), entry)
 
         # 兜底阅读器读的那一份：分类、条目、书名号表、着陆文案
         write_json(OUT_RUNTIME / (md_lang + ".json"),
@@ -896,9 +969,19 @@ def build_books():
         "use_resource_pack": True,
         # 无成就锁定时出版进度条恒为 0%，先关掉；做解锁时再打开
         "show_progress": False,
-        # 页面超长时缩放字号而不是截断
+        # 兜底用：万一还有页超出容量，宁可缩字号也不要截断内容。
+        # 正常情况下永远不触发——分页器按帕秋莉的真实容量切页，check_pagination 会在
+        # 生成期就把超容量的页报成 build 失败。这里的另一个选项 overflow 会让文字画到
+        # 书页外面糊在 GUI 上（书 GUI 没有 scissor 裁剪），truncate 在帕秋莉源码里是坏的
+        # （拿绝对屏幕 y 去比页面常量 PAGE_HEIGHT），两个都不能用。
         "text_overflow_mode": "resize",
     })
+
+    # 例外名单是「记录当下的毛病」，不是永久豁免：条目内容改了、页数不再是奇数时，
+    # 这条例外就该删掉。留着它会让下一个人以为这里还有问题。
+    for key in sorted(set(PAGINATION_ODD_EXCEPTIONS) - used_exceptions):
+        warn("分页例外 %s/%s 已经不再命中（现在是偶数页），请从 PAGINATION_ODD_EXCEPTIONS 删掉"
+             % key)
 
     for m in missing:
         warn("语言目录不存在：%s" % m)
@@ -1023,17 +1106,10 @@ def build_textures(force):
 def expected_output(path, text):
     """某个生成物「现在应该长什么样」。
 
-    条目 JSON 还要过一遍 paginate（那一趟会把长节切开），所以这里在内存里补做同样的切分；
-    只比对 gen 的输出会把每一篇长条目都误报成过期。两份脚本都是 stdlib-only，直接 import。
-
-    paginate_data 自己会迭代到不动点，所以这里调一次就够。
+    分页已经在 build_books 里做完了（生成与分页是同一步），所以这里直接比对，
+    不用再补做一趟——补做那套写法正是之前「两边一起空转」的来源。
     """
-    if "/entries/" not in path.replace("\\", "/"):
-        return text
-    data = json.loads(text)
-    if not paginate_module.paginate_data(data):
-        return text
-    return json.dumps(data, ensure_ascii=False, indent=2) + "\n"
+    return text
 
 
 def check_outputs():

@@ -7,7 +7,11 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "The Magic Workshop copies spell scrolls. What a mage casts is decided by the scrolls it carries, so this is where you give a mage a new set of tricks.$(br2)Finished scrolls go into the warehouse, and you still have to move them into a mage's cast strategy slots before it will use them (see $(l:wandscape:magic/casting_guide)Casting$(/l))."
+      "text": "The Magic Workshop copies spell scrolls. What a mage casts is decided by the scrolls it carries, so this is where you give a mage a new set of tricks."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Finished scrolls go into the warehouse, and you still have to move them into a mage's cast strategy slots before it will use them (see $(l:wandscape:magic/casting_guide)Casting$(/l))."
     }
   ]
 }

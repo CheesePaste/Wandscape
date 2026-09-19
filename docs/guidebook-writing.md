@@ -126,12 +126,18 @@ CLAUDE.md §二.9：面向玩家文本（`lang/*`、`guide/**`、I18n、Screen �
 ## 八、写完怎么收尾
 
 ```bash
-python gen_patchouli.py && python paginate_patchouli_json.py   # 两步都不能省，见 guidebook-patchouli.md §二
-python gen_patchouli.py --check                                # 只要没改动：确认生成物与 md/结构表一致
+python gen_patchouli.py                    # 编译；分页在同一步里做完，见 guidebook-patchouli.md §二
+python gen_patchouli.py --check            # 确认生成物与 md/结构表一致
+python paginate_patchouli_json.py --check  # 分部体检：超容量页 / 奇数页条目 / 残页
 ```
 
 - 生成器打印的警告必须清零（有警告它就非零退出）：未知命令、样式栈下溢、链接降级、md 里出现未登记的文档
   或指向不存在文档的链接、《…》不在标题表里——这些在游戏里都会变成 `[ERROR]`、纯文本或 404。
+  分页超容量、页数为奇（未记进例外名单的）同样会在这里报出来。
+- **每节控制在 9–14 行**（一行约 12 个汉字）。帕秋莉一页装 17 行、首页只有 14 行，
+  局部超了会被缩字号，短了会留半页空白——写的时候按这个量估，别等生成器报。
+  一个坑：md 里「一行一段」写法（段落之间空行）每段要额外吃一行 `$(br2)` 空行；
+  并列的条目改成 `- ` 列表就只算行数、不额外占行，合适就改。
 - **没进游戏看过，就不要说「验证过了」**。build 通过只说明能编译——文案是在运行期才渲染的，
   这类改动编译期一个错都不报。
 

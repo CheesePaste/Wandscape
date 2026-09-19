@@ -7,37 +7,65 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "$(italic)$(#6b5a45)Put the file in your datapack under $(#8a5a2b)data/<namespace>/element_mappings/$()$(italic)$(#6b5a45) and $(#8a5a2b)/reload$()$(italic)$(#6b5a45) picks it up. $(bold)The file name means nothing here$()$(italic)$(#6b5a45) — what prices anything is the $(#8a5a2b)block$()$(italic)$(#6b5a45), $(#8a5a2b)item$()$(italic)$(#6b5a45) and $(#8a5a2b)build_cost$()$(italic)$(#6b5a45) written inside it.$()$(br2)The element mappings are the single ledger of what a thing is worth in elements. What the Crafting Station charges to make it, what the workstation yields for taking it apart, what a shop sells it for, what finding one in a chest is worth, and even whether it counts as a material at all — every one of those reads this table."
+      "text": "$(italic)$(#6b5a45)Put the file in your datapack under $(#8a5a2b)data/<namespace>/element_mappings/$()$(italic)$(#6b5a45) and $(#8a5a2b)/reload$()$(italic)$(#6b5a45) picks it up. $(bold)The$(br) file name means nothing here$()$(italic)$(#6b5a45) — what prices anything is the $(#8a5a2b)block$()$(italic)$(#6b5a45), $(#8a5a2b)item$()$(italic)$(#6b5a45) and $(#8a5a2b)build_cost$()$(italic)$(#6b5a45) written inside it.$()"
     },
     {
       "type": "patchouli:text",
-      "text": "$(bold)Key  Meaning$()$(li)block — prices a block, by block registry id$(li)item — prices an item, by item registry id$(li)build_cost — a map from element to a whole number, keyed by one of the seven elements$(li)disabled — a boolean that takes it out of the element economy",
+      "text": "The element mappings are the single ledger of what a thing is worth in elements. What the Crafting Station charges to make it, what the workstation yields for taking it apart, what a shop s"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "ells it for, what finding one in a chest is worth, and even whether it counts$(br2)as a material at all — every one of those reads this table."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(bold)Key  Meaning$()$(li)block — prices a block, by block registry id$(li)item — prices an item, by item registry id",
       "title": "Fields"
     },
     {
       "type": "patchouli:text",
-      "text": "One of $(#8a5a2b)block$() or $(#8a5a2b)item$() is enough; a file with neither means nothing. Write it as a block and the block's item form is priced along with it; write only $(#8a5a2b)item$() and a block lookup will not find it.",
+      "text": "$(li)build_cost — a map from element to a whole number, keyed by one of the seven elements$(li)disabled — a boolean that takes it out of the element economy"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "One of $(#8a5a2b)block$() or $(#8a5a2b)item$() is enough; a file with neither means nothing. Write it as a block and the block's item form is priced along with it;$(br) write only $(#8a5a2b)item$() and a block lookup will not find it.",
       "title": "block and item"
     },
     {
       "type": "patchouli:text",
-      "text": "$(#8a5a2b)build_cost$() is an item's $(bold)canonical value$(), not what it costs to place. Several things charge against it: a workstation synthesis task spends it; taking an item apart in the workstation yields the value divided by the decompose divisor, which the Settings Center can adjust; a shop sells it with the shop's profit on top; an exploration chest prices its whole loot table through it; and the scanner values a patch of ground with it.",
+      "text": "$(#8a5a2b)build_cost$() is an item's $(bold)canonical value$(), not what it costs to place. Several things charge against it: a workstation synthesis task spends it;$(br) taking an item apart in the workstation yields the value divided by the decompose divisor, which the Settings Center can adjust;",
       "title": "Who Reads the Value"
     },
     {
       "type": "patchouli:text",
-      "text": "Buildings and roads only request $(bold)mapped$() blocks from the warehouse. A block with no mapping is never requested at all — so a single mistyped item id produces no error whatsoever, it just quietly makes that block free material that builds anyway. This is the easiest place in the table to lose money.",
+      "text": "a shop sells it with the shop's profit on top; an exploration chest prices its whole loot table through it; and the scanner values a patch of ground with it."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Buildings and roads only request $(bold)mapped$() blocks from the warehouse. A block with no mapping is never requested at all — so a single mistyped item id produces no error whatsoever, i",
       "title": "No Mapping Means Free"
     },
     {
       "type": "patchouli:text",
-      "text": "$(#8a5a2b)disabled$() is not merely \"sits out the economy\": any building or road containing that block is $(bold)refused placement outright$(), a deliberate rule that a banned block must never turn into free material. The $(#8a5a2b)disabled/$() subfolder in the mod's own data means nothing at all — the scan is recursive and files inside it load like any other. The field is the only switch.",
+      "text": "t just quietly makes that block free material that builds anyway. This is the easiest place in the table to lose money."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(#8a5a2b)disabled$() is not merely \"sits out the economy\": any building or road containing that block is $(bold)refused placement outright$(), a deliberate rule that a banned block must ne",
       "title": "disabled Has Teeth"
     },
     {
       "type": "patchouli:text",
-      "text": "To change a price the mod already has, your file must sit in the $(bold)$(#8a5a2b)wandscape$()$(bold) namespace under the same file name$(), overriding it by datapack priority. A different file name does not work: the registry key is the file name with the namespace stripped, the mod's own copy wins a collision and yours is dropped whole, and even if both survived, a lookup returns whichever comes first in hash order, so which one wins is not defined.",
+      "text": "ver turn into free material. The $(#8a5a2b)disabled/$() subfolder in the mod's own data means nothing at all — the$(br2)scan is recursive and files inside it load like any other. The field is the only switch."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "To change a price the mod already has, your file must sit in the $(bold)$(#8a5a2b)wandscape$()$(bold) namespace under the same file name$(), overriding it by datapack priority. A different $(br)file name does not work: the registry key is the file name with the namespace stripped, the mod's own copy wins a c",
       "title": "Overriding the Mod's Own Mappings"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "ollision and yours is dropped whole, and even if both survived, a lookup returns whichever comes first in hash order, so which one wins is not defined."
     },
     {
       "type": "patchouli:text",
@@ -46,13 +74,17 @@
     },
     {
       "type": "patchouli:text",
-      "text": "The mod also ships $(#8a5a2b)element_seeds.json$(), a hand-written baseline price list of some four hundred entries. It is $(bold)only$() an input to one developer command: it prices nothing at runtime and no datapack can override it.",
+      "text": "The mod also ships $(#8a5a2b)element_seeds.json$(), a hand-written baseline price list of some four hundred entries. It is $(bold)only$() an input to one developer command: it prices nothin$(br)g at runtime and no datapack can override it.",
       "title": "Element Seeds"
     },
     {
       "type": "patchouli:text",
-      "text": "$(#8a5a2b)/wandscape test generate_element_mappings$() takes the seeds as a baseline and works backwards through vanilla recipes to produce a whole batch of mapping files; $(#8a5a2b)--dry-run$() shows the plan first and $(#8a5a2b)--force$() overwrites hand-written files that already exist.$(br2)Note that it writes into a $(bold)developer's source tree$() — it is for editing the mod's own data on your own machine, and should not be run on a server.",
+      "text": "$(#8a5a2b)/wandscape test generate_element_mappings$() takes the seeds as a baseline and works backwards through vanilla recipes to produce a whole batch of mapping files;$(br) $(#8a5a2b)--dry-run$() shows the plan first and $(#8a5a2b)--force$() overwrites hand-written files that already exist.",
       "title": "The Generator Command"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Note that it writes into a $(bold)developer's source tree$() — it is for editing the mod's own data on your own machine, and should not be run on a server."
     }
   ]
 }

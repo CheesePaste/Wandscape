@@ -4,12 +4,9 @@ Mages are the backbone of the town. Constructing, crafting, and defending all re
 
 Right-click a mage to open the mage panel, where you can set equipment and view inventory (in the top-left of the mage preview).
 
-(Show image, next page)
+## The four switches on the panel
 
-Follow Mode: When enabled, the mage follows you and ignores town tasks.
-
-Peaceful Mode: When enabled, the mage will not attack any entity.
-
-Cast Strategy: Configure spells and casting order, see 《Advanced Casting》.
-
-Dismiss: Dismiss the mage permanently.
+- Follow Mode: When enabled, the mage follows you and ignores town tasks.
+- Peaceful Mode: When enabled, the mage will not attack any entity.
+- Cast Strategy: Configure spells and casting order, see 《Advanced Casting》.
+- Dismiss: Dismiss the mage permanently.

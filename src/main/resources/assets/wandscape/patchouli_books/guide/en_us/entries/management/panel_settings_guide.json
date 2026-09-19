@@ -11,15 +11,24 @@
     },
     {
       "type": "patchouli:text",
-      "text": "Settings sit on six pages: This Town follows the town itself, Visuals covers what you see, Town Economy covers money and output, Tourists covers how many arrive and how long they stay, Rules covers mob spawning and friendly fire, and Package Library lets you switch off building packs you do not want."
+      "text": "$(bold)The six settings pages$()$(br2)Settings sit on six pages: This Town follows the town itself, Visuals covers what you see, Town Economy covers money and output, Tour"
     },
     {
       "type": "patchouli:text",
-      "text": "This Town is open to everyone, but only for the town you founded yourself; every other page needs an admin (OP level 2). The few entries marked Client under Visuals are the exception — anyone can change those, and they only affect you."
+      "text": "ists covers how many arrive and how long they stay, Rules covers mob spawning and friendly fire, and Package Library lets you switch$(br)off building packs you do not want."
     },
     {
       "type": "patchouli:text",
-      "text": "Changes apply immediately and save themselves: no rejoining the world, no server restart — apart from preview resolution and frame rate, which need a game restart.$(br2)Turning off tourist spawning on the This Town page only stops new arrivals; tourists already in town finish their visit and leave on their own."
+      "text": "This Town is open to everyone, but only for the town you founded yourself;$(br) every other page needs an admin (OP level 2). The few entries marked Client under Visuals are the exception — anyone can change thos$(br)e, and they only affect you.",
+      "title": "Who can change them, and when they apply"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Changes apply immediately and save themselves: no rejoining the world, no server restart — apart from preview resolution and frame ra$(br)te, which need a game restart."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Turning off tourist spawning on the This Town page only stops new arrivals;$(br) tourists already in town finish their visit and leave on their own."
     }
   ]
 }

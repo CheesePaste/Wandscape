@@ -11,13 +11,21 @@
     },
     {
       "type": "patchouli:text",
-      "text": "只读的查询指令（$(#8a5a2b)status$()、$(#8a5a2b)list$()、$(#8a5a2b)view$()）任何人都能用；会改到小镇资产的——增删元素与物品、设等级、发经验、重命名、招募法师、取消或拆除建筑与路段——一律要求管理员权限。开发调试指令另挂一棵 $(#8a5a2b)/wandscape test$()，整棵子树要求管理员，普通玩家的补全列表里根本看不到它们。$(br2)每条指令都要先确定自己操作哪个小镇，顺序是固定的：$(bold)先看你是不是某个小镇的创建者$()，是就认那个镇，哪怕你人站在别处；不是创建者时，管理员按脚下位置认镇，普通玩家则直接报「未检测到小镇」。所以在别人的存档里查数据需要管理员——同一个坐标上你看得见房子，指令却会说没有小镇。",
+      "text": "只读的查询指令（$(#8a5a2b)status$()、$(#8a5a2b)list$()、$(#8a5a2b)view$()）任何人都能用；$(br)会改到小镇资产的——增删元素与物品、设等级、发经验、重命名、招募法师、取消或拆除建筑与路段——一律要求管理员权限。$(br)开发调试指令另挂一棵 $(#8a5a2b)/wandscape test$()，整棵子树要求管理员，普通玩家的补全列表里根本看不到它们。",
       "title": "权限，以及指令认哪个小镇"
     },
     {
       "type": "patchouli:text",
-      "text": "$(bold)指令  作用$()$(li)$(#8a5a2b)/wandscape colony status$() — 等级、经验、三值、游客与法师人数、在建数量、七种元素存量$(li)$(#8a5a2b)/wandscape colony list$() — 服务器上所有小镇的名称、短 id 与等级$(li)$(#8a5a2b)/wandscape colony create <名称>$() — 创建小镇（op-2）$(li)$(#8a5a2b)/wandscape colony destroy$() — 销毁小镇（op-2）$(li)$(#8a5a2b)/wandscape colony level <等级>$() — 把等级直接设到指定值，受等级上限约束（op-2）$(li)$(#8a5a2b)/wandscape colony exp <数量>$() — 发放经验，可能顺带升级（op-2）$(li)$(#8a5a2b)/wandscape colony name <名称>$() — 给小镇改名（op-2）",
+      "text": "每条指令都要先确定自己操作哪个小镇，顺序是固定的：$(bold)先看你是不是某个小镇的创建者$()，是就认那个镇，哪怕你人站在别处；$(br)不是创建者时，管理员按脚下位置认镇，普通玩家则直接报「未检测到小镇」。所以在别人的存档里查数据需要管理员——同一个坐标上你看得见房子，指令却会说没有小镇。"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(bold)指令  作用$()$(li)$(#8a5a2b)/wandscape colony status$() — 等级、经验、三值、游客与法师人数、在建数量、七种元素存量$(li)$(#8a5a2b)/wandscape colony list$() — 服务器上所有小镇的名称、短 id 与等级$(li)$(#8a5a2b)/wandscape colony create <名称>$() — 创建小镇（op-2）",
       "title": "小镇"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(#8a5a2b)/wandscape colony destroy$() — 销毁小镇（op-2）$(li)$(#8a5a2b)/wandscape colony level <等级>$() — 把等级直接设到指定值，受等级上限约束（op-2）$(li)$(#8a5a2b)/wandscape colony exp <数量>$() — 发放经验，可能顺带升级（op-2）$(li)$(#8a5a2b)/wandscape colony name <名称>$() — 给小镇改名（op-2）"
     },
     {
       "type": "patchouli:text",
@@ -25,8 +33,12 @@
     },
     {
       "type": "patchouli:text",
-      "text": "$(bold)指令  作用$()$(li)$(#8a5a2b)/wandscape element view$() — 查看七种元素的存量$(li)$(#8a5a2b)/wandscape element add <元素> <数量>$() — 增加元素（op-2）$(li)$(#8a5a2b)/wandscape element remove <元素> <数量>$() — 减少元素（op-2）$(li)$(#8a5a2b)/wandscape element clear$() — 清空七种元素（op-2）$(li)$(#8a5a2b)/wandscape warehouse view$() — 查看物品的类数、件数与容量占用$(li)$(#8a5a2b)/wandscape warehouse add <物品> <数量>$() — 增加物品（op-2）$(li)$(#8a5a2b)/wandscape warehouse remove <物品> <数量>$() — 减少物品（op-2）$(li)$(#8a5a2b)/wandscape warehouse clear$() — 清空物品（op-2）",
+      "text": "$(bold)指令  作用$()$(li)$(#8a5a2b)/wandscape element view$() — 查看七种元素的存量$(li)$(#8a5a2b)/wandscape element add <元素> <数量>$() — 增加元素（op-2）$(li)$(#8a5a2b)/wandscape element remove <元素> <数量>$() — 减少元素（op-2）$(li)$(#8a5a2b)/wandscape element clear$() — 清空七种元素（op-2）",
       "title": "元素与仓库"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(#8a5a2b)/wandscape warehouse view$() — 查看物品的类数、件数与容量占用$(li)$(#8a5a2b)/wandscape warehouse add <物品> <数量>$() — 增加物品（op-2）$(li)$(#8a5a2b)/wandscape warehouse remove <物品> <数量>$() — 减少物品（op-2）$(li)$(#8a5a2b)/wandscape warehouse clear$() — 清空物品（op-2）"
     },
     {
       "type": "patchouli:text",
@@ -34,8 +46,12 @@
     },
     {
       "type": "patchouli:text",
-      "text": "$(bold)指令  作用$()$(li)$(#8a5a2b)/wandscape building list [类别]$() — 列出小镇建筑：名字、类别、状态、尺寸、坐标与短 id$(li)$(#8a5a2b)/wandscape building cancel <建筑id>$() — 取消在建建筑并退还材料（op-2）$(li)$(#8a5a2b)/wandscape building demolish <建筑id>$() — 拆除建筑，掉落进小镇仓库（op-2）$(li)$(#8a5a2b)/wandscape road status$() — 路网段数、各种状态的数量与铺装总长$(li)$(#8a5a2b)/wandscape road cancel <路段id>$() — 撤回在建路段并退还材料（op-2）",
+      "text": "$(bold)指令  作用$()$(li)$(#8a5a2b)/wandscape building list [类别]$() — 列出小镇建筑：名字、类别、状态、尺寸、坐标与短 id$(li)$(#8a5a2b)/wandscape building cancel <建筑id>$() — 取消在建建筑并退还材料（op-2）",
       "title": "建筑与道路"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(li)$(#8a5a2b)/wandscape building demolish <建筑id>$() — 拆除建筑，掉落进小镇仓库（op-2）$(li)$(#8a5a2b)/wandscape road status$() — 路网段数、各种状态的数量与铺装总长$(br2)$(#8a5a2b)/wandscape road cancel <路段id>$() — 撤回在建路段并退还材料（op-2）"
     },
     {
       "type": "patchouli:text",
@@ -43,12 +59,16 @@
     },
     {
       "type": "patchouli:text",
-      "text": "$(bold)指令  作用$()$(li)$(#8a5a2b)/wandscape npc list [idle]$() — 法师名单：等级、空闲还是任务中、血量、蓝量与已装备法术$(li)$(#8a5a2b)/wandscape tourist list$() — 游客名单：状态、等级与三条需求$(li)$(#8a5a2b)/wandscape tourist clear$() — 清空小镇游客$(li)$(#8a5a2b)/wandscape tavern list$() — 酒馆里现有的法师简历$(li)$(#8a5a2b)/wandscape tavern recruit$() — 招募一名法师（op-2）$(li)$(#8a5a2b)/wandscape guard status$() — 守卫区数量、最近的威胁与活跃的守卫任务",
+      "text": "$(bold)指令  作用$()$(li)$(#8a5a2b)/wandscape npc list [idle]$() — 法师名单：等级、空闲还是任务中、血量、蓝量与已装备法术$(li)$(#8a5a2b)/wandscape tourist list$() — 游客名单：状态、等级与三条需求$(li)$(#8a5a2b)/wandscape tourist clear$() — 清空小镇游客$(li)$(#8a5a2b)/wandscape tavern list$() — 酒馆里现有的法师简历",
       "title": "法师、游客与酒馆"
     },
     {
       "type": "patchouli:text",
-      "text": "$(#8a5a2b)tourist clear$() 不需要权限，走的是$(bold)正常离城$()而不是凭空抹掉，游客太多或卡住时用它收场。$(br2)$(#8a5a2b)tavern recruit$() 首次免费，之后每次都要凑齐每种元素，价格在服务端配置里；元素不够时直接失败，不扣任何东西。$(br2)酒馆这两条按$(bold)脚下位置$()认镇，和你是不是镇主无关：站在小镇范围外，它们会退回到服务器上第一个小镇，而不是报错——想给哪个镇招人，得先走到那个镇里。"
+      "text": "$(#8a5a2b)/wandscape tavern recruit$() — 招募一名法师（op-2）$(li)$(#8a5a2b)/wandscape guard status$() — 守卫区数量、最近的威胁与活跃的守卫任务$(br2)$(#8a5a2b)tourist clear$() 不需要权限，走的是$(bold)正常离城$()而不是凭空抹掉，游客太多或卡住时用它收场。"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(#8a5a2b)tavern recruit$() 首次免费，之后每次都要凑齐每种元素，价格在服务端配置里；元素不够时直接失败，不扣任何东西。$(br2)酒馆这两条按$(bold)脚下位置$()认镇，和你是不是镇主无关：站在小镇范围外，它们会退回到服务器上第一个小镇，而不是报错——想给哪个镇招人，得先走到那个镇里。"
     },
     {
       "type": "patchouli:text",
@@ -57,17 +77,21 @@
     },
     {
       "type": "patchouli:text",
-      "text": "$(bold)指令  作用$()$(li)$(#8a5a2b)/wandscape guide [页名]$() — 打开游戏内指南书$(br2)只能由玩家在游戏里执行。不带页名时打开手册首页，给一个页名可以直接跳到那一页：写条目名（$(#8a5a2b)/wandscape guide townhall_guide$()）、去掉 $(#8a5a2b)_guide$() 的简称（$(#8a5a2b)/wandscape guide warehouse$()），或者写分类（$(#8a5a2b)/wandscape guide category:buildings$()）都可以。装没装帕秋莉都是同一套页名，装了就开帕秋莉手册，没装就开模组自带的阅读器。",
+      "text": "$(bold)指令  作用$()$(li)$(#8a5a2b)/wandscape guide [页名]$() — 打开游戏内指南书$(br2)只能由玩家在游戏里执行。$(br)不带页名时打开手册首页，给一个页名可以直接跳到那一页：写条目名（$(#8a5a2b)/wandscape guide townhall_guide$()）、去掉 $(#8a5a2b)_guide$() 的简称（$(#8",
       "title": "指南书"
     },
     {
       "type": "patchouli:text",
-      "text": "$(bold)指令  作用$()$(li)$(#8a5a2b)/wandscape curios list [目标]$() — 列出法师的饰品槽$(li)$(#8a5a2b)/wandscape curios set <槽位> <数量> [目标]$() — 把槽位数量设成指定值（op-2）$(li)$(#8a5a2b)/wandscape curios add <槽位> <数量> [目标]$() — 增加槽位（op-2）$(li)$(#8a5a2b)/wandscape curios remove <槽位> <数量> [目标]$() — 减少槽位（op-2）",
+      "text": "a5a2b)/wandscape guide warehouse$()），或者写分类（$(#8a5a2b)/wandscape guide category:buildings$()）都可以。$(br)装没装帕秋莉都是同一套页名，装了就开帕秋莉手册，没装就开模组自带的阅读器。"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(bold)指令  作用$()$(li)$(#8a5a2b)/wandscape curios list [目标]$() — 列出法师的饰品槽$(li)$(#8a5a2b)/wandscape curios set <槽位> <数量> [目标]$() — 把槽位数量设成指定值（op-2）$(li)$(#8a5a2b)/wandscape curios add <槽位> <数量> [目标]$() — 增加槽位（op-2）",
       "title": "装了 Curios 才有"
     },
     {
       "type": "patchouli:text",
-      "text": "这组指令只在装了 Curios 时存在。$(bold)不写目标就是对全服的法师下手$()，不只是你身边那几个；要只改某一位，得把目标写出来。"
+      "text": "$(#8a5a2b)/wandscape curios remove <槽位> <数量> [目标]$() — 减少槽位（op-2）$(br2)这组指令只在装了 Curios 时存在。$(bold)不写目标就是对全服的法师下手$()，不只是你身边那几个；要只改某一位，得把目标写出来。"
     }
   ]
 }

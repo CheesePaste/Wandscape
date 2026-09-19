@@ -59,21 +59,54 @@
 ```bash
 python gen_patchouli.py                    # 编译手册 JSON + 运行期清单（会先清空上一次的生成物）
 python gen_patchouli.py --check            # 只校验：已提交的生成物与当前 md/结构表是否一致（不进游戏就能跑的检查）
-python paginate_patchouli_json.py          # 把超长页切分；紧跟在 gen 之后，必跑
+python paginate_patchouli_json.py --check  # 分部体检：超容量页 / 奇数页条目 / 残页
 python gen_patchouli.py textures           # 生成占位书皮（已存在则跳过）
 python gen_patchouli.py textures --force   # 强制覆盖书皮
 ```
 
-- **两步都不能省**：`gen_patchouli.py` 的 `render_pages` 一节只出一页，长节全靠
-  `paginate_patchouli_json.py` 事后按 `$(br2)`/`$(li)` 切分。gen 会**整体重写**所有条目，
-  所以只跑 gen 不跑 paginate = 悄悄把整本书退回「一节一巨页」，而且 git diff 里看着像内容变更。
-  分页脚本可 `--dry-run` 先看切分计划，`--max-lines` / `--max-chars` 调阈值。
+- **分页是生成的一部分，只有一步**：`gen_patchouli.py` 生成完一节就调
+  `paginate_patchouli_json.py` 的 `paginate_data` 切页，再把结果写盘。
+  历史上这两步是分开跑的，出过事——忘了第二步，仓库里就留下「生成物是长节、分页器没跑」
+  的旧状态，而 `--check` 又用同一个分页器在内存里比对，两边一起空转，谁都没发现。
+  `paginate_patchouli_json.py` 现在只剩两个手动入口：`--check`（分部体检）和 `--dry-run`（看切分计划）。
 - 脚本只依赖 Python 标准库（含自写的 PNG 编码），不进构建流程，产物提交进仓库可审计。
 - 脚本末尾会对每条生成文本做**静态自检**：未知 `$(命令)`、样式栈下溢都会打印警告（帕秋莉对前者原样显示 `$(xxx)`，对后者抛异常渲染 `[ERROR]`）。
 - 另外三条自检拦住的是「跳转悄悄失效」这类问题：md 目录里有未登记的文档、正文里的《…》不在 `TITLE_TO_DOC` 里、
   md 链接指向不存在的文档/分类。**有任何警告即非零退出**——警告在游戏里会变成纯文本或 404。
 - 语言目录映射：md 的 `en` → 帕秋莉的 `en_us`。帕秋莉以 `en_us` 目录为**枚举索引**、其他语言只做覆盖，所以两套目录必须完整生成，不能只放 `zh_cn`。
   运行期清单按 md 语言取（`runtime/zh_cn.json` / `runtime/en.json`），用的是同一套语言目录名。
+
+### 分页规则：一页到底能放多少
+
+帕秋莉的页是**定尺寸**的：`GuiBook.PAGE_WIDTH=116`、`PAGE_HEIGHT=156`、`TEXT_LINE_HEIGHT=9`，
+`PageText.getTextHeight()` 决定正文从哪一行起排。换成行数就是这样：
+
+| 页型 | 起排 y | 容量 |
+|---|---|---|
+| 条目首页（顶部画条目名） | 22px | **14 行** |
+| 带 `##` 小节标题的页 | 12px | **16 行** |
+| 普通页 | -4px | **17 行** |
+
+每行约 12 个汉字（116px ÷ 9px）。超容量的页会被 `book.json` 的 `text_overflow_mode` 处理，
+本书设的是 `resize`，也就是**把整页字号缩小塞进去**——超出多少行字就缩多少，
+最狠的一页曾经缩到六成，玩家根本看不清。所以分页器的硬指标是「一页绝不超容量」，
+`check_pagination` 在生成期就把超容量的页报成 build 失败。
+
+`resize` 另外两个取值都不能用：`overflow` 会把文字画到书页外面糊在 GUI 上（书 GUI 没有 scissor 裁剪），
+`truncate` 在帕秋莉源码里是坏的（拿绝对屏幕 y 去比页面常量 `PAGE_HEIGHT`）。留着 `resize` 只当兜底，
+正常情况下永远不触发。
+
+其余规则：
+
+- **`##` 小节 = 逻辑单元，页 = 物理单元**。小节由作者定（中英文共用一套结构），
+  分页器只负责把超长的小节按 `（下一页）` → `$(br2)` 段界 → `$(li)` 列表行 → 句号 → 按字硬切
+  这几级切点切开。所以写作时让一节落在 9–14 行，页界自然就是语义边界。
+- **页数取偶**：帕秋莉左右两页同时展示（`GuiBookEntry` 里 `leftNum = spread*2`、`rightNum = spread*2+1`），
+  奇数页会让最后一个跨页的右半空成白纸。分页器在小节之间不动边界的前提下重排小节占几页、
+  必要时并节，实在凑不出偶数就记进 `gen_patchouli.py` 的 `PAGINATION_ODD_EXCEPTIONS`（带原因，不再命中会报错要求删掉）。
+- **不留残页**：多页条目里任何一页不足 7 行都要再平衡。
+- **中文与英文页数可以不同**：英文比中文长约 1.6 倍，同一节在英文侧会被切成两页。
+  这是正常的，别为了对齐两边页数去改结构。
 
 ### 结构清单在脚本里
 

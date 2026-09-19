@@ -7,11 +7,19 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "The four strategies at the top — Balanced, Offensive, Support and Defensive — only decide the order between categories. Inside a category the order still follows your slots.$(br2)While casting, a mage is held by a casting lock: no second spell starts until it releases, and cooldowns begin only after that."
+      "text": "$(bold)The overall strategy$()$(br2)The four strategies at the top — Balanced, Offensive, Support and Defensive — only decide the order between categories. Inside a cate"
     },
     {
       "type": "patchouli:text",
-      "text": "Iron's Spells and Goety need extra gear: an Iron scroll only fits with a spell book equipped, and a Goety focus only with a Goety wand in the main hand — one per bar. Losing the gear switches those entries off rather than dropping them."
+      "text": "gory the order still follows your slots.$(br2)$(bold)The casting lock and gear-gated spells$()"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "While casting, a mage is held by a casting lock: no second spell starts until it releases, and cooldowns begin only after that."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Iron's Spells and Goety need extra gear: an Iron scroll only fits with a spell book equipped, and a Goety focus only with a Goety wan$(br)d in the main hand — one per bar. Losing the gear switches those entries off rather than dropping them."
     }
   ]
 }

@@ -7,11 +7,19 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "The starter tutorial only covers the Town Hall, Warehouse, and Crafting Station. Here are additional essential features.$(br2)$(l:wandscape:playstyle/element_level_guide)《Elements and Town Level》$(/l) Understand the economy system$(br2)$(l:wandscape:magic/mages_guide)《Mages》$(/l) Workers and combatants of the town"
+      "text": "The starter tutorial only covers the Town Hall, Warehouse, and Crafting Station. Here are additional essential features."
     },
     {
       "type": "patchouli:text",
-      "text": "$(l:wandscape:buildings/altar_guide)《Altar》$(/l) Revive fallen mages, crucial in the early game$(br2)$(l:wandscape:buildings/crafting_guide)《Crafting Station》$(/l) Powerful wands, exploration tools, and boss fight equipment$(br2)$(l:wandscape:buildings/tavern_guide)《Tavern》$(/l) Recruit more mages$(br2)$(l:wandscape:buildings/mage_hut_guide)《Mage Hut》$(/l) Train mage attributes, the core of town combat power$(br2)$(l:wandscape:management/panel_road_guide)《Road Mode》$(/l) Level terrain and pave roads"
+      "text": "$(bold)Beyond the tutorial, these are worth a look$()$(li)$(l:wandscape:playstyle/element_level_guide)《Elements and Town Level》$(/l) Understand the economy system$(li)$(l:wandscape:magic/mages_guide)《Mages》$(/l) Workers and combatants of the town$(li)$(l:wandscape:buildings/altar_guide)《Altar》$(/l) Revive fallen mages, crucial in the early game"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(l:wandscape:buildings/crafting_guide)《Crafting Station》$(/l) Powerful wands, exploration tools, and boss fight equipment$(li)$(l:wandscape:buildings/tavern_guide)《Tavern》$(/l) Recruit more mages"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(li)$(l:wandscape:buildings/mage_hut_guide)《Mage Hut》$(/l) Train mage attributes, the core of town combat power$(li)$(l:wandscape:management/panel_road_guide)《Road Mode》$(/l) Level terrain and pave roads"
     }
   ]
 }

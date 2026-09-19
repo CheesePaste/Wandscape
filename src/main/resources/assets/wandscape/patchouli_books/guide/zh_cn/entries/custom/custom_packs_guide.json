@@ -7,16 +7,20 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "$(italic)$(#6b5a45)建筑包就是一个目录。把 $(#8a5a2b)data/<命名空间>/buildings/<包名>/$()$(italic)$(#6b5a45) 建出来，往里面丢建筑 JSON，它们就归这个包；目录里再放一份 $(#8a5a2b)package.json$()$(italic)$(#6b5a45)，包才有名字和图标。$()$(br2)建筑一多，平铺的一张列表就没法看了。包是给建筑分组、成套分发、并且让不同作者的同名建筑互不打架的单位——同一个包里的建筑，$(#8a5a2b)id$() 只要在包内不重名就行。"
+      "text": "$(italic)$(#6b5a45)建筑包就是一个目录。把 $(#8a5a2b)data/<命名空间>/buildings/<包名>/$()$(italic)$(#6b5a45) 建出来，往里面丢建筑 JSON，它们就归这个包；目录里再放一份 $(#8a5a2b)package.json$()$(italic)$(#6b5a45)，包才有名字和图标。$()"
     },
     {
       "type": "patchouli:text",
-      "text": "$(li)$(#8a5a2b)buildings/cottage.json$() — 直接放在 $(#8a5a2b)buildings/$() 下的建筑归 default 包$(li)$(#8a5a2b)buildings/medieval/inn.json$() — 目录名 $(#8a5a2b)medieval$() 就是包名$(li)$(#8a5a2b)buildings/medieval/package.json$() — 这个包的元数据$(li)$(#8a5a2b)buildings/medieval/tower/watchtower.json$() — 再往深写只是文件整理，照样归 medieval 包$(li)$(#8a5a2b)buildings/oriental/tea_house.json$() — 另一个包",
+      "text": "建筑一多，平铺的一张列表就没法看了。包是给建筑分组、成套分发、并且让不同作者的同名建筑互不打架的单位——同一个包里的建筑，$(#8a5a2b)id$() 只要在包内不重名就行。"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(li)$(#8a5a2b)buildings/cottage.json$() — 直接放在 $(#8a5a2b)buildings/$() 下的建筑归 default 包$(li)$(#8a5a2b)buildings/medieval/inn.json$() — 目录名 $(#8a5a2b)medieval$() 就是包名$(li)$(#8a5a2b)buildings/medieval/package.json$() — 这个包的元数据",
       "title": "目录即包"
     },
     {
       "type": "patchouli:text",
-      "text": "只有 $(#8a5a2b)buildings/$() 下的$(bold)第一层$()子目录名算包名，再往深写只是文件整理，不影响归属。"
+      "text": "$(li)$(#8a5a2b)buildings/medieval/tower/watchtower.json$() — 再往深写只是文件整理，照样归 medieval 包$(li)$(#8a5a2b)buildings/oriental/tea_house.json$() — 另一个包$(br2)只有 $(#8a5a2b)buildings/$() 下的$(bold)第一层$()子目录名算包名，再往深写只是文件整理，不影响归属。"
     },
     {
       "type": "patchouli:text",
@@ -50,8 +54,12 @@
     },
     {
       "type": "patchouli:text",
-      "text": "创造建筑扫描器的界面上有「目标建筑包」一栏，填一个还没用过的名字，导出时会自动建出那个目录并写一份 $(#8a5a2b)package.json$() 骨架，作者字段记成你。包名会被转成小写，所以 $(#8a5a2b)Medieval$() 与 $(#8a5a2b)medieval$() 是同一个包。$(br2)扫描器导出走的是存档自己的数据包，落点在 $(#8a5a2b)data/wandscape/buildings/<包名>/$()——包和命名空间是两件事，导出的文件永远在 $(#8a5a2b)wandscape$() 命名空间里。",
+      "text": "创造建筑扫描器的界面上有「目标建筑包」一栏，填一个还没用过的名字，导出时会自动建出那个目录并写一份 $(#8a5a2b)package.json$() 骨架，作者字段记成你。包名会被转成小写，所以 $(#8a5a2b)Medieval$() 与 $(#8a5a2b)medieval$() 是同一个包。",
       "title": "扫描器怎么配合"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "扫描器导出走的是存档自己的数据包，落点在 $(#8a5a2b)data/wandscape/buildings/<包名>/$()——包和命名空间是两件事，导出的文件永远在 $(#8a5a2b)wandscape$() 命名空间里。"
     }
   ]
 }

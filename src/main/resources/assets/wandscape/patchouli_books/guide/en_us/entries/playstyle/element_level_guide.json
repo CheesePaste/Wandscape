@@ -11,8 +11,12 @@
     },
     {
       "type": "patchouli:text",
-      "text": "The town level is the overall progression: every building in the build panel lists the level it needs, and a mage's rank cap and the Crafting Station blueprints follow it too. You can see the current level in the Town Hall panel.$(br2)Raising the town level takes experience, and there are two ways to earn it: satisfying tourists — only a tourist that leaves with all three bars full earns the town any — and opening loot chests out in the wild.",
+      "text": "The town level is the overall progression: every building in the build panel lists the level it needs, and a mage's rank cap and the Crafting Station blueprints follow it too. You can see the current level in the Town Hall panel.",
       "title": "Town Level"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Raising the town level takes experience, and there are two ways to earn it: satisfying tourists — only a tourist that leaves with all three bars full earns the town any — and opening loot chests out in the wild."
     }
   ]
 }

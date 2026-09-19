@@ -6,6 +6,8 @@
 
 Four tools. Replace swaps a patch of ground for the material you picked, Fill pours a solid cube into it, and Flatten cuts the ground down to the block you clicked as a reference. All three are the same in the world: hold the left button and drag out the area — the block you pressed on is the start, wherever you drag to is the end, and releasing fixes it; the handles on the start and end can still be dragged afterwards. Made a mistake? Backspace clears the end first, then the start. Confirming is only ever the button on the panel — there is no Enter key for it.
 
+## Splines and the camera
+
 Spline is drawn differently: on the Curve tab, left-click block surfaces to drop anchor points, switch to Select & Drag to shape the curve by its handles, then set width, thickness and border on the Array tab and submit.
 
 Hold the right button and drag to turn the view. WASD flies the camera and your character stays where it was.

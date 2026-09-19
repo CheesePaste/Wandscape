@@ -7,72 +7,128 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "$(italic)$(#6b5a45)Read the $(l:wandscape:buildings/building_scanner_guide)Building Scanner$(/l)$(italic)$(#6b5a45) first: what the scanner exports $(italic)is$()$(italic)$(#6b5a45) the file this page describes. Hand-writing only pays off when you want to generate a batch, or to touch up what a scan produced.$()$(br2)Put a building file in your datapack and after $(#8a5a2b)/reload$() it shows up in the build panel and in the Wand's list. $(bold)The file name only decides which package it belongs to; the $(#8a5a2b)id$()$(bold) written inside is the building's real identity.$()"
+      "text": "$(italic)$(#6b5a45)Read the $(l:wandscape:buildings/building_scanner_guide)Building Scanner$(/l)$(italic)$(#6b5a45) first: what the scanner exports $(italic)is$()$(italic)$(#6b5a45) the file this page describes. Hand-writing only pays off when you want to generate a batch, or to touch up what a scan produced.$()"
     },
     {
       "type": "patchouli:text",
-      "text": "The path is $(#8a5a2b)data/<namespace>/buildings/<id>.json$(), and the namespace is yours to choose — it need not be $(#8a5a2b)wandscape$(). Only an override of a building the mod ships has to sit in the $(#8a5a2b)wandscape$() namespace under the same file name.$(br2)The $(bold)first subdirectory level under $(#8a5a2b)buildings/$()$(bold) is the building package$(): $(#8a5a2b)data/xxx/buildings/medieval/inn.json$() belongs to the $(#8a5a2b)medieval$() package, and files sitting directly under $(#8a5a2b)buildings/$() belong to $(#8a5a2b)default$(). See $(l:wandscape:custom/custom_packs_guide)Importing Building Packs$(/l).",
+      "text": "Put a building file in your datapack and after $(#8a5a2b)/reload$() it shows up in the build panel and in the Wand's list. $(bold)The file name only decides which package it belongs to;$(br) the $(#8a5a2b)id$()$(bold) written inside is the building's real identity.$()"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "The path is $(#8a5a2b)data/<namespace>/buildings/<id>.json$(), and the namespace is yours to choose — it need not be $(#8a5a2b)wandscape$(). Only an override of a building the mod ships has$(br) to sit in the $(#8a5a2b)wandscape$() namespace under the same file name.",
       "title": "Where the Files Go"
     },
     {
       "type": "patchouli:text",
-      "text": "$(bold)Key  Meaning$()$(li)id — identity; the file name is not used$(li)category — class, deciding its build-panel tab$(li)pattern — block offsets, three numbers each$(li)palette — the block state list$(li)block_indices — as long as $(#8a5a2b)pattern$(), each an index into $(#8a5a2b)palette$()$(li)blueprint — construction blueprint; without it the panel never lists it",
+      "text": "The $(bold)first subdirectory level under $(#8a5a2b)buildings/$()$(bold) is the building package$(): $(#8a5a2b)data/xxx/buildings/medieval/inn.json$() belongs to the $(#8a5a2b)medieval$() p$(br)ackage, and files sitting directly under $(#8a5a2b)buildings/$() belong to $(#8a5a2b)default$(). See $(l:wandscape:custom/custom_packs_guide)Importing Building Packs$(/l)."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(bold)Key  Meaning$()$(li)id — identity; the file name is not used$(li)category — class, deciding its build-panel tab$(li)pattern — block offsets, three numbers each",
       "title": "The Smallest Working File"
     },
     {
       "type": "patchouli:text",
-      "text": "$(#8a5a2b)blueprint$() is the one people miss, and missing it looks like this: the log reports a clean load, and the building is nowhere in the panel. Copy its contents verbatim out of a scanner export. It holds two fields, $(#8a5a2b)id$() for which construction logic to use and $(#8a5a2b)bind$() for which blueprint parameter takes which building field.$(br2)A $(#8a5a2b)bind$() value carries a leading marker, the way a variable reference is written in a scripting language. Composing that binding yourself buys nothing — copy the scanner's.",
+      "text": "palette — the block state list$(li)block_indices — as long as $(#8a5a2b)pattern$(), each an index into $(#8a5a2b)palette$()$(li)blueprint — construction blueprint; without it the panel never lists it"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(#8a5a2b)blueprint$() is the one people miss, and missing it looks like this: the log reports a clean load, and the building is nowhere in the panel. Copy its contents verbatim out of a sc",
       "title": "The Blueprint"
     },
     {
       "type": "patchouli:text",
-      "text": "$(#8a5a2b)pattern$(), $(#8a5a2b)palette$() and $(#8a5a2b)block_indices$() together are the building: the offsets, a table of block states, and an index pointing each offset at one entry of that table. Their lengths and index ranges are checked at load time, and a mismatch throws the whole file away with one warning.",
+      "text": "anner export. It holds two fields, $(#8a5a2b)id$() for which construction logic to use and $(#8a5a2b)bind$() for wh$(br2)ich blueprint parameter takes which building field."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "A $(#8a5a2b)bind$() value carries a leading marker, the way a variable reference is written in a scripting language. Composing that binding yourself buys nothing — copy the scanner's."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(#8a5a2b)pattern$(), $(#8a5a2b)palette$() and $(#8a5a2b)block_indices$() together are the building: the offsets, a table of block states, and an index pointing each offset at one entry of $(br)that table. Their lengths and index ranges are checked at load time, and a mismatch throws the whole file away with one warning.",
       "title": "The Three Geometry Fields"
     },
     {
       "type": "patchouli:text",
-      "text": "$(#8a5a2b)boundary$() is the bounding box, two corners under $(#8a5a2b)min$() and $(#8a5a2b)max$(), and a missing corner fails the parse. It is $(bold)not$() checked against $(#8a5a2b)pattern$() in any way: the pattern may reach outside the box, while the space inside the box that the pattern does not cover is what \"clear the box\" sweeps at build time.$(br2)$(#8a5a2b)block_nbt$() carries block entity data and is stripped from a survival scanner's export. The $(#8a5a2b)block_mapping$() field of older files is now an outright error — rewrite it as palette plus block_indices.",
+      "text": "$(#8a5a2b)boundary$() is the bounding box, two corners under $(#8a5a2b)min$() and $(#8a5a2b)max$(), and a missing corner fails the parse. It is $(bold)not$() checked against $(#8a5a2b)patte$(br)rn$() in any way: the pattern may reach outside the box, while the space inside the box that the pattern does not cover is what \"clear the box\" sweeps at build time.",
       "title": "Bounding Box and Block Data"
     },
     {
       "type": "patchouli:text",
-      "text": "$(#8a5a2b)door_offsets$() is the list of candidate door blocks tourists come in through, and you may list several. Leave it out and tourists come in along the edge of the bounding box — a house that floats in the air or sits buried underground has no entrance they can find. The singular $(#8a5a2b)door_offset$() is the old key, still readable, no longer worth using.",
+      "text": "$(#8a5a2b)block_nbt$() carries block entity data and is stripped from a survival scanner's export. The $(#8a5a2b)block_mapping$() field of older files is now an outright error — rewrite it $(br)as palette plus block_indices."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(#8a5a2b)door_offsets$() is the list of candidate door blocks tourists come in through, and you may list several. Leave it out and tourists come in along the edge of the bounding box — a h",
       "title": "Doors"
     },
     {
       "type": "patchouli:text",
-      "text": "$(#8a5a2b)interact_spots$() is where tourists stand, each entry carrying three keys: $(#8a5a2b)pos$() relative to the anchor, $(#8a5a2b)action$() for what they do, and $(#8a5a2b)facing$() for which way they look. $(#8a5a2b)action$() is one of $(#8a5a2b)browse$(), $(#8a5a2b)eat$(), $(#8a5a2b)bathe$(), $(#8a5a2b)view$(), $(#8a5a2b)pay$(), $(#8a5a2b)read$(), $(#8a5a2b)take$(), $(#8a5a2b)rest$(), $(#8a5a2b)withdraw$(); $(#8a5a2b)facing$() is one of $(#8a5a2b)north$(), $(#8a5a2b)east$(), $(#8a5a2b)south$(), $(#8a5a2b)west$(). Getting either wrong $(bold)raises nothing$() — it is quietly rewritten to $(#8a5a2b)browse$() and $(#8a5a2b)south$().",
+      "text": "ouse that floats in the air or sits buried underground has no entrance they can find. The singular $(#8a5a2b)door_o$()$(br2)$(#8a5a2b)ffset$() is the old key, still readable, no longer worth using."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(#8a5a2b)interact_spots$() is where tourists stand, each entry carrying three keys: $(#8a5a2b)pos$() relative to the anchor, $(#8a5a2b)action$() for what they do, and $(#8a5a2b)facing$() f$(br)or which way they look. $(#8a5a2b)action$() is one of $(#8a5a2b)browse$(), $(#8a5a2b)eat$(), $(#8a5a2b)bathe$(), $(#8a5a2b)view$(), $(#8a5a2b)pay$(), $(#8a5a2b)read$(), $(#8a5a2b)take$(), $(#8a5a2b)rest$(), $(#8a5a2b)withdraw$();",
       "title": "Interact Spots"
     },
     {
       "type": "patchouli:text",
-      "text": "A building may hold several interact spots, and how many tourists it serves at once is exactly how many spots it has, so $(bold)a building with no interact spot at all is one tourists never touch$() — it builds fine and still counts towards the town, they simply never come.",
+      "text": "$(#8a5a2b)facing$() is one of $(#8a5a2b)north$(), $(#8a5a2b)east$(), $(#8a5a2b)south$(), $(#8a5a2b)west$(). Getting either wrong $(bold)raises nothing$() — it is quietly rewritten to $(#8a5a2b)browse$() and $(#8a5a2b)south$()."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "A building may hold several interact spots, and how many tourists it serves at once is exactly how many spots it has, so $(bold)a building with no interact spot at all is one tourists never$(br) touch$() — it builds fine and still counts towards the town, they simply never come.",
       "title": "How Many Spots"
     },
     {
       "type": "patchouli:text",
-      "text": "$(#8a5a2b)category$() is a free string and is not validated, but it decides which tab of the build panel the building lands in. Town halls, warehouses, workstations, crafting stations, magic workshops, taverns and altars carry further meaning in code, and mistaking the class costs the building that identity.",
+      "text": "$(#8a5a2b)category$() is a free string and is not validated, but it decides which tab of the build panel the building lands in. Town halls, warehouses, workstations, crafting stations, magi",
       "title": "Class"
     },
     {
       "type": "patchouli:text",
-      "text": "Four parameter groups concern tourists — $(#8a5a2b)shop$(), $(#8a5a2b)service$(), $(#8a5a2b)relax$() and $(#8a5a2b)atm$() — and harvesting nodes use $(#8a5a2b)node_config$(). $(bold)Those groups and $(#8a5a2b)category$()$(bold) do not follow each other$(): what makes a building a tourist target is having one of those four groups written, while $(#8a5a2b)category$() only affects filing and sorting. Write a $(#8a5a2b)shop$() group and set $(#8a5a2b)category$() to something else, and tourists still come and shop.",
+      "text": "c workshops, taverns and altars carry further meaning in code, and mistaking the class costs the building that identity."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Four parameter groups concern tourists — $(#8a5a2b)shop$(), $(#8a5a2b)service$(), $(#8a5a2b)relax$() and $(#8a5a2b)atm$() — and harvesting nodes use $(#8a5a2b)node_config$(). $(bold)Those g$(br)roups and $(#8a5a2b)category$()$(bold) do not follow each other$(): what makes a building a tourist target is havin",
       "title": "Parameter Groups"
     },
     {
       "type": "patchouli:text",
-      "text": "$(#8a5a2b)comfort$(), $(#8a5a2b)magic$() and $(#8a5a2b)wonder$() are the three values, deciding which need the building satisfies. $(#8a5a2b)unlock_requirement$() is the town-level gate: $(bold)omit it entirely and there is no gate at all (level 1)$(), whereas an empty object $(#8a5a2b){}$() means level 0 — the two are not the same, so do not write $(#8a5a2b){}$() out of habit.",
+      "text": "g one of those four groups written, while $(#8a5a2b)category$() only affects filing and sorting. Write a $(#8a5a2b)shop$() group and set $(#8a5a2b)category$() to something else, and tourists still come and shop."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(#8a5a2b)comfort$(), $(#8a5a2b)magic$() and $(#8a5a2b)wonder$() are the three values, deciding which need the building satisfies. $(#8a5a2b)unlock_requirement$() is the town-level gate: $(",
       "title": "Values and the Gate"
     },
     {
       "type": "patchouli:text",
-      "text": "$(li)Missing $(#8a5a2b)id$(): the entry is skipped, with one warning line.$(li)A syntax or geometry check fails: the whole entry is dropped with one warning, and every other building loads as usual.$(li)A mistyped block id: nothing is raised at load time, the block is skipped when the build reaches that cell, and the house comes out with a hole.$(li)$(#8a5a2b)blueprint$() missing or its id wrong: the first leaves the building out of the panel, the second throws while the build task is being expanded. Neither makes a sound at load time.",
+      "text": "bold)omit it entirely and there is no gate at all (level 1)$(), whereas an empty object $(#8a5a2b){}$() means level 0 — the two are not the same, so do not write $(#8a5a2b){}$() out of habit."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Missing $(#8a5a2b)id$(): the entry is skipped, with one warning line.$(li)A syntax or geometry check fails: the whole entry is dropped with one warning, and every other building loads as usual.",
       "title": "What Happens When It Is Wrong"
     },
     {
       "type": "patchouli:text",
-      "text": "One $(#8a5a2b)/reload$() is enough: it re-reads on the server and re-syncs clients in the same pass, with no restart and no relog. The one thing that will not refresh is a $(bold)build panel that is already open$() — leave and re-enter the build page to see the new building.$(br2)$(#8a5a2b)/wandscape building list$() prints the buildings the game currently knows about, and $(#8a5a2b)/wandscape fill <building id> <spacing> <count>$() lays out a row of them to check — with a mistyped id, that command echoes every known id back at you.",
+      "text": "A mistyped block id: nothing is raised at load time, the block is skipped when the build reaches that cell, and the house comes out with a hole."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(#8a5a2b)blueprint$() missing or its id wrong: the first leaves the building out of the panel, the second throws while the build task is being expanded. Neither makes a sound at load time."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "One $(#8a5a2b)/reload$() is enough: it re-reads on the server and re-syncs clients in the same pass, with no restart and no relog. The one thing that will not refresh is a $(bold)build pane$(br)l that is already open$() — leave and re-enter the build page to see the new building.",
       "title": "Making a Change Take Effect"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(#8a5a2b)/wandscape building list$() prints the buildings the game currently knows about, and $(#8a5a2b)/wandscape fill <building id> <spacing> <count>$() lays out a row of them to check —$(br) with a mistyped id, that command echoes every known id back at you."
     }
   ]
 }
