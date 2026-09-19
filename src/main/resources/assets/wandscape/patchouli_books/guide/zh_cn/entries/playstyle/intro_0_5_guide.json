@@ -7,7 +7,7 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "新手教程只覆盖了市政厅，仓库，合成站三个建筑，但是还有一些有用的没涉及到，这里补充。$(br2)$(bold)除了教程，这几样也值得先看$()$(li)$(l:wandscape:playstyle/element_level_guide)《元素与城镇等级》$(/l)了解经济系统$(li)$(l:wandscape:magic/mages_guide)《法师》$(/l)城镇的工人兼战斗人员"
+      "text": "新手教程只覆盖了市政厅，仓库，工作站三个建筑，但是还有一些有用的没涉及到，这里补充。$(br2)$(bold)除了教程，这几样也值得先看$()$(li)$(l:wandscape:playstyle/element_level_guide)《元素与城镇等级》$(/l)了解经济系统$(li)$(l:wandscape:magic/mages_guide)《法师》$(/l)城镇的工人兼战斗人员"
     },
     {
       "type": "patchouli:text",

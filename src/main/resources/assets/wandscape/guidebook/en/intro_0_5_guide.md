@@ -1,6 +1,6 @@
 # 0.5 Recommended Features
 
-The starter tutorial only covers the Town Hall, Warehouse, and Crafting Station. Here are additional essential features.
+The starter tutorial only covers the Town Hall, Warehouse, and Workstation. Here are additional essential features.
 
 ## Beyond the tutorial, these are worth a look
 
