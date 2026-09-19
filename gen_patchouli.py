@@ -63,8 +63,8 @@ CATEGORIES = [
      "这一页展示了模组的装备（法杖）与一些物品。对于法术卷轴等法术，见《魔法》，对于如何制作它们，见《合成站》。",
      "The mod's equipment (wands) and its smaller items. For spells such as scrolls, see 《Spells》; for how to craft them, see 《Crafting Station》."),
     ("custom", "自定义与数据包", "Customization & Datapacks", "minecraft:structure_block", 50,
-     "这一页展示了模组建筑、物品、魔法、合成配方与战利品等内容的模组方块和数据包的自定义方式。对于相关的模组本体内容，见《建筑》《魔法》《装备与物品》。",
-     "How to customize the mod's own blocks and data packs: buildings, items, spells, crafting recipes and loot. For the mod's own content, see 《Buildings》, 《Spells》 and 《Equipment and Items》."),
+     "这一页展示了模组建筑、物品、魔法、合成配方与战利品等内容的模组方块和数据包的自定义方式，以及查状态与急救用的模组指令。对于相关的模组本体内容，见《建筑》《魔法》《装备与物品》。",
+     "How to customize the mod's own blocks and data packs — buildings, items, spells, crafting recipes and loot — plus the mod's own commands for reading state and rescuing a stuck colony. For the mod's own content, see 《Buildings》, 《Spells》 and 《Equipment and Items》."),
     ("compat", "联动与兼容", "Integration & Compatibility", "minecraft:crafting_table", 60,
      "这一页展示了模组兼容和联动的其他模组。如果出现了兼容的BUG，见《关于我们》。",
      "What this mod does together with other mods. If you run into a compatibility bug, see 《About Us》."),
@@ -141,7 +141,8 @@ ENTRIES = [
     ("magic_compass_guide", "items", "wandscape:magic_compass", 3),
     ("warehouse_terminal_guide", "items", "wandscape:warehouse_terminal", 4),
 
-    # ── 自定义：总览 → 建筑扫描器（自定义建筑唯一的产出途径）→ 各条数据导入 ──
+    # ── 自定义：总览 → 建筑扫描器（自定义建筑唯一的产出途径）→ 各条数据导入 → 指令 ──
+    # 指令不属于「导入」，但它是同一批读者（开服/改数据的人）的另一把工具：`/wandscape` 下查状态与急救那批。
     ("custom_guide", "custom", "minecraft:structure_block", 0),
     ("building_scanner_guide", "custom", "wandscape:building_scanner", 1),
     ("custom_buildings_guide", "custom", "minecraft:scaffolding", 2),
@@ -150,6 +151,7 @@ ENTRIES = [
     ("custom_recipes_guide", "custom", "minecraft:crafting_table", 5),
     ("custom_magic_guide", "custom", "wandscape:spell_scroll", 6),
     ("custom_loot_guide", "custom", "minecraft:chest", 7),
+    ("custom_commands_guide", "custom", "minecraft:command_block", 8),
 
     # ── 联动与兼容：每个第三方模组一条，只讲玩家看得见的效果 ──
     ("curios_guide", "compat", "minecraft:gold_ingot", 0),

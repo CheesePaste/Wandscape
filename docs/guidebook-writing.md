@@ -25,7 +25,7 @@
 `overview_guide` / `getting_started` / `road_*` / `scanner_guide` 等 15 篇），它们开头都标了
 「本页已弃用」，内容跟现在的实现已经对不上。
 
-**不要读它们、不要照抄它们的说法。** 上面说的「读同类」，指的是**已经编进手册的那 61 篇**。
+**不要读它们、不要照抄它们的说法。** 上面说的「读同类」，指的是**已经编进手册的那 62 篇**。
 
 方向是反的：先按本规范把手册写好，将来再**按手册内容反向更新**那些旧文档。
 细节见 [guidebook-patchouli.md](guidebook-patchouli.md) 的「旧 guidebook 已弃用」一节。
@@ -149,11 +149,11 @@ python gen_patchouli.py && python paginate_patchouli_json.py   # 两步都不能
 
 ---
 
-## 附二：条目清单（截至 2026-09-18）
+## 附二：条目清单（截至 2026-09-19）
 
-手册登记 **62 个条目位**，来自 61 篇 md——`building_scanner_guide` 一篇登了两处（「建筑」与
+手册登记 **63 个条目位**，来自 62 篇 md——`building_scanner_guide` 一篇登了两处（「建筑」与
 「自定义与数据包」各一次），其余各登一处。
-**62 个条目位都有正文，占位页已清零**（最后一篇是 `custom_guide`）。zh/en 两侧完全一致。
+**63 个条目位都有正文，占位页已清零**（最后一篇是 `custom_guide`）。zh/en 两侧完全一致。
 
 | 分类 | 登记 | 缺 | 条目名（md 文件） |
 |---|---|---|---|
@@ -162,7 +162,7 @@ python gen_patchouli.py && python paginate_patchouli_json.py   # 两步都不能
 | 管理 | 5 | 0 | — |
 | 魔法 | 13 | 0 | — |
 | 装备与物品 | 5 | 0 | — |
-| 自定义与数据包 | 8 | 0 | —（第 2 条「建筑扫描器」`building_scanner_guide` 与「建筑」分类共用） |
+| 自定义与数据包 | 9 | 0 | —（第 2 条「建筑扫描器」`building_scanner_guide` 与「建筑」分类共用，末条是「指令」`custom_commands_guide`） |
 | 联动与兼容 | 4 | 0 | — |
 | 关于我们 | 1 | 0 | — |
 

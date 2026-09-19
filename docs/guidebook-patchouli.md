@@ -12,7 +12,7 @@
 
 ```
 内容唯一来源（作者只改这里）
-    src/main/resources/assets/wandscape/guidebook/{zh_cn,en}/*.md     76 篇 × 2 语（其中 61 篇编进手册，其余 15 篇已标注弃用、只兜底屏可读）
+    src/main/resources/assets/wandscape/guidebook/{zh_cn,en}/*.md     77 篇 × 2 语（其中 62 篇编进手册，其余 15 篇已标注弃用、只兜底屏可读）
                     │
                     │  gen_patchouli.py（本机跑，生成物提交进仓库）
                     ▼
@@ -35,7 +35,7 @@
 和现在的实现对不上。它们**没有编进手册**，开头一律标了「本页已弃用」。
 
 - **写新内容时不要读它们**——照抄会把过时的机制带进新手册。要写某一页，先读代码和 `data/` 里的实际数据。
-- **方向是反的**：先把手册（即编进手册的那 61 篇 md）写好，将来再**按手册内容反向更新**这些旧文档，
+- **方向是反的**：先把手册（即编进手册的那 62 篇 md）写好，将来再**按手册内容反向更新**这些旧文档，
   而不是拿旧文档去填手册。
 - 它们目前仍留在 `guidebook/` 里，只是因为没装 Patchouli 时兜底屏还能读到；**不要据此认为它们是可信来源**。
 - 手册里若还有链接指向这些文档，生成器会打印「链接无帕秋莉等价形式」——那是在提醒你目标已不在手册里。
@@ -70,7 +70,7 @@ python gen_patchouli.py textures --force   # 强制覆盖书皮
 | `management` | 管理 | panel / panel_build / panel_road / panel_tasks / panel_settings |
 | `magic` | 魔法 | mages / casting / advanced_casting / magic_beam / magic_meteor / magic_desperation / magic_enfeeble_field / magic_conversion / magic_petrification / magic_fortification / magic_heal / magic_teleport / magic_revive |
 | `items` | 装备与物品 | wand / oath_ring / scepter / magic_compass / warehouse_terminal |
-| `custom` | 自定义与数据包 | custom / building_scanner / custom_buildings / custom_packs / custom_elements / custom_recipes / custom_magic / custom_loot |
+| `custom` | 自定义与数据包 | custom / building_scanner / custom_buildings / custom_packs / custom_elements / custom_recipes / custom_magic / custom_loot / custom_commands |
 | `compat` | 联动与兼容 | curios / irons_spells / goety / tlm |
 | `about` | 关于我们 | about |
 

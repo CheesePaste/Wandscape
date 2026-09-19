@@ -1,6 +1,6 @@
 {
   "name": "Customization & Datapacks",
-  "description": "How to customize the mod's own blocks and data packs: buildings, items, spells, crafting recipes and loot. For the mod's own content, see $(l:wandscape:buildings)《Buildings》$(/l), $(l:wandscape:magic)《Spells》$(/l) and $(l:wandscape:items)《Equipment and Items》$(/l).",
+  "description": "How to customize the mod's own blocks and data packs — buildings, items, spells, crafting recipes and loot — plus the mod's own commands for reading state and rescuing a stuck colony. For the mod's own content, see $(l:wandscape:buildings)《Buildings》$(/l), $(l:wandscape:magic)《Spells》$(/l) and $(l:wandscape:items)《Equipment and Items》$(/l).",
   "icon": "minecraft:structure_block",
   "sortnum": 50
 }
