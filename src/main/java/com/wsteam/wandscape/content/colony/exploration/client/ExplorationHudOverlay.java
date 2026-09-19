@@ -34,13 +34,21 @@ public final class ExplorationHudOverlay {
     private static final int LINE_HEIGHT = 11;
     private static final int BOTTOM_PADDING = 5;
     private static final String SEPARATOR = " | ";
+    private static final int GAIN_RGB = 0x88EE88;
+    private static final int MESSAGE_RGB = 0xE8C880;
 
     private static boolean registered = false;
 
+    /**
+     * @param segments  body pieces, packed left to right
+     * @param separator glued between pieces that share a line; {@code null} puts every piece
+     *                  on its own line (used by free-form notices, whose pieces are sentences)
+     */
     private record ActiveNotice(
-            String regionName,
-            int exp,
-            Map<ElementType, Long> elements,
+            String title,
+            List<String> segments,
+            String separator,
+            int detailRgb,
             long startTimeMs
     ) {}
 
@@ -60,12 +68,29 @@ public final class ExplorationHudOverlay {
 
     public static void showReward(ExplorationRewardPacket packet) {
         if (packet == null) return;
-        currentNotice = new ActiveNotice(
-                packet.regionName(),
-                packet.exp(),
-                packet.elements(),
-                System.currentTimeMillis()
-        );
+
+        // A notice carries no payout — show its message in the card body instead.
+        if (packet.message() != null) {
+            currentNotice = new ActiveNotice(
+                    I18n.string("wandscape.exploration.notice_title", "野外宝箱"),
+                    List.of(packet.message().getString().split("\n")),
+                    null,
+                    MESSAGE_RGB,
+                    System.currentTimeMillis()
+            );
+            return;
+        }
+
+        String title = I18n.string("wandscape.exploration.discovered", "探索发现：%s", packet.regionName());
+
+        List<String> segments = new ArrayList<>();
+        segments.add(I18n.string("wandscape.exploration.exp_gain", "小镇经验 +%s", packet.exp()));
+        for (Map.Entry<ElementType, Long> e : packet.elements().entrySet()) {
+            String elemName = I18n.string("element.wandscape." + e.getKey().getId(), e.getKey().getId());
+            segments.add(elemName + " +" + e.getValue());
+        }
+
+        currentNotice = new ActiveNotice(title, segments, SEPARATOR, GAIN_RGB, System.currentTimeMillis());
     }
 
     private static void onRenderGuiPost(RenderGuiEvent.Post event) {
@@ -101,18 +126,12 @@ public final class ExplorationHudOverlay {
 
         Font font = mc.font;
 
-        String title = I18n.string("wandscape.exploration.discovered", "探索发现：%s", notice.regionName());
+        String title = notice.title();
 
-        List<String> segments = new ArrayList<>();
-        segments.add(I18n.string("wandscape.exploration.exp_gain", "小镇经验 +%d", notice.exp()));
-        for (Map.Entry<ElementType, Long> e : notice.elements().entrySet()) {
-            String elemName = I18n.string("element.wandscape." + e.getKey().getId(), e.getKey().getId());
-            segments.add(elemName + " +" + e.getValue());
-        }
-
-        // Every chest now pays out several elements, so wrap instead of running off-screen.
+        // A payout lists several elements, so wrap instead of running off-screen; a notice body
+        // is prose and needs the same treatment.
         int maxContentW = Math.max(120, screenW - 40 - PADDING_X * 2);
-        List<String> detailLines = wrapSegments(segments, font, maxContentW);
+        List<String> detailLines = wrapSegments(notice.segments(), notice.separator(), font, maxContentW);
 
         int titleW = font.width(title);
         int contentW = titleW;
@@ -134,7 +153,7 @@ public final class ExplorationHudOverlay {
         int bgColor = (bgAlpha << 24) | 0x1A0E04;
         int borderColor = (borderAlpha << 24) | (MedievalColors.BORDER_GOLD & 0x00FFFFFF);
         int titleColor = (textAlpha << 24) | 0xDEC478;
-        int detailColor = (textAlpha << 24) | 0x88EE88;
+        int detailColor = (textAlpha << 24) | notice.detailRgb();
 
         // Elevate to top-most z layer (800) so nothing in any screen can dim or cover it
         gui.flush();
@@ -161,22 +180,50 @@ public final class ExplorationHudOverlay {
         gui.flush();
     }
 
-    /** Greedily pack segments into lines that fit {@code maxWidth}, keeping the separator between them. */
-    private static List<String> wrapSegments(List<String> segments, Font font, int maxWidth) {
+    /**
+     * Greedily pack segments into lines that fit {@code maxWidth}. A segment wider than a whole
+     * line is broken character by character first — CJK prose has no spaces to break on, and the
+     * reward separator is only glued between pieces that actually share a line. A {@code null}
+     * separator forces every piece onto its own line.
+     */
+    private static List<String> wrapSegments(List<String> segments, String separator, Font font, int maxWidth) {
         List<String> lines = new ArrayList<>();
-        StringBuilder current = new StringBuilder();
         for (String segment : segments) {
-            String candidate = current.length() == 0 ? segment : current + SEPARATOR + segment;
-            if (current.length() > 0 && font.width(candidate) > maxWidth) {
-                lines.add(current.toString());
-                current = new StringBuilder(segment);
-            } else {
-                current = new StringBuilder(candidate);
+            for (String piece : breakToFit(segment, font, maxWidth)) {
+                int last = lines.size() - 1;
+                if (separator != null && last >= 0
+                        && font.width(lines.get(last) + separator + piece) <= maxWidth) {
+                    lines.set(last, lines.get(last) + separator + piece);
+                } else {
+                    lines.add(piece);
+                }
             }
         }
-        if (current.length() > 0) {
-            lines.add(current.toString());
-        }
         return lines;
+    }
+
+    /** Split one segment into pieces that each fit {@code maxWidth}, breaking per character. */
+    private static List<String> breakToFit(String segment, Font font, int maxWidth) {
+        List<String> pieces = new ArrayList<>();
+        if (segment.isEmpty()) return pieces;
+        if (font.width(segment) <= maxWidth) {
+            pieces.add(segment);
+            return pieces;
+        }
+        StringBuilder piece = new StringBuilder();
+        for (int i = 0; i < segment.length(); ) {
+            int codePoint = segment.codePointAt(i);
+            String ch = new String(Character.toChars(codePoint));
+            i += Character.charCount(codePoint);
+            if (piece.length() > 0 && font.width(piece + ch) > maxWidth) {
+                pieces.add(piece.toString());
+                piece.setLength(0);
+            }
+            piece.append(ch);
+        }
+        if (piece.length() > 0) {
+            pieces.add(piece.toString());
+        }
+        return pieces;
     }
 }

@@ -2,6 +2,8 @@ package com.wsteam.wandscape.content.colony.exploration.network;
 
 import com.wsteam.wandscape.content.element.data.ElementType;
 import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.ComponentSerialization;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
@@ -16,10 +18,18 @@ import java.util.function.Consumer;
 import static com.wsteam.wandscape.Wandscape.MODID;
 
 /**
- * Server→Client packet carrying exploration chest rewards:
- * region display name, gained colony experience, and element rewards.
+ * Server→Client packet driving the exploration chest HUD card. Two shapes share the card:
+ * a payout (region display name, gained colony experience, element rewards) and a plain
+ * {@code message} for chest outcomes that pay nothing — e.g. a wild chest opened before the
+ * player owns a town.
+ *
+ * <p>The card, not chat or the action bar, is the point: it renders above any open screen,
+ * so it is still readable over the chest GUI that opening one puts on the screen.
+ * A packet never carries both shapes — {@code message} non-null means the payout fields
+ * are unused (empty), and vice versa.
  */
-public record ExplorationRewardPacket(String regionName, int exp, Map<ElementType, Long> elements)
+public record ExplorationRewardPacket(String regionName, int exp, Map<ElementType, Long> elements,
+                                      Component message)
         implements CustomPacketPayload {
 
     public static final Type<ExplorationRewardPacket> TYPE =
@@ -32,7 +42,23 @@ public record ExplorationRewardPacket(String regionName, int exp, Map<ElementTyp
         elements = Collections.unmodifiableMap(new LinkedHashMap<>(elements));
     }
 
+    /** Payout packet: the card shows the EXP and element gains. */
+    public ExplorationRewardPacket(String regionName, int exp, Map<ElementType, Long> elements) {
+        this(regionName, exp, elements, null);
+    }
+
+    /** Notice packet: the card shows a message instead of a payout. */
+    public static ExplorationRewardPacket notice(Component message) {
+        return new ExplorationRewardPacket("", 0, Map.of(), message);
+    }
+
     public static void encode(RegistryFriendlyByteBuf buf, ExplorationRewardPacket packet) {
+        boolean hasMessage = packet.message() != null;
+        buf.writeBoolean(hasMessage);
+        if (hasMessage) {
+            ComponentSerialization.STREAM_CODEC.encode(buf, packet.message());
+            return;
+        }
         buf.writeUtf(packet.regionName());
         buf.writeVarInt(packet.exp());
         buf.writeVarInt(packet.elements().size());
@@ -43,6 +69,9 @@ public record ExplorationRewardPacket(String regionName, int exp, Map<ElementTyp
     }
 
     public static ExplorationRewardPacket decode(RegistryFriendlyByteBuf buf) {
+        if (buf.readBoolean()) {
+            return notice(ComponentSerialization.STREAM_CODEC.decode(buf));
+        }
         String regionName = buf.readUtf();
         int exp = buf.readVarInt();
         int size = buf.readVarInt();
@@ -66,6 +95,13 @@ public record ExplorationRewardPacket(String regionName, int exp, Map<ElementTyp
     public static void send(ServerPlayer player, String regionName, int exp, Map<ElementType, Long> elements) {
         if (player != null && !player.isRemoved()) {
             PacketDistributor.sendToPlayer(player, new ExplorationRewardPacket(regionName, exp, elements));
+        }
+    }
+
+    /** Helper to dispatch a chest notice (no payout) to a player. */
+    public static void sendNotice(ServerPlayer player, Component message) {
+        if (player != null && !player.isRemoved()) {
+            PacketDistributor.sendToPlayer(player, notice(message));
         }
     }
 

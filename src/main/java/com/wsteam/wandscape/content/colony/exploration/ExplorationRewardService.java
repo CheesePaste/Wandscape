@@ -9,11 +9,10 @@ import com.wsteam.wandscape.content.colony.ownership.ColonyOwnership;
 import com.wsteam.wandscape.content.element.data.ElementType;
 import com.wsteam.wandscape.content.warehouse.ColonyItemBank;
 import com.wsteam.wandscape.foundation.log.Log;
-import com.wsteam.wandscape.foundation.networking.ScreenFeedbackPacket;
 import com.wsteam.wandscape.foundation.service.ParticleService;
+import com.wsteam.wandscape.foundation.ui.I18n;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -123,9 +122,13 @@ public class ExplorationRewardService {
 
         UUID colonyId = ColonyOwnership.ownColony(player);
         if (colonyId == null) {
-            Component tip = Component.literal("§e[魔法小镇] 你在野外发现了宝箱，但尚未建立小镇，探索经验与元素已消散。使用小镇权杖即可建立属于你的小镇！");
-            player.displayClientMessage(tip, true);
-            ScreenFeedbackPacket.send(player, tip, false);
+            // The chest GUI is open right now, and both the action bar and ScreenFeedbackPacket
+            // draw behind it, so a tip routed there is never seen. Use the same card the payout
+            // uses — the overlay paints it on top of any open screen.
+            ExplorationRewardPacket.sendNotice(player, I18n.name(
+                    "message.wandscape.exploration.no_colony",
+                    "你发现了野外宝箱，但还没有属于自己的小镇——这份探索收益无人接收，已经消散。\n"
+                            + "先放置市政厅并命名，建立小镇后野外宝箱的收益就会记入你的账上。"));
             try {
                 player.playNotifySound(SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.PLAYERS, 0.8f, 1.0f);
             } catch (Throwable ignored) {}
