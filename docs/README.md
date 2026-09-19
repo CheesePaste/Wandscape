@@ -14,6 +14,7 @@
 | [legacy-audit.md](legacy-audit.md) | **旧文档过时审计与真实事实对照表**（废弃/重构/保留明细） | 查阅旧设计或怀疑某项机制是否过时时 |
 | [adr.md](adr.md) | 架构决策记录表（ADR）：日期 + 决策 + 一句话原因 | 准备重构设计或探究代码为何如此编写时 |
 | [domain-notes.md](domain-notes.md) | 核心功能域避坑手册（NPC/游客/魔法/任务/建筑/仓库等） | 开发或修改对应功能域代码前 |
+| [balance-baseline.md](balance-baseline.md) | **数值基线快照**：升级曲线与每级经验、游客线元素日产出、探索每箱元素/经验与组成、关键常量速查（刷新命令在文末） | 调平衡、评估某条产出线够不够、或写文档要引用具体数字时——**先查这里，别每次重跑 `balance/`** |
 | [data-formats.md](data-formats.md) | 数据格式与迁移纪律（JSON/NBT/SavedData 规范） | 新增或修改数据文件、调整持久化格式时 |
 | [checklists.md](checklists.md) | 迁移与重构活清单（NeoForge 适配、重构阶梯、PR 守则） | 版本迁移、大重构、发版或提交 PR 时 |
 | [fabric-port-survey.md](fabric-port-survey.md) | **Fabric 1.21.1 官方移植考察报告**：规模/耦合量、六条平台接缝、事件映射表、难度分级、仓库结构选择面 | 评估双 loader 官方版可行性或规划长期仓库演进时 |

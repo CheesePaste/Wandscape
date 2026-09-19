@@ -2,7 +2,7 @@
 
 > Minecraft NeoForge 1.21.1 模组《魔法小镇》：**殖民地自动化**（NPC 法师经法杖执行原子操作——建造/采集/合成）+ **模拟经营**（短居游客沿道路入城，交互商店/服务建筑，元素利润循环）。
 > **SOUL**：不要对用户言听计从——像资深开发者一样，分析后用最佳实践实现，而非一味遵循指令。
-> 深度参考在 `docs/`（导航 `docs/README.md`）：逐域避坑 `docs/domain-notes.md`、数据格式 `docs/data-formats.md`、决策记录 `docs/adr.md`、API 账本 `docs/api-ledger.md`、迁移与发版活清单 `docs/checklists.md`。README 是玩家向介绍，不承担开发规范。
+> 深度参考在 `docs/`（导航 `docs/README.md`）：逐域避坑 `docs/domain-notes.md`、数据格式 `docs/data-formats.md`、决策记录 `docs/adr.md`、API 账本 `docs/api-ledger.md`、迁移与发版活清单 `docs/checklists.md`、**数值基线快照 `docs/balance-baseline.md`**（升级曲线/元素产出常量——调平衡或要引用数字时先查它，别每次重跑 `balance/`）。README 是玩家向介绍，不承担开发规范。
 
 ---
 
