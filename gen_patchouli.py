@@ -11,7 +11,7 @@
     data/wandscape/patchouli_books/guide/book.json
     assets/wandscape/patchouli_books/guide/<patchouli_lang>/{categories,entries}/**.json
     assets/wandscape/guidebook/runtime/<md_lang>.json     （兜底阅读器读的运行期清单）
-    assets/wandscape/textures/gui/guidebook/book.png      （textures 子命令，占位书皮）
+    assets/wandscape/textures/gui/guidebook/book.png      （textures 子命令：书皮 + 按钮图集）
 
 运行期清单是给「没装 Patchouli」的兜底阅读器（GuidebookScreen）用的：分类、条目、条目名、
 《…》标题表与着陆文案都按语言各发一份，两套渲染因此看到同一本手册，页面跳转也一致。
@@ -23,7 +23,7 @@ Patchouli 以 en_us 目录为枚举索引，因此两套目录都必须完整生
 用法
     python gen_patchouli.py                # 编译手册 JSON + 运行期清单
     python gen_patchouli.py --check        # 只校验：已提交的生成物是否与当前 md/结构表一致
-    python gen_patchouli.py textures       # 生成占位书皮（已存在则不覆盖）
+    python gen_patchouli.py textures       # 生成书皮图集（已存在则不覆盖）
     python gen_patchouli.py textures --force
 """
 
@@ -999,6 +999,21 @@ class Canvas:
             i = (y * self.w + x) * 4
             self.px[i:i + 4] = bytes(c)
 
+    def over(self, x, y, c):
+        """把带 alpha 的 c 叠到现有像素上（等价 MC GuiGraphics.fill 的 ARGB 混合）。"""
+        if not (0 <= x < self.w and 0 <= y < self.h):
+            return
+        a = c[3]
+        if a == 0:
+            return
+        i = (y * self.w + x) * 4
+        if a == 255:
+            self.px[i:i + 4] = bytes(c)
+            return
+        for k in range(3):
+            self.px[i + k] = (c[k] * a + self.px[i + k] * (255 - a)) // 255
+        self.px[i + 3] = min(255, a + self.px[i + 3] * (255 - a) // 255)
+
     def rect(self, x, y, w, h, c):
         for yy in range(y, y + h):
             for xx in range(x, x + w):
@@ -1017,23 +1032,228 @@ class Canvas:
             self.rect(x + (w - span) if not left else x, y + i, span, 1, c)
 
 
-# 帕秋莉静态内嵌装饰图集色板（对齐 PatchouliBookRenderer 奥术秘典色系）
+# 帕秋莉书皮图集色板（奥术秘典色系）
 GOLD_OUTER = (197, 160, 89, 255)
 GOLD_INNER = (226, 193, 114, 255)
 GOLD_DARK = (122, 88, 24, 255)
+GOLD_BRIGHT = (251, 232, 166, 255)
 COVER_DARK = (19, 22, 39, 255)
+COVER_HIGHLIGHT = (37, 42, 72, 255)
+COVER_SHADOW = (10, 12, 22, 255)
+SEAM_CREASE = (20, 12, 4, 255)
 PAGE_LIGHT = (248, 244, 234, 255)
+PAGE_BOTTOM = (240, 232, 212, 255)
+PAGE_BORDER = (221, 210, 184, 255)
+PAGE_EDGE_1 = (214, 203, 176, 255)
+PAGE_EDGE_2 = (226, 215, 190, 255)
+BTN_BG_NORMAL = (26, 29, 46, 240)
+BTN_BG_HOVER = (44, 49, 78, 255)
+BTN_RIM_HOVER = (255, 232, 144, 255)
+GLYPH_NORMAL = (229, 195, 120, 255)
+GLYPH_HOVER = (255, 251, 234, 255)
+
+
+# ---- 绘制原语：语义对齐 MC GuiGraphics 的同名方法 ----
+def _fill(c, x1, y1, x2, y2, col):
+    """等价 GuiGraphics.fill：x2/y2 为开区间，带 alpha 时混合。"""
+    if col[3] == 255:
+        c.rect(x1, y1, x2 - x1, y2 - y1, col)
+        return
+    for yy in range(y1, y2):
+        for xx in range(x1, x2):
+            c.over(xx, yy, col)
+
+
+def _hline(c, x1, x2, y, col):
+    """等价 GuiGraphics.hLine：两端都含。"""
+    _fill(c, x1, y, x2 + 1, y + 1, col)
+
+
+def _vline(c, x, y1, y2, col):
+    """等价 GuiGraphics.vLine：两端都含。"""
+    _fill(c, x, y1, x + 1, y2 + 1, col)
+
+
+def _outline(c, x, y, w, h, col):
+    _hline(c, x, x + w - 1, y, col)
+    _hline(c, x, x + w - 1, y + h - 1, col)
+    _vline(c, x, y + 1, y + h - 2, col)
+    _vline(c, x + w - 1, y + 1, y + h - 2, col)
+
+
+def _gradient_v(c, x, y, w, h, top, bottom):
+    """等价 GuiGraphics.fillGradient 的纵向渐变。"""
+    for i in range(h):
+        t = i / h
+        c.rect(x, y + i, w, 1, tuple(int(top[k] + (bottom[k] - top[k]) * t) for k in range(4)))
+
+
+def _corner_bracket(c, cx, cy, dx, dy):
+    """四角蔓藤角扣：L 形金边 + 角心金铆钉。"""
+    _hline(c, min(cx, cx + dx * 6), max(cx, cx + dx * 6), cy, GOLD_BRIGHT)
+    _vline(c, cx, min(cy, cy + dy * 6), max(cy, cy + dy * 6), GOLD_BRIGHT)
+    rx1, rx2 = sorted((cx + dx * 2, cx + dx * 3))
+    ry1, ry2 = sorted((cy + dy * 2, cy + dy * 3))
+    _fill(c, rx1, ry1, rx2 + 1, ry2 + 1, GOLD_BRIGHT)
+
+
+def _draw_cover(c, x, y, w, h):
+    """硬质封皮：基底 + 明暗倒角 + 双道烫金滚边 + 四角角扣。"""
+    _fill(c, x, y, x + w, y + h, COVER_DARK)
+    _hline(c, x, x + w - 1, y, COVER_HIGHLIGHT)
+    _vline(c, x, y, y + h - 1, COVER_HIGHLIGHT)
+    _hline(c, x, x + w - 1, y + h - 1, COVER_SHADOW)
+    _vline(c, x + w - 1, y, y + h - 1, COVER_SHADOW)
+    _outline(c, x + 2, y + 2, w - 4, h - 4, GOLD_OUTER)
+    _outline(c, x + 4, y + 4, w - 8, h - 8, GOLD_INNER)
+    _corner_bracket(c, x + 3, y + 3, 1, 1)
+    _corner_bracket(c, x + w - 4, y + 3, -1, 1)
+    _corner_bracket(c, x + 3, y + h - 4, 1, -1)
+    _corner_bracket(c, x + w - 4, y + h - 4, -1, -1)
+
+
+def _draw_spine(c, spine_x, cover_y, cover_h):
+    """中央 3D 弧面书脊 + 三道嵌铆金箍 + 缝线装订深痕。"""
+    for i in range(-7, 8):
+        t = abs(i) / 7.0
+        col = (int(44 * (1 - t) + 14 * t), int(49 * (1 - t) + 16 * t),
+               int(82 * (1 - t) + 28 * t), 255)
+        _vline(c, spine_x + i, cover_y + 1, cover_y + cover_h - 2, col)
+
+    for ry in (cover_y + 24, cover_y + cover_h // 2, cover_y + cover_h - 24):
+        _fill(c, spine_x - 7, ry - 1, spine_x + 8, ry + 2, GOLD_OUTER)
+        _hline(c, spine_x - 7, spine_x + 7, ry - 1, GOLD_INNER)
+        _hline(c, spine_x - 7, spine_x + 7, ry + 1, GOLD_DARK)
+        _fill(c, spine_x - 5, ry, spine_x - 3, ry + 1, GOLD_BRIGHT)
+        _fill(c, spine_x + 4, ry, spine_x + 6, ry + 1, GOLD_BRIGHT)
+
+    _vline(c, spine_x, cover_y + 8, cover_y + cover_h - 9, SEAM_CREASE)
+
+
+def _draw_page(c, x, y, w, h, is_left):
+    """单页羊皮纸：侧沿叠纸厚度 + 纵向渐变基底 + 内饰框线 + 中缝下凹阴影。
+
+    位置不可动：帕秋莉把正文钉死在 PAGE_WIDTH/HEIGHT + TOP_PADDING +
+    LEFT_PAGE_X/RIGHT_PAGE_X 上，羊皮纸必须正好垫在正文底下。
+    """
+    if is_left:
+        _vline(c, x - 2, y + 2, y + h - 3, PAGE_EDGE_1)
+        _vline(c, x - 1, y + 1, y + h - 2, PAGE_EDGE_2)
+    else:
+        _vline(c, x + w + 1, y + 2, y + h - 3, PAGE_EDGE_1)
+        _vline(c, x + w, y + 1, y + h - 2, PAGE_EDGE_2)
+
+    _gradient_v(c, x, y, w, h, PAGE_LIGHT, PAGE_BOTTOM)
+
+    fx, fy, fw, fh = x + 4, y + 4, w - 8, h - 8
+    _outline(c, fx, fy, fw, fh, PAGE_BORDER)
+    _fill(c, fx, fy, fx + 2, fy + 2, GOLD_OUTER)
+    _fill(c, fx + fw - 2, fy, fx + fw, fy + 2, GOLD_OUTER)
+    _fill(c, fx, fy + fh - 2, fx + 2, fy + fh, GOLD_OUTER)
+    _fill(c, fx + fw - 2, fy + fh - 2, fx + fw, fy + fh, GOLD_OUTER)
+
+    # 中缝 16 像素平滑衰减的下凹阴影，向书脊一侧加深
+    gutter = 16
+    start = x + w - gutter if is_left else x
+    for i in range(gutter):
+        t = (i if is_left else gutter - i) / gutter
+        col = (0x24, 0x18, 0x0A, int(65 * (t ** 1.6)))
+        for yy in range(y, y + h):
+            c.over(start + i, yy, col)
+
+
+def _draw_ribbon(c, rx, r_top, r_bottom):
+    """顶端飘垂的真丝书签缎带。"""
+    rw = 10
+    _fill(c, rx, r_top, rx + rw, r_bottom, (160, 32, 45, 255))
+    _vline(c, rx, r_top, r_bottom, (192, 50, 65, 255))
+    _vline(c, rx + rw - 1, r_top, r_bottom, (110, 16, 26, 255))
+    _fill(c, rx, r_bottom - 2, rx + rw, r_bottom, GOLD_OUTER)
+
+
+# ---- 交互按钮：矢量绘制，烘进帕秋莉硬编码取样的 UV 槽 ----
+def _btn_preamble(c, x, y, w, h, hovered):
+    """hover 外发光 + 底板 + 描边，返回字形颜色。"""
+    if hovered:
+        _fill(c, x - 1, y - 1, x + w + 1, y + h + 1, (212, 175, 55, 0x44))
+    _fill(c, x, y, x + w, y + h, BTN_BG_HOVER if hovered else BTN_BG_NORMAL)
+    _outline(c, x, y, w, h, BTN_RIM_HOVER if hovered else GOLD_OUTER)
+    return GLYPH_HOVER if hovered else GLYPH_NORMAL
+
+
+def _draw_arrow_button(c, x, y, w, h, is_left, hovered):
+    """翻页箭头（◄ / ►）。"""
+    col = _btn_preamble(c, x, y, w, h, hovered)
+    cx = x + w // 2
+    cy = y + h // 2
+    if is_left:
+        _vline(c, cx - 3, cy, cy, col)
+        _vline(c, cx - 2, cy - 1, cy + 1, col)
+        _vline(c, cx - 1, cy - 2, cy + 2, col)
+        _vline(c, cx, cy - 3, cy + 3, col)
+        _hline(c, cx, cx + 3, cy, col)
+    else:
+        _vline(c, cx + 3, cy, cy, col)
+        _vline(c, cx + 2, cy - 1, cy + 1, col)
+        _vline(c, cx + 1, cy - 2, cy + 2, col)
+        _vline(c, cx, cy - 3, cy + 3, col)
+        _hline(c, cx - 3, cx, cy, col)
+
+
+def _draw_back_button(c, x, y, w, h, hovered):
+    """返回上级按键（↩ 弧形返回箭标）。"""
+    col = _btn_preamble(c, x, y, w, h, hovered)
+    cx = x + w // 2
+    cy = y + h // 2
+    _hline(c, cx - 3, cx + 2, cy - 1, col)
+    _vline(c, cx + 2, cy - 1, cy + 2, col)
+    _hline(c, cx + 1, cx + 2, cy + 2, col)
+    _vline(c, cx - 3, cy - 2, cy, col)
+    _vline(c, cx - 2, cy - 3, cy + 1, col)
+
+
+def _draw_bookmark_tab(c, x, y, w, h, hovered):
+    """书签页签。"""
+    _fill(c, x, y, x + w, y + h, (158, 36, 50, 255) if hovered else (122, 20, 32, 255))
+    _outline(c, x, y, w, h, GOLD_BRIGHT if hovered else GOLD_OUTER)
+
+
+def _atlas_slot(c, u, v, w, h, painter):
+    """按帕秋莉的取样规则填一格：正常在 (u,v)，hover 在 (u+w,v)。
+
+    见 GuiButtonBook.renderWidget：u + (isHoveredOrFocused() ? width : 0)。
+    """
+    painter(u, v, False)
+    painter(u + w, v, True)
 
 
 def build_book_texture():
-    """512×256 辅助图集。
+    """512×256 书皮 + 按钮图集。
 
-    书本底壳、着陆页名牌、翻页大/小箭头、返回键、书签页签以及 11x11 工具栏图标
-    已全部由 PatchouliBookRenderer.java 原生代码接管渲染，对应区域在图集中保持完全透明。
-    本图集仅保留帕秋莉硬编码取样的静态内嵌装饰（分隔条、搜索框、加锁图标、状态标记、106x106插图框）。
+    帕秋莉只认 book_texture 这一张贴图（GuiBook.drawFromTexture 固定 blit 512×256），
+    书本外壳、书脊、羊皮纸页与全部交互按钮因此整体烘在图集里，客户端不再需要任何自绘
+    或反射代码。图集坐标 (0,0) 与书本左上角 (bookLeft, bookTop) 重合。
+
+    封面原本还有一圈落差阴影和 7px/6px 外出血，但帕秋莉只 blit 272×180 一块
+    （原版书皮同样是边缘零留白铺满整块），画布内没有容纳它的余地，故不再绘制。
     """
     c = Canvas(512, 256)
 
+    # ── 书本本体：(0,0) 起 272×180 ──
+    _draw_cover(c, 0, 0, 272, 180)
+    _draw_spine(c, 136, 0, 180)
+    _draw_page(c, 8, 5, 125, 170, True)
+    _draw_page(c, 139, 5, 125, 170, False)
+    _draw_ribbon(c, 80, 0, 16)
+
+    # ── 交互按钮：正常/hover 成对落在帕秋莉硬编码的 UV 槽 ──
+    _atlas_slot(c, 272, 0, 18, 10, lambda x, y, hv: _draw_arrow_button(c, x, y, 18, 10, False, hv))
+    _atlas_slot(c, 272, 10, 18, 10, lambda x, y, hv: _draw_arrow_button(c, x, y, 18, 10, True, hv))
+    _atlas_slot(c, 272, 160, 13, 10, lambda x, y, hv: _draw_bookmark_tab(c, x, y, 13, 10, hv))
+    _atlas_slot(c, 272, 170, 13, 10, lambda x, y, hv: _draw_bookmark_tab(c, x, y, 13, 10, hv))
+    _atlas_slot(c, 308, 0, 18, 9, lambda x, y, hv: _draw_back_button(c, x, y, 18, 9, hv))
+
+    # ── 帕秋莉静态内嵌装饰（硬编码取样，非按钮） ──
     # 140,180 110x3：分隔条（古典双道细金线）
     c.rect(140, 180, 110, 1, GOLD_OUTER)
     c.rect(140, 181, 110, 1, GOLD_INNER)
@@ -1096,10 +1316,10 @@ def write_png(path, canvas):
 
 def build_textures(force):
     if BOOK_TEXTURE.exists() and not force:
-        print("占位书皮已存在，跳过：%s（用 --force 覆盖）" % BOOK_TEXTURE.relative_to(ROOT))
+        print("书皮图集已存在，跳过：%s（用 --force 覆盖）" % BOOK_TEXTURE.relative_to(ROOT))
         return
     write_png(BOOK_TEXTURE, build_book_texture())
-    print("已生成占位书皮：%s (512x256)" % BOOK_TEXTURE.relative_to(ROOT))
+    print("已生成书皮图集：%s (512x256)" % BOOK_TEXTURE.relative_to(ROOT))
 
 
 # ---------------------------------------------------------------- 入口

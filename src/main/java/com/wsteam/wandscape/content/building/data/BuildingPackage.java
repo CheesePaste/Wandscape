@@ -3,9 +3,12 @@ package com.wsteam.wandscape.content.building.data;
 import com.google.gson.JsonObject;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
+import java.util.regex.Pattern;
 
 /**
  * Metadata and catalog entry for a Building Package.
@@ -22,6 +25,21 @@ public record BuildingPackage(
         List<String> buildingIds
 ) {
     public static final String DEFAULT_ID = "default";
+
+    /** 包名会直接当作 {@code data/<ns>/buildings/<package_id>/} 的文件夹名，故只放行这些字符。 */
+    private static final Pattern ILLEGAL_ID_CHARS = Pattern.compile("[^a-z0-9_-]");
+
+    /**
+     * 把任意来源的字符串归一化成合法包 id：转小写、非法字符换成 {@code _}、
+     * 空则回落 {@link #DEFAULT_ID}。
+     *
+     * <p>包 id 可能来自客户端网络包（扫描器导出）或存档 NBT，都是外部输入；
+     * 未净化时 {@code Path.resolve} 会让 {@code ../} 逃出数据包目录。
+     */
+    public static String sanitizeId(@Nullable String raw) {
+        if (raw == null || raw.isBlank()) return DEFAULT_ID;
+        return ILLEGAL_ID_CHARS.matcher(raw.trim().toLowerCase(Locale.ROOT)).replaceAll("_");
+    }
 
     public BuildingPackage {
         if (buildingIds == null) {

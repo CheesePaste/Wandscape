@@ -89,12 +89,12 @@ public record ScannerExportPacket(BlockPos pos, String targetPackage) implements
             return;
         }
 
-        String targetPkg = (packet.targetPackage != null && !packet.targetPackage.isBlank())
-                ? packet.targetPackage.trim().toLowerCase(Locale.ROOT)
-                : scanner.getPackageId();
-        if (targetPkg == null || targetPkg.isBlank()) {
-            targetPkg = BuildingPackage.DEFAULT_ID;
-        }
+        // 包名会被拼进导出目录，而 packet.targetPackage 是客户端可控字符串，
+        // 必须净化成纯文件夹名，否则 "../.." 能把文件写到数据包目录之外。
+        String targetPkg = BuildingPackage.sanitizeId(
+                packet.targetPackage != null && !packet.targetPackage.isBlank()
+                        ? packet.targetPackage
+                        : scanner.getPackageId());
 
         // 导出保真分级：生存扫描器（isSafeExport=true）导出为纯建筑，连方块 NBT 都不写，
         // 从来源上杜绝“箱子里藏物品→扫描→打印”刷物品；创造扫描器完整保真（创作者专用）。
@@ -418,7 +418,16 @@ public record ScannerExportPacket(BlockPos pos, String targetPackage) implements
         // and ships with the mod jar (dev source resources) or stays readable via /reload (world datapack).
         try {
             Path buildingsDir = resolveDatapackDir(level, "buildings", "wandscape_builds");
-            Path exportDir = buildingsDir.resolve(targetPkg);
+            // 兜底断言：targetPkg 已在入口由 BuildingPackage.sanitizeId 净化，
+            // 这里再确认一次解析结果没逃出数据包目录，防止日后挪动入口时把漏洞带回来。
+            Path exportDir = buildingsDir.resolve(targetPkg).normalize();
+            if (!exportDir.startsWith(buildingsDir.normalize())) {
+                Log.warn(TAG, "Refusing export: package dir {} escapes datapack dir {} (pkg={})",
+                        exportDir, buildingsDir, targetPkg);
+                player.sendSystemMessage(I18n.name("message.wandscape.scanner.export_building_fail",
+                        "§cFailed to export: %s", targetPkg));
+                return;
+            }
             Files.createDirectories(exportDir);
             Path outFile = exportDir.resolve(sanitizeFileName(id) + ".json");
 

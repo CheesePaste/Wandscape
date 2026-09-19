@@ -18,10 +18,6 @@ final class PatchouliCompatImpl {
 
     private PatchouliCompatImpl() {}
 
-    static void initClient() {
-        PatchouliBookRenderer.init();
-    }
-
     /**
      * 打开手册。页名与兜底侧同一套：空串/null/{@code index} → 手册首页，
      * {@code category:<分类 id>} → 该分类的第一条（帕秋莉没有「打开分类」的 API），

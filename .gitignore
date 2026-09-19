@@ -98,8 +98,9 @@ pmd-deadcode.xml
 ### 废弃的指南重写临时目录（已 revert，残留不入库） ###
 guide_rewrite_temp/
 
-### CurseForge description (local only, not part of the mod) ###
+### CurseForge / Modrinth description (local only, not part of the mod) ###
 curseforge-description.md
+modrinth-description.md
 
 ### 本地 build-only 依赖 jar（如 JEI flatDir，不入库） ###
 /libs/
