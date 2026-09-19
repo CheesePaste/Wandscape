@@ -80,7 +80,7 @@ public class ConstructionSiteScreen extends MedievalScreen {
         this.completed = packet.completed();
         this.kind = packet.kind();
         setCreator(packet.creator());
-        setTitleBar(I18n.name("building.wandscape." + buildingTypeId, buildingName));
+        setTitleBar(I18n.buildingName(buildingTypeId, buildingName));
         if (kind != ConstructionSiteDataPacket.KIND_ROAD) {
             setBuildingContext(packet.buildingId(), null);
         }

@@ -63,8 +63,8 @@ public class NodeScreen extends MedievalScreen {
         this.channelTicks = packet.channelTicks();
         setCreator(packet.creator());
         setBuildingContext(null, packet.nodePos());
-        setTitleBar(com.wsteam.wandscape.foundation.ui.I18n.name(
-                "building.wandscape." + packet.buildingTypeId(), packet.buildingTypeId()));
+        setTitleBar(com.wsteam.wandscape.foundation.ui.I18n.buildingName(
+                packet.buildingTypeId(), packet.buildingTypeId()));
         if (slider != null) {
             slider.setMax(MAX_HARVESTS);
             slider.setValue(1);

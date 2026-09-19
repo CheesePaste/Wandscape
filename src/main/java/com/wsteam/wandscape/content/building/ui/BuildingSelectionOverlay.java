@@ -260,7 +260,9 @@ public final class BuildingSelectionOverlay {
                 .filter(s -> Config.isPackageEnabled(s.packageId()))
                 .filter(s -> WandscapePanelState.PACKAGE_ALL.equals(pkg) || pkg.equals(s.packageId()))
                 .filter(s -> "All".equals(cat) || matchesCategory(s.category(), cat))
-                .filter(s -> search.isEmpty() || s.displayName().toLowerCase().contains(search))
+                .filter(s -> search.isEmpty()
+                        || s.displayName().toLowerCase().contains(search)
+                        || com.wsteam.wandscape.foundation.ui.I18n.buildingName(s.id(), s.displayName()).getString().toLowerCase().contains(search))
                 .sorted(BuildingSelectionOverlay::compareSlots)
                 .toList();
     }
@@ -283,8 +285,7 @@ public final class BuildingSelectionOverlay {
     }
 
     private static String sortName(BuildingSlot slot) {
-        return com.wsteam.wandscape.foundation.ui.I18n.name(
-                "building.wandscape." + slot.id(), slot.displayName()).getString();
+        return com.wsteam.wandscape.foundation.ui.I18n.buildingName(slot.id(), slot.displayName()).getString();
     }
 
     private static int renderCategoryTabs(GuiGraphics g, Font font, List<String> cats,
@@ -482,7 +483,7 @@ public final class BuildingSelectionOverlay {
 
                 // Localized name (lang key, fallback to display_name); truncate by component width
                 net.minecraft.network.chat.Component nameComp =
-                        com.wsteam.wandscape.foundation.ui.I18n.name("building.wandscape." + slot.id(), slot.displayName());
+                        com.wsteam.wandscape.foundation.ui.I18n.buildingName(slot.id(), slot.displayName());
                 int nameW = font.width(nameComp);
                 if (nameW > CELL_W - 4) {
                     String text = nameComp.getString();

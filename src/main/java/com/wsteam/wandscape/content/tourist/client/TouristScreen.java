@@ -155,7 +155,7 @@ public class TouristScreen extends MedievalScreen {
                         formatDelta(visit.wonderDelta()), formatDelta(visit.energyDelta())).getString();
                 Component building = (visit.buildingTypeId() == null || visit.buildingTypeId().isEmpty())
                         ? Component.literal(visit.buildingName())
-                        : I18n.name("building.wandscape." + visit.buildingTypeId(), visit.buildingName());
+                        : I18n.buildingName(visit.buildingTypeId(), visit.buildingName());
                 Component line = building.copy()
                         .append(Component.literal(": "))
                         .append(localizeItemName(visit.whatHappened()))

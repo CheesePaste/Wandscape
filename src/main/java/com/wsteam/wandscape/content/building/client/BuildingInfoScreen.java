@@ -38,7 +38,7 @@ public class BuildingInfoScreen extends MedievalScreen {
 
     public BuildingInfoScreen(BuildingInfoPacket packet) {
         super(Component.literal("Info"), PW, PH);
-        setTitleBar(I18n.name("building.wandscape." + packet.buildingTypeId(), packet.buildingTypeId()));
+        setTitleBar(I18n.buildingName(packet.buildingTypeId(), packet.buildingTypeId()));
         this.showCloseButton = true;
         this.buildingTypeId = packet.buildingTypeId();
         this.category = packet.category();
