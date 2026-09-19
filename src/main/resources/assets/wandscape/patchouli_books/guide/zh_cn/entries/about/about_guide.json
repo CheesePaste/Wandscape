@@ -7,7 +7,7 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "Wandscape 由热爱 Minecraft 与模拟经营的开发者、建筑师与玩家们共同浇灌。$(br2)官方平台:$(br2)$(l:https://space.bilibili.com/514121566)bilibili$(/l) · $(l:https://discord.gg/da8ZPuQ7Ys)discord$(/l) · $(l:https://github.com/CheesePaste/Wandscape)github$(/l) · $(l:https://www.curseforge.com/minecraft/mc-mods/wandscape)curseforge$(/l) · modrinth（等待补充） · mc百科（等待补充）$(br2)反馈：BUG 与建议提到 $(l:https://github.com/CheesePaste/Wandscape/issues)GitHub Issues$(/l)；支持我们走 $(l:https://ifdian.net/a/CheesePaste)爱发电$(/l)。"
+      "text": "Wandscape 由热爱 Minecraft 与模拟经营的开发者、建筑师与玩家们共同浇灌。$(br2)官方平台:$(br2)$(l:https://space.bilibili.com/514121566)bilibili$(/l) · $(l:https://discord.gg/da8ZPuQ7Ys)discord$(/l) · $(l:https://github.com/CheesePaste/Wandscape)github$(/l) · $(l:https://www.curseforge.com/minecraft/mc-mods/wandscape)curseforge$(/l) · $(l:https://www.mcmod.cn/class/30005.html)mc百科$(/l) · $(l:https://modrinth.com/mod/wandscape)modrinth$(/l)（审核中）$(br2)反馈：BUG 与建议提到 $(l:https://github.com/CheesePaste/Wandscape/issues)GitHub Issues$(/l)；支持我们走 $(l:https://ifdian.net/a/CheesePaste)爱发电$(/l)。"
     },
     {
       "type": "patchouli:text",
