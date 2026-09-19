@@ -2267,7 +2267,7 @@
   "wandscape.configuration.title": "Wandscape Configs",
   "wandscape.guide_book.landing": "Welcome to Wandscape! You place the buildings, your wizards do the work, and tourists walk in along the roads to spend.$(br2)New here? Start with $(l:wandscape:playstyle/intro_0_guide)0. Getting Started$(/l), or pick a chapter from the $(l:wandscape:playstyle/index_guide)overview$(/l).",
   "wandscape.guide_book.name": "Wandscape Guidebook",
-  "wandscape.guide_book.subtitle": "From Empty Land to a Tourist Town",
+  "wandscape.guide_book.subtitle": "From Wilderness to Town",
   "wandscape.pack.all": "All Packs",
   "wandscape.pack.default.desc": "Built-in core buildings of Wandscape",
   "wandscape.pack.default.name": "Core Pack",

@@ -57,9 +57,13 @@ public final class PatchouliBookRenderer {
     private static final Field BOOK_TOP_FIELD;
     private static final Field BOOK_FIELD;
     private static final Field BOOK_ID_FIELD;
+    private static final Field BUTTON_U_FIELD;
+    private static final Field BUTTON_V_FIELD;
+    private static final Field BOOKMARK_FIELD;
 
     static {
         Field sf = null, bl = null, bt = null, b = null, bid = null;
+        Field bu = null, bv = null, bm = null;
         try {
             Class<?> guiBookClass = Class.forName("vazkii.patchouli.client.book.gui.GuiBook");
             sf = guiBookClass.getDeclaredField("scaleFactor");
@@ -70,11 +74,56 @@ public final class PatchouliBookRenderer {
             Class<?> bookClass = Class.forName("vazkii.patchouli.common.book.Book");
             bid = bookClass.getField("id");
         } catch (Throwable ignored) {}
+
+        try {
+            Class<?> guiButtonBookClass = Class.forName("vazkii.patchouli.client.book.gui.button.GuiButtonBook");
+            bu = guiButtonBookClass.getDeclaredField("u");
+            bu.setAccessible(true);
+            bv = guiButtonBookClass.getDeclaredField("v");
+            bv.setAccessible(true);
+        } catch (Throwable ignored) {}
+
+        try {
+            Class<?> guiBookmarkClass = Class.forName("vazkii.patchouli.client.book.gui.button.GuiButtonBookBookmark");
+            bm = guiBookmarkClass.getField("bookmark");
+            bm.setAccessible(true);
+        } catch (Throwable ignored) {}
+
         SCALE_FACTOR_FIELD = sf;
         BOOK_LEFT_FIELD = bl;
         BOOK_TOP_FIELD = bt;
         BOOK_FIELD = b;
         BOOK_ID_FIELD = bid;
+        BUTTON_U_FIELD = bu;
+        BUTTON_V_FIELD = bv;
+        BOOKMARK_FIELD = bm;
+    }
+
+    private static int getButtonU(AbstractWidget widget) {
+        if (BUTTON_U_FIELD != null) {
+            try {
+                return BUTTON_U_FIELD.getInt(widget);
+            } catch (Throwable ignored) {}
+        }
+        return -1;
+    }
+
+    private static int getButtonV(AbstractWidget widget) {
+        if (BUTTON_V_FIELD != null) {
+            try {
+                return BUTTON_V_FIELD.getInt(widget);
+            } catch (Throwable ignored) {}
+        }
+        return -1;
+    }
+
+    private static boolean isBookmarkAddButton(AbstractWidget widget) {
+        if (BOOKMARK_FIELD != null) {
+            try {
+                return BOOKMARK_FIELD.get(widget) == null;
+            } catch (Throwable ignored) {}
+        }
+        return false;
     }
 
     private PatchouliBookRenderer() {}
@@ -155,6 +204,14 @@ public final class PatchouliBookRenderer {
 
         renderTomeBackground(graphics, bookLeft, bookTop);
 
+        // 如果是着陆主页，绘制华丽的烫金铭牌底托（让其位于文字底层）
+        if ("GuiBookLanding".equals(screen.getClass().getSimpleName())) {
+            drawLandingNameplate(graphics, bookLeft - 8, bookTop + 12, 140, 31);
+        }
+
+        // 预绘制书签页签底板（让其位于图标与页码底层）
+        renderBookmarkTabBases(graphics, screen);
+
         pose.popPose();
     }
 
@@ -180,8 +237,8 @@ public final class PatchouliBookRenderer {
         drawPage(g, bookLeft + 8, bookTop + 5, 125, 170, true);
         drawPage(g, bookLeft + 139, bookTop + 5, 125, 170, false);
 
-        // 5. 顶端真丝书签缎带
-        drawBookmarkRibbon(g, bookLeft + 80, bookTop);
+        // 5. 顶端真丝书签缎带（垂于中央书脊内槽，不再穿过左页顶端）
+        drawBookmarkRibbon(g, spineX - 3, bookTop);
     }
 
     /**
@@ -328,12 +385,12 @@ public final class PatchouliBookRenderer {
     }
 
     /**
-     * 顶端飘垂的真丝书签缎带。
+     * 顶端飘垂的真丝书签缎带（垂于中缝书脊深槽内，自然垂落，不干扰内页任何文本）。
      */
     private static void drawBookmarkRibbon(GuiGraphics g, int rx, int bookTop) {
-        int rw = 10;
-        int rTop = bookTop - 9;
-        int rBottom = bookTop + 16;
+        int rw = 6;
+        int rTop = bookTop - 8;
+        int rBottom = bookTop + 36;
 
         // 缎带主体（绯红织锦）
         g.fill(rx, rTop, rx + rw, rBottom, 0xFFA0202D);
@@ -346,7 +403,7 @@ public final class PatchouliBookRenderer {
     }
 
     /**
-     * 屏幕绘制后（Tooltips 前）：原生绘制矢量翻页按钮与返回按键。
+     * 屏幕绘制后（Tooltips 前）：原生绘制矢量翻页按钮、功能按键与各控件修饰。
      */
     public static void onBookDrawScreen(BookDrawScreenEvent event) {
         if (!PatchouliCompat.BOOK_ID.equals(event.getBook())) {
@@ -374,23 +431,210 @@ public final class PatchouliBookRenderer {
             int ww = widget.getWidth();
             int wh = widget.getHeight();
             boolean hovered = widget.isHoveredOrFocused();
+            int u = getButtonU(widget);
+            int v = getButtonV(widget);
 
-            if (className.contains("Arrow")) {
-                // 翻页箭头按键：左箭头在左半部，右箭头在右半部
-                boolean isLeft = wx < (bookLeft + 136);
+            if ("GuiButtonBookArrowSmall".equals(className) || (ww == 5 && wh == 7)) {
+                // 图片页小翻页箭头 (5x7)：v == 27 为左，v == 20 为右
+                boolean isLeft = (v == 27) || (v != 20 && wx < (bookLeft + 136));
+                drawVectorSmallArrow(g, wx, wy, isLeft, hovered);
+            } else if ("GuiButtonBookArrow".equals(className) || (ww == 18 && wh == 10 && u == 272)) {
+                // 主翻页大箭头 (18x10)：v == 10 为左，v == 0 为右
+                boolean isLeft = (v == 10) || (v != 0 && wx < (bookLeft + 136));
                 drawVectorArrowButton(g, wx, wy, ww, wh, isLeft, hovered);
-            } else if (className.contains("Bookmark")) {
-                // 书签按键
-                drawVectorBookmarkTab(g, wx, wy, ww, wh, hovered);
-            } else if ("GuiButtonBook".equals(className) && ww == 18 && wh == 9) {
+            } else if ("GuiButtonBookBookmark".equals(className) || (ww == 13 && wh == 10)) {
+                // 书签悬停金芒微光（底板已在 Pre 阶段预画）
+                if (hovered) {
+                    drawBookmarkHoverGlow(g, wx, wy, ww, wh);
+                }
+            } else if ((ww == 18 && wh == 9) || (u == 308 && v == 0)) {
                 // 返回主页/上一级按键（18x9，位于中央书脊下方）
                 drawVectorBackButton(g, wx, wy, ww, wh, hovered);
+            } else if (ww == 11 && wh == 11) {
+                // 11x11 功能图标按键（缩放、配置、眼睛、标记已读、历史、成就、编辑器）
+                IconKind kind = resolveIconKind(className, u, v);
+                if (kind != null) {
+                    drawVectorIconButton(g, wx, wy, kind, hovered);
+                }
+            } else if ("GuiButtonCategory".equals(className) || (ww == 20 && wh == 20)) {
+                // 分类大按钮 (20x20)：微型八角金边与悬停微光
+                drawCategoryDecoration(g, wx, wy, ww, wh, hovered);
+            } else if ("GuiButtonEntry".equals(className)) {
+                // 条目行悬停金色流光拂过
+                if (hovered) {
+                    drawEntryHoverGlow(g, wx, wy, ww, wh);
+                }
             }
         }
     }
 
     /**
-     * 绘制矢量翻页箭头按键（◄ / ►）。
+     * 11x11 功能按钮类型。
+     */
+    private enum IconKind {
+        RESIZE,
+        CONFIG,
+        EYE,
+        MARK_READ,
+        HISTORY,
+        ADVANCEMENTS,
+        EDITOR
+    }
+
+    private static IconKind resolveIconKind(String className, int u, int v) {
+        if (className.contains("Resize") || (u == 330 && v == 9)) {
+            return IconKind.RESIZE;
+        }
+        if (className.contains("Config") || (u == 308 && v == 20)) {
+            return IconKind.CONFIG;
+        }
+        if (className.contains("MarkRead")) {
+            return IconKind.MARK_READ;
+        }
+        if (className.contains("Eye") || (u == 308 && v == 31)) {
+            return IconKind.EYE;
+        }
+        if (u == 330 && v == 31) {
+            return IconKind.HISTORY;
+        }
+        if (u == 330 && v == 20) {
+            return IconKind.ADVANCEMENTS;
+        }
+        if (u == 308 && v == 9) {
+            return IconKind.EDITOR;
+        }
+        return null;
+    }
+
+    /**
+     * 绘制着陆页古典真丝描金燕尾飘带铭牌底托。
+     *
+     * <p>采用深绯红天鹅绒织锦质感，配双道古金滚边、左侧书脊扣环卷折与右端古典燕尾切角，
+     * 与全书缎带及书签色系完全统一，彻底告别生硬突兀的黑块。
+     */
+    private static void drawLandingNameplate(GuiGraphics g, int x, int y, int w, int h) {
+        int ribbonH = 24;
+        int ribbonW = Math.max(w, 148);
+        int tailCut = 8;
+
+        // 1. 飘带投影（下方柔和双层漫反射下沉阴影）
+        g.fill(x + 4, y + ribbonH, x + ribbonW - tailCut - 2, y + ribbonH + 1, 0x30000000);
+        g.fill(x + 6, y + ribbonH + 1, x + ribbonW - tailCut - 6, y + ribbonH + 2, 0x18000000);
+
+        // 2. 飘带主体（绯红天鹅绒织锦纵向渐变光泽）
+        int colShadow = 0xFF35060B;
+
+        for (int ry = 0; ry < ribbonH; ry++) {
+            float dy = Math.abs(ry - (ribbonH - 1) / 2.0f);
+            int cut = (int) ((1.0f - dy / ((ribbonH - 1) / 2.0f)) * tailCut);
+            int xEnd = x + ribbonW - cut;
+
+            float factor = (float) ry / (ribbonH - 1);
+            int r = (int) (0x8A * (1 - factor) + 0x5A * factor);
+            int gr = (int) (0x18 * (1 - factor) + 0x0C * factor);
+            int b = (int) (0x24 * (1 - factor) + 0x14 * factor);
+            int col = 0xFF000000 | (r << 16) | (gr << 8) | b;
+
+            g.hLine(x, xEnd - 1, y + ry, col);
+        }
+
+        // 3. 上沿与下沿古金滚边（双道金线）
+        g.hLine(x, x + ribbonW - 1, y, COLOR_GOLD_OUTER);
+        g.hLine(x, x + ribbonW - 2, y + 1, COLOR_GOLD_INNER);
+        g.hLine(x, x + ribbonW - 1, y + ribbonH - 1, COLOR_GOLD_OUTER);
+        g.hLine(x, x + ribbonW - 2, y + ribbonH - 2, COLOR_GOLD_INNER);
+
+        // 4. 右端燕尾切角描金饰边
+        for (int ry = 0; ry < ribbonH; ry++) {
+            float dy = Math.abs(ry - (ribbonH - 1) / 2.0f);
+            int cut = (int) ((1.0f - dy / ((ribbonH - 1) / 2.0f)) * tailCut);
+            int xEnd = x + ribbonW - cut;
+
+            g.vLine(xEnd - 1, y + ry, y + ry, COLOR_GOLD_BRIGHT);
+            g.vLine(xEnd - 2, y + ry, y + ry, COLOR_GOLD_OUTER);
+        }
+
+        // 5. 左端书壳外翻卷折扣环（外侧 8px 处）
+        int claspX = x + 6;
+        g.vLine(claspX - 1, y, y + ribbonH - 1, COLOR_GOLD_OUTER);
+        g.vLine(claspX, y, y + ribbonH - 1, COLOR_GOLD_BRIGHT);
+        g.vLine(claspX + 1, y, y + ribbonH - 1, COLOR_GOLD_OUTER);
+
+        // 左下端翻卷下垂阴影折角
+        for (int i = 0; i < 6; i++) {
+            int foldY = y + ribbonH + i;
+            g.hLine(x + i, claspX, foldY, colShadow);
+        }
+    }
+
+    /**
+     * 预绘制书签页签底板（置于内容底层，让图标与文字正常叠印）。
+     */
+    private static void renderBookmarkTabBases(GuiGraphics g, Screen screen) {
+        for (GuiEventListener listener : screen.children()) {
+            if (!(listener instanceof AbstractWidget widget) || !widget.visible) {
+                continue;
+            }
+            String className = widget.getClass().getSimpleName();
+            if (className.contains("Bookmark") || (widget.getWidth() == 13 && widget.getHeight() == 10)) {
+                boolean isAdd = isBookmarkAddButton(widget);
+                drawBookmarkTabBase(g, widget.getX(), widget.getY(), widget.getWidth(), widget.getHeight(), isAdd);
+            }
+        }
+    }
+
+    /**
+     * 绘制书签页签真丝底板。
+     */
+    private static void drawBookmarkTabBase(GuiGraphics g, int x, int y, int w, int h, boolean isAdd) {
+        int bg = isAdd ? 0xFF6E101A : 0xFF8A1A26;
+        g.fill(x, y, x + w, y + h, bg);
+        drawRectOutline(g, x, y, w, h, COLOR_GOLD_OUTER);
+        g.vLine(x + w - 1, y + 1, y + h - 2, COLOR_GOLD_BRIGHT);
+
+        if (isAdd) {
+            int cx = x + w / 2;
+            int cy = y + h / 2;
+            g.vLine(cx, cy - 2, cy + 2, COLOR_GOLD_BRIGHT);
+            g.hLine(cx - 2, cx + 2, cy, COLOR_GOLD_BRIGHT);
+        }
+    }
+
+    /**
+     * 书签悬停时绘制外圈微光。
+     */
+    private static void drawBookmarkHoverGlow(GuiGraphics g, int x, int y, int w, int h) {
+        g.fill(x - 1, y - 1, x + w + 1, y + h + 1, 0x33D4AF37);
+        drawRectOutline(g, x, y, w, h, COLOR_GOLD_BRIGHT);
+    }
+
+    /**
+     * 绘制分类按钮 (20x20) 的古典装饰框与悬停微光。
+     */
+    private static void drawCategoryDecoration(GuiGraphics g, int x, int y, int w, int h, boolean hovered) {
+        if (hovered) {
+            g.fill(x - 1, y - 1, x + w + 1, y + h + 1, 0x24D4AF37);
+            drawRectOutline(g, x, y, w, h, COLOR_GOLD_BRIGHT);
+        } else {
+            drawRectOutline(g, x, y, w, h, 0x55C5A059);
+        }
+        int cornerCol = hovered ? COLOR_GOLD_BRIGHT : COLOR_GOLD_OUTER;
+        g.fill(x + 1, y + 1, x + 2, y + 2, cornerCol);
+        g.fill(x + w - 2, y + 1, x + w - 1, y + 2, cornerCol);
+        g.fill(x + 1, y + h - 2, x + 2, y + h - 1, cornerCol);
+        g.fill(x + w - 2, y + h - 2, x + w - 1, y + h - 1, cornerCol);
+    }
+
+    /**
+     * 条目行悬停金色流光拂过。
+     */
+    private static void drawEntryHoverGlow(GuiGraphics g, int x, int y, int w, int h) {
+        g.fillGradient(x, y, x + w, y + h, 0x22D4AF37, 0x04D4AF37);
+        g.vLine(x, y, y + h - 1, COLOR_GOLD_BRIGHT);
+    }
+
+    /**
+     * 绘制矢量翻页大箭头（18x10，◄ / ►）。
      */
     private static void drawVectorArrowButton(GuiGraphics g, int x, int y, int w, int h, boolean isLeft, boolean hovered) {
         if (hovered) {
@@ -407,14 +651,12 @@ public final class PatchouliBookRenderer {
         int cy = y + h / 2;
 
         if (isLeft) {
-            // ◄ 左箭头
             g.vLine(cx - 3, cy, cy, glyphCol);
             g.vLine(cx - 2, cy - 1, cy + 1, glyphCol);
             g.vLine(cx - 1, cy - 2, cy + 2, glyphCol);
             g.vLine(cx, cy - 3, cy + 3, glyphCol);
             g.hLine(cx, cx + 3, cy, glyphCol);
         } else {
-            // ► 右箭头
             g.vLine(cx + 3, cy, cy, glyphCol);
             g.vLine(cx + 2, cy - 1, cy + 1, glyphCol);
             g.vLine(cx + 1, cy - 2, cy + 2, glyphCol);
@@ -424,7 +666,38 @@ public final class PatchouliBookRenderer {
     }
 
     /**
-     * 绘制矢量返回按键（↩ 弧形返回箭标）。
+     * 绘制图片页微型矢量翻图箭头（5x7，◄ / ►）。
+     */
+    private static void drawVectorSmallArrow(GuiGraphics g, int x, int y, boolean isLeft, boolean hovered) {
+        int w = 5;
+        int h = 7;
+        if (hovered) {
+            g.fill(x - 1, y - 1, x + w + 1, y + h + 1, 0x44D4AF37);
+        }
+
+        int bg = hovered ? COLOR_BTN_BG_HOVER : COLOR_BTN_BG_NORMAL;
+        int rim = hovered ? COLOR_BTN_RIM_HOVER : COLOR_BTN_RIM_NORMAL;
+        g.fill(x, y, x + w, y + h, bg);
+        drawRectOutline(g, x, y, w, h, rim);
+
+        int glyphCol = hovered ? COLOR_GLYPH_HOVER : COLOR_GLYPH_NORMAL;
+        int cy = y + 3;
+
+        if (isLeft) {
+            // ◄ 迷你左三角：顶点在左，底边在右
+            g.vLine(x + 1, cy, cy, glyphCol);
+            g.vLine(x + 2, cy - 1, cy + 1, glyphCol);
+            g.vLine(x + 3, cy - 2, cy + 2, glyphCol);
+        } else {
+            // ► 迷你右三角：底边在左，顶点在右
+            g.vLine(x + 1, cy - 2, cy + 2, glyphCol);
+            g.vLine(x + 2, cy - 1, cy + 1, glyphCol);
+            g.vLine(x + 3, cy, cy, glyphCol);
+        }
+    }
+
+    /**
+     * 绘制矢量返回按键（18x9，↩ 弧形返回箭标）。
      */
     private static void drawVectorBackButton(GuiGraphics g, int x, int y, int w, int h, boolean hovered) {
         if (hovered) {
@@ -448,13 +721,101 @@ public final class PatchouliBookRenderer {
     }
 
     /**
-     * 绘制矢量书签外沿标签。
+     * 绘制 11x11 各种矢量功能图标按钮。
      */
-    private static void drawVectorBookmarkTab(GuiGraphics g, int x, int y, int w, int h, boolean hovered) {
-        int bg = hovered ? 0xFF9E2432 : 0xFF7A1420;
-        int rim = hovered ? COLOR_GOLD_BRIGHT : COLOR_GOLD_OUTER;
+    private static void drawVectorIconButton(GuiGraphics g, int x, int y, IconKind kind, boolean hovered) {
+        int w = 11;
+        int h = 11;
+        if (hovered) {
+            g.fill(x - 1, y - 1, x + w + 1, y + h + 1, 0x44D4AF37);
+        }
+
+        int bg = hovered ? COLOR_BTN_BG_HOVER : COLOR_BTN_BG_NORMAL;
+        int rim = hovered ? COLOR_BTN_RIM_HOVER : COLOR_BTN_RIM_NORMAL;
         g.fill(x, y, x + w, y + h, bg);
         drawRectOutline(g, x, y, w, h, rim);
+
+        int glyphCol = hovered ? COLOR_GLYPH_HOVER : COLOR_GLYPH_NORMAL;
+        int cx = x + 5;
+        int cy = y + 5;
+
+        switch (kind) {
+            case RESIZE -> drawResizeGlyph(g, cx, cy, glyphCol);
+            case CONFIG -> drawConfigGlyph(g, cx, cy, bg, glyphCol);
+            case EYE -> drawEyeGlyph(g, cx, cy, glyphCol, false);
+            case MARK_READ -> drawEyeGlyph(g, cx, cy, glyphCol, true);
+            case HISTORY -> drawHistoryGlyph(g, cx, cy, glyphCol);
+            case ADVANCEMENTS -> drawAdvancementsGlyph(g, cx, cy, glyphCol);
+            case EDITOR -> drawEditorGlyph(g, cx, cy, glyphCol);
+        }
+    }
+
+    private static void drawResizeGlyph(GuiGraphics g, int cx, int cy, int glyphCol) {
+        g.hLine(cx - 2, cx, cy - 3, glyphCol);
+        g.hLine(cx - 2, cx, cy + 1, glyphCol);
+        g.vLine(cx - 3, cy - 2, cy, glyphCol);
+        g.vLine(cx + 1, cy - 2, cy, glyphCol);
+        g.fill(cx - 1, cy - 2, cx, cy - 1, COLOR_GOLD_BRIGHT);
+        g.fill(cx + 2, cy + 2, cx + 3, cy + 3, glyphCol);
+        g.fill(cx + 3, cy + 3, cx + 4, cy + 4, glyphCol);
+    }
+
+    private static void drawConfigGlyph(GuiGraphics g, int cx, int cy, int bg, int glyphCol) {
+        g.fill(cx - 1, cy - 1, cx + 2, cy + 2, glyphCol);
+        g.hLine(cx - 1, cx + 1, cy - 3, glyphCol);
+        g.hLine(cx - 1, cx + 1, cy + 3, glyphCol);
+        g.vLine(cx - 3, cy - 1, cy + 1, glyphCol);
+        g.vLine(cx + 3, cy - 1, cy + 1, glyphCol);
+        g.fill(cx, cy, cx + 1, cy + 1, bg);
+    }
+
+    private static void drawEyeGlyph(GuiGraphics g, int cx, int cy, int glyphCol, boolean markRead) {
+        g.hLine(cx - 2, cx + 2, cy - 2, glyphCol);
+        g.hLine(cx - 2, cx + 2, cy + 2, glyphCol);
+        g.vLine(cx - 3, cy - 1, cy + 1, glyphCol);
+        g.vLine(cx + 3, cy - 1, cy + 1, glyphCol);
+        g.fill(cx, cy - 1, cx + 1, cy + 2, glyphCol);
+
+        if (markRead) {
+            g.vLine(cx + 3, cy - 4, cy - 1, 0xFF44E544);
+            g.hLine(cx + 2, cx + 4, cy - 3, 0xFF44E544);
+        }
+    }
+
+    private static void drawHistoryGlyph(GuiGraphics g, int cx, int cy, int glyphCol) {
+        g.hLine(cx - 1, cx + 1, cy - 3, glyphCol);
+        g.hLine(cx - 1, cx + 1, cy + 3, glyphCol);
+        g.vLine(cx - 3, cy - 1, cy + 1, glyphCol);
+        g.vLine(cx + 3, cy - 1, cy + 1, glyphCol);
+        g.fill(cx - 2, cy - 2, cx - 1, cy - 1, glyphCol);
+        g.fill(cx + 2, cy - 2, cx + 3, cy - 1, glyphCol);
+        g.fill(cx - 2, cy + 2, cx - 1, cy + 3, glyphCol);
+        g.fill(cx + 2, cy + 2, cx + 3, cy + 3, glyphCol);
+
+        g.fill(cx, cy, cx + 1, cy + 1, glyphCol);
+        g.vLine(cx, cy - 2, cy, glyphCol);
+        g.hLine(cx, cx + 2, cy, glyphCol);
+    }
+
+    private static void drawAdvancementsGlyph(GuiGraphics g, int cx, int cy, int glyphCol) {
+        g.hLine(cx - 2, cx + 2, cy - 3, glyphCol);
+        g.hLine(cx - 2, cx + 2, cy - 2, glyphCol);
+        g.hLine(cx - 1, cx + 1, cy - 1, glyphCol);
+        g.vLine(cx, cy, cy + 2, glyphCol);
+        g.hLine(cx - 2, cx + 2, cy + 3, glyphCol);
+        g.fill(cx - 3, cy - 2, cx - 2, cy - 1, glyphCol);
+        g.fill(cx + 3, cy - 2, cx + 4, cy - 1, glyphCol);
+    }
+
+    private static void drawEditorGlyph(GuiGraphics g, int cx, int cy, int glyphCol) {
+        g.fill(cx + 2, cy - 3, cx + 3, cy - 2, glyphCol);
+        g.fill(cx + 1, cy - 2, cx + 2, cy - 1, glyphCol);
+        g.fill(cx, cy - 1, cx + 1, cy, glyphCol);
+        g.fill(cx - 1, cy, cx, cy + 1, glyphCol);
+        g.fill(cx - 2, cy + 1, cx - 1, cy + 2, glyphCol);
+        g.fill(cx - 3, cy + 2, cx - 2, cy + 3, COLOR_GOLD_BRIGHT);
+        g.fill(cx + 3, cy - 2, cx + 4, cy - 1, glyphCol);
+        g.fill(cx + 2, cy - 1, cx + 3, cy, glyphCol);
     }
 
     /**

@@ -1,6 +1,6 @@
 # 核心功能域避坑手册（domain-notes）
 
-> 信息截至 2026-09-02 | Minecraft NeoForge 1.21.1
+> 信息截至 2026-09-18 | Minecraft NeoForge 1.21.1
 
 - **【何时读】**：第一次接触或修改某个具体功能域（NPC/游客/魔法/任务/建筑/仓库/道路/新手引导/第三方兼容）代码前。
 - **【不包含什么】**：各域基础概念百科、原版 Minecraft 常识、无特殊约定的常规 Java 代码流程。
@@ -37,6 +37,9 @@
 8. **殖民地数据在客户端恒不可用——客户端判定点只能用同步数据**（「客户端殖民等级陷阱」同族，2026-09-12 在第三方 GUI 上又踩一次）：
    - `ColonyApi.getColonyByFounder` / `getColonyLevel` / `getAllColonyIds` 都走 `getColonySavedData()` → `ServerLifecycleHooks.getCurrentServer()`，**专用服务器的客户端恒为 null**（单机因带有集成服务端而试不出来，属典型"单机复现不了"陷阱）；`ColonyWorkerApi.enlist` 一类引擎侧 api 在客户端也会因 `World.getActive() == null` 直接失败。
    - 典型翻车：把「主人有小镇」这类服务端事实写进**第三方 GUI 的可用性判定**里（车万女仆的 `IMaidTask#isEnable` 就是在客户端被调用来决定按钮可否点），结果任务在多人局里永久置灰、点不动。**做法**：客户端条件只用 `SynchedEntityData` / 同步包里的数据；服务端事实留给服务端把关，并用描述文案 + 一次性 `Log.warn` 兜底，别让它变成"选了任务却站着不动"的静默失败。
+9. **自定义实体禁 `bakeLayer(ModelLayers.PLAYER)`（EMF 连坐坑，游客渲染器同规则）**：
+   - Detailed Animations 系列资源包经 EMF 在烘焙期替换原版玩家层几何；借该层烘焙的自定义实体（NPC/游客曾是）会被连坐——EMF 的新几何配 64×64 标准布局皮肤，头身 UV 错位分离（2026-09 用户实测，仅装 EMF+ETF 即可复现）。
+   - 做法：实体渲染器各自注册自有 `ModelLayerLocation`（`wandscape:wandscape_npc/main`、`wandscape:tourist/main`，注册在 `WandscapeClient.onRegisterLayerDefinitions`），几何用 vanilla 同款工厂 `LayerDefinition.create(PlayerModel.createMesh(CubeDeformation.NONE, false), 64, 64)`（经典粗臂 64×64 含 overlay 第二层），与原版 PLAYER 层逐位一致——不装 EMF 时外观零变化；`EvilMage` 复用 NPC 渲染器自动覆盖。1.21.1 的 `PlayerModel` **没有** `createBodyLayer`（旧版本记忆），几何工厂是 `createMesh(CubeDeformation, boolean slim)`。
 
 ---
 

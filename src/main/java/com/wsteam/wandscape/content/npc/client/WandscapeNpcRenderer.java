@@ -13,7 +13,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.model.geom.ModelLayerLocation;
-import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
@@ -36,6 +35,10 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
 public class WandscapeNpcRenderer extends HumanoidMobRenderer<WandscapeNpc, HumanoidModel<WandscapeNpc>> {
+
+    /** 自有主体层：几何与原版 PLAYER 层一致，但不借 ModelLayers.PLAYER——EMF 等玩家模型替换会连坐借层实体。 */
+    public static final ModelLayerLocation MAIN_LAYER =
+            new ModelLayerLocation(ResourceLocation.fromNamespaceAndPath("wandscape", "wandscape_npc"), "main");
 
     public static final ModelLayerLocation WIZARD_HAT_LAYER =
             new ModelLayerLocation(ResourceLocation.fromNamespaceAndPath("wandscape", "wandscape_npc"), "wizard_hat");
@@ -71,7 +74,7 @@ public class WandscapeNpcRenderer extends HumanoidMobRenderer<WandscapeNpc, Huma
     private static final double RAY_STEP = 0.4;
 
     public WandscapeNpcRenderer(EntityRendererProvider.Context ctx) {
-        super(ctx, new WandscapeNpcModel(ctx.bakeLayer(ModelLayers.PLAYER)), 0.5f);
+        super(ctx, new WandscapeNpcModel(ctx.bakeLayer(MAIN_LAYER)), 0.5f);
         this.addLayer(new WizardHatLayer(this,
                 new WizardHatModel(ctx.bakeLayer(WIZARD_HAT_LAYER))));
         // Speech bubble added inline in render() instead of as RenderLayer

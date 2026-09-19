@@ -892,6 +892,7 @@ def build_books():
         "landing_text": "wandscape.guide_book.landing",
         "subtitle": "wandscape.guide_book.subtitle",
         "book_texture": "wandscape:textures/gui/guidebook/book.png",
+        "nameplate_color": "FBE8A6",
         "use_resource_pack": True,
         # 无成就锁定时出版进度条恒为 0%，先关掉；做解锁时再打开
         "show_progress": False,
@@ -933,133 +934,61 @@ class Canvas:
             self.rect(x + (w - span) if not left else x, y + i, span, 1, c)
 
 
-COVER = (74, 53, 36, 255)
-COVER_DARK = (52, 36, 24, 255)
-COVER_HI = (112, 82, 54, 255)
-GOLD = (176, 132, 68, 255)
-PAGE = (246, 236, 216, 255)
-PAGE_EDGE = (214, 198, 168, 255)
-PLATE = (150, 112, 58, 255)
-PLATE_HOVER = (192, 150, 82, 255)
-INK = (246, 236, 216, 255)
-
-
-def _icon_button(c, u, v, kind, hover):
-    c.rect(u, v, 11, 11, PLATE_HOVER if hover else PLATE)
-    c.frame(u, v, 11, 11, COVER_DARK)
-    if kind == "resize":
-        c.frame(u + 3, v + 2, 5, 5, INK)
-        c.rect(u + 6, v + 5, 2, 2, INK)
-    elif kind == "editor":
-        c.rect(u + 4, v + 2, 2, 6, INK)
-        c.rect(u + 3, v + 8, 5, 2, INK)
-    elif kind == "advancements":
-        c.rect(u + 2, v + 7, 7, 2, INK)
-        c.rect(u + 3, v + 4, 5, 2, INK)
-        c.rect(u + 4, v + 2, 3, 2, INK)
-    elif kind == "config":
-        c.rect(u + 3, v + 3, 5, 5, INK)
-        c.rect(u + 3, v + 5, 5, 1, COVER_DARK)
-        c.rect(u + 5, v + 2, 1, 7, INK)
-    elif kind == "history":
-        c.frame(u + 3, v + 2, 6, 6, INK)
-        c.rect(u + 2, v + 4, 2, 1, INK)
-    elif kind == "eye":
-        c.frame(u + 2, v + 4, 7, 3, INK)
-        c.rect(u + 4, v + 4, 3, 3, INK)
+# 帕秋莉静态内嵌装饰图集色板（对齐 PatchouliBookRenderer 奥术秘典色系）
+GOLD_OUTER = (197, 160, 89, 255)
+GOLD_INNER = (226, 193, 114, 255)
+GOLD_DARK = (122, 88, 24, 255)
+COVER_DARK = (19, 22, 39, 255)
+PAGE_LIGHT = (248, 244, 234, 255)
 
 
 def build_book_texture():
-    """512×256 占位书皮。坐标全部对齐帕秋莉 GuiBook 的取样区，详见 docs/guidebook-patchouli.md。"""
+    """512×256 辅助图集。
+
+    书本底壳、着陆页名牌、翻页大/小箭头、返回键、书签页签以及 11x11 工具栏图标
+    已全部由 PatchouliBookRenderer.java 原生代码接管渲染，对应区域在图集中保持完全透明。
+    本图集仅保留帕秋莉硬编码取样的静态内嵌装饰（分隔条、搜索框、加锁图标、状态标记、106x106插图框）。
+    """
     c = Canvas(512, 256)
 
-    # 0,0 272x180：整幅双页背景
-    c.rect(0, 0, 272, 180, COVER)
-    c.frame(0, 0, 272, 180, COVER_DARK, 2)
-    c.frame(2, 2, 268, 176, GOLD)
-    c.rect(131, 4, 10, 172, COVER_HI)
-    c.rect(134, 4, 4, 172, COVER_DARK)
-    for px in (15, 141):
-        c.rect(px, 18, 116, 156, PAGE)
-        c.frame(px, 18, 116, 156, PAGE_EDGE)
+    # 140,180 110x3：分隔条（古典双道细金线）
+    c.rect(140, 180, 110, 1, GOLD_OUTER)
+    c.rect(140, 181, 110, 1, GOLD_INNER)
+    c.rect(140, 182, 110, 1, GOLD_DARK)
 
-    # 0,180 140x31：着陆页名称牌
-    c.rect(0, 180, 140, 31, GOLD)
-    c.frame(0, 180, 140, 31, COVER_DARK)
+    # 140,183 99x14：搜索框（象牙白羊皮纸内芯 + 古金框线）
+    c.rect(140, 183, 99, 14, PAGE_LIGHT)
+    c.frame(140, 183, 99, 14, GOLD_OUTER)
 
-    # 140,180 110x3：分隔条
-    c.rect(140, 180, 110, 3, GOLD)
-    c.rect(140, 181, 110, 1, COVER_HI)
-
-    # 140,183 99x14：搜索框
-    c.rect(140, 183, 99, 14, PAGE)
-    c.frame(140, 183, 99, 14, COVER_HI)
-
-    # 250,180 16x16：锁
-    c.frame(254, 181, 8, 7, GOLD, 2)
-    c.rect(252, 187, 12, 9, GOLD)
+    # 250,180 16x16：锁图标（古典金铜挂锁）
+    c.frame(254, 181, 8, 7, GOLD_INNER, 2)
+    c.rect(252, 187, 12, 9, GOLD_OUTER)
     c.frame(252, 187, 12, 9, COVER_DARK)
     c.rect(257, 190, 2, 4, COVER_DARK)
 
-    # 140/148/156,197 8x8：未读 / 待办 / 完成
+    # 140/148/156,197 8x8：未读 / 待办 / 完成标记
+    # 140,197 未读：青铜圆环
     c.frame(141, 198, 6, 6, (140, 128, 108, 255))
     c.set(142, 197, (140, 128, 108, 255))
     c.set(145, 197, (140, 128, 108, 255))
     c.set(142, 204, (140, 128, 108, 255))
     c.set(145, 204, (140, 128, 108, 255))
-    c.rect(150, 198, 4, 6, (196, 148, 40, 255))
-    c.rect(149, 199, 6, 4, (196, 148, 40, 255))
+
+    # 148,197 待办：暖珀方块
+    c.rect(150, 198, 4, 6, (218, 165, 32, 255))
+    c.rect(149, 199, 6, 4, (218, 165, 32, 255))
+
+    # 156,197 完成：翡翠绿对勾
     for i in range(3):
-        c.set(157 + i, 201 + i, (60, 140, 60, 255))
-        c.set(157 + i, 202 + i, (60, 140, 60, 255))
+        c.set(157 + i, 201 + i, (46, 160, 67, 255))
+        c.set(157 + i, 202 + i, (46, 160, 67, 255))
     for i in range(5):
-        c.set(159 + i, 203 - i, (60, 140, 60, 255))
-        c.set(159 + i, 204 - i, (60, 140, 60, 255))
+        c.set(159 + i, 203 - i, (46, 160, 67, 255))
+        c.set(159 + i, 204 - i, (46, 160, 67, 255))
 
-    # 308,0 18x9（+18 悬停）：返回
-    for hover in (0, 1):
-        u = 308 + hover * 18
-        c.rect(u, 0, 18, 9, PLATE_HOVER if hover else PLATE)
-        c.frame(u, 0, 18, 9, COVER_DARK)
-        c.tri(u + 7, 2, 4, 5, INK)
-        c.rect(u + 11, 4, 3, 1, INK)
-
-    # 272,10 左 / 272,0 右，18x10（+18 悬停）：翻页
-    for hover in (0, 1):
-        u = 272 + hover * 18
-        for left in (True, False):
-            v = 10 if left else 0
-            c.rect(u, v, 18, 10, PLATE_HOVER if hover else PLATE)
-            c.frame(u, v, 18, 10, COVER_DARK)
-            c.tri(u + 7 if left else u + 6, v + 2, 5, 6, INK, left)
-
-    # 272,27 左 / 272,20 右，5x7（+5 悬停）：小箭头
-    for hover in (0, 1):
-        u = 272 + hover * 5
-        c.tri(u, 20, 5, 7, INK, left=False)
-        c.tri(u, 27, 5, 7, INK, left=True)
-
-    # 272,160 / 272,170，13x10（+13 悬停）：书签页签
-    for hover in (0, 1):
-        u = 272 + hover * 13
-        for v, bright in ((160, 0), (170, 1)):
-            col = (222, 182, 104, 255) if bright else (170, 128, 62, 255)
-            if hover:
-                col = (238, 202, 128, 255) if bright else (196, 152, 80, 255)
-            c.rect(u, v, 10, 10, col)
-            for i in range(5):
-                c.rect(u + 10 + i, v + i, 1, max(10 - 2 * i, 1), col)
-            c.frame(u, v, 10, 10, COVER_DARK)
-
-    # 11x11 图标按钮（+11 悬停）
-    for u, v, kind in ((330, 9, "resize"), (308, 9, "editor"), (330, 20, "advancements"),
-                       (308, 20, "config"), (330, 31, "history"), (308, 31, "eye")):
-        for hover in (0, 1):
-            _icon_button(c, u + hover * 11, v, kind, hover)
-
-    # 405,149 106x106：图片 / 实体 / 多方块外框（中空）
-    c.frame(405, 149, 106, 106, GOLD, 3)
-    c.frame(408, 152, 100, 100, COVER_DARK)
+    # 405,149 106x106：图片 / 实体 / 多方块外框（中空双金滚边）
+    c.frame(405, 149, 106, 106, GOLD_OUTER, 2)
+    c.frame(407, 151, 102, 102, COVER_DARK, 1)
     return c
 
 
