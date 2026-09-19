@@ -45,8 +45,8 @@ public final class HostileTargetingHandler {
 
     /**
      * 是否可直读 {@link NearestAttackableTargetGoal#targetType}。该字段经 NeoForge
-     * AccessTransformer（{@code META-INF/accesstransformer.cfg}）从 protected 提为 public，
-     * 不使用反射。若 AT 因版本变动未生效（字段改名等），置 false 禁用增强而非崩溃。
+     * AccessTransformer（{@code META-INF/accesstransformer.cfg}）从 protected 提为 public。
+     * 若 AT 因版本变动未生效（字段改名等），置 false 禁用增强而非崩溃。
      */
     private static boolean atActive = true;
 
