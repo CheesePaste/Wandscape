@@ -771,6 +771,11 @@ def check_manifest(warn):
         if other is not None and other != target:
             warn("标题《%s》中英两侧指向不同目标：%s / %s" % (title, target, other))
 
+    # 空分类在兜底那边会变成一页只有标题的空目录页，没有存在的理由
+    for c in CATEGORIES:
+        if not any(e[1] == c[0] for e in ENTRIES):
+            warn("分类 %s（%s）下没有任何条目" % (c[0], c[1]))
+
     # 通用别名（词尾 _guide 去掉）。`index` 是着陆页的保留 id，优先于别名，无需告警；
     # 别名词撞上分类 id 时（buildings / custom / about），该条目必须正好是该分类的第一条——
     # 否则玩家敲分类名会拿到别的页。撞上另一个条目 id 同样是歧义，一并出声。

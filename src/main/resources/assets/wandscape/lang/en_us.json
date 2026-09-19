@@ -502,6 +502,7 @@
   "gui.wandscape.gizmo.toast_confirmed": "§a3D Bounds updated and synced! (%d×%d×%d)",
   "gui.wandscape.gizmo.toast_enter": "§aEntered 3D Gizmo mode (RMB look, LMB drag axis)",
   "gui.wandscape.guidebook.action_tooltip": "Action: %s",
+  "gui.wandscape.guidebook.category_entries": "See all %s entries",
   "gui.wandscape.guidebook.title": "Wandscape Guidebook",
   "gui.wandscape.guidebook.titlebar": "Wandscape Guidebook",
   "gui.wandscape.hotel.guests": "Guests",

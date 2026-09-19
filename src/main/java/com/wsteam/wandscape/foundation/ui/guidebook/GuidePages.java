@@ -1,5 +1,6 @@
 package com.wsteam.wandscape.foundation.ui.guidebook;
 
+import com.wsteam.wandscape.foundation.ui.I18n;
 import com.wsteam.wandscape.foundation.ui.markdown.navigation.DocumentLoader;
 
 import java.util.List;
@@ -87,7 +88,10 @@ public final class GuidePages {
 
     // ── 合成 ────────────────────────────────────────────────────────────────
 
-    /** 着陆页：书名 + 着陆文案，然后按分类铺开目录（每个分类：分类名、描述、条目链接）。 */
+    /**
+     * 着陆页：书名 + 着陆文案，然后只列八个分类（分类名、描述、入口链接）。
+     * 条目不下沉到这一页——六十多条铺一屏长得没法看，点进分类页再看。
+     */
     private static String landingPage(GuideManifest manifest) {
         StringBuilder sb = new StringBuilder();
         sb.append("# ").append(manifest.landingTitle()).append("\n\n");
@@ -95,7 +99,12 @@ public final class GuidePages {
             sb.append(manifest.landingText().strip()).append("\n\n");
         }
         for (GuideManifest.Category category : manifest.categories()) {
-            appendCategorySection(sb, manifest, category, true);
+            sb.append("## ").append(category.name()).append("\n\n");
+            if (!category.desc().isBlank()) {
+                sb.append(category.desc().strip()).append("\n\n");
+            }
+            sb.append("- [").append(entriesLinkLabel(manifest, category))
+                    .append("](category:").append(category.id()).append(")\n\n");
         }
         return sb.toString();
     }
@@ -103,14 +112,7 @@ public final class GuidePages {
     /** 分类页：分类名 + 分类描述 + 条目链接 + 回目录。 */
     private static String categoryPage(GuideManifest manifest, GuideManifest.Category category) {
         StringBuilder sb = new StringBuilder();
-        appendCategorySection(sb, manifest, category, false);
-        sb.append("- [返回目录](").append(GuideManifest.ROOT_PAGE).append(".md)\n");
-        return sb.toString();
-    }
-
-    private static void appendCategorySection(StringBuilder sb, GuideManifest manifest,
-                                              GuideManifest.Category category, boolean heading) {
-        sb.append("#".repeat(heading ? 2 : 1)).append(" ").append(category.name()).append("\n\n");
+        sb.append("# ").append(category.name()).append("\n\n");
         if (!category.desc().isBlank()) {
             sb.append(category.desc().strip()).append("\n\n");
         }
@@ -118,10 +120,14 @@ public final class GuidePages {
         for (GuideManifest.Entry entry : entries) {
             sb.append("- [").append(entry.name()).append("](").append(entry.doc()).append(".md)\n");
         }
-        if (entries.isEmpty()) {
-            sb.append("- （暂无条目）\n");
-        }
-        sb.append("\n");
+        sb.append("\n- [返回目录](").append(GuideManifest.ROOT_PAGE).append(".md)\n");
+        return sb.toString();
+    }
+
+    /** 分类入口的链接文字：带上条目数，省得点进去才发现这一屏有多长。 */
+    private static String entriesLinkLabel(GuideManifest manifest, GuideManifest.Category category) {
+        return I18n.name("gui.wandscape.guidebook.category_entries",
+                "查看全部 %s 条", manifest.entriesIn(category.id()).size()).getString();
     }
 
     // ── 《…》 → 链接 ────────────────────────────────────────────────────────

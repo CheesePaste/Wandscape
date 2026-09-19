@@ -502,6 +502,7 @@
   "gui.wandscape.gizmo.toast_confirmed": "§a3D 包围盒已更新并同步！(%d×%d×%d)",
   "gui.wandscape.gizmo.toast_enter": "§a已进入 3D 可视化调整模式 (右键旋转视角, 左键拖拽轴向)",
   "gui.wandscape.guidebook.action_tooltip": "触发动作: %s",
+  "gui.wandscape.guidebook.category_entries": "查看全部 %s 条",
   "gui.wandscape.guidebook.title": "魔法小镇指南书",
   "gui.wandscape.guidebook.titlebar": "魔法小镇指南书",
   "gui.wandscape.hotel.guests": "住客",

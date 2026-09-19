@@ -10,5 +10,9 @@
   "gui.wandscape.guidebook.titlebar": {
     "zh_cn": "魔法小镇指南书",
     "en_us": "Wandscape Guidebook"
+  },
+  "gui.wandscape.guidebook.category_entries": {
+    "zh_cn": "查看全部 %s 条",
+    "en_us": "See all %s entries"
   }
 }
