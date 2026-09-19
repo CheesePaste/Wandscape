@@ -1,6 +1,7 @@
 package com.wsteam.wandscape.foundation.ui;
 import com.wsteam.wandscape.foundation.networking.ScreenFeedbackPacket;
 
+import javax.annotation.Nullable;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 
@@ -11,6 +12,44 @@ import net.minecraft.network.chat.MutableComponent;
 public final class I18n {
 
     private I18n() {}
+
+    /**
+     * Resolves a localized building name.
+     * Supports canonical full ID (e.g. "default:warehouse1", "oriental:bamboo_house")
+     * as well as short/raw ID ("warehouse1").
+     *
+     * <p>Checks:
+     * 1. Package-scoped key using dot separator if namespace present (e.g. "building.wandscape.oriental.bamboo_house")
+     * 2. Standard mod key: "building.wandscape.<rawId>" (e.g. "building.wandscape.warehouse1")
+     * 3. Fallback string (e.g. config display_name)
+     */
+    public static MutableComponent buildingName(@Nullable String buildingTypeId, @Nullable String fallback) {
+        if (buildingTypeId == null || buildingTypeId.isEmpty()) {
+            return Component.literal(fallback != null ? fallback : "");
+        }
+        String rawId = buildingTypeId.contains(":")
+                ? buildingTypeId.substring(buildingTypeId.indexOf(':') + 1)
+                : buildingTypeId;
+        String fb = (fallback != null && !fallback.isEmpty()) ? fallback : rawId;
+
+        try {
+            var lang = net.minecraft.locale.Language.getInstance();
+            if (lang != null) {
+                if (buildingTypeId.contains(":")) {
+                    String scopedKey = "building.wandscape." + buildingTypeId.replace(':', '.');
+                    if (lang.has(scopedKey)) {
+                        return Component.translatableWithFallback(scopedKey, fb);
+                    }
+                }
+                String standardKey = "building.wandscape." + rawId;
+                if (lang.has(standardKey)) {
+                    return Component.translatableWithFallback(standardKey, fb);
+                }
+            }
+        } catch (Throwable ignored) {}
+
+        return Component.translatableWithFallback("building.wandscape." + rawId, fb);
+    }
 
     /** Translatable name with fallback text. */
     public static MutableComponent name(String key, String fallback) {
