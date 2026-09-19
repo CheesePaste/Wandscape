@@ -1,0 +1,547 @@
+{
+  "manifest_version": 1,
+  "book": "wandscape:guide",
+  "landing": {
+    "title": "魔法小镇建设指南",
+    "text": "欢迎来到 Wandscape！你放下建筑，法师替你干活，游客沿路入城消费。\n\n第一次玩？先读[0，入门](intro_0_guide.md)，或从[概览](index_guide.md)挑一节。"
+  },
+  "categories": [
+    {
+      "id": "playstyle",
+      "name": "玩法主线",
+      "desc": "这一部分展示了模组的大致官方游玩路线。对于具体内容，见各功能分类。",
+      "icon": "minecraft:compass",
+      "sortnum": 0
+    },
+    {
+      "id": "buildings",
+      "name": "建筑",
+      "desc": "这一页展示了模组的所有建筑类型和对应功能。对于如何建造，见《0，入门》《管理》《建造子模式》。",
+      "icon": "minecraft:stone_bricks",
+      "sortnum": 10
+    },
+    {
+      "id": "management",
+      "name": "管理",
+      "desc": "这一页展示了模组的管理系统，操作方式。对于具体建筑，见《建筑》。",
+      "icon": "minecraft:lever",
+      "sortnum": 20
+    },
+    {
+      "id": "magic",
+      "name": "魔法",
+      "desc": "这一页展示了法师，施法与具体魔法。对于法杖与魔法道具，见《装备与物品》。",
+      "icon": "wandscape:spell_scroll",
+      "sortnum": 30
+    },
+    {
+      "id": "items",
+      "name": "装备与物品",
+      "desc": "这一页展示了模组的装备（法杖）与一些物品。对于法术卷轴等法术，见《魔法》，对于如何制作它们，见《合成站》。",
+      "icon": "wandscape:wand",
+      "sortnum": 40
+    },
+    {
+      "id": "custom",
+      "name": "自定义与数据包",
+      "desc": "这一页展示了模组建筑、物品、魔法、合成配方与战利品等内容的模组方块和数据包的自定义方式，以及查状态与急救用的模组指令。对于相关的模组本体内容，见《建筑》《魔法》《装备与物品》。",
+      "icon": "minecraft:structure_block",
+      "sortnum": 50
+    },
+    {
+      "id": "compat",
+      "name": "联动与兼容",
+      "desc": "这一页展示了模组兼容和联动的其他模组。如果出现了兼容的BUG，见《关于我们》。",
+      "icon": "minecraft:crafting_table",
+      "sortnum": 60
+    },
+    {
+      "id": "about",
+      "name": "关于我们",
+      "desc": "制作者名单、官方平台与反馈渠道。",
+      "icon": "minecraft:name_tag",
+      "sortnum": 70
+    }
+  ],
+  "entries": [
+    {
+      "doc": "index_guide",
+      "category": "playstyle",
+      "name": "概览",
+      "icon": "wandscape:guide_book",
+      "sortnum": 0
+    },
+    {
+      "doc": "intro_0_guide",
+      "category": "playstyle",
+      "name": "0，入门",
+      "icon": "minecraft:writable_book",
+      "sortnum": 1
+    },
+    {
+      "doc": "intro_0_5_guide",
+      "category": "playstyle",
+      "name": "0.5，推荐了解的功能",
+      "icon": "minecraft:knowledge_book",
+      "sortnum": 2
+    },
+    {
+      "doc": "element_level_guide",
+      "category": "playstyle",
+      "name": "元素与城镇等级",
+      "icon": "wandscape:element_earth",
+      "sortnum": 3
+    },
+    {
+      "doc": "track_tourist_guide",
+      "category": "playstyle",
+      "name": "1，游客线",
+      "icon": "wandscape:tourist_spawn_egg",
+      "sortnum": 4
+    },
+    {
+      "doc": "tourists_guide",
+      "category": "playstyle",
+      "name": "游客与三值",
+      "icon": "minecraft:emerald",
+      "sortnum": 5
+    },
+    {
+      "doc": "track_adventure_guide",
+      "category": "playstyle",
+      "name": "2，冒险线",
+      "icon": "minecraft:iron_sword",
+      "sortnum": 6
+    },
+    {
+      "doc": "track_tech_guide",
+      "category": "playstyle",
+      "name": "3，科技线",
+      "icon": "minecraft:redstone",
+      "sortnum": 7
+    },
+    {
+      "doc": "track_diplomacy_guide",
+      "category": "playstyle",
+      "name": "4，外交线",
+      "icon": "minecraft:white_banner",
+      "sortnum": 8
+    },
+    {
+      "doc": "buildings_guide",
+      "category": "buildings",
+      "name": "建筑",
+      "icon": "minecraft:bricks",
+      "sortnum": 0
+    },
+    {
+      "doc": "anomaly_guide",
+      "category": "buildings",
+      "name": "建筑维护",
+      "icon": "minecraft:anvil",
+      "sortnum": 1
+    },
+    {
+      "doc": "townhall_guide",
+      "category": "buildings",
+      "name": "市政厅",
+      "icon": "minecraft:bell",
+      "sortnum": 2
+    },
+    {
+      "doc": "warehouse_guide",
+      "category": "buildings",
+      "name": "仓库",
+      "icon": "minecraft:chest",
+      "sortnum": 3
+    },
+    {
+      "doc": "workstation_guide",
+      "category": "buildings",
+      "name": "工作站",
+      "icon": "minecraft:crafting_table",
+      "sortnum": 4
+    },
+    {
+      "doc": "crafting_guide",
+      "category": "buildings",
+      "name": "合成站",
+      "icon": "wandscape:wand",
+      "sortnum": 5
+    },
+    {
+      "doc": "magic_station_guide",
+      "category": "buildings",
+      "name": "魔法工坊",
+      "icon": "wandscape:spell_scroll",
+      "sortnum": 6
+    },
+    {
+      "doc": "tavern_guide",
+      "category": "buildings",
+      "name": "酒馆",
+      "icon": "minecraft:brewing_stand",
+      "sortnum": 7
+    },
+    {
+      "doc": "altar_guide",
+      "category": "buildings",
+      "name": "祭坛",
+      "icon": "minecraft:enchanting_table",
+      "sortnum": 8
+    },
+    {
+      "doc": "mage_hut_guide",
+      "category": "buildings",
+      "name": "法师小屋",
+      "icon": "minecraft:red_bed",
+      "sortnum": 9
+    },
+    {
+      "doc": "node_guide",
+      "category": "buildings",
+      "name": "元素节点",
+      "icon": "wandscape:element_earth",
+      "sortnum": 10
+    },
+    {
+      "doc": "decoration_guide",
+      "category": "buildings",
+      "name": "装饰",
+      "icon": "minecraft:lantern",
+      "sortnum": 11
+    },
+    {
+      "doc": "shop_guide",
+      "category": "buildings",
+      "name": "商店",
+      "icon": "minecraft:emerald",
+      "sortnum": 12
+    },
+    {
+      "doc": "service_guide",
+      "category": "buildings",
+      "name": "服务设施",
+      "icon": "minecraft:light_blue_bed",
+      "sortnum": 13
+    },
+    {
+      "doc": "relax_guide",
+      "category": "buildings",
+      "name": "休憩",
+      "icon": "minecraft:oak_stairs",
+      "sortnum": 14
+    },
+    {
+      "doc": "atm_guide",
+      "category": "buildings",
+      "name": "ATM",
+      "icon": "minecraft:gold_ingot",
+      "sortnum": 15
+    },
+    {
+      "doc": "building_scanner_guide",
+      "category": "buildings",
+      "name": "建筑扫描器",
+      "icon": "wandscape:building_scanner",
+      "sortnum": 16
+    },
+    {
+      "doc": "panel_guide",
+      "category": "management",
+      "name": "管理面板",
+      "icon": "minecraft:compass",
+      "sortnum": 0
+    },
+    {
+      "doc": "panel_build_guide",
+      "category": "management",
+      "name": "建造子模式",
+      "icon": "minecraft:scaffolding",
+      "sortnum": 1
+    },
+    {
+      "doc": "panel_road_guide",
+      "category": "management",
+      "name": "道路子模式",
+      "icon": "minecraft:dirt_path",
+      "sortnum": 2
+    },
+    {
+      "doc": "panel_tasks_guide",
+      "category": "management",
+      "name": "任务大厅",
+      "icon": "minecraft:paper",
+      "sortnum": 3
+    },
+    {
+      "doc": "panel_settings_guide",
+      "category": "management",
+      "name": "设置中心",
+      "icon": "minecraft:redstone_torch",
+      "sortnum": 4
+    },
+    {
+      "doc": "mages_guide",
+      "category": "magic",
+      "name": "法师",
+      "icon": "wandscape:wandscape_npc_spawn_egg",
+      "sortnum": 0
+    },
+    {
+      "doc": "casting_guide",
+      "category": "magic",
+      "name": "施法",
+      "icon": "minecraft:blaze_rod",
+      "sortnum": 1
+    },
+    {
+      "doc": "advanced_casting_guide",
+      "category": "magic",
+      "name": "高级施法管理",
+      "icon": "minecraft:lectern",
+      "sortnum": 2
+    },
+    {
+      "doc": "magic_beam_guide",
+      "category": "magic",
+      "name": "光束",
+      "icon": "minecraft:spectral_arrow",
+      "sortnum": 3
+    },
+    {
+      "doc": "magic_meteor_guide",
+      "category": "magic",
+      "name": "陨石",
+      "icon": "minecraft:fire_charge",
+      "sortnum": 4
+    },
+    {
+      "doc": "magic_desperation_guide",
+      "category": "magic",
+      "name": "背水一战",
+      "icon": "minecraft:diamond_sword",
+      "sortnum": 5
+    },
+    {
+      "doc": "magic_enfeeble_field_guide",
+      "category": "magic",
+      "name": "虚弱力场",
+      "icon": "minecraft:fermented_spider_eye",
+      "sortnum": 6
+    },
+    {
+      "doc": "magic_conversion_guide",
+      "category": "magic",
+      "name": "魅惑",
+      "icon": "minecraft:lead",
+      "sortnum": 7
+    },
+    {
+      "doc": "magic_petrification_guide",
+      "category": "magic",
+      "name": "石化",
+      "icon": "minecraft:stone",
+      "sortnum": 8
+    },
+    {
+      "doc": "magic_fortification_guide",
+      "category": "magic",
+      "name": "防御强化",
+      "icon": "minecraft:shield",
+      "sortnum": 9
+    },
+    {
+      "doc": "magic_heal_guide",
+      "category": "magic",
+      "name": "治疗",
+      "icon": "minecraft:golden_apple",
+      "sortnum": 10
+    },
+    {
+      "doc": "magic_teleport_guide",
+      "category": "magic",
+      "name": "传送",
+      "icon": "minecraft:ender_pearl",
+      "sortnum": 11
+    },
+    {
+      "doc": "magic_revive_guide",
+      "category": "magic",
+      "name": "复活",
+      "icon": "minecraft:totem_of_undying",
+      "sortnum": 12
+    },
+    {
+      "doc": "wand_guide",
+      "category": "items",
+      "name": "法杖",
+      "icon": "wandscape:wand",
+      "sortnum": 0
+    },
+    {
+      "doc": "oath_ring_guide",
+      "category": "items",
+      "name": "盟誓戒指",
+      "icon": "wandscape:oath_ring",
+      "sortnum": 1
+    },
+    {
+      "doc": "scepter_guide",
+      "category": "items",
+      "name": "权杖",
+      "icon": "wandscape:omni_scepter",
+      "sortnum": 2
+    },
+    {
+      "doc": "magic_compass_guide",
+      "category": "items",
+      "name": "魔法指南针",
+      "icon": "wandscape:magic_compass",
+      "sortnum": 3
+    },
+    {
+      "doc": "warehouse_terminal_guide",
+      "category": "items",
+      "name": "仓库终端",
+      "icon": "wandscape:warehouse_terminal",
+      "sortnum": 4
+    },
+    {
+      "doc": "custom_guide",
+      "category": "custom",
+      "name": "自定义",
+      "icon": "minecraft:structure_block",
+      "sortnum": 0
+    },
+    {
+      "doc": "building_scanner_guide",
+      "category": "custom",
+      "name": "建筑扫描器",
+      "icon": "wandscape:building_scanner",
+      "sortnum": 1
+    },
+    {
+      "doc": "custom_buildings_guide",
+      "category": "custom",
+      "name": "导入自定义建筑",
+      "icon": "minecraft:scaffolding",
+      "sortnum": 2
+    },
+    {
+      "doc": "custom_packs_guide",
+      "category": "custom",
+      "name": "导入建筑包",
+      "icon": "minecraft:bundle",
+      "sortnum": 3
+    },
+    {
+      "doc": "custom_elements_guide",
+      "category": "custom",
+      "name": "导入元素定价",
+      "icon": "wandscape:element_earth",
+      "sortnum": 4
+    },
+    {
+      "doc": "custom_recipes_guide",
+      "category": "custom",
+      "name": "导入合成配方",
+      "icon": "minecraft:crafting_table",
+      "sortnum": 5
+    },
+    {
+      "doc": "custom_magic_guide",
+      "category": "custom",
+      "name": "导入魔法",
+      "icon": "wandscape:spell_scroll",
+      "sortnum": 6
+    },
+    {
+      "doc": "custom_loot_guide",
+      "category": "custom",
+      "name": "导入战利品箱子价值",
+      "icon": "minecraft:chest",
+      "sortnum": 7
+    },
+    {
+      "doc": "custom_commands_guide",
+      "category": "custom",
+      "name": "指令",
+      "icon": "minecraft:command_block",
+      "sortnum": 8
+    },
+    {
+      "doc": "curios_guide",
+      "category": "compat",
+      "name": "Curios 饰品槽",
+      "icon": "minecraft:gold_ingot",
+      "sortnum": 0
+    },
+    {
+      "doc": "irons_spells_guide",
+      "category": "compat",
+      "name": "铁魔法",
+      "icon": "minecraft:enchanted_book",
+      "sortnum": 1
+    },
+    {
+      "doc": "goety_guide",
+      "category": "compat",
+      "name": "诡厄巫法",
+      "icon": "minecraft:soul_lantern",
+      "sortnum": 2
+    },
+    {
+      "doc": "tlm_guide",
+      "category": "compat",
+      "name": "车万女仆",
+      "icon": "minecraft:name_tag",
+      "sortnum": 3
+    },
+    {
+      "doc": "about_guide",
+      "category": "about",
+      "name": "关于我们",
+      "icon": "minecraft:name_tag",
+      "sortnum": 0
+    }
+  ],
+  "titles": {
+    "0，入门": "intro_0_guide",
+    "0.5，推荐了解的功能": "intro_0_5_guide",
+    "1，游客线": "track_tourist_guide",
+    "2，冒险线": "track_adventure_guide",
+    "3，科技线": "track_tech_guide",
+    "4，外交线": "track_diplomacy_guide",
+    "概览": "index_guide",
+    "建筑": "buildings",
+    "管理": "management",
+    "魔法": "magic",
+    "装备与物品": "items",
+    "自定义与数据包": "custom",
+    "联动与兼容": "compat",
+    "关于我们": "about_guide",
+    "元素与城镇等级": "element_level_guide",
+    "游客与三值": "tourists_guide",
+    "管理面板": "panel_guide",
+    "建造子模式": "panel_build_guide",
+    "道路子模式": "panel_road_guide",
+    "任务大厅": "panel_tasks_guide",
+    "设置中心": "panel_settings_guide",
+    "法师": "mages_guide",
+    "施法": "casting_guide",
+    "高级施法管理": "advanced_casting_guide",
+    "合成站": "crafting_guide",
+    "魔法工坊": "magic_station_guide",
+    "商店": "shop_guide",
+    "服务设施与酒店": "service_guide",
+    "酒馆": "tavern_guide",
+    "祭坛": "altar_guide",
+    "法师小屋": "mage_hut_guide",
+    "ATM": "atm_guide",
+    "法杖": "wand_guide",
+    "盟誓戒指": "oath_ring_guide",
+    "权杖": "scepter_guide",
+    "元素节点": "node_guide"
+  }
+}

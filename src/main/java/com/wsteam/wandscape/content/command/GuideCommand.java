@@ -7,6 +7,7 @@ import com.mojang.brigadier.suggestion.SuggestionProvider;
 import com.mojang.brigadier.tree.CommandNode;
 import com.wsteam.wandscape.content.items.guidebook.network.GuideBookOpenPacket;
 import com.wsteam.wandscape.foundation.ui.I18n;
+import com.wsteam.wandscape.foundation.ui.guidebook.GuideManifest;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
@@ -14,33 +15,52 @@ import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.List;
+import java.util.Set;
 
 /**
- * 打开模组指南书阅读器。
+ * 打开模组指南书。
  *
- * <p>默认打开「命令介绍页」（{@code commands_guide}，对模组 /wandscape 指令做系统介绍），
- * 也可传入页名直达任意指南页（如 {@code /wandscape guide warehouse} 打开仓库指南）。
+ * <p>不带页名打开手册首页（着陆页）；也可传入页名直达：条目 id（{@code townhall_guide}）、
+ * 去掉词尾 {@code _guide} 的别名（{@code warehouse}），或分类 {@code category:buildings}。
  *
- * <p>页名经 {@code GuideBookOpenPacket} 交给客户端 {@code DocumentLoader} 按语言解析，
- * 未知页名客户端显示 404 页。玩家无需权限。
+ * <p>页名经 {@code GuideBookOpenPacket} 交给客户端：装了 Patchouli 开手册条目，
+ * 没装走兜底阅读器，两边认同一套页名。未知页名在帕秋莉侧落到手册首页、在兜底侧显示 404 页。
+ * 玩家无需权限。
  */
 public final class GuideCommand {
 
-    /** 默认页：模组命令介绍。 */
-    public static final String DEFAULT_PAGE = "commands_guide";
+    /** 默认页：空串＝手册首页（着陆页），由 {@link GuideManifest#ROOT_PAGE} 解析。 */
+    public static final String DEFAULT_PAGE = "";
 
     private GuideCommand() {}
 
+    /**
+     * 补全列表取自运行期清单（页 id 与语言无关，所以服务端直接读它）。
+     * 以前这里是一串手写的页名，删了几篇文档就有 13 项指向不存在的页。
+     */
     private static final SuggestionProvider<CommandSourceStack> SUGGEST_PAGES = (ctx, builder) ->
-            SharedSuggestionProvider.suggest(List.of(
-                    "commands_guide", "index_guide", "getting_started_guide", "overview_guide",
-                    "road_guide", "warehouse_guide", "npc_guide", "tavern_guide", "tourist_guide",
-                    "townhall_guide", "shop_guide", "service_guide", "relax_guide", "atm_guide",
-                    "decoration_guide", "node_guide", "altar_guide",
-                    "crafting_guide", "magic_station_guide", "workstation_guide", "mage_hut_guide",
-                    "strategy_guide", "scanner_guide", "creative_scanner_guide", "road_replace_guide",
-                    "road_fill_guide", "road_spline_guide", "magic_circle_editor_guide", "anomaly_guide"),
-                    builder);
+            SharedSuggestionProvider.suggest(suggestedPages(), builder);
+
+    private static List<String> suggestedPages() {
+        GuideManifest manifest = GuideManifest.anyLocale();
+        if (manifest == null) {
+            return List.of(GuideManifest.ROOT_PAGE);
+        }
+        List<String> pages = new java.util.ArrayList<>();
+        for (GuideManifest.Category category : manifest.categories()) {
+            pages.add(GuideManifest.CATEGORY_PREFIX + category.id());
+        }
+        Set<String> seen = new java.util.HashSet<>();
+        for (GuideManifest.Entry entry : manifest.entries()) {
+            if (seen.add(entry.doc())) {
+                pages.add(entry.doc());
+                if (entry.doc().endsWith("_guide")) {
+                    pages.add(entry.doc().substring(0, entry.doc().length() - "_guide".length()));
+                }
+            }
+        }
+        return pages;
+    }
 
     public static CommandNode<CommandSourceStack> node() {
         return Commands.literal("guide")

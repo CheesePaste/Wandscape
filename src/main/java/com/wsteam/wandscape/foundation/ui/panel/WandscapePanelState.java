@@ -217,11 +217,6 @@ public final class WandscapePanelState {
                 underConstructionStarted != null ? underConstructionStarted : List.of();
     }
 
-    private static boolean panelEverOpened = false;
-
-    public static boolean isPanelEverOpened() {
-        return panelEverOpened;
-    }
 
     /** 管理面板仅支持主世界：非主世界（下界/末地/模组维度）打开会让俯瞰相机等客户端 UI
      *  状态在主世界假设下运行，造成面板/UI 异常。当前是否处于可打开面板的世界。 */
@@ -247,11 +242,6 @@ public final class WandscapePanelState {
         PacketDistributor.sendToServer(new PanelStateTogglePacket(true));
         // Default to overview mode
         enterSubMode(SubMode.OVERVIEW);
-
-        if (!panelEverOpened) {
-            panelEverOpened = true;
-            WandscapePanelController.openPanelHelpDocument();
-        }
     }
 
     public static void closePanel() {

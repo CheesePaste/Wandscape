@@ -1,0 +1,81 @@
+{
+  "name": "Commands",
+  "category": "wandscape:custom",
+  "icon": "minecraft:command_block",
+  "sortnum": 8,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "$(italic)$(#6b5a45)Every command lives under $(#8a5a2b)/wandscape$()$(italic)$(#6b5a45). Reading state needs no permission; anything that touches the colony needs an admin. The developer/debug set is tucked away under $(#8a5a2b)/wandscape test$()$(italic)$(#6b5a45) and is not covered here.$()$(br2)Most of what the panel does, a command can do too. What commands actually add is the other two things: $(bold)laying the numbers out$() and $(bold)rescuing a colony that has locked up$()."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Read-only queries ($(#8a5a2b)status$(), $(#8a5a2b)list$(), $(#8a5a2b)view$()) are open to anyone. Anything that changes a colony's assets — adding or removing elements and items, setting the level, granting experience, renaming, recruiting a mage, cancelling or demolishing buildings and road edges — requires admin rights. The developer/debug commands hang off a separate $(#8a5a2b)/wandscape test$() tree, admin-only from top to bottom, and they do not show up in a normal player's autocomplete at all.",
+      "title": "Permissions, and which colony a command picks"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Every command first has to decide which colony it is working on, and the order is fixed: $(bold)it looks for a colony you founded$(), and uses that one wherever you happen to be standing. Only if you founded none does an admin fall back to the colony at their feet, while a normal player is simply told no colony was found. That is why reading someone else's world needs admin: you can see the buildings at your coordinates, and the command still says there is no colony there."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(bold)Command  What it does$()$(li)$(#8a5a2b)/wandscape colony status$() — Level, experience, the three values, tourist and mage counts, work under construction, all seven elements$(li)$(#8a5a2b)/wandscape colony list$() — Name, short id and level of every colony on the server$(li)$(#8a5a2b)/wandscape colony create <name>$() — Create a colony (op-2)$(li)$(#8a5a2b)/wandscape colony destroy$() — Destroy a colony (op-2)$(li)$(#8a5a2b)/wandscape colony level <n>$() — Set the level outright, within the level cap (op-2)$(li)$(#8a5a2b)/wandscape colony exp <n>$() — Grant experience, which may level the colony up (op-2)$(li)$(#8a5a2b)/wandscape colony name <name>$() — Rename the colony (op-2)",
+      "title": "Colony"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(#8a5a2b)create$() places the colony 5 blocks in front of you, or under your feet if you are sneaking. It also spawns 3 starter mages and sets off a ring of fireworks. $(bold)One colony per player$(): if you already own one, the command fails outright rather than making a second.$(br2)$(#8a5a2b)destroy$() destroys $(bold)the colony you founded$(). Only when you never founded one does it fall back to the colony at your feet."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(bold)Command  What it does$()$(li)$(#8a5a2b)/wandscape element view$() — The seven element balances$(li)$(#8a5a2b)/wandscape element add <element> <amount>$() — Add elements (op-2)$(li)$(#8a5a2b)/wandscape element remove <element> <amount>$() — Remove elements (op-2)$(li)$(#8a5a2b)/wandscape element clear$() — Clear all seven elements (op-2)$(li)$(#8a5a2b)/wandscape warehouse view$() — Item kinds, piece count and capacity in use$(li)$(#8a5a2b)/wandscape warehouse add <item> <amount>$() — Add items (op-2)$(li)$(#8a5a2b)/wandscape warehouse remove <item> <amount>$() — Remove items (op-2)$(li)$(#8a5a2b)/wandscape warehouse clear$() — Clear all items (op-2)",
+      "title": "Elements and Warehouse"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Elements are written as their English ids: $(#8a5a2b)earth$(), $(#8a5a2b)wood$(), $(#8a5a2b)water$(), $(#8a5a2b)fire$(), $(#8a5a2b)metal$(), $(#8a5a2b)wind$(), $(#8a5a2b)dark$(). The warehouse holds $(bold)items$() only; elements go through $(#8a5a2b)element$(). Item ids must be written out in full, such as $(#8a5a2b)minecraft:iron_ingot$().$(br2)A $(#8a5a2b)remove$() that asks for more than the colony holds fails and $(bold)takes nothing at all$() — there is no half-finished deduction down to zero."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(bold)Command  What it does$()$(li)$(#8a5a2b)/wandscape building list [category]$() — Colony buildings: name, category, state, size, anchor and short id$(li)$(#8a5a2b)/wandscape building cancel <buildingId>$() — Cancel a building under construction and refund its materials (op-2)$(li)$(#8a5a2b)/wandscape building demolish <buildingId>$() — Demolish a building; the drops go to the colony warehouse (op-2)$(li)$(#8a5a2b)/wandscape road status$() — Road edge count, how many are in each state, and total paved length$(li)$(#8a5a2b)/wandscape road cancel <edgeId>$() — Withdraw an edge under construction and refund its materials (op-2)",
+      "title": "Buildings and Roads"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "You do not have to type an id in full: the 8-character short id from $(#8a5a2b)list$() works as-is, and so does any run of characters from the middle of it.$(br2)$(#8a5a2b)demolish$() refuses in one case: $(bold)the town hall, the warehouse and the workstation cannot be demolished while only one of their kind is left$(), so a colony cannot lose the buildings it needs to keep running."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(bold)Command  What it does$()$(li)$(#8a5a2b)/wandscape npc list [idle]$() — Mage roster: level, idle or on a task, health, mana and equipped spells$(li)$(#8a5a2b)/wandscape tourist list$() — Tourist roster: state, level and the three need bars$(li)$(#8a5a2b)/wandscape tourist clear$() — Clear the colony's tourists$(li)$(#8a5a2b)/wandscape tavern list$() — The mage resumes currently waiting in the tavern$(li)$(#8a5a2b)/wandscape tavern recruit$() — Recruit one mage (op-2)$(li)$(#8a5a2b)/wandscape guard status$() — Guard zone count, the nearest threat, and active guard tasks",
+      "title": "Mages, Tourists and the Tavern"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(#8a5a2b)tourist clear$() needs no permission, and it sends tourists home the $(bold)normal way$() rather than deleting them — use it when the town is overcrowded or a tourist is stuck."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(#8a5a2b)tavern recruit$() is free the first time; after that each recruit costs every element, at a price set in the server config. Not enough elements means the command fails without charging anything.$(br2)Both tavern commands pick their colony by $(bold)where you are standing$(), not by who owns it: outside every colony they fall back to the first colony on the server rather than reporting an error, so walk into the town you mean before recruiting for it."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(bold)Command  What it does$()$(li)$(#8a5a2b)/wandscape recover status$() — Live statistics for the task pool and building queues$(li)$(#8a5a2b)/wandscape recover clear$() — Empty the task pool and building queues, and release the mages$(br2)$(#8a5a2b)clear$() also needs no permission, and its price is that $(bold)every task in progress is discarded on the spot$(): whatever a mage was holding is dropped and the building queues are emptied with it. It is the last resort when mages stand still and do nothing at all, not routine maintenance.",
+      "title": "When Things Lock Up"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(bold)Command  What it does$()$(li)$(#8a5a2b)/wandscape guide [page]$() — Open the in-game guide book$(br2)Players only. With no page name it opens the manual's home page; give a page name to jump straight there — the entry id ($(#8a5a2b)/wandscape guide townhall_guide$()), the short form without $(#8a5a2b)_guide$() ($(#8a5a2b)/wandscape guide warehouse$()), or a category ($(#8a5a2b)/wandscape guide category:buildings$()). The same page names work either way: with Patchouli installed it opens the Patchouli book, without it opens the mod's own reader.",
+      "title": "The Guide Book"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(bold)Command  What it does$()$(li)$(#8a5a2b)/wandscape curios list [target]$() — List a mage's curio slots$(li)$(#8a5a2b)/wandscape curios set <slot> <amount> [target]$() — Set a slot count outright (op-2)$(li)$(#8a5a2b)/wandscape curios add <slot> <amount> [target]$() — Grow a slot count (op-2)$(li)$(#8a5a2b)/wandscape curios remove <slot> <amount> [target]$() — Shrink a slot count (op-2)",
+      "title": "Curios Only"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "These exist only with Curios installed. $(bold)Leaving the target out hits every mage on the server$(), not just the ones near you; name the target to touch a single mage."
+    }
+  ]
+}

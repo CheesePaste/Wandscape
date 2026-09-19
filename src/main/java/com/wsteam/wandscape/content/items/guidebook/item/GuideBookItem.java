@@ -16,15 +16,15 @@ import net.neoforged.neoforge.network.PacketDistributor;
 import java.util.List;
 
 /**
- * 指南书：右键直接打开模组教程首页（index_guide）。
+ * 指南书：右键打开手册首页（着陆页）。
  *
- * <p>服务端发 {@link GuideBookOpenPacket}，客户端用 {@code DocumentLoader}
- * 按语言加载文档并打开阅读器。合成：泥土 + 原木 + 圆石 + 小麦种子（无序）。
+ * <p>服务端发 {@link GuideBookOpenPacket}，客户端由 {@code GuideFacade} 路由：
+ * 装了 Patchouli 开帕秋莉手册，没装走兜底阅读器。合成：泥土 + 原木 + 圆石 + 小麦种子（无序）。
  */
 public class GuideBookItem extends Item {
 
-    /** 默认打开的教程首页文档。 */
-    public static final String INDEX_DOC = "index_guide";
+    /** 首页：空串＝着陆页，由结构清单解析成手册首页。 */
+    public static final String INDEX_DOC = "";
 
     public GuideBookItem(Properties properties) {
         super(properties);

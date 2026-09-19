@@ -1,6 +1,6 @@
 {
   "name": "自定义与数据包",
-  "description": "这一页展示了模组建筑、物品、魔法、合成配方与战利品等内容的模组方块和数据包的自定义方式。对于相关的模组本体内容，见$(l:wandscape:buildings)《建筑》$(/l)$(l:wandscape:magic)《魔法》$(/l)$(l:wandscape:items)《装备与物品》$(/l)。",
+  "description": "这一页展示了模组建筑、物品、魔法、合成配方与战利品等内容的模组方块和数据包的自定义方式，以及查状态与急救用的模组指令。对于相关的模组本体内容，见$(l:wandscape:buildings)《建筑》$(/l)$(l:wandscape:magic)《魔法》$(/l)$(l:wandscape:items)《装备与物品》$(/l)。",
   "icon": "minecraft:structure_block",
   "sortnum": 50
 }

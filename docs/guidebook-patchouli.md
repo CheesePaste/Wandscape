@@ -12,40 +12,53 @@
 
 ```
 内容唯一来源（作者只改这里）
-    src/main/resources/assets/wandscape/guidebook/{zh_cn,en}/*.md     76 篇 × 2 语（其中 61 篇编进手册，其余 15 篇已标注弃用、只兜底屏可读）
+    src/main/resources/assets/wandscape/guidebook/{zh_cn,en}/*.md     62 篇 × 2 语（全部编进手册）
                     │
                     │  gen_patchouli.py（本机跑，生成物提交进仓库）
                     ▼
     data/wandscape/patchouli_books/guide/book.json
     assets/wandscape/patchouli_books/guide/{zh_cn,en_us}/{categories,entries}/**.json
+    assets/wandscape/guidebook/runtime/{zh_cn,en}.json                （结构清单，两套渲染共用）
 
 运行时：
-  装了 Patchouli  →  帕秋莉手册 wandscape:guide（目录 / 章节 / 条目 / 跳转）
-  没装 Patchouli  →  GuidebookScreen + MarkdownParser 直接读同一份 md（只读兜底）
+  装了 Patchouli  →  帕秋莉手册 wandscape:guide（着陆页 / 分类 / 条目 / 跳转）
+  没装 Patchouli  →  GuidebookScreen + MarkdownParser 直接读同一份 md（只读兜底，
+                     结构读 runtime 清单，因此同样是「着陆页 → 分类 → 条目」三层）
 ```
 
-**硬约束**：md 是唯一内容来源。**不要**手改 `patchouli_books/**` 下的 JSON——它们会被下次生成整体覆盖。
-改内容 = 改 md + 重跑脚本，不存在「改两遍」的路径，两处渲染因此不可能不一致。
+**硬约束**：md 是唯一内容来源。**不要**手改 `patchouli_books/**` 或 `guidebook/runtime/**` 下的 JSON——
+它们会被下次生成整体覆盖。改内容 = 改 md + 重跑脚本，不存在「改两遍」的路径。
 
-### 旧 guidebook 已弃用，不要拿它当参考
+**结构也只有一处**：分类、条目、条目在哪个分类、条目名、正文里《…》指向谁，全写在 `gen_patchouli.py` 的
+`CATEGORIES` / `ENTRIES` / `TITLE_TO_DOC` 三张表里，由它发一份**运行期清单**（`guidebook/runtime/<语言>.json`）
+给两套渲染共用。帕秋莉那侧的「页名 → 条目 id」曾经是 `PatchouliCompatImpl` 里的一串手写枚举，因此漏过新加的
+条目、还和生成器的重复条目规则相反；现在它读同一份清单。兜底那侧同样靠清单才知道有哪些分类，
+并据此把正文里的《建筑》改写成可点链接（帕秋莉侧这一步由生成器在编译期完成）。
 
-这一版之前写的那些长篇 md（`getting_started` / `npc_guide` / `tourist_guide` / `strategy_guide` /
+### 旧 guidebook 已彻底删除
+
+这一版之前写的 15 篇长篇 md（`getting_started` / `npc_guide` / `tourist_guide` / `strategy_guide` /
 `overview_guide` / `road_*` / `scanner_guide` / `commands_guide` / `creators_guide` /
-`magic_circle_editor_guide` / `creative_scanner_guide` / `test_guide`，共 15 篇）**内容已经过时**，
-和现在的实现对不上。它们**没有编进手册**，开头一律标了「本页已弃用」。
+`magic_circle_editor_guide` / `creative_scanner_guide` / `test_guide`）**内容过时**，此前只因为
+「没装 Patchouli 时兜底屏还能读到」而留在 `guidebook/` 里。
 
-- **写新内容时不要读它们**——照抄会把过时的机制带进新手册。要写某一页，先读代码和 `data/` 里的实际数据。
-- **方向是反的**：先把手册（即编进手册的那 61 篇 md）写好，将来再**按手册内容反向更新**这些旧文档，
-  而不是拿旧文档去填手册。
-- 它们目前仍留在 `guidebook/` 里，只是因为没装 Patchouli 时兜底屏还能读到；**不要据此认为它们是可信来源**。
-- 手册里若还有链接指向这些文档，生成器会打印「链接无帕秋莉等价形式」——那是在提醒你目标已不在手册里。
+它们**已经删掉**（连同只被它们引用的 3 张配图 `road_diagram` / `magic_editor_diagram` / `sample`，
+以及 3 张早已无人引用的 `overview_diagram` / `scanner_diagram` / `scanner_ui`）。留下的唯一一份手册
+就是编进书里的这 62 篇。
+
+- 需要旧文里那点内容时**去 git 历史里取**（删除发生在「兜底补齐三层导航」那次提交），别再往 `guidebook/` 里抄回来。
+- 旧文里 4 个主题在手册中没有对应页：法阵编辑器、道路工作室/样条编辑器、`/wandscape test` 指令、创作者/API。
+  当时的处置是**不迁移**——工具类旁支，等真有人用再按手册文风补写。
+- 生成器现在会拦这类问题：md 目录里出现未登记的文档、正文里的《…》不在标题表里、链接指向不存在的文档，
+  都会打印警告并以非零码退出（见 §二）。
 
 ---
 
 ## 二、生成管线
 
 ```bash
-python gen_patchouli.py                    # 编译手册 JSON（会先清空上一次的生成物）
+python gen_patchouli.py                    # 编译手册 JSON + 运行期清单（会先清空上一次的生成物）
+python gen_patchouli.py --check            # 只校验：已提交的生成物与当前 md/结构表是否一致（不进游戏就能跑的检查）
 python paginate_patchouli_json.py          # 把超长页切分；紧跟在 gen 之后，必跑
 python gen_patchouli.py textures           # 生成占位书皮（已存在则跳过）
 python gen_patchouli.py textures --force   # 强制覆盖书皮
@@ -57,11 +70,18 @@ python gen_patchouli.py textures --force   # 强制覆盖书皮
   分页脚本可 `--dry-run` 先看切分计划，`--max-lines` / `--max-chars` 调阈值。
 - 脚本只依赖 Python 标准库（含自写的 PNG 编码），不进构建流程，产物提交进仓库可审计。
 - 脚本末尾会对每条生成文本做**静态自检**：未知 `$(命令)`、样式栈下溢都会打印警告（帕秋莉对前者原样显示 `$(xxx)`，对后者抛异常渲染 `[ERROR]`）。
+- 另外三条自检拦住的是「跳转悄悄失效」这类问题：md 目录里有未登记的文档、正文里的《…》不在 `TITLE_TO_DOC` 里、
+  md 链接指向不存在的文档/分类。**有任何警告即非零退出**——警告在游戏里会变成纯文本或 404。
 - 语言目录映射：md 的 `en` → 帕秋莉的 `en_us`。帕秋莉以 `en_us` 目录为**枚举索引**、其他语言只做覆盖，所以两套目录必须完整生成，不能只放 `zh_cn`。
+  运行期清单按 md 语言取（`runtime/zh_cn.json` / `runtime/en.json`），用的是同一套语言目录名。
 
 ### 结构清单在脚本里
 
-分类与「条目 → 分类 / 图标 / 排序」写在 `gen_patchouli.py` 的 `CATEGORIES` / `ENTRIES` 两张表里——这是**结构**元数据，不是内容。条目名取各自 md 的 H1，因此不用双语重复维护。
+分类、「条目 → 分类 / 图标 / 排序」与《…》标题表写在 `gen_patchouli.py` 的
+`CATEGORIES` / `ENTRIES` / `TITLE_TO_DOC` 三张表里——这是**结构**元数据，不是内容。
+条目名取各自 md 的 H1，因此不用双语重复维护；这三张表同时决定帕秋莉 JSON 与 `guidebook/runtime/<语言>.json` 的形状。
+**同一篇 md 登记两次时先出现者胜出**（`building_scanner_guide` 登在 buildings 与 custom 两处，
+帕秋莉条目 id 与清单都取 buildings 那份；脚本会断言别名不与分类/条目撞车）。
 
 | 分类 id | 中文名 | 条目（md 文件名去掉 `_guide`） |
 |---|---|---|
@@ -70,7 +90,7 @@ python gen_patchouli.py textures --force   # 强制覆盖书皮
 | `management` | 管理 | panel / panel_build / panel_road / panel_tasks / panel_settings |
 | `magic` | 魔法 | mages / casting / advanced_casting / magic_beam / magic_meteor / magic_desperation / magic_enfeeble_field / magic_conversion / magic_petrification / magic_fortification / magic_heal / magic_teleport / magic_revive |
 | `items` | 装备与物品 | wand / oath_ring / scepter / magic_compass / warehouse_terminal |
-| `custom` | 自定义与数据包 | custom / building_scanner / custom_buildings / custom_packs / custom_elements / custom_recipes / custom_magic / custom_loot |
+| `custom` | 自定义与数据包 | custom / building_scanner / custom_buildings / custom_packs / custom_elements / custom_recipes / custom_magic / custom_loot / custom_commands |
 | `compat` | 联动与兼容 | curios / irons_spells / goety / tlm |
 | `about` | 关于我们 | about |
 
@@ -155,23 +175,17 @@ python gen_patchouli.py textures --force   # 强制覆盖书皮
 
 当前占位图由 `gen_patchouli.py textures` 用纯代码绘制（平涂色块 + 简单符号），**不含正式美术**。
 
-### 4.2 正文配图：【占位，待重画】
+### 4.2 正文配图：当前一张都没有
 
-帕秋莉 `patchouli:image` 页固定 `blit(images[i], x, y, 0, 0, 200, 200)` 再整体 0.5 缩放，即：
+手册正文**现在不含任何配图**：唯一引用过图片的 3 篇旧文（`road_guide` / `magic_circle_editor_guide` /
+`test_guide`）连同它们的 3 张图一起删掉了，另外 3 张早已无人引用的
+（`overview_diagram` / `scanner_diagram` / `scanner_ui`）也一并清掉，`textures/gui/guidebook/`
+下只剩 `book.png`。
 
-- 只取贴图**左上 200×200 区域**；
-- 屏幕上只有 **100×100 像素**；
-- **没有 width/height 字段**可调。
-
-现有 3 张配图都是 **1376×768**，直接被裁左上角，等于显示不全：
-
-| 源图 | 引用处 | 现状 |
-|---|---|---|
-| `wandscape:textures/gui/guidebook/road_diagram.png` | `road_guide.md` | 裁左上角 |
-| `wandscape:textures/gui/guidebook/magic_editor_diagram.png` | `magic_circle_editor_guide.md` | 裁左上角 |
-| `wandscape:textures/gui/guidebook/sample.png` | `test_guide.md` | 裁左上角 |
-
-**重画规格**：**256×256 正方形 PNG**，有效内容严格放在**左上 200×200**（其余 56px 留白可透明），字号要按「最终显示只有 100×100」来定——即文字高度至少 16px 源尺寸才勉强可读。重画后直接覆盖同名文件即可，无需改 md（md 里的 `=WxH` 后缀会被忽略，但 md 阅读器兜底仍用它排版，所以别删）。
+要重新加图时的规格（帕秋莉 `patchouli:image` 页固定 `blit(images[i], x, y, 0, 0, 200, 200)`
+再整体 0.5 缩放）：**256×256 正方形 PNG**，有效内容严格放在**左上 200×200**（其余 56px 留白可透明），
+字号要按「最终显示只有 100×100」来定——即文字高度至少 16px 源尺寸才勉强可读。
+md 里的 `![alt](wandscape:path/x.png =WxH)` 尺寸后缀帕秋莉不认（兜底阅读器认）。
 
 ### 4.3 物品模型：【占位，待换】
 

@@ -1,0 +1,547 @@
+{
+  "manifest_version": 1,
+  "book": "wandscape:guide",
+  "landing": {
+    "title": "Wandscape Guidebook",
+    "text": "Welcome to Wandscape! You place the buildings, your wizards do the work, and tourists walk in along the roads to spend.\n\nNew here? Start with [0. Getting Started](intro_0_guide.md), or pick a chapter from the [overview](index_guide.md)."
+  },
+  "categories": [
+    {
+      "id": "playstyle",
+      "name": "Gameplay Tracks",
+      "desc": "This section shows the mod's general intended route. For the details of a feature, see its own category.",
+      "icon": "minecraft:compass",
+      "sortnum": 0
+    },
+    {
+      "id": "buildings",
+      "name": "Buildings",
+      "desc": "Every building type and what each one does. For how to build, see 《0. Getting Started》, 《Management》 and 《Build Mode》.",
+      "icon": "minecraft:stone_bricks",
+      "sortnum": 10
+    },
+    {
+      "id": "management",
+      "name": "Management",
+      "desc": "The mod's management system and how to operate it. For individual buildings, see 《Buildings》.",
+      "icon": "minecraft:lever",
+      "sortnum": 20
+    },
+    {
+      "id": "magic",
+      "name": "Spells",
+      "desc": "Mages, casting, and each spell. For wands and magic items, see 《Equipment and Items》.",
+      "icon": "wandscape:spell_scroll",
+      "sortnum": 30
+    },
+    {
+      "id": "items",
+      "name": "Equipment and Items",
+      "desc": "The mod's equipment (wands) and its smaller items. For spells such as scrolls, see 《Spells》; for how to craft them, see 《Crafting Station》.",
+      "icon": "wandscape:wand",
+      "sortnum": 40
+    },
+    {
+      "id": "custom",
+      "name": "Customization & Datapacks",
+      "desc": "How to customize the mod's own blocks and data packs — buildings, items, spells, crafting recipes and loot — plus the mod's own commands for reading state and rescuing a stuck colony. For the mod's own content, see 《Buildings》, 《Spells》 and 《Equipment and Items》.",
+      "icon": "minecraft:structure_block",
+      "sortnum": 50
+    },
+    {
+      "id": "compat",
+      "name": "Integration & Compatibility",
+      "desc": "What this mod does together with other mods. If you run into a compatibility bug, see 《About Us》.",
+      "icon": "minecraft:crafting_table",
+      "sortnum": 60
+    },
+    {
+      "id": "about",
+      "name": "About Us",
+      "desc": "Credits, official platforms, and where to send feedback.",
+      "icon": "minecraft:name_tag",
+      "sortnum": 70
+    }
+  ],
+  "entries": [
+    {
+      "doc": "index_guide",
+      "category": "playstyle",
+      "name": "Overview",
+      "icon": "wandscape:guide_book",
+      "sortnum": 0
+    },
+    {
+      "doc": "intro_0_guide",
+      "category": "playstyle",
+      "name": "0. Getting Started",
+      "icon": "minecraft:writable_book",
+      "sortnum": 1
+    },
+    {
+      "doc": "intro_0_5_guide",
+      "category": "playstyle",
+      "name": "0.5 Recommended Features",
+      "icon": "minecraft:knowledge_book",
+      "sortnum": 2
+    },
+    {
+      "doc": "element_level_guide",
+      "category": "playstyle",
+      "name": "Elements and Town Level",
+      "icon": "wandscape:element_earth",
+      "sortnum": 3
+    },
+    {
+      "doc": "track_tourist_guide",
+      "category": "playstyle",
+      "name": "1. Tourist Track",
+      "icon": "wandscape:tourist_spawn_egg",
+      "sortnum": 4
+    },
+    {
+      "doc": "tourists_guide",
+      "category": "playstyle",
+      "name": "Tourists and Values",
+      "icon": "minecraft:emerald",
+      "sortnum": 5
+    },
+    {
+      "doc": "track_adventure_guide",
+      "category": "playstyle",
+      "name": "2. Adventure Track",
+      "icon": "minecraft:iron_sword",
+      "sortnum": 6
+    },
+    {
+      "doc": "track_tech_guide",
+      "category": "playstyle",
+      "name": "3. Tech Track",
+      "icon": "minecraft:redstone",
+      "sortnum": 7
+    },
+    {
+      "doc": "track_diplomacy_guide",
+      "category": "playstyle",
+      "name": "4. Diplomacy Track",
+      "icon": "minecraft:white_banner",
+      "sortnum": 8
+    },
+    {
+      "doc": "buildings_guide",
+      "category": "buildings",
+      "name": "Buildings",
+      "icon": "minecraft:bricks",
+      "sortnum": 0
+    },
+    {
+      "doc": "anomaly_guide",
+      "category": "buildings",
+      "name": "Building Maintenance",
+      "icon": "minecraft:anvil",
+      "sortnum": 1
+    },
+    {
+      "doc": "townhall_guide",
+      "category": "buildings",
+      "name": "Town Hall",
+      "icon": "minecraft:bell",
+      "sortnum": 2
+    },
+    {
+      "doc": "warehouse_guide",
+      "category": "buildings",
+      "name": "Warehouse",
+      "icon": "minecraft:chest",
+      "sortnum": 3
+    },
+    {
+      "doc": "workstation_guide",
+      "category": "buildings",
+      "name": "Workstation",
+      "icon": "minecraft:crafting_table",
+      "sortnum": 4
+    },
+    {
+      "doc": "crafting_guide",
+      "category": "buildings",
+      "name": "Crafting Station",
+      "icon": "wandscape:wand",
+      "sortnum": 5
+    },
+    {
+      "doc": "magic_station_guide",
+      "category": "buildings",
+      "name": "Magic Workshop",
+      "icon": "wandscape:spell_scroll",
+      "sortnum": 6
+    },
+    {
+      "doc": "tavern_guide",
+      "category": "buildings",
+      "name": "Tavern",
+      "icon": "minecraft:brewing_stand",
+      "sortnum": 7
+    },
+    {
+      "doc": "altar_guide",
+      "category": "buildings",
+      "name": "Altar",
+      "icon": "minecraft:enchanting_table",
+      "sortnum": 8
+    },
+    {
+      "doc": "mage_hut_guide",
+      "category": "buildings",
+      "name": "Mage Hut",
+      "icon": "minecraft:red_bed",
+      "sortnum": 9
+    },
+    {
+      "doc": "node_guide",
+      "category": "buildings",
+      "name": "Element Node",
+      "icon": "wandscape:element_earth",
+      "sortnum": 10
+    },
+    {
+      "doc": "decoration_guide",
+      "category": "buildings",
+      "name": "Decorations",
+      "icon": "minecraft:lantern",
+      "sortnum": 11
+    },
+    {
+      "doc": "shop_guide",
+      "category": "buildings",
+      "name": "Shop",
+      "icon": "minecraft:emerald",
+      "sortnum": 12
+    },
+    {
+      "doc": "service_guide",
+      "category": "buildings",
+      "name": "Services",
+      "icon": "minecraft:light_blue_bed",
+      "sortnum": 13
+    },
+    {
+      "doc": "relax_guide",
+      "category": "buildings",
+      "name": "Relax",
+      "icon": "minecraft:oak_stairs",
+      "sortnum": 14
+    },
+    {
+      "doc": "atm_guide",
+      "category": "buildings",
+      "name": "ATM",
+      "icon": "minecraft:gold_ingot",
+      "sortnum": 15
+    },
+    {
+      "doc": "building_scanner_guide",
+      "category": "buildings",
+      "name": "Building Scanner",
+      "icon": "wandscape:building_scanner",
+      "sortnum": 16
+    },
+    {
+      "doc": "panel_guide",
+      "category": "management",
+      "name": "Management Panel",
+      "icon": "minecraft:compass",
+      "sortnum": 0
+    },
+    {
+      "doc": "panel_build_guide",
+      "category": "management",
+      "name": "Build Mode",
+      "icon": "minecraft:scaffolding",
+      "sortnum": 1
+    },
+    {
+      "doc": "panel_road_guide",
+      "category": "management",
+      "name": "Road Mode",
+      "icon": "minecraft:dirt_path",
+      "sortnum": 2
+    },
+    {
+      "doc": "panel_tasks_guide",
+      "category": "management",
+      "name": "Task Hall",
+      "icon": "minecraft:paper",
+      "sortnum": 3
+    },
+    {
+      "doc": "panel_settings_guide",
+      "category": "management",
+      "name": "Settings",
+      "icon": "minecraft:redstone_torch",
+      "sortnum": 4
+    },
+    {
+      "doc": "mages_guide",
+      "category": "magic",
+      "name": "Mages",
+      "icon": "wandscape:wandscape_npc_spawn_egg",
+      "sortnum": 0
+    },
+    {
+      "doc": "casting_guide",
+      "category": "magic",
+      "name": "Casting",
+      "icon": "minecraft:blaze_rod",
+      "sortnum": 1
+    },
+    {
+      "doc": "advanced_casting_guide",
+      "category": "magic",
+      "name": "Advanced Casting",
+      "icon": "minecraft:lectern",
+      "sortnum": 2
+    },
+    {
+      "doc": "magic_beam_guide",
+      "category": "magic",
+      "name": "Beam",
+      "icon": "minecraft:spectral_arrow",
+      "sortnum": 3
+    },
+    {
+      "doc": "magic_meteor_guide",
+      "category": "magic",
+      "name": "Meteor",
+      "icon": "minecraft:fire_charge",
+      "sortnum": 4
+    },
+    {
+      "doc": "magic_desperation_guide",
+      "category": "magic",
+      "name": "Desperation",
+      "icon": "minecraft:diamond_sword",
+      "sortnum": 5
+    },
+    {
+      "doc": "magic_enfeeble_field_guide",
+      "category": "magic",
+      "name": "Enfeeble Field",
+      "icon": "minecraft:fermented_spider_eye",
+      "sortnum": 6
+    },
+    {
+      "doc": "magic_conversion_guide",
+      "category": "magic",
+      "name": "Conversion",
+      "icon": "minecraft:lead",
+      "sortnum": 7
+    },
+    {
+      "doc": "magic_petrification_guide",
+      "category": "magic",
+      "name": "Petrification",
+      "icon": "minecraft:stone",
+      "sortnum": 8
+    },
+    {
+      "doc": "magic_fortification_guide",
+      "category": "magic",
+      "name": "Fortification",
+      "icon": "minecraft:shield",
+      "sortnum": 9
+    },
+    {
+      "doc": "magic_heal_guide",
+      "category": "magic",
+      "name": "Heal",
+      "icon": "minecraft:golden_apple",
+      "sortnum": 10
+    },
+    {
+      "doc": "magic_teleport_guide",
+      "category": "magic",
+      "name": "Teleport",
+      "icon": "minecraft:ender_pearl",
+      "sortnum": 11
+    },
+    {
+      "doc": "magic_revive_guide",
+      "category": "magic",
+      "name": "Revive",
+      "icon": "minecraft:totem_of_undying",
+      "sortnum": 12
+    },
+    {
+      "doc": "wand_guide",
+      "category": "items",
+      "name": "Wand",
+      "icon": "wandscape:wand",
+      "sortnum": 0
+    },
+    {
+      "doc": "oath_ring_guide",
+      "category": "items",
+      "name": "Oath Ring",
+      "icon": "wandscape:oath_ring",
+      "sortnum": 1
+    },
+    {
+      "doc": "scepter_guide",
+      "category": "items",
+      "name": "Scepters",
+      "icon": "wandscape:omni_scepter",
+      "sortnum": 2
+    },
+    {
+      "doc": "magic_compass_guide",
+      "category": "items",
+      "name": "Magic Compass",
+      "icon": "wandscape:magic_compass",
+      "sortnum": 3
+    },
+    {
+      "doc": "warehouse_terminal_guide",
+      "category": "items",
+      "name": "Warehouse Terminal",
+      "icon": "wandscape:warehouse_terminal",
+      "sortnum": 4
+    },
+    {
+      "doc": "custom_guide",
+      "category": "custom",
+      "name": "Customization",
+      "icon": "minecraft:structure_block",
+      "sortnum": 0
+    },
+    {
+      "doc": "building_scanner_guide",
+      "category": "custom",
+      "name": "Building Scanner",
+      "icon": "wandscape:building_scanner",
+      "sortnum": 1
+    },
+    {
+      "doc": "custom_buildings_guide",
+      "category": "custom",
+      "name": "Importing Custom Buildings",
+      "icon": "minecraft:scaffolding",
+      "sortnum": 2
+    },
+    {
+      "doc": "custom_packs_guide",
+      "category": "custom",
+      "name": "Importing Building Packs",
+      "icon": "minecraft:bundle",
+      "sortnum": 3
+    },
+    {
+      "doc": "custom_elements_guide",
+      "category": "custom",
+      "name": "Importing Element Values",
+      "icon": "wandscape:element_earth",
+      "sortnum": 4
+    },
+    {
+      "doc": "custom_recipes_guide",
+      "category": "custom",
+      "name": "Importing Crafting Recipes",
+      "icon": "minecraft:crafting_table",
+      "sortnum": 5
+    },
+    {
+      "doc": "custom_magic_guide",
+      "category": "custom",
+      "name": "Importing Spells",
+      "icon": "wandscape:spell_scroll",
+      "sortnum": 6
+    },
+    {
+      "doc": "custom_loot_guide",
+      "category": "custom",
+      "name": "Importing Loot Chest Values",
+      "icon": "minecraft:chest",
+      "sortnum": 7
+    },
+    {
+      "doc": "custom_commands_guide",
+      "category": "custom",
+      "name": "Commands",
+      "icon": "minecraft:command_block",
+      "sortnum": 8
+    },
+    {
+      "doc": "curios_guide",
+      "category": "compat",
+      "name": "Curios Slots",
+      "icon": "minecraft:gold_ingot",
+      "sortnum": 0
+    },
+    {
+      "doc": "irons_spells_guide",
+      "category": "compat",
+      "name": "Iron's Spells",
+      "icon": "minecraft:enchanted_book",
+      "sortnum": 1
+    },
+    {
+      "doc": "goety_guide",
+      "category": "compat",
+      "name": "Goety",
+      "icon": "minecraft:soul_lantern",
+      "sortnum": 2
+    },
+    {
+      "doc": "tlm_guide",
+      "category": "compat",
+      "name": "Touhou Little Maid",
+      "icon": "minecraft:name_tag",
+      "sortnum": 3
+    },
+    {
+      "doc": "about_guide",
+      "category": "about",
+      "name": "About Us",
+      "icon": "minecraft:name_tag",
+      "sortnum": 0
+    }
+  ],
+  "titles": {
+    "0. Getting Started": "intro_0_guide",
+    "0.5 Recommended Features": "intro_0_5_guide",
+    "1. Tourist Track": "track_tourist_guide",
+    "2. Adventure Track": "track_adventure_guide",
+    "3. Tech Track": "track_tech_guide",
+    "4. Diplomacy Track": "track_diplomacy_guide",
+    "Overview": "index_guide",
+    "Buildings": "buildings",
+    "Management": "management",
+    "Spells": "magic",
+    "Equipment and Items": "items",
+    "Customization & Datapacks": "custom",
+    "Integration & Compatibility": "compat",
+    "About Us": "about_guide",
+    "Elements and Town Level": "element_level_guide",
+    "Tourists and Values": "tourists_guide",
+    "Management Panel": "panel_guide",
+    "Build Mode": "panel_build_guide",
+    "Road Mode": "panel_road_guide",
+    "Task Hall": "panel_tasks_guide",
+    "Settings": "panel_settings_guide",
+    "Mages": "mages_guide",
+    "Casting": "casting_guide",
+    "Advanced Casting": "advanced_casting_guide",
+    "Magic Workshop": "magic_station_guide",
+    "Crafting Station": "crafting_guide",
+    "Shop": "shop_guide",
+    "Service Facilities and Hotels": "service_guide",
+    "Tavern": "tavern_guide",
+    "Altar": "altar_guide",
+    "Mage Hut": "mage_hut_guide",
+    "ATM": "atm_guide",
+    "Wand": "wand_guide",
+    "Oath Ring": "oath_ring_guide",
+    "Scepters": "scepter_guide",
+    "Element Node": "node_guide"
+  }
+}

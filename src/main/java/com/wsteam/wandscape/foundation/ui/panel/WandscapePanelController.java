@@ -724,9 +724,9 @@ public final class WandscapePanelController {
     }
 
     public static void openPanelHelpDocument() {
-        String docPath = "overview_guide";
+        String docPath = "panel_guide";
         if (WandscapePanelState.getActiveSubMode() == WandscapePanelState.SubMode.ROAD_PROJECTION) {
-            docPath = "road_guide";
+            docPath = "panel_road_guide";
         }
         com.wsteam.wandscape.foundation.ui.guidebook.GuideFacade.open(docPath);
     }

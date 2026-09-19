@@ -7,7 +7,7 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "Wandscape is grown by developers, architects and players who love Minecraft.$(br2)Official platforms:$(br2)$(l:https://space.bilibili.com/514121566)bilibili$(/l) · $(l:https://discord.gg/da8ZPuQ7Ys)discord$(/l) · $(l:https://github.com/CheesePaste/Wandscape)github$(/l) · $(l:https://www.curseforge.com/minecraft/mc-mods/wandscape)curseforge$(/l) · modrinth (TBA) · mcmod (TBA)$(br2)Feedback: bugs and suggestions to $(l:https://github.com/CheesePaste/Wandscape/issues)GitHub Issues$(/l); support us on $(l:https://ifdian.net/a/CheesePaste)Afdian$(/l)."
+      "text": "Wandscape is grown by developers, architects and players who love Minecraft.$(br2)Official platforms:$(br2)$(l:https://space.bilibili.com/514121566)bilibili$(/l) · $(l:https://discord.gg/da8ZPuQ7Ys)discord$(/l) · $(l:https://github.com/CheesePaste/Wandscape)github$(/l) · $(l:https://www.curseforge.com/minecraft/mc-mods/wandscape)curseforge$(/l) · $(l:https://www.mcmod.cn/class/30005.html)mcmod$(/l) · $(l:https://modrinth.com/mod/wandscape)modrinth$(/l) (under review)$(br2)Feedback: bugs and suggestions to $(l:https://github.com/CheesePaste/Wandscape/issues)GitHub Issues$(/l); support us on $(l:https://ifdian.net/a/CheesePaste)Afdian$(/l)."
     },
     {
       "type": "patchouli:text",

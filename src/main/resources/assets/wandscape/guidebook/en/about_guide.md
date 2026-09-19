@@ -3,7 +3,7 @@
 Wandscape is grown by developers, architects and players who love Minecraft.
 
 Official platforms:
-[bilibili](https://space.bilibili.com/514121566) · [discord](https://discord.gg/da8ZPuQ7Ys) · [github](https://github.com/CheesePaste/Wandscape) · [curseforge](https://www.curseforge.com/minecraft/mc-mods/wandscape) · modrinth (TBA) · mcmod (TBA)
+[bilibili](https://space.bilibili.com/514121566) · [discord](https://discord.gg/da8ZPuQ7Ys) · [github](https://github.com/CheesePaste/Wandscape) · [curseforge](https://www.curseforge.com/minecraft/mc-mods/wandscape) · [mcmod](https://www.mcmod.cn/class/30005.html) · [modrinth](https://modrinth.com/mod/wandscape) (under review)
 
 Feedback: bugs and suggestions to [GitHub Issues](https://github.com/CheesePaste/Wandscape/issues); support us on [Afdian](https://ifdian.net/a/CheesePaste).
 

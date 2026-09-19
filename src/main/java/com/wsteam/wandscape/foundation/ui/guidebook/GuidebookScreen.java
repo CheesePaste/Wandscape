@@ -6,7 +6,6 @@ import com.wsteam.wandscape.foundation.ui.I18n;
 import com.wsteam.wandscape.foundation.ui.component.MedievalButton;
 import com.wsteam.wandscape.foundation.ui.component.MedievalScreen;
 import com.wsteam.wandscape.foundation.ui.markdown.navigation.DocumentHistoryStack;
-import com.wsteam.wandscape.foundation.ui.markdown.navigation.DocumentLoader;
 import com.wsteam.wandscape.foundation.ui.markdown.widget.MarkdownRenderWidget;
 import net.minecraft.Util;
 import net.minecraft.client.gui.screens.ConfirmLinkScreen;
@@ -29,14 +28,14 @@ public class GuidebookScreen extends MedievalScreen {
     private MedievalButton btnBack;
     private MedievalButton btnForward;
 
-    public GuidebookScreen(String initialMarkdownContent) {
-        this(null, initialMarkdownContent, "assets/wandscape/guidebook/test_guide.md");
-    }
-
-    public GuidebookScreen(Screen parentScreen, String initialMarkdownContent, String initialDocPath) {
+    /**
+     * @param initialDocPath 页名（条目 id / 别名 / 分类页 / 空串＝着陆页）；由 {@link GuidePages}
+     *                       解析，构造时不做 IO——正文在 {@link #init()} 里按页 id 现取。
+     */
+    public GuidebookScreen(Screen parentScreen, String initialDocPath) {
         super(I18n.name("gui.wandscape.guidebook.title", "Wandscape 指南书"), 320, 230);
         this.parentScreen = parentScreen;
-        this.historyStack = new DocumentHistoryStack(initialDocPath);
+        this.historyStack = new DocumentHistoryStack(GuidePages.canonical(initialDocPath));
         this.showCloseButton = true;
         this.titleXOffset = 52;
         setTitleBar(I18n.name("gui.wandscape.guidebook.titlebar", "Wandscape 指南书"));
@@ -61,14 +60,14 @@ public class GuidebookScreen extends MedievalScreen {
         int contentW = panelWidth - 12;
         int contentH = panelHeight - headerHeight - 10;
 
-        String currentDocPath = historyStack.getCurrentDocument();
-        String content = DocumentLoader.loadMarkdown(currentDocPath);
+        String content = GuidePages.load(historyStack.getCurrentDocument());
 
         markdownWidget = new MarkdownRenderWidget(contentX, contentY, contentW, contentH, content);
         markdownWidget.setActionClickListener(this::handleLinkAction);
 
         addRenderableWidget(markdownWidget);
 
+        applyDocumentTitle(content);
         updateNavigationState();
     }
 
@@ -115,17 +114,16 @@ public class GuidebookScreen extends MedievalScreen {
             return;
         }
 
-        // 4. Document reference:
-        //    - native markdown link (doc_id.md / bare doc_id / assets/... full path)
-        //    - legacy guide:doc_id (backwards compat — strip prefix)
-        //    DocumentLoader.resolveCandidates normalizes all of these (incl. .md suffix).
-        String docPath = target;
-        if (target.startsWith("guidebook:")) {
-            docPath = target.substring("guidebook:".length()).trim();
-        }
+        // 4. Document reference (doc_id.md / bare doc_id / legacy guide:doc_id / category:<id>）。
+        //    归一化后再进历史栈：`x.md`、`x` 与全路径归一后是同一页，否则会变成三条历史。
+        navigateTo(target);
+    }
 
-        historyStack.navigateTo(docPath);
-        loadDocument(docPath);
+    /** 打开一页：归一化页名 → 取正文 → 建历史 → 刷新标题与翻页按钮。 */
+    private void navigateTo(String rawPage) {
+        String canonical = GuidePages.canonical(rawPage);
+        historyStack.navigateTo(canonical);
+        loadDocument(canonical);
     }
 
     private void handleGameAction(String action) {
@@ -152,11 +150,22 @@ public class GuidebookScreen extends MedievalScreen {
     }
 
     private void loadDocument(String docPath) {
-        String mdContent = DocumentLoader.loadMarkdown(docPath);
+        String mdContent = GuidePages.load(docPath);
         if (markdownWidget != null) {
             markdownWidget.setMarkdown(mdContent);
         }
+        applyDocumentTitle(mdContent);
         updateNavigationState();
+    }
+
+    /** 标题栏跟着页面走（着陆页是书名、分类页是分类名、条目页是条目名），放不下就截断。 */
+    private void applyDocumentTitle(String markdown) {
+        String pageTitle = GuidePages.title(markdown);
+        Component title = pageTitle != null && !pageTitle.isBlank()
+                ? Component.literal(pageTitle)
+                : I18n.name("gui.wandscape.guidebook.titlebar", "Wandscape 指南书");
+        int maxWidth = Math.max(40, panelWidth - titleXOffset - closeBtnW - 12);
+        setTitleBar(Component.literal(font.plainSubstrByWidth(title.getString(), maxWidth)));
     }
 
     private void updateNavigationState() {
@@ -173,8 +182,11 @@ public class GuidebookScreen extends MedievalScreen {
      * Used by the spline editor to detect its own guide (for H-toggle/ESC close).
      */
     public boolean isShowingDocument(String docPath) {
-        return historyStack != null && docPath != null
-                && docPath.equals(historyStack.getCurrentDocument());
+        if (historyStack == null || docPath == null) {
+            return false;
+        }
+        // 两边都归一化：调用方写 `road_spline`、这里存的是它解析出的条目 id，直接比字符串会永远不相等
+        return GuidePages.canonical(docPath).equals(historyStack.getCurrentDocument());
     }
 
     @Override

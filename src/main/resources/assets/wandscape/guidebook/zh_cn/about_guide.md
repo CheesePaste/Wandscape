@@ -3,7 +3,7 @@
 Wandscape 由热爱 Minecraft 与模拟经营的开发者、建筑师与玩家们共同浇灌。
 
 官方平台:
-[bilibili](https://space.bilibili.com/514121566) · [discord](https://discord.gg/da8ZPuQ7Ys) · [github](https://github.com/CheesePaste/Wandscape) · [curseforge](https://www.curseforge.com/minecraft/mc-mods/wandscape) · modrinth（等待补充） · mc百科（等待补充）
+[bilibili](https://space.bilibili.com/514121566) · [discord](https://discord.gg/da8ZPuQ7Ys) · [github](https://github.com/CheesePaste/Wandscape) · [curseforge](https://www.curseforge.com/minecraft/mc-mods/wandscape) · [mc百科](https://www.mcmod.cn/class/30005.html) · [modrinth](https://modrinth.com/mod/wandscape)（审核中）
 
 反馈：BUG 与建议提到 [GitHub Issues](https://github.com/CheesePaste/Wandscape/issues)；支持我们走 [爱发电](https://ifdian.net/a/CheesePaste)。
 

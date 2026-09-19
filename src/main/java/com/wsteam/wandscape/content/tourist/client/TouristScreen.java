@@ -43,7 +43,7 @@ public class TouristScreen extends MedievalScreen {
         setTitleBar(Component.literal("Tourist Info"));
         this.showCloseButton = true;
         this.showHelpButton = true;
-        this.helpDocumentPath = "tourist_guide";
+        this.helpDocumentPath = "tourists_guide";
         apply(packet);
     }
 
