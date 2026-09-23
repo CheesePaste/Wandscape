@@ -16,6 +16,7 @@
 | [domain-notes.md](domain-notes.md) | 核心功能域避坑手册（NPC/游客/魔法/任务/建筑/仓库等） | 开发或修改对应功能域代码前 |
 | [balance-baseline.md](balance-baseline.md) | **数值基线快照**：升级曲线与每级经验、游客线元素日产出、探索每箱元素/经验与组成、关键常量速查（刷新命令在文末） | 调平衡、评估某条产出线够不够、或写文档要引用具体数字时——**先查这里，别每次重跑 `balance/`** |
 | [data-formats.md](data-formats.md) | 数据格式与迁移纪律（JSON/NBT/SavedData 规范） | 新增或修改数据文件、调整持久化格式时 |
+| [file-layout.md](file-layout.md) | **文件落位总览**：三层落位（jar 内只读 / 数据包 / 运行时目录）逐目录清单、建筑包三来源与导出位置、15 个 SavedData 一览、生成器脚本到产物对照、「我要找的东西在哪」快查表 | 想找某个 JSON/建筑/配置躺在哪，或准备搬动某个落盘位置时 |
 | [checklists.md](checklists.md) | 迁移与重构活清单（NeoForge 适配、重构阶梯、PR 守则） | 版本迁移、大重构、发版或提交 PR 时 |
 | [fabric-port-survey.md](fabric-port-survey.md) | **Fabric 1.21.1 官方移植考察报告**：规模/耦合量、六条平台接缝、事件映射表、难度分级、仓库结构选择面 | 评估双 loader 官方版可行性或规划长期仓库演进时 |
 | [neoforge-26-upgrade-survey.md](neoforge-26-upgrade-survey.md) | **NeoForge 26.1 升级考察报告**：版本线/工具链变化、全库契约改名与深水重写分区、分项难度表、与 fabric 移植横评 | 评估升级到 Minecraft 26.1 / NeoForge 26.1 的体量与难易，规划升级顺序时 |
