@@ -16,7 +16,6 @@ import com.wsteam.wandscape.content.warehouse.network.WarehouseDataPacket;
 import com.wsteam.wandscape.foundation.networking.ScreenFeedbackPacket;
 import com.wsteam.wandscape.foundation.ui.I18n;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerPlayer;

@@ -3,6 +3,7 @@ import com.wsteam.wandscape.content.task.types.EffectId;
 import com.wsteam.wandscape.content.task.ecs.World;
 
 import com.wsteam.wandscape.content.magic.data.MagicCircleSpec;
+import com.wsteam.wandscape.content.items.magic.wand.item.WandItem;
 import com.wsteam.wandscape.content.magic.data.MagicDef;
 import com.wsteam.wandscape.content.magic.entity.MagicBeamEntity;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
@@ -10,11 +11,9 @@ import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.content.magic.network.MagicCircleCastPacket;
 import com.wsteam.wandscape.foundation.networking.Net;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.phys.Vec3;
 
 import javax.annotation.Nullable;
@@ -143,15 +142,9 @@ public final class MagicCaster {
                 }
             }
         }
-        CustomData data = held.get(DataComponents.CUSTOM_DATA);
-        if (data != null && data.contains("wand_color")) {
-            String hex = data.copyTag().getString("wand_color");
-            if (hex.length() == 7 && hex.charAt(0) == '#') {
-                try {
-                    return 0xFF000000 | Integer.parseInt(hex.substring(1), 16);
-                } catch (NumberFormatException ignored) {
-                }
-            }
+        Integer argb = WandItem.colorArgb(held);
+        if (argb != null) {
+            return argb;
         }
         return DEFAULT_COLOR;
     }

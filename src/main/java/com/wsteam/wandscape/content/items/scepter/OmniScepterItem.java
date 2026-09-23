@@ -4,8 +4,7 @@ import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.content.items.scepter.internal.ScepterService;
 import com.wsteam.wandscape.api.NpcInteractHook;
 import com.wsteam.wandscape.api.NpcSneakInteractHook;
-import net.minecraft.core.component.DataComponents;
-import net.minecraft.nbt.CompoundTag;
+import com.wsteam.wandscape.foundation.util.ItemData;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
@@ -15,7 +14,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
-import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.Level;
 
 import java.util.List;
@@ -24,7 +22,7 @@ import java.util.Locale;
 /**
  * 万能权杖：一杖四模式（和平/跟随/庇护/敌对），shift+右键循环模式，右键执行当前模式。
  *
- * <p>模式存于物品 {@link DataComponents#CUSTOM_DATA}（键 {@link #MODE_KEY}，值为 {@link ScepterKind} 名），
+ * <p>模式存于物品自定义数据（见 {@link ItemData}，键 {@link #MODE_KEY}，值为 {@link ScepterKind} 名），
  * 默认 {@link ScepterKind#PEACE}；客户端 tint/tooltip 读它 → 颜色与提示随模式变化，靠
  * {@code player.setItemInHand} 触发玩家每 tick 的 inventoryMenu 广播同步（同皮革染色的物品 NBT 渲染语义）。
  *
@@ -34,7 +32,7 @@ import java.util.Locale;
  */
 public class OmniScepterItem extends Item implements NpcInteractHook, NpcSneakInteractHook {
 
-    /** {@link DataComponents#CUSTOM_DATA} 中存当前模式的键。 */
+    /** 物品自定义数据（见 {@link ItemData}）中存当前模式的键。 */
     public static final String MODE_KEY = "mode";
 
     public OmniScepterItem(Properties properties) {
@@ -43,9 +41,8 @@ public class OmniScepterItem extends Item implements NpcInteractHook, NpcSneakIn
 
     /** 读当前模式；无记录/非法值回退默认 {@link ScepterKind#PEACE}。 */
     public static ScepterKind getMode(ItemStack stack) {
-        CustomData data = stack.get(DataComponents.CUSTOM_DATA);
-        if (data != null && data.contains(MODE_KEY)) {
-            String name = data.copyTag().getString(MODE_KEY);
+        String name = ItemData.getString(stack, MODE_KEY);
+        if (!name.isEmpty()) {
             try {
                 return ScepterKind.valueOf(name);
             } catch (IllegalArgumentException ignored) {
@@ -55,12 +52,9 @@ public class OmniScepterItem extends Item implements NpcInteractHook, NpcSneakIn
         return ScepterKind.PEACE;
     }
 
-    /** 写入当前模式到物品 NBT（就地修改传入的 stack）。 */
+    /** 写入当前模式到物品自定义数据（就地修改传入的 stack）。 */
     public static void setMode(ItemStack stack, ScepterKind mode) {
-        CustomData data = stack.get(DataComponents.CUSTOM_DATA);
-        CompoundTag tag = data != null ? data.copyTag() : new CompoundTag();
-        tag.putString(MODE_KEY, mode.name());
-        stack.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
+        ItemData.setString(stack, MODE_KEY, mode.name());
     }
 
     /** 服务端循环到下一模式并同步手持槽（客户端颜色/tooltip 当 tick 更新），上屏提示。 */

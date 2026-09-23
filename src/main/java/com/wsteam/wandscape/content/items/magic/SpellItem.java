@@ -3,8 +3,7 @@ package com.wsteam.wandscape.content.items.magic;
 import com.wsteam.wandscape.content.magic.data.MagicDef;
 import com.wsteam.wandscape.content.magic.internal.MagicSpellExecutors;
 import com.wsteam.wandscape.content.magic.internal.SpellbookLoader;
-import net.minecraft.core.component.DataComponents;
-import net.minecraft.nbt.CompoundTag;
+import com.wsteam.wandscape.foundation.util.ItemData;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
@@ -13,7 +12,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
-import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.Level;
 
 import javax.annotation.Nullable;
@@ -29,7 +27,7 @@ import java.util.List;
  */
 public class SpellItem extends Item {
 
-    /** {@link DataComponents#CUSTOM_DATA} 中存 magicId 的键。 */
+    /** 物品自定义数据（见 {@link ItemData}）中存 magicId 的键。 */
     public static final String MAGIC_ID_KEY = "magic_id";
 
     public SpellItem(Properties properties) {
@@ -39,19 +37,13 @@ public class SpellItem extends Item {
     /** 读绑定魔法 id；未绑定返回 null。 */
     @Nullable
     public static String getMagicId(ItemStack stack) {
-        CustomData data = stack.get(DataComponents.CUSTOM_DATA);
-        if (data != null && data.contains(MAGIC_ID_KEY)) {
-            return data.copyTag().getString(MAGIC_ID_KEY);
-        }
-        return null;
+        String magicId = ItemData.getString(stack, MAGIC_ID_KEY);
+        return magicId.isEmpty() ? null : magicId;
     }
 
     /** 写入绑定魔法 id。 */
     public static void setMagicId(ItemStack stack, String magicId) {
-        CustomData data = stack.get(DataComponents.CUSTOM_DATA);
-        var tag = data != null ? data.copyTag() : new CompoundTag();
-        tag.putString(MAGIC_ID_KEY, magicId);
-        stack.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
+        ItemData.setString(stack, MAGIC_ID_KEY, magicId);
     }
 
     @Override

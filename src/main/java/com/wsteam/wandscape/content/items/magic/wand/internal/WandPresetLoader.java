@@ -1,5 +1,6 @@
 package com.wsteam.wandscape.content.items.magic.wand.internal;
 import com.wsteam.wandscape.content.npc.types.NpcAttributeModifier;
+import com.wsteam.wandscape.content.items.magic.wand.item.WandItem;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -83,12 +84,12 @@ public class WandPresetLoader {
             String displayName = obj.has("display_name")
                     ? obj.get("display_name").getAsString() : id;
             String defaultColor = obj.has("wand_color")
-                    ? obj.get("wand_color").getAsString() : "#FFFFFF";
+                    ? obj.get("wand_color").getAsString() : WandApiImpl.DEFAULT_COLOR;
 
             // New NBT: only preset_id and wand_color
             CompoundTag nbt = new CompoundTag();
-            nbt.putString("preset_id", id);
-            nbt.putString("wand_color", defaultColor);
+            nbt.putString(WandItem.PRESET_KEY, id);
+            nbt.putString(WandItem.COLOR_KEY, defaultColor);
 
             // Parse attributes array
             List<NpcAttributeModifier> attributes = new ArrayList<>();

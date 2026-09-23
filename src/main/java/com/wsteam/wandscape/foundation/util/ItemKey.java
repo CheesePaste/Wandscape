@@ -4,7 +4,6 @@ import com.mojang.serialization.DataResult;
 import com.wsteam.wandscape.foundation.log.Log;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.component.DataComponentPatch;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
@@ -14,7 +13,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.component.CustomData;
 
 import javax.annotation.Nullable;
 
@@ -52,9 +50,7 @@ public record ItemKey(String itemId, @Nullable CompoundTag nbt) {
             return ItemKey.of(itemId, null);
         }
         ItemStack stack = new ItemStack(item, 1);
-        if (customTag != null && !customTag.isEmpty()) {
-            stack.set(DataComponents.CUSTOM_DATA, CustomData.of(customTag.copy()));
-        }
+        ItemData.setTag(stack, customTag);
         return fromStack(stack, registries);
     }
 

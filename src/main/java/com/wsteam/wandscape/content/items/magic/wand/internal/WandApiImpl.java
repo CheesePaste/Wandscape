@@ -3,32 +3,28 @@ package com.wsteam.wandscape.content.items.magic.wand.internal;
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.content.npc.types.NpcAttributeModifier;
 import com.wsteam.wandscape.api.WandApi;
+import com.wsteam.wandscape.content.items.magic.wand.item.WandItem;
 import com.wsteam.wandscape.content.items.magic.wand.internal.WandPresetLoader.WandPreset;
-import net.minecraft.core.component.DataComponents;
+import com.wsteam.wandscape.foundation.util.ItemData;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.component.CustomData;
 
 import javax.annotation.Nullable;
 import java.util.List;
 public class WandApiImpl implements WandApi {
 
-    private static final String TAG_COLOR = "wand_color";
-    private static final String TAG_PRESET = "preset_id";
+    /** 无染色时的默认色（法杖预设 JSON 未写 {@code wand_color} 时也用这个）。 */
+    public static final String DEFAULT_COLOR = "#FFFFFF";
 
     @Override
     public String getWandColor(ItemStack wand) {
-        CustomData customData = wand.get(DataComponents.CUSTOM_DATA);
-        if (customData == null) return "#FFFFFF";
-        String color = customData.copyTag().getString(TAG_COLOR);
-        return color.isEmpty() ? "#FFFFFF" : color;
+        String color = WandItem.colorHex(wand);
+        return color.isEmpty() ? DEFAULT_COLOR : color;
     }
 
     @Override
     @Nullable
     public String getWandPresetId(ItemStack stack) {
-        CustomData customData = stack.get(DataComponents.CUSTOM_DATA);
-        if (customData == null) return null;
-        String preset = customData.copyTag().getString(TAG_PRESET);
+        String preset = ItemData.getString(stack, WandItem.PRESET_KEY);
         return preset.isEmpty() ? null : preset;
     }
 

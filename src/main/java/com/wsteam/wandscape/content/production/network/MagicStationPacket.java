@@ -1,5 +1,6 @@
 package com.wsteam.wandscape.content.production.network;
 
+import com.wsteam.wandscape.content.items.magic.SpellItem;
 import com.wsteam.wandscape.content.production.data.CraftSpellRecipe;
 import com.wsteam.wandscape.content.production.data.RecipeUnlockRequirement;
 import com.wsteam.wandscape.content.production.internal.ProductionAffordability;
@@ -49,7 +50,7 @@ public record MagicStationPacket(BlockPos stationPos, ListTag recipes, String cr
             CompoundTag tag = new CompoundTag();
             tag.putString("id", r.id());
             tag.putString("output", r.outputItem());
-            tag.putString("magic_id", r.magicId());
+            tag.putString(SpellItem.MAGIC_ID_KEY, r.magicId());
 
             CompoundTag costTag = new CompoundTag();
             for (var e : r.cost().entrySet()) {
@@ -85,7 +86,7 @@ public record MagicStationPacket(BlockPos stationPos, ListTag recipes, String cr
             CompoundTag tag = recipes.getCompound(i);
             String id = tag.getString("id");
             String output = tag.getString("output");
-            String magicId = tag.getString("magic_id");
+            String magicId = tag.getString(SpellItem.MAGIC_ID_KEY);
             Map<ElementType, Long> cost = new LinkedHashMap<>();
             CompoundTag costTag = tag.getCompound("cost");
             for (String key : costTag.getAllKeys()) {

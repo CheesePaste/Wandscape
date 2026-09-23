@@ -1,6 +1,7 @@
 package com.wsteam.wandscape.compat.jei;
 
 import com.wsteam.wandscape.content.element.internal.ElementMappingConfig;
+import com.wsteam.wandscape.content.items.magic.SpellItem;
 import com.wsteam.wandscape.content.production.data.BrewPotionRecipe;
 import com.wsteam.wandscape.content.production.data.CraftSpellRecipe;
 import com.wsteam.wandscape.content.production.data.CraftWandRecipe;
@@ -79,7 +80,7 @@ public final class ElementRecipeCollector {
             if (r.cost().isEmpty()) continue;
             String station = r.craftStation() != null ? r.craftStation() : STATION_MAGIC;
             CompoundTag nbt = new CompoundTag();
-            nbt.putString("magic_id", r.magicId());
+            nbt.putString(SpellItem.MAGIC_ID_KEY, r.magicId());
             result.add(new ElementRecipe(r.id(), ElementRecipeKind.SYNTHESIZE, station,
                     r.outputItem(), nbt, r.cost(), List.of(), 0));
         }
