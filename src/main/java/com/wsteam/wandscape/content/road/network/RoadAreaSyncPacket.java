@@ -8,6 +8,7 @@ import com.wsteam.wandscape.content.road.core.RoadEdge;
 import com.wsteam.wandscape.api.RoadApi;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.api.WandscapeApis;
+import com.wsteam.wandscape.foundation.networking.Net;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -17,7 +18,6 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -152,7 +152,7 @@ public record RoadAreaSyncPacket(List<RoadEntry> roads) implements CustomPacketP
     public static void sendToPlayer(ServerPlayer player) {
         if (player == null || player.level() == null) return;
         java.util.UUID colonyId = com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.ownColony(player);
-        PacketDistributor.sendToPlayer(player, new RoadAreaSyncPacket(buildEntries(colonyId)));
+        Net.toPlayer(player, new RoadAreaSyncPacket(buildEntries(colonyId)));
     }
 
     /** Broadcast the under-construction road sync to every player on the server (each receives their own colony's roads). */

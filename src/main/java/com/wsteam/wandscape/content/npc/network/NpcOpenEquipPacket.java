@@ -5,6 +5,7 @@ import com.wsteam.wandscape.content.task.types.EntityId;
 import com.wsteam.wandscape.content.npc.NpcMenu;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.networking.Net;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.StreamCodec;
@@ -12,8 +13,6 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.SimpleMenuProvider;
-import net.neoforged.neoforge.network.PacketDistributor;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
 
@@ -46,8 +45,7 @@ public record NpcOpenEquipPacket(int entityId) implements CustomPacketPayload {
     }
 
     /** Server handler. */
-    public static void handleServer(NpcOpenEquipPacket pkt, IPayloadContext ctx) {
-        if (!(ctx.player() instanceof ServerPlayer sp)) return;
+    public static void handleServer(NpcOpenEquipPacket pkt, ServerPlayer sp) {
         var level = sp.serverLevel();
         if (!(level.getEntity(pkt.entityId()) instanceof WandscapeNpc npc) || npc.isRemoved()) {
             Log.warn(TAG, "Equip target entity {} is not a valid WandscapeNpc", pkt.entityId());
@@ -66,7 +64,7 @@ public record NpcOpenEquipPacket(int entityId) implements CustomPacketPayload {
         // 下一 tick 补发数据（客户端屏幕就绪后刷新名字/属性等），与 mobInteract 打开路径一致
         sp.serverLevel().getServer().execute(() -> {
             if (!npc.isRemoved() && sp.containerMenu instanceof NpcMenu) {
-                PacketDistributor.sendToPlayer(sp, NpcDataPacket.from(npc));
+                Net.toPlayer(sp, NpcDataPacket.from(npc));
             }
         });
     }

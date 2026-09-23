@@ -1,5 +1,6 @@
 package com.wsteam.wandscape.content.building.network;
 
+import com.wsteam.wandscape.foundation.networking.ClientPayloadDispatcher;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -10,7 +11,6 @@ import net.minecraft.resources.ResourceLocation;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-import java.util.function.Consumer;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
 /**
@@ -32,12 +32,10 @@ public record ShopOpenPacket(BlockPos buildingPos, UUID colonyId, UUID buildingI
     public Type<? extends CustomPacketPayload> type() { return TYPE; }
 
     // Client handler
-    private static Consumer<ShopOpenPacket> clientHandler;
 
-    public static void setClientHandler(Consumer<ShopOpenPacket> handler) { clientHandler = handler; }
 
     public static void handleClient(ShopOpenPacket packet) {
-        if (clientHandler != null) clientHandler.accept(packet);
+        ClientPayloadDispatcher.dispatch(packet);
     }
 
     // ── StreamCodec helpers ──

@@ -1,5 +1,6 @@
 package com.wsteam.wandscape.content.building.internal;
 import com.wsteam.wandscape.content.task.component.Position;
+import com.wsteam.wandscape.foundation.networking.Net;
 import com.wsteam.wandscape.foundation.ui.panel.PanelStateTracker;
 import com.wsteam.wandscape.content.colony.network.ColonyCreatePromptPacket;
 import com.wsteam.wandscape.content.npc.data.MageResume;
@@ -28,7 +29,6 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.level.Level;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import javax.annotation.Nullable;
 import java.util.LinkedHashMap;
@@ -108,13 +108,13 @@ public final class BuildingInteractHandler {
 
         // Sync building snapshot to client so building UI headers & action buttons have full context
         var debugPkt = com.wsteam.wandscape.content.building.projection.network.BuildingDebugRequestPacket.buildResponse(level, state);
-        PacketDistributor.sendToPlayer(player, debugPkt);
+        Net.toPlayer(player, debugPkt);
 
         // Town hall with no colony linked → ask the player to name & create one (even if under construction).
         if ("government".equals(category) && colonyId == null) {
             BuildingConfig promptCfg = BuildingConfigLoader.getInstance().get(state.getBuildingTypeId());
             String promptCreator = promptCfg != null ? promptCfg.creator() : "";
-            PacketDistributor.sendToPlayer(player,
+            Net.toPlayer(player,
                     new com.wsteam.wandscape.content.colony.network.ColonyCreatePromptPacket(pos, promptCreator));
             Log.info(TAG, "[Colony] Town hall at {} right-clicked with no colony — prompting for name", pos);
             return;
@@ -123,7 +123,7 @@ public final class BuildingInteractHandler {
         // Under-construction building → open the construction-site panel
         // (required materials, warehouse/synthesis status, time estimates).
         if (!state.hasEverCompleted()) {
-            PacketDistributor.sendToPlayer(player, ConstructionSiteDataPacket.from(level, state));
+            Net.toPlayer(player, ConstructionSiteDataPacket.from(level, state));
             return;
         }
 
@@ -146,7 +146,7 @@ public final class BuildingInteractHandler {
             // 命名风格与游客生成开关不在这里下发：它们随殖民地走，走 ColonyStatsSyncPacket，
             // 修改入口在设置中心的「本镇」页。
             // 保底复活按钮初值：全灭判定 + 该殖民地冷却（后续变化由 TownHallReviveStatePacket 推送）
-            PacketDistributor.sendToPlayer(player,
+            Net.toPlayer(player,
                     new TownHallOpenPacket(
                             pos, colonyId, name, lvl, exp, expNext, founderName, canUseWarehouse,
                             creator,
@@ -165,7 +165,7 @@ public final class BuildingInteractHandler {
             var guestNames = hotel != null
                     ? hotel.getGuestNames(state.getBuildingId(), level)
                     : java.util.List.<String>of();
-            PacketDistributor.sendToPlayer(player,
+            Net.toPlayer(player,
                     new HotelOpenPacket(state.getAnchor(), colonyId, state.getBuildingId(), creator, maxOcc, occupancy, guestNames));
             return;
         }
@@ -183,7 +183,7 @@ public final class BuildingInteractHandler {
                         ? shopStockManager.getStock(state.getBuildingId()) : Map.of();
                 Map<String, Integer> maxStocks = shopStockManager != null
                         ? shopStockManager.getAllMaxStocks(state.getBuildingId()) : Map.of();
-                PacketDistributor.sendToPlayer(player,
+                Net.toPlayer(player,
                         new ShopOpenPacket(state.getAnchor(), colonyId, state.getBuildingId(), creator, stock, maxStocks));
                 // Opening a shop triggers its first restock — push onboarding progress (step 7).
                 var tutorialApi = com.wsteam.wandscape.api.WandscapeApis.getTutorialApiSilently();
@@ -197,7 +197,7 @@ public final class BuildingInteractHandler {
                     mageResumes = tavernApi.getMageResumes(colonyId);
                     recruitCount = tavernApi.getRecruitCount(colonyId);
                 } catch (IllegalStateException ignored) {}
-                PacketDistributor.sendToPlayer(player,
+                Net.toPlayer(player,
                         new TavernOpenPacket(state.getAnchor(), colonyId, recruitCount, mageResumes, creator));
             }
             case "mage_hut" -> {
@@ -208,7 +208,7 @@ public final class BuildingInteractHandler {
             case "magic_station" -> openMagicStationGui(level, colonyId, player, state.getAnchor(), creator);
             case "altar" -> {
                 if (level instanceof net.minecraft.server.level.ServerLevel sl) {
-                    PacketDistributor.sendToPlayer(player,
+                    Net.toPlayer(player,
                             new AltarOpenPacket(state.getAnchor(), colonyId, state.getBuildingId(), creator,
                                     AltarCastHandler.listSpells(sl, state.getBuildingId())));
                 }
@@ -242,7 +242,7 @@ public final class BuildingInteractHandler {
         if (bank == null) return;
         Map<ItemKey, Long> snapshot = bank.getSnapshot(colonyId);
         Map<ElementType, Long> elemSnapshot = bank.getElementSnapshot(colonyId);
-        PacketDistributor.sendToPlayer(player,
+        Net.toPlayer(player,
                 WarehouseDataPacket.from(pos, colonyId, snapshot, elemSnapshot, creator));
     }
 
@@ -260,7 +260,7 @@ public final class BuildingInteractHandler {
             case "atm" -> atm != null ? atm.interactionDurationTicks() : 0;
             default -> svc != null ? svc.interactionDurationTicks() : 0;
         };
-        PacketDistributor.sendToPlayer(player, new BuildingInfoPacket(
+        Net.toPlayer(player, new BuildingInfoPacket(
                 state.getAnchor(), state.getBuildingTypeId(), category,
                 svc != null ? svc.elementOutput() : Map.of(),
                 svc != null ? svc.energyPerUse() : 0,
@@ -325,7 +325,7 @@ public final class BuildingInteractHandler {
 
         Map<ElementType, Long> elemSnapshot = bank.getElementSnapshot(colonyId);
         var pkt = WorkstationDataPacket.from(pos, decomposableItems, synthRecipes, elemSnapshot, colonyId, itemElementValues, creator);
-        PacketDistributor.sendToPlayer(player, pkt);
+        Net.toPlayer(player, pkt);
     }
 
     private static void openNodeGui(Level level, ServerPlayer player,
@@ -339,7 +339,7 @@ public final class BuildingInteractHandler {
             return;
         }
         var nc = config.nodeConfig();
-        PacketDistributor.sendToPlayer(player,
+        Net.toPlayer(player,
                 new NodeDataPacket(pos, state.getBuildingTypeId(), nc.element(),
                         nc.amountPerHarvest(), nc.channelTicks(), config.creator()));
         Log.info(TAG, "[Node] open GUI type={} at={} element={} amount={} ticks={}",
@@ -360,7 +360,7 @@ public final class BuildingInteractHandler {
         Map<ElementType, Long> elemSnapshot = bank != null
                 ? bank.getElementSnapshot(colonyId) : Map.of();
         var pkt = MagicStationPacket.from(pos, spellRecipes, elemSnapshot, colonyId, creator);
-        PacketDistributor.sendToPlayer(player, pkt);
+        Net.toPlayer(player, pkt);
     }
 
     private static void openCraftingStationGui(Level level, UUID colonyId,
@@ -383,6 +383,6 @@ public final class BuildingInteractHandler {
                 ? bank.getElementSnapshot(colonyId) : Map.of();
         var pkt = CraftingStationPacket.from(pos, wandRecipes, potionRecipes, miscRecipes,
                 elemSnapshot, colonyId, creator);
-        PacketDistributor.sendToPlayer(player, pkt);
+        Net.toPlayer(player, pkt);
     }
 }

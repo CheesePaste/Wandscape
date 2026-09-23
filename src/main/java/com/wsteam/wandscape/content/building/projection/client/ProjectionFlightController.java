@@ -1,6 +1,7 @@
 package com.wsteam.wandscape.content.building.projection.client;
 import com.wsteam.wandscape.content.task.component.Position;
 import com.wsteam.wandscape.content.task.component.NpcInventory;
+import com.wsteam.wandscape.foundation.networking.Net;
 import com.wsteam.wandscape.foundation.ui.panel.WandscapePanelController;
 
 import com.wsteam.wandscape.content.building.data.BuildingConfig;
@@ -21,7 +22,6 @@ import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.InputEvent;
-import net.neoforged.neoforge.network.PacketDistributor;
 import org.lwjgl.glfw.GLFW;
 
 /**
@@ -260,7 +260,7 @@ public final class ProjectionFlightController {
     // ── Exit ──
 
     private static void doExit() {
-        PacketDistributor.sendToServer(new ProjectionExitPacket());
+        Net.toServer(new ProjectionExitPacket());
         ProjectionClientState.exitProjection();
     }
 

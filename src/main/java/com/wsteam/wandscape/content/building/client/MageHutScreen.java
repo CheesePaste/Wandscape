@@ -9,6 +9,7 @@ import com.wsteam.wandscape.content.npc.attributes.NpcAttributes.AttributeType;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.content.element.data.ElementType;
 import com.wsteam.wandscape.content.npc.attributes.NpcAttributes;
+import com.wsteam.wandscape.foundation.networking.Net;
 import com.wsteam.wandscape.foundation.ui.I18n;
 import com.wsteam.wandscape.foundation.ui.component.MedievalButton;
 import com.wsteam.wandscape.foundation.ui.component.MedievalScreen;
@@ -24,7 +25,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -819,11 +819,11 @@ public class MageHutScreen extends MedievalScreen {
     /** Open the colony warehouse to check remaining element counts. */
     private void onOpenWarehouse() {
         if (buildingPos == null) return;
-        PacketDistributor.sendToServer(new OpenWarehousePacket(buildingPos));
+        Net.toServer(new OpenWarehousePacket(buildingPos));
     }
 
     private void sendAction(String action) {
-        PacketDistributor.sendToServer(new MageHutActionPacket(buildingPos, action));
+        Net.toServer(new MageHutActionPacket(buildingPos, action));
         Minecraft.getInstance().getSoundManager().play(
                 SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0f));
     }

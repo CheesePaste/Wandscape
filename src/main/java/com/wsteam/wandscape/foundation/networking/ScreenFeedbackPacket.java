@@ -1,5 +1,7 @@
 package com.wsteam.wandscape.foundation.networking;
 
+import com.wsteam.wandscape.foundation.networking.ClientPayloadDispatcher;
+import com.wsteam.wandscape.foundation.networking.Net;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentSerialization;
@@ -8,9 +10,7 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.neoforge.network.PacketDistributor;
 
-import java.util.function.Consumer;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
 /**
@@ -41,21 +41,15 @@ public record ScreenFeedbackPacket(Component message, boolean isError)
     /** Server helper: send transient feedback to a player (screen toast or action bar). */
     public static void send(ServerPlayer player, Component message, boolean isError) {
         if (player != null && !player.isRemoved()) {
-            PacketDistributor.sendToPlayer(player, new ScreenFeedbackPacket(message, isError));
+            Net.toPlayer(player, new ScreenFeedbackPacket(message, isError));
         }
     }
 
     // ── Client handler (injected by WandscapeClient) ──
 
-    private static Consumer<ScreenFeedbackPacket> clientHandler;
 
-    public static void setClientHandler(Consumer<ScreenFeedbackPacket> handler) {
-        clientHandler = handler;
-    }
 
     public static void handleClient(ScreenFeedbackPacket packet) {
-        if (clientHandler != null) {
-            clientHandler.accept(packet);
-        }
+        ClientPayloadDispatcher.dispatch(packet);
     }
 }

@@ -1,5 +1,6 @@
 package com.wsteam.wandscape.content.building.network;
 
+import com.wsteam.wandscape.foundation.networking.ClientPayloadDispatcher;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -9,7 +10,6 @@ import net.minecraft.resources.ResourceLocation;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.Consumer;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
 /**
@@ -33,12 +33,10 @@ public record BuildingInfoPacket(BlockPos pos, String buildingTypeId, String cat
     public Type<? extends CustomPacketPayload> type() { return TYPE; }
 
     // Client handler
-    private static Consumer<BuildingInfoPacket> clientHandler;
 
-    public static void setClientHandler(Consumer<BuildingInfoPacket> handler) { clientHandler = handler; }
 
     public static void handleClient(BuildingInfoPacket packet) {
-        if (clientHandler != null) clientHandler.accept(packet);
+        ClientPayloadDispatcher.dispatch(packet);
     }
 
     static void write(RegistryFriendlyByteBuf buf, BuildingInfoPacket pkt) {

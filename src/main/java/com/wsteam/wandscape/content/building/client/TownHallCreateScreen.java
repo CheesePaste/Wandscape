@@ -1,4 +1,5 @@
 package com.wsteam.wandscape.content.building.client;
+import com.wsteam.wandscape.foundation.networking.Net;
 import com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState;
 
 import com.wsteam.wandscape.content.colony.network.ColonyCreateRequestPacket;
@@ -9,7 +10,6 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
  * "Name your colony" screen shown when an intact town hall is right-clicked
@@ -66,7 +66,7 @@ public class TownHallCreateScreen extends MedievalScreen {
             name = I18n.name("gui.wandscape.townhall_create.default_name", "魔法小镇").getString();
         }
         confirmed = true;
-        PacketDistributor.sendToServer(new ColonyCreateRequestPacket(townHallAnchor, name));
+        Net.toServer(new ColonyCreateRequestPacket(townHallAnchor, name));
         this.onClose();
     }
 
@@ -78,7 +78,7 @@ public class TownHallCreateScreen extends MedievalScreen {
                 name = I18n.name("gui.wandscape.townhall_create.default_name", "魔法小镇").getString();
             }
             confirmed = true;
-            PacketDistributor.sendToServer(new ColonyCreateRequestPacket(townHallAnchor, name));
+            Net.toServer(new ColonyCreateRequestPacket(townHallAnchor, name));
         }
         super.onClose();
         // 确保清理建造栏和子模式，防止关闭弹窗后因光标抬起与建造栏开启导致 WASD / 视角冻结

@@ -8,6 +8,7 @@ import com.wsteam.wandscape.content.production.network.CraftingStationPacket;
 import com.wsteam.wandscape.content.production.network.CraftingStationPacket.RecipeEntry;
 import com.wsteam.wandscape.content.production.network.RequestProductionTaskPacket;
 import com.wsteam.wandscape.content.element.data.ElementType;
+import com.wsteam.wandscape.foundation.networking.Net;
 import com.wsteam.wandscape.foundation.ui.I18n;
 import com.wsteam.wandscape.foundation.ui.component.*;
 import com.wsteam.wandscape.foundation.ui.theme.MedievalColors;
@@ -21,7 +22,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -106,7 +106,7 @@ public class CraftingStationScreen extends MedievalScreen {
     /** Send a REFRESH request to the server to get the current task queue. */
     private void requestQueueRefresh() {
         if (stationPos == null || stationPos.equals(BlockPos.ZERO)) return;
-        PacketDistributor.sendToServer(new TaskQueueModifyPacket(stationPos, "refresh", 0));
+        Net.toServer(new TaskQueueModifyPacket(stationPos, "refresh", 0));
     }
 
     private int queueRefreshCounter;
@@ -274,7 +274,7 @@ public class CraftingStationScreen extends MedievalScreen {
         int qty = stepper.getValue();
         // 制作站统一 craft 动作：法杖/权杖/药水配方都走 production:craft（服务端按 recipe_id 解析）。
         String action = "craft";
-        PacketDistributor.sendToServer(new RequestProductionTaskPacket(
+        Net.toServer(new RequestProductionTaskPacket(
                 stationPos, action, sel.recipeId(), qty));
         // Refresh queue after submitting a new task
         requestQueueRefresh();
@@ -283,24 +283,24 @@ public class CraftingStationScreen extends MedievalScreen {
     /** Open the colony warehouse to check remaining element counts. */
     private void onOpenWarehouse() {
         if (stationPos == null || stationPos.equals(BlockPos.ZERO)) return;
-        PacketDistributor.sendToServer(new OpenWarehousePacket(stationPos));
+        Net.toServer(new OpenWarehousePacket(stationPos));
     }
 
     // ── Task queue callbacks ──
 
     private void onQueueDelete(int index) {
         if (stationPos == null || stationPos.equals(BlockPos.ZERO)) return;
-        PacketDistributor.sendToServer(new TaskQueueModifyPacket(stationPos, "delete", index));
+        Net.toServer(new TaskQueueModifyPacket(stationPos, "delete", index));
     }
 
     private void onQueueMoveUp(int index) {
         if (stationPos == null || stationPos.equals(BlockPos.ZERO)) return;
-        PacketDistributor.sendToServer(new TaskQueueModifyPacket(stationPos, "move_up", index));
+        Net.toServer(new TaskQueueModifyPacket(stationPos, "move_up", index));
     }
 
     private void onQueueMoveDown(int index) {
         if (stationPos == null || stationPos.equals(BlockPos.ZERO)) return;
-        PacketDistributor.sendToServer(new TaskQueueModifyPacket(stationPos, "move_down", index));
+        Net.toServer(new TaskQueueModifyPacket(stationPos, "move_down", index));
     }
 
     /** Draw an element cost as [icon]xN (icon tinted per element, like the V-key panel). Returns end x. */

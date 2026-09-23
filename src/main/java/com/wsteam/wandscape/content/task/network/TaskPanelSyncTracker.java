@@ -23,6 +23,7 @@ import com.wsteam.wandscape.content.task.engine.pool.BuildingTaskPool;
 import com.wsteam.wandscape.content.task.engine.pool.GlobalTask;
 import com.wsteam.wandscape.content.task.runtime.ExecutorState;
 import com.wsteam.wandscape.content.task.runtime.TaskState;
+import com.wsteam.wandscape.foundation.networking.Net;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
@@ -31,7 +32,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
-import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
 import java.util.*;
@@ -106,7 +106,7 @@ public final class TaskPanelSyncTracker {
         if (world == null || world.taskPool == null) return;
 
         TaskManagementSyncPacket packet = buildSnapshot(world, colonyId, player);
-        PacketDistributor.sendToPlayer(player, packet);
+        Net.toPlayer(player, packet);
     }
 
     public static TaskManagementSyncPacket buildSnapshot(World world, UUID colonyId, ServerPlayer player) {
@@ -148,6 +148,7 @@ public final class TaskPanelSyncTracker {
             String category = extractCategory(task);
             String title = extractTitle(task, buildingData);
             String buildingName = extractBuildingName(task, buildingData);
+            String buildingTypeId = extractBuildingTypeId(task, buildingData);
 
             long assignedNpcId = task.assignedNpcId != null ? task.assignedNpcId : -1;
             UUID assignedNpcUuid = null;
@@ -199,7 +200,7 @@ public final class TaskPanelSyncTracker {
             taskDtos.add(new TaskSummaryDto(
                     task.id, category, title,
                     task.blueprintId != null ? task.blueprintId : "",
-                    task.buildingId, buildingName,
+                    task.buildingId, buildingName, buildingTypeId,
                     stateStr, task.priority, task.stepIndex, totalSteps,
                     task.channelRemainingTicks, 0,
                     assignedNpcId, assignedNpcUuid, assignedNpcName,
@@ -312,6 +313,17 @@ public final class TaskPanelSyncTracker {
             BuildingState bs = buildingData.getBuilding(task.buildingId);
             if (bs != null) {
                 return formatBuildingName(bs);
+            }
+        }
+        return "";
+    }
+
+    /** 客户端按本地语言取名要的是类型 id——实例 UUID 认不出是哪种建筑。 */
+    private static String extractBuildingTypeId(GlobalTask task, BuildingSavedData buildingData) {
+        if (task.buildingId != null) {
+            BuildingState bs = buildingData.getBuilding(task.buildingId);
+            if (bs != null) {
+                return bs.getBuildingTypeId();
             }
         }
         return "";
@@ -494,7 +506,8 @@ public final class TaskPanelSyncTracker {
             if (!items.isEmpty()) {
                 BlockPos anchor = bs.getAnchor() != null ? bs.getAnchor() : BlockPos.ZERO;
                 groups.add(new ProductionGroupDto(
-                        bs.getBuildingId(), bName, category != null ? category : "workstation",
+                        bs.getBuildingId(), bName, bs.getBuildingTypeId(),
+                        category != null ? category : "workstation",
                         anchor.getX(), anchor.getY(), anchor.getZ(),
                         activeWorkers, items
                 ));

@@ -8,6 +8,7 @@ import com.wsteam.wandscape.content.production.network.MagicStationPacket;
 import com.wsteam.wandscape.content.production.network.MagicStationPacket.SpellEntry;
 import com.wsteam.wandscape.content.production.network.RequestProductionTaskPacket;
 import com.wsteam.wandscape.content.element.data.ElementType;
+import com.wsteam.wandscape.foundation.networking.Net;
 import com.wsteam.wandscape.foundation.ui.I18n;
 import com.wsteam.wandscape.foundation.ui.component.*;
 import com.wsteam.wandscape.foundation.ui.theme.MedievalColors;
@@ -20,7 +21,6 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -97,7 +97,7 @@ public class MagicStationScreen extends MedievalScreen {
 
     private void requestQueueRefresh() {
         if (stationPos == null || stationPos.equals(BlockPos.ZERO)) return;
-        PacketDistributor.sendToServer(new TaskQueueModifyPacket(stationPos, "refresh", 0));
+        Net.toServer(new TaskQueueModifyPacket(stationPos, "refresh", 0));
     }
 
     private int queueRefreshCounter;
@@ -254,7 +254,7 @@ public class MagicStationScreen extends MedievalScreen {
         // Block submission only when recipe is locked by colony level
         if (sel == null || "colony".equals(sel.lockedReason())) return;
         int qty = stepper.getValue();
-        PacketDistributor.sendToServer(new RequestProductionTaskPacket(
+        Net.toServer(new RequestProductionTaskPacket(
                 stationPos, "craft_spell", sel.recipeId(), qty));
         requestQueueRefresh();
     }
@@ -262,24 +262,24 @@ public class MagicStationScreen extends MedievalScreen {
     /** Open the colony warehouse to check remaining element counts. */
     private void onOpenWarehouse() {
         if (stationPos == null || stationPos.equals(BlockPos.ZERO)) return;
-        PacketDistributor.sendToServer(new OpenWarehousePacket(stationPos));
+        Net.toServer(new OpenWarehousePacket(stationPos));
     }
 
     // ── Task queue callbacks ──
 
     private void onQueueDelete(int index) {
         if (stationPos == null || stationPos.equals(BlockPos.ZERO)) return;
-        PacketDistributor.sendToServer(new TaskQueueModifyPacket(stationPos, "delete", index));
+        Net.toServer(new TaskQueueModifyPacket(stationPos, "delete", index));
     }
 
     private void onQueueMoveUp(int index) {
         if (stationPos == null || stationPos.equals(BlockPos.ZERO)) return;
-        PacketDistributor.sendToServer(new TaskQueueModifyPacket(stationPos, "move_up", index));
+        Net.toServer(new TaskQueueModifyPacket(stationPos, "move_up", index));
     }
 
     private void onQueueMoveDown(int index) {
         if (stationPos == null || stationPos.equals(BlockPos.ZERO)) return;
-        PacketDistributor.sendToServer(new TaskQueueModifyPacket(stationPos, "move_down", index));
+        Net.toServer(new TaskQueueModifyPacket(stationPos, "move_down", index));
     }
 
     /** Draw an element cost as [icon]xN (icon tinted per element, like the V-key panel). */

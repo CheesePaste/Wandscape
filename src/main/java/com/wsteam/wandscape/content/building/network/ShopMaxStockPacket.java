@@ -3,6 +3,7 @@ package com.wsteam.wandscape.content.building.network;
 import com.wsteam.wandscape.content.building.internal.ShopStockManager;
 import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.content.building.internal.BuildingSavedData;
+import com.wsteam.wandscape.foundation.networking.Net;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -10,7 +11,6 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.Map;
 import java.util.UUID;
@@ -50,7 +50,7 @@ public record ShopMaxStockPacket(UUID buildingId, BlockPos buildingPos,
         String creator = resolveCreator(packet.buildingPos, player.serverLevel());
         var refresh = new ShopOpenPacket(packet.buildingPos, packet.colonyId,
                 packet.buildingId, creator, stock, maxStocks);
-        PacketDistributor.sendToPlayer(player, refresh);
+        Net.toPlayer(player, refresh);
     }
 
     /** Resolve the shop building's config creator (for the bottom-left label). */

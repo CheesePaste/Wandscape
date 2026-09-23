@@ -183,7 +183,8 @@ public final class TaskManagementClientState {
             // Search query
             if (!query.isEmpty()) {
                 boolean matchSearch = (t.title() != null && t.title().toLowerCase().contains(query))
-                        || (t.buildingName() != null && t.buildingName().toLowerCase().contains(query))
+                        || com.wsteam.wandscape.foundation.ui.I18n
+                                .buildingName(t.buildingTypeId(), t.buildingName()).getString().toLowerCase().contains(query)
                         || (t.assignedNpcName() != null && t.assignedNpcName().toLowerCase().contains(query));
                 if (!matchSearch) continue;
             }
@@ -210,7 +211,8 @@ public final class TaskManagementClientState {
 
                 if (!query.isEmpty()) {
                     boolean matchSearch = (item.displayName() != null && item.displayName().toLowerCase().contains(query))
-                            || (group.buildingName() != null && group.buildingName().toLowerCase().contains(query))
+                            || com.wsteam.wandscape.foundation.ui.I18n
+                                    .buildingName(group.buildingTypeId(), group.buildingName()).getString().toLowerCase().contains(query)
                             || (item.itemOrRecipeId() != null && item.itemOrRecipeId().toLowerCase().contains(query))
                             || (item.dependencySource() != null && item.dependencySource().toLowerCase().contains(query));
                     if (!matchSearch) continue;
@@ -221,7 +223,7 @@ public final class TaskManagementClientState {
 
             if (!matchedItems.isEmpty()) {
                 result.add(new ProductionGroupDto(
-                        group.buildingId(), group.buildingName(), group.category(),
+                        group.buildingId(), group.buildingName(), group.buildingTypeId(), group.category(),
                         group.x(), group.y(), group.z(), group.activeWorkers(), matchedItems
                 ));
             }

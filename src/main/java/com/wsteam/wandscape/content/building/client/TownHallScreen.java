@@ -3,6 +3,7 @@ package com.wsteam.wandscape.content.building.client;
 import com.wsteam.wandscape.content.building.network.TownHallReviveRequestPacket;
 import com.wsteam.wandscape.content.building.network.TownHallWarehouseRequestPacket;
 import com.wsteam.wandscape.content.colony.network.ColonyNameUpdatePacket;
+import com.wsteam.wandscape.foundation.networking.Net;
 import com.wsteam.wandscape.foundation.ui.I18n;
 import com.wsteam.wandscape.foundation.ui.component.MedievalButton;
 import com.wsteam.wandscape.foundation.ui.component.MedievalScreen;
@@ -11,7 +12,6 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.UUID;
 
@@ -151,7 +151,7 @@ public class TownHallScreen extends MedievalScreen {
     }
 
     private void onWarehouseAccess() {
-        PacketDistributor.sendToServer(new TownHallWarehouseRequestPacket(buildingPos, colonyId));
+        Net.toServer(new TownHallWarehouseRequestPacket(buildingPos, colonyId));
     }
 
     /** 「复活法师」按钮文案：冷却中显示倒计时，其余情况用固定短文案（窄按钮放不下长句）。 */
@@ -177,14 +177,14 @@ public class TownHallScreen extends MedievalScreen {
     }
 
     private void onReviveRequested() {
-        PacketDistributor.sendToServer(new TownHallReviveRequestPacket(buildingPos, colonyId));
+        Net.toServer(new TownHallReviveRequestPacket(buildingPos, colonyId));
     }
 
     private void onNameChanged(String newName) {
         String trimmed = newName.trim();
         if (!trimmed.isEmpty() && !trimmed.equals(colonyName)) {
             colonyName = trimmed;
-            PacketDistributor.sendToServer(new ColonyNameUpdatePacket(colonyId, trimmed));
+            Net.toServer(new ColonyNameUpdatePacket(colonyId, trimmed));
         }
     }
 

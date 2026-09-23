@@ -2,6 +2,7 @@ package com.wsteam.wandscape.content.building.projection.network;
 
 import com.wsteam.wandscape.content.building.data.BuildingPackage;
 import com.wsteam.wandscape.content.building.projection.data.BuildingSlot;
+import com.wsteam.wandscape.foundation.networking.ClientPayloadDispatcher;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -39,11 +40,9 @@ public record ProjectionEnterResponsePacket(
         return TYPE;
     }
 
-    private static java.util.function.Consumer<ProjectionEnterResponsePacket> clientHandler = packet -> {};
-    public static void setClientHandler(java.util.function.Consumer<ProjectionEnterResponsePacket> handler) { clientHandler = handler; }
 
     public static void handleClient(ProjectionEnterResponsePacket packet) {
-        clientHandler.accept(packet);
+        ClientPayloadDispatcher.dispatch(packet);
     }
 
     // ── StreamCodec ──

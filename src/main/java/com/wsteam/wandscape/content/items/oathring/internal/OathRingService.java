@@ -7,6 +7,7 @@ import com.wsteam.wandscape.content.items.oathring.network.OathRingDataPacket;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.content.items.oathring.RingTier;
 import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.networking.Net;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
@@ -198,7 +199,7 @@ public final class OathRingService {
     /** 推送玩家当前占用掩码到客户端（tooltip 实时数量）。 */
     private static void syncToClient(ServerPlayer player) {
         byte mask = OathRingSavedData.get(player.getServer()).maskFor(player.getUUID());
-        net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(
+        Net.toPlayer(
                 player, new OathRingDataPacket(mask));
     }
 

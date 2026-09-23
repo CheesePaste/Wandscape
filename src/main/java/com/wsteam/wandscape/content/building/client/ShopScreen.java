@@ -1,6 +1,7 @@
 package com.wsteam.wandscape.content.building.client;
 
 import com.wsteam.wandscape.content.building.network.ShopMaxStockPacket;
+import com.wsteam.wandscape.foundation.networking.Net;
 import com.wsteam.wandscape.foundation.ui.I18n;
 import com.wsteam.wandscape.foundation.ui.component.MedievalButton;
 import com.wsteam.wandscape.foundation.ui.component.MedievalScreen;
@@ -13,7 +14,6 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -176,7 +176,7 @@ public class ShopScreen extends MedievalScreen {
 
     private void adjustMaxStock(String itemId, int newMax) {
         newMax = Math.clamp(newMax, 0, 64);
-        PacketDistributor.sendToServer(new ShopMaxStockPacket(
+        Net.toServer(new ShopMaxStockPacket(
                 buildingId, buildingPos, colonyId, itemId, newMax));
     }
 }

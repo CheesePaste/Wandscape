@@ -18,6 +18,7 @@ import com.wsteam.wandscape.content.road.network.RoadInteractPacket;
 import com.wsteam.wandscape.content.building.projection.client.ProjectionClientState;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.content.building.network.BuildingAreaSyncPacket;
+import com.wsteam.wandscape.foundation.networking.Net;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.PauseScreen;
 import net.minecraft.world.level.ClipContext;
@@ -28,7 +29,6 @@ import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.client.event.MovementInputUpdateEvent;
 import net.neoforged.neoforge.client.event.ScreenEvent;
 import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.network.PacketDistributor;
 import org.lwjgl.glfw.GLFW;
 
 
@@ -396,12 +396,12 @@ public final class WandscapePanelController {
         if (Math.min(buildingDist, roadDist) >= blockDist) return;
 
         if (roadHit != null && roadDist <= buildingDist) {
-            PacketDistributor.sendToServer(
+            Net.toServer(
                     new RoadInteractPacket(roadHit.pos()));
             Log.info(TAG, "[Panel] Ground right-click on under-construction road → open construction UI at {}",
                     roadHit.pos());
         } else {
-            PacketDistributor.sendToServer(
+            Net.toServer(
                     new OverviewInteractPacket(boxHit.pos()));
             Log.info(TAG, "[Panel] Ground right-click on empty construction site → open building UI at {}",
                     boxHit.pos());

@@ -16,7 +16,6 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.UUID;
 
@@ -47,8 +46,7 @@ public record RequestGatherTaskPacket(
     }
 
     /** Server-side handler. The client refreshes the queue afterwards via TaskQueueModifyPacket. */
-    public static void handleServer(RequestGatherTaskPacket pkt, IPayloadContext ctx) {
-        if (!(ctx.player() instanceof ServerPlayer sp)) return;
+    public static void handleServer(RequestGatherTaskPacket pkt, ServerPlayer sp) {
 
         sp.getServer().execute(() -> {
             var level = sp.serverLevel();

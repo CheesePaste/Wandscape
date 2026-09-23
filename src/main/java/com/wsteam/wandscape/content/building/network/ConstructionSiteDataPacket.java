@@ -6,6 +6,7 @@ import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.content.building.internal.BuildingState;
 import com.wsteam.wandscape.content.building.internal.EnqueueHelper;
 import com.wsteam.wandscape.content.warehouse.system.ResourceSupplySystem;
+import com.wsteam.wandscape.foundation.networking.ClientPayloadDispatcher;
 import com.wsteam.wandscape.foundation.util.ItemKey;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.foundation.registry.WandscapeConstants;
@@ -18,7 +19,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.Level;
 
 import java.util.*;
-import java.util.function.Consumer;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
 
@@ -171,18 +171,10 @@ public record ConstructionSiteDataPacket(
 
     // ── Client handler ──
 
-    private static Consumer<ConstructionSiteDataPacket> clientHandler;
 
-    public static void setClientHandler(Consumer<ConstructionSiteDataPacket> handler) {
-        clientHandler = handler;
-    }
 
     public static void handleClient(ConstructionSiteDataPacket packet) {
-        if (clientHandler != null) {
-            clientHandler.accept(packet);
-        } else {
-            Log.warn(TAG, "ConstructionSiteDataPacket: no client handler registered");
-        }
+        ClientPayloadDispatcher.dispatch(packet);
     }
 
     // ── StreamCodec helpers ──

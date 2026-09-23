@@ -7,10 +7,10 @@ import com.wsteam.wandscape.content.building.scanner.client.CreativeScannerScree
 import com.wsteam.wandscape.content.building.scanner.client.ScannerScreen;
 import com.wsteam.wandscape.content.building.scanner.network.ScannerSyncPacket;
 import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.networking.Net;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
  * Client-side state manager for the 3D Building Scanner Visual Adjuster (Gizmo Editor).
@@ -213,7 +213,7 @@ public final class ScannerGizmoState {
 
         Minecraft mc = Minecraft.getInstance();
         if (mc.level != null) {
-            PacketDistributor.sendToServer(new ScannerSyncPacket(
+            Net.toServer(new ScannerSyncPacket(
                     scanner.getBlockPos(),
                     scanner.saveWithoutMetadata(mc.level.registryAccess())
             ));

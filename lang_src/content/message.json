@@ -35,6 +35,10 @@
     "en_us": "[Wandscape] Task system is not ready",
     "zh_cn": "[魔法小镇] 任务系统未就绪"
   },
+  "message.wandscape.building.cancel_blocked": {
+    "en_us": "§c[Building] Cannot cancel construction of '%s': ",
+    "zh_cn": "§c[建筑] 无法撤销「%s」的建造："
+  },
   "message.wandscape.building.cancel_failed": {
     "en_us": "§c[Building] Cannot cancel construction of '%s'",
     "zh_cn": "§c[建筑] 无法撤销「%s」的建造"
@@ -42,6 +46,14 @@
   "message.wandscape.building.cancelled": {
     "en_us": "§e[Building] Cancelled construction of '%s'",
     "zh_cn": "§e[建筑] 已撤销「%s」的建造"
+  },
+  "message.wandscape.building.demolish_blocked": {
+    "en_us": "§c[Building] Cannot demolish '%s': ",
+    "zh_cn": "§c[建筑] 无法拆除「%s」："
+  },
+  "message.wandscape.building.demolish_blocked_last_one": {
+    "en_us": "This is the last building of its kind; at least one must remain for the colony to keep running",
+    "zh_cn": "这是最后一座同类建筑，必须保留至少一座以维持殖民地运转"
   },
   "message.wandscape.building.demolishing": {
     "en_us": "§c[Building] Demolishing '%s'... task enqueued",

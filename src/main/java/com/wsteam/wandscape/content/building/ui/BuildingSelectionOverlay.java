@@ -541,7 +541,8 @@ public final class BuildingSelectionOverlay {
         }
         for (BuildingPackage p : ProjectionClientState.getBuildingPackages()) {
             if (p.id().equals(pkgId)) {
-                return com.wsteam.wandscape.foundation.ui.I18n.name(p.name(), p.name()).getString();
+                return com.wsteam.wandscape.foundation.ui.I18n
+                        .datapackName(p.name(), p.name(), p.names()).getString();
             }
         }
         return pkgId;

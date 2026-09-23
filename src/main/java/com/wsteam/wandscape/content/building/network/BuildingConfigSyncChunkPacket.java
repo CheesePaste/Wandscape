@@ -1,11 +1,11 @@
 package com.wsteam.wandscape.content.building.network;
 
+import com.wsteam.wandscape.foundation.networking.ClientPayloadDispatcher;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 
-import java.util.function.Consumer;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
 
@@ -34,8 +34,6 @@ public record BuildingConfigSyncChunkPacket(
     public static final StreamCodec<RegistryFriendlyByteBuf, BuildingConfigSyncChunkPacket> STREAM_CODEC =
             StreamCodec.of(BuildingConfigSyncChunkPacket::write, BuildingConfigSyncChunkPacket::read);
 
-    private static Consumer<BuildingConfigSyncChunkPacket> clientHandler = packet -> {};
-    public static void setClientHandler(Consumer<BuildingConfigSyncChunkPacket> handler) { clientHandler = handler; }
 
     @Override
     public Type<? extends CustomPacketPayload> type() {
@@ -43,7 +41,7 @@ public record BuildingConfigSyncChunkPacket(
     }
 
     public static void handleClient(BuildingConfigSyncChunkPacket packet) {
-        clientHandler.accept(packet);
+        ClientPayloadDispatcher.dispatch(packet);
     }
 
     static void write(RegistryFriendlyByteBuf buf, BuildingConfigSyncChunkPacket pkt) {

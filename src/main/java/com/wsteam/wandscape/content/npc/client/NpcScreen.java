@@ -9,6 +9,7 @@ import com.wsteam.wandscape.compat.curios.client.NpcCuriosButton;
 import com.wsteam.wandscape.content.npc.NpcMenu;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.content.npc.network.*;
+import com.wsteam.wandscape.foundation.networking.Net;
 import com.wsteam.wandscape.foundation.ui.I18n;
 import com.wsteam.wandscape.foundation.ui.ReplayProtectedScreen;
 import com.wsteam.wandscape.foundation.ui.component.HelpButton;
@@ -27,7 +28,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.List;
 
@@ -162,7 +162,7 @@ public class NpcScreen extends AbstractContainerScreen<NpcMenu> implements Repla
             curiosButton = new NpcCuriosButton(modelX + 6, modelY + 6, () -> {
                 if (entityId >= 0) {
                     NpcScreenNavigator.prepareTransition(entityId);
-                    PacketDistributor.sendToServer(new NpcOpenCuriosPacket(entityId));
+                    Net.toServer(new NpcOpenCuriosPacket(entityId));
                 }
             });
         }
@@ -172,7 +172,7 @@ public class NpcScreen extends AbstractContainerScreen<NpcMenu> implements Repla
         inventoryButton = new NpcInventoryButton(invBtnX, modelY + 6, () -> {
             if (entityId >= 0) {
                 NpcScreenNavigator.prepareTransition(entityId);
-                PacketDistributor.sendToServer(new NpcOpenInventoryPacket(entityId));
+                Net.toServer(new NpcOpenInventoryPacket(entityId));
             }
         });
 
@@ -202,13 +202,13 @@ public class NpcScreen extends AbstractContainerScreen<NpcMenu> implements Repla
                 peaceLabel(), () -> {
             peaceMode = !peaceMode;
             refreshToggleButtons();
-            PacketDistributor.sendToServer(new NpcTogglePacket(entityId, NpcTogglePacket.FLAG_PEACE, peaceMode));
+            Net.toServer(new NpcTogglePacket(entityId, NpcTogglePacket.FLAG_PEACE, peaceMode));
         });
         followButton = new MedievalButton(bx + 70, btnY, 68, 16,
                 followLabel(), () -> {
             followMode = !followMode;
             refreshToggleButtons();
-            PacketDistributor.sendToServer(new NpcTogglePacket(entityId, NpcTogglePacket.FLAG_FOLLOW, followMode));
+            Net.toServer(new NpcTogglePacket(entityId, NpcTogglePacket.FLAG_FOLLOW, followMode));
         });
         addRenderableWidget(peaceButton);
         addRenderableWidget(followButton);
@@ -217,7 +217,7 @@ public class NpcScreen extends AbstractContainerScreen<NpcMenu> implements Repla
                 () -> {
                     if (entityId >= 0) {
                         NpcScreenNavigator.prepareTransition(entityId);
-                        PacketDistributor.sendToServer(new NpcOpenStrategyPacket(entityId));
+                        Net.toServer(new NpcOpenStrategyPacket(entityId));
                     }
                 }));
         addRenderableWidget(new MedievalButton(bx + 190, btnY, 46, 16,
@@ -236,7 +236,7 @@ public class NpcScreen extends AbstractContainerScreen<NpcMenu> implements Repla
                 autoPickupItems = false;
             }
             refreshToggleButtons();
-            PacketDistributor.sendToServer(new NpcTogglePacket(entityId, NpcTogglePacket.FLAG_PICKUP, pickupItems));
+            Net.toServer(new NpcTogglePacket(entityId, NpcTogglePacket.FLAG_PICKUP, pickupItems));
         });
         autoPickupButton = new MedievalButton(dropBoxX + 4, topPos + 190, 108, 16,
                 autoPickupLabel(), () -> {
@@ -245,7 +245,7 @@ public class NpcScreen extends AbstractContainerScreen<NpcMenu> implements Repla
                 pickupItems = true;
             }
             refreshToggleButtons();
-            PacketDistributor.sendToServer(new NpcTogglePacket(entityId, NpcTogglePacket.FLAG_AUTO_PICKUP, autoPickupItems));
+            Net.toServer(new NpcTogglePacket(entityId, NpcTogglePacket.FLAG_AUTO_PICKUP, autoPickupItems));
         });
         addRenderableWidget(pickupButton);
         addRenderableWidget(autoPickupButton);
@@ -283,7 +283,7 @@ public class NpcScreen extends AbstractContainerScreen<NpcMenu> implements Repla
         if (trimmed.isEmpty() || trimmed.equals(lastServerName)) return;
         lastServerName = trimmed;
         this.npcName = trimmed;
-        PacketDistributor.sendToServer(new NpcRenamePacket(entityId, trimmed));
+        Net.toServer(new NpcRenamePacket(entityId, trimmed));
     }
 
     private void onDismiss() {
@@ -293,7 +293,7 @@ public class NpcScreen extends AbstractContainerScreen<NpcMenu> implements Repla
                 I18n.name("gui.wandscape.npc.dismiss_title", "解雇法师"),
                 I18n.name("gui.wandscape.npc.dismiss_confirm", "确定解雇法师 %s？其装备将掉落。", name),
                 () -> {
-                    PacketDistributor.sendToServer(new NpcDismissPacket(entityId));
+                    Net.toServer(new NpcDismissPacket(entityId));
                     // 标准容器关闭（closeContainer + setScreen(null)），与关闭按钮一致；
                     // 服务端收到 close 包后立即同步关闭容器，避免面板残留/容器状态不一致
                     onClose();

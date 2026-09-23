@@ -2,6 +2,7 @@ package com.wsteam.wandscape.content.npc.client;
 
 import com.wsteam.wandscape.content.npc.NpcInventoryMenu;
 import com.wsteam.wandscape.content.npc.network.NpcOpenEquipPacket;
+import com.wsteam.wandscape.foundation.networking.Net;
 import com.wsteam.wandscape.foundation.ui.I18n;
 import com.wsteam.wandscape.foundation.ui.component.MedievalButton;
 import com.wsteam.wandscape.foundation.ui.theme.MedievalColors;
@@ -12,7 +13,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
  * 法师背包容器屏幕：顶部法师 27 格背包（3×9），下方原版玩家背包。
@@ -49,7 +49,7 @@ public class NpcInventoryScreen extends AbstractContainerScreen<NpcInventoryMenu
         int entityId = menu.getEntityId() >= 0 ? menu.getEntityId() : NpcScreenNavigator.getLastEntityId();
         if (entityId >= 0 && minecraft != null) {
             NpcScreenNavigator.prepareTransition(entityId);
-            PacketDistributor.sendToServer(new NpcOpenEquipPacket(entityId));
+            Net.toServer(new NpcOpenEquipPacket(entityId));
         } else if (minecraft != null && minecraft.player != null) {
             minecraft.player.closeContainer();
         }

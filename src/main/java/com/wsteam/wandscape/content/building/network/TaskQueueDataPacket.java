@@ -2,6 +2,7 @@ package com.wsteam.wandscape.content.building.network;
 import com.wsteam.wandscape.content.task.component.Position;
 
 import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.networking.ClientPayloadDispatcher;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -10,7 +11,6 @@ import net.minecraft.resources.ResourceLocation;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Consumer;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
 
@@ -91,18 +91,10 @@ public record TaskQueueDataPacket(
             boolean pending
     ) {}
 
-    private static Consumer<TaskQueueDataPacket> clientHandler;
 
-    public static void setClientHandler(Consumer<TaskQueueDataPacket> handler) {
-        clientHandler = handler;
-    }
 
     public static void handleClient(TaskQueueDataPacket packet) {
-        if (clientHandler != null) {
-            clientHandler.accept(packet);
-        } else {
-            Log.warn(TAG, "TaskQueueDataPacket: no client handler registered");
-        }
+        ClientPayloadDispatcher.dispatch(packet);
     }
 
     static void write(RegistryFriendlyByteBuf buf, TaskQueueDataPacket pkt) {

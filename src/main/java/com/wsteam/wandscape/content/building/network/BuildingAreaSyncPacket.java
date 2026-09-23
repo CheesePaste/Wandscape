@@ -11,6 +11,7 @@ import com.wsteam.wandscape.api.ColonyApi;
 import com.wsteam.wandscape.content.building.data.BuildingData;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.api.WandscapeApis;
+import com.wsteam.wandscape.foundation.networking.Net;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -20,7 +21,6 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -287,7 +287,7 @@ public record BuildingAreaSyncPacket(List<BuildingEntry> buildings) implements C
      */
     public static void sendToPlayer(ServerPlayer player, @Nullable UUID colonyId) {
         if (colonyId == null) {
-            PacketDistributor.sendToPlayer(player, new BuildingAreaSyncPacket(List.of()));
+            Net.toPlayer(player, new BuildingAreaSyncPacket(List.of()));
             return;
         }
         BuildingApi buildingApi = WandscapeApis.getBuildingApi();
@@ -296,7 +296,7 @@ public record BuildingAreaSyncPacket(List<BuildingEntry> buildings) implements C
         List<BuildingEntry> entries = buildingApi.getColonyBuildings(colonyId).stream()
                 .map(BuildingAreaSyncPacket::fromBuildingData)
                 .toList();
-        PacketDistributor.sendToPlayer(player, new BuildingAreaSyncPacket(entries));
+        Net.toPlayer(player, new BuildingAreaSyncPacket(entries));
         Log.info(TAG, "[Area] Sent {} building areas to {}", entries.size(),
                 player.getGameProfile().getName());
     }

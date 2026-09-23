@@ -1,6 +1,7 @@
 package com.wsteam.wandscape.content.building.network;
 
 import com.wsteam.wandscape.content.npc.data.MageResume;
+import com.wsteam.wandscape.foundation.networking.ClientPayloadDispatcher;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -12,7 +13,6 @@ import net.minecraft.resources.ResourceLocation;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import java.util.function.Consumer;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
 /**
@@ -35,16 +35,10 @@ public record TavernOpenPacket(BlockPos buildingPos, UUID colonyId,
 
     // ── Client handler ──
 
-    private static Consumer<TavernOpenPacket> clientHandler;
 
-    public static void setClientHandler(Consumer<TavernOpenPacket> handler) {
-        clientHandler = handler;
-    }
 
     public static void handleClient(TavernOpenPacket packet) {
-        if (clientHandler != null) {
-            clientHandler.accept(packet);
-        }
+        ClientPayloadDispatcher.dispatch(packet);
     }
 
     // ── StreamCodec helpers ──

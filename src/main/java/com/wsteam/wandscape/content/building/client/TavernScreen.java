@@ -4,6 +4,7 @@ import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.content.building.network.TavernRecruitPacket;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.content.npc.data.MageResume;
+import com.wsteam.wandscape.foundation.networking.Net;
 import com.wsteam.wandscape.foundation.registry.WandscapeConstants;
 import com.wsteam.wandscape.foundation.ui.I18n;
 import com.wsteam.wandscape.foundation.ui.component.MedievalButton;
@@ -18,7 +19,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -416,7 +416,7 @@ public class TavernScreen extends MedievalScreen {
     }
 
     private void onRecruit() {
-        PacketDistributor.sendToServer(new TavernRecruitPacket(buildingPos, "spawn_npc"));
+        Net.toServer(new TavernRecruitPacket(buildingPos, "spawn_npc"));
         Minecraft.getInstance().getSoundManager().play(
                 SimpleSoundInstance.forUI(SoundEvents.EXPERIENCE_ORB_PICKUP, 1.1f));
         setToast(I18n.name("gui.wandscape.tavern.recruit_published", "已发布招募令，正在派遣法师..."), MedievalColors.SUCCESS_GREEN);
@@ -425,7 +425,7 @@ public class TavernScreen extends MedievalScreen {
     private void onRecruitMage(int index) {
         if (index < 0 || index >= mageResumes.size()) return;
         MageResume r = mageResumes.get(index);
-        PacketDistributor.sendToServer(new TavernRecruitPacket(buildingPos, "recruit_mage:" + index));
+        Net.toServer(new TavernRecruitPacket(buildingPos, "recruit_mage:" + index));
         Minecraft.getInstance().getSoundManager().play(
                 SimpleSoundInstance.forUI(SoundEvents.VILLAGER_YES, 1.0f));
         setToast(I18n.name("gui.wandscape.tavern.hired_success", "已成功聘用法师：%s！", r.touristName()), MedievalColors.SUCCESS_GREEN);
@@ -437,7 +437,7 @@ public class TavernScreen extends MedievalScreen {
         openConfirmDialog(
                 I18n.name("gui.wandscape.tavern.reject_confirm", "确定拒绝 %s 的求职简历？", r.touristName()),
                 () -> {
-                    PacketDistributor.sendToServer(new TavernRecruitPacket(buildingPos, "reject_mage:" + index));
+                    Net.toServer(new TavernRecruitPacket(buildingPos, "reject_mage:" + index));
                     Minecraft.getInstance().getSoundManager().play(
                             SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0f));
                 });

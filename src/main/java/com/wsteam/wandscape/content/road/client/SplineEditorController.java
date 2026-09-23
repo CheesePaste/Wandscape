@@ -11,6 +11,7 @@ import com.wsteam.wandscape.content.road.core.SplinePoint;
 import com.wsteam.wandscape.content.road.network.SplineBuildPacket;
 import com.wsteam.wandscape.content.road.core.SplineVec3;
 import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.networking.Net;
 import com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -535,7 +536,7 @@ public final class SplineEditorController {
         
         if (tiles.isEmpty()) return;
 
-        net.neoforged.neoforge.network.PacketDistributor.sendToServer(new SplineBuildPacket(tiles.toString(), splineJson.toString()));
+        Net.toServer(new SplineBuildPacket(tiles.toString(), splineJson.toString()));
 
         Minecraft mc = Minecraft.getInstance();
         if (mc.player != null) {

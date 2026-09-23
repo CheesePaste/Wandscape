@@ -25,7 +25,8 @@ public class AnomalyScreen extends MedievalScreen {
     private static final int ROW_H = 26;
     private static final int CONTENT_PAD = 10;
 
-    private record AnomalyEntry(UUID buildingId, String buildingName, boolean started) {}
+    /** {@code buildingTypeId} 是建筑类型 id（不是显示名），行内按本地语言取名字。 */
+    private record AnomalyEntry(UUID buildingId, String buildingTypeId, boolean started) {}
 
     private List<AnomalyEntry> entries = List.of();
     private int scrollOffset;
@@ -91,7 +92,8 @@ public class AnomalyScreen extends MedievalScreen {
             }
 
             // Building name
-            g.drawString(font, entry.buildingName(), cx + 4, rowY + (ROW_H - 9) / 2,
+            g.drawString(font, I18n.buildingName(entry.buildingTypeId(), entry.buildingTypeId()).getString(),
+                    cx + 4, rowY + (ROW_H - 9) / 2,
                     MedievalColors.TEXT_WARM_WHITE, false);
 
             // Status badge (建造中 / 等待材料)

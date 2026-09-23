@@ -8,6 +8,7 @@ import com.wsteam.wandscape.content.building.internal.BuildingState;
 import com.wsteam.wandscape.content.building.internal.ShopStockManager;
 import com.wsteam.wandscape.content.building.data.WorkItem;
 import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.networking.Net;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -52,7 +53,7 @@ public record BuildingDebugRequestPacket(BlockPos pos) implements CustomPacketPa
         }
 
         var response = buildResponse(player.level(), state);
-        net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player, response);
+        Net.toPlayer(player, response);
 
         Log.info(TAG, "[Debug] Sent debug data for '{}' at {} to {}",
                 state.getBuildingTypeId(), packet.pos(), player.getGameProfile().getName());

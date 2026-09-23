@@ -2,6 +2,7 @@ package com.wsteam.wandscape.foundation.service;
 import com.wsteam.wandscape.content.task.ecs.World;
 
 import com.wsteam.wandscape.Config;
+import com.wsteam.wandscape.foundation.networking.Net;
 import com.wsteam.wandscape.foundation.networking.ParticleBurstPacket;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleOptions;
@@ -10,7 +11,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -122,7 +122,7 @@ public final class ParticleService {
                                     float r, float g, float b,
                                     int count, float size, int lifetime, boolean vertical) {
         if (!active() || level == null) return;
-        PacketDistributor.sendToPlayersTrackingChunk(level, new ChunkPos(BlockPos.containing(pos)),
+        Net.toTrackingChunk(level, new ChunkPos(BlockPos.containing(pos)),
                 new ParticleBurstPacket(pos, r, g, b, scaled(count), size, lifetime, vertical));
     }
 

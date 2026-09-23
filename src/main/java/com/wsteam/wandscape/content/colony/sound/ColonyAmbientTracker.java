@@ -3,12 +3,12 @@ package com.wsteam.wandscape.content.colony.sound;
 import com.wsteam.wandscape.content.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.content.building.internal.BuildingState;
 import com.wsteam.wandscape.content.colony.network.ColonyAmbientPacket;
+import com.wsteam.wandscape.foundation.networking.Net;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.*;
 
@@ -87,7 +87,7 @@ public final class ColonyAmbientTracker {
                 lastInTown.put(id, inTown);
                 lastDay.put(id, day);
                 lastSentTick.put(id, now);
-                PacketDistributor.sendToPlayer(player, new ColonyAmbientPacket(inTown, day));
+                Net.toPlayer(player, new ColonyAmbientPacket(inTown, day));
             }
         }
 

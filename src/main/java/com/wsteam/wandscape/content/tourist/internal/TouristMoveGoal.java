@@ -7,6 +7,7 @@ import com.wsteam.wandscape.content.road.core.RoadEdge;
 import com.wsteam.wandscape.content.road.engine.RoadSavedData;
 import com.wsteam.wandscape.content.task.event.NarrativeEventTriggered;
 import com.wsteam.wandscape.content.colony.ColonyActivation;
+import com.wsteam.wandscape.foundation.networking.Net;
 import com.wsteam.wandscape.foundation.service.ParticleService;
 import com.wsteam.wandscape.content.road.engine.WandscapeTags;
 import com.wsteam.wandscape.api.BuildingApi;
@@ -26,7 +27,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.level.pathfinder.Path;
-import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
 import javax.annotation.Nullable;
@@ -1894,7 +1894,7 @@ public class TouristMoveGoal extends Goal {
         TouristBubblePacket packet = new TouristBubblePacket(tourist.getId(), iconId, count);
         for (ServerPlayer p : level.getEntitiesOfClass(
                 ServerPlayer.class, tourist.getBoundingBox().inflate(32))) {
-            PacketDistributor.sendToPlayer(p, packet);
+            Net.toPlayer(p, packet);
         }
     }
 

@@ -13,7 +13,6 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.SimpleMenuProvider;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
 import top.theillusivec4.curios.api.CuriosApi;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
@@ -46,8 +45,7 @@ public record NpcOpenCuriosPacket(int entityId) implements CustomPacketPayload {
     }
 
     /** Server handler. */
-    public static void handleServer(NpcOpenCuriosPacket pkt, IPayloadContext ctx) {
-        if (!(ctx.player() instanceof ServerPlayer sp)) return;
+    public static void handleServer(NpcOpenCuriosPacket pkt, ServerPlayer sp) {
         var level = sp.serverLevel();
         if (!(level.getEntity(pkt.entityId()) instanceof WandscapeNpc npc) || npc.isRemoved()) {
             Log.warn(TAG, "Curios target entity {} is not a valid WandscapeNpc", pkt.entityId());

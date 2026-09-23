@@ -1,6 +1,7 @@
 package com.wsteam.wandscape.content.building.network;
 
 import com.wsteam.wandscape.content.magic.data.AltarSpellInfo;
+import com.wsteam.wandscape.foundation.networking.ClientPayloadDispatcher;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -13,7 +14,6 @@ import net.minecraft.resources.ResourceLocation;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import java.util.function.Consumer;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
 /**
@@ -35,12 +35,10 @@ public record AltarOpenPacket(BlockPos buildingPos, UUID colonyId, UUID building
     public Type<? extends CustomPacketPayload> type() { return TYPE; }
 
     // Client handler
-    private static Consumer<AltarOpenPacket> clientHandler;
 
-    public static void setClientHandler(Consumer<AltarOpenPacket> handler) { clientHandler = handler; }
 
     public static void handleClient(AltarOpenPacket packet) {
-        if (clientHandler != null) clientHandler.accept(packet);
+        ClientPayloadDispatcher.dispatch(packet);
     }
 
     static void write(RegistryFriendlyByteBuf buf, AltarOpenPacket pkt) {

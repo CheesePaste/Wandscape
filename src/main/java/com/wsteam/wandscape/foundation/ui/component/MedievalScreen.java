@@ -3,6 +3,7 @@ package com.wsteam.wandscape.foundation.ui.component;
 import com.wsteam.wandscape.content.building.projection.client.BuildingDebugClientState;
 import com.wsteam.wandscape.content.building.projection.network.BuildingActionPacket;
 import com.wsteam.wandscape.content.building.projection.network.BuildingDebugResponsePacket;
+import com.wsteam.wandscape.foundation.networking.Net;
 import com.wsteam.wandscape.foundation.ui.I18n;
 import com.wsteam.wandscape.foundation.ui.ReplayProtectedScreen;
 import com.wsteam.wandscape.foundation.ui.animation.MedievalAnimation;
@@ -15,7 +16,6 @@ import net.minecraft.client.gui.components.Renderable;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -203,7 +203,7 @@ public abstract class MedievalScreen extends Screen implements ReplayProtectedSc
                 }
             }
             if (this.buildingData == null && this.buildingPos != null) {
-                net.neoforged.neoforge.network.PacketDistributor.sendToServer(
+                Net.toServer(
                         new com.wsteam.wandscape.content.building.projection.network.BuildingDebugRequestPacket(this.buildingPos));
             }
             initBuildingActionButtons();
@@ -450,7 +450,7 @@ public abstract class MedievalScreen extends Screen implements ReplayProtectedSc
                     I18n.name("gui.wandscape.confirm.cancel.title", "确认撤销"),
                     I18n.name("gui.wandscape.confirm.cancel.msg", "确定要撤销「%s」的建造吗？将清除施工地并返还已分配建材。", name),
                     () -> {
-                        PacketDistributor.sendToServer(new BuildingActionPacket(cancelId, "cancel"));
+                        Net.toServer(new BuildingActionPacket(cancelId, "cancel"));
                         this.onClose();
                     }
             );
@@ -458,7 +458,7 @@ public abstract class MedievalScreen extends Screen implements ReplayProtectedSc
         }
 
         if (buildingData.needsRepair() && !buildingData.demolishing()) {
-            PacketDistributor.sendToServer(new BuildingActionPacket(targetId, "repair"));
+            Net.toServer(new BuildingActionPacket(targetId, "repair"));
             showFeedback(I18n.name("gui.wandscape.building_action.repair_sent", "已下发修复任务"), MedievalColors.SUCCESS_GREEN);
         }
     }
@@ -475,7 +475,7 @@ public abstract class MedievalScreen extends Screen implements ReplayProtectedSc
                 I18n.name("gui.wandscape.confirm.demolish.title", "确认拆除"),
                 I18n.name("gui.wandscape.confirm.demolish.msg", "确定要拆除「%s」吗？已下发的工作将中断，部分建材将返还。", name),
                 () -> {
-                    PacketDistributor.sendToServer(new BuildingActionPacket(destroyId, "destroy"));
+                    Net.toServer(new BuildingActionPacket(destroyId, "destroy"));
                     this.onClose();
                 }
         );

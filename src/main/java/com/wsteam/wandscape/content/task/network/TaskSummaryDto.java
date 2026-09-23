@@ -16,7 +16,10 @@ public record TaskSummaryDto(
         String title,
         String blueprintId,
         @Nullable UUID buildingId,
+        /** 服务端解析的无语言兜底名，客户端解析不出来时兜底用。 */
         String buildingName,
+        /** 建筑类型 id，客户端拿它按本地语言取名（{@code I18n#buildingName}）。 */
+        String buildingTypeId,
         String state, // "IN_PROGRESS", "AWAITING_RESOURCES", "PENDING_ASSIGN", "QUEUED"
         int priority,
         int stepIndex,
@@ -53,6 +56,7 @@ public record TaskSummaryDto(
         buf.writeBoolean(dto.buildingId != null);
         if (dto.buildingId != null) buf.writeUUID(dto.buildingId);
         buf.writeUtf(dto.buildingName != null ? dto.buildingName : "");
+        buf.writeUtf(dto.buildingTypeId != null ? dto.buildingTypeId : "");
         buf.writeUtf(dto.state != null ? dto.state : "PENDING_ASSIGN");
         buf.writeVarInt(dto.priority);
         buf.writeVarInt(dto.stepIndex);
@@ -87,6 +91,7 @@ public record TaskSummaryDto(
         String blueprintId = buf.readUtf();
         UUID buildingId = buf.readBoolean() ? buf.readUUID() : null;
         String buildingName = buf.readUtf();
+        String buildingTypeId = buf.readUtf();
         String state = buf.readUtf();
         int priority = buf.readVarInt();
         int stepIndex = buf.readVarInt();
@@ -113,7 +118,7 @@ public record TaskSummaryDto(
         String blockerReason = buf.readUtf();
 
         return new TaskSummaryDto(
-                taskId, category, title, blueprintId, buildingId, buildingName,
+                taskId, category, title, blueprintId, buildingId, buildingName, buildingTypeId,
                 state, priority, stepIndex, totalSteps,
                 channelRemainingTicks, channelTotalTicks,
                 assignedNpcId, assignedNpcUuid, assignedNpcName,

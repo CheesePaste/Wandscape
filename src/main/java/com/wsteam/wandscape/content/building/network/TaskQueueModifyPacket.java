@@ -16,6 +16,7 @@ import com.wsteam.wandscape.api.WandscapeApis;
 import com.wsteam.wandscape.content.task.engine.pool.GlobalTask;
 import com.wsteam.wandscape.content.warehouse.ColonyItemBank;
 import com.wsteam.wandscape.content.production.data.CraftRecipeView;
+import com.wsteam.wandscape.foundation.networking.Net;
 import com.wsteam.wandscape.foundation.util.ItemKey;
 import com.wsteam.wandscape.Wandscape;
 import net.minecraft.core.BlockPos;
@@ -24,8 +25,6 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.neoforge.network.PacketDistributor;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -59,8 +58,7 @@ public record TaskQueueModifyPacket(
     }
 
     /** Server-side handler. */
-    public static void handleServer(TaskQueueModifyPacket pkt, IPayloadContext ctx) {
-        if (!(ctx.player() instanceof ServerPlayer sp)) return;
+    public static void handleServer(TaskQueueModifyPacket pkt, ServerPlayer sp) {
 
         sp.getServer().execute(() -> {
             Log.info(TAG, "TaskQueueModify: received {} action index={} pos={} from player {}",
@@ -141,7 +139,7 @@ public record TaskQueueModifyPacket(
             List<TaskQueueDataPacket.CurrentTask> currents = buildCurrentTasks(data, buildingId);
 
             TaskQueueDataPacket response = new TaskQueueDataPacket(pkt.stationPos, entries, currents);
-            PacketDistributor.sendToPlayer(sp, response);
+            Net.toPlayer(sp, response);
         });
     }
 

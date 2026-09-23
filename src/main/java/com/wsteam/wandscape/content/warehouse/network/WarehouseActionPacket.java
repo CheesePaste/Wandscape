@@ -10,7 +10,6 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import javax.annotation.Nullable;
 
@@ -67,8 +66,7 @@ public record WarehouseActionPacket(
     }
 
     /** Server-side handler. */
-    public static void handleServer(WarehouseActionPacket pkt, IPayloadContext ctx) {
-        if (!(ctx.player() instanceof ServerPlayer sp)) return;
+    public static void handleServer(WarehouseActionPacket pkt, ServerPlayer sp) {
 
         sp.getServer().execute(() -> {
             if (!(sp.containerMenu instanceof WarehouseMenu menu)

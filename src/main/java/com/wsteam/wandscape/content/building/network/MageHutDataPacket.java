@@ -2,6 +2,7 @@ package com.wsteam.wandscape.content.building.network;
 
 import com.wsteam.wandscape.content.npc.attributes.NpcAttributes;
 
+import com.wsteam.wandscape.foundation.networking.ClientPayloadDispatcher;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -14,7 +15,6 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import java.util.function.Consumer;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
 
@@ -45,16 +45,10 @@ public record MageHutDataPacket(BlockPos buildingPos, UUID colonyId, String crea
 
     // ── Client handler ──
 
-    private static Consumer<MageHutDataPacket> clientHandler;
 
-    public static void setClientHandler(Consumer<MageHutDataPacket> handler) {
-        clientHandler = handler;
-    }
 
     public static void handleClient(MageHutDataPacket packet) {
-        if (clientHandler != null) {
-            clientHandler.accept(packet);
-        }
+        ClientPayloadDispatcher.dispatch(packet);
     }
 
     // ── StreamCodec helpers ──

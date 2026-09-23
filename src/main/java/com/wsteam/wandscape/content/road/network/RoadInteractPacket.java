@@ -9,13 +9,13 @@ import com.wsteam.wandscape.content.road.engine.RoadSavedData;
 import com.wsteam.wandscape.content.road.engine.RoadSiteData;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.api.WandscapeApis;
+import com.wsteam.wandscape.foundation.networking.Net;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.UUID;
 
@@ -71,7 +71,7 @@ public record RoadInteractPacket(BlockPos pos) implements CustomPacketPayload {
             colonyId = edgeColonyId;
         }
         ConstructionSiteDataPacket siteData = RoadSiteData.fromEdge(level, edge, colonyId);
-        PacketDistributor.sendToPlayer(player, siteData);
+        Net.toPlayer(player, siteData);
         Log.info(TAG, "[Interact] Opened road construction panel for edge {}", edge.getEdgeId());
     }
 

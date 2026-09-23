@@ -11,6 +11,7 @@ import com.wsteam.wandscape.compat.ironspellbooks.IronSpellsAttributes;
 import com.wsteam.wandscape.content.npc.attributes.NpcAttributes.AttributeType;
 import com.wsteam.wandscape.content.npc.WandscapeAttributes;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
+import com.wsteam.wandscape.foundation.networking.PayloadRegistry;
 import net.minecraft.core.Holder;
 import net.minecraft.core.NonNullList;
 import net.minecraft.core.registries.Registries;
@@ -71,12 +72,15 @@ public final class CuriosCompatImpl {
         NeoForge.EVENT_BUS.register(ServerHooks.class);
     }
 
-    /** 注册法师饰品栏打开请求 payload。仅在 Curios 已加载时被调用（复用主链路同一 registrar）。 */
+    /**
+     * 注册法师饰品栏打开请求 payload。仅在 Curios 已加载时被调用（复用主链路同一 registrar）。
+     *
+     * <p>走 {@link PayloadRegistry#c2s} 而非直接 {@code registrar.playToServer}：Curios 的包与主干包
+     * 方向适配规则（怎么从上下文取玩家、取不到怎么兜底）应当完全一致，只有一处实现。
+     */
     public static void registerPayloads(PayloadRegistrar registrar) {
-        registrar.playToServer(
-                NpcOpenCuriosPacket.TYPE,
-                NpcOpenCuriosPacket.STREAM_CODEC,
-                NpcOpenCuriosPacket::handleServer);
+        PayloadRegistry.c2s(registrar, NpcOpenCuriosPacket.TYPE,
+                NpcOpenCuriosPacket.STREAM_CODEC, NpcOpenCuriosPacket::handleServer);
     }
 
     /** 客户端：注册法师饰品容器屏幕。仅在 Curios 已加载时被调用。 */

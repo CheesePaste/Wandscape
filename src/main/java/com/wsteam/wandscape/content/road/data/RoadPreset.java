@@ -3,18 +3,37 @@ import com.wsteam.wandscape.content.task.component.Position;
 import com.wsteam.wandscape.content.task.ecs.World;
 
 import com.google.gson.*;
+import com.wsteam.wandscape.foundation.util.LocalizedText;
 import net.minecraft.world.level.block.Block;
 
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * A road placement preset — either a single block or a weighted-random multi-block set.
+ *
+ * @param displayNames 来自同一个 {@code display_name} 键的对象形态，按语言给出预设名；
+ *                     字符串形态或内置/程序化预设时为空。见 {@link LocalizedText}。
  */
-public record RoadPreset(String id, String displayName, List<WeightedEntry> blocks) {
+public record RoadPreset(String id, String displayName, Map<String, String> displayNames,
+                         List<WeightedEntry> blocks) {
 
     public record WeightedEntry(String blockId, int weight) {}
+
+    public RoadPreset {
+        displayNames = displayNames == null ? Map.of() : Map.copyOf(displayNames);
+        blocks = blocks == null ? List.of() : List.copyOf(blocks);
+    }
+
+    /**
+     * 给内置预设与程序化拼出来的预设用的简化构造：它们没有多语言形态
+     * （内置那几个吃 {@code gui.wandscape.road.preset.<id>} 的 lang 键，程序化的名字是现拼的）。
+     */
+    public RoadPreset(String id, String displayName, List<WeightedEntry> blocks) {
+        this(id, displayName, Map.of(), blocks);
+    }
 
     /**
      * Custom Gson deserializer matching the scanner export format
@@ -26,7 +45,10 @@ public record RoadPreset(String id, String displayName, List<WeightedEntry> bloc
                                        JsonDeserializationContext context) throws JsonParseException {
             JsonObject obj = json.getAsJsonObject();
             String id = obj.has("id") ? obj.get("id").getAsString() : "";
-            String name = obj.has("display_name") ? obj.get("display_name").getAsString() : id;
+            // display_name 两态：字符串 = 不分语言；对象 = 按语言。对象形态压过模组 lang 键。
+            JsonElement nameEl = obj.get("display_name");
+            String name = obj.has("display_name") ? LocalizedText.literal(nameEl, id) : id;
+            Map<String, String> displayNames = LocalizedText.parseLocaleMap(nameEl, "road preset '" + id + "'");
             List<WeightedEntry> blocks = new ArrayList<>();
             if (obj.has("blocks")) {
                 JsonArray arr = obj.getAsJsonArray("blocks");
@@ -37,7 +59,7 @@ public record RoadPreset(String id, String displayName, List<WeightedEntry> bloc
                     if (!blockId.isEmpty()) blocks.add(new WeightedEntry(blockId, weight));
                 }
             }
-            return new RoadPreset(id, name, List.copyOf(blocks));
+            return new RoadPreset(id, name, displayNames, List.copyOf(blocks));
         }
     }
 

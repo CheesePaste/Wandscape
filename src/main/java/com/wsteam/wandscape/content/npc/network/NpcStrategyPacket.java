@@ -3,12 +3,12 @@ import com.wsteam.wandscape.content.task.types.EntityId;
 
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.networking.Net;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -89,6 +89,6 @@ public record NpcStrategyPacket(int entityId, String preset, List<String> equipp
         Log.info(TAG, "NPC {} preset={}", npc.getUUID().toString().substring(0, 8), packet.preset());
 
         // 刷新策略屏 / 信息屏（权威状态）
-        PacketDistributor.sendToPlayer(player, NpcDataPacket.from(npc));
+        Net.toPlayer(player, NpcDataPacket.from(npc));
     }
 }

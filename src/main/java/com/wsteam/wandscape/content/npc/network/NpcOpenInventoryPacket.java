@@ -10,7 +10,6 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.SimpleMenuProvider;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
 
@@ -42,8 +41,7 @@ public record NpcOpenInventoryPacket(int entityId) implements CustomPacketPayloa
     }
 
     /** Server handler. */
-    public static void handleServer(NpcOpenInventoryPacket pkt, IPayloadContext ctx) {
-        if (!(ctx.player() instanceof ServerPlayer sp)) return;
+    public static void handleServer(NpcOpenInventoryPacket pkt, ServerPlayer sp) {
         var level = sp.serverLevel();
         if (!(level.getEntity(pkt.entityId()) instanceof WandscapeNpc npc) || npc.isRemoved()) {
             Log.warn(TAG, "Inventory target entity {} is not a valid WandscapeNpc", pkt.entityId());

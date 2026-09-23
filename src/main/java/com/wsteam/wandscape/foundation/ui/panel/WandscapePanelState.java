@@ -15,10 +15,10 @@ import com.wsteam.wandscape.content.building.projection.client.ProjectionClientS
 import com.wsteam.wandscape.content.building.projection.network.ProjectionEnterPacket;
 import com.wsteam.wandscape.content.building.projection.network.ProjectionExitPacket;
 import com.wsteam.wandscape.content.road.client.RoadPlacementState;
+import com.wsteam.wandscape.foundation.networking.Net;
 import com.wsteam.wandscape.foundation.ui.panel.PanelStateTogglePacket;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.level.Level;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.List;
 import java.util.UUID;
@@ -239,7 +239,7 @@ public final class WandscapePanelState {
         }
         showBuildingAreas = false;
         BuildingDebugClientState.setActive(true);
-        PacketDistributor.sendToServer(new PanelStateTogglePacket(true));
+        Net.toServer(new PanelStateTogglePacket(true));
         // Default to overview mode
         enterSubMode(SubMode.OVERVIEW);
     }
@@ -260,7 +260,7 @@ public final class WandscapePanelState {
         cursorLifted = false;
         activeSubMode = SubMode.NONE;
         buildPhase = BuildPhase.BAR;
-        PacketDistributor.sendToServer(new PanelStateTogglePacket(false));
+        Net.toServer(new PanelStateTogglePacket(false));
         // Panel closed → the per-tick reconciler no longer runs, so return the
         // cursor to gameplay (grabbed) directly here.
         grabMouseForGame();
@@ -471,7 +471,7 @@ public final class WandscapePanelState {
             switch (mode) {
                 case BUILD_PROJECTION -> {
                     buildPhase = BuildPhase.BAR;
-                    PacketDistributor.sendToServer(new ProjectionEnterPacket());
+                    Net.toServer(new ProjectionEnterPacket());
                     if (!buildingBarOpen) {
                         openBuildingBar();
                     }
@@ -483,7 +483,7 @@ public final class WandscapePanelState {
                     liftCursorForUI();
                 }
                 case TASKS -> {
-                    PacketDistributor.sendToServer(new com.wsteam.wandscape.content.task.network.TaskPanelSubscribePacket(true));
+                    Net.toServer(new com.wsteam.wandscape.content.task.network.TaskPanelSubscribePacket(true));
                     liftCursorForUI();
                 }
                 case SETTINGS -> {
@@ -500,7 +500,7 @@ public final class WandscapePanelState {
         switch (mode) {
             case BUILD_PROJECTION -> {
                 buildPhase = BuildPhase.BAR;
-                PacketDistributor.sendToServer(new ProjectionEnterPacket());
+                Net.toServer(new ProjectionEnterPacket());
                 if (!buildingBarOpen) openBuildingBar();
             }
             case ROAD_PROJECTION -> {
@@ -510,7 +510,7 @@ public final class WandscapePanelState {
                 liftCursorForUI();
             }
             case TASKS -> {
-                PacketDistributor.sendToServer(new com.wsteam.wandscape.content.task.network.TaskPanelSubscribePacket(true));
+                Net.toServer(new com.wsteam.wandscape.content.task.network.TaskPanelSubscribePacket(true));
                 liftCursorForUI();
             }
             case SETTINGS -> {
@@ -529,7 +529,7 @@ public final class WandscapePanelState {
                 }
                 buildPhase = BuildPhase.BAR;
                 if (ProjectionClientState.isProjecting()) {
-                    PacketDistributor.sendToServer(new ProjectionExitPacket());
+                    Net.toServer(new ProjectionExitPacket());
                     ProjectionClientState.suspendProjection();
                 }
                 // If entered from overview, go back to pure overview
@@ -566,7 +566,7 @@ public final class WandscapePanelState {
                 }
             }
             case TASKS -> {
-                PacketDistributor.sendToServer(new com.wsteam.wandscape.content.task.network.TaskPanelSubscribePacket(false));
+                Net.toServer(new com.wsteam.wandscape.content.task.network.TaskPanelSubscribePacket(false));
                 TaskManagementClientState.reset();
                 if (OverviewClientState.isActive()) {
                     activeSubMode = SubMode.OVERVIEW;

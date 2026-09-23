@@ -1,12 +1,12 @@
 package com.wsteam.wandscape.content.colony.network;
 
+import com.wsteam.wandscape.foundation.networking.ClientPayloadDispatcher;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 
-import java.util.function.Consumer;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
 /**
@@ -24,19 +24,13 @@ public record ColonyCreatePromptPacket(BlockPos townHallAnchor, String creator)
     public static final StreamCodec<RegistryFriendlyByteBuf, ColonyCreatePromptPacket> STREAM_CODEC =
             StreamCodec.of(ColonyCreatePromptPacket::write, ColonyCreatePromptPacket::read);
 
-    private static Consumer<ColonyCreatePromptPacket> clientHandler;
 
-    public static void setClientHandler(Consumer<ColonyCreatePromptPacket> handler) {
-        clientHandler = handler;
-    }
 
     @Override
     public Type<? extends CustomPacketPayload> type() { return TYPE; }
 
     public static void handleClient(ColonyCreatePromptPacket packet) {
-        if (clientHandler != null) {
-            clientHandler.accept(packet);
-        }
+        ClientPayloadDispatcher.dispatch(packet);
     }
 
     static void write(RegistryFriendlyByteBuf buf, ColonyCreatePromptPacket pkt) {

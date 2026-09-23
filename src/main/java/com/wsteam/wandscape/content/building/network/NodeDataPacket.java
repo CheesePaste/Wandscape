@@ -1,13 +1,13 @@
 package com.wsteam.wandscape.content.building.network;
 
 import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.networking.ClientPayloadDispatcher;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 
-import java.util.function.Consumer;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
 
@@ -37,18 +37,10 @@ public record NodeDataPacket(
         return TYPE;
     }
 
-    private static Consumer<NodeDataPacket> clientHandler;
 
-    public static void setClientHandler(Consumer<NodeDataPacket> handler) {
-        clientHandler = handler;
-    }
 
     public static void handleClient(NodeDataPacket packet) {
-        if (clientHandler != null) {
-            clientHandler.accept(packet);
-        } else {
-            Log.warn(TAG, "NodeDataPacket: no client handler registered");
-        }
+        ClientPayloadDispatcher.dispatch(packet);
     }
 
     static void write(RegistryFriendlyByteBuf buf, NodeDataPacket pkt) {

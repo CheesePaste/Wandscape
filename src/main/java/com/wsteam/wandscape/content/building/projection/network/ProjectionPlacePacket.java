@@ -6,6 +6,7 @@ import com.wsteam.wandscape.content.building.data.WorkItem;
 
 import com.wsteam.wandscape.content.building.data.BuildingConfig;
 import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
+import com.wsteam.wandscape.foundation.networking.Net;
 import com.wsteam.wandscape.foundation.sound.SoundService;
 import com.wsteam.wandscape.foundation.registry.WandscapeSounds;
 import com.wsteam.wandscape.content.building.projection.data.BuildingSlot;
@@ -21,7 +22,6 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.List;
 import java.util.UUID;
@@ -122,7 +122,7 @@ public record ProjectionPlacePacket(
                 colonyId = colonyApi.getColonyId(packet.anchorPos);
             }
             List<BuildingSlot> slots = ProjectionNetwork.getAvailableBuildings(colonyId);
-            net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player,
+            Net.toPlayer(player,
                     new ProjectionSlotsRefreshPacket(slots));
         }
 
@@ -137,7 +137,7 @@ public record ProjectionPlacePacket(
         // 5. 建镇引导：无自有小镇的玩家放置市政厅（建筑未归属）→ 立即弹命名/建镇。
         //    按「放置者无镇」判断，不按空间最近镇——否则紧邻别人的小镇时会误判为已属别人而不提示。
         if (isGov && owner == null) {
-            PacketDistributor.sendToPlayer(player,
+            Net.toPlayer(player,
                     new ColonyCreatePromptPacket(
                             packet.anchorPos, config.creator() != null ? config.creator() : ""));
             Log.info(TAG, "[Projection] Government building placed by colony-less player at {} — prompting for colony creation",

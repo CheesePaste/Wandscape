@@ -7,6 +7,7 @@ import com.wsteam.wandscape.content.road.core.RoadNetwork;
 import com.wsteam.wandscape.content.road.core.SplineLeg;
 import com.wsteam.wandscape.content.road.core.TransportRoute;
 import com.wsteam.wandscape.content.road.engine.RoadSavedData;
+import com.wsteam.wandscape.foundation.networking.Net;
 import com.wsteam.wandscape.foundation.util.BalanceValues;
 import com.wsteam.wandscape.foundation.util.ItemKey;
 import com.wsteam.wandscape.foundation.log.Log;
@@ -15,7 +16,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -124,7 +124,7 @@ public class ItemTransportManager {
                     if (packet == null) {
                         packet = new TransportStartPacket(key, count, from, actualRoute);
                     }
-                    PacketDistributor.sendToPlayer(player, packet);
+                    Net.toPlayer(player, packet);
                 }
             }
         }

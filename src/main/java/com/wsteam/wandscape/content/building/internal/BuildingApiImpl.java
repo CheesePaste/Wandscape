@@ -251,7 +251,9 @@ public class BuildingApiImpl implements BuildingApi {
         if (sd == null) return null;
         BuildingState state = sd.getBuilding(buildingId);
         if (state == null || state.isDemolishing() || !isProtectedLast(state)) return null;
-        return Component.literal("这是最后一座同类建筑，必须保留至少一座以维持殖民地运转");
+        return com.wsteam.wandscape.foundation.ui.I18n.name(
+                "message.wandscape.building.demolish_blocked_last_one",
+                "这是最后一座同类建筑，必须保留至少一座以维持殖民地运转");
     }
 
     @Override

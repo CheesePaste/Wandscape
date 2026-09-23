@@ -6,6 +6,7 @@ import com.wsteam.wandscape.content.building.network.TaskQueueDataPacket;
 import com.wsteam.wandscape.content.building.network.TaskQueueModifyPacket;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.foundation.log.LogCategory;
+import com.wsteam.wandscape.foundation.networking.Net;
 import com.wsteam.wandscape.foundation.ui.component.MedievalButton;
 import com.wsteam.wandscape.foundation.ui.component.MedievalScreen;
 import com.wsteam.wandscape.foundation.ui.component.Slider;
@@ -15,7 +16,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -107,7 +107,7 @@ public class NodeScreen extends MedievalScreen {
     /** Send a REFRESH request to the server to get the current task queue. */
     private void requestQueueRefresh() {
         if (nodePos == null || nodePos.equals(BlockPos.ZERO)) return;
-        PacketDistributor.sendToServer(new TaskQueueModifyPacket(nodePos, "refresh", 0));
+        Net.toServer(new TaskQueueModifyPacket(nodePos, "refresh", 0));
     }
 
     private int queueRefreshCounter;
@@ -199,7 +199,7 @@ public class NodeScreen extends MedievalScreen {
         int harvests = slider != null ? slider.getValue() : 1;
         if (nodePos == null || nodePos.equals(BlockPos.ZERO)) return;
         Log.debug(LogCategory.BUILDING, "ui", "publish gather x{} at {}", harvests, nodePos);
-        PacketDistributor.sendToServer(new RequestGatherTaskPacket(nodePos, harvests));
+        Net.toServer(new RequestGatherTaskPacket(nodePos, harvests));
         requestQueueRefresh();
     }
 
@@ -208,16 +208,16 @@ public class NodeScreen extends MedievalScreen {
     private void onQueueDelete(int index) {
         if (nodePos == null || nodePos.equals(BlockPos.ZERO)) return;
         Log.debug(LogCategory.BUILDING, "ui", "queue delete index={} pos={}", index, nodePos);
-        PacketDistributor.sendToServer(new TaskQueueModifyPacket(nodePos, "delete", index));
+        Net.toServer(new TaskQueueModifyPacket(nodePos, "delete", index));
     }
 
     private void onQueueMoveUp(int index) {
         if (nodePos == null || nodePos.equals(BlockPos.ZERO)) return;
-        PacketDistributor.sendToServer(new TaskQueueModifyPacket(nodePos, "move_up", index));
+        Net.toServer(new TaskQueueModifyPacket(nodePos, "move_up", index));
     }
 
     private void onQueueMoveDown(int index) {
         if (nodePos == null || nodePos.equals(BlockPos.ZERO)) return;
-        PacketDistributor.sendToServer(new TaskQueueModifyPacket(nodePos, "move_down", index));
+        Net.toServer(new TaskQueueModifyPacket(nodePos, "move_down", index));
     }
 }

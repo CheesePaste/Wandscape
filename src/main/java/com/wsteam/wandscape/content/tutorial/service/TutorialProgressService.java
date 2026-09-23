@@ -8,9 +8,9 @@ import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.content.tutorial.network.TutorialProgressSyncPacket;
 import com.wsteam.wandscape.api.WandscapeApis;
 import com.wsteam.wandscape.content.warehouse.ColonyItemBank;
+import com.wsteam.wandscape.foundation.networking.Net;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -38,7 +38,7 @@ public final class TutorialProgressService implements TutorialApi {
             step = Math.max(step, computeStep(new ServerContext(level, colonyId)));
         }
         sd.set(player.getUUID(), step, saved.dismissed());
-        PacketDistributor.sendToPlayer(player, new TutorialProgressSyncPacket(step, saved.dismissed()));
+        Net.toPlayer(player, new TutorialProgressSyncPacket(step, saved.dismissed()));
         Log.info(TAG, "[Guide] {} step={} dismissed={}",
                 player.getGameProfile().getName(), step, saved.dismissed());
     }

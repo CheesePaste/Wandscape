@@ -153,9 +153,8 @@ public class TouristScreen extends MedievalScreen {
                         "舒适%s 魔法%s 奇观%s · 精力%s",
                         formatDelta(visit.comfortDelta()), formatDelta(visit.magicDelta()),
                         formatDelta(visit.wonderDelta()), formatDelta(visit.energyDelta())).getString();
-                Component building = (visit.buildingTypeId() == null || visit.buildingTypeId().isEmpty())
-                        ? Component.literal(visit.buildingName())
-                        : I18n.buildingName(visit.buildingTypeId(), visit.buildingName());
+                // 没有类型 id 时 I18n 会自己退回字面量，不必在这里分叉。
+                Component building = I18n.buildingName(visit.buildingTypeId(), visit.buildingName());
                 Component line = building.copy()
                         .append(Component.literal(": "))
                         .append(localizeItemName(visit.whatHappened()))

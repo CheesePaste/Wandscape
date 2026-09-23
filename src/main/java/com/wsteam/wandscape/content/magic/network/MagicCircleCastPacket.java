@@ -2,6 +2,7 @@ package com.wsteam.wandscape.content.magic.network;
 import com.wsteam.wandscape.content.task.types.EffectId;
 import com.wsteam.wandscape.content.task.ecs.World;
 
+import com.wsteam.wandscape.foundation.networking.ClientPayloadDispatcher;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -10,7 +11,6 @@ import net.minecraft.world.phys.Vec3;
 
 import javax.annotation.Nullable;
 import java.util.UUID;
-import java.util.function.Consumer;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
 
@@ -33,8 +33,6 @@ public record MagicCircleCastPacket(UUID effectId, Vec3 pos, Vec3 axis, String c
         this(effectId, pos, axis, circleId, null);
     }
 
-    private static Consumer<MagicCircleCastPacket> clientHandler = packet -> {};
-    public static void setClientHandler(Consumer<MagicCircleCastPacket> handler) { clientHandler = handler; }
 
     @Override
     public Type<? extends CustomPacketPayload> type() {
@@ -42,7 +40,7 @@ public record MagicCircleCastPacket(UUID effectId, Vec3 pos, Vec3 axis, String c
     }
 
     public static void handleClient(MagicCircleCastPacket packet) {
-        clientHandler.accept(packet);
+        ClientPayloadDispatcher.dispatch(packet);
     }
 
     static void write(RegistryFriendlyByteBuf buf, MagicCircleCastPacket pkt) {
