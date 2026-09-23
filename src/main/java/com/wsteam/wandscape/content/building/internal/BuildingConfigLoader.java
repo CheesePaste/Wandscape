@@ -39,7 +39,7 @@ public final class BuildingConfigLoader {
     private final Map<String, JsonElement> packageRawJsons = new ConcurrentHashMap<>();
 
     private BuildingConfigLoader() {
-        ensureDefaultPackage();
+        ensureCorePackages();
     }
 
     public static BuildingConfigLoader getInstance() {
@@ -49,8 +49,16 @@ public final class BuildingConfigLoader {
         return INSTANCE;
     }
 
-    private void ensureDefaultPackage() {
+    /**
+     * 核心包兜底：{@code default} 与 {@code custom} 无论磁盘上有没有 {@code package.json} 都存在，
+     * 建筑包列表因此永远列得出「自定义」——扫描器导出默认就落在那儿。
+     *
+     * <p>用 {@code putIfAbsent}：数据包里真写了 {@code custom/package.json} 时，那份是玩家的，
+     * 不该被这里的兜底值盖掉。
+     */
+    private void ensureCorePackages() {
         packages.putIfAbsent(BuildingPackage.DEFAULT_ID, BuildingPackage.defaultPackage());
+        packages.putIfAbsent(BuildingPackage.CUSTOM_ID, BuildingPackage.customPackage());
     }
 
     /** Clear all loaded building configs, aliases, and packages (called before reload). */
@@ -60,7 +68,7 @@ public final class BuildingConfigLoader {
         aliasToFullId.clear();
         packages.clear();
         packageRawJsons.clear();
-        ensureDefaultPackage();
+        ensureCorePackages();
     }
 
     /** All raw JSON elements for server-to-client network sync. */
@@ -203,13 +211,13 @@ public final class BuildingConfigLoader {
     @Nullable
     public BuildingPackage getPackage(@Nullable String packageId) {
         if (packageId == null) return null;
-        ensureDefaultPackage();
+        ensureCorePackages();
         return packages.get(packageId);
     }
 
     /** All registered packages sorted by priority. */
     public List<BuildingPackage> getAllPackages() {
-        ensureDefaultPackage();
+        ensureCorePackages();
         List<BuildingPackage> list = new ArrayList<>(packages.values());
         list.sort(Comparator.comparingInt(BuildingPackage::priority).thenComparing(BuildingPackage::id));
         return Collections.unmodifiableList(list);

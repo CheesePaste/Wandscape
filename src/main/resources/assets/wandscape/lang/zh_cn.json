@@ -2247,6 +2247,8 @@
   "wandscape.guide_book.name": "魔法小镇建设指南",
   "wandscape.guide_book.subtitle": "从空地到游客小镇",
   "wandscape.pack.all": "全部建筑包",
+  "wandscape.pack.custom.desc": "扫描器导出与玩家自己编写的建筑集合",
+  "wandscape.pack.custom.name": "自定义",
   "wandscape.pack.default.desc": "魔法小镇模组内置核心建筑集合",
   "wandscape.pack.default.name": "核心建筑包",
   "wandscape.pack.oriental.desc": "东方传统竹制与古风建筑集合",

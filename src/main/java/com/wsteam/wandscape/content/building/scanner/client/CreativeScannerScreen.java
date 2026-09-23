@@ -965,7 +965,7 @@ public class CreativeScannerScreen extends MedievalScreen {
 
         String idStr = scanner.getBuildingId().isEmpty() ? "未命名ID" : scanner.getBuildingId();
         String nameStr = scanner.getDisplayName().isEmpty() ? "—" : scanner.getDisplayName();
-        String pkgStr = scanner.getPackageId().isEmpty() ? "default" : scanner.getPackageId();
+        String pkgStr = scanner.getPackageId();
         gui.drawString(font, I18n.string("gui.wandscape.scanner.overview_id_name", "标识: %s (%s) | 包: %s",
                 font.plainSubstrByWidth(idStr, 90), font.plainSubstrByWidth(nameStr, 80), font.plainSubstrByWidth(pkgStr, 70)),
                 lx + 12, y + 34, MedievalColors.TEXT_WARM_WHITE);
@@ -1194,7 +1194,9 @@ public class CreativeScannerScreen extends MedievalScreen {
             packageEdit.setValue(nextPkg.id());
         }
         syncToServer();
-        showFeedback(Component.literal("§e目标包: " + nextPkg.name() + " (" + nextPkg.id() + ")"), 0xFFD4A840);
+        // 包名可能是 lang key（内置的 default/custom 都是），查不到才退回原文。
+        String shownName = I18n.string(nextPkg.name(), nextPkg.id());
+        showFeedback(Component.literal("§e目标包: " + shownName + " (" + nextPkg.id() + ")"), 0xFFD4A840);
     }
 
     private void onPresetSave() {

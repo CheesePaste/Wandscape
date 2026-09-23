@@ -93,9 +93,10 @@ A 和 B 用的是**同一套加载器**：B 里放同 id 的文件就能覆盖 A
 
 | 路径 | 内容 | 写入者 |
 |---|---|---|
-| `<world>/datapacks/wandscape_builds/` | **扫描器导出的建筑**——含自动生成的 `pack.mcmeta`，`data/wandscape/buildings/<pkg>/<id>.json` | `ScannerExportPacket` |
-| `<world>/datapacks/wandscape_roads/` | 扫描器导出的道路预设，`data/wandscape/road_presets/*.json` | `ScannerExportPacket` |
+| `<world>/datapacks/wandscape_builds/` | 建筑导出包：`pack.mcmeta` + `data/wandscape/buildings/custom/<id>.json` | `ScannerExportPacket` 导出；`ScannerExportDirs.ensureSkeleton` 建骨架 |
+| `<world>/datapacks/wandscape_roads/` | 道路导出包：`pack.mcmeta` + `data/wandscape/road_presets/*.json` | 同上 |
 | `<world>/wandscape/generated_regions/*.json` | 一次性生成的探索区域定价（当前世界实测约 177 个） | `ExplorationRegionGenerator` |
+| `<world>/data/wandscape_*.dat` | 15 个 `SavedData`（见下表） | 各域 |
 | `<world>/data/wandscape_*.dat` | 15 个 `SavedData`（见下表） | 各域 |
 
 `SavedData` 全清单（都在 `<world>/data/` 下，压缩 NBT）：
@@ -153,7 +154,7 @@ data/wandscape/buildings/
     └── <建筑id>.json
 ```
 
-`package.json` 字段含义见 [data-formats.md](data-formats.md) §三。
+`package.json` 字段含义见 [data-formats.md](data-formats.md) §三。`name`/`description` 里允许放 lang key（内置的 `default`、`custom` 都这么干），界面走 `I18n` 解析，中英各显示各的。
 
 ### 4.2 三个来源，一套加载
 
@@ -161,15 +162,37 @@ data/wandscape/buildings/
 |---|---|---|
 | 内置 `default` 包 | jar 内 `data/wandscape/buildings/`（53 个） | 永远 |
 | 数据包加的包 | 任意数据包 `data/<ns>/buildings/<pkg>/` | 加载数据包时 |
-| **扫描器导出** | **`<world>/datapacks/wandscape_builds/data/wandscape/buildings/<pkg>/`** | 玩家在游戏里点导出时，即时写盘并**同时**注册进内存（不必 `/reload` 就能用） |
+| **扫描器导出** | **`<world>/datapacks/wandscape_builds/data/wandscape/buildings/custom/`** | 玩家在游戏里点导出时，即时写盘并**同时**注册进内存（不必 `/reload` 就能用） |
 
-导出位置在 `ScannerExportPacket.resolveDatapackDir()`（约 488 行）硬编码——写死在"世界存档的 `datapacks/`"下。选这里的理由是：世界数据包每次启动都会自动加载，退出重进后导出的建筑还在；写源码目录在开发环境会被 `build/resources/main` 盖掉。
+导出默认落进 **`custom`（自定义）包**——`default` 是随 jar 发布的核心包，玩家不该往里写。扫描器界面上的「包」输入框与下拉循环按钮仍可改成别的包（整合包作者要往自建包里导出），只是默认值不再是 `default`。
 
-### 4.3 旧档兼容：`deprecated/`
+路径本身收在 `ScannerExportDirs`（`content/building/scanner/`）一处，导出与建骨架共用，不再散在导出包里。选"世界数据包"这条路的理由是：世界数据包每次启动都会自动加载，退出重进后导出的建筑还在；写源码目录在开发环境会被 `build/resources/main` 盖掉。
+
+### 4.3 启动时自动建的空骨架
+
+服务器每次启动（`Wandscape.onServerStarting` → `ScannerExportDirs.ensureSkeleton`）都会把两个导出包的骨架建出来，**哪怕一条内容都没有**：
+
+```
+<world>/datapacks/
+├── wandscape_builds/
+│   ├── pack.mcmeta
+│   └── data/wandscape/buildings/
+│       └── custom/
+│           └── package.json     <- 自定义包元数据，可直接照抄当模板
+└── wandscape_roads/
+    ├── pack.mcmeta
+    └── data/wandscape/road_presets/
+```
+
+这样玩家进存档就能看见建筑/道路该往哪儿放，不必猜路径。**幂等**：已存在的文件一律不碰，玩家改过的 `package.json` 不会被冲掉；任何失败只 `Log.warn`，不影响服务器启动。
+
+`custom` 包在内存里还有一层兜底（`BuildingConfigLoader.ensureCorePackages`）——即使本次启动刚建的 `package.json` 要等下次重载才被数据包读进来，「自定义」也始终出现在建筑包列表里。
+
+### 4.4 旧档兼容：`deprecated/`
 
 `data/wandscape/buildings/deprecated/` 里的建筑按**内层 `id`** 解析（不按文件名/包名），旧存档里引用的建筑靠它加载。**目录被删过多次，删即断旧档**。
 
-### 4.4 停用某个包
+### 4.5 停用某个包
 
 `config/wandscape-common.toml` 的 `building.disabledPackages`（默认空 = 全开）。停用的包**不在建造栏显示**，但世界里已建成的建筑不受影响。同一个开关也有 UI 入口（设置面板）。
 

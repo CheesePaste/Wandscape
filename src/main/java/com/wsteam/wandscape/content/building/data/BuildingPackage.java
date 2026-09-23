@@ -26,6 +26,13 @@ public record BuildingPackage(
 ) {
     public static final String DEFAULT_ID = "default";
 
+    /**
+     * 扫描器导出建筑默认落进的自定义包。与 {@link #DEFAULT_ID} 的区别是定位：
+     * {@code default} 是模组随 jar 发布的核心包，玩家不该往里写；{@code custom} 是玩家的地盘，
+     * 导出与手写都进这里，世界数据包里那一份空目录骨架也指向它。
+     */
+    public static final String CUSTOM_ID = "custom";
+
     /** 包名会直接当作 {@code data/<ns>/buildings/<package_id>/} 的文件夹名，故只放行这些字符。 */
     private static final Pattern ILLEGAL_ID_CHARS = Pattern.compile("[^a-z0-9_-]");
 
@@ -58,6 +65,23 @@ public record BuildingPackage(
                 "1.0.0",
                 "wandscape:building_scanner",
                 0,
+                List.of()
+        );
+    }
+
+    /**
+     * 自定义（Custom）包的兜底元数据：世界数据包里没有 {@code custom/package.json} 时用它，
+     * 保证建筑包列表里永远有一个可选的「自定义」入口。落盘的那份文件优先。
+     */
+    public static BuildingPackage customPackage() {
+        return new BuildingPackage(
+                CUSTOM_ID,
+                "wandscape.pack.custom.name",
+                "wandscape.pack.custom.desc",
+                "Wandscape",
+                "1.0.0",
+                "wandscape:creative_building_scanner",
+                100,
                 List.of()
         );
     }

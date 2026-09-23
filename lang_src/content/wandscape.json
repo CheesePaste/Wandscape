@@ -11,6 +11,18 @@
     "zh_cn": "魔法小镇配置",
     "en_us": "Wandscape Configs"
   },
+  "wandscape.exploration.discovered": {
+    "zh_cn": "探索发现：%s",
+    "en_us": "Discovery: %s"
+  },
+  "wandscape.exploration.exp_gain": {
+    "zh_cn": "小镇经验 +%s",
+    "en_us": "Town EXP +%s"
+  },
+  "wandscape.exploration.notice_title": {
+    "zh_cn": "野外宝箱",
+    "en_us": "Wild Chest"
+  },
   "wandscape.guide_book.landing": {
     "zh_cn": "欢迎来到 Wandscape！你放下建筑，法师替你干活，游客沿路入城消费。$(br2)第一次玩？先读$(l:wandscape:playstyle/intro_0_guide)0，入门$(/l)，或从$(l:wandscape:playstyle/index_guide)概览$(/l)挑一节。",
     "en_us": "Welcome to Wandscape! You place the buildings, your wizards do the work, and tourists walk in along the roads to spend.$(br2)New here? Start with $(l:wandscape:playstyle/intro_0_guide)0. Getting Started$(/l), or pick a chapter from the $(l:wandscape:playstyle/index_guide)overview$(/l)."
@@ -26,6 +38,14 @@
   "wandscape.pack.all": {
     "zh_cn": "全部建筑包",
     "en_us": "All Packs"
+  },
+  "wandscape.pack.custom.desc": {
+    "zh_cn": "扫描器导出与玩家自己编写的建筑集合",
+    "en_us": "Buildings exported by the scanner or written by players"
+  },
+  "wandscape.pack.custom.name": {
+    "zh_cn": "自定义",
+    "en_us": "Custom"
   },
   "wandscape.pack.default.desc": {
     "zh_cn": "魔法小镇模组内置核心建筑集合",

@@ -9,6 +9,7 @@ import com.wsteam.wandscape.content.building.data.BuildingPackage;
 import com.wsteam.wandscape.content.building.scanner.CreativeScannerBlockEntity;
 import com.wsteam.wandscape.content.building.scanner.CreativeScannerBlockEntity.ShopGoodData;
 import com.wsteam.wandscape.content.building.scanner.InteractSpotMarkerBlock;
+import com.wsteam.wandscape.content.building.scanner.ScannerExportDirs;
 import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.content.road.data.RoadPresetLoader;
 import com.wsteam.wandscape.foundation.log.Log;
@@ -43,7 +44,10 @@ import static com.wsteam.wandscape.Wandscape.MODID;
 /**
  * Client→Server: Requests that the server scan the building and export a JSON file.
  * The server reads the scanner BE, scans world blocks, builds a JSON matching
- * the building config format, and writes it to wandscape_buildings/&lt;id&gt;.json.
+ * the building config format, and writes it into the world datapack's
+ * {@code data/wandscape/buildings/<package>/} directory — the actual paths live in
+ * {@link ScannerExportDirs}. Buildings export into the package the scanner carries
+ * (defaults to {@code custom}); roads export as road presets.
  */
 public record ScannerExportPacket(BlockPos pos, String targetPackage) implements CustomPacketPayload {
 
@@ -414,10 +418,11 @@ public record ScannerExportPacket(BlockPos pos, String targetPackage) implements
         bp.add("bind", bind);
         root.add("blueprint", bp);
 
-        // Write file into the datapack-readable buildings directory so it can be built immediately
-        // and ships with the mod jar (dev source resources) or stays readable via /reload (world datapack).
+        // 写进世界数据包的 buildings 目录：即时注册进内存所以马上能建，
+        // 落盘则保证退出重进（以及 /reload）后还在。路径见 ScannerExportDirs。
         try {
-            Path buildingsDir = resolveDatapackDir(level, "buildings", "wandscape_builds");
+            Path buildingsDir = ScannerExportDirs.prepareCategoryDir(level.getServer(),
+                    ScannerExportDirs.PACK_BUILDINGS, ScannerExportDirs.CATEGORY_BUILDINGS);
             // 兜底断言：targetPkg 已在入口由 BuildingPackage.sanitizeId 净化，
             // 这里再确认一次解析结果没逃出数据包目录，防止日后挪动入口时把漏洞带回来。
             Path exportDir = buildingsDir.resolve(targetPkg).normalize();
@@ -475,35 +480,6 @@ public record ScannerExportPacket(BlockPos pos, String targetPackage) implements
         }
     }
 
-    /**
-     * Resolve the datapack directory for a config category (e.g. "buildings").
-     *
-     * <p>Exports always go into a <b>world datapack</b> ({@code <world>/datapacks/<fallbackPack>}):
-     * the game loads world datapacks on every restart, so exported buildings/roads survive
-     * quitting and re-entering in both dev and production. (Dev serves the mod's data from
-     * {@code build/resources/main}, not {@code src/main/resources}, so writing into the source
-     * folder was lost on relaunch.) {@code pack.mcmeta} makes the folder a valid, auto-enabled
-     * datapack; without it the game ignores the folder entirely.
-     */
-    private static Path resolveDatapackDir(ServerLevel level, String category, String fallbackPack) throws IOException {
-        Path packRoot = level.getServer().getWorldPath(net.minecraft.world.level.storage.LevelResource.DATAPACK_DIR)
-                .resolve(fallbackPack);
-        ensurePackMeta(packRoot);
-        return packRoot.resolve("data/wandscape/" + category);
-    }
-
-    /** Write a pack.mcmeta so the folder is recognized as a loadable world datapack. */
-    private static void ensurePackMeta(Path packRoot) throws IOException {
-        Path metaFile = packRoot.resolve("pack.mcmeta");
-        if (Files.exists(metaFile)) return;
-        Files.createDirectories(packRoot);
-        int format = net.minecraft.SharedConstants.getCurrentVersion()
-                .getPackVersion(net.minecraft.server.packs.PackType.SERVER_DATA);
-        String meta = "{\n  \"pack\": {\n    \"pack_format\": " + format
-                + ",\n    \"description\": \"Wandscape exported buildings & road presets\"\n  }\n}";
-        Files.writeString(metaFile, meta);
-    }
-
     private static void exportRoad(CreativeScannerBlockEntity scanner,
                                    ScannerExportPacket packet,
                                    ServerPlayer player,
@@ -551,8 +527,8 @@ public record ScannerExportPacket(BlockPos pos, String targetPackage) implements
         root.add("blocks", blocksArr);
 
         try {
-            Path exportDir = resolveDatapackDir(level, "road_presets", "wandscape_roads");
-            Files.createDirectories(exportDir);
+            Path exportDir = ScannerExportDirs.prepareCategoryDir(level.getServer(),
+                    ScannerExportDirs.PACK_ROADS, ScannerExportDirs.CATEGORY_ROAD_PRESETS);
             Path outFile = exportDir.resolve(sanitizeFileName(id) + ".json");
             String json = new GsonBuilder().setPrettyPrinting().create().toJson(root);
             Files.writeString(outFile, json);

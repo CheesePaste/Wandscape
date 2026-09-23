@@ -2247,6 +2247,8 @@
   "wandscape.guide_book.name": "Wandscape Guidebook",
   "wandscape.guide_book.subtitle": "From Empty Land to a Tourist Town",
   "wandscape.pack.all": "All Packs",
+  "wandscape.pack.custom.desc": "Buildings exported by the scanner or written by players",
+  "wandscape.pack.custom.name": "Custom",
   "wandscape.pack.default.desc": "Built-in core buildings of Wandscape",
   "wandscape.pack.default.name": "Core Pack",
   "wandscape.pack.oriental.desc": "Traditional oriental and bamboo style buildings",

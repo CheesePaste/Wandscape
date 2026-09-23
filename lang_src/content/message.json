@@ -211,6 +211,10 @@
     "en_us": "[Wandscape] This mage has no trinket slots — Curios not detected or no slots assigned.",
     "zh_cn": "[魔法小镇] 该法师没有可用的饰品栏——未检测到 Curios 或其未给法师分配槽位。"
   },
+  "message.wandscape.exploration.no_colony": {
+    "en_us": "You found a wild chest, but you have no town of your own — the exploration reward had nobody to go to and has faded.\nPlace and name a town hall first: once your town exists, wild chests will pay into it.",
+    "zh_cn": "你发现了野外宝箱，但还没有属于自己的小镇——这份探索收益无人接收，已经消散。\n先放置市政厅并命名，建立小镇后野外宝箱的收益就会记入你的账上。"
+  },
   "message.wandscape.fill.disabled_block": {
     "en_us": "§cFill contains a disabled block: %s",
     "zh_cn": "§c填充包含禁用方块：%s"

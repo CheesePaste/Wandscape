@@ -14,6 +14,7 @@ import com.wsteam.wandscape.content.building.scanner.CreativeScannerBlockEntity;
 import com.wsteam.wandscape.content.building.scanner.ScannerBlock;
 import com.wsteam.wandscape.content.building.scanner.ScannerBlockEntity;
 import com.wsteam.wandscape.content.building.scanner.InteractSpotMarkerBlock;
+import com.wsteam.wandscape.content.building.scanner.ScannerExportDirs;
 import com.wsteam.wandscape.content.building.scanner.network.ScannerExportPacket;
 import com.wsteam.wandscape.content.building.scanner.network.ScannerSyncPacket;
 import com.wsteam.wandscape.content.building.projection.network.*;
@@ -1137,6 +1138,10 @@ public class Wandscape {
             EXPLORATION_REGION_LOADER.setGeneratedDir(ExplorationRegionGenerator.generatedDir(level));
         }
         ExplorationRegionGenerator.generateMissing(level);
+
+        // 扫描器导出的落盘骨架：哪怕一条内容都没有，也把两个空数据包目录建出来，
+        // 玩家进存档就能看见建筑/道路该往哪放，不必去猜路径。幂等，已存在的文件不碰。
+        ScannerExportDirs.ensureSkeleton(event.getServer());
     }
 
     @SubscribeEvent

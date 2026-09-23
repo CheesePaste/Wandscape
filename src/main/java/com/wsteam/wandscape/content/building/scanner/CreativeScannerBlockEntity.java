@@ -3,6 +3,7 @@ import com.wsteam.wandscape.content.task.component.Position;
 import com.wsteam.wandscape.content.task.ecs.World;
 
 import com.wsteam.wandscape.content.building.data.BlockOffset;
+import com.wsteam.wandscape.content.building.data.BuildingPackage;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
@@ -82,7 +83,7 @@ public class CreativeScannerBlockEntity extends BlockEntity {
     private BlockOffset boundaryMax = BlockOffset.of(1, 1, 1);
     private final List<BlockOffset> doorOffsets = new ArrayList<>();
     private String buildingId = "";
-    private String packageId = "default";
+    private String packageId = BuildingPackage.CUSTOM_ID;
     private String displayName = "";
     private String creator = "";
     private String category = "basic";
@@ -272,9 +273,13 @@ public class CreativeScannerBlockEntity extends BlockEntity {
     public String getBuildingId() { return buildingId; }
     public void setBuildingId(String id) { this.buildingId = id; }
 
-    public String getPackageId() { return (packageId == null || packageId.isBlank()) ? "default" : packageId; }
+    /**
+     * 导出目标建筑包：默认 {@link BuildingPackage#CUSTOM_ID}（玩家的地盘），
+     * 界面上仍可改成别处——整合包作者要往自建包里导出。
+     */
+    public String getPackageId() { return (packageId == null || packageId.isBlank()) ? BuildingPackage.CUSTOM_ID : packageId; }
     public void setPackageId(String id) {
-        this.packageId = (id == null || id.isBlank()) ? "default" : id.trim().toLowerCase(java.util.Locale.ROOT);
+        this.packageId = (id == null || id.isBlank()) ? BuildingPackage.CUSTOM_ID : id.trim().toLowerCase(java.util.Locale.ROOT);
     }
     public String getTargetPackage() { return getPackageId(); }
     public void setTargetPackage(String id) { setPackageId(id); }
@@ -513,8 +518,9 @@ public class CreativeScannerBlockEntity extends BlockEntity {
             doorOffsets.add(readOffsetArray(tag, KEY_DOOR_OFFSET));
         }
         buildingId = tag.getString(KEY_BUILDING_ID);
-        packageId = tag.contains(KEY_PACKAGE_ID) ? tag.getString(KEY_PACKAGE_ID) : "default";
-        if (packageId.isBlank()) packageId = "default";
+        // 老档扫描器没存过包名，一律归到自定义包——导出默认目标就是它。
+        packageId = tag.contains(KEY_PACKAGE_ID) ? tag.getString(KEY_PACKAGE_ID) : BuildingPackage.CUSTOM_ID;
+        if (packageId.isBlank()) packageId = BuildingPackage.CUSTOM_ID;
         displayName = tag.getString(KEY_DISPLAY_NAME);
         creator = tag.getString(KEY_CREATOR);
         category = tag.contains(KEY_CATEGORY) ? tag.getString(KEY_CATEGORY) : "basic";
