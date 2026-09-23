@@ -17,6 +17,7 @@ import com.wsteam.wandscape.content.building.scanner.client.gizmo.ScannerGizmoOv
 import com.wsteam.wandscape.content.building.scanner.client.gizmo.ScannerGizmoRenderer;
 import com.wsteam.wandscape.content.items.compass.client.CompassTargetClientCache;
 import com.wsteam.wandscape.content.items.guidebook.network.GuideBookOpenPacket;
+import com.wsteam.wandscape.content.items.magic.wand.item.WandItem;
 import com.wsteam.wandscape.content.items.scepter.OmniScepterItem;
 import com.wsteam.wandscape.content.items.scepter.ScepterKind;
 import com.wsteam.wandscape.content.road.client.SplineEditorController;
@@ -63,19 +64,14 @@ import net.minecraft.client.model.geom.builders.CubeDeformation;
 import net.minecraft.client.model.geom.builders.LayerDefinition;
 import net.minecraft.client.renderer.item.CompassItemPropertyFunction;
 import net.minecraft.client.renderer.item.ItemProperties;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.PreparableReloadListener;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.util.profiling.ProfilerFiller;
-import net.minecraft.world.item.component.CustomData;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.neoforge.client.event.*;
-import net.neoforged.neoforge.client.gui.ConfigurationScreen;
-import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 import net.neoforged.neoforge.common.NeoForge;
 import org.lwjgl.glfw.GLFW;
 
@@ -136,9 +132,10 @@ public class WandscapeClient {
             "key.categories.wandscape"
     );
 
-    public static void init(net.neoforged.bus.api.IEventBus modEventBus, ModContainer container) {
+    public static void init(net.neoforged.bus.api.IEventBus modEventBus) {
         modEventBus.register(WandscapeClient.class);
-        container.registerExtensionPoint(IConfigScreenFactory.class, ConfigurationScreen::new);
+        // 不注册 IConfigScreenFactory：模组列表的自动配置屏入口已裁掉。
+        // 配置只有两个落点——config/*.toml，或游戏内设置中心（V 面板 → 设置）。
         NeoForge.EVENT_BUS.addListener(ClientTickEvent.Post.class, WandscapeClient::onClientTick);
         NeoForge.EVENT_BUS.addListener(ClientPlayerNetworkEvent.LoggingIn.class, WandscapeClient::onPlayerLoggingIn);
         NeoForge.EVENT_BUS.addListener(ClientPlayerNetworkEvent.LoggingOut.class, WandscapeClient::onPlayerLoggingOut);
@@ -622,15 +619,9 @@ public class WandscapeClient {
     static void onItemColors(RegisterColorHandlersEvent.Item event) {
         event.register((stack, tintIndex) -> {
             if (tintIndex == 0) {
-                CustomData customData = stack.get(DataComponents.CUSTOM_DATA);
-                if (customData != null && customData.contains("wand_color")) {
-                    String color = customData.copyTag().getString("wand_color");
-                    if (!color.isEmpty() && color.length() == 7 && color.charAt(0) == '#') {
-                        try {
-                            return 0xFF000000 | Integer.parseInt(color.substring(1), 16);
-                        } catch (NumberFormatException ignored) {
-                        }
-                    }
+                Integer argb = WandItem.colorArgb(stack);
+                if (argb != null) {
+                    return argb;
                 }
             }
             return 0xFFFFFFFF;

@@ -82,6 +82,7 @@ import com.wsteam.wandscape.content.warehouse.WarehouseMenu;
 import com.wsteam.wandscape.content.warehouse.WarehouseTerminalItem;
 import com.wsteam.wandscape.content.warehouse.transport.TransportItemEntity;
 import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.util.ItemData;
 import com.wsteam.wandscape.foundation.networking.Net;
 import com.wsteam.wandscape.foundation.networking.PayloadRegistry;
 import com.wsteam.wandscape.foundation.registry.WandscapeSounds;
@@ -95,7 +96,6 @@ import java.util.List;
 import java.util.Map;
 import net.minecraft.commands.Commands;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.ParticleType;
 import net.minecraft.core.particles.SimpleParticleType;
 import net.minecraft.core.registries.Registries;
@@ -111,7 +111,6 @@ import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntityType;
@@ -448,7 +447,7 @@ public class Wandscape {
     private static void acceptWandPresets(CreativeModeTab.Output output) {
         for (WandPreset preset : WAND_PRESET_LOADER.getAllPresets().values()) {
             ItemStack stack = new ItemStack(WAND.get());
-            stack.set(DataComponents.CUSTOM_DATA, CustomData.of(preset.nbt().copy()));
+            ItemData.setTag(stack, preset.nbt());
             output.accept(stack);
         }
     }
@@ -561,7 +560,7 @@ public class Wandscape {
         PRODUCTION_RECIPE_LOADER = new ProductionRecipeLoader(DATA_LOADER, ELEMENT_MAPPING_LOADER);
 
         if (FMLEnvironment.dist == Dist.CLIENT) {
-            WandscapeClient.init(modEventBus, modContainer);
+            WandscapeClient.init(modEventBus);
         }
     }
 
