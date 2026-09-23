@@ -1,16 +1,4 @@
 {
-  "wandscape.configuration.section.wandscape.common.toml": {
-    "zh_cn": "魔法小镇配置",
-    "en_us": "Wandscape Configs"
-  },
-  "wandscape.configuration.section.wandscape.common.toml.title": {
-    "zh_cn": "魔法小镇配置",
-    "en_us": "Wandscape Configs"
-  },
-  "wandscape.configuration.title": {
-    "zh_cn": "魔法小镇配置",
-    "en_us": "Wandscape Configs"
-  },
   "wandscape.exploration.discovered": {
     "zh_cn": "探索发现：%s",
     "en_us": "Discovery: %s"
