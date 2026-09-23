@@ -63,15 +63,24 @@
 
 ## 三、发版与发布清单（Release Checklist）
 
+版本号规范：**`<版本>-<游戏版本>`**，游戏版本去掉点号（1.21.1 → `-1211`，1.20.1 → `-1201`）。
+例：`mod_version=2.1.2-1211` → jar `wandscape-2.1.2-1211.jar`、tag `v2.1.2-1211`。
+双线并行后两版内容不同步，游戏版本必须焊进版本号，否则玩家在 CurseForge/Modrinth 上会装错线。
+
 发版时按顺序执行：
 
-1. [ ] 更新 `gradle.properties` 中的 `mod_version` 为新版本号。
+1. [ ] 更新 `gradle.properties` 中的 `mod_version` 为新版本号（含游戏版本后缀）。
 2. [ ] 清理 `build/libs/` 下旧构建 jar。
 3. [ ] 运行 `./gradlew build` 确认全量编译通过。
-4. [ ] 提交发版 commit（格式：`chore: mod_version X.Y.Z — 发布说明`）。
-5. [ ] 打 Git 标签 `git tag vX.Y.Z`。
-6. [ ] 推送分支与标签 `git push origin main --tags`。
+4. [ ] 提交发版 commit（格式：`chore: mod_version <版本>-<游戏版本> — 发布说明`）。
+5. [ ] 打 Git 标签 `git tag v<版本>-<游戏版本>`。
+6. [ ] 推送分支与标签（分支名 = 游戏版本：主线 `1.21.1`、副分支 `1.20.1-forge`）：
+   ```bash
+   git push origin 1.21.1 --tags
+   ```
 7. [ ] 使用 GitHub CLI 发布 Release 并上传构建产物：
    ```bash
-   gh release create vX.Y.Z build/libs/wandscape-X.Y.Z.jar --title "Wandscape X.Y.Z" --notes-file RELEASE_NOTES.md
+   gh release create "v<版本>-<游戏版本>" "build/libs/wandscape-<版本>-<游戏版本>.jar" \
+     --title "Wandscape <版本>-<游戏版本>" --notes-file RELEASE_NOTES.md
    ```
+8. [ ] CurseForge / Modrinth 的 Game Version 标签按线选（1.21.1 或 1.20.1），文件名保持同一格式。

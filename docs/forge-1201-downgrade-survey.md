@@ -25,6 +25,12 @@
 - **第三方 compat 全部有 1.20.1 版，绝大多数 API 都对得上**：Curios `5.14.1+1.20.1`、Goety `2.5.58.3`、Patchouli `1.20.1-85-FORGE`（`PatchouliAPI` 两版字节级一致）、JEI `15.59.0.212`、Iron's Spells `1.20.1-3.16.3`、车万女仆 `1.5.3-forge`。**没有一件需要裁掉**；唯一需要真改的是 Curios 的 3 处成员级差异（`LazyOptional` 缺 `flatMap`/`ifPresentOrElse`、curio 注册方式、属性 `Holder` 包装），详见 §九。
 - **难度评级：中。** 比 [fabric-port-survey.md](fabric-port-survey.md) 轻（那次 loader 全换且多处「无现成」需 mixin 硬啃，这次 loader 侧同名度极高）；比 [neoforge-26-upgrade-survey.md](neoforge-26-upgrade-survey.md) 轻（那次 MC 跨 8~11 个版本且 GUI 渲染整层重写成双态状态机）。真成本集中在**网络栈**与**物品数据**两处，其余是量大但安全的名字替换。
 
+> **决策已落（2026-09-23）**——以下四条以此为准，本文其余小节仍是当日「考察」口径：
+> 1. **形态**：`1.21.1` 为主分支，降级在独立分支 `1.20.1-forge` 上做（独立 worktree 并行），**只在主线稳定发布后跟进一次**，不跟 alpha/beta；预计维护一年以上，主流模组迁走后停更。跟进走「转换脚本 + 每次把新踩到的模式补进脚本」，数据/资产/文档先在主线改、靠 merge 流到副分支。
+> 2. **配置屏**：入口两线一致裁掉（§6.4 已按此改写），配置只留 `config/*.toml` 与游戏内设置中心；面板未收录的 14 项也维持 TOML-only。
+> 3. **车万女仆（TLM）**：1.20.1 不兼容——§6.3 的 attachment 缺口在 1.20.1 侧随之消失。
+> 4. **compat 方针**：1.20.1 侧任何 compat 出问题就**关掉该模组**、不修；§九「没有一件需要裁掉」只是 API 层面的可用性结论，不等于承诺逐行修到能用。
+
 ---
 
 ## 二、先决：工具链与两类不同的差异
@@ -136,7 +142,7 @@
 | `client.event.ClientTickEvent.Post` | `event.TickEvent.ClientTickEvent` + `Phase.END` | 8 文件 / 10 处 | 改造 |
 | `event.entity.living.LivingIncomingDamageEvent` | `LivingHurtEvent`（访问器 1:1） | 4 文件 / 6 处 | 改名 |
 | `client.event.RegisterMenuScreensEvent` | 无（改在 `FMLClientSetupEvent` 里 `MenuScreens.register`） | 3 文件 / 4 处 | 改造 |
-| `client.gui.IConfigScreenFactory` + `ConfigurationScreen` | 有 `ConfigScreenHandler.ConfigScreenFactory`，但 **Forge 不自带配置屏** | 1 处 | 重做 |
+| `client.gui.IConfigScreenFactory` + `ConfigurationScreen` | 有 `ConfigScreenHandler.ConfigScreenFactory`，但 **Forge 不自带配置屏** | 1 处 | **已裁掉**（2026-09-23 决策，见 §6.4） |
 
 **另有 1 个语义陷阱**：`bus.api.ICancellableEvent`（1 文件）在 Forge 的事件总线上不存在，须改用 `@net.minecraftforge.eventbus.api.Cancelable` 注解 + `isCanceled()/setCanceled()`。
 
@@ -214,9 +220,9 @@
 
 **另一个可用的现成接缝**：`foundation/ui/util/ItemStackUtil.withCustomNbt(ItemStack, CompoundTag)` 是只写不读的辅助方法，**除自身 `fromIdWithNbt` 外没有调用者**——是天然的 NBT shim 落点。
 
-**一处顺带清理**：`wand_color` 这个 NBT 键的字符串字面量在 4 个不相关文件里各自内联（`WandApiImpl`、`MagicCaster`、`WandscapeClient`、`WandscapeNpcRenderer`），没有共享常量。降级改键名时会同时踩到四处，建议先收口。
+**顺带清理（已做，2026-09-23）**：`wand_color` 曾在 4 个不相关文件里各自内联字面量 + 各自写一遍十六进制解析（`WandApiImpl`、`MagicCaster`、`WandscapeClient`、`WandscapeNpcRenderer`），现统一为 `WandItem.COLOR_KEY` / `PRESET_KEY` 两个常量 + `WandItem.colorHex/colorArgb` 两个取值口（默认色仍由各调用方定，因为默认色本来就各不相同）。`magic_id` 走 `SpellItem.MAGIC_ID_KEY`，`mode` 走 `OmniScepterItem.MODE_KEY`；连数据侧的写入点（`WandPresetLoader`、`CraftWandRecipe`、`ElementRecipeCollector`、`MagicStationPacket`）也改为引用同一批常量。
 
-**建议**：即使不降级，也值得先把散落的 `DataComponents`/`CustomData` 读写收口到 `ItemKey` + 一个 `ItemData` 工具类——降级时改动面就从 25 个文件缩到 2 个。
+**已收口（2026-09-23）**：`foundation/util/ItemData` 成为全仓**唯一**读写物品自定义数据的地方。实测收口前后：读写的**组件 API**（`DataComponents.CUSTOM_DATA` / `CustomData.of`）此前散在 **13 个文件**，现只剩 `ItemData` 一个文件（另 `compat/goety/GoetyHelper` 用的是 `CONTAINER`/`ENCHANTMENTS` 两个**别的**组件，不属本项；顺带清掉 `WarehouseMenu` 一条死 import）。降级时这项改动面 = 1 个文件。
 
 ### 6.3 数据附件 → Capability（成本：种类的 L，范围的 S）
 
@@ -226,13 +232,15 @@
 
 **判断**：这是**唯一一处「无对应物」的真缺口**，但它是可选软依赖（TLM）里的一小块，爆炸半径 4 个文件。工作量在「capability 样板本身啰嗦」，不在业务逻辑。
 
-### 6.4 配置屏（成本：中，且是**功能损失**）
+> **决策已落（2026-09-23）**：1.20.1 侧**直接不兼容 TLM**，本项在降级中不再存在——删 `compat/tlm/` 整包（7 文件）+ `Wandscape` 两处注册调用 + gradle 依赖 + mods.toml 可选依赖条目即可，外部触点仅此。
 
-`ModConfigSpec` → `ForgeConfigSpec` 是改 3 个文件的事，但 **Forge 1.20.1 不自带配置屏**：NeoForge 的 `IConfigScreenFactory` + `ConfigurationScreen` 是「注册进去就自动生成」的，Forge 侧只有 `ConfigScreenHandler.ConfigScreenFactory` 这个壳，屏幕要自己写（或引 Cloth Config）。
+### 6.4 配置屏（成本：0，入口已裁）
 
-**连带影响**：本模组另有一套自研设置界面 `foundation/ui/settings/SettingItem.java` + `SettingsRegistry`，它是**反射读取配置规格**（`configValue.getSpec()` → `ValueSpec` → `Range`）来自动生成 UI 的。这套反射在 Forge 的 `ForgeConfigSpec` 上访问器同名，**理论上可存活**，但它是第二个假设了 NeoForge 配置规格形状的地方，需要实测。
+**决策（2026-09-23，两线一致）**：**不注册 `IConfigScreenFactory`**——1.21.1 与 1.20.1 都不再提供「模组列表 → 配置」那个自动生成的配置屏。配置只留两个落点：`config/*.toml`，或游戏内设置中心（V 面板 → 设置）。判据是那个屏本来也不是给人改的（一条翻译键都没有，覆盖的多是整合包作者的曲线旋钮），多一个入口就多一处要维护的 UI。
 
-**决策点**：要么手写一个配置屏（一次性成本），要么接受「只能改 TOML 文件、没有游戏内配置界面」。后者对本项目的自研设置界面而言其实可接受——**建议降级时直接裁掉 NeoForge 自动屏这一入口，保留下自研设置界面**。
+**已落地**（1.21.1 主线，先于分叉做掉）：`WandscapeClient` 删掉注册调用与随之空掉的 `ModContainer` 形参；`lang_src/content/wandscape.json` 里 3 条 `wandscape.configuration.*` 键一并删除并重新生成 lang。Forge 侧因此既不需要手写配置屏，也不需要 `ConfigScreenHandler.ConfigScreenFactory`。
+
+**剩下的一处真改动**（与配置屏无关，是设置中心自己要用的）：`SettingItem.declaredRange` 读 `defineInRange` 的区间做加减夹取。**这是直接 API 调用、不是反射**（本节原写「反射读取配置规格」有误），但 `ForgeConfigSpec.ConfigValue` 上**没有** `getSpec()`；等价信息在 `SPEC.getSpec().get(configValue.getPath())`（`ForgeConfigSpec.java:110` 返回 ValueSpec 树、`:311` 写入），故为一行改动 + `SettingsRegistry` 里 22 个构造点各补一个 `Config.SPEC` / `ClientConfig.SPEC` 形参。零反射、零新机制。
 
 ### 6.5 原版 API 版本差（非 loader，成本：中高）
 
@@ -404,7 +412,7 @@ Forge 1.20.1 是 Java 17，下面这些 Java 21 语法/API 必须替换：
 - **vanilla `Registries.*` 常量**（`CREATIVE_MODE_TAB`/`ENTITY_TYPE`/`MOB_EFFECT`/`MENU`/`ATTRIBUTE`/`SOUND_EVENT`…）：两版一致。
 - **无自定义 Forge 注册表**（`NewRegistryEvent`/`RegisterEvent`/`RegistryBuilder` 全仓 0 处）：`foundation/registry/dataconfig` 是数据包 JSON 加载器，零 loader 耦合。
 - **无 `IFluidHandler`/`IEnergyStorage`/`LazyOptional`**：能力面极小。
-- **无 `IConfigScreenFactory` 之外的自定义 loader 入口**；JEI 走自身 `@JeiPlugin` 扫描。
+- **不使用 `IConfigScreenFactory`**（自动配置屏入口已裁，见 §6.4）；JEI 走自身 `@JeiPlugin` 扫描。
 
 ---
 
@@ -419,7 +427,7 @@ Forge 1.20.1 是 Java 17，下面这些 Java 21 语法/API 必须替换：
 | **Patchouli** | `vazkii.patchouli:Patchouli:1.20.1-85-FORGE`（含 `:api`） | 1/1 | 存活；`PatchouliAPI` 在 1.20.1-85-FORGE 与 1.21.1-93-NEOFORGE 之间**字节级一致** |
 | **JEI** | `mezz.jei:jei-1.20.1-forge:15.59.0.212`（2026-09-16 发布） | 18/18 | 存活；仅版本线 19.x → 15.x |
 | **Iron's Spells** | `io.redspace:irons_spellbooks:1.20.1-3.16.3`（含 `:api`） | **12/12** | 存活（**修正见下**） |
-| **车万女仆 (TLM)** | `maven.modrinth:touhou-little-maid:g1SKoGQJ`（= `1.5.3-forge+mc1.20.1`） | 6/6 | 存活；包名零改名，仅 `MaidTickEvent` 从 `ICancellableEvent` 变 Forge `@Cancelable` |
+| **车万女仆 (TLM)** | `maven.modrinth:touhou-little-maid:g1SKoGQJ`（= `1.5.3-forge+mc1.20.1`） | 6/6 | 存活；包名零改名，仅 `MaidTickEvent` 从 `ICancellableEvent` 变 Forge `@Cancelable`。**但 1.20.1 侧决定不做（2026-09-23）**——数据附件无对应物（§6.3），关掉整包即可 |
 
 **Curios 是唯一需要真改的 compat**（这也修正了「导入命中即可用」的粗判）：
 
@@ -451,12 +459,12 @@ Forge 1.20.1 是 Java 17，下面这些 Java 21 语法/API 必须替换：
 | 工具链 + refmap | 整个 `build.gradle`、wrapper 版本、5 个 mixin | MDG 不能产 Forge 1.20.1；可能要把 Gradle 9.2.1 降到 8.x；refmap 从「不需要」变「必须」 | 中高 |
 | 数据包静默失效 | 43 文件 / 6 目录 + 37 处字段 | 工作量小，**失败无声**，是发布阻断项 | 中（风险高） |
 | tick 事件相位 | 20 文件 / 23 处 | 形状变化，逐个判断 | 中 |
-| 配置屏 | 1 处 + 自研设置界面反射 | Forge 不自带，是**功能损失**而非改造 | 中（含决策） |
+| 配置屏 | 0（决策已落：入口裁掉） | 两线都不给自动配置屏入口，配置只有 TOML 与游戏内设置中心 | **0** |
 | GUI 基类 4 处断点 | 4 处（含基类，全屏继承） | 在基类上，改动影响面大 | 中低 |
 | Java 21 → 17 | ~30 文件 | 机械，但会编译失败 | 低 |
 | mixin / AT | 5 + 3 | 一处启动崩溃；refmap 重映射 | 低-中 |
 | 改名波（RRL/注册/总线/配置规格） | 114 + 84 + 94 + 61 处 | 正则级，零语义 | 低（量大） |
-| 数据附件 | 1 类型 / 4 文件 | 唯一无对应物，但爆炸半径极小 | 低（种类难） |
+| 数据附件 | 0（TLM 兼容已决定不做） | 唯一无对应物，随 TLM 兼容一起裁掉 | **0** |
 | Patchouli / 资产 / 模型 / lang | 603 + 1,348 JSON | 零改动 | 0 |
 
 ### 相对工作量分层
@@ -474,7 +482,7 @@ Forge 1.20.1 是 Java 17，下面这些 Java 21 语法/API 必须替换：
    > 口径边界：此为**签名层面**判定，未逐行核验 codec 方法体内是否另有注册表访问；另 `ScreenFeedbackPacket` 属 foundation 通用反馈包，是全库使用面最广的一个，优先核它。
 2. **静默失效**：数据包目录与 JSON 字段错误**不报错**，可能一路带到发布。需要一份「加载后自检」清单。
 3. **AT 与 mixin**：两者失败都只在运行时暴露，且当前 mixin 配置是「必需」级别。
-4. **反射读配置规格**：`SettingItem` 假设了配置规格的形状，Forge 侧访问器同名但需实测。
+4. **设置中心读配置规格**：`SettingItem.declaredRange` 用的是直接 API 调用（**不是反射**，原表述有误）。`ForgeConfigSpec.ConfigValue` 没有 `getSpec()`，但 `SPEC.getSpec().get(path)` 一行可等价替代——已确证，不再是风险项（见 §6.4）。
 5. **`ClientTickEvent.Post.class` 类字面量注册**：漏改会是编译错误（好事），但相位判断漏写会是静默的行为差异（坏事）。
 6. **compat 的「类名命中」不等于「能用」**：Curios 就是反例——10 个导入全部命中，但 `LazyOptional` 少两个方法、curio 注册方式不同。其余 5 个 compat 只做了类名级比对，**成员级形制未逐行核对**。
 
@@ -503,15 +511,15 @@ Forge 1.20.1 是 Java 17，下面这些 Java 21 语法/API 必须替换：
 不是实施计划，只是给出「先动哪一块风险最低、收益最高」的判断。
 
 1. **先做「不依赖 loader」的两件事**（可随时单独做、随时可停，对现版本零风险）：
-   - 抽 `WandscapeNetwork` 门面收口 185 个发送点（原 fabric 考察已记过同一笔账，属独立价值）；
-   - 抽 `ItemData` 工具类收口 25 个文件里的 `DataComponents`/`CustomData` 读写。
-   这两步做完，降级时最重的两块就都缩到单个类里。
-2. **专项清数据包静默失效**（§七）：6 处目录改名 + 37 处字段改名。**这一步即使不降级也建议先做自查**——因为失败是无声的，越早暴露越好。
+   - 抽门面收口 185 个发送点（`foundation/networking/Net`，原 fabric 考察已记过同一笔账，属独立价值）——**已完成并合入 1.21.1**；
+   - 抽 `ItemData` 工具类收口散落的 `DataComponents`/`CustomData` 读写——**已完成并合入 1.21.1**（实测 13 文件 → 1 文件，见 §6.2）。
+   这两步做完，降级时最重的两块就都缩到单个类里；在「1.21.1 主、1.20.1 副」的双线模型下，它们同时也是**每次跟进**的主要成本削减器（要手工降级的热点从 73 个文件 / 13 个文件缩到各 1 个）。
+2. **专项清数据包静默失效**（§七）：6 处目录改名 + 37 处字段改名。**注意：改名是 1.20.1 分支专属工作**——1.21.1 用单数目录，在主线改成复数反而会失效；主线这边只做「加载自查」（确认现版本没有被静默忽略的文件），因为失败是无声的，越早暴露越好。
 3. **处理三处「会炸但不显然」的点**：`MixinMouseHandler#turnPlayer`、Java 21 语法回归、`ICancellableEvent`。
 4. **换工具链**（ForgeGradle 6 + mods.toml + manifest `MixinConfigs` + refmap + Java 17），先把 build 打通再谈逐缝替换。
 5. **按 §四表格逐类替换 loader 契约**（17 项，其中 9 项只是改名），同时按 §6.5 表处理原版 API 版本差（`SavedData` 签名、`appendHoverText`、属性枚举、`MobEffectInstance` 等）。
 6. **重写网络栈与物品数据**（两块真成本）。
-7. **最后处理配置屏决策、VBO 渲染、attachment capability**三处局部重写。
+7. **最后处理 VBO 渲染与 attachment capability**两处局部重写（配置屏已裁，不再列出；入口裁撤本身属于分叉前就该在 1.21.1 做掉的前置，见 §6.4）。
 
 ### 一条需要知道、但不建议走的捷径
 
@@ -548,7 +556,7 @@ Forge 1.20.1 是 Java 17，下面这些 Java 21 语法/API 必须替换：
 4. **配方 / 附魔面的残余**：`RecipeInput`/`SizedIngredient`/`EnchantmentHelper` 全仓 0 处使用，`RecipeManager.getAllRecipesFor` 的返回类型差已确证（1 文件）；但 `compat/goety/GoetyHelper` 里 22 处 `Enchantment` 相关的**实际调用形制**未逐行核对（仅 1 文件，风险有限）。
 5. **Forge 1.20.1 的 mixin 加载细节**：本文已确认「`[[mixins]]` 不适用于 Forge、须走 manifest `MixinConfigs`」，但 ForgeGradle 6 + MixinGradle 在该版本上是否需要额外 `refMap` 配置，需实测。
 6. **Forge 1.20.1 的维护态势**：本文核实的最新构建是 `47.4.23`（2026-08-19 发布），说明该线**当前仍在收更新**；但这是一条长尾线，后续节奏需在立项时再确认。另注意 FG6 已有 `FG_7.0` 分支在开发。
-7. **`SettingItem` 的反射读配置规格**在 `ForgeConfigSpec` 上是否真的可用（同名访问器存在，但未实测）。
+7. ~~**`SettingItem` 的反射读配置规格**在 `ForgeConfigSpec` 上是否真的可用~~ —— **已确证（2026-09-23）**：不是反射，且替代写法唯一（`SPEC.getSpec().get(path)` → `ValueSpec.getRange()`），详见 §6.4。
 8. **`RegistryFriendlyByteBuf` → `FriendlyByteBuf`** 降级后，86 个载荷的读写是否逐一对齐（本文判断为「可整体复用」，但未逐字节核对）。
 9. **`irons-spells-1201/` 参考源是过期分支**：它落在 `1.20.1-legacy`（3.4.0.11），而正确版本线是 `1.20.1-3.16.3`。若要重做该模块的逐包比对，需改抓 3.16.3 的源码或直接对 jar 做 `javap`。
 10. **MesdagPortLib 的成熟度**（见 §十二 末段）：它号称把 NeoForge 式 API 前向移植回 Forge 1.20.1，若能成立可省掉网络与数据组件两块最大成本；但未找到任何生产采用或维护节奏的证据，**不建议作为方案前提**。
