@@ -18,12 +18,12 @@ import com.wsteam.wandscape.content.building.data.BuildingData;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.content.magic.network.MagicCircleCastPacket;
 import com.wsteam.wandscape.api.WandscapeApis;
+import com.wsteam.wandscape.foundation.networking.Net;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -199,7 +199,7 @@ public final class AltarCastExecutor implements OpExecutor<AtomicOp.AltarCastOp>
         }
         Vec3 axis = new Vec3(0, 1, 0);
         Vec3 origin = new Vec3(center.getX() + 0.5, center.getY() + spec.height, center.getZ() + 0.5);
-        PacketDistributor.sendToPlayersTrackingChunk(level, new ChunkPos(center),
+        Net.toTrackingChunk(level, new ChunkPos(center),
                 new MagicCircleCastPacket(UUID.randomUUID(), origin, axis, circleId));
     }
 }

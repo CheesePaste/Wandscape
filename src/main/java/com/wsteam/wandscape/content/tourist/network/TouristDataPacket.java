@@ -4,6 +4,7 @@ import com.wsteam.wandscape.content.tourist.data.VisitMemory;
 
 import com.wsteam.wandscape.content.tourist.data.Activity;
 import com.wsteam.wandscape.content.tourist.entity.TouristEntity;
+import com.wsteam.wandscape.foundation.networking.ClientPayloadDispatcher;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -11,7 +12,6 @@ import net.minecraft.resources.ResourceLocation;
 
 import javax.annotation.Nullable;
 import java.util.List;
-import java.util.function.Consumer;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
 /**
@@ -74,16 +74,10 @@ public record TouristDataPacket(
 
     // ── Client handler ──
 
-    private static Consumer<TouristDataPacket> clientHandler;
 
-    public static void setClientHandler(Consumer<TouristDataPacket> handler) {
-        clientHandler = handler;
-    }
 
     public static void handleClient(TouristDataPacket packet) {
-        if (clientHandler != null) {
-            clientHandler.accept(packet);
-        }
+        ClientPayloadDispatcher.dispatch(packet);
     }
 
     // ── StreamCodec ──

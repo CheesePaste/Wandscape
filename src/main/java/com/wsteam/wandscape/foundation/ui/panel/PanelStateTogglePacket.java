@@ -8,12 +8,12 @@ import com.wsteam.wandscape.api.ColonyApi;
 import com.wsteam.wandscape.api.ColonyStatusApi;
 import com.wsteam.wandscape.content.colony.data.ColonyStatusSnapshot;
 import com.wsteam.wandscape.api.WandscapeApis;
+import com.wsteam.wandscape.foundation.networking.Net;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.UUID;
 
@@ -57,7 +57,7 @@ public record PanelStateTogglePacket(boolean open) implements CustomPacketPayloa
                     if (metricsApi != null) {
                         ColonyStatusSnapshot snap = metricsApi.getSnapshotSafe(colonyId);
                         if (snap.colonyId() != null) {
-                            PacketDistributor.sendToPlayer(player, ColonyStatsSyncPacket.fromSnapshot(snap));
+                            Net.toPlayer(player, ColonyStatsSyncPacket.fromSnapshot(snap));
                         }
                     }
                 }

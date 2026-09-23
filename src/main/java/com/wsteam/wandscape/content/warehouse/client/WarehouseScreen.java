@@ -3,6 +3,7 @@ import com.wsteam.wandscape.content.task.ecs.World;
 
 import com.wsteam.wandscape.WandscapeClient;
 import com.wsteam.wandscape.content.element.data.ElementType;
+import com.wsteam.wandscape.foundation.networking.Net;
 import com.wsteam.wandscape.foundation.ui.I18n;
 import com.wsteam.wandscape.foundation.util.ItemKey;
 import com.wsteam.wandscape.foundation.ui.ReplayProtectedScreen;
@@ -31,7 +32,6 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.*;
 
@@ -394,7 +394,7 @@ public class WarehouseScreen extends AbstractContainerScreen<WarehouseMenu>
         String action = button == 1
                 ? WarehouseActionPacket.ACTION_CURSOR_DESTROY_ONE
                 : WarehouseActionPacket.ACTION_CURSOR_DESTROY_ALL;
-        PacketDistributor.sendToServer(new WarehouseActionPacket(
+        Net.toServer(new WarehouseActionPacket(
                 menu.containerId, action, "", null, 0));
         return true;
     }
@@ -622,7 +622,7 @@ public class WarehouseScreen extends AbstractContainerScreen<WarehouseMenu>
         String action = button == 1
                 ? WarehouseActionPacket.ACTION_CURSOR_DEPOSIT_ONE
                 : WarehouseActionPacket.ACTION_CURSOR_DEPOSIT_ALL;
-        PacketDistributor.sendToServer(new WarehouseActionPacket(
+        Net.toServer(new WarehouseActionPacket(
                 menu.containerId, action, "", null, 0));
     }
 
@@ -678,7 +678,7 @@ public class WarehouseScreen extends AbstractContainerScreen<WarehouseMenu>
     }
 
     private void sendAction(ItemEntry entry, String action, int param) {
-        PacketDistributor.sendToServer(new WarehouseActionPacket(
+        Net.toServer(new WarehouseActionPacket(
                 menu.containerId, action, entry.itemId(), entry.nbt(), param));
     }
 
@@ -715,7 +715,7 @@ public class WarehouseScreen extends AbstractContainerScreen<WarehouseMenu>
                     && !(hoveredSlot instanceof WarehouseSlot)) {
                 int slotIndex = hoveredSlot.getContainerSlot();
                 if (up) {
-                    PacketDistributor.sendToServer(new WarehouseActionPacket(menu.containerId,
+                    Net.toServer(new WarehouseActionPacket(menu.containerId,
                             WarehouseActionPacket.ACTION_DEPOSIT_SLOT, "", null, slotIndex));
                     return true;
                 }
@@ -726,7 +726,7 @@ public class WarehouseScreen extends AbstractContainerScreen<WarehouseMenu>
                     CompoundTag nbt = (minecraft != null && minecraft.level != null && !stack.isEmpty())
                             ? ItemKey.fromStack(stack, minecraft.level.registryAccess()).nbt()
                             : null;
-                    PacketDistributor.sendToServer(new WarehouseActionPacket(menu.containerId,
+                    Net.toServer(new WarehouseActionPacket(menu.containerId,
                             WarehouseActionPacket.ACTION_TAKE_TO_SLOT, rl.toString(), nbt, slotIndex));
                     return true;
                 }

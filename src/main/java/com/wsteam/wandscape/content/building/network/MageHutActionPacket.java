@@ -7,7 +7,6 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.UUID;
 
@@ -50,8 +49,7 @@ public record MageHutActionPacket(BlockPos buildingPos, String action)
         return new MageHutActionPacket(buf.readBlockPos(), buf.readUtf());
     }
 
-    public static void handleServer(MageHutActionPacket pkt, IPayloadContext ctx) {
-        if (!(ctx.player() instanceof ServerPlayer sp)) return;
+    public static void handleServer(MageHutActionPacket pkt, ServerPlayer sp) {
         // 完全平行隔离：只能操作自己小镇的法师小屋（按建筑归属判定）。
         var data = com.wsteam.wandscape.content.building.internal.BuildingSavedData.get(sp.serverLevel());
         if (data != null) {

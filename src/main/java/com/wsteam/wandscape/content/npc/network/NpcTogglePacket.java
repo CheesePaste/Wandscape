@@ -3,12 +3,12 @@ import com.wsteam.wandscape.content.task.types.EntityId;
 
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.networking.Net;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
 /**
@@ -111,7 +111,7 @@ public record NpcTogglePacket(int entityId, String flag, boolean enabled) implem
         }
 
         // 回发最新数据，刷新打开中的 NPC 面板按钮状态
-        PacketDistributor.sendToPlayer(player, NpcDataPacket.from(npc));
+        Net.toPlayer(player, NpcDataPacket.from(npc));
         Log.info(TAG, "NPC {} {} → {} (by {})", npc.getUUID().toString().substring(0, 8),
                 packet.flag(), enabled, player.getName().getString());
     }

@@ -4,6 +4,7 @@ import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.api.WandscapeApis;
 import com.wsteam.wandscape.content.warehouse.network.WarehouseDataPacket;
+import com.wsteam.wandscape.foundation.networking.Net;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -14,7 +15,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import javax.annotation.Nullable;
 import java.util.UUID;
@@ -90,7 +90,7 @@ public class WarehouseTerminalItem extends Item {
     private static void pushInitialData(ServerPlayer player, UUID colonyId, BlockPos pos) {
         ColonyItemBank bank = ColonyItemBank.get(player.serverLevel());
         if (bank == null) return;
-        PacketDistributor.sendToPlayer(player,
+        Net.toPlayer(player,
                 WarehouseDataPacket.from(pos, colonyId,
                         bank.getSnapshot(colonyId), bank.getElementSnapshot(colonyId)));
     }

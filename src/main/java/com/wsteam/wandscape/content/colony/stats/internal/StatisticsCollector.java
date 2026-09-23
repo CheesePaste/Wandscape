@@ -6,6 +6,7 @@ import com.wsteam.wandscape.content.tourist.event.DailySettlementEvent;
 import com.wsteam.wandscape.content.tourist.event.TouristArrivedEvent;
 import com.wsteam.wandscape.content.tourist.event.TouristDepartedEvent;
 import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.networking.Net;
 import com.wsteam.wandscape.foundation.ui.panel.PanelStateTracker;
 import com.wsteam.wandscape.api.WandscapeApis;
 import com.wsteam.wandscape.content.colony.stats.data.ColonyDailySnapshot;
@@ -16,7 +17,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
 import java.util.HashMap;
@@ -142,7 +142,7 @@ public final class StatisticsCollector {
             // 完全平行隔离：统计只推给拥有该殖民地本人的开面板玩家，绝不按位置就近。
             UUID playerColony = colonyApi.getColonyByFounder(player.getUUID());
             if (colonyId.equals(playerColony)) {
-                PacketDistributor.sendToPlayer(player, new StatsSyncPacket(summary));
+                Net.toPlayer(player, new StatsSyncPacket(summary));
             }
         }
     }

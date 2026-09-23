@@ -42,6 +42,7 @@ import com.wsteam.wandscape.content.task.runtime.NpcTaskPackage;
 import com.wsteam.wandscape.content.task.runtime.TaskRuntime;
 import com.wsteam.wandscape.content.task.types.GridPos;
 import com.wsteam.wandscape.content.task.types.RitualId;
+import com.wsteam.wandscape.foundation.networking.Net;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.particles.ParticleTypes;
@@ -79,7 +80,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.fml.ModList;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -1747,7 +1747,7 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike, ColonyWor
             // 下一 tick 补发数据（客户端屏幕就绪后刷新名字/属性等）
             sp.serverLevel().getServer().execute(() -> {
                 if (!isRemoved() && sp.containerMenu instanceof NpcMenu) {
-                    PacketDistributor.sendToPlayer(sp, NpcDataPacket.from(WandscapeNpc.this));
+                    Net.toPlayer(sp, NpcDataPacket.from(WandscapeNpc.this));
                 }
             });
         }

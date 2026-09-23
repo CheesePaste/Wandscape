@@ -4,6 +4,7 @@ import com.wsteam.wandscape.content.task.component.Position;
 import com.wsteam.wandscape.content.building.projection.network.BuildingDebugRequestPacket;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.content.building.network.BuildingAreaSyncPacket;
+import com.wsteam.wandscape.foundation.networking.Net;
 import com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
@@ -14,7 +15,6 @@ import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import javax.annotation.Nullable;
 import java.util.UUID;
@@ -98,7 +98,7 @@ public final class BuildingDebugController {
         // Keep the previous building visible while this new request is in flight.
         BuildingDebugClientState.debouncedClear();
 
-        PacketDistributor.sendToServer(new BuildingDebugRequestPacket(hitPos));
+        Net.toServer(new BuildingDebugRequestPacket(hitPos));
         Log.info(TAG, "[Debug] Sent request: building={} at {}", buildingId, hitPos);
     }
 

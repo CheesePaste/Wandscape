@@ -4,11 +4,11 @@ import com.wsteam.wandscape.ClientConfig;
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.content.colony.network.ColonySettingUpdatePacket;
 import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.networking.Net;
 import com.wsteam.wandscape.foundation.ui.I18n;
 import com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState;
 import com.wsteam.wandscape.foundation.ui.settings.network.ConfigUpdatePacket;
 import net.neoforged.neoforge.common.ModConfigSpec;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -81,7 +81,7 @@ public interface SettingItem {
             // 本镇设置由服务端落盘：值已由取值器乐观写进客户端缓存（点完即刻反馈），
             // 服务端写入后回推殖民地快照做权威覆盖——被拒时同一路径把值改回来。
             try {
-                PacketDistributor.sendToServer(new ColonySettingUpdatePacket(key(), stringValue));
+                Net.toServer(new ColonySettingUpdatePacket(key(), stringValue));
             } catch (Throwable t) {
                 Log.warn("SettingItem", "Failed to send colony setting {}: {}", key(), t.getMessage());
             }
@@ -97,7 +97,7 @@ public interface SettingItem {
         // 通用配置以服务端为准：这里只把请求发出去，落盘与最终值等服务端回包。
         // 若先本地 save，服务端拒绝（无权限 / 值非法）时本地文件已经被写脏，两端就此不一致。
         try {
-            PacketDistributor.sendToServer(new ConfigUpdatePacket(key(), stringValue));
+            Net.toServer(new ConfigUpdatePacket(key(), stringValue));
         } catch (Throwable t) {
             // 未连接服务端（主菜单等）没有可校验的一方，退化为本地落盘，至少不丢改动。
             if (Config.SPEC.isLoaded()) {

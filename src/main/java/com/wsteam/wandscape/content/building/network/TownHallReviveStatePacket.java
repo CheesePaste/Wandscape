@@ -1,6 +1,8 @@
 package com.wsteam.wandscape.content.building.network;
 
 import com.wsteam.wandscape.content.npc.internal.ReviveHandler;
+import com.wsteam.wandscape.foundation.networking.ClientPayloadDispatcher;
+import com.wsteam.wandscape.foundation.networking.Net;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -8,10 +10,8 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.UUID;
-import java.util.function.Consumer;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
 
@@ -48,7 +48,7 @@ public record TownHallReviveStatePacket(UUID colonyId, int aliveNpcCount, int de
     /** Send the current state to one player (e.g. right after they pressed the button). */
     public static void send(ServerPlayer player, ServerLevel level, UUID colonyId) {
         if (player != null && !player.isRemoved()) {
-            PacketDistributor.sendToPlayer(player, from(level, colonyId));
+            Net.toPlayer(player, from(level, colonyId));
         }
     }
 
@@ -57,20 +57,16 @@ public record TownHallReviveStatePacket(UUID colonyId, int aliveNpcCount, int de
         if (level == null || colonyId == null || level.players().isEmpty()) return;
         TownHallReviveStatePacket pkt = from(level, colonyId);
         for (ServerPlayer player : level.players()) {
-            PacketDistributor.sendToPlayer(player, pkt);
+            Net.toPlayer(player, pkt);
         }
     }
 
     // ── Client handler (injected by WandscapeClient) ──
 
-    private static Consumer<TownHallReviveStatePacket> clientHandler;
 
-    public static void setClientHandler(Consumer<TownHallReviveStatePacket> handler) {
-        clientHandler = handler;
-    }
 
     public static void handleClient(TownHallReviveStatePacket packet) {
-        if (clientHandler != null) clientHandler.accept(packet);
+        ClientPayloadDispatcher.dispatch(packet);
     }
 
     static void write(RegistryFriendlyByteBuf buf, TownHallReviveStatePacket pkt) {

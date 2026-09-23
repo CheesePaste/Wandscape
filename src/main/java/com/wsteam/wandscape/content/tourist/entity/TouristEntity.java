@@ -13,6 +13,7 @@ import com.wsteam.wandscape.foundation.nav.WandscapeNavigation;
 // data imports updated
 import com.wsteam.wandscape.api.WandscapeApis;
 import com.wsteam.wandscape.content.tourist.network.TouristDataPacket;
+import com.wsteam.wandscape.foundation.networking.Net;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -36,7 +37,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
 import net.neoforged.fml.ModList;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -306,7 +306,7 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
         }
         // Send tourist data to the player to open the info screen
         if (player instanceof ServerPlayer sp) {
-            PacketDistributor.sendToPlayer(sp, TouristDataPacket.from(this));
+            Net.toPlayer(sp, TouristDataPacket.from(this));
         }
         return InteractionResult.CONSUME;
     }

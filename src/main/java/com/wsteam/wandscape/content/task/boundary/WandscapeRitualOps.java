@@ -14,6 +14,7 @@ import com.wsteam.wandscape.content.task.op.api.AtomicOp;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.foundation.log.LogCategory;
 import com.wsteam.wandscape.content.magic.network.MagicCircleCastPacket;
+import com.wsteam.wandscape.foundation.networking.Net;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
@@ -23,7 +24,6 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -106,9 +106,9 @@ public class WandscapeRitualOps implements RitualOps {
         Vec3 origin = new Vec3(worker.entity().getX(), worker.entity().getY() + h, worker.entity().getZ());
         Vec3 dest = new Vec3(target.x() + 0.5, target.y() + h, target.z() + 0.5);
 
-        PacketDistributor.sendToPlayersTrackingEntity(worker.entity(),
+        Net.toTracking(worker.entity(),
                 new MagicCircleCastPacket(UUID.randomUUID(), origin, axis, SELF_TELEPORT_CIRCLE));
-        PacketDistributor.sendToPlayersTrackingChunk(level, new ChunkPos(BlockPos.containing(dest)),
+        Net.toTrackingChunk(level, new ChunkPos(BlockPos.containing(dest)),
                 new MagicCircleCastPacket(UUID.randomUUID(), dest, axis, SELF_TELEPORT_CIRCLE));
     }
 

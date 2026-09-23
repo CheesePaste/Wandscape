@@ -1,12 +1,12 @@
 package com.wsteam.wandscape.content.colony.network;
 
 import com.wsteam.wandscape.Wandscape;
+import com.wsteam.wandscape.foundation.networking.ClientPayloadDispatcher;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 
-import java.util.function.Consumer;
 
 /**
  * Server→client packet：通知客户端小镇环境音状态。
@@ -31,16 +31,10 @@ public record ColonyAmbientPacket(boolean playing, boolean day) implements Custo
 
     // ── Client handler ──
 
-    private static Consumer<ColonyAmbientPacket> clientHandler;
 
-    public static void setClientHandler(Consumer<ColonyAmbientPacket> handler) {
-        clientHandler = handler;
-    }
 
     public static void handleClient(ColonyAmbientPacket packet) {
-        if (clientHandler != null) {
-            clientHandler.accept(packet);
-        }
+        ClientPayloadDispatcher.dispatch(packet);
     }
 
     // ── StreamCodec ──

@@ -1,6 +1,8 @@
 package com.wsteam.wandscape.content.colony.exploration.network;
 
 import com.wsteam.wandscape.content.element.data.ElementType;
+import com.wsteam.wandscape.foundation.networking.ClientPayloadDispatcher;
+import com.wsteam.wandscape.foundation.networking.Net;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentSerialization;
@@ -8,12 +10,10 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.function.Consumer;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
 
@@ -94,28 +94,22 @@ public record ExplorationRewardPacket(String regionName, int exp, Map<ElementTyp
     /** Helper to dispatch reward notification to a player. */
     public static void send(ServerPlayer player, String regionName, int exp, Map<ElementType, Long> elements) {
         if (player != null && !player.isRemoved()) {
-            PacketDistributor.sendToPlayer(player, new ExplorationRewardPacket(regionName, exp, elements));
+            Net.toPlayer(player, new ExplorationRewardPacket(regionName, exp, elements));
         }
     }
 
     /** Helper to dispatch a chest notice (no payout) to a player. */
     public static void sendNotice(ServerPlayer player, Component message) {
         if (player != null && !player.isRemoved()) {
-            PacketDistributor.sendToPlayer(player, notice(message));
+            Net.toPlayer(player, notice(message));
         }
     }
 
     // ── Client handler (injected by WandscapeClient) ──
 
-    private static Consumer<ExplorationRewardPacket> clientHandler;
 
-    public static void setClientHandler(Consumer<ExplorationRewardPacket> handler) {
-        clientHandler = handler;
-    }
 
     public static void handleClient(ExplorationRewardPacket packet) {
-        if (clientHandler != null) {
-            clientHandler.accept(packet);
-        }
+        ClientPayloadDispatcher.dispatch(packet);
     }
 }

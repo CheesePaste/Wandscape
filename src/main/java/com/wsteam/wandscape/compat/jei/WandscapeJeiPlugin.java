@@ -4,17 +4,16 @@ import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.content.magic.internal.SpellbookLoader;
 import com.wsteam.wandscape.content.items.magic.SpellItem;
 import com.wsteam.wandscape.content.items.magic.wand.internal.WandPresetLoader.WandPreset;
+import com.wsteam.wandscape.foundation.util.ItemData;
 import mezz.jei.api.IModPlugin;
 import mezz.jei.api.JeiPlugin;
 import mezz.jei.api.registration.IAdvancedRegistration;
 import mezz.jei.api.registration.IRecipeCategoryRegistration;
 import mezz.jei.api.registration.IRecipeRegistration;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.component.CustomData;
 import net.neoforged.neoforge.registries.DeferredItem;
 
 import java.util.List;
@@ -88,7 +87,7 @@ public class WandscapeJeiPlugin implements IModPlugin {
         registerItemInfo(registration, new ItemStack(Wandscape.WAND.get()));
         for (WandPreset preset : Wandscape.WAND_PRESET_LOADER.getAllPresets().values()) {
             ItemStack stack = new ItemStack(Wandscape.WAND.get());
-            stack.set(DataComponents.CUSTOM_DATA, CustomData.of(preset.nbt().copy()));
+            ItemData.setTag(stack, preset.nbt());
             registerItemInfo(registration, stack);
         }
     }

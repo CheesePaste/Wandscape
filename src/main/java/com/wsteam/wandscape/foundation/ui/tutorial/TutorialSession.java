@@ -2,9 +2,9 @@ package com.wsteam.wandscape.foundation.ui.tutorial;
 import com.wsteam.wandscape.content.tutorial.network.TutorialProgressSyncPacket;
 
 import com.wsteam.wandscape.content.tutorial.network.TutorialProgressUpdatePacket;
+import com.wsteam.wandscape.foundation.networking.Net;
 import com.wsteam.wandscape.foundation.ui.I18n;
 import net.minecraft.client.Minecraft;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
  * Client-side rendering state for the onboarding tutorial. The step index is
@@ -54,6 +54,6 @@ public final class TutorialSession {
     /** Dismiss the guide (× button); persisted via the server. */
     public static void dismiss() {
         dismissed = true;
-        PacketDistributor.sendToServer(new TutorialProgressUpdatePacket(true));
+        Net.toServer(new TutorialProgressUpdatePacket(true));
     }
 }

@@ -1,6 +1,7 @@
 package com.wsteam.wandscape.content.task.ui;
 import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.content.task.types.EntityId;
+import com.wsteam.wandscape.foundation.networking.Net;
 import com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState;
 
 import com.wsteam.wandscape.content.colony.overview.client.OverviewClientState;
@@ -15,7 +16,6 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.List;
 
@@ -496,7 +496,8 @@ public final class TaskManagementOverlay {
         int active = group.activeWorkers();
         int queued = Math.max(0, group.items().size() - active);
         String title = I18n.string("gui.wandscape.task.group.header", "[%s] %s  (制作中: %s | 排队: %s)",
-                catName, group.buildingName(), String.valueOf(active), String.valueOf(queued));
+                catName, I18n.buildingName(group.buildingTypeId(), group.buildingName()).getString(),
+                String.valueOf(active), String.valueOf(queued));
         g.drawString(font, title, x + 8, y + 8, WandscapeTheme.COLOR_TEXT_ACTIVE, false);
 
         // [定位] Button
@@ -658,7 +659,8 @@ public final class TaskManagementOverlay {
                         ? I18n.string("gui.wandscape.task.deps.state.missing", "缺少元素等待补齐")
                         : I18n.string("gui.wandscape.task.deps.state.queued", "队列排队就绪"));
         String wsText = I18n.string("gui.wandscape.task.deps.workshop", "工坊: %s | 产物: %s × %s | 状态: %s",
-                targetGroup.buildingName(), targetItem.displayName(),
+                I18n.buildingName(targetGroup.buildingTypeId(), targetGroup.buildingName()).getString(),
+                targetItem.displayName(),
                 String.valueOf(targetItem.count()), statusText);
         g.drawString(font, wsText, mx0 + 24, contentY + 22, 0xFFE0E0E0, false);
         contentY += 50;
@@ -976,7 +978,7 @@ public final class TaskManagementOverlay {
                     // [加急]
                     int rushX = btnBaseX + 48;
                     if (mx >= rushX && mx <= rushX + 44 && my >= btnBaseY && my <= btnBaseY + btnH2) {
-                        PacketDistributor.sendToServer(new TaskManagementActionPacket(
+                        Net.toServer(new TaskManagementActionPacket(
                                 t.taskId(), TaskManagementActionPacket.ACTION_RUSH, 100));
                         playClickSound();
                         return true;
@@ -985,7 +987,7 @@ public final class TaskManagementOverlay {
                     // [取消]
                     int cancelX = btnBaseX + 96;
                     if (mx >= cancelX && mx <= cancelX + 44 && my >= btnBaseY && my <= btnBaseY + btnH2) {
-                        PacketDistributor.sendToServer(new TaskManagementActionPacket(
+                        Net.toServer(new TaskManagementActionPacket(
                                 t.taskId(), TaskManagementActionPacket.ACTION_CANCEL, 0));
                         playClickSound();
                         return true;
@@ -1052,7 +1054,7 @@ public final class TaskManagementOverlay {
 
                     // [跟随]
                     if (mx >= btnBaseX && mx <= btnBaseX + 48 && my >= btnBaseY && my <= btnBaseY + btnH2) {
-                        PacketDistributor.sendToServer(new MageModeActionPacket(
+                        Net.toServer(new MageModeActionPacket(
                                 m.entityId(), MageModeActionPacket.MODE_FOLLOW, !m.followMode()));
                         playClickSound();
                         return true;
@@ -1061,7 +1063,7 @@ public final class TaskManagementOverlay {
                     // [和平]
                     int peaceX = btnBaseX + 52;
                     if (mx >= peaceX && mx <= peaceX + 48 && my >= btnBaseY && my <= btnBaseY + btnH2) {
-                        PacketDistributor.sendToServer(new MageModeActionPacket(
+                        Net.toServer(new MageModeActionPacket(
                                 m.entityId(), MageModeActionPacket.MODE_PEACE, !m.peaceMode()));
                         playClickSound();
                         return true;

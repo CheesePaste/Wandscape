@@ -4,6 +4,8 @@ import com.wsteam.wandscape.content.warehouse.transport.TransportItemEntityRende
 import com.mojang.blaze3d.platform.InputConstants;
 import com.wsteam.wandscape.content.building.client.*;
 import com.wsteam.wandscape.content.building.network.*;
+import com.wsteam.wandscape.foundation.networking.ClientPayloadDispatcher;
+import com.wsteam.wandscape.foundation.networking.Net;
 import com.wsteam.wandscape.foundation.registry.dataconfig.internal.DatapackDataSyncChunkPacket;
 import com.wsteam.wandscape.foundation.registry.dataconfig.internal.DatapackDataSyncReceiver;
 import com.wsteam.wandscape.content.building.scanner.client.ScannerRenderer;
@@ -15,6 +17,7 @@ import com.wsteam.wandscape.content.building.scanner.client.gizmo.ScannerGizmoOv
 import com.wsteam.wandscape.content.building.scanner.client.gizmo.ScannerGizmoRenderer;
 import com.wsteam.wandscape.content.items.compass.client.CompassTargetClientCache;
 import com.wsteam.wandscape.content.items.guidebook.network.GuideBookOpenPacket;
+import com.wsteam.wandscape.content.items.magic.wand.item.WandItem;
 import com.wsteam.wandscape.content.items.scepter.OmniScepterItem;
 import com.wsteam.wandscape.content.items.scepter.ScepterKind;
 import com.wsteam.wandscape.content.road.client.SplineEditorController;
@@ -61,21 +64,15 @@ import net.minecraft.client.model.geom.builders.CubeDeformation;
 import net.minecraft.client.model.geom.builders.LayerDefinition;
 import net.minecraft.client.renderer.item.CompassItemPropertyFunction;
 import net.minecraft.client.renderer.item.ItemProperties;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.PreparableReloadListener;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.util.profiling.ProfilerFiller;
-import net.minecraft.world.item.component.CustomData;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.neoforge.client.event.*;
-import net.neoforged.neoforge.client.gui.ConfigurationScreen;
-import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.network.PacketDistributor;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.concurrent.CompletableFuture;
@@ -135,9 +132,10 @@ public class WandscapeClient {
             "key.categories.wandscape"
     );
 
-    public static void init(net.neoforged.bus.api.IEventBus modEventBus, ModContainer container) {
+    public static void init(net.neoforged.bus.api.IEventBus modEventBus) {
         modEventBus.register(WandscapeClient.class);
-        container.registerExtensionPoint(IConfigScreenFactory.class, ConfigurationScreen::new);
+        // 不注册 IConfigScreenFactory：模组列表的自动配置屏入口已裁掉。
+        // 配置只有两个落点——config/*.toml，或游戏内设置中心（V 面板 → 设置）。
         NeoForge.EVENT_BUS.addListener(ClientTickEvent.Post.class, WandscapeClient::onClientTick);
         NeoForge.EVENT_BUS.addListener(ClientPlayerNetworkEvent.LoggingIn.class, WandscapeClient::onPlayerLoggingIn);
         NeoForge.EVENT_BUS.addListener(ClientPlayerNetworkEvent.LoggingOut.class, WandscapeClient::onPlayerLoggingOut);
@@ -202,15 +200,15 @@ public class WandscapeClient {
         int fps = ClientConfig.SPEC.isLoaded() ? ClientConfig.PREVIEW_FPS.get() : 12;
         BuildingPreviewGifCache.configure(res, fps);
         // Wire server→client packet handlers — open MedievalScreen directly.
-        ExplorationRewardPacket.setClientHandler(ExplorationHudOverlay::showReward);
-        WarehouseDataPacket.setClientHandler(packet -> {
+        ClientPayloadDispatcher.bind(ExplorationRewardPacket.TYPE, ExplorationHudOverlay::showReward);
+        ClientPayloadDispatcher.bind(WarehouseDataPacket.TYPE, packet -> {
             // The warehouse screen opens through the vanilla menu flow (openMenu +
             // RegisterMenuScreensEvent); the data packet only refreshes an open screen.
             if (Minecraft.getInstance().screen instanceof WarehouseScreen ws) {
                 ws.updateItems(packet);
             }
         });
-        WorkstationDataPacket.setClientHandler(packet -> {
+        ClientPayloadDispatcher.bind(WorkstationDataPacket.TYPE, packet -> {
             var screen = Minecraft.getInstance().screen;
             if (screen instanceof WorkstationScreen ws) {
                 ws.updateData(packet);
@@ -220,7 +218,7 @@ public class WandscapeClient {
                 Minecraft.getInstance().setScreen(ws);
             }
         });
-        NodeDataPacket.setClientHandler(packet -> {
+        ClientPayloadDispatcher.bind(NodeDataPacket.TYPE, packet -> {
             var screen = Minecraft.getInstance().screen;
             if (screen instanceof NodeScreen ns) {
                 ns.updateData(packet);
@@ -230,7 +228,7 @@ public class WandscapeClient {
                 Minecraft.getInstance().setScreen(ns);
             }
         });
-        ConstructionSiteDataPacket.setClientHandler(packet -> {
+        ClientPayloadDispatcher.bind(ConstructionSiteDataPacket.TYPE, packet -> {
             var screen = Minecraft.getInstance().screen;
             if (screen instanceof ConstructionSiteScreen cs && cs.matches(packet.buildingId())) {
                 cs.updateData(packet);
@@ -238,7 +236,7 @@ public class WandscapeClient {
                 Minecraft.getInstance().setScreen(new ConstructionSiteScreen(packet));
             }
         });
-        TaskQueueDataPacket.setClientHandler(packet -> {
+        ClientPayloadDispatcher.bind(TaskQueueDataPacket.TYPE, packet -> {
             var screen = Minecraft.getInstance().screen;
             if (screen instanceof WorkstationScreen ws) {
                 ws.updateQueueData(packet);
@@ -250,7 +248,7 @@ public class WandscapeClient {
                 ns.updateQueueData(packet);
             }
         });
-        CraftingStationPacket.setClientHandler(packet -> {
+        ClientPayloadDispatcher.bind(CraftingStationPacket.TYPE, packet -> {
             var screen = Minecraft.getInstance().screen;
             if (screen instanceof CraftingStationScreen cs) {
                 cs.updateData(packet);
@@ -260,7 +258,7 @@ public class WandscapeClient {
                 Minecraft.getInstance().setScreen(cs);
             }
         });
-        MagicStationPacket.setClientHandler(packet -> {
+        ClientPayloadDispatcher.bind(MagicStationPacket.TYPE, packet -> {
             var screen = Minecraft.getInstance().screen;
             if (screen instanceof MagicStationScreen ms) {
                 ms.updateData(packet);
@@ -270,7 +268,7 @@ public class WandscapeClient {
                 Minecraft.getInstance().setScreen(ms);
             }
         });
-        TavernOpenPacket.setClientHandler(packet -> {
+        ClientPayloadDispatcher.bind(TavernOpenPacket.TYPE, packet -> {
             var mc = Minecraft.getInstance();
             if (mc.screen instanceof TavernScreen existing) {
                 existing.updateData(packet.recruitCount(), packet.mageResumes());
@@ -279,7 +277,7 @@ public class WandscapeClient {
                         packet.recruitCount(), packet.mageResumes(), packet.creator()));
             }
         });
-        MageHutDataPacket.setClientHandler(packet -> {
+        ClientPayloadDispatcher.bind(MageHutDataPacket.TYPE, packet -> {
             var mc = Minecraft.getInstance();
             if (mc.screen instanceof MageHutScreen existing) {
                 existing.apply(packet);
@@ -287,20 +285,20 @@ public class WandscapeClient {
                 mc.setScreen(new MageHutScreen(packet));
             }
         });
-        HotelOpenPacket.setClientHandler(packet -> {
+        ClientPayloadDispatcher.bind(HotelOpenPacket.TYPE, packet -> {
             Minecraft.getInstance().setScreen(new HotelScreen(
                     packet.buildingPos(), packet.colonyId(), packet.buildingId(), packet.creator(),
                     packet.maxOccupancy(), packet.currentOccupancy(),
                     packet.guestNames()));
         });
-        AltarOpenPacket.setClientHandler(packet -> {
+        ClientPayloadDispatcher.bind(AltarOpenPacket.TYPE, packet -> {
             Minecraft.getInstance().setScreen(new AltarScreen(
                     packet.buildingPos(), packet.colonyId(), packet.buildingId(), packet.creator(),
                     packet.spells()));
         });
-        BuildingInfoPacket.setClientHandler(packet ->
+        ClientPayloadDispatcher.bind(BuildingInfoPacket.TYPE, packet ->
                 Minecraft.getInstance().setScreen(new BuildingInfoScreen(packet)));
-        NpcDataPacket.setClientHandler(packet -> {
+        ClientPayloadDispatcher.bind(NpcDataPacket.TYPE, packet -> {
             var mc = Minecraft.getInstance();
             // 装备/策略屏通过 openMenu 打开（RegisterMenuScreensEvent）；数据包仅刷新已开屏幕。
             if (mc.screen instanceof NpcStrategyScreen strategyScreen) {
@@ -309,7 +307,7 @@ public class WandscapeClient {
                 existing.apply(packet);
             }
         });
-        TouristDataPacket.setClientHandler(packet -> {
+        ClientPayloadDispatcher.bind(TouristDataPacket.TYPE, packet -> {
             var mc = Minecraft.getInstance();
             if (mc.screen instanceof TouristScreen existing) {
                 existing.apply(packet);
@@ -317,9 +315,9 @@ public class WandscapeClient {
                 mc.setScreen(new TouristScreen(packet));
             }
         });
-        com.wsteam.wandscape.content.colony.network.ColonyAmbientPacket.setClientHandler(packet ->
+        ClientPayloadDispatcher.bind(com.wsteam.wandscape.content.colony.network.ColonyAmbientPacket.TYPE, packet ->
                 ColonyAmbientSystem.setState(packet.playing(), packet.day()));
-        ShopOpenPacket.setClientHandler(packet -> {
+        ClientPayloadDispatcher.bind(ShopOpenPacket.TYPE, packet -> {
             var mc = Minecraft.getInstance();
             if (mc.screen instanceof ShopScreen existing) {
                 existing.updateFrom(packet.stock(), packet.maxStocks());
@@ -330,7 +328,7 @@ public class WandscapeClient {
         });
 
         // Town hall screen
-        TownHallOpenPacket.setClientHandler(packet -> {
+        ClientPayloadDispatcher.bind(TownHallOpenPacket.TYPE, packet -> {
             net.minecraft.client.Minecraft.getInstance().setScreen(
                     new TownHallScreen(
                             packet.buildingPos(), packet.colonyId(),
@@ -343,7 +341,7 @@ public class WandscapeClient {
 
         // Bootstrap-revive state push: refresh the already-open town hall panel's button.
         // Ignored unless the matching colony's panel is currently on screen.
-        com.wsteam.wandscape.content.building.network.TownHallReviveStatePacket.setClientHandler(packet -> {
+        ClientPayloadDispatcher.bind(com.wsteam.wandscape.content.building.network.TownHallReviveStatePacket.TYPE, packet -> {
             if (Minecraft.getInstance().screen
                     instanceof com.wsteam.wandscape.content.building.client.TownHallScreen townHall
                     && packet.colonyId().equals(townHall.colonyId())) {
@@ -353,22 +351,22 @@ public class WandscapeClient {
         });
 
         // Colony create prompt: town hall right-clicked but no colony exists
-        com.wsteam.wandscape.content.colony.network.ColonyCreatePromptPacket.setClientHandler(packet -> {
+        ClientPayloadDispatcher.bind(com.wsteam.wandscape.content.colony.network.ColonyCreatePromptPacket.TYPE, packet -> {
             net.minecraft.client.Minecraft.getInstance().setScreen(
                     new TownHallCreateScreen(packet.townHallAnchor(), packet.creator()));
         });
 
         // Guide book: right-click opens the manual landing page (Patchouli if present, else the reader)
-        GuideBookOpenPacket.setClientHandler(packet -> {
+        ClientPayloadDispatcher.bind(GuideBookOpenPacket.TYPE, packet -> {
             com.wsteam.wandscape.foundation.ui.guidebook.GuideFacade.open(packet.docPath());
         });
 
         // Guide progress seed — apply saved tutorial step/dismissal on panel open
-        com.wsteam.wandscape.content.tutorial.network.TutorialProgressSyncPacket.setClientHandler(packet ->
+        ClientPayloadDispatcher.bind(com.wsteam.wandscape.content.tutorial.network.TutorialProgressSyncPacket.TYPE, packet ->
                 com.wsteam.wandscape.foundation.ui.tutorial.TutorialSession.applySync(
                         packet.stepIndex(), packet.dismissed()));
 
-        com.wsteam.wandscape.content.warehouse.transport.TransportStartPacket.setClientHandler(packet -> {
+        ClientPayloadDispatcher.bind(com.wsteam.wandscape.content.warehouse.transport.TransportStartPacket.TYPE, packet -> {
             var mc = Minecraft.getInstance();
             var level = mc.level;
             if (level == null) return;
@@ -389,7 +387,7 @@ public class WandscapeClient {
             level.addEntity(entity);
         });
 
-        BuildingDebugResponsePacket.setClientHandler(packet -> {
+        ClientPayloadDispatcher.bind(BuildingDebugResponsePacket.TYPE, packet -> {
             Minecraft.getInstance().execute(() -> {
                 BuildingDebugClientState.setCachedData(packet);
                 if (Minecraft.getInstance().screen instanceof com.wsteam.wandscape.foundation.ui.component.MedievalScreen ms) {
@@ -398,7 +396,7 @@ public class WandscapeClient {
             });
         });
 
-        ProjectionEnterResponsePacket.setClientHandler(packet -> {
+        ClientPayloadDispatcher.bind(ProjectionEnterResponsePacket.TYPE, packet -> {
             var mc = Minecraft.getInstance();
             if (mc.player == null) return;
             if (packet.granted()) {
@@ -415,14 +413,14 @@ public class WandscapeClient {
             }
         });
 
-        com.wsteam.wandscape.content.magic.network.MagicCircleCastPacket.setClientHandler(packet -> {
+        ClientPayloadDispatcher.bind(com.wsteam.wandscape.content.magic.network.MagicCircleCastPacket.TYPE, packet -> {
             var mc = Minecraft.getInstance();
             if (mc.level instanceof net.minecraft.client.multiplayer.ClientLevel cl) {
                 MagicCircleEmitter.add(cl, packet.effectId(), packet.pos(), packet.axis(), packet.circleId(), packet.casterUuid());
             }
         });
 
-        com.wsteam.wandscape.foundation.networking.ParticleBurstPacket.setClientHandler(packet -> {
+        ClientPayloadDispatcher.bind(com.wsteam.wandscape.foundation.networking.ParticleBurstPacket.TYPE, packet -> {
             var mc = Minecraft.getInstance();
             if (!(mc.level instanceof net.minecraft.client.multiplayer.ClientLevel cl)) return;
             var rand = cl.random;
@@ -452,7 +450,7 @@ public class WandscapeClient {
             }
         });
 
-        TouristBubblePacket.setClientHandler(packet -> {
+        ClientPayloadDispatcher.bind(TouristBubblePacket.TYPE, packet -> {
             var mc = Minecraft.getInstance();
             if (mc.level == null) return;
             var e = mc.level.getEntity(packet.entityId());
@@ -461,15 +459,15 @@ public class WandscapeClient {
                     e.getUUID(), packet.iconId(), packet.count(), e.tickCount);
         });
 
-        BuildingConfigSyncChunkPacket.setClientHandler(
+        ClientPayloadDispatcher.bind(BuildingConfigSyncChunkPacket.TYPE, 
                 BuildingConfigSyncReceiver::onChunk);
 
-        DatapackDataSyncChunkPacket.setClientHandler(
+        ClientPayloadDispatcher.bind(DatapackDataSyncChunkPacket.TYPE, 
                 DatapackDataSyncReceiver::onChunk);
 
         // Transient feedback: show on the open feedback-capable screen (MedievalScreen /
         // WarehouseScreen), else the action bar.
-        com.wsteam.wandscape.foundation.networking.ScreenFeedbackPacket.setClientHandler(packet -> {
+        ClientPayloadDispatcher.bind(com.wsteam.wandscape.foundation.networking.ScreenFeedbackPacket.TYPE, packet -> {
             var mc = Minecraft.getInstance();
             if (mc.screen instanceof com.wsteam.wandscape.foundation.ui.component.ScreenFeedbackHost host) {
                 host.showFeedback(packet.message(),
@@ -558,7 +556,7 @@ public class WandscapeClient {
         while (WAREHOUSE_TERMINAL_KEY.consumeClick()) {
             if (searchFocused) continue;
             if (mc != null && mc.screen == null) {
-                PacketDistributor.sendToServer(new com.wsteam.wandscape.content.warehouse.network.WarehouseTerminalKeyPacket());
+                Net.toServer(new com.wsteam.wandscape.content.warehouse.network.WarehouseTerminalKeyPacket());
             }
         }
     }
@@ -621,15 +619,9 @@ public class WandscapeClient {
     static void onItemColors(RegisterColorHandlersEvent.Item event) {
         event.register((stack, tintIndex) -> {
             if (tintIndex == 0) {
-                CustomData customData = stack.get(DataComponents.CUSTOM_DATA);
-                if (customData != null && customData.contains("wand_color")) {
-                    String color = customData.copyTag().getString("wand_color");
-                    if (!color.isEmpty() && color.length() == 7 && color.charAt(0) == '#') {
-                        try {
-                            return 0xFF000000 | Integer.parseInt(color.substring(1), 16);
-                        } catch (NumberFormatException ignored) {
-                        }
-                    }
+                Integer argb = WandItem.colorArgb(stack);
+                if (argb != null) {
+                    return argb;
                 }
             }
             return 0xFFFFFFFF;

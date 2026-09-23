@@ -2,6 +2,7 @@ package com.wsteam.wandscape.content.warehouse;
 import com.wsteam.wandscape.content.task.ecs.World;
 
 import com.wsteam.wandscape.Wandscape;
+import com.wsteam.wandscape.foundation.networking.Net;
 import com.wsteam.wandscape.foundation.sound.SoundService;
 import com.wsteam.wandscape.foundation.registry.WandscapeSounds;
 import com.wsteam.wandscape.content.element.data.ElementType;
@@ -15,7 +16,6 @@ import com.wsteam.wandscape.content.warehouse.network.WarehouseDataPacket;
 import com.wsteam.wandscape.foundation.networking.ScreenFeedbackPacket;
 import com.wsteam.wandscape.foundation.ui.I18n;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerPlayer;
@@ -25,7 +25,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import javax.annotation.Nullable;
 import java.util.*;
@@ -326,7 +325,7 @@ public class WarehouseMenu extends AbstractContainerMenu {
         if (bank == null) return;
         Map<ItemKey, Long> itemSnapshot = bank.getSnapshot(colonyId);
         Map<ElementType, Long> elemSnapshot = bank.getElementSnapshot(colonyId);
-        PacketDistributor.sendToPlayer(player,
+        Net.toPlayer(player,
                 WarehouseDataPacket.from(buildingPos, colonyId, itemSnapshot, elemSnapshot));
     }
 

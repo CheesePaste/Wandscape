@@ -8,6 +8,7 @@ import com.wsteam.wandscape.content.npc.NpcStrategyMenu;
 import com.wsteam.wandscape.content.npc.network.NpcDataPacket;
 import com.wsteam.wandscape.content.npc.network.NpcOpenEquipPacket;
 import com.wsteam.wandscape.content.npc.network.NpcStrategyPacket;
+import com.wsteam.wandscape.foundation.networking.Net;
 import com.wsteam.wandscape.foundation.ui.I18n;
 import com.wsteam.wandscape.foundation.ui.ReplayProtectedScreen;
 import com.wsteam.wandscape.foundation.ui.component.HelpButton;
@@ -23,7 +24,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -108,7 +108,7 @@ public class NpcStrategyScreen extends AbstractContainerScreen<NpcStrategyMenu>
                     I18n.name("gui.wandscape.strategy.preset." + name, name),
                     () -> {
                 this.preset = p;
-                PacketDistributor.sendToServer(new NpcStrategyPacket(
+                Net.toServer(new NpcStrategyPacket(
                         entityId, p, List.of(), NpcStrategyPacket.NO_CONSUME));
             });
             addRenderableWidget(btn);
@@ -131,7 +131,7 @@ public class NpcStrategyScreen extends AbstractContainerScreen<NpcStrategyMenu>
         int id = this.entityId >= 0 ? this.entityId : NpcScreenNavigator.getLastEntityId();
         if (id >= 0 && minecraft != null) {
             NpcScreenNavigator.prepareTransition(id);
-            PacketDistributor.sendToServer(new NpcOpenEquipPacket(id));
+            Net.toServer(new NpcOpenEquipPacket(id));
         } else if (minecraft != null && minecraft.player != null) {
             minecraft.player.closeContainer();
         }

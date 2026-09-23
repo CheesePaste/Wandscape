@@ -8,6 +8,7 @@ import com.wsteam.wandscape.content.production.data.RecipeUnlockRequirement;
 import com.wsteam.wandscape.content.production.internal.ProductionAffordability;
 import com.wsteam.wandscape.content.production.internal.RecipeUnlockChecker;
 import com.wsteam.wandscape.content.element.data.ElementType;
+import com.wsteam.wandscape.foundation.networking.ClientPayloadDispatcher;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -19,7 +20,6 @@ import net.minecraft.resources.ResourceLocation;
 
 import javax.annotation.Nullable;
 import java.util.*;
-import java.util.function.Consumer;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
 /**
@@ -176,16 +176,10 @@ public record CraftingStationPacket(BlockPos stationPos, ListTag recipes, String
             RecipeUnlockRequirement unlockRequirement
     ) {}
 
-    private static Consumer<CraftingStationPacket> clientHandler;
 
-    public static void setClientHandler(Consumer<CraftingStationPacket> handler) {
-        clientHandler = handler;
-    }
 
     public static void handleClient(CraftingStationPacket packet) {
-        if (clientHandler != null) {
-            clientHandler.accept(packet);
-        }
+        ClientPayloadDispatcher.dispatch(packet);
     }
 
     static void write(RegistryFriendlyByteBuf buf, CraftingStationPacket pkt) {

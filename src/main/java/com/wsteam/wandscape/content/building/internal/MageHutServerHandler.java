@@ -15,6 +15,7 @@ import com.wsteam.wandscape.content.element.data.ElementType;
 import com.wsteam.wandscape.content.npc.attributes.NpcAttributes;
 import com.wsteam.wandscape.content.npc.data.MageHutResident;
 import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.networking.Net;
 import com.wsteam.wandscape.foundation.networking.ScreenFeedbackPacket;
 import com.wsteam.wandscape.api.NpcApi;
 import com.wsteam.wandscape.api.WandscapeApis;
@@ -26,7 +27,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.SimpleMenuProvider;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -54,7 +54,7 @@ public final class MageHutServerHandler {
         UUID colonyId = state.getColonyId();
         if (colonyId == null) return;
         var colonyLevel = colonyLevelOf(colonyId);
-        PacketDistributor.sendToPlayer(sp,
+        Net.toPlayer(sp,
                 buildPacket(level, buildingId, state, colonyId, colonyLevel));
     }
 
@@ -239,7 +239,7 @@ public final class MageHutServerHandler {
         sp.serverLevel().getServer().execute(() -> {
             if (!npc.isRemoved() && (sp.containerMenu instanceof NpcMenu
                     || sp.containerMenu instanceof NpcStrategyMenu)) {
-                PacketDistributor.sendToPlayer(sp, NpcDataPacket.from(npc));
+                Net.toPlayer(sp, NpcDataPacket.from(npc));
             }
         });
     }
@@ -325,7 +325,7 @@ public final class MageHutServerHandler {
     private static void sendRefresh(ServerPlayer sp, ServerLevel level, UUID buildingId,
                                     BuildingState state, UUID colonyId) {
         var colonyLevel = colonyLevelOf(colonyId);
-        PacketDistributor.sendToPlayer(sp,
+        Net.toPlayer(sp,
                 buildPacket(level, buildingId, state, colonyId, colonyLevel));
     }
 

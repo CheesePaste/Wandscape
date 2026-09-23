@@ -5,6 +5,7 @@ import com.wsteam.wandscape.api.WandscapeApis;
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.content.npc.WandscapeAttributes;
 import com.wsteam.wandscape.content.npc.types.NpcAttributeModifier;
+import com.wsteam.wandscape.foundation.util.ItemData;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
 import net.minecraft.network.chat.CommonComponents;
@@ -17,13 +18,44 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.component.ItemAttributeModifiers;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Locale;
 
 public class WandItem extends Item {
 
+    /** 物品自定义数据（见 {@link ItemData}）中存预设 id 的键。 */
+    public static final String PRESET_KEY = "preset_id";
+    /** 物品自定义数据（见 {@link ItemData}）中存染色（{@code #RRGGBB}）的键。 */
+    public static final String COLOR_KEY = "wand_color";
+
     public WandItem(Properties properties) {
         super(properties);
+    }
+
+    /**
+     * 读法杖染色串（{@code #RRGGBB}）；无染色 → 空串。
+     *
+     * <p>染色的三个消费方（法杖 API、施法光束、NPC 手持渲染、物品 tint）此前各自内联
+     * 键名与解析，现统一收在这里：默认色各不相同，故本类只负责「读到什么」，
+     * 「读不到用什么」由调用方定。
+     */
+    public static String colorHex(ItemStack stack) {
+        return ItemData.getString(stack, COLOR_KEY);
+    }
+
+    /** 读法杖染色为 ARGB；无染色或格式非法 → null（默认色由调用方定）。 */
+    @Nullable
+    public static Integer colorArgb(ItemStack stack) {
+        String hex = colorHex(stack);
+        if (hex.length() != 7 || hex.charAt(0) != '#') {
+            return null;
+        }
+        try {
+            return 0xFF000000 | Integer.parseInt(hex.substring(1), 16);
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     @Override

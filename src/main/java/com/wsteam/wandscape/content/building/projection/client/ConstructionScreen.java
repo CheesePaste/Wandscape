@@ -4,6 +4,7 @@ import com.wsteam.wandscape.content.task.component.Position;
 import com.wsteam.wandscape.content.building.data.BuildingConfig;
 import com.wsteam.wandscape.content.building.projection.network.ProjectionPlacePacket;
 import com.wsteam.wandscape.content.building.network.BuildingAreaSyncPacket;
+import com.wsteam.wandscape.foundation.networking.Net;
 import com.wsteam.wandscape.foundation.ui.I18n;
 import com.wsteam.wandscape.foundation.ui.component.MedievalButton;
 import com.wsteam.wandscape.foundation.ui.component.MedievalScreen;
@@ -16,7 +17,6 @@ import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
  * Construction screen — fine-tune a building placement before submitting the build task.
@@ -155,7 +155,7 @@ public class ConstructionScreen extends MedievalScreen {
             return;
         }
 
-        PacketDistributor.sendToServer(new ProjectionPlacePacket(
+        Net.toServer(new ProjectionPlacePacket(
                 buildingTypeId, pos, rotationSteps, ProjectionClientState.isClearBoxBeforeBuild()));
         ProjectionClientState.setPinned(false);
         ProjectionClientState.setGhostPos(null); // placed building is now real; drop preview

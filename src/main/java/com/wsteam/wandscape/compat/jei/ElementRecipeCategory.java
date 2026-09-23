@@ -4,6 +4,7 @@ import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.content.element.data.ElementType;
 import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.util.ItemData;
 import mezz.jei.api.constants.VanillaTypes;
 import mezz.jei.api.gui.builder.IRecipeLayoutBuilder;
 import mezz.jei.api.gui.builder.IRecipeSlotBuilder;
@@ -17,14 +18,12 @@ import mezz.jei.api.recipe.category.IRecipeCategory;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.component.CustomData;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -187,16 +186,14 @@ public class ElementRecipeCategory implements IRecipeCategory<ElementRecipe> {
         return stack;
     }
 
-    /** 按 itemId + CUSTOM_DATA NBT 解析输出物品（法杖 preset / 卷轴 magic_id），使 JEI 显示具体变体与 tooltip。 */
+    /** 按 itemId + 自定义数据 NBT 解析输出物品（法杖 preset / 卷轴 magic_id），使 JEI 显示具体变体与 tooltip。 */
     private static ItemStack resolveItem(String itemId, @Nullable CompoundTag nbt) {
         if (itemId == null) return ItemStack.EMPTY;
         try {
             ResourceLocation rl = ResourceLocation.tryParse(itemId);
             if (rl == null) return ItemStack.EMPTY;
             ItemStack stack = new ItemStack(BuiltInRegistries.ITEM.get(rl));
-            if (nbt != null && !nbt.isEmpty()) {
-                stack.set(DataComponents.CUSTOM_DATA, CustomData.of(nbt.copy()));
-            }
+            ItemData.setTag(stack, nbt);
             return stack.isEmpty() ? ItemStack.EMPTY : stack;
         } catch (RuntimeException e) {
             Log.warn("ElementRecipeCategory", "解析物品 " + itemId + " 失败，跳过该槽位", e);

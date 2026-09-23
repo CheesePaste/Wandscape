@@ -1,9 +1,11 @@
 package com.wsteam.wandscape.content.production.network;
 
+import com.wsteam.wandscape.content.items.magic.SpellItem;
 import com.wsteam.wandscape.content.production.data.CraftSpellRecipe;
 import com.wsteam.wandscape.content.production.data.RecipeUnlockRequirement;
 import com.wsteam.wandscape.content.production.internal.ProductionAffordability;
 import com.wsteam.wandscape.content.element.data.ElementType;
+import com.wsteam.wandscape.foundation.networking.ClientPayloadDispatcher;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -15,7 +17,6 @@ import net.minecraft.resources.ResourceLocation;
 
 import javax.annotation.Nullable;
 import java.util.*;
-import java.util.function.Consumer;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
 /**
@@ -49,7 +50,7 @@ public record MagicStationPacket(BlockPos stationPos, ListTag recipes, String cr
             CompoundTag tag = new CompoundTag();
             tag.putString("id", r.id());
             tag.putString("output", r.outputItem());
-            tag.putString("magic_id", r.magicId());
+            tag.putString(SpellItem.MAGIC_ID_KEY, r.magicId());
 
             CompoundTag costTag = new CompoundTag();
             for (var e : r.cost().entrySet()) {
@@ -85,7 +86,7 @@ public record MagicStationPacket(BlockPos stationPos, ListTag recipes, String cr
             CompoundTag tag = recipes.getCompound(i);
             String id = tag.getString("id");
             String output = tag.getString("output");
-            String magicId = tag.getString("magic_id");
+            String magicId = tag.getString(SpellItem.MAGIC_ID_KEY);
             Map<ElementType, Long> cost = new LinkedHashMap<>();
             CompoundTag costTag = tag.getCompound("cost");
             for (String key : costTag.getAllKeys()) {
@@ -123,16 +124,10 @@ public record MagicStationPacket(BlockPos stationPos, ListTag recipes, String cr
             RecipeUnlockRequirement unlockRequirement
     ) {}
 
-    private static Consumer<MagicStationPacket> clientHandler;
 
-    public static void setClientHandler(Consumer<MagicStationPacket> handler) {
-        clientHandler = handler;
-    }
 
     public static void handleClient(MagicStationPacket packet) {
-        if (clientHandler != null) {
-            clientHandler.accept(packet);
-        }
+        ClientPayloadDispatcher.dispatch(packet);
     }
 
     static void write(RegistryFriendlyByteBuf buf, MagicStationPacket pkt) {

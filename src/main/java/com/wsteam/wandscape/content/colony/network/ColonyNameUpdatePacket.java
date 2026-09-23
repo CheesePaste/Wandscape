@@ -1,5 +1,6 @@
 package com.wsteam.wandscape.content.colony.network;
 
+import com.wsteam.wandscape.foundation.networking.Net;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -38,7 +39,7 @@ public record ColonyNameUpdatePacket(UUID colonyId, String name) implements Cust
         var metricsApi = com.wsteam.wandscape.api.WandscapeApis.getColonyStatusApiSilently();
         if (metricsApi != null) {
             var snap = metricsApi.getSnapshot(packet.colonyId());
-            net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player,
+            Net.toPlayer(player,
                     ColonyStatsSyncPacket.fromSnapshot(snap));
         }
     }

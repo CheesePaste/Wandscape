@@ -2,6 +2,7 @@ package com.wsteam.wandscape.content.warehouse.network;
 import com.wsteam.wandscape.content.task.component.Position;
 
 import com.wsteam.wandscape.content.element.data.ElementType;
+import com.wsteam.wandscape.foundation.networking.ClientPayloadDispatcher;
 import com.wsteam.wandscape.foundation.util.ItemKey;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
@@ -13,7 +14,6 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 
 import java.util.*;
-import java.util.function.Consumer;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
 /**
@@ -111,17 +111,11 @@ public record WarehouseDataPacket(BlockPos buildingPos, UUID colonyId,
     /** A single item entry for client rendering. */
     public record ItemEntry(String itemId, @javax.annotation.Nullable CompoundTag nbt, long count) {}
 
-    private static Consumer<WarehouseDataPacket> clientHandler;
 
-    public static void setClientHandler(Consumer<WarehouseDataPacket> handler) {
-        clientHandler = handler;
-    }
 
     /** Handle on client: dispatched via injected Consumer from WandscapeClient. */
     public static void handleClient(WarehouseDataPacket packet) {
-        if (clientHandler != null) {
-            clientHandler.accept(packet);
-        }
+        ClientPayloadDispatcher.dispatch(packet);
     }
 
     // ── StreamCodec helpers ──

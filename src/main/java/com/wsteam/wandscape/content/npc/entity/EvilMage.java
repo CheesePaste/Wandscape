@@ -3,6 +3,7 @@ import com.wsteam.wandscape.content.npc.component.MagicState;
 import com.wsteam.wandscape.content.task.ecs.World;
 
 import com.wsteam.wandscape.content.npc.network.NpcDataPacket;
+import com.wsteam.wandscape.foundation.networking.Net;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
@@ -16,7 +17,6 @@ import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
  * 敌对测试生物「邪恶法师」：与小镇法师外观/属性/施法管线完全一致
@@ -85,7 +85,7 @@ public class EvilMage extends WandscapeNpc implements Enemy {
         // 只有创造玩家可右键编辑（施法表/策略/法杖）——生存玩家是猎物，不能改配置
         if (player.isCreative()) {
             if (player instanceof ServerPlayer sp) {
-                PacketDistributor.sendToPlayer(sp, NpcDataPacket.from(this));
+                Net.toPlayer(sp, NpcDataPacket.from(this));
             }
             return InteractionResult.CONSUME;
         }

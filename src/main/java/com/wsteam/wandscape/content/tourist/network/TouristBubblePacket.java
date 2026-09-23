@@ -1,13 +1,13 @@
 package com.wsteam.wandscape.content.tourist.network;
 import com.wsteam.wandscape.content.task.types.EntityId;
 
+import com.wsteam.wandscape.foundation.networking.ClientPayloadDispatcher;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 
 import javax.annotation.Nullable;
-import java.util.function.Consumer;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
 
@@ -23,8 +23,6 @@ public record TouristBubblePacket(
     public static final StreamCodec<RegistryFriendlyByteBuf, TouristBubblePacket> STREAM_CODEC =
             StreamCodec.of(TouristBubblePacket::write, TouristBubblePacket::read);
 
-    private static Consumer<TouristBubblePacket> clientHandler = packet -> {};
-    public static void setClientHandler(Consumer<TouristBubblePacket> handler) { clientHandler = handler; }
 
     @Override
     public Type<? extends CustomPacketPayload> type() {
@@ -32,7 +30,7 @@ public record TouristBubblePacket(
     }
 
     public static void handleClient(TouristBubblePacket packet) {
-        clientHandler.accept(packet);
+        ClientPayloadDispatcher.dispatch(packet);
     }
 
     // ── StreamCodec ──

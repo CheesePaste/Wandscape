@@ -2,6 +2,7 @@ package com.wsteam.wandscape.content.building.client;
 
 import com.wsteam.wandscape.content.building.network.AltarCastRequestPacket;
 import com.wsteam.wandscape.content.magic.data.AltarSpellInfo;
+import com.wsteam.wandscape.foundation.networking.Net;
 import com.wsteam.wandscape.foundation.ui.I18n;
 import com.wsteam.wandscape.foundation.ui.component.MedievalButton;
 import com.wsteam.wandscape.foundation.ui.component.MedievalScreen;
@@ -11,7 +12,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.HashSet;
 import java.util.List;
@@ -83,7 +83,7 @@ public class AltarScreen extends MedievalScreen {
     private void onSubmit() {
         AltarSpellInfo selected = list.getSelected();
         if (selected == null || isBusy(selected)) return;
-        PacketDistributor.sendToServer(new AltarCastRequestPacket(buildingId, selected.magicId()));
+        Net.toServer(new AltarCastRequestPacket(buildingId, selected.magicId()));
         submitted.add(selected.magicId());
         updateSubmit();
     }

@@ -6,13 +6,13 @@ import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import com.mojang.brigadier.tree.CommandNode;
 import com.wsteam.wandscape.content.items.guidebook.network.GuideBookOpenPacket;
+import com.wsteam.wandscape.foundation.networking.Net;
 import com.wsteam.wandscape.foundation.ui.I18n;
 import com.wsteam.wandscape.foundation.ui.guidebook.GuideManifest;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.List;
 import java.util.Set;
@@ -79,7 +79,7 @@ public final class GuideCommand {
                     "[魔法小镇] 该指令只能由玩家在游戏内执行"));
             return 0;
         }
-        PacketDistributor.sendToPlayer(player, new GuideBookOpenPacket(page));
+        Net.toPlayer(player, new GuideBookOpenPacket(page));
         return Command.SINGLE_SUCCESS;
     }
 }

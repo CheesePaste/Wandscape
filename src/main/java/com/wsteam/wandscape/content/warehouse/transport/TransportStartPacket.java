@@ -2,6 +2,7 @@ package com.wsteam.wandscape.content.warehouse.transport;
 
 import com.wsteam.wandscape.content.road.core.*;
 import com.wsteam.wandscape.content.road.core.*;
+import com.wsteam.wandscape.foundation.networking.ClientPayloadDispatcher;
 import com.wsteam.wandscape.foundation.util.ItemKey;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
@@ -12,7 +13,6 @@ import net.minecraft.resources.ResourceLocation;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Consumer;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
 
@@ -27,8 +27,6 @@ public record TransportStartPacket(ItemKey itemKey, int count, BlockPos from, Tr
     public static final StreamCodec<RegistryFriendlyByteBuf, TransportStartPacket> STREAM_CODEC =
             StreamCodec.of(TransportStartPacket::write, TransportStartPacket::read);
 
-    private static Consumer<TransportStartPacket> clientHandler = packet -> {};
-    public static void setClientHandler(Consumer<TransportStartPacket> handler) { clientHandler = handler; }
 
     @Override
     public Type<? extends CustomPacketPayload> type() {
@@ -36,7 +34,7 @@ public record TransportStartPacket(ItemKey itemKey, int count, BlockPos from, Tr
     }
 
     public static void handleClient(TransportStartPacket packet) {
-        clientHandler.accept(packet);
+        ClientPayloadDispatcher.dispatch(packet);
     }
 
     static void write(RegistryFriendlyByteBuf buf, TransportStartPacket pkt) {

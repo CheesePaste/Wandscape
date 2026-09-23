@@ -4,6 +4,7 @@ import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.content.task.types.EntityId;
 import com.wsteam.wandscape.content.road.network.RoadAreaSyncPacket;
 import com.wsteam.wandscape.content.building.ui.BuildingSelectionOverlay;
+import com.wsteam.wandscape.foundation.networking.Net;
 import com.wsteam.wandscape.foundation.ui.panel.WandscapePanelController;
 import com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState;
 import com.wsteam.wandscape.content.task.ui.TaskManagementClientState;
@@ -41,7 +42,6 @@ import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.client.event.MovementInputUpdateEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.network.PacketDistributor;
 import org.joml.Vector3f;
 import org.lwjgl.glfw.GLFW;
 
@@ -610,7 +610,7 @@ public final class OverviewFlightController {
         // Entity under crosshair → interact (NPC / tourist)
         int entityId = OverviewClientState.getTargetEntityId();
         if (entityId >= 0) {
-            PacketDistributor.sendToServer(new OverviewEntityInteractPacket(entityId));
+            Net.toServer(new OverviewEntityInteractPacket(entityId));
             Log.info(TAG, "[Overview] Interacting with entity id={}", entityId);
             return;
         }
@@ -618,7 +618,7 @@ public final class OverviewFlightController {
         // Ray hits under-construction road → open road construction panel
         BlockPos road = OverviewClientState.getTargetRoadPos();
         if (road != null) {
-            PacketDistributor.sendToServer(new RoadInteractPacket(road));
+            Net.toServer(new RoadInteractPacket(road));
             Log.info(TAG, "[Overview] Interacting with road at {}", road);
             return;
         }
@@ -626,7 +626,7 @@ public final class OverviewFlightController {
         // Ray hits building → interact
         BlockPos target = OverviewClientState.getTargetBlockPos();
         if (target != null && OverviewClientState.getTargetBuildingId() != null) {
-            PacketDistributor.sendToServer(new OverviewInteractPacket(target));
+            Net.toServer(new OverviewInteractPacket(target));
             Log.info(TAG, "[Overview] Interacting with building at {}", target);
         }
     }

@@ -1,11 +1,11 @@
 package com.wsteam.wandscape.content.tutorial.network;
 
+import com.wsteam.wandscape.foundation.networking.ClientPayloadDispatcher;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 
-import java.util.function.Consumer;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
 
@@ -27,16 +27,10 @@ public record TutorialProgressSyncPacket(int stepIndex, boolean dismissed) imple
         return TYPE;
     }
 
-    private static Consumer<TutorialProgressSyncPacket> clientHandler;
 
-    public static void setClientHandler(Consumer<TutorialProgressSyncPacket> handler) {
-        clientHandler = handler;
-    }
 
     public static void handleClient(TutorialProgressSyncPacket packet) {
-        if (clientHandler != null) {
-            clientHandler.accept(packet);
-        }
+        ClientPayloadDispatcher.dispatch(packet);
     }
 
     static void write(RegistryFriendlyByteBuf buf, TutorialProgressSyncPacket pkt) {

@@ -1,35 +1,46 @@
 package com.wsteam.wandscape;
-import com.wsteam.wandscape.content.colony.sound.ColonyAmbientTracker;
-import com.wsteam.wandscape.content.command.*;
-import com.wsteam.wandscape.content.npc.HostileTargetingHandler;
-import com.wsteam.wandscape.content.task.TaskPoolSavedData;
+import com.wsteam.wandscape.api.NpcMainHandApi;
+import com.wsteam.wandscape.api.WandscapeApis;
 import com.wsteam.wandscape.content.building.BuildingNoSpawnZoneHandler;
-import com.wsteam.wandscape.content.colony.ColonyApiImpl;
-
+import com.wsteam.wandscape.content.building.ChunkLoadManager;
 import com.wsteam.wandscape.content.building.internal.*;
 import com.wsteam.wandscape.content.building.network.*;
-import com.wsteam.wandscape.foundation.registry.dataconfig.internal.DatapackDataSyncChunkPacket;
+import com.wsteam.wandscape.content.building.projection.network.*;
 import com.wsteam.wandscape.content.building.scanner.CreativeScannerBlock;
 import com.wsteam.wandscape.content.building.scanner.CreativeScannerBlockEntity;
+import com.wsteam.wandscape.content.building.scanner.InteractSpotMarkerBlock;
 import com.wsteam.wandscape.content.building.scanner.ScannerBlock;
 import com.wsteam.wandscape.content.building.scanner.ScannerBlockEntity;
-import com.wsteam.wandscape.content.building.scanner.InteractSpotMarkerBlock;
 import com.wsteam.wandscape.content.building.scanner.ScannerExportDirs;
-import com.wsteam.wandscape.content.building.scanner.network.ScannerExportPacket;
-import com.wsteam.wandscape.content.building.scanner.network.ScannerSyncPacket;
-import com.wsteam.wandscape.content.building.projection.network.*;
-import com.wsteam.wandscape.content.building.scanner.network.ScannerValuePacket;
+import com.wsteam.wandscape.content.colony.ColonyApiImpl;
+import com.wsteam.wandscape.content.colony.ColonyLevelData;
+import com.wsteam.wandscape.content.colony.ColonyLevelManager;
+import com.wsteam.wandscape.content.colony.exploration.ExplorationRegionGenerator;
+import com.wsteam.wandscape.content.colony.exploration.ExplorationRegionLoader;
+import com.wsteam.wandscape.content.colony.exploration.ExplorationRewardService;
 import com.wsteam.wandscape.content.colony.raid.ColonyRaidTracker;
 import com.wsteam.wandscape.content.colony.raid.RaidTriggerScanner;
-import com.wsteam.wandscape.content.colony.stats.network.StatsSyncPacket;
+import com.wsteam.wandscape.content.colony.service.ColonyStatusService;
+import com.wsteam.wandscape.content.colony.sound.ColonyAmbientTracker;
+import com.wsteam.wandscape.content.colony.stats.internal.StatisticsCollector;
+import com.wsteam.wandscape.content.command.*;
+import com.wsteam.wandscape.content.element.data.ElementType;
+import com.wsteam.wandscape.content.element.internal.ElementApiImpl;
+import com.wsteam.wandscape.content.element.internal.ElementMappingLoader;
 import com.wsteam.wandscape.content.items.compass.CompassSyncHandler;
 import com.wsteam.wandscape.content.items.compass.CompassTier;
 import com.wsteam.wandscape.content.items.compass.MagicCompassItem;
-import com.wsteam.wandscape.content.items.compass.network.CompassTargetPacket;
+import com.wsteam.wandscape.content.items.element.ElementItem;
+import com.wsteam.wandscape.content.items.guidebook.item.GuideBookItem;
+import com.wsteam.wandscape.content.items.magic.SpellItem;
+import com.wsteam.wandscape.content.items.magic.wand.internal.WandApiImpl;
+import com.wsteam.wandscape.content.items.magic.wand.internal.WandPresetLoader.WandPreset;
+import com.wsteam.wandscape.content.items.magic.wand.internal.WandPresetLoader;
+import com.wsteam.wandscape.content.items.magic.wand.item.WandItem;
 import com.wsteam.wandscape.content.items.oathring.OathRingItem;
 import com.wsteam.wandscape.content.items.oathring.RingTier;
+import com.wsteam.wandscape.content.items.oathring.internal.OathRingSavedData;
 import com.wsteam.wandscape.content.items.oathring.internal.OathRingSyncHandler;
-import com.wsteam.wandscape.content.items.oathring.network.OathRingDataPacket;
 import com.wsteam.wandscape.content.items.scepter.OmniScepterItem;
 import com.wsteam.wandscape.content.items.scepter.ScepterItem;
 import com.wsteam.wandscape.content.items.scepter.ScepterKind;
@@ -37,84 +48,54 @@ import com.wsteam.wandscape.content.items.scepter.internal.ScepterApiImpl;
 import com.wsteam.wandscape.content.items.scepter.internal.ScepterDeathHandler;
 import com.wsteam.wandscape.content.items.scepter.internal.ScepterInteractHandler;
 import com.wsteam.wandscape.content.items.scepter.internal.ScepterMarksSavedData;
-import com.wsteam.wandscape.content.magic.internal.WandscapeEffects;
-import com.wsteam.wandscape.content.npc.guard.*;
-import com.wsteam.wandscape.content.road.data.RoadPresetLoader;
-import com.wsteam.wandscape.content.road.network.*;
-import com.wsteam.wandscape.content.tourist.internal.*;
-import com.wsteam.wandscape.content.tourist.network.TouristBubblePacket;
-import com.wsteam.wandscape.foundation.registry.dataconfig.internal.WandscapeBalanceLoader;
-import com.wsteam.wandscape.foundation.registry.dataconfig.internal.WandscapeDataLoader;
-import com.wsteam.wandscape.content.element.internal.ElementApiImpl;
-import com.wsteam.wandscape.content.element.internal.ElementMappingLoader;
-import com.wsteam.wandscape.content.items.element.ElementItem;
-// engine wildcard replaced
-import com.wsteam.wandscape.impl.EngineBootstrap;
-import com.wsteam.wandscape.content.production.ProductionEligibility;
-import com.wsteam.wandscape.content.task.boundary.WandscapeBlockInteractExecutor;
-import com.wsteam.wandscape.content.colony.ColonyLevelData;
-import com.wsteam.wandscape.content.colony.ColonyLevelManager;
-import com.wsteam.wandscape.content.colony.exploration.ExplorationRegionGenerator;
-import com.wsteam.wandscape.content.colony.exploration.ExplorationRegionLoader;
-import com.wsteam.wandscape.content.colony.exploration.ExplorationRewardService;
-import com.wsteam.wandscape.content.colony.exploration.network.ExplorationRewardPacket;
-import com.wsteam.wandscape.content.building.ChunkLoadManager;
-import com.wsteam.wandscape.content.colony.service.ColonyStatusService;
-import com.wsteam.wandscape.foundation.registry.WandscapeSounds;
-import com.wsteam.wandscape.content.warehouse.transport.TransportItemEntity;
-import com.wsteam.wandscape.content.warehouse.transport.TransportStartPacket;
-import com.wsteam.wandscape.content.items.guidebook.item.GuideBookItem;
-import com.wsteam.wandscape.content.items.guidebook.network.GuideBookOpenPacket;
 import com.wsteam.wandscape.content.magic.data.MagicDef;
 import com.wsteam.wandscape.content.magic.entity.MagicBeamEntity;
 import com.wsteam.wandscape.content.magic.internal.MagicCastManager;
 import com.wsteam.wandscape.content.magic.internal.MagicCircleLoader;
 import com.wsteam.wandscape.content.magic.internal.SpellbookLoader;
 import com.wsteam.wandscape.content.magic.internal.SpellcastingApiImpl;
-import com.wsteam.wandscape.content.items.magic.SpellItem;
+import com.wsteam.wandscape.content.magic.internal.WandscapeEffects;
+import com.wsteam.wandscape.content.npc.HostileTargetingHandler;
+import com.wsteam.wandscape.content.npc.NpcInventoryMenu;
 import com.wsteam.wandscape.content.npc.NpcMenu;
 import com.wsteam.wandscape.content.npc.NpcStrategyMenu;
-import com.wsteam.wandscape.content.npc.NpcInventoryMenu;
 import com.wsteam.wandscape.content.npc.entity.EvilMage;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
+import com.wsteam.wandscape.content.npc.guard.*;
 import com.wsteam.wandscape.content.npc.internal.EntityComponentBridge;
+import com.wsteam.wandscape.content.npc.internal.FriendlyForceApiImpl;
 import com.wsteam.wandscape.content.npc.internal.NpcApiImpl;
 import com.wsteam.wandscape.content.npc.internal.NpcAttributesApiImpl;
-import com.wsteam.wandscape.content.npc.network.*;
-import com.wsteam.wandscape.content.colony.overview.network.OverviewEntityInteractPacket;
-import com.wsteam.wandscape.content.colony.overview.network.OverviewInteractPacket;
+import com.wsteam.wandscape.content.npc.internal.NpcMainHandApiImpl;
+import com.wsteam.wandscape.content.production.ProductionEligibility;
 import com.wsteam.wandscape.content.production.ProductionRecipeLoader;
-import com.wsteam.wandscape.content.production.network.CraftingStationPacket;
-import com.wsteam.wandscape.content.production.network.MagicStationPacket;
-import com.wsteam.wandscape.content.production.network.RequestProductionTaskPacket;
-import com.wsteam.wandscape.content.production.network.WorkstationDataPacket;
-import com.wsteam.wandscape.content.items.oathring.internal.OathRingSavedData;
+import com.wsteam.wandscape.content.road.data.RoadPresetLoader;
 import com.wsteam.wandscape.content.road.engine.RoadApiImpl;
 import com.wsteam.wandscape.content.road.engine.RoadSavedData;
 import com.wsteam.wandscape.content.road.engine.RoadSegmentListener;
-import com.wsteam.wandscape.content.element.data.ElementType;
-import com.wsteam.wandscape.foundation.log.Log;
-import com.wsteam.wandscape.content.magic.network.MagicCircleCastPacket;
-import com.wsteam.wandscape.api.WandscapeApis;
-import com.wsteam.wandscape.content.colony.stats.internal.StatisticsCollector;
+import com.wsteam.wandscape.content.task.TaskPoolSavedData;
+import com.wsteam.wandscape.content.task.boundary.WandscapeBlockInteractExecutor;
 import com.wsteam.wandscape.content.tourist.entity.TouristEntity;
-import com.wsteam.wandscape.content.tourist.network.TouristDataPacket;
-import com.wsteam.wandscape.content.items.magic.wand.internal.WandApiImpl;
-import com.wsteam.wandscape.content.items.magic.wand.internal.WandPresetLoader;
-import com.wsteam.wandscape.content.items.magic.wand.internal.WandPresetLoader.WandPreset;
-import com.wsteam.wandscape.content.items.magic.wand.item.WandItem;
+import com.wsteam.wandscape.content.tourist.internal.*;
 import com.wsteam.wandscape.content.warehouse.WarehouseManager;
 import com.wsteam.wandscape.content.warehouse.WarehouseMenu;
 import com.wsteam.wandscape.content.warehouse.WarehouseTerminalItem;
-import com.wsteam.wandscape.content.warehouse.network.WarehouseActionPacket;
-import com.wsteam.wandscape.content.warehouse.network.WarehouseDataPacket;
-import com.wsteam.wandscape.content.warehouse.network.WarehouseTerminalKeyPacket;
-import com.wsteam.wandscape.content.npc.internal.FriendlyForceApiImpl;
-import com.wsteam.wandscape.api.NpcMainHandApi;
-import com.wsteam.wandscape.content.npc.internal.NpcMainHandApiImpl;
+import com.wsteam.wandscape.content.warehouse.transport.TransportItemEntity;
+import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.util.ItemData;
+import com.wsteam.wandscape.foundation.networking.Net;
+import com.wsteam.wandscape.foundation.networking.PayloadRegistry;
+import com.wsteam.wandscape.foundation.registry.WandscapeSounds;
+import com.wsteam.wandscape.foundation.registry.dataconfig.internal.DatapackDataSyncChunkPacket;
+import com.wsteam.wandscape.foundation.registry.dataconfig.internal.WandscapeBalanceLoader;
+import com.wsteam.wandscape.foundation.registry.dataconfig.internal.WandscapeDataLoader;
+import com.wsteam.wandscape.impl.EngineBootstrap;
+import java.nio.charset.StandardCharsets;
+import java.util.EnumMap;
+import java.util.List;
+import java.util.Map;
 import net.minecraft.commands.Commands;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.ParticleType;
 import net.minecraft.core.particles.SimpleParticleType;
 import net.minecraft.core.registries.Registries;
@@ -130,7 +111,6 @@ import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntityType;
@@ -161,10 +141,8 @@ import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import net.neoforged.neoforge.registries.NeoForgeRegistries;
 
-import java.nio.charset.StandardCharsets;
-import java.util.EnumMap;
-import java.util.List;
-import java.util.Map;
+// engine wildcard replaced
+
 
 @Mod(Wandscape.MODID)
 public class Wandscape {
@@ -469,7 +447,7 @@ public class Wandscape {
     private static void acceptWandPresets(CreativeModeTab.Output output) {
         for (WandPreset preset : WAND_PRESET_LOADER.getAllPresets().values()) {
             ItemStack stack = new ItemStack(WAND.get());
-            stack.set(DataComponents.CUSTOM_DATA, CustomData.of(preset.nbt().copy()));
+            ItemData.setTag(stack, preset.nbt());
             output.accept(stack);
         }
     }
@@ -582,7 +560,7 @@ public class Wandscape {
         PRODUCTION_RECIPE_LOADER = new ProductionRecipeLoader(DATA_LOADER, ELEMENT_MAPPING_LOADER);
 
         if (FMLEnvironment.dist == Dist.CLIENT) {
-            WandscapeClient.init(modEventBus, modContainer);
+            WandscapeClient.init(modEventBus);
         }
     }
 
@@ -602,414 +580,7 @@ public class Wandscape {
     }
 
     private void onRegisterPayloads(RegisterPayloadHandlersEvent event) {
-        var registrar = event.registrar(MODID).versioned("1.0");
-        registrar
-                .playToClient(
-                        WarehouseDataPacket.TYPE,
-                        WarehouseDataPacket.STREAM_CODEC,
-                        (packet, ctx) -> WarehouseDataPacket.handleClient(packet))
-                .playToClient(
-                        WorkstationDataPacket.TYPE,
-                        WorkstationDataPacket.STREAM_CODEC,
-                        (packet, ctx) -> WorkstationDataPacket.handleClient(packet))
-                .playToClient(
-                        CraftingStationPacket.TYPE,
-                        CraftingStationPacket.STREAM_CODEC,
-                        (packet, ctx) -> CraftingStationPacket.handleClient(packet))
-                .playToClient(
-                        MagicStationPacket.TYPE,
-                        MagicStationPacket.STREAM_CODEC,
-                        (packet, ctx) -> MagicStationPacket.handleClient(packet))
-                .playToClient(
-                        ShopOpenPacket.TYPE,
-                        ShopOpenPacket.STREAM_CODEC,
-                        (packet, ctx) -> ShopOpenPacket.handleClient(packet))
-                .playToClient(
-                        BuildingConfigSyncChunkPacket.TYPE,
-                        BuildingConfigSyncChunkPacket.STREAM_CODEC,
-                        (packet, ctx) -> BuildingConfigSyncChunkPacket.handleClient(packet))
-                .playToClient(
-                        DatapackDataSyncChunkPacket.TYPE,
-                        DatapackDataSyncChunkPacket.STREAM_CODEC,
-                        (packet, ctx) -> DatapackDataSyncChunkPacket.handleClient(packet))
-                .playToClient(
-                        ExplorationRewardPacket.TYPE,
-                        ExplorationRewardPacket.STREAM_CODEC,
-                        (packet, ctx) -> ExplorationRewardPacket.handleClient(packet))
-                .playToServer(
-                        ShopMaxStockPacket.TYPE,
-                        ShopMaxStockPacket.STREAM_CODEC,
-                        (packet, ctx) -> ShopMaxStockPacket.handleServer(packet,
-                                (net.minecraft.server.level.ServerPlayer) ctx.player()))
-                .playToClient(
-                        TavernOpenPacket.TYPE,
-                        TavernOpenPacket.STREAM_CODEC,
-                        (packet, ctx) -> TavernOpenPacket.handleClient(packet))
-                .playToClient(
-                        HotelOpenPacket.TYPE,
-                        HotelOpenPacket.STREAM_CODEC,
-                        (packet, ctx) -> HotelOpenPacket.handleClient(packet))
-                .playToClient(
-                        BuildingInfoPacket.TYPE,
-                        BuildingInfoPacket.STREAM_CODEC,
-                        (packet, ctx) -> BuildingInfoPacket.handleClient(packet))
-                .playToClient(
-                        TownHallOpenPacket.TYPE,
-                        TownHallOpenPacket.STREAM_CODEC,
-                        (packet, ctx) -> TownHallOpenPacket.handleClient(packet))
-                .playToServer(
-                        TownHallWarehouseRequestPacket.TYPE,
-                        TownHallWarehouseRequestPacket.STREAM_CODEC,
-                        (packet, ctx) -> TownHallWarehouseRequestPacket.handleServer(packet, ctx))
-                .playToClient(
-                        AltarOpenPacket.TYPE,
-                        AltarOpenPacket.STREAM_CODEC,
-                        (packet, ctx) -> AltarOpenPacket.handleClient(packet))
-                .playToServer(
-                        AltarCastRequestPacket.TYPE,
-                        AltarCastRequestPacket.STREAM_CODEC,
-                        (packet, ctx) -> AltarCastRequestPacket.handleServer(packet,
-                                (net.minecraft.server.level.ServerPlayer) ctx.player()))
-                .playToClient(
-                        TaskQueueDataPacket.TYPE,
-                        TaskQueueDataPacket.STREAM_CODEC,
-                        (packet, ctx) -> TaskQueueDataPacket.handleClient(packet))
-                // ── Construction-site panel (under-construction building) ──
-                .playToClient(
-                        ConstructionSiteDataPacket.TYPE,
-                        ConstructionSiteDataPacket.STREAM_CODEC,
-                        (packet, ctx) -> ConstructionSiteDataPacket.handleClient(packet))
-                .playToServer(
-                        RoadPlacePacket.TYPE,
-                        RoadPlacePacket.STREAM_CODEC,
-                        (packet, ctx) -> RoadPlacePacket.handleServer(packet, (net.minecraft.server.level.ServerPlayer) ctx.player()))
-                .playToClient(
-                        OathRingDataPacket.TYPE,
-                        OathRingDataPacket.STREAM_CODEC,
-                        (packet, ctx) -> OathRingDataPacket.handleClient(packet))
-                .playToClient(
-                        CompassTargetPacket.TYPE,
-                        CompassTargetPacket.STREAM_CODEC,
-                        (packet, ctx) -> CompassTargetPacket.handleClient(packet))
-                .playToServer(
-                        DestroyFillPacket.TYPE,
-                        DestroyFillPacket.STREAM_CODEC,
-                        (packet, ctx) -> DestroyFillPacket.handleServer(packet, (net.minecraft.server.level.ServerPlayer) ctx.player()))
-                .playToServer(
-                        FillBoxPacket.TYPE,
-                        FillBoxPacket.STREAM_CODEC,
-                        (packet, ctx) -> FillBoxPacket.handleServer(packet, (net.minecraft.server.level.ServerPlayer) ctx.player()))
-                .playToServer(
-                        RequestProductionTaskPacket.TYPE,
-                        RequestProductionTaskPacket.STREAM_CODEC,
-                        RequestProductionTaskPacket::handleServer)
-                .playToServer(
-                        TaskQueueModifyPacket.TYPE,
-                        TaskQueueModifyPacket.STREAM_CODEC,
-                        TaskQueueModifyPacket::handleServer)
-                .playToClient(
-                        NodeDataPacket.TYPE,
-                        NodeDataPacket.STREAM_CODEC,
-                        (packet, ctx) -> NodeDataPacket.handleClient(packet))
-                .playToServer(
-                        RequestGatherTaskPacket.TYPE,
-                        RequestGatherTaskPacket.STREAM_CODEC,
-                        RequestGatherTaskPacket::handleServer)
-                .playToServer(
-                        WarehouseActionPacket.TYPE,
-                        WarehouseActionPacket.STREAM_CODEC,
-                        WarehouseActionPacket::handleServer)
-                .playToServer(
-                        WarehouseTerminalKeyPacket.TYPE,
-                        WarehouseTerminalKeyPacket.STREAM_CODEC,
-                        (packet, ctx) -> WarehouseTerminalKeyPacket.handleServer(
-                                packet, (net.minecraft.server.level.ServerPlayer) ctx.player()))
-                .playToServer(
-                        TavernRecruitPacket.TYPE,
-                        TavernRecruitPacket.STREAM_CODEC,
-                        TavernRecruitPacket::handleServer)
-                // ── Mage Hut ──
-                .playToClient(
-                        MageHutDataPacket.TYPE,
-                        MageHutDataPacket.STREAM_CODEC,
-                        (packet, ctx) -> MageHutDataPacket.handleClient(packet))
-                .playToServer(
-                        MageHutActionPacket.TYPE,
-                        MageHutActionPacket.STREAM_CODEC,
-                        (packet, ctx) -> MageHutActionPacket.handleServer(packet, ctx))
-                .playToServer(
-                        OpenWarehousePacket.TYPE,
-                        OpenWarehousePacket.STREAM_CODEC,
-                        (packet, ctx) -> OpenWarehousePacket.handleServer(packet, ctx))
-                // ── Soul Projection ──
-                .playToServer(
-                        ProjectionEnterPacket.TYPE,
-                        ProjectionEnterPacket.STREAM_CODEC,
-                        (packet, ctx) -> ProjectionEnterPacket.handleServer(packet,
-                                (net.minecraft.server.level.ServerPlayer) ctx.player()))
-                .playToClient(
-                        ProjectionEnterResponsePacket.TYPE,
-                        ProjectionEnterResponsePacket.STREAM_CODEC,
-                        (packet, ctx) -> ProjectionEnterResponsePacket.handleClient(packet))
-                .playToServer(
-                        ProjectionExitPacket.TYPE,
-                        ProjectionExitPacket.STREAM_CODEC,
-                        (packet, ctx) -> ProjectionExitPacket.handleServer(packet,
-                                (net.minecraft.server.level.ServerPlayer) ctx.player()))
-                .playToServer(
-                        ProjectionPlacePacket.TYPE,
-                        ProjectionPlacePacket.STREAM_CODEC,
-                        (packet, ctx) -> ProjectionPlacePacket.handleServer(packet,
-                                (net.minecraft.server.level.ServerPlayer) ctx.player()))
-                .playToClient(
-                        ProjectionSlotsRefreshPacket.TYPE,
-                        ProjectionSlotsRefreshPacket.STREAM_CODEC,
-                        (packet, ctx) -> ProjectionSlotsRefreshPacket.handleClient(packet))
-                // ── Overview ──
-                .playToServer(
-                        OverviewInteractPacket.TYPE,
-                        OverviewInteractPacket.STREAM_CODEC,
-                        (packet, ctx) -> OverviewInteractPacket.handleServer(packet,
-                                (net.minecraft.server.level.ServerPlayer) ctx.player()))
-                .playToServer(
-                        OverviewEntityInteractPacket.TYPE,
-                        OverviewEntityInteractPacket.STREAM_CODEC,
-                        (packet, ctx) -> OverviewEntityInteractPacket.handleServer(packet,
-                                (net.minecraft.server.level.ServerPlayer) ctx.player()))
-                .playToServer(
-                        BuildingDebugRequestPacket.TYPE,
-                        BuildingDebugRequestPacket.STREAM_CODEC,
-                        (packet, ctx) -> BuildingDebugRequestPacket.handleServer(packet,
-                                (net.minecraft.server.level.ServerPlayer) ctx.player()))
-                .playToClient(
-                        BuildingDebugResponsePacket.TYPE,
-                        BuildingDebugResponsePacket.STREAM_CODEC,
-                        (packet, ctx) -> BuildingDebugResponsePacket.handleClient(packet))
-                .playToServer(
-                        BuildingActionPacket.TYPE,
-                        BuildingActionPacket.STREAM_CODEC,
-                        (packet, ctx) -> BuildingActionPacket.handleServer(packet,
-                                (net.minecraft.server.level.ServerPlayer) ctx.player()))
-                // ── Building Scanner ──
-                .playToServer(
-                        ScannerSyncPacket.TYPE,
-                        ScannerSyncPacket.STREAM_CODEC,
-                        (packet, ctx) -> ScannerSyncPacket.handleServer(packet,
-                                (ServerPlayer) ctx.player()))
-                .playToServer(
-                        ScannerExportPacket.TYPE,
-                        ScannerExportPacket.STREAM_CODEC,
-                        (packet, ctx) -> ScannerExportPacket.handleServer(packet,
-                                (ServerPlayer) ctx.player()))
-                .playToServer(
-                        ScannerValuePacket.TYPE,
-                        ScannerValuePacket.STREAM_CODEC,
-                        (packet, ctx) -> ScannerValuePacket.handleServer(packet,
-                                (ServerPlayer) ctx.player()))
-                .playToServer(
-                        SplineBuildPacket.TYPE,
-                        SplineBuildPacket.STREAM_CODEC,
-                        (packet, ctx) -> SplineBuildPacket.handleServer(packet, (ServerPlayer) ctx.player()))
-                .playToServer(
-                        RoadInteractPacket.TYPE,
-                        RoadInteractPacket.STREAM_CODEC,
-                        (packet, ctx) -> RoadInteractPacket.handleServer(packet, (ServerPlayer) ctx.player()))
-                .playToServer(
-                        RoadWithdrawPacket.TYPE,
-                        RoadWithdrawPacket.STREAM_CODEC,
-                        (packet, ctx) -> RoadWithdrawPacket.handleServer(packet, (ServerPlayer) ctx.player()))
-                // ── Wandscape Panel ──
-                .playToServer(
-                        com.wsteam.wandscape.foundation.ui.panel.PanelStateTogglePacket.TYPE,
-                        com.wsteam.wandscape.foundation.ui.panel.PanelStateTogglePacket.STREAM_CODEC,
-                        (packet, ctx) -> com.wsteam.wandscape.foundation.ui.panel.PanelStateTogglePacket
-                                .handleServer(packet, (ServerPlayer) ctx.player()))
-                .playToClient(
-                        com.wsteam.wandscape.content.colony.network.ColonyStatsSyncPacket.TYPE,
-                        com.wsteam.wandscape.content.colony.network.ColonyStatsSyncPacket.STREAM_CODEC,
-                        (packet, ctx) -> com.wsteam.wandscape.content.colony.network.ColonyStatsSyncPacket
-                                .handleClient(packet))
-                // ── Stats ──
-                .playToClient(
-                        StatsSyncPacket.TYPE,
-                        StatsSyncPacket.STREAM_CODEC,
-                        (packet, ctx) -> StatsSyncPacket
-                                .handleClient(packet))
-                // ── Building interaction area overlay ──
-                .playToClient(
-                        com.wsteam.wandscape.content.building.network.BuildingAreaSyncPacket.TYPE,
-                        com.wsteam.wandscape.content.building.network.BuildingAreaSyncPacket.STREAM_CODEC,
-                        (packet, ctx) -> com.wsteam.wandscape.content.building.network.BuildingAreaSyncPacket
-                                .handleClient(packet))
-                // ── Road construction ghost sync ──
-                .playToClient(
-                        com.wsteam.wandscape.content.road.network.RoadAreaSyncPacket.TYPE,
-                        com.wsteam.wandscape.content.road.network.RoadAreaSyncPacket.STREAM_CODEC,
-                        (packet, ctx) -> com.wsteam.wandscape.content.road.network.RoadAreaSyncPacket
-                                .handleClient(packet))
-                // ── Transient action feedback (screen toast or action bar) ──
-                .playToClient(
-                        com.wsteam.wandscape.foundation.networking.ScreenFeedbackPacket.TYPE,
-                        com.wsteam.wandscape.foundation.networking.ScreenFeedbackPacket.STREAM_CODEC,
-                        (packet, ctx) -> com.wsteam.wandscape.foundation.networking.ScreenFeedbackPacket
-                                .handleClient(packet))
-                // ── NPC info screen ──
-                .playToClient(
-                        NpcDataPacket.TYPE,
-                        NpcDataPacket.STREAM_CODEC,
-                        (packet, ctx) -> NpcDataPacket.handleClient(packet))
-                .playToServer(
-                        NpcOpenStrategyPacket.TYPE,
-                        NpcOpenStrategyPacket.STREAM_CODEC,
-                        (packet, ctx) -> NpcOpenStrategyPacket.handleServer(packet, ctx))
-                .playToServer(
-                        NpcOpenInventoryPacket.TYPE,
-                        NpcOpenInventoryPacket.STREAM_CODEC,
-                        (packet, ctx) -> NpcOpenInventoryPacket.handleServer(packet, ctx))
-                .playToServer(
-                        NpcStrategyPacket.TYPE,
-                        NpcStrategyPacket.STREAM_CODEC,
-                        (packet, ctx) -> NpcStrategyPacket.handleServer(packet,
-                                (net.minecraft.server.level.ServerPlayer) ctx.player()))
-                .playToServer(
-                        NpcRenamePacket.TYPE,
-                        NpcRenamePacket.STREAM_CODEC,
-                        (packet, ctx) -> NpcRenamePacket.handleServer(packet,
-                                (net.minecraft.server.level.ServerPlayer) ctx.player()))
-                .playToServer(
-                        NpcTogglePacket.TYPE,
-                        NpcTogglePacket.STREAM_CODEC,
-                        (packet, ctx) -> NpcTogglePacket.handleServer(packet,
-                                (net.minecraft.server.level.ServerPlayer) ctx.player()))
-                .playToServer(
-                        NpcDismissPacket.TYPE,
-                        NpcDismissPacket.STREAM_CODEC,
-                        (packet, ctx) -> NpcDismissPacket.handleServer(packet,
-                                (net.minecraft.server.level.ServerPlayer) ctx.player()))
-                // ── Tourist info screen ──
-                .playToClient(
-                        TouristDataPacket.TYPE,
-                        TouristDataPacket.STREAM_CODEC,
-                        (packet, ctx) -> TouristDataPacket.handleClient(packet))
-                // ── Tourist purchase / service bubble ──
-                .playToClient(
-                        TouristBubblePacket.TYPE,
-                        TouristBubblePacket.STREAM_CODEC,
-                        (packet, ctx) -> TouristBubblePacket.handleClient(packet))
-                // ── Colony day/night ambient ──
-                .playToClient(
-                        com.wsteam.wandscape.content.colony.network.ColonyAmbientPacket.TYPE,
-                        com.wsteam.wandscape.content.colony.network.ColonyAmbientPacket.STREAM_CODEC,
-                        (packet, ctx) -> com.wsteam.wandscape.content.colony.network.ColonyAmbientPacket
-                                .handleClient(packet))
-                // ── Colony name update ──
-                .playToServer(
-                        com.wsteam.wandscape.content.colony.network.ColonyNameUpdatePacket.TYPE,
-                        com.wsteam.wandscape.content.colony.network.ColonyNameUpdatePacket.STREAM_CODEC,
-                        (packet, ctx) -> com.wsteam.wandscape.content.colony.network.ColonyNameUpdatePacket
-                                .handleServer(packet, (net.minecraft.server.level.ServerPlayer) ctx.player()))
-                // ── Colony settings update (settings center 「本镇」page) ──
-                .playToServer(
-                        com.wsteam.wandscape.content.colony.network.ColonySettingUpdatePacket.TYPE,
-                        com.wsteam.wandscape.content.colony.network.ColonySettingUpdatePacket.STREAM_CODEC,
-                        (packet, ctx) -> com.wsteam.wandscape.content.colony.network.ColonySettingUpdatePacket
-                                .handleServer(packet, (net.minecraft.server.level.ServerPlayer) ctx.player()))
-                // ── Town hall bootstrap revive (anti-deadlock, all wizards dead) ──
-                .playToServer(
-                        com.wsteam.wandscape.content.building.network.TownHallReviveRequestPacket.TYPE,
-                        com.wsteam.wandscape.content.building.network.TownHallReviveRequestPacket.STREAM_CODEC,
-                        (packet, ctx) -> com.wsteam.wandscape.content.building.network.TownHallReviveRequestPacket
-                                .handleServer(packet, ctx))
-                .playToClient(
-                        com.wsteam.wandscape.content.building.network.TownHallReviveStatePacket.TYPE,
-                        com.wsteam.wandscape.content.building.network.TownHallReviveStatePacket.STREAM_CODEC,
-                        (packet, ctx) -> com.wsteam.wandscape.content.building.network.TownHallReviveStatePacket
-                                .handleClient(packet))
-                // ── Colony create (town hall naming flow) ──
-                .playToServer(
-                        com.wsteam.wandscape.content.colony.network.ColonyCreateRequestPacket.TYPE,
-                        com.wsteam.wandscape.content.colony.network.ColonyCreateRequestPacket.STREAM_CODEC,
-                        (packet, ctx) -> com.wsteam.wandscape.content.colony.network.ColonyCreateRequestPacket
-                                .handleServer(packet, (net.minecraft.server.level.ServerPlayer) ctx.player()))
-                .playToClient(
-                        com.wsteam.wandscape.content.colony.network.ColonyCreatePromptPacket.TYPE,
-                        com.wsteam.wandscape.content.colony.network.ColonyCreatePromptPacket.STREAM_CODEC,
-                        (packet, ctx) -> com.wsteam.wandscape.content.colony.network.ColonyCreatePromptPacket
-                                .handleClient(packet))
-                // ── Transport start ──
-                .playToClient(
-                        TransportStartPacket.TYPE,
-                        TransportStartPacket.STREAM_CODEC,
-                        (packet, ctx) -> ctx.enqueueWork(() -> TransportStartPacket.handleClient(packet)))
-                // ── Magic circle cast ──
-                .playToClient(
-                        MagicCircleCastPacket.TYPE,
-                        MagicCircleCastPacket.STREAM_CODEC,
-                        (packet, ctx) -> MagicCircleCastPacket.handleClient(packet))
-                // ── Particle burst (colored FX) ──
-                .playToClient(
-                        com.wsteam.wandscape.foundation.networking.ParticleBurstPacket.TYPE,
-                        com.wsteam.wandscape.foundation.networking.ParticleBurstPacket.STREAM_CODEC,
-                        (packet, ctx) -> com.wsteam.wandscape.foundation.networking.ParticleBurstPacket.handleClient(packet))
-                // ── Guide book (right-click to open tutorial home) ──
-                .playToClient(
-                        GuideBookOpenPacket.TYPE,
-                        GuideBookOpenPacket.STREAM_CODEC,
-                        (packet, ctx) -> GuideBookOpenPacket.handleClient(packet))
-                // ── Guide progress (onboarding persistence) ──
-                .playToClient(
-                        com.wsteam.wandscape.content.tutorial.network.TutorialProgressSyncPacket.TYPE,
-                        com.wsteam.wandscape.content.tutorial.network.TutorialProgressSyncPacket.STREAM_CODEC,
-                        (packet, ctx) -> com.wsteam.wandscape.content.tutorial.network.TutorialProgressSyncPacket.handleClient(packet))
-                .playToServer(
-                        com.wsteam.wandscape.content.tutorial.network.TutorialProgressUpdatePacket.TYPE,
-                        com.wsteam.wandscape.content.tutorial.network.TutorialProgressUpdatePacket.STREAM_CODEC,
-                        (packet, ctx) -> com.wsteam.wandscape.content.tutorial.network.TutorialProgressUpdatePacket.handleServer(packet,
-                                (net.minecraft.server.level.ServerPlayer) ctx.player()))
-                // ── Spline Road Editor ──
-                .playToClient(
-                        RoadStudioEnterPacket.TYPE,
-                        RoadStudioEnterPacket.STREAM_CODEC,
-                        RoadStudioEnterPacket::handleClient)
-                // ── Task & Mage Management Panel ──
-                .playToServer(
-                        com.wsteam.wandscape.content.task.network.TaskPanelSubscribePacket.TYPE,
-                        com.wsteam.wandscape.content.task.network.TaskPanelSubscribePacket.STREAM_CODEC,
-                        (packet, ctx) -> com.wsteam.wandscape.content.task.network.TaskPanelSubscribePacket
-                                .handleServer(packet, (net.minecraft.server.level.ServerPlayer) ctx.player()))
-                .playToClient(
-                        com.wsteam.wandscape.content.task.network.TaskManagementSyncPacket.TYPE,
-                        com.wsteam.wandscape.content.task.network.TaskManagementSyncPacket.STREAM_CODEC,
-                        (packet, ctx) -> com.wsteam.wandscape.content.task.network.TaskManagementSyncPacket
-                                .handleClient(packet))
-                .playToServer(
-                        com.wsteam.wandscape.content.task.network.TaskManagementActionPacket.TYPE,
-                        com.wsteam.wandscape.content.task.network.TaskManagementActionPacket.STREAM_CODEC,
-                        (packet, ctx) -> com.wsteam.wandscape.content.task.network.TaskManagementActionPacket
-                                .handleServer(packet, (net.minecraft.server.level.ServerPlayer) ctx.player()))
-                .playToServer(
-                        com.wsteam.wandscape.content.task.network.MageModeActionPacket.TYPE,
-                        com.wsteam.wandscape.content.task.network.MageModeActionPacket.STREAM_CODEC,
-                        (packet, ctx) -> com.wsteam.wandscape.content.task.network.MageModeActionPacket
-                                .handleServer(packet, (net.minecraft.server.level.ServerPlayer) ctx.player()))
-                // ── NPC 装备界面重开（饰品屏返回按钮） ──
-                .playToServer(
-                        NpcOpenEquipPacket.TYPE,
-                        NpcOpenEquipPacket.STREAM_CODEC,
-                        (packet, ctx) -> NpcOpenEquipPacket.handleServer(packet, ctx))
-                // ── 设置中心配置同步 ──
-                .playToServer(
-                        com.wsteam.wandscape.foundation.ui.settings.network.ConfigUpdatePacket.TYPE,
-                        com.wsteam.wandscape.foundation.ui.settings.network.ConfigUpdatePacket.STREAM_CODEC,
-                        (packet, ctx) -> com.wsteam.wandscape.foundation.ui.settings.network.ConfigUpdatePacket
-                                .handleServer(packet, (net.minecraft.server.level.ServerPlayer) ctx.player()))
-                .playToClient(
-                        com.wsteam.wandscape.foundation.ui.settings.network.ConfigSyncPacket.TYPE,
-                        com.wsteam.wandscape.foundation.ui.settings.network.ConfigSyncPacket.STREAM_CODEC,
-                        (packet, ctx) -> com.wsteam.wandscape.foundation.ui.settings.network.ConfigSyncPacket
-                                .handleClient(packet));
-        // Curios 兼容：法师饰品栏打开请求（仅 Curios 加载时在实现类内注册；无 Curios 时此处不引用任何 Curios 类）
-        com.wsteam.wandscape.compat.curios.CuriosCompat.registerPayloads(registrar);
+        PayloadRegistry.register(event);
     }
 
     private void onEntityAttributeCreation(EntityAttributeCreationEvent event) {
@@ -1336,9 +907,9 @@ public class Wandscape {
                         configIndex, chunkIndex, totalChunks, totalConfigs,
                         java.util.Arrays.copyOfRange(compressed, off, off + len));
                 if (event.getPlayer() != null) {
-                    net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(event.getPlayer(), pkt);
+                    Net.toPlayer(event.getPlayer(), pkt);
                 } else {
-                    net.neoforged.neoforge.network.PacketDistributor.sendToAllPlayers(pkt);
+                    Net.toAll(pkt);
                 }
                 chunkIndex++;
                 totalChunksSent++;
@@ -1387,9 +958,9 @@ public class Wandscape {
                             fileIndex, chunkIndex, totalChunks, filesToSync.size(),
                             java.util.Arrays.copyOfRange(compressed, off, off + len));
                     if (event.getPlayer() != null) {
-                        net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(event.getPlayer(), pkt);
+                        Net.toPlayer(event.getPlayer(), pkt);
                     } else {
-                        net.neoforged.neoforge.network.PacketDistributor.sendToAllPlayers(pkt);
+                        Net.toAll(pkt);
                     }
                     chunkIndex++;
                     syncChunks++;

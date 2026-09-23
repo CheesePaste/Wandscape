@@ -4,6 +4,7 @@ import com.wsteam.wandscape.ClientConfig;
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.content.colony.settings.ColonySettings;
 import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.networking.Net;
 import com.wsteam.wandscape.foundation.ui.I18n;
 import com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState;
 import com.wsteam.wandscape.foundation.util.NameStyle;
@@ -440,7 +441,7 @@ public final class SettingsRegistry {
             try {
                 net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
                 if (mc != null && mc.getConnection() != null) {
-                    net.neoforged.neoforge.network.PacketDistributor.sendToServer(
+                    Net.toServer(
                             new com.wsteam.wandscape.foundation.ui.settings.network.ConfigUpdatePacket("building.disabledPackages", ""));
                 }
             } catch (Throwable ignored) {}
@@ -459,7 +460,7 @@ public final class SettingsRegistry {
             String pkgId = pkg.id();
             String rawName = pkg.name();
             String title = (rawName != null && !rawName.isEmpty())
-                    ? I18n.string(rawName, rawName)
+                    ? I18n.datapackName(rawName, rawName, pkg.names()).getString()
                     : pkgId;
             items.add(new SettingItem.BooleanSetting(
                     "building.package." + pkgId,

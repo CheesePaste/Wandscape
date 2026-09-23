@@ -11,7 +11,6 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.UUID;
 
@@ -40,8 +39,7 @@ public record OpenWarehousePacket(BlockPos buildingPos)
     }
 
     /** Server-side handler. */
-    public static void handleServer(OpenWarehousePacket pkt, IPayloadContext ctx) {
-        if (!(ctx.player() instanceof ServerPlayer sp)) return;
+    public static void handleServer(OpenWarehousePacket pkt, ServerPlayer sp) {
 
         sp.getServer().execute(() -> {
             var level = sp.serverLevel();

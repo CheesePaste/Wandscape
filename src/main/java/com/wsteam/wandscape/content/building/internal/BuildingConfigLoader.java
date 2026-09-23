@@ -310,7 +310,7 @@ public final class BuildingConfigLoader {
 
         // Ensure package exists in packages map
         packages.computeIfAbsent(pkgId, k -> new BuildingPackage(
-                k, k, "", "", "1.0.0", "minecraft:stone_bricks", 100, List.of()
+                k, k, Map.of(), "", Map.of(), "", "1.0.0", "minecraft:stone_bricks", 100, List.of()
         ));
 
         Log.info(TAG, "loaded BuildingConfig: {} [package={}] (category={}, blocks={})",

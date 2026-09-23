@@ -239,7 +239,7 @@ public record ScannerExportPacket(BlockPos pos, String targetPackage) implements
         JsonObject root = new JsonObject();
         root.addProperty("id", id);
         root.addProperty("package_id", targetPkg);
-        root.addProperty("display_name", scanner.getDisplayName());
+        writeDisplayName(root, scanner.getDisplayName(), player);
         if (scanner.getCreator() != null && !scanner.getCreator().isBlank()) {
             root.addProperty("creator", scanner.getCreator());
         }
@@ -514,7 +514,7 @@ public record ScannerExportPacket(BlockPos pos, String targetPackage) implements
 
         JsonObject root = new JsonObject();
         root.addProperty("id", id);
-        root.addProperty("display_name", name);
+        writeDisplayName(root, name, player);
         root.addProperty("category", "road_preset");
 
         JsonArray blocksArr = new JsonArray();
@@ -543,6 +543,24 @@ public record ScannerExportPacket(BlockPos pos, String targetPackage) implements
             player.sendSystemMessage(I18n.name("message.wandscape.scanner.export_road_fail",
                     "§cFailed to export road preset: %s", e.getMessage()));
         }
+    }
+
+    /**
+     * 导出时把名字写成"带语言标记"的对象形态（{@code {"zh_cn": "茶馆"}}），而不是裸字符串。
+     * 导出的那一刻只有导出者自己的语言是已知的，标出来之后作者补别的语言只要加一个键，
+     * 客户端就会按各自的语言挑（见 {@code LocalizedText}）。名字为空时保持裸字符串。
+     */
+    private static void writeDisplayName(JsonObject root, String name, ServerPlayer player) {
+        if (name == null || name.isBlank()) {
+            root.addProperty("display_name", name != null ? name : "");
+            return;
+        }
+        String locale = (player != null && player.getLanguage() != null && !player.getLanguage().isBlank())
+                ? player.getLanguage()
+                : com.wsteam.wandscape.foundation.util.LocalizedText.FALLBACK_LOCALE;
+        JsonObject localized = new JsonObject();
+        localized.addProperty(locale, name);
+        root.add("display_name", localized);
     }
 
     private static String sanitizeFileName(String id) {

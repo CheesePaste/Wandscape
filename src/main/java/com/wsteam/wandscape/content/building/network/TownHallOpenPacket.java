@@ -1,4 +1,5 @@
 package com.wsteam.wandscape.content.building.network;
+import com.wsteam.wandscape.foundation.networking.ClientPayloadDispatcher;
 import com.wsteam.wandscape.foundation.util.NameStyle;
 
 import net.minecraft.core.BlockPos;
@@ -8,7 +9,6 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 
 import java.util.UUID;
-import java.util.function.Consumer;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
 /**
@@ -38,12 +38,10 @@ public record TownHallOpenPacket(BlockPos buildingPos, UUID colonyId,
     @Override
     public Type<? extends CustomPacketPayload> type() { return TYPE; }
 
-    private static Consumer<TownHallOpenPacket> clientHandler;
 
-    public static void setClientHandler(Consumer<TownHallOpenPacket> handler) { clientHandler = handler; }
 
     public static void handleClient(TownHallOpenPacket packet) {
-        if (clientHandler != null) clientHandler.accept(packet);
+        ClientPayloadDispatcher.dispatch(packet);
     }
 
     static void write(RegistryFriendlyByteBuf buf, TownHallOpenPacket pkt) {

@@ -3,11 +3,11 @@ package com.wsteam.wandscape.content.command;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.tree.CommandNode;
 import com.wsteam.wandscape.content.road.network.RoadStudioEnterPacket;
+import com.wsteam.wandscape.foundation.networking.Net;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
  * Command for the native self-drawn Road Studio overlay.
@@ -40,7 +40,7 @@ public final class RoadStudioCommand {
         }
 
         // Direct entry to native Road Studio overlay (NO ImGui!)
-        PacketDistributor.sendToPlayer(player, new RoadStudioEnterPacket(true));
+        Net.toPlayer(player, new RoadStudioEnterPacket(true));
 
         ctx.getSource().sendSuccess(() -> Component.literal(
                 "§aEntered Road Studio (Native UI)!\n" +
@@ -59,7 +59,7 @@ public final class RoadStudioCommand {
             return 0;
         }
 
-        PacketDistributor.sendToPlayer(player, new RoadStudioEnterPacket(false));
+        Net.toPlayer(player, new RoadStudioEnterPacket(false));
         ctx.getSource().sendSuccess(() -> Component.literal("§eExited Road Studio."), true);
         return 1;
     }

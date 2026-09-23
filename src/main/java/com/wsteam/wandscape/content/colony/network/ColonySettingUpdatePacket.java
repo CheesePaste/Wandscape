@@ -3,13 +3,13 @@ package com.wsteam.wandscape.content.colony.network;
 import com.wsteam.wandscape.api.WandscapeApis;
 import com.wsteam.wandscape.content.colony.settings.ColonySettings;
 import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.networking.Net;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.UUID;
 
@@ -61,7 +61,7 @@ public record ColonySettingUpdatePacket(String key, String value) implements Cus
             if (colonyId == null) return;
             var snapshot = statusApi.getSnapshotSafe(colonyId);
             if (snapshot.colonyId() == null) return;
-            PacketDistributor.sendToPlayer(player, ColonyStatsSyncPacket.fromSnapshot(snapshot));
+            Net.toPlayer(player, ColonyStatsSyncPacket.fromSnapshot(snapshot));
         } catch (Throwable t) {
             Log.warn(TAG, "Failed to push colony settings back to {}: {}",
                     player.getGameProfile().getName(), t.getMessage());

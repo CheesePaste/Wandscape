@@ -10,12 +10,12 @@ import com.wsteam.wandscape.content.element.event.ElementBalanceChangedEvent;
 import com.wsteam.wandscape.content.tourist.event.TouristArrivedEvent;
 import com.wsteam.wandscape.content.tourist.event.TouristDepartedEvent;
 import com.wsteam.wandscape.api.WandscapeApis;
+import com.wsteam.wandscape.foundation.networking.Net;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
-import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
 import java.util.Set;
@@ -112,7 +112,7 @@ public final class PanelStateTracker {
             // 无镇玩家收不到任何殖民地数据。绝不退化为就近殖民地。
             UUID playerColony = colonyApi.getColonyByFounder(playerId);
             if (snap.colonyId() != null && snap.colonyId().equals(playerColony)) {
-                PacketDistributor.sendToPlayer(player, ColonyStatsSyncPacket.fromSnapshot(snap));
+                Net.toPlayer(player, ColonyStatsSyncPacket.fromSnapshot(snap));
             }
         }
     }

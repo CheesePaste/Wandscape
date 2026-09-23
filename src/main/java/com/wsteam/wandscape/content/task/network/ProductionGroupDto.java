@@ -9,10 +9,15 @@ import java.util.UUID;
 /**
  * DTO representing a production building group (e.g. Workstation, Magic Table, Node)
  * and its associated queue of production items.
+ *
+ * @param buildingName   服务端解析的无语言兜底名，客户端解析不出来时兜底用
+ * @param buildingTypeId 建筑类型 id，客户端拿它按本地语言取名（{@code I18n#buildingName}）；
+ *                       只有实例 UUID 是认不出名字的
  */
 public record ProductionGroupDto(
         UUID buildingId,
         String buildingName,
+        String buildingTypeId,
         String category,
         int x,
         int y,
@@ -26,6 +31,7 @@ public record ProductionGroupDto(
         if (dto.buildingId != null) buf.writeUUID(dto.buildingId);
 
         buf.writeUtf(dto.buildingName != null ? dto.buildingName : "");
+        buf.writeUtf(dto.buildingTypeId != null ? dto.buildingTypeId : "");
         buf.writeUtf(dto.category != null ? dto.category : "workstation");
         buf.writeVarInt(dto.x);
         buf.writeVarInt(dto.y);
@@ -43,6 +49,7 @@ public record ProductionGroupDto(
     public static ProductionGroupDto read(RegistryFriendlyByteBuf buf) {
         UUID buildingId = buf.readBoolean() ? buf.readUUID() : null;
         String buildingName = buf.readUtf();
+        String buildingTypeId = buf.readUtf();
         String category = buf.readUtf();
         int x = buf.readVarInt();
         int y = buf.readVarInt();
@@ -55,6 +62,7 @@ public record ProductionGroupDto(
             items.add(ProductionItemDto.read(buf));
         }
 
-        return new ProductionGroupDto(buildingId, buildingName, category, x, y, z, activeWorkers, items);
+        return new ProductionGroupDto(buildingId, buildingName, buildingTypeId,
+                category, x, y, z, activeWorkers, items);
     }
 }

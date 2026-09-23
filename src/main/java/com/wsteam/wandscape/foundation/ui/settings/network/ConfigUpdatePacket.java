@@ -2,6 +2,7 @@ package com.wsteam.wandscape.foundation.ui.settings.network;
 
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.networking.Net;
 import com.wsteam.wandscape.foundation.ui.I18n;
 import com.wsteam.wandscape.foundation.ui.settings.SettingItem;
 import com.wsteam.wandscape.foundation.ui.settings.SettingsRegistry;
@@ -10,7 +11,6 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.Arrays;
 import java.util.List;
@@ -75,7 +75,7 @@ public record ConfigUpdatePacket(String path, String value) implements CustomPac
             Log.info(TAG, "Config {} updated to {} by player {}",
                     packet.path, packet.value, player.getName().getString());
             // 广播的是服务端落盘后的值，不是客户端报上来的值：夹取/取整只在这里发生一次，两端才不会各持一份。
-            PacketDistributor.sendToAllPlayers(new ConfigSyncPacket(packet.path, readConfig(packet.path), true));
+            Net.toAll(new ConfigSyncPacket(packet.path, readConfig(packet.path), true));
         } else {
             // 未知路径 / 客户端专属项 / 值解析失败：同样回吐权威值，客户端据此撤回。
             reject(player, packet.path);
@@ -84,7 +84,7 @@ public record ConfigUpdatePacket(String path, String value) implements CustomPac
 
     /** 拒绝一次修改：只回吐给发起者，带上服务端当前的权威值让他还原。 */
     private static void reject(ServerPlayer player, String path) {
-        PacketDistributor.sendToPlayer(player, new ConfigSyncPacket(path, readConfig(path), false));
+        Net.toPlayer(player, new ConfigSyncPacket(path, readConfig(path), false));
     }
 
     public static boolean applyConfig(String path, String value) {

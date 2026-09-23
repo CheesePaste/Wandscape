@@ -10,6 +10,7 @@ import com.wsteam.wandscape.content.magic.data.MagicDef;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.content.magic.network.MagicCircleCastPacket;
+import com.wsteam.wandscape.foundation.networking.Net;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
@@ -23,7 +24,6 @@ import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -138,7 +138,7 @@ public final class MagicSpellExecutors {
         UUID effectId = UUID.randomUUID();
 
         // 广播法阵在施法者脚下生成
-        PacketDistributor.sendToPlayersTrackingEntityAndSelf(npc,
+        Net.toTracking(npc,
                 new MagicCircleCastPacket(effectId, pos, new Vec3(0, 1, 0), circleId, npc.getUUID()));
 
         // 注册持续治疗任务（6秒=120t，每20t治疗 HEAL_BASE_AMOUNT × SPELL_POWER × 魔力强化 生命）：
@@ -226,7 +226,7 @@ public final class MagicSpellExecutors {
         UUID effectId = UUID.randomUUID();
 
         // 施法者脚下广播魔法阵
-        PacketDistributor.sendToPlayersTrackingEntityAndSelf(npc,
+        Net.toTracking(npc,
                 new MagicCircleCastPacket(effectId, pos, new Vec3(0, 1, 0), circleId, npc.getUUID()));
 
         // 连落 6 颗：按 1/6 持续时长逐颗发射，每颗发射时动态重选当时最近的敌对目标（不预分配落点）
@@ -256,7 +256,7 @@ public final class MagicSpellExecutors {
         UUID effectId = UUID.randomUUID();
 
         // 给自身播脚下石化魔法阵
-        PacketDistributor.sendToPlayersTrackingEntityAndSelf(npc,
+        Net.toTracking(npc,
                 new MagicCircleCastPacket(effectId, pos, new Vec3(0, 1, 0), circleId, npc.getUUID()));
 
         // 给自己施加 30 秒 (600 ticks) 石化 buff
@@ -286,7 +286,7 @@ public final class MagicSpellExecutors {
         UUID effectId = UUID.randomUUID();
 
         // 施法者脚下广播魔法阵
-        PacketDistributor.sendToPlayersTrackingEntityAndSelf(npc,
+        Net.toTracking(npc,
                 new MagicCircleCastPacket(effectId, pos, new Vec3(0, 1, 0), circleId, npc.getUUID()));
 
         // 收集半径内所有敌对生物，施加三层 debuff（友军——含己方/同殖民地召唤物——不中招）
@@ -334,7 +334,7 @@ public final class MagicSpellExecutors {
         UUID effectId = UUID.randomUUID();
 
         // 自身脚下广播金色赐福法阵
-        PacketDistributor.sendToPlayersTrackingEntityAndSelf(npc,
+        Net.toTracking(npc,
                 new MagicCircleCastPacket(effectId, pos, new Vec3(0, 1, 0), circleId, npc.getUUID()));
 
         // 护甲 +4 + 魔力强化 I（+20% 魔法伤害）+ 迅捷 I（30 秒）。
@@ -389,7 +389,7 @@ public final class MagicSpellExecutors {
         UUID effectId = UUID.randomUUID();
 
         // 施法者脚下广播感化法阵（跟随 NPC，范围覆盖最近几个敌人）
-        PacketDistributor.sendToPlayersTrackingEntityAndSelf(npc,
+        Net.toTracking(npc,
                 new MagicCircleCastPacket(effectId, pos, new Vec3(0, 1, 0), circleId, npc.getUUID()));
 
         int count = Math.min(CONVERSION_CHARM_COUNT, enemies.size());
@@ -438,7 +438,7 @@ public final class MagicSpellExecutors {
         UUID effectId = UUID.randomUUID();
 
         // 自身脚下广播深红背水法阵
-        PacketDistributor.sendToPlayersTrackingEntityAndSelf(npc,
+        Net.toTracking(npc,
                 new MagicCircleCastPacket(effectId, pos, new Vec3(0, 1, 0), circleId, npc.getUUID()));
 
         float armor = npc.getArmorValue();
@@ -468,7 +468,7 @@ public final class MagicSpellExecutors {
             case "heal" -> {
                 Vec3 pos = player.position();
                 UUID effectId = UUID.randomUUID();
-                PacketDistributor.sendToPlayersTrackingEntityAndSelf(player,
+                Net.toTracking(player,
                         new MagicCircleCastPacket(effectId, pos, new Vec3(0, 1, 0), circleId));
                 MagicEventHandler.addHealAura(new MagicEventHandler.HealAura(
                         level, pos, player, level.getGameTime() + (MagicCircleLoader.getSpec(circleId) != null ? MagicCircleLoader.getSpec(circleId).durationTicks : 120), HEAL_BASE_AMOUNT, 6.0));
@@ -478,7 +478,7 @@ public final class MagicSpellExecutors {
             case "meteor" -> {
                 Vec3 pos = player.position();
                 UUID effectId = UUID.randomUUID();
-                PacketDistributor.sendToPlayersTrackingEntityAndSelf(player,
+                Net.toTracking(player,
                         new MagicCircleCastPacket(effectId, pos, new Vec3(0, 1, 0), circleId));
 
                 float damage = def.effectDamage() != null ? def.effectDamage().floatValue() : METEOR_DEFAULT_DAMAGE;
@@ -506,7 +506,7 @@ public final class MagicSpellExecutors {
             case "petrification" -> {
                 Vec3 pos = player.position();
                 UUID effectId = UUID.randomUUID();
-                PacketDistributor.sendToPlayersTrackingEntityAndSelf(player,
+                Net.toTracking(player,
                         new MagicCircleCastPacket(effectId, pos, new Vec3(0, 1, 0), circleId));
                 player.addEffect(new MobEffectInstance(WandscapeEffects.PETRIFICATION, 600, 0));
                 level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.STONE_BREAK, SoundSource.NEUTRAL, 1.2f, 0.6f);
@@ -518,7 +518,7 @@ public final class MagicSpellExecutors {
                 Vec3 source = hand.add(dir.scale(1.0));
                 Vec3 targetPos = source.add(dir.scale(32.0));
                 UUID effectId = player.getUUID();
-                PacketDistributor.sendToPlayersTrackingEntityAndSelf(player,
+                Net.toTracking(player,
                         new MagicCircleCastPacket(effectId, source, dir, circleId));
                 MagicCastManager.schedule(level, effectId, source, targetPos, color,
                         MagicCaster.BEAM_SPAWN_DELAY, 120, null, null);
@@ -527,7 +527,7 @@ public final class MagicSpellExecutors {
             case "enfeeble_field" -> {
                 Vec3 pos = player.position();
                 UUID effectId = UUID.randomUUID();
-                PacketDistributor.sendToPlayersTrackingEntityAndSelf(player,
+                Net.toTracking(player,
                         new MagicCircleCastPacket(effectId, pos, new Vec3(0, 1, 0), circleId));
 
                 AABB box = player.getBoundingBox().inflate(5.8);
@@ -552,7 +552,7 @@ public final class MagicSpellExecutors {
             case "fortification" -> {
                 Vec3 pos = player.position();
                 UUID effectId = UUID.randomUUID();
-                PacketDistributor.sendToPlayersTrackingEntityAndSelf(player,
+                Net.toTracking(player,
                         new MagicCircleCastPacket(effectId, pos, new Vec3(0, 1, 0), circleId));
                 player.addEffect(new MobEffectInstance(WandscapeEffects.FORTIFICATION, 300, 0));
                 player.addEffect(new MobEffectInstance(WandscapeEffects.MAGIC_ENHANCE, 300, 0)); // 魔力强化 I（玩家暂无施法入口，仅显示；不保留力量）
@@ -566,7 +566,7 @@ public final class MagicSpellExecutors {
                 // 玩家感化：施法瞬间魅惑最近的 3 个敌对生物（同 NPC castConversion，受伤即解除）
                 Vec3 pos = player.position();
                 UUID effectId = UUID.randomUUID();
-                PacketDistributor.sendToPlayersTrackingEntityAndSelf(player,
+                Net.toTracking(player,
                         new MagicCircleCastPacket(effectId, pos, new Vec3(0, 1, 0), circleId));
 
                 AABB box = player.getBoundingBox().inflate(16.0);
@@ -589,7 +589,7 @@ public final class MagicSpellExecutors {
             case "desperation" -> {
                 Vec3 pos = player.position();
                 UUID effectId = UUID.randomUUID();
-                PacketDistributor.sendToPlayersTrackingEntityAndSelf(player,
+                Net.toTracking(player,
                         new MagicCircleCastPacket(effectId, pos, new Vec3(0, 1, 0), circleId));
                 float armor = player.getArmorValue();
                 int enhanceAmp = desperationEnhanceAmplifier(armor);
@@ -603,7 +603,7 @@ public final class MagicSpellExecutors {
             default -> {
                 Vec3 pos = player.position();
                 UUID effectId = UUID.randomUUID();
-                PacketDistributor.sendToPlayersTrackingEntityAndSelf(player,
+                Net.toTracking(player,
                         new MagicCircleCastPacket(effectId, pos, new Vec3(0, 1, 0), circleId));
                 level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.ENCHANTMENT_TABLE_USE, SoundSource.NEUTRAL, 1.0f, 1.0f);
                 yield true;

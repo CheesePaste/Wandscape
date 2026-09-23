@@ -6,6 +6,7 @@ import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.content.building.projection.data.BuildingSlot;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.api.WandscapeApis;
+import com.wsteam.wandscape.foundation.networking.Net;
 import com.wsteam.wandscape.foundation.ui.I18n;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -72,7 +73,7 @@ public record ProjectionEnterPacket() implements CustomPacketPayload {
             var metricsApi = WandscapeApis.getColonyStatusApiSilently();
             if (metricsApi != null) {
                 var snap = metricsApi.getSnapshot(colonyId);
-                net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player,
+                Net.toPlayer(player,
                         com.wsteam.wandscape.content.colony.network.ColonyStatsSyncPacket.fromSnapshot(snap));
             }
         }
@@ -88,7 +89,7 @@ public record ProjectionEnterPacket() implements CustomPacketPayload {
     }
 
     private static void sendResponse(ServerPlayer player, ProjectionEnterResponsePacket response) {
-        net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player, response);
+        Net.toPlayer(player, response);
     }
 
     // ── StreamCodec ──

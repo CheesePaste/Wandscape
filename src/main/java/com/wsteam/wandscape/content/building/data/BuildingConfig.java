@@ -6,6 +6,7 @@ import com.wsteam.wandscape.content.building.data.WonderConfig;
 import com.wsteam.wandscape.content.building.data.ShopConfig;
 import com.wsteam.wandscape.content.building.data.RelaxConfig;
 import com.wsteam.wandscape.content.tourist.data.Activity;
+import com.wsteam.wandscape.foundation.util.LocalizedText;
 
 import com.google.gson.*;
 import com.google.gson.annotations.SerializedName;
@@ -23,6 +24,11 @@ public record BuildingConfig(
         String id,
         @SerializedName("package_id") String packageId,
         @SerializedName("display_name") String displayName,
+        /**
+         * 来自同一个 {@code display_name} 键的对象形态，按语言给出名字；字符串形态时为空。
+         * {@link #displayName} 则是"无语言兜底值"，服务端自己用。见 {@link LocalizedText}。
+         */
+        Map<String, String> displayNames,
         @SerializedName("creator") String creator,
         String category,
         List<BlockOffset> pattern,
@@ -77,7 +83,7 @@ public record BuildingConfig(
             boolean deprecated,
             List<DecorationEntity> entities
     ) {
-        this(id, BuildingPackage.DEFAULT_ID, displayName, creator, category,
+        this(id, BuildingPackage.DEFAULT_ID, displayName, Map.of(), creator, category,
                 pattern, palette, blockIndices, blockNbt, comfort, magic, wonder,
                 unlockRequirement, boundary, blueprint, nodeConfig, decoration,
                 wonderConfig, shop, service, relax, atm, doorOffsets, interactSpots,
@@ -85,7 +91,7 @@ public record BuildingConfig(
     }
 
     public BuildingConfig withPackageId(String newPackageId) {
-        return new BuildingConfig(id, newPackageId, displayName, creator, category,
+        return new BuildingConfig(id, newPackageId, displayName, displayNames, creator, category,
                 pattern, palette, blockIndices, blockNbt, comfort, magic, wonder,
                 unlockRequirement, boundary, blueprint, nodeConfig, decoration,
                 wonderConfig, shop, service, relax, atm, doorOffsets, interactSpots,
@@ -93,7 +99,7 @@ public record BuildingConfig(
     }
 
     public BuildingConfig withIdAndPackageId(String newId, String newPackageId) {
-        return new BuildingConfig(newId, newPackageId, displayName, creator, category,
+        return new BuildingConfig(newId, newPackageId, displayName, displayNames, creator, category,
                 pattern, palette, blockIndices, blockNbt, comfort, magic, wonder,
                 unlockRequirement, boundary, blueprint, nodeConfig, decoration,
                 wonderConfig, shop, service, relax, atm, doorOffsets, interactSpots,
@@ -215,6 +221,17 @@ public record BuildingConfig(
     }
 
     /**
+     * 按语言取建筑名，回落链见 {@link LocalizedText}。
+     *
+     * <p>客户端渲染走 {@code I18n#buildingName}（它会先看本建筑有没有多语言声明）；
+     * 这里给服务端自己用——服务端拿不到可靠 locale，只在能拿到
+     * {@code ServerPlayer#getLanguage()} 的上屏路径上传，其余传 null 即得 {@link #displayName()}。
+     */
+    public String displayNameFor(@Nullable String locale) {
+        return LocalizedText.resolve(locale, displayNames, displayName, id);
+    }
+
+    /**
      * Custom Gson deserializer that applies defaults for missing optional sections.
      */
     public static class Deserializer implements JsonDeserializer<BuildingConfig> {
@@ -225,7 +242,10 @@ public record BuildingConfig(
 
             String id = getString(obj, "id", "");
             String packageId = getString(obj, "package_id", BuildingPackage.DEFAULT_ID);
-            String displayName = getString(obj, "display_name", "");
+            // display_name 两态：字符串 = 不分语言；对象 = 按语言。对象形态在名字解析里压过模组 lang 键。
+            JsonElement displayNameEl = obj.get("display_name");
+            String displayName = LocalizedText.literal(displayNameEl, "");
+            Map<String, String> displayNames = LocalizedText.parseLocaleMap(displayNameEl, id);
             String creator = getString(obj, "creator", "");
             String category = getString(obj, "category", "basic");
 
@@ -426,7 +446,7 @@ public record BuildingConfig(
                 entities = List.copyOf(ents);
             }
 
-            return new BuildingConfig(id, packageId, displayName, creator, category,
+            return new BuildingConfig(id, packageId, displayName, displayNames, creator, category,
                     pattern, palette, blockIndices, blockNbt,
                     comfort, magic, wonder,
                     unlockRequirement, boundary, blueprint, nodeConfig,

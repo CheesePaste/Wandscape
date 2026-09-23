@@ -1,13 +1,13 @@
 package com.wsteam.wandscape.foundation.networking;
 import com.wsteam.wandscape.content.task.ecs.World;
 
+import com.wsteam.wandscape.foundation.networking.ClientPayloadDispatcher;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.Vec3;
 
-import java.util.function.Consumer;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
 
@@ -21,8 +21,6 @@ public record ParticleBurstPacket(Vec3 pos, float r, float g, float b,
     public static final StreamCodec<RegistryFriendlyByteBuf, ParticleBurstPacket> STREAM_CODEC =
             StreamCodec.of(ParticleBurstPacket::write, ParticleBurstPacket::read);
 
-    private static Consumer<ParticleBurstPacket> clientHandler = packet -> {};
-    public static void setClientHandler(Consumer<ParticleBurstPacket> handler) { clientHandler = handler; }
 
     @Override
     public Type<? extends CustomPacketPayload> type() {
@@ -30,7 +28,7 @@ public record ParticleBurstPacket(Vec3 pos, float r, float g, float b,
     }
 
     public static void handleClient(ParticleBurstPacket packet) {
-        clientHandler.accept(packet);
+        ClientPayloadDispatcher.dispatch(packet);
     }
 
     static void write(RegistryFriendlyByteBuf buf, ParticleBurstPacket pkt) {

@@ -4,12 +4,12 @@ import com.wsteam.wandscape.content.items.compass.network.CompassTargetPacket;
 import com.wsteam.wandscape.content.colony.raid.RaidTownHall;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.api.WandscapeApis;
+import com.wsteam.wandscape.foundation.networking.Net;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import javax.annotation.Nullable;
 import java.util.UUID;
@@ -43,7 +43,7 @@ public final class CompassService {
     /** 推送玩家当前市政厅目标到客户端（供指南针指向 / tooltip 坐标）。 */
     public static void syncFor(ServerPlayer player) {
         GlobalPos target = resolveTownHall(player);
-        PacketDistributor.sendToPlayer(player, new CompassTargetPacket(target != null, target));
+        Net.toPlayer(player, new CompassTargetPacket(target != null, target));
     }
 
     /** 终极指南针右键：传送到自己殖民地的市政厅安全落点。 */

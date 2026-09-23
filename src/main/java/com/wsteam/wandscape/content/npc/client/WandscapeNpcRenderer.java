@@ -18,12 +18,11 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.HumanoidMobRenderer;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import com.wsteam.wandscape.content.items.magic.wand.item.WandItem;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.fml.ModList;
 import org.joml.Matrix4f;
@@ -221,24 +220,15 @@ public class WandscapeNpcRenderer extends HumanoidMobRenderer<WandscapeNpc, Huma
     }
 
     private float[] getWandColor(WandscapeNpc entity) {
-        ItemStack mainHand = entity.getMainHandItem();
-        if (!mainHand.isEmpty()) {
-            CustomData data = mainHand.get(DataComponents.CUSTOM_DATA);
-            if (data != null && data.contains("wand_color")) {
-                String hex = data.copyTag().getString("wand_color");
-                if (hex.length() == 7 && hex.charAt(0) == '#') {
-                    try {
-                        int argb = 0xFF000000 | Integer.parseInt(hex.substring(1), 16);
-                        return new float[] {
-                                ((argb >> 16) & 0xFF) / 255f,
-                                ((argb >> 8) & 0xFF) / 255f,
-                                (argb & 0xFF) / 255f
-                        };
-                    } catch (NumberFormatException ignored) {}
-                }
-            }
+        Integer argb = WandItem.colorArgb(entity.getMainHandItem());
+        if (argb == null) {
+            return DEFAULT_CAST_COLOR;
         }
-        return DEFAULT_CAST_COLOR;
+        return new float[] {
+                ((argb >> 16) & 0xFF) / 255f,
+                ((argb >> 8) & 0xFF) / 255f,
+                (argb & 0xFF) / 255f
+        };
     }
 
     private void spawnCastRay(WandscapeNpc entity) {

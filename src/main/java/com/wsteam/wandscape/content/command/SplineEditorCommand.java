@@ -3,11 +3,11 @@ package com.wsteam.wandscape.content.command;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.tree.CommandNode;
 import com.wsteam.wandscape.content.road.network.RoadStudioEnterPacket;
+import com.wsteam.wandscape.foundation.networking.Net;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
  * Commands to enter and exit the Spline Road Editor.
@@ -40,7 +40,7 @@ public final class SplineEditorCommand {
             return 0;
         }
 
-        PacketDistributor.sendToPlayer(player, new RoadStudioEnterPacket(true));
+        Net.toPlayer(player, new RoadStudioEnterPacket(true));
 
         ctx.getSource().sendSuccess(() -> Component.literal(
                 "§aEntered spline editor mode!\n" +
@@ -59,7 +59,7 @@ public final class SplineEditorCommand {
             return 0;
         }
 
-        PacketDistributor.sendToPlayer(player, new RoadStudioEnterPacket(false));
+        Net.toPlayer(player, new RoadStudioEnterPacket(false));
 
         ctx.getSource().sendSuccess(() -> Component.literal("§eExited spline editor mode."), true);
         return 1;

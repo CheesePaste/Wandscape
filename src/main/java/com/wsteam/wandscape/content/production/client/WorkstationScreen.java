@@ -11,6 +11,7 @@ import com.wsteam.wandscape.content.production.network.WorkstationDataPacket.Dec
 import com.wsteam.wandscape.content.production.network.WorkstationDataPacket.SynthesizeEntry;
 import com.wsteam.wandscape.content.element.data.ElementType;
 import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.networking.Net;
 import com.wsteam.wandscape.foundation.ui.I18n;
 import com.wsteam.wandscape.foundation.util.ItemKey;
 import com.wsteam.wandscape.foundation.ui.component.*;
@@ -25,7 +26,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -118,7 +118,7 @@ public class WorkstationScreen extends MedievalScreen {
     /** Send a REFRESH request to the server to get the current task queue. */
     private void requestQueueRefresh() {
         if (stationPos == null || stationPos.equals(BlockPos.ZERO)) return;
-        PacketDistributor.sendToServer(new TaskQueueModifyPacket(stationPos, "refresh", 0));
+        Net.toServer(new TaskQueueModifyPacket(stationPos, "refresh", 0));
     }
 
     private int queueRefreshCounter;
@@ -325,13 +325,13 @@ public class WorkstationScreen extends MedievalScreen {
         if (activeTab == 0) {
             DecomposableEntry sel = decomposeList.getSelected();
             if (sel == null || sel.count() <= 0) return;
-            PacketDistributor.sendToServer(new RequestProductionTaskPacket(
+            Net.toServer(new RequestProductionTaskPacket(
                     stationPos, "decompose", sel.itemId(), qty));
         } else {
             SynthesizeEntry sel = synthesizeList.getSelected();
             // Block submission only when recipe is locked by colony level
             if (sel == null || "colony".equals(sel.lockedReason())) return;
-            PacketDistributor.sendToServer(new RequestProductionTaskPacket(
+            Net.toServer(new RequestProductionTaskPacket(
                     stationPos, "synthesize", sel.recipeId(), qty));
         }
         // Refresh queue after submitting a new task
@@ -341,7 +341,7 @@ public class WorkstationScreen extends MedievalScreen {
     /** Open the colony warehouse to check remaining element counts. */
     private void onOpenWarehouse() {
         if (stationPos == null || stationPos.equals(BlockPos.ZERO)) return;
-        PacketDistributor.sendToServer(new OpenWarehousePacket(stationPos));
+        Net.toServer(new OpenWarehousePacket(stationPos));
     }
 
     // ── Task queue callbacks ──
@@ -349,19 +349,19 @@ public class WorkstationScreen extends MedievalScreen {
     private void onQueueDelete(int index) {
         if (stationPos == null || stationPos.equals(BlockPos.ZERO)) return;
         Log.info(TAG,"[TaskQueue] DELETE index={} pos={}", index, stationPos);
-        PacketDistributor.sendToServer(new TaskQueueModifyPacket(stationPos, "delete", index));
+        Net.toServer(new TaskQueueModifyPacket(stationPos, "delete", index));
     }
 
     private void onQueueMoveUp(int index) {
         if (stationPos == null || stationPos.equals(BlockPos.ZERO)) return;
         Log.info(TAG,"[TaskQueue] MOVE_UP index={} pos={}", index, stationPos);
-        PacketDistributor.sendToServer(new TaskQueueModifyPacket(stationPos, "move_up", index));
+        Net.toServer(new TaskQueueModifyPacket(stationPos, "move_up", index));
     }
 
     private void onQueueMoveDown(int index) {
         if (stationPos == null || stationPos.equals(BlockPos.ZERO)) return;
         Log.info(TAG,"[TaskQueue] MOVE_DOWN index={} pos={}", index, stationPos);
-        PacketDistributor.sendToServer(new TaskQueueModifyPacket(stationPos, "move_down", index));
+        Net.toServer(new TaskQueueModifyPacket(stationPos, "move_down", index));
     }
 
     /** Filter both lists by the search query, keeping the lists in sync with selection indexes. */

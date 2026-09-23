@@ -13,6 +13,7 @@ import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.content.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.content.npc.attributes.NpcAttributes;
 import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.networking.Net;
 import com.wsteam.wandscape.foundation.networking.ScreenFeedbackPacket;
 import com.wsteam.wandscape.foundation.registry.WandscapeConstants;
 import com.wsteam.wandscape.foundation.ui.I18n;
@@ -25,8 +26,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.MobSpawnType;
-import net.neoforged.neoforge.network.PacketDistributor;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.Random;
 import java.util.UUID;
@@ -55,8 +54,7 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
         return TYPE;
     }
 
-    public static void handleServer(TavernRecruitPacket pkt, IPayloadContext ctx) {
-        if (!(ctx.player() instanceof ServerPlayer sp)) return;
+    public static void handleServer(TavernRecruitPacket pkt, ServerPlayer sp) {
 
         sp.getServer().execute(() -> {
             ServerLevel level = sp.serverLevel();
@@ -137,7 +135,7 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
                             lvl, spPow, ws, cs, ar, spawnPos.toShortString()),
                     false);
 
-            PacketDistributor.sendToPlayer(sp,
+            Net.toPlayer(sp,
                     new TavernOpenPacket(pkt.buildingPos, colonyId,
                             tavernApi.getRecruitCount(colonyId),
                             tavernApi.getMageResumes(colonyId),
@@ -186,7 +184,7 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
         try {
             var tavernApi = com.wsteam.wandscape.api.WandscapeApis.getTavernApi();
             if (tavernApi != null) {
-                PacketDistributor.sendToPlayer(sp,
+                Net.toPlayer(sp,
                         new TavernOpenPacket(pkt.buildingPos, colonyId,
                                 tavernApi.getRecruitCount(colonyId),
                                 tavernApi.getMageResumes(colonyId),
@@ -222,7 +220,7 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
             }
 
             // Refresh the tavern screen with the updated resume list
-            PacketDistributor.sendToPlayer(sp,
+            Net.toPlayer(sp,
                     new TavernOpenPacket(pkt.buildingPos, colonyId,
                             tavernApi.getRecruitCount(colonyId),
                             tavernApi.getMageResumes(colonyId),

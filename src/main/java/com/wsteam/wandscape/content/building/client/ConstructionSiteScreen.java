@@ -4,6 +4,7 @@ import com.wsteam.wandscape.content.building.network.ConstructionSiteDataPacket;
 import com.wsteam.wandscape.content.building.network.ConstructionSiteDataPacket.MaterialEntry;
 import com.wsteam.wandscape.content.building.projection.network.BuildingActionPacket;
 import com.wsteam.wandscape.content.road.network.RoadWithdrawPacket;
+import com.wsteam.wandscape.foundation.networking.Net;
 import com.wsteam.wandscape.foundation.ui.I18n;
 import com.wsteam.wandscape.foundation.ui.component.MedievalButton;
 import com.wsteam.wandscape.foundation.ui.component.MedievalScreen;
@@ -16,7 +17,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -143,9 +143,9 @@ public class ConstructionSiteScreen extends MedievalScreen {
     private void onWithdraw() {
         if (buildingId == null) return;
         if (kind == ConstructionSiteDataPacket.KIND_ROAD) {
-            PacketDistributor.sendToServer(new RoadWithdrawPacket(buildingId));
+            Net.toServer(new RoadWithdrawPacket(buildingId));
         } else {
-            PacketDistributor.sendToServer(new BuildingActionPacket(buildingId, "cancel"));
+            Net.toServer(new BuildingActionPacket(buildingId, "cancel"));
         }
         Minecraft.getInstance().setScreen(null);
     }

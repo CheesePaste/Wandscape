@@ -4,13 +4,14 @@ import com.wsteam.wandscape.content.building.internal.BuildingRepairHandler;
 import com.wsteam.wandscape.content.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.content.building.internal.BuildingState;
 import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.ui.I18n;
 import com.wsteam.wandscape.api.WandscapeApis;
+import com.wsteam.wandscape.foundation.networking.Net;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.UUID;
 
@@ -55,20 +56,30 @@ public record BuildingActionPacket(UUID buildingId, String action) implements Cu
 
         var api = WandscapeApis.getBuildingApi();
 
+        // 名字按玩家上报的语言挑——服务端只有这一条按语言取名的路径，其余服务端用途
+        // （日志、任务参数）都吃 displayName() 那个无语言兜底值。
         String name = state.getDisplayName();
+        var config = com.wsteam.wandscape.content.building.internal.BuildingConfigLoader
+                .getInstance().get(state.getBuildingTypeId());
+        if (config != null) {
+            name = config.displayNameFor(player.getLanguage());
+        }
+
         switch (packet.action()) {
             case "destroy" -> {
                 var reason = api.demolishBlockReason(packet.buildingId());
                 if (reason != null) {
                     player.displayClientMessage(
-                            net.minecraft.network.chat.Component.literal("§c[建筑] 无法拆除「" + name + "」：").append(reason), true);
+                            I18n.name("message.wandscape.building.demolish_blocked",
+                                    "§c[建筑] 无法拆除「%s」：", name).append(reason), true);
                     Log.warn(TAG, "Player {} blocked demolition of {} ({}) — last {} building protected",
                             player.getGameProfile().getName(), state.getBuildingTypeId(),
                             packet.buildingId(), state.getCategory());
                 } else {
                     api.demolishBuilding(packet.buildingId());
                     player.displayClientMessage(
-                            net.minecraft.network.chat.Component.literal("§c[建筑] 正在拆除「" + name + "」... 已下发拆除任务"), true);
+                            I18n.name("message.wandscape.building.demolishing",
+                                    "§c[建筑] 正在拆除「%s」... 已下发拆除任务", name), true);
                     Log.info(TAG, "Player {} initiated demolition of {} ({}) at {}",
                             player.getGameProfile().getName(), state.getBuildingTypeId(),
                             packet.buildingId(), state.getAnchor());
@@ -78,12 +89,14 @@ public record BuildingActionPacket(UUID buildingId, String action) implements Cu
                 boolean ok = BuildingRepairHandler.triggerRepair(player.level(), packet.buildingId());
                 if (ok) {
                     player.displayClientMessage(
-                            net.minecraft.network.chat.Component.literal("§a[建筑] 正在维修「" + name + "」... 已下发修复任务"), true);
+                            I18n.name("message.wandscape.building.repairing",
+                                    "§a[建筑] 正在维修「%s」... 已下发修复任务", name), true);
                     Log.info(TAG, "Player {} triggered repair for {} ({})",
                             player.getGameProfile().getName(), state.getBuildingTypeId(), packet.buildingId());
                 } else {
                     player.displayClientMessage(
-                            net.minecraft.network.chat.Component.literal("§e[建筑]「" + name + "」当前无需维修"), true);
+                            I18n.name("message.wandscape.building.repair_failed",
+                                    "§e[建筑]「%s」当前无需维修", name), true);
                     Log.warn(TAG, "Player {} tried to repair {} ({}) but repair failed",
                             player.getGameProfile().getName(), state.getBuildingTypeId(), packet.buildingId());
                 }
@@ -93,7 +106,8 @@ public record BuildingActionPacket(UUID buildingId, String action) implements Cu
                 var reason = api.demolishBlockReason(packet.buildingId());
                 if (reason != null) {
                     player.displayClientMessage(
-                            net.minecraft.network.chat.Component.literal("§c[建筑] 无法撤销「" + name + "」的建造：").append(reason), true);
+                            I18n.name("message.wandscape.building.cancel_blocked",
+                                    "§c[建筑] 无法撤销「%s」的建造：", name).append(reason), true);
                     Log.warn(TAG, "Player {} blocked cancel of {} ({}) — last {} building protected",
                             player.getGameProfile().getName(), state.getBuildingTypeId(),
                             packet.buildingId(), state.getCategory());
@@ -101,12 +115,14 @@ public record BuildingActionPacket(UUID buildingId, String action) implements Cu
                     boolean ok = api.cancelBuilding(packet.buildingId());
                     if (ok) {
                         player.displayClientMessage(
-                                net.minecraft.network.chat.Component.literal("§e[建筑] 已撤销「" + name + "」的建造"), true);
+                                I18n.name("message.wandscape.building.cancelled",
+                                        "§e[建筑] 已撤销「%s」的建造", name), true);
                         Log.info(TAG, "Player {} cancelled under-construction building {} ({})",
                                 player.getGameProfile().getName(), state.getBuildingTypeId(), packet.buildingId());
                     } else {
                         player.displayClientMessage(
-                                net.minecraft.network.chat.Component.literal("§c[建筑] 无法撤销「" + name + "」的建造"), true);
+                                I18n.name("message.wandscape.building.cancel_failed",
+                                        "§c[建筑] 无法撤销「%s」的建造", name), true);
                         Log.warn(TAG, "Player {} tried to cancel {} ({}) but it cannot be cancelled",
                                 player.getGameProfile().getName(), state.getBuildingTypeId(), packet.buildingId());
                     }
@@ -119,7 +135,7 @@ public record BuildingActionPacket(UUID buildingId, String action) implements Cu
         var updatedState = sd.getBuilding(packet.buildingId());
         if (updatedState != null) {
             var updatedPkt = BuildingDebugRequestPacket.buildResponse(player.level(), updatedState);
-            PacketDistributor.sendToPlayer(player, updatedPkt);
+            Net.toPlayer(player, updatedPkt);
         }
     }
 

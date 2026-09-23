@@ -12,6 +12,7 @@ import com.wsteam.wandscape.content.building.scanner.client.gizmo.ScannerGizmoSt
 import com.wsteam.wandscape.content.building.scanner.network.ScannerExportPacket;
 import com.wsteam.wandscape.content.building.scanner.network.ScannerSyncPacket;
 import com.wsteam.wandscape.content.building.scanner.network.ScannerValuePacket;
+import com.wsteam.wandscape.foundation.networking.Net;
 import com.wsteam.wandscape.foundation.ui.I18n;
 import com.wsteam.wandscape.foundation.ui.component.MedievalScreen;
 import com.wsteam.wandscape.foundation.ui.theme.MedievalColors;
@@ -24,7 +25,6 @@ import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -1270,7 +1270,7 @@ public class CreativeScannerScreen extends MedievalScreen {
             scanResult = I18n.name("gui.wandscape.scanner.result_need_id", "§c导出失败: 请先在属性配置页设置建筑 ID！");
             return;
         }
-        PacketDistributor.sendToServer(new ScannerExportPacket(scanner.getBlockPos(), scanner.getPackageId()));
+        Net.toServer(new ScannerExportPacket(scanner.getBlockPos(), scanner.getPackageId()));
         showFeedback(I18n.name("gui.wandscape.scanner.result_export_started", "§a已发起导出与热注册: %s (包: %s)！", id, scanner.getPackageId()), 0xFF55FF55);
         scanResult = I18n.name("gui.wandscape.scanner.result_export_started", "§a已发起导出与热注册: %s [包: %s] (详见游戏聊天区)", id, scanner.getPackageId());
     }
@@ -1283,7 +1283,7 @@ public class CreativeScannerScreen extends MedievalScreen {
             scanResult = I18n.name("gui.wandscape.scanner.result_no_boundary", "§c未定义 3D 边界。");
             return;
         }
-        PacketDistributor.sendToServer(new ScannerValuePacket(scanner.getBlockPos()));
+        Net.toServer(new ScannerValuePacket(scanner.getBlockPos()));
         showFeedback(I18n.name("gui.wandscape.scanner.result_value_started", "§a已发起价值估算，请查看聊天区"), 0xFF55FF55);
         scanResult = I18n.name("gui.wandscape.scanner.result_value_started", "§a已发起区域元素价值计算，结果已输出到聊天区。");
     }
@@ -1294,7 +1294,7 @@ public class CreativeScannerScreen extends MedievalScreen {
             scanner.setCategory("custom");
         }
         CompoundTag tag = scanner.saveWithoutMetadata(minecraft.level.registryAccess());
-        PacketDistributor.sendToServer(new ScannerSyncPacket(scanner.getBlockPos(), tag));
+        Net.toServer(new ScannerSyncPacket(scanner.getBlockPos(), tag));
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
