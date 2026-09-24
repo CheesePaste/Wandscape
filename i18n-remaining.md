@@ -3,7 +3,7 @@
 > 范围：只列**玩家能看见**的未翻译文案。指令回执（`content/command/**`）、日志、
 > 配置注释一律不在本单内（见 §C）。
 > 本轮已修：法师小屋、共享 `MedievalScreen`、道路工坊面板与预设名、
-> `ColonyOwnership.deny` 越权提示。
+> `ColonyOwnership.deny` 越权提示、§A 的 12 个缺失界面/分类键。
 
 ## 0. 机制与三条硬规矩
 
@@ -22,7 +22,7 @@ I18n.string("...", "中文兜底", args)                        // 返回 String
 **lang 文件**：`src/main/resources/assets/wandscape/lang/{en_us,zh_cn}.json`
 - 两份键集必须完全一致，严格按字母序，2 空格缩进，末尾无逗号。
 - `§` 颜色码直接写在值里（如 `"§aRoad withdrawn"`）。
-- 当前 2319 键。
+- 当前 2331 键。
 
 **规矩 1 — 占位符只写 `%s`。** lang 值里的 `%d` 会被 MC 加载时归一化，而 **Java 兜底串不会**；
 在 Java 兜底里写 `%d` 会直接显示字面量。一律用 `%s`（`%1$s` 这类位置参数同理）。
@@ -35,7 +35,7 @@ I18n.string("...", "中文兜底", args)                        // 返回 String
   | 法师小屋空态说明（居中） | ≈ 186px（≈ 31 ASCII 字符） |
   | 法师小屋指派页右栏 | ≈ 134px（≈ 22 ASCII 字符） |
   | 道路工坊面板 | 屏宽 × 0.32，最小 × 0.22（≈ 190 ~ 300px） |
-- **头顶气泡（§A3）最敏感**：气泡框按文本自动撑开，长英文会糊住半个屏幕。
+- **头顶气泡（§A1）最敏感**：气泡框按文本自动撑开，长英文会糊住半个屏幕。
   目标 **≤ 16 个 ASCII 字符**；超了就**别译那一条**（改写得更短、或整条删掉，
   气泡池少一条没有任何功能影响）。
 
@@ -66,41 +66,7 @@ private static String title(String key, String fallback) {                 // �
 
 ## A. 只需补 lang 键（零代码改动）
 
-### A1. 2 个缺失的界面键
-
-键被代码引用了但 lang 里没有，玩家看到的是中文兜底。直接补进两份 lang：
-
-```json
-"gui.wandscape.constructionsite.withdraw": "Withdraw",
-"gui.wandscape.roadstudio.array_preview": "Enable real-time 3D array preview",
-```
-
-对应中文：`"撤回"`、`"预览 3D 阵列生成结果"`。
-
-> 另有 4 个 `message.wandscape.command.magic_*`（`magic_cd_cleared` / `magic_freecast_status` /
-> `magic_freecast_toggled` / `magic_mana_filled`）同样缺失，但属**指令回执**，按指示本轮不做。
-
-### A2. 10 个建筑分类键
-
-`CreativeScannerScreen` 的 `CategoryDef` 已经写好了键，只是 lang 没这几条 ——
-补上即可，**不用改代码**。补完顺带让建筑信息 tooltip 的分类名也跟着变好（`MedievalScreen` 用的是同一套键）。
-
-| 键 | en | zh |
-| --- | --- | --- |
-| `category.wandscape.basic` | Basic | 基础建筑 |
-| `category.wandscape.government` | Government | 政务市政 |
-| `category.wandscape.storage` | Storage | 仓库存储 |
-| `category.wandscape.workstation` | Workstations | 工作工坊 |
-| `category.wandscape.crafting_station` | Crafting | 物品合成 |
-| `category.wandscape.magic_station` | Magic Workshops | 魔法工坊 |
-| `category.wandscape.tavern` | Taverns | 冒险酒馆 |
-| `category.wandscape.wonder` | Wonders | 奇观奇迹 |
-| `category.wandscape.altar` | Elemental Altars | 元素祭坛 |
-| `category.wandscape.custom` | Custom | 自定义 |
-
-已有的 6 个别重复加：`node` / `shop` / `service` / `decoration` / `relax` / `atm`。
-
-### A3. 241 个头顶气泡键 —— 最高优先，且长度最敏感
+### A1. 241 个头顶气泡键 —— 最高优先，且长度最敏感
 
 `foundation/ui/bubble/AmbientTextPools.java` 的建筑/游客闲聊气泡**已经全部走
 `bubble(key, fallback)`**，键名也是现成的；缺的只是 lang 里的 241 条。
@@ -374,7 +340,7 @@ bubble.wandscape.npc.__fallback__.4	希望一切顺利
 | 966 | `未命名ID` | `gui.wandscape.scanner.…` |
 | 1199 | `§e目标包: ` | `message.wandscape.scanner.…` |
 
-（第 66-81 行的分类名与第 90-96 行的元素名是键缺失/已存在的**兜底串**，见 §A2 与 §1，不要在这里重复改。）
+（第 66-81 行的分类名与第 90-96 行的元素名是**已存在的兜底串**，见 §1，不要在这里重复改。）
 
 ### B2. 道路网络包回执（约 7 处）
 
@@ -436,6 +402,9 @@ npc.wandscape.state.task    = "%s"              / "%s"
 | 名称池 | `foundation/util/CharacterNames.java`（144 条） | 小镇命名风格的**内容**（中文名池），不是待翻译 UI 串；要改属玩法决策 |
 | 叙事模板 | `content/tourist/internal/NarrativeTemplates.java`（13 条） | 同上，属内容 |
 | 指南加载日志 | `GuideManifest.java` / `GuideImagePreviewScreen.java` | 是 `Log.*`，不是手册正文 |
+
+> 指令回执里有 4 个键 lang 同样没写（`message.wandscape.command.magic_cd_cleared` /
+> `magic_freecast_status` / `magic_freecast_toggled` / `magic_mana_filled`），将来做指令回执时一并补。
 
 ---
 
