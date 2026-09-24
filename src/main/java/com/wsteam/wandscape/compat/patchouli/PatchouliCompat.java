@@ -42,6 +42,14 @@ public final class PatchouliCompat {
     }
 
     /**
+     * 客户端初始化（由 WandscapeClient 调用）。
+     */
+    public static void initClient() {
+        if (!loaded) return;
+        PatchouliCompatImpl.initClient();
+    }
+
+    /**
      * 打开指定文档对应的帕秋莉手册条目；若 docPath 为空或 index 则打开手册主页。
      */
     public static void openBook(String docPath) {

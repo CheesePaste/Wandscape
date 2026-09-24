@@ -503,6 +503,8 @@
   "gui.wandscape.gizmo.toast_enter": "§aEntered 3D Gizmo mode (RMB look, LMB drag axis)",
   "gui.wandscape.guidebook.action_tooltip": "Action: %s",
   "gui.wandscape.guidebook.category_entries": "See all %s entries",
+  "gui.wandscape.guidebook.click_to_zoom": "Click to view full image",
+  "gui.wandscape.guidebook.preview_close_hint": "Press ESC or click anywhere to return",
   "gui.wandscape.guidebook.title": "Wandscape Guidebook",
   "gui.wandscape.guidebook.titlebar": "Wandscape Guidebook",
   "gui.wandscape.hotel.guests": "Guests",

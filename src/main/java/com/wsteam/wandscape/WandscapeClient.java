@@ -181,6 +181,9 @@ public class WandscapeClient {
 
         // Exploration chest reward HUD overlay
         ExplorationHudOverlay.register();
+
+        // Patchouli guidebook image preview lightbox
+        com.wsteam.wandscape.compat.patchouli.PatchouliCompat.initClient();
     }
 
     @SubscribeEvent

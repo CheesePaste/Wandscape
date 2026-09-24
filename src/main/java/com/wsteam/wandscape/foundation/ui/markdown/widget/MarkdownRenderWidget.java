@@ -8,6 +8,7 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.*;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
@@ -38,7 +39,16 @@ public class MarkdownRenderWidget extends AbstractWidget {
             FormattedCharSequence sequence
     ) {}
 
+    private record RenderedImage(
+            int x,
+            int y,
+            int width,
+            int height,
+            ResourceLocation location
+    ) {}
+
     private final List<RenderedLine> renderedLines = new ArrayList<>();
+    private final List<RenderedImage> renderedImages = new ArrayList<>();
 
     public MarkdownRenderWidget(int x, int y, int width, int height, String rawMarkdown) {
         super(x, y, width, height, Component.empty());
@@ -146,6 +156,7 @@ public class MarkdownRenderWidget extends AbstractWidget {
         int renderW = Math.max(10, getWidth() - 12);
 
         renderedLines.clear();
+        renderedImages.clear();
 
         // Enable scissor clipping to prevent rendering outside widget frame
         g.enableScissor(getX(), getY(), getX() + getWidth(), getY() + getHeight());
@@ -173,10 +184,18 @@ public class MarkdownRenderWidget extends AbstractWidget {
             g.fill(sbX, thumbY, sbX + 2, thumbY + thumbH, MedievalColors.BORDER_GOLD);
         }
 
-        // Render Hover Tooltip for active link if mouse is hovered over a link
+        // Render Hover Tooltip for active link or image if mouse is hovered
         if (isMouseOver(mouseX, mouseY)
                 && mouseX >= getX() && mouseX <= getX() + getWidth()
                 && mouseY >= getY() && mouseY <= getY() + getHeight()) {
+            // Check image tooltip first
+            for (RenderedImage img : renderedImages) {
+                if (mouseX >= img.x() && mouseX <= img.x() + img.width()
+                        && mouseY >= img.y() && mouseY <= img.y() + img.height()) {
+                    g.renderTooltip(font, Component.translatable("gui.wandscape.guidebook.click_to_zoom"), mouseX, mouseY);
+                    return;
+                }
+            }
             RenderedLine hoveredLine = getLineAt(mouseX, mouseY);
             if (hoveredLine != null) {
                 int relX = mouseX - hoveredLine.x();
@@ -242,8 +261,10 @@ public class MarkdownRenderWidget extends AbstractWidget {
                     ResourceLocation tex = ResourceLocation.parse(resourceLocation);
                     ResourceLocation activeTex = com.wsteam.wandscape.foundation.ui.markdown.texture.MarkdownTextureManager.getActiveTexture(tex);
                     g.blit(activeTex, imgX, y, 0.0f, 0.0f, imgW, imgH, imgW, imgH);
-                    // Gold border frame
-                    g.renderOutline(imgX - 1, y - 1, imgW + 2, imgH + 2, MedievalColors.BORDER_GOLD_DARK);
+                    boolean hovered = mouseX >= imgX && mouseX <= imgX + imgW && mouseY >= y && mouseY <= y + imgH;
+                    int borderColor = hovered ? MedievalColors.BORDER_GOLD : MedievalColors.BORDER_GOLD_DARK;
+                    g.renderOutline(imgX - 1, y - 1, imgW + 2, imgH + 2, borderColor);
+                    renderedImages.add(new RenderedImage(imgX, y, imgW, imgH, tex));
                 } catch (Exception e) {
                     // Fallback placeholder text if image texture missing
                     g.fill(imgX, y, imgX + imgW, y + imgH, MedievalColors.PARCHMENT_DARK);
@@ -443,6 +464,14 @@ public class MarkdownRenderWidget extends AbstractWidget {
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (button == 0 && isMouseOver(mouseX, mouseY)) {
+            for (RenderedImage img : renderedImages) {
+                if (mouseX >= img.x() && mouseX <= img.x() + img.width()
+                        && mouseY >= img.y() && mouseY <= img.y() + img.height()) {
+                    Screen currentScreen = Minecraft.getInstance().screen;
+                    Minecraft.getInstance().setScreen(new com.wsteam.wandscape.foundation.ui.guidebook.GuideImagePreviewScreen(currentScreen, img.location()));
+                    return true;
+                }
+            }
             RenderedLine line = getLineAt(mouseX, mouseY);
             if (line != null) {
                 Font font = Minecraft.getInstance().font;

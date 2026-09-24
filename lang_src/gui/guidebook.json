@@ -14,5 +14,13 @@
   "gui.wandscape.guidebook.category_entries": {
     "zh_cn": "查看全部 %s 条",
     "en_us": "See all %s entries"
+  },
+  "gui.wandscape.guidebook.click_to_zoom": {
+    "zh_cn": "点击查看高清大图",
+    "en_us": "Click to view full image"
+  },
+  "gui.wandscape.guidebook.preview_close_hint": {
+    "zh_cn": "按 ESC 或点击任意处返回",
+    "en_us": "Press ESC or click anywhere to return"
   }
 }

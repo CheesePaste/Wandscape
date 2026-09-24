@@ -35,6 +35,7 @@ except ImportError:  # pragma: no cover - 只在没装 Pillow 时报错
 ROOT = Path(__file__).resolve().parent
 SRC_DIR = ROOT / "guidebook_screenshots"
 OUT_DIR = ROOT / "src/main/resources/assets/wandscape/textures/guidebook"
+FULL_DIR = OUT_DIR / "full"
 
 # 帕秋莉的采样区（UV 0 .. 200/256）与画布尺寸。改这两个数等于改帕秋莉源码，别动。
 CANVAS = 256
@@ -47,10 +48,16 @@ LEGIBLE_PX = 8  # 屏幕上的字至少要有这么高（= MC 默认字号）
 
 
 def process(path: Path) -> dict:
-    """一张原始截图 -> 256x256 的成品。返回它的可读性数据。"""
+    """一张原始截图 -> 256x256 的成品 + full/ 目录下的高清原图。返回它的可读性数据。"""
     src = Image.open(path).convert("RGBA")
     w, h = src.size
 
+    # 1. 导出高清原图（打进 jar，供游戏内点击放大查看）
+    FULL_DIR.mkdir(parents=True, exist_ok=True)
+    full_out = FULL_DIR / path.name
+    src.save(full_out, optimize=True)
+
+    # 2. 导出 256x256 采样缩略图（供帕秋莉在书页内 100x100 显示）
     scale = min(CONTENT / w, CONTENT / h)
     new = (max(1, round(w * scale)), max(1, round(h * scale)))
     fitted = src.resize(new, Image.LANCZOS)

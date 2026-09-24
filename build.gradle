@@ -150,8 +150,8 @@ dependencies {
     // 诡厄巫法 (Goety) — 可选兼容依赖，compileOnly 不打包；玩家自行装 Goety。未装时相关功能自动隐藏。
     compileOnly "curse.maven:goety-586095:${goety_version}"
 
-    // 帕秋莉手册 (Patchouli) — 可选软依赖，compileOnly 不打包；提供文档指南 API
-    compileOnly "vazkii.patchouli:Patchouli:${patchouli_version}:api"
+    // 帕秋莉手册 (Patchouli) — 可选软依赖，compileOnly 不打包；提供文档指南与客户端查看支持
+    compileOnly "vazkii.patchouli:Patchouli:${patchouli_version}"
 
     // 车万女仆 (Touhou Little Maid) — 可选软依赖，compileOnly 不打包；玩家自行装 TLM。
     // 仅编译期用其 api 包（ILittleMaid / IMaidTask），未装时 compat 层整体静默降级。

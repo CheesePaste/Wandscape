@@ -79,4 +79,113 @@ final class PatchouliCompatImpl {
         ResourceLocation openGui = PatchouliAPI.get().getOpenBookGui();
         return PatchouliCompat.BOOK_ID.equals(openGui);
     }
+
+    /**
+     * 注册客户端事件监听（由 PatchouliCompat.initClient 调用）。
+     */
+    static void initClient() {
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(PatchouliCompatImpl::onScreenMouseClicked);
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(PatchouliCompatImpl::onScreenRenderPost);
+    }
+
+    private static void onScreenMouseClicked(net.neoforged.neoforge.client.event.ScreenEvent.MouseButtonPressed.Pre event) {
+        if (event.getButton() != 0 || !isBookOpen()) {
+            return;
+        }
+        if (!(event.getScreen() instanceof vazkii.patchouli.client.book.gui.GuiBookEntry bookScreen)) {
+            return;
+        }
+
+        for (var child : bookScreen.children()) {
+            if (child.isMouseOver(event.getMouseX(), event.getMouseY())) {
+                return;
+            }
+        }
+
+        ImageHit hit = findImageHit(bookScreen, event.getMouseX(), event.getMouseY());
+        if (hit != null && hit.image() != null) {
+            net.minecraft.client.Minecraft.getInstance().setScreen(
+                    new com.wsteam.wandscape.foundation.ui.guidebook.GuideImagePreviewScreen(bookScreen, hit.image()));
+            event.setCanceled(true);
+        }
+    }
+
+    private static void onScreenRenderPost(net.neoforged.neoforge.client.event.ScreenEvent.Render.Post event) {
+        if (!isBookOpen()) {
+            return;
+        }
+        if (!(event.getScreen() instanceof vazkii.patchouli.client.book.gui.GuiBookEntry bookScreen)) {
+            return;
+        }
+
+        for (var child : bookScreen.children()) {
+            if (child.isMouseOver(event.getMouseX(), event.getMouseY())) {
+                return;
+            }
+        }
+
+        ImageHit hit = findImageHit(bookScreen, event.getMouseX(), event.getMouseY());
+        if (hit != null && hit.image() != null) {
+            var graphics = event.getGuiGraphics();
+            graphics.renderOutline(hit.x() - 1, hit.y() - 1, hit.w() + 2, hit.h() + 2, 0xFFFFD700);
+            graphics.renderTooltip(
+                    net.minecraft.client.Minecraft.getInstance().font,
+                    net.minecraft.network.chat.Component.translatable("gui.wandscape.guidebook.click_to_zoom"),
+                    (int) event.getMouseX(),
+                    (int) event.getMouseY()
+            );
+        }
+    }
+
+    private record ImageHit(ResourceLocation image, int x, int y, int w, int h) {}
+
+    @javax.annotation.Nullable
+    private static ImageHit findImageHit(vazkii.patchouli.client.book.gui.GuiBookEntry bookScreen, double mouseX, double mouseY) {
+        int spread = bookScreen.getSpread();
+        java.util.List<vazkii.patchouli.client.book.BookPage> pages = bookScreen.getEntry().getPages();
+        int leftPageIdx = spread * 2;
+        int rightPageIdx = spread * 2 + 1;
+
+        int bookLeft = bookScreen.bookLeft;
+        int bookTop = bookScreen.bookTop;
+
+        int lx = bookLeft + vazkii.patchouli.client.book.gui.GuiBook.LEFT_PAGE_X + 8;
+        int ly = bookTop + vazkii.patchouli.client.book.gui.GuiBook.TOP_PADDING + 10;
+        int w = 100;
+        int h = 100;
+
+        if (mouseX >= lx && mouseX <= lx + w && mouseY >= ly && mouseY <= ly + h) {
+            if (leftPageIdx >= 0 && leftPageIdx < pages.size()) {
+                ResourceLocation img = getImageFromPage(pages.get(leftPageIdx));
+                if (img != null) {
+                    return new ImageHit(img, lx, ly, w, h);
+                }
+            }
+        }
+
+        int rx = bookLeft + vazkii.patchouli.client.book.gui.GuiBook.RIGHT_PAGE_X + 8;
+        int ry = bookTop + vazkii.patchouli.client.book.gui.GuiBook.TOP_PADDING + 10;
+
+        if (mouseX >= rx && mouseX <= rx + w && mouseY >= ry && mouseY <= ry + h) {
+            if (rightPageIdx >= 0 && rightPageIdx < pages.size()) {
+                ResourceLocation img = getImageFromPage(pages.get(rightPageIdx));
+                if (img != null) {
+                    return new ImageHit(img, rx, ry, w, h);
+                }
+            }
+        }
+
+        return null;
+    }
+
+    @javax.annotation.Nullable
+    private static ResourceLocation getImageFromPage(vazkii.patchouli.client.book.BookPage page) {
+        if (page instanceof vazkii.patchouli.client.book.page.PageImage && page.sourceObject != null && page.sourceObject.has("images")) {
+            var arr = page.sourceObject.getAsJsonArray("images");
+            if (arr != null && !arr.isEmpty()) {
+                return ResourceLocation.tryParse(arr.get(0).getAsString());
+            }
+        }
+        return null;
+    }
 }
