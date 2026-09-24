@@ -15,12 +15,14 @@ import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import org.joml.Matrix4f;
 
 import javax.annotation.Nullable;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -34,6 +36,8 @@ public final class SpeechBubbleRenderer {
     private static final float Y_OFFSET       = 1.2F;
     private static final float BUBBLE_PADDING = 8.0F;
     private static final float TRIANGLE_SIZE  = 4.0F;
+    /** 文本超过此宽度（GUI 单位）即按词换行：气泡宽度随文本自撑，长英文不换行会横跨半个视野。 */
+    private static final int   MAX_TEXT_WIDTH = 120;
     private static final int   MAX_DIST_SQ    = 4096;
     private static final int   ELLIPSE_SEGMENTS = 20;
     private static final float TEXT_Z_OFFSET   = 0.05F;
@@ -94,8 +98,12 @@ public final class SpeechBubbleRenderer {
         if (distSq > MAX_DIST_SQ) return;
 
         Font font = Minecraft.getInstance().font;
-        float textWidth = font.width(textComp);
-        float textHeight = font.lineHeight;
+        List<FormattedCharSequence> lines = font.split(textComp, MAX_TEXT_WIDTH);
+        int textWidth = 0;
+        for (FormattedCharSequence line : lines) {
+            textWidth = Math.max(textWidth, font.width(line));
+        }
+        int textHeight = font.lineHeight * lines.size();
 
         float bubbleW = textWidth + BUBBLE_PADDING * 2;
         float bubbleH = textHeight + BUBBLE_PADDING * 2;
@@ -118,10 +126,13 @@ public final class SpeechBubbleRenderer {
         poseStack.pushPose();
         poseStack.translate(0, 0, TEXT_Z_OFFSET);
         Matrix4f textMatrix = poseStack.last().pose();
-        float textX = -textWidth / 2F;
-        float textY = ey - textHeight / 2F;
-        font.drawInBatch(textComp, textX, textY, 0xFF000000, false,
-                textMatrix, buffer, Font.DisplayMode.POLYGON_OFFSET, 0, packedLight);
+        float textTop = ey - textHeight / 2F;
+        for (int i = 0; i < lines.size(); i++) {
+            FormattedCharSequence line = lines.get(i);
+            float lineX = -font.width(line) / 2F;
+            font.drawInBatch(line, lineX, textTop + i * font.lineHeight, 0xFF000000, false,
+                    textMatrix, buffer, Font.DisplayMode.POLYGON_OFFSET, 0, packedLight);
+        }
         poseStack.popPose();
 
         poseStack.popPose();

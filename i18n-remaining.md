@@ -3,7 +3,7 @@
 > 范围：只列**玩家能看见**的未翻译文案。指令回执（`content/command/**`）、日志、
 > 配置注释一律不在本单内（见 §C）。
 > 本轮已修：法师小屋、共享 `MedievalScreen`、道路工坊面板与预设名、
-> `ColonyOwnership.deny` 越权提示、§A 的 12 个缺失界面/分类键。
+> `ColonyOwnership.deny` 越权提示、§A 的 12 个缺失界面/分类键、§A 的 206 条气泡英文改写。
 
 ## 0. 机制与三条硬规矩
 
@@ -35,9 +35,10 @@ I18n.string("...", "中文兜底", args)                        // 返回 String
   | 法师小屋空态说明（居中） | ≈ 186px（≈ 31 ASCII 字符） |
   | 法师小屋指派页右栏 | ≈ 134px（≈ 22 ASCII 字符） |
   | 道路工坊面板 | 屏宽 × 0.32，最小 × 0.22（≈ 190 ~ 300px） |
-- **头顶气泡（§A1）最敏感**：气泡框按文本自动撑开，长英文会糊住半个屏幕。
-  目标 **≤ 16 个 ASCII 字符**；超了就**别译那一条**（改写得更短、或整条删掉，
-  气泡池少一条没有任何功能影响）。
+- **头顶气泡（§A）**：气泡框按文本自动撑开，长英文会糊住半个屏幕。**渲染侧已兜底**：
+  `SpeechBubbleRenderer` 按词换行（上限 120 GUI 单位 ≈ 20 ASCII 字符/行，中文现有文案不触发行上限），
+  所以文案层面只需**尽量短**（单行目标 ≤ 16 个 ASCII 字符），超了只是折成两行；
+  **不要再靠删气泡池条目来压长度**——删一条等于中英玩家同时少一条内容。
 
 **规矩 3 — 别把兜底串当硬编码。** 这类代码是**正确**的，不要动：
 
@@ -64,242 +65,21 @@ private static String title(String key, String fallback) {                 // �
 
 ---
 
-## A. 只需补 lang 键（零代码改动）
+## A. 头顶气泡 —— 已完成（留档备查）
 
-### A1. 241 个头顶气泡键 —— 最高优先，且长度最敏感
+**先纠正原单的一处误判**：气泡键**早在 v1.10.23a（`ab279fb0`）就已全部进 lang**，206 条
+（游客 generic 90 / building 55 / idle 8，法师 53），中英俱全、`{building}` 已转 `%s`，
+并非"缺 241 条"。本轮修的是**长度**，两处：
 
-`foundation/ui/bubble/AmbientTextPools.java` 的建筑/游客闲聊气泡**已经全部走
-`bubble(key, fallback)`**，键名也是现成的；缺的只是 lang 里的 241 条。
+1. **渲染器按词换行**（`foundation/ui/bubble/SpeechBubbleRenderer.java`）
+   原先 `bubbleW = font.width(text) + padding` —— 文本多宽气泡多宽，46 字符的英文气泡
+   能横跨近 12 格。现改为 `font.split(text, MAX_TEXT_WIDTH=120)` 取行、宽度取最长行、
+   高度按行数、逐行居中：任何语言、任何长度（含长建筑名）都不再撑爆视野。
+   中文现有气泡（≤12 字 ≈ 108px）不触发行上限，视觉零变化。
+2. **英文改写变短**：206 条英文全部重写为短句，超 16 字符的 **121 → 32 条**
+   （32 条里 27 条带 `%s`，最长 21 字符，仍在单行内）。中文值未动，仍是源码兜底原文。
 
-键名派生规则（照抄即可，不用读代码）：
-
-| 池 | 键格式 | 条数 |
-| --- | --- | --- |
-| 游客 · 无建筑引用 | `bubble.wandscape.tourist.generic.<emotion>.<state>.<idx>` | 90 |
-| 游客 · 含 `{building}` 引用 | `bubble.wandscape.tourist.building.<emotion>.<state>.<idx>` | 55 |
-| 游客 · 静止 / 睡着 | `bubble.wandscape.tourist.idle.<id 或 sleeping>.<idx>` | 8 |
-| 法师（殖民地 NPC） | `bubble.wandscape.npc.<pool>.<idx>` | 53 |
-
-- `<emotion>` = `delighted` / `pleased` / `satisfied` / `neutral` / `disappointed` / `upset`
-- `<state>` = `visiting` / `exploring` / `wandering`
-- `<pool>` = `idle` / `gathering` / `transforming` / `moving` / `casting` / `transform` /
-  `block_interact` / `ritual` / `__fallback__`
-- `{building}` 在代码里会被替换成 `%s`，**翻译时原样保留 `{building}` 占位**。
-
-**翻译前先读§0 规矩 2**：气泡 ≤ 16 个 ASCII 字符，装不下就删掉那一条。
-下面这份 `键<TAB>现有中文` 表由 `tools/ambient_keys.py` 直接从源码解析生成，
-需要重生成就跑 `python tools/ambient_keys.py > tools/ambient_keys.tsv`。
-
-```tsv
-bubble.wandscape.tourist.idle.idle.0	休息中
-bubble.wandscape.tourist.idle.idle.1	站着发呆
-bubble.wandscape.tourist.idle.idle.2	稍微歇会儿
-bubble.wandscape.tourist.idle.idle.3	喘口气
-bubble.wandscape.tourist.idle.sleeping.0	zzz…
-bubble.wandscape.tourist.idle.sleeping.1	睡得真香
-bubble.wandscape.tourist.idle.sleeping.2	好梦
-bubble.wandscape.tourist.idle.sleeping.3	呼噜…
-bubble.wandscape.tourist.generic.delighted.visiting.0	好期待进去看看！
-bubble.wandscape.tourist.generic.delighted.visiting.1	听说这里很棒！
-bubble.wandscape.tourist.generic.delighted.visiting.2	看起来就让人兴奋
-bubble.wandscape.tourist.generic.delighted.visiting.3	这个建筑太棒了
-bubble.wandscape.tourist.generic.delighted.visiting.4	迫不及待想进去了
-bubble.wandscape.tourist.generic.delighted.exploring.0	这里的风景太美了！
-bubble.wandscape.tourist.generic.delighted.exploring.1	真是个漂亮的地方
-bubble.wandscape.tourist.generic.delighted.exploring.2	魔法小镇的建设真不错
-bubble.wandscape.tourist.generic.delighted.exploring.3	每一步都是风景
-bubble.wandscape.tourist.generic.delighted.exploring.4	空气清新，心情舒畅
-bubble.wandscape.tourist.generic.delighted.wandering.0	今天心情真好~
-bubble.wandscape.tourist.generic.delighted.wandering.1	阳光真舒服
-bubble.wandscape.tourist.generic.delighted.wandering.2	真希望每天都这样
-bubble.wandscape.tourist.generic.delighted.wandering.3	生活真美好
-bubble.wandscape.tourist.generic.delighted.wandering.4	悠闲的时光最珍贵
-bubble.wandscape.tourist.generic.pleased.visiting.0	看起来不错的选择
-bubble.wandscape.tourist.generic.pleased.visiting.1	进去看看吧
-bubble.wandscape.tourist.generic.pleased.visiting.2	这家店看起来不错
-bubble.wandscape.tourist.generic.pleased.visiting.3	去逛逛
-bubble.wandscape.tourist.generic.pleased.visiting.4	来都来了
-bubble.wandscape.tourist.generic.pleased.exploring.0	魔法小镇的街道很整洁
-bubble.wandscape.tourist.generic.pleased.exploring.1	空气真好
-bubble.wandscape.tourist.generic.pleased.exploring.2	绿化做得不错
-bubble.wandscape.tourist.generic.pleased.exploring.3	设计得很用心
-bubble.wandscape.tourist.generic.pleased.exploring.4	这座魔法小镇发展得挺好
-bubble.wandscape.tourist.generic.pleased.wandering.0	嗯…去哪里好呢
-bubble.wandscape.tourist.generic.pleased.wandering.1	稍微走走吧
-bubble.wandscape.tourist.generic.pleased.wandering.2	漫步一下
-bubble.wandscape.tourist.generic.pleased.wandering.3	享受悠闲时光
-bubble.wandscape.tourist.generic.pleased.wandering.4	随心走走
-bubble.wandscape.tourist.generic.satisfied.visiting.0	就这家吧
-bubble.wandscape.tourist.generic.satisfied.visiting.1	进去逛逛
-bubble.wandscape.tourist.generic.satisfied.visiting.2	看起来还行
-bubble.wandscape.tourist.generic.satisfied.visiting.3	凑合看看吧
-bubble.wandscape.tourist.generic.satisfied.visiting.4	试试这家
-bubble.wandscape.tourist.generic.satisfied.exploring.0	还可以
-bubble.wandscape.tourist.generic.satisfied.exploring.1	一般般吧
-bubble.wandscape.tourist.generic.satisfied.exploring.2	还算干净整洁
-bubble.wandscape.tourist.generic.satisfied.exploring.3	没什么大问题
-bubble.wandscape.tourist.generic.satisfied.exploring.4	中规中矩
-bubble.wandscape.tourist.generic.satisfied.wandering.0	随便走走
-bubble.wandscape.tourist.generic.satisfied.wandering.1	不着急
-bubble.wandscape.tourist.generic.satisfied.wandering.2	慢悠悠地逛
-bubble.wandscape.tourist.generic.satisfied.wandering.3	溜达溜达
-bubble.wandscape.tourist.generic.satisfied.wandering.4	四处看看
-bubble.wandscape.tourist.generic.neutral.visiting.0	去看看有什么
-bubble.wandscape.tourist.generic.neutral.visiting.1	随便看看
-bubble.wandscape.tourist.generic.neutral.visiting.2	打发下时间
-bubble.wandscape.tourist.generic.neutral.visiting.3	路过看看
-bubble.wandscape.tourist.generic.neutral.visiting.4	来都来了
-bubble.wandscape.tourist.generic.neutral.exploring.0	嗯，没什么特别的
-bubble.wandscape.tourist.generic.neutral.exploring.1	就这样吧
-bubble.wandscape.tourist.generic.neutral.exploring.2	普普通通
-bubble.wandscape.tourist.generic.neutral.exploring.3	没什么好看的
-bubble.wandscape.tourist.generic.neutral.exploring.4	到处都一样
-bubble.wandscape.tourist.generic.neutral.wandering.0	走一走
-bubble.wandscape.tourist.generic.neutral.wandering.1	没什么事做
-bubble.wandscape.tourist.generic.neutral.wandering.2	闲逛一下
-bubble.wandscape.tourist.generic.neutral.wandering.3	随便走走
-bubble.wandscape.tourist.generic.neutral.wandering.4	打发时间
-bubble.wandscape.tourist.generic.disappointed.visiting.0	希望这家别太差
-bubble.wandscape.tourist.generic.disappointed.visiting.1	唉，试试看吧
-bubble.wandscape.tourist.generic.disappointed.visiting.2	不太抱期望
-bubble.wandscape.tourist.generic.disappointed.visiting.3	随便看看吧
-bubble.wandscape.tourist.generic.disappointed.visiting.4	希望不要踩雷
-bubble.wandscape.tourist.generic.disappointed.exploring.0	不太有意思
-bubble.wandscape.tourist.generic.disappointed.exploring.1	没什么好看的
-bubble.wandscape.tourist.generic.disappointed.exploring.2	有点无聊
-bubble.wandscape.tourist.generic.disappointed.exploring.3	也就这样了
-bubble.wandscape.tourist.generic.disappointed.exploring.4	浪费时间
-bubble.wandscape.tourist.generic.disappointed.wandering.0	有点无聊
-bubble.wandscape.tourist.generic.disappointed.wandering.1	想回去了
-bubble.wandscape.tourist.generic.disappointed.wandering.2	没什么意思
-bubble.wandscape.tourist.generic.disappointed.wandering.3	不如早点回去
-bubble.wandscape.tourist.generic.disappointed.wandering.4	唉……
-bubble.wandscape.tourist.generic.upset.visiting.0	最好别让我失望！
-bubble.wandscape.tourist.generic.upset.visiting.1	算了，看看吧
-bubble.wandscape.tourist.generic.upset.visiting.2	哼，就看看
-bubble.wandscape.tourist.generic.upset.visiting.3	最后一次机会
-bubble.wandscape.tourist.generic.upset.visiting.4	还能更差吗
-bubble.wandscape.tourist.generic.upset.exploring.0	什么破地方
-bubble.wandscape.tourist.generic.upset.exploring.1	一点都不好
-bubble.wandscape.tourist.generic.upset.exploring.2	真没意思
-bubble.wandscape.tourist.generic.upset.exploring.3	太失望了
-bubble.wandscape.tourist.generic.upset.exploring.4	再也不来了
-bubble.wandscape.tourist.generic.upset.wandering.0	烦死了
-bubble.wandscape.tourist.generic.upset.wandering.1	不想逛了
-bubble.wandscape.tourist.generic.upset.wandering.2	心情都被破坏了
-bubble.wandscape.tourist.generic.upset.wandering.3	糟透了今天
-bubble.wandscape.tourist.generic.upset.wandering.4	想回家了
-bubble.wandscape.tourist.building.delighted.visiting.0	上次在{building}体验很好，看看这家！
-bubble.wandscape.tourist.building.delighted.visiting.1	自从去了{building}就爱上这里了
-bubble.wandscape.tourist.building.delighted.visiting.2	希望这家和{building}一样棒
-bubble.wandscape.tourist.building.delighted.visiting.3	{building}给我留下了深刻印象
-bubble.wandscape.tourist.building.delighted.exploring.0	比起{building}那边，这也不差！
-bubble.wandscape.tourist.building.delighted.exploring.1	从{building}过来，这边也很不错
-bubble.wandscape.tourist.building.delighted.exploring.2	{building}那边好看，这边也不赖
-bubble.wandscape.tourist.building.delighted.wandering.0	在{building}玩得很开心，继续逛逛
-bubble.wandscape.tourist.building.delighted.wandering.1	刚从{building}出来，心情大好
-bubble.wandscape.tourist.building.delighted.wandering.2	回味着{building}的美好体验
-bubble.wandscape.tourist.building.pleased.visiting.0	听说{building}不错，这个应该也行
-bubble.wandscape.tourist.building.pleased.visiting.1	上次去了{building}感觉挺好，再看看这家
-bubble.wandscape.tourist.building.pleased.visiting.2	跟{building}差不多的话就很满意了
-bubble.wandscape.tourist.building.pleased.exploring.0	从{building}出来走走，挺舒服
-bubble.wandscape.tourist.building.pleased.exploring.1	逛完{building}再来这边，心情不错
-bubble.wandscape.tourist.building.pleased.exploring.2	{building}那边逛完了，继续探索
-bubble.wandscape.tourist.building.pleased.wandering.0	刚才在{building}收获不错
-bubble.wandscape.tourist.building.pleased.wandering.1	去过{building}了，到处转转
-bubble.wandscape.tourist.building.pleased.wandering.2	在{building}度过了愉快的时光
-bubble.wandscape.tourist.building.satisfied.visiting.0	这家和{building}差不多，试试
-bubble.wandscape.tourist.building.satisfied.visiting.1	之前去{building}还行，这家应该也凑合
-bubble.wandscape.tourist.building.satisfied.visiting.2	跟{building}差不多档次吧
-bubble.wandscape.tourist.building.satisfied.exploring.0	比{building}差不太多
-bubble.wandscape.tourist.building.satisfied.exploring.1	和{building}那边差不多吧
-bubble.wandscape.tourist.building.satisfied.exploring.2	逛完{building}过来，都差不多
-bubble.wandscape.tourist.building.satisfied.wandering.0	刚刚那家{building}还行
-bubble.wandscape.tourist.building.satisfied.wandering.1	去过{building}了，四处溜达
-bubble.wandscape.tourist.building.satisfied.wandering.2	在{building}出来走走消化一下
-bubble.wandscape.tourist.building.neutral.visiting.0	{building}都去了，这家也看看吧
-bubble.wandscape.tourist.building.neutral.visiting.1	顺便逛逛这家，跟{building}一样
-bubble.wandscape.tourist.building.neutral.visiting.2	从{building}过来，顺便看看
-bubble.wandscape.tourist.building.neutral.exploring.0	和{building}那边差不多
-bubble.wandscape.tourist.building.neutral.exploring.1	逛完{building}没什么特别感觉
-bubble.wandscape.tourist.building.neutral.exploring.2	跟{building}一样普普通通
-bubble.wandscape.tourist.building.neutral.wandering.0	刚从{building}出来，散散步
-bubble.wandscape.tourist.building.neutral.wandering.1	去了趟{building}，随便走走
-bubble.wandscape.tourist.building.neutral.wandering.2	从{building}出来透透气
-bubble.wandscape.tourist.building.disappointed.visiting.0	比{building}还差就不好了
-bubble.wandscape.tourist.building.disappointed.visiting.1	{building}就挺失望了，这家…
-bubble.wandscape.tourist.building.disappointed.visiting.2	希望比{building}强一点吧
-bubble.wandscape.tourist.building.disappointed.exploring.0	还没有{building}那边有意思
-bubble.wandscape.tourist.building.disappointed.exploring.1	跟{building}一样让人失望
-bubble.wandscape.tourist.building.disappointed.exploring.2	{building}不行，这边也够呛
-bubble.wandscape.tourist.building.disappointed.wandering.0	连{building}都不怎么样
-bubble.wandscape.tourist.building.disappointed.wandering.1	在{building}就不太开心
-bubble.wandscape.tourist.building.disappointed.wandering.2	{building}让人失望，逛街心情都没了
-bubble.wandscape.tourist.building.upset.visiting.0	希望比{building}好一点
-bubble.wandscape.tourist.building.upset.visiting.1	{building}已经够差了
-bubble.wandscape.tourist.building.upset.visiting.2	别跟{building}一样就行
-bubble.wandscape.tourist.building.upset.exploring.0	跟{building}一样差劲
-bubble.wandscape.tourist.building.upset.exploring.1	比{building}还差，服了
-bubble.wandscape.tourist.building.upset.exploring.2	从{building}出来心情就不好
-bubble.wandscape.tourist.building.upset.wandering.0	再也不去{building}那种地方了
-bubble.wandscape.tourist.building.upset.wandering.1	在{building}受够了
-bubble.wandscape.tourist.building.upset.wandering.2	{building}的体验太糟糕了
-bubble.wandscape.npc.idle.0	休息一下
-bubble.wandscape.npc.idle.1	今天也挺忙的
-bubble.wandscape.npc.idle.2	歇会儿
-bubble.wandscape.npc.idle.3	站着发呆
-bubble.wandscape.npc.idle.4	待会儿再干
-bubble.wandscape.npc.idle.5	忙碌的一天啊
-bubble.wandscape.npc.idle.6	嗯…想想下一步
-bubble.wandscape.npc.gathering.0	加把劲
-bubble.wandscape.npc.gathering.1	材料还不少
-bubble.wandscape.npc.gathering.2	这是好东西
-bubble.wandscape.npc.gathering.3	收获不错
-bubble.wandscape.npc.gathering.4	再采一点
-bubble.wandscape.npc.gathering.5	今天的成果不错
-bubble.wandscape.npc.gathering.6	这片区域资源丰富
-bubble.wandscape.npc.transforming.0	快完成了
-bubble.wandscape.npc.transforming.1	完美
-bubble.wandscape.npc.transforming.2	一砖一瓦
-bubble.wandscape.npc.transforming.3	结构稳固
-bubble.wandscape.npc.transforming.4	尺寸刚好
-bubble.wandscape.npc.transforming.5	接下来是这边…
-bubble.wandscape.npc.transforming.6	就差一点了
-bubble.wandscape.npc.moving.0	该去工作了
-bubble.wandscape.npc.moving.1	去那边看看
-bubble.wandscape.npc.moving.2	还有活要干
-bubble.wandscape.npc.moving.3	走起
-bubble.wandscape.npc.moving.4	不能闲着
-bubble.wandscape.npc.moving.5	下一站
-bubble.wandscape.npc.moving.6	时间不等人
-bubble.wandscape.npc.casting.0	魔力汇聚…
-bubble.wandscape.npc.casting.1	就是现在！
-bubble.wandscape.npc.casting.2	法术释放
-bubble.wandscape.npc.casting.3	感受元素的力量
-bubble.wandscape.npc.casting.4	能量充盈
-bubble.wandscape.npc.casting.5	就是这种感觉
-bubble.wandscape.npc.casting.6	集中…
-bubble.wandscape.npc.transform.0	转化开始
-bubble.wandscape.npc.transform.1	物质重组
-bubble.wandscape.npc.transform.2	炼金术的奥妙
-bubble.wandscape.npc.transform.3	变了变了
-bubble.wandscape.npc.block_interact.0	这个方块…
-bubble.wandscape.npc.block_interact.1	让我看看
-bubble.wandscape.npc.block_interact.2	这就是目标
-bubble.wandscape.npc.block_interact.3	找到了
-bubble.wandscape.npc.ritual.0	仪式进行中
-bubble.wandscape.npc.ritual.1	古老的力量
-bubble.wandscape.npc.ritual.2	遵从契约
-bubble.wandscape.npc.ritual.3	元素共鸣
-bubble.wandscape.npc.ritual.4	法力在流动…
-bubble.wandscape.npc.__fallback__.0	这座魔法小镇真不错
-bubble.wandscape.npc.__fallback__.1	环境宜人
-bubble.wandscape.npc.__fallback__.2	继续努力
-bubble.wandscape.npc.__fallback__.3	日子一天天过
-bubble.wandscape.npc.__fallback__.4	希望一切顺利
-```
-
----
+判据：**气泡长度问题在渲染侧解决，别在文案侧砍内容。**
 
 ## B. 需要改代码 + 补键（玩家可见）
 
