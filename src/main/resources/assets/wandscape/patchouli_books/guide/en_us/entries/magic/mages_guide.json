@@ -11,8 +11,19 @@
     },
     {
       "type": "patchouli:text",
-      "text": "$(li)Follow Mode: When enabled, the mage follows you and ignores town tasks.$(li)Peaceful Mode: When enabled, the mage will not attack any entity.$(li)Cast Strategy: Configure spells and casting order, see $(l:wandscape:magic/advanced_casting_guide)《Advanced Casting》$(/l).$(li)Dismiss: Dismiss the mage permanently.",
+      "text": "Follow Mode: When enabled, the mage follows you and ignores town tasks.$(li)Peaceful Mode: When enabled, the mage will not attack any entity.",
       "title": "The four switches on the panel"
+    },
+    {
+      "type": "patchouli:image",
+      "images": [
+        "wandscape:textures/guidebook/mage_panel.png"
+      ],
+      "text": "The mage panel: gear, plus Follow, Peace, Strategy and Dismiss"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(li)Cast Strategy: Configure spells and casting order, see $(l:wandscape:magic/advanced_casting_guide)《Advanced Casting》$(/l).$(li)Dismiss: Dismiss the mage permanently."
     }
   ]
 }

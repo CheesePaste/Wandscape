@@ -437,6 +437,14 @@ def split_page_text(text: str, cap_first: int, cap_rest: int, remove_hints=True,
 
 
 # ---------------------------------------------------------------- 平衡
+def _is_text_page(page) -> bool:
+    """能不能被切块、算行数的正文档。
+
+    图片 / 模板页没有可切的正文，混进重排只会被当成长度为 0 的块丢掉。
+    """
+    return isinstance(page, dict) and page.get("type") == "patchouli:text" and "text" in page
+
+
 def _page_lines(data: dict) -> int:
     return lines_for_text(data.get("text", ""))
 
@@ -452,6 +460,36 @@ def _cap_for(data: dict, index: int) -> int:
 def page_capacity(data: dict, index: int) -> int:
     """这一页最多排多少行（`_cap_for` 的公开版，给生成期自检用）。"""
     return _cap_for(data, index)
+
+
+def _split_atomic(pages):
+    """把非正文页（图片 / 模板）摘出来，连同它在正文页之间的位置。
+
+    这些页整页占满、没有可切的正文，所以不进切块也不进行数统计——但**页数是实打实的**，
+    奇偶配平时要算上。位置按「前面压着多少页正文页」记，重排完按同一口径插回。
+    """
+    text_pages, atomics, n = [], [], 0
+    for page in pages:
+        if _is_text_page(page):
+            text_pages.append(page)
+            n += 1
+        else:
+            atomics.append((n, page))
+    return text_pages, atomics
+
+
+def _reinsert_atomic(text_pages, atomics):
+    """把原子页按锚点插回正文页之间；锚点越界（正文页重排后变少了）就贴到末尾。"""
+    n = len(text_pages)
+    by_anchor = {}
+    for idx, page in atomics:
+        by_anchor.setdefault(min(idx, n), []).append(page)
+    out = []
+    for i, page in enumerate(text_pages):
+        out.extend(by_anchor.get(i, ()))
+        out.append(page)
+    out.extend(by_anchor.get(n, ()))
+    return out
 
 
 def _demote_title(data: dict) -> dict:
@@ -523,11 +561,13 @@ def _has_thin(pages) -> bool:
 
     末页也算——17 行的内容切成 13+4 和切成 9+8 页数一样，后者才是想要的。
     真正的短条目会在 `_reflow` 里就定成 1 页，根本走不到这里。
+
+    **只喂正文页**：图片 / 模板页没有正文，算 0 行，混进来会让这里恒为真。
     """
     return len(pages) > 1 and any(_page_lines(p) < MIN_PAGE_LINES for p in pages)
 
 
-def balance_pages(pages):
+def balance_pages(pages, atomic_count=0):
     """把整篇收敛到「偶数页 + 没有残页」。
 
     偶数页是因为帕秋莉左右同时展示，奇数页末尾右半会空成白纸。
@@ -535,36 +575,80 @@ def balance_pages(pages):
     页数总和是奇数时，先试着把某一节从 1 页摊成 2 页（摊完两页都得够满）；
     实在摊不动就把相邻两组并成一组（后一组标题降级成加粗行）。
     单页条目（内容本来就装不满一页）不参与平衡。
+
+    图片 / 模板页是**原子页**：整页占满，既不切块也不进行数统计，但页数要算进奇偶。
+    所以这里只对正文页做平衡，目标是让「正文页数 + 原子页数」为偶。
+    `atomic_count` 给调用方补上**没写进 `pages`** 的原子页数（生成器先做正文分页、
+    之后再插图片页，那时它手里还没有那些页）。
     """
-    if len(pages) <= 1 or not _all_fit(pages):
-        return pages
-    if len(pages) % 2 == 0 and not _has_thin(pages):
+    if len(pages) <= 1:
         return pages
 
-    groups = _group_by_title(pages)
+    text_pages, atomics = _split_atomic(pages)
+    target_parity = (len(atomics) + atomic_count) % 2
+    # 锚点 0 上的原子页会顶掉条目首页的位置，后面那页就不该再按「首页 14 行」算
+    page_offset = sum(1 for idx, _p in atomics if idx == 0)
+
+    if not _all_fit(text_pages):
+        return pages
+    if len(text_pages) % 2 == target_parity and not _has_thin(text_pages):
+        return pages
+
+    # 先试「把这几页正文并成一页」：正文总行数装得进一页时，这是唯一能把页数
+    # 翻成奇数的解（一页正文 + 一张插图 = 2 页，正好偶数）。
+    # `_reflow` 只会在小节之间挪页数，想不到「整篇压成一页」这条——而插图把奇偶压力
+    # 压到正文头上之后，这条恰恰是最常走通的。
+    if not any(p.get("title") for p in text_pages):
+        joined = _join_text_pages(text_pages)
+        if joined is not None and (len(joined) + atomic_count) % 2 == 0:
+            return _reinsert_atomic(joined, atomics)
+
+    groups = _group_by_title(text_pages)
     # 摊不开就并节，一直并到排版结果达标或只剩一节
     for _ in range(len(groups)):
         # 块切得越细，页界越好找；粗块切不动时才用细块（会多几个段中换行）
         for limit in (PAGE_CAP_FIRST, 10, MIN_PAGE_LINES):
-            out = _reflow(groups, limit)
+            out = _reflow(groups, limit, target_parity, page_offset)
             if out is not None and not _has_thin(out):
-                return out
+                return _reinsert_atomic(out, atomics)
         groups = _merge_two_groups(groups)
         if groups is None:
             break
     return pages
 
 
-def _reflow(groups, limit=PAGE_CAP_FIRST):
-    """给每组定页数并重排；凑不成偶数页返回 None。"""
+def _join_text_pages(pages):
+    """把连续几页正文并成一页；总行数装不下（或并完还是残页）就返回 None。
+
+    只在正文页都没带小节标题时可用——标题一旦被合并就得降级成正文加粗行，
+    那是 `_merge_two_groups` 的活，不该在这里悄悄做。
+    """
+    if len(pages) < 2:
+        return None
+    merged = "$(br2)".join(p["text"].rstrip() for p in pages)
+    out = [{"type": "patchouli:text", "text": merged}]
+    # 并完只剩一页，就没有「残页」一说；只要不超首页容量即可
+    if _page_lines(out[0]) > PAGE_CAP_FIRST:
+        return None
+    return out
+
+
+def _reflow(groups, limit=PAGE_CAP_FIRST, target_parity=0, page_offset=0):
+    """给每组定页数并重排；凑不出目标奇偶返回 None。
+
+    `target_parity` 是**正文页数**该有的奇偶。整篇要偶数页，而图片 / 模板页各占一整页，
+    所以正文页数的奇偶得跟原子页数配平：有一张图时，正文页数必须是奇数。
+    `page_offset` 是第一条正文页在整篇页序里的下标（前面压着图片页时不为 0）——
+    落在条目第 0 页的那一页才有「首页只剩 14 行」的容量，压着图时就不该按首页算。
+    """
     infos = []
     for i, group in enumerate(groups):
         chunks = _group_chunks(group, limit)
         if not chunks:
             return None
         title = group[0].get("title")
-        # 只有第一组落在条目首页（容量 14），其余组至少也是带标题页（16）
-        start = 0 if i == 0 else 1
+        # 只有第一组可能落在条目首页（容量 14），其余组至少也是带标题页（16）
+        start = page_offset if i == 0 else 1
         lo = _min_pages(chunks, _caps_for(start, bool(title), len(chunks)))
         if lo > len(chunks):                      # 单块超出任何容量，切不动
             return None
@@ -572,8 +656,8 @@ def _reflow(groups, limit=PAGE_CAP_FIRST):
         infos.append((chunks, title, start, lo, hi))
 
     plan = [lo for _c, _t, _s, lo, _hi in infos]
-    if sum(plan) % 2 == 1:
-        # 摊开一节（多在 1 → 2 页）凑偶数。**摊完两页都得够满**才算数：
+    if sum(plan) % 2 != target_parity:
+        # 摊开一节（多在 1 → 2 页）把奇偶翻过来。**摊完两页都得够满**才算数：
         # 16 行摊成 8+8 是好事，12 行摊成 6+6 只是把残页从一页变成两页，宁可不摊。
         best = None
         for i, (chunks, title, start, lo, hi) in enumerate(infos):
@@ -628,8 +712,13 @@ def _merge_two_groups(groups):
 
 # ---------------------------------------------------------------- 入口处理
 def paginate_data(data: dict, max_lines_override=None, max_chars_override=None,
-                  remove_hints=True, verbose=False, label="") -> bool:
-    """就地把条目 dict 的 pages 切开并平衡；有改动返回 True。"""
+                  remove_hints=True, verbose=False, label="", atomic_count=0) -> bool:
+    """就地把条目 dict 的 pages 切开并平衡；有改动返回 True。
+
+    `atomic_count` 是**不在 `pages` 里**的原子页（图片 / 模板）数量，只参与奇偶配平。
+    生成器先对正文分页、之后再插图片页，走的就是这条；调用方若已经把图片页写在
+    `pages` 里，留默认 0 即可，`balance_pages` 自己会数。
+    """
     pages = data.get("pages")
     if not pages or not isinstance(pages, list):
         return False
@@ -641,7 +730,7 @@ def paginate_data(data: dict, max_lines_override=None, max_chars_override=None,
 
     new_pages = []
     for page in pages:
-        if page.get("type") != "patchouli:text" or "text" not in page:
+        if not _is_text_page(page):
             new_pages.append(page)
             continue
         text = page.get("text", "")
@@ -660,7 +749,7 @@ def paginate_data(data: dict, max_lines_override=None, max_chars_override=None,
         for cont in parts[1:]:
             new_pages.append({"type": "patchouli:text", "text": cont})
 
-    balanced = balance_pages(new_pages)
+    balanced = balance_pages(new_pages, atomic_count)
 
     if verbose and label and json.dumps(balanced, ensure_ascii=False, sort_keys=True) != original:
         print(" -> %s: %d 页 → %d 页" % (label, len(pages), len(balanced)))
@@ -699,11 +788,13 @@ def audit(entries):
     problems = []
     stats = {"pages": 0, "over": 0, "odd": 0, "thin": 0}
     for rel, data in entries:
-        pages = [p for p in data.get("pages", []) if p.get("type") == "patchouli:text"]
-        stats["pages"] += len(pages)
-        if len(pages) > 1 and len(pages) % 2 == 1:
+        pages = [p for p in data.get("pages", []) if _is_text_page(p)]
+        atomic = len(data.get("pages", [])) - len(pages)
+        stats["pages"] += len(pages) + atomic
+        # 图片 / 模板页也各占一整页，对开页面上同样会让末页右半空出来
+        if len(pages) + atomic > 1 and (len(pages) + atomic) % 2 == 1:
             stats["odd"] += 1
-            problems.append("奇数页条目（末页右半会空）：%s（%d 页）" % (rel, len(pages)))
+            problems.append("奇数页条目（末页右半会空）：%s（%d 页）" % (rel, len(pages) + atomic))
         for i, p in enumerate(pages):
             lines = _page_lines(p)
             cap = _cap_for(p, i)

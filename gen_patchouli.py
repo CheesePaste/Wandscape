@@ -646,14 +646,26 @@ MIN_PREAMBLE_LINES = 8
 PAGINATION_ODD_EXCEPTIONS = {
     ("zh_cn", "buildings_guide"):
         "前言 12 行 + 先盖哪几座 20 行 = 32 行；2 页容量 30 行装不下，4 页每页不足 7 行",
-    ("zh_cn", "panel_settings_guide"):
-        "六个设置页 14 行 + 谁能改 17 行 = 31 行；2 页差 1 行，4 页每页不足 7 行",
     ("zh_cn", "advanced_casting_guide"):
         "总体策略 10 行 + 施法锁与装备门控 18 行 = 28 行；后者超过带标题页的 16 行容量",
-    ("en_us", "element_level_guide"):
-        "Town Level 26 行；与前言页合计 36 行，2 页装不下，4 页又切不出四个 7 行以上的页",
-    ("en_us", "tavern_guide"):
-        "单节 30 行；两段的长度让 2 页切不出两个 7 行以上的页，3 页则末页右半空",
+
+    # ── 下面这批是「加了插图之后才变奇数」的，成因是插图与正文各占各的页 ──
+    #
+    # 一张插图占 1 页，整篇要偶数页就得让**正文页数是奇数**。而正文页数能不能是奇数，
+    # 由它的行数卡死：1 页装得下 14 行（首页），3 页每页至少 7 行、共需 21 行。
+    # 于是**正文 15–20 行**这一段成了死角：1 页装不下、3 页又填不满，只能是 2 页（偶数）。
+    # 这类条目一旦配图，页数必为奇数，没有排版解法——要么删图，要么接受末页右半空着。
+    ("zh_cn", "element_level_guide"): "正文 20 行；15–20 行死角，配图后无解",
+    ("zh_cn", "mages_guide"):         "正文 19 行；15–20 行死角，配图后无解",
+    ("zh_cn", "casting_guide"):       "正文 17 行；15–20 行死角，配图后无解",
+    ("en_us", "altar_guide"):         "正文 19 行；15–20 行死角，配图后无解",
+    ("en_us", "mage_hut_guide"):      "正文 19 行；15–20 行死角，配图后无解",
+    # 这两条的正文都在死角边缘卡着：并成一页只差一行（15 行 vs 首页容量 14），
+    # 摊开又凑不满 3 页的 21 行。删图或增删正文都能走通，纯排版无解。
+    ("zh_cn", "tavern_guide"):
+        "正文 4+10 行，并成一页差 1 行（含段间空行共 15 行 > 首页 14）；配图后为 3 页",
+    ("en_us", "workstation_guide"):
+        "正文 26 行；3 页需每页 ≥7 行而 26 行分不出，配图后为 3 页",
 }
 
 
@@ -715,10 +727,13 @@ def check_pagination(book_lang, doc, pages, warn, used_exceptions=None):
         if page.get("type") != "patchouli:text":
             continue
         lines = paginate_module.lines_for_text(page.get("text", ""))
+        # 容量看的是这一页**画在书的第几页**：0 号页要腾出条目名的位置。图片页也占页序，
+        # 所以下标得按整篇数，不能按正文页重新数。
         cap = paginate_module.page_capacity(page, i)
         if lines > cap:
             warn("[%s] 条目 %s 第 %d 页 %d 行，超过帕秋莉这一页的 %d 行容量（进游戏会被缩小字号）"
                  % (book_lang, doc, i + 1, lines, cap))
+    # 图片 / 模板页各占一整页，对开页面上和正文页一样会让末页右半空出来
     if len(pages) > 1 and len(pages) % 2 == 1:
         key = (book_lang, doc)
         if key in PAGINATION_ODD_EXCEPTIONS:
@@ -733,6 +748,73 @@ def check_pagination(book_lang, doc, pages, warn, used_exceptions=None):
 # --check 模式下不落盘：所有生成物收进内存，跑完与磁盘逐字节比对（见 check_outputs）
 CHECK_MODE = False
 GENERATED = {}
+
+
+# 手写的插图页 / 模板页必须留住的字段。图片页的 `text` 是图注、`images` 可以多张
+# （帕秋莉给每张配左右箭头），模板页则整个 sourceObject 都要原样带走。
+ATOMIC_PAGE_KEYS = ("type", "images", "text", "title", "border", "image",
+                    "u", "v", "width", "height", "texture_width", "texture_height",
+                    "scale", "x", "y", "components", "include", "processor", "anchor")
+
+
+def load_atomic_pages(path):
+    """读一份条目 JSON，摘出手写的非文本页。返回 [(前面压着多少页正文页, 页), …]。"""
+    if not path.is_file():
+        return []
+    try:
+        pages = json.loads(path.read_text(encoding="utf-8")).get("pages", [])
+    except (OSError, ValueError):
+        return []
+    out, n = [], 0
+    for page in pages:
+        if isinstance(page, dict) and page.get("type") == "patchouli:text":
+            n += 1
+        elif isinstance(page, dict) and page.get("type"):
+            out.append((n, {k: v for k, v in page.items() if k in ATOMIC_PAGE_KEYS}))
+    return out
+
+
+def harvest_atomic_pages(book_lang):
+    """把这一语言下所有条目手写的插图页先收进内存：{条目 id: [(锚点, 页), …]}。
+
+    **必须在 `entries/` 清空重建之前调**——那一步会把上一轮的手写页连同旧 JSON 一起删掉，
+    之后再读就只剩空目录了。锚点按「前面压着多少页正文页」记，源文 md 的长短变了也不会
+    把图插到别处去。
+    """
+    out = {}
+    root = OUT_ASSETS / book_lang / "entries"
+    if not root.is_dir():
+        return out
+    for path in root.rglob("*.json"):
+        atomics = load_atomic_pages(path)
+        if atomics:
+            out[path.stem] = atomics
+    return out
+
+
+def reinsert_atomic(pages, atomics, warn, doc):
+    """把捞回来的原子页插进刚编译出的 pages，并守住两条会画坏的边界。"""
+    if not atomics:
+        return pages
+    n = len(pages)
+    by_anchor = {}
+    for idx, page in atomics:
+        by_anchor.setdefault(min(idx, n), []).append(page)
+
+    out = []
+    for i, page in enumerate(pages):
+        out.extend(by_anchor.get(i, ()))
+        out.append(page)
+    out.extend(by_anchor.get(n, ()))
+
+    # 首页画的是条目名（`PageText.getTextHeight()` 里 `pageNum == 0` 那条），
+    # 把图顶在它前面会让条目名压到图上——插在正文第一页之后。
+    if out and out[0].get("type") != "patchouli:text":
+        warn("[%s] 图片页落在第 0 页：那一页要画条目名，已改插到正文首页之后" % doc)
+        head = next((i for i, p in enumerate(out) if p.get("type") == "patchouli:text"), None)
+        if head is not None:
+            out.insert(head + 1, out.pop(0))
+    return out
 
 
 def write_json(path, obj):
@@ -905,6 +987,9 @@ def build_books():
             missing.append(str(lang_dir))
             continue
 
+        # 手写的插图页得赶在下面那轮清空之前收好——清了就再也读不回来了
+        atomic_by_doc = harvest_atomic_pages(book_lang)
+
         # 清掉上一轮生成物，避免改名/删条目后残留（分类被整个删掉时，空目录也要一并带走）
         # --check 只读，绝不动磁盘
         if not CHECK_MODE:
@@ -941,6 +1026,12 @@ def build_books():
             if cid not in cat_by_id:
                 warn("条目 %s 引用了未定义分类 %s" % (doc, cid))
             names_by_doc[doc] = to_plain(name)
+
+            # 插图页 / 模板页不用 md 写（`![]()` 那条路被分页器吃图 + 一张图要在中英
+            # 两份 md 各写一遍），直接手写进条目 JSON，生成时按原位置带过来。
+            entry_path = OUT_ASSETS / book_lang / "entries" / cid / (doc + ".json")
+            atomics = atomic_by_doc.get(doc, [])
+
             entry = {
                 "name": name,
                 "category": "%s:%s" % (NS, cid),
@@ -952,9 +1043,17 @@ def build_books():
             # 分页是生成的一部分：单跑 gen 就得到最终形态，不必再手动跑一趟 paginate。
             # 之前那两步的写法出过事——忘了第二步，仓库里就留下「生成物是长节、分页器没跑」的旧状态，
             # 而 --check 又用同一个分页器在内存里比对，两边一起空转，谁都没发现。
-            paginate_module.paginate_data(entry, label="%s/%s" % (book_lang, doc))
+            #
+            # 原子页这时还没插进 `pages`，只能把张数报给分页器——它据此把**正文页数**的
+            # 奇偶配到「加上原子页之后为偶」。插完正好落回偶数页，不用再跑第二趟。
+            #
+            # 别想着插完再补一趟 `paginate_data` 兜底：它对 `$(br)` 后紧跟的空格不幂等，
+            # 跑第二趟会把已经生成的正文改掉（实测 en_us 有 13 篇会被这一趟改出漂移）。
+            paginate_module.paginate_data(entry, label="%s/%s" % (book_lang, doc),
+                                          atomic_count=len(atomics))
+            entry["pages"] = reinsert_atomic(entry["pages"], atomics, warn, doc)
             check_pagination(book_lang, doc, entry["pages"], warn, used_exceptions)
-            write_json(OUT_ASSETS / book_lang / "entries" / cid / (doc + ".json"), entry)
+            write_json(entry_path, entry)
 
         # 兜底阅读器读的那一份：分类、条目、书名号表、着陆文案
         write_json(OUT_RUNTIME / (md_lang + ".json"),

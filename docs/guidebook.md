@@ -1,6 +1,6 @@
 # 手册（Guidebook）：内容 · 文风 · 管线 · 美术
 
-> 信息截至 2026-09-19 | Minecraft NeoForge 1.21.1 | 分支 1.21.1
+> 信息截至 2026-09-24 | Minecraft NeoForge 1.21.1 | 分支 1.21.1
 > 本文合并了原 `guidebook-patchouli.md`（管线）与 `guidebook-writing.md`（文风），并把原
 > `plan/patchouli-art-asset-spec.md` 的书皮槽位表与产出清单并进来。那三份文档已删——需要完整的美术调研
 > （6 本参考手册的做法、装饰符用量统计、逐条源码行号索引）时去 git 历史里取 `docs/plan/patchouli-art-asset-spec.md`。
@@ -343,11 +343,11 @@ src/main/resources/assets/wandscape/textures/gui/guidebook/book.png
 客户端已经没有绘制代码了，这张图就是书本身。它现在是**程序生成的占位美术**：
 纯色填充、线性渐变、直线——没有抗锯齿、没有纹理、没有噪点。核心工作量就是把它重画一遍。
 
-**实测结论：真正还需要画的只有两样**（2026-09-19 逐条确认）：
+**实测结论：要画的只剩书皮**（2026-09-24 复核）：
 
 | 曾以为要画 | 实际 |
 |---|---|
-| **正文插图**（256×256） | **不需要**——手册 217 页**全部**是 `patchouli:text` 纯文本页，没有任何 image 页或模板插图组件 |
+| **正文插图**（256×256） | **已有 22 张，但那是截图不是画的**（见 §5.3）。剩下要补的见 [guidebook-screenshots.md](guidebook-screenshots.md) |
 | **条目 / 分类图标**（16×16） | **不需要**——全部直接引用物品 ID |
 | **配方图集 `crafting_texture`**（128×256） | **不需要**——手册里没有合成页 |
 | **书皮图集** `book.png`（512×256） | **必做**，见 §5.2 |
@@ -459,7 +459,7 @@ graphics.blit(book.bookTexture, x, y, u, v, w, h, 512, 256);
 
 ### 5.3 正文插图：现在不需要，将来加图时的规格
 
-手册当前**一张配图都没有**（217 页全是纯文本页）。要加图时，帕秋莉 `patchouli:image` 页级是**硬规格**：
+手册现有 **22 张插图**（632 页里 `patchouli:image` 占 44 页，中英各一份）。帕秋莉 `patchouli:image` 页级是**硬规格**：
 
 ```java
 // PageImage.java:39-45
@@ -481,6 +481,28 @@ graphics.blit(images[index], x*2 + 6, y*2 + 6, 0, 0, 200, 200);
 md 里用 `![说明](wandscape:path/x.png =WxH)` 引用，生成器转成独立 `patchouli:image` 页；
 `=WxH` 后缀帕秋莉不认（只有兜底阅读器拿它排版），但别删。目录里原有的 6 张 1376×768 占位图
 已随引用它们的旧文档删除，**将来从零按 256×256 画**。
+
+> **动手加图之前先读 [guidebook-screenshots.md](guidebook-screenshots.md)**：逐张拍摄清单 + 落位流程。
+
+**插图手写进条目 JSON，不走 md**，理由有两条：
+
+1. **md 那条路曾经是坏的**——`paginate_patchouli_json.py` 的 `balance_pages()` 重建页面时只认文本块，
+   `patchouli:image` 页会被静默丢弃（`_page_lines()` 算 0 行 → 恒判为残页 → 走重排 → 图与 alt 一起消失）。
+   现已修（`_split_atomic` 把非文本页当**原子页**携带），但见下条。
+2. **一张图要在中英两份 md 里各写一遍**，图注还得各翻一次。图是语言无关的，
+   只有图注分语言——手写进 JSON 反而只有一个来源，也少一次人工同步。
+
+生成器认得手写的图片页（`harvest_atomic_pages` 在 `entries/` 清空前收进内存、编译完按原位置插回），
+重跑 `gen_patchouli.py` 不会丢，`--check` 也不会当成残留。
+
+**尺寸是硬限制**：`PageImage` 只取源图**左上 200×200** 再拉伸成 100×100（`blit` 的 UV 分母硬编码 256），
+所以成品必须先等比缩放进 200×200、再摆到 256×256 画布左上角，否则右边和下边各约 22% 不显示。
+整屏截图（591×459 起）缩完**字高只剩 1.5–2.7px**，进书里读不出字——
+`prepare_guidebook_images.py` 会逐张报等效字高，要文字可读得改裁局部特写。
+
+**加图会翻转页数奇偶**：一张图占一整页，正文页数必须变奇数才凑得回偶数。
+正文 15–20 行的条目两头够不着（1 页装不下、3 页填不满），是结构性无解——
+要么删图，要么增删正文；这类条目记在 `gen_patchouli.py` 的 `PAGINATION_ODD_EXCEPTIONS` 里，带原因。
 
 > 进阶：要用**自由尺寸**或**逐页替换纸底**，得用**模板组件**的 `patchouli:image`（带 `width`/`height`/`scale`/`x`/`y`/`u`/`v`）。
 > 模板文件要**同时放 `en_us/` 和 `zh_cn/`** 两处；挂了 `processor` 的模板需要对应的 Java 类（`compat/patchouli` 走 `compileOnly` 门禁）。

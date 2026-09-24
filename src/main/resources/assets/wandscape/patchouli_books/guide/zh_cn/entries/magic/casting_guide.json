@@ -10,6 +10,13 @@
       "text": "法师不会自己学魔法：卷轴在$(l:wandscape:buildings/magic_station_guide)《魔法工坊》$(/l)抄好、落进小镇仓库之后，还得由你放进它的施法策略槽。在法师面板打开策略页，把卷轴放进对应分类的槽里，法师才会用这个魔法；卷轴取出来，它也就不放了。"
     },
     {
+      "type": "patchouli:image",
+      "images": [
+        "wandscape:textures/guidebook/casting_slots.png"
+      ],
+      "text": "卷轴放进策略槽法师才会用，一类最多放三个"
+    },
+    {
       "type": "patchouli:text",
       "text": "每个魔法都有自己的冷却和魔力消耗，冷却没走完、或者魔力不够，法师这一轮就跳过它，往下试别的。同一个分类里，槽位从左到右就是尝试顺序，越靠左越优先，一类最多放三个。身上一个能用的魔法都没有时，法师会退回普通近战。"
     }

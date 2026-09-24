@@ -7,11 +7,22 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "Right-click a Town Hall that belongs to no town yet and give it a name: the town exists, and only then can other buildings go up. A player can only have one town."
+      "text": "Right-click a Town Hall that belongs to no town yet and give it a name: the town exists, and only then can other buildings go up. A p$(br)layer can only have one town."
+    },
+    {
+      "type": "patchouli:image",
+      "images": [
+        "wandscape:textures/guidebook/townhall_panel.png"
+      ],
+      "text": "The Town Hall panel: name, level, XP, and reviving mages"
     },
     {
       "type": "patchouli:text",
-      "text": "The panel is also where you rename the town. The naming style for future tourists and mages, and whether tourists keep arriving, live in the $(l:wandscape:management/panel_settings_guide)Settings Center$(/l) under the \"My Town\" tab— those only change your own town. See $(l:wandscape:playstyle/element_level_guide)Elements and Town Level$(/l) for leveling."
+      "text": "The panel is also where you rename the town. The naming style for future tourists and mages, and whether tourists keep arriving, live"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "in the $(l:wandscape:management/panel_settings_guide)Settings Center$(/l) under the \"My Town\" tab— those only change your own town. $(br)See $(l:wandscape:playstyle/element_level_guide)Elements and Town Level$(/l) for leveling."
     }
   ]
 }

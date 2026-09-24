@@ -10,6 +10,13 @@
       "text": "The Altar brings a fallen mage back: you place the order there, a mage of the town walks to the centre and works the ritual, and when it finishes the fallen mage returns."
     },
     {
+      "type": "patchouli:image",
+      "images": [
+        "wandscape:textures/guidebook/altar_panel.png"
+      ],
+      "text": "Order the rite at the Altar; a living mage performs it"
+    },
+    {
       "type": "patchouli:text",
       "text": "Reviving is the only ritual it offers, and it needs a living mage with enough mana or the order will not go through. If every mage is gone, the Town Hall panel has a revive button."
     }

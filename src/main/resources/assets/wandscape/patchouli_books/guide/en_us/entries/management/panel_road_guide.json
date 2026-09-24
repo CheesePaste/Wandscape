@@ -10,6 +10,13 @@
       "text": "$(italic)$(#6b5a45)Press 2 with the management panel open; press 2 again or ESC to leave.$()$(br2)$(bold)How to use it$()$(br2)Four tools. Replace swaps a patch of ground for the material you picked, Fill pours a solid cube into it, and Flatten cuts the ground"
     },
     {
+      "type": "patchouli:image",
+      "images": [
+        "wandscape:textures/guidebook/road_tools.png"
+      ],
+      "text": "Only Replace and Spline lay an actual road"
+    },
+    {
       "type": "patchouli:text",
       "text": "down to the block you clicked as a reference. All three are the same in the world: hold the left button and drag out the area — the$(br2)block you pressed on is the start, wherever you drag to is the end, and releasing fixes it;"
     },
@@ -19,25 +26,20 @@
     },
     {
       "type": "patchouli:text",
-      "text": "Spline is drawn differently: on the Curve tab, left-click block surfaces to drop anchor points, switch to Select & Drag to shape the $(br)curve by its handles, then set width, thickness and border on the Array tab and submit.",
+      "text": "Spline is drawn differently: on the Curve tab, left-click block surfaces to drop anchor points, switch to Select & Drag to shape the $(br)curve by its handles, then set width, thickness and border on the Array tab and submit.$(br2)$(bold)Only two of them leave a road$()",
       "title": "Splines and the camera"
     },
     {
       "type": "patchouli:text",
-      "text": "$(bold)Only two of them leave a road$()$(br2)Replace and Spline register a real road when they finish, and that is what tourists follow. Fill and Flatten only reshape terrain — w"
+      "text": "Replace and Spline register a real road when they finish, and that is what tourists follow. Fill and Flatten only reshape terrain — w$(br)hat they leave behind is not a road and tourists ignore it.$(br2)$(bold)Terrain is your job$()"
     },
     {
       "type": "patchouli:text",
-      "text": "hat they leave behind is not a road and tourists ignore it.$(br2)Hold the right button and drag to turn the view. WASD flies the camera and your character stays where it was."
+      "text": "Replace only lays at the height of the start point you picked, so on uneven ground the surface ends up half floating and half buried.$(br) Flatten the ground first — and Flatten really demolishes: trees, water and even someone else's building above the target height all $(br)come down with it."
     },
     {
       "type": "patchouli:text",
-      "text": "Replace only lays at the height of the start point you picked, so on uneven ground the surface ends up half floating and half buried.$(br) Flatten the ground first — and Flatten really demolishes: trees, water and even someone else's building above the target height all",
-      "title": "Terrain is your job"
-    },
-    {
-      "type": "patchouli:text",
-      "text": "come down with it.$(br2)Materials come from the town warehouse, and a mage lays the road block by block rather than all at once."
+      "text": "Hold the right button and drag to turn the view. WASD flies the camera and your character stays where it was.$(br2)Materials come from the town warehouse, and a mage lays the road block by block rather than all at once."
     }
   ]
 }

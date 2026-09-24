@@ -23,6 +23,20 @@
       "text": "e camera, put the building where you want it, left-click to rotate it, then confirm with Submit Build and Submit on$(br2)the right. When construction finishes the naming screen pops up on its own — give your town a name and you're settled in."
     },
     {
+      "type": "patchouli:image",
+      "images": [
+        "wandscape:textures/guidebook/intro_05_naming.png"
+      ],
+      "text": "Once construction ends you name the town"
+    },
+    {
+      "type": "patchouli:image",
+      "images": [
+        "wandscape:textures/guidebook/intro_03_placing.png"
+      ],
+      "text": "Drag with the right button to turn the camera; left click rotates 90 degrees"
+    },
+    {
       "type": "patchouli:text",
       "text": "The warehouse is the town's shared stock: everything mages gather or craft goes in here, and whatever sits in your own inventory doesn't count. The moment it is up, every element gets a sta",
       "title": "2. Build a Warehouse"
@@ -37,6 +51,13 @@
       "title": "3. Put Something in the Warehouse"
     },
     {
+      "type": "patchouli:image",
+      "images": [
+        "wandscape:textures/guidebook/intro_06_exchange_tab.png"
+      ],
+      "text": "The Exchange tab: warehouse on the left, your inventory below"
+    },
+    {
       "type": "patchouli:text",
       "text": "in takes it back out. This step is about remembering how the warehouse opens and how goods move — every haul later$(br2)on goes through this tab."
     },
@@ -49,6 +70,13 @@
       "type": "patchouli:text",
       "text": "Right-click the workstation, switch to the Crafting tab, pick a recipe and click Submit to put the order into the town's task queue. A mage takes it from there: the materials come out of th",
       "title": "5. Queue a Crafting Order"
+    },
+    {
+      "type": "patchouli:image",
+      "images": [
+        "wandscape:textures/guidebook/intro_07_craft_tab.png"
+      ],
+      "text": "The Workstation crafting tab: pick a recipe and submit"
     },
     {
       "type": "patchouli:text",

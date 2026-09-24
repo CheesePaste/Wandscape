@@ -10,8 +10,19 @@
       "text": "A building that takes damage — monsters, explosions — only loses blocks: it keeps working and keeps contributing to the town's three values as before, and there is no wear or upkeep to pay."
     },
     {
+      "type": "patchouli:image",
+      "images": [
+        "wandscape:textures/guidebook/bld_repair.png"
+      ],
+      "text": "The Repair button at the bottom of a building panel"
+    },
+    {
       "type": "patchouli:text",
-      "text": "When you want the missing blocks back, open the building's panel and press Repair: it works out what is missing, asks the warehouse for the materials, and a mage fills them in. Repair never happens on its own. Note that the \"abnormal\" report in the status list is ab$(br)out construction sites that never finished."
+      "text": "When you want the missing blocks back, open the building's panel and press Repair: it works out what is missing, asks the warehouse for the materials, and a mage fills them in. Repair never"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "happens on its own. Note that the \"abnormal\" report in the status list is ab$(br)out construction sites that never finished."
     }
   ]
 }

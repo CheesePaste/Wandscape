@@ -15,6 +15,13 @@
       "title": "谁能改、什么时候生效"
     },
     {
+      "type": "patchouli:image",
+      "images": [
+        "wandscape:textures/guidebook/settings_tabs.png"
+      ],
+      "text": "本镇页人人能改，其余五页要管理员"
+    },
+    {
       "type": "patchouli:text",
       "text": "改动立刻生效、自动存盘，不用重进世界也不用重启服务器——只有建筑预览的清晰度和帧率要重开游戏。$(br2)在「本镇」页关掉「生成游客」只是不再有新游客来，已经在镇上的会照常逛完自己离开。"
     }

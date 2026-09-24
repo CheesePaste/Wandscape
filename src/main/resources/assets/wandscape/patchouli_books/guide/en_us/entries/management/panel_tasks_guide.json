@@ -11,16 +11,27 @@
     },
     {
       "type": "patchouli:text",
-      "text": "There are three pages: the Task Hall lists what your town is doing and waiting to do, the Workshop Line groups the queues by building and shows what each is short of, and the Mage Roster shows what every mage is up to. A task card can be located, rushed or cancelled$(br)."
+      "text": "There are three pages: the Task Hall lists what your town is doing and waiting to do, the Workshop Line groups the queues by building"
     },
     {
       "type": "patchouli:text",
-      "text": "A building you just placed queues behind automatic restocking and production, so it sitting still at first is normal; rush it if you want it to start sooner. Rushing only helps work that has not been handed out yet.",
+      "text": "and shows what each is short of, and the Mage Roster shows what every mage is up to. A task card can be located, rushed or cancelled$(br)."
+    },
+    {
+      "type": "patchouli:image",
+      "images": [
+        "wandscape:textures/guidebook/tasks_tabs.png"
+      ],
+      "text": "Tasks, Workshop and Roster; rush a job from its card"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "A building you just placed queues behind automatic restocking and production, so it sitting still at first is normal;$(br) rush it if you want it to start sooner. Rushing only helps work that has not been handed out yet.",
       "title": "Rushing, cancelling and Follow"
     },
     {
       "type": "patchouli:text",
-      "text": "Cancelling deletes that step for good and does not put it back in the queue — missing blocks on a building only come back through Repair in overview mode.$(br2)Turning on Follow for a mage in the roster stops him taking any task at all, and work piles up."
+      "text": "Cancelling deletes that step for good and does not put it back in the queue — missing blocks on a building only come back through Rep$(br)air in overview mode.$(br2)Turning on Follow for a mage in the roster stops him taking any task at all, and work piles up."
     }
   ]
 }

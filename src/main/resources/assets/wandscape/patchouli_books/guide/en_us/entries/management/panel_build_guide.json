@@ -14,22 +14,24 @@
       "text": "sshair: hold the right button and drag to turn the view, left-click to turn the building 90 degrees, and a quick right-click to pin i$(br2)t. Once pinned you can drag its axes, or nudge it one block at a time with the X±/Y±/Z± buttons on the right."
     },
     {
+      "type": "patchouli:image",
+      "images": [
+        "wandscape:textures/guidebook/build_adjust.png"
+      ],
+      "text": "Nudge by the block on the right; left click rotates 90 degrees"
+    },
+    {
       "type": "patchouli:text",
-      "text": "Confirming takes two clicks: Submit Build on the panel, then Submit in the screen that opens;$(br) afterwards you are back at the bar, ready to place the next one.",
+      "text": "Confirming takes two clicks: Submit Build on the panel, then Submit in the screen that opens;$(br) afterwards you are back at the bar, ready to place the next one.$(br2)$(bold)Who builds it$()",
       "title": "Submitting and clearing"
     },
     {
       "type": "patchouli:text",
-      "text": "Anything already inside the footprint — another building's wall, furniture you placed — is cleared out with it by Clear box. That swi$(br)tch is on by default, so turn it off on the right before stacking buildings."
+      "text": "The materials come out of your town warehouse, never your inventory. Running short is not a failure: the site waits at Waiting for Ma$(br)terials and carries on once you stock up. A mage of your town does the work, so there is nothing for you to publish or start;"
     },
     {
       "type": "patchouli:text",
-      "text": "The materials come out of your town warehouse, never your inventory. Running short is not a failure: the site waits at Waiting for Ma",
-      "title": "Who builds it"
-    },
-    {
-      "type": "patchouli:text",
-      "text": "terials and carries on once you stock up. A mage of your town does the work, so there is nothing for you to publish or start;$(br2)with no mage around, or with the town frozen, work never begins."
+      "text": "Anything already inside the footprint — another building's wall, furniture you placed — is cleared out with it by Clear box. That swi$(br)tch is on by default, so turn it off on the right before stacking buildings.$(br2)with no mage around, or with the town frozen, work never begins."
     }
   ]
 }

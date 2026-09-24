@@ -7,11 +7,22 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "Element Nodes are the town's proper source of elements: each node yields one element only, and what it gathers goes straight into the warehouse."
+      "text": "Element Nodes are the town's proper source of elements: each node yields one element only, and what it gathers goes straight into the$(br) warehouse."
     },
     {
       "type": "patchouli:text",
-      "text": "A node does nothing by itself — set how many harvests to run in its screen and post the job, then a mage walks over to gather. Whether the town tops up short elements on its own can be switched on in the config; it is off by default."
+      "text": "A node does nothing by itself — set how many harvests to run in its screen and post the job, then a mage walks over to gather. Whethe"
+    },
+    {
+      "type": "patchouli:image",
+      "images": [
+        "wandscape:textures/guidebook/node_panel.png"
+      ],
+      "text": "Set the harvest count first, then publish, and mages will gather"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "r the town tops up short elements on its own can be switched on in the config;$(br) it is off by default."
     }
   ]
 }

@@ -8,6 +8,13 @@
     {
       "type": "patchouli:text",
       "text": "工作站把仓库里的元素合成成物品，也能把仓库里的东西分解回元素。分解拿回来的元素只有造它的一小部分，是清了没用的存货用的，别指望靠它赚。$(br2)两个方向都只认小镇仓库，你背包里的东西不参与。商店缺货时它会自动被叫去合成补货，看到它自己开工不用管。"
+    },
+    {
+      "type": "patchouli:image",
+      "images": [
+        "wandscape:textures/guidebook/workstation_panel.png"
+      ],
+      "text": "工作站把元素合成物品，也能把物品分解回元素"
     }
   ]
 }

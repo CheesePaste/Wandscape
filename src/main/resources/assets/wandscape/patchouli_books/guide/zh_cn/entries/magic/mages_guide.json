@@ -13,6 +13,13 @@
       "type": "patchouli:text",
       "text": "$(li)跟随模式:开启后，法师会跟随你，不会接取城镇任务。$(li)和平模式:开启后，法师不会攻击任何生物。$(li)施法策略:配置魔法与施法顺序，详见$(l:wandscape:magic/advanced_casting_guide)《高级施法管理》$(/l)$(li)解雇:解雇法师，该法师会永久消失。",
       "title": "面板上的四个开关"
+    },
+    {
+      "type": "patchouli:image",
+      "images": [
+        "wandscape:textures/guidebook/mage_panel.png"
+      ],
+      "text": "法师面板：装备，以及跟随、和平、策略、解雇"
     }
   ]
 }

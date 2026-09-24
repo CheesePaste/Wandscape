@@ -7,19 +7,22 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "Mages do not learn spells on their own: once a scroll has been copied at the $(l:wandscape:buildings/magic_station_guide)《Magic Workshop》$(/l) and has landed in the town warehouse, you sti$(br)ll have to place it. Open the strategy page from the mage panel and drop the"
+      "text": "Mages do not learn spells on their own: once a scroll has been copied at the $(l:wandscape:buildings/magic_station_guide)《Magic Work$(br)shop》$(/l) and has landed in the town warehouse, you still have to place it. Open the strategy page from the mage panel and drop the"
+    },
+    {
+      "type": "patchouli:image",
+      "images": [
+        "wandscape:textures/guidebook/casting_slots.png"
+      ],
+      "text": "A scroll works only in a strategy slot; three per category at most"
     },
     {
       "type": "patchouli:text",
-      "text": "scroll into a category slot, and the mage will use that spell;$(br)take the scroll back out and it stops using it."
+      "text": "scroll into a category slot, and the mage will use that spell;$(br)take the scroll back out and it stops using it.$(br2)Every spell has its own cooldown and mana cost. If the cooldown has not finished, or there is not enough mana, the mage skips that sp"
     },
     {
       "type": "patchouli:text",
-      "text": "Every spell has its own cooldown and mana cost. If the cooldown has not finished, or there is not enough mana, the mage skips that spell this time and tries the next one down the list. With"
-    },
-    {
-      "type": "patchouli:text",
-      "text": "in a category the slots run left to right and the leftmost one is tried first$(br2), three spells per category at most. With nothing left to cast, the mage falls back to an ordinary melee attack."
+      "text": "ell this time and tries the next one down the list. Within a category the slots run left to right and the leftmost one is tried first$(br2), three spells per category at most. With nothing left to cast, the mage falls back to an ordinary melee attack."
     }
   ]
 }
