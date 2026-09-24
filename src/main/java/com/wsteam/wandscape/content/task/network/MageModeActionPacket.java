@@ -62,7 +62,7 @@ public record MageModeActionPacket(
         }
         // 完全平行隔离：只能切换自己小镇法师的模式。
         if (!com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.isOwn(npc.colonyId, player)) {
-            com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(player, "法师");
+            com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(player, "mage", "法师");
             return;
         }
 

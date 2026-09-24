@@ -356,8 +356,7 @@ public final class RoadStudioOverlay {
         List<RoadPreset> presets = RoadPlacementState.getPresets();
         int currentIdx = RoadPlacementState.getSelectedPresetIndex();
         String[] names = presets.stream()
-                .map(p -> I18n.datapackName("gui.wandscape.road.preset." + p.id(),
-                        p.displayName(), p.displayNames()).getString())
+                .map(RoadStudioOverlay::presetLabel)
                 .toArray(String[]::new);
 
         int newIdx = StudioWidgets.combo("##preset", names, currentIdx, 22);
@@ -401,6 +400,15 @@ public final class RoadStudioOverlay {
             "minecraft:polished_diorite",
             "minecraft:bricks"
     };
+
+    /**
+     * 预设显示名的唯一出口：lang 键 → 数据包自带多语言 → 预设字面量，三段兜底。
+     * 面板、评估文案一律走这里，别再直接读 {@link RoadPreset#displayName()}。
+     */
+    private static String presetLabel(RoadPreset preset) {
+        if (preset == null) return "";
+        return I18n.datapackName(preset.langKey(), preset.displayName(), preset.displayNames()).getString();
+    }
 
     private static String formatBlockName(String blockId) {
         try {
@@ -589,7 +597,7 @@ public final class RoadStudioOverlay {
             StudioWidgets.spacing();
             StudioWidgets.textColored(
                     I18n.name("gui.wandscape.roadstudio.cost_estimate",
-                            "• 本次预计消耗: %d × %s", area, RoadPlacementState.getActivePreset().displayName()).getString(),
+                            "• 本次预计消耗: %d × %s", area, presetLabel(RoadPlacementState.getActivePreset())).getString(),
                     StudioColors.TEXT_GOLD);
             StudioWidgets.textColored(
                     I18n.name("gui.wandscape.roadstudio.output_estimate",
@@ -653,7 +661,7 @@ public final class RoadStudioOverlay {
             StudioWidgets.spacing();
             StudioWidgets.textColored(
                     I18n.name("gui.wandscape.roadstudio.cost_estimate",
-                            "• 本次预计消耗: %d × %s", volume, RoadPlacementState.getActivePreset().displayName()).getString(),
+                            "• 本次预计消耗: %d × %s", volume, presetLabel(RoadPlacementState.getActivePreset())).getString(),
                     StudioColors.TEXT_GOLD);
             StudioWidgets.textColored(
                     I18n.name("gui.wandscape.roadstudio.output_estimate",

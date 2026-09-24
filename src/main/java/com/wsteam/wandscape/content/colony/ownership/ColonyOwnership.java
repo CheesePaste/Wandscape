@@ -4,6 +4,7 @@ import com.wsteam.wandscape.api.ColonyApi;
 import com.wsteam.wandscape.api.WandscapeApis;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.foundation.networking.ScreenFeedbackPacket;
+import com.wsteam.wandscape.foundation.ui.I18n;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
@@ -54,17 +55,25 @@ public final class ColonyOwnership {
     /**
      * 拒止并反馈（快捷栏 Action Bar + 屏幕 Toast + 村民拒绝音效 + 日志）。
      *
-     * @param what 简短操作描述（如「建筑」「法师」「仓库」），用于玩家反馈文案。
+     * <p>操作描述走两次查表而不是字面量：{@code whatKey} 定 lang 键，{@code whatFallback}
+     * 是键缺失时的中文兜底。整个 Component 会被序列化给客户端解析，所以服务端只需要
+     * 拼出可翻译结构即可。
+     *
+     * @param whatKey      操作描述的 lang 键后缀（如 {@code building}/{@code mage}/{@code warehouse}），
+     *                     完整键为 {@code gui.wandscape.ownership.what.<whatKey>}
+     * @param whatFallback 该键缺失时的兜底描述
      */
-    public static void deny(ServerPlayer player, String what) {
-        Component msg = Component.literal("§c[魔法小镇] 你没有权限操作别人的小镇（" + what + "）");
+    public static void deny(ServerPlayer player, String whatKey, String whatFallback) {
+        Component what = I18n.name("gui.wandscape.ownership.what." + whatKey, whatFallback);
+        Component msg = I18n.name("message.wandscape.ownership.denied",
+                "§c[魔法小镇] 你没有权限操作别人的小镇（%s）", what);
         player.displayClientMessage(msg, true);
         ScreenFeedbackPacket.send(player, msg, true);
         try {
             player.playNotifySound(SoundEvents.VILLAGER_NO, SoundSource.PLAYERS, 1.0f, 1.0f);
         } catch (Throwable ignored) {}
         Log.warn(TAG, "Player {} denied {} on colony",
-                player.getGameProfile().getName(), what);
+                player.getGameProfile().getName(), whatKey);
     }
 
     /** 目标小镇是否就是玩家自己的小镇（供无分支逻辑处使用）。 */

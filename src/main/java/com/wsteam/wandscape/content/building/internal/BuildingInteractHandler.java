@@ -102,7 +102,7 @@ public final class BuildingInteractHandler {
         // 完全平行隔离：建筑 GUI 的咽喉——目标建筑不属于操作者本人（且非无归属建镇/野建筑）则拒止。
         if (colonyId != null
                 && !com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.isOwnColonyOf(colonyId, player)) {
-            com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(player, "建筑");
+            com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(player, "building", "建筑");
             return;
         }
 

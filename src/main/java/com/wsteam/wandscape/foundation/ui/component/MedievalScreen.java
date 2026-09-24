@@ -488,7 +488,7 @@ public abstract class MedievalScreen extends Screen implements ReplayProtectedSc
         if (titleBarText != null) {
             return titleBarText.getString();
         }
-        return "建筑";
+        return I18n.name("gui.wandscape.common.building", "建筑").getString();
     }
 
     protected void renderBuildingHeaderInfo(GuiGraphics g, int hx, int hy, int hw, int statusBadgeStartX) {
@@ -569,43 +569,55 @@ public abstract class MedievalScreen extends Screen implements ReplayProtectedSc
 
         if (isInRect(mouseX, mouseY, statusBadgeX, statusBadgeY, statusBadgeW, statusBadgeH)) {
             List<Component> tooltip = new ArrayList<>();
-            tooltip.add(Component.literal("§6" + getBuildingDisplayName() + " §7(" + buildingData.category() + ")"));
+            // 分类走 category.wandscape.<id>（创造扫描器同一套键），缺键时退回原始 id。
+            String category = buildingData.category();
+            tooltip.add(Component.literal("§6" + getBuildingDisplayName() + " §7("
+                    + I18n.name("category.wandscape." + category, category).getString() + ")"));
             tooltip.add(getStatusTooltip(buildingData));
             g.renderComponentTooltip(font, tooltip, mouseX, mouseY);
             return;
         }
 
         if (comfortIconW > 0 && isInRect(mouseX, mouseY, comfortIconX, comfortIconY, comfortIconW, comfortIconH)) {
-            g.renderTooltip(font, Component.literal("§d舒适度: " + buildingData.comfort()), mouseX, mouseY);
+            g.renderTooltip(font, I18n.name("gui.wandscape.building_stat.comfort_tip",
+                    "§d舒适度: %s", buildingData.comfort()), mouseX, mouseY);
             return;
         }
         if (magicIconW > 0 && isInRect(mouseX, mouseY, magicIconX, magicIconY, magicIconW, magicIconH)) {
-            g.renderTooltip(font, Component.literal("§9魔力: " + buildingData.magic()), mouseX, mouseY);
+            g.renderTooltip(font, I18n.name("gui.wandscape.building_stat.magic_tip",
+                    "§9魔力: %s", buildingData.magic()), mouseX, mouseY);
             return;
         }
         if (wonderIconW > 0 && isInRect(mouseX, mouseY, wonderIconX, wonderIconY, wonderIconW, wonderIconH)) {
-            g.renderTooltip(font, Component.literal("§e奇迹度: " + buildingData.wonder()), mouseX, mouseY);
+            g.renderTooltip(font, I18n.name("gui.wandscape.building_stat.wonder_tip",
+                    "§e奇迹度: %s", buildingData.wonder()), mouseX, mouseY);
             return;
         }
 
         if (btnRepair != null && btnRepair.visible && btnRepair.isHoveredOrFocused()) {
             if (buildingData.demolishing()) {
-                g.renderTooltip(font, Component.literal("建筑正在拆除中"), mouseX, mouseY);
+                g.renderTooltip(font, I18n.name("gui.wandscape.building_action.repair_demolishing",
+                        "建筑正在拆除中"), mouseX, mouseY);
             } else if (buildingData.underConstruction()) {
-                g.renderTooltip(font, Component.literal("撤销建造施工并返还建材"), mouseX, mouseY);
+                g.renderTooltip(font, I18n.name("gui.wandscape.building_action.repair_cancel_construction",
+                        "撤销建造施工并返还建材"), mouseX, mouseY);
             } else if (!btnRepair.active) {
-                g.renderTooltip(font, Component.literal("建筑结构完好，无需维修"), mouseX, mouseY);
+                g.renderTooltip(font, I18n.name("gui.wandscape.building_action.repair_not_needed",
+                        "建筑结构完好，无需维修"), mouseX, mouseY);
             } else {
-                g.renderTooltip(font, Component.literal("下发修复任务以恢复受损方块"), mouseX, mouseY);
+                g.renderTooltip(font, I18n.name("gui.wandscape.building_action.repair_send",
+                        "下发修复任务以恢复受损方块"), mouseX, mouseY);
             }
             return;
         }
 
         if (btnDemolish != null && btnDemolish.visible && btnDemolish.isHoveredOrFocused()) {
             if (buildingData.demolishing()) {
-                g.renderTooltip(font, Component.literal("拆除任务执行中..."), mouseX, mouseY);
+                g.renderTooltip(font, I18n.name("gui.wandscape.building_action.demolish_running",
+                        "拆除任务执行中..."), mouseX, mouseY);
             } else {
-                g.renderTooltip(font, Component.literal("拆除该建筑并返还建材（需确认）"), mouseX, mouseY);
+                g.renderTooltip(font, I18n.name("gui.wandscape.building_action.demolish_send",
+                        "拆除该建筑并返还建材（需确认）"), mouseX, mouseY);
             }
             return;
         }
@@ -635,17 +647,21 @@ public abstract class MedievalScreen extends Screen implements ReplayProtectedSc
 
     protected static Component getStatusTooltip(BuildingDebugResponsePacket data) {
         if (data.demolishing()) {
-            return Component.literal("§c状态: 正在拆除中，NPC 正在清理结构方块。");
+            return I18n.name("gui.wandscape.building_status_tip.demolishing",
+                    "§c状态: 正在拆除中，NPC 正在清理结构方块。");
         }
         if (data.underConstruction()) {
             return data.constructionStarted()
-                    ? Component.literal("§b状态: 施工中，NPC 正在搬运材料与砌筑。")
-                    : Component.literal("§e状态: 等待材料中，仓库备齐建材后方可动工。");
+                    ? I18n.name("gui.wandscape.building_status_tip.under_construction",
+                            "§b状态: 施工中，NPC 正在搬运材料与砌筑。")
+                    : I18n.name("gui.wandscape.building_status_tip.waiting_materials",
+                            "§e状态: 等待材料中，仓库备齐建材后方可动工。");
         }
         if (data.needsRepair()) {
-            return Component.literal("§6状态: 结构部分受损，点击下方「修复」按钮下发维修任务。");
+            return I18n.name("gui.wandscape.building_status_tip.needs_repair",
+                    "§6状态: 结构部分受损，点击下方「修复」按钮下发维修任务。");
         }
-        return Component.literal("§a状态: 正常运作，结构完好。");
+        return I18n.name("gui.wandscape.building_status_tip.ok", "§a状态: 正常运作，结构完好。");
     }
 
     // ── Close button ──

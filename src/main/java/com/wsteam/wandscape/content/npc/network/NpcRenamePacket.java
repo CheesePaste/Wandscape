@@ -54,7 +54,7 @@ public record NpcRenamePacket(int entityId, String name) implements CustomPacket
         }
         // 完全平行隔离：只能重命名自己小镇的法师。
         if (!com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.isOwn(npc.colonyId, player)) {
-            com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(player, "法师");
+            com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(player, "mage", "法师");
             return;
         }
 

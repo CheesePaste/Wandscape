@@ -79,7 +79,7 @@ public record NpcStrategyPacket(int entityId, String preset, List<String> equipp
         }
         // 完全平行隔离：只能修改自己小镇法师的策略预设。
         if (!com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.isOwn(npc.colonyId, player)) {
-            com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(player, "法师");
+            com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(player, "mage", "法师");
             return;
         }
         // 预设切换经 MagicApi.setEquippedAndStrategy（校验一致的写入，装备态不变但重验）：

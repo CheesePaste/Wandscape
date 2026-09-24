@@ -543,7 +543,10 @@ public class MageHutScreen extends MedievalScreen {
                 g.drawString(font, cName, cx + 6, cy + 3,
                         isSel ? MedievalColors.ACCENT_GOLD : MedievalColors.TEXT_WARM_WHITE);
 
-                String cStatus = c.idle() ? "空闲待命" : "正在忙碌";
+                String cStatus = I18n.name(c.idle()
+                        ? "gui.wandscape.mage_hut.candidate_idle"
+                        : "gui.wandscape.mage_hut.candidate_busy",
+                        c.idle() ? "空闲待命" : "正在忙碌").getString();
                 g.drawString(font, cStatus, cx + 6, cy + 14,
                         c.idle() ? MedievalColors.SUCCESS_GREEN : MedievalColors.TEXT_MUTED);
             }
@@ -593,9 +596,13 @@ public class MageHutScreen extends MedievalScreen {
             // Summary text
             int hx = rx + 56;
             g.drawString(font, c.name(), hx, ry + 22, MedievalColors.ACCENT_GOLD);
-            g.drawString(font, c.idle() ? "状态: 空闲待命" : "状态: 任务执行中",
+            g.drawString(font, I18n.name(c.idle()
+                            ? "gui.wandscape.mage_hut.assign_status_idle"
+                            : "gui.wandscape.mage_hut.assign_status_busy",
+                    c.idle() ? "状态: 空闲待命" : "状态: 任务执行中").getString(),
                     hx, ry + 36, MedievalColors.TEXT_WARM_WHITE);
-            g.drawString(font, "居所: 尚未分配专属居所", hx, ry + 50, MedievalColors.TEXT_MUTED);
+            g.drawString(font, I18n.name("gui.wandscape.mage_hut.assign_home",
+                    "居所: 尚未分配专属居所").getString(), hx, ry + 50, MedievalColors.TEXT_MUTED);
 
             // Description Box
             drawMinimalBox(g, rx + 6, ry + 74, rw - 12, 64, false, false);
@@ -613,10 +620,14 @@ public class MageHutScreen extends MedievalScreen {
             int cx = rx + rw / 2;
             g.drawCenteredString(font, I18n.name("gui.wandscape.mage_hut.title", "法师专属住宅").getString(),
                     cx, ry + 35, MedievalColors.ACCENT_GOLD);
-            g.drawCenteredString(font, "法师小屋是小镇法师的成长居所", cx, ry + 58, MedievalColors.TEXT_WARM_WHITE);
-            g.drawCenteredString(font, "• 招募法师后在此完成入住指派", cx, ry + 78, MedievalColors.TEXT_MUTED);
-            g.drawCenteredString(font, "• 定向强化法师的施法与建造属性", cx, ry + 94, MedievalColors.TEXT_MUTED);
-            g.drawCenteredString(font, "• 随小镇等级提升职业等阶", cx, ry + 110, MedievalColors.TEXT_MUTED);
+            g.drawCenteredString(font, I18n.name("gui.wandscape.mage_hut.empty_lead",
+                    "法师小屋是小镇法师的成长居所").getString(), cx, ry + 58, MedievalColors.TEXT_WARM_WHITE);
+            g.drawCenteredString(font, I18n.name("gui.wandscape.mage_hut.empty_bullet_1",
+                    "• 招募法师后在此完成入住指派").getString(), cx, ry + 78, MedievalColors.TEXT_MUTED);
+            g.drawCenteredString(font, I18n.name("gui.wandscape.mage_hut.empty_bullet_2",
+                    "• 定向强化法师的施法与建造属性").getString(), cx, ry + 94, MedievalColors.TEXT_MUTED);
+            g.drawCenteredString(font, I18n.name("gui.wandscape.mage_hut.empty_bullet_3",
+                    "• 随小镇等级提升职业等阶").getString(), cx, ry + 110, MedievalColors.TEXT_MUTED);
         }
     }
 
@@ -633,19 +644,27 @@ public class MageHutScreen extends MedievalScreen {
         List<Component> tooltip = new ArrayList<>();
         tooltip.add(Component.literal(attrKeyLabel(type) + " " + I18n.name("gui.wandscape.mage_hut.dossier_title", "属性详情").getString())
                 .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
-        tooltip.add(Component.literal(String.format("• 基础数值: %s / %s%s",
-                fmt(b), fmt(upper), b >= upper - 0.001f ? " (已达上限)" : "")).withStyle(ChatFormatting.WHITE));
-        tooltip.add(Component.literal(String.format("• 等阶加成: +%s (Lv.%d, 每级+%s)",
-                fmt(lvl), mageLevel, fmt(perLvl))).withStyle(ChatFormatting.GRAY));
-        tooltip.add(Component.literal(String.format("• 装备加成: +%s", fmt(eq))).withStyle(ChatFormatting.AQUA));
+        String maxedSuffix = b >= upper - 0.001f
+                ? I18n.name("gui.wandscape.mage_hut.tip_base_maxed", " (已达上限)").getString()
+                : "";
+        tooltip.add(I18n.name("gui.wandscape.mage_hut.tip_base",
+                "• 基础数值: %s / %s%s", fmt(b), fmt(upper), maxedSuffix).withStyle(ChatFormatting.WHITE));
+        tooltip.add(I18n.name("gui.wandscape.mage_hut.tip_level_bonus",
+                "• 等阶加成: +%s (Lv.%s, 每级+%s)",
+                fmt(lvl), mageLevel, fmt(perLvl)).withStyle(ChatFormatting.GRAY));
+        tooltip.add(I18n.name("gui.wandscape.mage_hut.tip_equip_bonus",
+                "• 装备加成: +%s", fmt(eq)).withStyle(ChatFormatting.AQUA));
         tooltip.add(Component.literal("──────────────────────").withStyle(ChatFormatting.DARK_GRAY));
-        tooltip.add(Component.literal(String.format("综合生效: %s", fmt(eff))).withStyle(ChatFormatting.YELLOW, ChatFormatting.BOLD));
+        tooltip.add(I18n.name("gui.wandscape.mage_hut.tip_total",
+                "综合生效: %s", fmt(eff)).withStyle(ChatFormatting.YELLOW, ChatFormatting.BOLD));
 
         if (canOperate() && NpcAttributes.canTrain(type, b)) {
-            tooltip.add(Component.literal(String.format("点击该行可特训 (每次+%s)", fmt(step)))
+            tooltip.add(I18n.name("gui.wandscape.mage_hut.tip_click_train",
+                            "点击该行可特训 (每次+%s)", fmt(step))
                     .withStyle(ChatFormatting.GREEN, ChatFormatting.ITALIC));
         } else if (b >= upper - 0.001f) {
-            tooltip.add(Component.literal("该属性基础已达特训极限")
+            tooltip.add(I18n.name("gui.wandscape.mage_hut.tip_at_limit",
+                            "该属性基础已达特训极限")
                     .withStyle(ChatFormatting.DARK_PURPLE, ChatFormatting.ITALIC));
         }
 

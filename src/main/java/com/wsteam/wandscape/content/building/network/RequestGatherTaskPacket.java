@@ -71,7 +71,7 @@ public record RequestGatherTaskPacket(
             // 完全平行隔离：只能在自己小镇的节点下发采集任务（消耗该镇元素）。
             if (state.getColonyId() != null
                     && !com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.isOwn(state.getColonyId(), sp)) {
-                com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(sp, "采集");
+                com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(sp, "gather", "采集");
                 return;
             }
 

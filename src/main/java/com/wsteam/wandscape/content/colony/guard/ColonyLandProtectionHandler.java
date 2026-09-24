@@ -49,12 +49,13 @@ public final class ColonyLandProtectionHandler {
         return buildingColony(level, pos) != null;
     }
 
-    private static boolean protect(ServerLevel level, BlockPos pos, ServerPlayer player, String what) {
+    private static boolean protect(ServerLevel level, BlockPos pos, ServerPlayer player,
+                                   String whatKey, String whatFallback) {
         UUID colonyId = buildingColony(level, pos);
         if (colonyId != null && !ColonyOwnership.isOwn(colonyId, player)) {
-            ColonyOwnership.deny(player, what);
+            ColonyOwnership.deny(player, whatKey, whatFallback);
             Log.warn(TAG, "Blocked player {} {} at {} in colony {}",
-                    player.getGameProfile().getName(), what, pos,
+                    player.getGameProfile().getName(), whatKey, pos,
                     colonyId.toString().substring(0, 8));
             return true;
         }
@@ -64,7 +65,7 @@ public final class ColonyLandProtectionHandler {
     @SubscribeEvent
     public static void onBlockBreak(BlockEvent.BreakEvent event) {
         if (event.getPlayer() instanceof ServerPlayer player
-                && protect((ServerLevel) event.getLevel(), event.getPos(), player, "方块")) {
+                && protect((ServerLevel) event.getLevel(), event.getPos(), player, "block", "方块")) {
             event.setCanceled(true);
         }
     }
@@ -72,7 +73,7 @@ public final class ColonyLandProtectionHandler {
     @SubscribeEvent
     public static void onBlockPlace(BlockEvent.EntityPlaceEvent event) {
         if (event.getEntity() instanceof ServerPlayer player
-                && protect((ServerLevel) event.getLevel(), event.getPos(), player, "方块")) {
+                && protect((ServerLevel) event.getLevel(), event.getPos(), player, "block", "方块")) {
             event.setCanceled(true);
         }
     }
@@ -92,7 +93,7 @@ public final class ColonyLandProtectionHandler {
         if (state.isAir()) return;
         if (!(event.getLevel().getBlockEntity(pos) instanceof Container)) return;
 
-        if (protect((ServerLevel) event.getLevel(), pos, player, "容器")) {
+        if (protect((ServerLevel) event.getLevel(), pos, player, "container", "容器")) {
             event.setCanceled(true);
         }
     }

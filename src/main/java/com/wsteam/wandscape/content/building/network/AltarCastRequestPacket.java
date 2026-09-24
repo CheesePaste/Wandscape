@@ -34,7 +34,7 @@ public record AltarCastRequestPacket(UUID buildingId, String magicId)
         var st = sd != null ? sd.getBuilding(packet.buildingId()) : null;
         if (st != null && st.getColonyId() != null
                 && !com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.isOwn(st.getColonyId(), player)) {
-            com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(player, "祭坛");
+            com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(player, "altar", "祭坛");
             return;
         }
         AltarCastHandler.onCastRequest(player, packet.buildingId, packet.magicId());

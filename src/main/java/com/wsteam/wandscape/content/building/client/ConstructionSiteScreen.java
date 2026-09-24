@@ -80,7 +80,11 @@ public class ConstructionSiteScreen extends MedievalScreen {
         this.completed = packet.completed();
         this.kind = packet.kind();
         setCreator(packet.creator());
-        setTitleBar(I18n.buildingName(buildingTypeId, buildingName));
+        // 路段的 buildingTypeId 装的是道路预设 id，查的是 road preset 那套键而不是建筑键。
+        setTitleBar(kind == ConstructionSiteDataPacket.KIND_ROAD
+                ? I18n.datapackName(com.wsteam.wandscape.content.road.data.RoadPreset.langKeyFor(buildingTypeId),
+                        buildingName, null)
+                : I18n.buildingName(buildingTypeId, buildingName));
         if (kind != ConstructionSiteDataPacket.KIND_ROAD) {
             setBuildingContext(packet.buildingId(), null);
         }

@@ -22,6 +22,23 @@ public record RoadPreset(String id, String displayName, Map<String, String> disp
 
     public record WeightedEntry(String blockId, int weight) {}
 
+    /**
+     * 预设名要查的 lang 键。内置预设按 id 走 {@code gui.wandscape.road.preset.<id>}；
+     * {@code custom:} 开头的是程序化混合/自定义拼色现场拼出来的合成 id（长度可达上百字符），
+     * 不能当键使，统一收敛到 {@code gui.wandscape.road.preset.custom}。
+     */
+    public static String langKeyFor(String presetId) {
+        if (presetId == null || presetId.isEmpty()) return "gui.wandscape.road.preset.custom";
+        return presetId.startsWith("custom:")
+                ? "gui.wandscape.road.preset.custom"
+                : "gui.wandscape.road.preset." + presetId;
+    }
+
+    /** 本预设自己的 lang 键，见 {@link #langKeyFor(String)}。 */
+    public String langKey() {
+        return langKeyFor(id);
+    }
+
     public RoadPreset {
         displayNames = displayNames == null ? Map.of() : Map.copyOf(displayNames);
         blocks = blocks == null ? List.of() : List.copyOf(blocks);

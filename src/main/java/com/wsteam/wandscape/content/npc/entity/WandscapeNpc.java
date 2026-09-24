@@ -1736,7 +1736,7 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike, ColonyWor
                 && !com.wsteam.wandscape.content.npc.internal.EntityComponentBridge.PLACEHOLDER_COLONY.equals(colonyId)
                 && player instanceof ServerPlayer sp
                 && !com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.isOwn(colonyId, sp)) {
-            com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(sp, "法师");
+            com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(sp, "mage", "法师");
             return InteractionResult.CONSUME;
         }
         // 打开 NPC 装备容器菜单（4 盔甲 + 1 法杖 + 玩家背包，全部真实 vanilla 槽）

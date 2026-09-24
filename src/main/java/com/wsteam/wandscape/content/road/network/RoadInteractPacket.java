@@ -62,7 +62,7 @@ public record RoadInteractPacket(BlockPos pos) implements CustomPacketPayload {
 
         UUID edgeColonyId = edge.getColonyId();
         if (!com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.isOwn(edgeColonyId, player)) {
-            com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(player, "道路");
+            com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(player, "road", "道路");
             return;
         }
 

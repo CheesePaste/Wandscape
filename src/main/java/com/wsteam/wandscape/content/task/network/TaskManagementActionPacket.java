@@ -65,7 +65,7 @@ public record TaskManagementActionPacket(
             java.util.UUID taskColony = resolveTaskColony(gt, player);
             if (taskColony != null
                     && !com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.isOwn(taskColony, player)) {
-                com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(player, "任务");
+                com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(player, "task", "任务");
                 return;
             }
         }

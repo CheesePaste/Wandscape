@@ -65,7 +65,7 @@ public record TownHallReviveRequestPacket(BlockPos buildingPos, UUID colonyId)
             }
             // 完全平行隔离：只能操作自己小镇市政厅的保底复活。
             if (!com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.isOwn(colonyId, sp)) {
-                com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(sp, "复活");
+                com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(sp, "revive", "复活");
                 return;
             }
 

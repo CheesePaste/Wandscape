@@ -57,7 +57,7 @@ public record MageHutActionPacket(BlockPos buildingPos, String action)
             var st = bid != null ? data.getBuilding(bid) : null;
             if (st != null && st.getColonyId() != null
                     && !com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.isOwn(st.getColonyId(), sp)) {
-                com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(sp, "法师小屋");
+                com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(sp, "mage_hut", "法师小屋");
                 return;
             }
         }

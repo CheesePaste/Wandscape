@@ -28,7 +28,7 @@ public record ColonyNameUpdatePacket(UUID colonyId, String name) implements Cust
     public static void handleServer(ColonyNameUpdatePacket packet, ServerPlayer player) {
         // 完全平行隔离：只能改名自己小镇。
         if (!com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.isOwn(packet.colonyId(), player)) {
-            com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(player, "小镇");
+            com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(player, "town", "小镇");
             return;
         }
         var colonyApi = com.wsteam.wandscape.api.WandscapeApis.getColonyApiSilently();

@@ -1,5 +1,6 @@
 package com.wsteam.wandscape.content.road.client.studio;
 import com.wsteam.wandscape.content.task.component.Position;
+import com.wsteam.wandscape.foundation.ui.I18n;
 
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -577,7 +578,8 @@ public final class StudioWidgets {
             if (clearHov && mouseClicked) result = 1;
             y += rowH;
         } else {
-            g.drawString(font, "  [未设置]", x + 4, y + 2, StudioColors.TEXT_DISABLED);
+            g.drawString(font, I18n.name("gui.wandscape.roadstudio.pos_unset", "  [未设置]").getString(),
+                    x + 4, y + 2, StudioColors.TEXT_DISABLED);
             y += LINE_H + 2;
 
             int capH = 20;
@@ -585,7 +587,7 @@ public final class StudioWidgets {
             g.fill(x, y, x + w, y + capH,
                     capHov ? StudioColors.BUTTON_HOVER : StudioColors.BUTTON_NORMAL);
             drawBorder(x, y, w, capH, capHov ? StudioColors.BORDER_GOLD_BRIGHT : StudioColors.BORDER_GOLD);
-            String capLabel = "捕捉脚下位点";
+            String capLabel = I18n.name("gui.wandscape.roadstudio.capture_feet_pos", "捕捉脚下位点").getString();
             int ctw = font.width(capLabel);
             g.drawString(font, capLabel, x + (w - ctw) / 2, y + 4,
                     capHov ? StudioColors.TEXT_GOLD : StudioColors.TEXT_WARM);

@@ -64,7 +64,7 @@ public record TownHallWarehouseRequestPacket(BlockPos buildingPos, UUID colonyId
             }
             // 完全平行隔离：只能打开自己小镇市政厅的仓库。
             if (!com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.isOwn(colonyId, sp)) {
-                com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(sp, "仓库");
+                com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(sp, "warehouse", "仓库");
                 return;
             }
 

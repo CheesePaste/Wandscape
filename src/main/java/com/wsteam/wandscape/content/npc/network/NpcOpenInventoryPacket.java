@@ -51,7 +51,7 @@ public record NpcOpenInventoryPacket(int entityId) implements CustomPacketPayloa
         if (npc.colonyId != null
                 && !com.wsteam.wandscape.content.npc.internal.EntityComponentBridge.PLACEHOLDER_COLONY.equals(npc.colonyId)
                 && !com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.isOwn(npc.colonyId, sp)) {
-            com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(sp, "法师");
+            com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(sp, "mage", "法师");
             return;
         }
         sp.openMenu(new SimpleMenuProvider(

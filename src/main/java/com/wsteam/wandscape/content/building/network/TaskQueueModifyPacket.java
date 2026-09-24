@@ -81,7 +81,7 @@ public record TaskQueueModifyPacket(
             BuildingState qState = data.getBuilding(buildingId);
             if (qState != null && qState.getColonyId() != null
                     && !com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.isOwn(qState.getColonyId(), sp)) {
-                com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(sp, "队列");
+                com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(sp, "task_queue", "队列");
                 return;
             }
             Log.info(TAG, "TaskQueueModify: buildingId={} action={} index={}",

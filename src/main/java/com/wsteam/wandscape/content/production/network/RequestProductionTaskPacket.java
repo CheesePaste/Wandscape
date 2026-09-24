@@ -71,7 +71,7 @@ public record RequestProductionTaskPacket(
             // 完全平行隔离：只能在自己小镇的生产站下发任务（消耗该镇元素/材料）。
             if (state.getColonyId() != null
                     && !com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.isOwn(state.getColonyId(), sp)) {
-                com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(sp, "生产");
+                com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(sp, "production", "生产");
                 return;
             }
 

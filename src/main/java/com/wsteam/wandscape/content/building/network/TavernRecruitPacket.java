@@ -79,7 +79,7 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
             }
             // 完全平行隔离：只能在自己小镇的酒馆招募/拒绝。
             if (!com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.isOwn(colonyId, sp)) {
-                com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(sp, "酒馆");
+                com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(sp, "tavern", "酒馆");
                 return;
             }
 
