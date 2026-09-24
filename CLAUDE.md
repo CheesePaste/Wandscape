@@ -35,6 +35,7 @@ com/wsteam/wandscape/
 8. **上屏/聊天只留错误与完成反馈**，其余用 Log。
 9. **禁 emoji 与装饰图标**：面向玩家文本（`lang/*`、`guide/**`、I18n、Screen 内联、叙事 JSON）与源码注释都禁；只留 →←↑↓、×、⌊⌋。
 10. **Config 注释中英双语**：`Config.java`/`ClientConfig.java`（及任何 `ModConfigSpec` `.comment()`）每条必须保留中文原文并紧跟一条英文翻译；新增键同样，禁只写单语。这些注释会生成进 config TOML 供玩家/整合包作者阅读。
+11. **上屏文案只改 `lang_src/`，`lang/*.json` 是生成物**：`assets/wandscape/lang/{zh_cn,en_us}.json` 由 `python gen_lang.py` 从 `lang_src/**/*.json`（键 → `{"zh_cn": …, "en_us": …}`）编译而来。手改生成物会在下次生成时被整体覆盖——已经吃过一次：气泡英文改写与 62 个键只改了生成物，`gen_lang.py` 一跑全没了，`--check` 还会报产物漂移。加/改文案一律走「改 `lang_src/` → `gen_lang.py` → 两个生成物一并提交」，提交前跑 `python gen_lang.py --check`（详见 `docs/lang-pipeline.md`）。占位符在 **Java 兜底串里一律写 `%s`**：`Language` 加载时会把 lang 值里的 `%d` 归一成 `%s`，兜底串不走这一步；`TranslatableContents#decomposeTemplate` 只认 `%s`，遇 `%d` 抛异常后退回原串，玩家会直接看到字面量 `%d`。
 
 ## 三、易踩的代码事实（改这些代码前先读）
 
