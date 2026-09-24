@@ -18,11 +18,19 @@
     },
     {
       "type": "patchouli:text",
-      "text": "scroll into a category slot, and the mage will use that spell;$(br)take the scroll back out and it stops using it.$(br2)Every spell has its own cooldown and mana cost. If the cooldown has not finished, or there is not enough mana, the mage skips that sp"
+      "text": "scroll into a category slot, and the mage will use that spell;$(br)take the scroll back out and it stops using it."
     },
     {
       "type": "patchouli:text",
-      "text": "ell this time and tries the next one down the list. Within a category the slots run left to right and the leftmost one is tried first$(br2), three spells per category at most. With nothing left to cast, the mage falls back to an ordinary melee attack."
+      "text": "Every spell has its own cooldown and mana cost. If the cooldown has not finished, or there is not enough mana, the mage skips that sp"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "ell this time and tries the next one down the list. Within a category the slots run left to right and the leftmost one is tried first"
+    },
+    {
+      "type": "patchouli:text",
+      "text": ", three spells per category at most. With nothing left to cast, the mage falls back to an ordinary melee attack.$(br2)More detail is in $(l:wandscape:magic/advanced_casting_guide)《Advanced Casting》$(/l)."
     }
   ]
 }

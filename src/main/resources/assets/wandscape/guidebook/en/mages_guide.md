@@ -8,5 +8,5 @@ Right-click a mage to open the mage panel, where you can set equipment and view 
 
 - Follow Mode: When enabled, the mage follows you and ignores town tasks.
 - Peaceful Mode: When enabled, the mage will not attack any entity.
-- Cast Strategy: Configure spells and casting order, see 《Advanced Casting》.
+- Cast Strategy: Configure spells and casting order, see 《Casting》.
 - Dismiss: Dismiss the mage permanently.

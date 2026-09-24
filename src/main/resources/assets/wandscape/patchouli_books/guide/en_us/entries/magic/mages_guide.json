@@ -23,7 +23,7 @@
     },
     {
       "type": "patchouli:text",
-      "text": "$(li)Cast Strategy: Configure spells and casting order, see $(l:wandscape:magic/advanced_casting_guide)《Advanced Casting》$(/l).$(li)Dismiss: Dismiss the mage permanently."
+      "text": "$(li)Cast Strategy: Configure spells and casting order, see $(l:wandscape:magic/casting_guide)《Casting》$(/l).$(li)Dismiss: Dismiss the mage permanently."
     }
   ]
 }

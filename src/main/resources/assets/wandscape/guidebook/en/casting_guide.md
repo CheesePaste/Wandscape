@@ -5,3 +5,5 @@ Mages do not learn spells on their own: once a scroll has been copied at the 《
 (Next page)
 
 Every spell has its own cooldown and mana cost. If the cooldown has not finished, or there is not enough mana, the mage skips that spell this time and tries the next one down the list. Within a category the slots run left to right and the leftmost one is tried first, three spells per category at most. With nothing left to cast, the mage falls back to an ordinary melee attack.
+
+More detail is in 《Advanced Casting》.
