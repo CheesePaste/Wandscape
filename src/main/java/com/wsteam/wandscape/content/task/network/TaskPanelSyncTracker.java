@@ -295,17 +295,19 @@ public final class TaskPanelSyncTracker {
         return "task";
     }
 
+    /**
+     * 任务标题：发 lang 键或原文，客户端按本地语言解析（{@code TaskText#taskTitle}）。
+     * 序列标签本身就是键（见 {@code BlueprintDefaults#label}）；建筑队列任务发空串——
+     * 客户端手上有建筑类型 id 与兜底名，自己拼「建筑名 + 任务」；都认不出时才发裸蓝图 id。
+     */
     private static String extractTitle(GlobalTask task, BuildingSavedData buildingData) {
         if (task.sequence != null && task.sequence.label() != null && !task.sequence.label().isEmpty()) {
             return task.sequence.label();
         }
-        if (task.buildingId != null) {
-            BuildingState bs = buildingData.getBuilding(task.buildingId);
-            if (bs != null) {
-                return formatBuildingName(bs) + " 任务";
-            }
+        if (task.buildingId != null && buildingData.getBuilding(task.buildingId) != null) {
+            return "";
         }
-        return task.blueprintId != null ? task.blueprintId : "未知任务 #" + task.id;
+        return task.blueprintId != null ? task.blueprintId : "";
     }
 
     private static String extractBuildingName(GlobalTask task, BuildingSavedData buildingData) {
@@ -337,6 +339,7 @@ public final class TaskPanelSyncTracker {
         return bs.getBuildingTypeId();
     }
 
+    /** 元素 id → 中文兜底名；客户端优先按 {@code element.wandscape.<id>} 取名，这里只是兜底。 */
     private static String formatResourceName(String elementId) {
         return switch (elementId) {
             case "earth" -> "地元素";
@@ -448,7 +451,7 @@ public final class TaskPanelSyncTracker {
                         items.add(new ProductionItemDto(
                                 head.id, 0, cat, bid, itemOrRecipeId, displayName, count,
                                 "RUNNING", assignedNpcId, assignedNpcName, progress,
-                                List.of(), List.of(), "正在执行中", false
+                                List.of(), List.of(), "gui.wandscape.task.source.running", false
                         ));
                     }
                 }
@@ -491,9 +494,12 @@ public final class TaskPanelSyncTracker {
                     }
 
                     String status = isShort ? "MISSING_ELEMENTS" : "QUEUED";
+                    // 来源发键，客户端按本地语言解析；数据包自己塞的 reason 原样透传。
                     String reason = item.params() != null && item.params().containsKey("reason")
                             ? item.params().get("reason").getAsString()
-                            : (bid.startsWith("production:synthesize") ? "自动化供应链补料" : "工坊手动排队");
+                            : (bid.startsWith("production:synthesize")
+                                    ? "gui.wandscape.task.source.auto"
+                                    : "gui.wandscape.task.source.manual");
 
                     items.add(new ProductionItemDto(
                             virtualId, qIndex++, cat, bid, itemOrRecipeId, displayName, count,

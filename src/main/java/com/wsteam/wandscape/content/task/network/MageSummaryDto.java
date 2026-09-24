@@ -22,6 +22,7 @@ public record MageSummaryDto(
         float workSpeed,
         float spellSpeed,
         float armorValue,
+        /** 当前任务的标题，格式同 {@link TaskSummaryDto#title()}；本 DTO 不带建筑信息，客户端按 id 回任务列表取。 */
         String currentTaskTitle,
         long currentTaskId,
         String equippedWand,

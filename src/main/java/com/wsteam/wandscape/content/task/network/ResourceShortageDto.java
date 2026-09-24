@@ -9,7 +9,7 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 public record ResourceShortageDto(
         String kind,        // "element" or "item"
         String resourceId,  // e.g. "water", "earth", "minecraft:stone"
-        String displayName, // e.g. "水元素", "石头"
+        String displayName, // 无语言兜底名（"水元素"、"石头"）；元素由客户端按 resourceId 取名
         int requiredAmount, // quantity needed
         int currentAmount   // quantity currently in colony warehouse
 ) {

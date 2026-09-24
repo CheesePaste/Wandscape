@@ -120,7 +120,8 @@ public final class GuidePages {
         for (GuideManifest.Entry entry : entries) {
             sb.append("- [").append(entry.name()).append("](").append(entry.doc()).append(".md)\n");
         }
-        sb.append("\n- [返回目录](").append(GuideManifest.ROOT_PAGE).append(".md)\n");
+        sb.append("\n- [").append(I18n.string("gui.wandscape.guidebook.back_to_index", "返回目录"))
+                .append("](").append(GuideManifest.ROOT_PAGE).append(".md)\n");
         return sb.toString();
     }
 

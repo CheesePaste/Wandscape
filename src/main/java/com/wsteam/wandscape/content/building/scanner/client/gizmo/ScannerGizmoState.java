@@ -8,6 +8,7 @@ import com.wsteam.wandscape.content.building.scanner.client.ScannerScreen;
 import com.wsteam.wandscape.content.building.scanner.network.ScannerSyncPacket;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.foundation.networking.Net;
+import com.wsteam.wandscape.foundation.ui.I18n;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.Vec3;
@@ -19,18 +20,20 @@ public final class ScannerGizmoState {
     private static final String TAG = "ScannerGizmoState";
 
     public enum Anchor {
-        MIN("Min 最小角点", 0xFF00E5FF),
-        MAX("Max 最大角点", 0xFFFFD700);
+        MIN("gui.wandscape.gizmo.anchor_min", "Min 角点", 0xFF00E5FF),
+        MAX("gui.wandscape.gizmo.anchor_max", "Max 角点", 0xFFFFD700);
 
-        private final String label;
+        private final String labelKey;
+        private final String labelFallback;
         private final int color;
 
-        Anchor(String label, int color) {
-            this.label = label;
+        Anchor(String labelKey, String labelFallback, int color) {
+            this.labelKey = labelKey;
+            this.labelFallback = labelFallback;
             this.color = color;
         }
 
-        public String getLabel() { return label; }
+        public String getLabel() { return I18n.string(labelKey, labelFallback); }
         public int getColor() { return color; }
     }
 
@@ -86,7 +89,7 @@ public final class ScannerGizmoState {
 
     public static void setSelectedAnchor(Anchor a) {
         selectedAnchor = a;
-        showToast(com.wsteam.wandscape.foundation.ui.I18n.string("gui.wandscape.gizmo.toast_anchor_switched", "已切换编辑锚点: %s", a.getLabel()), a.getColor());
+        showToast(I18n.string("gui.wandscape.gizmo.toast_anchor_switched", "已切换编辑锚点: %s", a.getLabel()), a.getColor());
     }
 
     public static void toggleAnchor() {

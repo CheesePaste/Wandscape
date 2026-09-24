@@ -189,7 +189,7 @@ public class CreativeScannerScreen extends MedievalScreen {
         addBtn(lx, topY, 90, 18, I18n.string("gui.wandscape.scanner.mode_corner", "模式: CORNER ▾"), () -> {
             scanner.setBlockMode(BlockMode.SAVE);
             syncToServer();
-            showFeedback(Component.literal("§e已切换到 SAVE 主扫描模式"), 0xFFD4A840);
+            showFeedback(I18n.name("message.wandscape.scanner.mode_save", "§e已切换到 SAVE 主扫描模式"), 0xFFD4A840);
             rebuild();
         });
 
@@ -215,7 +215,7 @@ public class CreativeScannerScreen extends MedievalScreen {
         addBtn(lx, y, 80, 18, I18n.string("gui.wandscape.scanner.mode_save", "模式: SAVE ▾"), () -> {
             scanner.setBlockMode(BlockMode.CORNER);
             syncToServer();
-            showFeedback(Component.literal("§e已切换到 CORNER 辅角点模式"), 0xFFD4A840);
+            showFeedback(I18n.name("message.wandscape.scanner.mode_corner", "§e已切换到 CORNER 辅角点模式"), 0xFFD4A840);
             rebuild();
         });
 
@@ -226,7 +226,9 @@ public class CreativeScannerScreen extends MedievalScreen {
             TargetMode next = scanner.getTargetMode() == TargetMode.BUILDING ? TargetMode.ROAD : TargetMode.BUILDING;
             scanner.setTargetMode(next);
             syncToServer();
-            showFeedback(Component.literal("§e已切换为 " + (next == TargetMode.BUILDING ? "建筑模式" : "道路模式")), 0xFFD4A840);
+            showFeedback(next == TargetMode.BUILDING
+                    ? I18n.name("message.wandscape.scanner.mode_building", "§e已切换为建筑模式")
+                    : I18n.name("message.wandscape.scanner.mode_road", "§e已切换为道路模式"), 0xFFD4A840);
             rebuild();
         });
 
@@ -245,11 +247,15 @@ public class CreativeScannerScreen extends MedievalScreen {
                     int dx = Math.abs(bMax.x() - bMin.x()) + 1;
                     int dy = Math.abs(bMax.y() - bMin.y()) + 1;
                     int dz = Math.abs(bMax.z() - bMin.z()) + 1;
-                    showFeedback(Component.literal(String.format("§a匹配成功！已更新 3D 边界 (%d×%d×%d)", dx, dy, dz)), 0xFF55FF55);
-                    scanResult = Component.literal(String.format("§a已匹配角点并更新边界！尺寸: %d×%d×%d", dx, dy, dz));
+                    showFeedback(I18n.name("message.wandscape.scanner.match_success",
+                            "§a匹配成功！已更新 3D 边界 (%s×%s×%s)", dx, dy, dz), 0xFF55FF55);
+                    scanResult = I18n.name("message.wandscape.scanner.match_success_result",
+                            "§a已匹配角点并更新边界！尺寸: %s×%s×%s", dx, dy, dz);
                 } else {
-                    showFeedback(Component.literal("§c未找到同名暗号的 CORNER 扫描器 (需在 64 格内)"), 0xFFFF5555);
-                    scanResult = Component.literal("§e未找到同名暗号的 CORNER 扫描器。请确认暗号是否一致。");
+                    showFeedback(I18n.name("message.wandscape.scanner.corner_not_found",
+                            "§c未找到同名暗号的 CORNER 扫描器 (需在 64 格内)"), 0xFFFF5555);
+                    scanResult = I18n.name("message.wandscape.scanner.corner_not_found_result",
+                            "§e未找到同名暗号的 CORNER 扫描器。请确认暗号是否一致。");
                 }
             }
             syncToServer();
@@ -288,8 +294,9 @@ public class CreativeScannerScreen extends MedievalScreen {
             if (doorY != null) doorY.setValue("0");
             if (doorZ != null) doorZ.setValue("0");
             syncToServer();
-            showFeedback(Component.literal("§6已清除全部门偏移记录 (默认走外围入口)"), 0xFFFFAA00);
-            scanResult = Component.literal("§7已清除全部门偏移记录。");
+            showFeedback(I18n.name("message.wandscape.scanner.doors_cleared",
+                    "§6已清除全部门偏移记录 (默认走外围入口)"), 0xFFFFAA00);
+            scanResult = I18n.name("message.wandscape.scanner.doors_cleared_result", "§7已清除全部门偏移记录。");
             rebuild();
         });
     }
@@ -307,7 +314,8 @@ public class CreativeScannerScreen extends MedievalScreen {
                 scanner.setBuildingId(s);
                 syncToServer();
             });
-            mkEdit(lx + 68, y + 38, 290, 18, scanner.getDisplayName().isEmpty() ? "自定义道路" : scanner.getDisplayName(), s -> {
+            mkEdit(lx + 68, y + 38, 290, 18, scanner.getDisplayName().isEmpty()
+                    ? I18n.string("gui.wandscape.scanner.custom_road", "自定义道路") : scanner.getDisplayName(), s -> {
                 scanner.setDisplayName(s);
                 syncToServer();
             });
@@ -319,7 +327,7 @@ public class CreativeScannerScreen extends MedievalScreen {
             addBtn(lx + 248, y + 86, 110, 18, I18n.string("gui.wandscape.scanner.switch_to_building", "切换为建筑模式"), () -> {
                 scanner.setTargetMode(TargetMode.BUILDING);
                 syncToServer();
-                showFeedback(Component.literal("§e已切换为建筑模式"), 0xFFD4A840);
+                showFeedback(I18n.name("message.wandscape.scanner.mode_building", "§e已切换为建筑模式"), 0xFFD4A840);
                 rebuild();
             });
             return;
@@ -332,7 +340,8 @@ public class CreativeScannerScreen extends MedievalScreen {
                 scanner.setBuildingId(s);
                 syncToServer();
             });
-            mkEdit(lx + 110, y, 64, 16, scanner.getDisplayName().isEmpty() ? "自定义建筑" : scanner.getDisplayName(), s -> {
+            mkEdit(lx + 110, y, 64, 16, scanner.getDisplayName().isEmpty()
+                    ? I18n.string("gui.wandscape.scanner.custom_building", "自定义建筑") : scanner.getDisplayName(), s -> {
                 scanner.setDisplayName(s);
                 syncToServer();
             });
@@ -350,7 +359,7 @@ public class CreativeScannerScreen extends MedievalScreen {
             addBtn(lx + 256, y, 108, 18, I18n.string("gui.wandscape.scanner.switch_to_road", "切换为道路模式"), () -> {
                 scanner.setTargetMode(TargetMode.ROAD);
                 syncToServer();
-                showFeedback(Component.literal("§e已切换为道路模式"), 0xFFD4A840);
+                showFeedback(I18n.name("message.wandscape.scanner.mode_road", "§e已切换为道路模式"), 0xFFD4A840);
                 rebuild();
             });
             return;
@@ -386,7 +395,7 @@ public class CreativeScannerScreen extends MedievalScreen {
         addBtn(lx + 256, y, 108, 18, I18n.string("gui.wandscape.scanner.switch_to_road", "切换为道路模式"), () -> {
             scanner.setTargetMode(TargetMode.ROAD);
             syncToServer();
-            showFeedback(Component.literal("§e已切换为道路模式"), 0xFFD4A840);
+            showFeedback(I18n.name("message.wandscape.scanner.mode_road", "§e已切换为道路模式"), 0xFFD4A840);
             rebuild();
         });
         y += 22;
@@ -442,7 +451,7 @@ public class CreativeScannerScreen extends MedievalScreen {
             scanner.addShopGood(new ShopGoodData("minecraft:apple", 5, 0, 0));
             syncToServer();
             shopGoodsPage = Math.max(0, (scanner.getShopGoods().size() - 1) / GOODS_PER_PAGE);
-            showFeedback(Component.literal("§a已上架新商品行 (请编辑物品ID)"), 0xFF55FF55);
+            showFeedback(I18n.name("message.wandscape.scanner.good_added", "§a已上架新商品行 (请编辑物品ID)"), 0xFF55FF55);
             rebuild();
         });
 
@@ -464,7 +473,7 @@ public class CreativeScannerScreen extends MedievalScreen {
             addBtn(lx + 300, rowY, 16, 16, "×", () -> {
                 scanner.removeShopGood(idx);
                 syncToServer();
-                showFeedback(Component.literal("§6已移除该商品条目"), 0xFFFFAA00);
+                showFeedback(I18n.name("message.wandscape.scanner.good_removed", "§6已移除该商品条目"), 0xFFFFAA00);
                 rebuild();
             });
             rowY += 20;
@@ -506,10 +515,10 @@ public class CreativeScannerScreen extends MedievalScreen {
             if (el != null) {
                 scanner.addServiceElementOutput(el, 1);
                 syncToServer();
-                showFeedback(Component.literal("§a已添加元素产出"), 0xFF55FF55);
+                showFeedback(I18n.name("message.wandscape.scanner.element_output_added", "§a已添加元素产出"), 0xFF55FF55);
                 rebuild();
             } else {
-                showFeedback(Component.literal("§e所有 7 种元素已全部添加完毕"), 0xFFFFAA00);
+                showFeedback(I18n.name("message.wandscape.scanner.element_output_full", "§e所有 7 种元素已全部添加完毕"), 0xFFFFAA00);
             }
         });
 
@@ -535,7 +544,7 @@ public class CreativeScannerScreen extends MedievalScreen {
             addBtn(lx + 182, rowY, 16, 16, "×", () -> {
                 scanner.removeServiceElementOutput(elem);
                 syncToServer();
-                showFeedback(Component.literal("§6已移除该元素产出"), 0xFFFFAA00);
+                showFeedback(I18n.name("message.wandscape.scanner.element_output_removed", "§6已移除该元素产出"), 0xFFFFAA00);
                 rebuild();
             });
             rowY += 20;
@@ -558,7 +567,8 @@ public class CreativeScannerScreen extends MedievalScreen {
         scanner.addServiceElementOutput(nextElem, amount);
         syncToServer();
         ElementDef elDef = getElementDef(nextElem);
-        showFeedback(Component.literal("§e产出元素切换为: " + elDef.symbol() + " " + elDef.label()), 0xFFD4A840);
+        showFeedback(I18n.name("message.wandscape.scanner.output_element_switched",
+                "§e产出元素切换为: %s", elDef.symbol() + " " + elDef.label()), 0xFFD4A840);
         rebuild();
     }
 
@@ -570,7 +580,8 @@ public class CreativeScannerScreen extends MedievalScreen {
             scanner.setNodeElement(nextElem);
             syncToServer();
             ElementDef nextDef = getElementDef(nextElem);
-            showFeedback(Component.literal("§e采集元素切换为: " + nextDef.symbol() + " " + nextDef.label()), 0xFFD4A840);
+            showFeedback(I18n.name("message.wandscape.scanner.gather_element_switched",
+                    "§e采集元素切换为: %s", nextDef.symbol() + " " + nextDef.label()), 0xFFD4A840);
             rebuild();
         });
 
@@ -959,11 +970,16 @@ public class CreativeScannerScreen extends MedievalScreen {
         drawMinimalBox(gui, lx, y, 364, 76, false, false);
         gui.drawString(font, I18n.string("gui.wandscape.scanner.overview_header", "当前扫描配置概览"), lx + 8, y + 4, MedievalColors.BORDER_GOLD);
 
-        String targetStr = scanner.getTargetMode() == TargetMode.ROAD ? "道路 (ROAD)" : "建筑 (BUILDING)";
-        String catStr = isSurvival ? "自定义 (custom)" : (getCategoryDef(scanner.getCategory()).label() + " (" + scanner.getCategory() + ")");
+        String targetStr = scanner.getTargetMode() == TargetMode.ROAD
+                ? I18n.string("gui.wandscape.scanner.overview_road", "道路 (ROAD)")
+                : I18n.string("gui.wandscape.scanner.overview_building", "建筑 (BUILDING)");
+        String catStr = isSurvival
+                ? I18n.string("gui.wandscape.scanner.overview_custom", "自定义 (custom)")
+                : (getCategoryDef(scanner.getCategory()).label() + " (" + scanner.getCategory() + ")");
         gui.drawString(font, I18n.string("gui.wandscape.scanner.overview_target_cat", "目标: %s | 分类: %s", targetStr, catStr), lx + 12, y + 18, MedievalColors.TEXT_WARM_WHITE);
 
-        String idStr = scanner.getBuildingId().isEmpty() ? "未命名ID" : scanner.getBuildingId();
+        String idStr = scanner.getBuildingId().isEmpty()
+                ? I18n.string("gui.wandscape.scanner.unnamed_id", "未命名ID") : scanner.getBuildingId();
         String nameStr = scanner.getDisplayName().isEmpty() ? "—" : scanner.getDisplayName();
         String pkgStr = scanner.getPackageId();
         gui.drawString(font, I18n.string("gui.wandscape.scanner.overview_id_name", "标识: %s (%s) | 包: %s",
@@ -1170,7 +1186,8 @@ public class CreativeScannerScreen extends MedievalScreen {
         scanner.setCategory(CATEGORIES.get(next).id());
         syncToServer();
         CategoryDef curCat = CATEGORIES.get(next);
-        showFeedback(Component.literal("§e" + I18n.string("gui.wandscape.scanner.category_label", "分类:") + " " + curCat.icon() + " " + curCat.label()), 0xFFD4A840);
+        showFeedback(I18n.name("message.wandscape.scanner.category_switched", "§e分类: %s",
+                curCat.icon() + " " + curCat.label()), 0xFFD4A840);
         rebuild();
     }
 
@@ -1196,7 +1213,8 @@ public class CreativeScannerScreen extends MedievalScreen {
         syncToServer();
         // 包名可能是 lang key（内置的 default/custom 都是），查不到才退回原文。
         String shownName = I18n.string(nextPkg.name(), nextPkg.id());
-        showFeedback(Component.literal("§e目标包: " + shownName + " (" + nextPkg.id() + ")"), 0xFFD4A840);
+        showFeedback(I18n.name("message.wandscape.scanner.target_package", "§e目标包: %s (%s)",
+                shownName, nextPkg.id()), 0xFFD4A840);
     }
 
     private void onPresetSave() {

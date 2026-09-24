@@ -182,7 +182,7 @@ public final class TaskManagementClientState {
 
             // Search query
             if (!query.isEmpty()) {
-                boolean matchSearch = (t.title() != null && t.title().toLowerCase().contains(query))
+                boolean matchSearch = TaskText.taskTitle(t).toLowerCase().contains(query)
                         || com.wsteam.wandscape.foundation.ui.I18n
                                 .buildingName(t.buildingTypeId(), t.buildingName()).getString().toLowerCase().contains(query)
                         || (t.assignedNpcName() != null && t.assignedNpcName().toLowerCase().contains(query));
@@ -210,11 +210,11 @@ public final class TaskManagementClientState {
                 if (!matchFilter) continue;
 
                 if (!query.isEmpty()) {
-                    boolean matchSearch = (item.displayName() != null && item.displayName().toLowerCase().contains(query))
+                    boolean matchSearch = TaskText.productionItemName(item).toLowerCase().contains(query)
                             || com.wsteam.wandscape.foundation.ui.I18n
                                     .buildingName(group.buildingTypeId(), group.buildingName()).getString().toLowerCase().contains(query)
                             || (item.itemOrRecipeId() != null && item.itemOrRecipeId().toLowerCase().contains(query))
-                            || (item.dependencySource() != null && item.dependencySource().toLowerCase().contains(query));
+                            || TaskText.resolve(item.dependencySource()).toLowerCase().contains(query);
                     if (!matchSearch) continue;
                 }
 
@@ -238,7 +238,7 @@ public final class TaskManagementClientState {
         for (MageSummaryDto m : allMages) {
             if (!query.isEmpty()) {
                 boolean matchSearch = (m.name() != null && m.name().toLowerCase().contains(query))
-                        || (m.currentTaskTitle() != null && m.currentTaskTitle().toLowerCase().contains(query))
+                        || TaskText.mageTaskTitle(m).toLowerCase().contains(query)
                         || (m.state() != null && m.state().toLowerCase().contains(query));
                 if (!matchSearch) continue;
             }

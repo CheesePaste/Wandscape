@@ -6,6 +6,7 @@ import com.wsteam.wandscape.content.task.types.RitualId;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
+import com.wsteam.wandscape.content.task.ui.TaskText;
 import com.wsteam.wandscape.foundation.ui.bubble.AmbientTextPools;
 import com.wsteam.wandscape.foundation.ui.bubble.SpeechBubbleRenderer;
 import com.wsteam.wandscape.foundation.ui.I18n;
@@ -131,6 +132,26 @@ public class WandscapeNpcRenderer extends HumanoidMobRenderer<WandscapeNpc, Huma
         return false;
     }
 
+    /**
+     * 状态串的翻译组件。固定状态查 {@code npc.wandscape.state.<键>}；动态状态查的是
+     * **前缀键**、payload 当 {@code %s} 参数传——状态串本身就是 {@code op:}/{@code ritual:}/{@code task:}
+     * 拼出来的（见 {@code WandscapeNpc} 的状态推导），整串当键查永远查不中，任何语言下都只剩中文兜底。
+     */
+    private static Component statusText(String statusKey) {
+        int sep = statusKey.indexOf(':');
+        if (sep > 0) {
+            String payload = statusKey.substring(sep + 1);
+            Component dynamic = switch (statusKey.substring(0, sep)) {
+                case "op" -> I18n.name("npc.wandscape.state.op", "执行: %s", payload);
+                case "ritual" -> I18n.name("npc.wandscape.state.ritual", "施法: %s", payload);
+                case "task" -> I18n.name("npc.wandscape.state.task", "%s", TaskText.sequenceLabel(payload));
+                default -> null;
+            };
+            if (dynamic != null) return dynamic;
+        }
+        return I18n.name("npc.wandscape.state." + statusKey, WandscapeNpc.statusFallback(statusKey));
+    }
+
     /** Render the mage's name (white) with its status (gray) above it. */
     private void renderNamePlate(WandscapeNpc entity, PoseStack poseStack,
                                  MultiBufferSource buffer, int packedLight) {
@@ -143,8 +164,7 @@ public class WandscapeNpcRenderer extends HumanoidMobRenderer<WandscapeNpc, Huma
         // Status above the name (gray)
         String statusKey = entity.getStatusText();
         if (!statusKey.isEmpty()) {
-            Component status = I18n.name("npc.wandscape.state." + statusKey, WandscapeNpc.statusFallback(statusKey))
-                    .copy().withStyle(style -> style.withColor(0xAAAAAA));
+            Component status = statusText(statusKey).copy().withStyle(style -> style.withColor(0xAAAAAA));
             poseStack.pushPose();
             poseStack.translate(0, entity.getBbHeight() + STATUS_Y_OFFSET, 0);
             poseStack.mulPose(this.entityRenderDispatcher.cameraOrientation());

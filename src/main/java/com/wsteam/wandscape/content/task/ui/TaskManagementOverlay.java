@@ -349,7 +349,7 @@ public final class TaskManagementOverlay {
 
         // Line 1: Priority Badge + Title + Category Tag
         String pTag = "[P" + task.priority() + "] ";
-        String title = pTag + task.title();
+        String title = pTag + TaskText.taskTitle(task);
         if (font.width(title) > w - 80) {
             title = font.plainSubstrByWidth(title, w - 85) + "...";
         }
@@ -379,7 +379,7 @@ public final class TaskManagementOverlay {
                 ResourceShortageDto s = task.shortages().getFirst();
                 String shortStr = I18n.string("gui.wandscape.task.status.missing_prereq",
                         "缺少前置: %s x%s (库存: %s / 需: %s)",
-                        s.displayName(), String.valueOf(s.getMissingAmount()),
+                        TaskText.shortageName(s), String.valueOf(s.getMissingAmount()),
                         String.valueOf(s.currentAmount()), String.valueOf(s.requiredAmount()));
                 g.drawString(font, shortStr, x + 8, statusY, 0xFFE57373, false);
             } else {
@@ -525,7 +525,7 @@ public final class TaskManagementOverlay {
                 ? I18n.string("gui.wandscape.task.prod.running_prefix", "[进行中] ")
                 : I18n.string("gui.wandscape.task.prod.queued_prefix", "[#%s 排队] ",
                         String.valueOf(item.queueIndex()));
-        String title = prefix + item.displayName() + " × " + item.count();
+        String title = prefix + TaskText.productionItemName(item) + " × " + item.count();
         g.drawString(font, title, x + 8, y + 6, WandscapeTheme.COLOR_TEXT_NORMAL, false);
 
         String catTag = "[" + formatCategory(item.category()) + "]";
@@ -553,7 +553,7 @@ public final class TaskManagementOverlay {
                 for (ResourceShortageDto s : item.elementCosts()) {
                     if (s.getMissingAmount() > 0) {
                         sb.append(I18n.string("gui.wandscape.task.prod.short_amount", "%s (缺 %s)  ",
-                                s.displayName(), String.valueOf(s.getMissingAmount())));
+                                TaskText.shortageName(s), String.valueOf(s.getMissingAmount())));
                     }
                 }
             }
@@ -575,7 +575,7 @@ public final class TaskManagementOverlay {
         } else {
             String src = item.dependencySource().isEmpty()
                     ? I18n.string("gui.wandscape.task.source.manual", "工坊手动排队")
-                    : item.dependencySource();
+                    : TaskText.resolve(item.dependencySource());
             g.drawString(font, I18n.string("gui.wandscape.task.prod.source", "来源: %s", src),
                     x + 8, line3Y, 0xFFB0BEC5, false);
         }
@@ -644,7 +644,7 @@ public final class TaskManagementOverlay {
                 mx0 + 24, contentY + 6, 0xFFFFD54F, false);
         String srcText = targetItem.dependencySource().isEmpty()
                 ? I18n.string("gui.wandscape.task.source.manual_production", "工坊手动排队生产")
-                : targetItem.dependencySource();
+                : TaskText.resolve(targetItem.dependencySource());
         g.drawString(font, I18n.string("gui.wandscape.task.deps.source", "来源: %s", srcText),
                 mx0 + 24, contentY + 22, 0xFFE0E0E0, false);
         contentY += 50;
@@ -660,7 +660,7 @@ public final class TaskManagementOverlay {
                         : I18n.string("gui.wandscape.task.deps.state.queued", "队列排队就绪"));
         String wsText = I18n.string("gui.wandscape.task.deps.workshop", "工坊: %s | 产物: %s × %s | 状态: %s",
                 I18n.buildingName(targetGroup.buildingTypeId(), targetGroup.buildingName()).getString(),
-                targetItem.displayName(),
+                TaskText.productionItemName(targetItem),
                 String.valueOf(targetItem.count()), statusText);
         g.drawString(font, wsText, mx0 + 24, contentY + 22, 0xFFE0E0E0, false);
         contentY += 50;
@@ -674,7 +674,7 @@ public final class TaskManagementOverlay {
             for (ResourceShortageDto cost : targetItem.elementCosts()) {
                 String elemStr = I18n.string("gui.wandscape.task.deps.element_row",
                         "• %s: 需求 %s | 仓库库存 %s | %s",
-                        cost.displayName(), String.valueOf(cost.requiredAmount()), String.valueOf(cost.currentAmount()),
+                        TaskText.shortageName(cost), String.valueOf(cost.requiredAmount()), String.valueOf(cost.currentAmount()),
                         cost.getMissingAmount() > 0
                                 ? I18n.string("gui.wandscape.task.deps.short", "§c缺 %s", String.valueOf(cost.getMissingAmount()))
                                 : I18n.string("gui.wandscape.task.deps.ok", "§a满足"));
@@ -1194,7 +1194,7 @@ public final class TaskManagementOverlay {
             case "CASTING" -> mage.currentTaskTitle().isEmpty()
                     ? I18n.string("gui.wandscape.task.mage_state.casting", "施法中")
                     : I18n.string("gui.wandscape.task.mage_state.casting_with_task", "施法中: %s",
-                            mage.currentTaskTitle());
+                            TaskText.mageTaskTitle(mage));
             case "MOVING" -> I18n.string("gui.wandscape.task.mage_state.moving", "前往工作中");
             case "FOLLOWING" -> I18n.string("gui.wandscape.task.mage_state.following", "跟随中");
             case "RESTING" -> I18n.string("gui.wandscape.task.mage_state.resting", "回屋休息中");

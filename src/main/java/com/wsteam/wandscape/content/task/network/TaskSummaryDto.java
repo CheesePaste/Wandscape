@@ -13,6 +13,7 @@ import java.util.UUID;
 public record TaskSummaryDto(
         long taskId,
         String category,
+        /** 序列标签（lang 键 + 位置后缀）或裸蓝图 id；建筑队列任务为空串，客户端自己拼建筑名。 */
         String title,
         String blueprintId,
         @Nullable UUID buildingId,

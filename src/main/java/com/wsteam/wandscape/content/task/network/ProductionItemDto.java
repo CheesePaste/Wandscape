@@ -15,6 +15,7 @@ public record ProductionItemDto(
         String category,
         String blueprintId,
         String itemOrRecipeId,
+        /** 物品名（服务端解析）或元素的无语言兜底名；客户端按 itemOrRecipeId 再解析一次。 */
         String displayName,
         int count,
         String status, // "RUNNING", "QUEUED", "MISSING_ELEMENTS"
@@ -23,6 +24,7 @@ public record ProductionItemDto(
         float progress,
         List<ResourceShortageDto> elementCosts,
         List<String> missingElements,
+        /** 上游来源：lang 键（如 {@code gui.wandscape.task.source.auto}）或数据包自己塞的原文。 */
         String dependencySource,
         boolean activeSupplyingGather
 ) {

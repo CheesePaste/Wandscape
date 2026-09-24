@@ -15,6 +15,7 @@ import com.wsteam.wandscape.content.building.data.WorkItem;
 import com.wsteam.wandscape.content.building.event.BuildingPlacedEvent;
 import com.wsteam.wandscape.content.building.event.BuildingRemovedEvent;
 import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.ui.I18n;
 import com.wsteam.wandscape.foundation.registry.WandscapeConstants;
 import com.wsteam.wandscape.content.warehouse.ColonyItemBank;
 import net.minecraft.core.BlockPos;
@@ -906,7 +907,8 @@ public class BuildingApiImpl implements BuildingApi {
         if (state == null) {
             // Building bounding boxes may overlap freely, but two buildings can never
             // occupy the same world voxel — that is the only thing that fails here.
-            return PlacementResult.fail(Component.literal("该位置与已有建筑方块重叠，不能占用同一格"));
+            return PlacementResult.fail(I18n.name("message.wandscape.building.overlap",
+                    "该位置与已有建筑方块重叠，不能占用同一格"));
         }
 
         UUID colonyId = state.getColonyId();

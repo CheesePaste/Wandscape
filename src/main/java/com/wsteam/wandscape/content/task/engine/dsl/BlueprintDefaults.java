@@ -242,28 +242,28 @@ public final class BlueprintDefaults {
         params.put("amount", str(p, "amount"));
         List<AtomicOp> ops = List.of(new AtomicOp.BlockInteractOp(
                 pos(p, "anchor"), new InteractAction("gather"), params, asInt(p, "channel_ticks")));
-        return new TaskSequence(ops, label("节点采集", p));
+        return new TaskSequence(ops, label("task.wandscape.seq.node_gather", p));
     }
 
     private static TaskSequence productionCraft(Map<String, JsonElement> p) {
         List<AtomicOp> ops = List.of(new AtomicOp.BlockInteractOp(
                 pos(p, "anchor"), new InteractAction("craft"),
                 interactParams(p, "recipe_id", "count"), asInt(p, "channel_ticks")));
-        return new TaskSequence(ops, label("制作物品", p));
+        return new TaskSequence(ops, label("task.wandscape.seq.craft_item", p));
     }
 
     private static TaskSequence productionCraftSpell(Map<String, JsonElement> p) {
         List<AtomicOp> ops = List.of(new AtomicOp.BlockInteractOp(
                 pos(p, "anchor"), new InteractAction("craft_spell"),
                 interactParams(p, "recipe_id", "count"), asInt(p, "channel_ticks")));
-        return new TaskSequence(ops, label("制作魔法卷轴", p));
+        return new TaskSequence(ops, label("task.wandscape.seq.craft_spell", p));
     }
 
     private static TaskSequence productionDecompose(Map<String, JsonElement> p) {
         List<AtomicOp> ops = List.of(new AtomicOp.BlockInteractOp(
                 pos(p, "anchor"), new InteractAction("decompose"),
                 interactParams(p, "item_id", "count"), asInt(p, "channel_ticks")));
-        return new TaskSequence(ops, label("分解物品", p));
+        return new TaskSequence(ops, label("task.wandscape.seq.decompose", p));
     }
 
     private static TaskSequence productionSynthesize(Map<String, JsonElement> p) {
@@ -276,7 +276,7 @@ public final class BlueprintDefaults {
         List<AtomicOp> ops = List.of(new AtomicOp.BlockInteractOp(
                 pos(p, "anchor"), new InteractAction("synthesize"),
                 params, asInt(p, "channel_ticks")));
-        return new TaskSequence(ops, label("合成物品", p));
+        return new TaskSequence(ops, label("task.wandscape.seq.synthesize", p));
     }
 
     // ─────────────────────────────────────────────────────────────────
@@ -306,9 +306,13 @@ public final class BlueprintDefaults {
         return params;
     }
 
-    /** Format the task label like the old interpreter's {@code buildLabel}: displayName at anchor. */
-    private static String label(String displayName, Map<String, JsonElement> p) {
-        String label = displayName;
+    /**
+     * Format the task label like the old interpreter's {@code buildLabel}: {@code <标签> at (<位置>)}。
+     * 标签发 lang 键（面板与头顶状态由客户端按本地语言解析，见 {@code TaskText#sequenceLabel}）
+     * 或数据包自己的原文；位置段与语言无关，原样拼在后面。
+     */
+    private static String label(String labelText, Map<String, JsonElement> p) {
+        String label = labelText;
         JsonElement anchor = p.get("anchor");
         if (anchor != null && anchor.isJsonArray()) {
             try { label += " at " + pos(anchor); } catch (RuntimeException ignored) {}

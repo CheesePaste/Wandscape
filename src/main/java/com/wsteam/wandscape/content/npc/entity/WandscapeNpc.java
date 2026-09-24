@@ -1681,8 +1681,8 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike, ColonyWor
     /**
      * Client-side fallback (zh) for a status key, shown only when the lang
      * entry is missing. Keys prefixed {@code op:}/{@code ritual:}/{@code task:}
-     * carry dynamic payloads and never resolve via lang — fallback reassembles
-     * the original display text.
+     * carry dynamic payloads：整串当键查不中，由渲染层拆前缀查
+     * {@code npc.wandscape.state.op|ritual|task} 并代入 payload，这里只管固定状态。
      */
     public static String statusFallback(String statusKey) {
         return switch (statusKey) {
@@ -1705,12 +1705,7 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike, ColonyWor
             case "portal_gate" -> "开启传送门";
             case "rain_call" -> "祈雨";
             case "clear_weather" -> "驱云";
-            default -> {
-                if (statusKey.startsWith("op:")) yield "执行: " + statusKey.substring(3);
-                if (statusKey.startsWith("ritual:")) yield "施法: " + statusKey.substring(7);
-                if (statusKey.startsWith("task:")) yield statusKey.substring(5);
-                yield statusKey;
-            }
+            default -> statusKey;
         };
     }
 
