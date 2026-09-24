@@ -287,7 +287,7 @@ public class NavigationSystem implements EcsSystem {
         ColonyWorker worker = EntityComponentBridge.INSTANCE.getWorker(npcId);
         // 门控：施法互斥锁 + 传送独立 CD + 固定魔力（magic_spells/teleport.json 数据驱动，缺失回退常量），
         // 任一不满足回退走路（而不是站等）。锁时长 = self_teleport 引导 tick（与 WandscapeRitualOps 引导时长对齐，防止引导期间并发施法）。
-        // 无施法能力的工作者（如仅工作态的车万女仆）tryEscapeCast 恒 false → 走下面的回退分支继续走路。
+        // 无施法能力的工作者 tryEscapeCast 恒 false → 走下面的回退分支继续走路。
         MagicDef tp = SpellbookLoader.getSpec("teleport");
         int tpCd = tp != null ? tp.baseCooldown() : TELEPORT_COOLDOWN_TICKS;
         int tpMana = tp != null ? tp.manaCost() : TELEPORT_MANA_COST;

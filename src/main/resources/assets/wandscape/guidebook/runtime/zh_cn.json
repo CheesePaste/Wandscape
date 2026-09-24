@@ -492,13 +492,6 @@
       "sortnum": 2
     },
     {
-      "doc": "tlm_guide",
-      "category": "compat",
-      "name": "车万女仆",
-      "icon": "minecraft:name_tag",
-      "sortnum": 3
-    },
-    {
       "doc": "about_guide",
       "category": "about",
       "name": "关于我们",

@@ -11,7 +11,7 @@
 > ⑩ `WarehouseApi` 补 `addItem/removeItem/clearItems/clearElements/clearAll`（`clearAll` 桩→真）+ `getItemCapacity/getUsedItemCapacity`，`warehouse/element` 指令改走 API（§8）；
 > ⑪ `ColonyApi` 全部未实现方法补齐（`getColonyName/setColonyName/getMaxLevel/getExpToNext/isActive/setActive/setColonyLevel`），`colony level/exp/name` 指令 + 内部全部读/写点（NpcApi/MageHut/Recipe/BuildUnlock/Interact/Status/Achievement/Tourist*）改走 API，`ColonyActivation` 加 per-colony 强制冻结覆盖（§4）。
 > 同步：`docs/plan/command-refactor-api-gaps.md` 状态更新。
-> 更新：2026-09-12。⑫ 新增 ColonyWorkerApi（§23）：把**任意 `Mob` 登记为殖民地工人**的对外契约——与法师共用同一条工作链（ECS 派活 → 原子操作执行器）与同一块任务面板。前置是内部抽出的 `ColonyWorker` 解析缝（`refactor(npc) 081af89f`，行为不变）：任务执行链此前写死 `WandscapeNpc`，现统一经 `ColonyWorker` 解析实体。同批还补了**施法者能力位** `canCastColonyMagic` + 任务 `params["caster_only"]`，在调度侧挡住不具备施法能力的工作者接守卫/祭坛任务（否则执行器拿不到法师会把任务瞬间判完成并空转）。详见 `docs/plan/touhou-little-maid-compat.md`。
+> 更新：2026-09-12。⑫ 新增 ColonyWorkerApi（§23）：把**任意 `Mob` 登记为殖民地工人**的对外契约——与法师共用同一条工作链（ECS 派活 → 原子操作执行器）与同一块任务面板。前置是内部抽出的 `ColonyWorker` 解析缝（`refactor(npc) 081af89f`，行为不变）：任务执行链此前写死 `WandscapeNpc`，现统一经 `ColonyWorker` 解析实体。同批还补了**施法者能力位** `canCastColonyMagic` + 任务 `params["caster_only"]`，在调度侧挡住不具备施法能力的工作者接守卫/祭坛任务（否则执行器拿不到法师会把任务瞬间判完成并空转）。该批的 TLM 兼容层已于 2026-09-24 删除，`ColonyWorkerApi` 与施法能力位保留（见 §23）。
 
 ## 图例
 
@@ -393,11 +393,11 @@
 
 > 面向 addon/其它模组：把己方生物登记为**殖民地工人**，与殖民地法师共用同一条工作链（`SchedulerSystem` 派活 → `TaskExecutionSystem` 执行原子操作），并一并出现在任务与法师管理面板里。实现 `content/npc/internal/ColonyWorkerApiImpl`；内部适配器 `content/npc/worker/MobColonyWorker`（通用）与 `WandscapeNpc`；ECS 登记走 `EntityComponentBridge.onWorkerJoinWorld`。
 >
-> 内部 `ColonyWorker` 接口（`content/npc/worker/`）**公开面只留 5 个登记方法**，以后好改；但那句"刻意不公开"只是**意图、没有机制**——它是 `public interface` 且 javadoc 主动招呼第三方在 `compat/` 下实现它，全仓无 `@ApiStatus.Internal`，也拦不住别人 import `content.npc.worker` + `content.npc.internal.EntityComponentBridge`。**复核（2026-09-12）：唯一已知的非平凡适配器（车万女仆）走的是直接驱动 `getNavigation()`（不是 `WALK_TARGET` 记忆——那条路被实测否决，见 `compat/tlm/MaidColonyWorker` 的 javadoc），且它绕过本 API、直调 `EntityComponentBridge.onWorkerJoinWorld`。**
+> 内部 `ColonyWorker` 接口（`content/npc/worker/`）**公开面只留 5 个登记方法**，以后好改；但那句"刻意不公开"只是**意图、没有机制**——它是 `public interface` 且 javadoc 主动招呼第三方在 `compat/` 下实现它，全仓无 `@ApiStatus.Internal`，也拦不住别人 import `content.npc.worker` + `content.npc.internal.EntityComponentBridge`。**复核（2026-09-24）：当前无任何非平凡适配器**——`ColonyWorkerApi` 零外部消费者，`MobColonyWorker` 是接口唯一的现成实现。此前唯一那个适配器（车万女仆）走的是直接驱动 `getNavigation()`（不是 `WALK_TARGET` 记忆——那条路被实测否决，理由见 `ColonyWorker` 的 javadoc），且它绕过本 API、直调 `EntityComponentBridge.onWorkerJoinWorld`；该兼容层已于 2026-09-24 删除。**
 
 | 方法 | 用途 | 状态 | dogfood |
 |---|---|---|---|
-| `boolean enlist(UUID colonyId, LivingEntity)` | 登记为某殖民地的工作者（幂等；已登记但换镇则改归属） | ✅ `ColonyWorkerApiImpl` | ⚠️ **零外部消费者**（2026-09-12 复核）：纯 addon 能力，骨架已就位但**尚无任何调用方**——车万女仆走 `compat/` 直调 `EntityComponentBridge`，不经过这里。**只能在服务端调用**（客户端 `World.getActive()` 为 null → warn + false） |
+| `boolean enlist(UUID colonyId, LivingEntity)` | 登记为某殖民地的工作者（幂等；已登记但换镇则改归属） | ✅ `ColonyWorkerApiImpl` | ⚠️ **零外部消费者**（2026-09-24 复核，与 2026-09-12 首次复核结论一致）：纯 addon 能力，骨架已就位但**尚无任何调用方**。**只能在服务端调用**（客户端 `World.getActive()` 为 null → warn + false） |
 | `void dismiss(LivingEntity)` | 解除登记：注销 ECS、释放全局任务、取消在途运输、恢复该生物自身 AI 移动 | ✅ | 🔧 同上 |
 | `boolean isEnlisted(LivingEntity)` | 是否已登记 | ✅ | 🔧 同上 |
 | `UUID getWorkerColony(LivingEntity)` | 所属殖民地；未登记 null | ✅ | 🔧 同上 |
@@ -407,7 +407,7 @@
 
 ⚠️ 登记要求：目标底层须为 `Mob`（需原版寻路，`ColonyWorker#entity()` 的类型就是 `Mob`）；殖民地须为**已注册的真实殖民地**（占位/已删殖民地会被调度器 `isColonyRegistered` 挡住，登记了也拿不到任务，故当场拒绝）。**首次派活**（首次启动工作导航）时会关掉该生物 `goalSelector` 的 MOVE 控制位（代价：不再自主追击/逃跑），`dismiss` 时恢复——注意是**惰性**的，登记到第一次接活之间它照常自主游荡。
 
-⚠️ **扩展性缺口**：`enlist` 写死 `new MobColonyWorker(...)`，没有工厂/注册点，接口也不在 `api/`。想接自带属性成长 / 魔力 / 殖民地法术 / 自定义导航的实体，只能来本仓库 `compat/` 下写适配器（先例：车万女仆），**不能在自己的 jar 里完成**。是否补一个适配器供体、还是先把本 API 收回内部，等真有第三方需求时再定（硬规则 6：不给投机性 API）。
+⚠️ **扩展性缺口**：`enlist` 写死 `new MobColonyWorker(...)`，没有工厂/注册点，接口也不在 `api/`。想接自带属性成长 / 魔力 / 殖民地法术 / 自定义导航的实体，只能来本仓库 `compat/` 下写适配器，**不能在自己的 jar 里完成**。是否补一个适配器供体、还是先把本 API 收回内部，等真有第三方需求时再定（硬规则 6：不给投机性 API）。
 
 ⚠️ 施法类任务（守卫 `guard:attack` / 祭坛施法）由只认本模组法师的执行器实现（`GuardAttackExecutor` / `AltarCastExecutor`），第三方工作者接取会「瞬间完成并空转」。故调度侧按任务 `params["caster_only"]` + `ColonyWorker#canCastColonyMagic()` 提前挡掉候选。第三方工作者若要承担这类任务，等阶段二把该能力位翻成 true。
 

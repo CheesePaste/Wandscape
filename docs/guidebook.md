@@ -14,7 +14,7 @@
 
 ```
 内容唯一来源（作者只改这里）
-    src/main/resources/assets/wandscape/guidebook/{zh_cn,en}/*.md     62 篇 × 2 语（全部编进手册）
+    src/main/resources/assets/wandscape/guidebook/{zh_cn,en}/*.md     61 篇 × 2 语（全部编进手册）
                     │
                     │  gen_patchouli.py（本机跑，生成物提交进仓库）
                     ▼
@@ -37,7 +37,7 @@
 
 | 要改的 | 唯一源 | 备注 |
 |---|---|---|
-| 条目正文 | `guidebook/{zh_cn,en}/<id>_guide.md` | 中英各一份，这是 62 篇的全部正文 |
+| 条目正文 | `guidebook/{zh_cn,en}/<id>_guide.md` | 中英各一份，这是 61 篇的全部正文 |
 | 条目名 | 同一篇 md 的首行 `# 标题` | 不用双语重复维护 |
 | 分类名、**分类描述** | `gen_patchouli.py` 的 `CATEGORIES` | **在 Python 里，不在 md**；描述同样支持《…》 |
 | 条目归哪个分类 / 排序 / 图标 | `gen_patchouli.py` 的 `ENTRIES` | |
@@ -73,7 +73,7 @@
 
 它们**已经删掉**（连同只被它们引用的 3 张配图 `road_diagram` / `magic_editor_diagram` / `sample`，
 以及 3 张早已无人引用的 `overview_diagram` / `scanner_diagram` / `scanner_ui`）。留下的唯一一份手册
-就是编进书里的这 62 篇。
+就是编进书里的这 61 篇。
 
 - 需要旧文里那点内容时**去 git 历史里取**（删除发生在「兜底补齐三层导航」那次提交），别再往 `guidebook/` 里抄回来。
 - 旧文里 4 个主题在手册中没有对应页：法阵编辑器、道路工作室 / 样条编辑器、`/wandscape test` 指令、创作者 / API。
@@ -95,7 +95,7 @@
 我把「戒指戴进饰品槽就能用」当成事实写进草稿，实际它只能拿在主手——这类错读者一试就发现，
 但手册的可信度当场就没了。
 
-**「同类」就是这本手册。** `guidebook/` 下只有编进手册的那 62 篇 md，没有第二套说法可读；
+**「同类」就是这本手册。** `guidebook/` 下只有编进手册的那 61 篇 md，没有第二套说法可读；
 要旧文（`npc_guide` / `tourist_guide` / `strategy_guide` / `overview_guide` / `getting_started` /
 `road_*` / `scanner_guide` / `commands_guide` 等 15 篇）里那点内容，去 git 历史取，细节见 §1.3。
 
@@ -181,10 +181,10 @@ CLAUDE.md §二.9：面向玩家文本（`lang/*`、`guide/**`、I18n、Screen �
 | `magic` | 魔法 | mages / casting / advanced_casting / magic_beam / magic_meteor / magic_desperation / magic_enfeeble_field / magic_conversion / magic_petrification / magic_fortification / magic_heal / magic_teleport / magic_revive |
 | `items` | 装备与物品 | wand / oath_ring / scepter / magic_compass / warehouse_terminal |
 | `custom` | 自定义与数据包 | custom / building_scanner / custom_buildings / custom_packs / custom_elements / custom_recipes / custom_magic / custom_loot / custom_commands |
-| `compat` | 联动与兼容 | curios / irons_spells / goety / tlm |
+| `compat` | 联动与兼容 | curios / irons_spells / goety |
 | `about` | 关于我们 | about |
 
-共 **63 个条目位**，来自 **62 篇 md**（`building_scanner_guide` 一篇登两处），中英两侧完全一致。
+共 **62 个条目位**，来自 **61 篇 md**（`building_scanner_guide` 一篇登两处），中英两侧完全一致。
 数字对不上，说明 `ENTRIES` 里加了新条目而这张表没跟上。
 
 **md 目录里不该有表外的文档**：`guidebook/{zh_cn,en}/` 下的每一篇都必须登在 `ENTRIES` 里，
@@ -243,7 +243,7 @@ service、relax、atm），顺序照建造面板的分类顺序，前后各夹�
   （`WandscapeJeiPlugin` 经 `magic.wandscape.<id>.desc` 本地化）那句。**两边都要改**（§1.1 的坑 1）。
 - **`items` 分类**把 3 档戒指 / 5 种权杖 / 3 档罗盘各自归并成一条，法杖整族一条（12 支预设不展开）。
 - **`compat` 分类只写玩家看得见的效果**（能做什么、要在哪里装什么、有什么前提），不写内部机制——
-  正文依据是 `compat/{curios,ironspellbooks,goety,tlm}/` 的实际行为，改兼容代码后这几页要跟着复核。
+  正文依据是 `compat/{curios,ironspellbooks,goety}/` 的实际行为，改兼容代码后这几页要跟着复核。
 
 **「目录页」** = `playstyle` 分类下的 `index_guide` 条目（条目名「概览」）：原 `index_guide.md` 的每节标题成为一页，
 节内文档链接转成帕秋莉可点击链接，点进去直接跳条目。

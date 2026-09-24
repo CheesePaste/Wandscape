@@ -223,7 +223,7 @@ public class SchedulerSystem implements EcsSystem {
      * 任务是否**只能由会施放殖民地法术的工作者**接取（params["caster_only"]；任务源声明）。
      *
      * <p>守卫 {@code guard:attack} 与祭坛施法的 MC 执行器只认本模组法师——拿不到法师时会把任务
-     * 立刻判为完成。若让第三方工作者（车万女仆等）接取，会变成"接了不动、威胁没处理、
+     * 立刻判为完成。若让第三方工作者接取，会变成"接了不动、威胁没处理、
      * 任务源再发布"的空转，故在候选阶段就挡掉（判定见 {@code ColonyWorker#canCastColonyMagic}）。
      */
     private static boolean taskIsCasterOnly(GlobalTask task) {

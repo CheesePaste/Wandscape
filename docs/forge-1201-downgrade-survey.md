@@ -28,7 +28,7 @@
 > **决策已落（2026-09-23）**——以下四条以此为准，本文其余小节仍是当日「考察」口径：
 > 1. **形态**：`1.21.1` 为主分支，降级在独立分支 `1.20.1-forge` 上做（独立 worktree 并行），**只在主线稳定发布后跟进一次**，不跟 alpha/beta；预计维护一年以上，主流模组迁走后停更。跟进走「转换脚本 + 每次把新踩到的模式补进脚本」，数据/资产/文档先在主线改、靠 merge 流到副分支。
 > 2. **配置屏**：入口两线一致裁掉（§6.4 已按此改写），配置只留 `config/*.toml` 与游戏内设置中心；面板未收录的 14 项也维持 TOML-only。
-> 3. **车万女仆（TLM）**：1.20.1 不兼容——§6.3 的 attachment 缺口在 1.20.1 侧随之消失。
+> 3. **车万女仆（TLM）**：1.20.1 不兼容——§6.3 的 attachment 缺口在 1.20.1 侧随之消失。**（2026-09-24 升级为两线一致）** 主分支亦已删除 `compat/tlm/`，该缺口现在两条线上都不存在，详见 `docs/adr.md`。
 > 4. **compat 方针**：1.20.1 侧任何 compat 出问题就**关掉该模组**、不修；§九「没有一件需要裁掉」只是 API 层面的可用性结论，不等于承诺逐行修到能用。
 
 ---
@@ -226,13 +226,15 @@
 
 ### 6.3 数据附件 → Capability（成本：种类的 L，范围的 S）
 
-**全仓只有 1 个 `AttachmentType`**：`compat/tlm/MaidColonyAttachments.MAID_COLONY_STATE`，挂在车万女仆的 `EntityMaid` 上，存 `MaidColonyState`（本身是 `INBTSerializable<CompoundTag>`），**读取点只有 1 处**（`MaidColonyWorker.java:83`）。
+**全仓只有 1 个 `AttachmentType`**（**2026-09-24 已随 TLM 兼容删除，现全仓 0 个**；以下为当日考察原文）：`compat/tlm/MaidColonyAttachments.MAID_COLONY_STATE`，挂在车万女仆的 `EntityMaid` 上，存 `MaidColonyState`（本身是 `INBTSerializable<CompoundTag>`），**读取点只有 1 处**（`MaidColonyWorker.java:83`）。
 
 1.20.1 的替代路径有两条：① 老式 capability（`Capability` + `CapabilityToken` + `AttachCapabilitiesEvent<Entity>` + `ICapabilityProvider` + 失效回调）；② 直接写进 maid 实体自己的 NBT。
 
-**判断**：这是**唯一一处「无对应物」的真缺口**，但它是可选软依赖（TLM）里的一小块，爆炸半径 4 个文件。工作量在「capability 样板本身啰嗦」，不在业务逻辑。
+**判断**：这是**唯一一处「无对应物」的真缺口**，但它是可选软依赖（TLM）里的一小块，爆炸半径 4 个文件。工作量在「capability 样板本身啰嗦」，不在业务逻辑。（2026-09-24：该缺口随 TLM 兼容从两条线上一起消失。）
 
 > **决策已落（2026-09-23）**：1.20.1 侧**直接不兼容 TLM**，本项在降级中不再存在——删 `compat/tlm/` 整包（7 文件）+ `Wandscape` 两处注册调用 + gradle 依赖 + mods.toml 可选依赖条目即可，外部触点仅此。
+>
+> **（2026-09-24 更新）**：该删除已在 1.21.1 主分支执行完毕，1.20.1 侧因此不再需要单独处理，两线在这一点上无差异。两处修正：① 实际爆炸半径比当时估的大——除 7 个类，还要删手册「联动与兼容」页（md + 生成物）、3 条 `task.wandscape.colony_worker*` lang 键与 `gen_patchouli.py` 的条目登记；② 元数据模板 `src/main/templates/META-INF/neoforge.mods.toml`（不在 `src/main/resources/META-INF/` 下，只有 `accesstransformer.cfg` 在那儿）**从未声明过 TLM 可选依赖**——它只声明了 neoforge / minecraft / jei / curios / patchouli，当时清单里「删 mods.toml 可选依赖条目」那条并不存在。
 
 ### 6.4 配置屏（成本：0，入口已裁）
 

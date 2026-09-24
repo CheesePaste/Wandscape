@@ -1866,7 +1866,7 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike, ColonyWor
             if (reason == RemovalReason.KILLED || reason == RemovalReason.DISCARDED) {
                 if (world != null) {
                     // 释放全局任务供重派 / 取消资源预留 / 取消在途运输 / 移除 ECS 组件——
-                    // 四件事全部集中在桥的 onWorkerLeaveWorld，第三方工作者（车万女仆等）
+                    // 四件事全部集中在桥的 onWorkerLeaveWorld，第三方工作者
                     // 走同一份清理，不会漏项造出「幽灵工作者占着全局任务不干活」。
                     EntityComponentBridge.INSTANCE.onWorkerLeaveWorld(this, world);
                 }

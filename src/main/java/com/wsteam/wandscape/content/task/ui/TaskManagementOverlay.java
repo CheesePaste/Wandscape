@@ -768,7 +768,7 @@ public final class TaskManagementOverlay {
 
         // Line 1: Name + State Tag
         String name = mage.name();
-        // 第三方模组登记的殖民地工作者（如车万女仆）标出来——她们与法师并排显示，
+        // 第三方模组登记的殖民地工作者标出来——它们与法师并排显示，
         // 但不吃法师那套属性/魔力，不标一下玩家会以为数据错了
         if (!"npc".equals(mage.kind())) {
             name = Component.translatable("gui.wandscape.task.worker_tag").getString() + " " + name;
@@ -806,7 +806,7 @@ public final class TaskManagementOverlay {
 
         // Line 4: Action Buttons (Right Aligned) —— 仅法师。
         // 跟随/和平是 WandscapeNpc 的模式开关（服务端 MageModeActionPacket 对非法师直接 warn+return），
-        // 面板里还并列着第三方工作者（女仆等），给她们画这两个按钮只会是点不动的死按钮。
+        // 面板里还并列着第三方工作者，给它们画这两个按钮只会是点不动的死按钮。
         if ("npc".equals(mage.kind())) {
             renderMageActionButtons(g, font, x + w - 108, y + 52, mage, mx, my);
         }

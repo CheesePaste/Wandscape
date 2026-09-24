@@ -33,7 +33,7 @@ public record MageSummaryDto(
         boolean peaceMode,
         /**
          * 工作者种类标签（面板显示用）：{@code "npc"} = 本模组法师，{@code "worker"} = 其它模组登记的
-         * 殖民地工作者（如车万女仆）。仅供 UI 区分图标/标签，无行为含义。
+         * 殖民地工作者。仅供 UI 区分图标/标签，无行为含义。
          */
         String kind
 ) {

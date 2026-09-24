@@ -28,15 +28,15 @@
    - **单向**（NPC 不攻击/不记仇/不溅射友军）走 `isFriendlyForce`；**双向互不侵犯**（玩家宠物/随从不打殖民地单位、殖民地随从不打玩家）走 `FriendlyTargetingHandler` 监听 `Mob.setTarget` 的 `LivingChangeTargetEvent`。只覆盖「真实殖民地侧」，`EvilMage` 等 `isColonyNpc()==false` 的敌意行为刻意保留。
    - **PVP 分化**：`Config.PVP`（`npc.pvp`，默认 true）开启时玩家侧实体（`PLAYER`/`PLAYER_SUMMON`/`PET`）的「恒友军」收紧为「仅同殖民地」——`classify()` 需把玩家/召唤者/宠物主人的殖民地解析进 `Classified.colony`（`getColonyByFounder`，殖民地↔创始人 1:1；无殖民地→ null→判非友军），`FriendlyForce.isAlly/areMutuallyAlly` 增 `pvp` 参数做 `sameColony` 判定。改动时必须同步贯通 `isRetaliationTarget`（还手）、`canBeamHurt`（光束伤害）与 `ScepterService.toggleHostile`（可标记敌对玩家）四条边界——只改一处会阻塞。`EvilMage.canBeamHurt` 已覆盖「非友军 或 生存玩家」，不受 PVP 影响。
    - **第三方魔法模组误伤（源头修复）**：`WandscapeNpc.isAlliedTo` 覆写（vanilla 中立钩子，基于 `Entity#isAlliedTo`）让 Goety `MobUtil.areAllies` 与铁魔法 `isFriendlyFireBetween` 在源头就不索敌/不误伤本殖民地 NPC——两类模组的友伤判定最终都汇到 `isAlliedTo`，故不必逐模组打补丁。玩家分支只豁免本殖民地创始人（`colonyFounder()`，`ColonyApi.getFounder`，PvP 无关），非玩家分支沿用 PvP 感知的 `isFriendlyForce`，所以「自家殖民地受保护、其他殖民地仍可被误伤」，与 PvP 的「跨殖民地敌对」同向。配套 `Config.NPC_FRIENDLY_FIRE_PROTECTION`（`npc.friendlyFireProtection`，默认 true）经 `NpcFriendlyFireHandler`（`LivingIncomingDamageEvent`：伤害链解析回攻击者玩家，仅取消「攻击者拥有该殖民地」的伤害）兜底覆盖近战/箭矢/其它不走 `isAlliedTo` 的来源；关闭后可再伤自家殖民地 NPC。
-   - ⚠️ **已知问题（待修，非缺陷）**：`npc.pvp = false` 时 `PLAYER`/`PLAYER_SUMMON`/`PET` 三类的殖民地语义被整体丢弃（`FriendlyForce.isAlly` 取 `true` 分支），**所有玩家本人 + 其宠物/召唤物跨殖民地恒为友军**——无 PVP 的世界里，玩家 B 的狼/马/召唤物都不会被玩家 A 的殖民地攻击，与「按殖民地归属判友军」的口径冲突。这是 PVP 系统引入前旧行为的保留档，改动前需先重新定义 `pvp = false` 到底该是什么语义（「无 PVP 但仍按殖民地」还是维持原样），属独立决策；**不要在第三方兼容里顺手动它**，会外溢到所有玩家侧实体。详见 `plan/touhou-little-maid-compat.md` §3.1.1。
+   - ⚠️ **已知问题（待修，非缺陷）**：`npc.pvp = false` 时 `PLAYER`/`PLAYER_SUMMON`/`PET` 三类的殖民地语义被整体丢弃（`FriendlyForce.isAlly` 取 `true` 分支），**所有玩家本人 + 其宠物/召唤物跨殖民地恒为友军**——无 PVP 的世界里，玩家 B 的狼/马/召唤物都不会被玩家 A 的殖民地攻击，与「按殖民地归属判友军」的口径冲突。这是 PVP 系统引入前旧行为的保留档，改动前需先重新定义 `pvp = false` 到底该是什么语义（「无 PVP 但仍按殖民地」还是维持原样），属独立决策；**不要在第三方兼容里顺手动它**，会外溢到所有玩家侧实体。
    - ⚠️ **做其他模组兼容时，务必把该模组的召唤物/宠物经 `FriendlyForceApi.registerAlly` 加入盟友名单，避免殖民地 NPC 误伤**——这是硬性提醒，遗漏会导致兼容模组的召唤生物被己方法师当敌人打死。
-     - **例外**：若该模组实体本身已实现 `OwnableEntity` 且有主（如车万女仆 `EntityMaid extends TamableAnimal`），它**已经**落 `PET` 兜底分支、按主人殖民地判定，**不要**再 `registerAlly`——`EXTERNAL_ALLY` 是恒友军、不校验殖民地，注册反而会把**别人家的、无主的**同类实体也变成己方友军，比不注册更差。
+     - **例外**：若该模组实体本身已实现 `OwnableEntity` 且有主（`TamableAnimal` 子类即是），它**已经**落 `PET` 兜底分支、按主人殖民地判定，**不要**再 `registerAlly`——`EXTERNAL_ALLY` 是恒友军、不校验殖民地，注册反而会把**别人家的、无主的**同类实体也变成己方友军，比不注册更差。
 7. **NPC 寻路水中脱困是「双层卡死判据 + 游泳免 onGround」**（`content/npc/system/NavigationSystem`）：
    - 位移卡死判据（每 60 tick 水平位移 < 2 格、连 3 次）只覆盖「没在动」；高岸水池这类「游得动但永远逼近不了目标」的困局需补**净逼近判据**：水中每区间游动够大时，记录到目标到达中心的**历史最低 3D 距离**（含垂直，兼容潜水下潜），连续 4 个区间（≈240 tick）不再创新低即切自传送脱困。渡河/水下工作全程单调逼近（每区间创新低），永不触发。
    - `switchToRitualTeleport`（及跟随兜底 `FollowPlayerGoal.tryTeleportToPlayer`）的门控是 `onGround()`，但游泳时 `onGround()` 恒 false——必须放行水中 NPC（`|| isInWater()`），否则水池困局判定卡死后每轮被门控拦下死循环，永远传送不出去（任务走 NavigationSystem、跟随走 FollowPlayerGoal 两路都会中招）；落点安全由 `findSafeLanding` 保证。
 8. **殖民地数据在客户端恒不可用——客户端判定点只能用同步数据**（「客户端殖民等级陷阱」同族，2026-09-12 在第三方 GUI 上又踩一次）：
    - `ColonyApi.getColonyByFounder` / `getColonyLevel` / `getAllColonyIds` 都走 `getColonySavedData()` → `ServerLifecycleHooks.getCurrentServer()`，**专用服务器的客户端恒为 null**（单机因带有集成服务端而试不出来，属典型"单机复现不了"陷阱）；`ColonyWorkerApi.enlist` 一类引擎侧 api 在客户端也会因 `World.getActive() == null` 直接失败。
-   - 典型翻车：把「主人有小镇」这类服务端事实写进**第三方 GUI 的可用性判定**里（车万女仆的 `IMaidTask#isEnable` 就是在客户端被调用来决定按钮可否点），结果任务在多人局里永久置灰、点不动。**做法**：客户端条件只用 `SynchedEntityData` / 同步包里的数据；服务端事实留给服务端把关，并用描述文案 + 一次性 `Log.warn` 兜底，别让它变成"选了任务却站着不动"的静默失败。
+   - 典型翻车：把「主人有小镇」这类服务端事实写进**第三方 GUI 的可用性判定**里（第三方模组的任务界面常把「这个选项能不能点」放在客户端判定），结果任务在多人局里永久置灰、点不动。**做法**：客户端条件只用 `SynchedEntityData` / 同步包里的数据；服务端事实留给服务端把关，并用描述文案 + 一次性 `Log.warn` 兜底，别让它变成"选了任务却站着不动"的静默失败。
 9. **自定义实体禁 `bakeLayer(ModelLayers.PLAYER)`（EMF 连坐坑，游客渲染器同规则）**：
    - Detailed Animations 系列资源包经 EMF 在烘焙期替换原版玩家层几何；借该层烘焙的自定义实体（NPC/游客曾是）会被连坐——EMF 的新几何配 64×64 标准布局皮肤，头身 UV 错位分离（2026-09 用户实测，仅装 EMF+ETF 即可复现）。
    - 做法：实体渲染器各自注册自有 `ModelLayerLocation`（`wandscape:wandscape_npc/main`、`wandscape:tourist/main`，注册在 `WandscapeClient.onRegisterLayerDefinitions`），几何用 vanilla 同款工厂 `LayerDefinition.create(PlayerModel.createMesh(CubeDeformation.NONE, false), 64, 64)`（经典粗臂 64×64 含 overlay 第二层），与原版 PLAYER 层逐位一致——不装 EMF 时外观零变化；`EvilMage` 复用 NPC 渲染器自动覆盖。1.21.1 的 `PlayerModel` **没有** `createBodyLayer`（旧版本记忆），几何工厂是 `createMesh(CubeDeformation, boolean slim)`。
@@ -95,9 +95,9 @@
    - 蓝图 DSL 解释器已废除，默认蓝图全部收敛为 `content/task/engine/dsl/BlueprintDefaults.java` 中的 Java lambda 函数注册。
 4. **任务链的实体解析只有一个点：`content/npc/worker/ColonyWorker`**（2026-09-12 起）：
    - 原子操作执行器只收 `ecsId`，类型墙就在这一处。7 个 MC 边界适配器（`EntityOps` / `MovementOps` / `RitualOps` / `BlockInteractExecutor` / `AsyncTransformExecutor` / `ResourceRequestExecutor` / `NavigationSystem`）一律经 `EntityComponentBridge.getWorker(ecsId)` 拿 `ColonyWorker`，**不要再写 `instanceof WandscapeNpc`**；确需法师专有能力时另取 `getNpc()`（它只认本模组法师，第三方工作者返回 null）。
-   - 接口只有 `entity()` / `colonyId()` 两个抽象方法，其余全是 default——default 就是"普通 Mob 当工人"的基线（原版寻路、中性属性、无魔力无法术），`MobColonyWorker` 几乎不覆写任何方法即是证明。实现新适配器先看 `compat/tlm`（车万女仆）与 `api/ColonyWorkerApi`。
+   - 接口只有 `entity()` / `colonyId()` 两个抽象方法，其余全是 default——default 就是"普通 Mob 当工人"的基线（原版寻路、中性属性、无魔力无法术），`MobColonyWorker` 几乎不覆写任何方法即是证明。实现新适配器先看 `api/ColonyWorkerApi`。
    - **两个已知缺口**：`ColonyWorker` 在 `content/` 而非 `api/` 且无 `@ApiStatus.Internal`（公开面与内部包的边界是意图、没有机制）；`enlist` 写死 `MobColonyWorker`、无工厂扩展点——想接自带属性成长/魔力/法术/自定义导航的实体，只能改本仓库。动手前先确认这是不是真需求（硬规则 6）。
-   - ⚠️ **殖民地归属有两处真相**：适配器上的 `colonyId()` 与 ECS 的 `ColonyMember` 组件。`AsyncTransformExecutor.resolveColonyId` 优先读组件；换镇时两者都要更新（女仆的适配器 `colonyId` 是 final，换镇走"拆掉重建"）。新写任何"改归属"的代码都要同时处理这两处。
+   - ⚠️ **殖民地归属有两处真相**：适配器上的 `colonyId()` 与 ECS 的 `ColonyMember` 组件。`AsyncTransformExecutor.resolveColonyId` 优先读组件；换镇时两者都要更新（`MobColonyWorker` 有 `setColonyId` 可原地改；接口实现若把 `colonyId` 定成不可变，换镇就得拆掉重建）。新写任何"改归属"的代码都要同时处理这两处。
 
 ---
 

@@ -223,8 +223,6 @@ src/main/resources/assets/wandscape/textures/guidebook/full/<名字>.png    高�
 | 62 | `compat_curios_slots` | P1 | 法师面板 →【饰品栏】按钮 | 按钮本身 + 打开后的饰品槽，两处同框 |
 | 63 | `compat_iron_slots` | P1 | 法师策略页 | 铁魔法卷轴所在的那个分类槽 + 法术书槽 |
 | 64 | `compat_goety_slots` | P1 | 法师策略页 | 聚晶槽，突出**整个策略栏只有这一个** |
-| 65 | `compat_tlm_job` | P1 | 车万女仆的女仆界面 | 工作类型切到「小镇工作」的那一处 |
-| 66 | `compat_tlm_roster` | P2 | 任务大厅 → 法师名册 | 名册里带「[小镇工人]」标记的那一行 |
 
 ---
 
@@ -236,7 +234,7 @@ src/main/resources/assets/wandscape/textures/guidebook/full/<名字>.png    高�
    ——需要一座建齐各类建筑的小镇；缺的用创造模式补。
 2. **建筑扫描器**：需另开创造存档，交互位标记只在创造模式物品栏里。
 3. **管理面板细部**：`build_bar_select` / `build_clear_box` / `road_range` / `road_spline_*` / `tasks_card` / `tasks_roster_follow` / `settings_town_page`。
-4. **联动**：需装齐 Curios / 铁魔法 / 诡厄巫法 / 车万女仆，单独开一个整合包档。
+4. **联动**：需装齐 Curios / 铁魔法 / 诡厄巫法，单独开一个整合包档。
 
 **补拍的出图流程**：原图丢进 `guidebook_screenshots/` → `python prepare_guidebook_images.py`
 → 在 `insert_guidebook_images.py` 的 `PLACEMENTS` 里加一行（锚点写该页正文里的一个片段）

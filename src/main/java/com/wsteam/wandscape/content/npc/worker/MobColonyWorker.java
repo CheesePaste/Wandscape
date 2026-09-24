@@ -13,7 +13,7 @@ import java.util.UUID;
  * 没有脱困施法、不能承担守卫/祭坛任务（{@code canCastColonyMagic} 恒 false）、共用
  * {@link WorkerFx} 的工作动作。这些生物没有本模组注册的自定义属性，也不该被写进它们的 vanilla
  * 属性表（{@code EntityAttributeCreationEvent} 只在注册期生效）。将来若要给第三方工作者真正的属性
- * 成长，按 UUID 挂一份自有存储即可（先例：车万女仆的 {@code MaidColonyState}），接口不用改。
+ * 成长，按 UUID 挂一份自有存储即可（NeoForge Data Attachment 即可），接口不用改。
  *
  * <p>本类只补两件接口答不出来的事：殖民地的**可变归属**（换镇不重建 ECS 实体）与**移动抑制**
  * （关掉 {@code goalSelector} 的 MOVE 控制位，否则它自己的游荡/逃跑/追击会与工作走位打架；

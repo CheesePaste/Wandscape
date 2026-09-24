@@ -175,7 +175,6 @@ ENTRIES = [
     ("curios_guide", "compat", "minecraft:gold_ingot", 0),
     ("irons_spells_guide", "compat", "minecraft:enchanted_book", 1),
     ("goety_guide", "compat", "minecraft:soul_lantern", 2),
-    ("tlm_guide", "compat", "minecraft:name_tag", 3),
 
     # ── 关于我们：平台、反馈与制作者，一条打完 ──
     ("about_guide", "about", "minecraft:name_tag", 0),

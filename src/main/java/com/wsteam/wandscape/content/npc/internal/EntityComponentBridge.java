@@ -316,7 +316,7 @@ public final class EntityComponentBridge {
 
     /**
      * 按 ECS id 取工作者——**任务执行链（导航/挖放/搬运/仪式/属性）的唯一解析入口**。
-     * 第三方工作者（车万女仆等）由此进入同一套原子操作执行器。
+     * 第三方工作者由此进入同一套原子操作执行器。
      */
     @Nullable
     public ColonyWorker getWorker(long ecsId) {

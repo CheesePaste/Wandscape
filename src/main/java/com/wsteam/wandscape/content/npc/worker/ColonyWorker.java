@@ -21,9 +21,8 @@ import java.util.UUID;
  * 其余全是 default。缺省行为就是「中立工作者」——原版寻路走位、中性属性、没有魔力与法术、
  * 共用 {@link WorkerFx} 的工作动作。本模组法师
  * （{@link com.wsteam.wandscape.content.npc.entity.WandscapeNpc}）是它的一个实现；
- * 第三方实体（如车万女仆）由 {@code compat/} 下的适配器实现，即可接入同一套殖民地工作链
- * （见 {@code docs/plan/touhou-little-maid-compat.md}）。**通用 {@link MobColonyWorker} 几乎
- * 不覆写任何方法，正是这些 default 的含义**——它们是"普通 Mob 当工人"的基线，不是空占位。
+ * 第三方实体只要自己实现本接口，即可接入同一套殖民地工作链。**通用 {@link MobColonyWorker}
+ * 几乎不覆写任何方法，正是这些 default 的含义**——它们是"普通 Mob 当工人"的基线，不是空占位。
  *
  * <p>刻意**不**把 {@code Entity} 的通用能力放进接口：那部分走 {@link #entity()} 取底层实体即可
  * （坐标/世界/存活/粒子随机数都在 {@code Entity}/{@code LivingEntity} 上）。接口只收敛各实现
@@ -80,17 +79,17 @@ public interface ColonyWorker {
 
     // ── 导航（默认直接驱动原版寻路，所有 PathfinderMob 通用）──
     //
-    // 曾经考虑过让女仆走 Brain 的 WALK_TARGET 记忆通道（理由是它能顺带阻断 TLM 声明
-    // WALK_TARGET ABSENT 的移动任务），被实测否决：TLM 在 CORE 里挂了 MaidAwaitTask（优先级 1，
-    // 早于 MoveToTargetSink 的 2），它会擦掉**目标超出站位半径**的 WALK_TARGET 连同 PATH 记忆，
-    // 而殖民地工地基本都在站位半径之外——结果是被钉死在原地一步不动。直驱既不写记忆、也不受
-    // 该擦除影响。代价：第三方声明 WALK_TARGET ABSENT 的移动任务（偷吃等）不再被自动挡住。
+    // 为何不走 Brain 的 WALK_TARGET 记忆通道：实测否决过一次。某些 Brain 驱动的实体会挂一个
+    // 早于 MoveToTargetSink（优先级 2）的高优先任务（优先级 1），把**目标超出其站位半径**的
+    // WALK_TARGET 连同 PATH 记忆一起擦掉，而殖民地工地基本都在站位半径之外——结果是被钉死在
+    // 原地一步不动。直驱既不写记忆、也不受该擦除影响。代价：声明 WALK_TARGET ABSENT 的移动
+    // 任务不再被自动挡住。
 
     /**
      * 原生随机游荡开关（工作期间须关闭）。
      *
      * <p>默认空实现：**若你的实体有自己的游荡/逃跑/追击 AI，必须覆写**，否则它会与工作走位
-     * 抢导航。走 Brain 的实体（如车万女仆）由它自己的任务行为统一关掉随机走动，覆写成空即可。
+     * 抢导航。走 Brain 的实体若已由自己的任务行为统一关掉随机走动，覆写成空即可。
      */
     default void setAiWanderingEnabled(boolean enabled) {}
 
@@ -131,8 +130,8 @@ public interface ColonyWorker {
     default void markEscapeChanneling(long gameTime, int ticks) {}
 
     // ── 属性与资源（默认中性值）──
-    // 来源由实现决定：WandscapeNpc 读 vanilla AttributeMap；车万女仆读自有状态容器
-    // （她的 vanilla 属性表不含本模组注册的自定义属性）。
+    // 来源由实现决定：WandscapeNpc 读 vanilla AttributeMap；没有本模组属性体系的实体
+    // 改读自有状态容器（它的 vanilla 属性表不含本模组注册的自定义属性）。
 
     /** 当前魔力。默认 0 = 不参与需要魔力门槛的任务。 */
     default float getCurrentMana() {
@@ -149,7 +148,7 @@ public interface ColonyWorker {
      *
      * <p>没有本模组属性体系的工作者不该被写进 vanilla 属性表——{@code EntityAttributeCreationEvent}
      * 只在注册期生效，事后改不了已注册 {@code EntityType} 的供给器。要真正的成长就自己挂一份
-     * 按 UUID 的自有存储（先例：车万女仆的 {@code MaidColonyState} 数据附件）。
+     * 按 UUID 的自有存储（NeoForge Data Attachment 即可）。
      */
     default float getEffectiveAttribute(AttributeType type) {
         return 1f;
@@ -185,7 +184,7 @@ public interface ColonyWorker {
      * 任务面板里的**种类标签**（仅供 UI 区分图标/文案，无任何行为含义）：
      * 本模组法师 {@code "npc"}，其它模组登记的工作者用默认值 {@code "worker"}。
      *
-     * <p>刻意用通用的 {@code "worker"} 而不是 {@code "maid"} 之类——把某个具体第三方模组的概念
+     * <p>刻意用通用的 {@code "worker"} 而不是某个具体模组的专名——把第三方模组的概念
      * 焊进通用 DTO 字段里，会让下一个接入的模组变成特例。
      */
     default String panelKind() {
