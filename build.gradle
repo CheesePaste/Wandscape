@@ -58,10 +58,6 @@ repositories {
             includeGroup "maven.modrinth"
         }
     }
-    // 本地 JEI jar（可选运行时依赖，compileOnly，不打包）。文件名已去中文方括号以匹配 flatDir 坐标。
-    flatDir {
-        dirs 'libs'
-    }
 }
 
 base {
@@ -180,6 +176,8 @@ var generateModMetadata = tasks.register("generateModMetadata", ProcessResources
             mod_version            : mod_version,
     ]
     inputs.properties replaceProperties
+    // 模板是 UTF-8：显式钉住过滤字符集，不跟随运行环境的默认编码
+    filteringCharset = 'UTF-8'
     expand replaceProperties
     from "src/main/templates"
     into "build/generated/sources/modMetadata"

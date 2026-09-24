@@ -46,7 +46,7 @@ authors="WandscapeDevTeam"
 
 # The description text for the mod (multi line!) (#mandatory)
 description='''
-Wandscape — a magic town-building and management mod,become the mayor and build a thriving magical town.
+Wandscape is a magic town-building and management mod,become the mayor and build a thriving magical town.
 '''
 
 # The [[mixins]] block allows you to declare your mixin config to FML so that it gets loaded.
@@ -110,6 +110,24 @@ file="META-INF/accesstransformer.cfg"
     modId="patchouli"
     type="optional"
     versionRange="[1.21,)"
+    ordering="AFTER"
+    side="BOTH"
+
+# Goety（诡厄巫法）— 可选依赖：法师主手拿诡厄法杖后，可把诡厄聚晶放进施法策略槽（整个策略栏同时只放 1 个）。
+# 不装 Goety 时这些策略槽与魔法自动隐藏。
+[[dependencies.${mod_id}]]
+    modId="goety"
+    type="optional"
+    versionRange="[3.1,)"
+    ordering="AFTER"
+    side="BOTH"
+
+# Iron's Spells 'n Spellbooks（铁魔法）— 可选依赖：法师施法策略槽可放铁魔法卷轴，可放根数受 Curios 法术书槽容量门控。
+# 不装铁魔法时这些功能自动隐藏。
+[[dependencies.${mod_id}]]
+    modId="irons_spellbooks"
+    type="optional"
+    versionRange="[1.21.1,)"
     ordering="AFTER"
     side="BOTH"
 
