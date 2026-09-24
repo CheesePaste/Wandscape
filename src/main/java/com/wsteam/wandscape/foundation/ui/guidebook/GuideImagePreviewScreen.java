@@ -1,5 +1,6 @@
 package com.wsteam.wandscape.foundation.ui.guidebook;
 
+import com.mojang.blaze3d.platform.NativeImage;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.foundation.log.LogCategory;
 import net.minecraft.client.Minecraft;
@@ -8,48 +9,25 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import org.lwjgl.glfw.GLFW;
+import org.lwjgl.opengl.GL11;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 全屏高清图片预览弹窗（Lightbox 预览）。
- * 供指南书（帕秋莉手册或内置 Markdown 阅读器）在点击图片时以 1:1 物理像素原图查看，按 ESC 或点击任意位置返回。
+ * 供指南书（帕秋莉手册或内置 Markdown 阅读器）在点击图片时放大查看。
+ * 遵循「1:1 原图直出为主、超出窗口自适应缩放、绝不盲目拉伸模糊、绝不溢出裁切」原则。
  */
 public class GuideImagePreviewScreen extends Screen {
-
-    private static final Map<String, int[]> KNOWN_DIMENSIONS = Map.ofEntries(
-            Map.entry("altar_panel.png", new int[]{634, 459}),
-            Map.entry("bld_repair.png", new int[]{591, 459}),
-            Map.entry("build_adjust.png", new int[]{808, 353}),
-            Map.entry("casting_slots.png", new int[]{599, 439}),
-            Map.entry("crafting_panel.png", new int[]{791, 421}),
-            Map.entry("elem_overview_tab.png", new int[]{848, 56}),
-            Map.entry("intro_03_placing.png", new int[]{921, 649}),
-            Map.entry("intro_05_naming.png", new int[]{1093, 545}),
-            Map.entry("intro_06_exchange_tab.png", new int[]{605, 339}),
-            Map.entry("intro_07_craft_tab.png", new int[]{796, 431}),
-            Map.entry("mage_hut_roster.png", new int[]{747, 483}),
-            Map.entry("mage_panel.png", new int[]{601, 465}),
-            Map.entry("node_panel.png", new int[]{789, 442}),
-            Map.entry("road_tools.png", new int[]{759, 582}),
-            Map.entry("settings_tabs.png", new int[]{809, 329}),
-            Map.entry("shop_panel.png", new int[]{596, 452}),
-            Map.entry("tasks_tabs.png", new int[]{821, 444}),
-            Map.entry("tavern_panel.png", new int[]{668, 460}),
-            Map.entry("tourist_detail.png", new int[]{600, 384}),
-            Map.entry("tourist_three_values.png", new int[]{184, 42}),
-            Map.entry("townhall_panel.png", new int[]{591, 459}),
-            Map.entry("workstation_panel.png", new int[]{796, 431})
-    );
 
     private static final Map<ResourceLocation, int[]> DIMENSION_CACHE = new ConcurrentHashMap<>();
 
     private final Screen parentScreen;
     private final ResourceLocation thumbnailLocation;
     private final ResourceLocation fullLocation;
-    private final int textureWidth;
-    private final int textureHeight;
+    private int textureWidth;
+    private int textureHeight;
 
     public GuideImagePreviewScreen(Screen parentScreen, ResourceLocation thumbnailLocation) {
         super(Component.translatable("gui.wandscape.guidebook.title"));
@@ -80,38 +58,33 @@ public class GuideImagePreviewScreen extends Screen {
         if (loc == null) {
             return new int[]{256, 256};
         }
-        String path = loc.getPath();
-        String filename = path.substring(path.lastIndexOf('/') + 1);
-        int[] known = KNOWN_DIMENSIONS.get(filename);
-        if (known != null) {
-            return known;
-        }
         return DIMENSION_CACHE.computeIfAbsent(loc, key -> {
+            // 1. 通过 ResourceManager + NativeImage 动态解析 PNG 原图物理宽高（无硬编码）
             try {
                 var resOpt = Minecraft.getInstance().getResourceManager().getResource(key);
                 if (resOpt.isPresent()) {
-                    try (var is = resOpt.get().open()) {
-                        byte[] header = is.readNBytes(24);
-                        if (header.length >= 24
-                                && (header[0] & 0xFF) == 0x89
-                                && header[1] == 'P'
-                                && header[2] == 'N'
-                                && header[3] == 'G') {
-                            int w = ((header[16] & 0xFF) << 24)
-                                    | ((header[17] & 0xFF) << 16)
-                                    | ((header[18] & 0xFF) << 8)
-                                    | (header[19] & 0xFF);
-                            int h = ((header[20] & 0xFF) << 24)
-                                    | ((header[21] & 0xFF) << 16)
-                                    | ((header[22] & 0xFF) << 8)
-                                    | (header[23] & 0xFF);
-                            if (w > 0 && h > 0) {
-                                return new int[]{w, h};
-                            }
+                    try (var is = resOpt.get().open();
+                         NativeImage img = NativeImage.read(is)) {
+                        int w = img.getWidth();
+                        int h = img.getHeight();
+                        if (w > 0 && h > 0) {
+                            return new int[]{w, h};
                         }
                     }
                 }
             } catch (Exception ignored) {}
+
+            // 2. 兜底：直接向 GPU 绑定的纹理对象查询其实际尺寸
+            try {
+                var tex = Minecraft.getInstance().getTextureManager().getTexture(key);
+                tex.bind();
+                int w = GL11.glGetTexLevelParameteri(GL11.GL_TEXTURE_2D, 0, GL11.GL_TEXTURE_WIDTH);
+                int h = GL11.glGetTexLevelParameteri(GL11.GL_TEXTURE_2D, 0, GL11.GL_TEXTURE_HEIGHT);
+                if (w > 0 && h > 0) {
+                    return new int[]{w, h};
+                }
+            } catch (Exception ignored) {}
+
             return new int[]{256, 256};
         });
     }
@@ -122,33 +95,41 @@ public class GuideImagePreviewScreen extends Screen {
         graphics.fill(0, 0, this.width, this.height, 0xD8080808);
 
         if (fullLocation != null) {
-            var window = Minecraft.getInstance().getWindow();
-            int winW = window.getWidth();
-            int winH = window.getHeight();
-            double guiScale = window.getGuiScale();
-            float invScale = (float) (1.0 / guiScale);
+            double guiScale = Minecraft.getInstance().getWindow().getGuiScale();
+            if (guiScale <= 0) {
+                guiScale = 1.0;
+            }
 
-            // 物理像素居中位置
-            int drawX = (winW - this.textureWidth) / 2;
-            int drawY = (winH - this.textureHeight) / 2;
+            // 图像在当前 GUI Scale 下的 1:1 逻辑尺寸（以此尺寸绘制时，屏幕物理像素刚好等于原图物理像素）
+            float naturalW = (float) this.textureWidth / (float) guiScale;
+            float naturalH = (float) this.textureHeight / (float) guiScale;
 
-            // 切换到物理像素 1:1 空间渲染：完全不缩放、不拉伸、1 纹理像素 = 1 屏幕物理像素
-            graphics.pose().pushPose();
-            graphics.pose().scale(invScale, invScale, 1.0f);
+            // 窗口可用最大安全区域（预留边距，绝不溢出窗口裁切）
+            float maxW = Math.max(32, this.width - 32);
+            float maxH = Math.max(32, this.height - 40);
 
-            // 装饰边框与阴影（物理像素单位）
-            graphics.fill(drawX - 4, drawY - 4, drawX + textureWidth + 4, drawY + textureHeight + 4, 0xAA000000);
-            graphics.renderOutline(drawX - 1, drawY - 1, textureWidth + 2, textureHeight + 2, 0xFFC89B3C);
+            // 缩放比例计算：默认 1.0（1:1 物理像素原图直出，不拉伸模糊）；仅在原图超出窗口时才等比缩紧适应
+            float scale = 1.0f;
+            if (naturalW > maxW || naturalH > maxH) {
+                scale = Math.min(maxW / naturalW, maxH / naturalH);
+            }
 
-            // 1:1 绘制图像（无二次采样与插值失真）
-            graphics.blit(fullLocation, drawX, drawY, 0.0f, 0.0f, textureWidth, textureHeight, textureWidth, textureHeight);
+            int drawW = Math.max(1, Math.round(naturalW * scale));
+            int drawH = Math.max(1, Math.round(naturalH * scale));
+            int drawX = (this.width - drawW) / 2;
+            int drawY = (this.height - drawH - 12) / 2 + 2;
 
-            graphics.pose().popPose();
+            // 2. 装饰边框与半透明阴影
+            graphics.fill(drawX - 3, drawY - 3, drawX + drawW + 3, drawY + drawH + 3, 0x88000000);
+            graphics.renderOutline(drawX - 1, drawY - 1, drawW + 2, drawH + 2, 0xFFC89B3C);
+
+            // 3. 在标准 GUI 坐标系绘制图像，贴合窗口尺寸，无矩阵变换冲突
+            graphics.blit(fullLocation, drawX, drawY, drawW, drawH, 0.0f, 0.0f, textureWidth, textureHeight, textureWidth, textureHeight);
         }
 
-        // 5. 底部提示文本（普通 GUI 缩放坐标系）
+        // 4. 底部居中操作提示文本
         Component hint = Component.translatable("gui.wandscape.guidebook.preview_close_hint");
-        graphics.drawCenteredString(font, hint, this.width / 2, this.height - 18, 0xFFCCCCCC);
+        graphics.drawCenteredString(font, hint, this.width / 2, this.height - 16, 0xFFCCCCCC);
 
         super.render(graphics, mouseX, mouseY, partialTicks);
     }
