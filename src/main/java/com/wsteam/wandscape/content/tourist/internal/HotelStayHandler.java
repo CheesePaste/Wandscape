@@ -1,18 +1,13 @@
 package com.wsteam.wandscape.content.tourist.internal;
-import com.wsteam.wandscape.content.task.boundary.EventBus;
-import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.foundation.util.TickProfiler;
 
 import com.wsteam.wandscape.content.building.data.BuildingConfig;
 import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.content.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.content.building.internal.BuildingState;
-import com.wsteam.wandscape.content.task.event.NarrativeEventTriggered;
-import com.wsteam.wandscape.content.colony.data.NarrativeEvent;
 import com.wsteam.wandscape.content.building.data.ServiceConfig;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.foundation.registry.WandscapeConstants;
-import com.wsteam.wandscape.foundation.ui.I18n;
 import com.wsteam.wandscape.content.tourist.entity.TouristEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
@@ -139,16 +134,10 @@ public final class HotelStayHandler {
             tourist.setNightsStayed(tourist.getNightsStayed() + 1);
             tourist.setEnergy(com.wsteam.wandscape.Config.TOURIST_MAX_ENERGY.get());
 
-            // 一晚满意值结算（与参观一致）+ Emit HOTEL_WAKEUP narrative
+            // 一晚满意值结算（与参观一致）
             UUID buildingId = touristToHotel.get(tourist.getUUID());
             if (buildingId != null) {
                 TouristSimulation.grantHotelNightStay(level, tourist, buildingId);
-                String bldType = getBuildingTypeId(buildingId);
-                String bldName = getBuildingDisplayName(buildingId, bldType);
-                NarrativeEvent wakeupEvent = NarrativeGenerator.generateHotelWakeup(
-                        tourist.getTouristName(), bldType != null ? bldType : "inn",
-                        bldName, level.getGameTime());
-                emitNarrativeEvent(wakeupEvent);
             }
 
             // 把「今晨已醒」同步给 sim 影子：实体路径的守卫是基于状态的
@@ -459,28 +448,5 @@ public final class HotelStayHandler {
 
     private static String shortId(UUID id) {
         return id.toString().substring(0, 8);
-    }
-
-    // ── Narrative helpers ──
-
-    @Nullable
-    private String getBuildingTypeId(UUID buildingId) {
-        BuildingConfig config = getBuildingConfig(buildingId);
-        return config != null ? config.id() : null;
-    }
-
-    private String getBuildingDisplayName(UUID buildingId, @Nullable String typeId) {
-        var config = BuildingConfigLoader.getInstance().get(typeId);
-        if (config != null && config.displayName() != null && !config.displayName().isEmpty()) {
-            return config.displayName();
-        }
-        return typeId != null ? typeId : I18n.name("message.wandscape.tourist.inn", "旅馆").getString();
-    }
-
-    private static void emitNarrativeEvent(NarrativeEvent ne) {
-        var world = com.wsteam.wandscape.content.task.ecs.World.getActive();
-        if (world != null && world.eventBus != null) {
-            world.eventBus.emit(new NarrativeEventTriggered(ne));
-        }
     }
 }

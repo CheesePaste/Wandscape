@@ -365,7 +365,7 @@ Forge 1.20.1 是 Java 17，下面这些 Java 21 语法/API 必须替换：
 | `data/curios/tags/item/` | `tags/items/` | 4 |
 | **合计** | **6 个目录** | **43** |
 
-**注意 `damage_type/` 两版都是单数，不要「顺手改对」**。`craft_recipes/`、`buildings/`、`magic_circles/`、`magic_spells/`、`narratives/`、`element_mappings/` 是本模组自定义 schema，与版本无关。
+**注意 `damage_type/` 两版都是单数，不要「顺手改对」**。`craft_recipes/`、`buildings/`、`magic_circles/`、`magic_spells/`、`element_mappings/` 是本模组自定义 schema，与版本无关。
 
 ### 7.2 JSON 字段格式（1.20.5+ 形制）
 
@@ -403,7 +403,7 @@ Forge 1.20.1 是 Java 17，下面这些 Java 21 语法/API 必须替换：
 - **225 个纯逻辑文件**（无 `net.minecraft` 也无 `net.neoforged` import）——引擎内核、蓝图解析、任务评分、路由算法，整块原样搬。
 - **`api/` 25 文件 / 1,811 行**：零 loader 耦合。
 - **`impl/` 4 文件**：只有 `EngineBootstrap` 一处 import `ServerStartingEvent`。
-- **1,188 个 `element_mappings` JSON + 全部自定义 schema 数据**（buildings/craft_recipes/magic_*/narratives）：1,348 个数据文件里 1,305 个与版本无关。
+- **1,188 个 `element_mappings` JSON + 全部自定义 schema 数据**（buildings/craft_recipes/magic_*）：1,348 个数据文件里 1,305 个与版本无关。
 - **Patchouli 手册全线**（§7.4）。
 - **130 个模型 JSON、189 张纹理、7 个音效、2,265×2 语言键**。
 - **GUI 渲染的绝大部分**（§6.8）：`GuiGraphics`/`blit`/`drawString`/`RenderType`/`PoseStack`/裁剪/`AbstractContainerScreen` 三段式。

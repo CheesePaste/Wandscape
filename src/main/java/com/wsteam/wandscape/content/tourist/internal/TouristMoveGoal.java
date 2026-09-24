@@ -5,7 +5,6 @@ import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.content.building.internal.BuildingState;
 import com.wsteam.wandscape.content.road.core.RoadEdge;
 import com.wsteam.wandscape.content.road.engine.RoadSavedData;
-import com.wsteam.wandscape.content.task.event.NarrativeEventTriggered;
 import com.wsteam.wandscape.content.colony.ColonyActivation;
 import com.wsteam.wandscape.foundation.networking.Net;
 import com.wsteam.wandscape.foundation.service.ParticleService;
@@ -13,8 +12,6 @@ import com.wsteam.wandscape.content.road.engine.WandscapeTags;
 import com.wsteam.wandscape.api.BuildingApi;
 import com.wsteam.wandscape.content.tourist.data.Activity;
 import com.wsteam.wandscape.content.building.data.BuildingData;
-import com.wsteam.wandscape.content.colony.data.NarrativeEvent;
-import com.wsteam.wandscape.content.tourist.data.VisitMemory;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.api.WandscapeApis;
 import com.wsteam.wandscape.content.tourist.entity.TouristEntity;
@@ -354,16 +351,6 @@ public class TouristMoveGoal extends Goal {
             return;
         }
 
-        // Emit arrival narrative event on first building visit (journey start), for stats only
-        if (tourist.getRecentVisits().isEmpty()) {
-            long dayTime = tourist.level().getDayTime() % 24000;
-            String dayPhase = dayTime < 6000 ? "morning"
-                    : dayTime < TouristSimulation.TOURIST_NIGHT_START ? "afternoon" : "night";
-            NarrativeEvent arrival = NarrativeGenerator.generateArrival(
-                    tourist.getTouristName(), dayPhase, tourist.level().getGameTime());
-            emitNarrativeEvent(arrival);
-        }
-
         beginNavigation(tourist.getCommuteTarget(), touristSpeed);
     }
 
@@ -422,7 +409,7 @@ public class TouristMoveGoal extends Goal {
         if (buildingId != null && isWithinDistanceOfBbox(buildingId, MICRO_NAV_SWITCH_DISTANCE)) {
             // 旅店入住：游客**进入建筑 bbox** 时触发（bbox+5 外扩已去掉，避免大旅店离门老远就入住）
             if (isHotelBuilding(buildingId) && isInsideBuilding(buildingId)) {
-                if (tryHotelCheckIn(buildingId, getBuildingTypeId(buildingId))) {
+                if (tryHotelCheckIn(buildingId)) {
                     return;
                 }
                 // 夜晚 + 未满条：意图入住（到达即入，spot time = 0）。旅店满员 → 不排队当 service 逛，
@@ -494,7 +481,7 @@ public class TouristMoveGoal extends Goal {
         if (distSqr < interactionRange * interactionRange) {
             // 到达旅店 → 入住即时完成（不占 spot、不等 interaction_duration）
             if (isHotelBuilding(buildingId)
-                    && tryHotelCheckIn(buildingId, getBuildingTypeId(buildingId))) {
+                    && tryHotelCheckIn(buildingId)) {
                 return;
             }
             // Reached entry point — switch to indoor micro-nav
@@ -532,7 +519,7 @@ public class TouristMoveGoal extends Goal {
         if (isHotelBuilding(buildingId) && isInsideBuilding(buildingId)) {
             long dayTime = tourist.level().getDayTime() % 24000;
             if (dayTime >= TouristSimulation.TOURIST_NIGHT_START && !tourist.isFullySatisfied()) {
-                if (tryHotelCheckIn(buildingId, getBuildingTypeId(buildingId))) {
+                if (tryHotelCheckIn(buildingId)) {
                     return;
                 }
                 // 夜晚意图入住但旅店满员 → 不当 service 逛/排队，放弃重新规划（避免排队拖到被清场）
@@ -1010,7 +997,7 @@ public class TouristMoveGoal extends Goal {
         String category = tourist.getTargetBuildingCategory();
         if (isHotelBuilding(buildingId)) {
             // 夜晚 + 未满条 → 入住；条件不满足（白天/满条）→ 当普通 service 交互
-            if (tryHotelCheckIn(buildingId, getBuildingTypeId(buildingId))) {
+            if (tryHotelCheckIn(buildingId)) {
                 return;
             }
         }
@@ -1034,7 +1021,7 @@ public class TouristMoveGoal extends Goal {
      *
      * @return true if the tourist checked in (caller must stop navigation)
      */
-    private boolean tryHotelCheckIn(UUID buildingId, @Nullable String bldType) {
+    private boolean tryHotelCheckIn(UUID buildingId) {
         try (var span = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tourist.goal.try_hotel_checkin")) {
         if (!isHotelBuilding(buildingId)) return false;
         long dayTime = tourist.level().getDayTime() % 24000;
@@ -1048,17 +1035,12 @@ public class TouristMoveGoal extends Goal {
 
         boolean alreadyResident = buildingId.equals(tourist.getCheckedInBuildingId());
         if (!alreadyResident) {
-            // 首次入住：登记 + 叙事（满意值不在此结算，改为每晚晨起结算——见 TouristSimulation.grantHotelNightStay）
+            // 首次入住：登记（满意值不在此结算，改为每晚晨起结算——见 TouristSimulation.grantHotelNightStay）
             if (!hotel.checkIn(tourist, buildingId, colonyId)) return false;
             tourist.addVisitedBuilding(buildingId);
-            String bldName = getBuildingDisplayName(buildingId, bldType);
-            NarrativeEvent checkinEvent = NarrativeGenerator.generateHotelCheckin(
-                    tourist.getTouristName(), bldType != null ? bldType : "unknown", bldName,
-                    tourist.level().getGameTime());
-            emitNarrativeEvent(checkinEvent);
         }
 
-        // 住店客夜晚回店：直接强制躺床（不复填满意值/不重复叙事）
+        // 住店客夜晚回店：直接强制躺床（不复填满意值）
         hotel.settleIntoBed(tourist, serverLevel(), buildingId);
 
         // 先清 spot 再清目标：clearSpotState 靠 getTargetBuildingId() 定位释放位，
@@ -1124,7 +1106,7 @@ public class TouristMoveGoal extends Goal {
                 tourist.getNavigation().stop();
                 return ReturnHomeResult.STOP;
             }
-            tryHotelCheckIn(hotel, getBuildingTypeId(hotel));
+            tryHotelCheckIn(hotel);
             tourist.getNavigation().stop();
             return ReturnHomeResult.STOP;
         }
@@ -1943,12 +1925,9 @@ public class TouristMoveGoal extends Goal {
         String bldType = TouristSimulation.getBuildingTypeId(level, buildingId);
         if (bldType == null) bldType = "shop";
         String bldName = getBuildingDisplayName(buildingId, bldType);
-        VisitMemory memory = TouristSimulation.addVisitMemory(tourist, bldType, bldName, "shop",
+        TouristSimulation.addVisitMemory(tourist, bldType, bldName, "shop",
                 tourist.level().getGameTime(), result.comfortDelta(), result.magicDelta(), result.wonderDelta(),
                 result.energyDelta(), result.whatHappened());
-
-        NarrativeEvent shopEvent = NarrativeGenerator.generateVisit(memory);
-        emitNarrativeEvent(shopEvent);
 
         var purchase = result.purchase();
         if (purchase != null) {
@@ -1971,12 +1950,9 @@ public class TouristMoveGoal extends Goal {
         String bldType = TouristSimulation.getBuildingTypeId(level, buildingId);
         if (bldType == null) bldType = "service";
         String bldName = getBuildingDisplayName(buildingId, bldType);
-        VisitMemory memory = TouristSimulation.addVisitMemory(tourist, bldType, bldName, "service",
+        TouristSimulation.addVisitMemory(tourist, bldType, bldName, "service",
                 tourist.level().getGameTime(), result.comfortDelta(), result.magicDelta(), result.wonderDelta(),
                 result.energyDelta(), result.whatHappened());
-
-        NarrativeEvent serviceEvent = NarrativeGenerator.generateVisit(memory);
-        emitNarrativeEvent(serviceEvent);
 
         var config = TouristSimulation.getConfig(level, buildingId);
         if (config != null && config.service() != null && !config.service().elementOutput().isEmpty()) {
@@ -2011,12 +1987,9 @@ public class TouristMoveGoal extends Goal {
         String bldType = TouristSimulation.getBuildingTypeId(level, buildingId);
         if (bldType == null) bldType = "decoration";
         String bldName = getBuildingDisplayName(buildingId, bldType);
-        VisitMemory memory = TouristSimulation.addVisitMemory(tourist, bldType, bldName, "relax",
+        TouristSimulation.addVisitMemory(tourist, bldType, bldName, "relax",
                 tourist.level().getGameTime(), result.comfortDelta(), result.magicDelta(), result.wonderDelta(),
                 result.energyDelta(), result.whatHappened());
-
-        NarrativeEvent relaxEvent = NarrativeGenerator.generateVisit(memory);
-        emitNarrativeEvent(relaxEvent);
 
         sparkleSatisfaction();
     }
@@ -2035,12 +2008,9 @@ public class TouristMoveGoal extends Goal {
         String bldType = TouristSimulation.getBuildingTypeId(level, buildingId);
         if (bldType == null) bldType = "atm";
         String bldName = getBuildingDisplayName(buildingId, bldType);
-        VisitMemory memory = TouristSimulation.addVisitMemory(tourist, bldType, bldName, "atm",
+        TouristSimulation.addVisitMemory(tourist, bldType, bldName, "atm",
                 tourist.level().getGameTime(), result.comfortDelta(), result.magicDelta(), result.wonderDelta(),
                 result.energyDelta(), result.whatHappened());
-
-        NarrativeEvent atmEvent = NarrativeGenerator.generateVisit(memory);
-        emitNarrativeEvent(atmEvent);
 
         sparkleSatisfaction();
     }
@@ -2294,12 +2264,5 @@ public class TouristMoveGoal extends Goal {
     private ServerLevel serverLevel() {
         if (tourist.level() instanceof ServerLevel sl) return sl;
         return getServerLevel();
-    }
-
-    private static void emitNarrativeEvent(NarrativeEvent ne) {
-        var world = com.wsteam.wandscape.content.task.ecs.World.getActive();
-        if (world != null && world.eventBus != null) {
-            world.eventBus.emit(new NarrativeEventTriggered(ne));
-        }
     }
 }

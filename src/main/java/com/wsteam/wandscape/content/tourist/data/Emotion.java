@@ -2,7 +2,7 @@ package com.wsteam.wandscape.content.tourist.data;
 
 /**
  * Emotional outcome of a tourist visit, derived from bar fill delta.
- * Used by {@code NarrativeGenerator} to select tone-appropriate templates.
+ * Used by {@link VisitMemory} (per-visit) and {@code AmbientTextPools} (departure tone).
  */
 public enum Emotion {
 

@@ -2,7 +2,7 @@
 
 > 信息截至 2026-09-02 | Minecraft NeoForge 1.21.1
 
-- **【何时读】**：新增或修改 `data/wandscape/` 下的数据 JSON（建筑/配方/元素/魔法/天平配置/叙事/标签）或处理存档序列化时。
+- **【何时读】**：新增或修改 `data/wandscape/` 下的数据 JSON（建筑/配方/元素/魔法/天平配置/标签）或处理存档序列化时。
 - **【不包含什么】**：代码实现细节、游戏内具体数值平衡脑洞。
 
 ---
@@ -167,15 +167,7 @@
 
 ---
 
-## 七、叙事模板 JSON (`data/wandscape/narratives/`)
-
-- `buildings/<type>.json`：特定建筑专属的叙事访问模板。
-- `zh_cn.json` / `en_us.json`：全局类别的到达、离场、住宿及满意度里程碑叙事模板。
-- 支持占位符：`{name}`（游客名）、`{building}`（建筑名）、`{item}`（商品名）、`{emotion_adj}`（心情形容词）。
-
----
-
-## 八、道路标签 (`data/wandscape/tags/block/custom_roads.json`)
+## 七、道路标签 (`data/wandscape/tags/block/custom_roads.json`)
 
 ```json
 {

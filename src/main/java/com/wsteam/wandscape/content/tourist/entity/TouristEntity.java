@@ -221,7 +221,7 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
     /** Set of building IDs the tourist has already visited this trip. */
     private final Set<UUID> visitedBuildings = new HashSet<>();
 
-    // ── Narrative memory (journey diary) ──
+    // ── Visit memory (journey diary) ──
 
     /** Visit memories for the current journey (max 24, FIFO, not persisted). */
     private final List<VisitMemory> recentVisits = new ArrayList<>();
@@ -962,7 +962,7 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
         return visitedBuildings.contains(buildingId);
     }
 
-    // ── Narrative memory (journey diary) ──
+    // ── Visit memory (journey diary) ──
 
     public void addVisitMemory(VisitMemory memory) {
         if (recentVisits.size() >= MAX_VISIT_MEMORIES) {

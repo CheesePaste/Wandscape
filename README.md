@@ -44,7 +44,7 @@ Minecraft NeoForge 1.21.1 模组 — **《魔法小镇》**（Wandscape）。**�
 
 ```
 src/main/java/com/wsteam/wandscape/   # 源码：content/<13 个功能域>、foundation/ 基建、api/ 契约、compat/ 集成、impl/ 装配
-src/main/resources/data/wandscape/    # JSON 配置（建筑/配方/元素映射/蓝图/魔法/叙事/标签）
+src/main/resources/data/wandscape/    # JSON 配置（建筑/配方/元素映射/蓝图/魔法/标签）
 src/main/resources/assets/wandscape/  # 资源（语言 en_us/zh_cn、模型、纹理、音效）
 docs/                                 # 开发者文档与数据格式（导航见 docs/README.md，以代码为准）
 ```

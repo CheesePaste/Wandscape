@@ -44,7 +44,7 @@ A Minecraft NeoForge 1.21.1 mod — **Wandscape**. **Must be installed on both t
 
 ```
 src/main/java/com/wsteam/wandscape/   # source: content/<13 domains>, foundation/, api/, compat/, impl/
-src/main/resources/data/wandscape/    # JSON configs (buildings/recipes/element mappings/blueprints/magic/narratives/tags)
+src/main/resources/data/wandscape/    # JSON configs (buildings/recipes/element mappings/blueprints/magic/tags)
 src/main/resources/assets/wandscape/  # assets (lang en_us/zh_cn, models, textures, sounds)
 docs/                                 # developer docs & data formats (navigation: docs/README.md; code is source of truth)
 ```

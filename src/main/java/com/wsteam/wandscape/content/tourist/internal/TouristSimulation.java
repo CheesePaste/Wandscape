@@ -283,7 +283,7 @@ public final class TouristSimulation {
 
     // ── Interactions ──
 
-    /** Result of a building visit — used for the journey diary, bubbles and narratives. */
+    /** Result of a building visit — used for the journey diary and bubbles. */
     public record InteractionResult(@Nullable ShopStockManager.PurchaseResult purchase,
             int comfortDelta, int magicDelta, int wonderDelta, int energyDelta, String whatHappened) {
     }
@@ -435,8 +435,8 @@ public final class TouristSimulation {
                 || relaxReusable(t, cfg.relax());
     }
 
-    /** Mark a visit memory on the host (journey diary). Returns the memory for narrative use. */
-    public static com.wsteam.wandscape.content.tourist.data.VisitMemory addVisitMemory(TouristStateHost t,
+    /** Mark a visit memory on the host (journey diary). */
+    public static void addVisitMemory(TouristStateHost t,
             @Nullable String buildingTypeId, @Nullable String displayName, String category, long gameTime,
             int comfortDelta, int magicDelta, int wonderDelta, int energyDelta, String whatHappened) {
         String type = buildingTypeId != null ? buildingTypeId : "unknown";
@@ -445,7 +445,6 @@ public final class TouristSimulation {
                 type, name, category, gameTime, comfortDelta, magicDelta, wonderDelta, energyDelta, whatHappened,
                 com.wsteam.wandscape.content.tourist.data.Emotion.fromDelta(comfortDelta + magicDelta + wonderDelta));
         t.addVisitMemory(memory);
-        return memory;
     }
 
     /**

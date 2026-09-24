@@ -192,7 +192,7 @@ public final class EngineBootstrap {
                 transporter, resourceReqExec, guardExec, selfDefenseExec, altarCastExec, movementOps);
         TaskRuntime.setActive(runtime);
 
-        // 11. Register narrative event subscribers (achievements)
+        // 11. Register achievement subscribers
         AchievementService.register();
         Log.info(TAG, "  AchievementService registered");
 

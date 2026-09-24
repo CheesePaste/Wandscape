@@ -623,10 +623,6 @@
     "en_us": "[Wandscape] Tavern system not available.",
     "zh_cn": "[魔法小镇] 酒馆系统不可用"
   },
-  "message.wandscape.tourist.inn": {
-    "en_us": "Inn",
-    "zh_cn": "旅馆"
-  },
   "message.wandscape.tourist.what_atm": {
     "en_us": "Withdrew cash",
     "zh_cn": "取钱"

@@ -35,7 +35,6 @@ A 和 B 用的是**同一套加载器**：B 里放同 id 的文件就能覆盖 A
 | `data/wandscape/craft_recipes/` | 32 | 合成站配方（法杖/权杖/戒指/卷轴/终端…） | `WandscapeDataLoader` |
 | `data/wandscape/magic_spells/` | 10 | 魔法定义 | `SpellbookLoader` |
 | `data/wandscape/magic_circles/` | 10 | 法阵视觉 spec | `MagicCircleLoader` |
-| `data/wandscape/narratives/` | 3 | 游客叙事模板：顶层 `zh_cn.json` + `buildings/*.json` | `NarrativeTemplates`（**走 classloader 读流，数据包覆盖不了**） |
 | `data/wandscape/loot_table/blocks/` | 2 | 扫描器方块的掉落表 | 原版 loot 加载 |
 | `data/wandscape/recipe/` | 2 | 原版工作台配方（扫描器、指南书） | 原版 recipe 加载 |
 | `data/wandscape/damage_type/` | 2 | 自造伤害类型（`beam`/`melee`，不用原版 magic） | 原版 |
@@ -81,7 +80,7 @@ A 和 B 用的是**同一套加载器**：B 里放同 id 的文件就能覆盖 A
 | `road_presets` | `RoadPresetLoader` | jar 内**没有**文件，默认路型在代码里（`RoadPreset.DEFAULT_PRESETS`） |
 | `exploration_regions` | `ExplorationRegionConfig::fromJson` | jar 内**没有**文件，是给数据包写的"声明层"，压过世界里的生成层 |
 
-另外两个不走 DataLoader 的 category 路径：`data/<ns>/blueprints/*.json`（旧的蓝图 DSL，已被 `BlueprintDefaults` 的 Java lambda 取代，仅注释里提到）、`data/wandscape/narratives/`（`NarrativeTemplates` 手工读流）。
+另外还有一个不走 DataLoader 的 category 路径：`data/<ns>/blueprints/*.json`（旧的蓝图 DSL，已被 `BlueprintDefaults` 的 Java lambda 取代，仅注释里提到）。
 
 **覆盖规则**（`WandscapeDataLoader.apply`）：id 取自文件名（剥掉命名空间）。跨命名空间撞 id 时 **`wandscape` 命名空间优先**，其余按 key 排序。想覆盖模组内置内容，需要把文件放进**同优先级或更高优先级**的数据包里。
 

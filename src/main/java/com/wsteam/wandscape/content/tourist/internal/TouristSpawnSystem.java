@@ -3,13 +3,11 @@ import com.wsteam.wandscape.content.building.data.BuildingData;
 import com.wsteam.wandscape.foundation.util.CharacterNames;
 import com.wsteam.wandscape.content.tourist.data.BarRatio;
 import com.wsteam.wandscape.foundation.util.NameStyle;
-import com.wsteam.wandscape.content.colony.data.NarrativeEvent;
 
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.content.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.content.building.internal.BuildingState;
-import com.wsteam.wandscape.content.task.event.NarrativeEventTriggered;
 import com.wsteam.wandscape.content.colony.ColonyActivation;
 import com.wsteam.wandscape.content.colony.ColonyLevelManager;
 import com.wsteam.wandscape.content.colony.ColonySavedData;
@@ -668,7 +666,7 @@ public final class TouristSpawnSystem {
     // Departure
     // ════════════════════════════════════════════════════════════════
 
-    /** Register departure, grant experience, fire events, generate narrative. */
+    /** Register departure, grant experience, fire events. */
     private void onTouristDepart(TouristEntity t, ServerLevel level) {
         // Check out of hotel if still checked in
         HotelStayHandler hotel = HotelStayHandler.getActive();
@@ -679,7 +677,6 @@ public final class TouristSpawnSystem {
         UUID colonyId = t.getColonyId();
         BarRatio fill = BarRatio.of(t.getComfortSat(), t.getComfortNeed(),
                 t.getMagicSat(), t.getMagicNeed(), t.getWonderSat(), t.getWonderNeed());
-        int barRatioPct = fill.minPct(); // 离场语调（min-ratio×100）
 
         // Grant colony experience only when fully satisfied
         if (t.isFullySatisfied()) {
@@ -700,14 +697,6 @@ public final class TouristSpawnSystem {
         // Remove the data shadow — a departed tourist has no sim state left.
         TouristSimSystem sim = TouristSimSystem.getActive();
         if (sim != null) sim.removeShadow(t.getUUID());
-
-        // Generate departure narrative (no on-screen text — silent by design)
-        int visitCount = t.getRecentVisits().size();
-
-        NarrativeEvent departureEvent = NarrativeGenerator.generateDeparture(
-                t.getTouristName(), barRatioPct, visitCount, t.level().getGameTime());
-        emitNarrativeEvent(departureEvent);
-
     }
 
     // ════════════════════════════════════════════════════════════════
@@ -892,12 +881,5 @@ public final class TouristSpawnSystem {
     private static TouristApi getTouristApi() {
         try { return WandscapeApis.getTouristApi(); }
         catch (IllegalStateException e) { return null; }
-    }
-
-    private static void emitNarrativeEvent(NarrativeEvent ne) {
-        var world = com.wsteam.wandscape.content.task.ecs.World.getActive();
-        if (world != null && world.eventBus != null) {
-            world.eventBus.emit(new NarrativeEventTriggered(ne));
-        }
     }
 }
