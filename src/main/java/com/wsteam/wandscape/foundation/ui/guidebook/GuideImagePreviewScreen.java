@@ -111,9 +111,17 @@ public class GuideImagePreviewScreen extends Screen {
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTicks) {
         // 1. 半透明暗色背景遮罩
+        // 注意：切勿在此调用 super.render()！因为 Screen.render() 默认会触发 renderBackground() -> processBlurEffect()，
+        // 会在所有内容绘制完成后对当前 Framebuffer 执行一次全屏高斯模糊后处理滤镜，导致已绘制的图片彻底糊化！
         graphics.fill(0, 0, this.width, this.height, 0xD8080808);
 
         if (fullLocation != null) {
+            // 确保纹理为 NEAREST 像素级采样，严禁双线性模糊
+            try {
+                var tex = Minecraft.getInstance().getTextureManager().getTexture(fullLocation);
+                tex.setFilter(false, false);
+            } catch (Exception ignored) {}
+
             var window = Minecraft.getInstance().getWindow();
             double guiScale = window.getGuiScale();
             if (guiScale <= 0) {
@@ -155,7 +163,7 @@ public class GuideImagePreviewScreen extends Screen {
                     String renderLog = String.format(
                             "[GUIDE_DEBUG] [RenderFrame] 窗口物理=%dx%d, GUI分辨率=%dx%d (Screen: %dx%d), guiScale=%.1f\n" +
                             "[GUIDE_DEBUG] [RenderFrame] 原图尺寸=%dx%d, GPU纹理尺寸=%dx%d, 纹理过滤=[%s]\n" +
-                            "[GUIDE_DEBUG] [RenderFrame] 1:1逻辑尺寸=%.1fx%.1f, 安全区=%.1fx%.1f, scale=%.3f, 最终绘制: pos=(%d, %d), size=(%dx%d)",
+                            "[GUIDE_DEBUG] [RenderFrame] 1:1逻辑尺寸=%.1fx%.1f, 安全区=%.1fx%.1f, scale=%.3f, 最终绘制: pos=(%d, %d), size=(%dx%d) (已消除全屏高斯模糊)",
                             window.getWidth(), window.getHeight(), window.getGuiScaledWidth(), window.getGuiScaledHeight(), this.width, this.height, guiScale,
                             this.textureWidth, this.textureHeight, gpuW, gpuH, filterStr,
                             naturalW, naturalH, maxW, maxH, scale, drawX, drawY, drawW, drawH);
@@ -184,8 +192,6 @@ public class GuideImagePreviewScreen extends Screen {
         // 5. 底部居中操作提示文本
         Component hint = Component.translatable("gui.wandscape.guidebook.preview_close_hint");
         graphics.drawCenteredString(font, hint, this.width / 2, this.height - 16, 0xFFCCCCCC);
-
-        super.render(graphics, mouseX, mouseY, partialTicks);
     }
 
     @Override
