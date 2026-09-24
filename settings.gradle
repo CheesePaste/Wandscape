@@ -1,9 +1,33 @@
+// ForgeGradle 6 与 MixinGradle 都不在 Gradle Plugin Portal 上，必须显式补仓库。
+// ForgeGradle 6 and MixinGradle are both absent from the Gradle Plugin Portal, so their
+// repositories must be declared explicitly.
 pluginManagement {
     repositories {
         gradlePluginPortal()
+        maven {
+            name = 'MinecraftForge'
+            url = 'https://maven.minecraftforge.net/'
+        }
+        maven {
+            name = 'Sponge'
+            url = 'https://repo.spongepowered.org/repository/maven-public/'
+        }
+        maven {
+            name = 'ParchmentMC'
+            url = 'https://maven.parchmentmc.org'
+        }
+    }
+    resolutionStrategy {
+        eachPlugin {
+            // MixinGradle 只以 snapshot 构件发布，插件 id 无法直接解析。
+            // MixinGradle is only published as a snapshot artifact, so the plugin id alone is unresolvable.
+            if (it.requested.id.namespace == 'org.spongepowered') {
+                it.useModule('org.spongepowered:mixingradle:0.7-SNAPSHOT')
+            }
+        }
     }
 }
 
 plugins {
-    id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
+    id 'org.gradle.toolchains.foojay-resolver-convention' version '0.7.0'
 }

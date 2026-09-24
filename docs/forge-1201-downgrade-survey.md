@@ -42,8 +42,8 @@
 | Minecraft | 1.21.1 | **1.20.1** | 数据包目录单→复（零报错）；运行时生成的 `pack_format` 自动 48→15 |
 | Loader | NeoForge **21.1.249** | **Forge 47.4.x**（1.20.1 线最新 `47.4.23`，2026-08-19 发布；官方 recommended 仍为 `47.4.10`）——**该版本线 2026 年仍在收更新的** | 包根 `net.neoforged.neoforge.*` → `net.minecraftforge.*` |
 | 构建插件 | **ModDevGradle 2.0.141**（`net.neoforged.moddev`） | **ForgeGradle 6**（`net.minecraftforge.gradle`，最新 `6.0.54`，2026-06；仓库里有 `FG_7.0` 分支，未废弃）。**Forge 1.20.1 没有第二条路**——ModDevGradle 与 NeoGradle 都是 NeoForge 专用 | 配置 DSL 全改；`neoForge {}` → `minecraft {}` |
-| 插件仓库 | `gradlePluginPortal()` 即可 | FG6 **不在** Plugin Portal，`settings.gradle` 的 `pluginManagement.repositories` 必须加 `https://maven.minecraftforge.net/` | 新增一段配置 |
-| Gradle | **wrapper 9.2.1** | **需降到 8.x**：FG6 是对 Gradle 8.1 API 编译的，9.x 支持未确立 | **要改 wrapper**（待实测确认） |
+| 插件仓库 | `gradlePluginPortal()` 即可 | FG6 **不在** Plugin Portal，`pluginManagement.repositories` 必须补 **三个**仓库：`https://maven.minecraftforge.net/`（FG6）、`https://repo.spongepowered.org/repository/maven-public/`（MixinGradle）、`https://maven.parchmentmc.org`（Parchment librarian） | 新增一段配置 + 一段 `resolutionStrategy.eachPlugin` |
+| Gradle | **wrapper 9.2.1** | **必须降到 8.x**——**已确证（2026-09-24）**：FG 6.0.45 changelog 明写「workspace 在 Gradle 9.2.0 上，但对外的编译目标是外部 Gradle 8.1 API 依赖」，即 9.x 不是受支持目标；真实在架模组 Goety-2 用 `8.1.1` | **要改 wrapper**；降级副线取 **8.9**（本机已缓存，免下载） |
 | JDK | 21 | **17** | 源码级回归见 §6.7 |
 | 混淆 / 映射 | Mojang official + Parchment `2024.11.17` | official + **Parchment `2023.09.03`**（1.20.1 有，2023-10 之后冻结）；走插件 `org.parchmentmc.librarian.forgegradle` + 仓库 `maven.parchmentmc.org` | 参数名保留；**生产环境跑 SRG 名** → refmap 必需 |
 | mod 元数据 | `src/main/templates/META-INF/neoforge.mods.toml` | `src/main/resources/META-INF/mods.toml` | schema 不同 |
@@ -550,11 +550,11 @@ Forge 1.20.1 是 Java 17，下面这些 Java 21 语法/API 必须替换：
 
 以下为当日**未完全确证**或**会随时间变化**的项，动手前须重新核对：
 
-1. **Gradle 版本**：FG6 是对 Gradle 8.1 API 编译的，而本仓 wrapper 是 **9.2.1**——「必须降到 8.x」是本文的判断而非官方明示，**动手第一件事就该拿一个空壳项目实测 6.0.54 + Gradle 9.2.1 能不能跑**，能跑就省一次 wrapper 变更。
-2. **Forge 47.4.23 与 Parchment `2023.09.03` 的实际组合可用性**：两者都已确认存在（Parchment 自 2023-10 起冻结于这一个 1.20.1 版本），但未在本机构建验证过。
+1. ~~**Gradle 版本**：FG6 是对 Gradle 8.1 API 编译的，而本仓 wrapper 是 **9.2.1**——「必须降到 8.x」是本文的判断而非官方明示，**动手第一件事就该拿一个空壳项目实测 6.0.54 + Gradle 9.2.1 能不能跑**~~ —— **已确证（2026-09-24）**：不必实测，官方口径已否。FG 6.0.45 changelog 原文「The workspace is in Gradle 9.2.0 now, but uses an external Gradle 8.1 API dependency to target」——即 FG6 自身开发用 9.2，但**对外编译目标是 Gradle 8.1 API**，9.x 不是受支持目标。另取证：真实在架的 Forge 1.20.1 模组 Goety-2 用 `gradle-8.1.1`。副线取 **8.9**（本机 wrapper dists 已缓存，免下载）。
+2. **Forge 47.4.23 与 Parchment `2023.09.03` 的实际组合可用性** —— **构件存在性已确证（2026-09-24）**：`maven.minecraftforge.net` 的 `net.minecraftforge:forge` 元数据显示 `47.4.23` 为该线最新；`maven.parchmentmc.org` 的 `parchment-1.20.1` 元数据以 `2023.09.03` 收尾（其后只有 nightly-SNAPSHOT），且该版本构件直连返回 200。**本机构建验证待跑**（见下方「降级实施进度」）。
 3. **Curios 5.x 成员级差异是否已穷尽**：本文只抓到了 `LazyOptional` 两处 + `registerCurio` 一处 + 属性 `Holder` 一处；`compat/curios` 共 8 个文件，未逐行重读。
 4. **配方 / 附魔面的残余**：`RecipeInput`/`SizedIngredient`/`EnchantmentHelper` 全仓 0 处使用，`RecipeManager.getAllRecipesFor` 的返回类型差已确证（1 文件）；但 `compat/goety/GoetyHelper` 里 22 处 `Enchantment` 相关的**实际调用形制**未逐行核对（仅 1 文件，风险有限）。
-5. **Forge 1.20.1 的 mixin 加载细节**：本文已确认「`[[mixins]]` 不适用于 Forge、须走 manifest `MixinConfigs`」，但 ForgeGradle 6 + MixinGradle 在该版本上是否需要额外 `refMap` 配置，需实测。
+5. ~~**Forge 1.20.1 的 mixin 加载细节**：本文已确认「`[[mixins]]` 不适用于 Forge、须走 manifest `MixinConfigs`」，但 ForgeGradle 6 + MixinGradle 在该版本上是否需要额外 `refMap` 配置，需实测。~~ —— **已确证（2026-09-24）**：接法唯一且已在真实工程验证。`settings.gradle` 加 Sponge 仓库 + `resolutionStrategy.eachPlugin` 把 `org.spongepowered` 映射到 `org.spongepowered:mixingradle:0.7-SNAPSHOT`（MixinGradle 不在 Plugin Portal）；`build.gradle` 加 `id 'org.spongepowered.mixin' version '0.7.+'`、`annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'`、`mixin { add sourceSets.main, "<modid>.refmap.json" }`；jar manifest 写 `MixinConfigs`。依据：`_refs/goety-2-1201/build.gradle`（真实在架的 Forge 1.20.1 模组）。
 6. **Forge 1.20.1 的维护态势**：本文核实的最新构建是 `47.4.23`（2026-08-19 发布），说明该线**当前仍在收更新**；但这是一条长尾线，后续节奏需在立项时再确认。另注意 FG6 已有 `FG_7.0` 分支在开发。
 7. ~~**`SettingItem` 的反射读配置规格**在 `ForgeConfigSpec` 上是否真的可用~~ —— **已确证（2026-09-23）**：不是反射，且替代写法唯一（`SPEC.getSpec().get(path)` → `ValueSpec.getRange()`），详见 §6.4。
 8. **`RegistryFriendlyByteBuf` → `FriendlyByteBuf`** 降级后，86 个载荷的读写是否逐一对齐（本文判断为「可整体复用」，但未逐字节核对）。

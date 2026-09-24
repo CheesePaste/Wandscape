@@ -1,4 +1,4 @@
-# This is an example neoforge.mods.toml file. It contains the data relating to the loading mods.
+# This is a mods.toml file for Forge 1.20.1. It contains the data relating to the loading mods.
 # There are several mandatory fields (#mandatory), and many more that are optional (#optional).
 # The overall format is standard TOML format, v0.5.0.
 # Note that there are a couple of TOML lists in this file.
@@ -7,7 +7,8 @@
 # The name of the mod loader type to load - for regular FML @Mod mods it should be javafml
 modLoader="javafml" #mandatory
 
-# A version range to match for said mod loader - for regular FML @Mod it will be the FML version. This is currently 2.
+# A version range to match for said mod loader - for regular FML @Mod it will be the FML version.
+# Forge 1.20.1 为 FML 47.x，故 range 由 gradle.properties 的 loader_version_range 给出。
 loaderVersion="${loader_version_range}" #mandatory
 
 # The license for you mod. This is mandatory metadata and allows for easier comprehension of your redistributive properties.
@@ -29,7 +30,7 @@ version="${mod_version}" #mandatory
 # A display name for the mod
 displayName="${mod_name}" #mandatory
 
-# A URL to query for updates for this mod. See the JSON update specification https://docs.neoforged.net/docs/misc/updatechecker/
+# A URL to query for updates for this mod. See the JSON update specification https://docs.minecraftforge.net/en/latest/misc/updatechecker/
 #updateJSONURL="https://change.me.example.invalid/updates.json" #optional
 
 # A URL for the "homepage" for this mod, displayed in the mod UI
@@ -49,21 +50,14 @@ description='''
 Wandscape — a magic town-building and management mod,become the mayor and build a thriving magical town.
 '''
 
-# The [[mixins]] block allows you to declare your mixin config to FML so that it gets loaded.
-[[mixins]]
-config="${mod_id}.mixins.json"
-
-# The [[accessTransformers]] block allows you to declare where your AT file is.
-# If this block is omitted, a fallback attempt will be made to load an AT from META-INF/accesstransformer.cfg
-[[accessTransformers]]
-file="META-INF/accesstransformer.cfg"
-
-# The coremods config file path is not configurable and is always loaded from META-INF/coremods.json
+# 注：mixin 配置与 Access Transformer 不在本文件声明。
+# Forge 1.20.1 分别走 JAR manifest 的 MixinConfigs 属性与 build.gradle 的 minecraft.accessTransformer，
+# 与 NeoForge 的 [[mixins]] / [[accessTransformers]] 块不同。
 
 # A dependency - use the . to indicate dependency for a specific modid. Dependencies are optional.
 [[dependencies.${mod_id}]] #optional
     # the modid of the dependency
-    modId="neoforge" #mandatory
+    modId="forge" #mandatory
     # The type of the dependency. Can be one of "required", "optional", "incompatible" or "discouraged" (case insensitive).
     # 'required' requires the mod to exist, 'optional' does not
     # 'incompatible' will prevent the game from loading when the mod exists, and 'discouraged' will show a warning
@@ -71,7 +65,7 @@ file="META-INF/accesstransformer.cfg"
     # Optional field describing why the dependency is required or why it is incompatible
     # reason="..."
     # The version range of the dependency
-    versionRange="${neo_version_range}" #mandatory
+    versionRange="${forge_version_range}" #mandatory
     # An ordering relationship for the dependency.
     # BEFORE - This mod is loaded BEFORE the dependency
     # AFTER - This mod is loaded AFTER the dependency
@@ -92,15 +86,16 @@ file="META-INF/accesstransformer.cfg"
 [[dependencies.${mod_id}]]
     modId="jei"
     type="optional"
-    versionRange="[19,)"
+    versionRange="[15,)"
     ordering="AFTER"
     side="CLIENT"
 
 # Curios API — 可选依赖：法师可装备饰品（NpcScreen 饰品栏按钮 + 法师饰品容器）。不装 Curios 时该功能自动隐藏。
+# 1.20.1 侧被 Iron's Spells 与 Goety 的强制传递依赖钉死在 5.x 线。
 [[dependencies.${mod_id}]]
     modId="curios"
     type="optional"
-    versionRange="[9.4,)"
+    versionRange="[5.14,)"
     ordering="AFTER"
     side="BOTH"
 
@@ -109,12 +104,10 @@ file="META-INF/accesstransformer.cfg"
 [[dependencies.${mod_id}]]
     modId="patchouli"
     type="optional"
-    versionRange="[1.21,)"
+    versionRange="[1.20.1-85,)"
     ordering="AFTER"
     side="BOTH"
 
-# Features are specific properties of the game environment, that you may want to declare you require. This example declares
-# that your mod requires GL version 3.2 or higher. Other features will be added. They are side aware so declaring this won't
-# stop your mod loading on the server for example.
+# Features are specific properties of the game environment, that you may want to declare you require.
 #[features.${mod_id}]
 #openGLVersion="[3.2,)"

@@ -84,3 +84,61 @@
      --title "Wandscape <版本>-<游戏版本>" --notes-file RELEASE_NOTES.md
    ```
 8. [ ] CurseForge / Modrinth 的 Game Version 标签按线选（1.21.1 或 1.20.1），文件名保持同一格式。
+
+---
+
+## 四、1.20.1 降级活清单（Downgrade to 1.20.1 / Forge 47.x）
+
+主线 `1.21.1` 不受影响；降级全部落在分支 `1.20.1-forge`（独立 worktree，与主仓平级）。依据 `docs/forge-1201-downgrade-survey.md`，§12 给出建议顺序。各阶段做完后原地划 `~~` 留痕，不删不重写。
+
+> 触点数字取自 2026-09-24 实测。原报告的 §3.2 / §四 / §五 写于网络包与 ItemData 两次重构**之前**，触点已缩水三成左右（loader import 201 文件 → 135），**动手每一步前按当次实测重新数**。
+
+### 里程碑 1：分支与工具链
+- [x] ~~建 `1.20.1-forge` 分支与并列 worktree `../wandscape-1201`~~
+- [x] ~~wrapper 9.2.1 → **8.9**（FG6 对外编译目标是 Gradle 8.1 API，9.x 不受支持）~~
+- [x] ~~`settings.gradle` 补三个插件仓库（MinecraftForge / Sponge / ParchmentMC）+ mixingradle 的 `resolutionStrategy`；foojay 1.0.0 → 0.7.0~~
+- [x] ~~`gradle.properties` 换 1.20.1 数值、删 `configuration-cache`、JVM 内存 1G → 3G、第三方按 1.20.1 线重写、删 TLM~~
+- [x] ~~`build.gradle` 重写为 ForgeGradle 6 + MixinGradle（`minecraft{}` / `mixin{}` / `fg.deobf` / `reobfJar` / manifest `MixinConfigs`）~~
+- [x] ~~`neoforge.mods.toml` → `src/main/resources/META-INF/mods.toml`，改 Forge schema，去掉 `[[mixins]]` / `[[accessTransformers]]`~~
+- [x] ~~CI JDK 21 → 17~~
+- [ ] 工具链跑通门槛：`./gradlew build` 能走到 `compileJava`，且**不出现 Gradle 配置错误**（源码报 `package net.neoforged does not exist` 属预期）
+
+### 里程碑 2：机械改名波 + Java 17 回归
+- [ ] 包根 `net.neoforged.*` → `net.minecraftforge.*`（135 文件 / 289 import）；`NeoForge.EVENT_BUS` → `MinecraftForge.EVENT_BUS`（53 文件 / 93 处）
+- [ ] `ResourceLocation.fromNamespaceAndPath` / `.parse` / `.withDefaultNamespace` → `new ResourceLocation(...)`（126 文件 / 154 处）
+- [ ] 注册返回类型 `DeferredHolder` / `DeferredItem` → `RegistryObject`（9 文件 / 84 处）；`ModConfigSpec` → `ForgeConfigSpec`（3 文件 / 61 处）；`NeoForgeRegistries` → `ForgeRegistries`
+- [ ] `DeferredRegister.createItems/createBlocks` → `create(ForgeRegistries.ITEMS/BLOCKS, MODID)`；`DeferredSpawnEggItem` → `ForgeSpawnEggItem`（构造签名不同）；`IMenuTypeExtension` → `IForgeMenuType`
+- [ ] `LivingIncomingDamageEvent` → `LivingHurtEvent`（6 文件 / 13 处）
+- [ ] Java 21 语法回归：`Math.clamp(`（23 文件 / 53 处）、switch 类型模式（2 文件 / 9 处）、record 解构（`MarkdownRenderWidget`，11 处）、`List.getFirst()`（3 处）
+- [ ] `wandscape.mixins.json` 的 `compatibilityLevel: JAVA_21` → `JAVA_17`
+
+### 里程碑 3：静默失效与启动崩溃（失败无声，专项清）
+- [ ] 数据包目录单→复：`advancement`(33) / `loot_table`(2) / `recipe`(2) / `tags/block`(1) / `tags/item`(1) / `curios/tags/item`(4)。**`damage_type/` 两版都是单数，不要「顺手改对」**
+- [ ] JSON 字段：进度图标 `{"id":}` → `{"item":}`(31)、进度谓词 `items` 标量→数组(2)、配方 `result`(2)、`neoforge:mod_loaded` → `forge:mod_loaded`(2)
+- [ ] `MixinMouseHandler#turnPlayer(double)` → 1.20.1 是**无参** `turnPlayer()`（配置 `required:true`，不修即启动崩溃）
+- [ ] `ICancellableEvent`（`ExplorationChestRewardEvent`）→ `@Cancelable` + `isCanceled()`/`setCanceled()`
+- [ ] AT 三条字段放宽实测生效（AT 失败不编译报错、只在运行时炸）
+
+### 里程碑 4：原版 API 版本差
+- [ ] `SavedData#save` / `INBTSerializable` 去掉 `HolderLookup.Provider` 形参（15 个 SavedData 子类，共 22 文件出现该形参）
+- [ ] `appendHoverText` 第 2 参 `Item.TooltipContext` → `Level`（9 文件 / 10 处）
+- [ ] `AttributeModifier.Operation` 统一到 1.20.1 拼写（7 处 `ADD_VALUE` / 5 处 `ADD_MULTIPLIED_BASE` / 1 处 `ADD_MULTIPLIED_TOTAL`）。**`ADDITION` / `MULTIPLY_BASE` 另有 5 处是本模组自己的 `ModifierOperation` 枚举，别一起改**
+- [ ] `Holder<Attribute>` → `Attribute`（6 文件 / 18 处，映射单点 `WandscapeAttributes.toVanilla`）
+- [ ] `MobEffectInstance` 收裸 `MobEffect`（21 处）；`MobEffects.RAID_OMEN` → `BAD_OMEN`
+- [ ] `saveAdditional` / `loadAdditional` / `getUpdateTag` / `handleUpdateTag` 去 provider（`CreativeScannerBlockEntity`）
+- [ ] 杂项：`isSameItemSameComponents` → `isSameItemSameTags`(3)、`MobSpawnEvent` 的 `Result.FAIL` → `DENY`、tick 相位改造（20 文件 / 23 处）、`RegisterMenuScreensEvent` → `FMLClientSetupEvent` 里注册
+
+### 里程碑 5：网络栈重写（最大单点）
+- [ ] `Net` 的 5 个方法体：`PacketDistributor` 目标对象 + `SimpleChannel.send`
+- [ ] `PayloadRegistry`：`NetworkRegistry.newSimpleChannel` + 85 条 `registerMessage`；改写 `s2c` / `c2s` 两个方法体
+- [ ] 86 个载荷的类型面：`CustomPacketPayload` → `IMessage`、`RegistryFriendlyByteBuf` → `FriendlyByteBuf`、删 `type()`
+- [ ] 3 个注册表依赖 codec 手工改：`NpcDataPacket`（`ItemStack.OPTIONAL_STREAM_CODEC`）、`ExplorationRewardPacket` 与 `ScreenFeedbackPacket`（`ComponentSerialization.STREAM_CODEC`）
+- [ ] 两个**非载荷**的缓冲用户易漏：`BuildingPackage`、`MagicBeamEntity`（`ByteBufCodecs.VECTOR3F`）
+- [ ] 3 个非机械 codec：`GuideBookOpenPacket` / `ScreenFeedbackPacket`（`composite`）、`WarehouseTerminalKeyPacket`（`unit`）
+
+### 里程碑 6：物品数据与局部重写
+- [ ] `ItemKey` 塌缩掉 `DataComponentPatch` / `RegistryOps` → `getTag().copy()` / `setTag(...)`；`HolderLookup.Provider` 从 22 文件移除
+- [ ] VBO 幽灵渲染重建（963 行；1.20.1 无公开的 `uploadIndexBuffer` 等价路径）
+- [ ] GUI 4 处断点：`renderBackground` 退回单参、`renderTransparentBackground`、`blitSprite`、`WidgetSprites`
+- [ ] compat 收尾：Curios 3 处成员级改写 + 依赖 range 重写；TLM 整包删除（7 文件 + 2 处注册调用）
+- [ ] 资源：3 个九宫格 `.png.mcmeta` 在 1.20.1 被忽略 → 面板退化，需换实现
