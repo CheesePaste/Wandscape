@@ -27,7 +27,7 @@ A 和 B 用的是**同一套加载器**：B 里放同 id 的文件就能覆盖 A
 
 | 路径 | 文件数 | 内容 | 登记在 |
 |---|---|---|---|
-| `data/wandscape/buildings/` | 56 | 内置建筑（`default` 包 53 个）+ `package.json` + `deprecated/`（2） | `BuildingConfigLoader` |
+| `data/wandscape/buildings/` | 56 | 内置建筑（`default` 包 53 个）+ `building_pack.json` + `deprecated/`（2） | `BuildingConfigLoader` |
 | `data/wandscape/buildings/deprecated/` | 2 | 旧档兼容载荷，**不可删**（见 §四） | 同上 |
 | `data/wandscape/element_mappings/` | 1188 | 单物品/方块元素定价，`minecraft_<id>.json` | `WandscapeDataLoader` |
 | `data/wandscape/element_mappings/disabled/` | 1 | 停用映射的停放处（示例文件） | 不加载 |
@@ -140,21 +140,21 @@ A 和 B 用的是**同一套加载器**：B 里放同 id 的文件就能覆盖 A
 
 ### 4.1 一个"建筑包"是什么
 
-`BuildingPackage` = **`buildings/` 下的一个子目录**，特征是目录里有 `package.json`：
+`BuildingPackage` = **`buildings/` 下的一个子目录**，特征是目录里有 `building_pack.json`：
 
 ```
 data/wandscape/buildings/
-├── package.json              <- 根包（default）的元数据
+├── building_pack.json        <- 根包（default）的元数据
 ├── tavern1.json              <- 根包里的建筑
 ├── deprecated/               <- 特殊：旧档兼容，不算建筑包
 │   ├── README.md
 │   └── service_hall.json
 └── <你的包名>/
-    ├── package.json          <- 包元数据：id/name/description/author/version/icon/priority
+    ├── building_pack.json    <- 包元数据：id/name/description/author/version/icon/priority
     └── <建筑id>.json
 ```
 
-`package.json` 字段含义见 [data-formats.md](data-formats.md) §三。`name`/`description` 里允许放 lang key（内置的 `default`、`custom` 都这么干），界面走 `I18n` 解析，中英各显示各的。
+`building_pack.json` 字段含义见 [data-formats.md](data-formats.md) §三。文件名收在 `BuildingPackage.FILE_NAME` 一处，读写两处都引用它。`name`/`description` 里允许放 lang key（内置的 `default`、`custom` 都这么干），界面走 `I18n` 解析，中英各显示各的。
 
 ### 4.2 三个来源，一套加载
 
@@ -178,15 +178,15 @@ data/wandscape/buildings/
 │   ├── pack.mcmeta
 │   └── data/wandscape/buildings/
 │       └── custom/
-│           └── package.json     <- 自定义包元数据，可直接照抄当模板
+│           └── building_pack.json  <- 自定义包元数据，可直接照抄当模板
 └── wandscape_roads/
     ├── pack.mcmeta
     └── data/wandscape/road_presets/
 ```
 
-这样玩家进存档就能看见建筑/道路该往哪儿放，不必猜路径。**幂等**：已存在的文件一律不碰，玩家改过的 `package.json` 不会被冲掉；任何失败只 `Log.warn`，不影响服务器启动。
+这样玩家进存档就能看见建筑/道路该往哪儿放，不必猜路径。**幂等**：已存在的文件一律不碰，玩家改过的 `building_pack.json` 不会被冲掉；任何失败只 `Log.warn`，不影响服务器启动。
 
-`custom` 包在内存里还有一层兜底（`BuildingConfigLoader.ensureCorePackages`）——即使本次启动刚建的 `package.json` 要等下次重载才被数据包读进来，「自定义」也始终出现在建筑包列表里。
+`custom` 包在内存里还有一层兜底（`BuildingConfigLoader.ensureCorePackages`）——即使本次启动刚建的 `building_pack.json` 要等下次重载才被数据包读进来，「自定义」也始终出现在建筑包列表里。
 
 ### 4.4 旧档兼容：`deprecated/`
 

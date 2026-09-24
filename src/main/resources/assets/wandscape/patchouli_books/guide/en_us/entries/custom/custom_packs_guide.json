@@ -7,19 +7,15 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "$(italic)$(#6b5a45)A building pack is simply a directory. Create $(#8a5a2b)data/<namespace>/buildings/<pack name>/$()$(italic)$(#6b5a$(br)45) and drop building JSON into it and they belong to that pack;$(br) add a $(#8a5a2b)package.json$()$(italic)$(#6b5a45) inside and the pack gets a name and an icon.$()"
+      "text": "$(italic)$(#6b5a45)A building pack is simply a directory. Create $(#8a5a2b)data/<namespace>/buildings/<pack name>/$()$(italic)$(#6b5a45) and drop building JSON into it and they belong to that pack;$(br) add a $(#8a5a2b)building_pack.json$()$(italic)$(#6b5a45) inside and the pack gets a name and an icon.$()"
     },
     {
       "type": "patchouli:text",
-      "text": "Once a town has many buildings, one flat list stops being readable. A pack is the unit that groups buildings, ships them as a set, an"
+      "text": "Once a town has many buildings, one flat list stops being readable. A pack is the unit that groups buildings, ships them as a set, and keeps two authors' same-named buildings from colliding$(br) — inside one pack, ids only have to be unique within that pack."
     },
     {
       "type": "patchouli:text",
-      "text": "d keeps two authors' same-named buildings from colliding — inside one pack, ids only have to be unique within that pack."
-    },
-    {
-      "type": "patchouli:text",
-      "text": "$(#8a5a2b)buildings/cottage.json$() — a building sitting directly under $(#8a5a2b)buildings/$() belongs to the $(#8a5a2b)default$() pack$(li)$(#8a5a2b)buildings/medieval/inn.json$() — the directory name $(#8a5a2b)medieval$() is the pack name$(li)$(#8a5a2b)buildings/medieval/package.json$() — this pack's metadata",
+      "text": "$(#8a5a2b)buildings/cottage.json$() — a building sitting directly under $(#8a5a2b)buildings/$() belongs to the $(#8a5a2b)default$() pack$(li)$(#8a5a2b)buildings/medieval/inn.json$() — the directory name $(#8a5a2b)medieval$() is the pack name$(li)$(#8a5a2b)buildings/medieval/building_pack.json$() — this pack's metadata",
       "title": "The Directory Is the Pack"
     },
     {
@@ -28,20 +24,24 @@
     },
     {
       "type": "patchouli:text",
-      "text": "A building JSON may also carry a $(#8a5a2b)package_id$() field of its own, which $(bold)outranks the directory$(). Writing $(#8a5a2b)$(br)default$() there is the same as leaving it out, since it falls back to the directory — the field is for pulling one file out of its f",
+      "text": "A building JSON may also carry a $(#8a5a2b)package_id$() field of its own, which $(bold)outranks the directory$(). Writing $(#8a5a2b)default$() there is the same as leaving it out, since it",
       "title": "Naming One File's Pack"
     },
     {
       "type": "patchouli:text",
-      "text": "older, nothing more.$(br2)$(bold)Pack Metadata$()$(br2)$(#8a5a2b)package.json$() sits in the pack directory, and every key in it may be omitted:"
+      "text": "falls back to the directory — the field is for pulling one file out of its folder, nothing more.$(br2)$(bold)Pack Metadata$()"
     },
     {
       "type": "patchouli:text",
-      "text": "$(bold)Key  Default$()$(li)id — the directory name$(li)name — the pack id$(li)description — empty$(li)author — empty$(li)version — $(#8a5a2b)1.0.0$()$(li)icon — $(#8a5a2b)minecraft:stone_bricks$()$(li)priority — 100"
+      "text": "$(#8a5a2b)building_pack.json$() sits in the pack directory, and every key in it may be omitted:$(br2)$(bold)Key  Default$()$(li)id — the directory name"
     },
     {
       "type": "patchouli:text",
-      "text": "$(#8a5a2b)name$() takes either a literal string or a language key — both go through the same \"use the lookup if it resolves, otherwis$(br)e use the text as written\" path, so a plain name is perfectly legal and you need not invent a $(#8a5a2b)wandscape.pack.*$() key.",
+      "text": "name — the pack id$(li)description — empty$(li)author — empty$(li)version — $(#8a5a2b)1.0.0$()$(li)icon — $(#8a5a2b)minecraft:stone_bricks$()$(li)priority — 100"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(#8a5a2b)name$() takes either a literal string or a language key — both go through the same \"use the lookup if it resolves, otherwise use the text as written\" path, so a plain name is perf$(br)ectly legal and you need not invent a $(#8a5a2b)wandscape.pack.*$() key.",
       "title": "Name and Ordering"
     },
     {
@@ -50,29 +50,29 @@
     },
     {
       "type": "patchouli:text",
-      "text": "$(bold)A $(#8a5a2b)buildings/package.json$()$(bold) in any namespace is taken as that default pack's metadata$() — to write your own $(br)pack's $(#8a5a2b)package.json$(), put it inside the pack directory;$(br) one at the root renames the default pack instead."
+      "text": "$(bold)A $(#8a5a2b)buildings/building_pack.json$()$(bold) in any namespace is taken as that default pack's metadata$() — to write your own pack's $(#8a5a2b)building_pack.json$(), put it inside the pack directory;$(br) one at the root renames the default pack instead."
     },
     {
       "type": "patchouli:text",
-      "text": "A directory with no $(#8a5a2b)package.json$() is not an error;$(br) a placeholder pack is created, named after the directory. Writing a $(#8a5a2b)package.json$() whose $(#8a5a2b)id$() differs from its$(br) directory name leaves the pack list calling it one thing while its buildings hang off another, matching neither.",
+      "text": "A directory with no $(#8a5a2b)building_pack.json$() is not an error;$(br) a placeholder pack is created, named after the directory. Writing a $(#8a5a2b)building_pack.json$() whose $(#8a5a2b)id$() differs from its directory name leaves the pack list calling it on",
       "title": "When the Directory and the Id Disagree"
     },
     {
       "type": "patchouli:text",
-      "text": "$(bold)Can Players Switch a Pack Off$()$(br2)Yes. The Settings Center has a Pack Library page that disables a whole pack. Disabling only affects what the build list shows — build"
+      "text": "e thing while its buildings hang off another, matching neither.$(br2)$(bold)Can Players Switch a Pack Off$()"
     },
     {
       "type": "patchouli:text",
-      "text": "ings already standing in the world keep working and keep paying out. It is there for players tidying a list, not for pack authors to $(br)gate features with."
+      "text": "Yes. The Settings Center has a Pack Library page that disables a whole pack. Disabling only affects what the build list shows — buildings already standing in the world keep working and keep$(br) paying out. It is there for players tidying a list, not for pack authors to gate features with."
     },
     {
       "type": "patchouli:text",
-      "text": "The Creative Building Scanner has a target-pack field;$(br) type a name that does not exist yet and the export creates that directory and writes a $(#8a5a2b)package.json$() skeleton into it, r$(br)ecording you as the author. The pack name is lowercased, so $(#8a5a2b)Medieval$() and $(#8a5a2b)medieval$() are one and the same pack",
+      "text": "The Creative Building Scanner has a target-pack field;$(br) type a name that does not exist yet and the export creates that directory and writes a $(#8a5a2b)building_pack.json$() skeleton into it, recording you as the author. The pack name is lower",
       "title": "Working With the Scanner"
     },
     {
       "type": "patchouli:text",
-      "text": ".$(br2)A scanner export goes into the save's own datapack under $(#8a5a2b)data/wandscape/buildings/<pack name>/$() — the pack and the namesp$(br)ace are two separate things, and an exported file always sits in the $(#8a5a2b)wandscape$() namespace."
+      "text": "cased, so $(#8a5a2b)Medieval$() and $(#8a5a2b)medieval$() are one and the same pack.$(br2)A scanner export goes into the save's own datapack under $(#8a5a2b)data/wandscape/buildings/<pack name>/$() — the pack and the namespace are two separate things, and an exported file always$(br) sits in the $(#8a5a2b)wandscape$() namespace."
     }
   ]
 }

@@ -50,10 +50,10 @@ public final class BuildingConfigLoader {
     }
 
     /**
-     * 核心包兜底：{@code default} 与 {@code custom} 无论磁盘上有没有 {@code package.json} 都存在，
+     * 核心包兜底：{@code default} 与 {@code custom} 无论磁盘上有没有包元数据文件都存在，
      * 建筑包列表因此永远列得出「自定义」——扫描器导出默认就落在那儿。
      *
-     * <p>用 {@code putIfAbsent}：数据包里真写了 {@code custom/package.json} 时，那份是玩家的，
+     * <p>用 {@code putIfAbsent}：数据包里真写了 {@code custom/building_pack.json} 时，那份是玩家的，
      * 不该被这里的兜底值盖掉。
      */
     private void ensureCorePackages() {
@@ -106,24 +106,24 @@ public final class BuildingConfigLoader {
 
     /**
      * Entry loader from WandscapeDataLoader scanning.
-     * Handles package.json as well as nested building json files.
+     * Handles the package metadata file as well as nested building json files.
      */
     public synchronized BuildingConfig loadFromDataPath(String pathId, JsonElement json) {
-        if (pathId.equals("package")) {
-            // Root package.json (default core package meta)
+        if (pathId.equals(BuildingPackage.FILE_NAME)) {
+            // Root metadata file (default core package meta)
             try {
                 BuildingPackage pkg = BuildingPackage.fromJson(BuildingPackage.DEFAULT_ID, json.getAsJsonObject());
                 packages.put(pkg.id(), pkg);
                 packageRawJsons.put(pkg.id(), json);
                 Log.info(TAG, "loaded root BuildingPackage: {}", pkg.id());
             } catch (Exception e) {
-                Log.warn(TAG, "Failed to parse root package.json: {}", e.getMessage());
+                Log.warn(TAG, "Failed to parse root package metadata: {}", e.getMessage());
             }
             return null;
         }
 
-        if (pathId.endsWith("/package")) {
-            // Subfolder package.json: e.g. "medieval/package"
+        if (pathId.endsWith("/" + BuildingPackage.FILE_NAME)) {
+            // Subfolder metadata file: e.g. "medieval/building_pack"
             int slashIdx = pathId.indexOf('/');
             String pkgId = pathId.substring(0, slashIdx);
             try {
@@ -132,7 +132,7 @@ public final class BuildingConfigLoader {
                 packageRawJsons.put(pkg.id(), json);
                 Log.info(TAG, "loaded BuildingPackage: {} ({})", pkg.id(), pkg.name());
             } catch (Exception e) {
-                Log.warn(TAG, "Failed to parse package.json for '{}': {}", pkgId, e.getMessage());
+                Log.warn(TAG, "Failed to parse package metadata for '{}': {}", pkgId, e.getMessage());
             }
             return null;
         }

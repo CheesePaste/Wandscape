@@ -41,6 +41,12 @@ public record BuildingPackage(
      */
     public static final String CUSTOM_ID = "custom";
 
+    /**
+     * 包元数据文件名（不含 {@code .json}），同时也是数据路径 id：包目录里有它才认作一个带元数据的包，
+     * 根目录的那一份是 {@link #DEFAULT_ID} 包的元数据。读写两处都引用它，别各自写字面量。
+     */
+    public static final String FILE_NAME = "building_pack";
+
     /** 包名会直接当作 {@code data/<ns>/buildings/<package_id>/} 的文件夹名，故只放行这些字符。 */
     private static final Pattern ILLEGAL_ID_CHARS = Pattern.compile("[^a-z0-9_-]");
 
@@ -82,7 +88,7 @@ public record BuildingPackage(
     }
 
     /**
-     * 自定义（Custom）包的兜底元数据：世界数据包里没有 {@code custom/package.json} 时用它，
+     * 自定义（Custom）包的兜底元数据：世界数据包里没有 {@code custom/building_pack.json} 时用它，
      * 保证建筑包列表里永远有一个可选的「自定义」入口。落盘的那份文件优先。
      */
     public static BuildingPackage customPackage() {

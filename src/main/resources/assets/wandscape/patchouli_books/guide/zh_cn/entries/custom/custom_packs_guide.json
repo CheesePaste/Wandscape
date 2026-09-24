@@ -7,7 +7,7 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "$(italic)$(#6b5a45)建筑包就是一个目录。把 $(#8a5a2b)data/<命名空间>/buildings/<包名>/$()$(italic)$(#6b5a45) 建出来，往里面丢建筑 JSON，它们就归这个包；目录里再放一份 $(#8a5a2b)package.json$()$(italic)$(#6b5a45)，包才有名字和图标。$()"
+      "text": "$(italic)$(#6b5a45)建筑包就是一个目录。把 $(#8a5a2b)data/<命名空间>/buildings/<包名>/$()$(italic)$(#6b5a45) 建出来，往里面丢建筑 JSON，它们就归这个包；目录里再放一份 $(#8a5a2b)building_pack.json$()$(italic)$(#6b5a45)，包才有名字和图标。$()"
     },
     {
       "type": "patchouli:text",
@@ -15,7 +15,7 @@
     },
     {
       "type": "patchouli:text",
-      "text": "$(li)$(#8a5a2b)buildings/cottage.json$() — 直接放在 $(#8a5a2b)buildings/$() 下的建筑归 default 包$(li)$(#8a5a2b)buildings/medieval/inn.json$() — 目录名 $(#8a5a2b)medieval$() 就是包名$(li)$(#8a5a2b)buildings/medieval/package.json$() — 这个包的元数据",
+      "text": "$(li)$(#8a5a2b)buildings/cottage.json$() — 直接放在 $(#8a5a2b)buildings/$() 下的建筑归 default 包$(li)$(#8a5a2b)buildings/medieval/inn.json$() — 目录名 $(#8a5a2b)medieval$() 就是包名$(li)$(#8a5a2b)buildings/medieval/building_pack.json$() — 这个包的元数据",
       "title": "目录即包"
     },
     {
@@ -29,7 +29,7 @@
     },
     {
       "type": "patchouli:text",
-      "text": "$(#8a5a2b)package.json$() 放在包目录下，键都可以省：$(br2)$(bold)键  缺省$()$(li)id — 当前目录名$(li)name — 包 id$(li)description — 空$(li)author — 空$(li)version — $(#8a5a2b)1.0.0$()$(li)icon — $(#8a5a2b)minecraft:stone_bricks$()$(li)priority — 100",
+      "text": "$(#8a5a2b)building_pack.json$() 放在包目录下，键都可以省：$(br2)$(bold)键  缺省$()$(li)id — 当前目录名$(li)name — 包 id$(li)description — 空$(li)author — 空$(li)version — $(#8a5a2b)1.0.0$()$(li)icon — $(#8a5a2b)minecraft:stone_bricks$()$(li)priority — 100",
       "title": "包的元数据"
     },
     {
@@ -39,12 +39,12 @@
     },
     {
       "type": "patchouli:text",
-      "text": "模组内置的建筑全在根目录，归一个叫 $(#8a5a2b)default$() 的包，显示名是\"核心建筑包\"。$(br2)$(bold)任何命名空间下的 $(#8a5a2b)buildings/package.json$()$(bold) 都会被当成这个默认包的元数据$()——要写自己包的 $(#8a5a2b)package.json$()，务必放进包目录里，在根目录放一份是改默认包的名字。",
+      "text": "模组内置的建筑全在根目录，归一个叫 $(#8a5a2b)default$() 的包，显示名是\"核心建筑包\"。$(br2)$(bold)任何命名空间下的 $(#8a5a2b)buildings/building_pack.json$()$(bold) 都会被当成这个默认包的元数据$()——要写自己包的 $(#8a5a2b)building_pack.json$()，务必放进包目录里，在根目录放一份是改默认包的名字。",
       "title": "默认包"
     },
     {
       "type": "patchouli:text",
-      "text": "没有 $(#8a5a2b)package.json$() 的目录不会报错，会自动补一个占位包，名字就是目录名。写 $(#8a5a2b)package.json$() 时把 $(#8a5a2b)id$() 写成和目录名不一样的值，会出现\"包列表里叫一个名字、建筑挂在另一个名字下\"的错位，两边都对不上。",
+      "text": "没有 $(#8a5a2b)building_pack.json$() 的目录不会报错，会自动补一个占位包，名字就是目录名。写 $(#8a5a2b)building_pack.json$() 时把 $(#8a5a2b)id$() 写成和目录名不一样的值，会出现\"包列表里叫一个名字、建筑挂在另一个名字下\"的错位，两边都对不上。",
       "title": "目录名与 id 不一致"
     },
     {
@@ -54,7 +54,7 @@
     },
     {
       "type": "patchouli:text",
-      "text": "创造建筑扫描器的界面上有「目标建筑包」一栏，填一个还没用过的名字，导出时会自动建出那个目录并写一份 $(#8a5a2b)package.json$() 骨架，作者字段记成你。包名会被转成小写，所以 $(#8a5a2b)Medieval$() 与 $(#8a5a2b)medieval$() 是同一个包。",
+      "text": "创造建筑扫描器的界面上有「目标建筑包」一栏，填一个还没用过的名字，导出时会自动建出那个目录并写一份 $(#8a5a2b)building_pack.json$() 骨架，作者字段记成你。包名会被转成小写，所以 $(#8a5a2b)Medieval$() 与 $(#8a5a2b)medieval$() 是同一个包。",
       "title": "扫描器怎么配合"
     },
     {

@@ -86,8 +86,8 @@ public final class ScannerExportDirs {
      * 建出两个导出包的空骨架并登记自定义包。
      *
      * <p>建的东西：两个包的 {@code pack.mcmeta}、各自的 category 目录，以及自定义包目录下的
-     * {@code package.json}（玩家可以直接照抄当模板）。<b>幂等且永不覆盖</b>——已存在的文件一律不碰，
-     * 玩家改过的 {@code package.json} 不会被冲掉；整段包在 try 里，任何失败只 {@code Log.warn}，
+     * {@code building_pack.json}（玩家可以直接照抄当模板）。<b>幂等且永不覆盖</b>——已存在的文件一律不碰，
+     * 玩家改过的那份不会被冲掉；整段包在 try 里，任何失败只 {@code Log.warn}，
      * 绝不让服务器起不来。
      */
     public static void ensureSkeleton(MinecraftServer server) {
@@ -99,7 +99,7 @@ public final class ScannerExportDirs {
             // 建筑那侧再往下建一层自定义包目录，玩家一眼看到该往哪放建筑 json
             Path customPkgDir = buildingsDir.resolve(BuildingPackage.CUSTOM_ID);
             Files.createDirectories(customPkgDir);
-            writeCustomPackageTemplate(customPkgDir.resolve("package.json"));
+            writeCustomPackageTemplate(customPkgDir.resolve(BuildingPackage.FILE_NAME + ".json"));
 
             Log.info(TAG, "Export skeleton ready under {}", packRoot(server, PACK_BUILDINGS).getParent());
         } catch (Exception e) {
@@ -111,8 +111,8 @@ public final class ScannerExportDirs {
      * 写自定义包的元数据模板。{@code name}/{@code description} 存的是 lang key 而非中文原文
      * ——与随 jar 发布的 {@code default} 包同构，读它的界面走 {@code I18n} 解析，中英各显示各的。
      */
-    private static void writeCustomPackageTemplate(Path pkgJsonFile) throws IOException {
-        if (Files.exists(pkgJsonFile)) return;
+    private static void writeCustomPackageTemplate(Path packFile) throws IOException {
+        if (Files.exists(packFile)) return;
         BuildingPackage pkg = BuildingPackage.customPackage();
         JsonObject obj = new JsonObject();
         obj.addProperty("id", pkg.id());
@@ -122,6 +122,6 @@ public final class ScannerExportDirs {
         obj.addProperty("version", pkg.version());
         obj.addProperty("icon", pkg.iconItem());
         obj.addProperty("priority", pkg.priority());
-        Files.writeString(pkgJsonFile, GSON.toJson(obj));
+        Files.writeString(packFile, GSON.toJson(obj));
     }
 }

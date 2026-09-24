@@ -436,10 +436,10 @@ public record ScannerExportPacket(BlockPos pos, String targetPackage) implements
             Files.createDirectories(exportDir);
             Path outFile = exportDir.resolve(sanitizeFileName(id) + ".json");
 
-            // Ensure package.json exists in target package directory
-            Path pkgJsonFile = exportDir.resolve("package.json");
+            // Ensure the package metadata file exists in the target package directory
+            Path packFile = exportDir.resolve(BuildingPackage.FILE_NAME + ".json");
             JsonObject pkgJson;
-            if (!Files.exists(pkgJsonFile)) {
+            if (!Files.exists(packFile)) {
                 pkgJson = new JsonObject();
                 pkgJson.addProperty("id", targetPkg);
                 String displayName = targetPkg.substring(0, 1).toUpperCase(Locale.ROOT) + targetPkg.substring(1);
@@ -449,10 +449,10 @@ public record ScannerExportPacket(BlockPos pos, String targetPackage) implements
                 pkgJson.addProperty("version", "1.0.0");
                 pkgJson.addProperty("icon", "minecraft:stone_bricks");
                 pkgJson.addProperty("priority", 100);
-                Files.writeString(pkgJsonFile, new GsonBuilder().setPrettyPrinting().create().toJson(pkgJson));
+                Files.writeString(packFile, new GsonBuilder().setPrettyPrinting().create().toJson(pkgJson));
             } else {
                 try {
-                    pkgJson = com.google.gson.JsonParser.parseString(Files.readString(pkgJsonFile)).getAsJsonObject();
+                    pkgJson = com.google.gson.JsonParser.parseString(Files.readString(packFile)).getAsJsonObject();
                 } catch (Exception e) {
                     pkgJson = new JsonObject();
                     pkgJson.addProperty("id", targetPkg);
