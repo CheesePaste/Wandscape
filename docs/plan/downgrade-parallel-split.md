@@ -17,7 +17,8 @@
   2. **三份并行**——按**目录独占**切分，每人只碰自己目录树里的文件，互不重叠。
 - **地基期间另外两人不是干等**：数据包目录与 JSON 字段改名是**纯资源改动（43 个 .json + 3 个 .mcmeta，零 `.java`）**，与地基零冲突，可以直接开工（见 §四·W0）。
 - **工作量最大的不是网络栈了。** `Net` / `PayloadRegistry` 收口后，185 处发送点塌缩成 5 个方法体，86 个载荷的类型面是**同一套规则替换**（脚本可吸收），真正手写的只剩 3 个 codec + 2 个非载荷缓冲用户。现在最重的是 **建筑域（131 文件 / 24929 行，占全仓 21%）**。
-- **三份工作量**（口径见 §三）：**A 152 点 / B 137 点 / C 131 点**，极差 ±8%。若把 `ItemKey` 留给地基（推荐，见 §二），则为 **A 122 / B 137 / C 131**，极差 ±6%。
+- **三份工作量**（口径见 §三）：**A 104 点 / B 103 点 / C 100 点**，极差 ±4%。代价是**地基最重**——它吸收了全部「机械改名 + Java 21 回归 + 咽喉类型」，约占全仓触点四成；但这部分人力时间只有 1.5~2 人日，因为几乎全靠脚本，不是逐处手改（§四）。
+- **一句话的取舍**：把四成的活压给一个人先做两天，换三个人之后各自独立不打架——**这比让三个人分别把全局改名跑一遍再互相收拾残局便宜**。
 
 ---
 
@@ -45,10 +46,12 @@
 工作量点数 = 机械改名点 + 判断点 + 载荷点 + 重写点
 
 机械改名点 = NEOIMP×0.3 + RRL×0.1      # NEOIMP=含 net.neoforged 的文件数；RRL=ResourceLocation 工厂调用数
-判断点     = J21×1 + TICKocc×2 + SDATA×3 + HOVER×2 + ATTR×2 + MOBEF×2
-载荷点     = NET×0.5                    # 86 个载荷的类型面走脚本，残留的是 3 个 codec + 2 个非载荷缓冲用户
-重写点     = 真重写行数 ÷ 50            # VBO 963 行、ItemKey 语义簇、foundation/ui 断点
+判断点     = TICKocc×2 + SDATA×3 + HOVER×2 + ATTR×2 + MOBEF×2
+载荷点     = NET×0.5                    # 载荷类型面走脚本，残留的是 3 个 codec + 2 个非载荷缓冲用户
+重写点     = 真重写行数 ÷ 50            # VBO 963 行、foundation/ui 断点、compat Curios 成员级改写
 ```
+
+> **Java 21 语法（`Math.clamp` 57 处等）不进本公式**——它由地基做一次全仓替换，不构成任何一份的独立工作量。同理，`ItemKey` / `Net` / `PayloadRegistry` / `Wandscape` 这些咽喉类型的语义重写也归地基，不计入 A/B/C。
 
 权重含义是**「每分钟判断量」的量级**，不是精确值——它只用来判断三份是否均衡，**不用于考核**。谁觉得权重不对，改公式重算即可，触点数的采集命令在 §3.4。
 
@@ -57,19 +60,23 @@
 | | **A · 建筑与生产域** | **B · NPC 与殖民地域** | **C · 基建与物品域** |
 |---|---|---|---|
 | **目录（独占）** | `content/building/**`（含 `network`/`scanner`/`projection`/`render`/`preview`/`client`）<br>`content/production/**`<br>`content/element/**`<br>`content/warehouse/**` | `content/npc/**`<br>`content/tourist/**`<br>`content/road/**`<br>`content/colony/**`<br>`content/command/**`<br>`content/task/**` | `foundation/**`<br>`content/items/**`<br>`content/magic/**`<br>`content/tutorial/**`<br>`compat/**`<br>`mixin/**`<br>`api/**`<br>`impl/**`<br>`src/main/resources/**` |
-| java 文件 | 178 | 310 | 308 |
-| 行数 | 32,782 | 53,697 | 38,239 |
-| 载荷文件 NET | 42 | 29 | 27 |
-| `net.neoforged` 文件 | 38 | 60 | 38 |
-| `ResourceLocation` 工厂 | 45 | 48 | 60 |
-| 判断触点 | J21 12 / tick 11 / SavedData 8 / hover 1 | J21 28 / tick 13 / SavedData 7 / 属性 2 / 药效 2 | J21 17 / tick 7 / SavedData 6 / hover 8 / 属性 5 / 药效 1 |
-| 真重写 | VBO 963 行、ItemKey 语义簇 | （无，全是局部改） | `foundation/ui` 4 处 GUI 断点、compat Curios 3 处 |
-| **加权点数** | **152**（移交 ItemKey 后 122） | **137** | **131** |
+| java 文件 | 178 | 310 | 224 |
+| 行数 | 32,782 | 53,697 | 27,029 |
+| 载荷文件 NET | 42 | 38 | 18 |
+| `net.neoforged` 文件 | 38 | 64 | 34 |
+| `ResourceLocation` 工厂 | 45 | 52 | 56 |
+| 判断触点 | tick 11 / SavedData 8 / hover 1 | tick 14 / SavedData 8 / 属性 2 / 药效 2 | tick 6 / SavedData 5 / hover 8 / 属性 5 / 药效 1 |
+| 真重写 | VBO 963 行 | （无，全是局部改） | `foundation/ui` 4 处 GUI 断点、compat Curios 3 处 |
+| **加权点数** | **104** | **103** | **100** |
+
+> 上表**不含 Java 21 语法触点**（全仓 57 处 / 约 30 文件）——那部分由地基统一全仓替换，不落到各份，故不进加权。
+> `Wandscape.java` / `WandscapeClient.java` / `Config.java` / `ClientConfig.java` 四个顶层散文件（2,046 行）同样归地基，不在上表。
+> 校验：文件数 178 + 310 + 224 + 4 = **716**，行数 32,782 + 53,697 + 27,029 + 2,046 = **115,554**，与全仓实测一致——**没有未分配的目录**。
 
 **为什么这样切**（按目录语义而非按工作量硬凑，避免"我的活改到一半发现归属不明"）：
 
 - **A 拿到 `warehouse`**：`ItemKey` 的语义簇（`ColonyItemBank` / `WarehouseManager` / `WarehouseMenu` / 运输包）全在这，与 `ItemData` 收口同一片区域，一个人做完整。
-- **B 拿到 `task`**：任务派发链（`TaskRequest → GlobalTaskPool → SchedulerSystem`）服务于 NPC 与殖民地，与 B 的域语义相邻；且 B 的 `tourist` 有 28 处 Java 21 语法（`Math.clamp`），是纯机械的体力活，需要搭配一些轻量域。
+- **B 拿到 `task`**：任务派发链（`TaskRequest → GlobalTaskPool → SchedulerSystem`）服务于 NPC 与殖民地，与 B 的域语义相邻。B 的文件数最多（310）但多为小文件。
 - **C 拿到 `foundation` + `items` + `compat`**：地基类（`foundation/ui` 的 4 处 GUI 断点会波及 18 个 Screen）、物品类（`appendHoverText` 9 文件全在这附近）、以及唯一需要真改的第三方（Curios 3 处）。
 
 ### 3.4 采集命令（可复跑，用来重算任一时刻的口径）
