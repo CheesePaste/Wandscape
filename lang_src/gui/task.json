@@ -291,6 +291,14 @@
     "zh_cn": "来源: %s",
     "en_us": "Source: %s"
   },
+  "gui.wandscape.task.prod.unknown_item": {
+    "zh_cn": "未知生产项",
+    "en_us": "Unknown item"
+  },
+  "gui.wandscape.task.source.auto": {
+    "zh_cn": "自动化供应链补料",
+    "en_us": "Auto supply"
+  },
   "gui.wandscape.task.source.manual": {
     "zh_cn": "工坊手动排队",
     "en_us": "Queued by hand"
@@ -298,6 +306,10 @@
   "gui.wandscape.task.source.manual_production": {
     "zh_cn": "工坊手动排队生产",
     "en_us": "Queued by hand in the workshop"
+  },
+  "gui.wandscape.task.source.running": {
+    "zh_cn": "正在执行中",
+    "en_us": "Running"
   },
   "gui.wandscape.task.status.building_queued": {
     "zh_cn": "建筑队列排队中 (待办阶段)",
@@ -334,6 +346,14 @@
   "gui.wandscape.task.tab.tasks": {
     "zh_cn": "任务大厅 (%s)",
     "en_us": "Tasks (%s)"
+  },
+  "gui.wandscape.task.title.building": {
+    "zh_cn": "%s 任务",
+    "en_us": "%s task"
+  },
+  "gui.wandscape.task.title.unknown": {
+    "zh_cn": "未知任务 #%s",
+    "en_us": "Unknown task #%s"
   },
   "gui.wandscape.task.worker_tag": {
     "zh_cn": "[小镇工人]",

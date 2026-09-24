@@ -115,6 +115,10 @@
     "zh_cn": "制作作者:",
     "en_us": "Creator:"
   },
+  "gui.wandscape.scanner.custom_building": {
+    "zh_cn": "自定义建筑",
+    "en_us": "Custom Building"
+  },
   "gui.wandscape.scanner.custom_road": {
     "zh_cn": "自定义道路",
     "en_us": "Custom Road"
@@ -359,6 +363,14 @@
     "zh_cn": "产出量:",
     "en_us": "Output:"
   },
+  "gui.wandscape.scanner.overview_building": {
+    "zh_cn": "建筑 (BUILDING)",
+    "en_us": "Building (BUILDING)"
+  },
+  "gui.wandscape.scanner.overview_custom": {
+    "zh_cn": "自定义 (custom)",
+    "en_us": "Custom (custom)"
+  },
   "gui.wandscape.scanner.overview_header": {
     "zh_cn": "当前扫描配置概览",
     "en_us": "Scan Configuration Overview"
@@ -366,6 +378,10 @@
   "gui.wandscape.scanner.overview_id_name": {
     "zh_cn": "标识: %s (%s)",
     "en_us": "ID: %s (%s)"
+  },
+  "gui.wandscape.scanner.overview_road": {
+    "zh_cn": "道路 (ROAD)",
+    "en_us": "Road (ROAD)"
   },
   "gui.wandscape.scanner.overview_stats": {
     "zh_cn": "尺寸: %d×%d×%d (%s格) | 门: %d扇 | 交互位: %d个",
@@ -646,6 +662,10 @@
   "gui.wandscape.scanner.unlock_requirement_header": {
     "zh_cn": "解锁门槛",
     "en_us": "Unlock Requirement"
+  },
+  "gui.wandscape.scanner.unnamed_id": {
+    "zh_cn": "未命名ID",
+    "en_us": "Unnamed ID"
   },
   "gui.wandscape.scanner.vol_format": {
     "zh_cn": "体积: %s格",

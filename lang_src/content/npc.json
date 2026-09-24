@@ -39,6 +39,10 @@
     "zh_cn": "移动中",
     "en_us": "Moving"
   },
+  "npc.wandscape.state.op": {
+    "zh_cn": "执行: %s",
+    "en_us": "Executing: %s"
+  },
   "npc.wandscape.state.placing": {
     "zh_cn": "放置中",
     "en_us": "Placing"
@@ -51,9 +55,17 @@
     "zh_cn": "祈雨",
     "en_us": "Calling Rain"
   },
+  "npc.wandscape.state.ritual": {
+    "zh_cn": "施法: %s",
+    "en_us": "Casting: %s"
+  },
   "npc.wandscape.state.summon_lightning": {
     "zh_cn": "召唤雷电",
     "en_us": "Summoning Lightning"
+  },
+  "npc.wandscape.state.task": {
+    "zh_cn": "%s",
+    "en_us": "%s"
   },
   "npc.wandscape.state.teleporting": {
     "zh_cn": "传送中",

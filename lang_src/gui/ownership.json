@@ -1,0 +1,66 @@
+{
+  "gui.wandscape.ownership.what.altar": {
+    "zh_cn": "祭坛",
+    "en_us": "Altar"
+  },
+  "gui.wandscape.ownership.what.block": {
+    "zh_cn": "方块",
+    "en_us": "Block"
+  },
+  "gui.wandscape.ownership.what.building": {
+    "zh_cn": "建筑",
+    "en_us": "Building"
+  },
+  "gui.wandscape.ownership.what.container": {
+    "zh_cn": "容器",
+    "en_us": "Container"
+  },
+  "gui.wandscape.ownership.what.gather": {
+    "zh_cn": "采集",
+    "en_us": "Harvest Task"
+  },
+  "gui.wandscape.ownership.what.mage": {
+    "zh_cn": "法师",
+    "en_us": "Mage"
+  },
+  "gui.wandscape.ownership.what.mage_hut": {
+    "zh_cn": "法师小屋",
+    "en_us": "Mage Hut"
+  },
+  "gui.wandscape.ownership.what.production": {
+    "zh_cn": "生产",
+    "en_us": "Production"
+  },
+  "gui.wandscape.ownership.what.revive": {
+    "zh_cn": "复活",
+    "en_us": "Revival"
+  },
+  "gui.wandscape.ownership.what.road": {
+    "zh_cn": "道路",
+    "en_us": "Road"
+  },
+  "gui.wandscape.ownership.what.shop": {
+    "zh_cn": "商店",
+    "en_us": "Shop"
+  },
+  "gui.wandscape.ownership.what.task": {
+    "zh_cn": "任务",
+    "en_us": "Task"
+  },
+  "gui.wandscape.ownership.what.task_queue": {
+    "zh_cn": "队列",
+    "en_us": "Task Queue"
+  },
+  "gui.wandscape.ownership.what.tavern": {
+    "zh_cn": "酒馆",
+    "en_us": "Tavern"
+  },
+  "gui.wandscape.ownership.what.town": {
+    "zh_cn": "小镇",
+    "en_us": "Town"
+  },
+  "gui.wandscape.ownership.what.warehouse": {
+    "zh_cn": "仓库",
+    "en_us": "Warehouse"
+  }
+}

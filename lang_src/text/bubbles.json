@@ -1,11 +1,11 @@
 {
   "bubble.wandscape.npc.__fallback__.0": {
     "zh_cn": "这座魔法小镇真不错",
-    "en_us": "This magic town is lovely"
+    "en_us": "Lovely town"
   },
   "bubble.wandscape.npc.__fallback__.1": {
     "zh_cn": "环境宜人",
-    "en_us": "Pleasant surroundings"
+    "en_us": "Pleasant here"
   },
   "bubble.wandscape.npc.__fallback__.2": {
     "zh_cn": "继续努力",
@@ -17,7 +17,7 @@
   },
   "bubble.wandscape.npc.__fallback__.4": {
     "zh_cn": "希望一切顺利",
-    "en_us": "Hope all goes well"
+    "en_us": "Hope all is well"
   },
   "bubble.wandscape.npc.block_interact.0": {
     "zh_cn": "这个方块…",
@@ -29,7 +29,7 @@
   },
   "bubble.wandscape.npc.block_interact.2": {
     "zh_cn": "这就是目标",
-    "en_us": "This is the target"
+    "en_us": "This is it"
   },
   "bubble.wandscape.npc.block_interact.3": {
     "zh_cn": "找到了",
@@ -37,7 +37,7 @@
   },
   "bubble.wandscape.npc.casting.0": {
     "zh_cn": "魔力汇聚…",
-    "en_us": "Gathering mana..."
+    "en_us": "Mana gathers..."
   },
   "bubble.wandscape.npc.casting.1": {
     "zh_cn": "就是现在！",
@@ -49,7 +49,7 @@
   },
   "bubble.wandscape.npc.casting.3": {
     "zh_cn": "感受元素的力量",
-    "en_us": "Feel the power of the elements"
+    "en_us": "Feel the power"
   },
   "bubble.wandscape.npc.casting.4": {
     "zh_cn": "能量充盈",
@@ -69,11 +69,11 @@
   },
   "bubble.wandscape.npc.gathering.1": {
     "zh_cn": "材料还不少",
-    "en_us": "Plenty of materials"
+    "en_us": "Plenty here"
   },
   "bubble.wandscape.npc.gathering.2": {
     "zh_cn": "这是好东西",
-    "en_us": "This is good stuff"
+    "en_us": "Good stuff"
   },
   "bubble.wandscape.npc.gathering.3": {
     "zh_cn": "收获不错",
@@ -85,11 +85,11 @@
   },
   "bubble.wandscape.npc.gathering.5": {
     "zh_cn": "今天的成果不错",
-    "en_us": "Good results today"
+    "en_us": "Good run today"
   },
   "bubble.wandscape.npc.gathering.6": {
     "zh_cn": "这片区域资源丰富",
-    "en_us": "This area is rich in resources"
+    "en_us": "Rich around here"
   },
   "bubble.wandscape.npc.idle.0": {
     "zh_cn": "休息一下",
@@ -101,7 +101,7 @@
   },
   "bubble.wandscape.npc.idle.2": {
     "zh_cn": "歇会儿",
-    "en_us": "Resting a moment"
+    "en_us": "Resting a bit"
   },
   "bubble.wandscape.npc.idle.3": {
     "zh_cn": "站着发呆",
@@ -109,7 +109,7 @@
   },
   "bubble.wandscape.npc.idle.4": {
     "zh_cn": "待会儿再干",
-    "en_us": "Will get to it later"
+    "en_us": "I'll do it later"
   },
   "bubble.wandscape.npc.idle.5": {
     "zh_cn": "忙碌的一天啊",
@@ -117,7 +117,7 @@
   },
   "bubble.wandscape.npc.idle.6": {
     "zh_cn": "嗯…想想下一步",
-    "en_us": "Hmm... thinking of next steps"
+    "en_us": "Hmm... what next"
   },
   "bubble.wandscape.npc.moving.0": {
     "zh_cn": "该去工作了",
@@ -125,7 +125,7 @@
   },
   "bubble.wandscape.npc.moving.1": {
     "zh_cn": "去那边看看",
-    "en_us": "Let's head over there"
+    "en_us": "Over there next"
   },
   "bubble.wandscape.npc.moving.2": {
     "zh_cn": "还有活要干",
@@ -145,11 +145,11 @@
   },
   "bubble.wandscape.npc.moving.6": {
     "zh_cn": "时间不等人",
-    "en_us": "Time waits for no one"
+    "en_us": "No time to waste"
   },
   "bubble.wandscape.npc.ritual.0": {
     "zh_cn": "仪式进行中",
-    "en_us": "Ritual in progress"
+    "en_us": "Ritual underway"
   },
   "bubble.wandscape.npc.ritual.1": {
     "zh_cn": "古老的力量",
@@ -157,31 +157,31 @@
   },
   "bubble.wandscape.npc.ritual.2": {
     "zh_cn": "遵从契约",
-    "en_us": "Obeying the contract"
+    "en_us": "Honoring the pact"
   },
   "bubble.wandscape.npc.ritual.3": {
     "zh_cn": "元素共鸣",
-    "en_us": "Element resonance"
+    "en_us": "Elements align"
   },
   "bubble.wandscape.npc.ritual.4": {
     "zh_cn": "法力在流动…",
-    "en_us": "Mana is flowing..."
+    "en_us": "Mana flows..."
   },
   "bubble.wandscape.npc.transform.0": {
     "zh_cn": "转化开始",
-    "en_us": "Transformation begins"
+    "en_us": "Transform begins"
   },
   "bubble.wandscape.npc.transform.1": {
     "zh_cn": "物质重组",
-    "en_us": "Matter recombining"
+    "en_us": "Matter reshapes"
   },
   "bubble.wandscape.npc.transform.2": {
     "zh_cn": "炼金术的奥妙",
-    "en_us": "The wonder of alchemy"
+    "en_us": "Alchemy at work"
   },
   "bubble.wandscape.npc.transform.3": {
     "zh_cn": "变了变了",
-    "en_us": "Changing, changing"
+    "en_us": "It is changing"
   },
   "bubble.wandscape.npc.transforming.0": {
     "zh_cn": "快完成了",
@@ -201,11 +201,11 @@
   },
   "bubble.wandscape.npc.transforming.4": {
     "zh_cn": "尺寸刚好",
-    "en_us": "Just the right size"
+    "en_us": "Fits just right"
   },
   "bubble.wandscape.npc.transforming.5": {
     "zh_cn": "接下来是这边…",
-    "en_us": "Next over here..."
+    "en_us": "Now over here..."
   },
   "bubble.wandscape.npc.transforming.6": {
     "zh_cn": "就差一点了",
@@ -213,187 +213,187 @@
   },
   "bubble.wandscape.tourist.building.delighted.exploring.0": {
     "zh_cn": "比起%s那边，这也不差！",
-    "en_us": "Not bad compared to %s!"
+    "en_us": "Not bad next to %s"
   },
   "bubble.wandscape.tourist.building.delighted.exploring.1": {
     "zh_cn": "从%s过来，这边也很不错",
-    "en_us": "Came from %s, this side is nice too"
+    "en_us": "From %s, nice here"
   },
   "bubble.wandscape.tourist.building.delighted.exploring.2": {
     "zh_cn": "%s那边好看，这边也不赖",
-    "en_us": "%s is pretty, and this side isn't bad either"
+    "en_us": "As pretty as %s"
   },
   "bubble.wandscape.tourist.building.delighted.visiting.0": {
     "zh_cn": "上次在%s体验很好，看看这家！",
-    "en_us": "Had a great time at %s, let's check this one!"
+    "en_us": "Loved %s, let's see!"
   },
   "bubble.wandscape.tourist.building.delighted.visiting.1": {
     "zh_cn": "自从去了%s就爱上这里了",
-    "en_us": "Fell in love with this place since visiting %s"
+    "en_us": "%s won me over"
   },
   "bubble.wandscape.tourist.building.delighted.visiting.2": {
     "zh_cn": "希望这家和%s一样棒",
-    "en_us": "Hope this one is as good as %s"
+    "en_us": "As good as %s?"
   },
   "bubble.wandscape.tourist.building.delighted.visiting.3": {
     "zh_cn": "%s给我留下了深刻印象",
-    "en_us": "%s left a deep impression on me"
+    "en_us": "%s impressed me"
   },
   "bubble.wandscape.tourist.building.delighted.wandering.0": {
     "zh_cn": "在%s玩得很开心，继续逛逛",
-    "en_us": "Had fun at %s, let's keep exploring"
+    "en_us": "Fun at %s, going on"
   },
   "bubble.wandscape.tourist.building.delighted.wandering.1": {
     "zh_cn": "刚从%s出来，心情大好",
-    "en_us": "Just left %s, feeling great"
+    "en_us": "Left %s, so happy"
   },
   "bubble.wandscape.tourist.building.delighted.wandering.2": {
     "zh_cn": "回味着%s的美好体验",
-    "en_us": "Savoring the wonderful time at %s"
+    "en_us": "Savoring %s"
   },
   "bubble.wandscape.tourist.building.disappointed.exploring.0": {
     "zh_cn": "还没有%s那边有意思",
-    "en_us": "Not as interesting as %s"
+    "en_us": "Less fun than %s"
   },
   "bubble.wandscape.tourist.building.disappointed.exploring.1": {
     "zh_cn": "跟%s一样让人失望",
-    "en_us": "Disappointing like %s"
+    "en_us": "As dull as %s"
   },
   "bubble.wandscape.tourist.building.disappointed.exploring.2": {
     "zh_cn": "%s不行，这边也够呛",
-    "en_us": "%s was bad, this looks rough too"
+    "en_us": "%s was bad, this too"
   },
   "bubble.wandscape.tourist.building.disappointed.visiting.0": {
     "zh_cn": "比%s还差就不好了",
-    "en_us": "Would be bad if worse than %s"
+    "en_us": "At least beat %s"
   },
   "bubble.wandscape.tourist.building.disappointed.visiting.1": {
     "zh_cn": "%s就挺失望了，这家…",
-    "en_us": "%s was disappointing, and this..."
+    "en_us": "%s let me down..."
   },
   "bubble.wandscape.tourist.building.disappointed.visiting.2": {
     "zh_cn": "希望比%s强一点吧",
-    "en_us": "Hope it's better than %s"
+    "en_us": "Better than %s?"
   },
   "bubble.wandscape.tourist.building.disappointed.wandering.0": {
     "zh_cn": "连%s都不怎么样",
-    "en_us": "Even %s wasn't great"
+    "en_us": "Even %s was meh"
   },
   "bubble.wandscape.tourist.building.disappointed.wandering.1": {
     "zh_cn": "在%s就不太开心",
-    "en_us": "Wasn't happy at %s"
+    "en_us": "Unhappy at %s"
   },
   "bubble.wandscape.tourist.building.disappointed.wandering.2": {
     "zh_cn": "%s让人失望，逛街心情都没了",
-    "en_us": "%s disappointed, no mood to stroll"
+    "en_us": "%s ruined my mood"
   },
   "bubble.wandscape.tourist.building.neutral.exploring.0": {
     "zh_cn": "和%s那边差不多",
-    "en_us": "About the same as %s"
+    "en_us": "Much like %s"
   },
   "bubble.wandscape.tourist.building.neutral.exploring.1": {
     "zh_cn": "逛完%s没什么特别感觉",
-    "en_us": "Done with %s, nothing special"
+    "en_us": "%s, nothing special"
   },
   "bubble.wandscape.tourist.building.neutral.exploring.2": {
     "zh_cn": "跟%s一样普普通通",
-    "en_us": "Ordinary like %s"
+    "en_us": "Ordinary, like %s"
   },
   "bubble.wandscape.tourist.building.neutral.visiting.0": {
     "zh_cn": "%s都去了，这家也看看吧",
-    "en_us": "Been to %s, might as well see this"
+    "en_us": "Seen %s, this too"
   },
   "bubble.wandscape.tourist.building.neutral.visiting.1": {
     "zh_cn": "顺便逛逛这家，跟%s一样",
-    "en_us": "Might as well browse, same as %s"
+    "en_us": "Browsing, same as %s"
   },
   "bubble.wandscape.tourist.building.neutral.visiting.2": {
     "zh_cn": "从%s过来，顺便看看",
-    "en_us": "Came from %s, checking this out"
+    "en_us": "Passing from %s"
   },
   "bubble.wandscape.tourist.building.neutral.wandering.0": {
     "zh_cn": "刚从%s出来，散散步",
-    "en_us": "Just left %s, taking a walk"
+    "en_us": "Out of %s, walking"
   },
   "bubble.wandscape.tourist.building.neutral.wandering.1": {
     "zh_cn": "去了趟%s，随便走走",
-    "en_us": "Visited %s, strolling"
+    "en_us": "%s, now strolling"
   },
   "bubble.wandscape.tourist.building.neutral.wandering.2": {
     "zh_cn": "从%s出来透透气",
-    "en_us": "Out of %s for some air"
+    "en_us": "Out of %s for air"
   },
   "bubble.wandscape.tourist.building.pleased.exploring.0": {
     "zh_cn": "从%s出来走走，挺舒服",
-    "en_us": "Nice stroll coming out of %s"
+    "en_us": "Nice walk after %s"
   },
   "bubble.wandscape.tourist.building.pleased.exploring.1": {
     "zh_cn": "逛完%s再来这边，心情不错",
-    "en_us": "Done with %s, feeling good"
+    "en_us": "After %s, happy"
   },
   "bubble.wandscape.tourist.building.pleased.exploring.2": {
     "zh_cn": "%s那边逛完了，继续探索",
-    "en_us": "Finished %s, continuing to explore"
+    "en_us": "Done %s, moving on"
   },
   "bubble.wandscape.tourist.building.pleased.visiting.0": {
     "zh_cn": "听说%s不错，这个应该也行",
-    "en_us": "Heard %s is good, this should be too"
+    "en_us": "Heard %s is good"
   },
   "bubble.wandscape.tourist.building.pleased.visiting.1": {
     "zh_cn": "上次去了%s感觉挺好，再看看这家",
-    "en_us": "Last time at %s was nice, let's see this one"
+    "en_us": "Liked %s, let's see"
   },
   "bubble.wandscape.tourist.building.pleased.visiting.2": {
     "zh_cn": "跟%s差不多的话就很满意了",
-    "en_us": "If it's like %s, I'll be satisfied"
+    "en_us": "Fine, if like %s"
   },
   "bubble.wandscape.tourist.building.pleased.wandering.0": {
     "zh_cn": "刚才在%s收获不错",
-    "en_us": "Just had a good time at %s"
+    "en_us": "Good time at %s"
   },
   "bubble.wandscape.tourist.building.pleased.wandering.1": {
     "zh_cn": "去过%s了，到处转转",
-    "en_us": "Been to %s, walking around"
+    "en_us": "Been to %s, strolling"
   },
   "bubble.wandscape.tourist.building.pleased.wandering.2": {
     "zh_cn": "在%s度过了愉快的时光",
-    "en_us": "Had a pleasant time at %s"
+    "en_us": "Pleasant time at %s"
   },
   "bubble.wandscape.tourist.building.satisfied.exploring.0": {
     "zh_cn": "比%s差不太多",
-    "en_us": "Not much different from %s"
+    "en_us": "Not far off %s"
   },
   "bubble.wandscape.tourist.building.satisfied.exploring.1": {
     "zh_cn": "和%s那边差不多吧",
-    "en_us": "About the same as %s"
+    "en_us": "Same as %s"
   },
   "bubble.wandscape.tourist.building.satisfied.exploring.2": {
     "zh_cn": "逛完%s过来，都差不多",
-    "en_us": "Done with %s, all about the same"
+    "en_us": "After %s, all same"
   },
   "bubble.wandscape.tourist.building.satisfied.visiting.0": {
     "zh_cn": "这家和%s差不多，试试",
-    "en_us": "About the same as %s, let's try"
+    "en_us": "Like %s, let's try"
   },
   "bubble.wandscape.tourist.building.satisfied.visiting.1": {
     "zh_cn": "之前去%s还行，这家应该也凑合",
-    "en_us": "Was fine at %s before, this should do"
+    "en_us": "%s was fine too"
   },
   "bubble.wandscape.tourist.building.satisfied.visiting.2": {
     "zh_cn": "跟%s差不多档次吧",
-    "en_us": "About %s's level"
+    "en_us": "Same level as %s"
   },
   "bubble.wandscape.tourist.building.satisfied.wandering.0": {
     "zh_cn": "刚刚那家%s还行",
-    "en_us": "That %s place was okay"
+    "en_us": "That %s was okay"
   },
   "bubble.wandscape.tourist.building.satisfied.wandering.1": {
     "zh_cn": "去过%s了，四处溜达",
-    "en_us": "Been to %s, wandering around"
+    "en_us": "Been to %s, roaming"
   },
   "bubble.wandscape.tourist.building.satisfied.wandering.2": {
     "zh_cn": "在%s出来走走消化一下",
-    "en_us": "Left %s for a walk to digest"
+    "en_us": "Walking off %s"
   },
   "bubble.wandscape.tourist.building.upset.exploring.0": {
     "zh_cn": "跟%s一样差劲",
@@ -401,15 +401,15 @@
   },
   "bubble.wandscape.tourist.building.upset.exploring.1": {
     "zh_cn": "比%s还差，服了",
-    "en_us": "Worse than %s, unbelievable"
+    "en_us": "Worse than %s, wow"
   },
   "bubble.wandscape.tourist.building.upset.exploring.2": {
     "zh_cn": "从%s出来心情就不好",
-    "en_us": "Been in a bad mood since %s"
+    "en_us": "Bad mood since %s"
   },
   "bubble.wandscape.tourist.building.upset.visiting.0": {
     "zh_cn": "希望比%s好一点",
-    "en_us": "Hope it's better than %s"
+    "en_us": "Just beat %s"
   },
   "bubble.wandscape.tourist.building.upset.visiting.1": {
     "zh_cn": "%s已经够差了",
@@ -417,47 +417,47 @@
   },
   "bubble.wandscape.tourist.building.upset.visiting.2": {
     "zh_cn": "别跟%s一样就行",
-    "en_us": "Just don't be like %s"
+    "en_us": "Not like %s, please"
   },
   "bubble.wandscape.tourist.building.upset.wandering.0": {
     "zh_cn": "再也不去%s那种地方了",
-    "en_us": "Never going to a place like %s again"
+    "en_us": "Never again, %s"
   },
   "bubble.wandscape.tourist.building.upset.wandering.1": {
     "zh_cn": "在%s受够了",
-    "en_us": "Had enough at %s"
+    "en_us": "Had enough of %s"
   },
   "bubble.wandscape.tourist.building.upset.wandering.2": {
     "zh_cn": "%s的体验太糟糕了",
-    "en_us": "%s was a terrible experience"
+    "en_us": "%s was awful"
   },
   "bubble.wandscape.tourist.generic.delighted.exploring.0": {
     "zh_cn": "这里的风景太美了！",
-    "en_us": "The scenery here is beautiful!"
+    "en_us": "What a view!"
   },
   "bubble.wandscape.tourist.generic.delighted.exploring.1": {
     "zh_cn": "真是个漂亮的地方",
-    "en_us": "What a lovely place"
+    "en_us": "Lovely place"
   },
   "bubble.wandscape.tourist.generic.delighted.exploring.2": {
     "zh_cn": "魔法小镇的建设真不错",
-    "en_us": "The town is beautifully built"
+    "en_us": "Well-built town"
   },
   "bubble.wandscape.tourist.generic.delighted.exploring.3": {
     "zh_cn": "每一步都是风景",
-    "en_us": "Every step is a view"
+    "en_us": "Views everywhere"
   },
   "bubble.wandscape.tourist.generic.delighted.exploring.4": {
     "zh_cn": "空气清新，心情舒畅",
-    "en_us": "Fresh air, good mood"
+    "en_us": "Fresh air, happy"
   },
   "bubble.wandscape.tourist.generic.delighted.visiting.0": {
     "zh_cn": "好期待进去看看！",
-    "en_us": "I can't wait to go in!"
+    "en_us": "Can't wait!"
   },
   "bubble.wandscape.tourist.generic.delighted.visiting.1": {
     "zh_cn": "听说这里很棒！",
-    "en_us": "I heard this place is great!"
+    "en_us": "Heard it's good!"
   },
   "bubble.wandscape.tourist.generic.delighted.visiting.2": {
     "zh_cn": "看起来就让人兴奋",
@@ -465,39 +465,39 @@
   },
   "bubble.wandscape.tourist.generic.delighted.visiting.3": {
     "zh_cn": "这个建筑太棒了",
-    "en_us": "This building is amazing"
+    "en_us": "What a building!"
   },
   "bubble.wandscape.tourist.generic.delighted.visiting.4": {
     "zh_cn": "迫不及待想进去了",
-    "en_us": "Can't wait to get inside"
+    "en_us": "Let's go inside"
   },
   "bubble.wandscape.tourist.generic.delighted.wandering.0": {
     "zh_cn": "今天心情真好~",
-    "en_us": "Feeling great today~"
+    "en_us": "Feeling great~"
   },
   "bubble.wandscape.tourist.generic.delighted.wandering.1": {
     "zh_cn": "阳光真舒服",
-    "en_us": "The sunshine is so nice"
+    "en_us": "Sun feels great"
   },
   "bubble.wandscape.tourist.generic.delighted.wandering.2": {
     "zh_cn": "真希望每天都这样",
-    "en_us": "Wish every day were like this"
+    "en_us": "Every day like this"
   },
   "bubble.wandscape.tourist.generic.delighted.wandering.3": {
     "zh_cn": "生活真美好",
-    "en_us": "Life is wonderful"
+    "en_us": "Life is good"
   },
   "bubble.wandscape.tourist.generic.delighted.wandering.4": {
     "zh_cn": "悠闲的时光最珍贵",
-    "en_us": "Leisure time is precious"
+    "en_us": "Easy days are best"
   },
   "bubble.wandscape.tourist.generic.disappointed.exploring.0": {
     "zh_cn": "不太有意思",
-    "en_us": "Not very interesting"
+    "en_us": "Not interesting"
   },
   "bubble.wandscape.tourist.generic.disappointed.exploring.1": {
     "zh_cn": "没什么好看的",
-    "en_us": "Nothing good to see"
+    "en_us": "Nothing to see"
   },
   "bubble.wandscape.tourist.generic.disappointed.exploring.2": {
     "zh_cn": "有点无聊",
@@ -513,7 +513,7 @@
   },
   "bubble.wandscape.tourist.generic.disappointed.visiting.0": {
     "zh_cn": "希望这家别太差",
-    "en_us": "Hope this one isn't too bad"
+    "en_us": "Hope it's not bad"
   },
   "bubble.wandscape.tourist.generic.disappointed.visiting.1": {
     "zh_cn": "唉，试试看吧",
@@ -521,7 +521,7 @@
   },
   "bubble.wandscape.tourist.generic.disappointed.visiting.2": {
     "zh_cn": "不太抱期望",
-    "en_us": "Not expecting much"
+    "en_us": "Low expectations"
   },
   "bubble.wandscape.tourist.generic.disappointed.visiting.3": {
     "zh_cn": "随便看看吧",
@@ -529,7 +529,7 @@
   },
   "bubble.wandscape.tourist.generic.disappointed.visiting.4": {
     "zh_cn": "希望不要踩雷",
-    "en_us": "Hope it's not a dud"
+    "en_us": "Hope it's fine"
   },
   "bubble.wandscape.tourist.generic.disappointed.wandering.0": {
     "zh_cn": "有点无聊",
@@ -541,11 +541,11 @@
   },
   "bubble.wandscape.tourist.generic.disappointed.wandering.2": {
     "zh_cn": "没什么意思",
-    "en_us": "Nothing meaningful"
+    "en_us": "Pointless"
   },
   "bubble.wandscape.tourist.generic.disappointed.wandering.3": {
     "zh_cn": "不如早点回去",
-    "en_us": "Might as well head back"
+    "en_us": "Head back early"
   },
   "bubble.wandscape.tourist.generic.disappointed.wandering.4": {
     "zh_cn": "唉……",
@@ -553,7 +553,7 @@
   },
   "bubble.wandscape.tourist.generic.neutral.exploring.0": {
     "zh_cn": "嗯，没什么特别的",
-    "en_us": "Hmm, nothing special"
+    "en_us": "Nothing special"
   },
   "bubble.wandscape.tourist.generic.neutral.exploring.1": {
     "zh_cn": "就这样吧",
@@ -565,7 +565,7 @@
   },
   "bubble.wandscape.tourist.generic.neutral.exploring.3": {
     "zh_cn": "没什么好看的",
-    "en_us": "Nothing interesting"
+    "en_us": "Nothing to see"
   },
   "bubble.wandscape.tourist.generic.neutral.exploring.4": {
     "zh_cn": "到处都一样",
@@ -573,7 +573,7 @@
   },
   "bubble.wandscape.tourist.generic.neutral.visiting.0": {
     "zh_cn": "去看看有什么",
-    "en_us": "Let's see what's here"
+    "en_us": "See what's here"
   },
   "bubble.wandscape.tourist.generic.neutral.visiting.1": {
     "zh_cn": "随便看看",
@@ -581,7 +581,7 @@
   },
   "bubble.wandscape.tourist.generic.neutral.visiting.2": {
     "zh_cn": "打发下时间",
-    "en_us": "Killing some time"
+    "en_us": "Killing time"
   },
   "bubble.wandscape.tourist.generic.neutral.visiting.3": {
     "zh_cn": "路过看看",
@@ -613,7 +613,7 @@
   },
   "bubble.wandscape.tourist.generic.pleased.exploring.0": {
     "zh_cn": "魔法小镇的街道很整洁",
-    "en_us": "The town streets are tidy"
+    "en_us": "Tidy streets"
   },
   "bubble.wandscape.tourist.generic.pleased.exploring.1": {
     "zh_cn": "空气真好",
@@ -625,15 +625,15 @@
   },
   "bubble.wandscape.tourist.generic.pleased.exploring.3": {
     "zh_cn": "设计得很用心",
-    "en_us": "Very thoughtfully designed"
+    "en_us": "Well designed"
   },
   "bubble.wandscape.tourist.generic.pleased.exploring.4": {
     "zh_cn": "这座魔法小镇发展得挺好",
-    "en_us": "This town is doing well"
+    "en_us": "Town is thriving"
   },
   "bubble.wandscape.tourist.generic.pleased.visiting.0": {
     "zh_cn": "看起来不错的选择",
-    "en_us": "Looks like a decent choice"
+    "en_us": "Looks decent"
   },
   "bubble.wandscape.tourist.generic.pleased.visiting.1": {
     "zh_cn": "进去看看吧",
@@ -641,11 +641,11 @@
   },
   "bubble.wandscape.tourist.generic.pleased.visiting.2": {
     "zh_cn": "这家店看起来不错",
-    "en_us": "This shop looks nice"
+    "en_us": "Shop looks nice"
   },
   "bubble.wandscape.tourist.generic.pleased.visiting.3": {
     "zh_cn": "去逛逛",
-    "en_us": "Let's go check it out"
+    "en_us": "Time to browse"
   },
   "bubble.wandscape.tourist.generic.pleased.visiting.4": {
     "zh_cn": "来都来了",
@@ -653,11 +653,11 @@
   },
   "bubble.wandscape.tourist.generic.pleased.wandering.0": {
     "zh_cn": "嗯…去哪里好呢",
-    "en_us": "Hmm... where to go"
+    "en_us": "Where to now?"
   },
   "bubble.wandscape.tourist.generic.pleased.wandering.1": {
     "zh_cn": "稍微走走吧",
-    "en_us": "Let's take a stroll"
+    "en_us": "A little stroll"
   },
   "bubble.wandscape.tourist.generic.pleased.wandering.2": {
     "zh_cn": "漫步一下",
@@ -665,7 +665,7 @@
   },
   "bubble.wandscape.tourist.generic.pleased.wandering.3": {
     "zh_cn": "享受悠闲时光",
-    "en_us": "Enjoying leisure time"
+    "en_us": "Enjoying quiet"
   },
   "bubble.wandscape.tourist.generic.pleased.wandering.4": {
     "zh_cn": "随心走走",
@@ -681,11 +681,11 @@
   },
   "bubble.wandscape.tourist.generic.satisfied.exploring.2": {
     "zh_cn": "还算干净整洁",
-    "en_us": "Clean and tidy enough"
+    "en_us": "Fairly clean"
   },
   "bubble.wandscape.tourist.generic.satisfied.exploring.3": {
     "zh_cn": "没什么大问题",
-    "en_us": "Nothing major wrong"
+    "en_us": "No big issues"
   },
   "bubble.wandscape.tourist.generic.satisfied.exploring.4": {
     "zh_cn": "中规中矩",
@@ -705,7 +705,7 @@
   },
   "bubble.wandscape.tourist.generic.satisfied.visiting.3": {
     "zh_cn": "凑合看看吧",
-    "en_us": "Good enough to check out"
+    "en_us": "Good enough"
   },
   "bubble.wandscape.tourist.generic.satisfied.visiting.4": {
     "zh_cn": "试试这家",
@@ -713,7 +713,7 @@
   },
   "bubble.wandscape.tourist.generic.satisfied.wandering.0": {
     "zh_cn": "随便走走",
-    "en_us": "Just walking around"
+    "en_us": "Just strolling"
   },
   "bubble.wandscape.tourist.generic.satisfied.wandering.1": {
     "zh_cn": "不着急",
@@ -737,7 +737,7 @@
   },
   "bubble.wandscape.tourist.generic.upset.exploring.1": {
     "zh_cn": "一点都不好",
-    "en_us": "Nothing good at all"
+    "en_us": "Nothing good"
   },
   "bubble.wandscape.tourist.generic.upset.exploring.2": {
     "zh_cn": "真没意思",
@@ -749,11 +749,11 @@
   },
   "bubble.wandscape.tourist.generic.upset.exploring.4": {
     "zh_cn": "再也不来了",
-    "en_us": "Never coming back"
+    "en_us": "Never again"
   },
   "bubble.wandscape.tourist.generic.upset.visiting.0": {
     "zh_cn": "最好别让我失望！",
-    "en_us": "Don't disappoint me!"
+    "en_us": "Don't fail me!"
   },
   "bubble.wandscape.tourist.generic.upset.visiting.1": {
     "zh_cn": "算了，看看吧",
@@ -761,7 +761,7 @@
   },
   "bubble.wandscape.tourist.generic.upset.visiting.2": {
     "zh_cn": "哼，就看看",
-    "en_us": "Hmph, just looking"
+    "en_us": "Hmph, looking"
   },
   "bubble.wandscape.tourist.generic.upset.visiting.3": {
     "zh_cn": "最后一次机会",
@@ -769,7 +769,7 @@
   },
   "bubble.wandscape.tourist.generic.upset.visiting.4": {
     "zh_cn": "还能更差吗",
-    "en_us": "Could it get worse"
+    "en_us": "Worse than this?"
   },
   "bubble.wandscape.tourist.generic.upset.wandering.0": {
     "zh_cn": "烦死了",
@@ -777,7 +777,7 @@
   },
   "bubble.wandscape.tourist.generic.upset.wandering.1": {
     "zh_cn": "不想逛了",
-    "en_us": "Don't want to stroll anymore"
+    "en_us": "Done strolling"
   },
   "bubble.wandscape.tourist.generic.upset.wandering.2": {
     "zh_cn": "心情都被破坏了",
@@ -801,11 +801,11 @@
   },
   "bubble.wandscape.tourist.idle.idle.2": {
     "zh_cn": "稍微歇会儿",
-    "en_us": "Resting a bit"
+    "en_us": "Short rest"
   },
   "bubble.wandscape.tourist.idle.idle.3": {
     "zh_cn": "喘口气",
-    "en_us": "Catching my breath"
+    "en_us": "Catching breath"
   },
   "bubble.wandscape.tourist.idle.sleeping.0": {
     "zh_cn": "zzz…",

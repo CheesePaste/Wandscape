@@ -3,6 +3,14 @@
     "zh_cn": "撤销",
     "en_us": "Undo"
   },
+  "gui.wandscape.building_action.demolish_running": {
+    "zh_cn": "拆除任务执行中...",
+    "en_us": "Demolition in progress..."
+  },
+  "gui.wandscape.building_action.demolish_send": {
+    "zh_cn": "拆除该建筑并返还建材（需确认）",
+    "en_us": "Demolish this building and refund materials (needs confirmation)"
+  },
   "gui.wandscape.building_action.demolishing": {
     "zh_cn": "拆除中...",
     "en_us": "Demolishing..."
@@ -14,6 +22,22 @@
   "gui.wandscape.building_action.repair": {
     "zh_cn": "修复",
     "en_us": "Repair"
+  },
+  "gui.wandscape.building_action.repair_cancel_construction": {
+    "zh_cn": "撤销建造施工并返还建材",
+    "en_us": "Cancel construction and refund materials"
+  },
+  "gui.wandscape.building_action.repair_demolishing": {
+    "zh_cn": "建筑正在拆除中",
+    "en_us": "Building is being demolished"
+  },
+  "gui.wandscape.building_action.repair_not_needed": {
+    "zh_cn": "建筑结构完好，无需维修",
+    "en_us": "Structure intact — no repair needed"
+  },
+  "gui.wandscape.building_action.repair_send": {
+    "zh_cn": "下发修复任务以恢复受损方块",
+    "en_us": "Queue a repair task to restore damaged blocks"
   },
   "gui.wandscape.building_action.repair_sent": {
     "zh_cn": "已下发修复任务",

@@ -55,6 +55,10 @@
     "zh_cn": "俯仰角 Pitch",
     "en_us": "Pitch"
   },
+  "gui.wandscape.roadstudio.array_preview": {
+    "zh_cn": "预览 3D 阵列生成结果",
+    "en_us": "Enable real-time 3D array preview"
+  },
   "gui.wandscape.roadstudio.array_preview_header": {
     "zh_cn": "实时 3D 预览与调整",
     "en_us": "Real-time 3D Preview & Adjust"
@@ -142,6 +146,10 @@
   "gui.wandscape.roadstudio.banner": {
     "zh_cn": "WANDSCAPE 道路制作工坊",
     "en_us": "WANDSCAPE Road Studio"
+  },
+  "gui.wandscape.roadstudio.capture_feet_pos": {
+    "zh_cn": "捕捉脚下位点",
+    "en_us": "Capture block underfoot"
   },
   "gui.wandscape.roadstudio.cost_estimate": {
     "zh_cn": "• 本次预计消耗: %d × %s",

@@ -1,0 +1,22 @@
+{
+  "gui.wandscape.building_status_tip.demolishing": {
+    "zh_cn": "§c状态: 正在拆除中，NPC 正在清理结构方块。",
+    "en_us": "§cStatus: being demolished — NPCs are clearing the structure blocks."
+  },
+  "gui.wandscape.building_status_tip.needs_repair": {
+    "zh_cn": "§6状态: 结构部分受损，点击下方「修复」按钮下发维修任务。",
+    "en_us": "§6Status: partially damaged — click Repair below to queue a repair task."
+  },
+  "gui.wandscape.building_status_tip.ok": {
+    "zh_cn": "§a状态: 正常运作，结构完好。",
+    "en_us": "§aStatus: operating normally, structure intact."
+  },
+  "gui.wandscape.building_status_tip.under_construction": {
+    "zh_cn": "§b状态: 施工中，NPC 正在搬运材料与砌筑。",
+    "en_us": "§bStatus: under construction — NPCs are hauling materials and building."
+  },
+  "gui.wandscape.building_status_tip.waiting_materials": {
+    "zh_cn": "§e状态: 等待材料中，仓库备齐建材后方可动工。",
+    "en_us": "§eStatus: waiting for materials — work starts once the warehouse is stocked."
+  }
+}

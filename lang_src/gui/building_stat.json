@@ -1,0 +1,14 @@
+{
+  "gui.wandscape.building_stat.comfort_tip": {
+    "zh_cn": "§d舒适度: %s",
+    "en_us": "§dComfort: %s"
+  },
+  "gui.wandscape.building_stat.magic_tip": {
+    "zh_cn": "§9魔力: %s",
+    "en_us": "§9Magic: %s"
+  },
+  "gui.wandscape.building_stat.wonder_tip": {
+    "zh_cn": "§e奇迹度: %s",
+    "en_us": "§eWonder: %s"
+  }
+}

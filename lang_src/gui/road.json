@@ -3,6 +3,10 @@
     "zh_cn": "圆石",
     "en_us": "Cobblestone"
   },
+  "gui.wandscape.road.preset.custom": {
+    "zh_cn": "自定义混合",
+    "en_us": "Custom Mix"
+  },
   "gui.wandscape.road.preset.dirt_path": {
     "zh_cn": "土径",
     "en_us": "Dirt Path"

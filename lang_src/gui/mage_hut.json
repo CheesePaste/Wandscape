@@ -19,6 +19,18 @@
     "zh_cn": "• 获得专属休息与恢复据点",
     "en_us": "• Exclusive home & rest location"
   },
+  "gui.wandscape.mage_hut.assign_home": {
+    "zh_cn": "居所: 尚未分配专属居所",
+    "en_us": "Home: unassigned"
+  },
+  "gui.wandscape.mage_hut.assign_status_busy": {
+    "zh_cn": "状态: 任务执行中",
+    "en_us": "Status: On a task"
+  },
+  "gui.wandscape.mage_hut.assign_status_idle": {
+    "zh_cn": "状态: 空闲待命",
+    "en_us": "Status: Idle"
+  },
   "gui.wandscape.mage_hut.assign_title": {
     "zh_cn": "法师入住指派",
     "en_us": "Assign Resident"
@@ -51,6 +63,14 @@
     "zh_cn": "工速",
     "en_us": "Work"
   },
+  "gui.wandscape.mage_hut.candidate_busy": {
+    "zh_cn": "正在忙碌",
+    "en_us": "Busy"
+  },
+  "gui.wandscape.mage_hut.candidate_idle": {
+    "zh_cn": "空闲待命",
+    "en_us": "Idle"
+  },
   "gui.wandscape.mage_hut.candidate_list": {
     "zh_cn": "小镇法师名单",
     "en_us": "Town Mages"
@@ -67,9 +87,25 @@
     "zh_cn": "法师档案",
     "en_us": "Mage Dossier"
   },
+  "gui.wandscape.mage_hut.empty_bullet_1": {
+    "zh_cn": "• 招募法师后在此完成入住指派",
+    "en_us": "• Assign a recruited mage"
+  },
+  "gui.wandscape.mage_hut.empty_bullet_2": {
+    "zh_cn": "• 定向强化法师的施法与建造属性",
+    "en_us": "• Train caster attributes"
+  },
+  "gui.wandscape.mage_hut.empty_bullet_3": {
+    "zh_cn": "• 随小镇等级提升职业等阶",
+    "en_us": "• Rank up with town level"
+  },
   "gui.wandscape.mage_hut.empty_hint": {
     "zh_cn": "尚无法师入住",
     "en_us": "No mage yet"
+  },
+  "gui.wandscape.mage_hut.empty_lead": {
+    "zh_cn": "法师小屋是小镇法师的成长居所",
+    "en_us": "Home of your town's mages"
   },
   "gui.wandscape.mage_hut.empty_sub": {
     "zh_cn": "选择左侧法师指派入住此小屋",
@@ -118,6 +154,34 @@
   "gui.wandscape.mage_hut.strategy": {
     "zh_cn": "策略",
     "en_us": "Strategy"
+  },
+  "gui.wandscape.mage_hut.tip_at_limit": {
+    "zh_cn": "该属性基础已达特训极限",
+    "en_us": "Base value has reached the training limit"
+  },
+  "gui.wandscape.mage_hut.tip_base": {
+    "zh_cn": "• 基础数值: %s / %s%s",
+    "en_us": "• Base: %s / %s%s"
+  },
+  "gui.wandscape.mage_hut.tip_base_maxed": {
+    "zh_cn": " (已达上限)",
+    "en_us": " (at max)"
+  },
+  "gui.wandscape.mage_hut.tip_click_train": {
+    "zh_cn": "点击该行可特训 (每次+%s)",
+    "en_us": "Click this row to train (+%s per session)"
+  },
+  "gui.wandscape.mage_hut.tip_equip_bonus": {
+    "zh_cn": "• 装备加成: +%s",
+    "en_us": "• Equipment bonus: +%s"
+  },
+  "gui.wandscape.mage_hut.tip_level_bonus": {
+    "zh_cn": "• 等阶加成: +%s (Lv.%s, 每级+%s)",
+    "en_us": "• Rank bonus: +%s (Lv.%s, +%s per level)"
+  },
+  "gui.wandscape.mage_hut.tip_total": {
+    "zh_cn": "综合生效: %s",
+    "en_us": "Effective total: %s"
   },
   "gui.wandscape.mage_hut.title": {
     "zh_cn": "法师小屋",

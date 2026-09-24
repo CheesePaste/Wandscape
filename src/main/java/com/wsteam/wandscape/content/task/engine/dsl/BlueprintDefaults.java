@@ -28,6 +28,9 @@ import java.util.Map;
  */
 public final class BlueprintDefaults {
 
+    /** 序列标签查的蓝图名键前缀：标签复用蓝图自己的名字（见 lang_src/content/blueprint.json）。 */
+    private static final String BLUEPRINT_NAME_KEY = "blueprint.wandscape.";
+
     private BlueprintDefaults() {}
 
     public static void register(BlueprintRegistry registry) {
@@ -81,7 +84,7 @@ public final class BlueprintDefaults {
         putBuildingId(data, p);
         ops.add(new AtomicOp.EmitEventOp("build_complete", data));
 
-        return new TaskSequence(ops, label("Build Structure", p));
+        return new TaskSequence(ops, label("build:place_structure", p));
     }
 
     // ─────────────────────────────────────────────────────────────────
@@ -129,7 +132,7 @@ public final class BlueprintDefaults {
         putBuildingId(data, p);
         ops.add(new AtomicOp.EmitEventOp("build_complete", data));
 
-        return new TaskSequence(ops, label("Clear and Build", p));
+        return new TaskSequence(ops, label("build:clear_and_build", p));
     }
 
     // ─────────────────────────────────────────────────────────────────
@@ -147,7 +150,7 @@ public final class BlueprintDefaults {
         data.put("building_id", str(p, "building_id"));
         ops.add(new AtomicOp.EmitEventOp("demolish_complete", data));
 
-        return new TaskSequence(ops, label("Demolish Structure", p));
+        return new TaskSequence(ops, label("build:demolish_structure", p));
     }
 
     // ─────────────────────────────────────────────────────────────────
@@ -168,7 +171,7 @@ public final class BlueprintDefaults {
         data.put("tiles_placed", String.valueOf(tiles.size()));
         ops.add(new AtomicOp.EmitEventOp("road_segment_complete", data));
 
-        return new TaskSequence(ops, label("Road Segment", p));
+        return new TaskSequence(ops, label("road:build_segment", p));
     }
 
     // ─────────────────────────────────────────────────────────────────
@@ -187,7 +190,7 @@ public final class BlueprintDefaults {
         data.put("blocks_placed", String.valueOf(tiles.size()));
         ops.add(new AtomicOp.EmitEventOp("terrain_fill_complete", data));
 
-        return new TaskSequence(ops, label("Fill Box", p));
+        return new TaskSequence(ops, label("terrain:fill_box", p));
     }
 
     // ─────────────────────────────────────────────────────────────────
@@ -216,7 +219,7 @@ public final class BlueprintDefaults {
         data.put("fill_block", fillBlock);
         ops.add(new AtomicOp.EmitEventOp("terrain_flatten_complete", data));
 
-        return new TaskSequence(ops, label("Terrain Flatten", p));
+        return new TaskSequence(ops, label("terrain:flatten", p));
     }
 
     // ─────────────────────────────────────────────────────────────────
@@ -229,7 +232,7 @@ public final class BlueprintDefaults {
         params.put("altar", str(p, "altar"));
         params.put("duration", str(p, "duration"));
         List<AtomicOp> ops = List.of(new AtomicOp.AltarCastOp(anchor, str(p, "magic_id"), params));
-        return new TaskSequence(ops, label("Altar Cast", p));
+        return new TaskSequence(ops, label("magic:altar_cast", p));
     }
 
     // ─────────────────────────────────────────────────────────────────
@@ -242,28 +245,28 @@ public final class BlueprintDefaults {
         params.put("amount", str(p, "amount"));
         List<AtomicOp> ops = List.of(new AtomicOp.BlockInteractOp(
                 pos(p, "anchor"), new InteractAction("gather"), params, asInt(p, "channel_ticks")));
-        return new TaskSequence(ops, label("task.wandscape.seq.node_gather", p));
+        return new TaskSequence(ops, label("node:gather", p));
     }
 
     private static TaskSequence productionCraft(Map<String, JsonElement> p) {
         List<AtomicOp> ops = List.of(new AtomicOp.BlockInteractOp(
                 pos(p, "anchor"), new InteractAction("craft"),
                 interactParams(p, "recipe_id", "count"), asInt(p, "channel_ticks")));
-        return new TaskSequence(ops, label("task.wandscape.seq.craft_item", p));
+        return new TaskSequence(ops, label("production:craft", p));
     }
 
     private static TaskSequence productionCraftSpell(Map<String, JsonElement> p) {
         List<AtomicOp> ops = List.of(new AtomicOp.BlockInteractOp(
                 pos(p, "anchor"), new InteractAction("craft_spell"),
                 interactParams(p, "recipe_id", "count"), asInt(p, "channel_ticks")));
-        return new TaskSequence(ops, label("task.wandscape.seq.craft_spell", p));
+        return new TaskSequence(ops, label("production:craft_spell", p));
     }
 
     private static TaskSequence productionDecompose(Map<String, JsonElement> p) {
         List<AtomicOp> ops = List.of(new AtomicOp.BlockInteractOp(
                 pos(p, "anchor"), new InteractAction("decompose"),
                 interactParams(p, "item_id", "count"), asInt(p, "channel_ticks")));
-        return new TaskSequence(ops, label("task.wandscape.seq.decompose", p));
+        return new TaskSequence(ops, label("production:decompose", p));
     }
 
     private static TaskSequence productionSynthesize(Map<String, JsonElement> p) {
@@ -276,7 +279,7 @@ public final class BlueprintDefaults {
         List<AtomicOp> ops = List.of(new AtomicOp.BlockInteractOp(
                 pos(p, "anchor"), new InteractAction("synthesize"),
                 params, asInt(p, "channel_ticks")));
-        return new TaskSequence(ops, label("task.wandscape.seq.synthesize", p));
+        return new TaskSequence(ops, label("production:synthesize", p));
     }
 
     // ─────────────────────────────────────────────────────────────────
@@ -307,12 +310,12 @@ public final class BlueprintDefaults {
     }
 
     /**
-     * Format the task label like the old interpreter's {@code buildLabel}: {@code <标签> at (<位置>)}。
-     * 标签发 lang 键（面板与头顶状态由客户端按本地语言解析，见 {@code TaskText#sequenceLabel}）
-     * 或数据包自己的原文；位置段与语言无关，原样拼在后面。
+     * Format the task label like the old interpreter's {@code buildLabel}: {@code <蓝图名> at (<位置>)}。
+     * 名字查蓝图自己的 lang 键 {@code blueprint.wandscape.<蓝图 id>}，客户端按本地语言解析
+     * （见 {@code TaskText#sequenceLabel}）；位置段与语言无关，原样拼在后面。
      */
-    private static String label(String labelText, Map<String, JsonElement> p) {
-        String label = labelText;
+    private static String label(String blueprintId, Map<String, JsonElement> p) {
+        String label = BLUEPRINT_NAME_KEY + blueprintId;
         JsonElement anchor = p.get("anchor");
         if (anchor != null && anchor.isJsonArray()) {
             try { label += " at " + pos(anchor); } catch (RuntimeException ignored) {}

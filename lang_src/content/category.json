@@ -3,17 +3,41 @@
     "zh_cn": "全部",
     "en_us": "All"
   },
+  "category.wandscape.altar": {
+    "zh_cn": "元素祭坛",
+    "en_us": "Elemental Altars"
+  },
   "category.wandscape.atm": {
     "zh_cn": "ATM",
     "en_us": "ATM"
+  },
+  "category.wandscape.basic": {
+    "zh_cn": "基础建筑",
+    "en_us": "Basic"
+  },
+  "category.wandscape.crafting_station": {
+    "zh_cn": "物品合成",
+    "en_us": "Crafting"
+  },
+  "category.wandscape.custom": {
+    "zh_cn": "自定义",
+    "en_us": "Custom"
   },
   "category.wandscape.decoration": {
     "zh_cn": "装饰",
     "en_us": "Decorations"
   },
+  "category.wandscape.government": {
+    "zh_cn": "政务市政",
+    "en_us": "Government"
+  },
   "category.wandscape.infrastructure": {
     "zh_cn": "基础设施",
     "en_us": "Infrastructure"
+  },
+  "category.wandscape.magic_station": {
+    "zh_cn": "魔法工坊",
+    "en_us": "Magic Workshops"
   },
   "category.wandscape.node": {
     "zh_cn": "采集节点",
@@ -30,5 +54,21 @@
   "category.wandscape.shop": {
     "zh_cn": "商店",
     "en_us": "Shops"
+  },
+  "category.wandscape.storage": {
+    "zh_cn": "仓库存储",
+    "en_us": "Storage"
+  },
+  "category.wandscape.tavern": {
+    "zh_cn": "冒险酒馆",
+    "en_us": "Taverns"
+  },
+  "category.wandscape.wonder": {
+    "zh_cn": "奇观奇迹",
+    "en_us": "Wonders"
+  },
+  "category.wandscape.workstation": {
+    "zh_cn": "工作工坊",
+    "en_us": "Workstations"
   }
 }

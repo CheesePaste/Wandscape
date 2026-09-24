@@ -3,6 +3,10 @@
     "zh_cn": "触发动作: %s",
     "en_us": "Action: %s"
   },
+  "gui.wandscape.guidebook.back_to_index": {
+    "zh_cn": "返回目录",
+    "en_us": "Back to contents"
+  },
   "gui.wandscape.guidebook.title": {
     "zh_cn": "魔法小镇指南书",
     "en_us": "Wandscape Guidebook"

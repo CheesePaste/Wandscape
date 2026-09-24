@@ -1,4 +1,8 @@
 {
+  "gui.wandscape.common.building": {
+    "zh_cn": "建筑",
+    "en_us": "Building"
+  },
   "gui.wandscape.common.close": {
     "zh_cn": "关闭",
     "en_us": "Close"

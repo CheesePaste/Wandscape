@@ -63,6 +63,10 @@
     "en_us": "[Wandscape] %s — no node_config",
     "zh_cn": "[魔法小镇] %s — 缺少 node_config"
   },
+  "message.wandscape.building.overlap": {
+    "zh_cn": "该位置与已有建筑方块重叠，不能占用同一格",
+    "en_us": "That spot overlaps an existing building block; two buildings cannot share a voxel"
+  },
   "message.wandscape.building.repair_failed": {
     "en_us": "§e[Building] '%s' does not need repair",
     "zh_cn": "§e[建筑]「%s」当前无需维修"
@@ -303,6 +307,10 @@
     "en_us": "Cannot pin — no block under the crosshair",
     "zh_cn": "无法固定 — 准星没有对准方块"
   },
+  "message.wandscape.ownership.denied": {
+    "en_us": "§c[Wandscape] You cannot operate someone else's town (%s)",
+    "zh_cn": "§c[魔法小镇] 你没有权限操作别人的小镇（%s）"
+  },
   "message.wandscape.panel.overworld_only": {
     "en_us": "The management panel can only be opened in the Overworld",
     "zh_cn": "暂时不支持在主世界以外世界打开管理面板"
@@ -387,6 +395,38 @@
     "en_us": "§aRoad withdrawn",
     "zh_cn": "§a已撤回道路"
   },
+  "message.wandscape.scanner.category_switched": {
+    "zh_cn": "§e分类: %s",
+    "en_us": "§eCategory: %s"
+  },
+  "message.wandscape.scanner.corner_not_found": {
+    "zh_cn": "§c未找到同名暗号的 CORNER 扫描器 (需在 64 格内)",
+    "en_us": "§cNo CORNER scanner with the same passphrase (within 64 blocks)"
+  },
+  "message.wandscape.scanner.corner_not_found_result": {
+    "zh_cn": "§e未找到同名暗号的 CORNER 扫描器。请确认暗号是否一致。",
+    "en_us": "§eNo CORNER scanner with that passphrase. Check both scanners use the same one."
+  },
+  "message.wandscape.scanner.doors_cleared": {
+    "zh_cn": "§6已清除全部门偏移记录 (默认走外围入口)",
+    "en_us": "§6All door offsets cleared (perimeter entry by default)"
+  },
+  "message.wandscape.scanner.doors_cleared_result": {
+    "zh_cn": "§7已清除全部门偏移记录。",
+    "en_us": "§7All door offsets cleared."
+  },
+  "message.wandscape.scanner.element_output_added": {
+    "zh_cn": "§a已添加元素产出",
+    "en_us": "§aElement output added"
+  },
+  "message.wandscape.scanner.element_output_full": {
+    "zh_cn": "§e所有 7 种元素已全部添加完毕",
+    "en_us": "§eAll 7 elements are already added"
+  },
+  "message.wandscape.scanner.element_output_removed": {
+    "zh_cn": "§6已移除该元素产出",
+    "en_us": "§6Element output removed"
+  },
   "message.wandscape.scanner.export_building_fail": {
     "en_us": "§cFailed to export: %s",
     "zh_cn": "§c导出失败：%s"
@@ -403,6 +443,42 @@
     "en_us": "§aExported road preset '%s' to §e%s§a — ready to use now, persists after /reload",
     "zh_cn": "§a已导出道路预设 '%s' 到 §e%s§a — 可立即使用，/reload 后依然有效"
   },
+  "message.wandscape.scanner.gather_element_switched": {
+    "zh_cn": "§e采集元素切换为: %s",
+    "en_us": "§eGather element switched to: %s"
+  },
+  "message.wandscape.scanner.good_added": {
+    "zh_cn": "§a已上架新商品行 (请编辑物品ID)",
+    "en_us": "§aNew shop good row added (edit its item ID)"
+  },
+  "message.wandscape.scanner.good_removed": {
+    "zh_cn": "§6已移除该商品条目",
+    "en_us": "§6Shop good removed"
+  },
+  "message.wandscape.scanner.match_success": {
+    "zh_cn": "§a匹配成功！已更新 3D 边界 (%s×%s×%s)",
+    "en_us": "§aMatch found! 3D bounds updated (%s×%s×%s)"
+  },
+  "message.wandscape.scanner.match_success_result": {
+    "zh_cn": "§a已匹配角点并更新边界！尺寸: %s×%s×%s",
+    "en_us": "§aCorners matched, bounds updated. Size: %s×%s×%s"
+  },
+  "message.wandscape.scanner.mode_building": {
+    "zh_cn": "§e已切换为建筑模式",
+    "en_us": "§eSwitched to building mode"
+  },
+  "message.wandscape.scanner.mode_corner": {
+    "zh_cn": "§e已切换到 CORNER 辅角点模式",
+    "en_us": "§eSwitched to CORNER helper-corner mode"
+  },
+  "message.wandscape.scanner.mode_road": {
+    "zh_cn": "§e已切换为道路模式",
+    "en_us": "§eSwitched to road mode"
+  },
+  "message.wandscape.scanner.mode_save": {
+    "zh_cn": "§e已切换到 SAVE 主扫描模式",
+    "en_us": "§eSwitched to SAVE main scan mode"
+  },
   "message.wandscape.scanner.no_boundary": {
     "en_us": "§cNo boundary defined",
     "zh_cn": "§c未定义边界"
@@ -415,9 +491,17 @@
     "en_us": "§cNo scanner found at %s",
     "zh_cn": "§c未找到扫描器方块 @ %s"
   },
+  "message.wandscape.scanner.output_element_switched": {
+    "zh_cn": "§e产出元素切换为: %s",
+    "en_us": "§eOutput element switched to: %s"
+  },
   "message.wandscape.scanner.set_building_id": {
     "en_us": "§cSet a building ID before exporting",
     "zh_cn": "§c导出前请先设置建筑 ID"
+  },
+  "message.wandscape.scanner.target_package": {
+    "zh_cn": "§e目标包: %s (%s)",
+    "en_us": "§eTarget package: %s (%s)"
   },
   "message.wandscape.scanner.value_block_count": {
     "en_us": "  §8(%s blocks)",

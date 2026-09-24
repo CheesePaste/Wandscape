@@ -23,6 +23,10 @@
     "zh_cn": "遍历建筑图案偏移，从 block_mapping 放置每个方块。完成时发出 build_complete 事件。",
     "en_us": "Iterate over building pattern offsets, placing each block from block_mapping. Emits build_complete event when done."
   },
+  "blueprint.wandscape.magic:altar_cast": {
+    "zh_cn": "祭坛施法",
+    "en_us": "Altar Cast"
+  },
   "blueprint.wandscape.node:gather": {
     "zh_cn": "节点采集",
     "en_us": "Node Gather"
