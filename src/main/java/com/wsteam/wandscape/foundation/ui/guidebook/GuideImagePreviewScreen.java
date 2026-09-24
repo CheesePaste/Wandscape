@@ -17,7 +17,7 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * 全屏高清图片预览弹窗（Lightbox 预览）。
  * 供指南书（帕秋莉手册或内置 Markdown 阅读器）在点击图片时放大查看。
- * 遵循「1:1 原图直出为主、超出窗口自适应缩放、绝不盲目拉伸模糊、绝不溢出裁切」原则。
+ * 依据窗口尺寸保持宽高比自适应铺展至最大舒适视野，按 ESC 或点击任意位置返回。
  */
 public class GuideImagePreviewScreen extends Screen {
 
@@ -122,56 +122,30 @@ public class GuideImagePreviewScreen extends Screen {
                 tex.setFilter(false, false);
             } catch (Exception ignored) {}
 
-            var window = Minecraft.getInstance().getWindow();
-            double guiScale = window.getGuiScale();
-            if (guiScale <= 0) {
-                guiScale = 1.0;
+            // 依据当前窗口尺寸保持宽高比自适应缩放（预留舒适边距）
+            int maxW = Math.max(64, this.width - 32);
+            int maxH = Math.max(48, this.height - 44);
+            float aspect = (float) this.textureWidth / (float) this.textureHeight;
+
+            int drawW = maxW;
+            int drawH = Math.round(drawW / aspect);
+            if (drawH > maxH) {
+                drawH = maxH;
+                drawW = Math.round(drawH * aspect);
             }
 
-            // 图像在当前 GUI Scale 下的 1:1 逻辑尺寸（以此尺寸绘制时，屏幕物理像素刚好等于原图物理像素）
-            float naturalW = (float) this.textureWidth / (float) guiScale;
-            float naturalH = (float) this.textureHeight / (float) guiScale;
-
-            // 窗口可用最大安全区域（预留边距，绝不溢出窗口裁切）
-            float maxW = Math.max(32, this.width - 32);
-            float maxH = Math.max(32, this.height - 40);
-
-            // 缩放比例计算：默认 1.0（1:1 物理像素原图直出，不拉伸模糊）；仅在原图超出窗口时才等比缩紧适应
-            float scale = 1.0f;
-            if (naturalW > maxW || naturalH > maxH) {
-                scale = Math.min(maxW / naturalW, maxH / naturalH);
-            }
-
-            int drawW = Math.max(1, Math.round(naturalW * scale));
-            int drawH = Math.max(1, Math.round(naturalH * scale));
             int drawX = (this.width - drawW) / 2;
             int drawY = (this.height - drawH - 12) / 2 + 2;
 
             if (!loggedRender) {
                 loggedRender = true;
-                try {
-                    var tex = Minecraft.getInstance().getTextureManager().getTexture(fullLocation);
-                    tex.bind();
-                    int gpuW = GL11.glGetTexLevelParameteri(GL11.GL_TEXTURE_2D, 0, GL11.GL_TEXTURE_WIDTH);
-                    int gpuH = GL11.glGetTexLevelParameteri(GL11.GL_TEXTURE_2D, 0, GL11.GL_TEXTURE_HEIGHT);
-                    int minFilter = GL11.glGetTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER);
-                    int magFilter = GL11.glGetTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER);
-                    String filterStr = String.format("MIN=%s, MAG=%s",
-                            minFilter == 9728 ? "NEAREST" : minFilter == 9729 ? "LINEAR" : String.valueOf(minFilter),
-                            magFilter == 9728 ? "NEAREST" : magFilter == 9729 ? "LINEAR" : String.valueOf(magFilter));
-
-                    String renderLog = String.format(
-                            "[GUIDE_DEBUG] [RenderFrame] 窗口物理=%dx%d, GUI分辨率=%dx%d (Screen: %dx%d), guiScale=%.1f\n" +
-                            "[GUIDE_DEBUG] [RenderFrame] 原图尺寸=%dx%d, GPU纹理尺寸=%dx%d, 纹理过滤=[%s]\n" +
-                            "[GUIDE_DEBUG] [RenderFrame] 1:1逻辑尺寸=%.1fx%.1f, 安全区=%.1fx%.1f, scale=%.3f, 最终绘制: pos=(%d, %d), size=(%dx%d) (已消除全屏高斯模糊)",
-                            window.getWidth(), window.getHeight(), window.getGuiScaledWidth(), window.getGuiScaledHeight(), this.width, this.height, guiScale,
-                            this.textureWidth, this.textureHeight, gpuW, gpuH, filterStr,
-                            naturalW, naturalH, maxW, maxH, scale, drawX, drawY, drawW, drawH);
-                    System.out.println(renderLog);
-                    Log.info(LogCategory.UI, renderLog);
-                } catch (Exception e) {
-                    System.out.println("[GUIDE_DEBUG] [RenderFrame] 获取渲染状态异常: " + e.getMessage());
-                }
+                var window = Minecraft.getInstance().getWindow();
+                String renderLog = String.format(
+                        "[GUIDE_DEBUG] [RenderFrame] 依据窗口自适应: 窗口物理=%dx%d, GUI=%dx%d, 原图=%dx%d, 最终绘制: pos=(%d, %d), size=(%dx%d) (无高斯模糊)",
+                        window.getWidth(), window.getHeight(), this.width, this.height,
+                        this.textureWidth, this.textureHeight, drawX, drawY, drawW, drawH);
+                System.out.println(renderLog);
+                Log.info(LogCategory.UI, renderLog);
             }
 
             // 2. 装饰边框与半透明阴影
@@ -182,8 +156,9 @@ public class GuideImagePreviewScreen extends Screen {
             graphics.blit(fullLocation, drawX, drawY, drawW, drawH, 0.0f, 0.0f, textureWidth, textureHeight, textureWidth, textureHeight);
 
             // 4. 屏幕左上角浮层调试信息（截屏即可直接查看参数）
-            String debugLine1 = String.format("[GUIDE_DEBUG] 原图:%dx%d | 绘制:%dx%d | 窗口物理:%dx%d | GUI缩放:%.1f",
-                    textureWidth, textureHeight, drawW, drawH, window.getWidth(), window.getHeight(), guiScale);
+            var window = Minecraft.getInstance().getWindow();
+            String debugLine1 = String.format("[GUIDE_DEBUG] 原图:%dx%d | 绘制:%dx%d | 窗口物理:%dx%d | GUI:%dx%d",
+                    textureWidth, textureHeight, drawW, drawH, window.getWidth(), window.getHeight(), this.width, this.height);
             String debugLine2 = String.format("[GUIDE_DEBUG] 资源: %s", fullLocation);
             graphics.drawString(font, debugLine1, 6, 6, 0xFFFFCC00, true);
             graphics.drawString(font, debugLine2, 6, 18, 0xFFFFCC00, true);
