@@ -26,8 +26,9 @@ public class GuideImagePreviewScreen extends Screen {
     private final Screen parentScreen;
     private final ResourceLocation thumbnailLocation;
     private final ResourceLocation fullLocation;
-    private int textureWidth;
-    private int textureHeight;
+    private final int textureWidth;
+    private final int textureHeight;
+    private boolean loggedRender = false;
 
     public GuideImagePreviewScreen(Screen parentScreen, ResourceLocation thumbnailLocation) {
         super(Component.translatable("gui.wandscape.guidebook.title"));
@@ -38,8 +39,10 @@ public class GuideImagePreviewScreen extends Screen {
         this.textureWidth = dims[0];
         this.textureHeight = dims[1];
 
-        Log.info(LogCategory.UI, "[指南预览] 开启大图预览: 原路径=%s -> 高清路径=%s, 尺寸=%dx%d",
+        String msg = String.format("[GUIDE_DEBUG] [ScreenInit] 原图=%s -> 高清图=%s, 解析尺寸=%dx%d",
                 thumbnailLocation, this.fullLocation, this.textureWidth, this.textureHeight);
+        System.out.println(msg);
+        Log.info(LogCategory.UI, msg);
     }
 
     private static ResourceLocation resolveFullLocation(ResourceLocation loc) {
@@ -49,8 +52,11 @@ public class GuideImagePreviewScreen extends Screen {
         String path = loc.getPath();
         if (path.startsWith("textures/guidebook/") && !path.startsWith("textures/guidebook/full/")) {
             String fullPath = path.replace("textures/guidebook/", "textures/guidebook/full/");
-            return ResourceLocation.fromNamespaceAndPath(loc.getNamespace(), fullPath);
+            ResourceLocation full = ResourceLocation.fromNamespaceAndPath(loc.getNamespace(), fullPath);
+            System.out.println("[GUIDE_DEBUG] [PathResolve] " + loc + " -> " + full);
+            return full;
         }
+        System.out.println("[GUIDE_DEBUG] [PathResolve] 保持原路径: " + loc);
         return loc;
     }
 
@@ -68,11 +74,18 @@ public class GuideImagePreviewScreen extends Screen {
                         int w = img.getWidth();
                         int h = img.getHeight();
                         if (w > 0 && h > 0) {
+                            String msg = String.format("[GUIDE_DEBUG] [DimProbe:NativeImage] %s -> 成功读取尺寸: %dx%d", key, w, h);
+                            System.out.println(msg);
+                            Log.info(LogCategory.UI, msg);
                             return new int[]{w, h};
                         }
                     }
+                } else {
+                    System.out.println("[GUIDE_DEBUG] [DimProbe:NativeImage] ResourceManager 中未找到资源: " + key);
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception e) {
+                System.out.println("[GUIDE_DEBUG] [DimProbe:NativeImage] 读取异常: " + key + " - " + e.getMessage());
+            }
 
             // 2. 兜底：直接向 GPU 绑定的纹理对象查询其实际尺寸
             try {
@@ -81,10 +94,16 @@ public class GuideImagePreviewScreen extends Screen {
                 int w = GL11.glGetTexLevelParameteri(GL11.GL_TEXTURE_2D, 0, GL11.GL_TEXTURE_WIDTH);
                 int h = GL11.glGetTexLevelParameteri(GL11.GL_TEXTURE_2D, 0, GL11.GL_TEXTURE_HEIGHT);
                 if (w > 0 && h > 0) {
+                    String msg = String.format("[GUIDE_DEBUG] [DimProbe:OpenGL] %s (TextureId=%d) -> GPU尺寸: %dx%d", key, tex.getId(), w, h);
+                    System.out.println(msg);
+                    Log.info(LogCategory.UI, msg);
                     return new int[]{w, h};
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception e) {
+                System.out.println("[GUIDE_DEBUG] [DimProbe:OpenGL] 查询异常: " + key + " - " + e.getMessage());
+            }
 
+            System.out.println("[GUIDE_DEBUG] [DimProbe:Fallback] 探测失败，回退默认 256x256: " + key);
             return new int[]{256, 256};
         });
     }
@@ -95,7 +114,8 @@ public class GuideImagePreviewScreen extends Screen {
         graphics.fill(0, 0, this.width, this.height, 0xD8080808);
 
         if (fullLocation != null) {
-            double guiScale = Minecraft.getInstance().getWindow().getGuiScale();
+            var window = Minecraft.getInstance().getWindow();
+            double guiScale = window.getGuiScale();
             if (guiScale <= 0) {
                 guiScale = 1.0;
             }
@@ -119,15 +139,49 @@ public class GuideImagePreviewScreen extends Screen {
             int drawX = (this.width - drawW) / 2;
             int drawY = (this.height - drawH - 12) / 2 + 2;
 
+            if (!loggedRender) {
+                loggedRender = true;
+                try {
+                    var tex = Minecraft.getInstance().getTextureManager().getTexture(fullLocation);
+                    tex.bind();
+                    int gpuW = GL11.glGetTexLevelParameteri(GL11.GL_TEXTURE_2D, 0, GL11.GL_TEXTURE_WIDTH);
+                    int gpuH = GL11.glGetTexLevelParameteri(GL11.GL_TEXTURE_2D, 0, GL11.GL_TEXTURE_HEIGHT);
+                    int minFilter = GL11.glGetTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER);
+                    int magFilter = GL11.glGetTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER);
+                    String filterStr = String.format("MIN=%s, MAG=%s",
+                            minFilter == 9728 ? "NEAREST" : minFilter == 9729 ? "LINEAR" : String.valueOf(minFilter),
+                            magFilter == 9728 ? "NEAREST" : magFilter == 9729 ? "LINEAR" : String.valueOf(magFilter));
+
+                    String renderLog = String.format(
+                            "[GUIDE_DEBUG] [RenderFrame] 窗口物理=%dx%d, GUI分辨率=%dx%d (Screen: %dx%d), guiScale=%.1f\n" +
+                            "[GUIDE_DEBUG] [RenderFrame] 原图尺寸=%dx%d, GPU纹理尺寸=%dx%d, 纹理过滤=[%s]\n" +
+                            "[GUIDE_DEBUG] [RenderFrame] 1:1逻辑尺寸=%.1fx%.1f, 安全区=%.1fx%.1f, scale=%.3f, 最终绘制: pos=(%d, %d), size=(%dx%d)",
+                            window.getWidth(), window.getHeight(), window.getGuiScaledWidth(), window.getGuiScaledHeight(), this.width, this.height, guiScale,
+                            this.textureWidth, this.textureHeight, gpuW, gpuH, filterStr,
+                            naturalW, naturalH, maxW, maxH, scale, drawX, drawY, drawW, drawH);
+                    System.out.println(renderLog);
+                    Log.info(LogCategory.UI, renderLog);
+                } catch (Exception e) {
+                    System.out.println("[GUIDE_DEBUG] [RenderFrame] 获取渲染状态异常: " + e.getMessage());
+                }
+            }
+
             // 2. 装饰边框与半透明阴影
             graphics.fill(drawX - 3, drawY - 3, drawX + drawW + 3, drawY + drawH + 3, 0x88000000);
             graphics.renderOutline(drawX - 1, drawY - 1, drawW + 2, drawH + 2, 0xFFC89B3C);
 
             // 3. 在标准 GUI 坐标系绘制图像，贴合窗口尺寸，无矩阵变换冲突
             graphics.blit(fullLocation, drawX, drawY, drawW, drawH, 0.0f, 0.0f, textureWidth, textureHeight, textureWidth, textureHeight);
+
+            // 4. 屏幕左上角浮层调试信息（截屏即可直接查看参数）
+            String debugLine1 = String.format("[GUIDE_DEBUG] 原图:%dx%d | 绘制:%dx%d | 窗口物理:%dx%d | GUI缩放:%.1f",
+                    textureWidth, textureHeight, drawW, drawH, window.getWidth(), window.getHeight(), guiScale);
+            String debugLine2 = String.format("[GUIDE_DEBUG] 资源: %s", fullLocation);
+            graphics.drawString(font, debugLine1, 6, 6, 0xFFFFCC00, true);
+            graphics.drawString(font, debugLine2, 6, 18, 0xFFFFCC00, true);
         }
 
-        // 4. 底部居中操作提示文本
+        // 5. 底部居中操作提示文本
         Component hint = Component.translatable("gui.wandscape.guidebook.preview_close_hint");
         graphics.drawCenteredString(font, hint, this.width / 2, this.height - 16, 0xFFCCCCCC);
 
