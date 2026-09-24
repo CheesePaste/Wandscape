@@ -26,8 +26,11 @@ public final class SettingsOverlay {
     private static final int CARD_GAP = 6;
     /** 卡片内控件（默认/开关/加减）顶边相对卡片顶的距离。渲染与点击命中都要用，只留这一处。 */
     private static final int CONTROL_Y = 11;
-    private static final int HEADER_CLOSE_W = 100;
-    private static final int HEADER_CLOSE_GAP = 16;
+    /** 标题与标签栏之间的最小间距；标题能拿到的宽度就是「标签栏之外的余量减它」。 */
+    private static final int TITLE_GAP = 16;
+    /** 标签内边距 / 标签间距，从宽到紧逐档尝试（见 layoutHeader）。最紧一档还塞不下就截断标签。 */
+    private static final int[] TAB_PADS = {16, 12, 8};
+    private static final int[] TAB_GAPS = {6, 4, 3};
 
     private static final int BG_BACKDROP = 0xAA080B10;
     private static final int HEADER_BG = 0xEE11151D;
@@ -135,6 +138,7 @@ public final class SettingsOverlay {
             String titleDraw,
             int titleX,
             int titleY,
+            String[] tabLabels,
             int[] tabX,
             int[] tabW,
             int closeX,
@@ -178,69 +182,50 @@ public final class SettingsOverlay {
 
         SettingTab[] tabs = SettingTab.values();
         int tabCount = tabs.length;
+        String[] labels = new String[tabCount];
         int[] rawW = new int[tabCount];
         for (int i = 0; i < tabCount; i++) {
-            rawW[i] = strWidth(font, tabs[i].getDisplayName());
+            labels[i] = tabs[i].getDisplayName();
+            rawW[i] = strWidth(font, labels[i]);
         }
 
-        String chosenTitle = "";
-        int pad = 16;
-        int gap = 6;
-
-        int fullTitleW = strWidth(font, fullTitle);
-        int shortTitleW = strWidth(font, shortTitle);
-
-        int tabsW16 = sumWidths(rawW, 16, 6);
-        int tabsW12 = sumWidths(rawW, 12, 4);
-
-        if (fullTitleW + 16 + tabsW16 <= avail) {
-            chosenTitle = fullTitle;
-            pad = 16;
-            gap = 6;
-        } else if (shortTitleW + 16 + tabsW16 <= avail) {
-            chosenTitle = shortTitle;
-            pad = 16;
-            gap = 6;
-        } else if (shortTitleW + 12 + tabsW12 <= avail) {
-            chosenTitle = shortTitle;
-            pad = 12;
-            gap = 4;
-        } else if (tabsW16 <= avail) {
-            chosenTitle = "";
-            pad = 16;
-            gap = 6;
-        } else if (tabsW12 <= avail) {
-            chosenTitle = "";
-            pad = 12;
-            gap = 4;
-        } else {
-            chosenTitle = "";
-            pad = 8;
-            gap = 3;
+        // 标签栏是导航主体，也从宽到紧逐档挑第一个放得下的间距；都放不下就等分格子截断标签，
+        // 宁可出现省略号，也绝不许整条标签栏压到右边的返回按钮上。
+        int pad = TAB_PADS[TAB_PADS.length - 1];
+        int gap = TAB_GAPS[TAB_GAPS.length - 1];
+        for (int tier = 0; tier < TAB_PADS.length; tier++) {
+            if (sumWidths(rawW, TAB_PADS[tier], TAB_GAPS[tier]) <= avail) {
+                pad = TAB_PADS[tier];
+                gap = TAB_GAPS[tier];
+                break;
+            }
         }
-
+        if (sumWidths(rawW, pad, gap) > avail) {
+            int cellW = Math.max(12, (avail - gap * (tabCount - 1)) / tabCount - pad);
+            for (int i = 0; i < tabCount; i++) {
+                labels[i] = font.plainSubstrByWidth(labels[i], cellW);
+                rawW[i] = strWidth(font, labels[i]);
+            }
+        }
         int totalTabsW = sumWidths(rawW, pad, gap);
-        int titleEnd = chosenTitle.isEmpty() ? leftMargin : (leftMargin + strWidth(font, chosenTitle) + 16);
+
+        // 标题只吃标签栏之外的余量：整名放得下用整名，只放得下短名用短名，都放不下就不画。
+        String chosenTitle = "";
+        int titleBudget = avail - totalTabsW - TITLE_GAP;
+        if (titleBudget >= strWidth(font, shortTitle)) {
+            chosenTitle = (strWidth(font, fullTitle) <= titleBudget) ? fullTitle : shortTitle;
+        }
+
+        int titleEnd = chosenTitle.isEmpty() ? leftMargin : (leftMargin + strWidth(font, chosenTitle) + TITLE_GAP);
 
         int startX;
         if (!chosenTitle.isEmpty()) {
             int remaining = contentRight - titleEnd;
             startX = titleEnd + Math.max(0, (remaining - totalTabsW) / 2);
-            if (startX + totalTabsW > contentRight) {
-                startX = contentRight - totalTabsW;
-            }
-            if (startX < titleEnd) {
-                startX = titleEnd;
-            }
         } else {
             startX = leftMargin + Math.max(0, (avail - totalTabsW) / 2);
-            if (startX + totalTabsW > contentRight) {
-                startX = contentRight - totalTabsW;
-            }
-            if (startX < leftMargin) {
-                startX = leftMargin;
-            }
         }
+        startX = Math.max(titleEnd, Math.min(startX, contentRight - totalTabsW));
 
         int[] tabX = new int[tabCount];
         int[] tabW = new int[tabCount];
@@ -251,7 +236,7 @@ public final class SettingsOverlay {
             curX += tabW[i] + gap;
         }
 
-        return new HeaderLayout(chosenTitle, leftMargin, 12, tabX, tabW, closeX, closeY, closeW, closeH);
+        return new HeaderLayout(chosenTitle, leftMargin, 12, labels, tabX, tabW, closeX, closeY, closeW, closeH);
     }
 
     private static int strWidth(Font font, String str) {
@@ -309,7 +294,7 @@ public final class SettingsOverlay {
         SettingTab[] tabs = SettingTab.values();
         for (int i = 0; i < tabs.length; i++) {
             SettingTab tab = tabs[i];
-            String label = tab.getDisplayName();
+            String label = lo.tabLabels()[i];
             int tabX = lo.tabX()[i];
             int tabW = lo.tabW()[i];
             boolean active = (tab == activeTab);
@@ -340,34 +325,36 @@ public final class SettingsOverlay {
         // 「恢复本页默认」的可用性比逐项可用性更严，见 canResetTab。
         boolean canReset = canResetTab(activeTab);
 
-        // Status / prompt
+        // Reset Page Defaults button on the right —— 先定按钮位置，提示才知道自己只能画到哪。
+        int rBtnW = 110;
+        int rBtnH = 18;
+        int rBtnX = screenW - rBtnW - 20;
+        int rBtnY = y + 4;
+
+        // Status / prompt：只吃到按钮左边为止，窗口再窄也只截断，不压到按钮上。
         String hint;
         int hintColor = WandscapeTheme.COLOR_TEXT_DIM;
         if (!canEdit) {
             // 一项都改不动时，把原因说准：本镇页缺的是「自己的小镇」，其余页缺的是管理员权限。
             hint = tabHasAdminOnlyItem(activeTab)
                     ? I18n.string("gui.wandscape.settings.hint.readonly",
-                            "只读模式：仅管理员 (OP 等级 2) 可修改设置")
+                            "只读：仅管理员 (OP 2) 可修改")
                     : I18n.string("gui.wandscape.settings.hint.no_colony",
-                            "你还没有属于自己的小镇：先右键一座市政厅建镇，这里才有可改的东西");
+                            "还没有自己的小镇：右键市政厅建镇后可改");
             hintColor = 0xFFFFB74D;
         } else if (activeTab == SettingTab.SETTLEMENT) {
             hint = I18n.string("gui.wandscape.settings.hint.settlement",
-                    "这几项随你自己的小镇走，任何玩家都能改，改完立即生效");
+                    "随本镇存档，人人可改，即时生效");
         } else if (activeTab == SettingTab.PACKAGES) {
             hint = I18n.string("gui.wandscape.settings.hint.packages",
-                    "管理已加载的建筑包。停用的建筑包将不会在建造栏中显示（即时生效）");
+                    "停用的建筑包不会出现在建造栏");
         } else {
             hint = I18n.string("gui.wandscape.settings.hint.general",
-                    "配置项修改即时生效并自动持久化保存（支持热重载）");
+                    "改动即时生效并自动保存");
         }
-        g.drawString(font, hint, 20, y + 8, hintColor, false);
+        g.drawString(font, font.plainSubstrByWidth(hint, Math.max(0, rBtnX - 20 - 8)),
+                20, y + 8, hintColor, false);
 
-        // Reset Page Defaults button on the right
-        int rBtnW = 110;
-        int rBtnH = 18;
-        int rBtnX = screenW - rBtnW - 20;
-        int rBtnY = y + 4;
         boolean rHover = canReset && mx >= rBtnX && mx <= rBtnX + rBtnW && my >= rBtnY && my <= rBtnY + rBtnH;
         int rBg = canReset ? (rHover ? 0xFFC8A040 : 0x44262E3B) : 0x221E242E;
         int rTextColor = canReset ? (rHover ? 0xFF111214 : WandscapeTheme.COLOR_TEXT_NORMAL) : 0xFF555555;

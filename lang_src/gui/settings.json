@@ -76,24 +76,24 @@
     "zh_cn": "详细调试日志"
   },
   "gui.wandscape.settings.hint.general": {
-    "en_us": "Changes take effect immediately and are saved automatically (hot-reload supported).",
-    "zh_cn": "配置项修改即时生效并自动持久化保存（支持热重载）"
+    "en_us": "Changes apply and save instantly",
+    "zh_cn": "改动即时生效并自动保存"
   },
   "gui.wandscape.settings.hint.no_colony": {
-    "en_us": "You have no town of your own yet: right-click a town hall to found one, then there is something to change here",
-    "zh_cn": "你还没有属于自己的小镇：先右键一座市政厅建镇，这里才有可改的东西"
+    "en_us": "No town yet: right-click a town hall to found one",
+    "zh_cn": "还没有自己的小镇：右键市政厅建镇后可改"
   },
   "gui.wandscape.settings.hint.packages": {
-    "en_us": "Manage the loaded building packs. A disabled pack no longer shows up in the build bar (takes effect immediately).",
-    "zh_cn": "管理已加载的建筑包。停用的建筑包将不会在建造栏中显示（即时生效）"
+    "en_us": "Disabled packs are hidden from the build bar",
+    "zh_cn": "停用的建筑包不会出现在建造栏"
   },
   "gui.wandscape.settings.hint.readonly": {
-    "en_us": "Read-only: only admins (permission level 2) can change settings",
-    "zh_cn": "只读模式：仅管理员 (OP 等级 2) 可修改设置"
+    "en_us": "Read-only: admins only (OP 2)",
+    "zh_cn": "只读：仅管理员 (OP 2) 可修改"
   },
   "gui.wandscape.settings.hint.settlement": {
-    "en_us": "These belong to your own town; anyone can change them and they apply immediately",
-    "zh_cn": "这几项随你自己的小镇走，任何玩家都能改，改完立即生效"
+    "en_us": "Stored with your town; anyone can change it",
+    "zh_cn": "随本镇存档，人人可改，即时生效"
   },
   "gui.wandscape.settings.npc.deathMessageGlobal": {
     "en_us": "Broadcast mage deaths server-wide",
@@ -176,35 +176,35 @@
     "zh_cn": "道路网格辅助线"
   },
   "gui.wandscape.settings.tab.colony": {
-    "en_us": "Town Autonomy",
-    "zh_cn": "城镇经营"
+    "en_us": "Economy",
+    "zh_cn": "经营"
   },
   "gui.wandscape.settings.tab.packages": {
-    "en_us": "Building Packs",
-    "zh_cn": "建筑包库"
+    "en_us": "Packs",
+    "zh_cn": "建筑包"
   },
   "gui.wandscape.settings.tab.rules": {
-    "en_us": "Rules & Security",
-    "zh_cn": "规则防护"
+    "en_us": "Rules",
+    "zh_cn": "规则"
   },
   "gui.wandscape.settings.tab.settlement": {
     "en_us": "My Town",
     "zh_cn": "本镇"
   },
   "gui.wandscape.settings.tab.tourist": {
-    "en_us": "Tourists & Economy",
-    "zh_cn": "游客生态"
+    "en_us": "Tourists",
+    "zh_cn": "游客"
   },
   "gui.wandscape.settings.tab.visual": {
-    "en_us": "Visual & Controls",
-    "zh_cn": "视效控制"
+    "en_us": "Visual",
+    "zh_cn": "视效"
   },
   "gui.wandscape.settings.tavern.recruitCostPerElement": {
     "en_us": "Tavern recruit cost per element",
     "zh_cn": "酒馆法师招募单价"
   },
   "gui.wandscape.settings.title": {
-    "en_us": "%s Settings Center",
+    "en_us": "%s Settings",
     "zh_cn": "%s 设置中心"
   },
   "gui.wandscape.settings.title_short": {
