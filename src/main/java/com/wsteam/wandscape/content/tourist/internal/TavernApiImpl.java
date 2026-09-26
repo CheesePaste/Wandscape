@@ -130,9 +130,7 @@ public class TavernApiImpl implements TavernApi {
 
     @Override
     public boolean canAffordRecruit(UUID colonyId) {
-        TavernRecruitStorage s = getStorage();
-        if (s == null) return false;
-        if (s.getRecruitCount(colonyId) == 0) return true; // 首次免费
+        if (getStorage() == null) return false;
         WarehouseApi wh = WandscapeApis.getWarehouseApiSilently();
         return wh != null && ElementType.allEnough(wh.getAllElements(colonyId),
                 com.wsteam.wandscape.Config.TAVERN_RECRUIT_COST_PER_ELEMENT.get());
@@ -148,10 +146,6 @@ public class TavernApiImpl implements TavernApi {
         TavernRecruitStorage s = getStorage();
         if (s == null) return false;
         int cost = Math.max(0, costPerElement);
-        if (s.getRecruitCount(colonyId) == 0) {
-            s.incrementRecruitCount(colonyId); // 首次免费
-            return true;
-        }
         WarehouseApi wh = WandscapeApis.getWarehouseApiSilently();
         if (wh == null) return false;
         if (!ElementType.allEnough(wh.getAllElements(colonyId), cost)) return false;
@@ -164,9 +158,10 @@ public class TavernApiImpl implements TavernApi {
 
     @Override
     public UUID recruitForColony(UUID colonyId, BlockPos spawnPos) {
-        // 酒馆招募的法师无起始战斗魔法：显式空载荷（与简历招募一致）。
+        // 酒馆直接招募的是新入行的 1 级法师：等级与属性都按 1 级掷，不随小镇等级走。
+        // 无起始战斗魔法：显式空载荷（与简历招募一致）。
         return recruitForColony(colonyId, spawnPos,
-                NpcSpawnSpec.builder().spells(List.of()).build(),
+                NpcSpawnSpec.builder().level(1).spells(List.of()).build(),
                 com.wsteam.wandscape.Config.TAVERN_RECRUIT_COST_PER_ELEMENT.get());
     }
 
@@ -178,11 +173,9 @@ public class TavernApiImpl implements TavernApi {
         if (spec.spells() == null) spec = spec.withSpells(List.of());
         TavernRecruitStorage s = getStorage();
         int cost = Math.max(0, costPerElement);
-        // 收费门控（首次免费）：不足则不生成、不计费。
-        if (s != null && s.getRecruitCount(colonyId) != 0) {
-            WarehouseApi wh = WandscapeApis.getWarehouseApiSilently();
-            if (wh == null || !ElementType.allEnough(wh.getAllElements(colonyId), cost)) return null;
-        }
+        // 收费门控：元素不足则不生成、不计费（无首次免费）。
+        WarehouseApi wh = WandscapeApis.getWarehouseApiSilently();
+        if (wh == null || !ElementType.allEnough(wh.getAllElements(colonyId), cost)) return null;
         UUID npcId = spawnViaApi(colonyId, spawnPos, spec);
         if (npcId == null) return null;
         if (s != null) chargeRecruit(colonyId, cost);

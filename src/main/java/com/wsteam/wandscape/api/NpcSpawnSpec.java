@@ -12,8 +12,8 @@ import java.util.Map;
  *
  * <p>供 {@link NpcApi#spawnNpc} 与酒馆招募（{@link TavernApi}）使用——整合包/附属模组可借此
  * 生成指定属性、等级、皮肤、帽色、习得魔法、名字的法师（例如一个更强的自定义 NPC，或带自定义
- * 招募花费）。{@code attributes} 是<b>基础属性</b>（base，非 effective）；缺席的键走「按小镇等级掷点
- * 默认」兜底。
+ * 招募花费）。{@code attributes} 是<b>基础属性</b>（base，非 effective）；缺席的键走「按
+ * {@code level} 掷点」兜底，{@code level} 也缺席时按小镇等级掷点。
  *
  * <p>用法：
  * <pre>{@code

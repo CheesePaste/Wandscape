@@ -96,7 +96,7 @@
     },
     {
       "type": "patchouli:text",
-      "text": "$(#8a5a2b)tavern recruit$() is free the first time;$(br) after that each recruit costs every element, at a price set in the server config. Not enough elements means the command fails without charging anything."
+      "text": "$(#8a5a2b)tavern recruit$() costs every element on every use, at a price set in the server config. Not enough elements means the command fails without charging anything, and the mage it bri$(br)ngs in is always level 1 regardless of the town's level — for a higher-level mage, hire a résumé instead."
     },
     {
       "type": "patchouli:text",

@@ -63,7 +63,7 @@ public final class TavernCommand {
                 .build();
     }
 
-    /** 招募一名法师（经 TavernApi；首次免费，之后每种元素 Config 价）。op-2。 */
+    /** 招募一名 1 级法师（经 TavernApi；每种元素 Config 价）。op-2。 */
     private static int recruit(CommandContext<CommandSourceStack> ctx) {
         CommandSourceStack src = ctx.getSource();
         var player = src.getPlayer();
@@ -87,7 +87,7 @@ public final class TavernCommand {
         }
         if (npcId == null) {
             src.sendFailure(I18n.name("message.wandscape.command.tavern_recruit_failed",
-                    "[魔法小镇] 招募失败：元素不足（首次免费，之后每种元素 %d）或系统未就绪",
+                    "[魔法小镇] 招募失败：元素不足（每种元素 %d）或系统未就绪",
                     com.wsteam.wandscape.Config.TAVERN_RECRUIT_COST_PER_ELEMENT.get()));
             return 0;
         }

@@ -95,7 +95,7 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
                 return;
             }
 
-            // 2.5 付费招募（「招募 NPC」）：走 TavernApi.recruitForColony —— 首次免费，之后每种元素
+            // 2.5 付费招募（「招募法师」）：走 TavernApi.recruitForColony —— 生成 1 级法师，每种元素
             //     Config 价；整合包可经 recruitForColony(colonyId, pos, spec, cost) 覆盖花费与自定义 NPC。
             com.wsteam.wandscape.api.TavernApi tavernApi = null;
             try {
@@ -111,8 +111,7 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
             UUID npcId = tavernApi.recruitForColony(colonyId, spawnPos);
             if (npcId == null) {
                 ScreenFeedbackPacket.send(sp, I18n.name("message.wandscape.tavern.insufficient_elements",
-                        "[Wandscape] Insufficient elements: recruiting costs %d of every element "
-                                + "(first recruit free).",
+                        "[Wandscape] Insufficient elements: recruiting costs %d of every element.",
                         com.wsteam.wandscape.Config.TAVERN_RECRUIT_COST_PER_ELEMENT.get()), true);
                 return;
             }

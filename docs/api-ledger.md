@@ -77,7 +77,7 @@
 
 ## 2b. NpcSpawnSpec（生成规格，`api` 包——新增 2026-09-04）
 
-> 生成殖民地法师时的**可选覆盖规格**（全字段 `@Nullable`，null=不覆盖/走默认）。供 `NpcApi.spawnNpc` 与酒馆招募（`TavernApi`）使用——整合包/附属可借此生成指定属性/等级/皮肤/帽色/名字/习得魔法/策略的法师（更强的自定义 NPC）；或 `fromCandidate(RecruitmentCandidate)` 由 `roll` 真档案生成"真实掷点"法师。`attributes` 是**基础值**（非 effective），缺席的键走按小镇等级掷点默认。
+> 生成殖民地法师时的**可选覆盖规格**（全字段 `@Nullable`，null=不覆盖/走默认）。供 `NpcApi.spawnNpc` 与酒馆招募（`TavernApi`）使用——整合包/附属可借此生成指定属性/等级/皮肤/帽色/名字/习得魔法/策略的法师（更强的自定义 NPC）；或 `fromCandidate(RecruitmentCandidate)` 由 `roll` 真档案生成"真实掷点"法师。`attributes` 是**基础值**（非 effective），缺席的键按 `level` 掷点（`level` 也缺席时按小镇等级掷点）。
 
 | 成员 | 用途 |
 |---|---|
@@ -246,11 +246,11 @@
 | `MageResume recruitMage(UUID tavernId, UUID, index)` | 招一份简历并**真生成法师**（经 `NpcApi.spawnNpc`，酒馆门口落点；生成成功才消耗简历） | ✅ 由隐式桩转真 | ✅ GUI 包 `TavernRecruitPacket.handleRecruitMage` 走 |
 | `MageResume recruitMage(UUID tavernId, UUID, index, NpcSpawnSpec)` | 简历招募 + spec 覆盖（属性/名字/皮肤等，覆盖优先） | ✅ | 🔧 纯 addon 能力 |
 | `rejectMage(UUID, index)` | 拒绝简历 | ✅ | 酒馆 GUI |
-| `getRecruitCount(UUID)` | 招募次数 | ✅ | — |
-| `canAffordRecruit(UUID)` / `chargeRecruit(UUID)` | 能否/扣费招募 | ✅ | — |
-| `chargeRecruit(UUID, int costPerElement)` | 按自定义花费扣费（首次免费） | ✅ | 🔧 纯 addon 能力（整合包调价） |
-| `UUID recruitForColony(UUID, BlockPos)` | 付费招募（默认掷点+默认花费，生成+计数） | ✅ | ✅ GUI 付费招募分支 + `tavern recruit` 命令走 |
-| `UUID recruitForColony(UUID, BlockPos, NpcSpawnSpec, int cost)` | 付费招募 + 自定义 NPC/花费（更强的特殊 NPC） | ✅ | 🔧 纯 addon 能力 |
+| `getRecruitCount(UUID)` | 招募次数（仅供 GUI 展示累计） | ✅ | — |
+| `canAffordRecruit(UUID)` / `chargeRecruit(UUID)` | 能否/扣费招募（无首次免费，每次都收费） | ✅ | — |
+| `chargeRecruit(UUID, int costPerElement)` | 按自定义花费扣费 | ✅ | 🔧 纯 addon 能力（整合包调价） |
+| `UUID recruitForColony(UUID, BlockPos)` | 付费招募：固定 1 级法师（等级与属性均按 1 级掷，不随小镇等级走）+ 默认花费 | ✅ | ✅ GUI 付费招募分支 + `tavern recruit` 命令走 |
+| `UUID recruitForColony(UUID, BlockPos, NpcSpawnSpec, int cost)` | 付费招募 + 自定义 NPC/花费（更强的特殊 NPC；`spec.level` 缺席时才按小镇等级掷点） | ✅ | 🔧 纯 addon 能力 |
 | `void addResume(UUID colonyId, MageResume)` | 向简历池注入 | 🔶 桩 | 🔧 本体绕开：`TavernRecruitStorage.addResume`（`test tavern add_resume` 用） |
 
 本体自消费：`getTavernApi` 7。**⚠️ recruitMage 不产实体**。

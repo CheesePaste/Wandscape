@@ -7,7 +7,7 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "The Tavern is how you recruit mages. You can hire one outright — free the first time in each town — or take on a résumé that is already waiting."
+      "text": "The Tavern is how you recruit mages. You can hire a fresh level 1 mage outright, paid for in elements from the warehouse each time, or take on a résumé that is already waiting."
     },
     {
       "type": "patchouli:image",
