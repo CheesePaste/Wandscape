@@ -132,7 +132,7 @@
 
 | 项 | 值 | 出处 |
 |---|---|---|
-| 殖民地初始元素 | 每元素 6,000 | `Config.colony.initialElementCount` |
+| 殖民地初始元素 | 每元素 2,000 | `Config.colony.initialElementCount` |
 | 离线收益系数 | 0.2 | `Config.colony.offlineIncomeMultiplier` |
 | 游客钱包 | `500 + 等级 × 200`；旅行基金 = 3× 钱包 | `Config.tourist.baseWallet` / `walletPerLevel` |
 | 游客停留 | 2–4 游戏日 | `Config.tourist.stayMinDays` / `stayMaxDays` |

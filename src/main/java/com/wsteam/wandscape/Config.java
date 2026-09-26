@@ -92,7 +92,7 @@ public class Config {
     public static final ModConfigSpec.IntValue INITIAL_ELEMENT_COUNT = BUILDER
             .comment("每种元素在小镇仓库首次建立时的初始数量（每小镇一次，只种一次）。")
             .comment("Initial count of each element when a town's warehouse is first established (once per town, planted only once).")
-            .defineInRange("colony.initialElementCount", 6000, 0, 2147483647);
+            .defineInRange("colony.initialElementCount", 2000, 0, 2147483647);
 
     // ---- 元素系统 Element System ----
 
