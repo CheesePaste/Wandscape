@@ -71,6 +71,10 @@
     "zh_cn": "待抄录",
     "en_us": "Awaiting Transcription..."
   },
+  "gui.wandscape.queue.tooltip.cancel": {
+    "zh_cn": "取消任务",
+    "en_us": "Cancel Task"
+  },
   "gui.wandscape.queue.tooltip.capacity": {
     "zh_cn": "小镇仓库容量不足",
     "en_us": "Town storage full"
@@ -82,5 +86,13 @@
   "gui.wandscape.queue.tooltip.missing_materials": {
     "zh_cn": "缺少原料，等待输入",
     "en_us": "Missing raw materials, waiting for input"
+  },
+  "gui.wandscape.queue.tooltip.move_to_bottom": {
+    "zh_cn": "置底任务",
+    "en_us": "Move to Bottom"
+  },
+  "gui.wandscape.queue.tooltip.move_to_top": {
+    "zh_cn": "置顶任务",
+    "en_us": "Move to Top"
   }
 }

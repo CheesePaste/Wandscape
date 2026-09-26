@@ -4,12 +4,12 @@ import com.wsteam.wandscape.content.building.network.NodeDataPacket;
 import com.wsteam.wandscape.content.building.network.RequestGatherTaskPacket;
 import com.wsteam.wandscape.content.building.network.TaskQueueDataPacket;
 import com.wsteam.wandscape.content.building.network.TaskQueueModifyPacket;
+import com.wsteam.wandscape.content.production.client.QuantityStepper;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.foundation.log.LogCategory;
 import com.wsteam.wandscape.foundation.networking.Net;
 import com.wsteam.wandscape.foundation.ui.component.MedievalButton;
 import com.wsteam.wandscape.foundation.ui.component.MedievalScreen;
-import com.wsteam.wandscape.foundation.ui.component.Slider;
 import com.wsteam.wandscape.foundation.ui.component.TaskQueuePanel;
 import com.wsteam.wandscape.foundation.ui.theme.MedievalColors;
 import net.minecraft.client.Minecraft;
@@ -33,7 +33,7 @@ public class NodeScreen extends MedievalScreen {
     private static final int PH = 220;
     private static final int LEFT_PW = 240;
     private static final int QUEUE_PW = 152;
-    private static final int MAX_HARVESTS = 10;
+    private static final int MAX_HARVESTS = 999;
     private static final int INFO_ROWS = 4;
     private static final int INFO_ROW_H = 12;
 
@@ -44,7 +44,7 @@ public class NodeScreen extends MedievalScreen {
 
     private int contentX;
     private int controlY;
-    private Slider slider;
+    private QuantityStepper stepper;
     private MedievalButton submitBtn;
     private TaskQueuePanel taskQueuePanel;
 
@@ -65,9 +65,8 @@ public class NodeScreen extends MedievalScreen {
         setBuildingContext(null, packet.nodePos());
         setTitleBar(com.wsteam.wandscape.foundation.ui.I18n.buildingName(
                 packet.buildingTypeId(), packet.buildingTypeId()));
-        if (slider != null) {
-            slider.setMax(MAX_HARVESTS);
-            slider.setValue(1);
+        if (stepper != null) {
+            stepper.setTotalMax(MAX_HARVESTS);
         }
         requestQueueRefresh();
     }
@@ -134,9 +133,12 @@ public class NodeScreen extends MedievalScreen {
 
         controlY = contentY + INFO_ROWS * INFO_ROW_H + 8;
 
-        // Harvest-count slider + publish button
-        slider = new Slider(contentX, controlY, 120, 1, MAX_HARVESTS, 1, v -> {});
-        addRenderableWidget(slider);
+        // Harvest-count quantity stepper + publish button
+        stepper = new QuantityStepper(contentX, controlY);
+        stepper.setTotalMax(MAX_HARVESTS);
+        addRenderableWidget(stepper.slider());
+        addRenderableWidget(stepper.minusBtn());
+        addRenderableWidget(stepper.plusBtn());
 
         submitBtn = new MedievalButton(contentX + contentW - 70, controlY + 4, 70, 18,
                 com.wsteam.wandscape.foundation.ui.I18n.name("gui.wandscape.node.publish_gather", "Publish Gather"),
@@ -149,8 +151,8 @@ public class NodeScreen extends MedievalScreen {
         int queueY = topPos + headerHeight + 4;
         taskQueuePanel = new TaskQueuePanel(queueX, queueY, QUEUE_PW, queuePh);
         taskQueuePanel.setOnDelete(this::onQueueDelete);
-        taskQueuePanel.setOnMoveUp(this::onQueueMoveUp);
-        taskQueuePanel.setOnMoveDown(this::onQueueMoveDown);
+        taskQueuePanel.setOnMoveToTop(this::onQueueMoveToTop);
+        taskQueuePanel.setOnMoveToBottom(this::onQueueMoveToBottom);
         addRenderableWidget(taskQueuePanel);
 
         if (nodePos != null && !nodePos.equals(BlockPos.ZERO)) {
@@ -170,8 +172,8 @@ public class NodeScreen extends MedievalScreen {
                 i18n("gui.wandscape.node.channel_ticks", "%s ticks", channelTicks));
         y += INFO_ROW_H;
 
-        // Live totals below the slider
-        int n = slider != null ? slider.getValue() : 1;
+        // Live totals below the stepper
+        int n = stepper != null ? stepper.getValue() : 1;
         String totals = i18n("gui.wandscape.node.total_line", "Total %1$s",
                 amountPerHarvest * n);
         g.drawString(Minecraft.getInstance().font, totals,
@@ -196,7 +198,7 @@ public class NodeScreen extends MedievalScreen {
     }
 
     private void onSubmit() {
-        int harvests = slider != null ? slider.getValue() : 1;
+        int harvests = stepper != null ? stepper.getValue() : 1;
         if (nodePos == null || nodePos.equals(BlockPos.ZERO)) return;
         Log.debug(LogCategory.BUILDING, "ui", "publish gather x{} at {}", harvests, nodePos);
         Net.toServer(new RequestGatherTaskPacket(nodePos, harvests));
@@ -211,13 +213,13 @@ public class NodeScreen extends MedievalScreen {
         Net.toServer(new TaskQueueModifyPacket(nodePos, "delete", index));
     }
 
-    private void onQueueMoveUp(int index) {
+    private void onQueueMoveToTop(int index) {
         if (nodePos == null || nodePos.equals(BlockPos.ZERO)) return;
-        Net.toServer(new TaskQueueModifyPacket(nodePos, "move_up", index));
+        Net.toServer(new TaskQueueModifyPacket(nodePos, "move_to_top", index));
     }
 
-    private void onQueueMoveDown(int index) {
+    private void onQueueMoveToBottom(int index) {
         if (nodePos == null || nodePos.equals(BlockPos.ZERO)) return;
-        Net.toServer(new TaskQueueModifyPacket(nodePos, "move_down", index));
+        Net.toServer(new TaskQueueModifyPacket(nodePos, "move_to_bottom", index));
     }
 }

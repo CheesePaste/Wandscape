@@ -275,8 +275,8 @@ public class WorkstationScreen extends MedievalScreen {
         int queueY = topPos + headerHeight + 4;
         taskQueuePanel = new TaskQueuePanel(queueX, queueY, QUEUE_PW, queuePh);
         taskQueuePanel.setOnDelete(this::onQueueDelete);
-        taskQueuePanel.setOnMoveUp(this::onQueueMoveUp);
-        taskQueuePanel.setOnMoveDown(this::onQueueMoveDown);
+        taskQueuePanel.setOnMoveToTop(this::onQueueMoveToTop);
+        taskQueuePanel.setOnMoveToBottom(this::onQueueMoveToBottom);
         addRenderableWidget(taskQueuePanel);
     }
 
@@ -365,16 +365,16 @@ public class WorkstationScreen extends MedievalScreen {
         Net.toServer(new TaskQueueModifyPacket(stationPos, "delete", index));
     }
 
-    private void onQueueMoveUp(int index) {
+    private void onQueueMoveToTop(int index) {
         if (stationPos == null || stationPos.equals(BlockPos.ZERO)) return;
-        Log.info(TAG,"[TaskQueue] MOVE_UP index={} pos={}", index, stationPos);
-        Net.toServer(new TaskQueueModifyPacket(stationPos, "move_up", index));
+        Log.info(TAG,"[TaskQueue] MOVE_TO_TOP index={} pos={}", index, stationPos);
+        Net.toServer(new TaskQueueModifyPacket(stationPos, "move_to_top", index));
     }
 
-    private void onQueueMoveDown(int index) {
+    private void onQueueMoveToBottom(int index) {
         if (stationPos == null || stationPos.equals(BlockPos.ZERO)) return;
-        Log.info(TAG,"[TaskQueue] MOVE_DOWN index={} pos={}", index, stationPos);
-        Net.toServer(new TaskQueueModifyPacket(stationPos, "move_down", index));
+        Log.info(TAG,"[TaskQueue] MOVE_TO_BOTTOM index={} pos={}", index, stationPos);
+        Net.toServer(new TaskQueueModifyPacket(stationPos, "move_to_bottom", index));
     }
 
     /** Filter both lists by the search query, keeping the lists in sync with selection indexes. */

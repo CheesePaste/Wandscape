@@ -24,14 +24,20 @@ public class QuantityStepper {
 
     private int totalMax = 1;
     private int page = 0;
+    private java.util.function.IntConsumer onValueChanged;
 
     /** @param x left edge (the -64 button's x); the slider and +64 button sit to its right. */
     public QuantityStepper(int x, int y) {
-        this.slider = new Slider(x + BTN_W + 2, y, SLIDER_W, 1, 1, 1, v -> {});
+        this.slider = new Slider(x + BTN_W + 2, y, SLIDER_W, 1, 1, 1,
+                v -> { if (onValueChanged != null) onValueChanged.accept(v); });
         this.minusBtn = new MedievalButton(x, y + BTN_DY, BTN_W, BTN_H,
                 Component.literal("-64"), this::prevPage);
         this.plusBtn = new MedievalButton(x + BTN_W + 2 + SLIDER_W + 2, y + BTN_DY, BTN_W, BTN_H,
                 Component.literal("+64"), this::nextPage);
+    }
+
+    public void setOnValueChanged(java.util.function.IntConsumer onValueChanged) {
+        this.onValueChanged = onValueChanged;
     }
 
     public Slider slider() {
@@ -77,5 +83,8 @@ public class QuantityStepper {
     private void applyWindow() {
         QuantityWindow.Page w = QuantityWindow.page(totalMax, page);
         slider.setRange(w.min(), w.max());
+        if (onValueChanged != null) {
+            onValueChanged.accept(slider.getValue());
+        }
     }
 }
