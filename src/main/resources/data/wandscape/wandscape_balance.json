@@ -29,6 +29,5 @@
   "craftingStationCraftTicksPerUnit": 1200,
   "constructionPlaceTicksPerUnit": 1,
   "castSingleTargetMaxEnemies": 3,
-  "castAoeMinEnemies": 3,
-  "mageHutRestTicks": 2400
+  "castAoeMinEnemies": 3
 }

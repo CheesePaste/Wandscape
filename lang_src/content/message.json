@@ -287,10 +287,6 @@
     "en_us": "[Wandscape] This mage hut is already occupied.",
     "zh_cn": "[魔法小镇] 这间法师小屋已经有人入住。"
   },
-  "message.wandscape.mage_hut.resting": {
-    "en_us": "[Wandscape] Now resting — the mage returns to the hut.",
-    "zh_cn": "[魔法小镇] 正在休息——法师将回到小屋休息。"
-  },
   "message.wandscape.mage_hut.trained": {
     "en_us": "[Wandscape] %s trained +%s.",
     "zh_cn": "[魔法小镇] %s 已训练 +%s。"

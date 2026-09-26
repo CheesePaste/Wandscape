@@ -357,9 +357,8 @@
 | `boolean forceBind(UUID buildingId, UUID npcId)` | 强绑：顶替+自动解旧+保留 colony 校验+活体 | ✅ | 🔧 本体绕开：`MageHutServerHandler.onAssign`（含全部校验，GUI 路径）——API 为其程序化版，本体保留 GUI 软绑 |
 | `boolean forceUnbind(UUID buildingId)` | 解绑（hut 原语） | ✅ | 🔧 本体绕开：`NpcDismissPacket:74-76`（离职清理） |
 | `boolean forceUnbindNpc(UUID)` | 解绑（npc 便捷，先反查再解） | ✅ | 🔧 同上 |
-| `int getMageHutRestTicks()` / `setMageHutRestTicks(int)` | 法师小屋休息时长（平衡） | ✅ | `BalanceValues` 委托 |
 
-本体自消费：`getMageHutApi` 未接（新建纯 addon 能力；本体 GUI/离职路径保留原逻辑）。**2026-09-02：**`get/setMageHutRestTicks` 从 NpcApi 归位（BalanceValues 委托）。
+本体自消费：`getMageHutApi` 未接（新建纯 addon 能力；本体 GUI/离职路径保留原逻辑）。**2026-09-02：**`get/setMageHutRestTicks` 从 NpcApi 归位（BalanceValues 委托）。**2026-09-26：**小屋「休息」功能整体删除（无实际作用），该对 get/set 连同 `BalanceValues.mageHutRestTicks` 一并真删。
 
 ---
 

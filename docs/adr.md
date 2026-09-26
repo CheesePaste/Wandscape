@@ -1,6 +1,6 @@
 # 架构决策记录表（ADR）
 
-> 信息截至 2026-09-24 | Minecraft NeoForge 1.21.1
+> 信息截至 2026-09-26 | Minecraft NeoForge 1.21.1
 
 - **【何时读】**：准备修改核心架构设计、评估重大方案或探究某项反直觉代码的设计原因时。
 - **【不包含什么】**：长篇复盘散文、已被代码类型/命名直接表达的平凡实现细节、已废弃且无参考价值的陈旧试验。
@@ -11,6 +11,7 @@
 
 | 日期 | 决策摘要 | 一句话原因 (Why) | 关联模块 / 代码 |
 |---|---|---|---|
+| 2026-09-26 | **删除法师小屋「休息」功能及其全部 NPC 侧机制**：`WandscapeNpc` 的 `resting/restEndTick/restPos` 字段与 `setRest`/`endRest`/`getRestPos`/`getRestEndTick` 方法、优先级 2 的 `RestGoal` 一并真删；串在任务链上的 `ColonyWorker.isResting()` / `EntityOps.isResting(long)` / `FollowAttackDecision.isActive` 的 `resting` 形参、SchedulerSystem 空闲筛选、TaskExecutionSystem 的「跟随/休息释放全局任务」分支、`TaskPanelSyncTracker` 的 `RESTING` 状态与面板配色/文案全部同步删除；`MageHutApi.get/setMageHutRestTicks`、`BalanceValues.mageHutRestTicks`（含 `KNOWN_KEYS` 键与 `wandscape_balance.json` 条目）、`MageHutDataPacket.resting` 字段与面板休息按钮/状态文案一并删除。 | 休息的唯一效果是「回小屋待 2 分钟回满血蓝」，而 NPC 平时本就有回血回蓝与空闲游荡，玩家感知不到差别；它却为此在任务调度上挂了一整条「休息中不派活 + 释放全局任务」的特例链，以及一个跨实体类型的 worker 缝方法。删掉后调度侧的让路理由只剩「跟随」一条，`resting` 形参不再出现在纯逻辑决策表里。 | `content/npc/entity/WandscapeNpc`, `content/npc/worker/ColonyWorker`, `content/task/boundary/EntityOps`, `content/npc/types/FollowAttackDecision`, `content/building/internal/MageHutServerHandler`, `api/MageHutApi`, `foundation/util/BalanceValues` |
 | 2026-09-24 | **删除车万女仆（TLM）兼容层，未来改做独立附属**：`compat/tlm/` 整包（7 类，含全仓唯一的 `AttachmentType`）、`Wandscape` 两处装配调用、gradle 的 TLM compileOnly 依赖、手册「联动与兼容」页与 3 条 `task.wandscape.colony_worker*` lang 键一并删除。**`ColonyWorker` 缝与 `api/ColonyWorkerApi` 原地保留**——缝是法师自己 + 7 个边界适配器 + 调度器的承重墙，API 是将来附属的接入点，二者都非 TLM 专属。 | 1.20.1 副分支无法承接 TLM（数据附件在 Forge 1.20.1 无对应物），两道口子各维护一套女仆接线不划算；既然 1.20.1 明确不做，主分支留着只会让「两线行为差异」多一处没意义的来源。TLM 的爆炸半径只有 7 个文件、收益不成比例，删掉比维护两份便宜。 | `compat/tlm/`(删), `Wandscape.java`, `build.gradle`, `gradle.properties`, `docs/forge-1201-downgrade-survey.md` |
 | 2026-09-23 | **降级 Forge 1.20.1 取「副分支跟进」形态**：`1.21.1` 仍是主分支（照常出 alpha/beta）；降级在独立分支 `1.20.1-forge`（独立 worktree 并行）上做，**只在 1.21.1 稳定发布后跟进一次**，不跟 alpha/beta。数据/资产/文档一律先在 1.21.1 改、靠 merge 流到副分支，**副分支只改 Java 代码与平台专属文档**。预计维护一年以上，主流模组迁走后停更。1.20.1 侧三条方针：**车万女仆（TLM）不兼容**；**任何 compat 出问题就关掉该模组的兼容、不修**；配置屏入口两线一致裁掉（见下条）。 | 双线并行的成本大头不是首次移植而是**未来十几次跟进**——若每次靠手工 re-port，一年后必然失控；这条决策配套要求「降级差异做成留在仓库里的转换脚本」，并把数据/文档收成单边改动以免两份漂移。TLM 被点名是因为它的数据附件在 Forge 1.20.1 没有对应物，而爆炸半径只有 4 个文件、收益不成比例。 | 分支 `1.20.1-forge`, `docs/forge-1201-downgrade-survey.md`, `compat/tlm/`（已于 2026-09-24 从主分支删除） |
 | 2026-09-23 | **裁掉自动配置屏入口（两线一致）**：`WandscapeClient` 不再注册 `IConfigScreenFactory`（顺带删掉随之空掉的 `ModContainer` 形参与两个已无用的 import），`lang_src` 里 3 条 `wandscape.configuration.*` 键一并删除并重生成 lang。配置只留两个落点：`config/*.toml` 与游戏内设置中心（V 面板 → 设置）。**不把面板未收录的 14 项补进设置中心**——那些是整合包作者的曲线与倍率旋钮，留在 TOML。 | 那个自动屏一条翻译键都没有、覆盖的多是曲线旋钮，本来就不是给人改的；它同时是 Forge 1.20.1 侧唯一「无对应物」的 UI 损失（考察报告 §6.4），裁掉后该项成本归零，两线也不存在行为差异。 | `WandscapeClient.init`, `lang_src/content/wandscape.json`, `docs/forge-1201-downgrade-survey.md §6.4` |

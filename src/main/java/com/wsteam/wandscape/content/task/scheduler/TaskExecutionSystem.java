@@ -72,11 +72,11 @@ public class TaskExecutionSystem implements EcsSystem {
 
             NpcTaskQueue queue = exec.npcQueue;
 
-            // ── 0. 跟随/休息：释放小镇全局任务（保留 self_defense 等个人包）──
+            // ── 0. 跟随：释放小镇全局任务（保留 self_defense 等个人包）──
             // 放在「无工作→idle」之前：挂起栈里可能还压着被自防御抢断的 global 包，
             // 此时 hasWork()=false 但 hasGlobalPackage()=true，先走 idle 会让该包永驻挂起栈。
             if (world.entityOps != null
-                    && (world.entityOps.isFollowing(npcId) || world.entityOps.isResting(npcId))
+                    && world.entityOps.isFollowing(npcId)
                     && (exec.globalTaskId != null || queue.hasGlobalPackage())) {
                 releaseForInterruption(world, npcId, exec, queue);
                 continue;
@@ -512,7 +512,7 @@ public class TaskExecutionSystem implements EcsSystem {
 
     /**
      * 释放绑定全局任务（保留步进 + 退还已取元素）并丢弃全部 {@code global:} 包。
-     * 覆盖"NPC 不能再干这个活"的所有场景（跟随/休息中断、幽灵 NPC）：
+     * 覆盖"NPC 不能再干这个活"的所有场景（跟随中断、幽灵 NPC）：
      * 任务归还任务池供他人续跑，元素退还仓库、步进重置到首个 ResourceRequestOp，
      * 避免下一 NPC 空背包打到资源短缺死循环。
      */
@@ -527,7 +527,7 @@ public class TaskExecutionSystem implements EcsSystem {
     }
 
     /**
-     * 跟随/休息：释放该 NPC 的全部小镇全局任务（current/pending/挂起栈里的
+     * 跟随：释放该 NPC 的全部小镇全局任务（current/pending/挂起栈里的
      * {@code global:*} 包），只保留 {@code self_defense} 等个人包。已绑定的全局任务
      * 按步进归还任务池（{@link GlobalTaskPool#releaseTaskForReassign}），供其他 NPC 接取。
      *

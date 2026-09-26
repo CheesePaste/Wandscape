@@ -51,7 +51,6 @@ public class MageHutScreen extends MedievalScreen {
     private int colonyLevel;
     private boolean hasResident;
     private boolean alive;
-    private boolean resting;
     private String mageName;
     private int mageLevel;
     private int skinVariant;
@@ -94,7 +93,6 @@ public class MageHutScreen extends MedievalScreen {
         this.colonyLevel = packet.colonyLevel();
         this.hasResident = packet.hasResident();
         this.alive = packet.alive();
-        this.resting = packet.resting();
         this.mageName = packet.mageName() != null ? packet.mageName() : "";
         this.mageLevel = packet.mageLevel();
         this.skinVariant = packet.skinVariant();
@@ -225,13 +223,6 @@ public class MageHutScreen extends MedievalScreen {
                 () -> sendAction("open_strategy"));
         strategyBtn.active = canOperate();
         addRenderableWidget(strategyBtn);
-
-        MedievalButton restBtn = new MedievalButton(
-                rx + 8 + (bW + bGap) * 2, bY, bW, bH,
-                I18n.name("gui.wandscape.mage_hut.rest", "休息"),
-                this::onRest);
-        restBtn.active = canOperate() && !resting;
-        addRenderableWidget(restBtn);
     }
 
     private void initEmpty(int contentTop) {
@@ -337,9 +328,6 @@ public class MageHutScreen extends MedievalScreen {
         if (!alive) {
             status = I18n.name("gui.wandscape.mage_hut.status_dead", "已阵亡").getString();
             statusCol = 0xFFFF5555;
-        } else if (resting) {
-            status = I18n.name("gui.wandscape.mage_hut.status_resting", "休息中").getString();
-            statusCol = MedievalColors.INFO_BLUE;
         } else {
             status = I18n.name("gui.wandscape.mage_hut.status_idle", "正常执勤").getString();
             statusCol = MedievalColors.SUCCESS_GREEN;
@@ -614,8 +602,6 @@ public class MageHutScreen extends MedievalScreen {
                     dx, dy + 13, MedievalColors.TEXT_MUTED);
             g.drawString(font, I18n.name("gui.wandscape.mage_hut.assign_desc_3", "• 随小镇等级晋升职业等阶").getString(),
                     dx, dy + 25, MedievalColors.TEXT_MUTED);
-            g.drawString(font, I18n.name("gui.wandscape.mage_hut.assign_desc_4", "• 获得专属休息与恢复据点").getString(),
-                    dx, dy + 37, MedievalColors.TEXT_MUTED);
         } else {
             int cx = rx + rw / 2;
             g.drawCenteredString(font, I18n.name("gui.wandscape.mage_hut.title", "法师专属住宅").getString(),
@@ -819,13 +805,6 @@ public class MageHutScreen extends MedievalScreen {
         Minecraft.getInstance().getSoundManager().play(
                 SimpleSoundInstance.forUI(SoundEvents.PLAYER_LEVELUP, 1.0f));
         setToast(I18n.name("gui.wandscape.mage_hut.toast_upgraded", "法师已晋升至 Lv.%d！", mageLevel + 1), MedievalColors.SUCCESS_GREEN);
-    }
-
-    private void onRest() {
-        sendAction("rest");
-        Minecraft.getInstance().getSoundManager().play(
-                SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 0.8f));
-        setToast(I18n.name("gui.wandscape.mage_hut.toast_resting", "法师已前往小屋休息..."), MedievalColors.INFO_BLUE);
     }
 
     private void onAssign(MageCandidate c) {

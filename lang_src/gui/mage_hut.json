@@ -15,10 +15,6 @@
     "zh_cn": "• 随小镇等级晋升职业等阶",
     "en_us": "• Promote rank up to town level"
   },
-  "gui.wandscape.mage_hut.assign_desc_4": {
-    "zh_cn": "• 获得专属休息与恢复据点",
-    "en_us": "• Exclusive home & rest location"
-  },
   "gui.wandscape.mage_hut.assign_home": {
     "zh_cn": "居所: 尚未分配专属居所",
     "en_us": "Home: unassigned"
@@ -135,10 +131,6 @@
     "zh_cn": "在酒馆招募法师后\n可在此指派入住",
     "en_us": "Recruit mages at Tavern\nthen assign them here"
   },
-  "gui.wandscape.mage_hut.rest": {
-    "zh_cn": "休息",
-    "en_us": "Rest"
-  },
   "gui.wandscape.mage_hut.status_dead": {
     "zh_cn": "已阵亡",
     "en_us": "Deceased"
@@ -146,10 +138,6 @@
   "gui.wandscape.mage_hut.status_idle": {
     "zh_cn": "正常执勤",
     "en_us": "On Duty"
-  },
-  "gui.wandscape.mage_hut.status_resting": {
-    "zh_cn": "休息中",
-    "en_us": "Resting"
   },
   "gui.wandscape.mage_hut.strategy": {
     "zh_cn": "策略",
@@ -190,10 +178,6 @@
   "gui.wandscape.mage_hut.toast_assigned": {
     "zh_cn": "法师已成功入住小屋！",
     "en_us": "Mage moved into the hut!"
-  },
-  "gui.wandscape.mage_hut.toast_resting": {
-    "zh_cn": "法师已前往小屋休息...",
-    "en_us": "Mage is heading back to rest..."
   },
   "gui.wandscape.mage_hut.toast_trained": {
     "zh_cn": "已完成属性特训！",
