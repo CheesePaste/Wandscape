@@ -11,15 +11,16 @@
     },
     {
       "type": "patchouli:text",
-      "text": "$(bold)Beyond the tutorial, these are worth a look$()$(li)$(l:wandscape:playstyle/element_level_guide)《Elements and Town Level》$(/l) Understand the economy system$(li)$(l:wandscape:magic/mages_guide)《Mages》$(/l) Workers and combatants of the town$(li)$(l:wandscape:buildings/altar_guide)《Altar》$(/l) Revive fallen mages, crucial in the early game"
+      "text": "$(l:wandscape:buildings/workstation_guide)《Workstation》$(/l), $(l:wandscape:buildings/crafting_guide)《Crafting Station》$(/l) and $(l:wandscape:buildings/magic_station_guide)《Magic Workshop》$(/l) each do one job at a time, so if they feel slow, build more of them$(br) — every building keeps its own queue and they can all work at once. Mages do the actual work, though, so extra buildings add nothing while every mage is busy."
     },
     {
       "type": "patchouli:text",
-      "text": "$(l:wandscape:buildings/crafting_guide)《Crafting Station》$(/l) Powerful wands, exploration tools, and boss fight equipment$(li)$(l:wandscape:buildings/tavern_guide)《Tavern》$(/l) Recruit more mages"
+      "text": "$(li)$(l:wandscape:playstyle/element_level_guide)《Elements and Town Level》$(/l) Understand the economy system$(li)$(l:wandscape:magic/mages_guide)《Mages》$(/l) Workers and combatants of the town$(li)$(l:wandscape:buildings/altar_guide)《Altar》$(/l) Revive fallen mages, crucial in the early game",
+      "title": "Beyond the tutorial, these are worth a look"
     },
     {
       "type": "patchouli:text",
-      "text": "$(li)$(l:wandscape:buildings/mage_hut_guide)《Mage Hut》$(/l) Train mage attributes, the core of town combat power$(li)$(l:wandscape:management/panel_road_guide)《Road Mode》$(/l) Level terrain and pave roads"
+      "text": "$(li)$(l:wandscape:buildings/crafting_guide)《Crafting Station》$(/l) Powerful wands, exploration tools, and boss fight equipment$(li)$(l:wandscape:buildings/tavern_guide)《Tavern》$(/l) Recruit more mages$(li)$(l:wandscape:buildings/mage_hut_guide)《Mage Hut》$(/l) Train mage attributes, the core of town combat power$(li)$(l:wandscape:management/panel_road_guide)《Road Mode》$(/l) Level terrain and pave roads"
     }
   ]
 }

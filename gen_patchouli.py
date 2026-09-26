@@ -218,6 +218,7 @@ TITLE_TO_DOC_ZH = {
     "高级施法管理": "advanced_casting_guide",
     "合成站": "crafting_guide",
     "魔法工坊": "magic_station_guide",
+    "工作站": "workstation_guide",
     "商店": "shop_guide",
     "服务设施与酒店": "service_guide",
     "酒馆": "tavern_guide",
@@ -258,6 +259,7 @@ TITLE_TO_DOC_EN = {
     "Casting": "casting_guide",
     "Advanced Casting": "advanced_casting_guide",
     "Magic Workshop": "magic_station_guide",
+    "Workstation": "workstation_guide",
     "Crafting Station": "crafting_guide",
     "Shop": "shop_guide",
     "Service Facilities and Hotels": "service_guide",
@@ -663,8 +665,9 @@ PAGINATION_ODD_EXCEPTIONS = {
     # 摊开又凑不满 3 页的 21 行。删图或增删正文都能走通，纯排版无解。
     ("zh_cn", "tavern_guide"):
         "正文 4+10 行，并成一页差 1 行（含段间空行共 15 行 > 首页 14）；配图后为 3 页",
-    ("en_us", "workstation_guide"):
-        "正文 26 行；3 页需每页 ≥7 行而 26 行分不出，配图后为 3 页",
+    ("zh_cn", "workstation_guide"):
+        "正文 21 行；并成一页装不下（含段间空行 22 行 > 首页 14），摊成 3 页又每页不足 7 行，"
+        "块界也切不出 7/7/7；配图后为 3 页",
 }
 
 
