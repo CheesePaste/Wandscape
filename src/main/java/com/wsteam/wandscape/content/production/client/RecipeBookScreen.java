@@ -50,7 +50,6 @@ public class RecipeBookScreen extends MedievalScreen {
         this.blueprintCount = packet.blueprintCount();
         this.allRecipes = new ArrayList<>(packet.recipeEntries());
         this.allRecipes.sort(Comparator.comparing(RecipeBookEntry::outputItem));
-        setCreator(packet.creator());
     }
 
     public boolean isMatchingColony(@Nullable UUID colonyId) {
@@ -62,7 +61,6 @@ public class RecipeBookScreen extends MedievalScreen {
         this.blueprintCount = packet.blueprintCount();
         this.allRecipes = new ArrayList<>(packet.recipeEntries());
         this.allRecipes.sort(Comparator.comparing(RecipeBookEntry::outputItem));
-        setCreator(packet.creator());
         applyFilter();
     }
 
@@ -234,5 +232,10 @@ public class RecipeBookScreen extends MedievalScreen {
                 g.renderTooltip(font, hovered, mouseX, mouseY);
             }
         }
+    }
+
+    @Override
+    protected void renderCreatorFooter(GuiGraphics g) {
+        // Suppress creator footer for RecipeBookScreen
     }
 }

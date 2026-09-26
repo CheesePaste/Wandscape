@@ -674,5 +674,9 @@
   "message.wandscape.warehouse_terminal.not_equipped": {
     "en_us": "Warehouse Terminal is not equipped or held",
     "zh_cn": "未穿戴或持有仓库终端"
+  },
+  "message.wandscape.blueprint.no_colony": {
+    "zh_cn": "你没有创建小镇，无法打开配方图鉴",
+    "en_us": "You have no town — the recipe book cannot be opened"
   }
 }

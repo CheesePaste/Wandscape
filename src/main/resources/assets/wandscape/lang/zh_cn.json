@@ -1464,6 +1464,7 @@
   "message.wandscape.altar.not_found": "[魔法小镇] 祭坛不存在或未完工",
   "message.wandscape.altar.on_cooldown": "[魔法小镇] 祭坛冷却中（剩余 %.1f 秒）",
   "message.wandscape.altar.task_system_not_ready": "[魔法小镇] 任务系统未就绪",
+  "message.wandscape.blueprint.no_colony": "你没有创建小镇，无法打开配方图鉴",
   "message.wandscape.building.cancel_blocked": "§c[建筑] 无法撤销「%s」的建造：",
   "message.wandscape.building.cancel_failed": "§c[建筑] 无法撤销「%s」的建造",
   "message.wandscape.building.cancelled": "§e[建筑] 已撤销「%s」的建造",

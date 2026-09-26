@@ -1464,6 +1464,7 @@
   "message.wandscape.altar.not_found": "[Wandscape] Altar not found or not finished",
   "message.wandscape.altar.on_cooldown": "[Wandscape] Altar cooling down (%.1f s remaining)",
   "message.wandscape.altar.task_system_not_ready": "[Wandscape] Task system is not ready",
+  "message.wandscape.blueprint.no_colony": "You have no town — the recipe book cannot be opened",
   "message.wandscape.building.cancel_blocked": "§c[Building] Cannot cancel construction of '%s': ",
   "message.wandscape.building.cancel_failed": "§c[Building] Cannot cancel construction of '%s'",
   "message.wandscape.building.cancelled": "§e[Building] Cancelled construction of '%s'",
