@@ -632,7 +632,8 @@ public class WandscapeClient {
     static void onItemColors(RegisterColorHandlersEvent.Item event) {
         event.register((stack, tintIndex) -> {
             if (tintIndex == 0) {
-                Integer argb = WandItem.colorArgb(stack);
+                // 法杖头：存过指挥模式的堆叠按模式变色，其余仍是预设染色（headColorArgb 里分界）
+                Integer argb = WandItem.headColorArgb(stack);
                 if (argb != null) {
                     return argb;
                 }
