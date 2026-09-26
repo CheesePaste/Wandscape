@@ -11,7 +11,7 @@
     },
     {
       "type": "patchouli:text",
-      "text": "$(bold)出发前先读这几篇$()$(li)推荐阅读:$(l:wandscape:magic/mages_guide)《法师》$(/l)$(l:wandscape:magic/casting_guide)《施法》$(/l)$(li)建筑相关:$(l:wandscape:buildings/mage_hut_guide)《法师小屋》$(/l)$(l:wandscape:buildings/tavern_guide)《酒馆》$(/l)$(li)物品推荐:$(l:wandscape:items/wand_guide)《法杖》$(/l)$(l:wandscape:items/oath_ring_guide)《盟誓戒指》$(/l)$(l:wandscape:items/scepter_guide)《权杖》$(/l)"
+      "text": "$(bold)出发前先读这几篇$()$(li)推荐阅读:$(l:wandscape:magic/mages_guide)《法师》$(/l)$(l:wandscape:magic/casting_guide)《施法》$(/l)$(li)建筑相关:$(l:wandscape:buildings/mage_hut_guide)《法师小屋》$(/l)$(l:wandscape:buildings/tavern_guide)《酒馆》$(/l)$(li)物品推荐:$(l:wandscape:items/wand_guide)《法杖》$(/l)$(l:wandscape:items/oath_ring_guide)《盟誓戒指》$(/l)"
     }
   ]
 }

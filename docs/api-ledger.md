@@ -151,7 +151,7 @@
 | `boolean isSheltered(UUID colonyId, UUID entityUuid, Level)` | 是否被殖民地庇护 | ✅ | `WandscapeNpc.isFriendlyForce`（:261）已走 |
 | `boolean isShelteredForAny(UUID, Level)` | 是否被任意殖民地庇护 | ✅ | `GuardTaskSource`（:90）已走 |
 | `LivingEntity forcedHostile(ServerLevel, UUID)` | 殖民地强制仇恨目标 | ✅ | guard 已走 |
-| `double getScepterHostileRange()` / `setScepterHostileRange(double)` | 权杖敌对触发集火距离（平衡） | ✅ | `BalanceValues` 委托 |
+| `double getScepterHostileRange()` / `setScepterHostileRange(double)` | 庇护/敌对模式触发集火距离（平衡；法杖与权杖共用） | ✅ | `BalanceValues` 委托 |
 | `void setSheltered(UUID, UUID, boolean)` | 设/撤庇护（**要补的写侧**） | 🔶 桩 | 🔧 **本体绕开**：`ScepterMarks.toggleShelter`（`ScepterMarks.java:60`，经 `ScepterService` 右键触发）——**这就是只读 bug 的根源** |
 | `void setForcedHostile(UUID, UUID)` | 设强制仇恨目标 | 🔶 桩 | 🔧 本体绕开：`ScepterMarks.toggleForcedHostile`（`:94`） |
 | `UUID clearForcedHostile(UUID)` | 清强制仇恨目标 | 🔶 桩 | 🔧 本体绕开：`ScepterMarks.clearForcedHostile`（`:116`） |
@@ -319,7 +319,7 @@
 | `onInteractNpc(ServerPlayer, Mob, InteractionHand)` | 非潜行右键法师 | 🔌 回调接口（addon 实现） | 本体经 `WandscapeNpc.mobInteract:1402` instanceof 派发 |
 | `onShiftClickNpc(ServerPlayer, Mob, InteractionHand)` | 潜行右键法师 | 🔌 回调接口 | 同上 `:1396` |
 
-**优点**：addon 物品实现这两个接口即自动获得右键殖民法师行为，无需注册表。**边界**：只对 `WandscapeNpc`；非殖民地生物走 `ScepterInteractHandler`（只认 scepter 物品）。
+**优点**：addon 物品实现这两个接口即自动获得右键殖民法师行为，无需注册表。**边界**：只对 `WandscapeNpc`；非殖民地生物走事件 handler（`ScepterInteractHandler` 认权杖物品，`WandInteractHandler` 认法杖物品——法杖的庇护/敌对模式即经此接管非殖民地生物）。
 
 ---
 

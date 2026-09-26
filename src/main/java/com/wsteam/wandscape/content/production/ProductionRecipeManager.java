@@ -32,6 +32,8 @@ public final class ProductionRecipeManager {
     public static final String SOURCE_WAREHOUSE_DEPOSIT = "warehouse_deposit";
     public static final String SOURCE_WAREHOUSE_SYNC = "warehouse_sync";
     public static final String SOURCE_BLUEPRINT = "blueprint";
+    /** 法杖鉴定模式：对着方块右键就地解锁它对应的合成配方。 */
+    public static final String SOURCE_WAND_IDENTIFY = "wand_identify";
     public static final String SOURCE_MANUAL = "manual";
 
     private ProductionRecipeManager() {}

@@ -118,7 +118,7 @@
 
 | 别这么写（面板上现成） | 这么写（面板看不见的） |
 |---|---|
-| 合成站能做法杖、权杖、盟誓戒指、魔法指南针和仓库终端，配方以元素为主，个别还要玻璃瓶 | 合成站合成装备和道具；成品直接进小镇仓库，不会进你的背包，材料也不从你背包里扣 |
+| 合成站能做法杖、盟誓戒指、魔法指南针和仓库终端，配方以元素为主，个别还要玻璃瓶 | 合成站合成装备和道具；成品直接进小镇仓库，不会进你的背包，材料也不从你背包里扣 |
 | 仓库能存元素和各类物资 | 仓库是全镇共用的存量，把仓库方块拆了东西也不会丢；多盖几座能扩容，还有仓库终端这种带在身上的开法 |
 
 隐藏信息点的几个常见方向：**成品进谁的包、拆了会不会丢、默认值是不是 0、要不要手动发布、名额算在谁头上。**
@@ -179,7 +179,7 @@ CLAUDE.md §二.9：面向玩家文本（`lang/*`、`guide/**`、I18n、Screen �
 | `buildings` | 建筑 | buildings / anomaly / townhall / warehouse / workstation / crafting / magic_station / tavern / altar / mage_hut / node / decoration / shop / service / relax / atm / building_scanner |
 | `management` | 管理 | panel / panel_build / panel_road / panel_tasks / panel_settings |
 | `magic` | 魔法 | mages / casting / advanced_casting / magic_beam / magic_meteor / magic_desperation / magic_enfeeble_field / magic_conversion / magic_petrification / magic_fortification / magic_heal / magic_teleport / magic_revive |
-| `items` | 装备与物品 | wand / oath_ring / scepter / magic_compass / warehouse_terminal |
+| `items` | 装备与物品 | wand / oath_ring / magic_compass / warehouse_terminal |
 | `custom` | 自定义与数据包 | custom / building_scanner / custom_buildings / custom_packs / custom_elements / custom_recipes / custom_magic / custom_loot / custom_commands |
 | `compat` | 联动与兼容 | curios / irons_spells / goety |
 | `about` | 关于我们 | about |
@@ -241,7 +241,7 @@ service、relax、atm），顺序照建造面板的分类顺序，前后各夹�
 
 - **`magic` 分类一条魔法一页**，正文**照搬 `magic_spells/<id>.json` 的 `description`**——即 JEI 卷轴信息页
   （`WandscapeJeiPlugin` 经 `magic.wandscape.<id>.desc` 本地化）那句。**两边都要改**（§1.1 的坑 1）。
-- **`items` 分类**把 3 档戒指 / 5 种权杖 / 3 档罗盘各自归并成一条，法杖整族一条（12 支预设不展开）。
+- **`items` 分类**把 3 档戒指 / 3 档罗盘各自归并成一条，法杖整族一条（12 支预设不展开）。
 - **`compat` 分类只写玩家看得见的效果**（能做什么、要在哪里装什么、有什么前提），不写内部机制——
   正文依据是 `compat/{curios,ironspellbooks,goety}/` 的实际行为，改兼容代码后这几页要跟着复核。
 
@@ -321,10 +321,13 @@ python gen_patchouli.py textures --force   # 强制覆盖书皮（美术就位�
   这几级切点切开。所以**写作时让一节落在 9–14 行，页界自然就是语义边界**。
   一个坑：md 里「一行一段」写法（段落之间空行）每段要额外吃一行 `$(br2)` 空行；
   并列的条目改成 `- ` 列表就只算行数、不额外占行，合适就改。
-- **页数取偶**：帕秋莉左右两页同时展示（`GuiBookEntry` 里 `leftNum = spread*2`、`rightNum = spread*2+1`），
+- **页数取偶（软目标）**：帕秋莉左右两页同时展示（`GuiBookEntry` 里 `leftNum = spread*2`、`rightNum = spread*2+1`），
   奇数页会让最后一个跨页的右半空成白纸。分页器在小节之间不动边界的前提下重排小节占几页、
   必要时并节，实在凑不出偶数就记进 `gen_patchouli.py` 的 `PAGINATION_ODD_EXCEPTIONS`（带原因，不再命中会报错要求删掉）。
-- **不留残页**：多页条目里任何一页不足 7 行都要再平衡。
+  **但偶数只是「把纸用满」，不是刚需**：该三页的内容就三页，别为了凑偶数删正文、并小节或改结构——
+  排版服从内容，不是反过来。
+- **不留残页（同样是软目标）**：多页条目里非末页不足 7 行，分页器会尽量再平衡；
+  内容本身决定了某页就是偏短，留着即可。`paginate_patchouli_json.py --check` 报的「欠满页」按需处理，不是硬指标。
 - **中文与英文页数可以不同**：英文比中文长约 1.6 倍，同一节在英文侧会被切成两页。
   这是正常的，别为了对齐两边页数去改结构。
 

@@ -19,7 +19,7 @@
     },
     {
       "type": "patchouli:text",
-      "text": "Recommended reading: $(l:wandscape:magic/mages_guide)《Mages》$(/l)$(l:wandscape:magic/casting_guide)《Casting》$(/l)$(li)Buildings: $(l:wandscape:buildings/mage_hut_guide)《Mage Hut》$(/l)$(l:wandscape:buildings/tavern_guide)《Tavern》$(/l)$(li)Items: $(l:wandscape:items/wand_guide)《Wand》$(/l)$(l:wandscape:items/oath_ring_guide)《Oath Ring》$(/l)$(l:wandscape:items/scepter_guide)《Scepters》$(/l)",
+      "text": "Recommended reading: $(l:wandscape:magic/mages_guide)《Mages》$(/l)$(l:wandscape:magic/casting_guide)《Casting》$(/l)$(li)Buildings: $(l:wandscape:buildings/mage_hut_guide)《Mage Hut》$(/l)$(l:wandscape:buildings/tavern_guide)《Tavern》$(/l)$(li)Items: $(l:wandscape:items/wand_guide)《Wand》$(/l)$(l:wandscape:items/oath_ring_guide)《Oath Ring》$(/l)",
       "title": "Read these before you set out"
     }
   ]

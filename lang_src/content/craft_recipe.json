@@ -27,10 +27,6 @@
     "zh_cn": "工匠法杖",
     "en_us": "Craftsman's Wand"
   },
-  "craft_recipe.wandscape.follow_wand": {
-    "zh_cn": "跟随权杖",
-    "en_us": "Follow Wand"
-  },
   "craft_recipe.wandscape.gale_wand": {
     "zh_cn": "疾风法杖",
     "en_us": "Gale Wand"
@@ -38,10 +34,6 @@
   "craft_recipe.wandscape.genesis_wand": {
     "zh_cn": "创世法杖",
     "en_us": "Genesis Wand"
-  },
-  "craft_recipe.wandscape.hostile_wand": {
-    "zh_cn": "敌对权杖",
-    "en_us": "Hostile Wand"
   },
   "craft_recipe.wandscape.magic_compass": {
     "zh_cn": "魔法指南针",
@@ -55,21 +47,9 @@
     "zh_cn": "湮灭法杖",
     "en_us": "Oblivion Wand"
   },
-  "craft_recipe.wandscape.omni_scepter": {
-    "zh_cn": "万能权杖",
-    "en_us": "Omni Scepter"
-  },
-  "craft_recipe.wandscape.peace_wand": {
-    "zh_cn": "和平权杖",
-    "en_us": "Peace Wand"
-  },
   "craft_recipe.wandscape.pyromancer_wand": {
     "zh_cn": "烈焰法杖",
     "en_us": "Pyromancer's Wand"
-  },
-  "craft_recipe.wandscape.shelter_wand": {
-    "zh_cn": "庇护权杖",
-    "en_us": "Shelter Wand"
   },
   "craft_recipe.wandscape.ultimate_magic_compass": {
     "zh_cn": "终极魔法指南针",

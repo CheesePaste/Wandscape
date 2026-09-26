@@ -15,6 +15,10 @@ import java.util.UUID;
 /**
  * 玩家权杖服务端业务：应用右键命令 + 本殖民地校验 + 玩家上屏反馈。
  *
+ * <p>权杖物品已从合成与创造栏隐藏，但庇护/敌对这两个模式的实现仍是唯一一份——法杖的
+ * 同名模式（{@code WandModeService}）直接复用 {@link #toggleShelter}/{@link #toggleHostile}，
+ * 不另写一套标记逻辑。和平/跟随是权杖专属，法杖不提供。
+ *
  * <p>范围归属「本殖民地」（与盟誓戒指同语义）：和平/跟随要求目标法师属于玩家自己殖民地的法师；
  * 庇护/敌对要求玩家有殖民地（标记存该殖民地名下，只指挥该殖民地法师）。无殖民地/跨殖民地拒绝
  * 并反馈。庇护与强制仇恨的标记落 {@link ScepterMarksSavedData}（长期持久化，退出重进生效）。
@@ -69,8 +73,10 @@ public final class ScepterService {
     }
 
     // ── 庇护 / 敌对：切换殖民地标记（持久化到 ScepterMarksSavedData）──
+    // 公开给法杖的庇护/敌对模式复用（WandModeService）：同一份校验与写入口，不另起一套。
 
-    private static void toggleShelter(ServerPlayer player, LivingEntity target) {
+    /** 切换目标的庇护状态；要求玩家有自己的小镇，标记落该殖民地名下。 */
+    public static void toggleShelter(ServerPlayer player, LivingEntity target) {
         UUID colonyId = ownColony(player);
         if (colonyId == null) {
             fail(player, "message.wandscape.scepter.no_colony");
@@ -87,7 +93,8 @@ public final class ScepterService {
                 shortId(target.getUUID()), shortId(colonyId));
     }
 
-    private static void toggleHostile(ServerPlayer player, LivingEntity target) {
+    /** 切换目标的强制仇恨状态（单槽；转移即替换旧目标）；盟友不能标记，要求有自己的小镇。 */
+    public static void toggleHostile(ServerPlayer player, LivingEntity target) {
         UUID colonyId = ownColony(player);
         if (colonyId == null) {
             fail(player, "message.wandscape.scepter.no_colony");

@@ -40,6 +40,12 @@
 9. **自定义实体禁 `bakeLayer(ModelLayers.PLAYER)`（EMF 连坐坑，游客渲染器同规则）**：
    - Detailed Animations 系列资源包经 EMF 在烘焙期替换原版玩家层几何；借该层烘焙的自定义实体（NPC/游客曾是）会被连坐——EMF 的新几何配 64×64 标准布局皮肤，头身 UV 错位分离（2026-09 用户实测，仅装 EMF+ETF 即可复现）。
    - 做法：实体渲染器各自注册自有 `ModelLayerLocation`（`wandscape:wandscape_npc/main`、`wandscape:tourist/main`，注册在 `WandscapeClient.onRegisterLayerDefinitions`），几何用 vanilla 同款工厂 `LayerDefinition.create(PlayerModel.createMesh(CubeDeformation.NONE, false), 64, 64)`（经典粗臂 64×64 含 overlay 第二层），与原版 PLAYER 层逐位一致——不装 EMF 时外观零变化；`EvilMage` 复用 NPC 渲染器自动覆盖。1.21.1 的 `PlayerModel` **没有** `createBodyLayer`（旧版本记忆），几何工厂是 `createMesh(CubeDeformation, boolean slim)`。
+10. **玩家指挥法师的唯一道具是法杖（权杖已隐藏但代码保留）**：
+   - 模式住**物品自定义数据**（`WandItem.MODE_KEY`，值 `WandMode` 名），shift+右键循环；三处入口必须同口径：本镇法师走 `mobInteract` → `NpcInteractHook`/`NpcSneakInteractHook`，非本镇生物走 `WandInteractHandler`（`PlayerInteractEvent.EntityInteract`），方块走 `WandItem.useOn`。
+   - **接管与否只由 `WandMode.affectsCreatures()`/`affectsBlocks()` 决定**，客户端与服务端读同一个判据——分散判断会让两端各接一半，出现「服务端下了命令、客户端还在走原版交互」。
+   - ⚠️ 两个已知边界，改交互前先看：`useOn` **只在方块自己没接住右键时被调用**，所以箱子/熔炉/门这类有界面的方块在集合、鉴定模式下照旧开自己的界面（要覆盖它们得改用 `RightClickBlock` 事件，代价是屏蔽所有方块交互）；`NpcInteractHook` 是 void、无法拒绝，因此**手持法杖右键法师永远被吞掉**，集合/鉴定模式下只回一句提示、不开法师装备菜单（权杖时代同此语义）。
+   - 庇护/敌对**没有第二份实现**：`WandModeService` 直接调 `ScepterService.toggleShelter/toggleHostile`，标记仍落 `ScepterMarksSavedData`；`scepterHostileRange` 默认值已随需求改为 32 格（`BalanceValues` 与 `wandscape_balance.json` 两处）。
+   - 集合是**一次性**的：直接调 ECS 的 `movementOps.navigateTo`（与守卫 AI 同一套寻路/卡住传送兜底），不存状态、不新增寻路代码；被任务打断即作废（`NavigationSystem` 只驱动 `NavigationState`，任务一入队就取消在途导航）。
 
 ---
 

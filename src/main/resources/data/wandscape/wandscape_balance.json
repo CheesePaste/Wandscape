@@ -19,7 +19,7 @@
   "guardFleeStartDist": 12.0,
   "guardFleeStandoff": 18.0,
 
-  "scepterHostileRange": 128.0,
+  "scepterHostileRange": 32.0,
 
   "transportTicksPerBlockOnRoad": 2,
   "transportTicksPerBlockOffRoad": 4,

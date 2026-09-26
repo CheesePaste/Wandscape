@@ -14,5 +14,21 @@
   "mode.wandscape.scepter.shelter": {
     "zh_cn": "庇护",
     "en_us": "Shelter"
+  },
+  "mode.wandscape.wand.gather": {
+    "zh_cn": "集合",
+    "en_us": "Gather"
+  },
+  "mode.wandscape.wand.hostile": {
+    "zh_cn": "敌对",
+    "en_us": "Hostile"
+  },
+  "mode.wandscape.wand.identify": {
+    "zh_cn": "鉴定",
+    "en_us": "Identify"
+  },
+  "mode.wandscape.wand.shelter": {
+    "zh_cn": "庇护",
+    "en_us": "Shelter"
   }
 }

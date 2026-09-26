@@ -2,7 +2,7 @@
   "name": "仓库终端",
   "category": "wandscape:items",
   "icon": "wandscape:warehouse_terminal",
-  "sortnum": 4,
+  "sortnum": 3,
   "read_by_default": true,
   "pages": [
     {

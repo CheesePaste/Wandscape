@@ -153,11 +153,12 @@ ENTRIES = [
 
     # ── 装备与物品：各类条目（小道具按类归并，法杖整族一条）——
     # 没有别的分类那样的总览页：这一类的东西就那么几件，底下每条自己就说清了，再写一篇总览是重复。
+    # 权杖已撤下（配方与创造栏双双隐藏，指挥功能并入法杖），条目随之下线，别再登记回来。
     ("wand_guide", "items", "wandscape:wand", 0),
     ("oath_ring_guide", "items", "wandscape:oath_ring", 1),
-    ("scepter_guide", "items", "wandscape:omni_scepter", 2),
-    ("magic_compass_guide", "items", "wandscape:magic_compass", 3),
-    ("warehouse_terminal_guide", "items", "wandscape:warehouse_terminal", 4),
+    ("magic_compass_guide", "items", "wandscape:magic_compass", 2),
+    ("warehouse_terminal_guide", "items", "wandscape:warehouse_terminal", 3),
+    ("blueprint_guide", "items", "wandscape:item_blueprint", 4),
 
     # ── 自定义：总览 → 建筑扫描器（自定义建筑唯一的产出途径）→ 各条数据导入 → 指令 ──
     # 指令不属于「导入」，但它是同一批读者（开服/改数据的人）的另一把工具：`/wandscape` 下查状态与急救那批。
@@ -228,7 +229,6 @@ TITLE_TO_DOC_ZH = {
     # 装备与物品
     "法杖": "wand_guide",
     "盟誓戒指": "oath_ring_guide",
-    "权杖": "scepter_guide",
     "元素节点": "node_guide",
 }
 
@@ -270,7 +270,6 @@ TITLE_TO_DOC_EN = {
     # Equipment and Items
     "Wand": "wand_guide",
     "Oath Ring": "oath_ring_guide",
-    "Scepters": "scepter_guide",
     "Element Node": "node_guide",
 }
 
@@ -661,13 +660,10 @@ PAGINATION_ODD_EXCEPTIONS = {
     ("zh_cn", "casting_guide"):       "正文 17 行；15–20 行死角，配图后无解",
     ("en_us", "altar_guide"):         "正文 19 行；15–20 行死角，配图后无解",
     ("en_us", "mage_hut_guide"):      "正文 19 行；15–20 行死角，配图后无解",
-    # 这两条的正文都在死角边缘卡着：并成一页只差一行（15 行 vs 首页容量 14），
+    # 这条的正文卡在死角边缘：并成一页只差一行（含段间空行共 15 行 > 首页 14），
     # 摊开又凑不满 3 页的 21 行。删图或增删正文都能走通，纯排版无解。
     ("zh_cn", "tavern_guide"):
         "正文 4+10 行，并成一页差 1 行（含段间空行共 15 行 > 首页 14）；配图后为 3 页",
-    ("zh_cn", "workstation_guide"):
-        "正文 21 行；并成一页装不下（含段间空行 22 行 > 首页 14），摊成 3 页又每页不足 7 行，"
-        "块界也切不出 7/7/7；配图后为 3 页",
 }
 
 

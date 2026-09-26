@@ -11,7 +11,15 @@
     },
     {
       "type": "patchouli:text",
-      "text": "s like spell power, work speed or max mana. The 12 preset wands each lean a different way, some toward combat and some toward buildin$(br2)g. You can pull a wand off one mage and hand it to another at any time, but a player holding one gains nothing from it."
+      "text": "s like spell power, work speed or max mana. The 12 preset wands each lean a different way, some toward combat and some toward buildin$(br2)g. You can pull a wand off one mage and hand it to another at any time, but a player holding one gains none of that."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "A player holding a wand can also give orders to the town's mages: shift+right-click to switch modes, right-click to use the current o$(br)ne, and the current mode is written in the item tooltip. Shelter and Hostile are the two that work on creatures — one marks the targe"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "t as an ally so your mages leave it alone, the other sends nearby mages to focus their fire on it. Gather and Identify are the two th$(br)at work on blocks — Gather calls nearby mages to the spot you point at, and Identify unlocks that block's crafting recipe on the spot$(br)."
     }
   ]
 }
