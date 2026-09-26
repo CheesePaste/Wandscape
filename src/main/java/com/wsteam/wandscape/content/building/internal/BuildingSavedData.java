@@ -61,6 +61,7 @@ public class BuildingSavedData extends SavedData {
     private static final String TAG_INTACT = "intact";
     private static final String TAG_EVER_COMPLETED = "ever_completed";
     private static final String TAG_CONSTRUCTION_STARTED = "construction_started";
+    private static final String TAG_CHARGED_MATERIALS = "charged_materials";
     private static final String TAG_QUEUE = "queue";
     private static final String TAG_CURRENT_TASK = "current_task";
     private static final String TAG_COMFORT = "comfort";
@@ -645,6 +646,15 @@ public class BuildingSavedData extends SavedData {
             entry.putBoolean(TAG_INTACT, state.isStructureIntact());
             entry.putBoolean(TAG_EVER_COMPLETED, state.hasEverCompleted());
             entry.putBoolean(TAG_CONSTRUCTION_STARTED, state.isConstructionStarted());
+            // 已扣建材账本（撤销建造的退还上限）
+            Map<String, Integer> charged = state.getChargedMaterials();
+            if (!charged.isEmpty()) {
+                CompoundTag chargedTag = new CompoundTag();
+                for (var e : charged.entrySet()) {
+                    chargedTag.putInt(e.getKey(), e.getValue());
+                }
+                entry.put(TAG_CHARGED_MATERIALS, chargedTag);
+            }
             entry.putInt(TAG_COMFORT, state.getComfort());
             entry.putInt(TAG_MAGIC, state.getMagic());
             entry.putInt(TAG_WONDER, state.getWonder());
@@ -809,6 +819,15 @@ public class BuildingSavedData extends SavedData {
                     ? entry.getBoolean(TAG_EVER_COMPLETED)
                     : state.isStructureIntact());
             state.setConstructionStarted(entry.getBoolean(TAG_CONSTRUCTION_STARTED));
+            // 旧档没有这本账 → 空账本：撤销时不退建材（宁可少退，不可凭空造物）。
+            if (entry.contains(TAG_CHARGED_MATERIALS)) {
+                CompoundTag chargedTag = entry.getCompound(TAG_CHARGED_MATERIALS);
+                Map<String, Integer> charged = new LinkedHashMap<>();
+                for (String itemId : chargedTag.getAllKeys()) {
+                    charged.put(itemId, chargedTag.getInt(itemId));
+                }
+                state.recordChargedMaterials(charged);
+            }
             if (entry.hasUUID(TAG_CURRENT_TASK)) {
                 state.setCurrentTaskId(entry.getUUID(TAG_CURRENT_TASK));
             }

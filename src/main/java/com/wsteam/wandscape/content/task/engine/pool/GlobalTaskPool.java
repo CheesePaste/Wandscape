@@ -327,6 +327,49 @@ public class GlobalTaskPool {
         return npcId;
     }
 
+    // ── Colony-scoped purge（玩家自救：只清自己的小镇） ──
+
+    /**
+     * 彻底清除属于 {@code colonyId} 的未完成任务：先走 {@link #cancelTask} 的释放语义
+     * （退订触发器、释放 NPC、丢弃全局包、取消导航），再把条目从池中移除。
+     *
+     * <p>{@code nextTaskId} 故意不重置——其他殖民地仍有更高 id 的任务在池里，重置会撞 id。
+     * 需要连计数器一起归零的只有 {@link #clearAll()}（全服清空）。
+     *
+     * @return 实际清除条数（不含本来就 COMPLETED 的条目）
+     */
+    public int purgeTasksForColony(UUID colonyId, World world) {
+        List<Long> ids = new ArrayList<>();
+        for (GlobalTask task : tasksById.values()) {
+            if (task.state != TaskState.COMPLETED && colonyId.equals(colonyIdOf(task))) {
+                ids.add(task.id);
+            }
+        }
+        return purgeTasks(ids, world);
+    }
+
+    /**
+     * 彻底清除指定 id 的任务，并顺带移除其中已 COMPLETED 的僵尸条目。
+     * 用于建筑队列交出来的 head/parked 任务——它们的 colony_id 理论上与建筑一致，
+     * 但缺 colony_id 的无主残留也会在这里被清掉，不留孤儿继续跑。
+     *
+     * @return 实际清除条数（不含本来就 COMPLETED 的条目）
+     */
+    public int purgeTasks(Collection<Long> taskIds, World world) {
+        int purged = 0;
+        for (Long id : taskIds) {
+            GlobalTask task = tasksById.get(id);
+            if (task == null) continue;
+            if (task.state != TaskState.COMPLETED) {
+                cancelTask(id, world);   // 内含 notifyChanged
+                purged++;
+            }
+            removeFromAssignable(task);
+            tasksById.remove(id);
+        }
+        return purged;
+    }
+
     /** Update priority of an existing task. Re-sorts assignableSet if pending. */
     public boolean updatePriority(long taskId, int newPriority) {
         GlobalTask task = tasksById.get(taskId);
@@ -399,7 +442,7 @@ public class GlobalTaskPool {
 
     /** 任务参数里的 colony_id（字符串）→ UUID；缺失或格式非法返回 null（无主任务）。 */
     @Nullable
-    private static UUID resolveColonyId(GlobalTask task) {
+    public static UUID colonyIdOf(GlobalTask task) {
         if (task.taskParams != null) {
             JsonElement el = task.taskParams.get("colony_id");
             if (el != null && el.isJsonPrimitive()) {
@@ -497,7 +540,7 @@ public class GlobalTaskPool {
             relevant++;
 
             boolean allAvailable = true;
-            UUID colonyId = resolveColonyId(task);
+            UUID colonyId = colonyIdOf(task);
             for (ResourceStack need : task.awaitingResource) {
                 if (colonyResources.available(colonyId, need.resource()) < need.amount()) {
                     allAvailable = false;

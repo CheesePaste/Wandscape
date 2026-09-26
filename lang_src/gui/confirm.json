@@ -4,16 +4,16 @@
     "en_us": "Cancel"
   },
   "gui.wandscape.confirm.cancel.msg": {
-    "zh_cn": "确定要撤销「%s」的建造吗？将清除施工地并返还已分配建材。",
-    "en_us": "Are you sure you want to cancel construction of '%s'? Site will be cleared and allocated materials returned."
+    "zh_cn": "确定要撤销「%s」的建造吗？已建部分将一并清除，只退还未开工或未建成部分的建材。",
+    "en_us": "Are you sure you want to cancel construction of '%s'? Whatever is already built is cleared too, and only unbuilt materials are returned."
   },
   "gui.wandscape.confirm.cancel.title": {
     "zh_cn": "确认撤销",
     "en_us": "Confirm Undo"
   },
   "gui.wandscape.confirm.demolish.msg": {
-    "zh_cn": "确定要拆除「%s」吗？已下发的工作将中断，部分建材将返还。",
-    "en_us": "Are you sure you want to demolish '%s'? Ongoing work will stop and some materials will be recovered."
+    "zh_cn": "确定要拆除「%s」吗？已下发的工作将中断，拆除不再返还任何建材。",
+    "en_us": "Are you sure you want to demolish '%s'? Ongoing work will stop and no materials are returned."
   },
   "gui.wandscape.confirm.demolish.title": {
     "zh_cn": "确认拆除",

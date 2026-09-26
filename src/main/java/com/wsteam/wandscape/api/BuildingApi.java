@@ -44,11 +44,13 @@ public interface BuildingApi {
 
     /**
      * Undo an under-construction (not yet completed) building. Returns true when
-     * the building was cancelled. If construction has started the built parts are
-     * demolished and the full material cost is refunded to the colony warehouse;
-     * if construction has not started the pending building is removed outright
-     * (nothing was consumed, so nothing is refunded). Completed buildings cannot
-     * be cancelled.
+     * the building was cancelled. Nothing is refunded before construction actually
+     * charges the warehouse: materials are deducted in one bulk commit at
+     * construction start, and only what that commit charged can be returned. Once
+     * charged, the parts not yet built are refunded and the built parts are
+     * demolished without salvage (their materials stay consumed). A building whose
+     * construction never charged anything (never started, or first-build free) is
+     * removed with no refund at all. Completed buildings cannot be cancelled.
      */
     boolean cancelBuilding(UUID buildingId);
 

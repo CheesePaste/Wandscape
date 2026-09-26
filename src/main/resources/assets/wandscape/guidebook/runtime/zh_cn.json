@@ -387,24 +387,24 @@
       "sortnum": 1
     },
     {
-      "doc": "scepter_guide",
-      "category": "items",
-      "name": "权杖",
-      "icon": "wandscape:omni_scepter",
-      "sortnum": 2
-    },
-    {
       "doc": "magic_compass_guide",
       "category": "items",
       "name": "魔法指南针",
       "icon": "wandscape:magic_compass",
-      "sortnum": 3
+      "sortnum": 2
     },
     {
       "doc": "warehouse_terminal_guide",
       "category": "items",
       "name": "仓库终端",
       "icon": "wandscape:warehouse_terminal",
+      "sortnum": 3
+    },
+    {
+      "doc": "blueprint_guide",
+      "category": "items",
+      "name": "物品图纸",
+      "icon": "wandscape:item_blueprint",
       "sortnum": 4
     },
     {
@@ -535,7 +535,6 @@
     "ATM": "atm_guide",
     "法杖": "wand_guide",
     "盟誓戒指": "oath_ring_guide",
-    "权杖": "scepter_guide",
     "元素节点": "node_guide"
   }
 }

@@ -24,8 +24,8 @@
     "en_us": "Repair"
   },
   "gui.wandscape.building_action.repair_cancel_construction": {
-    "zh_cn": "撤销建造施工并返还建材",
-    "en_us": "Cancel construction and refund materials"
+    "zh_cn": "撤销建造施工并退还尚未建成的建材",
+    "en_us": "Cancel construction and return materials not yet built"
   },
   "gui.wandscape.building_action.repair_demolishing": {
     "zh_cn": "建筑正在拆除中",

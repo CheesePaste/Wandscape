@@ -24,7 +24,7 @@
 {
   "_comment": "Wandscape Balance Overrides",
   "guard.flee_hp_threshold": 0.3,
-  "scepter.hostile_range": 128.0,
+  "scepter.hostile_range": 32.0,
   "tourist.vision_radius": 48.0,
   "tourist.max_energy": 100
 }
@@ -117,7 +117,7 @@
 
 - `type: "wand"`：NPC 建造法杖，携带预设属性加成与颜色。
 - `type: "spell"`：魔法工坊卷轴合成（`output.magic_id` 绑定法术 ID）。
-- `type: "misc"`：功能性右键物品（权杖、戒指、指南针、仓库终端等）。
+- `type: "misc"`：功能性右键物品（戒指、指南针、仓库终端等）。
 
 ---
 

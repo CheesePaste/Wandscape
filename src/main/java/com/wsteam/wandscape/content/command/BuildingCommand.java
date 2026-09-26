@@ -107,7 +107,7 @@ public final class BuildingCommand {
         }
         boolean ok = api.cancelBuilding(buildingId);
         src.sendSuccess(() -> Component.literal(
-                "[魔法小镇] " + (ok ? "已取消在建建筑（材料已退还）" : "取消失败：建筑不存在或已建成")),
+                "[魔法小镇] " + (ok ? "已取消在建建筑（已扣未建成的建材已退还）" : "取消失败：建筑不存在或已建成")),
                 true);
         return Command.SINGLE_SUCCESS;
     }

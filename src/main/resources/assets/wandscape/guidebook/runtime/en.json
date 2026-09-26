@@ -387,24 +387,24 @@
       "sortnum": 1
     },
     {
-      "doc": "scepter_guide",
-      "category": "items",
-      "name": "Scepters",
-      "icon": "wandscape:omni_scepter",
-      "sortnum": 2
-    },
-    {
       "doc": "magic_compass_guide",
       "category": "items",
       "name": "Magic Compass",
       "icon": "wandscape:magic_compass",
-      "sortnum": 3
+      "sortnum": 2
     },
     {
       "doc": "warehouse_terminal_guide",
       "category": "items",
       "name": "Warehouse Terminal",
       "icon": "wandscape:warehouse_terminal",
+      "sortnum": 3
+    },
+    {
+      "doc": "blueprint_guide",
+      "category": "items",
+      "name": "Item Blueprint",
+      "icon": "wandscape:item_blueprint",
       "sortnum": 4
     },
     {
@@ -535,7 +535,6 @@
     "ATM": "atm_guide",
     "Wand": "wand_guide",
     "Oath Ring": "oath_ring_guide",
-    "Scepters": "scepter_guide",
     "Element Node": "node_guide"
   }
 }

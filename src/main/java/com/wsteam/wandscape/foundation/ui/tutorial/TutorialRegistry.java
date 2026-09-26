@@ -28,6 +28,9 @@ import java.util.List;
  *       interaction step first tells the player to exit build mode (press 1 or ESC).</li>
  *   <li>Switching tabs uses the hard-coded number keys 1/2/3 (建造/道路/任务；
  *       统计/警告两个弃用页签已从面板移除)。</li>
+ *   <li>合成配方对每座小镇默认全锁。第 5 步在「选配方」与「提交」之间插一行讲解锁，且只讲
+ *       **入库即解锁**这一条：教程走到这里玩家还没有法杖（要合成站才做得出来），讲法杖鉴定是死路，
+ *       物品图纸也还没到手。另外两条（法杖鉴定 / 物品图纸自选）写在手册的《工作站》与《物品图纸》里。</li>
  * </ul>
  *
  * <p>Readability: every character must be clearly visible — no gray/dark text (§7/§8).
@@ -121,21 +124,25 @@ public final class TutorialRegistry {
                     "tutorial.wandscape.common.exit_build",
                     "tutorial.wandscape.synthesize.line2",
                     "tutorial.wandscape.synthesize.line3",
+                    "tutorial.wandscape.synthesize.line_unlock",
                     "tutorial.wandscape.synthesize.line4"),
             List.of(
                     "tutorial.wandscape.common.exit_build",
                     "tutorial.wandscape.synthesize.line2",
                     "tutorial.wandscape.synthesize.line3",
+                    "tutorial.wandscape.synthesize.line_unlock",
                     "tutorial.wandscape.synthesize.line4"),
             List.of(
                     "tutorial.wandscape.common.exit_build",
                     "tutorial.wandscape.synthesize.line2",
                     "tutorial.wandscape.synthesize.line3",
+                    "tutorial.wandscape.synthesize.line_unlock",
                     "tutorial.wandscape.synthesize.line4"),
             List.of(
                     "tutorial.wandscape.common.exit_build",
                     "tutorial.wandscape.synthesize.line2",
                     "tutorial.wandscape.synthesize.line3",
+                    "tutorial.wandscape.synthesize.line_unlock",
                     "tutorial.wandscape.synthesize.line4"),
             "tutorial.wandscape.synthesize.hint");
 

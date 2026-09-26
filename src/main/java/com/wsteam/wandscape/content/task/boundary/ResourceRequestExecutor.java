@@ -5,6 +5,7 @@ import com.wsteam.wandscape.content.task.component.ColonyMember;
 import com.wsteam.wandscape.content.task.component.NpcInventory;
 import com.wsteam.wandscape.content.task.component.TaskExecutor;
 import com.wsteam.wandscape.content.task.ecs.World;
+import com.wsteam.wandscape.content.task.engine.pool.GlobalTask;
 import com.wsteam.wandscape.content.task.types.ResourceStack;
 import com.wsteam.wandscape.content.warehouse.transport.ItemTransportManager;
 import com.wsteam.wandscape.content.npc.worker.ColonyWorker;
@@ -22,7 +23,9 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -258,19 +261,39 @@ public class ResourceRequestExecutor implements OpExecutor<AtomicOp.ResourceRequ
                         ColonyResourceAccess resources, UUID colonyId, World world, long npcId) {
         // Materials are deducted here (construction start) — they never enter the
         // NPC backpack, so a full inventory can't block the charge.
+        Map<String, Integer> charged = new LinkedHashMap<>();
         for (ResourceStack need : needs) {
             if (!resources.commit(colonyId, need.resource(), need.amount())) {
                 resources.release(colonyId, need.resource(), need.amount());
                 Log.warn(TAG, "[ResourceReq] commit failed for {} x{}, released reservation",
                         need.resource().id(), need.amount());
+            } else {
+                charged.merge(need.resource().id(), need.amount(), Integer::sum);
             }
         }
+        // 记账到任务所属建筑：撤销建造时只退这本账记下的建材（未开工 = 空账本 = 一分不退）。
+        recordChargeOnBuilding(world, npcId, charged);
 
         TaskExecutor exec = world.get(npcId, TaskExecutor.class);
         if (exec != null) {
             exec.state = ExecutorState.ACTIVE;
         }
         doneFuture.complete(null);
+    }
+
+    /**
+     * 把本批实际扣除的建材记到任务所属建筑的账上。建筑侧撤销建造时的退还上限就是这本账——
+     * 没有它，材料一分没扣过（仓库缺料、首建免费）的建筑撤销时也会按图纸全额返还。
+     */
+    private static void recordChargeOnBuilding(World world, long npcId, Map<String, Integer> charged) {
+        if (charged.isEmpty() || world == null || world.taskPool == null) return;
+        TaskExecutor exec = world.get(npcId, TaskExecutor.class);
+        if (exec == null || exec.globalTaskId == null) return;
+        GlobalTask task = world.taskPool.get(exec.globalTaskId);
+        if (task == null || task.buildingId == null) return;
+        var api = com.wsteam.wandscape.content.building.internal.BuildingApiImpl.get();
+        if (api == null) return;
+        api.recordChargedMaterials(task.buildingId, charged);
     }
 
     private CompletableFuture<Void> launch(LaunchEntry e) {

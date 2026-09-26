@@ -448,7 +448,7 @@ public abstract class MedievalScreen extends Screen implements ReplayProtectedSc
             String name = getBuildingDisplayName();
             openConfirmDialog(
                     I18n.name("gui.wandscape.confirm.cancel.title", "确认撤销"),
-                    I18n.name("gui.wandscape.confirm.cancel.msg", "确定要撤销「%s」的建造吗？将清除施工地并返还已分配建材。", name),
+                    I18n.name("gui.wandscape.confirm.cancel.msg", "确定要撤销「%s」的建造吗？已建部分将一并清除，只退还未开工或未建成部分的建材。", name),
                     () -> {
                         Net.toServer(new BuildingActionPacket(cancelId, "cancel"));
                         this.onClose();
@@ -473,7 +473,7 @@ public abstract class MedievalScreen extends Screen implements ReplayProtectedSc
         String name = getBuildingDisplayName();
         openConfirmDialog(
                 I18n.name("gui.wandscape.confirm.demolish.title", "确认拆除"),
-                I18n.name("gui.wandscape.confirm.demolish.msg", "确定要拆除「%s」吗？已下发的工作将中断，部分建材将返还。", name),
+                I18n.name("gui.wandscape.confirm.demolish.msg", "确定要拆除「%s」吗？已下发的工作将中断，拆除不再返还任何建材。", name),
                 () -> {
                     Net.toServer(new BuildingActionPacket(destroyId, "destroy"));
                     this.onClose();
@@ -600,7 +600,7 @@ public abstract class MedievalScreen extends Screen implements ReplayProtectedSc
                         "建筑正在拆除中"), mouseX, mouseY);
             } else if (buildingData.underConstruction()) {
                 g.renderTooltip(font, I18n.name("gui.wandscape.building_action.repair_cancel_construction",
-                        "撤销建造施工并返还建材"), mouseX, mouseY);
+                        "撤销建造施工并退还尚未建成的建材"), mouseX, mouseY);
             } else if (!btnRepair.active) {
                 g.renderTooltip(font, I18n.name("gui.wandscape.building_action.repair_not_needed",
                         "建筑结构完好，无需维修"), mouseX, mouseY);

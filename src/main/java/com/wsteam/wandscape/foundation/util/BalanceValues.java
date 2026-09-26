@@ -95,9 +95,9 @@ public final class BalanceValues {
     public static void setGuardFleeStandoff(double v) { OVERRIDES.put("guardFleeStandoff", v); }
 
     // ============================================================
-    // scepter
+    // scepter (庇护/敌对标记；法杖的同名模式复用同一配置)
     // ============================================================
-    private static final double DEFAULT_SCEPTER_HOSTILE_RANGE = 128.0;
+    private static final double DEFAULT_SCEPTER_HOSTILE_RANGE = 32.0;
 
     public static double scepterHostileRange() { return OVERRIDES.getOrDefault("scepterHostileRange", DEFAULT_SCEPTER_HOSTILE_RANGE); }
     public static void setScepterHostileRange(double v) { OVERRIDES.put("scepterHostileRange", v); }

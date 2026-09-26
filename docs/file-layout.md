@@ -32,7 +32,7 @@ A 和 B 用的是**同一套加载器**：B 里放同 id 的文件就能覆盖 A
 | `data/wandscape/element_mappings/` | 1188 | 单物品/方块元素定价，`minecraft_<id>.json` | `WandscapeDataLoader` |
 | `data/wandscape/element_mappings/disabled/` | 1 | 停用映射的停放处（示例文件） | 不加载 |
 | `data/wandscape/advancement/` | 33 | 成就树（含 `recipes/` 子目录） | 原版 advancement 加载 |
-| `data/wandscape/craft_recipes/` | 32 | 合成站配方（法杖/权杖/戒指/卷轴/终端…） | `WandscapeDataLoader` |
+| `data/wandscape/craft_recipes/` | 27 | 合成站配方（法杖/戒指/卷轴/终端…） | `WandscapeDataLoader` |
 | `data/wandscape/magic_spells/` | 10 | 魔法定义 | `SpellbookLoader` |
 | `data/wandscape/magic_circles/` | 10 | 法阵视觉 spec | `MagicCircleLoader` |
 | `data/wandscape/loot_table/blocks/` | 2 | 扫描器方块的掉落表 | 原版 loot 加载 |
@@ -113,7 +113,7 @@ A 和 B 用的是**同一套加载器**：B 里放同 id 的文件就能覆盖 A
 | `wandscape_statistics.dat` | 统计 |
 | `wandscape_npc_deaths.dat` | NPC 死亡登记 |
 | `wandscape_oath_rings.dat` | 誓约之戒 |
-| `wandscape_scepter_marks.dat` | 权杖标记 |
+| `wandscape_scepter_marks.dat` | 庇护/敌对标记（法杖模式；键名沿用权杖） |
 | `wandscape_tavern_recruits.dat` | 旅店招募 |
 | `wandscape_tourist_sim.dat` | 游客模拟 |
 | `wandscape_tutorial_progress.dat` | 新手引导进度 |

@@ -11,4 +11,4 @@ The adventure track is about exploring the world. It is playable already, and mo
 
 - Recommended reading: 《Mages》《Casting》
 - Buildings: 《Mage Hut》《Tavern》
-- Items: 《Wand》《Oath Ring》《Scepters》
+- Items: 《Wand》《Oath Ring》

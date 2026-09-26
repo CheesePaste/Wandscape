@@ -328,7 +328,10 @@ public class Wandscape {
                             new Item.Properties().stacksTo(1),
                             RingTier.HIGH));
 
-    // ---- scepter: 玩家权杖（和平/跟随/庇护/敌对，合成站 1 级配方产出，见 scepter/）----
+    // ---- scepter: 玩家权杖（和平/跟随/庇护/敌对）----
+    // 已隐藏：配方 JSON 已从 data/wandscape/craft_recipes 删除、创造栏不再发放，玩家无法获得。
+    // 注册与全部实现保留（庇护/敌对现由法杖的 WandModeService 复用，见 ScepterService），
+    // 将来要重新放出只补回数据文件与本列表的 accept 即可。旧存档里的权杖仍能正常加载使用。
     public static final DeferredItem<Item> PEACE_WAND =
             ITEMS.register("peace_wand", () ->
                     new ScepterItem(
@@ -429,11 +432,8 @@ public class Wandscape {
                         output.accept(OATH_RING.get());
                         output.accept(OATH_RING_MID.get());
                         output.accept(OATH_RING_HIGH.get());
-                        output.accept(PEACE_WAND.get());
-                        output.accept(FOLLOW_WAND.get());
-                        output.accept(SHELTER_WAND.get());
-                        output.accept(HOSTILE_WAND.get());
-                        output.accept(OMNI_SCEPTER.get());
+                        // 权杖（PEACE/FOLLOW/SHELTER/HOSTILE/OMNI_SCEPTER）不在此列：物品与代码保留待复用，
+                        // 但从合成站配方与创造栏双双撤下（见 scepter/），玩家手里只留法杖这一件指挥道具。
                         output.accept(MAGIC_COMPASS.get());
                         output.accept(ADVANCED_MAGIC_COMPASS.get());
                         output.accept(ULTIMATE_MAGIC_COMPASS.get());
@@ -504,6 +504,7 @@ public class Wandscape {
         NeoForge.EVENT_BUS.register(CompassSyncHandler.class);
         NeoForge.EVENT_BUS.register(ScepterInteractHandler.class);
         NeoForge.EVENT_BUS.register(ScepterDeathHandler.class);
+        NeoForge.EVENT_BUS.register(com.wsteam.wandscape.content.items.magic.wand.internal.WandInteractHandler.class);
         NeoForge.EVENT_BUS.register(SelfDefenseHandler.class);
         NeoForge.EVENT_BUS.register(FollowAttackHandler.class);
         NeoForge.EVENT_BUS.register(NpcSpellPowerHandler.class);
@@ -778,7 +779,8 @@ public class Wandscape {
                 .then(TavernCommand.devNode())
                 .then(RoadStudioCommand.node())
                 .then(SplineEditorCommand.node())
-                .then(RecipeCommand.node()));
+                .then(RecipeCommand.node())
+                .then(RecoveryCommand.devNode()));
 
         // ── Curios 兼容：法师饰品槽位管理（仅 Curios 加载时注册，避免无 Curios 时缺类崩溃） ──
         if (com.wsteam.wandscape.compat.curios.CuriosCompat.isLoaded()) {
