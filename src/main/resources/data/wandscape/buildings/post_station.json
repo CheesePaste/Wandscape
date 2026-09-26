@@ -42391,10 +42391,10 @@
     "max_occupancy": 0,
     "interaction_duration_ticks": 1800,
     "element_output": {
-      "earth": 131,
-      "wind": 131,
-      "wood": 131,
-      "dark": 132
+      "earth": 66,
+      "wind": 66,
+      "wood": 66,
+      "dark": 66
     }
   },
   "blueprint": {

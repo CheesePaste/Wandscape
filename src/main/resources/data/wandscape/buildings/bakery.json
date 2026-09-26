@@ -2708,7 +2708,7 @@
         "wonder": 0
       }
     ],
-    "profit_rate": 0.5,
+    "profit_rate": 0.25,
     "interaction_duration_ticks": 1200
   },
   "blueprint": {

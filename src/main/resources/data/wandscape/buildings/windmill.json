@@ -49979,8 +49979,8 @@
   "service": {
     "energy_per_use": 20,
     "element_output": {
-      "wind": 263,
-      "dark": 262
+      "wind": 132,
+      "dark": 131
     },
     "max_occupancy": 0,
     "interaction_duration_ticks": 1200

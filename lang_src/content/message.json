@@ -156,8 +156,8 @@
     "zh_cn": "[魔法小镇] 仅玩家可招募法师"
   },
   "message.wandscape.command.tavern_recruit_failed": {
-    "en_us": "[Wandscape] Recruit failed: insufficient elements (first free, then %d of every element) or system unavailable",
-    "zh_cn": "[魔法小镇] 招募失败：元素不足（首次免费，之后每种元素 %d）或系统未就绪"
+    "en_us": "[Wandscape] Recruit failed: insufficient elements (each costs %d of every element) or system unavailable",
+    "zh_cn": "[魔法小镇] 招募失败：元素不足（每种元素 %d）或系统未就绪"
   },
   "message.wandscape.command.tavern_recruited": {
     "en_us": "[Wandscape] Recruited mage (%s) to town %s",
@@ -290,10 +290,6 @@
   "message.wandscape.mage_hut.occupied": {
     "en_us": "[Wandscape] This mage hut is already occupied.",
     "zh_cn": "[魔法小镇] 这间法师小屋已经有人入住。"
-  },
-  "message.wandscape.mage_hut.resting": {
-    "en_us": "[Wandscape] Now resting — the mage returns to the hut.",
-    "zh_cn": "[魔法小镇] 正在休息——法师将回到小屋休息。"
   },
   "message.wandscape.mage_hut.trained": {
     "en_us": "[Wandscape] %s trained +%s.",
@@ -592,8 +588,8 @@
     "zh_cn": "§c样条道路包含禁用方块：%s"
   },
   "message.wandscape.tavern.insufficient_elements": {
-    "en_us": "[Wandscape] Insufficient elements: recruiting costs %d of every element (first recruit free).",
-    "zh_cn": "[魔法小镇] 元素不足：招募需每种元素 %d（首次招募免费）"
+    "en_us": "[Wandscape] Insufficient elements: recruiting costs %d of every element.",
+    "zh_cn": "[魔法小镇] 元素不足：招募需每种元素 %d"
   },
   "message.wandscape.tavern.invalid_selection": {
     "en_us": "[Wandscape] Invalid mage selection.",

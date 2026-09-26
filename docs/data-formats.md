@@ -88,6 +88,8 @@
 - `block_nbt`：仅由创造扫描器导出时包含；生存扫描器导出时剔除。
 - `interact_spots`：交互位列表，坐标相对建筑 anchor。`action` 支持 `browse/eat/bathe/view/pay/read/take/rest/withdraw`；`facing` 为朝向（`north/east/south/west`）。
 - **四类游客模式预设块**：`shop`（购物）、`service`（服务/住宿）、`relax`（歇脚恢复精力）、`atm`（取现补充随身钱包）。
+- **`shop.profit_rate` / `service.element_output` 是基准值，不是最终入账**。入账结算顺序是「JSON 原始产出 → 创始人离线的 `colony.offlineIncomeMultiplier` 折减 → 全局产出阀门」，阀门分别是 `Config.shop.elementMultiplier` 与 `Config.service.elementMultiplier`（默认 1.0 = 不缩放，可在设置中心「经营」页调）。想整体缩放游客经济的元素产出就动这两个 config，别逐个改 JSON。
+  - 商店入账 = `商品元素估价 × (1 + profit_rate)`；`profit_rate` 是**加价率**不是产出倍率，把入账砍半需要 `(profit_rate − 1) / 2`（负数），所以「减半」只能按利润率减半来配。
 
 ---
 

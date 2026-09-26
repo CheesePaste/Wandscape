@@ -25,7 +25,7 @@ import static com.wsteam.wandscape.Wandscape.MODID;
  */
 public record MageHutDataPacket(BlockPos buildingPos, UUID colonyId, String creator,
                                 int colonyLevel, boolean hasResident, boolean alive,
-                                boolean resting, @Nullable UUID npcId, String mageName,
+                                @Nullable UUID npcId, String mageName,
                                 int mageLevel, int skinVariant, float[] base, float[] equipBonus,
                                 List<MageCandidate> candidates) implements CustomPacketPayload {
 
@@ -61,7 +61,6 @@ public record MageHutDataPacket(BlockPos buildingPos, UUID colonyId, String crea
         tag.putInt("colonyLevel", pkt.colonyLevel);
         tag.putBoolean("hasResident", pkt.hasResident);
         tag.putBoolean("alive", pkt.alive);
-        tag.putBoolean("resting", pkt.resting);
         if (pkt.npcId != null) {
             tag.putUUID("npcId", pkt.npcId);
         }
@@ -101,7 +100,6 @@ public record MageHutDataPacket(BlockPos buildingPos, UUID colonyId, String crea
                 tag.getInt("colonyLevel"),
                 tag.getBoolean("hasResident"),
                 tag.getBoolean("alive"),
-                tag.getBoolean("resting"),
                 tag.hasUUID("npcId") ? tag.getUUID("npcId") : null,
                 tag.getString("name"),
                 tag.getInt("mageLevel"),
@@ -129,6 +127,6 @@ public record MageHutDataPacket(BlockPos buildingPos, UUID colonyId, String crea
 
     private static MageHutDataPacket empty() {
         return new MageHutDataPacket(BlockPos.ZERO, new UUID(0, 0), "", 1, false,
-                false, false, null, "", 1, -1, new float[NpcAttributes.ORDER.size()], new float[NpcAttributes.ORDER.size()], List.of());
+                false, null, "", 1, -1, new float[NpcAttributes.ORDER.size()], new float[NpcAttributes.ORDER.size()], List.of());
     }
 }

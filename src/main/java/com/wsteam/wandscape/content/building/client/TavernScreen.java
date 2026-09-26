@@ -344,28 +344,19 @@ public class TavernScreen extends MedievalScreen {
         drawInsetField(g, bx, by, bw, bh);
         drawGlowBorder(g, bx, by, bw, bh, MedievalColors.BORDER_GOLD);
 
-        if (recruitCount == 0) {
-            g.drawCenteredString(font, I18n.name("gui.wandscape.tavern.first_free", "首次招募免费").getString(),
-                    cx, by + 14, MedievalColors.SUCCESS_GREEN);
-            g.drawCenteredString(font, I18n.name("gui.wandscape.tavern.recruit_arrive",
-                    "招募后法师将即刻抵达酒馆并加入小镇").getString(),
-                    cx, by + 32, MedievalColors.TEXT_WARM_WHITE);
-            g.drawCenteredString(font, I18n.name("gui.wandscape.tavern.recruit_cost_future",
-                    "（此后每次招募将消耗 6 种元素各 %d）",
-                    com.wsteam.wandscape.Config.TAVERN_RECRUIT_COST_PER_ELEMENT.get()).getString(),
-                    cx, by + 48, MedievalColors.TEXT_DIM);
-        } else {
-            g.drawCenteredString(font, I18n.name("gui.wandscape.tavern.recruit_cost_now",
-                    "招募代价：6 种基础元素各 %d",
-                    com.wsteam.wandscape.Config.TAVERN_RECRUIT_COST_PER_ELEMENT.get()).getString(),
-                    cx, by + 14, MedievalColors.TEXT_WARM_WHITE);
-            g.drawCenteredString(font, I18n.name("gui.wandscape.tavern.recruit_count",
-                    "已累计招募：%d 位法师", recruitCount).getString(),
-                    cx, by + 32, MedievalColors.ACCENT_GOLD);
-            g.drawCenteredString(font, I18n.name("gui.wandscape.tavern.recruit_deduct",
-                    "将自动从小镇仓库中结算扣除所需元素").getString(),
-                    cx, by + 48, MedievalColors.TEXT_DIM);
-        }
+        g.drawCenteredString(font, I18n.name("gui.wandscape.tavern.recruit_cost_now",
+                "招募代价：6 种基础元素各 %d",
+                com.wsteam.wandscape.Config.TAVERN_RECRUIT_COST_PER_ELEMENT.get()).getString(),
+                cx, by + 12, MedievalColors.TEXT_WARM_WHITE);
+        g.drawCenteredString(font, I18n.name("gui.wandscape.tavern.recruit_arrive",
+                "招募后法师将即刻抵达酒馆并加入小镇").getString(),
+                cx, by + 28, MedievalColors.TEXT_MUTED);
+        g.drawCenteredString(font, I18n.name("gui.wandscape.tavern.recruit_deduct",
+                "将自动从小镇仓库中结算扣除所需元素").getString(),
+                cx, by + 44, MedievalColors.TEXT_DIM);
+        g.drawCenteredString(font, I18n.name("gui.wandscape.tavern.recruit_count",
+                "已累计招募：%d 位法师", recruitCount).getString(),
+                cx, by + 60, MedievalColors.ACCENT_GOLD);
     }
 
     private String getSpecialtyTag(MageResume r) {

@@ -30,32 +30,33 @@ public interface TavernApi {
     /** Reject a mage resume by index (removes it without spawning). Returns the removed resume or null if invalid. */
     MageResume rejectMage(UUID colonyId, int index);
 
-    /** 小镇累计成功「招募 NPC」的次数（首次免费，自第二次起收费）。 */
+    /** 小镇累计成功「招募法师」的次数（仅供展示，不影响花费）。 */
     int getRecruitCount(UUID colonyId);
 
-    /** 能否进行下一次「招募 NPC」：首次免费；之后需小镇每种元素 ≥ 招募成本。 */
+    /** 能否进行下一次「招募法师」：需小镇每种元素 ≥ 招募成本。 */
     boolean canAffordRecruit(UUID colonyId);
 
     /**
-     * 消耗一次「招募 NPC」代价并计数：首次免费；之后每种元素扣 {@code Config.TAVERN_RECRUIT_COST_PER_ELEMENT}。
+     * 消耗一次「招募法师」代价并计数：每种元素扣 {@code Config.TAVERN_RECRUIT_COST_PER_ELEMENT}。
      * 生成成功后调用，返回是否扣费成功。
      */
     boolean chargeRecruit(UUID colonyId);
 
-    /** 按自定义花费消耗一次「招募 NPC」代价（整合包可调便宜/贵）。 */
+    /** 按自定义花费消耗一次「招募法师」代价（整合包可调便宜/贵）。 */
     boolean chargeRecruit(UUID colonyId, int costPerElement);
 
     /**
-     * 付费招募一名法师（默认：掷点真实档案 + 默认花费），生成并计入招募次数。
+     * 付费招募一名 1 级法师（等级与属性均按 1 级掷点，不随小镇等级走），生成并计入招募次数。
      *
-     * @return 生成 NPC 的 UUID；元素不足（第二次起）、系统未就绪或生成失败返回 null（且不计费）
+     * @return 生成 NPC 的 UUID；元素不足、系统未就绪或生成失败返回 null（且不计费）
      */
     UUID recruitForColony(UUID colonyId, BlockPos spawnPos);
 
     /**
      * 付费招募，传入自定义 {@link NpcSpawnSpec}（可做更强的特殊 NPC）与自定义花费。
+     * 未指定 {@code spec.level()} 时等级与属性仍按小镇等级掷点。
      *
-     * @return 生成 NPC 的 UUID；元素不足（第二次起）、系统未就绪或生成失败返回 null（且不计费）
+     * @return 生成 NPC 的 UUID；元素不足、系统未就绪或生成失败返回 null（且不计费）
      */
     UUID recruitForColony(UUID colonyId, BlockPos spawnPos, NpcSpawnSpec spec, int costPerElement);
 

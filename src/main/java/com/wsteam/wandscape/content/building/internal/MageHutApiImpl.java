@@ -105,17 +105,7 @@ public class MageHutApiImpl implements MageHutApi {
         return forceUnbind(hut);
     }
 
-    // ── 可调平衡值（委托 BalanceValues）──
-
-    @Override
-    public int getMageHutRestTicks() {
-        return com.wsteam.wandscape.foundation.util.BalanceValues.mageHutRestTicks();
-    }
-
-    @Override
-    public void setMageHutRestTicks(int v) {
-        com.wsteam.wandscape.foundation.util.BalanceValues.setMageHutRestTicks(v);
-    }
+    // ── Shared helpers ──
 
     /** 移除小屋入住记录；若其入住者实体在世，以该小屋为准清掉其 homeHutId。 */
     private static void clearResident(BuildingSavedData data, ServerLevel level, UUID buildingId) {

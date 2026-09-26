@@ -2532,9 +2532,9 @@
     "max_occupancy": 0,
     "interaction_duration_ticks": 1200,
     "element_output": {
-      "earth": 50,
-      "wood": 50,
-      "water": 50
+      "earth": 25,
+      "wood": 25,
+      "water": 25
     }
   },
   "blueprint": {

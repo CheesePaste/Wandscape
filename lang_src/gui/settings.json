@@ -175,6 +175,14 @@
     "en_us": "Road terrain grid",
     "zh_cn": "道路网格辅助线"
   },
+  "gui.wandscape.settings.service.elementMultiplier": {
+    "en_us": "Service building element output multiplier",
+    "zh_cn": "服务设施元素产出倍率"
+  },
+  "gui.wandscape.settings.shop.elementMultiplier": {
+    "en_us": "Shop element output multiplier",
+    "zh_cn": "商店元素产出倍率"
+  },
   "gui.wandscape.settings.tab.colony": {
     "en_us": "Economy",
     "zh_cn": "经营"

@@ -347,16 +347,20 @@ public final class ShopStockManager {
         // Deposit profit elements into colony bank (based on item's element mapping value)
         // 创始人离线时按 offlineIncomeMultiplier 折减利润：成本不变、只折利润，
         // 商店按进价出售也永不亏损（不折售价，否则商品卖出即亏本）。
+        // 之后再压一道全局产出阀门：它只管总量，系数低于成本线时商店净损耗是有意为之。
         if (colonyId != null) {
             ColonyItemBank bank = ColonyItemBank.get(level);
             double profitRate = config.shop().profitRate();
             double m = ColonyActivation.getIncomeMultiplier(colonyId);
+            double valve = ColonyActivation.shopElementMultiplier();
             Map<ElementType, Long> elementValue = getItemElementValue(itemId);
             for (var entry : elementValue.entrySet()) {
                 long cost = entry.getValue();
                 long fullRevenue = (long) Math.ceil(cost * (1.0 + profitRate));
                 long perUnit = ColonyActivation.scaleProfit(cost, fullRevenue - cost, m);
-                bank.addElement(colonyId, entry.getKey(), perUnit * qty);
+                // 阀门乘在成交总额上（不是逐单位），少一次取整误差。
+                long payout = ColonyActivation.scaleOutput(perUnit * qty, valve);
+                bank.addElement(colonyId, entry.getKey(), payout);
             }
             bank.recordPurchase(colonyId);
         }

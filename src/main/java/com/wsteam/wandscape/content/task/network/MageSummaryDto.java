@@ -13,7 +13,7 @@ public record MageSummaryDto(
         UUID npcUuid,
         int entityId,
         String name,
-        String state, // "CASTING", "MOVING", "IDLE", "RESTING", "FOLLOWING"
+        String state, // "CASTING", "MOVING", "IDLE", "FOLLOWING"
         float currentHp,
         float maxHp,
         float currentMana,

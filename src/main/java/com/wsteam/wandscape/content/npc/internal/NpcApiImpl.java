@@ -146,10 +146,12 @@ public class NpcApiImpl implements NpcApi {
         ServerLevel level = getServerLevel();
         if (level == null) return null;
 
-        // 按小镇等级掷点默认属性；spec 未覆盖的键用此兜底。
+        // 掷点默认属性；spec 未覆盖的键用此兜底。掷点等级跟随 spec 指定的等级
+        //（否则「Lv.1 的新人」会带上按小镇等级掷出的属性），未指定才走小镇等级。
         var colonyApi = com.wsteam.wandscape.api.WandscapeApis.getColonyApiSilently();
         int colonyLevel = colonyApi != null ? colonyApi.getColonyLevel(colonyId) : 1;
-        var candidate = NpcAttributes.roll(colonyLevel, new Random(level.random.nextLong()));
+        int rollLevel = spec != null && spec.level() != null ? spec.level() : colonyLevel;
+        var candidate = NpcAttributes.roll(rollLevel, new Random(level.random.nextLong()));
 
         var npc = Wandscape.WANDSCAPE_NPC.get().spawn(level, spawnPos, MobSpawnType.COMMAND);
         if (npc == null) {

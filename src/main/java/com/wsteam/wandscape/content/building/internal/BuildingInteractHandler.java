@@ -9,6 +9,7 @@ import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.content.building.data.BuildingConfig;
 import com.wsteam.wandscape.content.building.network.*;
 import com.wsteam.wandscape.content.building.network.*;
+import com.wsteam.wandscape.content.colony.ColonyActivation;
 import com.wsteam.wandscape.content.colony.ColonySavedData;
 import com.wsteam.wandscape.content.npc.internal.ReviveHandler;
 import com.wsteam.wandscape.content.production.network.CraftingStationPacket;
@@ -262,11 +263,26 @@ public final class BuildingInteractHandler {
         };
         Net.toPlayer(player, new BuildingInfoPacket(
                 state.getAnchor(), state.getBuildingTypeId(), category,
-                svc != null ? svc.elementOutput() : Map.of(),
+                svc != null ? displayServiceOutput(svc.elementOutput()) : Map.of(),
                 svc != null ? svc.energyPerUse() : 0,
                 relax != null ? relax.energyRestore() : 0,
                 duration,
                 config.creator()));
+    }
+
+    /**
+     * 建筑信息面板上的元素产出：只乘全局产出阀门，与游客实际入账口径对齐。
+     * 不含创始人离线的折减——那是随在线状态来回变的运行时量，写进静态面板只会误导。
+     */
+    private static Map<String, Integer> displayServiceOutput(Map<String, Integer> raw) {
+        double valve = ColonyActivation.serviceElementMultiplier();
+        if (raw.isEmpty() || valve == 1.0) return raw;
+        Map<String, Integer> scaled = new LinkedHashMap<>();
+        for (var entry : raw.entrySet()) {
+            long value = ColonyActivation.scaleOutput(entry.getValue(), valve);
+            if (value > 0) scaled.put(entry.getKey(), (int) Math.min(Integer.MAX_VALUE, value));
+        }
+        return scaled;
     }
 
     @SubscribeEvent

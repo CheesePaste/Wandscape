@@ -92,7 +92,7 @@ public class Config {
     public static final ModConfigSpec.IntValue INITIAL_ELEMENT_COUNT = BUILDER
             .comment("每种元素在小镇仓库首次建立时的初始数量（每小镇一次，只种一次）。")
             .comment("Initial count of each element when a town's warehouse is first established (once per town, planted only once).")
-            .defineInRange("colony.initialElementCount", 6000, 0, 2147483647);
+            .defineInRange("colony.initialElementCount", 2000, 0, 2147483647);
 
     // ---- 元素系统 Element System ----
 
@@ -340,6 +340,34 @@ public class Config {
             .comment("野外宝箱探索元素全局倍率：最终获得的小镇元素奖励 × 该系数。默认 1.0（0 = 不给元素，1.0 = 回到估值原值）。只乘元素、不动经验，取值范围 0~10，可在设置中心「城镇经营」里调整。")
             .comment("Global exploration chest element multiplier: final gained colony elements × this factor. Default 1.0 (0 = no elements, 1.0 = the raw priced value). Elements only — experience is untouched. Range 0~10; adjustable in the Settings Center, Colony tab.")
             .defineInRange("exploration.elementMultiplier", 1.0, 0.0, 1000000.0);
+
+    // ---- 游客经济元素产出阀门 Tourist Economy Element Valves ----
+
+    public static final ModConfigSpec.DoubleValue SHOP_ELEMENT_MULTIPLIER = BUILDER
+            .comment("商店元素产出全局倍率：游客在商店买走商品后入账给小镇的元素 × 该系数。默认 1.0（不缩放），"
+                    + "基准值配在每个建筑 JSON 的 profit_rate 上（入账 = 商品元素估价 × (1 + profit_rate)），本项只做全局缩放。"
+                    + "乘在结算最后一步（离线折减之后、与探索宝箱的 elementMultiplier 同一口径），所以系数压到成本线以下时"
+                    + "商店在元素意义上会净损耗。0 = 商店不再产出元素。取值范围 0~1000000，可在设置中心「城镇经营」里调整。")
+            .comment("Global shop element output multiplier: the elements credited to the colony when a tourist buys goods "
+                    + "× this factor. Default 1.0 (no scaling); the baseline lives in each building JSON's profit_rate "
+                    + "(payout = item element value × (1 + profit_rate)) and this is only a global scale. Applied as the last "
+                    + "step of the payout (after the offline reduction, the same convention as the exploration chest "
+                    + "elementMultiplier), so a factor below the cost line makes shops a net element sink. "
+                    + "0 = shops stop producing elements. Range 0~1000000; adjustable in the Settings Center, Colony tab.")
+            .defineInRange("shop.elementMultiplier", 1.0, 0.0, 1000000.0);
+
+    public static final ModConfigSpec.DoubleValue SERVICE_ELEMENT_MULTIPLIER = BUILDER
+            .comment("服务设施元素产出全局倍率：游客使用服务建筑后入账给小镇的元素 × 该系数。默认 1.0（不缩放），"
+                    + "基准值配在每个建筑 JSON 的 element_output 上，本项只做全局缩放。乘在结算最后一步"
+                    + "（离线折减之后、与探索宝箱的 elementMultiplier 同一口径）。0 = 服务设施不再产出元素。"
+                    + "取值范围 0~1000000，可在设置中心「城镇经营」里调整。")
+            .comment("Global service building element output multiplier: the elements credited to the colony when a tourist "
+                    + "uses a service building × this factor. Default 1.0 (no scaling); the baseline lives in each building "
+                    + "JSON's element_output and this is only a global scale. Applied as the last step of the payout (after the "
+                    + "offline reduction, the same convention as the exploration chest elementMultiplier). "
+                    + "0 = service buildings stop producing elements. Range 0~1000000; adjustable in the Settings Center, "
+                    + "Colony tab.")
+            .defineInRange("service.elementMultiplier", 1.0, 0.0, 1000000.0);
 
     public static final ModConfigSpec SPEC = BUILDER.build();
 

@@ -33,7 +33,8 @@ public final class BalanceValues {
             "transportTicksPerBlockOnRoad", "transportTicksPerBlockOffRoad", "decorationBonusCap",
             "workstationCraftTicksPerUnit", "craftingStationCraftTicksPerUnit",
             "constructionPlaceTicksPerUnit", "castSingleTargetMaxEnemies", "castAoeMinEnemies",
-            "mageHutRestTicks", "sustainedCastMaxTicks");
+            "productionBatchMax",
+            "sustainedCastMaxTicks");
 
     // ============================================================
     // npc 回血回蓝
@@ -123,7 +124,9 @@ public final class BalanceValues {
     private static final int DEFAULT_CONSTRUCTION_PLACE_TICKS_PER_UNIT = 1;
     private static final int DEFAULT_CAST_SINGLE_TARGET_MAX_ENEMIES = 3;
     private static final int DEFAULT_CAST_AOE_MIN_ENEMIES = 3;
-    private static final int DEFAULT_MAGE_HUT_REST_TICKS = 2400;
+    /** 生产任务每批上限（单位数）：超出的请求在入队时拆成多条 ≤ 此值的条目，
+     *  共享队列里各空闲工作站/合成站可并发各领一批，而不是整块工作锁死在一座上。 */
+    private static final int DEFAULT_PRODUCTION_BATCH_MAX = 1000;
     /** Goety 持续（volley）单轮最大齐射时长（tick，自 charge 完成起计）：束缚 shotsNumber=0 的无限型，
      *  不截箭雨标准一轮（20 charge + 100 齐射）。addon 经 MagicApi.setSustainedCastMaxTicks 调。 */
     private static final int DEFAULT_SUSTAINED_CAST_MAX_TICKS = 100;
@@ -138,8 +141,8 @@ public final class BalanceValues {
     public static void setCastSingleTargetMaxEnemies(int v) { OVERRIDES.put("castSingleTargetMaxEnemies", (double) v); }
     public static int castAoeMinEnemies() { return (int)(double) OVERRIDES.getOrDefault("castAoeMinEnemies", (double) DEFAULT_CAST_AOE_MIN_ENEMIES); }
     public static void setCastAoeMinEnemies(int v) { OVERRIDES.put("castAoeMinEnemies", (double) v); }
-    public static int mageHutRestTicks() { return (int)(double) OVERRIDES.getOrDefault("mageHutRestTicks", (double) DEFAULT_MAGE_HUT_REST_TICKS); }
-    public static void setMageHutRestTicks(int v) { OVERRIDES.put("mageHutRestTicks", (double) v); }
+    public static int productionBatchMax() { return (int)(double) OVERRIDES.getOrDefault("productionBatchMax", (double) DEFAULT_PRODUCTION_BATCH_MAX); }
+    public static void setProductionBatchMax(int v) { OVERRIDES.put("productionBatchMax", (double) v); }
     public static int sustainedCastMaxTicks() { return (int)(double) OVERRIDES.getOrDefault("sustainedCastMaxTicks", (double) DEFAULT_SUSTAINED_CAST_MAX_TICKS); }
     public static void setSustainedCastMaxTicks(int v) { OVERRIDES.put("sustainedCastMaxTicks", (double) v); }
 

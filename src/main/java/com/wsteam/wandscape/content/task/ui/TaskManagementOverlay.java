@@ -1174,7 +1174,6 @@ public final class TaskManagementOverlay {
         return switch (state.toUpperCase()) {
             case "CASTING", "MOVING" -> 0xFF81C784;
             case "FOLLOWING" -> 0xFF64B5F6;
-            case "RESTING" -> 0xFFBA68C8;
             default -> 0xFF90A4AE;
         };
     }
@@ -1184,7 +1183,6 @@ public final class TaskManagementOverlay {
             case "CASTING" -> 0xFF81C784;
             case "MOVING" -> 0xFF4FC3F7;
             case "FOLLOWING" -> 0xFF64B5F6;
-            case "RESTING" -> 0xFFBA68C8;
             default -> 0xFFB0BEC5;
         };
     }
@@ -1197,7 +1195,6 @@ public final class TaskManagementOverlay {
                             TaskText.mageTaskTitle(mage));
             case "MOVING" -> I18n.string("gui.wandscape.task.mage_state.moving", "前往工作中");
             case "FOLLOWING" -> I18n.string("gui.wandscape.task.mage_state.following", "跟随中");
-            case "RESTING" -> I18n.string("gui.wandscape.task.mage_state.resting", "回屋休息中");
             default -> I18n.string("gui.wandscape.task.mage_state.idle", "空闲待命中");
         };
     }

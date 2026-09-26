@@ -243,10 +243,6 @@
     "zh_cn": "前往工作中",
     "en_us": "Heading to work"
   },
-  "gui.wandscape.task.mage_state.resting": {
-    "zh_cn": "回屋休息中",
-    "en_us": "Resting at home"
-  },
   "gui.wandscape.task.metrics.production": {
     "zh_cn": "工坊建筑: %s  |  制作中: %s  |  排队: %s  |  缺元素: %s",
     "en_us": "Workshops: %s  |  Making: %s  |  Queued: %s  |  Missing: %s"

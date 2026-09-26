@@ -139,6 +139,10 @@
    - **补货豁免**：商店补货驱动的自动合成（`ResourceSupplySystem.enqueueSynthesize(atFront=true)`）在 WorkItem 参数带 `supply=restock`，满仓仍可合成入仓（容量可被短暂超出），保货架不断供、防殖民地瘫痪。判定处（发布资格、队列徽标、op 守卫）统一看该参数。
    - **满仓生产任务 = 镜像「缺元素」**：合成/制作队列条目满仓不可发布、面板标「仓库容量不足」（`capacityBlocked` 走 TaskQueueDataPacket），执行期撞上满仓以伪资源 `warehouse_capacity` 抛 `ResourceShortageException` → BuildingTaskSource 回收回队列（`isCapacityShortage`），容量空出后按发布资格自动续跑；ResourceSupplySystem 对这类等待不尝试自动补产。
    - **拆迁/回收掉落满仓不丢**：`performSalvage` 产物 `tryAdd` 失败时改为在拆除点生成掉落物（等价箱满溢出），不吞物品也不阻塞平地。
+4. **生产队列条目是「批次」不是「请求」（坑）**：
+   - `production:decompose/synthesize/craft/craft_spell` 入队时经 `ProductionBatches.split` 按 `BalanceValues.productionBatchMax`（默认 1000，见 `wandscape_balance.json`）拆批，`channel_ticks` 按比例分摊、总时长不变；`BuildingApiImpl.mergeBandTail` 的同配方合并也用同一条上限，防止拆完又被粘回一条。
+   - 于是**同一次玩家下单、同一条补料需求会在共享队列里变成多条同配方条目**（圆石 x1000 × 30）。凡是要「按配方聚合」的地方都得按 `count` 求和，不能按条目数或「第一条」：`countSynthesizeInFlight` 已经是求和口径，`ResourceSupplySystem.scanProductionQueues` 必须先汇总需求再比库存（逐条减库存会因同一份库存被减 N 次而严重低估缺口）。
+   - 拆批也是发布资格（元素/容量）的判定粒度：拆细后「仓库放得下一部分」不会整条卡住。想看「一条超大任务」的旧样子，把 `productionBatchMax` 调大即可。
 
 ---
 

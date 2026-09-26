@@ -18,7 +18,7 @@
     },
     {
       "type": "patchouli:text",
-      "text": "Only a resident mage can train its attributes or be promoted, and the panel is also where you look at its gear and strategy or let it rest. Its rank cap follows the town level."
+      "text": "Only a resident mage can train its attributes or be promoted, and the panel is also where you look at its gear and strategy. Its rank cap follows the town level."
     }
   ]
 }

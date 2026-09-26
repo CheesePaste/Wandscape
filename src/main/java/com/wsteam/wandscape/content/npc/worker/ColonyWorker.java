@@ -55,11 +55,6 @@ public interface ColonyWorker {
         return false;
     }
 
-    /** 是否正在休息（小屋静养；休息中不接殖民地任务）。 */
-    default boolean isResting() {
-        return false;
-    }
-
     /** 是否处于和平模式（不主动索敌）。 */
     default boolean isPeaceMode() {
         return false;

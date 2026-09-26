@@ -70,7 +70,7 @@ You do not have to type an id in full: the 8-character short id from `list` work
 
 `tourist clear` needs no permission, and it sends tourists home the **normal way** rather than deleting them — use it when the town is overcrowded or a tourist is stuck.
 
-`tavern recruit` is free the first time; after that each recruit costs every element, at a price set in the server config. Not enough elements means the command fails without charging anything.
+`tavern recruit` costs every element on every use, at a price set in the server config. Not enough elements means the command fails without charging anything, and the mage it brings in is always level 1 regardless of the town's level — for a higher-level mage, hire a résumé instead.
 
 Both tavern commands pick their colony by **where you are standing**, not by who owns it: outside every colony they fall back to the first colony on the server rather than reporting an error, so walk into the town you mean before recruiting for it.
 

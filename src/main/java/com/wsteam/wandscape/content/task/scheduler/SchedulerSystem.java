@@ -56,8 +56,7 @@ public class SchedulerSystem implements EcsSystem {
             TaskExecutor exec = world.get(entity, TaskExecutor.class);
             if (exec != null && exec.state == ExecutorState.IDLE
                     && exec.npcQueue.isIdle() && exec.globalTaskId == null
-                    && (world.entityOps == null || (!world.entityOps.isFollowing(entity)
-                            && !world.entityOps.isResting(entity)))
+                    && (world.entityOps == null || !world.entityOps.isFollowing(entity))
                     && (world.entityOps == null || world.entityOps.isNpcAlive(entity))) {
                 idleNpcs.add(entity);
             }

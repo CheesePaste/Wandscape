@@ -31,10 +31,6 @@
     "zh_cn": "求职候选人",
     "en_us": "Applicants"
   },
-  "gui.wandscape.tavern.first_free": {
-    "zh_cn": "首次招募免费",
-    "en_us": "First Recruit is Free"
-  },
   "gui.wandscape.tavern.hire": {
     "zh_cn": "聘用该法师",
     "en_us": "Hire Mage"
@@ -63,10 +59,6 @@
     "zh_cn": "招募后法师将即刻抵达酒馆并加入小镇",
     "en_us": "The mage will arrive at the tavern and join the town immediately"
   },
-  "gui.wandscape.tavern.recruit_cost_future": {
-    "zh_cn": "（此后每次招募将消耗 6 种元素各 %d）",
-    "en_us": "(Each later recruit costs %d of each of the 6 elements)"
-  },
   "gui.wandscape.tavern.recruit_cost_now": {
     "zh_cn": "招募代价：6 种基础元素各 %d",
     "en_us": "Recruit cost: %d of each of the 6 basic elements"
@@ -88,8 +80,8 @@
     "en_us": "Recruit order published, dispatching a mage..."
   },
   "gui.wandscape.tavern.recruit_subtitle": {
-    "zh_cn": "招募新冒险者加入小镇",
-    "en_us": "Recruit a new adventurer for the town"
+    "zh_cn": "招募一名 1 级法师加入小镇",
+    "en_us": "Recruit a level 1 mage for the town"
   },
   "gui.wandscape.tavern.reject": {
     "zh_cn": "拒绝",

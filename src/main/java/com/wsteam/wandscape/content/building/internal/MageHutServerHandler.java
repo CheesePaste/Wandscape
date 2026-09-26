@@ -1,7 +1,6 @@
 package com.wsteam.wandscape.content.building.internal;
 import com.wsteam.wandscape.content.npc.data.NpcData;
 
-import com.wsteam.wandscape.content.building.data.BlockOffset;
 import com.wsteam.wandscape.content.building.network.MageHutActionPacket;
 import com.wsteam.wandscape.content.building.network.MageHutDataPacket;
 import com.wsteam.wandscape.content.building.network.MageHutDataPacket.MageCandidate;
@@ -10,7 +9,6 @@ import com.wsteam.wandscape.content.npc.NpcMenu;
 import com.wsteam.wandscape.content.npc.NpcStrategyMenu;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.content.npc.network.NpcDataPacket;
-import com.wsteam.wandscape.content.building.projection.BuildingRotation;
 import com.wsteam.wandscape.content.element.data.ElementType;
 import com.wsteam.wandscape.content.npc.attributes.NpcAttributes;
 import com.wsteam.wandscape.content.npc.data.MageHutResident;
@@ -22,7 +20,6 @@ import com.wsteam.wandscape.api.WandscapeApis;
 import com.wsteam.wandscape.foundation.registry.WandscapeConstants;
 import com.wsteam.wandscape.foundation.ui.I18n;
 import com.wsteam.wandscape.content.warehouse.ColonyItemBank;
-import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -35,7 +32,7 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Server-side logic for the Mage Hut panel actions (assign / upgrade / rest /
+ * Server-side logic for the Mage Hut panel actions (assign / upgrade /
  * train / open equipment / open strategy).
  *
  * <p>All actions validate that {@code buildingPos} resolves to a committed
@@ -86,8 +83,6 @@ public final class MageHutServerHandler {
                     UUID.fromString(action.substring("assign:".length())));
         } else if ("upgrade".equals(action)) {
             onUpgrade(sp, level, data, buildingId, state, colonyId);
-        } else if ("rest".equals(action)) {
-            onRest(sp, level, data, buildingId, state, colonyId);
         } else if (action.startsWith("train:")) {
             onTrain(sp, level, data, buildingId, state, colonyId,
                     AttributeType.valueOf(action.substring("train:".length())));
@@ -198,26 +193,6 @@ public final class MageHutServerHandler {
         sendRefresh(sp, level, buildingId, state, colonyId);
     }
 
-    // ── Rest ──
-
-    private static void onRest(ServerPlayer sp, ServerLevel level, BuildingSavedData data,
-                               UUID buildingId, BuildingState state, UUID colonyId) {
-        MageHutResident resident = data.getMageHutResident(buildingId);
-        WandscapeNpc npc = requireAlive(sp, level, resident);
-        if (npc == null) return;
-
-        BlockPos restPos = hutRestPos(state);
-        npc.setRest(restPos, level.getGameTime() + com.wsteam.wandscape.foundation.util.BalanceValues.mageHutRestTicks());
-        npc.setAiWanderingEnabled(false);
-
-        Log.info(TAG, "Mage {} resting at {} for {} ticks", npc.getNpcName(), restPos,
-                com.wsteam.wandscape.foundation.util.BalanceValues.mageHutRestTicks());
-        ScreenFeedbackPacket.send(sp,
-                I18n.name("message.wandscape.mage_hut.resting",
-                        "[Wandscape] Now resting — the mage returns to the hut."), false);
-        sendRefresh(sp, level, buildingId, state, colonyId);
-    }
-
     // ── Open equipment / strategy menu ──
 
     private static void onOpenMenu(ServerPlayer sp, ServerLevel level, BuildingSavedData data,
@@ -312,14 +287,6 @@ public final class MageHutServerHandler {
         npc.setLevel(resident.level());
     }
 
-    /** The world-space rest point: hut anchor + rotated interior offset. */
-    private static BlockPos hutRestPos(BuildingState state) {
-        var offset = BuildingRotation.rotateOffset(
-                new BlockOffset(1, 0, 1),
-                state.getRotationSteps());
-        return state.getAnchor().offset(offset.x(), offset.y(), offset.z());
-    }
-
     // ── Packet refresh ──
 
     private static void sendRefresh(ServerPlayer sp, ServerLevel level, UUID buildingId,
@@ -343,7 +310,7 @@ public final class MageHutServerHandler {
         if (resident == null) {
             List<MageCandidate> candidates = collectCandidates(level, colonyId);
             return new MageHutDataPacket(state.getAnchor(), colonyId, creator, colonyLevel,
-                    false, false, false, null, "", 1, -1, new float[NpcAttributes.ORDER.size()],
+                    false, false, null, "", 1, -1, new float[NpcAttributes.ORDER.size()],
                     new float[NpcAttributes.ORDER.size()], candidates);
         }
 
@@ -359,9 +326,8 @@ public final class MageHutServerHandler {
                                 resident.level(), 0f);
             }
         }
-        boolean resting = alive && npc.isResting();
         return new MageHutDataPacket(state.getAnchor(), colonyId, creator, colonyLevel,
-                true, alive, resting, resident.npcId(), resident.mageName(), resident.level(),
+                true, alive, resident.npcId(), resident.mageName(), resident.level(),
                 alive ? npc.getSkinVariant() : -1, base, equip, List.of());
     }
 

@@ -225,15 +225,13 @@ public final class TaskPanelSyncTracker {
 
             TaskExecutor exec = world.get(ecsId, TaskExecutor.class);
             boolean isIdle = exec == null || (exec.state == ExecutorState.IDLE && exec.npcQueue.isIdle() && exec.globalTaskId == null);
-            if (isIdle && !worker.isFollowMode() && !worker.isResting()) {
+            if (isIdle && !worker.isFollowMode()) {
                 idleMageCount++;
             }
 
             String state = "IDLE";
             if (worker.isFollowMode()) {
                 state = "FOLLOWING";
-            } else if (worker.isResting()) {
-                state = "RESTING";
             } else if (exec != null && exec.state != ExecutorState.IDLE) {
                 state = exec.pendingFutureIsNav ? "MOVING" : "CASTING";
             }
@@ -364,7 +362,7 @@ public final class TaskPanelSyncTracker {
                 if (m != null && colonyId.equals(m.colonyId())) {
                     TaskExecutor exec = world.get(entry.getKey(), TaskExecutor.class);
                     if (exec != null && exec.state == ExecutorState.IDLE && exec.npcQueue.isIdle() && exec.globalTaskId == null
-                            && !entry.getValue().isFollowMode() && !entry.getValue().isResting()) {
+                            && !entry.getValue().isFollowMode()) {
                         idleMages++;
                     }
                 }

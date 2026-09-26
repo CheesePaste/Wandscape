@@ -29,7 +29,7 @@ public class TavernRecruitStorage extends SavedData {
     private static final int MAX_PER_COLONY = 5;
 
     private final Map<UUID, List<MageResume>> colonyResumes = new ConcurrentHashMap<>();
-    /** colonyId → 酒馆「招募 NPC」累计成功次数（首次免费，之后每次扣元素）。 */
+    /** colonyId → 酒馆「招募法师」累计成功次数（仅供 GUI 展示）。 */
     private final Map<UUID, Integer> recruitCounts = new ConcurrentHashMap<>();
 
     private TavernRecruitStorage() {}
@@ -88,9 +88,9 @@ public class TavernRecruitStorage extends SavedData {
         return resume;
     }
 
-    // ── 招募计数（每小镇「招募 NPC」次数，首次免费） ──
+    // ── 招募计数（每小镇「招募法师」次数，仅供 GUI 展示） ──
 
-    /** 小镇累计成功招募 NPC 的次数。 */
+    /** 小镇累计成功招募法师的次数。 */
     public int getRecruitCount(UUID colonyId) {
         return recruitCounts.getOrDefault(colonyId, 0);
     }
