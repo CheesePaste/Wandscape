@@ -126,6 +126,14 @@ public class BuildingTaskPool {
         return queue != null ? queue.getHeadTaskId() : null;
     }
 
+    /**
+     * True if the building still has a queue entry (head, parked, or pending WorkItems).
+     * Unlike {@link #hasHead} this is also true for a queue holding only pending items.
+     */
+    public boolean hasQueue(UUID buildingId) {
+        return queues.containsKey(buildingId);
+    }
+
     public boolean hasHead(UUID buildingId) {
         BuildingTaskQueue queue = queues.get(buildingId);
         return queue != null && queue.hasHead();

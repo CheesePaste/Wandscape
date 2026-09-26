@@ -1,6 +1,7 @@
 package com.wsteam.wandscape.content.task.ecs;
 
 import com.wsteam.wandscape.content.task.boundary.*;
+import com.wsteam.wandscape.content.task.component.ColonyMember;
 import com.wsteam.wandscape.content.task.component.TaskExecutor;
 import com.wsteam.wandscape.content.task.event.SimpleEventBus;
 import com.wsteam.wandscape.content.task.op.executor.OpExecutorRegistry;
@@ -194,6 +195,56 @@ public class World {
                 exec.reset();
             }
         }
+    }
+
+    /** 单殖民地清理结果（供指令回执）：任务数 / 建筑队列数 / 法师数。 */
+    public record ColonyRecovery(int tasks, int buildingQueues, int npcs) {}
+
+    /**
+     * 只清理一个殖民地的任务：该镇建筑队列、该镇在全局池中的任务、该镇法师执行器。
+     * 与 {@link #clearAllTasks()} 同语义但按 {@code colony_id} 收窄——玩家的自杀式恢复指令走这里，
+     * 绝不波及其他小镇。
+     *
+     * @param colonyId    目标殖民地
+     * @param buildingIds 该殖民地拥有的全部建筑 id；由调用方从 {@code BuildingApi} 解析——
+     *                    World 不持有建筑数据，只在 {@link #buildingTaskPool} 里按 id 索引
+     */
+    public ColonyRecovery clearColonyTasks(UUID colonyId, Collection<UUID> buildingIds) {
+        List<Long> buildingLiveIds = new ArrayList<>();
+        int queues = 0;
+        if (buildingTaskPool != null) {
+            for (UUID buildingId : buildingIds) {
+                if (buildingTaskPool.hasQueue(buildingId)) queues++;
+                buildingLiveIds.addAll(buildingTaskPool.removeBuilding(buildingId));
+            }
+        }
+
+        int tasks = 0;
+        if (taskPool != null) {
+            // 建筑队列的 head/parked 先清：它们带 buildingId，即便 colony_id 缺失也不会被下面的
+            // 按殖民地扫描捞到，漏掉就会留下继续跑的孤儿任务（正在放方块的法师）。
+            tasks += taskPool.purgeTasks(buildingLiveIds, this);
+            tasks += taskPool.purgeTasksForColony(colonyId, this);
+        }
+
+        return new ColonyRecovery(tasks, queues, resetColonyExecutors(colonyId));
+    }
+
+    /** 重置某殖民地法师的执行器并取消其导航；返回重置个数。 */
+    private int resetColonyExecutors(UUID colonyId) {
+        int npcs = 0;
+        for (long entity : query(TaskExecutor.class, ColonyMember.class)) {
+            ColonyMember member = get(entity, ColonyMember.class);
+            if (member == null || !colonyId.equals(member.colonyId())) continue;
+            TaskExecutor exec = get(entity, TaskExecutor.class);
+            if (exec == null) continue;
+            if (movementOps != null) {
+                movementOps.cancelNavigation(entity);
+            }
+            exec.reset();
+            npcs++;
+        }
+        return npcs;
     }
 
     /** Execute all systems in registration order. */
