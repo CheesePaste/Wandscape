@@ -124,6 +124,12 @@
 6. **锚点与查询不再依赖盒互斥**：
    - anchor 落在其它建筑盒内是合法的（室内建筑的前提）。完成/拆除事件优先按 `building_id` 定位（`EnqueueHelper`/repair 都带该参），别只靠 anchor 反查。
    - posIndex 加载时从持久化 pattern 重建，重启后点 pattern 格仍精确归属；盒兜底/交互区查询取「最内层（体积最小）」建筑。
+7. **撤销建造按「已扣建材账本」退，别按图纸退**：
+   - 建材在开工那一刻由 `request_resource` **一次性扣除**（`ResourceRequestExecutor.finish` 提交），扣成功后回填该建筑的账本 `BuildingState.chargedMaterials`。撤销时逐项退 `min(未建成需求, 账本余额)` 并销账——账本是退还的**唯一依据与上限**。
+   - 未开工（含仓库缺料停在 `AWAITING_RESOURCES`）与首建免费（`EnqueueHelper` 的 `skipMaterials`）账本为空 → **一分不退**：材料从没被扣过，照图纸退款就是凭空造物（`isConstructionStarted` 只是「有 NPC 领过任务」，不能当扣款依据）。
+   - 已建成的方块不退：拆除 `demolish_structure` 用 `UPDATE_SUPPRESS_DROPS` 放空气，不清扫掉落物，那部分建材就此消耗（旧注释里说的「salvage 掉落」不存在）。
+   - 撤销会同时撤掉还在飞的 `request_resource`（`BuildingTaskSource.cancelBuildingTasks` → `ResourceRequestExecutor.cancelForNpc`，只释放仓库预占）：否则飞行途中撤销「先退（账本还空）后扣（到达才提交）」，玩家白丢一整份建材。
+   - 拆除（destroy）路径**不走退款**，别给它加余额退款：玩家自己敲掉的方块已掉过掉落物，再退就是双份。
 
 ---
 

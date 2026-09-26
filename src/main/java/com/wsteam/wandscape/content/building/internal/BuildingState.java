@@ -9,6 +9,8 @@ import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import javax.annotation.Nullable;
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 /**
@@ -33,6 +35,12 @@ public class BuildingState implements BuildingData {
     /** Sticky flag: set once construction work is claimed by an NPC, never reset. */
     private boolean constructionStarted;
     private boolean demolishing;
+    /**
+     * 已从仓库实际扣除、且还没退还的建造材料（材质 id → 数量），由引擎在
+     * {@code request_resource} 提交成功后回填，退还时销账。撤销建造时的退还上限就是这本账：
+     * 未开工（账本为空，材料一分没扣）时按图纸退任何东西都是凭空造物。
+     */
+    private final Map<String, Integer> chargedMaterials = new LinkedHashMap<>();
     private final Deque<WorkItem> taskQueue = new ArrayDeque<>();
     @Nullable
     private Set<BlockPos> patternPositions;
@@ -86,6 +94,33 @@ public class BuildingState implements BuildingData {
     @Override public boolean isConstructionStarted() { return constructionStarted; }
     @Nullable public UUID getCurrentTaskId() { return currentTaskId; }
     public Deque<WorkItem> getTaskQueue() { return taskQueue; }
+
+    /** 已扣建材账本（材质 id → 已扣且尚未退还的数量）。 */
+    public Map<String, Integer> getChargedMaterials() { return chargedMaterials; }
+
+    /** 累加本批实际从仓库扣除的建材（同材质合并计数）。 */
+    public void recordChargedMaterials(Map<String, Integer> counts) {
+        if (counts == null) return;
+        counts.forEach((id, amount) -> {
+            if (id != null && amount != null && amount > 0) {
+                chargedMaterials.merge(id, amount, Integer::sum);
+            }
+        });
+    }
+
+    /** 把已退还的部分从账本里销掉，同一笔账不会被退第二次。 */
+    public void deductChargedMaterials(Map<String, Integer> counts) {
+        if (counts == null) return;
+        counts.forEach((id, amount) -> {
+            if (id == null || amount == null || amount <= 0) return;
+            Integer left = chargedMaterials.get(id);
+            if (left == null) return;
+            int remaining = left - amount;
+            if (remaining > 0) chargedMaterials.put(id, remaining);
+            else chargedMaterials.remove(id);
+        });
+    }
+
     public boolean hasWork() {
         return !taskQueue.isEmpty();
     }

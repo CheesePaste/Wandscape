@@ -332,10 +332,13 @@ public class BuildingTaskSource implements TaskSource {
      * blocks. Stops the NPC mid-task, releases the footprint chunk lease, and
      * clears the {@link BuildingApi} current-task marker.
      *
-     * <p>The material flow is intentionally left untouched: an in-flight
-     * {@code request_resource} transport finishes and commits on its own, which
-     * matches {@code cancelBuilding}'s existing "materials are charged in one
-     * bulk commit at construction start" refund assumption.
+     * <p>The material flow is stopped together with the task: an in-flight
+     * {@code request_resource} transport is cancelled and its warehouse reservation released,
+     * so a cancelled building is never charged for materials it will never use. Without that,
+     * cancelling mid-flight refunds nothing (the charge ledger is still empty) and then the
+     * transport lands and deducts anyway — the player silently loses a whole material set.
+     * Whatever does get charged lands in the building's ledger, which is
+     * {@code cancelBuilding}'s refund ceiling.
      *
      * <p>Idempotent: a building whose queue was already removed returns no task
      * ids and is a no-op (safe to call from both undo and demolish paths).
@@ -345,13 +348,13 @@ public class BuildingTaskSource implements TaskSource {
         if (world == null || world.taskPool == null || world.buildingTaskPool == null) return;
 
         for (long taskId : world.buildingTaskPool.removeBuilding(buildingId)) {
-            world.taskPool.cancelTask(taskId, world);
+            cancelInFlightResourceRequest(world.taskPool.cancelTask(taskId, world));
         }
 
         // Sweep any active tasks in the global pool explicitly tagged with this buildingId
         for (GlobalTask task : world.taskPool.all()) {
             if (buildingId.equals(task.buildingId) && task.state != TaskState.COMPLETED) {
-                world.taskPool.cancelTask(task.id, world);
+                cancelInFlightResourceRequest(world.taskPool.cancelTask(task.id, world));
             }
         }
 
@@ -365,5 +368,17 @@ public class BuildingTaskSource implements TaskSource {
     /** Convert engine long task id to a UUID for BuildingApi tracking. */
     private static UUID toTaskUuid(long taskId) {
         return new UUID(taskId, 0);
+    }
+
+    /**
+     * 撤销建筑任务时，把它那笔还在飞的建材请求一并撤掉：运输是纯视觉的，撤销只释放仓库预占，
+     * 一分钱都不会扣。{@code npcId < 0}（任务还没派给谁）时无事可做。
+     */
+    private static void cancelInFlightResourceRequest(long npcId) {
+        if (npcId < 0) return;
+        var runtime = com.wsteam.wandscape.content.task.runtime.TaskRuntime.getActive();
+        if (runtime == null) return;
+        var exec = runtime.getResourceReqExec();
+        if (exec != null) exec.cancelForNpc(npcId);
     }
 }

@@ -376,14 +376,15 @@ public class BuildingApiImpl implements BuildingApi {
             }
         }
 
+        // 退款只看账本：材料真正被扣过才退，且每项不超过已扣数量。未开工（或首建免费）
+        // 时账本为空，退任何东西都是凭空造物——这条是撤销不刷物品的唯一保证。
+        refundUnplacedMaterials(state);
+
+        // 已开工 → 拆除清场（已建的方块不清扫掉落物，那部分建材就此消耗，不退）；
+        // 未开工 → 一个方块都没有，直接摘除登记。
         if (state.isConstructionStarted()) {
-            // Construction started → materials were charged to the warehouse in one
-            // bulk commit at construction start, so refund the full material cost,
-            // then demolish whatever has been built.
-            refundUnplacedMaterials(state);
             demolishBuilding(buildingId);
         } else {
-            // Not started → nothing was consumed; just drop the pending building.
             unregisterState(state);
         }
         sd.setDirty();
@@ -391,18 +392,37 @@ public class BuildingApiImpl implements BuildingApi {
     }
 
     /**
+     * 记录一笔实际从仓库扣除的建造材料（引擎在 {@code request_resource} 提交成功后回调）。
+     * 这本账是撤销时退还的唯一依据与上限——没有它，未开工的建筑撤销时也会按图纸全额返还，
+     * 等于凭空造物（材料一分没扣过）。
+     */
+    public void recordChargedMaterials(UUID buildingId, Map<String, Integer> counts) {
+        if (counts == null || counts.isEmpty()) return;
+        BuildingSavedData sd = getSavedData();
+        if (sd == null) return;
+        BuildingState state = sd.getBuilding(buildingId);
+        if (state == null) return;
+        state.recordChargedMaterials(counts);
+        sd.setDirty();
+    }
+
+    /**
      * Return the material cost of the blocks that were NOT yet placed to the colony
-     * warehouse. Blocks that WERE placed are refunded physically by the demolition's
-     * salvage flow (each broken block drops back as items), so refunding the full
-     * blueprint cost here would double-count and mint items. The offsets that are
-     * still missing / mismatched are detected via
-     * {@link BuildCompleteListener#findDamagedBlocks} — the same data the
-     * {@code build:place_structure} request_resource step consumed, minus the
-     * already-placed offsets.
+     * warehouse, capped by what was actually charged ({@link BuildingState#getChargedMaterials()}):
+     * per material it refunds {@code min(unbuilt demand, still-charged amount)}.
+     *
+     * <p>账本为空（从未开工，或首建免费）时一分不退——材料没被扣过，退出来就是凭空造物。
+     * Blocks that WERE placed are not refunded either: demolition does not drop salvage
+     * items, so their materials stay consumed. The offsets that are still missing /
+     * mismatched are detected via {@link BuildCompleteListener#findDamagedBlocks} — the
+     * same data the {@code build:place_structure} request_resource step consumed, minus
+     * the already-placed offsets.
      */
     private void refundUnplacedMaterials(BuildingState state) {
         UUID colonyId = state.getColonyId();
         if (colonyId == null) return;
+        Map<String, Integer> charged = state.getChargedMaterials();
+        if (charged.isEmpty()) return;
         BuildingConfig config = BuildingConfigLoader.getInstance().get(state.getBuildingTypeId());
         if (config == null) return;
         Level level = getServerLevel();
@@ -418,12 +438,19 @@ public class BuildingApiImpl implements BuildingApi {
         if (counts.isEmpty()) return;
 
         int total = 0;
+        Map<String, Integer> refunded = new LinkedHashMap<>();
         for (var entry : counts.entrySet()) {
-            bank.add(colonyId, ItemKey.of(entry.getKey(), null), entry.getValue());
-            total += entry.getValue();
+            int refund = Math.min(entry.getValue(), charged.getOrDefault(entry.getKey(), 0));
+            if (refund <= 0) continue;
+            bank.add(colonyId, ItemKey.of(entry.getKey(), null), refund);
+            refunded.merge(entry.getKey(), refund, Integer::sum);
+            total += refund;
         }
+        if (total <= 0) return;
+        // 销账：同一笔建材不会被退第二次。
+        state.deductChargedMaterials(refunded);
         Log.info(TAG, "[Cancel] Refunded {} unplaced material items ({} types) to colony {} for {} ({})",
-                total, counts.size(), colonyId.toString().substring(0, 8),
+                total, refunded.size(), colonyId.toString().substring(0, 8),
                 state.getBuildingTypeId(), state.getBuildingId().toString().substring(0, 8));
     }
 
