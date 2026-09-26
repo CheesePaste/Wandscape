@@ -72,8 +72,11 @@ public record WorkstationDataPacket(BlockPos stationPos, ListTag items, ListTag 
             // The client renders locked vs unlocked state locally using the
             // locked_reason NBT.  Server-side re-validation happens in
             // RequestProductionTaskPacket.handleServer() to prevent tampering.
-            boolean unlocked = com.wsteam.wandscape.content.production.internal.RecipeUnlockChecker
+            boolean colonyLevelUnlocked = com.wsteam.wandscape.content.production.internal.RecipeUnlockChecker
                     .isUnlocked(colonyId, r.unlockRequirement());
+            boolean recipeUnlocked = com.wsteam.wandscape.content.production.ProductionRecipeManager
+                    .isSynthesizeUnlocked(colonyId, r.id());
+
             int maxAffordable = ProductionAffordability.computeMaxAffordable(r.cost(), elementMap);
             CompoundTag tag = new CompoundTag();
             tag.putString("id", r.id());
@@ -86,7 +89,10 @@ public record WorkstationDataPacket(BlockPos stationPos, ListTag items, ListTag 
 
             // Determine locked reason before setting max_affordable
             String lockedReason;
-            if (!unlocked) {
+            if (!recipeUnlocked) {
+                lockedReason = "recipe_locked";
+                maxAffordable = 0;
+            } else if (!colonyLevelUnlocked) {
                 lockedReason = "colony";
                 maxAffordable = 0;
             } else if (maxAffordable == 0) {

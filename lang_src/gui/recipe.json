@@ -2,5 +2,9 @@
   "gui.wandscape.recipe.colony_level": {
     "zh_cn": "魔法小镇等级>=%s",
     "en_us": "Town Lv>=%s"
+  },
+  "gui.wandscape.recipe.locked_need_item": {
+    "zh_cn": "放入仓库以解析配方",
+    "en_us": "Deposit into warehouse to unlock"
   }
 }

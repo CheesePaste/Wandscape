@@ -63,6 +63,10 @@
     "en_us": "[Wandscape] %s — no node_config",
     "zh_cn": "[魔法小镇] %s — 缺少 node_config"
   },
+  "message.wandscape.building.missing_locked_materials": {
+    "zh_cn": "建筑已规划，但缺少 %s 种未解锁配方的材料，施工将等待材料入库",
+    "en_us": "Building planned, but missing %s material(s) with locked recipes; construction awaits items"
+  },
   "message.wandscape.building.overlap": {
     "zh_cn": "该位置与已有建筑方块重叠，不能占用同一格",
     "en_us": "That spot overlaps an existing building block; two buildings cannot share a voxel"

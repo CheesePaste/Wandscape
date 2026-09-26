@@ -194,7 +194,14 @@ public class ResourceSupplySystem implements EcsSystem {
                                             @Nullable World world, boolean atFront) {
         var recipes = Wandscape.PRODUCTION_RECIPE_LOADER;
         if (recipes == null) return false;
-        if (recipes.getSynthesizeRecipe(itemId) == null) return false;
+        var synthRecipe = recipes.getSynthesizeRecipe(itemId);
+        if (synthRecipe == null) return false;
+
+        // 配方门控：未解锁的配方不可被自动合成
+        if (colonyId != null && !com.wsteam.wandscape.content.production.ProductionRecipeManager
+                .isSynthesizeUnlocked(colonyId, synthRecipe.id())) {
+            return false;
+        }
 
         int inFlight = countSynthesizeInFlight(itemId, colonyId, world);
         int toAdd = amount - inFlight;

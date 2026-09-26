@@ -54,6 +54,7 @@ public record ConstructionSiteDataPacket(
     public static final int STATUS_READY = 0;     // 已备齐：仓库储量充足
     public static final int STATUS_CRAFTING = 1;  // 制作中：不足，但工作站正在合成
     public static final int STATUS_PENDING = 2;   // 待制作：不足，且没有工作站在做
+    public static final int STATUS_LOCKED = 3;    // 配方未解锁：不足，且合成配方尚未解锁
 
     private static final String TAG = "ConstructionSiteDataPacket";
 
@@ -145,6 +146,8 @@ public record ConstructionSiteDataPacket(
                     status = STATUS_READY;
                 } else if (inFlight > 0) {
                     status = STATUS_CRAFTING;
+                } else if (!com.wsteam.wandscape.content.production.ProductionRecipeManager.isSynthesizeUnlocked(colonyId, pureId)) {
+                    status = STATUS_LOCKED;
                 } else {
                     status = STATUS_PENDING;
                 }

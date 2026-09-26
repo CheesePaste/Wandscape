@@ -947,6 +947,28 @@ public class BuildingApiImpl implements BuildingApi {
         return sd != null && colonyId != null && sd.isFirstFreeClaimed(colonyId, buildingTypeId);
     }
 
+    /**
+     * 检查建筑所需建材中，当前殖民地仓库库存不足且合成配方尚未解锁的物品列表。
+     */
+    public static List<String> findMissingLockedMaterials(@Nullable UUID colonyId, BuildingConfig config) {
+        if (colonyId == null || config == null) return List.of();
+        var server = ServerLifecycleHooks.getCurrentServer();
+        if (server == null) return List.of();
+        ColonyItemBank bank = ColonyItemBank.get(server.overworld());
+        if (bank == null) return List.of();
+
+        List<String> missingLocked = new ArrayList<>();
+        for (var entry : EnqueueHelper.computeMaterialCounts(config).entrySet()) {
+            String itemId = entry.getKey();
+            int required = entry.getValue();
+            long available = bank.available(colonyId, ItemKey.of(itemId, null));
+            if (available < required && !com.wsteam.wandscape.content.production.ProductionRecipeManager.isSynthesizeUnlocked(colonyId, itemId)) {
+                missingLocked.add(itemId);
+            }
+        }
+        return missingLocked;
+    }
+
     // ---- Helpers ----
 
     @Override

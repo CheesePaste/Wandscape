@@ -195,6 +195,8 @@ public class ConstructionSiteScreen extends MedievalScreen {
                     I18n.name("gui.wandscape.constructionsite.status.ready", "已备齐").getString();
             case ConstructionSiteDataPacket.STATUS_CRAFTING ->
                     I18n.name("gui.wandscape.constructionsite.status.crafting", "制作中").getString();
+            case ConstructionSiteDataPacket.STATUS_LOCKED ->
+                    I18n.name("gui.wandscape.constructionsite.status.locked", "未解锁").getString();
             default ->
                     I18n.name("gui.wandscape.constructionsite.status.pending", "待制作").getString();
         };
@@ -204,6 +206,7 @@ public class ConstructionSiteScreen extends MedievalScreen {
         return switch (status) {
             case ConstructionSiteDataPacket.STATUS_READY -> MedievalColors.SUCCESS_GREEN;
             case ConstructionSiteDataPacket.STATUS_CRAFTING -> MedievalColors.ACCENT_GOLD;
+            case ConstructionSiteDataPacket.STATUS_LOCKED -> MedievalColors.DANGER_RED;
             default -> MedievalColors.TEXT_DIM;
         };
     }

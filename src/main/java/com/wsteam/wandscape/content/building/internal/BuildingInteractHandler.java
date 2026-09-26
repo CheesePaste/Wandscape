@@ -306,6 +306,11 @@ public final class BuildingInteractHandler {
         ColonyItemBank bank = ColonyItemBank.get(level);
         if (bank == null) return;
 
+        if (colonyId != null) {
+            com.wsteam.wandscape.content.production.ProductionRecipeManager
+                    .syncWarehouseItems(colonyId, bank);
+        }
+
         var elemLoader = Wandscape.ELEMENT_MAPPING_LOADER;
         Map<ItemKey, Long> decomposableItems = new LinkedHashMap<>();
         Map<String, Map<ElementType, Long>> itemElementValues = new LinkedHashMap<>();

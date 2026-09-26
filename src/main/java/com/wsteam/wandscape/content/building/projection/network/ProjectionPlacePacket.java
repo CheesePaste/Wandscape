@@ -12,6 +12,7 @@ import com.wsteam.wandscape.foundation.registry.WandscapeSounds;
 import com.wsteam.wandscape.content.building.projection.data.BuildingSlot;
 import com.wsteam.wandscape.api.BuildingApi;
 import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.content.building.internal.BuildingApiImpl;
 import com.wsteam.wandscape.foundation.networking.ScreenFeedbackPacket;
 import com.wsteam.wandscape.api.WandscapeApis;
 import com.wsteam.wandscape.foundation.ui.I18n;
@@ -102,6 +103,16 @@ public record ProjectionPlacePacket(
         Log.info(TAG, "[Projection] '{}' placed at {} by {} firstFree={}",
                 config.displayName(), packet.anchorPos,
                 player.getGameProfile().getName(), result.firstFree());
+
+        if (!result.firstFree() && owner != null) {
+            List<String> missingLocked = BuildingApiImpl.findMissingLockedMaterials(owner, config);
+            if (!missingLocked.isEmpty()) {
+                ScreenFeedbackPacket.send(player, I18n.name(
+                        "message.wandscape.building.missing_locked_materials",
+                        "建筑已规划，但缺少 %s 种未解锁配方的材料，施工将等待材料入库",
+                        missingLocked.size()), false);
+            }
+        }
 
         SoundService.playAt(player.serverLevel(), packet.anchorPos,
                 WandscapeSounds.BUILDING_PLACE, SoundSource.BLOCKS, 0.5f, 1.0f);

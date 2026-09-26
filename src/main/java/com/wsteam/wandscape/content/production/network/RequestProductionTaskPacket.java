@@ -102,6 +102,8 @@ public record RequestProductionTaskPacket(
                     case "synthesize" -> {
                         var recipe = loader.getSynthesizeRecipe(pkt.recipeOrItemId);
                         yield recipe != null
+                                && com.wsteam.wandscape.content.production.ProductionRecipeManager
+                                        .isSynthesizeUnlocked(colonyId, recipe.id())
                                 && RecipeUnlockChecker.isUnlocked(colonyId, recipe.unlockRequirement());
                     }
                     case "craft", "craft_spell" -> {

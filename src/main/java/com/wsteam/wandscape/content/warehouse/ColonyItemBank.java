@@ -352,6 +352,8 @@ public class ColonyItemBank extends SavedData {
         if (itemChangeNotifier != null) {
             itemChangeNotifier.onItemChanged(colonyId, key, newCount, amount);
         }
+        com.wsteam.wandscape.content.production.ProductionRecipeManager
+                .checkAndUnlockOnWarehouseAdd(colonyId, key.itemId());
     }
 
     public boolean consume(UUID colonyId, ItemKey key, long amount) {

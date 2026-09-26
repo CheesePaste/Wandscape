@@ -19,6 +19,10 @@
     "zh_cn": "制作中",
     "en_us": "Crafting"
   },
+  "gui.wandscape.constructionsite.status.locked": {
+    "zh_cn": "未解锁",
+    "en_us": "Locked"
+  },
   "gui.wandscape.constructionsite.status.pending": {
     "zh_cn": "待制作",
     "en_us": "Pending"

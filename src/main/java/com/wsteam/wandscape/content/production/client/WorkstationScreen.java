@@ -194,7 +194,9 @@ public class WorkstationScreen extends MedievalScreen {
             @Override
             protected void renderRow(GuiGraphics g, SynthesizeEntry item, int x, int y, int index,
                                      boolean selected, boolean hovered) {
-                boolean isLocked = "colony".equals(item.lockedReason());
+                boolean isRecipeLocked = "recipe_locked".equals(item.lockedReason());
+                boolean isColonyLocked = "colony".equals(item.lockedReason());
+                boolean isLocked = isRecipeLocked || isColonyLocked;
                 boolean canAfford = !isLocked && item.maxAffordable() > 0;
 
                 var registryItem = BuiltInRegistries.ITEM.get(ResourceLocation.tryParse(item.outputItem()));
@@ -226,7 +228,11 @@ public class WorkstationScreen extends MedievalScreen {
 
                 // Requirement / cost row
                 String reason = item.lockedReason();
-                if ("colony".equals(reason)) {
+                if ("recipe_locked".equals(reason)) {
+                    g.drawString(Minecraft.getInstance().font,
+                            I18n.name("gui.wandscape.recipe.locked_need_item", "Deposit into warehouse to unlock").getString(),
+                            x + 20, y + 10, MedievalColors.TEXT_DIM);
+                } else if ("colony".equals(reason)) {
                     StringBuilder costStr = new StringBuilder();
                     var req = item.unlockRequirement();
                     costStr.append(I18n.name("gui.wandscape.recipe.colony_level",
@@ -287,7 +293,7 @@ public class WorkstationScreen extends MedievalScreen {
         }
         // Locked recipes (colony level unmet) keep slider at 1.
         // Unlocked recipes allow ordering even if elements are currently insufficient.
-        boolean locked = "colony".equals(entry.lockedReason());
+        boolean locked = "colony".equals(entry.lockedReason()) || "recipe_locked".equals(entry.lockedReason());
         int max = locked ? 1 : Math.max(999, entry.maxAffordable());
         stepper.setTotalMax(max);
     }
@@ -329,8 +335,8 @@ public class WorkstationScreen extends MedievalScreen {
                     stationPos, "decompose", sel.itemId(), qty));
         } else {
             SynthesizeEntry sel = synthesizeList.getSelected();
-            // Block submission only when recipe is locked by colony level
-            if (sel == null || "colony".equals(sel.lockedReason())) return;
+            // Block submission when recipe is locked
+            if (sel == null || "colony".equals(sel.lockedReason()) || "recipe_locked".equals(sel.lockedReason())) return;
             Net.toServer(new RequestProductionTaskPacket(
                     stationPos, "synthesize", sel.recipeId(), qty));
         }
