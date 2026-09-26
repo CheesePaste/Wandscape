@@ -23,6 +23,15 @@
     {
       "type": "patchouli:text",
       "text": "A Workstation works on one job at a time, so anything queued behind it waits its turn. If crafting feels slow, build a second one somewhere else — each keeps its own queue and they can run at once. Mages do the actual work, though, so extra Workstations add nothing $(br)while every mage is busy."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "A new town has none of its crafting recipes unlocked, and the greyed-out half of the list on the Synthesize tab is exactly that. There are three ways to open one: deposit an item into the warehouse and its own recipe unlocks with it;",
+      "title": "Unlocking Recipes"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "hold a wand and right-click a block in Identify mode to unlock that block's recipe on the spot; or take an $(l:wandscape:items/blueprint_guide)Item Blueprint$(/l) and pick any single recipe on the Recipes page in the warehouse. Unlocks are per town and permanent."
     }
   ]
 }

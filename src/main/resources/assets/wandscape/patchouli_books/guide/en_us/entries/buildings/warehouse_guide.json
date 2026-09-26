@@ -12,6 +12,15 @@
     {
       "type": "patchouli:text",
       "text": "More warehouses means the town can store more. When you would rather not walk over, carry a $(l:wandscape:items/warehouse_terminal_guide)warehouse terminal$(/l)."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "The Recipes button in the warehouse opens the recipe book: every crafting recipe in town, unlocked or still locked, and clicking Unlock on a row spends an $(l:wandscape:items/blueprint_guide)Item Blueprint$(/l) to open it.",
+      "title": "Recipe Book"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Storing an item in the warehouse also unlocks that item's own recipe, so the quickest fix for a missing recipe is to put the item in."
     }
   ]
 }

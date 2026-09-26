@@ -1,71 +1,75 @@
 {
   "tutorial.wandscape.common.aim_drag_place": {
-    "zh_cn": "§b▶ §e按住右键拖动§b转视角，把建筑放到你要的位置",
-    "en_us": "§b▶ §eHold right-click and drag§b to turn the view and place the building"
+    "zh_cn": "§b▶ §e按住右键拖动§b把建筑放到你要的位置",
+    "en_us": "§b▶ §eHold right-click and drag§b to place the building"
   },
   "tutorial.wandscape.common.aim_rotate_submit": {
-    "zh_cn": "§b▶ §e左键§b旋转朝向，点右侧【§e提交施工§b】→【§e提交§b】",
-    "en_us": "§b▶ §eLeft-click§b to rotate, then click the right panel's §eSubmit Build§b → §eSubmit§b"
+    "zh_cn": "§b▶ §e左键§b旋转，点【§e提交施工§b】→【§e提交§b】",
+    "en_us": "§b▶ §eLeft-click§b to rotate, then §eSubmit Build§b → §eSubmit§b"
   },
   "tutorial.wandscape.common.build_list_open": {
     "zh_cn": "§a建造列表已打开",
     "en_us": "§aBuild list opened"
   },
   "tutorial.wandscape.common.drag_position_rotate": {
-    "zh_cn": "§b③ §e按住右键拖动§b转视角定位，§e左键§b旋转朝向",
-    "en_us": "§b③ §eHold right-click and drag§b to position, §eleft-click§b to rotate"
+    "zh_cn": "§b③ §e按住右键拖动§b定位，§e左键§b旋转",
+    "en_us": "§b③ §eHold right-click§b to position, §eleft-click§b to rotate"
   },
   "tutorial.wandscape.common.exit_build": {
     "zh_cn": "§b① 按 §e1§b 或 §eESC§b 退出建造模式",
     "en_us": "§b① Press §e1§b or §eESC§b to exit build mode"
   },
   "tutorial.wandscape.common.open_build": {
-    "zh_cn": "§b① 按 §e1§b 打开【建造】页签，按C抬起鼠标",
-    "en_us": "§b① Press §e1§b to open the §eBuild§b tab,Press C to catch mouse"
+    "zh_cn": "§b① 按 §e1§b 打开【建造】页签",
+    "en_us": "§b① Press §e1§b to open the §eBuild§b tab"
   },
   "tutorial.wandscape.common.pinned_locked": {
     "zh_cn": "§a已锁定，可拖拽轴线微调",
     "en_us": "§aLocked — drag the axis to fine-tune"
   },
   "tutorial.wandscape.common.pinned_submit": {
-    "zh_cn": "§b▶ 点右侧【§e提交施工§b】→【§e提交§b】",
-    "en_us": "§b▶ Click the right panel's §eSubmit Build§b → §eSubmit§b"
+    "zh_cn": "§b▶ 点【§e提交施工§b】→【§e提交§b】",
+    "en_us": "§b▶ Click §eSubmit Build§b → §eSubmit§b"
   },
   "tutorial.wandscape.common.submit_line": {
-    "zh_cn": "§b④ 点右侧【§e提交施工§b】→【§e提交§b】",
-    "en_us": "§b④ Click the right panel's §eSubmit Build§b → §eSubmit§b"
+    "zh_cn": "§b④ 点【§e提交施工§b】→【§e提交§b】",
+    "en_us": "§b④ Click §eSubmit Build§b → §eSubmit§b"
   },
   "tutorial.wandscape.deposit.hint": {
-    "zh_cn": "§e俯瞰视角：WASD 移动镜头，滚轮缩放；右键点建筑打开界面",
-    "en_us": "§eOverview view: WASD moves the camera, scroll wheel zooms; right-click a building to open it"
+    "zh_cn": "§eWASD 移动镜头，滚轮缩放",
+    "en_us": "§eWASD moves the camera, scroll wheel zooms"
   },
   "tutorial.wandscape.deposit.line2": {
-    "zh_cn": "§b② §e移动鼠标转视角§b，把准心对准仓库，§e右键点一下§b打开界面",
-    "en_us": "§b② §eMove the mouse§b to point at the warehouse, §eright-click once§b to open it"
+    "zh_cn": "§b② 对准仓库，§e右键点一下§b打开界面",
+    "en_us": "§b② Point at the warehouse and §eright-click once§b to open it"
   },
   "tutorial.wandscape.deposit.line3": {
-    "zh_cn": "§b③ 切到【§e交换§b】页签，点背包一个物品存入仓库",
-    "en_us": "§b③ Switch to the §eExchange§b tab and click an inventory item to deposit it"
+    "zh_cn": "§b③ 切到【§e交换§b】页签，点背包物品存进去",
+    "en_us": "§b③ Switch to the §eExchange§b tab and click an item to deposit it"
   },
   "tutorial.wandscape.deposit.title": {
     "zh_cn": "新手引导 (3/5)：右键仓库，放入一个物品",
     "en_us": "Newcomer Guide (3/5): Right-click the Warehouse to Deposit an Item"
   },
   "tutorial.wandscape.synthesize.hint": {
-    "zh_cn": "§e合成消耗元素、产出存入仓库，法师会自己把活干完。引导到此结束——按 §eH§b 打开手册，接着看《0.5，推荐了解的功能》",
-    "en_us": "§eCrafting costs elements and sends the output to the warehouse; mages finish the job on their own. That's the whole guide — press §eH§b to open the guidebook and read §e0.5 Recommended Features§b next"
+    "zh_cn": "§e合成吃元素、成品进仓库，法师自己会干完。引导到此结束，按 §eH§b 打开手册看《0.5，推荐了解的功能》",
+    "en_us": "§eCrafting costs elements and stores the output; mages finish the job. That's the guide — press §eH§b for the guidebook and read §e0.5 Recommended Features§b next"
   },
   "tutorial.wandscape.synthesize.line2": {
-    "zh_cn": "§b② 把准心对准 §e工作站§b，§e右键点一下§b打开界面",
-    "en_us": "§b② Aim at the §eWorkstation§b and §eright-click once§b to open it"
+    "zh_cn": "§b② 对准工作站，§e右键点一下§b打开界面",
+    "en_us": "§b② Point at the workstation and §eright-click once§b to open it"
   },
   "tutorial.wandscape.synthesize.line3": {
-    "zh_cn": "§b③ 切到【§e合成§b】页签，选一个配方",
-    "en_us": "§b③ Switch to the §eCrafting§b tab and pick a recipe"
+    "zh_cn": "§b③ 切到【§e合成§b】页签，选一条配方",
+    "en_us": "§b③ Switch to the §eSynthesize§b tab and pick a recipe"
   },
   "tutorial.wandscape.synthesize.line4": {
-    "zh_cn": "§b④ 点【§e提交§b】发布合成任务",
-    "en_us": "§b④ Click §eSubmit§b to queue the crafting task"
+    "zh_cn": "§b⑤ 点【§e提交§b】下单",
+    "en_us": "§b⑤ Click §eSubmit§b to order it"
+  },
+  "tutorial.wandscape.synthesize.line_unlock": {
+    "zh_cn": "§b④ 灰着的配方还没解锁：把要做的物品存进仓库就开了",
+    "en_us": "§b④ Greyed-out recipes are locked: deposit the item into the warehouse to unlock it"
   },
   "tutorial.wandscape.synthesize.title": {
     "zh_cn": "新手引导 (5/5)：右键工作站，下发一个合成订单",
@@ -84,16 +88,16 @@
     "en_us": "§b② Click the §eTown Hall§b card, §edouble-click§b to start placing"
   },
   "tutorial.wandscape.townhall.line3": {
-    "zh_cn": "§b③ §e按住右键拖动§b转视角，把建筑放到你要的位置",
-    "en_us": "§b③ §eHold right-click and drag§b to turn the view and place the building"
+    "zh_cn": "§b③ §e按住右键拖动§b，把建筑放到你要的位置",
+    "en_us": "§b③ §eHold right-click and drag§b to place the building"
   },
   "tutorial.wandscape.townhall.line4": {
-    "zh_cn": "§b④ §e左键§b旋转朝向，点右侧【§e提交施工§b】→【§e提交§b】",
-    "en_us": "§b④ §eLeft-click§b to rotate, then click the right panel's §eSubmit Build§b → §eSubmit§b"
+    "zh_cn": "§b④ §e左键§b旋转，点【§e提交施工§b】→【§e提交§b】",
+    "en_us": "§b④ §eLeft-click§b to rotate, then §eSubmit Build§b → §eSubmit§b"
   },
   "tutorial.wandscape.townhall.line5": {
-    "zh_cn": "§b⑤ 自动弹出命名界面，输入名称创建魔法小镇",
-    "en_us": "§b⑤ The naming screen pops up — enter a name to create your magic town"
+    "zh_cn": "§b⑤ 弹出命名界面，给小镇起个名字",
+    "en_us": "§b⑤ Name your town in the popup"
   },
   "tutorial.wandscape.townhall.title": {
     "zh_cn": "新手引导 (1/5)：建造市政厅",
@@ -104,8 +108,8 @@
     "en_us": "§b▶ Click the §eWarehouse§b card, §edouble-click§b to start placing"
   },
   "tutorial.wandscape.warehouse.hint": {
-    "zh_cn": "§e仓库存放法师采掘/合成的物资与元素，是最重要的建筑",
-    "en_us": "§eThe warehouse holds materials and elements gathered/crafted by mages — the most important building"
+    "zh_cn": "§e仓库是全镇共用的物资与元素，最重要的建筑",
+    "en_us": "§eThe warehouse is the town's shared stock of materials and elements — the most important building"
   },
   "tutorial.wandscape.warehouse.line2": {
     "zh_cn": "§b② 点【§e仓库§b】卡片，§e双击§b进入放置",
@@ -120,8 +124,8 @@
     "en_us": "§b▶ Click the §eWorkstation§b card, §edouble-click§b to start placing"
   },
   "tutorial.wandscape.workstation.hint": {
-    "zh_cn": "§e工作站可把建材分解为元素，或用元素合成物品",
-    "en_us": "§eWorkstations break materials into elements, or craft items from elements"
+    "zh_cn": "§e工作站把元素合成成物品，也能把物品分解回元素",
+    "en_us": "§eWorkstations craft items from elements, or break items back down into elements"
   },
   "tutorial.wandscape.workstation.line2": {
     "zh_cn": "§b② 点【§e工作站§b】卡片，§e双击§b进入放置",
