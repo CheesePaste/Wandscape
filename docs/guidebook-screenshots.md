@@ -200,7 +200,7 @@ src/main/resources/assets/wandscape/textures/guidebook/full/<名字>.png    高�
 |---|---|---|---|---|
 | 54 | `item_wand_tip` | P2 | 鼠标悬停法杖 | 属性加成行 + 一句「玩家拿着没有加成」的对照 |
 | 55 | `item_ring_tip` | P2 | 悬停三档盟誓戒指 | 三档并列，突出「1 名 / 2 名 / 4 名」的差别 |
-| 56 | `item_wand_mode_tip` | P2 | 悬停法杖（切到不同模式） | 提示里的「当前模式」行，以及 shift 右键切换模式的说明；对角色的模式各截一张更有对照 |
+| 56 | `item_wand_mode_tip` | P2 | 悬停法杖（切到不同模式） | 提示里的「当前模式」行，以及法杖头宝石随模式变的颜色；四种模式各截一张并排对照 |
 | 57 | `item_compass_tip` | P2 | 悬停高级/终极指南针 | 提示里的市政厅坐标行 |
 | 58 | `item_terminal_curios` | P2 | 仓库终端放进 Curios 手饰槽 | 手饰槽位 + 按键设置里的快捷键项，两处同框 |
 

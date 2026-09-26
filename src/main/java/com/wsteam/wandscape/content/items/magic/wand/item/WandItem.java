@@ -172,6 +172,26 @@ public class WandItem extends Item implements NpcInteractHook, NpcSneakInteractH
         }
     }
 
+    /**
+     * 法杖头（模型里的 gem，tintindex 0）应当染成什么色：**存过模式**的堆叠走模式色
+     * （{@link WandMode#themeColor()}），其余回落到预设染色 {@link #colorArgb}。
+     *
+     * <p>为什么以「有没有存过模式」而不是「当前模式的默认值」分界：模式是玩家切出来的状态，
+     * 没切过的法杖（刚合成的、法师手里的）应当保持预设的专属色——NPC 手中的法杖渲染
+     * （{@code WandscapeNpcRenderer}）与施法光束（{@code MagicCaster}）都直接读 {@link #colorArgb}，
+     * 若玩家侧一律染模式色，同一件物品在世界里和装备界面里会显示成两种颜色。
+     * 玩家第一次 shift+右键切模式，颜色才开始跟着模式走。
+     *
+     * <p>只有物品 tint 走本方法；光束与 NPC 手持渲染继续用 {@link #colorArgb}。
+     */
+    @Nullable
+    public static Integer headColorArgb(ItemStack stack) {
+        if (!ItemData.getString(stack, MODE_KEY).isEmpty()) {
+            return getMode(stack).themeColor();
+        }
+        return colorArgb(stack);
+    }
+
     @Override
     public boolean isBarVisible(ItemStack stack) {
         return false;

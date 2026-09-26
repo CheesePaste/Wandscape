@@ -1413,7 +1413,7 @@
   "item.wandscape.ultimate_magic_compass": "Ultimate Magic Compass",
   "item.wandscape.ultimate_magic_compass.desc": "Its needle always points at your town hall, and right-clicking teleports you straight there.",
   "item.wandscape.wand": "Wand",
-  "item.wandscape.wand.desc": "A wand is a mage's main-hand item, and the attribute bonus it carries only takes effect once it is equipped on a mage. A player holding one gains nothing from it, but can use it to give orders to the town's mages: shift+right-click to switch modes, right-click to use the current one.",
+  "item.wandscape.wand.desc": "A wand is a mage's main-hand item, and the attribute bonus it carries only takes effect once it is equipped on a mage. A player holding one gains nothing from it, but can use it to give orders to the town's mages: shift+right-click to switch modes and right-click to use the current one — the gem at the wand's head takes the current mode's colour.",
   "item.wandscape.wand.mode_current": "Mode: %s",
   "item.wandscape.wand.tooltip": "Shift+Right-Click to switch mode; Right-Click to use it",
   "item.wandscape.wandscape_npc_spawn_egg": "Mage Spawn Egg",

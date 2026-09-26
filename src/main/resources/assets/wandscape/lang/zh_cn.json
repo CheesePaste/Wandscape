@@ -1413,7 +1413,7 @@
   "item.wandscape.ultimate_magic_compass": "终极魔法指南针",
   "item.wandscape.ultimate_magic_compass.desc": "指针始终指着本镇的市政厅，右键还能直接传送到那里。",
   "item.wandscape.wand": "法杖",
-  "item.wandscape.wand.desc": "法杖是法师的主手装备，装到法师手上之后，它带的属性加成才会生效，比如提升法术强度、建造速度或者最大法力。玩家自己拿在手里没有任何加成，但能给本镇法师下命令：按住 shift 右键切换模式，右键执行当前模式。",
+  "item.wandscape.wand.desc": "法杖是法师的主手装备，装到法师手上之后，它带的属性加成才会生效，比如提升法术强度、建造速度或者最大法力。玩家自己拿在手里没有任何加成，但能给本镇法师下命令：按住 shift 右键切换模式，右键执行当前模式，法杖头上的宝石会跟着当前模式换色。",
   "item.wandscape.wand.mode_current": "当前模式：%s",
   "item.wandscape.wand.tooltip": "shift+右键切换模式；右键执行当前模式",
   "item.wandscape.wandscape_npc_spawn_egg": "法师刷怪蛋",

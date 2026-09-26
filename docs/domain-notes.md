@@ -46,6 +46,7 @@
    - ⚠️ 两个已知边界，改交互前先看：`useOn` **只在方块自己没接住右键时被调用**，所以箱子/熔炉/门这类有界面的方块在集合、鉴定模式下照旧开自己的界面（要覆盖它们得改用 `RightClickBlock` 事件，代价是屏蔽所有方块交互）；`NpcInteractHook` 是 void、无法拒绝，因此**手持法杖右键法师永远被吞掉**，集合/鉴定模式下只回一句提示、不开法师装备菜单（权杖时代同此语义）。
    - 庇护/敌对**没有第二份实现**：`WandModeService` 直接调 `ScepterService.toggleShelter/toggleHostile`，标记仍落 `ScepterMarksSavedData`；`scepterHostileRange` 默认值已随需求改为 32 格（`BalanceValues` 与 `wandscape_balance.json` 两处）。
    - 集合是**一次性**的：直接调 ECS 的 `movementOps.navigateTo`（与守卫 AI 同一套寻路/卡住传送兜底），不存状态、不新增寻路代码；被任务打断即作废（`NavigationSystem` 只驱动 `NavigationState`，任务一入队就取消在途导航）。
+   - 法杖头（模型里的 `gem`，`tintindex 0`）的显示色走 `WandItem.headColorArgb`：**存过模式**的堆叠染模式色（`WandMode.themeColor()`），没存过的仍是预设 `wand_color`。分界刻意放在「有没有存过模式」而不是「当前模式的默认值」——否则 NPC 装备界面里的法杖会显示默认模式色，而世界里 NPC 手里的法杖（`WandscapeNpcRenderer` 直接读 `colorArgb`）还是预设色，同一件物品两处不同色。只有物品 tint 走 `headColorArgb`，**施法光束（`MagicCaster`）与 NPC 手持渲染继续用 `colorArgb`**，改染色时别把三处混成一个入口。
 
 ---
 

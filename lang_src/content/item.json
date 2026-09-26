@@ -200,8 +200,8 @@
     "en_us": "Wand"
   },
   "item.wandscape.wand.desc": {
-    "zh_cn": "法杖是法师的主手装备，装到法师手上之后，它带的属性加成才会生效，比如提升法术强度、建造速度或者最大法力。玩家自己拿在手里没有任何加成，但能给本镇法师下命令：按住 shift 右键切换模式，右键执行当前模式。",
-    "en_us": "A wand is a mage's main-hand item, and the attribute bonus it carries only takes effect once it is equipped on a mage. A player holding one gains nothing from it, but can use it to give orders to the town's mages: shift+right-click to switch modes, right-click to use the current one."
+    "zh_cn": "法杖是法师的主手装备，装到法师手上之后，它带的属性加成才会生效，比如提升法术强度、建造速度或者最大法力。玩家自己拿在手里没有任何加成，但能给本镇法师下命令：按住 shift 右键切换模式，右键执行当前模式，法杖头上的宝石会跟着当前模式换色。",
+    "en_us": "A wand is a mage's main-hand item, and the attribute bonus it carries only takes effect once it is equipped on a mage. A player holding one gains nothing from it, but can use it to give orders to the town's mages: shift+right-click to switch modes and right-click to use the current one — the gem at the wand's head takes the current mode's colour."
   },
   "item.wandscape.wand.mode_current": {
     "zh_cn": "当前模式：%s",
