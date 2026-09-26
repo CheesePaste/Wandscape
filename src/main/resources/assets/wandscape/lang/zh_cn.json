@@ -1103,6 +1103,7 @@
   "gui.wandscape.settings.particle.level": "粒子效果等级",
   "gui.wandscape.settings.preview.fps": "建筑预览帧率",
   "gui.wandscape.settings.preview.resolution": "建筑预览清晰度",
+  "gui.wandscape.settings.recipe.lockEnabled": "配方锁定机制",
   "gui.wandscape.settings.reset": "默认",
   "gui.wandscape.settings.reset_item_toast": "已重置默认: %s",
   "gui.wandscape.settings.reset_locked": "锁定 (需 OP)",

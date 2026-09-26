@@ -218,6 +218,14 @@ public final class SettingsRegistry {
                 val -> String.format("%.1f×", val)
         ));
 
+        register(new SettingItem.BooleanSetting(
+                "recipe.lockEnabled",
+                title("recipe.lockEnabled", "配方锁定机制"),
+                SettingTab.COLONY,
+                false, true,
+                Config.RECIPE_LOCK_ENABLED
+        ));
+
         register(new SettingItem.IntSetting(
                 "tavern.recruitCostPerElement",
                 title("tavern.recruitCostPerElement", "酒馆法师招募单价"),

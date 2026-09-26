@@ -119,6 +119,15 @@ public class Config {
                     + "Default false (disabled). When enabled, the system automatically queues gather tasks at corresponding element nodes to cover element deficits.")
             .define("element.autoGatherOnShortage", false);
 
+    // ---- 配方系统 Recipe System ----
+
+    public static final ModConfigSpec.BooleanValue RECIPE_LOCK_ENABLED = BUILDER
+            .comment("是否启用配方锁机制：true（默认）时，合成配方需通过存入仓库、使用物品图纸或法杖鉴定等途径解锁；"
+                    + "false 时关闭配方锁机制，所有配方默认全部解锁。可在设置中心「城镇经营」调整。")
+            .comment("Whether synthesize recipe locking is enabled: when true (default), synthesize recipes must be unlocked via warehouse deposit, item blueprint, or wand identify; "
+                    + "when false, the recipe lock mechanic is disabled and all recipes are unlocked by default. Adjustable in Settings Center, Colony tab.")
+            .define("recipe.lockEnabled", true);
+
     // ---- 仓库容量 Warehouse Capacity ----
 
     public static final ModConfigSpec.IntValue WAREHOUSE_ITEM_CAPACITY = BUILDER
@@ -298,6 +307,10 @@ public class Config {
 
     public static boolean autoGatherOnShortage() {
         return SPEC.isLoaded() && AUTO_GATHER_ON_ELEMENT_SHORTAGE.get();
+    }
+
+    public static boolean isRecipeLockEnabled() {
+        return !SPEC.isLoaded() || RECIPE_LOCK_ENABLED.get();
     }
     // ---- 友军误伤 Friendly Fire ----
 

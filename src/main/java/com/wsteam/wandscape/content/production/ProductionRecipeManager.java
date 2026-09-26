@@ -1,5 +1,6 @@
 package com.wsteam.wandscape.content.production;
 
+import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.content.production.data.SynthesizeRecipe;
 import com.wsteam.wandscape.content.production.event.RecipeUnlockedEvent;
@@ -12,6 +13,7 @@ import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -56,6 +58,9 @@ public final class ProductionRecipeManager {
      * @return {@code true} if unlocked; {@code false} if locked, colony null, or recipe null
      */
     public static boolean isSynthesizeUnlocked(@Nullable UUID colonyId, @Nullable String recipeOrItemId) {
+        if (!Config.isRecipeLockEnabled()) {
+            return recipeOrItemId != null && !recipeOrItemId.isEmpty();
+        }
         if (colonyId == null || recipeOrItemId == null) return false;
         MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
         if (server == null) return false;
@@ -170,6 +175,16 @@ public final class ProductionRecipeManager {
      * Returns an unmodifiable snapshot of all unlocked synthesize recipe IDs for the colony.
      */
     public static Set<String> getUnlockedRecipes(@Nullable UUID colonyId) {
+        if (!Config.isRecipeLockEnabled()) {
+            var loader = Wandscape.PRODUCTION_RECIPE_LOADER;
+            if (loader != null) {
+                Set<String> all = new java.util.LinkedHashSet<>();
+                for (SynthesizeRecipe recipe : loader.getAllSynthesizeRecipes()) {
+                    all.add(normalizeRecipeId(recipe.id()));
+                }
+                return Collections.unmodifiableSet(all);
+            }
+        }
         if (colonyId == null) return Set.of();
         MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
         if (server == null) return Set.of();

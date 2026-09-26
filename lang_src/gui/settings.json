@@ -151,6 +151,10 @@
     "en_us": "Building preview resolution",
     "zh_cn": "建筑预览清晰度"
   },
+  "gui.wandscape.settings.recipe.lockEnabled": {
+    "en_us": "Synthesize recipe lock mechanic",
+    "zh_cn": "配方锁定机制"
+  },
   "gui.wandscape.settings.reset": {
     "en_us": "Default",
     "zh_cn": "默认"

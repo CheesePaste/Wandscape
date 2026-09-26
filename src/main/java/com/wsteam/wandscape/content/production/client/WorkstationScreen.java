@@ -230,7 +230,7 @@ public class WorkstationScreen extends MedievalScreen {
 
                 // Requirement / cost row
                 String reason = item.lockedReason();
-                if ("recipe_locked".equals(reason)) {
+                if ("recipe_locked".equals(reason) && Config.isRecipeLockEnabled()) {
                     g.drawString(Minecraft.getInstance().font,
                             I18n.name("gui.wandscape.recipe.locked_need_item", "Deposit into warehouse to unlock").getString(),
                             x + 20, y + 10, MedievalColors.TEXT_DIM);
@@ -282,6 +282,9 @@ public class WorkstationScreen extends MedievalScreen {
 
     /** A synthesize entry is locked when the colony level is unmet or the recipe is not yet unlocked. */
     private static boolean isLocked(SynthesizeEntry entry) {
+        if (!Config.isRecipeLockEnabled()) {
+            return "colony".equals(entry.lockedReason());
+        }
         return "colony".equals(entry.lockedReason()) || "recipe_locked".equals(entry.lockedReason());
     }
 
