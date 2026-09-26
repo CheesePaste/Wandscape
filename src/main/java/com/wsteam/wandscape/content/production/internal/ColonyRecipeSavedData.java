@@ -80,6 +80,21 @@ public class ColonyRecipeSavedData extends SavedData {
     }
 
     /**
+     * Lock all recipes for a colony.
+     *
+     * @return the number of recipes that were removed
+     */
+    public int lockAllRecipes(UUID colonyId) {
+        if (colonyId == null) return 0;
+        Set<String> set = unlockedRecipes.remove(colonyId);
+        if (set != null && !set.isEmpty()) {
+            setDirty();
+            return set.size();
+        }
+        return 0;
+    }
+
+    /**
      * Check if a recipe is unlocked for a colony.
      */
     public boolean isRecipeUnlocked(UUID colonyId, String recipeId) {

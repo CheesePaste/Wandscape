@@ -135,6 +135,66 @@
     "en_us": "[Wandscape] Town %s mages (%s, %d total):",
     "zh_cn": "[魔法小镇] 小镇 %s 法师 (%s，共 %d 名)："
   },
+  "message.wandscape.command.recipe_already_unlocked": {
+    "en_us": "[Wandscape] Town %s: recipe \"%s\" was already unlocked",
+    "zh_cn": "[魔法小镇] 小镇 %s 的配方「%s」之前已处于解锁状态"
+  },
+  "message.wandscape.command.recipe_ambiguous_colony": {
+    "en_us": "[Wandscape] Multiple towns detected: please use within a town or specify town ID / all",
+    "zh_cn": "[魔法小镇] 检测到多个小镇：请在对应小镇范围内使用，或指定小镇 ID / all"
+  },
+  "message.wandscape.command.recipe_colony_not_found": {
+    "en_us": "[Wandscape] Town not found: %s",
+    "zh_cn": "[魔法小镇] 未找到小镇：%s"
+  },
+  "message.wandscape.command.recipe_list_info": {
+    "en_us": "[Wandscape] Town %s synthesize recipes: %s / %s unlocked",
+    "zh_cn": "[魔法小镇] 小镇 %s 合成配方：已解锁 %s / %s 种"
+  },
+  "message.wandscape.command.recipe_lock_all_colonies_success": {
+    "en_us": "[Wandscape] Reset and locked synthesize recipes for all %s towns",
+    "zh_cn": "[魔法小镇] 已重置并锁定全部 %s 个小镇的合成配方"
+  },
+  "message.wandscape.command.recipe_lock_all_success": {
+    "en_us": "[Wandscape] Reset and locked all synthesize recipes for town %s (%s locked)",
+    "zh_cn": "[魔法小镇] 已重置并锁定小镇 %s 的所有合成配方（已锁定 %s 个）"
+  },
+  "message.wandscape.command.recipe_lock_one_colonies_success": {
+    "en_us": "[Wandscape] Locked recipe for all %s towns: %s",
+    "zh_cn": "[魔法小镇] 已为全部 %s 个小镇锁定配方：%s"
+  },
+  "message.wandscape.command.recipe_lock_one_success": {
+    "en_us": "[Wandscape] Locked recipe for town %s: %s",
+    "zh_cn": "[魔法小镇] 已为小镇 %s 锁定配方：%s"
+  },
+  "message.wandscape.command.recipe_no_colony": {
+    "en_us": "[Wandscape] No town detected: please use within a town or create one first",
+    "zh_cn": "[魔法小镇] 未检测到小镇：请在小镇范围内使用，或先创建小镇"
+  },
+  "message.wandscape.command.recipe_not_unlocked": {
+    "en_us": "[Wandscape] Town %s: recipe \"%s\" was not unlocked",
+    "zh_cn": "[魔法小镇] 小镇 %s 的配方「%s」未处于解锁状态"
+  },
+  "message.wandscape.command.recipe_unknown": {
+    "en_us": "[Wandscape] Unknown synthesize recipe: %s",
+    "zh_cn": "[魔法小镇] 未知合成配方：%s"
+  },
+  "message.wandscape.command.recipe_unlock_all_colonies_success": {
+    "en_us": "[Wandscape] Unlocked all synthesize recipes for all %s towns (%s newly unlocked in total)",
+    "zh_cn": "[魔法小镇] 已为全部 %s 个小镇解锁所有合成配方（共新解锁 %s 个配方条目）"
+  },
+  "message.wandscape.command.recipe_unlock_all_success": {
+    "en_us": "[Wandscape] For town %s, unlocked all %s synthesize recipes (%s newly unlocked)",
+    "zh_cn": "[魔法小镇] 已为小镇 %s 解锁全部 %s 个合成配方（本次新解锁 %s 个）"
+  },
+  "message.wandscape.command.recipe_unlock_one_colonies_success": {
+    "en_us": "[Wandscape] Unlocked recipe for all %s towns: %s",
+    "zh_cn": "[魔法小镇] 已为全部 %s 个小镇解锁配方：%s"
+  },
+  "message.wandscape.command.recipe_unlock_one_success": {
+    "en_us": "[Wandscape] Unlocked recipe for town %s: %s",
+    "zh_cn": "[魔法小镇] 已为小镇 %s 解锁配方：%s"
+  },
   "message.wandscape.command.tavern_list_failed": {
     "en_us": "[Wandscape] Failed to fetch tavern resumes: %1$s",
     "zh_cn": "[魔法小镇] 获取酒馆简历失败: %s"

@@ -1,6 +1,7 @@
 package com.wsteam.wandscape.content.production;
 
 import com.wsteam.wandscape.Wandscape;
+import com.wsteam.wandscape.content.production.data.SynthesizeRecipe;
 import com.wsteam.wandscape.content.production.event.RecipeUnlockedEvent;
 import com.wsteam.wandscape.content.production.internal.ColonyRecipeSavedData;
 import com.wsteam.wandscape.content.warehouse.ColonyItemBank;
@@ -33,6 +34,7 @@ public final class ProductionRecipeManager {
     public static final String SOURCE_WAREHOUSE_SYNC = "warehouse_sync";
     public static final String SOURCE_BLUEPRINT = "blueprint";
     public static final String SOURCE_MANUAL = "manual";
+    public static final String SOURCE_COMMAND = "command";
 
     private ProductionRecipeManager() {}
 
@@ -103,6 +105,63 @@ public final class ProductionRecipeManager {
                     colonyId.toString().substring(0, 8), normalized);
         }
         return locked;
+    }
+
+    /**
+     * Permanently unlock all synthesize recipes for a colony.
+     *
+     * @param colonyId the colony UUID
+     * @param source the unlock source description (e.g. "command")
+     * @return the number of recipes that were newly unlocked
+     */
+    public static int unlockAllSynthesize(@Nullable UUID colonyId, String source) {
+        if (colonyId == null) return 0;
+        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+        if (server == null) return 0;
+        var loader = Wandscape.PRODUCTION_RECIPE_LOADER;
+        if (loader == null) return 0;
+
+        ColonyRecipeSavedData data = ColonyRecipeSavedData.get(server);
+        int newlyUnlocked = 0;
+        for (SynthesizeRecipe recipe : loader.getAllSynthesizeRecipes()) {
+            String normalized = normalizeRecipeId(recipe.id());
+            if (data.unlockRecipe(colonyId, normalized)) {
+                newlyUnlocked++;
+                NeoForge.EVENT_BUS.post(new RecipeUnlockedEvent(colonyId, normalized, source));
+            }
+        }
+        if (newlyUnlocked > 0) {
+            Log.info(TAG, "[Recipe] Colony {} unlocked all synthesize recipes ({} newly unlocked) via {}",
+                    colonyId.toString().substring(0, 8), newlyUnlocked, source);
+        }
+        return newlyUnlocked;
+    }
+
+    /**
+     * Lock all synthesize recipes for a colony.
+     *
+     * @return the number of recipes that were locked
+     */
+    public static int lockAllSynthesize(@Nullable UUID colonyId) {
+        if (colonyId == null) return 0;
+        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+        if (server == null) return 0;
+
+        ColonyRecipeSavedData data = ColonyRecipeSavedData.get(server);
+        int locked = data.lockAllRecipes(colonyId);
+        if (locked > 0) {
+            Log.info(TAG, "[Recipe] Colony {} locked all recipes ({} locked)",
+                    colonyId.toString().substring(0, 8), locked);
+        }
+        return locked;
+    }
+
+    /**
+     * Returns the total number of synthesize recipes registered in the loader.
+     */
+    public static int getTotalSynthesizeRecipeCount() {
+        var loader = Wandscape.PRODUCTION_RECIPE_LOADER;
+        return loader != null ? loader.getAllSynthesizeRecipes().size() : 0;
     }
 
     /**
