@@ -1962,9 +1962,9 @@ public class TouristMoveGoal extends Goal {
             if (type != null) {
                 String itemId = WandscapeApis.getElementApi().elementItemId(type);
                 if (itemId != null) {
-                    // 气泡显示实际入账数（创始人离线时按系数折减）。
-                    long scaled = ColonyActivation.scaleIncome(pick.getValue(),
-                            ColonyActivation.getIncomeMultiplier(colonyId));
+                    // 气泡显示实际入账数：与 performServiceInteraction 走同一条
+                    // 「离线折减 → 全局产出阀门」链路，显示的数和账上的一致。
+                    long scaled = ColonyActivation.serviceElementPayout(pick.getValue(), colonyId);
                     sendBubble(itemId, (int) scaled);
                 }
             }

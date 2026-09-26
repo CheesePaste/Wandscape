@@ -22460,10 +22460,10 @@
   "service": {
     "energy_per_use": 20,
     "element_output": {
-      "earth": 225,
-      "wind": 225,
-      "wood": 225,
-      "metal": 225
+      "earth": 113,
+      "wind": 113,
+      "wood": 113,
+      "metal": 113
     },
     "max_occupancy": 0,
     "interaction_duration_ticks": 2400

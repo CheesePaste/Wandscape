@@ -19,6 +19,12 @@ import java.util.concurrent.ConcurrentHashMap;
  * 元素产出、殖民地经验获取都 × 该系数（默认 0.2 = 20%）。消耗侧（NPC 建造、
  * 商店补货的元素消耗）不打折——离线挂机净收益自然低于在线。
  *
+ * <p>离线折减之后还压着一道**全局产出阀门**（默认 1.0 = 不缩放，见 {@link #scaleOutput}）：
+ * 商店售出走 {@code Config.SHOP_ELEMENT_MULTIPLIER}、服务设施走
+ * {@code Config.SERVICE_ELEMENT_MULTIPLIER}。基准值配在各建筑 JSON 的 profit_rate /
+ * element_output 上，这两个旋钮是平衡调优的集中入口——想整体调游客经济给小镇的元素
+ * 产出，改这里即可，不必逐个改建筑 JSON。
+ *
  * <p>{@link #isColonyActive} 是冻结判定：离线收益系数为 0 时该小镇整体冻结
  * （NPC 建造/生产、游客经济、每日结算暂停，创始人上线后恢复）；系数 > 0 即运行。
  * {@link #setForcedActive} 提供 per-colony 强制覆盖（优先于派生判定），由
@@ -90,8 +96,43 @@ public final class ColonyActivation {
     /**
      * 利润折减：成本不变、利润 × 系数，返回折减后的总收入（= 成本 + 折减利润，
      * 恒 ≥ 成本，商店离线时按进价出售、不会亏损）。
+     *
+     * <p>注意这是**离线折减**的不变量：调用方随后还会乘全局产出阀门
+     * （{@link #scaleOutput}），最终入账可以低于成本，那是阀门的有意结果。
      */
     public static long scaleProfit(long cost, long profit, double multiplier) {
         return cost + scaleIncome(profit, multiplier);
+    }
+
+    /**
+     * 全局产出阀门：{@code value} × 系数，四舍五入。与 {@link #scaleIncome} 的离线折减不同，
+     * 这里不封顶——系数 &gt; 1 就是放大，这才是「产出倍率」该有的语义。值非正或系数 ≤ 0 → 0。
+     *
+     * <p>口径与探索宝箱的 {@code elementMultiplier} 一致：乘在结算的最后一步。所以商店/服务
+     * 建筑的入账顺序是「原始产出 → 离线折减 → 全局阀门」。建筑 JSON 里逐个配的
+     * profit_rate / element_output 只管形状，全局缩放收在这一处。
+     */
+    public static long scaleOutput(long value, double multiplier) {
+        if (value <= 0 || multiplier <= 0.0) return 0;
+        if (multiplier == 1.0) return value;
+        return Math.round(value * multiplier);
+    }
+
+    /** 商店元素产出的全局阀门；配置未加载时按 1.0（不缩放）。 */
+    public static double shopElementMultiplier() {
+        return Config.SPEC.isLoaded() ? Config.SHOP_ELEMENT_MULTIPLIER.get() : 1.0;
+    }
+
+    /** 服务设施元素产出的全局阀门；配置未加载时按 1.0（不缩放）。 */
+    public static double serviceElementMultiplier() {
+        return Config.SPEC.isLoaded() ? Config.SERVICE_ELEMENT_MULTIPLIER.get() : 1.0;
+    }
+
+    /**
+     * 服务设施单种元素的实际入账额：建筑 JSON 原始产出 → 离线折减 → 全局产出阀门。
+     * 实际入账与游客头顶气泡都走这一条链路，显示的数字才不会和账上对不上。
+     */
+    public static long serviceElementPayout(long raw, @Nullable UUID colonyId) {
+        return scaleOutput(scaleIncome(raw, getIncomeMultiplier(colonyId)), serviceElementMultiplier());
     }
 }

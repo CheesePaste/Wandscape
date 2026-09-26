@@ -328,12 +328,11 @@ public final class TouristSimulation {
         if (colonyId != null && !svc.elementOutput().isEmpty()) {
             ColonyItemBank bank = ColonyItemBank.get(level);
             if (bank != null) {
-                // 创始人离线时按 offlineIncomeMultiplier 折减产出（消耗侧不打折）。
-                double m = ColonyActivation.getIncomeMultiplier(colonyId);
+                // 原始产出 → 创始人离线的 offlineIncomeMultiplier 折减 → 全局产出阀门（消耗侧不打折）。
                 for (var entry : svc.elementOutput().entrySet()) {
                     try {
                         bank.addElement(colonyId, ElementType.fromId(entry.getKey()),
-                                ColonyActivation.scaleIncome(entry.getValue(), m));
+                                ColonyActivation.serviceElementPayout(entry.getValue(), colonyId));
                     } catch (IllegalArgumentException e) {
                         Log.warn(TAG, "[Tourist] Unknown element type '{}' in service {} elementOutput",
                                 entry.getKey(), shortId(buildingId));

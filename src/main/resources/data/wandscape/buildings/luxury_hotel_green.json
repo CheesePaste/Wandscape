@@ -35617,11 +35617,11 @@
     "max_occupancy": 12,
     "interaction_duration_ticks": 1800,
     "element_output": {
-      "earth": 63,
-      "wind": 63,
-      "wood": 63,
-      "water": 62,
-      "fire": 62
+      "earth": 32,
+      "wind": 32,
+      "wood": 32,
+      "water": 31,
+      "fire": 31
     }
   },
   "blueprint": {

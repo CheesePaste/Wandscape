@@ -4306,8 +4306,8 @@
     "max_occupancy": 0,
     "interaction_duration_ticks": 1200,
     "element_output": {
-      "water": 157,
-      "fire": 156
+      "water": 79,
+      "fire": 78
     }
   },
   "blueprint": {

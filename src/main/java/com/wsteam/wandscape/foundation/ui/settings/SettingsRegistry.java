@@ -250,6 +250,29 @@ public final class SettingsRegistry {
                 val -> String.format("%.1f×", val)
         ));
 
+        // 游客经济的两个产出阀门。乘在结算最后一步（离线折减之后），与探索宝箱的
+        // elementMultiplier 同一口径——建筑 JSON 里的 profit_rate / element_output
+        // 仍逐个配，这两项只做全局缩放。
+        register(new SettingItem.DoubleSetting(
+                "shop.elementMultiplier",
+                title("shop.elementMultiplier", "商店元素产出倍率"),
+                SettingTab.COLONY,
+                false, true,
+                Config.SHOP_ELEMENT_MULTIPLIER,
+                0.1, 0.5,
+                val -> String.format("%.1f×", val)
+        ));
+
+        register(new SettingItem.DoubleSetting(
+                "service.elementMultiplier",
+                title("service.elementMultiplier", "服务设施元素产出倍率"),
+                SettingTab.COLONY,
+                false, true,
+                Config.SERVICE_ELEMENT_MULTIPLIER,
+                0.1, 0.5,
+                val -> String.format("%.1f×", val)
+        ));
+
         // ═══════════════════════════════════════════════════════════════
         // Tab 3: 游客生态 (TOURIST)
         // ═══════════════════════════════════════════════════════════════
