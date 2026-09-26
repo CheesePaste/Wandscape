@@ -72,7 +72,11 @@ public class WorkstationScreen extends MedievalScreen {
         setCreator(packet.creator());
         setBuildingContext(null, packet.stationPos());
         this.decomposableItems = packet.decomposableEntries();
-        this.synthesizeRecipes = packet.synthesizeEntries();
+        // Unlocked recipes first, locked ones sink to the bottom. Stable sort keeps the
+        // data-pack order inside each group, so the list only reshuffles on unlock events.
+        this.synthesizeRecipes = packet.synthesizeEntries().stream()
+                .sorted((a, b) -> Boolean.compare(isLocked(a), isLocked(b)))
+                .toList();
         // Re-apply the current search filter to the refreshed data
         applySearch(searchInput != null ? searchInput.getValue() : "");
         // Reset slider on new data
@@ -194,10 +198,8 @@ public class WorkstationScreen extends MedievalScreen {
             @Override
             protected void renderRow(GuiGraphics g, SynthesizeEntry item, int x, int y, int index,
                                      boolean selected, boolean hovered) {
-                boolean isRecipeLocked = "recipe_locked".equals(item.lockedReason());
-                boolean isColonyLocked = "colony".equals(item.lockedReason());
-                boolean isLocked = isRecipeLocked || isColonyLocked;
-                boolean canAfford = !isLocked && item.maxAffordable() > 0;
+                boolean isRowLocked = isLocked(item);
+                boolean canAfford = !isRowLocked && item.maxAffordable() > 0;
 
                 var registryItem = BuiltInRegistries.ITEM.get(ResourceLocation.tryParse(item.outputItem()));
                 if (registryItem != null && registryItem != Items.AIR) {
@@ -206,7 +208,7 @@ public class WorkstationScreen extends MedievalScreen {
 
                 // Name row
                 int nameColor;
-                if (isLocked) {
+                if (isRowLocked) {
                     nameColor = MedievalColors.TEXT_DIM;
                 } else if (canAfford) {
                     nameColor = selected ? MedievalColors.ACCENT_GOLD
@@ -278,6 +280,11 @@ public class WorkstationScreen extends MedievalScreen {
         addRenderableWidget(taskQueuePanel);
     }
 
+    /** A synthesize entry is locked when the colony level is unmet or the recipe is not yet unlocked. */
+    private static boolean isLocked(SynthesizeEntry entry) {
+        return "colony".equals(entry.lockedReason()) || "recipe_locked".equals(entry.lockedReason());
+    }
+
     private void updateSliderForDecompose(DecomposableEntry entry) {
         if (entry == null) {
             stepper.setTotalMax(1);
@@ -293,7 +300,7 @@ public class WorkstationScreen extends MedievalScreen {
         }
         // Locked recipes (colony level unmet) keep slider at 1.
         // Unlocked recipes allow ordering even if elements are currently insufficient.
-        boolean locked = "colony".equals(entry.lockedReason()) || "recipe_locked".equals(entry.lockedReason());
+        boolean locked = isLocked(entry);
         int max = locked ? 1 : Math.max(999, entry.maxAffordable());
         stepper.setTotalMax(max);
     }
@@ -336,7 +343,7 @@ public class WorkstationScreen extends MedievalScreen {
         } else {
             SynthesizeEntry sel = synthesizeList.getSelected();
             // Block submission when recipe is locked
-            if (sel == null || "colony".equals(sel.lockedReason()) || "recipe_locked".equals(sel.lockedReason())) return;
+            if (sel == null || isLocked(sel)) return;
             Net.toServer(new RequestProductionTaskPacket(
                     stationPos, "synthesize", sel.recipeId(), qty));
         }
