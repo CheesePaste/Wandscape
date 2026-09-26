@@ -28,6 +28,7 @@
   "workstationCraftTicksPerUnit": 2,
   "craftingStationCraftTicksPerUnit": 1200,
   "constructionPlaceTicksPerUnit": 1,
+  "productionBatchMax": 1000,
   "castSingleTargetMaxEnemies": 3,
   "castAoeMinEnemies": 3
 }

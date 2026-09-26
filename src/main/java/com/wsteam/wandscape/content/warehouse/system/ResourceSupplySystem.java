@@ -112,6 +112,10 @@ public class ResourceSupplySystem implements EcsSystem {
      * 扫描工作站/合成站/魔法工坊队列里元素不足的生产配方：按殖民地聚合每种元素的缺口，
      * 走 {@link #trySupplyResource}（先合成、回退节点采集）自动补齐。这些条目留在队列
      * 原位（面板可见「缺元素」），补齐后由 BuildingTaskSource 的发布扫描自然挑中。
+     *
+     * <p>先把队列里所有条目的元素需求按殖民地求和、再与库存比一次，不能逐条减库存后相加：
+     * 拆批后同一配方在队列里就有多条（圆石 x1000 × 30），逐条各减一次库存会严重低估缺口
+     * （同一份库存被减 N 次），补料给少了队列就长时间卡在「缺元素」。
      */
     private void scanProductionQueues(World world) {
         if (!isAutoGatherEnabled()) return;
@@ -121,7 +125,7 @@ public class ResourceSupplySystem implements EcsSystem {
         ColonyItemBank bank = ColonyItemBank.get(server.overworld());
         if (bank == null) return;
 
-        Map<UUID, Map<ElementType, Long>> deficitsByColony = new LinkedHashMap<>();
+        Map<UUID, Map<ElementType, Long>> requiredByColony = new LinkedHashMap<>();
         Set<String> seenGroups = new HashSet<>();
         for (String category : List.of("workstation", "crafting_station", "magic_station")) {
             for (UUID buildingId : api.getBuildingsByCategory(null, category)) {
@@ -133,24 +137,27 @@ public class ResourceSupplySystem implements EcsSystem {
                 String groupKey = colonyId + "|" + bd.getBuildingTypeId();
                 if (!seenGroups.add(groupKey)) continue;
 
-                Map<ElementType, Long> available = bank.getElementSnapshot(colonyId);
                 for (WorkItem item : api.getQueue(buildingId)) {
                     String bid = item.blueprintId();
                     if (!ProductionEligibility.isElementCosting(bid)) continue;
                     Map<ElementType, Long> required = ProductionEligibility.requiredElements(bid, item.params());
-                    for (ElementType el : ProductionEligibility.missingElements(required, available)) {
-                        long deficit = required.get(el) - available.getOrDefault(el, 0L);
-                        deficitsByColony.computeIfAbsent(colonyId, k -> new LinkedHashMap<>())
-                                .merge(el, Math.max(1, deficit), Long::sum);
+                    Map<ElementType, Long> colonyRequired =
+                            requiredByColony.computeIfAbsent(colonyId, k -> new LinkedHashMap<>());
+                    for (var e : required.entrySet()) {
+                        colonyRequired.merge(e.getKey(), e.getValue(), Long::sum);
                     }
                 }
             }
         }
 
-        for (var colonyEntry : deficitsByColony.entrySet()) {
+        for (var colonyEntry : requiredByColony.entrySet()) {
             UUID colonyId = colonyEntry.getKey();
+            Map<ElementType, Long> available = bank.getElementSnapshot(colonyId);
             for (var e : colonyEntry.getValue().entrySet()) {
-                trySupplyResource(new ResourceId(e.getKey().getId()), e.getValue().intValue(), colonyId, world);
+                long deficit = e.getValue() - available.getOrDefault(e.getKey(), 0L);
+                if (deficit <= 0) continue;
+                trySupplyResource(new ResourceId(e.getKey().getId()),
+                        (int) Math.min(deficit, Integer.MAX_VALUE), colonyId, world);
             }
         }
     }

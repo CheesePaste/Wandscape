@@ -6,6 +6,7 @@ import com.google.gson.JsonPrimitive;
 import com.wsteam.wandscape.content.building.data.BlockOffset;
 import com.wsteam.wandscape.content.building.data.BuildingConfig;
 import com.wsteam.wandscape.content.building.source.BuildingTaskSource;
+import com.wsteam.wandscape.content.production.ProductionBatches;
 import com.wsteam.wandscape.content.building.projection.BuildingRotation;
 import com.wsteam.wandscape.api.BuildingApi;
 import com.wsteam.wandscape.content.building.data.BuildingData;
@@ -565,17 +566,20 @@ public class BuildingApiImpl implements BuildingApi {
         }
         if (queue == null) queue = state.getTaskQueue();
 
+        // 超限的生产任务先按 ProductionBatches 拆成 ≤ 上限的多条：一条超大任务（如铺平任务
+        // 触发的 x30000 补料）会把几万 tick 整块锁在一座工作站上，共享队列里别的空闲成员
+        // 无活可领。拆开后各站并发各领一批，只有一座站时总时长不变。
+        //
         // Merge a production task into an adjacent same-recipe task at its priority band's
         // tail so restock x1/x2 requests don't flood the queue with consecutive *7/*9
         // entries. A merge consumes no queue slot, so it must run before the capacity check.
         // Band-tail placement means a player task always merges at the top of its band, never
-        // behind lower-priority restock/auto-craft tasks.
-        if (mergeBandTail(queue, work)) {
-            sd.setDirty();
-            return;
+        // behind lower-priority restock/auto-craft tasks. The merge itself is capped (see
+        // mergeBandTail) so it can never glue the batches back into one oversized task.
+        for (WorkItem batch : ProductionBatches.split(work)) {
+            if (mergeBandTail(queue, batch)) continue;
+            insertByPriority(queue, batch);
         }
-
-        insertByPriority(queue, work);
         sd.setDirty();
     }
 
@@ -604,6 +608,10 @@ public class BuildingApiImpl implements BuildingApi {
      * is an adjacent same-recipe production task. Counts and channel ticks sum — executing
      * both requests sequentially is equivalent to the single merged task. Returns true when
      * merged; the incoming task then consumes no queue slot.
+     *
+     * <p>Production merges are additionally capped at {@link ProductionBatches#maxPerBatch()}:
+     * without that guard the merge would immediately glue {@code split}'s batches back into
+     * the single oversized task it just broke up.
      */
     static boolean mergeBandTail(Deque<WorkItem> queue, WorkItem incoming) {
         List<WorkItem> list = new ArrayList<>(queue);
@@ -611,7 +619,7 @@ public class BuildingApiImpl implements BuildingApi {
             WorkItem item = list.get(i);
             if (item.priority() < incoming.priority()) continue;  // below the band, keep scanning
             if (item.priority() > incoming.priority()) break;     // reached a higher band — no band below
-            if (mergeable(incoming, item)) {
+            if (mergeable(incoming, item) && ProductionBatches.mergedWithinLimit(item, incoming)) {
                 WorkItem merged = mergeWork(item, incoming);
                 list.set(i, merged);
                 queue.clear();
