@@ -31,6 +31,7 @@ public final class ProductionRecipeManager {
 
     public static final String SOURCE_WAREHOUSE_DEPOSIT = "warehouse_deposit";
     public static final String SOURCE_WAREHOUSE_SYNC = "warehouse_sync";
+    public static final String SOURCE_BLUEPRINT = "blueprint";
     public static final String SOURCE_MANUAL = "manual";
 
     private ProductionRecipeManager() {}

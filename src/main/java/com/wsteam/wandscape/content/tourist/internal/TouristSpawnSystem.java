@@ -18,10 +18,15 @@ import com.wsteam.wandscape.api.TouristApi;
 // data imports updated
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.api.WandscapeApis;
+import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.content.tourist.entity.TouristEntity;
+import com.wsteam.wandscape.content.warehouse.ColonyItemBank;
+import com.wsteam.wandscape.foundation.util.ItemKey;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ChunkPos;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
@@ -662,6 +667,15 @@ public final class TouristSpawnSystem {
         }
     }
 
+    private static void grantBlueprintDrop(ServerLevel level, UUID colonyId, double x, double y, double z) {
+        ColonyItemBank bank = ColonyItemBank.get(level);
+        ItemKey key = ItemKey.of("wandscape:item_blueprint", null);
+        if (bank == null || !bank.tryAdd(colonyId, key, 1)) {
+            ItemEntity entity = new ItemEntity(level, x, y, z, new ItemStack(Wandscape.ITEM_BLUEPRINT.get()));
+            level.addFreshEntity(entity);
+        }
+    }
+
     // ════════════════════════════════════════════════════════════════
     // Departure
     // ════════════════════════════════════════════════════════════════
@@ -678,9 +692,12 @@ public final class TouristSpawnSystem {
         BarRatio fill = BarRatio.of(t.getComfortSat(), t.getComfortNeed(),
                 t.getMagicSat(), t.getMagicNeed(), t.getWonderSat(), t.getWonderNeed());
 
-        // Grant colony experience only when fully satisfied
+        // Grant colony experience and chance for blueprint only when fully satisfied
         if (t.isFullySatisfied()) {
             grantExperience(t);
+            if (colonyId != null && level.random.nextDouble() < 0.05) {
+                grantBlueprintDrop(level, colonyId, t.getX(), t.getY(), t.getZ());
+            }
         }
 
         // Safety net: store mage resume at departure if not already stored

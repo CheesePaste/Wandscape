@@ -18,6 +18,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.storage.loot.LootTable;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.NeoForge;
@@ -180,6 +181,14 @@ public class ExplorationRewardService {
         if (itemBank != null) {
             for (Map.Entry<ElementType, Long> entry : elements.entrySet()) {
                 itemBank.addElement(colonyId, entry.getKey(), entry.getValue());
+            }
+        }
+
+        // 5% 概率发放 1 张物品图纸
+        if (random.nextDouble() < 0.05) {
+            ItemStack blueprint = new ItemStack(Wandscape.ITEM_BLUEPRINT.get());
+            if (!player.addItem(blueprint)) {
+                player.drop(blueprint, false);
             }
         }
 

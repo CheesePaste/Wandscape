@@ -371,6 +371,11 @@ public class Wandscape {
             ITEMS.register("warehouse_terminal", () ->
                     new WarehouseTerminalItem(new Item.Properties().stacksTo(1)));
 
+    // ---- blueprint: 物品图纸（开启宝箱/游客满满意度离场 5% 概率产出，用于配方面板自选解锁任意配方）----
+    public static final DeferredItem<Item> ITEM_BLUEPRINT =
+            ITEMS.register("item_blueprint", () ->
+                    new Item(new Item.Properties().stacksTo(64)));
+
     // ---- building-scanner blocks ----
     // Creative Building Scanner (full-featured, for creators) — renamed from building_scanner to
     // creative_building_scanner; the plain id "building_scanner" now belongs to the Survival scanner.
@@ -438,6 +443,7 @@ public class Wandscape {
                         output.accept(INTERACT_SPOT_MARKER_ITEM.get());
                         output.accept(GUIDE_BOOK.get());
                         output.accept(SPELL_SCROLL.get());
+                        output.accept(ITEM_BLUEPRINT.get());
                         acceptBoundSpellScrolls(output);
                         ELEMENT_ITEMS.values().forEach(item -> output.accept(item.get()));
                     })

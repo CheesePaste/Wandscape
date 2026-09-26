@@ -17,10 +17,14 @@ import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.api.WandscapeApis;
 import com.wsteam.wandscape.foundation.registry.WandscapeConstants;
 import com.wsteam.wandscape.content.tourist.entity.TouristEntity;
+import com.wsteam.wandscape.content.warehouse.ColonyItemBank;
+import com.wsteam.wandscape.foundation.util.ItemKey;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.item.ItemStack;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.level.SleepFinishedTimeEvent;
@@ -1021,6 +1025,9 @@ public final class TouristSimSystem {
         if (s.isMage() && s.isFullySatisfied() && !s.isMageResumeStored()) {
             storeMageResume(level, s);
         }
+        if (s.isFullySatisfied() && s.getColonyId() != null && level.random.nextDouble() < 0.05) {
+            grantBlueprintDrop(level, s.getColonyId(), s.getPosX(), s.getPosY(), s.getPosZ());
+        }
         var touristApi = TouristApiImpl.get();
         if (touristApi != null && s.getColonyId() != null) {
             BarRatio fill = BarRatio.of(s.getComfortSat(), s.getComfortNeed(),
@@ -1061,6 +1068,15 @@ public final class TouristSimSystem {
                     s.getWorkSpeed(), s.getSpellSpeed(), s.getArmor(),
                     s.getMaxMana(), s.getSkinVariant(), System.currentTimeMillis()));
             s.setMageResumeStored(true);
+        }
+    }
+
+    private static void grantBlueprintDrop(ServerLevel level, UUID colonyId, double x, double y, double z) {
+        ColonyItemBank bank = ColonyItemBank.get(level);
+        ItemKey key = ItemKey.of("wandscape:item_blueprint", null);
+        if (bank == null || !bank.tryAdd(colonyId, key, 1)) {
+            ItemEntity entity = new ItemEntity(level, x, y, z, new ItemStack(Wandscape.ITEM_BLUEPRINT.get()));
+            level.addFreshEntity(entity);
         }
     }
 

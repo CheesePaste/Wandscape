@@ -16,6 +16,7 @@ import com.wsteam.wandscape.foundation.ui.theme.MedievalColors;
 import com.wsteam.wandscape.content.warehouse.WarehouseMenu;
 import com.wsteam.wandscape.content.warehouse.WarehousePager;
 import com.wsteam.wandscape.content.warehouse.WarehouseSlot;
+import com.wsteam.wandscape.content.production.network.RequestRecipeBookPacket;
 import com.wsteam.wandscape.content.warehouse.network.WarehouseActionPacket;
 import com.wsteam.wandscape.content.warehouse.network.WarehouseDataPacket;
 import com.wsteam.wandscape.content.warehouse.network.WarehouseDataPacket.ItemEntry;
@@ -116,11 +117,13 @@ public class WarehouseScreen extends AbstractContainerScreen<WarehouseMenu>
     private final int[] tabW = new int[2];
     private int closeX, closeY, closeW, closeH;
     private int helpX, helpY, helpW, helpH;
+    private int recipeBtnX, recipeBtnY, recipeBtnW, recipeBtnH;
     private int prevX, prevY, prevW, prevH;
     private int nextX, nextY, nextW, nextH;
     private boolean prevActive;
     private boolean nextActive;
     private int trashX, trashY;
+    private UUID colonyId;
 
     // ── 通用皮肤状态 ──
     private String buildingCreator = "";
@@ -140,6 +143,7 @@ public class WarehouseScreen extends AbstractContainerScreen<WarehouseMenu>
     // ── 数据更新 ──
 
     public void updateItems(WarehouseDataPacket packet) {
+        this.colonyId = packet.colonyId();
         if (packet.creator() != null && !packet.creator().isBlank()) {
             setCreator(packet.creator());
         }
@@ -290,6 +294,12 @@ public class WarehouseScreen extends AbstractContainerScreen<WarehouseMenu>
         helpH = 14;
         helpX = closeX - helpW - 4;
         helpY = toolbarY + (TOOLBAR_H - helpH) / 2;
+
+        String recipeLabel = I18n.name("gui.wandscape.warehouse.btn_recipes", "配方").getString();
+        recipeBtnW = font.width(recipeLabel) + 14;
+        recipeBtnH = 14;
+        recipeBtnX = helpX - recipeBtnW - 4;
+        recipeBtnY = toolbarY + (TOOLBAR_H - recipeBtnH) / 2;
     }
 
     /** Exchange 右区分页控件几何（面板内、箱子纹理右侧留白区）。 */
@@ -329,6 +339,9 @@ public class WarehouseScreen extends AbstractContainerScreen<WarehouseMenu>
                     toolbarY + (TOOLBAR_H - font.lineHeight) / 2, color);
         }
 
+        String recipeLabel = I18n.name("gui.wandscape.warehouse.btn_recipes", "配方").getString();
+        drawNavButton(g, recipeBtnX, recipeBtnY, recipeBtnW, recipeBtnH, recipeLabel, true, mouseX, mouseY);
+
         if (showCloseButton) {
             int state = isInRect(mouseX, mouseY, closeX, closeY, closeW, closeH) ? 1 : 0;
             SkinRender.drawCloseButton(g, closeX, closeY, closeW, closeH, state);
@@ -359,11 +372,21 @@ public class WarehouseScreen extends AbstractContainerScreen<WarehouseMenu>
             switchTab(1);
             return true;
         }
+        if (isInRect(mouseX, mouseY, recipeBtnX, recipeBtnY, recipeBtnW, recipeBtnH)) {
+            openRecipeBook();
+            return true;
+        }
         if (showCloseButton && isInRect(mouseX, mouseY, closeX, closeY, closeW, closeH)) {
             onClose();
             return true;
         }
         return false;
+    }
+
+    private void openRecipeBook() {
+        if (colonyId != null) {
+            Net.toServer(new RequestRecipeBookPacket(colonyId));
+        }
     }
 
     /** Exchange 右区分页按钮点击（仅 Exchange 页可命中）。 */

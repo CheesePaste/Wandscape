@@ -58,7 +58,10 @@ import com.wsteam.wandscape.content.npc.network.NpcStrategyPacket;
 import com.wsteam.wandscape.content.npc.network.NpcTogglePacket;
 import com.wsteam.wandscape.content.production.network.CraftingStationPacket;
 import com.wsteam.wandscape.content.production.network.MagicStationPacket;
+import com.wsteam.wandscape.content.production.network.RecipeBookDataPacket;
 import com.wsteam.wandscape.content.production.network.RequestProductionTaskPacket;
+import com.wsteam.wandscape.content.production.network.RequestRecipeBookPacket;
+import com.wsteam.wandscape.content.production.network.UnlockRecipeByBlueprintPacket;
 import com.wsteam.wandscape.content.production.network.WorkstationDataPacket;
 import com.wsteam.wandscape.content.road.network.DestroyFillPacket;
 import com.wsteam.wandscape.content.road.network.FillBoxPacket;
@@ -133,6 +136,9 @@ public final class PayloadRegistry {
 
         s2c(r, WarehouseDataPacket.TYPE, WarehouseDataPacket.STREAM_CODEC, WarehouseDataPacket::handleClient);
         s2c(r, WorkstationDataPacket.TYPE, WorkstationDataPacket.STREAM_CODEC, WorkstationDataPacket::handleClient);
+        s2c(r, RecipeBookDataPacket.TYPE, RecipeBookDataPacket.STREAM_CODEC, RecipeBookDataPacket::handleClient);
+        c2s(r, RequestRecipeBookPacket.TYPE, RequestRecipeBookPacket.STREAM_CODEC, RequestRecipeBookPacket::handleServer);
+        c2s(r, UnlockRecipeByBlueprintPacket.TYPE, UnlockRecipeByBlueprintPacket.STREAM_CODEC, UnlockRecipeByBlueprintPacket::handleServer);
         s2c(r, CraftingStationPacket.TYPE, CraftingStationPacket.STREAM_CODEC, CraftingStationPacket::handleClient);
         s2c(r, MagicStationPacket.TYPE, MagicStationPacket.STREAM_CODEC, MagicStationPacket::handleClient);
         s2c(r, ShopOpenPacket.TYPE, ShopOpenPacket.STREAM_CODEC, ShopOpenPacket::handleClient);

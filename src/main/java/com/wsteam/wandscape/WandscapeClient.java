@@ -34,9 +34,11 @@ import com.wsteam.wandscape.content.colony.overview.client.OverviewFlightControl
 import com.wsteam.wandscape.content.colony.overview.client.OverviewRenderer;
 import com.wsteam.wandscape.content.production.client.CraftingStationScreen;
 import com.wsteam.wandscape.content.production.client.MagicStationScreen;
+import com.wsteam.wandscape.content.production.client.RecipeBookScreen;
 import com.wsteam.wandscape.content.production.client.WorkstationScreen;
 import com.wsteam.wandscape.content.production.network.CraftingStationPacket;
 import com.wsteam.wandscape.content.production.network.MagicStationPacket;
+import com.wsteam.wandscape.content.production.network.RecipeBookDataPacket;
 import com.wsteam.wandscape.content.production.network.WorkstationDataPacket;
 import com.wsteam.wandscape.content.building.projection.client.ProjectionFlightController;
 import com.wsteam.wandscape.content.road.client.RoadConstructionGhost;
@@ -219,6 +221,14 @@ public class WandscapeClient {
                 var ws = new WorkstationScreen();
                 ws.updateData(packet);
                 Minecraft.getInstance().setScreen(ws);
+            }
+        });
+        ClientPayloadDispatcher.bind(RecipeBookDataPacket.TYPE, packet -> {
+            var screen = Minecraft.getInstance().screen;
+            if (screen instanceof RecipeBookScreen rbs && rbs.isMatchingColony(packet.colonyId())) {
+                rbs.updateData(packet);
+            } else {
+                Minecraft.getInstance().setScreen(new RecipeBookScreen(packet));
             }
         });
         ClientPayloadDispatcher.bind(NodeDataPacket.TYPE, packet -> {

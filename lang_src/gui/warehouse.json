@@ -3,6 +3,10 @@
     "zh_cn": "空间 %s/%s",
     "en_us": "Space %s/%s"
   },
+  "gui.wandscape.warehouse.btn_recipes": {
+    "zh_cn": "配方",
+    "en_us": "Recipes"
+  },
   "gui.wandscape.warehouse.exchange": {
     "zh_cn": "交换",
     "en_us": "Exchange"

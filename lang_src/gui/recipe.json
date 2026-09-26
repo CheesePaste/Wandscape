@@ -6,5 +6,53 @@
   "gui.wandscape.recipe.locked_need_item": {
     "zh_cn": "放入仓库以解析配方",
     "en_us": "Deposit into warehouse to unlock"
+  },
+  "gui.wandscape.recipe.no_blueprint": {
+    "zh_cn": "缺少物品图纸",
+    "en_us": "No blueprints available"
+  },
+  "gui.wandscape.recipe.unlocked_success": {
+    "zh_cn": "配方解锁成功",
+    "en_us": "Recipe unlocked successfully"
+  },
+  "gui.wandscape.recipe_book.title": {
+    "zh_cn": "合成配方图鉴",
+    "en_us": "Synthesize Recipe Book"
+  },
+  "gui.wandscape.recipe_book.blueprints": {
+    "zh_cn": "可用图纸: %s",
+    "en_us": "Blueprints: %s"
+  },
+  "gui.wandscape.recipe_book.search": {
+    "zh_cn": "搜索配方…",
+    "en_us": "Search recipes..."
+  },
+  "gui.wandscape.recipe_book.tab_all": {
+    "zh_cn": "全部",
+    "en_us": "All"
+  },
+  "gui.wandscape.recipe_book.tab_unlocked": {
+    "zh_cn": "已解锁",
+    "en_us": "Unlocked"
+  },
+  "gui.wandscape.recipe_book.tab_locked": {
+    "zh_cn": "未解锁",
+    "en_us": "Locked"
+  },
+  "gui.wandscape.recipe_book.btn_unlock": {
+    "zh_cn": "解锁",
+    "en_us": "Unlock"
+  },
+  "gui.wandscape.recipe_book.badge_unlocked": {
+    "zh_cn": "已解锁",
+    "en_us": "Unlocked"
+  },
+  "gui.wandscape.recipe_book.confirm_title": {
+    "zh_cn": "解锁配方",
+    "en_us": "Unlock Recipe"
+  },
+  "gui.wandscape.recipe_book.confirm_prompt": {
+    "zh_cn": "确定消耗 1 张图纸解锁「%s」的合成配方吗？",
+    "en_us": "Consume 1 blueprint to unlock synthesize recipe for \"%s\"?"
   }
 }

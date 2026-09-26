@@ -222,5 +222,17 @@
   "item.wandscape.warehouse_terminal.tooltip_curios": {
     "zh_cn": "可放入 Curios 手饰槽；穿戴后可使用快捷键打开",
     "en_us": "Can be placed in Curios hands slot; press key to open while equipped"
+  },
+  "item.wandscape.item_blueprint": {
+    "zh_cn": "物品图纸",
+    "en_us": "Item Blueprint"
+  },
+  "item.wandscape.item_blueprint.desc": {
+    "zh_cn": "记录着失落炼金图式的羊皮图纸。可在仓库的配方图鉴中自选解锁任意一个工作站合成配方。",
+    "en_us": "A parchment diagram recording lost alchemical blueprints. Can be consumed in the warehouse recipe book to unlock any workstation synthesize recipe."
+  },
+  "item.wandscape.item_blueprint.tooltip": {
+    "zh_cn": "在仓库配方图鉴中消耗 1 张自选解锁任意合成配方",
+    "en_us": "Consume 1 in warehouse recipe book to unlock any synthesize recipe"
   }
 }
