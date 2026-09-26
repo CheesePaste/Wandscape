@@ -469,7 +469,7 @@ public final class BuildingSelectionOverlay {
                 // First-free still available: green "首免" badge top-left
                 if (!locked && slot.firstFreeAvailable()) {
                     String tag = com.wsteam.wandscape.foundation.ui.I18n.name(
-                            "gui.wandscape.badge.first_free", "First Free").getString();
+                            "gui.wandscape.badge.first_free", "Free").getString();
                     int tagW = font.width(tag) + 4;
                     int tagH = 9;
                     int tagX = cellX + 1;

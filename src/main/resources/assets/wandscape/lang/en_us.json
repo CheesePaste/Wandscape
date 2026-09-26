@@ -446,7 +446,7 @@
   "gui.wandscape.anomaly.col_status": "Status",
   "gui.wandscape.anomaly.summary": "Building: %s",
   "gui.wandscape.anomaly.title": "Anomaly Report",
-  "gui.wandscape.badge.first_free": "First Free",
+  "gui.wandscape.badge.first_free": "Free",
   "gui.wandscape.building_action.cancel": "Undo",
   "gui.wandscape.building_action.demolish_running": "Demolition in progress...",
   "gui.wandscape.building_action.demolish_send": "Demolish this building and refund materials (needs confirmation)",
