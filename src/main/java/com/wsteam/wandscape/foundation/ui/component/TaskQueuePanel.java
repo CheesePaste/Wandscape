@@ -127,8 +127,8 @@ public class TaskQueuePanel extends AbstractWidget {
 
     /** Callbacks wired by the parent Screen. */
     private java.util.function.IntConsumer onDelete;
-    private java.util.function.IntConsumer onMoveUp;
-    private java.util.function.IntConsumer onMoveDown;
+    private java.util.function.IntConsumer onMoveToTop;
+    private java.util.function.IntConsumer onMoveToBottom;
 
     // Item-icon cache: itemOrRecipeId → ItemStack (or null if not found)
     private final Map<String, ItemStack> iconCache = new HashMap<>();
@@ -164,9 +164,11 @@ public class TaskQueuePanel extends AbstractWidget {
         super(x, y, width, height, Component.literal("Task Queue"));
     }
 
-    public void setOnDelete(java.util.function.IntConsumer onDelete)       { this.onDelete = onDelete; }
-    public void setOnMoveUp(java.util.function.IntConsumer onMoveUp)        { this.onMoveUp = onMoveUp; }
-    public void setOnMoveDown(java.util.function.IntConsumer onMoveDown)    { this.onMoveDown = onMoveDown; }
+    public void setOnDelete(java.util.function.IntConsumer onDelete)               { this.onDelete = onDelete; }
+    public void setOnMoveToTop(java.util.function.IntConsumer onMoveToTop)        { this.onMoveToTop = onMoveToTop; }
+    public void setOnMoveToBottom(java.util.function.IntConsumer onMoveToBottom)  { this.onMoveToBottom = onMoveToBottom; }
+    public void setOnMoveUp(java.util.function.IntConsumer onMoveUp)              { this.onMoveToTop = onMoveUp; }
+    public void setOnMoveDown(java.util.function.IntConsumer onMoveDown)          { this.onMoveToBottom = onMoveDown; }
 
     /**
      * Replace all entries. Call from the parent Screen when new queue data arrives.
@@ -385,6 +387,7 @@ public class TaskQueuePanel extends AbstractWidget {
 
             int contentX = getX() + CONTENT_LEFT_PAD;
             int centerY  = rowBaseY + rowHeight / 2;
+            int btnY     = rowBaseY + (rowHeight - BTN_H) / 2;
 
             // ── Icon ──
             ItemStack icon = resolveIcon(e.itemOrRecipeId);
@@ -451,33 +454,40 @@ public class TaskQueuePanel extends AbstractWidget {
             }
 
             // ── Hover tooltip tracking ──
-            if (mouseX >= getX() && mouseX < colRightStart && hoverMouseY >= rowBaseY && hoverMouseY < rowBaseY + rowHeight) {
-                if ((e.capacityBlocked || e.insufficient) && mouseX >= statusBlockX && mouseX <= textColEnd) {
-                    if (e.capacityBlocked) {
-                        hoveredTooltipLines = List.of(I18n.name("gui.wandscape.queue.tooltip.capacity", "殖民地仓库容量不足"));
-                    } else if (e.missingElements != null && !e.missingElements.isEmpty()) {
-                        String elNames = formatElements(e.missingElements);
-                        hoveredTooltipLines = List.of(I18n.name("gui.wandscape.queue.tooltip.missing_elements", "缺少元素: %s", elNames));
-                    } else {
-                        hoveredTooltipLines = List.of(I18n.name("gui.wandscape.queue.tooltip.missing_materials", "缺少原料，等待输入"));
+            if (hoverMouseY >= rowBaseY && hoverMouseY < rowBaseY + rowHeight) {
+                if (mouseX >= getX() && mouseX < colRightStart) {
+                    if ((e.capacityBlocked || e.insufficient) && mouseX >= statusBlockX && mouseX <= textColEnd) {
+                        if (e.capacityBlocked) {
+                            hoveredTooltipLines = List.of(I18n.name("gui.wandscape.queue.tooltip.capacity", "殖民地仓库容量不足"));
+                        } else if (e.missingElements != null && !e.missingElements.isEmpty()) {
+                            String elNames = formatElements(e.missingElements);
+                            hoveredTooltipLines = List.of(I18n.name("gui.wandscape.queue.tooltip.missing_elements", "缺少元素: %s", elNames));
+                        } else {
+                            hoveredTooltipLines = List.of(I18n.name("gui.wandscape.queue.tooltip.missing_materials", "缺少原料，等待输入"));
+                        }
+                    } else if (icon != null && !icon.isEmpty()) {
+                        hoveredTooltipStack = icon;
                     }
-                } else if (icon != null && !icon.isEmpty()) {
-                    hoveredTooltipStack = icon;
+                } else if (mouseX >= colRightStart && mouseX < colRightStart + BTN_AREA_W && hoverMouseY >= btnY && hoverMouseY < btnY + BTN_H) {
+                    int col = (mouseX - colRightStart) / (BTN_W + BTN_GAP);
+                    if (col == 0) {
+                        hoveredTooltipLines = List.of(I18n.name("gui.wandscape.queue.tooltip.move_to_top", "置顶任务"));
+                    } else if (col == 1) {
+                        hoveredTooltipLines = List.of(I18n.name("gui.wandscape.queue.tooltip.move_to_bottom", "置底任务"));
+                    } else if (col == 2) {
+                        hoveredTooltipLines = List.of(I18n.name("gui.wandscape.queue.tooltip.cancel", "取消任务"));
+                    }
                 }
             }
 
             // ── Action buttons ──
-            int btnY = rowBaseY + (rowHeight - BTN_H) / 2;
-
-            boolean canUp    = onMoveUp != null    && e.index > 0;
-            boolean canDown  = onMoveDown != null  && e.index < entries.size() - 1;
+            boolean canTop    = onMoveToTop != null    && e.index > 0;
+            boolean canBottom = onMoveToBottom != null && e.index < entries.size() - 1;
             boolean canDelete = onDelete != null;
 
-            drawUpBtn  (g, colRightStart,                  btnY, canUp,    mouseX, hoverMouseY,
-                        () -> { if (canUp    && onMoveUp != null)    onMoveUp.accept(e.index);    });
-            drawDownBtn(g, colRightStart + BTN_W + BTN_GAP, btnY, canDown,  mouseX, hoverMouseY,
-                        () -> { if (canDown  && onMoveDown != null)  onMoveDown.accept(e.index);  });
-            drawCloseBtn(g,colRightStart + 2*(BTN_W+BTN_GAP),btnY, canDelete, mouseX, hoverMouseY,
+            drawToTopBtn   (g, colRightStart,                   btnY, canTop,    mouseX, hoverMouseY);
+            drawToBottomBtn(g, colRightStart + BTN_W + BTN_GAP,  btnY, canBottom, mouseX, hoverMouseY);
+            drawCloseBtn   (g, colRightStart + 2*(BTN_W+BTN_GAP),btnY, canDelete, mouseX, hoverMouseY,
                         () -> { if (canDelete && onDelete != null)   onDelete.accept(e.index);    });
         }
 
@@ -576,24 +586,28 @@ public class TaskQueuePanel extends AbstractWidget {
 
     // ── Sprite button helpers ──────────────────────────────────────────────
 
-    private void drawUpBtn(GuiGraphics g, int btnX, int btnY,
-                           boolean active, int mouseX, int mouseY, Runnable onPress) {
+    private void drawToTopBtn(GuiGraphics g, int btnX, int btnY,
+                              boolean active, int mouseX, int mouseY) {
         int state = active
                 ? (mouseX >= btnX && mouseX < btnX + BTN_W && mouseY >= btnY && mouseY < btnY + BTN_H
                     ? ARROW_STATE_HOVER
                     : ARROW_STATE_NORMAL)
                 : ARROW_STATE_DISABLED;
         renderArrow(g, btnX, btnY, state, true);
+        int barColor = (state == ARROW_STATE_DISABLED) ? 0x668B7355 : ((state == ARROW_STATE_HOVER) ? 0xFFFFFFFF : 0xFFD4A840);
+        g.fill(btnX + 3, btnY + 2, btnX + BTN_W - 3, btnY + 3, barColor);
     }
 
-    private void drawDownBtn(GuiGraphics g, int btnX, int btnY,
-                             boolean active, int mouseX, int mouseY, Runnable onPress) {
+    private void drawToBottomBtn(GuiGraphics g, int btnX, int btnY,
+                                 boolean active, int mouseX, int mouseY) {
         int state = active
                 ? (mouseX >= btnX && mouseX < btnX + BTN_W && mouseY >= btnY && mouseY < btnY + BTN_H
                     ? ARROW_STATE_HOVER
                     : ARROW_STATE_NORMAL)
                 : ARROW_STATE_DISABLED;
         renderArrow(g, btnX, btnY, state, false);
+        int barColor = (state == ARROW_STATE_DISABLED) ? 0x668B7355 : ((state == ARROW_STATE_HOVER) ? 0xFFFFFFFF : 0xFFD4A840);
+        g.fill(btnX + 3, btnY + BTN_H - 3, btnX + BTN_W - 3, btnY + BTN_H - 2, barColor);
     }
 
     /**
@@ -660,13 +674,13 @@ public class TaskQueuePanel extends AbstractWidget {
             boolean active;
             Runnable action;
             switch (col) {
-                case 0 -> { // ↑
-                    active = onMoveUp != null && e.index > 0;
-                    action = () -> { if (active && onMoveUp != null) onMoveUp.accept(e.index); };
+                case 0 -> { // ⤒
+                    active = onMoveToTop != null && e.index > 0;
+                    action = () -> { if (active && onMoveToTop != null) onMoveToTop.accept(e.index); };
                 }
-                case 1 -> { // ↓
-                    active = onMoveDown != null && e.index < entries.size() - 1;
-                    action = () -> { if (active && onMoveDown != null) onMoveDown.accept(e.index); };
+                case 1 -> { // ⤓
+                    active = onMoveToBottom != null && e.index < entries.size() - 1;
+                    action = () -> { if (active && onMoveToBottom != null) onMoveToBottom.accept(e.index); };
                 }
                 default -> { // ×
                     active = onDelete != null;

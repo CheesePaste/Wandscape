@@ -807,68 +807,74 @@ public class BuildingApiImpl implements BuildingApi {
         return true;
     }
 
-    public boolean moveUp(UUID buildingId, int index) {
+    public boolean moveToTop(UUID buildingId, int index) {
         BuildingSavedData sd = getSavedData();
         if (sd == null) {
-            Log.warn(TAG, "moveUp: no saved data for {}", buildingId);
+            Log.warn(TAG, "moveToTop: no saved data for {}", buildingId);
             return false;
         }
 
         BuildingState state = sd.getBuilding(buildingId);
         if (state == null) {
-            Log.warn(TAG, "moveUp: building {} not found", buildingId);
+            Log.warn(TAG, "moveToTop: building {} not found", buildingId);
             return false;
         }
 
         Deque<WorkItem> queue = sharedQueueFor(sd, state);
         if (queue == null) queue = state.getTaskQueue();
         if (index <= 0 || index >= queue.size()) {
-            Log.warn(TAG, "moveUp: index {} out of range (size={}) for {}", index, queue.size(), buildingId);
+            Log.warn(TAG, "moveToTop: index {} out of range (size={}) for {}", index, queue.size(), buildingId);
             return false;
         }
 
         java.util.List<WorkItem> list = new ArrayList<>(queue);
-        WorkItem upper = list.get(index - 1);
-        WorkItem lower = list.get(index);
-        java.util.Collections.swap(list, index, index - 1);
+        WorkItem item = list.remove(index);
+        list.add(0, item);
         queue.clear();
         queue.addAll(list);
         sd.setDirty();
-        Log.info(TAG, "moveUp: [{}]{}↔[{}]{} at {}",
-                index - 1, upper.blueprintId(), index, lower.blueprintId(), buildingId);
+        Log.info(TAG, "moveToTop: [{}] {} moved to top at {}",
+                index, item.blueprintId(), buildingId);
         return true;
     }
 
-    public boolean moveDown(UUID buildingId, int index) {
+    public boolean moveToBottom(UUID buildingId, int index) {
         BuildingSavedData sd = getSavedData();
         if (sd == null) {
-            Log.warn(TAG, "moveDown: no saved data for {}", buildingId);
+            Log.warn(TAG, "moveToBottom: no saved data for {}", buildingId);
             return false;
         }
 
         BuildingState state = sd.getBuilding(buildingId);
         if (state == null) {
-            Log.warn(TAG, "moveDown: building {} not found", buildingId);
+            Log.warn(TAG, "moveToBottom: building {} not found", buildingId);
             return false;
         }
 
         Deque<WorkItem> queue = sharedQueueFor(sd, state);
         if (queue == null) queue = state.getTaskQueue();
         if (index < 0 || index >= queue.size() - 1) {
-            Log.warn(TAG, "moveDown: index {} out of range (size={}) for {}", index, queue.size(), buildingId);
+            Log.warn(TAG, "moveToBottom: index {} out of range (size={}) for {}", index, queue.size(), buildingId);
             return false;
         }
 
         java.util.List<WorkItem> list = new ArrayList<>(queue);
-        WorkItem upper = list.get(index);
-        WorkItem lower = list.get(index + 1);
-        java.util.Collections.swap(list, index, index + 1);
+        WorkItem item = list.remove(index);
+        list.add(item);
         queue.clear();
         queue.addAll(list);
         sd.setDirty();
-        Log.info(TAG, "moveDown: [{}]{}↔[{}]{} at {}",
-                index, upper.blueprintId(), index + 1, lower.blueprintId(), buildingId);
+        Log.info(TAG, "moveToBottom: [{}] {} moved to bottom at {}",
+                index, item.blueprintId(), buildingId);
         return true;
+    }
+
+    public boolean moveUp(UUID buildingId, int index) {
+        return moveToTop(buildingId, index);
+    }
+
+    public boolean moveDown(UUID buildingId, int index) {
+        return moveToBottom(buildingId, index);
     }
 
     // ---- Placement (unified entry point) ----

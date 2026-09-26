@@ -99,12 +99,12 @@ public record TaskQueueModifyPacket(
                     boolean ok = api.removeFromQueue(buildingId, pkt.index);
                     changed = ok;
                 }
-                case "move_up" -> {
-                    boolean ok = api.moveUp(buildingId, pkt.index);
+                case "move_to_top", "move_up" -> {
+                    boolean ok = api.moveToTop(buildingId, pkt.index);
                     changed = ok;
                 }
-                case "move_down" -> {
-                    boolean ok = api.moveDown(buildingId, pkt.index);
+                case "move_to_bottom", "move_down" -> {
+                    boolean ok = api.moveToBottom(buildingId, pkt.index);
                     changed = ok;
                 }
                 default -> Log.warn(TAG, "TaskQueueModify: unknown action '{}' index={} pos={}",
