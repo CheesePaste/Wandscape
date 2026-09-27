@@ -36,6 +36,11 @@ public class BuildingState implements BuildingData {
     private boolean constructionStarted;
     private boolean demolishing;
     /**
+     * 建材是否已经由系统自动补过一次（{@code ConstructionSupply}）：补上了才置位，
+     * 置位后工地缺料不再自动补产，改由玩家在工地面板点「一键制作」。
+     */
+    private boolean autoSupplyDone;
+    /**
      * 已从仓库实际扣除、且还没退还的建造材料（材质 id → 数量），由引擎在
      * {@code request_resource} 提交成功后回填，退还时销账。撤销建造时的退还上限就是这本账：
      * 未开工（账本为空，材料一分没扣）时按图纸退任何东西都是凭空造物。
@@ -92,6 +97,7 @@ public class BuildingState implements BuildingData {
     @Override public boolean isStructureIntact() { return structureIntact; }
     @Override public boolean hasEverCompleted() { return hasEverCompleted; }
     @Override public boolean isConstructionStarted() { return constructionStarted; }
+    @Override public boolean isAutoSupplyDone() { return autoSupplyDone; }
     @Nullable public UUID getCurrentTaskId() { return currentTaskId; }
     public Deque<WorkItem> getTaskQueue() { return taskQueue; }
 
@@ -145,6 +151,7 @@ public class BuildingState implements BuildingData {
     public void setStructureIntact(boolean intact) { this.structureIntact = intact; }
     public void setHasEverCompleted(boolean completed) { this.hasEverCompleted = completed; }
     public void setConstructionStarted(boolean started) { this.constructionStarted = started; }
+    public void setAutoSupplyDone(boolean done) { this.autoSupplyDone = done; }
     public void setDemolishing(boolean demolishing) { this.demolishing = demolishing; }
     public void setCurrentTaskId(@Nullable UUID taskId) { this.currentTaskId = taskId; }
     public int getRotationSteps() { return rotationSteps; }

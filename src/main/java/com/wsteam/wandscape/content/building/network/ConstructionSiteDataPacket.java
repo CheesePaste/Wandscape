@@ -110,6 +110,14 @@ public record ConstructionSiteDataPacket(
     }
 
     /**
+     * 丢掉某建筑的快照缓存。面板上的操作（如「一键制作」下发合成任务）改了工地状态后，
+     * 紧接着要把新状态发回客户端——不失效就会被 5 秒 CD 拦住，发回去的还是操作前的旧快照。
+     */
+    public static void invalidateSnapshot(UUID buildingId) {
+        SNAPSHOT_CACHE.remove(buildingId);
+    }
+
+    /**
      * Assemble the construction-site snapshot for a building from its blueprint demand,
      * the colony warehouse stock, and in-flight workstation synthesis.
      */

@@ -3,6 +3,10 @@
     "zh_cn": "预计完工",
     "en_us": "Est. complete"
   },
+  "gui.wandscape.constructionsite.craft_all": {
+    "zh_cn": "一键制作",
+    "en_us": "Craft all"
+  },
   "gui.wandscape.constructionsite.completed": {
     "zh_cn": "已完工",
     "en_us": "Completed"

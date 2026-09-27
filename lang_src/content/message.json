@@ -307,6 +307,18 @@
     "en_us": "Teleported to the town hall (%s, %s, %s)",
     "zh_cn": "已传送到市政厅 (%s, %s, %s)"
   },
+  "message.wandscape.constructionsite.craft_all_blocked": {
+    "en_us": "§e[Site] %s material type(s) can't be auto-crafted (no recipe, recipe still locked, or no workstation available)",
+    "zh_cn": "§e[工地] 有 %s 项建材无法自动制作（没有合成配方、配方未解锁，或殖民地没有可用工作站）"
+  },
+  "message.wandscape.constructionsite.craft_all_none": {
+    "en_us": "[Site] No material needs crafting",
+    "zh_cn": "[工地] 没有需要制作的建材"
+  },
+  "message.wandscape.constructionsite.craft_all_queued": {
+    "en_us": "§a[Site] Queued %s crafting task(s)",
+    "zh_cn": "§a[工地] 已下发 %s 项制作任务"
+  },
   "message.wandscape.curios.no_slots": {
     "en_us": "[Wandscape] This mage has no trinket slots — Curios not detected or no slots assigned.",
     "zh_cn": "[魔法小镇] 该法师没有可用的饰品栏——未检测到 Curios 或其未给法师分配槽位。"

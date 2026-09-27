@@ -109,6 +109,9 @@ public final class RoadSavedData extends SavedData {
             }
             e.put("materialCounts", mats);
 
+            // 建材自动补料是否已发过（工地缺料不再自动补，改由面板「一键制作」）
+            e.putBoolean("autoSupplyDone", edge.isAutoSupplyDone());
+
             // Placed block positions (for clean demolition)
             ListTag placedTag = new ListTag();
             for (PathPoint bp : edge.getPlacedBlocks()) {
@@ -214,6 +217,9 @@ public final class RoadSavedData extends SavedData {
                 }
                 edge.setMaterialCounts(m);
             }
+
+            // 旧档没有这一位 → 视为没自动补过料：缺料时还能自动补一次。
+            edge.setAutoSupplyDone(e.getBoolean("autoSupplyDone"));
 
             data.network.addEdge(edge);
         }

@@ -257,10 +257,13 @@ public class GlobalTaskPool {
 
         releaseNpc(taskId, npcId, world);
 
-        // Auto-recovery: try to create production tasks for the needed resources
+        // Auto-recovery: try to create production tasks for the needed resources.
+        // The context (who is asking) lets the strategy exempt construction sites.
         if (resourceShortageHandler != null && !needed.isEmpty()) {
             ResourceStack primary = needed.get(0);
-            resourceShortageHandler.handle(primary.resource(), primary.amount(), GridPos.ORIGIN);
+            resourceShortageHandler.handle(
+                    new ResourceShortageHandler.Context(task.blueprintId, task.buildingId),
+                    primary.resource(), primary.amount(), GridPos.ORIGIN);
         }
 
         notifyChanged();

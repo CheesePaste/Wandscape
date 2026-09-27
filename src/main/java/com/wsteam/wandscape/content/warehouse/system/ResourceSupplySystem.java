@@ -100,6 +100,14 @@ public class ResourceSupplySystem implements EcsSystem {
                 continue;
             }
 
+            // 工地建材：自动补料只在放下建筑/道路时发一次（补不上才在这里顺延补一次），
+            // 之后一律等玩家在工地面板点「一键制作」——否则玩家删掉自动补的合成任务后，
+            // 这里每 40 tick 又补一条，删了又回来。
+            if (com.wsteam.wandscape.content.building.internal.ConstructionSupply
+                    .handleAwaitingConstructionTask(task)) {
+                continue;
+            }
+
             for (ResourceStack need : task.awaitingResource) {
                 int available = world.colonyResources.available(colonyId, need.resource());
                 if (available >= need.amount()) continue;
@@ -199,6 +207,18 @@ public class ResourceSupplySystem implements EcsSystem {
      */
     public static boolean enqueueSynthesize(String itemId, int amount, @Nullable UUID colonyId,
                                             @Nullable World world, boolean atFront) {
+        return enqueueSynthesize(itemId, amount, colonyId, world,
+                atFront ? WandscapeConstants.TASK_PRIORITY_RESTOCK : WandscapeConstants.TASK_PRIORITY_AUTO,
+                atFront);
+    }
+
+    /**
+     * Explicit-priority variant: the caller picks the queue band itself (工地「一键制作」走
+     * 玩家档 80，放下时的自动补一次仍走自动档 40). {@code restock} adds the {@code supply=restock}
+     * marker, which exempts the task from the warehouse-capacity block.
+     */
+    public static boolean enqueueSynthesize(String itemId, int amount, @Nullable UUID colonyId,
+                                            @Nullable World world, int priority, boolean restock) {
         var recipes = Wandscape.PRODUCTION_RECIPE_LOADER;
         if (recipes == null) return false;
         var synthRecipe = recipes.getSynthesizeRecipe(itemId);
@@ -238,7 +258,7 @@ public class ResourceSupplySystem implements EcsSystem {
         params.put("recipe_id", new JsonPrimitive(itemId));
         params.put("count", new JsonPrimitive(count));
         // 补货驱动的合成标记 supply=restock：仓库满仓时该任务豁免（防殖民地瘫痪）。
-        if (atFront) {
+        if (restock) {
             params.put("supply", new JsonPrimitive("restock"));
         }
         int channelTicks = com.wsteam.wandscape.Wandscape.PRODUCTION_RECIPE_LOADER != null
@@ -246,11 +266,6 @@ public class ResourceSupplySystem implements EcsSystem {
                 : com.wsteam.wandscape.foundation.util.BalanceValues.workstationCraftTicksPerUnit() * count;
         params.put("channel_ticks", new JsonPrimitive(channelTicks));
 
-        // 商店补货（atFront）比自动补产（卡资源缺口的短供）更优先：前者进补货段，
-        // 后者进自动段，队列按优先级分段排序。
-        int priority = atFront
-                ? WandscapeConstants.TASK_PRIORITY_RESTOCK
-                : WandscapeConstants.TASK_PRIORITY_AUTO;
         api.enqueueWork(stationId, new WorkItem("production:synthesize", params, priority));
         Log.info(TAG, "shortfall {} x{} → synthesize:{} at workstation {} ({} already in flight, priority={})",
                 itemId, amount, itemId, stationId.toString().substring(0, 8), inFlight, priority);

@@ -61,6 +61,7 @@ public class BuildingSavedData extends SavedData {
     private static final String TAG_INTACT = "intact";
     private static final String TAG_EVER_COMPLETED = "ever_completed";
     private static final String TAG_CONSTRUCTION_STARTED = "construction_started";
+    private static final String TAG_AUTO_SUPPLY_DONE = "auto_supply_done";
     private static final String TAG_CHARGED_MATERIALS = "charged_materials";
     private static final String TAG_QUEUE = "queue";
     private static final String TAG_CURRENT_TASK = "current_task";
@@ -646,6 +647,7 @@ public class BuildingSavedData extends SavedData {
             entry.putBoolean(TAG_INTACT, state.isStructureIntact());
             entry.putBoolean(TAG_EVER_COMPLETED, state.hasEverCompleted());
             entry.putBoolean(TAG_CONSTRUCTION_STARTED, state.isConstructionStarted());
+            entry.putBoolean(TAG_AUTO_SUPPLY_DONE, state.isAutoSupplyDone());
             // 已扣建材账本（撤销建造的退还上限）
             Map<String, Integer> charged = state.getChargedMaterials();
             if (!charged.isEmpty()) {
@@ -819,6 +821,8 @@ public class BuildingSavedData extends SavedData {
                     ? entry.getBoolean(TAG_EVER_COMPLETED)
                     : state.isStructureIntact());
             state.setConstructionStarted(entry.getBoolean(TAG_CONSTRUCTION_STARTED));
+            // 旧档没有这一位 → 视为没自动补过料：缺料时还能自动补一次，与旧行为一致。
+            state.setAutoSupplyDone(entry.getBoolean(TAG_AUTO_SUPPLY_DONE));
             // 旧档没有这本账 → 空账本：撤销时不退建材（宁可少退，不可凭空造物）。
             if (entry.contains(TAG_CHARGED_MATERIALS)) {
                 CompoundTag chargedTag = entry.getCompound(TAG_CHARGED_MATERIALS);

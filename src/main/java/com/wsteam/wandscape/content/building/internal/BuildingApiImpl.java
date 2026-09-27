@@ -977,6 +977,16 @@ public class BuildingApiImpl implements BuildingApi {
 
         enqueueWork(buildingId, workItem);
 
+        // 建材缺口就地自动补一次（下成工作站的合成任务），补上了才记账。此后这家工地缺料不再自动
+        // 补产，改由玩家在工地面板点「一键制作」——否则玩家删掉自动补的合成任务后，等料任务每
+        // 40 tick 被重扫一次就又补一条，删了又回来。
+        // 首建免费（压根不向仓库要料）与还没归属小镇的市政厅（colonyId 为空）跳过：后者等建镇后
+        // 由缺料重试路径顺延补发一次。
+        if (!firstFree && colonyId != null
+                && ConstructionSupply.craftForBuilding(state, WandscapeConstants.TASK_PRIORITY_AUTO).arranged()) {
+            ConstructionSupply.markDone(sd, state);
+        }
+
         Log.info(TAG, "[Placement] '{}' at {} firstFree={} clearBox={}",
                 config.displayName(), anchor, firstFree, clearBox);
         return PlacementResult.ok(buildingId, firstFree);

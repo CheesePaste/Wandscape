@@ -1,5 +1,6 @@
 package com.wsteam.wandscape.content.building.client;
 
+import com.wsteam.wandscape.content.building.network.ConstructionCraftAllPacket;
 import com.wsteam.wandscape.content.building.network.ConstructionSiteDataPacket;
 import com.wsteam.wandscape.content.building.network.ConstructionSiteDataPacket.MaterialEntry;
 import com.wsteam.wandscape.content.building.projection.network.BuildingActionPacket;
@@ -131,6 +132,16 @@ public class ConstructionSiteScreen extends MedievalScreen {
         list.setItems(materials);
         addRenderableWidget(list);
 
+        // 一键制作：按当前缺口把建材下成工作站合成任务。放下建筑/道路时已经自动补过一次，
+        // 玩家把那些任务删掉后不再自动重发（缺料也不会自己长回来），缺料就靠这个按钮补。
+        if (!completed) {
+            int btnW = 80, btnH = 18;
+            addRenderableWidget(new MedievalButton(
+                    leftPos + PW - 8 - btnW, topPos + headerHeight + 6, btnW, btnH,
+                    I18n.name("gui.wandscape.constructionsite.craft_all", "一键制作"),
+                    this::onCraftAll));
+        }
+
         // Withdraw button — road construction sites keep dedicated withdraw button;
         // buildings use MedievalScreen's unified cancel/demolish buttons.
         if (!completed && kind == ConstructionSiteDataPacket.KIND_ROAD) {
@@ -142,6 +153,12 @@ public class ConstructionSiteScreen extends MedievalScreen {
                     I18n.name("gui.wandscape.constructionsite.withdraw", "撤回"),
                     this::onWithdraw));
         }
+    }
+
+    private void onCraftAll() {
+        if (buildingId == null) return;
+        Net.toServer(new ConstructionCraftAllPacket(
+                buildingId, kind == ConstructionSiteDataPacket.KIND_ROAD));
     }
 
     private void onWithdraw() {

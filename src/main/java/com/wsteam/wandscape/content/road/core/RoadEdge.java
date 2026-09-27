@@ -39,6 +39,11 @@ public class RoadEdge {
     private final Set<PathPoint> placedBlocks = new HashSet<>();
     /** Per-material demand (bare block id → count) for this edge's build segment. */
     private Map<String, Integer> materialCounts = Map.of();
+    /**
+     * 建材是否已经由系统自动补过一次（{@code ConstructionSupply}）：补上了才置位，置位后
+     * 这条在建道路的缺料不再自动补产，改由玩家在工地面板点「一键制作」。
+     */
+    private boolean autoSupplyDone;
 
     public RoadEdge(UUID edgeId, @javax.annotation.Nullable UUID colonyId,
                     UUID fromNodeId, UUID toNodeId,
@@ -133,6 +138,11 @@ public class RoadEdge {
     public void setMaterialCounts(Map<String, Integer> counts) {
         this.materialCounts = counts != null ? Map.copyOf(counts) : Map.of();
     }
+
+    /** 建材是否已经自动补过一次（见字段注释）。 */
+    public boolean isAutoSupplyDone() { return autoSupplyDone; }
+
+    public void setAutoSupplyDone(boolean done) { this.autoSupplyDone = done; }
 
     /** Record the live segment task id for this edge (used to cancel on withdraw). */
     public void addSegmentTaskId(long taskId) {

@@ -206,9 +206,18 @@ public final class EngineBootstrap {
      * {@link ResourceSupplySystem#enqueueSynthesize} — enqueues a synthesize
      * work item at a workstation when a recipe exists, else falls through to
      * the default gather behavior (driven by {@link ResourceSupplySystem}).
+     *
+     * <p>工地（未建成建筑 / 在建道路）的建材请求是例外：它不走通用自动补产，由建筑域自己
+     * 按「放下时补一次 + 面板一键制作」管（见 {@code ConstructionSupply}）。这里的等料
+     * 重试路径在 {@link ResourceSupplySystem} 里另有一道同样的拦截。
      */
     private static ResourceShortageHandler createShortageHandler(World world) {
-        return (resource, amount, location) ->
-                ResourceSupplySystem.enqueueSynthesize(resource.id(), amount, world);
+        return (context, resource, amount, location) -> {
+            if (com.wsteam.wandscape.content.building.internal.ConstructionSupply
+                    .isConstructionSiteTask(context.blueprintId(), context.buildingId())) {
+                return true;
+            }
+            return ResourceSupplySystem.enqueueSynthesize(resource.id(), amount, world);
+        };
     }
 }

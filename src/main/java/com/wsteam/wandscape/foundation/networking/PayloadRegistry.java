@@ -6,6 +6,7 @@ import com.wsteam.wandscape.content.building.network.AltarOpenPacket;
 import com.wsteam.wandscape.content.building.network.BuildingAreaSyncPacket;
 import com.wsteam.wandscape.content.building.network.BuildingConfigSyncChunkPacket;
 import com.wsteam.wandscape.content.building.network.BuildingInfoPacket;
+import com.wsteam.wandscape.content.building.network.ConstructionCraftAllPacket;
 import com.wsteam.wandscape.content.building.network.ConstructionSiteDataPacket;
 import com.wsteam.wandscape.content.building.network.HotelOpenPacket;
 import com.wsteam.wandscape.content.building.network.MageHutActionPacket;
@@ -196,6 +197,7 @@ public final class PayloadRegistry {
         c2s(r, SplineBuildPacket.TYPE, SplineBuildPacket.STREAM_CODEC, SplineBuildPacket::handleServer);
         c2s(r, RoadInteractPacket.TYPE, RoadInteractPacket.STREAM_CODEC, RoadInteractPacket::handleServer);
         c2s(r, RoadWithdrawPacket.TYPE, RoadWithdrawPacket.STREAM_CODEC, RoadWithdrawPacket::handleServer);
+        c2s(r, ConstructionCraftAllPacket.TYPE, ConstructionCraftAllPacket.STREAM_CODEC, ConstructionCraftAllPacket::handleServer);
 
         // ── Wandscape Panel ──
         c2s(r, PanelStateTogglePacket.TYPE, PanelStateTogglePacket.STREAM_CODEC, PanelStateTogglePacket::handleServer);

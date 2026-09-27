@@ -235,6 +235,14 @@ public record RoadPlacePacket(String presetId, BlockPos startPos, BlockPos endPo
             // Capture demand + live task id on the edge so withdraw can cancel & refund.
             edge.setMaterialCounts(materials);
             edge.addSegmentTaskId(taskId);
+            // 建材缺口就地自动补一次（补上了才记账）：此后这条在建道路缺料不再自动补产，
+            // 改由玩家在工地面板点「一键制作」。
+            if (com.wsteam.wandscape.content.building.internal.ConstructionSupply
+                    .craftForRoad(edge, com.wsteam.wandscape.foundation.registry.WandscapeConstants.TASK_PRIORITY_AUTO)
+                    .arranged()) {
+                edge.setAutoSupplyDone(true);
+                savedData.setDirty();
+            }
             SoundService.playAt(player.serverLevel(), player.getX(), player.getY(), player.getZ(),
                     WandscapeSounds.TASK_PUBLISH, SoundSource.PLAYERS, 0.4f, 1.0f);
             Log.info(TAG, "[Road] Published task #{}: preset={} from={} to={} tiles={}",

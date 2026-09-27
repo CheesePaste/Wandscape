@@ -43,6 +43,14 @@ public interface BuildingData {
     /** Whether the building is being demolished by an NPC task. */
     default boolean isDemolishing() { return false; }
 
+    /**
+     * Whether this under-construction building's materials have already been auto-supplied
+     * once (see {@code ConstructionSupply}). Auto-supply happens at most once per building —
+     * after that the player pulls the trigger from the construction-site panel. Only
+     * meaningful while {@code !hasEverCompleted()}.
+     */
+    default boolean isAutoSupplyDone() { return false; }
+
     /** Number of 90° CCW rotation steps applied to the building (0-3). */
     default int getRotationSteps() { return 0; }
 }
