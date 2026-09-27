@@ -1,9 +1,9 @@
 {
   "block": "minecraft:observer",
   "build_cost": {
-    "earth": 6,
-    "metal": 16,
-    "fire": 16,
-    "wind": 8
+    "fire": 10,
+    "wind": 2,
+    "metal": 20,
+    "earth": 6
   }
 }

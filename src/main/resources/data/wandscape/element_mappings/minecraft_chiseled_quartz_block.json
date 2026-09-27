@@ -1,7 +1,8 @@
 {
   "block": "minecraft:chiseled_quartz_block",
   "build_cost": {
-    "fire": 32,
-    "wind": 32
+    "fire": 8,
+    "wind": 8,
+    "metal": 16
   }
 }

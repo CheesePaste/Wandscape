@@ -1,8 +1,9 @@
 {
   "block": "minecraft:granite",
   "build_cost": {
-    "earth": 1,
-    "fire": 16,
-    "wind": 16
+    "fire": 4,
+    "metal": 8,
+    "wind": 4,
+    "earth": 1
   }
 }

@@ -1,8 +1,9 @@
 {
   "block": "minecraft:polished_andesite",
   "build_cost": {
-    "earth": 1,
-    "fire": 4,
-    "wind": 4
+    "fire": 1,
+    "wind": 1,
+    "metal": 2,
+    "earth": 1
   }
 }

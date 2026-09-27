@@ -771,6 +771,7 @@ public class Wandscape {
                 .then(ProfileCommand.node())
                 .then(AuditElementsCommand.node())
                 .then(GenerateElementMappingsCommand.node())
+                .then(GenerateSeedMappingsCommand.node())
                 .then(FillBuildingCommand.fillNode())
                 .then(PublishBlueprintCommand.buildNode())
                 .then(MagicCommand.node())

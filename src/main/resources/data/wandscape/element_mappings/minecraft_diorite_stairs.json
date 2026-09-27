@@ -1,8 +1,9 @@
 {
   "block": "minecraft:diorite_stairs",
   "build_cost": {
-    "earth": 1,
-    "fire": 12,
-    "wind": 12
+    "fire": 3,
+    "metal": 6,
+    "wind": 3,
+    "earth": 1
   }
 }

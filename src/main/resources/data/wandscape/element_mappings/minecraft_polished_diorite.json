@@ -1,8 +1,9 @@
 {
   "block": "minecraft:polished_diorite",
   "build_cost": {
-    "earth": 1,
-    "fire": 8,
-    "wind": 8
+    "fire": 2,
+    "metal": 4,
+    "wind": 2,
+    "earth": 1
   }
 }

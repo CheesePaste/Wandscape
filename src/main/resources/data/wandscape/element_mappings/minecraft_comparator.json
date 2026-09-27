@@ -1,10 +1,10 @@
 {
   "block": "minecraft:comparator",
   "build_cost": {
-    "earth": 3,
     "wood": 6,
-    "fire": 20,
-    "metal": 24,
-    "wind": 8
+    "fire": 14,
+    "wind": 2,
+    "metal": 28,
+    "earth": 3
   }
 }

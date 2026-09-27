@@ -336,7 +336,7 @@
     {"item": "minecraft:ghast_tear",        "values": { "fire": 128, "wind": 128 },           "name_cn": "恶魂之泪"},
     {"item": "minecraft:redstone",          "values": { "fire": 4, "metal": 8 },                        "name_cn": "红石"},
     {"item": "minecraft:gunpowder",         "values": { "fire": 8 },                        "name_cn": "火药"},
-    {"item": "minecraft:quartz",            "values": { "fire": 8,"wind" : 8},                        "name_cn": "下界石英"},
+    {"item": "minecraft:quartz",            "values": { "metal": 4,"fire": 2,"wind": 2},             "name_cn": "下界石英"},
 
     {"item": "minecraft:feather",           "values": { "wind": 16 },                        "name_cn": "羽毛"},
     {"item": "minecraft:phantom_membrane",  "values": { "wind": 256 },                       "name_cn": "幻翼膜"},

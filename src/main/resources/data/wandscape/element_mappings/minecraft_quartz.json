@@ -1,7 +1,8 @@
 {
   "item": "minecraft:quartz",
   "build_cost": {
-    "fire": 8,
-    "wind": 8
+    "metal": 4,
+    "fire": 2,
+    "wind": 2
   }
 }

@@ -1,8 +1,9 @@
 {
   "block": "minecraft:polished_granite_stairs",
   "build_cost": {
-    "earth": 1,
-    "fire": 24,
-    "wind": 24
+    "fire": 6,
+    "metal": 12,
+    "wind": 6,
+    "earth": 1
   }
 }

@@ -1,9 +1,10 @@
 {
   "block": "minecraft:daylight_detector",
   "build_cost": {
-    "earth": 3,
     "wood": 3,
-    "fire": 24,
-    "wind": 24
+    "fire": 6,
+    "wind": 6,
+    "metal": 12,
+    "earth": 3
   }
 }

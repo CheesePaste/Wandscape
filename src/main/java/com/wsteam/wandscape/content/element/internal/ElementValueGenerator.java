@@ -39,6 +39,8 @@ public class ElementValueGenerator {
     private final Map<String, Map<ElementType, Long>> knownValues = new LinkedHashMap<>();
     /** item_id → recipe nodes that produce this item */
     private final Map<String, List<RecipeNode>> recipeIndex = new LinkedHashMap<>();
+    /** ingredient item_id → items whose recipes consume it (reverse of recipeIndex) */
+    private final Map<String, Set<String>> consumerIndex = new LinkedHashMap<>();
     /** items that already have manual mappings (skip unless --force) */
     private final Set<String> manualItemIds = new HashSet<>();
     private final Set<String> manualBlockIds = new HashSet<>();
@@ -46,6 +48,7 @@ public class ElementValueGenerator {
     private int recipesProcessed;
     private int iterationsRequired;
     private int filesSkipped;
+    private final List<String> changeSummaries = new ArrayList<>();
 
     record IngredientSlot(
         List<String> itemOptions,
@@ -89,7 +92,13 @@ public class ElementValueGenerator {
         int filesWritten,
         int filesSkipped,
         List<String> unresolvedSample,
-        Map<String, List<String>> rootCauses
+        Map<String, List<String>> rootCauses,
+        /** null for a full run; the seed id when only its derivation subtree was written */
+        String rootId,
+        /** size of the rooted subtree (0 for a full run) */
+        int subtreeSize,
+        /** "id  old → new" lines for every file whose values actually changed */
+        List<String> changeSummaries
     ) {}
 
     public ElementValueGenerator(Level level, boolean dryRun, boolean force, Path outputDir) {
@@ -172,6 +181,46 @@ public class ElementValueGenerator {
                 recipesProcessed++;
             }
         }
+
+        buildConsumerIndex();
+    }
+
+    /** Reverse of {@link #recipeIndex}: which outputs are built from a given ingredient. */
+    private void buildConsumerIndex() {
+        for (var entry : recipeIndex.entrySet()) {
+            for (RecipeNode node : entry.getValue()) {
+                for (IngredientSlot slot : node.slots) {
+                    for (String option : slot.itemOptions()) {
+                        consumerIndex.computeIfAbsent(option, k -> new LinkedHashSet<>())
+                                .add(entry.getKey());
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Every item whose value is derived — directly or transitively — from
+     * {@code rootId} through the vanilla recipe graph, the root included.
+     *
+     * <p>Conservative: a tag ingredient contributes every one of its options as a
+     * dependency, so the set can list items the fixed point actually resolved via a
+     * different option. Over-inclusion only costs a redundant file rewrite; the
+     * written value is still whatever {@link #resolve} computed.
+     */
+    public Set<String> downstreamOf(String rootId) {
+        Set<String> seen = new LinkedHashSet<>();
+        Deque<String> queue = new ArrayDeque<>();
+        seen.add(rootId);
+        queue.add(rootId);
+        while (!queue.isEmpty()) {
+            for (String outputId : consumerIndex.getOrDefault(queue.poll(), Set.of())) {
+                if (seen.add(outputId)) {
+                    queue.add(outputId);
+                }
+            }
+        }
+        return seen;
     }
 
     // ── Phase 2: Detect manual files ──
@@ -350,22 +399,41 @@ public class ElementValueGenerator {
 
     // ── Phase 5: Write output ──
 
-    int writeOutput(List<ItemWithValues> items) throws IOException {
+    int writeOutput(List<ItemWithValues> items, Set<String> only) throws IOException {
         int written = 0;
         int skipped = 0;
 
         for (ItemWithValues iwv : items) {
+            if (only != null && !only.contains(iwv.itemId)) {
+                continue;
+            }
             boolean isManual = manualItemIds.contains(iwv.itemId);
             if (iwv.isBlock && manualBlockIds.contains(iwv.itemId)) {
                 isManual = true;
             }
-            if (isManual && !force) {
+            // A rooted run names its seed explicitly, so re-deriving that whole subtree
+            // is the point: existing files are overwritten rather than skipped.
+            if (only == null && isManual && !force) {
                 skipped++;
                 continue;
             }
 
+            String json = renderJson(iwv);
+            String onDisk = readOnDisk(iwv.itemId);
+            if (onDisk != null) {
+                if (normalize(onDisk).equals(normalize(json))) {
+                    written++; // already up to date — leave the file untouched
+                    continue;
+                }
+                Map<ElementType, Long> old = parseValues(onDisk, iwv.itemId);
+                if (old != null && !old.equals(iwv.values)) {
+                    changeSummaries.add(iwv.itemId + "  "
+                            + formatValues(old) + " → " + formatValues(iwv.values));
+                }
+            }
+
             if (!dryRun) {
-                writeJson(iwv);
+                writeJson(iwv.itemId, json);
             }
             written++;
         }
@@ -374,26 +442,53 @@ public class ElementValueGenerator {
         return written;
     }
 
-    private void writeJson(ItemWithValues iwv) throws IOException {
+    /** Serialized mapping file for an item, without touching the filesystem. */
+    private String renderJson(ItemWithValues iwv) {
         JsonObject obj = new JsonObject();
-        if (iwv.isBlock) {
-            obj.addProperty("block", iwv.itemId);
-        } else {
-            obj.addProperty("item", iwv.itemId);
-        }
+        obj.addProperty(iwv.isBlock ? "block" : "item", iwv.itemId);
 
         JsonObject cost = new JsonObject();
         for (var entry : iwv.values.entrySet()) {
             cost.addProperty(entry.getKey().getId(), entry.getValue());
         }
         obj.add("build_cost", cost);
+        return GSON.toJson(obj);
+    }
 
-        String safeName = iwv.itemId.replace(':', '_') + ".json";
-        Path outFile = outputDir.resolve(safeName);
+    private void writeJson(String itemId, String json) throws IOException {
         Files.createDirectories(outputDir);
+        Files.writeString(outputDir.resolve(itemId.replace(':', '_') + ".json"), json);
+    }
 
-        String json = GSON.toJson(obj);
-        Files.writeString(outFile, json);
+    private String readOnDisk(String itemId) throws IOException {
+        Path file = outputDir.resolve(itemId.replace(':', '_') + ".json");
+        return Files.isRegularFile(file) ? Files.readString(file) : null;
+    }
+
+    private static Map<ElementType, Long> parseValues(String raw, String itemId) {
+        try {
+            return ElementMaps.parse(JsonParser.parseString(raw).getAsJsonObject(), "build_cost");
+        } catch (RuntimeException e) {
+            Log.warn(TAG, "Unreadable mapping file for {}, treating as changed: {}", itemId, e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * The working tree is CRLF on Windows while the generator writes LF, so raw
+     * comparison would call every file changed (git normalizes them back anyway).
+     */
+    private static String normalize(String raw) {
+        return raw.replace("\r\n", "\n").strip();
+    }
+
+    private static String formatValues(Map<ElementType, Long> values) {
+        StringBuilder sb = new StringBuilder();
+        for (var entry : values.entrySet()) {
+            if (sb.length() > 0) sb.append('/');
+            sb.append(entry.getKey().getId()).append(' ').append(entry.getValue());
+        }
+        return sb.length() == 0 ? "(empty)" : sb.toString();
     }
 
     // ── Phase 6: Trace root causes ──
@@ -477,6 +572,19 @@ public class ElementValueGenerator {
     // ── Orchestrator ──
 
     public GenerationReport run(Path manualDir, String seedJson) throws IOException {
+        return run(manualDir, seedJson, null);
+    }
+
+    /**
+     * @param rootSeed when non-null, only items whose value is derived from this seed are
+     *                 (re)written — a targeted refresh of one material plus everything
+     *                 crafted from it, instead of the whole mapping set. The seed's own
+     *                 value still comes from {@code element_seeds.json}; the id must be
+     *                 present there.
+     */
+    public GenerationReport run(Path manualDir, String seedJson, String rootSeed) throws IOException {
+        changeSummaries.clear();
+
         // Load seeds
         JsonObject seedRoot = JsonParser.parseString(seedJson).getAsJsonObject();
         loadSeeds(seedRoot);
@@ -493,13 +601,19 @@ public class ElementValueGenerator {
         // Phase 4: resolve
         List<ItemWithValues> outputs = resolveOutputs();
 
-        // Phase 5: write
-        int written = writeOutput(outputs);
+        // Phase 5: write — a rooted run restricts the write set to that seed's subtree
+        Set<String> only = null;
+        int subtreeSize = 0;
+        if (rootSeed != null) {
+            only = downstreamOf(rootSeed);
+            subtreeSize = only.size();
+        }
+        int written = writeOutput(outputs, only);
 
-        // Phase 6: trace root causes
+        // Phase 6: trace root causes — a full-run artifact, skipped when rooted
         Map<String, List<String>> rootCauses = traceRootCauses();
-        Path rootCausesFile = outputDir.getParent().getParent().resolve("missing_seeds.txt");
-        if (!dryRun) {
+        if (rootSeed == null && !dryRun) {
+            Path rootCausesFile = outputDir.getParent().getParent().resolve("missing_seeds.txt");
             writeRootCauses(rootCauses, rootCausesFile);
         }
 
@@ -525,7 +639,10 @@ public class ElementValueGenerator {
             written,
             filesSkipped,
             unresolvedSample,
-            rootCauses
+            rootCauses,
+            rootSeed,
+            subtreeSize,
+            List.copyOf(changeSummaries)
         );
     }
 }

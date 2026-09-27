@@ -1,8 +1,9 @@
 {
   "block": "minecraft:diorite_slab",
   "build_cost": {
-    "earth": 1,
-    "fire": 4,
-    "wind": 4
+    "fire": 1,
+    "metal": 2,
+    "wind": 1,
+    "earth": 1
   }
 }

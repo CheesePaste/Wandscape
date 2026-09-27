@@ -1,8 +1,9 @@
 {
   "block": "minecraft:andesite_stairs",
   "build_cost": {
-    "earth": 1,
-    "fire": 6,
-    "wind": 6
+    "fire": 1,
+    "wind": 1,
+    "metal": 3,
+    "earth": 1
   }
 }

@@ -1,7 +1,8 @@
 {
   "block": "minecraft:smooth_quartz",
   "build_cost": {
-    "fire": 32,
-    "wind": 32
+    "fire": 8,
+    "metal": 16,
+    "wind": 8
   }
 }

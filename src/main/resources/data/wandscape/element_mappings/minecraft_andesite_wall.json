@@ -1,8 +1,9 @@
 {
   "block": "minecraft:andesite_wall",
   "build_cost": {
-    "earth": 1,
-    "fire": 4,
-    "wind": 4
+    "fire": 1,
+    "wind": 1,
+    "metal": 2,
+    "earth": 1
   }
 }
