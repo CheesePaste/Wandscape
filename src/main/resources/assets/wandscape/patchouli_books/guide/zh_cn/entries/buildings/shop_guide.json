@@ -15,6 +15,10 @@
         "wandscape:textures/guidebook/shop_panel.png"
       ],
       "text": "最大库存默认是 0，不设这家店永远不会进货"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "补货不是白来的，货由工作站合成，元素成本照样从仓库账上扣，游客买走时再连本带利付回来。合成配方还锁着的商品怎么也补不上货，那一行会标着「配方未解锁」，解锁办法见$(l:wandscape:playstyle/recipe_unlock_guide)《配方解锁》$(/l)。"
     }
   ]
 }

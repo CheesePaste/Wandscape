@@ -2,7 +2,7 @@
   "name": "1. Tourist Track",
   "category": "wandscape:playstyle",
   "icon": "wandscape:tourist_spawn_egg",
-  "sortnum": 4,
+  "sortnum": 5,
   "read_by_default": true,
   "pages": [
     {

@@ -121,7 +121,29 @@
 
 ---
 
-## 五、元素映射与种子 (`element_mappings/` 与 `element_seeds.json`)
+## 五、默认解锁配方 (`data/wandscape/default_recipes.json`)
+
+单文件，列出**开局即解锁**的合成配方（`DefaultRecipeUnlocks` 读取，`/reload` 生效）：
+
+```json
+{
+  "recipes": [
+    "minecraft:oak_log",
+    "minecraft:oak_planks",
+    "minecraft:stone",
+    "minecraft:tuff"
+  ]
+}
+```
+
+- **写的是配方 id，不是文件名**：id 即 `SynthesizeRecipe.id()`——`element_mappings` 里该条目的 `item`（若有）否则 `block`，带不带 `minecraft:` 前缀都收。清单里写了但 `element_mappings` 里没有对应条目的 id 无副作用（它本来就没有配方）。
+- **语义是"基准"，不是存档记录**：清单内容不写进 `ColonyRecipeSavedData`，因此对每个殖民地恒定算已解锁，`/wandscape recipe lock` 也锁不掉；想收回就把 id 从文件里删掉。存档里存的仍只是玩家靠存货/图纸/鉴定挣来的那部分额外解锁。
+- **多命名空间取并集**：整合包/数据包可在自己的命名空间再放一份同名 `data/<ns>/default_recipes.json` 扩充，不必改模组文件。
+- 当前自带清单只放**主世界基础建材**（八种原木/木头、八种木板、八种树苗、蘑菇与蘑菇柄、竹子/竹块/竹板，加石头/圆石/闪长岩/安山岩/深板岩/深板岩圆石/凝灰岩）：去皮原木、竹马赛克与下界木料**故意不收**——留给玩家自己解锁。清单刻意用显式 id 而非 `#minecraft:logs` 这类标签，正是为了不把别的模组的高级木材（或下界木料）顺带提前放出。
+
+---
+
+## 六、元素映射与种子 (`element_mappings/` 与 `element_seeds.json`)
 
 ### 1. 单方块/物品映射 (`element_mappings/minecraft_<id>.json`)
 ```json
@@ -140,7 +162,7 @@
 
 ---
 
-## 六、魔法定义与法阵 JSON
+## 七、魔法定义与法阵 JSON
 
 ### 1. 魔法定义 (`magic_spells/<id>.json`)
 ```json
@@ -169,7 +191,7 @@
 
 ---
 
-## 七、道路标签 (`data/wandscape/tags/block/custom_roads.json`)
+## 八、道路标签 (`data/wandscape/tags/block/custom_roads.json`)
 
 ```json
 {

@@ -21,8 +21,10 @@ import java.util.UUID;
 /**
  * Manager for production recipe unlocking and gating.
  *
- * <p>Synthesize recipes start fully locked for each colony.
- * They are permanently unlocked through multiple triggers:
+ * <p>Synthesize recipes start fully locked for each colony, except those listed in
+ * {@code data/<namespace>/default_recipes.json} ({@link DefaultRecipeUnlocks}), which every
+ * colony can synthesize from the start. Everything else is permanently unlocked through
+ * multiple triggers:
  * <ul>
  *     <li>Warehouse deposit: when an item is added to the colony warehouse</li>
  *     <li>Existing warehouse inventory synchronization</li>
@@ -53,6 +55,10 @@ public final class ProductionRecipeManager {
     /**
      * Check if a synthesize recipe is unlocked for the specified colony.
      *
+     * <p>Recipes listed in {@code data/<namespace>/default_recipes.json} count as unlocked for
+     * every colony from the start (see {@link DefaultRecipeUnlocks}); the per-colony saved data
+     * holds only the additional unlocks earned in game.
+     *
      * @param colonyId the colony UUID
      * @param recipeOrItemId the recipe or output item ID
      * @return {@code true} if unlocked; {@code false} if locked, colony null, or recipe null
@@ -62,12 +68,33 @@ public final class ProductionRecipeManager {
             return recipeOrItemId != null && !recipeOrItemId.isEmpty();
         }
         if (colonyId == null || recipeOrItemId == null) return false;
+
+        String normalized = normalizeRecipeId(recipeOrItemId);
+        if (Wandscape.DEFAULT_RECIPE_UNLOCKS.contains(normalized)) return true;
+
         MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
         if (server == null) return false;
 
-        String normalized = normalizeRecipeId(recipeOrItemId);
         ColonyRecipeSavedData data = ColonyRecipeSavedData.get(server);
         return data.isRecipeUnlocked(colonyId, normalized);
+    }
+
+    /**
+     * UI-oriented gate query: {@code true} when the item has a synthesize recipe that is not
+     * yet unlocked for the colony, i.e. the colony cannot produce the item at all right now.
+     *
+     * <p>Items without any synthesize recipe report {@code false}: there is no recipe to unlock
+     * for them, so "recipe not unlocked" would be a wrong explanation for an empty stock.
+     *
+     * @param colonyId the colony UUID
+     * @param itemId the output item ID
+     * @return {@code true} if a recipe exists and is still locked
+     */
+    public static boolean isSynthesizeRecipeLocked(@Nullable UUID colonyId, @Nullable String itemId) {
+        if (itemId == null || itemId.isEmpty()) return false;
+        var loader = Wandscape.PRODUCTION_RECIPE_LOADER;
+        if (loader == null || loader.getSynthesizeRecipe(itemId) == null) return false;
+        return !isSynthesizeUnlocked(colonyId, itemId);
     }
 
     /**
@@ -172,7 +199,8 @@ public final class ProductionRecipeManager {
     }
 
     /**
-     * Returns an unmodifiable snapshot of all unlocked synthesize recipe IDs for the colony.
+     * Returns an unmodifiable snapshot of all unlocked synthesize recipe IDs for the colony:
+     * the default-unlocked baseline plus this colony's own unlocks.
      */
     public static Set<String> getUnlockedRecipes(@Nullable UUID colonyId) {
         if (!Config.isRecipeLockEnabled()) {
@@ -189,12 +217,17 @@ public final class ProductionRecipeManager {
         MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
         if (server == null) return Set.of();
 
-        return ColonyRecipeSavedData.get(server).getUnlockedRecipes(colonyId);
+        Set<String> unlocked = new java.util.LinkedHashSet<>(Wandscape.DEFAULT_RECIPE_UNLOCKS.ids());
+        unlocked.addAll(ColonyRecipeSavedData.get(server).getUnlockedRecipes(colonyId));
+        return Collections.unmodifiableSet(unlocked);
     }
 
     /**
      * Called whenever an item is added to the colony warehouse. If the item has a valid
      * synthesize recipe and is not yet unlocked, permanently unlocks it.
+     *
+     * <p>Default-unlocked recipes are skipped: they are already available and would only
+     * add redundant per-colony records to the save.
      */
     public static void checkAndUnlockOnWarehouseAdd(@Nullable UUID colonyId, @Nullable String itemId) {
         if (colonyId == null || itemId == null) return;
@@ -202,7 +235,8 @@ public final class ProductionRecipeManager {
         if (loader == null) return;
 
         // Check if there is a synthesize recipe that outputs this item
-        if (loader.getSynthesizeRecipe(itemId) != null) {
+        if (loader.getSynthesizeRecipe(itemId) != null
+                && !Wandscape.DEFAULT_RECIPE_UNLOCKS.contains(itemId)) {
             unlockSynthesize(colonyId, itemId, SOURCE_WAREHOUSE_DEPOSIT);
         }
     }
@@ -219,7 +253,8 @@ public final class ProductionRecipeManager {
         for (var entry : snapshot.entrySet()) {
             if (entry.getValue() > 0) {
                 String itemId = entry.getKey().itemId();
-                if (loader.getSynthesizeRecipe(itemId) != null) {
+                if (loader.getSynthesizeRecipe(itemId) != null
+                        && !Wandscape.DEFAULT_RECIPE_UNLOCKS.contains(itemId)) {
                     unlockSynthesize(colonyId, itemId, SOURCE_WAREHOUSE_SYNC);
                 }
             }

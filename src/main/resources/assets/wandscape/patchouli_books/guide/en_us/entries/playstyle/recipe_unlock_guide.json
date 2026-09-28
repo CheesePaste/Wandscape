@@ -1,0 +1,36 @@
+{
+  "name": "Unlocking Recipes",
+  "category": "wandscape:playstyle",
+  "icon": "wandscape:item_blueprint",
+  "sortnum": 3,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "A new town has none of its crafting recipes unlocked — that greyed-out half of the list in the Workstation and the Crafting Station is exactly what those are. Nobody can craft a locked reci"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "pe, and a shop cannot restock around one either: when goods run low the shop$(br2)asks the Workstation, and a locked recipe leaves nothing to craft. Unlocks are per town and permanent."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Deposit an item into the warehouse and its own crafting recipe unlocks with it, so the quickest fix for a missing recipe is to put the item in. This route costs nothing but the item itself,$(br) which makes it the usual one early on.",
+      "title": "Deposit into the Warehouse"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "A wild chest, or a tourist who leaves satisfied, may hand you an $(l:wandscape:items/blueprint_guide)Item Blueprint$(/l). Right-click a blueprint to open the recipe book, or click Recipes in the warehouse;",
+      "title": "Spend an Item Blueprint"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "click Unlock on a row to spend one blueprint on that recipe. The blueprint does not ask you to own the item first, so save it for the recipes whose item you cannot get hold of."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Switch a wand to Identify mode and right-click a block to unlock that block's crafting recipe on the spot — no deposit and no blueprint needed. See $(l:wandscape:items/wand_guide)《Wand》$(/$(br)l) for the four modes and how to switch between them.",
+      "title": "Identify with a Wand"
+    }
+  ]
+}

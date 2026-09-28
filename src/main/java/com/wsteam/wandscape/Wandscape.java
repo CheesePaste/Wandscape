@@ -67,6 +67,7 @@ import com.wsteam.wandscape.content.npc.internal.FriendlyForceApiImpl;
 import com.wsteam.wandscape.content.npc.internal.NpcApiImpl;
 import com.wsteam.wandscape.content.npc.internal.NpcAttributesApiImpl;
 import com.wsteam.wandscape.content.npc.internal.NpcMainHandApiImpl;
+import com.wsteam.wandscape.content.production.DefaultRecipeUnlocks;
 import com.wsteam.wandscape.content.production.ProductionEligibility;
 import com.wsteam.wandscape.content.production.ProductionRecipeLoader;
 import com.wsteam.wandscape.content.road.data.RoadPresetLoader;
@@ -243,6 +244,8 @@ public class Wandscape {
 
     // ---- 10 production-stations: loader ----
     public static ProductionRecipeLoader PRODUCTION_RECIPE_LOADER;
+    /** 加载 data/<命名空间>/default_recipes.json：开局即解锁的基础配方清单（不写进殖民地存档）。 */
+    public static final DefaultRecipeUnlocks DEFAULT_RECIPE_UNLOCKS = new DefaultRecipeUnlocks();
 
     // ---- 07 npc-system: entity ----
     public static final DeferredHolder<EntityType<?>, EntityType<WandscapeNpc>> WANDSCAPE_NPC =
@@ -596,6 +599,7 @@ public class Wandscape {
     public void onAddReloadListener(AddReloadListenerEvent event) {
         event.addListener(DATA_LOADER);
         event.addListener(BALANCE_LOADER);
+        event.addListener(DEFAULT_RECIPE_UNLOCKS);
     }
 
     @SubscribeEvent

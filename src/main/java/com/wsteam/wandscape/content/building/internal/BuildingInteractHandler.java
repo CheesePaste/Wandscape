@@ -185,7 +185,7 @@ public final class BuildingInteractHandler {
                 Map<String, Integer> maxStocks = shopStockManager != null
                         ? shopStockManager.getAllMaxStocks(state.getBuildingId()) : Map.of();
                 Net.toPlayer(player,
-                        new ShopOpenPacket(state.getAnchor(), colonyId, state.getBuildingId(), creator, stock, maxStocks));
+                        ShopOpenPacket.of(state.getAnchor(), colonyId, state.getBuildingId(), creator, stock, maxStocks));
                 // Opening a shop triggers its first restock — push onboarding progress (step 7).
                 var tutorialApi = com.wsteam.wandscape.api.WandscapeApis.getTutorialApiSilently();
                 if (tutorialApi != null) tutorialApi.sendToPlayer(player, colonyId);

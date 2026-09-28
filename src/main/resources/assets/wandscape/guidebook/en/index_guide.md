@@ -20,6 +20,8 @@ Features and Categories
 
 《Elements and Town Level》 Introduction to the economy system
 
+《Unlocking Recipes》 Crafting recipes start locked; how to open them
+
 《Management Panel》 Interaction, town management and building
 
 《Mages》 Introduction to workers and combat units

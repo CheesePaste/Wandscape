@@ -6,5 +6,9 @@
   "gui.wandscape.shop.title": {
     "zh_cn": "商店",
     "en_us": "Shop"
+  },
+  "gui.wandscape.shop.recipe_locked": {
+    "zh_cn": "配方未解锁",
+    "en_us": "Locked"
   }
 }

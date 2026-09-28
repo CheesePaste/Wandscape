@@ -41,6 +41,7 @@ A 和 B 用的是**同一套加载器**：B 里放同 id 的文件就能覆盖 A
 | `data/wandscape/tags/block/` | 1 | `custom_roads.json`——道路方块判定走标签 | `WandscapeTags` |
 | `data/wandscape/tags/item/` | 1 | `mage_main_hand_tools.json` | 原版 |
 | `data/wandscape/element_seeds.json` | 1 | **权威种子库**（元素定价的源头） | 审计/生成命令读 classpath |
+| `data/wandscape/default_recipes.json` | 1 | **默认解锁配方清单**（开局即解锁的基础建材，见 data-formats 五） | `DefaultRecipeUnlocks` |
 | `data/wandscape/wandscape_balance.json` | 1 | 天平数值覆盖（可调常量的持久化入口） | `WandscapeBalanceLoader` |
 | `data/wandscape/patchouli_books/guide/book.json` | 1 | 帕秋莉书本定义 | 帕秋莉 |
 

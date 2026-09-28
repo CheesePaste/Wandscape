@@ -15,11 +15,11 @@
     },
     {
       "type": "patchouli:text",
-      "text": "Features and Categories$(br2)$(l:wandscape:playstyle/element_level_guide)《Elements and Town Level》$(/l) Introduction to the economy system$(br2)$(l:wandscape:management/panel_guide)《Management Panel》$(/l) Interaction, town management and building"
+      "text": "Features and Categories$(br2)$(l:wandscape:playstyle/element_level_guide)《Elements and Town Level》$(/l) Introduction to the economy system$(br2)$(l:wandscape:playstyle/recipe_unlock_guide)《Unlocking Recipes》$(/l) Crafting recipes start locked; how to open them"
     },
     {
       "type": "patchouli:text",
-      "text": "$(l:wandscape:magic/mages_guide)《Mages》$(/l) Introduction to workers and combat units$(br2)$(l:wandscape:playstyle/tourists_guide)《Tourists and Values》$(/l) Short-stay visitors to your town$(br2)$(l:wandscape:magic/casting_guide)《Casting》$(/l) What decides which spells a mage casts"
+      "text": "$(l:wandscape:management/panel_guide)《Management Panel》$(/l) Interaction, town management and building$(br2)$(l:wandscape:magic/mages_guide)《Mages》$(/l) Introduction to workers and combat units$(br2)$(l:wandscape:playstyle/tourists_guide)《Tourists and Values》$(/l) Short-stay visitors to your town$(br2)$(l:wandscape:magic/casting_guide)《Casting》$(/l) What decides which spells a mage casts"
     },
     {
       "type": "patchouli:text",

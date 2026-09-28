@@ -2,7 +2,7 @@
   "name": "元素与城镇等级",
   "category": "wandscape:playstyle",
   "icon": "wandscape:element_earth",
-  "sortnum": 3,
+  "sortnum": 4,
   "read_by_default": true,
   "pages": [
     {

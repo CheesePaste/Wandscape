@@ -1,0 +1,26 @@
+{
+  "name": "配方解锁",
+  "category": "wandscape:playstyle",
+  "icon": "wandscape:item_blueprint",
+  "sortnum": 3,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "新镇子的合成配方一条都没开，工作站与合成站里灰着的那半张列表就是它们。锁着的配方谁也做不出来，商店的货也补不上——缺货时商店会向工作站要，配方没开就做不出。解锁按小镇记，开过一次就永久有效。"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(bold)存进仓库$()$(br2)把某样东西放进仓库，它自己的合成配方就跟着解锁，所以缺哪条配方，把那样东西存一次最快。这一条不用花任何东西，手上有实物就行，前期多半走这条。"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "开野外宝箱、或者游客满意离场时，有机会得到$(l:wandscape:items/blueprint_guide)物品图纸$(/l)。右键一张图纸能打开配方图鉴，或者在仓库界面点【配方】；想解锁哪条就点哪条右边的【解锁】，一张图纸换一条。图纸不必先有那样东西，拿不到实物的配方留给它。",
+      "title": "图纸自选"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(bold)法杖鉴定$()$(br2)把法杖切到鉴定模式，对着方块右键，那块方块的合成配方就地解锁，不必先把它存进仓库，也不用花图纸。法杖的四个模式和怎么切模式，见$(l:wandscape:items/wand_guide)《法杖》$(/l)。"
+    }
+  ]
+}

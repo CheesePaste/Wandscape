@@ -16,11 +16,16 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 /**
  * Shop GUI — per-good max-stock slider (0–64) with −/+ buttons.
  * Uses the shared {@link Slider} component with blue/black theme.
+ *
+ * <p>Goods whose synthesize recipe is still locked carry a 「配方未解锁」 hint at the row's
+ * right edge, explaining why the colony can never restock them.
  */
 public class ShopScreen extends MedievalScreen {
 
@@ -30,21 +35,25 @@ public class ShopScreen extends MedievalScreen {
     private static final int ROW_H = 26;
     private static final int ICON_SIZE = 16;
     private static final int SLIDER_X = 128;
-    private static final int SLIDER_W = 72;
+    /** Narrower than before: the locked-recipe hint needs the right part of the row. */
+    private static final int SLIDER_W = 56;
     private static final int BTN_W = 16;
     private static final int BTN_H = 14;
+    private static final int ROW_RIGHT_MARGIN = 8;
 
     private final BlockPos buildingPos;
     private final UUID colonyId;
     private final UUID buildingId;
     private Map<String, Integer> stock;
     private Map<String, Integer> maxStocks;
+    private Set<String> lockedGoods;
     private String[] itemIds;
     private ItemStack[] icons;
     private Component[] displayNames;
 
     public ShopScreen(BlockPos buildingPos, UUID colonyId, UUID buildingId, String creator,
-                      Map<String, Integer> stock, Map<String, Integer> maxStocks) {
+                      Map<String, Integer> stock, Map<String, Integer> maxStocks,
+                      Set<String> lockedGoods) {
         super(Component.literal("Shop"), PW, PH);
         setTitleBar(I18n.name("gui.wandscape.shop.title", "Shop"));
         this.showCloseButton = true;
@@ -57,13 +66,16 @@ public class ShopScreen extends MedievalScreen {
         setBuildingContext(buildingId, buildingPos);
         this.stock = new LinkedHashMap<>(stock);
         this.maxStocks = new LinkedHashMap<>(maxStocks);
+        this.lockedGoods = new LinkedHashSet<>(lockedGoods);
         this.itemIds = this.maxStocks.keySet().toArray(new String[0]);
         resolveIcons();
     }
 
-    public void updateFrom(Map<String, Integer> newStock, Map<String, Integer> newMaxStocks) {
+    public void updateFrom(Map<String, Integer> newStock, Map<String, Integer> newMaxStocks,
+                           Set<String> newLockedGoods) {
         this.stock = new LinkedHashMap<>(newStock);
         this.maxStocks = new LinkedHashMap<>(newMaxStocks);
+        this.lockedGoods = new LinkedHashSet<>(newLockedGoods);
         String[] newKeys = this.maxStocks.keySet().toArray(new String[0]);
         if (!java.util.Arrays.equals(this.itemIds, newKeys)) {
             this.itemIds = newKeys;
@@ -170,7 +182,18 @@ public class ShopScreen extends MedievalScreen {
 
             // ×cur/max to the right of [+]
             int rightX = leftPos + SLIDER_X + SLIDER_W + BTN_W + 6;
-            g.drawString(font, "×" + cur + "/" + max, rightX, cy - font.lineHeight / 2, textColor);
+            String count = "×" + cur + "/" + max;
+            g.drawString(font, count, rightX, cy - font.lineHeight / 2, textColor);
+
+            // 配方未解锁：该货物没有任何补货途径，贴行右缘说明原因。
+            // 译文过长放不下时宁可整条不画，也不压到库存数字上。
+            if (lockedGoods.contains(itemId)) {
+                Component hint = I18n.name("gui.wandscape.shop.recipe_locked", "Locked");
+                int hintX = leftPos + PW - ROW_RIGHT_MARGIN - font.width(hint);
+                if (hintX >= rightX + font.width(count) + 2) {
+                    g.drawString(font, hint, hintX, cy - font.lineHeight / 2, MedievalColors.TEXT_DIM);
+                }
+            }
         }
     }
 

@@ -14,7 +14,7 @@
 
 ```
 内容唯一来源（作者只改这里）
-    src/main/resources/assets/wandscape/guidebook/{zh_cn,en}/*.md     61 篇 × 2 语（全部编进手册）
+    src/main/resources/assets/wandscape/guidebook/{zh_cn,en}/*.md     62 篇 × 2 语（全部编进手册）
                     │
                     │  gen_patchouli.py（本机跑，生成物提交进仓库）
                     ▼
@@ -37,7 +37,7 @@
 
 | 要改的 | 唯一源 | 备注 |
 |---|---|---|
-| 条目正文 | `guidebook/{zh_cn,en}/<id>_guide.md` | 中英各一份，这是 61 篇的全部正文 |
+| 条目正文 | `guidebook/{zh_cn,en}/<id>_guide.md` | 中英各一份，这是 62 篇的全部正文 |
 | 条目名 | 同一篇 md 的首行 `# 标题` | 不用双语重复维护 |
 | 分类名、**分类描述** | `gen_patchouli.py` 的 `CATEGORIES` | **在 Python 里，不在 md**；描述同样支持《…》 |
 | 条目归哪个分类 / 排序 / 图标 | `gen_patchouli.py` 的 `ENTRIES` | |
@@ -73,7 +73,7 @@
 
 它们**已经删掉**（连同只被它们引用的 3 张配图 `road_diagram` / `magic_editor_diagram` / `sample`，
 以及 3 张早已无人引用的 `overview_diagram` / `scanner_diagram` / `scanner_ui`）。留下的唯一一份手册
-就是编进书里的这 61 篇。
+就是编进书里的这 62 篇。
 
 - 需要旧文里那点内容时**去 git 历史里取**（删除发生在「兜底补齐三层导航」那次提交），别再往 `guidebook/` 里抄回来。
 - 旧文里 4 个主题在手册中没有对应页：法阵编辑器、道路工作室 / 样条编辑器、`/wandscape test` 指令、创作者 / API。
@@ -95,7 +95,7 @@
 我把「戒指戴进饰品槽就能用」当成事实写进草稿，实际它只能拿在主手——这类错读者一试就发现，
 但手册的可信度当场就没了。
 
-**「同类」就是这本手册。** `guidebook/` 下只有编进手册的那 61 篇 md，没有第二套说法可读；
+**「同类」就是这本手册。** `guidebook/` 下只有编进手册的那 62 篇 md，没有第二套说法可读；
 要旧文（`npc_guide` / `tourist_guide` / `strategy_guide` / `overview_guide` / `getting_started` /
 `road_*` / `scanner_guide` / `commands_guide` 等 15 篇）里那点内容，去 git 历史取，细节见 §1.3。
 
@@ -175,16 +175,16 @@ CLAUDE.md §二.9：面向玩家文本（`lang/*`、`guide/**`、I18n、Screen �
 
 | 分类 id | 中文名 | 条目（md 文件名去掉 `_guide`） |
 |---|---|---|
-| `playstyle` | 玩法主线 | index / intro_0 / intro_0_5 / element_level / track_tourist / track_adventure / track_tech / track_diplomacy / tourists |
+| `playstyle` | 玩法主线 | index / intro_0 / intro_0_5 / recipe_unlock / element_level / track_tourist / track_adventure / track_tech / track_diplomacy / tourists |
 | `buildings` | 建筑 | buildings / anomaly / townhall / warehouse / workstation / crafting / magic_station / tavern / altar / mage_hut / node / decoration / shop / service / relax / atm / building_scanner |
 | `management` | 管理 | panel / panel_build / panel_road / panel_tasks / panel_settings |
 | `magic` | 魔法 | mages / casting / advanced_casting / magic_beam / magic_meteor / magic_desperation / magic_enfeeble_field / magic_conversion / magic_petrification / magic_fortification / magic_heal / magic_teleport / magic_revive |
-| `items` | 装备与物品 | wand / oath_ring / magic_compass / warehouse_terminal |
+| `items` | 装备与物品 | wand / oath_ring / magic_compass / warehouse_terminal / blueprint |
 | `custom` | 自定义与数据包 | custom / building_scanner / custom_buildings / custom_packs / custom_elements / custom_recipes / custom_magic / custom_loot / custom_commands |
 | `compat` | 联动与兼容 | curios / irons_spells / goety |
 | `about` | 关于我们 | about |
 
-共 **62 个条目位**，来自 **61 篇 md**（`building_scanner_guide` 一篇登两处），中英两侧完全一致。
+共 **63 个条目位**，来自 **62 篇 md**（`building_scanner_guide` 一篇登两处），中英两侧完全一致。
 数字对不上，说明 `ENTRIES` 里加了新条目而这张表没跟上。
 
 **md 目录里不该有表外的文档**：`guidebook/{zh_cn,en}/` 下的每一篇都必须登在 `ENTRIES` 里，
@@ -273,7 +273,7 @@ service、relax、atm），顺序照建造面板的分类顺序，前后各夹�
 ```bash
 python gen_patchouli.py                    # 编译手册 JSON + 运行期清单（会先清空上一次的生成物）
 python gen_patchouli.py --check            # 只校验：已提交的生成物与当前 md/结构表是否一致
-python paginate_patchouli_json.py --check  # 分部体检：超容量页 / 奇数页条目 / 残页
+python paginate_patchouli_json.py --check  # 分部体检：超容量页 / 残页（奇数页只计数，不算问题）
 python gen_patchouli.py textures           # 生成占位书皮（已存在则跳过）
 python gen_patchouli.py textures --force   # 强制覆盖书皮（美术就位后别再跑，见 §5.8）
 ```
@@ -321,11 +321,11 @@ python gen_patchouli.py textures --force   # 强制覆盖书皮（美术就位�
   这几级切点切开。所以**写作时让一节落在 9–14 行，页界自然就是语义边界**。
   一个坑：md 里「一行一段」写法（段落之间空行）每段要额外吃一行 `$(br2)` 空行；
   并列的条目改成 `- ` 列表就只算行数、不额外占行，合适就改。
-- **页数取偶（软目标）**：帕秋莉左右两页同时展示（`GuiBookEntry` 里 `leftNum = spread*2`、`rightNum = spread*2+1`），
-  奇数页会让最后一个跨页的右半空成白纸。分页器在小节之间不动边界的前提下重排小节占几页、
-  必要时并节，实在凑不出偶数就记进 `gen_patchouli.py` 的 `PAGINATION_ODD_EXCEPTIONS`（带原因，不再命中会报错要求删掉）。
-  **但偶数只是「把纸用满」，不是刚需**：该三页的内容就三页，别为了凑偶数删正文、并小节或改结构——
-  排版服从内容，不是反过来。
+- **页数奇偶只影响观感，不是指标**：帕秋莉左右两页同时展示（`GuiBookEntry` 里 `leftNum = spread*2`、
+  `rightNum = spread*2+1`），奇数页会让最后一个跨页的右半空成白纸。分页器会在**不动小节边界**的前提下
+  自动凑偶，凑不出来就随它去，生成器不再把奇数页报成问题。**禁止为了凑偶删改正文、并小节、调结构，
+  也别再加例外名单**——这里踩过坑：曾经有一份 `PAGINATION_ODD_EXCEPTIONS` 名单、生成期把奇数页当 build
+  失败，于是每加一段正文就要为页数反复改文案、加例外，全花在没用的地方。排版服从内容，不是反过来。
 - **不留残页（同样是软目标）**：多页条目里非末页不足 7 行，分页器会尽量再平衡；
   内容本身决定了某页就是偏短，留着即可。`paginate_patchouli_json.py --check` 报的「欠满页」按需处理，不是硬指标。
 - **中文与英文页数可以不同**：英文比中文长约 1.6 倍，同一节在英文侧会被切成两页。
@@ -505,9 +505,9 @@ md 里用 `![说明](wandscape:path/x.png =WxH)` 引用，生成器转成独立 
 无论在帕秋莉还是内置 Markdown 阅读器中，左键点击图片即可展开全屏高清预览，
 加载 `textures/guidebook/full/` 下的无损高清图，以屏幕最大舒适尺寸展示所有文字和参数细节。
 
-**加图会翻转页数奇偶**：一张图占一整页，正文页数必须变奇数才凑得回偶数。
-正文 15–20 行的条目两头够不着（1 页装不下、3 页填不满），是结构性无解——
-要么删图，要么增删正文；这类条目记在 `gen_patchouli.py` 的 `PAGINATION_ODD_EXCEPTIONS` 里，带原因。
+**加图会翻转页数奇偶**：一张图占一整页，正文页数得变奇数才凑得回偶数；正文 15–20 行的条目
+两头够不着（1 页装不下、3 页又填不满）。**这不用管**——奇数页只是末页右半空着，不值得拿内容去换，
+生成器也不会为它报错（见 §4.1）。
 
 > 进阶：要用**自由尺寸**或**逐页替换纸底**，得用**模板组件**的 `patchouli:image`（带 `width`/`height`/`scale`/`x`/`y`/`u`/`v`）。
 > 模板文件要**同时放 `en_us/` 和 `zh_cn/`** 两处；挂了 `processor` 的模板需要对应的 Java 类（`compat/patchouli` 走 `compileOnly` 门禁）。

@@ -37,6 +37,7 @@ com/wsteam/wandscape/
 10. **Config 注释中英双语**：`Config.java`/`ClientConfig.java`（及任何 `ModConfigSpec` `.comment()`）每条必须保留中文原文并紧跟一条英文翻译；新增键同样，禁只写单语。这些注释会生成进 config TOML 供玩家/整合包作者阅读。
 11. **上屏文案只改 `lang_src/`，`lang/*.json` 是生成物**：`assets/wandscape/lang/{zh_cn,en_us}.json` 由 `python gen_lang.py` 从 `lang_src/**/*.json`（键 → `{"zh_cn": …, "en_us": …}`）编译而来。手改生成物会在下次生成时被整体覆盖——已经吃过一次：气泡英文改写与 62 个键只改了生成物，`gen_lang.py` 一跑全没了，`--check` 还会报产物漂移。加/改文案一律走「改 `lang_src/` → `gen_lang.py` → 两个生成物一并提交」，提交前跑 `python gen_lang.py --check`（详见 `docs/lang-pipeline.md`）。占位符在 **Java 兜底串里一律写 `%s`**：`Language` 加载时会把 lang 值里的 `%d` 归一成 `%s`，兜底串不走这一步；`TranslatableContents#decomposeTemplate` 只认 `%s`，遇 `%d` 抛异常后退回原串，玩家会直接看到字面量 `%d`。
 12. **物品贴图必须 16×16 像素、alpha 全 255**：物品图标贴图尺寸固定 16×16，且每个像素的 alpha 通道必须为 255（完全不透明，不留半透明/透明像素），以贴合原版物品贴图的渲染与着色方式；新增或替换贴图后按此自检，别把边缘抗锯齿产生的透明像素带进来。
+13. **手册偶数页只是排版好看，不是指标**：帕秋莉手册的条目页数不必凑偶——奇数页唯一的代价是末页右半空着。**禁为凑偶数删改正文、并小节、调结构或维护例外名单**；`gen_patchouli.py` 与 `paginate_patchouli_json.py --check` 都不再把它当问题（曾经有一份 `PAGINATION_ODD_EXCEPTIONS` + 生成期 build 失败，结果是每加一段正文都要为页数反复改文案，纯属浪费时间）。手册唯一的排版硬指标是**一页绝不超容量**（超了帕秋莉会缩小整页字号）。口径详见 `docs/guidebook.md` §4.1。
 
 ## 三、易踩的代码事实（改这些代码前先读）
 

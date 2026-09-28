@@ -2,7 +2,7 @@
   "name": "Elements and Town Level",
   "category": "wandscape:playstyle",
   "icon": "wandscape:element_earth",
-  "sortnum": 3,
+  "sortnum": 4,
   "read_by_default": true,
   "pages": [
     {

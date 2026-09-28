@@ -31,7 +31,7 @@
     },
     {
       "type": "patchouli:text",
-      "text": "hold a wand and right-click a block in Identify mode to unlock that block's recipe on the spot; or take an $(l:wandscape:items/blueprint_guide)Item Blueprint$(/l) and pick any single recipe on the Recipes page in the warehouse. Unlocks are per town and permanent."
+      "text": "hold a wand and right-click a block in Identify mode to unlock that block's recipe on the spot; or take an $(l:wandscape:items/blueprint_guide)Item Blueprint$(/l) and pick any single recipe on the Recipes page in the warehouse. Unlocks are per town and permanent; for each route in detail, see $(l:wandscape:playstyle/recipe_unlock_guide)《Unlocking Recipes》$(/l)."
     }
   ]
 }

@@ -333,10 +333,11 @@ public class WandscapeClient {
         ClientPayloadDispatcher.bind(ShopOpenPacket.TYPE, packet -> {
             var mc = Minecraft.getInstance();
             if (mc.screen instanceof ShopScreen existing) {
-                existing.updateFrom(packet.stock(), packet.maxStocks());
+                existing.updateFrom(packet.stock(), packet.maxStocks(), packet.lockedGoods());
             } else if (mc.screen == null) {
                 mc.setScreen(new ShopScreen(packet.buildingPos(), packet.colonyId(),
-                        packet.buildingId(), packet.creator(), packet.stock(), packet.maxStocks()));
+                        packet.buildingId(), packet.creator(), packet.stock(), packet.maxStocks(),
+                        packet.lockedGoods()));
             }
         });
 

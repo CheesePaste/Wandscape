@@ -1147,6 +1147,7 @@
   "gui.wandscape.settings.value.on_short": "开启",
   "gui.wandscape.settings.warehouse.itemCapacity": "单座仓库基础容量",
   "gui.wandscape.shop.no_goods": "未配置货物",
+  "gui.wandscape.shop.recipe_locked": "配方未解锁",
   "gui.wandscape.shop.title": "商店",
   "gui.wandscape.stats.arrived": "到达: %s",
   "gui.wandscape.stats.departed": "离开: %s",

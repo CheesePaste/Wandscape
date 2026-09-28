@@ -571,6 +571,8 @@ def balance_pages(pages, atomic_count=0):
     """把整篇收敛到「偶数页 + 没有残页」。
 
     偶数页是因为帕秋莉左右同时展示，奇数页末尾右半会空成白纸。
+    **但这只是观感，不是验收指标**：这里凑不出来就原样返回，上游不会因此报错，
+    更不该有人为了凑偶去删改正文、并小节或加例外名单（见 docs/guidebook.md §4.1）。
     做法是**按小节重新排版**：小节之间的边界不动（标题留在页眉），只在组内决定这一节占几页。
     页数总和是奇数时，先试着把某一节从 1 页摊成 2 页（摊完两页都得够满）；
     实在摊不动就把相邻两组并成一组（后一组标题降级成加粗行）。
@@ -784,7 +786,11 @@ def process_entry_file(file_path: Path, max_lines_override=None, max_chars_overr
 
 # ---------------------------------------------------------------- 体检
 def audit(entries):
-    """体检：列出超容量页、奇数页条目、欠满页。返回 (问题列表, 统计 dict)。"""
+    """体检：列出超容量页与欠满页。返回 (问题列表, 统计 dict)。
+
+    **奇数页条目只计数、不算问题**：帕秋莉左右同时展示，奇数页的末页右半会空着，
+    但那只是观感，不值得拿内容去换。统计里照报，方便想看的人看。
+    """
     problems = []
     stats = {"pages": 0, "over": 0, "odd": 0, "thin": 0}
     for rel, data in entries:
@@ -794,7 +800,6 @@ def audit(entries):
         # 图片 / 模板页也各占一整页，对开页面上同样会让末页右半空出来
         if len(pages) + atomic > 1 and (len(pages) + atomic) % 2 == 1:
             stats["odd"] += 1
-            problems.append("奇数页条目（末页右半会空）：%s（%d 页）" % (rel, len(pages) + atomic))
         for i, p in enumerate(pages):
             lines = _page_lines(p)
             cap = _cap_for(p, i)

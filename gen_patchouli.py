@@ -94,16 +94,19 @@ CATEGORIES = [
 # 条目：(md 文件名去掉 .md, 所属分类, 图标, sortnum)。条目名取 md 的 H1。
 # 同一篇 md 可以登记多次、挂到不同分类——会生成内容相同的多份条目（内容同源，不存在两份要维护）。
 ENTRIES = [
-    # ── 玩法主线：路线与阅读顺序，外加两页没有独立分类的总括内容 ──
+    # ── 玩法主线：路线与阅读顺序，外加三页没有独立分类的总括内容 ──
+    # 配方解锁紧跟《0.5》：它讲的是「工作站的灰列表怎么变亮」，属于开局就得知道的事，
+    # 而它横跨仓库 / 法杖 / 图纸三处，落哪个功能分类都不合适，留在主线里。
     ("index_guide", "playstyle", "wandscape:guide_book", 0),
     ("intro_0_guide", "playstyle", "minecraft:writable_book", 1),
     ("intro_0_5_guide", "playstyle", "minecraft:knowledge_book", 2),
-    ("element_level_guide", "playstyle", "wandscape:element_earth", 3),
-    ("track_tourist_guide", "playstyle", "wandscape:tourist_spawn_egg", 4),
-    ("tourists_guide", "playstyle", "minecraft:emerald", 5),
-    ("track_adventure_guide", "playstyle", "minecraft:iron_sword", 6),
-    ("track_tech_guide", "playstyle", "minecraft:redstone", 7),
-    ("track_diplomacy_guide", "playstyle", "minecraft:white_banner", 8),
+    ("recipe_unlock_guide", "playstyle", "wandscape:item_blueprint", 3),
+    ("element_level_guide", "playstyle", "wandscape:element_earth", 4),
+    ("track_tourist_guide", "playstyle", "wandscape:tourist_spawn_egg", 5),
+    ("tourists_guide", "playstyle", "minecraft:emerald", 6),
+    ("track_adventure_guide", "playstyle", "minecraft:iron_sword", 7),
+    ("track_tech_guide", "playstyle", "minecraft:redstone", 8),
+    ("track_diplomacy_guide", "playstyle", "minecraft:white_banner", 9),
 
     # ── 建筑：总览 → 建筑维护 → 每一类建筑各一条 → 建筑扫描器 ──
     # 类别条目与 buildings/*.json 的 category 一一对应（government→市政厅、storage→仓库、
@@ -192,6 +195,7 @@ TITLE_TO_DOC_ZH = {
     # 玩法主线
     "0，入门": "intro_0_guide",
     "0.5，推荐了解的功能": "intro_0_5_guide",
+    "配方解锁": "recipe_unlock_guide",
     "1，游客线": "track_tourist_guide",
     "2，冒险线": "track_adventure_guide",
     "3，科技线": "track_tech_guide",
@@ -236,6 +240,7 @@ TITLE_TO_DOC_EN = {
     # en_us
     "0. Getting Started": "intro_0_guide",
     "0.5 Recommended Features": "intro_0_5_guide",
+    "Unlocking Recipes": "recipe_unlock_guide",
     "1. Tourist Track": "track_tourist_guide",
     "2. Adventure Track": "track_adventure_guide",
     "3. Tech Track": "track_tech_guide",
@@ -635,36 +640,10 @@ def render_pages(title, blocks, warn):
 # 单占一页会留下半页空白，在首页上表现为「左边只有一句引用」的残页。
 MIN_PREAMBLE_LINES = 8
 
-# 分页例外：(md 语言, 条目 id) → 为什么这一条暂时做不到偶数页。
-#
-# 这五条都是**内容长度**问题，不是排版问题：正文行数正好卡在 2 页与 3 页之间，
-# 摊成 4 页会出现不足 7 行的残页（比末页右半空白更难看），压成 2 页又得砍正文。
-# 分页器已经把能做的都做了（重排、并节、按句级粒度找切点），剩下的要靠增删正文，
-# 而那属于内容决定，不该由排版脚本代劳。
-#
-# 某条例外不再命中时 build_books 会报错提醒删掉它——不留一份会过期的死名单。
-PAGINATION_ODD_EXCEPTIONS = {
-    ("zh_cn", "buildings_guide"):
-        "前言 12 行 + 先盖哪几座 20 行 = 32 行；2 页容量 30 行装不下，4 页每页不足 7 行",
-    ("zh_cn", "advanced_casting_guide"):
-        "总体策略 10 行 + 施法锁与装备门控 18 行 = 28 行；后者超过带标题页的 16 行容量",
-
-    # ── 下面这批是「加了插图之后才变奇数」的，成因是插图与正文各占各的页 ──
-    #
-    # 一张插图占 1 页，整篇要偶数页就得让**正文页数是奇数**。而正文页数能不能是奇数，
-    # 由它的行数卡死：1 页装得下 14 行（首页），3 页每页至少 7 行、共需 21 行。
-    # 于是**正文 15–20 行**这一段成了死角：1 页装不下、3 页又填不满，只能是 2 页（偶数）。
-    # 这类条目一旦配图，页数必为奇数，没有排版解法——要么删图，要么接受末页右半空着。
-    ("zh_cn", "element_level_guide"): "正文 20 行；15–20 行死角，配图后无解",
-    ("zh_cn", "mages_guide"):         "正文 19 行；15–20 行死角，配图后无解",
-    ("zh_cn", "casting_guide"):       "正文 17 行；15–20 行死角，配图后无解",
-    ("en_us", "altar_guide"):         "正文 19 行；15–20 行死角，配图后无解",
-    ("en_us", "mage_hut_guide"):      "正文 19 行；15–20 行死角，配图后无解",
-    # 这条的正文卡在死角边缘：并成一页只差一行（含段间空行共 15 行 > 首页 14），
-    # 摊开又凑不满 3 页的 21 行。删图或增删正文都能走通，纯排版无解。
-    ("zh_cn", "tavern_guide"):
-        "正文 4+10 行，并成一页差 1 行（含段间空行共 15 行 > 首页 14）；配图后为 3 页",
-}
+# 页数奇偶**不作为验收指标**。帕秋莉左右两页同时展示，奇数页会让末页右半空着，
+# 但那只是观感问题：分页器已经会在不改内容的前提下尽量凑偶，凑不出来就随它去。
+# 禁止为了凑偶去删改正文、并小节、或在这里维护一份例外名单——那是在拿内容换排版。
+# 生成期只拦「页超容量」（会被 resize 缩小字号，玩家看不清），见 check_pagination。
 
 
 def compile_doc(md, warn):
@@ -711,12 +690,13 @@ def compile_doc(md, warn):
     return name, pages
 
 
-def check_pagination(book_lang, doc, pages, warn, used_exceptions=None):
-    """生成期自检：这一篇的页必须都能装进帕秋莉的物理页，页数必须取偶。
+def check_pagination(book_lang, doc, pages, warn):
+    """生成期自检：这一篇的每一页都必须装得进帕秋莉的物理页。
 
     挡的是「内容超容量 → book.json 的 resize 把字号缩小」——那是本书最不能出现的问题
     （玩家读到的字会小到看不清），必须让 build 直接失败，而不是等进游戏靠肉眼发现。
-    奇数页同理会空掉末页右半，除了记在 PAGINATION_ODD_EXCEPTIONS 里的那几条。
+
+    **页数奇偶不在这里管**：奇数页只是末页右半空着，属于观感，不值得拿内容去换。
     """
     if not pages:
         warn("[%s] 条目 %s 没有任何页面" % (book_lang, doc))
@@ -731,15 +711,6 @@ def check_pagination(book_lang, doc, pages, warn, used_exceptions=None):
         if lines > cap:
             warn("[%s] 条目 %s 第 %d 页 %d 行，超过帕秋莉这一页的 %d 行容量（进游戏会被缩小字号）"
                  % (book_lang, doc, i + 1, lines, cap))
-    # 图片 / 模板页各占一整页，对开页面上和正文页一样会让末页右半空出来
-    if len(pages) > 1 and len(pages) % 2 == 1:
-        key = (book_lang, doc)
-        if key in PAGINATION_ODD_EXCEPTIONS:
-            if used_exceptions is not None:
-                used_exceptions.add(key)
-            return
-        warn("[%s] 条目 %s 共 %d 页（奇数）：帕秋莉左右同时展示，末页右半会空成白纸"
-             % (book_lang, doc, len(pages)))
 
 
 # ---------------------------------------------------------------- 写出
@@ -975,7 +946,6 @@ def build_books():
     cat_by_id = {c[0]: c for c in CATEGORIES}
     known_docs = {e[0] for e in ENTRIES}
     missing = []
-    used_exceptions = set()
     _VALID_TARGETS = set(cat_by_id) | known_docs
     check_manifest(warn)
 
@@ -1050,7 +1020,7 @@ def build_books():
             paginate_module.paginate_data(entry, label="%s/%s" % (book_lang, doc),
                                           atomic_count=len(atomics))
             entry["pages"] = reinsert_atomic(entry["pages"], atomics, warn, doc)
-            check_pagination(book_lang, doc, entry["pages"], warn, used_exceptions)
+            check_pagination(book_lang, doc, entry["pages"], warn)
             write_json(entry_path, entry)
 
         # 兜底阅读器读的那一份：分类、条目、书名号表、着陆文案
@@ -1073,12 +1043,6 @@ def build_books():
         # （拿绝对屏幕 y 去比页面常量 PAGE_HEIGHT），两个都不能用。
         "text_overflow_mode": "resize",
     })
-
-    # 例外名单是「记录当下的毛病」，不是永久豁免：条目内容改了、页数不再是奇数时，
-    # 这条例外就该删掉。留着它会让下一个人以为这里还有问题。
-    for key in sorted(set(PAGINATION_ODD_EXCEPTIONS) - used_exceptions):
-        warn("分页例外 %s/%s 已经不再命中（现在是偶数页），请从 PAGINATION_ODD_EXCEPTIONS 删掉"
-             % key)
 
     for m in missing:
         warn("语言目录不存在：%s" % m)

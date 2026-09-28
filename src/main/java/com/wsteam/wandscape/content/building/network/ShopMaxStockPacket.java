@@ -48,7 +48,7 @@ public record ShopMaxStockPacket(UUID buildingId, BlockPos buildingPos,
         Map<String, Integer> stock = manager.getStock(packet.buildingId);
         Map<String, Integer> maxStocks = manager.getAllMaxStocks(packet.buildingId);
         String creator = resolveCreator(packet.buildingPos, player.serverLevel());
-        var refresh = new ShopOpenPacket(packet.buildingPos, packet.colonyId,
+        var refresh = ShopOpenPacket.of(packet.buildingPos, packet.colonyId,
                 packet.buildingId, creator, stock, maxStocks);
         Net.toPlayer(player, refresh);
     }

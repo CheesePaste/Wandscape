@@ -11,7 +11,7 @@
     },
     {
       "type": "patchouli:text",
-      "text": "$(l:wandscape:playstyle/track_adventure_guide)《2，冒险线》$(/l)出门探索，打怪开箱$(br2)$(l:wandscape:playstyle/track_tech_guide)《3，科技线》$(/l)还没有正式开始做$(br2)$(l:wandscape:playstyle/track_diplomacy_guide)《4，外交线》$(/l)还没有正式开始做$(br2)功能与类别$(br2)$(l:wandscape:playstyle/element_level_guide)《元素与城镇等级》$(/l)经济系统介绍"
+      "text": "$(l:wandscape:playstyle/track_adventure_guide)《2，冒险线》$(/l)出门探索，打怪开箱$(br2)$(l:wandscape:playstyle/track_tech_guide)《3，科技线》$(/l)还没有正式开始做$(br2)$(l:wandscape:playstyle/track_diplomacy_guide)《4，外交线》$(/l)还没有正式开始做$(br2)功能与类别$(br2)$(l:wandscape:playstyle/element_level_guide)《元素与城镇等级》$(/l)经济系统介绍$(br2)$(l:wandscape:playstyle/recipe_unlock_guide)《配方解锁》$(/l)合成配方默认全锁着，讲怎么开"
     },
     {
       "type": "patchouli:text",

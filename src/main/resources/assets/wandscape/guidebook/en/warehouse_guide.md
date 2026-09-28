@@ -8,4 +8,4 @@ More warehouses means the town can store more. When you would rather not walk ov
 
 The Recipes button in the warehouse opens the recipe book: every crafting recipe in town, unlocked or still locked, and clicking Unlock on a row spends an [Item Blueprint](blueprint_guide.md) to open it.
 
-Storing an item in the warehouse also unlocks that item's own recipe, so the quickest fix for a missing recipe is to put the item in.
+Storing an item in the warehouse also unlocks that item's own recipe, so the quickest fix for a missing recipe is to put the item in. For the other routes and how unlocking works, see 《Unlocking Recipes》.
