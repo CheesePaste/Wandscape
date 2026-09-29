@@ -5,6 +5,7 @@ import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.content.production.data.SynthesizeRecipe;
 import com.wsteam.wandscape.content.production.event.RecipeUnlockedEvent;
 import com.wsteam.wandscape.content.production.internal.ColonyRecipeSavedData;
+import com.wsteam.wandscape.content.production.internal.VanillaRecipeTree;
 import com.wsteam.wandscape.content.warehouse.ColonyItemBank;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.foundation.util.ItemKey;
@@ -14,6 +15,7 @@ import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -22,14 +24,20 @@ import java.util.UUID;
  * Manager for production recipe unlocking and gating.
  *
  * <p>Synthesize recipes start fully locked for each colony, except those listed in
- * {@code data/<namespace>/default_recipes.json} ({@link DefaultRecipeUnlocks}), which every
- * colony can synthesize from the start. Everything else is permanently unlocked through
- * multiple triggers:
+ * {@code data/<namespace>/default_recipes.json} ({@link DefaultRecipeUnlocks}) and everything
+ * those entries can be crafted into along the vanilla recipe tree ({@link VanillaRecipeTree}),
+ * which every colony can synthesize from the start. Everything else is permanently unlocked
+ * through multiple triggers:
  * <ul>
  *     <li>Warehouse deposit: when an item is added to the colony warehouse</li>
  *     <li>Existing warehouse inventory synchronization</li>
- *     <li>Explicit API / command / quest unlocks</li>
+ *     <li>Wand identify, item blueprint, explicit API / command / quest unlocks</li>
  * </ul>
+ *
+ * <p>Every unlock is then propagated along the vanilla recipe tree: knowing the materials of a
+ * recipe means knowing the recipe, so unlocking white wool in a colony that already knows oak
+ * planks also unlocks white beds. Derived entries are recorded like any other unlock, with
+ * {@link #SOURCE_RECIPE_TREE} as their source.
  */
 public final class ProductionRecipeManager {
     private static final String TAG = "ProductionRecipeManager";
@@ -39,6 +47,8 @@ public final class ProductionRecipeManager {
     public static final String SOURCE_BLUEPRINT = "blueprint";
     /** 法杖鉴定模式：对着方块右键就地解锁它对应的合成配方。 */
     public static final String SOURCE_WAND_IDENTIFY = "wand_identify";
+    /** 沿原版合成树推导出的下游条目（材料齐全即解锁），不是玩家直接获得的那一件。 */
+    public static final String SOURCE_RECIPE_TREE = "recipe_tree";
     public static final String SOURCE_MANUAL = "manual";
     public static final String SOURCE_COMMAND = "command";
 
@@ -71,6 +81,8 @@ public final class ProductionRecipeManager {
 
         String normalized = normalizeRecipeId(recipeOrItemId);
         if (Wandscape.DEFAULT_RECIPE_UNLOCKS.contains(normalized)) return true;
+        // 默认清单沿合成树能推出来的下游同样恒定已解锁（图未构建时退化为只看默认清单）
+        if (VanillaRecipeTree.isBaseline(normalized)) return true;
 
         MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
         if (server == null) return false;
@@ -111,14 +123,88 @@ public final class ProductionRecipeManager {
         if (server == null) return false;
 
         String normalized = normalizeRecipeId(recipeOrItemId);
-        ColonyRecipeSavedData data = ColonyRecipeSavedData.get(server);
-        boolean newlyUnlocked = data.unlockRecipe(colonyId, normalized);
+        boolean newlyUnlocked = recordUnlock(server, colonyId, normalized, source);
+        if (newlyUnlocked) propagateFrom(colonyId, normalized);
+        return newlyUnlocked;
+    }
+
+    /**
+     * 记一条解锁：写进存档、发事件、记日志。推导不在这里——见 {@link #propagateFrom}，
+     * 免得推导出的下游又反过来触发一次推导。
+     */
+    private static boolean recordUnlock(MinecraftServer server, UUID colonyId, String normalized, String source) {
+        boolean newlyUnlocked = ColonyRecipeSavedData.get(server).unlockRecipe(colonyId, normalized);
         if (newlyUnlocked) {
             Log.info(TAG, "[Recipe] Colony {} unlocked recipe '{}' via {}",
-                    colonyId.toString().substring(0, 8), normalized, source);
+                    shortId(colonyId), normalized, source);
             NeoForge.EVENT_BUS.post(new RecipeUnlockedEvent(colonyId, normalized, source));
         }
         return newlyUnlocked;
+    }
+
+    /**
+     * 沿原版合成树（{@link VanillaRecipeTree}）推导下游：新解锁的条目当已知材料，凡是每个材料槽
+     * 都有已解锁选项的配方一并解锁，递归下去（知道白羊毛和橡木木板，就知道白床）。推导结果同样
+     * 进存档并永久生效，来源记为 {@link #SOURCE_RECIPE_TREE}；推导是增量的，只走新解锁条目的下游。
+     */
+    private static void propagateFrom(UUID colonyId, String seed) {
+        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+        if (server == null) return;
+        VanillaRecipeTree.buildIfNeeded(server);
+        if (!VanillaRecipeTree.isBuilt()) return;
+
+        List<String> derived = VanillaRecipeTree.deriveFrom(
+                List.of(seed), id -> isSynthesizeUnlocked(colonyId, id));
+        if (derived.isEmpty()) return;
+
+        int recorded = 0;
+        for (String id : derived) {
+            if (recordUnlock(server, colonyId, id, SOURCE_RECIPE_TREE)) recorded++;
+        }
+        if (recorded > 0) {
+            Log.info(TAG, "[Recipe] Colony {} derived {} downstream recipe(s) from '{}'",
+                    shortId(colonyId), recorded, seed);
+        }
+    }
+
+    /**
+     * 开局 / 数据包重载后重扫全部殖民地：配方表变了（换模组、改数据包）就按各镇现有解锁集重推一遍，
+     * 补上按旧表推不出来的下游。合成树指纹没变的镇整段跳过，所以稳态下每次启动只花几次哈希查找。
+     */
+    public static void resyncTree(@Nullable MinecraftServer server) {
+        if (server == null) return;
+        VanillaRecipeTree.buildIfNeeded(server);
+        if (!VanillaRecipeTree.isBuilt()) return;
+
+        ColonyRecipeSavedData data = ColonyRecipeSavedData.get(server);
+        // 关着配方锁时全表已解锁、推导必然空转，所以这一轮盖另一枚指纹收尾：玩家把锁打开后
+        // 的下一次启动会按真指纹补跑一遍，那段时间里的解锁才不会漏推导。
+        int stamp = Config.isRecipeLockEnabled()
+                ? VanillaRecipeTree.fingerprint()
+                : ~VanillaRecipeTree.fingerprint();
+        int rescanned = 0;
+        int derived = 0;
+        for (UUID colonyId : data.colonyIds()) {
+            Integer stored = data.getTreeFingerprint(colonyId);
+            if (stored != null && stored == stamp) continue;
+
+            List<String> found = VanillaRecipeTree.deriveFrom(
+                    List.copyOf(data.getUnlockedRecipes(colonyId)),
+                    id -> isSynthesizeUnlocked(colonyId, id));
+            for (String id : found) {
+                if (recordUnlock(server, colonyId, id, SOURCE_RECIPE_TREE)) derived++;
+            }
+            data.setTreeFingerprint(colonyId, stamp);
+            rescanned++;
+        }
+        if (rescanned > 0) {
+            Log.info(TAG, "[Recipe] Recipe tree resync: {} colon(ies) rescanned, {} recipe(s) derived",
+                    rescanned, derived);
+        }
+    }
+
+    private static String shortId(UUID colonyId) {
+        return colonyId.toString().substring(0, 8);
     }
 
     /**
@@ -218,6 +304,7 @@ public final class ProductionRecipeManager {
         if (server == null) return Set.of();
 
         Set<String> unlocked = new java.util.LinkedHashSet<>(Wandscape.DEFAULT_RECIPE_UNLOCKS.ids());
+        unlocked.addAll(VanillaRecipeTree.baseline());
         unlocked.addAll(ColonyRecipeSavedData.get(server).getUnlockedRecipes(colonyId));
         return Collections.unmodifiableSet(unlocked);
     }
@@ -226,8 +313,8 @@ public final class ProductionRecipeManager {
      * Called whenever an item is added to the colony warehouse. If the item has a valid
      * synthesize recipe and is not yet unlocked, permanently unlocks it.
      *
-     * <p>Default-unlocked recipes are skipped: they are already available and would only
-     * add redundant per-colony records to the save.
+     * <p>Baseline recipes are skipped: they (and everything the default list can be crafted
+     * into) are already available and would only add redundant per-colony records to the save.
      */
     public static void checkAndUnlockOnWarehouseAdd(@Nullable UUID colonyId, @Nullable String itemId) {
         if (colonyId == null || itemId == null) return;
@@ -235,8 +322,7 @@ public final class ProductionRecipeManager {
         if (loader == null) return;
 
         // Check if there is a synthesize recipe that outputs this item
-        if (loader.getSynthesizeRecipe(itemId) != null
-                && !Wandscape.DEFAULT_RECIPE_UNLOCKS.contains(itemId)) {
+        if (loader.getSynthesizeRecipe(itemId) != null && !isBaselineUnlocked(itemId)) {
             unlockSynthesize(colonyId, itemId, SOURCE_WAREHOUSE_DEPOSIT);
         }
     }
@@ -253,11 +339,16 @@ public final class ProductionRecipeManager {
         for (var entry : snapshot.entrySet()) {
             if (entry.getValue() > 0) {
                 String itemId = entry.getKey().itemId();
-                if (loader.getSynthesizeRecipe(itemId) != null
-                        && !Wandscape.DEFAULT_RECIPE_UNLOCKS.contains(itemId)) {
+                if (loader.getSynthesizeRecipe(itemId) != null && !isBaselineUnlocked(itemId)) {
                     unlockSynthesize(colonyId, itemId, SOURCE_WAREHOUSE_SYNC);
                 }
             }
         }
+    }
+
+    /** 默认清单及其合成树上下游：恒定已解锁，不必按殖民地记账。 */
+    private static boolean isBaselineUnlocked(String itemId) {
+        return Wandscape.DEFAULT_RECIPE_UNLOCKS.contains(itemId)
+                || VanillaRecipeTree.isBaseline(normalizeRecipeId(itemId));
     }
 }

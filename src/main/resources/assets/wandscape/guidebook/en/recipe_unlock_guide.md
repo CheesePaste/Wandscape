@@ -2,6 +2,8 @@
 
 A new town has none of its crafting recipes unlocked — that greyed-out half of the list in the Item Workshop and the Equipment Workshop is exactly what those are. Nobody can craft a locked recipe, and a shop cannot restock around one either: when goods run low the shop asks the Item Workshop, and a locked recipe leaves nothing to craft. Unlocks are per town and permanent.
 
+Unlocks also come in chains: once an item is unlocked, every recipe whose materials are all known unlocks along with it. Your town knows oak planks from the start, so depositing a single white wool lights up the white bed as well.
+
 ## Deposit into the Warehouse
 
 Deposit an item into the warehouse and its own crafting recipe unlocks with it, so the quickest fix for a missing recipe is to put the item in. This route costs nothing but the item itself, which makes it the usual one early on.

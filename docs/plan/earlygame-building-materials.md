@@ -170,6 +170,18 @@ A 与建材那条不同：建材删/换之后玩家照旧要自己攒料，商�
 
 **弃用前的实测影响**（sandbox 跑 `prog` / `plateau`，8 种子）：静态 ≤5 档三值 139/103/110 → 135/101/104、造价 −2,756（正是 latern_shop 自己的 4/2/6 与 2,756 造价），理论上限 ≤10 档 Lv.38→36、≤15 档 Lv.61→60。sim 侧 **plateau 各档 12/17/22/29/30 → 12/18/21/30/30，没动**；`prog` 到 L30 从 D75 变 D82，但对照组（同样弃用 smithy）是 D84——和删 potion_store 时同一个结论：动态那套的摆动来自 sim 的自动扩建启发式与条带打包重排，不能归给具体哪一栋。
 
+### 6.3 合成树推导落地（2026-09-29，堵点口径随之变化）
+
+配方解锁现在沿原版合成树推导（`VanillaRecipeTree`，规则与缓存口径见 [data-formats](../data-formats.md) §五.1）：默认清单当"已知材料"，下游 187 条开局即解锁（合计 236 条，占图鉴 1186 条约两成）。对 §3.1 / §3.4 两张表的影响：
+
+- **变绿的**：木头族与石材族整片（门 / 栅栏 / 台阶 / 楼梯 / 告示牌 / 木板族）、竹子系（`bamboo_door` / `bamboo_slab` / `bamboo_trapdoor` / `bamboo_fence` / `bamboo_mosaic` / `bamboo_sign`）、`deepslate_tiles`、`stone_button`、`torch` / `chest` / `ladder` / `stick` / `charcoal` / `armor_stand`。§3.1 里 long_chair 与 signboard 的竹子系（`bamboo_wall_sign` 除外，见下）、book_shop / flower_shop / bakery 的 `bamboo_door`、祭坛的 `deepslate_tiles` 随之解决。
+- **没变的**（材料本身要靠探索、掉落或加工，树推不出来）：全部下界 / 末地 / 海洋 / 洞穴系（`end_rod` / `soul_lantern` / `copper_bulb` / `redstone_lamp` / `quartz_block` / `magma_block` / `sea_pickle` / `dried_kelp_block` / `calibrated_sculk_sensor`）、铁矿铜矿系（`iron_ingot` / `copper_grate` / `cut_copper_*` / `lantern` / `scaffolding`）、农牧系（`string` / `white_wool` / `paper` / `book` / `bread` / `honeycomb_block`），以及 `oak_leaves`（要剪刀或精准采集才拿得到第一块）。
+- **§3.4 的 5 级商品一件都没变绿**（`end_rod` / `comparator` / `observer` / `daylight_detector` / `calibrated_sculk_sensor`，替换上来的 `slime_block` 同样不行），该节结论不变：A 方案（写进 `default_recipes.json`）仍是让货位活过来的唯一一条路。
+- **无元素映射的方块与推导无关**：`polished_deepslate_button` 这类本来就不进门控（§五.1），树里也没有它的节点，不用为它们操心。
+- **`*_wall_sign` 依旧无解**：原版就没有配方（靠在墙上放告示牌转换），推导自然也给不出来——那要靠玩家自己放一次，与配方锁无关。
+
+---
+
 ## 七、附录：L1-10 逐栋元素造价
 
 单位为元素值，`[首免]` 表示该类型本镇第一栋免料。开局每元素 3000（合计 21000）可作 L1 标尺。

@@ -28,6 +28,10 @@ import java.util.Set;
  * {@code ColonyRecipeSavedData}，所以 {@code /wandscape recipe lock_all} 锁的是存档里那份
  * "额外解锁"，锁不掉清单内容（想收回就把该 id 从文件里删掉）。
  *
+ * <p><b>这份清单同时是合成树的种子</b>：列出的条目当作"开局就已知的材料"，沿原版配方树
+ * 一路推出下游（{@code VanillaRecipeTree}），推出来的东西对所有殖民地同样恒定已解锁。所以
+ * 往这里加一条原木或矿石会连带放出整条产业链——加之前先确认那正是想要的效果。
+ *
  * <p>多个命名空间的同名文件取并集，整合包/数据包可另写一份塞进自己的命名空间来扩充。
  * 格式：{@code {"recipes": ["minecraft:oak_log", ...]}}，id 带不带 {@code minecraft:} 前缀皆可。
  */

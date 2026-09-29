@@ -70,6 +70,7 @@ import com.wsteam.wandscape.content.npc.internal.NpcMainHandApiImpl;
 import com.wsteam.wandscape.content.production.DefaultRecipeUnlocks;
 import com.wsteam.wandscape.content.production.ProductionEligibility;
 import com.wsteam.wandscape.content.production.ProductionRecipeLoader;
+import com.wsteam.wandscape.content.production.ProductionRecipeManager;
 import com.wsteam.wandscape.content.road.data.RoadPresetLoader;
 import com.wsteam.wandscape.content.road.engine.RoadApiImpl;
 import com.wsteam.wandscape.content.road.engine.RoadSavedData;
@@ -640,6 +641,9 @@ public class Wandscape {
         WandscapeBlockInteractExecutor.setProductionRecipeLoader(PRODUCTION_RECIPE_LOADER);
         ProductionEligibility.setProductionRecipeLoader(PRODUCTION_RECIPE_LOADER);
 
+        // 原版合成树：建图 + 按镇重推解锁（配方表没变就只花几次哈希查找）
+        ProductionRecipeManager.resyncTree(event.getServer());
+
         // Load element seeds for Item Workshop decomposition
         try {
             var cl = Wandscape.class.getClassLoader();
@@ -895,6 +899,9 @@ public class Wandscape {
 
     @SubscribeEvent
     public void onDatapackSync(net.neoforged.neoforge.event.OnDatapackSyncEvent event) {
+        // /reload 换了配方表就重建合成树并重推解锁；玩家加入时配方表没换，这一步只是几次哈希查找
+        ProductionRecipeManager.resyncTree(event.getPlayerList().getServer());
+
         var rawJsons = configLoader.getRawJsons();
         List<String> jsonList = new java.util.ArrayList<>();
         for (var json : rawJsons.values()) {

@@ -142,6 +142,10 @@
    - 补不了（殖民地还没有物品工坊、配方还没解锁）时不记账，由 `ResourceSupplySystem.scanAwaitingTasks` 的 40 tick 重扫顺延补一次——只要没补上，重试就一直有机会；补上后闸门落下。
    - 光在放下时补一次不够：`ResourceShortageHandler`（任务转入 `AWAITING_RESOURCES` 时）与 `scanAwaitingTasks`（等料任务每 40 tick 重扫）**两条路径都会自动补产**，玩家在物品工坊队列里删掉自动补的合成任务后，2 秒后就又长回来。所以两处都要拦：前者看 `ResourceShortageHandler.Context`（`GlobalTaskPool` 把任务的 blueprintId/buildingId 传进来），后者看任务自身。
    - 拦的是「工地」，不是「建造蓝图」：`build:place_structure` 也用于**修复**，但修复只发生在已建成建筑上（`BuildingData.hasEverCompleted()`），照旧自动补产。建筑实际用的蓝图是 `build:clear_and_build`，两个 id 都要认。
+9. **配方解锁沿原版合成树推导（`VanillaRecipeTree`）**：
+   - 解锁一件东西会**连带**解锁"每个材料槽都有已解锁选项"的下游配方并递归下去（知道橡木木板，再存入一次白色羊毛，白床跟着解锁），推导结果同样永久入档，来源标 `recipe_tree`。默认清单（`default_recipes.json`）也当已知材料参与，所以新镇开局就有 200 多条恒定已解锁——判断"这料能不能自产"时别默认"没亲手拿到就永远锁着"。
+   - 因此自动补料的门（`isSynthesizeUnlocked`）比"玩家拿过什么"**宽**：工地与商店能自产的料可能比预期多。但要按**材料**判断而不是按**成品**：树只能推出材料齐全的东西，`end_rod`（烈焰棒）、`iron_ingot`（矿）、`white_wool`（线）这类上游没解锁的照样推不出来。
+   - 图挂在配方管理器**实例**上，`/reload` 换实例即重建；每镇按内容指纹（`ColonyRecipeSavedData.tree_fingerprint`，v2 起）决定要不要重扫，稳态启动零开销。改配方表（数据包 / 整合包 / 版本升级）后旧档靠这次重扫自愈。规则与实测数字见 `docs/data-formats.md` §五.1。
 
 ---
 
