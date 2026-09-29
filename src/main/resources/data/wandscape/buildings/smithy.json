@@ -8831,7 +8831,7 @@
     "minecraft:oak_stairs[facing=east]",
     "minecraft:spruce_door[facing=east]",
     "minecraft:spruce_door[facing=east,hinge=right]",
-    "minecraft:oxidized_copper_grate",
+    "minecraft:copper_grate",
     "minecraft:spruce_trapdoor[facing=south,half=top,open=true]",
     "minecraft:spruce_trapdoor[open=true]",
     "minecraft:spruce_door[facing=east,half=upper]",

@@ -213,7 +213,7 @@
   "palette": [
     "minecraft:stone_bricks",
     "minecraft:chiseled_stone_bricks",
-    "minecraft:polished_blackstone_bricks",
+    "minecraft:deepslate_tiles",
     "minecraft:amethyst_block"
   ],
   "block_indices": [

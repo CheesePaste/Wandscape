@@ -1336,7 +1336,7 @@
     "minecraft:spruce_stairs",
     "minecraft:campfire[facing=west,lit=false]",
     "minecraft:spruce_slab",
-    "minecraft:flowering_azalea_leaves[persistent=true]",
+    "minecraft:oak_leaves[persistent=true]",
     "minecraft:campfire[facing=south,lit=false]",
     "minecraft:dark_oak_slab[type=top]",
     "minecraft:spruce_trapdoor[open=true]",

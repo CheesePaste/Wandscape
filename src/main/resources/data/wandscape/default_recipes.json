@@ -46,6 +46,7 @@
     "minecraft:andesite",
     "minecraft:deepslate",
     "minecraft:cobbled_deepslate",
-    "minecraft:tuff"
+    "minecraft:tuff",
+    "minecraft:glowstone"
   ]
 }

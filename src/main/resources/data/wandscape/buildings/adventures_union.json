@@ -56345,7 +56345,7 @@
     "minecraft:oak_log[axis=z]",
     "minecraft:oak_trapdoor[half=top]",
     "minecraft:oak_trapdoor[facing=south,half=top]",
-    "minecraft:waxed_weathered_copper_trapdoor[open=true]",
+    "minecraft:waxed_copper_trapdoor[open=true]",
     "minecraft:moss_block",
     "minecraft:red_wool",
     "minecraft:mossy_stone_brick_slab",

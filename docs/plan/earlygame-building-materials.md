@@ -1,7 +1,7 @@
 # 1-10 级建筑建材前期可得性审计（配方解锁引入后的堵点）
 
 > 日期：2026-09-27
-> 状态：审计完成；修法三选一待定（见 §六）
+> 状态：已实施（方案 A，2026-09-29，口径见 §六）
 > 适用版本：Minecraft NeoForge 1.21.1 / 分支 `1.21.1`
 > 关联：[domain-notes.md](../domain-notes.md)（建筑 / 生产域）、[data-formats.md](../data-formats.md)、[balance-baseline.md](../balance-baseline.md)
 
@@ -98,9 +98,22 @@
 
 **倾向**：以 A 为主（堵点实实在在卡在 1 级，而 1 级是教学阶段，不该靠"等铜氧化"或"翻图纸"过关）；`end_stone` / `dark_prismarine` 这类**主题自洽**的 L10 门控可以不动，或只保留 1~2 个作"去过末地/海底神殿"的纪念性建材；`redstone_shop` 建议单独决策（见 §3.2）。若舍不得氧化铜的青绿观感，可只对氧化铜一档改用 B。
 
+### 6.1 已实施口径（2026-09-29，方案 A）
+
+- **氧化铜**：全部建筑、全部氧化阶段（`exposed` / `weathered` / `oxidized`，含 `waxed_` 变体）一律剥掉氧化前缀 → 未氧化铜（`copper_grate` / `cut_copper_slab` / `cut_copper_stairs` / `copper_bulb`…）。L15/20 建筑原有的深浅铜色阶一并抹平。造价零变化（见 §五.2）。
+- **`end_rod` / `*_froglight` / `beehive`**：只从 **1-5 级**建筑删除——craftstation1、bakery、flower_shop、mage_hut1、youth_hostel、hotel、latern_shop。L10 的七座节点建筑、三款蛙明灯路灯、养蜂人小屋、喷泉广场**原样保留**。
+- **同形替换**：`polished_blackstone_bricks` → `deepslate_tiles`（祭坛）、`polished_blackstone_button` → `polished_deepslate_button`（竹厅）、`flowering_azalea_leaves` → `oak_leaves`（仓库）。
+- **直接删除**：酒馆（tavern1）的 `sea_pickle` ×4；potion_store 的 `brewing_stand` ×4 / `soul_sand` ×3 / `nether_wart` ×3；potionstation1 的 `brewing_stand` ×1 / `soul_campfire` ×1。市政厅本就没有海泡菜（§3.1 表把两栋并作一行，`sea_pickle` ×4 全在酒馆）。
+- **`glowstone` 加进 `default_recipes.json`**：酒馆 / 市政厅的荧石改为开局即可合成（§3.1），仍是唯一一项破例放出的下界物资。
+- **本次未动**：hotel 的 `soul_sand` ×2、redstone_shop 整栋（§3.2 单独决策）、L10 的 `end_stone` ×165 / `dark_prismarine` / 节点 `end_rod`。
+
+实现口径：只改 palette 条目文本，**`block_indices` 一律不动**——删掉的方块把 palette 项写成 `minecraft:air`，索引保持不变（物料统计 `computeMaterialCounts` 与放置本就跳过 air，`clear_and_build` 的整箱清空也用同一套 air 映射）；同时删掉落空位置残留的 `block_nbt`。
+
 ## 七、附录：L1-10 逐栋元素造价
 
 单位为元素值，`[首免]` 表示该类型本镇第一栋免料。开局每元素 3000（合计 21000）可作 L1 标尺。
+
+**本表是 2026-09-27 审计当天的快照，此后两条互不相干的线各自让它过时**：(1) §6.1 的建材替换 / 删除让相关建筑变便宜（craftstation1 1845→1464、potion_store 2681→2356、flower_shop 1683→1467、smithy 12539→11551 等）；(2) 当天的 `element_mappings` 重做（`be8509d5`）改了一批方块单价，与本次改动无关——七座节点一律 -520、signboard -8 即属此类。要最新数字就重跑 `python balance/extract_buildings.py`，本表不逐次回填。
 
 | L1 | 造价 | L5 | 造价 | L10 | 造价 |
 |---|---:|---|---:|---|---:|
