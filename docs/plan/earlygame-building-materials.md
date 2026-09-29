@@ -96,7 +96,7 @@
 | L5 | **redstone_shop** | `comparator` / `observer` / `daylight_detector` | 下界石英（三件都要） | 53 / 38 / 30 |
 | L5 | **redstone_shop** | `calibrated_sculk_sensor` | 深暗之域 + 紫水晶碎片 | 224 |
 
-**五级这一档最集中**：`latern_shop` 六个货位里三个死（`end_rod` / `soul_lantern` / `copper_bulb`，`glowstone` 那个已由 §6.1 顺手解决），`redstone_shop` 六个里四个死（三件石英件 + 校准幽匿感测体）——两家正好是"灯饰店"和"红石商店"，主题自洽，但按门控算等于开张就有一半货架空着。对照之下 **`cellar` 全绿**（六件全是农田 / 牧场 / 熔炉产物），`smithy` 六件铁装全可挖，只是量大（`iron_chestplate` 512 metal）。
+**五级这一档最集中**：`latern_shop` 六个货位里三个死（`end_rod` / `soul_lantern` / `copper_bulb`，`glowstone` 那个已由 §6.1 顺手解决），`redstone_shop` 六个里四个死（三件石英件 + 校准幽匿感测体）——两家正好是"灯饰店"和"红石商店"，主题自洽，但按门控算等于开张就有一半货架空着。对照之下 **`cellar` 全绿**（六件全是农田 / 牧场 / 熔炉产物），`smithy` 六件铁装全可挖，只是量大（`iron_chestplate` 512 metal）。（两家各自怎么处理的见本节末尾「已处理」。）
 
 非堵但重：
 
@@ -112,6 +112,12 @@
 | **C 删商品** | 最省事 | 货位变少，商店价值下降；`redstone_shop` 六个删四个就只剩 `sticky_piston` / `redstone_block` |
 
 A 与建材那条不同：建材删/换之后玩家照旧要自己攒料，商品走 A 则连料都不用挖，是**直接发**。所以若只想让货架"能补上"而不想削弱门控，选 B/C 更贴。
+
+**已处理（2026-09-29）**：
+
+- `potion_store` 整栋 deprecated。本项目删建筑的唯一正确做法是**移进 `deprecated/` 并加 `"deprecated": true`**，不是删文件——代码仍按内层 `id` 注册它，旧档才能继续解析，而 `ProjectionNetwork:85` 把它从放置列表滤掉；做法示例见 `buildings/deprecated/example_deprecated.json`。上表 L1 那两行随之失效。
+- `redstone_shop` 的 `calibrated_sculk_sensor` 走 B/C 混合：商品换成 `slime_block`，楼里那块 `calibrated_sculk_sensor[facing=east]`（位置 `[13,1,6]`）连同它的 `block_nbt` 一并删掉——校准幽匿感测体自己带方块实体（`last_vibration_frequency` / `listener`），方块没了 NBT 就是挂在空气上的孤儿。`element_mappings/minecraft_calibrated_sculk_sensor.json` **保留**：映射表是通用物品价表，不跟着建筑走，别处仍可用。副作用两条：该商品单价 289 → 748（`slime_block` 是 water288+dark288），成了这家店最贵的一格；redstone_shop 造价 −224。单价这两个数取自 `extract_buildings.py` 的口径，比游戏实际低一截，原因见 §八末尾。
+- `latern_shop` 整栋改成服务设施 `service_hall`，六个货位随 `shop` 配置一起消失（改造口径见 §6.2）。
 
 ## 四、非堵但成本 / 获取重（可保留，改动前先权衡）
 
@@ -147,6 +153,22 @@ A 与建材那条不同：建材删/换之后玩家照旧要自己攒料，商�
 - **本次未动**：hotel 的 `soul_sand` ×2、redstone_shop 整栋（§3.2 单独决策）、L10 的 `end_stone` ×165 / `dark_prismarine` / 节点 `end_rod`。
 
 实现口径：只改 palette 条目文本，**`block_indices` 一律不动**——删掉的方块把 palette 项写成 `minecraft:air`，索引保持不变（物料统计 `computeMaterialCounts` 与放置本就跳过 air，`clear_and_build` 的整箱清空也用同一套 air 映射）；同时删掉落空位置残留的 `block_nbt`。
+
+### 6.2 整栋弃用与 latern_shop 改造成 service_hall（2026-09-29，承接 §3.4）
+
+**弃用的正确做法**：移文件 + 加标志，**不是删文件**——`git mv buildings/<id>.json buildings/deprecated/<id>.json` 再补 `"deprecated": true`。加载器只认内层 `id` 且会递归扫 `deprecated/`，所以旧档里那栋还能解析，只是 `ProjectionNetwork:85` 不让它出现在放置列表。`potion_store` 与 `latern_shop` 都这么处理，两者的 `building.wandscape.<id>` 语言键都**留着**（旧档世界里那栋楼还得靠它显示名字）。做法与最小样本写在 `buildings/deprecated/README.md` + `example_deprecated.json`。
+
+**latern_shop → service_hall**：latern_shop 的原结构（15×9×10、463 格）直接复用改成服务设施，新楼占 `service_hall` 这个 id——旧的 L2 占位 `deprecated/service_hall.json` 随之删掉，这就是 README 结尾说的"复用 id 原地重做"那一支（旧档里的 service_hall 会变成新楼）。
+
+| 项 | 改动 |
+|---|---|
+| `category` | `shop` → `service`；删 `shop` 配置（六个货位连同 `end_rod` / `soul_lantern` / `copper_bulb` 三个死货位一起消失） |
+| `service` | `{energy_per_use: 15, element_output: {fire: 25, wind: 25, earth: 25}, max_occupancy: 0, interaction_duration_ticks: 1200}`——量级对齐同档 L5 的 farm（earth/wood/water 各 25），元素换成"灯 = 火"的 fire/wind/earth |
+| 柜台 | y=1/z=2 那排六个发光展示位（`lantern` / `glowstone` / `soul_lantern` / `waxed_copper_bulb` / `jack_o_lantern` + §6.1 留下的那个 air 格）连同 x7 空位，整排换成 `stripped_spruce_log`，上面 y=2 压一排 `spruce_slab[type=top]`；给铜灯当开关的那根 `lever` 一并换掉。楼里只剩两根挂灯 `lantern[hanging=true]`（铁系，早期可得） |
+| `interact_spots` | 两个 spot 的 `read` → `browse`（服务设施口径） |
+| 三值 / 解锁 | 保持 4/2/6 与 L5 |
+
+**弃用前的实测影响**（sandbox 跑 `prog` / `plateau`，8 种子）：静态 ≤5 档三值 139/103/110 → 135/101/104、造价 −2,756（正是 latern_shop 自己的 4/2/6 与 2,756 造价），理论上限 ≤10 档 Lv.38→36、≤15 档 Lv.61→60。sim 侧 **plateau 各档 12/17/22/29/30 → 12/18/21/30/30，没动**；`prog` 到 L30 从 D75 变 D82，但对照组（同样弃用 smithy）是 D84——和删 potion_store 时同一个结论：动态那套的摆动来自 sim 的自动扩建启发式与条带打包重排，不能归给具体哪一栋。
 
 ## 七、附录：L1-10 逐栋元素造价
 
@@ -201,3 +223,11 @@ python balance/extract_buildings.py
 `calibrated_sculk_sensor` 要紫水晶+幽匿感测体、`nether_wart` **一条配方都没有**，都是这么核的
 （一行 `python -c` 读 zip 即可，不必开游戏）。类行为仍走 [minecraft-source](../../.claude/skills/minecraft-source)。
 本次已复核的关键事实：铜灯配方需烈焰棒、钟无配方只能村庄/交易取得、`wall_torch` 等在映射表中缺项。
+
+**顺带一个工具口径 bug（会让商店收入系统性偏低）**：`extract_buildings.py:97` 把售价写成
+`-(-int(cost * (1.0 + profit_rate)))`，注释说是 ceil，但对正数实际是 **floor**（Python `int()` 向零截断）；
+游戏侧 `ShopStockManager:258` 用的是真 `(long) Math.ceil(cost * (1.0 + profitRate))`。
+两者每元素最多差 1、元素越多差越多，而便宜货最惨——元素成本 1 的 good，工具算 1、游戏收 2，差一倍。
+所以 A4 的"可买最贵物价"、A5 的攒钱天数、sim 的商店收入都偏低。
+`observations.md` 里那批"游客能一次买满 64 个"的低价 good 结论方向不受影响（低价源自元素成本本来就低），
+但绝对数要按 ceil 重算。修法一行：换成 `math.ceil(...)`。

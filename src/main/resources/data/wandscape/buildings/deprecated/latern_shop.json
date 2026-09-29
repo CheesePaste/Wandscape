@@ -3,6 +3,7 @@
   "display_name": "Latern Shop",
   "creator": "次位神",
   "category": "shop",
+  "deprecated": true,
   "pattern": [
     [
       0,

@@ -3,6 +3,7 @@
   "display_name": "Potion Store",
   "creator": "CheesePaste",
   "category": "shop",
+  "deprecated": true,
   "pattern": [
     [
       0,

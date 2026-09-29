@@ -1,0 +1,45 @@
+{
+  "id": "example_deprecated",
+  "display_name": "Example Deprecated",
+  "category": "decoration",
+  "deprecated": true,
+  "pattern": [
+    [
+      0,
+      0,
+      0
+    ]
+  ],
+  "palette": [
+    "minecraft:stone"
+  ],
+  "block_indices": [
+    0
+  ],
+  "comfort": 0,
+  "magic": 0,
+  "wonder": 0,
+  "unlock_requirement": {
+    "min_colony_level": 1
+  },
+  "boundary": {
+    "min": [
+      0,
+      0,
+      0
+    ],
+    "max": [
+      0,
+      0,
+      0
+    ]
+  },
+  "blueprint": {
+    "id": "build:clear_and_build",
+    "bind": {
+      "offsets": "$pattern",
+      "blocks": "$block_mapping",
+      "name": "$display_name"
+    }
+  }
+}
