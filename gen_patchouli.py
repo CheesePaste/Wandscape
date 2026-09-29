@@ -20,7 +20,7 @@
 md 语言目录 → Patchouli 语言目录：en → en_us，zh_cn → zh_cn。
 Patchouli 以 en_us 目录为枚举索引，因此两套目录都必须完整生成。
 
-用法
+用法（分页已含在这一步里，别再单独跑 paginate_patchouli_json.py——第二趟不幂等）
     python gen_patchouli.py                # 编译手册 JSON + 运行期清单
     python gen_patchouli.py --check        # 只校验：已提交的生成物是否与当前 md/结构表一致
     python gen_patchouli.py textures       # 生成书皮图集（已存在则不覆盖）
@@ -34,7 +34,8 @@ import sys
 import zlib
 from pathlib import Path
 
-# --check 要在内存里补做分页（生成物是 gen + paginate 两步的结果），两份脚本都在仓库根、都只用 stdlib
+# 分页是 build_books 内部的一步（它直接调 paginate_module.paginate_data），所以生成完
+# **不要再单独跑一趟 paginate_patchouli_json.py**：第二趟不幂等，会把正文改出漂移（见下方注释）。
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import paginate_patchouli_json as paginate_module  # noqa: E402
 
