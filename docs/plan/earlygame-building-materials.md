@@ -1,7 +1,7 @@
-# 1-10 级建筑建材前期可得性审计（配方解锁引入后的堵点）
+# 1-10 级建筑建材 + 1-5 级商店商品前期可得性审计（配方解锁引入后的堵点）
 
-> 日期：2026-09-27
-> 状态：已实施（方案 A，2026-09-29，口径见 §六）
+> 日期：2026-09-27（§3.4 商店商品审计补于 2026-09-29）
+> 状态：建材已实施（方案 A，2026-09-29，口径见 §六）；§3.4 的 1-5 级商品待决策——下一步动 5 级
 > 适用版本：Minecraft NeoForge 1.21.1 / 分支 `1.21.1`
 > 关联：[domain-notes.md](../domain-notes.md)（建筑 / 生产域）、[data-formats.md](../data-formats.md)、[balance-baseline.md](../balance-baseline.md)
 
@@ -15,16 +15,21 @@
 2. **缺料自动补**。`ResourceSupplySystem.enqueueSynthesize` 在仓库缺料时自动向工作站排合成任务，但**尊重配方门控**：`ProductionRecipeManager.isSynthesizeUnlocked` 为假时直接 `return false`，不排任务。
 3. **合成的解锁途径只有三条**（另加 OP 指令，见 `RecipeCommand`）：物品**入过一次仓库**（`ProductionRecipeManager.checkAndUnlockOnWarehouseAdd`）、**法杖右键鉴定**（`WandModeService:182`）、**图纸自选**（`UnlockRecipeByBlueprintPacket:87`）。三者都要求玩家**先亲手拿到过该物品**（图纸除外，它可任选，但来源随机）。
 4. **于是堵点成立**：某方块早期拿不到 → 配方永远锁着 → 自动合成不启动 → 建筑永远停在"等待材料"。`ProjectionPlacePacket:108` 已专门检测这种组合（`BuildingApiImpl.findMissingLockedMaterials`）并给玩家提示"缺少 N 种未解锁配方的材料，施工将等待材料入库"——**说明这个洞已被预见，只是建材表没跟上**。
+5. **商店是这条闭环的第二个消费者**。`ShopStockManager.restock` 先看**仓库有没有现货**，没有才走 `ResourceSupplySystem.enqueueSynthesize` 排合成——同一道 `isSynthesizeUnlocked` 门。货架初始为空（`getOrCreateShopStock` 的空表 + `DEFAULT_MAX_STOCK`），所以**配方锁着 = 这个货位永远空着**，游客想买也买不到。审计范围因此不止建材，还包括 1-5 级商店的 `shop.goods`（见 §3.4）。
 
 **首免不解决问题**：`first_free: true` 只免该类型在本镇的第一栋（`BuildingApiImpl:960`），第二栋起照价收料，所以首免建筑的堵点材料仍是隐患，只是延后一栋爆发。
 
 ## 二、判定口径
 
 - **硬堵点**：该方块在对应等级下，玩家**没有合理路径拿到第一个**（原版门控：下界 / 末地 / 海底神殿 / 深暗 / 繁茂洞穴 / 滴水石 / 紫水晶洞 / 蜜蜂 / 精准采集 / 铜自然氧化 / 丛林）。
+- **商店商品的"第一个"同理**，只是主体从方块换成了物品：先亲手拿到过一次实物（入库解锁）或花图纸。**法杖鉴定对纯物品无效**——鉴定的入参是方块（`WandModeService:158` 读 `level.getBlockState(pos)`），所以 `quartz` / `spectral_arrow` / `spyglass` / `honey_bottle` 这类没有同名方块的物品只剩"入库 / 图纸"两条路。有同名方块的（`end_rod` / `soul_lantern` / `comparator` 等）多一条鉴定，但前提是世界里先有那块方块，早期同样没有。
+- **商品本身都能合成**：50 种 1-5 级商品（9 家商店）在 `element_mappings` 里**全部有条目**（无 `disabled`），且由映射生成的 `SynthesizeRecipe` 带的是 `RecipeUnlockRequirement.NONE`（minColonyLevel = 1，`SynthesizeRecipe:33`），没有等级闸。所以商品堵点**只可能是解锁**这一环，不是"没配方"或"等级不够"。
 - **重成本**：拿得到但要么量大（染料、羊毛、陶瓦、砂岩），要么要专门跑一趟（铁、钟），不算堵但值得记一笔。
 - 造价口径：Σ 方块数 × `element_mappings` 的 `build_cost`，1 元素 = 1 通用值。**开局每元素 3000（七元素合计 21000）**，可作为 L1 建筑造价的直观标尺。
 
 ## 三、硬堵点清单
+
+> §3.1–§3.3 是 2026-09-27 审计当时的原始建材清单，保留作记录；其中已经处理掉的部分见 §6.1，别再照着这几张表判断现状。§3.4 是后补的商店商品审计。
 
 ### 3.1 一级（最要紧：这是教学阶段）
 
@@ -73,6 +78,40 @@
 | 七座元素节点 | **每栋 `end_rod` ×4**；另 nodedark 用 `purpur_block` ×12（末地）、nodefire 用 `nether_bricks` ×12（下界）、nodemetal 用 `deepslate_copper_ore` ×10 + `deepslate_iron_ore` ×2（精准采集）、nodewater 用 `ice` ×12（精准采集） |
 
 十级的门控密度显著高于前两档，但玩家此时通常已开下界、跑过洞穴；**真正要单独决策的是三处**：`end_stone` ×165（必须去末地）、`dark_prismarine`（必须打海底神殿）、以及 7 座节点建筑共 28 根 `end_rod`（烈焰棒 + 末地紫颂果，等于每座节点都要末地下界各跑一趟）。
+
+### 3.4 商店商品（1-5 级）
+
+判定口径见 §二：货架初始为空，配方锁着就是**死货位**；商品全都有合成配方且无等级闸，堵的只有解锁那一环。原版配方逐条核过（§八），`门控` 一栏即"玩家怎么拿到第一个实物"。
+
+| 等级 | 建筑 | 商品 | 门控 | 造价 |
+|---|---|---|---|---|
+| L1 | **potion_store** | `quartz` | 下界石英矿（下界，冶炼得） | 8 |
+| L1 | **potion_store** | `nether_wart` | **原版无配方**，只在下界要塞 / 猪灵交易 | 16 |
+| L1 | **book_shop** | `spyglass` | 紫水晶碎片（紫水晶洞） | 80 |
+| L1 | **arrow_store** | `spectral_arrow` | 荧石粉（下界） | 36 |
+| L1 | bakery | `honey_bottle` | 蜜蜂（软：拿瓶子对满蜜的蜂巢右键，比蜂箱方块省掉剪刀/精准采集） | 33 |
+| L5 | **latern_shop** | `end_rod` | 烈焰棒（下界）+ 爆裂紫颂果（末地） | 17 |
+| L5 | **latern_shop** | `soul_lantern` | 灵魂火基底方块（下界） | 61 |
+| L5 | **latern_shop** | `copper_bulb` | 烈焰棒（下界） | 73 |
+| L5 | **redstone_shop** | `comparator` / `observer` / `daylight_detector` | 下界石英（三件都要） | 53 / 38 / 30 |
+| L5 | **redstone_shop** | `calibrated_sculk_sensor` | 深暗之域 + 紫水晶碎片 | 224 |
+
+**五级这一档最集中**：`latern_shop` 六个货位里三个死（`end_rod` / `soul_lantern` / `copper_bulb`，`glowstone` 那个已由 §6.1 顺手解决），`redstone_shop` 六个里四个死（三件石英件 + 校准幽匿感测体）——两家正好是"灯饰店"和"红石商店"，主题自洽，但按门控算等于开张就有一半货架空着。对照之下 **`cellar` 全绿**（六件全是农田 / 牧场 / 熔炉产物），`smithy` 六件铁装全可挖，只是量大（`iron_chestplate` 512 metal）。
+
+非堵但重：
+
+- **smithy** 六件铁装：铁可挖，属于贵不属于堵，但 L5 就摆 `iron_chestplate` 512 / `iron_leggings` 448 这种量。
+- **redstone_shop** 的 `sticky_piston`（黏液球，造价 150）与 `redstone_block`（红石 ×9，造价 108）——都要专门下一趟矿 / 蹲一趟沼泽。
+
+修法可选项（留给定 5 级档时挑）：
+
+| 做法 | 说明 | 代价 |
+|---|---|---|
+| **A 加进 `default_recipes.json`** | `glowstone` 的现成先例（§6.1），一行一个 id，不动商品表不动外观，货位立刻活 | 等于把该商品的门控整个拿掉——货架能自给自足，玩家不必先去下界/末地/晶洞 |
+| **B 换商品** | 同主题换早期可得：`latern_shop` 的 `end_rod` → `torch` / `campfire`，`redstone_shop` 的三件石英件 → `redstone_lamp` / `note_block` 之类 | 商店主题变淡，且要重新配 comfort/magic/wonder 与造价 |
+| **C 删商品** | 最省事 | 货位变少，商店价值下降；`redstone_shop` 六个删四个就只剩 `sticky_piston` / `redstone_block` |
+
+A 与建材那条不同：建材删/换之后玩家照旧要自己攒料，商品走 A 则连料都不用挖，是**直接发**。所以若只想让货架"能补上"而不想削弱门控，选 B/C 更贴。
 
 ## 四、非堵但成本 / 获取重（可保留，改动前先权衡）
 
@@ -149,6 +188,16 @@ python balance/extract_buildings.py
 # 1) element_mappings/*.json 建 { 方块id: build_cost }，无映射即"免费方块"
 # 2) 逐栋读 buildings/*.json，按 block_indices 聚合 palette（去 [state]）计数
 # 3) 按 block_indices → palette → 方块 id 累加币值，并按 unlock_requirement.min_colony_level 过滤
+
+# 商店商品（§3.4）：同一个 join，只是取 shop.goods[].item_id 而不是 palette
+# 逐栋读 buildings/*.json，筛 unlock_requirement.min_colony_level <= 5 且有 shop 的，
+# 列出 item_id → element_mappings 查 build_cost（全部有条目，所以只需再判解锁门控）
 ```
 
-判定原版可得性时优先查 [minecraft-source](../../.claude/skills/minecraft-source)（类行为）与 wiki（配方 / 战利品表）；本次已复核的关键事实：铜灯配方需烈焰棒、钟无配方只能村庄/交易取得、`wall_torch` 等在映射表中缺项。
+**原版配方别猜，直接读客户端 jar**：1.21.1 的原版数据都在
+`~/.gradle/caches/neoformruntime/artifacts/minecraft_1.21.1_client.jar` 里，
+`data/minecraft/recipe/*.json`（1290 条）就是逐条配方原文——`spectral_arrow` 要荧石粉、
+`soul_lantern` 要灵魂火基底、`copper_bulb` 要烈焰棒、三件红石件要下界石英、
+`calibrated_sculk_sensor` 要紫水晶+幽匿感测体、`nether_wart` **一条配方都没有**，都是这么核的
+（一行 `python -c` 读 zip 即可，不必开游戏）。类行为仍走 [minecraft-source](../../.claude/skills/minecraft-source)。
+本次已复核的关键事实：铜灯配方需烈焰棒、钟无配方只能村庄/交易取得、`wall_torch` 等在映射表中缺项。
