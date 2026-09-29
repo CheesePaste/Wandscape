@@ -22,7 +22,7 @@
 
 - **硬堵点**：该方块在对应等级下，玩家**没有合理路径拿到第一个**（原版门控：下界 / 末地 / 海底神殿 / 深暗 / 繁茂洞穴 / 滴水石 / 紫水晶洞 / 蜜蜂 / 精准采集 / 铜自然氧化 / 丛林）。
 - **重成本**：拿得到但要么量大（染料、羊毛、陶瓦、砂岩），要么要专门跑一趟（铁、钟），不算堵但值得记一笔。
-- 造价口径：Σ 方块数 × `element_mappings` 的 `build_cost`，1 元素 = 1 通用值。**开局每元素 2000（七元素合计 14000）**，可作为 L1 建筑造价的直观标尺。
+- 造价口径：Σ 方块数 × `element_mappings` 的 `build_cost`，1 元素 = 1 通用值。**开局每元素 3000（七元素合计 21000）**，可作为 L1 建筑造价的直观标尺。
 
 ## 三、硬堵点清单
 
@@ -76,7 +76,7 @@
 
 ## 四、非堵但成本 / 获取重（可保留，改动前先权衡）
 
-- **铁重**：`anvil` ×1（31 铁，映射 metal 1984）在 L1 **arrow_store**——开局每元素只有 2000，单这一项就吃掉全部金属预算；同档还有 `cauldron`（7 铁）、`chain` ×15（youth_hostel，首免）、`blast_furnace`、`smithing_table`。铁可挖，属于贵不属于堵，但 L1 的 arrow_store 值得单独看。
+- **铁重**：`anvil` ×1（31 铁，映射 metal 1984）在 L1 **arrow_store**——开局 metal 3000，单这一项就吃掉约 2/3 金属预算；同档还有 `cauldron`（7 铁）、`chain` ×15（youth_hostel，首免）、`blast_furnace`、`smithing_table`。铁可挖，属于贵不属于堵，但 L1 的 arrow_store 值得单独看。
 - **大批量染料 / 羊毛 / 石材**：luxury_hotel_cyan 的 `cyan_wool` ×442 + `cyan_concrete` ×359（青色 = 仙人掌绿 + 青金石，需沙漠与青金石矿）、luxury_hotel_green 的绿 / 黄绿陶瓦（同源仙人掌）、`smooth_sandstone` ×2670（海量沙子 + 烧炼）、`terracotta` 系（黏土）、`packed_mud` ×206。
 - **地下洞穴系**：`moss_block` / `moss_carpet` / `flowering_azalea_leaves` / `rooted_dirt` / `hanging_roots` / `dripstone_block` / `amethyst_cluster`——都找得到，只是要碰运气。
 - **海洋系**：`sea_pickle`、`dried_kelp_block`、`scaffolding`（竹子）。
@@ -100,7 +100,7 @@
 
 ## 七、附录：L1-10 逐栋元素造价
 
-单位为元素值，`[首免]` 表示该类型本镇第一栋免料。开局每元素 2000（合计 14000）可作 L1 标尺。
+单位为元素值，`[首免]` 表示该类型本镇第一栋免料。开局每元素 3000（合计 21000）可作 L1 标尺。
 
 | L1 | 造价 | L5 | 造价 | L10 | 造价 |
 |---|---:|---|---:|---|---:|
@@ -124,7 +124,7 @@
 | street_light | 82 | | | | |
 | long_chair | 21 | | | | |
 
-L1 前五栋里有三栋含金属大户（workstation1 metal 3438、mage_hut1 metal 3076、arrow_store metal 2382），开局 2000 metal 造不出其中任何一栋，必须靠挖铁——这属于合理的早期行为，但可与 §四 一起看。
+L1 前五栋里有三栋含金属大户（workstation1 metal 3438、mage_hut1 metal 3076、arrow_store metal 2382）。开局 metal 3000 时 arrow_store 已能自行造出，workstation1 与 mage_hut1 仍差数百，需靠挖铁——这属于合理的早期行为，但可与 §四 一起看。
 
 ## 八、复现方式
 
