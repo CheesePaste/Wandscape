@@ -117,7 +117,7 @@ public class ResourceSupplySystem implements EcsSystem {
     }
 
     /**
-     * 扫描工作站/合成站/魔法工坊队列里元素不足的生产配方：按殖民地聚合每种元素的缺口，
+     * 扫描物品工坊/装备工坊/魔法工坊队列里元素不足的生产配方：按殖民地聚合每种元素的缺口，
      * 走 {@link #trySupplyResource}（先合成、回退节点采集）自动补齐。这些条目留在队列
      * 原位（面板可见「缺元素」），补齐后由 BuildingTaskSource 的发布扫描自然挑中。
      *
@@ -317,7 +317,7 @@ public class ResourceSupplySystem implements EcsSystem {
     /**
      * Number of workstation buildings (optionally colony-scoped) currently working on a
      * {@code production:synthesize} task — either a running pool task anchored to them or
-     * a synthesize item still sitting in their queue. This is the "工作中工作站数量"
+     * a synthesize item still sitting in their queue. This is the "工作中物品工坊数量"
      * divisor for the construction-site panel's start-time estimate.
      */
     public static int countSynthesizingWorkstations(@Nullable UUID colonyId, @Nullable World world) {

@@ -18,7 +18,7 @@ import java.util.function.Function;
 /**
  * Medieval-styled search box shared by all Wandscape screens.
  * Draws its own inset field; matching uses the localized name + raw id so
- * both Chinese and English queries work (the Workstation approach).
+ * both Chinese and English queries work (the Item Workshop approach).
  */
 public class SearchBox extends EditBox {
 

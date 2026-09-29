@@ -18,7 +18,7 @@
     },
     {
       "type": "patchouli:text",
-      "text": "The town level is the overall progression: every building in the build panel lists the level it needs, and a mage's rank cap and the Crafting Station blueprints follow it too. You can see the current level in the Town Hall panel.",
+      "text": "The town level is the overall progression: every building in the build panel lists the level it needs, and a mage's rank cap and the Equipment Workshop blueprints follow it too. You can see the current level in the Town Hall panel.",
       "title": "Town Level"
     },
     {

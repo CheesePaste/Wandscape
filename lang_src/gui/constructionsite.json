@@ -36,15 +36,15 @@
     "en_us": "Ready"
   },
   "gui.wandscape.constructionsite.waiting_workstation": {
-    "zh_cn": "等待工作站",
-    "en_us": "Waiting for workstation"
+    "zh_cn": "等待物品工坊",
+    "en_us": "Waiting for item workshop"
   },
   "gui.wandscape.constructionsite.withdraw": {
     "zh_cn": "撤回",
     "en_us": "Withdraw"
   },
   "gui.wandscape.constructionsite.craft_hint": {
-    "zh_cn": "建材可以在工作站制作",
-    "en_us": "Materials can be crafted at the workstation"
+    "zh_cn": "建材可以在物品工坊制作",
+    "en_us": "Materials can be crafted at the item workshop"
   }
 }

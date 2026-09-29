@@ -27,19 +27,19 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * 工地建材补料：把未建成建筑 / 在建道路的建材缺口下成工作站合成任务。
+ * 工地建材补料：把未建成建筑 / 在建道路的建材缺口下成物品工坊合成任务。
  *
  * <p>三个入口，语义各不相同：
  * <ol>
  *   <li>放下建筑/道路时就地补一次（{@link #craftForBuilding}/{@link #craftForRoad}）：
  *       补上了就在建筑/道路边上记一笔，此后不再自动补（见 {@link #isAutoSupplyDone}）。</li>
  *   <li>缺料重试路径（{@link #handleAwaitingConstructionTask}）：只在还没记过账时顺延补一次——
- *       涵盖放下时殖民地还没有工作站、配方还没解锁这些当时补不了的情况。</li>
+ *       涵盖放下时殖民地还没有物品工坊、配方还没解锁这些当时补不了的情况。</li>
  *   <li>工地面板「一键制作」：玩家主动点，不记账、随时可再点，走玩家优先级档。</li>
  * </ol>
  *
  * <p>没有这一层时工地缺料走的是 {@code ResourceShortageHandler} 的通用自动补产：玩家把
- * 自动补出来的合成任务在工作站队列里删掉，等料任务每 40 tick 被重扫一次就再补一条，
+ * 自动补出来的合成任务在物品工坊队列里删掉，等料任务每 40 tick 被重扫一次就再补一条，
  * 删了又回来、玩家没有任何办法喊停。这里的「只自动补一次」正是那条刹车的落点。
  */
 public final class ConstructionSupply {
@@ -51,7 +51,7 @@ public final class ConstructionSupply {
     /**
      * 一次补料的结果：{@code enqueued} 实际下发的合成任务条数、{@code covered} 已被在制任务
      * 覆盖（无需重复下发）的建材种数、{@code blocked} 有缺口却补不了的建材（没有合成配方 /
-     * 配方未解锁 / 殖民地没有可用工作站）。
+     * 配方未解锁 / 殖民地没有可用物品工坊）。
      */
     public record Result(int enqueued, int covered, List<String> blocked) {
         static final Result EMPTY = new Result(0, 0, List.of());
@@ -64,14 +64,14 @@ public final class ConstructionSupply {
 
     // ── 下发 ──
 
-    /** 未建成建筑的建材缺口 → 该殖民地工作站的合成任务。 */
+    /** 未建成建筑的建材缺口 → 该殖民地物品工坊的合成任务。 */
     public static Result craftForBuilding(BuildingState state, int priority) {
         BuildingConfig config = BuildingConfigLoader.getInstance().get(state.getBuildingTypeId());
         if (config == null) return Result.EMPTY;
         return craft(state.getColonyId(), EnqueueHelper.computeMaterialCounts(config), priority);
     }
 
-    /** 在建道路路段的建材缺口 → 该殖民地工作站的合成任务。 */
+    /** 在建道路路段的建材缺口 → 该殖民地物品工坊的合成任务。 */
     public static Result craftForRoad(RoadEdge edge, int priority) {
         return craft(edge.getColonyId(), edge.getMaterialCounts(), priority);
     }
@@ -176,7 +176,7 @@ public final class ConstructionSupply {
     }
 
     /**
-     * 记下「这家工地已经自动补过料」。放下时就补上的走同一条记账；补不了（还没有工作站等）时
+     * 记下「这家工地已经自动补过料」。放下时就补上的走同一条记账；补不了（还没有物品工坊等）时
      * 不记账，等缺料重试路径再补一次——只要没补上，重试就一直有机会。
      */
     public static void markDone(@Nullable BuildingSavedData sd, BuildingState state) {
@@ -195,13 +195,13 @@ public final class ConstructionSupply {
             if (!result.blocked().isEmpty()) {
                 ScreenFeedbackPacket.send(player, I18n.name(
                         "message.wandscape.constructionsite.craft_all_blocked",
-                        "§e[工地] 有 %s 项建材无法自动制作（没有合成配方、配方未解锁，或殖民地没有可用工作站）",
+                        "§e[工地] 有 %s 项建材无法自动制作（没有合成配方、配方未解锁，或殖民地没有可用物品工坊）",
                         result.blocked().size()), true);
             }
         } else if (!result.blocked().isEmpty()) {
             ScreenFeedbackPacket.send(player, I18n.name(
                     "message.wandscape.constructionsite.craft_all_blocked",
-                    "§e[工地] 有 %s 项建材无法自动制作（没有合成配方、配方未解锁，或殖民地没有可用工作站）",
+                    "§e[工地] 有 %s 项建材无法自动制作（没有合成配方、配方未解锁，或殖民地没有可用物品工坊）",
                     result.blocked().size()), true);
         } else {
             ScreenFeedbackPacket.send(player, I18n.name(

@@ -1,6 +1,6 @@
 # Unlocking Recipes
 
-A new town has none of its crafting recipes unlocked — that greyed-out half of the list in the Workstation and the Crafting Station is exactly what those are. Nobody can craft a locked recipe, and a shop cannot restock around one either: when goods run low the shop asks the Workstation, and a locked recipe leaves nothing to craft. Unlocks are per town and permanent.
+A new town has none of its crafting recipes unlocked — that greyed-out half of the list in the Item Workshop and the Equipment Workshop is exactly what those are. Nobody can craft a locked recipe, and a shop cannot restock around one either: when goods run low the shop asks the Item Workshop, and a locked recipe leaves nothing to craft. Unlocks are per town and permanent.
 
 ## Deposit into the Warehouse
 

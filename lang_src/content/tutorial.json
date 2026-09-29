@@ -56,8 +56,8 @@
     "en_us": "§eCrafting costs elements and stores the output; mages finish the job. That's the guide — press §eH§b for the guidebook and read §e0.5 Recommended Features§b next"
   },
   "tutorial.wandscape.synthesize.line2": {
-    "zh_cn": "§b② 对准工作站，§e右键点一下§b打开界面",
-    "en_us": "§b② Point at the workstation and §eright-click once§b to open it"
+    "zh_cn": "§b② 对准物品工坊，§e右键点一下§b打开界面",
+    "en_us": "§b② Point at the item workshop and §eright-click once§b to open it"
   },
   "tutorial.wandscape.synthesize.line3": {
     "zh_cn": "§b③ 切到【§e合成§b】页签，选一条配方",
@@ -72,8 +72,8 @@
     "en_us": "§b④ Greyed-out recipes are locked: deposit the item into the warehouse to unlock it"
   },
   "tutorial.wandscape.synthesize.title": {
-    "zh_cn": "新手引导 (5/5)：右键工作站，下发一个合成订单",
-    "en_us": "Newcomer Guide (5/5): Right-click the Workstation to Queue a Crafting Order"
+    "zh_cn": "新手引导 (5/5)：右键物品工坊，下发一个合成订单",
+    "en_us": "Newcomer Guide (5/5): Right-click the Item Workshop to Queue a Crafting Order"
   },
   "tutorial.wandscape.townhall.bar2": {
     "zh_cn": "§b▶ 点【§e市政厅§b】卡片，§e双击§b进入放置",
@@ -120,19 +120,19 @@
     "en_us": "Newcomer Guide (2/5): Build a Warehouse"
   },
   "tutorial.wandscape.workstation.bar2": {
-    "zh_cn": "§b▶ 点【§e工作站§b】卡片，§e双击§b进入放置",
-    "en_us": "§b▶ Click the §eWorkstation§b card, §edouble-click§b to start placing"
+    "zh_cn": "§b▶ 点【§e物品工坊§b】卡片，§e双击§b进入放置",
+    "en_us": "§b▶ Click the §eItem Workshop§b card, §edouble-click§b to start placing"
   },
   "tutorial.wandscape.workstation.hint": {
-    "zh_cn": "§e工作站把元素合成成物品，也能把物品分解回元素",
-    "en_us": "§eWorkstations craft items from elements, or break items back down into elements"
+    "zh_cn": "§e物品工坊把元素合成成物品，也能把物品分解回元素",
+    "en_us": "§eItem Workshops craft items from elements, or break items back down into elements"
   },
   "tutorial.wandscape.workstation.line2": {
-    "zh_cn": "§b② 点【§e工作站§b】卡片，§e双击§b进入放置",
-    "en_us": "§b② Click the §eWorkstation§b card, §edouble-click§b to start placing"
+    "zh_cn": "§b② 点【§e物品工坊§b】卡片，§e双击§b进入放置",
+    "en_us": "§b② Click the §eItem Workshop§b card, §edouble-click§b to start placing"
   },
   "tutorial.wandscape.workstation.title": {
-    "zh_cn": "新手引导 (4/5)：建造工作站",
-    "en_us": "Newcomer Guide (4/5): Build a Workstation"
+    "zh_cn": "新手引导 (4/5)：建造物品工坊",
+    "en_us": "Newcomer Guide (4/5): Build an Item Workshop"
   }
 }

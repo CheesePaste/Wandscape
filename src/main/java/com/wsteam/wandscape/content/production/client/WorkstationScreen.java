@@ -59,8 +59,8 @@ public class WorkstationScreen extends MedievalScreen {
     private TaskQueuePanel taskQueuePanel;
 
     public WorkstationScreen() {
-        super(Component.literal("Workstation"), PW, PH);
-        setTitleBar(I18n.name("gui.wandscape.workstation.title", "Workstation"));
+        super(Component.literal("Item Workshop"), PW, PH);
+        setTitleBar(I18n.name("gui.wandscape.workstation.title", "Item Workshop"));
         this.showCloseButton = true;
         this.showHelpButton = true;
         this.helpDocumentPath = "workstation_guide";

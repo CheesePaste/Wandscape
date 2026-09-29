@@ -1,5 +1,5 @@
 {
-  "name": "Crafting Station",
+  "name": "Equipment Workshop",
   "category": "wandscape:buildings",
   "icon": "wandscape:wand",
   "sortnum": 5,
@@ -7,14 +7,18 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "The Crafting Station makes equipment and gadgets. Post the job and a mage does the work; the finished item goes into the town warehouse rather than your inventory, and the materials come out of the warehouse too — nothing in your own backpack is touched."
+      "text": "Wands, scepters, oath rings and other gear you carry around are made in the Equipment Workshop. Post the job and a mage does the work;"
     },
     {
       "type": "patchouli:image",
       "images": [
         "wandscape:textures/guidebook/crafting_panel.png"
       ],
-      "text": "A Crafting Station task sends the product straight to the warehouse"
+      "text": "An Equipment Workshop task sends the product straight to the warehouse"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "the finished item goes into the town warehouse rather than your inventory, and the materials come out of the warehouse too — nothing in your own backpack is touched."
     }
   ]
 }

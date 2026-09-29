@@ -7,11 +7,11 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "$(italic)$(#6b5a45)文件放进数据包的 $(#8a5a2b)data/<命名空间>/craft_recipes/$()$(italic)$(#6b5a45)，$(#8a5a2b)/reload$()$(italic)$(#6b5a45) 之后重开合成站就生效。$(bold)文件名就是配方 id$()$(italic)$(#6b5a45)，里面的 $(#8a5a2b)id$()$(italic)$(#6b5a45) 字段没人读，改文件名等于改 id。$()"
+      "text": "$(italic)$(#6b5a45)文件放进数据包的 $(#8a5a2b)data/<命名空间>/craft_recipes/$()$(italic)$(#6b5a45)，$(#8a5a2b)/reload$()$(italic)$(#6b5a45) 之后重开装备工坊就生效。$(bold)文件名就是配方 id$()$(italic)$(#6b5a45)，里面的 $(#8a5a2b)id$()$(italic)$(#6b5a45) 字段没人读，改文件名等于改 id。$()"
     },
     {
       "type": "patchouli:text",
-      "text": "合成站里的法杖与道具、魔法工坊里的卷轴，背后各是一份 $(#8a5a2b)craft_recipes$() 文件。这些配方不吃原版配方那套 $(#8a5a2b)pattern$()/$(#8a5a2b)key$()，它只写\"要多少元素、出什么东西\"，剩下的由法师在小镇上做。"
+      "text": "装备工坊里的法杖与道具、魔法工坊里的卷轴，背后各是一份 $(#8a5a2b)craft_recipes$() 文件。这些配方不吃原版配方那套 $(#8a5a2b)pattern$()/$(#8a5a2b)key$()，它只写\"要多少元素、出什么东西\"，剩下的由法师在小镇上做。"
     },
     {
       "type": "patchouli:text",
@@ -34,7 +34,7 @@
     },
     {
       "type": "patchouli:text",
-      "text": "配方行显示的既不是 $(#8a5a2b)display_name$() 也不是文件名，而是语言键 $(#8a5a2b)craft_recipe.wandscape.<配方 id>$()；查不到这个键时退回$(bold)产物物品自己的名字$()。所以一份没配语言键的法杖配方，在合成站里一律显示成\"法杖\"。"
+      "text": "配方行显示的既不是 $(#8a5a2b)display_name$() 也不是文件名，而是语言键 $(#8a5a2b)craft_recipe.wandscape.<配方 id>$()；查不到这个键时退回$(bold)产物物品自己的名字$()。所以一份没配语言键的法杖配方，在装备工坊里一律显示成\"法杖\"。"
     },
     {
       "type": "patchouli:text",

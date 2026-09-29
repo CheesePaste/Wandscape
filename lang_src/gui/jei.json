@@ -8,16 +8,16 @@
     "en_us": "÷%s"
   },
   "gui.wandscape.jei.station.crafting": {
-    "zh_cn": "合成站",
-    "en_us": "Crafting Station"
+    "zh_cn": "装备工坊",
+    "en_us": "Equipment Workshop"
   },
   "gui.wandscape.jei.station.magic": {
     "zh_cn": "魔法工坊",
-    "en_us": "Magic Station"
+    "en_us": "Magic Workshop"
   },
   "gui.wandscape.jei.station.workstation": {
-    "zh_cn": "工作站",
-    "en_us": "Workstation"
+    "zh_cn": "物品工坊",
+    "en_us": "Item Workshop"
   },
   "gui.wandscape.jei.synthesize": {
     "zh_cn": "元素合成",

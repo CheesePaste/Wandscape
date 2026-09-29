@@ -12,7 +12,7 @@
     "en_us": "Locked"
   },
   "gui.wandscape.shop.craft_hint": {
-    "zh_cn": "商品可以在工作站制作",
-    "en_us": "Goods can be crafted at the workstation"
+    "zh_cn": "商品可以在物品工坊制作",
+    "en_us": "Goods can be crafted at the item workshop"
   }
 }

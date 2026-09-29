@@ -166,7 +166,7 @@ public class BuildingSavedData extends SavedData {
 
     /**
      * The shared-queue group key for a building, or null if it doesn't share a queue.
-     * Workstation-family buildings share by {@code buildingTypeId}; node buildings
+     * Item Workshop-family buildings share by {@code buildingTypeId}; node buildings
      * share by their {@code node_config.element()} so all nodes of an element fan out.
      */
     @Nullable

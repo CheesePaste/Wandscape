@@ -19,9 +19,9 @@ import java.util.Map;
  * 从各配方数据源收集 JEI 展示用配方（纯逻辑，零 mezz 引用，可单测）。
  *
  * <ul>
- *   <li>元素映射：每个有非空 buildCost 且未 disabled 的映射生成工作站「合成」+「分解」两条。</li>
- *   <li>法杖配方：只生成合成站「合成」（法杖不可分解）。</li>
- *   <li>药剂配方：只生成合成站「合成」（带额外原料，随配方 craft_station 数据驱动定位）。</li>
+ *   <li>元素映射：每个有非空 buildCost 且未 disabled 的映射生成物品工坊「合成」+「分解」两条。</li>
+ *   <li>法杖配方：只生成装备工坊「合成」（法杖不可分解）。</li>
+ *   <li>药剂配方：只生成装备工坊「合成」（带额外原料，随配方 craft_station 数据驱动定位）。</li>
  *   <li>魔法卷轴配方：生成魔法工坊「合成」。</li>
  * </ul>
  */
@@ -33,7 +33,7 @@ public final class ElementRecipeCollector {
 
     private ElementRecipeCollector() {}
 
-    /** 工作站合成 / 分解配方（来自元素映射 buildCost）。 */
+    /** 物品工坊合成 / 分解配方（来自元素映射 buildCost）。 */
     public static List<ElementRecipe> fromElementMappings(Collection<ElementMappingConfig> configs) {
         List<ElementRecipe> recipes = new ArrayList<>();
         for (ElementMappingConfig config : configs) {
@@ -49,7 +49,7 @@ public final class ElementRecipeCollector {
         return recipes;
     }
 
-    /** 合成站法杖配方（不可分解，只生成合成；携带 preset NBT 供 JEI 显示具体变体）。 */
+    /** 装备工坊法杖配方（不可分解，只生成合成；携带 preset NBT 供 JEI 显示具体变体）。 */
     public static List<ElementRecipe> fromCraftWandRecipes(Collection<CraftWandRecipe> recipes) {
         List<ElementRecipe> result = new ArrayList<>();
         for (CraftWandRecipe r : recipes) {
@@ -61,7 +61,7 @@ public final class ElementRecipeCollector {
         return result;
     }
 
-    /** 药剂配方（仅合成，带额外原料；随配方 craft_station 归属合成站）。 */
+    /** 药剂配方（仅合成，带额外原料；随配方 craft_station 归属装备工坊）。 */
     public static List<ElementRecipe> fromBrewPotionRecipes(Collection<BrewPotionRecipe> recipes) {
         List<ElementRecipe> result = new ArrayList<>();
         for (BrewPotionRecipe r : recipes) {

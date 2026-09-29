@@ -37,7 +37,7 @@
     {
       "id": "items",
       "name": "Equipment and Items",
-      "desc": "The mod's equipment (wands) and its smaller items. For spells such as scrolls, see 《Spells》; for how to craft them, see 《Crafting Station》.",
+      "desc": "The mod's equipment (wands) and its smaller items. For spells such as scrolls, see 《Spells》; for how to craft them, see 《Equipment Workshop》.",
       "icon": "wandscape:wand",
       "sortnum": 40
     },
@@ -165,14 +165,14 @@
     {
       "doc": "workstation_guide",
       "category": "buildings",
-      "name": "Workstation",
+      "name": "Item Workshop",
       "icon": "minecraft:crafting_table",
       "sortnum": 4
     },
     {
       "doc": "crafting_guide",
       "category": "buildings",
-      "name": "Crafting Station",
+      "name": "Equipment Workshop",
       "icon": "wandscape:wand",
       "sortnum": 5
     },
@@ -533,8 +533,8 @@
     "Casting": "casting_guide",
     "Advanced Casting": "advanced_casting_guide",
     "Magic Workshop": "magic_station_guide",
-    "Workstation": "workstation_guide",
-    "Crafting Station": "crafting_guide",
+    "Item Workshop": "workstation_guide",
+    "Equipment Workshop": "crafting_guide",
     "Shop": "shop_guide",
     "Service Facilities and Hotels": "service_guide",
     "Tavern": "tavern_guide",

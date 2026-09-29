@@ -11,11 +11,11 @@
     },
     {
       "type": "patchouli:text",
-      "text": "The element mappings are the single ledger of what a thing is worth in elements. What the Crafting Station charges to make it, what the workstation yields for taking it apart, what a shop s"
+      "text": "The element mappings are the single ledger of what a thing is worth in elements. What the Equipment Workshop charges to make it, what the item workshop yields for taking it apart, what a sh"
     },
     {
       "type": "patchouli:text",
-      "text": "ells it for, what finding one in a chest is worth, and even whether it counts$(br2)as a material at all — every one of those reads this table."
+      "text": "op sells it for, what finding one in a chest is worth, and even whether it co$(br2)unts as a material at all — every one of those reads this table."
     },
     {
       "type": "patchouli:text",
@@ -33,7 +33,7 @@
     },
     {
       "type": "patchouli:text",
-      "text": "$(#8a5a2b)build_cost$() is an item's $(bold)canonical value$(), not what it costs to place. Several things charge against it: a workstation synthesis task spends it;$(br) taking an item apart in the workstation yields the value divided by the decompose divisor, which the Settings Center can adjust;",
+      "text": "$(#8a5a2b)build_cost$() is an item's $(bold)canonical value$(), not what it costs to place. Several things charge against it: a item workshop synthesis task spends it;$(br) taking an item apart in the item workshop yields the value divided by the decompose divisor, which the Settings Center can adjust;",
       "title": "Who Reads the Value"
     },
     {

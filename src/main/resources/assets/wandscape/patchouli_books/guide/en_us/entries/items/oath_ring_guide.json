@@ -7,7 +7,7 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "$(italic)$(#6b5a45)Crafted at the Crafting Station; Low, Mid and High need town level 1, 10 and 20 respectively.$()"
+      "text": "$(italic)$(#6b5a45)Crafted at the Equipment Workshop; Low, Mid and High need town level 1, 10 and 20 respectively.$()"
     },
     {
       "type": "patchouli:text",

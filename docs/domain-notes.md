@@ -114,7 +114,7 @@
    - `ScannerBlockEntity`（生存扫描器）导出时 `isSafeExport() == true`，强制跳过所有方块实体 NBT，并剥离物品展示框内的物品，彻底防止玩家通过扫描容器刷物品。
    - `CreativeScannerBlockEntity`（创造扫描器）完整保真导出 NBT。
 2. **关键基础设施拆除防护**：
-   - 全世界范围内仅剩最后 1 座市政厅（government）、仓库（storage）或工作站（workstation）时，禁止拆除或取消，防止殖民地系统运转瘫痪。
+   - 全世界范围内仅剩最后 1 座市政厅（government）、仓库（storage）或物品工坊（workstation）时，禁止拆除或取消，防止殖民地系统运转瘫痪。
 3. **向下兼容目录不可删**：
    - `src/main/resources/data/wandscape/buildings/deprecated/` 包含旧存档兼容建筑载荷，属于必须加载项，禁止删除。
 4. **重叠规则——盒可叠、方块不可叠（判定唯一源 `BuildingVoxels`）**：
@@ -138,9 +138,9 @@
    - 撤销会同时撤掉还在飞的 `request_resource`（`BuildingTaskSource.cancelBuildingTasks` → `ResourceRequestExecutor.cancelForNpc`，只释放仓库预占）：否则飞行途中撤销「先退（账本还空）后扣（到达才提交）」，玩家白丢一整份建材。
    - 拆除（destroy）路径**不走退款**，别给它加余额退款：玩家自己敲掉的方块已掉过掉落物，再退就是双份。
 8. **工地建材自动补料「放下时补一次，之后是玩家的事」（`content/building/internal/ConstructionSupply`）**：
-   - 放下建筑/道路时按「需求 − 仓库库存 − 已在制」把缺口下成工作站的 `production:synthesize`（自动档 40），补上了才在 `BuildingState.autoSupplyDone` / `RoadEdge.autoSupplyDone` 上记一笔。**补上了就不再自动补**：工地缺料此后只能在工地面板点「一键制作」（玩家档 80，不记账、可反复点）。
-   - 补不了（殖民地还没有工作站、配方还没解锁）时不记账，由 `ResourceSupplySystem.scanAwaitingTasks` 的 40 tick 重扫顺延补一次——只要没补上，重试就一直有机会；补上后闸门落下。
-   - 光在放下时补一次不够：`ResourceShortageHandler`（任务转入 `AWAITING_RESOURCES` 时）与 `scanAwaitingTasks`（等料任务每 40 tick 重扫）**两条路径都会自动补产**，玩家在工作站队列里删掉自动补的合成任务后，2 秒后就又长回来。所以两处都要拦：前者看 `ResourceShortageHandler.Context`（`GlobalTaskPool` 把任务的 blueprintId/buildingId 传进来），后者看任务自身。
+   - 放下建筑/道路时按「需求 − 仓库库存 − 已在制」把缺口下成物品工坊的 `production:synthesize`（自动档 40），补上了才在 `BuildingState.autoSupplyDone` / `RoadEdge.autoSupplyDone` 上记一笔。**补上了就不再自动补**：工地缺料此后只能在工地面板点「一键制作」（玩家档 80，不记账、可反复点）。
+   - 补不了（殖民地还没有物品工坊、配方还没解锁）时不记账，由 `ResourceSupplySystem.scanAwaitingTasks` 的 40 tick 重扫顺延补一次——只要没补上，重试就一直有机会；补上后闸门落下。
+   - 光在放下时补一次不够：`ResourceShortageHandler`（任务转入 `AWAITING_RESOURCES` 时）与 `scanAwaitingTasks`（等料任务每 40 tick 重扫）**两条路径都会自动补产**，玩家在物品工坊队列里删掉自动补的合成任务后，2 秒后就又长回来。所以两处都要拦：前者看 `ResourceShortageHandler.Context`（`GlobalTaskPool` 把任务的 blueprintId/buildingId 传进来），后者看任务自身。
    - 拦的是「工地」，不是「建造蓝图」：`build:place_structure` 也用于**修复**，但修复只发生在已建成建筑上（`BuildingData.hasEverCompleted()`），照旧自动补产。建筑实际用的蓝图是 `build:clear_and_build`，两个 id 都要认。
 
 ---

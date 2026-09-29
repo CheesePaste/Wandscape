@@ -108,14 +108,14 @@ src/main/resources/assets/wandscape/textures/guidebook/full/<名字>.png    高�
 | `intro_03_placing` | intro_0 / 一、建造市政厅 | 拖动转镜头、左键转 90 度 |
 | `intro_05_naming` | intro_0 / 一、建造市政厅 | 施工结束的命名界面 |
 | `intro_06_exchange_tab` | intro_0 / 三、往仓库里放东西 | 仓库交换页签 |
-| `intro_07_craft_tab` | intro_0 / 五、下发合成订单 | 工作站合成页签 |
+| `intro_07_craft_tab` | intro_0 / 五、下发合成订单 | 物品工坊合成页签 |
 | `elem_overview_tab` | 元素与城镇等级 | 顶部信息栏：等级 + 七种元素 |
 | `tourist_three_values` | 游客与三值 / 四个数 | 建筑左上角三值图标 |
 | `tourist_detail` | 游客与三值 / 怎么逛 | 游客详情页 |
 | `bld_repair` | 建筑维护 | 修复按钮 |
 | `townhall_panel` | 市政厅 | 改名 / 等级 / 复活法师 |
-| `workstation_panel` | 工作站 | 合成与分解 |
-| `crafting_panel` | 合成站 | 发布任务 |
+| `workstation_panel` | 物品工坊 | 合成与分解 |
+| `crafting_panel` | 装备工坊 | 发布任务 |
 | `tavern_panel` | 酒馆 | 雇佣与简历 |
 | `altar_panel` | 祭坛 | 复活仪式 |
 | `mage_hut_roster` | 法师小屋 | 小镇法师名单 |

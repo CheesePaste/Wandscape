@@ -215,7 +215,7 @@
 
 | 方法 | 用途 | 状态 | dogfood |
 |---|---|---|---|
-| `get/setWorkstationCraftTicksPerUnit`、`get/setCraftingStationCraftTicksPerUnit` | 工作站/合成台耗时（平衡） | ✅ | BalanceValues |
+| `get/setWorkstationCraftTicksPerUnit`、`get/setCraftingStationCraftTicksPerUnit` | 物品工坊/合成台耗时（平衡） | ✅ | BalanceValues |
 | `List<String> getUnlockedRecipes(UUID)` | 殖民地已解锁配方 | 🔶 桩 | 🔧 本体绕开：`RecipeUnlockChecker.isUnlocked`（internal）+ `ColonyLevelManager` |
 | `Map<ElementType,Long> getRecipeCost(String)` | 配方元素成本 | 🔶 桩 | 🔧 本体绕开：`CraftRecipeView.resolve`（`CraftRecipeView.java:30`） |
 | `boolean enqueueSynthesize(UUID buildingId, recipeId, int)` | 程序化发起一次合成 | 🔶 桩 | 🔧 本体绕开：`ResourceSupplySystem.enqueueSynthesize`（`:179`） |

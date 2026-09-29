@@ -51,7 +51,7 @@ A building may hold several interact spots, and how many tourists it serves at o
 
 ## Class
 
-`category` is a free string and is not validated, but it decides which tab of the build panel the building lands in. Town halls, warehouses, workstations, crafting stations, magic workshops, taverns and altars carry further meaning in code, and mistaking the class costs the building that identity.
+`category` is a free string and is not validated, but it decides which tab of the build panel the building lands in. Town halls, warehouses, item workshops, crafting stations, magic workshops, taverns and altars carry further meaning in code, and mistaking the class costs the building that identity.
 
 ## Parameter Groups
 

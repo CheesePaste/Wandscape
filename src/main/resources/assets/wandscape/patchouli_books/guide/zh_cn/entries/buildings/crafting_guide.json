@@ -1,5 +1,5 @@
 {
-  "name": "合成站",
+  "name": "装备工坊",
   "category": "wandscape:buildings",
   "icon": "wandscape:wand",
   "sortnum": 5,
@@ -7,14 +7,14 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "合成站是合成装备和道具的地方。发布任务后由法师动手，成品直接进小镇仓库，不会进你的背包；材料也一样从仓库里扣，你背包里的东西它不看。"
+      "text": "法杖、权杖、盟誓戒指这类要随身带的东西都在装备工坊做。发布任务后由法师动手，成品直接进小镇仓库，不会进你的背包；材料也一样从仓库里扣，你背包里的东西它不看。"
     },
     {
       "type": "patchouli:image",
       "images": [
         "wandscape:textures/guidebook/crafting_panel.png"
       ],
-      "text": "合成站发布任务，成品直接进小镇仓库"
+      "text": "装备工坊发布任务，成品直接进小镇仓库"
     }
   ]
 }

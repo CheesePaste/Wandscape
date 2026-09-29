@@ -52,7 +52,7 @@ public final class TutorialProgressService implements TutorialApi {
         if (ctx.hasCategory("government")) step++;        // 1 建造市政厅
         if (ctx.hasCategory("storage")) step++;           // 2 建造仓库
         if (ctx.hasPlayerDeposited()) step++;             // 3 存入一个物品
-        if (ctx.hasCategory("workstation")) step++;       // 4 建造工作站
+        if (ctx.hasCategory("workstation")) step++;       // 4 建造物品工坊
         if (ctx.hasPlayerSynthesized()) step++;           // 5 下发一个合成订单
         return step;
     }

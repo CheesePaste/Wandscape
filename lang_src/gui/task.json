@@ -193,15 +193,15 @@
   },
   "gui.wandscape.task.group.magic_workshop": {
     "zh_cn": "魔法工坊",
-    "en_us": "Magic workshop"
+    "en_us": "Magic Workshop"
   },
   "gui.wandscape.task.group.node": {
     "zh_cn": "元素节点",
     "en_us": "Element node"
   },
   "gui.wandscape.task.group.workstation": {
-    "zh_cn": "工作站",
-    "en_us": "Workstation"
+    "zh_cn": "物品工坊",
+    "en_us": "Item Workshop"
   },
   "gui.wandscape.task.mage.attrs": {
     "zh_cn": "法强:%s  工速:%s  护甲:%s",

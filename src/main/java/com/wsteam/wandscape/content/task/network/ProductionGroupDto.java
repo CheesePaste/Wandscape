@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * DTO representing a production building group (e.g. Workstation, Magic Table, Node)
+ * DTO representing a production building group (e.g. Item Workshop, Magic Table, Node)
  * and its associated queue of production items.
  *
  * @param buildingName   服务端解析的无语言兜底名，客户端解析不出来时兜底用

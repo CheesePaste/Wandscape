@@ -18,11 +18,11 @@
     },
     {
       "type": "patchouli:text",
-      "text": "When goods run low the shop asks the warehouse for the real items and has the Workstation craft them if the warehouse is empty, so build shops together with a warehouse and a workstation. A shop with nothing in stock contributes nothing to the town's three values."
+      "text": "When goods run low the shop asks the warehouse for the real items and has the Item Workshop craft them if the warehouse is empty, so build shops together with a warehouse and a item workshop. A shop with nothing in stock contributes nothing to the town's three value$(br)s."
     },
     {
       "type": "patchouli:text",
-      "text": "Restocking is not free: the goods are crafted by the Workstation and the element cost comes off the warehouse books, paid back with profit once a tourist buys. Goods whose crafting recipe is still locked can never be replenished at all and the row is marked Locked. $(br)See $(l:wandscape:playstyle/recipe_unlock_guide)《Unlocking Recipes》$(/l) for how to open one."
+      "text": "Restocking is not free: the goods are crafted by the Item Workshop and the element cost comes off the warehouse books, paid back with profit once a tourist buys. Goods whose crafting recipe is still locked can never be replenished at all and the row is marked Locked$(br). See $(l:wandscape:playstyle/recipe_unlock_guide)《Unlocking Recipes》$(/l) for how to open one."
     }
   ]
 }

@@ -45,8 +45,8 @@ public class CraftingStationScreen extends MedievalScreen {
     private TaskQueuePanel taskQueuePanel;
 
     public CraftingStationScreen() {
-        super(Component.literal("Crafting Station"), PW, PH);
-        setTitleBar(I18n.name("gui.wandscape.crafting_station.title", "Crafting Station"));
+        super(Component.literal("Equipment Workshop"), PW, PH);
+        setTitleBar(I18n.name("gui.wandscape.crafting_station.title", "Equipment Workshop"));
         this.showCloseButton = true;
         this.showHelpButton = true;
         this.helpDocumentPath = "crafting_guide";

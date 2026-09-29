@@ -63,12 +63,12 @@
     },
     {
       "type": "patchouli:text",
-      "text": "The workstation is where the town does its work: mages take a job and get to it right there, so keep it close to the warehouse. You build it in the Build tab as well: pick the Workstation c$(br)ard, double-click, place it, submit.",
-      "title": "4. Build a Workstation"
+      "text": "The item workshop is where the town does its work: mages take a job and get to it right there, so keep it close to the warehouse. You build it in the Build tab as well: pick the Item Worksh$(br)op card, double-click, place it, submit.",
+      "title": "4. Build a Item Workshop"
     },
     {
       "type": "patchouli:text",
-      "text": "Right-click the workstation and switch to the Synthesize tab: the ones shown in full colour can be ordered straight away, and the greyed-out ones are not unlocked yet — deposit the item you$(br) want from your inventory into the warehouse and its recipe opens, and the other two unlocking routes are on the $(",
+      "text": "Right-click the item workshop and switch to the Synthesize tab: the ones shown in full colour can be ordered straight away, and the greyed-out ones are not unlocked yet — deposit the item y$(br)ou want from your inventory into the warehouse and its recipe opens, and the other two unlocking routes are on the",
       "title": "5. Queue a Crafting Order"
     },
     {
@@ -76,15 +76,15 @@
       "images": [
         "wandscape:textures/guidebook/intro_07_craft_tab.png"
       ],
-      "text": "The Workstation crafting tab: pick a recipe and submit"
+      "text": "The Item Workshop crafting tab: pick a recipe and submit"
     },
     {
       "type": "patchouli:text",
-      "text": "l:wandscape:items/blueprint_guide)Item Blueprint$(/l) page. Pick an unlocked recipe and click Submit to put the order into the town's task queue. A mage takes it from there: the materials c$(br)ome out of the warehouse and the output goes back into it — never into your inventory, so don't go looking for it i"
+      "text": "$(l:wandscape:items/blueprint_guide)Item Blueprint$(/l) page. Pick an unlocked recipe and click Submit to put the order into the town's task queue. A mage takes it from there: the materials$(br) come out of the warehouse and the output goes back into it — never into your inventory, so don't go looking for it"
     },
     {
       "type": "patchouli:text",
-      "text": "n your backpack. To see how far along the job is, press V and then 3 for the task hall. That is the end of the five steps and the guide box won't come back;$(br)for what to build and do next, read $(l:wandscape:playstyle/intro_0_5_guide)《0.5 Recommended Features》$(/l)."
+      "text": "in your backpack. To see how far along the job is, press V and then 3 for the task hall. That is the end of the five steps and the guide box won't come back;$(br)for what to build and do next, read $(l:wandscape:playstyle/intro_0_5_guide)《0.5 Recommended Features》$(/l)."
     }
   ]
 }

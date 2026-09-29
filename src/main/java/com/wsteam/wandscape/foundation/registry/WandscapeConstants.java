@@ -12,7 +12,7 @@ public final class WandscapeConstants {
 
     /**
      * 受拆除保护的建筑类别：拆到 0 座会破坏殖民地运转（无市政厅无法定位小镇、
-     * 无仓库资源落入死账户 UUID(0,0)、无工作站生产停摆），故只剩最后一座时禁止拆除。
+     * 无仓库资源落入死账户 UUID(0,0)、无物品工坊生产停摆），故只剩最后一座时禁止拆除。
      * 按类别保护而非按类型，未来新增同类建筑自动纳入。
      */
     public static final Set<String> PROTECTED_LAST_CATEGORIES = Set.of(

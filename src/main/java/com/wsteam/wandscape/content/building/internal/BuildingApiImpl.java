@@ -594,7 +594,7 @@ public class BuildingApiImpl implements BuildingApi {
         if (queue == null) queue = state.getTaskQueue();
 
         // 超限的生产任务先按 ProductionBatches 拆成 ≤ 上限的多条：一条超大任务（如铺平任务
-        // 触发的 x30000 补料）会把几万 tick 整块锁在一座工作站上，共享队列里别的空闲成员
+        // 触发的 x30000 补料）会把几万 tick 整块锁在一座物品工坊上，共享队列里别的空闲成员
         // 无活可领。拆开后各站并发各领一批，只有一座站时总时长不变。
         //
         // Merge a production task into an adjacent same-recipe task at its priority band's
@@ -977,7 +977,7 @@ public class BuildingApiImpl implements BuildingApi {
 
         enqueueWork(buildingId, workItem);
 
-        // 建材缺口就地自动补一次（下成工作站的合成任务），补上了才记账。此后这家工地缺料不再自动
+        // 建材缺口就地自动补一次（下成物品工坊的合成任务），补上了才记账。此后这家工地缺料不再自动
         // 补产，改由玩家在工地面板点「一键制作」——否则玩家删掉自动补的合成任务后，等料任务每
         // 40 tick 被重扫一次就又补一条，删了又回来。
         // 首建免费（压根不向仓库要料）与还没归属小镇的市政厅（colonyId 为空）跳过：后者等建镇后

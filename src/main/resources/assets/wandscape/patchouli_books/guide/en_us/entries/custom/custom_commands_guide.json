@@ -79,7 +79,7 @@
     },
     {
       "type": "patchouli:text",
-      "text": "$(#8a5a2b)demolish$() refuses in one case: $(bold)the town hall, the warehouse and the workstation cannot be demolished while only one of their kind is left$(), so a colony cannot lose the $(br)buildings it needs to keep running."
+      "text": "$(#8a5a2b)demolish$() refuses in one case: $(bold)the town hall, the warehouse and the item workshop cannot be demolished while only one of their kind is left$(), so a colony cannot lose th$(br)e buildings it needs to keep running."
     },
     {
       "type": "patchouli:text",

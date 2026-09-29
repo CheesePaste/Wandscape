@@ -7,15 +7,15 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "$(italic)$(#6b5a45)Put the file in your datapack under $(#8a5a2b)data/<namespace>/craft_recipes/$()$(italic)$(#6b5a45) and reopen the$(br) Crafting Station after $(#8a5a2b)/reload$()$(italic)$(#6b5a45). $(bold)The file name is the recipe id$()$(italic)$(#6b5a45);$(br) the $(#8a5a2b)id$()$(italic)$(#6b5a45) field inside is read by nothing, so renaming the file renames the recipe.$()"
+      "text": "$(italic)$(#6b5a45)Put the file in your datapack under $(#8a5a2b)data/<namespace>/craft_recipes/$()$(italic)$(#6b5a45) and reopen the$(br) Equipment Workshop after $(#8a5a2b)/reload$()$(italic)$(#6b5a45). $(bold)The file name is the recipe id$()$(italic)$(#6b5a45);$(br) the $(#8a5a2b)id$()$(italic)$(#6b5a45) field inside is read by nothing, so renaming the file renames the recipe.$()"
     },
     {
       "type": "patchouli:text",
-      "text": "Every row in the Crafting Station's wand and gadget list, and every row in the Magic Workshop's scroll list, is backed by a $(#8a5a2b"
+      "text": "Every row in the Equipment Workshop's wand and gadget list, and every row in the Magic Workshop's scroll list, is backed by a $(#8a5a"
     },
     {
       "type": "patchouli:text",
-      "text": ")craft_recipes$() file. These recipes do not use the vanilla $(#8a5a2b)pattern$()/$(#8a5a2b)key$() shape: they state only how many el$(br)ements something costs and what it produces, and a mage does the work in town."
+      "text": "2b)craft_recipes$() file. These recipes do not use the vanilla $(#8a5a2b)pattern$()/$(#8a5a2b)key$() shape: they state only how many$(br)elements something costs and what it produces, and a mage does the work in town."
     },
     {
       "type": "patchouli:text",

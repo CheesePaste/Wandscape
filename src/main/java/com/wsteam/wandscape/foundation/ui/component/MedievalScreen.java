@@ -367,7 +367,7 @@ public abstract class MedievalScreen extends Screen implements ReplayProtectedSc
             bx = actionButtonsX;
             by = actionButtonsY;
         } else if (panelWidth >= 400) {
-            // Panels with right task queues (e.g. Workstation/Crafting/Magic/Node):
+            // Panels with right task queues (e.g. Item Workshop/Crafting/Magic/Node):
             // Place directly below the TaskQueuePanel on the right side footer
             bx = leftPos + panelWidth - 12 - (btnW * 2 + gap);
             by = topPos + panelHeight - 20;

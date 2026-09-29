@@ -15,12 +15,12 @@
     },
     {
       "type": "patchouli:text",
-      "text": "$(bold)Town Hall, Warehouse, Workstation$() — the ground floor: nothing goes up without a Town Hall, the Warehouse holds what the who$(br)le town shares, and the Workstation swaps elements and items both ways.",
+      "text": "$(bold)Town Hall, Warehouse, Item Workshop$() — the ground floor: nothing goes up without a Town Hall, the Warehouse holds what the w$(br)hole town shares, and the Item Workshop swaps elements and items both ways.",
       "title": "What to build first"
     },
     {
       "type": "patchouli:text",
-      "text": "$(bold)Crafting Station, Magic Workshop, Tavern, Mage Hut$() — the line to lay down for fighting strength: gear, scrolls, mages to hi$(br)re and somewhere to train them.$(li)$(bold)Altar$() — how a fallen mage comes back."
+      "text": "$(bold)Equipment Workshop, Magic Workshop, Tavern, Mage Hut$() — the line to lay down for fighting strength: gear, scrolls, mages to $(br)hire and somewhere to train them.$(li)$(bold)Altar$() — how a fallen mage comes back."
     },
     {
       "type": "patchouli:text",

@@ -45,8 +45,8 @@ PLACEMENTS = {
          "仓库的交换页签：左边是仓库，下面是背包",
          "The Exchange tab: warehouse on the left, your inventory below"),
         ("挑一个配方点【提交】", "switch to the Crafting tab", "intro_07_craft_tab",
-         "工作站的合成页签，挑一个配方点提交",
-         "The Workstation crafting tab: pick a recipe and submit"),
+         "物品工坊的合成页签，挑一个配方点提交",
+         "The Item Workshop crafting tab: pick a recipe and submit"),
     ],
     ("element_level_guide", "element_level_guide", "playstyle"): [
         (None, None, "elem_overview_tab",
@@ -73,13 +73,13 @@ PLACEMENTS = {
     ],
     ("workstation_guide", "workstation_guide", "buildings"): [
         (None, None, "workstation_panel",
-         "工作站把元素合成物品，也能把物品分解回元素",
-         "The Workstation turns elements into items, or breaks them back down"),
+         "物品工坊把元素做成物品，也能把物品分解回元素",
+         "The Item Workshop turns elements into items, or breaks them back down"),
     ],
     ("crafting_guide", "crafting_guide", "buildings"): [
         (None, None, "crafting_panel",
-         "合成站发布任务，成品直接进小镇仓库",
-         "A Crafting Station task sends the product straight to the warehouse"),
+         "装备工坊发布任务，成品直接进小镇仓库",
+         "An Equipment Workshop task sends the product straight to the warehouse"),
     ],
     ("tavern_guide", "tavern_guide", "buildings"): [
         ("也可以录用现成的简历", "take on a résumé that is", "tavern_panel",

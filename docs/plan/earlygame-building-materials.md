@@ -12,7 +12,7 @@
 配方解锁（`77948e0c`、`d0a4dbcf`、`3a539acc`）落地后，建材的获取链路变成一条闭环，任何一环缺失都会让建筑永久停在等料态：
 
 1. **建材 = 仓库实物**。`EnqueueHelper.computeMaterialCounts` 按建筑 palette 计数，**只统计有元素映射的方块**——没有映射的方块（见 §五）既不是建材、也不能解锁，直接免费放置。
-2. **缺料自动补**。`ResourceSupplySystem.enqueueSynthesize` 在仓库缺料时自动向工作站排合成任务，但**尊重配方门控**：`ProductionRecipeManager.isSynthesizeUnlocked` 为假时直接 `return false`，不排任务。
+2. **缺料自动补**。`ResourceSupplySystem.enqueueSynthesize` 在仓库缺料时自动向物品工坊排合成任务，但**尊重配方门控**：`ProductionRecipeManager.isSynthesizeUnlocked` 为假时直接 `return false`，不排任务。
 3. **合成的解锁途径只有三条**（另加 OP 指令，见 `RecipeCommand`）：物品**入过一次仓库**（`ProductionRecipeManager.checkAndUnlockOnWarehouseAdd`）、**法杖右键鉴定**（`WandModeService:182`）、**图纸自选**（`UnlockRecipeByBlueprintPacket:87`）。三者都要求玩家**先亲手拿到过该物品**（图纸除外，它可任选，但来源随机）。
 4. **于是堵点成立**：某方块早期拿不到 → 配方永远锁着 → 自动合成不启动 → 建筑永远停在"等待材料"。`ProjectionPlacePacket:108` 已专门检测这种组合（`BuildingApiImpl.findMissingLockedMaterials`）并给玩家提示"缺少 N 种未解锁配方的材料，施工将等待材料入库"——**说明这个洞已被预见，只是建材表没跟上**。
 5. **商店是这条闭环的第二个消费者**。`ShopStockManager.restock` 先看**仓库有没有现货**，没有才走 `ResourceSupplySystem.enqueueSynthesize` 排合成——同一道 `isSynthesizeUnlocked` 门。货架初始为空（`getOrCreateShopStock` 的空表 + `DEFAULT_MAX_STOCK`），所以**配方锁着 = 这个货位永远空着**，游客想买也买不到。审计范围因此不止建材，还包括 1-5 级商店的 `shop.goods`（见 §3.4）。
@@ -138,7 +138,7 @@ A 与建材那条不同：建材删/换之后玩家照旧要自己攒料，商�
 | 方案 | 做法 | 优点 | 代价 |
 |---|---|---|---|
 | **A 换方块** | 同形状换早期同类：氧化铜 → `copper_grate` / `cut_copper_slab` / `cut_copper_stairs`；`waxed_copper_bulb` / 蛙明灯 / `end_rod` → `lantern`（铁系，模组通用）；`polished_blackstone_button` → `stone_button`；竹子系 → 橡木同形（门 / 告示牌 / 活板门 / 栅栏）；`end_stone` → `smooth_sandstone` / `bone_block`；`dark_prismarine` → 同色石材；`deepslate_*_ore` → `raw_copper_block` / `raw_iron_block` | 直接消除堵点，改动全落在建筑 JSON 的 palette（替换 palette 项即整栋生效，`block_indices` 不动）；氧化铜一档造价零变化 | 少量配色变化（青绿→铜橙等）；约 15 栋建筑需要逐栋过 |
-| **B 开合成配方** | 外观完全不动，给这批方块在 `craft_recipes/*.json` 加合成站配方（`min_colony_level` 定档、按元素付费） | 美术零改动；复用已有配方系统 | 缺料**自动**补料走的是工作站合成（`ResourceSupplySystem`），与此路不通，玩家仍需手动合成后入库；等于多一条并行通路 |
+| **B 开合成配方** | 外观完全不动，给这批方块在 `craft_recipes/*.json` 加装备工坊配方（`min_colony_level` 定档、按元素付费） | 美术零改动；复用已有配方系统 | 缺料**自动**补料走的是物品工坊合成（`ResourceSupplySystem`），与此路不通，玩家仍需手动合成后入库；等于多一条并行通路 |
 | **C 上调解锁等级** | 不换材质，把受堵建筑挪到有该材料的等级（mage_hut1 → 10、redstone_shop → 15 等） | 零美术改动 | L1 可选建筑变少，教学阶段内容被抽薄 |
 
 **倾向**：以 A 为主（堵点实实在在卡在 1 级，而 1 级是教学阶段，不该靠"等铜氧化"或"翻图纸"过关）；`end_stone` / `dark_prismarine` 这类**主题自洽**的 L10 门控可以不动，或只保留 1~2 个作"去过末地/海底神殿"的纪念性建材；`redstone_shop` 建议单独决策（见 §3.2）。若舍不得氧化铜的青绿观感，可只对氧化铜一档改用 B。

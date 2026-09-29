@@ -52,8 +52,8 @@ public record ConstructionSiteDataPacket(
     public static final int KIND_ROAD = 1;
 
     public static final int STATUS_READY = 0;     // 已备齐：仓库储量充足
-    public static final int STATUS_CRAFTING = 1;  // 制作中：不足，但工作站正在合成
-    public static final int STATUS_PENDING = 2;   // 待制作：不足，且没有工作站在做
+    public static final int STATUS_CRAFTING = 1;  // 制作中：不足，但物品工坊正在合成
+    public static final int STATUS_PENDING = 2;   // 待制作：不足，且没有物品工坊在做
     public static final int STATUS_LOCKED = 3;    // 配方未解锁：不足，且合成配方尚未解锁
 
     private static final String TAG = "ConstructionSiteDataPacket";
@@ -78,7 +78,7 @@ public record ConstructionSiteDataPacket(
             if (sumMissing <= 0) {
                 start = 0; // 材料已备齐，随时可开工
             } else if (workingCount <= 0) {
-                can = false; // 有缺口但无工作站在做 → 无法估算
+                can = false; // 有缺口但无物品工坊在做 → 无法估算
                 start = 0;
             } else {
                 start = (int) Math.ceil((double) sumMissing * craftCD / workingCount);

@@ -76,8 +76,8 @@
     "en_us": "Cellar"
   },
   "building.wandscape.craftstation1": {
-    "zh_cn": "合成站",
-    "en_us": "Crafting Station"
+    "zh_cn": "装备工坊",
+    "en_us": "Equipment Workshop"
   },
   "building.wandscape.creature_store": {
     "zh_cn": "奇珍商店",
@@ -189,7 +189,7 @@
   },
   "building.wandscape.potionstation1": {
     "zh_cn": "魔法工坊",
-    "en_us": "Magic Station"
+    "en_us": "Magic Workshop"
   },
   "building.wandscape.redstone_shop": {
     "zh_cn": "红石商店",
@@ -260,8 +260,8 @@
     "en_us": "Windmill"
   },
   "building.wandscape.workstation1": {
-    "zh_cn": "工作站",
-    "en_us": "Workstation"
+    "zh_cn": "物品工坊",
+    "en_us": "Item Workshop"
   },
   "building.wandscape.youth_hostel": {
     "zh_cn": "青年旅舍",

@@ -14,7 +14,7 @@ import net.minecraft.world.item.TooltipFlag;
 import java.util.List;
 
 /**
- * 玩家权杖物品（和平/跟随/庇护/敌对），3D 模型 + 头部主题色染色，合成站 1 级配方产出。
+ * 玩家权杖物品（和平/跟随/庇护/敌对），3D 模型 + 头部主题色染色，装备工坊 1 级配方产出。
  *
  * <p>右键行为经 {@link NpcInteractHook} 接口由 {@code WandscapeNpc.mobInteract} 转交本物品
  * （法师目标），或经 {@code ScepterInteractHandler}（EntityInteract，非法师生物目标）注入

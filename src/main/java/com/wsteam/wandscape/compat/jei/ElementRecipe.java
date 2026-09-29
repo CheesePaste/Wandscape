@@ -20,8 +20,8 @@ import java.util.Map;
  *       {@code value} = 物品总价值；精确分数产出 = value ÷ 除数 由 JEI 层在 tooltip 展示。</li>
  * </ul>
  *
- * <p>{@code stationKey} 标注配方发生的设施：{@code workstation}（元素合成/分解，工作站）、
- * {@code crafting_station}（合成站）、{@code magic_station}（魔法工坊）。
+ * <p>{@code stationKey} 标注配方发生的设施：{@code workstation}（元素合成/分解，物品工坊）、
+ * {@code crafting_station}（装备工坊）、{@code magic_station}（魔法工坊）。
  * {@code extraInputs} 为额外的非元素原料（如药剂的玻璃瓶）。
  */
 public record ElementRecipe(

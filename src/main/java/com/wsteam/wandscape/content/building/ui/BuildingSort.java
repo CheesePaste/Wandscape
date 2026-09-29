@@ -31,14 +31,14 @@ public final class BuildingSort {
         return "infrastructure";
     }
 
-    /** 同解锁等级内的种类排序位：基建在前（市政厅→仓库→工作站→…），随后 node/decoration/shop/service/relax/atm。 */
+    /** 同解锁等级内的种类排序位：基建在前（市政厅→仓库→物品工坊→…），随后 node/decoration/shop/service/relax/atm。 */
     public static int categoryRank(String category) {
         if (category == null) return RANK_UNKNOWN_INFRA;
         return switch (category) {
             case "government" -> 0;        // 市政厅
             case "storage" -> 1;           // 仓库
-            case "workstation" -> 2;       // 工作站
-            case "crafting_station" -> 3;  // 合成站
+            case "workstation" -> 2;       // 物品工坊
+            case "crafting_station" -> 3;  // 装备工坊
             case "magic_station" -> 4;     // 魔法工坊
             case "tavern" -> 5;            // 酒馆
             case "altar" -> 6;             // 祭坛

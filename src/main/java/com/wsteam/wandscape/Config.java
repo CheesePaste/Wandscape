@@ -97,17 +97,17 @@ public class Config {
     // ---- 元素系统 Element System ----
 
     public static final ModConfigSpec.DoubleValue ELEMENT_DECOMPOSE_DIVISOR = BUILDER
-            .comment("Workstation 分解产出除数：分解物品返回其映射元素值的 1/N。"
+            .comment("Item Workshop 分解产出除数：分解物品返回其映射元素值的 1/N。"
                     + "默认 5 = 1/5（原为硬编码 1/10，回收率偏低）。")
-            .comment("Workstation decompose output divisor: decomposing an item returns 1/N of its mapped element value. "
+            .comment("Item Workshop decompose output divisor: decomposing an item returns 1/N of its mapped element value. "
                     + "Default 5 = 1/5 (was hard-coded 1/10, which made the recovery rate too low).")
             .defineInRange("element.decomposeDivisor", 5.0, 1.0, 1000000.0);
 
     public static final ModConfigSpec.DoubleValue ELEMENT_CRAFT_COST_MULTIPLIER = BUILDER
-            .comment("合成/制作消耗倍率：Workstation 合成、法杖制作、酿造消耗的元素 × 该系数。"
+            .comment("合成/制作消耗倍率：Item Workshop 合成、法杖制作、酿造消耗的元素 × 该系数。"
                     + "默认 1.0；设为 2.0 则消耗翻倍（消耗向上取整，不会少扣）。"
                     + "警告：修改会导致利润率低于该数值的商店不盈利。")
-            .comment("Crafting / production cost multiplier: element consumption of Workstation crafting, wand crafting, and brewing × this factor. "
+            .comment("Crafting / production cost multiplier: element consumption of Item Workshop crafting, wand crafting, and brewing × this factor. "
                     + "Default 1.0; set 2.0 to double consumption (rounded up, never under-charged). "
                     + "Warning: changing this can make shops with a profit margin below this value unprofitable.")
             .defineInRange("element.craftCostMultiplier", 1.0, 1.0, 1000000.0);

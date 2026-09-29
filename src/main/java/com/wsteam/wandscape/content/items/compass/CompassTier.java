@@ -5,11 +5,11 @@ package com.wsteam.wandscape.content.items.compass;
  */
 public enum CompassTier {
 
-    /** 合成站 1 级解锁：仅指向市政厅（圆盘蓝）。 */
+    /** 装备工坊 1 级解锁：仅指向市政厅（圆盘蓝）。 */
     BASIC("magic_compass", 1, 0x4A90D9, false, false),
-    /** 合成站 10 级解锁：额外在 tooltip 显示市政厅坐标（圆盘金）。 */
+    /** 装备工坊 10 级解锁：额外在 tooltip 显示市政厅坐标（圆盘金）。 */
     ADVANCED("advanced_magic_compass", 10, 0xD4AF37, true, false),
-    /** 合成站 20 级解锁：额外右键传送（圆盘紫）。 */
+    /** 装备工坊 20 级解锁：额外右键传送（圆盘紫）。 */
     ULTIMATE("ultimate_magic_compass", 20, 0x9B30FF, true, true);
 
     private final String itemId;

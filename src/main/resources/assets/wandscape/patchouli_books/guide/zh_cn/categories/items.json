@@ -1,6 +1,6 @@
 {
   "name": "装备与物品",
-  "description": "这一页展示了模组的装备（法杖）与一些物品。对于法术卷轴等法术，见$(l:wandscape:magic)《魔法》$(/l)，对于如何制作它们，见$(l:wandscape:buildings/crafting_guide)《合成站》$(/l)。",
+  "description": "这一页展示了模组的装备（法杖）与一些物品。对于法术卷轴等法术，见$(l:wandscape:magic)《魔法》$(/l)，对于如何制作它们，见$(l:wandscape:buildings/crafting_guide)《装备工坊》$(/l)。",
   "icon": "wandscape:wand",
   "sortnum": 40
 }

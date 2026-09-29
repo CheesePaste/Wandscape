@@ -55,7 +55,7 @@ A `remove` that asks for more than the colony holds fails and **takes nothing at
 
 You do not have to type an id in full: the 8-character short id from `list` works as-is, and so does any run of characters from the middle of it.
 
-`demolish` refuses in one case: **the town hall, the warehouse and the workstation cannot be demolished while only one of their kind is left**, so a colony cannot lose the buildings it needs to keep running.
+`demolish` refuses in one case: **the town hall, the warehouse and the item workshop cannot be demolished while only one of their kind is left**, so a colony cannot lose the buildings it needs to keep running.
 
 ## Mages, Tourists and the Tavern
 

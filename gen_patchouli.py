@@ -78,8 +78,8 @@ CATEGORIES = [
      "这一页展示了法师，施法与具体魔法。对于法杖与魔法道具，见《装备与物品》。",
      "Mages, casting, and each spell. For wands and magic items, see 《Equipment and Items》."),
     ("items", "装备与物品", "Equipment and Items", "wandscape:wand", 40,
-     "这一页展示了模组的装备（法杖）与一些物品。对于法术卷轴等法术，见《魔法》，对于如何制作它们，见《合成站》。",
-     "The mod's equipment (wands) and its smaller items. For spells such as scrolls, see 《Spells》; for how to craft them, see 《Crafting Station》."),
+     "这一页展示了模组的装备（法杖）与一些物品。对于法术卷轴等法术，见《魔法》，对于如何制作它们，见《装备工坊》。",
+     "The mod's equipment (wands) and its smaller items. For spells such as scrolls, see 《Spells》; for how to craft them, see 《Equipment Workshop》."),
     ("custom", "自定义与数据包", "Customization & Datapacks", "minecraft:structure_block", 50,
      "这一页展示了模组建筑、物品、魔法、合成配方与战利品等内容的模组方块和数据包的自定义方式，以及查状态与急救用的模组指令。对于相关的模组本体内容，见《建筑》《魔法》《装备与物品》。",
      "How to customize the mod's own blocks and data packs — buildings, items, spells, crafting recipes and loot — plus the mod's own commands for reading state and rescuing a stuck colony. For the mod's own content, see 《Buildings》, 《Spells》 and 《Equipment and Items》."),
@@ -95,7 +95,7 @@ CATEGORIES = [
 # 同一篇 md 可以登记多次、挂到不同分类——会生成内容相同的多份条目（内容同源，不存在两份要维护）。
 ENTRIES = [
     # ── 玩法主线：路线与阅读顺序，外加三页没有独立分类的总括内容 ──
-    # 配方解锁紧跟《0.5》：它讲的是「工作站的灰列表怎么变亮」，属于开局就得知道的事，
+    # 配方解锁紧跟《0.5》：它讲的是「物品工坊的灰列表怎么变亮」，属于开局就得知道的事，
     # 而它横跨仓库 / 法杖 / 图纸三处，落哪个功能分类都不合适，留在主线里。
     ("index_guide", "playstyle", "wandscape:guide_book", 0),
     ("intro_0_guide", "playstyle", "minecraft:writable_book", 1),
@@ -221,9 +221,9 @@ TITLE_TO_DOC_ZH = {
     "法师": "mages_guide",
     "施法": "casting_guide",
     "高级施法管理": "advanced_casting_guide",
-    "合成站": "crafting_guide",
+    "装备工坊": "crafting_guide",
     "魔法工坊": "magic_station_guide",
-    "工作站": "workstation_guide",
+    "物品工坊": "workstation_guide",
     "商店": "shop_guide",
     "服务设施与酒店": "service_guide",
     "酒馆": "tavern_guide",
@@ -264,8 +264,8 @@ TITLE_TO_DOC_EN = {
     "Casting": "casting_guide",
     "Advanced Casting": "advanced_casting_guide",
     "Magic Workshop": "magic_station_guide",
-    "Workstation": "workstation_guide",
-    "Crafting Station": "crafting_guide",
+    "Item Workshop": "workstation_guide",
+    "Equipment Workshop": "crafting_guide",
     "Shop": "shop_guide",
     "Service Facilities and Hotels": "service_guide",
     "Tavern": "tavern_guide",

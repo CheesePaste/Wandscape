@@ -6,8 +6,8 @@ Dealing with a building means having the management panel open first: press V, a
 
 ## What to build first
 
-- **Town Hall, Warehouse, Workstation** — the ground floor: nothing goes up without a Town Hall, the Warehouse holds what the whole town shares, and the Workstation swaps elements and items both ways.
-- **Crafting Station, Magic Workshop, Tavern, Mage Hut** — the line to lay down for fighting strength: gear, scrolls, mages to hire and somewhere to train them.
+- **Town Hall, Warehouse, Item Workshop** — the ground floor: nothing goes up without a Town Hall, the Warehouse holds what the whole town shares, and the Item Workshop swaps elements and items both ways.
+- **Equipment Workshop, Magic Workshop, Tavern, Mage Hut** — the line to lay down for fighting strength: gear, scrolls, mages to hire and somewhere to train them.
 - **Altar** — how a fallen mage comes back.
 - **Shop, Services, Relax, ATM, Decorations** — the tourist track's earning set: shops take elements in, services and relax buildings keep tourists around, ATMs keep them spending, and decorations boost those buildings.
 - **Element Node** — the proper source of elements.

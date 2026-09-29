@@ -43,8 +43,8 @@ public class MagicStationScreen extends MedievalScreen {
     private TaskQueuePanel taskQueuePanel;
 
     public MagicStationScreen() {
-        super(Component.literal("Magic Station"), PW, PH);
-        setTitleBar(I18n.name("gui.wandscape.magic_station.title", "Magic Station"));
+        super(Component.literal("Magic Workshop"), PW, PH);
+        setTitleBar(I18n.name("gui.wandscape.magic_station.title", "Magic Workshop"));
         this.showCloseButton = true;
         this.isBuildingScreen = true;
         this.showHelpButton = true;

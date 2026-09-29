@@ -16,8 +16,8 @@
     "en_us": "Basic"
   },
   "category.wandscape.crafting_station": {
-    "zh_cn": "物品合成",
-    "en_us": "Crafting"
+    "zh_cn": "装备工坊",
+    "en_us": "Equipment Workshops"
   },
   "category.wandscape.custom": {
     "zh_cn": "自定义",
@@ -68,7 +68,7 @@
     "en_us": "Wonders"
   },
   "category.wandscape.workstation": {
-    "zh_cn": "工作工坊",
-    "en_us": "Workstations"
+    "zh_cn": "物品工坊",
+    "en_us": "Item Workshops"
   }
 }

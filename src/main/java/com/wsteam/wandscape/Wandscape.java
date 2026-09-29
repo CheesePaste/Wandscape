@@ -361,7 +361,7 @@ public class Wandscape {
     public static final ScepterApiImpl SCEPTER_API =
             new ScepterApiImpl();
 
-    // ---- compass: 魔法指南针（三档，指针指向玩家自己殖民地的市政厅，合成站 1/10/20 级配方产出）----
+    // ---- compass: 魔法指南针（三档，指针指向玩家自己殖民地的市政厅，装备工坊 1/10/20 级配方产出）----
     public static final DeferredItem<Item> MAGIC_COMPASS =
             ITEMS.register("magic_compass", () ->
                     new MagicCompassItem(new Item.Properties().stacksTo(1), CompassTier.BASIC));
@@ -372,7 +372,7 @@ public class Wandscape {
             ITEMS.register("ultimate_magic_compass", () ->
                     new MagicCompassItem(new Item.Properties().stacksTo(1), CompassTier.ULTIMATE));
 
-    // ---- warehouse terminal: 仓库终端（右键打开本殖民地仓库面板，合成站 20 级配方产出；Curios 手饰槽待办）----
+    // ---- warehouse terminal: 仓库终端（右键打开本殖民地仓库面板，装备工坊 20 级配方产出；Curios 手饰槽待办）----
     public static final DeferredItem<Item> WAREHOUSE_TERMINAL =
             ITEMS.register("warehouse_terminal", () ->
                     new WarehouseTerminalItem(new Item.Properties().stacksTo(1)));
@@ -436,7 +436,7 @@ public class Wandscape {
                         output.accept(OATH_RING_MID.get());
                         output.accept(OATH_RING_HIGH.get());
                         // 权杖（PEACE/FOLLOW/SHELTER/HOSTILE/OMNI_SCEPTER）不在此列：物品与代码保留待复用，
-                        // 但从合成站配方与创造栏双双撤下（见 scepter/），玩家手里只留法杖这一件指挥道具。
+                        // 但从装备工坊配方与创造栏双双撤下（见 scepter/），玩家手里只留法杖这一件指挥道具。
                         output.accept(MAGIC_COMPASS.get());
                         output.accept(ADVANCED_MAGIC_COMPASS.get());
                         output.accept(ULTIMATE_MAGIC_COMPASS.get());
@@ -640,7 +640,7 @@ public class Wandscape {
         WandscapeBlockInteractExecutor.setProductionRecipeLoader(PRODUCTION_RECIPE_LOADER);
         ProductionEligibility.setProductionRecipeLoader(PRODUCTION_RECIPE_LOADER);
 
-        // Load element seeds for Workstation decomposition
+        // Load element seeds for Item Workshop decomposition
         try {
             var cl = Wandscape.class.getClassLoader();
             var is = cl.getResourceAsStream("data/wandscape/element_seeds.json");

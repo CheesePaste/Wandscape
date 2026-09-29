@@ -2,7 +2,7 @@
 
 > Put the file in your datapack under `data/<namespace>/element_mappings/` and `/reload` picks it up. **The file name means nothing here** — what prices anything is the `block`, `item` and `build_cost` written inside it.
 
-The element mappings are the single ledger of what a thing is worth in elements. What the Crafting Station charges to make it, what the workstation yields for taking it apart, what a shop sells it for, what finding one in a chest is worth, and even whether it counts as a material at all — every one of those reads this table.
+The element mappings are the single ledger of what a thing is worth in elements. What the Equipment Workshop charges to make it, what the item workshop yields for taking it apart, what a shop sells it for, what finding one in a chest is worth, and even whether it counts as a material at all — every one of those reads this table.
 
 ## Fields
 
@@ -19,7 +19,7 @@ One of `block` or `item` is enough; a file with neither means nothing. Write it 
 
 ## Who Reads the Value
 
-`build_cost` is an item's **canonical value**, not what it costs to place. Several things charge against it: a workstation synthesis task spends it; taking an item apart in the workstation yields the value divided by the decompose divisor, which the Settings Center can adjust; a shop sells it with the shop's profit on top; an exploration chest prices its whole loot table through it; and the scanner values a patch of ground with it.
+`build_cost` is an item's **canonical value**, not what it costs to place. Several things charge against it: a item workshop synthesis task spends it; taking an item apart in the item workshop yields the value divided by the decompose divisor, which the Settings Center can adjust; a shop sells it with the shop's profit on top; an exploration chest prices its whole loot table through it; and the scanner values a patch of ground with it.
 
 ## No Mapping Means Free
 

@@ -1,8 +1,8 @@
 # Importing Crafting Recipes
 
-> Put the file in your datapack under `data/<namespace>/craft_recipes/` and reopen the Crafting Station after `/reload`. **The file name is the recipe id**; the `id` field inside is read by nothing, so renaming the file renames the recipe.
+> Put the file in your datapack under `data/<namespace>/craft_recipes/` and reopen the Equipment Workshop after `/reload`. **The file name is the recipe id**; the `id` field inside is read by nothing, so renaming the file renames the recipe.
 
-Every row in the Crafting Station's wand and gadget list, and every row in the Magic Workshop's scroll list, is backed by a `craft_recipes` file. These recipes do not use the vanilla `pattern`/`key` shape: they state only how many elements something costs and what it produces, and a mage does the work in town.
+Every row in the Equipment Workshop's wand and gadget list, and every row in the Magic Workshop's scroll list, is backed by a `craft_recipes` file. These recipes do not use the vanilla `pattern`/`key` shape: they state only how many elements something costs and what it produces, and a mage does the work in town.
 
 ## Where the Files Go
 

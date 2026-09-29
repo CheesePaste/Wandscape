@@ -40,8 +40,8 @@
     "en_us": "Craft Item"
   },
   "blueprint.wandscape.production:craft.desc": {
-    "zh_cn": "NPC 在合成站引导施法，从元素制作法杖/权杖等物品。",
-    "en_us": "NPC channels at the crafting station to create wands, scepters or potions from elements."
+    "zh_cn": "NPC 在装备工坊引导施法，从元素制作法杖/权杖等物品。",
+    "en_us": "NPC channels at the equipment workshop to create wands, scepters and other gear from elements."
   },
   "blueprint.wandscape.production:craft_spell": {
     "zh_cn": "制作魔法卷轴",
@@ -49,23 +49,23 @@
   },
   "blueprint.wandscape.production:craft_spell.desc": {
     "zh_cn": "NPC 在魔法工坊引导施法，从元素合成魔法卷轴。",
-    "en_us": "NPC channels at the magic station to synthesize spell scrolls from elements."
+    "en_us": "NPC channels at the magic workshop to synthesize spell scrolls from elements."
   },
   "blueprint.wandscape.production:decompose": {
     "zh_cn": "分解物品",
     "en_us": "Decompose"
   },
   "blueprint.wandscape.production:decompose.desc": {
-    "zh_cn": "NPC 在工作站引导施法，将物品分解为元素成分。",
-    "en_us": "NPC channels at the workstation to break down items into their elemental components."
+    "zh_cn": "NPC 在物品工坊引导施法，将物品分解为元素成分。",
+    "en_us": "NPC channels at the item workshop to break down items into their elemental components."
   },
   "blueprint.wandscape.production:synthesize": {
     "zh_cn": "合成物品",
     "en_us": "Synthesize"
   },
   "blueprint.wandscape.production:synthesize.desc": {
-    "zh_cn": "NPC 在工作站引导施法，从元素合成物品。",
-    "en_us": "NPC channels at the workstation to synthesize items from elements."
+    "zh_cn": "NPC 在物品工坊引导施法，从元素合成物品。",
+    "en_us": "NPC channels at the item workshop to synthesize items from elements."
   },
   "blueprint.wandscape.road:build_segment": {
     "zh_cn": "铺设道路",

@@ -37,7 +37,7 @@
     {
       "id": "items",
       "name": "装备与物品",
-      "desc": "这一页展示了模组的装备（法杖）与一些物品。对于法术卷轴等法术，见《魔法》，对于如何制作它们，见《合成站》。",
+      "desc": "这一页展示了模组的装备（法杖）与一些物品。对于法术卷轴等法术，见《魔法》，对于如何制作它们，见《装备工坊》。",
       "icon": "wandscape:wand",
       "sortnum": 40
     },
@@ -165,14 +165,14 @@
     {
       "doc": "workstation_guide",
       "category": "buildings",
-      "name": "工作站",
+      "name": "物品工坊",
       "icon": "minecraft:crafting_table",
       "sortnum": 4
     },
     {
       "doc": "crafting_guide",
       "category": "buildings",
-      "name": "合成站",
+      "name": "装备工坊",
       "icon": "wandscape:wand",
       "sortnum": 5
     },
@@ -532,9 +532,9 @@
     "法师": "mages_guide",
     "施法": "casting_guide",
     "高级施法管理": "advanced_casting_guide",
-    "合成站": "crafting_guide",
+    "装备工坊": "crafting_guide",
     "魔法工坊": "magic_station_guide",
-    "工作站": "workstation_guide",
+    "物品工坊": "workstation_guide",
     "商店": "shop_guide",
     "服务设施与酒店": "service_guide",
     "酒馆": "tavern_guide",

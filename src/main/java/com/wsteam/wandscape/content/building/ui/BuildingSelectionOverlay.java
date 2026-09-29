@@ -173,7 +173,7 @@ public final class BuildingSelectionOverlay {
         return -1;
     }
 
-    /** 分类标签从左到右：全部 + 基础设施（市政厅/仓库/工作站等未单列者）+ 其余专属标签。 */
+    /** 分类标签从左到右：全部 + 基础设施（市政厅/仓库/物品工坊等未单列者）+ 其余专属标签。 */
     private static final List<String> CATEGORY_TABS = List.of(
             "infrastructure", "node", "decoration", "shop", "service", "relax", "atm"
     );

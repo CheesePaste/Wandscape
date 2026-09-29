@@ -83,12 +83,12 @@
     },
     {
       "type": "patchouli:text",
-      "text": "$(#8a5a2b)category$() is a free string and is not validated, but it decides which tab of the build panel the building lands in. Town halls, warehouses, workstations, crafting stations, magi",
+      "text": "$(#8a5a2b)category$() is a free string and is not validated, but it decides which tab of the build panel the building lands in. Town halls, warehouses, item workshops, crafting stations, ma",
       "title": "Class"
     },
     {
       "type": "patchouli:text",
-      "text": "c workshops, taverns and altars carry further meaning in code, and mistaking the class costs the building that identity."
+      "text": "gic workshops, taverns and altars carry further meaning in code, and mistaking the class costs the building that identity."
     },
     {
       "type": "patchouli:text",

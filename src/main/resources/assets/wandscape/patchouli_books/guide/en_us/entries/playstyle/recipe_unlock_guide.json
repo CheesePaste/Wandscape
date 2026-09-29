@@ -7,11 +7,11 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "A new town has none of its crafting recipes unlocked — that greyed-out half of the list in the Workstation and the Crafting Station is exactly what those are. Nobody can craft a locked reci"
+      "text": "A new town has none of its crafting recipes unlocked — that greyed-out half of the list in the Item Workshop and the Equipment Workshop is exactly what those are. Nobody can craft a locked"
     },
     {
       "type": "patchouli:text",
-      "text": "pe, and a shop cannot restock around one either: when goods run low the shop$(br2)asks the Workstation, and a locked recipe leaves nothing to craft. Unlocks are per town and permanent."
+      "text": "recipe, and a shop cannot restock around one either: when goods run low the s$(br2)hop asks the Item Workshop, and a locked recipe leaves nothing to craft. Unlocks are per town and permanent."
     },
     {
       "type": "patchouli:text",

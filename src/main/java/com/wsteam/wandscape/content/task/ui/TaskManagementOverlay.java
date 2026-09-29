@@ -486,7 +486,7 @@ public final class TaskManagementOverlay {
         g.fill(RenderType.guiOverlay(), x, y, x + 3, y + 26, 0, BORDER_GOLD);
 
         String catName = switch (group.category().toLowerCase()) {
-            case "workstation" -> I18n.string("gui.wandscape.task.group.workstation", "工作站");
+            case "workstation" -> I18n.string("gui.wandscape.task.group.workstation", "物品工坊");
             case "alchemy" -> I18n.string("gui.wandscape.task.group.alchemy", "炼药工坊");
             case "magic_workshop" -> I18n.string("gui.wandscape.task.group.magic_workshop", "魔法工坊");
             case "node" -> I18n.string("gui.wandscape.task.group.node", "元素节点");
