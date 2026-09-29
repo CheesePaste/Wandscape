@@ -42,5 +42,9 @@
   "gui.wandscape.constructionsite.withdraw": {
     "zh_cn": "撤回",
     "en_us": "Withdraw"
+  },
+  "gui.wandscape.constructionsite.craft_hint": {
+    "zh_cn": "建材可以在工作站制作",
+    "en_us": "Materials can be crafted at the workstation"
   }
 }

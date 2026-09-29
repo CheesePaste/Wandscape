@@ -179,6 +179,12 @@ public class ConstructionSiteScreen extends MedievalScreen {
                 + ": " + startLabel(), textX, lineY, MedievalColors.TEXT_WARM_WHITE);
         g.drawString(font, I18n.name("gui.wandscape.constructionsite.complete_time", "预计完工").getString()
                 + ": " + completeLabel(), textX, lineY + TIME_LINE_GAP, MedievalColors.TEXT_WARM_WHITE);
+
+        // 建材由殖民地工作站合成后送到工地，玩家常不知道来源；列表底与 creator 页脚之间正好一行。
+        g.drawString(font, I18n.name("gui.wandscape.constructionsite.craft_hint",
+                        "Materials can be crafted at the workstation"),
+                leftPos + 16, topPos + PH - CREATOR_FOOTER_H - font.lineHeight,
+                MedievalColors.TEXT_DIM);
     }
 
     private String startLabel() {

@@ -195,6 +195,12 @@ public class ShopScreen extends MedievalScreen {
                 }
             }
         }
+
+        // 货架由殖民地补货：仓库没有的货会在工作站下合成单，玩家常不知道来源。
+        // 提示固定在货物列表下方、creator 页脚（PH-24）之上那一行。
+        g.drawString(font, I18n.name("gui.wandscape.shop.craft_hint",
+                        "Goods can be crafted at the workstation"),
+                leftPos + 16, topPos + PH - 36, MedievalColors.TEXT_DIM);
     }
 
     private void adjustMaxStock(String itemId, int newMax) {
