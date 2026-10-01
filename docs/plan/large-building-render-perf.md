@@ -274,11 +274,60 @@ LOD 各档实测（每格画一个立方体，32 B/顶点）：
 |---|---|---|---|
 | C9 | **去 pretty-print** + 存取都 gzip | 29.5 MB → 8.6 MB（落盘），零逻辑改动 | 无 |
 | C10 | 自定义打包格式：`bits = max(2, ceil(log2(palette)))` 索引打包 + 全域空气游程 + NBT/gzip；**做我们自己的格式，不要求兼容 `.litematic`** | → 约 0.3 MB（约 100×） | 需带版本号走显式迁移链（[data-formats.md](../data-formats.md) 与硬规则 7） |
-| C11 | `pattern` 里别再混存 air（137,481 条 = 23.7%），或明确区分「放置」与「清空」两种语义 | 数据 −24%，语义也更清楚 | 若要保留「清空盒内」语义，得另设字段 |
+| C11 | `pattern` 里别再混存 air（137,481 条 = 23.7%），或明确区分「放置」与「清空」两种语义 | 数据 −24%，语义也更清楚 | **见 §7.1：air 不是纯冗余，删它会同时弱化三处行为** |
 | C12 | 对象模型去装箱：`List<BlockOffset>` → `int[]`、`List<Integer>` → `short[]`；`blockMapping()`（`BuildingConfig.java:209`，58 万条 String 键 HashMap，被 `BuildCompleteListener.java:189` / `BuildingRepairHandler.java:43` / `EnqueueHelper.java:448` 调用）要么删、要么改 int 键 | 常驻堆 −30 MB 级，且消掉一个约 100 MB 瞬时的定时炸弹 | 触及多个调用点 |
 | C13 | `rawJsons` 不再常驻 Gson 的 `JsonElement` 树（`BuildingConfigLoader.java:289`）；网络同步直接从序列化字节走（`Wandscape.java:905` 现在是先 `json.toString()` 再压） | 光这一栋楼的树按量级估算就是 **150–200 MB** 常驻 | 影响 `getRawJsons()` 的全部消费者 |
 
 C13 的量级说明：Gson 把 `[0,0,1]` 存成 `JsonArray` + `ArrayList` + 3 个 `JsonPrimitive`（每个内部包一个 `String`），单个三元组约 270 B；58 万个三元组即约 150 MB，加上 `block_indices` 数组与之同量级 ⇒ 200 MB 量级。这是估算，不是实测。
+
+### 7.1 「删掉 pattern 里的 air」专项排查（2026-10-01）
+
+**先说分布**：全仓 56 栋建筑 pattern 共 698,554 条，其中 air 137,509 条。但这 137,509 条里
+**137,481 条全在 magic_academy 一栋**；其余 27 栋合计只有 28 条，且那 28 条是上一轮建材改造
+故意留的「把这个方块删掉」标记（palette 写成 `minecraft:air`、索引不动，见
+[earlygame-building-materials.md](earlygame-building-materials.md) §6.1）。
+
+**再看来源**：当前扫描器**永不导出空气** —— `ScannerExportPacket.java:138` 就是
+`if (state.isAir()) continue;`，没有任何开关。所以 magic_academy 那 137k 条是旧版扫描器或
+后处理工具留下的，当前管线不会复现。
+
+**air 条目承重的三处（删掉会弱化）**：
+
+| 行为 | 位置 | 删掉之后 |
+|---|---|---|
+| **修复断言** | `BuildCompleteListener.java:183-206 findDamagedBlocks` 把 `"minecraft:air"` 当「此处应为空」，`BuildingRepairHandler.java:157` 据此点亮修复按钮、`:38-79` 真的把被填的格清空 | 不再认为这些格「该空」，被塞了东西也不报损坏、不清理 |
+| **拆除语义** | `BuildingApiImpl.java:314-326` 拆除 offsets 直接取自 `config.pattern()` | 这些格上的方块不再被清除，也不再被 `AsyncTransformExecutor.performSalvage` 回收进仓库 |
+| **占用/重叠** | `BuildingVoxels.java:90-108 computeFromOffsets` 把含空气在内的**全部**偏移塞进占用集，`BuildingSavedData.java:549-573` 据此建 posIndex 与重叠门禁 | 这些体素不再独占，两栋建筑可在原 air 格上重叠 |
+
+**不承重的（确认无影响）**：物料统计（`EnqueueHelper.java:387` 显式跳过 air）、仓库扣料
+（`BuildingRepairHandler.java:121`、`BuildingApiImpl.java:480` 同样跳过）、**建造完成判定**
+（`BuildCompleteListener.java:87` 无条件 `setStructureIntact(true)`，压根没有 pattern 比对 gate）、
+渲染几何（空气 `INVISIBLE`，0 个四边形）、x/z 居中（`BuildingCentering.java:29-35` 只看 min/max x/z）。
+
+**默认建造路径下它本来就冗余**：`clearBox` 默认 true，`EnqueueHelper.fillBoundaryAsAir`
+（`:313-345`）会给 boundary 里**每一个**体素补写 air。经核对，含 air 的 10 栋建筑的 air 偏移
+**全部落在自己的 boundary 内**，且 pattern 偏移无重复 —— 也就是说这些 air 对最终世界状态
+**没有增量贡献**（boundary 填充已经覆盖了它们）。唯一 `clearBox=false` 的生产路径是测试命令
+`/wandscape spawnall`（`SpawnAllBuildingsCommand.java:267-268`），那条路下 pattern 的 air
+才是唯一的清格来源。
+
+**结论与建议**：删 air 的**唯一正当理由是省体积，而这条理由站不住** —— C10 的 bit-pack +
+gzip 之后空气几乎不占体积（全域 9 bit 打包实测 288 KB），C9 的 compact 化也远比删 air 干净。
+反倒是删它会悄悄降级三处语义。所以：
+
+- **不建议**为省体积去删 air。
+- 若确实想收敛语义（让「空气 = 格子不存在」成为唯一口径），正确做法不是改 JSON，而是**把职责
+  收口**：`BuildingVoxels` 的占用集只收非空气偏移、修复断言改成「非空气格必须匹配」、清空统一
+  走 `EnqueueHelper.fillBoundaryAsAir`。这三处一起改才自洽，单独删数据会留下不一致。
+- 只删 magic_academy 那一份遗留 air 是可接受的折中（它本来就不是当前扫描器产物，且那栋楼
+  710 万格的包围盒里本来就有 650 万格毫无断言，少这 13.7 万格基本等于没变），但仍然是为了
+  一个不存在的体积问题付语义代价。
+
+**附带发现（与删不删 air 无关，但更值得看）**：`EnqueueHelper.fillBoundaryAsAir:330` 会给
+boundary 里每个体素补一条 op。magic_academy 的 boundary 体积是 **7,099,092**，pattern 只有
+580,814 —— 也就是建造时会被膨胀成约 **710 万条 offset/op**（其中约 650 万条是空气）。
+**这才是那栋楼建造耗时的真正大头**，而且删掉 pattern 里的 13.7 万条 air 对它毫无改善
+（那些格本来就在 boundary 内，删了也会被 boundary 填充原样补回）。要动应该动这里。
 
 ---
 
