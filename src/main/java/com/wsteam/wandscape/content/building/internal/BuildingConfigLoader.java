@@ -285,6 +285,17 @@ public final class BuildingConfigLoader {
         }
 
         config = config.withIdAndPackageId(fullId, pkgId);
+
+        // 内容与已注册的完全相同就复用旧实例。配置被当成一大批缓存的键（预览 GIF / LOD /
+        // 动画格子 / 缩略图 meta / 虚影 VBO），实例一换这些缓存就全部未命中重烤；更糟的是
+        // 旧实例还留在 HashMap 里时，查找会退化成 record 的逐组件 equals —— 那栋超大建筑的
+        // pattern 有 58 万条，等于每帧、每个建筑比 58 万次。入服同步 / 重复注册走的正是这里。
+        BuildingConfig previous = configs.get(fullId);
+        if (previous != null && previous.equals(config)) {
+            rawJsons.put(fullId, json);
+            return previous;
+        }
+
         configs.put(fullId, config);
         rawJsons.put(fullId, json);
 

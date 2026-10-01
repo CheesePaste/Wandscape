@@ -129,6 +129,15 @@ public final class BuildingGhostRenderer {
     private static final Map<BuildingConfig, List<List<AnimatedCell>>> ANIMATED_CACHE =
             Collections.synchronizedMap(new WeakHashMap<>());
 
+    /**
+     * 配置目录变化（datapack 重载 / 入服同步）时清空。条目按旧实例缓存，实例换了就失配 ——
+     * 这个 map 是 WeakHashMap，比键走 hashCode+equals，失配时每次查表都是 record 的逐组件
+     * equals（O(pattern)）。复用实例（见 BuildingConfigLoader）后一般不会再换，这里兜底。
+     */
+    public static void clearAnimatedCache() {
+        ANIMATED_CACHE.clear();
+    }
+
     private static List<AnimatedCell> animatedCells(BuildingConfig config, int steps) {
         List<List<AnimatedCell>> buckets = ANIMATED_CACHE.computeIfAbsent(config,
                 k -> new ArrayList<>(Collections.nCopies(4, null)));

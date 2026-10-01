@@ -44,7 +44,9 @@ import com.wsteam.wandscape.content.building.projection.client.ProjectionFlightC
 import com.wsteam.wandscape.content.road.client.RoadConstructionGhost;
 import com.wsteam.wandscape.content.road.client.RoadPlacementController;
 import com.wsteam.wandscape.content.road.client.RoadPlacementRenderer;
+import com.wsteam.wandscape.content.building.render.BuildingGhostRenderer;
 import com.wsteam.wandscape.content.building.render.BuildingGhostVboCache;
+import com.wsteam.wandscape.content.building.preview.BuildingPreviewRenderer;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.content.building.network.BuildingAreaSyncPacket;
 import com.wsteam.wandscape.foundation.ui.panel.WandscapePanelController;
@@ -680,6 +682,8 @@ public class WandscapeClient {
                                                   Executor backgroundExecutor, Executor gameExecutor) {
                 return barrier.wait(CompletableFuture.completedFuture(null))
                         .thenRun(BuildingGhostVboCache::closeAll)
+                        .thenRun(BuildingGhostRenderer::clearAnimatedCache)
+                        .thenRun(BuildingPreviewRenderer::clearMetaCache)
                         .thenRun(BuildingPreviewGifCache::closeAll)
                         .thenRun(BuildingPreviewGifCache::warmAll);
             }

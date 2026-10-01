@@ -92,6 +92,11 @@ public final class BuildingPreviewRenderer {
         }
     }
 
+    /** 配置目录变化（datapack 重载 / 入服同步）时清空——理由同 {@code BuildingGhostRenderer#clearAnimatedCache}。 */
+    public static void clearMetaCache() {
+        META_CACHE.clear();
+    }
+
     public static ConfigPreviewMeta getPreviewMeta(BuildingConfig config) {
         if (config.pattern().isEmpty()) {
             return new ConfigPreviewMeta(config);

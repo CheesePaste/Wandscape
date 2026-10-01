@@ -1,5 +1,7 @@
 package com.wsteam.wandscape.content.building.render;
 
+import com.mojang.blaze3d.systems.RenderSystem;
+import net.minecraft.client.renderer.ShaderInstance;
 import com.mojang.blaze3d.vertex.*;
 import com.wsteam.wandscape.content.building.data.BlockOffset;
 import com.wsteam.wandscape.content.building.data.BuildingConfig;
@@ -57,6 +59,14 @@ public final class BuildingGhostVboCache {
      * 1 = 每 tick 至多一次，即把原来的「每渲染帧一次」降到「每 tick 一次」。
      */
     private static final long MASK_REBUILD_INTERVAL_TICKS = 1L;
+
+    /**
+     * 每帧、每栋建筑重建遮罩索引的时间预算。原来每 tick 会把**所有可见段**重建一遍
+     * （那栋超大建筑约 44 万格逐格 {@code getBlockState} + 803 次 {@code glBufferData}），
+     * 整笔卡在那一个 tick 上，表现为帧率忽高忽低。改成按预算轮转：每帧最多花这么久，
+     * 转完一圈把所有可见段刷新一次，遮罩最多落后几 tick（刚建好的格子上会残留一小会儿虚影）。
+     */
+    private static final long MASK_REBUILD_BUDGET_NS = 1_000_000L;
 
     private static final Map<BuildingConfig, BakedGhostMesh[]> CACHE = new HashMap<>();
     private static final ByteBufferBuilder INDEX_BBB = new ByteBufferBuilder(4 * 1024 * 1024);
@@ -118,19 +128,49 @@ public final class BuildingGhostVboCache {
             order[n++] = sortKey(sections[i], i, anchor, camPos);
         }
         Arrays.sort(order, 0, n);   // 原始类型排序：零分配、无装箱
+        if (n == 0) return;
+
+        // 遮罩重建：按时间预算轮转，别在一次 tick 里把整栋楼的可见段全重建一遍。
+        // 没轮到的段继续用上一轮的遮罩索引，至多落后几 tick。
+        if (masked) {
+            long deadline = System.nanoTime() + MASK_REBUILD_BUDGET_NS;
+            int start = mesh.maskCursor % n;
+            int advanced = 0;
+            for (int k = 0; k < n; k++) {
+                SectionMesh section = sections[(int) (order[(start + k) % n] & 0xFFFF_FFFFL)];
+                if (needsMaskRebuild(mc, section, anchor)) {
+                    rebuildMaskedIndex(mc, section, anchor);
+                    advanced = k + 1;
+                    if (System.nanoTime() >= deadline) break;
+                }
+            }
+            mesh.maskCursor = (start + advanced) % n;
+        }
+
+        // 所有段共用同一个 modelView —— 顶点是按绝对的旋转后偏移烘进去的（见 buildSection
+        // 里的 pose.translate），段原点只在视锥剔除那一步用，这里**不加段原点**。所以 shader
+        // 与矩阵只需设一次，之后每段只 bind + draw —— 对齐原版 LevelRenderer#renderSectionLayer。
+        // （原来是每段 drawWithShader：每帧切 ~800 次 shader 程序、上传 ~800 次 MVP。）
+        Matrix4f modelView = new Matrix4f(cameraModelView).translate(
+                (float) (anchor.getX() - camPos.x),
+                (float) (anchor.getY() - camPos.y),
+                (float) (anchor.getZ() - camPos.z));
+        RenderSystem.setShader(GameRenderer::getRendertypeTranslucentShader);
+        ShaderInstance shader = RenderSystem.getShader();
+        shader.setDefaultUniforms(VertexFormat.Mode.QUADS, modelView, projection, mc.getWindow());
+        shader.apply();
 
         for (int k = 0; k < n; k++) {
             SectionMesh section = sections[(int) (order[k] & 0xFFFF_FFFFL)];
-            if (masked) {
-                if (needsMaskRebuild(mc, section, anchor)) {
-                    rebuildMaskedIndex(mc, section, anchor);
-                }
-            } else if (section.indexClobbered) {
+            if (!masked && section.indexClobbered) {
                 restoreFullIndex(section);
                 section.indexClobbered = false;
             }
-            drawSection(section, cameraModelView, projection, camPos, anchor);
+            section.vbo.bind();
+            section.vbo.draw();
         }
+        VertexBuffer.unbind();
+        shader.clear();
     }
 
     /**
@@ -496,25 +536,12 @@ public final class BuildingGhostVboCache {
     // ── 绘制 ──
     // ═══════════════════════════════════════════════════════════════
 
-    private static void drawSection(SectionMesh section, Matrix4f cameraModelView, Matrix4f projection,
-                                    Vec3 camPos, BlockPos anchor) {
-        // 只平移到 anchor，**不加段原点**：顶点是按绝对的旋转后偏移烘进去的（见 buildSection
-        // 里那行 pose.translate(rotated.x(), ...)），段原点再加一次就是偏移两遍，整栋楼会
-        // 炸成一堆错位的副本。段原点只服务于视锥剔除那一步（见 isSectionVisible）。
-        Matrix4f modelView = new Matrix4f(cameraModelView).translate(
-                (float) (anchor.getX() - camPos.x),
-                (float) (anchor.getY() - camPos.y),
-                (float) (anchor.getZ() - camPos.z));
-
-        section.vbo.bind();
-        section.vbo.drawWithShader(modelView, projection, GameRenderer.getRendertypeTranslucentShader());
-        VertexBuffer.unbind();
-    }
-
     private static final class BakedGhostMesh {
         final SectionMesh[] sections;
         /** 每帧复用的排序缓冲（排序键 = 距离高位 | 段下标），避免每帧分配。 */
         final long[] drawOrder;
+        /** 遮罩重建的轮转起点（可见列表内的下标），让预算公平地铺到所有可见段上。 */
+        int maskCursor;
 
         BakedGhostMesh(SectionMesh[] sections) {
             this.sections = sections;
