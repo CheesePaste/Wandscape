@@ -309,6 +309,11 @@ public final class EnqueueHelper {
      * (already present in {@code offsets}) are left untouched. Air coords are rotated
      * with the same {@link BuildingRotation#rotateOffset} used for pattern offsets.
      * No-op when the building has no boundary or its blueprint has no offsets/blocks.
+     *
+     * <p><b>这里的 air 与 pattern 里的 air 是两回事</b>：这里是「清空这一格」的真实放置操作
+     * （整箱清空功能），而 pattern 里的 {@code minecraft:air} 是
+     * {@link BuildingConfig#NON_CELL_BLOCK_ID}，语义是「这格不属于本建筑」、压根不存在。
+     * 两者共用同一个方块 id，但一个是动作、一个是缺席，别混。
      */
     private static void fillBoundaryAsAir(Map<String, JsonElement> params, BuildingConfig config, int rotationSteps) {
         BuildingConfig.BoundaryBox boundary = config.boundary();
@@ -432,7 +437,9 @@ public final class EnqueueHelper {
 
     /** Pattern offsets sorted Y→X→Z so the building rises from bottom to top. */
     private static JsonElement patternToJson(BuildingConfig config) {
-        var sorted = new ArrayList<>(config.pattern());
+        // 用 solidPattern：空气标记是「这格不属于本建筑」，不该进放置列表。
+        // （它若落在 boundary 内，clearBox 的整箱清空本来也会覆盖到那一格。）
+        var sorted = new ArrayList<>(config.solidPattern());
         sorted.sort(Comparator.comparingInt(BlockOffset::y)
                 .thenComparingInt(BlockOffset::x)
                 .thenComparingInt(BlockOffset::z));
@@ -564,8 +571,12 @@ public final class EnqueueHelper {
                                         int steps) {
         JsonObject result = new JsonObject();
         for (int i = 0; i < pattern.size(); i++) {
+            String blockId = rotatedPalette.get(blockIndices.get(i));
+            // 空气标记 = 「这格不属于本建筑」，不进放置表（与 blockMappingToJson 同口径）。
+            // 旋转不会把空气转成别的方块，所以这里按 id 过滤与过滤 offsets 等价。
+            if (BuildingConfig.NON_CELL_BLOCK_ID.equals(blockId)) continue;
             BlockOffset rotated = BuildingRotation.rotateOffset(pattern.get(i), steps);
-            result.addProperty(rotated.toKey(), rotatedPalette.get(blockIndices.get(i)));
+            result.addProperty(rotated.toKey(), blockId);
         }
         return result;
     }

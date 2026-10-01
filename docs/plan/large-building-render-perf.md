@@ -274,7 +274,7 @@ LOD 各档实测（每格画一个立方体，32 B/顶点）：
 |---|---|---|---|
 | C9 | **去 pretty-print** + 存取都 gzip | 29.5 MB → 8.6 MB（落盘），零逻辑改动 | 无 |
 | C10 | 自定义打包格式：`bits = max(2, ceil(log2(palette)))` 索引打包 + 全域空气游程 + NBT/gzip；**做我们自己的格式，不要求兼容 `.litematic`** | → 约 0.3 MB（约 100×） | 需带版本号走显式迁移链（[data-formats.md](../data-formats.md) 与硬规则 7） |
-| C11 | `pattern` 里别再混存 air（137,481 条 = 23.7%），或明确区分「放置」与「清空」两种语义 | 数据 −24%，语义也更清楚 | **见 §7.1：air 不是纯冗余，删它会同时弱化三处行为** |
+| C11 | ~~从数据里删掉 air~~ → **改口径**：air 语义定为「这格不存在」，收口进 `BuildingConfig.NON_CELL_BLOCK_ID` | 语义清楚了；体积靠 C9/C10 解决 | **已实施，见 §7.1** |
 | C12 | 对象模型去装箱：`List<BlockOffset>` → `int[]`、`List<Integer>` → `short[]`；`blockMapping()`（`BuildingConfig.java:209`，58 万条 String 键 HashMap，被 `BuildCompleteListener.java:189` / `BuildingRepairHandler.java:43` / `EnqueueHelper.java:448` 调用）要么删、要么改 int 键 | 常驻堆 −30 MB 级，且消掉一个约 100 MB 瞬时的定时炸弹 | 触及多个调用点 |
 | C13 | `rawJsons` 不再常驻 Gson 的 `JsonElement` 树（`BuildingConfigLoader.java:289`）；网络同步直接从序列化字节走（`Wandscape.java:905` 现在是先 `json.toString()` 再压） | 光这一栋楼的树按量级估算就是 **150–200 MB** 常驻 | 影响 `getRawJsons()` 的全部消费者 |
 
@@ -311,17 +311,36 @@ C13 的量级说明：Gson 把 `[0,0,1]` 存成 `JsonArray` + `ArrayList` + 3 �
 `/wandscape spawnall`（`SpawnAllBuildingsCommand.java:267-268`），那条路下 pattern 的 air
 才是唯一的清格来源。
 
-**结论与建议**：删 air 的**唯一正当理由是省体积，而这条理由站不住** —— C10 的 bit-pack +
-gzip 之后空气几乎不占体积（全域 9 bit 打包实测 288 KB），C9 的 compact 化也远比删 air 干净。
-反倒是删它会悄悄降级三处语义。所以：
+**已定口径与实施（2026-10-01）**：这些 air 是**手工标注**出来的 —— 导出把建筑周围的山体、
+树木一并收进了 pattern，标注者把那些不属于建筑的方块改写成 air 以把它们踢出建筑。而当前
+扫描器（`ScannerExportPacket.java:138`）从不导出空气，所以数据里的 air 一律是这个意思。
 
-- **不建议**为省体积去删 air。
-- 若确实想收敛语义（让「空气 = 格子不存在」成为唯一口径），正确做法不是改 JSON，而是**把职责
-  收口**：`BuildingVoxels` 的占用集只收非空气偏移、修复断言改成「非空气格必须匹配」、清空统一
-  走 `EnqueueHelper.fillBoundaryAsAir`。这三处一起改才自洽，单独删数据会留下不一致。
-- 只删 magic_academy 那一份遗留 air 是可接受的折中（它本来就不是当前扫描器产物，且那栋楼
-  710 万格的包围盒里本来就有 650 万格毫无断言，少这 13.7 万格基本等于没变），但仍然是为了
-  一个不存在的体积问题付语义代价。
+因此口径定为「**空气 = 这格不存在**」，落地为 `BuildingConfig.NON_CELL_BLOCK_ID` 这个唯一常量，
+并把三处职责一起收口（一起改才自洽，单改一处会留下不一致）：
+
+| 收口点 | 改动 | 效果 |
+|---|---|---|
+| `BuildingConfig.blockMapping()` | 跳过标记格 | 放置（`$blocks`）不产生该格的 op；修复按 key 查表查不到 → 不再要求这些格为空（`BuildCompleteListener.findDamagedBlocks` 的 `expectedSpec == null` 分支；`BuildingRepairHandler` 同理） |
+| `BuildingConfig.solidPattern()`（新增） | 只在真正属于建筑的格子上迭代 | 被 `BuildingVoxels.rotatedOffsets`（占用/重叠/posIndex/客户端冲突）与 `EnqueueHelper.patternToJson`（`$offsets`）与 `BuildingApiImpl` 拆除取用 |
+| `EnqueueHelper.blocksFromPalette` | 同样跳过标记格 | 旋转分支（`rotationSteps != 0`）与不旋转分支口径一致 |
+
+**没有改 JSON，也不建议改**：既然 air 语义已经是「不存在」，把它从数据里删掉就是**等价**的，
+唯一收益是体积 —— 而体积的正解是 C9/C10（bit-pack 之后空气几乎不占体积，全域 9 bit 打包
+实测 288 KB）。反过来，删数据会让「曾经被手工剔掉的格」这条信息在文件里消失，将来谁也看不出
+那里本来有山。
+
+**两条容易踩的边界**（改这块前先看）：
+
+1. `EnqueueHelper.fillBoundaryAsAir` 里的 `"minecraft:air"` 是**另一回事** —— 那是
+   `clearBox` 整箱清空的真实放置操作（一个动作），不是本节的「缺席」标记。两者共用同一个
+   方块 id，已在代码里加注释区分。默认 `clearBox=true` 下，标记格若落在 boundary 内，
+   照样会被整箱清空覆盖（改前改后一致）。
+2. 过滤会**打乱下标**。凡是「先 `rotateOffsets(config.pattern())`、再用同一个 `i` 取
+   `blockIdAt(i)`」的写法都不能换成 `solidPattern()`，只能自己跳过标记 ——
+   `BuildingApiImpl.materialCountsForMissingOffsets` 就是这种，已保持原样。
+
+**存档影响**：老档里已注册建筑的 `patternPositions`（SavedData）仍含那些体素，改口径后
+新建建筑不含 —— 该索引只用于归属查询与重叠粗筛，开发期不承诺存档兼容，重开新档最干净。
 
 **附带发现（与删不删 air 无关，但更值得看）**：`EnqueueHelper.fillBoundaryAsAir:330` 会给
 boundary 里每个体素补一条 op。magic_academy 的 boundary 体积是 **7,099,092**，pattern 只有

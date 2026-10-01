@@ -197,18 +197,57 @@ public record BuildingConfig(
         }
     }
 
+    /**
+     * 「这格不属于本建筑」的标记方块。
+     *
+     * <p>建筑 JSON 的导出（{@code ScannerExportPacket}）**从不写入空气**，所以 palette 里
+     * 出现 {@code minecraft:air} 一律是**手工标注**：导出常把建筑周围的山体、树木一并收进来，
+     * 标注者把这些不属于建筑的方块改写成 air 以把它们踢出建筑。
+     *
+     * <p>因此它的语义是「**这格不存在**」，而**不是**「把这一格清成空气」——物料不含它、
+     * 放置不碰它、修复不要求它为空、占用与重叠也不把它算作本建筑的地盘。
+     */
+    public static final String NON_CELL_BLOCK_ID = "minecraft:air";
+
     /** Block state string at {@code patternIndex} (parallel to {@link #pattern()}). */
     public String blockIdAt(int patternIndex) {
         return palette.get(blockIndices.get(patternIndex));
     }
 
+    /** {@code patternIndex} 这一格是不是 {@link #NON_CELL_BLOCK_ID} 标记。 */
+    public boolean isNonCellAt(int patternIndex) {
+        return NON_CELL_BLOCK_ID.equals(blockIdAt(patternIndex));
+    }
+
+    /**
+     * 只含真正属于本建筑的格子（按 {@link #NON_CELL_BLOCK_ID} 标记过滤后的偏移）。
+     * 每次调用 O(N) 重建；调用方都是建造 / 注册 / 拆除这类非逐帧路径。
+     *
+     * <p><b>注意</b>：过滤会打乱下标，凡是「先 {@code rotateOffsets(config.pattern())}、
+     * 再用同一个 {@code i} 去取 {@link #blockIdAt(int)}」的写法都不能换成本方法
+     * （那种写法要自己跳过标记，例如 {@code BuildingApiImpl.materialCountsForMissingOffsets}）。
+     */
+    public List<BlockOffset> solidPattern() {
+        List<BlockOffset> out = new ArrayList<>(pattern.size());
+        for (int i = 0; i < pattern.size(); i++) {
+            if (!isNonCellAt(i)) {
+                out.add(pattern.get(i));
+            }
+        }
+        return Collections.unmodifiableList(out);
+    }
+
     /**
      * Derived offset→blockstate map (key "x,y,z"). O(N) each call — prefer
      * {@link #blockIdAt(int)} in hot paths (material counting, renderers).
+     *
+     * <p>不含 {@link #NON_CELL_BLOCK_ID} 标记格：放置与修复都是「按这张表查 key 决定做什么」，
+     * 标记格在表里缺席就等于「这格不存在」——既不会被放置，也不会被要求为空。
      */
     public Map<String, String> blockMapping() {
         Map<String, String> m = new HashMap<>(pattern.size());
         for (int i = 0; i < pattern.size(); i++) {
+            if (isNonCellAt(i)) continue;
             m.put(pattern.get(i).toKey(), blockIdAt(i));
         }
         return Collections.unmodifiableMap(m);
