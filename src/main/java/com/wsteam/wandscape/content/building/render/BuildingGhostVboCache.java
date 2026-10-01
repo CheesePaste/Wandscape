@@ -447,12 +447,13 @@ public final class BuildingGhostVboCache {
 
     private static void drawSection(SectionMesh section, Matrix4f cameraModelView, Matrix4f projection,
                                     Vec3 camPos, BlockPos anchor) {
-        // ModelView = 相机视图矩阵 × (anchor + 段原点) 相对相机的平移。段各自带偏移绘制，
-        // 所以顶点缓冲里存的是段内相对坐标，同一段可以在任意 anchor 复用。
+        // 只平移到 anchor，**不加段原点**：顶点是按绝对的旋转后偏移烘进去的（见 buildSection
+        // 里那行 pose.translate(rotated.x(), ...)），段原点再加一次就是偏移两遍，整栋楼会
+        // 炸成一堆错位的副本。段原点只服务于视锥剔除那一步（见 isSectionVisible）。
         Matrix4f modelView = new Matrix4f(cameraModelView).translate(
-                (float) (anchor.getX() + section.originX - camPos.x),
-                (float) (anchor.getY() + section.originY - camPos.y),
-                (float) (anchor.getZ() + section.originZ - camPos.z));
+                (float) (anchor.getX() - camPos.x),
+                (float) (anchor.getY() - camPos.y),
+                (float) (anchor.getZ() - camPos.z));
 
         section.vbo.bind();
         section.vbo.drawWithShader(modelView, projection, GameRenderer.getRendertypeTranslucentShader());
