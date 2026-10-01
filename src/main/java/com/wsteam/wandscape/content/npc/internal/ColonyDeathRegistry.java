@@ -95,7 +95,7 @@ public class ColonyDeathRegistry extends SavedData {
     public CompoundTag save(CompoundTag tag, HolderLookup.Provider registries) {
         ListTag list = new ListTag();
         for (DeathRecord r : records) {
-            list.add(toNbt(r));
+            list.add(toNbt(r, registries));
         }
         tag.put(TAG_RECORDS, list);
         return tag;
@@ -105,13 +105,13 @@ public class ColonyDeathRegistry extends SavedData {
         ColonyDeathRegistry reg = new ColonyDeathRegistry();
         ListTag list = tag.getList(TAG_RECORDS, Tag.TAG_COMPOUND);
         for (int i = 0; i < list.size(); i++) {
-            DeathRecord r = fromNbt(list.getCompound(i));
+            DeathRecord r = fromNbt(list.getCompound(i), registries);
             if (r != null) reg.records.add(r);
         }
         return reg;
     }
 
-    private static CompoundTag toNbt(DeathRecord r) {
+    private static CompoundTag toNbt(DeathRecord r, HolderLookup.Provider registries) {
         CompoundTag t = new CompoundTag();
         t.putUUID("npcId", r.npcId());
         t.putString("name", r.name());
@@ -148,11 +148,14 @@ public class ColonyDeathRegistry extends SavedData {
             }
             t.put("equippedMagic", magics);
         }
+        if (r.preservedInventory() != null) {
+            t.put("preservedInventory", r.preservedInventory().toNbt(registries));
+        }
         return t;
     }
 
     @Nullable
-    private static DeathRecord fromNbt(CompoundTag t) {
+    private static DeathRecord fromNbt(CompoundTag t, HolderLookup.Provider registries) {
         if (!t.hasUUID("npcId")) return null;
         List<ResourceStack> inv = new ArrayList<>();
         if (t.contains("inventory")) {
@@ -174,6 +177,11 @@ public class ColonyDeathRegistry extends SavedData {
                 if (!id.isEmpty()) equippedMagic.add(id);
             }
         }
+        com.wsteam.wandscape.content.npc.data.PreservedInventory preservedInventory = null;
+        if (t.contains("preservedInventory")) {
+            preservedInventory = com.wsteam.wandscape.content.npc.data.PreservedInventory.fromNbt(
+                    t.getCompound("preservedInventory"), registries);
+        }
         return new DeathRecord(
                 t.getUUID("npcId"),
                 t.getString("name"),
@@ -188,6 +196,7 @@ public class ColonyDeathRegistry extends SavedData {
                 t.getFloat("workSpeed"), t.getFloat("spellSpeed"), t.getFloat("armorValue"),
                 t.getFloat("maxMana"),
                 inv,
-                equippedMagic);
+                equippedMagic,
+                preservedInventory);
     }
 }

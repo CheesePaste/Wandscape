@@ -49,6 +49,30 @@ public final class NpcDeathHandler {
             }
         }
 
+        com.wsteam.wandscape.content.npc.data.PreservedInventory pres = null;
+        if (com.wsteam.wandscape.content.items.charm.SoulwardCharmItem.isSoulwardActive(npc)) {
+            net.minecraft.world.item.ItemStack wand = npc.hasDefaultWand()
+                    ? net.minecraft.world.item.ItemStack.EMPTY
+                    : npc.getItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND).copy();
+
+            List<net.minecraft.world.item.ItemStack> armor = new java.util.ArrayList<>(WandscapeNpc.ARMOR_SLOT_COUNT);
+            for (var slot : WandscapeNpc.ARMOR_VANILLA_SLOTS) {
+                armor.add(npc.getItemBySlot(slot).copy());
+            }
+
+            List<net.minecraft.world.item.ItemStack> backpack = new java.util.ArrayList<>(npc.inventory.getContainerSize());
+            for (int i = 0; i < npc.inventory.getContainerSize(); i++) {
+                backpack.add(npc.inventory.getItem(i).copy());
+            }
+
+            net.minecraft.nbt.CompoundTag curiosTag = com.wsteam.wandscape.compat.curios.CuriosCompat
+                    .saveCurios(npc, level.registryAccess());
+
+            pres = new com.wsteam.wandscape.content.npc.data.PreservedInventory(wand, armor, backpack, curiosTag);
+            Log.info(TAG, "NPC {} ({}) 守魂护符生效 —— 随身装备、背包与饰品已完整封存入死亡快照",
+                    npc.getUUID().toString().substring(0, 8), npc.getNpcName());
+        }
+
         NpcApi npcApi = WandscapeApis.getNpcApiSilently();
         UUID colony = npcApi != null ? npcApi.getNpcColony(npc.getUUID()) : null;
         if (colony == null) colony = EntityComponentBridge.PLACEHOLDER_COLONY;
@@ -69,11 +93,12 @@ public final class NpcDeathHandler {
                 npc.getBaseAttributeValue(com.wsteam.wandscape.content.npc.attributes.NpcAttributes.AttributeType.ARMOR_VALUE),
                 npc.getBaseAttributeValue(com.wsteam.wandscape.content.npc.attributes.NpcAttributes.AttributeType.MAX_MANA),
                 inv,
-                npc.equippedMagic.flattenedQualified());
+                npc.equippedMagic.flattenedQualified(),
+                pres);
         ColonyDeathRegistry.get(level).add(rec);
-        Log.info(TAG, "NPC {} ({}) died at {},{},{} — death record saved, inventory {} stacks",
+        Log.info(TAG, "NPC {} ({}) died at {},{},{} — death record saved, inventory {} stacks, soulward={}",
                 rec.npcId().toString().substring(0, 8), rec.name(),
-                rec.x(), rec.y(), rec.z(), inv.size());
+                rec.x(), rec.y(), rec.z(), inv.size(), pres != null);
 
         // 像玩家/驯养宠物一样把阵亡消息送上聊天区（文案用原版战斗记录，受众受 Config 控制）
         broadcastDeathMessage(level, npc, colony);

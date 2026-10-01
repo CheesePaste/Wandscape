@@ -91,4 +91,23 @@ public final class CuriosCompat {
         if (!loaded || entity == null) return ItemStack.EMPTY;
         return CuriosCompatImpl.getEquippedSpellbook(entity);
     }
+
+    /**
+     * 保存实体的全部 Curios 饰品（槽位标识、索引、ItemStack）。
+     * 未安装 Curios 时返回 null。
+     */
+    @javax.annotation.Nullable
+    public static net.minecraft.nbt.CompoundTag saveCurios(LivingEntity entity, net.minecraft.core.HolderLookup.Provider registries) {
+        if (!loaded || entity == null) return null;
+        return CuriosCompatImpl.saveCurios(entity, registries);
+    }
+
+    /**
+     * 恢复实体的 Curios 饰品。
+     * 未安装 Curios 时为空操作。
+     */
+    public static void restoreCurios(LivingEntity entity, net.minecraft.nbt.CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
+        if (!loaded || entity == null || tag == null) return;
+        CuriosCompatImpl.restoreCurios(entity, tag, registries);
+    }
 }

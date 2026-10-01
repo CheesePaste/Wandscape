@@ -25,8 +25,21 @@ public record DeathRecord(
         float maxHp, float moveSpeed, float spellPower, float workSpeed,
         float spellSpeed, float armorValue, float maxMana,
         List<ResourceStack> inventory,
-        List<String> equippedMagic
+        List<String> equippedMagic,
+        @Nullable PreservedInventory preservedInventory
 ) {
+
+    public DeathRecord(
+            UUID npcId, String name, String dimension, int x, int y, int z,
+            long deathTime, UUID colonyId, int skinVariant, int hatColor,
+            boolean hasDefaultWand, float maxHp, float moveSpeed, float spellPower,
+            float workSpeed, float spellSpeed, float armorValue, float maxMana,
+            List<ResourceStack> inventory, List<String> equippedMagic
+    ) {
+        this(npcId, name, dimension, x, y, z, deathTime, colonyId, skinVariant, hatColor,
+                hasDefaultWand, maxHp, moveSpeed, spellPower, workSpeed, spellSpeed, armorValue, maxMana,
+                inventory, equippedMagic, null);
+    }
 
     public DeathRecord {
         inventory = List.copyOf(inventory);
