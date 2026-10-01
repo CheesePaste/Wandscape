@@ -12,10 +12,14 @@ import com.wsteam.wandscape.foundation.service.ParticleService;
 import com.wsteam.wandscape.content.building.event.BuildingPlacedEvent;
 import com.wsteam.wandscape.foundation.log.Log;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.Property;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
@@ -182,64 +186,105 @@ public final class BuildCompleteListener {
      */
     public static List<BlockOffset> findDamagedBlocks(Level level, BlockPos anchor, BuildingConfig config,
                                                         int rotationSteps) {
-        java.util.List<BlockOffset> pattern = BuildingRotation
-                .rotateOffsets(config.pattern(), rotationSteps);
-        java.util.Map<String, String> blockMapping = rotationSteps != 0
-                ? BuildingRotation.rotateBlockMapping(
-                        config.blockMapping(), rotationSteps)
-                : config.blockMapping();
+        int steps = rotationSteps & 3;
+
+        // 「预期是什么方块」按 palette 预解析（几百项），而不是按 pattern 逐格现算
+        // （几十万项）。原先要造一张 44 万条 "x,y,z" String 键的 HashMap，建筑旋转过时
+        // 还要再逐条把方块状态字符串解析、旋转、序列化回去 —— 大建筑上那一步是秒级的，
+        // 而打开工地面板就会走这里。旋转整张 palette 是 O(palette)，仓库里已有工具。
+        Expected[] byPalette = parseExpectedPalette(
+                BuildingRotation.rotatePalette(config.palette(), steps));
+
+        List<BlockOffset> pattern = config.pattern();
+        List<Integer> indices = config.blockIndices();
+        BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
+        int ax = anchor.getX(), ay = anchor.getY(), az = anchor.getZ();
 
         List<BlockOffset> damaged = new ArrayList<>();
-        for (BlockOffset offset : pattern) {
-            BlockPos target = anchor.offset(offset.x(), offset.y(), offset.z());
-            String expectedKey = offset.toKey();
-            String expectedSpec = blockMapping.get(expectedKey);
-            if (expectedSpec == null) continue;
-
-            BlockState actual = level.getBlockState(target);
-
-            if (!blockMatchesSpec(actual, expectedSpec)) {
-                damaged.add(offset);
+        for (int i = 0; i < pattern.size(); i++) {
+            Expected expected = byPalette[indices.get(i)];
+            if (expected == null) continue;   // 空气标记：「这格不属于本建筑」，不参与校验
+            BlockOffset off = pattern.get(i);
+            cursor.set(ax + off.x(), ay + off.y(), az + off.z());
+            if (!expected.matches(level.getBlockState(cursor))) {
+                damaged.add(BuildingRotation.rotateOffset(off, steps));
             }
         }
         return damaged;
     }
 
-    private static boolean blockMatchesSpec(BlockState actual, String expectedSpec) {
-        String expectedBlockId = expectedSpec;
-        java.util.Map<String, String> expectedProps = java.util.Collections.emptyMap();
+    /**
+     * 一条 palette 条目的「预期样子」：方块本身 + 需要核对的状态属性。
+     * {@code props} 为 null（本模组 93% 的方块如此）时，一次引用比较就能判定，
+     * 完全不必碰字符串。
+     */
+    private record Expected(Block block, @Nullable Map<Property<?>, String> props) {
+        boolean matches(BlockState actual) {
+            if (actual.getBlock() != block) return false;
+            if (props == null) return true;
+            for (var entry : props.entrySet()) {
+                Comparable<?> value = valueOf(actual, entry.getKey());
+                if (value == null) return false;
+                if (!entry.getValue().equals(nameOf(entry.getKey(), value))) return false;
+            }
+            return true;
+        }
+    }
 
-        int bracket = expectedSpec.indexOf('[');
-        if (bracket > 0 && expectedSpec.endsWith("]")) {
-            expectedBlockId = expectedSpec.substring(0, bracket);
-            String propsStr = expectedSpec.substring(bracket + 1, expectedSpec.length() - 1);
-            expectedProps = new LinkedHashMap<>();
-            for (String kv : propsStr.split(",")) {
-                String[] parts = kv.split("=", 2);
-                if (parts.length == 2) {
-                    expectedProps.put(parts[0].trim(), parts[1].trim());
-                }
+    /** 解析整张 palette；数组里为 null 的槽位表示「这格不存在」或该条目无法解析。 */
+    private static Expected[] parseExpectedPalette(List<String> palette) {
+        Expected[] out = new Expected[palette.size()];
+        for (int p = 0; p < palette.size(); p++) {
+            out[p] = parseExpected(palette.get(p));
+        }
+        return out;
+    }
+
+    @Nullable
+    private static Expected parseExpected(String spec) {
+        String baseId = spec;
+        String propsStr = null;
+        int bracket = spec.indexOf('[');
+        if (bracket > 0 && spec.endsWith("]")) {
+            baseId = spec.substring(0, bracket);
+            propsStr = spec.substring(bracket + 1, spec.length() - 1);
+        }
+
+        // 空气标记 = 「这格不属于本建筑」（BuildingConfig.NON_CELL_BLOCK_ID），不参与校验：
+        // 这些格本就不是这栋楼放的，不该被要求为空，也不该被算成损坏。
+        if (BuildingConfig.NON_CELL_BLOCK_ID.equals(baseId)) return null;
+
+        ResourceLocation rl;
+        try {
+            rl = ResourceLocation.parse(baseId);
+        } catch (RuntimeException e) {
+            return null;
+        }
+        Block block = BuiltInRegistries.BLOCK.get(rl);
+        if (block == null) return null;
+
+        if (propsStr == null || propsStr.isEmpty()) return new Expected(block, null);
+
+        Map<Property<?>, String> props = new LinkedHashMap<>();
+        for (String kv : propsStr.split(",")) {
+            String[] parts = kv.split("=", 2);
+            if (parts.length != 2) continue;
+            Property<?> prop = block.getStateDefinition().getProperty(parts[0].trim());
+            if (prop != null) {
+                props.put(prop, parts[1].trim());
             }
         }
-
-        String actualId = actual.getBlock().builtInRegistryHolder().key().location().toString();
-        if (!actualId.equals(expectedBlockId)) return false;
-
-        for (var entry : expectedProps.entrySet()) {
-            net.minecraft.world.level.block.state.properties.Property<?> prop =
-                    actual.getBlock().getStateDefinition().getProperty(entry.getKey());
-            if (prop == null) return false;
-            String actualValue = getPropertyValue(actual, prop);
-            if (!entry.getValue().equals(actualValue)) return false;
-        }
-        return true;
+        return new Expected(block, props.isEmpty() ? null : props);
     }
 
     @SuppressWarnings({ "unchecked", "rawtypes" })
-    private static String getPropertyValue(BlockState state,
-                                            net.minecraft.world.level.block.state.properties.Property<?> prop) {
-        Comparable<?> value = state.getValue((net.minecraft.world.level.block.state.properties.Property) prop);
-        return value != null ? ((net.minecraft.world.level.block.state.properties.Property) prop).getName(value) : "";
+    private static Comparable<?> valueOf(BlockState state, Property<?> prop) {
+        return state.getValue((Property) prop);
+    }
+
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    private static String nameOf(Property<?> prop, Comparable<?> value) {
+        return ((Property) prop).getName((Comparable) value);
     }
 
     private static Level getServerLevel() {
