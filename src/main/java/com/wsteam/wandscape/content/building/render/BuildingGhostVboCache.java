@@ -11,6 +11,7 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.state.BlockState;
@@ -46,7 +47,7 @@ public final class BuildingGhostVboCache {
     /** Draw the full ghost building using event camera ModelView matrix (120 FPS). */
     public static void drawGhost(Minecraft mc, Matrix4f cameraModelView, Matrix4f projection,
                                  Vec3 camPos, BlockPos anchor, BuildingConfig config, int rotationSteps) {
-        BakedGhostMesh mesh = getOrBake(mc, config, rotationSteps);
+        BakedGhostMesh mesh = getOrBake(mc, config, rotationSteps, anchor);
         if (mesh == null) return;
         if (mesh.indexClobbered) {
             restoreFullIndex(mesh);
@@ -58,7 +59,7 @@ public final class BuildingGhostVboCache {
     /** Draw ghost skipping placed blocks (under-construction footprint). */
     public static void drawGhostSkipped(Minecraft mc, Matrix4f cameraModelView, Matrix4f projection,
                                         Vec3 camPos, BlockPos anchor, BuildingConfig config, int rotationSteps) {
-        BakedGhostMesh mesh = getOrBake(mc, config, rotationSteps);
+        BakedGhostMesh mesh = getOrBake(mc, config, rotationSteps, anchor);
         if (mesh == null) return;
         if (needsMaskRebuild(mc, mesh, anchor)) {
             rebuildMaskedIndex(mc, mesh, anchor);
@@ -99,13 +100,13 @@ public final class BuildingGhostVboCache {
         }
     }
 
-    private static BakedGhostMesh getOrBake(Minecraft mc, BuildingConfig config, int rotationSteps) {
+    private static BakedGhostMesh getOrBake(Minecraft mc, BuildingConfig config, int rotationSteps, BlockPos anchor) {
         if (config.pattern().isEmpty()) return null;
         int steps = rotationSteps & 3;
         BakedGhostMesh[] buckets = bucketsFor(config);
         BakedGhostMesh mesh = buckets[steps];
         if (mesh == null) {
-            mesh = bake(mc, config, steps);
+            mesh = bake(mc, config, steps, anchor);
             synchronized (CACHE) {
                 if (buckets[steps] == null) {
                     buckets[steps] = mesh;
@@ -128,7 +129,7 @@ public final class BuildingGhostVboCache {
         }
     }
 
-    private static BakedGhostMesh bake(Minecraft mc, BuildingConfig config, int steps) {
+    private static BakedGhostMesh bake(Minecraft mc, BuildingConfig config, int steps, BlockPos anchor) {
         // 顶点数据只在这一次构建里写入 BufferBuilder；VertexBuffer.upload 是同步的
         // glBufferData，拷进 GPU 后这个 native 缓冲就没人再用了。而 ByteBufferBuilder
         // 没有 Cleaner 也没有 finalizer，只有 close() 才会 ALLOCATOR.free —— 漏掉这一步
@@ -137,7 +138,7 @@ public final class BuildingGhostVboCache {
         // ByteBufferBuilder 抛 OutOfMemoryError，游戏崩在烘焙瞬间。
         ByteBufferBuilder vertBbb = new ByteBufferBuilder(vertexCapacityFor(config));
         try {
-            return buildMesh(mc, vertBbb, config, steps);
+            return buildMesh(mc, vertBbb, config, steps, anchor);
         } finally {
             vertBbb.close();
         }
@@ -175,7 +176,7 @@ public final class BuildingGhostVboCache {
 
     /** 把图案烘焙进 {@code vertBbb}；调用方负责关闭 {@code vertBbb}。 */
     private static BakedGhostMesh buildMesh(Minecraft mc, ByteBufferBuilder vertBbb,
-                                            BuildingConfig config, int steps) {
+                                            BuildingConfig config, int steps, BlockPos anchor) {
         List<BlockOffset> pattern = config.pattern();
         int n = pattern.size();
 
@@ -203,6 +204,14 @@ public final class BuildingGhostVboCache {
 
         PoseStack pose = new PoseStack();
 
+        // 逐面剔除用的方块视图（B6）。建不出来（包围盒过大等）就是 null，退回不做剔除的老路径。
+        BuildingGhostBlockView view = BuildingGhostBlockView.create(
+                rotatedOffsets, cellStates, mc.level, anchor);
+        RandomSource random = RandomSource.create(42L);
+        // 剔除路径直接要 VertexConsumer（不是 MultiBufferSource）——AlphaCountingConsumer 本来就是
+        // 直接包 BufferBuilder 的，这里复用一个实例，别每格新建。
+        VertexConsumer cellConsumer = view != null ? new AlphaCountingConsumer(bb, vertexCount) : null;
+
         // 不再对几何体施加全局旋转：旋转几何体会把每格体积相对构造偏移最多 1 格
         // （90°/270° 偏 1 格、180° 两方向各偏 1 格）。改为每格平移到旋转后的偏移
         // （rotatedOffsets）并用旋转后的 BlockState 渲染，与服务端构造逐格一致。
@@ -224,9 +233,20 @@ public final class BuildingGhostVboCache {
             pose.pushPose();
             pose.translate(rotated.x(), rotated.y(), rotated.z());
 
-            mc.getBlockRenderer().renderSingleBlock(
-                    state, pose, ghostSource, FULL_BRIGHT, OverlayTexture.NO_OVERLAY,
-                    ModelData.EMPTY, RenderType.translucent());
+            if (view != null) {
+                // checkSides = true：原版会拿 view 逐个方向查邻居，被不透明邻居挡住的面直接
+                // 不产出——这也顺带让「六面都被包住」的方块产出 0 个四边形。用不带 AO 的
+                // 那版是因为原路径 renderSingleBlock 本就是平光；挂上 AO 会凭空多出转角明暗。
+                BlockPos cellPos = new BlockPos(rotated.x(), rotated.y(), rotated.z());
+                mc.getBlockRenderer().getModelRenderer().tesselateWithoutAO(
+                        view, mc.getBlockRenderer().getBlockModel(state), state, cellPos,
+                        pose, cellConsumer, true, random, state.getSeed(cellPos),
+                        OverlayTexture.NO_OVERLAY, ModelData.EMPTY, RenderType.translucent());
+            } else {
+                mc.getBlockRenderer().renderSingleBlock(
+                        state, pose, ghostSource, FULL_BRIGHT, OverlayTexture.NO_OVERLAY,
+                        ModelData.EMPTY, RenderType.translucent());
+            }
 
             pose.popPose();
 
