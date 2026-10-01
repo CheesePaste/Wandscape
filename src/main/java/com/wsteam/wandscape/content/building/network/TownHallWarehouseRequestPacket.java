@@ -68,8 +68,9 @@ public record TownHallWarehouseRequestPacket(BlockPos buildingPos, UUID colonyId
                 return;
             }
 
+            // 市政厅代开仓库：建筑上下文是市政厅而非仓库，传 null 免得仓库面板上出现市政厅的修复/拆除。
             BuildingInteractHandler.openWarehouseMenu(sp, colonyId, pkt.buildingPos(),
-                    BuildingInteractHandler.resolveCreator(level, pkt.buildingPos()));
+                    BuildingInteractHandler.resolveCreator(level, pkt.buildingPos()), null);
         });
     }
 
