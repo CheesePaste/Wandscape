@@ -1,6 +1,7 @@
 package com.wsteam.wandscape.content.building.render;
 
 import com.mojang.blaze3d.vertex.*;
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.wsteam.wandscape.content.building.data.BlockOffset;
 import com.wsteam.wandscape.content.building.data.BuildingConfig;
 import com.wsteam.wandscape.content.building.projection.BuildingRotation;
@@ -62,15 +63,22 @@ public final class BuildingGhostVboCache {
     private static final ByteBufferBuilder INDEX_BBB = new ByteBufferBuilder(4 * 1024 * 1024);
 
     /**
-     * 段是否按「由近到远」排序后再画（见 {@link #drawVisibleSections}）。默认开。
+     * 虚影是否**透视**（关闭深度写入，任何面都不遮挡别的面）。默认开。
      *
-     * <p><b>临时的 A/B 开关</b>：为了实测排序对帧时间的影响，由客户端指令
-     * {@code /ghostsort} 切换。测完（决定保留或撤掉排序）连同那条指令一起清掉。
+     * <p>透视 = 视线穿过的每一层都叠加上色，所以从任何角度看都能看进楼里；关掉它则改为
+     * 「段按由近到远排序」的实心壳观感（近的先写深度，墙后的面被深度测试拒掉）。
+     *
+     * <p><b>临时的 A/B 开关</b>：由客户端指令 {@code /ghostmode} 切换。测完（决定要哪种观感）
+     * 连同那条指令、以及被淘汰那一档的代码一起清掉。
      */
-    private static volatile boolean frontToBackSorting = true;
+    private static volatile boolean xray = true;
 
-    public static boolean isFrontToBackSorting() {
-        return frontToBackSorting;
+    public static boolean isXray() {
+        return xray;
+    }
+
+    public static void setXray(boolean enabled) {
+        xray = enabled;
     }
 
     /**
@@ -87,10 +95,6 @@ public final class BuildingGhostVboCache {
         return lastDrawTick;
     }
 
-    public static void setFrontToBackSorting(boolean enabled) {
-        frontToBackSorting = enabled;
-    }
-
     private BuildingGhostVboCache() {}
 
     /** Draw the full ghost building using event camera ModelView matrix (120 FPS). */
@@ -102,8 +106,10 @@ public final class BuildingGhostVboCache {
 
         RenderType rt = RenderType.translucent();
         rt.setupRenderState();
+        applyGhostDepthMask();
         lastDrawTick = currentTick(mc);
         drawVisibleSections(mesh, mc, cameraModelView, projection, camPos, anchor, frustum, false);
+        restoreGhostDepthMask();
         rt.clearRenderState();
     }
 
@@ -116,23 +122,56 @@ public final class BuildingGhostVboCache {
 
         RenderType rt = RenderType.translucent();
         rt.setupRenderState();
+        applyGhostDepthMask();
         lastDrawTick = currentTick(mc);
         drawVisibleSections(mesh, mc, cameraModelView, projection, camPos, anchor, frustum, true);
+        restoreGhostDepthMask();
         rt.clearRenderState();
     }
 
     /**
-     * 收集可见段、按**由近到远**排序后逐个绘制。
+     * 透视模式：关掉深度写入，任何面都不再遮挡别的面 —— 视线穿过的每一层都叠加上色，
+     * 于是从任何角度看都能看进楼里（之前那种"有些墙实、有些墙能看进去十几格"的斑驳透视，
+     * 其实是段绘制顺序的副作用，不是设计效果）。
      *
-     * <p><b>为什么必须排序</b>：{@link RenderType#translucent()} 的写掩码是 builder 默认的
-     * {@code COLOR_DEPTH_WRITE}（颜色与深度都写；MC 里想关掉深度写的类型都是显式
-     * {@code setWriteMaskState(COLOR_WRITE)}），深度测试是 {@code LEQUAL}。也就是说先画的
-     * 面会把深度写死、后面的面只要更远就被拒掉 —— 只要**近的先画**，"墙后面的那部分"根本
-     * 不会混色。而段的自然顺序是 {@code groupIntoSections} 的哈希桶序（烘一次就固定、与相机
-     * 无关），先画远再画近时远的面已经混过色、遮不住了，看起来就是"能透视进楼里"。
+     * <p>不写深度还顺带修掉一个既有的副作用：虚影不再污染共享深度缓冲，后面画的粒子/云
+     * 不会再被虚影的深度挡掉。
+     */
+    private static void applyGhostDepthMask() {
+        if (xray) RenderSystem.depthMask(false);
+    }
+
+    /**
+     * 恢复深度写入。
      *
-     * <p>几何一字不动（段、顶点、索引都照旧），只改绘制顺序，所以不触碰"虚影必须完整渲染"
-     * 的口径。填充侧的收益：每像素的混色层数从 H(穿过的面数) 降到约 1；顶点侧无收益。
+     * <p><b>必须自己恢复</b>：{@code RenderStateShard.WriteMaskStateShard} 只在
+     * {@code !writeDepth} 时才调用 {@code depthMask}（setup 与 clear 都是这个条件），
+     * 而 translucent 用的是 {@code COLOR_DEPTH_WRITE}（writeDepth=true），所以
+     * {@code clearRenderState()} 一个字都不会改深度掩码。不恢复的话，后面的粒子、云、
+     * 天气都会带着"不写深度"继续画。
+     */
+    private static void restoreGhostDepthMask() {
+        if (xray) RenderSystem.depthMask(true);
+    }
+
+    /**
+     * 收集可见段、按 {@link #xray} 选定的观感绘制。
+     *
+     * <ul>
+     *   <li><b>透视（默认）</b>：关掉深度写入，任何面都挡不住别的面，视线穿过的每一层都叠加
+     *       上色 —— 从任何角度看都能看进楼里。顺序对成像没有影响，所以不排序。</li>
+     *   <li><b>实心壳</b>：保留 translucent 的深度写入，则**必须由近到远排序**。因为
+     *       {@link RenderType#translucent()} 的写掩码是 builder 默认的
+     *       {@code COLOR_DEPTH_WRITE}（MC 里想关掉深度写的类型都显式
+     *       {@code setWriteMaskState(COLOR_WRITE)}）、深度测试是 {@code LEQUAL}：先画的近面
+     *       把深度写死，墙后的面就被拒掉。而段的自然顺序是 {@code groupIntoSections} 的哈希
+     *       桶序（烘一次固定、与相机无关），"先画远、后画近"时远的面已经混过色、遮不住了 ——
+     *       那正是之前看到的斑驳透视。</li>
+     * </ul>
+     *
+     * <p>两种模式都不动几何（段、顶点、索引照旧），只是渲染状态与绘制顺序的差别，所以不触碰
+     * "虚影必须完整渲染"的口径。填充侧：透视每像素混 n 层（n = 视线穿过的面数），实心壳约 1 层；
+     * 顶点侧两种模式相同。
      *
      * @param masked true = 工地虚影（要重建跳过已放置格的遮罩索引）
      */
@@ -170,7 +209,9 @@ public final class BuildingGhostVboCache {
      * 非负 double 的 IEEE 位模式按 long 解释是单调的，所以取高 32 位就够排序用。
      */
     private static long sortKey(SectionMesh section, int index, BlockPos anchor, Vec3 camPos) {
-        if (!frontToBackSorting) return index;
+        // 透视模式不写深度，绘制顺序对成像没有任何影响，排序纯属浪费 → 直接用下标
+        // （升序 = 收集顺序 = 段数组序，即原始顺序）。
+        if (xray) return index;
         double x0 = anchor.getX() + section.originX;
         double y0 = anchor.getY() + section.originY;
         double z0 = anchor.getZ() + section.originZ;
