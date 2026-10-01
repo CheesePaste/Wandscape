@@ -9,6 +9,7 @@ import com.wsteam.wandscape.content.building.projection.BuildingRotation;
 import com.wsteam.wandscape.content.building.preview.BuildingPreviewRenderer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.ItemDisplayContext;
@@ -49,14 +50,16 @@ public final class BuildingGhostRenderer {
 
     /** Render full building ghost via GPU VBO static cache with camera ModelView (120 FPS). */
     public static void renderGhostVbo(Minecraft mc, Matrix4f cameraModelView, Matrix4f projection,
-                                      Vec3 camPos, BlockPos anchor, BuildingConfig config, int rotationSteps) {
-        BuildingGhostVboCache.drawGhost(mc, cameraModelView, projection, camPos, anchor, config, rotationSteps);
+                                      Vec3 camPos, BlockPos anchor, BuildingConfig config, int rotationSteps,
+                                      Frustum frustum) {
+        BuildingGhostVboCache.drawGhost(mc, cameraModelView, projection, camPos, anchor, config, rotationSteps, frustum);
     }
 
     /** Render under-construction footprint ghost skipping placed blocks via GPU VBO. */
     public static void renderGhostVboSkipped(Minecraft mc, Matrix4f cameraModelView, Matrix4f projection,
-                                             Vec3 camPos, BlockPos anchor, BuildingConfig config, int rotationSteps) {
-        BuildingGhostVboCache.drawGhostSkipped(mc, cameraModelView, projection, camPos, anchor, config, rotationSteps);
+                                             Vec3 camPos, BlockPos anchor, BuildingConfig config, int rotationSteps,
+                                             Frustum frustum) {
+        BuildingGhostVboCache.drawGhostSkipped(mc, cameraModelView, projection, camPos, anchor, config, rotationSteps, frustum);
     }
 
     /**

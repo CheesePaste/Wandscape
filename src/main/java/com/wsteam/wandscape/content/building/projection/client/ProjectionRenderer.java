@@ -57,7 +57,7 @@ public final class ProjectionRenderer {
 
         // 1. Render GPU VBO ghost with exact event Camera ModelView matrix (120 FPS)
         BuildingGhostRenderer.renderGhostVbo(mc, event.getModelViewMatrix(), event.getProjectionMatrix(),
-                camPos, ghostPos, config, rotationSteps);
+                camPos, ghostPos, config, rotationSteps, event.getFrustum());
 
         // 1b. Render animated blocks (chests etc.) that have no static block model and
         // cannot bake into the VBO — drawn per-frame via their block-entity item renderer.
