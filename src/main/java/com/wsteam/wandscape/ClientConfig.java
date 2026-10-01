@@ -49,5 +49,15 @@ public final class ClientConfig {
                     + "transient event bubbles (purchase / service feedback: item icon × count), nor the nameplate and status text.")
             .define("ui.speechBubbles", true);
 
+    public static final ModConfigSpec.BooleanValue BUILDING_GHOST = BUILDER
+            .comment("是否渲染建筑虚影（放置预览与工地未完工建筑的半透明整栋预览）。关闭后不再画整栋虚影，"
+                    + "只保留建筑包围盒的线框——落点照样对得准。百万级方块的大建筑在弱显卡上可能卡顿甚至爆显存，"
+                    + "那种情况把它关掉即可；同时也不会再做虚影的烘焙与缓存。")
+            .comment("Whether to render the translucent building ghost (placement preview and the footprint of unfinished "
+                    + "construction sites). When off, no per-block ghost is drawn at all and only the bounding-box wireframe "
+                    + "remains, which is still enough to aim with. A million-block building can stutter or exhaust VRAM on weak "
+                    + "GPUs — turn this off for those; the ghost is then neither baked nor cached.")
+            .define("render.buildingGhost", true);
+
     public static final ModConfigSpec SPEC = BUILDER.build();
 }

@@ -3,12 +3,14 @@ import com.wsteam.wandscape.content.task.ecs.World;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.wsteam.wandscape.ClientConfig;
 import com.wsteam.wandscape.content.building.data.BlockOffset;
 import com.wsteam.wandscape.content.building.data.BuildingConfig;
 import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.content.building.projection.BuildingRotation;
 import com.wsteam.wandscape.content.building.projection.data.BuildingSlot;
 import com.wsteam.wandscape.content.building.render.BuildingGhostRenderer;
+import com.wsteam.wandscape.content.building.render.BuildingOutline;
 import com.wsteam.wandscape.foundation.log.Log;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -60,43 +62,47 @@ public final class ProjectionRenderer {
         Vec3 camPos = event.getCamera().getPosition();
         int rotationSteps = ProjectionClientState.getRotationSteps();
 
-        // 1. Render GPU VBO ghost with exact event Camera ModelView matrix (120 FPS)
-        BuildingGhostRenderer.renderGhostVbo(mc, event.getModelViewMatrix(), event.getProjectionMatrix(),
-                camPos, ghostPos, config, rotationSteps, event.getFrustum());
+        // 虚影可关（ClientConfig#BUILDING_GHOST）：弱显卡上百万方块的大楼光是烘焙+绘制虚影
+        // 就可能卡顿/爆显存。关掉后连 VBO 都不烘（getOrBake 不会被调到），只剩下面那圈包围盒线框。
+        boolean ghostOn = ClientConfig.BUILDING_GHOST.get();
 
-        // 1b. Render animated blocks (chests etc.) that have no static block model and
-        // cannot bake into the VBO — drawn per-frame via their block-entity item renderer.
-        BuildingGhostRenderer.renderGhostAnimated(mc, event.getPoseStack(),
-                mc.renderBuffers().bufferSource(), camPos, ghostPos, config, rotationSteps, false);
+        if (ghostOn) {
+            // 1. Render GPU VBO ghost with exact event Camera ModelView matrix (120 FPS)
+            BuildingGhostRenderer.renderGhostVbo(mc, event.getModelViewMatrix(), event.getProjectionMatrix(),
+                    camPos, ghostPos, config, rotationSteps, event.getFrustum());
+
+            // 1b. Render animated blocks (chests etc.) that have no static block model and
+            // cannot bake into the VBO — drawn per-frame via their block-entity item renderer.
+            BuildingGhostRenderer.renderGhostAnimated(mc, event.getPoseStack(),
+                    mc.renderBuffers().bufferSource(), camPos, ghostPos, config, rotationSteps, false);
+        }
 
         // 2. Render Boundary Wireframe (red only when the ghost shares a voxel with an
         // existing building — boundary boxes may now overlap freely)
         if (config.boundary() != null) {
             boolean conflict = ProjectionClientState.isOverlapDetected();
             boolean pinned = ProjectionClientState.isPinned();
+            // 虚影关掉时这圈线框是唯一的落点参考 → 无论是否已「钉住」都画。
+            boolean drawOutline = conflict || pinned || !ghostOn;
 
-            BuildingConfig.BoundaryBox boundary =
-                    BuildingRotation.rotateBoundary(config.boundary(), rotationSteps);
+            if (drawOutline) {
+                BuildingConfig.BoundaryBox boundary =
+                        BuildingRotation.rotateBoundary(config.boundary(), rotationSteps);
 
-            PoseStack poseStack = event.getPoseStack();
-            MultiBufferSource.BufferSource bufferSource = mc.renderBuffers().bufferSource();
+                PoseStack poseStack = event.getPoseStack();
+                MultiBufferSource.BufferSource bufferSource = mc.renderBuffers().bufferSource();
+                int g = conflict ? 40 : 255;
+                int b = conflict ? 40 : 255;
+                int r = 255;
 
-            poseStack.pushPose();
-            poseStack.translate(-camPos.x, -camPos.y, -camPos.z);
-
-            if (pinned && !conflict) {
+                poseStack.pushPose();
+                poseStack.translate(-camPos.x, -camPos.y, -camPos.z);
                 VertexConsumer lineVc = bufferSource.getBuffer(RenderType.lines());
                 drawAABBOutline(lineVc, poseStack.last(), ghostPos,
-                        boundary.min(), boundary.max(), 255, 255, 255);
+                        boundary.min(), boundary.max(), r, g, b);
                 bufferSource.endBatch(RenderType.lines());
-            } else if (conflict) {
-                VertexConsumer lineVc = bufferSource.getBuffer(RenderType.lines());
-                drawAABBOutline(lineVc, poseStack.last(), ghostPos,
-                        boundary.min(), boundary.max(), 255, 40, 40);
-                bufferSource.endBatch(RenderType.lines());
+                poseStack.popPose();
             }
-
-            poseStack.popPose();
         }
     }
 
@@ -110,31 +116,9 @@ public final class ProjectionRenderer {
     private static void drawAABBOutline(VertexConsumer vc, PoseStack.Pose poseEntry,
                                          BlockPos anchor, BlockOffset min, BlockOffset max,
                                          int r, int g, int b) {
-        float x0 = anchor.getX() + min.x() + 0.5f;
-        float y0 = anchor.getY() + min.y() + 0.5f;
-        float z0 = anchor.getZ() + min.z() + 0.5f;
-        float x1 = anchor.getX() + max.x() + 0.5f;
-        float y1 = anchor.getY() + max.y() + 0.5f;
-        float z1 = anchor.getZ() + max.z() + 0.5f;
-
-        seg(vc, poseEntry, x0, y0, z0, x1, y0, z0, r, g, b);
-        seg(vc, poseEntry, x1, y0, z0, x1, y0, z1, r, g, b);
-        seg(vc, poseEntry, x1, y0, z1, x0, y0, z1, r, g, b);
-        seg(vc, poseEntry, x0, y0, z1, x0, y0, z0, r, g, b);
-        seg(vc, poseEntry, x0, y1, z0, x1, y1, z0, r, g, b);
-        seg(vc, poseEntry, x1, y1, z0, x1, y1, z1, r, g, b);
-        seg(vc, poseEntry, x1, y1, z1, x0, y1, z1, r, g, b);
-        seg(vc, poseEntry, x0, y1, z1, x0, y1, z0, r, g, b);
-        seg(vc, poseEntry, x0, y0, z0, x0, y1, z0, r, g, b);
-        seg(vc, poseEntry, x1, y0, z0, x1, y1, z0, r, g, b);
-        seg(vc, poseEntry, x1, y0, z1, x1, y1, z1, r, g, b);
-        seg(vc, poseEntry, x0, y0, z1, x0, y1, z1, r, g, b);
-    }
-
-    private static void seg(VertexConsumer vc, PoseStack.Pose poseEntry,
-                            float x1, float y1, float z1, float x2, float y2, float z2,
-                            int r, int g, int b) {
-        vc.addVertex(poseEntry, x1, y1, z1).setColor(r, g, b, 255).setNormal(poseEntry, 0, 1, 0);
-        vc.addVertex(poseEntry, x2, y2, z2).setColor(r, g, b, 255).setNormal(poseEntry, 0, 1, 0);
+        BuildingOutline.box(vc, poseEntry,
+                anchor.getX() + min.x() + 0.5f, anchor.getY() + min.y() + 0.5f, anchor.getZ() + min.z() + 0.5f,
+                anchor.getX() + max.x() + 0.5f, anchor.getY() + max.y() + 0.5f, anchor.getZ() + max.z() + 0.5f,
+                r, g, b, 255);
     }
 }

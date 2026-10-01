@@ -1,14 +1,20 @@
 package com.wsteam.wandscape.content.building.client;
 import com.wsteam.wandscape.content.task.ecs.World;
 
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.wsteam.wandscape.ClientConfig;
 import com.wsteam.wandscape.content.building.data.BuildingConfig;
 import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.content.building.render.BuildingGhostRenderer;
+import com.wsteam.wandscape.content.building.render.BuildingOutline;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.foundation.log.LogCategory;
 import com.wsteam.wandscape.content.building.network.BuildingAreaSyncPacket;
 import com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -53,14 +59,17 @@ public final class ConstructionGhostRenderer {
 
         Vec3 camPos = event.getCamera().getPosition();
 
+        // 虚影可关（ClientConfig#BUILDING_GHOST）：关掉后连 VBO 都不烘，每个工地只画一圈包围盒线框。
+        boolean ghostOn = ClientConfig.BUILDING_GHOST.get();
+
         for (var entry : buildings) {
             if (entry.completed()) continue;
             BuildingConfig config = BuildingConfigLoader.getInstance().get(entry.buildingTypeId());
             if (config == null) continue;
 
+            BlockPos anchor = entry.anchor();
             // Per-building frustum cull — boundary from the packet is pre-rotated.
             if (entry.hasBoundary()) {
-                BlockPos anchor = entry.anchor();
                 AABB aabb = new AABB(
                         anchor.getX() + entry.bMinX(),
                         anchor.getY() + entry.bMinY(),
@@ -71,14 +80,41 @@ public final class ConstructionGhostRenderer {
                 if (!event.getFrustum().isVisible(aabb)) continue;
             }
 
+            if (!ghostOn) {
+                if (entry.hasBoundary()) {
+                    drawOutline(mc, event, camPos, anchor, entry);
+                }
+                continue;
+            }
+
             BuildingGhostRenderer.renderGhostVboSkipped(mc, event.getModelViewMatrix(), event.getProjectionMatrix(),
-                    camPos, entry.anchor(), config, entry.rotationSteps(), event.getFrustum());
+                    camPos, anchor, config, entry.rotationSteps(), event.getFrustum());
 
             // Animated blocks (chests etc.) can't bake into the VBO — render them
             // per-frame via their block-entity item renderer, skipping already-placed cells.
             BuildingGhostRenderer.renderGhostAnimated(mc, event.getPoseStack(),
-                    mc.renderBuffers().bufferSource(), camPos, entry.anchor(), config,
+                    mc.renderBuffers().bufferSource(), camPos, anchor, config,
                     entry.rotationSteps(), true);
         }
+    }
+
+    /** 虚影关闭时工地唯一的表现：包围盒线框（与放置预览同一套画法、同一个颜色口径）。 */
+    private static void drawOutline(Minecraft mc, RenderLevelStageEvent event, Vec3 camPos,
+                                    BlockPos anchor, BuildingAreaSyncPacket.BuildingEntry entry) {
+        PoseStack poseStack = event.getPoseStack();
+        MultiBufferSource.BufferSource buffers = mc.renderBuffers().bufferSource();
+        poseStack.pushPose();
+        poseStack.translate(-camPos.x, -camPos.y, -camPos.z);
+        VertexConsumer vc = buffers.getBuffer(RenderType.lines());
+        BuildingOutline.box(vc, poseStack.last(),
+                anchor.getX() + entry.bMinX() + 0.5f,
+                anchor.getY() + entry.bMinY() + 0.5f,
+                anchor.getZ() + entry.bMinZ() + 0.5f,
+                anchor.getX() + entry.bMaxX() + 0.5f,
+                anchor.getY() + entry.bMaxY() + 0.5f,
+                anchor.getZ() + entry.bMaxZ() + 0.5f,
+                255, 255, 255, 255);
+        buffers.endBatch(RenderType.lines());
+        poseStack.popPose();
     }
 }

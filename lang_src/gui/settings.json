@@ -175,6 +175,10 @@
     "en_us": "Restored tab settings to default",
     "zh_cn": "已恢复本页默认设置"
   },
+  "gui.wandscape.settings.render.buildingGhost": {
+    "en_us": "Building ghost",
+    "zh_cn": "建筑虚影"
+  },
   "gui.wandscape.settings.road.showTerrainGrid": {
     "en_us": "Road terrain grid",
     "zh_cn": "道路网格辅助线"

@@ -2,6 +2,7 @@ package com.wsteam.wandscape.foundation.ui.settings;
 
 import com.wsteam.wandscape.ClientConfig;
 import com.wsteam.wandscape.Config;
+import com.wsteam.wandscape.content.building.render.BuildingGhostVboCache;
 import com.wsteam.wandscape.content.colony.settings.ColonySettings;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.foundation.networking.Net;
@@ -128,6 +129,25 @@ public final class SettingsRegistry {
                 true, true,
                 ClientConfig.SHOW_SPEECH_BUBBLES
         ));
+
+        register(new SettingItem.BooleanSetting(
+                "render.buildingGhost",
+                title("render.buildingGhost", "建筑虚影"),
+                SettingTab.VISUAL,
+                true, true,
+                ClientConfig.BUILDING_GHOST
+        ) {
+            @Override
+            public void onModified(String stringValue) {
+                super.onModified(stringValue);
+                // 本项的用途就是「弱显卡别爆显存」，所以关掉的那一刻把已烘好的虚影 VBO 一并还回去
+                //（这份缓存的唯一清空入口 closeAll 在此之前没有任何调用方，会一直占到关服）。
+                // 只挂客户端 UI 路径：本项 clientOnly，服务端既不会应用也不会改它。
+                if (!ClientConfig.BUILDING_GHOST.get()) {
+                    BuildingGhostVboCache.closeAll();
+                }
+            }
+        });
 
         register(new SettingItem.IntSetting(
                 "preview.resolution",

@@ -7,6 +7,7 @@ import com.wsteam.wandscape.content.building.data.BuildingConfig;
 import com.wsteam.wandscape.content.building.data.BlockOffset;
 import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.content.building.projection.BuildingRotation;
+import com.wsteam.wandscape.content.building.render.BuildingOutline;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.foundation.log.LogCategory;
 import com.wsteam.wandscape.content.building.network.BuildingAreaSyncPacket;
@@ -134,38 +135,20 @@ public final class BuildingAreaRenderer {
 
         // Edges
         VertexConsumer lvc = buf.getBuffer(RenderType.lines());
-        r = ZONE_LINE_R; g = ZONE_LINE_G; b = ZONE_LINE_B; a = ZONE_LINE_A;
-        boxEdges(lvc, pose, x0, y0, z0, x1, y1, z1, r, g, b, a);
+        BuildingOutline.box(lvc, pose, x0, y0, z0, x1, y1, z1,
+                ZONE_LINE_R, ZONE_LINE_G, ZONE_LINE_B, ZONE_LINE_A);
         buf.endBatch(RenderType.lines());
     }
 
     private static void renderBoundary(MultiBufferSource.BufferSource buf, PoseStack.Pose pose,
                                         float x0, float y0, float z0, float x1, float y1, float z1) {
         VertexConsumer lvc = buf.getBuffer(RenderType.lines());
-        int r = BOUND_LINE_R, g = BOUND_LINE_G, b = BOUND_LINE_B, a = BOUND_LINE_A;
-        boxEdges(lvc, pose, x0, y0, z0, x1, y1, z1, r, g, b, a);
+        BuildingOutline.box(lvc, pose, x0, y0, z0, x1, y1, z1,
+                BOUND_LINE_R, BOUND_LINE_G, BOUND_LINE_B, BOUND_LINE_A);
         buf.endBatch(RenderType.lines());
     }
 
     // ── Drawing helpers ──
-
-    private static void boxEdges(VertexConsumer vc, PoseStack.Pose pose,
-                                  float x0, float y0, float z0, float x1, float y1, float z1,
-                                  int r, int g, int b, int a) {
-        line(vc, pose, x0,y0,z0, x1,y0,z0, r,g,b,a); line(vc, pose, x1,y0,z0, x1,y0,z1, r,g,b,a);
-        line(vc, pose, x1,y0,z1, x0,y0,z1, r,g,b,a); line(vc, pose, x0,y0,z1, x0,y0,z0, r,g,b,a);
-        line(vc, pose, x0,y1,z0, x1,y1,z0, r,g,b,a); line(vc, pose, x1,y1,z0, x1,y1,z1, r,g,b,a);
-        line(vc, pose, x1,y1,z1, x0,y1,z1, r,g,b,a); line(vc, pose, x0,y1,z1, x0,y1,z0, r,g,b,a);
-        line(vc, pose, x0,y0,z0, x0,y1,z0, r,g,b,a); line(vc, pose, x1,y0,z0, x1,y1,z0, r,g,b,a);
-        line(vc, pose, x1,y0,z1, x1,y1,z1, r,g,b,a); line(vc, pose, x0,y0,z1, x0,y1,z1, r,g,b,a);
-    }
-
-    private static void line(VertexConsumer vc, PoseStack.Pose pose,
-                              float x1, float y1, float z1, float x2, float y2, float z2,
-                              int r, int g, int b, int a) {
-        vc.addVertex(pose, x1, y1, z1).setColor(r, g, b, a).setNormal(pose, 0, 1, 0);
-        vc.addVertex(pose, x2, y2, z2).setColor(r, g, b, a).setNormal(pose, 0, 1, 0);
-    }
 
     private static void quad(VertexConsumer vc, PoseStack.Pose pose,
                               float x1, float y1, float z1, float x2, float y2, float z2,
