@@ -26,6 +26,7 @@ import org.lwjgl.system.MemoryUtil;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -60,6 +61,22 @@ public final class BuildingGhostVboCache {
     private static final Map<BuildingConfig, BakedGhostMesh[]> CACHE = new HashMap<>();
     private static final ByteBufferBuilder INDEX_BBB = new ByteBufferBuilder(4 * 1024 * 1024);
 
+    /**
+     * 段是否按「由近到远」排序后再画（见 {@link #drawVisibleSections}）。默认开。
+     *
+     * <p><b>临时的 A/B 开关</b>：为了实测排序对帧时间的影响，由客户端指令
+     * {@code /ghostsort} 切换。测完（决定保留或撤掉排序）连同那条指令一起清掉。
+     */
+    private static volatile boolean frontToBackSorting = true;
+
+    public static boolean isFrontToBackSorting() {
+        return frontToBackSorting;
+    }
+
+    public static void setFrontToBackSorting(boolean enabled) {
+        frontToBackSorting = enabled;
+    }
+
     private BuildingGhostVboCache() {}
 
     /** Draw the full ghost building using event camera ModelView matrix (120 FPS). */
@@ -71,14 +88,7 @@ public final class BuildingGhostVboCache {
 
         RenderType rt = RenderType.translucent();
         rt.setupRenderState();
-        for (SectionMesh section : mesh.sections) {
-            if (!isSectionVisible(section, anchor, frustum)) continue;
-            if (section.indexClobbered) {
-                restoreFullIndex(section);
-                section.indexClobbered = false;
-            }
-            drawSection(section, cameraModelView, projection, camPos, anchor);
-        }
+        drawVisibleSections(mesh, mc, cameraModelView, projection, camPos, anchor, frustum, false);
         rt.clearRenderState();
     }
 
@@ -91,14 +101,72 @@ public final class BuildingGhostVboCache {
 
         RenderType rt = RenderType.translucent();
         rt.setupRenderState();
-        for (SectionMesh section : mesh.sections) {
-            if (!isSectionVisible(section, anchor, frustum)) continue;
-            if (needsMaskRebuild(mc, section, anchor)) {
-                rebuildMaskedIndex(mc, section, anchor);
+        drawVisibleSections(mesh, mc, cameraModelView, projection, camPos, anchor, frustum, true);
+        rt.clearRenderState();
+    }
+
+    /**
+     * 收集可见段、按**由近到远**排序后逐个绘制。
+     *
+     * <p><b>为什么必须排序</b>：{@link RenderType#translucent()} 的写掩码是 builder 默认的
+     * {@code COLOR_DEPTH_WRITE}（颜色与深度都写；MC 里想关掉深度写的类型都是显式
+     * {@code setWriteMaskState(COLOR_WRITE)}），深度测试是 {@code LEQUAL}。也就是说先画的
+     * 面会把深度写死、后面的面只要更远就被拒掉 —— 只要**近的先画**，"墙后面的那部分"根本
+     * 不会混色。而段的自然顺序是 {@code groupIntoSections} 的哈希桶序（烘一次就固定、与相机
+     * 无关），先画远再画近时远的面已经混过色、遮不住了，看起来就是"能透视进楼里"。
+     *
+     * <p>几何一字不动（段、顶点、索引都照旧），只改绘制顺序，所以不触碰"虚影必须完整渲染"
+     * 的口径。填充侧的收益：每像素的混色层数从 H(穿过的面数) 降到约 1；顶点侧无收益。
+     *
+     * @param masked true = 工地虚影（要重建跳过已放置格的遮罩索引）
+     */
+    private static void drawVisibleSections(BakedGhostMesh mesh, Minecraft mc,
+                                            Matrix4f cameraModelView, Matrix4f projection,
+                                            Vec3 camPos, BlockPos anchor, Frustum frustum,
+                                            boolean masked) {
+        // 排序键 = (距离的高 32 位 | 段数组下标)，升序即由近到远；
+        // 关掉排序时高 32 位全 0，升序即"段数组下标升序" = 原始顺序，两条路共用一个缓冲。
+        long[] order = mesh.drawOrder;
+        int n = 0;
+        SectionMesh[] sections = mesh.sections;
+        for (int i = 0; i < sections.length; i++) {
+            if (!isSectionVisible(sections[i], anchor, frustum)) continue;
+            order[n++] = sortKey(sections[i], i, anchor, camPos);
+        }
+        Arrays.sort(order, 0, n);   // 原始类型排序：零分配、无装箱
+
+        for (int k = 0; k < n; k++) {
+            SectionMesh section = sections[(int) (order[k] & 0xFFFF_FFFFL)];
+            if (masked) {
+                if (needsMaskRebuild(mc, section, anchor)) {
+                    rebuildMaskedIndex(mc, section, anchor);
+                }
+            } else if (section.indexClobbered) {
+                restoreFullIndex(section);
+                section.indexClobbered = false;
             }
             drawSection(section, cameraModelView, projection, camPos, anchor);
         }
-        rt.clearRenderState();
+    }
+
+    /**
+     * 段到相机的排序键。距离取「相机到段 AABB 的最近点」，相机在段内时为 0。
+     * 非负 double 的 IEEE 位模式按 long 解释是单调的，所以取高 32 位就够排序用。
+     */
+    private static long sortKey(SectionMesh section, int index, BlockPos anchor, Vec3 camPos) {
+        if (!frontToBackSorting) return index;
+        double x0 = anchor.getX() + section.originX;
+        double y0 = anchor.getY() + section.originY;
+        double z0 = anchor.getZ() + section.originZ;
+        double x1 = x0 + SECTION_SIZE;
+        double y1 = y0 + SECTION_SIZE;
+        double z1 = z0 + SECTION_SIZE;
+        double dx = camPos.x < x0 ? x0 - camPos.x : (camPos.x > x1 ? camPos.x - x1 : 0.0);
+        double dy = camPos.y < y0 ? y0 - camPos.y : (camPos.y > y1 ? camPos.y - y1 : 0.0);
+        double dz = camPos.z < z0 ? z0 - camPos.z : (camPos.z > z1 ? camPos.z - z1 : 0.0);
+        double distSq = dx * dx + dy * dy + dz * dz;
+        long bits = Double.doubleToRawLongBits(distSq) >>> 32;
+        return (bits << 32) | (index & 0xFFFF_FFFFL);
     }
 
     private static boolean isSectionVisible(SectionMesh section, BlockPos anchor, Frustum frustum) {
@@ -462,9 +530,12 @@ public final class BuildingGhostVboCache {
 
     private static final class BakedGhostMesh {
         final SectionMesh[] sections;
+        /** 每帧复用的排序缓冲（排序键 = 距离高位 | 段下标），避免每帧分配。 */
+        final long[] drawOrder;
 
         BakedGhostMesh(SectionMesh[] sections) {
             this.sections = sections;
+            this.drawOrder = new long[sections.length];
         }
     }
 

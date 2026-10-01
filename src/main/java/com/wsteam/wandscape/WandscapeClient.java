@@ -153,6 +153,8 @@ public class WandscapeClient {
         TouristDebugRenderer.register();
         BuildingAreaRenderer.register();
         ConstructionGhostRenderer.register();
+        // 临时：虚影段排序的 A/B 测量指令（/ghostsort），测完随排序开关一起删
+        com.wsteam.wandscape.content.building.render.GhostSortCommand.register();
 
         // Wandscape Panel
         WandscapePanelController.register();
