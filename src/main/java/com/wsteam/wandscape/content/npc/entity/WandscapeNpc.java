@@ -1234,10 +1234,25 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike, ColonyWor
     // ============================================================
     // 死亡掉落：装备（盔甲 + 自定义法杖）。已装备魔法卷轴不掉落——
     // 死亡时由 NpcDeathHandler 记入死亡记录，复活时重新挂回复活后 NPC。
+    // 佩戴守魂护符（Soulward Charm）时，全部随身装备与背包物资跳过掉落，由死亡记录封存并在复活时全额归还。
     // ============================================================
+
+    private boolean dismissing = false;
+
+    @Override
+    protected void dropCustomDeathLoot(ServerLevel level, net.minecraft.world.damagesource.DamageSource damageSource, boolean recentlyHit) {
+        if (!dismissing && com.wsteam.wandscape.content.items.charm.SoulwardCharmItem.isSoulwardActive(this)) {
+            return;
+        }
+        super.dropCustomDeathLoot(level, damageSource, recentlyHit);
+    }
 
     @Override
     protected void dropEquipment() {
+        if (!dismissing && com.wsteam.wandscape.content.items.charm.SoulwardCharmItem.isSoulwardActive(this)) {
+            // 守魂护符生效：装备与背包已在 NpcDeathHandler 完整封存至死亡记录，跳过掉落与清空
+            return;
+        }
         super.dropEquipment();
         if (level().isClientSide) return;
         if (!isColonyNpc()) return;
@@ -1281,7 +1296,12 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike, ColonyWor
      */
     public void dismissFromColony() {
         if (level().isClientSide) return;
-        dropEquipment();
+        this.dismissing = true;
+        try {
+            dropEquipment();
+        } finally {
+            this.dismissing = false;
+        }
         if (isColonyNpc()) {
             for (EquippedMagicComponent.SpellEntry entry : equippedMagic.flattenedEntries()) {
                 if (entry == null || entry.id() == null || entry.id().isBlank()) continue;

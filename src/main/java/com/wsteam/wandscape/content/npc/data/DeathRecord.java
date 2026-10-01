@@ -25,12 +25,40 @@ public record DeathRecord(
         float maxHp, float moveSpeed, float spellPower, float workSpeed,
         float spellSpeed, float armorValue, float maxMana,
         List<ResourceStack> inventory,
-        List<String> equippedMagic
+        List<String> equippedMagic,
+        @Nullable PreservedInventory preservedInventory,
+        String deathCause
 ) {
+
+    public DeathRecord(
+            UUID npcId, String name, String dimension, int x, int y, int z,
+            long deathTime, UUID colonyId, int skinVariant, int hatColor,
+            boolean hasDefaultWand, float maxHp, float moveSpeed, float spellPower,
+            float workSpeed, float spellSpeed, float armorValue, float maxMana,
+            List<ResourceStack> inventory, List<String> equippedMagic
+    ) {
+        this(npcId, name, dimension, x, y, z, deathTime, colonyId, skinVariant, hatColor,
+                hasDefaultWand, maxHp, moveSpeed, spellPower, workSpeed, spellSpeed, armorValue, maxMana,
+                inventory, equippedMagic, null, "");
+    }
+
+    public DeathRecord(
+            UUID npcId, String name, String dimension, int x, int y, int z,
+            long deathTime, UUID colonyId, int skinVariant, int hatColor,
+            boolean hasDefaultWand, float maxHp, float moveSpeed, float spellPower,
+            float workSpeed, float spellSpeed, float armorValue, float maxMana,
+            List<ResourceStack> inventory, List<String> equippedMagic,
+            @Nullable PreservedInventory preservedInventory
+    ) {
+        this(npcId, name, dimension, x, y, z, deathTime, colonyId, skinVariant, hatColor,
+                hasDefaultWand, maxHp, moveSpeed, spellPower, workSpeed, spellSpeed, armorValue, maxMana,
+                inventory, equippedMagic, preservedInventory, "");
+    }
 
     public DeathRecord {
         inventory = List.copyOf(inventory);
         equippedMagic = equippedMagic == null ? List.of() : List.copyOf(equippedMagic);
+        deathCause = deathCause != null ? deathCause : "";
     }
 
     /** 范围内最近的死亡记录（3D 距离，含 Y）；无则 null。纯逻辑，可单测。 */

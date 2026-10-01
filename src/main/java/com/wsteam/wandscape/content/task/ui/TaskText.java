@@ -5,6 +5,8 @@ import com.wsteam.wandscape.content.task.network.ProductionItemDto;
 import com.wsteam.wandscape.content.task.network.ResourceShortageDto;
 import com.wsteam.wandscape.content.task.network.TaskSummaryDto;
 import com.wsteam.wandscape.foundation.ui.I18n;
+import net.minecraft.client.Minecraft;
+import net.minecraft.network.chat.Component;
 
 /**
  * 任务面板与 NPC 头顶状态里那些**服务端发来的文本**的客户端解析。
@@ -72,6 +74,38 @@ public final class TaskText {
         return "element".equals(shortage.kind())
                 ? I18n.string("element.wandscape." + shortage.resourceId(), shortage.displayName())
                 : shortage.displayName();
+    }
+
+    /** 死因文本解析：优先反序列化 JSON Component，失败则兜底为字面量或未知。 */
+    public static Component deathCause(String deathCauseJson) {
+        if (deathCauseJson == null || deathCauseJson.isEmpty()) {
+            return Component.translatable("gui.wandscape.task.death_cause.unknown");
+        }
+        if (deathCauseJson.startsWith("{") || deathCauseJson.startsWith("[")) {
+            try {
+                var level = Minecraft.getInstance().level;
+                if (level != null) {
+                    Component comp = Component.Serializer.fromJsonLenient(deathCauseJson, level.registryAccess());
+                    if (comp != null) return comp;
+                }
+            } catch (Exception ignored) {}
+        }
+        return Component.literal(deathCauseJson);
+    }
+
+    /** 维度名称友好显示（主世界/下界/末地/其它）。 */
+    public static String dimensionName(String dimensionId) {
+        if (dimensionId == null || dimensionId.isEmpty() || "minecraft:overworld".equals(dimensionId)) {
+            return I18n.string("gui.wandscape.task.dim.overworld", "主世界");
+        }
+        if ("minecraft:the_nether".equals(dimensionId)) {
+            return I18n.string("gui.wandscape.task.dim.the_nether", "下界");
+        }
+        if ("minecraft:the_end".equals(dimensionId)) {
+            return I18n.string("gui.wandscape.task.dim.the_end", "末地");
+        }
+        int idx = dimensionId.indexOf(':');
+        return idx >= 0 ? dimensionId.substring(idx + 1) : dimensionId;
     }
 
     private static boolean hasText(String s) {

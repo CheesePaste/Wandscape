@@ -130,9 +130,72 @@ public final class CuriosCompatImpl {
                 Wandscape.ADVANCED_MAGIC_COMPASS.get(),
                 Wandscape.ULTIMATE_MAGIC_COMPASS.get()
         );
+        // 为守魂护符注册 ICurio capability：掉落规则固定为 ALWAYS_KEEP
+        event.registerItem(
+                CuriosCapability.ITEM,
+                (stack, context) -> new ICurio() {
+                    @Override
+                    public ItemStack getStack() {
+                        return stack;
+                    }
+
+                    @Override
+                    public ICurio.DropRule getDropRule(SlotContext slotContext, net.minecraft.world.damagesource.DamageSource damageSource, boolean recentlyHit) {
+                        return ICurio.DropRule.ALWAYS_KEEP;
+                    }
+                },
+                Wandscape.SOULWARD_CHARM.get()
+        );
     }
 
-    /** 服务端钩子：饰品槽变化 → 重建铁魔法饰品属性桥。
+    /** 保存实体全部 Curios 槽位的饰品数据。 */
+    public static net.minecraft.nbt.CompoundTag saveCurios(LivingEntity entity, net.minecraft.core.HolderLookup.Provider registries) {
+        net.minecraft.nbt.CompoundTag tag = new net.minecraft.nbt.CompoundTag();
+        CuriosApi.getCuriosInventory(entity).ifPresent(handler -> {
+            net.minecraft.nbt.ListTag list = new net.minecraft.nbt.ListTag();
+            for (ICurioStacksHandler stacksHandler : handler.getCurios().values()) {
+                String identifier = stacksHandler.getIdentifier();
+                IDynamicStackHandler stacks = stacksHandler.getStacks();
+                for (int i = 0; i < stacks.getSlots(); i++) {
+                    ItemStack stack = stacks.getStackInSlot(i);
+                    if (!stack.isEmpty()) {
+                        net.minecraft.nbt.CompoundTag itemTag = new net.minecraft.nbt.CompoundTag();
+                        itemTag.putString("slot", identifier);
+                        itemTag.putInt("index", i);
+                        itemTag.put("item", stack.saveOptional(registries));
+                        list.add(itemTag);
+                    }
+                }
+            }
+            tag.put("curios", list);
+        });
+        return tag;
+    }
+
+    /** 恢复实体全部 Curios 槽位的饰品数据。 */
+    public static void restoreCurios(LivingEntity entity, net.minecraft.nbt.CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
+        if (!tag.contains("curios")) return;
+        net.minecraft.nbt.ListTag list = tag.getList("curios", net.minecraft.nbt.Tag.TAG_COMPOUND);
+        CuriosApi.getCuriosInventory(entity).ifPresent(handler -> {
+            for (int i = 0; i < list.size(); i++) {
+                net.minecraft.nbt.CompoundTag itemTag = list.getCompound(i);
+                String identifier = itemTag.getString("slot");
+                int index = itemTag.getInt("index");
+                if (itemTag.contains("item")) {
+                    ItemStack stack = ItemStack.parseOptional(registries, itemTag.getCompound("item"));
+                    if (!stack.isEmpty()) {
+                        handler.getStacksHandler(identifier).ifPresent(sh -> {
+                            if (index >= 0 && index < sh.getSlots()) {
+                                sh.getStacks().setStackInSlot(index, stack);
+                            }
+                        });
+                    }
+                }
+            }
+        });
+    }
+
+    /** 服务端钩子：饰品槽变化 → 重建铁魔法饰品属性桥；守魂护符掉落豁免。
      *  法师槽位映射由数据包 {@code data/curios/curios/entities/wandscape_npc.json} 声明，
      *  Curios 自带 datapack reload 与 sync 分发，无须任何运行时镜像。 */
     public static final class ServerHooks {
@@ -145,6 +208,24 @@ public final class CuriosCompatImpl {
         public static void onCurioChange(CurioChangeEvent evt) {
             if (evt.getEntity() instanceof WandscapeNpc npc) {
                 syncIronCurioAttributes(npc);
+            }
+        }
+
+        /** 守魂护符生效时，覆盖实体的全部 Curios 饰品掉落规则为 ALWAYS_KEEP。 */
+        @SubscribeEvent
+        public static void onDropRules(top.theillusivec4.curios.api.event.DropRulesEvent evt) {
+            if (evt.getEntity() instanceof WandscapeNpc npc
+                    && com.wsteam.wandscape.content.items.charm.SoulwardCharmItem.isSoulwardActive(npc)) {
+                evt.addOverride(stack -> true, ICurio.DropRule.ALWAYS_KEEP);
+            }
+        }
+
+        /** 守魂护符生效时取消饰品掉落事件（双重保险，不向世界生成任何饰品掉落实体）。 */
+        @SubscribeEvent
+        public static void onCurioDrops(top.theillusivec4.curios.api.event.CurioDropsEvent evt) {
+            if (evt.getEntity() instanceof WandscapeNpc npc
+                    && com.wsteam.wandscape.content.items.charm.SoulwardCharmItem.isSoulwardActive(npc)) {
+                evt.setCanceled(true);
             }
         }
     }

@@ -12,6 +12,7 @@ import com.wsteam.wandscape.content.task.types.ResourceStack;
 import com.wsteam.wandscape.foundation.service.ParticleService;
 import com.wsteam.wandscape.content.npc.data.DeathRecord;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
+import com.wsteam.wandscape.compat.curios.CuriosCompat;
 import com.wsteam.wandscape.api.MagicApi;
 import com.wsteam.wandscape.content.npc.attributes.NpcAttributes;
 import com.wsteam.wandscape.content.npc.data.MageHutResident;
@@ -24,6 +25,7 @@ import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.MobSpawnType;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
@@ -204,13 +206,56 @@ public final class ReviveHandler {
         // 恢复已装备魔法卷轴：死亡时不掉落、记入死亡记录，这里重新挂回复活后 NPC
         //（沿用 SpellcastingApi 的服务端权威校验：未知/ALTAR/SPECIAL 丢、每类 ≤3、去重）。
         restoreEquippedMagic(npc, rec);
+        // 恢复守魂护符保护的随身物品（主手法杖、盔甲、背包、饰品）
+        restorePreservedItems(npc, rec, level.registryAccess());
         ColonyDeathRegistry.get(level).remove(rec);
+        com.wsteam.wandscape.content.task.network.TaskPanelSyncTracker.markDirty();
 
         spawnReviveBurst(level, spawnPos.getX() + 0.5, spawnPos.getY() + 1.0, spawnPos.getZ() + 0.5);
         Log.info(TAG, "NPC {} ({}) 已复活 at {}（恢复 {} 格背包）",
                 npc.getUUID().toString().substring(0, 8), rec.name(),
                 spawnPos.toShortString(), rec.inventory().size());
         return true;
+    }
+
+    /**
+     * 恢复守魂护符保全的随身物品（主手自定义法杖、盔甲、27 格背包及 Curios 饰品）。
+     * 若死亡记录中无保全数据（未携带护符或老版本记录），则保持复活默认状态。
+     */
+    private static void restorePreservedItems(WandscapeNpc npc, DeathRecord rec, net.minecraft.core.HolderLookup.Provider registries) {
+        var pres = rec.preservedInventory();
+        if (pres == null) return;
+
+        // 1. 恢复主手自定义法杖
+        if (!pres.mainHandWand().isEmpty()) {
+            npc.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, pres.mainHandWand().copy());
+            npc.setHasDefaultWand(false);
+        }
+
+        // 2. 恢复 4 格盔甲
+        var armorList = pres.armor();
+        for (int i = 0; i < WandscapeNpc.ARMOR_SLOT_COUNT && i < armorList.size(); i++) {
+            ItemStack stack = armorList.get(i);
+            if (!stack.isEmpty()) {
+                npc.setItemSlot(WandscapeNpc.ARMOR_VANILLA_SLOTS[i], stack.copy());
+            }
+        }
+
+        // 3. 恢复 27 格背包
+        var bpList = pres.backpack();
+        for (int i = 0; i < npc.inventory.getContainerSize() && i < bpList.size(); i++) {
+            ItemStack stack = bpList.get(i);
+            if (!stack.isEmpty()) {
+                npc.inventory.setItem(i, stack.copy());
+            }
+        }
+        npc.inventory.setChanged();
+
+        // 4. 恢复 Curios 饰品
+        if (pres.curiosTag() != null) {
+            CuriosCompat.restoreCurios(npc, pres.curiosTag(), registries);
+            CuriosCompat.syncIronCurioAttributes(npc);
+        }
     }
 
     /** spawn() 已用默认属性注册 ECS——这里按死亡快照重新设置小镇与背包。 */

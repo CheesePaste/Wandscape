@@ -59,6 +59,10 @@
     "zh_cn": "返回鸟瞰 (ESC)",
     "en_us": "Back to overview (ESC)"
   },
+  "gui.wandscape.task.death_cause.unknown": {
+    "zh_cn": "未知原因",
+    "en_us": "Unknown causes"
+  },
   "gui.wandscape.task.default_mage": {
     "zh_cn": "法师",
     "en_us": "Mage"
@@ -139,6 +143,26 @@
     "zh_cn": "工坊: %s | 产物: %s × %s | 状态: %s",
     "en_us": "Workshop: %s | Output: %s × %s | Status: %s"
   },
+  "gui.wandscape.task.dim.overworld": {
+    "zh_cn": "主世界",
+    "en_us": "Overworld"
+  },
+  "gui.wandscape.task.dim.the_end": {
+    "zh_cn": "末地",
+    "en_us": "The End"
+  },
+  "gui.wandscape.task.dim.the_nether": {
+    "zh_cn": "下界",
+    "en_us": "The Nether"
+  },
+  "gui.wandscape.task.empty.alive_mages": {
+    "zh_cn": "当前小镇暂无在世法师",
+    "en_us": "No living mages in this colony"
+  },
+  "gui.wandscape.task.empty.dead_mages": {
+    "zh_cn": "当前小镇暂无阵亡法师",
+    "en_us": "No deceased mages in this colony"
+  },
   "gui.wandscape.task.empty.mages": {
     "zh_cn": "当前小镇暂无法师",
     "en_us": "This town has no mages yet"
@@ -207,6 +231,22 @@
     "zh_cn": "法强:%s  工速:%s  护甲:%s",
     "en_us": "Power:%s  Work:%s  Armor:%s"
   },
+  "gui.wandscape.task.mage.death_cause": {
+    "zh_cn": "死因: %s",
+    "en_us": "Cause: %s"
+  },
+  "gui.wandscape.task.mage.death_pos": {
+    "zh_cn": "地点: %s (%s, %s, %s)",
+    "en_us": "Location: %s (%s, %s, %s)"
+  },
+  "gui.wandscape.task.mage.filter.alive": {
+    "zh_cn": "在世",
+    "en_us": "Alive"
+  },
+  "gui.wandscape.task.mage.filter.dead": {
+    "zh_cn": "已阵亡",
+    "en_us": "Deceased"
+  },
   "gui.wandscape.task.mage.follow": {
     "zh_cn": "跟随",
     "en_us": "Follow"
@@ -231,6 +271,10 @@
     "zh_cn": "施法中: %s",
     "en_us": "Casting: %s"
   },
+  "gui.wandscape.task.mage_state.dead": {
+    "zh_cn": "已阵亡",
+    "en_us": "Deceased"
+  },
   "gui.wandscape.task.mage_state.following": {
     "zh_cn": "跟随中",
     "en_us": "Following"
@@ -242,6 +286,10 @@
   "gui.wandscape.task.mage_state.moving": {
     "zh_cn": "前往工作中",
     "en_us": "Heading to work"
+  },
+  "gui.wandscape.task.metrics.mages": {
+    "zh_cn": "在世: %s  |  空闲: %s  |  阵亡待复活: %s",
+    "en_us": "Alive: %s  |  Idle: %s  |  Deceased: %s"
   },
   "gui.wandscape.task.metrics.production": {
     "zh_cn": "工坊建筑: %s  |  制作中: %s  |  排队: %s  |  缺元素: %s",

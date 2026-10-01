@@ -378,6 +378,11 @@ public class Wandscape {
             ITEMS.register("warehouse_terminal", () ->
                     new WarehouseTerminalItem(new Item.Properties().stacksTo(1)));
 
+    // ---- soulward charm: 守魂护符（法师饰品，Curios charm 槽；死亡不掉落并在复活时全额归还）----
+    public static final DeferredItem<Item> SOULWARD_CHARM =
+            ITEMS.register("soulward_charm", () ->
+                    new com.wsteam.wandscape.content.items.charm.SoulwardCharmItem(new Item.Properties().stacksTo(1)));
+
     // ---- blueprint: 物品图纸（开启宝箱/游客满满意度离场 5% 概率产出，右键打开配方面板自选解锁任意配方）----
     public static final DeferredItem<Item> ITEM_BLUEPRINT =
             ITEMS.register("item_blueprint", () ->
@@ -442,6 +447,7 @@ public class Wandscape {
                         output.accept(ADVANCED_MAGIC_COMPASS.get());
                         output.accept(ULTIMATE_MAGIC_COMPASS.get());
                         output.accept(WAREHOUSE_TERMINAL.get());
+                        output.accept(SOULWARD_CHARM.get());
                         output.accept(CREATIVE_BUILDING_SCANNER_ITEM.get());
                         output.accept(BUILDING_SCANNER_ITEM.get());
                         output.accept(INTERACT_SPOT_MARKER_ITEM.get());

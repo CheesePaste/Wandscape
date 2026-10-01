@@ -162,6 +162,12 @@ public final class TaskManagementOverlay {
                         "工坊建筑: %s  |  制作中: %s  |  排队: %s  |  缺元素: %s",
                         String.valueOf(TaskManagementClientState.getAllProductionGroups().size()),
                         String.valueOf(running), String.valueOf(queued), String.valueOf(missing));
+            } else if (tab == TaskManagementClientState.SubTab.MAGES) {
+                metrics = I18n.string("gui.wandscape.task.metrics.mages",
+                        "在世: %s  |  空闲: %s  |  阵亡待复活: %s",
+                        String.valueOf(TaskManagementClientState.getAliveMageCount()),
+                        String.valueOf(TaskManagementClientState.getIdleMageCount()),
+                        String.valueOf(TaskManagementClientState.getDeadMageCount()));
             } else {
                 int inProgress = 0, awaiting = 0, pending = 0;
                 for (TaskSummaryDto t : TaskManagementClientState.getAllTasks()) {
@@ -208,7 +214,7 @@ public final class TaskManagementOverlay {
         String prodLabel = I18n.string("gui.wandscape.task.tab.production", "工坊流水线 (%s)",
                 String.valueOf(TaskManagementClientState.getTotalProductionItemCount()));
         String mageLabel = I18n.string("gui.wandscape.task.tab.mages", "法师名册 (%s)",
-                String.valueOf(TaskManagementClientState.getTotalMageCount()));
+                String.valueOf(TaskManagementClientState.getAllMages().size()));
 
         int titleW = font.width(title);
         int pad = 24;
@@ -290,8 +296,21 @@ public final class TaskManagementOverlay {
                 g.drawString(font, label, curX + 7, btnY + 5, txtColor, false);
                 curX += btnW + 6;
             }
-        } else {
-            // Mages 页：无工具栏筛选/提示（[聚焦]/[跟踪] 入口已移除）。
+        } else if (tab == TaskManagementClientState.SubTab.MAGES) {
+            TaskManagementClientState.MageFilter currentFilter = TaskManagementClientState.getActiveMageFilter();
+            TaskManagementClientState.MageFilter[] filters = TaskManagementClientState.MageFilter.values();
+
+            for (TaskManagementClientState.MageFilter f : filters) {
+                String label = mageFilterLabel(f);
+                int btnW = font.width(label) + 14;
+                boolean active = f == currentFilter;
+                boolean hover = mx >= curX && mx <= curX + btnW && my >= btnY && my <= btnY + btnH;
+                int bg = active ? 0xFFC8A040 : (hover ? 0x883E4A5E : 0x44262E3B);
+                g.fill(RenderType.guiOverlay(), curX, btnY, curX + btnW, btnY + btnH, 0, bg);
+                int txtColor = active ? 0xFF111214 : WandscapeTheme.COLOR_TEXT_NORMAL;
+                g.drawString(font, label, curX + 7, btnY + 5, txtColor, false);
+                curX += btnW + 6;
+            }
         }
     }
 
@@ -723,7 +742,11 @@ public final class TaskManagementOverlay {
         List<MageSummaryDto> mages = TaskManagementClientState.getFilteredMages();
 
         if (mages.isEmpty()) {
-            String empty = I18n.string("gui.wandscape.task.empty.mages", "当前小镇暂无法师");
+            String empty = switch (TaskManagementClientState.getActiveMageFilter()) {
+                case DEAD -> I18n.string("gui.wandscape.task.empty.dead_mages", "当前小镇暂无阵亡法师");
+                case ALIVE -> I18n.string("gui.wandscape.task.empty.alive_mages", "当前小镇暂无在世法师");
+                default -> I18n.string("gui.wandscape.task.empty.mages", "当前小镇暂无法师");
+            };
             g.drawString(font, empty, x + (w - font.width(empty)) / 2, y + 50, WandscapeTheme.COLOR_TEXT_DIM, false);
             return;
         }
@@ -763,7 +786,13 @@ public final class TaskManagementOverlay {
 
     private static void renderMageCard(GuiGraphics g, Font font, int x, int y, int w, MageSummaryDto mage, double mx, double my) {
         boolean hover = mx >= x && mx <= x + w && my >= y && my <= y + MAGE_CARD_H;
-        g.fill(RenderType.guiOverlay(), x, y, x + w, y + MAGE_CARD_H, 0, hover ? CARD_BG_HOVER : CARD_BG);
+        int bg;
+        if (mage.isDead()) {
+            bg = hover ? 0xEE332024 : 0xCC24181B;
+        } else {
+            bg = hover ? CARD_BG_HOVER : CARD_BG;
+        }
+        g.fill(RenderType.guiOverlay(), x, y, x + w, y + MAGE_CARD_H, 0, bg);
         g.fill(RenderType.guiOverlay(), x, y, x + 3, y + MAGE_CARD_H, 0, getMageStateAccentColor(mage.state()));
 
         // Line 1: Name + State Tag
@@ -773,10 +802,16 @@ public final class TaskManagementOverlay {
         if (!"npc".equals(mage.kind())) {
             name = Component.translatable("gui.wandscape.task.worker_tag").getString() + " " + name;
         }
-        g.drawString(font, name, x + 8, y + 6, WandscapeTheme.COLOR_TEXT_ACTIVE, false);
+        int nameColor = mage.isDead() ? 0xFFEF9A9A : WandscapeTheme.COLOR_TEXT_ACTIVE;
+        g.drawString(font, name, x + 8, y + 6, nameColor, false);
 
         String stateTag = formatMageState(mage);
         g.drawString(font, stateTag, x + w - font.width(stateTag) - 8, y + 6, getMageStateTextColor(mage.state()), false);
+
+        if (mage.isDead()) {
+            renderDeadMageDetails(g, font, x, y, w, mage, mx, my);
+            return;
+        }
 
         // Line 2: HP & MP Gauges
         int barW = 64;
@@ -835,6 +870,59 @@ public final class TaskManagementOverlay {
                         ? I18n.string("gui.wandscape.task.mage.unpeace", "取消和平")
                         : I18n.string("gui.wandscape.task.mage.peace", "和平"),
                 peaceX + 5, y + 6, 0xFFFFFFFF, false);
+    }
+
+    private static void renderDeadMageDetails(GuiGraphics g, Font font, int x, int y, int w, MageSummaryDto mage, double mx, double my) {
+        int maxTextW = w - 16;
+
+        // Line 2: Cause of Death
+        Component causeComp = TaskText.deathCause(mage.deathCause());
+        String causeStr = I18n.string("gui.wandscape.task.mage.death_cause", "死因: %s", causeComp.getString());
+        if (font.width(causeStr) > maxTextW) {
+            causeStr = font.plainSubstrByWidth(causeStr, maxTextW);
+        }
+        g.drawString(font, causeStr, x + 8, y + 22, 0xFFFF8A80, false);
+
+        // Line 3: Death Location (Dimension + Coordinates)
+        String dimName = TaskText.dimensionName(mage.deathDimension());
+        String posStr = I18n.string("gui.wandscape.task.mage.death_pos", "地点: %s (%s, %s, %s)",
+                dimName,
+                String.valueOf((int) Math.floor(mage.posX())),
+                String.valueOf((int) Math.floor(mage.posY())),
+                String.valueOf((int) Math.floor(mage.posZ())));
+        if (font.width(posStr) > maxTextW) {
+            posStr = font.plainSubstrByWidth(posStr, maxTextW);
+        }
+        g.drawString(font, posStr, x + 8, y + 38, 0xFFB0BEC5, false);
+
+        // Line 4: Attributes on Left, [定位] Button on Right
+        String attrStr = I18n.string("gui.wandscape.task.mage.attrs", "法强:%s  工速:%s  护甲:%s",
+                String.format("%.1f", mage.spellPower()),
+                String.format("%.1f", mage.workSpeed()),
+                String.format("%.0f", mage.armorValue()));
+        int btnW = 44;
+        int btnH = 20;
+        int btnX = x + w - btnW - 8;
+        int btnY = y + 52;
+        int attrMaxW = btnX - (x + 8) - 6;
+        if (font.width(attrStr) > attrMaxW) {
+            attrStr = font.plainSubstrByWidth(attrStr, attrMaxW);
+        }
+        g.drawString(font, attrStr, x + 8, y + 57, 0xFF78909C, false);
+
+        // [定位] Button
+        boolean sameDim = isSameDimension(mage.deathDimension());
+        boolean hover = sameDim && mx >= btnX && mx <= btnX + btnW && my >= btnY && my <= btnY + btnH;
+        int btnBg = !sameDim ? 0x44262E3B : (hover ? 0xEE4E342E : 0x883E2723);
+        int btnTxtColor = sameDim ? 0xFFFFFFFF : 0xFF757575;
+        g.fill(RenderType.guiOverlay(), btnX, btnY, btnX + btnW, btnY + btnH, 0, btnBg);
+        g.drawString(font, locateLabel(), btnX + 6, btnY + 6, btnTxtColor, false);
+    }
+
+    private static boolean isSameDimension(String dimensionId) {
+        if (dimensionId == null || dimensionId.isEmpty()) return true;
+        var level = Minecraft.getInstance().level;
+        return level != null && dimensionId.equals(level.dimension().location().toString());
     }
 
     // ═══════════════════════════════════════════════════════════════════
@@ -933,6 +1021,17 @@ public final class TaskManagementOverlay {
                     int btnW = font.width(label) + 14;
                     if (mx >= fx && mx <= fx + btnW && my >= fBtnY && my <= fBtnY + fBtnH) {
                         TaskManagementClientState.setActiveProductionFilter(f);
+                        playClickSound();
+                        return true;
+                    }
+                    fx += btnW + 6;
+                }
+            } else if (tab == TaskManagementClientState.SubTab.MAGES) {
+                for (TaskManagementClientState.MageFilter f : TaskManagementClientState.MageFilter.values()) {
+                    String label = mageFilterLabel(f);
+                    int btnW = font.width(label) + 14;
+                    if (mx >= fx && mx <= fx + btnW && my >= fBtnY && my <= fBtnY + fBtnH) {
+                        TaskManagementClientState.setActiveMageFilter(f);
                         playClickSound();
                         return true;
                     }
@@ -1045,6 +1144,19 @@ public final class TaskManagementOverlay {
 
                 if (my >= cy && my <= cy + MAGE_CARD_H) {
                     MageSummaryDto m = mages.get(i);
+                    if (m.isDead()) {
+                        int btnW = 44;
+                        int btnX = cx + cardW - btnW - 8;
+                        int btnY2 = cy + 52;
+                        int btnH2 = 20;
+                        if (isSameDimension(m.deathDimension()) && mx >= btnX && mx <= btnX + btnW && my >= btnY2 && my <= btnY2 + btnH2) {
+                            flyToTarget(m.posX(), m.posY(), m.posZ());
+                            collapseDrawerToOverview();
+                            playClickSound();
+                            return true;
+                        }
+                        continue;
+                    }
                     // 跟随/和平按钮只画给法师（见 renderMageCard）；这里同步挡掉命中判定，
                     // 否则非法师卡片上会出现一块"看不见但能点、点了没反应"的死区。
                     if (!"npc".equals(m.kind())) continue;
@@ -1139,6 +1251,15 @@ public final class TaskManagementOverlay {
         };
     }
 
+    /** 法师页筛选按钮文案，见 {@link #taskFilterLabel}。 */
+    private static String mageFilterLabel(TaskManagementClientState.MageFilter f) {
+        return switch (f) {
+            case ALL -> I18n.string("gui.wandscape.task.filter.all", "全部");
+            case ALIVE -> I18n.string("gui.wandscape.task.mage.filter.alive", "在世");
+            case DEAD -> I18n.string("gui.wandscape.task.mage.filter.dead", "已阵亡");
+        };
+    }
+
     /**
      * 定位按钮文案。动作按钮的宽度是写死的（44/48/54 px），渲染与命中判定两处共用同一份常量，
      * 所以文案得短——换语言时别把标签写长，否则会溢出按钮。
@@ -1172,6 +1293,7 @@ public final class TaskManagementOverlay {
 
     private static int getMageStateAccentColor(String state) {
         return switch (state.toUpperCase()) {
+            case "DEAD" -> 0xFFE53935;
             case "CASTING", "MOVING" -> 0xFF81C784;
             case "FOLLOWING" -> 0xFF64B5F6;
             default -> 0xFF90A4AE;
@@ -1180,6 +1302,7 @@ public final class TaskManagementOverlay {
 
     private static int getMageStateTextColor(String state) {
         return switch (state.toUpperCase()) {
+            case "DEAD" -> 0xFFEF5350;
             case "CASTING" -> 0xFF81C784;
             case "MOVING" -> 0xFF4FC3F7;
             case "FOLLOWING" -> 0xFF64B5F6;
@@ -1189,6 +1312,7 @@ public final class TaskManagementOverlay {
 
     private static String formatMageState(MageSummaryDto mage) {
         return switch (mage.state().toUpperCase()) {
+            case "DEAD" -> I18n.string("gui.wandscape.task.mage_state.dead", "已阵亡");
             case "CASTING" -> mage.currentTaskTitle().isEmpty()
                     ? I18n.string("gui.wandscape.task.mage_state.casting", "施法中")
                     : I18n.string("gui.wandscape.task.mage_state.casting_with_task", "施法中: %s",
