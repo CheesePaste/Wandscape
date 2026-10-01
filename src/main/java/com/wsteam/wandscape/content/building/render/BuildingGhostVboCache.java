@@ -73,6 +73,20 @@ public final class BuildingGhostVboCache {
         return frontToBackSorting;
     }
 
+    /**
+     * 最近一次**真正发出**虚影绘制的 tick；{@code Long.MIN_VALUE} = 从未画过。
+     *
+     * <p>临时 A/B 指令靠它判定「虚影现在在画」，而不是去猜处于哪个模式 —— 放置虚影
+     * （{@link com.wsteam.wandscape.content.building.projection.client.ProjectionRenderer}）
+     * 与工地虚影（{@link com.wsteam.wandscape.content.building.client.ConstructionGhostRenderer}）
+     * 是两条路、门控条件不同（前者看是否在投影，后者看面板是否打开）。
+     */
+    private static volatile long lastDrawTick = Long.MIN_VALUE;
+
+    public static long lastDrawTick() {
+        return lastDrawTick;
+    }
+
     public static void setFrontToBackSorting(boolean enabled) {
         frontToBackSorting = enabled;
     }
@@ -88,6 +102,7 @@ public final class BuildingGhostVboCache {
 
         RenderType rt = RenderType.translucent();
         rt.setupRenderState();
+        lastDrawTick = currentTick(mc);
         drawVisibleSections(mesh, mc, cameraModelView, projection, camPos, anchor, frustum, false);
         rt.clearRenderState();
     }
@@ -101,6 +116,7 @@ public final class BuildingGhostVboCache {
 
         RenderType rt = RenderType.translucent();
         rt.setupRenderState();
+        lastDrawTick = currentTick(mc);
         drawVisibleSections(mesh, mc, cameraModelView, projection, camPos, anchor, frustum, true);
         rt.clearRenderState();
     }

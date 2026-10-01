@@ -2,6 +2,7 @@ package com.wsteam.wandscape.content.building.render;
 
 import com.mojang.brigadier.context.CommandContext;
 import com.wsteam.wandscape.content.building.projection.client.ProjectionClientState;
+import com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.foundation.log.LogCategory;
 import net.minecraft.client.Minecraft;
@@ -67,18 +68,36 @@ public final class GhostSortCommand {
         double sum = msSum;
         samples = 0;
         msSum = 0.0;
+        String diag = diagnostics();
         if (n < MIN_SAMPLES) {
-            return "上一段样本太少(" + n + " tick)：每段请保持投影状态跑够十几秒再切";
+            return "上一段样本太少(" + n + " tick)：保持虚影显示不动跑够十几秒再切 | " + diag;
         }
         double avgMs = sum / n;
-        return String.format("上一段 %d tick / 平均 %.2f ms 每帧(约 %.1f fps)", n, avgMs, 1000.0 / avgMs);
+        return String.format("上一段 %d tick / 平均 %.2f ms 每帧(约 %.1f fps)", n, avgMs, 1000.0 / avgMs)
+                + " | " + diag;
+    }
+
+    /** 采样条件到底满没满足，一把报出来，免得下次又只能猜。 */
+    private static String diagnostics() {
+        Minecraft mc = Minecraft.getInstance();
+        long now = mc.level != null ? mc.level.getGameTime() : -1L;
+        long last = BuildingGhostVboCache.lastDrawTick();
+        String since = last == Long.MIN_VALUE ? "从未" : (now - last) + " tick 前";
+        return "诊断[投影=" + ProjectionClientState.isProjecting()
+                + " 虚影位置=" + ProjectionClientState.getGhostPos()
+                + " 面板=" + WandscapePanelState.isPanelOpen()
+                + " 上次绘制=" + since
+                + " fps=" + mc.getFps()
+                + " 排序=" + (BuildingGhostVboCache.isFrontToBackSorting() ? "开" : "关") + "]";
     }
 
     private static void onClientTick(ClientTickEvent.Post event) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null || mc.player == null) return;
-        // 只在虚影真的会被画出来时采样，否则两种状态量到的是同一件事
-        if (!ProjectionClientState.isProjecting() || ProjectionClientState.getGhostPos() == null) return;
+        // 取样条件 = 「虚影这一两 tick 真的被画过」这个事实，而不是猜当前处于哪个模式：
+        // 放置虚影与工地虚影分属两个渲染器、门控条件不同。
+        long last = BuildingGhostVboCache.lastDrawTick();
+        if (last == Long.MIN_VALUE || mc.level.getGameTime() - last > 2) return;
         int fps = mc.getFps();
         if (fps <= 0) return;
         msSum += 1000.0 / fps;
