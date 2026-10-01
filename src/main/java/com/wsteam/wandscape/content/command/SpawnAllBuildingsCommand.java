@@ -292,6 +292,10 @@ public final class SpawnAllBuildingsCommand {
         } else if (op instanceof AtomicOp.EmitEventOp e) {
             // 蓝图自带的 build_complete——BuildCompleteListener 据此置为已建成
             world.eventBus.emit(new CustomEvent(e.eventName(), e.templateParams()));
+        } else if (op instanceof AtomicOp.ClearBoxOp) {
+            // 本命令按 clearBox=false 编译（见 submitNext），不会产生清场 op。
+            // 万一将来参数被改，宁可吵一声也不要静默漏掉清场。
+            Log.warn(TAG, "[Test] spawn-all got a ClearBoxOp (compiled with clearBox=false?) — skipped");
         }
         // ResourceRequestOp：调试生成不向仓库要料，跳过
     }

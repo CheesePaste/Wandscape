@@ -634,6 +634,7 @@ public class TaskExecutionSystem implements EcsSystem {
             case AtomicOp.AltarCastOp a   -> "altar_cast:" + a.magicId();
             case AtomicOp.BlockInteractOp b -> "block_interact:" + b.action().id();
             case AtomicOp.TransformOp t   -> "transform";
+            case AtomicOp.ClearBoxOp c    -> "clear_box";
             case AtomicOp.ParallelOp p    -> "parallel";
             case AtomicOp.SelfDefenseOp s -> "combat";
             default                       -> null;
@@ -682,20 +683,29 @@ public class TaskExecutionSystem implements EcsSystem {
     }
 
     private static void collectTargets(AtomicOp op, int[] box, boolean[] hasTarget) {
-        GridPos t = op.target();
-        if (t != null) {
-            hasTarget[0] = true;
-            if (t.x() < box[0]) box[0] = t.x();
-            if (t.x() > box[1]) box[1] = t.x();
-            if (t.y() < box[2]) box[2] = t.y();
-            if (t.z() < box[3]) box[3] = t.z();
-            if (t.z() > box[4]) box[4] = t.z();
+        if (op instanceof AtomicOp.ClearBoxOp clear) {
+            // 整箱清空只带盒子两个角（target() 是 min）：两角都要算进去，站位才与原先
+            // 「盒内每格一条 air op」时一致，否则大建筑的法师会站到盒子一侧去。
+            includeTarget(box, hasTarget, clear.min());
+            includeTarget(box, hasTarget, clear.max());
+        } else {
+            includeTarget(box, hasTarget, op.target());
         }
         if (op instanceof AtomicOp.ParallelOp(List<AtomicOp> steps)) {
             for (AtomicOp sub : steps) {
                 collectTargets(sub, box, hasTarget);
             }
         }
+    }
+
+    private static void includeTarget(int[] box, boolean[] hasTarget, @Nullable GridPos t) {
+        if (t == null) return;
+        hasTarget[0] = true;
+        if (t.x() < box[0]) box[0] = t.x();
+        if (t.x() > box[1]) box[1] = t.x();
+        if (t.y() < box[2]) box[2] = t.y();
+        if (t.z() < box[3]) box[3] = t.z();
+        if (t.z() > box[4]) box[4] = t.z();
     }
 
 }

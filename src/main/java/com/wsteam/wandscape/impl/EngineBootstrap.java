@@ -11,6 +11,7 @@ import com.wsteam.wandscape.content.npc.guard.executor.SelfDefenseExecutor;
 import com.wsteam.wandscape.content.npc.system.NavigationSystem;
 import com.wsteam.wandscape.content.task.boundary.AsyncTransformExecutor;
 import com.wsteam.wandscape.content.task.boundary.BlockOps;
+import com.wsteam.wandscape.content.task.boundary.ClearBoxExecutor;
 import com.wsteam.wandscape.content.task.boundary.ColonyResourceAccess;
 import com.wsteam.wandscape.content.task.boundary.EntityOps;
 import com.wsteam.wandscape.content.task.boundary.MovementOps;
@@ -177,6 +178,11 @@ public final class EngineBootstrap {
             Log.info(TAG, "  AsyncTransformExecutor active: {} tick delay per block", asyncDelay);
         }
 
+        // 9b2. 整箱清空执行器：盒内格子在执行期按每 tick 预算枚举（见 ClearBoxExecutor）。
+        ClearBoxExecutor clearBoxExec = new ClearBoxExecutor();
+        world.opExecutors.register(clearBoxExec);
+        Log.info(TAG, "  ClearBoxExecutor registered");
+
         // 9c. Override BlockInteractOp executor with async version.
         WandscapeBlockInteractExecutor blockInteractExec = new WandscapeBlockInteractExecutor(transporter);
         world.opExecutors.register(blockInteractExec); // overwrites default BlockInteractExecutor
@@ -188,7 +194,7 @@ public final class EngineBootstrap {
         Log.info(TAG, "  ResourceRequestExecutor registered (visual transport, staggered)");
 
         // 10. Construct TaskRuntime
-        TaskRuntime runtime = new TaskRuntime(world, asyncExec, blockInteractExec, ritualOps,
+        TaskRuntime runtime = new TaskRuntime(world, asyncExec, clearBoxExec, blockInteractExec, ritualOps,
                 transporter, resourceReqExec, guardExec, selfDefenseExec, altarCastExec, movementOps);
         TaskRuntime.setActive(runtime);
 

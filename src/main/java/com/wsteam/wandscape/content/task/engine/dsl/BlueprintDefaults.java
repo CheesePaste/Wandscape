@@ -12,6 +12,7 @@ import com.wsteam.wandscape.content.task.types.ResourceStack;
 import com.wsteam.wandscape.content.task.runtime.TaskSequence;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -92,12 +93,15 @@ public final class BlueprintDefaults {
     // offsets/blocks it is given)
     //
     // Whether the boundary box is cleared is decided upstream in EnqueueHelper: when
-    // box clearing is on (default), it expands offsets/blocks to the whole rotated
-    // boundary with non-pattern voxels mapped to "minecraft:air", so this loop single-
-    // passes the box exactly like the pre-overlap "clear then build" did. When off,
-    // only the pattern voxels arrive and construction is pure placement (overlapping
-    // interiors untouched). This method itself always just places each given offset's
-    // mapped block — an air mapping is a normal (free) place.
+    // box clearing is on (default) the params carry the rotated boundary box, and this
+    // method turns it into ONE ClearBoxOp whose box is enumerated at execution time
+    // (先清场、后放置，与 pre-overlap 的 "clear then build" 同序同结果). When off, no
+    // boundary params arrive and construction is pure placement (overlapping interiors
+    // untouched). 放置循环本身只管把给定 offset 的方块放下去。
+    //
+    // 参数形态是自描述的，所以不需要版本迁移：动作与旧档的老参数形态（offsets 里自带
+    // "minecraft:air" 条目、没有 boundary_*）都仍然可用 —— 老形态不产生 ClearBoxOp，
+    // 那些 air 条目会在下面的循环里逐格放掉，与改前完全一致。
     // ─────────────────────────────────────────────────────────────────
 
     private static TaskSequence clearAndBuild(Map<String, JsonElement> p) {
@@ -109,6 +113,7 @@ public final class BlueprintDefaults {
 
         // Inline of the former `call build:place_structure` macro-expansion.
         addMaterialRequest(ops, p);
+        addBoxClear(ops, p, anchor, offsets);
         for (GridPos off : offsets) {
             String key = key(off);
             String block = blocks.get(key);
@@ -133,6 +138,44 @@ public final class BlueprintDefaults {
         ops.add(new AtomicOp.EmitEventOp("build_complete", data));
 
         return new TaskSequence(ops, label("build:clear_and_build", p));
+    }
+
+    /**
+     * 整箱清空：把 {@code boundary_min} / {@code boundary_max} 换成**一个**盒内枚举的
+     * {@link AtomicOp.ClearBoxOp}（范围由 {@code EnqueueHelper#fillBoundaryParams} 写入）。
+     *
+     * <p>排除集 = 编译期的 pattern 全集，编成盒内一维索引并排序，执行器用「游标只前进」的
+     * 双指针逐格跳过它们 —— 一栋超大建筑 58 万条 pattern 只占约 4.6 MB 的 long[]，而原先
+     * 那 666 万条 air 条目要撑出 710 万条 op。
+     *
+     * <p>落在盒外的 pattern 格不进排除集：清场只在盒内走，走不到那里，也就不会误伤它。
+     */
+    private static void addBoxClear(List<AtomicOp> ops, Map<String, JsonElement> p,
+                                    GridPos anchor, List<GridPos> offsets) {
+        if (!p.containsKey("boundary_min") || !p.containsKey("boundary_max")) return;
+        GridPos min = pos(p, "boundary_min");
+        GridPos max = pos(p, "boundary_max");
+        int dx = max.x() - min.x() + 1;
+        int dy = max.y() - min.y() + 1;
+        int dz = max.z() - min.z() + 1;
+
+        // offsets 相对 anchor，搬到「盒内相对坐标」再编码。
+        int ox = anchor.x() - min.x();
+        int oy = anchor.y() - min.y();
+        int oz = anchor.z() - min.z();
+        long[] excluded = new long[offsets.size()];
+        int n = 0;
+        for (GridPos off : offsets) {
+            int rx = off.x() + ox;
+            int ry = off.y() + oy;
+            int rz = off.z() + oz;
+            if (rx < 0 || rx >= dx || ry < 0 || ry >= dy || rz < 0 || rz >= dz) continue;
+            excluded[n++] = AtomicOp.ClearBoxOp.index(dx, dz, rx, ry, rz);
+        }
+        if (n != excluded.length) excluded = Arrays.copyOf(excluded, n);
+        Arrays.sort(excluded);
+
+        ops.add(new AtomicOp.ClearBoxOp(min, max, excluded));
     }
 
     // ─────────────────────────────────────────────────────────────────

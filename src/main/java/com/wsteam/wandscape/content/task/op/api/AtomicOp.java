@@ -34,7 +34,8 @@ public sealed interface AtomicOp
                 AtomicOp.ParallelOp,
                 AtomicOp.AttackMonsterOp,
                 AtomicOp.SelfDefenseOp,
-                AtomicOp.SpawnDecorationOp {
+                AtomicOp.SpawnDecorationOp,
+                AtomicOp.ClearBoxOp {
 
     /**
      * The world position this operation acts on, or {@code null} if positionless
@@ -276,6 +277,56 @@ public sealed interface AtomicOp
         @Override
         public GridPos target() {
             return target;
+        }
+    }
+
+    /**
+     * 整箱清空：把包围盒 {@code [min, max]} 内**不属于本建筑**的格子清成空气（拆除并回收）。
+     *
+     * <p>这是「一栋楼提交时先清场地」的那一步。它存在的理由是<b>别把盒内每一格都写成 op</b>：
+     * 一栋超大建筑的 boundary 有 710 万格而 pattern 只有 58 万条，逐格展开会产出 710 万条
+     * {@code TransformOp} —— 实测代价分三笔：提交时造 JSON 6.0 s、1 秒后蓝图编译 2.5 s、
+     * 第一次动工时在单帧里跳过 666 万个空气 op（每次跳过都要查方块注册表造 {@code BlockType}）。
+     * 换成这个 op 之后，盒内格子在<b>执行期</b>按每 tick 的预算枚举，盒外/pattern 格直接跳过。
+     *
+     * <p>执行序仍是「先清场、后放置」：本 op 排在放置 op 之前，且 pattern 格**必须跳过** ——
+     * 清场一旦碰了 pattern 格，会把已经放好的方块回收进仓库、再由放置 op 从 NPC 背包重放一遍，
+     * 仓库满时那份额外掉落物就是一次物品复制。
+     *
+     * @param min              包围盒最小角（世界坐标，已按 rotationSteps 旋转）
+     * @param max              包围盒最大角（世界坐标，已按 rotationSteps 旋转）
+     * @param excludedIndices  盒内一维索引升序数组，见 {@link com.wsteam.wandscape.content.task.boundary.ClearBoxExecutor}
+     *                         的编码口径；即编译期的 pattern 全集
+     */
+    record ClearBoxOp(GridPos min, GridPos max, long[] excludedIndices) implements AtomicOp {
+        @Override
+        public GridPos target() {
+            return min; // stance/导航锚点
+        }
+
+        public int sizeX() { return max.x() - min.x() + 1; }
+        public int sizeY() { return max.y() - min.y() + 1; }
+        public int sizeZ() { return max.z() - min.z() + 1; }
+
+        public long volume() { return (long) sizeX() * sizeY() * sizeZ(); }
+
+        /** 相对坐标是否落在盒内（盒外的 pattern 格不参与清场，因为清场走不到那里）。 */
+        public boolean containsRel(int relX, int relY, int relZ) {
+            return relX >= 0 && relX < sizeX()
+                    && relY >= 0 && relY < sizeY()
+                    && relZ >= 0 && relZ < sizeZ();
+        }
+
+        /**
+         * 盒内相对坐标 → 一维排名：<b>z 最快、x 次之、y 最外</b>，值域恰好是
+         * {@code [0, volume())} 的一个排列。
+         *
+         * <p>编码（编译期给排除集排序）与枚举（执行期逐格推进）用的是**同一个函数**：
+         * 执行器按「z 最快、x 次之」进位，其进位序就是这个排名的 0,1,2,… 增长序，
+         * 所以排除集排好序后可以只用「游标只前进」的双指针逐格比对。
+         */
+        public static long index(int sizeX, int sizeZ, int relX, int relY, int relZ) {
+            return ((long) relY * sizeX + relX) * sizeZ + relZ;
         }
     }
 

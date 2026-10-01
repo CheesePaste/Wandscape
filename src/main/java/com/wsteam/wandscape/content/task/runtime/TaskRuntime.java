@@ -4,6 +4,7 @@ import com.wsteam.wandscape.content.building.executor.AltarCastExecutor;
 import com.wsteam.wandscape.content.npc.guard.executor.GuardAttackExecutor;
 import com.wsteam.wandscape.content.npc.guard.executor.SelfDefenseExecutor;
 import com.wsteam.wandscape.content.task.boundary.AsyncTransformExecutor;
+import com.wsteam.wandscape.content.task.boundary.ClearBoxExecutor;
 import com.wsteam.wandscape.content.task.boundary.ResourceRequestExecutor;
 import com.wsteam.wandscape.content.task.boundary.WandscapeBlockInteractExecutor;
 import com.wsteam.wandscape.content.task.boundary.WandscapeMovementOps;
@@ -30,6 +31,8 @@ public final class TaskRuntime {
     @Nullable
     private final AsyncTransformExecutor asyncExec;
     @Nullable
+    private final ClearBoxExecutor clearBoxExec;
+    @Nullable
     private final WandscapeBlockInteractExecutor blockInteractExec;
     @Nullable
     private final WandscapeRitualOps ritualOps;
@@ -48,6 +51,7 @@ public final class TaskRuntime {
 
     public TaskRuntime(World world,
                        @Nullable AsyncTransformExecutor asyncExec,
+                       @Nullable ClearBoxExecutor clearBoxExec,
                        @Nullable WandscapeBlockInteractExecutor blockInteractExec,
                        @Nullable WandscapeRitualOps ritualOps,
                        @Nullable ItemTransportManager transporter,
@@ -58,6 +62,7 @@ public final class TaskRuntime {
                        @Nullable WandscapeMovementOps movementOps) {
         this.world = world;
         this.asyncExec = asyncExec;
+        this.clearBoxExec = clearBoxExec;
         this.blockInteractExec = blockInteractExec;
         this.ritualOps = ritualOps;
         this.transporter = transporter;
@@ -95,6 +100,11 @@ public final class TaskRuntime {
         if (asyncExec != null) {
             try (var s = TickProfiler.INSTANCE.start("tick.async_exec")) {
                 asyncExec.tickAll();
+            }
+        }
+        if (clearBoxExec != null) {
+            try (var s = TickProfiler.INSTANCE.start("tick.clear_box")) {
+                clearBoxExec.tickAll();
             }
         }
         if (blockInteractExec != null) {

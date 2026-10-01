@@ -1,7 +1,8 @@
 # 服务端 tick 卡点排查（提交施工 / 打开工地 UI）
 
 > 日期：2026-10-01
-> 状态：**A / B 已实施（2026-10-01）**，C 档待定（C0 已被 C1 取代，见 §四）
+> 状态：**A / B / C1 已实施（2026-10-01）**；C0 被 C1 取代，C2 已弃（见 §四）。
+> 待实测复核：见 §五 —— 尤其 C1 的「清场后世界状态逐格一致」
 > 证据：spark 采样 `run/config/spark/profile-2026-10-01_13.47.14.sparkprofile`（1139 ticks / 102 s，聚焦 Server thread）
 > 关联：[large-building-render-perf.md](large-building-render-perf.md)（渲染侧与 §7.1 的整箱清空量化）、[domain-notes.md](../domain-notes.md)、[data-formats.md](../data-formats.md)
 
@@ -138,52 +139,75 @@ EnqueueHelper.fillBoundaryAsAir()                     5.34%
 - **`findDamagedBlocks` 的 58 万次 `level.getBlockState`**：只占 0.04%。之前为它做的
   `87eae8a2` 优化本身没错，但不是这里的瓶颈。
 
-## 四、方案（按性价比排序，均未实施）
+## 四、方案（A / B / C1 已实施 2026-10-01；C0 被 C1 取代，C2 已弃）
 
-### A · 元素映射查表改成 O(1)（最高优先）
+### A · 元素映射查表改成 O(1)（已实施）
 
-两处一起改才有效，缺一不可：
+1. **`SimpleDataRegistry.getAll()` 缓存不可变快照**（`loadEntry` / `clear` 置脏），单次零拷贝；
+   契约写进 `WandscapeDataRegistry#getAll` 的 javadoc —— 快照在重载前是同一实例，下游可据此
+   判失效。其它调用点（JEI、建筑目录、配方等）一起受益。
+2. **`ElementMappingLoader` 建 `id → config` 索引**（`itemId` / `blockId` 双键），按快照实例
+   身份失效；`findConfig` / `findConfigByItemId` / `getBuildCostByItemId` 全走它。
+   **索引必须建在原始 registry 上（含 disabled 条目）**，否则 `isDisabled` 查不到。
 
-1. **`SimpleDataRegistry.getAll()` 不再每次复制**：维护一份不可变快照，`loadEntry` / `clear`
-   时置脏，下次 `getAll` 只重建一次。这样它也顺带给了「按快照缓存」一个稳定的身份可比较。
-   注意它有很多其它调用点（JEI、建筑目录、配方等），全部一起受益。
-2. **`ElementMappingLoader` 建 `id → config` 索引**：同时登记 `itemId` 与 `blockId` 两个键，
-   按 `getAll()` 返回的快照实例做身份比较来失效；`findConfig` / `findConfigByItemId` /
-   `hasMapping` / `isDisabled` 全部改走它。`runtimeOverrides` 本来就是 O(1)，保持先行。
+行为变更：重复键的胜者从「每次调用随机」（取决于不可变 map 每次不同的迭代序）变为「固定」，
+属修掉的不确定性。
 
-预期：41.5 s → 亚秒级。
+### B · 逐块循环改按 palette 预解析（已实施）
 
-### B · 逐块循环改按 palette 预解析
+`computeMaterialCounts` / `findDisabledBlock` 先按 palette（magic_academy 460 项）解析
+`pureId` / `mapped` / `disabled` 三个并行数组，逐块循环退化成数组下标：58 万次查表 → 几百次。
+顺带新增 `foundation/util/BlockIds.stripBlockState`（手写截断）取代逐块 `replaceAll` 的
+正则重编译，用在三处逐块循环。**注意这是纯粹的第二刀**：第一刀（A）才是 41.5 s 的大头。
 
-`computeMaterialCounts` / `findDisabledBlock` 的循环里只需要「这个方块 id 有没有映射 / 是否
-disabled」。先按 **palette**（几百项）解析一次纯 id 与判据，再逐块查表：
+### C1 · `fillBoundaryAsAir` 不再展开，改传包围盒给蓝图（已实施）
 
-- 58 万次查表 → 几百次；
-- 即使 A 做了，这条也能把剩下的 58 万次 HashMap 查找压到忽略不计，且是纯局部改动；
-- 顺手把 `String.replaceAll("\\[.*?\\]", "")` 换成手写截断（白给的，虽然只占 0.27%）。
+原方案（C0：只换容器不碰 op）**已废弃** —— 它只拿掉 §3.2 里 `blocks` 那一半，而 §3.4 的实测
+显示这笔开销还有另外两笔同样量级、C0 一笔都碰不到。实施的是彻底版：
 
-### C · `fillBoundaryAsAir` 不再展开（需单独决策，三个档位）
+- **参数侧**（`EnqueueHelper`）：`fillBoundaryAsAir` 删除，只在 params 里写
+  `boundary_min` / `boundary_max`（旋转后的世界包围盒，与 `registerIfAbsent` 的占地/区块租约
+  共用 `worldBoundary` 一个口径）。offsets/blocks 回到只含 pattern。
+- **蓝图侧**（`BlueprintDefaults.clearAndBuild`）：见到 boundary 参数就编出**一个**
+  `AtomicOp.ClearBoxOp(min, max, excludedSorted)`；排除集 = 编译期的 pattern 全集，编成盒内
+  一维排名（`ClearBoxOp.index`，z 最快、x 次之、y 最外）后排序，580k 条占约 4.6 MB。
+- **执行侧**（新增 `content/task/boundary/ClearBoxExecutor`）：多 tick 游标，每 tick 16384 格
+  （标定见常量注释），按同一排名序推进；**跳过本来就是空气的格**（`BlockOps#isAir`，比
+  `getBlock()` 便宜——不查方块注册表、不造 `BlockType`），并用「游标只前进」的双指针跳过
+  pattern 格。非 pattern 且非空气的格才 `BlockSalvage.salvage` + `setBlock(air)`，与改前同序。
+  `BlockSalvage` 是从 `AsyncTransformExecutor` 里原样抽出的共用实现（逻辑一字未改）。
+- **顺序不变**：`addMaterialRequest` → 清场 → 放置。缺料仍先 park，不清场。
 
-这笔开销是**单次 6 秒**、只在提交那一瞬间，不修的话「提交卡一下」会一直留着。
+**必须守住的不变量**：排除集不能省。清场一旦碰 pattern 格，会把已经放好的方块回收进仓库、
+再由放置 op 从 NPC 背包重放一遍；仓库满时 `dropSalvageOnGround` 那一份就是一次物品复制。
 
-**C0 · 只换容器，不碰 op（新增，优先推荐）** —— 由 §3.2 的实测直接推出：
+**参数形态是自描述的，所以不需要版本迁移**：老档/在途任务的老参数（offsets 里自带 air、
+没有 boundary_*）不产生 ClearBoxOp，那些 air 条目照旧逐格放掉，与改前完全一致。
 
-既然贵的是 `blocks` 那个 **`LinkedTreeMap` 的逐条插入**（4.18%），而 `offsets` 那个
-**`JsonArray` 追加几乎免费**（0.03%），那就**只往 `offsets` 里加边界格、不再往 `blocks` 里塞
-6.6 万个 air 映射**，让 `BlueprintDefaults.clearAndBuild` 把「在 offsets 里但 blocks 里查不到」
-当作 `minecraft:air` 来处理（现在这种 key 是 `continue` 跳过）。
+**可见的行为变化**：清场从「每个非空气格占一个 tick」变成「后台按预算扫完（大盒子约 22 秒）」，
+小建筑上表现为法师一口气清场完毕；最终世界状态与掉落回收完全一致。
 
-- 效果：把 666 万次 O(log n) 的树插入换成 666 万次数组追加，预计 5.34% → 接近 0；
-- 不改 op、不改 executor、不改执行语义（清空盒内这件事照旧发生）；
-- 需要动的地方只有两处：`EnqueueHelper.fillBoundaryAsAir`（不发 air 映射）与
-  `BlueprintDefaults.clearAndBuild`（缺失 key 视为 air）。
-- **风险**：`blocks.get(key) == null` 的语义从「跳过」变成「放空气」。当前所有 offsets 都来自
-  pattern（必有映射）或边界补格，所以实际不会误伤；但这是个语义耦合，改之前要确认没有别的
-  调用方依赖「缺 key = 跳过」。
+### 3.4 A / B 修不到的两笔（2026-10-01 复核 sparkprofile 时补记）
 
-**C1 · 传包围盒 + 排除集给蓝图**（彻底版，见 [large-building-render-perf.md](large-building-render-perf.md) §7.1）：
-执行期（区块已加载）枚举、跳过 pattern 格与本来就是空气的格。要动 op / executor / 蓝图，
-用户此前明确说不想碰。
+原方案把「提交施工」算作一笔（`fillBoundaryAsAir` 5.34%），**实际是三笔**，A/B 一笔都碰不到：
+
+| 笔 | 位置 | 实测 | 说明 |
+|---|---|---:|---|
+| ① 提交当帧造 JSON | `EnqueueHelper.fillBoundaryAsAir` | 6016 ms | §3.2 已记 |
+| ② 提交后约 1 秒的蓝图编译 | `BuildingTaskSource.poll → BuildingTaskPool.enqueue → GlobalTaskPool.addTaskWithId → BlueprintRegistry.compile → BlueprintDefaults.clearAndBuild` | **2536 ms** | 710 万条 offsets 解析成 710 万个 `GridPos` + 710 万个 `TransformOp`，在服务端线程上跑 |
+| ③ 第一次动工的批量跳过 | `TaskExecutionSystem` 4a（目标已是目标方块就 `advanceStep(); continue;`） | 未实测（外推 2–7 s 单帧） | 每次跳过都要走 `blockOps.getBlock()` = `getBlockState` + `BuiltInRegistries.BLOCK.getKey()` + `toString()` + 造 `BlockType`，666 万次全压在一个 tick 里 |
+
+①②的数值是从 `run/config/spark/profile-2026-10-01_13.47.14.sparkprofile` 里直接读出来的
+（protobuf，Server thread 单线程树；与 §2 的百分比换算一致：6016/100.7 s = 5.97%、
+2536/100.7 s = 2.5%）。①在 §2.1 的树里，②③不在 —— ②挂在 tick 的 source poll 下、
+③挂在 `TaskExecutionSystem.processNpc` 下，上一轮看树时漏了。
+
+**顺带发现（另一条独立的账）**：`BuildingSavedData:674` 会把建筑任务队列里每个 WorkItem 的
+params 用 `PARAMS_GSON.toJson` 序列化进 NBT。而 `BuildingTaskSource.poll` 在
+`hasEligibleWork` 为假时**不弹队列**（缺料时就是这样），于是一个「已提交但仓库没料」的建造
+任务会长期滞留队列 —— 此后每次自动存档都要把 710 万条三元组序列化成几十 MB 的字符串。
+C1 把这条一起从 340 MB 级降到 25 MB 级；要彻底消掉得让 params 不再携带 pattern
+（蓝图按 building_type 自己查配置），那违反「蓝图不 import MC」的纯逻辑边界，暂不做。
 
 ## 五、复现与复核
 
@@ -194,13 +218,21 @@ disabled」。先按 **palette**（几百项）解析一次纯 id 与判据，�
 /spark profiler stop
 ```
 
-修完 A / B 后重跑，预期这几项从榜上消失或降到 1% 以下：
+A / B / C1 全部修完后重跑，预期这几项从榜上消失或降到 1% 以下：
 
-- `SimpleDataRegistry.getAll` / `java.util.Map.copyOf` / `LinkedTreeMap` 相关的占比
-- `ElementMappingLoader.findConfigByItemId`
-- `EnqueueHelper.computeMaterialCounts` / `findDisabledBlock`
+- `SimpleDataRegistry.getAll` / `java.util.Map.copyOf` / `LinkedTreeMap` 相关的占比（A）
+- `ElementMappingLoader.findConfigByItemId` / `EnqueueHelper.computeMaterialCounts` /
+  `findDisabledBlock`（A + B）
+- `EnqueueHelper.fillBoundaryAsAir`（C1，整段方法已删除）、`BlueprintDefaults.clearAndBuild`
+  与 `posList`（C1，710 万 → 58 万条，2.5 s → 约 0.2 s）
+- `TaskExecutionSystem` 4a 的 `WandscapeBlockOps.getBlock` / `getKey` 尖峰（C1，不再存在）
 
-`fillBoundaryAsAir` 只有在做 C 之后才会掉下去；若未做 C，它仍应是榜上唯一的大项。
+新增应该出现的两项（正常表现，不是问题）：`tick.clear_box` 有恒定的每 tick 开销
+（16384 格约 1.7 ms），以及 `ClearBoxExecutor` 的一次 start/done 两条 info 日志。
+
+**还没验过的**：C1 的最终世界是否与改前逐格一致（清场后的方块集合 + 仓库回收量）。建议在
+一座小建筑上做 A/B 对照：提交 → 比较「清场后盒内非 pattern 格是否全为空气」与
+「回收进仓库的物品数量」，再拿大建筑复跑 spark 看单帧尖峰是否消失。
 
 ## 六、一句话
 

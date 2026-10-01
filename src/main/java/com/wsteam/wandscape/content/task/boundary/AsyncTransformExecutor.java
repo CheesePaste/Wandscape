@@ -3,7 +3,6 @@ import com.wsteam.wandscape.content.task.boundary.EntityOps;
 import com.wsteam.wandscape.content.task.component.TaskExecutor;
 
 import com.wsteam.wandscape.content.task.boundary.BlockOps;
-import com.wsteam.wandscape.content.task.component.ColonyMember;
 import com.wsteam.wandscape.content.task.component.NpcInventory;
 import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.content.task.types.BlockType;
@@ -14,27 +13,14 @@ import com.wsteam.wandscape.content.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.content.task.op.api.AtomicOp;
 import com.wsteam.wandscape.content.task.op.executor.OpExecutor;
 import com.wsteam.wandscape.content.task.op.executor.ResourceShortageException;
-import com.wsteam.wandscape.foundation.util.ItemKey;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.api.WandscapeApis;
-import com.wsteam.wandscape.content.warehouse.ColonyItemBank;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
-import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -195,90 +181,8 @@ public class AsyncTransformExecutor implements OpExecutor<AtomicOp.TransformOp> 
     //  Dismantling / Salvage Logistics Interception
     // ════════════════════════════════════════════════════════════
 
+    /** 回收实现见 {@link BlockSalvage}（与整箱清空的批量清格执行器共用同一份）。 */
     private void performSalvage(AtomicOp.TransformOp op, World world, long npcId) {
-        ColonyWorker worker = EntityComponentBridge.INSTANCE.getWorker(npcId);
-        Level level = worker != null ? worker.entity().level() : null;
-        if (level == null && ServerLifecycleHooks.getCurrentServer() != null) {
-            level = ServerLifecycleHooks.getCurrentServer().overworld();
-        }
-        if (!(level instanceof ServerLevel sl)) return;
-
-        BlockPos bp = new BlockPos(op.target().x(), op.target().y(), op.target().z());
-        BlockState oldState = sl.getBlockState(bp);
-        if (!isSalvageable(oldState, sl, bp, op.to())) return;
-
-        BlockEntity be = sl.getBlockEntity(bp);
-        List<ItemStack> drops = Block.getDrops(oldState, sl, bp, be,
-                worker != null ? worker.entity() : null, ItemStack.EMPTY);
-        if (drops.isEmpty()) {
-            if (!oldState.canBeReplaced()) {
-                Item item = oldState.getBlock().asItem();
-                if (item != Items.AIR) {
-                    drops = List.of(new ItemStack(item, 1));
-                }
-            }
-        }
-        if (drops.isEmpty()) return;
-
-        UUID colonyId = resolveColonyId(worker, world, bp);
-        ColonyItemBank bank = ColonyItemBank.get(sl);
-        if (bank == null || colonyId == null) return;
-
-        for (ItemStack drop : drops) {
-            if (drop.isEmpty()) continue;
-            String itemId = BuiltInRegistries.ITEM.getKey(drop.getItem()).toString();
-            ItemKey key = ItemKey.of(itemId, null);
-            int count = drop.getCount();
-            if (!bank.tryAdd(colonyId, key, count)) {
-                // 满仓：不入仓库也不吞物品——掉落物落回拆除点（等价箱满溢出，损失为零，
-                // 也不让拆迁/平地被满仓卡死）。见 ColonyItemBank 容量机制。
-                Log.info(TAG, "[Salvage] warehouse full — dropped {} x{} at {} (colony={})",
-                        key.itemId(), count, bp, colonyId.toString().substring(0, 8));
-                dropSalvageOnGround(sl, bp, drop);
-                continue;
-            }
-            Log.info(TAG, "[Salvage] Dismantled item returned to warehouse: {} x{} (colony={})",
-                    key.itemId(), count, colonyId.toString().substring(0, 8));
-        }
-    }
-
-    /** 满仓时把拆迁/回收掉落物生成在拆除点上（等价箱满溢出，不丢物品、不阻塞平地）。 */
-    private static void dropSalvageOnGround(ServerLevel level, BlockPos pos, ItemStack drop) {
-        double x = pos.getX() + 0.5;
-        double y = pos.getY() + 0.5;
-        double z = pos.getZ() + 0.5;
-        net.minecraft.world.entity.item.ItemEntity entity =
-                new net.minecraft.world.entity.item.ItemEntity(level, x, y, z, drop.copy());
-        entity.setDeltaMovement(0, 0.1, 0);
-        entity.setPickUpDelay(10);
-        level.addFreshEntity(entity);
-    }
-
-    private boolean isSalvageable(BlockState oldState, ServerLevel sl, BlockPos bp, BlockType toType) {
-        if (oldState.isAir()) return false;
-        if (!oldState.getFluidState().isEmpty()) return false;
-        if (oldState.getDestroySpeed(sl, bp) < 0) return false;
-        if (oldState.is(net.minecraft.tags.BlockTags.FIRE)) return false;
-        if (toType != null && !toType.id().isEmpty() && !"minecraft:air".equals(toType.id())) {
-            String pureOld = BuiltInRegistries.BLOCK.getKey(oldState.getBlock()).toString();
-            String pureTo = toType.stripBlockStateSuffix().id();
-            return !pureOld.equals(pureTo); // same block type, no replacement salvage needed
-        }
-        return true;
-    }
-
-    private UUID resolveColonyId(@Nullable ColonyWorker worker, World world, BlockPos bp) {
-        if (worker != null) {
-            Long ecsId = EntityComponentBridge.INSTANCE.getEcsId(worker.workerId());
-            var member = ecsId != null ? world.get(ecsId, ColonyMember.class) : null;
-            if (member != null && member.colonyId() != null) return member.colonyId();
-            if (worker.colonyId() != null) return worker.colonyId();
-        }
-        var colonyApi = WandscapeApis.getColonyApiSilently();
-        if (colonyApi != null) {
-            UUID cid = colonyApi.getColonyId(bp);
-            if (cid != null) return cid;
-        }
-        return new UUID(0, 0);
+        BlockSalvage.salvage(world, npcId, op.target(), op.to());
     }
 }

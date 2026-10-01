@@ -79,13 +79,7 @@ public final class EnqueueHelper {
             BuildingApiImpl api = BuildingApiImpl.get();
 
             UUID buildingId = UUID.randomUUID();
-            BoundingBox bounds;
-            if (config.boundary() != null) {
-                BuildingConfig.BoundaryBox rotatedBoundary = BuildingRotation.rotateBoundary(config.boundary(), rotationSteps);
-                bounds = BuildingSavedData.computeWorldBox(pos, rotatedBoundary);
-            } else {
-                bounds = new BoundingBox(pos);
-            }
+            BoundingBox bounds = worldBoundary(pos, config, rotationSteps);
 
             BuildingState state = new BuildingState(
                     buildingId,
@@ -175,10 +169,11 @@ public final class EnqueueHelper {
 
     /**
      * Build a WorkItem with rotation support, optional material skip, and optional
-     * boundary clearing. When {@code clearBox} is true the build enqueue expands the
-     * placed voxel set to the whole rotated boundary box — every non-pattern voxel
-     * becomes an air mapping — so {@code build:clear_and_build} single-passes the box
-     * exactly like the pre-overlap build used to (whole box cleared, then walls placed).
+     * boundary clearing. When {@code clearBox} is true the params carry the rotated
+     * boundary box ({@code boundary_min} / {@code boundary_max}) and
+     * {@code build:clear_and_build} turns it into a single
+     * {@link com.wsteam.wandscape.content.task.op.api.AtomicOp.ClearBoxOp} — the box is
+     * enumerated at execution time, so a whole-box clear no longer costs 710 万个 op。
      * When false the params stay pattern-only (pure placement, overlapping interiors
      * untouched). Repair/demolish assemble their own WorkItems and never pass this.
      */
@@ -221,10 +216,10 @@ public final class EnqueueHelper {
                 params.put("entities", entitiesToJson(config));
             }
             // Box clearing: when the BUILD panel toggle is on (clearBox, default),
-            // the non-pattern voxels inside the boundary are expanded into the placed
-            // set as air mappings — clear_and_build then single-passes the whole box,
-            // reproducing the pre-overlap "clear the box, then build" outcome.
-            // When off, offsets/blocks stay pattern-only (pure placement).
+            // the params carry the rotated boundary box and clear_and_build emits one
+            // ClearBoxOp that wipes the box at execution time — same outcome as the
+            // pre-overlap "clear the box, then build", without expanding 6.6M air
+            // voxels into offsets/blocks. When off, only pattern params are emitted.
             // material_list + material_counts: auto-computed from pattern → block_mapping
             // When skipMaterials is true, emit empty arrays so the blueprint
             // always has the param; the NPC simply requests nothing.
@@ -295,59 +290,47 @@ public final class EnqueueHelper {
         }
 
         if (clearBox) {
-            fillBoundaryAsAir(params, config, rotationSteps);
+            fillBoundaryParams(params, pos, config, rotationSteps);
         }
 
         return new WorkItem(blueprintId, params, priority);
     }
 
     /**
-     * Expand the build params' placed set to the whole rotated boundary box when box
-     * clearing is enabled: every boundary voxel that has no pattern mapping gets an
-     * {@code "minecraft:air"} mapping (free, no material) appended to {@code offsets}
-     * ahead of the pattern voxels, so {@code clear_and_build} single-passes the box the
-     * way the pre-overlap "clear then build" used to. Voxels belonging to the pattern
-     * (already present in {@code offsets}) are left untouched. Air coords are rotated
-     * with the same {@link BuildingRotation#rotateOffset} used for pattern offsets.
-     * No-op when the building has no boundary or its blueprint has no offsets/blocks.
+     * 旋转后的 boundary 在世界坐标下的包围盒；没有 boundary 时退回 anchor 单格。
      *
-     * <p><b>这里的 air 与 pattern 里的 air 是两回事</b>：这里是「清空这一格」的真实放置操作
-     * （整箱清空功能），而 pattern 里的 {@code minecraft:air} 是
-     * {@link BuildingConfig#NON_CELL_BLOCK_ID}，语义是「这格不属于本建筑」、压根不存在。
-     * 两者共用同一个方块 id，但一个是动作、一个是缺席，别混。
+     * <p>「注册的占地 / 强制加载的区块租约 / 整箱清空的范围」三者必须同源，所以
+     * {@link #registerIfAbsent} 与 {@link #buildWorkItem} 共用这一个口径 —— 一旦分家，
+     * 清场会跑到建筑地盘之外去动方块。
      */
-    private static void fillBoundaryAsAir(Map<String, JsonElement> params, BuildingConfig config, int rotationSteps) {
-        BuildingConfig.BoundaryBox boundary = config.boundary();
-        if (boundary == null) return;
-        JsonElement offsetsEl = params.get("offsets");
-        JsonElement blocksEl = params.get("blocks");
-        if (!(offsetsEl instanceof JsonArray) || !(blocksEl instanceof JsonObject)) return;
-        JsonArray offsets = offsetsEl.getAsJsonArray();
-        JsonObject blocks = blocksEl.getAsJsonObject();
+    static BoundingBox worldBoundary(BlockPos pos, BuildingConfig config, int rotationSteps) {
+        if (config.boundary() == null) return new BoundingBox(pos);
+        BuildingConfig.BoundaryBox rotated = BuildingRotation.rotateBoundary(config.boundary(), rotationSteps);
+        return BuildingSavedData.computeWorldBox(pos, rotated);
+    }
 
-        int steps = rotationSteps & 3;
-        Set<String> existing = new HashSet<>(offsets.size() * 2);
-        for (JsonElement el : offsets) {
-            JsonArray arr = el.getAsJsonArray();
-            existing.add(arr.get(0).getAsInt() + "," + arr.get(1).getAsInt() + "," + arr.get(2).getAsInt());
-        }
-
-        JsonArray airs = new JsonArray();
-        for (BlockOffset off : boundary.allPositions()) {
-            BlockOffset r = BuildingRotation.rotateOffset(off, steps);
-            String key = r.x() + "," + r.y() + "," + r.z();
-            if (existing.contains(key)) continue;
-            existing.add(key);
-            blocks.addProperty(key, "minecraft:air");
-            airs.add(offsetToJson(r));
-        }
-
-        if (!airs.isEmpty()) {
-            JsonArray merged = new JsonArray();
-            for (JsonElement el : airs) merged.add(el);
-            for (JsonElement el : offsets) merged.add(el);
-            params.put("offsets", merged);
-        }
+    /**
+     * 整箱清空的**范围**：只写 {@code boundary_min} / {@code boundary_max} 两个参数，
+     * 由 {@code build:clear_and_build} 编出一个 {@code ClearBoxOp}，盒内格子在执行期枚举。
+     *
+     * <p>原先这里是把 boundary 里每一个非 pattern 格展开成 {@code "minecraft:air"} 条目塞进
+     * {@code blocks} 与 {@code offsets}（magic_academy 一栋就是 666 万条）。那条路实测贵在三处：
+     * 提交时造 JSON（6.0 s）、提交后 1 秒的蓝图编译（2.5 s）、第一次动工时在单帧里跳过 666 万个
+     * 空气 op（每次跳过都要查方块注册表造 {@code BlockType}）。范围参数化之后三笔一起消失。
+     *
+     * <p>无 boundary、或蓝图没有 offsets/blocks 参数时不写：前者本就不需要清场，后者是
+     * 老式 {@code build:place_structure} 参数形态，压根没有盒内格可清。
+     *
+     * <p><b>注意</b>：pattern 里的 {@code minecraft:air}（{@link BuildingConfig#NON_CELL_BLOCK_ID}）
+     * 与整箱清空是两回事 —— 那是「这格不属于本建筑」的缺席标记，清场执行器靠排除集跳过这些格。
+     */
+    private static void fillBoundaryParams(Map<String, JsonElement> params, BlockPos pos,
+                                           BuildingConfig config, int rotationSteps) {
+        if (config.boundary() == null) return;
+        if (!(params.get("offsets") instanceof JsonArray) || !(params.get("blocks") instanceof JsonObject)) return;
+        BoundingBox box = worldBoundary(pos, config, rotationSteps);
+        params.put("boundary_min", offsetToJson(new BlockOffset(box.minX(), box.minY(), box.minZ())));
+        params.put("boundary_max", offsetToJson(new BlockOffset(box.maxX(), box.maxY(), box.maxZ())));
     }
 
     private static JsonElement resolveField(BuildingConfig config, String fieldName) {
