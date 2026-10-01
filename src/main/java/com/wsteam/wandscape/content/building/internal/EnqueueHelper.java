@@ -14,6 +14,7 @@ import com.wsteam.wandscape.api.BuildingApi;
 import com.wsteam.wandscape.content.element.data.ElementType;
 import com.wsteam.wandscape.content.building.data.WorkItem;
 import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.util.BlockIds;
 import com.wsteam.wandscape.api.WandscapeApis;
 import com.wsteam.wandscape.content.warehouse.ColonyItemBank;
 import net.minecraft.core.BlockPos;
@@ -386,15 +387,12 @@ public final class EnqueueHelper {
      */
     public static Map<String, Integer> computeMaterialCounts(BuildingConfig config) {
         var counts = new java.util.LinkedHashMap<String, Integer>();
-        var elementApi = WandscapeApis.getElementApi();
-        for (int i = 0; i < config.pattern().size(); i++) {
-            String blockId = config.blockIdAt(i);
-            if ("minecraft:air".equals(blockId)) continue;
-            // Strip blockstate properties (e.g. "[facing=south]") before checking
-            // element mappings — mappings are registered for bare block IDs only.
-            String pureId = blockId.replaceAll("\\[.*?\\]", "").trim();
-            if (!elementApi.hasElementMapping(pureId)) continue;
-            counts.merge(pureId, 1, Integer::sum);
+        PaletteScan palette = paletteScan(config);
+        List<Integer> indices = config.blockIndices();
+        for (int i = 0; i < indices.size(); i++) {
+            int p = indices.get(i);
+            if (palette.air[p] || !palette.mapped[p]) continue;
+            counts.merge(palette.pure[p], 1, Integer::sum);
         }
         return counts;
     }
@@ -407,14 +405,48 @@ public final class EnqueueHelper {
      */
     @Nullable
     public static String findDisabledBlock(BuildingConfig config) {
-        var elementApi = WandscapeApis.getElementApi();
-        for (int i = 0; i < config.pattern().size(); i++) {
-            String blockId = config.blockIdAt(i);
-            if ("minecraft:air".equals(blockId)) continue;
-            String pureId = blockId.replaceAll("\\[.*?\\]", "").trim();
-            if (elementApi.isDisabled(pureId)) return pureId;
+        PaletteScan palette = paletteScan(config);
+        List<Integer> indices = config.blockIndices();
+        for (int i = 0; i < indices.size(); i++) {
+            int p = indices.get(i);
+            if (palette.air[p]) continue;
+            if (palette.disabled[p]) return palette.pure[p];
         }
         return null;
+    }
+
+    /**
+     * 按 **palette**（几百项）预解析元素映射，而不是按 pattern（几十万条）逐块现查。
+     *
+     * <p>上面两个统计循环都只需要「这个方块 id 有没有映射 / 是不是 disabled」，而方块 id 只由
+     * {@code palette[blockIndices[i]]} 取到 —— 先把每个 palette 项解析一遍，逐块循环就退化成
+     * 三次数组下标。palette 与 pattern 的规模差三个数量级：magic_academy 是 460 项 vs 580,814 条。
+     *
+     * <p>这层是 2026-10 spark 定案后的第二刀：第一刀把查表本身做成 O(1)（那才是 41.5 秒的大头），
+     * 这一刀把「查表次数」从 58 万次降到几百次，剩下的逐块成本是纯数组访问。
+     */
+    private record PaletteScan(String[] pure, boolean[] air, boolean[] mapped, boolean[] disabled) {}
+
+    private static PaletteScan paletteScan(BuildingConfig config) {
+        var elementApi = WandscapeApis.getElementApi();
+        List<String> palette = config.palette();
+        int size = palette.size();
+        String[] pure = new String[size];
+        boolean[] air = new boolean[size];
+        boolean[] mapped = new boolean[size];
+        boolean[] disabled = new boolean[size];
+        for (int p = 0; p < size; p++) {
+            // air 判定用原始串（与改前一致）：palette 里的 minecraft:air 是
+            // 「这格不属于本建筑」的标记，不是建材。
+            String raw = palette.get(p);
+            air[p] = BuildingConfig.NON_CELL_BLOCK_ID.equals(raw);
+            // 元素映射按裸方块 id 登记，先剥掉方块状态属性（"[facing=south]"）。
+            String pureId = BlockIds.stripBlockState(raw);
+            pure[p] = pureId;
+            mapped[p] = elementApi.hasElementMapping(pureId);
+            disabled[p] = elementApi.isDisabled(pureId);
+        }
+        return new PaletteScan(pure, air, mapped, disabled);
     }
 
     /**

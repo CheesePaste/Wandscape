@@ -12,6 +12,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.state.BlockState;
 
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -26,6 +27,22 @@ public class ElementMappingLoader {
 
     /** 程序化注册覆盖层（addon 经 ElementApi.registerMapping 写入；查询先查它再回落 JSON registry）。 */
     private final Map<String, ElementMappingConfig> runtimeOverrides = new ConcurrentHashMap<>();
+
+    /**
+     * {@code id(item 或 block) → config} 的 O(1) 索引，覆盖**全部**条目（含 disabled —— 判定
+     * 「禁用」本身就要先查到它，绝不能拿 {@link #getAllConfigs()} 那种已过滤的表来建）。
+     *
+     * <p>{@link #indexedFrom} 记录建索引时用的那份 registry 快照实例；快照换实例（= 数据重载过）
+     * 就重建。这依赖 {@code WandscapeDataRegistry#getAll()} 返回稳定快照，见其 javadoc。
+     *
+     * <p>为什么必须有：{@link #findConfigByItemId} 原先每次调用都「整表复制 + 全表线性扫描」，
+     * 而它被放在逐方块的循环里 —— spark 实测这条链在一栋超大建筑（58 万条 pattern）上占服务端
+     * 线程 27.4% ≈ 27.6 秒，另加 {@link #isDisabled} 那条 13.4% ≈ 13.5 秒。
+     */
+    private volatile Map<String, ElementMappingConfig> index;
+
+    /** 建 {@link #index} 时所用的 registry 快照；与当前快照同实例即索引仍有效。 */
+    private volatile Map<String, ElementMappingConfig> indexedFrom;
 
     public ElementMappingLoader(WandscapeDataLoader dataLoader) {
         this.registry = dataLoader.register(CATEGORY, ElementMappingConfig::fromJson);
@@ -45,6 +62,37 @@ public class ElementMappingLoader {
     @javax.annotation.Nullable
     private ElementMappingConfig runtimeConfig(String id) {
         return runtimeOverrides.get(id);
+    }
+
+    /**
+     * 按裸方块 / 物品 id 查映射：程序化覆盖先行，然后走 {@link #index()}。
+     * 两份表都以「先登记先胜」处理重复键（JSON 侧的胜者取决于快照迭代序，与原线性扫描同为
+     * 「任取其一」，只是现在**固定**下来，同一存档不会这次查 A、下次查 B）。
+     */
+    @javax.annotation.Nullable
+    private ElementMappingConfig lookup(String blockOrItemId) {
+        ElementMappingConfig override = runtimeConfig(blockOrItemId);
+        if (override != null) return override;
+        return index().get(blockOrItemId);
+    }
+
+    /** 建/复用 id 索引；registry 快照换了实例才重建（几百微秒级，重载时才发生）。 */
+    private Map<String, ElementMappingConfig> index() {
+        Map<String, ElementMappingConfig> snapshot = registry.getAll();
+        Map<String, ElementMappingConfig> cached = index;
+        if (cached != null && indexedFrom == snapshot) return cached;
+
+        Map<String, ElementMappingConfig> built = new HashMap<>(snapshot.size() * 2);
+        for (ElementMappingConfig config : snapshot.values()) {
+            String blockId = config.blockId();
+            if (blockId != null) built.putIfAbsent(blockId, config);
+            String itemId = config.itemId();
+            if (itemId != null) built.putIfAbsent(itemId, config);
+        }
+        // 先写 index 再写 indexedFrom：读方看到新 indexedFrom 时必定也能看到新 index。
+        index = built;
+        indexedFrom = snapshot;
+        return built;
     }
 
     public Map<ElementType, Long> getBuildCost(BlockState state) {
@@ -80,16 +128,10 @@ public class ElementMappingLoader {
     }
 
     private ElementMappingConfig findConfig(BlockState state) {
-        ResourceLocation key = BuiltInRegistries.BLOCK.getKey(state.getBlock());
-        String blockId = key.toString();
-        ElementMappingConfig rc = runtimeConfig(blockId);
-        if (rc != null) return rc;
-        for (ElementMappingConfig config : registry.getAll().values()) {
-            if (blockId.equals(config.blockId())) return config;
-        }
-        // Fallback: check if an item mapping exists for this block's item form
-        String itemId = blockId; // blocks and their items share the same ID
-        return findConfigByItemId(itemId);
+        // 方块与它的物品形态共用同一个 id，索引把 itemId / blockId 两个键都登记了，
+        // 所以一次查表即覆盖原先「先按 blockId 扫、再回落按 itemId 查」的两段。
+        String blockId = BuiltInRegistries.BLOCK.getKey(state.getBlock()).toString();
+        return lookup(blockId);
     }
 
     private ElementMappingConfig findConfigByItem(Item item) {
@@ -98,12 +140,7 @@ public class ElementMappingLoader {
     }
 
     private ElementMappingConfig findConfigByItemId(String itemId) {
-        ElementMappingConfig rc = runtimeConfig(itemId);
-        if (rc != null) return rc;
-        for (ElementMappingConfig config : registry.getAll().values()) {
-            if (itemId.equals(config.itemId())||itemId.equals(config.blockId())) return config;
-        }
-        return null;
+        return lookup(itemId);
     }
 
     public boolean hasMapping(String blockOrItemId) {
@@ -145,13 +182,9 @@ public class ElementMappingLoader {
     }
 
     public Map<ElementType, Long> getBuildCostByItemId(String itemId) {
+        // 「再按 blockId 找一遍」的回落已并入索引（两个键都登记），且禁用即无成本。
         ElementMappingConfig config = findConfigByItemId(itemId);
-        if (config != null && !config.disabled()) return config.buildCost();
-        // Try block ID match too
-        for (ElementMappingConfig c : getAllConfigs()) {
-            if (itemId.equals(c.blockId())) return c.buildCost();
-        }
-        return Map.of();
+        return config != null && !config.disabled() ? config.buildCost() : Map.of();
     }
 
     /**

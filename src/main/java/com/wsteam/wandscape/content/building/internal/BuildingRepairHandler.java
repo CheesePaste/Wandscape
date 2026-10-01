@@ -9,6 +9,7 @@ import com.wsteam.wandscape.content.building.data.BuildingConfig;
 import com.wsteam.wandscape.content.building.projection.BuildingRotation;
 import com.wsteam.wandscape.content.building.data.WorkItem;
 import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.util.BlockIds;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 
@@ -120,7 +121,7 @@ public final class BuildingRepairHandler {
             String blockId = entry.getValue().getAsString();
             if (blockId == null || "minecraft:air".equals(blockId)) continue;
             // Strip blockstate properties; element mappings use bare IDs only.
-            String pureId = blockId.replaceAll("\\[.*?\\]", "").trim();
+            String pureId = BlockIds.stripBlockState(blockId);
             if (!elementApi.hasElementMapping(pureId)) continue;
             counts.merge(pureId, 1, Integer::sum);
         }

@@ -10,6 +10,7 @@ import com.wsteam.wandscape.content.production.ProductionBatches;
 import com.wsteam.wandscape.content.building.projection.BuildingRotation;
 import com.wsteam.wandscape.api.BuildingApi;
 import com.wsteam.wandscape.content.building.data.BuildingData;
+import com.wsteam.wandscape.foundation.util.BlockIds;
 import com.wsteam.wandscape.foundation.util.ItemKey;
 import com.wsteam.wandscape.foundation.util.BalanceValues;
 import com.wsteam.wandscape.content.building.data.WorkItem;
@@ -478,7 +479,7 @@ public class BuildingApiImpl implements BuildingApi {
         for (int i = 0; i < rotatedPattern.size(); i++) {
             if (!missingKeys.contains(rotatedPattern.get(i).toKey())) continue;
             String blockId = config.blockIdAt(i);
-            String pureId = blockId.replaceAll("\\[.*?\\]", "").trim();
+            String pureId = BlockIds.stripBlockState(blockId);
             if ("minecraft:air".equals(pureId)) continue;
             if (!hasElementMapping.test(pureId)) continue;
             counts.merge(pureId, 1, Integer::sum);
