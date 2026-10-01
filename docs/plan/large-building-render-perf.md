@@ -340,7 +340,8 @@ C13 的量级说明：Gson 把 `[0,0,1]` 存成 `JsonArray` + `ArrayList` + 3 �
    `BuildingApiImpl.materialCountsForMissingOffsets` 就是这种，已保持原样。
 
 **存档影响**：老档里已注册建筑的 `patternPositions`（SavedData）仍含那些体素，改口径后
-新建建筑不含 —— 该索引只用于归属查询与重叠粗筛，开发期不承诺存档兼容，重开新档最干净。
+新建建筑不含 —— 该索引只用于归属查询与重叠粗筛，不是可迁移的数据形状，属**版本断档**：
+不写兼容层，但要随这次改动在 release 正文里给出不兼容提示（见 `docs/checklists.md` §三）。
 
 **附带发现（与删不删 air 无关，但更值得看）**：`EnqueueHelper.fillBoundaryAsAir:330` 会给
 boundary 里每个体素补一条 op。magic_academy 的 boundary 体积是 **7,099,092**，pattern 只有
