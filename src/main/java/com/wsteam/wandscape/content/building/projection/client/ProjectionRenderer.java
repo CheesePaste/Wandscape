@@ -39,8 +39,13 @@ public final class ProjectionRenderer {
 
     static void onRenderLevelStage(RenderLevelStageEvent event) {
         if (!ProjectionClientState.isProjecting()) return;
-        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS
-                && event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRIPWIRE_BLOCKS) return;
+        // 只接一个阶段。MC 的 LevelRenderer 是**按 chunk 渲染层逐层**派发这个事件的
+        // （AFTER_TRANSLUCENT_BLOCKS 绑 translucent 层、AFTER_TRIPWIRE_BLOCKS 绑 tripwire 层），
+        // 两者每帧各触发一次 —— 原先两个都接，等于整栋虚影每帧被画了两遍：顶点、光栅化、
+        // 混合全付双份，而且第二遍是在第一遍写好的等深上以 LEQUAL 通过，同一层颜色被混两次
+        // （0.55 混两遍 = 有效 0.8）。工地虚影（ConstructionGhostRenderer）一直只接
+        // AFTER_TRIPWIRE_BLOCKS，这里与它对齐。
+        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRIPWIRE_BLOCKS) return;
 
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null) return;
