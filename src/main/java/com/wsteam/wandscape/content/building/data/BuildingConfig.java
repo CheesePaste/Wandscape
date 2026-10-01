@@ -54,6 +54,30 @@ public record BuildingConfig(
         @SerializedName("deprecated") boolean deprecated,
         @SerializedName("entities") List<DecorationEntity> entities
 ) {
+    /**
+     * 便宜且与 {@link #equals} 一致的哈希。
+     *
+     * <p>record 自动生成的 {@code hashCode()} 会把**每个组件**都哈希一遍，其中包括整条
+     * {@code pattern} 列表。而配置在本项目里被当成一大批缓存的键（预览 GIF、LOD、包围盒、
+     * 缩放、缩略图 meta、动画格子、虚影 VBO），其中 {@code BuildingPreviewGifCache.pumpQueue}
+     * 是**每帧**查的 —— 于是每帧都要把整条 pattern 走一遍（那栋超大建筑 58 万条），
+     * 实测占掉渲染线程 68% 的时间。
+     *
+     * <p>这里只哈希识别字段。{@code id} 在目录里唯一（加载时已归一为
+     * {@code <package>:<id>}，见 {@code BuildingConfigLoader}），所以：
+     * <ul>
+     *   <li>仍满足 {@code a.equals(b) => a.hashCode()==b.hashCode()} —— {@link #equals}
+     *       未改，所有组件照样比较，哈希只是取了它的一个子集；</li>
+     *   <li>同实例查找走 {@code HashMap} 的 identity 短路，正常命中路径是 O(1)。</li>
+     * </ul>
+     * 用 {@code String#hashCode} 而不是 {@code Objects.hash}，是为了免掉每帧的临时数组分配。
+     */
+    @Override
+    public int hashCode() {
+        int h = id == null ? 0 : id.hashCode();
+        return 31 * h + (packageId == null ? 0 : packageId.hashCode());
+    }
+
     /** 26-argument compatibility constructor defaulting packageId to default. */
     public BuildingConfig(
             String id,

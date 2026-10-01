@@ -89,6 +89,13 @@ public final class BuildingPreviewGifCache {
     private static final Map<BuildingConfig, LodPreview> LOD_CACHE = new HashMap<>();
 
     /**
+     * 还没烤完的建筑数。归零后 {@link #pumpQueue} 直接返回 —— 稳态（全部就绪）下每帧零成本，
+     * 连 key 列表都不必复制。以前是每帧扫一遍全部 key 并逐个 {@code CACHE.get}，配合当时
+     * 昂贵的 {@code BuildingConfig.hashCode()}（遍历整条 pattern）占了渲染线程 68%。
+     */
+    private static int pendingCount;
+
+    /**
      * 一张缩略图最多画多少格。超了就把建筑按 factor³ 归并，每格只画**一个代表方块**
      * 并把它放大 factor 倍 —— 所以建筑看着仍是连续实心的，不是抽稀出来的点阵。
      *
@@ -115,7 +122,11 @@ public final class BuildingPreviewGifCache {
         if (config == null || config.pattern().isEmpty()) {
             return;
         }
-        CACHE.computeIfAbsent(config, k -> new BuildingGif());
+        // get + put 而非 computeIfAbsent：要能分辨「这次是否新建」，才好维护 pendingCount。
+        if (CACHE.get(config) == null) {
+            CACHE.put(config, new BuildingGif());
+            pendingCount++;
+        }
     }
 
     /** Round-robin start index so a slow config doesn't starve the others. */
@@ -130,7 +141,7 @@ public final class BuildingPreviewGifCache {
      * start keeps a multi-thousand-block building from monopolising the budget.
      */
     public static void pumpQueue() {
-        if (CACHE.isEmpty()) {
+        if (pendingCount <= 0) {   // 快路径：全部就绪
             return;
         }
         List<BuildingConfig> keys = List.copyOf(CACHE.keySet());
@@ -143,6 +154,7 @@ public final class BuildingPreviewGifCache {
             if (gif != null && !gif.ready) {
                 if (gif.baked >= FRAME_COUNT) {
                     gif.ready = true;
+                    pendingCount--;
                 } else {
                     ResourceLocation loc = materializeFrame(config, gif.baked);
                     if (loc != null) {
@@ -151,6 +163,7 @@ public final class BuildingPreviewGifCache {
                     gif.baked++;
                     if (gif.baked >= FRAME_COUNT) {
                         gif.ready = true;
+                        pendingCount--;
                     }
                 }
             }
@@ -244,6 +257,7 @@ public final class BuildingPreviewGifCache {
         LOD_CACHE.clear();
         BOUNDS_CACHE.clear();
         SCALE_CACHE.clear();
+        pendingCount = 0;
     }
 
     // ═══════════════════════════════════════════════════════════════
