@@ -29,6 +29,8 @@ public class ColonyDeathRegistry extends SavedData {
     private static final String DATA_NAME = "wandscape_npc_deaths";
     private static final String TAG_RECORDS = "records";
 
+    private static final int CURRENT_VERSION = 1;
+
     private final List<DeathRecord> records = new ArrayList<>();
 
     public static final Factory<ColonyDeathRegistry> FACTORY = new Factory<>(
@@ -70,6 +72,16 @@ public class ColonyDeathRegistry extends SavedData {
         return DeathRecord.latestInColony(records, colonyId);
     }
 
+    /** 某小镇待复活的所有死亡记录。colonyId 为 null 时返回空表。 */
+    public List<DeathRecord> getRecordsInColony(@Nullable UUID colonyId) {
+        if (colonyId == null) return List.of();
+        List<DeathRecord> list = new ArrayList<>();
+        for (DeathRecord r : records) {
+            if (colonyId.equals(r.colonyId())) list.add(r);
+        }
+        return list;
+    }
+
     /** 某小镇待复活的死亡记录条数（不等同于人口——被解雇者不留记录）。colonyId 为 null 时返回 0。 */
     public int countInColony(@Nullable UUID colonyId) {
         if (colonyId == null) return 0;
@@ -93,6 +105,7 @@ public class ColonyDeathRegistry extends SavedData {
 
     @Override
     public CompoundTag save(CompoundTag tag, HolderLookup.Provider registries) {
+        tag.putInt("version", CURRENT_VERSION);
         ListTag list = new ListTag();
         for (DeathRecord r : records) {
             list.add(toNbt(r, registries));
@@ -151,6 +164,7 @@ public class ColonyDeathRegistry extends SavedData {
         if (r.preservedInventory() != null) {
             t.put("preservedInventory", r.preservedInventory().toNbt(registries));
         }
+        t.putString("deathCause", r.deathCause());
         return t;
     }
 
@@ -182,6 +196,7 @@ public class ColonyDeathRegistry extends SavedData {
             preservedInventory = com.wsteam.wandscape.content.npc.data.PreservedInventory.fromNbt(
                     t.getCompound("preservedInventory"), registries);
         }
+        String deathCause = t.getString("deathCause");
         return new DeathRecord(
                 t.getUUID("npcId"),
                 t.getString("name"),
@@ -197,6 +212,7 @@ public class ColonyDeathRegistry extends SavedData {
                 t.getFloat("maxMana"),
                 inv,
                 equippedMagic,
-                preservedInventory);
+                preservedInventory,
+                deathCause);
     }
 }

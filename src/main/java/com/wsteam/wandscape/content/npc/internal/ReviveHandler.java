@@ -209,6 +209,7 @@ public final class ReviveHandler {
         // 恢复守魂护符保护的随身物品（主手法杖、盔甲、背包、饰品）
         restorePreservedItems(npc, rec, level.registryAccess());
         ColonyDeathRegistry.get(level).remove(rec);
+        com.wsteam.wandscape.content.task.network.TaskPanelSyncTracker.markDirty();
 
         spawnReviveBurst(level, spawnPos.getX() + 0.5, spawnPos.getY() + 1.0, spawnPos.getZ() + 0.5);
         Log.info(TAG, "NPC {} ({}) 已复活 at {}（恢复 {} 格背包）",

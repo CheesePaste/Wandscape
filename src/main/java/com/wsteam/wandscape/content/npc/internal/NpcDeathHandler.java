@@ -73,6 +73,14 @@ public final class NpcDeathHandler {
                     npc.getUUID().toString().substring(0, 8), npc.getNpcName());
         }
 
+        Component deathMessage = npc.getCombatTracker().getDeathMessage();
+        String deathCauseJson = "";
+        try {
+            deathCauseJson = Component.Serializer.toJson(deathMessage, level.registryAccess());
+        } catch (Exception ignored) {
+            deathCauseJson = deathMessage.getString();
+        }
+
         NpcApi npcApi = WandscapeApis.getNpcApiSilently();
         UUID colony = npcApi != null ? npcApi.getNpcColony(npc.getUUID()) : null;
         if (colony == null) colony = EntityComponentBridge.PLACEHOLDER_COLONY;
@@ -94,14 +102,16 @@ public final class NpcDeathHandler {
                 npc.getBaseAttributeValue(com.wsteam.wandscape.content.npc.attributes.NpcAttributes.AttributeType.MAX_MANA),
                 inv,
                 npc.equippedMagic.flattenedQualified(),
-                pres);
+                pres,
+                deathCauseJson);
         ColonyDeathRegistry.get(level).add(rec);
+        com.wsteam.wandscape.content.task.network.TaskPanelSyncTracker.markDirty();
         Log.info(TAG, "NPC {} ({}) died at {},{},{} — death record saved, inventory {} stacks, soulward={}",
                 rec.npcId().toString().substring(0, 8), rec.name(),
                 rec.x(), rec.y(), rec.z(), inv.size(), pres != null);
 
         // 像玩家/驯养宠物一样把阵亡消息送上聊天区（文案用原版战斗记录，受众受 Config 控制）
-        broadcastDeathMessage(level, npc, colony);
+        broadcastDeathMessage(level, npc, colony, deathMessage);
 
         // 复活只走祭坛（或全灭时玩家按市政厅的保底按钮），阵亡本身不触发任何自动复活。
         // 阵亡会改变小镇人口，推送最新状态让已打开的市政厅面板刷新保底按钮可用性。
@@ -116,9 +126,8 @@ public final class NpcDeathHandler {
      * 受众受 {@link Config#NPC_DEATH_MESSAGE_GLOBAL} 控制：开启 → 全服广播（同玩家死亡）；
      * 关闭 → 仅发所属小镇创建者（同驯养宠物死亡只通知主人）。受 showDeathMessages 游戏规则门控。
      */
-    private static void broadcastDeathMessage(ServerLevel level, WandscapeNpc npc, UUID colonyId) {
+    private static void broadcastDeathMessage(ServerLevel level, WandscapeNpc npc, UUID colonyId, Component message) {
         if (!level.getGameRules().getBoolean(GameRules.RULE_SHOWDEATHMESSAGES)) return;
-        Component message = npc.getCombatTracker().getDeathMessage();
         if (Config.NPC_DEATH_MESSAGE_GLOBAL.get()) {
             level.getServer().getPlayerList().broadcastSystemMessage(message, false);
             return;

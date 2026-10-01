@@ -35,8 +35,43 @@ public record MageSummaryDto(
          * 工作者种类标签（面板显示用）：{@code "npc"} = 本模组法师，{@code "worker"} = 其它模组登记的
          * 殖民地工作者。仅供 UI 区分图标/标签，无行为含义。
          */
-        String kind
+        String kind,
+        String deathDimension,
+        String deathCause
 ) {
+
+    public MageSummaryDto(
+            long ecsId,
+            UUID npcUuid,
+            int entityId,
+            String name,
+            String state,
+            float currentHp,
+            float maxHp,
+            float currentMana,
+            float maxMana,
+            float spellPower,
+            float workSpeed,
+            float spellSpeed,
+            float armorValue,
+            String currentTaskTitle,
+            long currentTaskId,
+            String equippedWand,
+            double posX,
+            double posY,
+            double posZ,
+            boolean followMode,
+            boolean peaceMode,
+            String kind
+    ) {
+        this(ecsId, npcUuid, entityId, name, state, currentHp, maxHp, currentMana, maxMana,
+                spellPower, workSpeed, spellSpeed, armorValue, currentTaskTitle, currentTaskId,
+                equippedWand, posX, posY, posZ, followMode, peaceMode, kind, "", "");
+    }
+
+    public boolean isDead() {
+        return "DEAD".equalsIgnoreCase(state);
+    }
 
     public float getHealthRatio() {
         return maxHp > 0 ? Math.clamp(currentHp / maxHp, 0f, 1f) : 1f;
@@ -69,6 +104,8 @@ public record MageSummaryDto(
         buf.writeBoolean(dto.followMode);
         buf.writeBoolean(dto.peaceMode);
         buf.writeUtf(dto.kind != null ? dto.kind : "npc");
+        buf.writeUtf(dto.deathDimension != null ? dto.deathDimension : "");
+        buf.writeUtf(dto.deathCause != null ? dto.deathCause : "");
     }
 
     public static MageSummaryDto read(RegistryFriendlyByteBuf buf) {
@@ -94,13 +131,16 @@ public record MageSummaryDto(
         boolean followMode = buf.readBoolean();
         boolean peaceMode = buf.readBoolean();
         String kind = buf.readUtf();
+        String deathDimension = buf.readUtf();
+        String deathCause = buf.readUtf();
 
         return new MageSummaryDto(
                 ecsId, npcUuid, entityId, name, state,
                 currentHp, maxHp, currentMana, maxMana,
                 spellPower, workSpeed, spellSpeed, armorValue,
                 currentTaskTitle, currentTaskId, equippedWand,
-                posX, posY, posZ, followMode, peaceMode, kind
+                posX, posY, posZ, followMode, peaceMode, kind,
+                deathDimension, deathCause
         );
     }
 }

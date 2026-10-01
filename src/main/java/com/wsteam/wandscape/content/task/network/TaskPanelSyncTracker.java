@@ -10,6 +10,8 @@ import com.wsteam.wandscape.content.task.component.ColonyMember;
 import com.wsteam.wandscape.content.task.component.TaskExecutor;
 import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.content.npc.attributes.NpcAttributes.AttributeType;
+import com.wsteam.wandscape.content.npc.internal.ColonyDeathRegistry;
+import com.wsteam.wandscape.content.npc.data.DeathRecord;
 import com.wsteam.wandscape.content.task.types.ResourceStack;
 import com.wsteam.wandscape.content.production.ProductionEligibility;
 import com.wsteam.wandscape.content.npc.worker.ColonyWorker;
@@ -271,6 +273,38 @@ public final class TaskPanelSyncTracker {
                     e.getX(), e.getY(), e.getZ(),
                     worker.isFollowMode(), worker.isPeaceMode(),
                     worker.panelKind()
+            ));
+        }
+
+        // 3.5. Collect Deceased Mages from ColonyDeathRegistry
+        ColonyDeathRegistry deathRegistry = ColonyDeathRegistry.get(serverLevel);
+        List<DeathRecord> deathRecords = deathRegistry.getRecordsInColony(colonyId);
+        for (DeathRecord r : deathRecords) {
+            mageDtos.add(new MageSummaryDto(
+                    -1L,
+                    r.npcId(),
+                    -1,
+                    r.name(),
+                    "DEAD",
+                    0.0f,
+                    r.maxHp(),
+                    0.0f,
+                    r.maxMana(),
+                    r.spellPower(),
+                    r.workSpeed(),
+                    r.spellSpeed(),
+                    r.armorValue(),
+                    "",
+                    -1L,
+                    "",
+                    r.x() + 0.5,
+                    r.y(),
+                    r.z() + 0.5,
+                    false,
+                    false,
+                    "npc",
+                    r.dimension() != null ? r.dimension() : "",
+                    r.deathCause() != null ? r.deathCause() : ""
             ));
         }
 
