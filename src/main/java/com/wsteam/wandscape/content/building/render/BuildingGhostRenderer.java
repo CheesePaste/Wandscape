@@ -13,13 +13,20 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.extensions.common.IClientItemExtensions;
 import org.joml.Matrix4f;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.WeakHashMap;
 
 /**
  * World-space semi-transparent building ghost renderer facade.
@@ -65,8 +72,8 @@ public final class BuildingGhostRenderer {
                                            int rotationSteps, boolean skipBuilt) {
         if (config.pattern().isEmpty()) return;
         int steps = rotationSteps & 3;
-        Map<BlockOffset, BlockState> resolved = BuildingPreviewRenderer.resolveBlockStates(config);
-        if (resolved.isEmpty()) return;
+        List<AnimatedCell> cells = animatedCells(config, steps);
+        if (cells.isEmpty()) return;
 
         poseStack.pushPose();
         // 平移到 anchor，不旋转几何体：几何体绕原点旋转会把每格体积相对构造偏移最多
@@ -75,18 +82,15 @@ public final class BuildingGhostRenderer {
 
         MultiBufferSource ghostSource = renderType -> new GhostAlphaConsumer(bufferSource.getBuffer(renderType));
 
-        for (BlockOffset off : config.pattern()) {
-            BlockState state = resolved.get(off);
-            if (state == null || state.getRenderShape() != RenderShape.ENTITYBLOCK_ANIMATED) continue;
-            BlockOffset rotated = BuildingRotation.rotateOffset(off, steps);
+        for (AnimatedCell cell : cells) {
+            BlockOffset rotated = cell.offset();
             if (skipBuilt) {
                 if (mc.level != null && mc.level.getBlockState(
-                        anchor.offset(rotated.x(), rotated.y(), rotated.z())).getBlock() == state.getBlock()) {
+                        anchor.offset(rotated.x(), rotated.y(), rotated.z())).getBlock() == cell.block()) {
                     continue;
                 }
             }
-            ItemStack stack = new ItemStack(state.getBlock());
-            var customRenderer = IClientItemExtensions.of(stack).getCustomRenderer();
+            var customRenderer = IClientItemExtensions.of(cell.stack()).getCustomRenderer();
             if (customRenderer == null) continue;
             poseStack.pushPose();
             poseStack.translate(rotated.x(), rotated.y(), rotated.z());
@@ -96,13 +100,56 @@ public final class BuildingGhostRenderer {
                 poseStack.mulPose(com.mojang.math.Axis.YP.rotationDegrees(-90f * steps));
                 poseStack.translate(-0.5f, -0.5f, -0.5f);
             }
-            customRenderer.renderByItem(stack, ItemDisplayContext.NONE, poseStack,
+            customRenderer.renderByItem(cell.stack(), ItemDisplayContext.NONE, poseStack,
                     ghostSource, FULL_BRIGHT, OverlayTexture.NO_OVERLAY);
             poseStack.popPose();
         }
 
         poseStack.popPose();
         bufferSource.endBatch();
+    }
+
+    /**
+     * 一个需要逐帧单独渲染的格子（没有静态模型、焙不进 VBO 的方块）。
+     * {@code offset} 已按建筑旋转角旋转过，{@code stack} 预建好以免每帧分配。
+     */
+    private record AnimatedCell(BlockOffset offset, Block block, ItemStack stack) {}
+
+    /**
+     * 按 (config, rotation) 预计算的动画格子表。原先每帧都要遍历整份 pattern
+     * （那栋超大建筑 58 万条）做一次 HashMap 查找加一次 {@code rotateOffset}，只为挑出
+     * 通常不到一百个箱子/告示牌；现在这份表建一次就一直用。
+     *
+     * <p>弱键：配置在 {@code /reload} 时会被整体换掉，弱键让旧配置的条目自然回收，
+     * 与 {@code BuildingPreviewRenderer.META_CACHE} 同一口径。
+     */
+    private static final Map<BuildingConfig, List<List<AnimatedCell>>> ANIMATED_CACHE =
+            Collections.synchronizedMap(new WeakHashMap<>());
+
+    private static List<AnimatedCell> animatedCells(BuildingConfig config, int steps) {
+        List<List<AnimatedCell>> buckets = ANIMATED_CACHE.computeIfAbsent(config,
+                k -> new ArrayList<>(Collections.nCopies(4, null)));
+        List<AnimatedCell> cells = buckets.get(steps);
+        if (cells == null) {
+            cells = collectAnimatedCells(config, steps);
+            buckets.set(steps, cells);
+        }
+        return cells;
+    }
+
+    private static List<AnimatedCell> collectAnimatedCells(BuildingConfig config, int steps) {
+        List<BlockOffset> pattern = config.pattern();
+        List<AnimatedCell> cells = new ArrayList<>();
+        Set<BlockOffset> seen = new HashSet<>();
+        for (int i = 0; i < pattern.size(); i++) {
+            BlockState state = BuildingPreviewRenderer.resolveBlockState(
+                    BuildingRotation.rotateBlockStateString(config.blockIdAt(i), steps));
+            if (state == null || state.getRenderShape() != RenderShape.ENTITYBLOCK_ANIMATED) continue;
+            BlockOffset rotated = BuildingRotation.rotateOffset(pattern.get(i), steps);
+            if (!seen.add(rotated)) continue;
+            cells.add(new AnimatedCell(rotated, state.getBlock(), new ItemStack(state.getBlock())));
+        }
+        return List.copyOf(cells);
     }
 
     /** Apply the ghost alpha to a single buffer's vertices. */

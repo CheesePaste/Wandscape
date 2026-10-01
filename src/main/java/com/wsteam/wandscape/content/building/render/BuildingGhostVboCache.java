@@ -32,6 +32,12 @@ public final class BuildingGhostVboCache {
     private static final float GHOST_ALPHA = 0.55f;
     private static final int FULL_BRIGHT = 0xF000F0;
 
+    /**
+     * 遮罩索引重建的最小间隔（tick）；anchor 变化时不等，立即重建。
+     * 1 = 每 tick 至多一次，即把原来的「每渲染帧一次」降到「每 tick 一次」。
+     */
+    private static final long MASK_REBUILD_INTERVAL_TICKS = 1L;
+
     private static final Map<BuildingConfig, BakedGhostMesh[]> CACHE = new HashMap<>();
     private static final ByteBufferBuilder INDEX_BBB = new ByteBufferBuilder(4 * 1024 * 1024);
 
@@ -54,8 +60,31 @@ public final class BuildingGhostVboCache {
                                         Vec3 camPos, BlockPos anchor, BuildingConfig config, int rotationSteps) {
         BakedGhostMesh mesh = getOrBake(mc, config, rotationSteps);
         if (mesh == null) return;
-        rebuildMaskedIndex(mc, mesh, anchor);
+        if (needsMaskRebuild(mc, mesh, anchor)) {
+            rebuildMaskedIndex(mc, mesh, anchor);
+        }
         drawVbo(mesh, cameraModelView, projection, camPos, anchor);
+    }
+
+    /**
+     * Whether the masked index must be rewritten this frame.
+     *
+     * <p>重写一次要遍历整个 pattern（每格写一条退化四边形索引），再把整块索引
+     * {@code glBufferData} 上 GPU —— 对那栋超大建筑是几十 MB 级的写入加几十 MB 的上传，
+     * 而这条路径原来是每帧都跑的。遮罩只在「有格子刚建好」时才变，所以这里做节流：
+     * anchor 一动就立刻重建（不重建会拿错位置的遮罩），否则每
+     * {@link #MASK_REBUILD_INTERVAL_TICKS} tick 至多一次。
+     */
+    private static boolean needsMaskRebuild(Minecraft mc, BakedGhostMesh mesh, BlockPos anchor) {
+        // 当前上传的是完整索引（drawGhost 恢复过）——必须是遮罩版才算数。
+        if (!mesh.indexClobbered) return true;
+        if (!anchor.equals(mesh.maskAnchor)) return true;
+        if (mesh.maskTick == Long.MIN_VALUE) return true;
+        return currentTick(mc) - mesh.maskTick >= MASK_REBUILD_INTERVAL_TICKS;
+    }
+
+    private static long currentTick(Minecraft mc) {
+        return mc.level != null ? mc.level.getGameTime() : 0L;
     }
 
     public static void closeAll() {
@@ -100,6 +129,53 @@ public final class BuildingGhostVboCache {
     }
 
     private static BakedGhostMesh bake(Minecraft mc, BuildingConfig config, int steps) {
+        // 顶点数据只在这一次构建里写入 BufferBuilder；VertexBuffer.upload 是同步的
+        // glBufferData，拷进 GPU 后这个 native 缓冲就没人再用了。而 ByteBufferBuilder
+        // 没有 Cleaner 也没有 finalizer，只有 close() 才会 ALLOCATOR.free —— 漏掉这一步
+        // 就是每烘焙一次永久泄漏整个 capacity（本项目那栋超大建筑单次 400 MB 级，
+        // 转一圈换个旋转再焙一次就翻倍），堆外内存吃光后 malloc 返回 0，
+        // ByteBufferBuilder 抛 OutOfMemoryError，游戏崩在烘焙瞬间。
+        ByteBufferBuilder vertBbb = new ByteBufferBuilder(vertexCapacityFor(config));
+        try {
+            return buildMesh(mc, vertBbb, config, steps);
+        } finally {
+            vertBbb.close();
+        }
+    }
+
+    /**
+     * 顶点缓冲容量上界：非空气格数 × 6 面 × 4 顶点 × 32 字节（{@code BLOCK} 格式）。
+     *
+     * <p>不按 {@code pattern.size() * 24 * 32} 预留——空气在 pattern 里占了相当比例
+     * （本项目那栋超大建筑是 137,481/580,814，约 24%），而空气质量为 0
+     * （{@code AirBlock#getRenderShape} 返回 {@code INVISIBLE}），把它们算进去是平白
+     * 多占上百 MB。真超过这个上界时 {@code ByteBufferBuilder} 自会增长，不会截断。
+     */
+    private static int vertexCapacityFor(BuildingConfig config) {
+        List<String> palette = config.palette();
+        boolean[] nonAir = new boolean[palette.size()];
+        for (int p = 0; p < palette.size(); p++) {
+            String id = palette.get(p);
+            nonAir[p] = id != null && !id.endsWith(":air");
+        }
+        List<Integer> indices = config.blockIndices();
+        long cells = 0L;
+        for (int i = 0; i < indices.size(); i++) {
+            int idx = indices.get(i);
+            if (idx >= 0 && idx < nonAir.length && nonAir[idx]) {
+                cells++;
+            }
+        }
+        long bytes = cells * 6L * 4L * 32L;
+        if (bytes < 1024L * 1024L) {
+            return 1024 * 1024;
+        }
+        return (int) Math.min(bytes, Integer.MAX_VALUE - 8);
+    }
+
+    /** 把图案烘焙进 {@code vertBbb}；调用方负责关闭 {@code vertBbb}。 */
+    private static BakedGhostMesh buildMesh(Minecraft mc, ByteBufferBuilder vertBbb,
+                                            BuildingConfig config, int steps) {
         List<BlockOffset> pattern = config.pattern();
         int n = pattern.size();
 
@@ -117,8 +193,6 @@ public final class BuildingGhostVboCache {
             cellBlocks[i] = state != null ? state.getBlock() : null;
         }
 
-        int capacity = Math.max(n * 24 * 32, 1024 * 1024);
-        ByteBufferBuilder vertBbb = new ByteBufferBuilder(capacity);
         BufferBuilder bb = new BufferBuilder(vertBbb, VertexFormat.Mode.QUADS, DefaultVertexFormat.BLOCK);
         int[] vertexCount = new int[1];
         MultiBufferSource ghostSource = rt -> new AlphaCountingConsumer(bb, vertexCount);
@@ -210,6 +284,8 @@ public final class BuildingGhostVboCache {
         }
         uploadIndex(mesh);
         mesh.indexClobbered = true;
+        mesh.maskAnchor = anchor.immutable();
+        mesh.maskTick = currentTick(mc);
     }
 
     private static void uploadIndex(BakedGhostMesh mesh) {
@@ -266,6 +342,10 @@ public final class BuildingGhostVboCache {
         final Block[] cellBlocks;
         final ByteBuffer fullIndex;
         boolean indexClobbered;
+        /** 当前遮罩索引对应的 anchor；null = 还没建过遮罩。 */
+        BlockPos maskAnchor;
+        /** 上次重建遮罩的 tick；{@link Long#MIN_VALUE} = 还没建过。 */
+        long maskTick = Long.MIN_VALUE;
 
         BakedGhostMesh(VertexBuffer vbo, VertexFormat.IndexType indexType,
                        int[] quadStart, int[] quadCount,

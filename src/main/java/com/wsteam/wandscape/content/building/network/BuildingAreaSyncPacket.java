@@ -54,7 +54,16 @@ public record BuildingAreaSyncPacket(List<BuildingEntry> buildings) implements C
     private static volatile List<BuildingEntry> cached = List.of();
 
     /** Cached world-space occupancy of cached buildings, keyed "typeId|anchor|rotation". */
-    private static final Map<String, BuildingVoxels.Occupancy> entryOccupancies = new HashMap<>();
+    private static final Map<String, BuildingVoxels.PackedOccupancy> entryOccupancies = new HashMap<>();
+
+    /**
+     * 上一次查询的候选占用。准心不动（也没在拖拽）时，同一栋建筑同一个 anchor 会
+     * 每 tick 被问一遍——缓存这一条就把那种情况下的重建整个省掉。
+     */
+    private static BuildingConfig lastCandidateConfig;
+    private static BlockPos lastCandidateAnchor;
+    private static int lastCandidateRotation = -1;
+    private static BuildingVoxels.PackedOccupancy lastCandidate;
 
     public static List<BuildingEntry> getCached() {
         return cached;
@@ -64,6 +73,10 @@ public record BuildingAreaSyncPacket(List<BuildingEntry> buildings) implements C
     public static void clear() {
         cached = List.of();
         entryOccupancies.clear();
+        lastCandidateConfig = null;
+        lastCandidateAnchor = null;
+        lastCandidateRotation = -1;
+        lastCandidate = null;
     }
 
     /**
@@ -77,7 +90,7 @@ public record BuildingAreaSyncPacket(List<BuildingEntry> buildings) implements C
      */
     public static boolean voxelConflicts(@Nullable BuildingConfig config, BlockPos anchor, int rotationSteps) {
         if (config == null || config.pattern() == null || config.pattern().isEmpty()) return false;
-        BuildingVoxels.Occupancy mine = BuildingVoxels.compute(config, anchor, rotationSteps);
+        BuildingVoxels.PackedOccupancy mine = candidateOccupancy(config, anchor, rotationSteps);
         if (mine.isEmpty()) return false;
 
         for (BuildingEntry entry : cached) {
@@ -92,6 +105,22 @@ public record BuildingAreaSyncPacket(List<BuildingEntry> buildings) implements C
         return false;
     }
 
+    /** 候选建筑的世界占用，带一条缓存：同一个 (配置, anchor, 旋转) 反复问时不必每次重建。 */
+    private static BuildingVoxels.PackedOccupancy candidateOccupancy(
+            BuildingConfig config, BlockPos anchor, int rotationSteps) {
+        int rot = rotationSteps & 3;
+        if (lastCandidate != null && lastCandidateConfig == config
+                && lastCandidateRotation == rot && anchor.equals(lastCandidateAnchor)) {
+            return lastCandidate;
+        }
+        BuildingVoxels.PackedOccupancy occ = BuildingVoxels.computePacked(config, anchor, rot);
+        lastCandidateConfig = config;
+        lastCandidateAnchor = anchor.immutable();
+        lastCandidateRotation = rot;
+        lastCandidate = occ;
+        return occ;
+    }
+
     /** Whether a voxel-extent AABB touches a cached entry's boundary box. */
     private static boolean extentHitsBoundary(@Nullable net.minecraft.world.level.levelgen.structure.BoundingBox ext,
                                               BuildingEntry entry) {
@@ -103,14 +132,14 @@ public record BuildingAreaSyncPacket(List<BuildingEntry> buildings) implements C
     }
 
     /** Lazy, cached world-space occupancy of a cached building entry (rotation applied). */
-    private static BuildingVoxels.Occupancy entryOccupancy(BuildingEntry entry) {
+    private static BuildingVoxels.PackedOccupancy entryOccupancy(BuildingEntry entry) {
         String key = entry.buildingTypeId() + '|' + entry.anchor() + '|' + (entry.rotationSteps() & 3);
-        BuildingVoxels.Occupancy occ = entryOccupancies.get(key);
+        BuildingVoxels.PackedOccupancy occ = entryOccupancies.get(key);
         if (occ != null) return occ;
         BuildingConfig cfg = BuildingConfigLoader.getInstance().get(entry.buildingTypeId());
         occ = (cfg == null || cfg.pattern() == null || cfg.pattern().isEmpty())
-                ? BuildingVoxels.computeFromOffsets(List.of(), entry.anchor())
-                : BuildingVoxels.compute(cfg, entry.anchor(), entry.rotationSteps());
+                ? BuildingVoxels.computePackedFromOffsets(List.of(), entry.anchor())
+                : BuildingVoxels.computePacked(cfg, entry.anchor(), entry.rotationSteps());
         entryOccupancies.put(key, occ);
         return occ;
     }
