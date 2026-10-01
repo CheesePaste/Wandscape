@@ -11,6 +11,8 @@ import com.wsteam.wandscape.content.building.data.BlockOffset;
 import com.wsteam.wandscape.content.building.data.BuildingConfig;
 import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.foundation.log.Log;
+import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
+import it.unimi.dsi.fastutil.longs.LongSet;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.LightTexture;
@@ -68,7 +70,7 @@ public final class BuildingPreviewGifCache {
     /** Fraction of the texture the building should fill after its rotated footprint. */
     private static final float FILL = 0.78F;
     /** Bump when the bake pipeline changes so stale disk frames are not reused. */
-    private static final int CACHE_VERSION = 4;
+    private static final int CACHE_VERSION = 5;
     /** Per-frame budget for the bake queue, in nanoseconds. */
     private static final long BAKE_BUDGET_NS = 8_000_000L;
 
@@ -82,7 +84,19 @@ public final class BuildingPreviewGifCache {
     private static final String TEX_NAME = "wandscape_building_preview";
 
     private static final Map<BuildingConfig, BuildingGif> CACHE = new LinkedHashMap<>();
-    private static final Map<BuildingConfig, List<BuildingPreviewRenderer.BlockEntry>> VISIBLE_CACHE = new HashMap<>();
+
+    /** 每个建筑算一次的缩略图 LOD 格子表，见 {@link #buildLodPreview}。 */
+    private static final Map<BuildingConfig, LodPreview> LOD_CACHE = new HashMap<>();
+
+    /**
+     * 一张缩略图最多画多少格。超了就把建筑按 factor³ 归并，每格只画**一个代表方块**
+     * 并把它放大 factor 倍 —— 所以建筑看着仍是连续实心的，不是抽稀出来的点阵。
+     *
+     * <p>128 px 的缩略图上，4×4×4 归并后的一格还不到一个像素，观感上是同一张图；
+     * 而绘制次数按 factor³ 下降：那栋超大建筑每帧从 378,882 次掉到 2,925 次。
+     * 方块数在预算内的建筑 factor == 1，逐方块渲染，与改造前完全一致。
+     */
+    private static final int LOD_CELL_BUDGET = 12_000;
 
     private static TextureTarget target;
     private static final ByteBufferBuilder BAKE_BBB = new ByteBufferBuilder(2 * 1024 * 1024);
@@ -227,7 +241,7 @@ public final class BuildingPreviewGifCache {
             }
         }
         CACHE.clear();
-        VISIBLE_CACHE.clear();
+        LOD_CACHE.clear();
         BOUNDS_CACHE.clear();
         SCALE_CACHE.clear();
     }
@@ -310,7 +324,8 @@ public final class BuildingPreviewGifCache {
         if (meta.resolvedMap.isEmpty()) {
             return null;
         }
-        List<BuildingPreviewRenderer.BlockEntry> entries = visibleEntries(config, meta);
+        LodPreview preview = lodPreview(config, meta);
+        List<PreviewCell> entries = preview.cells();
         if (entries.isEmpty()) {
             return null;
         }
@@ -344,11 +359,16 @@ public final class BuildingPreviewGifCache {
             pose.mulPose(new Quaternionf().rotateY(angle));
             pose.translate(-meta.cx - 0.5F, -meta.cy - 0.5F, -meta.cz - 0.5F);
 
-            for (BuildingPreviewRenderer.BlockEntry entry : entries) {
+            int factor = preview.factor();
+            for (PreviewCell cell : entries) {
                 pose.pushPose();
-                pose.translate(entry.offset().x(), entry.offset().y(), entry.offset().z());
+                pose.translate(cell.x(), cell.y(), cell.z());
+                // LOD 格子：把代表方块放大 factor 倍填满整格，建筑看上去仍是实心的。
+                if (factor > 1) {
+                    pose.scale(factor, factor, factor);
+                }
                 blockRenderer.renderSingleBlock(
-                        entry.state(), pose, BAKE_SRC, FULL_BRIGHT, OverlayTexture.NO_OVERLAY,
+                        cell.state(), pose, BAKE_SRC, FULL_BRIGHT, OverlayTexture.NO_OVERLAY,
                         ModelData.EMPTY, RenderType.solid());
                 pose.popPose();
             }
@@ -451,31 +471,89 @@ public final class BuildingPreviewGifCache {
         return true;
     }
 
-    /** Blocks visible in the thumbnail: the exterior shell plus anything adjacent to a non-opaque neighbor. */
-    private static List<BuildingPreviewRenderer.BlockEntry> visibleEntries(
-            BuildingConfig config, BuildingPreviewRenderer.ConfigPreviewMeta meta) {
-        return VISIBLE_CACHE.computeIfAbsent(config, k -> {
-            List<BuildingPreviewRenderer.BlockEntry> out = new ArrayList<>();
-            for (BuildingPreviewRenderer.BlockEntry entry : meta.fullEntries) {
-                if (!isEnclosed(meta, entry.offset())) {
-                    out.add(entry);
-                }
+    /** 缩略图的一格：{@code factor³} 个方块归并成一个，坐标是格子在 pattern 空间里的最小角。 */
+    private record PreviewCell(int x, int y, int z, BlockState state) {}
+
+    /** 一张缩略图用的格子表；{@code factor == 1} 表示逐方块、没有归并。 */
+    private record LodPreview(List<PreviewCell> cells, int factor) {}
+
+    private static LodPreview lodPreview(BuildingConfig config,
+                                         BuildingPreviewRenderer.ConfigPreviewMeta meta) {
+        return LOD_CACHE.computeIfAbsent(config, k -> buildLodPreview(meta));
+    }
+
+    /**
+     * 方块数在预算内就逐方块（factor = 1），超预算就一级级翻倍归并到预算为止。
+     *
+     * <p>每格的代表方块**优先取能遮挡的整方块**：一格里第一个碰到的可能是火把、告示牌
+     * 或树叶，放大 k 倍会画成一片漂浮的碎片，建筑看着就不完整了 —— 宁可取它的石墙。
+     */
+    private static LodPreview buildLodPreview(BuildingPreviewRenderer.ConfigPreviewMeta meta) {
+        List<BuildingPreviewRenderer.BlockEntry> full = meta.fullEntries;
+
+        int factor = 1;
+        while (factor < 16 && countCells(full, factor) > LOD_CELL_BUDGET) {
+            factor <<= 1;
+        }
+
+        Map<Long, PreviewCell> grid = new HashMap<>();
+        for (BuildingPreviewRenderer.BlockEntry entry : full) {
+            BlockState state = entry.state();
+            if (state == null || state.isAir()) continue;
+            BlockOffset o = entry.offset();
+            long key = cellKey(o.x(), o.y(), o.z(), factor);
+            PreviewCell prev = grid.get(key);
+            if (prev == null || (!prev.state().canOcclude() && state.canOcclude())) {
+                grid.put(key, new PreviewCell(
+                        cellMin(o.x(), factor), cellMin(o.y(), factor), cellMin(o.z(), factor), state));
             }
-            return List.copyOf(out);
-        });
+        }
+
+        // 只留外壳：六面邻居格子都在、且都遮挡的格子从外面看不见。
+        List<PreviewCell> out = new ArrayList<>(grid.size());
+        for (PreviewCell cell : grid.values()) {
+            if (!isEnclosedCell(grid, cell, factor)) {
+                out.add(cell);
+            }
+        }
+        return new LodPreview(List.copyOf(out), factor);
     }
 
-    private static boolean isEnclosed(BuildingPreviewRenderer.ConfigPreviewMeta meta, BlockOffset o) {
-        return isOccluding(meta, o.x() + 1, o.y(), o.z())
-                && isOccluding(meta, o.x() - 1, o.y(), o.z())
-                && isOccluding(meta, o.x(), o.y() + 1, o.z())
-                && isOccluding(meta, o.x(), o.y() - 1, o.z())
-                && isOccluding(meta, o.x(), o.y(), o.z() + 1)
-                && isOccluding(meta, o.x(), o.y(), o.z() - 1);
+    private static int countCells(List<BuildingPreviewRenderer.BlockEntry> full, int factor) {
+        LongSet seen = new LongOpenHashSet(full.size());
+        for (BuildingPreviewRenderer.BlockEntry entry : full) {
+            BlockState state = entry.state();
+            if (state == null || state.isAir()) continue;
+            BlockOffset o = entry.offset();
+            seen.add(cellKey(o.x(), o.y(), o.z(), factor));
+        }
+        return seen.size();
     }
 
-    private static boolean isOccluding(BuildingPreviewRenderer.ConfigPreviewMeta meta, int x, int y, int z) {
-        BlockState state = meta.resolvedMap.get(BlockOffset.of(x, y, z));
-        return state != null && state.canOcclude();
+    /** 格子最小角；{@code factor} 是 2 的幂，用 floorDiv 才对负偏移也成立。 */
+    private static int cellMin(int v, int factor) {
+        return Math.floorDiv(v, factor) * factor;
     }
+
+    /** 把格号打包成 long 作哈希键（floorDiv 之后再取低位，负坐标也稳定）。 */
+    private static long cellKey(int x, int y, int z, int factor) {
+        return ((long) (Math.floorDiv(x, factor) & 0x1FFFFF) << 42)
+                | ((long) (Math.floorDiv(y, factor) & 0xFFFFF) << 22)
+                | (Math.floorDiv(z, factor) & 0x3FFFFF);
+    }
+
+    private static boolean isEnclosedCell(Map<Long, PreviewCell> grid, PreviewCell cell, int factor) {
+        for (int axis = 0; axis < 3; axis++) {
+            for (int dir = -1; dir <= 1; dir += 2) {
+                PreviewCell n = grid.get(cellKey(
+                        cell.x() + (axis == 0 ? dir * factor : 0),
+                        cell.y() + (axis == 1 ? dir * factor : 0),
+                        cell.z() + (axis == 2 ? dir * factor : 0),
+                        factor));
+                if (n == null || !n.state().canOcclude()) return false;
+            }
+        }
+        return true;
+    }
+
 }
