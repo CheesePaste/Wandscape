@@ -172,7 +172,8 @@ public final class BuildingInteractHandler {
         }
 
         switch (category) {
-            case "storage" -> openWarehouseMenu(player, colonyId, state.getAnchor(), creator);
+            case "storage" -> openWarehouseMenu(player, colonyId, state.getAnchor(), creator,
+                    state.getBuildingId());
             case "workstation" -> openWorkstationGui(level, colonyId, player, state.getAnchor(), creator);
             case "crafting_station" -> openCraftingStationGui(level, colonyId, player, state.getAnchor(), creator);
             case "node" -> openNodeGui(level, player, state.getAnchor(), state);
@@ -233,18 +234,24 @@ public final class BuildingInteractHandler {
         }
     }
 
-    /** Open the warehouse container menu (vanilla flow) and push the initial data snapshot. */
+    /**
+     * Open the warehouse container menu (vanilla flow) and push the initial data snapshot.
+     *
+     * @param buildingId 这仓库对应的建筑；从仓库建筑进入时传该建筑 id（面板显示建筑状态与修复/拆除），
+     *                   便携终端与市政厅代开入口传 {@code null}
+     */
     public static void openWarehouseMenu(ServerPlayer player, UUID colonyId,
-                                         net.minecraft.core.BlockPos pos, String creator) {
+                                         net.minecraft.core.BlockPos pos, String creator,
+                                         @javax.annotation.Nullable UUID buildingId) {
         player.openMenu(new net.minecraft.world.SimpleMenuProvider(
-                (id, inv, p) -> new WarehouseMenu(id, inv, colonyId, pos),
+                (id, inv, p) -> new WarehouseMenu(id, inv, colonyId, pos, buildingId),
                 Component.translatable("gui.wandscape.warehouse.title")));
         ColonyItemBank bank = ColonyItemBank.get(player.serverLevel());
         if (bank == null) return;
         Map<ItemKey, Long> snapshot = bank.getSnapshot(colonyId);
         Map<ElementType, Long> elemSnapshot = bank.getElementSnapshot(colonyId);
         Net.toPlayer(player,
-                WarehouseDataPacket.from(pos, colonyId, snapshot, elemSnapshot, creator));
+                WarehouseDataPacket.from(pos, colonyId, snapshot, elemSnapshot, creator, buildingId));
     }
 
     private static void openInfoPanel(ServerPlayer player, BuildingState state,

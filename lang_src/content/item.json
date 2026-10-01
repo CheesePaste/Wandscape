@@ -135,6 +135,22 @@
     "zh_cn": "右键生物：标记为盟友（法师不攻击/不误伤），再次右键解除",
     "en_us": "Right-click a creature: mark as ally (mages won't attack/hurt it); right-click again to release"
   },
+  "item.wandscape.soulward_charm": {
+    "zh_cn": "守魂护符",
+    "en_us": "Soulward Charm"
+  },
+  "item.wandscape.soulward_charm.desc": {
+    "zh_cn": "蕴含灵魂守护魔力的护符。由法师佩戴时，若法师战死，其随身法杖、盔甲、背包与饰品均不会掉落，将在复活时完整归还。",
+    "en_us": "A charm infused with soul-guarding magic. When equipped by a mage, their wand, armor, inventory, and trinkets will not drop upon death and will be restored upon revival."
+  },
+  "item.wandscape.soulward_charm.tooltip": {
+    "zh_cn": "法师佩戴：战死时不掉落法杖、盔甲、背包与饰品，复活时全额归还",
+    "en_us": "Mage equipped: retains wand, armor, inventory, and trinkets on death; restored upon revival"
+  },
+  "item.wandscape.soulward_charm.tooltip_curios": {
+    "zh_cn": "可放入 Curios 护符槽；纯净环境下放于法师背包亦可生效",
+    "en_us": "Equippable in Curios charm slot; also effective in mage inventory without Curios"
+  },
   "item.wandscape.spell.cast_failed": {
     "zh_cn": "施放失败",
     "en_us": "Cast failed"

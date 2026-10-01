@@ -24,7 +24,8 @@ import static com.wsteam.wandscape.Wandscape.MODID;
  */
 public record WarehouseDataPacket(BlockPos buildingPos, UUID colonyId,
                                    ListTag items, ListTag elements, String creator,
-                                   long usedCapacity, long capacity)
+                                   long usedCapacity, long capacity,
+                                   @javax.annotation.Nullable UUID buildingId)
         implements CustomPacketPayload {
 
     public static final Type<WarehouseDataPacket> TYPE =
@@ -50,6 +51,17 @@ public record WarehouseDataPacket(BlockPos buildingPos, UUID colonyId,
                                             Map<ItemKey, Long> itemSnapshot,
                                             Map<ElementType, Long> elementSnapshot,
                                             String creator) {
+        return from(buildingPos, colonyId, itemSnapshot, elementSnapshot, creator, null);
+    }
+
+    /**
+     * 完整构造。{@code buildingId} 是「这仓库对应哪座建筑」：从仓库建筑打开时带上，
+     * 面板才会显示建筑状态头部与修复/拆除；便携终端与市政厅代开入口传 null。
+     */
+    public static WarehouseDataPacket from(BlockPos buildingPos, UUID colonyId,
+                                            Map<ItemKey, Long> itemSnapshot,
+                                            Map<ElementType, Long> elementSnapshot,
+                                            String creator, @javax.annotation.Nullable UUID buildingId) {
         ListTag itemList = new ListTag();
         long used = 0;
         for (var entry : itemSnapshot.entrySet()) {
@@ -72,7 +84,8 @@ public record WarehouseDataPacket(BlockPos buildingPos, UUID colonyId,
         }
 
         return new WarehouseDataPacket(buildingPos, colonyId, itemList, elemList, creator,
-                used, com.wsteam.wandscape.content.warehouse.ColonyItemBank.capacityFor(colonyId));
+                used, com.wsteam.wandscape.content.warehouse.ColonyItemBank.capacityFor(colonyId),
+                buildingId);
     }
 
     /** Decode item list for client rendering. */
@@ -129,6 +142,9 @@ public record WarehouseDataPacket(BlockPos buildingPos, UUID colonyId,
         wrapper.putString("creator", pkt.creator != null ? pkt.creator : "");
         wrapper.putLong("used", pkt.usedCapacity);
         wrapper.putLong("cap", pkt.capacity);
+        if (pkt.buildingId != null) {
+            wrapper.putUUID("bld", pkt.buildingId);
+        }
         buf.writeNbt(wrapper);
     }
 
@@ -136,7 +152,7 @@ public record WarehouseDataPacket(BlockPos buildingPos, UUID colonyId,
         CompoundTag wrapper = buf.readNbt();
         if (wrapper == null) {
             return new WarehouseDataPacket(BlockPos.ZERO, new UUID(0, 0),
-                    new ListTag(), new ListTag(), "", 0, 0);
+                    new ListTag(), new ListTag(), "", 0, 0, null);
         }
         BlockPos buildingPos = BlockPos.of(wrapper.getLong("pos"));
         UUID colonyId = wrapper.contains("colony") ? wrapper.getUUID("colony") : new UUID(0, 0);
@@ -145,6 +161,7 @@ public record WarehouseDataPacket(BlockPos buildingPos, UUID colonyId,
         String creator = wrapper.getString("creator");
         long used = wrapper.contains("used") ? wrapper.getLong("used") : 0;
         long cap = wrapper.contains("cap") ? wrapper.getLong("cap") : 0;
-        return new WarehouseDataPacket(buildingPos, colonyId, items, elems, creator, used, cap);
+        UUID buildingId = wrapper.contains("bld") ? wrapper.getUUID("bld") : null;
+        return new WarehouseDataPacket(buildingPos, colonyId, items, elems, creator, used, cap, buildingId);
     }
 }

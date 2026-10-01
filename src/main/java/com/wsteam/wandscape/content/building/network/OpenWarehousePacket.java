@@ -69,7 +69,7 @@ public record OpenWarehousePacket(BlockPos buildingPos)
             }
 
             BuildingInteractHandler.openWarehouseMenu(sp, colonyId, pkt.buildingPos(),
-                    BuildingInteractHandler.resolveCreator(level, pkt.buildingPos()));
+                    BuildingInteractHandler.resolveCreator(level, pkt.buildingPos()), buildingId);
         });
     }
 

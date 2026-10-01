@@ -49,6 +49,38 @@ public final class NpcDeathHandler {
             }
         }
 
+        com.wsteam.wandscape.content.npc.data.PreservedInventory pres = null;
+        if (com.wsteam.wandscape.content.items.charm.SoulwardCharmItem.isSoulwardActive(npc)) {
+            net.minecraft.world.item.ItemStack wand = npc.hasDefaultWand()
+                    ? net.minecraft.world.item.ItemStack.EMPTY
+                    : npc.getItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND).copy();
+
+            List<net.minecraft.world.item.ItemStack> armor = new java.util.ArrayList<>(WandscapeNpc.ARMOR_SLOT_COUNT);
+            for (var slot : WandscapeNpc.ARMOR_VANILLA_SLOTS) {
+                armor.add(npc.getItemBySlot(slot).copy());
+            }
+
+            List<net.minecraft.world.item.ItemStack> backpack = new java.util.ArrayList<>(npc.inventory.getContainerSize());
+            for (int i = 0; i < npc.inventory.getContainerSize(); i++) {
+                backpack.add(npc.inventory.getItem(i).copy());
+            }
+
+            net.minecraft.nbt.CompoundTag curiosTag = com.wsteam.wandscape.compat.curios.CuriosCompat
+                    .saveCurios(npc, level.registryAccess());
+
+            pres = new com.wsteam.wandscape.content.npc.data.PreservedInventory(wand, armor, backpack, curiosTag);
+            Log.info(TAG, "NPC {} ({}) 守魂护符生效 —— 随身装备、背包与饰品已完整封存入死亡快照",
+                    npc.getUUID().toString().substring(0, 8), npc.getNpcName());
+        }
+
+        Component deathMessage = npc.getCombatTracker().getDeathMessage();
+        String deathCauseJson = "";
+        try {
+            deathCauseJson = Component.Serializer.toJson(deathMessage, level.registryAccess());
+        } catch (Exception ignored) {
+            deathCauseJson = deathMessage.getString();
+        }
+
         NpcApi npcApi = WandscapeApis.getNpcApiSilently();
         UUID colony = npcApi != null ? npcApi.getNpcColony(npc.getUUID()) : null;
         if (colony == null) colony = EntityComponentBridge.PLACEHOLDER_COLONY;
@@ -69,14 +101,17 @@ public final class NpcDeathHandler {
                 npc.getBaseAttributeValue(com.wsteam.wandscape.content.npc.attributes.NpcAttributes.AttributeType.ARMOR_VALUE),
                 npc.getBaseAttributeValue(com.wsteam.wandscape.content.npc.attributes.NpcAttributes.AttributeType.MAX_MANA),
                 inv,
-                npc.equippedMagic.flattenedQualified());
+                npc.equippedMagic.flattenedQualified(),
+                pres,
+                deathCauseJson);
         ColonyDeathRegistry.get(level).add(rec);
-        Log.info(TAG, "NPC {} ({}) died at {},{},{} — death record saved, inventory {} stacks",
+        com.wsteam.wandscape.content.task.network.TaskPanelSyncTracker.markDirty();
+        Log.info(TAG, "NPC {} ({}) died at {},{},{} — death record saved, inventory {} stacks, soulward={}",
                 rec.npcId().toString().substring(0, 8), rec.name(),
-                rec.x(), rec.y(), rec.z(), inv.size());
+                rec.x(), rec.y(), rec.z(), inv.size(), pres != null);
 
         // 像玩家/驯养宠物一样把阵亡消息送上聊天区（文案用原版战斗记录，受众受 Config 控制）
-        broadcastDeathMessage(level, npc, colony);
+        broadcastDeathMessage(level, npc, colony, deathMessage);
 
         // 复活只走祭坛（或全灭时玩家按市政厅的保底按钮），阵亡本身不触发任何自动复活。
         // 阵亡会改变小镇人口，推送最新状态让已打开的市政厅面板刷新保底按钮可用性。
@@ -91,9 +126,8 @@ public final class NpcDeathHandler {
      * 受众受 {@link Config#NPC_DEATH_MESSAGE_GLOBAL} 控制：开启 → 全服广播（同玩家死亡）；
      * 关闭 → 仅发所属小镇创建者（同驯养宠物死亡只通知主人）。受 showDeathMessages 游戏规则门控。
      */
-    private static void broadcastDeathMessage(ServerLevel level, WandscapeNpc npc, UUID colonyId) {
+    private static void broadcastDeathMessage(ServerLevel level, WandscapeNpc npc, UUID colonyId, Component message) {
         if (!level.getGameRules().getBoolean(GameRules.RULE_SHOWDEATHMESSAGES)) return;
-        Component message = npc.getCombatTracker().getDeathMessage();
         if (Config.NPC_DEATH_MESSAGE_GLOBAL.get()) {
             level.getServer().getPlayerList().broadcastSystemMessage(message, false);
             return;

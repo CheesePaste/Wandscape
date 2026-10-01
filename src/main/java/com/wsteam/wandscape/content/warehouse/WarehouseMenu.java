@@ -48,17 +48,24 @@ public class WarehouseMenu extends AbstractContainerMenu {
     private static final String TAG = "WarehouseMenu";
 
     // ── Layout (kept here so client and server menus use identical coordinates) ──
-    public static final int PANEL_W = 300;   // 与市政厅面板统一
-    public static final int PANEL_H = 230;
+    public static final int PANEL_W = 300;   // 与市政厅面板同宽
+    /**
+     * 面板内的中世纪头部高度（由 {@code MedievalContainerScreen} 绘制）。
+     * 原版 6 行箱贴图高 222px，无法与头部同塞进其它建筑屏的 230px，所以本面板整体偏高：
+     * {@code PANEL_H = HEADER_H(22) + 贴图(222) + 创建者署名条(12)}。
+     */
+    public static final int HEADER_H = 22;
+    public static final int PANEL_H = 256;
     public static final int SLOT = 18;
     public static final int GRID_COLS = 9;
     public static final int GRID_ROWS = 6;
     public static final int WAREHOUSE_SLOT_COUNT = GRID_COLS * GRID_ROWS; // 54
     public static final int PLAYER_SLOT_COUNT = 36;
     public static final int GRID_X = 8;
-    public static final int GRID_Y = 18;
+    /** 仓库格起始 Y：贴图在屏内整体下移 {@link #HEADER_H}，槽位坐标必须同偏移才能与贴图槽框对齐。 */
+    public static final int GRID_Y = HEADER_H + 18;
     // 玩家背包 3×9+快捷栏 由共享组件 VanillaPlayerInventory 构建（坐标相对本面板左上，
-    // 落在 Exchange 页 blit 的原版 6 行箱纹理内：inventoryTop(6)=139 / hotbarTop(6)=197）
+    // 同样整体下移 HEADER_H，落在 Exchange 页 blit 的原版 6 行箱纹理内）
 
     private static final int MAX_CURSOR_COUNT = Integer.MAX_VALUE;
 
@@ -69,20 +76,29 @@ public class WarehouseMenu extends AbstractContainerMenu {
     public UUID getColonyId() { return colonyId; }
     @Nullable
     private final BlockPos buildingPos;
+    /**
+     * 该仓库对应的建筑 id（从仓库建筑右键/建筑面板打开时有值）；便携终端打开时为 null
+     * ——面板据此决定是否显示建筑状态头部与修复/拆除。
+     */
+    @Nullable
+    private final UUID buildingId;
+    public UUID getBuildingId() { return buildingId; }
     /** 玩家背包 36 槽（可显隐），由共享组件构建。 */
     private final List<ToggleableSlot> playerSlots;
 
     /** Client-side factory (MenuType): no colony context yet — data arrives via packet. */
     public WarehouseMenu(int containerId, Inventory playerInventory) {
-        this(containerId, playerInventory, null, null);
+        this(containerId, playerInventory, null, null, null);
     }
 
     /** Server-side factory (MenuProvider). */
     public WarehouseMenu(int containerId, Inventory playerInventory,
-                         @Nullable UUID colonyId, @Nullable BlockPos buildingPos) {
+                         @Nullable UUID colonyId, @Nullable BlockPos buildingPos,
+                         @Nullable UUID buildingId) {
         super(Wandscape.WAREHOUSE_MENU.get(), containerId);
         this.colonyId = colonyId;
         this.buildingPos = buildingPos;
+        this.buildingId = buildingId;
 
         for (int i = 0; i < WAREHOUSE_SLOT_COUNT; i++) {
             int col = i % GRID_COLS;
@@ -90,8 +106,8 @@ public class WarehouseMenu extends AbstractContainerMenu {
             addSlot(new WarehouseSlot(i, GRID_X + col * SLOT, GRID_Y + row * SLOT));
         }
         this.playerSlots = VanillaPlayerInventory.addTo(this::addSlot, playerInventory,
-                VanillaPlayerInventory.inventoryTop(GRID_ROWS),
-                VanillaPlayerInventory.hotbarTop(GRID_ROWS));
+                VanillaPlayerInventory.inventoryTop(GRID_ROWS) + HEADER_H,
+                VanillaPlayerInventory.hotbarTop(GRID_ROWS) + HEADER_H);
     }
 
     /** Client: point the read-only warehouse slots at the screen's display data. */
@@ -326,7 +342,7 @@ public class WarehouseMenu extends AbstractContainerMenu {
         Map<ItemKey, Long> itemSnapshot = bank.getSnapshot(colonyId);
         Map<ElementType, Long> elemSnapshot = bank.getElementSnapshot(colonyId);
         Net.toPlayer(player,
-                WarehouseDataPacket.from(buildingPos, colonyId, itemSnapshot, elemSnapshot));
+                WarehouseDataPacket.from(buildingPos, colonyId, itemSnapshot, elemSnapshot, "", buildingId));
     }
 
     // ── Helpers ──

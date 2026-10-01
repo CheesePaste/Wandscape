@@ -165,6 +165,11 @@
    - `production:decompose/synthesize/craft/craft_spell` 入队时经 `ProductionBatches.split` 按 `BalanceValues.productionBatchMax`（默认 1000，见 `wandscape_balance.json`）拆批，`channel_ticks` 按比例分摊、总时长不变；`BuildingApiImpl.mergeBandTail` 的同配方合并也用同一条上限，防止拆完又被粘回一条。
    - 于是**同一次玩家下单、同一条补料需求会在共享队列里变成多条同配方条目**（圆石 x1000 × 30）。凡是要「按配方聚合」的地方都得按 `count` 求和，不能按条目数或「第一条」：`countSynthesizeInFlight` 已经是求和口径，`ResourceSupplySystem.scanProductionQueues` 必须先汇总需求再比库存（逐条减库存会因同一份库存被减 N 次而严重低估缺口）。
    - 拆批也是发布资格（元素/容量）的判定粒度：拆细后「仓库放得下一部分」不会整条卡住。想看「一条超大任务」的旧样子，把 `productionBatchMax` 调大即可。
+5. **仓库 UI 布局不变量（改 UI 前必读）**：
+   - 面板 `WarehouseMenu.PANEL_W × PANEL_H = 300 × 256`，比其它建筑屏（300×230）高：`HEADER_H(22)` 头部 + 原版 6 行箱贴图 `222` + 创建者署名条 `12`。交换页的 `generic_54` 贴图从 `topPos + HEADER_H` 起 blit。
+   - **槽位坐标与贴图是两套数，必须同偏移**：仓库格 `GRID_Y = HEADER_H + 18`，玩家背包/快捷栏走 `VanillaPlayerInventory.inventoryTop/hotbarTop + HEADER_H`。改任一处不同步另一处，槽框就会与贴图错位。
+   - 仓库屏继承 `foundation/ui/component/MedievalContainerScreen`（**不是** `MedievalScreen`）：容器屏那一支的公共面板格式与建筑头部都在这个基类里。以后新的仓储类 UI 继承它，别再从 `AbstractContainerScreen` 起手重复抄皮肤。
+   - 建筑头部只在**从仓库建筑进入**时出现：`WarehouseDataPacket.buildingId` 为 null（便携终端、市政厅代开）时面板只显示标题。市政厅代开刻意传 null——那时的建筑上下文是市政厅，挂上「修复/拆除」会打到市政厅身上。
 
 ---
 

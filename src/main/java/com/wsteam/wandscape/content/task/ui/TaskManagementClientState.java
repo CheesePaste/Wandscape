@@ -53,9 +53,26 @@ public final class TaskManagementClientState {
         }
     }
 
+    public enum MageFilter {
+        ALL("gui.wandscape.task.filter.all"),
+        ALIVE("gui.wandscape.task.mage.filter.alive"),
+        DEAD("gui.wandscape.task.mage.filter.dead");
+
+        private final String translationKey;
+
+        MageFilter(String translationKey) {
+            this.translationKey = translationKey;
+        }
+
+        public String getTranslationKey() {
+            return translationKey;
+        }
+    }
+
     private static volatile SubTab activeTab = SubTab.TASKS;
     private static volatile TaskFilter activeFilter = TaskFilter.ALL;
     private static volatile ProductionFilter activeProductionFilter = ProductionFilter.ALL;
+    private static volatile MageFilter activeMageFilter = MageFilter.ALL;
     private static volatile String searchQuery = "";
     private static volatile int taskScrollOffset = 0;
     private static volatile int productionScrollOffset = 0;
@@ -90,6 +107,7 @@ public final class TaskManagementClientState {
         activeTab = SubTab.TASKS;
         activeFilter = TaskFilter.ALL;
         activeProductionFilter = ProductionFilter.ALL;
+        activeMageFilter = MageFilter.ALL;
         searchQuery = "";
         taskScrollOffset = 0;
         productionScrollOffset = 0;
@@ -124,6 +142,12 @@ public final class TaskManagementClientState {
         productionScrollOffset = 0;
     }
 
+    public static MageFilter getActiveMageFilter() { return activeMageFilter; }
+    public static void setActiveMageFilter(MageFilter filter) {
+        activeMageFilter = filter;
+        mageScrollOffset = 0;
+    }
+
     public static String getSearchQuery() { return searchQuery; }
     public static void setSearchQuery(String query) {
         searchQuery = query != null ? query : "";
@@ -152,6 +176,22 @@ public final class TaskManagementClientState {
     }
     public static int getIdleMageCount() { return idleMageCount; }
     public static int getTotalMageCount() { return totalMageCount; }
+
+    public static int getAliveMageCount() {
+        int count = 0;
+        for (MageSummaryDto m : allMages) {
+            if (!m.isDead()) count++;
+        }
+        return count;
+    }
+
+    public static int getDeadMageCount() {
+        int count = 0;
+        for (MageSummaryDto m : allMages) {
+            if (m.isDead()) count++;
+        }
+        return count;
+    }
 
     public static long getSelectedTaskId() { return selectedTaskId; }
     public static void setSelectedTaskId(long id) { selectedTaskId = id; }
@@ -236,14 +276,33 @@ public final class TaskManagementClientState {
         String query = searchQuery.trim().toLowerCase();
 
         for (MageSummaryDto m : allMages) {
+            boolean matchFilter = switch (activeMageFilter) {
+                case ALL -> true;
+                case ALIVE -> !m.isDead();
+                case DEAD -> m.isDead();
+            };
+            if (!matchFilter) continue;
+
             if (!query.isEmpty()) {
                 boolean matchSearch = (m.name() != null && m.name().toLowerCase().contains(query))
                         || TaskText.mageTaskTitle(m).toLowerCase().contains(query)
-                        || (m.state() != null && m.state().toLowerCase().contains(query));
+                        || (m.state() != null && m.state().toLowerCase().contains(query))
+                        || (m.deathCause() != null && m.deathCause().toLowerCase().contains(query));
                 if (!matchSearch) continue;
             }
             list.add(m);
         }
+
+        // In ALL filter: dead mages first so casualties are immediately visible
+        if (activeMageFilter == MageFilter.ALL) {
+            list.sort((a, b) -> {
+                if (a.isDead() != b.isDead()) {
+                    return a.isDead() ? -1 : 1;
+                }
+                return 0;
+            });
+        }
+
         return list;
     }
 }

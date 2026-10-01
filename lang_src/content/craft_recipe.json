@@ -59,6 +59,10 @@
     "zh_cn": "仓库终端",
     "en_us": "Warehouse Terminal"
   },
+  "craft_recipe.wandscape.soulward_charm": {
+    "zh_cn": "守魂护符",
+    "en_us": "Soulward Charm"
+  },
   "craft_recipe.wandscape.workshop_wand": {
     "zh_cn": "工坊法杖",
     "en_us": "Workshop Wand"

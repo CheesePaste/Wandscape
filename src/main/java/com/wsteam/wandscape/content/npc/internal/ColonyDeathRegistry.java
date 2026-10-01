@@ -29,6 +29,8 @@ public class ColonyDeathRegistry extends SavedData {
     private static final String DATA_NAME = "wandscape_npc_deaths";
     private static final String TAG_RECORDS = "records";
 
+    private static final int CURRENT_VERSION = 1;
+
     private final List<DeathRecord> records = new ArrayList<>();
 
     public static final Factory<ColonyDeathRegistry> FACTORY = new Factory<>(
@@ -70,6 +72,16 @@ public class ColonyDeathRegistry extends SavedData {
         return DeathRecord.latestInColony(records, colonyId);
     }
 
+    /** 某小镇待复活的所有死亡记录。colonyId 为 null 时返回空表。 */
+    public List<DeathRecord> getRecordsInColony(@Nullable UUID colonyId) {
+        if (colonyId == null) return List.of();
+        List<DeathRecord> list = new ArrayList<>();
+        for (DeathRecord r : records) {
+            if (colonyId.equals(r.colonyId())) list.add(r);
+        }
+        return list;
+    }
+
     /** 某小镇待复活的死亡记录条数（不等同于人口——被解雇者不留记录）。colonyId 为 null 时返回 0。 */
     public int countInColony(@Nullable UUID colonyId) {
         if (colonyId == null) return 0;
@@ -93,9 +105,10 @@ public class ColonyDeathRegistry extends SavedData {
 
     @Override
     public CompoundTag save(CompoundTag tag, HolderLookup.Provider registries) {
+        tag.putInt("version", CURRENT_VERSION);
         ListTag list = new ListTag();
         for (DeathRecord r : records) {
-            list.add(toNbt(r));
+            list.add(toNbt(r, registries));
         }
         tag.put(TAG_RECORDS, list);
         return tag;
@@ -105,13 +118,13 @@ public class ColonyDeathRegistry extends SavedData {
         ColonyDeathRegistry reg = new ColonyDeathRegistry();
         ListTag list = tag.getList(TAG_RECORDS, Tag.TAG_COMPOUND);
         for (int i = 0; i < list.size(); i++) {
-            DeathRecord r = fromNbt(list.getCompound(i));
+            DeathRecord r = fromNbt(list.getCompound(i), registries);
             if (r != null) reg.records.add(r);
         }
         return reg;
     }
 
-    private static CompoundTag toNbt(DeathRecord r) {
+    private static CompoundTag toNbt(DeathRecord r, HolderLookup.Provider registries) {
         CompoundTag t = new CompoundTag();
         t.putUUID("npcId", r.npcId());
         t.putString("name", r.name());
@@ -148,11 +161,15 @@ public class ColonyDeathRegistry extends SavedData {
             }
             t.put("equippedMagic", magics);
         }
+        if (r.preservedInventory() != null) {
+            t.put("preservedInventory", r.preservedInventory().toNbt(registries));
+        }
+        t.putString("deathCause", r.deathCause());
         return t;
     }
 
     @Nullable
-    private static DeathRecord fromNbt(CompoundTag t) {
+    private static DeathRecord fromNbt(CompoundTag t, HolderLookup.Provider registries) {
         if (!t.hasUUID("npcId")) return null;
         List<ResourceStack> inv = new ArrayList<>();
         if (t.contains("inventory")) {
@@ -174,6 +191,12 @@ public class ColonyDeathRegistry extends SavedData {
                 if (!id.isEmpty()) equippedMagic.add(id);
             }
         }
+        com.wsteam.wandscape.content.npc.data.PreservedInventory preservedInventory = null;
+        if (t.contains("preservedInventory")) {
+            preservedInventory = com.wsteam.wandscape.content.npc.data.PreservedInventory.fromNbt(
+                    t.getCompound("preservedInventory"), registries);
+        }
+        String deathCause = t.getString("deathCause");
         return new DeathRecord(
                 t.getUUID("npcId"),
                 t.getString("name"),
@@ -188,6 +211,8 @@ public class ColonyDeathRegistry extends SavedData {
                 t.getFloat("workSpeed"), t.getFloat("spellSpeed"), t.getFloat("armorValue"),
                 t.getFloat("maxMana"),
                 inv,
-                equippedMagic);
+                equippedMagic,
+                preservedInventory,
+                deathCause);
     }
 }
