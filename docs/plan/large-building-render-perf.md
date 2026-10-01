@@ -401,6 +401,80 @@ boundary 里每个体素补一条 op。magic_academy 的 boundary 体积是 **7,
 **这才是那栋楼建造耗时的真正大头**，而且删掉 pattern 里的 13.7 万条 air 对它毫无改善
 （那些格本来就在 boundary 内，删了也会被 boundary 填充原样补回）。要动应该动这里。
 
+### 7.2 服务端卡点：逐块 `String.replaceAll`（2026-10-01 排查，待 spark 复核）
+
+**现场证据**（用户实测日志）：
+
+```
+[13:38:05] [Render thread/INFO] [wa.general/]: [OverviewFlightController] [Overview] Interacting with building at BlockPos{x=-27, y=56, z=119}
+[13:38:19] [Server thread/WARN] [minecraft/MinecraftServer]: Can't keep up! Is the server overloaded? Running 6563ms or 131 ticks behind
+```
+
+两条要点：卡的是 **Server thread**（不是渲染线程），**131 ticks = 6.5 秒**；而且触发路径是
+**总览模式交互**，不是我以为的普通右键 —— 两条路径最终都汇进
+`BuildingInteractHandler.handleInteraction`。
+
+**根因（静态定位，待 spark 证实）**：`String.replaceAll(regex, …)` 内部是
+`Pattern.compile(regex).matcher(this).replaceAll(…)`，而 **`Pattern.compile` 没有缓存** ——
+每调一次就重新解析、构造一次正则。下面每一处都在**按 pattern 逐块**的循环里
+（那栋楼 580,814 条）：
+
+| 位置 | 用途 |
+|---|---|
+| `EnqueueHelper.java:395` `computeMaterialCounts` | 剥掉 `[facing=…]` 后缀去查元素映射 |
+| `EnqueueHelper.java:414` `findDisabledBlock` | 同上 |
+| `BuildingApiImpl.java:481` `materialCountsForMissingOffsets` | 同上 |
+| `BuildingRepairHandler.java:123` | 同上 |
+| `content/task/types/ResourceId.java:25` `stripBlockStateSuffix` | 同上；**它还在 `AsyncTransformExecutor:80` 里被逐 op 调用**，即整个建造过程每放一块都要编译一次正则 |
+| `content/task/types/BlockType.java:25`、`RoadApiImpl.java:130`、`road/network/*` 若干 | 同一写法的其它副本 |
+
+**为什么正好对上 6.5 秒**：一次交互/提交会**串起好几趟**这种 58 万次循环 ——
+
+- 提交施工（`BuildingApiImpl.placeBuilding` → 建 task 那一段）：
+  ① `:940 findDisabledBlock` → ② `EnqueueHelper.buildWorkItem` → `computeMaterialData` →
+  `computeMaterialCounts` → ③ `ConstructionSupply:71` 又一次 `computeMaterialCounts`；
+  再叠上 `fillBoundaryAsAir` 的 ~2.6 GB 分配（见 §7.1 与 §二.2.1）与
+  `BuildingSavedData.register` 的 44 万格占用集。
+- 总览交互 / 右键工地（`BuildingInteractHandler.handleInteraction:111,127`）：
+  ④ `BuildingDebugRequestPacket.buildResponse` → `findDamagedBlocks`（已在 `87eae8a2` 优化过，
+  余下主要是 58 万次 `level.getBlockState`）；
+  ⑤ `ConstructionSiteDataPacket.from` → 又一次 `findDamagedBlocks` + `computeMaterialCounts`
+  （第 395 行那趟）+ 每个材料各一次 `ResourceSupplySystem.countSynthesizeInFlight`
+  （它遍历 `world.taskPool.all()`，即 材料数 × 任务数）。
+
+按 `Pattern.compile` 单次约 1–3 µs 估：**每趟 58 万次约 0.6–1.7 s**，三趟叠加就是秒级到近十秒。
+这是**估算，不是实测** —— 所以下一步交给 spark。
+
+**修法方向（未实施，等复核再定）**：把后缀剥离从「每次编译正则」换成一次手写扫描
+（找 `[` 截断即可，不需要正则），或按 palette 预解析一次（palette 只有几百项，
+`computeMaterialCounts` 完全可以先按 palette 建一张 `纯id` 表再逐块查表）。
+`ResourceId`/`BlockType` 的 `stripBlockStateSuffix` 是逐 op 调用，收益会摊在整个建造过程上。
+
+**给 spark 复核用的核对清单**（在**服务端**跑，因为卡的是 Server thread）：
+
+```bash
+# 只采样超过 100ms 的 tick，边跑边复现卡顿，然后 stop
+/spark profiler start --only-ticks-over 100 --timeout 120
+# 复现：总览模式交互一次，再提交一次施工
+/spark profiler stop
+```
+
+拿到结果后按这个顺序核对（命中前两条基本就能定案）：
+
+1. **`java.util.regex.Pattern.compile`** —— 若它排在前列，§7.2 的判断成立，且调用栈应当指向
+   `String.replaceAll` → `EnqueueHelper.computeMaterialCounts` / `findDisabledBlock` / `ResourceId.stripBlockStateSuffix`。
+2. **`EnqueueHelper.computeMaterialCounts` / `findDisabledBlock`** 自身的自耗时。
+3. `EnqueueHelper.fillBoundaryAsAir` 与其下游的 `JsonArray.add` / `LinkedTreeMap.put` ——
+   确认 ~2.6 GB 那笔（见 §7.1 的量化）。
+4. `BuildingVoxels.computeFromOffsets`、`BuildingSavedData.register` —— 44 万格占用集。
+5. `ResourceSupplySystem.countSynthesizeInFlight` —— 若它靠前，说明「材料数 × 任务数」那层
+   需要改成一次遍历建索引，而不是每个材料扫一遍。
+6. `BuildCompleteListener.findDamagedBlocks` —— 若仍靠前，说明 58 万次 `level.getBlockState`
+   是主要成本（那要考虑按段裁剪扫描范围，而不是全盒扫）。
+
+**如果 spark 显示的是上面以外的东西**（比如 `ServerChunkCache.getChunk` 靠前，说明扫描把
+未加载区块也拽进来了；或 `BlockPos.offset` 分配靠前），那就是我漏判了，按新的调用栈重来。
+
 ---
 
 ## 八、合规口径（为什么参照 Litematica 没有侵权风险）
