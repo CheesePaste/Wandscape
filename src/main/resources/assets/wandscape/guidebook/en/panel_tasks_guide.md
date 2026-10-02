@@ -10,6 +10,6 @@ There are three pages: the Task Hall lists what your town is doing and waiting t
 
 A building you just placed queues behind automatic restocking and production, so it sitting still at first is normal; rush it if you want it to start sooner. Rushing only helps work that has not been handed out yet.
 
-Cancelling deletes that step for good and does not put it back in the queue — missing blocks on a building only come back through Repair in overview mode.
+Cancelling deletes that step for good and does not put it back in the queue — missing blocks on a building only come back through Restore in overview mode.
 
 Turning on Follow for a mage in the roster stops him taking any task at all, and work piles up.

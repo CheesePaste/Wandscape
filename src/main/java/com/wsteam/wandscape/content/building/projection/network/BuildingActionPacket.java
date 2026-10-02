@@ -48,7 +48,7 @@ public record BuildingActionPacket(UUID buildingId, String action) implements Cu
             return;
         }
 
-        // 完全平行隔离：只能对自己小镇的建筑执行销毁/撤销/维修。
+        // 完全平行隔离：只能对自己小镇的建筑执行销毁/撤销/复原。
         if (!com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.isOwn(state.getColonyId(), player)) {
             com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(player, "building", "建筑");
             return;
@@ -90,13 +90,13 @@ public record BuildingActionPacket(UUID buildingId, String action) implements Cu
                 if (ok) {
                     player.displayClientMessage(
                             I18n.name("message.wandscape.building.repairing",
-                                    "§a[建筑] 正在维修「%s」... 已下发修复任务", name), true);
+                                    "§a[建筑] 正在复原「%s」... 已下发复原任务", name), true);
                     Log.info(TAG, "Player {} triggered repair for {} ({})",
                             player.getGameProfile().getName(), state.getBuildingTypeId(), packet.buildingId());
                 } else {
                     player.displayClientMessage(
                             I18n.name("message.wandscape.building.repair_failed",
-                                    "§e[建筑]「%s」当前无需维修", name), true);
+                                    "§e[建筑]「%s」当前无需复原", name), true);
                     Log.warn(TAG, "Player {} tried to repair {} ({}) but repair failed",
                             player.getGameProfile().getName(), state.getBuildingTypeId(), packet.buildingId());
                 }

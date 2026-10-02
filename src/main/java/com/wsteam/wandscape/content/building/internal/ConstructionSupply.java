@@ -124,8 +124,8 @@ public final class ConstructionSupply {
     /**
      * 这条任务是不是「工地要建材」——未建成建筑的建造任务，或在建道路的路段任务。
      *
-     * <p>修复任务（{@code build:place_structure} 但建筑已建成）不算工地：维修一直有缺料自动补产，
-     * 玩家点「修复」后不该逼他再点一次制作。
+     * <p>复原任务（{@code build:place_structure} 但建筑已建成）不算工地：缺料一直自动补产，
+     * 玩家点「复原」后不该逼他再点一次制作。
      */
     public static boolean isConstructionSiteTask(@Nullable String blueprintId, @Nullable UUID buildingId) {
         if ("road:build_segment".equals(blueprintId)) return true;

@@ -87,7 +87,7 @@ public final class BuildCompleteListener {
 
         List<BlockOffset> damaged = findDamagedBlocks(level, anchor, config, state.getRotationSteps());
         // 建筑不再因结构损坏而停摆：无论残留多少缺失方块，建成即判定完好并计入贡献，
-        // 缺失方块可通过 V 面板「修复」手动补齐。
+        // 缺失方块可通过 V 面板「复原」手动补齐。
         state.setStructureIntact(true);
         // Sticky: once construction completes, never show the ghost again,
         // even if the building later becomes damaged.

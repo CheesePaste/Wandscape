@@ -1276,7 +1276,7 @@ public final class TaskManagementOverlay {
             case "decompose" -> I18n.string("gui.wandscape.task.cat.decompose", "分解");
             case "guard" -> I18n.string("gui.wandscape.task.cat.guard", "守卫");
             case "altar" -> I18n.string("gui.wandscape.task.cat.altar", "祭坛");
-            case "repair" -> I18n.string("gui.wandscape.task.cat.repair", "维修");
+            case "repair" -> I18n.string("gui.wandscape.task.cat.repair", "复原");
             case "queued" -> I18n.string("gui.wandscape.task.cat.queued", "待办");
             default -> I18n.string("gui.wandscape.task.cat.default", "任务");
         };

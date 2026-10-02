@@ -840,7 +840,7 @@ public class CreativeScannerScreen extends MedievalScreen {
             gui.drawString(font, I18n.string("gui.wandscape.scanner.survival_desc_header", "生存建筑属性与蓝图说明"), lx + 8, y + 54, MedievalColors.BORDER_GOLD);
             String[] notes = {
                     I18n.string("gui.wandscape.scanner.survival_note1", "• 生存模式下扫描的建筑类别固定为 custom (自定义)。"),
-                    I18n.string("gui.wandscape.scanner.survival_note2", "• 建筑的舒适度、魔法值、奇观值与维护费用在建造时由其内部方块属性自动评估，无需手动配置。"),
+                    I18n.string("gui.wandscape.scanner.survival_note2", "• 建筑的舒适值、魔法值、奇观值与维护费用在建造时由其内部方块属性自动评估，无需手动配置。"),
                     I18n.string("gui.wandscape.scanner.survival_note3", "• 导出的蓝图可直接在蓝图工坊、建造法杖及建筑列表中使用，支持市民法师全自动建造。"),
                     I18n.string("gui.wandscape.scanner.survival_note4", "• 如需配置商店出售商品、服务元素产出等深度经济系统，请在创造模式使用创造建筑扫描器。")
             };

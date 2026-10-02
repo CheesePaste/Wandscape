@@ -72,12 +72,12 @@
     "en_us": "That spot overlaps an existing building block; two buildings cannot share a voxel"
   },
   "message.wandscape.building.repair_failed": {
-    "en_us": "§e[Building] '%s' does not need repair",
-    "zh_cn": "§e[建筑]「%s」当前无需维修"
+    "en_us": "§e[Building] '%s' does not need restoring",
+    "zh_cn": "§e[建筑]「%s」当前无需复原"
   },
   "message.wandscape.building.repairing": {
-    "en_us": "§a[Building] Repairing '%s'... repair task enqueued",
-    "zh_cn": "§a[建筑] 正在维修「%s」... 已下发修复任务"
+    "en_us": "§a[Building] Restoring '%s'... restore task enqueued",
+    "zh_cn": "§a[建筑] 正在复原「%s」... 已下发复原任务"
   },
   "message.wandscape.colony.attached": {
     "en_us": "[Wandscape] Town hall linked to the existing town.",

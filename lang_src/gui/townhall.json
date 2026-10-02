@@ -1,20 +1,4 @@
 {
-  "gui.wandscape.townhall.exp_eq": {
-    "zh_cn": "游客等级 = 魔法小镇等级 → 200 经验",
-    "en_us": "Tourist level = town level → 200 XP"
-  },
-  "gui.wandscape.townhall.exp_gt": {
-    "zh_cn": "游客等级 > 魔法小镇等级 → 500 经验",
-    "en_us": "Tourist level > town level → 500 XP"
-  },
-  "gui.wandscape.townhall.exp_lt": {
-    "zh_cn": "游客等级 < 魔法小镇等级 → 0 经验",
-    "en_us": "Tourist level < town level → 0 XP"
-  },
-  "gui.wandscape.townhall.exp_source": {
-    "zh_cn": "经验来源（游客三条需求全满时）：",
-    "en_us": "Experience source (when a tourist's three bars are full):"
-  },
   "gui.wandscape.townhall.founder": {
     "zh_cn": "创建者：%s",
     "en_us": "Founder: %s"

@@ -31,11 +31,11 @@ public class TownHallScreen extends MedievalScreen {
     private static final int EXP_BAR_W = 200;
     private static final int EXP_BAR_H = 12;
 
-    /** 本镇操作按钮的尺寸，与 {@link MedievalScreen} 的「修复/拆除」一致，两者排同一行。 */
+    /** 本镇操作按钮的尺寸，与 {@link MedievalScreen} 的「复原/拆除」一致，两者排同一行。 */
     private static final int ACTION_BTN_W = 44;
     private static final int ACTION_BTN_H = 16;
     private static final int ACTION_GAP = 4;
-    /** 「修复/拆除」组的左下角偏移；本镇按钮紧贴其左侧。 */
+    /** 「复原/拆除」组的左下角偏移；本镇按钮紧贴其左侧。 */
     private static final int ACTION_OFFSET_X = PW - 14 - (ACTION_BTN_W * 2 + ACTION_GAP);
     private static final int ACTION_OFFSET_Y = PH - 20;
 
@@ -132,7 +132,7 @@ public class TownHallScreen extends MedievalScreen {
         addRenderableWidget(nameBox);
 
         // Bottom row: optional 「仓库存取」 + 「复活法师」 (anti-deadlock bootstrap). 两者与
-        // 「修复/拆除」同排、紧贴其左侧——自成一行的排法会把底部挤成两层。
+        // 「复原/拆除」同排、紧贴其左侧——自成一行的排法会把底部挤成两层。
         // 起点不越过 leftPos+96，那是给左下角「创建者：…」页脚留的位置。
         int buttonCount = canUseWarehouse ? 2 : 1;
         int rowW = buttonCount * ACTION_BTN_W + (buttonCount - 1) * ACTION_GAP;
@@ -160,7 +160,7 @@ public class TownHallScreen extends MedievalScreen {
             int seconds = reviveCooldownSeconds % 60;
             String clock = reviveCooldownSeconds / 60 + ":" + (seconds < 10 ? "0" : "") + seconds;
             Component full = I18n.name("gui.wandscape.townhall.revive_cooldown_label", "复活 %s", clock);
-            // 按钮与「修复/拆除」同宽，装不下「复活 1:23」时只留倒计时，别把字挤出按钮外。
+            // 按钮与「复原/拆除」同宽，装不下「复活 1:23」时只留倒计时，别把字挤出按钮外。
             if (font != null && font.width(full) > ACTION_BTN_W - 4) {
                 return Component.literal(clock);
             }
@@ -213,7 +213,6 @@ public class TownHallScreen extends MedievalScreen {
 
     private void renderContent(GuiGraphics g) {
         int cx = leftPos + PW / 2;
-        int leftX = leftPos + 16;
 
         // Edit box background
         int ebX = cx - 82;
@@ -239,22 +238,6 @@ public class TownHallScreen extends MedievalScreen {
         // Experience bar
         renderExpBar(g, y);
         y += EXP_BAR_H + 10;
-
-        // Experience source info
-        g.drawString(font, I18n.name("gui.wandscape.townhall.exp_source", "经验来源（游客满意度100%时）："),
-                leftX, y, MedievalColors.TEXT_MUTED);
-        y += font.lineHeight + 2;
-
-        Component[] expLines = {
-            I18n.name("gui.wandscape.townhall.exp_lt", "游客等级 < 魔法小镇等级 → 0 经验"),
-            I18n.name("gui.wandscape.townhall.exp_eq", "游客等级 = 魔法小镇等级 → 200 经验"),
-            I18n.name("gui.wandscape.townhall.exp_gt", "游客等级 > 魔法小镇等级 → 500 经验")
-        };
-        for (Component line : expLines) {
-            g.drawString(font, Component.literal("  ").copy().append(line), leftX + 4, y,
-                    MedievalColors.TEXT_MUTED);
-            y += font.lineHeight + 1;
-        }
 
         Component hint = I18n.name("gui.wandscape.townhall.hint",
                 "点击名称框修改魔法小镇名称，输入完成自动保存");

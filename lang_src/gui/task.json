@@ -52,8 +52,8 @@
     "en_us": "Backlog"
   },
   "gui.wandscape.task.cat.repair": {
-    "zh_cn": "维修",
-    "en_us": "Repair"
+    "zh_cn": "复原",
+    "en_us": "Restore"
   },
   "gui.wandscape.task.close": {
     "zh_cn": "返回鸟瞰 (ESC)",

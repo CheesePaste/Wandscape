@@ -596,7 +596,7 @@
     "en_us": "• Scanned buildings in survival mode are permanently set to custom category."
   },
   "gui.wandscape.scanner.survival_note2": {
-    "zh_cn": "• 建筑的舒适度、魔法值、奇观值与维护费用在建造时由其内部方块属性自动评估，无需手动配置。",
+    "zh_cn": "• 建筑的舒适值、魔法值、奇观值与维护费用在建造时由其内部方块属性自动评估，无需手动配置。",
     "en_us": "• Comfort, magic, wonder, and maintenance are auto-evaluated from internal blocks."
   },
   "gui.wandscape.scanner.survival_note3": {

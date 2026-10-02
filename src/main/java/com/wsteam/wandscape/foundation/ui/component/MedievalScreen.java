@@ -379,7 +379,7 @@ public abstract class MedievalScreen extends Screen implements ReplayProtectedSc
         }
 
         btnRepair = new MedievalButton(bx, by, btnW, btnH,
-                I18n.name("gui.wandscape.building_action.repair", "修复"),
+                I18n.name("gui.wandscape.building_action.repair", "复原"),
                 this::onBuildingRepairClicked) {
             @Override
             protected void renderWidget(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
@@ -426,13 +426,13 @@ public abstract class MedievalScreen extends Screen implements ReplayProtectedSc
 
         // 2. Repair / Undo button state
         if (demolishing) {
-            btnRepair.setMessage(I18n.name("gui.wandscape.building_action.repair", "修复"));
+            btnRepair.setMessage(I18n.name("gui.wandscape.building_action.repair", "复原"));
             btnRepair.active = false;
         } else if (underConstruction) {
             btnRepair.setMessage(I18n.name("gui.wandscape.building_action.cancel", "撤销"));
             btnRepair.active = true;
         } else {
-            btnRepair.setMessage(I18n.name("gui.wandscape.building_action.repair", "修复"));
+            btnRepair.setMessage(I18n.name("gui.wandscape.building_action.repair", "复原"));
             btnRepair.active = needsRepair;
         }
     }
@@ -459,7 +459,7 @@ public abstract class MedievalScreen extends Screen implements ReplayProtectedSc
 
         if (buildingData.needsRepair() && !buildingData.demolishing()) {
             Net.toServer(new BuildingActionPacket(targetId, "repair"));
-            showFeedback(I18n.name("gui.wandscape.building_action.repair_sent", "已下发修复任务"), MedievalColors.SUCCESS_GREEN);
+            showFeedback(I18n.name("gui.wandscape.building_action.repair_sent", "已下发复原任务"), MedievalColors.SUCCESS_GREEN);
         }
     }
 
@@ -580,17 +580,17 @@ public abstract class MedievalScreen extends Screen implements ReplayProtectedSc
 
         if (comfortIconW > 0 && isInRect(mouseX, mouseY, comfortIconX, comfortIconY, comfortIconW, comfortIconH)) {
             g.renderTooltip(font, I18n.name("gui.wandscape.building_stat.comfort_tip",
-                    "§d舒适度: %s", buildingData.comfort()), mouseX, mouseY);
+                    "§d舒适值: %s", buildingData.comfort()), mouseX, mouseY);
             return;
         }
         if (magicIconW > 0 && isInRect(mouseX, mouseY, magicIconX, magicIconY, magicIconW, magicIconH)) {
             g.renderTooltip(font, I18n.name("gui.wandscape.building_stat.magic_tip",
-                    "§9魔力: %s", buildingData.magic()), mouseX, mouseY);
+                    "§9魔法值: %s", buildingData.magic()), mouseX, mouseY);
             return;
         }
         if (wonderIconW > 0 && isInRect(mouseX, mouseY, wonderIconX, wonderIconY, wonderIconW, wonderIconH)) {
             g.renderTooltip(font, I18n.name("gui.wandscape.building_stat.wonder_tip",
-                    "§e奇迹度: %s", buildingData.wonder()), mouseX, mouseY);
+                    "§e奇观值: %s", buildingData.wonder()), mouseX, mouseY);
             return;
         }
 
@@ -603,10 +603,10 @@ public abstract class MedievalScreen extends Screen implements ReplayProtectedSc
                         "撤销建造施工并退还尚未建成的建材"), mouseX, mouseY);
             } else if (!btnRepair.active) {
                 g.renderTooltip(font, I18n.name("gui.wandscape.building_action.repair_not_needed",
-                        "建筑结构完好，无需维修"), mouseX, mouseY);
+                        "建筑与蓝图一致，无需复原"), mouseX, mouseY);
             } else {
                 g.renderTooltip(font, I18n.name("gui.wandscape.building_action.repair_send",
-                        "下发修复任务以恢复受损方块"), mouseX, mouseY);
+                        "下发复原任务，把建筑还原为蓝图原样"), mouseX, mouseY);
             }
             return;
         }
@@ -630,10 +630,7 @@ public abstract class MedievalScreen extends Screen implements ReplayProtectedSc
                     ? I18n.name("gui.wandscape.building_status.under_construction", "施工中")
                     : I18n.name("gui.wandscape.building_status.waiting_materials", "等待材料");
         }
-        if (data.needsRepair()) {
-            return I18n.name("gui.wandscape.building_status.needs_repair", "受损需修");
-        }
-        return I18n.name("gui.wandscape.building_status.ok", "正常运转");
+        return I18n.name("gui.wandscape.building_status.ok", "已建成");
     }
 
     protected static int getStatusBadgeColor(BuildingDebugResponsePacket data) {
@@ -641,7 +638,6 @@ public abstract class MedievalScreen extends Screen implements ReplayProtectedSc
         if (data.underConstruction()) {
             return data.constructionStarted() ? 0xFF88AAFF : 0xFFFFCC66;
         }
-        if (data.needsRepair()) return 0xFFFF9944;
         return 0xFF88CC88;
     }
 
@@ -657,11 +653,7 @@ public abstract class MedievalScreen extends Screen implements ReplayProtectedSc
                     : I18n.name("gui.wandscape.building_status_tip.waiting_materials",
                             "§e状态: 等待材料中，仓库备齐建材后方可动工。");
         }
-        if (data.needsRepair()) {
-            return I18n.name("gui.wandscape.building_status_tip.needs_repair",
-                    "§6状态: 结构部分受损，点击下方「修复」按钮下发维修任务。");
-        }
-        return I18n.name("gui.wandscape.building_status_tip.ok", "§a状态: 正常运作，结构完好。");
+        return I18n.name("gui.wandscape.building_status_tip.ok", "§a状态: 已建成。");
     }
 
     // ── Close button ──

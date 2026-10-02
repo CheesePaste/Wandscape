@@ -31,7 +31,7 @@
     },
     {
       "type": "patchouli:text",
-      "text": "Cancelling deletes that step for good and does not put it back in the queue — missing blocks on a building only come back through Rep$(br)air in overview mode.$(br2)Turning on Follow for a mage in the roster stops him taking any task at all, and work piles up."
+      "text": "Cancelling deletes that step for good and does not put it back in the queue — missing blocks on a building only come back through Res$(br)tore in overview mode.$(br2)Turning on Follow for a mage in the roster stops him taking any task at all, and work piles up."
     }
   ]
 }

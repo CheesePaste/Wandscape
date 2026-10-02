@@ -21,8 +21,8 @@ import java.util.UUID;
 /**
  * Manual repair entry point: {@link #triggerRepair} scans a building for missing
  * pattern blocks and enqueues a {@code build:place_structure} repair task.
- * 建筑被破坏不再导致停摆（已移除 1/3 阈值与自动修复），缺失方块仅在玩家主动点「修复」时补齐；
- * 受损建筑照常运转、照常贡献。
+ * 建筑被破坏不再导致停摆（已移除 1/3 阈值与自动复原），缺失方块仅在玩家主动点「复原」时补齐；
+ * 缺方块的建筑照常运转、照常贡献。
  */
 public final class BuildingRepairHandler {
     private static final String TAG = "BuildingRepairHandler";
