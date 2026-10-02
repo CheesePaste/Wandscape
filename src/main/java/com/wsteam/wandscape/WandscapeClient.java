@@ -406,8 +406,8 @@ public class WandscapeClient {
         ClientPayloadDispatcher.bind(BuildingDebugResponsePacket.TYPE, packet -> {
             Minecraft.getInstance().execute(() -> {
                 BuildingDebugClientState.setCachedData(packet);
-                if (Minecraft.getInstance().screen instanceof com.wsteam.wandscape.foundation.ui.component.BuildingDataHost host) {
-                    host.setBuildingData(packet);
+                if (Minecraft.getInstance().screen instanceof com.wsteam.wandscape.foundation.ui.component.MedievalScreen ms) {
+                    ms.setBuildingData(packet);
                 }
             });
         });

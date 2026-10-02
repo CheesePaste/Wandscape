@@ -53,9 +53,8 @@ public class WarehouseTerminalItem extends Item {
             return false;
         }
         BlockPos pos = player.blockPosition();
-        // 便携终端不绑定建筑：buildingId 传 null，面板只显示标题而不显示建筑状态/修复拆除。
         player.openMenu(new SimpleMenuProvider(
-                (id, inv, p) -> new WarehouseMenu(id, inv, colonyId, pos, null),
+                (id, inv, p) -> new WarehouseMenu(id, inv, colonyId, pos),
                 Component.translatable("gui.wandscape.warehouse.title")));
         pushInitialData(player, colonyId, pos);
         return true;

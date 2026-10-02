@@ -1,24 +1,30 @@
 package com.wsteam.wandscape.content.warehouse.client;
+import com.wsteam.wandscape.content.task.ecs.World;
 
+import com.wsteam.wandscape.WandscapeClient;
 import com.wsteam.wandscape.content.element.data.ElementType;
-import com.wsteam.wandscape.content.production.network.RequestRecipeBookPacket;
+import com.wsteam.wandscape.foundation.networking.Net;
+import com.wsteam.wandscape.foundation.ui.I18n;
+import com.wsteam.wandscape.foundation.util.ItemKey;
+import com.wsteam.wandscape.foundation.ui.ReplayProtectedScreen;
+import com.wsteam.wandscape.foundation.ui.component.ElementPanel;
+import com.wsteam.wandscape.foundation.ui.component.HelpButton;
+import com.wsteam.wandscape.foundation.ui.component.ScrollableList;
+import com.wsteam.wandscape.foundation.ui.component.SearchBox;
+import com.wsteam.wandscape.foundation.ui.skin.SkinRender;
+import com.wsteam.wandscape.foundation.ui.theme.MedievalColors;
 import com.wsteam.wandscape.content.warehouse.WarehouseMenu;
 import com.wsteam.wandscape.content.warehouse.WarehousePager;
 import com.wsteam.wandscape.content.warehouse.WarehouseSlot;
+import com.wsteam.wandscape.content.production.network.RequestRecipeBookPacket;
 import com.wsteam.wandscape.content.warehouse.network.WarehouseActionPacket;
 import com.wsteam.wandscape.content.warehouse.network.WarehouseDataPacket;
 import com.wsteam.wandscape.content.warehouse.network.WarehouseDataPacket.ItemEntry;
-import com.wsteam.wandscape.foundation.networking.Net;
-import com.wsteam.wandscape.foundation.ui.I18n;
-import com.wsteam.wandscape.foundation.ui.component.ElementPanel;
-import com.wsteam.wandscape.foundation.ui.component.MedievalContainerScreen;
-import com.wsteam.wandscape.foundation.ui.component.ScrollableList;
-import com.wsteam.wandscape.foundation.ui.component.SearchBox;
-import com.wsteam.wandscape.foundation.ui.theme.MedievalColors;
-import com.wsteam.wandscape.foundation.util.ItemKey;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
@@ -30,34 +36,37 @@ import net.minecraft.world.item.Items;
 
 import java.util.*;
 
-import static com.wsteam.wandscape.content.warehouse.WarehouseMenu.HEADER_H;
 import static com.wsteam.wandscape.content.warehouse.WarehouseMenu.PANEL_H;
 import static com.wsteam.wandscape.content.warehouse.WarehouseMenu.PANEL_W;
 
 /**
- * Warehouse GUI — 与其它建筑屏同一套面板格式（继承 {@link MedievalContainerScreen}）。
+ * Warehouse GUI with two tabs.
  *
- * <p><b>总览页</b>：元素存量 + 可搜索的物品清单（无槽位）。
+ * <p><b>Overview</b>: compact medieval panel — element storage + searchable item
+ * list (search driven, no slots).
  *
- * <p><b>交换页</b>：左侧仍是原版 6 行箱（{@code generic_54} 贴图，槽框画在贴图里），
- * 上半 54 个只读仓库格 + 下半玩家背包/快捷栏真槽位；仓库侧交互走
- * {@link WarehouseActionPacket}，玩家槽位是真原版 {@link Slot}，快捷键与背包排序 mod 照常可用。
- * 页签与「配方」按钮浮在面板上方（面板内的头部由基类绘制：标题/状态/关闭/帮助/修复/拆除）。
+ * <p><b>Exchange</b>: a real vanilla 6-row chest (the {@code generic_54}
+ * texture) — warehouse read-only slots on top, vanilla player inventory below.
+ * Warehouse interactions go through {@link WarehouseActionPacket}; the player
+ * slots are real vanilla {@link Slot}s so all shortcuts and inventory-sorting
+ * mods work on them.
  *
- * <p>面板比其它建筑屏高出一个头部（{@code HEADER_H}）：原版箱子贴图 222px 无法与 22px 头部
- * 同塞进 230px。槽位的 Y 坐标由 {@link WarehouseMenu} 统一加了同一个偏移，两边必须一致。
+ * <p>A floating toolbar above the panel hosts the tabs, the help/close buttons
+ * and (on Exchange) the pager controls. Extends {@link AbstractContainerScreen}
+ * so the panel is centred like a vanilla container; on short screens the top is
+ * clamped so the toolbar stays visible.
  */
-public class WarehouseScreen extends MedievalContainerScreen<WarehouseMenu> {
+public class WarehouseScreen extends AbstractContainerScreen<WarehouseMenu>
+        implements ReplayProtectedScreen, com.wsteam.wandscape.foundation.ui.component.ScreenFeedbackHost {
 
-    // ── 原版 6 行箱贴图（槽框随贴图，槽位坐标须与之对齐） ──
+    // ── 面板：与市政厅统一 300×230；Exchange 左侧贴原版 6 行箱(generic_54) 纹理 ──
     private static final int CHEST_W = 176;
     private static final int CHEST_H = 222;
-    private static final int CHEST_TOP = HEADER_H;
 
-    // X 销毁格：右列，避开底部「修复/拆除」
+    // X 销毁格：Exchange 右列底部 18×18（照抄创造模式 X，销毁光标上的物品）
     private static final int TRASH_SIZE = 18;
     private static final int TRASH_RIGHT_MARGIN = 14;
-    private static final int TRASH_BOTTOM_MARGIN = 66;
+    private static final int TRASH_BOTTOM_MARGIN = 14;
 
     private static final int TOOLBAR_H = 20;
     private static final int OVERVIEW_PAD = 8;
@@ -68,6 +77,8 @@ public class WarehouseScreen extends MedievalContainerScreen<WarehouseMenu> {
     private static final ResourceLocation CHEST_TEXTURE =
             ResourceLocation.withDefaultNamespace("textures/gui/container/generic_54.png");
 
+    private static final int GLASS_TOP = 0xBB483828;
+    private static final int GLASS_BOTTOM = 0xBB1E1410;
     private static final int GLASS_BOX_TOP = 0xBB423020;
     private static final int GLASS_BOX_BOTTOM = 0xBB1C1008;
 
@@ -100,12 +111,13 @@ public class WarehouseScreen extends MedievalContainerScreen<WarehouseMenu> {
     // ── Exchange widgets ──
     private SearchBox exchangeSearchInput;
 
-    // ── 浮动工具栏几何（tabs + 配方）──
+    // ── 顶部工具栏命中区域（computeToolbar 现算，render 与 click 共用）──
     private int toolbarY;
     private final int[] tabX = new int[2];
     private final int[] tabW = new int[2];
+    private int closeX, closeY, closeW, closeH;
+    private int helpX, helpY, helpW, helpH;
     private int recipeBtnX, recipeBtnY, recipeBtnW, recipeBtnH;
-    // ── Exchange 分页控件 / 销毁格几何 ──
     private int prevX, prevY, prevW, prevH;
     private int nextX, nextY, nextW, nextH;
     private boolean prevActive;
@@ -113,12 +125,19 @@ public class WarehouseScreen extends MedievalContainerScreen<WarehouseMenu> {
     private int trashX, trashY;
     private UUID colonyId;
 
+    // ── 通用皮肤状态 ──
+    private String buildingCreator = "";
+    private final boolean showCloseButton = true;
+    private final boolean showHelpButton = true;
+    private final String helpDocumentPath = "warehouse_guide";
+    private HelpButton helpButton;
+    private Component feedback;
+    private int feedbackColor;
+    private long feedbackExpireTick;
+    private static final long FEEDBACK_DURATION_MS = 3000L;
+
     public WarehouseScreen(WarehouseMenu menu, Inventory playerInventory, Component title) {
-        super(menu, playerInventory, title, PANEL_W, PANEL_H);
-        setTitleBar(I18n.name("gui.wandscape.warehouse.title", "Colony Warehouse"));
-        this.showCloseButton = true;
-        this.showHelpButton = true;
-        this.helpDocumentPath = "warehouse_guide";
+        super(menu, playerInventory, title);
     }
 
     // ── 数据更新 ──
@@ -127,10 +146,6 @@ public class WarehouseScreen extends MedievalContainerScreen<WarehouseMenu> {
         this.colonyId = packet.colonyId();
         if (packet.creator() != null && !packet.creator().isBlank()) {
             setCreator(packet.creator());
-        }
-        // 从仓库建筑打开时才有建筑上下文；便携终端打开时 buildingId 为空，头部只显示标题。
-        if (packet.buildingId() != null && !isBuildingScreen) {
-            setBuildingContext(packet.buildingId(), packet.buildingPos());
         }
         this.usedCapacity = packet.usedCapacity();
         this.capacity = packet.capacity();
@@ -146,17 +161,26 @@ public class WarehouseScreen extends MedievalContainerScreen<WarehouseMenu> {
         recomputeVisible();
     }
 
-    // ── 初始化 / 切换 ──
-
-    /** 浮动页签条位于面板之外，矮屏上贴顶保证它可见。 */
-    @Override
-    protected void positionPanel() {
-        this.topPos = Math.max((this.height - imageHeight) / 2, TOOLBAR_H + 4);
+    public void setCreator(String creator) {
+        this.buildingCreator = creator != null ? creator : "";
     }
 
+    public void showFeedback(Component message, int color) {
+        this.feedback = message;
+        this.feedbackColor = color;
+        this.feedbackExpireTick = System.currentTimeMillis() + FEEDBACK_DURATION_MS;
+    }
+
+    // ── 初始化 / 切换 ──
+
     @Override
-    protected void initContent() {
+    protected void init() {
+        configureLayout();
         computeToolbar();
+        if (showHelpButton && helpDocumentPath != null) {
+            helpButton = new HelpButton(helpX, helpY, helpW, helpH, this::openHelpDocument);
+            addRenderableWidget(helpButton);
+        }
         buildOverviewTab();
         buildExchangeTab();
         showTab(activeTab);
@@ -164,10 +188,12 @@ public class WarehouseScreen extends MedievalContainerScreen<WarehouseMenu> {
         recomputeVisible();
     }
 
-    /** 创建者署名画在箱子贴图下方的窄条里（默认位置会压到贴图）。 */
-    @Override
-    protected int creatorFooterY() {
-        return topPos + CHEST_TOP + CHEST_H + 2;
+    /** 两个页签共用同一面板（与市政厅统一尺寸）；矮屏贴顶保证顶部工具栏可见。 */
+    private void configureLayout() {
+        this.imageWidth = PANEL_W;
+        this.imageHeight = PANEL_H;
+        this.leftPos = (this.width - this.imageWidth) / 2;
+        this.topPos = Math.max((this.height - this.imageHeight) / 2, TOOLBAR_H + 4);
     }
 
     private void switchTab(int tabIndex) {
@@ -179,7 +205,7 @@ public class WarehouseScreen extends MedievalContainerScreen<WarehouseMenu> {
 
     private void buildOverviewTab() {
         int cx = leftPos + OVERVIEW_PAD;
-        int cy = topPos + HEADER_H + OVERVIEW_PAD;
+        int cy = topPos + OVERVIEW_PAD;
         int elementW = 130;
 
         elementPanel = new ElementPanel(cx, cy, elementW);
@@ -201,7 +227,7 @@ public class WarehouseScreen extends MedievalContainerScreen<WarehouseMenu> {
 
     private void buildExchangeTab() {
         int x = leftPos + CHEST_W + 14;
-        exchangeSearchInput = new SearchBox(font, x + 1, topPos + HEADER_H + 4, PANEL_W - CHEST_W - 30,
+        exchangeSearchInput = new SearchBox(font, x + 1, topPos + 10, PANEL_W - CHEST_W - 30,
                 I18n.name("gui.wandscape.warehouse.search", "Search items..."));
         exchangeSearchInput.setResponder(q -> {
             query = q;
@@ -248,7 +274,7 @@ public class WarehouseScreen extends MedievalContainerScreen<WarehouseMenu> {
         };
     }
 
-    // ── 浮动工具栏 ──
+    // ── 顶部工具栏 ──
 
     /** 现算工具栏几何（render 与 click 用同一套坐标）。 */
     private void computeToolbar() {
@@ -260,20 +286,28 @@ public class WarehouseScreen extends MedievalContainerScreen<WarehouseMenu> {
             tabW[i] = tw;
             cx += tw + 4;
         }
+        closeW = 18;
+        closeH = 14;
+        closeX = leftPos + imageWidth - closeW - 4;
+        closeY = toolbarY + (TOOLBAR_H - closeH) / 2;
+        helpW = 14;
+        helpH = 14;
+        helpX = closeX - helpW - 4;
+        helpY = toolbarY + (TOOLBAR_H - helpH) / 2;
 
         String recipeLabel = I18n.name("gui.wandscape.warehouse.btn_recipes", "配方").getString();
         recipeBtnW = font.width(recipeLabel) + 14;
         recipeBtnH = 14;
-        recipeBtnX = leftPos + imageWidth - recipeBtnW - 4;
+        recipeBtnX = helpX - recipeBtnW - 4;
         recipeBtnY = toolbarY + (TOOLBAR_H - recipeBtnH) / 2;
     }
 
-    /** Exchange 右列分页控件几何。 */
+    /** Exchange 右区分页控件几何（面板内、箱子纹理右侧留白区）。 */
     private void computePager() {
         int baseX = leftPos + CHEST_W + 14;
         prevW = 18;
         prevH = 12;
-        prevY = topPos + HEADER_H + 34;
+        prevY = topPos + 40;
         prevX = baseX;
         nextW = 18;
         nextH = 12;
@@ -281,7 +315,7 @@ public class WarehouseScreen extends MedievalContainerScreen<WarehouseMenu> {
         nextX = baseX + prevW + 6;
     }
 
-    /** X 销毁格几何：右列底部、与面板右下角留边距（避开修复/拆除按钮）。 */
+    /** X 销毁格几何：Exchange 右列底部、与面板右下角留边距。 */
     private void computeTrash() {
         trashX = leftPos + PANEL_W - TRASH_RIGHT_MARGIN - TRASH_SIZE;
         trashY = topPos + PANEL_H - TRASH_BOTTOM_MARGIN - TRASH_SIZE;
@@ -307,6 +341,11 @@ public class WarehouseScreen extends MedievalContainerScreen<WarehouseMenu> {
 
         String recipeLabel = I18n.name("gui.wandscape.warehouse.btn_recipes", "配方").getString();
         drawNavButton(g, recipeBtnX, recipeBtnY, recipeBtnW, recipeBtnH, recipeLabel, true, mouseX, mouseY);
+
+        if (showCloseButton) {
+            int state = isInRect(mouseX, mouseY, closeX, closeY, closeW, closeH) ? 1 : 0;
+            SkinRender.drawCloseButton(g, closeX, closeY, closeW, closeH, state);
+        }
     }
 
     private void drawNavButton(GuiGraphics g, int x, int y, int w, int h, String label,
@@ -337,6 +376,10 @@ public class WarehouseScreen extends MedievalContainerScreen<WarehouseMenu> {
             openRecipeBook();
             return true;
         }
+        if (showCloseButton && isInRect(mouseX, mouseY, closeX, closeY, closeW, closeH)) {
+            onClose();
+            return true;
+        }
         return false;
     }
 
@@ -346,7 +389,7 @@ public class WarehouseScreen extends MedievalContainerScreen<WarehouseMenu> {
         }
     }
 
-    /** Exchange 右列分页按钮点击（仅 Exchange 页可命中）。 */
+    /** Exchange 右区分页按钮点击（仅 Exchange 页可命中）。 */
     private boolean handlePagerClick(double mouseX, double mouseY, int button) {
         if (button != 0 || activeTab != 1) return false;
         computePager();
@@ -382,18 +425,32 @@ public class WarehouseScreen extends MedievalContainerScreen<WarehouseMenu> {
     // ── 渲染 ──
 
     @Override
-    protected void renderContent(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        super.render(g, mouseX, mouseY, partialTick);
+        renderCreatorFooter(g);
+        renderFeedback(g);
+        renderTooltip(g, mouseX, mouseY);
+        renderTrashTooltip(g, mouseX, mouseY);
+    }
+
+    @Override
+    protected void renderBg(GuiGraphics g, float partialTick, int mouseX, int mouseY) {
         renderToolbar(g, mouseX, mouseY);
         if (activeTab == 0) {
+            g.fillGradient(leftPos, topPos, leftPos + PANEL_W, topPos + PANEL_H,
+                    GLASS_TOP, GLASS_BOTTOM);
+            drawGlowBorder(g, leftPos, topPos, PANEL_W, PANEL_H, MedievalColors.BORDER_GOLD);
             drawOverviewCapacity(g);
         } else {
-            renderExchangeContent(g, mouseX, mouseY);
+            renderChest(g, mouseX, mouseY);
         }
     }
 
-    /** Exchange 背景：面板左侧贴原版 6 行箱（仓库格+玩家背包），右列放搜索/分页/容量/销毁格。 */
-    private void renderExchangeContent(GuiGraphics g, int mouseX, int mouseY) {
-        g.blit(CHEST_TEXTURE, leftPos, topPos + CHEST_TOP, 0, 0, CHEST_W, CHEST_H);
+    /** Exchange 背景：面板左侧贴原版 6 行箱（仓库格+玩家背包），右侧放分页控件。 */
+    private void renderChest(GuiGraphics g, int mouseX, int mouseY) {
+        g.blit(CHEST_TEXTURE, leftPos, topPos, 0, 0, CHEST_W, CHEST_H);
+        g.drawString(font, I18n.name("gui.wandscape.warehouse.title", "Colony Warehouse").getString(),
+                leftPos + 8, topPos + 6, 0x404040);
         drawExchangeCapacity(g);
         renderPager(g, mouseX, mouseY);
         renderTrash(g, mouseX, mouseY);
@@ -403,16 +460,16 @@ public class WarehouseScreen extends MedievalContainerScreen<WarehouseMenu> {
     private void drawOverviewCapacity(GuiGraphics g) {
         if (capacity <= 0) return;
         int x = leftPos + OVERVIEW_PAD;
-        int y = topPos + HEADER_H + OVERVIEW_PAD + 7 * 18 + 4;
+        int y = topPos + OVERVIEW_PAD + 7 * 18 + 4;
         g.drawString(font, capacityText(), x, y, capacityColor());
     }
 
-    /** Exchange 页：右列搜索框下方画容量读数（未设上限则隐藏）。 */
+    /** Exchange 页：\"仓库\"标题右侧画容量读数（未设上限则隐藏）。 */
     private void drawExchangeCapacity(GuiGraphics g) {
         if (capacity <= 0) return;
-        int x = leftPos + CHEST_W + 14;
-        int y = topPos + HEADER_H + 4 + font.lineHeight + 6 + 3;
-        g.drawString(font, capacityText(), x, y, capacityColor());
+        String title = I18n.name("gui.wandscape.warehouse.title", "Colony Warehouse").getString();
+        int titleW = font.width(title);
+        g.drawString(font, capacityText(), leftPos + 8 + titleW + 12, topPos + 6, capacityColor());
     }
 
     private String capacityText() {
@@ -433,7 +490,7 @@ public class WarehouseScreen extends MedievalContainerScreen<WarehouseMenu> {
         drawNavButton(g, nextX, nextY, nextW, nextH, "▶", nextActive, mouseX, mouseY);
         String pageText = I18n.name("gui.wandscape.warehouse.page", "%s / %s",
                 page + 1, totalPages).getString();
-        g.drawString(font, pageText, x, prevY + prevH + 6, MedievalColors.TEXT_MUTED);
+        g.drawString(font, pageText, x, topPos + 64, MedievalColors.TEXT_MUTED);
     }
 
     /** X 销毁格：槽位式小按钮 + 红 ×；光标有物品时点亮（可销毁），否则置灰提示先拾起。 */
@@ -458,11 +515,6 @@ public class WarehouseScreen extends MedievalContainerScreen<WarehouseMenu> {
         g.pose().popPose();
     }
 
-    @Override
-    protected void renderForeground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        renderTrashTooltip(g, mouseX, mouseY);
-    }
-
     /** 悬停 X 时提示用途（仅 Exchange 页）。 */
     private void renderTrashTooltip(GuiGraphics g, int mouseX, int mouseY) {
         if (activeTab != 1) return;
@@ -473,6 +525,11 @@ public class WarehouseScreen extends MedievalContainerScreen<WarehouseMenu> {
                 I18n.name("gui.wandscape.warehouse.trash_hint",
                         "Pick up an item, then click here to delete it"));
         g.renderComponentTooltip(font, lines, mouseX, mouseY);
+    }
+
+    @Override
+    protected void renderLabels(GuiGraphics g, int mouseX, int mouseY) {
+        // 标题/工具条由皮肤绘制；不画 vanilla 标签。
     }
 
     @Override
@@ -508,12 +565,49 @@ public class WarehouseScreen extends MedievalContainerScreen<WarehouseMenu> {
         g.pose().popPose();
     }
 
+    private void renderCreatorFooter(GuiGraphics g) {
+        if (buildingCreator.isBlank() || activeTab != 0) return;
+        String text = I18n.name("gui.wandscape.common.creator_label", "Creator").getString()
+                + ": " + buildingCreator;
+        g.drawString(font, text, leftPos + 16, topPos + PANEL_H - 24,
+                MedievalColors.TEXT_DIM);
+    }
+
+    private void renderFeedback(GuiGraphics g) {
+        if (feedback == null) return;
+        if (System.currentTimeMillis() > feedbackExpireTick) {
+            feedback = null;
+            return;
+        }
+        int textW = font.width(feedback);
+        int pad = 8;
+        int w = textW + pad * 2;
+        int h = font.lineHeight + 6;
+        int x = (this.width - w) / 2;
+        int y = Math.max(6, topPos - h - 3);
+
+        g.fillGradient(x, y, x + w, y + h, 0xEE2A1C14, 0xEE120804);
+        int borderCol = (feedbackColor & 0x00FFFFFF) | 0xDD000000;
+        g.fill(x, y, x + w, y + 1, borderCol);
+        g.fill(x, y + h - 1, x + w, y + h, borderCol);
+        g.fill(x, y, x + 1, y + h, borderCol);
+        g.fill(x + w - 1, y, x + w, y + h, borderCol);
+
+        g.drawString(font, feedback, x + pad, y + (h - font.lineHeight) / 2, feedbackColor);
+    }
+
+    @Override
+    protected void renderTooltip(GuiGraphics g, int x, int y) {
+        // 仓库格走标准物品 tooltip（与 RS 一致，不附加数量行）。
+        super.renderTooltip(g, x, y);
+    }
+
     // ── 输入 ──
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        // 浮动工具栏（tabs/配方）优先；tab 必须在 super 前拦截，
-        // 因原版容器屏的 mouseClicked 走到槽位逻辑后无条件返回 true。
+        // 顶部工具栏（tabs/帮助/关闭）优先；tab 必须在 super 前拦截，
+        // 因 AbstractContainerScreen.mouseClicked 走到槽位逻辑后无条件返回 true。
         if (handleToolbarClick(mouseX, mouseY, button)) {
             return true;
         }
@@ -538,10 +632,10 @@ public class WarehouseScreen extends MedievalContainerScreen<WarehouseMenu> {
         return super.mouseClicked(mouseX, mouseY, button);
     }
 
-    /** 存储区矩形（原版 6 行箱格区，相对面板：8..170 × (HEADER_H+18)..(HEADER_H+126)）。 */
+    /** 存储区矩形（原版 6 行箱格区，相对面板：8..170 × 18..126）。 */
     private boolean isOverStorageArea(double mouseX, double mouseY) {
         int x0 = leftPos + 8;
-        int y0 = topPos + HEADER_H + 18;
+        int y0 = topPos + 18;
         return mouseX >= x0 && mouseX < x0 + 9 * 18
                 && mouseY >= y0 && mouseY < y0 + 6 * 18;
     }
@@ -553,6 +647,26 @@ public class WarehouseScreen extends MedievalContainerScreen<WarehouseMenu> {
                 : WarehouseActionPacket.ACTION_CURSOR_DEPOSIT_ALL;
         Net.toServer(new WarehouseActionPacket(
                 menu.containerId, action, "", null, 0));
+    }
+
+    @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (super.keyPressed(keyCode, scanCode, modifiers)) {
+            return true;
+        }
+        if (showHelpButton && helpDocumentPath != null
+                && !(getFocused() instanceof EditBox box && box.canConsumeInput())
+                && WandscapeClient.GUIDEBOOK_TOGGLE.matches(keyCode, scanCode)) {
+            openHelpDocument();
+            return true;
+        }
+        return false;
+    }
+
+    public void openHelpDocument() {
+        if (helpDocumentPath != null && minecraft != null) {
+            com.wsteam.wandscape.foundation.ui.guidebook.GuideFacade.open(this, helpDocumentPath);
+        }
     }
 
     private Slot findWarehouseSlot(double mouseX, double mouseY) {
@@ -681,5 +795,42 @@ public class WarehouseScreen extends MedievalContainerScreen<WarehouseMenu> {
         if (minecraft == null || minecraft.level == null) return new ItemStack(registryItem, count);
         // 账本载荷是完整物品序列化（ItemKey 语义）；用当前 level 的 registry 解码还原全组件。
         return ItemKey.of(entry.itemId(), entry.nbt()).toStack(count, minecraft.level.registryAccess());
+    }
+
+    // ── 皮肤绘制工具 ──
+
+    private static void drawGlowBorder(GuiGraphics g, int x, int y, int w, int h, int color) {
+        int c0 = color;
+        int c1 = (color & 0x00FFFFFF) | 0x66000000;
+        g.fill(x, y, x + w, y + 1, c0);
+        g.fill(x, y + h - 1, x + w, y + h, c0);
+        g.fill(x, y, x + 1, y + h, c0);
+        g.fill(x + w - 1, y, x + w, y + h, c0);
+        g.fill(x + 1, y + 1, x + w - 1, y + 2, c1);
+        g.fill(x + 1, y + h - 2, x + w - 1, y + h - 1, c1);
+        g.fill(x + 1, y + 1, x + 2, y + h - 1, c1);
+        g.fill(x + w - 2, y + 1, x + w - 1, y + h - 1, c1);
+    }
+
+    private static void drawMinimalBox(GuiGraphics g, int x, int y, int w, int h,
+                                       boolean active, boolean hovered) {
+        if (active) {
+            g.fillGradient(x, y, x + w, y + h, GLASS_BOX_TOP, GLASS_BOX_BOTTOM);
+            drawGlowBorder(g, x, y, w, h, MedievalColors.BORDER_GOLD);
+        } else if (hovered) {
+            g.fillGradient(x, y, x + w, y + h,
+                    MedievalColors.BUTTON_BG_HOVER, MedievalColors.PANEL_TITLE_BG);
+            drawGlowBorder(g, x, y, w, h, MedievalColors.BORDER_GOLD_DARK);
+        } else {
+            g.fillGradient(x, y, x + w, y + h, 0x992A1E18, 0x991A0E08);
+            g.fill(x, y, x + w, y + 1, MedievalColors.BORDER_GOLD_DARK);
+            g.fill(x, y + h - 1, x + w, y + h, MedievalColors.BORDER_GOLD_DARK);
+            g.fill(x, y, x + 1, y + h, MedievalColors.BORDER_GOLD_DARK);
+            g.fill(x + w - 1, y, x + w, y + h, MedievalColors.BORDER_GOLD_DARK);
+        }
+    }
+
+    private static boolean isInRect(double mx, double my, int x, int y, int w, int h) {
+        return mx >= x && mx < x + w && my >= y && my < y + h;
     }
 }
