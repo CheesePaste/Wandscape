@@ -6,7 +6,6 @@ import com.mojang.blaze3d.vertex.*;
 import com.wsteam.wandscape.content.building.data.BlockOffset;
 import com.wsteam.wandscape.content.building.data.BuildingConfig;
 import com.wsteam.wandscape.content.building.projection.BuildingRotation;
-import com.wsteam.wandscape.content.building.preview.BuildingPreviewRenderer;
 import it.unimi.dsi.fastutil.longs.Long2IntMap;
 import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
 import net.minecraft.client.Minecraft;
@@ -17,6 +16,7 @@ import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.state.BlockState;
@@ -27,7 +27,6 @@ import org.joml.Matrix4f;
 import org.lwjgl.system.MemoryUtil;
 
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -44,6 +43,12 @@ import java.util.Map;
  *   <li><b>构建期峰值只受最大一段约束</b>：逐段构建、建完立刻关掉该段的 native 顶点缓冲，
  *       不再需要按整栋楼预留几百 MB（实测中位 468 格/段）。</li>
  * </ul>
+ *
+ * <p><b>烘焙按 tick 分摊</b>：首次画某栋建筑的虚影要从头烘一栋楼的 VBO。那栋超大建筑
+ * pattern 58 万条，解析 + 逐段 tessellation 一次做完实测约 2 秒（spark 里
+ * {@code getOrBake} 一战占掉渲染线程 6.87%），整笔卡在一个 tick 上，弱机可能直接卡死。
+ * 现在烘焙是一个可续跑作业（{@link GhostBakeJob}），每 tick 只推进
+ * {@link #BAKE_BUDGET_NS} 那么多；期间已建好的段照常画（虚影逐段长出来），几何不降级。
  */
 public final class BuildingGhostVboCache {
 
@@ -68,7 +73,42 @@ public final class BuildingGhostVboCache {
      */
     private static final long MASK_REBUILD_BUDGET_NS = 1_000_000L;
 
-    private static final Map<BuildingConfig, BakedGhostMesh[]> CACHE = new HashMap<>();
+    /**
+     * 烘焙按**帧**分摊的时间预算 —— 每帧由渲染入口取一次 {@link #bakeDeadline()}，往下传给
+     * 本帧要画的所有虚影共用，与 {@code BuildingPreviewGifCache.pumpQueue} 同一口径
+     * （那边也是「整个队列共用一个 deadline」，不是每个建筑一份）。
+     *
+     * <p>为什么不按建筑算：在建工地是**逐个**画的（{@code ConstructionGhostRenderer} 每帧
+     * 遍历所有未完工建筑），每个建筑各给一份预算的话，场上 20 个工地就是 20 份，单帧开销
+     * 直接翻 20 倍 —— 那正是要治的病。
+     *
+     * <p>为什么不按 tick：预算是被「每帧都花掉」的，按帧算代价才被摊平在每一帧上，不会在
+     * tick 的第一帧挤出一个尖峰。1ms 在 240 帧下约占帧预算的四分之一，此时每秒能推进约
+     * 240ms 的烘焙量。嫌虚影长得慢就调大这个值（单帧上限随之变大）。
+     */
+    private static final long BAKE_BUDGET_NS = 1_000_000L;
+
+    /**
+     * 多久没被画到的半成品作业就丢掉（tick）。
+     *
+     * <p>一个在跑的作业握着 3 条 n 长的数组（那栋超大建筑约 14 MB）、分组用的中间表，
+     * 以及一位面剔除视图（定长索引表最大 32 MB）。玩家转走旋转角、或把面板关掉之后，
+     * 这些作业没人再推进，不收就是白占内存 —— 烘完的网格留着，半成品丢掉重开即可。
+     */
+    private static final long IDLE_JOB_TICKS = 200L;
+
+    /**
+     * 本帧所有虚影共用的烘焙时间上限（绝对时刻）。渲染入口每帧取一次，往下传。
+     *
+     * @see #BAKE_BUDGET_NS
+     */
+    public static long bakeDeadline() {
+        return System.nanoTime() + BAKE_BUDGET_NS;
+    }
+
+    private static final Map<String, GhostBucket> CACHE = new HashMap<>();
+    /** {@link #sweepIdleJobs} 的上次执行 tick，让每帧多次调用只扫一遍。 */
+    private static long lastSweepTick = Long.MIN_VALUE;
     private static final ByteBufferBuilder INDEX_BBB = new ByteBufferBuilder(4 * 1024 * 1024);
 
     private BuildingGhostVboCache() {}
@@ -76,8 +116,8 @@ public final class BuildingGhostVboCache {
     /** Draw the full ghost building using event camera ModelView matrix (120 FPS). */
     public static void drawGhost(Minecraft mc, Matrix4f cameraModelView, Matrix4f projection,
                                  Vec3 camPos, BlockPos anchor, BuildingConfig config, int rotationSteps,
-                                 Frustum frustum) {
-        BakedGhostMesh mesh = getOrBake(mc, config, rotationSteps, anchor);
+                                 Frustum frustum, long bakeDeadlineNs) {
+        BakedGhostMesh mesh = getOrBake(mc, config, rotationSteps, anchor, bakeDeadlineNs);
         if (mesh == null) return;
 
         RenderType rt = RenderType.translucent();
@@ -89,8 +129,8 @@ public final class BuildingGhostVboCache {
     /** Draw ghost skipping placed blocks (under-construction footprint). */
     public static void drawGhostSkipped(Minecraft mc, Matrix4f cameraModelView, Matrix4f projection,
                                         Vec3 camPos, BlockPos anchor, BuildingConfig config, int rotationSteps,
-                                        Frustum frustum) {
-        BakedGhostMesh mesh = getOrBake(mc, config, rotationSteps, anchor);
+                                        Frustum frustum, long bakeDeadlineNs) {
+        BakedGhostMesh mesh = getOrBake(mc, config, rotationSteps, anchor, bakeDeadlineNs);
         if (mesh == null) return;
 
         RenderType rt = RenderType.translucent();
@@ -106,8 +146,8 @@ public final class BuildingGhostVboCache {
      * {@code COLOR_DEPTH_WRITE}（颜色与深度都写；MC 里想关掉深度写的类型都显式
      * {@code setWriteMaskState(COLOR_WRITE)}），深度测试是 {@code LEQUAL}。也就是说先画的
      * 面会把深度写死、后面的面只要更远就被拒掉 —— 只要**近的先画**，"墙后面的那部分"根本
-     * 不会混色。而段的自然顺序是 {@code groupIntoSections} 的哈希桶序（烘一次就固定、与相机
-     * 无关），先画远再画近时远的面已经混过色、遮不住了，看起来就是斑驳的"能透视进楼里"。
+     * 不会混色。而段的自然顺序是分组时的哈希桶序（烘一次就固定、与相机无关），先画远再画近时
+     * 远的面已经混过色、遮不住了，看起来就是斑驳的"能透视进楼里"。
      *
      * <p>几何一字不动（段、顶点、索引都照旧），只改绘制顺序，所以不触碰"虚影必须完整渲染"
      * 的口径。填充侧：每像素的混色层数从 H(穿过的面数) 降到约 1；顶点侧无收益。
@@ -123,9 +163,11 @@ public final class BuildingGhostVboCache {
         long[] order = mesh.drawOrder;
         int n = 0;
         SectionMesh[] sections = mesh.sections;
-        for (int i = 0; i < sections.length; i++) {
-            if (!isSectionVisible(sections[i], anchor, frustum)) continue;
-            order[n++] = sortKey(sections[i], i, anchor, camPos);
+        for (int i = 0; i < mesh.scanned; i++) {
+            SectionMesh section = sections[i];
+            if (section == null) continue;   // 该段产不出四边形，或还没建到
+            if (!isSectionVisible(section, anchor, frustum)) continue;
+            order[n++] = sortKey(section, i, anchor, camPos);
         }
         Arrays.sort(order, 0, n);   // 原始类型排序：零分配、无装箱
         if (n == 0) return;
@@ -222,118 +264,352 @@ public final class BuildingGhostVboCache {
 
     public static void closeAll() {
         synchronized (CACHE) {
-            for (BakedGhostMesh[] buckets : CACHE.values()) {
-                if (buckets == null) continue;
-                for (BakedGhostMesh mesh : buckets) {
-                    if (mesh == null) continue;
-                    for (SectionMesh section : mesh.sections) {
-                        section.vbo.close();
-                    }
-                }
+            for (GhostBucket bucket : CACHE.values()) {
+                bucket.releaseAll();
             }
             CACHE.clear();
         }
     }
 
-    private static BakedGhostMesh getOrBake(Minecraft mc, BuildingConfig config, int rotationSteps, BlockPos anchor) {
+    // ═══════════════════════════════════════════════════════════════
+    // ── 缓存 ──
+    // ═══════════════════════════════════════════════════════════════
+
+    /**
+     * 一栋建筑的四个旋转角各自的烘焙结果。
+     *
+     * <p>{@link #source} 是烘这份 VBO 时的配置实例。进世界时服务端会同步建筑数据，
+     * {@code BuildingConfigLoader} 会重建全部实例，而这份缓存跨世界不清 —— 旧实例仍是键。
+     * 见 {@link #bucketFor} 里为什么键必须是 {@code id} 而不是 record。
+     */
+    private static final class GhostBucket {
+        BuildingConfig source;
+        final BakedGhostMesh[] byRotation = new BakedGhostMesh[4];
+        final GhostBakeJob[] jobs = new GhostBakeJob[4];
+
+        GhostBucket(BuildingConfig source) {
+            this.source = source;
+        }
+
+        /** 丢掉在跑的作业并归还全部 GPU 缓冲（漏一个 VertexBuffer 就是永久显存泄漏）。 */
+        void releaseAll() {
+            for (int i = 0; i < 4; i++) {
+                jobs[i] = null;
+                closeMesh(byRotation[i]);
+                byRotation[i] = null;
+            }
+        }
+    }
+
+    private static void closeMesh(BakedGhostMesh mesh) {
+        if (mesh == null || mesh.sections == null) return;
+        for (SectionMesh section : mesh.sections) {
+            if (section != null) section.vbo.close();
+        }
+    }
+
+    /**
+     * 取这栋建筑的缓存桶，**键是 {@code config.id()} 而不是 record**。
+     *
+     * <p>record 的 {@code equals} 会逐组件比较，含整条 {@code pattern}；而
+     * {@code hashCode} 只哈希 id/packageId。进世界同步会把每栋建筑换成新实例，新实例与旧实例
+     * 同 hash、不同身份 —— {@code HashMap} 的 identity 短路失效，查找退化成每帧、每栋楼
+     * 比一遍 58 万条 pattern（spark 实测占渲染线程 27.16%）。{@code id} 是权威唯一键
+     * （见 {@code BuildingConfigLoader#parseAndRegister}），String 的哈希与比较都是 O(1)。
+     *
+     * <p>实例换了之后只做**一次**内容比较：内容一样就认下新实例（此后走身份短路，VBO 继续
+     * 复用 —— 这才是"重进世界缓存生效"）；真变了才释放重烘，不留同 hash 的僵尸键。
+     *
+     * <p>调用方必须已持有 {@link #CACHE} 的锁。
+     */
+    private static GhostBucket bucketLocked(BuildingConfig config) {
+        String key = config.id();
+        GhostBucket bucket = CACHE.get(key);
+        if (bucket != null && bucket.source != config) {
+            if (bucket.source.equals(config)) {
+                bucket.source = config;
+            } else {
+                bucket.releaseAll();
+                bucket = null;
+            }
+        }
+        if (bucket == null) {
+            bucket = new GhostBucket(config);
+            CACHE.put(key, bucket);
+        }
+        return bucket;
+    }
+
+    /**
+     * 取这栋建筑该旋转角的网格，顺手把烘焙作业推到 {@code bakeDeadlineNs} 为止。
+     *
+     * <p>整段都持 {@link #CACHE} 的锁：调用方全在渲染线程，唯一的另一个线程是 datapack
+     * 重载时跑 {@link #closeAll()} 的那条。锁只为了不和它交错（作业推进有单帧预算上界，
+     * 真撞上也只是让重载等一小会儿）。
+     */
+    private static BakedGhostMesh getOrBake(Minecraft mc, BuildingConfig config, int rotationSteps,
+                                            BlockPos anchor, long bakeDeadlineNs) {
         if (config.pattern().isEmpty()) return null;
         int steps = rotationSteps & 3;
-        BakedGhostMesh[] buckets = bucketsFor(config);
-        BakedGhostMesh mesh = buckets[steps];
-        if (mesh == null) {
-            mesh = bake(mc, config, steps, anchor);
-            synchronized (CACHE) {
-                if (buckets[steps] == null) {
-                    buckets[steps] = mesh;
-                } else {
-                    mesh = buckets[steps];
+        synchronized (CACHE) {
+            GhostBucket bucket = bucketLocked(config);
+            BakedGhostMesh mesh = bucket.byRotation[steps];
+            GhostBakeJob job = bucket.jobs[steps];
+
+            // 换世界了（level 实例变了或没了）：半成品作业连着旧 Level 与半拉的段，作废重开。
+            // 这里必须往前挪到建作业之前 —— 建作业要花一份 n 长的数组，建完立刻扔掉是白烧。
+            // 已经烘完的网格不受影响（那时 jobs[steps] 早已是 null），它的顶点是相对偏移，
+            // 换世界照样能用。
+            if (job != null && job.level != mc.level) {
+                bucket.jobs[steps] = null;
+                closeMesh(mesh);
+                bucket.byRotation[steps] = null;
+                mesh = null;
+                job = null;
+            }
+
+            if (mesh == null) {
+                mesh = new BakedGhostMesh();
+                bucket.byRotation[steps] = mesh;
+                job = new GhostBakeJob(mc, config, steps, anchor);
+                bucket.jobs[steps] = job;
+            }
+
+            if (job != null) {
+                job.lastRequestTick = currentTick(mc);
+                if (job.advance(mesh, bakeDeadlineNs)) {
+                    bucket.jobs[steps] = null;   // 完工
+                }
+            }
+            // 还没建出任何段（或这栋楼本来就产不出四边形）：当帧不画。
+            // mesh 一直留在桶里，所以不会退化成"每帧重烘"。
+            return mesh.builtCount == 0 ? null : mesh;
+        }
+    }
+
+    /**
+     * 每 tick 至多扫一次，丢掉 {@link #IDLE_JOB_TICKS} 内没被画到的半成品作业。
+     *
+     * <p>得由「面板没开也会跑」的地方调（{@code ConstructionGhostRenderer} 的渲染回调开头），
+     * 否则关掉面板后这些作业永远没人收。已烘完的网格留着，只丢半成品。
+     */
+    public static void sweepIdleJobs(Minecraft mc) {
+        if (mc.level == null) return;
+        long tick = mc.level.getGameTime();
+        synchronized (CACHE) {
+            if (tick == lastSweepTick) return;
+            lastSweepTick = tick;
+            for (GhostBucket bucket : CACHE.values()) {
+                for (int i = 0; i < 4; i++) {
+                    GhostBakeJob job = bucket.jobs[i];
+                    if (job == null) continue;
+                    // 跨世界的作业直接丢（不为别的，就为它的 lastRequestTick 记的是上个世界的
+                    // gameTime，比本世界的还大，做差是负数，永远过不了下面那道年龄判定）。
+                    if (job.level != mc.level || tick - job.lastRequestTick > IDLE_JOB_TICKS) {
+                        bucket.jobs[i] = null;
+                        closeMesh(bucket.byRotation[i]);
+                        bucket.byRotation[i] = null;
+                    }
                 }
             }
         }
-        return mesh;
-    }
-
-    private static BakedGhostMesh[] bucketsFor(BuildingConfig config) {
-        synchronized (CACHE) {
-            BakedGhostMesh[] buckets = CACHE.get(config);
-            if (buckets == null) {
-                buckets = new BakedGhostMesh[4];
-                CACHE.put(config, buckets);
-            }
-            return buckets;
-        }
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // ── 构建 ──
+    // ── 烘焙作业（可跨 tick 续跑）──
     // ═══════════════════════════════════════════════════════════════
 
-    private static BakedGhostMesh bake(Minecraft mc, BuildingConfig config, int steps, BlockPos anchor) {
-        List<BlockOffset> pattern = config.pattern();
-        int n = pattern.size();
+    /**
+     * 一栋建筑某个旋转角的烘焙作业。
+     *
+     * <p>四个阶段，每个都是「带 cursor 的下标循环」，每次 {@link #advance} 只把当前阶段推进
+     * 一片（每片至多 {@link #CHUNK} 次迭代），外层按时间预算反复调进：
+     *
+     * <ul>
+     *   <li>A 解析：逐格算出旋转后偏移与方块状态，用 palette 级状态表（见
+     *       {@code BuildingGhostRenderer#paletteStates}）—— 这一步原来对每格重新解析一次
+     *       方块状态字符串，58 万格约 0.9 秒，是按 V 卡顿的主因。</li>
+     *   <li>B 建视图：逐面剔除要用的假方块视图（{@link BuildingGhostBlockView.Builder}）。</li>
+     *   <li>C 分组：按 16³ 段把 pattern 下标分组，三趟可切的下标循环。</li>
+     *   <li>D 建段：逐段 tessellation + 上传，一段一个切片单位，随时可中断。</li>
+     * </ul>
+     */
+    private static final class GhostBakeJob {
 
-        BlockOffset[] rotatedOffsets = new BlockOffset[n];
-        Block[] cellBlocks = new Block[n];
-        BlockState[] cellStates = new BlockState[n];
+        /** 单次切片在一个内层循环里最多推进的格数；每片都短到不必再查表。 */
+        private static final int CHUNK = 1 << 15;
 
-        for (int i = 0; i < n; i++) {
-            rotatedOffsets[i] = BuildingRotation.rotateOffset(pattern.get(i), steps);
-            // 用旋转后的 BlockState：旋转仅改变偏移与方块朝向（建筑旋转后每格仍占据
-            // 轴对齐单位立方体 [pos,pos+1]），几何体本身不绕原点转。
-            BlockState state = BuildingPreviewRenderer.resolveBlockState(
-                    BuildingRotation.rotateBlockStateString(config.blockIdAt(i), steps));
-            cellStates[i] = state;
-            cellBlocks[i] = state != null ? state.getBlock() : null;
+        private static final int PHASE_RESOLVE = 0;
+        private static final int PHASE_VIEW = 1;
+        private static final int PHASE_GROUP = 2;
+        private static final int PHASE_SECTIONS = 3;
+        private static final int PHASE_DONE = 4;
+
+        private final Minecraft mc;
+        private final int steps;
+        private final BlockPos anchor;
+        private final int n;
+
+        /** 作业创建时的世界实例；变了就说明换了世界，作业作废（见 {@code getOrBake}）。 */
+        final Level level;
+        /** 上次被画到的 tick；{@link #sweepIdleJobs} 据此丢掉没人再推进的半成品。 */
+        long lastRequestTick;
+
+        private final List<BlockOffset> pattern;
+        private final List<Integer> blockIndices;
+        /** palette 级方块状态表（已按 steps 旋转），下标即 palette 下标。 */
+        private final BlockState[] byPalette;
+
+        private final BlockOffset[] rotatedOffsets;
+        private final BlockState[] cellStates;
+        private final Block[] cellBlocks;
+
+        private int phase = PHASE_RESOLVE;
+        private int cursor;
+
+        private BuildingGhostBlockView.Builder viewBuilder;
+        private BuildingGhostBlockView view;
+
+        private long[] sectionKeys;
+        private Long2IntMap sectionIndexOf;
+        private int[] sectionCounts;
+        private int[] sectionFillCursor;
+        private int[][] sectionCells;
+        private int groupPass;
+
+        private int sectionIndex;
+        private final RandomSource random = RandomSource.create(42L);
+
+        GhostBakeJob(Minecraft mc, BuildingConfig config, int steps, BlockPos anchor) {
+            this.mc = mc;
+            this.level = mc.level;
+            this.steps = steps;
+            this.anchor = anchor;
+            this.pattern = config.pattern();
+            this.blockIndices = config.blockIndices();
+            this.byPalette = BuildingGhostRenderer.paletteStates(config, steps);
+            this.n = pattern.size();
+            this.rotatedOffsets = new BlockOffset[n];
+            this.cellStates = new BlockState[n];
+            this.cellBlocks = new Block[n];
         }
 
-        // 逐面剔除用的方块视图（B6）。**整栋一份**——跨段边界的邻居必须查得到，
-        // 所以它不能按段切。建不出来（包围盒过大等）就是 null，退回不做剔除的老路径。
-        BuildingGhostBlockView view = BuildingGhostBlockView.create(
-                rotatedOffsets, cellStates, mc.level, anchor);
-        RandomSource random = RandomSource.create(42L);
-
-        int[][] sectionCells = groupIntoSections(rotatedOffsets);
-        List<SectionMesh> sections = new ArrayList<>(sectionCells.length);
-        for (int[] cells : sectionCells) {
-            SectionMesh section = buildSection(mc, cells, rotatedOffsets, cellStates, cellBlocks, view, random);
-            if (section != null) {
-                sections.add(section);
+        /**
+         * 推进到 {@code deadlineNs} 用完或这栋楼烘完；返回 {@code true} 表示烘完了。
+         *
+         * <p>预算是**全帧共用**的绝对时刻，所以预算耗尽时这里一步都不做 —— 那就等于这一帧
+         * 把它排在后面。不会饿死：轮到前面的作业总有烘完的一刻，之后自然轮到它。
+         */
+        boolean advance(BakedGhostMesh mesh, long deadlineNs) {
+            while (phase < PHASE_DONE && System.nanoTime() < deadlineNs) {
+                // 每个 step 内部各自有 CHUNK 上界（建段那一步是「一整段」），所以最坏也只是
+                // 超出预算一次切片单位。
+                if (phase == PHASE_RESOLVE) stepResolve();
+                else if (phase == PHASE_VIEW) stepView();
+                else if (phase == PHASE_GROUP) stepGroup(mesh);
+                else stepSections(mesh);
             }
+            return phase >= PHASE_DONE;
         }
-        if (sections.isEmpty()) return null;
-        return new BakedGhostMesh(sections.toArray(new SectionMesh[0]));
-    }
 
-    /** 把 pattern 下标按 16³ 段分组，返回「段 → 该段的 pattern 下标」。 */
-    private static int[][] groupIntoSections(BlockOffset[] rotatedOffsets) {
-        int n = rotatedOffsets.length;
-        long[] keys = new long[n];
-        Long2IntMap indexOf = new Long2IntOpenHashMap();
-        indexOf.defaultReturnValue(-1);
-        for (int i = 0; i < n; i++) {
-            long key = sectionKey(rotatedOffsets[i]);
-            keys[i] = key;
-            if (!indexOf.containsKey(key)) {
-                indexOf.put(key, indexOf.size());
+        private void stepResolve() {
+            int end = Math.min(n, cursor + CHUNK);
+            for (; cursor < end; cursor++) {
+                rotatedOffsets[cursor] = BuildingRotation.rotateOffset(pattern.get(cursor), steps);
+                BlockState state = byPalette[blockIndices.get(cursor)];
+                cellStates[cursor] = state;
+                cellBlocks[cursor] = state != null ? state.getBlock() : null;
             }
+            if (cursor < n) return;
+            // 逐面剔除用的方块视图（B6）。**整栋一份**——跨段边界的邻居必须查得到，
+            // 所以它不能按段切。建不出来（包围盒过大等）就是 null，退回不做剔除的老路径。
+            viewBuilder = new BuildingGhostBlockView.Builder(rotatedOffsets, cellStates, level, anchor);
+            phase = PHASE_VIEW;
+            cursor = 0;
         }
 
-        int sectionCount = indexOf.size();
-        int[] counts = new int[sectionCount];
-        for (int i = 0; i < n; i++) {
-            counts[indexOf.get(keys[i])]++;
+        private void stepView() {
+            if (!viewBuilder.step()) return;
+            view = viewBuilder.build();
+            viewBuilder = null;
+            phase = PHASE_GROUP;
+            cursor = 0;
+            groupPass = 0;
+            sectionKeys = new long[n];
+            sectionIndexOf = new Long2IntOpenHashMap();
+            sectionIndexOf.defaultReturnValue(-1);
         }
 
-        int[][] cells = new int[sectionCount][];
-        for (int s = 0; s < sectionCount; s++) {
-            cells[s] = new int[counts[s]];
+        /** 把 pattern 下标按 16³ 段分组，填出 {@code sectionCells}（段 → 该段的 pattern 下标）。 */
+        private void stepGroup(BakedGhostMesh mesh) {
+            if (groupPass == 0) {
+                int end = Math.min(n, cursor + CHUNK);
+                for (; cursor < end; cursor++) {
+                    long key = sectionKey(rotatedOffsets[cursor]);
+                    sectionKeys[cursor] = key;
+                    if (!sectionIndexOf.containsKey(key)) {
+                        sectionIndexOf.put(key, sectionIndexOf.size());
+                    }
+                }
+                if (cursor < n) return;
+                int sectionCount = sectionIndexOf.size();
+                sectionCounts = new int[sectionCount];
+                sectionFillCursor = new int[sectionCount];
+                groupPass = 1;
+                cursor = 0;
+                return;
+            }
+
+            if (groupPass == 1) {
+                int end = Math.min(n, cursor + CHUNK);
+                for (; cursor < end; cursor++) {
+                    sectionCounts[sectionIndexOf.get(sectionKeys[cursor])]++;
+                }
+                if (cursor < n) return;
+                sectionCells = new int[sectionCounts.length][];
+                for (int s = 0; s < sectionCounts.length; s++) {
+                    sectionCells[s] = new int[sectionCounts[s]];
+                }
+                groupPass = 2;
+                cursor = 0;
+                return;
+            }
+
+            int end = Math.min(n, cursor + CHUNK);
+            for (; cursor < end; cursor++) {
+                int s = sectionIndexOf.get(sectionKeys[cursor]);
+                sectionCells[s][sectionFillCursor[s]++] = cursor;
+            }
+            if (cursor < n) return;
+
+            // 分组完成：段数组按总槽位定长分配，逐段往槽里填。产不出四边形的段留 null，
+            // 段序不变（与老实现里 sections 只收非空段的顺序一致）。
+            mesh.sections = new SectionMesh[sectionCells.length];
+            mesh.drawOrder = new long[sectionCells.length];
+            // 分组用的中间表到这儿就没用了：那栋超大建筑光 sectionKeys 就是 4.6 MB，
+            // 半成品作业可能挂很久（见 sweepIdleJobs），别白占着。
+            sectionKeys = null;
+            sectionIndexOf = null;
+            sectionCounts = null;
+            sectionFillCursor = null;
+            phase = PHASE_SECTIONS;
+            sectionIndex = 0;
         }
-        int[] cursor = new int[sectionCount];
-        for (int i = 0; i < n; i++) {
-            int s = indexOf.get(keys[i]);
-            cells[s][cursor[s]++] = i;
+
+        /** 建一段。一段是一个切片单位：段内 tessellation 与 VBO 上传必须是原子的。 */
+        private void stepSections(BakedGhostMesh mesh) {
+            if (sectionIndex >= sectionCells.length) {
+                phase = PHASE_DONE;
+                return;
+            }
+            SectionMesh section = buildSection(mc, sectionCells[sectionIndex],
+                    rotatedOffsets, cellStates, cellBlocks, view, random);
+            mesh.sections[sectionIndex] = section;
+            if (section != null) mesh.builtCount++;
+            sectionIndex++;
+            mesh.scanned = sectionIndex;
+            if (sectionIndex >= sectionCells.length) phase = PHASE_DONE;
         }
-        return cells;
     }
 
     private static long sectionKey(BlockOffset o) {
@@ -341,6 +617,10 @@ public final class BuildingGhostVboCache {
                 | (((long) (o.y() >> SECTION_SHIFT) & 0x7FF) << 21)
                 | ((o.z() >> SECTION_SHIFT) & 0x1FFFFF);
     }
+
+    // ═══════════════════════════════════════════════════════════════
+    // ── 构建 ──
+    // ═══════════════════════════════════════════════════════════════
 
     /**
      * 构建一个段。顶点缓冲在这里按**本段**的非空气格数预留，建完立刻关闭 ——
@@ -427,20 +707,27 @@ public final class BuildingGhostVboCache {
             MeshData mesh = bb.buildOrThrow();
             VertexFormat.IndexType indexType = mesh.drawState().indexType();
             VertexBuffer vbo = new VertexBuffer(VertexBuffer.Usage.STATIC);
-            vbo.bind();
-            vbo.upload(mesh);
-            VertexBuffer.unbind();
+            try {
+                vbo.bind();
+                vbo.upload(mesh);
+                VertexBuffer.unbind();
 
-            ByteBuffer fullIndex = ByteBuffer.allocateDirect(totalQuads * 6 * indexType.bytes);
-            long fp = MemoryUtil.memAddress(fullIndex);
-            for (int q = 0; q < totalQuads; q++) {
-                int base = q * 4;
-                writeQuadIndex(fp, indexType, base, base + 1, base + 2, base + 2, base + 3, base);
-                fp += 6L * indexType.bytes;
+                ByteBuffer fullIndex = ByteBuffer.allocateDirect(totalQuads * 6 * indexType.bytes);
+                long fp = MemoryUtil.memAddress(fullIndex);
+                for (int q = 0; q < totalQuads; q++) {
+                    int base = q * 4;
+                    writeQuadIndex(fp, indexType, base, base + 1, base + 2, base + 2, base + 3, base);
+                    fp += 6L * indexType.bytes;
+                }
+
+                return new SectionMesh(originX, originY, originZ, vbo, indexType,
+                        quadStart, quadCount, offsets, blocks, fullIndex);
+            } catch (RuntimeException | Error e) {
+                // 这一段还没挂进任何 SectionMesh，抛出去就没人关得到它了（那栋超大建筑索引缓冲
+                // 十几 MB，OOM 真会发生）—— 自己关掉再抛，否则每次重试都漏一个 GL buffer。
+                vbo.close();
+                throw e;
             }
-
-            return new SectionMesh(originX, originY, originZ, vbo, indexType,
-                    quadStart, quadCount, offsets, blocks, fullIndex);
         } finally {
             vertBbb.close();
         }
@@ -537,16 +824,16 @@ public final class BuildingGhostVboCache {
     // ═══════════════════════════════════════════════════════════════
 
     private static final class BakedGhostMesh {
-        final SectionMesh[] sections;
-        /** 每帧复用的排序缓冲（排序键 = 距离高位 | 段下标），避免每帧分配。 */
-        final long[] drawOrder;
+        /** 全部段槽位；还没建到的槽位、以及产不出四边形的段都是 null。 */
+        SectionMesh[] sections;
+        /** 每帧复用的排序缓冲（排序键 = 距离高位 | 段下标），长度 = sections.length。 */
+        long[] drawOrder;
+        /** 已扫过的槽位数（{@code [0, scanned)} 里非 null 的才是已建好的段）。 */
+        int scanned;
+        /** 已建出的段数。 */
+        int builtCount;
         /** 遮罩重建的轮转起点（可见列表内的下标），让预算公平地铺到所有可见段上。 */
         int maskCursor;
-
-        BakedGhostMesh(SectionMesh[] sections) {
-            this.sections = sections;
-            this.drawOrder = new long[sections.length];
-        }
     }
 
     private static final class SectionMesh {

@@ -10,6 +10,7 @@ import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.content.building.projection.BuildingRotation;
 import com.wsteam.wandscape.content.building.projection.data.BuildingSlot;
 import com.wsteam.wandscape.content.building.render.BuildingGhostRenderer;
+import com.wsteam.wandscape.content.building.render.BuildingGhostVboCache;
 import com.wsteam.wandscape.content.building.render.BuildingOutline;
 import com.wsteam.wandscape.foundation.log.Log;
 import net.minecraft.client.Minecraft;
@@ -69,7 +70,8 @@ public final class ProjectionRenderer {
         if (ghostOn) {
             // 1. Render GPU VBO ghost with exact event Camera ModelView matrix (120 FPS)
             BuildingGhostRenderer.renderGhostVbo(mc, event.getModelViewMatrix(), event.getProjectionMatrix(),
-                    camPos, ghostPos, config, rotationSteps, event.getFrustum());
+                    camPos, ghostPos, config, rotationSteps, event.getFrustum(),
+                    BuildingGhostVboCache.bakeDeadline());
 
             // 1b. Render animated blocks (chests etc.) that have no static block model and
             // cannot bake into the VBO — drawn per-frame via their block-entity item renderer.

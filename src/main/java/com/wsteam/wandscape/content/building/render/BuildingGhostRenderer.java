@@ -22,12 +22,11 @@ import net.neoforged.neoforge.client.extensions.common.IClientItemExtensions;
 import org.joml.Matrix4f;
 
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.WeakHashMap;
 
 /**
  * World-space semi-transparent building ghost renderer facade.
@@ -48,18 +47,25 @@ public final class BuildingGhostRenderer {
 
     private BuildingGhostRenderer() {}
 
-    /** Render full building ghost via GPU VBO static cache with camera ModelView (120 FPS). */
+    /**
+     * Render full building ghost via GPU VBO static cache with camera ModelView (120 FPS).
+     *
+     * @param bakeDeadlineNs 本帧全场景共用的烘焙时间上限（{@link BuildingGhostVboCache#bakeDeadline()}），
+     *                       渲染入口每帧取一次往下传，别每个建筑各算一份
+     */
     public static void renderGhostVbo(Minecraft mc, Matrix4f cameraModelView, Matrix4f projection,
                                       Vec3 camPos, BlockPos anchor, BuildingConfig config, int rotationSteps,
-                                      Frustum frustum) {
-        BuildingGhostVboCache.drawGhost(mc, cameraModelView, projection, camPos, anchor, config, rotationSteps, frustum);
+                                      Frustum frustum, long bakeDeadlineNs) {
+        BuildingGhostVboCache.drawGhost(mc, cameraModelView, projection, camPos, anchor, config,
+                rotationSteps, frustum, bakeDeadlineNs);
     }
 
     /** Render under-construction footprint ghost skipping placed blocks via GPU VBO. */
     public static void renderGhostVboSkipped(Minecraft mc, Matrix4f cameraModelView, Matrix4f projection,
                                              Vec3 camPos, BlockPos anchor, BuildingConfig config, int rotationSteps,
-                                             Frustum frustum) {
-        BuildingGhostVboCache.drawGhostSkipped(mc, cameraModelView, projection, camPos, anchor, config, rotationSteps, frustum);
+                                             Frustum frustum, long bakeDeadlineNs) {
+        BuildingGhostVboCache.drawGhostSkipped(mc, cameraModelView, projection, camPos, anchor, config,
+                rotationSteps, frustum, bakeDeadlineNs);
     }
 
     /**
@@ -119,43 +125,100 @@ public final class BuildingGhostRenderer {
     private record AnimatedCell(BlockOffset offset, Block block, ItemStack stack) {}
 
     /**
-     * 按 (config, rotation) 预计算的动画格子表。原先每帧都要遍历整份 pattern
+     * 该配置在给定旋转角下、按 **palette 条目** 解析好的方块状态表（下标即 palette 下标）。
+     *
+     * <p>pattern 每格的状态字符串是 {@code palette.get(blockIndices.get(i))} —— 去重后只有
+     * {@code palette.size()}（通常几十）个不同值。而 {@code rotateBlockStateString} 与
+     * {@code resolveBlockState} 都没有缓存，每次都要 {@code ResourceLocation.parse} + 注册表
+     * 查找 + {@code split}：那栋超大建筑 58 万条 pattern 逐格解析一次实测约 0.9 秒，正是按 V
+     * 卡一下的主因。按 palette 解析一次即可，结果逐位相同（两者都是「palette 条目 × steps」
+     * 的纯函数）。
+     *
+     * <p>虚影 VBO 烘焙与动画格子表共用这一张表。
+     */
+    static BlockState[] paletteStates(BuildingConfig config, int steps) {
+        List<String> rotated = BuildingRotation.rotatePalette(config.palette(), steps);
+        BlockState[] states = new BlockState[rotated.size()];
+        for (int p = 0; p < states.length; p++) {
+            states[p] = BuildingPreviewRenderer.resolveBlockState(rotated.get(p));
+        }
+        return states;
+    }
+
+    /**
+     * 按 (config.id(), rotation) 预计算的动画格子表。原先每帧都要遍历整份 pattern
      * （那栋超大建筑 58 万条）做一次 HashMap 查找加一次 {@code rotateOffset}，只为挑出
      * 通常不到一百个箱子/告示牌；现在这份表建一次就一直用。
      *
-     * <p>弱键：配置在 {@code /reload} 时会被整体换掉，弱键让旧配置的条目自然回收，
-     * 与 {@code BuildingPreviewRenderer.META_CACHE} 同一口径。
+     * <p>键是 {@code id} 而不是 record —— 理由同 {@code BuildingGhostVboCache#bucketLocked}：
+     * record 的 {@code equals} 会逐组件比整条 pattern，而进世界同步会把每栋建筑换成新实例，
+     * 拿 record 当键就等于每帧比一遍 58 万条。（原来是 WeakHashMap，靠 GC 回收旧实例；
+     * 其实旧实例一直被 VBO 缓存强引用着，从没真正回收过，反而每帧都在跑那个 O(pattern) 比较。）
      */
-    private static final Map<BuildingConfig, List<List<AnimatedCell>>> ANIMATED_CACHE =
-            Collections.synchronizedMap(new WeakHashMap<>());
+    private static final Map<String, AnimatedEntry> ANIMATED_CACHE = new HashMap<>();
 
-    /**
-     * 配置目录变化（datapack 重载 / 入服同步）时清空。条目按旧实例缓存，实例换了就失配 ——
-     * 这个 map 是 WeakHashMap，比键走 hashCode+equals，失配时每次查表都是 record 的逐组件
-     * equals（O(pattern)）。复用实例（见 BuildingConfigLoader）后一般不会再换，这里兜底。
-     */
-    public static void clearAnimatedCache() {
-        ANIMATED_CACHE.clear();
+    /** 一栋建筑的四个旋转角各自的动画格子表，外加烘这份表时的配置实例（判内容是否变过）。 */
+    private static final class AnimatedEntry {
+        BuildingConfig source;
+        @SuppressWarnings("unchecked")
+        final List<AnimatedCell>[] byRotation = new List[4];
+
+        AnimatedEntry(BuildingConfig source) {
+            this.source = source;
+        }
     }
 
     private static List<AnimatedCell> animatedCells(BuildingConfig config, int steps) {
-        List<List<AnimatedCell>> buckets = ANIMATED_CACHE.computeIfAbsent(config,
-                k -> new ArrayList<>(Collections.nCopies(4, null)));
-        List<AnimatedCell> cells = buckets.get(steps);
+        AnimatedEntry entry = entryFor(config);
+        List<AnimatedCell> cells = entry.byRotation[steps];
         if (cells == null) {
             cells = collectAnimatedCells(config, steps);
-            buckets.set(steps, cells);
+            entry.byRotation[steps] = cells;
         }
         return cells;
     }
 
+    /**
+     * datapack 重载时清空，挂在客户端 reload listener 上
+     * （见 {@code WandscapeClient#onRegisterClientReloadListeners}）。
+     *
+     * <p>入服同步（{@code WandscapeDataLoader#applyCategoryFrom}）**不经过** reload listener，
+     * 所以这条路径覆盖不到它 —— 那条路靠 {@link #entryFor} 的实例比对自愈。
+     */
+    public static void clearAnimatedCache() {
+        synchronized (ANIMATED_CACHE) {
+            ANIMATED_CACHE.clear();
+        }
+    }
+
+    private static AnimatedEntry entryFor(BuildingConfig config) {
+        String key = config.id();
+        synchronized (ANIMATED_CACHE) {
+            AnimatedEntry entry = ANIMATED_CACHE.get(key);
+            if (entry != null && entry.source != config) {
+                // 进世界同步换了实例：内容一样就认下新实例（此后走身份短路），真变了就丢掉重算。
+                if (entry.source.equals(config)) {
+                    entry.source = config;
+                } else {
+                    entry = null;
+                }
+            }
+            if (entry == null) {
+                entry = new AnimatedEntry(config);
+                ANIMATED_CACHE.put(key, entry);
+            }
+            return entry;
+        }
+    }
+
     private static List<AnimatedCell> collectAnimatedCells(BuildingConfig config, int steps) {
         List<BlockOffset> pattern = config.pattern();
+        List<Integer> blockIndices = config.blockIndices();
+        BlockState[] byPalette = paletteStates(config, steps);
         List<AnimatedCell> cells = new ArrayList<>();
         Set<BlockOffset> seen = new HashSet<>();
         for (int i = 0; i < pattern.size(); i++) {
-            BlockState state = BuildingPreviewRenderer.resolveBlockState(
-                    BuildingRotation.rotateBlockStateString(config.blockIdAt(i), steps));
+            BlockState state = byPalette[blockIndices.get(i)];
             if (state == null || state.getRenderShape() != RenderShape.ENTITYBLOCK_ANIMATED) continue;
             BlockOffset rotated = BuildingRotation.rotateOffset(pattern.get(i), steps);
             if (!seen.add(rotated)) continue;

@@ -83,55 +83,126 @@ public final class BuildingGhostBlockView implements BlockAndTintGetter {
     @Nullable
     public static BuildingGhostBlockView create(BlockOffset[] rotatedOffsets, BlockState[] states,
                                                 @Nullable Level realLevel, BlockPos anchor) {
-        int n = rotatedOffsets.length;
-        if (n == 0 || states.length != n || realLevel == null) return null;
-
-        int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE, minZ = Integer.MAX_VALUE;
-        int maxX = Integer.MIN_VALUE, maxY = Integer.MIN_VALUE, maxZ = Integer.MIN_VALUE;
-        for (BlockOffset off : rotatedOffsets) {
-            if (off.x() < minX) minX = off.x();
-            if (off.x() > maxX) maxX = off.x();
-            if (off.y() < minY) minY = off.y();
-            if (off.y() > maxY) maxY = off.y();
-            if (off.z() < minZ) minZ = off.z();
-            if (off.z() > maxZ) maxZ = off.z();
+        Builder builder = new Builder(rotatedOffsets, states, realLevel, anchor);
+        while (!builder.step()) {
+            // 一口气跑完：调用方要么在做可续跑的烘焙作业（自己分片），要么要的就是一次到位。
         }
+        return builder.build();
+    }
 
-        long sx = (long) maxX - minX + 1;
-        long sy = (long) maxY - minY + 1;
-        long sz = (long) maxZ - minZ + 1;
-        long cells = sx * sy * sz;
-        if (cells > MAX_CELLS || cells > Integer.MAX_VALUE) {
-            return null;
-        }
+    /**
+     * 可续跑视图构建，给「烘焙摊到多 tick」的虚影作业用（见 {@code BuildingGhostVboCache}）。
+     *
+     * <p>两趟下标循环，每趟各自有推进上界，外层按时间预算反复调 {@link #step()} 即可：
+     * 先扫包围盒，再按包围盒定长建索引表并逐格填充。中间唯一不可切的是一次
+     * {@code new short[cells]}（最大 {@link #MAX_CELLS} ≈ 32 MB，一次零化几十毫秒），
+     * 分段方案在这里也换不到更多。
+     */
+    public static final class Builder {
 
-        int sizeX = (int) sx, sizeY = (int) sy, sizeZ = (int) sz;
-        short[] grid = new short[sizeX * sizeY * sizeZ];   // 0 = 空气（缺省值），其余是 states 里的下标 + 1
+        /** 单次 {@link #step()} 在一个内层循环里最多推进的格数。 */
+        private static final int CHUNK = 1 << 15;
 
+        private final BlockOffset[] rotatedOffsets;
+        private final BlockState[] states;
+        private final Level realLevel;
+        private final BlockPos anchor;
+        private final int n;
+
+        /** 0 = 扫包围盒，1 = 填索引表，2 = 已完。 */
+        private int pass;
+        private int cursor;
+        private boolean abandoned;
+
+        private int minX, minY, minZ, maxX, maxY, maxZ;
+        private int sizeX, sizeY, sizeZ;
+        private short[] grid;
         // 建筑自身用到的状态收进一张小表；空气不入表，落在 0 上。
-        java.util.HashMap<BlockState, Short> indexOf = new java.util.HashMap<>();
-        java.util.ArrayList<BlockState> palette = new java.util.ArrayList<>();
+        private final java.util.HashMap<BlockState, Short> indexOf = new java.util.HashMap<>();
+        private final java.util.ArrayList<BlockState> palette = new java.util.ArrayList<>();
 
-        for (int i = 0; i < n; i++) {
-            BlockState state = states[i];
-            if (state == null || state.isAir()) continue;
-            BlockOffset off = rotatedOffsets[i];
-            int lx = off.x() - minX, ly = off.y() - minY, lz = off.z() - minZ;
-            short slot = indexOf.computeIfAbsent(state, s -> {
-                palette.add(s);
-                return (short) palette.size();   // 刻意 +1，好让 0 留给空气
-            });
-            grid[(ly * sizeZ + lz) * sizeX + lx] = slot;
+        public Builder(BlockOffset[] rotatedOffsets, BlockState[] states,
+                       @Nullable Level realLevel, BlockPos anchor) {
+            this.rotatedOffsets = rotatedOffsets;
+            this.states = states;
+            this.realLevel = realLevel;
+            this.anchor = anchor;
+            this.n = rotatedOffsets.length;
+            if (n == 0 || states.length != n || realLevel == null) {
+                this.abandoned = true;
+                this.pass = 2;
+            } else {
+                this.minX = this.minY = this.minZ = Integer.MAX_VALUE;
+                this.maxX = this.maxY = this.maxZ = Integer.MIN_VALUE;
+            }
         }
 
-        // 槽位是 short，且 0 留给空气。状态种类多到这个地步只可能来自畸形数据包，
-        // 直接放弃剔除退回老路径，别让 0 号槽把某个方块静默变成空气。
-        if (palette.size() > Short.MAX_VALUE) {
-            return null;
+        /** 推进一小片；返回 {@code true} 表示已建完（用 {@link #build()} 取结果）。 */
+        public boolean step() {
+            if (pass == 2) return true;
+            if (pass == 0) {
+                int end = Math.min(n, cursor + CHUNK);
+                for (; cursor < end; cursor++) {
+                    BlockOffset off = rotatedOffsets[cursor];
+                    if (off.x() < minX) minX = off.x();
+                    if (off.x() > maxX) maxX = off.x();
+                    if (off.y() < minY) minY = off.y();
+                    if (off.y() > maxY) maxY = off.y();
+                    if (off.z() < minZ) minZ = off.z();
+                    if (off.z() > maxZ) maxZ = off.z();
+                }
+                if (cursor < n) return false;
+
+                long sx = (long) maxX - minX + 1;
+                long sy = (long) maxY - minY + 1;
+                long sz = (long) maxZ - minZ + 1;
+                long cells = sx * sy * sz;
+                if (cells > MAX_CELLS || cells > Integer.MAX_VALUE) {
+                    abandoned = true;
+                    pass = 2;
+                    return true;
+                }
+                sizeX = (int) sx;
+                sizeY = (int) sy;
+                sizeZ = (int) sz;
+                // 0 = 空气（缺省值），其余是 states 里的下标 + 1
+                grid = new short[sizeX * sizeY * sizeZ];
+                pass = 1;
+                cursor = 0;
+                return false;
+            }
+
+            int end = Math.min(n, cursor + CHUNK);
+            for (; cursor < end; cursor++) {
+                BlockState state = states[cursor];
+                if (state == null || state.isAir()) continue;
+                BlockOffset off = rotatedOffsets[cursor];
+                int lx = off.x() - minX, ly = off.y() - minY, lz = off.z() - minZ;
+                short slot = indexOf.computeIfAbsent(state, s -> {
+                    palette.add(s);
+                    return (short) palette.size();   // 刻意 +1，好让 0 留给空气
+                });
+                grid[(ly * sizeZ + lz) * sizeX + lx] = slot;
+            }
+            // 槽位是 short，且 0 留给空气。状态种类多到这个地步只可能来自畸形数据包，
+            // 直接放弃剔除退回老路径，别让 0 号槽把某个方块静默变成空气。
+            if (palette.size() > Short.MAX_VALUE) {
+                abandoned = true;
+                pass = 2;
+                return true;
+            }
+            if (cursor < n) return false;
+            pass = 2;
+            return true;
         }
 
-        return new BuildingGhostBlockView(grid, palette.toArray(new BlockState[0]),
-                minX, minY, minZ, sizeX, sizeY, sizeZ, realLevel, anchor);
+        /** 建完后的视图；被放弃（包围盒过大 / 无数据）时返回 {@code null}。可重复调用。 */
+        @Nullable
+        public BuildingGhostBlockView build() {
+            if (abandoned || grid == null) return null;
+            return new BuildingGhostBlockView(grid, palette.toArray(new BlockState[0]),
+                    minX, minY, minZ, sizeX, sizeY, sizeZ, realLevel, anchor);
+        }
     }
 
     // ── BlockGetter ──

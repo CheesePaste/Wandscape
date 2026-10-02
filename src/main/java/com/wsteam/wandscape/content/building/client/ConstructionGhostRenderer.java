@@ -7,6 +7,7 @@ import com.wsteam.wandscape.ClientConfig;
 import com.wsteam.wandscape.content.building.data.BuildingConfig;
 import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.content.building.render.BuildingGhostRenderer;
+import com.wsteam.wandscape.content.building.render.BuildingGhostVboCache;
 import com.wsteam.wandscape.content.building.render.BuildingOutline;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.foundation.log.LogCategory;
@@ -47,6 +48,13 @@ public final class ConstructionGhostRenderer {
     }
 
     static void onRenderLevelStage(RenderLevelStageEvent event) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level == null) return;
+
+        // 收掉没人再画的半成品烘焙作业。放在所有早退**之前**：面板关掉后这里仍每帧进来
+        // （监听的是全阶段事件），而那时正是最需要收的时候。内部按 tick 限流，重复调用免费。
+        BuildingGhostVboCache.sweepIdleJobs(mc);
+
         // Only show construction footprints while the panel is open (V mode / placement).
         if (!WandscapePanelState.isPanelOpen()) return;
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRIPWIRE_BLOCKS) return;
@@ -54,10 +62,10 @@ public final class ConstructionGhostRenderer {
         var buildings = BuildingAreaSyncPacket.getCached();
         if (buildings.isEmpty()) return;
 
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.level == null) return;
-
         Vec3 camPos = event.getCamera().getPosition();
+
+        // 本帧所有工地共用一份烘焙时间预算：逐个建筑各给一份的话，场上 N 个工地就是 N 份。
+        long bakeDeadline = BuildingGhostVboCache.bakeDeadline();
 
         // 虚影可关（ClientConfig#BUILDING_GHOST）：关掉后连 VBO 都不烘，每个工地只画一圈包围盒线框。
         boolean ghostOn = ClientConfig.BUILDING_GHOST.get();
@@ -88,7 +96,7 @@ public final class ConstructionGhostRenderer {
             }
 
             BuildingGhostRenderer.renderGhostVboSkipped(mc, event.getModelViewMatrix(), event.getProjectionMatrix(),
-                    camPos, anchor, config, entry.rotationSteps(), event.getFrustum());
+                    camPos, anchor, config, entry.rotationSteps(), event.getFrustum(), bakeDeadline);
 
             // Animated blocks (chests etc.) can't bake into the VBO — render them
             // per-frame via their block-entity item renderer, skipping already-placed cells.
