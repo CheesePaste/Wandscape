@@ -6,6 +6,8 @@ import com.mojang.blaze3d.vertex.*;
 import com.wsteam.wandscape.content.building.data.BlockOffset;
 import com.wsteam.wandscape.content.building.data.BuildingConfig;
 import com.wsteam.wandscape.content.building.projection.BuildingRotation;
+import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.log.LogCategory;
 import it.unimi.dsi.fastutil.longs.Long2IntMap;
 import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
 import net.minecraft.client.Minecraft;
@@ -89,11 +91,15 @@ public final class BuildingGhostVboCache {
     private static final long BAKE_BUDGET_NS = 1_000_000L;
 
     /**
-     * 多久没被画到的半成品作业就丢掉（tick）。
+     * 整个虚影系统闲置（一帧都没画过任何虚影）这么久之后，把所有半成品作业收掉（tick）。
      *
      * <p>一个在跑的作业握着 3 条 n 长的数组（那栋超大建筑约 14 MB）、分组用的中间表，
-     * 以及一位面剔除视图（定长索引表最大 32 MB）。玩家转走旋转角、或把面板关掉之后，
-     * 这些作业没人再推进，不收就是白占内存 —— 烘完的网格留着，半成品丢掉重开即可。
+     * 以及一位面剔除视图（定长索引表最大 32 MB）。面板关掉 / 退出投影之后这些作业没人再推进，
+     * 不收就是白占内存 —— 烘完的网格留着，半成品丢掉重开即可。
+     *
+     * <p>计量口径是**整个系统**而不是单个建筑：某个建筑被视锥剔掉、或玩家转走了旋转角，
+     * 都只是它这一会儿没被画到，不代表这份作业废弃了。按单个建筑计时的话，玩家一边移动
+     * 一边看，大楼时不时出视锥，作业就会被反复收掉又从头重烘 —— 那是我自己造出来的病。
      */
     private static final long IDLE_JOB_TICKS = 200L;
 
@@ -109,6 +115,8 @@ public final class BuildingGhostVboCache {
     private static final Map<String, GhostBucket> CACHE = new HashMap<>();
     /** {@link #sweepIdleJobs} 的上次执行 tick，让每帧多次调用只扫一遍。 */
     private static long lastSweepTick = Long.MIN_VALUE;
+    /** 上次真的画到虚影的 tick（见 {@link #IDLE_JOB_TICKS}）。 */
+    private static long lastActiveTick = Long.MIN_VALUE;
     private static final ByteBufferBuilder INDEX_BBB = new ByteBufferBuilder(4 * 1024 * 1024);
 
     private BuildingGhostVboCache() {}
@@ -375,11 +383,11 @@ public final class BuildingGhostVboCache {
                 bucket.jobs[steps] = job;
             }
 
-            if (job != null) {
-                job.lastRequestTick = currentTick(mc);
-                if (job.advance(mesh, bakeDeadlineNs)) {
-                    bucket.jobs[steps] = null;   // 完工
-                }
+            lastActiveTick = currentTick(mc);
+            if (job != null && job.advance(mesh, bakeDeadlineNs)) {
+                bucket.jobs[steps] = null;   // 完工
+                Log.debug(LogCategory.BUILDING, "ghost", "baked {} rot={} sections={} in {} ms",
+                        config.id(), steps, mesh.builtCount, job.elapsedMs());
             }
             // 还没建出任何段（或这栋楼本来就产不出四边形）：当帧不画。
             // mesh 一直留在桶里，所以不会退化成"每帧重烘"。
@@ -399,17 +407,17 @@ public final class BuildingGhostVboCache {
         synchronized (CACHE) {
             if (tick == lastSweepTick) return;
             lastSweepTick = tick;
+            // 虚影还在画：在跑的作业都别动，哪怕这一会儿某个建筑被视锥剔掉了。
+            if (tick - lastActiveTick <= IDLE_JOB_TICKS) return;
+
+            // 全部收掉。跨世界的那些也一并收：lastActiveTick 可能记的是上个世界的 gameTime，
+            // 和本世界做差是负数，光看上面那道闲置判定永远轮不到它们。
             for (GhostBucket bucket : CACHE.values()) {
                 for (int i = 0; i < 4; i++) {
-                    GhostBakeJob job = bucket.jobs[i];
-                    if (job == null) continue;
-                    // 跨世界的作业直接丢（不为别的，就为它的 lastRequestTick 记的是上个世界的
-                    // gameTime，比本世界的还大，做差是负数，永远过不了下面那道年龄判定）。
-                    if (job.level != mc.level || tick - job.lastRequestTick > IDLE_JOB_TICKS) {
-                        bucket.jobs[i] = null;
-                        closeMesh(bucket.byRotation[i]);
-                        bucket.byRotation[i] = null;
-                    }
+                    if (bucket.jobs[i] == null) continue;
+                    bucket.jobs[i] = null;
+                    closeMesh(bucket.byRotation[i]);
+                    bucket.byRotation[i] = null;
                 }
             }
         }
@@ -452,8 +460,7 @@ public final class BuildingGhostVboCache {
 
         /** 作业创建时的世界实例；变了就说明换了世界，作业作废（见 {@code getOrBake}）。 */
         final Level level;
-        /** 上次被画到的 tick；{@link #sweepIdleJobs} 据此丢掉没人再推进的半成品。 */
-        long lastRequestTick;
+        private final long startedNs = System.nanoTime();
 
         private final List<BlockOffset> pattern;
         private final List<Integer> blockIndices;
@@ -492,6 +499,11 @@ public final class BuildingGhostVboCache {
             this.rotatedOffsets = new BlockOffset[n];
             this.cellStates = new BlockState[n];
             this.cellBlocks = new Block[n];
+        }
+
+        /** 作业从建下到烘完的墙钟耗时（毫秒）；分摊烘焙后这个数包含中间空闲的帧，仅供诊断。 */
+        long elapsedMs() {
+            return (System.nanoTime() - startedNs) / 1_000_000L;
         }
 
         /**
