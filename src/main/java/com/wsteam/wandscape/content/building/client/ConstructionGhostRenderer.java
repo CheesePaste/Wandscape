@@ -51,9 +51,9 @@ public final class ConstructionGhostRenderer {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null) return;
 
-        // 收掉没人再画的半成品烘焙作业。放在所有早退**之前**：面板关掉后这里仍每帧进来
-        // （监听的是全阶段事件），而那时正是最需要收的时候。内部按 tick 限流，重复调用免费。
-        BuildingGhostVboCache.sweepIdleJobs(mc);
+        // 回收长时间没人看的虚影。放在所有早退**之前**：面板关掉后这里仍每帧进来
+        // （监听的是全阶段事件），而那时正是最需要回收的时候。内部有限流，重复调用免费。
+        BuildingGhostVboCache.sweepIdle();
 
         // Only show construction footprints while the panel is open (V mode / placement).
         if (!WandscapePanelState.isPanelOpen()) return;

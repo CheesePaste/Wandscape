@@ -600,6 +600,9 @@ public class WandscapeClient {
     /** Reset client panel/UI state on disconnect so it doesn't leak into the next world. */
     private static void onPlayerLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
         WandscapePanelState.reset();
+        // 虚影 VBO 是纯客户端常驻显存（大楼一栋几十 MB，顶点/索引在 GPU 上），离开世界就整个
+        // 还回去。之前只有「关掉虚影开关」和 datapack 重载两个释放点，跨世界会一直堆着。
+        BuildingGhostVboCache.closeAll();
         CompassTargetClientCache.clear(); // 跨世界/存档不残留上一市政厅目标
         // 建筑区域缓存在服务器重新同步前不清空，会带着上一世界（存档）的建筑边界框进入
         // 下一世界，导致新存档首次建建筑时误报“与旧存档建筑重叠”。

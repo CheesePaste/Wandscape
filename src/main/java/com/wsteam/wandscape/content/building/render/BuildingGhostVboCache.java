@@ -31,6 +31,7 @@ import org.lwjgl.system.MemoryUtil;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -91,17 +92,23 @@ public final class BuildingGhostVboCache {
     private static final long BAKE_BUDGET_NS = 1_000_000L;
 
     /**
-     * 整个虚影系统闲置（一帧都没画过任何虚影）这么久之后，把所有半成品作业收掉（tick）。
+     * 一栋建筑的虚影（含**烘完的网格**与在跑的作业）多久没被画到就整个释放（纳秒）。
      *
-     * <p>一个在跑的作业握着 3 条 n 长的数组（那栋超大建筑约 14 MB）、分组用的中间表，
-     * 以及一位面剔除视图（定长索引表最大 32 MB）。面板关掉 / 退出投影之后这些作业没人再推进，
-     * 不收就是白占内存 —— 烘完的网格留着，半成品丢掉重开即可。
+     * <p>烘完的网格是常驻的：顶点与索引在 GPU 上，每段还额外留一份 {@code fullIndex} 直接缓冲，
+     * 那栋超大建筑一栋就是几十 MB。没有上限、也没有过期的话，「看过的建筑 × 转过的旋转角」
+     * 会一直堆到关游戏 —— 所以要有这一条。
      *
-     * <p>计量口径是**整个系统**而不是单个建筑：某个建筑被视锥剔掉、或玩家转走了旋转角，
-     * 都只是它这一会儿没被画到，不代表这份作业废弃了。按单个建筑计时的话，玩家一边移动
-     * 一边看，大楼时不时出视锥，作业就会被反复收掉又从头重烘 —— 那是我自己造出来的病。
+     * <p>口径是**每栋建筑**而不是整个虚影系统：系统级闲置判定会造成「只要还在看着任意一栋
+     * 虚影，其它几百栋永远不回收」。代价是玩家一边移动、大楼时不时出视锥时，超过这个时限
+     * 会被收掉重烘（渐进的，不会卡）。
+     *
+     * <p>另外两条释放路径：玩家退出世界（{@code WandscapeClient#onPlayerLoggingOut}，立刻全清）
+     * 与 datapack 重载（{@link #closeAll()}）。
      */
-    private static final long IDLE_JOB_TICKS = 200L;
+    private static final long IDLE_CLEAR_NS = 300L * 1_000_000_000L;
+
+    /** {@link #sweepIdle()} 的最小间隔。它每次渲染回调都会被调到，用不着每帧扫。 */
+    private static final long SWEEP_INTERVAL_NS = 50_000_000L;
 
     /**
      * 本帧所有虚影共用的烘焙时间上限（绝对时刻）。渲染入口每帧取一次，往下传。
@@ -113,10 +120,8 @@ public final class BuildingGhostVboCache {
     }
 
     private static final Map<String, GhostBucket> CACHE = new HashMap<>();
-    /** {@link #sweepIdleJobs} 的上次执行 tick，让每帧多次调用只扫一遍。 */
-    private static long lastSweepTick = Long.MIN_VALUE;
-    /** 上次真的画到虚影的 tick（见 {@link #IDLE_JOB_TICKS}）。 */
-    private static long lastActiveTick = Long.MIN_VALUE;
+    /** {@link #sweepIdle()} 上次执行时刻，限流用。 */
+    private static long lastSweepNs = System.nanoTime();
     private static final ByteBufferBuilder INDEX_BBB = new ByteBufferBuilder(4 * 1024 * 1024);
 
     private BuildingGhostVboCache() {}
@@ -287,13 +292,15 @@ public final class BuildingGhostVboCache {
      * 一栋建筑的四个旋转角各自的烘焙结果。
      *
      * <p>{@link #source} 是烘这份 VBO 时的配置实例。进世界时服务端会同步建筑数据，
-     * {@code BuildingConfigLoader} 会重建全部实例，而这份缓存跨世界不清 —— 旧实例仍是键。
-     * 见 {@link #bucketFor} 里为什么键必须是 {@code id} 而不是 record。
+     * {@code BuildingConfigLoader} 会重建全部实例；键必须是 {@code id} 而不是 record
+     * （见 {@link #bucketLocked}）。
      */
     private static final class GhostBucket {
         BuildingConfig source;
         final BakedGhostMesh[] byRotation = new BakedGhostMesh[4];
         final GhostBakeJob[] jobs = new GhostBakeJob[4];
+        /** 上次真的画到这栋建筑虚影的时刻，{@link #IDLE_CLEAR_NS} 据此回收。 */
+        long lastDrawnNs = System.nanoTime();
 
         GhostBucket(BuildingConfig source) {
             this.source = source;
@@ -364,10 +371,10 @@ public final class BuildingGhostVboCache {
             BakedGhostMesh mesh = bucket.byRotation[steps];
             GhostBakeJob job = bucket.jobs[steps];
 
-            // 换世界了（level 实例变了或没了）：半成品作业连着旧 Level 与半拉的段，作废重开。
-            // 这里必须往前挪到建作业之前 —— 建作业要花一份 n 长的数组，建完立刻扔掉是白烧。
-            // 已经烘完的网格不受影响（那时 jobs[steps] 早已是 null），它的顶点是相对偏移，
-            // 换世界照样能用。
+            // 换维度了（level 实例变了）：半成品作业连着旧 Level 与半拉的段，作废重开。
+            // 必须往前挪到建作业之前 —— 建作业要花一份 n 长的数组，建完立刻扔掉是白烧。
+            // 已经烘完的网格不受影响（那时 jobs[steps] 早已是 null），它的顶点是相对偏移；
+            // 唯一带世界信息的是烘进去的群系染色，换维度后会沿用旧的，属于可接受的瑕疵。
             if (job != null && job.level != mc.level) {
                 bucket.jobs[steps] = null;
                 closeMesh(mesh);
@@ -383,7 +390,7 @@ public final class BuildingGhostVboCache {
                 bucket.jobs[steps] = job;
             }
 
-            lastActiveTick = currentTick(mc);
+            bucket.lastDrawnNs = System.nanoTime();
             if (job != null && job.advance(mesh, bakeDeadlineNs)) {
                 bucket.jobs[steps] = null;   // 完工
                 Log.debug(LogCategory.BUILDING, "ghost", "baked {} rot={} sections={} in {} ms",
@@ -396,29 +403,23 @@ public final class BuildingGhostVboCache {
     }
 
     /**
-     * 每 tick 至多扫一次，丢掉 {@link #IDLE_JOB_TICKS} 内没被画到的半成品作业。
+     * 回收闲置的虚影：一栋建筑 {@link #IDLE_CLEAR_NS} 没被画到，就把它的网格与作业整个释放，
+     * 并从缓存里移出（下次要看再重烘）。
      *
      * <p>得由「面板没开也会跑」的地方调（{@code ConstructionGhostRenderer} 的渲染回调开头），
-     * 否则关掉面板后这些作业永远没人收。已烘完的网格留着，只丢半成品。
+     * 否则关掉面板之后就没人触发回收了。内部按 {@link #SWEEP_INTERVAL_NS} 限流。
      */
-    public static void sweepIdleJobs(Minecraft mc) {
-        if (mc.level == null) return;
-        long tick = mc.level.getGameTime();
+    public static void sweepIdle() {
+        long now = System.nanoTime();
         synchronized (CACHE) {
-            if (tick == lastSweepTick) return;
-            lastSweepTick = tick;
-            // 虚影还在画：在跑的作业都别动，哪怕这一会儿某个建筑被视锥剔掉了。
-            if (tick - lastActiveTick <= IDLE_JOB_TICKS) return;
-
-            // 全部收掉。跨世界的那些也一并收：lastActiveTick 可能记的是上个世界的 gameTime，
-            // 和本世界做差是负数，光看上面那道闲置判定永远轮不到它们。
-            for (GhostBucket bucket : CACHE.values()) {
-                for (int i = 0; i < 4; i++) {
-                    if (bucket.jobs[i] == null) continue;
-                    bucket.jobs[i] = null;
-                    closeMesh(bucket.byRotation[i]);
-                    bucket.byRotation[i] = null;
-                }
+            if (now - lastSweepNs < SWEEP_INTERVAL_NS) return;
+            lastSweepNs = now;
+            Iterator<GhostBucket> it = CACHE.values().iterator();
+            while (it.hasNext()) {
+                GhostBucket bucket = it.next();
+                if (now - bucket.lastDrawnNs <= IDLE_CLEAR_NS) continue;
+                bucket.releaseAll();
+                it.remove();
             }
         }
     }
@@ -599,7 +600,7 @@ public final class BuildingGhostVboCache {
             mesh.sections = new SectionMesh[sectionCells.length];
             mesh.drawOrder = new long[sectionCells.length];
             // 分组用的中间表到这儿就没用了：那栋超大建筑光 sectionKeys 就是 4.6 MB，
-            // 半成品作业可能挂很久（见 sweepIdleJobs），别白占着。
+            // 半成品作业可能挂很久（见 #IDLE_CLEAR_NS），别白占着。
             sectionKeys = null;
             sectionIndexOf = null;
             sectionCounts = null;
