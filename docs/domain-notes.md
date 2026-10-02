@@ -146,6 +146,14 @@
    - 解锁一件东西会**连带**解锁"每个材料槽都有已解锁选项"的下游配方并递归下去（知道橡木木板，再存入一次白色羊毛，白床跟着解锁），推导结果同样永久入档，来源标 `recipe_tree`。默认清单（`default_recipes.json`）也当已知材料参与，所以新镇开局就有 200 多条恒定已解锁——判断"这料能不能自产"时别默认"没亲手拿到就永远锁着"。
    - 因此自动补料的门（`isSynthesizeUnlocked`）比"玩家拿过什么"**宽**：工地与商店能自产的料可能比预期多。但要按**材料**判断而不是按**成品**：树只能推出材料齐全的东西，`end_rod`（烈焰棒）、`iron_ingot`（矿）、`white_wool`（线）这类上游没解锁的照样推不出来。
    - 图挂在配方管理器**实例**上，`/reload` 换实例即重建；每镇按内容指纹（`ColonyRecipeSavedData.tree_fingerprint`，v2 起）决定要不要重扫，稳态启动零开销。改配方表（数据包 / 整合包 / 版本升级）后旧档靠这次重扫自愈。规则与实测数字见 `docs/data-formats.md` §五.1。
+10. **奇观建筑落成触发机制（`WonderCompletedEvent` 与 `WonderTriggerRegistry`）**：
+   - **触发时机**：当任何 `category == "wonder"` 的建筑在 `BuildCompleteListener` 中建成时，自动触发。
+   - **双层解耦架构**：
+     - **底座事件 `WonderCompletedEvent`**（发布至 `NeoForge.EVENT_BUS`）：供外部解耦系统（如 `AchievementService` 奇观成就结算、任务系统等）监听，无需感知各个具体奇观的内部细节。
+     - **专用注册中心 `WonderTriggerRegistry`**：以策略模式支持按 `buildingTypeId` 或谓词（`Predicate<WonderTriggerContext>`）注册业务处理函数。
+   - **首建与复原防重入（`firstCompletion`）**：奇观若损坏后通过 V 面板「复原」虽也会触发完工，但 `state.hasEverCompleted()` 为 true。注册器通过 `firstOnly = true` 确保一次性重磅奖励（如全套配方解锁）仅在小镇历史上首次落成时触发，杜绝玩家刷取奖励。
+   - **内置奇观：魔法学院（`magic_academy`）**：首建落成自动调用 `ProductionRecipeManager.unlockAllSynthesize(colonyId, "wonder:magic_academy")` 为该小镇解锁所有合成配方，并向全镇成员及附近玩家广播 ScreenFeedback 横幅与系统消息。
+   - **调试与测试指令**：`/wandscape test wonder list`（查看已注册触发器）及 `/wandscape test wonder trigger <buildingType> [firstCompletion]`（手动对当前小镇触发奇观落成效果）。
 
 ---
 

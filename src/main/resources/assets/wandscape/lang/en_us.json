@@ -1681,6 +1681,7 @@
   "message.wandscape.warehouse.capacity_full": "Warehouse capacity is full",
   "message.wandscape.warehouse_terminal.no_colony": "You have no town — the warehouse cannot be opened",
   "message.wandscape.warehouse_terminal.not_equipped": "Warehouse Terminal is not equipped or held",
+  "message.wandscape.wonder.magic_academy_completed": "[Wonder] The Magic Academy is complete! All synthesize recipes unlocked for the town (%s items)",
   "mode.wandscape.scepter.follow": "Follow",
   "mode.wandscape.scepter.hostile": "Hostile",
   "mode.wandscape.scepter.peace": "Peace",

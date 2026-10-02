@@ -37,7 +37,7 @@ public final class BuildingCommand {
     private static final SuggestionProvider<CommandSourceStack> SUGGEST_CATEGORIES = (ctx, builder) ->
             SharedSuggestionProvider.suggest(
                     java.util.List.of("government", "storage", "production", "node",
-                            "altar", "mage_hut", "tavern", "shop", "hotel", "relax"),
+                            "altar", "mage_hut", "tavern", "shop", "hotel", "relax", "wonder"),
                     builder);
 
     public static CommandNode<CommandSourceStack> node() {

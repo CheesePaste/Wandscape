@@ -88,6 +88,7 @@ public final class BuildCompleteListener {
         List<BlockOffset> damaged = findDamagedBlocks(level, anchor, config, state.getRotationSteps());
         // 建筑不再因结构损坏而停摆：无论残留多少缺失方块，建成即判定完好并计入贡献，
         // 缺失方块可通过 V 面板「复原」手动补齐。
+        boolean firstCompletion = !state.hasEverCompleted();
         state.setStructureIntact(true);
         // Sticky: once construction completes, never show the ghost again,
         // even if the building later becomes damaged.
@@ -127,6 +128,21 @@ public final class BuildCompleteListener {
                         ParticleService.boundsCenterAbove(state.getBounds(), 2),
                         1.0f, 0.85f, 0.30f, 40, 0.14f, 40, true);
             }
+        }
+
+        // ── 奇观建筑生命周期触发 ──
+        if ("wonder".equals(state.getCategory()) && level instanceof ServerLevel srv) {
+            com.wsteam.wandscape.content.building.wonder.WonderTriggerContext ctx =
+                    new com.wsteam.wandscape.content.building.wonder.WonderTriggerContext(
+                            state.getBuildingId(),
+                            state.getColonyId(),
+                            state.getBuildingTypeId(),
+                            config,
+                            state,
+                            srv,
+                            firstCompletion
+                    );
+            com.wsteam.wandscape.content.building.wonder.WonderTriggerRegistry.dispatch(ctx);
         }
 
         // Record contribution: only fires ColonyEvaluationChangedEvent when this

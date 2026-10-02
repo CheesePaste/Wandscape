@@ -142,6 +142,9 @@
 
 本体自消费：`getBuildingApi` 35（最重之一）。**无新桩**——这是当前最"活"的 API。
 
+**公开事件（域事件留域 `content/building/event`，广播于 `NeoForge.EVENT_BUS`）**：
+- `WonderCompletedEvent`（奇观建筑落成，带 `buildingId/colonyId/buildingTypeId/config/state/level/firstCompletion`）
+
 ---
 
 ## 6. ScepterApi（权杖庇护/强制仇恨域）
