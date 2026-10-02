@@ -17,6 +17,7 @@ import com.wsteam.wandscape.content.task.engine.pool.GlobalTask;
 import com.wsteam.wandscape.content.warehouse.ColonyItemBank;
 import com.wsteam.wandscape.content.production.data.CraftRecipeView;
 import com.wsteam.wandscape.foundation.networking.Net;
+import com.wsteam.wandscape.foundation.registry.WandscapeConstants;
 import com.wsteam.wandscape.foundation.util.ItemKey;
 import com.wsteam.wandscape.Wandscape;
 import net.minecraft.core.BlockPos;
@@ -41,8 +42,13 @@ import static com.wsteam.wandscape.Wandscape.MODID;
 public record TaskQueueModifyPacket(
     BlockPos stationPos,
     String action,
-    int index
+    int index,
+    String targetGroup
 ) implements CustomPacketPayload {
+
+    public TaskQueueModifyPacket(BlockPos stationPos, String action, int index) {
+        this(stationPos, action, index, "");
+    }
 
     private static final String TAG = "TaskQueueModifyPacket";
 
@@ -61,8 +67,8 @@ public record TaskQueueModifyPacket(
     public static void handleServer(TaskQueueModifyPacket pkt, ServerPlayer sp) {
 
         sp.getServer().execute(() -> {
-            Log.info(TAG, "TaskQueueModify: received {} action index={} pos={} from player {}",
-                    pkt.action, pkt.index, pkt.stationPos, sp.getName().getString());
+            Log.info(TAG, "TaskQueueModify: received {} action index={} group={} pos={} from player {}",
+                    pkt.action, pkt.index, pkt.targetGroup, pkt.stationPos, sp.getName().getString());
 
             BuildingSavedData data = BuildingSavedData.get(sp.serverLevel());
             if (data == null) {
@@ -84,8 +90,8 @@ public record TaskQueueModifyPacket(
                 com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(sp, "task_queue", "队列");
                 return;
             }
-            Log.info(TAG, "TaskQueueModify: buildingId={} action={} index={}",
-                    buildingId.toString().substring(0, 8), pkt.action, pkt.index);
+            Log.info(TAG, "TaskQueueModify: buildingId={} action={} index={} group={}",
+                    buildingId.toString().substring(0, 8), pkt.action, pkt.index, pkt.targetGroup);
 
             var api = com.wsteam.wandscape.content.building.internal.BuildingApiImpl.get();
             boolean changed = false;
@@ -107,6 +113,23 @@ public record TaskQueueModifyPacket(
                     boolean ok = api.moveToBottom(buildingId, pkt.index);
                     changed = ok;
                 }
+                case "cancel_group" -> {
+                    String tg = pkt.targetGroup();
+                    String sType = tg != null ? tg : "";
+                    String sId = "";
+                    int colon = sType.indexOf(':');
+                    if (colon >= 0) {
+                        sId = sType.substring(colon + 1);
+                        sType = sType.substring(0, colon);
+                    }
+                    UUID cid = qState != null ? qState.getColonyId() : null;
+                    var world = com.wsteam.wandscape.content.task.ecs.World.getActive();
+                    int cancelled = com.wsteam.wandscape.content.warehouse.system.ResourceSupplySystem
+                            .cancelTasksForSource(cid, sType, sId, world);
+                    Log.info(TAG, "TaskQueueModify: cancel_group '{}' (type={}, id={}) cancelled {} tasks",
+                            tg, sType, sId, cancelled);
+                    changed = true;
+                }
                 default -> Log.warn(TAG, "TaskQueueModify: unknown action '{}' index={} pos={}",
                         pkt.action, pkt.index, pkt.stationPos);
             }
@@ -127,11 +150,17 @@ public record TaskQueueModifyPacket(
                 String category = categorize(bid);
                 String itemOrRecipeId = extractItemId(bid, params);
                 int quantity = paramInt(params, "count", 0);
+                String sourceType = resolveSourceType(item);
+                String sourceId = paramStr(params, "source_id");
+                String sourceName = resolveSourceName(item, data);
                 entries.add(new TaskQueueDataPacket.QueueEntry(
                         i, category, itemOrRecipeId, quantity, bid, summarizeWorkItem(bid, params),
                         isInsufficient(bid, params, elementSnapshot, bank, colonyId),
                         missingElements(bid, params, elementSnapshot),
-                        isCapacityBlocked(bid, params, bank, colonyId)
+                        isCapacityBlocked(bid, params, bank, colonyId),
+                        sourceType,
+                        sourceId != null ? sourceId : "",
+                        sourceName != null ? sourceName : ""
                 ));
             }
 
@@ -244,7 +273,7 @@ public record TaskQueueModifyPacket(
 
         List<TaskQueueDataPacket.CurrentTask> result = new ArrayList<>();
         for (BuildingState target : targets) {
-            TaskQueueDataPacket.CurrentTask ct = buildCurrentTask(target);
+            TaskQueueDataPacket.CurrentTask ct = buildCurrentTask(target, data);
             if (ct != null) result.add(ct);
         }
         return result;
@@ -255,7 +284,7 @@ public record TaskQueueModifyPacket(
      * Returns null when no head task is active or it can't be resolved.
      */
     @Nullable
-    private static TaskQueueDataPacket.CurrentTask buildCurrentTask(@Nullable BuildingState state) {
+    private static TaskQueueDataPacket.CurrentTask buildCurrentTask(@Nullable BuildingState state, @Nullable BuildingSavedData data) {
         if (state == null) return null;
         UUID currentTaskUuid = state.getCurrentTaskId();
         if (currentTaskUuid == null) return null;
@@ -288,9 +317,16 @@ public record TaskQueueModifyPacket(
         // Channel task accepted but not started (NPC en route): show "waiting" instead of a fake countdown.
         boolean pending = channelTotal > 0 && !channelActive;
 
+        String sourceType = resolveSourceType(gt);
+        String sourceId = paramStr(params, "source_id");
+        String sourceName = resolveSourceName(gt, data);
         TaskQueueDataPacket.QueueEntry entry = new TaskQueueDataPacket.QueueEntry(
                 0, categorize(bid), extractItemId(bid, params),
-                paramInt(params, "count", 0), bid, summarizeWorkItem(bid, params));
+                paramInt(params, "count", 0), bid, summarizeWorkItem(bid, params),
+                false, List.of(), false,
+                sourceType,
+                sourceId != null ? sourceId : "",
+                sourceName != null ? sourceName : "");
         return new TaskQueueDataPacket.CurrentTask(
                 entry, stepIndex, totalSteps, channelRemaining, channelTotal, pending);
     }
@@ -379,17 +415,73 @@ public record TaskQueueModifyPacket(
         return !bank.hasCapacity(colonyId, count);
     }
 
+    static String resolveSourceType(WorkItem item) {
+        String st = paramStr(item.params(), "source_type");
+        if (st != null && !st.isEmpty()) return st;
+        if ("restock".equals(paramStr(item.params(), "supply"))) return "restock";
+        if (item.priority() >= WandscapeConstants.TASK_PRIORITY_PLAYER) return "player";
+        return "auto";
+    }
+
+    static String resolveSourceType(GlobalTask task) {
+        String st = paramStr(task.taskParams, "source_type");
+        if (st != null && !st.isEmpty()) return st;
+        if ("restock".equals(paramStr(task.taskParams, "supply"))) return "restock";
+        if (task.priority >= WandscapeConstants.TASK_PRIORITY_PLAYER) return "player";
+        return "auto";
+    }
+
+    static String resolveSourceName(WorkItem item, BuildingSavedData data) {
+        String sn = paramStr(item.params(), "source_name");
+        if (sn != null && !sn.isEmpty()) return sn;
+        String st = resolveSourceType(item);
+        if ("building".equals(st)) {
+            String sid = paramStr(item.params(), "source_id");
+            if (sid != null && !sid.isEmpty()) {
+                try {
+                    UUID bid = UUID.fromString(sid);
+                    BuildingState bs = data.getBuilding(bid);
+                    if (bs != null) {
+                        return bs.getDisplayName();
+                    }
+                } catch (IllegalArgumentException ignored) {}
+            }
+        }
+        return "";
+    }
+
+    static String resolveSourceName(GlobalTask task, BuildingSavedData data) {
+        String sn = paramStr(task.taskParams, "source_name");
+        if (sn != null && !sn.isEmpty()) return sn;
+        String st = resolveSourceType(task);
+        if ("building".equals(st)) {
+            String sid = paramStr(task.taskParams, "source_id");
+            if (sid != null && !sid.isEmpty()) {
+                try {
+                    UUID bid = UUID.fromString(sid);
+                    BuildingState bs = data.getBuilding(bid);
+                    if (bs != null) {
+                        return bs.getDisplayName();
+                    }
+                } catch (IllegalArgumentException ignored) {}
+            }
+        }
+        return "";
+    }
+
     static void write(RegistryFriendlyByteBuf buf, TaskQueueModifyPacket pkt) {
         buf.writeBlockPos(pkt.stationPos);
         buf.writeUtf(pkt.action);
         buf.writeVarInt(pkt.index);
+        buf.writeUtf(pkt.targetGroup != null ? pkt.targetGroup : "");
     }
 
     static TaskQueueModifyPacket read(RegistryFriendlyByteBuf buf) {
         return new TaskQueueModifyPacket(
                 buf.readBlockPos(),
                 buf.readUtf(),
-                buf.readVarInt()
+                buf.readVarInt(),
+                buf.readUtf()
         );
     }
 }

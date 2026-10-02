@@ -291,6 +291,8 @@ public class BuildingApiImpl implements BuildingApi {
                             state.getColonyId(), materialCounts, com.wsteam.wandscape.content.task.ecs.World.getActive());
                 }
             }
+            com.wsteam.wandscape.content.warehouse.system.ResourceSupplySystem.cancelTasksForSource(
+                    state.getColonyId(), "building", buildingId.toString(), com.wsteam.wandscape.content.task.ecs.World.getActive());
         }
 
         // Mark building for demolition and clear any pending work. Also flip
@@ -375,6 +377,8 @@ public class BuildingApiImpl implements BuildingApi {
                         colonyId, materialCounts, world);
             }
         }
+        com.wsteam.wandscape.content.warehouse.system.ResourceSupplySystem.cancelTasksForSource(
+                colonyId, "building", buildingId.toString(), world);
 
         // 退款只看账本：材料真正被扣过才退，且每项不超过已扣数量。未开工（或首建免费）
         // 时账本为空，退任何东西都是凭空造物——这条是撤销不刷物品的唯一保证。

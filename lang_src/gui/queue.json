@@ -1,4 +1,12 @@
 {
+  "gui.wandscape.queue.cancel_all": {
+    "zh_cn": "一键全部取消",
+    "en_us": "Cancel All"
+  },
+  "gui.wandscape.queue.empty": {
+    "zh_cn": "暂无制作任务",
+    "en_us": "No tasks in queue"
+  },
   "gui.wandscape.queue.capacity": {
     "zh_cn": "容量不足",
     "en_us": "Full"
@@ -71,13 +79,45 @@
     "zh_cn": "待抄录",
     "en_us": "Awaiting Transcription..."
   },
+  "gui.wandscape.queue.source.auto": {
+    "zh_cn": "自动补给",
+    "en_us": "Auto Supply"
+  },
+  "gui.wandscape.queue.source.building": {
+    "zh_cn": "建筑建造",
+    "en_us": "Construction"
+  },
+  "gui.wandscape.queue.source.building_name": {
+    "zh_cn": "建造: %s",
+    "en_us": "Build: %s"
+  },
+  "gui.wandscape.queue.source.player": {
+    "zh_cn": "玩家请求",
+    "en_us": "Player Request"
+  },
+  "gui.wandscape.queue.source.restock": {
+    "zh_cn": "商店补货",
+    "en_us": "Shop Restock"
+  },
+  "gui.wandscape.queue.source.road": {
+    "zh_cn": "道路施工",
+    "en_us": "Road Construction"
+  },
   "gui.wandscape.queue.tooltip.cancel": {
     "zh_cn": "取消任务",
     "en_us": "Cancel Task"
   },
+  "gui.wandscape.queue.tooltip.cancel_group": {
+    "zh_cn": "一键取消此组所有任务",
+    "en_us": "Cancel all tasks in this group"
+  },
   "gui.wandscape.queue.tooltip.capacity": {
     "zh_cn": "小镇仓库容量不足",
     "en_us": "Town storage full"
+  },
+  "gui.wandscape.queue.tooltip.group_summary": {
+    "zh_cn": "%s (进行中: %s, 排队: %s)",
+    "en_us": "%s (Running: %s, Queued: %s)"
   },
   "gui.wandscape.queue.tooltip.missing_elements": {
     "zh_cn": "缺少元素: %s",

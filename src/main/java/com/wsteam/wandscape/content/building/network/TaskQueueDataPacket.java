@@ -53,6 +53,9 @@ public record TaskQueueDataPacket(
      * @param missingElements element ids (lowercase, e.g. "wood") that are short — rendered as icons client-side
      * @param capacityBlocked true when the colony warehouse is full and this craft output cannot be deposited
      *                        (restock-driven synthesis is exempt)
+     * @param sourceType      origin type: "player" / "building" / "road" / "restock" / "auto"
+     * @param sourceId        origin id: buildingId / roadId (empty for player/auto)
+     * @param sourceName      display name for the source: e.g. "Town Hall", "Road Construction", etc.
      */
     public record QueueEntry(
             int index,
@@ -63,12 +66,23 @@ public record TaskQueueDataPacket(
             String summary,
             boolean insufficient,
             List<String> missingElements,
-            boolean capacityBlocked
+            boolean capacityBlocked,
+            String sourceType,
+            String sourceId,
+            String sourceName
     ) {
-        /** Compact constructor defaulting the shortage markers (legacy / non-production entries). */
+        /** Compact constructor defaulting source info to player. */
+        public QueueEntry(int index, String category, String itemOrRecipeId, int quantity,
+                          String blueprintId, String summary, boolean insufficient,
+                          List<String> missingElements, boolean capacityBlocked) {
+            this(index, category, itemOrRecipeId, quantity, blueprintId, summary,
+                    insufficient, missingElements, capacityBlocked, "player", "", "");
+        }
+
+        /** Legacy constructor kept for backward compatibility. */
         public QueueEntry(int index, String category, String itemOrRecipeId, int quantity,
                           String blueprintId, String summary) {
-            this(index, category, itemOrRecipeId, quantity, blueprintId, summary, false, List.of(), false);
+            this(index, category, itemOrRecipeId, quantity, blueprintId, summary, false, List.of(), false, "player", "", "");
         }
     }
 
@@ -127,6 +141,9 @@ public record TaskQueueDataPacket(
             buf.writeUtf(el);
         }
         buf.writeBoolean(entry.capacityBlocked);
+        buf.writeUtf(entry.sourceType != null ? entry.sourceType : "");
+        buf.writeUtf(entry.sourceId != null ? entry.sourceId : "");
+        buf.writeUtf(entry.sourceName != null ? entry.sourceName : "");
     }
 
     static TaskQueueDataPacket read(RegistryFriendlyByteBuf buf) {
@@ -164,7 +181,10 @@ public record TaskQueueDataPacket(
             missing.add(buf.readUtf());
         }
         boolean capacityBlocked = buf.readBoolean();
+        String sourceType = buf.readUtf();
+        String sourceId = buf.readUtf();
+        String sourceName = buf.readUtf();
         return new QueueEntry(index, category, itemOrRecipeId, quantity, blueprintId, summary,
-                insufficient, missing, capacityBlocked);
+                insufficient, missing, capacityBlocked, sourceType, sourceId, sourceName);
     }
 }

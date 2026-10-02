@@ -68,19 +68,25 @@ public final class ConstructionSupply {
     public static Result craftForBuilding(BuildingState state, int priority) {
         BuildingConfig config = BuildingConfigLoader.getInstance().get(state.getBuildingTypeId());
         if (config == null) return Result.EMPTY;
-        return craft(state.getColonyId(), EnqueueHelper.computeMaterialCounts(config), priority);
+        String sourceName = config.displayName() != null && !config.displayName().isEmpty()
+                ? config.displayName()
+                : state.getBuildingTypeId();
+        return craft(state.getColonyId(), EnqueueHelper.computeMaterialCounts(config), priority,
+                "building", state.getBuildingId().toString(), sourceName);
     }
 
     /** 在建道路路段的建材缺口 → 该殖民地物品工坊的合成任务。 */
     public static Result craftForRoad(RoadEdge edge, int priority) {
-        return craft(edge.getColonyId(), edge.getMaterialCounts(), priority);
+        return craft(edge.getColonyId(), edge.getMaterialCounts(), priority,
+                "road", edge.getEdgeId().toString(), "道路施工");
     }
 
     /**
      * 按「需求 - 仓库库存」算每种建材的缺口，缺口里再扣掉已在制/已排队的部分，交给
      * {@link ResourceSupplySystem#enqueueSynthesize} 下单。库存已经够的建材不碰。
      */
-    private static Result craft(@Nullable UUID colonyId, Map<String, Integer> demand, int priority) {
+    private static Result craft(@Nullable UUID colonyId, Map<String, Integer> demand, int priority,
+                                @Nullable String sourceType, @Nullable String sourceId, @Nullable String sourceName) {
         World world = World.getActive();
         var server = ServerLifecycleHooks.getCurrentServer();
         if (world == null || server == null || colonyId == null || demand.isEmpty()) return Result.EMPTY;
@@ -106,15 +112,16 @@ public final class ConstructionSupply {
                 covered++;
                 continue;
             }
-            if (ResourceSupplySystem.enqueueSynthesize(itemId, deficit, colonyId, world, priority, false)) {
+            if (ResourceSupplySystem.enqueueSynthesize(itemId, deficit, colonyId, world, priority, false,
+                    sourceType, sourceId, sourceName)) {
                 enqueued++;
             } else {
                 blocked.add(itemId);
             }
         }
         if (enqueued > 0 || !blocked.isEmpty()) {
-            Log.info(LogCategory.BUILDING, "supply", "construction supply: enqueued={} covered={} blocked={} priority={}",
-                    enqueued, covered, blocked, priority);
+            Log.info(LogCategory.BUILDING, "supply", "construction supply: enqueued={} covered={} blocked={} priority={} source={}:{}",
+                    enqueued, covered, blocked, priority, sourceType, sourceId);
         }
         return new Result(enqueued, covered, blocked);
     }

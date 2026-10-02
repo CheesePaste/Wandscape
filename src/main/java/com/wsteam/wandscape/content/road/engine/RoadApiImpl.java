@@ -83,6 +83,8 @@ public class RoadApiImpl implements RoadApi {
                 world.taskPool.cancelTask(taskId, world);
             }
         }
+        com.wsteam.wandscape.content.warehouse.system.ResourceSupplySystem.cancelTasksForSource(
+                refundColonyId, "road", edgeId.toString(), world);
 
         // 2. Clear only tiles that currently hold a road material block — leaves
         //    unbuilt terrain untouched. Placing air directly (no transform executor)
