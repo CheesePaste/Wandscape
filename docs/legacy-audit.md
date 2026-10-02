@@ -58,7 +58,7 @@
    - 权杖限定本殖民地，庇护扩友军边界，敌对单槽最高优先集火，仅持久化 UUID。
    - 盟誓戒指固定 4 槽不塌缩，整份 NBT 存取。
 4. **建筑与数据格式** (`docs/data-formats.md`)：
-   - 建筑 JSON `pattern / palette / block_indices` 结构。
+   - 建筑 JSON 的 `pattern` 打包对象（`PatternCodec` v1：palette + 稀疏 cells/values 两条 varint 流），旧的三件套已断档。
    - 关键建筑拆除保护（全世界最后 1 座市政厅/仓库/工作站禁止拆除）。
    - `src/main/resources/data/wandscape/buildings/deprecated/` 兼容载荷必须保留。
    - 元素 370+ 种子权威库、7 大元素映射与价值流向。

@@ -250,10 +250,6 @@ public final class BuildCompleteListener {
             propsStr = spec.substring(bracket + 1, spec.length() - 1);
         }
 
-        // 空气标记 = 「这格不属于本建筑」（BuildingConfig.NON_CELL_BLOCK_ID），不参与校验：
-        // 这些格本就不是这栋楼放的，不该被要求为空，也不该被算成损坏。
-        if (BuildingConfig.NON_CELL_BLOCK_ID.equals(baseId)) return null;
-
         ResourceLocation rl;
         try {
             rl = ResourceLocation.parse(baseId);

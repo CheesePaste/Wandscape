@@ -49,12 +49,14 @@
   "category": "government",
   "first_free": true,
   "deprecated": false,
-  "pattern": [[0,0,0], [1,0,0]],
-  "palette": [
-    "minecraft:oak_planks",
-    "minecraft:glass"
-  ],
-  "block_indices": [0, 1],
+  "pattern": {
+    "format": 1,
+    "origin": [0, 0, 0],
+    "size": [2, 1, 1],
+    "palette": ["minecraft:oak_planks", "minecraft:glass"],
+    "cells": "<base64>",
+    "values": "<base64>"
+  },
   "block_nbt": {
     "0,0,0": "<base64_nbt>"
   },
@@ -86,8 +88,36 @@
 }
 ```
 
+### 3.1 `pattern` 打包格式（`PatternCodec`，版本 1）
+
+`pattern` 是**对象**，不是数组。方块网格按 sparse 方式打包，编解码唯一实现是
+`content/building/data/PatternCodec`（纯逻辑、不 import MC），扫描器导出与加载器解析共用它。
+
+- `origin` / `size`：网格包围盒的最小角与尺寸（`origin` 可为负；扫描器导出的偏移是
+  `boundaryMin + 相对坐标`）。**自带范围，不复用 `boundary`** —— 后者是可选的、且语义是
+  「整箱清空的范围」，两者不是一回事。
+- `palette`：该建筑用到的方块状态，首次出现序。
+- `cells`：`base64(gzip(varint 流))`。每格线性下标 `((y-oy)*sx + (x-ox))*sz + (z-oz)` 升序排列，
+  存与前一个的差分（首个对 0 差分）。
+- `values`：`base64(gzip(varint 流))`，与 `cells` **逐位对齐**的 palette 下标。
+- 解码结果按 `(y, x, z)` 序产出，`pattern[i]` 的方块是 `palette[blockIndices[i]]`。
+
+实测（magic_academy，44.3 万格 / 453 种方块）：29.5 MB 的 pretty JSON → **361 KB**，约 82 倍。
+全仓 56 栋合计 36.4 MB → 1.5 MB。
+
+**旧格式已断档，不提供兼容读取**：`pattern` 数组 + 顶层 `palette` + `block_indices` 三件套
+（v1.11.1 及更早版本的扫描器导出）见到即抛 `JsonParseException`。`format` 不认识同样抛错。
+玩家在此版本之前导出的建筑需要重新扫描导出。
+
+**空气不是特殊方块**：扫描器从不导出空气，所以数据里出现 `minecraft:air` 一律是**人为把
+导出的周边山体/树木改写成 air 想踢出建筑**留下的痕迹 —— 它的本意就是删除。这类格子不进打包
+数据，直接成为「缺失」。放置、修复、物料、占用与重叠都只按 `pattern` 的格子算，没有任何
+针对空气的特判。
+
 ### 关键字段说明
-- `block_nbt`：仅由创造扫描器导出时包含；生存扫描器导出时剔除。
+- `block_nbt`：仅由创造扫描器导出时包含；生存扫描器导出时剔除。键是 `x,y,z`，值是**逐条
+  gzip 后的 base64 NBT** —— 一栋大建筑的这一项可能比 pattern 本身还大（magic_academy 是
+  159 KB vs 载荷 210 KB），是下一步的压缩目标。
 - `interact_spots`：交互位列表，坐标相对建筑 anchor。`action` 支持 `browse/eat/bathe/view/pay/read/take/rest/withdraw`；`facing` 为朝向（`north/east/south/west`）。
 - **四类游客模式预设块**：`shop`（购物）、`service`（服务/住宿）、`relax`（歇脚恢复精力）、`atm`（取现补充随身钱包）。
 - **`shop.profit_rate` / `service.element_output` 是基准值，不是最终入账**。入账结算顺序是「JSON 原始产出 → 创始人离线的 `colony.offlineIncomeMultiplier` 折减 → 全局产出阀门」，阀门分别是 `Config.shop.elementMultiplier` 与 `Config.service.elementMultiplier`（默认 1.0 = 不缩放，可在设置中心「经营」页调）。想整体缩放游客经济的元素产出就动这两个 config，别逐个改 JSON。

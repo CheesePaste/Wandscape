@@ -1,7 +1,7 @@
 # 超大建筑的渲染性能与数据体积方案（magic_academy 为样本）
 
 > 日期：2026-10-01
-> 状态：**A 档已实施**（A1 的非视觉部分 + A2 + A3 + A4，2026-10-01，口径见 §五）；A1 里会改变观感的部分与 A5 未做，B / C 档待决策
+> 状态：**A 档已实施**（A1 的非视觉部分 + A2 + A3 + A4，2026-10-01，口径见 §五）；**C9 / C10 已实施**（2026-10-02，口径见 §7.3），C11 已回退；C12 / C13（运行时堆内存）未做；A1 里会改变观感的部分与 A5 未做，B 档见 §六
 > 适用版本：Minecraft NeoForge 1.21.1 / 分支 `1.21.1`
 > 关联：[domain-notes.md](../domain-notes.md)（建筑域）、[data-formats.md](../data-formats.md)、[file-layout.md](../file-layout.md)、[adr.md](../adr.md)
 > 外部参考：`_refs/litematica/`（LGPL-3.0，分支 `pre-rewrite/fabric/1.21.1-masa`，v0.19.50；已被 `.gitignore:116` 忽略，只读不抄，口径见 §八）
@@ -324,9 +324,9 @@ anchor 变化时必须整轮重建（否则会用错位置的遮罩）。等实�
 
 | # | 改动 | 收益 | 风险 |
 |---|---|---|---|
-| C9 | **去 pretty-print** + 存取都 gzip | 29.5 MB → 8.6 MB（落盘），零逻辑改动 | 无 |
-| C10 | 自定义打包格式：`bits = max(2, ceil(log2(palette)))` 索引打包 + 全域空气游程 + NBT/gzip；**做我们自己的格式，不要求兼容 `.litematic`** | → 约 0.3 MB（约 100×） | 需带版本号走显式迁移链（[data-formats.md](../data-formats.md) 与硬规则 7） |
-| C11 | ~~从数据里删掉 air~~ → **改口径**：air 语义定为「这格不存在」，收口进 `BuildingConfig.NON_CELL_BLOCK_ID` | 语义清楚了；体积靠 C9/C10 解决 | **已实施，见 §7.1** |
+| C9 | **去 pretty-print**：落盘一律紧凑 JSON | 缩进不再占体积，零逻辑改动 | 无 |
+| C10 | 自定义打包格式 `PatternCodec` v1：**稀疏**（排序线性下标差分 varint + 值 varint 两条流，各自 gzip + base64），**做我们自己的格式，不要求兼容 `.litematic`** | 全仓 36.4 MB → **1.5 MB**（23.6×）；magic_academy 29.5 MB → **361 KB** | 需带版本号断档（[data-formats.md](../data-formats.md) 与硬规则 7） |
+| C11 | ~~air 语义定为「这格不存在」，收口进 `BuildingConfig.NON_CELL_BLOCK_ID`~~ → **已回退**：不给 air 任何特殊待遇，迁移时把存量 air 格直接删成缺失 | —— | **见 §7.3** |
 | C12 | 对象模型去装箱：`List<BlockOffset>` → `int[]`、`List<Integer>` → `short[]`；`blockMapping()`（`BuildingConfig.java:209`，58 万条 String 键 HashMap，被 `BuildCompleteListener.java:189` / `BuildingRepairHandler.java:43` / `EnqueueHelper.java:448` 调用）要么删、要么改 int 键 | 常驻堆 −30 MB 级，且消掉一个约 100 MB 瞬时的定时炸弹 | 触及多个调用点 |
 | C13 | `rawJsons` 不再常驻 Gson 的 `JsonElement` 树（`BuildingConfigLoader.java:289`）；网络同步直接从序列化字节走（`Wandscape.java:905` 现在是先 `json.toString()` 再压） | 光这一栋楼的树按量级估算就是 **150–200 MB** 常驻 | 影响 `getRawJsons()` 的全部消费者 |
 
@@ -356,6 +356,15 @@ C13 的量级说明：Gson 把 `[0,0,1]` 存成 `JsonArray` + `ArrayList` + 3 �
 （`BuildCompleteListener.java:87` 无条件 `setStructureIntact(true)`，压根没有 pattern 比对 gate）、
 渲染几何（空气 `INVISIBLE`，0 个四边形）、x/z 居中（`BuildingCentering.java:29-35` 只看 min/max x/z）。
 
+> **勘误（2026-10-02）**：上面这份清单当时把「x/z 居中」也列了进来，**那条是错的**。
+> `BuildingCentering.rotatedCenterOffsets` 用 `config.pattern()` 的 min/max x/z 算中心，而 C11 只在
+> 三处过滤、**没动 `pattern()`**，所以 C11 当时确实没影响它 —— 但 §7.3 的迁移把空气格从
+> `pattern()` 里**真删了**，于是它承重。实测全仓 56 栋只有 1 栋受影响：magic_academy 的 z=0、z=1
+> 两层整层是空气，删掉后 `minZ` 0 → 2，居中偏移 `floor((0+196)/2)=98` → `floor((2+196)/2)=99`，
+> **放置锚点沿 Z 平移 1 格**。判断：按「真正属于建筑的格子」居中比按两整层幻影空气居中更正确，
+> 故接受该偏移、不做补偿。`boundary` 未动（仍是 `z∈[0,196]`），清场范围、注册占地与虚影几何
+> 都不受影响。
+
 **默认建造路径下它本来就冗余**：`clearBox` 默认 true，`EnqueueHelper.fillBoundaryAsAir`
 （`:313-345`）会给 boundary 里**每一个**体素补写 air。经核对，含 air 的 10 栋建筑的 air 偏移
 **全部落在自己的 boundary 内**，且 pattern 偏移无重复 —— 也就是说这些 air 对最终世界状态
@@ -367,33 +376,70 @@ C13 的量级说明：Gson 把 `[0,0,1]` 存成 `JsonArray` + `ArrayList` + 3 �
 树木一并收进了 pattern，标注者把那些不属于建筑的方块改写成 air 以把它们踢出建筑。而当前
 扫描器（`ScannerExportPacket.java:138`）从不导出空气，所以数据里的 air 一律是这个意思。
 
-因此口径定为「**空气 = 这格不存在**」，落地为 `BuildingConfig.NON_CELL_BLOCK_ID` 这个唯一常量，
-并把三处职责一起收口（一起改才自洽，单改一处会留下不一致）：
+**这一节的口径已被推翻，见 §7.3。** 上面那段分析（air 从哪来、曾经怎么承重）仍然有效，
+但结论——「把 air 定义成『这格不存在』的特殊标记、并在代码里三处跳过它」——是**错的**：
+它给空气开了一个本不该有的特例。正确做法是**不给 air 任何特殊待遇**，把这些手动标注的格子
+在迁移时直接删成缺失。
 
-| 收口点 | 改动 | 效果 |
-|---|---|---|
-| `BuildingConfig.blockMapping()` | 跳过标记格 | 放置（`$blocks`）不产生该格的 op；修复按 key 查表查不到 → 不再要求这些格为空（`BuildCompleteListener.findDamagedBlocks` 的 `expectedSpec == null` 分支；`BuildingRepairHandler` 同理） |
-| `BuildingConfig.solidPattern()`（新增） | 只在真正属于建筑的格子上迭代 | 被 `BuildingVoxels.rotatedOffsets`（占用/重叠/posIndex/客户端冲突）与 `EnqueueHelper.patternToJson`（`$offsets`）与 `BuildingApiImpl` 拆除取用 |
-| `EnqueueHelper.blocksFromPalette` | 同样跳过标记格 | 旋转分支（`rotationSteps != 0`）与不旋转分支口径一致 |
-
-**没有改 JSON，也不建议改**：既然 air 语义已经是「不存在」，把它从数据里删掉就是**等价**的，
-唯一收益是体积 —— 而体积的正解是 C9/C10（bit-pack 之后空气几乎不占体积，全域 9 bit 打包
-实测 288 KB）。反过来，删数据会让「曾经被手工剔掉的格」这条信息在文件里消失，将来谁也看不出
-那里本来有山。
-
-**两条容易踩的边界**（改这块前先看）：
+**仍然有效的两条边界**（改这块前先看）：
 
 1. `EnqueueHelper.fillBoundaryAsAir` 里的 `"minecraft:air"` 是**另一回事** —— 那是
-   `clearBox` 整箱清空的真实放置操作（一个动作），不是本节的「缺席」标记。两者共用同一个
-   方块 id，已在代码里加注释区分。默认 `clearBox=true` 下，标记格若落在 boundary 内，
-   照样会被整箱清空覆盖（改前改后一致）。
-2. 过滤会**打乱下标**。凡是「先 `rotateOffsets(config.pattern())`、再用同一个 `i` 取
-   `blockIdAt(i)`」的写法都不能换成 `solidPattern()`，只能自己跳过标记 ——
-   `BuildingApiImpl.materialCountsForMissingOffsets` 就是这种，已保持原样。
+   `clearBox` 整箱清空的真实放置操作（一个动作），不是「缺席」标记。
+2. 物料统计里不该向仓库要空气。这一条不靠特判，靠「空气没有元素映射」自然成立
+   （`computeMaterialCounts` 只统计 `mapped` 的 palette 项）。
 
-**存档影响**：老档里已注册建筑的 `patternPositions`（SavedData）仍含那些体素，改口径后
-新建建筑不含 —— 该索引只用于归属查询与重叠粗筛，不是可迁移的数据形状，属**版本断档**：
-不写兼容层，但要随这次改动在 release 正文里给出不兼容提示（见 `docs/checklists.md` §三）。
+---
+
+### 7.3 C11 回退 + C9/C10 实施口径（2026-10-02）
+
+**回退 C11**（6 文件 9 处，全部删掉 air 特判）：
+
+| 文件 | 回退内容 |
+|---|---|
+| `BuildingConfig` | 删 `NON_CELL_BLOCK_ID` / `isNonCellAt()` / `solidPattern()`；`blockMapping()` 不再跳过任何格 |
+| `BuildCompleteListener` | 删 `parseExpected` 里的 air 早退 |
+| `BuildingApiImpl` | 拆除 offsets 改回 `config.pattern()` |
+| `BuildingVoxels` | 占用/重叠改回 `config.pattern()` |
+| `EnqueueHelper` | `patternToJson` 改回 `pattern()`、`blocksFromPalette` 删跳过；顺带删掉 `PaletteScan` 里已成死重量的 `air[]` 数组 |
+
+回退后 `docs/domain-notes.md` 里「建筑自注册起拥有其 pattern 所占每个格」重新成立
+（C11 之后那句话其实已经和代码不符了）。
+
+**C10 格式**（`content/building/data/PatternCodec`，纯逻辑不 import MC，扫描器编码 + 加载器解码
+共用一份实现）：
+
+```json
+"pattern": { "format": 1, "origin": [...], "size": [...],
+             "palette": [...], "cells": "<base64>", "values": "<base64>" }
+```
+
+- **稀疏**：只存有方块的格子。线性下标升序，存差分 varint；palette 下标另开一条流逐位对齐。
+- 两条流各自 gzip(BEST_COMPRESSION) + base64。自带 `origin`/`size`，不复用 `boundary`。
+- 顶层 `palette` / `block_indices` **删除**；`pattern` 从数组变对象。
+
+**为什么不是 litematica 那种全域定长位域**：同一栋楼实测，全域 9 bit 铺满 + gzip = **414 KB**，
+稀疏流 = **189 KB 载荷**（+ 信封 172 KB = 文件 361 KB）。稀疏把「没有方块的地方」压到几乎为零，
+且是完全自成一体的编码（有序流 + 变长整数 + 双流对齐），与投影模组的「定长位域 + LSB-first
+紧凑排列」不是同一套东西 —— 只借鉴了「palette + 位/字节打包 + gzip + 带版本号」这个大方向。
+
+**实测**：全仓 56 栋 36.4 MB → 1.5 MB（23.6×）；magic_academy 29.5 MB → **361 KB**。
+注意 **jar 只小 12 万字节**（14.94 MB → 14.81 MB）—— pretty JSON 本来就被 zip 压掉了大半，
+所以这次的收益在**源码/仓库体积与加载解析开销**，不在模组下载体积。
+`block_nbt` 现在是最大的单项（magic_academy 159 KB，1087 条逐条 gzip 的 base64 NBT），是下一步
+的压缩目标。
+
+**迁移与断档**：存量文件用一次性脚本转换（**脚本用完即删，不入库**），转换前后逐格无损 ——
+只丢那 137,481 条人为标注的 air（magic_academy 一栋占 137,481 条）。**运行期没有迁移代码**：
+
+- 旧格式（`pattern` 数组 + `block_indices`）见到即抛 `JsonParseException`，玩家此前导出的建筑
+  **直接失效**，需重新扫描；
+- 因此这是**版本断档**，需在 release 正文给出不兼容提示（见 `docs/checklists.md` §三）。
+  另注：`block_indices.size() != pattern.size()` 那类运行时校验随旧格式一起消失，
+  尺寸一致性由 `PatternCodec` 在解码期保证（cells 与 values 两条流长度必须相等）。
+
+**验证方式**：`./gradlew build` 只保证编译。格式一致性用一次性的对账做了——编译仓库里**真实的
+`PatternCodec.java`**（只依赖 gson），解码全部 56 个迁移后文件算出逐格 SHA-256，与「迁移前
+git HEAD 原始文件滤掉空气后」的同名摘要比对，56 条全部相同。
 
 **附带发现（与删不删 air 无关，但更值得看）**：`EnqueueHelper.fillBoundaryAsAir:330` 会给
 boundary 里每个体素补一条 op。magic_academy 的 boundary 体积是 **7,099,092**，pattern 只有

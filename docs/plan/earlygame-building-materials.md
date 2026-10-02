@@ -154,6 +154,12 @@ A 与建材那条不同：建材删/换之后玩家照旧要自己攒料，商�
 
 实现口径：只改 palette 条目文本，**`block_indices` 一律不动**——删掉的方块把 palette 项写成 `minecraft:air`，索引保持不变（物料统计 `computeMaterialCounts` 与放置本就跳过 air，`clear_and_build` 的整箱清空也用同一套 air 映射）；同时删掉落空位置残留的 `block_nbt`。
 
+> **这条手改流程已随 C10 打包格式失效（2026-10-02）**：`pattern` / `palette` / `block_indices`
+> 三件套不再存在于文件里，方块网格是 `PatternCodec` 的 base64 载荷，无法靠改一行 palette 文本
+> 删方块。上面那些改动用 `minecraft:air` 占位的格子，已在迁移时按「本意就是删除」直接删成缺失
+> （全仓共 28 条，见 [large-building-render-perf.md](large-building-render-perf.md) §7.1）。
+> 今后要删方块得改数据后重新编码，或直接在游戏里改完再扫描导出。
+
 ### 6.2 整栋弃用与 latern_shop 改造成 service_hall（2026-09-29，承接 §3.4）
 
 **弃用的正确做法**：移文件 + 加标志，**不是删文件**——`git mv buildings/<id>.json buildings/deprecated/<id>.json` 再补 `"deprecated": true`。加载器只认内层 `id` 且会递归扫 `deprecated/`，所以旧档里那栋还能解析，只是 `ProjectionNetwork:85` 不让它出现在放置列表。`potion_store` 与 `latern_shop` 都这么处理，两者的 `building.wandscape.<id>` 语言键都**留着**（旧档世界里那栋楼还得靠它显示名字）。做法与最小样本写在 `buildings/deprecated/README.md` + `example_deprecated.json`。

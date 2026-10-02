@@ -6,6 +6,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.wsteam.wandscape.content.building.data.BlockOffset;
 import com.wsteam.wandscape.content.building.data.BuildingPackage;
+import com.wsteam.wandscape.content.building.data.PatternCodec;
 import com.wsteam.wandscape.content.building.scanner.CreativeScannerBlockEntity;
 import com.wsteam.wandscape.content.building.scanner.CreativeScannerBlockEntity.ShopGoodData;
 import com.wsteam.wandscape.content.building.scanner.InteractSpotMarkerBlock;
@@ -245,28 +246,9 @@ public record ScannerExportPacket(BlockPos pos, String targetPackage) implements
         }
         root.addProperty("category", scanner.getCategory());
 
-        // Pattern
-        JsonArray patternArr = new JsonArray();
-        for (BlockOffset off : pattern) {
-            JsonArray arr = new JsonArray();
-            arr.add(off.x());
-            arr.add(off.y());
-            arr.add(off.z());
-            patternArr.add(arr);
-        }
-        root.add("pattern", patternArr);
-
-        // Palette + block_indices (parallel to pattern)
-        JsonArray paletteArr = new JsonArray();
-        for (String bid : palette) {
-            paletteArr.add(bid);
-        }
-        root.add("palette", paletteArr);
-        JsonArray idxArr = new JsonArray();
-        for (int i : blockIndices) {
-            idxArr.add(i);
-        }
-        root.add("block_indices", idxArr);
+        // Pattern：打包成 PatternCodec 的稀疏格式（palette 与索引都在里面）。
+        // 这是唯一被接受落盘形态 —— 旧的 pattern 数组 + block_indices 已断档。
+        root.add(PatternCodec.KEY, PatternCodec.encode(palette, pattern, blockIndices));
 
         // Block NBT (base64-encoded BlockEntity data)
         if (!blockNbt.isEmpty()) {
@@ -462,7 +444,8 @@ public record ScannerExportPacket(BlockPos pos, String targetPackage) implements
             BuildingPackage pkgMeta = BuildingPackage.fromJson(targetPkg, pkgJson);
             BuildingConfigLoader.getInstance().registerPackage(pkgMeta);
 
-            String json = new GsonBuilder().setPrettyPrinting().create().toJson(root);
+            // 紧凑输出：pattern 已经是 base64 载荷，缩进只会白白撑大文件（见 PatternCodec）。
+            String json = new GsonBuilder().create().toJson(root);
             Files.writeString(outFile, json);
 
             // Register in-memory so the building is buildable right now, no /reload needed.

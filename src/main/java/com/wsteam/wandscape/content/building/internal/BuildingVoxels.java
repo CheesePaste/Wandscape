@@ -212,13 +212,10 @@ public final class BuildingVoxels {
         String key = System.identityHashCode(config) + "|" + rot;
         List<BlockOffset> cached = ROTATED_PATTERN_CACHE.get(key);
         if (cached != null) return cached;
-        // 只算真正属于本建筑的格子：pattern 里的空气标记语义是「这格不存在」
-        // （见 BuildingConfig.NON_CELL_BLOCK_ID），不该被算成本建筑占用的体素——
-        // 否则那些手工剔掉的山体格会平白占着地盘，别的建筑重叠不上去。
-        List<BlockOffset> solid = config.solidPattern();
-        List<BlockOffset> rotated = BuildingRotation.rotateOffsets(solid, rot);
-        if (rotated == solid) {
-            rotated = new ArrayList<>(solid); // keep cache per-call detached from the derived list
+        List<BlockOffset> pattern = config.pattern();
+        List<BlockOffset> rotated = BuildingRotation.rotateOffsets(pattern, rot);
+        if (rotated == pattern) {
+            rotated = new ArrayList<>(pattern); // keep cache per-call detached from the shared list
         }
         List<BlockOffset> unmod = Collections.unmodifiableList(rotated);
         ROTATED_PATTERN_CACHE.put(key, unmod);

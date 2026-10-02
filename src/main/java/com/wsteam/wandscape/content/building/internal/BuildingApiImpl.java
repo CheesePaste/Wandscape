@@ -312,11 +312,8 @@ public class BuildingApiImpl implements BuildingApi {
         params.put("building_id", new JsonPrimitive(buildingId.toString()));
 
         int rotationSteps = state.getRotationSteps();
-        // solidPattern：空气标记是「这格不属于本建筑」，拆除不该去动它
-        // （它若落在 boundary 内，那些格子本来也不是这栋楼盖上去的）。
         java.util.List<BlockOffset> pattern =
-                BuildingRotation.rotateOffsets(
-                        config.solidPattern(), rotationSteps);
+                BuildingRotation.rotateOffsets(config.pattern(), rotationSteps);
 
         JsonArray offsets = new JsonArray();
         for (var offset : pattern) {

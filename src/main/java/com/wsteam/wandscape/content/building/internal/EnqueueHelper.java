@@ -320,9 +320,6 @@ public final class EnqueueHelper {
      *
      * <p>无 boundary、或蓝图没有 offsets/blocks 参数时不写：前者本就不需要清场，后者是
      * 老式 {@code build:place_structure} 参数形态，压根没有盒内格可清。
-     *
-     * <p><b>注意</b>：pattern 里的 {@code minecraft:air}（{@link BuildingConfig#NON_CELL_BLOCK_ID}）
-     * 与整箱清空是两回事 —— 那是「这格不属于本建筑」的缺席标记，清场执行器靠排除集跳过这些格。
      */
     private static void fillBoundaryParams(Map<String, JsonElement> params, BlockPos pos,
                                            BuildingConfig config, int rotationSteps) {
@@ -361,9 +358,9 @@ public final class EnqueueHelper {
 
     /**
      * Compute deduped material counts (pure block id → total) from pattern → block_mapping.
-     * Skips air blocks. Blocks without an element mapping are "free" materials and are
-     * skipped (not requested from the warehouse); blockstate properties are stripped
-     * before counting so mappings registered for bare block IDs match.
+     * Blocks without an element mapping are "free" materials and are skipped (not requested
+     * from the warehouse); blockstate properties are stripped before counting so mappings
+     * registered for bare block IDs match.
      *
      * <p>Public for the construction-site panel, which reuses the same demand口径.
      * Returns an empty map when the building needs no warehouse-supplied materials.
@@ -374,7 +371,7 @@ public final class EnqueueHelper {
         List<Integer> indices = config.blockIndices();
         for (int i = 0; i < indices.size(); i++) {
             int p = indices.get(i);
-            if (palette.air[p] || !palette.mapped[p]) continue;
+            if (!palette.mapped[p]) continue;
             counts.merge(palette.pure[p], 1, Integer::sum);
         }
         return counts;
@@ -392,7 +389,6 @@ public final class EnqueueHelper {
         List<Integer> indices = config.blockIndices();
         for (int i = 0; i < indices.size(); i++) {
             int p = indices.get(i);
-            if (palette.air[p]) continue;
             if (palette.disabled[p]) return palette.pure[p];
         }
         return null;
@@ -408,28 +404,23 @@ public final class EnqueueHelper {
      * <p>这层是 2026-10 spark 定案后的第二刀：第一刀把查表本身做成 O(1)（那才是 41.5 秒的大头），
      * 这一刀把「查表次数」从 58 万次降到几百次，剩下的逐块成本是纯数组访问。
      */
-    private record PaletteScan(String[] pure, boolean[] air, boolean[] mapped, boolean[] disabled) {}
+    private record PaletteScan(String[] pure, boolean[] mapped, boolean[] disabled) {}
 
     private static PaletteScan paletteScan(BuildingConfig config) {
         var elementApi = WandscapeApis.getElementApi();
         List<String> palette = config.palette();
         int size = palette.size();
         String[] pure = new String[size];
-        boolean[] air = new boolean[size];
         boolean[] mapped = new boolean[size];
         boolean[] disabled = new boolean[size];
         for (int p = 0; p < size; p++) {
-            // air 判定用原始串（与改前一致）：palette 里的 minecraft:air 是
-            // 「这格不属于本建筑」的标记，不是建材。
-            String raw = palette.get(p);
-            air[p] = BuildingConfig.NON_CELL_BLOCK_ID.equals(raw);
             // 元素映射按裸方块 id 登记，先剥掉方块状态属性（"[facing=south]"）。
-            String pureId = BlockIds.stripBlockState(raw);
+            String pureId = BlockIds.stripBlockState(palette.get(p));
             pure[p] = pureId;
             mapped[p] = elementApi.hasElementMapping(pureId);
             disabled[p] = elementApi.isDisabled(pureId);
         }
-        return new PaletteScan(pure, air, mapped, disabled);
+        return new PaletteScan(pure, mapped, disabled);
     }
 
     /**
@@ -452,9 +443,7 @@ public final class EnqueueHelper {
 
     /** Pattern offsets sorted Y→X→Z so the building rises from bottom to top. */
     private static JsonElement patternToJson(BuildingConfig config) {
-        // 用 solidPattern：空气标记是「这格不属于本建筑」，不该进放置列表。
-        // （它若落在 boundary 内，clearBox 的整箱清空本来也会覆盖到那一格。）
-        var sorted = new ArrayList<>(config.solidPattern());
+        var sorted = new ArrayList<>(config.pattern());
         sorted.sort(Comparator.comparingInt(BlockOffset::y)
                 .thenComparingInt(BlockOffset::x)
                 .thenComparingInt(BlockOffset::z));
@@ -587,9 +576,6 @@ public final class EnqueueHelper {
         JsonObject result = new JsonObject();
         for (int i = 0; i < pattern.size(); i++) {
             String blockId = rotatedPalette.get(blockIndices.get(i));
-            // 空气标记 = 「这格不属于本建筑」，不进放置表（与 blockMappingToJson 同口径）。
-            // 旋转不会把空气转成别的方块，所以这里按 id 过滤与过滤 offsets 等价。
-            if (BuildingConfig.NON_CELL_BLOCK_ID.equals(blockId)) continue;
             BlockOffset rotated = BuildingRotation.rotateOffset(pattern.get(i), steps);
             result.addProperty(rotated.toKey(), blockId);
         }
