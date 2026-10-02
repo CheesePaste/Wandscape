@@ -49,14 +49,13 @@ import java.util.*;
  *
  * <p><b>Layout</b>: a real vanilla 6-row chest (the {@code generic_54} texture) with
  * the read-only warehouse slots, and the vanilla player inventory below. The element
- * storage column sits to the <b>left</b> of the chest texture, a search band runs
- * across the panel top (over the texture's own 18px title strip, so the panel is no
- * taller than the chest), and the pager and delete box live in the narrow margin
- * right of the chest.
+ * storage column sits to the <b>left</b> of the chest texture with the search box
+ * above it in that same column, and the pager and delete box live in the narrow
+ * margin right of the chest. The panel is no taller than the chest texture itself.
  *
  * <p>Slot coordinates come from {@link WarehouseMenu} and are relative to the chest
  * texture origin, which is this screen's {@code leftPos/topPos}. The panel chrome
- * (element column / search band / right margin) is therefore drawn relative to
+ * (element column / search box / right margin) is therefore drawn relative to
  * {@link #panelX}/{@link #panelY}, which sit a fixed offset left of the chest — that
  * way the vanilla slot grid never has to be shifted.
  *
@@ -84,15 +83,15 @@ public class WarehouseScreen extends AbstractContainerScreen<WarehouseMenu>
     private static final int LEFT_EXT = PAD + ELEM_W + COL_GAP;
     private static final int RIGHT_EXT = 48;  // 箱子右侧留白列（翻页键 + 页码 + 销毁格）
 
-    /** 面板顶部那条搜索带：与箱贴图标题条同高（箱贴图 0..17 就是标题条），不额外加高。 */
-    private static final int SEARCH_BAND = 18;
-    /** 元素列从搜索带下方起画。 */
-    private static final int ELEM_TOP = SEARCH_BAND + 2;
+    /** 箱贴图/槽位原点距面板顶的像素：别让箱子整个贴着面板顶边。 */
+    private static final int CHEST_TOP_OFFSET = 4;
+    /** 元素列从面板顶下方多少像素起画——上方那条留给搜索框。 */
+    private static final int ELEM_TOP = 24;
 
     public static final int PANEL_W = LEFT_EXT + CHEST_W + RIGHT_EXT;
-    // 高度与原版箱贴图持平（222 + 8 底边距），一点都不比改造前高——再高会顶出矮屏、
+    // 上下各留 4px 边距，总高与原版箱贴图基本持平——再高会顶出矮屏、
     // 把箱内的玩家背包行挤到屏幕外。
-    public static final int PANEL_H = CHEST_H + PAD;
+    public static final int PANEL_H = CHEST_TOP_OFFSET + CHEST_H + 4;
 
     private static final int TOOLBAR_H = 20;
     private static final int BTN_W = 44;      // 与 MedievalScreen 的建筑动作按钮同尺寸
@@ -235,7 +234,7 @@ public class WarehouseScreen extends AbstractContainerScreen<WarehouseMenu>
         this.panelX = px;
         this.panelY = py;
         this.leftPos = px + LEFT_EXT;
-        this.topPos = py;
+        this.topPos = py + CHEST_TOP_OFFSET;
     }
 
     /**
@@ -250,13 +249,13 @@ public class WarehouseScreen extends AbstractContainerScreen<WarehouseMenu>
     }
 
     private void buildWidgets() {
-        elementPanel = new ElementPanel(panelX + PAD, topPos + ELEM_TOP, ELEM_W);
+        elementPanel = new ElementPanel(panelX + PAD, panelY + ELEM_TOP, ELEM_W);
         elementPanel.setElements(elements);
         addRenderableWidget(elementPanel);
 
         // 搜索框只占元素列那一栏，右侧不压到箱子贴图。
         searchInput = new SearchBox(font, panelX + PAD + 1,
-                panelY + (SEARCH_BAND - font.lineHeight) / 2, ELEM_W - 2,
+                panelY + (ELEM_TOP - font.lineHeight) / 2, ELEM_W - 2,
                 I18n.name("gui.wandscape.warehouse.search", "Search items..."));
         searchInput.setResponder(q -> {
             query = q;
@@ -482,26 +481,20 @@ public class WarehouseScreen extends AbstractContainerScreen<WarehouseMenu>
     protected void renderBg(GuiGraphics g, float partialTick, int mouseX, int mouseY) {
         renderToolbar(g, mouseX, mouseY);
 
-        // 整块面板（含左侧元素列与顶部搜索带）的玻璃底 + 金边。
+        // 整块面板（含左侧元素列）的玻璃底 + 金边。
         g.fillGradient(panelX, panelY, panelX + PANEL_W, panelY + PANEL_H, GLASS_TOP, GLASS_BOTTOM);
         drawGlowBorder(g, panelX, panelY, PANEL_W, PANEL_H, MedievalColors.BORDER_GOLD);
 
         // 元素列衬底：与箱子贴图区分开。
-        g.fillGradient(panelX + PAD - 2, topPos + ELEM_TOP - 2,
-                panelX + PAD + ELEM_W + 2, topPos + ELEM_TOP + 7 * 18 + 2,
+        g.fillGradient(panelX + PAD - 2, panelY + ELEM_TOP - 2,
+                panelX + PAD + ELEM_W + 2, panelY + ELEM_TOP + 7 * 18 + 2,
                 GLASS_BOX_TOP, GLASS_BOX_BOTTOM);
-        drawGlowBorder(g, panelX + PAD - 2, topPos + ELEM_TOP - 2, ELEM_W + 4, 7 * 18 + 4,
+        drawGlowBorder(g, panelX + PAD - 2, panelY + ELEM_TOP - 2, ELEM_W + 4, 7 * 18 + 4,
                 MedievalColors.BORDER_GOLD_DARK);
 
-        // 原版 6 行箱贴图（槽位原点；仓库格 + 玩家背包）。
+        // 原版 6 行箱贴图（槽位原点；仓库格 + 玩家背包）。不盖任何横条，
+        // 贴图自带的标题条原样保留。
         g.blit(CHEST_TEXTURE, leftPos, topPos, 0, 0, CHEST_W, CHEST_H);
-
-        // 搜索带盖在箱贴图自带的标题条上：面板用一条统一的深色带做顶栏，箱内方格
-        // （从 topPos+18 起）正好紧贴它下沿，视觉上不额外占高。
-        g.fillGradient(panelX, panelY, panelX + PANEL_W, panelY + SEARCH_BAND,
-                GLASS_BOX_TOP, GLASS_BOX_BOTTOM);
-        g.fill(panelX, panelY + SEARCH_BAND - 1, panelX + PANEL_W, panelY + SEARCH_BAND,
-                MedievalColors.BORDER_GOLD_DARK);
 
         drawCapacity(g);
         renderPager(g, mouseX, mouseY);
@@ -549,7 +542,7 @@ public class WarehouseScreen extends AbstractContainerScreen<WarehouseMenu>
 
     /** 元素列下方那两行（制作者署名、容量读数）的起始 Y。 */
     private int leftFooterY() {
-        return topPos + ELEM_TOP + 7 * 18 + 8;
+        return panelY + ELEM_TOP + 7 * 18 + 8;
     }
 
     /** 容量读数：左下角、制作者署名下面一行（未设上限则隐藏）。 */
@@ -570,12 +563,12 @@ public class WarehouseScreen extends AbstractContainerScreen<WarehouseMenu>
         return usedCapacity >= capacity ? 0xFFFF6B5E : MedievalColors.TEXT_MUTED;
     }
 
-    /** 箱子右侧留白列的翻页键（面板内，让开顶部搜索带里的容量读数）。 */
+    /** 箱子右侧留白列的翻页键（面板内，略低于面板顶边）。 */
     private void computePager() {
         int baseX = leftPos + CHEST_W + 8;
         prevW = 18;
         prevH = 12;
-        prevY = topPos + SEARCH_BAND + 6;
+        prevY = topPos + 24;
         prevX = baseX;
         nextW = 18;
         nextH = 12;
