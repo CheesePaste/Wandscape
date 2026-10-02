@@ -5,11 +5,10 @@
   "display_name": "守魂护符",
   "output": { "item": "wandscape:soulward_charm" },
   "cost": {
-    "dark": 5000,
-    "metal": 4000,
-    "water": 3000
+    "dark": 4000,
+    "metal": 5000
   },
   "unlock_requirement": {
-    "min_colony_level": 8
+    "min_colony_level": 5
   }
 }
