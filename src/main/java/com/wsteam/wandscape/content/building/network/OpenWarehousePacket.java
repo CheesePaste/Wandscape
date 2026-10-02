@@ -68,8 +68,12 @@ public record OpenWarehousePacket(BlockPos buildingPos)
                 return;
             }
 
+            // 本包是「从别的建筑屏跳到本镇仓库」的快捷入口（法师小屋/合成站/工作台），
+            // buildingPos 是那座建筑而不是仓库——刻意不给建筑上下文：否则面板会把复原/拆除
+            // 挂到法师小屋身上。只有右键仓库建筑本体（BuildingInteractHandler 的 storage 分支）
+            // 才带 buildingId。
             BuildingInteractHandler.openWarehouseMenu(sp, colonyId, pkt.buildingPos(),
-                    BuildingInteractHandler.resolveCreator(level, pkt.buildingPos()));
+                    BuildingInteractHandler.resolveCreator(level, pkt.buildingPos()), null);
         });
     }
 

@@ -623,7 +623,8 @@ public abstract class MedievalScreen extends Screen implements ReplayProtectedSc
         }
     }
 
-    protected static Component getStatusBadgeText(BuildingDebugResponsePacket data) {
+    /** 建筑状态徽标文案；容器屏（仓库）也复用，故为 public。 */
+    public static Component getStatusBadgeText(BuildingDebugResponsePacket data) {
         if (data.demolishing()) return I18n.name("gui.wandscape.building_status.demolishing", "拆除中");
         if (data.underConstruction()) {
             return data.constructionStarted()
@@ -633,7 +634,8 @@ public abstract class MedievalScreen extends Screen implements ReplayProtectedSc
         return I18n.name("gui.wandscape.building_status.ok", "已建成");
     }
 
-    protected static int getStatusBadgeColor(BuildingDebugResponsePacket data) {
+    /** 建筑状态徽标配色；容器屏（仓库）也复用，故为 public。 */
+    public static int getStatusBadgeColor(BuildingDebugResponsePacket data) {
         if (data.demolishing()) return 0xFFFF6666;
         if (data.underConstruction()) {
             return data.constructionStarted() ? 0xFF88AAFF : 0xFFFFCC66;
@@ -641,7 +643,8 @@ public abstract class MedievalScreen extends Screen implements ReplayProtectedSc
         return 0xFF88CC88;
     }
 
-    protected static Component getStatusTooltip(BuildingDebugResponsePacket data) {
+    /** 建筑状态悬停提示；容器屏（仓库）也复用，故为 public。 */
+    public static Component getStatusTooltip(BuildingDebugResponsePacket data) {
         if (data.demolishing()) {
             return I18n.name("gui.wandscape.building_status_tip.demolishing",
                     "§c状态: 正在拆除中，NPC 正在清理结构方块。");

@@ -48,8 +48,9 @@ public class WarehouseMenu extends AbstractContainerMenu {
     private static final String TAG = "WarehouseMenu";
 
     // ── Layout (kept here so client and server menus use identical coordinates) ──
-    public static final int PANEL_W = 300;   // 与市政厅面板统一
-    public static final int PANEL_H = 230;
+    // 槽位原点 = 原版 6 行箱贴图原点（WarehouseScreen 的 leftPos/topPos）；面板在此基础上向
+    // 左扩出元素列、向上扩出搜索行，所以 GRID_X/GRID_Y 不用动。面板尺寸是屏幕侧的事，
+    // 见 WarehouseScreen.PANEL_W/PANEL_H。
     public static final int SLOT = 18;
     public static final int GRID_COLS = 9;
     public static final int GRID_ROWS = 6;
@@ -69,20 +70,41 @@ public class WarehouseMenu extends AbstractContainerMenu {
     public UUID getColonyId() { return colonyId; }
     @Nullable
     private final BlockPos buildingPos;
+
+    /**
+     * 这仓库对应的建筑 uuid；仅从仓库建筑本体打开时非空。便携终端（无建筑）与市政厅代开
+     * （那时语境是市政厅，挂上复原/拆除会打到市政厅身上）都是 {@code null}，面板就不显示
+     * 状态徽标与复原/拆除。
+     */
+    @Nullable
+    private final UUID buildingId;
+
+    /** 面板据此判断是否显示建筑头部动作；{@code null} = 无建筑上下文。 */
+    @Nullable
+    public UUID getBuildingId() { return buildingId; }
+
     /** 玩家背包 36 槽（可显隐），由共享组件构建。 */
     private final List<ToggleableSlot> playerSlots;
 
     /** Client-side factory (MenuType): no colony context yet — data arrives via packet. */
     public WarehouseMenu(int containerId, Inventory playerInventory) {
-        this(containerId, playerInventory, null, null);
+        this(containerId, playerInventory, null, null, null);
     }
 
-    /** Server-side factory (MenuProvider). */
+    /** Server-side factory (MenuProvider)，无建筑上下文（便携终端/市政厅代开）。 */
     public WarehouseMenu(int containerId, Inventory playerInventory,
                          @Nullable UUID colonyId, @Nullable BlockPos buildingPos) {
+        this(containerId, playerInventory, colonyId, buildingPos, null);
+    }
+
+    /** Server-side factory (MenuProvider)，绑定到具体仓库建筑。 */
+    public WarehouseMenu(int containerId, Inventory playerInventory,
+                         @Nullable UUID colonyId, @Nullable BlockPos buildingPos,
+                         @Nullable UUID buildingId) {
         super(Wandscape.WAREHOUSE_MENU.get(), containerId);
         this.colonyId = colonyId;
         this.buildingPos = buildingPos;
+        this.buildingId = buildingId;
 
         for (int i = 0; i < WAREHOUSE_SLOT_COUNT; i++) {
             int col = i % GRID_COLS;
@@ -326,7 +348,8 @@ public class WarehouseMenu extends AbstractContainerMenu {
         Map<ItemKey, Long> itemSnapshot = bank.getSnapshot(colonyId);
         Map<ElementType, Long> elemSnapshot = bank.getElementSnapshot(colonyId);
         Net.toPlayer(player,
-                WarehouseDataPacket.from(buildingPos, colonyId, itemSnapshot, elemSnapshot));
+                WarehouseDataPacket.from(buildingPos, colonyId, itemSnapshot, elemSnapshot,
+                        "", buildingId));
     }
 
     // ── Helpers ──

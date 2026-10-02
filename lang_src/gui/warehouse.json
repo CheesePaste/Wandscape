@@ -7,14 +7,6 @@
     "zh_cn": "配方",
     "en_us": "Recipes"
   },
-  "gui.wandscape.warehouse.exchange": {
-    "zh_cn": "交换",
-    "en_us": "Exchange"
-  },
-  "gui.wandscape.warehouse.overview": {
-    "zh_cn": "总览",
-    "en_us": "Overview"
-  },
   "gui.wandscape.warehouse.page": {
     "zh_cn": "%s / %s",
     "en_us": "%s / %s"

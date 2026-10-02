@@ -68,8 +68,10 @@ public record TownHallWarehouseRequestPacket(BlockPos buildingPos, UUID colonyId
                 return;
             }
 
+            // 市政厅代开：不给建筑上下文——那时的建筑是市政厅，挂上复原/拆除会打到市政厅身上，
+            // 而市政厅面板自己已有这对按钮。
             BuildingInteractHandler.openWarehouseMenu(sp, colonyId, pkt.buildingPos(),
-                    BuildingInteractHandler.resolveCreator(level, pkt.buildingPos()));
+                    BuildingInteractHandler.resolveCreator(level, pkt.buildingPos()), null);
         });
     }
 

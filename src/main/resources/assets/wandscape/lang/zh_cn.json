@@ -1365,8 +1365,6 @@
   "gui.wandscape.townhall_create.title": "创建魔法小镇",
   "gui.wandscape.warehouse.btn_recipes": "配方",
   "gui.wandscape.warehouse.capacity": "空间 %s/%s",
-  "gui.wandscape.warehouse.exchange": "交换",
-  "gui.wandscape.warehouse.overview": "总览",
   "gui.wandscape.warehouse.page": "%s / %s",
   "gui.wandscape.warehouse.player_inventory": "玩家背包",
   "gui.wandscape.warehouse.search": "搜索物品…",

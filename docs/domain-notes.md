@@ -165,6 +165,14 @@
    - `production:decompose/synthesize/craft/craft_spell` 入队时经 `ProductionBatches.split` 按 `BalanceValues.productionBatchMax`（默认 1000，见 `wandscape_balance.json`）拆批，`channel_ticks` 按比例分摊、总时长不变；`BuildingApiImpl.mergeBandTail` 的同配方合并也用同一条上限，防止拆完又被粘回一条。
    - 于是**同一次玩家下单、同一条补料需求会在共享队列里变成多条同配方条目**（圆石 x1000 × 30）。凡是要「按配方聚合」的地方都得按 `count` 求和，不能按条目数或「第一条」：`countSynthesizeInFlight` 已经是求和口径，`ResourceSupplySystem.scanProductionQueues` 必须先汇总需求再比库存（逐条减库存会因同一份库存被减 N 次而严重低估缺口）。
    - 拆批也是发布资格（元素/容量）的判定粒度：拆细后「仓库放得下一部分」不会整条卡住。想看「一条超大任务」的旧样子，把 `productionBatchMax` 调大即可。
+5. **仓库 UI 布局不变量（改 UI 前必读）**：
+   - 仓库屏是**单页**：原版 6 行箱贴图（`generic_54`）+ 玩家背包，元素列在它左边，搜索带横在面板顶部，翻页键/页码/销毁格挤在箱子右侧那条窄留白列里。没有总览/交换页签。
+   - **面板高度必须与原版箱贴图持平（`PANEL_H = CHEST_H + PAD`）**：仓库屏是唯一装在原版 6 行箱容器里的界面，顶栏那圈额外高度会把箱内的玩家背包行推出矮屏（GUI scale 4 / 1080p 下 GUI 高只有 270，多 28px 就溢出）。搜索框没有另起一行，而是**盖在箱贴图自带的 18px 标题条上**（`SEARCH_BAND`），元素列从 `ELEM_TOP` 起画。
+   - **槽位原点 = 箱子贴图原点**：`WarehouseScreen.leftPos/topPos` 就是箱贴图左上角，`WarehouseMenu` 的 `GRID_X(8)`/`GRID_Y(18)` 与共享的 `VanillaPlayerInventory.INVENTORY_X(8)` 都相对它。面板只向左扩一圈 `LEFT_EXT`（元素列），**面板左上角另有 `panelX/panelY`**——画面板与工具栏一律用它，别拿 `leftPos/topPos` 当面板角。
+   - 想挪箱子（改槽位坐标）就要同时改 `WarehouseMenu` 的 GRID_X/GRID_Y 与共享的 `INVENTORY_X`，代价大；改布局优先「箱子不动、只动面板装饰」。
+   - 面板比 `imageWidth/imageHeight` 覆盖范围大一圈，所以**必须覆写 `hasClickedOutside` 按整面板判定**：不覆写的话在元素列/搜索行上点击会被当成「点到了 GUI 外」，手里拿着的物品直接丢进世界。
+   - **建筑上下文只从仓库建筑本体入口下发**（`BuildingInteractHandler` 的 `storage` 分支带 `state.getBuildingId()`，`WarehouseDataPacket.buildingId` 非空 → 顶栏状态徽标 + 复原/拆除）。其余入口一律传 `null`，它们带的 pos 都不是仓库、挂上复原/拆除会打到别人身上：便携终端（无建筑）、市政厅代开（`TownHallWarehouseRequestPacket`，带的是市政厅）、其它建筑屏的「打开仓库」快捷入口（`OpenWarehousePacket`，法师小屋/合成站/工作台都在用，带的是那座建筑）。
+   - 复原/拆除按钮是 `MedievalButton` widget，走 `super.mouseClicked` 的控件通道；确认框是自包含的 `MedievalConfirmDialog`（同 `NpcScreen` 的接法），要在 `render` 末尾补画、在 `mouseClicked`/`keyPressed` 开头拦截。
 
 ---
 

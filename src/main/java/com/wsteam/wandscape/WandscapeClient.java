@@ -408,6 +408,11 @@ public class WandscapeClient {
                 BuildingDebugClientState.setCachedData(packet);
                 if (Minecraft.getInstance().screen instanceof com.wsteam.wandscape.foundation.ui.component.MedievalScreen ms) {
                     ms.setBuildingData(packet);
+                } else if (Minecraft.getInstance().screen
+                        instanceof com.wsteam.wandscape.content.warehouse.client.WarehouseScreen ws) {
+                    // 仓库屏是容器屏，不继承 MedievalScreen，单独收这份建筑状态（仅从仓库
+                    // 建筑本体打开时它才有 buildingId，其余入口会在 setBuildingData 里被忽略）。
+                    ws.setBuildingData(packet);
                 }
             });
         });
