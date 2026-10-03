@@ -176,9 +176,8 @@ public class NodeScreen extends MedievalScreen {
 
         // Live totals below the stepper
         int n = stepper != null ? stepper.getValue() : 1;
-        int totalSec = (int) Math.ceil((double) channelTicks * n / 20.0);
-        String totals = i18n("gui.wandscape.node.total_line", "Total %1$s (~%2$ss base)",
-                amountPerHarvest * n, totalSec);
+        String totals = i18n("gui.wandscape.node.total_line", "Total %1$s",
+                amountPerHarvest * n);
         g.drawString(Minecraft.getInstance().font, totals,
                 contentX, controlY + 26, MedievalColors.TEXT_MUTED);
     }

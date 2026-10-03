@@ -608,7 +608,7 @@
   "gui.wandscape.node.per_harvest": "Per Harvest",
   "gui.wandscape.node.publish_gather": "Publish Gather",
   "gui.wandscape.node.total": "Total",
-  "gui.wandscape.node.total_line": "Total %1$s (~%2$ss base)",
+  "gui.wandscape.node.total_line": "Total %1$s",
   "gui.wandscape.npc.armor": "Armor",
   "gui.wandscape.npc.attributes": "Attributes",
   "gui.wandscape.npc.auto_pickup_off": "Auto Pickup: OFF",
