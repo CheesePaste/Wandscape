@@ -281,16 +281,8 @@ public class BuildingApiImpl implements BuildingApi {
         // doesn't keep working on a structure that's being torn down (undo/destroy).
         BuildingTaskSource.cancelBuildingTasks(buildingId);
 
-        // Cancel any auto-synthesis tasks if the building was still under construction
+        // Cancel any workstation synthesis tasks dedicated to this building if still under construction
         if (!state.hasEverCompleted()) {
-            BuildingConfig config = BuildingConfigLoader.getInstance().get(state.getBuildingTypeId());
-            if (config != null) {
-                Map<String, Integer> materialCounts = EnqueueHelper.computeMaterialCounts(config);
-                if (!materialCounts.isEmpty()) {
-                    com.wsteam.wandscape.content.warehouse.system.ResourceSupplySystem.cancelAutoSynthesize(
-                            state.getColonyId(), materialCounts, com.wsteam.wandscape.content.task.ecs.World.getActive());
-                }
-            }
             com.wsteam.wandscape.content.warehouse.system.ResourceSupplySystem.cancelTasksForSource(
                     state.getColonyId(), "building", buildingId.toString(), com.wsteam.wandscape.content.task.ecs.World.getActive());
         }
@@ -366,14 +358,7 @@ public class BuildingApiImpl implements BuildingApi {
         BuildingTaskSource.cancelBuildingTasks(buildingId);
         state.getTaskQueue().clear();
 
-        // 2. Cancel auto-synthesized workstation tasks spawned for this building
-        if (config != null) {
-            Map<String, Integer> materialCounts = EnqueueHelper.computeMaterialCounts(config);
-            if (!materialCounts.isEmpty()) {
-                com.wsteam.wandscape.content.warehouse.system.ResourceSupplySystem.cancelAutoSynthesize(
-                        colonyId, materialCounts, world);
-            }
-        }
+        // 2. Cancel workstation synthesis tasks spawned for this building
         com.wsteam.wandscape.content.warehouse.system.ResourceSupplySystem.cancelTasksForSource(
                 colonyId, "building", buildingId.toString(), world);
 
