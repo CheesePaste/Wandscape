@@ -114,7 +114,6 @@ import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.neoforged.api.distmarker.Dist;
@@ -133,7 +132,7 @@ import net.neoforged.neoforge.event.AddReloadListenerEvent;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
-import net.neoforged.neoforge.event.level.BlockEvent;
+
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
@@ -192,9 +191,6 @@ public class Wandscape {
     public static final DeferredHolder<MenuType<?>, MenuType<NpcInventoryMenu>> NPC_INVENTORY_MENU =
             MENUS.register("npc_inventory", () ->
                     IMenuTypeExtension.create(NpcInventoryMenu::new));
-
-    // ---- Debug target ----
-    public static BlockPos debugDiamondTarget = null;
 
     // ---- Data loader ----
     public static final WandscapeDataLoader DATA_LOADER = new WandscapeDataLoader();
@@ -512,6 +508,7 @@ public class Wandscape {
         NeoForge.EVENT_BUS.register(BuildingNoSpawnZoneHandler.class);
         NeoForge.EVENT_BUS.register(OathRingSyncHandler.class);
         NeoForge.EVENT_BUS.register(CompassSyncHandler.class);
+        NeoForge.EVENT_BUS.register(com.wsteam.wandscape.foundation.ui.settings.ConfigSyncHandler.class);
         NeoForge.EVENT_BUS.register(ScepterInteractHandler.class);
         NeoForge.EVENT_BUS.register(ScepterDeathHandler.class);
         NeoForge.EVENT_BUS.register(com.wsteam.wandscape.content.items.magic.wand.internal.WandInteractHandler.class);
@@ -745,14 +742,6 @@ public class Wandscape {
         ExplorationRewardService.get().clearCache();
         com.wsteam.wandscape.content.warehouse.transport.ItemTransportManager.reset();
         EntityComponentBridge.INSTANCE.clear();
-    }
-
-    @SubscribeEvent
-    public void onBlockPlace(BlockEvent.EntityPlaceEvent event) {
-        if (event.getState().is(Blocks.DIAMOND_BLOCK)) {
-            debugDiamondTarget = event.getPos();
-            Log.info(TAG, "[Debug] Diamond block placed at {}", debugDiamondTarget);
-        }
     }
 
     private int engineTickCount = 0;

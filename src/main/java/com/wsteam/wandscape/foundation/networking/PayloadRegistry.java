@@ -90,6 +90,7 @@ import com.wsteam.wandscape.foundation.networking.ParticleBurstPacket;
 import com.wsteam.wandscape.foundation.networking.ScreenFeedbackPacket;
 import com.wsteam.wandscape.foundation.registry.dataconfig.internal.DatapackDataSyncChunkPacket;
 import com.wsteam.wandscape.foundation.ui.panel.PanelStateTogglePacket;
+import com.wsteam.wandscape.foundation.ui.settings.network.ConfigSnapshotPacket;
 import com.wsteam.wandscape.foundation.ui.settings.network.ConfigSyncPacket;
 import com.wsteam.wandscape.foundation.ui.settings.network.ConfigUpdatePacket;
 
@@ -278,6 +279,8 @@ public final class PayloadRegistry {
         // ── 设置中心配置同步 ──
         c2s(r, ConfigUpdatePacket.TYPE, ConfigUpdatePacket.STREAM_CODEC, ConfigUpdatePacket::handleServer);
         s2c(r, ConfigSyncPacket.TYPE, ConfigSyncPacket.STREAM_CODEC, ConfigSyncPacket::handleClient);
+        // 入服全量下发（COMMON 配置在专服上两端各一份，改值时才发的 ConfigSyncPacket 补不上进服基线）
+        s2c(r, ConfigSnapshotPacket.TYPE, ConfigSnapshotPacket.STREAM_CODEC, ConfigSnapshotPacket::handleClient);
 
         // Curios 兼容：法师饰品栏打开请求（仅 Curios 加载时在实现类内注册；无 Curios 时此处不引用任何 Curios 类）
         CuriosCompat.registerPayloads(r);

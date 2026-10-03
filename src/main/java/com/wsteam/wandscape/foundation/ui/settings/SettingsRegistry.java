@@ -478,6 +478,22 @@ public final class SettingsRegistry {
         return Collections.unmodifiableList(all);
     }
 
+    /**
+     * 配置同步用：已注册的、非客户端专属的设置项。
+     *
+     * <p>刻意不含 {@link #getPackageItems()} 那两条动态项——它们由客户端从建筑包列表现建
+     * （{@code ProjectionClientState}），服务端调它没有意义；整张建筑包页的状态由
+     * {@code building.disabledPackages} 这一个键派生，同步那一项即可。
+     */
+    public static List<SettingItem> getSyncableItems() {
+        init();
+        List<SettingItem> all = new ArrayList<>(ALL_ITEMS.size());
+        for (SettingItem item : ALL_ITEMS) {
+            if (!item.isClientOnly()) all.add(item);
+        }
+        return Collections.unmodifiableList(all);
+    }
+
     public static void resetTab(SettingTab tab) {
         init();
         // 按「本页能不能恢复默认」判，而不是管理员门控：本镇页非 OP 也要能恢复默认。
