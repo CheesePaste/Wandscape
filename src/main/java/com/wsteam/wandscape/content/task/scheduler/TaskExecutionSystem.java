@@ -60,79 +60,77 @@ public class TaskExecutionSystem implements EcsSystem {
 
     @Override
     public void update(World world, float delta) {
-        try (var span = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("ecs.task_execution.tick")) {
-        OpExecutorRegistry registry = world.opExecutors;
-        if (registry == null) return;
+    OpExecutorRegistry registry = world.opExecutors;
+    if (registry == null) return;
 
-        List<Long> npcs = world.query(Position.class, TaskExecutor.class, NpcInventory.class);
+    List<Long> npcs = world.query(Position.class, TaskExecutor.class, NpcInventory.class);
 
-        for (long npcId : npcs) {
-            TaskExecutor exec = world.get(npcId, TaskExecutor.class);
-            if (exec == null) continue;
+    for (long npcId : npcs) {
+        TaskExecutor exec = world.get(npcId, TaskExecutor.class);
+        if (exec == null) continue;
 
-            NpcTaskQueue queue = exec.npcQueue;
+        NpcTaskQueue queue = exec.npcQueue;
 
-            // ── 0. 跟随：释放小镇全局任务（保留 self_defense 等个人包）──
-            // 放在「无工作→idle」之前：挂起栈里可能还压着被自防御抢断的 global 包，
-            // 此时 hasWork()=false 但 hasGlobalPackage()=true，先走 idle 会让该包永驻挂起栈。
-            if (world.entityOps != null
-                    && world.entityOps.isFollowing(npcId)
-                    && (exec.globalTaskId != null || queue.hasGlobalPackage())) {
-                releaseForInterruption(world, npcId, exec, queue);
-                continue;
-            }
-
-            // ── 0.5 小镇冻结：创始人不在线且关闭离线运行 → NPC 原地冻结，不推进执行 ──
-            // 保留原状态（队列/步骤/async future），创始人上线后由同一路径恢复。
-            ColonyMember frozenMember = world.get(npcId, ColonyMember.class);
-            if (frozenMember != null && world.entityOps != null
-                    && !world.entityOps.isColonyActive(frozenMember.colonyId())) {
-                continue;
-            }
-
-            // ── 0.6 幽灵 NPC 防御：MC 实体缺失/已移除（区块卸载、异常清理遗漏）──
-            // 任务不得驱动一个不存在的 NPC：释放绑定全局任务（保留步进、退还已取元素）、
-            // 丢弃全局包、清执行状态并跳过本轮。ECS 组件保留（区块重载后重连复用）。
-            if (world.entityOps != null && !world.entityOps.isNpcAlive(npcId)) {
-                releaseForPhantom(world, npcId, exec, queue);
-                continue;
-            }
-
-            // ── 0.7 未注册殖民地 NPC 防御：占位（刷怪蛋召唤在殖民地外）/陈旧（殖民地已删除）
-            // 殖民地无仓库可服务，不得执行任何殖民地工作——与幽灵防御同构：释放绑定全局任务、
-            // 丢弃 global 包、取消导航，保留个人包（自防御）。首次清理后无残留即空转不刷日志。
-            ColonyMember colonyMember = world.get(npcId, ColonyMember.class);
-            if (colonyMember != null && world.entityOps != null
-                    && !world.entityOps.isColonyRegistered(colonyMember.colonyId())
-                    && (exec.globalTaskId != null || queue.hasGlobalPackage())) {
-                releaseBoundGlobalTask(world, npcId, exec, queue);
-                if (world.movementOps != null) {
-                    world.movementOps.cancelNavigation(npcId);
-                }
-                Log.debug(LogCategory.TASK, "exec", "NPC %d — unregistered colony (placeholder/stale): released global task", npcId);
-                continue;
-            }
-
-            // ── 1. No work → idle ──
-            if (!queue.hasWork() && exec.globalTaskId == null) {
-                if (exec.state != ExecutorState.IDLE) {
-                }
-                exec.state = ExecutorState.IDLE;
-                exec.currentOpTarget = null;
-                exec.currentOpKind = null;
-                exec.activePackageSource = null;
-                exec.initialNavDone = false;
-                if (world.movementOps != null && exec.pendingFuture != null) {
-                    world.movementOps.cancelNavigation(npcId);
-                    exec.pendingFuture = null;
-                    exec.pendingFutureIsNav = false;
-                }
-                continue;
-            }
-
-            processNpc(world, npcId, exec, queue, registry);
+        // ── 0. 跟随：释放小镇全局任务（保留 self_defense 等个人包）──
+        // 放在「无工作→idle」之前：挂起栈里可能还压着被自防御抢断的 global 包，
+        // 此时 hasWork()=false 但 hasGlobalPackage()=true，先走 idle 会让该包永驻挂起栈。
+        if (world.entityOps != null
+                && world.entityOps.isFollowing(npcId)
+                && (exec.globalTaskId != null || queue.hasGlobalPackage())) {
+            releaseForInterruption(world, npcId, exec, queue);
+            continue;
         }
+
+        // ── 0.5 小镇冻结：创始人不在线且关闭离线运行 → NPC 原地冻结，不推进执行 ──
+        // 保留原状态（队列/步骤/async future），创始人上线后由同一路径恢复。
+        ColonyMember frozenMember = world.get(npcId, ColonyMember.class);
+        if (frozenMember != null && world.entityOps != null
+                && !world.entityOps.isColonyActive(frozenMember.colonyId())) {
+            continue;
         }
+
+        // ── 0.6 幽灵 NPC 防御：MC 实体缺失/已移除（区块卸载、异常清理遗漏）──
+        // 任务不得驱动一个不存在的 NPC：释放绑定全局任务（保留步进、退还已取元素）、
+        // 丢弃全局包、清执行状态并跳过本轮。ECS 组件保留（区块重载后重连复用）。
+        if (world.entityOps != null && !world.entityOps.isNpcAlive(npcId)) {
+            releaseForPhantom(world, npcId, exec, queue);
+            continue;
+        }
+
+        // ── 0.7 未注册殖民地 NPC 防御：占位（刷怪蛋召唤在殖民地外）/陈旧（殖民地已删除）
+        // 殖民地无仓库可服务，不得执行任何殖民地工作——与幽灵防御同构：释放绑定全局任务、
+        // 丢弃 global 包、取消导航，保留个人包（自防御）。首次清理后无残留即空转不刷日志。
+        ColonyMember colonyMember = world.get(npcId, ColonyMember.class);
+        if (colonyMember != null && world.entityOps != null
+                && !world.entityOps.isColonyRegistered(colonyMember.colonyId())
+                && (exec.globalTaskId != null || queue.hasGlobalPackage())) {
+            releaseBoundGlobalTask(world, npcId, exec, queue);
+            if (world.movementOps != null) {
+                world.movementOps.cancelNavigation(npcId);
+            }
+            Log.debug(LogCategory.TASK, "exec", "NPC %d — unregistered colony (placeholder/stale): released global task", npcId);
+            continue;
+        }
+
+        // ── 1. No work → idle ──
+        if (!queue.hasWork() && exec.globalTaskId == null) {
+            if (exec.state != ExecutorState.IDLE) {
+            }
+            exec.state = ExecutorState.IDLE;
+            exec.currentOpTarget = null;
+            exec.currentOpKind = null;
+            exec.activePackageSource = null;
+            exec.initialNavDone = false;
+            if (world.movementOps != null && exec.pendingFuture != null) {
+                world.movementOps.cancelNavigation(npcId);
+                exec.pendingFuture = null;
+                exec.pendingFutureIsNav = false;
+            }
+            continue;
+        }
+
+        processNpc(world, npcId, exec, queue, registry);
+    }
     }
 
     private void processNpc(World world, long npcId, TaskExecutor exec,

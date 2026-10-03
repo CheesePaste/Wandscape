@@ -162,63 +162,61 @@ public final class TouristSpawnSystem {
 
     @SubscribeEvent
     public void onServerTick(ServerTickEvent.Post event) {
-        try (var span = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tourist.spawn.on_server_tick")) {
-        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
-        if (server == null) return;
-        ServerLevel level = server.overworld();
-        if (level == null) return;
+    MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+    if (server == null) return;
+    ServerLevel level = server.overworld();
+    if (level == null) return;
 
-        long dayTime = level.getDayTime() % 24000;
-        long day = level.getDayTime() / 24000;
+    long dayTime = level.getDayTime() % 24000;
+    long day = level.getDayTime() / 24000;
 
-        // ── Morning: reset schedule flag + count overnight stayers（每 tick 检查，便宜）──
-        if (dayTime < 1000 && scheduleDay != day) {
+    // ── Morning: reset schedule flag + count overnight stayers（每 tick 检查，便宜）──
+    if (dayTime < 1000 && scheduleDay != day) {
+        scheduleCreated = false;
+        pendingSpawns.clear();
+        scheduleDay = day;
+        countOvernightStayers(level);
+    }
+
+    // ── Spawn window (1000-8000)：每 tick flush，不等 CHECK_INTERVAL ──
+    // 高 tick rate（如 1000）下游戏时间推进更快：若只在每 CHECK_INTERVAL tick 才
+    // flush，生成窗口可能被跳过去、每日游客「来不及生成」。改为每 tick flush，
+    // 每个 pending 的随机 spawnTime 一到就立即生成，窗口内绝不漏。
+    // 多殖民地平行：冻结/市政厅开关不再取"任意单镇"当全局门，逐镇在
+    // createSchedule（排期）与 flushPendingSpawns（落生）里判定。
+    boolean inSpawnWindow = dayTime >= TOURIST_SPAWN_WINDOW_START
+            && dayTime < TOURIST_SPAWN_WINDOW_END;
+    if (inSpawnWindow) {
+        if (Config.TOURIST_SPAWN_ENABLED.get()) {
+            if (!scheduleCreated || scheduleDay != day) {
+                createSchedule(level);
+                scheduleDay = day;
+            }
+            flushPendingSpawns(level);
+        } else if (scheduleCreated) {
+            // 全局开关中途关闭：清掉今日已排计划，避免重新开启时一次性倾泻游客
             scheduleCreated = false;
             pendingSpawns.clear();
-            scheduleDay = day;
-            countOvernightStayers(level);
         }
+    }
 
-        // ── Spawn window (1000-8000)：每 tick flush，不等 CHECK_INTERVAL ──
-        // 高 tick rate（如 1000）下游戏时间推进更快：若只在每 CHECK_INTERVAL tick 才
-        // flush，生成窗口可能被跳过去、每日游客「来不及生成」。改为每 tick flush，
-        // 每个 pending 的随机 spawnTime 一到就立即生成，窗口内绝不漏。
-        // 多殖民地平行：冻结/市政厅开关不再取"任意单镇"当全局门，逐镇在
-        // createSchedule（排期）与 flushPendingSpawns（落生）里判定。
-        boolean inSpawnWindow = dayTime >= TOURIST_SPAWN_WINDOW_START
-                && dayTime < TOURIST_SPAWN_WINDOW_END;
-        if (inSpawnWindow) {
-            if (Config.TOURIST_SPAWN_ENABLED.get()) {
-                if (!scheduleCreated || scheduleDay != day) {
-                    createSchedule(level);
-                    scheduleDay = day;
-                }
-                flushPendingSpawns(level);
-            } else if (scheduleCreated) {
-                // 全局开关中途关闭：清掉今日已排计划，避免重新开启时一次性倾泻游客
-                scheduleCreated = false;
-                pendingSpawns.clear();
-            }
-        }
+    // ── 周期性重型工作（每 CHECK_INTERVAL tick）──
+    tickCounter++;
+    if (tickCounter % CHECK_INTERVAL != 0) return;
 
-        // ── 周期性重型工作（每 CHECK_INTERVAL tick）──
-        tickCounter++;
-        if (tickCounter % CHECK_INTERVAL != 0) return;
+    // ── Night departure window (18000-24000) ──
+    boolean inDepartureWindow = dayTime >= TOURIST_DEPARTURE_WINDOW_START
+            && dayTime < TOURIST_DEPARTURE_WINDOW_END;
 
-        // ── Night departure window (18000-24000) ──
-        boolean inDepartureWindow = dayTime >= TOURIST_DEPARTURE_WINDOW_START
-                && dayTime < TOURIST_DEPARTURE_WINDOW_END;
+    // Always run cleanup for energy/idle/timeout regardless of time
+    cleanupTourists(level, inDepartureWindow);
 
-        // Always run cleanup for energy/idle/timeout regardless of time
-        cleanupTourists(level, inDepartureWindow);
-
-        // Night departure processing
-        if (inDepartureWindow) {
-            processNightDepartures(level);
-        } else {
-            pendingDepartures.clear(); // not in departure window, clear stale delays
-        }
-        }
+    // Night departure processing
+    if (inDepartureWindow) {
+        processNightDepartures(level);
+    } else {
+        pendingDepartures.clear(); // not in departure window, clear stale delays
+    }
     }
 
     // ════════════════════════════════════════════════════════════════

@@ -1,7 +1,6 @@
 package com.wsteam.wandscape.content.tourist.internal;
 import com.wsteam.wandscape.content.task.component.Position;
 import com.wsteam.wandscape.content.task.ecs.World;
-import com.wsteam.wandscape.foundation.util.TickProfiler;
 
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.Wandscape;
@@ -163,25 +162,23 @@ public final class TouristSimSystem {
 
     @SubscribeEvent
     public void onServerTick(ServerTickEvent.Post event) {
-        try (var span = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tourist.sim.on_server_tick")) {
-        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
-        if (server == null) return;
-        ServerLevel level = server.overworld();
-        if (level == null || registry == null) {
-            return;
-        }
+    MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+    if (server == null) return;
+    ServerLevel level = server.overworld();
+    if (level == null || registry == null) {
+        return;
+    }
 
-        // 幽灵占位自愈保险：占用者已不在世界且无 shadow（sim 驱动中实体 detach 但 shadow 在场不算幽灵）
-        // → 释放该 spot 并清其排队（兜底漏清理路径）。
-        if (++spotPurgeCounter % SPOT_PURGE_INTERVAL == 0) {
-            int cleaned = TouristSpotManager.getActive().purgeMissing(
-                    uuid -> level.getEntity(uuid) != null || registry.getShadows().containsKey(uuid));
-            if (cleaned > 0) Log.info(TAG, "[Tourist] purged {} ghost spot(s)", cleaned);
-        }
+    // 幽灵占位自愈保险：占用者已不在世界且无 shadow（sim 驱动中实体 detach 但 shadow 在场不算幽灵）
+    // → 释放该 spot 并清其排队（兜底漏清理路径）。
+    if (++spotPurgeCounter % SPOT_PURGE_INTERVAL == 0) {
+        int cleaned = TouristSpotManager.getActive().purgeMissing(
+                uuid -> level.getEntity(uuid) != null || registry.getShadows().containsKey(uuid));
+        if (cleaned > 0) Log.info(TAG, "[Tourist] purged {} ghost spot(s)", cleaned);
+    }
 
-        if (++tickCounter % SIM_INTERVAL != 0) return;
-        runTick(level);
-        }
+    if (++tickCounter % SIM_INTERVAL != 0) return;
+    runTick(level);
     }
 
     // ── 玩家睡觉跳过夜晚：夜间批量快进（睡→醒，让夜晚后果照常发生）──
@@ -199,77 +196,75 @@ public final class TouristSimSystem {
     }
 
     private void runTick(ServerLevel level) {
-        try (var span = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tourist.sim.run_tick")) {
-        Map<UUID, TouristShadow> shadows = registry.getShadows();
+    Map<UUID, TouristShadow> shadows = registry.getShadows();
 
-        // Index live entities for O(1) lookup + orphan scan. This MUST run BEFORE the
-        // `shadows.isEmpty()` guard below: a skipped night (player sleeps) departs every
-        // no-hotel tourist in one shot (fastForwardNight), emptying the registry — if the
-        // per-shadow loop were the only cleanup, a departed tourist whose body is still
-        // observed would linger in the world once the last shadow leaves. A live body with
-        // no shadow IS a departed tourist; discard it regardless of registry size.
-        // Uses the static LIVE_TOURISTS cache (populated by TouristEntity lifecycle)
-        // instead of level.getAllEntities() — that iterates every entity in the world
-        // (items, mobs, xp orbs, …) every tick, which is the #1 CPU hog.
-        Map<UUID, TouristEntity> entities = new java.util.HashMap<>();
-        for (TouristEntity t : LIVE_TOURISTS.values()) {
-            if (!t.isAlive()) continue;
-            if (t.isPreview()) continue; // 预览假人：无 shadow，不参与 sim/孤儿清除
-            entities.put(t.getUUID(), t);
-            // Orphan: no shadow → departed tourist, clear the residual body.
-            // (A chunk-unload race can briefly move a shadow to another chunk while
-            // the body is still loaded — do NOT discard by position difference, that
-            // kills freshly spawned tourists.)
-            if (isOrphan(t.getUUID(), shadows)) {
-                Log.info(TAG, "[Tourist] discarding orphan body {} (departed)", shortId(t.getUUID()));
-                t.discard();
+    // Index live entities for O(1) lookup + orphan scan. This MUST run BEFORE the
+    // `shadows.isEmpty()` guard below: a skipped night (player sleeps) departs every
+    // no-hotel tourist in one shot (fastForwardNight), emptying the registry — if the
+    // per-shadow loop were the only cleanup, a departed tourist whose body is still
+    // observed would linger in the world once the last shadow leaves. A live body with
+    // no shadow IS a departed tourist; discard it regardless of registry size.
+    // Uses the static LIVE_TOURISTS cache (populated by TouristEntity lifecycle)
+    // instead of level.getAllEntities() — that iterates every entity in the world
+    // (items, mobs, xp orbs, …) every tick, which is the #1 CPU hog.
+    Map<UUID, TouristEntity> entities = new java.util.HashMap<>();
+    for (TouristEntity t : LIVE_TOURISTS.values()) {
+        if (!t.isAlive()) continue;
+        if (t.isPreview()) continue; // 预览假人：无 shadow，不参与 sim/孤儿清除
+        entities.put(t.getUUID(), t);
+        // Orphan: no shadow → departed tourist, clear the residual body.
+        // (A chunk-unload race can briefly move a shadow to another chunk while
+        // the body is still loaded — do NOT discard by position difference, that
+        // kills freshly spawned tourists.)
+        if (isOrphan(t.getUUID(), shadows)) {
+            Log.info(TAG, "[Tourist] discarding orphan body {} (departed)", shortId(t.getUUID()));
+            t.discard();
+        }
+    }
+
+    if (shadows.isEmpty()) return;
+
+    // Pre-compute player probes and sim-range once per tick (was O(S×P) alloc per shadow).
+    double simRange = level.getServer().getPlayerList().getSimulationDistance() * 16.0;
+    double simRangeSq = simRange * simRange;
+    java.util.List<PlayerProbe> probeList = new java.util.ArrayList<>();
+    for (var p : level.players()) {
+        if (!p.isSpectator()) probeList.add(new PlayerProbe(p.getX(), p.getZ()));
+    }
+    PlayerProbe[] probes = probeList.toArray(new PlayerProbe[0]);
+
+    for (TouristShadow s : new ArrayList<>(shadows.values())) {
+        // 创始人不在线 → 冻结小镇：游客原地冻结——不 sim、不实体化、不离场、不被清。
+        // 冻结期间占位/排队保留（shadow 仍在 registry，spot purge 不误清）。
+        if (s.getColonyId() != null && !ColonyActivation.isColonyActive(s.getColonyId())) {
+            continue;
+        }
+        // The sim drives a tourist whenever no player can observe it. Chunk state is
+        // an unreliable proxy here: spawn chunks stay "loaded"/"ticking" even with the
+        // player far away (so isLoaded/isPositionTicking never let the sim take over),
+        // yet the real AI doesn't actually behave for unobserved tourists. Player
+        // proximity is the signal that decides whether the physical entity runs.
+        boolean observed = probes.length > 0 && hasObserver(simRangeSq, s.getPosX(), s.getPosZ(), probes);
+        if (observed) {
+            handleLoaded(level, s, entities.get(s.getTouristId()));
+        } else {
+            // Detach the physical body (UNLOADED_TO_CHUNK ≠ KILLED/DISCARDED, so the
+            // shadow survives) so it can't double-run real AI against the sim's shadow.
+            TouristEntity body = entities.get(s.getTouristId());
+            if (body != null && body.isAlive()) {
+                body.remove(Entity.RemovalReason.UNLOADED_TO_CHUNK);
             }
-        }
-
-        if (shadows.isEmpty()) return;
-
-        // Pre-compute player probes and sim-range once per tick (was O(S×P) alloc per shadow).
-        double simRange = level.getServer().getPlayerList().getSimulationDistance() * 16.0;
-        double simRangeSq = simRange * simRange;
-        java.util.List<PlayerProbe> probeList = new java.util.ArrayList<>();
-        for (var p : level.players()) {
-            if (!p.isSpectator()) probeList.add(new PlayerProbe(p.getX(), p.getZ()));
-        }
-        PlayerProbe[] probes = probeList.toArray(new PlayerProbe[0]);
-
-        for (TouristShadow s : new ArrayList<>(shadows.values())) {
-            // 创始人不在线 → 冻结小镇：游客原地冻结——不 sim、不实体化、不离场、不被清。
-            // 冻结期间占位/排队保留（shadow 仍在 registry，spot purge 不误清）。
-            if (s.getColonyId() != null && !ColonyActivation.isColonyActive(s.getColonyId())) {
-                continue;
+            // 实体→sim 切换瞬间才清瞬时交互/排队状态（onRemovedFromLevel 已释放实体的 spot/queue）。
+            // 不能每 tick 重置——否则排队中的 shadow 每次被踢出队尾、交互中的被清零，
+            // 排队/交互永不推进（游客原地卡死）。
+            if (s.isHydrated()) {
+                s.setInteractTicksLeft(0);
+                s.setQueueSpotIndex(-1);
+                s.setOccupiedSpot(-1);
             }
-            // The sim drives a tourist whenever no player can observe it. Chunk state is
-            // an unreliable proxy here: spawn chunks stay "loaded"/"ticking" even with the
-            // player far away (so isLoaded/isPositionTicking never let the sim take over),
-            // yet the real AI doesn't actually behave for unobserved tourists. Player
-            // proximity is the signal that decides whether the physical entity runs.
-            boolean observed = probes.length > 0 && hasObserver(simRangeSq, s.getPosX(), s.getPosZ(), probes);
-            if (observed) {
-                handleLoaded(level, s, entities.get(s.getTouristId()));
-            } else {
-                // Detach the physical body (UNLOADED_TO_CHUNK ≠ KILLED/DISCARDED, so the
-                // shadow survives) so it can't double-run real AI against the sim's shadow.
-                TouristEntity body = entities.get(s.getTouristId());
-                if (body != null && body.isAlive()) {
-                    body.remove(Entity.RemovalReason.UNLOADED_TO_CHUNK);
-                }
-                // 实体→sim 切换瞬间才清瞬时交互/排队状态（onRemovedFromLevel 已释放实体的 spot/queue）。
-                // 不能每 tick 重置——否则排队中的 shadow 每次被踢出队尾、交互中的被清零，
-                // 排队/交互永不推进（游客原地卡死）。
-                if (s.isHydrated()) {
-                    s.setInteractTicksLeft(0);
-                    s.setQueueSpotIndex(-1);
-                    s.setOccupiedSpot(-1);
-                }
-                simStep(level, s);
-            }
+            simStep(level, s);
         }
-        }
+    }
     }
 
     /** Pre-computed player positions for observer checks (refreshed once per runTick). */
@@ -894,51 +889,49 @@ public final class TouristSimSystem {
     // ── Departure ──
 
     private void checkDeparture(ServerLevel level, TouristShadow s) {
-        try (var span = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tourist.sim.check_departure")) {
-        UUID hotel = s.getCheckedInBuildingId();
-        long dayTime = level.getDayTime() % 24000;
-        // 离场/清场只在 18000-24000 窗口（与实体路径一致，sim 不再 14000 起提前清人）
-        boolean inDepartureWindow = dayTime >= TouristSpawnSystem.TOURIST_DEPARTURE_WINDOW_START
-                && dayTime < TouristSpawnSystem.TOURIST_DEPARTURE_WINDOW_END;
+    UUID hotel = s.getCheckedInBuildingId();
+    long dayTime = level.getDayTime() % 24000;
+    // 离场/清场只在 18000-24000 窗口（与实体路径一致，sim 不再 14000 起提前清人）
+    boolean inDepartureWindow = dayTime >= TouristSpawnSystem.TOURIST_DEPARTURE_WINDOW_START
+            && dayTime < TouristSpawnSystem.TOURIST_DEPARTURE_WINDOW_END;
 
-        if (hotel != null) {
-            // 住店客：只按停留截止（任意时刻）或满条在离场窗口离场；其余时刻不被清
-            if (level.getGameTime() >= s.getDepartureDeadline()) {
-                depart(level, s);
-            } else if (s.isFullySatisfied() && inDepartureWindow) {
-                depart(level, s);
-            }
-            return;
-        }
-
-        if (s.isFullySatisfied() && s.isMage() && !s.isMageResumeStored()) {
-            storeMageResume(level, s);
-            s.setMageResumeStored(true);
-        }
-
-        boolean isIdle = s.getCommuteTarget() == null && s.getTargetBuildingId() == null;
-        boolean idleTimeout = isIdle && s.simTick() > TouristSpawnSystem.TOURIST_DESPAWN_TIMEOUT_TICKS;
-        // 交互/排队中：不转旅店（routeToHotel 会改 target 打断当前交互），先完成当前交互，
-        // 完成后 decideNext 的夜晚逻辑自会选旅店。
-        boolean interacting = s.getInteractTicksLeft() > 0 || s.getQueueSpotIndex() >= 0;
-
-        // D6 离场（goal.md）：到点 / 满条离场窗口 / 离场窗口无旅店 / idle 超时
-        boolean leave;
+    if (hotel != null) {
+        // 住店客：只按停留截止（任意时刻）或满条在离场窗口离场；其余时刻不被清
         if (level.getGameTime() >= s.getDepartureDeadline()) {
-            leave = true;
-        } else if (s.isFullySatisfied()) {
-            // 满条等离场窗口再离场（白天满条先开心闲逛；14000-18000 不提前清）
-            leave = inDepartureWindow || idleTimeout;
-        } else if (inDepartureWindow) {
-            // 离场窗口 + 未满条：入旅店；无旅店/满 → 离场。交互/排队中先完成交互，不打断。
-            leave = !interacting && !routeToHotel(level, s);
-        } else {
-            leave = idleTimeout;
-        }
-        if (leave) {
+            depart(level, s);
+        } else if (s.isFullySatisfied() && inDepartureWindow) {
             depart(level, s);
         }
-        }
+        return;
+    }
+
+    if (s.isFullySatisfied() && s.isMage() && !s.isMageResumeStored()) {
+        storeMageResume(level, s);
+        s.setMageResumeStored(true);
+    }
+
+    boolean isIdle = s.getCommuteTarget() == null && s.getTargetBuildingId() == null;
+    boolean idleTimeout = isIdle && s.simTick() > TouristSpawnSystem.TOURIST_DESPAWN_TIMEOUT_TICKS;
+    // 交互/排队中：不转旅店（routeToHotel 会改 target 打断当前交互），先完成当前交互，
+    // 完成后 decideNext 的夜晚逻辑自会选旅店。
+    boolean interacting = s.getInteractTicksLeft() > 0 || s.getQueueSpotIndex() >= 0;
+
+    // D6 离场（goal.md）：到点 / 满条离场窗口 / 离场窗口无旅店 / idle 超时
+    boolean leave;
+    if (level.getGameTime() >= s.getDepartureDeadline()) {
+        leave = true;
+    } else if (s.isFullySatisfied()) {
+        // 满条等离场窗口再离场（白天满条先开心闲逛；14000-18000 不提前清）
+        leave = inDepartureWindow || idleTimeout;
+    } else if (inDepartureWindow) {
+        // 离场窗口 + 未满条：入旅店；无旅店/满 → 离场。交互/排队中先完成交互，不打断。
+        leave = !interacting && !routeToHotel(level, s);
+    } else {
+        leave = idleTimeout;
+    }
+    if (leave) {
+        depart(level, s);
+    }
     }
 
     private boolean routeToHotel(ServerLevel level, TouristShadow s) {

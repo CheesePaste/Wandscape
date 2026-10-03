@@ -4,8 +4,9 @@
 > 本文是 `balance/`（未入库）那套分析工具的**数值结论快照**，入库是为了不跑工具也能查。
 >
 > ⚠ **下文数字先于「石英元素值重定」**：`element_seeds.json` 已把 `minecraft:quartz` 从 `fire 8/wind 8` 改成 `metal 4/fire 2/wind 2`，
-> 但 `element_mappings/*.json` 要跑游戏内 `/wandscape test generate_seed_mappings minecraft:quartz` 才会重算。
-> 在那之前，凡引用石英/花岗岩/闪长岩/安山岩造价的数字（§2 的攒钱天数、§3 的宝箱估价）仍是旧口径。
+> 且 `element_mappings/minecraft_quartz.json` 已按新价重算；但凡引用石英/花岗岩/闪长岩/安山岩造价的数字
+> （§2 的攒钱天数、§3 的宝箱估价）仍是旧口径。元素值今后直接手改 `element_mappings/*.json`
+> ——原先那条游戏内生成命令已随生成器一并删除。
 
 - **【何时读】**：调平衡、评估「某条产出线够不够」、写文档/手册要引用具体数字、或怀疑某处数值被人动过时——先查这里，对不上再跑工具。
 - **【不包含什么】**：推导过程、工具用法与口径细节（那些在 `balance/README.md`，随工具走、不入库）。

@@ -6,7 +6,6 @@ import com.wsteam.wandscape.content.building.data.BuildingData;
 import com.wsteam.wandscape.content.building.data.ShopGoodDef;
 import com.wsteam.wandscape.foundation.util.ItemKey;
 import com.wsteam.wandscape.content.building.data.ShopConfig;
-import com.wsteam.wandscape.foundation.util.TickProfiler;
 
 import com.wsteam.wandscape.content.building.data.BuildingConfig;
 import com.wsteam.wandscape.content.colony.ColonyActivation;
@@ -496,12 +495,10 @@ public final class ShopStockManager {
     /** Re-attempt restock for shops awaiting produced goods, on a slow heartbeat. */
     @SubscribeEvent
     public void onServerTick(ServerTickEvent.Post event) {
-        try (var span = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("building.shop_stock.on_server_tick")) {
-            if (pendingRestock.isEmpty()) return;
-            if (++restockRetryTicks < RESTOCK_RETRY_INTERVAL_TICKS) return;
-            restockRetryTicks = 0;
-            retryPendingRestocks();
-        }
+        if (pendingRestock.isEmpty()) return;
+        if (++restockRetryTicks < RESTOCK_RETRY_INTERVAL_TICKS) return;
+        restockRetryTicks = 0;
+        retryPendingRestocks();
     }
 
     private void retryPendingRestocks() {

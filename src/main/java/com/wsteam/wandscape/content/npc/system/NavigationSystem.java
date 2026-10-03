@@ -1,7 +1,6 @@
 package com.wsteam.wandscape.content.npc.system;
 import com.wsteam.wandscape.content.task.boundary.RitualOps;
 import com.wsteam.wandscape.content.task.boundary.MovementOps;
-import com.wsteam.wandscape.foundation.util.TickProfiler;
 
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.foundation.registry.WandscapeConstants;
@@ -65,65 +64,63 @@ public class NavigationSystem implements EcsSystem {
 
     @Override
     public void update(World world, float delta) {
-        try (var span = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("ecs.navigation.tick")) {
-        tickCounter++;
+    tickCounter++;
 
-        List<Long> npcs = world.query(NavigationState.class, Position.class);
-        for (long npcId : npcs) {
-            NavigationState nav = world.get(npcId, NavigationState.class);
-            if (nav == null || nav.mode == NavigationState.Mode.IDLE) continue;
+    List<Long> npcs = world.query(NavigationState.class, Position.class);
+    for (long npcId : npcs) {
+        NavigationState nav = world.get(npcId, NavigationState.class);
+        if (nav == null || nav.mode == NavigationState.Mode.IDLE) continue;
 
-            ColonyWorker worker = EntityComponentBridge.INSTANCE.getWorker(npcId);
-            if (worker == null || worker.entity().isRemoved()) {
-                nav.reset();
+        ColonyWorker worker = EntityComponentBridge.INSTANCE.getWorker(npcId);
+        if (worker == null || worker.entity().isRemoved()) {
+            nav.reset();
+            continue;
+        }
+        var e = worker.entity();
+
+        double dx = e.getX() - (nav.target.x() + 0.5);
+        double dz = e.getZ() - (nav.target.z() + 0.5);
+        double hDistSq = dx * dx + dz * dz;
+
+        // Arrived (all modes): 水平距离 <= 5格（垂直高度任意）
+        if (hDistSq <= STOP_RANGE_SQ) {
+            arrive(nav, worker);
+            continue;
+        }
+
+        // ---- First tick: initialise ----
+        if (nav.startTick == 0) {
+            nav.startTick = tickCounter;
+            nav.lastCheckTick = tickCounter;
+            nav.lastCheckX = e.getX();
+            nav.lastCheckZ = e.getZ();
+
+            // Distance > walkThreshold → skip pathfinding, use self_teleport ritual
+            if (nav.mode == NavigationState.Mode.PATHFINDING
+                    && hDistSq > (long) WandscapeConstants.NPC_WALK_THRESHOLD * WandscapeConstants.NPC_WALK_THRESHOLD) {
+                switchToRitualTeleport(nav, npcId, world);
                 continue;
             }
-            var e = worker.entity();
 
-            double dx = e.getX() - (nav.target.x() + 0.5);
-            double dz = e.getZ() - (nav.target.z() + 0.5);
-            double hDistSq = dx * dx + dz * dz;
+            worker.setAiWanderingEnabled(false);
 
-            // Arrived (all modes): 水平距离 <= 5格（垂直高度任意）
-            if (hDistSq <= STOP_RANGE_SQ) {
-                arrive(nav, worker);
-                continue;
-            }
-
-            // ---- First tick: initialise ----
-            if (nav.startTick == 0) {
-                nav.startTick = tickCounter;
-                nav.lastCheckTick = tickCounter;
-                nav.lastCheckX = e.getX();
-                nav.lastCheckZ = e.getZ();
-
-                // Distance > walkThreshold → skip pathfinding, use self_teleport ritual
-                if (nav.mode == NavigationState.Mode.PATHFINDING
-                        && hDistSq > (long) WandscapeConstants.NPC_WALK_THRESHOLD * WandscapeConstants.NPC_WALK_THRESHOLD) {
+            if (nav.mode == NavigationState.Mode.PATHFINDING) {
+                boolean ok = startPathfinding(nav, worker, npcId);
+                if (!ok) {
+                    Log.debug(LogCategory.NPC, "nav", "Worker {} — pathfinding init failed, switching to teleport", npcId);
                     switchToRitualTeleport(nav, npcId, world);
-                    continue;
                 }
-
-                worker.setAiWanderingEnabled(false);
-
-                if (nav.mode == NavigationState.Mode.PATHFINDING) {
-                    boolean ok = startPathfinding(nav, worker, npcId);
-                    if (!ok) {
-                        Log.debug(LogCategory.NPC, "nav", "Worker {} — pathfinding init failed, switching to teleport", npcId);
-                        switchToRitualTeleport(nav, npcId, world);
-                    }
-                    continue;
-                }
-                // TELEPORT_WAITING / TELEPORT_RITUAL: fall through
+                continue;
             }
+            // TELEPORT_WAITING / TELEPORT_RITUAL: fall through
+        }
 
-            switch (nav.mode) {
-                case PATHFINDING -> tickPathfinding(nav, worker, npcId, world);
-                case TELEPORT_WAITING -> tickTeleportWaiting(nav, npcId, world);
-                case TELEPORT_RITUAL -> { /* ritual in private queue; arrival checked at top */ }
-            }
+        switch (nav.mode) {
+            case PATHFINDING -> tickPathfinding(nav, worker, npcId, world);
+            case TELEPORT_WAITING -> tickTeleportWaiting(nav, npcId, world);
+            case TELEPORT_RITUAL -> { /* ritual in private queue; arrival checked at top */ }
         }
-        }
+    }
     }
 
     // ---- PATHFINDING ----

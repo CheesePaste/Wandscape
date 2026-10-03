@@ -6,7 +6,6 @@ import com.wsteam.wandscape.content.building.data.BuildingData;
 import com.wsteam.wandscape.content.tourist.data.VisitMemory;
 import com.wsteam.wandscape.content.building.data.AtmConfig;
 import com.wsteam.wandscape.content.building.data.ShopConfig;
-import com.wsteam.wandscape.foundation.util.TickProfiler;
 import com.wsteam.wandscape.content.tourist.data.Emotion;
 import com.wsteam.wandscape.content.building.data.RelaxConfig;
 import com.wsteam.wandscape.content.tourist.data.Activity;
@@ -478,80 +477,78 @@ public final class TouristSimulation {
      */
     @Nullable
     public static BuildingState selectNextTarget(ServerLevel level, TouristStateHost t, boolean requireLoaded) {
-        try (var span = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tourist.sim.select_next_target")) {
-        UUID colonyId = t.getColonyId();
-        if (colonyId == null) return null;
-        BuildingApi api = getBuildingApi();
-        if (api == null) return null;
+    UUID colonyId = t.getColonyId();
+    if (colonyId == null) return null;
+    BuildingApi api = getBuildingApi();
+    if (api == null) return null;
 
-        List<BuildingState> allBuildings = api.getColonyBuildings(colonyId);
-        if (allBuildings.isEmpty()) return null;
+    List<BuildingState> allBuildings = api.getColonyBuildings(colonyId);
+    if (allBuildings.isEmpty()) return null;
 
-        BlockPos touristPos = t.touristPos();
-        if (touristPos == null) return null;
+    BlockPos touristPos = t.touristPos();
+    if (touristPos == null) return null;
 
-        long dayTime = level.getDayTime() % 24000;
-        boolean isNight = dayTime >= TOURIST_NIGHT_START;
-        boolean energyEmpty = t.getEnergy() <= 0;
-        boolean nightHotel = isNight && !t.isFullySatisfied();
+    long dayTime = level.getDayTime() % 24000;
+    boolean isNight = dayTime >= TOURIST_NIGHT_START;
+    boolean energyEmpty = t.getEnergy() <= 0;
+    boolean nightHotel = isNight && !t.isFullySatisfied();
 
-        int visionSq = TOURIST_VISION_RADIUS * TOURIST_VISION_RADIUS;
-        int atmCooldown = TOURIST_ATM_WITHDRAW_COOLDOWN_TICKS;
+    int visionSq = TOURIST_VISION_RADIUS * TOURIST_VISION_RADIUS;
+    int atmCooldown = TOURIST_ATM_WITHDRAW_COOLDOWN_TICKS;
 
-        List<BuildingState> normal = new ArrayList<>();
-        List<BuildingState> hotels = new ArrayList<>();
-        // Cache configs per building so weightedPick → buildingScore skips redundant getConfig() lookups.
-        java.util.Map<UUID, BuildingConfig> cfgCache = new java.util.HashMap<>();
-        for (BuildingData b : allBuildings) {
-            if (!b.isStructureIntact()) continue;
-            BuildingState state = getState(level, b.getBuildingId());
-            if (state == null) continue;
-            BuildingConfig cfg = getConfig(level, b.getBuildingId());
-            if (cfg == null || !cfg.isTouristTarget()) continue;
-            if (cfg.interactSpots() == null || cfg.interactSpots().isEmpty()) continue; // 0-spot 无兜底
+    List<BuildingState> normal = new ArrayList<>();
+    List<BuildingState> hotels = new ArrayList<>();
+    // Cache configs per building so weightedPick → buildingScore skips redundant getConfig() lookups.
+    java.util.Map<UUID, BuildingConfig> cfgCache = new java.util.HashMap<>();
+    for (BuildingData b : allBuildings) {
+        if (!b.isStructureIntact()) continue;
+        BuildingState state = getState(level, b.getBuildingId());
+        if (state == null) continue;
+        BuildingConfig cfg = getConfig(level, b.getBuildingId());
+        if (cfg == null || !cfg.isTouristTarget()) continue;
+        if (cfg.interactSpots() == null || cfg.interactSpots().isEmpty()) continue; // 0-spot 无兜底
 
-            // 视野（距离）过滤
-            double dx = state.getAnchor().getX() - touristPos.getX();
-            double dz = state.getAnchor().getZ() - touristPos.getZ();
-            if (dx * dx + dz * dz > visionSq) continue;
-            if (requireLoaded && !level.isLoaded(state.getAnchor())) continue;
+        // 视野（距离）过滤
+        double dx = state.getAnchor().getX() - touristPos.getX();
+        double dz = state.getAnchor().getZ() - touristPos.getZ();
+        if (dx * dx + dz * dz > visionSq) continue;
+        if (requireLoaded && !level.isLoaded(state.getAnchor())) continue;
 
-            // ATM 是纯取现机：钱包不足（atmReusable）才值得去；否则不当景点候选——避免游客
-            // 把 ATM 当一般建筑逛、走到跟前还顺手取钱（"有钱还取 / 第一个建筑就跑 ATM"）。
-            if (cfg.atm() != AtmConfig.NONE && !atmReusable(t, cfg.atm(), atmCooldown)) continue;
+        // ATM 是纯取现机：钱包不足（atmReusable）才值得去；否则不当景点候选——避免游客
+        // 把 ATM 当一般建筑逛、走到跟前还顺手取钱（"有钱还取 / 第一个建筑就跑 ATM"）。
+        if (cfg.atm() != AtmConfig.NONE && !atmReusable(t, cfg.atm(), atmCooldown)) continue;
 
-            boolean hotel = cfg.service() != ServiceConfig.NONE && cfg.service().maxOccupancy() > 0;
-            if (nightHotel) {
-                // 夜晚 + 未满条：优先旅店（不查 visited，白天逛过不阻挡夜晚入住）；
-                // 视野内无旅店 → 回退普通建筑（尊重 visited、精力 0 只去 relax），傍晚不干晃。
-                if (hotel) {
-                    if (hasHotelVacancy(level, b.getBuildingId())) {
-                        hotels.add(state);
-                        cfgCache.put(state.getBuildingId(), cfg);
-                    }
-                } else {
-                    if (energyEmpty && (cfg.relax() == RelaxConfig.NONE || cfg.relax().energyRestore() <= 0)) continue;
-                    // ATM 可重新取现 / 精力低可重复歇脚 relax 时豁免 visited；其余按 visited 门
-                    if (!exemptFromVisited(t, cfg, atmCooldown) && t.hasVisitedBuilding(b.getBuildingId())) continue;
-                    normal.add(state);
+        boolean hotel = cfg.service() != ServiceConfig.NONE && cfg.service().maxOccupancy() > 0;
+        if (nightHotel) {
+            // 夜晚 + 未满条：优先旅店（不查 visited，白天逛过不阻挡夜晚入住）；
+            // 视野内无旅店 → 回退普通建筑（尊重 visited、精力 0 只去 relax），傍晚不干晃。
+            if (hotel) {
+                if (hasHotelVacancy(level, b.getBuildingId())) {
+                    hotels.add(state);
                     cfgCache.put(state.getBuildingId(), cfg);
                 }
-                continue;
+            } else {
+                if (energyEmpty && (cfg.relax() == RelaxConfig.NONE || cfg.relax().energyRestore() <= 0)) continue;
+                // ATM 可重新取现 / 精力低可重复歇脚 relax 时豁免 visited；其余按 visited 门
+                if (!exemptFromVisited(t, cfg, atmCooldown) && t.hasVisitedBuilding(b.getBuildingId())) continue;
+                normal.add(state);
+                cfgCache.put(state.getBuildingId(), cfg);
             }
+            continue;
+        }
 
-            if (energyEmpty) {
-                // 精力 0 → 只能去恢复建筑（relax.energyRestore>0）；无恢复建筑 → 闲逛（不离场）
-                if (cfg.relax() == RelaxConfig.NONE || cfg.relax().energyRestore() <= 0) continue;
-            }
-            // ATM 可重新取现 / 精力低可重复歇脚 relax 时豁免 visited；其余按 visited 门
-            if (!exemptFromVisited(t, cfg, atmCooldown) && t.hasVisitedBuilding(b.getBuildingId())) continue;
-            normal.add(state);
-            cfgCache.put(state.getBuildingId(), cfg);
+        if (energyEmpty) {
+            // 精力 0 → 只能去恢复建筑（relax.energyRestore>0）；无恢复建筑 → 闲逛（不离场）
+            if (cfg.relax() == RelaxConfig.NONE || cfg.relax().energyRestore() <= 0) continue;
         }
-        List<BuildingState> candidates = nightHotel && !hotels.isEmpty() ? hotels : normal;
-        if (candidates.isEmpty()) return null;
-        return weightedPick(level, t, candidates, cfgCache);
-        }
+        // ATM 可重新取现 / 精力低可重复歇脚 relax 时豁免 visited；其余按 visited 门
+        if (!exemptFromVisited(t, cfg, atmCooldown) && t.hasVisitedBuilding(b.getBuildingId())) continue;
+        normal.add(state);
+        cfgCache.put(state.getBuildingId(), cfg);
+    }
+    List<BuildingState> candidates = nightHotel && !hotels.isEmpty() ? hotels : normal;
+    if (candidates.isEmpty()) return null;
+    return weightedPick(level, t, candidates, cfgCache);
     }
 
     /** Find-Best-Action 评分：满意度偏好（总三值增益） + 精力/钱包紧急加分 − 排队惩罚。 */
@@ -665,33 +662,31 @@ public final class TouristSimulation {
     @javax.annotation.Nullable
     public static BuildingState findHotelTarget(ServerLevel level, TouristStateHost t,
             boolean requireLoaded) {
-        try (var span = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tourist.sim.find_hotel_target")) {
-        UUID colonyId = t.getColonyId();
-        if (colonyId == null) return null;
-        BuildingApi api = getBuildingApi();
-        if (api == null) return null;
+    UUID colonyId = t.getColonyId();
+    if (colonyId == null) return null;
+    BuildingApi api = getBuildingApi();
+    if (api == null) return null;
 
-        // 任意可用旅店：最近优先
-        BlockPos touristPos = t.touristPos();
-        BuildingState best = null;
-        int bestDist = Integer.MAX_VALUE;
-        for (BuildingData b : api.getColonyBuildings(colonyId)) {
-            if (!"service".equals(b.getCategory())) continue;
-            if (!b.isStructureIntact()) continue;
-            if (!isHotelBuilding(level, b.getBuildingId())) continue;
-            if (requireLoaded && !level.isLoaded(b.getPosition())) continue;
-            if (!hasHotelVacancy(level, b.getBuildingId())) continue;
-            int d = touristPos != null
-                    ? Math.abs(touristPos.getX() - b.getPosition().getX())
-                      + Math.abs(touristPos.getZ() - b.getPosition().getZ())
-                    : 0;
-            if (d < bestDist) {
-                bestDist = d;
-                best = getState(level, b.getBuildingId());
-            }
+    // 任意可用旅店：最近优先
+    BlockPos touristPos = t.touristPos();
+    BuildingState best = null;
+    int bestDist = Integer.MAX_VALUE;
+    for (BuildingData b : api.getColonyBuildings(colonyId)) {
+        if (!"service".equals(b.getCategory())) continue;
+        if (!b.isStructureIntact()) continue;
+        if (!isHotelBuilding(level, b.getBuildingId())) continue;
+        if (requireLoaded && !level.isLoaded(b.getPosition())) continue;
+        if (!hasHotelVacancy(level, b.getBuildingId())) continue;
+        int d = touristPos != null
+                ? Math.abs(touristPos.getX() - b.getPosition().getX())
+                  + Math.abs(touristPos.getZ() - b.getPosition().getZ())
+                : 0;
+        if (d < bestDist) {
+            bestDist = d;
+            best = getState(level, b.getBuildingId());
         }
-        return best;
-        }
+    }
+    return best;
     }
 
     // ── Helpers ──

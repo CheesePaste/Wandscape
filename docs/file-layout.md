@@ -207,7 +207,7 @@ data/wandscape/buildings/
 | `paginate_patchouli_json.py` | 帕秋莉条目 JSON | 分页后写回 |
 | `strip_building_ground.py` / `gen_icons.py` / `fix_icons.py` | 美术/建筑素材 | 贴图与建筑 JSON |
 
-游戏内命令 `/wandscape generate_element_mappings` 是**开发期命令**：它从 classpath 读 `element_seeds.json`，推算元素定价，**直接写回** `../src/main/resources/data/wandscape/element_mappings/`（靠 `serverDir/..` 反推仓库根）。生产环境的服务目录没有 `src/`，所以这条命令只在开发环境有意义。
+`data/wandscape/element_mappings/*.json` 是**手改产物**。原先有两条开发期命令（`/wandscape test generate_element_mappings` 与 `generate_seed_mappings`）从 `element_seeds.json` 推算定价后写回源码树，现已删除：全量生成已完成，且它们靠 `serverDir/..` 反推仓库根、把结果直接写进 `src/main/resources`（也就是打进 jar），继续留着只会误伤。改元素价直接改映射文件，`element_seeds.json` 只作基准对照。
 
 ---
 

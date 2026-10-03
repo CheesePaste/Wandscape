@@ -11,7 +11,6 @@ import com.wsteam.wandscape.content.task.boundary.WandscapeMovementOps;
 import com.wsteam.wandscape.content.task.boundary.WandscapeRitualOps;
 import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.content.warehouse.transport.ItemTransportManager;
-import com.wsteam.wandscape.foundation.util.TickProfiler;
 import net.minecraft.server.level.ServerLevel;
 
 import javax.annotation.Nullable;
@@ -98,55 +97,35 @@ public final class TaskRuntime {
     public void tick(ServerLevel level) {
         // 1. Tick async executors
         if (asyncExec != null) {
-            try (var s = TickProfiler.INSTANCE.start("tick.async_exec")) {
-                asyncExec.tickAll();
-            }
+            asyncExec.tickAll();
         }
         if (clearBoxExec != null) {
-            try (var s = TickProfiler.INSTANCE.start("tick.clear_box")) {
-                clearBoxExec.tickAll();
-            }
+            clearBoxExec.tickAll();
         }
         if (blockInteractExec != null) {
-            try (var s = TickProfiler.INSTANCE.start("tick.block_interact")) {
-                blockInteractExec.tickAll();
-            }
+            blockInteractExec.tickAll();
         }
         if (ritualOps != null) {
-            try (var s = TickProfiler.INSTANCE.start("tick.ritual_ops")) {
-                ritualOps.tickAll();
-            }
+            ritualOps.tickAll();
         }
         if (transporter != null) {
-            try (var s = TickProfiler.INSTANCE.start("tick.transporter")) {
-                transporter.tickAll();
-            }
+            transporter.tickAll();
         }
         if (resourceReqExec != null) {
-            try (var s = TickProfiler.INSTANCE.start("tick.resource_req")) {
-                resourceReqExec.tickAll();
-            }
+            resourceReqExec.tickAll();
         }
         if (guardExec != null) {
-            try (var s = TickProfiler.INSTANCE.start("tick.guard_exec")) {
-                guardExec.tickAll();
-            }
+            guardExec.tickAll();
         }
         if (selfDefenseExec != null) {
-            try (var s = TickProfiler.INSTANCE.start("tick.self_defense")) {
-                selfDefenseExec.tick(world);
-            }
+            selfDefenseExec.tick(world);
         }
         if (altarCastExec != null) {
-            try (var s = TickProfiler.INSTANCE.start("tick.altar_exec")) {
-                altarCastExec.tickAll();
-            }
+            altarCastExec.tickAll();
         }
 
         // 2. Tick ECS World (includes NavigationSystem, ResourceSupplySystem, SchedulerSystem, etc.)
-        try (var s = TickProfiler.INSTANCE.start("tick.world")) {
-            world.tick(1.0f);
-        }
+        world.tick(1.0f);
     }
 
     public World getWorld() {

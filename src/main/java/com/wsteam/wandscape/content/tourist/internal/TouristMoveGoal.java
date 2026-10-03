@@ -252,71 +252,69 @@ public class TouristMoveGoal extends Goal {
 
     @Override
     public void tick() {
-        try (var span = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tourist.goal.tick")) {
-            // 睡着（住店客在旅店床上）：不动，等清晨晨起（HotelStayHandler.wakeUp 后自然外出）
-            if (tourist.isSleeping()) {
+        // 睡着（住店客在旅店床上）：不动，等清晨晨起（HotelStayHandler.wakeUp 后自然外出）
+        if (tourist.isSleeping()) {
+            tourist.getNavigation().stop();
+            return;
+        }
+
+        long dayTime = tourist.level().getDayTime() % 24000;
+        boolean isNight = dayTime >= TouristSimulation.TOURIST_NIGHT_START;
+        UUID hotelId = tourist.getCheckedInBuildingId();
+
+        // 白天：解除夜晚「无空闲旅店」闩锁，让下一晚重新尝试找旅店
+        if (dayTime < TouristSimSystem.TOURIST_EVENING_ROUTING_START) {
+            hotelRouteBackoff.clear();
+        }
+
+        // ── 住店客（未满条）：夜晚/凌晨回自己旅店睡觉（空闲即回店；满条住店客夜晚等离场）──
+        if ((isNight || dayTime < 1000) && hotelId != null && !tourist.isFullySatisfied()
+                && !performingActivity && !queueing) {
+            ReturnHomeResult r = returnToOwnHotel();
+            if (r == ReturnHomeResult.STOP) {
                 tourist.getNavigation().stop();
                 return;
             }
-
-            long dayTime = tourist.level().getDayTime() % 24000;
-            boolean isNight = dayTime >= TouristSimulation.TOURIST_NIGHT_START;
-            UUID hotelId = tourist.getCheckedInBuildingId();
-
-            // 白天：解除夜晚「无空闲旅店」闩锁，让下一晚重新尝试找旅店
-            if (dayTime < TouristSimSystem.TOURIST_EVENING_ROUTING_START) {
-                hotelRouteBackoff.clear();
+            if (r == ReturnHomeResult.ROUTING) {
+                return; // 刚设置回店导航，本 tick 不再派发（下一 tick 正常推进）
             }
+            // HEADING / NONE → 落正常派发推进导航
+        }
 
-            // ── 住店客（未满条）：夜晚/凌晨回自己旅店睡觉（空闲即回店；满条住店客夜晚等离场）──
-            if ((isNight || dayTime < 1000) && hotelId != null && !tourist.isFullySatisfied()
-                    && !performingActivity && !queueing) {
-                ReturnHomeResult r = returnToOwnHotel();
-                if (r == ReturnHomeResult.STOP) {
-                    tourist.getNavigation().stop();
-                    return;
-                }
-                if (r == ReturnHomeResult.ROUTING) {
-                    return; // 刚设置回店导航，本 tick 不再派发（下一 tick 正常推进）
-                }
-                // HEADING / NONE → 落正常派发推进导航
-            }
-
-            // ── 傍晚路由：无旅店游客停止当前任务去旅店（防夜晚无旅店被清场）──
-            // 错峰与前置过滤：每 10 tick 轮询一次，且当晚已锁住/已在去旅店路上时前置跳过
-            if (dayTime >= TouristSimSystem.TOURIST_EVENING_ROUTING_START
-                    && hotelId == null && !tourist.isFullySatisfied()
-                    && !targetingHotel() && !hotelRouteBackoff.isActive()) {
-                if ((tourist.timeBase() + tourist.getId()) % 10 == 0) {
-                    if (eveningRouteToHotel()) {
-                        return; // 刚设置路由，本 tick 不再派发
-                    }
+        // ── 傍晚路由：无旅店游客停止当前任务去旅店（防夜晚无旅店被清场）──
+        // 错峰与前置过滤：每 10 tick 轮询一次，且当晚已锁住/已在去旅店路上时前置跳过
+        if (dayTime >= TouristSimSystem.TOURIST_EVENING_ROUTING_START
+                && hotelId == null && !tourist.isFullySatisfied()
+                && !targetingHotel() && !hotelRouteBackoff.isActive()) {
+            if ((tourist.timeBase() + tourist.getId()) % 10 == 0) {
+                if (eveningRouteToHotel()) {
+                    return; // 刚设置路由，本 tick 不再派发
                 }
             }
+        }
 
-            // ── Roof-rescue insurance: stuck on a floating surface → teleport down ──
-            if (tickRoofRescue()) {
-                return;
-            }
+        // ── Roof-rescue insurance: stuck on a floating surface → teleport down ──
+        if (tickRoofRescue()) {
+            return;
+        }
 
-            // ── Forced move mode (command override) ──
-            TouristState forced = tourist.getForcedMoveMode();
-            if (forced != null) {
-                MoveMode mapped = mapStateToMoveMode(forced);
-                if (mapped != null && mapped != currentMode) {
-                    Log.info(TAG, "[Tourist] {} forced mode {} (command override)",
-                            tourist.getTouristName(), mapped);
-                    switchMode(mapped);
-                    dispatchStart(); // plan target + begin navigation
-                }
-                tourist.forceMoveMode(null); // consume the override
+        // ── Forced move mode (command override) ──
+        TouristState forced = tourist.getForcedMoveMode();
+        if (forced != null) {
+            MoveMode mapped = mapStateToMoveMode(forced);
+            if (mapped != null && mapped != currentMode) {
+                Log.info(TAG, "[Tourist] {} forced mode {} (command override)",
+                        tourist.getTouristName(), mapped);
+                switchMode(mapped);
+                dispatchStart(); // plan target + begin navigation
             }
+            tourist.forceMoveMode(null); // consume the override
+        }
 
-            switch (currentMode) {
-                case VISITING_BUILDING -> tickBuildingVisit();
-                case EXPLORING_POI -> tickPoiExplore();
-                case WANDERING -> tickWander();
-            }
+        switch (currentMode) {
+            case VISITING_BUILDING -> tickBuildingVisit();
+            case EXPLORING_POI -> tickPoiExplore();
+            case WANDERING -> tickWander();
         }
     }
 
@@ -371,287 +369,283 @@ public class TouristMoveGoal extends Goal {
 
     /** Macro-navigation phase: approach building entry point via road network. */
     private void tickOutdoorNav() {
-        try (var span = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tourist.goal.outdoor_nav")) {
-        BlockPos target = tourist.getCommuteTarget();
-        if (target == null) {
-            idleTicks++;
-            if (idleTicks > POST_TOUR_IDLE_TICKS) {
-                planNextBuilding();
-                if (tourist.getCommuteTarget() != null) {
-                    idleTicks = 0;
-                    beginNavigation(tourist.getCommuteTarget(), touristSpeed);
-                } else {
-                    switchMode(MoveMode.WANDERING);
-                    startWander();
-                }
-            }
-            return;
-        }
-
-        // Target chunk unloaded while en route → can't path there; re-plan to a
-        // loaded building (or wander). Prevents stalling at the load boundary.
-        if (!tourist.level().isLoaded(target)) {
-            tourist.setCommuteTarget(null);
-            tourist.setTargetBuildingId(null);
-            tourist.setTargetBuildingCategory(null);
+    BlockPos target = tourist.getCommuteTarget();
+    if (target == null) {
+        idleTicks++;
+        if (idleTicks > POST_TOUR_IDLE_TICKS) {
             planNextBuilding();
             if (tourist.getCommuteTarget() != null) {
+                idleTicks = 0;
                 beginNavigation(tourist.getCommuteTarget(), touristSpeed);
             } else {
                 switchMode(MoveMode.WANDERING);
                 startWander();
             }
-            return;
         }
+        return;
+    }
 
-        // Check if we're close enough to the building to switch to indoor micro-nav
-        UUID buildingId = tourist.getTargetBuildingId();
-        if (buildingId != null && isWithinDistanceOfBbox(buildingId, MICRO_NAV_SWITCH_DISTANCE)) {
-            // 旅店入住：游客**进入建筑 bbox** 时触发（bbox+5 外扩已去掉，避免大旅店离门老远就入住）
-            if (isHotelBuilding(buildingId) && isInsideBuilding(buildingId)) {
-                if (tryHotelCheckIn(buildingId)) {
-                    return;
-                }
-                // 夜晚 + 未满条：意图入住（到达即入，spot time = 0）。旅店满员 → 不排队当 service 逛，
-                // 直接放弃本次访问重新规划（去别的旅店/离场窗口兜底），避免排队拖到被清场。
-                long dayTime = tourist.level().getDayTime() % 24000;
-                if (dayTime >= TouristSimulation.TOURIST_NIGHT_START && !tourist.isFullySatisfied()) {
-                    finishBuildingStop();
-                    return;
-                }
-            }
-            switchToIndoorNav();
-            return;
-        }
-
-        var nav = tourist.getNavigation();
-        BlockPos pos = tourist.blockPosition();
-
-        // ── Real stuck detection & hard fallback ──
-        totalNavTicks++;
-        if (lastPos != null && sameHorizontal(pos, lastPos)) {
-            noMoveTicks++;
+    // Target chunk unloaded while en route → can't path there; re-plan to a
+    // loaded building (or wander). Prevents stalling at the load boundary.
+    if (!tourist.level().isLoaded(target)) {
+        tourist.setCommuteTarget(null);
+        tourist.setTargetBuildingId(null);
+        tourist.setTargetBuildingCategory(null);
+        planNextBuilding();
+        if (tourist.getCommuteTarget() != null) {
+            beginNavigation(tourist.getCommuteTarget(), touristSpeed);
         } else {
-            noMoveTicks = 0;
-            lastPos = pos;
+            switchMode(MoveMode.WANDERING);
+            startWander();
         }
+        return;
+    }
 
-        // 卡死判定：硬超时在水中放宽——渡水是合法慢移动，游泳前进的游客不该被 600 tick 硬上限
-        // 强制传送；水中只认水平不动（noMoveTicks，见 sameHorizontal 注释）。
-        if (noMoveTicks > 100 || (totalNavTicks > 600 && !tourist.isInWater())) {
-            // 卡死 → 作废当前路径（停导航、清 waypoint），**直接传送到目标入口**（不作废目标，
-            // 由到达判定接管，避免反复重走同一卡死点）。不再等三轮 / 先传当前位置附近安全点。
-            noMoveTicks = 0;
-            totalNavTicks = 0;
-            lastPos = null;
-            nav.stop();
-            outdoorWaypoints = null;
-            currentWaypointIndex = 0;
-            if (teleportToNavTarget(target)) return;
-            // 目标侧找不到落点 → 退回当前位置附近安全点兜底
+    // Check if we're close enough to the building to switch to indoor micro-nav
+    UUID buildingId = tourist.getTargetBuildingId();
+    if (buildingId != null && isWithinDistanceOfBbox(buildingId, MICRO_NAV_SWITCH_DISTANCE)) {
+        // 旅店入住：游客**进入建筑 bbox** 时触发（bbox+5 外扩已去掉，避免大旅店离门老远就入住）
+        if (isHotelBuilding(buildingId) && isInsideBuilding(buildingId)) {
+            if (tryHotelCheckIn(buildingId)) {
+                return;
+            }
+            // 夜晚 + 未满条：意图入住（到达即入，spot time = 0）。旅店满员 → 不排队当 service 逛，
+            // 直接放弃本次访问重新规划（去别的旅店/离场窗口兜底），避免排队拖到被清场。
+            long dayTime = tourist.level().getDayTime() % 24000;
+            if (dayTime >= TouristSimulation.TOURIST_NIGHT_START && !tourist.isFullySatisfied()) {
+                finishBuildingStop();
+                return;
+            }
+        }
+        switchToIndoorNav();
+        return;
+    }
+
+    var nav = tourist.getNavigation();
+    BlockPos pos = tourist.blockPosition();
+
+    // ── Real stuck detection & hard fallback ──
+    totalNavTicks++;
+    if (lastPos != null && sameHorizontal(pos, lastPos)) {
+        noMoveTicks++;
+    } else {
+        noMoveTicks = 0;
+        lastPos = pos;
+    }
+
+    // 卡死判定：硬超时在水中放宽——渡水是合法慢移动，游泳前进的游客不该被 600 tick 硬上限
+    // 强制传送；水中只认水平不动（noMoveTicks，见 sameHorizontal 注释）。
+    if (noMoveTicks > 100 || (totalNavTicks > 600 && !tourist.isInWater())) {
+        // 卡死 → 作废当前路径（停导航、清 waypoint），**直接传送到目标入口**（不作废目标，
+        // 由到达判定接管，避免反复重走同一卡死点）。不再等三轮 / 先传当前位置附近安全点。
+        noMoveTicks = 0;
+        totalNavTicks = 0;
+        lastPos = null;
+        nav.stop();
+        outdoorWaypoints = null;
+        currentWaypointIndex = 0;
+        if (teleportToNavTarget(target)) return;
+        // 目标侧找不到落点 → 退回当前位置附近安全点兜底
+        BlockPos tp = TouristTeleport.findSafeSpot(serverLevel(), pos, tourist.getColonyId(), tourist.getTargetBuildingId());
+        if (tp != null) {
+            tourist.setPos(tp.getX() + 0.5, tp.getY(), tp.getZ() + 0.5);
+            tourist.resetFallDistance();
+            tourist.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+        }
+        return;
+    }
+
+    // ── Road-network waypoint progression ──
+    if (outdoorWaypoints != null && currentWaypointIndex < outdoorWaypoints.size()) {
+        BlockPos curWp = outdoorWaypoints.get(currentWaypointIndex);
+        double wpDistSq = (pos.getX() - curWp.getX()) * (pos.getX() - curWp.getX())
+                + (pos.getZ() - curWp.getZ()) * (pos.getZ() - curWp.getZ());
+        if (wpDistSq <= 9.0) { // Within 3 blocks horizontally
+            currentWaypointIndex++;
+            if (currentWaypointIndex < outdoorWaypoints.size()) {
+                moveToNext(touristSpeed, outdoorWaypoints.get(currentWaypointIndex));
+            } else {
+                outdoorWaypoints = null;
+                moveToNext(touristSpeed, target);
+            }
+        }
+    }
+
+    // Check arrival at entry point (fallback if proximity check doesn't fire)
+    double distSqr = pos.distSqr(target);
+    int interactionRange = getInteractionRange();
+    if (distSqr < interactionRange * interactionRange) {
+        // 到达旅店 → 入住即时完成（不占 spot、不等 interaction_duration）
+        if (isHotelBuilding(buildingId)
+                && tryHotelCheckIn(buildingId)) {
+            return;
+        }
+        // Reached entry point — switch to indoor micro-nav
+        switchToIndoorNav();
+        return;
+    }
+
+    // Stuck recovery：重寻路到当前 waypoint/目标（物理卡死由上方硬兜底梯子处理，这里只防寻路热循环）
+    if (nav.isDone()) {
+        BlockPos curDest = (outdoorWaypoints != null && currentWaypointIndex < outdoorWaypoints.size())
+                ? outdoorWaypoints.get(currentWaypointIndex) : target;
+        if (++stuckTicks > 40) {
+            stuckTicks = 0;
+            moveToNext(touristSpeed, curDest);
+        } else if (repathDue()) {
+            moveToNext(touristSpeed, curDest);
+        }
+    } else {
+        stuckTicks = Math.max(0, stuckTicks - 1);
+    }
+    }
+
+    /** Micro-navigation phase: inside building, navigate to interact point then exit. */
+    private void tickIndoorNav() {
+    UUID buildingId = tourist.getTargetBuildingId();
+    if (buildingId == null) {
+        finishBuildingStop();
+        return;
+    }
+
+    // 已进旅店（进入建筑 bbox）：入住即时完成，不占 spot、不等 interaction_duration。
+    // 白天/满条/满员（tryHotelCheckIn 失败）→ 按普通 service 建筑继续。
+    if (isHotelBuilding(buildingId) && isInsideBuilding(buildingId)) {
+        long dayTime = tourist.level().getDayTime() % 24000;
+        if (dayTime >= TouristSimulation.TOURIST_NIGHT_START && !tourist.isFullySatisfied()) {
+            if (tryHotelCheckIn(buildingId)) {
+                return;
+            }
+            // 夜晚意图入住但旅店满员 → 不当 service 逛/排队，放弃重新规划（避免排队拖到被清场）
+            finishBuildingStop();
+            return;
+        }
+    }
+
+    // 活动中（在 spot 上做动作）：duration 倒计时，结束才结算
+    if (performingActivity) {
+        tickActivity();
+        return;
+    }
+    // 排队中（spot 全满）：轮询空 spot，超时放弃去别处
+    if (queueing) {
+        tickQueue();
+        return;
+    }
+
+    var nav = tourist.getNavigation();
+    BlockPos pos = tourist.blockPosition();
+
+    // ── Real stuck detection & hard fallback ──
+    totalNavTicks++;
+    if (lastPos != null && sameHorizontal(pos, lastPos)) {
+        noMoveTicks++;
+    } else {
+        noMoveTicks = 0;
+        lastPos = pos;
+    }
+
+    if (noMoveTicks > 100 || (totalNavTicks > 400 && !tourist.isInWater())) {
+        noMoveTicks = 0;
+        totalNavTicks = 0;
+        lastPos = null;
+        nav.stop();
+        if (exitingPhase) {
+            // Leaving the building: teleport to safe ground just outside the entry.
+            BlockPos tp = TouristTeleport.findSafeSpotNearEntry(serverLevel(),
+                    entryPoint != null ? entryPoint : tourist.getCommuteTarget(),
+                    tourist.getColonyId());
+            if (tp == null) {
+                finishBuildingStop();
+                return;
+            }
+            tourist.setPos(tp.getX() + 0.5, tp.getY(), tp.getZ() + 0.5);
+            tourist.resetFallDistance();
+            tourist.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+        } else {
+            // 去 spot 途中卡死 → 直接传送到交互 spot 开始活动（不作废本次访问，不等三轮）。
+            if (interactPoint != null) {
+                teleportToIndoorTarget(interactPoint);
+                startActivityAtSpot();
+                return;
+            }
             BlockPos tp = TouristTeleport.findSafeSpot(serverLevel(), pos, tourist.getColonyId(), tourist.getTargetBuildingId());
             if (tp != null) {
                 tourist.setPos(tp.getX() + 0.5, tp.getY(), tp.getZ() + 0.5);
                 tourist.resetFallDistance();
                 tourist.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
             }
-            return;
         }
-
-        // ── Road-network waypoint progression ──
-        if (outdoorWaypoints != null && currentWaypointIndex < outdoorWaypoints.size()) {
-            BlockPos curWp = outdoorWaypoints.get(currentWaypointIndex);
-            double wpDistSq = (pos.getX() - curWp.getX()) * (pos.getX() - curWp.getX())
-                    + (pos.getZ() - curWp.getZ()) * (pos.getZ() - curWp.getZ());
-            if (wpDistSq <= 9.0) { // Within 3 blocks horizontally
-                currentWaypointIndex++;
-                if (currentWaypointIndex < outdoorWaypoints.size()) {
-                    moveToNext(touristSpeed, outdoorWaypoints.get(currentWaypointIndex));
-                } else {
-                    outdoorWaypoints = null;
-                    moveToNext(touristSpeed, target);
-                }
-            }
-        }
-
-        // Check arrival at entry point (fallback if proximity check doesn't fire)
-        double distSqr = pos.distSqr(target);
-        int interactionRange = getInteractionRange();
-        if (distSqr < interactionRange * interactionRange) {
-            // 到达旅店 → 入住即时完成（不占 spot、不等 interaction_duration）
-            if (isHotelBuilding(buildingId)
-                    && tryHotelCheckIn(buildingId)) {
-                return;
-            }
-            // Reached entry point — switch to indoor micro-nav
-            switchToIndoorNav();
-            return;
-        }
-
-        // Stuck recovery：重寻路到当前 waypoint/目标（物理卡死由上方硬兜底梯子处理，这里只防寻路热循环）
-        if (nav.isDone()) {
-            BlockPos curDest = (outdoorWaypoints != null && currentWaypointIndex < outdoorWaypoints.size())
-                    ? outdoorWaypoints.get(currentWaypointIndex) : target;
-            if (++stuckTicks > 40) {
-                stuckTicks = 0;
-                moveToNext(touristSpeed, curDest);
-            } else if (repathDue()) {
-                moveToNext(touristSpeed, curDest);
-            }
-        } else {
-            stuckTicks = Math.max(0, stuckTicks - 1);
-        }
-        }
+        return;
     }
 
-    /** Micro-navigation phase: inside building, navigate to interact point then exit. */
-    private void tickIndoorNav() {
-        try (var span = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tourist.goal.indoor_nav")) {
-        UUID buildingId = tourist.getTargetBuildingId();
-        if (buildingId == null) {
+    if (exitingPhase) {
+        // Heading back to entry point after interaction
+        BlockPos exitTarget = entryPoint != null ? entryPoint : tourist.getCommuteTarget();
+        if (exitTarget == null) {
             finishBuildingStop();
             return;
         }
 
-        // 已进旅店（进入建筑 bbox）：入住即时完成，不占 spot、不等 interaction_duration。
-        // 白天/满条/满员（tryHotelCheckIn 失败）→ 按普通 service 建筑继续。
-        if (isHotelBuilding(buildingId) && isInsideBuilding(buildingId)) {
-            long dayTime = tourist.level().getDayTime() % 24000;
-            if (dayTime >= TouristSimulation.TOURIST_NIGHT_START && !tourist.isFullySatisfied()) {
-                if (tryHotelCheckIn(buildingId)) {
-                    return;
-                }
-                // 夜晚意图入住但旅店满员 → 不当 service 逛/排队，放弃重新规划（避免排队拖到被清场）
-                finishBuildingStop();
-                return;
-            }
-        }
+        BlockPos ground = findGround(exitTarget.getX(), exitTarget.getY(), exitTarget.getZ());
+        if (ground != null) exitTarget = ground;
 
-        // 活动中（在 spot 上做动作）：duration 倒计时，结束才结算
-        if (performingActivity) {
-            tickActivity();
-            return;
-        }
-        // 排队中（spot 全满）：轮询空 spot，超时放弃去别处
-        if (queueing) {
-            tickQueue();
-            return;
-        }
-
-        var nav = tourist.getNavigation();
-        BlockPos pos = tourist.blockPosition();
-
-        // ── Real stuck detection & hard fallback ──
-        totalNavTicks++;
-        if (lastPos != null && sameHorizontal(pos, lastPos)) {
-            noMoveTicks++;
-        } else {
-            noMoveTicks = 0;
-            lastPos = pos;
-        }
-
-        if (noMoveTicks > 100 || (totalNavTicks > 400 && !tourist.isInWater())) {
-            noMoveTicks = 0;
-            totalNavTicks = 0;
-            lastPos = null;
-            nav.stop();
-            if (exitingPhase) {
-                // Leaving the building: teleport to safe ground just outside the entry.
-                BlockPos tp = TouristTeleport.findSafeSpotNearEntry(serverLevel(),
-                        entryPoint != null ? entryPoint : tourist.getCommuteTarget(),
-                        tourist.getColonyId());
-                if (tp == null) {
-                    finishBuildingStop();
-                    return;
-                }
-                tourist.setPos(tp.getX() + 0.5, tp.getY(), tp.getZ() + 0.5);
-                tourist.resetFallDistance();
-                tourist.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
-            } else {
-                // 去 spot 途中卡死 → 直接传送到交互 spot 开始活动（不作废本次访问，不等三轮）。
-                if (interactPoint != null) {
-                    teleportToIndoorTarget(interactPoint);
-                    startActivityAtSpot();
-                    return;
-                }
-                BlockPos tp = TouristTeleport.findSafeSpot(serverLevel(), pos, tourist.getColonyId(), tourist.getTargetBuildingId());
-                if (tp != null) {
-                    tourist.setPos(tp.getX() + 0.5, tp.getY(), tp.getZ() + 0.5);
-                    tourist.resetFallDistance();
-                    tourist.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
-                }
-            }
-            return;
-        }
-
-        if (exitingPhase) {
-            // Heading back to entry point after interaction
-            BlockPos exitTarget = entryPoint != null ? entryPoint : tourist.getCommuteTarget();
-            if (exitTarget == null) {
-                finishBuildingStop();
-                return;
-            }
-
-            BlockPos ground = findGround(exitTarget.getX(), exitTarget.getY(), exitTarget.getZ());
-            if (ground != null) exitTarget = ground;
-
-            double distSqr = pos.distSqr(exitTarget);
-            if (distSqr < 4.0 || !isInsideBuilding(buildingId)) {
-                // Reached exit point or left building → back to macro
-                finishBuildingStop();
-                return;
-            }
-
-            // Stuck recovery：重寻路到出口（物理卡死由上方硬兜底处理）
-            if (nav.isDone()) {
-                if (++stuckTicks > 40) {
-                    stuckTicks = 0;
-                }
-                if (allowRepath()) {
-                    nav.moveTo(exitTarget.getX() + 0.5, exitTarget.getY(), exitTarget.getZ() + 0.5, touristSpeed);
-                }
-            } else {
-                stuckTicks = Math.max(0, stuckTicks - 1);
-            }
-            return;
-        }
-
-        // Navigating to interact point
-        BlockPos target = interactPoint;
-        if (target == null) {
-            // Fallback: use commute target
-            target = tourist.getCommuteTarget();
-        }
-        if (target == null) {
+        double distSqr = pos.distSqr(exitTarget);
+        if (distSqr < 4.0 || !isInsideBuilding(buildingId)) {
+            // Reached exit point or left building → back to macro
             finishBuildingStop();
             return;
         }
 
-        // interactPoint is already a walkable spot (spiral-scanned for air-above-solid);
-        // do NOT re-derive ground via findGround — it scans from Y+5 downward and can
-        // land on the roof/shelf above the interaction floor.
-
-        // 到达判定：与目标 spot 点的距离（spot 单点寻路，无 AABB 交互区）
-        double distSqr = pos.distSqr(target);
-        if (distSqr <= 4.0) {
-            // 到达 spot → 开始活动（站着做该 spot 的动作，duration 结束才结算）
-            tourist.getNavigation().stop();
-            startActivityAtSpot();
-            return;
-        }
-
-        // Stuck recovery：重寻路到 spot（物理卡死由上方硬兜底梯子处理）
+        // Stuck recovery：重寻路到出口（物理卡死由上方硬兜底处理）
         if (nav.isDone()) {
             if (++stuckTicks > 40) {
                 stuckTicks = 0;
             }
             if (allowRepath()) {
-                nav.moveTo(target.getX() + 0.5, target.getY(), target.getZ() + 0.5, touristSpeed);
+                nav.moveTo(exitTarget.getX() + 0.5, exitTarget.getY(), exitTarget.getZ() + 0.5, touristSpeed);
             }
         } else {
             stuckTicks = Math.max(0, stuckTicks - 1);
         }
+        return;
+    }
+
+    // Navigating to interact point
+    BlockPos target = interactPoint;
+    if (target == null) {
+        // Fallback: use commute target
+        target = tourist.getCommuteTarget();
+    }
+    if (target == null) {
+        finishBuildingStop();
+        return;
+    }
+
+    // interactPoint is already a walkable spot (spiral-scanned for air-above-solid);
+    // do NOT re-derive ground via findGround — it scans from Y+5 downward and can
+    // land on the roof/shelf above the interaction floor.
+
+    // 到达判定：与目标 spot 点的距离（spot 单点寻路，无 AABB 交互区）
+    double distSqr = pos.distSqr(target);
+    if (distSqr <= 4.0) {
+        // 到达 spot → 开始活动（站着做该 spot 的动作，duration 结束才结算）
+        tourist.getNavigation().stop();
+        startActivityAtSpot();
+        return;
+    }
+
+    // Stuck recovery：重寻路到 spot（物理卡死由上方硬兜底梯子处理）
+    if (nav.isDone()) {
+        if (++stuckTicks > 40) {
+            stuckTicks = 0;
         }
+        if (allowRepath()) {
+            nav.moveTo(target.getX() + 0.5, target.getY(), target.getZ() + 0.5, touristSpeed);
+        }
+    } else {
+        stuckTicks = Math.max(0, stuckTicks - 1);
+    }
     }
 
     /** 到达 spot：认领（若未认领）并开始做该 spot 的动作（duration 倒计时）。 */
@@ -723,153 +717,145 @@ public class TouristMoveGoal extends Goal {
 
     /** 活动倒计时：duration 结束 → 释放 spot + 结算（四类交互）+ 退出。 */
     private void tickActivity() {
-        try (var span = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tourist.goal.activity")) {
-        UUID bid = tourist.getTargetBuildingId();
-        if (!isBuildingValid(bid)) {
-            Log.info(TAG, "[Tourist] {} activity target {} is destroyed/invalidated. Aborting activity.",
-                    tourist.getTouristName(), bid);
-            clearSpotState();
-            abandonBuildingVisit();
-            return;
-        }
-        // 活动期间持续面向 spot（look 控制/随机张望可能拉偏 yaw）
-        if (claimedSpot >= 0 && tourist.level() instanceof ServerLevel sl) {
-            faceSpot(sl, bid, claimedSpot);
-        }
-        int remaining = tourist.getActivityTicks() - 1;
-        tourist.setActivityTicks(remaining);
-        if (remaining > 0) return;
+    UUID bid = tourist.getTargetBuildingId();
+    if (!isBuildingValid(bid)) {
+        Log.info(TAG, "[Tourist] {} activity target {} is destroyed/invalidated. Aborting activity.",
+                tourist.getTouristName(), bid);
+        clearSpotState();
+        abandonBuildingVisit();
+        return;
+    }
+    // 活动期间持续面向 spot（look 控制/随机张望可能拉偏 yaw）
+    if (claimedSpot >= 0 && tourist.level() instanceof ServerLevel sl) {
+        faceSpot(sl, bid, claimedSpot);
+    }
+    int remaining = tourist.getActivityTicks() - 1;
+    tourist.setActivityTicks(remaining);
+    if (remaining > 0) return;
 
-        UUID buildingId = tourist.getTargetBuildingId();
-        TouristSimulation.releaseSpot(buildingId, claimedSpot);
-        claimedSpot = -1;
-        tourist.setCurrentActivity(null);
-        tourist.setOccupiedSpot(-1);
-        tourist.setFrozenYaw(null);
-        tourist.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, net.minecraft.world.item.ItemStack.EMPTY);
-        performingActivity = false;
+    UUID buildingId = tourist.getTargetBuildingId();
+    TouristSimulation.releaseSpot(buildingId, claimedSpot);
+    claimedSpot = -1;
+    tourist.setCurrentActivity(null);
+    tourist.setOccupiedSpot(-1);
+    tourist.setFrozenYaw(null);
+    tourist.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, net.minecraft.world.item.ItemStack.EMPTY);
+    performingActivity = false;
 
-        if (buildingId != null) {
-            performBuildingInteraction();
-        }
+    if (buildingId != null) {
+        performBuildingInteraction();
+    }
 
-        // After interaction, start exiting
-        if (entryPoint != null && buildingId != null && isInsideBuilding(buildingId)) {
-            exitingPhase = true;
-            stuckTicks = 0;
-            noMoveTicks = 0;
-            totalNavTicks = 0;
-            BlockPos exitGround = findGround(entryPoint.getX(), entryPoint.getY(), entryPoint.getZ());
-            BlockPos exitTarget = exitGround != null ? exitGround : entryPoint;
-            stampRepath();
-            tourist.getNavigation().moveTo(exitTarget.getX() + 0.5, exitTarget.getY(), exitTarget.getZ() + 0.5, touristSpeed);
-        } else {
-            finishBuildingStop();
-        }
-        }
+    // After interaction, start exiting
+    if (entryPoint != null && buildingId != null && isInsideBuilding(buildingId)) {
+        exitingPhase = true;
+        stuckTicks = 0;
+        noMoveTicks = 0;
+        totalNavTicks = 0;
+        BlockPos exitGround = findGround(entryPoint.getX(), entryPoint.getY(), entryPoint.getZ());
+        BlockPos exitTarget = exitGround != null ? exitGround : entryPoint;
+        stampRepath();
+        tourist.getNavigation().moveTo(exitTarget.getX() + 0.5, exitTarget.getY(), exitTarget.getZ() + 0.5, touristSpeed);
+    } else {
+        finishBuildingStop();
+    }
     }
 
     /** 排队等待：轮询本队 spot 空位，超 TOURIST_QUEUE_WAIT_TOLERANCE_TICKS 放弃去别处。 */
     private void tickQueue() {
-        try (var span = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tourist.goal.tick_queue")) {
-        if (++queueTicks > TouristSimSystem.TOURIST_QUEUE_WAIT_TOLERANCE_TICKS) {
-            abandonBuildingVisit();
+    if (++queueTicks > TouristSimSystem.TOURIST_QUEUE_WAIT_TOLERANCE_TICKS) {
+        abandonBuildingVisit();
+        return;
+    }
+    ServerLevel level = serverLevel();
+    UUID buildingId = tourist.getTargetBuildingId();
+    if (level == null || buildingId == null || queueSpotIndex < 0) {
+        abandonBuildingVisit();
+        return;
+    }
+    // 严格 FIFO：只有本队队首可认领该 spot 空位（队首离队后下一个自然成为队首）
+    if (TouristSpotManager.getActive().queuePosition(buildingId, queueSpotIndex, tourist.getUUID()) == 0) {
+        int spot = TouristSimulation.claimSpotAt(level, buildingId, queueSpotIndex, tourist.getUUID());
+        if (spot >= 0) {
+            leaveQueue();
+            claimedSpot = spot;
+            queueing = false;
+            queueTicks = 0;
+            tourist.setFrozenYaw(null);
+            startActivityAtSpot();
             return;
         }
-        ServerLevel level = serverLevel();
-        UUID buildingId = tourist.getTargetBuildingId();
-        if (level == null || buildingId == null || queueSpotIndex < 0) {
-            abandonBuildingVisit();
-            return;
-        }
-        // 严格 FIFO：只有本队队首可认领该 spot 空位（队首离队后下一个自然成为队首）
-        if (TouristSpotManager.getActive().queuePosition(buildingId, queueSpotIndex, tourist.getUUID()) == 0) {
-            int spot = TouristSimulation.claimSpotAt(level, buildingId, queueSpotIndex, tourist.getUUID());
-            if (spot >= 0) {
-                leaveQueue();
-                claimedSpot = spot;
-                queueing = false;
-                queueTicks = 0;
-                tourist.setFrozenYaw(null);
-                startActivityAtSpot();
-                return;
-            }
-        }
-        navigateToQueueSlot();
-        }
+    }
+    navigateToQueueSlot();
     }
 
     /** 进入排队状态（spot 全满）：排到队最短的 spot 后，沿该 spot 朝向站成一列。 */
     private void startQueueing() {
-        try (var span = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tourist.goal.start_queue")) {
-        queueing = true;
-        queueTicks = 0;
-        tourist.setCurrentActivity(Activity.QUEUE);
-        tourist.setFrozenYaw(null);
-        ServerLevel level = serverLevel();
-        UUID buildingId = tourist.getTargetBuildingId();
-        if (level != null && buildingId != null) {
-            int total = TouristSimulation.interactSpotCount(level, buildingId);
-            if (total > 0) {
-                // 均匀分布：排到当前队最短（并列取最小下标）的 spot 后
-                int spot = TouristSpotManager.getActive().shortestQueueSpot(buildingId, total);
-                TouristSpotManager.getActive().joinQueue(buildingId, spot, tourist.getUUID());
-                queueSpotIndex = spot;
-            }
+    queueing = true;
+    queueTicks = 0;
+    tourist.setCurrentActivity(Activity.QUEUE);
+    tourist.setFrozenYaw(null);
+    ServerLevel level = serverLevel();
+    UUID buildingId = tourist.getTargetBuildingId();
+    if (level != null && buildingId != null) {
+        int total = TouristSimulation.interactSpotCount(level, buildingId);
+        if (total > 0) {
+            // 均匀分布：排到当前队最短（并列取最小下标）的 spot 后
+            int spot = TouristSpotManager.getActive().shortestQueueSpot(buildingId, total);
+            TouristSpotManager.getActive().joinQueue(buildingId, spot, tourist.getUUID());
+            queueSpotIndex = spot;
         }
-        navigateToQueueSlot();
-        }
+    }
+    navigateToQueueSlot();
     }
 
     /** 导航到本队当前队序对应的站位（沿 spot 朝向向后排开），到位后朝向与 spot 一致。 */
     private void navigateToQueueSlot() {
-        try (var span = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tourist.goal.nav_queue_slot")) {
-        UUID buildingId = tourist.getTargetBuildingId();
-        ServerLevel level = serverLevel();
-        if (buildingId == null || level == null || queueSpotIndex < 0) {
-            tourist.getNavigation().stop();
-            return;
+    UUID buildingId = tourist.getTargetBuildingId();
+    ServerLevel level = serverLevel();
+    if (buildingId == null || level == null || queueSpotIndex < 0) {
+        tourist.getNavigation().stop();
+        return;
+    }
+    int slot = TouristSpotManager.getActive().queuePosition(buildingId, queueSpotIndex, tourist.getUUID());
+    if (slot < 0) {
+        tourist.getNavigation().stop();
+        return;
+    }
+    BlockPos target = TouristSimulation.queueSlotPos(level, buildingId, queueSpotIndex, slot);
+    if (target == null) {
+        tourist.getNavigation().stop();
+        return;
+    }
+    // 已到位且目标没变：首次到达时精确对齐站位中心与地面高度，之后保持静止防高频抖动，
+    // 朝向与 spot 的 facing 一致（和交互游客同向）
+    boolean sameTarget = target.equals(queueNavTarget);
+    boolean arrived = tourist.blockPosition().distSqr(target) <= QUEUE_ARRIVE_DIST_SQ;
+    if (sameTarget && arrived) {
+        tourist.getNavigation().stop();
+        if (tourist.getFrozenYaw() == null) {
+            double floorY = TouristSimulation.getFloorSurfaceY(level, target);
+            tourist.setPos(target.getX() + 0.5, floorY, target.getZ() + 0.5);
+            tourist.resetFallDistance();
+            tourist.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+            float yaw = TouristSimulation.spotFacing(level, buildingId, queueSpotIndex).toYRot();
+            tourist.setFrozenYaw(yaw);
         }
-        int slot = TouristSpotManager.getActive().queuePosition(buildingId, queueSpotIndex, tourist.getUUID());
-        if (slot < 0) {
-            tourist.getNavigation().stop();
-            return;
+        return;
+    }
+    // 需移动：队序前移（目标变化）换目标，或导航已结束（被撞开/寻路失败）重新引导
+    tourist.setFrozenYaw(null);
+    if (!sameTarget || (tourist.getNavigation().isDone() && allowRepath())) {
+        queueNavTarget = target;
+        double distSq = tourist.blockPosition().distSqr(target);
+        if (distSq <= 9.0) {
+            // 近距离队列移动（1~3格）：直接使用 MoveControl 逼近，避免触发原版 A* 寻路风暴
+            tourist.getMoveControl().setWantedPosition(target.getX() + 0.5, target.getY(), target.getZ() + 0.5, touristSpeed);
+        } else {
+            // 远距离入队：常规导航
+            tourist.getNavigation().moveTo(target.getX() + 0.5, target.getY(), target.getZ() + 0.5, touristSpeed);
         }
-        BlockPos target = TouristSimulation.queueSlotPos(level, buildingId, queueSpotIndex, slot);
-        if (target == null) {
-            tourist.getNavigation().stop();
-            return;
-        }
-        // 已到位且目标没变：首次到达时精确对齐站位中心与地面高度，之后保持静止防高频抖动，
-        // 朝向与 spot 的 facing 一致（和交互游客同向）
-        boolean sameTarget = target.equals(queueNavTarget);
-        boolean arrived = tourist.blockPosition().distSqr(target) <= QUEUE_ARRIVE_DIST_SQ;
-        if (sameTarget && arrived) {
-            tourist.getNavigation().stop();
-            if (tourist.getFrozenYaw() == null) {
-                double floorY = TouristSimulation.getFloorSurfaceY(level, target);
-                tourist.setPos(target.getX() + 0.5, floorY, target.getZ() + 0.5);
-                tourist.resetFallDistance();
-                tourist.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
-                float yaw = TouristSimulation.spotFacing(level, buildingId, queueSpotIndex).toYRot();
-                tourist.setFrozenYaw(yaw);
-            }
-            return;
-        }
-        // 需移动：队序前移（目标变化）换目标，或导航已结束（被撞开/寻路失败）重新引导
-        tourist.setFrozenYaw(null);
-        if (!sameTarget || (tourist.getNavigation().isDone() && allowRepath())) {
-            queueNavTarget = target;
-            double distSq = tourist.blockPosition().distSqr(target);
-            if (distSq <= 9.0) {
-                // 近距离队列移动（1~3格）：直接使用 MoveControl 逼近，避免触发原版 A* 寻路风暴
-                tourist.getMoveControl().setWantedPosition(target.getX() + 0.5, target.getY(), target.getZ() + 0.5, touristSpeed);
-            } else {
-                // 远距离入队：常规导航
-                tourist.getNavigation().moveTo(target.getX() + 0.5, target.getY(), target.getZ() + 0.5, touristSpeed);
-            }
-        }
-        }
+    }
     }
 
     /** 离开建筑所有队列（幂等），清排队状态。 */
@@ -1019,38 +1005,36 @@ public class TouristMoveGoal extends Goal {
      * @return true if the tourist checked in (caller must stop navigation)
      */
     private boolean tryHotelCheckIn(UUID buildingId) {
-        try (var span = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tourist.goal.try_hotel_checkin")) {
-        if (!isHotelBuilding(buildingId)) return false;
-        long dayTime = tourist.level().getDayTime() % 24000;
-        boolean isNight = dayTime >= TouristSimulation.TOURIST_NIGHT_START;
-        // 夜晚 + 未满条 → 入住/回店睡（满条游客夜晚等离场，不入旅店）
-        if (!(isNight && !tourist.isFullySatisfied())) return false;
+    if (!isHotelBuilding(buildingId)) return false;
+    long dayTime = tourist.level().getDayTime() % 24000;
+    boolean isNight = dayTime >= TouristSimulation.TOURIST_NIGHT_START;
+    // 夜晚 + 未满条 → 入住/回店睡（满条游客夜晚等离场，不入旅店）
+    if (!(isNight && !tourist.isFullySatisfied())) return false;
 
-        HotelStayHandler hotel = HotelStayHandler.getActive();
-        UUID colonyId = tourist.getColonyId();
-        if (hotel == null || colonyId == null) return false;
+    HotelStayHandler hotel = HotelStayHandler.getActive();
+    UUID colonyId = tourist.getColonyId();
+    if (hotel == null || colonyId == null) return false;
 
-        boolean alreadyResident = buildingId.equals(tourist.getCheckedInBuildingId());
-        if (!alreadyResident) {
-            // 首次入住：登记（满意值不在此结算，改为每晚晨起结算——见 TouristSimulation.grantHotelNightStay）
-            if (!hotel.checkIn(tourist, buildingId, colonyId)) return false;
-            tourist.addVisitedBuilding(buildingId);
-        }
+    boolean alreadyResident = buildingId.equals(tourist.getCheckedInBuildingId());
+    if (!alreadyResident) {
+        // 首次入住：登记（满意值不在此结算，改为每晚晨起结算——见 TouristSimulation.grantHotelNightStay）
+        if (!hotel.checkIn(tourist, buildingId, colonyId)) return false;
+        tourist.addVisitedBuilding(buildingId);
+    }
 
-        // 住店客夜晚回店：直接强制躺床（不复填满意值）
-        hotel.settleIntoBed(tourist, serverLevel(), buildingId);
+    // 住店客夜晚回店：直接强制躺床（不复填满意值）
+    hotel.settleIntoBed(tourist, serverLevel(), buildingId);
 
-        // 先清 spot 再清目标：clearSpotState 靠 getTargetBuildingId() 定位释放位，
-        // 若先置 null，占用的 spot（如白天在自家旅店做的服务位）会用 null 建筑 key 释放 → NPE。
-        clearSpotState();
-        tourist.setCommuteTarget(null);
-        tourist.setTargetBuildingId(null);
-        tourist.setTargetBuildingCategory(null);
-        indoorPhase = false;
-        exitingPhase = false;
-        syncDebugData();
-        return true;
-        }
+    // 先清 spot 再清目标：clearSpotState 靠 getTargetBuildingId() 定位释放位，
+    // 若先置 null，占用的 spot（如白天在自家旅店做的服务位）会用 null 建筑 key 释放 → NPE。
+    clearSpotState();
+    tourist.setCommuteTarget(null);
+    tourist.setTargetBuildingId(null);
+    tourist.setTargetBuildingCategory(null);
+    indoorPhase = false;
+    exitingPhase = false;
+    syncDebugData();
+    return true;
     }
 
     // ── 夜晚回店 / 傍晚路由（住店客机制）──
@@ -1072,84 +1056,82 @@ public class TouristMoveGoal extends Goal {
      * 旅店被拆/停用 → 解除登记，按无旅店游客处理。
      */
     private ReturnHomeResult returnToOwnHotel() {
-        try (var span = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tourist.goal.return_hotel")) {
-        UUID hotel = tourist.getCheckedInBuildingId();
-        if (hotel == null) return ReturnHomeResult.NONE;
-        if (tourist.isSleeping()) {
+    UUID hotel = tourist.getCheckedInBuildingId();
+    if (hotel == null) return ReturnHomeResult.NONE;
+    if (tourist.isSleeping()) {
+        tourist.getNavigation().stop();
+        return ReturnHomeResult.STOP;
+    }
+
+    BuildingApi api = getBuildingApi();
+    var data = api != null ? api.getBuilding(hotel) : null;
+    if (data == null || !data.isStructureIntact() || !isHotelBuilding(hotel)) {
+        // 旅店已失效 → 解除登记，按无旅店游客处理（傍晚路由去别的旅店 / 离场窗口兜底）
+        clearSpotState();
+        tourist.setCommuteTarget(null);
+        tourist.setTargetBuildingId(null);
+        tourist.setTargetBuildingCategory(null);
+        HotelStayHandler h = HotelStayHandler.getActive();
+        if (h != null) h.checkOut(tourist, serverLevel());
+        Log.info(TAG, "[Tourist] {} hotel invalid — released from hotel {}", tourist.getTouristName(), shortId(hotel));
+        return ReturnHomeResult.NONE;
+    }
+
+    // 已在自己旅店内（进入建筑 bbox，无 +5 外扩）→ 回店睡（alreadyResident 路径，直接强制躺床）。
+    // 无床卡原地（wakeUpPos == 当前位置且未睡着）→ 站定等晨起，不重复 settle；
+    // 重载后站在床上（wakeUpPos != 当前位置）→ 仍重新躺床。
+    if (isInsideBuilding(hotel)) {
+        if (tourist.getWakeUpPos() != null && !tourist.isSleeping()
+                && tourist.getWakeUpPos().equals(tourist.blockPosition())) {
             tourist.getNavigation().stop();
             return ReturnHomeResult.STOP;
         }
+        tryHotelCheckIn(hotel);
+        tourist.getNavigation().stop();
+        return ReturnHomeResult.STOP;
+    }
 
-        BuildingApi api = getBuildingApi();
-        var data = api != null ? api.getBuilding(hotel) : null;
-        if (data == null || !data.isStructureIntact() || !isHotelBuilding(hotel)) {
-            // 旅店已失效 → 解除登记，按无旅店游客处理（傍晚路由去别的旅店 / 离场窗口兜底）
+    // 已在回店路上：近距离 → 继续走；过远（如经普通访问路径选中远处自家旅店）→ 传送，避免长距离寻路
+    if (hotel.equals(tourist.getTargetBuildingId())) {
+        BlockPos target = api.getTouristInteractionTarget(hotel);
+        if (target == null) target = data.getPosition();
+        if (target != null && tourist.blockPosition().distSqr(target)
+                > (long) TOURIST_HOTEL_TELEPORT_DISTANCE * TOURIST_HOTEL_TELEPORT_DISTANCE) {
+            if (!hotelRouteBackoff.isActive() && teleportToHotel(hotel, target)) {
+                // 传送后重设近距离导航（清掉旧的远距离 waypoint 路径）
+                routeToHotelBuilding(hotel, target, false);
+                return ReturnHomeResult.ROUTING;
+            }
+            // 过远但（闩锁中或）传送失败 → 取消当前远距离路由，闩锁今晚不再重试（不强制长距离寻路）
             clearSpotState();
             tourist.setCommuteTarget(null);
             tourist.setTargetBuildingId(null);
             tourist.setTargetBuildingCategory(null);
-            HotelStayHandler h = HotelStayHandler.getActive();
-            if (h != null) h.checkOut(tourist, serverLevel());
-            Log.info(TAG, "[Tourist] {} hotel invalid — released from hotel {}", tourist.getTouristName(), shortId(hotel));
-            return ReturnHomeResult.NONE;
-        }
-
-        // 已在自己旅店内（进入建筑 bbox，无 +5 外扩）→ 回店睡（alreadyResident 路径，直接强制躺床）。
-        // 无床卡原地（wakeUpPos == 当前位置且未睡着）→ 站定等晨起，不重复 settle；
-        // 重载后站在床上（wakeUpPos != 当前位置）→ 仍重新躺床。
-        if (isInsideBuilding(hotel)) {
-            if (tourist.getWakeUpPos() != null && !tourist.isSleeping()
-                    && tourist.getWakeUpPos().equals(tourist.blockPosition())) {
-                tourist.getNavigation().stop();
-                return ReturnHomeResult.STOP;
-            }
-            tryHotelCheckIn(hotel);
             tourist.getNavigation().stop();
-            return ReturnHomeResult.STOP;
-        }
-
-        // 已在回店路上：近距离 → 继续走；过远（如经普通访问路径选中远处自家旅店）→ 传送，避免长距离寻路
-        if (hotel.equals(tourist.getTargetBuildingId())) {
-            BlockPos target = api.getTouristInteractionTarget(hotel);
-            if (target == null) target = data.getPosition();
-            if (target != null && tourist.blockPosition().distSqr(target)
-                    > (long) TOURIST_HOTEL_TELEPORT_DISTANCE * TOURIST_HOTEL_TELEPORT_DISTANCE) {
-                if (!hotelRouteBackoff.isActive() && teleportToHotel(hotel, target)) {
-                    // 传送后重设近距离导航（清掉旧的远距离 waypoint 路径）
-                    routeToHotelBuilding(hotel, target, false);
-                    return ReturnHomeResult.ROUTING;
-                }
-                // 过远但（闩锁中或）传送失败 → 取消当前远距离路由，闩锁今晚不再重试（不强制长距离寻路）
-                clearSpotState();
-                tourist.setCommuteTarget(null);
-                tourist.setTargetBuildingId(null);
-                tourist.setTargetBuildingCategory(null);
-                tourist.getNavigation().stop();
-                hotelRouteBackoff.enter();
-                return ReturnHomeResult.NONE;
-            }
-            return ReturnHomeResult.HEADING;
-        }
-
-        // 旅店区块未加载 → 现在无法寻路回店；保持住店客身份（登记在案，不会被清），等区块加载
-        ServerLevel level = serverLevel();
-        if (level == null || !level.isLoaded(data.getPosition())) {
-            return ReturnHomeResult.NONE;
-        }
-        // 闩锁中（当晚过远传送失败）：保持登记不动作（避免每 tick 重扫安全点）
-        if (hotelRouteBackoff.isActive()) {
-            return ReturnHomeResult.NONE;
-        }
-
-        BlockPos target = api.getTouristInteractionTarget(hotel);
-        if (target == null) target = data.getPosition();
-        if (!routeToHotelBuilding(hotel, target, true)) {
-            // 过远但传送失败 → 闩锁今晚不再重试（不强制远距离寻路）
             hotelRouteBackoff.enter();
             return ReturnHomeResult.NONE;
         }
-        return ReturnHomeResult.ROUTING;
-        }
+        return ReturnHomeResult.HEADING;
+    }
+
+    // 旅店区块未加载 → 现在无法寻路回店；保持住店客身份（登记在案，不会被清），等区块加载
+    ServerLevel level = serverLevel();
+    if (level == null || !level.isLoaded(data.getPosition())) {
+        return ReturnHomeResult.NONE;
+    }
+    // 闩锁中（当晚过远传送失败）：保持登记不动作（避免每 tick 重扫安全点）
+    if (hotelRouteBackoff.isActive()) {
+        return ReturnHomeResult.NONE;
+    }
+
+    BlockPos target = api.getTouristInteractionTarget(hotel);
+    if (target == null) target = data.getPosition();
+    if (!routeToHotelBuilding(hotel, target, true)) {
+        // 过远但传送失败 → 闩锁今晚不再重试（不强制远距离寻路）
+        hotelRouteBackoff.enter();
+        return ReturnHomeResult.NONE;
+    }
+    return ReturnHomeResult.ROUTING;
     }
 
     /**
@@ -1160,26 +1142,24 @@ public class TouristMoveGoal extends Goal {
      * @return true = 刚设置路由（本 tick 不再派发）
      */
     private boolean eveningRouteToHotel() {
-        try (var span = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tourist.goal.evening_route_hotel")) {
-        if (targetingHotel()) return false;
-        // 闩锁中（当晚无空闲旅店/传送失败）：不再搜索，正常行为继续
-        if (hotelRouteBackoff.isActive()) return false;
-        BuildingState hotel = TouristSimulation.findHotelTarget(serverLevel(), tourist, true);
-        if (hotel == null) {
-            // 无空闲旅店 → 闩锁今晚不再搜索（夜晚无退宿，重扫白费）
-            hotelRouteBackoff.enter();
-            return false;
-        }
-        BuildingApi api = getBuildingApi();
-        BlockPos target = api != null ? api.getTouristInteractionTarget(hotel.getBuildingId()) : null;
-        if (target == null) target = hotel.getAnchor();
-        if (!routeToHotelBuilding(hotel.getBuildingId(), target, true)) {
-            // 过远但传送失败 → 闩锁今晚不再重试（不强制远距离寻路）
-            hotelRouteBackoff.enter();
-            return false;
-        }
-        return true;
-        }
+    if (targetingHotel()) return false;
+    // 闩锁中（当晚无空闲旅店/传送失败）：不再搜索，正常行为继续
+    if (hotelRouteBackoff.isActive()) return false;
+    BuildingState hotel = TouristSimulation.findHotelTarget(serverLevel(), tourist, true);
+    if (hotel == null) {
+        // 无空闲旅店 → 闩锁今晚不再搜索（夜晚无退宿，重扫白费）
+        hotelRouteBackoff.enter();
+        return false;
+    }
+    BuildingApi api = getBuildingApi();
+    BlockPos target = api != null ? api.getTouristInteractionTarget(hotel.getBuildingId()) : null;
+    if (target == null) target = hotel.getAnchor();
+    if (!routeToHotelBuilding(hotel.getBuildingId(), target, true)) {
+        // 过远但传送失败 → 闩锁今晚不再重试（不强制远距离寻路）
+        hotelRouteBackoff.enter();
+        return false;
+    }
+    return true;
     }
 
     /**
@@ -1188,53 +1168,49 @@ public class TouristMoveGoal extends Goal {
      * @return 路由设置成功
      */
     private boolean routeToHotelBuilding(UUID hotelId, BlockPos target, boolean teleportIfFar) {
-        try (var span = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tourist.goal.route_to_hotel")) {
-        if (target == null) return false;
+    if (target == null) return false;
 
-        // 过远 → 先尝试传送（传送失败则放弃本次路由，不强制远距离寻路）
-        if (teleportIfFar) {
-            int max = TOURIST_HOTEL_TELEPORT_DISTANCE;
-            if (tourist.blockPosition().distSqr(target) > (long) max * max) {
-                if (!teleportToHotel(hotelId, target)) {
-                    return false;
-                }
+    // 过远 → 先尝试传送（传送失败则放弃本次路由，不强制远距离寻路）
+    if (teleportIfFar) {
+        int max = TOURIST_HOTEL_TELEPORT_DISTANCE;
+        if (tourist.blockPosition().distSqr(target) > (long) max * max) {
+            if (!teleportToHotel(hotelId, target)) {
+                return false;
             }
         }
+    }
 
-        // 停止当前任务（释放 spot/队列）
-        clearSpotState();
-        tourist.setCommuteTarget(null);
-        tourist.setTargetBuildingId(null);
-        tourist.setTargetBuildingCategory(null);
-        indoorPhase = false;
-        exitingPhase = false;
-        entryPoint = null;
-        interactPoint = null;
-        syncDebugData();
+    // 停止当前任务（释放 spot/队列）
+    clearSpotState();
+    tourist.setCommuteTarget(null);
+    tourist.setTargetBuildingId(null);
+    tourist.setTargetBuildingCategory(null);
+    indoorPhase = false;
+    exitingPhase = false;
+    entryPoint = null;
+    interactPoint = null;
+    syncDebugData();
 
-        tourist.setTargetBuildingId(hotelId);
-        tourist.setTargetBuildingCategory("service");
-        tourist.setCommuteTarget(target);
+    tourist.setTargetBuildingId(hotelId);
+    tourist.setTargetBuildingCategory("service");
+    tourist.setCommuteTarget(target);
 
-        switchMode(MoveMode.VISITING_BUILDING);
-        dispatchStart();
-        return true;
-        }
+    switchMode(MoveMode.VISITING_BUILDING);
+    dispatchStart();
+    return true;
     }
 
     /** 传送到旅店入口附近的安全点；找不到安全点返回 false（不动、不传送）。 */
     private boolean teleportToHotel(UUID hotelId, BlockPos target) {
-        try (var span = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tourist.goal.teleport_hotel")) {
-        BlockPos tp = TouristTeleport.findSafeSpotNearEntry(serverLevel(), target, tourist.getColonyId());
-        if (tp == null) {
-            tp = TouristTeleport.findSafeSpot(serverLevel(), target, tourist.getColonyId(), hotelId);
-        }
-        if (tp == null) return false;
-        tourist.setPos(tp.getX() + 0.5, tp.getY(), tp.getZ() + 0.5);
-        tourist.resetFallDistance();
-        tourist.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
-        return true;
-        }
+    BlockPos tp = TouristTeleport.findSafeSpotNearEntry(serverLevel(), target, tourist.getColonyId());
+    if (tp == null) {
+        tp = TouristTeleport.findSafeSpot(serverLevel(), target, tourist.getColonyId(), hotelId);
+    }
+    if (tp == null) return false;
+    tourist.setPos(tp.getX() + 0.5, tp.getY(), tp.getZ() + 0.5);
+    tourist.resetFallDistance();
+    tourist.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+    return true;
     }
 
     /** 当前目标是否是一座仍在营业的旅店（含回店/傍晚路由进行中）。 */

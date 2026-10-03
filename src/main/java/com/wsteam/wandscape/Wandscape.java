@@ -772,10 +772,7 @@ public class Wandscape {
                 .executes(SpawnAllBuildingsCommand::startDefault)
                 .then(SpawnAllBuildingsCommand.node())
                 .then(LogCommand.node())
-                .then(ProfileCommand.node())
                 .then(AuditElementsCommand.node())
-                .then(GenerateElementMappingsCommand.node())
-                .then(GenerateSeedMappingsCommand.node())
                 .then(FillBuildingCommand.fillNode())
                 .then(PublishBlueprintCommand.buildNode())
                 .then(MagicCommand.node())
@@ -804,93 +801,66 @@ public class Wandscape {
 
     @SubscribeEvent
     public void onServerTick(ServerTickEvent.Post event) {
-        com.wsteam.wandscape.foundation.util.TickProfiler.Span spanTotal =
-                com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tick.server_post");
-        try {
-            // Colony ambient: 建筑包围盒+20格内玩家昼夜环境音门控（服务端判断+发包）
-            try (var s = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tick.ambient")) {
-                ColonyAmbientTracker.tick(event.getServer());
-            }
+        // Colony ambient: 建筑包围盒+20格内玩家昼夜环境音门控（服务端判断+发包）
+        ColonyAmbientTracker.tick(event.getServer());
 
-            // Debug: /wandscape test all 的建筑批量生成（按预算摊到多个 tick）
-            try (var s = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tick.test_spawn_all")) {
-                SpawnAllBuildingsCommand.tick();
-            }
+        // Debug: /wandscape test all 的建筑批量生成（按预算摊到多个 tick）
+        SpawnAllBuildingsCommand.tick();
 
-            // Magic cast: 法阵动画结束后生成信标光束（不依赖 ECS）
-            try (var s = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tick.magic_cast")) {
-                MagicCastManager.tick();
-            }
+        // Magic cast: 法阵动画结束后生成信标光束（不依赖 ECS）
+        MagicCastManager.tick();
 
-            // Altar: 每 tick 推进所有祭坛的魔法冷却（SavedData，按祭坛独立）
-            try (var s = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tick.altar_cast")) {
-                AltarCastHandler.tick(event.getServer().overworld());
-            }
+        // Altar: 每 tick 推进所有祭坛的魔法冷却（SavedData，按祭坛独立）
+        AltarCastHandler.tick(event.getServer().overworld());
 
-            // Iron's Spells compat: 推进持续施法与长蓄力法术
-            if (com.wsteam.wandscape.compat.ironspellbooks.IronSpellsCompat.isLoaded()) {
-                com.wsteam.wandscape.compat.ironspellbooks.IronSpellsCaster.tickAll();
-            }
+        // Iron's Spells compat: 推进持续施法与长蓄力法术
+        if (com.wsteam.wandscape.compat.ironspellbooks.IronSpellsCompat.isLoaded()) {
+            com.wsteam.wandscape.compat.ironspellbooks.IronSpellsCaster.tickAll();
+        }
 
-            // Goety compat: 推进持续引导与长蓄力法术
-            if (com.wsteam.wandscape.compat.goety.GoetyCompat.isLoaded()) {
-                com.wsteam.wandscape.compat.goety.GoetyCaster.tickAll();
-            }
+        // Goety compat: 推进持续引导与长蓄力法术
+        if (com.wsteam.wandscape.compat.goety.GoetyCompat.isLoaded()) {
+            com.wsteam.wandscape.compat.goety.GoetyCaster.tickAll();
+        }
 
-            var rt = com.wsteam.wandscape.content.task.runtime.TaskRuntime.getActive();
-            if (rt == null) return;
-            var world = rt.getWorld();
+        var rt = com.wsteam.wandscape.content.task.runtime.TaskRuntime.getActive();
+        if (rt == null) return;
+        var world = rt.getWorld();
 
-            mcTickCount++;
+        mcTickCount++;
 
-            // ①g1 Tick projectile dodge (walk away from incoming hostile arrows/skulls; throttled)
-            try (var s = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tick.projectile_dodge")) {
-                ProjectileDodge.tick(world);
-            }
+        // ①g1 Tick projectile dodge (walk away from incoming hostile arrows/skulls; throttled)
+        ProjectileDodge.tick(world);
 
-            // ①h Tick raid trigger scanner + victory tracker (colonies live in the overworld)
-            var raidLevel = event.getServer().overworld();
-            if (raidLevel != null) {
-                try (var s = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tick.raid")) {
-                    RaidTriggerScanner.INSTANCE.tick(raidLevel);
-                    ColonyRaidTracker.INSTANCE.tick(raidLevel);
-                }
-            }
+        // ①h Tick raid trigger scanner + victory tracker (colonies live in the overworld)
+        var raidLevel = event.getServer().overworld();
+        if (raidLevel != null) {
+            RaidTriggerScanner.INSTANCE.tick(raidLevel);
+            ColonyRaidTracker.INSTANCE.tick(raidLevel);
+        }
 
-            // ② Sync MC entity positions → ECS
-            try (var s = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tick.bridge_sync_pos")) {
-                EntityComponentBridge.INSTANCE.syncPositions(world);
-            }
+        // ② Sync MC entity positions → ECS
+        EntityComponentBridge.INSTANCE.syncPositions(world);
 
-            // ②a 对账清理被外部模组移除的第三方工作者（它们不会走本模组的 onRemovedFromLevel）
-            if (colonyWorkerApi != null) {
-                try (var s = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tick.worker_reconcile")) {
-                    colonyWorkerApi.tick();
-                }
-            }
+        // ②a 对账清理被外部模组移除的第三方工作者（它们不会走本模组的 onRemovedFromLevel）
+        if (colonyWorkerApi != null) {
+            colonyWorkerApi.tick();
+        }
 
-            // ②b Flush any NPCs that loaded before the engine was ready
-            try (var s = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tick.bridge_flush_joins")) {
-                EntityComponentBridge.INSTANCE.flushDeferredJoins(world);
-            }
+        // ②b Flush any NPCs that loaded before the engine was ready
+        EntityComponentBridge.INSTANCE.flushDeferredJoins(world);
 
-            // ③ Task runtime tick (executors + ECS world)
-            engineTickCount++;
-            rt.tick(event.getServer().overworld());
+        // ③ Task runtime tick (executors + ECS world)
+        engineTickCount++;
+        rt.tick(event.getServer().overworld());
 
-            // Heartbeat every ~5 seconds (100 MC ticks)
-            if (mcTickCount % 100 == 0) {
-                Log.debug(com.wsteam.wandscape.foundation.log.LogCategory.BOOTSTRAP, "engine", "engineTick=#{} mcTick=#{} — entities={} tasks_in_pool={} pendingAsync={}",
-                        engineTickCount, mcTickCount,
-                        world.getNextEntityId() - 1,
-                        world.taskPool != null ? world.taskPool.size() : 0,
-                        world.hasPendingAsyncOps() ? 1 : 0);
-            }
-        } finally {
-            com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.end(spanTotal);
-            var ow = event.getServer().overworld();
-            long time = ow != null ? ow.getGameTime() : 0;
-            com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.flushTick(time);
+        // Heartbeat every ~5 seconds (100 MC ticks)
+        if (mcTickCount % 100 == 0) {
+            Log.debug(com.wsteam.wandscape.foundation.log.LogCategory.BOOTSTRAP, "engine", "engineTick=#{} mcTick=#{} — entities={} tasks_in_pool={} pendingAsync={}",
+                    engineTickCount, mcTickCount,
+                    world.getNextEntityId() - 1,
+                    world.taskPool != null ? world.taskPool.size() : 0,
+                    world.hasPendingAsyncOps() ? 1 : 0);
         }
     }
 

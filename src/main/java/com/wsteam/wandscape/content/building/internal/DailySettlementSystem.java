@@ -1,6 +1,5 @@
 package com.wsteam.wandscape.content.building.internal;
 import com.wsteam.wandscape.content.colony.ColonyActivation;
-import com.wsteam.wandscape.foundation.util.TickProfiler;
 
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.content.colony.stats.internal.StatisticsCollector;
@@ -44,26 +43,24 @@ public final class DailySettlementSystem {
 
     @SubscribeEvent
     public void onServerTick(ServerTickEvent.Post event) {
-        try (var span = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("building.settlement.on_server_tick")) {
-        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
-        if (server == null) return;
-        ServerLevel level = server.overworld();
-        if (level == null) return;
+    MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+    if (server == null) return;
+    ServerLevel level = server.overworld();
+    if (level == null) return;
 
-        long dayTime = level.getDayTime();
-        long currentDay = dayTime / 24000;
+    long dayTime = level.getDayTime();
+    long currentDay = dayTime / 24000;
 
-        // Already settled this day
-        if (currentDay == settledDay) return;
+    // Already settled this day
+    if (currentDay == settledDay) return;
 
-        // Wait until we're within the settlement window (time-of-day near 0)
-        int tod = (int) (dayTime % 24000);
-        int window = SETTLEMENT_WINDOW_TICKS;
-        if (tod > window) return;
+    // Wait until we're within the settlement window (time-of-day near 0)
+    int tod = (int) (dayTime % 24000);
+    int window = SETTLEMENT_WINDOW_TICKS;
+    if (tod > window) return;
 
-        settledDay = currentDay;
-        fireSettlement(level, currentDay);
-        }
+    settledDay = currentDay;
+    fireSettlement(level, currentDay);
     }
 
     // ── Settlement fire ──

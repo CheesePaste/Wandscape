@@ -1,5 +1,4 @@
 package com.wsteam.wandscape.content.building.internal;
-import com.wsteam.wandscape.foundation.util.TickProfiler;
 
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.content.building.data.BuildingConfig;
@@ -46,70 +45,68 @@ public final class DecorationBonusSystem {
 
     @SubscribeEvent
     public void onServerTick(ServerTickEvent.Post event) {
-        try (var span = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("building.decoration.on_server_tick")) {
-        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
-        if (server == null) return;
-        ServerLevel level = server.overworld();
-        if (level == null) return;
+    MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+    if (server == null) return;
+    ServerLevel level = server.overworld();
+    if (level == null) return;
 
-        tickCounter++;
-        int interval = DECORATION_SCAN_INTERVAL_TICKS;
-        if (tickCounter % interval != 0) return;
+    tickCounter++;
+    int interval = DECORATION_SCAN_INTERVAL_TICKS;
+    if (tickCounter % interval != 0) return;
 
-        BuildingSavedData savedData = BuildingSavedData.get(level);
-        BuildingConfigLoader configLoader = BuildingConfigLoader.getInstance();
+    BuildingSavedData savedData = BuildingSavedData.get(level);
+    BuildingConfigLoader configLoader = BuildingConfigLoader.getInstance();
 
-        // Separate buildings into sources (decoration) and targets (functional)
-        List<BuildingState> sources = new ArrayList<>();
-        List<BuildingState> targets = new ArrayList<>();
+    // Separate buildings into sources (decoration) and targets (functional)
+    List<BuildingState> sources = new ArrayList<>();
+    List<BuildingState> targets = new ArrayList<>();
 
-        for (BuildingState state : savedData.getAllBuildings()) {
-            String category = state.getCategory();
-            if ("decoration".equals(category)) {
-                sources.add(state);
-            } else if (!"wonder".equals(category)) {
-                targets.add(state);
+    for (BuildingState state : savedData.getAllBuildings()) {
+        String category = state.getCategory();
+        if ("decoration".equals(category)) {
+            sources.add(state);
+        } else if (!"wonder".equals(category)) {
+            targets.add(state);
+        }
+    }
+
+    if (sources.isEmpty()) {
+        cache.clear();
+        return;
+    }
+
+    // For each target, accumulate bonuses from all sources in range
+    for (BuildingState target : targets) {
+        BlockPos targetAnchor = target.getAnchor();
+        BuildingConfig targetCfg = configLoader.get(target.getBuildingTypeId());
+        if (targetCfg == null) continue;
+
+        int accComfort = 0, accMagic = 0, accWonder = 0;
+
+        for (BuildingState source : sources) {
+            BlockPos sourceAnchor = source.getAnchor();
+            BuildingConfig sourceCfg = configLoader.get(source.getBuildingTypeId());
+            if (sourceCfg == null || sourceCfg.decoration() == null) continue;
+
+            int radius = sourceCfg.decoration().radius();
+            int dist = Math.abs(targetAnchor.getX() - sourceAnchor.getX())
+                     + Math.abs(targetAnchor.getY() - sourceAnchor.getY())
+                     + Math.abs(targetAnchor.getZ() - sourceAnchor.getZ());
+
+            if (dist <= radius) {
+                accComfort += sourceCfg.comfort();
+                accMagic   += sourceCfg.magic();
+                accWonder  += sourceCfg.wonder();
             }
         }
 
-        if (sources.isEmpty()) {
-            cache.clear();
-            return;
-        }
+        // Cap per stat: min(accumulated, base × cap)
+        double cap = com.wsteam.wandscape.foundation.util.BalanceValues.decorationBonusCap();
+        int bonusComfort = (int) Math.min(accComfort, targetCfg.comfort() * cap);
+        int bonusMagic   = (int) Math.min(accMagic,   targetCfg.magic() * cap);
+        int bonusWonder  = (int) Math.min(accWonder,  targetCfg.wonder() * cap);
 
-        // For each target, accumulate bonuses from all sources in range
-        for (BuildingState target : targets) {
-            BlockPos targetAnchor = target.getAnchor();
-            BuildingConfig targetCfg = configLoader.get(target.getBuildingTypeId());
-            if (targetCfg == null) continue;
-
-            int accComfort = 0, accMagic = 0, accWonder = 0;
-
-            for (BuildingState source : sources) {
-                BlockPos sourceAnchor = source.getAnchor();
-                BuildingConfig sourceCfg = configLoader.get(source.getBuildingTypeId());
-                if (sourceCfg == null || sourceCfg.decoration() == null) continue;
-
-                int radius = sourceCfg.decoration().radius();
-                int dist = Math.abs(targetAnchor.getX() - sourceAnchor.getX())
-                         + Math.abs(targetAnchor.getY() - sourceAnchor.getY())
-                         + Math.abs(targetAnchor.getZ() - sourceAnchor.getZ());
-
-                if (dist <= radius) {
-                    accComfort += sourceCfg.comfort();
-                    accMagic   += sourceCfg.magic();
-                    accWonder  += sourceCfg.wonder();
-                }
-            }
-
-            // Cap per stat: min(accumulated, base × cap)
-            double cap = com.wsteam.wandscape.foundation.util.BalanceValues.decorationBonusCap();
-            int bonusComfort = (int) Math.min(accComfort, targetCfg.comfort() * cap);
-            int bonusMagic   = (int) Math.min(accMagic,   targetCfg.magic() * cap);
-            int bonusWonder  = (int) Math.min(accWonder,  targetCfg.wonder() * cap);
-
-            cache.update(target.getBuildingId(), bonusComfort, bonusMagic, bonusWonder);
-        }
-        }
+        cache.update(target.getBuildingId(), bonusComfort, bonusMagic, bonusWonder);
+    }
     }
 }

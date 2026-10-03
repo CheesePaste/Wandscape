@@ -1,7 +1,6 @@
 package com.wsteam.wandscape.content.tourist.internal;
 import com.wsteam.wandscape.content.task.component.Position;
 import com.wsteam.wandscape.content.task.ecs.World;
-import com.wsteam.wandscape.foundation.util.TickProfiler;
 
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.content.building.internal.BuildingState;
@@ -57,19 +56,17 @@ public final class TouristTeleport {
     @Nullable
     public static BlockPos findSafeSpot(ServerLevel level, BlockPos origin,
             @Nullable UUID colonyId, @Nullable UUID targetBuildingId) {
-        try (var span = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tourist.teleport.find_safe_spot")) {
-        // 1. Nearest built road within the search radius.
-        BlockPos road = nearestRoadSpot(level, origin, colonyId);
-        if (road != null) return road;
-        // 2. Building periphery: entry point, bbox faces, then a bounded ring scan.
-        BlockPos periphery = peripherySpot(level, origin, colonyId, targetBuildingId);
-        if (periphery != null) return periphery;
-        // 3. Last resort before giving up: the origin column itself, if it already
-        //    stands on safe open ground (e.g. trapped in front of a door).
-        BlockPos here = walkableOutsideBuilding(level, origin.getX(), origin.getY(), origin.getZ(), colonyId);
-        if (here != null) return here;
-        return null;
-        }
+    // 1. Nearest built road within the search radius.
+    BlockPos road = nearestRoadSpot(level, origin, colonyId);
+    if (road != null) return road;
+    // 2. Building periphery: entry point, bbox faces, then a bounded ring scan.
+    BlockPos periphery = peripherySpot(level, origin, colonyId, targetBuildingId);
+    if (periphery != null) return periphery;
+    // 3. Last resort before giving up: the origin column itself, if it already
+    //    stands on safe open ground (e.g. trapped in front of a door).
+    BlockPos here = walkableOutsideBuilding(level, origin.getX(), origin.getY(), origin.getZ(), colonyId);
+    if (here != null) return here;
+    return null;
     }
 
     /**
@@ -80,12 +77,10 @@ public final class TouristTeleport {
     @Nullable
     public static BlockPos findSafeSpotNearEntry(ServerLevel level, BlockPos entry,
             @Nullable UUID colonyId) {
-        try (var span = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tourist.teleport.find_safe_spot_near_entry")) {
-        if (entry == null) return null;
-        BlockPos near = walkableOutsideBuilding(level, entry.getX(), entry.getY(), entry.getZ(), colonyId);
-        if (near != null) return near;
-        return findSafeSpot(level, entry, colonyId, null);
-        }
+    if (entry == null) return null;
+    BlockPos near = walkableOutsideBuilding(level, entry.getX(), entry.getY(), entry.getZ(), colonyId);
+    if (near != null) return near;
+    return findSafeSpot(level, entry, colonyId, null);
     }
 
     /**
@@ -96,50 +91,46 @@ public final class TouristTeleport {
     @Nullable
     public static BlockPos findSpawnSpotNearBuilding(ServerLevel level, UUID colonyId,
             UUID buildingId, BlockPos origin) {
-        try (var span = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tourist.teleport.find_spawn_spot")) {
-            BlockPos safe = findSafeSpot(level, origin, colonyId, buildingId);
-            if (safe == null) return null;
-            BoundingBox box = boundsOf(buildingId);
-            if (box == null) return safe; // 无 bbox 信息（极少）→ 信任 findSafeSpot
-            int nx = Math.max(box.minX(), Math.min(safe.getX(), box.maxX()));
-            int nz = Math.max(box.minZ(), Math.min(safe.getZ(), box.maxZ()));
-            double d = Math.hypot(safe.getX() - nx, safe.getZ() - nz);
-            return d <= TOURIST_SPAWN_NEAR_BUILDING_DIST ? safe : null;
-        }
+        BlockPos safe = findSafeSpot(level, origin, colonyId, buildingId);
+        if (safe == null) return null;
+        BoundingBox box = boundsOf(buildingId);
+        if (box == null) return safe; // 无 bbox 信息（极少）→ 信任 findSafeSpot
+        int nx = Math.max(box.minX(), Math.min(safe.getX(), box.maxX()));
+        int nz = Math.max(box.minZ(), Math.min(safe.getZ(), box.maxZ()));
+        double d = Math.hypot(safe.getX() - nx, safe.getZ() - nz);
+        return d <= TOURIST_SPAWN_NEAR_BUILDING_DIST ? safe : null;
     }
 
     // ── Priority 1: nearest built road ──
 
     @Nullable
     private static BlockPos nearestRoadSpot(ServerLevel level, BlockPos origin, @Nullable UUID colonyId) {
-        try (var span = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tourist.teleport.nearest_road")) {
-        RoadNetwork net = roadNetwork(colonyId);
-        if (net == null || net.isEmpty()) return null;
+    RoadNetwork net = roadNetwork(colonyId);
+    if (net == null || net.isEmpty()) return null;
 
-        int maxSq = TOURIST_RESCUE_ROAD_RADIUS * TOURIST_RESCUE_ROAD_RADIUS;
-        PathPoint best = null;
-        int bestSq = Integer.MAX_VALUE;
-        for (RoadEdge edge : net.getEdges().values()) {
-            if (edge.getStatus() != RoadEdge.EdgeStatus.COMPLETE) continue;
-            for (PathPoint pp : edge.getPath()) {
-                int dx = pp.x() - origin.getX();
-                int dz = pp.z() - origin.getZ();
-                int sq = dx * dx + dz * dz;
-                if (sq < bestSq) {
-                    bestSq = sq;
-                    best = pp;
-                }
+    int maxSq = TOURIST_RESCUE_ROAD_RADIUS * TOURIST_RESCUE_ROAD_RADIUS;
+    PathPoint best = null;
+    int bestSq = Integer.MAX_VALUE;
+    for (RoadEdge edge : net.getEdges().values()) {
+        if (edge.getStatus() != RoadEdge.EdgeStatus.COMPLETE) continue;
+        for (PathPoint pp : edge.getPath()) {
+            int dx = pp.x() - origin.getX();
+            int dz = pp.z() - origin.getZ();
+            int sq = dx * dx + dz * dz;
+            if (sq < bestSq) {
+                bestSq = sq;
+                best = pp;
             }
         }
-        if (best == null || bestSq > maxSq) return null;
+    }
+    if (best == null || bestSq > maxSq) return null;
 
-        // A road may run under a building built after it — validate the surface.
-        BlockPos ground = findGround(level, best.x(), best.y(), best.z());
-        if (ground == null) return null;
-        if (isFloatingSurface(level, ground)) return null;
-        if (isInsideAnyBuilding(level, ground, colonyId)) return null;
-        return ground;
-        }
+    // A road may run under a building built after it — validate the surface.
+    BlockPos ground = findGround(level, best.x(), best.y(), best.z());
+    if (ground == null) return null;
+    if (isFloatingSurface(level, ground)) return null;
+    if (isInsideAnyBuilding(level, ground, colonyId)) return null;
+    return ground;
     }
 
     @Nullable
@@ -156,52 +147,50 @@ public final class TouristTeleport {
     @Nullable
     private static BlockPos peripherySpot(ServerLevel level, BlockPos origin,
             @Nullable UUID colonyId, @Nullable UUID targetBuildingId) {
-        try (var span = com.wsteam.wandscape.foundation.util.TickProfiler.INSTANCE.start("tourist.teleport.periphery")) {
-        // 1. The building's documented entry point already sits just outside its bbox.
-        if (targetBuildingId != null) {
-            BlockPos entry = getEntryPoint(targetBuildingId);
-            if (entry != null) {
-                BlockPos s = walkableOutsideBuilding(level, entry.getX(), entry.getY(), entry.getZ(), colonyId);
-                if (s != null) return s;
-            }
+    // 1. The building's documented entry point already sits just outside its bbox.
+    if (targetBuildingId != null) {
+        BlockPos entry = getEntryPoint(targetBuildingId);
+        if (entry != null) {
+            BlockPos s = walkableOutsideBuilding(level, entry.getX(), entry.getY(), entry.getZ(), colonyId);
+            if (s != null) return s;
         }
-        // 2. Step just outside the bbox the tourist is on/in (or the target building's),
-        //    so even a huge building is escaped in a handful of tries.
-        BoundingBox box = boundsOf(targetBuildingId);
-        if (box == null) box = containingBox(level, origin, colonyId);
-        if (box != null) {
-            int cx = Math.max(box.minX(), Math.min(origin.getX(), box.maxX()));
-            int cz = Math.max(box.minZ(), Math.min(origin.getZ(), box.maxZ()));
-            BlockPos[] faces = {
-                    new BlockPos(box.minX() - 3, origin.getY(), cz),
-                    new BlockPos(box.maxX() + 3, origin.getY(), cz),
-                    new BlockPos(cx, origin.getY(), box.minZ() - 3),
-                    new BlockPos(cx, origin.getY(), box.maxZ() + 3),
-            };
-            for (BlockPos f : faces) {
-                BlockPos s = walkableOutsideBuilding(level, f.getX(), f.getY(), f.getZ(), colonyId);
-                if (s != null) return s;
-            }
+    }
+    // 2. Step just outside the bbox the tourist is on/in (or the target building's),
+    //    so even a huge building is escaped in a handful of tries.
+    BoundingBox box = boundsOf(targetBuildingId);
+    if (box == null) box = containingBox(level, origin, colonyId);
+    if (box != null) {
+        int cx = Math.max(box.minX(), Math.min(origin.getX(), box.maxX()));
+        int cz = Math.max(box.minZ(), Math.min(origin.getZ(), box.maxZ()));
+        BlockPos[] faces = {
+                new BlockPos(box.minX() - 3, origin.getY(), cz),
+                new BlockPos(box.maxX() + 3, origin.getY(), cz),
+                new BlockPos(cx, origin.getY(), box.minZ() - 3),
+                new BlockPos(cx, origin.getY(), box.maxZ() + 3),
+        };
+        for (BlockPos f : faces) {
+            BlockPos s = walkableOutsideBuilding(level, f.getX(), f.getY(), f.getZ(), colonyId);
+            if (s != null) return s;
         }
-        // 3. Bounded outward ring scan, sampling columns until one clears all bboxes.
-        int radius = TOURIST_RESCUE_PERIPHERY_RADIUS;
-        for (int r = 2; r <= radius; r += 2) {
-            int step = Math.max(1, r / 4);
-            for (int x = -r; x <= r; x += step) {
-                BlockPos s = tryColumn(level, origin, x, r, colonyId);
-                if (s != null) return s;
-                s = tryColumn(level, origin, x, -r, colonyId);
-                if (s != null) return s;
-            }
-            for (int z = -r; z <= r; z += step) {
-                BlockPos s = tryColumn(level, origin, r, z, colonyId);
-                if (s != null) return s;
-                s = tryColumn(level, origin, -r, z, colonyId);
-                if (s != null) return s;
-            }
+    }
+    // 3. Bounded outward ring scan, sampling columns until one clears all bboxes.
+    int radius = TOURIST_RESCUE_PERIPHERY_RADIUS;
+    for (int r = 2; r <= radius; r += 2) {
+        int step = Math.max(1, r / 4);
+        for (int x = -r; x <= r; x += step) {
+            BlockPos s = tryColumn(level, origin, x, r, colonyId);
+            if (s != null) return s;
+            s = tryColumn(level, origin, x, -r, colonyId);
+            if (s != null) return s;
         }
-        return null;
+        for (int z = -r; z <= r; z += step) {
+            BlockPos s = tryColumn(level, origin, r, z, colonyId);
+            if (s != null) return s;
+            s = tryColumn(level, origin, -r, z, colonyId);
+            if (s != null) return s;
         }
+    }
+    return null;
     }
 
     @Nullable

@@ -32,8 +32,8 @@ import java.util.function.Predicate;
  * 供 {@link ProductionRecipeManager} 沿树推导解锁。索引是 {@link Node}（只留 id 字符串），
  * 遍历 {@link #derive} 因此不碰 MC 类型，是纯逻辑。
  *
- * <p>树覆盖的配方类型与 {@code ElementValueGenerator} 一致（合成 / 熔炼 / 烟熏 / 营火 /
- * 切石 / 锻造），所以「能推出的」与「element_mappings 里有价的」是同一个域：图鉴里不会出现
+ * <p>树覆盖的配方类型固定为合成 / 熔炼 / 烟熏 / 营火 / 切石 / 锻造，也就是
+ * {@code element_mappings} 那个定价域，所以「能推出的」与「有价的」是同一个域：图鉴里不会出现
  * 有价却推不出来的条目。产出没有元素映射的配方直接丢掉——那种物品既合不出来、也不可能被解锁，
  * 留着只会白占遍历。特殊配方（{@code isSpecial()}，如染色 / 烟花 / 地图复制）没有稳定的材料表，
  * 一律跳过。
@@ -48,7 +48,7 @@ import java.util.function.Predicate;
 public final class VanillaRecipeTree {
     private static final String TAG = "VanillaRecipeTree";
 
-    /** 与 ElementValueGenerator 同一套配方类型，保证推导域与元素价域重合。 */
+    /** 这套配方类型就是元素定价域，保证推导域与「element_mappings 里有价的」重合。 */
     @SuppressWarnings("rawtypes")
     private static final List<RecipeType> RECIPE_TYPES = List.of(
             RecipeType.CRAFTING,
@@ -61,7 +61,7 @@ public final class VanillaRecipeTree {
 
     /**
      * 一条原版配方：产出 id + 若干材料槽，每个槽是一组可替换的选项 id。
-     * 只留字符串，遍历逻辑因此不碰 MC 类型（与 {@code ElementValueGenerator.RecipeNode} 同一取舍）。
+     * 只留字符串，遍历逻辑因此不碰 MC 类型。
      */
     record Node(String outputId, List<List<String>> slots) {}
 
