@@ -90,17 +90,19 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         final long taskId;
         /** {@link GlobalTask#channelEpoch} at channel start — stale channels are cancelled. */
         final int epoch;
+        final int totalTicks;
         int remainingTicks;
         boolean cancelled;
 
         Pending(CompletableFuture<Void> future, AtomicOp.BlockInteractOp op, World world,
-                long npcId, long taskId, int epoch, int remainingTicks) {
+                long npcId, long taskId, int epoch, int totalTicks, int remainingTicks) {
             this.future = future;
             this.op = op;
             this.world = world;
             this.npcId = npcId;
             this.taskId = taskId;
             this.epoch = epoch;
+            this.totalTicks = totalTicks;
             this.remainingTicks = remainingTicks;
         }
     }
@@ -158,18 +160,19 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         long taskId = -1;
         int epoch = 0;
         int total = effectiveChannel(world, npcId, op.channelTicks());
+        int remaining = total;
         TaskExecutor exec = world.get(npcId, TaskExecutor.class);
         if (exec != null && exec.globalTaskId != null && world.taskPool != null) {
             GlobalTask task = world.taskPool.get(exec.globalTaskId);
             if (task != null) {
                 taskId = task.id;
                 if (task.channelRemainingTicks > 0) {
-                    total = Math.min(task.channelRemainingTicks, total);
+                    remaining = Math.min(task.channelRemainingTicks, total);
                 }
                 epoch = ++task.channelEpoch; // invalidate any stale channel from an earlier execution
             }
         }
-        Pending p = new Pending(future, op, world, npcId, taskId, epoch, total);
+        Pending p = new Pending(future, op, world, npcId, taskId, epoch, total, remaining);
         pending.add(p);
 
         future.thenRun(() -> {
@@ -273,7 +276,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
             if (p.cancelled) continue;
             GridPos t = p.op.target();
             if (t != null && t.equals(target)) {
-                return new int[]{p.remainingTicks, p.op.channelTicks()};
+                return new int[]{p.remainingTicks, p.totalTicks};
             }
         }
         return new int[]{-1, -1};
