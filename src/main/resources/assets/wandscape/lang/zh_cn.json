@@ -608,7 +608,7 @@
   "gui.wandscape.node.per_harvest": "每次采集",
   "gui.wandscape.node.publish_gather": "发布采集",
   "gui.wandscape.node.total": "合计",
-  "gui.wandscape.node.total_line": "合计 %1$s",
+  "gui.wandscape.node.total_line": "合计 %1$s（基础约 %2$s 秒）",
   "gui.wandscape.npc.armor": "护甲值",
   "gui.wandscape.npc.attributes": "属性",
   "gui.wandscape.npc.auto_pickup_off": "自动拾取: 关",

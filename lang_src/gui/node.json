@@ -24,7 +24,7 @@
     "en_us": "Total"
   },
   "gui.wandscape.node.total_line": {
-    "zh_cn": "合计 %1$s",
-    "en_us": "Total %1$s"
+    "zh_cn": "合计 %1$s（基础约 %2$s 秒）",
+    "en_us": "Total %1$s (~%2$ss base)"
   }
 }
