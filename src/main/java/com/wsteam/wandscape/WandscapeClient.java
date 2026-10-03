@@ -678,11 +678,18 @@ public class WandscapeClient {
 
     @SubscribeEvent
     static void onRegisterClientReloadListeners(RegisterClientReloadListenersEvent event) {
-        event.registerReloadListener(Wandscape.DATA_LOADER);
-        event.registerReloadListener(Wandscape.BALANCE_LOADER);
+        // 数据 loader 一律不挂客户端总线。客户端 ResourceManager 是 CLIENT_RESOURCES，
+        // PathPackResources 按 packType.getDirectory() 取根目录，只解析得到 assets/，
+        // 扫 data/ 得到 0 条；而 WandscapeDataLoader#apply 第一件事是无差别 clear()，
+        // 清完无从补回。单人存档下客户端与集成服务端共用同一个 static 实例，于是任何
+        // 客户端资源重载（原版 F3+T、选项里换资源包、模组调 Minecraft#reloadResourcePacks）
+        // 都会把服务端的建筑配置和 balance 数值一起清空，且服务端不会因此重新 apply，
+        // 要等 /reload 或重进世界才恢复。客户端的数据本就由 OnDatapackSyncEvent 的
+        // applyCategoryFrom 下发，不走 reload listener。
+        //
         // A datapack reload recreates every BuildingConfig instance, so the GPU
         // buffers keyed by the old instances are stale — close them so they get
-        // re-baked (not leaked). Runs after DATA_LOADER so new configs are ready.
+        // re-baked (not leaked).
         event.registerReloadListener(new PreparableReloadListener() {
             @Override
             public CompletableFuture<Void> reload(PreparationBarrier barrier, ResourceManager resourceManager,
