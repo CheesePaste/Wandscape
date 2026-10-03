@@ -147,8 +147,10 @@ public record ConstructionSiteDataPacket(
                 String pureId = e.getKey();
                 int required = e.getValue();
                 long stock = bank != null ? bank.count(colonyId, ItemKey.of(pureId, null)) : 0;
+                String bidStr = buildingId != null ? buildingId.toString() : null;
                 int inFlight = ResourceSupplySystem.countSynthesizeInFlight(
-                        pureId, colonyId, com.wsteam.wandscape.content.task.ecs.World.getActive());
+                        pureId, colonyId, com.wsteam.wandscape.content.task.ecs.World.getActive(),
+                        "building", bidStr);
                 int status;
                 if (stock >= required) {
                     status = STATUS_READY;

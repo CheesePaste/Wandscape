@@ -107,7 +107,8 @@ public final class ConstructionSupply {
 
             // enqueueSynthesize 自己也会扣在制量，但它把「已覆盖」和「下发了」都返回 true；
             // 这里先算一次在制，才能把两种结果分开计数（面板回执要报真实下发条数）。
-            int inFlight = ResourceSupplySystem.countSynthesizeInFlight(itemId, colonyId, world);
+            // 按来源隔离在制量：避免同一建筑或同料建筑共享在制计数导致后续建筑漏发或误判覆盖。
+            int inFlight = ResourceSupplySystem.countSynthesizeInFlight(itemId, colonyId, world, sourceType, sourceId);
             if (inFlight >= deficit) {
                 covered++;
                 continue;

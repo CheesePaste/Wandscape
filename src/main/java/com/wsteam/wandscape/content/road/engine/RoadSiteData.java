@@ -50,8 +50,10 @@ public final class RoadSiteData {
             String key = e.getKey();
             int required = e.getValue();
             long stock = bank != null ? bank.count(colonyId, ItemKey.of(key, null)) : 0;
+            String eidStr = edge.getEdgeId() != null ? edge.getEdgeId().toString() : null;
             int inFlight = ResourceSupplySystem.countSynthesizeInFlight(
-                    key, colonyId, com.wsteam.wandscape.content.task.ecs.World.getActive());
+                    key, colonyId, com.wsteam.wandscape.content.task.ecs.World.getActive(),
+                    "road", eidStr);
             int status;
             if (stock >= required) {
                 status = ConstructionSiteDataPacket.STATUS_READY;

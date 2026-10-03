@@ -242,7 +242,7 @@ public class ResourceSupplySystem implements EcsSystem {
             return false;
         }
 
-        int inFlight = countSynthesizeInFlight(itemId, colonyId, world);
+        int inFlight = countSynthesizeInFlight(itemId, colonyId, world, sourceType, sourceId);
         int toAdd = amount - inFlight;
         if (toAdd <= 0) return true; // already covered by queued/running production
 
@@ -299,6 +299,15 @@ public class ResourceSupplySystem implements EcsSystem {
      * the queued portion.
      */
     public static int countSynthesizeInFlight(String itemId, @Nullable UUID colonyId, @Nullable World world) {
+        return countSynthesizeInFlight(itemId, colonyId, world, null, null);
+    }
+
+    /**
+     * Source-scoped variant: sums synthesize work for {@code itemId} filtered by {@code sourceType}
+     * and {@code sourceId} (e.g. only tasks originating from a specific building or road edge).
+     */
+    public static int countSynthesizeInFlight(String itemId, @Nullable UUID colonyId, @Nullable World world,
+                                             @Nullable String sourceType, @Nullable String sourceId) {
         String key = stripMcPrefix(itemId);
         int total = 0;
 
@@ -308,6 +317,8 @@ public class ResourceSupplySystem implements EcsSystem {
                 if (!"production:synthesize".equals(t.blueprintId)) continue;
                 if (colonyId != null && !colonyId.equals(resolveColonyId(t))) continue;
                 if (!sameRecipe(key, t.taskParams.get("recipe_id"))) continue;
+                if ((sourceType != null || sourceId != null)
+                        && !matchesSource(t.taskParams, t.priority, sourceType, sourceId)) continue;
                 total += intParam(t.taskParams.get("count"));
             }
         }
@@ -326,6 +337,8 @@ public class ResourceSupplySystem implements EcsSystem {
                 for (WorkItem item : api.getQueue(stationId)) {
                     if (!"production:synthesize".equals(item.blueprintId())) continue;
                     if (!sameRecipe(key, item.params().get("recipe_id"))) continue;
+                    if ((sourceType != null || sourceId != null)
+                            && !matchesSource(item.params(), item.priority(), sourceType, sourceId)) continue;
                     total += intParam(item.params().get("count"));
                 }
             }
