@@ -330,9 +330,6 @@ public class BuildingApiImpl implements BuildingApi {
         WorkItem demolishWork = new WorkItem("build:demolish_structure", params, DEMOLISH_PRIORITY);
         state.getTaskQueue().addLast(demolishWork);
         sd.setDirty();
-
-        Log.info(TAG, "[Demolish] Building {} ({}) at {} — demolition enqueued",
-                state.getBuildingTypeId(), buildingId, state.getAnchor());
     }
 
     @Override
@@ -453,9 +450,6 @@ public class BuildingApiImpl implements BuildingApi {
         if (total <= 0) return;
         // 销账：同一笔建材不会被退第二次。
         state.deductChargedMaterials(refunded);
-        Log.info(TAG, "[Cancel] Refunded {} unplaced material items ({} types) to colony {} for {} ({})",
-                total, refunded.size(), colonyId.toString().substring(0, 8),
-                state.getBuildingTypeId(), state.getBuildingId().toString().substring(0, 8));
     }
 
     /**
@@ -655,8 +649,6 @@ public class BuildingApiImpl implements BuildingApi {
                 list.set(i, merged);
                 queue.clear();
                 queue.addAll(list);
-                Log.info(TAG, "enqueueWork: merged {} tasks at building {} — count={}",
-                        merged.blueprintId(), merged.params().get("anchor"), merged.params().get("count"));
                 return true;
             }
             break; // band tail is a different task — no merge, insertion lands after it
@@ -808,6 +800,31 @@ public class BuildingApiImpl implements BuildingApi {
         return new ArrayList<>(queue);
     }
 
+    /**
+     * 发布预检专用：这座建筑**当前可领的活** = 共享组队列 ∪ 自有队列。
+     *
+     * <p>与 {@link #getQueue} 刻意不同（那里的「共享队列优先」是 UI 与索引操作的语义）。拆除
+     * （{@code demolishBuilding}）与复原（{@code BuildingRepairHandler}）的任务进的是**自有队列**，
+     * 只看 {@code getQueue} 会让共享队列类别（workstation/crafting_station/magic_station/node）的
+     * 建筑被判「无活可发布」而永不发布——任务静静躺在队列里，NPC 永不开工。这里把两边并起来看，
+     * 与 {@link #dequeueWorkEligible}「共享队列弹不出就落自有队列」的口径对齐。
+     */
+    public List<WorkItem> getClaimableWork(UUID buildingId) {
+        BuildingSavedData sd = getSavedData();
+        if (sd == null) return List.of();
+
+        BuildingState state = sd.getBuilding(buildingId);
+        if (state == null) return List.of();
+
+        Deque<WorkItem> shared = sharedQueueFor(sd, state);
+        if (shared == null || shared.isEmpty()) return new ArrayList<>(state.getTaskQueue());
+
+        List<WorkItem> all = new ArrayList<>(shared.size() + state.getTaskQueue().size());
+        all.addAll(shared);
+        all.addAll(state.getTaskQueue());
+        return all;
+    }
+
     public boolean removeFromQueue(UUID buildingId, int index) {
         BuildingSavedData sd = getSavedData();
         if (sd == null) {
@@ -830,11 +847,10 @@ public class BuildingApiImpl implements BuildingApi {
 
         // Convert deque to list, remove, then rebuild deque
         java.util.List<WorkItem> list = new ArrayList<>(queue);
-        WorkItem removed = list.remove(index);
+        list.remove(index);
         queue.clear();
         queue.addAll(list);
         sd.setDirty();
-        Log.info(TAG, "removeFromQueue: removed [{}] {} from building {}", index, removed.blueprintId(), buildingId);
         return true;
     }
 
@@ -864,8 +880,6 @@ public class BuildingApiImpl implements BuildingApi {
         queue.clear();
         queue.addAll(list);
         sd.setDirty();
-        Log.info(TAG, "moveToTop: [{}] {} moved to top at {}",
-                index, item.blueprintId(), buildingId);
         return true;
     }
 
@@ -991,8 +1005,6 @@ public class BuildingApiImpl implements BuildingApi {
             ConstructionSupply.markDone(sd, state);
         }
 
-        Log.info(TAG, "[Placement] '{}' at {} firstFree={} clearBox={}",
-                config.displayName(), anchor, firstFree, clearBox);
         return PlacementResult.ok(buildingId, firstFree);
     }
 

@@ -1,6 +1,5 @@
 package com.wsteam.wandscape.content.npc.internal;
 import com.wsteam.wandscape.Config;
-import com.wsteam.wandscape.api.NpcApi;
 import com.wsteam.wandscape.api.WandscapeApis;
 import com.wsteam.wandscape.content.npc.attributes.NpcAttributes.AttributeType;
 
@@ -81,9 +80,16 @@ public final class NpcDeathHandler {
             deathCauseJson = deathMessage.getString();
         }
 
-        NpcApi npcApi = WandscapeApis.getNpcApiSilently();
-        UUID colony = npcApi != null ? npcApi.getNpcColony(npc.getUUID()) : null;
-        if (colony == null) colony = EntityComponentBridge.PLACEHOLDER_COLONY;
+        // 归属直接读实体权威字段（NBT 持久化），不经 EntityComponentBridge 静态桥往返：
+        // 桥映射在区块卸载/重连/启动早期会短暂缺失，那一刻取到 null 会被静默写成占位殖民地，
+        // 而祭坛按建筑的真实 colonyId 查 —— 玩家看到的就是「没有死亡记录」。
+        UUID colony = npc.colonyId;
+        if (colony == null || EntityComponentBridge.PLACEHOLDER_COLONY.equals(colony)) {
+            Log.warn(TAG, "NPC {} ({}) 无归属殖民地（colonyId={}）——记录将挂占位殖民地，"
+                            + "本镇祭坛按真实 colonyId 查不到它",
+                    npc.getUUID().toString().substring(0, 8), npc.getNpcName(), colony);
+            colony = EntityComponentBridge.PLACEHOLDER_COLONY;
+        }
         DeathRecord rec = new DeathRecord(
                 npc.getUUID(),
                 npc.getNpcName(),

@@ -185,10 +185,24 @@ public class BuildingSavedData extends SavedData {
         return sharedQueues.computeIfAbsent(new SharedGroup(colonyId, groupKey), k -> new ArrayDeque<>());
     }
 
-    /** Shared queue for a group only if one already exists, else null (no side effects). */
+    /**
+     * Shared queue for a group only if it currently holds **待领** work, else null.
+     *
+     * <p>空组队列按「不存在」处理并顺手摘掉条目：{@link #save} 对空队列直接 {@code continue}
+     * （不落盘），所以空条目是纯运行时残留。若让它继续参与「共享队列优先于自有队列」的判定，
+     * 就会造出「本次会话看不到、重进世界才看得到」的状态分歧——拆除/复原任务被空组队列遮蔽、
+     * 永不发布正是由此而来。摘掉后运行时状态与存档态一致。
+     */
     @Nullable
     public Deque<WorkItem> peekSharedQueue(UUID colonyId, String groupKey) {
-        return sharedQueues.get(new SharedGroup(colonyId, groupKey));
+        SharedGroup key = new SharedGroup(colonyId, groupKey);
+        Deque<WorkItem> queue = sharedQueues.get(key);
+        if (queue == null) return null;
+        if (queue.isEmpty()) {
+            sharedQueues.remove(key, queue);
+            return null;
+        }
+        return queue;
     }
 
     /** Whether a group has at least one queued (not yet claimed) task. */

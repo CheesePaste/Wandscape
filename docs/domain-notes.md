@@ -47,6 +47,11 @@
    - 庇护/敌对**没有第二份实现**：`WandModeService` 直接调 `ScepterService.toggleShelter/toggleHostile`，标记仍落 `ScepterMarksSavedData`；`scepterHostileRange` 默认值已随需求改为 32 格（`BalanceValues` 与 `wandscape_balance.json` 两处）。
    - 集合是**一次性**的：直接调 ECS 的 `movementOps.navigateTo`（与守卫 AI 同一套寻路/卡住传送兜底），不存状态、不新增寻路代码；被任务打断即作废（`NavigationSystem` 只驱动 `NavigationState`，任务一入队就取消在途导航）。
    - 法杖头（模型里的 `gem`，`tintindex 0`）的显示色走 `WandItem.headColorArgb`：**存过模式**的堆叠染模式色（`WandMode.themeColor()`），没存过的仍是预设 `wand_color`。分界刻意放在「有没有存过模式」而不是「当前模式的默认值」——否则 NPC 装备界面里的法杖会显示默认模式色，而世界里 NPC 手里的法杖（`WandscapeNpcRenderer` 直接读 `colorArgb`）还是预设色，同一件物品两处不同色。只有物品 tint 走 `headColorArgb`，**施法光束（`MagicCaster`）与 NPC 手持渲染继续用 `colorArgb`**，改染色时别把三处混成一个入口。
+11. **祭坛查的是建筑归属、死亡记录存的是实体字段，两处必须同源**：
+   - 死亡记录的小镇归属取自实体权威字段 `WandscapeNpc.colonyId`（NBT 持久化），**不**经 `EntityComponentBridge` 静态桥往返：桥映射在区块卸载/重连/启动早期会短暂缺失，那一刻取到 null 会被静默写成占位殖民地，而祭坛按建筑的真实 `colonyId` 查——两者对不上就表现为「祭坛显示没有死亡记录」，全程零告警。查询侧 `AltarCastExecutor` 也统一用**祭坛建筑**的归属，不再用任务参数 `colony_id`（冗余副本，缺失或失配会查到别镇）。
+   - `DeathRecord.latestInColony(records, null)` 返回 null，与 `getRecordsInColony(null)` 的空表口径一致；旧语义「null = 不限小镇」会让尚未归属的祭坛把**别镇**的死者拉来复活。
+   - 环境伤害逃生（`NpcEscapeTeleport`）**也救工作中的法师**：唯一不放行的是正卡在异步 op 的 future 上（传送后任务会重放该 op，`ResourceRequestOp` 这类重放会二次扣资源、不保证幂等）。传送前必须做交接三步——清 `pendingFuture`、`movementOps.cancelNavigation`、把 ritual future 回填给执行器——与 `NavigationSystem.switchToRitualTeleport` 同一套；缺了这步任务执行系统会死等已失效的 future，NPC 传走了任务却卡住。
+   - 法师**没有**任何伤害免疫、复活只给 1 血是**刻意设计**，别当缺陷修；要动的是「逃生可达性」，不是「死亡率」。
 
 ---
 
@@ -154,6 +159,10 @@
    - **首建与复原防重入（`firstCompletion`）**：奇观若损坏后通过 V 面板「复原」虽也会触发完工，但 `state.hasEverCompleted()` 为 true。注册器通过 `firstOnly = true` 确保一次性重磅奖励（如全套配方解锁）仅在小镇历史上首次落成时触发，杜绝玩家刷取奖励。
    - **内置奇观：魔法学院（`magic_academy`）**：首建落成自动调用 `ProductionRecipeManager.unlockAllSynthesize(colonyId, "wonder:magic_academy")` 为该小镇解锁所有合成配方，并向全镇成员及附近玩家广播 ScreenFeedback 横幅与系统消息。
    - **调试与测试指令**：`/wandscape test wonder list`（查看已注册触发器）及 `/wandscape test wonder trigger <buildingType> [firstCompletion]`（手动对当前小镇触发奇观落成效果）。
+11. **发布预检看的是「共享组队列 ∪ 自有队列」（`getClaimableWork` vs `getQueue`）**：
+   - `getQueue` 的「共享组队列优先」是**UI 与索引操作**的语义；**发布预检**必须用 `getClaimableWork`（两边并起来看，与 `dequeueWorkEligible`「共享队列弹不出就落自有队列」对齐）。
+   - 拆除 `build:demolish_structure` 与复原 `build:place_structure` 进的是建筑**自有队列**。共享队列类别（workstation / crafting_station / magic_station / node，见 `BuildingSavedData.groupKeyFor`）的建筑若预检只看 `getQueue`，会被永远判为「无活可发布」：任务静静躺在队列里 NPC 永不开工，而队列面板走同一路由也被遮蔽、显示为空。表现就是「撤销/复原点了没反应」。
+   - 空组队列**不算**「有队列」：`BuildingSavedData.peekSharedQueue` 对空队列按不存在处理并顺手摘掉条目（`save` 本就不落盘空队列，空条目是纯运行时残留）。留着空条目会让运行时状态与存档态分叉，造出「本次会话卡死、重进世界自愈」的假象——排查同类问题时，「重进就好」是内存态与落盘态不一致的强信号。改队列路由前先确认这三处的分工。
 
 ---
 

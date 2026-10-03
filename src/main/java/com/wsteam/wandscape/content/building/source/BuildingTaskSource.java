@@ -45,10 +45,6 @@ public class BuildingTaskSource implements TaskSource {
     // Poll every 1 second (20 ticks)
     private static final int POLL_INTERVAL_TICKS = 20;
 
-    // Log heartbeat every N polls to avoid spam
-    private int pollCount = 0;
-    private static final int HEARTBEAT_INTERVAL = 10; // every ~10 seconds
-
     @Override
     public int pollIntervalTicks() {
         return POLL_INTERVAL_TICKS;
@@ -58,8 +54,6 @@ public class BuildingTaskSource implements TaskSource {
     public void poll(GlobalTaskPool pool, World world) {
         var api = com.wsteam.wandscape.content.building.internal.BuildingApiImpl.get();
         if (api == null) return;
-
-        pollCount++;
 
         BuildingTaskPool btp = world.buildingTaskPool;
 
@@ -113,9 +107,6 @@ public class BuildingTaskSource implements TaskSource {
         List<UUID> buildingIds = api.getBuildingsWithPendingWork(null);
         // Deterministic order so no building is starved by map order (id sort for fairness).
         buildingIds.sort(Comparator.comparing(UUID::toString));
-
-        if (pollCount % HEARTBEAT_INTERVAL == 0) {
-        }
 
         ChunkLoadManager chunkLoad = ChunkLoadManager.get();
 
@@ -179,9 +170,6 @@ public class BuildingTaskSource implements TaskSource {
 
                 if (taskId >= 0) {
                     api.setCurrentTask(buildingId, toTaskUuid(taskId));
-                    Log.info(TAG, "[BuildingTaskSource] >>> TASK PUBLISHED: id=#{} blueprint={} building={} pool_size={}",
-                            taskId, item.blueprintId(),
-                            buildingId.toString().substring(0, 8), pool.size());
                 }
             } catch (Exception e) {
                 chunkLoad.releaseBuilding(buildingId);
@@ -266,13 +254,19 @@ public class BuildingTaskSource implements TaskSource {
         return true;
     }
 
-    /** 队列里是否存在现在能发布的条目（读队列，不弹）。 */
+    /**
+     * 队列里是否存在现在能发布的条目（读队列，不弹）。
+     *
+     * <p>读的是 {@code getClaimableWork}（共享组队列 ∪ 自有队列）而非 {@code getQueue}：后者
+     * 「共享队列优先」，会把拆除/复原这类进自有队列的任务整体遮蔽，导致共享队列类别的建筑
+     * 永远判为无活可发布。
+     */
     private static boolean hasEligibleWork(com.wsteam.wandscape.content.building.internal.BuildingApiImpl api, UUID buildingId,
                                            @Nullable Map<ElementType, Long> elementSnapshot,
                                            @Nullable Long capacityRemaining,
                                            @Nullable ColonyItemBank bank,
                                            @Nullable UUID colonyId) {
-        for (WorkItem item : api.getQueue(buildingId)) {
+        for (WorkItem item : api.getClaimableWork(buildingId)) {
             if (isEligible(item, elementSnapshot, capacityRemaining, bank, colonyId)) return true;
         }
         return false;

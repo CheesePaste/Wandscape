@@ -79,12 +79,19 @@ public record DeathRecord(
         return best;
     }
 
-    /** 某小镇最近死去的记录（deathTime 最大，不限位置）；colonyId 为 null 时不限小镇；空表返回 null。纯逻辑，可单测。 */
+    /**
+     * 某小镇最近死去的记录（deathTime 最大，不限位置）；空表或 {@code colonyId} 为 null 时返回 null。
+     *
+     * <p>{@code colonyId} 为 null 表示「没有归属可查」，与 {@code getRecordsInColony(null)} 返回空表
+     * 的口径一致。旧行为是「null = 不限小镇」，会让尚未归属的祭坛把**别镇**的死者拉来复活。
+     * 纯逻辑，可单测。
+     */
     @Nullable
     public static DeathRecord latestInColony(List<DeathRecord> records, @Nullable UUID colonyId) {
+        if (colonyId == null) return null;
         DeathRecord best = null;
         for (DeathRecord r : records) {
-            if (colonyId != null && !colonyId.equals(r.colonyId())) continue;
+            if (!colonyId.equals(r.colonyId())) continue;
             if (best == null || r.deathTime() > best.deathTime()) {
                 best = r;
             }

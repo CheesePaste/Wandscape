@@ -84,16 +84,6 @@ public final class AltarCastExecutor implements OpExecutor<AtomicOp.AltarCastOp>
             Log.warn(TAG, "NPC {} — 非法祭坛 id '{}'，任务跳过", npcId, altarStr);
             return CompletableFuture.completedFuture(null);
         }
-        UUID colonyId = null;
-        String colonyStr = op.params().get("colony_id");
-        if (colonyStr != null) {
-            try {
-                colonyId = UUID.fromString(colonyStr);
-            } catch (IllegalArgumentException e) {
-                colonyId = null;
-            }
-        }
-
         var buildingApi = WandscapeApis.getBuildingApiSilently();
         BoundingBox bounds = buildingApi != null ? buildingApi.getBuildingBounds(altarId) : null;
         if (bounds == null) {
@@ -102,22 +92,24 @@ public final class AltarCastExecutor implements OpExecutor<AtomicOp.AltarCastOp>
             return CompletableFuture.completedFuture(null);
         }
 
+        // 小镇归属以**祭坛建筑**为准（与下方复活落点同源）。任务参数 colony_id 只是冗余副本，
+        // 缺失或与建筑失配时会去查别镇的死亡记录；两处判定收敛到同一个来源。
+        var altarBuilding = buildingApi != null ? buildingApi.getBuilding(altarId) : null;
+        UUID colonyId = altarBuilding != null ? altarBuilding.getColonyId() : null;
+
         AltarCastState state = AltarCastState.get(level);
         if (state.getCooldown(altarId, op.magicId()) > 0) {
-            Log.info(TAG, "NPC {} — 祭坛 {} 冷却中，施法跳过（任务幂等结束）", npcId, altarId.toString().substring(0, 8));
             return CompletableFuture.completedFuture(null);
         }
         // 幂等复核：记录可能在发布后被同小镇其他祭坛复活消耗——此时不放法阵不扣蓝
         if (ReviveHandler.REVIVE_MAGIC_ID.equals(op.magicId())
                 && ColonyDeathRegistry.get(level).latestInColony(colonyId) == null) {
-            Log.info(TAG, "NPC {} — 无该小镇死亡记录可复活，施法跳过（任务幂等结束）", npcId);
             return CompletableFuture.completedFuture(null);
         }
 
         int duration = Math.max(1, def.altarDuration());
         if (!npc.tryAltarCast(def.manaCost(), duration)) {
             // 调度器已按魔力门槛分派，这里通常是引导期间又被战斗施法占用锁或魔力临时下降
-            Log.info(TAG, "NPC {} — 祭坛施法被拒（魔力不足/施法锁占用），施法跳过", npcId);
             return CompletableFuture.completedFuture(null);
         }
 
@@ -128,8 +120,6 @@ public final class AltarCastExecutor implements OpExecutor<AtomicOp.AltarCastOp>
 
         CompletableFuture<Void> future = world.startAsyncOp("altar_cast_" + npcId);
         pending.add(new Pending(future, level, altarId, op.magicId(), duration));
-        Log.info(TAG, "NPC {} — 祭坛施法 {}（扣蓝 {}）引导 {} tick @ {}",
-                npcId, op.magicId(), def.manaCost(), duration, center.toShortString());
         return future;
     }
 
