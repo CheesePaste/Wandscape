@@ -118,9 +118,6 @@ public final class WonderEffectApplier {
                     List.copyOf(wonderConfig.effects()));
             applyEffects(wonderConfig.effects(), state.getBuildingId(), state.getColonyId());
         }
-
-        Log.info(TAG, "[Wonder] Recalculated: {} wonders active, stats={} prices={} rules={}",
-                activeEffectsByBuilding.size(), statCache, priceCache, unlockedRules);
     }
 
     private void applyEffects(List<WonderEffect> effects, UUID buildingId, UUID colonyId) {

@@ -106,8 +106,6 @@ public final class IronSpellsCaster {
             spell.getCastFinishSound().ifPresent(s -> level.playSound(null, npc.getX(), npc.getY(), npc.getZ(),
                     s, SoundSource.NEUTRAL, 1.0f, 1.0f));
 
-            Log.info(TAG, "NPC {} cast instant iron spell '{}' Lv.{}",
-                    npc.getUUID().toString().substring(0, 8), spellId, spellLevel);
             return true;
         } else {
             // LONG / CONTINUOUS 蓄力或引导：开始即一次性扣全量（铁魔法自身无按秒扣蓝机制，
@@ -125,8 +123,6 @@ public final class IronSpellsCaster {
                     s, SoundSource.NEUTRAL, 1.0f, 1.0f));
 
             ACTIVE_CASTS.add(new ActiveCast(level, npc, target, spell, spellLevel, lockTicks, castType, magicData));
-            Log.info(TAG, "NPC {} began channeling iron spell '{}' Lv.{} (lockTicks={})",
-                    npc.getUUID().toString().substring(0, 8), spellId, spellLevel, lockTicks);
             return true;
         }
     }
@@ -176,8 +172,6 @@ public final class IronSpellsCaster {
                 cast.spell.getCastFinishSound().ifPresent(s -> cast.level.playSound(null,
                         cast.npc.getX(), cast.npc.getY(), cast.npc.getZ(), s, SoundSource.NEUTRAL, 1.0f, 1.0f));
                 it.remove();
-                Log.info(TAG, "NPC {} completed iron spell '{}' Lv.{}",
-                        cast.npc.getUUID().toString().substring(0, 8), cast.spell.getSpellId(), cast.spellLevel);
             }
         }
     }

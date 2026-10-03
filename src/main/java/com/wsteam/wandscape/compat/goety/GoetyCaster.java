@@ -133,15 +133,9 @@ public final class GoetyCaster {
                                              SpellStat stat, String focusId, @Nullable LivingEntity target) {
         try {
             if (!spell.conditionsMet(level, npc, stat)) {
-                Log.info(TAG, "Spell '{}' stat-conditions not met on NPC {} (target={}, dist={})",
-                        focusId, npc.getUUID().toString().substring(0, 8),
-                        target != null ? target.getName().getString() : "null",
-                        target != null ? String.format("%.2f", npc.distanceTo(target)) : "N/A");
                 return false;
             }
             if (!spell.conditionsMet(level, npc)) {
-                Log.info(TAG, "Spell '{}' entity-conditions not met on NPC {}",
-                        focusId, npc.getUUID().toString().substring(0, 8));
                 return false;
             }
             return true;
@@ -207,8 +201,6 @@ public final class GoetyCaster {
         playCastingSound(level, npc, spell);
 
         spell.SpellResult(level, npc, staff, stat);
-        Log.info(TAG, "NPC {} cast instant goety spell '{}'",
-                npc.getUUID().toString().substring(0, 8), focusId);
         return true;
     }
 
@@ -260,8 +252,6 @@ public final class GoetyCaster {
                 GoetyHelper.everStyle(spell), GoetyHelper.baseCooldown(spell),
                 GoetyHelper.manaCost(spell), chargeTicks, shotLimit);
         ACTIVE_VOLLEYS.put(npcId, v);
-        Log.info(TAG, "NPC {} began goety volley '{}' (everStyle={}, charge={}, shots={}, cdAfterRound={})",
-                npc.getUUID().toString().substring(0, 8), focusId, v.everStyle, chargeTicks, shotLimit, v.cdAfterRound);
         return true;
     }
 
@@ -400,12 +390,6 @@ public final class GoetyCaster {
         if (applyCooldown && !MagicState.isFreeCast() && v.cdAfterRound > 0) {
             float speed = Math.max(0.1f, npc.getEffectiveAttribute(AttributeType.SPELL_SPEED));
             npc.magic.applyCooldown(v.focusId, v.cdAfterRound, speed);
-            Log.info(TAG, "NPC {} finished goety volley '{}' after {} shots / {} ticks → cooldown {}",
-                    npc.getUUID().toString().substring(0, 8), v.focusId, v.shotsFired,
-                    v.chargeElapsed + v.dischargeTicks, v.cdAfterRound);
-        } else {
-            Log.info(TAG, "NPC {} ended goety volley '{}' (interrupted, no cooldown)",
-                    npc.getUUID().toString().substring(0, 8), v.focusId);
         }
     }
 

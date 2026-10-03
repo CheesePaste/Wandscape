@@ -451,7 +451,6 @@ public class TouristMoveGoal extends Goal {
             // 目标侧找不到落点 → 退回当前位置附近安全点兜底
             BlockPos tp = TouristTeleport.findSafeSpot(serverLevel(), pos, tourist.getColonyId(), tourist.getTargetBuildingId());
             if (tp != null) {
-                Log.info(TAG, "[Tourist] {} outdoor nav hard fallback. Teleporting to {}", tourist.getTouristName(), tp.toShortString());
                 tourist.setPos(tp.getX() + 0.5, tp.getY(), tp.getZ() + 0.5);
                 tourist.resetFallDistance();
                 tourist.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
@@ -565,7 +564,6 @@ public class TouristMoveGoal extends Goal {
                     finishBuildingStop();
                     return;
                 }
-                Log.info(TAG, "[Tourist] {} indoor exit fallback. Teleporting to {}", tourist.getTouristName(), tp.toShortString());
                 tourist.setPos(tp.getX() + 0.5, tp.getY(), tp.getZ() + 0.5);
                 tourist.resetFallDistance();
                 tourist.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
@@ -578,7 +576,6 @@ public class TouristMoveGoal extends Goal {
                 }
                 BlockPos tp = TouristTeleport.findSafeSpot(serverLevel(), pos, tourist.getColonyId(), tourist.getTargetBuildingId());
                 if (tp != null) {
-                    Log.info(TAG, "[Tourist] {} indoor nav hard fallback. Teleporting to {}", tourist.getTouristName(), tp.toShortString());
                     tourist.setPos(tp.getX() + 0.5, tp.getY(), tp.getZ() + 0.5);
                     tourist.resetFallDistance();
                     tourist.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
@@ -1233,9 +1230,6 @@ public class TouristMoveGoal extends Goal {
             tp = TouristTeleport.findSafeSpot(serverLevel(), target, tourist.getColonyId(), hotelId);
         }
         if (tp == null) return false;
-        Log.info(TAG, "[Tourist] {} teleporting to hotel {} ({} blocks away)",
-                tourist.getTouristName(), shortId(hotelId),
-                (int) Math.sqrt(tourist.blockPosition().distSqr(target)));
         tourist.setPos(tp.getX() + 0.5, tp.getY(), tp.getZ() + 0.5);
         tourist.resetFallDistance();
         tourist.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
@@ -1313,7 +1307,6 @@ public class TouristMoveGoal extends Goal {
         stuckFallbacks = 0;
         syncDebugData();
 
-        Log.warn(TAG, "[Tourist] {} abandoned stuck building visit, forced to WANDER", tourist.getTouristName());
         switchMode(MoveMode.WANDERING);
         startWander();
     }
@@ -1356,7 +1349,6 @@ public class TouristMoveGoal extends Goal {
                 if (teleportToNavTarget(navTarget)) return;
                 BlockPos tp = TouristTeleport.findSafeSpot(serverLevel(), pos, tourist.getColonyId(), null);
                 if (tp != null) {
-                    Log.info(TAG, "[Tourist] {} POI nav hard fallback. Teleporting to {}", tourist.getTouristName(), tp.toShortString());
                     tourist.setPos(tp.getX() + 0.5, tp.getY(), tp.getZ() + 0.5);
                     tourist.resetFallDistance();
                     tourist.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
@@ -1440,7 +1432,6 @@ public class TouristMoveGoal extends Goal {
         if (target == null) target = rawTarget;
 
         navTarget = target;
-        logNav("POI", target);
         lastPos = null;
         noMoveTicks = 0;
         totalNavTicks = 0;
@@ -1514,7 +1505,6 @@ public class TouristMoveGoal extends Goal {
                 lastNodeIndex = -1;
                 lastPos = null;
                 if (tp != null) {
-                    Log.info(TAG, "[Tourist] {} wander stuck, teleporting to {}", tourist.getTouristName(), tp.toShortString());
                     tourist.setPos(tp.getX() + 0.5, tp.getY(), tp.getZ() + 0.5);
                     tourist.resetFallDistance();
                     tourist.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
@@ -1538,8 +1528,6 @@ public class TouristMoveGoal extends Goal {
                     nav.stop();
                     BlockPos tp = TouristTeleport.findSafeSpot(serverLevel(), anchor, tourist.getColonyId(), null);
                     if (tp != null) {
-                        Log.info(TAG, "[Tourist] {} wander target unreachable, teleporting to anchor {}",
-                                tourist.getTouristName(), tp.toShortString());
                         tourist.setPos(tp.getX() + 0.5, tp.getY(), tp.getZ() + 0.5);
                         tourist.resetFallDistance();
                         tourist.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
@@ -1886,12 +1874,6 @@ public class TouristMoveGoal extends Goal {
 
         BuildingState chosen = TouristSimulation.selectNextTarget(level, tourist, true);
         if (chosen == null) {
-            Log.info(TAG, "[Tourist] {} | NO BUILDING | colony={} | night={} | visited={} | energy={} | bars={}/{}/{} (need {}/{}/{})",
-                    tourist.getTouristName(), tourist.getColonyId(),
-                    (level.getDayTime() % 24000) >= TouristSimulation.TOURIST_NIGHT_START,
-                    tourist.getVisitedBuildings().size(), tourist.getEnergy(),
-                    tourist.getComfortSat(), tourist.getMagicSat(), tourist.getWonderSat(),
-                    tourist.getComfortNeed(), tourist.getMagicNeed(), tourist.getWonderNeed());
             return;
         }
 
@@ -2087,8 +2069,6 @@ public class TouristMoveGoal extends Goal {
             tp = TouristTeleport.findSafeSpot(level, dest, tourist.getColonyId(), tourist.getTargetBuildingId());
         }
         if (tp == null) return false;
-        Log.info(TAG, "[Tourist] {} nav hard stuck, teleporting to target {}",
-                tourist.getTouristName(), tp.toShortString());
         tourist.setPos(tp.getX() + 0.5, tp.getY(), tp.getZ() + 0.5);
         tourist.resetFallDistance();
         tourist.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
@@ -2112,22 +2092,10 @@ public class TouristMoveGoal extends Goal {
         tourist.resetFallDistance();
         tourist.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
         tourist.getNavigation().stop();
-        Log.info(TAG, "[Tourist] {} indoor nav hard stuck, teleporting to spot {}",
-                tourist.getTouristName(), spot.toShortString());
         lastPos = null;
         noMoveTicks = 0;
         totalNavTicks = 0;
         stuckFallbacks = 0;
-    }
-
-    // ── Logging ──
-
-    private void logNav(String label, BlockPos target) {
-        String name = tourist.getTouristName();
-        BlockPos from = tourist.blockPosition();
-        Log.info(TAG, "[Tourist] {} {} → {} ({}→{})",
-                name, label, target.toShortString(),
-                from.toShortString(), target.toShortString());
     }
 
     // ════════════════════════════════════════════════════════════════
@@ -2191,7 +2159,6 @@ public class TouristMoveGoal extends Goal {
         rescueLastPos = null;
         roofStuckTicks = 0;
         if (tp == null) return false;
-        Log.info(TAG, "[Tourist] {} stuck on floating surface, rescuing to {}", tourist.getTouristName(), tp.toShortString());
         tourist.setPos(tp.getX() + 0.5, tp.getY(), tp.getZ() + 0.5);
         tourist.resetFallDistance();
         tourist.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);

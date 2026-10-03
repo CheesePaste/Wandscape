@@ -351,11 +351,7 @@ public final class MagicEventHandler {
                 level.playSound(null, entity.getX(), entity.getY(), entity.getZ(),
                         SoundEvents.STONE_HIT, SoundSource.NEUTRAL, 0.8f, 1.0f);
             }
-
-            Log.info(TAG, "Petrification damage reduction: raw={}, final={} for entity={}",
-                    originalDamage, reducedDamage, entity.getName().getString());
         }
-
         // ── 护甲削减（可负 = 增伤） ──
         if (entity.hasEffect(WandscapeEffects.ARMOR_SHRED)) {
             int amplifier = entity.getEffect(WandscapeEffects.ARMOR_SHRED).getAmplifier();

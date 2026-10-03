@@ -384,10 +384,6 @@ public final class TouristSpawnSystem {
                     // 到达登记由 TouristEntity.onAddedToLevel 单点完成（覆盖刷怪蛋/命令路径）。
                     TouristSimSystem sim = TouristSimSystem.getActive();
                     if (sim != null) sim.adoptTourist(tourist);
-
-                    Log.info(TAG, "[Tourist] {} (Lv.{}) spawned at {} (colony {})",
-                            tourist.getTouristName(), ps.level, ground.toShortString(),
-                            ps.colonyId().toString().substring(0, 8));
                 } finally {
                     ChunkLoadManager.get().releaseChunk(cp);
                 }
@@ -752,9 +748,6 @@ public final class TouristSpawnSystem {
             t.setTargetBuildingId(b.getBuildingId());
             t.setTargetBuildingCategory("service");
             t.setCommuteTarget(target);
-            Log.info(TAG, "[Tourist] {} routed to hotel {} (bars={}/{}/{} energy={})",
-                    t.getTouristName(), b.getBuildingId().toString().substring(0, 8),
-                    t.getComfortSat(), t.getMagicSat(), t.getWonderSat(), t.getEnergy());
             return true;
         }
         return false;

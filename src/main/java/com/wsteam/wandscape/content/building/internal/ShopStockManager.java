@@ -119,7 +119,6 @@ public final class ShopStockManager {
         if (bank == null) return;
 
         restock(buildingId, config.shop(), colonyId, bank);
-        Log.info(TAG, "[Shop] Initial restock for building={}", buildingId.toString().substring(0, 8));
     }
 
     /** Returns the current stock count for a specific item. */

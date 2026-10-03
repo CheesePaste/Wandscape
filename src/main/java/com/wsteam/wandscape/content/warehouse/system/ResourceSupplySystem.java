@@ -288,8 +288,6 @@ public class ResourceSupplySystem implements EcsSystem {
         params.put("channel_ticks", new JsonPrimitive(channelTicks));
 
         api.enqueueWork(stationId, new WorkItem("production:synthesize", params, priority));
-        Log.info(TAG, "shortfall {} x{} → synthesize:{} at workstation {} ({} already in flight, priority={}, source={}:{})",
-                itemId, amount, itemId, stationId.toString().substring(0, 8), inFlight, priority, sourceType, sourceId);
         return true;
     }
 
@@ -657,8 +655,6 @@ public class ResourceSupplySystem implements EcsSystem {
             api.enqueueWork(representativeId, new WorkItem(blueprint, params,
                     WandscapeConstants.TASK_PRIORITY_AUTO));
         }
-        Log.info(TAG, "shortfall {} x{} → gather on node {} ({} harvests, {} already in flight)",
-                element, deficit, representativeId.toString().substring(0, 8), harvests, inFlight);
     }
 
     /**

@@ -76,7 +76,6 @@ public final class TouristSimSystem {
     private static final int AT_HOTEL_RANGE = 16;
 
     private int tickCounter;
-    private int simStepLogCounter;
     private int spotPurgeCounter;
     private TouristSimRegistry registry;
     private final Random random = new Random();
@@ -151,9 +150,6 @@ public final class TouristSimSystem {
         s.setMaxMana(t.getMaxMana());
         exportToShadow(t, s);
         registry.put(t.getUUID(), s);
-        Log.info(TAG, "[Tourist][diag] adopted shadow {} at ({},{}), commute={}, target={}",
-                s.getTouristName(), (int) s.getPosX(), (int) s.getPosZ(),
-                s.getCommuteTarget(), s.getTargetBuildingId());
     }
 
     /** Remove a tourist's shadow (called when a loaded tourist departs). */
@@ -172,10 +168,8 @@ public final class TouristSimSystem {
         if (server == null) return;
         ServerLevel level = server.overworld();
         if (level == null || registry == null) {
-            if (tickCounter == 0) Log.info(TAG, "[Tourist][diag] onServerTick skipped (server/level/registry null)");
             return;
         }
-        if (tickCounter == 0) Log.info(TAG, "[Tourist][diag] onServerTick firing, shadows={}", registry.getShadows().size());
 
         // 幽灵占位自愈保险：占用者已不在世界且无 shadow（sim 驱动中实体 detach 但 shadow 在场不算幽灵）
         // → 释放该 spot 并清其排队（兜底漏清理路径）。
@@ -428,13 +422,6 @@ public final class TouristSimSystem {
     // ── Unloaded sim step ──
 
     private void simStep(ServerLevel level, TouristShadow s) {
-        if (++simStepLogCounter % 100 == 0) {
-            Log.info(TAG, "[Tourist][diag] simStep {} pos=({},{}) commute={} target={} bars={}/{}/{} energy={} tick={}",
-                    s.getTouristName(), (int) s.getPosX(), (int) s.getPosZ(),
-                    s.getCommuteTarget() != null ? s.getCommuteTarget().toShortString() : "null",
-                    s.getTargetBuildingId() != null ? s.getTargetBuildingId().toString().substring(0, 8) : "null",
-                    s.getComfortSat(), s.getMagicSat(), s.getWonderSat(), s.getEnergy(), s.simTick());
-        }
         s.advanceSimTick(SIM_INTERVAL);
         s.markUnhydrated();
 
@@ -635,7 +622,6 @@ public final class TouristSimSystem {
                         s.setWakeUpPos(s.touristPos());
                         s.addVisitedBuilding(buildingId);
                         // 满意值不在此结算，改为每晚晨起结算（见 TouristSimulation.grantHotelNightStay）
-                        Log.info(TAG, "[Tourist] {} (sim) checked into hotel {}", shortId(s.getTouristId()), shortId(buildingId));
                     }
                     s.setCommuteTarget(null);
                     s.setTargetBuildingId(null);
@@ -709,8 +695,6 @@ public final class TouristSimSystem {
             TouristSpotManager.getActive().leaveAllQueues(buildingId, s.getTouristId());
             // 放弃也算「逛过」：本次停留不再尝试该建筑（与实体一致）
             s.addVisitedBuilding(buildingId);
-            Log.info(TAG, "[Tourist] {} (sim) abandoned queue at {} (wait timeout), re-planning",
-                    s.getTouristName(), shortId(buildingId));
         }
         s.setQueueSpotIndex(-1);
         s.setInteractTicksLeft(0);
@@ -733,9 +717,6 @@ public final class TouristSimSystem {
                 default -> TouristSimulation.performServiceInteraction(level, s, buildingId, colonyId);
             };
             if (result != null) {
-                Log.info(TAG, "[Tourist] {} (sim) {} at {} '{}' → bars {}/{}/{}, energy {}",
-                        s.getTouristName(), result.whatHappened(), shortId(buildingId), category,
-                        s.getComfortSat(), s.getMagicSat(), s.getWonderSat(), s.getEnergy());
                 // 与实体路径一致：交互记入行程（买不起记「逛了一圈什么也没买」）
                 String bldType = TouristSimulation.getBuildingTypeId(level, buildingId);
                 var bldCfg = TouristSimulation.getConfig(level, buildingId);
@@ -744,9 +725,6 @@ public final class TouristSimSystem {
                 TouristSimulation.addVisitMemory(s, bldType, bldName, category,
                         level.getGameTime(), result.comfortDelta(), result.magicDelta(), result.wonderDelta(),
                         result.energyDelta(), result.whatHappened());
-            } else {
-                Log.info(TAG, "[Tourist] {} (sim) nothing buyable at {} '{}'",
-                        s.getTouristName(), shortId(buildingId), category);
             }
             s.addVisitedBuilding(buildingId);
         }
@@ -903,7 +881,6 @@ public final class TouristSimSystem {
         s.setHotelCheckinTime(s.simTick());
         s.setWakeUpPos(s.touristPos());
         s.addVisitedBuilding(buildingId);
-        Log.info(TAG, "[Tourist] {} (快进夜) checked into hotel {}", shortId(s.getTouristId()), shortId(buildingId));
     }
 
     /** 住店客旅店是否仍有效（镜像 routeToOwnHotel 校验）。 */
@@ -1035,8 +1012,6 @@ public final class TouristSimSystem {
             touristApi.registerDeparture(s.getTouristId(), s.getColonyId(), fill);
         }
         registry.remove(s.getTouristId());
-        Log.info(TAG, "[Tourist] {} (sim) departed (bars={}/{}/{} energy={})",
-                s.getTouristName(), s.getComfortSat(), s.getMagicSat(), s.getWonderSat(), s.getEnergy());
     }
 
     private void grantExperience(TouristShadow s) {

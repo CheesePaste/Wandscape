@@ -289,7 +289,6 @@ public class ColonyItemBank extends SavedData {
         if (elementChangeNotifier != null) {
             elementChangeNotifier.onElementChanged(colonyId, type, newAmount, amount);
         }
-        Log.info(TAG, "[BANK] AddElement:%s".formatted(type.name()));
     }
 
     /** Record one successful tourist purchase for the colony. */
@@ -339,7 +338,6 @@ public class ColonyItemBank extends SavedData {
         if (elementChangeNotifier != null) {
             elementChangeNotifier.onElementChanged(colonyId, type, Math.max(0, remaining), -amount);
         }
-        Log.info(TAG, "[BANK] consumeElement:%s".formatted(type.name()));
         return true;
     }
 
@@ -385,7 +383,6 @@ public class ColonyItemBank extends SavedData {
 
     public boolean reserve(UUID colonyId, ItemKey key, long amount) {
         if (available(colonyId, key) < amount) return false;
-        Log.info(TAG, "[BANK] reserve:%s".formatted(key.itemId()));
         reservations.computeIfAbsent(colonyId, k -> new ConcurrentHashMap<>())
                 .merge(key, amount, Long::sum);
         return true;
@@ -401,7 +398,6 @@ public class ColonyItemBank extends SavedData {
             if (newRes <= 0) res.remove(key);
             else res.put(key, newRes);
         }
-        Log.info(TAG, "[BANK] commit:%s".formatted(key.itemId()));
         return ok;
     }
 

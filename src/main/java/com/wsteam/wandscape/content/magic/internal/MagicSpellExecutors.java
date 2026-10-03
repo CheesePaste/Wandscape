@@ -151,8 +151,6 @@ public final class MagicSpellExecutors {
                 level, pos, npc, level.getGameTime() + durationTicks, healAmount, HEAL_RADIUS));
 
         level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.NEUTRAL, 1.0f, 1.0f);
-        Log.info(TAG, "castHeal caster={} healAmount={} durationTicks={}",
-                npc.getUUID().toString().substring(0, 8), healAmount, durationTicks);
         return true;
     }
 
@@ -204,7 +202,6 @@ public final class MagicSpellExecutors {
             }
         }
         if (nearest == null) {
-            Log.info(TAG, "fireMeteorAtNearestEnemy 无目标 skip origin={}", origin);
             return;
         }
         spawnMeteorAt(level, caster, nearest.position(), damage, radius);
@@ -237,7 +234,6 @@ public final class MagicSpellExecutors {
         }
 
         level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.FIRECHARGE_USE, SoundSource.NEUTRAL, 1.0f, 0.8f);
-        Log.info(TAG, "castMeteor caster={} interval={}", npc.getUUID().toString().substring(0, 8), interval);
         return true;
     }
 
@@ -263,7 +259,6 @@ public final class MagicSpellExecutors {
         npc.addEffect(new MobEffectInstance(WandscapeEffects.PETRIFICATION, 600, 0));
 
         level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.STONE_BREAK, SoundSource.NEUTRAL, 1.2f, 0.6f);
-        Log.info(TAG, "castPetrification caster={} buffDuration=600", npc.getUUID().toString().substring(0, 8));
         return true;
     }
 
@@ -311,8 +306,6 @@ public final class MagicSpellExecutors {
 
         level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.WARDEN_SONIC_BOOM,
                 SoundSource.NEUTRAL, 0.5f, 0.4f);
-        Log.info(TAG, "castEnfeebleField caster={} hits={} debuffTicks={}",
-                npc.getUUID().toString().substring(0, 8), hitCount, ENFEEBLE_DEBUFF_TICKS);
         return true;
     }
 
@@ -348,8 +341,6 @@ public final class MagicSpellExecutors {
 
         level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.BELL_RESONATE,
                 SoundSource.NEUTRAL, 0.7f, 1.0f);
-        Log.info(TAG, "castFortification caster={} buffTicks={}",
-                npc.getUUID().toString().substring(0, 8), FORTIFICATION_BUFF_TICKS);
         return true;
     }
 
@@ -402,8 +393,6 @@ public final class MagicSpellExecutors {
 
         level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.EVOKER_CAST_SPELL,
                 SoundSource.NEUTRAL, 0.6f, 1.3f);
-        Log.info(TAG, "castConversion caster={} charmed={}/{} debuffTicks={}",
-                npc.getUUID().toString().substring(0, 8), count, enemies.size(), CONVERSION_DEBUFF_TICKS);
         return true;
     }
 
@@ -451,8 +440,6 @@ public final class MagicSpellExecutors {
 
         level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.WITHER_SPAWN,
                 SoundSource.NEUTRAL, 0.4f, 0.8f);
-        Log.info(TAG, "castDesperation caster={} armor={} enhanceAmp={} buffTicks={}",
-                npc.getUUID().toString().substring(0, 8), armor, enhanceAmp, DESPERATION_BUFF_TICKS);
         return true;
     }
 
@@ -546,7 +533,6 @@ public final class MagicSpellExecutors {
                 }
                 level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.WARDEN_SONIC_BOOM,
                         SoundSource.NEUTRAL, 0.5f, 0.4f);
-                Log.info(TAG, "castEnfeebleField player hits={}", hitCount);
                 yield true;
             }
             case "fortification" -> {
@@ -559,7 +545,6 @@ public final class MagicSpellExecutors {
                 player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, 300, 0));
                 level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.BELL_RESONATE,
                         SoundSource.NEUTRAL, 0.7f, 1.0f);
-                Log.info(TAG, "castFortification player");
                 yield true;
             }
             case "conversion" -> {
@@ -583,7 +568,6 @@ public final class MagicSpellExecutors {
                 }
                 level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.EVOKER_CAST_SPELL,
                         SoundSource.NEUTRAL, 0.6f, 1.3f);
-                Log.info(TAG, "castConversion player charmed={}", count);
                 yield true;
             }
             case "desperation" -> {
@@ -597,7 +581,6 @@ public final class MagicSpellExecutors {
                 player.addEffect(new MobEffectInstance(WandscapeEffects.MAGIC_ENHANCE, 300, enhanceAmp)); // 魔力强化（玩家暂无施法入口，仅显示；不保留力量）
                 level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.WITHER_SPAWN,
                         SoundSource.NEUTRAL, 0.4f, 0.8f);
-                Log.info(TAG, "castDesperation player armor={} enhanceAmp={}", armor, enhanceAmp);
                 yield true;
             }
             default -> {

@@ -79,9 +79,6 @@ public final class GuardTaskSource implements TaskSource {
         // 由距威胁最近的真实殖民地 NPC 接取（调度器按邻近评分）；占位殖民地 NPC 永不接取。
         TaskRequest request = new TaskRequest("guard:attack", params, GuardConstants.GUARD_PRIORITY, null);
         activeTaskId = pool.addTask(request);
-        Log.info(TAG, ">>> GUARD TASK PUBLISHED #{} target={} attack={} release={} pool={}",
-                activeTaskId, threat.getUUID().toString().substring(0, 8),
-                com.wsteam.wandscape.foundation.util.BalanceValues.guardRange(), com.wsteam.wandscape.foundation.util.BalanceValues.guardReleaseRange(), pool.size());
     }
 
     /** 攻击区（±guard.range）内距并集盒中心最近的存活 Enemy；无则 null。

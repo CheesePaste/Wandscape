@@ -157,15 +157,11 @@ public final class BuildingRepairHandler {
 
         List<BlockOffset> damaged = BuildCompleteListener.findDamagedBlocks(level, state.getAnchor(), config, state.getRotationSteps());
         if (damaged.isEmpty()) {
-            Log.info(TAG, "[Building] Repair triggered but no damage found for {} at {}",
-                    state.getBuildingTypeId(), state.getAnchor());
             return false;
         }
 
         enqueueRepairForOffsets(state, config, damaged);
         data.setDirty();
-        Log.info(TAG, "[Building] Repair triggered manually for {} at {} — {} blocks damaged, repair enqueued",
-                state.getBuildingTypeId(), state.getAnchor(), damaged.size());
         return true;
     }
 

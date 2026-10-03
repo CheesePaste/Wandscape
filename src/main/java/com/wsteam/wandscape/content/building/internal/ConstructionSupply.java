@@ -119,10 +119,6 @@ public final class ConstructionSupply {
                 blocked.add(itemId);
             }
         }
-        if (enqueued > 0 || !blocked.isEmpty()) {
-            Log.info(LogCategory.BUILDING, "supply", "construction supply: enqueued={} covered={} blocked={} priority={} source={}:{}",
-                    enqueued, covered, blocked, priority, sourceType, sourceId);
-        }
         return new Result(enqueued, covered, blocked);
     }
 

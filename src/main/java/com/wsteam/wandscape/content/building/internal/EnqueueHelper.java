@@ -534,10 +534,6 @@ public final class EnqueueHelper {
             bank.addElement(colonyId, element, initialCount);
         }
         bank.markSeeded(colonyId);
-
-        Log.info(TAG, "[Enqueue] seeded warehouse: {} elements x{} (colony={})",
-                ElementType.values().length, initialCount,
-                colonyId.toString().substring(0, 8));
     }
 
     private static Level getServerLevel() {

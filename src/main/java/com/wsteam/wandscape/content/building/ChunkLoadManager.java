@@ -112,7 +112,6 @@ public final class ChunkLoadManager {
         if (leaseData != null) {
             leaseData.addLease(buildingId, chunks);
         }
-        Log.info(TAG, "leaseBuilding {} — {} chunks force-loaded", id8(buildingId), chunks.size());
         return true;
     }
 
@@ -126,7 +125,6 @@ public final class ChunkLoadManager {
         if (leaseData != null) {
             leaseData.removeLease(buildingId);
         }
-        Log.info(TAG, "releaseBuilding {} — released {} chunks", id8(buildingId), chunks.size());
     }
 
     public boolean isLeased(UUID buildingId) {

@@ -119,16 +119,7 @@ public final class MagicCaster {
 
         boolean ok = MagicCastManager.schedule(level, npc.getUUID(), source, aim, c,
                 BEAM_SPAWN_DELAY, spec.durationTicks + BEAM_TAIL, npc, target);
-        Log.info(TAG, "castNpcBeam id={} circle={} target={} hand={} axis={} source={} aim={} scheduled={}",
-                npc.getUUID().toString().substring(0, 8), circleId,
-                target.getUUID().toString().substring(0, 8),
-                fmt(hand), fmt(axis), fmt(source), fmt(aim), ok);
         return ok;
-    }
-
-    /** 调试日志：Vec3 四舍五入两位。 */
-    private static String fmt(Vec3 v) {
-        return String.format("(%.2f,%.2f,%.2f)", v.x, v.y, v.z);
     }
 
     /** 光束颜色：参数 > 手持法杖 wand_color > 默认青蓝。 */

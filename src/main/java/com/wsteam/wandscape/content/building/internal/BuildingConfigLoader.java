@@ -115,7 +115,6 @@ public final class BuildingConfigLoader {
                 BuildingPackage pkg = BuildingPackage.fromJson(BuildingPackage.DEFAULT_ID, json.getAsJsonObject());
                 packages.put(pkg.id(), pkg);
                 packageRawJsons.put(pkg.id(), json);
-                Log.info(TAG, "loaded root BuildingPackage: {}", pkg.id());
             } catch (Exception e) {
                 Log.warn(TAG, "Failed to parse root package metadata: {}", e.getMessage());
             }
@@ -130,7 +129,6 @@ public final class BuildingConfigLoader {
                 BuildingPackage pkg = BuildingPackage.fromJson(pkgId, json.getAsJsonObject());
                 packages.put(pkg.id(), pkg);
                 packageRawJsons.put(pkg.id(), json);
-                Log.info(TAG, "loaded BuildingPackage: {} ({})", pkg.id(), pkg.name());
             } catch (Exception e) {
                 Log.warn(TAG, "Failed to parse package metadata for '{}': {}", pkgId, e.getMessage());
             }
@@ -324,8 +322,6 @@ public final class BuildingConfigLoader {
                 k, k, Map.of(), "", Map.of(), "", "1.0.0", "minecraft:stone_bricks", 100, List.of()
         ));
 
-        Log.info(TAG, "loaded BuildingConfig: {} [package={}] (category={}, blocks={})",
-                fullId, pkgId, config.category(), config.pattern().size());
         return config;
     }
 }

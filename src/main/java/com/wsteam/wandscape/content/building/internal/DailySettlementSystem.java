@@ -37,7 +37,6 @@ public final class DailySettlementSystem {
     public static DailySettlementSystem register() {
         DailySettlementSystem system = new DailySettlementSystem();
         NeoForge.EVENT_BUS.register(system);
-        Log.info(TAG, "DailySettlementSystem registered");
         return system;
     }
 

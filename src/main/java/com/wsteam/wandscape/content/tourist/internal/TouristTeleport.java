@@ -68,7 +68,6 @@ public final class TouristTeleport {
         //    stands on safe open ground (e.g. trapped in front of a door).
         BlockPos here = walkableOutsideBuilding(level, origin.getX(), origin.getY(), origin.getZ(), colonyId);
         if (here != null) return here;
-        Log.warn(TAG, "No safe rescue spot near {}", origin.toShortString());
         return null;
         }
     }

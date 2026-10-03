@@ -84,13 +84,9 @@ public final class BlockSalvage {
             if (!bank.tryAdd(colonyId, key, count)) {
                 // 满仓：不入仓库也不吞物品——掉落物落回拆除点（等价箱满溢出，损失为零，
                 // 也不让拆迁/平地被满仓卡死）。见 ColonyItemBank 容量机制。
-                Log.info(TAG, "[Salvage] warehouse full — dropped {} x{} at {} (colony={})",
-                        key.itemId(), count, bp, colonyId.toString().substring(0, 8));
                 dropSalvageOnGround(sl, bp, drop);
                 continue;
             }
-            Log.info(TAG, "[Salvage] Dismantled item returned to warehouse: {} x{} (colony={})",
-                    key.itemId(), count, colonyId.toString().substring(0, 8));
         }
     }
 

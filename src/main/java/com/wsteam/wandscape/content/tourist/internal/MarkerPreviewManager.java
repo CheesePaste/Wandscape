@@ -158,7 +158,6 @@ public final class MarkerPreviewManager {
         preview.setInvulnerable(true);
         level.addFreshEntity(preview);
         previews.put(pos, preview.getUUID());
-        Log.info(TAG, "[Preview] spawned {} at {}", action, pos.toShortString());
     }
 
     private void removePreview(ServerLevel level, BlockPos pos) {

@@ -46,10 +46,6 @@ public final class MagicCastManager {
                 level.getGameTime() + Math.max(1, delayTicks), Math.max(1, lifeTicks),
                 casterNpc, targetNpc));
         ACTIVE_CASTERS.add(casterUuid);
-        Log.info(TAG, "schedule caster={} source={} target={} fireTick={} life={} targetNpc={} pending={}",
-                casterUuid.toString().substring(0, 8), source, target,
-                level.getGameTime() + Math.max(1, delayTicks), lifeTicks,
-                targetNpc != null ? targetNpc.getUUID().toString().substring(0, 8) : "null", PENDING.size());
         return true;
     }
 
@@ -68,11 +64,6 @@ public final class MagicCastManager {
                 pc.level().addFreshEntity(beam);
                 SoundService.playAt(pc.level(), pc.source().x, pc.source().y, pc.source().z,
                         WandscapeSounds.MAGIC_BEAM, SoundSource.NEUTRAL, 0.6f, 1.0f);
-                Log.info(TAG, "beam spawned id={} source={} target={} color=#{} life={} caster={} targetNpc={} time={}",
-                        beam.getId(), pc.source(), pc.target(), Integer.toHexString(pc.color()),
-                        pc.lifeTicks(), pc.caster().toString().substring(0, 8),
-                        pc.targetNpc() != null ? pc.targetNpc().getUUID().toString().substring(0, 8) : "null",
-                        pc.level().getGameTime());
                 it.remove();
                 ACTIVE_CASTERS.remove(pc.caster());
             }

@@ -158,7 +158,6 @@ public final class BuildingContributionRegistry {
                     .computeIfAbsent(state.getColonyId(), k -> new ConcurrentHashMap<>());
             typeMap.merge(state.getBuildingTypeId(), 1, Integer::sum);
         }
-        Log.info(TAG, "BuildingContributionRegistry rebuilt — {} colonies tracked", intactCounts.size());
     }
 
     // ── Query ─────────────────────────────────────────────────────────────────

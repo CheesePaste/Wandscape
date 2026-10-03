@@ -218,10 +218,6 @@ public final class BuildingInteractHandler {
             case "service", "relax", "decoration", "atm" ->
                     openInfoPanel(player, state, category, bldConfig);
             default -> {
-                Log.info(TAG, "[Building] Right-click: type={} at={} intact={} queue={}",
-                        state.getBuildingTypeId(), state.getAnchor(),
-                        state.isStructureIntact(),
-                        state.getTaskQueue().size());
                 BuildingConfig config = BuildingConfigLoader.getInstance().get(state.getBuildingTypeId());
                 if (config != null) {
                     Component lockReason = BuildingUnlockChecker
@@ -370,9 +366,6 @@ public final class BuildingInteractHandler {
         Net.toPlayer(player,
                 new NodeDataPacket(pos, state.getBuildingTypeId(), nc.element(),
                         nc.amountPerHarvest(), nc.channelTicks(), config.creator()));
-        Log.info(TAG, "[Node] open GUI type={} at={} element={} amount={} ticks={}",
-                state.getBuildingTypeId(), pos, nc.element(),
-                nc.amountPerHarvest(), nc.channelTicks());
     }
 
     private static void openMagicStationGui(Level level, UUID colonyId,

@@ -66,8 +66,6 @@ public class ElementItem extends Item {
         stack.shrink(count);
         SoundService.playAt(player.serverLevel(), player.blockPosition(),
                 WandscapeSounds.WAREHOUSE, SoundSource.PLAYERS, 0.6f, 1.0f);
-        Log.info(TAG, "{} x{} -> warehouse {}", elementType.getId(), count,
-                ownColonyId.toString().substring(0, 8));
     }
 
     @Override

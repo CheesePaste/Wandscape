@@ -85,7 +85,6 @@ public final class BuildCompleteListener {
             return;
         }
 
-        List<BlockOffset> damaged = findDamagedBlocks(level, anchor, config, state.getRotationSteps());
         // 建筑不再因结构损坏而停摆：无论残留多少缺失方块，建成即判定完好并计入贡献，
         // 缺失方块可通过 V 面板「复原」手动补齐。
         boolean firstCompletion = !state.hasEverCompleted();
@@ -98,14 +97,6 @@ public final class BuildCompleteListener {
         // Refresh client caches: a completed building's construction ghost clears.
         com.wsteam.wandscape.content.building.network.BuildingAreaSyncPacket.broadcastToColony(
                 ServerLifecycleHooks.getCurrentServer(), anchor);
-
-        if (damaged.isEmpty()) {
-            Log.info(TAG, "[Building] {} at {} construction complete — now operational",
-                    state.getBuildingTypeId(), anchor);
-        } else {
-            Log.info(TAG, "[Building] {} at {} — {}/{} blocks missing (still operational, repair via V panel)",
-                    state.getBuildingTypeId(), anchor, damaged.size(), config.pattern().size());
-        }
 
         // Assign colony via ColonyApiImpl
         UUID assignedColonyId = com.wsteam.wandscape.content.colony.ColonyApiImpl.get().onBuildingIntact(state);
@@ -149,14 +140,7 @@ public final class BuildCompleteListener {
         // building type transitions from 0→1 intact buildings in the colony.
         UUID colonyId = state.getColonyId();
         if (colonyId != null) {
-            boolean changed = data.addBuildingContribution(
-                    colonyId, state.getBuildingTypeId());
-            if (changed) {
-                Log.info(TAG, "[Evaluation] Colony {} gained +{} from first {}",
-                        colonyId.toString().substring(0, 8),
-                        data.getContributionRegistry().getSnapshot(colonyId),
-                        state.getBuildingTypeId());
-            }
+            data.addBuildingContribution(colonyId, state.getBuildingTypeId());
         }
     }
 

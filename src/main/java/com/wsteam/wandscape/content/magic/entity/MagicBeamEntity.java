@@ -167,24 +167,12 @@ public class MagicBeamEntity extends Entity {
         builder.define(DATA_CASTER, Optional.empty());
     }
 
-    private boolean loggedSpawn;
-
     @Override
     public void tick() {
         super.tick();
         if (!level().isClientSide) {
             trackTarget();
             damageTargets();
-        }
-        if (!loggedSpawn && tickCount >= 5) {
-            loggedSpawn = true;
-            Log.info("MagicBeam", "beam tick id={} client={} pos={} targetPresent={} target={} life={}",
-                    getId(), level().isClientSide, position(), getTarget().isPresent(), getTarget().orElse(null),
-                    getLifetimeTicks());
-        }
-        if (tickCount == getLifetimeTicks() - 1) {
-            Log.info("MagicBeam", "beam expire id={} client={} tickCount={}",
-                    getId(), level().isClientSide, tickCount);
         }
         // 两端都用 tickCount（客户端实体也自增），避免依赖未同步的字段导致客户端立即自毁
         if (tickCount >= getLifetimeTicks()) discard();

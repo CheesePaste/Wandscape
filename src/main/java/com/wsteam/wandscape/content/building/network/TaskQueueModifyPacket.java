@@ -67,9 +67,6 @@ public record TaskQueueModifyPacket(
     public static void handleServer(TaskQueueModifyPacket pkt, ServerPlayer sp) {
 
         sp.getServer().execute(() -> {
-            Log.info(TAG, "TaskQueueModify: received {} action index={} group={} pos={} from player {}",
-                    pkt.action, pkt.index, pkt.targetGroup, pkt.stationPos, sp.getName().getString());
-
             BuildingSavedData data = BuildingSavedData.get(sp.serverLevel());
             if (data == null) {
                 Log.warn(TAG, "TaskQueueModify: no BuildingSavedData — action={} index={} pos={}",
@@ -90,15 +87,12 @@ public record TaskQueueModifyPacket(
                 com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(sp, "task_queue", "队列");
                 return;
             }
-            Log.info(TAG, "TaskQueueModify: buildingId={} action={} index={} group={}",
-                    buildingId.toString().substring(0, 8), pkt.action, pkt.index, pkt.targetGroup);
 
             var api = com.wsteam.wandscape.content.building.internal.BuildingApiImpl.get();
             boolean changed = false;
 
             switch (pkt.action) {
                 case "refresh" -> {
-                    Log.info(TAG, "TaskQueueModify: refresh requested for building {}", buildingId.toString().substring(0, 8));
                     changed = true;
                 }
                 case "delete" -> {
@@ -124,10 +118,8 @@ public record TaskQueueModifyPacket(
                     }
                     UUID cid = qState != null ? qState.getColonyId() : null;
                     var world = com.wsteam.wandscape.content.task.ecs.World.getActive();
-                    int cancelled = com.wsteam.wandscape.content.warehouse.system.ResourceSupplySystem
+                    com.wsteam.wandscape.content.warehouse.system.ResourceSupplySystem
                             .cancelTasksForSource(cid, sType, sId, world);
-                    Log.info(TAG, "TaskQueueModify: cancel_group '{}' (type={}, id={}) cancelled {} tasks",
-                            tg, sType, sId, cancelled);
                     changed = true;
                 }
                 default -> Log.warn(TAG, "TaskQueueModify: unknown action '{}' index={} pos={}",

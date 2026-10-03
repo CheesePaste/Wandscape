@@ -130,9 +130,6 @@ public final class AltarCastHandler {
         // 殖民地归属经 TaskRequest.colonyId 显式传递（GlobalTaskPool 统一写入 colony_id 参数）
         world.taskPool.addTask(new TaskRequest(TASK_BLUEPRINT, params, WandscapeConstants.TASK_PRIORITY_PLAYER,
                 colonyId));
-        Log.info(TAG, "player={} requested altar cast: altar={} magic={} manaCost={}",
-                player.getName().getString(), buildingId.toString().substring(0, 8),
-                magicId, def.manaCost());
         ScreenFeedbackPacket.send(player, I18n.name("message.wandscape.altar.cast_scheduled",
                 "[魔法小镇] 已安排祭坛施法：%s", magicId), false);
     }

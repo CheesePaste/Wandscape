@@ -141,9 +141,6 @@ public class GlobalTaskPool {
         tasksById.put(id, task);
         addToAssignable(task);
         notifyChanged();
-        Log.info(TAG, "addTask #%d '%s' blueprint=%s state=%s priority=%d steps=%d triggers=%d",
-                id, seq.label(), request.blueprintId(), initialState, request.priority(),
-                seq.size(), compiled.triggers().size());
         return id;
     }
 
@@ -161,8 +158,6 @@ public class GlobalTaskPool {
         t.channelRemainingTicks = task.channelRemainingTicks; // preserve any mid-channel checkpoint
         addToAssignable(t);
         notifyChanged();
-        Log.info(TAG, "addTask #%d '%s' (pre-built) state=%s priority=%d triggers=%d",
-                id, t.sequence.label(), t.state, t.priority, t.triggers.size());
         return id;
     }
 

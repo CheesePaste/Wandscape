@@ -193,9 +193,6 @@ public class ResourceRequestExecutor implements OpExecutor<AtomicOp.ResourceRequ
                     finish(doneFuture, needs, resources, colonyId, world, npcId));
         }
 
-        Log.info(TAG, "[ResourceReq] NPC {} requesting {} items ({} types, {} of {} staggered)",
-                npcId, totalItems, needs.size(),
-                remainingCount, totalItems);
         return doneFuture;
     }
 
