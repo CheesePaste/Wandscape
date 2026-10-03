@@ -71,7 +71,7 @@ public class MagicStationScreen extends MedievalScreen {
                 entries.add(new TaskQueuePanel.Entry(
                         qe.index(), qe.category(), qe.itemOrRecipeId(), qe.quantity(),
                         qe.blueprintId(), qe.summary(), qe.insufficient(), qe.missingElements(),
-                        qe.capacityBlocked()));
+                        qe.capacityBlocked(), qe.sourceType(), qe.sourceId(), qe.sourceName()));
             }
             taskQueuePanel.setEntries(entries);
             taskQueuePanel.setCurrents(toPanelCurrents(packet.currents()));
@@ -87,7 +87,8 @@ public class MagicStationScreen extends MedievalScreen {
             TaskQueueDataPacket.QueueEntry e = ct.entry();
             result.add(new TaskQueuePanel.CurrentInfo(
                     new TaskQueuePanel.Entry(e.index(), e.category(), e.itemOrRecipeId(),
-                            e.quantity(), e.blueprintId(), e.summary(), false, List.of(), false),
+                            e.quantity(), e.blueprintId(), e.summary(), false, List.of(), false,
+                            e.sourceType(), e.sourceId(), e.sourceName()),
                     ct.stepIndex(), ct.totalSteps(),
                     ct.channelRemainingTicks(), ct.channelTotalTicks(),
                     ct.pending()));
@@ -211,6 +212,7 @@ public class MagicStationScreen extends MedievalScreen {
         taskQueuePanel.setOnDelete(this::onQueueDelete);
         taskQueuePanel.setOnMoveToTop(this::onQueueMoveToTop);
         taskQueuePanel.setOnMoveToBottom(this::onQueueMoveToBottom);
+        taskQueuePanel.setOnCancelGroup(this::onQueueCancelGroup);
         addRenderableWidget(taskQueuePanel);
     }
 
@@ -280,6 +282,12 @@ public class MagicStationScreen extends MedievalScreen {
     private void onQueueMoveToBottom(int index) {
         if (stationPos == null || stationPos.equals(BlockPos.ZERO)) return;
         Net.toServer(new TaskQueueModifyPacket(stationPos, "move_to_bottom", index));
+    }
+
+    private void onQueueCancelGroup(String sourceType, String sourceId) {
+        if (stationPos == null || stationPos.equals(BlockPos.ZERO)) return;
+        String targetGroup = (sourceType != null ? sourceType : "") + (sourceId != null && !sourceId.isEmpty() ? ":" + sourceId : "");
+        Net.toServer(new TaskQueueModifyPacket(stationPos, "cancel_group", 0, targetGroup));
     }
 
     /** Draw an element cost as [icon]xN (icon tinted per element, like the V-key panel). */

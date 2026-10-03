@@ -1,6 +1,4 @@
 package com.wsteam.wandscape.foundation.ui.component;
-import com.wsteam.wandscape.content.task.component.Position;
-import com.wsteam.wandscape.content.task.ecs.World;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.wsteam.wandscape.foundation.ui.I18n;
@@ -20,25 +18,28 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 
+import javax.annotation.Nullable;
 import java.util.*;
+import java.util.function.BiConsumer;
+import java.util.function.IntConsumer;
+
 /**
- * Side panel displaying a building's task queue.
- * Each entry shows:
- *   [icon] [category label] × [quantity]   [↑] [↓] [×]
+ * Side panel displaying a building's task queue, organized into visual blocks grouped
+ * by source (building construction, road construction, player request, etc.).
  *
- * <p>Category icons are drawn from Minecraft's own item/block registry.
- * If the itemOrRecipeId cannot be resolved, a generic placeholder is shown.
- *
- * <p>The top row is the locked currently-executing task (see {@link #setCurrent}),
- * with a progress bar. Pending rows below are all actionable: first pending
- * cannot move up; last pending cannot move down.
+ * <p>Each group has:
+ * <ul>
+ *   <li>A header with collapse/expand toggle indicator (▼ / ▶), group title, total task count,
+ *       and a group cancel button [×] to cancel all tasks in that group with one click.</li>
+ *   <li>A colored vertical accent strip and subtle frame distinguishing each group.</li>
+ *   <li>Inside expanded groups: running tasks (with progress bar) and pending tasks
+ *       (with icon, category, quantity, shortage tags, and [↑] [↓] [×] buttons).</li>
+ * </ul>
  */
 public class TaskQueuePanel extends AbstractWidget {
 
     /**
-     * One entry as received from the server.
-     * Use {@link #fromBlueprint(String, String, int, String, String)} to construct
-     * from legacy blueprintId + summary when structured data is unavailable.
+     * One entry in the task queue.
      */
     public record Entry(
             int index,
@@ -49,11 +50,23 @@ public class TaskQueuePanel extends AbstractWidget {
             String summary,
             boolean insufficient,
             List<String> missingElements,
-            boolean capacityBlocked
+            boolean capacityBlocked,
+            String sourceType,
+            String sourceId,
+            String sourceName
     ) {
+        /** Compact constructor defaulting source info to player. */
+        public Entry(int index, String category, String itemOrRecipeId, int quantity,
+                     String blueprintId, String summary, boolean insufficient,
+                     List<String> missingElements, boolean capacityBlocked) {
+            this(index, category, itemOrRecipeId, quantity, blueprintId, summary,
+                    insufficient, missingElements, capacityBlocked, "player", "", "");
+        }
+
         /** Legacy constructor kept for backward compatibility. */
         public Entry(int index, String blueprintId, String summary) {
-            this(index, categorize(blueprintId), extractItemId(blueprintId, summary), 0, blueprintId, summary, false, List.of(), false);
+            this(index, categorize(blueprintId), extractItemId(blueprintId, summary), 0,
+                    blueprintId, summary, false, List.of(), false, "player", "", "");
         }
 
         private static String categorize(String bid) {
@@ -67,8 +80,6 @@ public class TaskQueuePanel extends AbstractWidget {
         }
 
         private static String extractItemId(String bid, String summary) {
-            // Best-effort: strip the "Action " prefix from legacy summary
-            // e.g. "Decompose minecraft:oak_log x64" → "minecraft:oak_log"
             int sp = summary.indexOf(' ');
             if (sp > 0) {
                 String rest = summary.substring(sp + 1);
@@ -82,10 +93,6 @@ public class TaskQueuePanel extends AbstractWidget {
 
     /**
      * The building's currently executing (head) task + its progress.
-     * Channel tasks ({@code channelTotalTicks > 0}) show a countdown; multi-step
-     * tasks fall back to step progress. {@code pending} means the task has a channel
-     * configured but it has not started yet (NPC en route) — show a waiting label
-     * instead of a progress bar + countdown.
      */
     public record CurrentInfo(
             Entry entry,
@@ -96,91 +103,101 @@ public class TaskQueuePanel extends AbstractWidget {
             boolean pending
     ) {}
 
-    private final List<Entry> entries = new ArrayList<>();
-    private final int rowHeight = 16;
-
-    // ── Unified scrolling (mouse wheel) ──
-    /**
-     * Pixel offset into the panel content. Running rows and pending entries are one
-     * continuous list: a shared station can run one task per member, and with enough
-     * running rows the pending area was squeezed to nothing, so the wheel now moves
-     * both blocks together instead of only the pending ones.
-     */
-    private int scrollOffset;
-
-    // ── Current (executing) tasks ──
-    private static final int CURRENT_ROW_H = 18;
-    private final List<Current> currents = new ArrayList<>();
-
-    /** One running task shown at the top of the panel, with its own animated countdown. */
+    /** Internal representation of a running task with client-side smoothed countdown. */
     private static final class Current {
         Entry entry;
         int stepIndex;
         int totalSteps;
         int channelRemaining;
         int channelTotal;
-        /** Channel task accepted but not started (NPC en route): show waiting label, no animation. */
         boolean pending;
-        /** Smoothed remaining channel ticks, decremented per client tick between refreshes. */
         double animatedRemaining;
     }
 
-    /** Callbacks wired by the parent Screen. */
-    private java.util.function.IntConsumer onDelete;
-    private java.util.function.IntConsumer onMoveToTop;
-    private java.util.function.IntConsumer onMoveToBottom;
+    /**
+     * Visual block representing tasks originating from the same source
+     * (e.g. under-construction building, road segment, player order).
+     */
+    public static final class TaskGroup {
+        public final String key;
+        public final String sourceType;
+        public final String sourceId;
+        public final String sourceName;
+        public final List<Current> currents = new ArrayList<>();
+        public final List<Entry> entries = new ArrayList<>();
 
-    // Item-icon cache: itemOrRecipeId → ItemStack (or null if not found)
-    private final Map<String, ItemStack> iconCache = new HashMap<>();
+        public TaskGroup(String key, String sourceType, String sourceId, String sourceName) {
+            this.key = key;
+            this.sourceType = sourceType;
+            this.sourceId = sourceId;
+            this.sourceName = sourceName;
+        }
 
-    // Hover tooltip tracking
-    private ItemStack hoveredTooltipStack;
-    private List<Component> hoveredTooltipLines;
+        public int totalCount() {
+            return currents.size() + entries.size();
+        }
+    }
+
+    private final List<Entry> entries = new ArrayList<>();
+    private final List<Current> currents = new ArrayList<>();
+    private final List<TaskGroup> groups = new ArrayList<>();
+    private final Set<String> collapsedGroups = new HashSet<>();
 
     // Layout constants
-    private static final int ICON_SIZE   = 16;   // icon cell: 16×16 px
-    private static final int ICON_GAP    = 2;    // gap between icon and label
-    private static final int BTN_W       = 14;
-    private static final int BTN_H       = 14;
-    private static final int BTN_GAP     = 1;
-    // 3 buttons × 14 + 2 gaps × 1 = 44px right margin
-    private static final int BTN_AREA_W  = 3 * BTN_W + 2 * BTN_GAP;
-    // Left padding for text content
-    private static final int CONTENT_LEFT_PAD = 4;
-    // Panel padding plus the title strip above the first row / below the last one
-    private static final int CONTENT_TOP_PAD    = 4 + 10;
-    private static final int CONTENT_BOTTOM_PAD = 4;
+    private final int rowHeight = 16;
+    private static final int HEADER_H        = 16;
+    private static final int CURRENT_ROW_H   = 18;
+    private static final int BLOCK_GAP       = 3;
+    private static final int ICON_SIZE       = 16;
+    private static final int ICON_GAP        = 2;
+    private static final int BTN_W           = 14;
+    private static final int BTN_H           = 14;
+    private static final int BTN_GAP         = 1;
+    private static final int BTN_AREA_W      = 3 * BTN_W + 2 * BTN_GAP;
+    private static final int CONTENT_LEFT_PAD = 3;
+    private static final int CONTENT_TOP_PAD  = 5;
+    private static final int CONTENT_BOTTOM_PAD = 5;
 
     // Sprite state indices
     private static final int ARROW_STATE_NORMAL   = 0;
     private static final int ARROW_STATE_HOVER    = 1;
     private static final int ARROW_STATE_DISABLED = 2;
     private static final int CLOSE_STATE_DISABLED = 3;
+    private static final float HOVER_BRIGHTEN     = 1.6F;
 
-    // Normal and hover share the same arrow sprite; hover is brightened to stay distinguishable.
-    private static final float HOVER_BRIGHTEN = 1.6F;
+    private int scrollOffset;
+
+    /** Callbacks wired by parent Screen. */
+    private IntConsumer onDelete;
+    private IntConsumer onMoveToTop;
+    private IntConsumer onMoveToBottom;
+    private BiConsumer<String, String> onCancelGroup;
+
+    // Item-icon cache: itemOrRecipeId → ItemStack
+    private final Map<String, ItemStack> iconCache = new HashMap<>();
+
+    // Hover tooltip tracking
+    private ItemStack hoveredTooltipStack;
+    private List<Component> hoveredTooltipLines;
 
     public TaskQueuePanel(int x, int y, int width, int height) {
         super(x, y, width, height, Component.literal("Task Queue"));
     }
 
-    public void setOnDelete(java.util.function.IntConsumer onDelete)               { this.onDelete = onDelete; }
-    public void setOnMoveToTop(java.util.function.IntConsumer onMoveToTop)        { this.onMoveToTop = onMoveToTop; }
-    public void setOnMoveToBottom(java.util.function.IntConsumer onMoveToBottom)  { this.onMoveToBottom = onMoveToBottom; }
-    public void setOnMoveUp(java.util.function.IntConsumer onMoveUp)              { this.onMoveToTop = onMoveUp; }
-    public void setOnMoveDown(java.util.function.IntConsumer onMoveDown)          { this.onMoveToBottom = onMoveDown; }
+    public void setOnDelete(IntConsumer onDelete)                             { this.onDelete = onDelete; }
+    public void setOnMoveToTop(IntConsumer onMoveToTop)                       { this.onMoveToTop = onMoveToTop; }
+    public void setOnMoveToBottom(IntConsumer onMoveToBottom)                 { this.onMoveToBottom = onMoveToBottom; }
+    public void setOnMoveUp(IntConsumer onMoveUp)                             { this.onMoveToTop = onMoveUp; }
+    public void setOnMoveDown(IntConsumer onMoveDown)                         { this.onMoveToBottom = onMoveDown; }
+    public void setOnCancelGroup(BiConsumer<String, String> onCancelGroup)   { this.onCancelGroup = onCancelGroup; }
 
-    /**
-     * Replace all entries. Call from the parent Screen when new queue data arrives.
-     */
     public void setEntries(List<Entry> entries) {
         this.entries.clear();
         this.iconCache.clear();
         if (entries != null) {
             this.entries.addAll(entries);
         }
-        // The queue refreshes every ~second; keep the user's scroll position but clamp it
-        // to the new content range so a shrunken queue never leaves the viewport empty.
+        rebuildGroups();
         this.scrollOffset = Math.min(this.scrollOffset, maxScroll());
     }
 
@@ -188,41 +205,10 @@ public class TaskQueuePanel extends AbstractWidget {
         return Collections.unmodifiableList(entries);
     }
 
-    /** Top edge of the scrollable content region (running rows come first, then pending entries). */
-    private int contentTop() {
-        return getY() + CONTENT_TOP_PAD;
-    }
-
-    /** Bottom edge (exclusive) of the scrollable content region. */
-    private int contentBottom() {
-        return getY() + height - CONTENT_BOTTOM_PAD;
-    }
-
-    /** Height of the visible content region. */
-    private int viewportHeight() {
-        return Math.max(0, contentBottom() - contentTop());
-    }
-
-    /** Total pixel height of the running rows plus the pending entries. */
-    private int contentHeight() {
-        return currents.size() * CURRENT_ROW_H + entries.size() * rowHeight;
-    }
-
-    /** Maximum pixel scroll offset; 0 when everything already fits. */
-    private int maxScroll() {
-        return Math.max(0, contentHeight() - viewportHeight());
-    }
-
-    /** Convenience single-current setter (kept for callers that only have one running task). */
-    public void setCurrent(@javax.annotation.Nullable CurrentInfo info) {
+    public void setCurrent(@Nullable CurrentInfo info) {
         setCurrents(info == null ? List.of() : List.of(info));
     }
 
-    /**
-     * Replace the currently executing tasks shown at the top of the panel. A shared
-     * building (workstation family / node) may run several concurrently — one per
-     * member — so this accepts a list. Pass empty when nothing is running.
-     */
     public void setCurrents(List<CurrentInfo> infos) {
         this.currents.clear();
         if (infos != null) {
@@ -239,12 +225,110 @@ public class TaskQueuePanel extends AbstractWidget {
                 this.currents.add(c);
             }
         }
-        // Running rows are part of the scrolled content, so a shrinking batch can leave
-        // the offset past the end — clamp it back.
+        rebuildGroups();
         this.scrollOffset = Math.min(this.scrollOffset, maxScroll());
     }
 
-    /** Decrement the animated channel countdown by one client tick. Call from the parent Screen's tick(). */
+    private void rebuildGroups() {
+        groups.clear();
+        Map<String, TaskGroup> map = new LinkedHashMap<>();
+
+        // 1. Running tasks
+        for (Current c : currents) {
+            String sType = (c.entry != null && c.entry.sourceType() != null) ? c.entry.sourceType() : "player";
+            String sId = (c.entry != null && c.entry.sourceId() != null) ? c.entry.sourceId() : "";
+            String sName = (c.entry != null && c.entry.sourceName() != null) ? c.entry.sourceName() : "";
+            String key = toGroupKey(sType, sId);
+            TaskGroup g = map.computeIfAbsent(key, k -> new TaskGroup(k, sType, sId, sName));
+            g.currents.add(c);
+        }
+
+        // 2. Pending tasks
+        for (Entry e : entries) {
+            String sType = e.sourceType() != null ? e.sourceType() : "player";
+            String sId = e.sourceId() != null ? e.sourceId() : "";
+            String sName = e.sourceName() != null ? e.sourceName() : "";
+            String key = toGroupKey(sType, sId);
+            TaskGroup g = map.computeIfAbsent(key, k -> new TaskGroup(k, sType, sId, sName));
+            g.entries.add(e);
+        }
+
+        groups.addAll(map.values());
+        collapsedGroups.retainAll(map.keySet());
+    }
+
+    private static String toGroupKey(String sType, String sId) {
+        if ("building".equalsIgnoreCase(sType) && sId != null && !sId.isEmpty()) {
+            return "building:" + sId;
+        }
+        if ("road".equalsIgnoreCase(sType) && sId != null && !sId.isEmpty()) {
+            return "road:" + sId;
+        }
+        if (sType != null && !sType.isEmpty()) {
+            return sType.toLowerCase();
+        }
+        return "player";
+    }
+
+    private static Component groupTitle(TaskGroup g) {
+        String type = g.sourceType != null ? g.sourceType.toLowerCase() : "player";
+        return switch (type) {
+            case "building" -> {
+                String name = (g.sourceName != null && !g.sourceName.isEmpty()) ? g.sourceName : "建筑";
+                yield I18n.name("gui.wandscape.queue.source.building_name", "建造: %s", name);
+            }
+            case "road" -> I18n.name("gui.wandscape.queue.source.road", "道路施工");
+            case "player" -> I18n.name("gui.wandscape.queue.source.player", "玩家请求");
+            case "restock" -> I18n.name("gui.wandscape.queue.source.restock", "商店补货");
+            case "auto" -> I18n.name("gui.wandscape.queue.source.auto", "自动补给");
+            default -> Component.literal(g.sourceName != null && !g.sourceName.isEmpty() ? g.sourceName : type);
+        };
+    }
+
+    private static int groupAccentColor(String sourceType) {
+        if (sourceType == null) return 0xFF6AB0DE;
+        return switch (sourceType.toLowerCase()) {
+            case "building" -> 0xFFD4A840; // Medieval gold
+            case "road"     -> 0xFF7CAE7A; // Earthy green
+            case "player"   -> 0xFF6AB0DE; // Soft cyan
+            case "restock"  -> 0xFFE5A93C; // Amber / merchant
+            case "auto"     -> 0xFFAAAAAA; // Gray
+            default         -> 0xFFBB86FC; // Purple
+        };
+    }
+
+    private int groupHeight(TaskGroup g) {
+        if (collapsedGroups.contains(g.key)) {
+            return HEADER_H;
+        }
+        return HEADER_H + g.currents.size() * CURRENT_ROW_H + g.entries.size() * rowHeight + 2;
+    }
+
+    private int contentTop() {
+        return getY() + CONTENT_TOP_PAD;
+    }
+
+    private int contentBottom() {
+        return getY() + height - CONTENT_BOTTOM_PAD;
+    }
+
+    private int viewportHeight() {
+        return Math.max(0, contentBottom() - contentTop());
+    }
+
+    private int contentHeight() {
+        if (groups.isEmpty()) return 0;
+        int h = 0;
+        for (TaskGroup g : groups) {
+            h += groupHeight(g) + BLOCK_GAP;
+        }
+        return h;
+    }
+
+    private int maxScroll() {
+        return Math.max(0, contentHeight() - viewportHeight());
+    }
+
     public void tickProgress() {
         for (Current c : currents) {
             if (c.entry != null && !c.pending && c.channelTotal > 0 && c.animatedRemaining > 0) {
@@ -253,7 +337,6 @@ public class TaskQueuePanel extends AbstractWidget {
         }
     }
 
-    /** Fraction 0..1 through a current task (channel-based, else step-based). */
     private static float progressFraction(Current c) {
         if (c.entry == null || c.pending) return 0;
         if (c.channelTotal > 0) {
@@ -266,7 +349,6 @@ public class TaskQueuePanel extends AbstractWidget {
         return 0;
     }
 
-    /** Short "time remaining" label for a current task row, or a waiting label when not started. */
     private static String timeLabel(Current c) {
         if (c.entry == null) return "";
         if (c.pending) return pendingLabel(c.entry.category());
@@ -281,7 +363,6 @@ public class TaskQueuePanel extends AbstractWidget {
         return "";
     }
 
-    /** Localized "waiting to start" label for a pending channel task. */
     private static String pendingLabel(String cat) {
         return switch (cat) {
             case "decompose" -> I18n.name("gui.wandscape.queue.pending.decompose", "待分解").getString();
@@ -295,7 +376,6 @@ public class TaskQueuePanel extends AbstractWidget {
         };
     }
 
-    /** Simple track + gold fill progress bar. */
     private static void drawProgressBar(GuiGraphics g, int x, int y, int w, int h, float frac) {
         g.fill(x, y, x + w, y + h, 0x66000000);
         int fw = Math.round(w * frac);
@@ -304,14 +384,12 @@ public class TaskQueuePanel extends AbstractWidget {
         }
     }
 
-    /** Resolve a cached ItemStack for the given resource id, or null. */
-    @javax.annotation.Nullable
+    @Nullable
     private ItemStack resolveIcon(String itemOrRecipeId) {
         if (itemOrRecipeId == null || itemOrRecipeId.isBlank()) return null;
         return iconCache.computeIfAbsent(itemOrRecipeId, id -> {
             ResourceLocation rl = ResourceLocation.tryParse(id);
             if (rl == null) return null;
-            // Try block first, then item
             Block block = BuiltInRegistries.BLOCK.getOptional(rl).orElse(null);
             if (block != null && !(block.defaultBlockState().isAir())) {
                 return new ItemStack(block);
@@ -324,10 +402,9 @@ public class TaskQueuePanel extends AbstractWidget {
         });
     }
 
-    /** Render an icon stack at (x, y), centred vertically within a rowHeight tall cell. */
-    private void renderIcon(GuiGraphics g, ItemStack stack, int x, int y, int rowHeight) {
+    private void renderIcon(GuiGraphics g, ItemStack stack, int x, int y, int cellH) {
         if (stack.isEmpty()) return;
-        int iconY = y + (rowHeight - ICON_SIZE) / 2;
+        int iconY = y + (cellH - ICON_SIZE) / 2;
         g.renderItem(stack, x, iconY);
     }
 
@@ -341,10 +418,15 @@ public class TaskQueuePanel extends AbstractWidget {
         // Background panel
         SkinRender.drawPanel9Slice(g, SkinSprite.PANEL_B, getX(), getY(), width, height);
 
-        int rightPad     = 4;  // padding between button area and panel right edge
-        int colRightStart = getX() + width - BTN_AREA_W - rightPad;
+        if (groups.isEmpty()) {
+            Component emptyText = I18n.name("gui.wandscape.queue.empty", "暂无制作任务");
+            int tw = Minecraft.getInstance().font.width(emptyText);
+            int tx = getX() + (width - tw) / 2;
+            int ty = getY() + (height - 8) / 2;
+            g.drawString(Minecraft.getInstance().font, emptyText, tx, ty, MedievalColors.TEXT_DIM);
+            return;
+        }
 
-        // Row area — running rows and pending entries share one scroll region
         int regionTop  = contentTop();
         int listBottom = contentBottom();
         int maxScroll  = maxScroll();
@@ -354,160 +436,121 @@ public class TaskQueuePanel extends AbstractWidget {
 
         boolean scrollable = listBottom > regionTop && maxScroll > 0;
         if (scrollable) {
-            // Clip partially-scrolled rows so they never paint over the panel edges
             g.enableScissor(getX(), regionTop, getX() + width, listBottom);
         }
 
-        // Hover only counts inside the viewport: a row scrolled under the top edge is not visible.
-        int hoverMouseY = mouseY >= regionTop && mouseY < listBottom ? mouseY : Integer.MIN_VALUE;
+        int hoverMouseY = (mouseY >= regionTop && mouseY < listBottom) ? mouseY : Integer.MIN_VALUE;
 
-        // ── Current (executing) tasks — leading block of the scroll region, each with a progress bar ──
-        int currentBase = regionTop - scrollOffset;
-        for (int i = 0; i < currents.size(); i++) {
-            int rowY = currentBase + i * CURRENT_ROW_H;
-            if (rowY + CURRENT_ROW_H <= regionTop) continue;   // scrolled off the top edge
-            if (rowY >= listBottom) break;                     // past the bottom edge
-            renderCurrentRow(g, rowY, currents.get(i), mouseX, hoverMouseY);
-        }
+        int blockX = getX() + 3;
+        int blockW = width - 6;
+        int curY = regionTop - scrollOffset;
 
-        // ── Pending entries — directly below the running rows, moving with the same offset ──
-        int pendingBase = currentBase + currents.size() * CURRENT_ROW_H;
-        int startRow = Math.max(0, (regionTop - pendingBase) / rowHeight);
-        for (int row = startRow; row < entries.size(); row++) {
-            int rowBaseY = pendingBase + row * rowHeight;
-            if (rowBaseY + rowHeight <= regionTop) continue;   // scrolled off the top edge
-            if (rowBaseY >= listBottom) break;                 // past the bottom edge
+        for (TaskGroup grp : groups) {
+            int gH = groupHeight(grp);
+            int blockY = curY;
+            curY += gH + BLOCK_GAP;
 
-            Entry e = entries.get(row);
+            // Frustum cull
+            if (blockY + gH <= regionTop) continue;
+            if (blockY >= listBottom) break;
 
-            // Alternating row background
-            if (row % 2 == 1) {
-                g.fill(getX() + 1, rowBaseY, getX() + width - 1, rowBaseY + rowHeight - 1, 0x22FFFFFF);
+            boolean isCollapsed = collapsedGroups.contains(grp.key);
+            int accentColor = groupAccentColor(grp.sourceType);
+
+            // Block outer frame & background
+            g.fill(blockX, blockY, blockX + blockW, blockY + gH, 0x33000000);
+            g.fill(blockX, blockY, blockX + blockW, blockY + 1, 0x448B7355);
+            g.fill(blockX, blockY + gH - 1, blockX + blockW, blockY + gH, 0x448B7355);
+            g.fill(blockX + blockW - 1, blockY, blockX + blockW, blockY + gH, 0x448B7355);
+            // Left vertical accent stripe
+            g.fill(blockX, blockY, blockX + 2, blockY + gH, accentColor);
+
+            // Header bar
+            int headerY = blockY;
+            boolean headerHovered = hoverMouseY >= headerY && hoverMouseY < headerY + HEADER_H
+                    && mouseX >= blockX && mouseX < blockX + blockW;
+            if (headerHovered) {
+                g.fill(blockX + 2, headerY, blockX + blockW - 1, headerY + HEADER_H, 0x1AFFFFFF);
+            } else {
+                g.fill(blockX + 2, headerY, blockX + blockW - 1, headerY + HEADER_H, 0x22000000);
             }
 
-            int contentX = getX() + CONTENT_LEFT_PAD;
-            int centerY  = rowBaseY + rowHeight / 2;
-            int btnY     = rowBaseY + (rowHeight - BTN_H) / 2;
+            // Collapse arrow: ▼ (expanded) or ▶ (collapsed)
+            String arrowStr = isCollapsed ? "▶" : "▼";
+            g.drawString(Minecraft.getInstance().font, arrowStr, blockX + 5, headerY + 4, accentColor);
 
-            // ── Icon ──
-            ItemStack icon = resolveIcon(e.itemOrRecipeId);
-            if (icon != null) {
-                renderIcon(g, icon, contentX, rowBaseY, rowHeight);
+            // Header title & count
+            Component title = groupTitle(grp);
+            String countStr = "(" + grp.totalCount() + ")";
+            int countW = Minecraft.getInstance().font.width(countStr);
+            int closeBtnX = blockX + blockW - BTN_W - 3;
+            int closeBtnY = headerY + (HEADER_H - BTN_H) / 2;
+
+            // Close button [×] on header (one-click cancel group)
+            boolean closeHovered = headerHovered && mouseX >= closeBtnX && mouseX < closeBtnX + BTN_W
+                    && hoverMouseY >= closeBtnY && hoverMouseY < closeBtnY + BTN_H;
+            drawCloseBtn(g, closeBtnX, closeBtnY, onCancelGroup != null, mouseX, hoverMouseY, null);
+
+            // Title max available width
+            int maxTitleW = closeBtnX - countW - (blockX + 16) - 4;
+            String rawTitle = title.getString();
+            if (Minecraft.getInstance().font.width(rawTitle) > maxTitleW) {
+                rawTitle = Minecraft.getInstance().font.plainSubstrByWidth(rawTitle, Math.max(10, maxTitleW - 8)) + "…";
             }
+            g.drawString(Minecraft.getInstance().font, rawTitle, blockX + 16, headerY + 4, MedievalColors.TEXT_WARM_WHITE);
+            int titleEnd = blockX + 16 + Minecraft.getInstance().font.width(rawTitle);
+            g.drawString(Minecraft.getInstance().font, countStr, titleEnd + 3, headerY + 4, MedievalColors.TEXT_MUTED);
 
-            // ── Category label + item quantity ──
-            int labelX = contentX + ICON_SIZE + ICON_GAP;
-            Component label = categoryLabel(e.category);
-            g.drawString(Minecraft.getInstance().font, label,
-                    labelX, centerY - 4, MedievalColors.TEXT_DIM);
-
-            int curX = labelX + Minecraft.getInstance().font.width(label);
-            if (e.quantity > 0) {
-                String qtyStr = " x" + e.quantity;
-                g.drawString(Minecraft.getInstance().font, qtyStr,
-                        curX, centerY - 4, MedievalColors.TEXT_MUTED);
-                curX += Minecraft.getInstance().font.width(qtyStr);
-            }
-
-            // ── Blockage status tag (right-aligned before action buttons) ──
-            int textColEnd = colRightStart - 2;
-            int statusBlockX = textColEnd;
-
-            if (e.capacityBlocked) {
-                Component shortTag = I18n.name("gui.wandscape.queue.capacity", "容量不足");
-                int tagW = Minecraft.getInstance().font.width(shortTag);
-                statusBlockX = textColEnd - tagW;
-                if (statusBlockX >= curX + 2) {
-                    g.drawString(Minecraft.getInstance().font, shortTag,
-                            statusBlockX, centerY - 4, 0xFFE05040);
-                }
-            } else if (e.insufficient) {
-                if (e.missingElements != null && !e.missingElements.isEmpty()) {
-                    Component shortTag = I18n.name("gui.wandscape.queue.insufficient", "缺");
-                    int tagW = Minecraft.getInstance().font.width(shortTag);
-                    int iconCount = e.missingElements.size();
-                    int totalBlockW = tagW + 2 + iconCount * 11 - 2;
-                    statusBlockX = textColEnd - totalBlockW;
-                    if (statusBlockX < curX + 2) statusBlockX = curX + 2;
-
-                    g.drawString(Minecraft.getInstance().font, shortTag,
-                            statusBlockX, centerY - 4, 0xFFE05040);
-
-                    int iconX = statusBlockX + tagW + 2;
-                    for (String el : e.missingElements) {
-                        if (iconX + 9 > textColEnd) break;
-                        ResourceLocation ico = WandscapeTheme.elementIcon(el);
-                        if (ico != null) {
-                            WandscapeTheme.drawIcon(g, ico, iconX, centerY - 5, 9, 9, WandscapeTheme.elementColor(el));
-                        }
-                        iconX += 11;
-                    }
+            // Header tooltip tracking
+            if (headerHovered) {
+                if (closeHovered) {
+                    hoveredTooltipLines = List.of(I18n.name("gui.wandscape.queue.tooltip.cancel_group", "一键取消此组所有任务"));
                 } else {
-                    Component shortTag = I18n.name("gui.wandscape.queue.missing_materials", "缺材料");
-                    int tagW = Minecraft.getInstance().font.width(shortTag);
-                    statusBlockX = textColEnd - tagW;
-                    if (statusBlockX >= curX + 2) {
-                        g.drawString(Minecraft.getInstance().font, shortTag,
-                                statusBlockX, centerY - 4, 0xFFE05040);
-                    }
+                    hoveredTooltipLines = List.of(I18n.name("gui.wandscape.queue.tooltip.group_summary",
+                            "%s (进行中: %s, 排队: %s)", title.getString(), grp.currents.size(), grp.entries.size()));
                 }
             }
 
-            // ── Hover tooltip tracking ──
-            if (hoverMouseY >= rowBaseY && hoverMouseY < rowBaseY + rowHeight) {
-                if (mouseX >= getX() && mouseX < colRightStart) {
-                    if ((e.capacityBlocked || e.insufficient) && mouseX >= statusBlockX && mouseX <= textColEnd) {
-                        if (e.capacityBlocked) {
-                            hoveredTooltipLines = List.of(I18n.name("gui.wandscape.queue.tooltip.capacity", "殖民地仓库容量不足"));
-                        } else if (e.missingElements != null && !e.missingElements.isEmpty()) {
-                            String elNames = formatElements(e.missingElements);
-                            hoveredTooltipLines = List.of(I18n.name("gui.wandscape.queue.tooltip.missing_elements", "缺少元素: %s", elNames));
-                        } else {
-                            hoveredTooltipLines = List.of(I18n.name("gui.wandscape.queue.tooltip.missing_materials", "缺少原料，等待输入"));
-                        }
-                    } else if (icon != null && !icon.isEmpty()) {
-                        hoveredTooltipStack = icon;
+            // If not collapsed, render the contained tasks
+            if (!isCollapsed) {
+                // Divider line under header
+                g.fill(blockX + 2, headerY + HEADER_H - 1, blockX + blockW - 1, headerY + HEADER_H, 0x228B7355);
+
+                int itemY = headerY + HEADER_H + 1;
+                int innerX = blockX + 2;
+                int innerW = blockW - 3;
+
+                // Running tasks
+                for (Current c : grp.currents) {
+                    if (itemY + CURRENT_ROW_H > regionTop && itemY < listBottom) {
+                        renderCurrentRow(g, itemY, c, innerX, innerW, mouseX, hoverMouseY);
                     }
-                } else if (mouseX >= colRightStart && mouseX < colRightStart + BTN_AREA_W && hoverMouseY >= btnY && hoverMouseY < btnY + BTN_H) {
-                    int col = (mouseX - colRightStart) / (BTN_W + BTN_GAP);
-                    if (col == 0) {
-                        hoveredTooltipLines = List.of(I18n.name("gui.wandscape.queue.tooltip.move_to_top", "置顶任务"));
-                    } else if (col == 1) {
-                        hoveredTooltipLines = List.of(I18n.name("gui.wandscape.queue.tooltip.move_to_bottom", "置底任务"));
-                    } else if (col == 2) {
-                        hoveredTooltipLines = List.of(I18n.name("gui.wandscape.queue.tooltip.cancel", "取消任务"));
+                    itemY += CURRENT_ROW_H;
+                }
+
+                // Pending entries
+                for (int i = 0; i < grp.entries.size(); i++) {
+                    Entry e = grp.entries.get(i);
+                    if (itemY + rowHeight > regionTop && itemY < listBottom) {
+                        renderEntryRow(g, itemY, e, innerX, innerW, mouseX, hoverMouseY, i % 2 == 1);
                     }
+                    itemY += rowHeight;
                 }
             }
-
-            // ── Action buttons ──
-            boolean canTop    = onMoveToTop != null    && e.index > 0;
-            boolean canBottom = onMoveToBottom != null && e.index < entries.size() - 1;
-            boolean canDelete = onDelete != null;
-
-            drawToTopBtn   (g, colRightStart,                   btnY, canTop,    mouseX, hoverMouseY);
-            drawToBottomBtn(g, colRightStart + BTN_W + BTN_GAP,  btnY, canBottom, mouseX, hoverMouseY);
-            drawCloseBtn   (g, colRightStart + 2*(BTN_W+BTN_GAP),btnY, canDelete, mouseX, hoverMouseY,
-                        () -> { if (canDelete && onDelete != null)   onDelete.accept(e.index);    });
         }
 
         if (scrollable) {
             g.disableScissor();
-            // Thin scrollbar in the right padding, shown only while the content overflows
             RenderUtil.drawScrollbar(g, getX() + width - 3, regionTop, 3, listBottom - regionTop,
                     contentHeight(), scrollOffset);
         }
     }
 
-    /** Draw a locked current-task row: icon + label + remaining time + progress bar. */
-    private void renderCurrentRow(GuiGraphics g, int rowY, Current c, int mouseX, int mouseY) {
-        // Gold-tinted highlight so the running task stands out from pending rows
-        g.fill(getX() + 1, rowY, getX() + width - 1, rowY + CURRENT_ROW_H - 1, 0x44D4A840);
+    private void renderCurrentRow(GuiGraphics g, int rowY, Current c, int rowX, int rowW, int mouseX, int mouseY) {
+        g.fill(rowX, rowY, rowX + rowW, rowY + CURRENT_ROW_H - 1, 0x33D4A840);
 
-        int contentX = getX() + CONTENT_LEFT_PAD;
-        // Current row has no buttons — time text and progress bar can use the full panel width,
-        // keeping them clear of long category labels.
-        int textRight = getX() + width - 4;
+        int contentX = rowX + CONTENT_LEFT_PAD;
+        int textRight = rowX + rowW - 4;
 
         ItemStack icon = resolveIcon(c.entry.itemOrRecipeId());
         if (icon != null) {
@@ -529,24 +572,120 @@ public class TaskQueuePanel extends AbstractWidget {
             g.drawString(Minecraft.getInstance().font, time, textRight - timeW, rowY + 2, MedievalColors.TEXT_MUTED);
         }
 
-        // Progress bar spans from the label start to the right text edge.
-        // Skipped while the channel task is pending (not started yet) — a waiting label shows instead.
         if (!c.pending) {
             int barW = Math.max(8, textRight - labelX);
             drawProgressBar(g, labelX, rowY + 13, barW, 3, progressFraction(c));
         }
 
-        if (mouseX >= getX() && mouseX < getX() + width && mouseY >= rowY && mouseY < rowY + CURRENT_ROW_H) {
+        if (mouseX >= rowX && mouseX < rowX + rowW && mouseY >= rowY && mouseY < rowY + CURRENT_ROW_H) {
             if (icon != null && !icon.isEmpty()) {
                 hoveredTooltipStack = icon;
             }
         }
     }
 
-    /**
-     * Render tooltip if hovering over a queue row item or shortage tag.
-     * Call from Screen's {@code renderForeground}.
-     */
+    private void renderEntryRow(GuiGraphics g, int rowY, Entry e, int rowX, int rowW, int mouseX, int mouseY, boolean isOdd) {
+        if (isOdd) {
+            g.fill(rowX, rowY, rowX + rowW, rowY + rowHeight - 1, 0x18FFFFFF);
+        }
+
+        int colRightStart = rowX + rowW - BTN_AREA_W - 2;
+        int contentX = rowX + CONTENT_LEFT_PAD;
+        int centerY  = rowY + rowHeight / 2;
+        int btnY     = rowY + (rowHeight - BTN_H) / 2;
+
+        ItemStack icon = resolveIcon(e.itemOrRecipeId);
+        if (icon != null) {
+            renderIcon(g, icon, contentX, rowY, rowHeight);
+        }
+
+        int labelX = contentX + ICON_SIZE + ICON_GAP;
+        Component label = categoryLabel(e.category);
+        g.drawString(Minecraft.getInstance().font, label, labelX, centerY - 4, MedievalColors.TEXT_DIM);
+
+        int curX = labelX + Minecraft.getInstance().font.width(label);
+        if (e.quantity > 0) {
+            String qtyStr = " x" + e.quantity;
+            g.drawString(Minecraft.getInstance().font, qtyStr, curX, centerY - 4, MedievalColors.TEXT_MUTED);
+            curX += Minecraft.getInstance().font.width(qtyStr);
+        }
+
+        int textColEnd = colRightStart - 2;
+        int statusBlockX = textColEnd;
+        if (e.capacityBlocked) {
+            Component shortTag = I18n.name("gui.wandscape.queue.capacity", "容量不足");
+            int tagW = Minecraft.getInstance().font.width(shortTag);
+            statusBlockX = textColEnd - tagW;
+            if (statusBlockX >= curX + 2) {
+                g.drawString(Minecraft.getInstance().font, shortTag, statusBlockX, centerY - 4, 0xFFE05040);
+            }
+        } else if (e.insufficient) {
+            if (e.missingElements != null && !e.missingElements.isEmpty()) {
+                Component shortTag = I18n.name("gui.wandscape.queue.insufficient", "缺");
+                int tagW = Minecraft.getInstance().font.width(shortTag);
+                int iconCount = e.missingElements.size();
+                int totalBlockW = tagW + 2 + iconCount * 11 - 2;
+                statusBlockX = textColEnd - totalBlockW;
+                if (statusBlockX < curX + 2) statusBlockX = curX + 2;
+
+                g.drawString(Minecraft.getInstance().font, shortTag, statusBlockX, centerY - 4, 0xFFE05040);
+
+                int iconX = statusBlockX + tagW + 2;
+                for (String el : e.missingElements) {
+                    if (iconX + 9 > textColEnd) break;
+                    ResourceLocation ico = WandscapeTheme.elementIcon(el);
+                    if (ico != null) {
+                        WandscapeTheme.drawIcon(g, ico, iconX, centerY - 5, 9, 9, WandscapeTheme.elementColor(el));
+                    }
+                    iconX += 11;
+                }
+            } else {
+                Component shortTag = I18n.name("gui.wandscape.queue.missing_materials", "缺材料");
+                int tagW = Minecraft.getInstance().font.width(shortTag);
+                statusBlockX = textColEnd - tagW;
+                if (statusBlockX >= curX + 2) {
+                    g.drawString(Minecraft.getInstance().font, shortTag, statusBlockX, centerY - 4, 0xFFE05040);
+                }
+            }
+        }
+
+        // Hover tooltip tracking
+        if (mouseY >= rowY && mouseY < rowY + rowHeight) {
+            if (mouseX >= rowX && mouseX < colRightStart) {
+                if ((e.capacityBlocked || e.insufficient) && mouseX >= statusBlockX && mouseX <= textColEnd) {
+                    if (e.capacityBlocked) {
+                        hoveredTooltipLines = List.of(I18n.name("gui.wandscape.queue.tooltip.capacity", "殖民地仓库容量不足"));
+                    } else if (e.missingElements != null && !e.missingElements.isEmpty()) {
+                        String elNames = formatElements(e.missingElements);
+                        hoveredTooltipLines = List.of(I18n.name("gui.wandscape.queue.tooltip.missing_elements", "缺少元素: %s", elNames));
+                    } else {
+                        hoveredTooltipLines = List.of(I18n.name("gui.wandscape.queue.tooltip.missing_materials", "缺少原料，等待输入"));
+                    }
+                } else if (icon != null && !icon.isEmpty()) {
+                    hoveredTooltipStack = icon;
+                }
+            } else if (mouseX >= colRightStart && mouseX < colRightStart + BTN_AREA_W && mouseY >= btnY && mouseY < btnY + BTN_H) {
+                int col = (mouseX - colRightStart) / (BTN_W + BTN_GAP);
+                if (col == 0) {
+                    hoveredTooltipLines = List.of(I18n.name("gui.wandscape.queue.tooltip.move_to_top", "置顶任务"));
+                } else if (col == 1) {
+                    hoveredTooltipLines = List.of(I18n.name("gui.wandscape.queue.tooltip.move_to_bottom", "置底任务"));
+                } else if (col == 2) {
+                    hoveredTooltipLines = List.of(I18n.name("gui.wandscape.queue.tooltip.cancel", "取消任务"));
+                }
+            }
+        }
+
+        // Action buttons
+        boolean canTop    = onMoveToTop != null    && e.index > 0;
+        boolean canBottom = onMoveToBottom != null && e.index < entries.size() - 1;
+        boolean canDelete = onDelete != null;
+
+        drawToTopBtn   (g, colRightStart,                   btnY, canTop,    mouseX, mouseY);
+        drawToBottomBtn(g, colRightStart + BTN_W + BTN_GAP,  btnY, canBottom, mouseX, mouseY);
+        drawCloseBtn   (g, colRightStart + 2 * (BTN_W + BTN_GAP), btnY, canDelete, mouseX, mouseY, null);
+    }
+
     public void renderTooltip(GuiGraphics g, int mouseX, int mouseY) {
         if (hoveredTooltipStack != null && !hoveredTooltipStack.isEmpty()) {
             g.renderTooltip(Minecraft.getInstance().font, hoveredTooltipStack, mouseX, mouseY);
@@ -566,10 +705,6 @@ public class TaskQueuePanel extends AbstractWidget {
         return sb.toString();
     }
 
-    /**
-     * Map internal category key to a short display label (localized).
-     * Keep strings short so they fit on one line with the icon.
-     */
     private static Component categoryLabel(String cat) {
         String key = "gui.wandscape.queue.category." + cat;
         return switch (cat) {
@@ -584,36 +719,26 @@ public class TaskQueuePanel extends AbstractWidget {
         };
     }
 
-    // ── Sprite button helpers ──────────────────────────────────────────────
-
-    private void drawToTopBtn(GuiGraphics g, int btnX, int btnY,
-                              boolean active, int mouseX, int mouseY) {
+    private void drawToTopBtn(GuiGraphics g, int btnX, int btnY, boolean active, int mouseX, int mouseY) {
         int state = active
                 ? (mouseX >= btnX && mouseX < btnX + BTN_W && mouseY >= btnY && mouseY < btnY + BTN_H
-                    ? ARROW_STATE_HOVER
-                    : ARROW_STATE_NORMAL)
+                    ? ARROW_STATE_HOVER : ARROW_STATE_NORMAL)
                 : ARROW_STATE_DISABLED;
         renderArrow(g, btnX, btnY, state, true);
         int barColor = (state == ARROW_STATE_DISABLED) ? 0x668B7355 : ((state == ARROW_STATE_HOVER) ? 0xFFFFFFFF : 0xFFD4A840);
         g.fill(btnX + 3, btnY + 2, btnX + BTN_W - 3, btnY + 3, barColor);
     }
 
-    private void drawToBottomBtn(GuiGraphics g, int btnX, int btnY,
-                                 boolean active, int mouseX, int mouseY) {
+    private void drawToBottomBtn(GuiGraphics g, int btnX, int btnY, boolean active, int mouseX, int mouseY) {
         int state = active
                 ? (mouseX >= btnX && mouseX < btnX + BTN_W && mouseY >= btnY && mouseY < btnY + BTN_H
-                    ? ARROW_STATE_HOVER
-                    : ARROW_STATE_NORMAL)
+                    ? ARROW_STATE_HOVER : ARROW_STATE_NORMAL)
                 : ARROW_STATE_DISABLED;
         renderArrow(g, btnX, btnY, state, false);
         int barColor = (state == ARROW_STATE_DISABLED) ? 0x668B7355 : ((state == ARROW_STATE_HOVER) ? 0xFFFFFFFF : 0xFFD4A840);
         g.fill(btnX + 3, btnY + BTN_H - 3, btnX + BTN_W - 3, btnY + BTN_H - 2, barColor);
     }
 
-    /**
-     * Draws an up/down arrow sprite, brightening it on hover so the shared
-     * normal sprite stays visually distinguishable. Shader color is always reset.
-     */
     private void renderArrow(GuiGraphics g, int btnX, int btnY, int state, boolean up) {
         if (state == ARROW_STATE_HOVER) {
             RenderSystem.setShaderColor(HOVER_BRIGHTEN, HOVER_BRIGHTEN, HOVER_BRIGHTEN, 1.0F);
@@ -626,22 +751,13 @@ public class TaskQueuePanel extends AbstractWidget {
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
     }
 
-    private void drawCloseBtn(GuiGraphics g, int btnX, int btnY,
-                              boolean active, int mouseX, int mouseY, Runnable onPress) {
+    private void drawCloseBtn(GuiGraphics g, int btnX, int btnY, boolean active, int mouseX, int mouseY, @Nullable Runnable onPress) {
         int state = active
-                ? (mouseX >= btnX && mouseX < btnX + BTN_W && mouseY >= btnY && mouseY < btnY + BTN_H
-                    ? 1
-                    : 0)
+                ? (mouseX >= btnX && mouseX < btnX + BTN_W && mouseY >= btnY && mouseY < btnY + BTN_H ? 1 : 0)
                 : CLOSE_STATE_DISABLED;
         SkinRender.drawCloseButton(g, btnX, btnY, BTN_W, BTN_H, state);
     }
 
-    // ── Click handling ─────────────────────────────────────────────────────
-
-    /**
-     * Hit-test: find which active button the mouse is over and fire its action.
-     * Scans rows bottom-up so the last rendered visible row takes priority when overlapping.
-     */
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (!visible || button != 0) return false;
@@ -650,50 +766,96 @@ public class TaskQueuePanel extends AbstractWidget {
         int my = (int) mouseY;
         int regionTop = contentTop();
         int listBottom = contentBottom();
-        // Pending rows start after the running rows, both shifted by the shared scroll offset
-        int pendingBase = regionTop + currents.size() * CURRENT_ROW_H - scrollOffset;
 
-        for (int row = entries.size() - 1; row >= 0; row--) {
-            int rowBaseY = pendingBase + row * rowHeight;
-            if (rowBaseY + rowHeight <= regionTop || rowBaseY >= listBottom) continue;
+        if (my < regionTop || my >= listBottom) return false;
+        if (mx < getX() || mx >= getX() + width) return false;
 
-            Entry e = entries.get(row);
-            int btnY = rowBaseY + (rowHeight - BTN_H) / 2;
-            if (my < btnY || my > btnY + BTN_H) continue;
+        int blockX = getX() + 3;
+        int blockW = width - 6;
+        int curY = regionTop - scrollOffset;
 
-            int colRightStart = getX() + width - BTN_AREA_W - 4;
+        for (TaskGroup grp : groups) {
+            int gH = groupHeight(grp);
+            int blockY = curY;
+            curY += gH + BLOCK_GAP;
 
-            // Determine which button column the mouse X falls in
-            int col = -1;
-            for (int c = 0; c < 3; c++) {
-                int bx = colRightStart + c * (BTN_W + BTN_GAP);
-                if (mx >= bx && mx < bx + BTN_W) { col = c; break; }
+            if (my < blockY || my >= blockY + gH) continue;
+            if (mx < blockX || mx >= blockX + blockW) continue;
+
+            boolean isCollapsed = collapsedGroups.contains(grp.key);
+
+            // Inside header?
+            if (my < blockY + HEADER_H) {
+                int closeBtnX = blockX + blockW - BTN_W - 3;
+                int closeBtnY = blockY + (HEADER_H - BTN_H) / 2;
+                if (mx >= closeBtnX && mx < closeBtnX + BTN_W && my >= closeBtnY && my < closeBtnY + BTN_H) {
+                    if (onCancelGroup != null) {
+                        onCancelGroup.accept(grp.sourceType, grp.sourceId);
+                        return true;
+                    }
+                } else {
+                    // Clicked header elsewhere -> toggle collapse!
+                    if (isCollapsed) {
+                        collapsedGroups.remove(grp.key);
+                    } else {
+                        collapsedGroups.add(grp.key);
+                    }
+                    scrollOffset = Math.min(scrollOffset, maxScroll());
+                    return true;
+                }
+                return false;
             }
-            if (col < 0) return false;
 
-            boolean active;
-            Runnable action;
-            switch (col) {
-                case 0 -> { // ⤒
-                    active = onMoveToTop != null && e.index > 0;
-                    action = () -> { if (active && onMoveToTop != null) onMoveToTop.accept(e.index); };
-                }
-                case 1 -> { // ⤓
-                    active = onMoveToBottom != null && e.index < entries.size() - 1;
-                    action = () -> { if (active && onMoveToBottom != null) onMoveToBottom.accept(e.index); };
-                }
-                default -> { // ×
-                    active = onDelete != null;
-                    action = () -> { if (active && onDelete != null) onDelete.accept(e.index); };
+            // Inside expanded group content?
+            if (!isCollapsed) {
+                int itemY = blockY + HEADER_H + 1;
+                // Skip currents (running tasks are progress-only)
+                itemY += grp.currents.size() * CURRENT_ROW_H;
+                int innerX = blockX + 2;
+                int innerW = blockW - 3;
+                int colRightStart = innerX + innerW - BTN_AREA_W - 2;
+
+                for (Entry e : grp.entries) {
+                    if (my >= itemY && my < itemY + rowHeight) {
+                        int btnY = itemY + (rowHeight - BTN_H) / 2;
+                        if (my >= btnY && my < btnY + BTN_H && mx >= colRightStart && mx < colRightStart + BTN_AREA_W) {
+                            int col = (mx - colRightStart) / (BTN_W + BTN_GAP);
+                            boolean active;
+                            Runnable action;
+                            switch (col) {
+                                case 0 -> { // ⤒
+                                    active = onMoveToTop != null && e.index > 0;
+                                    action = () -> { if (active && onMoveToTop != null) onMoveToTop.accept(e.index); };
+                                }
+                                case 1 -> { // ⤓
+                                    active = onMoveToBottom != null && e.index < entries.size() - 1;
+                                    action = () -> { if (active && onMoveToBottom != null) onMoveToBottom.accept(e.index); };
+                                }
+                                case 2 -> { // ×
+                                    active = onDelete != null;
+                                    action = () -> { if (active && onDelete != null) onDelete.accept(e.index); };
+                                }
+                                default -> {
+                                    active = false;
+                                    action = null;
+                                }
+                            }
+                            if (active && action != null) {
+                                action.run();
+                                return true;
+                            }
+                        }
+                        return false;
+                    }
+                    itemY += rowHeight;
                 }
             }
-            if (active) { action.run(); return true; }
             return false;
         }
+
         return false;
     }
 
-    /** Mouse-wheel scrolls the whole panel content (running rows + pending entries). */
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
         if (!visible) return false;
@@ -703,7 +865,6 @@ public class TaskQueuePanel extends AbstractWidget {
         }
         int maxScroll = maxScroll();
         if (maxScroll <= 0) return false;
-        // 2 rows per notch, matching ScrollableList
         scrollOffset = (int) Math.clamp(scrollOffset - scrollY * rowHeight * 2, 0, maxScroll);
         return true;
     }

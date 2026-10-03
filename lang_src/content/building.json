@@ -147,6 +147,10 @@
     "zh_cn": "法师小屋",
     "en_us": "Mage Hut"
   },
+  "building.wandscape.magic_academy": {
+    "zh_cn": "魔法学院",
+    "en_us": "Magic Academy"
+  },
   "building.wandscape.magicshop": {
     "zh_cn": "魔法商店",
     "en_us": "Magic Shop"

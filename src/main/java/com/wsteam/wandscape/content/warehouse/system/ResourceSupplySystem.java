@@ -219,6 +219,18 @@ public class ResourceSupplySystem implements EcsSystem {
      */
     public static boolean enqueueSynthesize(String itemId, int amount, @Nullable UUID colonyId,
                                             @Nullable World world, int priority, boolean restock) {
+        return enqueueSynthesize(itemId, amount, colonyId, world, priority, restock,
+                restock ? "restock" : "auto", "", restock ? "商店补货" : "");
+    }
+
+    /**
+     * Explicit-source variant: records what originated this synthesize request (building construction,
+     * road construction, shop restock, or auto supply).
+     */
+    public static boolean enqueueSynthesize(String itemId, int amount, @Nullable UUID colonyId,
+                                            @Nullable World world, int priority, boolean restock,
+                                            @Nullable String sourceType, @Nullable String sourceId,
+                                            @Nullable String sourceName) {
         var recipes = Wandscape.PRODUCTION_RECIPE_LOADER;
         if (recipes == null) return false;
         var synthRecipe = recipes.getSynthesizeRecipe(itemId);
@@ -261,14 +273,23 @@ public class ResourceSupplySystem implements EcsSystem {
         if (restock) {
             params.put("supply", new JsonPrimitive("restock"));
         }
+        if (sourceType != null && !sourceType.isBlank()) {
+            params.put("source_type", new JsonPrimitive(sourceType));
+        }
+        if (sourceId != null && !sourceId.isBlank()) {
+            params.put("source_id", new JsonPrimitive(sourceId));
+        }
+        if (sourceName != null && !sourceName.isBlank()) {
+            params.put("source_name", new JsonPrimitive(sourceName));
+        }
         int channelTicks = com.wsteam.wandscape.Wandscape.PRODUCTION_RECIPE_LOADER != null
                 ? com.wsteam.wandscape.Wandscape.PRODUCTION_RECIPE_LOADER.computeSynthesizeChannelTicks(itemId, count)
                 : com.wsteam.wandscape.foundation.util.BalanceValues.workstationCraftTicksPerUnit() * count;
         params.put("channel_ticks", new JsonPrimitive(channelTicks));
 
         api.enqueueWork(stationId, new WorkItem("production:synthesize", params, priority));
-        Log.info(TAG, "shortfall {} x{} → synthesize:{} at workstation {} ({} already in flight, priority={})",
-                itemId, amount, itemId, stationId.toString().substring(0, 8), inFlight, priority);
+        Log.info(TAG, "shortfall {} x{} → synthesize:{} at workstation {} ({} already in flight, priority={}, source={}:{})",
+                itemId, amount, itemId, stationId.toString().substring(0, 8), inFlight, priority, sourceType, sourceId);
         return true;
     }
 
@@ -360,6 +381,92 @@ public class ResourceSupplySystem implements EcsSystem {
             }
         }
         return count;
+    }
+
+    /**
+     * Cancel all synthesize tasks (both queued in workstations and running in the pool)
+     * belonging to a specific source (e.g. an under-construction building or road).
+     *
+     * @param colonyId   colony scope
+     * @param sourceType source type, e.g. "building" or "road" or "player"
+     * @param sourceId   source UUID string (e.g. buildingId or edgeId); if empty, matches all of that sourceType
+     * @param world      ECS world
+     * @return number of tasks cancelled (queued + running)
+     */
+    public static int cancelTasksForSource(@Nullable UUID colonyId,
+                                           @Nullable String sourceType,
+                                           @Nullable String sourceId,
+                                           @Nullable World world) {
+        var api = getBuildingApi();
+        if (api == null) return 0;
+
+        int cancelled = 0;
+        List<UUID> stations = api.getBuildingsByCategory(colonyId, "workstation");
+        Set<String> processedGroups = new HashSet<>();
+
+        // 1. Process queued WorkItems in workstation queues
+        for (UUID stationId : stations) {
+            BuildingData bd = api.getBuilding(stationId);
+            if (bd == null) continue;
+            String groupKey = bd.getColonyId() + "|" + bd.getBuildingTypeId();
+            if (!processedGroups.add(groupKey)) continue;
+
+            List<WorkItem> queue = api.getQueue(stationId);
+            for (int i = queue.size() - 1; i >= 0; i--) {
+                WorkItem item = queue.get(i);
+                if (matchesSource(item.params(), item.priority(), sourceType, sourceId)) {
+                    api.removeFromQueue(stationId, i);
+                    cancelled++;
+                    Log.info(TAG, "[CancelSource] Removed WorkItem [{}] {} from station {} (sourceType={}, sourceId={})",
+                            i, item.blueprintId(), stationId.toString().substring(0, 8), sourceType, sourceId);
+                }
+            }
+        }
+
+        // 2. Check running GlobalTasks in world.taskPool
+        if (world != null && world.taskPool != null) {
+            for (GlobalTask t : world.taskPool.all()) {
+                if (t.state == TaskState.COMPLETED) continue;
+                if (!"production:synthesize".equals(t.blueprintId)) continue;
+                if (colonyId != null && !colonyId.equals(resolveColonyId(t))) continue;
+
+                if (matchesSource(t.taskParams, t.priority, sourceType, sourceId)) {
+                    world.taskPool.cancelTask(t.id, world);
+                    if (t.buildingId != null && world.buildingTaskPool != null) {
+                        world.buildingTaskPool.onHeadCompleted(t.buildingId, colonyId, world.taskPool);
+                        api.clearCurrentTask(t.buildingId);
+                    }
+                    cancelled++;
+                    Log.info(TAG, "[CancelSource] Cancelled running task #{} for station {} (sourceType={}, sourceId={})",
+                            t.id, t.buildingId != null ? t.buildingId.toString().substring(0, 8) : "null", sourceType, sourceId);
+                }
+            }
+        }
+        return cancelled;
+    }
+
+    private static boolean matchesSource(Map<String, JsonElement> params, int priority,
+                                         @Nullable String sourceType, @Nullable String sourceId) {
+        String itemSourceType = paramStr(params, "source_type");
+        String itemSourceId = paramStr(params, "source_id");
+
+        // If explicitly tagged with source_type
+        if (itemSourceType != null && !itemSourceType.isEmpty()) {
+            if (sourceType != null && !sourceType.isEmpty() && !sourceType.equalsIgnoreCase(itemSourceType)) return false;
+            if (sourceId != null && !sourceId.isEmpty()) {
+                return sourceId.equalsIgnoreCase(itemSourceId);
+            }
+            return true;
+        }
+
+        // Untagged fallback:
+        if ("player".equalsIgnoreCase(sourceType)) {
+            return priority == WandscapeConstants.TASK_PRIORITY_PLAYER;
+        }
+        if ("restock".equalsIgnoreCase(sourceType)) {
+            return "restock".equals(paramStr(params, "supply"));
+        }
+        return false;
     }
 
     /**
@@ -467,6 +574,16 @@ public class ResourceSupplySystem implements EcsSystem {
             return el.getAsInt();
         }
         return 0;
+    }
+
+    @Nullable
+    private static String paramStr(@Nullable Map<String, JsonElement> params, String key) {
+        if (params == null) return null;
+        JsonElement el = params.get(key);
+        if (el != null && el.isJsonPrimitive() && el.getAsJsonPrimitive().isString()) {
+            return el.getAsString();
+        }
+        return null;
     }
 
     private static String stripMcPrefix(String id) {

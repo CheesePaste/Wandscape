@@ -32,6 +32,7 @@ public final class NodeGatherTaskFactory {
         params.put("element", new JsonPrimitive(config.element()));
         params.put("amount", new JsonPrimitive(config.amountPerHarvest() * count));
         params.put("channel_ticks", new JsonPrimitive(config.channelTicks()));
+        params.put("source_type", new JsonPrimitive("player"));
         return new WorkItem(config.blueprint(), params, GATHER_PRIORITY);
     }
 

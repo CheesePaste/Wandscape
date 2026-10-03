@@ -802,5 +802,10 @@
   "message.wandscape.blueprint.no_colony": {
     "zh_cn": "你没有创建小镇，无法打开配方图鉴",
     "en_us": "You have no town — the recipe book cannot be opened"
+  },
+  "message.wandscape.wonder.magic_academy_completed": {
+    "zh_cn": "[奇观] 魔法学院落成！为小镇解锁了全部合成配方（共 %s 项）",
+    "en_us": "[Wonder] The Magic Academy is complete! All synthesize recipes unlocked for the town (%s items)"
   }
 }
+

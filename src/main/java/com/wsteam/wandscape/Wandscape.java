@@ -627,6 +627,7 @@ public class Wandscape {
 
         BuildCompleteListener.register();
         DemolishCompleteListener.register();
+        com.wsteam.wandscape.content.building.wonder.WonderTriggerRegistry.init();
         // Rebuild colony spatial index from saved data
         var colonyApi = com.wsteam.wandscape.api.WandscapeApis.getColonyApiSilently();
         if (colonyApi instanceof ColonyApiImpl impl) {
@@ -795,7 +796,8 @@ public class Wandscape {
                 .then(RoadStudioCommand.node())
                 .then(SplineEditorCommand.node())
                 .then(RecipeCommand.node())
-                .then(RecoveryCommand.devNode()));
+                .then(RecoveryCommand.devNode())
+                .then(WonderTestCommand.node()));
 
         // ── Curios 兼容：法师饰品槽位管理（仅 Curios 加载时注册，避免无 Curios 时缺类崩溃） ──
         if (com.wsteam.wandscape.compat.curios.CuriosCompat.isLoaded()) {

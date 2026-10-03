@@ -95,6 +95,7 @@ public final class AchievementService {
         world.eventBus.subscribe(ColonyLevelUpEvent.class, AchievementService::onColonyLevelUp);
 
         NeoForge.EVENT_BUS.addListener(AchievementService::onBuildingPlaced);
+        NeoForge.EVENT_BUS.addListener(AchievementService::onWonderCompleted);
         NeoForge.EVENT_BUS.addListener(AchievementService::onShopRestocked);
         NeoForge.EVENT_BUS.addListener(AchievementService::onRaidVictory);
         NeoForge.EVENT_BUS.addListener(AchievementService::onTouristArrived);
@@ -105,6 +106,13 @@ public final class AchievementService {
     }
 
     // ---- Event-driven fast path ----
+
+    private static void onWonderCompleted(com.wsteam.wandscape.content.building.event.WonderCompletedEvent event) {
+        UUID colonyId = event.getColonyId();
+        if (colonyId != null) {
+            checkWonder(colonyId);
+        }
+    }
 
     private static void onBuildingPlaced(BuildingPlacedEvent event) {
         UUID colonyId = event.getColonyId();
