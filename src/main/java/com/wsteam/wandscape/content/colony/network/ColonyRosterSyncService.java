@@ -250,7 +250,16 @@ public final class ColonyRosterSyncService {
         return shortId(id);
     }
 
-    /** 档位显示名（lang 键 + 英文兜底）；{@code null} = 非成员。 */
+    /**
+     * 档位显示名（lang 键 + 英文兜底）；{@code null} = 非成员。
+     *
+     * <p>这是档位名的**唯一真源**：面板渲染与聊天/Toast 都走这里，别在别处再拼一套键
+     * （此前两套键同档异名：面板作「管理员」、消息作「管事」）。
+     *
+     * <p>[别顺手优化] 不要为了省分配把它改成 {@code Map<ColonyRole, String>} 静态缓存：
+     * 客户端语言可在游戏内运行时切换，按 role 缓存的字符串会因此陈旧。真要缓存须以
+     * (role, locale) 为键，或每帧只解析一次。当前每帧一次的开销相对面板其它绘制可忽略。
+     */
     public static MutableComponent roleLabel(@Nullable ColonyRole role) {
         if (role == null) return I18n.name("gui.wandscape.colony_network.role.none", "Non-member");
         return I18n.name("gui.wandscape.colony_network.role." + role.name().toLowerCase(Locale.ROOT), role.name());
