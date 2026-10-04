@@ -24,7 +24,6 @@
 | [guidebook.md](guidebook.md) | **手册全流程（内容 · 文风 · 管线 · 美术）**：md 单源 → 帕秋莉 JSON / 无帕秋莉时的兜底屏两处渲染、「改什么 = 改哪里」唯一源表、玩家文案文风（只写「做了什么」不写能力清单，附我们踩过的真实反例）、md→帕秋莉映射表与样式栈两个坑、生成与分页自检、书皮 512×256 的 23 类槽位全表与美术产出清单 | **动手写或改任何玩家看得到的文案之前**——手册条目、物品/魔法介绍、JEI 信息页、界面标签；改 `guidebook/*.md`、重生成手册、替换手册美术素材、或接续解锁与入口收口时 |
 | [guidebook-screenshots.md](guidebook-screenshots.md) | **手册配图的拍摄清单**：64 个条目的逐张截图位（截哪个界面、从哪进、画面上必须出现什么）+ 拍摄与出图规格（100×100 取景、256 画布、字高约束）+ 分页器吞图片页的实测缺陷与修复方向 | 给手册补真实截图、或发现加了 `![]()` 后图不出现时 |
 | [lang-pipeline.md](lang-pipeline.md) | **语言文件生成管线（lang_src 单源 → lang/zh_cn.json + en_us.json）**：为什么这么拆、源文件分法、编译期校验（中英齐全 / 占位符对齐 / 产物漂移）、以及「为什么不按命名空间拆 / 不自写加载器」的决策留档 | 加或改任何上屏文案、新增界面、或想动 `lang/` 下那两个 JSON 时 |
-| [dsh-migration.md](dsh-migration.md) | **迁移到 DeepSeek Harness（dsh）考察报告**：dsh 用法与 CC 概念对照、配置分层（Cordis YAML patch）、现有资产迁移清单（AGENTS.md/skill/MCP/hook/权限逐项判定）、插件生态实测（Java/MC 方向 0–57 星，不值得）、agent memory 落回项目文档的三分类方案 | 准备换 harness、评估 dsh 值不值得迁、或要把 agent memory 并入仓库文档时 |
 
 ---
 
