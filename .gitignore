@@ -21,7 +21,7 @@ CLAUDE.local.md
 tools/
 ReForgedPlay/
 ReForgedPlay-1.21/
-
+.agents/
 ### 平衡分析工作区（脚本/数据/模拟输出，不入库） ###
 /balance/
 
