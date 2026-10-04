@@ -29,11 +29,22 @@ public final class ColonyOwnership {
     /**
      * 玩家自己的小镇（按 founder 绑定，无视距离），没有则返回 null。
      * 绝不回退到空间「最近小镇」——那是跨镇泄密的根因。
+     *
+     * <p>解析失败（API 未就绪 / 存储异常）一律降级为 null 并记警告：调用方把 null 当
+     * 「无小镇」处理，绝不让异常冒泡打断调用链。这是全仓唯一的「我的小镇」解析入口，
+     * 各域不得再自备副本（否则多镇改造会漏改）。
      */
     @Nullable
     public static UUID ownColony(ServerPlayer player) {
-        ColonyApi api = WandscapeApis.getColonyApiSilently();
-        return api != null ? api.getColonyByFounder(player.getUUID()) : null;
+        if (player == null) return null;
+        try {
+            ColonyApi api = WandscapeApis.getColonyApiSilently();
+            return api != null ? api.getColonyByFounder(player.getUUID()) : null;
+        } catch (RuntimeException e) {
+            Log.warn(TAG, "Failed to resolve own colony for {}: {}",
+                    player.getUUID(), e.toString());
+            return null;
+        }
     }
 
     /**

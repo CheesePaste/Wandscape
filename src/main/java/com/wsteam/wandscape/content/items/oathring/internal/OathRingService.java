@@ -40,7 +40,7 @@ public final class OathRingService {
      * 把法师存入戒指对应档位的首个空槽。先落存储再移除实体（原子性：存储失败则法师不动）。
      */
     public static void tryStore(ServerPlayer player, WandscapeNpc mage, RingTier tier) {
-        UUID playerColony = ownColony(player);
+        UUID playerColony = com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.ownColony(player);
         if (playerColony == null) {
             fail(player, "message.wandscape.ring.no_colony");
             return;
@@ -83,7 +83,7 @@ public final class OathRingService {
      * 从戒指对应档位取第一个已占槽的法师放到目标位置附近。
      */
     public static void tryRelease(ServerPlayer player, BlockPos start, RingTier tier) {
-        UUID playerColony = ownColony(player);
+        UUID playerColony = com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.ownColony(player);
         if (playerColony == null) {
             fail(player, "message.wandscape.ring.no_colony");
             return;
@@ -145,18 +145,6 @@ public final class OathRingService {
     // ════════════════════════════════════════════════════════════
     //  辅助
     // ════════════════════════════════════════════════════════════
-
-    /** 玩家创建殖民地的 UUID；无殖民地（含 API 未就绪）返回 null。 */
-    @Nullable
-    private static UUID ownColony(ServerPlayer player) {
-        try {
-            var api = com.wsteam.wandscape.api.WandscapeApis.getColonyApiSilently();
-            return api != null ? api.getColonyByFounder(player.getUUID()) : null;
-        } catch (RuntimeException e) {
-            Log.warn(TAG, "Failed to resolve own colony for {}: {}", shortId(player.getUUID()), e.toString());
-            return null;
-        }
-    }
 
     /**
      * 目标点附近的安全落点：下落有碰撞体 + 站立两层空气 + chunk 已加载。

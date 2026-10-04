@@ -1,8 +1,6 @@
 package com.wsteam.wandscape.content.warehouse;
 import com.wsteam.wandscape.content.task.ecs.World;
 
-import com.wsteam.wandscape.foundation.log.Log;
-import com.wsteam.wandscape.api.WandscapeApis;
 import com.wsteam.wandscape.content.warehouse.network.WarehouseDataPacket;
 import com.wsteam.wandscape.foundation.networking.Net;
 import net.minecraft.core.BlockPos;
@@ -16,7 +14,6 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 
-import javax.annotation.Nullable;
 import java.util.UUID;
 
 /**
@@ -28,8 +25,6 @@ import java.util.UUID;
  * <p><b>本期不做：</b>Curios「手饰」槽位穿戴 + 穿戴时按键开面板（见 {@code docs/gaps.md}）。
  */
 public class WarehouseTerminalItem extends Item {
-
-    private static final String TAG = "WarehouseTerminalItem";
 
     public WarehouseTerminalItem(Properties properties) {
         super(properties);
@@ -46,7 +41,7 @@ public class WarehouseTerminalItem extends Item {
 
     /** 打开玩家自己殖民地的仓库菜单；无殖民地给出提示并返回 false。 */
     public static boolean openWarehouse(ServerPlayer player) {
-        UUID colonyId = ownColony(player);
+        UUID colonyId = com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.ownColony(player);
         if (colonyId == null) {
             player.displayClientMessage(
                     Component.translatable("message.wandscape.warehouse_terminal.no_colony"), true);
@@ -93,17 +88,5 @@ public class WarehouseTerminalItem extends Item {
         Net.toPlayer(player,
                 WarehouseDataPacket.from(pos, colonyId,
                         bank.getSnapshot(colonyId), bank.getElementSnapshot(colonyId)));
-    }
-
-    /** 玩家创建殖民地的 UUID；无殖民地（含 API 未就绪）返回 null。 */
-    @Nullable
-    private static UUID ownColony(ServerPlayer player) {
-        try {
-            var api = WandscapeApis.getColonyApiSilently();
-            return api != null ? api.getColonyByFounder(player.getUUID()) : null;
-        } catch (RuntimeException e) {
-            Log.warn(TAG, "Failed to resolve own colony for {}: {}", player.getUUID(), e.toString());
-            return null;
-        }
     }
 }

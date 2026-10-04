@@ -9,7 +9,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
 
-import javax.annotation.Nullable;
 import java.util.UUID;
 
 /**
@@ -77,7 +76,7 @@ public final class ScepterService {
 
     /** 切换目标的庇护状态；要求玩家有自己的小镇，标记落该殖民地名下。 */
     public static void toggleShelter(ServerPlayer player, LivingEntity target) {
-        UUID colonyId = ownColony(player);
+        UUID colonyId = com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.ownColony(player);
         if (colonyId == null) {
             fail(player, "message.wandscape.scepter.no_colony");
             return;
@@ -95,7 +94,7 @@ public final class ScepterService {
 
     /** 切换目标的强制仇恨状态（单槽；转移即替换旧目标）；盟友不能标记，要求有自己的小镇。 */
     public static void toggleHostile(ServerPlayer player, LivingEntity target) {
-        UUID colonyId = ownColony(player);
+        UUID colonyId = com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.ownColony(player);
         if (colonyId == null) {
             fail(player, "message.wandscape.scepter.no_colony");
             return;
@@ -130,7 +129,7 @@ public final class ScepterService {
 
     /** 目标法师必须属于玩家自己创建的殖民地；否则拒绝并反馈。 */
     private static boolean requireOwnMage(ServerPlayer player, WandscapeNpc npc) {
-        UUID colonyId = ownColony(player);
+        UUID colonyId = com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.ownColony(player);
         if (colonyId == null) {
             fail(player, "message.wandscape.scepter.no_colony");
             return false;
@@ -141,18 +140,6 @@ public final class ScepterService {
             return false;
         }
         return true;
-    }
-
-    /** 玩家创建殖民地的 UUID；无殖民地（含 API 未就绪）返回 null。 */
-    @Nullable
-    private static UUID ownColony(ServerPlayer player) {
-        try {
-            var api = com.wsteam.wandscape.api.WandscapeApis.getColonyApiSilently();
-            return api != null ? api.getColonyByFounder(player.getUUID()) : null;
-        } catch (RuntimeException e) {
-            Log.warn(TAG, "Failed to resolve own colony for {}: {}", shortId(player.getUUID()), e.toString());
-            return null;
-        }
     }
 
     private static void ok(ServerPlayer player, String key, Object... args) {

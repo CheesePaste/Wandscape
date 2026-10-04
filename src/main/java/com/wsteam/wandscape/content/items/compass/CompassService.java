@@ -1,9 +1,9 @@
 package com.wsteam.wandscape.content.items.compass;
 
 import com.wsteam.wandscape.content.items.compass.network.CompassTargetPacket;
+import com.wsteam.wandscape.content.colony.ownership.ColonyOwnership;
 import com.wsteam.wandscape.content.colony.raid.RaidTownHall;
 import com.wsteam.wandscape.foundation.log.Log;
-import com.wsteam.wandscape.api.WandscapeApis;
 import com.wsteam.wandscape.foundation.networking.Net;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
@@ -31,7 +31,7 @@ public final class CompassService {
     /** 玩家自己殖民地的市政厅 GlobalPos（坐标在主世界）；无殖民地/无市政厅返回 null。 */
     @Nullable
     public static GlobalPos resolveTownHall(ServerPlayer player) {
-        UUID colonyId = ownColony(player);
+        UUID colonyId = ColonyOwnership.ownColony(player);
         if (colonyId == null) return null;
         BlockPos hall = RaidTownHall.findTownHall(colonyId);
         if (hall == null) return null;
@@ -48,7 +48,7 @@ public final class CompassService {
 
     /** 终极指南针右键：传送到自己殖民地的市政厅安全落点。 */
     public static void teleportToTownHall(ServerPlayer player) {
-        UUID colonyId = ownColony(player);
+        UUID colonyId = ColonyOwnership.ownColony(player);
         if (colonyId == null) {
             fail(player, "message.wandscape.compass.no_colony");
             return;
@@ -80,18 +80,6 @@ public final class CompassService {
         ok(player, "message.wandscape.compass.tp", spot.getX(), spot.getY(), spot.getZ());
         syncFor(player); // 传送后把最新市政厅坐标同步回客户端
         Log.info(TAG, "Player {} teleported to town hall at {}", shortId(player.getUUID()), spot);
-    }
-
-    /** 玩家创建殖民地的 UUID；无殖民地（含 API 未就绪）返回 null。 */
-    @Nullable
-    private static UUID ownColony(ServerPlayer player) {
-        try {
-            var api = WandscapeApis.getColonyApiSilently();
-            return api != null ? api.getColonyByFounder(player.getUUID()) : null;
-        } catch (RuntimeException e) {
-            Log.warn(TAG, "Failed to resolve own colony for {}: {}", shortId(player.getUUID()), e.toString());
-            return null;
-        }
     }
 
     /**
