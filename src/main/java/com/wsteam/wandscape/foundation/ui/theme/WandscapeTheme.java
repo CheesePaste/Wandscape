@@ -29,6 +29,8 @@ public final class WandscapeTheme {
     // ── Icons ──
     public static final ResourceLocation ICON_TAB_BUILD = ResourceLocation.fromNamespaceAndPath(Wandscape.MODID, "textures/gui/icons/tab_build.png");
     public static final ResourceLocation ICON_TAB_ROAD = ResourceLocation.fromNamespaceAndPath(Wandscape.MODID, "textures/gui/icons/tab_road.png");
+    /** Sidebar tab: colony switcher (「我的小镇」列表与切换). */
+    public static final ResourceLocation ICON_TAB_COLONY = ResourceLocation.fromNamespaceAndPath(Wandscape.MODID, "textures/gui/icons/tab_colony.png");
     public static final ResourceLocation ICON_TAB_EDITOR = ResourceLocation.fromNamespaceAndPath(Wandscape.MODID, "textures/gui/icons/tab_editor.png");
     public static final ResourceLocation ICON_TAB_SETTINGS = ResourceLocation.fromNamespaceAndPath(Wandscape.MODID, "textures/gui/icons/tab_settings.png");
     public static final ResourceLocation ICON_TAB_STATS = ResourceLocation.fromNamespaceAndPath(Wandscape.MODID, "textures/gui/icons/tab_stats.png");

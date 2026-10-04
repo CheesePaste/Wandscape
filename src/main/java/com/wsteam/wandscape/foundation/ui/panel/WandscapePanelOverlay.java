@@ -32,6 +32,11 @@ public final class WandscapePanelOverlay {
     public static final int SIDEBAR_W = 28;
     public static final int SIDEBAR_ICON_S = 24;
     public static final int SIDEBAR_GAP = 8;
+    /**
+     * Sidebar tab count — single source for rendering, hit-testing and the 1..N number keys.
+     * Order: 0 建造 / 1 道路 / 2 小镇 / 3 任务 / 4 设置.
+     */
+    public static final int SIDEBAR_TAB_COUNT = 5;
 
     private static final int BAR_BG = 0xEE14161C;
     private static final int SIDEBAR_BG = 0xAA111214;
@@ -136,6 +141,7 @@ public final class WandscapePanelOverlay {
         net.minecraft.resources.ResourceLocation[] tabIcons = {
             WandscapeTheme.ICON_TAB_BUILD,
             WandscapeTheme.ICON_TAB_ROAD,
+            WandscapeTheme.ICON_TAB_COLONY,
             WandscapeTheme.ICON_TAB_EDITOR,
             WandscapeTheme.ICON_TAB_SETTINGS
         };
@@ -143,8 +149,8 @@ public final class WandscapePanelOverlay {
         WandscapePanelState.SubMode activeMode = WandscapePanelState.getActiveSubMode();
         int hoveredIcon = getSidebarHoveredIcon(mx, my, screenH);
 
-        // 建造 / 道路 / 任务 / 设置四个 tab（位置 0-3 对齐 1/2/3/4 数字键）
-        for (int i = 0; i < 4; i++) {
+        // 建造 / 道路 / 小镇 / 任务 / 设置五个 tab（位置 0-4 对齐 1/2/3/4/5 数字键）
+        for (int i = 0; i < tabIcons.length; i++) {
             int iy = startY + i * totalIconH;
             int ix = (SIDEBAR_W - SIDEBAR_ICON_S) / 2;
             int color = isTabActive(i, activeMode) ? WandscapeTheme.COLOR_TEXT_ACTIVE : WandscapeTheme.COLOR_TEXT_NORMAL;
@@ -179,20 +185,89 @@ public final class WandscapePanelOverlay {
             renderStatsContent(g, font, screenW, screenH);
         }
 
+        // Colony switcher content (shifted right of sidebar — the sidebar stays visible here,
+        // unlike the TASKS/SETTINGS hubs, so the other tabs remain clickable)
+        if (WandscapePanelState.getActiveSubMode() == WandscapePanelState.SubMode.COLONY) {
+            renderColonySwitcher(g, font, screenW, screenH);
+        }
+
         // Sidebar tab tooltips
         int hoveredIcon = getSidebarHoveredIcon(mx, my, screenH);
         if (hoveredIcon >= 0 && WandscapePanelState.isCursorLifted()) {
             net.minecraft.network.chat.Component tip = switch (hoveredIcon) {
                 case 0 -> I18n.name("gui.wandscape.panel.tab.build", "建造 (1)");
                 case 1 -> I18n.name("gui.wandscape.panel.tab.road", "道路 (2)");
-                case 2 -> I18n.name("gui.wandscape.panel.tab.tasks", "任务 (3)");
-                case 3 -> I18n.name("gui.wandscape.panel.tab.settings", "设置中心 (4)");
+                case 2 -> I18n.name("gui.wandscape.panel.tab.colony", "小镇 (3)");
+                case 3 -> I18n.name("gui.wandscape.panel.tab.tasks", "任务 (4)");
+                case 4 -> I18n.name("gui.wandscape.panel.tab.settings", "设置中心 (5)");
                 default -> null;
             };
             if (tip != null) {
                 g.renderTooltip(font, tip, (int) mx, (int) my);
             }
         }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // ── Colony switcher ──
+    // ═══════════════════════════════════════════════════════════════
+
+    /**
+     * 小镇切换页：列出「我参与的小镇」，当前操作的那座用金框标记。
+     *
+     * <p>数据来源暂为单值 {@link WandscapePanelState#getColonyId()}——服务端目前只会下发
+     * 「自己的那一座」。一人多镇的服务端列表同步落地后，这里改为遍历列表并支持点击切换；
+     * 在此之前不臆造多镇数据：页面如实显示一座（标记「当前」）或空态。
+     */
+    private static void renderColonySwitcher(GuiGraphics g, Font font, int screenW, int screenH) {
+        int leftX = SIDEBAR_W + 8;
+        int topY = TOP_BAR_H + 10;
+        int panelW = Math.min(240, screenW - leftX - 16);
+        if (panelW < 96) return;
+
+        UUID cid = WandscapePanelState.getColonyId();
+        String name = WandscapePanelState.getColonyName();
+        int level = WandscapePanelState.getColonyLevel();
+
+        final int headerH = 22;
+        final int rowH = 24;
+        int bodyH = cid != null ? rowH + 8 : 20;
+        int panelH = headerH + bodyH + 6;
+
+        g.fill(RenderType.guiOverlay(), leftX, topY, leftX + panelW, topY + panelH, WandscapeTheme.COLOR_BG_MAIN);
+        drawBorder(g, leftX, topY, panelW, panelH, WandscapeTheme.COLOR_BORDER_NORMAL);
+
+        drawText(g, font, I18n.name("gui.wandscape.colony_switch.title", "我的小镇").getString(),
+                leftX + 8, topY + 7, WandscapeTheme.COLOR_TEXT_ACTIVE);
+
+        int y = topY + headerH;
+        if (cid == null) {
+            drawText(g, font, I18n.name("gui.wandscape.colony_switch.empty", "尚未加入任何小镇").getString(),
+                    leftX + 8, y + 6, WandscapeTheme.COLOR_TEXT_DIM);
+            return;
+        }
+
+        if (name == null || name.isEmpty()) name = cid.toString().substring(0, 8);
+
+        // 单镇时这一行必然是「当前」那座，直接用激活态配色。
+        int rowTop = y + 4;
+        g.fill(RenderType.guiOverlay(), leftX + 4, rowTop, leftX + panelW - 4, rowTop + rowH - 4, 0x33C8A040);
+        drawBorder(g, leftX + 4, rowTop, panelW - 8, rowH - 4, WandscapeTheme.COLOR_BORDER_ACTIVE);
+        WandscapeTheme.drawIcon(g, WandscapeTheme.ICON_TAB_COLONY, leftX + 9, rowTop + 3, 12, 12,
+                WandscapeTheme.COLOR_TEXT_NORMAL);
+        drawText(g, font, name + "  Lv." + level, leftX + 25, rowTop + 6, WandscapeTheme.COLOR_TEXT_NORMAL);
+
+        String mark = I18n.name("gui.wandscape.colony_switch.current", "当前").getString();
+        drawText(g, font, mark, leftX + panelW - 10 - font.width(mark), rowTop + 6,
+                WandscapeTheme.COLOR_TEXT_ACTIVE);
+    }
+
+    /** 1px 主题边框（纯代码绘制，不用纹理）。 */
+    private static void drawBorder(GuiGraphics g, int x, int y, int w, int h, int color) {
+        g.fill(RenderType.guiOverlay(), x, y, x + w, y + 1, color);
+        g.fill(RenderType.guiOverlay(), x, y + h - 1, x + w, y + h, color);
+        g.fill(RenderType.guiOverlay(), x, y, x + 1, y + h, color);
+        g.fill(RenderType.guiOverlay(), x + w - 1, y, x + w, y + h, color);
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -377,8 +452,8 @@ public final class WandscapePanelOverlay {
         int startY = TOP_BAR_H + 8;
         int totalH = SIDEBAR_ICON_S + SIDEBAR_GAP;
 
-        // 建造 / 道路 / 任务 / 设置四个 tab（编号 0-3 对齐 1/2/3/4 数字键）
-        for (int i = 0; i < 4; i++) {
+        // 建造 / 道路 / 小镇 / 任务 / 设置五个 tab（编号 0-4 对齐 1/2/3/4/5 数字键）
+        for (int i = 0; i < SIDEBAR_TAB_COUNT; i++) {
             int iy = startY + i * totalH;
             if (my >= iy && my <= iy + SIDEBAR_ICON_S) return i;
         }
@@ -394,8 +469,9 @@ public final class WandscapePanelOverlay {
         return switch (tabIndex) {
             case 0 -> activeMode == WandscapePanelState.SubMode.BUILD_PROJECTION;
             case 1 -> activeMode == WandscapePanelState.SubMode.ROAD_PROJECTION;
-            case 2 -> activeMode == WandscapePanelState.SubMode.TASKS;
-            case 3 -> activeMode == WandscapePanelState.SubMode.SETTINGS;
+            case 2 -> activeMode == WandscapePanelState.SubMode.COLONY;
+            case 3 -> activeMode == WandscapePanelState.SubMode.TASKS;
+            case 4 -> activeMode == WandscapePanelState.SubMode.SETTINGS;
             default -> false;
         };
     }

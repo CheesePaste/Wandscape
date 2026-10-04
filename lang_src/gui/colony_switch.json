@@ -1,0 +1,14 @@
+{
+  "gui.wandscape.colony_switch.current": {
+    "zh_cn": "当前",
+    "en_us": "Current"
+  },
+  "gui.wandscape.colony_switch.empty": {
+    "zh_cn": "尚未加入任何小镇",
+    "en_us": "No colonies joined yet"
+  },
+  "gui.wandscape.colony_switch.title": {
+    "zh_cn": "我的小镇",
+    "en_us": "My Colonies"
+  }
+}

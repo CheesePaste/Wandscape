@@ -426,8 +426,8 @@ public final class WandscapePanelController {
         int startY = WandscapePanelOverlay.TOP_BAR_H + 8;
         int totalH = WandscapePanelOverlay.SIDEBAR_ICON_S + WandscapePanelOverlay.SIDEBAR_GAP;
 
-        // 建造 / 道路 / 任务 / 设置（编号 0-3 对齐 1/2/3/4 数字键）
-        for (int i = 0; i < 4; i++) {
+        // 建造 / 道路 / 小镇 / 任务 / 设置（编号 0-4 对齐 1/2/3/4/5 数字键）
+        for (int i = 0; i < WandscapePanelOverlay.SIDEBAR_TAB_COUNT; i++) {
             int iy = startY + i * totalH;
             if (mouseY >= iy && mouseY <= iy + WandscapePanelOverlay.SIDEBAR_ICON_S) return i;
         }
@@ -441,8 +441,9 @@ public final class WandscapePanelController {
         WandscapePanelState.SubMode targetMode = switch (tabIndex) {
             case 0 -> WandscapePanelState.SubMode.BUILD_PROJECTION;
             case 1 -> WandscapePanelState.SubMode.ROAD_PROJECTION;
-            case 2 -> WandscapePanelState.SubMode.TASKS;
-            case 3 -> WandscapePanelState.SubMode.SETTINGS;
+            case 2 -> WandscapePanelState.SubMode.COLONY;
+            case 3 -> WandscapePanelState.SubMode.TASKS;
+            case 4 -> WandscapePanelState.SubMode.SETTINGS;
             default -> null;
         };
 
@@ -563,7 +564,7 @@ public final class WandscapePanelController {
             return;
         }
 
-        // 1/2/3/4: quick-switch into Build/Road/Tasks/Settings（吞掉原版快捷栏切换）。
+        // 1/2/3/4/5: quick-switch into Build/Road/Colony/Tasks/Settings（吞掉原版快捷栏切换）。
         // 面板开着才拦数字键切子模式，面板关着则保持原版快捷栏。
         if (WandscapePanelState.isPanelOpen()) {
             int tabIndex = switch (key) {
@@ -571,6 +572,7 @@ public final class WandscapePanelController {
                 case GLFW.GLFW_KEY_2 -> 1;
                 case GLFW.GLFW_KEY_3 -> 2;
                 case GLFW.GLFW_KEY_4 -> 3;
+                case GLFW.GLFW_KEY_5 -> 4;
                 default -> -1;
             };
             if (tabIndex >= 0) {
@@ -625,15 +627,16 @@ public final class WandscapePanelController {
         // 3. Sub-mode active → exit it, keep the panel open
         if (sub != WandscapePanelState.SubMode.NONE && sub != WandscapePanelState.SubMode.OVERVIEW) {
             WandscapePanelState.exitCurrentSubMode();
-            // Ground-mode / STATS / TASKS exit leaves the sub-mode set — drop to the bare panel
+            // Ground-mode / STATS / COLONY / TASKS / SETTINGS exit leaves the sub-mode set — drop to the bare panel
             WandscapePanelState.SubMode after = WandscapePanelState.getActiveSubMode();
             if (after == WandscapePanelState.SubMode.BUILD_PROJECTION
                     || after == WandscapePanelState.SubMode.ROAD_PROJECTION
                     || after == WandscapePanelState.SubMode.STATS
+                    || after == WandscapePanelState.SubMode.COLONY
                     || after == WandscapePanelState.SubMode.TASKS
                     || after == WandscapePanelState.SubMode.SETTINGS) {
                 WandscapePanelState.setSubMode(WandscapePanelState.SubMode.NONE);
-                // 地面/STATS/TASKS/SETTINGS 退出后子模式清空 → 回常态抓取
+                // 地面/STATS/COLONY/TASKS/SETTINGS 退出后子模式清空 → 回常态抓取
                 WandscapePanelState.syncCursorToState();
             }
             return;
