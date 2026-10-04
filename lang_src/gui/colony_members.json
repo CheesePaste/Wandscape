@@ -1,0 +1,58 @@
+{
+  "gui.wandscape.colony_members.accept": {
+    "zh_cn": "接受",
+    "en_us": "Accept"
+  },
+  "gui.wandscape.colony_members.decline": {
+    "zh_cn": "拒绝",
+    "en_us": "Decline"
+  },
+  "gui.wandscape.colony_members.empty.invites": {
+    "zh_cn": "暂无邀请",
+    "en_us": "No pending invites"
+  },
+  "gui.wandscape.colony_members.empty.members": {
+    "zh_cn": "暂无成员",
+    "en_us": "No members"
+  },
+  "gui.wandscape.colony_members.empty.online": {
+    "zh_cn": "没有可邀请的在线玩家",
+    "en_us": "No players available"
+  },
+  "gui.wandscape.colony_members.hint.no_permission": {
+    "zh_cn": "需管理员及以上档位",
+    "en_us": "Requires Manager or above"
+  },
+  "gui.wandscape.colony_members.hint.not_member": {
+    "zh_cn": "你不是该镇成员",
+    "en_us": "You are not a member of this colony"
+  },
+  "gui.wandscape.colony_members.hint.select": {
+    "zh_cn": "点击上方小镇列表选择要管理的小镇",
+    "en_us": "Pick a colony from the list above"
+  },
+  "gui.wandscape.colony_members.invite": {
+    "zh_cn": "邀请",
+    "en_us": "Invite"
+  },
+  "gui.wandscape.colony_members.invite_role": {
+    "zh_cn": "邀请档位: %s",
+    "en_us": "Invite role: %s"
+  },
+  "gui.wandscape.colony_members.invite_row": {
+    "zh_cn": "%s 由 %s 邀请（%s）",
+    "en_us": "%s by %s (%s)"
+  },
+  "gui.wandscape.colony_members.section.invites": {
+    "zh_cn": "待处理邀请",
+    "en_us": "Pending Invites"
+  },
+  "gui.wandscape.colony_members.section.members": {
+    "zh_cn": "成员",
+    "en_us": "Members"
+  },
+  "gui.wandscape.colony_members.section.online": {
+    "zh_cn": "可邀请的在线玩家",
+    "en_us": "Invitable Players"
+  }
+}

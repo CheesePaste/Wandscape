@@ -328,6 +328,9 @@ public final class WandscapePanelState {
         buildPhase = BuildPhase.BAR;
         lastClickTime = 0;
         lastClickIndex = -1;
+        // 花名册 / 待处理邀请属于「上一个世界」的服务端同步数据，必须一起清，
+        // 否则断线重连或换存档后面板会先画出旧世界的成员表（服务端推新数据前的那几帧）。
+        com.wsteam.wandscape.content.colony.network.ColonyPanelClientState.reset();
     }
 
     // ── Cursor helpers (shared by BUILD and ROAD modes) ──

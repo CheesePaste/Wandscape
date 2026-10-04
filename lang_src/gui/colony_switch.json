@@ -7,6 +7,14 @@
     "zh_cn": "尚未加入任何小镇",
     "en_us": "No colonies joined yet"
   },
+  "gui.wandscape.colony_switch.entry": {
+    "zh_cn": "%s  Lv.%s",
+    "en_us": "%s  Lv.%s"
+  },
+  "gui.wandscape.colony_switch.section.mine": {
+    "zh_cn": "小镇列表",
+    "en_us": "Colonies"
+  },
   "gui.wandscape.colony_switch.title": {
     "zh_cn": "我的小镇",
     "en_us": "My Colonies"
