@@ -39,7 +39,10 @@ import com.wsteam.wandscape.content.colony.exploration.network.ExplorationReward
 import com.wsteam.wandscape.content.colony.network.ColonyAmbientPacket;
 import com.wsteam.wandscape.content.colony.network.ColonyCreatePromptPacket;
 import com.wsteam.wandscape.content.colony.network.ColonyCreateRequestPacket;
+import com.wsteam.wandscape.content.colony.network.ColonyListSyncPacket;
+import com.wsteam.wandscape.content.colony.network.ColonyMemberActionPacket;
 import com.wsteam.wandscape.content.colony.network.ColonyNameUpdatePacket;
+import com.wsteam.wandscape.content.colony.network.ColonyRosterSyncPacket;
 import com.wsteam.wandscape.content.colony.network.ColonySettingUpdatePacket;
 import com.wsteam.wandscape.content.colony.network.ColonyStatsSyncPacket;
 import com.wsteam.wandscape.content.colony.overview.network.OverviewEntityInteractPacket;
@@ -240,6 +243,12 @@ public final class PayloadRegistry {
         // ── Colony settings update (settings center 「本镇」page) ──
         c2s(r, ColonySettingUpdatePacket.TYPE, ColonySettingUpdatePacket.STREAM_CODEC, ColonySettingUpdatePacket::handleServer);
 
+        // ── Colony roster: 侧边栏「小镇」页（发起邀请 / 接受邀请 / 管理成员 + 我的小镇列表）──
+        // 目标镇 + 最低档位由包自己声明（ColonyScopedPayload），档位判定在 c2s 的网关里一处完成。
+        c2s(r, ColonyMemberActionPacket.TYPE, ColonyMemberActionPacket.STREAM_CODEC, ColonyMemberActionPacket::handleServer);
+        s2c(r, ColonyRosterSyncPacket.TYPE, ColonyRosterSyncPacket.STREAM_CODEC, ColonyRosterSyncPacket::handleClient);
+        s2c(r, ColonyListSyncPacket.TYPE, ColonyListSyncPacket.STREAM_CODEC, ColonyListSyncPacket::handleClient);
+
         // ── Town hall bootstrap revive (anti-deadlock, all wizards dead) ──
         c2s(r, TownHallReviveRequestPacket.TYPE, TownHallReviveRequestPacket.STREAM_CODEC, TownHallReviveRequestPacket::handleServer);
         s2c(r, TownHallReviveStatePacket.TYPE, TownHallReviveStatePacket.STREAM_CODEC, TownHallReviveStatePacket::handleClient);
@@ -300,6 +309,11 @@ public final class PayloadRegistry {
      *
      * <p>上下文里的玩家只在服务端的 serverbound 路径上存在，取到的必须是 {@link ServerPlayer}；
      * 真拿到别的形态说明包走错了方向，记警告后丢弃，不打断整条连接。
+     *
+     * <p>这里是**殖民地权限的统一网关**：实现了 {@link ColonyScopedPayload} 的包自己声明
+     * 「目标镇 + 最低档位」，进 handler 前由 {@link ColonyScope#admit} 按档位判定，不够就拒止并
+     * 直接 return。判定落点因此只有这一处，而不是 30 个包各自手写一遍 {@code isOwn}。
+     * 不实现该接口的既有包不受影响（行为与改动前完全一致）。
      */
     public static <T extends CustomPacketPayload> void c2s(
             PayloadRegistrar r,
@@ -308,6 +322,9 @@ public final class PayloadRegistry {
             BiConsumer<T, ServerPlayer> handler) {
         r.playToServer(type, codec, (payload, ctx) -> {
             if (ctx.player() instanceof ServerPlayer player) {
+                if (payload instanceof ColonyScopedPayload scoped && !ColonyScope.admit(scoped, player)) {
+                    return;
+                }
                 handler.accept(payload, player);
             } else {
                 Log.warnOnce(LogCategory.NETWORK, "not-server-player:" + type.id(),

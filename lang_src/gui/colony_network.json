@@ -1,0 +1,114 @@
+{
+  "gui.wandscape.ownership.what.colony_member": {
+    "zh_cn": "小镇成员",
+    "en_us": "Town members"
+  },
+  "gui.wandscape.colony_network.role.owner": {
+    "zh_cn": "镇长",
+    "en_us": "Owner"
+  },
+  "gui.wandscape.colony_network.role.manager": {
+    "zh_cn": "管事",
+    "en_us": "Manager"
+  },
+  "gui.wandscape.colony_network.role.member": {
+    "zh_cn": "成员",
+    "en_us": "Member"
+  },
+  "gui.wandscape.colony_network.role.ally": {
+    "zh_cn": "盟友",
+    "en_us": "Ally"
+  },
+  "gui.wandscape.colony_network.role.none": {
+    "zh_cn": "非成员",
+    "en_us": "Non-member"
+  },
+  "message.wandscape.colony_network.invite_sent": {
+    "zh_cn": "§a[魔法小镇] 已邀请 %s 加入「%s」，档位 %s。",
+    "en_us": "§a[Wandscape] Invited %s to join %s as %s."
+  },
+  "message.wandscape.colony_network.invited": {
+    "zh_cn": "§e[魔法小镇] %s 邀请你加入「%s」，档位 %s。到侧边栏「小镇」页可以接受或拒绝。",
+    "en_us": "§e[Wandscape] %s invited you to join %s as %s. Open the Towns page in the sidebar to accept or decline."
+  },
+  "message.wandscape.colony_network.joined": {
+    "zh_cn": "§a[魔法小镇] 你已加入「%s」，档位 %s。",
+    "en_us": "§a[Wandscape] You joined %s as %s."
+  },
+  "message.wandscape.colony_network.declined": {
+    "zh_cn": "§7[魔法小镇] 已拒绝加入「%s」。",
+    "en_us": "§7[Wandscape] Declined the invitation to %s."
+  },
+  "message.wandscape.colony_network.role_changed": {
+    "zh_cn": "§a[魔法小镇] 已将 %s 的档位改为 %s。",
+    "en_us": "§a[Wandscape] Changed the rank of %s to %s."
+  },
+  "message.wandscape.colony_network.unchanged": {
+    "zh_cn": "§7[魔法小镇] %s 的档位已是 %s，未做改动。",
+    "en_us": "§7[Wandscape] %s is already %s; nothing changed."
+  },
+  "message.wandscape.colony_network.member_removed": {
+    "zh_cn": "§a[魔法小镇] 已将 %s 移出「%s」。",
+    "en_us": "§a[Wandscape] Removed %s from %s."
+  },
+  "message.wandscape.colony_network.you_removed": {
+    "zh_cn": "§c[魔法小镇] 你已被移出「%s」。",
+    "en_us": "§c[Wandscape] You were removed from %s."
+  },
+  "message.wandscape.colony_network.invalid": {
+    "zh_cn": "§c[魔法小镇] 无效的成员操作请求。",
+    "en_us": "§c[Wandscape] Invalid member action request."
+  },
+  "message.wandscape.colony_network.failed": {
+    "zh_cn": "§c[魔法小镇] 成员操作失败，请查看服务端日志。",
+    "en_us": "§c[Wandscape] The member action failed; check the server log."
+  },
+  "message.wandscape.colony_network.no_invite": {
+    "zh_cn": "§c[魔法小镇] 没有找到发给你的该小镇邀请（可能已处理或已过期）。",
+    "en_us": "§c[Wandscape] No pending invitation from that town for you (it may have been handled already)."
+  },
+  "message.wandscape.colony_network.colony_gone": {
+    "zh_cn": "§c[魔法小镇] 该小镇已不存在。",
+    "en_us": "§c[Wandscape] That town no longer exists."
+  },
+  "message.wandscape.colony_network.target_offline": {
+    "zh_cn": "§c[魔法小镇] 该玩家不在线。",
+    "en_us": "§c[Wandscape] That player is not online."
+  },
+  "message.wandscape.colony_network.already_member": {
+    "zh_cn": "§c[魔法小镇] %s 已在此小镇花名册中。",
+    "en_us": "§c[Wandscape] %s is already on this town's roster."
+  },
+  "message.wandscape.colony_network.you_already_member": {
+    "zh_cn": "§c[魔法小镇] 你已是「%s」的成员。",
+    "en_us": "§c[Wandscape] You are already a member of %s."
+  },
+  "message.wandscape.colony_network.cannot_grant_owner": {
+    "zh_cn": "§c[魔法小镇] 不能通过邀请授予 OWNER；所有权转让请用转让功能。",
+    "en_us": "§c[Wandscape] OWNER cannot be granted by invitation; use ownership transfer instead."
+  },
+  "message.wandscape.colony_network.cannot_grant_higher": {
+    "zh_cn": "§c[魔法小镇] 只能授予严格低于自己档位的档位。",
+    "en_us": "§c[Wandscape] You can only grant a rank strictly below your own."
+  },
+  "message.wandscape.colony_network.cannot_set_owner": {
+    "zh_cn": "§c[魔法小镇] 不能把他人设为 OWNER；所有权转让请用转让功能。",
+    "en_us": "§c[Wandscape] You cannot promote someone to OWNER; use ownership transfer instead."
+  },
+  "message.wandscape.colony_network.target_not_member": {
+    "zh_cn": "§c[魔法小镇] 该玩家不在此小镇花名册中。",
+    "en_us": "§c[Wandscape] That player is not on this town's roster."
+  },
+  "message.wandscape.colony_network.cannot_touch_owner": {
+    "zh_cn": "§c[魔法小镇] 不能改动或移除 OWNER 的档位。",
+    "en_us": "§c[Wandscape] The OWNER's rank cannot be changed or removed."
+  },
+  "message.wandscape.colony_network.self_lock": {
+    "zh_cn": "§c[魔法小镇] 不能降级或移除自己。",
+    "en_us": "§c[Wandscape] You cannot demote or remove yourself."
+  },
+  "message.wandscape.colony_network.write_failed": {
+    "zh_cn": "§c[魔法小镇] 花名册写入失败，请重试。",
+    "en_us": "§c[Wandscape] Failed to update the roster; please retry."
+  }
+}
