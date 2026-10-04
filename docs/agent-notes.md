@@ -40,7 +40,7 @@
 ## 三、调试与日志
 
 1. **用户的应用内实测是决定性证据；现象与文档理论矛盾时先核对代码事实**（另见 `AGENTS.md` §工作流与提交第一条）：
-   - 用户描述现象时先当成事实，优先在代码里核对硬事实（旋转 / 坐标 / 相位 / 触发条件），而不是扩展文档里的旧假设；改代码前用 `minecraft-source` 技能核实 MC API。
+   - 用户描述现象时先当成事实，优先在代码里核对硬事实（旋转 / 坐标 / 相位 / 触发条件），而不是扩展文档里的旧假设；改代码前先读真实源码核实 MC API。
    - **Why**：修游客行为 bug 时，我按 `docs/bugs/tourist-behavior-bugs.md`（该目录已不存在，需要时去 git 历史取）的「Y 外扩交互区误判到达」理论推治本方案，被用户纠正——实测现象是「游客完全包裹在交互区内却 VISITING 不交互」，明显不是寻路问题。核对代码后真因是 `planNextBuilding` 计算 `touristInteractZones` 时未按 `rotationSteps` 旋转，到达判定命中错位框，`arrived` 恒 false 后卡死兜底「传送到自己」死循环。
 2. **`Log.debug` 在未开 debug 时会被打成带 `[DEBUG]` 前缀的 INFO**（`AGENTS.md` §非显然陷阱已有同一结论，这里给机制与做法）：
    - 机制在 `foundation/log/Log.java` 的 `logInternal` DEBUG 分支：底层 log4j logger 未开 debug 时**不丢弃**，而是 `logger.info("[DEBUG] " + msg)` 提升输出。于是「降级为 debug」分两段——默认各类目都是 INFO，`LogConfig.isEnabled(cat, DEBUG)` 为 false、函数提前 return，确实静默；但管理员把某类目调成 DEBUG 想排查时，`LogConfig` 放行而 log4j 仍卡在 INFO，这些日志会以 `[DEBUG]` 前缀**重新刷屏**，且失去 debug / info 的区分能力。
