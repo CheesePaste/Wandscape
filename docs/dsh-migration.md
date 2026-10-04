@@ -20,6 +20,18 @@ npx @deepseek-ai/dsh web --no-open
 
 模型凭据在 **UI 的 Settings → Models** 里填，不是配置文件，保存后即时生效。
 
+### 桌面版（官方 Electron，不是第三方套壳）
+
+DeepSeek 有**第一方桌面版**：官方仓库的 `apps/desktop/` 是完整 Electron 应用（electron-builder 配置、NSIS 安装器、托盘图标、`dsh.cmd`）。README 原话：「The desktop application is an Electron shell around the complete dsh Web application.」
+
+- 下载（landing page `https://www.deepseek.com/harness/`）：
+  - Windows：`https://download.deepseek.com/desktop/dsh-latest-windows-x64.exe`
+  - macOS：`https://download.deepseek.com/desktop/dsh-latest-macos-arm64.dmg`
+- **不走 GitHub Releases**——官方 25 个 tag 的 release assets 全是空的，只能从 DeepSeek 自己的 CDN 取，别去 release 页找安装包。
+- 装完是托盘应用，关窗即最小化；菜单里有 Manage dsh Command… 可把 `dsh` 加进 PATH。
+- `desktop` 是 Electron 独占的 profile：CLI 不能 boot 它，**给它装插件要用 `--profile desktop`（且需先退出应用）**；CLI/浏览器版插件则是 `--profile web`。
+- 与 npm 的 `@deepseek-ai/dsh` **1:1 锁版本**。
+
 ### 入口模式（对照 CC 的「就是 `claude`」）
 
 | 命令 | 用途 |
@@ -43,6 +55,19 @@ Web 侧随发行提供四个 agent preset：`standard`（Standard mode，默认�
 dsh **内置** `ask_user_question`（包 `@deepseek-ai/dsh-tool-ask-user`），基本是 CC `AskUserQuestion` 的**超集**：同样 `question` / `header` / 2–4 个选项 + 每项一句说明；额外支持**一次问多个问题**、**multi-select**、显式自由文本 `custom`（即 Other）、「推荐项放第一并标注 (Recommended)」约定，以及可选的 **timed 模式**（超时后放模型继续干活，问题仍可回答）。Web 端有专门的问答卡片占住输入框（`packages/client/ui-user-questions/`），TUI 端有 `QuestionDialog`，并通过 `$.ui.ask` 开放给插件作者。
 
 **两处没有**：MCP 协议的 elicitation 不支持；`approval` 闸门只能是 yes/no（`allowed-once` / `rejected` / `cancelled` / `unavailable`）——设计如此，和问答是两套独立机制。
+
+### 子代理与嵌套深度（默认已禁止层层委派）
+
+委派工具是 `subagent`（包 `@deepseek-ai/dsh-tool-subagent`；base profile 另挂 `subagent_fork`）。**好消息：我们要的「子代理不许再开子代理」是官方默认行为。**
+
+- **`maxDepth` 默认 1**：根（depth 0）可委派一层，**子代理（depth 1）再开孙代理会被硬拒**（`SubagentDepthError: subagent depth 2 exceeds maxDepth 1`）。语义正好。
+- **但仍建议显式钉死 `maxDepth: 1`**：官方这个默认值改过一次（2026-07 的 Agent Note 写 3，现行 catalog 是 1）。钉死可防止将来默认值被调大时静默重新打开递归。
+- 取值：`0` = 连根都不许委派；`'provider-managed'` = 不设上限。
+- 为什么根上的设置能管子代：子代理继承父的 preset，连带同一个委派工具实例，所以根配的 `maxDepth` 对子代同样生效——这正是「根能委派、子不能」可被强制的原因。
+- **并发上限**：`@deepseek-ai/dsh-subagent` 的 **`maxActiveSubagents` 默认 8**（想对齐我们的「并发 ≤4」就调成 4）；另有 `@deepseek-ai/dsh-agent-loop` 的 `maxParallelToolCalls`（每步并行工具数）与 `@deepseek-ai/dsh-jobs-local` 的 `maxConcurrentJobsPerOwner`（默认 10，后台任务按属主计）。
+- 备用硬闸：委派工具上的 `toolFilter: { deny: ['subagent', 'subagent_fork'] }`——被过滤的工具**从子代理 prompt 里消失且拒绝执行**。
+- **做不到的**：`SubagentStart` hook **不能拦截**（它 detached 且只加上下文，没有任何扩展点 await 它）；`PreToolUse` hook 能 deny，但分不清根与子（桥只报常量 `agent_type`），写下去等于把根也一起禁掉。所以嵌套限制别指望 hook。
+- `DELEGATED_CALLER` 确实是「根 vs 子」的真实接缝，但它目前**只守** `ask_user_question` / `exit_plan_mode`，没接在委派路径上——将来官方若把它接上，这里才有更细的余地。
 
 ### 配置模型（这是和 CC 差别最大的地方）
 
@@ -243,7 +268,19 @@ Java / Minecraft / 游戏相关，全部落在 0–57 星：
 
 注意榜首那几个（EverOS / MemOS / memsearch / brooks-lint / Aegis）都是**跨 agent 工具顺带支持 dsh**，不是 dsh 原生。而「苏格拉底式追问 / grill」这一整类**没有一个超过 ~50 星**。
 
-> 推论：`grill-me` 这种技能与其去找插件，不如自己在 `.agents/skills/` 里维护一个——它本来就只是一段 prompt，没有任何依赖。
+> **星数口径警告**：`EverOS` 的 13,337 星是**记忆框架本身**的，它的 dsh 插件在另一个 **7 星**的侧仓库里（`EverMind-AI/Plugins` 的 `dsh/` 子目录），README 自称还是「pre-release verification」；`MemOS` 的 dsh 适配器在 npm 上只有 0.1.1、最后发布 2026-09-07。**别被框架的星数误导**，那不代表 dsh 侧可用。
+> 另外：本仓 memory 已决定落回仓库文档（见 §四），不引外部 memory server——所以这三个对本文读者价值不大。
+
+**值得装的**（活跃、dsh 原生、npm 可装）：
+
+| 插件 | 星 | 作用 |
+|---:|---|---|
+| `dsh-context` | 1,837 | 上下文用量仪表盘 / 侧栏 |
+| `dsh-deja` | 1,127 | 会话历史全文搜索（单个 Go 二进制，不走 LLM） |
+| `superpowers-dsh` | 101 | CC `superpowers` 的 dsh 移植（TDD / 调试 / 规划） |
+| `dsh-doublecheck` | 54 | 「拷问需求 → 测实现 → 证交付」 |
+
+装法统一：`dsh plugin --profile <web|desktop> add <包名>`。`dsh-pocket`（1,509 星）与 `dsh-dafeiyu`（392 星）都已 2.5–3 周未更新，且官方桌面版（见 §一）已覆盖「悬浮/托住」这类需求，可跳过。
 
 ### 「悬浮球」：能看的有，能操作的没有
 
