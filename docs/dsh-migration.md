@@ -148,6 +148,12 @@ dsh 的本地 skill 搜索根（按 rank 优先）：
 
 > 直觉陷阱：dsh 有 `whenToUse` 字段，看着正好装触发词——但官方明确它**对模型隐藏**（目录 "omits … routing hints"）。所以触发词必须留在 `description` 里，不能挪进 `whenToUse`。
 
+**坑三（这个最阴，2026-10-04 实测）：`description` 里出现 `: `（冒号 + 空格）会让整个 skill 被静默丢弃。** 平铺写法 `description: ... Triggers on: explore the codebase ...` 在 YAML 里根本不是字符串——`Triggers on:` 的位置就构成第二个映射键，frontmatter 解析直接失败。dsh 的反应是**不报错、不警告，这个 skill 就当不存在**：目录里没有它，`skill` 工具回一句 `skill "x" is unknown or no longer available`，只从「我明明建了文件」的角度看根本查不出原因。
+
+- 修法：把 `description` 写成块标量 `description: |` 再把正文缩进两格（本仓 `minecraft-source` 一直都是这个写法，所以没踩到）。这也是**从 CC 搬 skill 时必须复查的一处**——CC 的 frontmatter 解析更宽松，同样的文件在 CC 下能用、到 dsh 下就消失。
+- 自查：`python -c "import yaml,sys;print(yaml.safe_load(open(p,encoding='utf-8').read().split('---')[1]))"`，或者干脆只认一种写法——**所有本地 skill 的 `description` 一律用 `|` 块标量**。
+- 排查顺序（skill 明明建了却加载不到）：① frontmatter 能否解析 → ② 目录名与 `name` 是否都是 kebab-case → ③ 根目录对不对（`<repo>/.dsh/skills` 100 / `<repo>/.agents/skills` 200 / `$DSH_HOME/skills` 400 / `~/.agents/skills` 500）。**实测目录创建后无需重启**：改完 frontmatter 当场就在会话技能目录里出现（Chokidar 盯着根目录，连「根目录当时还不存在、事后才建」这种情况也能补上）。
+
 **坑二：CC 兼容靠 junction。** `.claude/` 被 gitignore，真文件必须住在 `.claude/` 之外才能入库；而 CC 只从 `.claude/skills` 发现技能。处理：真文件放 `.agents/skills/`，把 `.claude/skills` 做成指向它的 **Windows 目录 junction**（`mklink /J`，无需管理员权限），CC 与 dsh 都能看到。CC 退役后删掉这个 junction 即可。
 
 其余：`scripts/cache/` 由脚本以 `$(dirname $0)/cache` 定位、随目录搬家，已单独 gitignore（LRU 上限 50 个文件）；`compatibility:` 不是 dsh 文档化的 frontmatter 键，会落进 `metadata`，无害。
@@ -191,7 +197,7 @@ dsh **不读这个文件**。要在 `$DSH_HOME/cordis.patch.yml`（全 profile�
 - **`cwd` 必须显式给一个非空真实目录——这是最容易静默踩死的一格。** `mcp-client` 的 stdio transport 把 `cwd` 原样交给 `spawn`，而它的 schema 默认值是**空串**（`cwd: z.string().default("")`，见 `lib/index.js` 的 `Config`）；`spawn(cmd, args, { cwd: '' })` 实测直接 `ENOENT`。**照抄官方默认 = 一个工具都注册不出来**，而且 `failOnStartupError` 默认 false，只在日志里留一行 error，看起来像「配置好了但没反应」。另外该 server 拿 `cwd` 当 session root，启动即按它推导项目名并自动索引/监听——给错目录会去索引无关的大目录。本机写成 `cwd: !!js "process.env.DSH_MCP_CWD ?? '<repo>'"`：`!!js` 在**宿主**进程求值，不受 mcp-client 对子进程环境的清洗（`DSH_*` 与 `/KEY|PASSWORD|SECRET|TOKEN/i` 一律丢弃）影响，所以环境变量仍能覆盖。
 - **改完不用重启**：配置层走热重载，当场就能看到工具出现。实测 14 个工具全部注册为 `mcp__codebase-memory__*`，`list_projects` 调用成功。
 - **工具名确实变长**，全仓引用已同步：`AGENTS.md`（知识图谱那条）、`CLAUDE.local.md`。
-- **全局 skill 也要跟着改**：`~/.claude/skills/codebase-memory/` 是 CC 侧的，而 dsh 的本地 skill 根不含 `.claude/skills`。已在 **`~/.dsh/skills/codebase-memory/SKILL.md`**（rank 400 `$DSH_HOME/skills`）落一份 dsh 版：工具名带前缀、写明 `project` 参数、并把本仓「in-degree 不能判死码」的提醒写进去。CC 侧那份**刻意保留**——两边工具名不同，不是同一份文件的重复，硬做 junction 反而会让 CC 拿到错误的名字。
+- **全局 skill 也要跟着改**：`~/.claude/skills/codebase-memory/` 是 CC 侧的，而 dsh 的本地 skill 根不含 `.claude/skills`。已在 **`~/.dsh/skills/codebase-memory/SKILL.md`**（rank 400 `$DSH_HOME/skills`）落一份 dsh 版：工具名带前缀、写明 `project` 参数、并把本仓「in-degree 不能判死码」的提醒写进去。CC 侧那份**刻意保留**——两边工具名不同，不是同一份文件的重复，硬做 junction 反而会让 CC 拿到错误的名字。搬的时候踩了 §二.3「坑三」：CC 那份的 `description` 是平铺标量且含 `: `，直接复制会静默失效，已改用 `|` 块标量。
 - **一个待处理项：同一路径两个索引**。`list_projects` 同时列出 `C-Users-huhai-Desktop-Java-mcmod-wandscape`（约 43.7k 节点，由 cwd 推导、服务端自动索引与监听的就是它）和 `wandscape`（约 23.7k 节点，覆盖不全）。**用前者**，skill 与 `CLAUDE.local.md` 都写明了；要清掉旧的用 `delete_project`（本次未删，留给你决定）。
 
 ### 5. Hooks：三个 cbm 脚本当前是死的，先查再迁
