@@ -19,7 +19,7 @@ MineColonies 这两点**都支持**，但各有一处与 Wandscape 不同，必�
 - 它的**成员身份天然多对多**：`Permissions.addPlayer` 里**没有任何「一个人只能在几个殖民地」的检查**（已核对 `core/colony/permissions/Permissions.java:804`、`core/network/messages/PermissionsMessage.java:260`）。玩家可以被任意多个殖民地收进名单。
 - 它只有**归属（owner）是一对一**：`CreateColonyMessage` 用 `getIColonyByOwner` 挡住「已有殖民地的人再建一个」。也就是说 MineColonies 的「一个人一个殖民地」限制的是**当 owner**，不是**当成员**。
 
-→ **「一个人参与管理多个小镇」在 MineColonies 里是既有能力，不是要新造的东西**。Wandscape 要做的，是把它从「owner 一个 + 成员多个」推广到 **owner 也可多个**（或干脆不设 owner 独占）。
+→ **「一个人参与管理多个小镇」在 MineColonies 里是既有能力，不是要新造的东西**。Wandscape 要做的，是把**成员侧**推广为多对多（一人可在多座镇各有档位）；但 **owner 仍保持唯一**（不是「owner 也可多个」）——理由是友军白名单派生自单一归属身份，见 §10.3.1。
 
 **Wandscape 现状的最大差距**：`ColonyOwnership.ownColony(player)` 只认「按 founder 绑定的那唯一一座」，`isOwn` 是等值比较（`content/colony/ownership/ColonyOwnership.java`）。这是**唯一归属判定入口**，也是模型改动唯一需要动的地方——领地保护（`ColonyLandProtectionHandler`）已经全部经由它，改动面是收敛的。详见 §8.3。
 
@@ -201,7 +201,7 @@ MineColonies 的镇际关系**形式大于内容**：有完整的状态机与 UI
 
 MineColonies 的落点是 `Map<UUID, ColonyPlayer>`（每殖民地一份）——**每个格子存一个 rank**。它对「行方向」（一人多镇）没有限制，对「列方向」（一镇多人）也没有限制；**唯一的一对一约束是 owner 那一格**（`getIColonyByOwner` 只返回第一个匹配，且建制时挡重复）。
 
-→ **Wandscape 要的模型就是这张矩阵本身**：一个 `(玩家, 小镇) -> 角色` 的多对多关系。MineColonies 已经证明了它的可行性；Wandscape 只需要把「owner 独占」的约束拿掉（或改为「一个玩家可以在多座小镇里当 owner」）。
+→ **Wandscape 要的模型就是这张矩阵本身**：一个 `(玩家, 小镇) -> 角色` 的多对多关系。MineColonies 已经证明了它的可行性；Wandscape **保留它「owner 独占」的那一格**（owner 唯一且可转让，见 §10.3.1），只把**成员侧**放开成多对多。
 
 ### 8.2 需要的数据形状（两个方向都要能查）
 
@@ -241,7 +241,7 @@ MineColonies 的五个内置 rank 里，Wandscape 需要的映射：
 
 | MineColonies rank | Wandscape 是否用 | 说明 |
 |---|---|---|
-| `OWNER` | 用（可多个） | 小镇创始人 / 最高管理者 |
+| `OWNER` | 用（**唯一，可转让**） | 小镇创始人 / 最高管理者；**同时是友军白名单的归属身份锚点**（故不可多个，见 §10.3.1） |
 | `OFFICER` | 用 | 可管理建筑/成员（`isColonyManager` 语义） |
 | `FRIEND` | 用 | 可建造/使用，不可管人 |
 | `NEUTRAL` | **弃用** | 平行隔离下「未登记」必须=无权限，不能有一档默认权限 |
@@ -267,7 +267,7 @@ MineColonies 的五个内置 rank 里，Wandscape 需要的映射：
 
 ### 8.6 连锁影响（改动会波及的地方）
 
-- **`FriendlyForce`**：玩家侧友军判定（PVP 开启时「仅同殖民地」）要从「同一座小镇」变成「**是否共享任一参与的小镇**」（两玩家若同属某镇，则该镇内互不侵犯）。NPC 侧仍按 colonyId 等值，不受影响。需要确认 `WandscapeNpc.classify` 里「玩家 → 殖民地」的解析是否也假定唯一——若假定唯一，同样要改成集合。（**待核对**，见 §10.3。）
+- **`FriendlyForce`**：玩家侧友军判定（PVP 开启时「仅同殖民地」）要从「同一座小镇」变成「**是否共享任一参与的小镇**」（两玩家若同属某镇，则该镇内互不侵犯）。NPC 侧仍按 colonyId 等值，不受影响。需要确认 `WandscapeNpc.classify` 里「玩家 → 殖民地」的解析是否也假定唯一——**已核对：假定唯一**（走 `getColonyByFounder`），多镇下必须改成集合，见 §10.3.2。
 - **客户端同步**：要为每个玩家下发「我参与的小镇 + 我在各镇的角色」，这样面板/UI 才能列出多个小镇。这是当前完全缺失的一环（客户端恒 null）。
 - **权杖**：`ScepterMarks` / `ScepterApi` **本来就按 colonyId 存**（`isSheltered(colonyId, …)`、`forcedHostile(level, colonyId)`），天然适配多镇——权杖的使用权限应挂在「对该 colonyId 的某个动作位」上，这正好是 §8.3 加的 action 参数要判的东西。
 - **领地保护**：`ColonyLandProtectionHandler` 全部经 `isOwn` → 随签名升级自动覆盖，无需另改。
@@ -300,7 +300,7 @@ MineColonies 的五个内置 rank 里，Wandscape 需要的映射：
 1. **权限 = 位掩码 + 通用 Action 枚举**，而非每种操作写一个布尔字段。可扩展、易序列化、易做 GUI 开关网格。
 2. **玩家与小镇是多对多、角色存在「小镇内的名单」里**（每格一个 rank）——这就是「一人多镇 + 多人一镇」的通用形状。
 3. **防自锁规则**：不允许在自己的角色上关掉「管成员 / 管建筑 / 进建筑」三项。
-4. **owner 只是名单里角色最高的一员**，不是特殊字段——便于「多个 owner」与转让。
+4. **owner 只是名单里角色最高的一员**，不是特殊字段——便于转让。但 Wandscape 需要它**唯一**（友军白名单的归属身份锚点，见 §10.3.1），所以「可多个」这一点**不能照搬**。
 5. **拒止反馈的镇务日志**（第 2 档）：可回看的越权记录；顺带把「被拒尝试」变成「入籍申请线索」。
 6. **工具状态纪律**：权威判定恒在服务端；物品 NBT 只存指向数据；侧别用错要留日志；选区类状态加超时。
 7. **关系绑定实体建筑**：修路/建门楼才能建交——Wandscape 有道路系统，天然适配（镇际层）。
@@ -321,21 +321,56 @@ MineColonies 的五个内置 rank 里，Wandscape 需要的映射：
 
 | 议题 | 裁定 | 影响 |
 |---|---|---|
-| **owner 语义** | **允许多 owner**（跟 §8.4；不采用一代 RBAC 文档的「恒有且仅有 1 人」） | `ColonySavedData` 的 `founders` 单值映射必须升级为成员表 |
+| **owner 语义** | **唯一，且可转让**（推翻本文上一版的「允许多 owner」） | 理由见 §10.3.1：友军白名单派生自**单一归属身份**，两个 Owner 会让「某玩家是否在本镇白名单」失去唯一答案。`founders` 映射可继续用，转让 = 改这一条 |
 | **访客边界** | **严格无权限**：非成员连商店、旅店都不能用 | 「未登记 = 无权限」按字面执行。NPC 游客走 `TouristEntity`、不经玩家权限路径，所以经营闭环不受影响——但这条要在权限矩阵里**显式写成「游客经济只对 NPC 开放」**，否则以后会被当成 bug 修回去 |
 | **当前操作的小镇** | **显式选择器 + 默认跟随最近一次显式交互**；禁位置推断 | 对应 §8.5 守住 2。服务端仍按「你在该镇的角色」重判，UI 上的"当前镇"只是选择，不是权限 |
 | **建镇 vs 入镇意图** | **不需要猜**：建镇 = 对无主市政厅（`colonyId == null`）右键命名；入镇 = 显式邀请 | 两个意图由**世界动作**区分，与「有没有自己的镇」无关。故「无镇 + 有成员身份」是**正常状态**，不是歧义状态 |
-| **权限粒度** | **暂缓**：统一网络入口先只判归属（等价今天的「只许自己的镇」），`ColonyPermission` 节点随 RBAC 阶段再定 | 约 30 个服务端包届时各加一行 action；避免现在拍板粒度（原「动作粒度」未决项） |
+| **权限粒度** | **只设三档**：OWNER / MANAGER / MEMBER（能力表见 §10.3.1），**不做逐动作位掩码** | 网关按档位判即可，`ColonyPermission` 那类细粒度节点本阶段不做 |
+
+#### 10.3.1 三档角色与能力边界（2026-10 裁定）
+
+| 档位 | 能力 | 代码含义 |
+|---|---|---|
+| **OWNER** | 全部权限 | **唯一，可转让**。同时是友军白名单的**归属身份锚点** |
+| **MANAGER** | 建造/拆除建筑、管理法师（招募/解雇/调策略/装备）、让法师跟随、仓库存取、下单、任务调度——即**全部操作性权限**；**不能调整任何人的档位** | 能操作镇内法师，但**不是法师的 Owner**（法师归属仍是 `npc.colonyId`，不随管理人变） |
+| **MEMBER** | **仅**：自己 + 自己的法师 + 自己的召唤物进入该镇 `FriendlyForce` 名单（不被该镇法师攻击） | 纯白名单身份，**不含任何操作权限** |
+| 非成员 | **无任何权限**（含商店消费、旅店入住——见上表「访客边界」） | 未登记 = 无权限 |
+
+**为什么 Owner 必须唯一**（代码事实，不是偏好）：友军判定链是
+
+```
+WandscapeNpc.isFriendlyForce(other, colonyId)
+  → classify(other)                      // 玩家 → Classified(PLAYER, pvpColony(player))
+  → pvpColony(uuid) = ColonyApi.getColonyByFounder(uuid)   // WandscapeNpc.java:440
+  → FriendlyForce.isAlly(selfColony, otherColony, PLAYER, pvp)
+       = sameColony(selfColony, otherColony)               // FriendlyForce.java:65
+```
+
+即**白名单是从「单一归属身份」派生的**（`getColonyByFounder` 是 1:1 反查）。一座镇若有两个 Owner，
+「某玩家是否在本镇白名单」就不再是单值可判的——跨镇成员关系（A 的某个 Owner 同时是 B 的成员）
+更无法确定答案。这也顺带定了 Manager 的语义边界：**「能管」与「归属」是两个轴**，
+Manager 进白名单不等于成为法师的 Owner（正是 §8.4 提醒的「别把 manager 标志与拥有的逐动作位混为一谈」）。
+
+#### 10.3.2 由三档模型推出的必改点（尚未实施）
+
+1. **白名单要从「Owner 身份派生」改成「花名册派生」**：`WandscapeNpc.pvpColony` 现在只认 `getColonyByFounder`，
+   于是 Manager / Member 会被自己镇的法师判成**非友军**（PVP 开启时直接挨打）。必须改成「查该玩家在哪些镇的花名册上」。
+2. **`FriendlyForce.Classified.colony` 是单值 `UUID`，必须变成集合**（或判定谓词）：一人可同时是 A 镇 Owner + B 镇 Member，
+   玩家侧实体（`PLAYER` / `PLAYER_SUMMON` / `PET`）因此可能对**多座镇**都算友军，而
+   `isAlly(selfColony, otherColony, …)` 现在只比一个 UUID。这一条正是 §8.6 挂的「`classify` 是否假定唯一」——
+   **核对结果：确实假定唯一**，多镇下必改。
+3. **`isAlliedTo`（双向、供第三方魔法模组索敌）现在只豁免本镇创始人**，与 `isFriendlyForce`（同镇即友军）口径本就不同。
+   花名册化后两者要**分别**明确 Manager / Member 是否也豁免，别顺手合并成一个。
+4. **`ColonySavedData` 加花名册 = 改数据格式**：先补 `version` + 显式迁移链（见 §10.5.4），
+   旧档按「founder = 唯一 OWNER，其余人无档位」迁移。
 
 ### 10.4 仍待澄清（做之前必须先定）
 
-- **角色划分**：OWNER / MANAGER / MEMBER 具体几档？
 - **邀请 / 加入流程**：谁能邀请？被邀请方要不要「接受」？离线邀请怎么挂？
-- **离线收益与激活**：`ColonyActivation.isFounderOnline` 是单 founder 语义，多 owner / 成员参与下怎么算？（本文原先完全没提）
+- **离线收益与激活**：`ColonyActivation.isFounderOnline` 是单 founder 语义，**owner 转让后 / 成员参与下**怎么算？（本文原先完全没提）
 - **成就与教学授予对象**：`docs/guidebook.md` D3 已标待定（行为类授予操作玩家 / 状态类沿用 founder），多镇下 founder 不再唯一。
 - **与权杖的关系**：敌人/盟友标记是「镇对所有者的指令」，多镇下用**哪座镇**的身份下令、挂哪个动作位？
 - **镇际关系（盟友）到底共享什么**：§7.5 已指出 MineColonies 的盟友实际只换来一个传送；Wandscape 要做就先定义收益。
-- **`WandscapeNpc.classify` 对「玩家 → 殖民地」是否假定唯一**（§8.6 待核对）——若假定唯一，多镇下要改成集合判定。
 
 ### 10.5 对本文既有结论的修正（动手前必读，已核对代码）
 
