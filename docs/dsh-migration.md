@@ -140,9 +140,15 @@ dsh 的本地 skill 搜索根（按 rank 优先）：
 
 **`.claude/skills` 不在列表里。** 但格式是兼容的：目录束 `<name>/SKILL.md` 或平铺 `<name>.md`，名字必须 kebab-case（`^[a-z0-9]+(?:-[a-z0-9]+)*$`），frontmatter **必填 `name` 与 `description`**，另认 `whenToUse` / `metadata` / `disable-model-invocation` / `user-invocable`（后两个省略即 `true`）。**不支持递归 `**/SKILL.md`。** 有 Chokidar 监视根目录，改完不用重启。
 
-**已完成**：两个 skill 都搬到 `.agents/skills/`，SKILL.md 内的脚本路径同步改成 `.agents/skills/...`；`.gitignore` 从 `.agents`（整目录忽略）改为 `.agents/*` + `!.agents/skills/` + 单独忽略 `scripts/cache/`——**从此 skill 真正随仓库走**（此前 `.claude/` 被整体忽略，它们只存在于本机）。
+**已完成**：两个 skill 都搬到 `.agents/skills/`（dsh 的 project-agents 根，rank 200），SKILL.md 内的脚本路径同步改成 `.agents/skills/...`。
 
-> **踩过的坑（2026-10-04 复核补记）**：上一版改动其实是**静默失效**的。`.gitignore` 里原本另有一条 `.agents/`（在「Dev tools」段），而 git **不会进入被排除的目录**，后面的 `!.agents/skills/` 再也捞不回来——`git check-ignore` 与 `git ls-files` 双向核实：skill 当时一个文件都没入库。后来那版无效配置被回滚成了 `.agents/`。**正确写法是把原来那条 `.agents/` 换成 `.agents/*` + `!.agents/skills/`**，不能两条并存。已按此修正，`minecraft-source` 的 4 个文件现已 `git add` 入库。
+**定案（2026-10-04，用户裁定）：skill 不入库。** `.agents/` 整个目录继续被 `.gitignore` 排除，skill 属于「本机开发工具」，只住在本机。
+
+> **踩过的坑（2026-10-04 补记，这段是错的、别再照做）**：迁移时曾一度认为「skill 应该随仓库走」，于是把 `.gitignore` 的 `.agents/` 换成 `.agents/*` + `!.agents/skills/` + `scripts/cache/`，并把 4 个 skill 文件 `git add` 入库——理由是「skill 是内容管线的可复现依赖」。**这个理由不成立**：skill 是给 agent 用的本机工具，不是模组的构建/生成依赖，入库只会把本机工具链钉进仓库。该提交已从历史中移除（未 push 过），`.gitignore` 恢复为一条 `.agents/`。
+>
+> 顺带记一个 git 行为陷阱：`!.agents/skills/` 这类否定规则**在父目录被排除时无效**——git 不会进入被排除的目录。当时那条 `.agents/` 让这个「已入库」的结论**静默为假**：`git ls-files` 与 `git check-ignore` 双向核实才发现 4 个文件一个都没进版本控制。所以「改了 .gitignore」不等于「生效了」，必须用 `git check-ignore -v <path>` / `git ls-files <path>` 复核。
+>
+> 代价与注意：skill 只在本机，**换机器要重新搬**（`minecraft-source` 这套是从 CC 侧搬来的；`~/.dsh/skills/` 下的全局 skill 同理）。本次对 `decompile-neoforge.sh` 的「按项目 `neo_version` 选源码 jar」修复也只落在本机文件里，没进 git。
 
 **坑一：description 会被截断。** dsh 的模型可见目录只收 `name` + `description`，且 `catalogDescriptionMaxLength` **默认 500**。原 `minecraft-source` 的 description 是 **1100 字符**，第 500 字符断在句子中间——尾部那整串触发词（`Triggers on: …`）**全部丢失**；技能仍能按名加载，但模型路由时的命中率会明显下降。已重写为 **456 字符**并把触发词前移。
 
@@ -412,7 +418,7 @@ Java / Minecraft / 游戏相关，全部落在 0–57 星：
 
 - [x] `CLAUDE.md` 正文并入 `AGENTS.md`，`AGENTS.md` 成为唯一真源；`CLAUDE.md` 收缩为一行 `@AGENTS.md`（见 §二.1 为什么不能直接删）
 - [x] `docs/` 里所有「CLAUDE.md」交叉引用改名为 `AGENTS.md`
-- [x] 两个 skill 搬到 `.agents/skills/`，SKILL.md 内脚本路径同步更新
+- [x] 两个 skill 搬到 `.agents/skills/`，SKILL.md 内脚本路径同步更新（**skill 不入库**，见 §二.3 定案）
 - [x] `minecraft-source` 的 description 由 1100 字符压到 456 字符，触发词前移
 - [x] `.claude/skills` 做成指向 `.agents/skills` 的 junction，CC 侧继续可用
 
@@ -420,14 +426,14 @@ Java / Minecraft / 游戏相关，全部落在 0–57 星：
 
 - [x] `~/.claude/rules/context7.md` → 已并入 `~/.dsh/AGENTS.md`（原件已删，避免同一份规则两处维护）
 - [x] 三个 cbm hook 确认**从来没在跑**（任何 settings 里都没有 `hooks` 键、也没有 `hooks.json`）→ 无迁移问题
-- [x] `.gitignore` 的 skill 入库：**上一版是静默失效的**（被另一条 `.agents/` 挡住），已改成 `.agents/*` + `!.agents/skills/` 并 `git add`，`git check-ignore` 双向核实（见 §二.3 踩过的坑）
+- [x] skill 与 git 的关系定案：**不入库**，`.agents/` 整目录继续忽略（曾一度改成 `!.agents/skills/` 并入库，属误判，已从历史移除；见 §二.3）
 
 **切到 dsh 之后做**：
 
 - [x] `cordis.patch.yml` 加 `@deepseek-ai/dsh-mcp-client` 条目；全仓工具短名改成 `mcp__codebase-memory__*`（`AGENTS.md`、`CLAUDE.local.md`、`~/.dsh/skills/codebase-memory/`；实测 14 个工具注册成功、`list_projects` 调用通过）
 - [x] 选 sandbox/approval preset：现用 `danger-full-access` + `never`（顶替原 allowlist，粒度变粗已接受）
 - [x] 按 §四 执行 memory 三分类落位并清空 memory 目录（见 §四「执行结果」）
-- [ ] **唯一剩下的一条**：`list_projects` 里同一路径有两个索引（`C-Users-huhai-Desktop-Java-mcmod-wandscape` 43.7k 节点 = 该用的那个；`wandscape` 23.7k 节点 = 覆盖不全的旧索引）。要清就用 `delete_project`，本次没动
+- [x] 清掉重复索引：旧的小索引 `wandscape`（23.7k 节点）已 `delete_project`，只留 `C-Users-huhai-Desktop-Java-mcmod-wandscape`。顺带核实了它的覆盖范围——**只索引 git 跟踪的内容**：734 个 `.java` 全部在册（按 `file_path` 计数），`_refs/` 0 条，`tools/`、`balance/`、`build/`、`run/` 同样为空。索引器跟随 git 的忽略规则，所以 gitignore 掉的本地目录不会被吃进去。
 - [ ] 复核时机：dsh 每次升级后，因为它还是 developer preview
 
 ---
