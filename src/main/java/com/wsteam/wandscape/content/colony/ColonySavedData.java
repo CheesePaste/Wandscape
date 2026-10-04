@@ -1,6 +1,7 @@
 package com.wsteam.wandscape.content.colony;
 import com.wsteam.wandscape.content.task.ecs.World;
 
+import com.wsteam.wandscape.content.colony.roster.ColonyRole;
 import com.wsteam.wandscape.foundation.util.NameStyle;
 import com.wsteam.wandscape.foundation.log.Log;
 import net.minecraft.core.BlockPos;
@@ -16,6 +17,7 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -42,9 +44,24 @@ public class ColonySavedData extends SavedData {
     private static final String KEY_REVIVE_COOLDOWN_UNTIL = "reviveCooldownUntil";
     private static final String KEY_TOURIST_SPAWN_DISABLED = "touristSpawnDisabled";
 
+    // ── 花名册（v2 起）──
+    private static final String KEY_VERSION = "version";
+    private static final String KEY_ROSTER = "roster";
+    private static final String KEY_PLAYER = "player";
+    private static final String KEY_ROLE = "role";
+
+    /**
+     * 存档版本。v1 = 无 version 字段的旧档（只有 founder，无花名册）；
+     * v2 = 带 {@code colonyId → (playerUuid → ColonyRole)} 花名册。
+     * 改数据格式必须走 {@link #migrate} 的显式迁移链，不许留「缺 key 补默认」的兼容分支。
+     */
+    private static final int CURRENT_VERSION = 2;
+
     private final Map<UUID, BlockPos> colonies = new ConcurrentHashMap<>();
-    /** colonyId → founding player UUID (informational; permissions remain shared). */
+    /** colonyId → founding player UUID. 归属的权威仍是花名册里的 OWNER，这里保留是为了既有的 founder 反查路径。 */
     private final Map<UUID, UUID> founders = new ConcurrentHashMap<>();
+    /** colonyId → (playerUuid → 档位)。一人可在多座镇各有档位，故为两层映射。 */
+    private final Map<UUID, Map<UUID, ColonyRole>> rosters = new ConcurrentHashMap<>();
     /** colonyId → character naming rule (defaults to FANTASY when absent). */
     private final Map<UUID, NameStyle> namingStyles = new ConcurrentHashMap<>();
     /** Colony IDs whose town hall 「生成游客」 toggle is OFF (absent = enabled). */
@@ -74,6 +91,8 @@ public class ColonySavedData extends SavedData {
         colonies.put(colonyId, origin.immutable());
         if (founder != null) {
             founders.put(colonyId, founder);
+            // 建镇者即花名册第一人（唯一 OWNER）。花名册是权限与友军判定的唯一真源。
+            rosterOf(colonyId).put(founder, ColonyRole.OWNER);
         }
         setDirty();
         Log.info(TAG, "[Colony] Persisted colony {} at {}", colonyId.toString().substring(0, 8), origin);
@@ -84,6 +103,7 @@ public class ColonySavedData extends SavedData {
         founders.remove(colonyId);
         namingStyles.remove(colonyId);
         touristSpawnDisabled.remove(colonyId);
+        rosters.remove(colonyId);
         if (removed != null) {
             setDirty();
             Log.info(TAG, "[Colony] Removed colony {} from persistence", colonyId.toString().substring(0, 8));
@@ -107,6 +127,100 @@ public class ColonySavedData extends SavedData {
             if (entry.getValue().equals(founder)) return entry.getKey();
         }
         return null;
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    //  花名册（玩家 → 档位）
+    // ══════════════════════════════════════════════════════════════
+
+    /** 该镇花名册的可变视图（不存在则建）。调用方改动后必须自行 {@link #setDirty()}。 */
+    private Map<UUID, ColonyRole> rosterOf(UUID colonyId) {
+        return rosters.computeIfAbsent(colonyId, k -> new ConcurrentHashMap<>());
+    }
+
+    /** 玩家在该镇的档位；不在花名册返回 null（= 非成员，无任何权限）。 */
+    @Nullable
+    public ColonyRole getRole(UUID colonyId, UUID playerId) {
+        Map<UUID, ColonyRole> roster = rosters.get(colonyId);
+        return roster != null ? roster.get(playerId) : null;
+    }
+
+    /** 该镇花名册（只读快照）。 */
+    public Map<UUID, ColonyRole> getRoster(UUID colonyId) {
+        Map<UUID, ColonyRole> roster = rosters.get(colonyId);
+        return roster != null ? Collections.unmodifiableMap(roster) : Collections.<UUID, ColonyRole>emptyMap();
+    }
+
+    /**
+     * 玩家参与的所有小镇（colonyId → 档位）。一人可在多座镇各有档位，故返回多值。
+     *
+     * <p>反向查询靠遍历各镇花名册得出（镇数量级很小）。若将来镇数显著变大，再补反向索引。
+     */
+    public Map<UUID, ColonyRole> getColoniesOf(UUID playerId) {
+        Map<UUID, ColonyRole> out = new LinkedHashMap<>();
+        for (var entry : rosters.entrySet()) {
+            ColonyRole role = entry.getValue().get(playerId);
+            if (role != null) out.put(entry.getKey(), role);
+        }
+        return out;
+    }
+
+    /**
+     * 设置档位（新增成员或改档）。**不接受 OWNER** —— 所有权变更走 {@link #transferOwner}，
+     * 以免绕过「一座镇恒有且仅有一个 OWNER」这个不变量（它同时是友军白名单的归属锚点）。
+     *
+     * @return 是否实际发生变更
+     */
+    public boolean setRole(UUID colonyId, UUID playerId, ColonyRole role) {
+        if (role == null || role == ColonyRole.OWNER) {
+            Log.warn(TAG, "[Colony] setRole rejected for {}: use transferOwner for OWNER", role);
+            return false;
+        }
+        Map<UUID, ColonyRole> roster = rosterOf(colonyId);
+        if (roster.get(playerId) == role) return false;
+        roster.put(playerId, role);
+        setDirty();
+        Log.info(TAG, "[Colony] Roster {}: {} → {}", short8(colonyId), short8(playerId), role);
+        return true;
+    }
+
+    /** 移出花名册。OWNER 不可被移出（要换人请走 {@link #transferOwner}）。 */
+    public boolean removeMember(UUID colonyId, UUID playerId) {
+        Map<UUID, ColonyRole> roster = rosters.get(colonyId);
+        if (roster == null) return false;
+        if (roster.get(playerId) == ColonyRole.OWNER) {
+            Log.warn(TAG, "[Colony] Refused to remove the OWNER of colony {}", short8(colonyId));
+            return false;
+        }
+        if (roster.remove(playerId) == null) return false;
+        setDirty();
+        Log.info(TAG, "[Colony] Roster {}: removed {}", short8(colonyId), short8(playerId));
+        return true;
+    }
+
+    /**
+     * 转让所有权：新人置 OWNER，前任降为 MANAGER（交接不断管理权），并同步 founder 反查。
+     * 新人不存在、或与前任同一人时视为无操作。
+     */
+    public boolean transferOwner(UUID colonyId, UUID newOwnerId) {
+        if (newOwnerId == null || !colonies.containsKey(colonyId)) return false;
+        UUID prev = founders.get(colonyId);
+        if (newOwnerId.equals(prev)) return false;
+
+        Map<UUID, ColonyRole> roster = rosterOf(colonyId);
+        if (prev != null) {
+            roster.put(prev, ColonyRole.MANAGER);
+        }
+        roster.put(newOwnerId, ColonyRole.OWNER);
+        founders.put(colonyId, newOwnerId);
+        setDirty();
+        Log.info(TAG, "[Colony] Colony {} ownership transferred {} → {}",
+                short8(colonyId), prev != null ? short8(prev) : "none", short8(newOwnerId));
+        return true;
+    }
+
+    private static String short8(UUID id) {
+        return id.toString().substring(0, 8);
     }
 
     /** Naming rule for future tourist/NPC names; defaults to FANTASY. */
@@ -216,8 +330,20 @@ public class ColonySavedData extends SavedData {
             if (cooldownUntil != null && cooldownUntil > 0) {
                 entryTag.putLong(KEY_REVIVE_COOLDOWN_UNTIL, cooldownUntil);
             }
+            Map<UUID, ColonyRole> roster = rosters.get(entry.getKey());
+            if (roster != null && !roster.isEmpty()) {
+                ListTag rosterList = new ListTag();
+                for (var member : roster.entrySet()) {
+                    CompoundTag memberTag = new CompoundTag();
+                    memberTag.putUUID(KEY_PLAYER, member.getKey());
+                    memberTag.putString(KEY_ROLE, member.getValue().name());
+                    rosterList.add(memberTag);
+                }
+                entryTag.put(KEY_ROSTER, rosterList);
+            }
             list.add(entryTag);
         }
+        tag.putInt(KEY_VERSION, CURRENT_VERSION);
         tag.put(KEY_COLONIES, list);
 
         if (!touristSpawnDisabled.isEmpty()) {
@@ -243,6 +369,23 @@ public class ColonySavedData extends SavedData {
             if (entry.contains(KEY_FOUNDER)) {
                 data.founders.put(id, entry.getUUID(KEY_FOUNDER));
             }
+            if (entry.contains(KEY_ROSTER, Tag.TAG_LIST)) {
+                ListTag rosterList = entry.getList(KEY_ROSTER, Tag.TAG_COMPOUND);
+                Map<UUID, ColonyRole> roster = new ConcurrentHashMap<>();
+                for (int j = 0; j < rosterList.size(); j++) {
+                    CompoundTag memberTag = rosterList.getCompound(j);
+                    ColonyRole role = ColonyRole.byName(memberTag.getString(KEY_ROLE));
+                    if (role == null) {
+                        Log.warn(TAG, "[Colony] Unknown roster role '{}' for colony {}, entry skipped",
+                                memberTag.getString(KEY_ROLE), id);
+                        continue;
+                    }
+                    roster.put(memberTag.getUUID(KEY_PLAYER), role);
+                }
+                if (!roster.isEmpty()) {
+                    data.rosters.put(id, roster);
+                }
+            }
             if (entry.contains(KEY_NAMING_STYLE)) {
                 try {
                     data.namingStyles.put(id, NameStyle.valueOf(entry.getString(KEY_NAMING_STYLE)));
@@ -257,6 +400,9 @@ public class ColonySavedData extends SavedData {
         }
         Log.info(TAG, "Loaded {} colonies from saved data", data.colonies.size());
 
+        int version = tag.contains(KEY_VERSION) ? tag.getInt(KEY_VERSION) : 1;
+        migrate(data, version);
+
         if (tag.contains(KEY_TOURIST_SPAWN_DISABLED)) {
             ListTag disabled = tag.getList(KEY_TOURIST_SPAWN_DISABLED, Tag.TAG_STRING);
             for (int i = 0; i < disabled.size(); i++) {
@@ -269,5 +415,30 @@ public class ColonySavedData extends SavedData {
             }
         }
         return data;
+    }
+
+    /**
+     * 显式迁移链。改数据格式必须在这里补一段，不留「缺 key 补默认」的兼容分支。
+     *
+     * <p>v1 → v2：旧档没有花名册，按「founder = 唯一 OWNER」补齐。
+     */
+    private static void migrate(ColonySavedData data, int fromVersion) {
+        if (fromVersion < 2) {
+            for (var entry : data.founders.entrySet()) {
+                data.rosterOf(entry.getKey()).put(entry.getValue(), ColonyRole.OWNER);
+            }
+            Log.info(TAG, "[Colony] Migrated colony roster v{} → v{} (founder promoted to OWNER)",
+                    fromVersion, CURRENT_VERSION);
+        }
+        // 不变量：有 founder 的镇必须有且仅有一个 OWNER。半迁移或异常档在此纠正并留痕。
+        for (var entry : data.founders.entrySet()) {
+            UUID colonyId = entry.getKey();
+            Map<UUID, ColonyRole> roster = data.rosterOf(colonyId);
+            if (!roster.containsValue(ColonyRole.OWNER)) {
+                roster.put(entry.getValue(), ColonyRole.OWNER);
+                Log.warn(TAG, "[Colony] Colony {} had no OWNER in its roster; founder reinstated",
+                        colonyId.toString().substring(0, 8));
+            }
+        }
     }
 }

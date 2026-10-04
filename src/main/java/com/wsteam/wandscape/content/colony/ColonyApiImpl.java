@@ -5,6 +5,7 @@ import com.wsteam.wandscape.foundation.util.NameStyle;
 import com.wsteam.wandscape.content.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.content.building.internal.BuildingState;
 import com.wsteam.wandscape.content.colony.ColonySavedData;
+import com.wsteam.wandscape.content.colony.roster.ColonyRole;
 import com.wsteam.wandscape.api.ColonyApi;
 import com.wsteam.wandscape.content.building.data.BuildingData;
 import com.wsteam.wandscape.foundation.log.Log;
@@ -73,6 +74,45 @@ public final class ColonyApiImpl implements ColonyApi {
     public UUID getColonyByFounder(UUID founder) {
         ColonySavedData csd = getColonySavedData();
         return csd != null ? csd.getColonyByFounder(founder) : null;
+    }
+
+    // ── 花名册（玩家 → 档位）──────────────────────────────────────────
+
+    @Override
+    @Nullable
+    public ColonyRole getRole(UUID colonyId, UUID playerId) {
+        ColonySavedData csd = getColonySavedData();
+        return csd != null ? csd.getRole(colonyId, playerId) : null;
+    }
+
+    @Override
+    public Map<UUID, ColonyRole> getRoster(UUID colonyId) {
+        ColonySavedData csd = getColonySavedData();
+        return csd != null ? csd.getRoster(colonyId) : Map.<UUID, ColonyRole>of();
+    }
+
+    @Override
+    public Map<UUID, ColonyRole> getColoniesOf(UUID playerId) {
+        ColonySavedData csd = getColonySavedData();
+        return csd != null ? csd.getColoniesOf(playerId) : Map.<UUID, ColonyRole>of();
+    }
+
+    @Override
+    public boolean setRole(UUID colonyId, UUID playerId, ColonyRole role) {
+        ColonySavedData csd = getColonySavedData();
+        return csd != null && csd.setRole(colonyId, playerId, role);
+    }
+
+    @Override
+    public boolean removeMember(UUID colonyId, UUID playerId) {
+        ColonySavedData csd = getColonySavedData();
+        return csd != null && csd.removeMember(colonyId, playerId);
+    }
+
+    @Override
+    public boolean transferOwner(UUID colonyId, UUID newOwnerId) {
+        ColonySavedData csd = getColonySavedData();
+        return csd != null && csd.transferOwner(colonyId, newOwnerId);
     }
 
     @Override

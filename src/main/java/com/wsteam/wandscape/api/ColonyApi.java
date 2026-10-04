@@ -1,11 +1,13 @@
 package com.wsteam.wandscape.api;
 import com.wsteam.wandscape.content.building.data.BuildingData;
+import com.wsteam.wandscape.content.colony.roster.ColonyRole;
 import com.wsteam.wandscape.foundation.util.NameStyle;
 
 import net.minecraft.core.BlockPos;
 
 import javax.annotation.Nullable;
 import java.util.Collection;
+import java.util.Map;
 import java.util.UUID;
 public interface ColonyApi {
     /** Register a new colony at the given origin. Returns its UUID. */
@@ -87,4 +89,32 @@ public interface ColonyApi {
      * @return 设置成功返回 true；殖民地不存在或越界返回 false
      */
     boolean setColonyLevel(UUID colonyId, int level);
+
+    // ── 花名册（玩家 → 档位）──────────────────────────────────────────
+    // 以下全部与 getColonyByFounder 同为**服务端专用**（实现读殖民地 SavedData，
+    // 专用服务器的客户端恒返回 null / 空集）。客户端只能用同步下来的数据。
+
+    /** 玩家在指定小镇的档位；不在花名册返回 null（= 非成员，无任何权限）。 */
+    @Nullable
+    ColonyRole getRole(UUID colonyId, UUID playerId);
+
+    /** 该镇花名册（playerUuid → 档位）只读快照。 */
+    Map<UUID, ColonyRole> getRoster(UUID colonyId);
+
+    /** 玩家参与的所有小镇（colonyId → 档位）。一人可在多座镇各有档位，故返回多值。 */
+    Map<UUID, ColonyRole> getColoniesOf(UUID playerId);
+
+    /**
+     * 设置档位（新增成员或改档）。**不接受 OWNER** —— 所有权变更走 {@link #transferOwner}，
+     * 以免破坏「一座镇恒有且仅有一个 OWNER」这个不变量。
+     *
+     * @return 是否实际发生变更
+     */
+    boolean setRole(UUID colonyId, UUID playerId, ColonyRole role);
+
+    /** 移出花名册。OWNER 不可被移出（要换人请走 {@link #transferOwner}）。 */
+    boolean removeMember(UUID colonyId, UUID playerId);
+
+    /** 转让所有权：新人置 OWNER，前任降为 MANAGER。@return 是否成功。 */
+    boolean transferOwner(UUID colonyId, UUID newOwnerId);
 }

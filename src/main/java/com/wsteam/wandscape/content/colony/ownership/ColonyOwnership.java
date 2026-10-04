@@ -2,6 +2,7 @@ package com.wsteam.wandscape.content.colony.ownership;
 
 import com.wsteam.wandscape.api.ColonyApi;
 import com.wsteam.wandscape.api.WandscapeApis;
+import com.wsteam.wandscape.content.colony.roster.ColonyRole;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.foundation.networking.ScreenFeedbackPacket;
 import com.wsteam.wandscape.foundation.ui.I18n;
@@ -93,5 +94,33 @@ public final class ColonyOwnership {
         if (colonyId == null) return false;
         UUID own = ownColony(player);
         return own != null && own.equals(colonyId);
+    }
+
+    /**
+     * 玩家在指定小镇的档位（花名册查询）。
+     *
+     * <p>{@link #isOwn} 只回答「这是不是我的镇」，档位才回答「我在这镇能干什么」——
+     * 多殖民地模型下，权限判定要走这里而不是归属等值比较。
+     *
+     * <p>不在花名册、参数缺失、API 未就绪或存储异常一律返回 null（= 非成员，无任何权限），
+     * 绝不把异常抛给调用方。
+     */
+    @Nullable
+    public static ColonyRole role(@Nullable ServerPlayer player, @Nullable UUID colonyId) {
+        if (player == null || colonyId == null) return null;
+        try {
+            ColonyApi api = WandscapeApis.getColonyApiSilently();
+            return api != null ? api.getRole(colonyId, player.getUUID()) : null;
+        } catch (RuntimeException e) {
+            Log.warn(TAG, "Failed to resolve role of {} in colony {}: {}",
+                    player.getUUID(), colonyId, e.toString());
+            return null;
+        }
+    }
+
+    /** 玩家在指定小镇的档位是否不低于 {@code min}（非成员恒 false）。 */
+    public static boolean hasRole(@Nullable ServerPlayer player, @Nullable UUID colonyId, ColonyRole min) {
+        ColonyRole current = role(player, colonyId);
+        return current != null && current.atLeast(min);
     }
 }
