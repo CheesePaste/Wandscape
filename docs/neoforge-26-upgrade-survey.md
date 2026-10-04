@@ -39,7 +39,7 @@
 | 构建插件 | ModDevGradle（或 NeoGradle） | **MDG ≥2.0.141 / NG ≥7.1.21** | 配置 DSL |
 | Loader | FancyModLoader 2.x 时代 | **FancyModLoader 7.0.x** | mods.toml / `@Mod` / 事件总线注册等元层变化（见 `_refs/261/loader-7.0.4-changelog.txt`） |
 
-**升级路径**：NeoForge 官方 `PORTING.md` 面向的是「NeoForge 本体」移植（NeoForm + patches + rejects-*），对**mod** 的启发是：没有「1.21.1→26.1」的分步迁移文档，只能**一次性跳到 26.1，靠编译错误枚举 + 逐缝对照**。由于本模组已删 datagen / GameTest 运行配置（`CLAUDE.md`），datagen 变化不咬人；数据资产（1353 个 data json、193 纹理、lang/指南书）**零 loader 依赖，原样可用**（JSON 里的 id 仍是字符串，不受 `ResourceLocation→Identifier` 影响）。
+**升级路径**：NeoForge 官方 `PORTING.md` 面向的是「NeoForge 本体」移植（NeoForm + patches + rejects-*），对**mod** 的启发是：没有「1.21.1→26.1」的分步迁移文档，只能**一次性跳到 26.1，靠编译错误枚举 + 逐缝对照**。由于本模组已删 datagen / GameTest 运行配置（`AGENTS.md`），datagen 变化不咬人；数据资产（1353 个 data json、193 纹理、lang/指南书）**零 loader 依赖，原样可用**（JSON 里的 id 仍是字符串，不受 `ResourceLocation→Identifier` 影响）。
 
 ---
 

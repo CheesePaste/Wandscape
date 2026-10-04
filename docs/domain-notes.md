@@ -163,6 +163,21 @@
    - `getQueue` 的「共享组队列优先」是**UI 与索引操作**的语义；**发布预检**必须用 `getClaimableWork`（两边并起来看，与 `dequeueWorkEligible`「共享队列弹不出就落自有队列」对齐）。
    - 拆除 `build:demolish_structure` 与复原 `build:place_structure` 进的是建筑**自有队列**。共享队列类别（workstation / crafting_station / magic_station / node，见 `BuildingSavedData.groupKeyFor`）的建筑若预检只看 `getQueue`，会被永远判为「无活可发布」：任务静静躺在队列里 NPC 永不开工，而队列面板走同一路由也被遮蔽、显示为空。表现就是「撤销/复原点了没反应」。
    - 空组队列**不算**「有队列」：`BuildingSavedData.peekSharedQueue` 对空队列按不存在处理并顺手摘掉条目（`save` 本就不落盘空队列，空条目是纯运行时残留）。留着空条目会让运行时状态与存档态分叉，造出「本次会话卡死、重进世界自愈」的假象——排查同类问题时，「重进就好」是内存态与落盘态不一致的强信号。改队列路由前先确认这三处的分工。
+12. **清场（`ClearBoxOp`）的两条不变量**：
+   - **排除集不能省**：清场一旦碰 pattern 格，会把已经放好的方块回收进仓库、再由放置 op 从 NPC 背包重放一遍；仓库满时 `dropSalvageOnGround` 那一份就是一次**物品复制**。
+   - 物料统计**不该向仓库要空气**：这条不靠特判，靠「空气没有元素映射」自然成立（`computeMaterialCounts` 只统计 `mapped` 的 palette 项）。
+13. **工地 / 虚影渲染的已知残留（改投影渲染前先看）**：
+   - `BuildingGhostRenderer.drawGhostSkipped` 每 tick 会把**所有可见段**重建一遍（样本楼 803 个非空 16³ 段，中位 468 格/段，最大 2322）。要再压一档可给重建加「每 tick 时间预算 + 轮转」，代价是遮罩最多落后几个 tick；**anchor 变化时必须整轮重建**，否则会用错位置的遮罩。
+   - 同 config + 旋转的多个工地共享同一份 `BakedGhostMesh`，各工地 anchor 交替变化会让节流失效——但**不比改前差**（改前本来就每帧重建）。彻底解法是每个工地独立索引缓冲。
+   - 「选中的那栋正好也在施工」会让 `ProjectionRenderer.drawGhost` 与 `ConstructionGhostRenderer.drawGhostSkipped` 在同一份网格上每帧来回约 64 MB 索引（改动前就有）。
+   - **有意为之的观感差异**：改造后草/树叶/藤蔓用**目的地群系的真实染色**（改造前是固定默认草绿），只影响带 tint 的方块（样本楼 46/443,333 格）；随机模型从共享随机序列改为按位置确定，观感更稳定。
+   - **观感口径（这是定档，不是待优化项）**：虚影几何**必须完整**——拒降级、拒 LOD、拒抽样；观感定档「实心壳」，不做透视。
+   - **3x 填充差距的根因**：我们一律用 `RenderType.translucent()`，而投影类模组是原生分层渲染。**alpha 与 160 帧不可兼得**——别再试图两全。
+   - **`ByteBufferBuilder` 必须显式 `close()`**：它既没有 `Cleaner` 也没有 finalizer；`MeshData.close()` 只把 writeOffset 归零、**不 free 指针**。漏关就是永久堆外泄漏。
+14. **建材成本门控的已知缺口（`element_mappings`）**：
+   - **无元素映射 = 免费，且不参与解锁门控**。当前这类方块有一批：`wall_torch`、各类 `*_wall_banner`、`*_wall_sign`、全部 `potted_*`、`water`、`lava`、`bubble_column`、`tripwire`。同一栋建筑里 `torch` 要钱而 `wall_torch` 不要钱、`oak_sign` 要钱而 `oak_wall_sign` 不要钱。
+   - `bell` 有映射（metal 2048）但**原版没有配方**，首解锁只能靠村庄——「映射表里有价、游戏里没门路」的典型样本。
+   - 需**精准采集**的门控仍在 L5 的 `redstone_shop` 与 L10 的 nodemetal / nodewater 上出现（`ice`、`amethyst_cluster`、深板岩矿石）。
 
 ---
 

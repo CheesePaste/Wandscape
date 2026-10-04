@@ -494,7 +494,7 @@
 
 ### 裁定不动（审计证明非缺陷）
 - **FillBuildingCommand/StressTestCommand 不路由 placeBuilding**：两调试命令**故意走低层**（无视解锁/disabled/firstFree 堆建筑/灌任务）；且 `EnqueueHelper.registerIfAbsent` **本身就带重叠校验**（placeBuilding:892 同用它），核心校验未绕过。路由会改变调试用途。判定"API 不完整"不成立。
-- **BuildingApiImpl 其余 impl-only 留 content/building，不搬 API**：getQueue/removeFromQueue/moveUp/moveDown/dequeueWorkEligible/setCurrentTask/clearCurrentTask/getBuildingsWithPendingWork/registerBuilding/unregisterBuilding 全是**建筑队列调度核心**（任务源轮询/队列 UI/跨域 ResourceSupplySystem），接口故意不暴露（Step 2e 裁）。跨域直调正常（CLAUDE.md 铁律）。
+- **BuildingApiImpl 其余 impl-only 留 content/building，不搬 API**：getQueue/removeFromQueue/moveUp/moveDown/dequeueWorkEligible/setCurrentTask/clearCurrentTask/getBuildingsWithPendingWork/registerBuilding/unregisterBuilding 全是**建筑队列调度核心**（任务源轮询/队列 UI/跨域 ResourceSupplySystem），接口故意不暴露（Step 2e 裁）。跨域直调正常（AGENTS.md 铁律）。
 - **ColonyApiImpl impl-only**（onBuildingIntact/onBuildingDestroyed/assignColonyIfPossible/rebuildFromSavedData/setColonyLevelManager）= building↔colony 钩子+装配，留内部。
 
 ### 死码清理（BuildingApiImpl）

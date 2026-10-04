@@ -91,3 +91,18 @@
 **关于不兼容的口径**（硬规则 7）：项目**不维护新旧两套格式并存的兼容层** —— 断档是允许的选择，
 但代价是"发布时说清楚"，不是"代码里长期养一个兼容分支"。所以发版前先问一句：
 这次改动有没有让旧档读不出来？有就写进正文，没有就跳过第 9 步。
+
+---
+
+## 四、遗留待办（性能 · 工具 · 待验证）
+
+> 2026-10-04 从已删的性能考察文档（`docs/plan/server-tick-hotspots.md`、`docs/plan/large-building-render-perf.md`、`docs/plan/earlygame-building-materials.md`）收拢，**它们是这些未完成项的唯一留存**。
+
+- [ ] **C12 对象模型去装箱**：`List<BlockOffset>` → `int[]`、`List<Integer>` → `short[]`；`blockMapping()`（`BuildingConfig.java:209`，58 万条 String 键 HashMap，被 `BuildCompleteListener.java:189` / `BuildingRepairHandler.java:43` / `EnqueueHelper.java:448` 调用）要么删、要么改 int 键。收益：常驻堆 −30 MB 级，并消掉一个约 100 MB 的瞬时峰值。
+- [ ] **C13 `rawJsons` 不再常驻 Gson `JsonElement` 树**（`BuildingConfigLoader.java:289`）；网络同步直接走序列化字节（`Wandscape.java:905` 现在是先 `json.toString()` 再压）。影响 `getRawJsons()` 的全部消费者。**量级是估算不是实测**：单三元组约 270 B、58 万条 ⇒ 150–200 MB。
+- [ ] **A5 `warmAll()` / `stableName()`**：当初按决策未做（预设超大建筑优化到位后不再是问题）。注：`stableName()` 每次重建约 15 MB 字符串，与建筑大小无关。
+- [ ] **`block_nbt` 是下一个压缩目标**：现为最大单项（magic_academy 159 KB / 1087 条逐条 gzip 的 base64 NBT）。
+- [ ] **`extract_buildings.py:97` 售价取整 bug**：写成 `-(-int(cost * (1.0 + profit_rate)))`，注释说 ceil，但对正数实际是 **floor**（Python `int()` 向零截断）；游戏侧 `ShopStockManager:258` 用的是真 `Math.ceil`。**会让商店收入系统性偏低**，低档商品最明显（1 元素商品被工具记成 2），修法一行：换 `math.ceil`。
+- [ ] **清场（C1）世界状态一致性未验证**：清场后盒内方块集合与仓库回收量是否与改前逐格一致。建议小建筑先做 A/B：提交 → 比较「清场后盒内非 pattern 格是否全为空气」与「回收进仓库的物品数量」，再用大建筑复跑 spark 看单帧尖峰是否消失。
+- [ ] **批量跳过尖峰从未实测**：`TaskExecutionSystem` 4a 的「已是目标方块就 skip」路径，外推 2–7 s 单帧（666 万次 `blockOps.getBlock()`）。C1 预期已消掉它，但没有实测数据。
+- [ ] **SavedData 任务参数序列化残留**：`BuildingSavedData:674` 把每个 WorkItem 的 params 用 Gson 序列化进 NBT；C1 已把 340 MB 级压到 25 MB 级。彻底消掉要让 params 不再携带 pattern（蓝图按 building_type 自查配置），但那违反「蓝图不 import MC」的纯逻辑边界，暂不做。

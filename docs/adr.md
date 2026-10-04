@@ -23,7 +23,7 @@
 | 2026-09-19 | **探索经验去掉危险乘数、`exp_ratio` 15→5**：`ExplorationRewardSpec.dangerMultiplier` 真删（record 字段、`reward.danger_multiplier` 解析、生成器写盘三处一起删），经验只由「箱子元素总值 ÷ `exp_ratio`」决定；`DEFAULT_EXP_RATIO` 15.0→5.0，10 个声明区域 JSON 显式跟着写 5.0。已删的键留在 `RETIRED_KEYS` 里：旧文件还写着 `danger_multiplier` 时 `Log.warn` 点名，不静默按新口径结算。**旧存档的 `<world>/wandscape/generated_regions/` 不会自动重算**（启动时匹配到就跳过），改默认值后需手动删一次该目录，下次开服按新口径重写。 | 结算口径汇总成一页（`balance/explore_reward.py`）后看清：箱子价差 250 倍（下界遗迹 5,551 exp/箱 vs 村庄 36），而危险系数只在 0.8~2.5 之间抖，既解释不了也压不住这个差距——它是第二个说不清的旋钮。统一成「箱子值多少元素就换多少经验」后，调平衡只剩 `exp_ratio` 一个杠杆。 | `content/colony/exploration/ExplorationRewardSpec`, `ExplorationExpectationCalculator`, `ExplorationRegionGenerator`, `data/wandscape/exploration_regions/` |
 | 2026-09-15 | **探索价值改「读权重算期望」，废弃蒙特卡洛抽样；算不出价值就是 0**：新增 `ExplorationLootEstimator` + `ExplorationProbeRandom`（对任何区间都答中点的随机源），借 `LootContext.Builder.withOptionalRandomSource` 与 `LootPoolEntryContainer#expand` / `LootPoolEntry#getWeight` 一次遍历即得数学期望；`LootTable#pools` / `LootPool#entries` 两个无 getter 字段走 AT 提 public。`createFallback` 由「经验 50×危险 + 土 10~30」改为经验 0 + 元素空，并且不再为算不出价值的表落 region 文件（只 `Log.info` 一行）。同时 `loot_share` 进入 `reward` 块（默认 0.5），`Config` 的 `exploration.sampleCount` 真删。 | 抽样 50 次要真造 `ItemStack` 并跑附魔/计数函数，实测在整合包里把服务端线程卡了四十多秒；而算不出价值的箱子（模组物品没有 `element_mappings`）本来就不该有奖励——原兜底既把"没数据"伪装成"便宜箱子"，又让生成器落下一堆内容相同的无用文件（实测四十多份）。 | `content/colony/exploration/ExplorationLootEstimator`, `ExplorationProbeRandom`, `ExplorationExpectationCalculator`, `META-INF/accesstransformer.cfg` |
 | 2026-09-15 | **探索奖励数据显式化，废弃「自动写 config 账本」方案**：region JSON 拆成「身份」（`name` + `loot_table_patterns`）与「发放」（`reward` 块）；`reward.mode` 只决定元素价值向量从哪来（`derived` 按战利品表算 / `fixed` 用声明值 / `additive` 两者相加），`exp_ratio` / `danger_multiplier` / `variance` / `loot_share` 不分模式都作用在该向量上。未被任何 region 声明的宝箱战利品表在 `ServerStartingEvent` 按权重算出价值，写成**标准 region JSON** 落到 `<world>/wandscape/generated_regions/`；查找为「声明层优先、生成层兜底」。代码侧只留 `ExplorationChestRewardEvent` 一个可改可取消的结算前事件。 | 奖励原本唯一派生自元素映射，想调箱子价值只能去改全局建造经济（build cost），而那是另一件事。中途评估过的「另写一份 config 账本」只省下重启后重算一次，却要换来第三个数据位置 + 优先级规则 + 过期与 reset 命令——收益撑不起成本，于是取消账本，让自动产物就是标准 region 数据，一个格式一件事。 | `content/colony/exploration/`, `data/wandscape/exploration_regions/`, `Wandscape.onServerStarting` |
-| 2026-10-01 | **存档兼容按版本断档，不做双格式兼容层**：数据格式变更仍优先走版本号迁移；确需断档时不维护新旧两套格式并存（不写"缺 key 补默认"式兼容分支、不留别名），但**破坏存档兼容的 release 必须在 release 正文给出不兼容提示**（清单见 `docs/checklists.md` §三）。 | 项目已不在开发期，玩家存档是真的；但双格式兼容层的长期维护成本远高于一次性断档——代价应当由"发布时说清楚"承担，而不是由常驻代码复杂度承担。 | `CLAUDE.md`（硬规则 7）, `docs/checklists.md` |
+| 2026-10-01 | **存档兼容按版本断档，不做双格式兼容层**：数据格式变更仍优先走版本号迁移；确需断档时不维护新旧两套格式并存（不写"缺 key 补默认"式兼容分支、不留别名），但**破坏存档兼容的 release 必须在 release 正文给出不兼容提示**（清单见 `docs/checklists.md` §三）。 | 项目已不在开发期，玩家存档是真的；但双格式兼容层的长期维护成本远高于一次性断档——代价应当由"发布时说清楚"承担，而不是由常驻代码复杂度承担。 | `AGENTS.md`（硬规则 7）, `docs/checklists.md` |
 | 2026-09-15 | **运行时输出目录按作用域分桶**：世界作用域 → `<world>/`（`wandscape/generated_regions/`、`datapacks/<pack>/data/wandscape/`、`data/` 下的 SavedData）；全局作用域 → `<gameDir>/config/wandscape/`；诊断 → `<gameDir>/logs/`。`previews/` 与 `scanner_presets/` 由游离的 `<gameDir>/wandscape/` 挪进 `config/wandscape/`，**不做老数据迁移**。 | 判据是「换一个世界还成立吗」；此前同一类客户端数据分散在两处，新写盘点无处可依。 | `BuildingPreviewGifCache`, `ScannerPresetStore`, `docs/domain-notes.md §十一` |
 | 2026-09-10 | **复活入口收敛为「祭坛 + 市政厅全灭保底按钮」**：删除「全灭自动复活」与「距建筑 20 格内自动复活」两条被动路径及其心跳轮询，`reviveNearBuildingRange` 平衡值与 `NpcApi` 对应 get/set 一并真删；新增市政厅面板底部「复活法师」按钮——**全灭 + 该殖民地 5 分钟冷却**才可按，免费，把最近阵亡者复活到市政厅门口。全灭判定改走 ECS 桥（`onRemovedFromLevel` 只在 KILLED/DISCARDED 移除条目，区块卸载保留），不再用「已加载实体」枚举。 | 祭坛施法需要一名**在世法师**走到祭坛旁，全员阵亡即硬锁死，必须留一个自举出口；而被动自动复活既绕过祭坛设计，又会在远处法师所在区块卸载时被误判为「全灭」，改为玩家显式按下的受控单次路径。 | `content/npc/internal/ReviveHandler`, `content/npc/internal/ColonyDeathRegistry`, `content/building/client/TownHallScreen`, `content/building/network/TownHallReviveRequestPacket`, `content/building/network/TownHallReviveStatePacket` |
 | 2026-09-02 | **NpcData 转纯字段读模型 + 属性读写分离**：NpcData 由 interface 转 `record` 只放字段，属性读面唯一化为 `attributes()`（effective 全量，含隐藏），删全部逐属性读法（getSpellPower/getWorkSpeed/getSpellSpeed/getArmorValue/getMaxHealth/getMaxMana 共 6 个）；写路径完整保留在 `NpcAttributesApi`（setNpcAttributes/setNpcLevel/trainNpc/levelUpNpc），其读桩 getNpcAttributes 删除；scepterHostileRange/mageHutRestTicks 归位各自域 API。 | 属性增减不再改读模型形状；读写边界清晰（单实体快照投影=字段、跨实体/改状态=API 方法）；兑现 ledger 悬置的「读面二选一去重」裁定。 | `content/npc/data/NpcData`, `api/NpcAttributesApi`, `api/NpcApi`, `api/ScepterApi`, `api/MageHutApi` |
@@ -35,10 +35,10 @@
 | 2026-09-01 | **API 瘦身与归口重设计**：API 仅保留极薄公开契约，内部通信废除搭桥改直接调用，未实现桩显式抛 `@Unimplemented`。 | 彻底打破过度微服务搭桥反模式，诚实暴露契约状态。 | `api/`, `WandscapeApis` |
 | 2026-09-01 | **数据驱动收敛与治理**：蓝图 DSL 解释器删除并收敛为 Java-lambda（`BlueprintDefaults`），删除孤儿 `road_templates`，保留 `buildings/deprecated/`。 | 消除无维护价值的脆弱 DSL 解释器，保留旧存档建筑向下兼容载荷。 | `content/task/engine/dsl/`, `data/wandscape/buildings/deprecated/` |
 | 2026-09-01 | **NPC 属性收敛唯一源**：五处重复定义收敛进 `NpcAttributes` 单类，规则表支持 API 覆盖，ARMOR 默认 5。 | 彻底根除因多处分散定义导致的漏同步崩溃，建立单事实源。 | `content/npc/attributes/NpcAttributes`, `api/NpcAttributesApi` |
-| 2026-09-01 | **删除全部单元测试**：删除 `src/test` 目录，日常验证以 `./gradlew build` 为唯一准绳。 | 拒绝测试灌注与低价值桩测试维护负担，参考 Botania/Create 实践。 | `CLAUDE.md`, 构建配置 |
+| 2026-09-01 | **删除全部单元测试**：删除 `src/test` 目录，日常验证以 `./gradlew build` 为唯一准绳。 | 拒绝测试灌注与低价值桩测试维护负担，参考 Botania/Create 实践。 | `AGENTS.md`, 构建配置 |
 | 2026-08-31 | **消融 core/engine/shared 桥层**：254 个桥类按语义彻底分配到 `content/<domain>`、`foundation/` 与 `impl/`。 | 归属看语义服务谁，彻底消灭为规避反向依赖而生的搭桥层。 | `content/`, `foundation/`, `impl/` |
 | 2026-08-31 | **制作站动作统一为 craft**：合成法杖/药水/杂物统一为 `production:craft` 并由 `CraftRecipeView` 解析，魔法卷轴保持独立。 | 消除添加新合成物时必须扇出修改一堆执行器与包的缺陷。 | `content/production/`, `content/task/` |
-| 2026-08-30 | **数据格式与兼容纪律**：不写无版本号兼容、删字段真删、SavedData 升级走显式版本迁移链。 | 阻断"缺 key 补默认"内联兼容代码指数级滋生。 | `CLAUDE.md`, `newplan/plan.md` |
+| 2026-08-30 | **数据格式与兼容纪律**：不写无版本号兼容、删字段真删、SavedData 升级走显式版本迁移链。 | 阻断"缺 key 补默认"内联兼容代码指数级滋生。 | `AGENTS.md`, `newplan/plan.md` |
 | 2026-08-30 | **纯逻辑与 MC 严格解耦**：无 MC 依赖的算法/评分/DSL/公式等禁止 import MC 类。 | 保留纯粹清晰度与零 MC 依赖移植能力，作为架构唯一硬边界。 | `content/task/`, `content/npc/attributes/` |
 
 ---
@@ -85,3 +85,14 @@
 | 2026-08-12 | **施法决策三层架构**：L0 硬性保命/紧急治疗 > L1 玩家策略预设 > L2 普攻兜底。 | 确保濒死保命逻辑永远优先，不受玩家策略排序干扰。 | `content/magic/internal/CastBrain` |
 | 2026-08-11 | **施法互斥锁与 CD 分离**：互斥锁占用期间 CD 冻结，锁释放后倒计时。 | CD 代表施法结束后的恢复间隔，避免长法阵锁覆盖 CD 造成连发。 | `content/npc/component/MagicState` |
 | 2026-08-07 | **祭坛独占重大魔法与复活**：`altar_only` 魔法禁止 NPC 自由施法，每祭坛 CD 独立存储。 | 重大仪式集中在神圣设施并以任务形式驱动，防止玩家随时随地滥用。 | `content/magic/`, `content/building/` |
+
+---
+
+## 三、未决事项（挂起决策）
+
+> 只记「已经明确要选但还没选」的分支；定了之后写进上面两张表并从本节删掉。
+> 本节 2026-10-04 从已删的考察文档（`docs/plan/earlygame-building-materials.md` 等）中收拢。
+
+1. **L1–5 商店商品门控**（原 earlygame 考察 §3.4）：五级这一档最集中——`latern_shop` 六个货位三个死（`end_rod` / `soul_lantern` / `copper_bulb`），`redstone_shop` 六个里四个死（三件石英件 + 校准幽匿感测体）。两家主题自洽，但按门控算等于开张就有一半货架空着。三条路择一：**A** 写进 `default_recipes.json`（先例 `glowstone`，是让货位活过来的唯一一条路，但商品走 A 等于**直接发料**，连挖都不用挖）；**B** 换货；**C** 删货。若只想「能补上」又不想削弱门控，B/C 更贴。
+2. **其余挂起的门控**：`hotel` 的 `soul_sand` ×2、`redstone_shop` 整栋（按 §3.2 单独决策）、L10 的 `end_stone` ×165 / `dark_prismarine` / 节点 `end_rod`。倾向：`end_stone` / `dark_prismarine` 这类**主题自洽**的 L10 门控可以不动，或只留 1~2 个作「去过末地/海底神殿」的纪念性建材。
+3. **`altar1` 的 `amethyst_block`**：紫水晶需先找到晶洞。注：`aa35e04b` 当初特意把祭坛降到 1 级并写明「材料成本即门槛」，**紫水晶可能是有意保留的成本门槛——改前先确认**。
