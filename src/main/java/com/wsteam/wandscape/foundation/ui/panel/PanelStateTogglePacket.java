@@ -23,10 +23,13 @@ import static com.wsteam.wandscape.Wandscape.MODID;
  * Client→Server: Notifies server that the player opened or closed the Wandscape panel.
  * Server stores this state to gate building right-click interactions.
  *
- * <p>On open, if no colony exists near the player, the server auto-creates one at the
- * player's position (moved earlier from the "first town hall placement with no colony"
- * flow), so the colony exists before the first building is placed — which the per-colony
- * first-free ({@code first_free}) claim requires.
+ * <p>On open, the server resolves the player's own colony by founder
+ * ({@code getColonyByFounder}) and pushes that colony's stats snapshot; the building-area
+ * packet is sent either way (empty when there is no colony, so a previous world's cached
+ * boundaries cannot leak into the new save).
+ *
+ * <p>无小镇 = 建镇引导态：**绝不回退到空间最近小镇**（否则无镇玩家会观察到别人的小镇数据），
+ * 也**不会**自动为玩家创建殖民地——建镇只能由「右键无主市政厅 → 命名」触发。
  */
 public record PanelStateTogglePacket(boolean open) implements CustomPacketPayload {
 
