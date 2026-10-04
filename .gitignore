@@ -16,7 +16,10 @@ spec/
 ### Claude (local working files, kept out of the repo) ###
 .claude/
 magiccircles/
+# 本地指令覆盖层（存云服务器凭据与 runbook）：CC 只读 CLAUDE.local.md，dsh 两个都读
+# （AGENTS.local.md + CLAUDE.local.md 都会被加载）。所以两个名字都必须挡住，别只留一个。
 CLAUDE.local.md
+AGENTS.local.md
 ### Dev tools (maintained outside the repo) ###
 tools/
 ReForgedPlay/
