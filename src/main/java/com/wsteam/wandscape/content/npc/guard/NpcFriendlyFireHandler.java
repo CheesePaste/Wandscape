@@ -17,7 +17,6 @@ import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.Set;
-import java.util.UUID;
 
 /**
  * 玩家误伤自家殖民地 NPC 的兜底拦截（配合 {@link WandscapeNpc#isAlliedTo} 的双向友军语义）。
@@ -48,9 +47,12 @@ public final class NpcFriendlyFireHandler {
 
         ColonyApi api = WandscapeApis.getColonyApiSilently();
         if (api == null) return;
-        // 只豁免「该玩家拥有」的殖民地 NPC；无殖民地玩家 → null → 不豁免（可误伤他人殖民地）。
-        UUID playerColony = api.getColonyByFounder(attacker.getUUID());
-        if (playerColony == null || !playerColony.equals(npc.colonyId)) return;
+        // 只豁免「本镇花名册上的成员」对该镇 NPC 的伤害：四档（OWNER/MANAGER/MEMBER/ALLY）一视同仁。
+        // 这是 isAlliedTo 之外的兜底（覆盖近战/箭矢等一切来源），口径必须与它一致。
+        // 非成员（无镇玩家、他镇玩家）→ null → 不豁免，可误伤他人殖民地。
+        // 必须用花名册而非 getColonyByFounder：后者只认创始人，会让 MANAGER/MEMBER/ALLY
+        // 拿剑砍自家镇的法师照样掉血（花名册才是权限与归属的唯一真源）。
+        if (api.getRole(npc.colonyId, attacker.getUUID()) == null) return;
 
         event.setCanceled(true);
     }

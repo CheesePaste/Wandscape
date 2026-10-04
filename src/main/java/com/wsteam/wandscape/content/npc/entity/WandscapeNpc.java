@@ -14,6 +14,7 @@ import com.wsteam.wandscape.content.warehouse.ColonyItemBank;
 // core.component wildcard replaced
 import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.content.npc.attributes.NpcAttributes.AttributeType;
+import com.wsteam.wandscape.content.colony.roster.ColonyRole;
 import com.wsteam.wandscape.content.npc.types.FollowAttackDecision;
 import com.wsteam.wandscape.content.npc.types.FriendlyForce;
 import com.wsteam.wandscape.content.npc.WandscapeAttributes;
@@ -301,9 +302,9 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike, ColonyWor
     }
 
     /**
-     * 该法师的魔法光束能伤害的目标判定钩子——**友军名单管辖**：友军（玩家 + 玩家侧宠物/守护召唤/
-     * 玩家随从 + 同殖民地 NPC/其铁魔法随从/游客，PVP 开启时玩家侧仅同殖民地计友军，见
-     * {@link #isFriendlyForce}）以外的一切实体都能伤害。与
+     * 该法师的魔法光束能伤害的目标判定钩子——**友军名单管辖**：友军（与本镇互为友军的镇 NPC/
+     * 其铁魔法随从/游客 + 花名册上该镇的玩家及其宠物·守护召唤·随从；PVP 关闭时玩家侧恒友军）以外的
+     * 一切实体都能伤害，见 {@link #isFriendlyForce}。与
      * {@link #isHostileTarget}（主动索敌，仍仅 Enemy）分开：战斗中 NPC 不会主动锁定非敌对
      * 生物，但一旦交战（跟随玩家攻击的目标 / 受击反击 / 守卫对怪），光束/陨石溅射对束内
      * 非友军一律结算伤害。敌对法师等子类覆盖为「非友军 或 生存玩家」，用于实战测试。
@@ -315,10 +316,11 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike, ColonyWor
     }
 
     /**
-     * 目标是否属于本 NPC 所在殖民地的友军名单（派生）：同 {@code colonyId} 的 NPC + 玩家（PVP 开启时
-     * 仅同殖民地玩家）+ 玩家侧宠物/守护召唤/玩家随从 + 同殖民地 NPC 召唤的铁魔法随从 + 同殖民地游客。
-     * 友军不记仇、不受本 NPC 任何攻击伤害——仇恨记录（{@code SelfDefenseHandler}）与伤害判定
-     * （{@link #canBeamHurt} / {@code NpcSpellPowerHandler} 伤害入口）统一走此方法，边界唯一。
+     * 目标是否属于本 NPC 所在殖民地的友军名单（派生）：与本镇互为友军的镇 NPC/其铁魔法随从/游客 +
+     * 花名册上该镇的玩家（OWNER/MANAGER/MEMBER/ALLY 四档一视同仁）及其宠物·守护召唤·随从
+     * （PVP 关闭时玩家侧恒友军）。友军不记仇、不受本 NPC 任何攻击伤害——仇恨记录
+     * （{@code SelfDefenseHandler}）与伤害判定（{@link #canBeamHurt} / {@code NpcSpellPowerHandler}
+     * 伤害入口）统一走此方法，边界唯一。
      */
     public boolean isFriendlyForce(LivingEntity other) {
         return isFriendlyForce(other, colonyId);
@@ -327,12 +329,14 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike, ColonyWor
     /**
      * 目标是否属于指定殖民地的友军名单（静态重载，供自身实例委托与玩家权杖 PvP/误点校验用）。
      * 与实例版本同一套派生规则，只是殖民地显式传入——权限校验处（如敌对权杖拒绝标记盟友）无需
-     * 依赖某个具体 NPC 实例。PVP 开启（{@code Config.PVP}）时玩家侧实体（玩家/其宠物/其召唤物）
-     * 仅同殖民地算友军，殖民地外玩家（含无殖民地玩家）为非友军，可被还手/敌对标记。
+     * 依赖某个具体 NPC 实例。镇际关系按 {@link FriendlyForce#linked}（对称）；PVP 开启
+     * （{@code Config.PVP}）时玩家侧实体（玩家/其宠物/其召唤物）仅当该玩家在**与本镇互为友军的镇**
+     * 花名册上才算友军（四档一视同仁），殖民地外玩家（含无殖民地玩家）为非友军，可被还手/敌对标记。
      */
     public static boolean isFriendlyForce(LivingEntity other, UUID colonyId) {
         FriendlyForce.Classified c = classify(other);
-        if (FriendlyForce.isAlly(colonyId, c.colony(), c.kind(), com.wsteam.wandscape.Config.PVP.get())) {
+        if (FriendlyForce.isAlly(FriendlyForce.singleColony(colonyId), c.colonies(), c.kind(),
+                com.wsteam.wandscape.Config.PVP.get(), ROSTER_LOOKUP)) {
             return true;
         }
         // 庇护名单：被玩家用庇护权杖标记的生物视作盟友（按殖民地名下长期持久化）——
@@ -348,37 +352,75 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike, ColonyWor
     /**
      * 双向友军（vanilla 中立钩子，供第三方魔法模组的索敌/友伤判定用）：
      * 覆盖 {@link LivingEntity#isAlliedTo}，让 Goety 的 {@code MobUtil#areAllies} 与铁魔法的
-     * {@code isFriendlyFireBetween} 在"源头上"就把本殖民地 NPC 视为友军，不必逐模组兼容。
+     * {@code isFriendlyFireBetween} 在「源头上」就把本殖民地 NPC 视为友军，不必逐模组兼容。
      *
-     * <p>与 {@link #isFriendlyForce}（单向、"NPC 永不攻击玩家的防御姿态"）区分：这里是**双向、
-     * 且只豁免本殖民地创始人玩家**的语意，与 Config「误伤保护」一致——其他殖民地的玩家/殖民地
-     * NPC 不豁免，仍可被索敌/误伤（与 PvP 的「跨殖民地敌对」同向）。非殖民地实体（敌对法师等
-     * {@code isColonyNpc()==false}）不覆写 → 走父类原版判定，可被正常交战。
+     * <p>与 {@link #isFriendlyForce} 刻意**不合并**，两者花名册化后的口径差异：
+     * <ul>
+     *   <li>{@code isAlliedTo}：**双向**、受 {@code npc.friendlyFireProtection} 开关约束；玩家分支只认
+     *       **本镇**花名册上的直接成员，不追 {@link FriendlyForce#linked} 跨镇盟友。</li>
+     *   <li>{@code isFriendlyForce}：**单向**（NPC 的防御姿态）、不受该开关约束；覆盖全部实体类别
+     *       （NPC/召唤/宠物/游客/守护），且玩家侧按 {@code linked} 关系判定（含跨镇盟友）。</li>
+     * </ul>
+     *
+     * <p>各档位是否豁免（两处结论一致，四档一视同仁——ALLY 的存在意义就是「仅友军白名单」）：
+     * <ul>
+     *   <li>OWNER：{@code isAlliedTo} 豁免、{@code isFriendlyForce} 豁免。</li>
+     *   <li>MANAGER：两者皆豁免（改造前会被本镇法师当非友军打，本次修复）。</li>
+     *   <li>MEMBER：两者皆豁免（同上）。</li>
+     *   <li>ALLY：两者皆豁免。</li>
+     *   <li>不在花名册（非成员）：两者皆不豁免，仍可被索敌/误伤（与 PvP 的「跨殖民地敌对」同向）。</li>
+     * </ul>
+     *
+     * <p>非殖民地实体（敌对法师等 {@code isColonyNpc()==false}）不覆写 → 走父类原版判定，可被正常交战。
      */
     @Override
     public boolean isAlliedTo(Entity other) {
         if (!isColonyNpc()) return super.isAlliedTo(other);
         if (other instanceof LivingEntity le) {
             if (le instanceof Player player) {
-                return Config.NPC_FRIENDLY_FIRE_PROTECTION.get()
-                        && player.getUUID().equals(colonyFounder());
+                // 档位：OWNER/MANAGER/MEMBER/ALLY 均豁免；只认本镇花名册，不追跨镇盟友
+                return Config.NPC_FRIENDLY_FIRE_PROTECTION.get() && isRosterMember(player.getUUID());
             }
-            // 非玩家：沿用 PvP 感知的 isFriendlyForce（同殖民地 NPC/其随从/游客/玩家侧宠物·守护召唤/外部注册友军）。
+            // 非玩家：沿用 PvP 感知的 isFriendlyForce（互为友军的镇 NPC/其随从/游客/玩家侧宠物·守护召唤/外部注册友军）。
             return isFriendlyForce(le);
         }
         return super.isAlliedTo(other);
     }
 
-    /** 本殖民地创建者玩家 UUID（null = 未归属真实殖民地 / 无创始人 / 缺省占位殖民地）。 */
-    private @Nullable UUID colonyFounder() {
-        if (colonyId == null) return null;
+    /**
+     * 该玩家是否在本镇花名册上（OWNER/MANAGER/MEMBER/ALLY 任一档位）。
+     *
+     * <p>降级：API 未装配 / 客户端（无 SavedData）→ false + {@code warnOnce}，即「不额外豁免」，
+     * 与改造前同口径（改造前只认 founder，客户端同样恒 false）。绝不抛。
+     */
+    private boolean isRosterMember(UUID playerId) {
+        if (colonyId == null) return false;
         ColonyApi api = WandscapeApis.getColonyApiSilently();
-        return api != null ? api.getFounder(colonyId) : null;
+        if (api == null) {
+            Log.warnOnce(LogCategory.NPC, "friendly-fire-api-missing",
+                    "ColonyApi unavailable — friendly-fire protection falls back to no exemption");
+            return false;
+        }
+        try {
+            return api.getRole(colonyId, playerId) != null;
+        } catch (RuntimeException ex) {
+            Log.warnOnce(LogCategory.NPC, "friendly-fire-role-lookup",
+                    "Colony role lookup failed for colony {} player {}: {}",
+                    short8(colonyId), short8(playerId), ex.toString());
+            return false;
+        }
+    }
+
+    /** UUID 前 8 位（日志用）。 */
+    private static String short8(@Nullable UUID id) {
+        return id != null ? id.toString().substring(0, 8) : "null";
     }
 
     /**
      * 实体在友军名单中的类别（静态重载，供 {@link #isFriendlyForce} 与
-     * {@link #isMutuallyFriendly} 共用，边界唯一）。判定顺序：玩家 > 本模组 NPC > 守护召唤
+     * {@link #isMutuallyFriendly} 共用，边界唯一）。返回的殖民地是**集合**：玩家侧实体取
+     * 「该玩家在哪些镇的花名册上」（一人可同时在多座镇，四档一视同仁），殖民地侧实体为单元素集合，
+     * 恒友军类别为空集。判定顺序：玩家 > 本模组 NPC > 守护召唤
      * （玩家创建的铁傀儡 / 雪傀儡）> 召唤者解析（铁魔法 / 诡厄 {@code IOwned}：召唤者为玩家 → 玩家侧召唤恒友军、
      * 本模组法师 → 其殖民地的召唤随从）> 玩家训养的宠物（{@code OwnableEntity} 有主）> 游客 >
      * 其它模组经 {@code FriendlyForceApi} 注册的友军（{@code EXTERNAL_ALLY}）> 其它（含村庄自然生成的铁傀儡）。
@@ -395,52 +437,95 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike, ColonyWor
      */
     static FriendlyForce.Classified classify(LivingEntity e) {
         if (e instanceof Player player) {
-            return new FriendlyForce.Classified(FriendlyForce.AllyKind.PLAYER, pvpColony(player.getUUID()));
+            return new FriendlyForce.Classified(FriendlyForce.AllyKind.PLAYER, playerColonies(player.getUUID()));
         }
         if (e instanceof WandscapeNpc npc) {
-            return new FriendlyForce.Classified(FriendlyForce.AllyKind.WANDSCAPE_NPC, npc.colonyId);
+            return new FriendlyForce.Classified(FriendlyForce.AllyKind.WANDSCAPE_NPC,
+                    FriendlyForce.singleColony(npc.colonyId));
         }
         if (e instanceof IronGolem golem && golem.isPlayerCreated()) {
-            return new FriendlyForce.Classified(FriendlyForce.AllyKind.GOLEM, null);
+            return new FriendlyForce.Classified(FriendlyForce.AllyKind.GOLEM, Set.of());
         }
         if (e instanceof SnowGolem) {
-            return new FriendlyForce.Classified(FriendlyForce.AllyKind.GOLEM, null);
+            return new FriendlyForce.Classified(FriendlyForce.AllyKind.GOLEM, Set.of());
         }
         Entity summoner = IronSpellsCompat.getSummoner(e);
         if (summoner == null && com.wsteam.wandscape.compat.goety.GoetyCompat.isLoaded()) {
             summoner = com.wsteam.wandscape.compat.goety.GoetyCompat.getMasterOwner(e);
         }
         if (summoner instanceof Player p) {
-            return new FriendlyForce.Classified(FriendlyForce.AllyKind.PLAYER_SUMMON, pvpColony(p.getUUID()));
+            return new FriendlyForce.Classified(FriendlyForce.AllyKind.PLAYER_SUMMON, playerColonies(p.getUUID()));
         }
         if (summoner instanceof WandscapeNpc ownerNpc) {
-            return new FriendlyForce.Classified(FriendlyForce.AllyKind.MAGIC_SUMMON, ownerNpc.colonyId);
+            return new FriendlyForce.Classified(FriendlyForce.AllyKind.MAGIC_SUMMON,
+                    FriendlyForce.singleColony(ownerNpc.colonyId));
         }
         if (summoner == null && !(e instanceof Enemy) && e instanceof OwnableEntity o && o.getOwnerUUID() != null) {
-            return new FriendlyForce.Classified(FriendlyForce.AllyKind.PET, pvpColony(o.getOwnerUUID()));
+            return new FriendlyForce.Classified(FriendlyForce.AllyKind.PET, playerColonies(o.getOwnerUUID()));
         }
         if (e instanceof ColonyVisitor visitor) {
-            return new FriendlyForce.Classified(FriendlyForce.AllyKind.TOURIST, visitor.getColonyId());
+            return new FriendlyForce.Classified(FriendlyForce.AllyKind.TOURIST,
+                    FriendlyForce.singleColony(visitor.getColonyId()));
         }
         // 其它模组经 FriendlyForceApi 注册的友军（其召唤物/宠物等）：恒友军。谓词轻量（instanceof）。
         FriendlyForceApi allyApi = WandscapeApis.getFriendlyForceApiSilently();
         if (allyApi != null && allyApi.isExternalAlly(e)) {
-            return new FriendlyForce.Classified(FriendlyForce.AllyKind.EXTERNAL_ALLY, null);
+            return new FriendlyForce.Classified(FriendlyForce.AllyKind.EXTERNAL_ALLY, Set.of());
         }
-        return new FriendlyForce.Classified(FriendlyForce.AllyKind.OTHER, null);
+        return new FriendlyForce.Classified(FriendlyForce.AllyKind.OTHER, Set.of());
     }
 
     /**
-     * PVP 开启时把玩家侧实体的持有殖民地解析出来（供 {@code classify} 放到友军类别旁，使
-     * {@code FriendlyForce.isAlly} 能按「同殖民地」判定）；PVP 关闭时返回 null，维持原
-     * 「玩家侧恒友军」语义。殖民地与创始人 1:1（{@code ColonyApi.getColonyByFounder}），
-     * 无殖民地玩家/宠物 → null → 在 PVP 下判非友军。只查 SavedData 一次，够轻量。
+     * 花名册查询缝的 MC 侧实现（{@link FriendlyForce} 保持零 MC 依赖，绝不自己查 ColonyApi）：
+     * 给出某镇的「成员 → 档位」，供 {@link FriendlyForce#linked} 判镇际友军。
+     *
+     * <p>降级：API 未装配 / 查询异常 → {@code warnOnce} 后返回空 Map，使 linked 收敛为
+     * 「只有自己那座镇」（等价改造前行为），绝不抛异常打崩战斗结算路径。
      */
-    @Nullable
-    private static UUID pvpColony(UUID ownerUuid) {
-        if (!com.wsteam.wandscape.Config.PVP.get()) return null;
-        var api = com.wsteam.wandscape.api.WandscapeApis.getColonyApiSilently();
-        return api != null ? api.getColonyByFounder(ownerUuid) : null;
+    private static final FriendlyForce.ColonyRosterLookup ROSTER_LOOKUP = colonyId -> {
+        ColonyApi api = WandscapeApis.getColonyApiSilently();
+        if (api == null) {
+            Log.warnOnce(LogCategory.NPC, "roster-api-missing",
+                    "ColonyApi unavailable — friendly-force falls back to same-colony only");
+            return Map.of();
+        }
+        try {
+            Map<UUID, ColonyRole> roster = api.getRoster(colonyId);
+            return roster != null ? roster : Map.of();
+        } catch (RuntimeException ex) {
+            Log.warnOnce(LogCategory.NPC, "roster-lookup-failed",
+                    "Roster lookup failed for colony {}: {}", short8(colonyId), ex.toString());
+            return Map.of();
+        }
+    };
+
+    /**
+     * 玩家侧实体的殖民地**集合**：该玩家在哪些镇的花名册上（OWNER/MANAGER/MEMBER/ALLY 四档一视同仁，
+     * 只要在花名册上就是该镇友军）。一人可同时在多座镇，故是集合而非单值——取代旧的
+     * 「创始人 1:1 反查」（{@code ColonyApi.getColonyByFounder}），这是本任务的核心修复。
+     *
+     * <p>PVP 关闭时返回空集：玩家侧恒友军（{@link FriendlyForce#isAlly} 的 pvp=false 分支），
+     * 无需查花名册，顺带省掉热路径上的 SavedData 访问。
+     *
+     * <p>降级：API 未装配 / 查询异常 → 空集 + {@code warnOnce}，等价改造前「无殖民地 → null」。
+     */
+    private static Set<UUID> playerColonies(UUID playerUuid) {
+        if (!com.wsteam.wandscape.Config.PVP.get()) return Set.of();
+        ColonyApi api = WandscapeApis.getColonyApiSilently();
+        if (api == null) {
+            Log.warnOnce(LogCategory.NPC, "player-colonies-api-missing",
+                    "ColonyApi unavailable — PvP player-side ally check falls back to no colony");
+            return Set.of();
+        }
+        try {
+            Map<UUID, ColonyRole> mine = api.getColoniesOf(playerUuid);
+            if (mine == null || mine.isEmpty()) return Set.of();
+            return Set.copyOf(mine.keySet());
+        } catch (RuntimeException ex) {
+            Log.warnOnce(LogCategory.NPC, "player-colonies-lookup-failed",
+                    "getColoniesOf failed for player {}: {}", short8(playerUuid), ex.toString());
+            return Set.of();
+        }
     }
 
     /**
@@ -464,15 +549,17 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike, ColonyWor
      * （{@link #isColonySide}）时判定——敌对生物（EvilMage）、普通怪物、野外中立生物与玩家的
      * 对抗是敌意而非误伤，刻意排除。
      *
-     * <p>判定：任一方恒友军（玩家/宠物/守护召唤/玩家随从）取另一侧殖民地为参考；两侧均殖民地侧
-     * 须同一殖民地。与单向 {@link #isFriendlyForce} 共用 {@link #classify}，规则不散落。
+     * <p>判定：任一方恒友军（玩家侧实体在 PVP 关闭时 / 宠物 / 守护召唤 / 玩家随从 / 外部注册友军）
+     * 取另一侧殖民地为参考（玩家侧无殖民地集合时必须以真实殖民地侧为参考）；两侧均殖民地侧须存在
+     * 一对 {@link FriendlyForce#linked} 的镇。与单向 {@link #isFriendlyForce} 共用 {@link #classify}
+     * 与同一套镇际规则，规则不散落。
      */
     public static boolean isMutuallyFriendly(LivingEntity a, LivingEntity b) {
         if (!isColonySide(a) && !isColonySide(b)) return false;
         FriendlyForce.Classified ca = classify(a);
         FriendlyForce.Classified cb = classify(b);
-        return FriendlyForce.areMutuallyAlly(ca.colony(), ca.kind(), cb.colony(), cb.kind(),
-                com.wsteam.wandscape.Config.PVP.get());
+        return FriendlyForce.areMutuallyAlly(ca.colonies(), ca.kind(), cb.colonies(), cb.kind(),
+                com.wsteam.wandscape.Config.PVP.get(), ROSTER_LOOKUP);
     }
 
     /**
@@ -491,9 +578,10 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike, ColonyWor
     /**
      * 受击反击目标判定：NPC 被该攻击者打伤时是否应当还手。
      * 与 {@link #isHostileTarget}（主动索敌，仅 Enemy）区分——反击不要求 Enemy：
-     * 北极熊/铁傀儡/狼等中立生物主动攻击 NPC 时同样记仇还手。友军（玩家、玩家侧宠物/守护召唤/
-     * 玩家随从与同殖民地 NPC）不反击（友伤）；不同殖民地 NPC 属非友军，可按此反击。PVP 开启时
-     * 玩家侧仅同殖民地计友军，其他殖民地/无殖民地玩家攻击 NPC 会触发反击。
+     * 北极熊/铁傀儡/狼等中立生物主动攻击 NPC 时同样记仇还手。友军（与本镇互为友军的镇 NPC、花名册上
+     * 该镇的玩家及其宠物/守护召唤/随从）不反击（友伤）；非友军（含未与本镇互为友军的镇 NPC）可按此反击。
+     * PVP 开启时玩家侧仅「与本镇互为友军的镇花名册上的玩家」计友军，其他殖民地/无殖民地玩家攻击
+     * 本 NPC 会触发反击。
      */
     public boolean isRetaliationTarget(LivingEntity attacker) {
         return !isFriendlyForce(attacker);
