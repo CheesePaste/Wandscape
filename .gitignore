@@ -60,7 +60,9 @@ run/
 **/src/generated/**/.cache/
 repo/
 !**/src/**/repo/
-.agents
+.agents/*
+!.agents/skills/
+.agents/skills/*/scripts/cache/
 #AGENTS.md
 ref
 node_modules
