@@ -3,7 +3,6 @@
 > Minecraft NeoForge 1.21.1 模组《魔法小镇》：殖民地自动化（NPC 法师经法杖执行建造/采集/合成）+ 模拟经营（短居游客沿道路入城，交互商店/服务建筑，元素利润循环）。
 > **本文件是项目准则的唯一真源**，Claude Code / Codex / Cursor / DeepSeek Harness 都读它。`CLAUDE.md` 只是一行 `@AGENTS.md` 指针，**别在那里写第二套规则**——文档多源漂移正是重构清过的痼疾。
 > 深层知识不写在这里：导航见 `docs/README.md`；动手改某个功能域前，先读 `docs/domain-notes.md` 对应小节 + `docs/adr.md` 相关决策。
-> **本机专属资产（都被 `.gitignore` 排除、不进版本控制，换机器就没有，新会话默认不知道它们存在）**：`.agents/skills/` 是给 agent 用的本地技能（**skill 刻意不入库**，换机器要重新搬，见 `docs/dsh-migration.md` §二.3）；`_refs/` 是 18 棵第三方/mod 参考源码树（MineColonies、litematica、patchouli、Goety、IronSpells、JEI、Create、Botania、FTB-Quests、TouhouLittleMaid、Curios、AE2 及各自 1.20.1 版），**要对账原版或其他模组行为时先读它、别凭记忆猜**（重新拉取用 `_refs/fetch-1201-refs.sh`）；`tools/` 是本地开发工具（`jar-audit/` jar 自检脚手架，用法见 `docs/agent-notes.md` §四；另有若干 i18n 脚本）；`balance/` 是平衡分析工作区（结果快照见 `docs/balance-baseline.md`，别每次重跑）；`CLAUDE.local.md` 存云服务器 runbook 与凭据。
 
 ## SOUL
 
@@ -18,8 +17,7 @@
 
 - 不维护单测（`src/test` 已删）：不写测试、不跑 `./gradlew test`。
 - **禁 `./gradlew runClient`**；也已无 GameTest / datagen run 配置。元素覆盖审计走游戏内命令 `/wandscape audit_elements`，没有对应的 run 配置可跑。
-- 写 MC / NeoForge 代码前先用 `minecraft-source` 技能读真实源码，**禁止凭记忆写 API**：
-  `bash .agents/skills/minecraft-source/scripts/decompile.sh <类名>`
+- 写 MC / NeoForge 代码前**必须读真实源码核实 API**（vanilla / NeoForge / 第三方模组都一样），**禁止凭记忆写**。本机怎么读反编译源码（`minecraft-source` 技能）写在 `CLAUDE.local.md` —— 那是各人自备的本地覆盖层，不入库。
 - 需求或设计没敲定就先追问清楚（决策树每支明确）再动手，别猜着写。
 
 ## 架构归属（硬原则）
