@@ -117,9 +117,13 @@ dsh 侧代价：读到 `AGENTS.md`（全文）+ `CLAUDE.md`（一行字面量 `@
 
 > 注意：dsh 的指令发现只跟随结构化文件工具（read/write/edit），**不跟随 bash 的 cd**；靠 `.git` 向上找根。另外 CC **不认** `AGENTS.local.md`（只认 `CLAUDE.local.md`），而 dsh 两者都认——所以本地覆盖层继续用 `CLAUDE.local.md`，两边通吃。
 
-### 2. 全局规则：`context7.md` 需要搬家
+### 2. 全局规则：`context7.md` 搬进 `~/.dsh/AGENTS.md`（已执行）
 
-`~/.claude/rules/context7.md` 在 dsh 下**不会**被加载（`.claude/rules/` 不被解释）。把它并入 `~/.dsh/AGENTS.md`。同理，如果将来加全局规则，直接写这个文件。
+`~/.claude/rules/context7.md` 在 dsh 下**不会**被加载（`.claude/rules/` 不被解释）。
+
+**已执行**：内容原样搬进 `~/.dsh/AGENTS.md`（ctx7 的命令与判据一字未改，只把散文改写成中文），`~/.claude/rules/context7.md` 已删——留着就是同一份规则两处维护。实测 dsh 打开会话即注入该文件（无需重启，会话中途新建也立刻生效）。同理，将来加全局规则直接写这个文件。
+
+> 注意这是**跨项目**的用户级规则，不随本仓库走（`.dsh/` 不在仓库里）；仓库自己的准则仍然只写 `AGENTS.md`。
 
 ### 3. Skills：格式兼容，搬目录 + 改路径
 
@@ -137,6 +141,8 @@ dsh 的本地 skill 搜索根（按 rank 优先）：
 **`.claude/skills` 不在列表里。** 但格式是兼容的：目录束 `<name>/SKILL.md` 或平铺 `<name>.md`，名字必须 kebab-case（`^[a-z0-9]+(?:-[a-z0-9]+)*$`），frontmatter **必填 `name` 与 `description`**，另认 `whenToUse` / `metadata` / `disable-model-invocation` / `user-invocable`（后两个省略即 `true`）。**不支持递归 `**/SKILL.md`。** 有 Chokidar 监视根目录，改完不用重启。
 
 **已完成**：两个 skill 都搬到 `.agents/skills/`，SKILL.md 内的脚本路径同步改成 `.agents/skills/...`；`.gitignore` 从 `.agents`（整目录忽略）改为 `.agents/*` + `!.agents/skills/` + 单独忽略 `scripts/cache/`——**从此 skill 真正随仓库走**（此前 `.claude/` 被整体忽略，它们只存在于本机）。
+
+> **踩过的坑（2026-10-04 复核补记）**：上一版改动其实是**静默失效**的。`.gitignore` 里原本另有一条 `.agents/`（在「Dev tools」段），而 git **不会进入被排除的目录**，后面的 `!.agents/skills/` 再也捞不回来——`git check-ignore` 与 `git ls-files` 双向核实：skill 当时一个文件都没入库。后来那版无效配置被回滚成了 `.agents/`。**正确写法是把原来那条 `.agents/` 换成 `.agents/*` + `!.agents/skills/`**，不能两条并存。已按此修正，`minecraft-source` 的 4 个文件现已 `git add` 入库。
 
 **坑一：description 会被截断。** dsh 的模型可见目录只收 `name` + `description`，且 `catalogDescriptionMaxLength` **默认 500**。原 `minecraft-source` 的 description 是 **1100 字符**，第 500 字符断在句子中间——尾部那整串触发词（`Triggers on: …`）**全部丢失**；技能仍能按名加载，但模型路由时的命中率会明显下降。已重写为 **456 字符**并把触发词前移。
 
@@ -179,11 +185,22 @@ dsh **不读这个文件**。要在 `$DSH_HOME/cordis.patch.yml`（全 profile�
 - 其余键与默认值：`toolCallTimeoutMs`（60000）、`failOnStartupError`（false）、`maxInstructionBytes`（32768）、`reconnect`（`enabled` true / `initialDelayMs` 500 / `maxDelayMs` 30000 / `maxAttempts` 10）。远程 server 用 `transport: streamable-http` + `url` + `headers`。
 - 不支持：MCP prompt 模板、elicitation、task 执行、resource 订阅。
 
+**已执行 + 实测复核（2026-10-04）**：条目落在 `~/.dsh/profiles/desktop/cordis.patch.yml`（`desktop` 是桌面版独占 profile，CLI 不能 boot 它，连 `--dump-config` 都被拒，所以只能靠配置热重载实测）。实测结论：
+
+- 顶层 `- insert:` **不带 `id`** 时是追加到根 entry 列表（`dsh-app-boot` 的 `applyEntryPatches`：`if (insert) { if (id) {...group...} else data.push(...insert) }`），新增一行 MCP server 用这个形状即可，不必指向某个 group。
+- **`cwd` 必须显式给一个非空真实目录——这是最容易静默踩死的一格。** `mcp-client` 的 stdio transport 把 `cwd` 原样交给 `spawn`，而它的 schema 默认值是**空串**（`cwd: z.string().default("")`，见 `lib/index.js` 的 `Config`）；`spawn(cmd, args, { cwd: '' })` 实测直接 `ENOENT`。**照抄官方默认 = 一个工具都注册不出来**，而且 `failOnStartupError` 默认 false，只在日志里留一行 error，看起来像「配置好了但没反应」。另外该 server 拿 `cwd` 当 session root，启动即按它推导项目名并自动索引/监听——给错目录会去索引无关的大目录。本机写成 `cwd: !!js "process.env.DSH_MCP_CWD ?? '<repo>'"`：`!!js` 在**宿主**进程求值，不受 mcp-client 对子进程环境的清洗（`DSH_*` 与 `/KEY|PASSWORD|SECRET|TOKEN/i` 一律丢弃）影响，所以环境变量仍能覆盖。
+- **改完不用重启**：配置层走热重载，当场就能看到工具出现。实测 14 个工具全部注册为 `mcp__codebase-memory__*`，`list_projects` 调用成功。
+- **工具名确实变长**，全仓引用已同步：`AGENTS.md`（知识图谱那条）、`CLAUDE.local.md`。
+- **全局 skill 也要跟着改**：`~/.claude/skills/codebase-memory/` 是 CC 侧的，而 dsh 的本地 skill 根不含 `.claude/skills`。已在 **`~/.dsh/skills/codebase-memory/SKILL.md`**（rank 400 `$DSH_HOME/skills`）落一份 dsh 版：工具名带前缀、写明 `project` 参数、并把本仓「in-degree 不能判死码」的提醒写进去。CC 侧那份**刻意保留**——两边工具名不同，不是同一份文件的重复，硬做 junction 反而会让 CC 拿到错误的名字。
+- **一个待处理项：同一路径两个索引**。`list_projects` 同时列出 `C-Users-huhai-Desktop-Java-mcmod-wandscape`（约 43.7k 节点，由 cwd 推导、服务端自动索引与监听的就是它）和 `wandscape`（约 23.7k 节点，覆盖不全）。**用前者**，skill 与 `CLAUDE.local.md` 都写明了；要清掉旧的用 `delete_project`（本次未删，留给你决定）。
+
 ### 5. Hooks：三个 cbm 脚本当前是死的，先查再迁
 
-`~/.claude/hooks/` 下有三个脚本（`cbm-code-discovery-gate`、`cbm-session-reminder`、`cbm-subagent-reminder`），但**在 `~/.claude/settings.json`、`settings.local.json` 和整个 `.claude/` 里找不到任何注册它们的 `hooks` 键，也没有 `hooks.json`**。也就是说它们现在大概率根本没在触发，是 codebase-memory-mcp 安装残留。
+`~/.claude/hooks/` 下有三个脚本（`cbm-code-discovery-gate`、`cbm-session-reminder`、`cbm-subagent-reminder`），但**在 `~/.claude/settings.json`、`settings.local.json` 和整个 `.claude/` 里找不到任何注册它们的 `hooks` 键，也没有 `hooks.json`**。也就是说它们根本没在触发，是 codebase-memory-mcp 安装残留。
 
-**迁移前先在 CC 下确认它们是否真的在跑**——如果本来就没生效，就没有迁移问题。
+**已核实（2026-10-04）：确实没在跑**——逐个查了用户级 `settings.json` / `settings.local.json`、仓库 `.claude/settings.local.json`，全都没有 `hooks` 键；`~/.claude` 下也不存在 `hooks.json`（`find` 命中的那些 `hooks.json` 全在第三方插件缓存目录里，属插件自己的清单）。所以**没有迁移问题**：不用给 `@deepseek-ai/dsh-hooks-claude-code` 配 `configPath`。
+
+那三个脚本仍留在 `~/.claude/hooks/`（本次未删，属 CC 侧残留）。真要迁的话结论依旧成立——`cbm-session-reminder` 是 `cat` 到 stdout，而 dsh 的 `SessionStart` 只消费 JSON 的 `additionalContext`；`cbm-code-discovery-gate` 是「只加图上下文、从不拦截」，而 `PreToolUse` 的 `additionalContext` 被忽略。两个都属「往上下文里塞东西」型，桥复用不了。图谱那份上下文提示已由 `~/.dsh/skills/codebase-memory/` 的 skill 承担。
 
 要迁的话，dsh 有桥：`@deepseek-ai/dsh-hooks-claude-code`，`configPath` 指向你的 `hooks.json` 或含 `hooks` 键的 settings 文件，支持 `SessionStart` / `UserPromptSubmit` / `PreToolUse` / `PostToolUse` / `Stop` / `SubagentStart` / `SubagentStop`。但**有限制，且正好打在这三个脚本上**：
 
@@ -254,6 +271,8 @@ Java / Minecraft / 游戏相关，全部落在 0–57 星：
 
 抛开 Java/MC，只看「通用工作流」这一类（对应 CC 的 superpowers / planning-with-files / grill-me），确实有东西可选：
 
+> 本仓的 `grill-me` 技能**已删**（2026-10-04）：它本来就只是「追问到决策树每支明确」的一段 prompt，实际用下来价值不足；`AGENTS.md` 里那条要求保留为一条普通准则（「需求或设计没敲定就先追问清楚再动手」），不再挂技能。下面提到它是为了说明 dsh 生态在这一档有没有替代品。
+
 | 星 | 仓库 | 用途 |
 |---:|---|---|
 | 13,337 | `EverMind-AI/EverOS` | 便携、本地优先的 Markdown 记忆层（跨 agent） |
@@ -315,8 +334,9 @@ Java / Minecraft / 游戏相关，全部落在 0–57 星：
 
 对现有 memory 逐条核对了「是否已被 docs 覆盖」和「引用的文件/类名是否还存在」：
 
-- **已被现有文档完全覆盖：7 条** → 删。例：`feedback_debug_console_vs_chat`（已是 `AGENTS.md` 硬规则「上屏只留错误与完成反馈」）、`project-lang-placeholder-s-only`（已是 `AGENTS.md` 的 `%s` 规则）、`project-npc-damage-intentional`（已是 `docs/domain-notes.md:54`）、`feedback_building_rotation`（已是 `domain-notes.md` §五.4）、`reference-bytebufferbuilder-leak`（现已收进 `docs/domain-notes.md` §五.13）。
-- **已过时／锚点消失：5 条** → 删，不迁。例如 `feedback_plan_block_means_code`（锚在已删除的 `architecture/plan/`、`newplan/`）、`project_eventbus_nondispatch_in_test`（项目已无单测，`src/test` 在 2026-09-01 的 ADR 里删了，前提不存在）、`project-building-scanner`（列的类名全错：实际是 `ScannerBlock*` 不是 `BuildingScannerBlock*`，行为本身已在 `domain-notes.md §五.1`）、`feedback_tier2_word_decisions`（锚在已删的 `newplan/tier2-rename.md`）、`project-guide-audit-baseline`（v1.11.1 的时间点快照，模组已是 2.x）。
+- **已被现有文档完全覆盖：6 条** → 删。例：`feedback_debug_console_vs_chat`（已是 `AGENTS.md` 硬规则「上屏只留错误与完成反馈」）、`project-lang-placeholder-s-only`（已是 `AGENTS.md` 的 `%s` 规则）、`project-npc-damage-intentional`（已是 `docs/domain-notes.md` §一.11）、`feedback_building_rotation`（已是 `domain-notes.md` §五.4）、`project-building-scanner`（已是 §五.1 + §五.3）、`project_element_audit_run`（已在 `AGENTS.md` §构建与验证）。
+  > **订正（2026-10-04 执行时）**：本节原先还把 `reference-bytebufferbuilder-leak` 也列进这一类，说它「现已收进 `domain-notes.md` §五.13」。实际 §五.13 当时只覆盖了「没有 `Cleaner` / `MeshData.close()` 不 free 指针」这一层，**「谁关它 / try-finally / `resize` 是 realloc」是缺的**，执行时才补上。教训：一条 memory 与落位表指向同一处，不等于内容已经全在——落位时必须回到那份文档逐句核对，不能凭「表格里写了」就判覆盖。
+- **已过时／锚点消失：4 条**（订正：`project-building-scanner` 归上一类，它行为已在 §五.1）→ 删，不迁。例如 `feedback_plan_block_means_code`（锚在已删除的 `architecture/plan/`、`newplan/`）、`project_eventbus_nondispatch_in_test`（项目已无单测，`src/test` 在 2026-09-01 的 ADR 里删了，前提不存在）、`feedback_tier2_word_decisions`（锚在已删的 `newplan/tier2-rename.md`）、`project-guide-audit-baseline`（v1.11.1 的时间点快照，模组已是 2.x）。
 - **引用了重命名/搬走的符号**：`reference-log-debug-promotion` 等多条需修指针（如 `shared/ui/ReplayScreenGuard.java` → `foundation/ui/ReplayScreenGuard.java`；`GuardCombat.CAST_MIN_INTERVAL` → `MELEE_COOLDOWN_TICKS`；`docs/bugs/` 目录已不存在）。
 
 ### 落位规则：**别建万金油**
@@ -352,6 +372,32 @@ Java / Minecraft / 游戏相关，全部落在 0–57 星：
 3. 最后建 `docs/agent-notes.md` 装跨切面项，并给 `docs/README.md` 加导航。
 4. 迁移完成后清空 memory 目录与 `MEMORY.md`，避免 CC 与 docs 双写。
 
+### 执行结果（2026-10-04）
+
+真源是 `~/.claude/projects/C--Users-huhai-Desktop-Java-mcmod-wandscape/memory/`（38 篇 + `MEMORY.md`）。落位共 **+46 行、0 删除**：
+
+| 去处 | 落了什么 |
+|---|---|
+| `docs/domain-notes.md` | §一.6（`sameColony` 把 null / `PLACEHOLDER_COLONY` 当具体 UUID 比对的未修风险）、§一.8（客户端 `getColonyLevel()` 恒返 0 + `WandscapePanelState` 解法 + `RecipeUnlockChecker` 同型埋雷）、§三.5（魔法冷却常量就地定义 + `CAST_MIN_INTERVAL` → `MELEE_COOLDOWN_TICKS` 漂移）、§五.13 补子项（「谁关它」/ try-finally / `resize` 是 realloc）、§五.15（建筑显示名按产物命名 + 三值定名 + 动作词「复原」）、§五.16（`BuildingConfig` 当 map 键的坑 + 剩 5 张表未改）、§九.2（回放检测只反射公开 API）、§十.2（开容器 GUI 只 `ExplorationHudOverlay` 可见） |
+| `docs/guidebook.md` §4.1 | 改正文触发重排的两坑（奇数正文页约束、`_hard_cut()` 硬切 `$(l:)`） |
+| `docs/file-layout.md` §五 | 新生成器放仓库根、别放 `tools/` |
+| `docs/checklists.md` §三.10 | curseforge / modrinth 描述是本地文件、不入库 |
+| **`docs/agent-notes.md`（新建，64 行）** | 五节跨切面知识：工作流与提交、通用实现取向、调试与日志、本机工具、未修风险与待实测 |
+| `docs/README.md` | 导航表 +1 行指向 `agent-notes.md` |
+
+判定**已被 docs 完整覆盖、零动作** 6 条：`feedback_debug_console_vs_chat`、`project-lang-placeholder-s-only`、`project-npc-damage-intentional`、`feedback_building_rotation`、`project-building-scanner`、`project_element_audit_run`。判定**过时 / 锚点消失** 4 条：`feedback_plan_block_means_code`（`architecture/plan/`、`newplan/` 都没了）、`feedback_tier2_word_decisions`（锚在 `newplan/tier2-rename.md`）、`project_eventbus_nondispatch_in_test`（前提是单测，`src/test` 已删）、`project-guide-audit-baseline`（v1.11.1 时间点快照，模组已 2.x）。其余并入对应文档，或改写成指针（`agent-notes.md` 与 `AGENTS.md` 重复的一律留指针）。
+
+落位时**顺手修正的失真**（memory 自己已经漂了，照抄会把错的写进文档）：
+
+- `shared/ui/ReplayScreenGuard.java` → 实为 `foundation/ui/ReplayScreenGuard.java`（`shared/` 桥层已消融）。
+- `GuardCombat.CAST_MIN_INTERVAL` → 现名 `MELEE_COOLDOWN_TICKS`（值仍 40）。
+- 类名只写了 `ByteBufferBuilder`，实际 FQN 是 `com.mojang.blaze3d.vertex.ByteBufferBuilder`（用 `minecraft-source` 技能核过）。
+- `docs/bugs/` 目录已不存在；`feedback_no-reflection-keywords` 引用的 `docs/legacy-audit.md` 也不存在，只保留 `docs/adr.md`。
+- `project_curseforge_desc_gitignored` 的行号已变，且旁边**多了一个** `modrinth-description.md`（memory 里没有）。
+- **纠正本节上面的口径**：`reference-bytebufferbuilder-leak` 原先被列进「已被 docs 完整覆盖 → 删」，实际只覆盖了一半（详见该条下的订正）。
+
+清空方式：整个 memory 目录（38 篇 + `MEMORY.md`）**移动**到 `~/.dsh/archive/cc-memory-wandscape-2026-10-04/`，而不是硬删——CC 侧不再双写，同时留一份可回溯的存档（39 个文件）。同目录下的会话 `.jsonl` 是 CC 的会话日志、不是 memory，未动。
+
 ---
 
 ## 五、迁移待办清单
@@ -361,20 +407,21 @@ Java / Minecraft / 游戏相关，全部落在 0–57 星：
 - [x] `CLAUDE.md` 正文并入 `AGENTS.md`，`AGENTS.md` 成为唯一真源；`CLAUDE.md` 收缩为一行 `@AGENTS.md`（见 §二.1 为什么不能直接删）
 - [x] `docs/` 里所有「CLAUDE.md」交叉引用改名为 `AGENTS.md`
 - [x] 两个 skill 搬到 `.agents/skills/`，SKILL.md 内脚本路径同步更新
-- [x] `.gitignore`：`.agents` → `.agents/*` + `!.agents/skills/` + 忽略 `scripts/cache/`（skill 从此入库）
 - [x] `minecraft-source` 的 description 由 1100 字符压到 456 字符，触发词前移
 - [x] `.claude/skills` 做成指向 `.agents/skills` 的 junction，CC 侧继续可用
 
-**仍需在 CC 侧做**：
+**CC 侧遗留：已查完，无待办**
 
-- [ ] `~/.claude/rules/context7.md` → 并入 `~/.dsh/AGENTS.md`（dsh 不读 `.claude/rules/`）
-- [ ] 确认三个 cbm hook 在 CC 下是否真的在跑（现磁盘上有脚本但无任何注册）
+- [x] `~/.claude/rules/context7.md` → 已并入 `~/.dsh/AGENTS.md`（原件已删，避免同一份规则两处维护）
+- [x] 三个 cbm hook 确认**从来没在跑**（任何 settings 里都没有 `hooks` 键、也没有 `hooks.json`）→ 无迁移问题
+- [x] `.gitignore` 的 skill 入库：**上一版是静默失效的**（被另一条 `.agents/` 挡住），已改成 `.agents/*` + `!.agents/skills/` 并 `git add`，`git check-ignore` 双向核实（见 §二.3 踩过的坑）
 
 **切到 dsh 之后做**：
 
-- [ ] `~/.dsh/cordis.patch.yml` 加 `@deepseek-ai/dsh-mcp-client` 条目；全仓把工具短名改成 `mcp__codebase-memory__*`
-- [ ] 选一个 sandbox/approval preset 顶替原 allowlist，接受粒度变粗
-- [ ] 按 §四 执行 memory 三分类落位，最后清空 memory 目录
+- [x] `cordis.patch.yml` 加 `@deepseek-ai/dsh-mcp-client` 条目；全仓工具短名改成 `mcp__codebase-memory__*`（`AGENTS.md`、`CLAUDE.local.md`、`~/.dsh/skills/codebase-memory/`；实测 14 个工具注册成功、`list_projects` 调用通过）
+- [x] 选 sandbox/approval preset：现用 `danger-full-access` + `never`（顶替原 allowlist，粒度变粗已接受）
+- [x] 按 §四 执行 memory 三分类落位并清空 memory 目录（见 §四「执行结果」）
+- [ ] **唯一剩下的一条**：`list_projects` 里同一路径有两个索引（`C-Users-huhai-Desktop-Java-mcmod-wandscape` 43.7k 节点 = 该用的那个；`wandscape` 23.7k 节点 = 覆盖不全的旧索引）。要清就用 `delete_project`，本次没动
 - [ ] 复核时机：dsh 每次升级后，因为它还是 developer preview
 
 ---

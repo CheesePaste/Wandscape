@@ -207,6 +207,8 @@ data/wandscape/buildings/
 | `paginate_patchouli_json.py` | 帕秋莉条目 JSON | 分页后写回 |
 | `strip_building_ground.py` / `gen_icons.py` / `fix_icons.py` | 美术/建筑素材 | 贴图与建筑 JSON |
 
+**新生成器放这里（仓库根），不要放 `tools/`**：`tools/` 自提交 `58f57f50` 起已被 `.gitignore` 排除（第 21 行，约定是「开发工具独立维护」）——放那里脚本不进版本控制，别人改了源文件就没法重新生成，生成器与生成物会脱节。转译 / 生成脚本是内容管线的可复现依赖，**必须入库**：默认放仓库根、与生成物在同一条 commit 里提交。只有自带独立项目结构（自己的 `package.json` / 构建体系，如魔法阵编辑器）的工具才进 `tools/`。
+
 `data/wandscape/element_mappings/*.json` 是**手改产物**。原先有两条开发期命令（`/wandscape test generate_element_mappings` 与 `generate_seed_mappings`）从 `element_seeds.json` 推算定价后写回源码树，现已删除：全量生成已完成，且它们靠 `serverDir/..` 反推仓库根、把结果直接写进 `src/main/resources`（也就是打进 jar），继续留着只会误伤。改元素价直接改映射文件，`element_seeds.json` 只作基准对照。
 
 ---

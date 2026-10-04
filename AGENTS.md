@@ -16,10 +16,10 @@
 ```
 
 - 不维护单测（`src/test` 已删）：不写测试、不跑 `./gradlew test`。
-- **禁 `./gradlew runClient`**；也已无 GameTest / datagen run 配置。
+- **禁 `./gradlew runClient`**；也已无 GameTest / datagen run 配置。元素覆盖审计走游戏内命令 `/wandscape audit_elements`，没有对应的 run 配置可跑。
 - 写 MC / NeoForge 代码前先用 `minecraft-source` 技能读真实源码，**禁止凭记忆写 API**：
   `bash .agents/skills/minecraft-source/scripts/decompile.sh <类名>`
-- 需求或设计没敲定，先用 `grill-me` 技能（`.agents/skills/grill-me/`）追问到决策树每支明确再动手。
+- 需求或设计没敲定就先追问清楚（决策树每支明确）再动手，别猜着写。
 
 ## 架构归属（硬原则）
 
@@ -41,7 +41,7 @@
 - NBT 传出用 `return tag.copy()`；事件只作通知，需要顺序就直接调用。
 - `Log.debug` 在未开 debug 时会被打成带 `[DEBUG]` 前缀的 INFO——「降级为 debug」不等于可控开关。
 - 所有可能失败的路径都要有兜底，出错至少 `Log.warn()`（`foundation/log/Log`）；禁静默失败，禁崩溃。
-- 查调用链 / 影响面先走 codebase-memory 知识图谱（`search_graph` → `trace_path` → `get_code_snippet`），再退回 grep。
+- 查调用链 / 影响面先走 codebase-memory 知识图谱（`mcp__codebase-memory__search_graph` → `mcp__codebase-memory__trace_path` → `mcp__codebase-memory__get_code_snippet`），再退回 grep。工具名带 `mcp__codebase-memory__` 前缀是 dsh 的命名规则，CC 时代的短名已不成立。
 - 重命名走 IDE 的 rename（自动同步全仓引用），别做全局字符串替换。
 
 ## 文案 · 资源 · 数据

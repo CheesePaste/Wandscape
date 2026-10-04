@@ -31,12 +31,16 @@
    - ⚠️ **已知问题（待修，非缺陷）**：`npc.pvp = false` 时 `PLAYER`/`PLAYER_SUMMON`/`PET` 三类的殖民地语义被整体丢弃（`FriendlyForce.isAlly` 取 `true` 分支），**所有玩家本人 + 其宠物/召唤物跨殖民地恒为友军**——无 PVP 的世界里，玩家 B 的狼/马/召唤物都不会被玩家 A 的殖民地攻击，与「按殖民地归属判友军」的口径冲突。这是 PVP 系统引入前旧行为的保留档，改动前需先重新定义 `pvp = false` 到底该是什么语义（「无 PVP 但仍按殖民地」还是维持原样），属独立决策；**不要在第三方兼容里顺手动它**，会外溢到所有玩家侧实体。
    - ⚠️ **做其他模组兼容时，务必把该模组的召唤物/宠物经 `FriendlyForceApi.registerAlly` 加入盟友名单，避免殖民地 NPC 误伤**——这是硬性提醒，遗漏会导致兼容模组的召唤生物被己方法师当敌人打死。
      - **例外**：若该模组实体本身已实现 `OwnableEntity` 且有主（`TamableAnimal` 子类即是），它**已经**落 `PET` 兜底分支、按主人殖民地判定，**不要**再 `registerAlly`——`EXTERNAL_ALLY` 是恒友军、不校验殖民地，注册反而会把**别人家的、无主的**同类实体也变成己方友军，比不注册更差。
+    - ⚠️ **已知未修风险：`FriendlyForce.sameColony` 把 null / `PLACEHOLDER_COLONY` 当具体 UUID 比对**（2026-10 全仓扫荡发现，用户拍板暂不修）。`sameColony` 把两侧的 null 都归一成 `PLACEHOLDER_COLONY` 再比相等，于是「施法者 `colonyId` 停在占位符、目标已属真实殖民地」判为**非友军**——同镇的光束 / 陨石会误伤自己人。占位符状态确实可达：`EntityComponentBridge.onNpcJoinWorld` 只在**新建登记**时按位置自动探测殖民地（重连分支刻意跳过重探测），且要求探测点附近有殖民地原点，所以镇外召唤或建镇前召唤的法师会长期停在占位符。归因困难（铁魔法等产生同一死亡文案，无法确认），真修是窄口径：只放宽 `WANDSCAPE_NPC`/`MAGIC_SUMMON`/`TOURIST` 三类，别动玩家侧。
 7. **NPC 寻路水中脱困是「双层卡死判据 + 游泳免 onGround」**（`content/npc/system/NavigationSystem`）：
    - 位移卡死判据（每 60 tick 水平位移 < 2 格、连 3 次）只覆盖「没在动」；高岸水池这类「游得动但永远逼近不了目标」的困局需补**净逼近判据**：水中每区间游动够大时，记录到目标到达中心的**历史最低 3D 距离**（含垂直，兼容潜水下潜），连续 4 个区间（≈240 tick）不再创新低即切自传送脱困。渡河/水下工作全程单调逼近（每区间创新低），永不触发。
    - `switchToRitualTeleport`（及跟随兜底 `FollowPlayerGoal.tryTeleportToPlayer`）的门控是 `onGround()`，但游泳时 `onGround()` 恒 false——必须放行水中 NPC（`|| isInWater()`），否则水池困局判定卡死后每轮被门控拦下死循环，永远传送不出去（任务走 NavigationSystem、跟随走 FollowPlayerGoal 两路都会中招）；落点安全由 `findSafeLanding` 保证。
 8. **殖民地数据在客户端恒不可用——客户端判定点只能用同步数据**（「客户端殖民等级陷阱」同族，2026-09-12 在第三方 GUI 上又踩一次）：
    - `ColonyApi.getColonyByFounder` / `getColonyLevel` / `getAllColonyIds` 都走 `getColonySavedData()` → `ServerLifecycleHooks.getCurrentServer()`，**专用服务器的客户端恒为 null**（单机因带有集成服务端而试不出来，属典型"单机复现不了"陷阱）；`ColonyWorkerApi.enlist` 一类引擎侧 api 在客户端也会因 `World.getActive() == null` 直接失败。
    - 典型翻车：把「主人有小镇」这类服务端事实写进**第三方 GUI 的可用性判定**里（第三方模组的任务界面常把「这个选项能不能点」放在客户端判定），结果任务在多人局里永久置灰、点不动。**做法**：客户端条件只用 `SynchedEntityData` / 同步包里的数据；服务端事实留给服务端把关，并用描述文案 + 一次性 `Log.warn` 兜底，别让它变成"选了任务却站着不动"的静默失败。
+    - **`getColonyLevel()` 的表现是恒返回 0，不是抛异常**：客户端 `ColonyApiImpl` 是个**空的空间索引**（`colonyToOrigin`/`colonyOrigins` 只在服务端世界加载时经 `rebuildFromSavedData()` 与 `createColony()` 填充，客户端从不填充），于是命中「无此镇 → return 0」契约，任何镇都返回 0——客户端侧所有等级门槛判定会全部显示锁定，且只在专服/局域网远端复现（单机集成服与客户端同 JVM、共享同一单例，索引已被服务端填好，试不出来）。
+    - **做法**：客户端取等级走 `WandscapePanelState.getColonyLevel()`（真实等级经 `ColonyStatsSyncPacket` 同步），服务端才走 `colonyApi.getColonyLevel(colonyId)`。判定入口 `BuildingUnlockChecker.resolveLevel()` 已按此修正（`FMLEnvironment.dist.isClient()` 先行）；`getColonyLevel` 返回 0 = 无此镇的契约保留，别改它。
+    - ⚠️ **同型未修的埋雷**：`content/production/internal/RecipeUnlockChecker.isUnlocked()` 直接调 `colonyApi.getColonyLevel(colonyId)`，**没有 Dist 分支**——同一陷阱一处修了一处没修。当前尚未炸，因为全部调用点都在服务端或发包构建路径（`WorkstationDataPacket`/`CraftingStationPacket`/`MagicStationPacket`/`RequestProductionTaskPacket.handleServer`），客户端屏幕只读服务端下发的 `lockedReason`；将来任何客户端路径（新屏幕 / 预览 / JEI）复算解锁状态就会立刻复现。
 9. **自定义实体禁 `bakeLayer(ModelLayers.PLAYER)`（EMF 连坐坑，游客渲染器同规则）**：
    - Detailed Animations 系列资源包经 EMF 在烘焙期替换原版玩家层几何；借该层烘焙的自定义实体（NPC/游客曾是）会被连坐——EMF 的新几何配 64×64 标准布局皮肤，头身 UV 错位分离（2026-09 用户实测，仅装 EMF+ETF 即可复现）。
    - 做法：实体渲染器各自注册自有 `ModelLayerLocation`（`wandscape:wandscape_npc/main`、`wandscape:tourist/main`，注册在 `WandscapeClient.onRegisterLayerDefinitions`），几何用 vanilla 同款工厂 `LayerDefinition.create(PlayerModel.createMesh(CubeDeformation.NONE, false), 64, 64)`（经典粗臂 64×64 含 overlay 第二层），与原版 PLAYER 层逐位一致——不装 EMF 时外观零变化；`EvilMage` 复用 NPC 渲染器自动覆盖。1.21.1 的 `PlayerModel` **没有** `createBodyLayer`（旧版本记忆），几何工厂是 `createMesh(CubeDeformation, boolean slim)`。
@@ -94,6 +98,9 @@
    - volley 全程**不占施法互斥锁**：各魔法 CD 照走；GuardCombat 每轮复选只让位「严格更高优先」法术，选回同 focus / 选不到都保持 volley；L0 紧急奶等其它施法经 `MagicSpellExecutors.dispatch` 打断 volley。
    - 魔力按 Goety 扣费节拍（EverCharge/呼吸每 20 发扣一次 `manaCost`、Steam 类每发扣一次），不足自动停、不罚 CD。
    - 遗留：非 `IChargingSpell` 但 `defaultCastDuration()>0` 的蓄力弹（PrismaBeam 类走 useSpell/stopSpell）仍被 instant 分支秒发，待修。
+5. **魔法冷却 / 施法常量定义在各魔法自己的类里**：
+   - 「每个魔法一个值」的冷却与时长常量（`GuardCombat.MELEE_COOLDOWN_TICKS`、`MagicCaster.BEAM_SPAWN_DELAY` 这类）一律放在该魔法逻辑所在类的顶部作为命名常量，**不要**上收到 `WandscapeConstants`：集中后改一个冷却要跨文件翻字段找，而放在魔法类里一眼就能看到。只有真正全局共享的跨系统常量才进 `WandscapeConstants`。
+   - 读旧记录时注意常量名漂移：`GuardCombat.CAST_MIN_INTERVAL` 已重命名为 **`MELEE_COOLDOWN_TICKS`**（值仍是 40），别再按旧名找。
 
 ---
 
@@ -174,10 +181,21 @@
    - **观感口径（这是定档，不是待优化项）**：虚影几何**必须完整**——拒降级、拒 LOD、拒抽样；观感定档「实心壳」，不做透视。
    - **3x 填充差距的根因**：我们一律用 `RenderType.translucent()`，而投影类模组是原生分层渲染。**alpha 与 160 帧不可兼得**——别再试图两全。
    - **`ByteBufferBuilder` 必须显式 `close()`**：它既没有 `Cleaner` 也没有 finalizer；`MeshData.close()` 只把 writeOffset 归零、**不 free 指针**。漏关就是永久堆外泄漏。
+     - 看到 `new ByteBufferBuilder(...)` 先问「**谁关它**」：用完即弃的必须 `try/finally` 配 `close()`，只有长期复用的静态 scratch（如 `INDEX_BBB`）才可以不关。踩过的实例是虚影 VBO 烘焙——`new ByteBufferBuilder(capacity)` 是局部变量、全项目没一处 close，每烘一次永久漏掉整个 capacity（超大建筑单次 400 MB 级），堆外吃光后 `malloc` 返回 0、构造/`resize` 抛 `OutOfMemoryError`，表现为「点提交瞬间内存耗尽崩溃」，很容易误判成「预留太多」而去调 capacity（调多少都没用）。
+     - `resize()` 是 `realloc`：预留过小会走 `max(capacity + min(capacity, 2MB), size)` 的细粒度增长，几百 MB 要上百次 realloc，宁可一次估准。
 14. **建材成本门控的已知缺口（`element_mappings`）**：
    - **无元素映射 = 免费，且不参与解锁门控**。当前这类方块有一批：`wall_torch`、各类 `*_wall_banner`、`*_wall_sign`、全部 `potted_*`、`water`、`lava`、`bubble_column`、`tripwire`。同一栋建筑里 `torch` 要钱而 `wall_torch` 不要钱、`oak_sign` 要钱而 `oak_wall_sign` 不要钱。
    - `bell` 有映射（metal 2048）但**原版没有配方**，首解锁只能靠村庄——「映射表里有价、游戏里没门路」的典型样本。
    - 需**精准采集**的门控仍在 L5 的 `redstone_shop` 与 L10 的 nodemetal / nodewater 上出现（`ice`、`amethyst_cluster`、深板岩矿石）。
+15. **建筑显示名按产物命名，建筑三值固定叫「舒适值/魔法值/奇观值」**：
+   - 生产类建筑的显示名一律写成「`<产物>`工坊」并由产物决定定语（物品工坊 / Item Workshop、装备工坊 / Equipment Workshop、魔法工坊 / Magic Workshop）。不写「工作站」「合成站」「制作」这类**可互换**的通用词——建筑名是玩家选建筑时唯一的信息来源，通用词不承载「这里产出什么」；中英名还必须语义对齐（中文叫工坊，英文就得是 Workshop，`魔法工坊 vs Magic Station` 那种错位会让两边玩家看到不同的东西）。
+   - **改名只动显示名**：building id / category id 一律不动（旧档建筑按 id 解析）。改名会波及 `lang_src/`、两套手册 md、`gen_patchouli.py` 的 `TITLE_TO_DOC` 表、`insert_guidebook_images.py` 的图注、Java 兜底串、建筑 data 的 `display_name` 与存活文档，改之前先把这份清单过一遍。
+   - 三值的中文定名是 **舒适值 / 魔法值 / 奇观值**（scanner 的短标签可省「值」）。**「魔力」只留给法师的 mana**（NPC 资源属性），别拿来叫建筑值——旧悬停提示里的「魔力」与手册里的「满意值」都已作废；「奇观」不要写成「奇迹」。建筑改造动作一律叫「**复原**」（英文 Restore），别写「修复/维修」，内部标识符 `btnRepair`、lang 键 `building_action.repair`、包 `BuildingRepairHandler` 保留原名、只改玩家可见文案；建筑状态徽章只有「已建成」一档表示建成，结构是否被改动只体现在「复原」按钮可不可点。
+16. **别拿 `BuildingConfig` 当热路径 map 的键（record `equals` 会遍历整条 pattern）**：
+   - `BuildingConfig`（`content/building/data`）是 record，组件含 `List<BlockOffset> pattern`（超大建筑 58 万条），自动生成的 `equals()` 逐组件比较、**包含整条 pattern**，一次就是 O(pattern)。它在本项目里被当过多处缓存的键（预览 GIF / LOD / 包围盒 / 缩放、缩略图 meta、动画格子、虚影 VBO），其中虚影 `getOrBake`、`animatedCells`、`pumpQueue` 是**逐帧**查的——逐帧每栋楼一次 O(pattern)，实测能吃掉 20% 以上渲染线程。
+   - `HashMap.get` 本有 `==` 短路，只要**键实例稳定**就走不到 `equals`。坑在实例更替：`BuildingConfigLoader.parseAndRegister` 每次都 `withIdAndPackageId(...)` 造新实例，那条「内容相同就复用旧实例」的兜底（`previous.equals(config)`）依赖 `configs` 里还留着上一版，而 `clear()` 会先把它清空，于是兜底永不触发。
+   - **进世界换实例的路径是 datapack 同步**：`DatapackDataSyncReceiver` → `WandscapeDataLoader.applyCategoryFrom` → `SimpleDataRegistry.clear()` → `onClear.run()` → `BuildingConfigLoader.clear()` → 随即按同步来的 JSON 重建全部实例。这条路径**不经过客户端的 reload listener**（`WandscapeClient#onRegisterClientReloadListeners` 里那串 `closeAll` / `clearAnimatedCache` / `clearMetaCache` / `BuildingPreviewGifCache.closeAll`），所以 **datapack reload 有清缓存、进世界同步没有**——进世界后旧实例仍留在各 map 的键里，新实例同 hash（`hashCode` 只哈希 `id`/`packageId`）不同身份，于是每帧每栋楼一次 O(pattern) `equals`。表现是「退出世界重进后缓存失效、240fps 掉到 100fps」。`hashCode` 已改成只哈希 `id`/`packageId`，所以症状会从 `HashMap.hash` 变成 `HashMap.get`。
+   - **做法**：新增「以 `BuildingConfig` 为键」的缓存一律用 **`config.id()` 取键 + 值里包一层 `source` 记烘这份表时的实例**——实例换了只做**一次**内容比对，一样就认下新实例（此后走身份短路，继续复用），真变了才释放重烘。`id` 是权威唯一键（`parseAndRegister` 里 `config.id()` 就是全量 id）。虚影那两个逐帧缓存（`BuildingGhostVboCache.CACHE`、`BuildingGhostRenderer.ANIMATED_CACHE`）已按这套改完；**还剩** `BuildingPreviewGifCache` 的 CACHE/LOD_CACHE/BOUNDS_CACHE/SCALE_CACHE 与 `BuildingPreviewRenderer.META_CACHE` 仍按 record 取键（`pumpQueue` 有 `pendingCount` 稳态早退，暂未上热点），要动就照同一套来。也别以为「reload listener 清了缓存」能覆盖进世界同步。
 
 ---
 
@@ -235,6 +253,10 @@
    且是在类初始化里炸，堆栈看不出是哪个清单惹的。
    - 做法：静态字段只存持有者本身（`DeferredItem<Item>` 等），到 `registerRecipes` 这类回调里再 `.get()`。
    - `WandscapeJeiPlugin.INFO_ITEMS` 踩过这个坑（开局必崩）。文案清单、图标清单同理，别图省事在字段里就取成 `Item`。
+2. **回放中检测（ReplayMod / ReforgedPlay）只反射公开 API，不订阅事件**：
+   - ReforgedPlay 是 ReplayMod 的 NeoForge 1.21.1 移植（源码 github.com/ferriarnus/ReForgedPlay），**完整保留 `com.replaymod.*` 包结构与 API**，所以两个模组可以走同一个检测入口。判「正在回放」= 反射 `com.replaymod.replay.ReplayModReplay` 的**公开**静态字段 `instance` 非 null，且其公开方法 `getReplayHandler()` 非 null。**没有**简单的 `ACTIVE` 静态布尔。
+   - 这是 ReplayMod 官方公开集成面（只有 public 成员、无 `setAccessible`）；用它的理由不是「反射更酷」而是避开更大的反射面：官方事件 `com.replaymod.replay.events.ReplayOpenedCallback`/`ReplayClosedCallback` 的事件基类 `de.johni0702.minecraft.gui.utils.Event#register` 是**包私有**，外部订阅得反射进私有方法 + 动态代理，反而更脏。
+   - 做法：保持**按次反射**而不做 init 一次性缓存（任何时刻都能重新尝试，解析时机 / 版本差异不会把守卫永久禁用）；用 `Class.forName` + 捕获异常判「模组不存在 → 返回 false」，因此不需要 compileOnly 依赖。本模组实现是 `foundation/ui/ReplayScreenGuard.java`（监听 `ScreenEvent.Opening`，取消 `ReplayProtectedScreen` 的打开；旧记录里 `shared/ui/...` 的路径已作废）。PlayerAnimator 一类的录像/回放兼容也按这个 API 做。
 
 ---
 
@@ -271,6 +293,10 @@
      `ExplorationRewardRange.rollElements` 只让**总额的一部分**沿用战利品表比例（比例来自 `reward.loot_share`，默认 0.5，0 = 全随机、1 = 纯战利品），另一半按随机权重（0.5~1.5 抖动、最大余数法配平）平摊到七元素；
      总额与经验折算不受影响（经验是按元素总值算的，没变）。
    - **双轨入库**：经验直加小镇等级，元素直入小镇 `ColonyItemBank` 金库；无小镇玩家由 Action Bar 提示并保留原版物品。
+2. **开容器 GUI 那一刻的提示只能走 `ExplorationHudOverlay`（动作栏与 `ScreenFeedbackPacket` 都被盖住）**：
+   - 玩家打开容器界面（宝箱 / 仓库等）时两条常见反馈通道都不可见：`player.displayClientMessage(component, true)` 画的是动作栏、在 Screen 之下；`ScreenFeedbackPacket` 只在 `MedievalScreen` 上弹 toast、否则退回动作栏——同样在 Screen 之下。
+   - 唯一能盖在容器界面上的通道是 `content/colony/exploration/client/ExplorationHudOverlay`：注册在 `ScreenEvent.Render.Post`（另加 `RenderGuiEvent.Post` 覆盖无 GUI 场景），z 层抬到 800 且绘制前 `flush()`。
+   - **做法**：任何「开箱子 / 开容器那一刻」要给玩家看的反馈都发 `ExplorationRewardPacket`（`sendNotice(player, component)` 走提示卡，`send` 走经验 + 元素卡），不要用动作栏或 `ScreenFeedbackPacket`。注意卡片只有**单槽位**，后来的通知会顶掉前一条。
 
 ---
 

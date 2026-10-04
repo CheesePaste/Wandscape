@@ -87,6 +87,10 @@
 9. [ ] **不兼容提示**：本次发版若含**破坏存档兼容**的改动（数据格式断档、SavedData 迁移链缺口、
    已放置建筑/道路/殖民地的既有数据无法解析），release 正文（`RELEASE_NOTES.md`）**必须**有一段
    醒目的不兼容说明：说清楚哪种世界会受影响、需要开新档还是有部分数据会丢。
+10. [ ] **CurseForge / Modrinth 描述是本地文件，不入库**：`curseforge-description.md` 与
+    `modrinth-description.md` 都在 `.gitignore` 里（那是平台发布文案，避免与 GitHub release notes 双源维护）。
+    用户要求「更新 curseforge 描述」时，**改完文件即算完成**，不需要 `git add` / `commit`；发布 GitHub release 时
+    工作树可能仍是 clean 的，别因为「没改动可提交」而困惑。GitHub release notes 另写（发布时临时生成，不入库）。
 
 **关于不兼容的口径**（硬规则 7）：项目**不维护新旧两套格式并存的兼容层** —— 断档是允许的选择，
 但代价是"发布时说清楚"，不是"代码里长期养一个兼容分支"。所以发版前先问一句：
