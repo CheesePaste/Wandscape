@@ -15,12 +15,12 @@
     },
     {
       "type": "patchouli:text",
-      "text": "Press V to open the management panel, then 1 for the Build tab. Click the Town Hall card and double-click it to start placing: hold right-click and drag to turn the camera, put the building",
+      "text": "Press V to open the management panel, then 1 for the Build tab. Click the Town Hall card and double-click it to start placing: the ghost follows your crosshair, left-click to rotate it in p",
       "title": "1. Build the Town Hall"
     },
     {
       "type": "patchouli:text",
-      "text": "where you want it, left-click to rotate it, then confirm with Submit Build and Submit on the right. When construct$(br2)ion finishes the naming screen pops up on its own — give your town a name and you're settled in."
+      "text": "lace, ALT+scroll to fine-tune, and Enter to confirm the position then finalize. Click Submit Build and then Submit$(br2)on the right to order it;$(br)when construction ends the naming screen pops up on its own, so give your town a name."
     },
     {
       "type": "patchouli:image",
@@ -34,7 +34,7 @@
       "images": [
         "wandscape:textures/guidebook/intro_03_placing.png"
       ],
-      "text": "Drag with the right button to turn the camera; left click rotates 90 degrees"
+      "text": "The ghost follows your crosshair; left click rotates 90 degrees"
     },
     {
       "type": "patchouli:text",

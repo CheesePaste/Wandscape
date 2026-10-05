@@ -696,15 +696,18 @@ def _merge_two_groups(groups):
 
     只在「摊不开」时兜底：合并会让一个小节标题从页眉降级成正文加粗行，
     但标题本身不丢——总好过末页右半永远空着。
+
+    **合并必须保序**：两组按页顺序首尾相接，只把后一组首页的标题降级，
+    页界处的 `$(br2)` 由 `_group_chunks` 自己补。曾经这里写成「头两页的文字拼成一页、
+    再把第一组剩下的页贴到后面」，第一组只要超过一页，它的第 2 页就会被排到后一组正文之后，
+    整篇内容错位（实测 15/128 篇中招：读者看到的是两段跳来跳去的正文）。
     """
     if len(groups) < 2:
         return None
     best = None
     for i in range(len(groups) - 1):
-        head = groups[i][0]
-        tail_page = _demote_title(groups[i + 1][0])
-        combined = [dict(head, text=head.get("text", "").rstrip() + "$(br2)" + tail_page["text"])]
-        combined += groups[i][1:] + [_demote_title(p) for p in groups[i + 1][1:]]
+        combined = ([dict(p) for p in groups[i]]
+                    + [_demote_title(p) for p in groups[i + 1]])
         size = _slice_lines(_group_chunks(combined))
         if best is None or size < best[0]:
             best = (size, i, combined)

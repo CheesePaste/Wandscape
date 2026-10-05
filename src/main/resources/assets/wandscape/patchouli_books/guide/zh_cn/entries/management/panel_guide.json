@@ -7,11 +7,11 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "$(italic)$(#6b5a45)默认按 V 打开，再按一次 V 关掉。$()$(br2)$(bold)怎么开$()$(br2)管理面板是模组交互的核心。$(br2)$(bold)五个子模式$()$(li)1→$(l:wandscape:management/panel_build_guide)《建造子模式》$(/l)：负责建造建筑$(li)2→$(l:wandscape:management/panel_road_guide)《道路子模式》$(/l)：负责铺设道路与地形改造"
+      "text": "$(italic)$(#6b5a45)默认按 V 打开，再按一次 V 关掉。$()$(br2)$(bold)怎么开$()$(br2)管理面板是模组交互的核心。$(br2)左侧一列是五个子模式：面板打开时按 1 到 5 进入对应的一项，再按同一个数字键或 ESC 退出。"
     },
     {
       "type": "patchouli:text",
-      "text": "$(li)3→$(l:wandscape:management/panel_colony_guide)《小镇面板》$(/l)：负责切换小镇与成员管理$(li)4→$(l:wandscape:management/panel_tasks_guide)《任务大厅》$(/l)：负责管理任务与法师状态$(li)5→$(l:wandscape:management/panel_settings_guide)《设置中心》$(/l)：负责修改模组设置$(br2)左侧一列是五个子模式：面板打开时按 1 到 5 进入对应的一项，再按同一个数字键或 ESC 退出。$(br2)把准心对准法师或建筑时，目标上会出现白色包围盒，此时右键就能打开它的详情页。"
+      "text": "把准心对准法师或建筑时，目标上会出现白色包围盒，此时右键就能打开它的详情页。$(br2)$(bold)五个子模式$()$(li)1→$(l:wandscape:management/panel_build_guide)《建造子模式》$(/l)：负责建造建筑$(li)2→$(l:wandscape:management/panel_road_guide)《道路子模式》$(/l)：负责铺设道路与地形改造$(li)3→$(l:wandscape:management/panel_colony_guide)《小镇面板》$(/l)：负责切换小镇与成员管理$(li)4→$(l:wandscape:management/panel_tasks_guide)《任务大厅》$(/l)：负责管理任务与法师状态$(li)5→$(l:wandscape:management/panel_settings_guide)《设置中心》$(/l)：负责修改模组设置"
     }
   ]
 }

@@ -4,7 +4,7 @@
 
 ## 1. Build the Town Hall
 
-Press V to open the management panel, then 1 for the Build tab. Click the Town Hall card and double-click it to start placing: hold right-click and drag to turn the camera, put the building where you want it, left-click to rotate it, then confirm with Submit Build and Submit on the right. When construction finishes the naming screen pops up on its own — give your town a name and you're settled in.
+Press V to open the management panel, then 1 for the Build tab. Click the Town Hall card and double-click it to start placing: the ghost follows your crosshair, left-click to rotate it in place, ALT+scroll to fine-tune, and Enter to confirm the position then finalize. Click Submit Build and then Submit on the right to order it; when construction ends the naming screen pops up on its own, so give your town a name.
 
 ## 2. Build a Warehouse
 

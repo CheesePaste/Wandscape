@@ -105,7 +105,7 @@ src/main/resources/assets/wandscape/textures/guidebook/full/<名字>.png    高�
 
 | 图片 | 落位条目 | 图注讲的 |
 |---|---|---|
-| `intro_03_placing` | intro_0 / 一、建造市政厅 | 拖动转镜头、左键转 90 度 |
+| `intro_03_placing` | intro_0 / 一、建造市政厅 | 跟准心的虚影 + 左键转 90 度 |
 | `intro_05_naming` | intro_0 / 一、建造市政厅 | 施工结束的命名界面 |
 | `intro_06_exchange_tab` | intro_0 / 三、往仓库里放东西 | 仓库交换页签 |
 | `intro_07_craft_tab` | intro_0 / 五、下发合成订单 | 物品工坊合成页签 |

@@ -20,12 +20,15 @@ import net.minecraft.core.BlockPos;
  * and a Submit button (always shown — construction does not require pinning
  * first). Rotation itself is done with left-click on the ghost. Kept compact so
  * the panel bottom never reaches the bottom building-selection bar.
+ *
+ * <p><b>面板不放键位提示</b>：操作提示一律写在手册《建造子模式》里，面板只留按钮与状态。
+ * 别再往这里加提示行——它会占掉一整行高度，而且和手册形成第二份说法。
  */
 public final class BuildPopPanelOverlay {
 
     public static final int PANEL_W = 164;
-    /** 比旧版高一行：底部那行是「左键旋转 · Enter 确认 · ALT+滚轮微调」的键位提示。 */
-    public static final int PANEL_H = 128;
+    /** 面板高度：到「提交施工」按钮下沿 + 3px 为止（无提示行）。 */
+    public static final int PANEL_H = 114;
     public static final int PANEL_RIGHT_MARGIN = 8;
     public static final int PANEL_TOP_MARGIN = WandscapePanelOverlay.TOP_BAR_H + 2;
 
@@ -38,7 +41,6 @@ public final class BuildPopPanelOverlay {
     private static final int NUDGE_Y = ROT_Y + 13;
     private static final int CLEAR_Y = NUDGE_Y + 16;
     private static final int SUBMIT_Y = CLEAR_Y + 17;
-    private static final int HINT_Y = SUBMIT_Y + 17;
 
     /** 「旋转」按钮：落在朝向那行右侧，与左键共用同一个动作（键盘侧走左键，不再占独立键位）。 */
     private static final int ROTATE_BTN_W = 44;
@@ -202,11 +204,6 @@ public final class BuildPopPanelOverlay {
         g.fill(RenderType.guiOverlay(), submitX, submitY, submitX + submitW, submitY + BTN_H, 0, submitBg);
         g.fill(RenderType.guiOverlay(), submitX, submitY + BTN_H - 1, submitX + submitW, submitY + BTN_H, 0, 0xFF28A745);
         g.drawCenteredString(font, I18n.name("gui.wandscape.buildpop.submit", "提交施工").getString(), submitX + submitW / 2, submitY + 4, hoverSubmit ? 0xFFFFFFFF : 0xFFAADDBB);
-
-        // 键位提示行：全仓只此一处解释「左键 / Enter / ALT+滚轮」，别再往别的行塞第二份
-        g.drawCenteredString(font, I18n.name("gui.wandscape.buildpop.hint",
-                        "§8左键旋转 · Enter 确认 · ALT+滚轮微调").getString(),
-                panelX + PANEL_W / 2, panelY + HINT_Y + 2, 0xFFFFFFFF);
     }
 
     public static boolean isOverPanel(double mouseX, double mouseY, int screenW) {

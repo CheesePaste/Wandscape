@@ -77,20 +77,24 @@
     },
     {
       "type": "patchouli:text",
-      "text": "Ticks is how long a mage spends channelling before the elements arrive. Under any other category the block does not$(br2)$(bold)Shops$()"
+      "text": "Ticks is how long a mage spends channelling before the elements arrive. Under any other category the block does not$(br2)appear and the building produces no elements."
     },
     {
       "type": "patchouli:text",
-      "text": "Set the category to \"Shops\" and the screen gains this block: each row in the goods list holds an item together with the Comf, Mag and Wond values it provides, and tourists pick according to"
+      "text": "$(bold)Shops$()$(br2)Set the category to \"Shops\" and the screen gains this block: each row in the goods list holds an item together with the Comf, Mag and Wond values it provides, and tourists pick according to"
     },
     {
       "type": "patchouli:text",
-      "text": "their own needs — no rows at all means nothing in stock. Profit % is what one sale earns, and Duration Ticks is ho$(br2)appear and the building produces no elements.$(br2)w long a tourist spends buying."
+      "text": "their own needs — no rows at all means nothing in stock. Profit % is what one sale earns, and Duration Ticks is ho$(br2)w long a tourist spends buying."
     },
     {
       "type": "patchouli:text",
       "text": "Set the category to \"Services\" and the screen gains this block: Energy is what a tourist spends per visit, Capacity is how many fit inside at once, and Duration is how long one visit lasts;",
       "title": "Services"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "each row of the element output underneath holds which element is produced and its Output amount. Any Capacity above 0 also turns the building into an inn at night."
     },
     {
       "type": "patchouli:text",
@@ -102,16 +106,12 @@
     },
     {
       "type": "patchouli:text",
-      "text": "each row of the element output underneath holds which element is produced and its Output amount. Any Capacity above 0 also turns the building into an inn at night."
-    },
-    {
-      "type": "patchouli:text",
       "text": "Click \"Scan Area\" first to see how many valid blocks the box holds — scanners and interact spot markers are skipped automatically and never written into the building. Then click \"Export Bui$(br)lding JSON\", and the file is written into a datapack inside your save: it is buildable on the spot and still there",
       "title": "Exporting"
     },
     {
       "type": "patchouli:text",
-      "text": "$(bold)Preset Templates$()$(br2)Once the bounding box and properties are the way you want them, save them as a preset template;$(br2)after you quit and come back. Switch the same scanner to road mode and you export a road preset instead, hot-registered straight into Road Studio and the Wand."
+      "text": "after you quit and come back. Switch the same scanner to road mode and you export a road preset instead, hot-registered straight into Road Studio and the Wand.$(br2)$(bold)Preset Templates$()$(br2)Once the bounding box and properties are the way you want them, save them as a preset template;"
     },
     {
       "type": "patchouli:text",

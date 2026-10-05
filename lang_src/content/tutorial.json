@@ -1,7 +1,7 @@
 {
   "tutorial.wandscape.common.aim_drag_place": {
-    "zh_cn": "§b▶ §e按住右键拖动§b把建筑放到你要的位置",
-    "en_us": "§b▶ §eHold right-click and drag§b to place the building"
+    "zh_cn": "§b▶ §e移动准心§b，虚影自动跟着走",
+    "en_us": "§b▶ §eMove the crosshair§b — the ghost follows on its own"
   },
   "tutorial.wandscape.common.aim_rotate_submit": {
     "zh_cn": "§b▶ §e左键§b旋转，点【§e提交施工§b】→【§e提交§b】",
@@ -12,8 +12,8 @@
     "en_us": "§aBuild list opened"
   },
   "tutorial.wandscape.common.drag_position_rotate": {
-    "zh_cn": "§b③ §e按住右键拖动§b定位，§e左键§b旋转",
-    "en_us": "§b③ §eHold right-click§b to position, §eleft-click§b to rotate"
+    "zh_cn": "§b③ §e移动准心§b定位，§e左键§b旋转",
+    "en_us": "§b③ §eMove the crosshair§b to position, §eleft-click§b to rotate"
   },
   "tutorial.wandscape.common.exit_build": {
     "zh_cn": "§b① 按 §e1§b 或 §eESC§b 退出建造模式",
@@ -24,8 +24,8 @@
     "en_us": "§b① Press §e1§b to open the §eBuild§b tab"
   },
   "tutorial.wandscape.common.pinned_locked": {
-    "zh_cn": "§a已锁定，可拖拽轴线微调",
-    "en_us": "§aLocked — drag the axis to fine-tune"
+    "zh_cn": "§a锚点已钉住，§eALT+滚轮§a沿视线轴微调",
+    "en_us": "§aAnchor pinned — §eALT+scroll§a nudges along the axis you face"
   },
   "tutorial.wandscape.common.pinned_submit": {
     "zh_cn": "§b▶ 点【§e提交施工§b】→【§e提交§b】",
@@ -88,8 +88,8 @@
     "en_us": "§b② Click the §eTown Hall§b card, §edouble-click§b to start placing"
   },
   "tutorial.wandscape.townhall.line3": {
-    "zh_cn": "§b③ §e按住右键拖动§b，把建筑放到你要的位置",
-    "en_us": "§b③ §eHold right-click and drag§b to place the building"
+    "zh_cn": "§b③ §e移动准心§b，把虚影放到你要的位置",
+    "en_us": "§b③ §eMove the crosshair§b to where you want the building"
   },
   "tutorial.wandscape.townhall.line4": {
     "zh_cn": "§b④ §e左键§b旋转，点【§e提交施工§b】→【§e提交§b】",

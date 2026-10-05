@@ -46,7 +46,7 @@
     },
     {
       "type": "patchouli:text",
-      "text": "$(bold)The Default Pack$()$(br2)Every building the mod ships lives at the root and belongs to a pack called $(#8a5a2b)default$(), displayed as Core Pack.$(br2)$(#8a5a2b)icon$() takes an item id. The lower the $(#8a5a2b)priority$(), the earlier the pack sorts, and the mod's own core pack sits at 0."
+      "text": "$(#8a5a2b)icon$() takes an item id. The lower the $(#8a5a2b)priority$(), the earlier the pack sorts, and the mod's own core pack sits at 0.$(br2)$(bold)The Default Pack$()$(br2)Every building the mod ships lives at the root and belongs to a pack called $(#8a5a2b)default$(), displayed as Core Pack."
     },
     {
       "type": "patchouli:text",

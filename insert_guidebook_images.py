@@ -36,8 +36,8 @@ TEX = "wandscape:textures/guidebook/%s.png"
 PLACEMENTS = {
     ("intro_0_guide", "intro_0_guide", "playstyle"): [
         ("左键旋转朝向", "left-click to ", "intro_03_placing",
-         "按住右键拖动转镜头，左键把建筑原地转 90 度",
-         "Drag with the right button to turn the camera; left click rotates 90 degrees"),
+         "虚影跟着准心走，左键把建筑原地转 90 度",
+         "The ghost follows your crosshair; left click rotates 90 degrees"),
         ("施工结束后会自动弹出命名界面", "the naming screen pops up", "intro_05_naming",
          "施工结束会弹出命名界面，给小镇起个名字",
          "Once construction ends you name the town"),

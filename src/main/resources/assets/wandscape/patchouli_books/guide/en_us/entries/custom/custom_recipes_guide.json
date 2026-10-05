@@ -56,12 +56,12 @@
     },
     {
       "type": "patchouli:text",
-      "text": "$(#8a5a2b)type$() is one of nine: $(#8a5a2b)max_hp$(), $(#8a5a2b)move_speed$(), $(#8a5a2b)spell_power$(), $(#8a5a2b)work_speed$(), $(#8a5a2b)spell_speed$(), $(#8a5a2b)armor_value$(), $(#8a5a2b)max_mana$(), $(#8a5a2b)health_regen$(), $(#8a5a2b)mana_regen$().$(br2)$(bold)What a Wand Is$()$(br2)A wand has no tier or class field: what a wand $(italic)is$() is exactly this set of modifiers plus a colour.",
+      "text": "$(#8a5a2b)type$() is one of nine: $(#8a5a2b)max_hp$(), $(#8a5a2b)move_speed$(), $(#8a5a2b)spell_power$(), $(#8a5a2b)work_speed$(), $(#8a5a2b)spell_speed$(), $(#8a5a2b)armor_value$(), $(#8a5a2b)max_mana$(), $(#8a5a2b)health_regen$(), $(#8a5a2b)mana_regen$().$(br2)$(#8a5a2b)operation$() is either $(#8a5a2b)addition$(), which adds the amount outright, or $(#8a5a2b)multiply_base$(), which adds a p",
       "title": "Writing the Modifiers"
     },
     {
       "type": "patchouli:text",
-      "text": "$(#8a5a2b)operation$() is either $(#8a5a2b)addition$(), which adds the amount outright, or $(#8a5a2b)multiply_base$(), which adds a p$(br)ercentage of the base value. $(#8a5a2b)amount$() is therefore sometimes $(#8a5a2b)40.0$() and sometimes $(#8a5a2b)0.2$(), and negative numbers are legal."
+      "text": "ercentage of the base value. $(#8a5a2b)amount$() is therefore sometimes $(#8a5a2b)40.0$() and sometimes $(#8a5a2b)0.2$(), and negative numbers are legal.$(br2)$(bold)What a Wand Is$()$(br2)A wand has no tier or class field: what a wand $(italic)is$() is exactly this set of modifiers plus a colour."
     },
     {
       "type": "patchouli:text",

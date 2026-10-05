@@ -23,10 +23,6 @@
     "zh_cn": "定稿",
     "en_us": "Finalize"
   },
-  "gui.wandscape.buildpop.hint": {
-    "zh_cn": "§8左键旋转 · Enter 确认 · ALT+滚轮微调",
-    "en_us": "§8LMB rotate · Enter confirm · ALT+scroll nudge"
-  },
   "gui.wandscape.buildpop.locked": {
     "zh_cn": "§a[已定稿]",
     "en_us": "§a[Finalized]"

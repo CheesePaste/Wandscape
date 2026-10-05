@@ -18,9 +18,10 @@ import java.util.List;
  * (Chinese). Content conventions (accuracy-first, from the real interactions):
  * <ul>
  *   <li>Placement (build/road sub-modes) is taught as OPERATIONS, in order, no passive
- *       filler: 按住右键拖动 = 转视角（把建筑放到想要的位置）→ 左键 = 旋转朝向
- *       → 点右侧【提交施工】→ 施工界面【提交】. The important operations come first;
- *       the hint line only carries auxiliary info (WASD/scroll/building purpose).</li>
+ *       filler: 移动准心 = 虚影自动跟随（不按键）→ 左键 = 旋转朝向 → Enter / 面板阶段按钮
+ *       = 瞄准 → 确认位置 → 定稿 → 点右侧【提交施工】→ 施工界面【提交】. The important
+ *       operations come first; the hint line only carries auxiliary info (WASD/scroll/
+ *       building purpose). 键位提示的完整版本在手册《建造子模式》，面板里不再重复。</li>
  *   <li>Building interaction happens in the V-panel OVERVIEW sub-mode, which is a free
  *       camera: 移动鼠标转视角，WASD 移动，滚轮缩放. Right-drag rotates the view ONLY inside
  *       build/road sub-modes, so the interaction steps never claim that.</li>
