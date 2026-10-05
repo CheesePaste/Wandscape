@@ -1,5 +1,8 @@
 package com.wsteam.wandscape.content.colony.network;
 
+import com.wsteam.wandscape.content.colony.ownership.ColonyOwnership;
+import com.wsteam.wandscape.content.colony.roster.ColonyRole;
+
 import com.wsteam.wandscape.api.WandscapeApis;
 import com.wsteam.wandscape.content.colony.settings.ColonySettings;
 import com.wsteam.wandscape.foundation.log.Log;
@@ -18,15 +21,16 @@ import static com.wsteam.wandscape.Wandscape.MODID;
 /**
  * Client→Server: 本镇设置（设置中心「本镇」页）的一次改动。
  *
- * <p>包体不带 colonyId：服务端只按 founder 反查发起者自己的小镇，所以「改别人的小镇」
- * 根本无入口，也不必再叠一层归属校验——凭据不是客户端说了算的 id，而是玩家身份本身。
+ * <p>包体不带 colonyId：服务端只按 {@link ColonyOwnership#activeColony} 解析发起者当前操作的
+ * 小镇，所以「改别人的小镇」根本无入口，凭据不是客户端说了算的 id 而是玩家身份本身；
+ * 档位另由 {@link ColonySettings#apply} 把关（不足 OWNER 拒止）。
  *
  * <p>写入后回推一次 {@link ColonyStatsSyncPacket}：成功时是刚落盘的值，被拒时是服务端现值，
  * 客户端的乐观改动两种情况都会收敛到权威值。
  *
- * <p>Client→Server update for a per-colony setting. The target colony is resolved from the
- * sender's founder, never from the wire; the authoritative snapshot is pushed back either way
- * so an optimistic client edit always converges (accepted or rolled back).
+ * <p>Client→Server update for a per-colony setting. The target colony is the sender's active
+ * colony, never anything from the wire; the authoritative snapshot is pushed back either way so
+ * an optimistic client edit always converges (accepted or rolled back).
  */
 public record ColonySettingUpdatePacket(String key, String value) implements CustomPacketPayload {
 
@@ -57,7 +61,7 @@ public record ColonySettingUpdatePacket(String key, String value) implements Cus
             var colonyApi = WandscapeApis.getColonyApiSilently();
             var statusApi = WandscapeApis.getColonyStatusApiSilently();
             if (colonyApi == null || statusApi == null) return;
-            UUID colonyId = colonyApi.getColonyByFounder(player.getUUID());
+            UUID colonyId = ColonyOwnership.activeColony(player);
             if (colonyId == null) return;
             var snapshot = statusApi.getSnapshotSafe(colonyId);
             if (snapshot.colonyId() == null) return;

@@ -1,5 +1,7 @@
 package com.wsteam.wandscape.content.npc.network;
 
+import com.wsteam.wandscape.content.colony.roster.ColonyRole;
+
 import com.wsteam.wandscape.content.npc.NpcInventoryMenu;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.foundation.log.Log;
@@ -47,10 +49,11 @@ public record NpcOpenInventoryPacket(int entityId) implements CustomPacketPayloa
             Log.warn(TAG, "Inventory target entity {} is not a valid WandscapeNpc", pkt.entityId());
             return;
         }
-        // 完全平行隔离：只能打开自己小镇法师的背包栏。
+        // 档位：开法师背包栏 = MANAGER（映射「法师装备」）。
         if (npc.colonyId != null
                 && !com.wsteam.wandscape.content.npc.internal.EntityComponentBridge.PLACEHOLDER_COLONY.equals(npc.colonyId)
-                && !com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.isOwn(npc.colonyId, sp)) {
+                && !com.wsteam.wandscape.content.colony.ownership.ColonyOwnership
+                        .hasRole(sp, npc.colonyId, ColonyRole.MANAGER)) {
             com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(sp, "mage", "法师");
             return;
         }

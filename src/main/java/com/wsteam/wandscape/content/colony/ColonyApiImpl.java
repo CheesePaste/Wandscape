@@ -69,12 +69,7 @@ public final class ColonyApiImpl implements ColonyApi {
         return csd != null ? csd.getFounder(colonyId) : null;
     }
 
-    @Override
-    @Nullable
-    public UUID getColonyByFounder(UUID founder) {
-        ColonySavedData csd = getColonySavedData();
-        return csd != null ? csd.getColonyByFounder(founder) : null;
-    }
+    // [已移除] getColonyByFounder 的实现 —— 见 ColonyApi 里的说明（一人多镇下必然歧义）。
 
     // ── 花名册（玩家 → 档位）──────────────────────────────────────────
 
@@ -113,6 +108,21 @@ public final class ColonyApiImpl implements ColonyApi {
     public boolean transferOwner(UUID colonyId, UUID newOwnerId) {
         ColonySavedData csd = getColonySavedData();
         return csd != null && csd.transferOwner(colonyId, newOwnerId);
+    }
+
+    @Override
+    @Nullable
+    public UUID getActiveColony(UUID playerId) {
+        ColonySavedData csd = getColonySavedData();
+        return csd != null ? csd.getActiveColony(playerId) : null;
+    }
+
+    @Override
+    public void setActiveColony(UUID playerId, @Nullable UUID colonyId) {
+        ColonySavedData csd = getColonySavedData();
+        if (csd != null) {
+            csd.setActiveColony(playerId, colonyId);
+        }
     }
 
     @Override

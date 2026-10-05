@@ -1,5 +1,7 @@
 package com.wsteam.wandscape.content.road.network;
 
+import com.wsteam.wandscape.content.colony.roster.ColonyRole;
+
 import com.wsteam.wandscape.api.RoadApi;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.foundation.networking.ScreenFeedbackPacket;
@@ -54,13 +56,16 @@ public record RoadWithdrawPacket(UUID edgeId) implements CustomPacketPayload {
             return;
         }
 
+        // 档位：撤路是破坏性入口 = MANAGER；edge 无归属时沿用原语义放行。
         UUID edgeColonyId = edge.getColonyId();
-        if (!com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.isOwn(edgeColonyId, player)) {
+        if (edgeColonyId != null
+                && !com.wsteam.wandscape.content.colony.ownership.ColonyOwnership
+                        .hasRole(player, edgeColonyId, ColonyRole.MANAGER)) {
             com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(player, "road", "道路");
             return;
         }
 
-        UUID colonyId = com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.ownColony(player);
+        UUID colonyId = com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.activeColony(player);
         if (colonyId == null) {
             colonyId = edgeColonyId;
         }

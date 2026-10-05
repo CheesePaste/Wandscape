@@ -11,7 +11,6 @@ import com.wsteam.wandscape.content.building.internal.BuildingUnlockChecker;
 import com.wsteam.wandscape.content.building.projection.client.BuildPopPanelOverlay;
 import com.wsteam.wandscape.content.building.projection.client.ProjectionFlightController;
 import com.wsteam.wandscape.content.colony.network.ColonyMemberActionPacket;
-import com.wsteam.wandscape.content.colony.network.ColonyPanelClientState;
 import com.wsteam.wandscape.content.colony.overview.client.OverviewClientState;
 import com.wsteam.wandscape.content.colony.overview.network.OverviewInteractPacket;
 import com.wsteam.wandscape.content.colony.roster.ColonyRole;
@@ -498,12 +497,19 @@ public final class WandscapePanelController {
             switch (hit.hit()) {
                 case MISS -> { return; }
 
-                // 切换当前镇：本地选中 + 请服务端推该镇花名册（服务端校验「你在该镇花名册上」）
+                // 切换当前镇：只发 SELECT 意图，**不在本地改选中**——当前镇由服务端唯一定义
+                // （ActiveColonyTracker 落库 + ColonyContextSync 统一推送），面板高亮跟着推送走。
+                // 本地乐观改会重新造出「面板切了但顶栏不变」的第二份状态，正是本轮要修的 bug。
                 case COLONY_ROW -> {
                     WandscapePanelOverlay.ColonyRow row =
                             rowOrNull(WandscapePanelOverlay.colonyRows(), hit.index());
                     if (row == null || row.id() == null) return;
-                    ColonyPanelClientState.setSelectedColony(row.id());
+                    if (!WandscapePanelOverlay.canSwitch(row)) {
+                        // 命中检测已把分组标题与 ALLY 行滤掉；走到这里说明几何/数据不一致，记一条不发包。
+                        Log.warn(TAG, "[Colony] 不可切换的行却命中点击: colony={} role={}",
+                                row.id(), row.role());
+                        return;
+                    }
                     Net.toServer(new ColonyMemberActionPacket(
                             ColonyMemberActionPacket.Action.SELECT, row.id(), null, null));
                     playClickSound(mc);
@@ -570,11 +576,11 @@ public final class WandscapePanelController {
         }
     }
 
-    /** 选中镇 UUID；未选中时记一条 warn 并返回 null（调用方据此放弃发包，不静默）。 */
+    /** 当前镇 UUID（服务端推送的唯一真源）；无当前镇时记一条 warn 并返回 null（调用方据此放弃发包）。 */
     private static UUID requireSelectedColony() {
-        UUID colonyId = ColonyPanelClientState.getSelectedColony();
+        UUID colonyId = WandscapePanelOverlay.currentColonyId();
         if (colonyId == null) {
-            Log.warn(TAG, "[Colony] 未选中小镇，忽略本次成员操作");
+            Log.warn(TAG, "[Colony] 当前没有可操作的小镇，忽略本次成员操作");
         }
         return colonyId;
     }

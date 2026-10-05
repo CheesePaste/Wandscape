@@ -1,5 +1,7 @@
 package com.wsteam.wandscape.content.building.network;
 
+import com.wsteam.wandscape.content.colony.roster.ColonyRole;
+
 import com.wsteam.wandscape.content.building.internal.MageHutServerHandler;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -50,13 +52,14 @@ public record MageHutActionPacket(BlockPos buildingPos, String action)
     }
 
     public static void handleServer(MageHutActionPacket pkt, ServerPlayer sp) {
-        // 完全平行隔离：只能操作自己小镇的法师小屋（按建筑归属判定）。
+        // 档位：法师小屋分配/升级/训练 = MANAGER，非成员与档位不足一律拒止。
         var data = com.wsteam.wandscape.content.building.internal.BuildingSavedData.get(sp.serverLevel());
         if (data != null) {
             UUID bid = data.getBuildingIdAt(pkt.buildingPos);
             var st = bid != null ? data.getBuilding(bid) : null;
             if (st != null && st.getColonyId() != null
-                    && !com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.isOwn(st.getColonyId(), sp)) {
+                    && !com.wsteam.wandscape.content.colony.ownership.ColonyOwnership
+                            .hasRole(sp, st.getColonyId(), ColonyRole.MANAGER)) {
                 com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(sp, "mage_hut", "法师小屋");
                 return;
             }

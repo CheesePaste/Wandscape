@@ -1,4 +1,6 @@
 package com.wsteam.wandscape.content.task.network;
+
+import com.wsteam.wandscape.content.colony.roster.ColonyRole;
 import com.wsteam.wandscape.content.task.types.EntityId;
 
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
@@ -60,8 +62,10 @@ public record MageModeActionPacket(
             Log.warn(TAG, "Target entity {} is not WandscapeNpc", packet.entityId);
             return;
         }
-        // 完全平行隔离：只能切换自己小镇法师的模式。
-        if (!com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.isOwn(npc.colonyId, player)) {
+        // 档位：切换法师模式（跟随/和平）= MANAGER（映射「让法师跟随/调策略」）。
+        if (npc.colonyId != null
+                && !com.wsteam.wandscape.content.colony.ownership.ColonyOwnership
+                        .hasRole(player, npc.colonyId, ColonyRole.MANAGER)) {
             com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(player, "mage", "法师");
             return;
         }

@@ -1,4 +1,6 @@
 package com.wsteam.wandscape.content.road.network;
+
+import com.wsteam.wandscape.content.colony.roster.ColonyRole;
 import com.wsteam.wandscape.content.task.component.Position;
 
 import com.wsteam.wandscape.content.building.network.ConstructionSiteDataPacket;
@@ -60,13 +62,16 @@ public record RoadInteractPacket(BlockPos pos) implements CustomPacketPayload {
             return; // completed roads show no construction panel
         }
 
+        // 档位：打开道路工地面板（含撤路/补料按钮）= MANAGER；edge 无归属时沿用原语义放行。
         UUID edgeColonyId = edge.getColonyId();
-        if (!com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.isOwn(edgeColonyId, player)) {
+        if (edgeColonyId != null
+                && !com.wsteam.wandscape.content.colony.ownership.ColonyOwnership
+                        .hasRole(player, edgeColonyId, ColonyRole.MANAGER)) {
             com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(player, "road", "道路");
             return;
         }
 
-        UUID colonyId = com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.ownColony(player);
+        UUID colonyId = com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.activeColony(player);
         if (colonyId == null) {
             colonyId = edgeColonyId;
         }

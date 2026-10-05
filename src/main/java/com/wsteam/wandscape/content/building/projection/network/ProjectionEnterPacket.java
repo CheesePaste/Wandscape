@@ -6,6 +6,7 @@ import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.content.building.projection.data.BuildingSlot;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.api.WandscapeApis;
+import com.wsteam.wandscape.content.colony.ownership.ColonyOwnership;
 import com.wsteam.wandscape.foundation.networking.Net;
 import com.wsteam.wandscape.foundation.ui.I18n;
 import net.minecraft.core.BlockPos;
@@ -63,18 +64,20 @@ public record ProjectionEnterPacket() implements CustomPacketPayload {
 
         // Grant entry
         ProjectionNetwork.addProjecting(player);
-        UUID colonyId = null;
-        var colonyApi = WandscapeApis.getColonyApiSilently();
-        if (colonyApi != null) {
-            // 完全平行隔离：投影/建筑槽永远只关联玩家自己的小镇；无镇则空（建镇引导态）。
-            colonyId = colonyApi.getColonyByFounder(player.getUUID());
-        }
+        // 完全平行隔离：投影/建筑槽永远只关联玩家**当前操作的小镇**（可切换，不再等于
+        // 「我创始的那座」）；无当前镇则空（建镇引导态），绝不按位置就近解析。
+        UUID colonyId = ColonyOwnership.activeColony(player);
         if (colonyId != null) {
             var metricsApi = WandscapeApis.getColonyStatusApiSilently();
             if (metricsApi != null) {
-                var snap = metricsApi.getSnapshot(colonyId);
-                Net.toPlayer(player,
-                        com.wsteam.wandscape.content.colony.network.ColonyStatsSyncPacket.fromSnapshot(snap));
+                // 用 Safe 变体：快照异常绝不能冒泡出包 handler（禁崩溃）。但这里 colonyId 已知非空，
+                // 所以失败拿到的 EMPTY（colonyId = null）不是「引导态空包」而是「取数失败」——
+                // 照发会把客户端顶栏与面板当前镇清空，因此只在确实取到该镇快照时才发。
+                var snap = metricsApi.getSnapshotSafe(colonyId);
+                if (snap.colonyId() != null) {
+                    Net.toPlayer(player,
+                            com.wsteam.wandscape.content.colony.network.ColonyStatsSyncPacket.fromSnapshot(snap));
+                }
             }
         }
         List<BuildingSlot> slots = ProjectionNetwork.getAvailableBuildings(colonyId);

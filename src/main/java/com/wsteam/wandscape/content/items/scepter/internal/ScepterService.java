@@ -1,4 +1,7 @@
 package com.wsteam.wandscape.content.items.scepter.internal;
+
+import com.wsteam.wandscape.content.colony.ownership.ColonyOwnership;
+import com.wsteam.wandscape.content.colony.roster.ColonyRole;
 import com.wsteam.wandscape.api.NpcApi;
 import com.wsteam.wandscape.content.task.ecs.World;
 
@@ -76,9 +79,14 @@ public final class ScepterService {
 
     /** 切换目标的庇护状态；要求玩家有自己的小镇，标记落该殖民地名下。 */
     public static void toggleShelter(ServerPlayer player, LivingEntity target) {
-        UUID colonyId = com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.ownColony(player);
+        UUID colonyId = ColonyOwnership.activeColony(player);
         if (colonyId == null) {
             fail(player, "message.wandscape.scepter.no_colony");
+            return;
+        }
+        // 档位：权杖指令 = MANAGER（映射「权杖指令（ScepterService）」），标记只指挥该镇法师。
+        if (!ColonyOwnership.hasRole(player, colonyId, ColonyRole.MANAGER)) {
+            ColonyOwnership.deny(player, "mage", "法师");
             return;
         }
         ScepterMarksSavedData data = ScepterMarksSavedData.get(player.getServer());
@@ -94,9 +102,14 @@ public final class ScepterService {
 
     /** 切换目标的强制仇恨状态（单槽；转移即替换旧目标）；盟友不能标记，要求有自己的小镇。 */
     public static void toggleHostile(ServerPlayer player, LivingEntity target) {
-        UUID colonyId = com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.ownColony(player);
+        UUID colonyId = ColonyOwnership.activeColony(player);
         if (colonyId == null) {
             fail(player, "message.wandscape.scepter.no_colony");
+            return;
+        }
+        // 档位：权杖指令 = MANAGER（映射「权杖指令（ScepterService）」）。
+        if (!ColonyOwnership.hasRole(player, colonyId, ColonyRole.MANAGER)) {
+            ColonyOwnership.deny(player, "mage", "法师");
             return;
         }
         // 防误点：盟友（玩家/同殖民地法师/同殖民地游客/庇护名单等 isFriendlyForce）不能被标记为
@@ -127,16 +140,22 @@ public final class ScepterService {
 
     // ── 校验与辅助 ──
 
-    /** 目标法师必须属于玩家自己创建的殖民地；否则拒绝并反馈。 */
+    /**
+     * 目标法师必须属于玩家有权指挥的殖民地（该镇档位 ≥ MANAGER）；否则拒绝并反馈。
+     *
+     * <p>判据按**目标法师所属镇**，而不是玩家的当前镇：一人可同时在多座镇，若他在某镇是 MANAGER，
+     * 该镇的法师就归他指挥——这与「当前操作的小镇」是两个轴，不能混用 activeColony 代替。
+     */
     private static boolean requireOwnMage(ServerPlayer player, WandscapeNpc npc) {
-        UUID colonyId = com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.ownColony(player);
-        if (colonyId == null) {
-            fail(player, "message.wandscape.scepter.no_colony");
+        NpcApi npcApi = com.wsteam.wandscape.api.WandscapeApis.getNpcApiSilently();
+        UUID npcColony = npcApi != null ? npcApi.getNpcColony(npc.getUUID()) : null;
+        if (!npc.isColonyNpc() || npcColony == null) {
+            fail(player, "message.wandscape.scepter.other_colony");
             return false;
         }
-        NpcApi npcApi = com.wsteam.wandscape.api.WandscapeApis.getNpcApiSilently();
-        if (!npc.isColonyNpc() || npcApi == null || !colonyId.equals(npcApi.getNpcColony(npc.getUUID()))) {
-            fail(player, "message.wandscape.scepter.other_colony");
+        // 档位：权杖指令 = MANAGER（映射「权杖指令（ScepterService）」）。
+        if (!ColonyOwnership.hasRole(player, npcColony, ColonyRole.MANAGER)) {
+            ColonyOwnership.deny(player, "mage", "法师");
             return false;
         }
         return true;

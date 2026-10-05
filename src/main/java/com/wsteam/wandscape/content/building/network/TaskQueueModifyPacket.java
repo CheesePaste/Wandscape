@@ -1,5 +1,7 @@
 package com.wsteam.wandscape.content.building.network;
 
+import com.wsteam.wandscape.content.colony.roster.ColonyRole;
+
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
@@ -80,10 +82,11 @@ public record TaskQueueModifyPacket(
                         pkt.stationPos, pkt.action, pkt.index);
                 return;
             }
-            // 完全平行隔离：只能修改自己小镇建筑的生产队列。
+            // 档位：队列重排/取消 = 任务调度（MANAGER），非成员与档位不足一律拒止。
             BuildingState qState = data.getBuilding(buildingId);
             if (qState != null && qState.getColonyId() != null
-                    && !com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.isOwn(qState.getColonyId(), sp)) {
+                    && !com.wsteam.wandscape.content.colony.ownership.ColonyOwnership
+                            .hasRole(sp, qState.getColonyId(), ColonyRole.MANAGER)) {
                 com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(sp, "task_queue", "队列");
                 return;
             }

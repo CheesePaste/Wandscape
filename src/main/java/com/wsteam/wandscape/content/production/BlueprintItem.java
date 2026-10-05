@@ -1,5 +1,7 @@
 package com.wsteam.wandscape.content.production;
 
+import com.wsteam.wandscape.content.colony.roster.ColonyRole;
+
 import com.wsteam.wandscape.content.colony.ownership.ColonyOwnership;
 import com.wsteam.wandscape.content.production.network.RecipeBookDataPacket;
 import net.minecraft.network.chat.Component;
@@ -29,10 +31,15 @@ public class BlueprintItem extends Item {
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
         if (!level.isClientSide && player instanceof ServerPlayer sp) {
-            UUID colonyId = ColonyOwnership.ownColony(sp);
+            UUID colonyId = ColonyOwnership.activeColony(sp);
             if (colonyId == null) {
                 sp.displayClientMessage(
                         Component.translatable("message.wandscape.blueprint.no_colony"), true);
+                return InteractionResultHolder.fail(stack);
+            }
+            // 档位：配方图鉴/解锁 = MANAGER（映射「配方管理」类操作）。
+            if (!ColonyOwnership.hasRole(sp, colonyId, ColonyRole.MANAGER)) {
+                ColonyOwnership.deny(sp, "recipe_book", "配方");
                 return InteractionResultHolder.fail(stack);
             }
             RecipeBookDataPacket.sendTo(sp, colonyId);

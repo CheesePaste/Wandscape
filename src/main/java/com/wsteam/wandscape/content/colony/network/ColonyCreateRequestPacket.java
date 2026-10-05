@@ -2,6 +2,9 @@ package com.wsteam.wandscape.content.colony.network;
 
 import com.wsteam.wandscape.content.command.ColonyCommand;
 import com.wsteam.wandscape.content.building.internal.BuildingState;
+import com.wsteam.wandscape.content.colony.ActiveColonyTracker;
+import com.wsteam.wandscape.content.colony.ownership.ColonyOwnership;
+import com.wsteam.wandscape.content.colony.roster.ColonyRole;
 import com.wsteam.wandscape.api.ColonyApi;
 import com.wsteam.wandscape.api.WandscapeApis;
 import com.wsteam.wandscape.foundation.log.Log;
@@ -34,6 +37,10 @@ public record ColonyCreateRequestPacket(BlockPos townHallAnchor, String name)
 
     private static final String TAG = "ColonyCreateRequestPacket";
 
+    /** 拒止反馈的操作描述（{@link ColonyOwnership#deny} 的两次查表）。 */
+    private static final String WHAT_KEY = "town_hall";
+    private static final String WHAT_FALLBACK = "市政厅";
+
     public static final Type<ColonyCreateRequestPacket> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath(MODID, "colony_create_request"));
 
@@ -54,24 +61,38 @@ public record ColonyCreateRequestPacket(BlockPos townHallAnchor, String name)
         ServerLevel level = player.serverLevel();
         ColonyApi colonyApi = WandscapeApis.getColonyApi();
 
-        // 命名即归属/建镇，且归属跟玩家，不再按空间自动并入最近小镇：
-        UUID founderOwn = colonyApi.getColonyByFounder(player.getUUID());
-        if (founderOwn != null) {
-            // 已有小镇的玩家：仅当这座无归属市政厅就落在自己镇上时关联它；
-            // 否则拒绝——不能建第二个镇，也不收编/并入别人的无主市政厅。
-            UUID near = colonyApi.getColonyId(packet.townHallAnchor);
-            if (near != null && near.equals(founderOwn)) {
-                linkTownHall(packet.townHallAnchor, founderOwn);
-                sendMessage(player, I18n.name("message.wandscape.colony.attached",
-                        "[魔法小镇] 市政厅已关联至现有小镇。"));
-            } else {
-                sendMessage(player, I18n.name("message.wandscape.command.colony_already_owned",
-                        "[魔法小镇] 你已拥有小镇，这里不是你的小镇范围，不能创建/关联另一个小镇。"));
-            }
+        // 建镇 vs 关联，只看**这座市政厅自己**有没有归属（BuildingState.colonyId）：
+        // 既不问玩家已经拥有几座镇，也不用空间距离判——「最近原点 ≤256」会把紧邻新镇的市政厅
+        // 串到邻居头上（getColonyId(BlockPos) 的语义，不是归属）。这与「建镇 = 对无主市政厅右键命名」
+        // 的裁定一致：两个意图由世界动作区分，与「有没有自己的镇」无关。
+        var buildingApi = WandscapeApis.getBuildingApi();
+        BuildingState townHall = buildingApi != null ? buildingApi.getBuildingAt(packet.townHallAnchor) : null;
+        if (townHall == null) {
+            sendMessage(player, I18n.name("message.wandscape.colony.create_failed",
+                    "[魔法小镇] 创建小镇失败。"));
+            Log.warn(TAG, "[Colony] Create request for anchor with no building: {}",
+                    packet.townHallAnchor);
             return;
         }
 
-        // 无自有小镇 → 命名即建镇（即使紧邻其它小镇也照建：两镇可相距任意近，归属跟放置者）
+        UUID anchorColony = townHall.getColonyId();
+        if (anchorColony != null) {
+            // 已有归属：这里只意味着「确认/关联这座市政厅」，不是建镇。需要该镇 MANAGER+
+            // ——别人镇范围内的市政厅不能凭一次右键认领。
+            if (!ColonyOwnership.hasRole(player, anchorColony, ColonyRole.MANAGER)) {
+                ColonyOwnership.deny(player, WHAT_KEY, WHAT_FALLBACK);
+                Log.warn(TAG, "[Colony] {} tried to attach town hall {} to colony {} without MANAGER+",
+                        player.getGameProfile().getName(), packet.townHallAnchor, shortId(anchorColony));
+                return;
+            }
+            linkTownHall(packet.townHallAnchor, anchorColony);
+            sendMessage(player, I18n.name("message.wandscape.colony.attached",
+                    "[魔法小镇] 市政厅已关联至现有小镇。"));
+            return;
+        }
+
+        // 无主市政厅 → 命名即建镇。**一人可拥有多座镇**（用户明确要求），故这里没有
+        // 「已拥有小镇就不能再建」的守卫；两镇可相距任意近，归属跟放置者。
         ColonyCommand.ColonyCreateOutcome outcome =
                 ColonyCommand.createColonyAt(level, packet.townHallAnchor, name, player.getUUID());
         if (outcome == null || !outcome.success()) {
@@ -85,19 +106,21 @@ public record ColonyCreateRequestPacket(BlockPos townHallAnchor, String name)
         if (colonyId != null) {
             linkTownHall(packet.townHallAnchor, colonyId);
             Log.info(TAG, "[Colony] Town hall at {} linked to new colony {}",
-                    packet.townHallAnchor, colonyId.toString().substring(0, 8));
+                    packet.townHallAnchor, shortId(colonyId));
+        } else {
+            Log.warn(TAG, "[Colony] Created a colony at {} but could not resolve its id; "
+                    + "town hall left unlinked", packet.townHallAnchor);
         }
 
-        // Refresh the client's building-area cache immediately: the just-created
-        // colony's town hall must appear on the client so the onboarding guide
-        // advances and the panel overlay shows its boundary (no panel reopen needed).
-        com.wsteam.wandscape.content.building.network.BuildingAreaSyncPacket.sendToPlayer(player, colonyId);
-
-        // Push tutorial progress — the new colony's town hall completes the first step.
-        var tutorialApi = com.wsteam.wandscape.api.WandscapeApis.getTutorialApiSilently();
-        if (tutorialApi != null) {
-            tutorialApi.sendToPlayer(player, colonyId);
+        // 建镇成功即把这座新镇设为当前镇（用户要求；一人可多座），随后走统一入口一次推齐
+        // 顶栏统计 + 建筑边界 + 教程 + 花名册 + 列表。原来那两发分散推送（BuildingAreaSyncPacket /
+        // tutorial）已并入 ColonyContextSync.push —— 少了这一步，面板高亮与顶栏会停在上一座镇。
+        if (colonyId != null && !ActiveColonyTracker.setActive(player, colonyId)) {
+            // 建镇者恒为 OWNER，走到这里说明花名册写入异常；仍推送（回退上一座镇），不静默。
+            Log.warn(TAG, "[Colony] Created colony {} but could not make it the active colony for {}",
+                    shortId(colonyId), player.getGameProfile().getName());
         }
+        ColonyContextSync.push(player);
     }
 
     private static void linkTownHall(BlockPos anchor, UUID colonyId) {
@@ -115,6 +138,10 @@ public record ColonyCreateRequestPacket(BlockPos townHallAnchor, String name)
         if (player != null) {
             player.sendSystemMessage(message);
         }
+    }
+
+    private static String shortId(UUID id) {
+        return id != null ? id.toString().substring(0, 8) : "none";
     }
 
     static void write(RegistryFriendlyByteBuf buf, ColonyCreateRequestPacket pkt) {

@@ -1,4 +1,6 @@
 package com.wsteam.wandscape.compat.curios;
+
+import com.wsteam.wandscape.content.colony.roster.ColonyRole;
 import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.content.task.component.NpcInventory;
 import com.wsteam.wandscape.content.task.types.EntityId;
@@ -51,10 +53,11 @@ public record NpcOpenCuriosPacket(int entityId) implements CustomPacketPayload {
             Log.warn(TAG, "Curios target entity {} is not a valid WandscapeNpc", pkt.entityId());
             return;
         }
-        // 完全平行隔离：只能打开自己小镇法师的饰品栏。
+        // 档位：开法师饰品栏 = MANAGER（映射「法师装备」）。
         if (npc.colonyId != null
                 && !com.wsteam.wandscape.content.npc.internal.EntityComponentBridge.PLACEHOLDER_COLONY.equals(npc.colonyId)
-                && !com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.isOwn(npc.colonyId, sp)) {
+                && !com.wsteam.wandscape.content.colony.ownership.ColonyOwnership
+                        .hasRole(sp, npc.colonyId, ColonyRole.MANAGER)) {
             com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(sp, "mage", "法师");
             return;
         }

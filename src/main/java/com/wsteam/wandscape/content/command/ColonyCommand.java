@@ -154,12 +154,12 @@ public final class ColonyCommand {
      */
     public static ColonyCreateOutcome createColonyAt(ServerLevel level, BlockPos origin, String name,
                                         @Nullable UUID founder) {
-        // 一人一小镇：玩家已拥有小镇时拒绝创建第二个（V 面板/市政厅命名/命令共用此入口）
-        if (founder != null && WandscapeApis.getColonyApi().getColonyByFounder(founder) != null) {
-            return ColonyCreateOutcome.failure(I18n.name(
-                    "message.wandscape.command.colony_already_owned",
-                    "[魔法小镇] Failed: 你已拥有小镇，不能创建第二个。"));
-        }
+        // **一人可拥有多座镇**（2026-10 裁定）：旧守卫「已拥有小镇就拒绝建第二个」已删除。
+        // 仍然成立的不变量是**每座镇恒有一个 Owner**（花名册 OWNER，由 ColonySavedData 保证），
+        // 而**不是**「每个玩家只能有一座镇」——后者是旧模型的反向假设，已随多殖民地一起废止。
+        // [注意] 因此不要再按玩家反查 getColonyByFounder：一人多镇下它必然歧义（该方法已取消），
+        // 要「我在哪座镇」用 ColonyOwnership.activeColony，要「谁拥有这座镇」查花名册 OWNER。
+        //
         // 小镇间不设隔离距离——可相距任意近；建筑/命名归属跟「放置者」，不跟空间最近镇，
         // 近镇各建各的也不会串归属/串物资。
 
@@ -264,11 +264,9 @@ public final class ColonyCommand {
     public static UUID ensureColonyNear(ServerLevel level, BlockPos origin,
                                         String name, @Nullable UUID founder) {
         ColonyApi colonyApi = WandscapeApis.getColonyApi();
-        // 一人一小镇：玩家已有小镇时返回它（无论多远），绝不新建第二个
-        if (founder != null) {
-            UUID owned = colonyApi.getColonyByFounder(founder);
-            if (owned != null) return owned;
-        }
+        // [一人可多镇] 旧「玩家已有小镇就返回它（无论多远），绝不新建第二个」的短路已删除——
+        // 那条守卫正是本次要放开的东西，且它依赖「按玩家反查」，一人多镇下必然歧义
+        // （getColonyByFounder 已退役）。现在的语义就是方法名的字面意思：保证 origin 处有一座镇。
         UUID existing = colonyApi.getColonyId(origin);
         if (existing != null) return existing;
 
@@ -295,7 +293,9 @@ public final class ColonyCommand {
         }
 
         ColonyApi colonyApi = WandscapeApis.getColonyApi();
-        UUID colonyId = colonyApi.getColonyByFounder(player.getUUID());
+        // 优先玩家**当前操作的镇**；没有当前镇时保留「位置 256 格内最近镇」的兜底——这是 op-2 命令面
+        // 有意的调试便利（与 CommandUtil 的 OP 旁路同口径）。绝不再按玩家反查。
+        UUID colonyId = colonyApi.getActiveColony(player.getUUID());
         if (colonyId == null) {
             colonyId = colonyApi.getColonyId(player.blockPosition());
         }
@@ -436,15 +436,15 @@ public final class ColonyCommand {
         return Command.SINGLE_SUCCESS;
     }
 
-    /** 解析执行者所属小镇（创始人优先，其次位置），玩家-only；失败输出给定提示并返回 null。 */
+    /** 解析执行者**当前操作的镇**（其次位置兜底），玩家-only；失败输出给定提示并返回 null。 */
     @javax.annotation.Nullable
     private static UUID resolvePlayerColony(CommandContext<CommandSourceStack> ctx, String failMsg) {
         CommandSourceStack src = ctx.getSource();
         var player = src.getPlayer();
         ColonyApi colonyApi = WandscapeApis.getColonyApiSilently();
         if (player != null && colonyApi != null) {
-            UUID owned = colonyApi.getColonyByFounder(player.getUUID());
-            if (owned != null) return owned;
+            UUID active = colonyApi.getActiveColony(player.getUUID());
+            if (active != null) return active;
         }
         UUID near = colonyApi != null
                 ? colonyApi.getColonyId(BlockPos.containing(src.getPosition())) : null;

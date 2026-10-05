@@ -44,24 +44,34 @@ public class ColonySavedData extends SavedData {
     private static final String KEY_REVIVE_COOLDOWN_UNTIL = "reviveCooldownUntil";
     private static final String KEY_TOURIST_SPAWN_DISABLED = "touristSpawnDisabled";
 
-    // ── 花名册（v2 起）──
+    // ── 花名册（v2 起）／当前镇（v3 起）──
     private static final String KEY_VERSION = "version";
     private static final String KEY_ROSTER = "roster";
     private static final String KEY_PLAYER = "player";
     private static final String KEY_ROLE = "role";
+    private static final String KEY_ACTIVE = "activeColony";
+    private static final String KEY_COLONY = "colony";
 
     /**
      * 存档版本。v1 = 无 version 字段的旧档（只有 founder，无花名册）；
-     * v2 = 带 {@code colonyId → (playerUuid → ColonyRole)} 花名册。
+     * v2 = 带 {@code colonyId → (playerUuid → ColonyRole)} 花名册；
+     * v3 = 再带 {@code playerUuid → colonyId} 的「当前操作的小镇」（跨重连持久化）。
      * 改数据格式必须走 {@link #migrate} 的显式迁移链，不许留「缺 key 补默认」的兼容分支。
      */
-    private static final int CURRENT_VERSION = 2;
+    private static final int CURRENT_VERSION = 3;
 
     private final Map<UUID, BlockPos> colonies = new ConcurrentHashMap<>();
-    /** colonyId → founding player UUID. 归属的权威仍是花名册里的 OWNER，这里保留是为了既有的 founder 反查路径。 */
+    /**
+     * colonyId → founding player UUID（「每座镇恒有一个 Owner」的落点）。
+     *
+     * <p>[注意] 只允许按 colonyId 正向查（{@link #getFounder}）。**不要按玩家反查**：
+     * 一人可拥有多座镇，反向查询必然歧义 —— 所以 getColonyByFounder 已从 ColonyApi 移除。
+     */
     private final Map<UUID, UUID> founders = new ConcurrentHashMap<>();
     /** colonyId → (playerUuid → 档位)。一人可在多座镇各有档位，故为两层映射。 */
     private final Map<UUID, Map<UUID, ColonyRole>> rosters = new ConcurrentHashMap<>();
+    /** playerUuid → 当前操作的小镇（v3）。跨重连保留，避免每次登录都跳回默认镇。 */
+    private final Map<UUID, UUID> activeColonies = new ConcurrentHashMap<>();
     /** colonyId → character naming rule (defaults to FANTASY when absent). */
     private final Map<UUID, NameStyle> namingStyles = new ConcurrentHashMap<>();
     /** Colony IDs whose town hall 「生成游客」 toggle is OFF (absent = enabled). */
@@ -104,6 +114,8 @@ public class ColonySavedData extends SavedData {
         namingStyles.remove(colonyId);
         touristSpawnDisabled.remove(colonyId);
         rosters.remove(colonyId);
+        // 小镇没了，任何把它当「当前镇」的记录也要一并清掉（否则玩家会指着一个不存在的镇）
+        activeColonies.values().removeIf(colonyId::equals);
         if (removed != null) {
             setDirty();
             Log.info(TAG, "[Colony] Removed colony {} from persistence", colonyId.toString().substring(0, 8));
@@ -120,14 +132,9 @@ public class ColonySavedData extends SavedData {
         return founders.get(colonyId);
     }
 
-    /** The colony founded by the given player (one player = one colony), or null. */
-    @Nullable
-    public UUID getColonyByFounder(UUID founder) {
-        for (var entry : founders.entrySet()) {
-            if (entry.getValue().equals(founder)) return entry.getKey();
-        }
-        return null;
-    }
+    // [已移除] getColonyByFounder —— 「按玩家反查他创始的那座镇」。一人可拥有多座镇之后
+    // 它必然歧义（首次匹配的线性扫描），且会把「作为成员参与别人的镇」误判成「没有镇」。
+    // 需要反向查询时用 ColonyApi.getColoniesOf(playerUuid)（配 ColonyRole.OWNER）或当前镇。
 
     // ══════════════════════════════════════════════════════════════
     //  花名册（玩家 → 档位）
@@ -217,6 +224,32 @@ public class ColonySavedData extends SavedData {
         Log.info(TAG, "[Colony] Colony {} ownership transferred {} → {}",
                 short8(colonyId), prev != null ? short8(prev) : "none", short8(newOwnerId));
         return true;
+    }
+
+    // ── 当前操作的小镇（v3，跨重连持久化）────────────────────────────
+
+    /**
+     * 玩家上次选择的小镇；没选过返回 null。
+     *
+     * <p>只做存储读写。**可切换性与默认解析在 {@code ActiveColonyTracker}**（唯一真源）——
+     * 「档位 ≥ MEMBER 才可切」的校验在那里，这里不判权限。
+     */
+    @Nullable
+    public UUID getActiveColony(UUID playerId) {
+        return activeColonies.get(playerId);
+    }
+
+    /** 记录/清除玩家的当前镇（{@code colonyId == null} 表示清除）。 */
+    public void setActiveColony(UUID playerId, @Nullable UUID colonyId) {
+        if (colonyId == null) {
+            if (activeColonies.remove(playerId) == null) return;
+        } else {
+            UUID prev = activeColonies.put(playerId, colonyId);
+            if (colonyId.equals(prev)) return;
+        }
+        setDirty();
+        Log.info(TAG, "[Colony] Active colony of {} → {}", short8(playerId),
+                colonyId != null ? short8(colonyId) : "none");
     }
 
     private static String short8(UUID id) {
@@ -353,6 +386,18 @@ public class ColonySavedData extends SavedData {
             }
             tag.put(KEY_TOURIST_SPAWN_DISABLED, disabled);
         }
+
+        // v3：玩家的「当前操作的小镇」（跨重连保留）
+        if (!activeColonies.isEmpty()) {
+            ListTag active = new ListTag();
+            for (var entry : activeColonies.entrySet()) {
+                CompoundTag activeTag = new CompoundTag();
+                activeTag.putUUID(KEY_PLAYER, entry.getKey());
+                activeTag.putUUID(KEY_COLONY, entry.getValue());
+                active.add(activeTag);
+            }
+            tag.put(KEY_ACTIVE, active);
+        }
         return tag;
     }
 
@@ -414,6 +459,14 @@ public class ColonySavedData extends SavedData {
                 }
             }
         }
+        // v3：玩家的「当前操作的小镇」
+        if (tag.contains(KEY_ACTIVE, Tag.TAG_LIST)) {
+            ListTag active = tag.getList(KEY_ACTIVE, Tag.TAG_COMPOUND);
+            for (int i = 0; i < active.size(); i++) {
+                CompoundTag activeTag = active.getCompound(i);
+                data.activeColonies.put(activeTag.getUUID(KEY_PLAYER), activeTag.getUUID(KEY_COLONY));
+            }
+        }
         return data;
     }
 
@@ -421,6 +474,8 @@ public class ColonySavedData extends SavedData {
      * 显式迁移链。改数据格式必须在这里补一段，不留「缺 key 补默认」的兼容分支。
      *
      * <p>v1 → v2：旧档没有花名册，按「founder = 唯一 OWNER」补齐。
+     * v2 → v3：新增「当前镇」表；无需搬运数据（空表即「没选过」，由 ActiveColonyTracker 按默认规则解析），
+     * 只做一次指向已不存在小镇的脏记录清理。
      */
     private static void migrate(ColonySavedData data, int fromVersion) {
         if (fromVersion < 2) {
@@ -428,6 +483,10 @@ public class ColonySavedData extends SavedData {
                 data.rosterOf(entry.getKey()).put(entry.getValue(), ColonyRole.OWNER);
             }
             Log.info(TAG, "[Colony] Migrated colony roster v{} → v{} (founder promoted to OWNER)",
+                    fromVersion, CURRENT_VERSION);
+        }
+        if (fromVersion < 3) {
+            Log.info(TAG, "[Colony] Migrated colony store v{} → v{} (active-colony table added)",
                     fromVersion, CURRENT_VERSION);
         }
         // 不变量：有 founder 的镇必须有且仅有一个 OWNER。半迁移或异常档在此纠正并留痕。
@@ -440,5 +499,7 @@ public class ColonySavedData extends SavedData {
                         colonyId.toString().substring(0, 8));
             }
         }
+        // 不变量：当前镇必须仍然存在。小镇被删后遗留的记录在这里清掉。
+        data.activeColonies.values().removeIf(id -> !data.colonies.containsKey(id));
     }
 }

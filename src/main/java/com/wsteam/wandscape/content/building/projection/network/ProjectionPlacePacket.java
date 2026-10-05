@@ -1,4 +1,6 @@
 package com.wsteam.wandscape.content.building.projection.network;
+
+import com.wsteam.wandscape.content.colony.roster.ColonyRole;
 import com.wsteam.wandscape.content.task.component.Position;
 import com.wsteam.wandscape.content.building.network.BuildingAreaSyncPacket;
 import com.wsteam.wandscape.content.colony.network.ColonyCreatePromptPacket;
@@ -76,11 +78,20 @@ public record ProjectionPlacePacket(
             return;
         }
 
-        // 归属跟「放置者」，不跟空间：
-        //  - 有自有小镇 → 放哪里都归属自己的镇（近邻别人的镇也照建，互不串）；
-        //  - 无自有小镇 → 只允许放市政厅（建镇），放置后先不归属，等命名建镇再归属。
+        // 归属跟「当前镇」，不跟空间：
+        //  - 有当前镇 → 放哪里都归属该镇（近邻别人的镇也照建，互不串），并要求 MANAGER 档
+        //    （放置即下建造任务，属「建造」）；
+        //  - 无当前镇 → 只允许放市政厅（建镇），放置后先不归属，等命名建镇再归属。
         boolean isGov = "government".equals(config.category());
-        UUID owner = com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.ownColony(player);
+        UUID owner = com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.activeColony(player);
+        if (owner != null
+                && !com.wsteam.wandscape.content.colony.ownership.ColonyOwnership
+                        .hasRole(player, owner, ColonyRole.MANAGER)) {
+            com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(player, "building", "建筑");
+            Log.warn(TAG, "[Projection] Player {} lacks MANAGER in colony {} — placement denied",
+                    player.getGameProfile().getName(), owner.toString().substring(0, 8));
+            return;
+        }
         if (owner == null && !isGov) {
             ScreenFeedbackPacket.send(player, I18n.name("message.wandscape.projection.place_failed",
                     "[Projection] §c请先创建小镇（先放置市政厅并命名）"), true);

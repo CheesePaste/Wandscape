@@ -1,4 +1,6 @@
 package com.wsteam.wandscape.content.npc.network;
+
+import com.wsteam.wandscape.content.colony.roster.ColonyRole;
 import com.wsteam.wandscape.content.task.types.EntityId;
 
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
@@ -52,8 +54,10 @@ public record NpcRenamePacket(int entityId, String name) implements CustomPacket
             Log.warn(TAG, "Rename target entity {} is not a WandscapeNpc", packet.entityId());
             return;
         }
-        // 完全平行隔离：只能重命名自己小镇的法师。
-        if (!com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.isOwn(npc.colonyId, player)) {
+        // 档位：给法师改名 = MANAGER（法师管理），非成员与档位不足一律拒止。
+        if (npc.colonyId != null
+                && !com.wsteam.wandscape.content.colony.ownership.ColonyOwnership
+                        .hasRole(player, npc.colonyId, ColonyRole.MANAGER)) {
             com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(player, "mage", "法师");
             return;
         }

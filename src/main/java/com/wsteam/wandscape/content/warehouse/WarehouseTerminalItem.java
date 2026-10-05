@@ -1,4 +1,6 @@
 package com.wsteam.wandscape.content.warehouse;
+
+import com.wsteam.wandscape.content.colony.roster.ColonyRole;
 import com.wsteam.wandscape.content.task.ecs.World;
 
 import com.wsteam.wandscape.content.warehouse.network.WarehouseDataPacket;
@@ -39,12 +41,18 @@ public class WarehouseTerminalItem extends Item {
         return InteractionResultHolder.success(player.getItemInHand(hand));
     }
 
-    /** 打开玩家自己殖民地的仓库菜单；无殖民地给出提示并返回 false。 */
+    /** 打开当前小镇的仓库菜单；无当前镇或档位不足给出提示并返回 false。 */
     public static boolean openWarehouse(ServerPlayer player) {
-        UUID colonyId = com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.ownColony(player);
+        UUID colonyId = com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.activeColony(player);
         if (colonyId == null) {
             player.displayClientMessage(
                     Component.translatable("message.wandscape.warehouse_terminal.no_colony"), true);
+            return false;
+        }
+        // 档位：便携终端存取 = MEMBER（映射「仓库存取」），非成员与档位不足一律拒止。
+        if (!com.wsteam.wandscape.content.colony.ownership.ColonyOwnership
+                .hasRole(player, colonyId, ColonyRole.MEMBER)) {
+            com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(player, "warehouse", "仓库");
             return false;
         }
         BlockPos pos = player.blockPosition();

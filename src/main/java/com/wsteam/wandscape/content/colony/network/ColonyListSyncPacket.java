@@ -18,9 +18,12 @@ import static com.wsteam.wandscape.Wandscape.MODID;
 /**
  * Server→Client: 「我的小镇」列表——收件人参与的每一座镇（colonyId / 名字 / 等级 / 我在该镇的档位）。
  *
- * <p>一人可同时在多座镇（花名册模型），所以这是**列表**而不是单值。侧边栏用它渲染小镇列表；
- * 点击切换只改客户端选中项（{@link ColonyPanelClientState#setSelectedColony}），列表本身不因此变化，
- * 故不需要来回同步。
+ * <p>一人可同时在多座镇（花名册模型），所以这是**列表**而不是单值。侧边栏用它渲染小镇列表。
+ *
+ * <p>「当前镇」**不在这里**：它由 {@link ColonyStatsSyncPacket} 推送、落在
+ * {@code WandscapePanelState.colonyId}，面板的高亮与成员表都按那个 id 去
+ * {@link ColonyPanelClientState} 取缓存（见其类注释）。这里只带「我在该镇的档位」，
+ * 用来决定哪些行可切换（{@code >= MEMBER}）——{@link ColonyRole#ALLY} 行置灰不可点。
  */
 public record ColonyListSyncPacket(List<Entry> colonies) implements CustomPacketPayload {
 

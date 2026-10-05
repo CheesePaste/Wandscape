@@ -16,9 +16,15 @@ import java.util.concurrent.ConcurrentHashMap;
  * {@link ColonyRosterSyncPacket} 写某座镇的成员/档位/待处理邀请。写入即覆盖，客户端不缓存写入意图
  * ——它自己不发请求，只消费服务端推来的快照（登录时 + 每次花名册变更后，见 {@code ColonyRosterSyncService}）。
  *
- * <p>扁平视图（{@link #getColonyName()} / {@link #getMyRole()} / {@link #getMembers()}）永远描述
- * **当前选中的那座镇**：内部按 colonyId 缓存每座镇的花名册，{@link #setSelectedColony} 切镇时立刻
- * 用缓存换视图，所以点列表切换不需要再向服务端要一次数据。
+ * <p>**本类刻意不保存「当前是哪座镇」**（[别顺手加回来] 这里此前有过
+ * {@code selectedColony} + 一份扁平视图）。全客户端唯一的「当前镇」是
+ * {@code WandscapePanelState.colonyId}——由服务端 {@code ColonyStatsSyncPacket} 推送的当前镇，
+ * 顶栏 / 边界 / 设置 / 子面板共用同一份。面板的选中高亮与成员列表都拿那个 id 来这里取缓存，
+ * 于是「面板切了但顶栏不变」在结构上不可能发生：根本不存在第二份状态可以漂移。
+ * 缺了这份数据只会让面板显示空态，绝不会让两处显示不一致。
+ *
+ * <p>因此对外的读取一律要求调用方显式给出 colonyId：{@link #roleOf} / {@link #nameOf} /
+ * {@link #membersOf}。反过来说，任何形如「把选中项存起来」的字段都是这类 bug 的复发点。
  *
  * <p>字段全部 volatile + ConcurrentHashMap：网络线程写、渲染线程读。零 MC 依赖，可在服务端加载。
  */
@@ -33,70 +39,47 @@ public final class ColonyPanelClientState {
     /** 待处理邀请（跨小镇）。 */
     public record InviteEntry(UUID colonyId, String colonyName, String inviterName, ColonyRole role) {}
 
-    /** 单座镇的花名册缓存。 */
+    /** 单座镇的花名册缓存（按 colonyId 取，不绑定「选中」概念）。 */
     private record RosterSnapshot(String colonyName, ColonyRole myRole, List<MemberEntry> members) {}
 
     private static volatile List<ColonyEntry> colonies = List.of();
-    private static volatile UUID selectedColony = null;
-    private static volatile String colonyName = "";
-    private static volatile ColonyRole myRole = null;
-    private static volatile List<MemberEntry> members = List.of();
     private static volatile List<InviteEntry> pendingInvites = List.of();
     private static final Map<UUID, RosterSnapshot> rosters = new ConcurrentHashMap<>();
 
     private ColonyPanelClientState() {}
 
-    // ── 扁平视图（永远对应 selectedColony）──
+    // ── 列表 / 邀请（与「当前是哪座镇」无关，无需 colonyId）──
 
     /** 我的小镇列表；未收到同步时空表（永不 null）。 */
     public static List<ColonyEntry> getColonies() { return colonies; }
 
-    public static void setColonies(@Nullable List<ColonyEntry> value) {
-        colonies = value != null ? List.copyOf(value) : List.of();
-    }
-
-    /** 当前选中的小镇；尚未选中返回 null。 */
-    @Nullable
-    public static UUID getSelectedColony() { return selectedColony; }
-
-    /** 切换当前小镇：立刻用该镇已缓存的花名册换视图（没缓存到就显示空表，等包到达再填）。 */
-    public static void setSelectedColony(@Nullable UUID colonyId) {
-        selectedColony = colonyId;
-        RosterSnapshot snapshot = colonyId != null ? rosters.get(colonyId) : null;
-        if (snapshot != null) {
-            colonyName = snapshot.colonyName();
-            myRole = snapshot.myRole();
-            members = snapshot.members();
-        } else {
-            colonyName = "";
-            myRole = null;
-            members = List.of();
-        }
-    }
-
-    /** 当前选中镇的显示名；无选中或未知返回空串（永不 null）。 */
-    public static String getColonyName() { return colonyName; }
-
-    public static void setColonyName(@Nullable String value) { colonyName = value != null ? value : ""; }
-
-    /** 我在当前选中镇的档位；非成员/无选中返回 null。 */
-    @Nullable
-    public static ColonyRole getMyRole() { return myRole; }
-
-    public static void setMyRole(@Nullable ColonyRole value) { myRole = value; }
-
-    /** 当前选中镇的成员；无选中返回空表（永不 null）。 */
-    public static List<MemberEntry> getMembers() { return members; }
-
-    public static void setMembers(@Nullable List<MemberEntry> value) {
-        members = value != null ? List.copyOf(value) : List.of();
-    }
-
     /** 发给我的待处理邀请（全部小镇，跨镇合并）；无邀请时空表（永不 null）。 */
     public static List<InviteEntry> getPendingInvites() { return pendingInvites; }
 
-    public static void setPendingInvites(@Nullable List<InviteEntry> value) {
-        pendingInvites = value != null ? List.copyOf(value) : List.of();
+    // ── 按 colonyId 取花名册（当前镇由调用方给，见类注释）──
+
+    /** 我在该镇的档位；无该镇快照或非成员返回 null。 */
+    @Nullable
+    public static ColonyRole roleOf(@Nullable UUID colonyId) {
+        RosterSnapshot snapshot = snapshot(colonyId);
+        return snapshot != null ? snapshot.myRole() : null;
+    }
+
+    /** 该镇显示名；无快照返回空串（永不 null）。 */
+    public static String nameOf(@Nullable UUID colonyId) {
+        RosterSnapshot snapshot = snapshot(colonyId);
+        return snapshot != null && snapshot.colonyName() != null ? snapshot.colonyName() : "";
+    }
+
+    /** 该镇成员列表；无快照返回空表（永不 null）。 */
+    public static List<MemberEntry> membersOf(@Nullable UUID colonyId) {
+        RosterSnapshot snapshot = snapshot(colonyId);
+        return snapshot != null ? snapshot.members() : List.of();
+    }
+
+    @Nullable
+    private static RosterSnapshot snapshot(@Nullable UUID colonyId) {
+        return colonyId != null ? rosters.get(colonyId) : null;
     }
 
     // ── 服务端快照落地 ──
@@ -109,11 +92,6 @@ public final class ColonyPanelClientState {
             converted.add(new ColonyEntry(entry.colonyId(), entry.name(), entry.level(), entry.myRole()));
         }
         colonies = List.copyOf(converted);
-        // 选中的镇已不在列表里（被移出/镇被删）：退回未选中，避免面板继续显示一座不再属于我的镇。
-        UUID selected = selectedColony;
-        if (selected != null && converted.stream().noneMatch(e -> selected.equals(e.colonyId()))) {
-            setSelectedColony(null);
-        }
     }
 
     /** 落地某座镇的花名册快照（成员 + 我的档位 + 我的全部待处理邀请）。 */
@@ -124,9 +102,8 @@ public final class ColonyPanelClientState {
         for (ColonyRosterSyncPacket.Member member : packet.members()) {
             converted.add(new MemberEntry(member.id(), member.name(), member.role()));
         }
-        List<MemberEntry> snapshotMembers = List.copyOf(converted);
         rosters.put(packet.colonyId(),
-                new RosterSnapshot(packet.colonyName(), packet.myRole(), snapshotMembers));
+                new RosterSnapshot(packet.colonyName(), packet.myRole(), List.copyOf(converted)));
 
         // 待处理邀请与「哪座镇」无关：它是发给我的邀请总表，任何一个花名册包都带全量，直接覆盖。
         List<InviteEntry> invites = new ArrayList<>(packet.pendingInvites().size());
@@ -134,16 +111,6 @@ public final class ColonyPanelClientState {
             invites.add(new InviteEntry(invite.colonyId(), invite.colonyName(), invite.inviterName(), invite.role()));
         }
         pendingInvites = List.copyOf(invites);
-
-        // 首次收到自身成员身份的花名册：默认选中它，打开面板即有内容（OWNER 镇排在推送序列最前）。
-        if (selectedColony == null && packet.myRole() != null) {
-            selectedColony = packet.colonyId();
-        }
-        if (packet.colonyId().equals(selectedColony)) {
-            colonyName = packet.colonyName();
-            myRole = packet.myRole();
-            members = snapshotMembers;
-        }
     }
 
     /**
@@ -152,10 +119,6 @@ public final class ColonyPanelClientState {
      */
     public static void reset() {
         colonies = List.of();
-        selectedColony = null;
-        colonyName = "";
-        myRole = null;
-        members = List.of();
         pendingInvites = List.of();
         rosters.clear();
     }

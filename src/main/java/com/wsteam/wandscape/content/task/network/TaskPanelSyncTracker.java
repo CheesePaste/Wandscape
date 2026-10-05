@@ -16,7 +16,7 @@ import com.wsteam.wandscape.content.task.types.ResourceStack;
 import com.wsteam.wandscape.content.production.ProductionEligibility;
 import com.wsteam.wandscape.content.npc.worker.ColonyWorker;
 import com.wsteam.wandscape.content.npc.internal.EntityComponentBridge;
-import com.wsteam.wandscape.api.ColonyApi;
+import com.wsteam.wandscape.content.colony.ownership.ColonyOwnership;
 import com.wsteam.wandscape.api.WarehouseApi;
 import com.wsteam.wandscape.content.element.data.ElementType;
 import com.wsteam.wandscape.content.building.data.WorkItem;
@@ -95,14 +95,15 @@ public final class TaskPanelSyncTracker {
     }
 
     private static void syncPlayer(ServerPlayer player) {
-        ColonyApi colonyApi = WandscapeApis.getColonyApiSilently();
-        if (colonyApi == null) return;
-
-        UUID colonyId = colonyApi.getColonyByFounder(player.getUUID());
+        // 任务面板只描述玩家**当前操作的小镇**（可切换，不再等于「我创始的那座」）。
+        // 这里曾有一个 `getColonyId(blockPosition())` 的「空间最近小镇」兜底，正是跨镇泄密的
+        // 根因（站在别人的镇边上就会看到别人的任务），已删除并**不得修回**：
+        // 无当前镇 = 建镇引导态，发空快照清客户端缓存，绝不按位置就近解析。
+        UUID colonyId = ColonyOwnership.activeColony(player);
         if (colonyId == null) {
-            colonyId = colonyApi.getColonyId(player.blockPosition());
+            Net.toPlayer(player, new TaskManagementSyncPacket(null, List.of(), List.of(), List.of(), 0, 0, 0));
+            return;
         }
-        if (colonyId == null) return;
 
         World world = com.wsteam.wandscape.content.task.ecs.World.getActive();
         if (world == null || world.taskPool == null) return;

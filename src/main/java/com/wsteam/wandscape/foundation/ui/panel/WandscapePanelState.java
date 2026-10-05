@@ -36,6 +36,15 @@ public final class WandscapePanelState {
     private static volatile boolean panelHidden = false;
     private static volatile boolean cursorLifted = false;
     private static volatile SubMode activeSubMode = SubMode.NONE;
+    /**
+     * 全客户端**唯一**的「当前镇」（服务端 ColonyStatsSyncPacket 推来，源头是 ActiveColonyTracker）。
+     *
+     * <p>顶栏 / 建筑边界 / 设置中心 / 建造解锁 / 侧边栏「小镇」面板共用这一份。[别顺手加回来]
+     * 侧边栏面板曾经另存一份 {@code selectedColony}，两份状态漂移的表现就是「面板切了但顶栏不变」；
+     * 现在面板只按本字段取花名册缓存（见 {@code ColonyPanelClientState} 类注释），没有第二份可漂移。
+     * 切换走的路径是：面板点行 → SELECT 包 → 服务端 ActiveColonyTracker.setActive →
+     * ColonyContextSync.push（第一个包就是 ColonyStatsSyncPacket）→ 本字段更新 → 各处一起变。
+     */
     private static volatile UUID colonyId = null;
     private static volatile int comfort = 0;
     private static volatile int magic = 0;

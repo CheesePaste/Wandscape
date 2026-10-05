@@ -1,4 +1,6 @@
 package com.wsteam.wandscape.content.npc.network;
+
+import com.wsteam.wandscape.content.colony.roster.ColonyRole;
 import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.content.task.types.EntityId;
 
@@ -50,10 +52,11 @@ public record NpcOpenStrategyPacket(int entityId) implements CustomPacketPayload
             Log.warn(TAG, "Strategy target entity {} is not a WandscapeNpc", pkt.entityId());
             return;
         }
-        // 完全平行隔离：只能打开自己小镇法师的策略栏。
+        // 档位：开法师策略栏 = MANAGER（映射「法师调策略/装备」）。
         if (npc.colonyId != null
                 && !com.wsteam.wandscape.content.npc.internal.EntityComponentBridge.PLACEHOLDER_COLONY.equals(npc.colonyId)
-                && !com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.isOwn(npc.colonyId, sp)) {
+                && !com.wsteam.wandscape.content.colony.ownership.ColonyOwnership
+                        .hasRole(sp, npc.colonyId, ColonyRole.MANAGER)) {
             com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(sp, "mage", "法师");
             return;
         }

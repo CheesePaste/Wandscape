@@ -1,5 +1,7 @@
 package com.wsteam.wandscape.content.building.projection.network;
 
+import com.wsteam.wandscape.content.colony.roster.ColonyRole;
+
 import com.wsteam.wandscape.content.building.internal.BuildingRepairHandler;
 import com.wsteam.wandscape.content.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.content.building.internal.BuildingState;
@@ -48,8 +50,11 @@ public record BuildingActionPacket(UUID buildingId, String action) implements Cu
             return;
         }
 
-        // 完全平行隔离：只能对自己小镇的建筑执行销毁/撤销/复原。
-        if (!com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.isOwn(state.getColonyId(), player)) {
+        // 档位：拆除/复原/撤销建筑 = MANAGER（映射「建造/拆除/修复建筑」）。
+        // colonyId == null 的野建筑（未归属的建镇市政厅）无镇可判档，沿用原语义放行。
+        if (state.getColonyId() != null
+                && !com.wsteam.wandscape.content.colony.ownership.ColonyOwnership
+                        .hasRole(player, state.getColonyId(), ColonyRole.MANAGER)) {
             com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(player, "building", "建筑");
             return;
         }

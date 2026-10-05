@@ -1,5 +1,7 @@
 package com.wsteam.wandscape.content.colony.network;
 
+import com.wsteam.wandscape.content.colony.roster.ColonyRole;
+
 import com.wsteam.wandscape.foundation.networking.Net;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -26,8 +28,9 @@ public record ColonyNameUpdatePacket(UUID colonyId, String name) implements Cust
     public Type<? extends CustomPacketPayload> type() { return TYPE; }
 
     public static void handleServer(ColonyNameUpdatePacket packet, ServerPlayer player) {
-        // 完全平行隔离：只能改名自己小镇。
-        if (!com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.isOwn(packet.colonyId(), player)) {
+        // 档位：改小镇名 = OWNER（映射「改小镇设置」），其余档位一律拒止。
+        if (!com.wsteam.wandscape.content.colony.ownership.ColonyOwnership
+                .hasRole(player, packet.colonyId(), ColonyRole.OWNER)) {
             com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(player, "town", "小镇");
             return;
         }
@@ -38,9 +41,15 @@ public record ColonyNameUpdatePacket(UUID colonyId, String name) implements Cust
 
         var metricsApi = com.wsteam.wandscape.api.WandscapeApis.getColonyStatusApiSilently();
         if (metricsApi != null) {
-            var snap = metricsApi.getSnapshot(packet.colonyId());
-            Net.toPlayer(player,
-                    ColonyStatsSyncPacket.fromSnapshot(snap));
+            // getSnapshotSafe：快照异常不再冒泡出包 handler（禁崩溃）。
+            // 此处 colonyId 已由上面的 hasRole 判定保证非空，所以 EMPTY（colonyId=null）意味着
+            // 「取数失败」而不是「引导态空包」——失败时降级为不发，保留客户端上一份已知状态，
+            // 别把顶栏/面板当前镇清空（与 ProjectionEnterPacket 同一惯例）。
+            var snap = metricsApi.getSnapshotSafe(packet.colonyId());
+            if (snap.colonyId() != null) {
+                Net.toPlayer(player,
+                        ColonyStatsSyncPacket.fromSnapshot(snap));
+            }
         }
     }
 

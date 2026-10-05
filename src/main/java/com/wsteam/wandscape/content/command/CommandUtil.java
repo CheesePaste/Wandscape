@@ -1,6 +1,7 @@
 package com.wsteam.wandscape.content.command;
 
 import com.wsteam.wandscape.api.WandscapeApis;
+import com.wsteam.wandscape.content.colony.ownership.ColonyOwnership;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
@@ -11,8 +12,8 @@ import java.util.UUID;
 /**
  * 命令域共享小工具：殖民地归属解析、玩家获取、失败反馈的公共兜底。
  *
- * <p>解析优先级（与 ColonyCommand/ColonyApi 一人一小镇规则一致）：
- * 创始人所拥有小镇 → 位置所在殖民地（256 格内）→ 任意第一个殖民地 → null。
+ * <p>解析优先级（多殖民地后「我的镇」= 玩家**当前操作**的小镇，不再等于「我创始的那座」）：
+ * 当前镇 → 位置所在殖民地（256 格内，仅 OP）→ 任意第一个殖民地 → null。
  */
 final class CommandUtil {
 
@@ -26,7 +27,7 @@ final class CommandUtil {
 
     /**
      * 解析 `src` 执行者当前应绑定的殖民地 id。
-     * 玩家：创始人所拥有 → 若为 OP 允许所在位置殖民地 → 否则 null（绝不回退至其他玩家小镇）。
+     * 玩家：当前镇 → 若为 OP 允许所在位置殖民地 → 否则 null（绝不回退至其他玩家小镇）。
      * 控制台/命令方块：位置所在 → 任意第一个 → null。
      */
     @Nullable
@@ -35,8 +36,9 @@ final class CommandUtil {
         if (colonyApi == null) return null;
         ServerPlayer p = src.getPlayer();
         if (p != null) {
-            UUID owned = colonyApi.getColonyByFounder(p.getUUID());
-            if (owned != null) return owned;
+            // 「我当前操作的小镇」（可显式切换、跨重连持久化），不再等于「我创始的那座」。
+            UUID active = ColonyOwnership.activeColony(p);
+            if (active != null) return active;
             UUID at = colonyApi.getColonyId(BlockPos.containing(src.getPosition()));
             if (at != null && p.hasPermissions(2)) return at;
             return null;

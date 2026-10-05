@@ -1,4 +1,6 @@
 package com.wsteam.wandscape.content.building.network;
+
+import com.wsteam.wandscape.content.colony.roster.ColonyRole;
 import com.wsteam.wandscape.content.task.component.Position;
 
 import com.wsteam.wandscape.content.building.internal.BuildingInteractHandler;
@@ -62,8 +64,9 @@ public record OpenWarehousePacket(BlockPos buildingPos)
                         buildingId);
                 return;
             }
-            // 完全平行隔离：只能打开自己小镇仓库的界面。
-            if (!com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.isOwn(colonyId, sp)) {
+            // 档位：仓库存取 = MEMBER（映射「仓库存取」），非成员与档位不足一律拒止。
+            if (!com.wsteam.wandscape.content.colony.ownership.ColonyOwnership
+                    .hasRole(sp, colonyId, ColonyRole.MEMBER)) {
                 com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(sp, "warehouse", "仓库");
                 return;
             }

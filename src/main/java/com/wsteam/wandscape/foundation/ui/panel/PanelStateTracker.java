@@ -2,7 +2,7 @@ package com.wsteam.wandscape.foundation.ui.panel;
 import com.wsteam.wandscape.content.colony.network.ColonyStatsSyncPacket;
 
 import com.wsteam.wandscape.content.building.internal.BuildingInteractHandler;
-import com.wsteam.wandscape.api.ColonyApi;
+import com.wsteam.wandscape.content.colony.ownership.ColonyOwnership;
 import com.wsteam.wandscape.api.ColonyStatusApi;
 import com.wsteam.wandscape.content.colony.data.ColonyStatusSnapshot;
 import com.wsteam.wandscape.content.colony.event.ColonyEvaluationChangedEvent;
@@ -94,9 +94,6 @@ public final class PanelStateTracker {
     private static void syncHudForColony(UUID colonyId) {
         if (panelOpenPlayers.isEmpty()) return;
 
-        ColonyApi colonyApi = WandscapeApis.getColonyApiSilently();
-        if (colonyApi == null) return;
-
         MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
         if (server == null) return;
 
@@ -108,9 +105,11 @@ public final class PanelStateTracker {
         for (UUID playerId : panelOpenPlayers) {
             ServerPlayer player = server.getPlayerList().getPlayer(playerId);
             if (player == null) continue;
-            // 完全平行隔离：HUD 只推送给「该殖民地属于其本人」的开面板玩家；
-            // 无镇玩家收不到任何殖民地数据。绝不退化为就近殖民地。
-            UUID playerColony = colonyApi.getColonyByFounder(playerId);
+            // 顶栏只推给「当前镇 == 该殖民地」的开面板玩家：多镇下必须比当前镇，
+            // 比创始人（getColonyByFounder）会让被邀请参与别人的镇、以及被转让出去的成员
+            // 永远收不到自己当前镇的顶栏数据。
+            // 无当前镇 = 建镇引导态，不推任何殖民地数据，绝不退化为空间最近小镇。
+            UUID playerColony = ColonyOwnership.activeColony(player);
             if (snap.colonyId() != null && snap.colonyId().equals(playerColony)) {
                 Net.toPlayer(player, ColonyStatsSyncPacket.fromSnapshot(snap));
             }

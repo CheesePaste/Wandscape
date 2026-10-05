@@ -1,5 +1,7 @@
 package com.wsteam.wandscape.content.building.network;
 
+import com.wsteam.wandscape.content.colony.roster.ColonyRole;
+
 import com.wsteam.wandscape.content.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.content.building.internal.BuildingState;
 import com.wsteam.wandscape.content.building.internal.ConstructionSupply;
@@ -63,8 +65,10 @@ public record ConstructionCraftAllPacket(UUID targetId, boolean road) implements
             return;
         }
 
-        // 完全平行隔离：只能对自己小镇的工地补料。
-        if (!com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.isOwn(state.getColonyId(), player)) {
+        // 档位：工地一键制作（下材料订单）= MEMBER（映射「ConstructionCraftAll」）。
+        if (state.getColonyId() != null
+                && !com.wsteam.wandscape.content.colony.ownership.ColonyOwnership
+                        .hasRole(player, state.getColonyId(), ColonyRole.MEMBER)) {
             com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(player, "building", "建筑");
             return;
         }
@@ -88,7 +92,10 @@ public record ConstructionCraftAllPacket(UUID targetId, boolean road) implements
             return;
         }
 
-        if (!com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.isOwn(edge.getColonyId(), player)) {
+        // 档位：道路工地补料 = MEMBER（与建筑工地同一档位口径）；edge 无归属时沿用原语义放行。
+        if (edge.getColonyId() != null
+                && !com.wsteam.wandscape.content.colony.ownership.ColonyOwnership
+                        .hasRole(player, edge.getColonyId(), ColonyRole.MEMBER)) {
             com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(player, "road", "道路");
             return;
         }
@@ -97,7 +104,7 @@ public record ConstructionCraftAllPacket(UUID targetId, boolean road) implements
                 ConstructionSupply.craftForRoad(edge, WandscapeConstants.TASK_PRIORITY_PLAYER);
         ConstructionSupply.announce(player, result);
 
-        UUID colonyId = com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.ownColony(player);
+        UUID colonyId = com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.activeColony(player);
         Net.toPlayer(player, RoadSiteData.fromEdge(
                 level, edge, colonyId != null ? colonyId : edge.getColonyId()));
         Log.info(TAG, "Player {} craft-all on road edge {} — enqueued={} covered={} blocked={}",

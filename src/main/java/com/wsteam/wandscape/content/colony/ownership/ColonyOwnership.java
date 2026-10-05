@@ -2,6 +2,7 @@ package com.wsteam.wandscape.content.colony.ownership;
 
 import com.wsteam.wandscape.api.ColonyApi;
 import com.wsteam.wandscape.api.WandscapeApis;
+import com.wsteam.wandscape.content.colony.ActiveColonyTracker;
 import com.wsteam.wandscape.content.colony.roster.ColonyRole;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.foundation.networking.ScreenFeedbackPacket;
@@ -15,11 +16,17 @@ import javax.annotation.Nullable;
 import java.util.UUID;
 
 /**
- * 完全平行隔离的唯一归属判定入口。
+ * 殖民地上下文与权限判定的唯一入口。
  *
- * <p>铁律：一个玩家在服务器上的一切 Wandscape 上下文只能是他自己创建的小镇；
- * 没有小镇 = 「建镇引导态」，绝不显示/操作别人的小镇。本类收敛
- * 「目标是否属于操作者」这一判断与拒止反馈，取代逐包散落的手写校验。
+ * <p>多殖民地后语义分两层，**不要混用**：
+ * <ul>
+ *   <li>{@link #activeColony} —— 「我**当前操作**的小镇」。可以是自己拥有的，也可以是被邀请参与别人的镇；
+ *       由 {@link ActiveColonyTracker} 解析、可显式切换（档位 ≥ MEMBER）、跨重连持久化。
+ *       一切「包里不带镇 id」的上下文解析都走它。没有可切换的镇 = 建镇引导态，
+ *       **绝不回退空间最近小镇**（那是跨镇泄密的根因）。</li>
+ *   <li>{@link #hasRole} / {@link #role} —— 「我在**这座**镇能干什么」。权限判定一律用它；
+ *       {@link #isOwn} 只回答「这是不是我当前操作的那座镇」，**它不是权限判定**。</li>
+ * </ul>
  */
 public final class ColonyOwnership {
 
@@ -28,39 +35,51 @@ public final class ColonyOwnership {
     private ColonyOwnership() {}
 
     /**
-     * 玩家自己的小镇（按 founder 绑定，无视距离），没有则返回 null。
-     * 绝不回退到空间「最近小镇」——那是跨镇泄密的根因。
+     * 玩家**当前操作的小镇**；没有任何可切换的镇时返回 null（= 建镇引导态）。
      *
-     * <p>解析失败（API 未就绪 / 存储异常）一律降级为 null 并记警告：调用方把 null 当
-     * 「无小镇」处理，绝不让异常冒泡打断调用链。这是全仓唯一的「我的小镇」解析入口，
-     * 各域不得再自备副本（否则多镇改造会漏改）。
+     * <p>由 {@link ActiveColonyTracker} 解析：已存且仍可切 → 自己拥有的镇 → 档位最高者 → null。
+     * 全程**不回退空间最近小镇**。解析失败降级为 null 并记警告，绝不抛给调用方
+     * （调用方遍布 UI 与事件路径）。这是全仓唯一的「当前镇」入口，各域不得自备副本。
      */
     @Nullable
-    public static UUID ownColony(ServerPlayer player) {
-        if (player == null) return null;
-        try {
-            ColonyApi api = WandscapeApis.getColonyApiSilently();
-            return api != null ? api.getColonyByFounder(player.getUUID()) : null;
-        } catch (RuntimeException e) {
-            Log.warn(TAG, "Failed to resolve own colony for {}: {}",
-                    player.getUUID(), e.toString());
-            return null;
-        }
+    public static UUID activeColony(ServerPlayer player) {
+        return ActiveColonyTracker.activeColony(player);
     }
 
     /**
-     * 玩家是否拥有对 {@code colonyId} 的操作权。
+     * [已弃用的名字] 等价于 {@link #activeColony(ServerPlayer)}。
+     *
+     * <p>多殖民地之前它是「我创始的那座」；现在玩家的操作上下文是**可切换的当前镇**，
+     * 被邀请参与别人的镇也有自己的当前镇，所以那个等式不再成立。名字暂时保留以免一次性
+     * 打红约 50 处调用点，整合期会统一改成 {@code activeColony} 并删除本方法。
+     * **新代码请直接用 {@link #activeColony}。**
+     */
+    @Nullable
+    public static UUID ownColony(ServerPlayer player) {
+        return activeColony(player);
+    }
+
+    /**
+     * 玩家**当前操作的镇**是否就是 {@code colonyId}。
+     *
+     * <p><b>[它不是权限判定]</b> 「我在这镇能干什么」一律走 {@link #hasRole} / {@link #role}。
+     * 多殖民地后本方法只是「这是不是我当前那座镇」的是非题。
      *
      * <ul>
-     *   <li>{@code colonyId == null}：无归属目标（建镇/野建筑），视为允许。</li>
-     *   <li>OP（权限 ≥ 2）旁路直接放行。</li>
-     *   <li>否则须玩家自己的小镇与 {@code colonyId} 相等。</li>
+     *   <li>{@code colonyId == null}：无归属目标（建镇流程 / 未关联建筑），视为允许——
+     *       建镇引导依赖这条，别收紧。</li>
+     *   <li>否则须与玩家的当前镇（{@link #activeColony}）相等。</li>
      * </ul>
+     *
+     * <p><b>[无 OP 旁路]</b> 旧注释曾声称「OP（权限 ≥ 2）旁路直接放行」，但**代码里从来没有这个分支**，
+     * 属于文档撒谎。现按四档模型裁定：**权限一律按档位判，不给 OP 静默的全局旁路**——
+     * 管理员要干预走 {@code /wandscape colony ...}（op-2 门控的命令面），
+     * 而不是悄悄绕过所有镇的权限。静默继承一条旧注释不是授权。
      */
     public static boolean isOwn(@Nullable UUID colonyId, @Nullable ServerPlayer player) {
         if (player == null) return false;
         if (colonyId == null) return true;                 // 无归属：建镇流程/未关联建筑
-        UUID own = ownColony(player);
+        UUID own = activeColony(player);
         return own != null && own.equals(colonyId);
     }
 

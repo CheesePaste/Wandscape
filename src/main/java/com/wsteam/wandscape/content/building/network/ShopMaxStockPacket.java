@@ -1,5 +1,7 @@
 package com.wsteam.wandscape.content.building.network;
 
+import com.wsteam.wandscape.content.colony.roster.ColonyRole;
+
 import com.wsteam.wandscape.content.building.internal.ShopStockManager;
 import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.content.building.internal.BuildingSavedData;
@@ -36,8 +38,10 @@ public record ShopMaxStockPacket(UUID buildingId, BlockPos buildingPos,
     public static void handleServer(ShopMaxStockPacket packet, ServerPlayer player) {
         ShopStockManager manager = ShopStockManager.getActive();
         if (manager == null) return;
-        // 完全平行隔离：只能调自己小镇商店的最大库存。
-        if (!com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.isOwn(packet.colonyId(), player)) {
+        // 档位：改商店最大库存是经营配置（MANAGER）；开商店面板本身只要 MEMBER。
+        if (packet.colonyId() != null
+                && !com.wsteam.wandscape.content.colony.ownership.ColonyOwnership
+                        .hasRole(player, packet.colonyId(), ColonyRole.MANAGER)) {
             com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(player, "shop", "商店");
             return;
         }

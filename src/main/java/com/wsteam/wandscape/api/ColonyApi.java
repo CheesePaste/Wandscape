@@ -22,18 +22,13 @@ public interface ColonyApi {
     @Nullable
     UUID getFounder(UUID colonyId);
 
-    /**
-     * The colony founded by the given player (one player = one colony), or null.
-     *
-     * <p>⚠️ **服务端专用**：实现查的是殖民地 SavedData（`ServerLifecycleHooks.getCurrentServer()`），
-     * 在**专用服务器的客户端恒返回 null**（单机因有集成服务端而看不出来）。
-     * 因此**绝不要**在客户端也会跑到的判定里用它——典型翻车：第三方实体任务的
-     * {@code isEnable} 在客户端被调用，用它判"主人有小镇"会让任务在多人游戏里永久置灰、点不动。
-     * 客户端只能用同步下来的数据（如 `WandscapePanelState`），殖民地归属这类服务端事实
-     * 要放到服务端路径去把关。同类陷阱：[{@code getColonyLevel} 客户端恒 0]。
-     */
-    @Nullable
-    UUID getColonyByFounder(UUID founder);
+    // [已移除] getColonyByFounder(playerUuid) —— 「按玩家反查他创始的那座镇」。
+    // 一人可拥有多座镇之后它**必然歧义**（旧实现是首次匹配的线性扫描），而且会把「作为成员
+    // 参与别人的镇」误判成「没有镇」——本次多殖民地改造的根因之一。不要再把它加回来，改用：
+    //   我在哪座镇        → ColonyOwnership.activeColony(player) / getActiveColony(playerUuid)
+    //   谁拥有这座镇      → getRole(colonyId, player) == ColonyRole.OWNER
+    //   这人拥有哪些镇    → getColoniesOf(player) 过滤 OWNER
+    // 上面那些方法同为**服务端专用**（客户端恒 null / 空），注意事项同 getRole 的注释。
 
     /** Find the nearest colony UUID within 256 blocks of pos, or null. */
     UUID getColonyId(BlockPos pos);
@@ -117,4 +112,19 @@ public interface ColonyApi {
 
     /** 转让所有权：新人置 OWNER，前任降为 MANAGER。@return 是否成功。 */
     boolean transferOwner(UUID colonyId, UUID newOwnerId);
+
+    // ── 当前操作的小镇（v3 起，跨重连持久化）──────────────────────────
+    // 与 getRole 同为**服务端专用**（读殖民地 SavedData，专用服务器的客户端恒 null）。
+
+    /**
+     * 玩家上次选择的小镇；没选过返回 null。
+     *
+     * <p>只做存储读写，**不判权限**：「档位 ≥ MEMBER 才可切」与默认解析唯一真源在
+     * {@code ActiveColonyTracker}。
+     */
+    @Nullable
+    UUID getActiveColony(UUID playerId);
+
+    /** 记录/清除玩家的当前镇（{@code colonyId == null} 表示清除）。 */
+    void setActiveColony(UUID playerId, @Nullable UUID colonyId);
 }

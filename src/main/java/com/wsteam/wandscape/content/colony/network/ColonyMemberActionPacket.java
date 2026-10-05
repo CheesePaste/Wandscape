@@ -2,6 +2,7 @@ package com.wsteam.wandscape.content.colony.network;
 
 import com.wsteam.wandscape.api.ColonyApi;
 import com.wsteam.wandscape.api.WandscapeApis;
+import com.wsteam.wandscape.content.colony.ActiveColonyTracker;
 import com.wsteam.wandscape.content.colony.ownership.ColonyOwnership;
 import com.wsteam.wandscape.content.colony.roster.ColonyRole;
 import com.wsteam.wandscape.foundation.log.Log;
@@ -37,9 +38,9 @@ public record ColonyMemberActionPacket(Action action, UUID colonyId, UUID target
     /**
      * 成员动作。
      *
-     * <p>{@code SELECT} 不是花名册变更，而是「我要看这座镇」：客户端点列表切换时发它，服务端校验
-     * 发起者确实是该镇成员后回推该镇花名册。没有它，切换镇就只能靠客户端缓存，刚进服或刚被拉进新镇
-     * 会看到空面板。
+     * <p>{@code SELECT} 不是花名册变更，而是「把这座镇设为我的当前镇」：客户端在小镇列表里点一行时发它，
+     * 服务端校验「可切换」（档位 ≥ MEMBER，见 {@code ActiveColonyTracker}）后 setActive 并统一推送。
+     * {@link ColonyRole#ALLY} 不可切换——它零操作权限，切过去也什么都做不了，故网关就按 MEMBER 拦掉。
      */
     public enum Action { INVITE, ACCEPT, DECLINE, SET_ROLE, REMOVE, SELECT }
 
@@ -64,7 +65,7 @@ public record ColonyMemberActionPacket(Action action, UUID colonyId, UUID target
      *
      * <ul>
      *   <li>{@code INVITE} → MANAGER；{@code SET_ROLE} / {@code REMOVE} → OWNER（仅镇长）；</li>
-     *   <li>{@code SELECT} → ALLY（只要是成员就能看该镇花名册）；</li>
+     *   <li>{@code SELECT} → MEMBER：可切换的下限。ALLY 只有白名单权限，切过去没有意义，网关直接拒；</li>
      *   <li>{@code ACCEPT} / {@code DECLINE} → **不过网关**：执行者是被邀方本人，此刻还不在花名册上、
      *       没有档位可判，必须由 handler 按「服务端内存里发给本人的待处理邀请」校验，
      *       且**绝不能采信客户端传来的 colonyId / role**（否则改包就能以 OWNER 入伙）。</li>
@@ -76,7 +77,7 @@ public record ColonyMemberActionPacket(Action action, UUID colonyId, UUID target
         return switch (action) {
             case INVITE -> ColonyScope.atLeast(colonyId, ColonyRole.MANAGER, WHAT_KEY, WHAT_FALLBACK);
             case SET_ROLE, REMOVE -> ColonyScope.atLeast(colonyId, ColonyRole.OWNER, WHAT_KEY, WHAT_FALLBACK);
-            case SELECT -> ColonyScope.atLeast(colonyId, ColonyRole.ALLY, WHAT_KEY, WHAT_FALLBACK);
+            case SELECT -> ColonyScope.atLeast(colonyId, ColonyRole.MEMBER, WHAT_KEY, WHAT_FALLBACK);
             // ACCEPT / DECLINE：被邀方本人，还不是成员（见上）。将来新增动作若忘记在此声明，
             // 默认不过网关——漏声明只会少一层兜底，不会误拒正常操作，权威判定仍在 handler。
             default -> ColonyScope.NONE;
@@ -230,8 +231,24 @@ public record ColonyMemberActionPacket(Action action, UUID colonyId, UUID target
                 colonyName, ColonyRosterSyncService.roleLabel(invite.role())));
         Log.info(TAG, "{} joined colony {} as {}", name(actor), shortId(invitedColony), invite.role());
 
+        // 接受邀请后**自动切到该镇**（用户明确要求），但**不传送**——位置的改变只能由玩家自己决定，
+        // 这里只换「当前镇」上下文。
+        // 邀请档位可能是 ALLY：ALLY 不可切换，那就只入伙、不动当前镇——绝不因此把邀请判为失败。
+        ColonyRole granted = invite.role();
+        if (granted != null && granted.atLeast(ActiveColonyTracker.MIN_SWITCH_ROLE)) {
+            if (!ActiveColonyTracker.setActive(actor, invitedColony)) {
+                Log.warn(TAG, "Accepted the invite to {} but could not make it the active colony for {}",
+                        shortId(invitedColony), name(actor));
+            }
+        } else {
+            Log.info(TAG, "{} joined colony {} as {}; active colony unchanged (ALLY is not switchable)",
+                    name(actor), shortId(invitedColony), granted);
+        }
+
+        // 其余成员：花名册变了，推最新快照 + 列表。
         ColonyRosterSyncService.pushColony(server, invitedColony);
-        ColonyRosterSyncService.pushFor(actor);
+        // 本人：走统一入口一次推齐（切换后顶栏/边界/教程/花名册/列表必须同时换）。
+        ColonyContextSync.push(actor);
     }
 
     private static void decline(ServerPlayer actor, @Nullable UUID colonyId) {
@@ -362,20 +379,36 @@ public record ColonyMemberActionPacket(Action action, UUID colonyId, UUID target
     }
 
     // ══════════════════════════════════════════════════════════════
-    //  SELECT：成员即可看该镇花名册（点列表切换时刷新明细）
+    //  SELECT：把该镇设为当前镇（可切换 = MEMBER+），随后统一推送
     // ══════════════════════════════════════════════════════════════
 
+    /**
+     * 切换当前镇：侧边栏「小镇」面板点一行即走到这里。
+     *
+     * <p>这是**唯一**的切换入口（用户明确要求只在面板里切，不用跑到镇上）。服务端权威判定：
+     * {@link ActiveColonyTracker#setActive} 自己校验「镇存在 + 档位 ≥ MEMBER」，ALLY 会被它拒，
+     * 且拒绝时**不改动已存的当前镇**（失败方向安全）。网关已按 MEMBER 先拦一层，这里不依赖它单独下结论。
+     */
     private static void select(ServerPlayer actor, @Nullable UUID colonyId) {
-        ColonyApi api = colonyApi();
-        if (api == null || colonyId == null) {
+        if (colonyId == null) {
             toast(actor, true, "invalid", "§c[魔法小镇] 无效的成员操作请求。");
             return;
         }
-        if (api.getRole(colonyId, actor.getUUID()) == null) {
-            ColonyOwnership.deny(actor, WHAT_KEY, WHAT_FALLBACK);
+        if (!ActiveColonyTracker.setActive(actor, colonyId)) {
+            toast(actor, true, "switch_failed",
+                    "§c[魔法小镇] 无法切换到该小镇：你已不是可切换的成员（盟友档位不可切换）。");
+            Log.warn(TAG, "{} failed to switch the active colony to {}", name(actor), shortId(colonyId));
             return;
         }
-        ColonyRosterSyncService.pushRoster(actor, colonyId);
+
+        // 一次推齐：顶栏统计 + 建筑边界 + 教程 + 花名册 + 列表。切换后客户端各处必须同时换上下文，
+        // 散着推必漏一处，表现就是「切了但顶栏/边界还是上一座镇」。
+        ColonyContextSync.push(actor);
+
+        ColonyApi api = colonyApi();
+        toast(actor, false, "switched", "§a[魔法小镇] 已切换到「%s」。",
+                api != null ? safeName(api, colonyId) : "");
+        Log.info(TAG, "{} switched the active colony to {}", name(actor), shortId(colonyId));
     }
 
     // ══════════════════════════════════════════════════════════════

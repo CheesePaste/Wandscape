@@ -1,5 +1,7 @@
 package com.wsteam.wandscape.content.building.network;
 
+import com.wsteam.wandscape.content.colony.roster.ColonyRole;
+
 import com.wsteam.wandscape.content.building.internal.AltarCastHandler;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -29,11 +31,12 @@ public record AltarCastRequestPacket(UUID buildingId, String magicId)
     public Type<? extends CustomPacketPayload> type() { return TYPE; }
 
     public static void handleServer(AltarCastRequestPacket packet, ServerPlayer player) {
-        // 完全平行隔离：只能在自己小镇的祭坛下重大法术（消耗该镇元素/魔力）。
+        // 档位：祭坛施法是建筑操作（消耗该镇元素/魔力），归 MANAGER。
         var sd = com.wsteam.wandscape.content.building.internal.BuildingSavedData.get(player.serverLevel());
         var st = sd != null ? sd.getBuilding(packet.buildingId()) : null;
         if (st != null && st.getColonyId() != null
-                && !com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.isOwn(st.getColonyId(), player)) {
+                && !com.wsteam.wandscape.content.colony.ownership.ColonyOwnership
+                        .hasRole(player, st.getColonyId(), ColonyRole.MANAGER)) {
             com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(player, "altar", "祭坛");
             return;
         }

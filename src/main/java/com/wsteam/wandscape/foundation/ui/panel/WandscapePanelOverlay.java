@@ -19,6 +19,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.client.event.RenderGuiEvent;
 import net.neoforged.neoforge.common.NeoForge;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -218,10 +219,13 @@ public final class WandscapePanelOverlay {
     // ═══════════════════════════════════════════════════════════════
     // ── Colony panel：我的小镇 / 待处理邀请 / 成员 / 可邀请玩家 ──
     //
-    // 数据一律取自 ColonyPanelClientState（T2 的客户端镜像：按 colonyId 缓存，以
-    // getSelectedColony() 为「当前镇」），**不读** WandscapePanelState.getColonyId() ——
-    // 那是「我创始的那座」旧单镇字段，与这里可切换的选中镇不是一回事。
-    // 渲染与命中检测共用同一份几何（computeGeo + view + *Rect），避免两处各算一遍漂移。
+    // 「当前镇」只有一份真源：WandscapePanelState.getColonyId()（服务端 ColonyStatsSyncPacket
+    // 推来的当前镇，顶栏/边界/设置/本面板共用）。本面板**不维护自己的选中项**——高亮、成员表、
+    // 邀请入口的档位全部按那个 id 到 ColonyPanelClientState 的花名册缓存里取，所以
+    // 「面板切了但顶栏不变」不可能发生（没有第二份状态可漂移）。
+    // 点击一行 = 发 SELECT 意图；服务端 setActive 后统一推送，高亮随之移动（服务端权威）。
+    // 渲染与命中检测共用同一份几何与同一份数据视图（computeGeo + view + *Rect + colonyLines），
+    // 避免两处各算一遍漂移。
     // ═══════════════════════════════════════════════════════════════
 
     // ── 几何常量：面板内所有坐标都由这些常量算出，别在方法里撒魔法数 ──
@@ -270,6 +274,23 @@ public final class WandscapePanelOverlay {
     public record InviteRow(UUID colonyId, String colonyName, String inviterName, ColonyRole role) {}
     public record MemberRow(UUID id, String name, ColonyRole role) {}
     public record OnlineRow(UUID id, String name) {}
+
+    /**
+     * 小镇列表的一「行」：分组标题 / 引导提示 / 一座镇。
+     *
+     * <p>三者共用 {@link #CP_ROW_H} 行高——命中检测只按行高算下标，行高不一就得再养一套几何。
+     * {@code rowIndex} 是这一行在 {@link #colonyRows()} 里的下标（标题/提示为 -1），
+     * 命中结果只吐 rowIndex，所以 controller 依旧按 colonyRows() 取行。
+     */
+    private record ColonyLine(@Nullable ColonyRow row, int rowIndex, @Nullable String label, int labelColor) {
+        static ColonyLine of(ColonyRow row, int rowIndex) {
+            return new ColonyLine(row, rowIndex, null, 0);
+        }
+
+        static ColonyLine label(String text, int color) {
+            return new ColonyLine(null, -1, text, color);
+        }
+    }
 
     /** 各分区滚动偏移（单位：行）。渲染、命中、滚轮三处共用，切走再切回保留浏览位置。 */
     private static final int[] COLONY_SCROLL = new int[ColonySection.values().length];
@@ -389,7 +410,8 @@ public final class WandscapePanelOverlay {
      * 小镇面板：左列「小镇列表 / 待处理邀请」，右列「成员 / 可邀请玩家」。
      *
      * <p>面板只占侧边栏右侧的区域，侧边栏保持可见、其它 tab 仍可点（与 TASKS/SETTINGS 那种
-     * 整屏 hub 不同）。数据全走 ColonyPanelClientState；未收到同步时各分区显示空态、按钮置灰。
+     * 整屏 hub 不同）。数据全走 ColonyPanelClientState 的按 colonyId 缓存，当前镇取
+     * {@link #currentColonyId()}（服务端推送的唯一真源）；未收到同步时各分区显示空态、按钮置灰。
      */
     private static void renderColonyPanel(GuiGraphics g, Font font, int screenW, int screenH,
                                           double mx, double my) {
@@ -403,40 +425,46 @@ public final class WandscapePanelOverlay {
             drawText(g, font, I18n.name("gui.wandscape.colony_switch.title", "我的小镇").getString(),
                     geo.x() + CP_INNER_PAD, geo.y() + 3, WandscapeTheme.COLOR_TEXT_ACTIVE);
 
-            UUID selected = ColonyPanelClientState.getSelectedColony();
-            ColonyRole myRole = ColonyPanelClientState.getMyRole();
+            UUID current = currentColonyId();
+            ColonyRole myRole = currentRole();
             boolean inviteAllowed = canInvite();
 
-            renderColonySection(g, font, geo, colonyRows(), selected, mx, my, hover);
+            renderColonySection(g, font, geo, mx, my, hover);
             renderInviteSection(g, font, geo, inviteRows(), mx, my, hover);
-            renderMemberSection(g, font, geo, memberRows(), selected != null, mx, my, hover);
+            renderMemberSection(g, font, geo, memberRows(), current != null, mx, my, hover);
             renderOnlineSection(g, font, geo, inviteAllowed ? onlineRows() : List.of(),
-                    selected != null, myRole, mx, my, hover);
+                    current != null, myRole, mx, my, hover);
         } catch (Throwable t) {
             // 每帧都跑的 HUD 路径：数据来自网络镜像 + 在线玩家表，出任何异常都不许把 HUD 打崩。
             Log.warn(TAG, "[Colony] 面板渲染失败: {}", t.toString());
         }
     }
 
-    private static void renderColonySection(GuiGraphics g, Font font, ColonyGeo geo, List<ColonyRow> rows,
-                                            UUID selected, double mx, double my, boolean hover) {
-        SectionView v = view(geo, ColonySection.COLONIES, rows.size());
+    private static void renderColonySection(GuiGraphics g, Font font, ColonyGeo geo,
+                                            double mx, double my, boolean hover) {
+        List<ColonyLine> lines = colonyLines();
+        SectionView v = view(geo, ColonySection.COLONIES, lines.size());
+        UUID current = currentColonyId();
         drawSectionTitle(g, font, geo.leftX(), geo.coloniesBodyY() - CP_SECTION_H, geo.colW(),
-                I18n.name("gui.wandscape.colony_switch.section.mine", "小镇列表").getString(), v, rows.size());
-
-        if (rows.isEmpty()) {
-            drawText(g, font, I18n.name("gui.wandscape.colony_switch.empty", "尚未加入任何小镇").getString(),
-                    geo.leftX() + 3, geo.coloniesBodyY() + 2, WandscapeTheme.COLOR_TEXT_DIM);
-            return;
-        }
+                I18n.name("gui.wandscape.colony_switch.section.mine", "小镇列表").getString(), v, lines.size());
 
         for (int i = v.from(); i < v.to(); i++) {
-            ColonyRow row = rows.get(i);
+            ColonyLine line = lines.get(i);
             int rowY = v.rowY(i);
-            boolean isSelected = selected != null && selected.equals(row.id());
-            boolean rowHover = rowHovered(v, i, hover, mx, my, geo.leftX(), geo.colW());
 
-            if (isSelected) {
+            // 分组标题 / 建镇引导：不是可点的镇行，恒不点亮 hover、恒不产生命中。
+            if (line.row() == null) {
+                drawText(g, font, truncate(font, line.label(), geo.colW() - 6), geo.leftX() + 3, rowY + 2,
+                        line.labelColor());
+                continue;
+            }
+
+            ColonyRow row = line.row();
+            boolean switchable = canSwitch(row.role());
+            boolean isCurrent = current != null && current.equals(row.id());
+            boolean rowHover = switchable && rowHovered(v, i, hover, mx, my, geo.leftX(), geo.colW());
+
+            if (isCurrent) {
                 g.fill(RenderType.guiOverlay(), geo.leftX(), rowY, geo.leftX() + geo.colW(),
                         rowY + CP_ROW_H - 1, COLOR_ROW_SELECTED);
                 drawBorder(g, geo.leftX(), rowY, geo.colW(), CP_ROW_H - 1, WandscapeTheme.COLOR_BORDER_ACTIVE);
@@ -445,20 +473,64 @@ public final class WandscapePanelOverlay {
                         rowY + CP_ROW_H - 1, COLOR_ROW_HOVER);
             }
 
-            int textColor = isSelected ? WandscapeTheme.COLOR_TEXT_ACTIVE
-                    : (rowHover ? WandscapeTheme.COLOR_TEXT_NORMAL : WandscapeTheme.COLOR_TEXT_DIM);
+            // ALLY 行（不可切换）整行置灰、且不点亮 hover：点不动的事视觉上就得先说清楚。
+            int textColor = !switchable ? COLOR_DISABLED_TEXT
+                    : (isCurrent ? WandscapeTheme.COLOR_TEXT_ACTIVE
+                    : (rowHover ? WandscapeTheme.COLOR_TEXT_NORMAL : WandscapeTheme.COLOR_TEXT_DIM));
             WandscapeTheme.drawIcon(g, WandscapeTheme.ICON_TAB_COLONY, geo.leftX() + 2, rowY + 1, 10, 10, textColor);
 
-            String right = isSelected
+            String right = isCurrent
                     ? I18n.name("gui.wandscape.colony_switch.current", "当前").getString()
                     : roleName(row.role());
             int rightW = font.width(right);
+            int rightColor = !switchable ? COLOR_DISABLED_TEXT
+                    : (isCurrent ? WandscapeTheme.COLOR_TEXT_ACTIVE : WandscapeTheme.COLOR_TEXT_DIM);
             String name = (row.name() == null || row.name().isEmpty()) ? shortId(row.id()) : row.name();
             String label = I18n.name("gui.wandscape.colony_switch.entry", "%s  Lv.%s", name, row.level()).getString();
             drawText(g, font, truncate(font, label, geo.colW() - 16 - rightW), geo.leftX() + 14, rowY + 2, textColor);
-            drawText(g, font, right, geo.leftX() + geo.colW() - 2 - rightW, rowY + 2,
-                    isSelected ? WandscapeTheme.COLOR_TEXT_ACTIVE : WandscapeTheme.COLOR_TEXT_DIM);
+            drawText(g, font, right, geo.leftX() + geo.colW() - 2 - rightW, rowY + 2, rightColor);
         }
+    }
+
+    /**
+     * 小镇列表的数据视图：按「我拥有的（OWNER）/ 我参与的」分组，并在没有自己的镇时补一条建镇引导。
+     *
+     * <p>渲染、命中、滚动三处共用它。注意与 {@link #colonyRows()} 的分工：后者是纯镇行的**动作视图**，
+     * controller 按它取行；命中结果里的 index 也一律是 colonyRows() 的下标（不是本列表的行下标）。
+     */
+    private static List<ColonyLine> colonyLines() {
+        List<ColonyRow> rows = colonyRows();
+        List<ColonyLine> lines = new ArrayList<>(rows.size() + 3);
+        boolean ownedHeader = false;
+        boolean joinedHeader = false;
+        boolean ownsAny = false;
+
+        if (rows.isEmpty()) {
+            lines.add(ColonyLine.label(I18n.name("gui.wandscape.colony_switch.empty",
+                    "尚未加入任何小镇").getString(), WandscapeTheme.COLOR_TEXT_DIM));
+        }
+        for (int i = 0; i < rows.size(); i++) {
+            ColonyRow row = rows.get(i);
+            if (row.role() == ColonyRole.OWNER) {
+                ownsAny = true;
+                if (!ownedHeader) {
+                    lines.add(ColonyLine.label(I18n.name("gui.wandscape.colony_switch.section.owned",
+                            "我拥有的").getString(), WandscapeTheme.COLOR_TEXT_ACTIVE));
+                    ownedHeader = true;
+                }
+            } else if (!joinedHeader) {
+                lines.add(ColonyLine.label(I18n.name("gui.wandscape.colony_switch.section.joined",
+                        "我参与的").getString(), WandscapeTheme.COLOR_TEXT_ACTIVE));
+                joinedHeader = true;
+            }
+            lines.add(ColonyLine.of(row, i));
+        }
+        // 一座自己的镇都没有 → 给出唯一可见的建镇入口提示（世界动作：建造市政厅 → 右键命名）。
+        if (!ownsAny) {
+            lines.add(ColonyLine.label(I18n.name("gui.wandscape.colony_switch.guide",
+                    "新建自己的小镇：建造市政厅后右键命名").getString(), WandscapeTheme.COLOR_TEXT_NORMAL));
+        }
+        return lines;
     }
 
     private static void renderInviteSection(GuiGraphics g, Font font, ColonyGeo geo, List<InviteRow> rows,
@@ -658,15 +730,40 @@ public final class WandscapePanelOverlay {
 
     // ── 权限判定（客户端 UX；服务端仍会重判） ──
 
-    /** 邀请入口：选中镇档位 >= MANAGER。 */
+    /**
+     * 当前镇（服务端推送的唯一真源）：顶栏 / 边界 / 设置中心 / 本面板共用它，面板不再自持选中项。
+     * 无当前镇（未加入任何镇 / 尚未收到同步）返回 null。
+     */
+    @Nullable
+    public static UUID currentColonyId() {
+        return WandscapePanelState.getColonyId();
+    }
+
+    /** 我在当前镇的档位；无当前镇或非成员返回 null。 */
+    @Nullable
+    public static ColonyRole currentRole() {
+        return ColonyPanelClientState.roleOf(currentColonyId());
+    }
+
+    /** 切换档位的下限：>= MEMBER 才可切换。ALLY 只有白名单权限，切过去也什么都做不了。 */
+    public static boolean canSwitch(@Nullable ColonyRole role) {
+        return role != null && role.atLeast(ColonyRole.MEMBER);
+    }
+
+    /** 该行是否可切换（>= MEMBER）；ALLY 行置灰且不产生命中。 */
+    public static boolean canSwitch(@Nullable ColonyRow row) {
+        return row != null && canSwitch(row.role());
+    }
+
+    /** 邀请入口：当前镇档位 >= MANAGER。 */
     public static boolean canInvite() {
-        ColonyRole role = ColonyPanelClientState.getMyRole();
+        ColonyRole role = currentRole();
         return role != null && role.atLeast(ColonyRole.MANAGER);
     }
 
-    /** 调档位 / 移除成员：选中镇档位 == OWNER（== {@link ColonyRole#canGovern()}）。 */
+    /** 调档位 / 移除成员：当前镇档位 == OWNER（== {@link ColonyRole#canGovern()}）。 */
     public static boolean canGovern() {
-        ColonyRole role = ColonyPanelClientState.getMyRole();
+        ColonyRole role = currentRole();
         return role != null && role.canGovern();
     }
 
@@ -686,7 +783,7 @@ public final class WandscapePanelOverlay {
     }
 
     private static List<ColonyRole> inviteRoleOptions() {
-        ColonyRole mine = ColonyPanelClientState.getMyRole();
+        ColonyRole mine = currentRole();
         if (mine == null) return List.of();
         List<ColonyRole> out = new ArrayList<>(INVITE_ROLE_CYCLE.length);
         for (ColonyRole role : INVITE_ROLE_CYCLE) {
@@ -717,8 +814,9 @@ public final class WandscapePanelOverlay {
         return out;
     }
 
+    /** 当前镇的成员表；无当前镇 / 无快照返回空表。 */
     public static List<MemberRow> memberRows() {
-        var raw = ColonyPanelClientState.getMembers();
+        var raw = ColonyPanelClientState.membersOf(currentColonyId());
         if (raw == null || raw.isEmpty()) return List.of();
         List<MemberRow> out = new ArrayList<>(raw.size());
         for (var member : raw) {
@@ -770,11 +868,18 @@ public final class WandscapePanelOverlay {
         Font font = Minecraft.getInstance().font;
         if (font == null) return NO_HIT;
 
-        // 1. 小镇列表：整行可点 → 切换当前镇
-        List<ColonyRow> colonies = colonyRows();
-        SectionView coloniesView = view(geo, ColonySection.COLONIES, colonies.size());
-        int colonyIndex = rowIndexAt(coloniesView, mx, my, geo.leftX(), geo.colW());
-        if (colonyIndex >= 0) return new ColonyHitResult(ColonyHit.COLONY_ROW, colonyIndex);
+        // 1. 小镇列表：只有可切换的行（>= MEMBER）产生命中 → 切当前镇。
+        //    分组标题/建镇引导行、以及 ALLY 行（置灰不可切换）都不给命中，点了自然没效果。
+        List<ColonyLine> lines = colonyLines();
+        SectionView coloniesView = view(geo, ColonySection.COLONIES, lines.size());
+        int lineIndex = rowIndexAt(coloniesView, mx, my, geo.leftX(), geo.colW());
+        if (lineIndex >= 0) {
+            ColonyLine line = lines.get(lineIndex);
+            if (line.row() != null && line.rowIndex() >= 0 && canSwitch(line.row())) {
+                return new ColonyHitResult(ColonyHit.COLONY_ROW, line.rowIndex());
+            }
+            return NO_HIT;
+        }
 
         // 2. 待处理邀请：行内右侧 [接受][拒绝]
         List<InviteRow> invites = inviteRows();
@@ -843,7 +948,7 @@ public final class WandscapePanelOverlay {
             if (section == null) return false;
 
             int count = switch (section) {
-                case COLONIES -> colonyRows().size();
+                case COLONIES -> colonyLines().size();
                 case INVITES -> inviteRows().size();
                 case MEMBERS -> memberRows().size();
                 case ONLINE -> canInvite() ? onlineRows().size() : 0;

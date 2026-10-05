@@ -1,4 +1,6 @@
 package com.wsteam.wandscape.content.npc.network;
+
+import com.wsteam.wandscape.content.colony.roster.ColonyRole;
 import com.wsteam.wandscape.content.task.types.EntityId;
 
 import com.wsteam.wandscape.content.building.internal.BuildingSavedData;
@@ -64,8 +66,10 @@ public record NpcDismissPacket(int entityId) implements CustomPacketPayload {
             Log.warn(TAG, "Dismiss target {} is not a colony NPC", npc.getUUID().toString().substring(0, 8));
             return;
         }
-        // 完全平行隔离：只能解雇自己小镇的法师。
-        if (!com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.isOwn(npc.colonyId, player)) {
+        // 档位：解雇法师 = MANAGER（映射「法师解雇」），非成员与档位不足一律拒止。
+        if (npc.colonyId != null
+                && !com.wsteam.wandscape.content.colony.ownership.ColonyOwnership
+                        .hasRole(player, npc.colonyId, ColonyRole.MANAGER)) {
             com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(player, "mage", "法师");
             return;
         }

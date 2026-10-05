@@ -1,5 +1,7 @@
 package com.wsteam.wandscape.content.production.network;
 
+import com.wsteam.wandscape.content.colony.roster.ColonyRole;
+
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.content.colony.ownership.ColonyOwnership;
 import com.wsteam.wandscape.content.production.ProductionRecipeManager;
@@ -47,7 +49,8 @@ public record UnlockRecipeByBlueprintPacket(UUID colonyId, String recipeId) impl
         player.getServer().execute(() -> {
             if (pkt.colonyId() == null || pkt.recipeId() == null || pkt.recipeId().isEmpty()) return;
 
-            if (!ColonyOwnership.isOwn(pkt.colonyId(), player)) {
+            // 档位：消耗图纸解锁配方 = MANAGER（映射「建造/配方管理」类操作）。
+            if (!ColonyOwnership.hasRole(player, pkt.colonyId(), ColonyRole.MANAGER)) {
                 ColonyOwnership.deny(player, "recipe_book", "配方");
                 return;
             }

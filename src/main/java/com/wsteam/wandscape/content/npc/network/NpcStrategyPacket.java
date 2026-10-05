@@ -1,4 +1,6 @@
 package com.wsteam.wandscape.content.npc.network;
+
+import com.wsteam.wandscape.content.colony.roster.ColonyRole;
 import com.wsteam.wandscape.content.task.types.EntityId;
 
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
@@ -77,8 +79,10 @@ public record NpcStrategyPacket(int entityId, String preset, List<String> equipp
             Log.warn(TAG, "Strategy target entity {} is not a WandscapeNpc", packet.entityId());
             return;
         }
-        // 完全平行隔离：只能修改自己小镇法师的策略预设。
-        if (!com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.isOwn(npc.colonyId, player)) {
+        // 档位：改法师施法预设 = MANAGER（映射「法师调策略」）。
+        if (npc.colonyId != null
+                && !com.wsteam.wandscape.content.colony.ownership.ColonyOwnership
+                        .hasRole(player, npc.colonyId, ColonyRole.MANAGER)) {
             com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(player, "mage", "法师");
             return;
         }

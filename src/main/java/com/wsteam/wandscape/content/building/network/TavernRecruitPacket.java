@@ -1,4 +1,6 @@
 package com.wsteam.wandscape.content.building.network;
+
+import com.wsteam.wandscape.content.colony.roster.ColonyRole;
 import com.wsteam.wandscape.content.task.component.Position;
 import com.wsteam.wandscape.content.npc.data.MageResume;
 
@@ -77,8 +79,9 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
                         "[Wandscape] This tavern is not assigned to any colony."), true);
                 return;
             }
-            // 完全平行隔离：只能在自己小镇的酒馆招募/拒绝。
-            if (!com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.isOwn(colonyId, sp)) {
+            // 档位：招募/拒绝法师 = MANAGER，非成员与档位不足一律拒止。
+            if (!com.wsteam.wandscape.content.colony.ownership.ColonyOwnership
+                    .hasRole(sp, colonyId, ColonyRole.MANAGER)) {
                 com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(sp, "tavern", "酒馆");
                 return;
             }

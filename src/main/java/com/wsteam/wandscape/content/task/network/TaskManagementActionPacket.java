@@ -1,5 +1,7 @@
 package com.wsteam.wandscape.content.task.network;
 
+import com.wsteam.wandscape.content.colony.roster.ColonyRole;
+
 import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.foundation.log.Log;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -59,12 +61,13 @@ public record TaskManagementActionPacket(
         long taskId = packet.taskId();
         String action = packet.action();
 
-        // 完全平行隔离：只能取消/加急/调优先级自己小镇的任务。
+        // 档位：取消/加急/调优先级任务 = MANAGER（映射「任务调度与取消」）。
         var gt = world.taskPool.get(taskId);
         if (gt != null) {
             java.util.UUID taskColony = resolveTaskColony(gt, player);
             if (taskColony != null
-                    && !com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.isOwn(taskColony, player)) {
+                    && !com.wsteam.wandscape.content.colony.ownership.ColonyOwnership
+                            .hasRole(player, taskColony, ColonyRole.MANAGER)) {
                 com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(player, "task", "任务");
                 return;
             }

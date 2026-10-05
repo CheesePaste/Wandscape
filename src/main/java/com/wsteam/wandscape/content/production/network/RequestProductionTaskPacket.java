@@ -1,5 +1,7 @@
 package com.wsteam.wandscape.content.production.network;
 
+import com.wsteam.wandscape.content.colony.roster.ColonyRole;
+
 import com.google.gson.JsonPrimitive;
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.content.building.internal.BuildingSavedData;
@@ -68,9 +70,10 @@ public record RequestProductionTaskPacket(
                 Log.warn(TAG, "RequestProductionTask: building state null for {}", buildingId);
                 return;
             }
-            // 完全平行隔离：只能在自己小镇的生产站下发任务（消耗该镇元素/材料）。
+            // 档位：生产站下单 = MEMBER（映射「工坊下单」），非成员与档位不足一律拒止。
             if (state.getColonyId() != null
-                    && !com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.isOwn(state.getColonyId(), sp)) {
+                    && !com.wsteam.wandscape.content.colony.ownership.ColonyOwnership
+                            .hasRole(sp, state.getColonyId(), ColonyRole.MEMBER)) {
                 com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(sp, "production", "生产");
                 return;
             }

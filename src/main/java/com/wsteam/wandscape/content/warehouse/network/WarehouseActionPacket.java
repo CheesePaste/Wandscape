@@ -1,4 +1,6 @@
 package com.wsteam.wandscape.content.warehouse.network;
+
+import com.wsteam.wandscape.content.colony.roster.ColonyRole;
 import com.wsteam.wandscape.content.task.component.NpcInventory;
 
 import com.wsteam.wandscape.foundation.util.ItemKey;
@@ -75,8 +77,10 @@ public record WarehouseActionPacket(
                         pkt.containerId, sp.containerMenu);
                 return;
             }
-            // 完全平行隔离：仓库动作（含取/销毁）只对本人的小镇仓库放行。
-            if (!com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.isOwn(menu.getColonyId(), sp)) {
+            // 档位：仓库动作（含取/销毁）= MEMBER（映射「仓库存取」），非成员与档位不足一律拒止。
+            if (menu.getColonyId() != null
+                    && !com.wsteam.wandscape.content.colony.ownership.ColonyOwnership
+                            .hasRole(sp, menu.getColonyId(), ColonyRole.MEMBER)) {
                 com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(sp, "warehouse", "仓库");
                 return;
             }

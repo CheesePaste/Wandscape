@@ -1,5 +1,7 @@
 package com.wsteam.wandscape.content.building.network;
 
+import com.wsteam.wandscape.content.colony.roster.ColonyRole;
+
 import com.wsteam.wandscape.content.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.content.building.internal.BuildingState;
 import com.wsteam.wandscape.content.npc.internal.ReviveHandler;
@@ -63,8 +65,9 @@ public record TownHallReviveRequestPacket(BlockPos buildingPos, UUID colonyId)
                 Log.warn(TAG, "colony mismatch for {}", buildingId);
                 return;
             }
-            // 完全平行隔离：只能操作自己小镇市政厅的保底复活。
-            if (!com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.isOwn(colonyId, sp)) {
+            // 档位：保底复活是操作性入口（映射划 MANAGER），非成员与档位不足一律拒止。
+            if (!com.wsteam.wandscape.content.colony.ownership.ColonyOwnership
+                    .hasRole(sp, colonyId, ColonyRole.MANAGER)) {
                 com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(sp, "revive", "复活");
                 return;
             }

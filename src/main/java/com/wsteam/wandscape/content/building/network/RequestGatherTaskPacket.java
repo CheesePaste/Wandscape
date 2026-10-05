@@ -1,5 +1,7 @@
 package com.wsteam.wandscape.content.building.network;
 
+import com.wsteam.wandscape.content.colony.roster.ColonyRole;
+
 import com.wsteam.wandscape.content.building.data.BuildingConfig;
 import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.content.building.internal.BuildingSavedData;
@@ -68,9 +70,10 @@ public record RequestGatherTaskPacket(
                 Log.warn(TAG, "RequestGatherTask: building {} has no node_config", state.getBuildingTypeId());
                 return;
             }
-            // 完全平行隔离：只能在自己小镇的节点下发采集任务（消耗该镇元素）。
+            // 档位：节点下单 = MEMBER（映射「工坊/节点下单」），非成员与档位不足一律拒止。
             if (state.getColonyId() != null
-                    && !com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.isOwn(state.getColonyId(), sp)) {
+                    && !com.wsteam.wandscape.content.colony.ownership.ColonyOwnership
+                            .hasRole(sp, state.getColonyId(), ColonyRole.MEMBER)) {
                 com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(sp, "gather", "采集");
                 return;
             }

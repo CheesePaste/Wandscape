@@ -11,9 +11,21 @@
     "zh_cn": "%s  Lv.%s",
     "en_us": "%s  Lv.%s"
   },
+  "gui.wandscape.colony_switch.guide": {
+    "zh_cn": "新建自己的小镇：建造市政厅后右键命名",
+    "en_us": "Right-click a town hall to name it"
+  },
+  "gui.wandscape.colony_switch.section.joined": {
+    "zh_cn": "我参与的",
+    "en_us": "Joined"
+  },
   "gui.wandscape.colony_switch.section.mine": {
     "zh_cn": "小镇列表",
     "en_us": "Colonies"
+  },
+  "gui.wandscape.colony_switch.section.owned": {
+    "zh_cn": "我拥有的",
+    "en_us": "Owned by me"
   },
   "gui.wandscape.colony_switch.title": {
     "zh_cn": "我的小镇",

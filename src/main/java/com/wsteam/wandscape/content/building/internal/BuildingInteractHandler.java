@@ -1,4 +1,6 @@
 package com.wsteam.wandscape.content.building.internal;
+
+import com.wsteam.wandscape.content.colony.roster.ColonyRole;
 import com.wsteam.wandscape.content.task.component.Position;
 import com.wsteam.wandscape.foundation.networking.Net;
 import com.wsteam.wandscape.foundation.ui.panel.PanelStateTracker;
@@ -87,6 +89,33 @@ public final class BuildingInteractHandler {
     }
 
     /**
+     * 建筑 GUI 的「要做什么 → 最低档位」映射（咽喉按意图分流，不是「谁建的」一刀切）。
+     *
+     * <ul>
+     *   <li>未完工的工地 → MEMBER：面板上的「一键制作」是下材料订单（档位映射把
+     *       ConstructionCraftAll 划给 MEMBER）；面板里的拆除/撤销由 {@code BuildingActionPacket}
+     *       单独按 MANAGER 把关。</li>
+     *   <li>storage / workstation / crafting_station / magic_station / node / shop → MEMBER：
+     *       仓库存取与下单；开商店面板 = MEMBER，改最大库存由 {@code ShopMaxStockPacket} 按 MANAGER 把关。</li>
+     *   <li>tavern / mage_hut / altar → MANAGER：招募、分配升级训练、祭坛施法等操作性入口。</li>
+     *   <li>government / service / relax / decoration / atm → ALLY：纯信息面板，含友军档。</li>
+     *   <li>其余分类不打开任何面板，不判档（返回 null）。</li>
+     * </ul>
+     */
+    @Nullable
+    private static ColonyRole requiredRole(String category, BuildingState state) {
+        if (!state.hasEverCompleted()) return ColonyRole.MEMBER;
+        if (category == null) return null;   // 无分类：不开任何面板，不判档（也别让 switch 吃 NPE）
+        return switch (category) {
+            case "storage", "workstation", "crafting_station", "magic_station", "node", "shop" ->
+                    ColonyRole.MEMBER;
+            case "tavern", "mage_hut", "altar" -> ColonyRole.MANAGER;
+            case "government", "service", "relax", "decoration", "atm" -> ColonyRole.ALLY;
+            default -> null;
+        };
+    }
+
+    /**
      * Central dispatch for building right-click interactions.
      * Called from both {@link #onRightClickBlock} (normal mode) and
      * {@code OverviewInteractPacket} (overview mode).
@@ -100,9 +129,13 @@ public final class BuildingInteractHandler {
         String category = state.getCategory();
         UUID colonyId = state.getColonyId();
 
-        // 完全平行隔离：建筑 GUI 的咽喉——目标建筑不属于操作者本人（且非无归属建镇/野建筑）则拒止。
-        if (colonyId != null
-                && !com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.isOwnColonyOf(colonyId, player)) {
+        // 档位咽喉：建筑 GUI 的唯一入口，按「要做什么」定最低档位（见 requiredRole），
+        // 不再是「是不是我创始的镇」。colonyId == null 的野建筑（尚未归属的建镇市政厅）
+        // 无镇可判档，沿用原语义放行，建镇引导仍可达。
+        ColonyRole minRole = requiredRole(category, state);
+        if (colonyId != null && minRole != null
+                && !com.wsteam.wandscape.content.colony.ownership.ColonyOwnership
+                        .hasRole(player, colonyId, minRole)) {
             com.wsteam.wandscape.content.colony.ownership.ColonyOwnership.deny(player, "building", "建筑");
             return;
         }

@@ -1,14 +1,13 @@
 package com.wsteam.wandscape.content.colony.stats.internal;
 
-import com.wsteam.wandscape.api.ColonyApi;
 import com.wsteam.wandscape.content.colony.event.ColonyEvaluationChangedEvent;
+import com.wsteam.wandscape.content.colony.ownership.ColonyOwnership;
 import com.wsteam.wandscape.content.tourist.event.DailySettlementEvent;
 import com.wsteam.wandscape.content.tourist.event.TouristArrivedEvent;
 import com.wsteam.wandscape.content.tourist.event.TouristDepartedEvent;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.foundation.networking.Net;
 import com.wsteam.wandscape.foundation.ui.panel.PanelStateTracker;
-import com.wsteam.wandscape.api.WandscapeApis;
 import com.wsteam.wandscape.content.colony.stats.data.ColonyDailySnapshot;
 import com.wsteam.wandscape.content.colony.stats.data.ColonyStatsSummary;
 import com.wsteam.wandscape.content.colony.stats.network.StatsSyncPacket;
@@ -134,13 +133,11 @@ public final class StatisticsCollector {
     private static void pushStatsToPlayers(MinecraftServer server, UUID colonyId, StatisticsData data) {
         ColonyStatsSummary summary = data.computeSummary(colonyId);
 
-        ColonyApi colonyApi = WandscapeApis.getColonyApiSilently();
-        if (colonyApi == null) return;
-
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             if (!PanelStateTracker.isPanelOpen(player)) continue;
-            // 完全平行隔离：统计只推给拥有该殖民地本人的开面板玩家，绝不按位置就近。
-            UUID playerColony = colonyApi.getColonyByFounder(player.getUUID());
+            // 统计只推给「当前镇 == 该殖民地」的开面板玩家：多镇下必须比当前镇，
+            // 比创始人会让被邀请参与的成员拿不到统计。绝不按位置就近。
+            UUID playerColony = ColonyOwnership.activeColony(player);
             if (colonyId.equals(playerColony)) {
                 Net.toPlayer(player, new StatsSyncPacket(summary));
             }

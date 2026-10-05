@@ -1,5 +1,7 @@
 package com.wsteam.wandscape.content.colony.guard;
 
+import com.wsteam.wandscape.content.colony.roster.ColonyRole;
+
 import com.wsteam.wandscape.content.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.content.building.internal.BuildingState;
 import com.wsteam.wandscape.content.colony.ownership.ColonyOwnership;
@@ -21,8 +23,8 @@ import java.util.UUID;
 /**
  * 领地方块保护（完全平行隔离的原版方块层）。
  *
- * <p>规则：某方块若属于某座「殖民地建筑」（位于其 pattern/交互区内），则只有该殖民地 Owner
- * 可破坏/放置/开启；非 Owner 一律取消事件并反馈。爆炸过滤掉所有殖民地建筑的受影响方块，
+ * <p>规则：某方块若属于某座「殖民地建筑」（位于其 pattern/交互区内），则只有在该殖民地档位
+ * ≥ MANAGER 的玩家可破坏/放置/开启；档位不足一律取消事件并反馈。爆炸过滤掉所有殖民地建筑的受影响方块，
  * 防止 TNT/苦力怕/袭击炸毁小镇。
  *
  * <p>只保护「属于建筑」的方块，而不是整个 256 工作圈——不干扰野外地形，避免过度限制。
@@ -52,7 +54,7 @@ public final class ColonyLandProtectionHandler {
     private static boolean protect(ServerLevel level, BlockPos pos, ServerPlayer player,
                                    String whatKey, String whatFallback) {
         UUID colonyId = buildingColony(level, pos);
-        if (colonyId != null && !ColonyOwnership.isOwn(colonyId, player)) {
+        if (colonyId != null && !ColonyOwnership.hasRole(player, colonyId, ColonyRole.MANAGER)) {
             ColonyOwnership.deny(player, whatKey, whatFallback);
             Log.warn(TAG, "Blocked player {} {} at {} in colony {}",
                     player.getGameProfile().getName(), whatKey, pos,
