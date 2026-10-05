@@ -112,7 +112,7 @@ public final class BuildingPreviewGifCache {
     private static final Map<String, GifEntry> CACHE = new LinkedHashMap<>();
 
     /** 每个建筑算一次的缩略图 LOD 格子表，见 {@link #buildLodPreview}。 */
-    private static final Map<BuildingConfig, LodPreview> LOD_CACHE = new HashMap<>();
+    private static final ConfigKeyedCache<LodPreview> LOD_CACHE = new ConfigKeyedCache<>();
 
     /**
      * 还没烤完的建筑数。归零后 {@link #pumpQueue} 直接返回 —— 稳态（全部就绪）下每帧零成本，
@@ -475,11 +475,11 @@ public final class BuildingPreviewGifCache {
         }
     }
 
-    private static final Map<BuildingConfig, float[]> BOUNDS_CACHE = new HashMap<>();
+    private static final ConfigKeyedCache<float[]> BOUNDS_CACHE = new ConfigKeyedCache<>();
 
     /** Half-extents of the pattern bounding box (incl. the block's own [0,1] size), cached per config. */
     private static float[] boundsOf(BuildingConfig config, BuildingPreviewRenderer.ConfigPreviewMeta meta) {
-        return BOUNDS_CACHE.computeIfAbsent(config, k -> {
+        return BOUNDS_CACHE.get(config, k -> {
             int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE, minZ = Integer.MAX_VALUE;
             int maxX = Integer.MIN_VALUE, maxY = Integer.MIN_VALUE, maxZ = Integer.MIN_VALUE;
             for (BuildingPreviewRenderer.BlockEntry e : meta.fullEntries) {
@@ -492,7 +492,7 @@ public final class BuildingPreviewGifCache {
         });
     }
 
-    private static final Map<BuildingConfig, Float> SCALE_CACHE = new HashMap<>();
+    private static final ConfigKeyedCache<Float> SCALE_CACHE = new ConfigKeyedCache<>();
 
     /**
      * One constant scale per building, based on the worst-case rotated footprint
@@ -500,7 +500,7 @@ public final class BuildingPreviewGifCache {
      * rotating only, never zooming. Nothing clips because the worst case fits.
      */
     private static float scaleForBuilding(BuildingConfig config, BuildingPreviewRenderer.ConfigPreviewMeta meta) {
-        return SCALE_CACHE.computeIfAbsent(config, k -> {
+        return SCALE_CACHE.get(config, k -> {
             float[] b = boundsOf(k, meta);
             float maxProj = 0f;
             for (int f = 0; f < FRAME_COUNT; f++) {
@@ -551,7 +551,7 @@ public final class BuildingPreviewGifCache {
 
     private static LodPreview lodPreview(BuildingConfig config,
                                          BuildingPreviewRenderer.ConfigPreviewMeta meta) {
-        return LOD_CACHE.computeIfAbsent(config, k -> buildLodPreview(meta));
+        return LOD_CACHE.get(config, k -> buildLodPreview(meta));
     }
 
     /**

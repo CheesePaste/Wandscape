@@ -25,11 +25,12 @@ import java.util.Map;
 public final class BuildingPreviewRenderer {
 
     /**
-     * Cached pattern→BlockState resolution and preview metadata per config.
-     * BuildingConfig is immutable and held strongly by the loader, so a weak key is safe and never leaks.
+     * 每配置一份的 pattern→BlockState 解析与预览元数据。键走 {@code config.id()}（见
+     * {@link ConfigKeyedCache}）：入服同步换实例后不会退化成每帧一次 O(pattern) 相等比较。
+     * 生命期由 {@link #clearMetaCache()}（reload / 退世界）管，不再靠 WeakHashMap 兜底——
+     * config 本身由 loader 强引用，弱键从来就没真正回收过什么。
      */
-    private static final Map<BuildingConfig, ConfigPreviewMeta> META_CACHE =
-            java.util.Collections.synchronizedMap(new java.util.WeakHashMap<>());
+    private static final ConfigKeyedCache<ConfigPreviewMeta> META_CACHE = new ConfigKeyedCache<>();
 
     public record BlockEntry(BlockOffset offset, BlockState state) {}
 
@@ -78,7 +79,7 @@ public final class BuildingPreviewRenderer {
         if (config.pattern().isEmpty()) {
             return new ConfigPreviewMeta(config);
         }
-        return META_CACHE.computeIfAbsent(config, ConfigPreviewMeta::new);
+        return META_CACHE.get(config, ConfigPreviewMeta::new);
     }
 
     private static Map<BlockOffset, BlockState> buildBlockStates(BuildingConfig config) {

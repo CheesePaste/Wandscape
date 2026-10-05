@@ -70,6 +70,17 @@ public final class ConstructionGhostRenderer {
         // 虚影可关（ClientConfig#BUILDING_GHOST）：关掉后连 VBO 都不烘，每个工地只画一圈包围盒线框。
         boolean ghostOn = ClientConfig.BUILDING_GHOST.get();
 
+        // 线框路子：所有工地的框攒进同一批，循环外只 flush 一次（原来是每栋一次 endBatch +
+        // 每栋各自 push/translate/pop 一遍 PoseStack）。
+        PoseStack outlineStack = null;
+        VertexConsumer outlineVc = null;
+        if (!ghostOn) {
+            outlineStack = event.getPoseStack();
+            outlineStack.pushPose();
+            outlineStack.translate(-camPos.x, -camPos.y, -camPos.z);
+            outlineVc = mc.renderBuffers().bufferSource().getBuffer(RenderType.lines());
+        }
+
         for (var entry : buildings) {
             if (entry.completed()) continue;
             BuildingConfig config = BuildingConfigLoader.getInstance().get(entry.buildingTypeId());
@@ -90,7 +101,7 @@ public final class ConstructionGhostRenderer {
 
             if (!ghostOn) {
                 if (entry.hasBoundary()) {
-                    drawOutline(mc, event, camPos, anchor, entry);
+                    appendOutline(outlineVc, outlineStack.last(), anchor, entry);
                 }
                 continue;
             }
@@ -104,17 +115,17 @@ public final class ConstructionGhostRenderer {
                     mc.renderBuffers().bufferSource(), camPos, anchor, config,
                     entry.rotationSteps(), true);
         }
+
+        if (!ghostOn) {
+            mc.renderBuffers().bufferSource().endBatch(RenderType.lines());
+            outlineStack.popPose();
+        }
     }
 
-    /** 虚影关闭时工地唯一的表现：包围盒线框（与放置预览同一套画法、同一个颜色口径）。 */
-    private static void drawOutline(Minecraft mc, RenderLevelStageEvent event, Vec3 camPos,
-                                    BlockPos anchor, BuildingAreaSyncPacket.BuildingEntry entry) {
-        PoseStack poseStack = event.getPoseStack();
-        MultiBufferSource.BufferSource buffers = mc.renderBuffers().bufferSource();
-        poseStack.pushPose();
-        poseStack.translate(-camPos.x, -camPos.y, -camPos.z);
-        VertexConsumer vc = buffers.getBuffer(RenderType.lines());
-        BuildingOutline.box(vc, poseStack.last(),
+    /** 把一个工地的包围盒线框追加进共享 consumer（与放置预览同一套画法、同一个颜色口径）。 */
+    private static void appendOutline(VertexConsumer vc, PoseStack.Pose pose,
+                                      BlockPos anchor, BuildingAreaSyncPacket.BuildingEntry entry) {
+        BuildingOutline.box(vc, pose,
                 anchor.getX() + entry.bMinX() + 0.5f,
                 anchor.getY() + entry.bMinY() + 0.5f,
                 anchor.getZ() + entry.bMinZ() + 0.5f,
@@ -122,7 +133,5 @@ public final class ConstructionGhostRenderer {
                 anchor.getY() + entry.bMaxY() + 0.5f,
                 anchor.getZ() + entry.bMaxZ() + 0.5f,
                 255, 255, 255, 255);
-        buffers.endBatch(RenderType.lines());
-        poseStack.popPose();
     }
 }

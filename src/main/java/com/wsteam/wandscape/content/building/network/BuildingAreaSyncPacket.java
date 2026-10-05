@@ -53,8 +53,14 @@ public record BuildingAreaSyncPacket(List<BuildingEntry> buildings) implements C
     /** Client-side cache, updated each time the panel opens. */
     private static volatile List<BuildingEntry> cached = List.of();
 
-    /** Cached world-space occupancy of cached buildings, keyed "typeId|anchor|rotation". */
-    private static final Map<String, BuildingVoxels.PackedOccupancy> entryOccupancies = new HashMap<>();
+    /**
+     * 已缓存建筑的世界占用表。键只取「建筑类型 + anchor + 旋转」三项——只有它们决定占用；
+     * 完工标志 / 边界框等粘性字段变了不该触发重算，也不该在表里留下第二条。
+     * 以前键是每查一次现拼的 {@code "typeId|anchor|rot"} 字符串，而一次冲突查询要遍历整张表。
+     */
+    private record OccupancyKey(String buildingTypeId, BlockPos anchor, int rotationSteps) {}
+
+    private static final Map<OccupancyKey, BuildingVoxels.PackedOccupancy> entryOccupancies = new HashMap<>();
 
     /**
      * 上一次查询的候选占用。准心不动（也没在拖拽）时，同一栋建筑同一个 anchor 会
@@ -133,7 +139,7 @@ public record BuildingAreaSyncPacket(List<BuildingEntry> buildings) implements C
 
     /** Lazy, cached world-space occupancy of a cached building entry (rotation applied). */
     private static BuildingVoxels.PackedOccupancy entryOccupancy(BuildingEntry entry) {
-        String key = entry.buildingTypeId() + '|' + entry.anchor() + '|' + (entry.rotationSteps() & 3);
+        OccupancyKey key = new OccupancyKey(entry.buildingTypeId(), entry.anchor(), entry.rotationSteps() & 3);
         BuildingVoxels.PackedOccupancy occ = entryOccupancies.get(key);
         if (occ != null) return occ;
         BuildingConfig cfg = BuildingConfigLoader.getInstance().get(entry.buildingTypeId());
