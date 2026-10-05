@@ -204,6 +204,15 @@
    - **状态聚合与完工事件**：子批次自身设置 `omit_complete_event = true` 不单独发广播；`BuildingTaskPool.checkBatchesProgress` 跟踪全量批次进度，只有当全部活跃与待发批次均完成时，才由 `BuildingTaskQueue` 统一聚合发射 `build_complete` 事件，触发奇观触发器、建筑完成粒子、工地面板状态更新与下一条待办任务提升。
    - **配置项**：`Config.CONSTRUCTION_MULTI_WORKER_ENABLED`（`building.multiWorkerEnabled`，默认 true，游戏内设置中心「城镇经营」可调）与 `Config.CONSTRUCTION_BATCH_SIZE`（`building.constructionBatchSize`，默认 32 方块，范围 4~1024）。
 
+18. **建造投影的放置模型（2026-10-06 起对齐 Litematica，改交互前必读）**：
+   - **三阶段**：`瞄准`（虚影每 tick / 每帧跟随准心，**不按任何键**）→ `调整中`（`isPinned()`：锚点固定、不再跟随，可用 ALT+滚轮 / 6 个按钮改 xyz、R 键或面板按钮旋转）→ `已定稿`（`isLocked()`：位移与旋转一律拒绝）。
+   - **左键只前进不回退**：瞄准 --左键--> 调整中 --左键--> 已定稿；**回退（重新瞄准）只在面板那颗阶段按钮与 Enter 键上**（三态循环由 `ProjectionClientState.advancePlacementStage()` 单点裁决，别在别处再写一套 if）。面板同一颗按钮的文案随状态变：确认位置 / 定稿 / 重新瞄准。
+   - **ALT+滚轮**沿「相机视线三分量绝对值最大的那个轴」移动 1 格（等价 Litematica 的 `getClosestLookingDirection`：抬头低头改 Y，平视朝哪看改对应 X/Z）；**普通滚轮不消费事件、不做任何事**。瞄准阶段微调会自动进入「调整中」。
+   - **旋转**走 `ProjectionFlightController.rotateFromInput()`（R 键与面板「旋转」按钮共用的唯一入口）；**已定稿后拒绝**——定稿的含义就是几何已确认，改朝向要先重新瞄准。
+   - **右键 = 打开施工屏**（精确坐标 / 提交）；施工屏里改坐标会把状态退回「调整中」（否则瞄准阶段每 tick 把虚影拉回准心、定稿态又拒绝改坐标）。**提交施工**仍在面板按钮 → 施工屏里；提交成功后 pinned/locked 一起清零。
+   - 面板「建筑参数」**常驻**；末行是唯一的键位提示（左键确认 · R 旋转 · ALT+滚轮微调），面板因此比旧版高 14px（`PANEL_H = 128`）。文案键 `buildpop.*` 只改值不动键名，改完跑 `gen_lang.py`。
+   - **不要再引入「跨准心三轴 gizmo 拖拽」那套**：它与左键阶段推进、R 旋转、ALT+滚轮三义重叠，`BuildGizmoController`/`BuildGizmoRenderer` 已删；要精调走 ALT+滚轮、6 个按钮或施工屏坐标。
+
 ---
 
 ## 六、仓库与物流域 (`content/warehouse`)

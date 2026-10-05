@@ -10,7 +10,7 @@ import com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState;
 import com.wsteam.wandscape.content.task.ui.TaskManagementClientState;
 
 import com.mojang.blaze3d.platform.InputConstants;
-import com.wsteam.wandscape.content.building.projection.client.BuildGizmoController;
+
 import com.wsteam.wandscape.content.building.projection.client.BuildPopPanelOverlay;
 import com.wsteam.wandscape.content.road.client.RoadEditorInputHelper;
 import com.wsteam.wandscape.content.road.client.SplineEditorClientState;
@@ -266,18 +266,13 @@ public final class OverviewFlightController {
         ClipContext centerCtx = new ClipContext(origin, centerEnd, ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, mc.player);
         BlockHitResult centerHit = mc.level.clip(centerCtx);
 
-        long window = mc.getWindow().getWindow();
-        boolean rightDown = (window != 0L && org.lwjgl.glfw.GLFW.glfwGetMouseButton(window, org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_RIGHT) == org.lwjgl.glfw.GLFW.GLFW_PRESS)
-                || mc.mouseHandler.isRightPressed();
-
         if (centerHit.getType() == HitResult.Type.BLOCK) {
             // 命中草/花/蘑菇/树叶等不能立足的方块时，向下吸附到真正的地面
             // （草方块/泥土），避免建筑被植物垫高一层。
             BlockPos centerPlacePos = BuildPlacement.resolve(
                     mc.level, centerHit.getBlockPos(), centerHit.getDirection());
-            if (rightDown || ProjectionClientState.getGhostPos() == null) {
-                ProjectionClientState.setGhostPos(ProjectionClientState.centerAnchor(centerPlacePos));
-            }
+            // 瞄准阶段：虚影始终跟随准心（与地面模式一致，不再要求按住右键）。
+            ProjectionClientState.setGhostPos(ProjectionClientState.centerAnchor(centerPlacePos));
         }
 
         BlockPos curGhost = ProjectionClientState.getGhostPos();
@@ -344,7 +339,7 @@ public final class OverviewFlightController {
             // Skip when aiming at a gizmo axis (drag) or clicking any panel/bar/sidebar UI region,
             // so a UI click doesn't accidentally rotate the ghost.
             if (ProjectionClientState.isProjecting()) {
-                if (leftClicked && !isOverGizmo() && !isOverBuildUi(mc)) {
+                if (leftClicked && !isOverBuildUi(mc)) {
                     ProjectionClientState.rotate();
                 }
             } else {
@@ -362,16 +357,6 @@ public final class OverviewFlightController {
 
         // ── Drain all vanilla actions ──
         drainVanillaInput(mc);
-    }
-
-    /** Whether the cursor is hovering or dragging a gizmo axis — that click belongs to the gizmo. */
-    private static boolean isOverGizmo() {
-        BuildGizmoController.AxisDrag hovered =
-                BuildGizmoController.getHoveredAxis();
-        BuildGizmoController.AxisDrag dragging =
-                BuildGizmoController.getDraggingAxis();
-        return hovered != BuildGizmoController.AxisDrag.NONE
-                || dragging != BuildGizmoController.AxisDrag.NONE;
     }
 
     /**

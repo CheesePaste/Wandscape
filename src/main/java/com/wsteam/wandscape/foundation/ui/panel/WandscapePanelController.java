@@ -225,9 +225,26 @@ public final class WandscapePanelController {
 
         // ── Build mode right pop panel handling ──
         if (BuildPopPanelOverlay.isActive()) {
-            if (BuildPopPanelOverlay.isOverLockButton(mouseX, mouseY, screenW)) {
-                boolean curPinned = ProjectionClientState.isPinned();
-                ProjectionClientState.setPinned(!curPinned);
+            if (BuildPopPanelOverlay.isOverStageButton(mouseX, mouseY, screenW)) {
+                // 瞄准 → 确认位置（调整中）→ 定稿 → 重新瞄准：规则收敛在 advancePlacementStage
+                if (ProjectionClientState.isPinned() && !ProjectionClientState.isLocked()
+                        && ProjectionClientState.getGhostPos() == null) {
+                    mc.player.displayClientMessage(
+                            net.minecraft.network.chat.Component.literal("§c")
+                                    .append(com.wsteam.wandscape.foundation.ui.I18n.name(
+                                            "message.wandscape.projection.no_target",
+                                            "没有可施工的位置 — 先对准地面")), true);
+                } else {
+                    ProjectionClientState.advancePlacementStage();
+                }
+                mc.getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(
+                        net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK, 1.0f));
+                event.setCanceled(true);
+                return;
+            }
+            // 「旋转」按钮：与 R 键同一入口（定稿后 rotateFromInput 自己会拒绝）
+            if (BuildPopPanelOverlay.isOverRotateButton(mouseX, mouseY, screenW)) {
+                ProjectionFlightController.rotateFromInput();
                 mc.getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(
                         net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK, 1.0f));
                 event.setCanceled(true);
@@ -267,6 +284,12 @@ public final class WandscapePanelController {
                                     .append(com.wsteam.wandscape.foundation.ui.I18n.name(
                                             "message.wandscape.projection.no_target",
                                             "没有可施工的位置 — 先对准地面")), true);
+                } else if (ProjectionClientState.isLocked()) {
+                    mc.player.displayClientMessage(
+                            net.minecraft.network.chat.Component.literal("§6")
+                                    .append(com.wsteam.wandscape.foundation.ui.I18n.name(
+                                            "message.wandscape.projection.finalized",
+                                            "已定稿 — 面板可「重新瞄准」或「提交施工」")), true);
                 } else {
                     int[] d = BuildPopPanelOverlay.nudgeDelta(nudgeIdx);
                     net.minecraft.core.BlockPos nudgePos = ghost.offset(d[0], d[1], d[2]);
@@ -689,13 +712,13 @@ public final class WandscapePanelController {
             }
         }
 
-        // Enter key in Build mode: toggle Lock / Pinned state (Phase 1 ↔ Phase 2)
+        // Enter key in Build mode: 推进放置阶段（瞄准 → 确认位置 → 定稿 → 重新瞄准），
+        // 与面板那颗阶段按钮同源；左键只前进不回退，回退只在这里。
         if ((key == GLFW.GLFW_KEY_ENTER || key == GLFW.GLFW_KEY_KP_ENTER)
                 && WandscapePanelState.isPanelOpen()
                 && WandscapePanelState.getActiveSubMode() == WandscapePanelState.SubMode.BUILD_PROJECTION
                 && ProjectionClientState.isProjecting()) {
-            boolean curPinned = ProjectionClientState.isPinned();
-            ProjectionClientState.setPinned(!curPinned);
+            ProjectionClientState.advancePlacementStage();
             mc.getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(
                     net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK, 1.0f));
             return;

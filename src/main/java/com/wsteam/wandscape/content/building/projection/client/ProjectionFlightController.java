@@ -15,6 +15,7 @@ import com.wsteam.wandscape.content.building.network.BuildingAreaSyncPacket;
 import com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.phys.BlockHitResult;
@@ -27,10 +28,10 @@ import org.lwjgl.glfw.GLFW;
 /**
  * Per-tick input handler for ground-based building placement mode.
  *
- * <p>Player walks to the build site normally. Ghost preview raycasts from
- * the camera position. Left-click rotates the building; right-click toggles
- * the pin (lock) for gizmo fine-tuning. Construction is submitted only via
- * the panel "提交施工" button.
+ * <p><b>瞄准阶段</b>：虚影每 tick 跟随准心，不需要按任何键。
+ * <b>左键</b>旋转 90 度；<b>ALT+滚轮</b>沿「视线最近的轴」微调 1 格，并把虚影「定位」到锚点
+ * （此后不再跟随准心）；<b>右键</b>打开施工屏（精确坐标 / 提交）；面板按钮与 Enter 键切换
+ * 「定位 / 重新瞄准」。对照 Litematica 的 placement：固定锚点 + 沿视线轴 nudge + 快捷键旋转。
  * Movement is blocked globally by WandscapePanelController when the cursor is lifted.
  */
 public final class ProjectionFlightController {
@@ -116,21 +117,76 @@ public final class ProjectionFlightController {
     // ── Scroll wheel ──
 
     /** Handle mouse scroll via NeoForge's {@link InputEvent.MouseScrollingEvent}.
-     *  Accumulates delta in client state; the tick handler processes it. */
+     *  ALT+滚轮：沿视线最近轴把锚点挪一格（对齐 Litematica 的 nudge）。普通滚轮不消费事件。 */
     static void onMouseScroll(InputEvent.MouseScrollingEvent event) {
         if (!ProjectionClientState.isProjecting()) return;
-        // Let overview mode handle its own scroll
-        if (OverviewClientState.isActive()) return;
+        if (!Screen.hasAltDown()) return;
+        double deltaY = event.getScrollDeltaY();
+        if (deltaY == 0) return;
         event.setCanceled(true);
+        nudgeGhost(Minecraft.getInstance(), deltaY > 0 ? 1 : -1);
+    }
 
-        // Building bar open — scroll does NOT cycle building selection (removed per user request)
-        // No scroll-to-switch outside bar — selection is bar-only
+    /**
+     * ALT+滚轮微调：沿「视线绝对值最大的那个轴」移动锚点 {@code amount} 格。
+     * 等价 Litematica 的 {@code EntityWrap.getClosestLookingDirection}——抬头低头改 Y，
+     * 平视朝哪边看就改对应的 X/Z。瞄准阶段微调会自动进入「调整中」；「已定稿」后拒绝。
+     */
+    private static void nudgeGhost(Minecraft mc, int amount) {
+        BlockPos pos = ProjectionClientState.getGhostPos();
+        if (pos == null) {
+            if (mc.player != null) {
+                mc.player.displayClientMessage(
+                        Component.literal("[Projection] §c").append(
+                                com.wsteam.wandscape.foundation.ui.I18n.name(
+                                        "message.wandscape.projection.no_target",
+                                        "没有可施工的位置 — 先对准地面")), true);
+            }
+            return;
+        }
+        if (ProjectionClientState.isLocked()) {
+            if (mc.player != null) {
+                mc.player.displayClientMessage(
+                        Component.literal("[Projection] §6").append(
+                                com.wsteam.wandscape.foundation.ui.I18n.name(
+                                        "message.wandscape.projection.finalized",
+                                        "已定稿 — 面板可「重新瞄准」或「提交施工」")), true);
+            }
+            return;
+        }
+        BlockPos moved = pos.relative(closestLookingDirection(mc), amount);
+        ProjectionClientState.setPinned(true);
+        ProjectionClientState.setGhostPos(moved);
+        ProjectionClientState.setOverlapDetected(ProjectionClientState.currentSelectionConflicts(moved));
+    }
+
+    /**
+     * 旋转待建建筑（R 键 / 面板「旋转」按钮共用的唯一入口）。
+     * 「已定稿」后拒绝：定稿的含义就是几何已确认，改朝向要先「重新瞄准」。
+     */
+    public static void rotateFromInput() {
+        if (!ProjectionClientState.isProjecting()) return;
+        if (ProjectionClientState.isLocked()) return;
+        ProjectionClientState.rotate();
+    }
+
+    /** 视线主导轴：比较相机视线三分量的绝对值取最大者（抬头/低头 → Y，平视 → X 或 Z）。 */
+    private static net.minecraft.core.Direction closestLookingDirection(Minecraft mc) {
+        var look = mc.gameRenderer.getMainCamera().getLookVector();
+        float ax = Math.abs(look.x()), ay = Math.abs(look.y()), az = Math.abs(look.z());
+        if (ay >= ax && ay >= az) {
+            return look.y() >= 0 ? net.minecraft.core.Direction.UP : net.minecraft.core.Direction.DOWN;
+        }
+        if (ax >= az) {
+            return look.x() >= 0 ? net.minecraft.core.Direction.EAST : net.minecraft.core.Direction.WEST;
+        }
+        return look.z() >= 0 ? net.minecraft.core.Direction.SOUTH : net.minecraft.core.Direction.NORTH;
     }
 
     // ── Ghost position ──
 
     private static void updateGhostPosition(Minecraft mc) {
-        // Pinned: ghost stays fixed — only re-check voxel conflict against the fixed position
+        // 已「定位」（pinned）：锚点不再跟随准心，只重算重叠；改 xyz 走 ALT+滚轮与面板微调按钮。
         if (ProjectionClientState.isPinned()) {
             BlockPos fixed = ProjectionClientState.getGhostPos();
             if (fixed != null) {
@@ -138,10 +194,6 @@ public final class ProjectionFlightController {
             }
             return;
         }
-
-        long window = mc.getWindow().getWindow();
-        boolean rightDown = (window != 0L && GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_RIGHT) == GLFW.GLFW_PRESS)
-                || mc.mouseHandler.isRightPressed();
 
         // Perform a long-range raycast from camera center
         Camera camera = mc.gameRenderer.getMainCamera();
@@ -163,9 +215,8 @@ public final class ProjectionFlightController {
             // 命中草/花/蘑菇/树叶等不能立足的方块时，向下吸附到真正的地面
             // （草方块/泥土），避免建筑被植物垫高一层。
             BlockPos placePos = BuildPlacement.resolve(mc.level, hit.getBlockPos(), hit.getDirection());
-            if (rightDown || ProjectionClientState.getGhostPos() == null) {
-                ProjectionClientState.setGhostPos(ProjectionClientState.centerAnchor(placePos));
-            }
+            // 瞄准阶段：虚影始终跟随准心，不需要按任何键（Litematica 对齐后的手感改善点）。
+            ProjectionClientState.setGhostPos(ProjectionClientState.centerAnchor(placePos));
         }
 
         BlockPos curGhost = ProjectionClientState.getGhostPos();
@@ -187,20 +238,14 @@ public final class ProjectionFlightController {
         boolean rightClicked = rightDown && !wasRightDown;
         wasLeftDown = leftDown;
         wasRightDown = rightDown;
-
-        // Left-click: rotate the building 90° CCW — works pinned or not. When the ghost is
-        // pinned the click may instead start a gizmo drag (BuildGizmoController handles it),
-        // so skip rotation while hovering or dragging an axis.
+        // 左键：阶段推进（只前进不回退）——瞄准 → 确认位置（进调整阶段）→ 定稿。
+        // 回退（重新瞄准）走面板按钮 / Enter，避免误点把已确认的位置清掉。
         if (leftClicked) {
-            boolean overGizmo = BuildGizmoController.getHoveredAxis() != BuildGizmoController.AxisDrag.NONE
-                    || BuildGizmoController.getDraggingAxis() != BuildGizmoController.AxisDrag.NONE;
-            if (!overGizmo) {
-                ProjectionClientState.rotate();
+            if (!ProjectionClientState.isLocked()) {
+                ProjectionClientState.advancePlacementStage();
             }
         }
-
-        // Right-click: toggle pin (lock) for gizmo fine-tuning. Construction is only via the
-        // panel "提交施工" button — right-click no longer opens the construction screen.
+        // 右键：打开施工屏（精确坐标 / 提交）
         if (rightClicked) {
             BlockPos ghostPos = ProjectionClientState.getGhostPos();
             if (ghostPos == null) {
@@ -208,13 +253,13 @@ public final class ProjectionFlightController {
                     mc.player.displayClientMessage(
                             Component.literal("[Projection] §c").append(
                                     com.wsteam.wandscape.foundation.ui.I18n.name(
-                                            "message.wandscape.projection.cannot_pin",
-                                            "无法固定 — 准星没有对准方块")), true);
+                                            "message.wandscape.projection.no_target",
+                                            "没有可施工的位置 — 准星没有对准方块")), true);
                 }
                 return;
             }
-            ProjectionClientState.setPinned(!ProjectionClientState.isPinned());
-            Log.info(TAG, "[Projection] Ghost pin toggled to {}", ProjectionClientState.isPinned());
+            openConstructionScreen(mc);
+
         }
     }
 

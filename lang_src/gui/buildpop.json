@@ -1,4 +1,8 @@
 {
+  "gui.wandscape.buildpop.adjusting": {
+    "zh_cn": "§b[调整中]",
+    "en_us": "§b[Adjusting]"
+  },
   "gui.wandscape.buildpop.aiming": {
     "zh_cn": "§e[瞄准中]",
     "en_us": "§e[Aiming]"
@@ -11,17 +15,29 @@
     "zh_cn": "§a清理盒内方块：是",
     "en_us": "§aClear box: yes"
   },
-  "gui.wandscape.buildpop.lock": {
-    "zh_cn": "锁定",
-    "en_us": "Lock"
+  "gui.wandscape.buildpop.confirm": {
+    "zh_cn": "确认位置",
+    "en_us": "Confirm"
+  },
+  "gui.wandscape.buildpop.finalize": {
+    "zh_cn": "定稿",
+    "en_us": "Finalize"
+  },
+  "gui.wandscape.buildpop.hint": {
+    "zh_cn": "§8左键确认 · R 旋转 · ALT+滚轮微调",
+    "en_us": "§8LMB confirm · R rotate · ALT+scroll nudge"
   },
   "gui.wandscape.buildpop.locked": {
-    "zh_cn": "§a[已锁定]",
-    "en_us": "§a[Locked]"
+    "zh_cn": "§a[已定稿]",
+    "en_us": "§a[Finalized]"
   },
   "gui.wandscape.buildpop.position": {
     "zh_cn": "§7位置: §f%s",
     "en_us": "§7Position: §f%s"
+  },
+  "gui.wandscape.buildpop.rotate": {
+    "zh_cn": "旋转",
+    "en_us": "Rotate"
   },
   "gui.wandscape.buildpop.rotation": {
     "zh_cn": "§7朝向: §e%d°",
@@ -40,7 +56,7 @@
     "en_us": "§6§lBuilding Info"
   },
   "gui.wandscape.buildpop.unlock": {
-    "zh_cn": "解锁",
-    "en_us": "Unlock"
+    "zh_cn": "重新瞄准",
+    "en_us": "Re-aim"
   }
 }

@@ -411,13 +411,13 @@
     "en_us": "[Projection] §cBuilding API unavailable",
     "zh_cn": "[Projection] §c建筑系统不可用"
   },
-  "message.wandscape.projection.cannot_pin": {
-    "en_us": "Cannot pin — no block under the crosshair",
-    "zh_cn": "无法固定 — 准星没有对准方块"
-  },
   "message.wandscape.projection.enter_failed": {
     "en_us": "[Projection] %s",
     "zh_cn": "[Projection] %s"
+  },
+  "message.wandscape.projection.finalized": {
+    "en_us": "Finalized — re-aim or submit from the panel",
+    "zh_cn": "已定稿 — 面板可「重新瞄准」或「提交施工」"
   },
   "message.wandscape.projection.no_target": {
     "en_us": "No placeable position — aim at the ground first",

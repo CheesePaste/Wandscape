@@ -138,6 +138,9 @@ public class ConstructionScreen extends MedievalScreen {
             status = null;
             return;
         }
+        // 改坐标即「重新进入调整」：否则瞄准阶段会每 tick 把虚影拉回准心、定稿态又拒绝改坐标。
+        ProjectionClientState.setPinned(true);
+        ProjectionClientState.setLocked(false);
         ProjectionClientState.setGhostPos(pos);
         boolean conflict = BuildingAreaSyncPacket.voxelConflicts(config, pos, rotationSteps);
         ProjectionClientState.setOverlapDetected(conflict);
@@ -158,6 +161,7 @@ public class ConstructionScreen extends MedievalScreen {
         Net.toServer(new ProjectionPlacePacket(
                 buildingTypeId, pos, rotationSteps, ProjectionClientState.isClearBoxBeforeBuild()));
         ProjectionClientState.setPinned(false);
+        ProjectionClientState.setLocked(false);
         ProjectionClientState.setGhostPos(null); // placed building is now real; drop preview
 
         Minecraft mc = Minecraft.getInstance();

@@ -45,6 +45,9 @@ public final class ProjectionClientState {
     /** Whether the ghost preview is pinned to a fixed position (no longer follows the crosshair). */
     private static volatile boolean pinned = false;
 
+    /** 左键第二次确认后的终态；见 {@link #isLocked()}。 */
+    private static volatile boolean locked = false;
+
     /** Available building slots received from server. */
     private static final List<BuildingSlot> buildingSlots =
             Collections.synchronizedList(new ArrayList<>());
@@ -156,6 +159,7 @@ public final class ProjectionClientState {
         overlapDetected = false;
         rotationSteps = 0;
         pinned = false;
+        locked = false;
         synchronized (buildingSlots) {
             buildingSlots.clear();
         }
@@ -270,6 +274,34 @@ public final class ProjectionClientState {
 
     public static void setPinned(boolean fixed) {
         pinned = fixed;
+    }
+
+    /**
+     * 已「定稿」：左键第二次确认后的终态，位移与旋转一律拒绝（对齐 Litematica 的 {@code locked}），
+     * 只剩「提交施工 / 打开施工屏 / 重新瞄准」三条出路。
+     */
+    public static boolean isLocked() {
+        return locked;
+    }
+
+    public static void setLocked(boolean value) {
+        locked = value;
+    }
+
+    /**
+     * 推进放置阶段（面板按钮与 Enter 键共用；左键只前进不回退）：
+     * 瞄准 → 调整（确认位置）→ 定稿 → 回到瞄准（重新瞄准）。
+     * 三个阶段各有一条规则，收敛在这里，别再散成三处 if。
+     */
+    public static void advancePlacementStage() {
+        if (locked) {
+            locked = false;
+            pinned = false;
+        } else if (pinned) {
+            locked = true;
+        } else {
+            pinned = true;
+        }
     }
 
     // ── Rotation ──
