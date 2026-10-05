@@ -83,7 +83,33 @@ public final class BuildingPreviewGifCache {
     private static final String CACHE_SUBDIR = "config/wandscape/previews";
     private static final String TEX_NAME = "wandscape_building_preview";
 
-    private static final Map<BuildingConfig, BuildingGif> CACHE = new LinkedHashMap<>();
+    private static final class BuildingGif {
+        final ResourceLocation[] frameLocs = new ResourceLocation[FRAME_COUNT];
+        int baked;
+        boolean ready;
+    }
+
+    /**
+     * 缓存条目：值里记 {@code source} 实例。键走 {@code config.id()}（{@code docs/domain-notes.md} §16
+     * 的统一姿势）——以前直接拿 {@link BuildingConfig} 当键，而配置实例会被整批换掉
+     * （datapack 重载、入服同步不清缓存），此时 record 的 {@code equals} 要逐组件比整条 pattern，
+     * 偏偏 {@link #getFrameLocation} 是**逐帧逐格**查的：进世界重进后就是每帧每格一次 O(pattern)。
+     */
+    private static final class GifEntry {
+        final BuildingConfig source;
+        final BuildingGif gif;
+
+        GifEntry(BuildingConfig source, BuildingGif gif) {
+            this.source = source;
+            this.gif = gif;
+        }
+
+        GifEntry(BuildingConfig source) {
+            this(source, new BuildingGif());
+        }
+    }
+
+    private static final Map<String, GifEntry> CACHE = new LinkedHashMap<>();
 
     /** 每个建筑算一次的缩略图 LOD 格子表，见 {@link #buildLodPreview}。 */
     private static final Map<BuildingConfig, LodPreview> LOD_CACHE = new HashMap<>();
@@ -111,10 +137,31 @@ public final class BuildingPreviewGifCache {
 
     private BuildingPreviewGifCache() {}
 
-    private static final class BuildingGif {
-        final ResourceLocation[] frameLocs = new ResourceLocation[FRAME_COUNT];
-        int baked;
-        boolean ready;
+    /**
+     * 取该配置的缓存条目：实例没换直接命中；换了但内容相同就认下新实例（只比这一次，
+     * 已烘好的帧继续用，此后走身份短路）；同 id 却内容不同则关掉旧帧纹理并返回 null
+     * （调用方会当作没缓存重建）。
+     */
+    private static GifEntry entryFor(BuildingConfig config) {
+        GifEntry entry = CACHE.get(config.id());
+        if (entry == null) {
+            return null;
+        }
+        if (entry.source == config) {
+            return entry;
+        }
+        if (entry.source.equals(config)) {
+            GifEntry adopted = new GifEntry(config, entry.gif);
+            CACHE.put(config.id(), adopted);
+            return adopted;
+        }
+        Minecraft mc = Minecraft.getInstance();
+        closeGif(mc != null ? mc.getTextureManager() : null, entry.gif);
+        CACHE.remove(config.id());
+        if (!entry.gif.ready) {
+            pendingCount = Math.max(0, pendingCount - 1);
+        }
+        return null;
     }
 
     /** Enqueue a config for (lazy) loading/baking. Idempotent. */
@@ -123,8 +170,8 @@ public final class BuildingPreviewGifCache {
             return;
         }
         // get + put 而非 computeIfAbsent：要能分辨「这次是否新建」，才好维护 pendingCount。
-        if (CACHE.get(config) == null) {
-            CACHE.put(config, new BuildingGif());
+        if (entryFor(config) == null) {
+            CACHE.put(config.id(), new GifEntry(config));
             pendingCount++;
         }
     }
@@ -144,14 +191,18 @@ public final class BuildingPreviewGifCache {
         if (pendingCount <= 0) {   // 快路径：全部就绪
             return;
         }
-        List<BuildingConfig> keys = List.copyOf(CACHE.keySet());
+        List<String> keys = List.copyOf(CACHE.keySet());
         int n = keys.size();
         long deadline = System.nanoTime() + BAKE_BUDGET_NS;
         for (int step = 0; step < n; step++) {
             int idx = (cursor + step) % n;
-            BuildingConfig config = keys.get(idx);
-            BuildingGif gif = CACHE.get(config);
-            if (gif != null && !gif.ready) {
+            GifEntry entry = CACHE.get(keys.get(idx));
+            if (entry == null) {
+                continue;
+            }
+            BuildingConfig config = entry.source;
+            BuildingGif gif = entry.gif;
+            if (!gif.ready) {
                 if (gif.baked >= FRAME_COUNT) {
                     gif.ready = true;
                     pendingCount--;
@@ -205,10 +256,11 @@ public final class BuildingPreviewGifCache {
      * baking, so the building appears immediately.
      */
     public static ResourceLocation getFrameLocation(BuildingConfig config) {
-        BuildingGif gif = CACHE.get(config);
-        if (gif == null) {
+        GifEntry entry = entryFor(config);
+        if (entry == null) {
             return null;
         }
+        BuildingGif gif = entry.gif;
         if (!gif.ready) {
             return gif.frameLocs[0];
         }
@@ -237,21 +289,27 @@ public final class BuildingPreviewGifCache {
         com.mojang.blaze3d.systems.RenderSystem.disableBlend();
     }
 
+    /** 关掉一条缓存持有的全部帧纹理（{@link #closeAll} 与「同 id 内容变了」两条路共用）。 */
+    private static void closeGif(TextureManager tm, BuildingGif gif) {
+        if (tm == null) {
+            return;
+        }
+        for (ResourceLocation loc : gif.frameLocs) {
+            if (loc == null) {
+                continue;
+            }
+            AbstractTexture tex = tm.getTexture(loc);
+            if (tex != null) {
+                tex.close();
+            }
+        }
+    }
+
     public static void closeAll() {
         Minecraft mc = Minecraft.getInstance();
         TextureManager tm = mc != null ? mc.getTextureManager() : null;
-        if (tm != null) {
-            for (BuildingGif gif : CACHE.values()) {
-                for (ResourceLocation loc : gif.frameLocs) {
-                    if (loc == null) {
-                        continue;
-                    }
-                    AbstractTexture tex = tm.getTexture(loc);
-                    if (tex != null) {
-                        tex.close();
-                    }
-                }
-            }
+        for (GifEntry entry : CACHE.values()) {
+            closeGif(tm, entry.gif);
         }
         CACHE.clear();
         LOD_CACHE.clear();
