@@ -484,6 +484,7 @@ public class TaskExecutionSystem implements EcsSystem {
         }
 
         int firstReqIdx = -1;
+        boolean refundedAny = false;
 
         for (int i = 0; i < task.sequence.size() && i < currentStep; i++) {
             if (task.sequence.get(i) instanceof AtomicOp.ResourceRequestOp(List<ResourceStack> items)) {
@@ -492,17 +493,18 @@ public class TaskExecutionSystem implements EcsSystem {
                     if (count > 0) {
                         inv.remove(item.resource(), count);
                         colony.addResource(colonyId, item.resource(), count);
+                        refundedAny = true;
                         Log.debug(LogCategory.TASK, "exec", "NPC %d — returned %d x %s to warehouse of colony %s on release",
                                 npcId, count, item.resource().id(), colonyId);
                     }
                 }
-                if (firstReqIdx < 0) {
+                if (firstReqIdx < 0 && refundedAny) {
                     firstReqIdx = i;
                 }
             }
         }
 
-        if (firstReqIdx >= 0) {
+        if (refundedAny && firstReqIdx >= 0) {
             exec.stepIndex = firstReqIdx;
             taskPool.advanceStep(taskId, firstReqIdx);
         }

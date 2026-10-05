@@ -71,7 +71,7 @@ public class BuildingTaskQueue {
     }
 
     public boolean hasHead() {
-        return headTaskId != null || !activeBatchIds.isEmpty();
+        return headTaskId != null || !activeBatchIds.isEmpty() || !pendingBatches.isEmpty() || completionData != null;
     }
 
     public void clearHead() {
@@ -158,6 +158,24 @@ public class BuildingTaskQueue {
 
     public boolean hasParked() {
         return !parkedTaskIds.isEmpty();
+    }
+
+    public void unparkBatch(long taskId) {
+        parkedTaskIds.remove(taskId);
+        activeBatchIds.add(taskId);
+    }
+
+    public boolean hasCompletionData() {
+        return completionData != null;
+    }
+
+    public boolean isEmpty() {
+        return headTaskId == null
+                && activeBatchIds.isEmpty()
+                && parkedTaskIds.isEmpty()
+                && pending.isEmpty()
+                && pendingBatches.isEmpty()
+                && completionData == null;
     }
 
     /** Snapshot of parked task ids (safe to iterate while removing). */

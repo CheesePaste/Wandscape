@@ -65,10 +65,11 @@ public class BuildingTaskSource implements TaskSource {
         if (btp != null) {
             for (var entry : btp.getAll().entrySet()) {
                 UUID buildingId = entry.getKey();
-                btp.pruneParked(buildingId, pool);
+                var queue = entry.getValue();
 
-                if (entry.getValue().hasActiveBatches() || entry.getValue().hasPendingBatches() || entry.getValue().getCompletionData() != null) {
-                    for (long batchId : new ArrayList<>(entry.getValue().getActiveBatchIds())) {
+                if (queue.hasActiveBatches() || queue.hasPendingBatches() || queue.hasCompletionData()
+                        || (queue.hasParked() && queue.hasCompletionData())) {
+                    for (long batchId : new ArrayList<>(queue.getActiveBatchIds())) {
                         GlobalTask task = pool.get(batchId);
                         if (task != null && task.state == TaskState.AWAITING_RESOURCES) {
                             btp.parkHead(buildingId, batchId);
@@ -82,7 +83,8 @@ public class BuildingTaskSource implements TaskSource {
                         api.clearCurrentTask(buildingId);
                     }
                 } else {
-                    Long headId = entry.getValue().getHeadTaskId();
+                    btp.pruneParked(buildingId, pool);
+                    Long headId = queue.getHeadTaskId();
                     if (headId != null) {
                         GlobalTask head = pool.get(headId);
                         if (head == null || head.state == TaskState.COMPLETED) {

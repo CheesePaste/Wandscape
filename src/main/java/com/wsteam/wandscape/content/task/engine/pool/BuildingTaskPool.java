@@ -151,7 +151,7 @@ public class BuildingTaskPool {
 
     public boolean isBatchBuilding(UUID buildingId) {
         BuildingTaskQueue queue = queues.get(buildingId);
-        return queue != null && (queue.hasActiveBatches() || queue.hasPendingBatches() || queue.getCompletionData() != null);
+        return queue != null && (queue.hasActiveBatches() || queue.hasPendingBatches() || queue.hasCompletionData() || (queue.hasParked() && queue.hasCompletionData()));
     }
 
     /**
@@ -169,8 +169,20 @@ public class BuildingTaskPool {
     public boolean checkBatchesProgress(UUID buildingId, GlobalTaskPool pool, @Nullable EventBus eventBus) {
         BuildingTaskQueue queue = queues.get(buildingId);
         if (queue == null) return false;
-        if (!queue.hasActiveBatches() && !queue.hasPendingBatches() && queue.getCompletionData() == null) {
+        if (!queue.hasActiveBatches() && !queue.hasPendingBatches() && !queue.hasCompletionData() && !queue.hasParked()) {
             return false;
+        }
+
+        // 0. Unpark any batches that woke up from AWAITING_RESOURCES
+        if (queue.hasParked()) {
+            for (long parkedId : new ArrayList<>(queue.getParkedTaskIds())) {
+                GlobalTask task = pool.get(parkedId);
+                if (task != null && task.state != TaskState.AWAITING_RESOURCES && task.state != TaskState.COMPLETED) {
+                    queue.unparkBatch(parkedId);
+                    Log.debug(TAG, "building {} batch #{} unparked (state={})",
+                            buildingId.toString().substring(0, 8), parkedId, task.state);
+                }
+            }
         }
 
         // 1. Prune finished active batches
@@ -247,7 +259,7 @@ public class BuildingTaskPool {
         BuildingTaskQueue queue = queues.get(buildingId);
         if (queue == null) return;
         if (queue.hasParked()) {
-            for (long taskId : queue.getParkedTaskIds()) {
+            for (long taskId : new ArrayList<>(queue.getParkedTaskIds())) {
                 GlobalTask task = pool.get(taskId);
                 if (task == null || task.state == TaskState.COMPLETED) {
                     queue.removeParked(taskId);
@@ -255,7 +267,7 @@ public class BuildingTaskPool {
             }
         }
         // Clean up a queue left empty after its parked tasks completed with no new head.
-        if (!queue.hasHead() && !queue.hasParked() && !queue.hasPending()) {
+        if (queue.isEmpty()) {
             queues.remove(buildingId, queue);
         }
     }
@@ -319,7 +331,11 @@ public class BuildingTaskPool {
         for (GlobalTask task : pool.all()) {
             if (task.buildingId != null && task.state != TaskState.COMPLETED) {
                 BuildingTaskQueue q = getOrCreate(task.buildingId);
-                q.addActiveBatch(task.id);
+                if (task.state == TaskState.AWAITING_RESOURCES) {
+                    q.addParked(task.id);
+                } else {
+                    q.addActiveBatch(task.id);
+                }
             }
         }
     }
