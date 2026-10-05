@@ -104,7 +104,18 @@ public final class ConstructionBatches {
 
         String rawName = work.params().containsKey("name") && work.params().get("name").isJsonPrimitive()
                 ? work.params().get("name").getAsString() : "Building";
-        String anchorStr = work.params().containsKey("anchor") ? work.params().get("anchor").toString() : "[0,0,0]";
+        String anchorStr = "0,0,0";
+        if (work.params().containsKey("anchor")) {
+            JsonElement el = work.params().get("anchor");
+            if (el.isJsonPrimitive()) {
+                anchorStr = el.getAsString();
+            } else if (el.isJsonArray()) {
+                JsonArray arr = el.getAsJsonArray();
+                if (arr.size() == 3) {
+                    anchorStr = arr.get(0).getAsInt() + "," + arr.get(1).getAsInt() + "," + arr.get(2).getAsInt();
+                }
+            }
+        }
         String buildingIdStr = work.params().containsKey("building_id") && work.params().get("building_id").isJsonPrimitive()
                 ? work.params().get("building_id").getAsString() : "";
 

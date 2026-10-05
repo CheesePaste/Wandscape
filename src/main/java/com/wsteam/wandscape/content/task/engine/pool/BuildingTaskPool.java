@@ -66,7 +66,11 @@ public class BuildingTaskPool {
     public long enqueueBatches(UUID buildingId, @Nullable UUID colonyId, ConstructionBatches.SplitResult split, GlobalTaskPool pool) {
         BuildingTaskQueue queue = getOrCreate(buildingId);
         queue.setColonyId(colonyId);
-        queue.setCompletionData(split.completionData());
+        Map<String, String> compData = new LinkedHashMap<>(split.completionData());
+        if (buildingId != null) {
+            compData.putIfAbsent("building_id", buildingId.toString());
+        }
+        queue.setCompletionData(compData);
 
         boolean needsPrep = ConstructionBatches.needsPreparation(split.initialBatch());
         if (needsPrep) {
@@ -145,6 +149,11 @@ public class BuildingTaskPool {
         return queue != null && queue.hasActiveBatches();
     }
 
+    public boolean isBatchBuilding(UUID buildingId) {
+        BuildingTaskQueue queue = queues.get(buildingId);
+        return queue != null && (queue.hasActiveBatches() || queue.hasPendingBatches() || queue.getCompletionData() != null);
+    }
+
     /**
      * Checks progress of active batches for a building.
      * Prunes finished active batches and parked tasks.
@@ -166,7 +175,7 @@ public class BuildingTaskPool {
 
         // 1. Prune finished active batches
         List<Long> done = new ArrayList<>();
-        for (long batchId : queue.getActiveBatchIds()) {
+        for (long batchId : new ArrayList<>(queue.getActiveBatchIds())) {
             GlobalTask task = pool.get(batchId);
             if (task == null || task.state == TaskState.COMPLETED) {
                 done.add(batchId);
@@ -179,7 +188,7 @@ public class BuildingTaskPool {
         // 2. Prune finished parked batches
         if (queue.hasParked()) {
             List<Long> doneParked = new ArrayList<>();
-            for (long parkedId : queue.getParkedTaskIds()) {
+            for (long parkedId : new ArrayList<>(queue.getParkedTaskIds())) {
                 GlobalTask task = pool.get(parkedId);
                 if (task == null || task.state == TaskState.COMPLETED) {
                     doneParked.add(parkedId);

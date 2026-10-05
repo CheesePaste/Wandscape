@@ -25,6 +25,7 @@ import com.wsteam.wandscape.Wandscape;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -66,8 +67,8 @@ public class BuildingTaskSource implements TaskSource {
                 UUID buildingId = entry.getKey();
                 btp.pruneParked(buildingId, pool);
 
-                if (entry.getValue().hasActiveBatches() || entry.getValue().hasPendingBatches()) {
-                    for (long batchId : entry.getValue().getActiveBatchIds()) {
+                if (entry.getValue().hasActiveBatches() || entry.getValue().hasPendingBatches() || entry.getValue().getCompletionData() != null) {
+                    for (long batchId : new ArrayList<>(entry.getValue().getActiveBatchIds())) {
                         GlobalTask task = pool.get(batchId);
                         if (task != null && task.state == TaskState.AWAITING_RESOURCES) {
                             btp.parkHead(buildingId, batchId);
@@ -411,7 +412,7 @@ public class BuildingTaskSource implements TaskSource {
 
         BuildingTaskPool btp = world.buildingTaskPool;
         UUID buildingId = task.buildingId;
-        if (btp.hasActiveBatches(buildingId)) {
+        if (btp.isBatchBuilding(buildingId)) {
             boolean finished = btp.checkBatchesProgress(buildingId, world.taskPool, world.eventBus);
             if (finished) {
                 var api = com.wsteam.wandscape.content.building.internal.BuildingApiImpl.get();
