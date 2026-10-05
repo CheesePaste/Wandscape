@@ -15,6 +15,7 @@ import com.wsteam.wandscape.content.task.engine.pool.BuildingTaskPool;
 import com.wsteam.wandscape.content.task.engine.pool.GlobalTask;
 import com.wsteam.wandscape.content.task.engine.pool.GlobalTaskPool;
 import com.wsteam.wandscape.content.task.engine.pool.TaskRequest;
+import com.wsteam.wandscape.content.task.event.TaskCompleted;
 import com.wsteam.wandscape.content.task.runtime.TaskState;
 import com.wsteam.wandscape.content.task.source.TaskSource;
 import com.wsteam.wandscape.content.warehouse.ColonyItemBank;
@@ -55,6 +56,8 @@ public class BuildingTaskSource implements TaskSource {
         var api = com.wsteam.wandscape.content.building.internal.BuildingApiImpl.get();
         if (api == null) return;
 
+        ensureSubscribed(world);
+
         BuildingTaskPool btp = world.buildingTaskPool;
 
         // ── 1. Cleanup: detect finished or resource-parked building head tasks ──
@@ -63,34 +66,50 @@ public class BuildingTaskSource implements TaskSource {
                 UUID buildingId = entry.getKey();
                 btp.pruneParked(buildingId, pool);
 
-                Long headId = entry.getValue().getHeadTaskId();
-                if (headId != null) {
-                    GlobalTask head = pool.get(headId);
-                    if (head == null || head.state == TaskState.COMPLETED) {
-                        btp.onHeadCompleted(buildingId, resolveColony(api, buildingId), pool);
+                if (entry.getValue().hasActiveBatches() || entry.getValue().hasPendingBatches()) {
+                    for (long batchId : entry.getValue().getActiveBatchIds()) {
+                        GlobalTask task = pool.get(batchId);
+                        if (task != null && task.state == TaskState.AWAITING_RESOURCES) {
+                            btp.parkHead(buildingId, batchId);
+                            api.clearCurrentTask(buildingId);
+                            Log.debug(LogCategory.BUILDING, "source", "building {} batch #{} parked on resource shortage",
+                                    buildingId.toString().substring(0, 8), batchId);
+                        }
+                    }
+                    boolean finished = btp.checkBatchesProgress(buildingId, pool, world.eventBus);
+                    if (finished) {
                         api.clearCurrentTask(buildingId);
-                        Log.debug(LogCategory.BUILDING, "source", "cleanup building {} head #{} completed",
-                                buildingId.toString().substring(0, 8), headId);
-                    } else if (head.state == TaskState.AWAITING_RESOURCES) {
-                        if (head.buildingId != null && isProductionTask(head)
-                                && (isElementShortage(head) || isCapacityShortage(head))) {
-                            // 生产任务中途缺元素/仓库满仓（发布后资源或容量被并发任务抢走）→ 回收回队列，
-                            // 不 park 进不可见的 AWAITING_RESOURCES：任务留在面板可见，
-                            // 下方发布区按「元素不足/仓库容量不足」跳过它，直到补齐/空出容量。
-                            WorkItem recycled = new WorkItem(head.blueprintId, head.taskParams, head.priority);
-                            api.enqueueWork(buildingId, recycled);
-                            pool.cancelTask(headId, world);
+                    }
+                } else {
+                    Long headId = entry.getValue().getHeadTaskId();
+                    if (headId != null) {
+                        GlobalTask head = pool.get(headId);
+                        if (head == null || head.state == TaskState.COMPLETED) {
                             btp.onHeadCompleted(buildingId, resolveColony(api, buildingId), pool);
                             api.clearCurrentTask(buildingId);
-                            Log.debug(LogCategory.BUILDING, "source", "building {} head #{} recycled to queue on element/capacity shortage",
+                            Log.debug(LogCategory.BUILDING, "source", "cleanup building {} head #{} completed",
                                     buildingId.toString().substring(0, 8), headId);
-                        } else {
-                            // 非生产任务（建材运输等）或缺的是物品原料（如药水玻璃瓶）→ 维持 park，
-                            // 等资源到账由唤醒路径继续。
-                            btp.parkHead(buildingId, headId);
-                            api.clearCurrentTask(buildingId);
-                            Log.debug(LogCategory.BUILDING, "source", "building {} head #{} parked on resource shortage",
-                                    buildingId.toString().substring(0, 8), headId);
+                        } else if (head.state == TaskState.AWAITING_RESOURCES) {
+                            if (head.buildingId != null && isProductionTask(head)
+                                    && (isElementShortage(head) || isCapacityShortage(head))) {
+                                // 生产任务中途缺元素/仓库满仓（发布后资源或容量被并发任务抢走）→ 回收回队列，
+                                // 不 park 进不可见的 AWAITING_RESOURCES：任务留在面板可见，
+                                // 下方发布区按「元素不足/仓库容量不足」跳过它，直到补齐/空出容量。
+                                WorkItem recycled = new WorkItem(head.blueprintId, head.taskParams, head.priority);
+                                api.enqueueWork(buildingId, recycled);
+                                pool.cancelTask(headId, world);
+                                btp.onHeadCompleted(buildingId, resolveColony(api, buildingId), pool);
+                                api.clearCurrentTask(buildingId);
+                                Log.debug(LogCategory.BUILDING, "source", "building {} head #{} recycled to queue on element/capacity shortage",
+                                        buildingId.toString().substring(0, 8), headId);
+                            } else {
+                                // 非生产任务（建材运输等）或缺的是物品原料（如药水玻璃瓶）→ 维持 park，
+                                // 等资源到账由唤醒路径继续。
+                                btp.parkHead(buildingId, headId);
+                                api.clearCurrentTask(buildingId);
+                                Log.debug(LogCategory.BUILDING, "source", "building {} head #{} parked on resource shortage",
+                                        buildingId.toString().substring(0, 8), headId);
+                            }
                         }
                     }
                 }
@@ -374,5 +393,35 @@ public class BuildingTaskSource implements TaskSource {
         if (runtime == null) return;
         var exec = runtime.getResourceReqExec();
         if (exec != null) exec.cancelForNpc(npcId);
+    }
+
+    private boolean eventSubscribed = false;
+
+    private void ensureSubscribed(World world) {
+        if (eventSubscribed || world.eventBus == null) return;
+        eventSubscribed = true;
+        world.eventBus.subscribe(TaskCompleted.class, this::onTaskCompleted);
+    }
+
+    private void onTaskCompleted(TaskCompleted e) {
+        World world = World.getActive();
+        if (world == null || world.buildingTaskPool == null || world.taskPool == null) return;
+        GlobalTask task = world.taskPool.get(e.taskId());
+        if (task == null || task.buildingId == null) return;
+
+        BuildingTaskPool btp = world.buildingTaskPool;
+        UUID buildingId = task.buildingId;
+        if (btp.hasActiveBatches(buildingId)) {
+            boolean finished = btp.checkBatchesProgress(buildingId, world.taskPool, world.eventBus);
+            if (finished) {
+                var api = com.wsteam.wandscape.content.building.internal.BuildingApiImpl.get();
+                if (api != null) {
+                    api.clearCurrentTask(buildingId);
+                }
+                if (!btp.hasHead(buildingId) && !btp.hasParked(buildingId)) {
+                    ChunkLoadManager.get().releaseBuilding(buildingId);
+                }
+            }
+        }
     }
 }

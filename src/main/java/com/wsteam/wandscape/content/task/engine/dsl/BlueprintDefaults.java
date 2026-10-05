@@ -78,12 +78,14 @@ public final class BlueprintDefaults {
                     ? o.get("nbt").getAsString() : null;
             ops.add(new AtomicOp.SpawnDecorationOp(anchor.add(offset), type, facing, nbt));
         }
-        Map<String, String> data = new LinkedHashMap<>();
-        data.put("building_name", str(p, "name"));
-        data.put("blocks_placed", String.valueOf(offsets.size()));
-        data.put("anchor", str(p, "anchor"));
-        putBuildingId(data, p);
-        ops.add(new AtomicOp.EmitEventOp("build_complete", data));
+        if (!bool(p, "omit_complete_event", false)) {
+            Map<String, String> data = new LinkedHashMap<>();
+            data.put("building_name", str(p, "name"));
+            data.put("blocks_placed", String.valueOf(offsets.size()));
+            data.put("anchor", str(p, "anchor"));
+            putBuildingId(data, p);
+            ops.add(new AtomicOp.EmitEventOp("build_complete", data));
+        }
 
         return new TaskSequence(ops, label("build:place_structure", p));
     }
@@ -113,7 +115,10 @@ public final class BlueprintDefaults {
 
         // Inline of the former `call build:place_structure` macro-expansion.
         addMaterialRequest(ops, p);
-        addBoxClear(ops, p, anchor, offsets);
+        List<GridPos> clearExclusions = p.containsKey("pattern_offsets")
+                ? posList(p, "pattern_offsets")
+                : offsets;
+        addBoxClear(ops, p, anchor, clearExclusions);
         for (GridPos off : offsets) {
             String key = key(off);
             String block = blocks.get(key);
@@ -130,12 +135,14 @@ public final class BlueprintDefaults {
                     ? o.get("nbt").getAsString() : null;
             ops.add(new AtomicOp.SpawnDecorationOp(anchor.add(offset), type, facing, nbt));
         }
-        Map<String, String> data = new LinkedHashMap<>();
-        data.put("building_name", str(p, "name"));
-        data.put("blocks_placed", String.valueOf(offsets.size()));
-        data.put("anchor", str(p, "anchor"));
-        putBuildingId(data, p);
-        ops.add(new AtomicOp.EmitEventOp("build_complete", data));
+        if (!bool(p, "omit_complete_event", false)) {
+            Map<String, String> data = new LinkedHashMap<>();
+            data.put("building_name", str(p, "name"));
+            data.put("blocks_placed", String.valueOf(offsets.size()));
+            data.put("anchor", str(p, "anchor"));
+            putBuildingId(data, p);
+            ops.add(new AtomicOp.EmitEventOp("build_complete", data));
+        }
 
         return new TaskSequence(ops, label("build:clear_and_build", p));
     }
@@ -441,6 +448,16 @@ public final class BlueprintDefaults {
         return el.getAsJsonPrimitive().isNumber()
                 ? el.getAsJsonPrimitive().getAsInt()
                 : Integer.parseInt(el.getAsJsonPrimitive().getAsString());
+    }
+
+    private static boolean bool(Map<String, JsonElement> p, String key, boolean defaultValue) {
+        JsonElement el = p.get(key);
+        if (el == null || !el.isJsonPrimitive()) return defaultValue;
+        try {
+            return el.getAsBoolean();
+        } catch (Exception e) {
+            return defaultValue;
+        }
     }
 
     private static JsonElement require(Map<String, JsonElement> p, String key) {

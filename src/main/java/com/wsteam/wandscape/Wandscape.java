@@ -675,6 +675,9 @@ public class Wandscape {
             var saved = TaskPoolSavedData.getOrCreate(level, world.taskPool);
             // Mark dirty when pool changes so SavedData writes to disk
             world.taskPool.onChanged = saved::setDirty;
+            if (world.buildingTaskPool != null) {
+                world.buildingTaskPool.rebuildFromPool(world.taskPool);
+            }
             Log.info(TAG, "Task persistence wired — pool has {} active tasks", world.taskPool.size());
         }
 
