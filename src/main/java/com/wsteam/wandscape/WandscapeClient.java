@@ -122,14 +122,6 @@ public class WandscapeClient {
             "key.categories.wandscape"
     );
 
-    /** 建造投影「调整阶段」的旋转键（默认 R）。与面板「旋转」按钮共用同一个动作。 */
-    public static final KeyMapping BUILD_ROTATE = new KeyMapping(
-            "key.wandscape.build_rotate",
-            InputConstants.Type.KEYSYM,
-            GLFW.GLFW_KEY_R,
-            "key.categories.wandscape"
-    );
-
     public static final KeyMapping PANEL_HIDE_TOGGLE = new KeyMapping(
             "key.wandscape.panel_hide",
             InputConstants.Type.KEYSYM,
@@ -526,7 +518,6 @@ public class WandscapeClient {
         event.register(RAISE_CURSOR);
         event.register(GUIDEBOOK_TOGGLE);
         event.register(PANEL_AREAS_TOGGLE);
-        event.register(BUILD_ROTATE);
         event.register(PANEL_HIDE_TOGGLE);
         event.register(WAREHOUSE_TERMINAL_KEY);
     }
@@ -586,11 +577,6 @@ public class WandscapeClient {
             if (mc != null && mc.screen == null) {
                 Net.toServer(new com.wsteam.wandscape.content.warehouse.network.WarehouseTerminalKeyPacket());
             }
-        }
-        while (BUILD_ROTATE.consumeClick()) {
-            // R key: 建造投影调整阶段旋转 90 度（面板「旋转」按钮是同一动作的另一个入口）
-            if (searchFocused) continue;
-            ProjectionFlightController.rotateFromInput();
         }
     }
 

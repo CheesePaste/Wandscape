@@ -30,8 +30,9 @@ import org.lwjgl.glfw.GLFW;
  *
  * <p><b>瞄准阶段</b>：虚影每 tick 跟随准心，不需要按任何键。
  * <b>左键</b>旋转 90 度；<b>ALT+滚轮</b>沿「视线最近的轴」微调 1 格，并把虚影「定位」到锚点
- * （此后不再跟随准心）；<b>右键</b>打开施工屏（精确坐标 / 提交）；面板按钮与 Enter 键切换
- * 「定位 / 重新瞄准」。对照 Litematica 的 placement：固定锚点 + 沿视线轴 nudge + 快捷键旋转。
+ * （此后不再跟随准心）；<b>Enter</b> 与面板阶段按钮推进/回退阶段（瞄准 → 确认位置 → 定稿 → 重新瞄准）；
+ * <b>右键</b>打开施工屏（精确坐标 / 提交）。对照 Litematica 的 placement：固定锚点 + 沿视线轴 nudge
+ * + 快捷键旋转（这里用左键，避免与 JEI/EMI 的 R 配方键冲突）。
  * Movement is blocked globally by WandscapePanelController when the cursor is lifted.
  */
 public final class ProjectionFlightController {
@@ -161,7 +162,7 @@ public final class ProjectionFlightController {
     }
 
     /**
-     * 旋转待建建筑（R 键 / 面板「旋转」按钮共用的唯一入口）。
+     * 旋转待建建筑（左键 / 面板「旋转」按钮共用的唯一入口）。
      * 「已定稿」后拒绝：定稿的含义就是几何已确认，改朝向要先「重新瞄准」。
      */
     public static void rotateFromInput() {
@@ -238,12 +239,9 @@ public final class ProjectionFlightController {
         boolean rightClicked = rightDown && !wasRightDown;
         wasLeftDown = leftDown;
         wasRightDown = rightDown;
-        // 左键：阶段推进（只前进不回退）——瞄准 → 确认位置（进调整阶段）→ 定稿。
-        // 回退（重新瞄准）走面板按钮 / Enter，避免误点把已确认的位置清掉。
+        // 左键：旋转 90 度（与面板「旋转」按钮同一入口，定稿态会被 rotateFromInput 拒绝）
         if (leftClicked) {
-            if (!ProjectionClientState.isLocked()) {
-                ProjectionClientState.advancePlacementStage();
-            }
+            rotateFromInput();
         }
         // 右键：打开施工屏（精确坐标 / 提交）
         if (rightClicked) {

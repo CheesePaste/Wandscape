@@ -7,10 +7,6 @@
     "zh_cn": "切换建筑区域",
     "en_us": "Toggle Building Areas"
   },
-  "key.wandscape.build_rotate": {
-    "zh_cn": "旋转待建建筑",
-    "en_us": "Rotate Pending Building"
-  },
   "key.wandscape.guide": {
     "zh_cn": "打开指南书",
     "en_us": "Open Guidebook"

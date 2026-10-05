@@ -24,7 +24,7 @@ import net.minecraft.core.BlockPos;
 public final class BuildPopPanelOverlay {
 
     public static final int PANEL_W = 164;
-    /** 比旧版高一行：底部那行是「左键确认 · R 旋转 · ALT+滚轮微调」的键位提示。 */
+    /** 比旧版高一行：底部那行是「左键旋转 · Enter 确认 · ALT+滚轮微调」的键位提示。 */
     public static final int PANEL_H = 128;
     public static final int PANEL_RIGHT_MARGIN = 8;
     public static final int PANEL_TOP_MARGIN = WandscapePanelOverlay.TOP_BAR_H + 2;
@@ -40,7 +40,7 @@ public final class BuildPopPanelOverlay {
     private static final int SUBMIT_Y = CLEAR_Y + 17;
     private static final int HINT_Y = SUBMIT_Y + 17;
 
-    /** 「旋转」按钮：落在朝向那行右侧，与 R 键共用同一个动作。 */
+    /** 「旋转」按钮：落在朝向那行右侧，与左键共用同一个动作（键盘侧走左键，不再占独立键位）。 */
     private static final int ROTATE_BTN_W = 44;
     private static final int ROTATE_BTN_H = 14;
 
@@ -143,7 +143,7 @@ public final class BuildPopPanelOverlay {
         g.drawCenteredString(font, I18n.name(stageKey, stageFallback).getString(),
                 btnLockX + BTN_W / 2, btnLockY + 4, hoverLock ? 0xFFFFFFFF : 0xFFCCCCCC);
 
-        // Rotation angle + 「旋转」按钮（与 R 键同一动作；定稿后置灰不可用）
+        // Rotation angle + 「旋转」按钮（与左键同一动作；定稿后置灰不可用）
         y = panelY + ROT_Y;
         int rotDeg = ProjectionClientState.getRotationSteps() * 90;
         g.drawString(font, I18n.name("gui.wandscape.buildpop.rotation", "§7朝向: §e%s°", rotDeg).getString(), panelX + 8, y + 3, 0xFFFFFFFF, false);
@@ -203,9 +203,9 @@ public final class BuildPopPanelOverlay {
         g.fill(RenderType.guiOverlay(), submitX, submitY + BTN_H - 1, submitX + submitW, submitY + BTN_H, 0, 0xFF28A745);
         g.drawCenteredString(font, I18n.name("gui.wandscape.buildpop.submit", "提交施工").getString(), submitX + submitW / 2, submitY + 4, hoverSubmit ? 0xFFFFFFFF : 0xFFAADDBB);
 
-        // 键位提示行：全仓只此一处解释「左键 / R / ALT+滚轮」，别再往别的行塞第二份
+        // 键位提示行：全仓只此一处解释「左键 / Enter / ALT+滚轮」，别再往别的行塞第二份
         g.drawCenteredString(font, I18n.name("gui.wandscape.buildpop.hint",
-                        "§8左键确认 · R 旋转 · ALT+滚轮微调").getString(),
+                        "§8左键旋转 · Enter 确认 · ALT+滚轮微调").getString(),
                 panelX + PANEL_W / 2, panelY + HINT_Y + 2, 0xFFFFFFFF);
     }
 
@@ -227,7 +227,7 @@ public final class BuildPopPanelOverlay {
         return mouseX >= btnX && mouseX <= btnX + BTN_W && mouseY >= btnY && mouseY <= btnY + BTN_H;
     }
 
-    /** 命中「旋转」按钮（朝向那行右侧，与 R 键同一动作）。 */
+    /** 命中「旋转」按钮（朝向那行右侧，与左键同一动作）。 */
     public static boolean isOverRotateButton(double mouseX, double mouseY, int screenW) {
         if (!isActive()) return false;
         int panelX = getPanelX(screenW);

@@ -242,7 +242,7 @@ public final class WandscapePanelController {
                 event.setCanceled(true);
                 return;
             }
-            // 「旋转」按钮：与 R 键同一入口（定稿后 rotateFromInput 自己会拒绝）
+            // 「旋转」按钮：与左键同一入口（定稿后 rotateFromInput 自己会拒绝）
             if (BuildPopPanelOverlay.isOverRotateButton(mouseX, mouseY, screenW)) {
                 ProjectionFlightController.rotateFromInput();
                 mc.getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(
@@ -713,7 +713,7 @@ public final class WandscapePanelController {
         }
 
         // Enter key in Build mode: 推进放置阶段（瞄准 → 确认位置 → 定稿 → 重新瞄准），
-        // 与面板那颗阶段按钮同源；左键只前进不回退，回退只在这里。
+        // 与面板那颗阶段按钮同源，是「确认」的键盘入口（左键已改回旋转）。
         if ((key == GLFW.GLFW_KEY_ENTER || key == GLFW.GLFW_KEY_KP_ENTER)
                 && WandscapePanelState.isPanelOpen()
                 && WandscapePanelState.getActiveSubMode() == WandscapePanelState.SubMode.BUILD_PROJECTION
