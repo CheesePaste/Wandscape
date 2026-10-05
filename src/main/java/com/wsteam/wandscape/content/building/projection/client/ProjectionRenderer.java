@@ -20,8 +20,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 
-import java.util.List;
-
 /**
  * World-space rendering for soul projection mode.
  */
@@ -56,7 +54,7 @@ public final class ProjectionRenderer {
         BlockPos ghostPos = ProjectionClientState.getGhostPos();
         if (ghostPos == null) return;
 
-        BuildingSlot slot = getSelectedSlot();
+        BuildingSlot slot = ProjectionClientState.getSelectedSlot();
         BuildingConfig config = (slot != null) ? BuildingConfigLoader.getInstance().get(slot.id()) : null;
         if (config == null) return;
 
@@ -106,13 +104,6 @@ public final class ProjectionRenderer {
                 poseStack.popPose();
             }
         }
-    }
-
-    private static BuildingSlot getSelectedSlot() {
-        List<BuildingSlot> slots = ProjectionClientState.getBuildingSlots();
-        int index = ProjectionClientState.getSelectedSlotIndex();
-        if (slots.isEmpty() || index < 0 || index >= slots.size()) return null;
-        return slots.get(index);
     }
 
     private static void drawAABBOutline(VertexConsumer vc, PoseStack.Pose poseEntry,

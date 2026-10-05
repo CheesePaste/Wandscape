@@ -227,12 +227,23 @@ public final class ProjectionClientState {
         ghostPos = pos;
     }
 
+    /**
+     * 当前选中的槽位，**不复制槽位表**。
+     * 逐帧渲染路径（{@code ProjectionRenderer}）只要这一条，走 {@link #getBuildingSlots()}
+     * 会每帧 {@code List.copyOf} 整份列表（含加锁）。
+     */
+    public static BuildingSlot getSelectedSlot() {
+        synchronized (buildingSlots) {
+            int index = selectedSlotIndex;
+            if (index < 0 || index >= buildingSlots.size()) return null;
+            return buildingSlots.get(index);
+        }
+    }
+
     /** 当前选中的建筑配置；槽位为空或索引越界时返回 null。 */
     public static BuildingConfig getSelectedConfig() {
-        List<BuildingSlot> slots = getBuildingSlots();
-        int index = selectedSlotIndex;
-        if (slots.isEmpty() || index < 0 || index >= slots.size()) return null;
-        return BuildingConfigLoader.getInstance().get(slots.get(index).id());
+        BuildingSlot slot = getSelectedSlot();
+        return slot == null ? null : BuildingConfigLoader.getInstance().get(slot.id());
     }
 
     /**

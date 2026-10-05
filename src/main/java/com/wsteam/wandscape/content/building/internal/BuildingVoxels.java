@@ -44,11 +44,17 @@ public final class BuildingVoxels {
     private BuildingVoxels() {}
 
     /**
-     * Rotated pattern offsets per (config instance, rotation). Keyed by the config
-     * object's identity so a `/reload` that replaces the config (same id, new
-     * object) never serves stale rotated offsets. Rotation is anchor-independent.
+     * Rotated pattern offsets per (config id, rotation)。
+     *
+     * <p>键走 {@code config.id()}（配置的权威唯一键），值里记着烘这份表的 {@code source} 实例：
+     * 以前用 {@code System.identityHashCode} 当键，每次 datapack reload / 入服同步换实例都会
+     * 留下一条永不回收的整条旋转 pattern（大建筑每份几十 MB）。实例换了先做**一次**内容比对，
+     * 相同就认下新实例（此后走身份短路不再比），真变了才重算——即
+     * {@code docs/domain-notes.md} §16 的统一姿势。旋转与 anchor 无关，所以键里不含 anchor。
      */
-    private static final Map<String, List<BlockOffset>> ROTATED_PATTERN_CACHE = new ConcurrentHashMap<>();
+    private record RotatedEntry(BuildingConfig source, List<BlockOffset> offsets) {}
+
+    private static final Map<String, RotatedEntry> ROTATED_PATTERN_CACHE = new ConcurrentHashMap<>();
 
     /**
      * The world-space voxels a building configuration would occupy at an anchor
@@ -206,19 +212,28 @@ public final class BuildingVoxels {
         return new BoundingBox(minX, minY, minZ, maxX, maxY, maxZ);
     }
 
-    /** Rotated pattern offsets with a per-(config instance, rotation) cache so previews stay cheap. */
+    /** Rotated pattern offsets with a per-(config id, rotation) cache so previews stay cheap. */
     public static List<BlockOffset> rotatedOffsets(BuildingConfig config, int rotationSteps) {
         int rot = rotationSteps & 3;
-        String key = System.identityHashCode(config) + "|" + rot;
-        List<BlockOffset> cached = ROTATED_PATTERN_CACHE.get(key);
-        if (cached != null) return cached;
+        String key = config.id() + '|' + rot;
+        RotatedEntry cached = ROTATED_PATTERN_CACHE.get(key);
+        if (cached != null) {
+            if (cached.source() == config) {
+                return cached.offsets();
+            }
+            if (cached.source().equals(config)) {
+                // 同 id 的新实例、内容一致：认下新实例，此后不再逐帧比内容
+                ROTATED_PATTERN_CACHE.put(key, new RotatedEntry(config, cached.offsets()));
+                return cached.offsets();
+            }
+        }
         List<BlockOffset> pattern = config.pattern();
         List<BlockOffset> rotated = BuildingRotation.rotateOffsets(pattern, rot);
         if (rotated == pattern) {
             rotated = new ArrayList<>(pattern); // keep cache per-call detached from the shared list
         }
         List<BlockOffset> unmod = Collections.unmodifiableList(rotated);
-        ROTATED_PATTERN_CACHE.put(key, unmod);
+        ROTATED_PATTERN_CACHE.put(key, new RotatedEntry(config, unmod));
         return unmod;
     }
 }

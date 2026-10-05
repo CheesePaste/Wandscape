@@ -85,6 +85,12 @@ public final class BuildingAreaRenderer {
         poseStack.translate(-camPos.x, -camPos.y, -camPos.z);
         PoseStack.Pose pose = poseStack.last();
 
+        // 两种 RenderType 各取一次 consumer，循环里只写顶点、循环外统一 flush：
+        // 原先每个 interact spot 各 endBatch 两次、每栋边界再一次，大镇（100 栋 × 2 spot）
+        // 每帧就是 400+ 次 draw call。
+        VertexConsumer quads = buf.getBuffer(RenderType.debugQuads());
+        VertexConsumer lines = buf.getBuffer(RenderType.lines());
+
         for (var entry : buildings) {
             if (!entry.hasBoundary()) continue;
 
@@ -109,43 +115,40 @@ public final class BuildingAreaRenderer {
                     float zx0 = anchor.getX() + rotated.x();
                     float zy0 = anchor.getY() + rotated.y();
                     float zz0 = anchor.getZ() + rotated.z();
-                    renderZone(buf, pose, zx0, zy0, zz0, zx0 + 1f, zy0 + 1f, zz0 + 1f);
+                    renderZone(quads, lines, pose, zx0, zy0, zz0, zx0 + 1f, zy0 + 1f, zz0 + 1f);
                 }
             }
 
             // Render building boundary reference (subtle green)
-            renderBoundary(buf, pose, bx0, by0, bz0, bx1, by1, bz1);
+            renderBoundary(lines, pose, bx0, by0, bz0, bx1, by1, bz1);
         }
+
+        buf.endBatch(RenderType.debugQuads());
+        buf.endBatch(RenderType.lines());
 
         poseStack.popPose();
     }
 
-    private static void renderZone(MultiBufferSource.BufferSource buf, PoseStack.Pose pose,
+    private static void renderZone(VertexConsumer quads, VertexConsumer lines, PoseStack.Pose pose,
                                     float x0, float y0, float z0, float x1, float y1, float z1) {
         // Semi-transparent faces
-        VertexConsumer fvc = buf.getBuffer(RenderType.debugQuads());
         int r = ZONE_FACE_R, g = ZONE_FACE_G, b = ZONE_FACE_B, a = ZONE_FACE_A;
-        quad(fvc, pose, x0, y0, z0, x1, y0, z0, x1, y0, z1, x0, y0, z1, r, g, b, a); // bottom
-        quad(fvc, pose, x0, y1, z0, x0, y1, z1, x1, y1, z1, x1, y1, z0, r, g, b, a); // top
-        quad(fvc, pose, x0, y0, z0, x0, y1, z0, x1, y1, z0, x1, y0, z0, r, g, b, a); // back
-        quad(fvc, pose, x1, y0, z0, x1, y1, z0, x1, y1, z1, x1, y0, z1, r, g, b, a); // right
-        quad(fvc, pose, x0, y0, z1, x1, y0, z1, x1, y1, z1, x0, y1, z1, r, g, b, a); // front
-        quad(fvc, pose, x0, y0, z0, x0, y0, z1, x0, y1, z1, x0, y1, z0, r, g, b, a); // left
-        buf.endBatch(RenderType.debugQuads());
+        quad(quads, pose, x0, y0, z0, x1, y0, z0, x1, y0, z1, x0, y0, z1, r, g, b, a); // bottom
+        quad(quads, pose, x0, y1, z0, x0, y1, z1, x1, y1, z1, x1, y1, z0, r, g, b, a); // top
+        quad(quads, pose, x0, y0, z0, x0, y1, z0, x1, y1, z0, x1, y0, z0, r, g, b, a); // back
+        quad(quads, pose, x1, y0, z0, x1, y1, z0, x1, y1, z1, x1, y0, z1, r, g, b, a); // right
+        quad(quads, pose, x0, y0, z1, x1, y0, z1, x1, y1, z1, x0, y1, z1, r, g, b, a); // front
+        quad(quads, pose, x0, y0, z0, x0, y0, z1, x0, y1, z1, x0, y1, z0, r, g, b, a); // left
 
         // Edges
-        VertexConsumer lvc = buf.getBuffer(RenderType.lines());
-        BuildingOutline.box(lvc, pose, x0, y0, z0, x1, y1, z1,
+        BuildingOutline.box(lines, pose, x0, y0, z0, x1, y1, z1,
                 ZONE_LINE_R, ZONE_LINE_G, ZONE_LINE_B, ZONE_LINE_A);
-        buf.endBatch(RenderType.lines());
     }
 
-    private static void renderBoundary(MultiBufferSource.BufferSource buf, PoseStack.Pose pose,
+    private static void renderBoundary(VertexConsumer lines, PoseStack.Pose pose,
                                         float x0, float y0, float z0, float x1, float y1, float z1) {
-        VertexConsumer lvc = buf.getBuffer(RenderType.lines());
-        BuildingOutline.box(lvc, pose, x0, y0, z0, x1, y1, z1,
+        BuildingOutline.box(lines, pose, x0, y0, z0, x1, y1, z1,
                 BOUND_LINE_R, BOUND_LINE_G, BOUND_LINE_B, BOUND_LINE_A);
-        buf.endBatch(RenderType.lines());
     }
 
     // ── Drawing helpers ──
