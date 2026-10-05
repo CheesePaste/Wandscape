@@ -24,6 +24,13 @@ public class BuildingTaskPool {
 
     private final Map<UUID, BuildingTaskQueue> queues = new ConcurrentHashMap<>();
 
+    @Nullable
+    public Runnable onChanged;
+
+    public void notifyChanged() {
+        if (onChanged != null) onChanged.run();
+    }
+
     private BuildingTaskQueue getOrCreate(UUID buildingId) {
         return queues.computeIfAbsent(buildingId, k -> new BuildingTaskQueue());
     }
@@ -42,16 +49,20 @@ public class BuildingTaskPool {
 
         if (!queue.hasHead()) {
             if (ConstructionBatches.isSplittable(item)) {
-                return enqueueBatches(buildingId, colonyId, ConstructionBatches.split(item, colonyId), pool);
+                long tid = enqueueBatches(buildingId, colonyId, ConstructionBatches.split(item, colonyId), pool);
+                notifyChanged();
+                return tid;
             }
             TaskRequest request = new TaskRequest(
                     item.blueprintId(), item.params(), item.priority(), colonyId);
             long taskId = pool.addTaskFromBuilding(request, buildingId);
             queue.setHeadTaskId(taskId);
+            notifyChanged();
             return taskId;
         }
 
         queue.enqueue(item);
+        notifyChanged();
         return -1;
     }
 
@@ -79,6 +90,7 @@ public class BuildingTaskPool {
             queue.setPendingBatches(split.remainingBatches());
             Log.info(TAG, "building {} published prep batch #{} ({} pending placement batches)",
                     buildingId.toString().substring(0, 8), taskId, split.remainingBatches().size());
+            notifyChanged();
             return taskId;
         } else {
             long firstId = pool.addTaskFromBuilding(split.initialBatch(), buildingId);
@@ -90,6 +102,7 @@ public class BuildingTaskPool {
             queue.clearPendingBatches();
             Log.info(TAG, "building {} published all {} batches concurrently",
                     buildingId.toString().substring(0, 8), 1 + split.remainingBatches().size());
+            notifyChanged();
             return firstId;
         }
     }
@@ -125,6 +138,7 @@ public class BuildingTaskPool {
         } else {
             queues.remove(buildingId); // clean up empty queue
         }
+        notifyChanged();
     }
 
     /**
@@ -142,6 +156,7 @@ public class BuildingTaskPool {
         }
         queue.removeActiveBatch(taskId);
         queue.addParked(taskId);
+        notifyChanged();
     }
 
     public boolean hasActiveBatches(UUID buildingId) {
@@ -198,8 +213,8 @@ public class BuildingTaskPool {
         }
 
         // 2. Prune finished parked batches
+        List<Long> doneParked = new ArrayList<>();
         if (queue.hasParked()) {
-            List<Long> doneParked = new ArrayList<>();
             for (long parkedId : new ArrayList<>(queue.getParkedTaskIds())) {
                 GlobalTask task = pool.get(parkedId);
                 if (task == null || task.state == TaskState.COMPLETED) {
@@ -209,6 +224,10 @@ public class BuildingTaskPool {
             for (long parkedId : doneParked) {
                 queue.removeParked(parkedId);
             }
+        }
+
+        if (!done.isEmpty() || !doneParked.isEmpty()) {
+            notifyChanged();
         }
 
         // If batches are still active or parked (waiting resources), not done yet
@@ -224,6 +243,7 @@ public class BuildingTaskPool {
                 long taskId = pool.addTaskFromBuilding(req, buildingId);
                 queue.addActiveBatch(taskId);
             }
+            notifyChanged();
             Log.info(TAG, "building {} foundation finished, released {} parallel placement batches",
                     buildingId.toString().substring(0, 8), pending.size());
             return false;
@@ -258,17 +278,23 @@ public class BuildingTaskPool {
     public void pruneParked(UUID buildingId, GlobalTaskPool pool) {
         BuildingTaskQueue queue = queues.get(buildingId);
         if (queue == null) return;
+        boolean changed = false;
         if (queue.hasParked()) {
             for (long taskId : new ArrayList<>(queue.getParkedTaskIds())) {
                 GlobalTask task = pool.get(taskId);
                 if (task == null || task.state == TaskState.COMPLETED) {
                     queue.removeParked(taskId);
+                    changed = true;
                 }
             }
         }
         // Clean up a queue left empty after its parked tasks completed with no new head.
         if (queue.isEmpty()) {
             queues.remove(buildingId, queue);
+            changed = true;
+        }
+        if (changed) {
+            notifyChanged();
         }
     }
 
@@ -302,6 +328,7 @@ public class BuildingTaskPool {
 
     public void clear() {
         queues.clear();
+        notifyChanged();
     }
 
     /** For persistence: all non-empty building queues. */
@@ -319,6 +346,7 @@ public class BuildingTaskPool {
     public List<Long> removeBuilding(UUID buildingId) {
         BuildingTaskQueue queue = queues.remove(buildingId);
         if (queue == null) return List.of();
+        notifyChanged();
         List<Long> ids = new ArrayList<>(queue.getAllActiveTaskIds());
         ids.addAll(queue.getParkedTaskIds());
         return ids;
@@ -335,6 +363,22 @@ public class BuildingTaskPool {
                     q.addParked(task.id);
                 } else {
                     q.addActiveBatch(task.id);
+                }
+                if (q.getColonyId() == null && task.taskParams != null && task.taskParams.containsKey("colony_id")) {
+                    try {
+                        q.setColonyId(UUID.fromString(task.taskParams.get("colony_id").getAsString()));
+                    } catch (Exception ignored) {}
+                }
+                if (!q.hasCompletionData() && task.taskParams != null && task.taskParams.containsKey("building_id")) {
+                    Map<String, String> comp = new LinkedHashMap<>();
+                    comp.put("building_id", task.buildingId.toString());
+                    if (task.taskParams.containsKey("building_type")) {
+                        comp.put("building_type", task.taskParams.get("building_type").getAsString());
+                    }
+                    if (task.taskParams.containsKey("recipe_id")) {
+                        comp.put("recipe_id", task.taskParams.get("recipe_id").getAsString());
+                    }
+                    q.setCompletionData(comp);
                 }
             }
         }

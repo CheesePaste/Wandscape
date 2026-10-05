@@ -3,7 +3,10 @@ import com.wsteam.wandscape.content.task.ecs.World;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
+import com.wsteam.wandscape.content.building.data.WorkItem;
 import com.wsteam.wandscape.content.building.internal.BuildingSavedData;
+import com.wsteam.wandscape.content.task.engine.pool.BuildingTaskPool;
+import com.wsteam.wandscape.content.task.engine.pool.BuildingTaskQueue;
 import com.wsteam.wandscape.content.task.types.ResourceId;
 import com.wsteam.wandscape.content.task.types.ResourceStack;
 import com.wsteam.wandscape.foundation.log.Log;
@@ -21,10 +24,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
@@ -56,17 +56,20 @@ public final class TaskPoolSavedData extends SavedData {
     private static final int MAX_PARAM_JSON_BYTES = 60000;
 
     private final GlobalTaskPool pool;
+    @Nullable
+    private final BuildingTaskPool buildingPool;
 
-    private TaskPoolSavedData(GlobalTaskPool pool) {
+    private TaskPoolSavedData(GlobalTaskPool pool, @Nullable BuildingTaskPool buildingPool) {
         this.pool = pool;
+        this.buildingPool = buildingPool;
     }
 
-    /** Get or create the saved-data instance for the given pool. */
+    /** Get or create the saved-data instance for the given pool and optional building task pool. */
     public static TaskPoolSavedData getOrCreate(
-            net.minecraft.server.level.ServerLevel level, GlobalTaskPool pool) {
+            net.minecraft.server.level.ServerLevel level, GlobalTaskPool pool, @Nullable BuildingTaskPool buildingPool) {
         return level.getDataStorage().computeIfAbsent(
-                new Factory<>(() -> new TaskPoolSavedData(pool),
-                        (tag, registries) -> load(pool, tag, level)),
+                new Factory<>(() -> new TaskPoolSavedData(pool, buildingPool),
+                        (tag, registries) -> load(pool, buildingPool, tag, level)),
                 DATA_NAME);
     }
 
@@ -90,7 +93,72 @@ public final class TaskPoolSavedData extends SavedData {
         }
         tag.put("tasks", list);
         tag.putLong("nextId", pool.getNextTaskId());
-        Log.info(TAG, "[TaskPoolSavedData] saved {} tasks (nextId={})", list.size(), pool.getNextTaskId());
+
+        if (buildingPool != null) {
+            ListTag bqList = new ListTag();
+            for (Map.Entry<UUID, BuildingTaskQueue> entry : buildingPool.getAll().entrySet()) {
+                UUID bid = entry.getKey();
+                BuildingTaskQueue q = entry.getValue();
+                CompoundTag bTag = new CompoundTag();
+                bTag.putUUID("bid", bid);
+                if (q.getColonyId() != null) {
+                    bTag.putUUID("colony", q.getColonyId());
+                }
+                if (q.getHeadTaskId() != null) {
+                    bTag.putLong("head", q.getHeadTaskId());
+                }
+                if (q.hasActiveBatches()) {
+                    ListTag activeList = new ListTag();
+                    for (long id : q.getActiveBatchIds()) {
+                        CompoundTag idTag = new CompoundTag();
+                        idTag.putLong("id", id);
+                        activeList.add(idTag);
+                    }
+                    bTag.put("active", activeList);
+                }
+                if (q.hasParked()) {
+                    ListTag parkedList = new ListTag();
+                    for (long id : q.getParkedTaskIds()) {
+                        CompoundTag idTag = new CompoundTag();
+                        idTag.putLong("id", id);
+                        parkedList.add(idTag);
+                    }
+                    bTag.put("parked", parkedList);
+                }
+                if (q.hasCompletionData()) {
+                    CompoundTag compTag = new CompoundTag();
+                    for (Map.Entry<String, String> ce : q.getCompletionData().entrySet()) {
+                        compTag.putString(ce.getKey(), ce.getValue());
+                    }
+                    bTag.put("comp", compTag);
+                }
+                if (q.hasPendingBatches()) {
+                    ListTag pbList = new ListTag();
+                    for (TaskRequest req : q.getPendingBatches()) {
+                        CompoundTag reqTag = taskRequestToNbt(req);
+                        if (reqTag != null) {
+                            pbList.add(reqTag);
+                        }
+                    }
+                    bTag.put("pending_batches", pbList);
+                }
+                if (q.hasPending()) {
+                    ListTag piList = new ListTag();
+                    for (WorkItem wi : q.getPending()) {
+                        CompoundTag wiTag = workItemToNbt(wi);
+                        if (wiTag != null) {
+                            piList.add(wiTag);
+                        }
+                    }
+                    bTag.put("pending_items", piList);
+                }
+                bqList.add(bTag);
+            }
+            tag.put("building_queues", bqList);
+        }
+
+        Log.info(TAG, "[TaskPoolSavedData] saved {} tasks, {} building queues (nextId={})",
+                list.size(), buildingPool != null ? buildingPool.totalBuildings() : 0, pool.getNextTaskId());
         return tag;
     }
 
@@ -115,22 +183,7 @@ public final class TaskPoolSavedData extends SavedData {
         }
         tag.putBoolean("head", task.isBuildingHead);
 
-        // taskParams: store each JsonElement value as a string; oversized JSON is gzip-compressed
-        // into a ByteArrayTag because NBT StringTag has a 64KB write limit.
-        if (!task.taskParams.isEmpty()) {
-            CompoundTag params = new CompoundTag();
-            CompoundTag paramsCompressed = new CompoundTag();
-            for (var entry : task.taskParams.entrySet()) {
-                String json = entry.getValue().toString();
-                if (json.getBytes(StandardCharsets.UTF_8).length > MAX_PARAM_JSON_BYTES) {
-                    paramsCompressed.putByteArray(entry.getKey(), gzip(json));
-                } else {
-                    params.putString(entry.getKey(), json);
-                }
-            }
-            if (!params.isEmpty()) tag.put("params", params);
-            if (!paramsCompressed.isEmpty()) tag.put("params_c", paramsCompressed);
-        }
+        writeParams(tag, task.taskParams);
 
         // awaitingResource (now a list, persisted as ListTag of CompoundTags)
         if (task.awaitingResource != null && !task.awaitingResource.isEmpty()) {
@@ -147,11 +200,89 @@ public final class TaskPoolSavedData extends SavedData {
         return tag;
     }
 
+    private static CompoundTag taskRequestToNbt(TaskRequest req) {
+        CompoundTag tag = new CompoundTag();
+        tag.putString("bp", req.blueprintId());
+        tag.putInt("priority", req.priority());
+        if (req.colonyId() != null) {
+            tag.putUUID("colony", req.colonyId());
+        }
+        writeParams(tag, req.params());
+        return tag;
+    }
+
+    @Nullable
+    private static TaskRequest taskRequestFromNbt(CompoundTag tag) {
+        String bp = tag.getString("bp");
+        if (bp.isEmpty()) return null;
+        int priority = tag.getInt("priority");
+        UUID colonyId = tag.contains("colony") ? tag.getUUID("colony") : null;
+        Map<String, JsonElement> params = readParams(tag);
+        return new TaskRequest(bp, params, priority, colonyId);
+    }
+
+    private static CompoundTag workItemToNbt(WorkItem item) {
+        CompoundTag tag = new CompoundTag();
+        tag.putString("bp", item.blueprintId());
+        tag.putInt("priority", item.priority());
+        writeParams(tag, item.params());
+        return tag;
+    }
+
+    @Nullable
+    private static WorkItem workItemFromNbt(CompoundTag tag) {
+        String bp = tag.getString("bp");
+        if (bp.isEmpty()) return null;
+        int priority = tag.getInt("priority");
+        Map<String, JsonElement> params = readParams(tag);
+        return new WorkItem(bp, params, priority);
+    }
+
+    private static void writeParams(CompoundTag target, Map<String, JsonElement> paramsMap) {
+        if (paramsMap == null || paramsMap.isEmpty()) return;
+        CompoundTag params = new CompoundTag();
+        CompoundTag paramsCompressed = new CompoundTag();
+        for (var entry : paramsMap.entrySet()) {
+            String json = entry.getValue().toString();
+            if (json.getBytes(StandardCharsets.UTF_8).length > MAX_PARAM_JSON_BYTES) {
+                paramsCompressed.putByteArray(entry.getKey(), gzip(json));
+            } else {
+                params.putString(entry.getKey(), json);
+            }
+        }
+        if (!params.isEmpty()) target.put("params", params);
+        if (!paramsCompressed.isEmpty()) target.put("params_c", paramsCompressed);
+    }
+
+    private static Map<String, JsonElement> readParams(CompoundTag tag) {
+        Map<String, JsonElement> taskParams = new HashMap<>();
+        if (tag.contains("params_c")) {
+            CompoundTag compressed = tag.getCompound("params_c");
+            for (String key : compressed.getAllKeys()) {
+                byte[] data = compressed.getByteArray(key);
+                try {
+                    taskParams.put(key, tryParseJson(ungzip(data)));
+                } catch (IOException e) {
+                    taskParams.put(key, tryParseJson(new String(data, StandardCharsets.UTF_8)));
+                }
+            }
+        }
+        if (tag.contains("params")) {
+            CompoundTag paramsTag = tag.getCompound("params");
+            for (String key : paramsTag.getAllKeys()) {
+                String raw = paramsTag.getString(key);
+                taskParams.put(key, tryParseJson(raw));
+            }
+        }
+        return taskParams;
+    }
+
     // ================================================================
     // NBT load
     // ================================================================
 
-    private static TaskPoolSavedData load(GlobalTaskPool pool, CompoundTag tag, @Nullable net.minecraft.server.level.ServerLevel level) {
+    private static TaskPoolSavedData load(GlobalTaskPool pool, @Nullable BuildingTaskPool buildingPool,
+                                          CompoundTag tag, @Nullable net.minecraft.server.level.ServerLevel level) {
         ListTag list = tag.getList("tasks", Tag.TAG_COMPOUND);
         int loaded = 0;
         for (int i = 0; i < list.size(); i++) {
@@ -169,8 +300,75 @@ public final class TaskPoolSavedData extends SavedData {
                 pool.setNextTaskId(savedNextId);
             }
         }
-        Log.info(TAG, "[TaskPoolSavedData] loaded {} tasks (nextId={})", loaded, pool.getNextTaskId());
-        return new TaskPoolSavedData(pool);
+
+        int loadedQueues = 0;
+        if (tag.contains("building_queues") && buildingPool != null) {
+            ListTag bqList = tag.getList("building_queues", Tag.TAG_COMPOUND);
+            for (int i = 0; i < bqList.size(); i++) {
+                CompoundTag bTag = bqList.getCompound(i);
+                UUID bid = bTag.getUUID("bid");
+                if (level != null) {
+                    var buildingSd = BuildingSavedData.get(level);
+                    if (buildingSd != null && buildingSd.getBuilding(bid) == null) {
+                        Log.info(TAG, "[TaskPoolSavedData] Dropping building queue for removed building {}", bid);
+                        continue;
+                    }
+                }
+                BuildingTaskQueue q = new BuildingTaskQueue();
+                if (bTag.contains("colony")) {
+                    q.setColonyId(bTag.getUUID("colony"));
+                }
+                if (bTag.contains("head")) {
+                    q.setHeadTaskId(bTag.getLong("head"));
+                }
+                if (bTag.contains("active")) {
+                    ListTag activeList = bTag.getList("active", Tag.TAG_COMPOUND);
+                    for (int j = 0; j < activeList.size(); j++) {
+                        q.addActiveBatch(activeList.getCompound(j).getLong("id"));
+                    }
+                }
+                if (bTag.contains("parked")) {
+                    ListTag parkedList = bTag.getList("parked", Tag.TAG_COMPOUND);
+                    for (int j = 0; j < parkedList.size(); j++) {
+                        q.addParked(parkedList.getCompound(j).getLong("id"));
+                    }
+                }
+                if (bTag.contains("comp")) {
+                    CompoundTag compTag = bTag.getCompound("comp");
+                    Map<String, String> compMap = new LinkedHashMap<>();
+                    for (String key : compTag.getAllKeys()) {
+                        compMap.put(key, compTag.getString(key));
+                    }
+                    q.setCompletionData(compMap);
+                }
+                if (bTag.contains("pending_batches")) {
+                    ListTag pbList = bTag.getList("pending_batches", Tag.TAG_COMPOUND);
+                    List<TaskRequest> pBatches = new ArrayList<>();
+                    for (int j = 0; j < pbList.size(); j++) {
+                        TaskRequest req = taskRequestFromNbt(pbList.getCompound(j));
+                        if (req != null) {
+                            pBatches.add(req);
+                        }
+                    }
+                    q.setPendingBatches(pBatches);
+                }
+                if (bTag.contains("pending_items")) {
+                    ListTag piList = bTag.getList("pending_items", Tag.TAG_COMPOUND);
+                    for (int j = 0; j < piList.size(); j++) {
+                        WorkItem wi = workItemFromNbt(piList.getCompound(j));
+                        if (wi != null) {
+                            q.enqueue(wi);
+                        }
+                    }
+                }
+                buildingPool.putQueue(bid, q);
+                loadedQueues++;
+            }
+        }
+
+        Log.info(TAG, "[TaskPoolSavedData] loaded {} tasks, {} building queues (nextId={})",
+                loaded, loadedQueues, pool.getNextTaskId());
+        return new TaskPoolSavedData(pool, buildingPool);
     }
 
     @Nullable
@@ -179,28 +377,7 @@ public final class TaskPoolSavedData extends SavedData {
         String blueprintId = tag.getString("bp");
         if (blueprintId.isEmpty()) return null;
 
-        // Reconstruct taskParams. Compressed params first (gzip'd during save), then plain strings.
-        Map<String, JsonElement> taskParams = new HashMap<>();
-        if (tag.contains("params_c")) {
-            CompoundTag compressed = tag.getCompound("params_c");
-            for (String key : compressed.getAllKeys()) {
-                byte[] data = compressed.getByteArray(key);
-                try {
-                    taskParams.put(key, tryParseJson(ungzip(data)));
-                } catch (IOException e) {
-                    // Fall back: bytes may be an uncompressed string if gzip failed during save.
-                    taskParams.put(key, tryParseJson(new String(data, StandardCharsets.UTF_8)));
-                }
-            }
-        }
-        if (tag.contains("params")) {
-            CompoundTag paramsTag = tag.getCompound("params");
-            for (String key : paramsTag.getAllKeys()) {
-                String raw = paramsTag.getString(key);
-                // Parse via Gson to preserve JSON structure
-                taskParams.put(key, tryParseJson(raw));
-            }
-        }
+        Map<String, JsonElement> taskParams = readParams(tag);
 
         // Defense-in-depth: If this is a building task for a building that was deleted/undone, drop it
         if (level != null) {
