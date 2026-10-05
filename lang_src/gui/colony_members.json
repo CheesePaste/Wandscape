@@ -54,5 +54,17 @@
   "gui.wandscape.colony_members.section.online": {
     "zh_cn": "可邀请的在线玩家",
     "en_us": "Invitable Players"
+  },
+  "gui.wandscape.colony_members.transfer.start": {
+    "zh_cn": "转让镇长",
+    "en_us": "Transfer Owner"
+  },
+  "gui.wandscape.colony_members.transfer.cancel": {
+    "zh_cn": "取消转让",
+    "en_us": "Cancel"
+  },
+  "gui.wandscape.colony_members.transfer": {
+    "zh_cn": "转让",
+    "en_us": "Transfer"
   }
 }

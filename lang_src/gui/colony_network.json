@@ -122,5 +122,17 @@
   "message.wandscape.colony_network.switch_failed": {
     "zh_cn": "§c[魔法小镇] 无法切换到该小镇：你已不是可切换的成员（盟友档位不可切换）。",
     "en_us": "§c[Wandscape] Cannot switch to that town: you are no longer a switchable member (Ally rank cannot switch)."
+  },
+  "message.wandscape.colony_network.transferred": {
+    "zh_cn": "§a[魔法小镇] 已将「%s」的镇长转让给 %s，你的档位降为 %s。",
+    "en_us": "§a[Wandscape] Transferred %s to %s; you are now %s."
+  },
+  "message.wandscape.colony_network.you_became_owner": {
+    "zh_cn": "§a[魔法小镇] 你已成为「%s」的镇长。",
+    "en_us": "§a[Wandscape] You are now the Owner of %s."
+  },
+  "message.wandscape.colony_network.transfer_self": {
+    "zh_cn": "§c[魔法小镇] 不能把镇长转让给自己。",
+    "en_us": "§c[Wandscape] You cannot transfer ownership to yourself."
   }
 }

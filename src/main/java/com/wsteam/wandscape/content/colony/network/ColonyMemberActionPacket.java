@@ -23,7 +23,7 @@ import java.util.UUID;
 import static com.wsteam.wandscape.Wandscape.MODID;
 
 /**
- * Client→Server: 花名册的一次动作（发起邀请 / 接受 / 拒绝 / 调档位 / 移除成员 / 切换查看的小镇）。
+ * Client→Server: 花名册的一次动作（发起邀请 / 接受 / 拒绝 / 调档位 / 移除成员 / 转让镇长 / 切换查看的小镇）。
  *
  * <p>客户端只发**意图**：包里的 colonyId / target / role 一律视为不可信输入，服务端在 handler 里
  * 按花名册与内存邀请记录**权威重判**每一支动作的权限与参数。档位粗筛由统一网关
@@ -41,8 +41,12 @@ public record ColonyMemberActionPacket(Action action, UUID colonyId, UUID target
      * <p>{@code SELECT} 不是花名册变更，而是「把这座镇设为我的当前镇」：客户端在小镇列表里点一行时发它，
      * 服务端校验「可切换」（档位 ≥ MEMBER，见 {@code ActiveColonyTracker}）后 setActive 并统一推送。
      * {@link ColonyRole#ALLY} 不可切换——它零操作权限，切过去也什么都做不了，故网关就按 MEMBER 拦掉。
+     *
+     * <p>{@code TRANSFER} 是**唯一**能把人变成 OWNER 的动作（{@code SET_ROLE} 明确拒绝 OWNER，
+     * 邀请也不得授予 OWNER）：客户端在小镇面板的成员行上选一个人，服务端校验发起者是该镇 OWNER、
+     * 目标是本镇非 OWNER 成员后，走 {@code ColonyApi.transferOwner}（前任降 MANAGER）。
      */
-    public enum Action { INVITE, ACCEPT, DECLINE, SET_ROLE, REMOVE, SELECT }
+    public enum Action { INVITE, ACCEPT, DECLINE, SET_ROLE, REMOVE, SELECT, TRANSFER }
 
     private static final String TAG = "ColonyMemberActionPacket";
 
@@ -64,7 +68,7 @@ public record ColonyMemberActionPacket(Action action, UUID colonyId, UUID target
      * 网关作用域：目标镇 + 该动作要求的最低档位。
      *
      * <ul>
-     *   <li>{@code INVITE} → MANAGER；{@code SET_ROLE} / {@code REMOVE} → OWNER（仅镇长）；</li>
+     *   <li>{@code INVITE} → MANAGER；{@code SET_ROLE} / {@code REMOVE} / {@code TRANSFER} → OWNER（仅镇长）；</li>
      *   <li>{@code SELECT} → MEMBER：可切换的下限。ALLY 只有白名单权限，切过去没有意义，网关直接拒；</li>
      *   <li>{@code ACCEPT} / {@code DECLINE} → **不过网关**：执行者是被邀方本人，此刻还不在花名册上、
      *       没有档位可判，必须由 handler 按「服务端内存里发给本人的待处理邀请」校验，
@@ -76,7 +80,8 @@ public record ColonyMemberActionPacket(Action action, UUID colonyId, UUID target
         if (colonyId == null || action == null) return ColonyScope.NONE;
         return switch (action) {
             case INVITE -> ColonyScope.atLeast(colonyId, ColonyRole.MANAGER, WHAT_KEY, WHAT_FALLBACK);
-            case SET_ROLE, REMOVE -> ColonyScope.atLeast(colonyId, ColonyRole.OWNER, WHAT_KEY, WHAT_FALLBACK);
+            case SET_ROLE, REMOVE, TRANSFER ->
+                    ColonyScope.atLeast(colonyId, ColonyRole.OWNER, WHAT_KEY, WHAT_FALLBACK);
             case SELECT -> ColonyScope.atLeast(colonyId, ColonyRole.MEMBER, WHAT_KEY, WHAT_FALLBACK);
             // ACCEPT / DECLINE：被邀方本人，还不是成员（见上）。将来新增动作若忘记在此声明，
             // 默认不过网关——漏声明只会少一层兜底，不会误拒正常操作，权威判定仍在 handler。
@@ -106,6 +111,7 @@ public record ColonyMemberActionPacket(Action action, UUID colonyId, UUID target
                 case DECLINE -> decline(actor, packet.colonyId());
                 case SET_ROLE -> setRole(actor, server, packet.colonyId(), packet.target(), packet.role());
                 case REMOVE -> remove(actor, server, packet.colonyId(), packet.target());
+                case TRANSFER -> transfer(actor, server, packet.colonyId(), packet.target());
                 case SELECT -> select(actor, packet.colonyId());
             }
         } catch (Throwable t) {
@@ -374,6 +380,73 @@ public record ColonyMemberActionPacket(Action action, UUID colonyId, UUID target
                 ColonyRosterSyncService.displayName(server, targetId), colonyName);
         Log.info(TAG, "{} removed {} from colony {}", name(actor), shortId(targetId), shortId(colonyId));
 
+        ColonyRosterSyncService.pushColony(server, colonyId);
+        ColonyRosterSyncService.pushFor(actor);
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    //  TRANSFER：仅 OWNER，把镇长让给本镇另一位成员（前任降 MANAGER）
+    // ══════════════════════════════════════════════════════════════
+
+    /**
+     * 转让所有权：小镇面板成员行上的「转让」走到这里。
+     *
+     * <p>这是**唯一**能产出新 OWNER 的路径（{@link #setRole} 与 {@link #invite} 都显式拒绝 OWNER），
+     * 所以这里必须把「谁能给、能给谁」判死：发起者须是该镇 OWNER，目标须是**本镇花名册上**的
+     * 非 OWNER 成员。目标可以离线——花名册是权威，转让不要求对方在场（否则人一走就交接不了）。
+     *
+     * <p>真正的落库走 {@code ColonyApi.transferOwner}：新人置 OWNER、前任降 MANAGER、
+     * 「一座镇恒有且仅有一个 OWNER」的不变量由它守护，本类不自行改花名册。
+     */
+    private static void transfer(ServerPlayer actor, MinecraftServer server,
+                                 @Nullable UUID colonyId, @Nullable UUID targetId) {
+        ColonyApi api = colonyApi();
+        if (api == null || colonyId == null || targetId == null) {
+            toast(actor, true, "invalid", "§c[魔法小镇] 无效的成员操作请求。");
+            return;
+        }
+        // 权威重判（网关已按 OWNER 兜底；这里不依赖网关单独下结论，网关被绕过也不能越权）。
+        if (!ColonyOwnership.hasRole(actor, colonyId, ColonyRole.OWNER)) {
+            ColonyOwnership.deny(actor, WHAT_KEY, WHAT_FALLBACK);
+            return;
+        }
+        if (targetId.equals(actor.getUUID())) {
+            toast(actor, true, "transfer_self", "§c[魔法小镇] 不能把镇长转让给自己。");
+            return;
+        }
+        ColonyRole targetRole = api.getRole(colonyId, targetId);
+        if (targetRole == null) {
+            toast(actor, true, "target_not_member", "§c[魔法小镇] 该玩家不在此小镇花名册中。");
+            return;
+        }
+        if (targetRole == ColonyRole.OWNER) {
+            // 一镇恒有一个 OWNER：走到这里说明花名册被外部改坏或本包重放，宁可拒绝也不覆盖。
+            toast(actor, true, "cannot_touch_owner", "§c[魔法小镇] 不能改动或移除 OWNER 的档位。");
+            Log.warn(TAG, "Refused to transfer colony {} to {}: target is already OWNER",
+                    shortId(colonyId), shortId(targetId));
+            return;
+        }
+        if (!api.transferOwner(colonyId, targetId)) {
+            toast(actor, true, "write_failed", "§c[魔法小镇] 花名册写入失败，请重试。");
+            Log.warn(TAG, "transferOwner failed: colony {} → {}", shortId(colonyId), shortId(targetId));
+            return;
+        }
+
+        String colonyName = safeName(api, colonyId);
+        String targetName = ColonyRosterSyncService.displayName(server, targetId);
+        toast(actor, false, "transferred", "§a[魔法小镇] 已将「%s」的镇长转让给 %s，你的档位降为 %s。",
+                colonyName, targetName, ColonyRosterSyncService.roleLabel(ColonyRole.MANAGER));
+        Log.info(TAG, "{} transferred colony {} ownership to {}", name(actor), shortId(colonyId), shortId(targetId));
+
+        ServerPlayer target = server.getPlayerList().getPlayer(targetId);
+        if (target != null && !target.isRemoved()) {
+            // 对别人的档位变更一律走聊天（屏幕 Toast 只回执自己的操作）。
+            target.sendSystemMessage(I18n.name(MSG + "you_became_owner",
+                    "§a[魔法小镇] 你已成为「%s」的镇长。", colonyName));
+        }
+
+        // 两个档位都变了：给该镇全部在线成员推最新花名册与列表（前任与新镇长各自的分组随之变），
+        // 再单独给发起者推一次他的全量（列表里的 myRole 变了）。
         ColonyRosterSyncService.pushColony(server, colonyId);
         ColonyRosterSyncService.pushFor(actor);
     }

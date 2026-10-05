@@ -486,6 +486,8 @@ public final class WandscapePanelController {
      * 小镇面板点击分发：几何命中由 {@link WandscapePanelOverlay#colonyHitTest} 给出（与渲染同源，
      * 已把置灰按钮滤掉），这里只把命中翻成 {@link ColonyMemberActionPacket} 意图包。
      * 档位/归属一律由服务端重判——客户端的置灰与这里的二次判定只是 UX 与防御。
+     *
+     * <p>唯一的例外是 {@code TRANSFER_TOGGLE}：它只切客户端的「转让镇长」模式，不发包。
      */
     private static void handleColonyPanelClick(double mouseX, double mouseY, int screenW, int screenH) {
         Minecraft mc = Minecraft.getInstance();
@@ -552,6 +554,29 @@ public final class WandscapePanelController {
                     playClickSound(mc);
                 }
 
+                // 转让镇长模式开关：纯客户端状态，不发包——开了之后成员行只剩一个【转让】按钮
+                case TRANSFER_TOGGLE -> {
+                    if (!WandscapePanelOverlay.canGovern()) return;
+                    WandscapePanelOverlay.toggleTransferMode();
+                    playClickSound(mc);
+                }
+
+                // 转让镇长：把当前镇的镇长让给这一行的成员（唯一能把人变成 OWNER 的动作）。
+                // 只发意图；服务端校验「我是该镇 OWNER + 目标是非 OWNER 成员」后才落库。
+                case MEMBER_TRANSFER -> {
+                    if (!WandscapePanelOverlay.canGovern() || !WandscapePanelOverlay.isTransferMode()) return;
+                    UUID colonyId = requireSelectedColony();
+                    WandscapePanelOverlay.MemberRow member =
+                            rowOrNull(WandscapePanelOverlay.memberRows(), hit.index());
+                    if (colonyId == null || member == null || member.id() == null) return;
+                    if (member.role() == ColonyRole.OWNER) return;
+                    Net.toServer(new ColonyMemberActionPacket(ColonyMemberActionPacket.Action.TRANSFER,
+                            colonyId, member.id(), member.role()));
+                    // 发出即退出转让模式，等服务端权威花名册推回来；成功时我不再是镇长，按钮自然下线
+                    WandscapePanelOverlay.exitTransferMode();
+                    playClickSound(mc);
+                }
+
                 // 邀请在线玩家：仅 MANAGER+，档位取面板当前选择（默认 MEMBER）
                 case ONLINE_INVITE -> {
                     if (!WandscapePanelOverlay.canInvite()) return;
@@ -596,7 +621,8 @@ public final class WandscapePanelController {
 
     /**
      * 档位循环 ALLY → MEMBER → MANAGER → ALLY。
-     * 永不产出 OWNER：转让是 ColonyApi.transferOwner 的事，不从这里走（服务端也会拒）。
+     * 永不产出 OWNER：转让是 {@code Action.TRANSFER}（小镇面板的【转让镇长】）的事，不从这里走
+     * （服务端同样拒）。
      */
     private static ColonyRole nextManageableRole(ColonyRole current) {
         if (current == null) return ColonyRole.MEMBER;

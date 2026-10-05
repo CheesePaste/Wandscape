@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
@@ -263,7 +264,8 @@ public final class WandscapePanelOverlay {
     public enum ColonySection { COLONIES, INVITES, MEMBERS, ONLINE }
 
     /** 命中类型；index 是列表里的**绝对**行下标（不是可见行内的偏移），未命中为 -1。 */
-    public enum ColonyHit { MISS, COLONY_ROW, INVITE_ACCEPT, INVITE_DECLINE, MEMBER_ROLE, MEMBER_REMOVE, ONLINE_INVITE, INVITE_ROLE }
+    public enum ColonyHit { MISS, COLONY_ROW, INVITE_ACCEPT, INVITE_DECLINE, MEMBER_ROLE, MEMBER_REMOVE,
+                            TRANSFER_TOGGLE, MEMBER_TRANSFER, ONLINE_INVITE, INVITE_ROLE }
 
     public record ColonyHitResult(ColonyHit hit, int index) {}
 
@@ -301,6 +303,21 @@ public final class WandscapePanelOverlay {
      */
     private static final ColonyRole[] INVITE_ROLE_CYCLE = { ColonyRole.MEMBER, ColonyRole.ALLY, ColonyRole.MANAGER };
     private static int inviteRoleIndex = 0;
+
+    /**
+     * 「转让镇长」模式：开启后成员行右侧的「调档位 / 移除」换成单个【转让】，点谁就把镇长让给谁。
+     *
+     * <p>为什么要一个模式、而不是给每行再加一个转让按钮：转让是**唯一**会把镇长交出去的操作，
+     * 误点代价最大，而一行塞三个按钮既挤又正好和【移除】挨着。换成模式后，同一时刻一行只有一个
+     * 动作可点——想调档位/移除就先退出转让模式，点错也点不到别的。
+     *
+     * <p>纯客户端 UI 状态（服务端照旧权威重判），与 {@link #COLONY_SCROLL} 同族；随「离开小镇页」
+     * （{@code WandscapePanelState.exitCurrentSubMode}）与「当前镇/我的档位变了」一起复位。
+     */
+    private static boolean transferMode = false;
+    /** 进入转让模式时的小镇 id；当前镇换了就自动作废（见 {@link #syncTransferMode}）。 */
+    @Nullable
+    private static UUID transferModeColony = null;
 
     private record ColonyGeo(int x, int y, int w, int h,
                              int leftX, int rightX, int colW,
@@ -419,13 +436,16 @@ public final class WandscapePanelOverlay {
             ColonyGeo geo = computeGeo(screenW, screenH);
             if (geo == null) return;
 
+            UUID current = currentColonyId();
+            // 转让模式只在「当前镇 + 我是该镇镇长」下成立：切换了镇、或被降级/转让出去，下一帧就复位
+            syncTransferMode(current);
+
             boolean hover = WandscapePanelState.isCursorLifted();
 
             WandscapeTheme.drawRtsBox(g, geo.x(), geo.y(), geo.w(), geo.h(), true, false);
             drawText(g, font, I18n.name("gui.wandscape.colony_switch.title", "我的小镇").getString(),
                     geo.x() + CP_INNER_PAD, geo.y() + 3, WandscapeTheme.COLOR_TEXT_ACTIVE);
 
-            UUID current = currentColonyId();
             ColonyRole myRole = currentRole();
             boolean inviteAllowed = canInvite();
 
@@ -572,8 +592,22 @@ public final class WandscapePanelOverlay {
     private static void renderMemberSection(GuiGraphics g, Font font, ColonyGeo geo, List<MemberRow> rows,
                                             boolean hasSelection, double mx, double my, boolean hover) {
         SectionView v = view(geo, ColonySection.MEMBERS, rows.size());
-        drawSectionTitle(g, font, geo.rightX(), geo.membersBodyY() - CP_SECTION_H, geo.colW(),
-                I18n.name("gui.wandscape.colony_members.section.members", "成员").getString(), v, rows.size());
+        int titleY = geo.membersBodyY() - CP_SECTION_H;
+        boolean govern = canGovern();
+
+        // 标题行右侧是「转让镇长」开关：只有镇长看得见（看不到就不画，与在线玩家区的档位按钮同款）。
+        ButtonRect transferToggle = memberTransferToggleRect(geo, font);
+        String title = I18n.name("gui.wandscape.colony_members.section.members", "成员").getString();
+        drawSectionTitle(g, font, geo.rightX(), titleY,
+                govern ? transferToggle.x() - geo.rightX() - 3 : geo.colW(),
+                govern ? truncate(font, title, transferToggle.x() - geo.rightX() - 4) : title,
+                v, rows.size());
+        if (govern) {
+            String label = transferMode
+                    ? I18n.name("gui.wandscape.colony_members.transfer.cancel", "取消转让").getString()
+                    : I18n.name("gui.wandscape.colony_members.transfer.start", "转让镇长").getString();
+            drawFlatButton(g, font, transferToggle, label, true, hover && transferToggle.contains(mx, my));
+        }
 
         if (rows.isEmpty()) {
             String hint = hasSelection
@@ -583,7 +617,8 @@ public final class WandscapePanelOverlay {
             return;
         }
 
-        boolean govern = canGovern();
+        boolean transferring = govern && transferMode;
+        String transferLabel = I18n.name("gui.wandscape.colony_members.transfer", "转让").getString();
         for (int i = v.from(); i < v.to(); i++) {
             MemberRow row = rows.get(i);
             int rowY = v.rowY(i);
@@ -593,17 +628,26 @@ public final class WandscapePanelOverlay {
                         rowY + CP_ROW_H - 1, COLOR_ROW_HOVER);
             }
 
-            // 只有 OWNER 能调档位/移除；镇长那一行谁都不许动（与服务端「防自锁」一致）。
+            // 只有 OWNER 能调档位/移除/转让；镇长那一行谁都不许动（与服务端「防自锁」一致）。
+            boolean manageable = govern && row.role() != ColonyRole.OWNER;
+            if (transferring && manageable) {
+                // 转让模式下这一行只剩【转让】：把档位与移除换掉，避免紧挨着点错
+                ButtonRect transferBtn = memberTransferRect(geo, font, rowY);
+                drawFlatButton(g, font, transferBtn, transferLabel, true, rowHover && transferBtn.contains(mx, my));
+                drawText(g, font, truncate(font, row.name(), transferBtn.x() - geo.rightX() - 5),
+                        geo.rightX() + 3, rowY + 2, WandscapeTheme.COLOR_TEXT_NORMAL);
+                continue;
+            }
+
             String roleLabel = roleName(row.role());
-            boolean editable = govern && row.role() != ColonyRole.OWNER;
             ButtonRect roleBtn = memberRoleRect(geo, font, rowY, roleLabel);
             ButtonRect removeBtn = memberRemoveRect(geo, rowY);
-            drawFlatButton(g, font, roleBtn, roleLabel, editable, rowHover && roleBtn.contains(mx, my));
-            drawFlatButton(g, font, removeBtn, "×", editable, rowHover && removeBtn.contains(mx, my));
+            drawFlatButton(g, font, roleBtn, roleLabel, manageable, rowHover && roleBtn.contains(mx, my));
+            drawFlatButton(g, font, removeBtn, "×", manageable, rowHover && removeBtn.contains(mx, my));
 
             drawText(g, font, truncate(font, row.name(), roleBtn.x() - geo.rightX() - 5),
                     geo.rightX() + 3, rowY + 2,
-                    editable ? WandscapeTheme.COLOR_TEXT_NORMAL : WandscapeTheme.COLOR_TEXT_DIM);
+                    manageable ? WandscapeTheme.COLOR_TEXT_NORMAL : WandscapeTheme.COLOR_TEXT_DIM);
         }
     }
 
@@ -715,6 +759,22 @@ public final class WandscapePanelOverlay {
         return new ButtonRect(remove.x() - w - 3, rowY + 1, w, CP_ROW_H - 3);
     }
 
+    /** 成员区标题行右侧的「转让镇长」开关（渲染与命中共用）。 */
+    private static ButtonRect memberTransferToggleRect(ColonyGeo geo, Font font) {
+        String label = transferMode
+                ? I18n.name("gui.wandscape.colony_members.transfer.cancel", "取消转让").getString()
+                : I18n.name("gui.wandscape.colony_members.transfer.start", "转让镇长").getString();
+        int w = font.width(label) + CP_BTN_PAD;
+        return new ButtonRect(geo.rightX() + geo.colW() - w - 1, geo.membersBodyY() - CP_SECTION_H, w, CP_SECTION_H);
+    }
+
+    /** 转让模式下成员行右侧的单个【转让】按钮（取代平时的档位 + 移除两键）。 */
+    private static ButtonRect memberTransferRect(ColonyGeo geo, Font font, int rowY) {
+        String label = I18n.name("gui.wandscape.colony_members.transfer", "转让").getString();
+        int w = font.width(label) + CP_BTN_PAD;
+        return new ButtonRect(geo.rightX() + geo.colW() - w - 1, rowY + 1, w, CP_ROW_H - 3);
+    }
+
     private static ButtonRect onlineInviteRect(ColonyGeo geo, Font font, int rowY) {
         String label = I18n.name("gui.wandscape.colony_members.invite", "邀请").getString();
         int w = font.width(label) + CP_BTN_PAD;
@@ -761,10 +821,45 @@ public final class WandscapePanelOverlay {
         return role != null && role.atLeast(ColonyRole.MANAGER);
     }
 
-    /** 调档位 / 移除成员：当前镇档位 == OWNER（== {@link ColonyRole#canGovern()}）。 */
+    /** 调档位 / 移除成员 / 转让镇长：当前镇档位 == OWNER（== {@link ColonyRole#canGovern()}）。 */
     public static boolean canGovern() {
         ColonyRole role = currentRole();
         return role != null && role.canGovern();
+    }
+
+    /** 是否处于「转让镇长」模式（纯客户端 UI 状态，仅 OWNER 下成立）。 */
+    public static boolean isTransferMode() {
+        return transferMode;
+    }
+
+    /** 进入/退出「转让镇长」模式；命中成员区标题行右侧的开关按钮时调用。 */
+    public static void toggleTransferMode() {
+        if (transferMode) {
+            exitTransferMode();
+            return;
+        }
+        if (!canGovern()) return;
+        transferMode = true;
+        transferModeColony = currentColonyId();
+    }
+
+    /** 退出「转让镇长」模式：发出转让、离开小镇页、当前镇或我的档位变了，都走这里。 */
+    public static void exitTransferMode() {
+        transferMode = false;
+        transferModeColony = null;
+    }
+
+    /**
+     * 自愈：转让模式只在「当前镇 + 我是该镇 OWNER」下成立。切换了镇、或被降级 / 把镇长让出去之后，
+     * 渲染时就把它复位——面板上不会留下一份「看着能转让、点下去必失败」的旧界面。
+     *
+     * <p>离开小镇页的那条路径不走这里（那时本方法根本不会被调用），由
+     * {@code WandscapePanelState.exitCurrentSubMode} 显式复位。
+     */
+    private static void syncTransferMode(@Nullable UUID current) {
+        if (transferMode && (!canGovern() || !Objects.equals(transferModeColony, current))) {
+            exitTransferMode();
+        }
     }
 
     /** 当前选择的邀请档位（默认 MEMBER）。候选只含低于自己档位的，见 {@link #inviteRoleOptions()}。 */
@@ -895,8 +990,12 @@ public final class WandscapePanelOverlay {
             }
         }
 
-        // 3. 成员：仅 OWNER 可调档位/移除，且镇长那行不给动（置灰 → 不返回命中）
+        // 3. 成员：仅 OWNER 可调档位 / 移除 / 转让，且镇长那行谁都不给动（置灰 → 不返回命中）
         if (canGovern()) {
+            // 3a. 标题行右侧的「转让镇长」开关：只切进/出转让模式，本身不是花名册操作
+            if (memberTransferToggleRect(geo, font).contains(mx, my)) {
+                return new ColonyHitResult(ColonyHit.TRANSFER_TOGGLE, -1);
+            }
             List<MemberRow> members = memberRows();
             SectionView membersView = view(geo, ColonySection.MEMBERS, members.size());
             int memberIndex = rowIndexAt(membersView, mx, my, geo.rightX(), geo.colW());
@@ -904,11 +1003,19 @@ public final class WandscapePanelOverlay {
                 MemberRow row = members.get(memberIndex);
                 if (row.role() != ColonyRole.OWNER) {
                     int rowY = membersView.rowY(memberIndex);
-                    if (memberRoleRect(geo, font, rowY, roleName(row.role())).contains(mx, my)) {
-                        return new ColonyHitResult(ColonyHit.MEMBER_ROLE, memberIndex);
-                    }
-                    if (memberRemoveRect(geo, rowY).contains(mx, my)) {
-                        return new ColonyHitResult(ColonyHit.MEMBER_REMOVE, memberIndex);
+                    // 转让模式下这一行只有一个【转让】按钮；平时才是档位 + 移除（两者不同时存在，
+                    // 所以「点了转让却改了档位」在几何上就不可能发生）。
+                    if (transferMode) {
+                        if (memberTransferRect(geo, font, rowY).contains(mx, my)) {
+                            return new ColonyHitResult(ColonyHit.MEMBER_TRANSFER, memberIndex);
+                        }
+                    } else {
+                        if (memberRoleRect(geo, font, rowY, roleName(row.role())).contains(mx, my)) {
+                            return new ColonyHitResult(ColonyHit.MEMBER_ROLE, memberIndex);
+                        }
+                        if (memberRemoveRect(geo, rowY).contains(mx, my)) {
+                            return new ColonyHitResult(ColonyHit.MEMBER_REMOVE, memberIndex);
+                        }
                     }
                 }
             }

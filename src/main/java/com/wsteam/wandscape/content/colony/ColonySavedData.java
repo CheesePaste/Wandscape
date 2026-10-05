@@ -207,16 +207,23 @@ public class ColonySavedData extends SavedData {
 
     /**
      * 转让所有权：新人置 OWNER，前任降为 MANAGER（交接不断管理权），并同步 founder 反查。
-     * 新人不存在、或与前任同一人时视为无操作。
+     * 新人不存在、或已经是本镇 OWNER 时视为无操作。
+     *
+     * <p>前任**按花名册里的 OWNER 找**，而不是按 {@link #founders}：权限的唯一真源是花名册，
+     * founders 可能只是半迁移/旧档残留（v1 档只写过 founder）。旧实现只降 founders 那一位，
+     * 于是「花名册 OWNER ≠ founders」的档转让后会同时留下两个 OWNER——不变量当场破。
+     * 这里把花名册里除新人以外的 OWNER 一律降为 MANAGER，顺带把坏档纠正回来。
      */
     public boolean transferOwner(UUID colonyId, UUID newOwnerId) {
         if (newOwnerId == null || !colonies.containsKey(colonyId)) return false;
         UUID prev = founders.get(colonyId);
-        if (newOwnerId.equals(prev)) return false;
-
         Map<UUID, ColonyRole> roster = rosterOf(colonyId);
-        if (prev != null) {
-            roster.put(prev, ColonyRole.MANAGER);
+        if (roster.get(newOwnerId) == ColonyRole.OWNER) return false;
+
+        for (UUID memberId : Set.copyOf(roster.keySet())) {
+            if (!memberId.equals(newOwnerId) && roster.get(memberId) == ColonyRole.OWNER) {
+                roster.put(memberId, ColonyRole.MANAGER);
+            }
         }
         roster.put(newOwnerId, ColonyRole.OWNER);
         founders.put(colonyId, newOwnerId);
