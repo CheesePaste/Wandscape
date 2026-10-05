@@ -87,6 +87,8 @@
 9. [ ] **不兼容提示**：本次发版若含**破坏存档兼容**的改动（数据格式断档、SavedData 迁移链缺口、
    已放置建筑/道路/殖民地的既有数据无法解析），release 正文（`RELEASE_NOTES.md`）**必须**有一段
    醒目的不兼容说明：说清楚哪种世界会受影响、需要开新档还是有部分数据会丢。
+   **部署默认保档**：常规上线**不动世界**（只删模组的 `config/*.toml` 让新默认值生效）；
+   只有本项判定为不兼容、或用户明确要求时才删档，且删前先备份世界。别把「不兼容时要提示」误读成「默认删档」。
 10. [ ] **CurseForge / Modrinth 描述是本地文件，不入库**：`curseforge-description.md` 与
     `modrinth-description.md` 都在 `.gitignore` 里（那是平台发布文案，避免与 GitHub release notes 双源维护）。
     用户要求「更新 curseforge 描述」时，**改完文件即算完成**，不需要 `git add` / `commit`；发布 GitHub release 时
