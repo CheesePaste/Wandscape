@@ -73,17 +73,17 @@ public final class BuildingSelectionOverlay {
         registered = true;
     }
 
+    /**
+     * 建筑选择栏是否可用。**刻意不看是否已「钉住/定稿」**：改建筑是调整阶段的正当操作
+     * （选中另一栋后虚影就地换配置、锚点不动），历史上这里有一个 {@code !isPinned()} 门，
+     * 导致「确认位置后按 1 回建造页换建筑」栏子是开了、overlay 却不渲染也不吃点击。
+     * 也不再按右键按住与否隐藏——右键现在只是「打开施工屏」的一次点击，不是长按定位。
+     */
     public static boolean isActive() {
-        Minecraft mc = Minecraft.getInstance();
-        long window = (mc != null && mc.getWindow() != null) ? mc.getWindow().getWindow() : 0L;
-        boolean rightDown = (window != 0L && org.lwjgl.glfw.GLFW.glfwGetMouseButton(window, org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_RIGHT) == org.lwjgl.glfw.GLFW.GLFW_PRESS)
-                || (mc != null && mc.mouseHandler != null && mc.mouseHandler.isRightPressed());
         return WandscapePanelState.isPanelOpen()
                 && ProjectionClientState.isProjecting()
                 && WandscapePanelState.getActiveSubMode() == WandscapePanelState.SubMode.BUILD_PROJECTION
-                && WandscapePanelState.isBuildingBarOpen()
-                && !rightDown
-                && !ProjectionClientState.isPinned();
+                && WandscapePanelState.isBuildingBarOpen();
     }
 
     static int getSlotsSize() {

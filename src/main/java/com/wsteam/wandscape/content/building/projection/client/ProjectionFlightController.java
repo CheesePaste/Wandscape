@@ -42,6 +42,13 @@ public final class ProjectionFlightController {
     /** Extended reach distance in projection mode (blocks). */
     private static final double PROJECTION_REACH = 512.0;
 
+    /** ALT+滚轮：一次微调至少要攒够的刻度（高分辨率滚轮的小 delta 先累加，凑够一格才动）。 */
+    private static final double SCROLL_STEP_MIN = 0.6;
+    /** ALT+滚轮：两次微调之间的最小间隔，挡住「一个刻度被驱动连发多次」导致的连跳。 */
+    private static final long SCROLL_NUDGE_COOLDOWN_MS = 100L;
+    private static double scrollAccum;
+    private static long lastNudgeMs;
+
     // ── Input edge detection state ──
     private static boolean wasLeftDown = false;
     private static boolean wasRightDown = false;
@@ -120,12 +127,29 @@ public final class ProjectionFlightController {
     /** Handle mouse scroll via NeoForge's {@link InputEvent.MouseScrollingEvent}.
      *  ALT+滚轮：沿视线最近轴把锚点挪一格（对齐 Litematica 的 nudge）。普通滚轮不消费事件。 */
     static void onMouseScroll(InputEvent.MouseScrollingEvent event) {
-        if (!ProjectionClientState.isProjecting()) return;
-        if (!Screen.hasAltDown()) return;
+        if (!ProjectionClientState.isProjecting() || !Screen.hasAltDown()) {
+            scrollAccum = 0;   // 不在微调上下文里，别把余量带到下一段
+            return;
+        }
         double deltaY = event.getScrollDeltaY();
         if (deltaY == 0) return;
         event.setCanceled(true);
-        nudgeGhost(Minecraft.getInstance(), deltaY > 0 ? 1 : -1);
+
+        // 最小灵敏度限制：高分辨率滚轮 / 触控板一次物理刻度会连发多个小 delta，
+        // 逐事件动一格会「滚一下跳好几格」。
+        long now = System.currentTimeMillis();
+        if (now - lastNudgeMs < SCROLL_NUDGE_COOLDOWN_MS) {
+            scrollAccum = 0;   // 冷却期内的输入整段丢弃：宁可少动一格，也不连跳
+            return;
+        }
+        scrollAccum += deltaY;
+        if (Math.abs(scrollAccum) < SCROLL_STEP_MIN) {
+            return;            // 还没攒够一格刻度，先记着
+        }
+        int amount = scrollAccum > 0 ? 1 : -1;
+        scrollAccum = 0;
+        lastNudgeMs = now;
+        nudgeGhost(Minecraft.getInstance(), amount);
     }
 
     /**
