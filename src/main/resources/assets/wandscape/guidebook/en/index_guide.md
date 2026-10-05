@@ -32,7 +32,7 @@ Features and Categories
 
 《Buildings》 What you can put up, and how each kind works
 
-《Management》 The panel, and its four sub-modes: building, roads, tasks and settings
+《Management》 The panel, and its five sub-modes: building, roads, the town panel, tasks and settings
 
 《Spells》 Mages, casting, and what each spell does
 

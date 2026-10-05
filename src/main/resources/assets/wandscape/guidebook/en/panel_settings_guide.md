@@ -1,6 +1,6 @@
 # Settings
 
-> Press 4 with the management panel open; press 4 again to leave. ESC only returns you to the overview, it does not close the panel.
+> Press 5 with the management panel open; press 5 again to leave. ESC only returns you to the overview, it does not close the panel.
 
 ## The six settings pages
 
@@ -8,7 +8,7 @@ Settings sit on six pages: This Town follows the town itself, Visuals covers wha
 
 ## Who can change them, and when they apply
 
-This Town is open to everyone, but only for the town you founded yourself; every other page needs an admin (OP level 2). The few entries marked Client under Visuals are the exception — anyone can change those, and they only affect you.
+This Town covers your **current** town's own settings, and only that town's Owner can change them; every other page needs an admin (OP level 2). The few entries marked Client under Visuals are the exception — anyone can change those, and they only affect you.
 
 Changes apply immediately and save themselves: no rejoining the world, no server restart — apart from preview resolution and frame rate, which need a game restart.
 

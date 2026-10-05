@@ -1,20 +1,19 @@
 # Management Panel
 
-## How to open it
+> Press V to open it, and press V again to close it.
 
-The management panel is the interaction core of the mod.
+## Opening it
 
-Open the panel: By default, press V to open.
+The management panel is the core of the mod's interaction.
 
-Basic Operations:
+The left column holds the five sub-modes: press 1 to 5 with the panel open to enter one, and press the same number again or ESC to leave.
 
-Interaction: Aim at a mage or building to see a white bounding box. Right-click to open its details page.
+Aim at a mage or a building and the target gets a white bounding box; right-click then opens its details page.
 
-## The four sub-modes
-
-Switch Modes: Press 1, 2, 3, 4 to switch sub-modes on the left:
+## The five sub-modes
 
 - 1→《Build Mode》: Construct buildings
 - 2→《Road Mode》: Pave roads and shape terrain
-- 3→《Task Hall》: Manage tasks and mage status
-- 4→《Settings》: Modify mod settings
+- 3→《Town Panel》: Switch towns and manage members
+- 4→《Task Hall》: Manage tasks and mage status
+- 5→《Settings》: Modify mod settings

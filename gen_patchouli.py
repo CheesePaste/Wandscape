@@ -98,16 +98,19 @@ ENTRIES = [
     # ── 玩法主线：路线与阅读顺序，外加三页没有独立分类的总括内容 ──
     # 配方解锁紧跟《0.5》：它讲的是「物品工坊的灰列表怎么变亮」，属于开局就得知道的事，
     # 而它横跨仓库 / 法杖 / 图纸三处，落哪个功能分类都不合适，留在主线里。
+    # 权限管理插在《0.5》与《配方解锁》之间：多人共用一个存档时才需要，但需要的那一局里
+    # 它是「谁能动我的镇」的唯一说明，所以和配方解锁一样留在开局阅读顺序上，由《0.5》点名。
     ("index_guide", "playstyle", "wandscape:guide_book", 0),
     ("intro_0_guide", "playstyle", "minecraft:writable_book", 1),
     ("intro_0_5_guide", "playstyle", "minecraft:knowledge_book", 2),
-    ("recipe_unlock_guide", "playstyle", "wandscape:item_blueprint", 3),
-    ("element_level_guide", "playstyle", "wandscape:element_earth", 4),
-    ("track_tourist_guide", "playstyle", "wandscape:tourist_spawn_egg", 5),
-    ("tourists_guide", "playstyle", "minecraft:emerald", 6),
-    ("track_adventure_guide", "playstyle", "minecraft:iron_sword", 7),
-    ("track_tech_guide", "playstyle", "minecraft:redstone", 8),
-    ("track_diplomacy_guide", "playstyle", "minecraft:white_banner", 9),
+    ("permission_guide", "playstyle", "minecraft:name_tag", 3),
+    ("recipe_unlock_guide", "playstyle", "wandscape:item_blueprint", 4),
+    ("element_level_guide", "playstyle", "wandscape:element_earth", 5),
+    ("track_tourist_guide", "playstyle", "wandscape:tourist_spawn_egg", 6),
+    ("tourists_guide", "playstyle", "minecraft:emerald", 7),
+    ("track_adventure_guide", "playstyle", "minecraft:iron_sword", 8),
+    ("track_tech_guide", "playstyle", "minecraft:redstone", 9),
+    ("track_diplomacy_guide", "playstyle", "minecraft:white_banner", 10),
 
     # ── 建筑：总览 → 建筑维护 → 每一类建筑各一条 → 建筑扫描器 ──
     # 类别条目与 buildings/*.json 的 category 一一对应（government→市政厅、storage→仓库、
@@ -132,12 +135,13 @@ ENTRIES = [
     ("atm_guide", "buildings", "minecraft:gold_ingot", 15),
     ("building_scanner_guide", "buildings", "wandscape:building_scanner", 16),
 
-    # ── 管理：面板本身 + 四个子模式 ──
+    # ── 管理：面板本身 + 五个子模式（顺序照侧边栏 1..5）──
     ("panel_guide", "management", "minecraft:compass", 0),
     ("panel_build_guide", "management", "minecraft:scaffolding", 1),
     ("panel_road_guide", "management", "minecraft:dirt_path", 2),
-    ("panel_tasks_guide", "management", "minecraft:paper", 3),
-    ("panel_settings_guide", "management", "minecraft:redstone_torch", 4),
+    ("panel_colony_guide", "management", "minecraft:bell", 3),
+    ("panel_tasks_guide", "management", "minecraft:paper", 4),
+    ("panel_settings_guide", "management", "minecraft:redstone_torch", 5),
 
     # ── 魔法：法师 + 施法（上手讲怎么放）+ 高级施法管理（策略/锁/门控）+ 每个魔法一条 ──
     # 魔法图标用原版物品（模组无 per-magic 图标，10 条共用 spell_scroll 会让分类页不可读）
@@ -196,6 +200,7 @@ TITLE_TO_DOC_ZH = {
     # 玩法主线
     "0，入门": "intro_0_guide",
     "0.5，推荐了解的功能": "intro_0_5_guide",
+    "权限管理": "permission_guide",
     "配方解锁": "recipe_unlock_guide",
     "1，游客线": "track_tourist_guide",
     "2，冒险线": "track_adventure_guide",
@@ -217,6 +222,7 @@ TITLE_TO_DOC_ZH = {
     "管理面板": "panel_guide",
     "建造子模式": "panel_build_guide",
     "道路子模式": "panel_road_guide",
+    "小镇面板": "panel_colony_guide",
     "任务大厅": "panel_tasks_guide",
     "设置中心": "panel_settings_guide",
     "法师": "mages_guide",
@@ -241,6 +247,7 @@ TITLE_TO_DOC_EN = {
     # en_us
     "0. Getting Started": "intro_0_guide",
     "0.5 Recommended Features": "intro_0_5_guide",
+    "Permissions": "permission_guide",
     "Unlocking Recipes": "recipe_unlock_guide",
     "1. Tourist Track": "track_tourist_guide",
     "2. Adventure Track": "track_adventure_guide",
@@ -259,6 +266,7 @@ TITLE_TO_DOC_EN = {
     "Management Panel": "panel_guide",
     "Build Mode": "panel_build_guide",
     "Road Mode": "panel_road_guide",
+    "Town Panel": "panel_colony_guide",
     "Task Hall": "panel_tasks_guide",
     "Settings": "panel_settings_guide",
     "Mages": "mages_guide",

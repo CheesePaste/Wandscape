@@ -122,15 +122,16 @@ ColonyOwnership.isOwn(colonyId, player)          // 只是「这是不是我当�
 
 - **登记表零改动**：不认识该接口的包行为完全不变。
 - **失败方向是「放行」**：作用域缺失/不齐时 `admit` 返回 true，把权威判定留给 handler，避免网关自己不确定就误拒。
-- ⚠️ **当前覆盖率 = 1 个包**：只有 `ColonyMemberActionPacket` 声明了作用域（`INVITE`→MANAGER、`SET_ROLE`/`REMOVE`→OWNER、`SELECT`→ALLY、`ACCEPT`/`DECLINE`→不过网关）。**其余约 30 个操作包仍在包内自查 `hasRole`**（§3 的表）。要接网关时，**包内自查与作用域声明必须同档位**，别出现「包里 MANAGER、网关 ALLY」的错位。
+- ⚠️ **当前覆盖率 = 1 个包**：只有 `ColonyMemberActionPacket` 声明了作用域（`INVITE`→MANAGER、`SET_ROLE`/`REMOVE`/`TRANSFER`→OWNER、`SELECT`→MEMBER、`ACCEPT`/`DECLINE`→不过网关）。**其余约 30 个操作包仍在包内自查 `hasRole`**（§3 的表）。要接网关时，**包内自查与作用域声明必须同档位**，别出现「包里 MANAGER、网关 ALLY」的错位。
 
 ---
 
 ## 五、邀请与成员管理
 
 - **入口只有一个**：侧边栏「小镇」面板（`SubMode.COLONY`，数字键 3，位置在道路之下、任务大厅之上）。**不做市政厅分页**。
-- 面板内可完成：切换当前镇、看成员、**发起邀请 / 接受 / 拒绝**、调档位、移除成员、新建小镇引导。
-- **邀请只在内存**（`ColonyInviteRegistry`），被邀方必须在线；`ServerStoppedEvent` 清空。**本阶段不支持离线邀请**（那需要过期语义）。
+- 面板内可完成：切换当前镇、看成员、**发起邀请 / 接受 / 拒绝**、调档位、移除成员、**转让镇长**、新建小镇引导。
+- **转让镇长**在面板上是两步：成员表标题右侧的【转让镇长】先切进「转让模式」（成员行只剩一个【转让】按钮，档位与移除都换掉），点某一行才真的转让。这样「转让」与【移除】在几何上永不同时存在，不会点错。
+- **邀请只在内存**（`ColonyInviteRegistry`），被邀方必须在线；`ServerStoppedEvent` 清空。**本阶段不支持离线邀请**（那需要过期语义）。**转让不要求对方在线**——花名册才是权威，人不在场也得能交接。
 - 服务端权威重判，客户端只发意图：
 
 | 动作 | 规则 |
@@ -138,8 +139,9 @@ ColonyOwnership.isOwn(colonyId, player)          // 只是「这是不是我当�
 | `INVITE` | 发起者 ≥ MANAGER；目标须在线；不得邀已在花名册的人；**只能授予严格低于自己档位的档位**；**任何人不得授予 OWNER** |
 | `ACCEPT` | 只有被邀方本人；**只认服务端存的那条邀请**——包体里的 `colonyId` / `role` **一律不采信**（否则篡改客户端即可用 OWNER 入伙）；成功后**自动切换**到该镇 |
 | `DECLINE` | 丢弃该邀请 |
-| `SET_ROLE` | 仅 OWNER；不得设成 OWNER（转让走 `ColonyApi.transferOwner`）；不得动 OWNER |
+| `SET_ROLE` | 仅 OWNER；不得设成 OWNER（转让走 `TRANSFER`）；不得动 OWNER |
 | `REMOVE` | 仅 OWNER；OWNER 不可被移出；**不能移除/降级自己** |
+| `TRANSFER` | 仅 OWNER；目标须是**本镇花名册上的非 OWNER 成员**（可离线）；**唯一能产出新 OWNER 的动作**，落库走 `ColonyApi.transferOwner`（新人置 OWNER、前任降 MANAGER），客户端传来的 role 不参与判定 |
 
 ---
 
@@ -227,6 +229,7 @@ ColonyOwnership.isOwn(colonyId, player)          // 只是「这是不是我当�
 6. **被移出当前镇后顶栏要等下一次 stats 推送才清空**：既有同步节奏，非本系统引入。
 7. **`PanelStateTogglePacket` 与 `ColonyContextSync.push` 有推送重复**：收口可省约 15 行，代价是每次开面板多发 2~N 包。
 8. **`getColonyId(BlockPos)` 的 ≤256 空间最近归属**：多镇可任意近时，对其余非市政厅建筑仍有归属歧义（既有问题）。本系统只保证**建镇/关联判据不再受它影响**（已改看市政厅自己的 `BuildingState.colonyId`）。
+9. **设置中心「本镇」页的可用性没跟着档位走**：`SettingItem.canModify()` 对本镇项只要求「面板当前绑了小镇」，`SettingsRegistry` 的注释也还写着「人人可改」，于是**非 OWNER 在界面上点得动**（本地乐观写入）→ 服务端 `ColonySettings.apply` 按 OWNER 拒 → 回推权威值撤回。结果是「界面骗人一下再弹回」，数据没错但体验不对。修法是把当前镇档位接进设置界面（`ColonyPanelClientState.roleOf(WandscapePanelState.getColonyId())` 已够用），并把 `SettingItem.canModify()` 的本镇分支收到 OWNER。
 
 **运行时验证状态**
 
@@ -248,4 +251,6 @@ ColonyOwnership.isOwn(colonyId, player)          // 只是「这是不是我当�
 | **`linked` 成对、不做传递闭包** | 传递闭包会凭空多豁免一层 |
 | **删除 `getColonyByFounder`** | 一人多镇下必然歧义，且会把「作为成员参与别人的镇」误判成「没有镇」 |
 | **面板不本地改选中** | 单一真源，避免「切了但顶栏不变」 |
+| **转让做成两步（先切「转让模式」再点人）** | 转让紧挨着【移除】；一步到位的按钮迟早被点错。切模式后成员行只剩一个【转让】，两者在几何上不可能同时存在 |
+| **转让允许对方离线** | 花名册才是权威；要求对方在场等于「人一走就交不出去」，比照邀请的在线要求不适用于这里 |
 | **不删档部署** | 常规上线只删模组 `config/*.toml` 让新默认值生效；仅不兼容或用户明确要求才删档，且删前备份（见 `CLAUDE.local.md`） |

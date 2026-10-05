@@ -2,7 +2,7 @@
   "name": "配方解锁",
   "category": "wandscape:playstyle",
   "icon": "wandscape:item_blueprint",
-  "sortnum": 3,
+  "sortnum": 4,
   "read_by_default": true,
   "pages": [
     {

@@ -7,19 +7,16 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "$(bold)How to open it$()$(br2)The management panel is the interaction core of the mod.$(br2)Open the panel: By default, press V to open."
+      "text": "$(italic)$(#6b5a45)Press V to open it, and press V again to close it.$()$(br2)$(bold)Opening it$()$(br2)The management panel is the core of the mod's interaction."
     },
     {
       "type": "patchouli:text",
-      "text": "$(bold)The four sub-modes$()$(br2)Switch Modes: Press 1, 2, 3, 4 to switch sub-modes on the left:$(li)1→$(l:wandscape:management/panel_build_guide)《Build Mode》$(/l): Construct buildings"
+      "text": "The left column holds the five sub-modes: press 1 to 5 with the panel open to enter one, and press the same number again or ESC to leave.$(br2)Aim at a mage or a building and the target gets a white bounding box; right-click then opens its details page."
     },
     {
       "type": "patchouli:text",
-      "text": "$(li)2→$(l:wandscape:management/panel_road_guide)《Road Mode》$(/l): Pave roads and shape terrain$(li)3→$(l:wandscape:management/panel_tasks_guide)《Task Hall》$(/l): Manage tasks and mage status$(li)4→$(l:wandscape:management/panel_settings_guide)《Settings》$(/l): Modify mod settings"
-    },
-    {
-      "type": "patchouli:text",
-      "text": "Basic Operations:$(br2)Interaction: Aim at a mage or building to see a white bounding box. Right-click to open its details page."
+      "text": "$(li)1→$(l:wandscape:management/panel_build_guide)《Build Mode》$(/l): Construct buildings$(li)2→$(l:wandscape:management/panel_road_guide)《Road Mode》$(/l): Pave roads and shape terrain$(li)3→$(l:wandscape:management/panel_colony_guide)《Town Panel》$(/l): Switch towns and manage members$(li)4→$(l:wandscape:management/panel_tasks_guide)《Task Hall》$(/l): Manage tasks and mage status$(li)5→$(l:wandscape:management/panel_settings_guide)《Settings》$(/l): Modify mod settings",
+      "title": "The five sub-modes"
     }
   ]
 }

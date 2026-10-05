@@ -1,0 +1,43 @@
+{
+  "name": "Permissions",
+  "category": "wandscape:playstyle",
+  "icon": "minecraft:name_tag",
+  "sortnum": 3,
+  "read_by_default": true,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "$(italic)$(#6b5a45)In single player you can skip this page; it matters when several players share a world.$()$(br2)A town and a player relate many-to-many: you can own several towns and be a member of someone else's at the same time. What you may d"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "o is not about who you are, but about $(bold)your rank on that town's roster$():$(br2)$(bold)Owner$() — the town's owner. Only they can change the town's settings, change other players' ranks and hand ownership over. Ev$(br)ery town has exactly one Owner."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(bold)Manager$() — every hands-on job in town: building and demolishing, hiring and dismissing mages, scheduling tasks, casting at t$(br)he altar, paving roads and shaping terrain.$(li)$(bold)Member$() — warehouse access and workshop orders, and nothing else: no building, no mage management."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(bold)Ally$() — one thing only: the town's mages will not attack you. No permissions at all, and you cannot even switch to that town.$(br2)Anyone not on the roster can do nothing at all, not even spend money in a shop or stay at a hotel."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "The player who invites you picks your rank on the spot (Manager and above may invite, and only at a rank below their own).",
+      "title": "Where ranks come from"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "An Owner only ever comes from a $(bold)transfer$(): the current Owner hands the town to you from the Town Panel, and the former Owner$(br) drops to Manager. That is the only way ownership changes hands — nobody can be set to Owner directly."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "A rank decides what you may do in a town;$(br) which town you are looking at is a separate matter. Click a row in the town list of the Town Panel to make that town your current on$(br)e, and the top bar, the building outlines and the member list all follow.",
+      "title": "The town you are working in"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Switching neither teleports you nor changes your rank in the town you left.$(br2)Which buttons each rank can use in the Town Panel is on $(l:wandscape:management/panel_colony_guide)《Town Panel》$(/l)."
+    }
+  ]
+}

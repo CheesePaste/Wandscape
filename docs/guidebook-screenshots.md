@@ -136,13 +136,13 @@ src/main/resources/assets/wandscape/textures/guidebook/full/<名字>.png    高�
 
 | # | 文件名 | 优先 | 从哪进 | 画面上必须出现 |
 |---|---|---|---|---|
-| 1 | `intro_01_build_tab` | P0 | 按 V 开面板 → 按 1 进【建造】 | 左侧四个子模式列表 + 底部建筑栏，两处同框 |
+| 1 | `intro_01_build_tab` | P0 | 按 V 开面板 → 按 1 进【建造】 | 左侧五个子模式列表 + 底部建筑栏，两处同框 |
 | 2 | `intro_02_townhall_card` | P0 | 同上，看底部建筑栏 | 【市政厅】卡片本体，**连同卡片上的等级标签** |
 | 4 | `intro_04_submit` | P0 | 点【提交施工】后 | 施工画面里的【提交】按钮 |
 | 9 | `elem_level_on_card` | P1 | 建造页签的建筑卡片 | 卡片上标等级门槛的那一处（可与 #2 合并成一张） |
 | 12 | `adventure_loot_chest` | P1 | 野外找到那种战利品箱子 | 箱子本体 + 附近环境，让读者认得出它（正文叫「野外的战利品箱子」） |
 
-`index_guide` / `intro_0_5_guide` / `track_tech_guide` / `track_diplomacy_guide` **不配图**（目录页、链接列表、未实装内容）。
+`index_guide` / `intro_0_5_guide` / `permission_guide` / `track_tech_guide` / `track_diplomacy_guide` **不配图**（目录页、链接列表、纯规则说明、未实装内容）。
 
 **建筑（buildings）**
 
@@ -176,7 +176,7 @@ src/main/resources/assets/wandscape/textures/guidebook/full/<名字>.png    高�
 
 | # | 文件名 | 优先 | 从哪进 | 画面上必须出现 |
 |---|---|---|---|---|
-| 37 | `panel_overview` | P1 | 按 V | 左侧四个子模式列表（1 建造 / 2 道路 / 3 任务大厅 / 4 设置中心）——与 #1 是同一处，可复用 |
+| 37 | `panel_overview` | P1 | 按 V | 左侧五个子模式列表（1 建造 / 2 道路 / 3 小镇 / 4 任务大厅 / 5 设置中心）——与 #1 是同一处，可复用 |
 | 38 | `build_bar_select` | P1 | 建造子模式，看底部建筑栏 | 单击选中态 vs 双击进入放置的提示 |
 | 40 | `build_clear_box` | P1 | 放置中，看右侧面板 | 【清理盒内方块】开关（默认开，本篇重点） |
 | 42 | `road_range` | P1 | 用替换或铲平拖出一片范围 | 拖出的范围 + **起点终点上的手柄** |
@@ -185,6 +185,7 @@ src/main/resources/assets/wandscape/textures/guidebook/full/<名字>.png    高�
 | 46 | `tasks_card` | P1 | 任务大厅页 | 一张任务卡上的【定位】【加急】【取消】三处 |
 | 47 | `tasks_roster_follow` | P1 | 法师名册页 | 某个法师的【跟随】开关 |
 | 49 | `settings_town_page` | P1 | 设置中心 →【本镇】页 | 小镇名 + 「生成游客」开关 |
+| 50 | `panel_colony_overview` | P1 | 按 V → 按 3 进【小镇】 | 小镇列表（我拥有的 / 我参与的，含标着【当前】的那一行）+ 成员表，连同成员表标题右侧的【转让镇长】按钮，两处同框 |
 
 **魔法（magic）**
 

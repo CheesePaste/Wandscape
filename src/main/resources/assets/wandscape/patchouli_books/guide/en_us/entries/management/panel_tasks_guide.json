@@ -2,12 +2,12 @@
   "name": "Task Hall",
   "category": "wandscape:management",
   "icon": "minecraft:paper",
-  "sortnum": 3,
+  "sortnum": 4,
   "read_by_default": true,
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "$(italic)$(#6b5a45)Press 3 with the management panel open; press 3 again or ESC to leave.$()$(br2)$(bold)What the three pages do$()"
+      "text": "$(italic)$(#6b5a45)Press 4 with the management panel open; press 4 again or ESC to leave.$()$(br2)$(bold)What the three pages do$()"
     },
     {
       "type": "patchouli:text",

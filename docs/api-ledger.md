@@ -106,7 +106,10 @@
 | 方法 | 用途 | 状态 | dogfood |
 |---|---|---|---|
 | `createColony(BlockPos[, UUID founder])` | 建殖民地，回 UUID | ✅ | `ColonyApiImpl` |
-| `getFounder(UUID)` / `getColonyByFounder(UUID)` | 创始人双向 | ✅ | — |
+| `getFounder(UUID)` | 创始人**正向**查（colonyId → founder）。反向查 `getColonyByFounder` **已删除**：一人多镇下必然歧义，改用 `getColoniesOf` / 当前镇 | ✅ | — |
+| `getRole(UUID, UUID)` / `getRoster(UUID)` / `getColoniesOf(UUID)` | 花名册读：某人档位 / 全镇花名册 / 我参与的所有镇 | ✅ | 权限判定与面板全走 `ColonyOwnership` |
+| `setRole(UUID, UUID, ColonyRole)` / `removeMember(UUID, UUID)` / `transferOwner(UUID, UUID)` | 花名册写：调档（**拒 OWNER**）/ 移出（**拒 OWNER**）/ 转让（新 OWNER，前任降 MANAGER） | ✅ | `ColonyMemberActionPacket`（侧边栏「小镇」面板的成员动作，含【转让镇长】） |
+| `getActiveColony(UUID)` / `setActiveColony(UUID, UUID)` | 当前操作的小镇（v3 起跨重连持久化；只做存储读写，**不判权限**） | ✅ | `ActiveColonyTracker` 是唯一真源 |
 | `getColonyId(BlockPos)` | 位置→最近殖民地 | ✅ | `WandscapeApis.colonyAt` |
 | `deleteColony(UUID)` | 删殖民地 | ✅ | `ColonyCommand` |
 | `isColonyOrigin(BlockPos)` | 是否殖民地原点 | ✅ | — |
@@ -483,7 +486,7 @@
 ### ✅ 确认全走 API（无绕过）
 - **ScepterApi 3 读**：`isSheltered`/`isShelteredForAny`/`forcedHostile` 全部经 `WandscapeApis.getScepterApiSilently()`（`WandscapeNpc.isFriendlyForce`、`GuardTaskSource:91`、`GuardAttackExecutor:139`、`SelfDefenseExecutor:173`）。`ScepterMarks` 直读仅限 scepter 子系统自身。
 - **NpcApi 查询**：`NpcData.from`（record 静态工厂）只在 `NpcApiImpl`；`EntityComponentBridge.allNpcs()` 用户全为各子系统内部活体逻辑。
-- **TouristApi 读**、**TavernApi 读/招/拒**、**GuideProgressApi.sendToPlayer**、**RoadApi 增/减/撤**、**ElementApi 命名方法**、**BuildingApi 拆/撤/快照**、**ColonyApi getAllColonyIds/getColonyByFounder/setNamingStyle**。
+- **TouristApi 读**、**TavernApi 读/招/拒**、**GuideProgressApi.sendToPlayer**、**RoadApi 增/减/撤**、**ElementApi 命名方法**、**BuildingApi 拆/撤/快照**、**ColonyApi getAllColonyIds/setNamingStyle**。
 
 ### ⚠️ 真绕过 → 已修正
 | 接口 | 绕过点（修正前） | 修正 |

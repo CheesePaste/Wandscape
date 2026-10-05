@@ -14,7 +14,7 @@
 
 ```
 内容唯一来源（作者只改这里）
-    src/main/resources/assets/wandscape/guidebook/{zh_cn,en}/*.md     62 篇 × 2 语（全部编进手册）
+    src/main/resources/assets/wandscape/guidebook/{zh_cn,en}/*.md     64 篇 × 2 语（全部编进手册）
                     │
                     │  gen_patchouli.py（本机跑，生成物提交进仓库）
                     ▼
@@ -37,7 +37,7 @@
 
 | 要改的 | 唯一源 | 备注 |
 |---|---|---|
-| 条目正文 | `guidebook/{zh_cn,en}/<id>_guide.md` | 中英各一份，这是 62 篇的全部正文 |
+| 条目正文 | `guidebook/{zh_cn,en}/<id>_guide.md` | 中英各一份，这是 64 篇的全部正文 |
 | 条目名 | 同一篇 md 的首行 `# 标题` | 不用双语重复维护 |
 | 分类名、**分类描述** | `gen_patchouli.py` 的 `CATEGORIES` | **在 Python 里，不在 md**；描述同样支持《…》 |
 | 条目归哪个分类 / 排序 / 图标 | `gen_patchouli.py` 的 `ENTRIES` | |
@@ -73,7 +73,7 @@
 
 它们**已经删掉**（连同只被它们引用的 3 张配图 `road_diagram` / `magic_editor_diagram` / `sample`，
 以及 3 张早已无人引用的 `overview_diagram` / `scanner_diagram` / `scanner_ui`）。留下的唯一一份手册
-就是编进书里的这 62 篇。
+就是编进书里的这 64 篇。
 
 - 需要旧文里那点内容时**去 git 历史里取**（删除发生在「兜底补齐三层导航」那次提交），别再往 `guidebook/` 里抄回来。
 - 旧文里 4 个主题在手册中没有对应页：法阵编辑器、道路工作室 / 样条编辑器、`/wandscape test` 指令、创作者 / API。
@@ -95,7 +95,7 @@
 我把「戒指戴进饰品槽就能用」当成事实写进草稿，实际它只能拿在主手——这类错读者一试就发现，
 但手册的可信度当场就没了。
 
-**「同类」就是这本手册。** `guidebook/` 下只有编进手册的那 62 篇 md，没有第二套说法可读；
+**「同类」就是这本手册。** `guidebook/` 下只有编进手册的那 64 篇 md，没有第二套说法可读；
 要旧文（`npc_guide` / `tourist_guide` / `strategy_guide` / `overview_guide` / `getting_started` /
 `road_*` / `scanner_guide` / `commands_guide` 等 15 篇）里那点内容，去 git 历史取，细节见 §1.3。
 
@@ -175,16 +175,16 @@ AGENTS.md §二.9：面向玩家文本（`lang/*`、`guide/**`、I18n、Screen �
 
 | 分类 id | 中文名 | 条目（md 文件名去掉 `_guide`） |
 |---|---|---|
-| `playstyle` | 玩法主线 | index / intro_0 / intro_0_5 / recipe_unlock / element_level / track_tourist / track_adventure / track_tech / track_diplomacy / tourists |
+| `playstyle` | 玩法主线 | index / intro_0 / intro_0_5 / permission / recipe_unlock / element_level / track_tourist / track_adventure / track_tech / track_diplomacy / tourists |
 | `buildings` | 建筑 | buildings / anomaly / townhall / warehouse / workstation / crafting / magic_station / tavern / altar / mage_hut / node / decoration / shop / service / relax / atm / building_scanner |
-| `management` | 管理 | panel / panel_build / panel_road / panel_tasks / panel_settings |
+| `management` | 管理 | panel / panel_build / panel_road / panel_colony / panel_tasks / panel_settings |
 | `magic` | 魔法 | mages / casting / advanced_casting / magic_beam / magic_meteor / magic_desperation / magic_enfeeble_field / magic_conversion / magic_petrification / magic_fortification / magic_heal / magic_teleport / magic_revive |
 | `items` | 装备与物品 | wand / oath_ring / magic_compass / warehouse_terminal / blueprint |
 | `custom` | 自定义与数据包 | custom / building_scanner / custom_buildings / custom_packs / custom_elements / custom_recipes / custom_magic / custom_loot / custom_commands |
 | `compat` | 联动与兼容 | curios / irons_spells / goety |
 | `about` | 关于我们 | about |
 
-共 **63 个条目位**，来自 **62 篇 md**（`building_scanner_guide` 一篇登两处），中英两侧完全一致。
+共 **65 个条目位**，来自 **64 篇 md**（`building_scanner_guide` 一篇登两处），中英两侧完全一致。
 数字对不上，说明 `ENTRIES` 里加了新条目而这张表没跟上。
 
 **md 目录里不该有表外的文档**：`guidebook/{zh_cn,en}/` 下的每一篇都必须登在 `ENTRIES` 里，

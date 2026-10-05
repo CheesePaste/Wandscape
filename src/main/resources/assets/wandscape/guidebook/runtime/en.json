@@ -86,53 +86,60 @@
       "sortnum": 2
     },
     {
+      "doc": "permission_guide",
+      "category": "playstyle",
+      "name": "Permissions",
+      "icon": "minecraft:name_tag",
+      "sortnum": 3
+    },
+    {
       "doc": "recipe_unlock_guide",
       "category": "playstyle",
       "name": "Unlocking Recipes",
       "icon": "wandscape:item_blueprint",
-      "sortnum": 3
+      "sortnum": 4
     },
     {
       "doc": "element_level_guide",
       "category": "playstyle",
       "name": "Elements and Town Level",
       "icon": "wandscape:element_earth",
-      "sortnum": 4
+      "sortnum": 5
     },
     {
       "doc": "track_tourist_guide",
       "category": "playstyle",
       "name": "1. Tourist Track",
       "icon": "wandscape:tourist_spawn_egg",
-      "sortnum": 5
+      "sortnum": 6
     },
     {
       "doc": "tourists_guide",
       "category": "playstyle",
       "name": "Tourists and Values",
       "icon": "minecraft:emerald",
-      "sortnum": 6
+      "sortnum": 7
     },
     {
       "doc": "track_adventure_guide",
       "category": "playstyle",
       "name": "2. Adventure Track",
       "icon": "minecraft:iron_sword",
-      "sortnum": 7
+      "sortnum": 8
     },
     {
       "doc": "track_tech_guide",
       "category": "playstyle",
       "name": "3. Tech Track",
       "icon": "minecraft:redstone",
-      "sortnum": 8
+      "sortnum": 9
     },
     {
       "doc": "track_diplomacy_guide",
       "category": "playstyle",
       "name": "4. Diplomacy Track",
       "icon": "minecraft:white_banner",
-      "sortnum": 9
+      "sortnum": 10
     },
     {
       "doc": "buildings_guide",
@@ -275,18 +282,25 @@
       "sortnum": 2
     },
     {
+      "doc": "panel_colony_guide",
+      "category": "management",
+      "name": "Town Panel",
+      "icon": "minecraft:bell",
+      "sortnum": 3
+    },
+    {
       "doc": "panel_tasks_guide",
       "category": "management",
       "name": "Task Hall",
       "icon": "minecraft:paper",
-      "sortnum": 3
+      "sortnum": 4
     },
     {
       "doc": "panel_settings_guide",
       "category": "management",
       "name": "Settings",
       "icon": "minecraft:redstone_torch",
-      "sortnum": 4
+      "sortnum": 5
     },
     {
       "doc": "mages_guide",
@@ -509,6 +523,7 @@
   "titles": {
     "0. Getting Started": "intro_0_guide",
     "0.5 Recommended Features": "intro_0_5_guide",
+    "Permissions": "permission_guide",
     "Unlocking Recipes": "recipe_unlock_guide",
     "1. Tourist Track": "track_tourist_guide",
     "2. Adventure Track": "track_adventure_guide",
@@ -527,6 +542,7 @@
     "Management Panel": "panel_guide",
     "Build Mode": "panel_build_guide",
     "Road Mode": "panel_road_guide",
+    "Town Panel": "panel_colony_guide",
     "Task Hall": "panel_tasks_guide",
     "Settings": "panel_settings_guide",
     "Mages": "mages_guide",

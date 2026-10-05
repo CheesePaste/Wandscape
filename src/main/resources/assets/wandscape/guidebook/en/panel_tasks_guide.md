@@ -1,6 +1,6 @@
 # Task Hall
 
-> Press 3 with the management panel open; press 3 again or ESC to leave.
+> Press 4 with the management panel open; press 4 again or ESC to leave.
 
 ## What the three pages do
 

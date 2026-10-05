@@ -15,12 +15,12 @@
     },
     {
       "type": "patchouli:text",
-      "text": "$(li)$(l:wandscape:playstyle/recipe_unlock_guide)《Unlocking Recipes》$(/l) Crafting recipes start locked; how to open them$(li)$(l:wandscape:playstyle/element_level_guide)《Elements and Town Level》$(/l) Understand the economy system$(li)$(l:wandscape:magic/mages_guide)《Mages》$(/l) Workers and combatants of the town$(li)$(l:wandscape:buildings/altar_guide)《Altar》$(/l) Revive fallen mages, crucial in the early game",
+      "text": "$(li)$(l:wandscape:playstyle/recipe_unlock_guide)《Unlocking Recipes》$(/l) Crafting recipes start locked; how to open them$(li)$(l:wandscape:playstyle/permission_guide)《Permissions》$(/l) Who may do what in which town when several players share a world$(li)$(l:wandscape:playstyle/element_level_guide)《Elements and Town Level》$(/l) Understand the economy system$(li)$(l:wandscape:magic/mages_guide)《Mages》$(/l) Workers and combatants of the town",
       "title": "Beyond the tutorial, these are worth a look"
     },
     {
       "type": "patchouli:text",
-      "text": "$(li)$(l:wandscape:buildings/crafting_guide)《Equipment Workshop》$(/l) Powerful wands, exploration tools, and boss fight equipment$(li)$(l:wandscape:buildings/tavern_guide)《Tavern》$(/l) Recruit more mages$(li)$(l:wandscape:buildings/mage_hut_guide)《Mage Hut》$(/l) Train mage attributes, the core of town combat power$(li)$(l:wandscape:management/panel_road_guide)《Road Mode》$(/l) Level terrain and pave roads"
+      "text": "$(li)$(l:wandscape:buildings/altar_guide)《Altar》$(/l) Revive fallen mages, crucial in the early game$(li)$(l:wandscape:buildings/crafting_guide)《Equipment Workshop》$(/l) Powerful wands, exploration tools, and boss fight equipment$(li)$(l:wandscape:buildings/tavern_guide)《Tavern》$(/l) Recruit more mages$(li)$(l:wandscape:buildings/mage_hut_guide)《Mage Hut》$(/l) Train mage attributes, the core of town combat power$(li)$(l:wandscape:management/panel_road_guide)《Road Mode》$(/l) Level terrain and pave roads"
     }
   ]
 }

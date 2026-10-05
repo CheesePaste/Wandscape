@@ -7,6 +7,7 @@ The starter tutorial only covers the Town Hall, Warehouse, and Item Workshop. He
 ## Beyond the tutorial, these are worth a look
 
 - 《Unlocking Recipes》 Crafting recipes start locked; how to open them
+- 《Permissions》 Who may do what in which town when several players share a world
 - 《Elements and Town Level》 Understand the economy system
 - 《Mages》 Workers and combatants of the town
 - 《Altar》 Revive fallen mages, crucial in the early game

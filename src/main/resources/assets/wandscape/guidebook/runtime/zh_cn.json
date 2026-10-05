@@ -86,53 +86,60 @@
       "sortnum": 2
     },
     {
+      "doc": "permission_guide",
+      "category": "playstyle",
+      "name": "权限管理",
+      "icon": "minecraft:name_tag",
+      "sortnum": 3
+    },
+    {
       "doc": "recipe_unlock_guide",
       "category": "playstyle",
       "name": "配方解锁",
       "icon": "wandscape:item_blueprint",
-      "sortnum": 3
+      "sortnum": 4
     },
     {
       "doc": "element_level_guide",
       "category": "playstyle",
       "name": "元素与城镇等级",
       "icon": "wandscape:element_earth",
-      "sortnum": 4
+      "sortnum": 5
     },
     {
       "doc": "track_tourist_guide",
       "category": "playstyle",
       "name": "1，游客线",
       "icon": "wandscape:tourist_spawn_egg",
-      "sortnum": 5
+      "sortnum": 6
     },
     {
       "doc": "tourists_guide",
       "category": "playstyle",
       "name": "游客与三值",
       "icon": "minecraft:emerald",
-      "sortnum": 6
+      "sortnum": 7
     },
     {
       "doc": "track_adventure_guide",
       "category": "playstyle",
       "name": "2，冒险线",
       "icon": "minecraft:iron_sword",
-      "sortnum": 7
+      "sortnum": 8
     },
     {
       "doc": "track_tech_guide",
       "category": "playstyle",
       "name": "3，科技线",
       "icon": "minecraft:redstone",
-      "sortnum": 8
+      "sortnum": 9
     },
     {
       "doc": "track_diplomacy_guide",
       "category": "playstyle",
       "name": "4，外交线",
       "icon": "minecraft:white_banner",
-      "sortnum": 9
+      "sortnum": 10
     },
     {
       "doc": "buildings_guide",
@@ -275,18 +282,25 @@
       "sortnum": 2
     },
     {
+      "doc": "panel_colony_guide",
+      "category": "management",
+      "name": "小镇面板",
+      "icon": "minecraft:bell",
+      "sortnum": 3
+    },
+    {
       "doc": "panel_tasks_guide",
       "category": "management",
       "name": "任务大厅",
       "icon": "minecraft:paper",
-      "sortnum": 3
+      "sortnum": 4
     },
     {
       "doc": "panel_settings_guide",
       "category": "management",
       "name": "设置中心",
       "icon": "minecraft:redstone_torch",
-      "sortnum": 4
+      "sortnum": 5
     },
     {
       "doc": "mages_guide",
@@ -509,6 +523,7 @@
   "titles": {
     "0，入门": "intro_0_guide",
     "0.5，推荐了解的功能": "intro_0_5_guide",
+    "权限管理": "permission_guide",
     "配方解锁": "recipe_unlock_guide",
     "1，游客线": "track_tourist_guide",
     "2，冒险线": "track_adventure_guide",
@@ -527,6 +542,7 @@
     "管理面板": "panel_guide",
     "建造子模式": "panel_build_guide",
     "道路子模式": "panel_road_guide",
+    "小镇面板": "panel_colony_guide",
     "任务大厅": "panel_tasks_guide",
     "设置中心": "panel_settings_guide",
     "法师": "mages_guide",

@@ -2,12 +2,12 @@
   "name": "任务大厅",
   "category": "wandscape:management",
   "icon": "minecraft:paper",
-  "sortnum": 3,
+  "sortnum": 4,
   "read_by_default": true,
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "$(italic)$(#6b5a45)管理面板打开时按 3 进入，再按一次 3 或 ESC 退出。$()$(br2)$(bold)三页各管什么$()$(br2)这里分三页：任务大厅列出本镇正在干和等着干的活，工坊流水线按建筑看队列、缺什么料，法师名册看每个法师在忙什么。任务卡上能定位、加急、取消。"
+      "text": "$(italic)$(#6b5a45)管理面板打开时按 4 进入，再按一次 4 或 ESC 退出。$()$(br2)$(bold)三页各管什么$()$(br2)这里分三页：任务大厅列出本镇正在干和等着干的活，工坊流水线按建筑看队列、缺什么料，法师名册看每个法师在忙什么。任务卡上能定位、加急、取消。"
     },
     {
       "type": "patchouli:text",

@@ -11,8 +11,12 @@
     },
     {
       "type": "patchouli:text",
-      "text": "$(li)$(l:wandscape:playstyle/recipe_unlock_guide)《配方解锁》$(/l)合成配方默认全锁着，讲怎么开$(li)$(l:wandscape:playstyle/element_level_guide)《元素与城镇等级》$(/l)了解经济系统$(li)$(l:wandscape:magic/mages_guide)《法师》$(/l)城镇的工人兼战斗人员$(li)$(l:wandscape:buildings/altar_guide)《祭坛》$(/l)祭坛可以复活法师，在前期很有用$(li)$(l:wandscape:buildings/crafting_guide)《装备工坊》$(/l)有提升战力的法杖与探索，打BOSS都很有用的道具$(li)$(l:wandscape:buildings/tavern_guide)《酒馆》$(/l)可以招募法师$(li)$(l:wandscape:buildings/mage_hut_guide)《法师小屋》$(/l)可以训练法师，战力的核心$(li)$(l:wandscape:management/panel_road_guide)《道路子模式》$(/l)平地和铺路功能",
+      "text": "$(li)$(l:wandscape:playstyle/recipe_unlock_guide)《配方解锁》$(/l)合成配方默认全锁着，讲怎么开$(li)$(l:wandscape:playstyle/permission_guide)《权限管理》$(/l)多人共玩时谁能在哪座镇做什么$(li)$(l:wandscape:playstyle/element_level_guide)《元素与城镇等级》$(/l)了解经济系统$(li)$(l:wandscape:magic/mages_guide)《法师》$(/l)城镇的工人兼战斗人员",
       "title": "除了教程，这几样也值得先看"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(li)$(l:wandscape:buildings/altar_guide)《祭坛》$(/l)祭坛可以复活法师，在前期很有用$(li)$(l:wandscape:buildings/crafting_guide)《装备工坊》$(/l)有提升战力的法杖与探索，打BOSS都很有用的道具$(li)$(l:wandscape:buildings/tavern_guide)《酒馆》$(/l)可以招募法师$(li)$(l:wandscape:buildings/mage_hut_guide)《法师小屋》$(/l)可以训练法师，战力的核心$(li)$(l:wandscape:management/panel_road_guide)《道路子模式》$(/l)平地和铺路功能"
     }
   ]
 }

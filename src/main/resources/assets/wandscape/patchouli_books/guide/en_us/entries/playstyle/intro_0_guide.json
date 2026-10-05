@@ -84,7 +84,7 @@
     },
     {
       "type": "patchouli:text",
-      "text": "in your backpack. To see how far along the job is, press V and then 3 for the task hall. That is the end of the five steps and the guide box won't come back;$(br)for what to build and do next, read $(l:wandscape:playstyle/intro_0_5_guide)《0.5 Recommended Features》$(/l)."
+      "text": "in your backpack. To see how far along the job is, press V and then 4 for the task hall. That is the end of the five steps and the guide box won't come back;$(br)for what to build and do next, read $(l:wandscape:playstyle/intro_0_5_guide)《0.5 Recommended Features》$(/l)."
     }
   ]
 }
