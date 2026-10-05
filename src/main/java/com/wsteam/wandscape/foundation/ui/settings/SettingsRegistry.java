@@ -246,6 +246,24 @@ public final class SettingsRegistry {
                 Config.RECIPE_LOCK_ENABLED
         ));
 
+        register(new SettingItem.BooleanSetting(
+                "building.multiWorkerEnabled",
+                title("building.multiWorkerEnabled", "多法师协同建造"),
+                SettingTab.COLONY,
+                false, true,
+                Config.CONSTRUCTION_MULTI_WORKER_ENABLED
+        ));
+
+        register(new SettingItem.IntSetting(
+                "building.constructionBatchSize",
+                title("building.constructionBatchSize", "协同建造单批方块数"),
+                SettingTab.COLONY,
+                false, true,
+                Config.CONSTRUCTION_BATCH_SIZE,
+                4, 16,
+                val -> unit("unit.blocks", "%s 方块", String.valueOf(val))
+        ));
+
         register(new SettingItem.IntSetting(
                 "tavern.recruitCostPerElement",
                 title("tavern.recruitCostPerElement", "酒馆法师招募单价"),

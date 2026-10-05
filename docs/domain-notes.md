@@ -197,6 +197,13 @@
    - **进世界换实例的路径是 datapack 同步**：`DatapackDataSyncReceiver` → `WandscapeDataLoader.applyCategoryFrom` → `SimpleDataRegistry.clear()` → `onClear.run()` → `BuildingConfigLoader.clear()` → 随即按同步来的 JSON 重建全部实例。这条路径**不经过客户端的 reload listener**（`WandscapeClient#onRegisterClientReloadListeners` 里那串 `closeAll` / `clearAnimatedCache` / `clearMetaCache` / `BuildingPreviewGifCache.closeAll`），所以 **datapack reload 有清缓存、进世界同步没有**——进世界后旧实例仍留在各 map 的键里，新实例同 hash（`hashCode` 只哈希 `id`/`packageId`）不同身份，于是每帧每栋楼一次 O(pattern) `equals`。表现是「退出世界重进后缓存失效、240fps 掉到 100fps」。`hashCode` 已改成只哈希 `id`/`packageId`，所以症状会从 `HashMap.hash` 变成 `HashMap.get`。
    - **做法**：新增「以 `BuildingConfig` 为键」的缓存一律用 **`config.id()` 取键 + 值里包一层 `source` 记烘这份表时的实例**——实例换了只做**一次**内容比对，一样就认下新实例（此后走身份短路，继续复用），真变了才释放重烘。`id` 是权威唯一键（`parseAndRegister` 里 `config.id()` 就是全量 id）。虚影那两个逐帧缓存（`BuildingGhostVboCache.CACHE`、`BuildingGhostRenderer.ANIMATED_CACHE`）已按这套改完；**还剩** `BuildingPreviewGifCache` 的 CACHE/LOD_CACHE/BOUNDS_CACHE/SCALE_CACHE 与 `BuildingPreviewRenderer.META_CACHE` 仍按 record 取键（`pumpQueue` 有 `pendingCount` 稳态早退，暂未上热点），要动就照同一套来。也别以为「reload listener 清了缓存」能覆盖进世界同步。
 
+17. **多法师协同建造分批与状态机（`ConstructionBatches` & `BuildingTaskPool`）**：
+   - **两阶段执行契约**：单条包含大量方块的大型建筑/修复任务（`build:clear_and_build` / `build:place_structure`）超过 `Config.CONSTRUCTION_BATCH_SIZE`（默认 32 方块）且开启 `Config.CONSTRUCTION_MULTI_WORKER_ENABLED` 时，由 `ConstructionBatches.split` 拆分为批次：
+     - **Phase 1 准备批次（Initial / Foundation Batch）**：承载全栋建筑的全部材料扣款（`ResourceRequestOp`）与包围盒清扫（`ClearBoxOp`，若开清盒开关），以及底层地基方块放置。若仓库材料不足，该批次自然进入 `AWAITING_RESOURCES` 挂起等待（进入 `BuildingTaskQueue.parkedTaskIds`），绝不放行后续批次，防止无料白嫖；待材料补齐唤醒后（`unparkBatch`）重回活跃状态。
+     - **Phase 2 并发放置批次（Parallel Placement Batches）**：首批准备完工（建材全额记账、场地已平整）后，后续所有放置批次一次性全部释放入 `GlobalTaskPool`，多个空闲法师可同时各领一批并发施工。
+   - **状态聚合与完工事件**：子批次自身设置 `omit_complete_event = true` 不单独发广播；`BuildingTaskPool.checkBatchesProgress` 跟踪全量批次进度，只有当全部活跃与待发批次均完成时，才由 `BuildingTaskQueue` 统一聚合发射 `build_complete` 事件，触发奇观触发器、建筑完成粒子、工地面板状态更新与下一条待办任务提升。
+   - **配置项**：`Config.CONSTRUCTION_MULTI_WORKER_ENABLED`（`building.multiWorkerEnabled`，默认 true，游戏内设置中心「城镇经营」可调）与 `Config.CONSTRUCTION_BATCH_SIZE`（`building.constructionBatchSize`，默认 32 方块，范围 4~1024）。
+
 ---
 
 ## 六、仓库与物流域 (`content/warehouse`)

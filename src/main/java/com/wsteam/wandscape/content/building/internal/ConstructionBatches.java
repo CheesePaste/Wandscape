@@ -4,6 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
+import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.content.building.data.WorkItem;
 import com.wsteam.wandscape.content.task.engine.pool.TaskRequest;
 
@@ -48,9 +49,11 @@ public final class ConstructionBatches {
 
     /**
      * 判定任务是否为可切分的宏建筑任务：
-     * 只有建造（build:clear_and_build）与结构放置（build:place_structure），且方块数大于单批阈值时才切分。
+     * 只有建造（build:clear_and_build）与结构放置（build:place_structure），
+     * 且在启用多法师建造且方块数大于配置单批阈值时才切分。
      */
     public static boolean isSplittable(WorkItem work) {
+        if (!Config.isMultiWorkerConstructionEnabled()) return false;
         if (work == null || work.blueprintId() == null) return false;
         if (!"build:clear_and_build".equals(work.blueprintId())
                 && !"build:place_structure".equals(work.blueprintId())) {
@@ -58,8 +61,9 @@ public final class ConstructionBatches {
         }
         if (work.params() == null) return false;
         JsonElement offsetsEl = work.params().get("offsets");
+        int batchSize = Config.constructionBatchSize();
         return offsetsEl != null && offsetsEl.isJsonArray()
-                && offsetsEl.getAsJsonArray().size() > DEFAULT_BATCH_SIZE;
+                && offsetsEl.getAsJsonArray().size() > batchSize;
     }
 
     /** 任务是否需要前置准备阶段（有材料消耗需从仓库提取，或有包围盒需清场）。 */
@@ -91,8 +95,9 @@ public final class ConstructionBatches {
     public static SplitResult split(WorkItem work, @Nullable UUID colonyId) {
         JsonArray offsets = work.params().get("offsets").getAsJsonArray();
         int totalBlocks = offsets.size();
+        int batchSize = Math.max(1, Config.constructionBatchSize());
 
-        int chunkCount = (totalBlocks + DEFAULT_BATCH_SIZE - 1) / DEFAULT_BATCH_SIZE;
+        int chunkCount = (totalBlocks + batchSize - 1) / batchSize;
         int perChunk = (totalBlocks + chunkCount - 1) / chunkCount;
 
         JsonObject blocks = work.params().containsKey("blocks") && work.params().get("blocks").isJsonObject()
