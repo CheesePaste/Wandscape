@@ -7,8 +7,9 @@ import javax.annotation.Nullable;
  *
  * <p>语义（2026-10 裁定，别自行扩展）：
  * <ul>
- *   <li>{@link #OWNER} 全部权限，含改小镇设置与调整他人档位。**唯一且可转让**，转让后前任降 MANAGER。
- *       同时是友军白名单的归属身份锚点——这正是它不可多个的原因（见 docs/multiplayer-survey.md §10.3.1）。</li>
+ *   <li>{@link #OWNER} 全部权限，含改小镇设置与调整他人档位。**每座镇唯一**、可转让，转让后前任降 MANAGER；
+ *       **一人可拥有多座镇**（「一镇一主」是不变量，「一人一镇」已废止）。
+ *       同时是友军白名单的归属身份锚点——这正是它不可多个的原因（见 docs/multiplayer-permissions.md §一.3）。</li>
  *   <li>{@link #MANAGER} 全部操作性权限（建造/拆除、法师招募解雇调策略装备、跟随、任务调度……），
  *       但**不能**调档位、不能改设置。能操作镇内法师，却**不是法师的 Owner**（法师归属仍是
  *       {@code WandscapeNpc.colonyId}，不随管理人变）——「能管」与「归属」是两个轴。</li>

@@ -7,7 +7,7 @@ import javax.annotation.Nullable;
 /**
  * 包自己声明「目标小镇 + 拒止文案」的客户端 → 服务端包，由 {@link PayloadRegistry#c2s} 一处接管。
  *
- * <p>背景（见 {@code docs/multiplayer-survey.md} §10.5.2）：全仓约 30 个服务端包各自在
+ * <p>背景（见 {@code docs/multiplayer-permissions.md} §四）：全仓约 30 个服务端包各自在
  * {@code handleServer} 里手写归属校验，改一次权限模型就要改 30 处、漏一处就是越权洞。
  * 真正的落点不是「再包一层」，而是让包声明它的作用域，判定与拒止集中在一处。
  *
