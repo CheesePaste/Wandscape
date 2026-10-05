@@ -23,6 +23,14 @@
     "en_us": "[Restart]",
     "zh_cn": "[需重启]"
   },
+  "gui.wandscape.settings.building.constructionBatchSize": {
+    "en_us": "Construction batch size",
+    "zh_cn": "协同建造单批方块数"
+  },
+  "gui.wandscape.settings.building.multiWorkerEnabled": {
+    "en_us": "Multi-mage collaborative building",
+    "zh_cn": "多法师协同建造"
+  },
   "gui.wandscape.settings.building.noSpawnInBuildingArea": {
     "en_us": "No mob spawning in building areas",
     "zh_cn": "建筑区域防刷怪"
@@ -274,6 +282,10 @@
   "gui.wandscape.settings.ui.speechBubbles": {
     "en_us": "Chatter bubbles",
     "zh_cn": "闲聊气泡"
+  },
+  "gui.wandscape.settings.unit.blocks": {
+    "en_us": "%s blocks",
+    "zh_cn": "%s 方块"
   },
   "gui.wandscape.settings.unit.blocks_per_second": {
     "en_us": "%s blocks/s",

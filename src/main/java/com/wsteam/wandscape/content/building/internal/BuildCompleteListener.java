@@ -58,13 +58,7 @@ public final class BuildCompleteListener {
         String anchorStr = params.get("anchor");
         String buildingName = params.get("building_name");
 
-        if (anchorStr == null) {
-            Log.warn(TAG, "build_complete event missing anchor — cannot verify building");
-            return;
-        }
-
         BlockPos anchor = parseAnchor(anchorStr);
-        if (anchor == null) return;
 
         Level level = getServerLevel();
         if (level == null) return;
@@ -74,9 +68,14 @@ public final class BuildCompleteListener {
         // boxes may overlap. Fall back to the anchor search for legacy events that
         // predate the id tag.
         BuildingState state = findById(data, params.get("building_id"));
-        if (state == null) state = findByAnchor(data, anchor);
+        if (state == null && anchor != null) state = findByAnchor(data, anchor);
         if (state == null) {
+            Log.warn(TAG, "build_complete: building state not found for id={} anchor={}",
+                    params.get("building_id"), anchorStr);
             return;
+        }
+        if (anchor == null) {
+            anchor = state.getAnchor();
         }
 
         BuildingConfig config = BuildingConfigLoader.getInstance().get(state.getBuildingTypeId());
@@ -144,15 +143,20 @@ public final class BuildCompleteListener {
         }
     }
 
-    /** Parse "x,y,z" string into BlockPos. */
+    /** Parse "x,y,z" or "[x,y,z]" string into BlockPos. */
     private static BlockPos parseAnchor(String s) {
+        if (s == null) return null;
+        s = s.trim();
+        if (s.startsWith("[") && s.endsWith("]")) {
+            s = s.substring(1, s.length() - 1).trim();
+        }
         String[] parts = s.split(",");
         if (parts.length != 3) return null;
         try {
             return new BlockPos(
-                    Integer.parseInt(parts[0]),
-                    Integer.parseInt(parts[1]),
-                    Integer.parseInt(parts[2]));
+                    Integer.parseInt(parts[0].trim()),
+                    Integer.parseInt(parts[1].trim()),
+                    Integer.parseInt(parts[2].trim()));
         } catch (NumberFormatException e) {
             Log.warn(TAG, "Invalid anchor format: {}", s);
             return null;

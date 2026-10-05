@@ -672,9 +672,13 @@ public class Wandscape {
         ServerLevel level = event.getServer().overworld();
         var world = runtime.getWorld();
         if (world != null && world.taskPool != null) {
-            var saved = TaskPoolSavedData.getOrCreate(level, world.taskPool);
+            var saved = TaskPoolSavedData.getOrCreate(level, world.taskPool, world.buildingTaskPool);
             // Mark dirty when pool changes so SavedData writes to disk
             world.taskPool.onChanged = saved::setDirty;
+            if (world.buildingTaskPool != null) {
+                world.buildingTaskPool.onChanged = saved::setDirty;
+                world.buildingTaskPool.rebuildFromPool(world.taskPool);
+            }
             Log.info(TAG, "Task persistence wired — pool has {} active tasks", world.taskPool.size());
         }
 

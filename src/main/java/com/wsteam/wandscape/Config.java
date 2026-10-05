@@ -257,6 +257,22 @@ public class Config {
             .comment("Hostile mobs will not naturally spawn inside a building's complete bounding box.")
             .define("building.noSpawnInBuildingArea", true);
 
+    // ---- 建筑施工 Building Construction ----
+
+    public static final ModConfigSpec.BooleanValue CONSTRUCTION_MULTI_WORKER_ENABLED = BUILDER
+            .comment("是否启用多法师协同建造：设为 true（默认）时，大型建筑任务会自动拆分为多个批次供多名法师并行放置方块；"
+                    + "设为 false 时保持单人按序建造。可在设置中心「城镇经营」调整。")
+            .comment("Whether multi-worker construction is enabled: when true (default), large building tasks are split into multiple batches for multiple mages to place blocks in parallel; "
+                    + "when false, single-worker sequential construction is used. Adjustable in Settings Center, Colony tab.")
+            .define("building.multiWorkerEnabled", true);
+
+    public static final ModConfigSpec.IntValue CONSTRUCTION_BATCH_SIZE = BUILDER
+            .comment("多法师协同建造时单批次方块数：每个放置子任务包含的方块数量上限。"
+                    + "默认 32。建筑方块数超过此数值时才会触发分批。可在设置中心「城镇经营」调整。")
+            .comment("Block count per batch during multi-worker construction: maximum number of blocks assigned to each placement subtask. "
+                    + "Default 32. Buildings with block counts exceeding this value will be split into batches. Adjustable in Settings Center, Colony tab.")
+            .defineInRange("building.constructionBatchSize", 32, 4, 1024);
+
     public static final ModConfigSpec.IntValue TAVERN_RECRUIT_COST_PER_ELEMENT = BUILDER
             .comment("酒馆「招募 NPC」自第二次起每种元素的价格。")
             .comment("Price per element for the Tavern 'recruit NPC' from the second recruit onward.")
@@ -311,6 +327,14 @@ public class Config {
 
     public static boolean isRecipeLockEnabled() {
         return !SPEC.isLoaded() || RECIPE_LOCK_ENABLED.get();
+    }
+
+    public static boolean isMultiWorkerConstructionEnabled() {
+        return !SPEC.isLoaded() || CONSTRUCTION_MULTI_WORKER_ENABLED.get();
+    }
+
+    public static int constructionBatchSize() {
+        return !SPEC.isLoaded() ? 32 : CONSTRUCTION_BATCH_SIZE.get();
     }
     // ---- 友军误伤 Friendly Fire ----
 
