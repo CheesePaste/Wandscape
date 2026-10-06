@@ -125,7 +125,7 @@
    - **为什么执行侧还要逐拍判**：委派是玩家随时可改的配置，而任务是在改配置**之前**派出去的——调度器门口只挡得住"新派"，挡不住"已经在跑"。判据必须读 `exec.globalTaskId`（包绑定后才有；自防御抢断只是把包压进挂起栈，**不会**清这个绑定），所以判定点放在 `processNpc` 里紧跟包启动之后，**不能**提前到 `update` 的更早位置：那会顺手把挂起栈（自防御抢断的包）的恢复时序一起改掉。
    - **生效时延（改文档/面板文案时别写成"即时"）**：改委派后，错配任务在**下一拍**被释放回池（保留步进并退还已取元素），再等**下一次调度心跳**（`EngineBootstrap.SCHEDULER_HEARTBEAT_TICKS = 20` tick）重派；也就是说玩家点完大约一秒内到位，且那件活会从第一个取料步骤重来。
    - **读侧走边界，调度器保持零 MC 依赖**：`EntityOps.delegatedBuildingOf(npcId)` / `delegatedNpcOf(buildingId)`（实现取主世界 `BuildingSavedData`）。`delegatedNpcOf` 对「查不到这名法师」返回 -1，即**按未委派处理**——存档里万一留下过期 UUID，表现是那座建筑退回常规竞派，不会把任务卡死。
-   - **批次续接同样受约束**：多法师协同的 `tryContinueBuilding`（见 §五.17）在续接前也判工地/法师委派，不符就作废续接意图。
+   - **多法师批次同样受约束**：批次接续走的是同一条调度链路（`fairOrder` + 派发门槛，见 §五.17），没有第二条会绕过委派的自派活路径。
    - **面板入口**：委派是策略决定，档位按 MANAGER（`BuildingDelegatePacket`）；候选列表由 `BuildingDelegateDataPacket` 下发，选人框 `MageDelegateDialog` 挂在 `MedievalScreen` 基类——以后别的建筑类别要开委派，改白名单即可，UI 不用动。
    - **已知取舍**：委派不搬人——法师靠自己走到工地，所在区块卸载时该建筑的任务就一直等它（这正是委派的语义，不是 bug）。
 
@@ -216,9 +216,10 @@
    - **配置项**：`Config.CONSTRUCTION_MULTI_WORKER_ENABLED`（`building.multiWorkerEnabled`，默认 true，游戏内设置中心「城镇经营」可调）与 `Config.CONSTRUCTION_BATCH_SIZE`（`building.constructionBatchSize`，默认 32 方块，范围 4~1024）。
    - **批次必须像「一个法师站一处干完整栋」（2026-10-06 修，改拆批前必读）**：拆批本身没问题，问题是让每条批次「各自为政」——
      1. **整栋一个站位**：`ConstructionBatches.split` 给每条批次写 `params["task_bbox"]`（整栋 pattern ∪ 清盒范围的六元组包围盒），`TaskExecutionSystem.resolveTaskStance` 优先按它算站位；站位策略只有 `TaskExecutionSystem.standoffStance` 一处（盒西沿外两格、最底层上方一格、Z 中线），`computeTaskStance` 也走它。改前每条批次按自己那一小块现算，前后批的站位能差十几格，法师每批都横穿工地。
-     2. **完工即续接**：批次完工时 `TaskExecutionSystem.armContinuation` 若判到同栋还有别的批次（`BuildingTaskPool.hasOtherUnfinishedBatches`，含首批完工后尚未放行的 pending），就在 `TaskExecutor.continuation` 记下工地（窗口 60 tick）；下一次空闲 `tryContinueBuilding` 把同栋的下一条待派批次直接续给同一法师，不再回落到调度器心跳（≤20 tick）。指派仍走 `GlobalTaskPool.assignLight`——不预占、不产生幽灵任务；判定只认带 `omit_complete_event` 的批次任务，不认同建筑队列里冒出来的其它工作（合成/复原），免得绕开调度器的施法与魔力门槛。
-     3. **闲逛/捡物路径在被抢活时清掉**：`WandscapeNpc` 的 `RandomStrollGoal` 与 `AutoPickupItemGoal` 的 `stop()` 现在会清掉自己的路径（`suppressWandering` 或 `engineDrivingNavigation()` 为真时除外——那是 NavigationSystem 正在驱动的工作走位）。改前这两条「闲逛目标 / 去捡掉落物」的路径会在任务到来后继续被走完，正是「跑一段再干几秒」。
-     - **症状对照**：只拆批不做上面三条时，玩家实测是「法师干几秒钟就停下来来回跑、跑一段再干几秒钟」（不拆批时是站一处干完整栋）；前半段是每条批次各自算站位，后半段是批次之间的调度空窗里法师闲逛/走去捡掉落物。改这三条之前别去调 `constructionBatchSize`——那是粒度旋钮，不是这个病。
+     2. **完工即接续（接续交给调度器，判定只有一处）**：法师一完工就 `SchedulerSystem.requestImmediatePass()`，让**下一 tick** 立刻跑一轮派活，而不是等心跳（`SCHEDULER_HEARTBEAT_TICKS = 20` tick ≈ 1 秒）——那 1 秒就是「干一会、手上停一下」。派活规则仍全在 `SchedulerSystem`，执行侧只催不派（早先那版 `TaskExecutor.continuation` 自派活已删除：它自带「同栋还有批次」等前提，前提不成立时照样回落心跳）。
+     3. **公平派活序（`SchedulerSystem.fairOrder`）**：可派任务重排成「**还没有工人的任务组各一条**」+「其余按原优先序」。组 = `building_id`，没有建筑归属的任务（采集点/路段/祭坛施法）各自成组。效果：每栋楼/每个任务先分到一个人，有多余的空闲法师才去做第二、第三个工人；否则先入池的大楼（批次最多、id 最老）会一直霸占所有空出来的法师，玩家后放的建筑永远等不到人。建筑委派的候选门槛照旧在候选循环里生效，`fairOrder` 只排序不动语义。
+     4. **闲逛/捡物路径在被抢活时清掉**：`WandscapeNpc` 的 `RandomStrollGoal` 与 `AutoPickupItemGoal` 的 `stop()` 现在会清掉自己的路径（`suppressWandering` 或 `engineDrivingNavigation()` 为真时除外——那是 NavigationSystem 正在驱动的工作走位）。改前这两条「闲逛目标 / 去捡掉落物」的路径会在任务到来后继续被走完，正是「跑一段再干几秒」。
+     - **症状对照**：只拆批不做上面几条时，玩家实测是「法师干几秒钟就停下来来回跑、跑一段再干几秒钟」（不拆批时是站一处干完整栋）；横向乱跑来自每条批次各自算站位 + 闲逛路径，纵向「手上停一下」来自批次之间回落调度器心跳。改这几条之前别去调 `constructionBatchSize`——那是粒度旋钮，不是这个病。
 
 18. **建造投影的放置模型（2026-10-06 起对齐 Litematica，改交互前必读）**：
    - **三阶段**：`瞄准`（虚影每 tick / 每帧跟随准心，**不按任何键**）→ `调整中`（`isPinned()`：锚点固定、不再跟随，可用 ALT+滚轮 / 6 个按钮改 xyz、左键或面板按钮旋转）→ `已定稿`（`isLocked()`：位移与旋转一律拒绝）。

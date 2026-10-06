@@ -9,7 +9,6 @@ import com.wsteam.wandscape.content.task.runtime.TaskSequence;
 
 import javax.annotation.Nullable;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 /**
  * NPC-side task execution state.
@@ -92,25 +91,6 @@ public class TaskExecutor {
      */
     public boolean initialNavDone = false;
 
-    /**
-     * 多法师协同建造的「批次续接」意图：某批次完工时若同栋建筑还有别的批次，这里记下工地，
-     * 由 {@code TaskExecutionSystem} 在下一次空闲时直接把下一条批次续给同一个 NPC，
-     * 不必等调度器心跳——否则每批之间都空转一次，表现为「干几秒、停一下、来回跑」。
-     * {@code untilTick} 过后由执行系统自行丢弃；{@link #reset()} 一并清掉，
-     * 但 {@link #releaseGlobalTask()} **不清**——续接意图本就是跨任务存在的。
-     */
-    @Nullable
-    public BatchContinuation continuation = null;
-
-    /**
-     * 批次续接意图（纯数据）。
-     *
-     * @param buildingId 工地（建筑 id）
-     * @param colonyId   归属小镇；可空（无主任务不做续接）
-     * @param untilTick  失效时刻（近似 tick，见 {@code TaskExecutionSystem.worldTick}）
-     */
-    public record BatchContinuation(UUID buildingId, @Nullable UUID colonyId, long untilTick) {}
-
     /** Reset all state. */
     public void reset() {
         npcQueue.clear();
@@ -127,7 +107,6 @@ public class TaskExecutor {
         state = ExecutorState.IDLE;
         activePackageSource = null;
         initialNavDone = false;
-        continuation = null;
     }
 
     /** Clear global task state (used when task is interrupted or completes). */

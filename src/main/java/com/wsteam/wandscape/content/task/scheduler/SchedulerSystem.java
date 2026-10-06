@@ -33,6 +33,13 @@ public class SchedulerSystem implements EcsSystem {
     private final int heartbeatInterval;
     private int tickCounter = 0;
 
+    /**
+     * 「立刻跑一轮」请求：任务刚完工、法师空出来时由 {@link TaskExecutionSystem} 置位。
+     * 空出来的法师若等心跳（{@link #heartbeatInterval} tick，默认 1 秒）才拿到下一条活，
+     * 玩家看到的就是「干几秒、手上停一下」。
+     */
+    private boolean immediatePassRequested;
+
     private static final String TAG = "Scheduler";
 
     /** @param heartbeatInterval ticks between scheduling runs */
@@ -40,10 +47,17 @@ public class SchedulerSystem implements EcsSystem {
         this.heartbeatInterval = heartbeatInterval;
     }
 
+    /** 请求下一 tick 立刻跑一轮派活（不等心跳）。 */
+    public void requestImmediatePass() {
+        immediatePassRequested = true;
+    }
+
     @Override
     public void update(World world, float delta) {
     tickCounter++;
-    if (tickCounter % heartbeatInterval != 0) return;
+    boolean heartbeat = tickCounter % heartbeatInterval == 0;
+    if (!heartbeat && !immediatePassRequested) return;
+    immediatePassRequested = false;
 
     // 1. Find all idle NPCs with full component set
     // 跟随模式：NPC 不接取任何小镇任务，从空闲候选中排除
@@ -88,15 +102,20 @@ public class SchedulerSystem implements EcsSystem {
             continue;
         }
         List<Long> colonyNpcs = entry.getValue();
-        List<GlobalTask> assignable = taskPool.getAssignableTasks();
-        if (assignable.isEmpty()) continue;
 
-        // Collect target positions already occupied by IN_PROGRESS tasks
+        // 在跑的任务一次扫完两件事：
+        //   ① occupiedTargets：同一目标位置不重复派人（原有口径）；
+        //   ② servedBuildings：哪些任务组已经有工人——公平派活序的判据（见 fairOrder）。
         Set<GridPos> occupiedTargets = new HashSet<>();
+        Set<UUID> servedBuildings = new HashSet<>();
         for (GlobalTask t : taskPool.getByState(TaskState.IN_PROGRESS)) {
             GridPos target = extractTaskTarget(t);
             if (target != null) occupiedTargets.add(target);
+            if (t.buildingId != null) servedBuildings.add(t.buildingId);
         }
+
+        List<GlobalTask> assignable = fairOrder(taskPool.getAssignableTasks(), servedBuildings);
+        if (assignable.isEmpty()) continue;
 
         for (GlobalTask task : assignable) {
             // Skip if another NPC is already working on the same target position
@@ -215,6 +234,44 @@ public class SchedulerSystem implements EcsSystem {
         return null;
     }
 
+    /**
+     * 公平派活序：**先给「还没有工人的任务组」各排一条**，其余条目按原优先序排在其后。
+     *
+     * <p>为什么必须这样排：宏建筑会被拆成几十条批次任务，按纯粹优先序派活时，先入池的那栋楼
+     * （批次最多、id 最老）会一直霸占所有空出来的法师，玩家后放的建筑 B、C 永远等不到人。
+     * 现在的口径是「先保证每个任务/每栋建筑都先分到一个人，只有还剩空闲法师时才让第二个、
+     * 第三个工人去做同一件事」——也就是空闲法师才去协同建造。
+     *
+     * <p>组 = {@code building_id}；没有归属建筑的任务（采集点、路段、祭坛施法等）各自成组，
+     * 它们同样属于「还没人做」。组内与组间都保持入参的顺序（priority desc → createdAt asc →
+     * id asc），所以地基批次永远排在屋顶之前、高优先任务组的第一个人也排在低优先任务组之前。
+     *
+     * <p>任务可以声明建筑委派（只许某一名法师接）：委派约束在下面的候选循环里生效，
+     * 这里只负责排序，不动委派语义。
+     */
+    private static List<GlobalTask> fairOrder(List<GlobalTask> assignable, Set<UUID> servedBuildings) {
+        List<GlobalTask> firstWorker = new ArrayList<>();
+        List<GlobalTask> spareWorkers = new ArrayList<>();
+        Set<UUID> alreadyPicked = new HashSet<>();
+
+        for (GlobalTask task : assignable) {
+            UUID building = task.buildingId;
+            if (building == null) {
+                firstWorker.add(task); // 无归属建筑 = 自成一组，永远算「还没人做」
+            } else if (!servedBuildings.contains(building) && alreadyPicked.add(building)) {
+                firstWorker.add(task);
+            } else {
+                spareWorkers.add(task);
+            }
+        }
+
+        if (firstWorker.isEmpty()) return assignable;
+        List<GlobalTask> ordered = new ArrayList<>(firstWorker.size() + spareWorkers.size());
+        ordered.addAll(firstWorker);
+        ordered.addAll(spareWorkers);
+        return ordered;
+    }
+
     /** 任务声明的小镇归属（params["colony_id"]）；无 = 不限小镇。 */
     @Nullable
     private static String taskColonyFilter(GlobalTask task) {
@@ -246,12 +303,4 @@ public class SchedulerSystem implements EcsSystem {
         return el != null && el.isJsonPrimitive() && el.getAsBoolean();
     }
 
-    /** Manually trigger a scheduling heartbeat (for testing). */
-    public void forceHeartbeat() {
-        tickCounter = heartbeatInterval;
-    }
-
-    public void resetCounter() {
-        tickCounter = 0;
-    }
 }

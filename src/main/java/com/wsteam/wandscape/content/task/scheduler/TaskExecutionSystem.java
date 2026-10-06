@@ -55,16 +55,14 @@ public class TaskExecutionSystem implements EcsSystem {
     private static final String TAG = "TaskExec";
     private static final double NAV_RANGE_SQ = 25.0;
     private static final RitualId ITEM_TELEPORT = new RitualId("item_teleport");
-    /**
-     * 批次续接窗口（tick）：批次完工后这么久内仍算「就在这个工地干活」，超时就交回调度器正常竞派。
-     * 只用来盖住「完工 → 待发批次释放 → 下次心跳」这段空窗，不需要长。
-     */
-    private static final int CONTINUE_WINDOW_TICKS = 60;
 
     private final GlobalTaskPool taskPool;
+    /** 派活方：任务完工、法师空出来时叫它下一 tick 立刻跑一轮，别让法师空等到心跳。 */
+    private final SchedulerSystem scheduler;
 
-    public TaskExecutionSystem(GlobalTaskPool taskPool) {
+    public TaskExecutionSystem(GlobalTaskPool taskPool, SchedulerSystem scheduler) {
         this.taskPool = taskPool;
+        this.scheduler = scheduler;
     }
 
     @Override
@@ -121,8 +119,8 @@ public class TaskExecutionSystem implements EcsSystem {
             continue;
         }
 
-        // ── 1. No work → 先试续接同栋建筑的下一个批次，续不上才 idle ──
-        if (!queue.hasWork() && exec.globalTaskId == null && !tryContinueBuilding(world, npcId, exec)) {
+        // ── 1. No work → idle ──
+        if (!queue.hasWork() && exec.globalTaskId == null) {
             if (exec.state != ExecutorState.IDLE) {
             }
             exec.state = ExecutorState.IDLE;
@@ -397,13 +395,14 @@ public class TaskExecutionSystem implements EcsSystem {
                 exec.globalTaskId);
 
         if (source.startsWith("global:") && exec.globalTaskId != null) {
-            armContinuation(world, npcId, exec, taskPool.get(exec.globalTaskId));
             syncStepToPool(exec, queue);
             taskPool.completeTask(exec.globalTaskId, npcId);
             Log.debug(LogCategory.TASK, "exec", "NPC %d — completed global task #%d", npcId, exec.globalTaskId);
 
-
             exec.releaseGlobalTask();
+            // 法师空出来了 → 立刻叫调度器下一 tick 跑一轮：批次只有几十格，等心跳（≤1s）才接上
+            // 下一条，玩家看到的就是「干几秒、手上停一下」。派活规则仍只有调度器一处，这里只是催它。
+            scheduler.requestImmediatePass();
         }
 
         queue.finishCurrentPackage();
@@ -427,93 +426,7 @@ public class TaskExecutionSystem implements EcsSystem {
         }
     }
 
-    // ── 多法师协同：同栋建筑的批次续接 ──
-
-    /**
-     * 批次完工时留下「续接意图」：同栋建筑还有别的批次（含首批完工后尚未放行的 pending），
-     * 就把工地与归属镇记在 {@link TaskExecutor#continuation} 上，下一次空闲时由
-     * {@link #tryContinueBuilding} 直接把下一条批次续给同一个法师。
-     *
-     * <p>为什么需要它：多法师协同把一栋楼拆成几十条小批次，而批次之间必须经过
-     * 「完工 → 待发批次放行 → 调度器心跳（≤20 tick）重新竞派」这条链，法师每批都要空转一次、
-     * 期间还会自行闲逛——玩家看到的正是「干几秒、停一下、来回跑」。
-     */
-    private void armContinuation(World world, long npcId, TaskExecutor exec, @Nullable GlobalTask finished) {
-        if (finished == null || finished.buildingId == null || world.buildingTaskPool == null
-                || !world.buildingTaskPool.hasOtherUnfinishedBatches(finished.buildingId, finished.id)) {
-            exec.continuation = null;
-            return;
-        }
-        exec.continuation = new TaskExecutor.BatchContinuation(finished.buildingId,
-                GlobalTaskPool.colonyIdOf(finished), worldTick(world) + CONTINUE_WINDOW_TICKS);
-    }
-
-    /**
-     * 续接同栋建筑的下一条待派批次；没有（或意图过期/归属变了）返回 false，交回正常 idle。
-     *
-     * <p>指派语义仍走 {@link GlobalTaskPool#assignLight}——续接只是省掉一次心跳等待，
-     * 任务照样在全局池里可被抢占、可被释放，不产生「预占但没人干」的幽灵任务。
-     */
-    private boolean tryContinueBuilding(World world, long npcId, TaskExecutor exec) {
-        TaskExecutor.BatchContinuation c = exec.continuation;
-        if (c == null) return false;
-        if (worldTick(world) > c.untilTick() || taskPool == null) {
-            exec.continuation = null;
-            return false;
-        }
-        ColonyMember member = world.get(npcId, ColonyMember.class);
-        if (member == null || (c.colonyId() != null && !c.colonyId().equals(member.colonyId()))) {
-            exec.continuation = null;
-            return false;
-        }
-        // 委派：续接也受委派约束——工地被委派给别人、或这名法师被委派到了别处，续接意图作废
-        if (world.entityOps != null) {
-            UUID post = world.entityOps.delegatedBuildingOf(npcId);
-            if (post != null && !post.equals(c.buildingId())) {
-                exec.continuation = null;
-                return false;
-            }
-            long owner = world.entityOps.delegatedNpcOf(c.buildingId());
-            if (owner >= 0 && owner != npcId) {
-                exec.continuation = null;
-                return false;
-            }
-        }
-        // 池里没有待派任务就直接收工：getAssignableTasks() 每次都要复制+排序，
-        // 而这 60 tick 窗口内每个空转 tick 都会问一次。
-        if (taskPool.assignableCount() == 0) return false;
-        for (GlobalTask task : taskPool.getAssignableTasks()) {
-            if (!c.buildingId().equals(task.buildingId) || !isConstructionBatch(task)) continue;
-            if (c.colonyId() != null && !c.colonyId().equals(GlobalTaskPool.colonyIdOf(task))) continue;
-
-            GridPos stance = resolveTaskStance(task);
-            NpcTaskPackage pkg = NpcTaskPackage.resumeFrom(
-                    "global:" + task.id, task.sequence, stance, task.priority, task.stepIndex);
-            exec.npcQueue.enqueueNormal(pkg);
-            taskPool.assignLight(task.id, npcId, world);
-            exec.continuation = null;
-            Log.debug(LogCategory.TASK, "exec", "NPC %d — continued building %s batch #%d",
-                    npcId, c.buildingId().toString().substring(0, 8), task.id);
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * 该任务是否是多法师协同拆出的建造批次：{@code ConstructionBatches} 是唯一写
-     * {@code omit_complete_event} 的地方（子批次不单独发完工广播）。续接只认批次，
-     * 不认同建筑队列里冒出来的其它工作（合成/复原等），免得绕开调度器的施法与魔力门槛。
-     */
-    private static boolean isConstructionBatch(GlobalTask task) {
-        if (task.taskParams == null) return false;
-        JsonElement el = task.taskParams.get("omit_complete_event");
-        if (el == null || !el.isJsonPrimitive()) return false;
-        try {
-            return el.getAsBoolean();
-        } catch (RuntimeException e) {
-            return false;
-        }
-    }
+    // ── 多法师协同：批次之间的接续 ──
 
     /**
      * Sync stepIndex from the queue to both exec and the global task pool.

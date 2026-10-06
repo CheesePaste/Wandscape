@@ -87,8 +87,10 @@ public final class CoreBootstrap {
         // 7. Register systems (in order)
         world.addSystem(new SystemBlueprintSystem(sysBp));
         world.addSystem(new TaskSourcePoller(config.taskSources()));
-        world.addSystem(new SchedulerSystem(config.schedulerHeartbeatTicks()));
-        world.addSystem(new TaskExecutionSystem(world.taskPool));
+        // 派活方要先建出来交给执行侧：法师一空出来就催它下一 tick 立刻跑一轮（见 SchedulerSystem#requestImmediatePass）
+        SchedulerSystem scheduler = new SchedulerSystem(config.schedulerHeartbeatTicks());
+        world.addSystem(scheduler);
+        world.addSystem(new TaskExecutionSystem(world.taskPool, scheduler));
 
         Log.info(TAG, "bootstrap complete - %d component stores, %d systems, %d task sources",
                 world.stores().size(), world.systemCount(), config.taskSources().size());
