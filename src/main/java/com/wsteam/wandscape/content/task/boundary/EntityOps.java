@@ -62,12 +62,17 @@ public interface EntityOps {
     boolean isColonyRegistered(java.util.UUID colonyId);
 
     /**
-     * Whether the NPC's MC entity is present and usable — not unloaded
-     * (chunk unload) and not destroyed (death/discard). A phantom NPC
-     * (components in the ECS world but no live MC entity) must not be
-     * assigned new work or driven by the task executor.
+     * Whether the NPC is alive in the world (not dead and not discarded).
+     * Returns true even if the NPC's chunk is currently unloaded, as long as
+     * the NPC still exists in the colony and can be summoned.
      */
     boolean isNpcAlive(long npcId);
+
+    /**
+     * Whether the NPC's Minecraft entity is currently loaded in memory and usable
+     * (present in a loaded chunk, not removed).
+     */
+    boolean isNpcLoaded(long npcId);
 
     /**
      * Spawn a decoration entity (item frame, painting) from trimmed NBT during
