@@ -1,5 +1,6 @@
 package com.wsteam.wandscape.content.building.render;
 
+import com.mojang.blaze3d.shaders.Uniform;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.renderer.ShaderInstance;
 import com.mojang.blaze3d.vertex.*;
@@ -206,14 +207,26 @@ public final class BuildingGhostVboCache {
         // 里的 pose.translate），段原点只在视锥剔除那一步用，这里**不加段原点**。所以 shader
         // 与矩阵只需设一次，之后每段只 bind + draw —— 对齐原版 LevelRenderer#renderSectionLayer。
         // （原来是每段 drawWithShader：每帧切 ~800 次 shader 程序、上传 ~800 次 MVP。）
-        Matrix4f modelView = new Matrix4f(cameraModelView).translate(
-                (float) (anchor.getX() - camPos.x),
-                (float) (anchor.getY() - camPos.y),
-                (float) (anchor.getZ() - camPos.z));
+        //
+        // 「锚点 − 相机」这次平移走 **ChunkOffset**，不乘进 modelView：rendertype_translucent
+        // 的顶点着色器算的是 pos = Position + ChunkOffset、vertexDistance = fog_distance(pos,
+        // FogShape)，原版地形正是**逐段**把 ChunkOffset 设成「段原点 − 相机」，好把区块相对顶点
+        // 凑成相机相对坐标。两种写法几何逐位等价（M·T·P == M·(P+C)，M 是相机旋转），但 ChunkOffset
+        // 留 0 就等于拿**建筑局部坐标**当相机相对坐标 —— 雾按「到锚点的距离」算：那栋
+        // 154×233×195 的魔法学院局部距离最大 249（远端角）/232（顶），越过
+        // FogEnd = 渲染距离×16 后被 linear_fog 涂成纯 FogColor（夜里只剩 6%~9% 亮度 ≈ 黑），
+        // 表现就是「顶和远端那个角是黑的、开光影又全亮」（Iris 换成 gbuffers_*，原版这套雾不参与）。
         RenderSystem.setShader(GameRenderer::getRendertypeTranslucentShader);
         ShaderInstance shader = RenderSystem.getShader();
-        shader.setDefaultUniforms(VertexFormat.Mode.QUADS, modelView, projection, mc.getWindow());
-        shader.apply();
+        shader.setDefaultUniforms(VertexFormat.Mode.QUADS, cameraModelView, projection, mc.getWindow());
+        Uniform chunkOffset = shader.CHUNK_OFFSET;
+        if (chunkOffset != null) {
+            chunkOffset.set(
+                    (float) (anchor.getX() - camPos.x),
+                    (float) (anchor.getY() - camPos.y),
+                    (float) (anchor.getZ() - camPos.z));
+        }
+        shader.apply();   // apply() 会把 ChunkOffset 连同其余 uniform 一起上传
 
         for (int k = 0; k < n; k++) {
             SectionMesh section = sections[(int) (order[k] & 0xFFFF_FFFFL)];
@@ -225,6 +238,14 @@ public final class BuildingGhostVboCache {
             section.vbo.draw();
         }
         VertexBuffer.unbind();
+
+        // 还原成原版「段循环结束」的值 0 —— 但必须显式 upload()：set() 只标脏，而
+        // ShaderInstance#clear() 并不清 uniform 值，光 set 不传会让这一帧之后任何走地形着色器的
+        // draw（手里的半透明方块、别的虚影路径）被这个偏移顶歪。
+        if (chunkOffset != null) {
+            chunkOffset.set(0.0F, 0.0F, 0.0F);
+            chunkOffset.upload();
+        }
         shader.clear();
     }
 
