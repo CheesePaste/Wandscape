@@ -1783,6 +1783,7 @@
   "message.wandscape.warehouse_terminal.no_colony": "你没有创建小镇，无法打开仓库",
   "message.wandscape.warehouse_terminal.not_equipped": "未穿戴或持有仓库终端",
   "message.wandscape.wonder.magic_academy_completed": "[奇观] 魔法学院落成！为小镇解锁了全部合成配方（共 %s 项）",
+  "message.wandscape.world_response.borrowed": "§7这一处正被【世界应答】借用，暂时改不了（用【平息】可以收回）",
   "message.wandscape.world_response.calm_done": "世界恢复了原状（已收回 %s 处改动）",
   "message.wandscape.world_response.calm_idle": "世界本来就很安静",
   "message.wandscape.world_response.cooldown": "世界仍在平静 —— %s 秒后才会再次回应",

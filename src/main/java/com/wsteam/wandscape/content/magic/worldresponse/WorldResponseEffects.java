@@ -3,16 +3,22 @@ package com.wsteam.wandscape.content.magic.worldresponse;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.foundation.ui.I18n;
 import com.wsteam.wandscape.foundation.util.BalanceValues;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageTypes;
+import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.EntityTeleportEvent;
 import net.neoforged.neoforge.event.entity.EntityTravelToDimensionEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
+import net.neoforged.neoforge.event.level.BlockEvent;
+import net.neoforged.neoforge.event.level.PistonEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
@@ -51,12 +57,18 @@ public final class WorldResponseEffects {
     private static final String TAG = "WorldResponse";
     /** 回滚重试间隔（tick）：给未加载区块留出"回来"的时间，也避免每 tick 遍历。 */
     private static final int ROLLBACK_RETRY_TICKS = 20;
+    /** 借用点提示的节流（tick）：玩家对着借用点猛按时不至于刷屏。 */
+    private static final int BORROW_NOTICE_TICKS = 10;
+    /** 活塞推程要扫的格数：原版最多推 12 格，外加活塞头占的那一格。 */
+    private static final int PISTON_LINE = 13;
 
     private static final Map<UUID, Map<String, WorldResponseEffect>> ACTIVE = new ConcurrentHashMap<>();
     /** 还剩下未加载区块没还干净的效果：绝不丢掉，等区块回来或关服收尾。 */
     private static final List<WorldResponseEffect> PENDING_ROLLBACK = new CopyOnWriteArrayList<>();
     /** 上一 tick 的位置，用来识别"没有事件的那种传送"。 */
     private static final Map<UUID, Vec3> LAST_POS = new ConcurrentHashMap<>();
+    /** 「这一格正被借用」的提示节流表（防刷屏）。 */
+    private static final Map<UUID, Long> BORROW_NOTICE_AT = new ConcurrentHashMap<>();
     private static int retryCooldown;
     private static boolean registered;
 
@@ -74,6 +86,13 @@ public final class WorldResponseEffects {
         bus.addListener(EntityTeleportEvent.class, WorldResponseEffects::onTeleport);
         bus.addListener(PlayerEvent.PlayerChangedDimensionEvent.class, WorldResponseEffects::onChangedDimension);
         bus.addListener(LivingIncomingDamageEvent.class, WorldResponseEffects::onIncomingDamage);
+        // 借出去的位置禁止第三方改动：破坏 / 放置 / 流体在那一格造方块（黑曜石、石头之类）
+        bus.addListener(BlockEvent.BreakEvent.class, WorldResponseEffects::onBreakBorrowed);
+        bus.addListener(BlockEvent.EntityPlaceEvent.class, WorldResponseEffects::onPlaceBorrowed);
+        bus.addListener(BlockEvent.FluidPlaceBlockEvent.class, WorldResponseEffects::onFluidPlaceBorrowed);
+        bus.addListener(PlayerInteractEvent.LeftClickBlock.class, WorldResponseEffects::onLeftClickBorrowed);
+        // 活塞推东西也不许推到这个范围里（方块被推进来、或活塞头伸进来都算改动）
+        bus.addListener(PistonEvent.Pre.class, WorldResponseEffects::onPistonPre);
         bus.addListener(ServerStoppingEvent.class, e -> stopAll(e.getServer()));
         Log.info(TAG, "[WorldResponse] Persistent effect manager registered");
     }
@@ -104,6 +123,7 @@ public final class WorldResponseEffects {
         if (player == null) return 0;
         Map<String, WorldResponseEffect> mine = ACTIVE.remove(player.getUUID());
         LAST_POS.remove(player.getUUID());
+        BORROW_NOTICE_AT.remove(player.getUUID());
         if (mine == null || mine.isEmpty()) return 0;
         for (WorldResponseEffect effect : mine.values()) {
             rollback(player, effect);
@@ -133,6 +153,7 @@ public final class WorldResponseEffects {
         }
         ACTIVE.clear();
         LAST_POS.clear();
+        BORROW_NOTICE_AT.clear();
         forceFinalRollback();
     }
 
@@ -239,6 +260,89 @@ public final class WorldResponseEffects {
     private static boolean isEnvironmentalHeat(DamageSource source) {
         return source.is(DamageTypes.LAVA) || source.is(DamageTypes.HOT_FLOOR)
                 || source.is(DamageTypes.IN_FIRE) || source.is(DamageTypes.ON_FIRE);
+    }
+
+    // ── 借用点：禁止第三方改动 ──
+
+    /** 这个位置是不是正被某个生效中的效果借用（借出去的位置禁止改动，理由见 WorldResponseEffect#holds）。 */
+    public static boolean isBorrowed(LevelAccessor level, BlockPos pos) {
+        if (level == null || pos == null || ACTIVE.isEmpty()) return false;
+        for (Map<String, WorldResponseEffect> mine : ACTIVE.values()) {
+            for (WorldResponseEffect effect : mine.values()) {
+                if (effect.holds(level, pos)) return true;
+            }
+        }
+        return false;
+    }
+
+    private static void onBreakBorrowed(BlockEvent.BreakEvent event) {
+        if (!isBorrowed(event.getLevel(), event.getPos())) return;
+        event.setCanceled(true);
+        if (event.getPlayer() instanceof ServerPlayer player) borrowNotice(player);
+    }
+
+    private static void onPlaceBorrowed(BlockEvent.EntityPlaceEvent event) {
+        // 挂在父类上：EntityMultiPlaceEvent（床/门那种一下放多格）也会进来
+        if (!isBorrowed(event.getLevel(), event.getPos())) return;
+        event.setCanceled(true);
+        if (event.getEntity() instanceof ServerPlayer player) {
+            borrowNotice(player);
+        } else {
+            // 非玩家实体（别的模组的机器之类）同样拦下，只记一条日志
+            Log.info(TAG, "[WorldResponse] Blocked a placement by {} at a borrowed spot {}",
+                    event.getEntity() == null ? "?" : event.getEntity().getType(), event.getPos());
+        }
+    }
+
+    private static void onFluidPlaceBorrowed(BlockEvent.FluidPlaceBlockEvent event) {
+        // 流体想在借用点造方块（水+岩浆=石头/黑曜石这类）：拦掉，否则那一格就永久变了样
+        if (isBorrowed(event.getLevel(), event.getPos())) event.setCanceled(true);
+    }
+
+    private static void onLeftClickBorrowed(PlayerInteractEvent.LeftClickBlock event) {
+        // 垫脚替身本来就不可破坏（挖不动、也没有破坏事件），所以这里主要是给玩家一个解释
+        if (event.getLevel().isClientSide()) return;
+        if (!isBorrowed(event.getLevel(), event.getPos())) return;
+        event.setCanceled(true);
+        if (event.getEntity() instanceof ServerPlayer player) borrowNotice(player);
+    }
+
+    /** 借用点**及其外面一圈**（上下左右前后 6 格）：活塞推程扫到它就不许动。 */
+    private static boolean isBorrowedOrBeside(LevelAccessor level, BlockPos pos) {
+        if (isBorrowed(level, pos)) return true;
+        for (Direction direction : Direction.values()) {
+            if (isBorrowed(level, pos.relative(direction))) return true;
+        }
+        return false;
+    }
+
+    /**
+     * 活塞：只要它的推程线扫到借用点**或借用点外面那一圈**，这个活塞这一下就不动。
+     *
+     * <p>借用点本身靠这条线就够挡（方块被推进来的话，目的地必然是借用点，落在线上）；外面那一圈是
+     * 按「这一带在借用期间冻结」的口径一起挡的——宁可让机械停一下，也不要在借用期间改动这一带。
+     * 原版最多推 12 格，加上活塞头占的那一格，所以扫脸前 {@value #PISTON_LINE} 格。
+     */
+    private static void onPistonPre(PistonEvent.Pre event) {
+        Direction direction = event.getDirection();
+        BlockPos piston = event.getPos();
+        for (int i = 1; i <= PISTON_LINE; i++) {
+            if (isBorrowedOrBeside(event.getLevel(), piston.relative(direction, i))) {
+                event.setCanceled(true);
+                Log.info(TAG, "[WorldResponse] Blocked a piston at {} — its push line hits a borrowed spot", piston);
+                return;
+            }
+        }
+    }
+
+    /** 玩家在借用点动手时给一次解释；同一人 {@value #BORROW_NOTICE_TICKS} tick 内只提示一次。 */
+    private static void borrowNotice(ServerPlayer player) {
+        long now = player.serverLevel().getGameTime();
+        Long last = BORROW_NOTICE_AT.get(player.getUUID());
+        if (last != null && now - last < BORROW_NOTICE_TICKS) return;
+        BORROW_NOTICE_AT.put(player.getUUID(), now);
+        player.displayClientMessage(I18n.name("message.wandscape.world_response.borrowed",
+                "§7这一处正被【世界应答】借用，暂时改不了（用【平息】可以收回）"), true);
     }
 
     private static void onTravelToDimension(EntityTravelToDimensionEvent event) {

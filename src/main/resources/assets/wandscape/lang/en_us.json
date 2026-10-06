@@ -1783,6 +1783,7 @@
   "message.wandscape.warehouse_terminal.no_colony": "You have no town — the warehouse cannot be opened",
   "message.wandscape.warehouse_terminal.not_equipped": "Warehouse Terminal is not equipped or held",
   "message.wandscape.wonder.magic_academy_completed": "[Wonder] The Magic Academy is complete! All synthesize recipes unlocked for the town (%s items)",
+  "message.wandscape.world_response.borrowed": "§7This spot is borrowed by the World's Response — you can't change it until it is recalled (use Calm)",
   "message.wandscape.world_response.calm_done": "The world has settled back (%s change(s) undone)",
   "message.wandscape.world_response.calm_idle": "The world was already quiet",
   "message.wandscape.world_response.cooldown": "The world is still calm — it will answer again in %s s",

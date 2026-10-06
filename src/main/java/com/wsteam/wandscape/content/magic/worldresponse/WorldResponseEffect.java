@@ -1,6 +1,8 @@
 package com.wsteam.wandscape.content.magic.worldresponse;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.LevelAccessor;
 
 import javax.annotation.Nullable;
 
@@ -22,6 +24,20 @@ public interface WorldResponseEffect {
 
     /** 每 tick 推进（内部自己限流；不需要每 tick 做事的实现请自带计数器）。 */
     void tick(ServerPlayer player);
+
+    /**
+     * 这个位置是不是正被本效果**借用**（临时改过、还没还回去）。
+     *
+     * <p>管理器据此**禁止第三方改动它**：破坏、放置、以及流体在那一格造方块（黑曜石/石头之类）
+     * 都会被取消。理由是借出去的位置一旦被改写，回滚时就分不清「该还原成什么」——轻则水位永久
+     * 回不去，重则把别人的建造覆盖掉。
+     *
+     * @param level 事件所在的维度。效果是按维度绑定的，实现方必须拿它跟自己的 level 比一下，
+     *              否则两个维度里同一坐标会互相误判
+     */
+    default boolean holds(LevelAccessor level, BlockPos pos) {
+        return false;
+    }
 
     /**
      * 生效期间是否让施法者免疫**环境热伤害**（岩浆 / 岩浆块 / 站在火里 / 身上着火）。

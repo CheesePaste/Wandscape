@@ -863,6 +863,10 @@
     "zh_cn": "[奇观] 魔法学院落成！为小镇解锁了全部合成配方（共 %s 项）",
     "en_us": "[Wonder] The Magic Academy is complete! All synthesize recipes unlocked for the town (%s items)"
   },
+  "message.wandscape.world_response.borrowed": {
+    "zh_cn": "§7这一处正被【世界应答】借用，暂时改不了（用【平息】可以收回）",
+    "en_us": "§7This spot is borrowed by the World's Response — you can't change it until it is recalled (use Calm)"
+  },
   "message.wandscape.world_response.calm_done": {
     "zh_cn": "世界恢复了原状（已收回 %s 处改动）",
     "en_us": "The world has settled back (%s change(s) undone)"
