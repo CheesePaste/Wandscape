@@ -252,6 +252,10 @@ public final class EntityComponentBridge {
         if (ecsIdBoxed == null) return;
         long ecsId = ecsIdBoxed;
 
+        // 建筑委派解约：人没了，它专职的那座建筑不能留着一个永远不到岗的岗位
+        //（否则那座建筑的任务会一直等它，谁都不许接）。
+        com.wsteam.wandscape.content.building.internal.BuildingDelegation.onMageGone(worker.workerId());
+
         // Release global task for reassignment (preserve stepIndex)
         var exec = world.get(ecsId, TaskExecutor.class);
         if (exec != null && exec.globalTaskId != null) {

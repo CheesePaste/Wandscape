@@ -4,6 +4,7 @@ import com.wsteam.wandscape.content.task.types.EffectId;
 import com.wsteam.wandscape.content.task.types.EntityId;
 import com.wsteam.wandscape.content.task.types.GridPos;
 import com.wsteam.wandscape.content.building.ChunkLoadManager;
+import com.wsteam.wandscape.content.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.content.npc.worker.ColonyWorker;
 import com.wsteam.wandscape.content.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.foundation.log.Log;
@@ -84,6 +85,37 @@ public class WandscapeEntityOps implements EntityOps {
     public boolean isNpcAlive(long npcId) {
         ColonyWorker worker = EntityComponentBridge.INSTANCE.getWorker(npcId);
         return worker != null && !worker.entity().isRemoved();
+    }
+
+    // ── 建筑委派读侧（真源在建筑存档 BuildingSavedData；主世界即权威层，与 BuildingApiImpl 一致）──
+
+    @Override
+    @Nullable
+    public java.util.UUID delegatedBuildingOf(long npcId) {
+        BuildingSavedData sd = buildingData();
+        if (sd == null) return null;
+        ColonyWorker worker = EntityComponentBridge.INSTANCE.getWorker(npcId);
+        return worker != null ? sd.getDelegatedBuildingOfMage(worker.workerId()) : null;
+    }
+
+    @Override
+    public long delegatedNpcOf(java.util.UUID buildingId) {
+        BuildingSavedData sd = buildingData();
+        if (sd == null || buildingId == null) return -1;
+        java.util.UUID mage = sd.getDelegatedMage(buildingId);
+        if (mage == null) return -1;
+        // 反查索引与建筑字段必须指向同一对（一名法师只能服务一座建筑）。存档被手改/损坏出现
+        // 两座建筑抢同一法师时，只有索引认下的那一座拿到它，另一座按未委派处理——宁可退回
+        // 常规竞派，也不让一个法师同时接两座建筑的活。
+        if (!buildingId.equals(sd.getDelegatedBuildingOfMage(mage))) return -1;
+        Long ecsId = EntityComponentBridge.INSTANCE.getEcsId(mage);
+        return ecsId != null ? ecsId : -1;
+    }
+
+    @Nullable
+    private static BuildingSavedData buildingData() {
+        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+        return server != null ? BuildingSavedData.get(server.overworld()) : null;
     }
 
     @Override

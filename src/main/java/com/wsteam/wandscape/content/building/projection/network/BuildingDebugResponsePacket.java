@@ -32,7 +32,11 @@ public record BuildingDebugResponsePacket(
         int magic,
         int wonder,
         List<WorkItem> queue,
-        UUID currentTaskId
+        UUID currentTaskId,
+        /** 该建筑是否支持委派（类别白名单 + 已建成）——面板据此决定是否出「委派」按钮。 */
+        boolean delegatable,
+        /** 被委派法师的显示名；未委派为空串。 */
+        String delegatedMageName
 ) implements CustomPacketPayload {
 
     private static final String TAG = "BuildingDebugResponsePacket";
@@ -91,6 +95,9 @@ public record BuildingDebugResponsePacket(
         } else {
             buf.writeBoolean(false);
         }
+
+        buf.writeBoolean(pkt.delegatable());
+        buf.writeUtf(pkt.delegatedMageName() != null ? pkt.delegatedMageName() : "", 64);
     }
 
     static BuildingDebugResponsePacket read(RegistryFriendlyByteBuf buf) {
@@ -120,11 +127,15 @@ public record BuildingDebugResponsePacket(
 
         UUID currentTaskId = buf.readBoolean() ? buf.readUUID() : null;
 
+        boolean delegatable = buf.readBoolean();
+        String delegatedMageName = buf.readUtf(64);
+
         return new BuildingDebugResponsePacket(
                 buildingId, buildingTypeId, displayName, category,
                 colonyId, anchor, intact, needsRepair,
                 underConstruction, constructionStarted, demolishing,
-                comfort, magic, wonder, queue, currentTaskId
+                comfort, magic, wonder, queue, currentTaskId,
+                delegatable, delegatedMageName
         );
     }
 }

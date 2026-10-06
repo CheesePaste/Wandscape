@@ -5,6 +5,8 @@ import com.wsteam.wandscape.content.building.network.AltarCastRequestPacket;
 import com.wsteam.wandscape.content.building.network.AltarOpenPacket;
 import com.wsteam.wandscape.content.building.network.BuildingAreaSyncPacket;
 import com.wsteam.wandscape.content.building.network.BuildingConfigSyncChunkPacket;
+import com.wsteam.wandscape.content.building.network.BuildingDelegateDataPacket;
+import com.wsteam.wandscape.content.building.network.BuildingDelegatePacket;
 import com.wsteam.wandscape.content.building.network.BuildingInfoPacket;
 import com.wsteam.wandscape.content.building.network.ConstructionCraftAllPacket;
 import com.wsteam.wandscape.content.building.network.ConstructionSiteDataPacket;
@@ -193,6 +195,10 @@ public final class PayloadRegistry {
         c2s(r, BuildingDebugRequestPacket.TYPE, BuildingDebugRequestPacket.STREAM_CODEC, BuildingDebugRequestPacket::handleServer);
         s2c(r, BuildingDebugResponsePacket.TYPE, BuildingDebugResponsePacket.STREAM_CODEC, BuildingDebugResponsePacket::handleClient);
         c2s(r, BuildingActionPacket.TYPE, BuildingActionPacket.STREAM_CODEC, BuildingActionPacket::handleServer);
+
+        // ── 建筑委派（Building Delegation）──
+        c2s(r, BuildingDelegatePacket.TYPE, BuildingDelegatePacket.STREAM_CODEC, BuildingDelegatePacket::handleServer);
+        s2c(r, BuildingDelegateDataPacket.TYPE, BuildingDelegateDataPacket.STREAM_CODEC, BuildingDelegateDataPacket::handleClient);
 
         // ── Building Scanner ──
         c2s(r, ScannerSyncPacket.TYPE, ScannerSyncPacket.STREAM_CODEC, ScannerSyncPacket::handleServer);

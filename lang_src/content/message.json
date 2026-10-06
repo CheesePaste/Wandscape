@@ -83,6 +83,26 @@
     "en_us": "[Wandscape] Town hall linked to the existing town.",
     "zh_cn": "[魔法小镇] 市政厅已关联至现有小镇。"
   },
+  "message.wandscape.delegate.no_building": {
+    "en_us": "§e[Delegate] Building not found",
+    "zh_cn": "§e[委派] 建筑不存在"
+  },
+  "message.wandscape.delegate.no_mage": {
+    "en_us": "§e[Delegate] That mage is gone",
+    "zh_cn": "§e[委派] 找不到该法师"
+  },
+  "message.wandscape.delegate.under_construction": {
+    "en_us": "§e[Delegate] Finish the building first",
+    "zh_cn": "§e[委派] 建筑尚未完工，建成后才能委派"
+  },
+  "message.wandscape.delegate.unsupported": {
+    "en_us": "§e[Delegate] This building type does not support delegation",
+    "zh_cn": "§e[委派] 该建筑类型不支持委派"
+  },
+  "message.wandscape.delegate.wrong_colony": {
+    "en_us": "§e[Delegate] That mage belongs to another town",
+    "zh_cn": "§e[委派] 该法师不属于本镇"
+  },
   "message.wandscape.colony.create_failed": {
     "en_us": "[Wandscape] Failed to create town.",
     "zh_cn": "[魔法小镇] 创建小镇失败。"

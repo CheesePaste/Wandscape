@@ -3,6 +3,7 @@ import com.wsteam.wandscape.content.task.component.Position;
 
 import com.wsteam.wandscape.content.building.internal.BuildCompleteListener;
 import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
+import com.wsteam.wandscape.content.building.internal.BuildingDelegation;
 import com.wsteam.wandscape.content.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.content.building.internal.BuildingState;
 import com.wsteam.wandscape.content.building.internal.ShopStockManager;
@@ -86,6 +87,10 @@ public record BuildingDebugRequestPacket(BlockPos pos) implements CustomPacketPa
                 .findDamagedBlocks(level, state.getAnchor(), config, state.getRotationSteps())
                 .isEmpty();
 
+        // 委派法师的显示名（按钮态与悬停文案用；未委派为 null）
+        String delegatedName = com.wsteam.wandscape.content.building.internal.BuildingDelegation
+                .delegatedMageName(BuildingSavedData.get(level), state.getBuildingId());
+
         return new BuildingDebugResponsePacket(
                 state.getBuildingId(), typeId, displayName, state.getCategory(),
                 state.getColonyId(), state.getAnchor(),
@@ -93,7 +98,9 @@ public record BuildingDebugRequestPacket(BlockPos pos) implements CustomPacketPa
                 !state.hasEverCompleted(), state.isConstructionStarted(),
                 state.isDemolishing(),
                 comfort, magic, wonder,
-                queueSnapshot, state.getCurrentTaskId()
+                queueSnapshot, state.getCurrentTaskId(),
+                BuildingDelegation.supports(state),
+                delegatedName != null ? delegatedName : ""
         );
     }
 

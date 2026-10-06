@@ -44,6 +44,8 @@ public abstract class MedievalScreen extends Screen implements ReplayProtectedSc
 
     protected MedievalButton btnRepair;
     protected MedievalButton btnDemolish;
+    /** 建筑委派的「委派」按钮：仅当服务端标记该建筑可委派（工坊三兄弟 / 采集节点）时出现。 */
+    protected MedievalButton btnDelegate;
     protected int actionButtonsX = -1;
     protected int actionButtonsY = -1;
     protected int actionButtonsOffsetX = -1;
@@ -74,6 +76,10 @@ public abstract class MedievalScreen extends Screen implements ReplayProtectedSc
             btnRepair.setY(y);
             btnDemolish.setX(x + btnRepair.getWidth() + 4);
             btnDemolish.setY(y);
+            if (btnDelegate != null) {
+                btnDelegate.setX(x - btnRepair.getWidth() - 4);
+                btnDelegate.setY(y);
+            }
         }
     }
 
@@ -116,6 +122,73 @@ public abstract class MedievalScreen extends Screen implements ReplayProtectedSc
     /** Open the built-in confirm dialog with custom title; on confirm the given action runs. */
     protected void openConfirmDialog(Component title, Component message, Runnable onConfirm) {
         confirmDialog.open(title, message, onConfirm);
+    }
+
+    // ── 建筑委派（Building Delegation）对话框 ──
+    /**
+     * 「委派法师」选择框。由 {@link #onDelegateButtonClicked()} 向服务端索要候选列表，
+     * 服务端回 {@code BuildingDelegateDataPacket} 后经 {@link #applyDelegateData} 打开。
+     * 放在基类：以后任何建筑类别只要服务端标了可委派，按钮与选人框直接复用。
+     */
+    protected final MageDelegateDialog delegateDialog = new MageDelegateDialog();
+
+    /** 已发出「要候选列表」的请求，等回包开框（防止服务端顺带推的数据包乱弹框）。 */
+    private boolean delegatePickerRequested;
+
+    /** 点「委派」：向服务端要当前委派 + 候选法师，回包到达后由 {@link #applyDelegateData} 开框。 */
+    protected void onDelegateButtonClicked() {
+        UUID target = currentBuildingId();
+        if (target == null) return;
+        delegatePickerRequested = true;
+        Net.toServer(new com.wsteam.wandscape.content.building.network.BuildingDelegatePacket(
+                com.wsteam.wandscape.content.building.network.BuildingDelegatePacket.ACTION_PICKER,
+                target, null));
+    }
+
+    /**
+     * 服务端下发的委派数据：校验是当前建筑的、且确实是我们刚点过「委派」要来的，然后打开选择框。
+     * 由客户端路由调用。
+     */
+    public void applyDelegateData(com.wsteam.wandscape.content.building.network.BuildingDelegateDataPacket packet) {
+        if (packet == null || !isBuildingScreen || !delegatePickerRequested) return;
+        UUID target = currentBuildingId();
+        if (target != null && !target.equals(packet.buildingId())) return;
+        delegatePickerRequested = false;
+        this.buildingId = packet.buildingId();
+
+        List<MageDelegateDialog.Row> rows = new ArrayList<>();
+        for (var row : packet.candidates()) {
+            rows.add(new MageDelegateDialog.Row(row.mageUuid(), row.name(), row.state(),
+                    row.delegatedBuilding(), row.delegatedBuildingName()));
+        }
+        delegateDialog.open(packet.buildingId(), packet.currentMageUuid() != null, rows,
+                this::onDelegateMagePicked, this::onDelegateCleared);
+    }
+
+    private void onDelegateMagePicked(MageDelegateDialog.Row row) {
+        UUID target = currentBuildingId();
+        if (target == null || row == null) return;
+        Net.toServer(new com.wsteam.wandscape.content.building.network.BuildingDelegatePacket(
+                com.wsteam.wandscape.content.building.network.BuildingDelegatePacket.ACTION_SET,
+                target, row.mageUuid()));
+        showFeedback(I18n.name("gui.wandscape.delegate.done", "已委派 %s 负责本建筑", row.name()),
+                MedievalColors.SUCCESS_GREEN);
+    }
+
+    private void onDelegateCleared() {
+        UUID target = currentBuildingId();
+        if (target == null) return;
+        Net.toServer(new com.wsteam.wandscape.content.building.network.BuildingDelegatePacket(
+                com.wsteam.wandscape.content.building.network.BuildingDelegatePacket.ACTION_CLEAR,
+                target, null));
+        showFeedback(I18n.name("gui.wandscape.delegate.cleared", "已取消委派"), MedievalColors.SUCCESS_GREEN);
+    }
+
+    /** 当前建筑 id：优先取服务端快照，其次本地上下文（节点屏只有坐标、无可委派按钮也不受影响）。 */
+    @Nullable
+    protected UUID currentBuildingId() {
+        if (buildingData != null && buildingData.buildingId() != null) return buildingData.buildingId();
+        return buildingId;
     }
 
     // ── Building creator footer ──
@@ -222,6 +295,10 @@ public abstract class MedievalScreen extends Screen implements ReplayProtectedSc
         if (confirmDialog.isOpen()) {
             return confirmDialog.keyPressed(keyCode, scanCode, modifiers);
         }
+        // Delegate picker open: likewise modal
+        if (delegateDialog.isOpen()) {
+            return delegateDialog.keyPressed(keyCode, scanCode, modifiers);
+        }
         // Let a focused text box consume the key first (typing letters incl. H);
         // only open the help document when H is pressed outside any edit box.
         if (super.keyPressed(keyCode, scanCode, modifiers)) {
@@ -263,7 +340,7 @@ public abstract class MedievalScreen extends Screen implements ReplayProtectedSc
 
         renderCreatorFooter(g);
         renderFeedback(g);
-        if (!confirmDialog.isOpen()) {
+        if (!confirmDialog.isOpen() && !delegateDialog.isOpen()) {
             renderForeground(g, mouseX, mouseY, partialTick);
             if (isBuildingScreen && buildingData != null) {
                 renderBuildingHeaderTooltips(g, mouseX, mouseY);
@@ -272,6 +349,9 @@ public abstract class MedievalScreen extends Screen implements ReplayProtectedSc
 
         if (confirmDialog.isOpen()) {
             confirmDialog.render(g, width, height, mouseX, mouseY);
+        }
+        if (delegateDialog.isOpen()) {
+            delegateDialog.render(g, width, height, mouseX, mouseY);
         }
     }
 
@@ -394,8 +474,16 @@ public abstract class MedievalScreen extends Screen implements ReplayProtectedSc
                 I18n.name("gui.wandscape.building_action.destroy", "拆除"),
                 this::onBuildingDemolishClicked);
 
+        // 委派按钮：排在「复原」左侧，位置留给所有建筑屏；可见性由服务端标记
+        // （buildingData.delegatable()）在 updateBuildingActionButtons 里决定。
+        btnDelegate = new MedievalButton(bx - btnW - gap, by, btnW, btnH,
+                I18n.name("gui.wandscape.building_action.delegate", "委派"),
+                this::onDelegateButtonClicked);
+        btnDelegate.visible = false;
+
         addRenderableWidget(btnRepair);
         addRenderableWidget(btnDemolish);
+        addRenderableWidget(btnDelegate);
 
         updateBuildingActionButtons();
     }
@@ -405,6 +493,7 @@ public abstract class MedievalScreen extends Screen implements ReplayProtectedSc
         if (buildingData == null) {
             btnRepair.visible = false;
             btnDemolish.visible = false;
+            if (btnDelegate != null) btnDelegate.visible = false;
             return;
         }
 
@@ -434,6 +523,12 @@ public abstract class MedievalScreen extends Screen implements ReplayProtectedSc
         } else {
             btnRepair.setMessage(I18n.name("gui.wandscape.building_action.repair", "复原"));
             btnRepair.active = needsRepair;
+        }
+
+        // 3. 委派按钮：只有服务端标了可委派的建筑（工坊三兄弟/节点，且已建成）才出现；
+        //    delegatable 已含「已完工」，故这里只需再排掉拆除中。
+        if (btnDelegate != null) {
+            btnDelegate.visible = buildingData.delegatable() && !demolishing;
         }
     }
 
@@ -621,6 +716,18 @@ public abstract class MedievalScreen extends Screen implements ReplayProtectedSc
             }
             return;
         }
+
+        if (btnDelegate != null && btnDelegate.visible && btnDelegate.isHoveredOrFocused()) {
+            String delegateName = buildingData.delegatedMageName();
+            if (delegateName != null && !delegateName.isEmpty()) {
+                g.renderTooltip(font, I18n.name("gui.wandscape.building_action.delegate_set",
+                        "已委派: %s（只做本建筑的任务）", delegateName), mouseX, mouseY);
+            } else {
+                g.renderTooltip(font, I18n.name("gui.wandscape.building_action.delegate_unset",
+                        "选择一名法师专职本建筑：它只接本建筑的任务，本建筑的任务也只派给它"), mouseX, mouseY);
+            }
+            return;
+        }
     }
 
     /** 建筑状态徽标文案；容器屏（仓库）也复用，故为 public。 */
@@ -677,11 +784,38 @@ public abstract class MedievalScreen extends Screen implements ReplayProtectedSc
         if (confirmDialog.isOpen()) {
             return confirmDialog.mouseClicked(mouseX, mouseY, button);
         }
+        if (delegateDialog.isOpen()) {
+            return delegateDialog.mouseClicked(mouseX, mouseY, button);
+        }
         if (button == 0 && isCloseHit(mouseX, mouseY)) {
             this.onClose();
             return true;
         }
         return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+        if (delegateDialog.isOpen()) {
+            return delegateDialog.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+        }
+        return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+    }
+
+    @Override
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+        if (delegateDialog.isOpen()) {
+            return delegateDialog.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+        }
+        return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+    }
+
+    @Override
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        if (delegateDialog.isOpen()) {
+            return delegateDialog.mouseReleased(mouseX, mouseY, button);
+        }
+        return super.mouseReleased(mouseX, mouseY, button);
     }
 
     // ── Drawing helpers ──

@@ -415,6 +415,17 @@ public class WandscapeClient {
             });
         });
 
+        // 建筑委派：服务端回执的候选法师列表 → 交给当前建筑屏（基类统一处理，任何可委派建筑复用）
+        ClientPayloadDispatcher.bind(
+                com.wsteam.wandscape.content.building.network.BuildingDelegateDataPacket.TYPE, packet -> {
+                    Minecraft.getInstance().execute(() -> {
+                        if (Minecraft.getInstance().screen
+                                instanceof com.wsteam.wandscape.foundation.ui.component.MedievalScreen ms) {
+                            ms.applyDelegateData(packet);
+                        }
+                    });
+                });
+
         ClientPayloadDispatcher.bind(ProjectionEnterResponsePacket.TYPE, packet -> {
             var mc = Minecraft.getInstance();
             if (mc.player == null) return;

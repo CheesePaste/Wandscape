@@ -79,4 +79,22 @@ public interface EntityOps {
      * @param nbtBase64   base64-encoded compressed entity NBT (position-rebased, relative to anchor)
      */
     void spawnDecoration(GridPos pos, String entityType, String facing, @Nullable String nbtBase64);
+
+    /**
+     * 建筑委派（见 {@code BuildingDelegation}）的读侧：该工作者被委派到的建筑。
+     *
+     * <p>调度器据此保证「被委派的法师只做它那座建筑的任务」——委派是非 MC 概念，
+     * 而建筑数据在 MC 侧，故由本边界提供这两个查询，调度器保持零 MC 依赖。
+     *
+     * @return 委派到的建筑 id；未委派返回 null
+     */
+    @Nullable
+    java.util.UUID delegatedBuildingOf(long npcId);
+
+    /**
+     * 建筑委派的读侧：该建筑被委派给的工作者（ECS id）。
+     *
+     * @return 被委派工作者的 ECS id；未委派或该工作者已不在世返回 -1
+     */
+    long delegatedNpcOf(java.util.UUID buildingId);
 }

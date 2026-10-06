@@ -59,6 +59,14 @@ public class BuildingState implements BuildingData {
     @Nullable
     private UUID currentTaskId;
     private int rotationSteps;
+    /**
+     * 本建筑被委派给的那名法师（NPC UUID）；未委派为 null。
+     *
+     * <p>委派 = 「这名法师只做这座建筑派发的任务，这座建筑的任务也只派给这名法师」，
+     * 规则与读写编排见 {@link BuildingDelegation}。这里只存事实，不判合法性。
+     */
+    @Nullable
+    private UUID delegatedMage;
 
     public BuildingState(UUID buildingId, String buildingTypeId, String category,
                          BlockPos anchor, BoundingBox bounds,
@@ -156,4 +164,8 @@ public class BuildingState implements BuildingData {
     public void setCurrentTaskId(@Nullable UUID taskId) { this.currentTaskId = taskId; }
     public int getRotationSteps() { return rotationSteps; }
     public void setRotationSteps(int steps) { this.rotationSteps = steps & 3; }
+
+    /** 被委派到本建筑的法师（NPC UUID）；未委派为 null。 */
+    @Nullable public UUID getDelegatedMage() { return delegatedMage; }
+    public void setDelegatedMage(@Nullable UUID mageUuid) { this.delegatedMage = mageUuid; }
 }

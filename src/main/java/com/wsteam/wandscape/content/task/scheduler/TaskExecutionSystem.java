@@ -26,6 +26,7 @@ import com.wsteam.wandscape.content.task.engine.pool.GlobalTaskPool;
 import com.wsteam.wandscape.content.task.runtime.ExecutorState;
 import com.wsteam.wandscape.content.task.runtime.NpcTaskPackage;
 import com.wsteam.wandscape.content.task.runtime.TaskSequence;
+import com.wsteam.wandscape.content.task.runtime.TaskState;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -145,12 +146,18 @@ public class TaskExecutionSystem implements EcsSystem {
                             NpcTaskQueue queue, OpExecutorRegistry registry) {
 
         // ── 1. No current package → start the next one ──
-        if (queue.currentPackage() == null && queue.hasPending()) {
-            queue.startNextPending();
-            NpcTaskPackage pkg = queue.currentPackage();
-            if (pkg != null && pkg.source().startsWith("global:") && exec.globalTaskId == null) {
-                bindGlobalTaskToExecutor(exec, pkg);
-            }
+        startNextPackageIfAny(exec, queue);
+
+        // ── 1.5 建筑委派（Building Delegation）：错配的全局工作当场释放 ──
+        // 放在包启动/绑定之后：此刻才谈得上「这个包属于哪座建筑」。委派是玩家的即时指令，
+        // 不该等下一次调度心跳、更不该等这活干完——被委派的法师手上不该有别的建筑的活，
+        // 被委派的建筑也不该让别人代劳。释放走 releaseForInterruption 的成熟路径
+        //（保留步进、退还已取元素、丢全局包、保留个人包），下一拍调度器按新归属重派。
+        if (violatesDelegation(world, npcId, exec)) {
+            releaseForInterruption(world, npcId, exec, queue);
+            Log.debug(LogCategory.TASK, "exec",
+                    "NPC %d — released a task that violates its building delegation", npcId);
+            return;
         }
 
         NpcTaskPackage pkg = queue.currentPackage();
@@ -459,6 +466,19 @@ public class TaskExecutionSystem implements EcsSystem {
             exec.continuation = null;
             return false;
         }
+        // 委派：续接也受委派约束——工地被委派给别人、或这名法师被委派到了别处，续接意图作废
+        if (world.entityOps != null) {
+            UUID post = world.entityOps.delegatedBuildingOf(npcId);
+            if (post != null && !post.equals(c.buildingId())) {
+                exec.continuation = null;
+                return false;
+            }
+            long owner = world.entityOps.delegatedNpcOf(c.buildingId());
+            if (owner >= 0 && owner != npcId) {
+                exec.continuation = null;
+                return false;
+            }
+        }
         // 池里没有待派任务就直接收工：getAssignableTasks() 每次都要复制+排序，
         // 而这 60 tick 窗口内每个空转 tick 都会问一次。
         if (taskPool.assignableCount() == 0) return false;
@@ -650,6 +670,52 @@ public class TaskExecutionSystem implements EcsSystem {
             world.movementOps.cancelNavigation(npcId);
         }
         Log.debug(LogCategory.TASK, "exec", "NPC %d — phantom (MC entity gone): released global task", npcId);
+    }
+
+    /**
+     * 若当前没有包且有排队包，启动下一个包并在它是 {@code global:} 包时绑定到执行器。
+     * （原本内联在 {@code processNpc} 里；委派判定也要在包启动之后才谈得上"这个包属于哪座建筑"，
+     * 故抽出来给两处共用。）
+     */
+    private void startNextPackageIfAny(TaskExecutor exec, NpcTaskQueue queue) {
+        if (queue.currentPackage() != null || !queue.hasPending()) return;
+        queue.startNextPending();
+        NpcTaskPackage pkg = queue.currentPackage();
+        if (pkg != null && pkg.source().startsWith("global:") && exec.globalTaskId == null) {
+            bindGlobalTaskToExecutor(exec, pkg);
+        }
+    }
+
+    /**
+     * 该 NPC 当前绑定/待执行的全局任务是否**违反建筑委派**（见 {@code BuildingDelegation}）：
+     * <ul>
+     *   <li>被委派的法师手上拿着**不是它那座建筑**的全局任务（含没有建筑归属的护卫等任务）；</li>
+     *   <li>手上任务所属的建筑已被委派给**别人**。</li>
+     * </ul>
+     *
+     * <p>为什么放在执行侧逐拍判，而不是只在调度器门口判：委派是玩家随时可改的配置，
+     * 而任务是在改配置**之前**就派出去的。这里复用"释放任务（保留步进 + 退还已取元素 +
+     * 丢全局包）"的成熟路径，下一拍调度器就会按新归属重派，不必在改委派的那个包里
+     * 另写一套搬任务的逻辑。
+     */
+    private static boolean violatesDelegation(World world, long npcId, TaskExecutor exec) {
+        if (world.entityOps == null || world.taskPool == null || exec.globalTaskId == null) {
+            return false;
+        }
+        GlobalTask task = world.taskPool.get(exec.globalTaskId);
+        if (task == null) return false;
+        // 已完成（还没被释放干净）的任务不碰：releaseTaskForReassign 会把它转回 PENDING_ASSIGN，
+        // 等于让一件干完的活复活重跑。
+        if (task.state == TaskState.COMPLETED) return false;
+
+        UUID post = world.entityOps.delegatedBuildingOf(npcId);
+        if (post != null) {
+            // 被委派的法师只做它那座建筑的活：别的建筑的任务、无主任务（护卫/祭坛等）都不许留
+            return task.buildingId == null || !post.equals(task.buildingId);
+        }
+        if (task.buildingId == null) return false;
+        long owner = world.entityOps.delegatedNpcOf(task.buildingId);
+        return owner >= 0 && owner != npcId;
     }
 
     /** Bind a global task to the executor when a global package starts. */

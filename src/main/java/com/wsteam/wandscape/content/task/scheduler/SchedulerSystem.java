@@ -105,6 +105,12 @@ public class SchedulerSystem implements EcsSystem {
                 continue;
             }
 
+            // 建筑委派（Building Delegation）：这座建筑是否已被委派给某一名法师。
+            // 已委派 → 它的任务只许那名法师接；那名法师不在岗（别的活/不在世）时任务就等，
+            // 绝不"降级"给别人——这正是委派与普通抢单的区别。
+            long buildingDelegate = (task.buildingId != null && world.entityOps != null)
+                    ? world.entityOps.delegatedNpcOf(task.buildingId) : -1;
+
             // 任务可声明小镇归属 + 魔力门槛（如祭坛施法）：
             // 只分给指定小镇的 NPC，且其当前魔力必须 ≥ 任务蓝耗（不足则任务挂起，等回蓝）。
             String taskColony = taskColonyFilter(task);
@@ -120,6 +126,19 @@ public class SchedulerSystem implements EcsSystem {
             double bestDist = -1;
 
             for (long npcId : colonyNpcs) {
+                // 委派约束（与上面对称的另一半）：被委派的法师只接它那座建筑的任务——
+                // 别的建筑的任务、以及 guard:attack 这类没有建筑归属的任务（含护卫）一律不接。
+                if (world.entityOps != null) {
+                    UUID npcPost = world.entityOps.delegatedBuildingOf(npcId);
+                    if (npcPost != null
+                            && (task.buildingId == null || !npcPost.equals(task.buildingId))) {
+                        continue;
+                    }
+                    if (buildingDelegate >= 0 && buildingDelegate != npcId) {
+                        continue;
+                    }
+                }
+
                 // 施法者门槛：守卫/祭坛等任务由只认本模组法师的执行器实现，其它工作者接不了
                 // （接了执行器拿不到实体，任务会瞬间"完成"并空转）
                 if (casterOnly && (world.entityOps == null

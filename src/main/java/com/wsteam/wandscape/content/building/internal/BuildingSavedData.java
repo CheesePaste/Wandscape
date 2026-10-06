@@ -88,6 +88,9 @@ public class BuildingSavedData extends SavedData {
     // NBT key for mage hut residents (buildingId → MageHutResident)
     private static final String TAG_MAGE_HUT_RESIDENTS = "mage_hut_residents";
 
+    // NBT key for the delegated mage of a building (buildingId → NPC UUID)
+    private static final String TAG_DELEGATED_MAGE = "delegated_mage";
+
     // NBT key for shared production queues (workstations by type, nodes by element)
     private static final String TAG_SHARED_QUEUES = "shared_queues";
 
@@ -122,6 +125,15 @@ public class BuildingSavedData extends SavedData {
     /** buildingId → the single mage assigned to that mage hut (survives the mage's death). */
     private final Map<UUID, MageHutResident> mageHutResidents = new ConcurrentHashMap<>();
 
+    // ── Building delegation（建筑委派）──
+    /**
+     * mageUuid → buildingId 反查索引：调度器每拍要按法师问「你被委派到哪座建筑」，
+     * 遍历全部建筑是 O(建筑数)；本表只做 O(1) 反查。{@link #buildings} 里的
+     * {@link BuildingState#getDelegatedMage()} 仍是唯一真源，三处同步：
+     * {@link #setDelegatedMage}、{@link #unregister}、{@link #rebuildIndexes}。
+     */
+    private final Map<UUID, UUID> delegationByMage = new ConcurrentHashMap<>();
+
     // ── Shared production queues ──
     /**
      * A queue shared by all buildings of the same "(colony, groupKey)":
@@ -152,6 +164,66 @@ public class BuildingSavedData extends SavedData {
     public void removeMageHutResident(UUID buildingId) {
         mageHutResidents.remove(buildingId);
         setDirty();
+    }
+
+    // ── Building delegation（建筑委派）──
+
+    /**
+     * 记录（或清除）一座建筑的被委派法师，并同步反查索引。
+     *
+     * <p>只写事实、不做合法性判断——类别白名单、法师在世/同镇等规则在
+     * {@link BuildingDelegation} 一处判定。这里同时摘掉「该法师原先委派到别处」的旧条目，
+     * 保证「一名法师只服务一座建筑」这条不变式在存储层就成立。
+     */
+    public void setDelegatedMage(UUID buildingId, @Nullable UUID mageUuid) {
+        BuildingState state = buildings.get(buildingId);
+        if (state == null) return;
+        UUID previous = state.getDelegatedMage();
+        if (java.util.Objects.equals(previous, mageUuid)) return;
+
+        if (previous != null) {
+            delegationByMage.remove(previous, buildingId);
+        }
+        state.setDelegatedMage(mageUuid);
+        if (mageUuid != null) {
+            // 该法师若已在别的建筑名下，先摘掉那一条（一个法师只有一座建筑）
+            UUID oldBuilding = delegationByMage.put(mageUuid, buildingId);
+            if (oldBuilding != null && !oldBuilding.equals(buildingId)) {
+                BuildingState old = buildings.get(oldBuilding);
+                if (old != null) old.setDelegatedMage(null);
+            }
+        }
+        setDirty();
+    }
+
+    /** 该建筑被委派给的法师（NPC UUID）；未委派返回 null。 */
+    @Nullable
+    public UUID getDelegatedMage(UUID buildingId) {
+        BuildingState state = buildings.get(buildingId);
+        return state != null ? state.getDelegatedMage() : null;
+    }
+
+    /** 该法师被委派到的建筑；未委派返回 null。 */
+    @Nullable
+    public UUID getDelegatedBuildingOfMage(UUID mageUuid) {
+        return mageUuid != null ? delegationByMage.get(mageUuid) : null;
+    }
+
+    /**
+     * 法师不再存在（阵亡/解散）时摘掉其委派，返回被解约的建筑 id（本就没委派返回 null）。
+     * 调用方据此让那座建筑退回「谁都能接」的常规调度，不留一座只等死人的空岗。
+     */
+    @Nullable
+    public UUID clearDelegationOfMage(UUID mageUuid) {
+        if (mageUuid == null) return null;
+        UUID buildingId = delegationByMage.remove(mageUuid);
+        if (buildingId == null) return null;
+        BuildingState state = buildings.get(buildingId);
+        if (state != null && mageUuid.equals(state.getDelegatedMage())) {
+            state.setDelegatedMage(null);
+        }
+        setDirty();
+        return buildingId;
     }
 
     // ── Shared production queues ──
@@ -625,6 +697,12 @@ public class BuildingSavedData extends SavedData {
         BuildingState state = buildings.remove(buildingId);
         if (state == null) return null;
 
+        // 建筑没了，它的委派也随之消失：反查索引必须一起摘，否则那座建筑再被
+        // 建回来（同 id 不会复用，但索引会留垃圾）前，那个法师会一直"被占着"
+        if (state.getDelegatedMage() != null) {
+            delegationByMage.remove(state.getDelegatedMage(), buildingId);
+        }
+
         // Clean posIndex — remove all entries pointing to this building
         posIndex.values().removeIf(id -> id.equals(buildingId));
 
@@ -677,6 +755,10 @@ public class BuildingSavedData extends SavedData {
             entry.putInt(TAG_ROTATION, state.getRotationSteps());
             if (state.getCurrentTaskId() != null) {
                 entry.putUUID(TAG_CURRENT_TASK, state.getCurrentTaskId());
+            }
+            // 委派法师（未委派不写键：旧档缺键即"无委派"，与旧行为一致）
+            if (state.getDelegatedMage() != null) {
+                entry.putUUID(TAG_DELEGATED_MAGE, state.getDelegatedMage());
             }
 
             // Task queue
@@ -849,6 +931,10 @@ public class BuildingSavedData extends SavedData {
             if (entry.hasUUID(TAG_CURRENT_TASK)) {
                 state.setCurrentTaskId(entry.getUUID(TAG_CURRENT_TASK));
             }
+            // 旧档没有这个键 → 未委派（与旧行为一致：谁都能接这座建筑的活）
+            if (entry.hasUUID(TAG_DELEGATED_MAGE)) {
+                state.setDelegatedMage(entry.getUUID(TAG_DELEGATED_MAGE));
+            }
 
             // Task queue
             ListTag queueTag = entry.getList(TAG_QUEUE, Tag.TAG_COMPOUND);
@@ -1001,6 +1087,22 @@ public class BuildingSavedData extends SavedData {
             chunkIndex.computeIfAbsent(cp, k -> ConcurrentHashMap.newKeySet())
                     .add(state.getBuildingId());
         });
+        // 委派反查索引（读档/新登记时重建）。两座建筑在存档里同时指向一名法师是损坏态：
+        // 这里以先来后到认一个（索引即派发口径），并把落败那座的字段一并清掉，
+        // 免得出现「面板显示已委派某人、调度器却当它没委派」的分歧（见 BuildingDelegation）。
+        if (state.getDelegatedMage() != null) {
+            UUID mage = state.getDelegatedMage();
+            UUID prev = delegationByMage.put(mage, state.getBuildingId());
+            if (prev != null && !prev.equals(state.getBuildingId())) {
+                BuildingState loser = buildings.get(prev);
+                if (loser != null && mage.equals(loser.getDelegatedMage())) {
+                    loser.setDelegatedMage(null);
+                }
+                Log.warn(TAG, "mage {} was delegated to two buildings ({} kept, {} cleared on load)",
+                        mage.toString().substring(0, 8), state.getBuildingId().toString().substring(0, 8),
+                        prev.toString().substring(0, 8));
+            }
+        }
         Set<BlockPos> positions = state.getPatternPositions();
         if (positions != null) {
             for (BlockPos pos : positions) {

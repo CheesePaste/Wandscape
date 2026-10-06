@@ -1,0 +1,46 @@
+{
+  "gui.wandscape.delegate.cleared": {
+    "zh_cn": "已取消委派",
+    "en_us": "Delegation cleared"
+  },
+  "gui.wandscape.delegate.clear": {
+    "zh_cn": "取消委派",
+    "en_us": "Clear Delegation"
+  },
+  "gui.wandscape.delegate.close": {
+    "zh_cn": "关闭",
+    "en_us": "Close"
+  },
+  "gui.wandscape.delegate.done": {
+    "zh_cn": "已委派 %s 负责本建筑",
+    "en_us": "Delegated %s to this building"
+  },
+  "gui.wandscape.delegate.empty": {
+    "zh_cn": "本镇暂无可委派的法师",
+    "en_us": "No assignable mages in this town"
+  },
+  "gui.wandscape.delegate.row_busy": {
+    "zh_cn": "执行任务中",
+    "en_us": "Working"
+  },
+  "gui.wandscape.delegate.row_current": {
+    "zh_cn": "当前委派",
+    "en_us": "Currently delegated here"
+  },
+  "gui.wandscape.delegate.row_delegated": {
+    "zh_cn": "已委派: %s",
+    "en_us": "Delegated to: %s"
+  },
+  "gui.wandscape.delegate.row_following": {
+    "zh_cn": "跟随玩家中",
+    "en_us": "Following a player"
+  },
+  "gui.wandscape.delegate.row_idle": {
+    "zh_cn": "空闲",
+    "en_us": "Idle"
+  },
+  "gui.wandscape.delegate.title": {
+    "zh_cn": "委派法师",
+    "en_us": "Delegate a Mage"
+  }
+}

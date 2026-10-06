@@ -117,6 +117,17 @@
    - 接口只有 `entity()` / `colonyId()` 两个抽象方法，其余全是 default——default 就是"普通 Mob 当工人"的基线（原版寻路、中性属性、无魔力无法术），`MobColonyWorker` 几乎不覆写任何方法即是证明。实现新适配器先看 `api/ColonyWorkerApi`。
    - **两个已知缺口**：`ColonyWorker` 在 `content/` 而非 `api/` 且无 `@ApiStatus.Internal`（公开面与内部包的边界是意图、没有机制）；`enlist` 写死 `MobColonyWorker`、无工厂扩展点——想接自带属性成长/魔力/法术/自定义导航的实体，只能改本仓库。动手前先确认这是不是真需求（硬规则 6）。
    - ⚠️ **殖民地归属有两处真相**：适配器上的 `colonyId()` 与 ECS 的 `ColonyMember` 组件。`AsyncTransformExecutor.resolveColonyId` 优先读组件；换镇时两者都要更新（`MobColonyWorker` 有 `setColonyId` 可原地改；接口实现若把 `colonyId` 定成不可变，换镇就得拆掉重建）。新写任何"改归属"的代码都要同时处理这两处。
+5. **建筑委派（Building Delegation）：「一名法师专职一座建筑」（2026-10-06 起，改任务派发/建筑面板前必读）**：
+   - **三条不变式**（规则唯一命名类 `content/building/internal/BuildingDelegation`）：① 委派法师**只接该建筑派发的任务**——别的建筑的任务、`guard:attack` 与祭坛施法（两者都没有建筑归属）一律不接；② 该建筑的任务**只派给**它的委派法师，它不在岗（在别处干活/跟随/走远了）就**等着**，绝不降级给别人；③ 一名法师同时只服务一座建筑，再委派等于把它从原岗位调走（存储层 `BuildingSavedData.setDelegatedMage` 保证这条）。
+   - **白名单只有一处**：`BuildingDelegation.SUPPORTED_CATEGORIES` = 物品工坊 / 装备工坊 / 魔法工坊 / 采集节点；面板按钮与网络层校验都读 `BuildingDelegation.supports`，加类别只改这一处。刻意**不**复用 `BuildingSavedData.SHARED_QUEUE_CATEGORIES`（眼下同集）——「共享队列」与「可委派」是两套规则，谁先变都不该拖着另一个走。
+   - **存储与生命周期**：`BuildingState.delegatedMage`（NPC UUID，随建筑存档）+ `BuildingSavedData.delegationByMage` 反查索引（避免调度器每拍每法师遍历全部建筑）。建筑拆除/撤销时 `unregister` 顺手摘索引，委派随建筑一起消失；法师阵亡/解散时 `EntityComponentBridge.onWorkerLeaveWorld` → `BuildingDelegation.onMageGone` 解约——否则那座建筑留着一个永远不到岗的岗位，它的任务会全部卡死。**「阵亡」与「区块卸载」必须分开**：两者 `isRemoved()` 都为真，只有 `RemovalReason.shouldDestroy()` 分得开（`BuildingDelegation.workerGone`，与 `ReviveHandler.isBridgeEntryAlive` 同一口径）；判据收在 `onMageGone` 内部，因为第三方工作者的对账钩子（`ColonyWorkerApiImpl.tick`）把区块卸载也当成"离开 ECS"，而卸载的法师还会回来。
+   - **判定只有两处，别在别处再写一套**：① `SchedulerSystem` 的派发门槛（按 `task.buildingId`——**具体那座建筑**，不是类别；共享队列弹出的任务在 `BuildingTaskPool.enqueue` 时就绑到认领它的那座建筑上，所以按 id 判足够精确）；② `TaskExecutionSystem.processNpc` 步骤 1.5 的 `violatesDelegation`，错配的走既有的 `releaseForInterruption`（保留步进 + 退还已取元素 + 丢全局包 + 保留个人包），下一拍释放回池、下一次调度心跳按新归属重派。
+   - **为什么执行侧还要逐拍判**：委派是玩家随时可改的配置，而任务是在改配置**之前**派出去的——调度器门口只挡得住"新派"，挡不住"已经在跑"。判据必须读 `exec.globalTaskId`（包绑定后才有；自防御抢断只是把包压进挂起栈，**不会**清这个绑定），所以判定点放在 `processNpc` 里紧跟包启动之后，**不能**提前到 `update` 的更早位置：那会顺手把挂起栈（自防御抢断的包）的恢复时序一起改掉。
+   - **生效时延（改文档/面板文案时别写成"即时"）**：改委派后，错配任务在**下一拍**被释放回池（保留步进并退还已取元素），再等**下一次调度心跳**（`EngineBootstrap.SCHEDULER_HEARTBEAT_TICKS = 20` tick）重派；也就是说玩家点完大约一秒内到位，且那件活会从第一个取料步骤重来。
+   - **读侧走边界，调度器保持零 MC 依赖**：`EntityOps.delegatedBuildingOf(npcId)` / `delegatedNpcOf(buildingId)`（实现取主世界 `BuildingSavedData`）。`delegatedNpcOf` 对「查不到这名法师」返回 -1，即**按未委派处理**——存档里万一留下过期 UUID，表现是那座建筑退回常规竞派，不会把任务卡死。
+   - **批次续接同样受约束**：多法师协同的 `tryContinueBuilding`（见 §五.17）在续接前也判工地/法师委派，不符就作废续接意图。
+   - **面板入口**：委派是策略决定，档位按 MANAGER（`BuildingDelegatePacket`）；候选列表由 `BuildingDelegateDataPacket` 下发，选人框 `MageDelegateDialog` 挂在 `MedievalScreen` 基类——以后别的建筑类别要开委派，改白名单即可，UI 不用动。
+   - **已知取舍**：委派不搬人——法师靠自己走到工地，所在区块卸载时该建筑的任务就一直等它（这正是委派的语义，不是 bug）。
 
 ---
 

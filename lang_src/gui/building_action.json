@@ -3,6 +3,18 @@
     "zh_cn": "撤销",
     "en_us": "Undo"
   },
+  "gui.wandscape.building_action.delegate": {
+    "zh_cn": "委派",
+    "en_us": "Delegate"
+  },
+  "gui.wandscape.building_action.delegate_set": {
+    "zh_cn": "已委派: %s（只做本建筑的任务）",
+    "en_us": "Delegated to %s (works only on this building)"
+  },
+  "gui.wandscape.building_action.delegate_unset": {
+    "zh_cn": "选择一名法师专职本建筑：它只接本建筑的任务，本建筑的任务也只派给它",
+    "en_us": "Pick one mage for this building — it takes only this building's tasks, and they go only to it"
+  },
   "gui.wandscape.building_action.demolish_running": {
     "zh_cn": "拆除任务执行中...",
     "en_us": "Demolition in progress..."
