@@ -7,6 +7,8 @@ import com.wsteam.wandscape.content.task.component.NpcInventory;
 
 import com.wsteam.wandscape.content.task.boundary.ColonyResourceAccess;
 import com.wsteam.wandscape.content.task.boundary.MovementOps;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 // core.component wildcard replaced
 import com.wsteam.wandscape.content.task.ecs.EcsSystem;
 import com.wsteam.wandscape.content.task.ecs.World;
@@ -27,6 +29,7 @@ import com.wsteam.wandscape.content.task.runtime.TaskSequence;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -51,6 +54,11 @@ public class TaskExecutionSystem implements EcsSystem {
     private static final String TAG = "TaskExec";
     private static final double NAV_RANGE_SQ = 25.0;
     private static final RitualId ITEM_TELEPORT = new RitualId("item_teleport");
+    /**
+     * 批次续接窗口（tick）：批次完工后这么久内仍算「就在这个工地干活」，超时就交回调度器正常竞派。
+     * 只用来盖住「完工 → 待发批次释放 → 下次心跳」这段空窗，不需要长。
+     */
+    private static final int CONTINUE_WINDOW_TICKS = 60;
 
     private final GlobalTaskPool taskPool;
 
@@ -112,8 +120,8 @@ public class TaskExecutionSystem implements EcsSystem {
             continue;
         }
 
-        // ── 1. No work → idle ──
-        if (!queue.hasWork() && exec.globalTaskId == null) {
+        // ── 1. No work → 先试续接同栋建筑的下一个批次，续不上才 idle ──
+        if (!queue.hasWork() && exec.globalTaskId == null && !tryContinueBuilding(world, npcId, exec)) {
             if (exec.state != ExecutorState.IDLE) {
             }
             exec.state = ExecutorState.IDLE;
@@ -382,6 +390,7 @@ public class TaskExecutionSystem implements EcsSystem {
                 exec.globalTaskId);
 
         if (source.startsWith("global:") && exec.globalTaskId != null) {
+            armContinuation(world, npcId, exec, taskPool.get(exec.globalTaskId));
             syncStepToPool(exec, queue);
             taskPool.completeTask(exec.globalTaskId, npcId);
             Log.debug(LogCategory.TASK, "exec", "NPC %d — completed global task #%d", npcId, exec.globalTaskId);
@@ -408,6 +417,81 @@ public class TaskExecutionSystem implements EcsSystem {
             exec.currentOpKind = null;
             exec.activePackageSource = null;
             exec.initialNavDone = false;
+        }
+    }
+
+    // ── 多法师协同：同栋建筑的批次续接 ──
+
+    /**
+     * 批次完工时留下「续接意图」：同栋建筑还有别的批次（含首批完工后尚未放行的 pending），
+     * 就把工地与归属镇记在 {@link TaskExecutor#continuation} 上，下一次空闲时由
+     * {@link #tryContinueBuilding} 直接把下一条批次续给同一个法师。
+     *
+     * <p>为什么需要它：多法师协同把一栋楼拆成几十条小批次，而批次之间必须经过
+     * 「完工 → 待发批次放行 → 调度器心跳（≤20 tick）重新竞派」这条链，法师每批都要空转一次、
+     * 期间还会自行闲逛——玩家看到的正是「干几秒、停一下、来回跑」。
+     */
+    private void armContinuation(World world, long npcId, TaskExecutor exec, @Nullable GlobalTask finished) {
+        if (finished == null || finished.buildingId == null || world.buildingTaskPool == null
+                || !world.buildingTaskPool.hasOtherUnfinishedBatches(finished.buildingId, finished.id)) {
+            exec.continuation = null;
+            return;
+        }
+        exec.continuation = new TaskExecutor.BatchContinuation(finished.buildingId,
+                GlobalTaskPool.colonyIdOf(finished), worldTick(world) + CONTINUE_WINDOW_TICKS);
+    }
+
+    /**
+     * 续接同栋建筑的下一条待派批次；没有（或意图过期/归属变了）返回 false，交回正常 idle。
+     *
+     * <p>指派语义仍走 {@link GlobalTaskPool#assignLight}——续接只是省掉一次心跳等待，
+     * 任务照样在全局池里可被抢占、可被释放，不产生「预占但没人干」的幽灵任务。
+     */
+    private boolean tryContinueBuilding(World world, long npcId, TaskExecutor exec) {
+        TaskExecutor.BatchContinuation c = exec.continuation;
+        if (c == null) return false;
+        if (worldTick(world) > c.untilTick() || taskPool == null) {
+            exec.continuation = null;
+            return false;
+        }
+        ColonyMember member = world.get(npcId, ColonyMember.class);
+        if (member == null || (c.colonyId() != null && !c.colonyId().equals(member.colonyId()))) {
+            exec.continuation = null;
+            return false;
+        }
+        // 池里没有待派任务就直接收工：getAssignableTasks() 每次都要复制+排序，
+        // 而这 60 tick 窗口内每个空转 tick 都会问一次。
+        if (taskPool.assignableCount() == 0) return false;
+        for (GlobalTask task : taskPool.getAssignableTasks()) {
+            if (!c.buildingId().equals(task.buildingId) || !isConstructionBatch(task)) continue;
+            if (c.colonyId() != null && !c.colonyId().equals(GlobalTaskPool.colonyIdOf(task))) continue;
+
+            GridPos stance = resolveTaskStance(task);
+            NpcTaskPackage pkg = NpcTaskPackage.resumeFrom(
+                    "global:" + task.id, task.sequence, stance, task.priority, task.stepIndex);
+            exec.npcQueue.enqueueNormal(pkg);
+            taskPool.assignLight(task.id, npcId, world);
+            exec.continuation = null;
+            Log.debug(LogCategory.TASK, "exec", "NPC %d — continued building %s batch #%d",
+                    npcId, c.buildingId().toString().substring(0, 8), task.id);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * 该任务是否是多法师协同拆出的建造批次：{@code ConstructionBatches} 是唯一写
+     * {@code omit_complete_event} 的地方（子批次不单独发完工广播）。续接只认批次，
+     * 不认同建筑队列里冒出来的其它工作（合成/复原等），免得绕开调度器的施法与魔力门槛。
+     */
+    private static boolean isConstructionBatch(GlobalTask task) {
+        if (task.taskParams == null) return false;
+        JsonElement el = task.taskParams.get("omit_complete_event");
+        if (el == null || !el.isJsonPrimitive()) return false;
+        try {
+            return el.getAsBoolean();
+        } catch (RuntimeException e) {
+            return false;
         }
     }
 
@@ -679,7 +763,53 @@ public class TaskExecutionSystem implements EcsSystem {
             collectTargets(seq.get(i), box, hasTarget);
         }
         if (!hasTarget[0]) return null;
-        return new GridPos(box[0] - 2, box[2] + 1, (box[3] + box[4]) / 2);
+        return standoffStance(box[0], box[2], box[3], box[4]);
+    }
+
+    /**
+     * 站位策略（全套规则只此一处）：站在目标包围盒**西侧外沿两格外**、最底层上方一格、Z 轴中点。
+     * 放置是远程施法、不按距离门控，所以站位只决定法师「站在哪里把活干完」。
+     *
+     * @param minX 包围盒最小 X；{@code minY} 最小 Y；{@code minZ}/{@code maxZ} 最小/最大 Z
+     */
+    public static GridPos standoffStance(int minX, int minY, int minZ, int maxZ) {
+        return new GridPos(minX - 2, minY + 1, (minZ + maxZ) / 2);
+    }
+
+    /**
+     * 解析一条全局任务的站位：优先读 {@code params["task_bbox"]}（多法师协同的批次由
+     * {@code ConstructionBatches} 按**整栋**包围盒写入，保证同栋所有批次共用一个站位），
+     * 否则按 op 包围盒现算。
+     *
+     * <p>批次若各自按自己那一小块现算，站位能差十几格，法师每批都要横穿工地——
+     * 这正是「多法师协同之后法师来回跑」的根因。
+     */
+    @Nullable
+    public static GridPos resolveTaskStance(@Nullable GlobalTask task) {
+        if (task == null) return null;
+        GridPos declared = declaredStance(task.taskParams);
+        if (declared != null) return declared;
+        return task.sequence != null ? computeTaskStance(task.sequence) : null;
+    }
+
+    /** params 声明的整栋包围盒 {@code [minX, minY, minZ, maxX, maxY, maxZ]} → 站位。 */
+    @Nullable
+    private static GridPos declaredStance(@Nullable Map<String, JsonElement> params) {
+        if (params == null) return null;
+        JsonElement el = params.get("task_bbox");
+        if (el == null || !el.isJsonArray()) return null;
+        JsonArray arr = el.getAsJsonArray();
+        if (arr.size() != 6) {
+            Log.warn(TAG, "task_bbox malformed (%s values) — falling back to op bbox", arr.size());
+            return null;
+        }
+        try {
+            return standoffStance(arr.get(0).getAsInt(), arr.get(1).getAsInt(),
+                    arr.get(2).getAsInt(), arr.get(5).getAsInt());
+        } catch (RuntimeException e) {
+            Log.warn(TAG, "task_bbox unreadable (%s) — falling back to op bbox", el);
+            return null;
+        }
     }
 
     private static void collectTargets(AtomicOp op, int[] box, boolean[] hasTarget) {

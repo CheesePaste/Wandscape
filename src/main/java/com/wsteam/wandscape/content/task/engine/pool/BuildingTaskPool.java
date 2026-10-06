@@ -164,6 +164,22 @@ public class BuildingTaskPool {
         return queue != null && queue.hasActiveBatches();
     }
 
+    /**
+     * 该建筑除 {@code excludeTaskId} 之外是否还有未完工批次（待发的 pending，或别的活跃批次）。
+     *
+     * <p>多法师协同的批次续接判定用：批次完工那一刻它自己还在 {@code activeBatchIds} 里，
+     * 必须排除掉自己——否则每栋楼的最后一批也会留下一个永远没用武之地的续接意图。
+     */
+    public boolean hasOtherUnfinishedBatches(UUID buildingId, long excludeTaskId) {
+        BuildingTaskQueue queue = queues.get(buildingId);
+        if (queue == null) return false;
+        if (queue.hasPendingBatches()) return true;
+        for (long id : queue.getActiveBatchIds()) {
+            if (id != excludeTaskId) return true;
+        }
+        return false;
+    }
+
     public boolean isBatchBuilding(UUID buildingId) {
         BuildingTaskQueue queue = queues.get(buildingId);
         return queue != null && (queue.hasActiveBatches() || queue.hasPendingBatches() || queue.hasCompletionData() || (queue.hasParked() && queue.hasCompletionData()));

@@ -1466,13 +1466,25 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike, ColonyWor
 
             @Override
             public void stop() {
-                if (!suppressWandering && !noIdleWander()) {
-                    super.stop(); // only clear navigation if stopping organically
+                // 游荡路径只属于游荡自己：被引擎抢活 / 开始施法打断时必须把它清掉，否则法师会
+                // 一边放方块一边把这条「闲逛目标」走完（实测观感就是「干几秒、跑一段、再干几秒」，
+                // 而且乱跑容易被怪咬死）。MovementOps 接管的导航不能碰——那是 NavigationSystem
+                // 正在驱动的工作走位，由它自己重寻路/到达后收尾。
+                if (suppressWandering || engineDrivingNavigation()) {
+                    return;
                 }
-                // When suppressWandering is set, MovementOps owns the navigation —
-                // don't let the goal selector's cleanup kill our path.
+                super.stop();
             }
         });
+    }
+
+    /** NavigationSystem（MovementOps 的唯一驱动者）是否正在为这只 NPC 导航：NavigationState 非 IDLE。 */
+    private boolean engineDrivingNavigation() {
+        if (ecsEntityId < 0) return false;
+        World world = World.getActive();
+        if (world == null) return false;
+        NavigationState nav = world.get(ecsEntityId, NavigationState.class);
+        return nav != null && nav.mode != NavigationState.Mode.IDLE;
     }
 
     @Override
@@ -2512,9 +2524,12 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike, ColonyWor
         public void stop() {
             targetItem = null;
             stuckTicks = 0;
-            if (!suppressWandering && !isCasting()) {
-                getNavigation().stop();
+            // 同 RandomStrollGoal.stop：被引擎抢活 / 施法打断时要把这条「去捡掉落物」的路径清掉，
+            // 否则法师会一边施工一边走去捡东西（工地清场满仓掉物时尤其明显）。
+            if (suppressWandering || isCasting() || engineDrivingNavigation()) {
+                return;
             }
+            getNavigation().stop();
         }
 
         @Nullable

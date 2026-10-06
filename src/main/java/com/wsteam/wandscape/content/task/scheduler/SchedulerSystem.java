@@ -160,7 +160,7 @@ public class SchedulerSystem implements EcsSystem {
             if (bestNpc >= 0) {
                 TaskExecutor bestExec = world.get(bestNpc, TaskExecutor.class);
                 if (bestExec != null) {
-                    GridPos stance = TaskExecutionSystem.computeTaskStance(task.sequence);
+                    GridPos stance = TaskExecutionSystem.resolveTaskStance(task);
                     NpcTaskPackage pkg = NpcTaskPackage.resumeFrom(
                             "global:" + task.id, task.sequence, stance, task.priority,
                             task.stepIndex);

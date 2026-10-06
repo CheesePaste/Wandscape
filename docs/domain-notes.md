@@ -203,6 +203,11 @@
      - **Phase 2 并发放置批次（Parallel Placement Batches）**：首批准备完工（建材全额记账、场地已平整）后，后续所有放置批次一次性全部释放入 `GlobalTaskPool`，多个空闲法师可同时各领一批并发施工。
    - **状态聚合与完工事件**：子批次自身设置 `omit_complete_event = true` 不单独发广播；`BuildingTaskPool.checkBatchesProgress` 跟踪全量批次进度，只有当全部活跃与待发批次均完成时，才由 `BuildingTaskQueue` 统一聚合发射 `build_complete` 事件，触发奇观触发器、建筑完成粒子、工地面板状态更新与下一条待办任务提升。
    - **配置项**：`Config.CONSTRUCTION_MULTI_WORKER_ENABLED`（`building.multiWorkerEnabled`，默认 true，游戏内设置中心「城镇经营」可调）与 `Config.CONSTRUCTION_BATCH_SIZE`（`building.constructionBatchSize`，默认 32 方块，范围 4~1024）。
+   - **批次必须像「一个法师站一处干完整栋」（2026-10-06 修，改拆批前必读）**：拆批本身没问题，问题是让每条批次「各自为政」——
+     1. **整栋一个站位**：`ConstructionBatches.split` 给每条批次写 `params["task_bbox"]`（整栋 pattern ∪ 清盒范围的六元组包围盒），`TaskExecutionSystem.resolveTaskStance` 优先按它算站位；站位策略只有 `TaskExecutionSystem.standoffStance` 一处（盒西沿外两格、最底层上方一格、Z 中线），`computeTaskStance` 也走它。改前每条批次按自己那一小块现算，前后批的站位能差十几格，法师每批都横穿工地。
+     2. **完工即续接**：批次完工时 `TaskExecutionSystem.armContinuation` 若判到同栋还有别的批次（`BuildingTaskPool.hasOtherUnfinishedBatches`，含首批完工后尚未放行的 pending），就在 `TaskExecutor.continuation` 记下工地（窗口 60 tick）；下一次空闲 `tryContinueBuilding` 把同栋的下一条待派批次直接续给同一法师，不再回落到调度器心跳（≤20 tick）。指派仍走 `GlobalTaskPool.assignLight`——不预占、不产生幽灵任务；判定只认带 `omit_complete_event` 的批次任务，不认同建筑队列里冒出来的其它工作（合成/复原），免得绕开调度器的施法与魔力门槛。
+     3. **闲逛/捡物路径在被抢活时清掉**：`WandscapeNpc` 的 `RandomStrollGoal` 与 `AutoPickupItemGoal` 的 `stop()` 现在会清掉自己的路径（`suppressWandering` 或 `engineDrivingNavigation()` 为真时除外——那是 NavigationSystem 正在驱动的工作走位）。改前这两条「闲逛目标 / 去捡掉落物」的路径会在任务到来后继续被走完，正是「跑一段再干几秒」。
+     - **症状对照**：只拆批不做上面三条时，玩家实测是「法师干几秒钟就停下来来回跑、跑一段再干几秒钟」（不拆批时是站一处干完整栋）；前半段是每条批次各自算站位，后半段是批次之间的调度空窗里法师闲逛/走去捡掉落物。改这三条之前别去调 `constructionBatchSize`——那是粒度旋钮，不是这个病。
 
 18. **建造投影的放置模型（2026-10-06 起对齐 Litematica，改交互前必读）**：
    - **三阶段**：`瞄准`（虚影每 tick / 每帧跟随准心，**不按任何键**）→ `调整中`（`isPinned()`：锚点固定、不再跟随，可用 ALT+滚轮 / 6 个按钮改 xyz、左键或面板按钮旋转）→ `已定稿`（`isLocked()`：位移与旋转一律拒绝）。

@@ -7,6 +7,7 @@ import com.google.gson.JsonPrimitive;
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.content.building.data.WorkItem;
 import com.wsteam.wandscape.content.task.engine.pool.TaskRequest;
+import com.wsteam.wandscape.foundation.log.Log;
 
 import javax.annotation.Nullable;
 import java.util.*;
@@ -24,9 +25,15 @@ import java.util.*;
  *       后续所有批次一次性全部释放入全局任务池，多个法师可同时接单，按各自区域并发放置。</li>
  * </ol>
  *
+ * <p>批次不是「独立的小活」：每条批次都带上整栋的包围盒 {@code params["task_bbox"]}，
+ * 让所有批次共用同一个站位，并由 {@code TaskExecutionSystem} 在同一法师身上直接续接，
+ * 使拆批在观感与效率上等价于「一个法师站在一处干完整栋」。
+ *
  * <p>纯 Java 逻辑，零 Minecraft 运行时依赖。
  */
 public final class ConstructionBatches {
+
+    private static final String TAG = "ConstructionBatches";
 
     private ConstructionBatches() {}
 
@@ -109,20 +116,17 @@ public final class ConstructionBatches {
 
         String rawName = work.params().containsKey("name") && work.params().get("name").isJsonPrimitive()
                 ? work.params().get("name").getAsString() : "Building";
-        String anchorStr = "0,0,0";
-        if (work.params().containsKey("anchor")) {
-            JsonElement el = work.params().get("anchor");
-            if (el.isJsonPrimitive()) {
-                anchorStr = el.getAsString();
-            } else if (el.isJsonArray()) {
-                JsonArray arr = el.getAsJsonArray();
-                if (arr.size() == 3) {
-                    anchorStr = arr.get(0).getAsInt() + "," + arr.get(1).getAsInt() + "," + arr.get(2).getAsInt();
-                }
-            }
-        }
+        // 锚点：offsets 是**相对锚点**的偏移，boundary_min/max 是绝对坐标——算整栋包围盒时
+        // 必须把锚点加到 offsets 上，否则写出去的站位会落在原点附近（法师跑到世界原点去）。
+        int[] anchorArr = anchorOf(work.params());
+        String anchorStr = anchorArr[0] + "," + anchorArr[1] + "," + anchorArr[2];
         String buildingIdStr = work.params().containsKey("building_id") && work.params().get("building_id").isJsonPrimitive()
                 ? work.params().get("building_id").getAsString() : "";
+
+        // 整栋（pattern 全集 ∪ 清盒范围）的包围盒，写进每条批次的 params["task_bbox"]：
+        // 执行侧据此算「整条任务一个」的站位。不写的话，每条批次都会按自己那一小块现算站位，
+        // 前排/后排批次的站位能差十几格，法师就得在工地两侧来回跑（实测观感就是「干几秒、跑一段」）。
+        int[] taskBbox = taskBbox(offsets, anchorArr, work.params());
 
         Map<String, String> completionData = new LinkedHashMap<>();
         completionData.put("building_name", rawName);
@@ -164,6 +168,9 @@ public final class ConstructionBatches {
             params.put("name", new JsonPrimitive(rawName + " (" + (c + 1) + "/" + chunkCount + ")"));
             // 子批次自身不发射 build_complete 事件，由 BuildingTaskPool 聚合后在全量完工时统一发射
             params.put("omit_complete_event", new JsonPrimitive(true));
+            if (taskBbox != null) {
+                params.put("task_bbox", bboxToJson(taskBbox));
+            }
 
             if (c == 0) {
                 // 首个批次：保留全部建材请求与清盒，但清盒排除集需覆盖全建筑 pattern
@@ -188,5 +195,82 @@ public final class ConstructionBatches {
         }
 
         return new SplitResult(initialBatch, remainingBatches, completionData);
+    }
+
+    /**
+     * 整条建造任务的目标包围盒 {@code [minX, minY, minZ, maxX, maxY, maxZ]}（世界坐标），
+     * 供执行侧算「整条任务一个」的站位（{@code TaskExecutionSystem.standoffStance}）。
+     *
+     * <p>范围取 pattern 全集（相对锚点，先加锚点）并入清盒盒（{@code boundary_min/max}，绝对坐标，
+     * 开清盒时）——与不拆批时执行侧按 op 包围盒现算的结果一致，所以拆批前后法师站的是同一个点。
+     *
+     * @return 包围盒；pattern 为空时返回 null（不写该参数，执行侧退回按 op 现算）
+     */
+    @Nullable
+    private static int[] taskBbox(JsonArray offsets, int[] anchor, Map<String, JsonElement> params) {
+        int[] box = {Integer.MAX_VALUE, Integer.MAX_VALUE, Integer.MAX_VALUE,
+                Integer.MIN_VALUE, Integer.MIN_VALUE, Integer.MIN_VALUE};
+        for (JsonElement el : offsets) {
+            if (el.isJsonArray()) {
+                JsonArray arr = el.getAsJsonArray();
+                if (arr.size() == 3) {
+                    expand(box, anchor[0] + arr.get(0).getAsInt(),
+                            anchor[1] + arr.get(1).getAsInt(),
+                            anchor[2] + arr.get(2).getAsInt());
+                }
+            }
+        }
+        for (String key : List.of("boundary_min", "boundary_max")) {
+            JsonElement el = params.get(key);
+            if (el != null && el.isJsonArray()) {
+                JsonArray arr = el.getAsJsonArray();
+                if (arr.size() == 3) {
+                    expand(box, arr.get(0).getAsInt(), arr.get(1).getAsInt(), arr.get(2).getAsInt());
+                }
+            }
+        }
+        return box[0] > box[3] ? null : box;
+    }
+
+    /**
+     * 锚点 {@code params["anchor"]}：建造链路写的是 {@code [x,y,z]} 数组，老参数形态也可能写成
+     * 逗号串。缺失或读不出时退回原点（与执行侧「无锚点即按原点放」的老口径一致）。
+     */
+    private static int[] anchorOf(Map<String, JsonElement> params) {
+        JsonElement el = params.get("anchor");
+        if (el != null) {
+            try {
+                if (el.isJsonArray()) {
+                    JsonArray arr = el.getAsJsonArray();
+                    if (arr.size() == 3) {
+                        return new int[]{arr.get(0).getAsInt(), arr.get(1).getAsInt(), arr.get(2).getAsInt()};
+                    }
+                } else if (el.isJsonPrimitive()) {
+                    String[] parts = el.getAsString().split(",");
+                    if (parts.length == 3) {
+                        return new int[]{Integer.parseInt(parts[0].trim()),
+                                Integer.parseInt(parts[1].trim()), Integer.parseInt(parts[2].trim())};
+                    }
+                }
+            } catch (RuntimeException e) {
+                Log.warn(TAG, "unreadable anchor param '%s' — batching falls back to origin", el);
+            }
+        }
+        return new int[]{0, 0, 0};
+    }
+
+    private static void expand(int[] box, int x, int y, int z) {
+        if (x < box[0]) box[0] = x;
+        if (y < box[1]) box[1] = y;
+        if (z < box[2]) box[2] = z;
+        if (x > box[3]) box[3] = x;
+        if (y > box[4]) box[4] = y;
+        if (z > box[5]) box[5] = z;
+    }
+
+    private static JsonArray bboxToJson(int[] box) {
+        JsonArray arr = new JsonArray();
+        for (int v : box) arr.add(v);
+        return arr;
     }
 }
