@@ -89,7 +89,9 @@ public final class BuildingRepairHandler {
         params.put("building_id", new JsonPrimitive(state.getBuildingId().toString()));
         params.put("offsets", offsets);
         params.put("blocks", blocks);
-        params.put("blocks_nbt", blocksNbt);
+        // 键名必须是 "block_nbt"：蓝图（BlueprintDefaults.placeStructure）读的是它。
+        // 这里曾写成 "blocks_nbt"，与建造路径那个死参数同名 → 修复后的箱子/告示牌同样丢 NBT。
+        params.put("block_nbt", blocksNbt);
         params.put("name", new JsonPrimitive(config.displayName()));
 
         // Restore decorative entities too — replay the full list (idempotent:

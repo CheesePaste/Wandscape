@@ -394,7 +394,10 @@ public record ScannerExportPacket(BlockPos pos, String targetPackage) implements
         JsonObject bind = new JsonObject();
         bind.addProperty("offsets", "$pattern");
         bind.addProperty("blocks", "$block_mapping");
-        bind.addProperty("blocks_nbt", "$block_nbt");
+        // 参数名必须与蓝图读物一致：placeStructure/clearAndBuild 读的是 "block_nbt"。
+        // 这里曾写成 "blocks_nbt" → 扫描器导出的建筑在建造时既拿不到 NBT（箱子/告示牌内容物丢），
+        // 又多背一个永远没人读的整栋副本（拆批后每批一份）。
+        bind.addProperty("block_nbt", "$block_nbt");
         bind.addProperty("entities", "$entities");
         bind.addProperty("name", "$display_name");
         bp.add("bind", bind);

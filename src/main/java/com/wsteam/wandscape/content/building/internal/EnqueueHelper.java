@@ -204,12 +204,19 @@ public final class EnqueueHelper {
                 JsonElement value = resolveField(config, fieldName);
                 if (value != null) {
                     params.put(blueprintParamName, value);
+                } else {
+                    // bind 指向了不存在的 config 字段（或是拼错的字段名）时，蓝图拿不到这个参数。
+                    // 静默跳过会让「方块 NBT 没了」「建材不扣」这类故障变成哑弹，必须留痕。
+                    Log.warn(TAG, "bind '{}' -> '{}' resolved to no config field (building {});"
+                            + " the blueprint will run without this param",
+                            blueprintParamName, fieldRef, config.id());
                 }
             }
-            // Auto-add blocks_nbt if not provided by bind (backward compat with older building JSONs)
-            if (!params.containsKey("blocks_nbt")) {
-                params.put("blocks_nbt", blockNbtToJson(config));
-            }
+            // 这里曾自动补一个 "blocks_nbt"（内容等于整栋 block_nbt 的副本）。它**零消费者**：
+            // 蓝图读的是 bind 里的 "block_nbt"（见 BlueprintDefaults.placeStructure），
+            // 而同名的 "blocks_nbt" 从来没被读过。多法师拆批时 `new LinkedHashMap<>(work.params())`
+            // 会把整份副本复制进**每一条**批次，magic_academy 一栋就是 13854 × 143 KB ≈ 546 MB
+            // 落进 wandscape_tasks.dat。删掉，别再加回来。
             // Auto-add entities if not provided by bind (older building JSONs) so the
             // blueprint's for_each $entities always has a value — empty means no decorations.
             if (!params.containsKey("entities")) {
@@ -257,10 +264,13 @@ public final class EnqueueHelper {
                     params.put("blocks", blocksFromPalette(
                             config.pattern(), rotatedPalette, config.blockIndices(), rotationSteps));
                 }
-                // Rotate block_nbt (keys only — values are opaque base64 strings)
-                if (params.containsKey("blocks_nbt")) {
-                    params.put("blocks_nbt", rotateBlockNbtJson(
-                            params.get("blocks_nbt").getAsJsonObject(), rotationSteps));
+                // Rotate block_nbt: 键是局部偏移串，旋转后必须跟着转 —— 否则执行期
+                // `blockNbt.get(key)` 拿的是**旋转后**的键，非 0 旋转下必然落空，箱子/告示牌/
+                // 花盆的 NBT 会被静默丢掉。与修复路径（BuildingRepairHandler）同一口径：
+                // 那边一直用的就是 BuildingRotation.rotateBlockNbt，只有建造路径漏了。
+                if (params.containsKey("block_nbt")) {
+                    params.put("block_nbt", rotateBlockNbtJson(
+                            params.get("block_nbt").getAsJsonObject(), rotationSteps));
                 }
                 // Rotate decoration entities (offsets + facing strings, NBT opaque)
                 if (params.containsKey("entities")) {
@@ -583,7 +593,12 @@ public final class EnqueueHelper {
         JsonObject result = new JsonObject();
         for (var entry : nbt.entrySet()) {
             BlockOffset off = parseKey(entry.getKey());
-            if (off == null) continue;
+            if (off == null) {
+                // 坏键不能静默丢：那条方块的 NBT 会跟着消失，而玩家只会看到「箱子里的东西没了」。
+                Log.warn(TAG, "block_nbt key '{}' is not an offset triple — dropping its NBT on rotation",
+                        entry.getKey());
+                continue;
+            }
             BlockOffset rotatedOff = BuildingRotation.rotateOffset(off, steps);
             result.addProperty(rotatedOff.toKey(), entry.getValue().getAsString());
         }
