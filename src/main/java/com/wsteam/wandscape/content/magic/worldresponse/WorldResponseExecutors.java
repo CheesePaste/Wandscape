@@ -27,8 +27,29 @@ public final class WorldResponseExecutors {
      */
     public static boolean execute(ServerPlayer player, WorldResponse response) {
         return switch (response) {
-            case FORWARD, LIFT, OPEN, JUDGE -> notImplemented(player, response);
+            case TERRAFORM -> activateTerraform(player);
+            case FORWARD, LIFT, JUDGE -> notImplemented(player, response);
         };
+    }
+
+    /**
+     * 移山填海：开的是**持续效果**（世界持续为你让路），关闭入口是配套魔法《平息》
+     * （{@code world_response_calm} → {@link WorldResponseEffects#stopAll}）。
+     * 重复选择不叠加、也不进冷却——没做事就不该罚冷却。
+     */
+    private static boolean activateTerraform(ServerPlayer player) {
+        if (WorldResponseEffects.isActive(player, TerraformEffect.ID)) {
+            ScreenFeedbackPacket.send(player, I18n.name("message.wandscape.world_response.terraform_active",
+                    "世界已经在为你让路 —— 用【平息】让它停下"), false);
+            return false;
+        }
+        if (!WorldResponseEffects.activate(player, new TerraformEffect(player.serverLevel()))) {
+            return false;
+        }
+        Log.info(TAG, "[WorldResponse] Terraform started for {}", player.getGameProfile().getName());
+        ScreenFeedbackPacket.send(player, I18n.name("message.wandscape.world_response.terraform_start",
+                "世界开始为你让路"), true);
+        return true;
     }
 
     private static boolean notImplemented(ServerPlayer player, WorldResponse response) {

@@ -86,5 +86,13 @@
   "magic.wandscape.world_response.desc": {
     "zh_cn": "毕业魔法：向世界表达意志，由世界回应。施放后短暂列出可选的世界回应，从中挑一个。",
     "en_us": "The graduation magic: state your will and let the world answer. Casting briefly lists the responses you may choose from."
+  },
+  "magic.wandscape.world_response_calm": {
+    "zh_cn": "平息",
+    "en_us": "Calm"
+  },
+  "magic.wandscape.world_response_calm.desc": {
+    "zh_cn": "《世界应答》的配套魔法：让正在生效的世界回应停下，并把改动过的地形原样还回。",
+    "en_us": "The companion magic to World's Response: stops any active response and puts the changed terrain back."
   }
 }

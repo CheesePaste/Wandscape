@@ -456,6 +456,16 @@ public final class MagicSpellExecutors {
             // WorldResponseManager.choose 触发（pending/冷却/校验都在那里）。
             case "world_response" -> com.wsteam.wandscape.content.magic.worldresponse.WorldResponseManager
                     .begin(player, def.baseCooldown());
+            // 配套魔法《平息》：把所有持续型世界回应停下并把地形还回（持续效果不能没有关闭入口）
+            case "world_response_calm" -> {
+                int stopped = com.wsteam.wandscape.content.magic.worldresponse.WorldResponseEffects.stopAll(player);
+                player.displayClientMessage(com.wsteam.wandscape.foundation.ui.I18n.name(
+                        stopped > 0 ? "message.wandscape.world_response.calm_done"
+                                : "message.wandscape.world_response.calm_idle",
+                        stopped > 0 ? "世界恢复了原状（已收回 %s 处改动）" : "世界本来就很安静",
+                        stopped), true);
+                yield stopped > 0;
+            }
             case "heal" -> {
                 Vec3 pos = player.position();
                 UUID effectId = UUID.randomUUID();

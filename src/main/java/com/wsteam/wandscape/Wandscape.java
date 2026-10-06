@@ -624,6 +624,8 @@ public class Wandscape {
 
         BuildCompleteListener.register();
         DemolishCompleteListener.register();
+        // 《世界应答》持续效果（移山填海这类）：注册 tick/登出/换维度/关服四条回滚路径
+        com.wsteam.wandscape.content.magic.worldresponse.WorldResponseEffects.register();
         com.wsteam.wandscape.content.building.wonder.WonderTriggerRegistry.init();
         // Rebuild colony spatial index from saved data
         var colonyApi = com.wsteam.wandscape.api.WandscapeApis.getColonyApiSilently();

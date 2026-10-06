@@ -27,13 +27,13 @@
     "zh_cn": "§7大地托举你向上",
     "en_us": "§7The land lifts you upward"
   },
-  "worldresponse.wandscape.open": {
-    "zh_cn": "§f开路",
-    "en_us": "§fClear the Way"
+  "worldresponse.wandscape.terraform": {
+    "zh_cn": "§f移山填海",
+    "en_us": "§fMove Mountains"
   },
-  "worldresponse.wandscape.open.desc": {
-    "zh_cn": "§7世界为你清除前方的阻碍",
-    "en_us": "§7The world clears what blocks your path"
+  "worldresponse.wandscape.terraform.desc": {
+    "zh_cn": "§7四周的阻挡临时让开，走过之后原样放回（用【平息】收回）",
+    "en_us": "§7What blocks you steps aside for a while and returns once you pass (recall it with §fCalm§7)"
   },
   "worldresponse.wandscape.judge": {
     "zh_cn": "§f裁决",

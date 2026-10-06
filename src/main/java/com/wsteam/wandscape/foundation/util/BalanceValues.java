@@ -34,7 +34,9 @@ public final class BalanceValues {
             "workstationCraftTicksPerUnit", "craftingStationCraftTicksPerUnit",
             "constructionPlaceTicksPerUnit", "castSingleTargetMaxEnemies", "castAoeMinEnemies",
             "productionBatchMax",
-            "sustainedCastMaxTicks");
+            "sustainedCastMaxTicks",
+            "worldResponseTerraformRadius", "worldResponseTerraformScanInterval",
+            "worldResponseTerraformRestoreMargin");
 
     // ============================================================
     // npc 回血回蓝
@@ -145,6 +147,24 @@ public final class BalanceValues {
     public static void setProductionBatchMax(int v) { OVERRIDES.put("productionBatchMax", (double) v); }
     public static int sustainedCastMaxTicks() { return (int)(double) OVERRIDES.getOrDefault("sustainedCastMaxTicks", (double) DEFAULT_SUSTAINED_CAST_MAX_TICKS); }
     public static void setSustainedCastMaxTicks(int v) { OVERRIDES.put("sustainedCastMaxTicks", (double) v); }
+
+    // ============================================================
+    // 《世界应答》移山填海（持续效果：临时移开阻挡、出圈回放）
+    // ============================================================
+
+    /** 清理半径（格，圆形）：玩家身体两层内该半径的阻挡会被临时移开。 */
+    private static final int DEFAULT_WORLD_RESPONSE_TERRAFORM_RADIUS = 3;
+    /** 扫描间隔（tick）：越小越跟手、越费性能；默认 10 = 每秒两次。 */
+    private static final int DEFAULT_WORLD_RESPONSE_TERRAFORM_SCAN_INTERVAL = 10;
+    /** 回放余量（格）：离开「半径 + 余量」的方块才放回，避免在脚边闪回。 */
+    private static final int DEFAULT_WORLD_RESPONSE_TERRAFORM_RESTORE_MARGIN = 2;
+
+    public static int worldResponseTerraformRadius() { return (int)(double) OVERRIDES.getOrDefault("worldResponseTerraformRadius", (double) DEFAULT_WORLD_RESPONSE_TERRAFORM_RADIUS); }
+    public static void setWorldResponseTerraformRadius(int v) { OVERRIDES.put("worldResponseTerraformRadius", (double) v); }
+    public static int worldResponseTerraformScanInterval() { return (int)(double) OVERRIDES.getOrDefault("worldResponseTerraformScanInterval", (double) DEFAULT_WORLD_RESPONSE_TERRAFORM_SCAN_INTERVAL); }
+    public static void setWorldResponseTerraformScanInterval(int v) { OVERRIDES.put("worldResponseTerraformScanInterval", (double) v); }
+    public static int worldResponseTerraformRestoreMargin() { return (int)(double) OVERRIDES.getOrDefault("worldResponseTerraformRestoreMargin", (double) DEFAULT_WORLD_RESPONSE_TERRAFORM_RESTORE_MARGIN); }
+    public static void setWorldResponseTerraformRestoreMargin(int v) { OVERRIDES.put("worldResponseTerraformRestoreMargin", (double) v); }
 
     // ============================================================
     // 持久化 JSON 覆盖（data/wandscape/wandscape_balance.json）驱动

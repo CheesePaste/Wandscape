@@ -112,6 +112,14 @@
    - **选择界面是独立 `Screen`（`WorldResponseScreen`）而不是浮层**：本模组的「抬光标 + UI 点击路由」整条链挂在面板开关上（`WandscapePanelController` 先判 `isPanelOpen()`），野外施放时借不到；`Screen` 自带光标接管/释放，省掉一整套光标状态机。`isPauseScreen() = false`，世界照常跑。
    - **刻意不绑任何热键**：1-5 已被面板页签占用、1-9 是原版快捷栏。选择只走鼠标方向（离中心超过甜区即按角度归属最近扇区），左键确认、右键 / ESC 取消。**不要再给轮盘加数字键**——那正是热键冲突的来源。
    - 文案：法术名 `magic.wandscape.world_response[.desc]`、轮盘 `worldresponse.wandscape.*`、反馈 `message.wandscape.world_response.*`；改完照例跑 `gen_lang.py`。
+7. **持续型世界回应（`WorldResponseEffect` / `WorldResponseEffects`）——回滚只有一条路**：
+   - **开**：`WorldResponseExecutors` 调 `WorldResponseEffects.activate(player, effect)`；同 id 只允许一个（重复激活被拒且**不扣冷却**）。**收**：配套魔法《平息》（`world_response_calm` → `WorldResponseEffects.stopAll`）——企划案要的「持续时间 infinity 但必须能主动关」就落在这里。
+   - **所有回滚都必须汇进 `stopAll`**：主动停止、玩家登出、**换维度**、**关服**（`ServerStoppingEvent`）四条路都在 `WorldResponseEffects.register()` 里接好。原因很实在：效果改的是真实地形，只存内存快照的话，「效果没了地形没还」就是永久性的坑——尤其换维度，快照记的是原维度坐标，必须先还回再走。
+   - **第一个落地的是「移山填海」（`TerraformEffect`，id `terraform`，即企划案的「开路」升级为持续型）**：清理玩家**脚下那层与身体那层**（`dy = 0..1`）圆形半径内的阻挡——**脚下那格与头上那格都不碰**；「挡路」的判定 = 有碰撞箱 **或**是液体（水会推人）。
+   - **重力方块与液体靠写入标志解决，不要在边界另放临时封堵**：移开时用 `Block.UPDATE_CLIENTS`（flag 2，只同步客户端、不给邻居发更新）→ 正上方沙砾不会立刻塌进来、旁边水/岩浆不会立刻灌进来；回放时用 `Block.UPDATE_ALL`（flag 3）→ 物理照常回归（该落的落、该流的流）。这样不留任何非原版方块，也就不需要第二轮还原。
+   - **三类方块永远不动**：`getDestroySpeed(level,pos) < 0`（不可破坏，用原版语义而不是维护名单）、`hasBlockEntity()`（容器/告示牌，清了会吞内容物）、`ColonyLandProtectionHandler.isProtected`（属于任何建筑的地皮——世界让路不拆别人的房子，包括施法者自己的）。
+   - **回放有三种触发**：走出「半径 + 余量」（逐格还，效果跟着人走、身后不留疤）、主动停止、以及上面那四条生命周期路径。**扫描有节流**（默认每 10 tick 一次），半径/间隔/余量三个旋钮在 `BalanceValues`：`worldResponseTerraformRadius` / `worldResponseTerraformScanInterval` / `worldResponseTerraformRestoreMargin`。
+   - **Tick 里抛异常 = 立刻停掉该效果**（记 `Log.warn` 并走 `stopAll` 那条回滚），不允许带着半截状态继续跑。
 
 ---
 

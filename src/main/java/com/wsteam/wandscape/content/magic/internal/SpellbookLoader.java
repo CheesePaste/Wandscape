@@ -59,9 +59,13 @@ public class SpellbookLoader {
         if (def == null) return null;
         if (def.category() == MagicDef.Category.ALTAR) return null;
         if ("teleport".equals(def.id())) return null;
-        // 世界应答是玩家专属的毕业魔法（两阶段施法 + 客户端轮盘），NPC 既不该装备也不该施放
-        if ("world_response".equals(def.id())) return null;
+        // 只给玩家的法术（世界应答与它的配套《平息》）：NPC 既不装备也不施放
+        if (PLAYER_ONLY_SPELLS.contains(def.id())) return null;
         String g = def.defaultGroup();
         return EquippedMagicComponent.isCategory(g) ? g : "support";
     }
+
+    /** 只给玩家的法术：装备桶与自动决策都要绕开（见 {@link #equippableCategoryOf}）。 */
+    private static final java.util.Set<String> PLAYER_ONLY_SPELLS =
+            java.util.Set.of("world_response", "world_response_calm");
 }

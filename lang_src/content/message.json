@@ -827,6 +827,14 @@
     "zh_cn": "[奇观] 魔法学院落成！为小镇解锁了全部合成配方（共 %s 项）",
     "en_us": "[Wonder] The Magic Academy is complete! All synthesize recipes unlocked for the town (%s items)"
   },
+  "message.wandscape.world_response.calm_done": {
+    "zh_cn": "世界恢复了原状（已收回 %s 处改动）",
+    "en_us": "The world has settled back (%s change(s) undone)"
+  },
+  "message.wandscape.world_response.calm_idle": {
+    "zh_cn": "世界本来就很安静",
+    "en_us": "The world was already quiet"
+  },
   "message.wandscape.world_response.cooldown": {
     "zh_cn": "世界仍在平静 —— %s 秒后才会再次回应",
     "en_us": "The world is still calm — it will answer again in %s s"
@@ -842,6 +850,14 @@
   "message.wandscape.world_response.pending": {
     "zh_cn": "世界正在聆听你的意志 —— 先选一个回应",
     "en_us": "The world is already listening — choose a response first"
+  },
+  "message.wandscape.world_response.terraform_active": {
+    "zh_cn": "世界已经在为你让路 —— 用【平息】让它停下",
+    "en_us": "The world is already clearing your path — use Calm to stop it"
+  },
+  "message.wandscape.world_response.terraform_start": {
+    "zh_cn": "世界开始为你让路",
+    "en_us": "The world begins to clear your path"
   },
   "message.wandscape.world_response.unknown": {
     "zh_cn": "世界听不懂这个意志：%s",

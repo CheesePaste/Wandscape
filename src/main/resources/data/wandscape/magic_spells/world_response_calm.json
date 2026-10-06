@@ -1,0 +1,13 @@
+{
+  "id": "world_response_calm",
+  "category": "special",
+  "mana_cost": 0,
+  "base_cooldown": 0,
+  "cast_time": 0,
+  "range": 0,
+  "target_mode": "none",
+  "effect": {
+    "color": "#9B30FF"
+  },
+  "description": "《世界应答》的配套魔法：让正在生效的世界回应停下，并把改动过的地形原样还回。"
+}

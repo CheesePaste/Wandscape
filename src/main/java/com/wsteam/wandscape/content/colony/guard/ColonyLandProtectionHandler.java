@@ -51,6 +51,15 @@ public final class ColonyLandProtectionHandler {
         return buildingColony(level, pos) != null;
     }
 
+    /**
+     * 该位置是否属于「某座建筑的领地」。给**由世界直接改地形**的效果用（世界应答的移山填海）：
+     * 口径与事件门一致（建筑占地与交互区都算），但**不看玩家权限**——世界让路不该拆掉任何人
+     * （包括施法者自己）的房子，直接一刀切不碰最省事也最不容易出错。
+     */
+    public static boolean isProtected(Level level, BlockPos pos) {
+        return level != null && pos != null && isClaimed(level, pos);
+    }
+
     private static boolean protect(ServerLevel level, BlockPos pos, ServerPlayer player,
                                    String whatKey, String whatFallback) {
         UUID colonyId = buildingColony(level, pos);

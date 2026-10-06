@@ -19,8 +19,8 @@ public enum WorldResponse {
     FORWARD("forward", -90f),
     /** 左：向上抬升。 */
     LIFT("lift", 180f),
-    /** 右：在身前开路。 */
-    OPEN("open", 0f),
+    /** 右：移山填海（持续型：四周的阻挡临时让开，走过之后原样放回）。 */
+    TERRAFORM("terraform", 0f),
     /** 下：处置眼前的阻碍者。 */
     JUDGE("judge", 90f);
 
