@@ -1419,6 +1419,7 @@
   "gui.wandscape.townhall.revive_no_record": "No wizard is waiting to be revived",
   "gui.wandscape.townhall.revive_ok": "Revived one wizard (weakened). Send them to the altar to revive the rest.",
   "gui.wandscape.townhall.revive_still_alive": "Wizards are still alive; the fallback revive only works when the town is wiped out",
+  "gui.wandscape.townhall.revive_tooltip": "Revives one wizard when the whole town is wiped out; otherwise go to the altar to revive",
   "gui.wandscape.townhall.title": "Town Hall",
   "gui.wandscape.townhall.warehouse": "Warehouse Access",
   "gui.wandscape.townhall_create.create": "Create",

@@ -194,6 +194,18 @@ public class TownHallScreen extends MedievalScreen {
         renderReviveReadyHighlight(g);
     }
 
+    /** 「复活法师」悬停说明：团灭才可按，其余情况该走祭坛。 */
+    @Override
+    protected void renderForeground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        if (reviveButton == null) return;
+        if (!isInRect(mouseX, mouseY, reviveButton.getX(), reviveButton.getY(),
+                reviveButton.getWidth(), reviveButton.getHeight())) return;
+        // 不挂 AbstractWidget#setTooltip：未团灭/冷却中时按钮是禁用的，而原版只对
+        // isMouseOver（含 active 判定）的控件弹提示——恰恰把最需要这条说明的两种情况吃掉。
+        g.renderTooltip(font, I18n.name("gui.wandscape.townhall.revive_tooltip",
+                "团灭时复活一名法师，未团灭请前往祭坛复活"), mouseX, mouseY);
+    }
+
     /** Gold border while the bootstrap revive is actually available — draws the eye to the escape hatch. */
     private void renderReviveReadyHighlight(GuiGraphics g) {
         if (reviveButton == null || !reviveButton.active) return;
