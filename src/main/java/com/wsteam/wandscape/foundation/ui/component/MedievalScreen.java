@@ -156,6 +156,11 @@ public abstract class MedievalScreen extends Screen implements ReplayProtectedSc
         delegatePickerRequested = false;
         this.buildingId = packet.buildingId();
 
+        // 开框前清掉 widget 焦点：点「委派」那一刻，原版 ContainerEventHandler.mouseClicked
+        // 会把 focused 设到这颗按钮上；而模态框是手工渲染、不进 widget 树的，它把之后的点击
+        // 全吞掉，再没人把焦点挪走——按钮就会一直亮着「悬停/聚焦」态（玩家实测的假悬停）。
+        setFocused(null);
+
         List<MageDelegateDialog.Row> rows = new ArrayList<>();
         for (var row : packet.candidates()) {
             rows.add(new MageDelegateDialog.Row(row.mageUuid(), row.name(), row.state(),
@@ -781,10 +786,14 @@ public abstract class MedievalScreen extends Screen implements ReplayProtectedSc
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         // Confirm dialog open: it consumes all clicks, blocking the screen behind.
+        // 两个模态框都手工接管输入：顺手清焦点，免得下层按钮一直显示「悬停/聚焦」态
+        // （见 applyDelegateData 的说明）。
         if (confirmDialog.isOpen()) {
+            setFocused(null);
             return confirmDialog.mouseClicked(mouseX, mouseY, button);
         }
         if (delegateDialog.isOpen()) {
+            setFocused(null);
             return delegateDialog.mouseClicked(mouseX, mouseY, button);
         }
         if (button == 0 && isCloseHit(mouseX, mouseY)) {
