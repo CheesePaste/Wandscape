@@ -11,7 +11,7 @@
     },
     {
       "type": "patchouli:text",
-      "text": "Finished scrolls go into the warehouse, and you still have to move them into a mage's cast strategy slots before it will use them (see $(l:wandscape:magic/casting_guide)Casting$(/l))."
+      "text": "Finished scrolls go into the warehouse, and you still have to move them into a mage's cast strategy slots before it will use them (see $(l:wandscape:magic/casting_guide)Casting$(/l)).$(br2)Delegate one mage to this workshop from the panel's lower right; see $(l:wandscape:buildings/delegation_guide)《Delegation》$(/l)."
     }
   ]
 }

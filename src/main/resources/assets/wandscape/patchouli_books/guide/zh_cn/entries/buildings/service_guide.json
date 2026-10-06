@@ -2,7 +2,7 @@
   "name": "服务设施",
   "category": "wandscape:buildings",
   "icon": "minecraft:light_blue_bed",
-  "sortnum": 13,
+  "sortnum": 14,
   "read_by_default": true,
   "pages": [
     {

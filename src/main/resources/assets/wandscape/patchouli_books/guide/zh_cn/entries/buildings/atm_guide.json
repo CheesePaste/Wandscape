@@ -2,7 +2,7 @@
   "name": "ATM",
   "category": "wandscape:buildings",
   "icon": "minecraft:gold_ingot",
-  "sortnum": 15,
+  "sortnum": 16,
   "read_by_default": true,
   "pages": [
     {

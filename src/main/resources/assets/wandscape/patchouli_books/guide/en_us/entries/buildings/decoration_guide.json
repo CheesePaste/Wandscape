@@ -2,7 +2,7 @@
   "name": "Decorations",
   "category": "wandscape:buildings",
   "icon": "minecraft:lantern",
-  "sortnum": 11,
+  "sortnum": 12,
   "read_by_default": true,
   "pages": [
     {

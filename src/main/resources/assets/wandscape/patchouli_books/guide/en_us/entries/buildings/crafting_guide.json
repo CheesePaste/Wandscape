@@ -7,7 +7,7 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "Wands, scepters, oath rings and other gear you carry around are made in the Equipment Workshop. Post the job and a mage does the work;"
+      "text": "Wands, scepters, oath rings and other gear you carry around are made in the Equipment Workshop. Post the job and a mage does the work$(br);"
     },
     {
       "type": "patchouli:image",
@@ -18,7 +18,11 @@
     },
     {
       "type": "patchouli:text",
-      "text": "the finished item goes into the town warehouse rather than your inventory, and the materials come out of the warehouse too — nothing in your own backpack is touched."
+      "text": "the finished item goes into the town warehouse rather than your inventory, and the materials come out of the warehouse too — nothing"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "in your own backpack is touched. Delegate one mage to this workshop from the panel's lower right;$(br) see $(l:wandscape:buildings/delegation_guide)《Delegation》$(/l)."
     }
   ]
 }

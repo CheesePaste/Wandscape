@@ -116,7 +116,8 @@ ENTRIES = [
     # 类别条目与 buildings/*.json 的 category 一一对应（government→市政厅、storage→仓库、
     # workstation、crafting_station、magic_station、tavern、altar、mage_hut、node、
     # decoration、shop、service、relax、atm），排序照建造面板的分类顺序。
-    # 首尾两条不是建筑类别：建筑维护讲受损建筑怎么修，建筑扫描器是把自建房导入成建筑。
+    # 首尾与中间各有一条不是建筑类别的：建筑维护讲受损建筑怎么修，建筑扫描器是把自建房导入成建筑，
+    # 委派是横跨工坊三兄弟与节点的管理动作（挨着那四类排）。
     ("buildings_guide", "buildings", "minecraft:bricks", 0),
     ("anomaly_guide", "buildings", "minecraft:anvil", 1),
     ("townhall_guide", "buildings", "minecraft:bell", 2),
@@ -128,12 +129,14 @@ ENTRIES = [
     ("altar_guide", "buildings", "minecraft:enchanting_table", 8),
     ("mage_hut_guide", "buildings", "minecraft:red_bed", 9),
     ("node_guide", "buildings", "wandscape:element_earth", 10),
-    ("decoration_guide", "buildings", "minecraft:lantern", 11),
-    ("shop_guide", "buildings", "minecraft:emerald", 12),
-    ("service_guide", "buildings", "minecraft:light_blue_bed", 13),
-    ("relax_guide", "buildings", "minecraft:oak_stairs", 14),
-    ("atm_guide", "buildings", "minecraft:gold_ingot", 15),
-    ("building_scanner_guide", "buildings", "wandscape:building_scanner", 16),
+    # 委派横跨上面这四类建筑（工坊三兄弟 + 节点），排在它们之后：读完那四页接着就是它。
+    ("delegation_guide", "buildings", "minecraft:name_tag", 11),
+    ("decoration_guide", "buildings", "minecraft:lantern", 12),
+    ("shop_guide", "buildings", "minecraft:emerald", 13),
+    ("service_guide", "buildings", "minecraft:light_blue_bed", 14),
+    ("relax_guide", "buildings", "minecraft:oak_stairs", 15),
+    ("atm_guide", "buildings", "minecraft:gold_ingot", 16),
+    ("building_scanner_guide", "buildings", "wandscape:building_scanner", 17),
 
     # ── 管理：面板本身 + 五个子模式（顺序照侧边栏 1..5）──
     ("panel_guide", "management", "minecraft:compass", 0),
@@ -241,6 +244,7 @@ TITLE_TO_DOC_ZH = {
     "法杖": "wand_guide",
     "盟誓戒指": "oath_ring_guide",
     "元素节点": "node_guide",
+    "委派": "delegation_guide",
 }
 
 TITLE_TO_DOC_EN = {
@@ -285,6 +289,7 @@ TITLE_TO_DOC_EN = {
     "Wand": "wand_guide",
     "Oath Ring": "oath_ring_guide",
     "Element Node": "node_guide",
+    "Delegation": "delegation_guide",
 }
 
 # md 正文里两种语言的《…》同时存在（一篇 md 只用一种语言），编译期查合并表即可。

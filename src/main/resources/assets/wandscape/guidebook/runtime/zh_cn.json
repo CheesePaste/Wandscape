@@ -219,46 +219,53 @@
       "sortnum": 10
     },
     {
+      "doc": "delegation_guide",
+      "category": "buildings",
+      "name": "委派",
+      "icon": "minecraft:name_tag",
+      "sortnum": 11
+    },
+    {
       "doc": "decoration_guide",
       "category": "buildings",
       "name": "装饰",
       "icon": "minecraft:lantern",
-      "sortnum": 11
+      "sortnum": 12
     },
     {
       "doc": "shop_guide",
       "category": "buildings",
       "name": "商店",
       "icon": "minecraft:emerald",
-      "sortnum": 12
+      "sortnum": 13
     },
     {
       "doc": "service_guide",
       "category": "buildings",
       "name": "服务设施",
       "icon": "minecraft:light_blue_bed",
-      "sortnum": 13
+      "sortnum": 14
     },
     {
       "doc": "relax_guide",
       "category": "buildings",
       "name": "休憩",
       "icon": "minecraft:oak_stairs",
-      "sortnum": 14
+      "sortnum": 15
     },
     {
       "doc": "atm_guide",
       "category": "buildings",
       "name": "ATM",
       "icon": "minecraft:gold_ingot",
-      "sortnum": 15
+      "sortnum": 16
     },
     {
       "doc": "building_scanner_guide",
       "category": "buildings",
       "name": "建筑扫描器",
       "icon": "wandscape:building_scanner",
-      "sortnum": 16
+      "sortnum": 17
     },
     {
       "doc": "panel_guide",
@@ -559,6 +566,7 @@
     "ATM": "atm_guide",
     "法杖": "wand_guide",
     "盟誓戒指": "oath_ring_guide",
-    "元素节点": "node_guide"
+    "元素节点": "node_guide",
+    "委派": "delegation_guide"
   }
 }

@@ -7,7 +7,7 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "魔法工坊抄写魔法卷轴。法师放什么魔法，全看它手里有哪些卷轴，所以想让法师换一套本领，就得到这里多抄几卷。$(br2)抄好的卷轴进仓库，还要放进法师的施法策略槽里它才会用（见$(l:wandscape:magic/casting_guide)施法$(/l)）。"
+      "text": "魔法工坊抄写魔法卷轴。法师放什么魔法，全看它手里有哪些卷轴，所以想让法师换一套本领，就得到这里多抄几卷。$(br2)抄好的卷轴进仓库，还要放进法师的施法策略槽里它才会用（见$(l:wandscape:magic/casting_guide)施法$(/l)）。$(br2)面板右下角的【委派】能让一名法师专职这座工坊，规则与取舍见$(l:wandscape:buildings/delegation_guide)《委派》$(/l)。"
     }
   ]
 }
