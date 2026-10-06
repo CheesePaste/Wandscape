@@ -4,7 +4,6 @@ import com.wsteam.wandscape.content.task.component.NpcInventory;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
-import com.google.gson.reflect.TypeToken;
 import com.wsteam.wandscape.content.building.data.BlockOffset;
 import com.wsteam.wandscape.content.building.data.BuildingConfig;
 import com.wsteam.wandscape.content.building.projection.BuildingRotation;
@@ -26,6 +25,8 @@ import net.minecraft.world.level.saveddata.SavedData;
 import net.neoforged.bus.api.IEventBus;
 
 import javax.annotation.Nullable;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -71,6 +72,13 @@ public class BuildingSavedData extends SavedData {
     private static final String TAG_QUEUE_ITEM_BLUEPRINT = "blueprint";
     private static final String TAG_QUEUE_ITEM_PARAMS = "params_json";
     private static final String TAG_QUEUE_ITEM_PRIORITY = "priority";
+    /** 超长参数（> {@link #MAX_PARAM_JSON_BYTES}）的 gzip 落点，与 {@code TaskPoolSavedData} 同名同义。 */
+    private static final String TAG_PARAMS_C = "params_c";
+    /**
+     * 参数 JSON 超这个 UTF-8 字节数就 gzip。**不能按 {@code String.length()} 判断**——
+     * 触发条件是 NBT 的 UTF 字节长度上限 65535，中文/代理对下字符数与字节数不等。
+     */
+    private static final int MAX_PARAM_JSON_BYTES = 60000;
 
     // NBT keys for shop inventory persistence
     private static final String TAG_SHOP_STOCK = "shop_stock";
@@ -94,9 +102,8 @@ public class BuildingSavedData extends SavedData {
     // NBT key for shared production queues (workstations by type, nodes by element)
     private static final String TAG_SHARED_QUEUES = "shared_queues";
 
+    /** 逐条参数用 {@code JsonElement} 直接读写（{@link #writeParams} / {@link #readParams}），不再需要整包 TypeToken。 */
     private static final Gson PARAMS_GSON = new Gson();
-    private static final java.lang.reflect.Type PARAMS_TYPE =
-            new TypeToken<Map<String, JsonElement>>(){}.getType();
 
     // ── Indexes ──
     private final Map<UUID, BuildingState> buildings = new ConcurrentHashMap<>();
@@ -767,7 +774,7 @@ public class BuildingSavedData extends SavedData {
                 CompoundTag itemTag = new CompoundTag();
                 itemTag.putString(TAG_QUEUE_ITEM_BLUEPRINT, item.blueprintId());
                 itemTag.putInt(TAG_QUEUE_ITEM_PRIORITY, item.priority());
-                itemTag.putString(TAG_QUEUE_ITEM_PARAMS, PARAMS_GSON.toJson(item.params()));
+                writeParams(itemTag, item.params());
                 queueTag.add(itemTag);
             }
             entry.put(TAG_QUEUE, queueTag);
@@ -856,8 +863,95 @@ public class BuildingSavedData extends SavedData {
         CompoundTag itemTag = new CompoundTag();
         itemTag.putString(TAG_QUEUE_ITEM_BLUEPRINT, item.blueprintId());
         itemTag.putInt(TAG_QUEUE_ITEM_PRIORITY, item.priority());
-        itemTag.putString(TAG_QUEUE_ITEM_PARAMS, PARAMS_GSON.toJson(item.params()));
+        writeParams(itemTag, item.params());
         return itemTag;
+    }
+
+    /**
+     * 落盘一条 WorkItem 的参数：JSON 超 {@link #MAX_PARAM_JSON_BYTES} 就 gzip 成 byteArray，
+     * 否则明文。口径与 {@code TaskPoolSavedData} 完全一致（同一阈值、同一个 {@code params} /
+     * {@code params_c} 双键形态）——别再起第三套写法。
+     *
+     * <p><b>为什么必须压</b>：Minecraft 的 {@code StringTag.write} 走 {@code DataOutput.writeUTF}，
+     * UTF 字节超 65535 会抛 {@code UTFDataFormatException}，而 NeoForge 的
+     * {@code NbtIo.StringFallbackDataOutput.writeUTF} 会**抓住它并把整个字符串换成空串**
+     * （{@code super.writeUTF("")}）。也就是说超长参数不会崩、不会报错，只是**静默消失**：
+     * 读档后这条任务变成没有参数的哑弹。本模组的建造参数正好是这个量级
+     * （magic_academy 的 {@code offsets} 5.3 MB、{@code blocks} 17.6 MB），
+     * 只要任务在存档时刻还躺在队列里（无法师 / 缺料 / 队列满，窗口可以任意长）就会中招。
+     */
+    private static void writeParams(CompoundTag target, Map<String, JsonElement> paramsMap) {
+        if (paramsMap == null || paramsMap.isEmpty()) return;
+        CompoundTag params = new CompoundTag();
+        CompoundTag paramsCompressed = new CompoundTag();
+        for (var entry : paramsMap.entrySet()) {
+            JsonElement value = entry.getValue();
+            if (value == null) continue;
+            String json = value.toString();
+            if (json.getBytes(StandardCharsets.UTF_8).length > MAX_PARAM_JSON_BYTES) {
+                // gzip 失败不能抛：退回明文，让这条任务至少完整（哪怕冒 64KB 风险也比丢光强）。
+                paramsCompressed.putByteArray(entry.getKey(), gzip(json));
+            } else {
+                params.putString(entry.getKey(), json);
+            }
+        }
+        if (!params.isEmpty()) target.put(TAG_QUEUE_ITEM_PARAMS, params);
+        if (!paramsCompressed.isEmpty()) target.put(TAG_PARAMS_C, paramsCompressed);
+    }
+
+    /** {@link #writeParams} 的读侧：先解 {@code params_c}（gzip byteArray），再读明文 {@code params}（后者覆盖）。 */
+    private static Map<String, JsonElement> readParams(CompoundTag tag) {
+        Map<String, JsonElement> params = new HashMap<>();
+        CompoundTag compressed = tag.getCompound(TAG_PARAMS_C);
+        for (String key : compressed.getAllKeys()) {
+            byte[] data = compressed.getByteArray(key);
+            String json;
+            try {
+                json = ungzip(data);
+            } catch (IOException e) {
+                // 解压失败说明这段字节坏了；退回当明文试一次，与 TaskPoolSavedData 同口径。
+                Log.warn(TAG, "params_c['{}'] is not a valid gzip stream — trying as plain text", key);
+                json = new String(data, StandardCharsets.UTF_8);
+            }
+            putParam(params, key, json);
+        }
+        CompoundTag plain = tag.getCompound(TAG_QUEUE_ITEM_PARAMS);
+        for (String key : plain.getAllKeys()) {
+            putParam(params, key, plain.getString(key));
+        }
+        return params;
+    }
+
+    /** 解一条参数 JSON 并放进 map；坏 JSON 不能连累整座建筑，退回空表并留痕。 */
+    private static void putParam(Map<String, JsonElement> out, String key, String json) {
+        try {
+            JsonElement parsed = PARAMS_GSON.fromJson(json, JsonElement.class);
+            out.put(key, parsed != null ? parsed : com.google.gson.JsonNull.INSTANCE);
+        } catch (RuntimeException e) {
+            Log.warn(TAG, "task param '{}' is not readable JSON, dropped: {}", key, e.getMessage());
+        }
+    }
+
+    /** 与 {@code TaskPoolSavedData.gzip} 同口径（gzip 失败不能抛，退回明文）。 */
+    private static byte[] gzip(String json) {
+        try {
+            var sink = new java.io.ByteArrayOutputStream(Math.max(64, json.length() / 4));
+            try (var gz = new java.util.zip.GZIPOutputStream(sink)) {
+                gz.write(json.getBytes(StandardCharsets.UTF_8));
+            }
+            return sink.toByteArray();
+        } catch (IOException e) {
+            Log.warn(TAG, "Failed to gzip task params ({} bytes) — storing raw: {}",
+                    json.length(), e.getMessage());
+            return json.getBytes(StandardCharsets.UTF_8);
+        }
+    }
+
+    /** 与 {@code TaskPoolSavedData.ungzip} 同口径。 */
+    private static String ungzip(byte[] data) throws IOException {
+        try (var in = new java.util.zip.GZIPInputStream(new java.io.ByteArrayInputStream(data))) {
+            return new String(in.readAllBytes(), StandardCharsets.UTF_8);
+        }
     }
 
     /** Deserialize a WorkItem from a CompoundTag, or null on malformed data. */
@@ -866,13 +960,7 @@ public class BuildingSavedData extends SavedData {
         String blueprint = itemTag.getString(TAG_QUEUE_ITEM_BLUEPRINT);
         if (blueprint.isEmpty()) return null;
         int priority = itemTag.getInt(TAG_QUEUE_ITEM_PRIORITY);
-        Map<String, JsonElement> params = Collections.emptyMap();
-        if (itemTag.contains(TAG_QUEUE_ITEM_PARAMS)) {
-            String json = itemTag.getString(TAG_QUEUE_ITEM_PARAMS);
-            params = PARAMS_GSON.fromJson(json, PARAMS_TYPE);
-            if (params == null) params = Collections.emptyMap();
-        }
-        return new WorkItem(blueprint, params, priority);
+        return new WorkItem(blueprint, readParams(itemTag), priority);
     }
 
     private static BuildingSavedData load(CompoundTag tag, HolderLookup.Provider registries) {
@@ -940,16 +1028,15 @@ public class BuildingSavedData extends SavedData {
             ListTag queueTag = entry.getList(TAG_QUEUE, Tag.TAG_COMPOUND);
             for (int j = 0; j < queueTag.size(); j++) {
                 CompoundTag itemTag = queueTag.getCompound(j);
-                String blueprint = itemTag.getString(TAG_QUEUE_ITEM_BLUEPRINT);
-                int priority = itemTag.getInt(TAG_QUEUE_ITEM_PRIORITY);
-
-                Map<String, JsonElement> params = Collections.emptyMap();
-                if (itemTag.contains(TAG_QUEUE_ITEM_PARAMS)) {
-                    String json = itemTag.getString(TAG_QUEUE_ITEM_PARAMS);
-                    params = PARAMS_GSON.fromJson(json, PARAMS_TYPE);
-                    if (params == null) params = Collections.emptyMap();
+                WorkItem item = workItemFromTag(itemTag);
+                // 参数读不出来（旧档被 64KB 静默截断成空串的残留、或损坏）就丢掉这一条，
+                // 不能把一条没有参数的任务放进队列——那会在执行期变成哑弹或误动作。
+                if (item == null) {
+                    Log.warn(TAG, "Dropping unreadable queued task on building {} (blueprint '{}')",
+                            id.toString().substring(0, 8), itemTag.getString(TAG_QUEUE_ITEM_BLUEPRINT));
+                    continue;
                 }
-                state.getTaskQueue().addLast(new WorkItem(blueprint, params, priority));
+                state.getTaskQueue().addLast(item);
             }
 
             // 维护费已删除：旧存档中"maintenance" 字段会被忽略，建筑不再可能因维护费停摆。
