@@ -36,7 +36,7 @@ public final class BalanceValues {
             "productionBatchMax",
             "sustainedCastMaxTicks",
             "worldResponseTerraformRadius", "worldResponseTerraformScanInterval",
-            "worldResponseTerraformRestoreMargin");
+            "worldResponseTerraformRestoreMargin", "worldResponseTeleportJumpDistance");
 
     // ============================================================
     // npc 回血回蓝
@@ -158,6 +158,8 @@ public final class BalanceValues {
     private static final int DEFAULT_WORLD_RESPONSE_TERRAFORM_SCAN_INTERVAL = 10;
     /** 回放余量（格）：离开「半径 + 余量」的方块才放回，避免在脚边闪回。 */
     private static final int DEFAULT_WORLD_RESPONSE_TERRAFORM_RESTORE_MARGIN = 2;
+    /** 单 tick 位移超过这个格数就按「被传送了」处理（正常跑跳/鞘翅/激流都到不了，见 domain-notes）。 */
+    private static final int DEFAULT_WORLD_RESPONSE_TELEPORT_JUMP_DISTANCE = 16;
 
     public static int worldResponseTerraformRadius() { return (int)(double) OVERRIDES.getOrDefault("worldResponseTerraformRadius", (double) DEFAULT_WORLD_RESPONSE_TERRAFORM_RADIUS); }
     public static void setWorldResponseTerraformRadius(int v) { OVERRIDES.put("worldResponseTerraformRadius", (double) v); }
@@ -165,6 +167,8 @@ public final class BalanceValues {
     public static void setWorldResponseTerraformScanInterval(int v) { OVERRIDES.put("worldResponseTerraformScanInterval", (double) v); }
     public static int worldResponseTerraformRestoreMargin() { return (int)(double) OVERRIDES.getOrDefault("worldResponseTerraformRestoreMargin", (double) DEFAULT_WORLD_RESPONSE_TERRAFORM_RESTORE_MARGIN); }
     public static void setWorldResponseTerraformRestoreMargin(int v) { OVERRIDES.put("worldResponseTerraformRestoreMargin", (double) v); }
+    public static int worldResponseTeleportJumpDistance() { return (int)(double) OVERRIDES.getOrDefault("worldResponseTeleportJumpDistance", (double) DEFAULT_WORLD_RESPONSE_TELEPORT_JUMP_DISTANCE); }
+    public static void setWorldResponseTeleportJumpDistance(int v) { OVERRIDES.put("worldResponseTeleportJumpDistance", (double) v); }
 
     // ============================================================
     // 持久化 JSON 覆盖（data/wandscape/wandscape_balance.json）驱动

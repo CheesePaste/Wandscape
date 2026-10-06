@@ -1778,6 +1778,7 @@
   "message.wandscape.world_response.expired": "世界已经平静下来 —— 重新施放【世界应答】",
   "message.wandscape.world_response.not_implemented": "「%s」尚未实现",
   "message.wandscape.world_response.pending": "世界正在聆听你的意志 —— 先选一个回应",
+  "message.wandscape.world_response.teleport_stop": "传送打断了世界应答 —— 世界已恢复原状，需要时再施放一次",
   "message.wandscape.world_response.terraform_active": "世界已经在为你让路 —— 用【平息】让它停下",
   "message.wandscape.world_response.terraform_start": "世界开始为你让路",
   "message.wandscape.world_response.unknown": "世界听不懂这个意志：%s",

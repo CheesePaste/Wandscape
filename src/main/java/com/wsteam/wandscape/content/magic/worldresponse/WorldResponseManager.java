@@ -107,6 +107,11 @@ public final class WorldResponseManager {
         }
     }
 
+    /** 作废选择窗口（传送 / 换维度 / 断线）：**冷却不动**——传送不该成为跳过冷却的手段。 */
+    public static void cancelPending(UUID playerId) {
+        if (playerId != null) PENDING.remove(playerId);
+    }
+
     /** 断开/换世界时清干净，避免 UUID 复用后带着旧 pending。 */
     public static void clear(UUID playerId) {
         if (playerId == null) return;

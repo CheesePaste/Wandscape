@@ -107,18 +107,21 @@
    - 读旧记录时注意常量名漂移：`GuardCombat.CAST_MIN_INTERVAL` 已重命名为 **`MELEE_COOLDOWN_TICKS`**（值仍是 40），别再按旧名找。
 6. **《世界应答》（`world_response`）是两阶段施法，别当成普通法术改**：
    - **阶段一**（卷轴 / `castForPlayer`）**只打开选择**，不产生任何世界效果：`WorldResponseManager.begin` 记一条 pending（5 秒）并把允许的回应下发给客户端。**阶段二**（客户端轮盘 → `WorldResponseChoicePacket`）校验 pending 未过期 + id 合法，再交 `WorldResponseExecutors`。**执行成功才进冷却**（失败/未实现不进，便于反复调试）。
-   - **pending 是防伪造闸门**：没有 pending 的选择包一律拒（客户端本地开屏 + 直接发包的方案做不到这点）。空 id = 取消（只清 pending）。状态是内存态、按世界游戏刻计时，过期项在 `begin`/`choose` 里顺手修剪；`WorldResponseManager.clear` 留给断线/换世界。
+   - **pending 是防伪造闸门**：没有 pending 的选择包一律拒（客户端本地开屏 + 直接发包的方案做不到这点）。空 id = 取消（只清 pending）。状态是内存态、按世界游戏刻计时，过期项在 `begin`/`choose` 里顺手修剪；`WorldResponseManager.clear` 留给断线/换世界。传送 / 换维度 / 断线另外走 `WorldResponseManager.cancelPending`：只作废选择窗口、**不动冷却**（传送不该成为跳过冷却的手段）。
    - **四个回应不是法术**（`content/magic/worldresponse/WorldResponse` 枚举 + lang 键）：它们不进 `magic_spells/`，否则要连带处理「卷轴绑定 / NPC 装备 / JEI 图鉴 / 装备桶」四处清单。`SpellbookLoader.equippableCategoryOf` 已显式排除 `world_response`——**NPC 既不装备也不施放它**（它是玩家专属毕业魔法）。将来要扩成数据驱动（渡海/遁地/跃迁…）就把枚举提升成 JSON。
    - **选择界面是独立 `Screen`（`WorldResponseScreen`）而不是浮层**：本模组的「抬光标 + UI 点击路由」整条链挂在面板开关上（`WandscapePanelController` 先判 `isPanelOpen()`），野外施放时借不到；`Screen` 自带光标接管/释放，省掉一整套光标状态机。`isPauseScreen() = false`，世界照常跑。
    - **刻意不绑任何热键**：1-5 已被面板页签占用、1-9 是原版快捷栏。选择只走鼠标方向（离中心超过甜区即按角度归属最近扇区），左键确认、右键 / ESC 取消。**不要再给轮盘加数字键**——那正是热键冲突的来源。
    - 文案：法术名 `magic.wandscape.world_response[.desc]`、轮盘 `worldresponse.wandscape.*`、反馈 `message.wandscape.world_response.*`；改完照例跑 `gen_lang.py`。
 7. **持续型世界回应（`WorldResponseEffect` / `WorldResponseEffects`）——回滚只有一条路**：
    - **开**：`WorldResponseExecutors` 调 `WorldResponseEffects.activate(player, effect)`；同 id 只允许一个（重复激活被拒且**不扣冷却**）。**收**：配套魔法《平息》（`world_response_calm` → `WorldResponseEffects.stopAll`）——企划案要的「持续时间 infinity 但必须能主动关」就落在这里。
-   - **所有回滚都必须汇进 `stopAll`**：主动停止、玩家登出、**换维度**、**关服**（`ServerStoppingEvent`）四条路都在 `WorldResponseEffects.register()` 里接好。原因很实在：效果改的是真实地形，只存内存快照的话，「效果没了地形没还」就是永久性的坑——尤其换维度，快照记的是原维度坐标，必须先还回再走。
+   - **所有回滚都必须汇进 `stopAll`**：主动停止、玩家登出、**传送 / 换维度**、**关服**（`ServerStoppingEvent`）几条路都在 `WorldResponseEffects.register()` 里接好。原因很实在：效果改的是真实地形，只存内存快照的话，「效果没了地形没还」就是永久性的坑——尤其换维度，快照记的是原维度坐标，必须先还回再走。
+   - **传送一律用「之前」的事件停**：`EntityTravelToDimensionEvent`（换维度之前，人还在原维度）与 `EntityTeleportEvent`（监听器挂父类，`/tp`、spreadplayers、末影珍珠、紫颂果、末影人瞬移都会进来；非玩家实体由 `instanceof ServerPlayer` 挡掉）。事后事件 `PlayerChangedDimensionEvent` 只作补网。整合包里不走这两个事件的传送（传送石碑之类）由**每 tick 位移突变**兜底：单 tick 位移超过 `worldResponseTeleportJumpDistance`（默认 16 格；玩家自由落体终速约 4 格/tick，鞘翅火箭与激流远低于它）就按被传送处理。停下会发一条 `message.wandscape.world_response.teleport_stop`，玩家重新施放即可——**宁可少维持一会儿，也不要把某台机器的核心方块留在卸载的区块里**。传送同时会作废还没选完的轮盘窗口（`WorldResponseManager.cancelPending`），免得「开着轮盘被传走、在新位置一确认就生效」。
    - **第一个落地的是「移山填海」（`TerraformEffect`，id `terraform`，即企划案的「开路」升级为持续型）**：清理玩家**脚下那层与身体那层**（`dy = 0..1`）圆形半径内的阻挡——**脚下那格与头上那格都不碰**；「挡路」的判定 = 有碰撞箱 **或**是液体（水会推人）。
    - **重力方块与液体靠写入标志解决，不要在边界另放临时封堵**：移开时用 `Block.UPDATE_CLIENTS`（flag 2，只同步客户端、不给邻居发更新）→ 正上方沙砾不会立刻塌进来、旁边水/岩浆不会立刻灌进来；回放时用 `Block.UPDATE_ALL`（flag 3）→ 物理照常回归（该落的落、该流的流）。这样不留任何非原版方块，也就不需要第二轮还原。
-   - **三类方块永远不动**：`getDestroySpeed(level,pos) < 0`（不可破坏，用原版语义而不是维护名单）、`hasBlockEntity()`（容器/告示牌，清了会吞内容物）、`ColonyLandProtectionHandler.isProtected`（属于任何建筑的地皮——世界让路不拆别人的房子，包括施法者自己的）。
-   - **回放有三种触发**：走出「半径 + 余量」（逐格还，效果跟着人走、身后不留疤）、主动停止、以及上面那四条生命周期路径。**扫描有节流**（默认每 10 tick 一次），半径/间隔/余量三个旋钮在 `BalanceValues`：`worldResponseTerraformRadius` / `worldResponseTerraformScanInterval` / `worldResponseTerraformRestoreMargin`。
+   - **四类方块永远不动**：① 传送门本体（`state.is(BlockTags.PORTALS)`——原版门方块本身 `getDestroySpeed < 0` 已被不可破坏那条挡住，但整合包的自定义门不一定）；② **与传送门相邻一圈的方块**（3×3×3 邻域里出现门方块就整块跳过：门框就是紧贴门的那一圈，且门的四个**角**框与门方块只是**斜邻**，只看上下左右会漏，而拆掉任一角框都会让 `PortalShape` 判为不完整、门在下一次方块更新里熄灭）；③ `getDestroySpeed(level,pos) < 0`（不可破坏，用原版语义而不是维护名单）与 `hasBlockEntity()`（容器/告示牌，清了会吞内容物）；④ `ColonyLandProtectionHandler.isProtected`（属于任何建筑的地皮——世界让路不拆别人的房子，包括施法者自己的）。
+   - **回放的触发**：走出「半径 + 余量」（逐格还，效果跟着人走、身后不留疤）、主动停止、以及上面那几条生命周期路径。**扫描有节流**（默认每 10 tick 一次），半径/间隔/余量三个旋钮在 `BalanceValues`：`worldResponseTerraformRadius` / `worldResponseTerraformScanInterval` / `worldResponseTerraformRestoreMargin`。
+   - **未加载的区块：不写、也不丢**。清理只发生在玩家身边（那时的区块必然加载着）；回放时若那一格所在区块已卸载，就**留着快照等它回来**——绝不为回放调用 `setBlock`（`Level.setBlock` 会经 `getChunkAt` **同步加载区块**：主线程卡顿，还会把玩家没去过的区块拉进内存），也绝不把还不了的记录删掉。`WorldResponseEffect.stop(player, loadChunks)` 因此返回布尔值：`false` = 还有方块压在未加载的区块里，`WorldResponseEffects` 把它挂进 `PENDING_ROLLBACK` 每 20 tick 重试一次，区块回来了就还上。
+   - **关服那一次是最后机会，允许为回滚把区块读回来**（`loadChunks = true`，全仓只有这一处）。能这么做是因为 `ServerStoppingEvent` 在**存档之前**触发：`MinecraftServer.runServer` 的 `finally` 里先 `handleServerStopping`（post 事件）再 `stopServer()`，而 `saveAllChunks` 在 `stopServer()` 里面——所以这一次写回去的方块会落盘。**非正常关服（崩溃 / 断电）仍可能留下坑**：快照只在内存里，这是已知取舍（要彻底解决得上 SavedData，眼下不值）。
    - **Tick 里抛异常 = 立刻停掉该效果**（记 `Log.warn` 并走 `stopAll` 那条回滚），不允许带着半截状态继续跑。
 
 ---

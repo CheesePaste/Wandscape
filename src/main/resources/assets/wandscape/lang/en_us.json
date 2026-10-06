@@ -1778,6 +1778,7 @@
   "message.wandscape.world_response.expired": "The world has gone quiet — cast World's Response again",
   "message.wandscape.world_response.not_implemented": "\"%s\" is not implemented yet",
   "message.wandscape.world_response.pending": "The world is already listening — choose a response first",
+  "message.wandscape.world_response.teleport_stop": "The teleport broke the world's response — the world has settled back; cast it again if needed",
   "message.wandscape.world_response.terraform_active": "The world is already clearing your path — use Calm to stop it",
   "message.wandscape.world_response.terraform_start": "The world begins to clear your path",
   "message.wandscape.world_response.unknown": "The world does not know that will: %s",

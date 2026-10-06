@@ -851,6 +851,10 @@
     "zh_cn": "世界正在聆听你的意志 —— 先选一个回应",
     "en_us": "The world is already listening — choose a response first"
   },
+  "message.wandscape.world_response.teleport_stop": {
+    "zh_cn": "传送打断了世界应答 —— 世界已恢复原状，需要时再施放一次",
+    "en_us": "The teleport broke the world's response — the world has settled back; cast it again if needed"
+  },
   "message.wandscape.world_response.terraform_active": {
     "zh_cn": "世界已经在为你让路 —— 用【平息】让它停下",
     "en_us": "The world is already clearing your path — use Calm to stop it"

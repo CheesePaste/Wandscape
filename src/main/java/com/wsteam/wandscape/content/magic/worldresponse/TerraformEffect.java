@@ -6,11 +6,13 @@ import com.wsteam.wandscape.foundation.util.BalanceValues;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
+import javax.annotation.Nullable;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -26,12 +28,19 @@ import java.util.Map;
  * 回放时用 {@link Block#UPDATE_ALL}，物理照常回归（该落的落、该流的流）。
  * 这比"在边界额外放临时封堵"干净得多：不留任何非原版方块，也就不需要第二轮还原。
  *
- * <p><b>三类方块永远不动</b>：不可破坏（{@code getDestroySpeed < 0}，基岩这类，用原版语义而不是
- * 维护名单）、带方块实体（容器/告示牌，直接清会把内容物吞掉）、属于任何建筑的地皮
+ * <p><b>永远不动的方块分四类</b>：① 传送门本体（{@link BlockTags#PORTALS}，原版的门方块虽然本身
+ * 不可破坏，但整合包的自定义门不一定）；② **与传送门相邻一圈的方块**——门框就是紧贴门的那一圈
+ * （含斜角的四个角，所以要看 3×3×3 而不是只看上下左右），拆了框的门会在下一次方块更新里自己熄灭；
+ * ③ 不可破坏（{@code getDestroySpeed < 0}，基岩这类，用原版语义而不是维护名单）与带方块实体
+ * （容器/告示牌，直接清会把内容物吞掉）；④ 属于任何建筑的地皮
  * （{@link ColonyLandProtectionHandler#isProtected}——世界让路不该拆别人的房子，包括施法者自己的）。
  *
- * <p>回滚有三条触发：走出范围（逐格还）、主动停止/断线/换维度/关服（一次还干净）。
- * 快照只存内存、按维度绑定：换维度时管理器会先停掉本效果，所以不存在"跨维度还错地方"。
+ * <p><b>未加载的区块不写也不丢</b>：清理只发生在玩家身边（必然是已加载的），回放时若某一格所在区块
+ * 已经卸载，就**留着快照等它回来**——绝不为回放同步加载区块，也绝不把还不了的记录删掉
+ * （{@link #stop} 会返回 false，由 {@link WorldResponseEffects} 挂起重试）。
+ *
+ * <p>回滚触发有四种：走出范围（逐格还）、主动停止/断线、传送与换维度、关服；四条都汇到
+ * {@link #stop}。快照只存内存、按维度绑定：换维度前管理器会先停掉本效果，所以不存在"跨维度还错地方"。
  */
 public final class TerraformEffect implements WorldResponseEffect {
 
@@ -67,15 +76,22 @@ public final class TerraformEffect implements WorldResponseEffect {
     }
 
     @Override
-    public void stop(ServerPlayer player) {
-        int n = removed.size();
-        for (Map.Entry<BlockPos, BlockState> e : removed.entrySet()) {
+    public boolean stop(@Nullable ServerPlayer player, boolean loadChunks) {
+        int restored = 0;
+        Iterator<Map.Entry<BlockPos, BlockState>> it = removed.entrySet().iterator();
+        while (it.hasNext()) {
+            Map.Entry<BlockPos, BlockState> e = it.next();
+            // 区块没加载就留着（除非是关服那一次收尾）：同步加载区块会卡主线程，也会把没人去的区块拉进内存
+            if (!loadChunks && !level.isLoaded(e.getKey())) continue;
             level.setBlock(e.getKey(), e.getValue(), Block.UPDATE_ALL);
+            it.remove();
+            restored++;
         }
-        removed.clear();
-        if (n > 0) {
-            Log.info(TAG, "[WorldResponse] Terraform restored {} block(s)", n);
+        if (restored > 0) {
+            Log.info(TAG, "[WorldResponse] Terraform restored {} block(s)", restored);
         }
+        // 还剩下的由管理器挂起重试（它在那儿记一条日志），这里不再逐次刷屏
+        return removed.isEmpty();
     }
 
     // ── 清 ──
@@ -91,10 +107,13 @@ public final class TerraformEffect implements WorldResponseEffect {
                 for (int dy = 0; dy <= 1; dy++) {            // 只有身体这两层；dy=-1（脚下）与 dy=2（头上）不管
                     BlockPos pos = feet.offset(dx, dy, dz);
                     if (removed.containsKey(pos)) continue;
+                    if (!level.isLoaded(pos)) continue;      // 不在未加载的区块里动土
                     if (!blocksMovement(pos)) continue;
                     if (!canClear(pos)) continue;
-                    removed.put(pos.immutable(), level.getBlockState(pos));
-                    level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS);
+                    BlockState original = level.getBlockState(pos);
+                    // 写失败（超世界高度、debug 世界）就当没这回事：先写再记账，免得快照里留着从没被移开的方块
+                    if (!level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS)) continue;
+                    removed.put(pos.immutable(), original);
                 }
             }
         }
@@ -110,9 +129,32 @@ public final class TerraformEffect implements WorldResponseEffect {
 
     private boolean canClear(BlockPos pos) {
         BlockState state = level.getBlockState(pos);
+        if (state.is(BlockTags.PORTALS)) return false;             // 传送门本体
+        if (portalNearby(pos)) return false;                       // 门框（含斜角）
         if (state.getDestroySpeed(level, pos) < 0) return false;   // 不可破坏（基岩/屏障这类）
         if (state.hasBlockEntity()) return false;                  // 容器/告示牌：清了会吞内容物
         return !ColonyLandProtectionHandler.isProtected(level, pos);
+    }
+
+    /**
+     * 3×3×3 邻域里只要有传送门方块就整块跳过。
+     *
+     * <p>为什么要连斜角一起看：门框是一整圈，门的四个**角**上的框块与门方块只是斜邻——只看上下左右
+     * 会漏掉它们，而拆掉任何一个角框都会让 {@code PortalShape} 判定为不完整，门在下一次方块更新里熄灭。
+     */
+    private boolean portalNearby(BlockPos pos) {
+        BlockPos.MutableBlockPos probe = new BlockPos.MutableBlockPos();
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dy = -1; dy <= 1; dy++) {
+                for (int dz = -1; dz <= 1; dz++) {
+                    if (dx == 0 && dy == 0 && dz == 0) continue;
+                    probe.set(pos.getX() + dx, pos.getY() + dy, pos.getZ() + dz);
+                    if (!level.isLoaded(probe)) continue;          // 边界外那一格可能落在没加载的区块里
+                    if (level.getBlockState(probe).is(BlockTags.PORTALS)) return true;
+                }
+            }
+        }
+        return false;
     }
 
     // ── 还 ──
@@ -127,6 +169,7 @@ public final class TerraformEffect implements WorldResponseEffect {
         while (it.hasNext()) {
             Map.Entry<BlockPos, BlockState> e = it.next();
             if (e.getKey().distToCenterSqr(center.x, center.y, center.z) <= limitSqr) continue;
+            if (!level.isLoaded(e.getKey())) continue;   // 保留快照：这一格等它所在的区块回来再还
             level.setBlock(e.getKey(), e.getValue(), Block.UPDATE_ALL);
             it.remove();
         }
