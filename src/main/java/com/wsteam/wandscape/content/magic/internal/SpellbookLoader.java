@@ -59,6 +59,8 @@ public class SpellbookLoader {
         if (def == null) return null;
         if (def.category() == MagicDef.Category.ALTAR) return null;
         if ("teleport".equals(def.id())) return null;
+        // 世界应答是玩家专属的毕业魔法（两阶段施法 + 客户端轮盘），NPC 既不该装备也不该施放
+        if ("world_response".equals(def.id())) return null;
         String g = def.defaultGroup();
         return EquippedMagicComponent.isCategory(g) ? g : "support";
     }

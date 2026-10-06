@@ -452,6 +452,10 @@ public final class MagicSpellExecutors {
         int color = def.effectColor() != null ? def.effectColor() : MagicCaster.DEFAULT_COLOR;
 
         return switch (def.id()) {
+            // 世界应答（毕业魔法）：两阶段施法——这一下只打开回应轮盘，真正的效果在玩家选定后由
+            // WorldResponseManager.choose 触发（pending/冷却/校验都在那里）。
+            case "world_response" -> com.wsteam.wandscape.content.magic.worldresponse.WorldResponseManager
+                    .begin(player, def.baseCooldown());
             case "heal" -> {
                 Vec3 pos = player.position();
                 UUID effectId = UUID.randomUUID();

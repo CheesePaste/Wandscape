@@ -78,5 +78,13 @@
   "magic.wandscape.teleport.desc": {
     "zh_cn": "将施法者瞬间传送到目标位置。",
     "en_us": "Instantly teleports the caster to the target location."
+  },
+  "magic.wandscape.world_response": {
+    "zh_cn": "世界应答",
+    "en_us": "World's Response"
+  },
+  "magic.wandscape.world_response.desc": {
+    "zh_cn": "毕业魔法：向世界表达意志，由世界回应。施放后短暂列出可选的世界回应，从中挑一个。",
+    "en_us": "The graduation magic: state your will and let the world answer. Casting briefly lists the responses you may choose from."
   }
 }

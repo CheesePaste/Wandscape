@@ -826,6 +826,26 @@
   "message.wandscape.wonder.magic_academy_completed": {
     "zh_cn": "[奇观] 魔法学院落成！为小镇解锁了全部合成配方（共 %s 项）",
     "en_us": "[Wonder] The Magic Academy is complete! All synthesize recipes unlocked for the town (%s items)"
+  },
+  "message.wandscape.world_response.cooldown": {
+    "zh_cn": "世界仍在平静 —— %s 秒后才会再次回应",
+    "en_us": "The world is still calm — it will answer again in %s s"
+  },
+  "message.wandscape.world_response.expired": {
+    "zh_cn": "世界已经平静下来 —— 重新施放【世界应答】",
+    "en_us": "The world has gone quiet — cast World's Response again"
+  },
+  "message.wandscape.world_response.not_implemented": {
+    "zh_cn": "「%s」尚未实现",
+    "en_us": "\"%s\" is not implemented yet"
+  },
+  "message.wandscape.world_response.pending": {
+    "zh_cn": "世界正在聆听你的意志 —— 先选一个回应",
+    "en_us": "The world is already listening — choose a response first"
+  },
+  "message.wandscape.world_response.unknown": {
+    "zh_cn": "世界听不懂这个意志：%s",
+    "en_us": "The world does not know that will: %s"
   }
 }
 

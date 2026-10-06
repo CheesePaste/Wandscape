@@ -1,0 +1,46 @@
+{
+  "worldresponse.wandscape.title": {
+    "zh_cn": "§d世界听见了你的意志。",
+    "en_us": "§dThe world has heard your will."
+  },
+  "worldresponse.wandscape.hub_hint": {
+    "zh_cn": "§7移动鼠标，看向你要的回应",
+    "en_us": "§7Move the mouse toward the response you want"
+  },
+  "worldresponse.wandscape.hint": {
+    "zh_cn": "§8左键确认 · 右键 / ESC 取消",
+    "en_us": "§8LMB confirm · RMB / ESC cancel"
+  },
+  "worldresponse.wandscape.forward": {
+    "zh_cn": "§f向前",
+    "en_us": "§fForward"
+  },
+  "worldresponse.wandscape.forward.desc": {
+    "zh_cn": "§7世界把你送往注视的方向",
+    "en_us": "§7The world carries you toward where you look"
+  },
+  "worldresponse.wandscape.lift": {
+    "zh_cn": "§f扶摇",
+    "en_us": "§fAscend"
+  },
+  "worldresponse.wandscape.lift.desc": {
+    "zh_cn": "§7大地托举你向上",
+    "en_us": "§7The land lifts you upward"
+  },
+  "worldresponse.wandscape.open": {
+    "zh_cn": "§f开路",
+    "en_us": "§fClear the Way"
+  },
+  "worldresponse.wandscape.open.desc": {
+    "zh_cn": "§7世界为你清除前方的阻碍",
+    "en_us": "§7The world clears what blocks your path"
+  },
+  "worldresponse.wandscape.judge": {
+    "zh_cn": "§f裁决",
+    "en_us": "§fJudgement"
+  },
+  "worldresponse.wandscape.judge.desc": {
+    "zh_cn": "§7世界替你处置眼前的阻碍者",
+    "en_us": "§7The world deals with what stands against you"
+  }
+}

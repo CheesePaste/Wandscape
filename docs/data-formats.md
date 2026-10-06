@@ -229,6 +229,8 @@
 }
 ```
 
+`world_response`（毕业魔法《世界应答》）是**两阶段**特例：JSON 只声明它是玩家专属的 `special` 法术，施放后由服务端打开客户端轮盘（`WorldResponseOpenPacket`），玩家选定并回 `WorldResponseChoicePacket` 后才真正生效。**它的四个回应（向前 / 扶摇 / 开路 / 裁决）不是法术**，不进 `magic_spells/`——契约见 `docs/domain-notes.md` §三.6。
+
 ### 2. 魔法阵视觉 (`magic_circles/<id>.json`)
 定义法阵几何图层与粒子动画。包含 5 种几何图元：`ring`（环）、`arc`（弧）、`polygon`（多边形）、`star`（星形）、`glyph`（符文）。
 

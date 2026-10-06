@@ -105,6 +105,13 @@
 5. **魔法冷却 / 施法常量定义在各魔法自己的类里**：
    - 「每个魔法一个值」的冷却与时长常量（`GuardCombat.MELEE_COOLDOWN_TICKS`、`MagicCaster.BEAM_SPAWN_DELAY` 这类）一律放在该魔法逻辑所在类的顶部作为命名常量，**不要**上收到 `WandscapeConstants`：集中后改一个冷却要跨文件翻字段找，而放在魔法类里一眼就能看到。只有真正全局共享的跨系统常量才进 `WandscapeConstants`。
    - 读旧记录时注意常量名漂移：`GuardCombat.CAST_MIN_INTERVAL` 已重命名为 **`MELEE_COOLDOWN_TICKS`**（值仍是 40），别再按旧名找。
+6. **《世界应答》（`world_response`）是两阶段施法，别当成普通法术改**：
+   - **阶段一**（卷轴 / `castForPlayer`）**只打开选择**，不产生任何世界效果：`WorldResponseManager.begin` 记一条 pending（5 秒）并把允许的回应下发给客户端。**阶段二**（客户端轮盘 → `WorldResponseChoicePacket`）校验 pending 未过期 + id 合法，再交 `WorldResponseExecutors`。**执行成功才进冷却**（失败/未实现不进，便于反复调试）。
+   - **pending 是防伪造闸门**：没有 pending 的选择包一律拒（客户端本地开屏 + 直接发包的方案做不到这点）。空 id = 取消（只清 pending）。状态是内存态、按世界游戏刻计时，过期项在 `begin`/`choose` 里顺手修剪；`WorldResponseManager.clear` 留给断线/换世界。
+   - **四个回应不是法术**（`content/magic/worldresponse/WorldResponse` 枚举 + lang 键）：它们不进 `magic_spells/`，否则要连带处理「卷轴绑定 / NPC 装备 / JEI 图鉴 / 装备桶」四处清单。`SpellbookLoader.equippableCategoryOf` 已显式排除 `world_response`——**NPC 既不装备也不施放它**（它是玩家专属毕业魔法）。将来要扩成数据驱动（渡海/遁地/跃迁…）就把枚举提升成 JSON。
+   - **选择界面是独立 `Screen`（`WorldResponseScreen`）而不是浮层**：本模组的「抬光标 + UI 点击路由」整条链挂在面板开关上（`WandscapePanelController` 先判 `isPanelOpen()`），野外施放时借不到；`Screen` 自带光标接管/释放，省掉一整套光标状态机。`isPauseScreen() = false`，世界照常跑。
+   - **刻意不绑任何热键**：1-5 已被面板页签占用、1-9 是原版快捷栏。选择只走鼠标方向（离中心超过甜区即按角度归属最近扇区），左键确认、右键 / ESC 取消。**不要再给轮盘加数字键**——那正是热键冲突的来源。
+   - 文案：法术名 `magic.wandscape.world_response[.desc]`、轮盘 `worldresponse.wandscape.*`、反馈 `message.wandscape.world_response.*`；改完照例跑 `gen_lang.py`。
 
 ---
 

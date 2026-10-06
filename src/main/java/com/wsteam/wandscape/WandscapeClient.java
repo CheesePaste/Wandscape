@@ -28,6 +28,8 @@ import com.wsteam.wandscape.content.colony.sound.ColonyAmbientSystem;
 import com.wsteam.wandscape.content.magic.client.MagicBeamEntityRenderer;
 import com.wsteam.wandscape.content.magic.client.MagicCircleDotParticle;
 import com.wsteam.wandscape.content.magic.client.MagicCircleEmitter;
+import com.wsteam.wandscape.content.magic.client.WorldResponseScreen;
+import com.wsteam.wandscape.content.magic.network.WorldResponseOpenPacket;
 import com.wsteam.wandscape.content.npc.client.*;
 import com.wsteam.wandscape.content.npc.network.NpcDataPacket;
 import com.wsteam.wandscape.content.colony.overview.client.OverviewFlightController;
@@ -206,6 +208,9 @@ public class WandscapeClient {
         BuildingPreviewGifCache.configure(res, fps);
         // Wire server→client packet handlers — open MedievalScreen directly.
         ClientPayloadDispatcher.bind(ExplorationRewardPacket.TYPE, ExplorationHudOverlay::showReward);
+        // 《世界应答》回应轮盘：服务端决定何时开、列出当下允许的回应；客户端只负责画与选
+        ClientPayloadDispatcher.bind(WorldResponseOpenPacket.TYPE, packet ->
+                Minecraft.getInstance().execute(() -> WorldResponseScreen.open(packet.responseIds())));
         ClientPayloadDispatcher.bind(WarehouseDataPacket.TYPE, packet -> {
             // The warehouse screen opens through the vanilla menu flow (openMenu +
             // RegisterMenuScreensEvent); the data packet only refreshes an open screen.

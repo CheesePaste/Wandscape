@@ -54,6 +54,8 @@ import com.wsteam.wandscape.content.items.compass.network.CompassTargetPacket;
 import com.wsteam.wandscape.content.items.guidebook.network.GuideBookOpenPacket;
 import com.wsteam.wandscape.content.items.oathring.network.OathRingDataPacket;
 import com.wsteam.wandscape.content.magic.network.MagicCircleCastPacket;
+import com.wsteam.wandscape.content.magic.network.WorldResponseChoicePacket;
+import com.wsteam.wandscape.content.magic.network.WorldResponseOpenPacket;
 import com.wsteam.wandscape.content.npc.network.NpcDataPacket;
 import com.wsteam.wandscape.content.npc.network.NpcDismissPacket;
 import com.wsteam.wandscape.content.npc.network.NpcOpenEquipPacket;
@@ -268,6 +270,10 @@ public final class PayloadRegistry {
 
         // ── Magic circle cast ──
         s2c(r, MagicCircleCastPacket.TYPE, MagicCircleCastPacket.STREAM_CODEC, MagicCircleCastPacket::handleClient);
+
+        // ── World response（毕业魔法《世界应答》的回应轮盘：服务端开轮盘、客户端回选择） ──
+        s2c(r, WorldResponseOpenPacket.TYPE, WorldResponseOpenPacket.STREAM_CODEC, WorldResponseOpenPacket::handleClient);
+        c2s(r, WorldResponseChoicePacket.TYPE, WorldResponseChoicePacket.STREAM_CODEC, WorldResponseChoicePacket::handleServer);
 
         // ── Particle burst (colored FX) ──
         s2c(r, ParticleBurstPacket.TYPE, ParticleBurstPacket.STREAM_CODEC, ParticleBurstPacket::handleClient);
