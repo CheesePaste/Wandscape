@@ -303,7 +303,37 @@ public final class EnqueueHelper {
             fillBoundaryParams(params, pos, config, rotationSteps);
         }
 
-        return new WorkItem(blueprintId, params, priority);
+        // batchBuild=true：这条任务由建筑模板展开，样式可从建筑 JSON 复原，所以能拆成多法师批次、
+        // 也能在读档时用 JSON 重建（修复/生产/采集任务没这个标记，它们拆了就丢参数）。
+        return new WorkItem(blueprintId, params, priority, true);
+    }
+
+    /**
+     * 读档重建：用**建筑 JSON**（样式的唯一真源）+ 存档里的锚点/朝向，重建当初入队的那条建造
+     * WorkItem，供 {@code ConstructionBatches.split} 重新分批。
+     *
+     * <p>两个刻意的选择：
+     * <ul>
+     *   <li>{@code skipMaterials=true} —— 读档只重建**剩余 placement 批次**（它们的建材参数本来就被
+     *       split 清空）；准备批次绝不由这里重建：{@code skipMaterials}(首建免费) 在
+     *       {@code claimFirstFree} 之后无法重算，重发准备批次会再扣一次建材、或让免费建筑凭空要料。</li>
+     *   <li>{@code sd} 传 null —— 该方法只用于拼参数，不读存档对象。</li>
+     * </ul>
+     *
+     * @param priority 存档里记下的分批优先级
+     * @param clearBox 存档里记下的清盒标志（决定 task_bbox，读档重分要一致）
+     * @return 重建的 WorkItem；建筑类型已从 JSON 里删掉时返回 null（调用方必须留痕并作废该建筑）
+     */
+    @Nullable
+    public static WorkItem rebuildWorkItem(BuildingState state, int priority, boolean clearBox) {
+        BuildingConfig config = BuildingConfigLoader.getInstance().get(state.getBuildingTypeId());
+        if (config == null) {
+            Log.warn(TAG, "cannot rebuild build work for building {}: unknown building type '{}'",
+                    state.getBuildingId(), state.getBuildingTypeId());
+            return null;
+        }
+        return buildWorkItem(config, state.getAnchor(), state.getBuildingTypeId(), priority, null,
+                state.getBuildingId(), state.getRotationSteps(), true, clearBox);
     }
 
     /**

@@ -48,8 +48,11 @@ public class BuildingTaskPool {
         BuildingTaskQueue queue = getOrCreate(buildingId);
 
         if (!queue.hasHead()) {
-            if (ConstructionBatches.isSplittable(item)) {
-                long tid = enqueueBatches(buildingId, colonyId, ConstructionBatches.split(item, colonyId), pool);
+            // 分批尺寸在此快照：玩家中途改 Config 不影响已开工建筑（重分会让 chunk 边界错位漏块）
+            int batchSize = ConstructionBatches.currentBatchSize();
+            if (ConstructionBatches.isSplittable(item, batchSize)) {
+                long tid = enqueueBatches(buildingId, colonyId, item,
+                        ConstructionBatches.split(item, colonyId, batchSize), batchSize, pool);
                 notifyChanged();
                 return tid;
             }
@@ -72,9 +75,12 @@ public class BuildingTaskPool {
      * subsequent batches wait in {@link BuildingTaskQueue#getPendingBatches} until the initial batch finishes.
      * Otherwise, all batches are published to {@link GlobalTaskPool} simultaneously for concurrent execution.
      *
+     * @param work      the pre-split WorkItem (its priority/清盒标志进 {@link ConstructionBatches.BatchJob})
+     * @param batchSize 分批尺寸快照，连同 {@code work} 一起写进持久化记录
      * @return global task ID of the first published batch
      */
-    public long enqueueBatches(UUID buildingId, @Nullable UUID colonyId, ConstructionBatches.SplitResult split, GlobalTaskPool pool) {
+    public long enqueueBatches(UUID buildingId, @Nullable UUID colonyId, WorkItem work,
+                               ConstructionBatches.SplitResult split, int batchSize, GlobalTaskPool pool) {
         BuildingTaskQueue queue = getOrCreate(buildingId);
         queue.setColonyId(colonyId);
         Map<String, String> compData = new LinkedHashMap<>(split.completionData());
@@ -88,6 +94,10 @@ public class BuildingTaskPool {
             long taskId = pool.addTaskFromBuilding(split.initialBatch(), buildingId);
             queue.addActiveBatch(taskId);
             queue.setPendingBatches(split.remainingBatches());
+            // prep 未跑完：完成游标 0，读档要重建待发批次、等 prep 跑完再放行
+            queue.setBatchJob(new ConstructionBatches.BatchJob(batchSize, false, 0,
+                    ConstructionBatches.blockCount(work), work.priority(),
+                    ConstructionBatches.clearsBox(work)));
             Log.info(TAG, "building {} published prep batch #{} ({} pending placement batches)",
                     buildingId.toString().substring(0, 8), taskId, split.remainingBatches().size());
             notifyChanged();
@@ -100,6 +110,10 @@ public class BuildingTaskPool {
                 queue.addActiveBatch(taskId);
             }
             queue.clearPendingBatches();
+            // 无准备阶段＝所有批次已原子放出；游标仍为 0（释放不等于完成），由完成剪除逐步推进
+            queue.setBatchJob(new ConstructionBatches.BatchJob(batchSize, true, 0,
+                    ConstructionBatches.blockCount(work), work.priority(),
+                    ConstructionBatches.clearsBox(work)));
             Log.info(TAG, "building {} published all {} batches concurrently",
                     buildingId.toString().substring(0, 8), 1 + split.remainingBatches().size());
             notifyChanged();
@@ -121,8 +135,10 @@ public class BuildingTaskPool {
 
         WorkItem next = queue.dequeueNext();
         if (next != null) {
-            if (ConstructionBatches.isSplittable(next)) {
-                long taskId = enqueueBatches(buildingId, colonyId, ConstructionBatches.split(next, colonyId), pool);
+            int batchSize = ConstructionBatches.currentBatchSize();
+            if (ConstructionBatches.isSplittable(next, batchSize)) {
+                long taskId = enqueueBatches(buildingId, colonyId, next,
+                        ConstructionBatches.split(next, colonyId, batchSize), batchSize, pool);
                 Log.info(TAG, "building {} promoted next splittable batch #{} blueprint={} pending={}",
                         buildingId.toString().substring(0, 8), taskId,
                         next.blueprintId(), queue.pendingSize());
@@ -166,7 +182,9 @@ public class BuildingTaskPool {
 
     public boolean isBatchBuilding(UUID buildingId) {
         BuildingTaskQueue queue = queues.get(buildingId);
-        return queue != null && (queue.hasActiveBatches() || queue.hasPendingBatches() || queue.hasCompletionData() || (queue.hasParked() && queue.hasCompletionData()));
+        return queue != null && (queue.hasActiveBatches() || queue.hasPendingBatches()
+                || queue.hasBatchJob() || queue.hasCompletionData()
+                || (queue.hasParked() && queue.hasCompletionData()));
     }
 
     /**
@@ -184,7 +202,8 @@ public class BuildingTaskPool {
     public boolean checkBatchesProgress(UUID buildingId, GlobalTaskPool pool, @Nullable EventBus eventBus) {
         BuildingTaskQueue queue = queues.get(buildingId);
         if (queue == null) return false;
-        if (!queue.hasActiveBatches() && !queue.hasPendingBatches() && !queue.hasCompletionData() && !queue.hasParked()) {
+        if (!queue.hasActiveBatches() && !queue.hasPendingBatches() && !queue.hasCompletionData()
+                && !queue.hasParked() && !queue.hasBatchJob()) {
             return false;
         }
 
@@ -201,6 +220,23 @@ public class BuildingTaskPool {
         }
 
         // 1. Prune finished active batches
+        //    先推进完成游标：只数**队首连续完成的 placement 子批次**。
+        //    - 准备批次（c=0，带 pattern_offsets）与修复任务不占批次下标，跳过不数；
+        //    - 任务已消失（null）时无法判定类型，直接停下让游标落后——重跑一次是幂等的，
+        //      越过未完成的批次则是读档后永久缺那一片方块；
+        //    - 有 parked 批次时 live 集合不完整（parked 已不在 activeBatchIds 里），游标本轮不推进。
+        //    批次按下标顺序释放（activeBatchIds 是 LinkedHashSet），所以"队首连续完成"= 完成游标。
+        if (!queue.hasParked()) {
+            int leadingCompleted = 0;
+            for (long batchId : queue.getActiveBatchIds()) {
+                GlobalTask task = pool.get(batchId);
+                if (task == null) break;
+                if (!ConstructionBatches.isPlacementBatch(task.taskParams)) continue;
+                if (task.state != TaskState.COMPLETED) break;
+                leadingCompleted++;
+            }
+            queue.advanceBatchCursor(leadingCompleted);
+        }
         List<Long> done = new ArrayList<>();
         for (long batchId : new ArrayList<>(queue.getActiveBatchIds())) {
             GlobalTask task = pool.get(batchId);
@@ -243,6 +279,9 @@ public class BuildingTaskPool {
                 long taskId = pool.addTaskFromBuilding(req, buildingId);
                 queue.addActiveBatch(taskId);
             }
+            // 释放 ≠ 完成：完成游标只由上面的"队首连续完成"推进（读档据此决定重发范围）。
+            // 但释放意味着准备批次已判定完成（能走到这里就说明没有活跃、也没有停泊批次）。
+            queue.markPrepDone();
             notifyChanged();
             Log.info(TAG, "building {} foundation finished, released {} parallel placement batches",
                     buildingId.toString().substring(0, 8), pending.size());

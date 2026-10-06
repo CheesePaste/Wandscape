@@ -232,6 +232,15 @@
      3. **公平派活序（`SchedulerSystem.fairOrder`）**：可派任务重排成「**还没有工人的任务组各一条**」+「其余按原优先序」。组 = `building_id`，没有建筑归属的任务（采集点/路段/祭坛施法）各自成组。效果：每栋楼/每个任务先分到一个人，有多余的空闲法师才去做第二、第三个工人；否则先入池的大楼（批次最多、id 最老）会一直霸占所有空出来的法师，玩家后放的建筑永远等不到人。建筑委派的候选门槛照旧在候选循环里生效，`fairOrder` 只排序不动语义。
      4. **闲逛/捡物路径在被抢活时清掉**：`WandscapeNpc` 的 `RandomStrollGoal` 与 `AutoPickupItemGoal` 的 `stop()` 现在会清掉自己的路径（`suppressWandering` 或 `engineDrivingNavigation()` 为真时除外——那是 NavigationSystem 正在驱动的工作走位）。改前这两条「闲逛目标 / 去捡掉落物」的路径会在任务到来后继续被走完，正是「跑一段再干几秒」。
      - **症状对照**：只拆批不做上面几条时，玩家实测是「法师干几秒钟就停下来来回跑、跑一段再干几秒钟」（不拆批时是站一处干完整栋）；横向乱跑来自每条批次各自算站位 + 闲逛路径，纵向「手上停一下」来自批次之间回落调度器心跳。改这几条之前别去调 `constructionBatchSize`——那是粒度旋钮，不是这个病。
+   - **批次的 params 不落盘，读档按「完成游标」重建重发（2026-10-06 改，动持久化前必读）**：
+     - **为什么**：`ConstructionBatches.split` 里 `new LinkedHashMap<>(work.params())` 会把整栋参数复制进**每一条**批次，而拆批后的批次是要落盘的。实测 Magic Academy 一栋 13854 批，落盘 546 MB（`wandscape_tasks.dat`，解压 569 MB），其中 94% 是每批重复携带的整栋副本；旧结构在 Phase 2 期间还会把同量级数据搬进 `tasks[]`。
+     - **真源**：建筑样式只有建筑 JSON 一个真源。整栋「还剩什么」现在完全由 **{建筑 JSON（type/anchor/rotation）+ 完成游标}** 决定，`TaskPoolSavedData` 每条拆批队列只落 6 个标量 `BatchJob(batchSize, prepDone, completedBatches, blockCount, priority, clearBox)`；子批次任务本身被 `isRebuiltBatchTask` 跳过、不进 `tasks[]`。
+     - **游标语义（踩过就会掉块）**：`completedBatches` 是**完成**游标，不是「已释放数」——批次 COMPLETED 后就从 `GlobalTaskPool` 消失，若按「已释放数」记，已跑完的批次读档后既不在池里也不在重建范围，那一段方块会永久缺失且不报错。推进点是 `BuildingTaskPool.checkBatchesProgress` 剪除完成批次处，且只推进「**从队首连续完成**」的前缀（`activeBatchIds` 是 `LinkedHashSet`，插入序 = 释放序 = 下标序）：乱序完成时游标宁可落后（那几批读档重跑一次，`TransformOp` 幂等），绝不越过未完成的批次。
+     - **`batchSize` 必须快照**：`chunkCount`/`perChunk` 是两个 ceil，边界随批尺寸变；玩家能在设置中心改 `constructionBatchSize`，不存当时值就会让游标指到别的块段。
+     - **准备批次（Phase 1）永不重建**：它本身就是普通 `GlobalTask`，读档由通用任务持久化原样恢复（含 `pattern_offsets`）。重建一条会变两条，而 `ResourceRequestExecutor.finish` 对 `material_list` 是**全额 commit、不查 `charged_materials` 账本**，等于把整栋建材再扣一遍；何况重建必须知道 `skipMaterials`（= `firstFree`），而它在 `claimFirstFree` 之后重算必得 false。
+     - **不匹配一律 warn + 作废，不夹取游标**：重建方块数 ≠ 存档的 `blockCount`（中途改了 JSON）、游标越界、`prepDone=false` 却有完成游标、类型已从数据包删除、旧档还存在 `pending_batches`（本格式断档不迁移）——全部 `Log.warn` + 丢该队列 + 丢该建筑 `build:*` 任务，建筑停在现状由玩家点「复原」（修复走世界扫描，安全）。
+     - **修复类任务不参与拆批**：`BuildingRepairHandler` 造的 `build:place_structure` 参数来自**世界扫描**，无法从 JSON 重建。判据用 `WorkItem.batchBuild()` 显式标记（只有 `EnqueueHelper.buildWorkItem` 模板展开才置位）+ `clear_and_build` 身份兜底。注意 `BuildingSavedData` 持久化 `BuildingState.taskQueue` 时用 3 参构造、**会丢这个标记**，所以 `clear_and_build` 那条兜底不能删，除非把标记也存进建筑存档。
+     - **同源的旧坑：NBT 字符串超 64KB 会被静默写成空串**。`StringTag.write` → `DataOutput.writeUTF` 超 65535 字节抛 `UTFDataFormatException`，而 `NbtIo.StringFallbackDataOutput.writeUTF` 会 catch 住并 `super.writeUTF("")`——不崩、不报错，数据消失。所以**任何 params 落盘都必须先按 UTF-8 字节数判断是否 gzip**（`TaskPoolSavedData` 与 `BuildingSavedData` 现在都是 `>60000` 就进 `params_c`）。另外 `blueprint.bind` 的参数名必须与蓝图读物逐字一致：写错键名不会报错，只会让这个参数永远为空——2026-10-06 前 53 个建筑 JSON 把 `block_nbt` 写成 `blocks_nbt`，箱子/告示牌/花盆的 NBT 全线读不到。
 
 18. **建造投影的放置模型（2026-10-06 起对齐 Litematica，改交互前必读）**：
    - **三阶段**：`瞄准`（虚影每 tick / 每帧跟随准心，**不按任何键**）→ `调整中`（`isPinned()`：锚点固定、不再跟随，可用 ALT+滚轮 / 6 个按钮改 xyz、左键或面板按钮旋转）→ `已定稿`（`isLocked()`：位移与旋转一律拒绝）。

@@ -68,6 +68,7 @@ public class BuildingTaskSource implements TaskSource {
                 var queue = entry.getValue();
 
                 if (queue.hasActiveBatches() || queue.hasPendingBatches() || queue.hasCompletionData()
+                        || queue.hasBatchJob()
                         || (queue.hasParked() && queue.hasCompletionData())) {
                     for (long batchId : new ArrayList<>(queue.getActiveBatchIds())) {
                         GlobalTask task = pool.get(batchId);
