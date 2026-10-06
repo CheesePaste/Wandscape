@@ -118,6 +118,7 @@ A 和 B 用的是**同一套加载器**：B 里放同 id 的文件就能覆盖 A
 | `wandscape_tavern_recruits.dat` | 旅店招募 |
 | `wandscape_tourist_sim.dat` | 游客模拟 |
 | `wandscape_tutorial_progress.dat` | 新手引导进度 |
+| `wandscape_world_response_protection.dat` | 移山填海的「不许动」方块名单（**按玩家各一份**，见 `docs/domain-notes.md` §三.7） |
 
 ### 3.2 跟客户端/gameDir 走（`<gameDir>/…`）
 

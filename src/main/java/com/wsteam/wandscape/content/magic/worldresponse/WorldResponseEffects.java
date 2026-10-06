@@ -5,10 +5,13 @@ import com.wsteam.wandscape.foundation.ui.I18n;
 import com.wsteam.wandscape.foundation.util.BalanceValues;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.EntityTeleportEvent;
 import net.neoforged.neoforge.event.entity.EntityTravelToDimensionEvent;
+import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
@@ -70,6 +73,7 @@ public final class WorldResponseEffects {
         bus.addListener(EntityTravelToDimensionEvent.class, WorldResponseEffects::onTravelToDimension);
         bus.addListener(EntityTeleportEvent.class, WorldResponseEffects::onTeleport);
         bus.addListener(PlayerEvent.PlayerChangedDimensionEvent.class, WorldResponseEffects::onChangedDimension);
+        bus.addListener(LivingIncomingDamageEvent.class, WorldResponseEffects::onIncomingDamage);
         bus.addListener(ServerStoppingEvent.class, e -> stopAll(e.getServer()));
         Log.info(TAG, "[WorldResponse] Persistent effect manager registered");
     }
@@ -207,6 +211,34 @@ public final class WorldResponseEffects {
             stopAll(player);   // 带着效果断线会让地形留坑：登出即回滚
             WorldResponseManager.cancelPending(player.getUUID());   // 人都走了，留着选择窗口没意义
         }
+    }
+
+    /**
+     * 环境热伤害免疫：效果自己声明要不要（{@link WorldResponseEffect#wardsHeat()}），
+     * 「让路顺便别把人烫伤」这条判断只有一份。
+     */
+    private static void onIncomingDamage(LivingIncomingDamageEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer player)) return;
+        if (!isEnvironmentalHeat(event.getSource())) return;
+        Map<String, WorldResponseEffect> mine = ACTIVE.get(player.getUUID());
+        if (mine == null) return;
+        for (WorldResponseEffect effect : mine.values()) {
+            if (effect.wardsHeat()) {
+                event.setCanceled(true);
+                return;
+            }
+        }
+    }
+
+    /**
+     * 「环境热」：岩浆、岩浆块、站在火里、身上着火。
+     *
+     * <p>刻意**不**用 {@code DamageTypeTags.IS_FIRE}：那个标签连火球一起收（见原版
+     * {@code DamageTypeTagsProvider}），拿它挡伤害等于顺手给了玩家一份火焰免疫。
+     */
+    private static boolean isEnvironmentalHeat(DamageSource source) {
+        return source.is(DamageTypes.LAVA) || source.is(DamageTypes.HOT_FLOOR)
+                || source.is(DamageTypes.IN_FIRE) || source.is(DamageTypes.ON_FIRE);
     }
 
     private static void onTravelToDimension(EntityTravelToDimensionEvent event) {

@@ -24,6 +24,16 @@ public interface WorldResponseEffect {
     void tick(ServerPlayer player);
 
     /**
+     * 生效期间是否让施法者免疫**环境热伤害**（岩浆 / 岩浆块 / 站在火里 / 身上着火）。
+     *
+     * <p>默认不免疫。实现方不用自己接伤害事件——{@link WorldResponseEffects} 会在伤害进来时问一句，
+     * 这样「让路顺便别把人烫伤」这件事只有一份判断。
+     */
+    default boolean wardsHeat() {
+        return false;
+    }
+
+    /**
      * 停止并回滚到生效前的状态；幂等，可重复调用。
      *
      * @param player     触发这次回滚的玩家；登出/关服之后补做的回滚会传 {@code null}

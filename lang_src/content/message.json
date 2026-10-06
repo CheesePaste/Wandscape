@@ -235,6 +235,42 @@
     "en_us": "  Tasks %s (assignable %s · running %s · awaiting %s · done %s) · buildings %s · queues %s",
     "zh_cn": "  任务 %s（可派发 %s · 进行中 %s · 待料 %s · 已完成 %s）· 建筑 %s 座 · 队列 %s 个"
   },
+  "message.wandscape.command.response_list": {
+    "zh_cn": "[魔法小镇] 移山填海不会动这 %s 种方块：%s",
+    "en_us": "[Wandscape] Terraform will not touch these %s block(s): %s"
+  },
+  "message.wandscape.command.response_list_empty": {
+    "zh_cn": "[魔法小镇] 名单是空的 —— 用 /wandscape response protect <方块> 往里加",
+    "en_us": "[Wandscape] The list is empty — add blocks with /wandscape response protect <block>"
+  },
+  "message.wandscape.command.response_no_block": {
+    "zh_cn": "[魔法小镇] 准星没对着方块 —— 补一个方块 id，或者对着方块/水面再来一次",
+    "en_us": "[Wandscape] You are not looking at a block — pass a block id, or aim at the block (or the water surface) and try again"
+  },
+  "message.wandscape.command.response_players_only": {
+    "zh_cn": "[魔法小镇] 这份名单是每个玩家自己的，请在游戏里执行",
+    "en_us": "[Wandscape] This list belongs to each player — run the command in game"
+  },
+  "message.wandscape.command.response_protect_already": {
+    "zh_cn": "[魔法小镇] %s 本来就在名单里",
+    "en_us": "[Wandscape] %s is already on the list"
+  },
+  "message.wandscape.command.response_protected": {
+    "zh_cn": "[魔法小镇] 移山填海不会再动 %s",
+    "en_us": "[Wandscape] Terraform will no longer touch %s"
+  },
+  "message.wandscape.command.response_unknown_block": {
+    "zh_cn": "[魔法小镇] 找不到这个方块：%s",
+    "en_us": "[Wandscape] Unknown block: %s"
+  },
+  "message.wandscape.command.response_unprotect_missing": {
+    "zh_cn": "[魔法小镇] %s 不在名单里",
+    "en_us": "[Wandscape] %s is not on the list"
+  },
+  "message.wandscape.command.response_unprotected": {
+    "zh_cn": "[魔法小镇] 移山填海可以动 %s 了",
+    "en_us": "[Wandscape] Terraform may touch %s again"
+  },
   "message.wandscape.command.tavern_list_failed": {
     "en_us": "[Wandscape] Failed to fetch tavern resumes: %1$s",
     "zh_cn": "[魔法小镇] 获取酒馆简历失败: %s"

@@ -770,7 +770,8 @@ public class Wandscape {
                 .then(RecoveryCommand.node())
                 .then(GuardCommand.node())
                 .then(GuideCommand.node())
-                .then(RecipeCommand.node());
+                .then(RecipeCommand.node())
+                .then(ResponseCommand.node());
 
         // ── 开发者/调试：一律藏到 /wandscape test（整棵 op-2，普通玩家补全里不可见） ──
         root.then(Commands.literal("test")
