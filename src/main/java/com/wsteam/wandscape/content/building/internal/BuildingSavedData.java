@@ -84,9 +84,6 @@ public class BuildingSavedData extends SavedData {
     private static final String TAG_SHOP_STOCK = "shop_stock";
     private static final String TAG_SHOP_MAX_STOCK = "shop_max_stock";
 
-    // NBT key for pattern positions (precise overlap detection)
-    private static final String TAG_PATTERN_POSITIONS = "pattern_pos";
-
     // NBT key for rotation steps
     private static final String TAG_ROTATION = "rotation";
 
@@ -380,11 +377,9 @@ public class BuildingSavedData extends SavedData {
         UUID id = posIndex.get(pos);
         if (id != null) return id;
 
-        // Fallback: posIndex is rebuilt at load from persisted pattern positions, so
-        // this path only fires before that (or for positions that are inside a
-        // building's box but not on one of its pattern voxels). Prefer the exact
-        // pattern-voxel owner; otherwise the innermost containing box wins, so a
-        // position inside nested buildings resolves deterministically.
+        // Fallback: posIndex 已在读档时按建筑 JSON 现算填满，所以这条路只在「准心落在某栋的
+        // 包围盒内、但不在它的 pattern 格上」时才走。优先认精确的 pattern 格主人；
+        // 否则认最内层的包围盒，让嵌套建筑里的位置有确定归属。
         ChunkPos cp = new ChunkPos(pos);
         Set<UUID> chunkIds = chunkIndex.get(cp);
         if (chunkIds == null) return null;
@@ -394,8 +389,8 @@ public class BuildingSavedData extends SavedData {
         for (UUID candidate : chunkIds) {
             BuildingState state = buildings.get(candidate);
             if (state == null) continue;
-            Set<BlockPos> pattern = state.getPatternPositions();
-            if (pattern != null && pattern.contains(pos)) {
+            Set<BlockPos> pattern = materializePatternPositions(state);
+            if (pattern.contains(pos)) {
                 // Cache in posIndex for next lookup
                 posIndex.put(pos, candidate);
                 return candidate;
@@ -650,7 +645,7 @@ public class BuildingSavedData extends SavedData {
         for (BuildingState existing : buildings.values()) {
             // A building being demolished no longer occupies the space — don't block placement.
             if (existing.isDemolishing()) continue;
-            if (conflictsWith(occupancy, existing)) {
+            if (conflictsWith(occupancy, existing, this)) {
                 throw new BuildingOverlapException(
                         "Building " + state.getBuildingTypeId() + " at " + anchor
                         + " overlaps with " + existing.getBuildingTypeId()
@@ -676,21 +671,14 @@ public class BuildingSavedData extends SavedData {
 
     /**
      * Whether the new building's occupied voxels collide with an existing one
-     * (BuildingVoxels two-phase test). Legacy buildings without a stored pattern
-     * conservatively occupy their whole boundary box.
+     * (BuildingVoxels two-phase test).
+     *
+     * <p>占地格现算自建筑 JSON（见 {@link #materializePatternPositions}），不再是「存档里有没有
+     * 存过 pattern」决定的：查不到 type 的作废建筑会被算成空集——它确实不再占任何世界格，
+     * 所以不该像过去那样退回「整盒保守占用」去挡住邻栋建造。
      */
-    private static boolean conflictsWith(BuildingVoxels.Occupancy mine, BuildingState existing) {
-        Set<BlockPos> existingPattern = existing.getPatternPositions();
-        if (existingPattern == null) {
-            // Legacy building without a persisted pattern — we cannot know its exact
-            // voxels, so conservatively treat its whole boundary box as occupied.
-            BoundingBox existingBox = existing.getBounds();
-            if (mine.extent() == null || !BuildingVoxels.extentsIntersect(mine.extent(), existingBox)) return false;
-            for (BlockPos pos : mine.positions()) {
-                if (existingBox.isInside(pos)) return true;
-            }
-            return false;
-        }
+    private static boolean conflictsWith(BuildingVoxels.Occupancy mine, BuildingState existing, BuildingSavedData owner) {
+        Set<BlockPos> existingPattern = owner.materializePatternPositions(existing);
         if (existingPattern.isEmpty() || mine.isEmpty()) return false;
         return BuildingVoxels.overlaps(mine.positions(), mine.extent(), existingPattern, existing.getPatternExtent());
     }
@@ -779,12 +767,12 @@ public class BuildingSavedData extends SavedData {
             }
             entry.put(TAG_QUEUE, queueTag);
 
-            // Pattern positions (for precise overlap detection)
-            Set<BlockPos> patternPos = state.getPatternPositions();
-            if (patternPos != null && !patternPos.isEmpty()) {
-                long[] arr = patternPos.stream().mapToLong(BlockPos::asLong).toArray();
-                entry.putLongArray(TAG_PATTERN_POSITIONS, arr);
-            }
+            // 维护费已删除：旧存档中"maintenance" 字段会被忽略，建筑不再可能因维护费停摆。
+            // 旧存档残留的 shutdown 位一律忽略（建筑照常运转）。
+
+            // 占地格（pattern_pos）**刻意不落盘**：pattern 的真源是建筑 JSON，把整份世界坐标
+            // 抄进存档既冗余（magic_academy 一栋 3.5MB 未压缩），又会在数据包更新该建筑之后与
+            // 真实样式分家。读档时由 materializePatternPositions 现算。
 
             list.add(entry);
         }
@@ -1042,17 +1030,8 @@ public class BuildingSavedData extends SavedData {
             // 维护费已删除：旧存档中"maintenance" 字段会被忽略，建筑不再可能因维护费停摆。
             // 旧存档残留的 shutdown 位一律忽略（建筑照常运转）。
 
-            // Pattern positions (precise overlap detection)
-            if (entry.contains(TAG_PATTERN_POSITIONS)) {
-                long[] arr = entry.getLongArray(TAG_PATTERN_POSITIONS);
-                if (arr != null && arr.length > 0) {
-                    Set<BlockPos> positions = new HashSet<>(arr.length);
-                    for (long l : arr) {
-                        positions.add(BlockPos.of(l));
-                    }
-                    state.setPatternPositions(Collections.unmodifiableSet(positions));
-                }
-            }
+            // 占地格不再从存档读（旧档里的 pattern_pos 直接忽略，用户已定断档不迁移）——
+            // 由 rebuildIndexes → materializePatternPositions 按建筑 JSON 现算。
 
             // Register into indexes (no overlap check needed on load)
             data.buildings.put(id, state);
@@ -1164,17 +1143,23 @@ public class BuildingSavedData extends SavedData {
     }
 
     /**
-     * Rebuild posIndex and chunkIndex for a single building (used during load).
-     * posIndex is filled from the persisted pattern positions, so exact
-     * voxel-owner lookups stay precise even under overlapping bounding boxes
-     * (no box-containment ambiguity after a restart).
+     * Rebuild posIndex / chunkIndex / delegation for a single building (used during load).
+     *
+     * <p>占地格不再从存档读，而是**按需由建筑 JSON 推导**（{@link #materializePatternPositions}）：
+     * pattern 的定义真源是建筑 JSON，把它整份世界坐标抄进存档既冗余，又会在数据包更新该建筑之后
+     * 与真实样式分家——那种漂移比省几十毫秒难查得多。
      */
     private void rebuildIndexes(BuildingState state) {
+        // ── 占地格 → posIndex（精确的「这一格属于哪栋」查询）──
+        for (BlockPos pos : materializePatternPositions(state)) {
+            posIndex.put(pos, state.getBuildingId());
+        }
+        // ── 包围盒 → chunkIndex ──
         state.getBounds().intersectingChunks().forEach(cp -> {
             chunkIndex.computeIfAbsent(cp, k -> ConcurrentHashMap.newKeySet())
                     .add(state.getBuildingId());
         });
-        // 委派反查索引（读档/新登记时重建）。两座建筑在存档里同时指向一名法师是损坏态：
+        // ── 委派反查索引（读档/新登记时重建）。两座建筑在存档里同时指向一名法师是损坏态：
         // 这里以先来后到认一个（索引即派发口径），并把落败那座的字段一并清掉，
         // 免得出现「面板显示已委派某人、调度器却当它没委派」的分歧（见 BuildingDelegation）。
         if (state.getDelegatedMage() != null) {
@@ -1190,23 +1175,49 @@ public class BuildingSavedData extends SavedData {
                         prev.toString().substring(0, 8));
             }
         }
-        Set<BlockPos> positions = state.getPatternPositions();
-        if (positions != null) {
-            for (BlockPos pos : positions) {
-                posIndex.put(pos, state.getBuildingId());
-            }
-            state.setPatternExtent(BuildingVoxels.boundingBoxOf(positions));
-        }
     }
 
-    /** Rebuild posIndex entry for a building (used when BuildingConfig is available). */
-    void rebuildPosIndex(BuildingState state, BuildingConfig config) {
-        java.util.List<BlockOffset> pattern = BuildingRotation
-                .rotateOffsets(config.pattern(), state.getRotationSteps());
-        for (BlockOffset off : pattern) {
-            BlockPos worldPos = state.getAnchor().offset(off.x(), off.y(), off.z());
-            posIndex.put(worldPos, state.getBuildingId());
+    /**
+     * 一栋建筑在世界里实际占用的格子，按需从建筑 JSON 推导并缓存在 {@link BuildingState} 上。
+     *
+     * <p>这是「建筑 JSON 是样式唯一真源」的落点：存档只留 type/anchor/rotation，占地格一律现算。
+     * 缓存是为了给 {@code conflictsWith} 复用——那栋 44.3 万格的建筑每建一次邻栋都要算一遍
+     * 整条 pattern 的话，代价是 O(pattern) 的装箱与哈希，比读一次存档贵得多。
+     *
+     * <p>config 查不到（数据包删掉了这个 type）时**静默留半残状态是不行的**：一条警告 + 一个
+     * 空集，让该建筑从此「不占用任何世界格」——这正是「作废」在这套数据模型里的准确含义，
+     * 而不是给它套一个会粘住的 demolishing 位。后果是明确的、可诊断的：它不再参与占地冲突，
+     * 也不能再派发建造（没有 pattern 可展开），但仍在世界里有身份，玩家能看见并自行拆除。
+     *
+     * @return 该建筑占用的世界格；type 已不在数据包里时为**空集**（并已告警）
+     */
+    private Set<BlockPos> materializePatternPositions(BuildingState state) {
+        Set<BlockPos> cached = state.getPatternPositions();
+        if (cached != null) return cached;
+
+        String type = state.getBuildingTypeId();
+        BuildingConfig config = BuildingConfigLoader.getInstance().get(type);
+        if (config == null || config.pattern().isEmpty()) {
+            Log.warn(TAG, "building {} has type '{}' which is no longer in the datapack —"
+                            + " treated as defunct: occupies no world voxel from now on",
+                    state.getBuildingId().toString().substring(0, 8), type);
+            Set<BlockPos> empty = Collections.emptySet();
+            state.setPatternPositions(empty);
+            state.setPatternExtent(null);
+            return empty;
         }
+
+        // 走 BuildingVoxels 的旋转缓存（键 config.id()+rot），别自己调 BuildingRotation 绕开它。
+        List<BlockOffset> offsets = BuildingVoxels.rotatedOffsets(config, state.getRotationSteps());
+        BlockPos anchor = state.getAnchor();
+        Set<BlockPos> positions = new HashSet<>(offsets.size());
+        for (BlockOffset off : offsets) {
+            positions.add(anchor.offset(off.x(), off.y(), off.z()));
+        }
+        Set<BlockPos> unmodifiable = Collections.unmodifiableSet(positions);
+        state.setPatternPositions(unmodifiable);
+        state.setPatternExtent(BuildingVoxels.boundingBoxOf(unmodifiable));
+        return unmodifiable;
     }
 
     // ── Contribution tracking ────────────────────────────────────────────────
