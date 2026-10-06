@@ -1,0 +1,21 @@
+{
+  "render_type": "minecraft:translucent",
+  "textures": {
+    "particle": "minecraft:block/water_still",
+    "liquid": "minecraft:block/water_still"
+  },
+  "elements": [
+    {
+      "from": [0, 0, 0],
+      "to": [16, 14.2222, 16],
+      "faces": {
+        "down":  { "uv": [0, 0, 16, 16], "texture": "#liquid", "cullface": "down", "tintindex": 0 },
+        "up":    { "uv": [0, 0, 16, 16], "texture": "#liquid", "cullface": "up", "tintindex": 0 },
+        "north": { "uv": [0, 0, 16, 14.2222], "texture": "#liquid", "cullface": "north", "tintindex": 0 },
+        "south": { "uv": [0, 0, 16, 14.2222], "texture": "#liquid", "cullface": "south", "tintindex": 0 },
+        "west":  { "uv": [0, 0, 16, 14.2222], "texture": "#liquid", "cullface": "west", "tintindex": 0 },
+        "east":  { "uv": [0, 0, 16, 14.2222], "texture": "#liquid", "cullface": "east", "tintindex": 0 }
+      }
+    }
+  ]
+}

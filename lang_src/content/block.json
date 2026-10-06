@@ -10,5 +10,13 @@
   "block.wandscape.interact_spot_marker": {
     "zh_cn": "交互位标记",
     "en_us": "Interact Spot Marker"
+  },
+  "block.wandscape.world_response_lava": {
+    "zh_cn": "凝浆（世界应答）",
+    "en_us": "Congealed Lava (World's Response)"
+  },
+  "block.wandscape.world_response_water": {
+    "zh_cn": "凝水（世界应答）",
+    "en_us": "Congealed Water (World's Response)"
   }
 }

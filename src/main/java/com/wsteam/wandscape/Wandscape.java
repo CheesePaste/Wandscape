@@ -55,6 +55,7 @@ import com.wsteam.wandscape.content.magic.internal.MagicCircleLoader;
 import com.wsteam.wandscape.content.magic.internal.SpellbookLoader;
 import com.wsteam.wandscape.content.magic.internal.SpellcastingApiImpl;
 import com.wsteam.wandscape.content.magic.internal.WandscapeEffects;
+import com.wsteam.wandscape.content.magic.worldresponse.SolidFluidBlock;
 import com.wsteam.wandscape.content.npc.HostileTargetingHandler;
 import com.wsteam.wandscape.content.npc.NpcInventoryMenu;
 import com.wsteam.wandscape.content.npc.NpcMenu;
@@ -114,8 +115,12 @@ import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.material.Fluids;
+import net.minecraft.world.level.material.MapColor;
+import net.minecraft.world.level.material.PushReaction;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -422,6 +427,35 @@ public class Wandscape {
                     BlockBehaviour.Properties.of().strength(2.0f).noOcclusion()));
     public static final DeferredItem<Item> INTERACT_SPOT_MARKER_ITEM =
             ITEMS.register("interact_spot_marker", () -> new BlockItem(INTERACT_SPOT_MARKER.get(), new Item.Properties()));
+
+    // ---- 《世界应答》移山填海的液面替身 ----
+    // 外表与原版液面齐平、但有支撑（见 SolidFluidBlock）。**故意不注册物品、不进创造栏**：
+    // 它只该由 TerraformEffect 在人踩上液面前临时放下，走开/停止就换回真液体。
+    public static final DeferredHolder<Block, Block> WORLD_RESPONSE_WATER = BLOCKS.register("world_response_water",
+            () -> new SolidFluidBlock(Fluids.WATER, liquidCloneProperties(false)));
+    public static final DeferredHolder<Block, Block> WORLD_RESPONSE_LAVA = BLOCKS.register("world_response_lava",
+            () -> new SolidFluidBlock(Fluids.LAVA, liquidCloneProperties(true)));
+
+    /**
+     * 液面替身的共同属性：不可破坏（玩家/爆炸都动不了，回滚才只需管我们自己）、不掉落、
+     * 不挡光不遮视线不窒息（免得站在上面被闷到）、没有脚步声、活塞推不动。
+     *
+     * @param emissive 岩浆替身要自带 15 级光，否则夜里那格岩浆会明显变暗
+     */
+    private static BlockBehaviour.Properties liquidCloneProperties(boolean emissive) {
+        BlockBehaviour.Properties properties = BlockBehaviour.Properties.of()
+                .strength(-1.0F, 3600000.8F)
+                .mapColor(MapColor.NONE)
+                .noLootTable()
+                .noOcclusion()
+                .isValidSpawn((state, level, pos, type) -> false)
+                .isViewBlocking((state, level, pos) -> false)
+                .isSuffocating((state, level, pos) -> false)
+                .noTerrainParticles()
+                .sound(SoundType.EMPTY)
+                .pushReaction(PushReaction.BLOCK);
+        return emissive ? properties.lightLevel(state -> 15) : properties;
+    }
 
     // ---- Creative tab ----
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> WANDSCAPE_TAB =

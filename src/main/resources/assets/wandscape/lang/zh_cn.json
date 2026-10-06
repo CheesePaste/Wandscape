@@ -79,6 +79,8 @@
   "block.wandscape.building_scanner": "建筑扫描器",
   "block.wandscape.creative_building_scanner": "创造建筑扫描器",
   "block.wandscape.interact_spot_marker": "交互位标记",
+  "block.wandscape.world_response_lava": "凝浆（世界应答）",
+  "block.wandscape.world_response_water": "凝水（世界应答）",
   "blueprint.wandscape.build:clear_and_build": "清除并建造",
   "blueprint.wandscape.build:clear_and_build.desc": "先清除边界 AABB 内非图案方块，再调用 build:place_structure 放置图案方块。clear_offsets 由 EnqueueHelper 预计算为边界体积减去图案偏移。",
   "blueprint.wandscape.build:demolish_structure": "拆除建筑",

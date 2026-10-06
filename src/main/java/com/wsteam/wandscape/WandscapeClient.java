@@ -685,6 +685,19 @@ public class WandscapeClient {
     }
 
     @SubscribeEvent
+    static void onBlockColors(RegisterColorHandlersEvent.Block event) {
+        // 移山填海的「水面替身」要跟真水一个颜色：水的颜色来自生物群系，而方块模型不吃液体渲染器
+        // 那套取色，所以这里接同一个解析器（BiomeColors.WATER_COLOR_RESOLVER 的公开入口）。
+        // 岩浆替身不注册——原版岩浆贴图本身就是彩色的，染色反而错。
+        event.register((state, level, pos, tintIndex) -> {
+            if (tintIndex != 0) return -1;
+            return level != null && pos != null
+                    ? net.minecraft.client.renderer.BiomeColors.getAverageWaterColor(level, pos)
+                    : 0x3F76E4;
+        }, Wandscape.WORLD_RESPONSE_WATER.get());
+    }
+
+    @SubscribeEvent
     static void onRegisterParticleProviders(RegisterParticleProvidersEvent event) {
         event.registerSpriteSet(Wandscape.CAST_BOLT.get(), CastBoltParticle.Provider::new);
         event.registerSpriteSet(Wandscape.MAGIC_GLOW.get(), MagicCircleDotParticle.Provider::new);

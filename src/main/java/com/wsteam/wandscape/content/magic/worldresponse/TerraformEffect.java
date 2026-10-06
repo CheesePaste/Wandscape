@@ -1,5 +1,6 @@
 package com.wsteam.wandscape.content.magic.worldresponse;
 
+import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.content.colony.guard.ColonyLandProtectionHandler;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.foundation.util.BalanceValues;
@@ -26,11 +27,13 @@ import java.util.Set;
  * **脚下那一格不抽**（只有它是液体时才垫），头上那格也不碰，所以不会把人脚下的地板抽掉、
  * 也不会削掉头顶的天花板。
  *
- * <p><b>踏水而行</b>：脚下那一格如果是**液体方块本身**（水/岩浆），就临时换成一层屏障方块当垫脚点
- * （屏障不可见、原版、不可破坏，等价于「这一格水对施法者来说就是完整碰撞箱」）。垫的是**脚那一格**
- * 而不是它下面那格：人被顶到液面上站着，于是不必在水里挖坑，水面只少掉「他正踩着的那一层」；
- * 脚那格已经是空气（说明他已经在液面上走）时才看下面那格。走开就还回液体。
- * 只有「本身就是液体」的方块才垫（{@link LiquidBlock}），含水台阶/含水楼梯那种本来就站得住，不碰。
+ * <p><b>踏水而行</b>：脚那一格如果是**液体方块本身**（水/岩浆），就临时换成一个**液面替身**
+ * （{@link SolidFluidBlock}：贴图/高度/颜色都与原版液面一致，但有完整碰撞）。于是水面和岩浆面上
+ * 会跟着人铺出一条看不见的路：走上去不落水、不陷进岩浆，走开就还回液体。
+ * 垫的是**脚那一格**而不是它下面那格：人被顶到液面上站着，于是不必在水里挖坑，水面只少掉
+ * 「他正踩着的那一层」；脚那格已经是空气（说明他已经在液面上走）时才看下面那格。
+ * 只有「本身就是液体」的方块才垫（{@link LiquidBlock}），含水台阶/含水楼梯那种本来就站得住，不碰；
+ * 整合包的自定义液体没有替身，退回屏障方块。
  * 配合管理器里的热伤害免疫（{@link #wardsHeat()}），路过岩浆池不会掉血。
  *
  * <p><b>重力方块与液体靠写入标志解决</b>：改动时用 {@link Block#UPDATE_CLIENTS}（只同步客户端、
@@ -142,7 +145,7 @@ public final class TerraformEffect implements WorldResponseEffect {
     }
 
     /**
-     * 垫脚层：这一格是液体就临时换一层屏障，让人能踩着水面/岩浆面走。
+     * 垫脚层：这一格是液体就临时换成它的**液面替身**（{@link SolidFluidBlock}），让人能踩着水面/岩浆面走。
      *
      * @return true = 这一格已经归我们管（刚垫上、或本来就是我们的垫脚层），不必再看下面一格；
      *         false = 这一格不是液体（空气/普通方块），请调用方去看下面那一格
@@ -153,9 +156,28 @@ public final class TerraformEffect implements WorldResponseEffect {
         BlockState state = level.getBlockState(pos);
         if (!(state.getBlock() instanceof LiquidBlock)) return false;   // 只垫"本身就是液体"的格子
         if (!canTouch(pos, blacklist)) return true;          // 名单/地皮护着：这一格不垫
-        if (!level.setBlock(pos, Blocks.BARRIER.defaultBlockState(), Block.UPDATE_CLIENTS)) return true;
+        if (!level.setBlock(pos, floorFor(state).defaultBlockState(), Block.UPDATE_CLIENTS)) return true;
         altered.put(pos.immutable(), state);
         return true;
+    }
+
+    /**
+     * 液体 → 它的**液面替身**（{@link SolidFluidBlock}：外表与真液体一样、但有支撑）。
+     * 整合包的自定义液体没有替身，退回屏障方块——不好看，但照样能站，功能不断。
+     */
+    private static Block floorFor(BlockState liquid) {
+        if (liquid.is(Blocks.WATER)) return Wandscape.WORLD_RESPONSE_WATER.get();
+        if (liquid.is(Blocks.LAVA)) return Wandscape.WORLD_RESPONSE_LAVA.get();
+        return Blocks.BARRIER;
+    }
+
+    /** 这一格还维持着「我们留下的样子」吗：空气（移开留下的）、液体（可能已经流回来）、或我们垫的替身/屏障。 */
+    private static boolean looksUntouched(BlockState state) {
+        return state.isAir()
+                || state.getBlock() instanceof LiquidBlock
+                || state.is(Blocks.BARRIER)
+                || state.is(Wandscape.WORLD_RESPONSE_WATER.get())
+                || state.is(Wandscape.WORLD_RESPONSE_LAVA.get());
     }
 
     /** 「会阻挡移动」：有碰撞箱，或者是液体（水会推人，同样算挡路）。 */
@@ -227,7 +249,7 @@ public final class TerraformEffect implements WorldResponseEffect {
     private boolean restore(BlockPos pos, BlockState original, boolean loadChunks) {
         if (!loadChunks && !level.isLoaded(pos)) return false;
         BlockState now = level.getBlockState(pos);
-        if (!now.isAir() && !(now.getBlock() instanceof LiquidBlock) && !now.is(Blocks.BARRIER)) {
+        if (!looksUntouched(now)) {
             Log.info(TAG, "[WorldResponse] Terraform: {} is no longer ours — leaving it as it is", pos);
             return true;
         }
