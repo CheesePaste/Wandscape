@@ -16,9 +16,6 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
 import javax.annotation.Nullable;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -50,35 +47,22 @@ import java.util.Set;
  * ⑤ 属于任何建筑的地皮（{@link ColonyLandProtectionHandler#isProtected}——世界让路不该拆别人的房子，
  * 包括施法者自己的；这条对垫脚层同样生效）。
  *
- * <p><b>未加载的区块不写也不丢</b>：清理只发生在玩家身边（必然是已加载的），回放时若某一格所在区块
- * 已经卸载，就**留着快照等它回来**——绝不为回放同步加载区块，也绝不把还不了的记录删掉
- * （{@link #stop} 会返回 false，由 {@link WorldResponseEffects} 挂起重试）。
- *
- * <p><b>借出去的位置不许第三方改动</b>：效果借走的每一格都记在 {@link #holds} 里，管理器据此
- * 取消玩家（以及其它实体）对它的破坏/放置（含流体自己造方块），并在每一轮扫描时**重新压实**一次
- * ——因为 flag 2 只保证「我们不通知邻居」，邻居被别的原因更新时水照样能流回我们挖开的空位。
- * 万一真的有实心方块盖进来了（命令、别的模组绕过事件），就让出这一格并记一条日志：那是别人的建造，
- * 比我们的回滚重要。理由很实在：借出去的位置一旦被改写，回滚时就分不清「该还原成什么」——
- * 轻则水位永久回不去，重则把别人的东西覆盖掉。
- *
- * <p>回滚触发有四种：走出范围（逐格还）、主动停止/断线、传送与换维度、关服；四条都汇到
- * {@link #stop}。快照只存内存、按维度绑定：换维度前管理器会先停掉本效果，所以不存在"跨维度还错地方"。
+ * <p>借走的位置、回滚、未加载区块、以及「借用期间禁止第三方改动」这几件事统一在
+ * {@link BorrowedBlocks} 里（扶摇共用同一份规则），本类只管「怎么改」。
  */
 public final class TerraformEffect implements WorldResponseEffect {
 
     public static final String ID = "terraform";
     private static final String TAG = "WorldResponse";
 
-    /** 借出去的一格：原位长什么样，以及我们把它改成了什么（用于持续压实与判断有没有被第三方动过）。 */
-    private record Held(BlockState original, BlockState left) {}
-
     private final ServerLevel level;
-    /** 被借走的位置 → 原位与"我们留下的样子"。只记一次，重复扫到不覆盖原状。 */
-    private final Map<BlockPos, Held> borrowed = new LinkedHashMap<>();
+    /** 借走的位置表（规则见 {@link BorrowedBlocks}）：移开的方块、被垫脚层顶掉的液体。 */
+    private final BorrowedBlocks borrowed;
     private int scanCooldown;
 
     public TerraformEffect(ServerLevel level) {
         this.level = level;
+        this.borrowed = new BorrowedBlocks(level);
     }
 
     @Override
@@ -92,10 +76,10 @@ public final class TerraformEffect implements WorldResponseEffect {
         return true;
     }
 
-    /** 借走的位置禁止第三方改动：管理器在破坏/放置事件里据此取消（见 {@link WorldResponseEffects}）。 */
+    /** 借走的位置禁止第三方改动：管理器在破坏/放置/活塞事件里据此取消（见 {@link WorldResponseEffects}）。 */
     @Override
     public boolean holds(LevelAccessor level, BlockPos pos) {
-        return level == this.level && borrowed.containsKey(pos);
+        return borrowed.holds(level, pos);
     }
 
     @Override
@@ -104,26 +88,17 @@ public final class TerraformEffect implements WorldResponseEffect {
         scanCooldown = Math.max(1, BalanceValues.worldResponseTerraformScanInterval());
         if (level != player.serverLevel()) return;   // 换维度后管理器会停掉本效果，这里只是兜底
         Set<Block> blacklist = WorldResponseProtectionSavedData.blacklist(level, player.getUUID());
-        restoreOutOfRange(player);
-        keepBorrowed();
+        double limit = Math.max(1, BalanceValues.worldResponseTerraformRadius())
+                + Math.max(1, BalanceValues.worldResponseTerraformRestoreMargin()) + 0.5;
+        borrowed.restoreOutOfRange(player.position(), limit * limit);
+        borrowed.keepShaped();
         reshapeAround(player, blacklist);
     }
 
     @Override
     public boolean stop(@Nullable ServerPlayer player, boolean loadChunks) {
-        int settled = 0;
-        Iterator<Map.Entry<BlockPos, Held>> it = borrowed.entrySet().iterator();
-        while (it.hasNext()) {
-            Map.Entry<BlockPos, Held> e = it.next();
-            if (!restore(e.getKey(), e.getValue().original(), loadChunks)) continue;   // 区块没加载：留着下次
-            it.remove();
-            settled++;
-        }
-        if (settled > 0) {
-            Log.info(TAG, "[WorldResponse] Terraform settled {} block(s)", settled);
-        }
         // 还剩下的由管理器挂起重试（它在那儿记一条日志），这里不再逐次刷屏
-        return borrowed.isEmpty();
+        return borrowed.restoreAll(loadChunks);
     }
 
     // ── 改 ──
@@ -152,14 +127,11 @@ public final class TerraformEffect implements WorldResponseEffect {
 
     /** 移开一格挡路的东西：记好原位再写空气。 */
     private void carve(BlockPos pos, Set<Block> blacklist) {
-        if (borrowed.containsKey(pos)) return;
+        if (borrowed.contains(pos)) return;
         if (!level.isLoaded(pos)) return;                    // 不在未加载的区块里动土
         if (!blocksMovement(pos)) return;
         if (!canTouch(pos, blacklist)) return;
-        BlockState original = level.getBlockState(pos);
-        // 写失败（超世界高度、debug 世界）就当没这回事：先写再记账，免得快照里留着从没被改过的方块
-        if (!level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS)) return;
-        borrowed.put(pos.immutable(), new Held(original, Blocks.AIR.defaultBlockState()));
+        borrowed.take(pos, Blocks.AIR.defaultBlockState());   // 写失败就不记账，快照里不会留没改过的方块
     }
 
     /**
@@ -169,14 +141,12 @@ public final class TerraformEffect implements WorldResponseEffect {
      *         false = 这一格不是液体（空气/普通方块），请调用方去看下面那一格
      */
     private boolean pave(BlockPos pos, Set<Block> blacklist) {
-        if (borrowed.containsKey(pos)) return true;          // 已经是我们改过的（垫过或移开过）
+        if (borrowed.contains(pos)) return true;             // 已经是我们改过的（垫过或移开过）
         if (!level.isLoaded(pos)) return true;               // 未加载的区块不去碰，也不再往下看
         BlockState state = level.getBlockState(pos);
         if (!(state.getBlock() instanceof LiquidBlock)) return false;   // 只垫"本身就是液体"的格子
         if (!canTouch(pos, blacklist)) return true;          // 名单/地皮护着：这一格不垫
-        BlockState floor = floorFor(state).defaultBlockState();
-        if (!level.setBlock(pos, floor, Block.UPDATE_CLIENTS)) return true;
-        borrowed.put(pos.immutable(), new Held(state, floor));
+        borrowed.take(pos, floorFor(state).defaultBlockState());
         return true;
     }
 
@@ -188,42 +158,6 @@ public final class TerraformEffect implements WorldResponseEffect {
         if (liquid.is(Blocks.WATER)) return Wandscape.WORLD_RESPONSE_WATER.get();
         if (liquid.is(Blocks.LAVA)) return Wandscape.WORLD_RESPONSE_LAVA.get();
         return Blocks.BARRIER;
-    }
-
-    /**
-     * 把借出去的位置重新压成我们要的样子。
-     *
-     * <p>为什么需要这一遍：我们用 flag 2 写入、**不通知邻居**，所以水不会主动灌回来；但只要附近
-     * 有**任何**其它方块更新（别人放东西、活塞动作、流体自己流），水就可能重新流进我们挖开的空位，
-     * 路就断了。每一轮扫描重新压实一次，顺带处理绕过事件保护的改写（命令、别的模组）。
-     *
-     * <p>真被**实心方块**盖进来（那是别人的建造）就不动它、把这一格让出去并记一条日志——
-     * 与 {@link #restore} 同一口径。
-     */
-    private void keepBorrowed() {
-        for (Iterator<Map.Entry<BlockPos, Held>> it = borrowed.entrySet().iterator(); it.hasNext(); ) {
-            Map.Entry<BlockPos, Held> e = it.next();
-            Held held = e.getValue();
-            if (!level.isLoaded(e.getKey())) continue;               // 区块没加载：等它回来
-            BlockState now = level.getBlockState(e.getKey());
-            if (now.equals(held.left())) continue;                    // 还是我们留下的样子
-            if (isOursOrFluid(now)) {
-                // 空气/流体/我们的替身：按我们的样子压实（流体又流回来了就再挖掉）
-                level.setBlock(e.getKey(), held.left(), Block.UPDATE_CLIENTS);
-                continue;
-            }
-            Log.info(TAG, "[WorldResponse] Terraform: {} was built over — giving it up", e.getKey());
-            it.remove();
-        }
-    }
-
-    /** 可以安全按快照还原/压实的样子：空气、液体、或我们垫的替身/屏障。 */
-    private static boolean isOursOrFluid(BlockState state) {
-        return state.isAir()
-                || state.getBlock() instanceof LiquidBlock
-                || state.is(Blocks.BARRIER)
-                || state.is(Wandscape.WORLD_RESPONSE_WATER.get())
-                || state.is(Wandscape.WORLD_RESPONSE_LAVA.get());
     }
 
     /** 「会阻挡移动」：有碰撞箱，或者是液体（水会推人，同样算挡路）。 */
@@ -264,42 +198,5 @@ public final class TerraformEffect implements WorldResponseEffect {
             }
         }
         return false;
-    }
-
-    // ── 还 ──
-
-    /** 离开「清理半径 + 余量」的格子立刻放回：效果跟着人走，人走过之后地形不留疤。 */
-    private void restoreOutOfRange(ServerPlayer player) {
-        int r = Math.max(1, BalanceValues.worldResponseTerraformRadius());
-        double limit = r + Math.max(1, BalanceValues.worldResponseTerraformRestoreMargin()) + 0.5;
-        double limitSqr = limit * limit;
-        Vec3 center = player.position();
-        Iterator<Map.Entry<BlockPos, Held>> it = borrowed.entrySet().iterator();
-        while (it.hasNext()) {
-            Map.Entry<BlockPos, Held> e = it.next();
-            if (e.getKey().distToCenterSqr(center.x, center.y, center.z) <= limitSqr) continue;
-            if (!restore(e.getKey(), e.getValue().original(), false)) continue;   // 保留快照：等那一格所在的区块回来
-            it.remove();
-        }
-    }
-
-    /**
-     * 还原一格。
-     *
-     * <p>只在「这一格还是我们留下的样子（或本来就该有的液体）」时才写：空气（我们移开留下的）、
-     * 液体（水/岩浆可能已经流回来）、或者我们垫的替身/屏障。**真被实心方块盖进来就不覆盖**——
-     * 那是别人的建造，比我们的回滚重要；遇到这种格子就放弃这一格（记一条日志）并把快照丢掉。
-     *
-     * @return false = 区块没加载，这一格必须留到下次（绝不为回滚同步加载区块）
-     */
-    private boolean restore(BlockPos pos, BlockState original, boolean loadChunks) {
-        if (!loadChunks && !level.isLoaded(pos)) return false;
-        BlockState now = level.getBlockState(pos);
-        if (!isOursOrFluid(now)) {
-            Log.info(TAG, "[WorldResponse] Terraform: {} is no longer ours — leaving it as it is", pos);
-            return true;
-        }
-        level.setBlock(pos, original, Block.UPDATE_ALL);
-        return true;
     }
 }

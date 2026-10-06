@@ -24,8 +24,8 @@
     "en_us": "§fAscend"
   },
   "worldresponse.wandscape.lift.desc": {
-    "zh_cn": "§7大地托举你向上",
-    "en_us": "§7The land lifts you upward"
+    "zh_cn": "§7在露天的空旷处凭空铺出楼梯托你上升（用【平息】收回）",
+    "en_us": "§7Lays stairs out of thin air to lift you up in the open (recall it with §fCalm§7)"
   },
   "worldresponse.wandscape.terraform": {
     "zh_cn": "§f移山填海",

@@ -883,6 +883,14 @@
     "zh_cn": "世界已经平静下来 —— 重新施放【世界应答】",
     "en_us": "The world has gone quiet — cast World's Response again"
   },
+  "message.wandscape.world_response.lift_active": {
+    "zh_cn": "世界已经在托着你上升 —— 用【平息】让它停下",
+    "en_us": "The world is already lifting you — use Calm to stop it"
+  },
+  "message.wandscape.world_response.lift_start": {
+    "zh_cn": "世界开始为你铺阶",
+    "en_us": "The world begins laying steps for you"
+  },
   "message.wandscape.world_response.not_implemented": {
     "zh_cn": "「%s」尚未实现",
     "en_us": "\"%s\" is not implemented yet"

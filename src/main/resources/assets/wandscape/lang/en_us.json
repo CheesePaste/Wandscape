@@ -1788,6 +1788,8 @@
   "message.wandscape.world_response.calm_idle": "The world was already quiet",
   "message.wandscape.world_response.cooldown": "The world is still calm — it will answer again in %s s",
   "message.wandscape.world_response.expired": "The world has gone quiet — cast World's Response again",
+  "message.wandscape.world_response.lift_active": "The world is already lifting you — use Calm to stop it",
+  "message.wandscape.world_response.lift_start": "The world begins laying steps for you",
   "message.wandscape.world_response.not_implemented": "\"%s\" is not implemented yet",
   "message.wandscape.world_response.pending": "The world is already listening — choose a response first",
   "message.wandscape.world_response.teleport_stop": "The teleport broke the world's response — the world has settled back; cast it again if needed",
@@ -2556,7 +2558,7 @@
   "worldresponse.wandscape.judge": "§fJudgement",
   "worldresponse.wandscape.judge.desc": "§7The world deals with what stands against you",
   "worldresponse.wandscape.lift": "§fAscend",
-  "worldresponse.wandscape.lift.desc": "§7The land lifts you upward",
+  "worldresponse.wandscape.lift.desc": "§7Lays stairs out of thin air to lift you up in the open (recall it with §fCalm§7)",
   "worldresponse.wandscape.terraform": "§fMove Mountains",
   "worldresponse.wandscape.terraform.desc": "§7What blocks you steps aside for a while and returns once you pass (recall it with §fCalm§7)",
   "worldresponse.wandscape.title": "§dThe world has heard your will."

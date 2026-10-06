@@ -27,9 +27,29 @@ public final class WorldResponseExecutors {
      */
     public static boolean execute(ServerPlayer player, WorldResponse response) {
         return switch (response) {
+            case LIFT -> activateLift(player);
             case TERRAFORM -> activateTerraform(player);
-            case FORWARD, LIFT, JUDGE -> notImplemented(player, response);
+            case FORWARD, JUDGE -> notImplemented(player, response);
         };
+    }
+
+    /**
+     * 扶摇：同样是**持续效果**（世界持续替你铺台阶往上托），关闭入口也是《平息》。
+     * 重复选择不叠加、也不进冷却——没做事就不该罚冷却。
+     */
+    private static boolean activateLift(ServerPlayer player) {
+        if (WorldResponseEffects.isActive(player, LiftEffect.ID)) {
+            ScreenFeedbackPacket.send(player, I18n.name("message.wandscape.world_response.lift_active",
+                    "世界已经在托着你上升 —— 用【平息】让它停下"), false);
+            return false;
+        }
+        if (!WorldResponseEffects.activate(player, new LiftEffect(player.serverLevel()))) {
+            return false;
+        }
+        Log.info(TAG, "[WorldResponse] Lift started for {}", player.getGameProfile().getName());
+        ScreenFeedbackPacket.send(player, I18n.name("message.wandscape.world_response.lift_start",
+                "世界开始为你铺阶"), true);
+        return true;
     }
 
     /**

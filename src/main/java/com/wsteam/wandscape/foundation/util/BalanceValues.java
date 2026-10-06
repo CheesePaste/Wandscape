@@ -36,7 +36,9 @@ public final class BalanceValues {
             "productionBatchMax",
             "sustainedCastMaxTicks",
             "worldResponseTerraformRadius", "worldResponseTerraformScanInterval",
-            "worldResponseTerraformRestoreMargin", "worldResponseTeleportJumpDistance");
+            "worldResponseTerraformRestoreMargin", "worldResponseTeleportJumpDistance",
+            "worldResponseLiftScanInterval", "worldResponseLiftStairs", "worldResponseLiftStairWidth",
+            "worldResponseLiftPlatformRadius", "worldResponseLiftRestoreMargin");
 
     // ============================================================
     // npc 回血回蓝
@@ -161,6 +163,17 @@ public final class BalanceValues {
     /** 单 tick 位移超过这个格数就按「被传送了」处理（正常跑跳/鞘翅/激流都到不了，见 domain-notes）。 */
     private static final int DEFAULT_WORLD_RESPONSE_TELEPORT_JUMP_DISTANCE = 16;
 
+    /** 扶摇：铺台阶的扫描间隔（tick）。比移山填海密，因为要靠它跟住走路节奏。 */
+    private static final int DEFAULT_WORLD_RESPONSE_LIFT_SCAN_INTERVAL = 4;
+    /** 扶摇：一次往前铺几级楼梯（够走到下一轮扫描就行）。 */
+    private static final int DEFAULT_WORLD_RESPONSE_LIFT_STAIRS = 6;
+    /** 扶摇：楼梯几格宽（居中于玩家，转身/斜走时不至于一脚踩空）。 */
+    private static final int DEFAULT_WORLD_RESPONSE_LIFT_STAIR_WIDTH = 3;
+    /** 扶摇：脚下一层那片半砖平台的半径（格）——它就是"凭空托住"的那一大片下脚点。 */
+    private static final int DEFAULT_WORLD_RESPONSE_LIFT_PLATFORM_RADIUS = 4;
+    /** 扶摇：不在这一轮形状里、又离玩家还不到这个距离（格）的旧格子先留着，防抖。 */
+    private static final int DEFAULT_WORLD_RESPONSE_LIFT_RESTORE_MARGIN = 2;
+
     public static int worldResponseTerraformRadius() { return (int)(double) OVERRIDES.getOrDefault("worldResponseTerraformRadius", (double) DEFAULT_WORLD_RESPONSE_TERRAFORM_RADIUS); }
     public static void setWorldResponseTerraformRadius(int v) { OVERRIDES.put("worldResponseTerraformRadius", (double) v); }
     public static int worldResponseTerraformScanInterval() { return (int)(double) OVERRIDES.getOrDefault("worldResponseTerraformScanInterval", (double) DEFAULT_WORLD_RESPONSE_TERRAFORM_SCAN_INTERVAL); }
@@ -169,6 +182,16 @@ public final class BalanceValues {
     public static void setWorldResponseTerraformRestoreMargin(int v) { OVERRIDES.put("worldResponseTerraformRestoreMargin", (double) v); }
     public static int worldResponseTeleportJumpDistance() { return (int)(double) OVERRIDES.getOrDefault("worldResponseTeleportJumpDistance", (double) DEFAULT_WORLD_RESPONSE_TELEPORT_JUMP_DISTANCE); }
     public static void setWorldResponseTeleportJumpDistance(int v) { OVERRIDES.put("worldResponseTeleportJumpDistance", (double) v); }
+    public static int worldResponseLiftScanInterval() { return (int)(double) OVERRIDES.getOrDefault("worldResponseLiftScanInterval", (double) DEFAULT_WORLD_RESPONSE_LIFT_SCAN_INTERVAL); }
+    public static void setWorldResponseLiftScanInterval(int v) { OVERRIDES.put("worldResponseLiftScanInterval", (double) v); }
+    public static int worldResponseLiftStairs() { return (int)(double) OVERRIDES.getOrDefault("worldResponseLiftStairs", (double) DEFAULT_WORLD_RESPONSE_LIFT_STAIRS); }
+    public static void setWorldResponseLiftStairs(int v) { OVERRIDES.put("worldResponseLiftStairs", (double) v); }
+    public static int worldResponseLiftStairWidth() { return (int)(double) OVERRIDES.getOrDefault("worldResponseLiftStairWidth", (double) DEFAULT_WORLD_RESPONSE_LIFT_STAIR_WIDTH); }
+    public static void setWorldResponseLiftStairWidth(int v) { OVERRIDES.put("worldResponseLiftStairWidth", (double) v); }
+    public static int worldResponseLiftPlatformRadius() { return (int)(double) OVERRIDES.getOrDefault("worldResponseLiftPlatformRadius", (double) DEFAULT_WORLD_RESPONSE_LIFT_PLATFORM_RADIUS); }
+    public static void setWorldResponseLiftPlatformRadius(int v) { OVERRIDES.put("worldResponseLiftPlatformRadius", (double) v); }
+    public static int worldResponseLiftRestoreMargin() { return (int)(double) OVERRIDES.getOrDefault("worldResponseLiftRestoreMargin", (double) DEFAULT_WORLD_RESPONSE_LIFT_RESTORE_MARGIN); }
+    public static void setWorldResponseLiftRestoreMargin(int v) { OVERRIDES.put("worldResponseLiftRestoreMargin", (double) v); }
 
     // ============================================================
     // 持久化 JSON 覆盖（data/wandscape/wandscape_balance.json）驱动
