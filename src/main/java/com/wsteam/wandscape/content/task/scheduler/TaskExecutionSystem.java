@@ -150,9 +150,11 @@ public class TaskExecutionSystem implements EcsSystem {
         // 放在包启动/绑定之后：此刻才谈得上「这个包属于哪座建筑」。委派是玩家的即时指令，
         // 不该等下一次调度心跳、更不该等这活干完——被委派的法师手上不该有别的建筑的活，
         // 被委派的建筑也不该让别人代劳。释放走 releaseForInterruption 的成熟路径
-        //（保留步进、退还已取元素、丢全局包、保留个人包），下一拍调度器按新归属重派。
+        //（保留步进、退还已取元素、丢全局包、保留个人包），并催调度器下一 tick 重派：
+        // 否则改完委派要等满一轮心跳（默认 1 秒），与「完工即催调度」的节奏不一致。
         if (violatesDelegation(world, npcId, exec)) {
             releaseForInterruption(world, npcId, exec, queue);
+            scheduler.requestImmediatePass();
             Log.debug(LogCategory.TASK, "exec",
                     "NPC %d — released a task that violates its building delegation", npcId);
             return;

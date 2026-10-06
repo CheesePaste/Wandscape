@@ -23,6 +23,6 @@ Be careful in a small town: a delegated mage takes no guard jobs and will not he
 ## Things to Know
 
 - The mage **does not teleport** — it walks there. If the mage's chunk is not loaded, this building's jobs keep waiting for it.
-- A change is **not instant**: a job already running is returned to the queue on the next tick and re-assigned by the next scheduling pass (about a second later), restarting from its material-fetch step.
+- A change is **not instant**: a job already running is returned to the queue on the next tick and picked up again right away, restarting from its material-fetch step.
 - If the mage dies or is dismissed, the delegation is released and the building takes any mage again. A chunk unload does **not** release it — the mage comes back, so the post is kept.
 - Demolishing or undoing the building takes the delegation with it.

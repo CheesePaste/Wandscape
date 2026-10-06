@@ -28,20 +28,12 @@
     },
     {
       "type": "patchouli:text",
-      "text": "Assign a mage when you want one workshop to keep working, or a node to keep producing, without other buildings stealing the worker."
+      "text": "Assign a mage when you want one workshop to keep working, or a node to keep producing, without other buildings stealing the worker.$(br2)Be careful in a small town: a delegated mage takes no guard jobs and will not help with construction, so one post locks up one mage."
     },
     {
       "type": "patchouli:text",
-      "text": "Be careful in a small town: a delegated mage takes no guard jobs and will not help with construction, so one post locks up one mage."
-    },
-    {
-      "type": "patchouli:text",
-      "text": "The mage $(bold)does not teleport$() — it walks there. If the mage's chunk is not loaded, this building's jobs keep waiting for it.",
+      "text": "The mage $(bold)does not teleport$() — it walks there. If the mage's chunk is not loaded, this building's jobs keep waiting for it.$(li)A change is $(bold)not instant$(): a job already running is returned to the queue on the next tick and picked up again right away, restarting from its material-fetch step.",
       "title": "Things to Know"
-    },
-    {
-      "type": "patchouli:text",
-      "text": "A change is $(bold)not instant$(): a job already running is returned to the queue on the next tick and re-assigned by the next scheduling pass (about a second later), restarting from its material-fetch step."
     },
     {
       "type": "patchouli:text",
