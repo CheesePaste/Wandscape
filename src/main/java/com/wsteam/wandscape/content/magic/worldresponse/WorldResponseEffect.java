@@ -39,6 +39,33 @@ public interface WorldResponseEffect {
         return false;
     }
 
+    /** 默认借用优先级（扶摇这类「给世界加东西」的回应）。 */
+    int PRIORITY_DEFAULT = 0;
+    /** 移山填海：**世界让路的权限最高**——它要清开的格子，低优先级的回应一律让。 */
+    int PRIORITY_TERRAFORM = 1;
+
+    /**
+     * 借用优先级：**数值大的可以先手**。一格同一时刻只归一个效果，但优先级更高的那个可以要求
+     * 更低的效果先把这一格还回原位，然后自己接管（实现见 {@link WorldResponseEffects#releaseFor}）。
+     *
+     * <p>当前口径：移山填海（{@link #PRIORITY_TERRAFORM}）> 扶摇（{@link #PRIORITY_DEFAULT}）。
+     * 与设计初衷一致——「世界为你让路」是最高指令，它要清开的地方，连我们自己刚铺的台阶也得让开；
+     * 反过来扶摇不许把台阶/平台铺进移山填海正在用的格子里（那会把刚让开的路堵回去）。
+     */
+    default int borrowPriority() {
+        return PRIORITY_DEFAULT;
+    }
+
+    /**
+     * 立刻把这一格还回原位并放弃它（给优先级更高的效果腾位置）。
+     *
+     * <p>默认不借任何格子，所以什么都不用做。自己借了格子的实现必须**先还原再放手**：直接让高优先级
+     * 去读当前状态的话，读到的是我们留下的方块，会被当成"原位"记下来，最后回滚出一个谁都没见过的方块。
+     *
+     * @param level 事件所在维度（不是自己的维度就什么都不做）
+     */
+    default void release(LevelAccessor level, BlockPos pos) {}
+
     /**
      * 生效期间是否让施法者免疫**环境热伤害**（岩浆 / 岩浆块 / 站在火里 / 身上着火）。
      *

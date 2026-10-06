@@ -39,10 +39,13 @@ final class BorrowedBlocks {
     record Held(BlockState original, BlockState left) {}
 
     private final ServerLevel level;
+    /** 持有者的借用优先级：高的可以要求低的先还回原位再接管（见 {@link WorldResponseEffect#borrowPriority()}）。 */
+    private final int priority;
     private final Map<BlockPos, Held> map = new LinkedHashMap<>();
 
-    BorrowedBlocks(ServerLevel level) {
+    BorrowedBlocks(ServerLevel level, int priority) {
         this.level = level;
+        this.priority = priority;
     }
 
     /** 这一格是不是我们借走的（不带维度判断，调用方自己确认维度）。 */
@@ -64,20 +67,34 @@ final class BorrowedBlocks {
     /**
      * 写一格并记账（先写成功再记账，免得记下从没被改过的方块）。
      *
-     * <p>**一格同一时刻只归一个效果**：这一格要是正被别的效果（含已经停下、还在等区块加载的那些）
-     * 借走，就直接不动它——否则新效果会把「旧效果留下的东西」当成**原位**记下来，
-     * 最后回滚出一个谁都没见过的方块（凭空多一格石头台阶这种事就是这么来的）。
+     * <p>**一格同一时刻只归一个效果**，但**优先级高的可以先手**：先让优先级严格更低的效果把这一格
+     * 还回原位（{@link WorldResponseEffects#releaseFor}），我们随后读到的才是**真原位**；
+     * 若这一格还被同级或更高优先级拿着，就直接不动它。
      *
-     * @return false = 已经是我们借走的、被别的效果借走、区块没加载、或写失败
+     * @return false = 已经是我们借走的、被同级/更高优先级拿着、区块没加载、或写失败
      */
     boolean take(BlockPos pos, BlockState left) {
         if (map.containsKey(pos)) return false;
-        if (WorldResponseEffects.isBorrowed(level, pos)) return false;
-        if (!level.isLoaded(pos)) return false;
+        if (!level.isLoaded(pos)) return false;      // 不为写方块加载区块
+        WorldResponseEffects.releaseFor(level, pos, priority);
+        if (WorldResponseEffects.isBorrowed(level, pos)) return false;   // 同级/更高优先级拿着：不动
         BlockState original = level.getBlockState(pos);
+        if (original.equals(left)) return true;      // 已经是我们要的样子：不必写、也不必记账
         if (!level.setBlock(pos, left, Block.UPDATE_CLIENTS)) return false;
         map.put(pos.immutable(), new Held(original, left));
         return true;
+    }
+
+    /**
+     * 立刻把这一格还回原位并放弃它（给更高优先级腾位置，或被 {@link WorldResponseEffects#releaseFor} 点到）。
+     *
+     * <p>区块没加载时什么都不做（留着记录，等它回来再还）。
+     */
+    void release(BlockPos pos) {
+        Held held = map.get(pos);
+        if (held == null) return;
+        if (!restore(pos, held, false)) return;
+        map.remove(pos);
     }
 
     /** 换掉「我们留下的样子」（原位不动）：例如踏上去之后的楼梯换成上半砖。 */

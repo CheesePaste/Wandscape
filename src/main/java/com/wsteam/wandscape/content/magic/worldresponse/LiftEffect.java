@@ -76,7 +76,7 @@ public final class LiftEffect implements WorldResponseEffect {
 
     public LiftEffect(ServerLevel level) {
         this.level = level;
-        this.borrowed = new BorrowedBlocks(level);
+        this.borrowed = new BorrowedBlocks(level, PRIORITY_DEFAULT);
     }
 
     @Override
@@ -88,6 +88,13 @@ public final class LiftEffect implements WorldResponseEffect {
     @Override
     public boolean holds(LevelAccessor level, BlockPos pos) {
         return borrowed.holds(level, pos);
+    }
+
+    /** 让位：移山填海优先级更高，它要清开的格子（包括我们刚铺的台阶/平台）得先还回原位再交给它。 */
+    @Override
+    public void release(LevelAccessor level, BlockPos pos) {
+        if (level != this.level) return;
+        borrowed.release(pos);
     }
 
     @Override

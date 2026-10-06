@@ -62,7 +62,7 @@ public final class TerraformEffect implements WorldResponseEffect {
 
     public TerraformEffect(ServerLevel level) {
         this.level = level;
-        this.borrowed = new BorrowedBlocks(level);
+        this.borrowed = new BorrowedBlocks(level, PRIORITY_TERRAFORM);
     }
 
     @Override
@@ -80,6 +80,22 @@ public final class TerraformEffect implements WorldResponseEffect {
     @Override
     public boolean holds(LevelAccessor level, BlockPos pos) {
         return borrowed.holds(level, pos);
+    }
+
+    /**
+     * **世界让路的权限最高**：一格同一时刻只归一个效果，但移山填海可以先手——低优先级的回应
+     * （扶摇的平台/台阶）得先把那一格还回原位，再由这里接管。反过来扶摇抢不走这里借的格子。
+     */
+    @Override
+    public int borrowPriority() {
+        return PRIORITY_TERRAFORM;
+    }
+
+    /** 让位：把这一格还回原位。移山填海已经是最高的，正常不会被点到；留着是为了将来加更高的。 */
+    @Override
+    public void release(LevelAccessor level, BlockPos pos) {
+        if (level != this.level) return;
+        borrowed.release(pos);
     }
 
     @Override

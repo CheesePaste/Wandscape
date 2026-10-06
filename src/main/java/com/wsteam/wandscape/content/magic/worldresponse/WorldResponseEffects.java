@@ -284,6 +284,37 @@ public final class WorldResponseEffects {
         return false;
     }
 
+    /**
+     * 让**优先级严格更低**的效果把这一格先还回原位，给更高的腾位置（当前口径：移山填海 > 扶摇）。
+     *
+     * <p>为什么不是「直接抢」：抢来的话，高优先级那边读到的当前状态是低优先级留下的方块，会被当成
+     * **原位**记下来，最后回滚出一个谁都没见过的方块。让低的先还回原位，高的读到的才是真原位。
+     *
+     * <p>有待重试的（{@link #PENDING_ROLLBACK}）也算持有者——它们手里照样握着格子。
+     */
+    public static void releaseFor(LevelAccessor level, BlockPos pos, int priority) {
+        if (level == null || pos == null) return;
+        if (ACTIVE.isEmpty() && PENDING_ROLLBACK.isEmpty()) return;
+        for (Map<String, WorldResponseEffect> mine : ACTIVE.values()) {
+            for (WorldResponseEffect effect : mine.values()) {
+                releaseOne(level, pos, priority, effect);
+            }
+        }
+        for (WorldResponseEffect effect : PENDING_ROLLBACK) {
+            releaseOne(level, pos, priority, effect);
+        }
+    }
+
+    private static void releaseOne(LevelAccessor level, BlockPos pos, int priority, WorldResponseEffect effect) {
+        if (effect.borrowPriority() >= priority) return;      // 同级 / 更高优先级：不让
+        if (!effect.holds(level, pos)) return;
+        try {
+            effect.release(level, pos);
+        } catch (RuntimeException ex) {
+            Log.warn(TAG, "[WorldResponse] '{}' failed to release {}: {}", effect.id(), pos, ex.toString());
+        }
+    }
+
     private static void onBreakBorrowed(BlockEvent.BreakEvent event) {
         if (!isBorrowed(event.getLevel(), event.getPos())) return;
         event.setCanceled(true);
