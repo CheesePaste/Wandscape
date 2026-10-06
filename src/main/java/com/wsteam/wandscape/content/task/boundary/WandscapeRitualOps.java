@@ -25,6 +25,8 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 
@@ -192,7 +194,7 @@ public class WandscapeRitualOps implements RitualOps {
                     }
                 }
                 if (dest != null) {
-                    e.teleportTo(dest.x, dest.y, dest.z);
+                    teleportAndSync(e, dest);
                     worker.stopNavigation();
                     // 落点可能超出到达半径，把导航状态拨回 PATHFINDING，让 NavigationSystem 走完剩余距离
                     //（已到则下一 tick 判到），避免停在 TELEPORT_RITUAL 空转
@@ -222,6 +224,25 @@ public class WandscapeRitualOps implements RitualOps {
         }
 
         Log.warn(TAG, "[RitualOps] Unknown ritual '{}' at {} — no-op", ritual.id(), target);
+    }
+
+    /**
+     * 服务端瞬移实体并强刷网络跟踪。
+     *
+     * <p>解决 Minecraft 原版长途 teleportTo 时 TrackedEntity/ServerEntity 不重置、
+     * 导致客户端只收到旧坐标 AddEntityPacket 从而实体在客户端不可见的问题。
+     */
+    public static void teleportAndSync(Entity e, Vec3 dest) {
+        if (!(e.level() instanceof ServerLevel serverLevel)) return;
+        serverLevel.getChunk((int) Math.floor(dest.x) >> 4, (int) Math.floor(dest.z) >> 4);
+        e.teleportTo(dest.x, dest.y, dest.z);
+        e.setDeltaMovement(Vec3.ZERO);
+        e.setOnGround(true);
+        if (e instanceof PathfinderMob mob) {
+            mob.getNavigation().stop();
+        }
+        serverLevel.getChunkSource().removeEntity(e);
+        serverLevel.getChunkSource().addEntity(e);
     }
 
     /**
@@ -262,6 +283,8 @@ public class WandscapeRitualOps implements RitualOps {
      * 确保工作者 100% 物理瞬移到任务现场，彻底杜绝因落点搜索失败而原地隔空施工。
      */
     public static Vec3 findSafeLandingWithFallback(ServerLevel level, GridPos target) {
+        // 先确保目标区块已装载，避免高度图与方块查询得到未加载默认值（-64）
+        level.getChunk(target.x() >> 4, target.z() >> 4);
         Vec3 spot = findSafeLanding(level, target);
         if (spot != null) return spot;
 

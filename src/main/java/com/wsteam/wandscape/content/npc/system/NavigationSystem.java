@@ -372,7 +372,7 @@ public class NavigationSystem implements EcsSystem {
 
     // ---- Internal ----
 
-    private static final int WAKEUP_TIMEOUT_TICKS = 60;
+    private static final int WAKEUP_TIMEOUT_TICKS = 160;
 
     private void tickWakeup(NavigationState nav, long npcId, World world) {
         nav.wakeupWaitTicks++;
@@ -384,7 +384,7 @@ public class NavigationSystem implements EcsSystem {
             if (e.level() instanceof ServerLevel serverLevel && nav.target != null) {
                 Vec3 dest = WandscapeRitualOps.findSafeLandingWithFallback(serverLevel, nav.target);
                 double fromX = e.getX(), fromY = e.getY(), fromZ = e.getZ();
-                e.teleportTo(dest.x, dest.y, dest.z);
+                WandscapeRitualOps.teleportAndSync(e, dest);
                 worker.stopNavigation();
 
                 WandscapeRitualOps.spawnPortalBurst(e.level(), fromX, fromY, fromZ);
