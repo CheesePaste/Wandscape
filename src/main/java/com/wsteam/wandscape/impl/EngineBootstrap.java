@@ -169,14 +169,15 @@ public final class EngineBootstrap {
         ItemTransportManager transporter = new ItemTransportManager();
         ItemTransportManager.setActive(transporter);
 
-        // 9b. Override TransformOp executor with async version (V2.5 gating demo)
-        int asyncDelay = 1;
-        AsyncTransformExecutor asyncExec = null;
-        if (asyncDelay > 0) {
-            asyncExec = new AsyncTransformExecutor(asyncDelay);
-            world.opExecutors.register(asyncExec); // overwrites default TransformExecutor
-            Log.info(TAG, "  AsyncTransformExecutor active: {} tick delay per block", asyncDelay);
-        }
+        // 9b. TransformOp 执行器（放置/拆除/铺地的唯一实现）。
+        //     delay = 0 → 拍内完成：「一拍放几格」由 TaskExecutionSystem 按工作速度额度决定
+        //     （instantOpBudget：floor(工作速度)，至少 1）；把这里改成 >0 会退回「每格等 N tick」的
+        //     老节奏，那条路上工作速度额度用不上，两者别同时开。
+        int asyncDelay = 0;
+        AsyncTransformExecutor asyncExec = new AsyncTransformExecutor(asyncDelay);
+        world.opExecutors.register(asyncExec); // overwrites default TransformExecutor
+        Log.info(TAG, "  TransformOp executor: {} (delay={} tick/block)",
+                asyncDelay <= 0 ? "instant, work-speed budgeted" : "delayed", asyncDelay);
 
         // 9b2. 整箱清空执行器：盒内格子在执行期按每 tick 预算枚举（见 ClearBoxExecutor）。
         ClearBoxExecutor clearBoxExec = new ClearBoxExecutor();

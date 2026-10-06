@@ -132,6 +132,13 @@
    - **多法师批次同样受约束**：批次接续走的是同一条调度链路（`fairOrder` + 派发门槛，见 §五.17），没有第二条会绕过委派的自派活路径。
    - **面板入口**：委派是策略决定，档位按 MANAGER（`BuildingDelegatePacket`）；候选列表由 `BuildingDelegateDataPacket` 下发，选人框 `MageDelegateDialog` 挂在 `MedievalScreen` 基类——以后别的建筑类别要开委派，改白名单即可，UI 不用动。
    - **已知取舍**：委派不搬人——法师靠自己走到工地，所在区块卸载时该建筑的任务就一直等它（这正是委派的语义，不是 bug）。
+6. **法师放置方块的速度 = 每 tick 的旁路 op 额度 = `floor(工作速度)`（至少 1 格）**（2026-10-06 起，改放置速度/工作速度曲线前必读）：
+   - 一格方块就是一个 `TransformOp`，所以「一拍放几格」＝「一拍执行几个**拍内完成**的旁路 op」。额度在 `TaskExecutionSystem.instantOpBudget` 单点计算（`EntityOps#getWorkSpeed`，取的是**有效**属性：含等级加成与装备），循环里以 `sideEffectBudget` 倒扣，扣完就 `break`、剩下的留给下一 tick。原先那条「一拍只允许一个旁路 op」（外加 same-target 特例）已删除；same-target 特例的删除是安全的——连续两 op 打同一格时第二 op 会走 4a 的「已是目标方块就跳过」判定，只是从一拍变成两拍。
+   - **前提是放置 op 拍内完成**：`EngineBootstrap` 把 `AsyncTransformExecutor` 的 `delayTicks` 置 0。若把它改回 `>0`，引擎会重新等每格的 future（每格占 N 拍），那条路上工作速度额度用不上——两个旋钮别同时开（类注释里写明）。
+   - **两条路共用 `AsyncTransformExecutor.placeNow`**（清障回收 → 置块 + 方块实体数据 → 工作动作 + 节流施法音），所以 delay=0 也不会退化成「方块在长、法师不动」——拍内路径原先恰好缺这一段（不挥手、不出声）。
+   - **只管拍内完成的 op**：拆除、铺地这类 TransformOp 同样按额度加速；采集 / 合成 / 仪式 / 整箱清空各有自己的多 tick 预算（`ClearBoxExecutor.VOXELS_PER_TICK`、`WandscapeBlockInteractExecutor` 的 channelTicks ÷ 工作速度），不吃这个额度、也不会被它加速。
+   - ⚠️ **台阶很硬，别在别处偷偷加码**：工作速度 1.99 → 1 格/拍、2.0 → 2 格/拍（直接翻倍）。招募曲线 `NpcAttributes.BASE_SPECS` 是 0.5~1.5、每级 +0.05，所以低阶法师基本还是 1 格/拍，跨过 2.0 / 3.0 才质变。要平滑收益（如 1.5 → 平均 1.5 格/拍）就得把额度换成小数累积器，改一处即可。
+   - **副作用**：面板的「预计完工」（`ConstructionSiteDataPacket.Estimate` 的 `placeCD × remainingBlocks`）仍按恒定每格耗时估，工作速度 >1 时会偏悲观、多法师并行也没折进去——那本是粗估，要跟新口径就得改估算公式（本次未动）。
 
 ---
 
@@ -215,7 +222,7 @@
 17. **多法师协同建造分批与状态机（`ConstructionBatches` & `BuildingTaskPool`）**：
    - **两阶段执行契约**：单条包含大量方块的大型建筑/修复任务（`build:clear_and_build` / `build:place_structure`）超过 `Config.CONSTRUCTION_BATCH_SIZE`（默认 32 方块）且开启 `Config.CONSTRUCTION_MULTI_WORKER_ENABLED` 时，由 `ConstructionBatches.split` 拆分为批次：
      - **Phase 1 准备批次（Initial / Foundation Batch）**：承载全栋建筑的全部材料扣款（`ResourceRequestOp`）与包围盒清扫（`ClearBoxOp`，若开清盒开关），以及底层地基方块放置。若仓库材料不足，该批次自然进入 `AWAITING_RESOURCES` 挂起等待（进入 `BuildingTaskQueue.parkedTaskIds`），绝不放行后续批次，防止无料白嫖；待材料补齐唤醒后（`unparkBatch`）重回活跃状态。
-     - **Phase 2 并发放置批次（Parallel Placement Batches）**：首批准备完工（建材全额记账、场地已平整）后，后续所有放置批次一次性全部释放入 `GlobalTaskPool`，多个空闲法师可同时各领一批并发施工。
+     - **Phase 2 并发放置批次（Parallel Placement Batches）**：首批准备完工（建材全额记账、场地已平整）后，后续所有放置批次一次性全部释放入 `GlobalTaskPool`，多个空闲法师可同时各领一批并发施工。一批 32 格在 1 格/拍时约 1.6 秒；「一拍放几格」见 §四.6（高阶法师会成倍缩短）。
    - **状态聚合与完工事件**：子批次自身设置 `omit_complete_event = true` 不单独发广播；`BuildingTaskPool.checkBatchesProgress` 跟踪全量批次进度，只有当全部活跃与待发批次均完成时，才由 `BuildingTaskQueue` 统一聚合发射 `build_complete` 事件，触发奇观触发器、建筑完成粒子、工地面板状态更新与下一条待办任务提升。
    - **配置项**：`Config.CONSTRUCTION_MULTI_WORKER_ENABLED`（`building.multiWorkerEnabled`，默认 true，游戏内设置中心「城镇经营」可调）与 `Config.CONSTRUCTION_BATCH_SIZE`（`building.constructionBatchSize`，默认 32 方块，范围 4~1024）。
    - **批次必须像「一个法师站一处干完整栋」（2026-10-06 修，改拆批前必读）**：拆批本身没问题，问题是让每条批次「各自为政」——

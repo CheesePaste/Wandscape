@@ -253,7 +253,9 @@ public class TaskExecutionSystem implements EcsSystem {
             exec.initialNavDone = true;
         }
 
-        // ── 4. Execute op loop (batch pure ops, one side-effect per tick, no distance limit) ──
+        // ── 4. Execute op loop (pure ops 连续批处理；旁路 op 按工作速度给每 tick 额度，不受距离限制) ──
+        // 一格方块就是一个 op，所以「一拍放几格」＝「一拍执行几个拍内完成的旁路 op」：额度见 instantOpBudget。
+        int sideEffectBudget = -1; // 懒算：本 tick 还剩几个旁路 op 的额度（<0 表示还没算过）
         while (queue.peekCurrentOp() != null) {
             AtomicOp currentOp = queue.peekCurrentOp();
 
@@ -342,14 +344,10 @@ public class TaskExecutionSystem implements EcsSystem {
                     exec.lastWorkTick = worldTick(world);
                     exec.state = ExecutorState.ACTIVE;
 
-                    // Same-target batching: if next op shares target, continue
-                    GridPos doneTarget = currentOp.target();
-                    AtomicOp nextOp = queue.peekCurrentOp();
-                    if (nextOp != null && sameTarget(doneTarget, nextOp.target())) {
-                        continue;
-                    }
-                    // One side-effect per tick
-                    break;
+                    // 本 tick 的旁路 op 额度用完就停手，剩下的留给下一 tick。
+                    if (sideEffectBudget < 0) sideEffectBudget = instantOpBudget(world, npcId);
+                    if (--sideEffectBudget <= 0) break;
+                    continue;
                 }
                 // Pure op: executor may have already finished the package via advanceAfterPureOp
                 if (queue.isCurrentPackageDone() || queue.currentPackage() != pkg) {
@@ -704,8 +702,21 @@ public class TaskExecutionSystem implements EcsSystem {
         };
     }
 
-    private static boolean sameTarget(@Nullable GridPos a, @Nullable GridPos b) {
-        return a != null && a.equals(b);
+    /**
+     * 单个 tick 能执行几个**拍内完成**的旁路 op —— 也就是「一拍放几格方块」：**工作速度向下取整，至少 1**。
+     *
+     * <p>一格方块一个 op，所以放置速度就是 op 消费速度。口径：工作速度 1.5 → 1 格、2.5 → 2 格、
+     * 3.0 → 3 格、0.5 → 1 格（原先是恒定的「每格占一拍」）。工作速度取自 ECS 边界
+     * {@code EntityOps#getWorkSpeed}，即**有效属性**（含等级加成与装备），招募曲线 0.5~1.5、
+     * 每级 +0.05，所以中低阶法师基本还是 1 格/拍，高阶（有效值 ≥2）才翻倍。
+     *
+     * <p>只管拍内完成的 op（放置 / 拆除 / 铺地这类 TransformOp）。引导类 op 本身多 tick
+     * （采集、合成、仪式、整箱清空各有自己的每 tick 预算），不吃这个额度，也不会被它加速。
+     */
+    private static int instantOpBudget(World world, long npcId) {
+        float work = world.entityOps != null ? world.entityOps.getWorkSpeed(npcId) : 1f;
+        if (!(work > 1f)) return 1; // 0.5 / 1.0 / NaN 一律 1 格
+        return (int) Math.floor(work);
     }
 
     /** Approximate tick counter from system time (for lastWorkTick tracking). */

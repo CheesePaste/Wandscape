@@ -24,16 +24,22 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * Async TransformOp executor — exercises V2.5 CompletableFuture model.
+ * TransformOp 执行器（放置 / 拆除 / 铺地的唯一实现）。
  *
- * <p>Returns an incomplete future from {@link World#startAsyncOp} (Promise pattern).
- * The engine stores this future in TaskExecutor.pendingFuture and does NOT
- * re-invoke execute(). When the future completes, the engine advances stepIndex.
+ * <p><b>两种节奏</b>，由构造参数 {@code delayTicks} 决定：
+ * <ul>
+ *   <li>{@code delayTicks <= 0}（当前 {@code EngineBootstrap} 用的）：拍内直接完成——放置
+ *       **速度**改由 {@code TaskExecutionSystem} 的每 tick 工作速度额度决定
+ *       （一拍放 {@code floor(工作速度)} 格，至少 1，见 {@code instantOpBudget}）。</li>
+ *   <li>{@code delayTicks > 0}：老的 V2.5 promise 模型——返回 {@link World#startAsyncOp} 的未完成
+ *       future，引擎存进 {@code TaskExecutor.pendingFuture} 等它；到期后在 {@code thenRun} 里落块。
+ *       注意这条路上「每格占 {@code delayTicks} 拍」，工作速度额度用不上，两者别同时开。</li>
+ * </ul>
  *
- * <p>The actual block placement happens via the future's {@code thenRun} callback.
+ * <p>两条路都走同一份 {@link #placeNow}：清障回收 → 置块 + 方块实体数据 → 工作动作与施法音。
  *
  * <p>When the op carries a {@link AtomicOp.TransformOp#consumable()}, the item is
- * removed from NPC inventory before the delay countdown starts. On shortage, a
+ * removed from NPC inventory first. On shortage, a
  * {@link ResourceShortageException} is thrown — the engine marks the task
  * AWAITING_RESOURCES and releases the NPC.
  *
@@ -85,14 +91,11 @@ public class AsyncTransformExecutor implements OpExecutor<AtomicOp.TransformOp> 
             }
         }
 
-        // ── Placement (existing delay-tick mechanism, shared by both paths) ──
+        // ── Placement ──
+        // delayTicks <= 0：拍内直接放。放置**速度**不在这里管——「一拍放几格」由
+        // TaskExecutionSystem 的每 tick 工作速度额度（instantOpBudget）决定，两处各司其职。
         if (delayTicks <= 0) {
-            performSalvage(op, world, npcId);
-            BlockOps blockOps = world.blockOps;
-            if (blockOps != null) {
-                blockOps.setBlock(op.target(), op.to());
-                blockOps.setBlockEntityData(op.target(), op.blockNbtBase64());
-            }
+            placeNow(op, world, npcId);
             return CompletableFuture.completedFuture(null);
         }
 
@@ -104,47 +107,52 @@ public class AsyncTransformExecutor implements OpExecutor<AtomicOp.TransformOp> 
         //    Engine stores this future in TaskExecutor.pendingFuture,
         //    does NOT re-invoke execute(). When complete() fires, engine
         //    advances stepIndex and calls execute() for the NEXT op.
-        pending.add(new Pending(future, op, world, npcId, effectiveDelay(world, npcId)));
+        pending.add(new Pending(future, op, world, npcId, delayTicks));
 
         // Hook: place block when delay expires
         future.thenRun(() -> {
             Pending p = findPending(future);
             if (p == null) return;
             pending.remove(p);
-
-            // Intercept & return salvaged block items to colony warehouse with visual flight
-            performSalvage(p.op(), p.world(), p.npcId());
-
-            if (p.world().blockOps != null) {
-                p.world().blockOps.setBlock(p.op().target(), p.op().to());
-                p.world().blockOps.setBlockEntityData(p.op().target(), p.op().blockNbtBase64());
-            }
-            // Visual feedback on the NPC that performed the work
-            ColonyWorker worker = EntityComponentBridge.INSTANCE.getWorker(p.npcId());
-            if (worker != null) {
-                worker.doWorkAnimation(new BlockPos(
-                        p.op().target().x(), p.op().target().y(), p.op().target().z()));
-                // NPC 施法放置音（守卫/自防御不走这里，避免与 GuardCombat 开火音重叠）
-                // 节流与方块放置/拆除音同频：整栋楼连续施工时不会每块都响
-                if (worker.entity().level() instanceof ServerLevel sl) {
-                    SoundService.playAtThrottled(sl, p.op().target().x() + 0.5,
-                            p.op().target().y() + 0.5, p.op().target().z() + 0.5,
-                            WandscapeSounds.NPC_CAST, SoundSource.NEUTRAL, 0.5f, 1.0f,
-                            NPC_CAST_THROTTLE_TICKS);
-                }
-            }
+            placeNow(p.op(), p.world(), p.npcId());
         });
 
         return future;
     }
 
-    /** Effective per-block delay for this NPC: base delayTicks divided by WORK_SPEED. */
-    private int effectiveDelay(World world, long npcId) {
-        float work = (world.entityOps != null) ? world.entityOps.getWorkSpeed(npcId) : 1f;
-        if (work <= 1f) return delayTicks;
-        return Math.max(1, (int) Math.ceil(delayTicks / work));
+    /**
+     * 当场放下一格：清障回收 → 置块 + 方块实体数据 → 工作动作与施法音。
+     *
+     * <p>拍内路径与延迟路径共用同一份，避免两条路各自漂移（原先拍内路径既不挥手也不出声，
+     * 一旦把延迟调成 0，整栋楼就会「方块在长、法师不动」）。
+     */
+    private void placeNow(AtomicOp.TransformOp op, World world, long npcId) {
+        // Intercept & return salvaged block items to colony warehouse with visual flight
+        performSalvage(op, world, npcId);
+
+        BlockOps blockOps = world.blockOps;
+        if (blockOps != null) {
+            blockOps.setBlock(op.target(), op.to());
+            blockOps.setBlockEntityData(op.target(), op.blockNbtBase64());
+        }
+
+        // Visual feedback on the NPC that performed the work
+        ColonyWorker worker = EntityComponentBridge.INSTANCE.getWorker(npcId);
+        if (worker != null) {
+            worker.doWorkAnimation(new BlockPos(
+                    op.target().x(), op.target().y(), op.target().z()));
+            // NPC 施法放置音（守卫/自防御不走这里，避免与 GuardCombat 开火音重叠）
+            // 节流与方块放置/拆除音同频：整栋楼连续施工时不会每块都响
+            if (worker.entity().level() instanceof ServerLevel sl) {
+                SoundService.playAtThrottled(sl, op.target().x() + 0.5,
+                        op.target().y() + 0.5, op.target().z() + 0.5,
+                        WandscapeSounds.NPC_CAST, SoundSource.NEUTRAL, 0.5f, 1.0f,
+                        NPC_CAST_THROTTLE_TICKS);
+            }
+        }
     }
 
+    /** Effective per-block delay for this NPC: base delayTicks divided by WORK_SPEED. */
     /** Called every MC tick. Decrements countdowns and completes futures. */
     public void tickAll() {
         if (pending.isEmpty()) return;
