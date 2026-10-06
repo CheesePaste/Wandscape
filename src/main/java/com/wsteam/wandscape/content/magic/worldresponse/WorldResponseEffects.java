@@ -264,13 +264,22 @@ public final class WorldResponseEffects {
 
     // ── 借用点：禁止第三方改动 ──
 
-    /** 这个位置是不是正被某个生效中的效果借用（借出去的位置禁止改动，理由见 WorldResponseEffect#holds）。 */
+    /**
+     * 这个位置是不是正被某个效果借用（借出去的位置禁止改动，理由见 WorldResponseEffect#holds）。
+     *
+     * <p>**已经停下、但还有方块压在未加载区块里等重试的那些效果也算**：它们手里照样握着这些格子，
+     * 不护着的话，别人一改，那次补做的回滚就只能放弃这一格（地形永久回不去）。
+     */
     public static boolean isBorrowed(LevelAccessor level, BlockPos pos) {
-        if (level == null || pos == null || ACTIVE.isEmpty()) return false;
+        if (level == null || pos == null) return false;
+        if (ACTIVE.isEmpty() && PENDING_ROLLBACK.isEmpty()) return false;
         for (Map<String, WorldResponseEffect> mine : ACTIVE.values()) {
             for (WorldResponseEffect effect : mine.values()) {
                 if (effect.holds(level, pos)) return true;
             }
+        }
+        for (WorldResponseEffect effect : PENDING_ROLLBACK) {
+            if (effect.holds(level, pos)) return true;
         }
         return false;
     }

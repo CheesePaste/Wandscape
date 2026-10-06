@@ -45,14 +45,6 @@ final class BorrowedBlocks {
         this.level = level;
     }
 
-    boolean isEmpty() {
-        return map.isEmpty();
-    }
-
-    int size() {
-        return map.size();
-    }
-
     /** 这一格是不是我们借走的（不带维度判断，调用方自己确认维度）。 */
     boolean contains(BlockPos pos) {
         return map.containsKey(pos);
@@ -72,10 +64,15 @@ final class BorrowedBlocks {
     /**
      * 写一格并记账（先写成功再记账，免得记下从没被改过的方块）。
      *
-     * @return false = 已经是我们借走的、区块没加载、或写失败。调用方据此决定要不要继续往下做。
+     * <p>**一格同一时刻只归一个效果**：这一格要是正被别的效果（含已经停下、还在等区块加载的那些）
+     * 借走，就直接不动它——否则新效果会把「旧效果留下的东西」当成**原位**记下来，
+     * 最后回滚出一个谁都没见过的方块（凭空多一格石头台阶这种事就是这么来的）。
+     *
+     * @return false = 已经是我们借走的、被别的效果借走、区块没加载、或写失败
      */
     boolean take(BlockPos pos, BlockState left) {
         if (map.containsKey(pos)) return false;
+        if (WorldResponseEffects.isBorrowed(level, pos)) return false;
         if (!level.isLoaded(pos)) return false;
         BlockState original = level.getBlockState(pos);
         if (!level.setBlock(pos, left, Block.UPDATE_CLIENTS)) return false;
@@ -87,6 +84,7 @@ final class BorrowedBlocks {
     boolean reshape(BlockPos pos, BlockState left) {
         Held held = map.get(pos);
         if (held == null) return false;
+        if (!level.isLoaded(pos)) return false;      // 与其它写入路径同一条纪律：不为写方块加载区块
         if (!level.setBlock(pos, left, Block.UPDATE_CLIENTS)) return false;
         map.put(pos.immutable(), new Held(held.original(), left));
         return true;
