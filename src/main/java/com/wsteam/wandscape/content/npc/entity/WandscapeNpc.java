@@ -941,8 +941,13 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike, ColonyWor
     private String lastSyncedOpKind = "";
     private BlockPos lastSyncedTarget = null;
 
-    // ── Fast path: skip ECS polling for idle NPCs ──
-    private int ecsPollCooldown = 0;
+    /**
+     * 施法姿态/光束的**掉线余量**（tick）：多法师拆批后，批次之间只有 1 tick 空窗，
+     * 这一 tick 若立刻把 isCasting 置 false，手臂会从施法姿态弹回站姿再弹回来——
+     * 玩家看到的就是「动作一顿一顿」。掉线晚 CASTING_GRACE_TICKS 拍生效即可抹平。
+     */
+    private int castingGraceTicks = 0;
+    private static final int CASTING_GRACE_TICKS = 5;
 
     // ── 手动施法（祭坛施法引导窗口）：窗口内强制 isCasting=true，与 ECS 驱动的施法互不干扰 ──
     private int manualCastTicks = 0;
@@ -1558,55 +1563,63 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike, ColonyWor
         boolean manual = manualCastTicks > 0;
         if (manual) manualCastTicks--;
 
+        boolean working = false;
         boolean casting;
-        if (ecsPollCooldown > 0 && !isCasting() && !manual) {
-            // Fast path: idle NPC, skip ECS query this tick
-            ecsPollCooldown--;
-            return;
-        } else {
-            World ecsWorld = com.wsteam.wandscape.content.task.ecs.World.getActive();
-            if (ecsWorld != null && ecsEntityId > 0) {
-                var exec = ecsWorld.get(ecsEntityId,
-                        TaskExecutor.class);
-                casting = exec != null
-                        && exec.state == ExecutorState.ACTIVE
-                        && (exec.npcQueue.hasWork() || exec.globalTaskId != null);
-                if (casting && exec.currentOpTarget != null) {
-                    var t = exec.currentOpTarget;
-                    BlockPos target = new BlockPos(t.x(), t.y(), t.z());
-                    if (!target.equals(lastSyncedTarget)) {
-                        setDebugTarget(target);
-                        lastSyncedTarget = target;
-                    }
-                    String kind = exec.currentOpKind != null ? exec.currentOpKind : "";
-                    if (!kind.equals(lastSyncedOpKind)) {
-                        setOpKind(exec.currentOpKind);
-                        lastSyncedOpKind = kind;
-                    }
-                    faceTarget(target);
-                } else {
-                    if (lastSyncedTarget != null) {
-                        setDebugTarget(null);
-                        lastSyncedTarget = null;
-                    }
-                    if (!lastSyncedOpKind.isEmpty()) {
-                        setOpKind(null);
-                        lastSyncedOpKind = "";
-                    }
+        World ecsWorld = com.wsteam.wandscape.content.task.ecs.World.getActive();
+        if (ecsWorld != null && ecsEntityId > 0) {
+            var exec = ecsWorld.get(ecsEntityId,
+                    TaskExecutor.class);
+            working = exec != null
+                    && exec.state == ExecutorState.ACTIVE
+                    && (exec.npcQueue.hasWork() || exec.globalTaskId != null);
+
+            // 姿态与光束的掉线留余量：批次之间只有 1 tick 空窗，不该让手臂弹回站姿再弹回来。
+            if (working) {
+                castingGraceTicks = CASTING_GRACE_TICKS;
+            } else if (castingGraceTicks > 0) {
+                castingGraceTicks--;
+            }
+            casting = working || castingGraceTicks > 0;
+
+            if (working && exec.currentOpTarget != null) {
+                var t = exec.currentOpTarget;
+                BlockPos target = new BlockPos(t.x(), t.y(), t.z());
+                if (!target.equals(lastSyncedTarget)) {
+                    setDebugTarget(target);
+                    lastSyncedTarget = target;
                 }
-                // Compute status text from ECS state
-                String status = computeStatusText(ecsWorld);
-                if (!status.equals(getStatusText())) {
-                    setStatusText(status);
+                String kind = exec.currentOpKind != null ? exec.currentOpKind : "";
+                if (!kind.equals(lastSyncedOpKind)) {
+                    setOpKind(exec.currentOpKind);
+                    lastSyncedOpKind = kind;
                 }
-            } else {
-                casting = false;
-                if (!getStatusText().isEmpty()) {
-                    setStatusText("");
+                faceTarget(target);
+            } else if (working || !casting) {
+                // 「在干活但这一拍没有 op 目标」（如正走路去工地）立刻清光束——渲染侧只认「有目标才拉光束」；
+                // 余量期内（已停工、姿态还没掉）则保留上一帧目标，别在批次之间的空窗里闪一下。
+                if (lastSyncedTarget != null) {
+                    setDebugTarget(null);
+                    lastSyncedTarget = null;
+                }
+                if (!lastSyncedOpKind.isEmpty()) {
+                    setOpKind(null);
+                    lastSyncedOpKind = "";
                 }
             }
-            // Poll every tick while casting, every 20 ticks while idle
-            ecsPollCooldown = casting ? 0 : 20;
+
+            // 状态串（头上那行）每 tick 现算，不许再为「空闲 NPC」省这一步：
+            // 多法师拆批后批次之间只隔 1 tick，一旦节流（旧写法 20 tick），客户端会整整 1 秒
+            // 看不到施法姿态 / 光束 / 朝向的更新——方块一直在放，法师动作却一顿一顿（实测就是这个）。
+            String status = computeStatusText(ecsWorld);
+            if (!status.equals(getStatusText())) {
+                setStatusText(status);
+            }
+        } else {
+            castingGraceTicks = 0;
+            casting = false;
+            if (!getStatusText().isEmpty()) {
+                setStatusText("");
+            }
         }
 
         if (manual) casting = true;

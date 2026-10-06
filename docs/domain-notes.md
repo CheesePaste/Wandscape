@@ -56,6 +56,10 @@
    - `DeathRecord.latestInColony(records, null)` 返回 null，与 `getRecordsInColony(null)` 的空表口径一致；旧语义「null = 不限小镇」会让尚未归属的祭坛把**别镇**的死者拉来复活。
    - 环境伤害逃生（`NpcEscapeTeleport`）**也救工作中的法师**：唯一不放行的是正卡在异步 op 的 future 上（传送后任务会重放该 op，`ResourceRequestOp` 这类重放会二次扣资源、不保证幂等）。传送前必须做交接三步——清 `pendingFuture`、`movementOps.cancelNavigation`、把 ritual future 回填给执行器——与 `NavigationSystem.switchToRitualTeleport` 同一套；缺了这步任务执行系统会死等已失效的 future，NPC 传走了任务却卡住。
    - 法师**没有**任何伤害免疫、复活只给 1 血是**刻意设计**，别当缺陷修；要动的是「逃生可达性」，不是「死亡率」。
+12. **法师的施法姿态/光束/朝向 = 每 tick 现算的 `isCasting`，不许为「空闲 NPC」节流**（2026-10-06 修，踩过）：
+    - `WandscapeNpc.tickCastingState()` 从 ECS 推导 `casting`（`exec.state == ACTIVE && 有活`），它同时驱动客户端模型的施法姿态（`WandscapeNpcModel.setupAnim` 的 `isCasting()` 分支会**覆盖**原版挥手动画）、光束粒子（`WandscapeNpcRenderer`）、`faceTarget` 与头上状态串。
+    - **曾经的坑**：那里有个「空闲 NPC 每 20 tick 才查一次 ECS」的快速路径，条件是「冷却未到 **且** 当前不是施法态」。多法师协同把建筑拆成几十条 1.6 秒的批次任务、批次之间恰好有 1 tick 的 `IDLE`，于是每个批次边界都会把 `casting` 打成 false 并把冷却重置成 20 tick —— 客户端整整 1 秒收不到姿态/光束/朝向更新，表现就是**方块一直在放、建筑一直在长，法师的动作却一顿一顿**（玩家口径「干一会停一会」）。已把快速路径整个删掉：`casting`/目标/朝向/状态串一律每 tick 现算（每次只是 1~2 次组件查表，可忽略），并给姿态掉线留 `CASTING_GRACE_TICKS = 5` 的余量，免得批次之间的 1 tick 空窗让手臂弹回站姿再弹回来。
+    - **推论**：任何「每 N tick 省一次 ECS 查询」的节流都不能覆盖与**客户端可见状态**挂钩的字段（姿态/目标/朝向/状态串）；性能上真正贵的是拼字符串与同步实体数据，那部分靠「值没变就不 set」的脏检查就够。
 
 ---
 
