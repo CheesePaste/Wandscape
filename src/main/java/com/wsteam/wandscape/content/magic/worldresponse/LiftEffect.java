@@ -45,10 +45,12 @@ import java.util.Set;
  * ④ 不在**建筑地皮**上（{@link ColonyLandProtectionHandler#isProtected}）。于是玩家既不会拿它覆盖
  * 自己的红石/机器，也不会在别人的结构里凭空长出平台来。
  *
- * <p><b>方向</b>：用两次扫描之间的**服务端位置差**取主轴（服务端玩家的 {@code deltaMovement} 不可靠）；
+ * <p><b>方向</b>：用两次扫描之间的**服务端位置差**取主轴（服务端玩家的 {@code deltaMovement} 不可靠，
+ * 位置差只在扫描时采样，见 {@link #lastPos}）。
  * 斜着走（两轴比值 &gt; {@value #AMBIGUOUS_RATIO}）时不猜主轴、直接看**视线**，免得楼梯铺成锯齿。
  * **视角朝下**（俯角超过 {@code worldResponseLiftMaxDownPitch}，默认 30 度）时不再往前铺楼梯——
- * 人朝下看是在下落 / 找落脚点，脚下平台照旧留着。
+ * 人朝下看是在看路 / 找落脚点，脚下平台照旧留着，已经铺好的几级也留着（于是低头不会把人从半空扔下去）；
+ * 但**脚踩着我们自己铺的东西时（正在爬楼梯）这一条不生效**，否则低头看台阶就再也爬不上去了。
  *
  * <p><b>回收**留一轮缓冲**</b>：只有「这一轮和上一轮都不想要」的格子才还回（{@link #wantedPrev}），
  * 所以新旧交接时不会出现"先收后放"的真空期，也不会留下没人管的残块。
@@ -115,16 +117,14 @@ public final class LiftEffect implements WorldResponseEffect {
         if (level != player.serverLevel()) return;   // 换维度后管理器会停掉本效果，这里只是兜底
 
         BlockPos feet = player.blockPosition();
-        // 俯角闸门只在**空中**（跳起/下落/腾空）生效：本意是"人朝下看是在下落找落脚点，别再长梯子"；
-        // 但踩在台阶上爬升时要低头看路，那时把人停掉就再也爬不上去了（实测反馈"无法释放楼梯"）。
-        boolean lookingDown = !player.onGround()
-                && player.getXRot() > Math.max(10, BalanceValues.worldResponseLiftMaxDownPitch());
+        // 俯角闸门：视角**明显朝下**（俯角超过 worldResponseLiftMaxDownPitch，默认 30 度）时不再往前长楼梯——
+        // 低头是在看路/找落脚点，不是在攀升。（60 度太钝：那得整个人低着头走路才会停。）
+        // 例外：**人已经踩在我们铺的东西上**时闸门不生效——那正是在爬我们自己的台阶，低头看台阶是必须的，
+        // 否则一低头楼梯就停、再也爬不上去。
+        boolean lookingDown = player.getXRot() > Math.max(10, BalanceValues.worldResponseLiftMaxDownPitch())
+                && !borrowed.contains(feet.below());
         Direction sampled = lookingDown ? null : sampleDirection(player);
-        if (lookingDown) {
-            // 视角明显朝下：不再往前铺楼梯，也不保留旧的（人显然在下落/找落脚点）；脚下平台照旧
-            climbDirection = null;
-            idleTicks = 0;
-        } else if (sampled != null) {
+        if (sampled != null) {
             climbDirection = sampled;
             idleTicks = 0;
         } else if (climbDirection != null
@@ -137,13 +137,16 @@ public final class LiftEffect implements WorldResponseEffect {
         // 只在露天开工：头顶见不到天（屋顶下/洞里/水下）就整轮不铺——旧形状由下面的回收收走
         if (playerUnderOpenSky(player)) {
             layPlatform(feet, now);
-            buildStairs(feet, now);
+            if (!lookingDown) buildStairs(feet, now);   // 低头那几轮不长新楼梯；旧的那几级由回收缓冲留着
         }
         // 回收：**这一轮和上一轮都不想要**的才还（留一轮缓冲，避免"先收后放"的真空期与残块）
         Set<BlockPos> keep = new HashSet<>(now);
         keep.addAll(wantedPrev);
         borrowed.restoreNotIn(keep);
         borrowed.keepShaped();
+        // 记下**这一轮扫描时**的位置：下一轮的位置差就是「前进方向」（sampleDirection 唯一的数据源）。
+        // 只在扫描时更新，所以差值覆盖整个扫描间隔——潜行约 0.26 格 / 4t，仍在 MOVING_EPSILON 之上。
+        lastPos = player.position();
         // 双缓冲交换：这一轮变成"上一轮"，旧的那份留给下一轮 clear 复用
         Set<BlockPos> spare = wantedPrev;
         wantedPrev = now;
