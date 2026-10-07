@@ -38,7 +38,8 @@ public final class BalanceValues {
             "worldResponseTerraformRadius", "worldResponseTerraformScanInterval",
             "worldResponseTerraformRestoreMargin", "worldResponseTeleportJumpDistance",
             "worldResponseLiftScanInterval", "worldResponseLiftStairs", "worldResponseLiftStairWidth",
-            "worldResponseLiftPlatformRadius", "worldResponseLiftRestoreMargin", "worldResponseLiftHoldTicks");
+            "worldResponseLiftPlatformRadius", "worldResponseLiftRestoreMargin", "worldResponseLiftHoldTicks",
+            "worldResponseLiftMaxDownPitch");
 
     // ============================================================
     // npc 回血回蓝
@@ -171,10 +172,15 @@ public final class BalanceValues {
     private static final int DEFAULT_WORLD_RESPONSE_LIFT_STAIR_WIDTH = 3;
     /** 扶摇：脚下一层那片半砖平台的半径（格）——它就是"凭空托住"的那一大片下脚点。 */
     private static final int DEFAULT_WORLD_RESPONSE_LIFT_PLATFORM_RADIUS = 4;
-    /** 扶摇：不在这一轮形状里、又离玩家还不到这个距离（格）的旧格子先留着，防抖。 */
+    /** 扶摇：停下之后「人还在借用范围里就不收」的判定半径（格）——脚下不能突然空掉。 */
     private static final int DEFAULT_WORLD_RESPONSE_LIFT_RESTORE_MARGIN = 2;
     /** 扶摇：玩家停下来之后台阶还留多久（tick）；太短会"刚走两步就散"，默认 3 秒。 */
     private static final int DEFAULT_WORLD_RESPONSE_LIFT_HOLD_TICKS = 60;
+    /**
+     * 扶摇：俯角超过这个度数就不再往前铺楼梯——人朝下看是在下落/找落脚点，不是要上升。
+     * 默认 30：低头看路、看脚下的坡就会停；早先试过 60，那等于"整个人低着头走路"才停（实测反馈太钝）。
+     */
+    private static final int DEFAULT_WORLD_RESPONSE_LIFT_MAX_DOWN_PITCH = 30;
 
     public static int worldResponseTerraformRadius() { return (int)(double) OVERRIDES.getOrDefault("worldResponseTerraformRadius", (double) DEFAULT_WORLD_RESPONSE_TERRAFORM_RADIUS); }
     public static void setWorldResponseTerraformRadius(int v) { OVERRIDES.put("worldResponseTerraformRadius", (double) v); }
@@ -196,6 +202,8 @@ public final class BalanceValues {
     public static void setWorldResponseLiftRestoreMargin(int v) { OVERRIDES.put("worldResponseLiftRestoreMargin", (double) v); }
     public static int worldResponseLiftHoldTicks() { return (int)(double) OVERRIDES.getOrDefault("worldResponseLiftHoldTicks", (double) DEFAULT_WORLD_RESPONSE_LIFT_HOLD_TICKS); }
     public static void setWorldResponseLiftHoldTicks(int v) { OVERRIDES.put("worldResponseLiftHoldTicks", (double) v); }
+    public static int worldResponseLiftMaxDownPitch() { return (int)(double) OVERRIDES.getOrDefault("worldResponseLiftMaxDownPitch", (double) DEFAULT_WORLD_RESPONSE_LIFT_MAX_DOWN_PITCH); }
+    public static void setWorldResponseLiftMaxDownPitch(int v) { OVERRIDES.put("worldResponseLiftMaxDownPitch", (double) v); }
 
     // ============================================================
     // 持久化 JSON 覆盖（data/wandscape/wandscape_balance.json）驱动

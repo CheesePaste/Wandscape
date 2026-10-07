@@ -63,8 +63,15 @@ public final class WorldResponseEffects {
     private static final int PISTON_LINE = 13;
 
     private static final Map<UUID, Map<String, WorldResponseEffect>> ACTIVE = new ConcurrentHashMap<>();
-    /** 还剩下未加载区块没还干净的效果：绝不丢掉，等区块回来或关服收尾。 */
-    private static final List<WorldResponseEffect> PENDING_ROLLBACK = new CopyOnWriteArrayList<>();
+
+    /**
+     * 还没还干净的效果：两种来源——① 有方块压在**未加载区块**里（等区块回来）；
+     * ② 扶摇停下时玩家还踩在上面，刻意先留着当落脚点（等他自己走开）。
+     * 两者都带上玩家 UUID，重试时必须把玩家找回来问一声（人不在就直接还）。
+     */
+    private record PendingRollback(UUID playerId, WorldResponseEffect effect) {}
+
+    private static final List<PendingRollback> PENDING_ROLLBACK = new CopyOnWriteArrayList<>();
     /** 上一 tick 的位置，用来识别"没有事件的那种传送"。 */
     private static final Map<UUID, Vec3> LAST_POS = new ConcurrentHashMap<>();
     /** 「这一格正被借用」的提示节流表（防刷屏）。 */
@@ -133,12 +140,16 @@ public final class WorldResponseEffects {
         return mine.size();
     }
 
-    /** 回滚一个效果；没还干净（方块所在区块没加载）就挂进重试表，**不丢快照**。 */
+    /**
+     * 回滚一个效果；没还干净就挂进重试表，**不丢快照**。
+     *
+     * <p>没还干净的两种情形：方块压在未加载区块里（等区块回来），或扶摇刻意留着落脚点（等人走开）。
+     */
     private static void rollback(@Nullable ServerPlayer player, WorldResponseEffect effect) {
         try {
             if (!effect.stop(player, false)) {
-                PENDING_ROLLBACK.add(effect);
-                Log.info(TAG, "[WorldResponse] '{}' has block(s) in unloaded chunks — queued for retry", effect.id());
+                PENDING_ROLLBACK.add(new PendingRollback(player != null ? player.getUUID() : null, effect));
+                Log.info(TAG, "[WorldResponse] '{}' not fully restored yet — queued for retry", effect.id());
             }
         } catch (RuntimeException ex) {
             // 回滚失败必须看得见：宁可留下日志也不要静默把地形留在半途
@@ -154,13 +165,13 @@ public final class WorldResponseEffects {
         ACTIVE.clear();
         LAST_POS.clear();
         BORROW_NOTICE_AT.clear();
-        forceFinalRollback();
+        forceFinalRollback(server);
     }
 
     /** 关服收尾：这是最后一次机会，允许为回滚把未加载的区块读回来。 */
-    private static void forceFinalRollback() {
+    private static void forceFinalRollback(MinecraftServer server) {
         if (PENDING_ROLLBACK.isEmpty()) return;
-        retryPending(true);
+        retryPending(server, true);
         if (!PENDING_ROLLBACK.isEmpty()) {
             Log.warn(TAG, "[WorldResponse] {} effect(s) still hold un-restored block(s) — the world may keep a hole",
                     PENDING_ROLLBACK.size());
@@ -168,23 +179,31 @@ public final class WorldResponseEffects {
         }
     }
 
-    private static void retryPending(boolean loadChunks) {
-        for (WorldResponseEffect effect : PENDING_ROLLBACK) {
+    /**
+     * 重试回滚。
+     *
+     * <p>必须把**玩家**找回来一起问：扶摇停下之后是"玩家还踩着就先留着"，拿不到玩家就只能直接还。
+     * 玩家已离线时自然拿到 null，那时直接还正是我们要的。
+     */
+    private static void retryPending(MinecraftServer server, boolean loadChunks) {
+        for (PendingRollback pending : PENDING_ROLLBACK) {
+            ServerPlayer player = server != null && pending.playerId() != null
+                    ? server.getPlayerList().getPlayer(pending.playerId()) : null;
             boolean done;
             try {
-                done = effect.stop(null, loadChunks);
+                done = pending.effect().stop(player, loadChunks);
             } catch (RuntimeException ex) {
-                Log.warn(TAG, "[WorldResponse] Retried rollback of '{}' failed: {}", effect.id(), ex.toString());
+                Log.warn(TAG, "[WorldResponse] Retried rollback of '{}' failed: {}", pending.effect().id(), ex.toString());
                 done = true;   // 一直抛异常的效果不该每 20 tick 刷一次屏
             }
-            if (done) PENDING_ROLLBACK.remove(effect);
+            if (done) PENDING_ROLLBACK.remove(pending);
         }
     }
 
     private static void onServerTick(ServerTickEvent.Post event) {
         if (--retryCooldown <= 0) {
             retryCooldown = ROLLBACK_RETRY_TICKS;
-            if (!PENDING_ROLLBACK.isEmpty()) retryPending(false);
+            if (!PENDING_ROLLBACK.isEmpty()) retryPending(event.getServer(), false);
         }
         if (ACTIVE.isEmpty()) {
             if (!LAST_POS.isEmpty()) LAST_POS.clear();
@@ -278,8 +297,8 @@ public final class WorldResponseEffects {
                 if (effect.holds(level, pos)) return true;
             }
         }
-        for (WorldResponseEffect effect : PENDING_ROLLBACK) {
-            if (effect.holds(level, pos)) return true;
+        for (PendingRollback pending : PENDING_ROLLBACK) {
+            if (pending.effect().holds(level, pos)) return true;
         }
         return false;
     }
@@ -300,8 +319,8 @@ public final class WorldResponseEffects {
                 releaseOne(level, pos, priority, effect);
             }
         }
-        for (WorldResponseEffect effect : PENDING_ROLLBACK) {
-            releaseOne(level, pos, priority, effect);
+        for (PendingRollback pending : PENDING_ROLLBACK) {
+            releaseOne(level, pos, priority, pending.effect());
         }
     }
 

@@ -45,10 +45,15 @@ import java.util.Set;
  * ④ 不在**建筑地皮**上（{@link ColonyLandProtectionHandler#isProtected}）。于是玩家既不会拿它覆盖
  * 自己的红石/机器，也不会在别人的结构里凭空长出平台来。
  *
- * <p><b>方向与位置</b>：方向用两次扫描之间的**服务端位置差**取主轴（服务端玩家的 {@code deltaMovement}
- * 不可靠），两轴之间做 1.2 倍消抖，斜着走不会东西/南北来回跳；位置永远锚在玩家身上。
- * 每一轮扫描算出「这一轮想要的格子」（平台盘 + 楼梯段），不在其中的旧格子离玩家超过
- * {@code worldResponseLiftRestoreMargin} 就逐格还回——所以台阶是**短暂**的，走开就散。
+ * <p><b>方向</b>：用两次扫描之间的**服务端位置差**取主轴（服务端玩家的 {@code deltaMovement} 不可靠）；
+ * 斜着走（两轴比值 &gt; {@value #AMBIGUOUS_RATIO}）时不猜主轴、直接看**视线**，免得楼梯铺成锯齿。
+ * **视角朝下**（俯角超过 {@code worldResponseLiftMaxDownPitch}，默认 30 度）时不再往前铺楼梯——
+ * 人朝下看是在下落 / 找落脚点，脚下平台照旧留着。
+ *
+ * <p><b>回收**留一轮缓冲**</b>：只有「这一轮和上一轮都不想要」的格子才还回（{@link #wantedPrev}），
+ * 所以新旧交接时不会出现"先收后放"的真空期，也不会留下没人管的残块。
+ * 停下时**不会立刻收回**：只要玩家还在借用范围里（{@code worldResponseLiftRestoreMargin} 格内还有我们
+ * 铺的东西），就先留着当落脚点，等他走开再逐格还回（见 {@link #stop}）。
  *
  * <p>借走的位置、回滚、未加载区块、以及「借用期间禁止第三方改动」统一交给 {@link BorrowedBlocks}
  * （与移山填海同一份规则）。
@@ -73,10 +78,12 @@ public final class LiftEffect implements WorldResponseEffect {
     @Nullable private Vec3 lastPos;
     /** 当前的前进方向（停下之后会沿用一段时间，见 {@code worldResponseLiftHoldTicks}）。 */
     @Nullable private Direction climbDirection;
-    /** 停下之后已经过了多少 tick：超过保持时间才把台阶放掉。 */
+    /** 停下之后已经过了多少 tick：超过保持时间才把楼梯放掉。 */
     private int idleTicks;
-    /** 这一轮「想要」的格子（平台盘 + 楼梯段）：不在里面又走远了的旧格子会被还回去。 */
-    private final Set<BlockPos> wanted = new HashSet<>();
+    /** 这一轮「想要」的格子（平台盘 + 楼梯段）；与 {@link #wantedPrev} 一起决定回收。 */
+    private Set<BlockPos> wanted = new HashSet<>();
+    /** 上一轮「想要」的格子：留一轮缓冲，避免新旧交接时的真空期与残块。 */
+    private Set<BlockPos> wantedPrev = new HashSet<>();
 
     public LiftEffect(ServerLevel level) {
         this.level = level;
@@ -108,33 +115,51 @@ public final class LiftEffect implements WorldResponseEffect {
         if (level != player.serverLevel()) return;   // 换维度后管理器会停掉本效果，这里只是兜底
 
         BlockPos feet = player.blockPosition();
-        // 方向采样：走起来才有新方向；停下了就**沿用上一次的方向**，直到超过保持时间才放手
-        // （不然"刚走两步台阶就散了"——实测反馈）。
-        Direction sampled = sampleDirection(player);
-        if (sampled != null) {
+        boolean lookingDown = player.getXRot() > Math.max(10, BalanceValues.worldResponseLiftMaxDownPitch());
+        Direction sampled = lookingDown ? null : sampleDirection(player);
+        if (lookingDown) {
+            // 视角明显朝下：不再往前铺楼梯，也不保留旧的（人显然在下落/找落脚点）；脚下平台照旧
+            climbDirection = null;
+            idleTicks = 0;
+        } else if (sampled != null) {
             climbDirection = sampled;
             idleTicks = 0;
         } else if (climbDirection != null
                 && ++idleTicks > Math.max(1, BalanceValues.worldResponseLiftHoldTicks())) {
-            climbDirection = null;
+            climbDirection = null;      // 停久了才放手
         }
-        wanted.clear();
-        // 只在露天开工：头顶见不到天（屋顶下/洞里/水下）就整轮不铺——上一轮的形状由下面的
-        // restoreNotIn 按"这一轮想要什么"收回去。
+
+        Set<BlockPos> now = wanted;
+        now.clear();
+        // 只在露天开工：头顶见不到天（屋顶下/洞里/水下）就整轮不铺——旧形状由下面的回收收走
         if (playerUnderOpenSky(player)) {
-            layPlatform(feet);
-            buildStairs(feet);
+            layPlatform(feet, now);
+            buildStairs(feet, now);
         }
-        double grace = Math.max(1, BalanceValues.worldResponseLiftRestoreMargin());
-        borrowed.restoreNotIn(wanted, player.position(), grace * grace);
+        // 回收：**这一轮和上一轮都不想要**的才还（留一轮缓冲，避免"先收后放"的真空期与残块）
+        Set<BlockPos> keep = new HashSet<>(now);
+        keep.addAll(wantedPrev);
+        borrowed.restoreNotIn(keep);
         borrowed.keepShaped();
-        lastPos = player.position();
+        // 双缓冲交换：这一轮变成"上一轮"，旧的那份留给下一轮 clear 复用
+        Set<BlockPos> spare = wantedPrev;
+        wantedPrev = now;
+        wanted = spare;
     }
 
+    /**
+     * 停下时**先不急着还**。
+     *
+     * <p>玩家还站在我们铺的东西上（或旁边）时就先留着当落脚点——法术一停脚下立刻空掉会把人摔下去。
+     * 返回 {@code false} 让管理器过一会儿再问一次，等他走开（或者人走了/换维度了/关服收尾）再整批还回。
+     */
     @Override
     public boolean stop(@Nullable ServerPlayer player, boolean loadChunks) {
-        // 还剩下的由管理器挂起重试（它在那儿记一条日志），这里不再逐次刷屏
-        return borrowed.restoreAll(loadChunks);
+        if (loadChunks || player == null) return borrowed.restoreAll(loadChunks);   // 关服收尾 / 人不在：直接还
+        if (player.serverLevel() != level) return borrowed.restoreAll(false);       // 人已经在别的维度
+        double r = Math.max(1, BalanceValues.worldResponseLiftRestoreMargin());
+        if (borrowed.hasAnyWithin(player.position(), r * r)) return false;          // 还踩着：留着，等走开
+        return borrowed.restoreAll(false);
     }
 
     // ── 脚下一层：半砖平台 ──
@@ -143,7 +168,7 @@ public final class LiftEffect implements WorldResponseEffect {
      * 脚下面那一层铺一大片上半砖：空气铺新的，已经是我们铺的楼梯就**收成上半砖**（玩家踩过的那一级
      * 就是这么薄下去的）。顶面都在玩家脚那一层，所以既不会被顶、也不会把他卡进方块里。
      */
-    private void layPlatform(BlockPos feet) {
+    private void layPlatform(BlockPos feet, Set<BlockPos> now) {
         BlockPos layer = feet.below();
         int r = Math.max(1, BalanceValues.worldResponseLiftPlatformRadius());
         int rSqr = r * r;
@@ -151,7 +176,7 @@ public final class LiftEffect implements WorldResponseEffect {
             for (int dz = -r; dz <= r; dz++) {
                 if (dx * dx + dz * dz > rSqr) continue;      // 圆形而不是方形
                 BlockPos pos = layer.offset(dx, 0, dz);
-                wanted.add(pos);
+                now.add(pos);
                 if (borrowed.contains(pos)) {
                     BorrowedBlocks.Held held = borrowed.held(pos);
                     if (held != null && held.left().is(STAIR)) {
@@ -195,11 +220,11 @@ public final class LiftEffect implements WorldResponseEffect {
 
     /**
      * 沿前进方向铺一段楼梯：第 i 级在「脚那一层前面第 i 格、抬高 i-1 格」，宽度居中于玩家。
-     * 只往**空气**里铺；已经是我们铺的楼梯**只改朝向**（转向之后旧朝向的台阶爬不上去，实测反馈）。
+     * 只往**空气**里铺；已经是我们铺的楼梯**只改朝向**（转向之后旧朝向的台阶爬不上去）。
      */
-    private void buildStairs(BlockPos feet) {
+    private void buildStairs(BlockPos feet, Set<BlockPos> now) {
         Direction dir = climbDirection;
-        if (dir == null) return;                       // 没有方向（刚开/停太久）：只留平台
+        if (dir == null) return;                       // 没有方向（刚开/停太久/朝下看）：只留平台
         int steps = Math.max(1, BalanceValues.worldResponseLiftStairs());
         int half = Math.max(0, (Math.max(1, BalanceValues.worldResponseLiftStairWidth()) - 1) / 2);
         Direction side = dir.getClockWise();           // 宽度方向
@@ -208,7 +233,7 @@ public final class LiftEffect implements WorldResponseEffect {
             BlockPos base = feet.relative(dir, i).offset(0, i - 1, 0);
             for (int w = -half; w <= half; w++) {
                 BlockPos pos = base.relative(side, w);
-                wanted.add(pos);
+                now.add(pos);
                 if (borrowed.contains(pos)) {
                     // 转向之后：把这一格已经铺好的楼梯改成新朝向，否则它会横在路中间爬不上去。
                     // 玩家自己那格不在楼梯段里（i 从 1 起），所以不会改到他正踩着的那一级。

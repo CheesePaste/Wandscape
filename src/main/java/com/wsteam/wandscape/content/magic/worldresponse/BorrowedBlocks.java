@@ -158,20 +158,28 @@ final class BorrowedBlocks {
     }
 
     /**
-     * 把「不在 {@code keep} 里、又离 {@code center} 超过 {@code graceSqr}」的格子还回去。
+     * 把「不在 {@code keep} 里」的格子**全部**还回去。
      *
      * <p>给形状每一轮都在变的效应用（扶摇的平台盘 + 楼梯段）：直接算「这一轮想要哪些格子」比调一个
-     * 球形半径精确，台阶也就真的是**短暂**的——走开就散，只留一小段 grace 防抖。
+     * 球形半径精确。防抖不在这里做——调用方把「上一轮想要的」并进 {@code keep} 就够了
+     * （留一轮缓冲：既不出现"先收后放"的真空期，也不留没人管的残块）。
      */
-    void restoreNotIn(Set<BlockPos> keep, Vec3 center, double graceSqr) {
+    void restoreNotIn(Set<BlockPos> keep) {
         List<BlockPos> wrote = new ArrayList<>();
         for (Map.Entry<BlockPos, Held> e : byY()) {
             if (keep.contains(e.getKey())) continue;
-            if (e.getKey().distToCenterSqr(center.x, center.y, center.z) <= graceSqr) continue;
             if (!restore(e.getKey(), e.getValue(), false, wrote)) continue;
             map.remove(e.getKey());
         }
         wakeUp(wrote);
+    }
+
+    /** 玩家附近（{@code rSqr} 之内）还有没有我们借走的格子。扶摇停下时用它决定「还踩着就先留着」。 */
+    boolean hasAnyWithin(Vec3 center, double rSqr) {
+        for (BlockPos pos : map.keySet()) {
+            if (pos.distToCenterSqr(center.x, center.y, center.z) <= rSqr) return true;
+        }
+        return false;
     }
 
     /**
