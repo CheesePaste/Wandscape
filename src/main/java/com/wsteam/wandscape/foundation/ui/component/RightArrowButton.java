@@ -7,7 +7,7 @@ import net.minecraft.client.gui.narration.NarratedElementType;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.network.chat.Component;
 /**
- * Right arrow button using the right_arrow sprite sheet.
+ * Right arrow button using code-driven precision geometric arrow.
  * Default native size is 20×14.
  */
 public class RightArrowButton extends AbstractButton {
@@ -34,15 +34,11 @@ public class RightArrowButton extends AbstractButton {
         if (!visible) return;
 
         int state;
-        if (!active) state = 2;
+        if (!active) state = 3;
         else if (isHoveredOrFocused()) state = 1;
         else state = 0;
 
-        SkinRender.drawRightArrow(g, getX(), getY(), state);
-
-        if (active && isHoveredOrFocused()) {
-            g.fill(getX() + 1, getY() + 1, getX() + width - 1, getY() + height - 1, 0x30FFFFFF);
-        }
+        SkinRender.drawRightArrow(g, getX(), getY(), width, height, state);
     }
 
     @Override

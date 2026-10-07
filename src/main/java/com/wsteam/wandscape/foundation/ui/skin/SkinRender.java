@@ -285,32 +285,131 @@ public final class SkinRender {
         drawBar(g, x, y, w, SkinSprite.BAR_A_SPRITE.height());
     }
 
-    // ── Less / More buttons ──
+    // ── Code-driven Badge Frame (Shared by gem tools, arrows, steppers) ──
+
+    public static void drawBadgeFrame(GuiGraphics g, int x, int y, int w, int h, int state) {
+        if (w <= 0 || h <= 0) return;
+
+        boolean disabled = (state == 3 || state == 2);
+        boolean hovered = (state == 1);
+
+        int bgTop, bgBottom, borderColor, innerHighlight;
+        if (disabled) {
+            bgTop = 0xAA1C1820;
+            bgBottom = 0xAA121016;
+            borderColor = 0x55554D45;
+            innerHighlight = 0;
+        } else if (hovered) {
+            bgTop = 0xF0361E4C; // 奥术紫金曜石
+            bgBottom = 0xF01C0F2A;
+            borderColor = MedievalColors.BORDER_GOLD; // 亮金
+            innerHighlight = 0x50FFE8A0;
+        } else {
+            bgTop = 0xDD20142C; // 深暮黑紫
+            bgBottom = 0xDD120A1A;
+            borderColor = 0xFF8A6A32; // 暗金
+            innerHighlight = 0x20FFFFFF;
+        }
+
+        // 1. 底色渐变与切角几何体
+        g.fillGradient(x + 1, y + 1, x + w - 1, y + h - 1, bgTop, bgBottom);
+        g.fill(x + 2, y, x + w - 2, y + 1, bgTop);
+        g.fill(x + 2, y + h - 1, x + w - 2, y + h, bgBottom);
+        g.fill(x, y + 2, x + 1, y + h - 2, bgTop);
+        g.fill(x + w - 1, y + 2, x + w, y + h - 2, bgBottom);
+
+        // 2. 切角边框
+        g.fill(x + 2, y, x + w - 2, y + 1, borderColor);
+        g.fill(x + 2, y + h - 1, x + w - 2, y + h, borderColor);
+        g.fill(x, y + 2, x + 1, y + h - 2, borderColor);
+        g.fill(x + w - 1, y + 2, x + w, y + h - 2, borderColor);
+        g.fill(x + 1, y + 1, x + 2, y + 2, borderColor);
+        g.fill(x + w - 2, y + 1, x + w - 1, y + 2, borderColor);
+        g.fill(x + 1, y + h - 2, x + 2, y + h - 1, borderColor);
+        g.fill(x + w - 2, y + h - 2, x + w - 1, y + h - 1, borderColor);
+
+        // 3. 悬停外发光
+        if (hovered) {
+            int glow = 0x33C8A040;
+            g.fill(x + 2, y - 1, x + w - 2, y, glow);
+            g.fill(x + 2, y + h, x + w - 2, y + h + 1, glow);
+            g.fill(x - 1, y + 2, x, y + h - 2, glow);
+            g.fill(x + w, y + 2, x + w + 1, y + h - 2, glow);
+        }
+
+        // 4. 顶部微高光线
+        if (innerHighlight != 0 && w >= 6) {
+            g.fill(x + 2, y + 1, x + w - 2, y + 2, innerHighlight);
+        }
+    }
+
+    // ── Less / More buttons (Code-driven Steppers) ──
+
+    public static void drawLessButton(GuiGraphics g, int x, int y, int w, int h, int state) {
+        drawBadgeFrame(g, x, y, w, h, state);
+        boolean disabled = (state == 3 || state == 2);
+        boolean hovered = (state == 1);
+        int color = disabled ? 0xFF666666 : (hovered ? 0xFFFFE077 : 0xFFD5C4A8);
+        int cx = x + w / 2;
+        int cy = y + h / 2;
+        g.fill(cx - 2, cy - 1, cx + 3, cy + 1, color);
+    }
 
     public static void drawLessButton(GuiGraphics g, int x, int y, int state) {
-        SkinSprite sprite = SkinSprite.LESS_STATES[state];
-        drawSprite(g, SkinSprite.LESS_BTN, x, y, sprite,
-                   SkinSprite.LESS_SHEET_W, SkinSprite.LESS_SHEET_H);
+        drawLessButton(g, x, y, 14, 14, state);
+    }
+
+    public static void drawMoreButton(GuiGraphics g, int x, int y, int w, int h, int state) {
+        drawBadgeFrame(g, x, y, w, h, state);
+        boolean disabled = (state == 3 || state == 2);
+        boolean hovered = (state == 1);
+        int color = disabled ? 0xFF666666 : (hovered ? 0xFFFFE077 : 0xFFD5C4A8);
+        int cx = x + w / 2;
+        int cy = y + h / 2;
+        g.fill(cx - 2, cy - 1, cx + 3, cy + 1, color);
+        g.fill(cx - 1, cy - 2, cx + 1, cy + 3, color);
     }
 
     public static void drawMoreButton(GuiGraphics g, int x, int y, int state) {
-        SkinSprite sprite = SkinSprite.MORE_STATES[state];
-        drawSprite(g, SkinSprite.MORE_BTN, x, y, sprite,
-                   SkinSprite.MORE_SHEET_W, SkinSprite.MORE_SHEET_H);
+        drawMoreButton(g, x, y, 14, 14, state);
     }
 
-    // ── Left / Right arrows ──
+    // ── Left / Right arrows (Code-driven Precision Geometric Accents) ──
+
+    public static void drawLeftArrow(GuiGraphics g, int x, int y, int w, int h, int state) {
+        drawBadgeFrame(g, x, y, w, h, state);
+        boolean disabled = (state == 3 || state == 2);
+        boolean hovered = (state == 1);
+        int color = disabled ? 0xFF666666 : (hovered ? 0xFFFFE077 : 0xFFD5C4A8);
+        int cx = x + w / 2;
+        int cy = y + h / 2;
+        g.fill(cx - 2, cy, cx - 1, cy + 1, color);
+        g.fill(cx - 1, cy - 1, cx, cy + 2, color);
+        g.fill(cx, cy - 2, cx + 1, cy + 3, color);
+        g.fill(cx + 1, cy - 3, cx + 2, cy - 1, color);
+        g.fill(cx + 1, cy + 2, cx + 2, cy + 4, color);
+    }
 
     public static void drawLeftArrow(GuiGraphics g, int x, int y, int state) {
-        SkinSprite sprite = SkinSprite.LEFT_ARROW_STATES[state];
-        drawSprite(g, SkinSprite.LEFT_ARROW, x, y, sprite,
-                   SkinSprite.LEFT_ARROW_SHEET_W, SkinSprite.LEFT_ARROW_SHEET_H);
+        drawLeftArrow(g, x, y, 20, 14, state);
+    }
+
+    public static void drawRightArrow(GuiGraphics g, int x, int y, int w, int h, int state) {
+        drawBadgeFrame(g, x, y, w, h, state);
+        boolean disabled = (state == 3 || state == 2);
+        boolean hovered = (state == 1);
+        int color = disabled ? 0xFF666666 : (hovered ? 0xFFFFE077 : 0xFFD5C4A8);
+        int cx = x + w / 2;
+        int cy = y + h / 2;
+        g.fill(cx + 2, cy, cx + 3, cy + 1, color);
+        g.fill(cx + 1, cy - 1, cx + 2, cy + 2, color);
+        g.fill(cx, cy - 2, cx + 1, cy + 3, color);
+        g.fill(cx - 1, cy - 3, cx, cy - 1, color);
+        g.fill(cx - 1, cy + 2, cx, cy + 4, color);
     }
 
     public static void drawRightArrow(GuiGraphics g, int x, int y, int state) {
-        SkinSprite sprite = SkinSprite.RIGHT_ARROW_STATES[state];
-        drawSprite(g, SkinSprite.RIGHT_ARROW, x, y, sprite,
-                   SkinSprite.RIGHT_ARROW_SHEET_W, SkinSprite.RIGHT_ARROW_SHEET_H);
+        drawRightArrow(g, x, y, 20, 14, state);
     }
 
     // ── Help button (Code-driven Gem Badge) ──
@@ -406,30 +505,42 @@ public final class SkinRender {
                    SkinSprite.EXIT_SHEET_W, SkinSprite.EXIT_SHEET_H);
     }
 
-    // ── Up / Down arrows ──
-
-    public static void drawUpArrow(GuiGraphics g, int x, int y, int state) {
-        SkinSprite sprite = SkinSprite.UP_ARROW_STATES[state];
-        drawSprite(g, SkinSprite.UP_ARROW, x, y, sprite,
-                   SkinSprite.UP_ARROW_SHEET_W, SkinSprite.UP_ARROW_SHEET_H);
-    }
+    // ── Up / Down arrows (Code-driven Precision Geometric Accents) ──
 
     public static void drawUpArrow(GuiGraphics g, int x, int y, int w, int h, int state) {
-        SkinSprite sprite = SkinSprite.UP_ARROW_STATES[state];
-        drawSprite(g, SkinSprite.UP_ARROW, x, y, w, h, sprite,
-                   SkinSprite.UP_ARROW_SHEET_W, SkinSprite.UP_ARROW_SHEET_H);
+        drawBadgeFrame(g, x, y, w, h, state);
+        boolean disabled = (state == 3 || state == 2);
+        boolean hovered = (state == 1);
+        int color = disabled ? 0xFF666666 : (hovered ? 0xFFFFE077 : 0xFFD5C4A8);
+        int cx = x + w / 2;
+        int cy = y + h / 2;
+        g.fill(cx, cy - 2, cx + 1, cy - 1, color);
+        g.fill(cx - 1, cy - 1, cx + 2, cy, color);
+        g.fill(cx - 2, cy, cx + 3, cy + 1, color);
+        g.fill(cx - 3, cy + 1, cx - 1, cy + 2, color);
+        g.fill(cx + 2, cy + 1, cx + 4, cy + 2, color);
     }
 
-    public static void drawDownArrow(GuiGraphics g, int x, int y, int state) {
-        SkinSprite sprite = SkinSprite.DOWN_ARROW_STATES[state];
-        drawSprite(g, SkinSprite.DOWN_ARROW, x, y, sprite,
-                   SkinSprite.DOWN_ARROW_SHEET_W, SkinSprite.DOWN_ARROW_SHEET_H);
+    public static void drawUpArrow(GuiGraphics g, int x, int y, int state) {
+        drawUpArrow(g, x, y, 14, 14, state);
     }
 
     public static void drawDownArrow(GuiGraphics g, int x, int y, int w, int h, int state) {
-        SkinSprite sprite = SkinSprite.DOWN_ARROW_STATES[state];
-        drawSprite(g, SkinSprite.DOWN_ARROW, x, y, w, h, sprite,
-                   SkinSprite.DOWN_ARROW_SHEET_W, SkinSprite.DOWN_ARROW_SHEET_H);
+        drawBadgeFrame(g, x, y, w, h, state);
+        boolean disabled = (state == 3 || state == 2);
+        boolean hovered = (state == 1);
+        int color = disabled ? 0xFF666666 : (hovered ? 0xFFFFE077 : 0xFFD5C4A8);
+        int cx = x + w / 2;
+        int cy = y + h / 2;
+        g.fill(cx - 3, cy - 2, cx - 1, cy - 1, color);
+        g.fill(cx + 2, cy - 2, cx + 4, cy - 1, color);
+        g.fill(cx - 2, cy - 1, cx + 3, cy, color);
+        g.fill(cx - 1, cy, cx + 2, cy + 1, color);
+        g.fill(cx, cy + 1, cx + 1, cy + 2, color);
+    }
+
+    public static void drawDownArrow(GuiGraphics g, int x, int y, int state) {
+        drawDownArrow(g, x, y, 14, 14, state);
     }
 
     // ── Internal blit helpers ──
