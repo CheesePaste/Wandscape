@@ -63,14 +63,18 @@ public final class LiftEffect implements WorldResponseEffect {
     private static final Block SLAB = Blocks.STONE_SLAB;
     /** 一次扫描里水平位移小于这个数（格）就算「没在前进」，不铺新楼梯。要放得过潜行（约 0.26 格/4t）。 */
     private static final double MOVING_EPSILON = 0.1;
+    /** 两轴位移比值超过它就当"斜着走"：这时用视线定方向，而不是猜主轴（免得楼梯铺成锯齿）。 */
+    private static final double AMBIGUOUS_RATIO = 0.75;
 
     private final ServerLevel level;
     private final BorrowedBlocks borrowed;
     private int scanCooldown;
     /** 上一次扫描的位置：用服务端位置差判断前进方向。 */
     @Nullable private Vec3 lastPos;
-    /** 上一次定下来的前进轴：斜着走时用它消抖。 */
+    /** 当前的前进方向（停下之后会沿用一段时间，见 {@code worldResponseLiftHoldTicks}）。 */
     @Nullable private Direction climbDirection;
+    /** 停下之后已经过了多少 tick：超过保持时间才把台阶放掉。 */
+    private int idleTicks;
     /** 这一轮「想要」的格子（平台盘 + 楼梯段）：不在里面又走远了的旧格子会被还回去。 */
     private final Set<BlockPos> wanted = new HashSet<>();
 
@@ -104,12 +108,22 @@ public final class LiftEffect implements WorldResponseEffect {
         if (level != player.serverLevel()) return;   // 换维度后管理器会停掉本效果，这里只是兜底
 
         BlockPos feet = player.blockPosition();
+        // 方向采样：走起来才有新方向；停下了就**沿用上一次的方向**，直到超过保持时间才放手
+        // （不然"刚走两步台阶就散了"——实测反馈）。
+        Direction sampled = sampleDirection(player);
+        if (sampled != null) {
+            climbDirection = sampled;
+            idleTicks = 0;
+        } else if (climbDirection != null
+                && ++idleTicks > Math.max(1, BalanceValues.worldResponseLiftHoldTicks())) {
+            climbDirection = null;
+        }
         wanted.clear();
         // 只在露天开工：头顶见不到天（屋顶下/洞里/水下）就整轮不铺——上一轮的形状由下面的
         // restoreNotIn 按"这一轮想要什么"收回去。
         if (playerUnderOpenSky(player)) {
             layPlatform(feet);
-            buildStairs(player, feet);
+            buildStairs(feet);
         }
         double grace = Math.max(1, BalanceValues.worldResponseLiftRestoreMargin());
         borrowed.restoreNotIn(wanted, player.position(), grace * grace);
@@ -181,21 +195,30 @@ public final class LiftEffect implements WorldResponseEffect {
 
     /**
      * 沿前进方向铺一段楼梯：第 i 级在「脚那一层前面第 i 格、抬高 i-1 格」，宽度居中于玩家。
-     * 只往**空气**里铺；已经有我们的方块就不重铺（保留它原本的朝向）。
+     * 只往**空气**里铺；已经是我们铺的楼梯**只改朝向**（转向之后旧朝向的台阶爬不上去，实测反馈）。
      */
-    private void buildStairs(ServerPlayer player, BlockPos feet) {
-        Direction dir = climbDirection(player);
-        if (dir == null) return;                       // 没在前进：不铺新的（旧格子按 keep 集合保留/收回）
+    private void buildStairs(BlockPos feet) {
+        Direction dir = climbDirection;
+        if (dir == null) return;                       // 没有方向（刚开/停太久）：只留平台
         int steps = Math.max(1, BalanceValues.worldResponseLiftStairs());
         int half = Math.max(0, (Math.max(1, BalanceValues.worldResponseLiftStairWidth()) - 1) / 2);
         Direction side = dir.getClockWise();           // 宽度方向
-        BlockState stair = STAIR.defaultBlockState().setValue(StairBlock.FACING, dir);
+        BlockState stair = stairState(dir);
         for (int i = 1; i <= steps; i++) {
             BlockPos base = feet.relative(dir, i).offset(0, i - 1, 0);
             for (int w = -half; w <= half; w++) {
                 BlockPos pos = base.relative(side, w);
                 wanted.add(pos);
-                if (borrowed.contains(pos)) continue;          // 已经铺过：不重铺，也不改它的朝向
+                if (borrowed.contains(pos)) {
+                    // 转向之后：把这一格已经铺好的楼梯改成新朝向，否则它会横在路中间爬不上去。
+                    // 玩家自己那格不在楼梯段里（i 从 1 起），所以不会改到他正踩着的那一级。
+                    BorrowedBlocks.Held held = borrowed.held(pos);
+                    if (held != null && held.left().is(STAIR)
+                            && held.left().getValue(StairBlock.FACING) != dir) {
+                        borrowed.reshape(pos, stair);
+                    }
+                    continue;
+                }
                 // 楼梯逐格还要求"这一格见得到天"：免得楼梯长进山体、屋顶这些地方
                 if (!canBuildAt(pos) || !level.canSeeSky(pos)) continue;
                 borrowed.take(pos, stair);
@@ -203,30 +226,32 @@ public final class LiftEffect implements WorldResponseEffect {
         }
     }
 
+    private static BlockState stairState(Direction facing) {
+        return STAIR.defaultBlockState().setValue(StairBlock.FACING, facing);
+    }
+
     /**
-     * 前进方向：用两次扫描之间的**位置差**取主轴（服务端玩家的 deltaMovement 不可靠）。
+     * 前进方向：用两次扫描之间的**位置差**取主轴（服务端玩家的 {@code deltaMovement} 不可靠）。
      *
-     * <p>消抖：新方向与上一次不是同一条轴时，必须在这一轴上明显更"正"（1.2 倍）才换——斜着走、
-     * 或者转身到一半，都不会让楼梯在两条轴之间来回跳。
+     * <p>斜着走（两轴分量差不多）时不猜主轴，直接看**视线朝向**——那才是玩家想去的地方，
+     * 也避免了「在两条轴之间来回跳、楼梯铺成锯齿」。正对某条轴走时才用位移主轴。
      *
-     * @return null = 这次没在前进（站住了/被挡住了），不铺新楼梯
+     * @return null = 这次没在前进（站住了/被挡住了）
      */
     @Nullable
-    private Direction climbDirection(ServerPlayer player) {
+    private Direction sampleDirection(ServerPlayer player) {
         Vec3 now = player.position();
         if (lastPos == null) return null;
         double dx = now.x - lastPos.x;
         double dz = now.z - lastPos.z;
-        if (Math.max(Math.abs(dx), Math.abs(dz)) < MOVING_EPSILON) return null;
-        Direction candidate = Math.abs(dx) >= Math.abs(dz)
-                ? (dx > 0 ? Direction.EAST : Direction.WEST)
-                : (dz > 0 ? Direction.SOUTH : Direction.NORTH);
-        if (climbDirection != null && candidate.getAxis() != climbDirection.getAxis()) {
-            double onNewAxis = Math.abs(candidate.getAxis() == Direction.Axis.X ? dx : dz);
-            double onOldAxis = Math.abs(climbDirection.getAxis() == Direction.Axis.X ? dx : dz);
-            if (onNewAxis < onOldAxis * 1.2) return climbDirection;
+        double ax = Math.abs(dx);
+        double az = Math.abs(dz);
+        if (Math.max(ax, az) < MOVING_EPSILON) return null;
+        if (Math.min(ax, az) > Math.max(ax, az) * AMBIGUOUS_RATIO) {
+            Direction look = player.getDirection();      // 视线水平朝向（已是最近的四个方向之一）
+            return look.getAxis().isHorizontal() ? look : null;
         }
-        climbDirection = candidate;
-        return candidate;
+        return ax >= az ? (dx > 0 ? Direction.EAST : Direction.WEST)
+                : (dz > 0 ? Direction.SOUTH : Direction.NORTH);
     }
 }

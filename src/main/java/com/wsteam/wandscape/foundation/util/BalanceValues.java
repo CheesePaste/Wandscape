@@ -38,7 +38,7 @@ public final class BalanceValues {
             "worldResponseTerraformRadius", "worldResponseTerraformScanInterval",
             "worldResponseTerraformRestoreMargin", "worldResponseTeleportJumpDistance",
             "worldResponseLiftScanInterval", "worldResponseLiftStairs", "worldResponseLiftStairWidth",
-            "worldResponseLiftPlatformRadius", "worldResponseLiftRestoreMargin");
+            "worldResponseLiftPlatformRadius", "worldResponseLiftRestoreMargin", "worldResponseLiftHoldTicks");
 
     // ============================================================
     // npc 回血回蓝
@@ -157,7 +157,7 @@ public final class BalanceValues {
     /** 清理半径（格，圆形）：玩家身体两层内该半径的阻挡会被临时移开。 */
     private static final int DEFAULT_WORLD_RESPONSE_TERRAFORM_RADIUS = 3;
     /** 扫描间隔（tick）：越小越跟手、越费性能；默认 10 = 每秒两次。 */
-    private static final int DEFAULT_WORLD_RESPONSE_TERRAFORM_SCAN_INTERVAL = 10;
+    private static final int DEFAULT_WORLD_RESPONSE_TERRAFORM_SCAN_INTERVAL = 3;
     /** 回放余量（格）：离开「半径 + 余量」的方块才放回，避免在脚边闪回。 */
     private static final int DEFAULT_WORLD_RESPONSE_TERRAFORM_RESTORE_MARGIN = 2;
     /** 单 tick 位移超过这个格数就按「被传送了」处理（正常跑跳/鞘翅/激流都到不了，见 domain-notes）。 */
@@ -173,6 +173,8 @@ public final class BalanceValues {
     private static final int DEFAULT_WORLD_RESPONSE_LIFT_PLATFORM_RADIUS = 4;
     /** 扶摇：不在这一轮形状里、又离玩家还不到这个距离（格）的旧格子先留着，防抖。 */
     private static final int DEFAULT_WORLD_RESPONSE_LIFT_RESTORE_MARGIN = 2;
+    /** 扶摇：玩家停下来之后台阶还留多久（tick）；太短会"刚走两步就散"，默认 3 秒。 */
+    private static final int DEFAULT_WORLD_RESPONSE_LIFT_HOLD_TICKS = 60;
 
     public static int worldResponseTerraformRadius() { return (int)(double) OVERRIDES.getOrDefault("worldResponseTerraformRadius", (double) DEFAULT_WORLD_RESPONSE_TERRAFORM_RADIUS); }
     public static void setWorldResponseTerraformRadius(int v) { OVERRIDES.put("worldResponseTerraformRadius", (double) v); }
@@ -192,6 +194,8 @@ public final class BalanceValues {
     public static void setWorldResponseLiftPlatformRadius(int v) { OVERRIDES.put("worldResponseLiftPlatformRadius", (double) v); }
     public static int worldResponseLiftRestoreMargin() { return (int)(double) OVERRIDES.getOrDefault("worldResponseLiftRestoreMargin", (double) DEFAULT_WORLD_RESPONSE_LIFT_RESTORE_MARGIN); }
     public static void setWorldResponseLiftRestoreMargin(int v) { OVERRIDES.put("worldResponseLiftRestoreMargin", (double) v); }
+    public static int worldResponseLiftHoldTicks() { return (int)(double) OVERRIDES.getOrDefault("worldResponseLiftHoldTicks", (double) DEFAULT_WORLD_RESPONSE_LIFT_HOLD_TICKS); }
+    public static void setWorldResponseLiftHoldTicks(int v) { OVERRIDES.put("worldResponseLiftHoldTicks", (double) v); }
 
     // ============================================================
     // 持久化 JSON 覆盖（data/wandscape/wandscape_balance.json）驱动

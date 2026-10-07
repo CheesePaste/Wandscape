@@ -34,8 +34,11 @@ import java.util.Set;
  * 整合包的自定义液体没有替身，退回屏障方块。
  * 配合管理器里的热伤害免疫（{@link #wardsHeat()}），路过岩浆池不会掉血。
  *
- * <p><b>重力方块与液体靠写入标志解决</b>：改动时用 {@link Block#UPDATE_CLIENTS}（只同步客户端、
- * 不给邻居发更新），于是正上方的沙/砾**不会立刻塌进来**、旁边的水/岩浆**不会立刻灌进来**；
+ * <p><b>重力方块、液体与「靠支撑的方块」都靠写入标志解决</b>：改写用 {@link BorrowedBlocks} 的
+ * {@code WRITE_FLAGS}（{@code UPDATE_CLIENTS | UPDATE_KNOWN_SHAPE | UPDATE_SUPPRESS_DROPS}）——
+ * 它跳过**邻居方块更新**（沙砾不塌、水浆不灌）**也跳过邻居形状更新**（雪层/火把/花草/铁轨不会
+ * 因为底下被抽空而当场碎掉；这条是实测抓到的 bug：只用 flag 2 时 {@code updateNeighbourShapes}
+ * 照样跑，靠支撑的方块会碎，而且它们不在我们的快照里、回滚也还不了）；
  * 回放时用 {@link Block#UPDATE_ALL}，物理照常回归（该落的落、该流的流）。
  * 这比"在边界额外放临时封堵"干净得多：不留任何非原版方块，也就不需要第二轮还原。
  *
