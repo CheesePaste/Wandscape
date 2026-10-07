@@ -115,7 +115,10 @@ public final class LiftEffect implements WorldResponseEffect {
         if (level != player.serverLevel()) return;   // 换维度后管理器会停掉本效果，这里只是兜底
 
         BlockPos feet = player.blockPosition();
-        boolean lookingDown = player.getXRot() > Math.max(10, BalanceValues.worldResponseLiftMaxDownPitch());
+        // 俯角闸门只在**空中**（跳起/下落/腾空）生效：本意是"人朝下看是在下落找落脚点，别再长梯子"；
+        // 但踩在台阶上爬升时要低头看路，那时把人停掉就再也爬不上去了（实测反馈"无法释放楼梯"）。
+        boolean lookingDown = !player.onGround()
+                && player.getXRot() > Math.max(10, BalanceValues.worldResponseLiftMaxDownPitch());
         Direction sampled = lookingDown ? null : sampleDirection(player);
         if (lookingDown) {
             // 视角明显朝下：不再往前铺楼梯，也不保留旧的（人显然在下落/找落脚点）；脚下平台照旧

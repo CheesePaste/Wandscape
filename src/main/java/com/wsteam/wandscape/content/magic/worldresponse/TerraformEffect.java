@@ -179,12 +179,19 @@ public final class TerraformEffect implements WorldResponseEffect {
         return Blocks.BARRIER;
     }
 
-    /** 「会阻挡移动」：有碰撞箱，或者是液体（水会推人，同样算挡路）。 */
+    /**
+     * 「碍事」的判定：有碰撞箱、是液体、或者**有形状**。
+     *
+     * <p>第三条是实测补的：雪层 / 花草 / 火把 / 铁轨 / 地毯 / 按钮这些**薄片与植物**碰撞箱要么为空、
+     * 要么小得可怜，但一样挡视线、一样该被让开——只按碰撞箱判会让它们原地不动（实测反馈"范围内的雪不会消失"）。
+     * 真正空形状的东西（光方块、火）仍然不碰。
+     */
     private boolean blocksMovement(BlockPos pos) {
         BlockState state = level.getBlockState(pos);
         if (state.isAir()) return false;
-        if (!state.getFluidState().isEmpty()) return true;
-        return !state.getCollisionShape(level, pos).isEmpty();
+        if (!state.getFluidState().isEmpty()) return true;                    // 水会推人，算挡路
+        if (!state.getCollisionShape(level, pos).isEmpty()) return true;
+        return !state.getShape(level, pos).isEmpty();                          // 薄片/植物：没有（或几乎没有）碰撞箱，但有形状
     }
 
     /** 这一格能不能动：玩家名单、传送门（本体与门框）、不可破坏、带方块实体、建筑地皮，五道门。 */

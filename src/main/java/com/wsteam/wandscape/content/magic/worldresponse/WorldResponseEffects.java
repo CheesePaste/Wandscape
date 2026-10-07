@@ -320,12 +320,27 @@ public final class WorldResponseEffects {
             }
         }
         for (PendingRollback pending : PENDING_ROLLBACK) {
-            releaseOne(level, pos, priority, pending.effect());
+            releaseOne(level, pos, priority, pending.effect(), true);
         }
     }
 
     private static void releaseOne(LevelAccessor level, BlockPos pos, int priority, WorldResponseEffect effect) {
-        if (effect.borrowPriority() >= priority) return;      // 同级 / 更高优先级：不让
+        releaseOne(level, pos, priority, effect, false);
+    }
+
+    /**
+     * 让一个持有者让出这一格。
+     *
+     * <p>**衰减中的持有者（正在等玩家走开 / 等区块加载）连同级也要让**：否则"上一次的残留还握着格子"
+     * 会把重新施放的同名效果顶在门外（实测反馈：平息后重新放扶摇，平台/楼梯铺不出来）。活跃的效果之间
+     * 仍然只让给严格更高优先级。
+     */
+    private static void releaseOne(LevelAccessor level, BlockPos pos, int priority,
+                                   WorldResponseEffect effect, boolean holderIsPending) {
+        boolean yields = holderIsPending
+                ? effect.borrowPriority() <= priority
+                : effect.borrowPriority() < priority;
+        if (!yields) return;
         if (!effect.holds(level, pos)) return;
         try {
             effect.release(level, pos);
