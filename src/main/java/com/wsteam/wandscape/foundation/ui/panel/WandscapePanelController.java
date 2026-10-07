@@ -117,6 +117,7 @@ public final class WandscapePanelController {
         // 玩家列表闪烁；引导结束后 Tab 恢复原版玩家列表功能。
         // 面板隐藏时放行，让 Tab 回到原版玩家列表。
         if (!WandscapePanelState.isPanelHidden()
+                && !WandscapePanelState.isTutorialSuppressed()
                 && com.wsteam.wandscape.foundation.ui.tutorial.TutorialSession.shouldShow()
                 && com.wsteam.wandscape.WandscapeClient.TUTORIAL_FOLD_TOGGLE.getKey().getValue() == GLFW.GLFW_KEY_TAB) {
             mc.options.keyPlayerList.setDown(false);
@@ -215,13 +216,7 @@ public final class WandscapePanelController {
             }
         }
 
-        // ── 小镇面板（侧边栏「小镇」页）：切换镇 / 接受拒绝邀请 / 调档位 / 移除 / 邀请在线玩家 ──
-        // 命中几何在 overlay（与渲染同源），这里只负责把命中翻成发包动作。
-        if (WandscapePanelOverlay.isOverColonyPanel(mouseX, mouseY, screenW, screenH)) {
-            handleColonyPanelClick(mouseX, mouseY, screenW, screenH);
-            event.setCanceled(true);
-            return;
-        }
+
 
         // ── Build mode right pop panel handling ──
         if (BuildPopPanelOverlay.isActive()) {
@@ -357,6 +352,13 @@ public final class WandscapePanelController {
                 event.setCanceled(true);
                 return;
             }
+        }
+
+        // ── Colony Management Hub ──
+        if (com.wsteam.wandscape.content.colony.ui.ColonyManagementOverlay.isActive()) {
+            com.wsteam.wandscape.content.colony.ui.ColonyManagementOverlay.handleMouseClick(mouseX, mouseY, screenW, screenH);
+            event.setCanceled(true);
+            return;
         }
 
         // ── Task & Mage Management Hub ──
@@ -501,160 +503,7 @@ public final class WandscapePanelController {
         Log.info(TAG, "[Panel] Tab {} clicked → SubMode {}", tabIndex, targetMode);
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // ── 小镇面板 handlers ──
-    // ═══════════════════════════════════════════════════════════════
 
-    /**
-     * 小镇面板点击分发：几何命中由 {@link WandscapePanelOverlay#colonyHitTest} 给出（与渲染同源，
-     * 已把置灰按钮滤掉），这里只把命中翻成 {@link ColonyMemberActionPacket} 意图包。
-     * 档位/归属一律由服务端重判——客户端的置灰与这里的二次判定只是 UX 与防御。
-     *
-     * <p>唯一的例外是 {@code TRANSFER_TOGGLE}：它只切客户端的「转让镇长」模式，不发包。
-     */
-    private static void handleColonyPanelClick(double mouseX, double mouseY, int screenW, int screenH) {
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null) return;
-        try {
-            WandscapePanelOverlay.ColonyHitResult hit =
-                    WandscapePanelOverlay.colonyHitTest(mouseX, mouseY, screenW, screenH);
-
-            switch (hit.hit()) {
-                case MISS -> { return; }
-
-                // 切换当前镇：只发 SELECT 意图，**不在本地改选中**——当前镇由服务端唯一定义
-                // （ActiveColonyTracker 落库 + ColonyContextSync 统一推送），面板高亮跟着推送走。
-                // 本地乐观改会重新造出「面板切了但顶栏不变」的第二份状态，正是本轮要修的 bug。
-                case COLONY_ROW -> {
-                    WandscapePanelOverlay.ColonyRow row =
-                            rowOrNull(WandscapePanelOverlay.colonyRows(), hit.index());
-                    if (row == null || row.id() == null) return;
-                    if (!WandscapePanelOverlay.canSwitch(row)) {
-                        // 命中检测已把分组标题与 ALLY 行滤掉；走到这里说明几何/数据不一致，记一条不发包。
-                        Log.warn(TAG, "[Colony] 不可切换的行却命中点击: colony={} role={}",
-                                row.id(), row.role());
-                        return;
-                    }
-                    Net.toServer(new ColonyMemberActionPacket(
-                            ColonyMemberActionPacket.Action.SELECT, row.id(), null, null));
-                    playClickSound(mc);
-                }
-
-                // 接受 / 拒绝：服务端只认它自己存的那条待处理邀请，客户端传的镇与档位不决定结果
-                case INVITE_ACCEPT, INVITE_DECLINE -> {
-                    WandscapePanelOverlay.InviteRow invite =
-                            rowOrNull(WandscapePanelOverlay.inviteRows(), hit.index());
-                    if (invite == null) return;
-                    var action = hit.hit() == WandscapePanelOverlay.ColonyHit.INVITE_ACCEPT
-                            ? ColonyMemberActionPacket.Action.ACCEPT
-                            : ColonyMemberActionPacket.Action.DECLINE;
-                    Net.toServer(new ColonyMemberActionPacket(
-                            action, invite.colonyId(), mc.player.getUUID(), invite.role()));
-                    playClickSound(mc);
-                }
-
-                // 档位调整：仅 OWNER（再判一次；永不设成 OWNER，转让只走 ColonyApi.transferOwner）
-                case MEMBER_ROLE -> {
-                    if (!WandscapePanelOverlay.canGovern()) return;
-                    UUID colonyId = requireSelectedColony();
-                    WandscapePanelOverlay.MemberRow member =
-                            rowOrNull(WandscapePanelOverlay.memberRows(), hit.index());
-                    if (colonyId == null || member == null || member.role() == ColonyRole.OWNER) return;
-                    Net.toServer(new ColonyMemberActionPacket(ColonyMemberActionPacket.Action.SET_ROLE,
-                            colonyId, member.id(), nextManageableRole(member.role())));
-                    playClickSound(mc);
-                }
-
-                // 移除成员：仅 OWNER，且移不掉 OWNER（服务端同样拒）
-                case MEMBER_REMOVE -> {
-                    if (!WandscapePanelOverlay.canGovern()) return;
-                    UUID colonyId = requireSelectedColony();
-                    WandscapePanelOverlay.MemberRow member =
-                            rowOrNull(WandscapePanelOverlay.memberRows(), hit.index());
-                    if (colonyId == null || member == null || member.role() == ColonyRole.OWNER) return;
-                    Net.toServer(new ColonyMemberActionPacket(ColonyMemberActionPacket.Action.REMOVE,
-                            colonyId, member.id(), member.role()));
-                    playClickSound(mc);
-                }
-
-                // 转让镇长模式开关：纯客户端状态，不发包——开了之后成员行只剩一个【转让】按钮
-                case TRANSFER_TOGGLE -> {
-                    if (!WandscapePanelOverlay.canGovern()) return;
-                    WandscapePanelOverlay.toggleTransferMode();
-                    playClickSound(mc);
-                }
-
-                // 转让镇长：把当前镇的镇长让给这一行的成员（唯一能把人变成 OWNER 的动作）。
-                // 只发意图；服务端校验「我是该镇 OWNER + 目标是非 OWNER 成员」后才落库。
-                case MEMBER_TRANSFER -> {
-                    if (!WandscapePanelOverlay.canGovern() || !WandscapePanelOverlay.isTransferMode()) return;
-                    UUID colonyId = requireSelectedColony();
-                    WandscapePanelOverlay.MemberRow member =
-                            rowOrNull(WandscapePanelOverlay.memberRows(), hit.index());
-                    if (colonyId == null || member == null || member.id() == null) return;
-                    if (member.role() == ColonyRole.OWNER) return;
-                    Net.toServer(new ColonyMemberActionPacket(ColonyMemberActionPacket.Action.TRANSFER,
-                            colonyId, member.id(), member.role()));
-                    // 发出即退出转让模式，等服务端权威花名册推回来；成功时我不再是镇长，按钮自然下线
-                    WandscapePanelOverlay.exitTransferMode();
-                    playClickSound(mc);
-                }
-
-                // 邀请在线玩家：仅 MANAGER+，档位取面板当前选择（默认 MEMBER）
-                case ONLINE_INVITE -> {
-                    if (!WandscapePanelOverlay.canInvite()) return;
-                    UUID colonyId = requireSelectedColony();
-                    WandscapePanelOverlay.OnlineRow target =
-                            rowOrNull(WandscapePanelOverlay.onlineRows(), hit.index());
-                    if (colonyId == null || target == null || target.id() == null) return;
-                    Net.toServer(new ColonyMemberActionPacket(ColonyMemberActionPacket.Action.INVITE,
-                            colonyId, target.id(), WandscapePanelOverlay.inviteRole()));
-                    playClickSound(mc);
-                }
-
-                // 切换「邀请档位」（纯客户端选择，不发包）
-                case INVITE_ROLE -> {
-                    if (!WandscapePanelOverlay.canInvite()) return;
-                    WandscapePanelOverlay.cycleInviteRole();
-                    playClickSound(mc);
-                }
-            }
-        } catch (Throwable t) {
-            Log.warn(TAG, "[Colony] 面板点击处理失败: {}", t.toString());
-        }
-    }
-
-    /** 当前镇 UUID（服务端推送的唯一真源）；无当前镇时记一条 warn 并返回 null（调用方据此放弃发包）。 */
-    private static UUID requireSelectedColony() {
-        UUID colonyId = WandscapePanelOverlay.currentColonyId();
-        if (colonyId == null) {
-            Log.warn(TAG, "[Colony] 当前没有可操作的小镇，忽略本次成员操作");
-        }
-        return colonyId;
-    }
-
-    /** 面板行视图按下标取行；越界记 warn 并返回 null（防越界崩客户端）。 */
-    private static <T> T rowOrNull(List<T> rows, int index) {
-        if (rows == null || index < 0 || index >= rows.size()) {
-            Log.warn(TAG, "[Colony] 命中行下标越界: index={} size={}", index, rows == null ? -1 : rows.size());
-            return null;
-        }
-        return rows.get(index);
-    }
-
-    /**
-     * 档位循环 ALLY → MEMBER → MANAGER → ALLY。
-     * 永不产出 OWNER：转让是 {@code Action.TRANSFER}（小镇面板的【转让镇长】）的事，不从这里走
-     * （服务端同样拒）。
-     */
-    private static ColonyRole nextManageableRole(ColonyRole current) {
-        if (current == null) return ColonyRole.MEMBER;
-        return switch (current) {
-            case ALLY -> ColonyRole.MEMBER;
-            case MEMBER -> ColonyRole.MANAGER;
-            case MANAGER, OWNER -> ColonyRole.ALLY;
-        };
-    }
 
     private static void playClickSound(Minecraft mc) {
         mc.getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(
@@ -742,6 +591,7 @@ public final class WandscapePanelController {
         // When no guide is showing, Tab does nothing to the panel.
         if (com.wsteam.wandscape.WandscapeClient.TUTORIAL_FOLD_TOGGLE.matches(key, scanCode)
                 && WandscapePanelState.isPanelOpen()
+                && !WandscapePanelState.isTutorialSuppressed()
                 && com.wsteam.wandscape.foundation.ui.tutorial.TutorialSession.shouldShow()) {
             com.wsteam.wandscape.foundation.ui.tutorial.TutorialSession.toggleCollapsed();
             return;
@@ -868,15 +718,8 @@ public final class WandscapePanelController {
     static void onMouseScroll(InputEvent.MouseScrollingEvent event) {
         if (WandscapePanelState.isPanelHidden()) return;
 
-        // 小镇面板：滚轮滚动光标所在分区（只在该分区确有溢出时消费事件）
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.screen == null && WandscapePanelState.isPanelOpen()) {
-            double guiScale = mc.getWindow().getGuiScale();
-            int screenW = mc.getWindow().getGuiScaledWidth();
-            int screenH = mc.getWindow().getGuiScaledHeight();
-            double mouseX = mc.mouseHandler.xpos() / guiScale;
-            double mouseY = mc.mouseHandler.ypos() / guiScale;
-            if (WandscapePanelOverlay.scrollColonyPanel(mouseX, mouseY, screenW, screenH, event.getScrollDeltaY())) {
+        if (com.wsteam.wandscape.content.colony.ui.ColonyManagementOverlay.isActive()) {
+            if (com.wsteam.wandscape.content.colony.ui.ColonyManagementOverlay.handleMouseScroll(event.getScrollDeltaY())) {
                 event.setCanceled(true);
                 return;
             }

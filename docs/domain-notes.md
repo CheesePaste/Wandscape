@@ -246,6 +246,8 @@
    - **三阶段**：`瞄准`（虚影每 tick / 每帧跟随准心，**不按任何键**）→ `调整中`（`isPinned()`：锚点固定、不再跟随，可用 ALT+滚轮 / 6 个按钮改 xyz、左键或面板按钮旋转）→ `已定稿`（`isLocked()`：位移与旋转一律拒绝）。
    - **确认走 Enter 与面板那颗阶段按钮**：两者都是三态循环（瞄准 → 确认位置/调整中 → 定稿 → 重新瞄准），规则收敛在 `ProjectionClientState.advancePlacementStage()` 单点裁决，别在别处再写一套 if。面板同一颗按钮的文案随状态变：确认位置 / 定稿 / 重新瞄准。
    - **ALT+滚轮**沿「相机视线三分量绝对值最大的那个轴」移动 1 格（等价 Litematica 的 `getClosestLookingDirection`：抬头低头改 Y，平视朝哪看改对应 X/Z）；**普通滚轮不消费事件、不做任何事**。瞄准阶段微调会自动进入「调整中」。
+     - **按住 ALT 才能自由转视角**（实测反馈后的口径）：俯瞰模式默认「光标抬到面板上就不转视角」（鼠标交给光标），而放置时面板常开、右键又被用来开施工屏，视角会锁死在初始俯视 45°——方向判定就永远只能得到"向下"。所以 `OverviewFlightController.onMouseTurn` 里加了 `Screen.hasAltDown()` 这个出口：**按住 ALT 一律允许转视角**。玩家侧的操作口径是：**ALT = 精调模式**（按住后转视角瞄准方向，同时滚轮沿该方向挪一格）。
+     - **平局优先水平**（`ProjectionFlightController.VERTICAL_DOMINANCE = 1.15`，约等于俯仰 49°）：45° 俯视时上下分量与水平分量正好相等，不设门槛的话平局永远判成「向下」，"面朝方向"完全用不上；设了门槛后默认 45° 视角按面朝方向微调，要上下挪就把视角抬/压得更陡（按住 ALT 很好做到）。
      - **有最小灵敏度限制**（`ProjectionFlightController` 的 `SCROLL_STEP_MIN = 0.6` 与 `SCROLL_NUDGE_COOLDOWN_MS = 100`）：高分辨率滚轮/触控板一次物理刻度会连发多个小 delta，逐事件动一格就是「滚一下跳好几格」；现在小 delta 先累加、凑够一格才动，两次微调之间还有 100ms 冷却（冷却期内输入整段丢弃——宁可少动一格，也不连跳）。要调手感只动这两个常量。
    - **三个阶段任意时刻都能回建造栏换建筑**（数字键 1 → 建造页）：`BuildingSelectionOverlay.isActive()` **刻意不看 `isPinned()/isLocked()`**，也不再按右键按住与否隐藏（右键现在只是「打开施工屏」的一次点击，不是长按定位）。换建筑只换配置、锚点不动。历史上那里有 `!isPinned()` 门，表现为「确认位置后按 1 回建造页，栏子开了却既不显示也不吃点击」。
    - **旋转**走 `ProjectionFlightController.rotateFromInput()`（**左键**与面板「旋转」按钮共用的唯一入口；键盘侧别再另占键位——R 试过，撞 JEI/EMI 的配方键）；**已定稿后拒绝**——定稿的含义就是几何已确认，改朝向要先重新瞄准。
@@ -298,6 +300,7 @@
    - **Tutorial**（`content/tutorial`）：新手引导系统内核，包含引导步骤（`TutorialStep`）、服务端会话（`TutorialSession`）、网络同步与 HUD 引导框渲染。
    - **Guidebook**（`content/items`）：指南书物品与 Markdown 手册文档阅读器。
    - 两个系统各自自治，严禁混用 `Guide*` 泛名。
+2. **投影放置期间导引框收起**（`WandscapePanelState.isTutorialSuppressed()`）：右上角那块会挡住投影与地形（实测反馈），所以在**建造投影子模式 / 已定位**时**不画、不吃点击、也不劫持 Tab**（Tab 回到原版玩家列表）。判据**只有这一个方法**，`TutorialRenderer.render/isCloseClicked/isCollapseClicked` 与 `WandscapePanelController` 两处 Tab 门控都问它——**别在别处再写一套 `buildMode || isPlacing || ...`**（那些 flag 只用来决定文案/版式）。新手进度与折叠状态不受影响，退出放置自动回来；想改成"进放置自动折成小三角、可展开"只需把 `TutorialRenderer.render` 里那处 `hidden()` 换成 `TutorialSession.toggleCollapsed()`。
 2. **获得方式两条，都要留**：玩家第一次登录某个存档由 `content/items/guidebook/internal/GuideBookGrantHandler` 直接发一本（标记写玩家持久化 NBT，只发一次，旧档玩家升级后补发）；
    `data/wandscape/recipe/guide_book.json` 的配方**保留**——手册丢了照配方再做一本，这是唯一补做途径。欢迎语（`message.wandscape.town.welcome`）按这个口径写，别再写「制作一本手册」。
 
@@ -350,12 +353,11 @@
    - **元素分配一半看战利品表、一半随机撒**：原版宝箱战利品以金属（铁/铜/金）为主，纯按战利品表折算会让所有箱子都给金属。
      `ExplorationRewardRange.rollElements` 只让**总额的一部分**沿用战利品表比例（比例来自 `reward.loot_share`，默认 0.5，0 = 全随机、1 = 纯战利品），另一半按随机权重（0.5~1.5 抖动、最大余数法配平）平摊到七元素；
      总额与经验折算不受影响（经验是按元素总值算的，没变）。
-   - **双轨入库**：经验直加小镇等级，元素直入小镇 `ColonyItemBank` 金库；无小镇玩家**什么都不上屏**（只 `Log.info`），原版战利品照拿。
-     曾经发过一张成句的提示卡（讲「收益无人接收、先去建镇」），开箱那一刻糊一大段字观感很差，2026-10 起去掉——野外箱子对无镇玩家就是「只给原版战利品」。
-2. **开容器 GUI 那一刻的上屏通道只有 `ExplorationHudOverlay` 那一张奖励卡**：
+   - **双轨入库**：经验直加小镇等级，元素直入小镇 `ColonyItemBank` 金库；无小镇玩家由 Action Bar 提示并保留原版物品。
+2. **开容器 GUI 那一刻的提示只能走 `ExplorationHudOverlay`（动作栏与 `ScreenFeedbackPacket` 都被盖住）**：
    - 玩家打开容器界面（宝箱 / 仓库等）时两条常见反馈通道都不可见：`player.displayClientMessage(component, true)` 画的是动作栏、在 Screen 之下；`ScreenFeedbackPacket` 只在 `MedievalScreen` 上弹 toast、否则退回动作栏——同样在 Screen 之下。
    - 唯一能盖在容器界面上的通道是 `content/colony/exploration/client/ExplorationHudOverlay`：注册在 `ScreenEvent.Render.Post`（另加 `RenderGuiEvent.Post` 覆盖无 GUI 场景），z 层抬到 800 且绘制前 `flush()`。
-   - 卡片只承载**奖励**（地域名 + 经验 + 元素），`ExplorationRewardPacket` 不再有「纯提示」形态——无小镇、算不出价值这类不发奖的结局一律静默，别为了提示把它加回来：开箱那一刻的长文案玩家不想读。注意卡片只有**单槽位**，后来的奖励会顶掉前一条。
+   - **做法**：任何「开箱子 / 开容器那一刻」要给玩家看的反馈都发 `ExplorationRewardPacket`（`sendNotice(player, component)` 走提示卡，`send` 走经验 + 元素卡），不要用动作栏或 `ScreenFeedbackPacket`。注意卡片只有**单槽位**，后来的通知会顶掉前一条。
 
 ---
 

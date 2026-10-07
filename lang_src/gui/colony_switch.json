@@ -1,4 +1,164 @@
 {
+  "gui.wandscape.colony.badge.ally": {
+    "zh_cn": "盟友",
+    "en_us": "Ally"
+  },
+  "gui.wandscape.colony.badge.current": {
+    "zh_cn": "当前",
+    "en_us": "Current"
+  },
+  "gui.wandscape.colony.badge.invite": {
+    "zh_cn": "邀请函",
+    "en_us": "Invite"
+  },
+  "gui.wandscape.colony.badge.manager": {
+    "zh_cn": "管事",
+    "en_us": "Manager"
+  },
+  "gui.wandscape.colony.badge.member": {
+    "zh_cn": "成员",
+    "en_us": "Member"
+  },
+  "gui.wandscape.colony.badge.online": {
+    "zh_cn": "在线",
+    "en_us": "Online"
+  },
+  "gui.wandscape.colony.badge.owner": {
+    "zh_cn": "镇长",
+    "en_us": "Owner"
+  },
+  "gui.wandscape.colony.badge.self": {
+    "zh_cn": "我自己",
+    "en_us": "You"
+  },
+  "gui.wandscape.colony.btn.ally_disabled": {
+    "zh_cn": "盟友不可切换",
+    "en_us": "Ally cannot switch"
+  },
+  "gui.wandscape.colony.btn.invite_send": {
+    "zh_cn": "发送邀请",
+    "en_us": "Send Invite"
+  },
+  "gui.wandscape.colony.btn.remove": {
+    "zh_cn": "移除",
+    "en_us": "Kick"
+  },
+  "gui.wandscape.colony.btn.role_set": {
+    "zh_cn": "档位: %s",
+    "en_us": "Role: %s"
+  },
+  "gui.wandscape.colony.btn.selected": {
+    "zh_cn": "当前小镇",
+    "en_us": "Selected"
+  },
+  "gui.wandscape.colony.btn.switch": {
+    "zh_cn": "切换小镇",
+    "en_us": "Switch"
+  },
+  "gui.wandscape.colony.btn.transfer_to": {
+    "zh_cn": "转让镇长",
+    "en_us": "Transfer Owner"
+  },
+  "gui.wandscape.colony.hint.colonies": {
+    "zh_cn": "管理小镇归属、切换当前镇，或处理入镇邀请",
+    "en_us": "Manage colonies, switch active town, or handle invites"
+  },
+  "gui.wandscape.colony.hint.invites": {
+    "zh_cn": "邀请在线玩家加入当前小镇 (%s)",
+    "en_us": "Invite online players to current colony (%s)"
+  },
+  "gui.wandscape.colony.hint.invites_no_perm": {
+    "zh_cn": "权限不足：需管事及以上档位才可邀请玩家",
+    "en_us": "Requires Manager or Owner to invite"
+  },
+  "gui.wandscape.colony.hint.members": {
+    "zh_cn": "当前小镇：%s (Lv.%s) · 身份: %s · 成员: %s人",
+    "en_us": "Active: %s (Lv.%s) · Role: %s · Members: %s"
+  },
+  "gui.wandscape.colony.hint.no_colony": {
+    "zh_cn": "尚未选择或加入小镇：请先在「我的小镇」页选择或创建小镇",
+    "en_us": "No colony selected: Please pick or create a colony first"
+  },
+  "gui.wandscape.colony.no_online_players": {
+    "zh_cn": "当前没有可邀请的在线玩家（其他玩家已全在本镇或处于离线）",
+    "en_us": "No online players available to invite"
+  },
+  "gui.wandscape.colony.no_owned_colonies": {
+    "zh_cn": "尚未创立属于自己的小镇：在世界中建造市政厅并右键命名即可创立",
+    "en_us": "No owned colonies: Build a town hall and name it to create a colony"
+  },
+  "gui.wandscape.colony.section.invites": {
+    "zh_cn": "待处理邀请 (%s)",
+    "en_us": "Pending Invites (%s)"
+  },
+  "gui.wandscape.colony.section.joined": {
+    "zh_cn": "我参与的小镇 (%s)",
+    "en_us": "Joined Colonies (%s)"
+  },
+  "gui.wandscape.colony.section.owned": {
+    "zh_cn": "我拥有的小镇 (%s)",
+    "en_us": "Owned Colonies (%s)"
+  },
+  "gui.wandscape.colony.tab.colonies": {
+    "zh_cn": "我的小镇",
+    "en_us": "My Colonies"
+  },
+  "gui.wandscape.colony.tab.colonies_pending": {
+    "zh_cn": "我的小镇 (%s)",
+    "en_us": "My Colonies (%s)"
+  },
+  "gui.wandscape.colony.tab.invites": {
+    "zh_cn": "招募玩家",
+    "en_us": "Recruitment"
+  },
+  "gui.wandscape.colony.tab.members": {
+    "zh_cn": "成员名册",
+    "en_us": "Roster"
+  },
+  "gui.wandscape.colony.title": {
+    "zh_cn": "%s 小镇管理",
+    "en_us": "%s Town Management"
+  },
+  "gui.wandscape.colony.title_short": {
+    "zh_cn": "小镇管理",
+    "en_us": "Town Management"
+  },
+  "gui.wandscape.colony.toast.accepted": {
+    "zh_cn": "已接受入镇邀请",
+    "en_us": "Accepted invitation"
+  },
+  "gui.wandscape.colony.toast.declined": {
+    "zh_cn": "已拒绝入镇邀请",
+    "en_us": "Declined invitation"
+  },
+  "gui.wandscape.colony.toast.invite_sent": {
+    "zh_cn": "已向 %s 发送入镇邀请 (%s)",
+    "en_us": "Sent invitation to %s (%s)"
+  },
+  "gui.wandscape.colony.toast.removed": {
+    "zh_cn": "已将 %s 移出小镇",
+    "en_us": "Removed %s from colony"
+  },
+  "gui.wandscape.colony.toast.role_changed": {
+    "zh_cn": "已将 %s 的档位调整为: %s",
+    "en_us": "Changed %s's role to: %s"
+  },
+  "gui.wandscape.colony.toast.role_selected": {
+    "zh_cn": "邀请档位已设为: %s",
+    "en_us": "Invite role set to: %s"
+  },
+  "gui.wandscape.colony.toast.switched": {
+    "zh_cn": "正在切换当前小镇...",
+    "en_us": "Switching active colony..."
+  },
+  "gui.wandscape.colony.toast.transfer_sent": {
+    "zh_cn": "已向 %s 发起镇长转让",
+    "en_us": "Transferred ownership to %s"
+  },
+  "gui.wandscape.colony.transfer_mode_banner": {
+    "zh_cn": "处于【转让镇长】模式：点击下方任意成员的「转让镇长」即可移交职位",
+    "en_us": "Transfer Mode: Click 'Transfer Owner' on any member to transfer"
+  },
   "gui.wandscape.colony_switch.current": {
     "zh_cn": "当前",
     "en_us": "Current"

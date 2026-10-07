@@ -46,6 +46,14 @@ public final class ProjectionFlightController {
     private static final double SCROLL_STEP_MIN = 0.6;
     /** ALT+滚轮：两次微调之间的最小间隔，挡住「一个刻度被驱动连发多次」导致的连跳。 */
     private static final long SCROLL_NUDGE_COOLDOWN_MS = 100L;
+    /**
+     * 视线判轴时「上下明显压过水平」的倍数门槛（1.15 ≈ 俯仰角 49°）。
+     *
+     * <p>存在的理由：空中俯瞰默认俯角 45°，此时上下与水平分量正好相等——不设门槛的话平局永远判成
+     * 「向下」，面朝方向就完全用不上（实测反馈）。设了门槛后，45° 的默认视角按面朝方向微调，
+     * 要上下挪就按住 ALT 把视角抬/压得更陡一点。
+     */
+    private static final float VERTICAL_DOMINANCE = 1.15f;
     private static double scrollAccum;
     private static long lastNudgeMs;
 
@@ -195,17 +203,25 @@ public final class ProjectionFlightController {
         ProjectionClientState.rotate();
     }
 
-    /** 视线主导轴：比较相机视线三分量的绝对值取最大者（抬头/低头 → Y，平视 → X 或 Z）。 */
+    /**
+     * 视线主导轴：比较相机视线三分量的绝对值取最大者（明显抬头/低头 → Y，其余 → X 或 Z）。
+     *
+     * <p>**平局优先水平**：空中俯瞰的默认俯角就是 45°，而 45° 时上下分量与水平分量恰好相等——
+     * 若按"相等也算上下"处理，方向判定会永远是"向下"，ALT+滚轮只能上下挪（实测反馈）。
+     * 所以上下要**明显**压过水平（{@value #VERTICAL_DOMINANCE} 倍）才算，否则按面朝方向走：
+     * 判定本来的意思就是「面朝哪儿就往哪儿挪」。
+     */
     private static net.minecraft.core.Direction closestLookingDirection(Minecraft mc) {
         var look = mc.gameRenderer.getMainCamera().getLookVector();
-        float ax = Math.abs(look.x()), ay = Math.abs(look.y()), az = Math.abs(look.z());
-        if (ay >= ax && ay >= az) {
+        float ax = Math.abs(look.x());
+        float ay = Math.abs(look.y());
+        float az = Math.abs(look.z());
+        float horizontal = Math.max(ax, az);
+        if (ay > horizontal * VERTICAL_DOMINANCE) {
             return look.y() >= 0 ? net.minecraft.core.Direction.UP : net.minecraft.core.Direction.DOWN;
         }
-        if (ax >= az) {
-            return look.x() >= 0 ? net.minecraft.core.Direction.EAST : net.minecraft.core.Direction.WEST;
-        }
-        return look.z() >= 0 ? net.minecraft.core.Direction.SOUTH : net.minecraft.core.Direction.NORTH;
+        return ax >= az ? (look.x() >= 0 ? net.minecraft.core.Direction.EAST : net.minecraft.core.Direction.WEST)
+                : (look.z() >= 0 ? net.minecraft.core.Direction.SOUTH : net.minecraft.core.Direction.NORTH);
     }
 
     // ── Ghost position ──

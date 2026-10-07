@@ -129,8 +129,22 @@ public final class TutorialRenderer {
         return out;
     }
 
+    /**
+     * 导引框此刻**该不该收起**：正在做投影放置时收起（判据见
+     * {@link com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState#isTutorialSuppressed()}）。
+     *
+     * <p>放置时右上角这块会挡住投影与地形（实测反馈）。这里只是**不画、也不吃点击**——
+     * 新手进度与折叠状态都不动，退出放置（或放完）自动回到原样。
+     * 想改成"进入放置时自动折成右上角那个小三角、需要时还能展开"，把 {@code render} 里这句换成
+     * {@code TutorialSession.toggleCollapsed()} 即可（一处开关）。
+     */
+    private static boolean hidden() {
+        return com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState.isTutorialSuppressed();
+    }
+
     public static boolean isCloseClicked(Font font, double mx, double my, int screenW, int screenH,
                                          TutorialStep step, boolean buildMode, boolean isPlacing, boolean isBar, boolean isPinned) {
+        if (hidden()) return false;
         Box b = layout(font, screenW, screenH, step, buildMode, isPlacing, isBar, isPinned);
         if (b.collapsed) return false; // no close button on the collapsed tab
         double sx = mx / SCALE;
@@ -141,6 +155,7 @@ public final class TutorialRenderer {
 
     public static boolean isCollapseClicked(Font font, double mx, double my, int screenW, int screenH,
                                             TutorialStep step, boolean buildMode, boolean isPlacing, boolean isBar, boolean isPinned) {
+        if (hidden()) return false;
         Box b = layout(font, screenW, screenH, step, buildMode, isPlacing, isBar, isPinned);
         double sx = mx / SCALE;
         double sy = my / SCALE;
@@ -155,6 +170,7 @@ public final class TutorialRenderer {
     public static void render(GuiGraphics g, Font font, int screenW, int screenH, double mx, double my,
                               TutorialStep step,
                               boolean buildMode, boolean isPlacing, boolean isBar, boolean isPinned) {
+        if (hidden()) return;
         Box b = layout(font, screenW, screenH, step, buildMode, isPlacing, isBar, isPinned);
         int pad = PAD;
 
