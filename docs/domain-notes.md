@@ -298,6 +298,8 @@
    - **Tutorial**（`content/tutorial`）：新手引导系统内核，包含引导步骤（`TutorialStep`）、服务端会话（`TutorialSession`）、网络同步与 HUD 引导框渲染。
    - **Guidebook**（`content/items`）：指南书物品与 Markdown 手册文档阅读器。
    - 两个系统各自自治，严禁混用 `Guide*` 泛名。
+2. **获得方式两条，都要留**：玩家第一次登录某个存档由 `content/items/guidebook/internal/GuideBookGrantHandler` 直接发一本（标记写玩家持久化 NBT，只发一次，旧档玩家升级后补发）；
+   `data/wandscape/recipe/guide_book.json` 的配方**保留**——手册丢了照配方再做一本，这是唯一补做途径。欢迎语（`message.wandscape.town.welcome`）按这个口径写，别再写「制作一本手册」。
 
 ---
 
@@ -348,11 +350,12 @@
    - **元素分配一半看战利品表、一半随机撒**：原版宝箱战利品以金属（铁/铜/金）为主，纯按战利品表折算会让所有箱子都给金属。
      `ExplorationRewardRange.rollElements` 只让**总额的一部分**沿用战利品表比例（比例来自 `reward.loot_share`，默认 0.5，0 = 全随机、1 = 纯战利品），另一半按随机权重（0.5~1.5 抖动、最大余数法配平）平摊到七元素；
      总额与经验折算不受影响（经验是按元素总值算的，没变）。
-   - **双轨入库**：经验直加小镇等级，元素直入小镇 `ColonyItemBank` 金库；无小镇玩家由 Action Bar 提示并保留原版物品。
-2. **开容器 GUI 那一刻的提示只能走 `ExplorationHudOverlay`（动作栏与 `ScreenFeedbackPacket` 都被盖住）**：
+   - **双轨入库**：经验直加小镇等级，元素直入小镇 `ColonyItemBank` 金库；无小镇玩家**什么都不上屏**（只 `Log.info`），原版战利品照拿。
+     曾经发过一张成句的提示卡（讲「收益无人接收、先去建镇」），开箱那一刻糊一大段字观感很差，2026-10 起去掉——野外箱子对无镇玩家就是「只给原版战利品」。
+2. **开容器 GUI 那一刻的上屏通道只有 `ExplorationHudOverlay` 那一张奖励卡**：
    - 玩家打开容器界面（宝箱 / 仓库等）时两条常见反馈通道都不可见：`player.displayClientMessage(component, true)` 画的是动作栏、在 Screen 之下；`ScreenFeedbackPacket` 只在 `MedievalScreen` 上弹 toast、否则退回动作栏——同样在 Screen 之下。
    - 唯一能盖在容器界面上的通道是 `content/colony/exploration/client/ExplorationHudOverlay`：注册在 `ScreenEvent.Render.Post`（另加 `RenderGuiEvent.Post` 覆盖无 GUI 场景），z 层抬到 800 且绘制前 `flush()`。
-   - **做法**：任何「开箱子 / 开容器那一刻」要给玩家看的反馈都发 `ExplorationRewardPacket`（`sendNotice(player, component)` 走提示卡，`send` 走经验 + 元素卡），不要用动作栏或 `ScreenFeedbackPacket`。注意卡片只有**单槽位**，后来的通知会顶掉前一条。
+   - 卡片只承载**奖励**（地域名 + 经验 + 元素），`ExplorationRewardPacket` 不再有「纯提示」形态——无小镇、算不出价值这类不发奖的结局一律静默，别为了提示把它加回来：开箱那一刻的长文案玩家不想读。注意卡片只有**单槽位**，后来的奖励会顶掉前一条。
 
 ---
 

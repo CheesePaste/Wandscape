@@ -31,6 +31,8 @@
 入口只有一处：H 键、`guide_book` 物品、`/wandscape guide`、各建筑屏的 `?` 全部经
 `foundation/ui/guidebook/GuideFacade` 路由——装了 Patchouli 走条目，没装退 `GuidebookScreen` 只读兜底。
 
+**书怎么到手**：玩家首次登录存档时由 `content/items/guidebook/internal/GuideBookGrantHandler` 直接发一本（标记写玩家持久化 NBT，只发一次）；`data/wandscape/recipe/guide_book.json` 的配方保留，丢了照配方补做。
+
 ### 1.1 改什么 = 改哪里
 
 **这是全文最重要的一张表。** 除了最后两条，其余每项都只有一个来源。

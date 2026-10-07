@@ -35,20 +35,15 @@ public final class ExplorationHudOverlay {
     private static final int BOTTOM_PADDING = 5;
     private static final String SEPARATOR = " | ";
     private static final int GAIN_RGB = 0x88EE88;
-    private static final int MESSAGE_RGB = 0xE8C880;
 
     private static boolean registered = false;
 
     /**
-     * @param segments  body pieces, packed left to right
-     * @param separator glued between pieces that share a line; {@code null} puts every piece
-     *                  on its own line (used by free-form notices, whose pieces are sentences)
+     * @param segments body pieces, packed left to right and glued by {@link #SEPARATOR}
      */
     private record ActiveNotice(
             String title,
             List<String> segments,
-            String separator,
-            int detailRgb,
             long startTimeMs
     ) {}
 
@@ -69,18 +64,6 @@ public final class ExplorationHudOverlay {
     public static void showReward(ExplorationRewardPacket packet) {
         if (packet == null) return;
 
-        // A notice carries no payout — show its message in the card body instead.
-        if (packet.message() != null) {
-            currentNotice = new ActiveNotice(
-                    I18n.string("wandscape.exploration.notice_title", "野外宝箱"),
-                    List.of(packet.message().getString().split("\n")),
-                    null,
-                    MESSAGE_RGB,
-                    System.currentTimeMillis()
-            );
-            return;
-        }
-
         String title = I18n.string("wandscape.exploration.discovered", "探索发现：%s", packet.regionName());
 
         List<String> segments = new ArrayList<>();
@@ -90,7 +73,7 @@ public final class ExplorationHudOverlay {
             segments.add(elemName + " +" + e.getValue());
         }
 
-        currentNotice = new ActiveNotice(title, segments, SEPARATOR, GAIN_RGB, System.currentTimeMillis());
+        currentNotice = new ActiveNotice(title, segments, System.currentTimeMillis());
     }
 
     private static void onRenderGuiPost(RenderGuiEvent.Post event) {
@@ -128,10 +111,9 @@ public final class ExplorationHudOverlay {
 
         String title = notice.title();
 
-        // A payout lists several elements, so wrap instead of running off-screen; a notice body
-        // is prose and needs the same treatment.
+        // A payout lists several elements, so wrap instead of running off-screen.
         int maxContentW = Math.max(120, screenW - 40 - PADDING_X * 2);
-        List<String> detailLines = wrapSegments(notice.segments(), notice.separator(), font, maxContentW);
+        List<String> detailLines = wrapSegments(notice.segments(), font, maxContentW);
 
         int titleW = font.width(title);
         int contentW = titleW;
@@ -153,7 +135,7 @@ public final class ExplorationHudOverlay {
         int bgColor = (bgAlpha << 24) | 0x1A0E04;
         int borderColor = (borderAlpha << 24) | (MedievalColors.BORDER_GOLD & 0x00FFFFFF);
         int titleColor = (textAlpha << 24) | 0xDEC478;
-        int detailColor = (textAlpha << 24) | notice.detailRgb();
+        int detailColor = (textAlpha << 24) | GAIN_RGB;
 
         // Elevate to top-most z layer (800) so nothing in any screen can dim or cover it
         gui.flush();
@@ -181,19 +163,17 @@ public final class ExplorationHudOverlay {
     }
 
     /**
-     * Greedily pack segments into lines that fit {@code maxWidth}. A segment wider than a whole
-     * line is broken character by character first — CJK prose has no spaces to break on, and the
-     * reward separator is only glued between pieces that actually share a line. A {@code null}
-     * separator forces every piece onto its own line.
+     * Greedily pack segments into lines that fit {@code maxWidth}, gluing {@link #SEPARATOR}
+     * between pieces that end up sharing a line. A segment wider than a whole line is broken
+     * character by character first — CJK prose has no spaces to break on.
      */
-    private static List<String> wrapSegments(List<String> segments, String separator, Font font, int maxWidth) {
+    private static List<String> wrapSegments(List<String> segments, Font font, int maxWidth) {
         List<String> lines = new ArrayList<>();
         for (String segment : segments) {
             for (String piece : breakToFit(segment, font, maxWidth)) {
                 int last = lines.size() - 1;
-                if (separator != null && last >= 0
-                        && font.width(lines.get(last) + separator + piece) <= maxWidth) {
-                    lines.set(last, lines.get(last) + separator + piece);
+                if (last >= 0 && font.width(lines.get(last) + SEPARATOR + piece) <= maxWidth) {
+                    lines.set(last, lines.get(last) + SEPARATOR + piece);
                 } else {
                     lines.add(piece);
                 }
