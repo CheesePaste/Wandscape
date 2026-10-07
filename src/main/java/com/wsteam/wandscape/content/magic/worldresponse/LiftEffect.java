@@ -38,6 +38,9 @@ import java.util.Set;
  * <p><b>楼梯</b>：沿前进方向、从玩家脚那一层起步，铺 {@code worldResponseLiftStairs}（默认 6）级、
  * 每级 {@code worldResponseLiftStairWidth}（默认 3）格宽，第 i 级在「前面第 i 格、抬高 i-1 格」。
  * 用真楼梯方块是因为它的碰撞天生是「前半格 0.5 + 后半格 1.0」——一级正好抬 1 格而玩家**不用跳**。
+ * **竖直基准取"脚踩的那一级"而不是"脚所在的方块"**：踩在某一级的前半格时脚就在那一级自己的格子里
+ * （比踏面低半格），拿方块当基准会让整段楼梯随半格来回抖一格（实测"偶尔高一级 + 闪烁"），
+ * 所以人在往上爬某一级时，段从**高一级**起铺（见 {@link #ascending}）。
  *
  * <p><b>只有「空旷地带」铺得出来</b>——扶摇的用途是露天攀升，不是拆家：
  * ① 每一格都必须是**空气**（绝不替换任何已有方块）；② **人得在露天**（{@code canSeeSky(头那一格)}：
@@ -49,11 +52,11 @@ import java.util.Set;
  * 位置差只在扫描时采样，见 {@link #lastPos}）。
  * 斜着走（两轴比值 &gt; {@value #AMBIGUOUS_RATIO}）时不猜主轴、直接看**视线**，免得楼梯铺成锯齿。
  * **视角朝下**（俯角超过 {@code worldResponseLiftMaxDownPitch}，默认 30 度）时不再往前铺楼梯——
- * 人朝下看是在看路 / 找落脚点，脚下平台照旧留着，已经铺好的几级也留着（于是低头不会把人从半空扔下去）；
- * 但**脚踩着我们自己铺的东西时（正在爬楼梯）这一条不生效**，否则低头看台阶就再也爬不上去了。
+ * 人朝下看是在看路 / 找落脚点；脚下平台照旧留着，已经铺好的几级也留着（于是低头不会把人从半空扔下去）。
  *
  * <p><b>回收**留一轮缓冲**</b>：只有「这一轮和上一轮都不想要」的格子才还回（{@link #wantedPrev}），
- * 所以新旧交接时不会出现"先收后放"的真空期，也不会留下没人管的残块。
+ * 所以新旧交接时不会出现"先收后放"的真空期，也不会留下没人管的残块；**玩家脚所在那一格无条件留着**
+ * （爬台阶时脚就站在那一级自己的格子里，那格既不属于平台层也不属于楼梯段）。
  * 停下时**不会立刻收回**：只要玩家还在借用范围里（{@code worldResponseLiftRestoreMargin} 格内还有我们
  * 铺的东西），就先留着当落脚点，等他走开再逐格还回（见 {@link #stop}）。
  *
@@ -118,11 +121,9 @@ public final class LiftEffect implements WorldResponseEffect {
 
         BlockPos feet = player.blockPosition();
         // 俯角闸门：视角**明显朝下**（俯角超过 worldResponseLiftMaxDownPitch，默认 30 度）时不再往前长楼梯——
-        // 低头是在看路/找落脚点，不是在攀升。（60 度太钝：那得整个人低着头走路才会停。）
-        // 例外：**人已经踩在我们铺的东西上**时闸门不生效——那正是在爬我们自己的台阶，低头看台阶是必须的，
-        // 否则一低头楼梯就停、再也爬不上去。
-        boolean lookingDown = player.getXRot() > Math.max(10, BalanceValues.worldResponseLiftMaxDownPitch())
-                && !borrowed.contains(feet.below());
+        // 低头是在看路 / 找落脚点，不是在攀升。（60 度太钝：那得整个人低着头走路才会停。）
+        // 只判俯角、不加别的条件：实测要的就是"低头就不生成"，脚下平台照旧留着。
+        boolean lookingDown = player.getXRot() > Math.max(10, BalanceValues.worldResponseLiftMaxDownPitch());
         Direction sampled = lookingDown ? null : sampleDirection(player);
         if (sampled != null) {
             climbDirection = sampled;
@@ -142,6 +143,10 @@ public final class LiftEffect implements WorldResponseEffect {
         // 回收：**这一轮和上一轮都不想要**的才还（留一轮缓冲，避免"先收后放"的真空期与残块）
         Set<BlockPos> keep = new HashSet<>(now);
         keep.addAll(wantedPrev);
+        // 玩家脚所在那一格永远留着：踩在某一级的**前半格**时，人脚就站在那一级楼梯自己的格子里——
+        // 它既不在楼梯段里（段从 i=1 起算、只往前），也不在平台层里（平台层是脚下面那层），
+        // 不收走才不会在爬的中途被人抽掉脚下方块（实测"偶尔会掉一下"）。
+        keep.add(feet);
         borrowed.restoreNotIn(keep);
         borrowed.keepShaped();
         // 记下**这一轮扫描时**的位置：下一轮的位置差就是「前进方向」（sampleDirection 唯一的数据源）。
@@ -231,12 +236,17 @@ public final class LiftEffect implements WorldResponseEffect {
     private void buildStairs(BlockPos feet, Set<BlockPos> now) {
         Direction dir = climbDirection;
         if (dir == null) return;                       // 没有方向（刚开/停太久/朝下看）：只留平台
+        // 竖直基准**不能直接用"脚所在方块"**：踩在某一级的前半格时，人脚所在方块就是那一级本身、
+        // 比那级的踏面低半格；直接拿它当基准，整段楼梯会随着"半格上上下下"来回抖一格——实测表现
+        // 就是"偶尔高一级 + 闪烁"。正在往上爬这一级（脚所在格是朝 dir 的楼梯）时，下一级比它高一格；
+        // 否则脚就站在踏面上（地面 / 半砖 / 台阶后半格），下一级与脚所在方块齐平。
+        int rise = ascending(feet, dir) ? 1 : 0;
         int steps = Math.max(1, BalanceValues.worldResponseLiftStairs());
         int half = Math.max(0, (Math.max(1, BalanceValues.worldResponseLiftStairWidth()) - 1) / 2);
         Direction side = dir.getClockWise();           // 宽度方向
         BlockState stair = stairState(dir);
         for (int i = 1; i <= steps; i++) {
-            BlockPos base = feet.relative(dir, i).offset(0, i - 1, 0);
+            BlockPos base = feet.relative(dir, i).offset(0, i - 1 + rise, 0);
             for (int w = -half; w <= half; w++) {
                 BlockPos pos = base.relative(side, w);
                 now.add(pos);
@@ -259,6 +269,17 @@ public final class LiftEffect implements WorldResponseEffect {
 
     private static BlockState stairState(Direction facing) {
         return STAIR.defaultBlockState().setValue(StairBlock.FACING, facing);
+    }
+
+    /**
+     * 脚所在那一格是不是「正朝 {@code dir} 往上爬」的一级楼梯——也就是人正踩在它**前半格**上。
+     *
+     * <p>用方块类型判而不是只问"是不是我们铺的"：玩家自己家的原版楼梯上也该接得顺。踩在前半格时
+     * 人脚所在方块**就是那一级本身**（踏面比方块低半格），所以它命中时楼梯段要从"高一级"起铺。
+     */
+    private boolean ascending(BlockPos feet, Direction dir) {
+        BlockState state = level.getBlockState(feet);
+        return state.getBlock() instanceof StairBlock && state.getValue(StairBlock.FACING) == dir;
     }
 
     /**
