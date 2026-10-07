@@ -341,7 +341,7 @@ public final class WandscapePanelState {
         // 否则断线重连或换存档后面板会先画出旧世界的成员表（服务端推新数据前的那几帧）。
         com.wsteam.wandscape.content.colony.network.ColonyPanelClientState.reset();
         // 同族的页内临时状态：小镇面板的「转让镇长」模式不许跟着进下一个世界。
-        WandscapePanelOverlay.exitTransferMode();
+        com.wsteam.wandscape.content.colony.ui.ColonyManagementOverlay.exitTransferMode();
     }
 
     // ── Cursor helpers (shared by BUILD and ROAD modes) ──
@@ -548,9 +548,8 @@ public final class WandscapePanelState {
 
     public static void exitCurrentSubMode() {
         // 离开小镇页 → 复位「转让镇长」模式：它只是页内的一次性选择，不该跨页存活
-        // （转让模式在页内还有一条自愈路径，见 WandscapePanelOverlay.syncTransferMode）。
         if (activeSubMode == SubMode.COLONY) {
-            WandscapePanelOverlay.exitTransferMode();
+            com.wsteam.wandscape.content.colony.ui.ColonyManagementOverlay.exitTransferMode();
         }
         switch (activeSubMode) {
             case BUILD_PROJECTION -> {
