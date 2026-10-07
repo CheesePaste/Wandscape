@@ -162,11 +162,7 @@ public final class OverviewFlightController {
         long window = mc.getWindow().getWindow();
         boolean rightDown = (window != 0L && org.lwjgl.glfw.GLFW.glfwGetMouseButton(window, org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_RIGHT) == org.lwjgl.glfw.GLFW.GLFW_PRESS)
                 || mc.mouseHandler.isRightPressed();
-        // 按住 ALT 一律允许自由转视角：投影放置要靠**视线**判"面朝哪儿"（ALT+滚轮沿该轴微调），
-        // 而放置时面板常开、光标抬到面板上、右键又被用来开施工屏——不加这个出口视角会被锁在初始俯视，
-        // 方向判定就永远是"向下"（实测反馈）。
-        boolean altDown = net.minecraft.client.gui.screens.Screen.hasAltDown();
-        if (cursorLifted && !rightDown && !altDown) return;
+        if (cursorLifted && !rightDown) return;
 
         double sens = mc.options.sensitivity().get() * 0.6 + 0.2;
         double mult = sens * sens * sens * 8.0;
