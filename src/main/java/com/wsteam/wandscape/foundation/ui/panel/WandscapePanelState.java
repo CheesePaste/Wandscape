@@ -379,17 +379,6 @@ public final class WandscapePanelState {
     public static boolean isBuildingBarOpen() { return buildingBarOpen; }
     public static BuildPhase getBuildPhase() { return buildPhase; }
 
-    /**
-     * 投影放置期间：右上角的新手引导框**收起**——它挡投影与地形（实测反馈），
-     * 连它劫持的 Tab（折叠/展开引导）也一并让开，让 Tab 回到原版玩家列表。
-     *
-     * <p>只是"不画、不吃点击、不劫持键"：新手进度与折叠状态都不动，退出放置自动回来。
-     * **判据只有这里一处**，渲染、点击、热键三边都问它，别各写一套。
-     */
-    public static boolean isTutorialSuppressed() {
-        return activeSubMode == SubMode.BUILD_PROJECTION || ProjectionClientState.isPinned();
-    }
-
     /** Search box only accepts keyboard input once clicked/activated. */
     public static boolean isBuildingBarSearchFocused() { return buildingBarSearchFocused; }
     public static void setBuildingBarSearchFocused(boolean focused) { buildingBarSearchFocused = focused; }
