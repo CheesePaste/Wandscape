@@ -8,8 +8,9 @@ import net.minecraft.client.gui.components.AbstractButton;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.network.chat.Component;
 /**
- * Medieval-themed button using sprite-sheet textures.
- * Falls back to programmatic rendering if skin assets are unavailable.
+ * Medieval-themed button using code-driven canvas rendering.
+ * Provides dark obsidian gradient, chamfered gold borders,
+ * glowing hover states, and precise typography.
  */
 public class MedievalButton extends AbstractButton {
 
@@ -36,20 +37,23 @@ public class MedievalButton extends AbstractButton {
     protected void renderWidget(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         if (!visible) return;
 
-        int state = active ? 0 : 3;
-        int textColor = active ? MedievalColors.TEXT_WARM_WHITE : MedievalColors.TEXT_DIM;
-
-        // Base sprite (always state 0 for active, 3 for disabled)
-        SkinRender.drawButton(g, getX(), getY(), width, height, state);
-
-        // Hover brightening — only the interior, leaving the sprite's border untouched
-        if (active && isHoveredOrFocused()) {
-            g.fill(getX() + 2, getY() + 2, getX() + width - 2, getY() + height - 2, 0x30FFFFFF);
-            textColor = MedievalColors.ACCENT_GOLD;
+        int state;
+        if (!active) {
+            state = 3;
+        } else if (isHoveredOrFocused()) {
+            state = 1;
+        } else {
+            state = 0;
         }
 
-        int textY = getY() + (height - 9) / 2;
-        g.drawCenteredString(Minecraft.getInstance().font, getMessage(),
+        SkinRender.drawButton(g, getX(), getY(), width, height, state);
+
+        int textColor = !active ? MedievalColors.TEXT_DIM
+                : (isHoveredOrFocused() ? MedievalColors.ACCENT_GOLD : MedievalColors.TEXT_WARM_WHITE);
+
+        var font = Minecraft.getInstance().font;
+        int textY = getY() + (height - font.lineHeight) / 2 + 1;
+        g.drawCenteredString(font, getMessage(),
                 getX() + width / 2, textY, textColor);
     }
 

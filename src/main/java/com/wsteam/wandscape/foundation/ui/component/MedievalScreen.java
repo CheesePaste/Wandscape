@@ -217,7 +217,7 @@ public abstract class MedievalScreen extends Screen implements ReplayProtectedSc
 
     // ── Built-in close button ──
     protected boolean showCloseButton;
-    protected int closeBtnX, closeBtnY, closeBtnW = 18, closeBtnH = 14;
+    protected int closeBtnX, closeBtnY, closeBtnW = 14, closeBtnH = 14;
     protected int closeBtnState;
 
     // ── Built-in help button & document ──

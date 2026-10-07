@@ -1,6 +1,7 @@
 package com.wsteam.wandscape.foundation.ui.component;
 
 import com.wsteam.wandscape.foundation.ui.I18n;
+import com.wsteam.wandscape.foundation.ui.skin.SkinRender;
 import com.wsteam.wandscape.foundation.ui.theme.MedievalColors;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -218,15 +219,10 @@ public final class MageDelegateDialog {
 
     private static void drawButton(GuiGraphics g, Font font, int x, int y, int w, int h,
                                    Component label, boolean hovered, boolean primary) {
-        int bgTop = hovered ? MedievalColors.BUTTON_BG_HOVER : (primary ? 0xFF3A2818 : 0xFF2A1E18);
-        int bgBottom = hovered ? MedievalColors.PANEL_TITLE_BG : (primary ? 0xFF1E100A : 0xFF140C08);
-        int border = primary ? MedievalColors.BORDER_GOLD
-                : (hovered ? MedievalColors.BORDER_GOLD : MedievalColors.BORDER_GOLD_DARK);
-        g.fillGradient(x, y, x + w, y + h, bgTop, bgBottom);
-        MedievalScreen.drawGlowBorder(g, x, y, w, h, border);
-        int color = primary ? (hovered ? MedievalColors.ACCENT_GOLD : MedievalColors.TEXT_WARM_WHITE)
-                : (hovered ? MedievalColors.TEXT_WARM_WHITE : MedievalColors.TEXT_MUTED);
-        g.drawCenteredString(font, label, x + w / 2, y + (h - font.lineHeight) / 2, color);
+        int state = hovered ? 1 : 0;
+        SkinRender.drawButton(g, x, y, w, h, state);
+        int color = hovered ? MedievalColors.ACCENT_GOLD : MedievalColors.TEXT_WARM_WHITE;
+        g.drawCenteredString(font, label, x + w / 2, y + (h - font.lineHeight) / 2 + 1, color);
     }
 
     private static boolean isInRect(double mx, double my, int x, int y, int w, int h) {
