@@ -54,6 +54,8 @@ public class TaskExecutionSystem implements EcsSystem {
 
     private static final String TAG = "TaskExec";
     private static final double NAV_RANGE_SQ = 25.0;
+    /** 到场容差平方：自传送落点搜索半径达 6 格（对角线约 8.5 格），因此到场判定给 8.5²≈72.25 容差，防止安全落点因对角线距离被误判未到场。 */
+    private static final double NAV_ARRIVAL_TOLERANCE_SQ = 72.25;
     private static final RitualId ITEM_TELEPORT = new RitualId("item_teleport");
 
     private final GlobalTaskPool taskPool;
@@ -206,8 +208,31 @@ public class TaskExecutionSystem implements EcsSystem {
                 syncStepToPool(exec, queue);
                 exec.lastWorkTick = worldTick(world);
             } else {
-                Log.debug(LogCategory.TASK, "exec", "NPC %d — initial nav resolved, starting work (no distance limit)", npcId);
-                exec.initialNavDone = true;
+                boolean arrived = false;
+                if (world.entityOps == null || world.entityOps.isNpcLoaded(npcId)) {
+                    GridPos navTarget = resolveTaskNavTarget(pkg);
+                    Position pos = world.get(npcId, Position.class);
+                    if (navTarget == null || pos == null) {
+                        arrived = true;
+                    } else {
+                        double dx = pos.pos().x() - navTarget.x();
+                        double dz = pos.pos().z() - navTarget.z();
+                        arrived = (dx * dx + dz * dz <= NAV_ARRIVAL_TOLERANCE_SQ);
+                    }
+                }
+                if (arrived) {
+                    Log.debug(LogCategory.TASK, "exec", "NPC %d — initial nav resolved, starting work (no distance limit)", npcId);
+                    exec.initialNavDone = true;
+                } else {
+                    Log.warn(LogCategory.TASK, "exec", "NPC %d — initial nav completed but NPC not at target or not loaded! Releasing task.", npcId);
+                    releaseToGlobalPool(exec, queue, npcId, world);
+                    exec.state = ExecutorState.IDLE;
+                    exec.currentOpTarget = null;
+                    exec.currentOpKind = null;
+                    exec.activePackageSource = null;
+                    exec.initialNavDone = false;
+                    return;
+                }
             }
             if (queue.isCurrentPackageDone()) {
                 finishOrReleaseCurrentPackage(exec, queue, npcId, world);
@@ -235,12 +260,13 @@ public class TaskExecutionSystem implements EcsSystem {
         // ── 3. Initial navigation toward task stance/target if far away ──
         if (!exec.initialNavDone && exec.pendingFuture == null && world.movementOps != null) {
             GridPos navTarget = resolveTaskNavTarget(pkg);
+            boolean loaded = world.entityOps == null || world.entityOps.isNpcLoaded(npcId);
             if (navTarget != null) {
                 Position pos = world.get(npcId, Position.class);
                 if (pos != null) {
                     double dx = pos.pos().x() - navTarget.x();
                     double dz = pos.pos().z() - navTarget.z();
-                    if (dx * dx + dz * dz > NAV_RANGE_SQ) {
+                    if (!loaded || dx * dx + dz * dz > NAV_RANGE_SQ) {
                         MovementOps mov = world.movementOps;
                         CompletableFuture<Void> navFuture = mov.navigateTo(
                                 npcId, navTarget.x(), navTarget.y(), navTarget.z());
@@ -250,12 +276,26 @@ public class TaskExecutionSystem implements EcsSystem {
                         return;
                     }
                 }
+                if (loaded) {
+                    exec.initialNavDone = true;
+                }
+            } else if (loaded) {
+                // In range or positionless: mark initial navigation completed only if loaded
+                exec.initialNavDone = true;
             }
-            // In range or positionless: mark initial navigation completed
-            exec.initialNavDone = true;
         }
 
         // ── 4. Execute op loop (pure ops 连续批处理；旁路 op 按工作速度给每 tick 额度，不受距离限制) ──
+        if (world.entityOps != null && !world.entityOps.isNpcLoaded(npcId)) {
+            Log.warn(LogCategory.TASK, "exec", "NPC %d — not loaded when attempting to execute ops; releasing task", npcId);
+            releaseToGlobalPool(exec, queue, npcId, world);
+            exec.state = ExecutorState.IDLE;
+            exec.currentOpTarget = null;
+            exec.currentOpKind = null;
+            exec.activePackageSource = null;
+            exec.initialNavDone = false;
+            return;
+        }
         // 一格方块就是一个 op，所以「一拍放几格」＝「一拍执行几个拍内完成的旁路 op」：额度见 instantOpBudget。
         int sideEffectBudget = -1; // 懒算：本 tick 还剩几个旁路 op 的额度（<0 表示还没算过）
         while (queue.peekCurrentOp() != null) {
