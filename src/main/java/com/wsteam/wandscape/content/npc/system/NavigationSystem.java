@@ -19,6 +19,10 @@ import com.wsteam.wandscape.content.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.foundation.log.LogCategory;
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.phys.Vec3;
+import com.wsteam.wandscape.content.building.ChunkLoadManager;
 
 import java.util.List;
 import java.util.Map;
@@ -71,8 +75,17 @@ public class NavigationSystem implements EcsSystem {
         NavigationState nav = world.get(npcId, NavigationState.class);
         if (nav == null || nav.mode == NavigationState.Mode.IDLE) continue;
 
+        if (nav.mode == NavigationState.Mode.WAKEUP) {
+            tickWakeup(nav, npcId, world);
+            continue;
+        }
+
         ColonyWorker worker = EntityComponentBridge.INSTANCE.getWorker(npcId);
         if (worker == null || worker.entity().isRemoved()) {
+            if (nav.hasWakeupChunk) {
+                ChunkLoadManager.get().releaseChunk(new ChunkPos(nav.wakeupChunkX, nav.wakeupChunkZ));
+                nav.hasWakeupChunk = false;
+            }
             nav.reset();
             continue;
         }
@@ -288,20 +301,34 @@ public class NavigationSystem implements EcsSystem {
         MagicDef tp = SpellbookLoader.getSpec("teleport");
         int tpCd = tp != null ? tp.baseCooldown() : TELEPORT_COOLDOWN_TICKS;
         int tpMana = tp != null ? tp.manaCost() : TELEPORT_MANA_COST;
+
+        boolean isLongDistance = false;
+        if (worker != null && target != null) {
+            double dx = worker.entity().getX() - (target.x() + 0.5);
+            double dz = worker.entity().getZ() - (target.z() + 0.5);
+            isLongDistance = (dx * dx + dz * dz > (long) WandscapeConstants.NPC_WALK_THRESHOLD * WandscapeConstants.NPC_WALK_THRESHOLD);
+        }
+
         if (worker != null && !worker.tryEscapeCast("teleport", tpCd, tpMana,
                 WandscapeRitualOps.channelTicks(RitualId.SELF_TELEPORT))) {
-            Log.debug(LogCategory.NPC, "nav", "Worker {} — teleport gated (lock/CD/mana), walking instead", npcId);
-            // 门控未通过（CD/锁/蓝）：真正开始走路，而不是站桩等 CD。startTick 保持非 0，
-            // 避免下一 tick init 块再次进传送分支形成每 tick 空转（旧行为 startTick=0 → 每 tick
-            // 重试门控 + 该走路时站着，直到 CD 结束才一次性传送）。中途 CD 就绪由
-            // PATHFIND_TIMEOUT/卡住/重寻路失败后再切传送兜住。
-            nav.mode = NavigationState.Mode.PATHFINDING;
-            nav.startTick = tickCounter;
-            if (!startPathfinding(nav, worker, npcId)) {
-                // 连走路都起不来（如区块未加载）→ 退回原逻辑：下 tick 重试传送门控
-                nav.startTick = 0;
+            if (isLongDistance) {
+                // 长途工作通勤：距离 >64格，原版寻路注定失败且会导致陷入每 tick 寻路死循环。
+                // 此时直接放行自传送仪式，保证远方法师能够准时到达工地。
+                Log.debug(LogCategory.NPC, "nav", "Worker {} — long-distance commute (dist > 64), proceeding with teleport despite CD/mana", npcId);
+            } else {
+                Log.debug(LogCategory.NPC, "nav", "Worker {} — teleport gated (lock/CD/mana), walking instead", npcId);
+                // 门控未通过（CD/锁/蓝）：真正开始走路，而不是站桩等 CD。startTick 保持非 0，
+                // 避免下一 tick init 块再次进传送分支形成每 tick 空转（旧行为 startTick=0 → 每 tick
+                // 重试门控 + 该走路时站着，直到 CD 结束才一次性传送）。中途 CD 就绪由
+                // PATHFIND_TIMEOUT/卡住/重寻路失败后再切传送兜住。
+                nav.mode = NavigationState.Mode.PATHFINDING;
+                nav.startTick = tickCounter;
+                if (!startPathfinding(nav, worker, npcId)) {
+                    // 连走路都起不来（如区块未加载）→ 退回原逻辑：下 tick 重试传送门控
+                    nav.startTick = 0;
+                }
+                return;
             }
-            return;
         }
 
         // ── Clear the failed nav future from TaskExecutor ──
@@ -345,8 +372,59 @@ public class NavigationSystem implements EcsSystem {
 
     // ---- Internal ----
 
+    private static final int WAKEUP_TIMEOUT_TICKS = 160;
+
+    private void tickWakeup(NavigationState nav, long npcId, World world) {
+        nav.wakeupWaitTicks++;
+        ColonyWorker worker = EntityComponentBridge.INSTANCE.getWorker(npcId);
+        boolean loaded = worker != null && !worker.entity().isRemoved();
+
+        if (loaded) {
+            var e = worker.entity();
+            if (e.level() instanceof ServerLevel serverLevel && nav.target != null) {
+                Vec3 dest = WandscapeRitualOps.findSafeLandingWithFallback(serverLevel, nav.target);
+                double fromX = e.getX(), fromY = e.getY(), fromZ = e.getZ();
+                WandscapeRitualOps.teleportAndSync(e, dest);
+                worker.stopNavigation();
+
+                WandscapeRitualOps.spawnPortalBurst(e.level(), fromX, fromY, fromZ);
+                WandscapeRitualOps.spawnPortalBurst(e.level(), dest.x, dest.y, dest.z);
+
+                world.addComponent(npcId, new Position(new GridPos((int) Math.floor(dest.x), (int) Math.floor(dest.y), (int) Math.floor(dest.z))));
+                Log.info(TAG, "Worker {} woke up from chunk and teleported to ({},{},{})",
+                        npcId, (int) dest.x, (int) dest.y, (int) dest.z);
+            }
+            if (nav.hasWakeupChunk) {
+                ChunkLoadManager.get().releaseChunk(new ChunkPos(nav.wakeupChunkX, nav.wakeupChunkZ));
+                nav.hasWakeupChunk = false;
+            }
+            arrive(nav, worker);
+            return;
+        }
+
+        if (nav.wakeupWaitTicks > WAKEUP_TIMEOUT_TICKS) {
+            Log.warn(TAG, "Worker {} timed out waiting for chunk ({}, {}) to wake up",
+                    npcId, nav.wakeupChunkX, nav.wakeupChunkZ);
+            if (nav.hasWakeupChunk) {
+                ChunkLoadManager.get().releaseChunk(new ChunkPos(nav.wakeupChunkX, nav.wakeupChunkZ));
+                nav.hasWakeupChunk = false;
+            }
+            if (nav.future != null && !nav.future.isDone()) {
+                nav.future.completeExceptionally(new java.util.concurrent.TimeoutException(
+                        "Worker " + npcId + " failed to wake up from chunk (" + nav.wakeupChunkX + ", " + nav.wakeupChunkZ + ")"));
+            }
+            nav.reset();
+        }
+    }
+
     private void arrive(NavigationState nav, ColonyWorker worker) {
-        worker.setAiWanderingEnabled(true);
+        if (worker != null) {
+            worker.setAiWanderingEnabled(true);
+        }
+        if (nav.hasWakeupChunk) {
+            ChunkLoadManager.get().releaseChunk(new ChunkPos(nav.wakeupChunkX, nav.wakeupChunkZ));
+            nav.hasWakeupChunk = false;
+        }
         if (nav.future != null && !nav.future.isDone()) {
             nav.future.complete(null);
         }

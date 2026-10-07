@@ -84,6 +84,19 @@ public class WandscapeEntityOps implements EntityOps {
     @Override
     public boolean isNpcAlive(long npcId) {
         ColonyWorker worker = EntityComponentBridge.INSTANCE.getWorker(npcId);
+        if (worker == null) return false;
+        var e = worker.entity();
+        if (e.isRemoved()) {
+            Entity.RemovalReason reason = e.getRemovalReason();
+            return reason == Entity.RemovalReason.UNLOADED_TO_CHUNK
+                    || reason == Entity.RemovalReason.UNLOADED_WITH_PLAYER;
+        }
+        return e.isAlive();
+    }
+
+    @Override
+    public boolean isNpcLoaded(long npcId) {
+        ColonyWorker worker = EntityComponentBridge.INSTANCE.getWorker(npcId);
         return worker != null && !worker.entity().isRemoved();
     }
 

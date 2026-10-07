@@ -22,7 +22,9 @@ public class NavigationState {
         /** Waiting for mana to regen before ritual teleport. */
         TELEPORT_WAITING,
         /** Self-teleport ritual pushed to private queue; waiting for TaskExec to consume it. */
-        TELEPORT_RITUAL
+        TELEPORT_RITUAL,
+        /** Entity was in an unloaded chunk; chunk is temporarily acquired to wake the entity up. */
+        WAKEUP
     }
 
     public Mode mode = Mode.IDLE;
@@ -57,6 +59,12 @@ public class NavigationState {
     /** 水中逼近停滞的连续区间计数（每 STUCK_CHECK_INTERVAL_TICKS 判一次），达上限切传送。 */
     public int waterStallCount;
 
+    // ---- 未加载区块唤醒追踪（WAKEUP 模式）----
+    public boolean hasWakeupChunk;
+    public int wakeupChunkX;
+    public int wakeupChunkZ;
+    public int wakeupWaitTicks;
+
     /** Reset to idle, clearing all state. */
     public void reset() {
         if (future != null && !future.isDone()) {
@@ -73,5 +81,9 @@ public class NavigationState {
         lastCheckZ = 0;
         waterBestDist = -1.0;
         waterStallCount = 0;
+        hasWakeupChunk = false;
+        wakeupChunkX = 0;
+        wakeupChunkZ = 0;
+        wakeupWaitTicks = 0;
     }
 }

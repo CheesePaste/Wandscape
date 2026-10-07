@@ -43,6 +43,10 @@
     "zh_cn": "尚有法师存活，保底复活只在全员阵亡时可用",
     "en_us": "Wizards are still alive; the fallback revive only works when the town is wiped out"
   },
+  "gui.wandscape.townhall.revive_tooltip": {
+    "zh_cn": "团灭时复活一名法师，未团灭请前往祭坛复活",
+    "en_us": "Revives one wizard when the whole town is wiped out; otherwise go to the altar to revive"
+  },
   "gui.wandscape.townhall.title": {
     "zh_cn": "市政厅",
     "en_us": "Town Hall"

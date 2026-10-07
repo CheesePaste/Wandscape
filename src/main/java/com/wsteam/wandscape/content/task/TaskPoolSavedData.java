@@ -5,6 +5,9 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
 import com.wsteam.wandscape.content.building.data.WorkItem;
 import com.wsteam.wandscape.content.building.internal.BuildingSavedData;
+import com.wsteam.wandscape.content.building.internal.BuildingState;
+import com.wsteam.wandscape.content.building.internal.ConstructionBatches;
+import com.wsteam.wandscape.content.building.internal.EnqueueHelper;
 import com.wsteam.wandscape.content.task.engine.pool.BuildingTaskPool;
 import com.wsteam.wandscape.content.task.engine.pool.BuildingTaskQueue;
 import com.wsteam.wandscape.content.task.types.ResourceId;
@@ -17,6 +20,7 @@ import com.wsteam.wandscape.content.task.runtime.TaskState;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.saveddata.SavedData;
 
 import javax.annotation.Nullable;
@@ -35,6 +39,19 @@ import java.util.zip.GZIPOutputStream;
  * On load, tasks are recompiled from their blueprint; stepIndex and state are
  * restored so partially-completed tasks resume where they left off.
  *
+ * <p>拆批建造（多法师批次）**不落盘任何批次 params**：全量写盘曾让本文件涨到 546 MB
+ * （{@code pending_batches} 里上万条批次各带一份整栋 {@code blocks_nbt}）。建筑 JSON 是样式的
+ * 唯一真源，所以：
+ * <ul>
+ *   <li>每条建筑队列只存 {@link ConstructionBatches.BatchJob} 那份标量进度（含**完成游标**）；</li>
+ *   <li>子批次任务本身也不进 {@code tasks[]}（{@code isRebuiltBatchTask}），读档时用 JSON
+ *       重建 WorkItem 再重新分批、按游标跳过已完成的前缀（见 {@link #rebuildBatchBuild}）；</li>
+ *   <li>例外是**准备批次**（c=0，带 {@code pattern_offsets}）：它绝不重建（重发会再扣一遍整栋建材），
+ *       照旧由通用任务持久化恢复。</li>
+ * </ul>
+ * 重建结果与存档记录不匹配（方块数对不上、游标越界、建筑类型已删）时按用户口径直接
+ * **作废该建筑的建造队列**并 warn，不夹取游标硬放。
+ *
  * <p>Serialisation deliberately uses hand-rolled CompoundTag rather than NBT codecs:
  * every field stored is a primitive scalar (long/int/String/UUID or gzip'd Gson JSON),
  * so nothing needs a {@code HolderLookup.Provider} — and the {@code Factory} already
@@ -47,6 +64,12 @@ public final class TaskPoolSavedData extends SavedData {
 
     private static final String TAG = "TaskPoolSavedData";
     private static final String DATA_NAME = "wandscape_tasks";
+
+    /**
+     * 建筑队列里「拆批建造持久化记录」的键（见 {@link ConstructionBatches.BatchJob}）。
+     * 批次 params **不再落盘**：建筑 JSON 是样式的唯一真源，读档重建 WorkItem 再重新分批。
+     */
+    private static final String BATCH_TAG = "batch";
 
     /**
      * JSON params above this UTF-8 byte size are gzip-compressed before NBT storage.
@@ -73,11 +96,6 @@ public final class TaskPoolSavedData extends SavedData {
                 DATA_NAME);
     }
 
-    /** Signal that task state has changed and a save is needed. */
-    public void markChanged() {
-        setDirty();
-    }
-
     // ================================================================
     // NBT save
     // ================================================================
@@ -94,6 +112,9 @@ public final class TaskPoolSavedData extends SavedData {
         tag.put("tasks", list);
         tag.putLong("nextId", pool.getNextTaskId());
 
+        int batchBuilds = 0;
+        int completedBatchCount = 0;
+        int pendingBatchCount = 0;
         if (buildingPool != null) {
             ListTag bqList = new ListTag();
             for (Map.Entry<UUID, BuildingTaskQueue> entry : buildingPool.getAll().entrySet()) {
@@ -104,26 +125,31 @@ public final class TaskPoolSavedData extends SavedData {
                 if (q.getColonyId() != null) {
                     bTag.putUUID("colony", q.getColonyId());
                 }
-                if (q.getHeadTaskId() != null) {
-                    bTag.putLong("head", q.getHeadTaskId());
-                }
-                if (q.hasActiveBatches()) {
-                    ListTag activeList = new ListTag();
-                    for (long id : q.getActiveBatchIds()) {
-                        CompoundTag idTag = new CompoundTag();
-                        idTag.putLong("id", id);
-                        activeList.add(idTag);
+                // 拆批建造的活跃集合**不落盘**：placement 子批次本身不落盘（params 从 JSON 重建），
+                // 准备批次由通用任务持久化恢复、随后由 BuildingTaskPool.rebuildFromPool 重新索引回本队列。
+                // 存下来的旧 task id 读档时已失效，恢复它们会让完成游标误判（见 load）。
+                if (!q.hasBatchJob()) {
+                    if (q.getHeadTaskId() != null) {
+                        bTag.putLong("head", q.getHeadTaskId());
                     }
-                    bTag.put("active", activeList);
-                }
-                if (q.hasParked()) {
-                    ListTag parkedList = new ListTag();
-                    for (long id : q.getParkedTaskIds()) {
-                        CompoundTag idTag = new CompoundTag();
-                        idTag.putLong("id", id);
-                        parkedList.add(idTag);
+                    if (q.hasActiveBatches()) {
+                        ListTag activeList = new ListTag();
+                        for (long id : q.getActiveBatchIds()) {
+                            CompoundTag idTag = new CompoundTag();
+                            idTag.putLong("id", id);
+                            activeList.add(idTag);
+                        }
+                        bTag.put("active", activeList);
                     }
-                    bTag.put("parked", parkedList);
+                    if (q.hasParked()) {
+                        ListTag parkedList = new ListTag();
+                        for (long id : q.getParkedTaskIds()) {
+                            CompoundTag idTag = new CompoundTag();
+                            idTag.putLong("id", id);
+                            parkedList.add(idTag);
+                        }
+                        bTag.put("parked", parkedList);
+                    }
                 }
                 if (q.hasCompletionData()) {
                     CompoundTag compTag = new CompoundTag();
@@ -132,15 +158,21 @@ public final class TaskPoolSavedData extends SavedData {
                     }
                     bTag.put("comp", compTag);
                 }
-                if (q.hasPendingBatches()) {
-                    ListTag pbList = new ListTag();
-                    for (TaskRequest req : q.getPendingBatches()) {
-                        CompoundTag reqTag = taskRequestToNbt(req);
-                        if (reqTag != null) {
-                            pbList.add(reqTag);
-                        }
-                    }
-                    bTag.put("pending_batches", pbList);
+                if (q.hasBatchJob()) {
+                    // 只落盘标量进度：批次 params 全量写盘曾让本文件涨到 546 MB（pending_batches 里
+                    // 13854 条批次各带一份整栋 blocks_nbt）。读档用建筑 JSON 重建再重新分批。
+                    ConstructionBatches.BatchJob job = q.getBatchJob();
+                    CompoundTag jobTag = new CompoundTag();
+                    jobTag.putInt("size", job.batchSize());
+                    jobTag.putBoolean("prep", job.prepDone());
+                    jobTag.putInt("done", job.completedBatches());
+                    jobTag.putInt("blocks", job.blockCount());
+                    jobTag.putInt("prio", job.priority());
+                    jobTag.putBoolean("clearbox", job.clearBox());
+                    bTag.put(BATCH_TAG, jobTag);
+                    batchBuilds++;
+                    completedBatchCount += job.completedBatches();
+                    pendingBatchCount += q.getPendingBatches().size();
                 }
                 if (q.hasPending()) {
                     ListTag piList = new ListTag();
@@ -157,13 +189,21 @@ public final class TaskPoolSavedData extends SavedData {
             tag.put("building_queues", bqList);
         }
 
-        Log.info(TAG, "[TaskPoolSavedData] saved {} tasks, {} building queues (nextId={})",
-                list.size(), buildingPool != null ? buildingPool.totalBuildings() : 0, pool.getNextTaskId());
+        // 观测点：批次 params 已不再落盘，这里把「完成游标」与下次读档要重建的批次数量打出来，
+        // 便于实测核对（读档会对每条建筑重发 completedBatchCount 之后的 pendingBatchCount 条批次）。
+        Log.info(TAG, "[TaskPoolSavedData] saved {} tasks, {} building queues "
+                        + "({} batch builds: cursor at {} completed placement batches, "
+                        + "{} pending batches rebuilt from building JSON on load; nextId={})",
+                list.size(), buildingPool != null ? buildingPool.totalBuildings() : 0,
+                batchBuilds, completedBatchCount, pendingBatchCount, pool.getNextTaskId());
         return tag;
     }
 
     private static CompoundTag taskToNbt(GlobalTask task) {
         if (task.blueprintId == null) return null;
+        // 拆批建造的子批次不落盘：params 能从建筑 JSON + 完成游标完整重建（见 rebuildBatchBuild），
+        // 而这里每条都带一份自成一体的 offsets/blocks/block_nbt 分片，magic_academy 一栋上万条。
+        if (isRebuiltBatchTask(task)) return null;
         CompoundTag tag = new CompoundTag();
         tag.putLong("id", task.id);
         tag.putString("bp", task.blueprintId);
@@ -200,33 +240,21 @@ public final class TaskPoolSavedData extends SavedData {
         return tag;
     }
 
-    private static CompoundTag taskRequestToNbt(TaskRequest req) {
-        CompoundTag tag = new CompoundTag();
-        tag.putString("bp", req.blueprintId());
-        tag.putInt("priority", req.priority());
-        if (req.colonyId() != null) {
-            tag.putUUID("colony", req.colonyId());
-        }
-        writeParams(tag, req.params());
-        return tag;
-    }
-
-    @Nullable
-    private static TaskRequest taskRequestFromNbt(CompoundTag tag) {
-        String bp = tag.getString("bp");
-        if (bp.isEmpty()) return null;
-        int priority = tag.getInt("priority");
-        UUID colonyId = tag.contains("colony") ? tag.getUUID("colony") : null;
-        Map<String, JsonElement> params = readParams(tag);
-        return new TaskRequest(bp, params, priority, colonyId);
-    }
-
     private static CompoundTag workItemToNbt(WorkItem item) {
         CompoundTag tag = new CompoundTag();
         tag.putString("bp", item.blueprintId());
         tag.putInt("priority", item.priority());
         writeParams(tag, item.params());
         return tag;
+    }
+
+    /**
+     * 拆批建造的子批次（c≥1 的 placement 批次）：params 能从建筑 JSON + 完成游标完整重建，
+     * 落盘纯属冗余。识别口径与完成游标共用 {@link ConstructionBatches#isPlacementBatch}
+     * —— 准备批次（c=0，带 pattern_offsets）与修复任务照旧全量落盘。
+     */
+    private static boolean isRebuiltBatchTask(GlobalTask task) {
+        return ConstructionBatches.isPlacementBatch(task.taskParams);
     }
 
     @Nullable
@@ -282,26 +310,14 @@ public final class TaskPoolSavedData extends SavedData {
     // ================================================================
 
     private static TaskPoolSavedData load(GlobalTaskPool pool, @Nullable BuildingTaskPool buildingPool,
-                                          CompoundTag tag, @Nullable net.minecraft.server.level.ServerLevel level) {
-        ListTag list = tag.getList("tasks", Tag.TAG_COMPOUND);
-        int loaded = 0;
-        for (int i = 0; i < list.size(); i++) {
-            CompoundTag t = list.getCompound(i);
-            long originalId = t.getLong("id");
-            GlobalTask task = taskFromNbt(t, pool, originalId, level);
-            if (task != null) {
-                pool.addLoadedTask(task, originalId);
-                loaded++;
-            }
-        }
-        if (tag.contains("nextId")) {
-            long savedNextId = tag.getLong("nextId");
-            if (savedNextId > pool.getNextTaskId()) {
-                pool.setNextTaskId(savedNextId);
-            }
-        }
-
-        int loadedQueues = 0;
+                                          CompoundTag tag, @Nullable ServerLevel level) {
+        // 建筑队列先读：拆批建造的批次 params 不再落盘，要用建筑 JSON 重建；重建失败的建筑
+        //（建筑类型已删 / 中途改过 JSON 导致方块数不匹配 / 旧档格式）必须连它的任务一起丢弃 ——
+        // 否则 Wandscape 随后的 rebuildFromPool 会凭残留任务把刚作废的队列又立起来。
+        Map<UUID, BuildingTaskQueue> restoredQueues = new LinkedHashMap<>();
+        Set<UUID> voidedBuildings = new HashSet<>();
+        int rebuiltQueues = 0;
+        int rebuiltPendingBatches = 0;
         if (tag.contains("building_queues") && buildingPool != null) {
             ListTag bqList = tag.getList("building_queues", Tag.TAG_COMPOUND);
             for (int i = 0; i < bqList.size(); i++) {
@@ -314,23 +330,45 @@ public final class TaskPoolSavedData extends SavedData {
                         continue;
                     }
                 }
+                // 旧档断档（用户定的口径：不迁移）：pending_batches 是全量批次 params 的老形态。
+                // 不认识却留着，会让"还差几千格"的建筑照样发 build_complete —— 整条作废并留痕。
+                if (bTag.contains("pending_batches")) {
+                    Log.warn(TAG, "[TaskPoolSavedData] building {} holds legacy 'pending_batches' "
+                            + "(pre-refactor save); dropping its construction queue — repair or re-place it", bid);
+                    voidedBuildings.add(bid);
+                    continue;
+                }
                 BuildingTaskQueue q = new BuildingTaskQueue();
                 if (bTag.contains("colony")) {
                     q.setColonyId(bTag.getUUID("colony"));
                 }
-                if (bTag.contains("head")) {
-                    q.setHeadTaskId(bTag.getLong("head"));
-                }
-                if (bTag.contains("active")) {
-                    ListTag activeList = bTag.getList("active", Tag.TAG_COMPOUND);
-                    for (int j = 0; j < activeList.size(); j++) {
-                        q.addActiveBatch(activeList.getCompound(j).getLong("id"));
+                if (bTag.contains(BATCH_TAG)) {
+                    // 拆批建造：head/active/parked **一律不恢复**（存的是过期 id，恢复会让完成游标误判）。
+                    // 活跃集合全部重建：placement 批次按游标重发进 pendingBatches（下一次 poll 释放），
+                    // 准备批次由通用任务持久化恢复、随后 rebuildFromPool 重新索引回本队列。
+                    if (!rebuildBatchBuild(bTag.getCompound(BATCH_TAG), level, bid, q)) {
+                        voidedBuildings.add(bid);
+                        continue;
                     }
-                }
-                if (bTag.contains("parked")) {
-                    ListTag parkedList = bTag.getList("parked", Tag.TAG_COMPOUND);
-                    for (int j = 0; j < parkedList.size(); j++) {
-                        q.addParked(parkedList.getCompound(j).getLong("id"));
+                    if (q.hasPendingBatches()) {
+                        rebuiltQueues++;
+                        rebuiltPendingBatches += q.getPendingBatches().size();
+                    }
+                } else {
+                    if (bTag.contains("head")) {
+                        q.setHeadTaskId(bTag.getLong("head"));
+                    }
+                    if (bTag.contains("active")) {
+                        ListTag activeList = bTag.getList("active", Tag.TAG_COMPOUND);
+                        for (int j = 0; j < activeList.size(); j++) {
+                            q.addActiveBatch(activeList.getCompound(j).getLong("id"));
+                        }
+                    }
+                    if (bTag.contains("parked")) {
+                        ListTag parkedList = bTag.getList("parked", Tag.TAG_COMPOUND);
+                        for (int j = 0; j < parkedList.size(); j++) {
+                            q.addParked(parkedList.getCompound(j).getLong("id"));
+                        }
                     }
                 }
                 if (bTag.contains("comp")) {
@@ -341,17 +379,6 @@ public final class TaskPoolSavedData extends SavedData {
                     }
                     q.setCompletionData(compMap);
                 }
-                if (bTag.contains("pending_batches")) {
-                    ListTag pbList = bTag.getList("pending_batches", Tag.TAG_COMPOUND);
-                    List<TaskRequest> pBatches = new ArrayList<>();
-                    for (int j = 0; j < pbList.size(); j++) {
-                        TaskRequest req = taskRequestFromNbt(pbList.getCompound(j));
-                        if (req != null) {
-                            pBatches.add(req);
-                        }
-                    }
-                    q.setPendingBatches(pBatches);
-                }
                 if (bTag.contains("pending_items")) {
                     ListTag piList = bTag.getList("pending_items", Tag.TAG_COMPOUND);
                     for (int j = 0; j < piList.size(); j++) {
@@ -361,21 +388,147 @@ public final class TaskPoolSavedData extends SavedData {
                         }
                     }
                 }
-                buildingPool.putQueue(bid, q);
-                loadedQueues++;
+                restoredQueues.put(bid, q);
             }
         }
 
-        Log.info(TAG, "[TaskPoolSavedData] loaded {} tasks, {} building queues (nextId={})",
-                loaded, loadedQueues, pool.getNextTaskId());
+        ListTag list = tag.getList("tasks", Tag.TAG_COMPOUND);
+        int loaded = 0;
+        for (int i = 0; i < list.size(); i++) {
+            CompoundTag t = list.getCompound(i);
+            long originalId = t.getLong("id");
+            GlobalTask task = taskFromNbt(t, pool, originalId, level, voidedBuildings);
+            if (task != null) {
+                pool.addLoadedTask(task, originalId);
+                loaded++;
+            }
+        }
+        if (tag.contains("nextId")) {
+            long savedNextId = tag.getLong("nextId");
+            if (savedNextId > pool.getNextTaskId()) {
+                pool.setNextTaskId(savedNextId);
+            }
+        }
+
+        if (buildingPool != null) {
+            for (Map.Entry<UUID, BuildingTaskQueue> entry : restoredQueues.entrySet()) {
+                buildingPool.putQueue(entry.getKey(), entry.getValue());
+            }
+        }
+
+        // 观测点：重建计数（rebuiltQueues/rebuiltPendingBatches）与作废建筑数，便于实测核对
+        // —— 拆批建造的批次 params 已不落盘，读档必须重建出同样多的待发批次。
+        Log.info(TAG, "[TaskPoolSavedData] loaded {} tasks, {} building queues "
+                        + "({} batch builds with {} pending placement batches rebuilt from building JSON, "
+                        + "{} buildings voided; nextId={})",
+                loaded, restoredQueues.size(), rebuiltQueues, rebuiltPendingBatches,
+                voidedBuildings.size(), pool.getNextTaskId());
         return new TaskPoolSavedData(pool, buildingPool);
+    }
+
+    /**
+     * 读档重建一条拆批建造。
+     *
+     * <p>批次 params 一律不落盘：建筑 JSON 是样式的唯一真源，这里用 {@link EnqueueHelper#rebuildWorkItem}
+     * 重建 WorkItem、再按存档里的**分批尺寸快照**重新分批，然后按**完成游标**决定重发范围：
+     * 游标之前的 placement 批次视为已完成、跳过；游标及其之后的全部重发（含当时在途的那几批——
+     * 从该批起点重跑，与"重进世界重跑整条"同语义，幂等，不新增丢失）。
+     *
+     * <p>重发不在这里直接发任务，而是塞回 {@code pendingBatches}：准备批次还没跑完时，
+     * {@code checkBatchesProgress} 到不了释放分支（有活跃/停泊任务就提前 return），
+     * 所以「prep 必须先完成」这条契约由队列语义天然保证。
+     *
+     * <p>**准备批次（c=0）不在这里重建**：它是普通 GlobalTask，由通用任务持久化恢复；
+     * 重建一条会变成两条 prep 任务，而 {@code ResourceRequestExecutor.finish} 对 material_list
+     * 是全额 commit（不查账本），等于再扣一遍整栋建材；何况 {@code skipMaterials}(首建免费)
+     * 在 {@code claimFirstFree} 之后无法重算。
+     *
+     * @return false 表示重建失败，调用方必须作废该建筑的建造队列（warn + 丢弃，不许夹取游标硬放）
+     */
+    private static boolean rebuildBatchBuild(CompoundTag jobTag, @Nullable ServerLevel level,
+                                             UUID buildingId, BuildingTaskQueue queue) {
+        ConstructionBatches.BatchJob job = new ConstructionBatches.BatchJob(
+                jobTag.getInt("size"), jobTag.getBoolean("prep"), jobTag.getInt("done"),
+                jobTag.getInt("blocks"), jobTag.getInt("prio"), jobTag.getBoolean("clearbox"));
+        queue.setBatchJob(job);
+
+        // 不可能组合：placement 批次只在 Phase 2 释放之后才存在，而释放必然先判 prep 完成。
+        // 出现它说明记录被改坏/与 JSON 错位 —— 作废，不夹取游标硬放。
+        if (job.completedBatches() > 0 && !job.prepDone()) {
+            Log.warn(TAG, "[TaskPoolSavedData] building {} batch record is inconsistent "
+                    + "(cursor at {} completed batches but prep not done) — dropping its construction queue",
+                    buildingId, job.completedBatches());
+            return false;
+        }
+
+        if (level == null) {
+            Log.warn(TAG, "[TaskPoolSavedData] building {}: no level to rebuild {} pending placement batches "
+                    + "from building JSON — dropping its construction queue", buildingId, job.blockCount());
+            return false;
+        }
+        var sd = BuildingSavedData.get(level);
+        BuildingState state = sd != null ? sd.getBuilding(buildingId) : null;
+        if (state == null) {
+            Log.warn(TAG, "[TaskPoolSavedData] building {} has a batch record but no building state — "
+                    + "dropping its construction queue", buildingId);
+            return false;
+        }
+        int rebuiltBlocks;
+        ConstructionBatches.SplitResult split;
+        try {
+            WorkItem work = EnqueueHelper.rebuildWorkItem(state, job.priority(), job.clearBox());
+            if (work == null) return false; // rebuildWorkItem 已 warn
+            rebuiltBlocks = ConstructionBatches.blockCount(work);
+            if (rebuiltBlocks <= 0) {
+                Log.warn(TAG, "[TaskPoolSavedData] building {}: rebuilt work has no block list "
+                        + "(building JSON bind changed?) — dropping its construction queue", buildingId);
+                return false;
+            }
+            if (rebuiltBlocks != job.blockCount()) {
+                Log.warn(TAG, "[TaskPoolSavedData] building {}: building JSON changed mid-build — rebuilt {} "
+                                + "blocks but {} were recorded at start; dropping its construction queue "
+                                + "(no cursor clamping)",
+                        buildingId, rebuiltBlocks, job.blockCount());
+                return false;
+            }
+            split = ConstructionBatches.split(work, queue.getColonyId(), job.batchSize());
+        } catch (RuntimeException e) {
+            // 建筑 JSON 形态坏了（缺 offsets、block_mapping 类型不对……）：读档不能因此崩，
+            // 也不能装着没事——作废该建筑的建造队列并留痕。
+            Log.warn(TAG, "[TaskPoolSavedData] building {}: failed to rebuild batches from building JSON: {}",
+                    buildingId, e.toString());
+            return false;
+        }
+        int totalBatches = split.remainingBatches().size();
+        if (totalBatches <= 0 || job.completedBatches() > totalBatches) {
+            // 游标越过重建出的批次数 = 记录与 JSON 对不上（改了分批尺寸快照？），
+            // 按用户口径作废，绝不把游标夹到边界上硬放。
+            Log.warn(TAG, "[TaskPoolSavedData] building {}: batch cursor {} is out of range (rebuilt {} "
+                            + "placement batches) — dropping its construction queue",
+                    buildingId, job.completedBatches(), totalBatches);
+            return false;
+        }
+        List<TaskRequest> toRepublish = ConstructionBatches.batchesFrom(split, job.completedBatches());
+        queue.setPendingBatches(toRepublish);
+        Log.info(TAG, "[TaskPoolSavedData] building {}: rebuilt {} placement batches, cursor={} → "
+                        + "republishing {} (batchSize={}, prepDone={}, blocks={})",
+                buildingId, totalBatches, job.completedBatches(), toRepublish.size(),
+                job.batchSize(), job.prepDone(), rebuiltBlocks);
+        return true;
     }
 
     @Nullable
     private static GlobalTask taskFromNbt(CompoundTag tag, GlobalTaskPool pool, long originalId,
-                                          @Nullable net.minecraft.server.level.ServerLevel level) {
+                                          @Nullable ServerLevel level, Set<UUID> voidedBuildings) {
         String blueprintId = tag.getString("bp");
         if (blueprintId.isEmpty()) return null;
+
+        // 队列刚被作废的建筑：它的建造链路任务一并丢弃（作废原因在队列侧已按建筑 warn 过一次，
+        // 这里不重复刷屏）。只丢 build:* —— 同建筑上的生产/采集任务与这次作废无关，继续跑。
+        if (!voidedBuildings.isEmpty() && blueprintId.startsWith("build:")
+                && tag.contains("bid") && voidedBuildings.contains(tag.getUUID("bid"))) {
+            return null;
+        }
 
         Map<String, JsonElement> taskParams = readParams(tag);
 

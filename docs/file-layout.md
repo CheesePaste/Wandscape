@@ -106,8 +106,7 @@ A 和 B 用的是**同一套加载器**：B 里放同 id 的文件就能覆盖 A
 | `wandscape_colonies.dat` | 殖民地主体（另有强制落盘逻辑 `ColonySavedData.saveNow`） |
 | `wandscape_colony_levels.dat` | 殖民等级/经验 |
 | `wandscape_colony_items.dat` | 殖民地物品银行 |
-| `wandscape_buildings.dat` | 已建建筑实例 |
-| `wandscape_chunk_leases.dat` | 区块租约 |
+| `wandscape_buildings.dat` | 已建建筑实例（只存 type/anchor/rotation 等事实，占地格由建筑 JSON 现算） |
 | `wandscape_altar_casts.dat` | 祭坛施法状态 |
 | `wandscape_roads.dat` | 路网 |
 | `wandscape_tasks.dat` | 任务池 |

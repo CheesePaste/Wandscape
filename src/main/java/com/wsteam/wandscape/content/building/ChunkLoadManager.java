@@ -25,9 +25,10 @@ import java.util.stream.Collectors;
  * chunks instead of silently no-oping on unloaded ones.
  *
  * <p>Chunks are refcounted so multiple buildings sharing a chunk don't unload
- * each other. The lease registry is persisted ({@link ChunkLeaseData}) because
- * vanilla {@code ForcedChunksSavedData} survives crashes — the registry lets us
- * release stale force-loads on the next server start.
+ * each other. The registry is purely in-memory: vanilla {@code ForcedChunksSavedData}
+ * survives crashes and restarts, so on the next server start we re-derive the
+ * building footprints from {@link BuildingState#getBounds()} and release whatever
+ * is still force-loaded before the normal poll flow re-leases it.
  */
 public final class ChunkLoadManager {
 
@@ -36,8 +37,6 @@ public final class ChunkLoadManager {
 
     @Nullable
     private ServerLevel level;
-    @Nullable
-    private ChunkLeaseData leaseData;
 
     /** chunk → refcount across all leased buildings. */
     private final Map<ChunkPos, Integer> refs = new HashMap<>();
@@ -62,29 +61,52 @@ public final class ChunkLoadManager {
     // ---- Lifecycle ----
 
     /**
-     * Called on server start. Releases every stale lease recorded in the
-     * previous session (clearing any force-loads left behind by a crash);
-     * the normal poll flow re-acquires leases within a few ticks.
+     * Called on server start. 释放上一个会话残留的建筑占地强加载（崩溃或停服时租约来不及释放），
+     * 随后正常 poll 流程会在几 tick 内按需重新租用。
      */
     public void init(ServerLevel serverLevel) {
         this.level = serverLevel;
-        this.leaseData = ChunkLeaseData.getOrCreate(serverLevel);
-        int released = 0;
-        for (var entry : leaseData.getLeases().entrySet()) {
-            for (ChunkPos cp : entry.getValue()) {
-                if (setForced(cp, false)) released++;
-            }
-        }
-        leaseData.clearAll();
         refs.clear();
         leases.clear();
+        int released;
+        try {
+            released = releaseStaleForceLoads();
+        } catch (RuntimeException e) {
+            // 清残留强加载只是尽力而为，任何异常都不该拖垮服务器启动。
+            released = 0;
+            Log.warn(TAG, "stale forced-chunk sweep failed: {}", e.toString());
+        }
         Log.info(TAG, "ChunkLoadManager initialized — released {} stale forced chunks", released);
     }
 
-    /** Called on server stop. Drops all state (registry stays on disk until next init). */
+    /**
+     * 按建筑 bounds 现算上一个会话遗留的强加载区块并释放。旧实现为此单独落盘了一张租约表
+     * （world/data/wandscape_chunk_leases.dat），但那张表 100% 可由
+     * {@code BuildingState.getBounds().intersectingChunks()} 推导，故销毁冗余落盘、改为启动时现算。
+     *
+     * <p>尽力而为：读不到建筑数据就记 warn 返回，不阻断服务器启动。
+     */
+    private int releaseStaleForceLoads() {
+        ServerLevel lvl = level;
+        if (lvl == null) return 0;
+        BuildingSavedData sd = BuildingSavedData.get(lvl);
+        if (sd == null) {
+            Log.warn(TAG, "stale forced-chunk sweep skipped — building data unavailable");
+            return 0;
+        }
+        int released = 0;
+        for (BuildingState state : sd.getAllBuildings()) {
+            if (state == null || state.getBounds() == null) continue;
+            for (ChunkPos cp : state.getBounds().intersectingChunks().toList()) {
+                if (setForced(cp, false)) released++;
+            }
+        }
+        return released;
+    }
+
+    /** Called on server stop. Drops all in-memory state (残留强加载由下次 init 清理). */
     public void reset() {
         level = null;
-        leaseData = null;
         refs.clear();
         leases.clear();
     }
@@ -109,9 +131,6 @@ public final class ChunkLoadManager {
             acquire(cp);
         }
         leases.put(buildingId, chunks);
-        if (leaseData != null) {
-            leaseData.addLease(buildingId, chunks);
-        }
         return true;
     }
 
@@ -121,9 +140,6 @@ public final class ChunkLoadManager {
         if (chunks == null) return;
         for (ChunkPos cp : chunks) {
             release(cp);
-        }
-        if (leaseData != null) {
-            leaseData.removeLease(buildingId);
         }
     }
 

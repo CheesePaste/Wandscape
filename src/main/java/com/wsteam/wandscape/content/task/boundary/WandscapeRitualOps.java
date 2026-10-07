@@ -15,6 +15,8 @@ import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.foundation.log.LogCategory;
 import com.wsteam.wandscape.content.magic.network.MagicCircleCastPacket;
 import com.wsteam.wandscape.foundation.networking.Net;
+import com.wsteam.wandscape.content.task.component.Position;
+import com.wsteam.wandscape.foundation.service.ParticleService;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
@@ -22,6 +24,9 @@ import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 
@@ -179,17 +184,17 @@ public class WandscapeRitualOps implements RitualOps {
                 // 传送到安全落点，避免落进实体方块/建筑内部窒息；找不到安全落点则放弃传送，避免进墙窒息或高空坠亡
                 Vec3 dest = null;
                 if (e.level() instanceof ServerLevel serverLevel) {
-                    dest = findSafeLanding(serverLevel, target);
+                    dest = findSafeLandingWithFallback(serverLevel, target);
                     // 若目标原点未能找到安全落点，且工作者处于跟随模式，尝试以跟随玩家实时位置重试搜索
                     if (dest == null && worker.isFollowMode() && worker.getFollowerUuid() != null) {
                         Player follower = resolveFollower(serverLevel, worker.getFollowerUuid());
                         if (follower != null) {
-                            dest = findSafeLanding(serverLevel, new GridPos(follower.getBlockX(), follower.getBlockY(), follower.getBlockZ()));
+                            dest = findSafeLandingWithFallback(serverLevel, new GridPos(follower.getBlockX(), follower.getBlockY(), follower.getBlockZ()));
                         }
                     }
                 }
                 if (dest != null) {
-                    e.teleportTo(dest.x, dest.y, dest.z);
+                    teleportAndSync(e, dest);
                     worker.stopNavigation();
                     // 落点可能超出到达半径，把导航状态拨回 PATHFINDING，让 NavigationSystem 走完剩余距离
                     //（已到则下一 tick 判到），避免停在 TELEPORT_RITUAL 空转
@@ -201,6 +206,8 @@ public class WandscapeRitualOps implements RitualOps {
                     // 末影人式传送爆点：起点（消失）+ 终点（出现）
                     spawnPortalBurst(e.level(), fromX, fromY, fromZ);
                     spawnPortalBurst(e.level(), e.getX(), e.getY(), e.getZ());
+                    // 同步刷新 ECS Position 组件，确保物理位置与 ECS 位置一致
+                    world.addComponent(casterId, new Position(new GridPos((int) Math.floor(dest.x), (int) Math.floor(dest.y), (int) Math.floor(dest.z))));
                     Log.debug(LogCategory.TASK, "ritual", "self_teleport: NPC {} → {} (dest {},{},{})",
                             casterId, target, dest.x, dest.y, dest.z);
                 } else {
@@ -217,6 +224,25 @@ public class WandscapeRitualOps implements RitualOps {
         }
 
         Log.warn(TAG, "[RitualOps] Unknown ritual '{}' at {} — no-op", ritual.id(), target);
+    }
+
+    /**
+     * 服务端瞬移实体并强刷网络跟踪。
+     *
+     * <p>解决 Minecraft 原版长途 teleportTo 时 TrackedEntity/ServerEntity 不重置、
+     * 导致客户端只收到旧坐标 AddEntityPacket 从而实体在客户端不可见的问题。
+     */
+    public static void teleportAndSync(Entity e, Vec3 dest) {
+        if (!(e.level() instanceof ServerLevel serverLevel)) return;
+        serverLevel.getChunk((int) Math.floor(dest.x) >> 4, (int) Math.floor(dest.z) >> 4);
+        e.teleportTo(dest.x, dest.y, dest.z);
+        e.setDeltaMovement(Vec3.ZERO);
+        e.setOnGround(true);
+        if (e instanceof PathfinderMob mob) {
+            mob.getNavigation().stop();
+        }
+        serverLevel.getChunkSource().removeEntity(e);
+        serverLevel.getChunkSource().addEntity(e);
     }
 
     /**
@@ -249,6 +275,28 @@ public class WandscapeRitualOps implements RitualOps {
             if (spot != null) return spot;
         }
         return null;
+    }
+
+    /**
+     * 带地表高度图兜底的安全落点搜索：绝不返回 null。
+     * 先调用 {@link #findSafeLanding} 寻找最近坚实地面；若找不到，则回退为目标坐标的地表高度（MOTION_BLOCKING），
+     * 确保工作者 100% 物理瞬移到任务现场，彻底杜绝因落点搜索失败而原地隔空施工。
+     */
+    public static Vec3 findSafeLandingWithFallback(ServerLevel level, GridPos target) {
+        // 先确保目标区块已装载，避免高度图与方块查询得到未加载默认值（-64）
+        level.getChunk(target.x() >> 4, target.z() >> 4);
+        Vec3 spot = findSafeLanding(level, target);
+        if (spot != null) return spot;
+
+        int surfaceY = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, target.x(), target.z());
+        if (surfaceY > level.getMinBuildHeight()) {
+            if (isSafeLanding(level, target.x(), surfaceY, target.z(), false)) {
+                return new Vec3(target.x() + 0.5, surfaceY, target.z() + 0.5);
+            }
+            return new Vec3(target.x() + 0.5, surfaceY, target.z() + 0.5);
+        }
+
+        return new Vec3(target.x() + 0.5, Math.max(target.y() + 1.0, level.getMinBuildHeight() + 1.0), target.z() + 0.5);
     }
 
     /** 逃生搜索最大半径：保证传送后远离危险点（岩浆/窒息区域），又不会跳得过远。 */
@@ -338,13 +386,17 @@ public class WandscapeRitualOps implements RitualOps {
         }
     }
 
-    /** 末影人传送式 PORTAL 爆点（环绕身体，16 粒）。 */
-    private static void spawnPortalBurst(Level level, double x, double y, double z) {
-        for (int i = 0; i < 16; i++) {
-            double ox = (level.random.nextDouble() - 0.5);
-            double oy = level.random.nextDouble() * 2.0;
-            double oz = (level.random.nextDouble() - 0.5);
-            level.addParticle(ParticleTypes.PORTAL, x + ox, y + oy, z + oz, 0, 0, 0);
+    /** 末影人传送式 PORTAL 爆点（环绕身体，广播给附近玩家）。 */
+    public static void spawnPortalBurst(Level level, double x, double y, double z) {
+        if (level instanceof ServerLevel sl) {
+            ParticleService.burstAt(sl, ParticleTypes.PORTAL, new Vec3(x, y + 1.0, z), 24, 0.4, 0.1);
+        } else {
+            for (int i = 0; i < 16; i++) {
+                double ox = (level.random.nextDouble() - 0.5);
+                double oy = level.random.nextDouble() * 2.0;
+                double oz = (level.random.nextDouble() - 0.5);
+                level.addParticle(ParticleTypes.PORTAL, x + ox, y + oy, z + oz, 0, 0, 0);
+            }
         }
     }
 }

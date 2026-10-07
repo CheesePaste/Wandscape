@@ -117,6 +117,7 @@ public final class WandscapePanelController {
         // 玩家列表闪烁；引导结束后 Tab 恢复原版玩家列表功能。
         // 面板隐藏时放行，让 Tab 回到原版玩家列表。
         if (!WandscapePanelState.isPanelHidden()
+                && !WandscapePanelState.isTutorialSuppressed()
                 && com.wsteam.wandscape.foundation.ui.tutorial.TutorialSession.shouldShow()
                 && com.wsteam.wandscape.WandscapeClient.TUTORIAL_FOLD_TOGGLE.getKey().getValue() == GLFW.GLFW_KEY_TAB) {
             mc.options.keyPlayerList.setDown(false);
@@ -742,6 +743,7 @@ public final class WandscapePanelController {
         // When no guide is showing, Tab does nothing to the panel.
         if (com.wsteam.wandscape.WandscapeClient.TUTORIAL_FOLD_TOGGLE.matches(key, scanCode)
                 && WandscapePanelState.isPanelOpen()
+                && !WandscapePanelState.isTutorialSuppressed()
                 && com.wsteam.wandscape.foundation.ui.tutorial.TutorialSession.shouldShow()) {
             com.wsteam.wandscape.foundation.ui.tutorial.TutorialSession.toggleCollapsed();
             return;

@@ -204,12 +204,19 @@ public final class EnqueueHelper {
                 JsonElement value = resolveField(config, fieldName);
                 if (value != null) {
                     params.put(blueprintParamName, value);
+                } else {
+                    // bind 指向了不存在的 config 字段（或是拼错的字段名）时，蓝图拿不到这个参数。
+                    // 静默跳过会让「方块 NBT 没了」「建材不扣」这类故障变成哑弹，必须留痕。
+                    Log.warn(TAG, "bind '{}' -> '{}' resolved to no config field (building {});"
+                            + " the blueprint will run without this param",
+                            blueprintParamName, fieldRef, config.id());
                 }
             }
-            // Auto-add blocks_nbt if not provided by bind (backward compat with older building JSONs)
-            if (!params.containsKey("blocks_nbt")) {
-                params.put("blocks_nbt", blockNbtToJson(config));
-            }
+            // 这里曾自动补一个 "blocks_nbt"（内容等于整栋 block_nbt 的副本）。它**零消费者**：
+            // 蓝图读的是 bind 里的 "block_nbt"（见 BlueprintDefaults.placeStructure），
+            // 而同名的 "blocks_nbt" 从来没被读过。多法师拆批时 `new LinkedHashMap<>(work.params())`
+            // 会把整份副本复制进**每一条**批次，magic_academy 一栋就是 13854 × 143 KB ≈ 546 MB
+            // 落进 wandscape_tasks.dat。删掉，别再加回来。
             // Auto-add entities if not provided by bind (older building JSONs) so the
             // blueprint's for_each $entities always has a value — empty means no decorations.
             if (!params.containsKey("entities")) {
@@ -257,10 +264,13 @@ public final class EnqueueHelper {
                     params.put("blocks", blocksFromPalette(
                             config.pattern(), rotatedPalette, config.blockIndices(), rotationSteps));
                 }
-                // Rotate block_nbt (keys only — values are opaque base64 strings)
-                if (params.containsKey("blocks_nbt")) {
-                    params.put("blocks_nbt", rotateBlockNbtJson(
-                            params.get("blocks_nbt").getAsJsonObject(), rotationSteps));
+                // Rotate block_nbt: 键是局部偏移串，旋转后必须跟着转 —— 否则执行期
+                // `blockNbt.get(key)` 拿的是**旋转后**的键，非 0 旋转下必然落空，箱子/告示牌/
+                // 花盆的 NBT 会被静默丢掉。与修复路径（BuildingRepairHandler）同一口径：
+                // 那边一直用的就是 BuildingRotation.rotateBlockNbt，只有建造路径漏了。
+                if (params.containsKey("block_nbt")) {
+                    params.put("block_nbt", rotateBlockNbtJson(
+                            params.get("block_nbt").getAsJsonObject(), rotationSteps));
                 }
                 // Rotate decoration entities (offsets + facing strings, NBT opaque)
                 if (params.containsKey("entities")) {
@@ -293,7 +303,37 @@ public final class EnqueueHelper {
             fillBoundaryParams(params, pos, config, rotationSteps);
         }
 
-        return new WorkItem(blueprintId, params, priority);
+        // batchBuild=true：这条任务由建筑模板展开，样式可从建筑 JSON 复原，所以能拆成多法师批次、
+        // 也能在读档时用 JSON 重建（修复/生产/采集任务没这个标记，它们拆了就丢参数）。
+        return new WorkItem(blueprintId, params, priority, true);
+    }
+
+    /**
+     * 读档重建：用**建筑 JSON**（样式的唯一真源）+ 存档里的锚点/朝向，重建当初入队的那条建造
+     * WorkItem，供 {@code ConstructionBatches.split} 重新分批。
+     *
+     * <p>两个刻意的选择：
+     * <ul>
+     *   <li>{@code skipMaterials=true} —— 读档只重建**剩余 placement 批次**（它们的建材参数本来就被
+     *       split 清空）；准备批次绝不由这里重建：{@code skipMaterials}(首建免费) 在
+     *       {@code claimFirstFree} 之后无法重算，重发准备批次会再扣一次建材、或让免费建筑凭空要料。</li>
+     *   <li>{@code sd} 传 null —— 该方法只用于拼参数，不读存档对象。</li>
+     * </ul>
+     *
+     * @param priority 存档里记下的分批优先级
+     * @param clearBox 存档里记下的清盒标志（决定 task_bbox，读档重分要一致）
+     * @return 重建的 WorkItem；建筑类型已从 JSON 里删掉时返回 null（调用方必须留痕并作废该建筑）
+     */
+    @Nullable
+    public static WorkItem rebuildWorkItem(BuildingState state, int priority, boolean clearBox) {
+        BuildingConfig config = BuildingConfigLoader.getInstance().get(state.getBuildingTypeId());
+        if (config == null) {
+            Log.warn(TAG, "cannot rebuild build work for building {}: unknown building type '{}'",
+                    state.getBuildingId(), state.getBuildingTypeId());
+            return null;
+        }
+        return buildWorkItem(config, state.getAnchor(), state.getBuildingTypeId(), priority, null,
+                state.getBuildingId(), state.getRotationSteps(), true, clearBox);
     }
 
     /**
@@ -583,7 +623,12 @@ public final class EnqueueHelper {
         JsonObject result = new JsonObject();
         for (var entry : nbt.entrySet()) {
             BlockOffset off = parseKey(entry.getKey());
-            if (off == null) continue;
+            if (off == null) {
+                // 坏键不能静默丢：那条方块的 NBT 会跟着消失，而玩家只会看到「箱子里的东西没了」。
+                Log.warn(TAG, "block_nbt key '{}' is not an offset triple — dropping its NBT on rotation",
+                        entry.getKey());
+                continue;
+            }
             BlockOffset rotatedOff = BuildingRotation.rotateOffset(off, steps);
             result.addProperty(rotatedOff.toKey(), entry.getValue().getAsString());
         }

@@ -1421,6 +1421,7 @@
   "gui.wandscape.townhall.revive_no_record": "没有待复活的法师",
   "gui.wandscape.townhall.revive_ok": "已复活一名法师（虚弱状态），其余阵亡者请由他前往祭坛复活",
   "gui.wandscape.townhall.revive_still_alive": "尚有法师存活，保底复活只在全员阵亡时可用",
+  "gui.wandscape.townhall.revive_tooltip": "团灭时复活一名法师，未团灭请前往祭坛复活",
   "gui.wandscape.townhall.title": "市政厅",
   "gui.wandscape.townhall.warehouse": "仓库存取",
   "gui.wandscape.townhall_create.create": "创建",
