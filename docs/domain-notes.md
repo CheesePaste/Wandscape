@@ -138,6 +138,11 @@
    - **关服那一次是最后机会，允许为回滚把区块读回来**（`loadChunks = true`，全仓只有这一处）。能这么做是因为 `ServerStoppingEvent` 在**存档之前**触发：`MinecraftServer.runServer` 的 `finally` 里先 `handleServerStopping`（post 事件）再 `stopServer()`，而 `saveAllChunks` 在 `stopServer()` 里面——所以这一次写回去的方块会落盘。**非正常关服（崩溃 / 断电）仍可能留下坑**：快照只在内存里，这是已知取舍（要彻底解决得上 SavedData，眼下不值）。
    - **Tick 里抛异常 = 立刻停掉该效果**（记 `Log.warn` 并走 `stopAll` 那条回滚），不允许带着半截状态继续跑。
 
+8. **《世界应答》的测试期获得路径：`player_castable` + 两张测试卷轴配方**（正式落地「获得仪式」后要一起收掉）：
+   - 卷轴（`SpellItem`）**默认只有创造模式能右键施放**（历史行为，因为它本来是给法师装备用的物品形态）；`MagicDef.playerCastable`（JSON `player_castable`，默认 false）是**测试版开关**：开了它，生存玩家也能右键施放。《世界应答》两个法术都开了——它们在 `SpellbookLoader.PLAYER_ONLY_SPELLS` 里，NPC 本来就不装备不施放，所以卷轴对它们只有「玩家自己用」这一条路径，开这个开关不会和 NPC 装备设计打架。
+   - 两张测试卷轴配方：`craft_recipes/scroll_world_response.json`（成本 水/木 各 100）、`scroll_world_response_calm.json`（各 50），都在**魔法工坊**（`magic_station`）、**不设解锁门槛**（缺省即 `minColonyLevel = 1`）。卷轴**用一次不消耗**（`SpellItem.use` 不 shrink），方便反复试。
+   - tooltip 会按 `playerCastable` 换一行提示（`item.wandscape.spell.player_castable_hint` / `creative_hint`）；被拒绝时的提示仍是 `creative_only`。
+
 ---
 
 ## 四、任务与 ECS 域 (`content/task`)

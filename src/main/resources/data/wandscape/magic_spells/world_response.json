@@ -6,8 +6,9 @@
   "cast_time": 0,
   "range": 0,
   "target_mode": "none",
+  "player_castable": true,
   "effect": {
     "color": "#9B30FF"
   },
-  "description": "毕业魔法：向世界表达意志，由世界回应。施放后短暂列出可选的世界回应，玩家从中挑一个。"
+  "description": "毕业魔法：向世界表达意志，由世界回应。施放后短暂列出可选的世界回应，玩家从中挑一个。测试期：卷轴允许生存模式右键施放。"
 }

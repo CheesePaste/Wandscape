@@ -1,0 +1,11 @@
+{
+  "type": "spell",
+  "craft_station": "magic_station",
+  "id": "scroll_world_response_calm",
+  "display_name": "平息卷轴（测试）",
+  "output": { "item": "wandscape:spell_scroll", "magic_id": "world_response_calm" },
+  "cost": {
+    "water": 50,
+    "wood": 50
+  }
+}

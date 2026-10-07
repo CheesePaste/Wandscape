@@ -187,6 +187,10 @@
     "zh_cn": "此魔法卷轴未绑定任何魔法",
     "en_us": "This spell scroll has no spell bound"
   },
+  "item.wandscape.spell.player_castable_hint": {
+    "zh_cn": "§7测试版：生存模式也可右键施放",
+    "en_us": "§7Test build: usable in survival (right-click)"
+  },
   "item.wandscape.spell.unbound": {
     "zh_cn": "未绑定魔法",
     "en_us": "Unbound"

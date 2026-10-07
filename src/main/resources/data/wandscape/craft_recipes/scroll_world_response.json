@@ -1,0 +1,11 @@
+{
+  "type": "spell",
+  "craft_station": "magic_station",
+  "id": "scroll_world_response",
+  "display_name": "世界应答卷轴（测试）",
+  "output": { "item": "wandscape:spell_scroll", "magic_id": "world_response" },
+  "cost": {
+    "water": 100,
+    "wood": 100
+  }
+}

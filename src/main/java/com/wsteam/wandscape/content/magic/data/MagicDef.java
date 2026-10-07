@@ -18,6 +18,9 @@ import java.util.List;
  * （single_target/aoe/defense/support 之一），normal 法术缺省放置组用，供默认装备种子与
  * {@code SpellbookLoader.equippableCategoryOf} 兜底装桶——实际组由玩家在策略页放置决定。
  * {@code description} 是可选的玩家可读介绍文本（魔法卷轴的 JEI 信息页用，缺省 null）。
+ * {@code playerCastable} 是**测试版开关**：卷轴默认只有创造模式能右键施放（历史行为），
+ * 声明它的魔法允许生存玩家也右键施放——给还没接「获得仪式」的新魔法做测试用，
+ * 正式落地时应随获得路径一起收掉。
  * 数据契约见 {@code docs/spell-casting.md}。
  */
 public record MagicDef(
@@ -36,7 +39,8 @@ public record MagicDef(
         int altarDuration,
         SpellConditions conditions,
         @Nullable String defaultGroup,
-        @Nullable String description
+        @Nullable String description,
+        boolean playerCastable
 ) {
 
     public MagicDef {
@@ -95,9 +99,10 @@ public record MagicDef(
         SpellConditions conditions = SpellConditions.fromJson(obj.get("conditions"));
         String defaultGroup = getString(obj, "default_group", null);
         String description = getString(obj, "description", null);
+        boolean playerCastable = getBool(obj, "player_castable", false);
         return new MagicDef(defId, category, manaCost, baseCooldown, castTime, range, targetMode,
                 circleId, color, damage, altarOnly, altarCooldown, altarDuration, conditions, defaultGroup,
-                description);
+                description, playerCastable);
     }
 
     /** "#A8E0FF" → 0xFFA8E0FF；非法/缺失返回 null。 */

@@ -1490,6 +1490,7 @@
   "item.wandscape.spell.mana_cost": "Mana cost: %1$s",
   "item.wandscape.spell.name": "Spell: %1$s",
   "item.wandscape.spell.not_bound": "This spell scroll has no spell bound",
+  "item.wandscape.spell.player_castable_hint": "§7Test build: usable in survival (right-click)",
   "item.wandscape.spell.unbound": "Unbound",
   "item.wandscape.spell.unknown_data": "Spell data missing",
   "item.wandscape.spell_scroll": "Spell Scroll",

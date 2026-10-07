@@ -1490,6 +1490,7 @@
   "item.wandscape.spell.mana_cost": "耗蓝：%1$s",
   "item.wandscape.spell.name": "魔法：%1$s",
   "item.wandscape.spell.not_bound": "此魔法卷轴未绑定任何魔法",
+  "item.wandscape.spell.player_castable_hint": "§7测试版：生存模式也可右键施放",
   "item.wandscape.spell.unbound": "未绑定魔法",
   "item.wandscape.spell.unknown_data": "魔法数据缺失",
   "item.wandscape.spell_scroll": "魔法卷轴",

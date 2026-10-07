@@ -149,7 +149,8 @@ public final class IronSpellsHelper {
                 0,
                 conditions,
                 null,
-                null
+                null,
+                false
         );
     }
 

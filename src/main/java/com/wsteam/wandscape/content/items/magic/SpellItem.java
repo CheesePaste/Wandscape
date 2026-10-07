@@ -20,8 +20,12 @@ import java.util.List;
 /**
  * 魔法的物品形态（通用件，CUSTOM_DATA 存 magicId）。
  *
- * <p>创造模式右键在当前位置施放所绑魔法（测试用）；生存模式不予施放。
- * tooltip 显示魔法名 + 耗蓝 / 冷却 / 施法时间（读 MagicDef 数据）。
+ * <p>卷轴默认是**创造模式测试件**：右键在当前位置施放所绑魔法，生存模式不予施放。
+ * 声明了 {@code player_castable} 的魔法（当前是《世界应答》那两个测试版法术）例外——
+ * 生存玩家也能右键施放。这两个法术在 {@code SpellbookLoader.PLAYER_ONLY_SPELLS} 里，
+ * NPC 本来就不装备不施放，所以卷轴对它们只有「玩家自己用」这一条路径。
+ *
+ * <p>tooltip 显示魔法名 + 耗蓝 / 冷却 / 施法时间（读 MagicDef 数据）。
  * 只允许绑定战斗魔法 + 特殊魔法（heal/teleport）——revive（祭坛专属，ALTAR）不物品化；
  * teleport 卷轴创造模式不可施放（导航回退魔法，无原地施法语义）。
  */
@@ -52,8 +56,7 @@ public class SpellItem extends Item {
         if (level.isClientSide) {
             return InteractionResultHolder.success(stack);
         }
-        if (!(player instanceof ServerPlayer sp) || !sp.getAbilities().instabuild) {
-            player.displayClientMessage(Component.translatable("item.wandscape.spell.creative_only"), true);
+        if (!(player instanceof ServerPlayer sp)) {
             return InteractionResultHolder.fail(stack);
         }
         String magicId = getMagicId(stack);
@@ -65,6 +68,10 @@ public class SpellItem extends Item {
         if (def == null || def.category() == MagicDef.Category.ALTAR
                 || "teleport".equals(magicId)) {
             sp.displayClientMessage(Component.translatable("item.wandscape.spell.invalid"), true);
+            return InteractionResultHolder.fail(stack);
+        }
+        if (!sp.getAbilities().instabuild && !def.playerCastable()) {
+            sp.displayClientMessage(Component.translatable("item.wandscape.spell.creative_only"), true);
             return InteractionResultHolder.fail(stack);
         }
         boolean ok = MagicSpellExecutors.castForPlayer(sp, def);
@@ -91,7 +98,9 @@ public class SpellItem extends Item {
         tooltipComponents.add(Component.translatable("item.wandscape.spell.mana_cost", def.manaCost()));
         tooltipComponents.add(Component.translatable("item.wandscape.spell.cooldown", seconds(def.baseCooldown())));
         tooltipComponents.add(Component.translatable("item.wandscape.spell.cast_time", seconds(def.castTime())));
-        tooltipComponents.add(Component.translatable("item.wandscape.spell.creative_hint"));
+        tooltipComponents.add(Component.translatable(def.playerCastable()
+                ? "item.wandscape.spell.player_castable_hint"
+                : "item.wandscape.spell.creative_hint"));
     }
 
     private static Component magicName(String magicId) {

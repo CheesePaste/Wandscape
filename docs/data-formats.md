@@ -229,7 +229,9 @@
 }
 ```
 
-`world_response`（毕业魔法《世界应答》）是**两阶段**特例：JSON 只声明它是玩家专属的 `special` 法术，施放后由服务端打开客户端轮盘（`WorldResponseOpenPacket`），玩家选定并回 `WorldResponseChoicePacket` 后才真正生效。**它的四个回应（向前 / 扶摇 / 开路 / 裁决）不是法术**，不进 `magic_spells/`——契约见 `docs/domain-notes.md` §三.6。
+`world_response`（毕业魔法《世界应答》）是**两阶段**特例：JSON 只声明它是玩家专属的 `special` 法术，施放后由服务端打开客户端轮盘（`WorldResponseOpenPacket`），玩家选定并回 `WorldResponseChoicePacket` 后才真正生效。**它的四个回应（向前 / 扶摇 / 移山填海 / 裁决）不是法术**，不进 `magic_spells/`——契约见 `docs/domain-notes.md` §三.6。
+
+可选字段 `player_castable`（默认 `false`）是**测试版开关**：卷轴默认只有创造模式能右键施放（历史行为），声明它的魔法允许**生存玩家**也右键施放。目前只有《世界应答》两个法术开着它（它们还没接「获得仪式」，见 §1 的 `scroll_world_response*.json` 测试卷轴配方）；正式落地获得路径后应把这个字段一并收掉。
 
 ### 2. 魔法阵视觉 (`magic_circles/<id>.json`)
 定义法阵几何图层与粒子动画。包含 5 种几何图元：`ring`（环）、`arc`（弧）、`polygon`（多边形）、`star`（星形）、`glyph`（符文）。

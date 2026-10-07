@@ -6,8 +6,9 @@
   "cast_time": 0,
   "range": 0,
   "target_mode": "none",
+  "player_castable": true,
   "effect": {
     "color": "#9B30FF"
   },
-  "description": "《世界应答》的配套魔法：让正在生效的世界回应停下，并把改动过的地形原样还回。"
+  "description": "《世界应答》的配套魔法：让正在生效的世界回应停下，并把改动过的地形原样还回。测试期：卷轴允许生存模式右键施放。"
 }
