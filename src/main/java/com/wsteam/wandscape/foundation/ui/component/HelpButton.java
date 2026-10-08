@@ -1,23 +1,22 @@
 package com.wsteam.wandscape.foundation.ui.component;
 
 import com.wsteam.wandscape.foundation.ui.skin.SkinRender;
-import com.wsteam.wandscape.foundation.ui.skin.SkinSprite;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractButton;
 import net.minecraft.client.gui.narration.NarratedElementType;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.network.chat.Component;
+
 /**
- * Help (?) button using the help_button sprite sheet.
- * Default native size is 30×32.
+ * Help (?) button using code-driven gem badge rendering.
+ * Native size is 14×14.
  */
 public class HelpButton extends AbstractButton {
 
     private final MedievalButton.OnPress onPress;
 
     public HelpButton(int x, int y, MedievalButton.OnPress onPress) {
-        super(x, y, SkinSprite.HELP_STATES[0].width(), SkinSprite.HELP_STATES[0].height(), Component.empty());
-        this.onPress = onPress;
+        this(x, y, 14, 14, onPress);
     }
 
     public HelpButton(int x, int y, int width, int height, MedievalButton.OnPress onPress) {
@@ -40,10 +39,6 @@ public class HelpButton extends AbstractButton {
         else state = 0;
 
         SkinRender.drawHelpButton(g, getX(), getY(), width, height, state);
-
-        if (active && isHoveredOrFocused()) {
-            g.fill(getX() + 2, getY() + 2, getX() + width - 2, getY() + height - 2, 0x30FFFFFF);
-        }
     }
 
     @Override

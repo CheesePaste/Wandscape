@@ -1,6 +1,7 @@
 package com.wsteam.wandscape.foundation.ui.component;
 
 import com.wsteam.wandscape.foundation.ui.I18n;
+import com.wsteam.wandscape.foundation.ui.skin.SkinRender;
 import com.wsteam.wandscape.foundation.ui.theme.MedievalColors;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -169,23 +170,10 @@ public final class MedievalConfirmDialog {
 
     private static void drawButton(GuiGraphics g, Font font, int x, int y,
                                    Component label, boolean hovered, boolean confirm) {
-        int bgTop = confirm
-                ? (hovered ? MedievalColors.BUTTON_BG_HOVER : 0xFF3A2818)
-                : (hovered ? MedievalColors.BUTTON_BG_HOVER : 0xFF2A1E18);
-        int bgBottom = confirm
-                ? (hovered ? MedievalColors.PANEL_TITLE_BG : 0xFF1E100A)
-                : (hovered ? MedievalColors.PANEL_TITLE_BG : 0xFF140C08);
-        int borderColor = confirm
-                ? (MedievalColors.BORDER_GOLD)
-                : (hovered ? MedievalColors.BORDER_GOLD : MedievalColors.BORDER_GOLD_DARK);
-
-        g.fillGradient(x, y, x + BTN_W, y + BTN_H, bgTop, bgBottom);
-        MedievalScreen.drawGlowBorder(g, x, y, BTN_W, BTN_H, borderColor);
-
-        int color = confirm
-                ? (hovered ? MedievalColors.ACCENT_GOLD : MedievalColors.TEXT_WARM_WHITE)
-                : (hovered ? MedievalColors.TEXT_WARM_WHITE : MedievalColors.TEXT_MUTED);
-        g.drawCenteredString(font, label, x + BTN_W / 2, y + (BTN_H - font.lineHeight) / 2, color);
+        int state = hovered ? 1 : 0;
+        SkinRender.drawButton(g, x, y, BTN_W, BTN_H, state);
+        int color = hovered ? MedievalColors.ACCENT_GOLD : MedievalColors.TEXT_WARM_WHITE;
+        g.drawCenteredString(font, label, x + BTN_W / 2, y + (BTN_H - font.lineHeight) / 2 + 1, color);
     }
 
     private static boolean isInRect(double mx, double my, int x, int y, int w, int h) {

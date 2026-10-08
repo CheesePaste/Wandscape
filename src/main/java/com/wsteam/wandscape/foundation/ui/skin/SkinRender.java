@@ -1,6 +1,8 @@
 package com.wsteam.wandscape.foundation.ui.skin;
-import com.wsteam.wandscape.content.task.component.Position;
 
+import com.wsteam.wandscape.foundation.ui.theme.MedievalColors;
+
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.resources.ResourceLocation;
 /**
@@ -72,26 +74,167 @@ public final class SkinRender {
              targetW, targetH);
     }
 
-    // ── Button rendering ──
+    // ── Button rendering (Code-driven Medieval Aesthetic) ──
 
     public static void drawButton(GuiGraphics g, int x, int y, int w, int h, int state) {
-        SkinSprite sprite = SkinSprite.BTN_A_STATES[state];
-        drawSprite(g, SkinSprite.BUTTON_A, x, y, w, h,
-                   sprite, SkinSprite.BUTTON_A_SHEET_W, SkinSprite.BUTTON_A_SHEET_H);
+        if (w <= 0 || h <= 0) return;
+
+        boolean disabled = (state == 3);
+        boolean hovered = (state == 1);
+        boolean pressed = (state == 2);
+
+        int bgTop, bgBottom, borderColor, innerHighlight, cornerAccent;
+
+        if (disabled) {
+            bgTop = 0xAA1C1820;
+            bgBottom = 0xAA121016;
+            borderColor = 0x55554D45;
+            innerHighlight = 0;
+            cornerAccent = 0;
+        } else if (pressed) {
+            bgTop = 0xF41A1024;
+            bgBottom = 0xF4100918;
+            borderColor = MedievalColors.BORDER_GOLD_DARK;
+            innerHighlight = 0x15000000;
+            cornerAccent = 0x88C8A040;
+        } else if (hovered) {
+            bgTop = 0xF63E2254; // 奥术曜石紫
+            bgBottom = 0xF61C1028;
+            borderColor = MedievalColors.BORDER_GOLD; // 0xFFC8A040
+            innerHighlight = 0x50FFE8A0; // 顶部淡金高光
+            cornerAccent = 0xFFFFE8A0;   // 亮金四角铆钉
+        } else {
+            bgTop = 0xF0241A2E; // 深暮微紫
+            bgBottom = 0xF0140D1C;
+            borderColor = MedievalColors.BORDER_GOLD_DARK; // 0xFF9A7A40
+            innerHighlight = 0x22FFFFFF;
+            cornerAccent = 0x999A7A40;
+        }
+
+        // 1. 底色渐变与倒角填充（防直角呆板）
+        g.fillGradient(x + 1, y + 1, x + w - 1, y + h - 1, bgTop, bgBottom);
+        g.fill(x + 2, y, x + w - 2, y + 1, bgTop);
+        g.fill(x + 2, y + h - 1, x + w - 2, y + h, bgBottom);
+        g.fill(x, y + 2, x + 1, y + h - 2, bgTop);
+        g.fill(x + w - 1, y + 2, x + w, y + h - 2, bgBottom);
+
+        // 2. 切角边框（45度切角）
+        g.fill(x + 2, y, x + w - 2, y + 1, borderColor);
+        g.fill(x + 2, y + h - 1, x + w - 2, y + h, borderColor);
+        g.fill(x, y + 2, x + 1, y + h - 2, borderColor);
+        g.fill(x + w - 1, y + 2, x + w, y + h - 2, borderColor);
+        g.fill(x + 1, y + 1, x + 2, y + 2, borderColor);
+        g.fill(x + w - 2, y + 1, x + w - 1, y + 2, borderColor);
+        g.fill(x + 1, y + h - 2, x + 2, y + h - 1, borderColor);
+        g.fill(x + w - 2, y + h - 2, x + w - 1, y + h - 1, borderColor);
+
+        // 3. 悬停外发光晕（1px 微光）
+        if (hovered) {
+            int glow = 0x33C8A040;
+            g.fill(x + 2, y - 1, x + w - 2, y, glow);
+            g.fill(x + 2, y + h, x + w - 2, y + h + 1, glow);
+            g.fill(x - 1, y + 2, x, y + h - 2, glow);
+            g.fill(x + w, y + 2, x + w + 1, y + h - 2, glow);
+        }
+
+        // 4. 顶部内高光微光带
+        if (innerHighlight != 0 && w >= 6) {
+            g.fill(x + 3, y + 1, x + w - 3, y + 2, innerHighlight);
+        }
+
+        // 5. 四角金铆钉晶体点缀
+        if (cornerAccent != 0 && w >= 10 && h >= 10) {
+            g.fill(x + 2, y + 2, x + 3, y + 3, cornerAccent);
+            g.fill(x + w - 3, y + 2, x + w - 2, y + 3, cornerAccent);
+            g.fill(x + 2, y + h - 3, x + 3, y + h - 2, cornerAccent);
+            g.fill(x + w - 3, y + h - 3, x + w - 2, y + h - 2, cornerAccent);
+        }
+
+        // 6. 两端精致的微型金色符文折线刻印（Chevron Accent ⟨ ⟩）
+        if (!disabled && w >= 44 && h >= 12) {
+            int cy = y + h / 2;
+            int chevColor = hovered ? 0xFFECC45F : 0x779A7A40;
+            // 左折角 ⟨
+            g.fill(x + 6, cy - 2, x + 7, cy - 1, chevColor);
+            g.fill(x + 5, cy - 1, x + 6, cy + 1, chevColor);
+            g.fill(x + 6, cy + 1, x + 7, cy + 2, chevColor);
+            // 右折角 ⟩
+            g.fill(x + w - 7, cy - 2, x + w - 6, cy - 1, chevColor);
+            g.fill(x + w - 6, cy - 1, x + w - 5, cy + 1, chevColor);
+            g.fill(x + w - 7, cy + 1, x + w - 6, cy + 2, chevColor);
+        }
     }
 
-    // ── Close / icon button ──
+    // ── Close / icon button (Code-driven Gem Badge) ──
 
     public static void drawCloseButton(GuiGraphics g, int x, int y, int w, int h, int state) {
-        SkinSprite sprite = SkinSprite.CLOSE_STATES[state];
-        drawSprite(g, SkinSprite.CLOSE_BTN, x, y, w, h, sprite,
-                   SkinSprite.CLOSE_SHEET_W, SkinSprite.CLOSE_SHEET_H);
+        if (w <= 0 || h <= 0) return;
+
+        boolean disabled = (state == 3);
+        boolean hovered = (state == 1);
+
+        int bgTop, bgBottom, borderColor, innerHighlight;
+        if (disabled) {
+            bgTop = 0xAA1C1820;
+            bgBottom = 0xAA121016;
+            borderColor = 0x55554D45;
+            innerHighlight = 0;
+        } else if (hovered) {
+            // 悬停：典雅石榴石/血珀晶石深红微光
+            bgTop = 0xF07E2028;
+            bgBottom = 0xF0481016;
+            borderColor = 0xFFFFB86C;
+            innerHighlight = 0x50FFFFFF;
+        } else {
+            bgTop = 0xDD20142C;
+            bgBottom = 0xDD120A1A;
+            borderColor = 0xFF8A6A32;
+            innerHighlight = 0x20FFFFFF;
+        }
+
+        // 1. 底色与切角几何体
+        g.fillGradient(x + 1, y + 1, x + w - 1, y + h - 1, bgTop, bgBottom);
+        g.fill(x + 2, y, x + w - 2, y + 1, bgTop);
+        g.fill(x + 2, y + h - 1, x + w - 2, y + h, bgBottom);
+        g.fill(x, y + 2, x + 1, y + h - 2, bgTop);
+        g.fill(x + w - 1, y + 2, x + w, y + h - 2, bgBottom);
+
+        // 2. 切角边框
+        g.fill(x + 2, y, x + w - 2, y + 1, borderColor);
+        g.fill(x + 2, y + h - 1, x + w - 2, y + h, borderColor);
+        g.fill(x, y + 2, x + 1, y + h - 2, borderColor);
+        g.fill(x + w - 1, y + 2, x + w, y + h - 2, borderColor);
+        g.fill(x + 1, y + 1, x + 2, y + 2, borderColor);
+        g.fill(x + w - 2, y + 1, x + w - 1, y + 2, borderColor);
+        g.fill(x + 1, y + h - 2, x + 2, y + h - 1, borderColor);
+        g.fill(x + w - 2, y + h - 2, x + w - 1, y + h - 1, borderColor);
+
+        // 3. 悬停外发光
+        if (hovered) {
+            int glow = 0x33FFB86C;
+            g.fill(x + 2, y - 1, x + w - 2, y, glow);
+            g.fill(x + 2, y + h, x + w - 2, y + h + 1, glow);
+            g.fill(x - 1, y + 2, x, y + h - 2, glow);
+            g.fill(x + w, y + 2, x + w + 1, y + h - 2, glow);
+        }
+
+        // 4. 顶部微光线
+        if (innerHighlight != 0 && w >= 6) {
+            g.fill(x + 2, y + 1, x + w - 2, y + 2, innerHighlight);
+        }
+
+        // 5. 中间十字交叉 "×"（像素对称几何绘制）
+        int cx = x + w / 2;
+        int cy = y + h / 2;
+        int crossColor = disabled ? 0xFF666666 : (hovered ? 0xFFFFFFFF : 0xFFD5C4A8);
+        for (int i = -2; i <= 2; i++) {
+            g.fill(cx + i, cy + i, cx + i + 1, cy + i + 1, crossColor);
+            g.fill(cx + i, cy - i, cx + i + 1, cy - i + 1, crossColor);
+        }
     }
 
     public static void drawCloseButton(GuiGraphics g, int x, int y, int state) {
-        SkinSprite sprite = SkinSprite.CLOSE_STATES[state];
-        drawSprite(g, SkinSprite.CLOSE_BTN, x, y, sprite,
-                   SkinSprite.CLOSE_SHEET_W, SkinSprite.CLOSE_SHEET_H);
+        drawCloseButton(g, x, y, 14, 14, state);
     }
 
     // ── Header bar (3-part: left cap + stretched center + right cap) ──
@@ -142,46 +285,200 @@ public final class SkinRender {
         drawBar(g, x, y, w, SkinSprite.BAR_A_SPRITE.height());
     }
 
-    // ── Less / More buttons ──
+    // ── Code-driven Badge Frame (Shared by gem tools, arrows, steppers) ──
+
+    public static void drawBadgeFrame(GuiGraphics g, int x, int y, int w, int h, int state) {
+        if (w <= 0 || h <= 0) return;
+
+        boolean disabled = (state == 3 || state == 2);
+        boolean hovered = (state == 1);
+
+        int bgTop, bgBottom, borderColor, innerHighlight;
+        if (disabled) {
+            bgTop = 0xAA1C1820;
+            bgBottom = 0xAA121016;
+            borderColor = 0x55554D45;
+            innerHighlight = 0;
+        } else if (hovered) {
+            bgTop = 0xF0361E4C; // 奥术紫金曜石
+            bgBottom = 0xF01C0F2A;
+            borderColor = MedievalColors.BORDER_GOLD; // 亮金
+            innerHighlight = 0x50FFE8A0;
+        } else {
+            bgTop = 0xDD20142C; // 深暮黑紫
+            bgBottom = 0xDD120A1A;
+            borderColor = 0xFF8A6A32; // 暗金
+            innerHighlight = 0x20FFFFFF;
+        }
+
+        // 1. 底色渐变与切角几何体
+        g.fillGradient(x + 1, y + 1, x + w - 1, y + h - 1, bgTop, bgBottom);
+        g.fill(x + 2, y, x + w - 2, y + 1, bgTop);
+        g.fill(x + 2, y + h - 1, x + w - 2, y + h, bgBottom);
+        g.fill(x, y + 2, x + 1, y + h - 2, bgTop);
+        g.fill(x + w - 1, y + 2, x + w, y + h - 2, bgBottom);
+
+        // 2. 切角边框
+        g.fill(x + 2, y, x + w - 2, y + 1, borderColor);
+        g.fill(x + 2, y + h - 1, x + w - 2, y + h, borderColor);
+        g.fill(x, y + 2, x + 1, y + h - 2, borderColor);
+        g.fill(x + w - 1, y + 2, x + w, y + h - 2, borderColor);
+        g.fill(x + 1, y + 1, x + 2, y + 2, borderColor);
+        g.fill(x + w - 2, y + 1, x + w - 1, y + 2, borderColor);
+        g.fill(x + 1, y + h - 2, x + 2, y + h - 1, borderColor);
+        g.fill(x + w - 2, y + h - 2, x + w - 1, y + h - 1, borderColor);
+
+        // 3. 悬停外发光
+        if (hovered) {
+            int glow = 0x33C8A040;
+            g.fill(x + 2, y - 1, x + w - 2, y, glow);
+            g.fill(x + 2, y + h, x + w - 2, y + h + 1, glow);
+            g.fill(x - 1, y + 2, x, y + h - 2, glow);
+            g.fill(x + w, y + 2, x + w + 1, y + h - 2, glow);
+        }
+
+        // 4. 顶部微高光线
+        if (innerHighlight != 0 && w >= 6) {
+            g.fill(x + 2, y + 1, x + w - 2, y + 2, innerHighlight);
+        }
+    }
+
+    // ── Less / More buttons (Code-driven Steppers) ──
+
+    public static void drawLessButton(GuiGraphics g, int x, int y, int w, int h, int state) {
+        drawBadgeFrame(g, x, y, w, h, state);
+        boolean disabled = (state == 3 || state == 2);
+        boolean hovered = (state == 1);
+        int color = disabled ? 0xFF666666 : (hovered ? 0xFFFFE077 : 0xFFD5C4A8);
+        int cx = x + w / 2;
+        int cy = y + h / 2;
+        g.fill(cx - 2, cy - 1, cx + 3, cy + 1, color);
+    }
 
     public static void drawLessButton(GuiGraphics g, int x, int y, int state) {
-        SkinSprite sprite = SkinSprite.LESS_STATES[state];
-        drawSprite(g, SkinSprite.LESS_BTN, x, y, sprite,
-                   SkinSprite.LESS_SHEET_W, SkinSprite.LESS_SHEET_H);
+        drawLessButton(g, x, y, 14, 14, state);
+    }
+
+    public static void drawMoreButton(GuiGraphics g, int x, int y, int w, int h, int state) {
+        drawBadgeFrame(g, x, y, w, h, state);
+        boolean disabled = (state == 3 || state == 2);
+        boolean hovered = (state == 1);
+        int color = disabled ? 0xFF666666 : (hovered ? 0xFFFFE077 : 0xFFD5C4A8);
+        int cx = x + w / 2;
+        int cy = y + h / 2;
+        g.fill(cx - 2, cy - 1, cx + 3, cy + 1, color);
+        g.fill(cx - 1, cy - 2, cx + 1, cy + 3, color);
     }
 
     public static void drawMoreButton(GuiGraphics g, int x, int y, int state) {
-        SkinSprite sprite = SkinSprite.MORE_STATES[state];
-        drawSprite(g, SkinSprite.MORE_BTN, x, y, sprite,
-                   SkinSprite.MORE_SHEET_W, SkinSprite.MORE_SHEET_H);
+        drawMoreButton(g, x, y, 14, 14, state);
     }
 
-    // ── Left / Right arrows ──
+    // ── Left / Right arrows (Code-driven Precision Geometric Accents) ──
+
+    public static void drawLeftArrow(GuiGraphics g, int x, int y, int w, int h, int state) {
+        drawBadgeFrame(g, x, y, w, h, state);
+        boolean disabled = (state == 3 || state == 2);
+        boolean hovered = (state == 1);
+        int color = disabled ? 0xFF666666 : (hovered ? 0xFFFFE077 : 0xFFD5C4A8);
+        int cx = x + w / 2;
+        int cy = y + h / 2;
+        g.fill(cx - 2, cy, cx - 1, cy + 1, color);
+        g.fill(cx - 1, cy - 1, cx, cy + 2, color);
+        g.fill(cx, cy - 2, cx + 1, cy + 3, color);
+        g.fill(cx + 1, cy - 3, cx + 2, cy - 1, color);
+        g.fill(cx + 1, cy + 2, cx + 2, cy + 4, color);
+    }
 
     public static void drawLeftArrow(GuiGraphics g, int x, int y, int state) {
-        SkinSprite sprite = SkinSprite.LEFT_ARROW_STATES[state];
-        drawSprite(g, SkinSprite.LEFT_ARROW, x, y, sprite,
-                   SkinSprite.LEFT_ARROW_SHEET_W, SkinSprite.LEFT_ARROW_SHEET_H);
+        drawLeftArrow(g, x, y, 20, 14, state);
+    }
+
+    public static void drawRightArrow(GuiGraphics g, int x, int y, int w, int h, int state) {
+        drawBadgeFrame(g, x, y, w, h, state);
+        boolean disabled = (state == 3 || state == 2);
+        boolean hovered = (state == 1);
+        int color = disabled ? 0xFF666666 : (hovered ? 0xFFFFE077 : 0xFFD5C4A8);
+        int cx = x + w / 2;
+        int cy = y + h / 2;
+        g.fill(cx + 2, cy, cx + 3, cy + 1, color);
+        g.fill(cx + 1, cy - 1, cx + 2, cy + 2, color);
+        g.fill(cx, cy - 2, cx + 1, cy + 3, color);
+        g.fill(cx - 1, cy - 3, cx, cy - 1, color);
+        g.fill(cx - 1, cy + 2, cx, cy + 4, color);
     }
 
     public static void drawRightArrow(GuiGraphics g, int x, int y, int state) {
-        SkinSprite sprite = SkinSprite.RIGHT_ARROW_STATES[state];
-        drawSprite(g, SkinSprite.RIGHT_ARROW, x, y, sprite,
-                   SkinSprite.RIGHT_ARROW_SHEET_W, SkinSprite.RIGHT_ARROW_SHEET_H);
+        drawRightArrow(g, x, y, 20, 14, state);
     }
 
-    // ── Help / Option / Exit buttons ──
-
-    public static void drawHelpButton(GuiGraphics g, int x, int y, int state) {
-        SkinSprite sprite = SkinSprite.HELP_STATES[state];
-        drawSprite(g, SkinSprite.HELP_BTN, x, y, sprite,
-                   SkinSprite.HELP_SHEET_W, SkinSprite.HELP_SHEET_H);
-    }
+    // ── Help button (Code-driven Gem Badge) ──
 
     public static void drawHelpButton(GuiGraphics g, int x, int y, int w, int h, int state) {
-        SkinSprite sprite = SkinSprite.HELP_STATES[state];
-        drawSprite(g, SkinSprite.HELP_BTN, x, y, w, h, sprite,
-                   SkinSprite.HELP_SHEET_W, SkinSprite.HELP_SHEET_H);
+        if (w <= 0 || h <= 0) return;
+
+        boolean disabled = (state == 3);
+        boolean hovered = (state == 1);
+
+        int bgTop, bgBottom, borderColor, innerHighlight;
+        if (disabled) {
+            bgTop = 0xAA1C1820;
+            bgBottom = 0xAA121016;
+            borderColor = 0x55554D45;
+            innerHighlight = 0;
+        } else if (hovered) {
+            // 悬停：奥术星空蓝晶石深邃微光
+            bgTop = 0xF02A3C78;
+            bgBottom = 0xF0162248;
+            borderColor = 0xFFFFDF70;
+            innerHighlight = 0x50FFFFFF;
+        } else {
+            bgTop = 0xDD20142C;
+            bgBottom = 0xDD120A1A;
+            borderColor = 0xFF8A6A32;
+            innerHighlight = 0x20FFFFFF;
+        }
+
+        // 1. 底色与切角几何体
+        g.fillGradient(x + 1, y + 1, x + w - 1, y + h - 1, bgTop, bgBottom);
+        g.fill(x + 2, y, x + w - 2, y + 1, bgTop);
+        g.fill(x + 2, y + h - 1, x + w - 2, y + h, bgBottom);
+        g.fill(x, y + 2, x + 1, y + h - 2, bgTop);
+        g.fill(x + w - 1, y + 2, x + w, y + h - 2, bgBottom);
+
+        // 2. 切角边框
+        g.fill(x + 2, y, x + w - 2, y + 1, borderColor);
+        g.fill(x + 2, y + h - 1, x + w - 2, y + h, borderColor);
+        g.fill(x, y + 2, x + 1, y + h - 2, borderColor);
+        g.fill(x + w - 1, y + 2, x + w, y + h - 2, borderColor);
+        g.fill(x + 1, y + 1, x + 2, y + 2, borderColor);
+        g.fill(x + w - 2, y + 1, x + w - 1, y + 2, borderColor);
+        g.fill(x + 1, y + h - 2, x + 2, y + h - 1, borderColor);
+        g.fill(x + w - 2, y + h - 2, x + w - 1, y + h - 1, borderColor);
+
+        // 3. 悬停外发光
+        if (hovered) {
+            int glow = 0x33FFDF70;
+            g.fill(x + 2, y - 1, x + w - 2, y, glow);
+            g.fill(x + 2, y + h, x + w - 2, y + h + 1, glow);
+            g.fill(x - 1, y + 2, x, y + h - 2, glow);
+            g.fill(x + w, y + 2, x + w + 1, y + h - 2, glow);
+        }
+
+        // 4. 顶部微光线
+        if (innerHighlight != 0 && w >= 6) {
+            g.fill(x + 2, y + 1, x + w - 2, y + 2, innerHighlight);
+        }
+
+        // 5. 中间 "?" 居中绘制
+        var font = Minecraft.getInstance().font;
+        int textColor = disabled ? 0xFF666666 : (hovered ? 0xFFFFFFFF : 0xFFD5C4A8);
+        int textY = y + (h - font.lineHeight) / 2 + 1;
+        g.drawCenteredString(font, "?", x + w / 2, textY, textColor);
+    }
+
+    public static void drawHelpButton(GuiGraphics g, int x, int y, int state) {
+        drawHelpButton(g, x, y, 14, 14, state);
     }
 
     public static void drawOptionButton(GuiGraphics g, int x, int y, int state) {
@@ -208,30 +505,42 @@ public final class SkinRender {
                    SkinSprite.EXIT_SHEET_W, SkinSprite.EXIT_SHEET_H);
     }
 
-    // ── Up / Down arrows ──
-
-    public static void drawUpArrow(GuiGraphics g, int x, int y, int state) {
-        SkinSprite sprite = SkinSprite.UP_ARROW_STATES[state];
-        drawSprite(g, SkinSprite.UP_ARROW, x, y, sprite,
-                   SkinSprite.UP_ARROW_SHEET_W, SkinSprite.UP_ARROW_SHEET_H);
-    }
+    // ── Up / Down arrows (Code-driven Precision Geometric Accents) ──
 
     public static void drawUpArrow(GuiGraphics g, int x, int y, int w, int h, int state) {
-        SkinSprite sprite = SkinSprite.UP_ARROW_STATES[state];
-        drawSprite(g, SkinSprite.UP_ARROW, x, y, w, h, sprite,
-                   SkinSprite.UP_ARROW_SHEET_W, SkinSprite.UP_ARROW_SHEET_H);
+        drawBadgeFrame(g, x, y, w, h, state);
+        boolean disabled = (state == 3 || state == 2);
+        boolean hovered = (state == 1);
+        int color = disabled ? 0xFF666666 : (hovered ? 0xFFFFE077 : 0xFFD5C4A8);
+        int cx = x + w / 2;
+        int cy = y + h / 2;
+        g.fill(cx, cy - 2, cx + 1, cy - 1, color);
+        g.fill(cx - 1, cy - 1, cx + 2, cy, color);
+        g.fill(cx - 2, cy, cx + 3, cy + 1, color);
+        g.fill(cx - 3, cy + 1, cx - 1, cy + 2, color);
+        g.fill(cx + 2, cy + 1, cx + 4, cy + 2, color);
     }
 
-    public static void drawDownArrow(GuiGraphics g, int x, int y, int state) {
-        SkinSprite sprite = SkinSprite.DOWN_ARROW_STATES[state];
-        drawSprite(g, SkinSprite.DOWN_ARROW, x, y, sprite,
-                   SkinSprite.DOWN_ARROW_SHEET_W, SkinSprite.DOWN_ARROW_SHEET_H);
+    public static void drawUpArrow(GuiGraphics g, int x, int y, int state) {
+        drawUpArrow(g, x, y, 14, 14, state);
     }
 
     public static void drawDownArrow(GuiGraphics g, int x, int y, int w, int h, int state) {
-        SkinSprite sprite = SkinSprite.DOWN_ARROW_STATES[state];
-        drawSprite(g, SkinSprite.DOWN_ARROW, x, y, w, h, sprite,
-                   SkinSprite.DOWN_ARROW_SHEET_W, SkinSprite.DOWN_ARROW_SHEET_H);
+        drawBadgeFrame(g, x, y, w, h, state);
+        boolean disabled = (state == 3 || state == 2);
+        boolean hovered = (state == 1);
+        int color = disabled ? 0xFF666666 : (hovered ? 0xFFFFE077 : 0xFFD5C4A8);
+        int cx = x + w / 2;
+        int cy = y + h / 2;
+        g.fill(cx - 3, cy - 2, cx - 1, cy - 1, color);
+        g.fill(cx + 2, cy - 2, cx + 4, cy - 1, color);
+        g.fill(cx - 2, cy - 1, cx + 3, cy, color);
+        g.fill(cx - 1, cy, cx + 2, cy + 1, color);
+        g.fill(cx, cy + 1, cx + 1, cy + 2, color);
+    }
+
+    public static void drawDownArrow(GuiGraphics g, int x, int y, int state) {
+        drawDownArrow(g, x, y, 14, 14, state);
     }
 
     // ── Internal blit helpers ──

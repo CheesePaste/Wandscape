@@ -1,23 +1,22 @@
 package com.wsteam.wandscape.foundation.ui.component;
 
 import com.wsteam.wandscape.foundation.ui.skin.SkinRender;
-import com.wsteam.wandscape.foundation.ui.skin.SkinSprite;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractButton;
 import net.minecraft.client.gui.narration.NarratedElementType;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.network.chat.Component;
+
 /**
- * More (+) button using the more_button sprite sheet.
- * Default native size is 22×24.
+ * More (+) button using code-driven stepper badge rendering.
+ * Default native size is 14×14.
  */
 public class MoreButton extends AbstractButton {
 
     private final MedievalButton.OnPress onPress;
 
     public MoreButton(int x, int y, MedievalButton.OnPress onPress) {
-        super(x, y, SkinSprite.MORE_STATES[0].width(), SkinSprite.MORE_STATES[0].height(), Component.empty());
-        this.onPress = onPress;
+        this(x, y, 14, 14, onPress);
     }
 
     public MoreButton(int x, int y, int width, int height, MedievalButton.OnPress onPress) {
@@ -39,11 +38,7 @@ public class MoreButton extends AbstractButton {
         else if (isHoveredOrFocused()) state = 1;
         else state = 0;
 
-        SkinRender.drawMoreButton(g, getX(), getY(), state);
-
-        if (active && isHoveredOrFocused()) {
-            g.fill(getX() + 2, getY() + 2, getX() + width - 2, getY() + height - 2, 0x30FFFFFF);
-        }
+        SkinRender.drawMoreButton(g, getX(), getY(), width, height, state);
     }
 
     @Override
