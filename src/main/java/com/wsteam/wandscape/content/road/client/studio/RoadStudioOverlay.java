@@ -15,6 +15,7 @@ import com.wsteam.wandscape.content.road.data.RoadPreset;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.foundation.networking.Net;
 import com.wsteam.wandscape.foundation.ui.I18n;
+import com.wsteam.wandscape.foundation.ui.util.CursorGrab;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -97,7 +98,7 @@ public final class RoadStudioOverlay {
         SplineEditorController.resetInputState();
         Minecraft mc = Minecraft.getInstance();
         if (mc != null && mc.mouseHandler != null) {
-            mc.mouseHandler.releaseMouse();
+            CursorGrab.release(mc);
         }
         Log.info(TAG, "[RoadStudio] Native overlay opened");
     }
@@ -111,7 +112,7 @@ public final class RoadStudioOverlay {
         SplineEditorController.resetInputState();
         Minecraft mc = Minecraft.getInstance();
         if (mc != null && mc.mouseHandler != null) {
-            mc.mouseHandler.grabMouse();
+            CursorGrab.grab(mc);
         }
         Log.info(TAG, "[RoadStudio] Native overlay closed");
     }

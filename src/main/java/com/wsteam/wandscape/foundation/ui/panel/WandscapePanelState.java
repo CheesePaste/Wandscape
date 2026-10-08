@@ -17,6 +17,7 @@ import com.wsteam.wandscape.content.building.projection.network.ProjectionExitPa
 import com.wsteam.wandscape.content.road.client.RoadPlacementState;
 import com.wsteam.wandscape.foundation.networking.Net;
 import com.wsteam.wandscape.foundation.ui.panel.PanelStateTogglePacket;
+import com.wsteam.wandscape.foundation.ui.util.CursorGrab;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.level.Level;
 
@@ -244,7 +245,7 @@ public final class WandscapePanelState {
         cursorLifted = false;
         Minecraft mc = Minecraft.getInstance();
         if (mc.mouseHandler != null) {
-            mc.mouseHandler.grabMouse();
+            CursorGrab.grab(mc);
         }
         showBuildingAreas = false;
         BuildingDebugClientState.setActive(true);
@@ -465,7 +466,7 @@ public final class WandscapePanelState {
     }
 
     private static void grabMouseForGame() {
-        Minecraft.getInstance().mouseHandler.grabMouse();
+        CursorGrab.grab();
     }
 
     // ── Sub-mode ──

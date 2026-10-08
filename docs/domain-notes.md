@@ -315,6 +315,11 @@
    - ReforgedPlay 是 ReplayMod 的 NeoForge 1.21.1 移植（源码 github.com/ferriarnus/ReForgedPlay），**完整保留 `com.replaymod.*` 包结构与 API**，所以两个模组可以走同一个检测入口。判「正在回放」= 反射 `com.replaymod.replay.ReplayModReplay` 的**公开**静态字段 `instance` 非 null，且其公开方法 `getReplayHandler()` 非 null。**没有**简单的 `ACTIVE` 静态布尔。
    - 这是 ReplayMod 官方公开集成面（只有 public 成员、无 `setAccessible`）；用它的理由不是「反射更酷」而是避开更大的反射面：官方事件 `com.replaymod.replay.events.ReplayOpenedCallback`/`ReplayClosedCallback` 的事件基类 `de.johni0702.minecraft.gui.utils.Event#register` 是**包私有**，外部订阅得反射进私有方法 + 动态代理，反而更脏。
    - 做法：保持**按次反射**而不做 init 一次性缓存（任何时刻都能重新尝试，解析时机 / 版本差异不会把守卫永久禁用）；用 `Class.forName` + 捕获异常判「模组不存在 → 返回 false」，因此不需要 compileOnly 依赖。本模组实现是 `foundation/ui/ReplayScreenGuard.java`（监听 `ScreenEvent.Opening`，取消 `ReplayProtectedScreen` 的打开；旧记录里 `shared/ui/...` 的路径已作废）。PlayerAnimator 一类的录像/回放兼容也按这个 API 做。
+3. **鼠标抓取状态是原版没有仲裁机制的共享资源，本仓在这一层既宣告所有权也做兜底**：
+   - 原版 `MouseHandler.grabMouse()` 与 `releaseMouse()` **都会** `GLFW.glfwSetCursorPos` 到窗口正中并翻转 `GLFW_CURSOR`，`grabMouse()` 还顺带 `setScreen(null)` / `KeyMapping.setAll()` / `missTime = 10000` / `ignoreFirstMove = true`。所以任何「每 tick 抢一次」的模组都会与 V 面板的持久自由光标对撞成**「光标锁在屏幕正中闪烁」**——实测 `huhutalk`（`PhoneOverlay.updateCursorMode()` 在 `ClientTickEvent` 里 `else if (mc.screen == null) grabMouse()`）就是这一例；`maidmarriage` 的 tick 驱动 `setScreen(null)`/release 循环是同一类（其作者在源码注释里描述了同一现象）。
+   - 做法：**本仓所有光标抓/放必须走 `foundation/ui/util/CursorGrab`**（它用 ThreadLocal 打「这是本仓发的」标记），`MixinMouseHandler` 才好在 `grabMouse()/releaseMouse()` 的 HEAD 上取消「外来」的那个。**不要**改在两者共同调用的 `InputConstants.grabOrReleaseMouse` 上：调用者是**先**改自己的 `mouseGrabbed` / `xpos,ypos`，**再**调那个 helper，在 helper 上取消会留下「标志位与真实游标模式不一致」+「逻辑坐标已被丢到正中（面板命中判定读的就是它）」，而 helper 之后的四个副作用照样跑。
+   - 归属意图的唯一发布点是 `WandscapePanelController` 的 `cursorIntentFree` / `cursorIntentGrabbed`（对账器每 tick 算一次，别处不许自己推）；release 方向做成**「争抢闩」**（连续 3 tick 观察到被外部放掉才武装 200 tick），避免把别的覆盖层一次性的合法索要（例如按住 Alt 要自由光标）误杀。
+   - 兜底**不覆盖**：直接调 GLFW 的模组、别的模组开 Screen（那时面板按键本就整体变哑）、外部改 `options.hideGui`（`isPanelHidden()` 判真 → 面板整块死）。这三条是各自独立的后续项。
 
 ---
 

@@ -1,6 +1,7 @@
 package com.wsteam.wandscape.content.building.client;
 import com.wsteam.wandscape.foundation.networking.Net;
 import com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState;
+import com.wsteam.wandscape.foundation.ui.util.CursorGrab;
 
 import com.wsteam.wandscape.content.colony.network.ColonyCreateRequestPacket;
 import com.wsteam.wandscape.foundation.ui.I18n;
@@ -91,7 +92,7 @@ public class TownHallCreateScreen extends MedievalScreen {
         com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState.syncCursorToState();
         net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
         if (mc.mouseHandler != null && !com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState.isCursorLifted()) {
-            mc.mouseHandler.grabMouse();
+            CursorGrab.grab(mc);
         }
     }
 

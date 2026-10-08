@@ -19,6 +19,7 @@ import com.wsteam.wandscape.content.road.client.SplineEditorController;
 import com.wsteam.wandscape.content.road.network.RoadInteractPacket;
 import com.wsteam.wandscape.content.building.projection.client.ProjectionClientState;
 import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.ui.util.CursorGrab;
 import com.wsteam.wandscape.content.building.network.BuildingAreaSyncPacket;
 import com.wsteam.wandscape.foundation.networking.Net;
 import net.minecraft.client.Minecraft;
@@ -65,6 +66,19 @@ public final class WandscapePanelController {
     private static double savedCursorY;
     private static boolean hasSavedCursor = false;
 
+    // ── 光标归属「意图」的唯一发布点 ──
+    // 由下面的对账器每 tick 算一次；别的任何地方都不许自己推。MixinMouseHandler 的光标兜底只读这里，
+    // 判断「外来调用」则靠 CursorGrab.isSelfCall()（本仓自己发的抓/放一律豁免）。
+    private static volatile boolean cursorIntentFree = false;
+    private static volatile boolean cursorIntentGrabbed = false;
+    // 「争抢闩」：只有观察到「我们要求抓取、却每 tick 被外部放掉」才武装 release 否决。
+    // 不做成无条件，是因为「别的模组想为自己的非 Screen 覆盖层抓着光标」是合法需求，
+    // 无条件否决等于我们单方面宣告优先级；持续对撞才反击。
+    private static final int RELEASE_VETO_ARM_TICKS = 3;
+    private static final int RELEASE_VETO_HOLD_TICKS = 200;
+    private static int foreignReleaseTicks = 0;
+    private static int releaseVetoLatch = 0;
+
     private WandscapePanelController() {}
 
     public static void register() {
@@ -107,6 +121,11 @@ public final class WandscapePanelController {
             lastScreenOpen = false;
             lastDesiredLifted = false;
             hasSavedCursor = false;
+            // 面板关了 → 收回「光标归本仓」的宣告，兜底随之失效。
+            cursorIntentFree = false;
+            cursorIntentGrabbed = false;
+            foreignReleaseTicks = 0;
+            releaseVetoLatch = 0;
             return;
         }
 
@@ -152,12 +171,21 @@ public final class WandscapePanelController {
 
         // A Screen owns cursor visibility; only re-assert right after it closes
         // (vanilla grabs the mouse when a Screen closes).
-        if (screenOpen) return;
+        if (screenOpen) {
+            // Screen 期间光标归 Screen：本仓既不要自由也不要求抓取，兜底不介入。
+            cursorIntentFree = false;
+            cursorIntentGrabbed = false;
+            foreignReleaseTicks = 0;
+            return;
+        }
 
         // The spline editor's right-drag camera grab owns the cursor while active —
         // reconciling here would release it and break camera rotation.
         if (splineCam) {
             lastDesiredLifted = false;   // force a restore transition when it releases
+            // 样条相机（RMB 旋转）期间光标必须锁住，被外部放掉会打断连续 delta → 宣告「本仓要抓取」。
+            cursorIntentFree = false;
+            cursorIntentGrabbed = true;
             return;
         }
 
@@ -166,17 +194,46 @@ public final class WandscapePanelController {
         // RMB 按住时视为 grabbed（视角旋转需要锁鼠标拿增量），松开后恢复 cursorLifted 意图。
         boolean desired = cursorLifted && !rightDown;
         boolean justTransitioned = (desired != lastDesiredLifted);
+
+        // 发布意图 —— 这几行是 MixinMouseHandler 兜底判据的唯一真源。
+        cursorIntentFree = desired;
+        cursorIntentGrabbed = !desired;
+        if (releaseVetoLatch > 0) releaseVetoLatch--;
+
         if (desired) {
-            mc.mouseHandler.releaseMouse();
+            foreignReleaseTicks = 0;
+            CursorGrab.release(mc);
             // On a fresh grab→free transition (or right after a Screen closed), put
             // the cursor back where it last was instead of window center.
             if ((justTransitioned || screenJustClosed) && hasSavedCursor) {
                 GLFW.glfwSetCursorPos(window, savedCursorX, savedCursorY);
             }
         } else {
-            mc.mouseHandler.grabMouse();
+            // 我们要求抓取：若上一 tick 也是这个意图、而此刻鼠标却没被抓着，说明有人在我们后面放掉了它。
+            // 连续命中才武装 release 否决（见 vetoForeignRelease 的注释）。
+            if (!lastDesiredLifted && !mc.mouseHandler.isMouseGrabbed()) {
+                foreignReleaseTicks++;
+                if (foreignReleaseTicks == RELEASE_VETO_ARM_TICKS) {
+                    releaseVetoLatch = RELEASE_VETO_HOLD_TICKS;
+                    Log.warn(TAG, "[Panel][Cursor] 检测到外部持续释放光标，武装 release 否决 {} tick",
+                            RELEASE_VETO_HOLD_TICKS);
+                }
+            } else {
+                foreignReleaseTicks = 0;
+            }
+            CursorGrab.grab(mc);
         }
         lastDesiredLifted = desired;
+    }
+
+    /** 光标兜底（MixinMouseHandler）：此刻是否应否决外来的 {@code grabMouse()}。 */
+    public static boolean vetoForeignGrab() {
+        return cursorIntentFree;
+    }
+
+    /** 光标兜底：此刻是否应否决外来的 {@code releaseMouse()}（仅在争抢闩武装期内为真）。 */
+    public static boolean vetoForeignRelease() {
+        return releaseVetoLatch > 0;
     }
 
     static void onMouseButtonPre(InputEvent.MouseButton.Pre event) {

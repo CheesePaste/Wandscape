@@ -9,6 +9,7 @@ import com.wsteam.wandscape.content.building.scanner.network.ScannerSyncPacket;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.foundation.networking.Net;
 import com.wsteam.wandscape.foundation.ui.I18n;
+import com.wsteam.wandscape.foundation.ui.util.CursorGrab;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.Vec3;
@@ -191,7 +192,7 @@ public final class ScannerGizmoState {
             mc.setScreen(null);
         }
         if (mc.mouseHandler != null) {
-            mc.mouseHandler.releaseMouse();
+            CursorGrab.release(mc);
         }
 
         showToast(com.wsteam.wandscape.foundation.ui.I18n.string("gui.wandscape.gizmo.toast_enter", "§a已进入 3D 可视化调整模式 (右键旋转视角, 左键拖拽轴向)"), 0xFF55FF55);
@@ -225,7 +226,7 @@ public final class ScannerGizmoState {
         CreativeScannerBlockEntity be = scanner;
         active = false;
         if (mc.mouseHandler != null) {
-            mc.mouseHandler.releaseMouse();
+            CursorGrab.release(mc);
         }
 
         CreativeScannerScreen screen = (be instanceof ScannerBlockEntity survival)
@@ -245,7 +246,7 @@ public final class ScannerGizmoState {
 
         Minecraft mc = Minecraft.getInstance();
         if (mc.mouseHandler != null) {
-            mc.mouseHandler.releaseMouse();
+            CursorGrab.release(mc);
         }
 
         CreativeScannerScreen screen = (be instanceof ScannerBlockEntity survival)

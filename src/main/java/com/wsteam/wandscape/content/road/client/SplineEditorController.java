@@ -13,6 +13,7 @@ import com.wsteam.wandscape.content.road.core.SplineVec3;
 import com.wsteam.wandscape.foundation.log.Log;
 import com.wsteam.wandscape.foundation.networking.Net;
 import com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState;
+import com.wsteam.wandscape.foundation.ui.util.CursorGrab;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.phys.Vec3;
@@ -112,11 +113,11 @@ public final class SplineEditorController {
                     hasSavedCursor = true;
 
                     cameraActive = true;
-                    mc.mouseHandler.grabMouse();
+                    CursorGrab.grab(mc);
                 }
             } else if (cameraActive && action == GLFW.GLFW_RELEASE) {
                 cameraActive = false;
-                mc.mouseHandler.releaseMouse();
+                CursorGrab.release(mc);
                 if (hasSavedCursor) {
                     GLFW.glfwSetCursorPos(window, savedCursorX, savedCursorY);
                 }
@@ -179,10 +180,10 @@ public final class SplineEditorController {
             hasSavedCursor = true;
 
             cameraActive = true;
-            mc.mouseHandler.grabMouse();
+            CursorGrab.grab(mc);
         } else if (cameraActive && !rightDown) {
             cameraActive = false;
-            mc.mouseHandler.releaseMouse();
+            CursorGrab.release(mc);
             if (hasSavedCursor) {
                 GLFW.glfwSetCursorPos(window, savedCursorX, savedCursorY);
             }
@@ -190,7 +191,7 @@ public final class SplineEditorController {
 
         // Defensive: while camera is not active and no screen is open, ensure mouse cursor stays released (free)
         if (!cameraActive && mc.screen == null && mc.mouseHandler.isMouseGrabbed()) {
-            mc.mouseHandler.releaseMouse();
+            CursorGrab.release(mc);
             if (hasSavedCursor) {
                 GLFW.glfwSetCursorPos(window, savedCursorX, savedCursorY);
             }

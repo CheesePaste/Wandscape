@@ -2,6 +2,7 @@ package com.wsteam.wandscape.content.building.scanner.client.gizmo;
 
 import com.wsteam.wandscape.content.building.data.BlockOffset;
 import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.ui.util.CursorGrab;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.phys.AABB;
@@ -85,11 +86,11 @@ public final class ScannerGizmoController {
                     savedCursorY = mc.mouseHandler.ypos();
                     hasSavedCursor = true;
                     cameraActive = true;
-                    mc.mouseHandler.grabMouse();
+                    CursorGrab.grab(mc);
                 }
             } else if (cameraActive && action == GLFW.GLFW_RELEASE) {
                 cameraActive = false;
-                mc.mouseHandler.releaseMouse();
+                CursorGrab.release(mc);
                 if (hasSavedCursor) {
                     GLFW.glfwSetCursorPos(window, savedCursorX, savedCursorY);
                     hasSavedCursor = false;
