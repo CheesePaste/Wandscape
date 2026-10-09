@@ -224,12 +224,27 @@ public final class SkinRender {
         }
 
         // 5. 中间十字交叉 "×"（像素对称几何绘制）
-        int cx = x + w / 2;
-        int cy = y + h / 2;
         int crossColor = disabled ? 0xFF545C6C : (hovered ? 0xFFFFFFFF : 0xFFC8A040);
-        for (int i = -2; i <= 2; i++) {
-            g.fill(cx + i, cy + i, cx + i + 1, cy + i + 1, crossColor);
-            g.fill(cx + i, cy - i, cx + i + 1, cy - i + 1, crossColor);
+        if (w % 2 == 0 && h % 2 == 0) {
+            int midX1 = x + w / 2 - 1;
+            int midX2 = x + w / 2;
+            int midY1 = y + h / 2 - 1;
+            int midY2 = y + h / 2;
+            int arm = (w >= 18 && h >= 18) ? 3 : 2;
+            for (int d = 0; d <= arm; d++) {
+                g.fill(midX1 - d, midY1 - d, midX1 - d + 1, midY1 - d + 1, crossColor);
+                g.fill(midX2 + d, midY1 - d, midX2 + d + 1, midY1 - d + 1, crossColor);
+                g.fill(midX1 - d, midY2 + d, midX1 - d + 1, midY2 + d + 1, crossColor);
+                g.fill(midX2 + d, midY2 + d, midX2 + d + 1, midY2 + d + 1, crossColor);
+            }
+        } else {
+            int cx = x + w / 2;
+            int cy = y + h / 2;
+            int arm = Math.min(w, h) >= 17 ? 3 : 2;
+            for (int d = -arm; d <= arm; d++) {
+                g.fill(cx + d, cy + d, cx + d + 1, cy + d + 1, crossColor);
+                g.fill(cx + d, cy - d, cx + d + 1, cy - d + 1, crossColor);
+            }
         }
     }
 
@@ -350,9 +365,17 @@ public final class SkinRender {
         boolean disabled = (state == 3 || state == 2);
         boolean hovered = (state == 1);
         int color = disabled ? 0xFF545C6C : (hovered ? 0xFFFFDF7A : 0xFFC8A040);
-        int cx = x + w / 2;
-        int cy = y + h / 2;
-        g.fill(cx - 2, cy - 1, cx + 3, cy + 1, color);
+        if (w % 2 == 0 && h % 2 == 0) {
+            int midX1 = x + w / 2 - 1;
+            int midX2 = x + w / 2;
+            int midY1 = y + h / 2 - 1;
+            int midY2 = y + h / 2;
+            g.fill(midX1 - 2, midY1, midX2 + 3, midY2 + 1, color);
+        } else {
+            int cx = x + w / 2;
+            int cy = y + h / 2;
+            g.fill(cx - 2, cy - 1, cx + 3, cy + 1, color);
+        }
     }
 
     public static void drawLessButton(GuiGraphics g, int x, int y, int state) {
@@ -364,10 +387,19 @@ public final class SkinRender {
         boolean disabled = (state == 3 || state == 2);
         boolean hovered = (state == 1);
         int color = disabled ? 0xFF545C6C : (hovered ? 0xFFFFDF7A : 0xFFC8A040);
-        int cx = x + w / 2;
-        int cy = y + h / 2;
-        g.fill(cx - 2, cy - 1, cx + 3, cy + 1, color);
-        g.fill(cx - 1, cy - 2, cx + 1, cy + 3, color);
+        if (w % 2 == 0 && h % 2 == 0) {
+            int midX1 = x + w / 2 - 1;
+            int midX2 = x + w / 2;
+            int midY1 = y + h / 2 - 1;
+            int midY2 = y + h / 2;
+            g.fill(midX1 - 2, midY1, midX2 + 3, midY2 + 1, color);
+            g.fill(midX1, midY1 - 2, midX2 + 1, midY2 + 3, color);
+        } else {
+            int cx = x + w / 2;
+            int cy = y + h / 2;
+            g.fill(cx - 2, cy - 1, cx + 3, cy + 1, color);
+            g.fill(cx - 1, cy - 2, cx + 1, cy + 3, color);
+        }
     }
 
     public static void drawMoreButton(GuiGraphics g, int x, int y, int state) {
@@ -381,13 +413,25 @@ public final class SkinRender {
         boolean disabled = (state == 3 || state == 2);
         boolean hovered = (state == 1);
         int color = disabled ? 0xFF545C6C : (hovered ? 0xFFFFDF7A : 0xFFC8A040);
-        int cx = x + w / 2;
-        int cy = y + h / 2;
-        g.fill(cx - 2, cy, cx - 1, cy + 1, color);
-        g.fill(cx - 1, cy - 1, cx, cy + 2, color);
-        g.fill(cx, cy - 2, cx + 1, cy + 3, color);
-        g.fill(cx + 1, cy - 3, cx + 2, cy - 1, color);
-        g.fill(cx + 1, cy + 2, cx + 2, cy + 4, color);
+        if (w % 2 == 0 && h % 2 == 0) {
+            int midX1 = x + w / 2 - 1;
+            int midX2 = x + w / 2;
+            int midY1 = y + h / 2 - 1;
+            int midY2 = y + h / 2;
+            g.fill(midX1 - 1, midY1, midX1, midY2 + 1, color);
+            g.fill(midX1, midY1 - 1, midX1 + 1, midY2 + 2, color);
+            g.fill(midX2, midY1 - 2, midX2 + 1, midY2 + 3, color);
+            g.fill(midX2 + 1, midY1 - 2, midX2 + 2, midY1, color);
+            g.fill(midX2 + 1, midY2 + 1, midX2 + 2, midY2 + 3, color);
+        } else {
+            int cx = x + w / 2;
+            int cy = y + h / 2;
+            g.fill(cx - 2, cy, cx - 1, cy + 1, color);
+            g.fill(cx - 1, cy - 1, cx, cy + 2, color);
+            g.fill(cx, cy - 2, cx + 1, cy + 3, color);
+            g.fill(cx + 1, cy - 3, cx + 2, cy - 1, color);
+            g.fill(cx + 1, cy + 2, cx + 2, cy + 4, color);
+        }
     }
 
     public static void drawLeftArrow(GuiGraphics g, int x, int y, int state) {
@@ -399,13 +443,25 @@ public final class SkinRender {
         boolean disabled = (state == 3 || state == 2);
         boolean hovered = (state == 1);
         int color = disabled ? 0xFF545C6C : (hovered ? 0xFFFFDF7A : 0xFFC8A040);
-        int cx = x + w / 2;
-        int cy = y + h / 2;
-        g.fill(cx + 2, cy, cx + 3, cy + 1, color);
-        g.fill(cx + 1, cy - 1, cx + 2, cy + 2, color);
-        g.fill(cx, cy - 2, cx + 1, cy + 3, color);
-        g.fill(cx - 1, cy - 3, cx, cy - 1, color);
-        g.fill(cx - 1, cy + 2, cx, cy + 4, color);
+        if (w % 2 == 0 && h % 2 == 0) {
+            int midX1 = x + w / 2 - 1;
+            int midX2 = x + w / 2;
+            int midY1 = y + h / 2 - 1;
+            int midY2 = y + h / 2;
+            g.fill(midX1 - 1, midY1 - 2, midX1, midY1, color);
+            g.fill(midX1 - 1, midY2 + 1, midX1, midY2 + 3, color);
+            g.fill(midX1, midY1 - 2, midX1 + 1, midY2 + 3, color);
+            g.fill(midX2, midY1 - 1, midX2 + 1, midY2 + 2, color);
+            g.fill(midX2 + 1, midY1, midX2 + 2, midY2 + 1, color);
+        } else {
+            int cx = x + w / 2;
+            int cy = y + h / 2;
+            g.fill(cx + 2, cy, cx + 3, cy + 1, color);
+            g.fill(cx + 1, cy - 1, cx + 2, cy + 2, color);
+            g.fill(cx, cy - 2, cx + 1, cy + 3, color);
+            g.fill(cx - 1, cy - 3, cx, cy - 1, color);
+            g.fill(cx - 1, cy + 2, cx, cy + 4, color);
+        }
     }
 
     public static void drawRightArrow(GuiGraphics g, int x, int y, int state) {
@@ -512,13 +568,25 @@ public final class SkinRender {
         boolean disabled = (state == 3 || state == 2);
         boolean hovered = (state == 1);
         int color = disabled ? 0xFF545C6C : (hovered ? 0xFFFFDF7A : 0xFFC8A040);
-        int cx = x + w / 2;
-        int cy = y + h / 2;
-        g.fill(cx, cy - 2, cx + 1, cy - 1, color);
-        g.fill(cx - 1, cy - 1, cx + 2, cy, color);
-        g.fill(cx - 2, cy, cx + 3, cy + 1, color);
-        g.fill(cx - 3, cy + 1, cx - 1, cy + 2, color);
-        g.fill(cx + 2, cy + 1, cx + 4, cy + 2, color);
+        if (w % 2 == 0 && h % 2 == 0) {
+            int midX1 = x + w / 2 - 1;
+            int midX2 = x + w / 2;
+            int midY1 = y + h / 2 - 1;
+            int midY2 = y + h / 2;
+            g.fill(midX1, midY1 - 1, midX2 + 1, midY1, color);
+            g.fill(midX1 - 1, midY1, midX2 + 2, midY1 + 1, color);
+            g.fill(midX1 - 2, midY2, midX2 + 3, midY2 + 1, color);
+            g.fill(midX1 - 2, midY2 + 1, midX1, midY2 + 2, color);
+            g.fill(midX2 + 1, midY2 + 1, midX2 + 3, midY2 + 2, color);
+        } else {
+            int cx = x + w / 2;
+            int cy = y + h / 2;
+            g.fill(cx, cy - 2, cx + 1, cy - 1, color);
+            g.fill(cx - 1, cy - 1, cx + 2, cy, color);
+            g.fill(cx - 2, cy, cx + 3, cy + 1, color);
+            g.fill(cx - 3, cy + 1, cx - 1, cy + 2, color);
+            g.fill(cx + 2, cy + 1, cx + 4, cy + 2, color);
+        }
     }
 
     public static void drawUpArrow(GuiGraphics g, int x, int y, int state) {
@@ -530,13 +598,25 @@ public final class SkinRender {
         boolean disabled = (state == 3 || state == 2);
         boolean hovered = (state == 1);
         int color = disabled ? 0xFF545C6C : (hovered ? 0xFFFFDF7A : 0xFFC8A040);
-        int cx = x + w / 2;
-        int cy = y + h / 2;
-        g.fill(cx - 3, cy - 2, cx - 1, cy - 1, color);
-        g.fill(cx + 2, cy - 2, cx + 4, cy - 1, color);
-        g.fill(cx - 2, cy - 1, cx + 3, cy, color);
-        g.fill(cx - 1, cy, cx + 2, cy + 1, color);
-        g.fill(cx, cy + 1, cx + 1, cy + 2, color);
+        if (w % 2 == 0 && h % 2 == 0) {
+            int midX1 = x + w / 2 - 1;
+            int midX2 = x + w / 2;
+            int midY1 = y + h / 2 - 1;
+            int midY2 = y + h / 2;
+            g.fill(midX1 - 2, midY1 - 1, midX1, midY1, color);
+            g.fill(midX2 + 1, midY1 - 1, midX2 + 3, midY1, color);
+            g.fill(midX1 - 2, midY1, midX2 + 3, midY1 + 1, color);
+            g.fill(midX1 - 1, midY2, midX2 + 2, midY2 + 1, color);
+            g.fill(midX1, midY2 + 1, midX2 + 1, midY2 + 2, color);
+        } else {
+            int cx = x + w / 2;
+            int cy = y + h / 2;
+            g.fill(cx - 3, cy - 2, cx - 1, cy - 1, color);
+            g.fill(cx + 2, cy - 2, cx + 4, cy - 1, color);
+            g.fill(cx - 2, cy - 1, cx + 3, cy, color);
+            g.fill(cx - 1, cy, cx + 2, cy + 1, color);
+            g.fill(cx, cy + 1, cx + 1, cy + 2, color);
+        }
     }
 
     public static void drawDownArrow(GuiGraphics g, int x, int y, int state) {
