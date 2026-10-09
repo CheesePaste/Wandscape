@@ -76,10 +76,10 @@ public class Slider extends AbstractWidget {
 
         // Value label centered above track
         g.drawCenteredString(font, String.valueOf(value),
-                trackX + trackW / 2, getY(), MedievalColors.TEXT_WARM_WHITE);
+                trackX + trackW / 2, getY(), isMouseOver(mouseX, mouseY) ? MedievalColors.ACCENT_GOLD : MedievalColors.TEXT_WARM_WHITE);
 
         // Track outline / inset border
-        g.fill(trackX - 1, trackY - 1, trackX + trackW + 1, trackY + trackH + 1, 0xFF3D2A14);
+        g.fill(trackX - 1, trackY - 1, trackX + trackW + 1, trackY + trackH + 1, 0xFF262E3E);
 
         // Track — dark background
         g.fill(trackX, trackY, trackX + trackW, trackY + trackH, MedievalColors.SLIDER_TRACK);
@@ -99,9 +99,9 @@ public class Slider extends AbstractWidget {
         int thumbY = trackY - 2;
 
         boolean hovered = isMouseOver(mouseX, mouseY);
-        int borderColor = hovered ? 0xFFE0C068 : 0xFF9A7A40;
-        int bodyColor = hovered ? 0xFF4A3820 : 0xFF2A1A0A;
-        int ridgeColor = hovered ? 0xFFFFFFFF : 0xFFC8A040;
+        int borderColor = hovered ? MedievalColors.BORDER_GOLD_BRIGHT : MedievalColors.BORDER_GOLD;
+        int bodyColor = hovered ? 0xFF2B3347 : 0xFF181C28;
+        int ridgeColor = hovered ? 0xFFFFE082 : MedievalColors.ACCENT_GOLD;
 
         // Thumb outer border
         g.fill(thumbX, thumbY, thumbX + thumbW, thumbY + thumbH, borderColor);

@@ -238,16 +238,16 @@ public class TavernScreen extends MedievalScreen {
 
                 // Card background & borders
                 if (isSel) {
-                    g.fill(lx + 3, cy, lx + lw - 3, cy + cardH, 0x66C8A040);
+                    g.fill(lx + 3, cy, lx + lw - 3, cy + cardH, 0x66283550);
                     drawGlowBorder(g, lx + 3, cy, lw - 6, cardH, MedievalColors.BORDER_GOLD);
                     // Gold vertical indicator
                     g.fill(lx + 4, cy + 2, lx + 6, cy + cardH - 2, MedievalColors.ACCENT_GOLD);
                 } else if (isHov) {
-                    g.fill(lx + 3, cy, lx + lw - 3, cy + cardH, 0x33C8A040);
-                    g.fill(lx + 3, cy, lx + lw - 3, cy + 1, MedievalColors.BORDER_GOLD_DARK);
-                    g.fill(lx + 3, cy + cardH - 1, lx + lw - 3, cy + cardH, MedievalColors.BORDER_GOLD_DARK);
+                    g.fill(lx + 3, cy, lx + lw - 3, cy + cardH, 0x33364560);
+                    g.fill(lx + 3, cy, lx + lw - 3, cy + 1, MedievalColors.CARD_BORDER);
+                    g.fill(lx + 3, cy + cardH - 1, lx + lw - 3, cy + cardH, MedievalColors.CARD_BORDER);
                 } else {
-                    g.fill(lx + 3, cy, lx + lw - 3, cy + cardH, 0x22000000);
+                    g.fill(lx + 3, cy, lx + lw - 3, cy + cardH, 0x22121724);
                 }
 
                 // Card text
@@ -281,7 +281,7 @@ public class TavernScreen extends MedievalScreen {
             int py = ry + 6;
             int pw = 52;
             int ph = 64;
-            g.fill(px, py, px + pw, py + ph, MedievalColors.PARCHMENT_DEEPEST);
+            g.fill(px, py, px + pw, py + ph, 0xDD0D1018);
             drawGlowBorder(g, px, py, pw, ph, MedievalColors.BORDER_GOLD);
             if (previewNpc != null) {
                 InventoryScreen.renderEntityInInventoryFollowsMouse(

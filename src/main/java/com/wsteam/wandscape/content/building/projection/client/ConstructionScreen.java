@@ -119,7 +119,22 @@ public class ConstructionScreen extends MedievalScreen {
             g.drawString(font, label, leftPos + LABEL_X, y + (BOX_H - font.lineHeight) / 2,
                     MedievalColors.ACCENT_GOLD);
             drawInsetField(g, leftPos + BOX_X, y, BOX_W, BOX_H);
+            EditBox currentBox = switch (row) {
+                case 0 -> xBox;
+                case 1 -> yBox;
+                default -> zBox;
+            };
+            if (currentBox != null && currentBox.isFocused()) {
+                int bx = leftPos + BOX_X;
+                g.fill(bx, y, bx + BOX_W, y + 1, MedievalColors.BORDER_GOLD_BRIGHT);
+                g.fill(bx, y + BOX_H - 1, bx + BOX_W, y + BOX_H, MedievalColors.BORDER_GOLD_BRIGHT);
+                g.fill(bx, y, bx + 1, y + BOX_H, MedievalColors.BORDER_GOLD_BRIGHT);
+                g.fill(bx + BOX_W - 1, y, bx + BOX_W, y + BOX_H, MedievalColors.BORDER_GOLD_BRIGHT);
+            }
         }
+
+        // Preview frame
+        drawInsetField(g, leftPos + PREVIEW_X - 1, topPos + PREVIEW_Y - 1, PREVIEW_W + 2, PREVIEW_H + 2);
 
         // Flush GUI batch so the cached building preview renders on top of the glass panel
         g.bufferSource().endBatch(RenderType.gui());
@@ -127,7 +142,7 @@ public class ConstructionScreen extends MedievalScreen {
                 leftPos + PREVIEW_X, topPos + PREVIEW_Y, PREVIEW_W, PREVIEW_H);
 
         if (status != null) {
-            g.drawCenteredString(font, status, leftPos + PW / 2, topPos + STATUS_Y, 0xFFE06060);
+            g.drawCenteredString(font, status, leftPos + PW / 2, topPos + STATUS_Y, MedievalColors.DANGER_RED);
         }
     }
 

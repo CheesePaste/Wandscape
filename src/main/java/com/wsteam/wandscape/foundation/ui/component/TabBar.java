@@ -80,6 +80,14 @@ public class TabBar extends AbstractWidget {
             boolean selected = i == selectedIndex;
             boolean hovered = isMouseOverTab(mouseX, mouseY, i, tabWidth);
 
+            if (selected) {
+                // Soft golden background glow
+                g.fillGradient(tabX + 2, y + 1, tabX + tabW - 2, y + TAB_HEIGHT - 1,
+                        0x33C8A040, 0x08C8A040);
+            } else if (hovered) {
+                g.fill(tabX + 2, y + 1, tabX + tabW - 2, y + TAB_HEIGHT - 1, 0x18FFFFFF);
+            }
+
             int textColor;
             if (selected) {
                 textColor = MedievalColors.ACCENT_GOLD;
@@ -94,11 +102,16 @@ public class TabBar extends AbstractWidget {
             int textX = tabX + (tabW - textWidth) / 2;
             g.drawString(font, tabs.get(i), textX, y + 3, textColor);
 
-            // Gold underline for selected tab
+            // Radiant gold underline for selected tab with soft glow
             if (selected) {
-                g.fill(tabX + TAB_PADDING, y + TAB_HEIGHT - UNDERLINE_HEIGHT,
-                        tabX + tabW - TAB_PADDING, y + TAB_HEIGHT,
-                        MedievalColors.ACCENT_GOLD);
+                int ulStart = tabX + TAB_PADDING;
+                int ulEnd = tabX + tabW - TAB_PADDING;
+                g.fill(ulStart, y + TAB_HEIGHT - UNDERLINE_HEIGHT,
+                        ulEnd, y + TAB_HEIGHT,
+                        MedievalColors.BORDER_GOLD_BRIGHT);
+                g.fill(ulStart - 1, y + TAB_HEIGHT - 1,
+                        ulEnd + 1, y + TAB_HEIGHT,
+                        0x88C8A040);
             }
         }
     }

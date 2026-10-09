@@ -195,9 +195,10 @@ public abstract class ScrollableList<T> extends AbstractWidget {
             if (hovered) this.hoveredIndex = i;
 
             if (selected) {
-                g.fill(getX(), rowY, contentRight, rowY + rowHeight, MedievalColors.PURPLE_BG);
+                g.fill(getX(), rowY, contentRight, rowY + rowHeight, 0x66283550);
+                g.fill(getX(), rowY + 1, getX() + 2, rowY + rowHeight - 1, MedievalColors.ACCENT_GOLD);
             } else if (hovered) {
-                g.fill(getX(), rowY, contentRight, rowY + rowHeight, MedievalColors.PARCHMENT_LIGHT);
+                g.fill(getX(), rowY, contentRight, rowY + rowHeight, 0x33364560);
             }
 
             renderRow(g, items.get(i), getX() + 2, rowY, i, selected, hovered);

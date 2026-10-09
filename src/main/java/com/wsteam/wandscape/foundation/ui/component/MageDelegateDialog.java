@@ -37,12 +37,12 @@ public final class MageDelegateDialog {
     private static final int BTN_GAP = 10;
 
     private static final int DIM_COLOR = 0xC0000000;
-    private static final int HEADER_TOP = 0xFF502870;
-    private static final int HEADER_BOTTOM = 0xFF1A0830;
-    private static final int HEADER_ACCENT_TOP = 0xFFD4A840;
-    private static final int HEADER_ACCENT_BOTTOM = 0xFF6A4020;
-    private static final int BOX_TOP = 0xFF2A1C12;
-    private static final int BOX_BOTTOM = 0xFF140A06;
+    private static final int HEADER_TOP = 0xFF1F2436;
+    private static final int HEADER_BOTTOM = 0xFF121520;
+    private static final int HEADER_ACCENT_TOP = MedievalColors.BORDER_GOLD_BRIGHT;
+    private static final int HEADER_ACCENT_BOTTOM = MedievalColors.BORDER_GOLD_DARK;
+    private static final int BOX_TOP = 0xFF181B26;
+    private static final int BOX_BOTTOM = 0xFF10121A;
 
     /** 一名候选法师（与 {@code BuildingDelegateDataPacket.Row} 同形，UI 层不依赖网络类型）。 */
     public record Row(UUID mageUuid, String name, String state,

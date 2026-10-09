@@ -109,26 +109,40 @@ public class ConstructionSiteScreen extends MedievalScreen {
                 var font = Minecraft.getInstance().font;
                 var registryItem = BuiltInRegistries.ITEM.get(ResourceLocation.tryParse(item.blockId()));
                 if (registryItem != null && registryItem != Items.AIR) {
-                    g.renderItem(new ItemStack(registryItem), x, y + 1);
+                    g.renderItem(new ItemStack(registryItem), x + 2, y + 2);
                 }
                 Component name = (registryItem != null && registryItem != Items.AIR)
                         ? new ItemStack(registryItem).getHoverName()
                         : Component.literal(item.blockId());
-                g.drawString(font, name, x + 20, y + 2,
-                        selected ? MedievalColors.ACCENT_GOLD : MedievalColors.TEXT_MUTED);
+                g.drawString(font, name, x + 22, y + 6,
+                        selected ? MedievalColors.ACCENT_GOLD : MedievalColors.TEXT_WARM_WHITE);
 
                 // Middle: required quantity, right-aligned to MID_COL_X.
-                String countText = "x" + item.required();
-                g.drawString(font, countText, x + MID_COL_X - font.width(countText), y + 2,
+                String countText = "×" + item.required();
+                g.drawString(font, countText, x + MID_COL_X - font.width(countText), y + 6,
                         MedievalColors.TEXT_MUTED);
 
-                // Right: supply status, right-aligned to the row edge.
+                // Right: supply status pill badge
                 String statusText = statusText(item.status());
-                g.drawString(font, statusText,
-                        x + getWidth() - scrollbarWidth - font.width(statusText) - 6, y + 2,
-                        statusColor(item.status()));
+                int stColor = statusColor(item.status());
+                int badgeW = font.width(statusText) + 8;
+                int badgeH = 12;
+                int badgeX = x + getWidth() - scrollbarWidth - badgeW - 6;
+                int badgeY = y + 4;
+                int badgeBg = switch (item.status()) {
+                    case ConstructionSiteDataPacket.STATUS_READY -> 0x3366BB6A;
+                    case ConstructionSiteDataPacket.STATUS_CRAFTING -> 0x33FFA726;
+                    case ConstructionSiteDataPacket.STATUS_LOCKED -> 0x33EF5350;
+                    default -> 0x33445068;
+                };
+                g.fill(badgeX, badgeY, badgeX + badgeW, badgeY + badgeH, badgeBg);
+                g.drawString(font, statusText, badgeX + 4, badgeY + 2, stColor);
             }
         };
+        list.setTooltipProvider((item, idx) -> {
+            var registryItem = BuiltInRegistries.ITEM.get(ResourceLocation.tryParse(item.blockId()));
+            return (registryItem != null && registryItem != Items.AIR) ? new ItemStack(registryItem) : null;
+        });
         list.setItems(materials);
         addRenderableWidget(list);
 
@@ -137,7 +151,7 @@ public class ConstructionSiteScreen extends MedievalScreen {
         if (!completed) {
             int btnW = 80, btnH = 18;
             addRenderableWidget(new MedievalButton(
-                    leftPos + PW - 8 - btnW, topPos + headerHeight + 6, btnW, btnH,
+                    leftPos + PW - 8 - btnW, topPos + headerHeight + 8, btnW, btnH,
                     I18n.name("gui.wandscape.constructionsite.craft_all", "一键制作"),
                     this::onCraftAll));
         }
@@ -172,13 +186,38 @@ public class ConstructionSiteScreen extends MedievalScreen {
     }
 
     @Override
+    protected void renderForeground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        super.renderForeground(g, mouseX, mouseY, partialTick);
+        if (list != null) {
+            ItemStack stack = list.hoveredTooltipStack();
+            if (stack != null && !stack.isEmpty()) {
+                g.renderTooltip(font, stack, mouseX, mouseY);
+            }
+        }
+    }
+
+    @Override
     protected void renderContent(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        int textX = leftPos + 8;
-        int lineY = topPos + headerHeight + TIME_LINE1_Y;
+        int cardX = leftPos + 8;
+        int cardY = topPos + headerHeight + 4;
+        int cardW = PW - 16;
+        int cardH = TIME_STRIP_H;
+
+        // Decorative background well for time estimate
+        g.fill(cardX, cardY, cardX + cardW, cardY + cardH, 0x330D1018);
+        g.fill(cardX, cardY, cardX + cardW, cardY + 1, 0x553A455C);
+        g.fill(cardX, cardY + cardH - 1, cardX + cardW, cardY + cardH, 0x553A455C);
+        g.fill(cardX, cardY, cardX + 2, cardY + cardH, MedievalColors.ACCENT_GOLD);
+
+        int textX = cardX + 8;
+        int lineY = cardY + 5;
         g.drawString(font, I18n.name("gui.wandscape.constructionsite.start_time", "预计开工").getString()
-                + ": " + startLabel(), textX, lineY, MedievalColors.TEXT_WARM_WHITE);
+                + ": ", textX, lineY, MedievalColors.TEXT_MUTED);
+        g.drawString(font, startLabel(), textX + 54, lineY, MedievalColors.TEXT_WARM_WHITE);
+
         g.drawString(font, I18n.name("gui.wandscape.constructionsite.complete_time", "预计完工").getString()
-                + ": " + completeLabel(), textX, lineY + TIME_LINE_GAP, MedievalColors.TEXT_WARM_WHITE);
+                + ": ", textX, lineY + TIME_LINE_GAP + 2, MedievalColors.TEXT_MUTED);
+        g.drawString(font, completeLabel(), textX + 54, lineY + TIME_LINE_GAP + 2, MedievalColors.ACCENT_GOLD);
 
         // 建材由殖民地物品工坊合成后送到工地，玩家常不知道来源；列表底与 creator 页脚之间正好一行。
         g.drawString(font, I18n.name("gui.wandscape.constructionsite.craft_hint",

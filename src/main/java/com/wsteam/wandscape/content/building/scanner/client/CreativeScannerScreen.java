@@ -1501,13 +1501,13 @@ public class CreativeScannerScreen extends MedievalScreen {
 
     private void drawEditBoxBorder(GuiGraphics gui, int x, int y, int w, int h, boolean focused, boolean hover) {
         drawInsetField(gui, x, y, w, h);
-        int borderColor = focused ? MedievalColors.BORDER_GOLD : (hover ? 0xAAFFD700 : 0x55806848);
+        int borderColor = focused ? MedievalColors.BORDER_GOLD_BRIGHT : (hover ? MedievalColors.BORDER_GOLD : MedievalColors.INSET_BORDER);
         gui.fill(x, y, x + w, y + 1, borderColor);
         gui.fill(x, y + h - 1, x + w, y + h, borderColor);
         gui.fill(x, y, x + 1, y + h, borderColor);
         gui.fill(x + w - 1, y, x + w, y + h, borderColor);
         if (focused) {
-            gui.fill(x + 1, y + 1, x + w - 1, y + h - 1, 0x18FFD700);
+            gui.fill(x + 1, y + 1, x + w - 1, y + h - 1, 0x202B3C58);
         }
     }
 

@@ -232,20 +232,36 @@ public class TownHallScreen extends MedievalScreen {
         int ebW = 164;
         int ebH = font.lineHeight + 6;
         drawInsetField(g, ebX, ebY, ebW, ebH);
+        if (nameBox != null && nameBox.isFocused()) {
+            g.fill(ebX, ebY, ebX + ebW, ebY + 1, MedievalColors.BORDER_GOLD_BRIGHT);
+            g.fill(ebX, ebY + ebH - 1, ebX + ebW, ebY + ebH, MedievalColors.BORDER_GOLD_BRIGHT);
+            g.fill(ebX, ebY, ebX + 1, ebY + ebH, MedievalColors.BORDER_GOLD_BRIGHT);
+            g.fill(ebX + ebW - 1, ebY, ebX + ebW, ebY + ebH, MedievalColors.BORDER_GOLD_BRIGHT);
+        }
 
-        // Colony founder（命名风格按钮组已移入设置中心的「本镇」页，这里不再为它留位置）
+        // Colony founder
         int y = ebY + ebH + 14;
         Component founderText = I18n.name("gui.wandscape.townhall.founder", "创建者：%s",
                 founderName != null && !founderName.isEmpty() ? founderName : "—");
         g.drawString(font, founderText, cx - font.width(founderText) / 2, y,
                 MedievalColors.TEXT_WARM_WHITE);
-        y += font.lineHeight + 6;
-
-        // Colony level
-        Component levelText = I18n.name("gui.wandscape.townhall.level", "魔法小镇等级 %s", level);
-        g.drawString(font, levelText, cx - font.width(levelText) / 2, y,
-                MedievalColors.BORDER_GOLD);
         y += font.lineHeight + 8;
+
+        // Colony level badge
+        Component levelText = I18n.name("gui.wandscape.townhall.level", "魔法小镇等级 %s", level);
+        int ltw = font.width(levelText);
+        int badgePad = 8;
+        int badgeX = cx - (ltw + badgePad * 2) / 2;
+        int badgeY = y - 2;
+        int badgeW = ltw + badgePad * 2;
+        int badgeH = font.lineHeight + 4;
+        g.fill(badgeX, badgeY, badgeX + badgeW, badgeY + badgeH, MedievalColors.CARD_BG);
+        g.fill(badgeX, badgeY, badgeX + badgeW, badgeY + 1, MedievalColors.BORDER_GOLD);
+        g.fill(badgeX, badgeY + badgeH - 1, badgeX + badgeW, badgeY + badgeH, MedievalColors.BORDER_GOLD);
+        g.fill(badgeX, badgeY, badgeX + 1, badgeY + badgeH, MedievalColors.BORDER_GOLD);
+        g.fill(badgeX + badgeW - 1, badgeY, badgeX + badgeW, badgeY + badgeH, MedievalColors.BORDER_GOLD);
+        g.drawString(font, levelText, cx - ltw / 2, y, MedievalColors.ACCENT_GOLD);
+        y += font.lineHeight + 12;
 
         // Experience bar
         renderExpBar(g, y);
@@ -262,11 +278,12 @@ public class TownHallScreen extends MedievalScreen {
         float ratio = expToNext > 0 ? (float) experience / expToNext : 0;
         int fillW = (int) (EXP_BAR_W * Math.min(1.0f, ratio));
 
-        g.fill(barX, barY, barX + EXP_BAR_W, barY + EXP_BAR_H, 0x28000000);
+        g.fill(barX, barY, barX + EXP_BAR_W, barY + EXP_BAR_H, MedievalColors.PROGRESS_BG);
         if (fillW > 0) {
-            g.fill(barX, barY, barX + fillW, barY + EXP_BAR_H, MedievalColors.BORDER_GOLD);
+            g.fill(barX, barY, barX + fillW, barY + EXP_BAR_H, 0xFF2F7AE5);
+            g.fill(barX, barY, barX + fillW, barY + 2, 0xFF6DB1FF); // specular highlight
         }
-        int border = MedievalColors.BORDER_GOLD_DARK;
+        int border = MedievalColors.BORDER_GOLD;
         g.fill(barX, barY, barX + EXP_BAR_W, barY + 1, border);
         g.fill(barX, barY + EXP_BAR_H - 1, barX + EXP_BAR_W, barY + EXP_BAR_H, border);
         g.fill(barX, barY, barX + 1, barY + EXP_BAR_H, border);

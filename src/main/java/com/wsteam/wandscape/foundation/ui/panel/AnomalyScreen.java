@@ -67,15 +67,15 @@ public class AnomalyScreen extends MedievalScreen {
         int cw = panelWidth - CONTENT_PAD * 2;
 
         // Header row
-        g.drawString(font, I18n.name("gui.wandscape.anomaly.col_building", "建筑名称").getString(), cx, cy, MedievalColors.BORDER_GOLD, false);
-        g.drawString(font, I18n.name("gui.wandscape.anomaly.col_status", "状态").getString(), cx + cw - 125, cy, MedievalColors.BORDER_GOLD, false);
+        g.drawString(font, I18n.name("gui.wandscape.anomaly.col_building", "建筑名称").getString(), cx, cy, MedievalColors.ACCENT_GOLD, false);
+        g.drawString(font, I18n.name("gui.wandscape.anomaly.col_status", "状态").getString(), cx + cw - 125, cy, MedievalColors.ACCENT_GOLD, false);
 
         int sepY = cy + 12;
-        g.fill(cx, sepY, cx + cw, sepY + 1, MedievalColors.BORDER_GOLD_DARK);
+        RenderUtil.drawHLineDecorative(g, cx, sepY, cw);
 
         // List area
-        int listY = sepY + 4;
-        int listH = panelHeight - headerHeight - 16 - 14;
+        int listY = sepY + 6;
+        int listH = panelHeight - headerHeight - 16 - 16;
 
         g.enableScissor(cx, listY, cx + cw, listY + listH);
 
@@ -88,29 +88,29 @@ public class AnomalyScreen extends MedievalScreen {
                     && mouseY >= rowY && mouseY < rowY + ROW_H;
 
             if (hovered) {
-                g.fill(cx, rowY, cx + cw, rowY + ROW_H, MedievalColors.BUTTON_BG_HOVER);
+                g.fill(cx, rowY, cx + cw, rowY + ROW_H - 2, 0x33364560);
+                g.fill(cx, rowY, cx + 2, rowY + ROW_H - 2, MedievalColors.ACCENT_GOLD);
+            } else {
+                g.fill(cx, rowY, cx + cw, rowY + ROW_H - 2, 0x22121724);
             }
 
             // Building name
             g.drawString(font, I18n.buildingName(entry.buildingTypeId(), entry.buildingTypeId()).getString(),
-                    cx + 4, rowY + (ROW_H - 9) / 2,
-                    MedievalColors.TEXT_WARM_WHITE, false);
+                    cx + 6, rowY + (ROW_H - 9) / 2,
+                    hovered ? MedievalColors.ACCENT_GOLD : MedievalColors.TEXT_WARM_WHITE, false);
 
             // Status badge (建造中 / 等待材料)
-            int badgeColor;
-            String badgeText;
-            if (entry.started()) {
-                badgeColor = MedievalColors.INFO_BLUE;
-                badgeText = I18n.name("gui.wandscape.anomaly.badge_under_construction", "建造中").getString();
-            } else {
-                badgeColor = MedievalColors.BORDER_GOLD_DARK;
-                badgeText = I18n.name("gui.wandscape.anomaly.badge_waiting_materials", "等待材料").getString();
-            }
+            int badgeColor = entry.started() ? 0xFF42A5F5 : 0xFFFFA726;
+            int badgeBg = entry.started() ? 0x3342A5F5 : 0x33FFA726;
+            String badgeText = entry.started()
+                    ? I18n.name("gui.wandscape.anomaly.badge_under_construction", "建造中").getString()
+                    : I18n.name("gui.wandscape.anomaly.badge_waiting_materials", "等待材料").getString();
+
             int badgeW = font.width(badgeText) + 8;
             int badgeX = cx + cw - 125;
             int badgeY = rowY + (ROW_H - 14) / 2;
-            g.fill(badgeX, badgeY, badgeX + badgeW, badgeY + 14, badgeColor | 0xCC000000);
-            g.drawString(font, badgeText, badgeX + 4, badgeY + 3, MedievalColors.TEXT_WARM_WHITE, false);
+            g.fill(badgeX, badgeY, badgeX + badgeW, badgeY + 14, badgeBg);
+            g.drawString(font, badgeText, badgeX + 4, badgeY + 3, badgeColor, false);
         }
 
         g.disableScissor();

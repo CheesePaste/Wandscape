@@ -304,7 +304,7 @@ public class MageHutScreen extends MedievalScreen {
         int py = ly + 6;
         int pw = 46;
         int ph = 56;
-        g.fill(px, py, px + pw, py + ph, MedievalColors.PARCHMENT_DEEPEST);
+        g.fill(px, py, px + pw, py + ph, 0xDD0D1018);
         drawGlowBorder(g, px, py, pw, ph, MedievalColors.BORDER_GOLD);
         if (previewNpc != null) {
             InventoryScreen.renderEntityInInventoryFollowsMouse(
@@ -348,15 +348,15 @@ public class MageHutScreen extends MedievalScreen {
 
             // Card highlight
             if (isSel) {
-                g.fill(rx, rowY, rx + rw, rowY + 15, 0x66C8A040);
+                g.fill(rx, rowY, rx + rw, rowY + 15, 0x66283550);
                 drawGlowBorder(g, rx, rowY, rw, 15, MedievalColors.BORDER_GOLD);
                 g.fill(rx + 1, rowY + 2, rx + 3, rowY + 13, MedievalColors.ACCENT_GOLD);
             } else if (isHov) {
-                g.fill(rx, rowY, rx + rw, rowY + 15, 0x33C8A040);
-                g.fill(rx, rowY, rx + rw, rowY + 1, MedievalColors.BORDER_GOLD_DARK);
-                g.fill(rx, rowY + 14, rx + rw, rowY + 15, MedievalColors.BORDER_GOLD_DARK);
+                g.fill(rx, rowY, rx + rw, rowY + 15, 0x33364560);
+                g.fill(rx, rowY, rx + rw, rowY + 1, MedievalColors.CARD_BORDER);
+                g.fill(rx, rowY + 14, rx + rw, rowY + 15, MedievalColors.CARD_BORDER);
             } else {
-                g.fill(rx, rowY, rx + rw, rowY + 15, (i % 2 == 0) ? 0x22000000 : 0x11000000);
+                g.fill(rx, rowY, rx + rw, rowY + 15, (i % 2 == 0) ? 0x22121724 : 0x11101420);
             }
 
             // Stat name
@@ -369,11 +369,11 @@ public class MageHutScreen extends MedievalScreen {
             int barY = rowY + 5;
             int barW = 46;
             int barH = 6;
-            g.fill(barX, barY, barX + barW, barY + barH, 0xFF0E0804);
-            g.fill(barX, barY, barX + barW, barY + 1, 0xFF3D2A14);
-            g.fill(barX, barY + barH - 1, barX + barW, barY + barH, 0xFF3D2A14);
-            g.fill(barX, barY, barX + 1, barY + barH, 0xFF3D2A14);
-            g.fill(barX + barW - 1, barY, barX + barW, barY + barH, 0xFF3D2A14);
+            g.fill(barX, barY, barX + barW, barY + barH, MedievalColors.PROGRESS_BG);
+            g.fill(barX, barY, barX + barW, barY + 1, MedievalColors.INSET_BORDER);
+            g.fill(barX, barY + barH - 1, barX + barW, barY + barH, MedievalColors.INSET_BORDER);
+            g.fill(barX, barY, barX + 1, barY + barH, MedievalColors.INSET_BORDER);
+            g.fill(barX + barW - 1, barY, barX + barW, barY + barH, MedievalColors.INSET_BORDER);
 
             float b = base[i];
             float lower = NpcAttributes.lower(type);
@@ -513,15 +513,15 @@ public class MageHutScreen extends MedievalScreen {
                         && mouseY >= viewY && mouseY <= viewY + viewH;
 
                 if (isSel) {
-                    g.fill(cx, cy, cx + cw, cy + cardH, 0x66C8A040);
+                    g.fill(cx, cy, cx + cw, cy + cardH, 0x66283550);
                     drawGlowBorder(g, cx, cy, cw, cardH, MedievalColors.BORDER_GOLD);
                     g.fill(cx + 1, cy + 2, cx + 3, cy + cardH - 2, MedievalColors.ACCENT_GOLD);
                 } else if (isHov) {
-                    g.fill(cx, cy, cx + cw, cy + cardH, 0x33C8A040);
-                    g.fill(cx, cy, cx + cw, cy + 1, MedievalColors.BORDER_GOLD_DARK);
-                    g.fill(cx, cy + cardH - 1, cx + cw, cy + cardH, MedievalColors.BORDER_GOLD_DARK);
+                    g.fill(cx, cy, cx + cw, cy + cardH, 0x33364560);
+                    g.fill(cx, cy, cx + cw, cy + 1, MedievalColors.CARD_BORDER);
+                    g.fill(cx, cy + cardH - 1, cx + cw, cy + cardH, MedievalColors.CARD_BORDER);
                 } else {
-                    g.fill(cx, cy, cx + cw, cy + cardH, 0x22000000);
+                    g.fill(cx, cy, cx + cw, cy + cardH, 0x22121724);
                 }
 
                 String cName = (i + 1) + ". " + c.name();
@@ -574,7 +574,7 @@ public class MageHutScreen extends MedievalScreen {
             int py = ry + 18;
             int pw = 44;
             int ph = 52;
-            g.fill(px, py, px + pw, py + ph, MedievalColors.PARCHMENT_DEEPEST);
+            g.fill(px, py, px + pw, py + ph, 0xDD0D1018);
             drawGlowBorder(g, px, py, pw, ph, MedievalColors.BORDER_GOLD);
             if (previewNpc != null) {
                 InventoryScreen.renderEntityInInventoryFollowsMouse(

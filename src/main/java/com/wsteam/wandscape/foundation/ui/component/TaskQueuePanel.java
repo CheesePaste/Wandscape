@@ -377,10 +377,10 @@ public class TaskQueuePanel extends AbstractWidget {
     }
 
     private static void drawProgressBar(GuiGraphics g, int x, int y, int w, int h, float frac) {
-        g.fill(x, y, x + w, y + h, 0x66000000);
+        g.fill(x, y, x + w, y + h, MedievalColors.PROGRESS_BG);
         int fw = Math.round(w * frac);
         if (fw > 0) {
-            g.fill(x, y, x + fw, y + h, 0xFFD4A840);
+            g.fill(x, y, x + fw, y + h, MedievalColors.PROGRESS_FILL);
         }
     }
 
@@ -416,7 +416,7 @@ public class TaskQueuePanel extends AbstractWidget {
         hoveredTooltipLines = null;
 
         // Background panel
-        SkinRender.drawPanel9Slice(g, SkinSprite.PANEL_B, getX(), getY(), width, height);
+        MedievalScreen.drawInsetField(g, getX(), getY(), width, height);
 
         if (groups.isEmpty()) {
             Component emptyText = I18n.name("gui.wandscape.queue.empty", "暂无制作任务");
@@ -458,10 +458,10 @@ public class TaskQueuePanel extends AbstractWidget {
             int accentColor = groupAccentColor(grp.sourceType);
 
             // Block outer frame & background
-            g.fill(blockX, blockY, blockX + blockW, blockY + gH, 0x33000000);
-            g.fill(blockX, blockY, blockX + blockW, blockY + 1, 0x448B7355);
-            g.fill(blockX, blockY + gH - 1, blockX + blockW, blockY + gH, 0x448B7355);
-            g.fill(blockX + blockW - 1, blockY, blockX + blockW, blockY + gH, 0x448B7355);
+            g.fill(blockX, blockY, blockX + blockW, blockY + gH, 0x440E121B);
+            g.fill(blockX, blockY, blockX + blockW, blockY + 1, 0x55384256);
+            g.fill(blockX, blockY + gH - 1, blockX + blockW, blockY + gH, 0x55384256);
+            g.fill(blockX + blockW - 1, blockY, blockX + blockW, blockY + gH, 0x55384256);
             // Left vertical accent stripe
             g.fill(blockX, blockY, blockX + 2, blockY + gH, accentColor);
 
@@ -514,7 +514,7 @@ public class TaskQueuePanel extends AbstractWidget {
             // If not collapsed, render the contained tasks
             if (!isCollapsed) {
                 // Divider line under header
-                g.fill(blockX + 2, headerY + HEADER_H - 1, blockX + blockW - 1, headerY + HEADER_H, 0x228B7355);
+                g.fill(blockX + 2, headerY + HEADER_H - 1, blockX + blockW - 1, headerY + HEADER_H, 0x333A455C);
 
                 int itemY = headerY + HEADER_H + 1;
                 int innerX = blockX + 2;
@@ -547,7 +547,7 @@ public class TaskQueuePanel extends AbstractWidget {
     }
 
     private void renderCurrentRow(GuiGraphics g, int rowY, Current c, int rowX, int rowW, int mouseX, int mouseY) {
-        g.fill(rowX, rowY, rowX + rowW, rowY + CURRENT_ROW_H - 1, 0x33D4A840);
+        g.fill(rowX, rowY, rowX + rowW, rowY + CURRENT_ROW_H - 1, 0x33283E5A);
 
         int contentX = rowX + CONTENT_LEFT_PAD;
         int textRight = rowX + rowW - 4;
@@ -725,7 +725,7 @@ public class TaskQueuePanel extends AbstractWidget {
                     ? ARROW_STATE_HOVER : ARROW_STATE_NORMAL)
                 : ARROW_STATE_DISABLED;
         renderArrow(g, btnX, btnY, state, true);
-        int barColor = (state == ARROW_STATE_DISABLED) ? 0x668B7355 : ((state == ARROW_STATE_HOVER) ? 0xFFFFFFFF : 0xFFD4A840);
+        int barColor = (state == ARROW_STATE_DISABLED) ? 0x55445068 : ((state == ARROW_STATE_HOVER) ? 0xFFFFFFFF : MedievalColors.ACCENT_GOLD);
         g.fill(btnX + 3, btnY + 2, btnX + BTN_W - 3, btnY + 3, barColor);
     }
 
@@ -735,7 +735,7 @@ public class TaskQueuePanel extends AbstractWidget {
                     ? ARROW_STATE_HOVER : ARROW_STATE_NORMAL)
                 : ARROW_STATE_DISABLED;
         renderArrow(g, btnX, btnY, state, false);
-        int barColor = (state == ARROW_STATE_DISABLED) ? 0x668B7355 : ((state == ARROW_STATE_HOVER) ? 0xFFFFFFFF : 0xFFD4A840);
+        int barColor = (state == ARROW_STATE_DISABLED) ? 0x55445068 : ((state == ARROW_STATE_HOVER) ? 0xFFFFFFFF : MedievalColors.ACCENT_GOLD);
         g.fill(btnX + 3, btnY + BTN_H - 3, btnX + BTN_W - 3, btnY + BTN_H - 2, barColor);
     }
 

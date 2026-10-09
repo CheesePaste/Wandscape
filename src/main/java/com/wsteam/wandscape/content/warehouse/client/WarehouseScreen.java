@@ -106,10 +106,10 @@ public class WarehouseScreen extends AbstractContainerScreen<WarehouseMenu>
     private static final ResourceLocation CHEST_TEXTURE =
             ResourceLocation.withDefaultNamespace("textures/gui/container/generic_54.png");
 
-    private static final int GLASS_TOP = 0xBB483828;
-    private static final int GLASS_BOTTOM = 0xBB1E1410;
-    private static final int GLASS_BOX_TOP = 0xBB423020;
-    private static final int GLASS_BOX_BOTTOM = 0xBB1C1008;
+    private static final int GLASS_TOP = 0xF4161A26;
+    private static final int GLASS_BOTTOM = 0xF60D0F16;
+    private static final int GLASS_BOX_TOP = 0xEE161A26;
+    private static final int GLASS_BOX_BOTTOM = 0xF20D0F16;
 
     // 面板左上角（= 槽位原点向左/向上扩出的那一圈）
     private int panelX, panelY;
@@ -528,7 +528,7 @@ public class WarehouseScreen extends AbstractContainerScreen<WarehouseMenu>
         int h = 12;
         int y = toolbarY + (TOOLBAR_H - h) / 2;
         int border = (color & 0x00FFFFFF) | 0x88000000;
-        g.fill(x, y, x + w, y + h, 0xAA180E14);
+        g.fill(x, y, x + w, y + h, 0xCC101420);
         g.fill(x, y, x + w, y + 1, border);
         g.fill(x, y + h - 1, x + w, y + h, border);
         g.fill(x, y, x + 1, y + h, border);

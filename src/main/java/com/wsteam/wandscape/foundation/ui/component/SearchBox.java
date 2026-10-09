@@ -33,7 +33,17 @@ public class SearchBox extends EditBox {
 
     @Override
     public void renderWidget(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        MedievalScreen.drawInsetField(g, getX() - 1, getY() - 2, getWidth() + 2, getHeight() + 4);
+        int bx = getX() - 1;
+        int by = getY() - 2;
+        int bw = getWidth() + 2;
+        int bh = getHeight() + 4;
+        MedievalScreen.drawInsetField(g, bx, by, bw, bh);
+        if (isFocused()) {
+            g.fill(bx, by, bx + bw, by + 1, MedievalColors.BORDER_GOLD_BRIGHT);
+            g.fill(bx, by + bh - 1, bx + bw, by + bh, MedievalColors.BORDER_GOLD_BRIGHT);
+            g.fill(bx, by, bx + 1, by + bh, MedievalColors.BORDER_GOLD_BRIGHT);
+            g.fill(bx + bw - 1, by, bx + bw, by + bh, MedievalColors.BORDER_GOLD_BRIGHT);
+        }
         super.renderWidget(g, mouseX, mouseY, partialTick);
     }
 

@@ -128,11 +128,12 @@ public class RecipeBookScreen extends MedievalScreen {
                     SkinRender.drawButton(g, ax, ay, actionW, actionH, 3);
                     g.drawCenteredString(font,
                             I18n.name("gui.wandscape.recipe_book.badge_unlocked", "已解锁"),
-                            ax + actionW / 2, ay + (actionH - font.lineHeight) / 2, 0x55FF55);
+                            ax + actionW / 2, ay + (actionH - font.lineHeight) / 2, MedievalColors.SUCCESS_GREEN);
                 } else {
                     boolean canAfford = blueprintCount > 0;
-                    SkinRender.drawButton(g, ax, ay, actionW, actionH, canAfford ? 0 : 3);
-                    int textColor = canAfford ? MedievalColors.TEXT_WARM_WHITE : MedievalColors.TEXT_DIM;
+                    boolean btnHover = canAfford && hovered;
+                    SkinRender.drawButton(g, ax, ay, actionW, actionH, canAfford ? (btnHover ? 2 : 0) : 3);
+                    int textColor = canAfford ? (btnHover ? MedievalColors.ACCENT_GOLD : MedievalColors.TEXT_WARM_WHITE) : MedievalColors.TEXT_DIM;
                     g.drawCenteredString(font,
                             I18n.name("gui.wandscape.recipe_book.btn_unlock", "解锁"),
                             ax + actionW / 2, ay + (actionH - font.lineHeight) / 2, textColor);

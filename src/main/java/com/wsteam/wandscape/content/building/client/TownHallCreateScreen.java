@@ -137,7 +137,15 @@ public class TownHallCreateScreen extends MedievalScreen {
         // Name input field (inset)
         int ebX = cx - 92;
         int ebY = topPos + headerHeight + 24;
-        drawInsetField(g, ebX, ebY, 184, font.lineHeight + 6);
+        int ebW = 184;
+        int ebH = font.lineHeight + 6;
+        drawInsetField(g, ebX, ebY, ebW, ebH);
+        if (nameBox != null && nameBox.isFocused()) {
+            g.fill(ebX, ebY, ebX + ebW, ebY + 1, MedievalColors.BORDER_GOLD_BRIGHT);
+            g.fill(ebX, ebY + ebH - 1, ebX + ebW, ebY + ebH, MedievalColors.BORDER_GOLD_BRIGHT);
+            g.fill(ebX, ebY, ebX + 1, ebY + ebH, MedievalColors.BORDER_GOLD_BRIGHT);
+            g.fill(ebX + ebW - 1, ebY, ebX + ebW, ebY + ebH, MedievalColors.BORDER_GOLD_BRIGHT);
+        }
 
         // Hint
         String hint = I18n.name("gui.wandscape.townhall_create.name_hint", "输入魔法小镇名称").getString();
@@ -152,7 +160,7 @@ public class TownHallCreateScreen extends MedievalScreen {
         drawMinimalBox(g, bx, by, bw, bh, !pendingName.trim().isEmpty() && hover, hover);
         String label = I18n.name("gui.wandscape.townhall_create.create", "创建").getString();
         g.drawString(font, label, cx - font.width(label) / 2,
-                by + (bh - font.lineHeight) / 2, MedievalColors.TEXT_WARM_WHITE);
+                by + (bh - font.lineHeight) / 2, hover ? MedievalColors.ACCENT_GOLD : MedievalColors.TEXT_WARM_WHITE);
     }
 
     @Override

@@ -225,11 +225,11 @@ public abstract class MedievalScreen extends Screen implements ReplayProtectedSc
     protected String helpDocumentPath;
     protected HelpButton helpButton;
 
-    // ── Glass panel gradient (Dark opaque medieval theme) ──
-    private static final int GLASS_TOP       = 0xF5261A10;
-    private static final int GLASS_BOTTOM    = 0xF5120804;
-    private static final int GLASS_BOX_TOP    = 0xDD3A2818;
-    private static final int GLASS_BOX_BOTTOM = 0xDD1E100A;
+    // ── Glass panel gradient (Dark celestial obsidian slate) ──
+    private static final int GLASS_TOP       = 0xF2161A26;
+    private static final int GLASS_BOTTOM    = 0xF40D0F16;
+    private static final int GLASS_BOX_TOP    = 0xEE1E2332;
+    private static final int GLASS_BOX_BOTTOM = 0xEE121520;
 
     // ── Transient feedback toast (drawn over the screen, does not resize the panel) ──
     private static final long FEEDBACK_DURATION_MS = 3000L;
@@ -380,8 +380,8 @@ public abstract class MedievalScreen extends Screen implements ReplayProtectedSc
         int x = (this.width - w) / 2;
         int y = Math.max(6, topPos - h - 3);
 
-        // Dark medieval box with colored glow border
-        g.fillGradient(x, y, x + w, y + h, 0xEE2A1C14, 0xEE120804);
+        // Dark celestial box with colored glow border
+        g.fillGradient(x, y, x + w, y + h, 0xEE161A26, 0xEE0D0F16);
         int borderCol = (feedbackColor & 0x00FFFFFF) | 0xDD000000;
         g.fill(x, y, x + w, y + 1, borderCol);
         g.fill(x, y + h - 1, x + w, y + h, borderCol);
@@ -401,6 +401,12 @@ public abstract class MedievalScreen extends Screen implements ReplayProtectedSc
         // Glow border
         drawGlowBorder(g, leftPos, topPos, panelWidth, panelHeight,
                 MedievalColors.BORDER_GOLD);
+        // Corner gold accents
+        int cRiv = MedievalColors.CORNER_DECORATION;
+        g.fill(leftPos + 2, topPos + 2, leftPos + 4, topPos + 4, cRiv);
+        g.fill(leftPos + panelWidth - 4, topPos + 2, leftPos + panelWidth - 2, topPos + 4, cRiv);
+        g.fill(leftPos + 2, topPos + panelHeight - 4, leftPos + 4, topPos + panelHeight - 2, cRiv);
+        g.fill(leftPos + panelWidth - 4, topPos + panelHeight - 4, leftPos + panelWidth - 2, topPos + panelHeight - 2, cRiv);
     }
 
     // ── MINIMAL header ──
@@ -411,17 +417,17 @@ public abstract class MedievalScreen extends Screen implements ReplayProtectedSc
         int hw = panelWidth - 2;
 
         g.fillGradient(hx, hy, hx + hw, hy + headerHeight,
-                0xFF502870, 0xFF1A0830);
+                0xFF1F2436, 0xFF121520);
 
         // Gold bottom separator — 2-ring glow fade
         int sepY = hy + headerHeight;
         int sc = MedievalColors.BORDER_GOLD;
         g.fill(hx, sepY, hx + hw, sepY + 1, sc);
-        g.fill(hx, sepY + 1, hx + hw, sepY + 2, (sc & 0x00FFFFFF) | 0x66000000);
+        g.fill(hx, sepY + 1, hx + hw, sepY + 2, (sc & 0x00FFFFFF) | 0x44000000);
 
         // Gold left accent — gradient
         g.fillGradient(hx, hy, hx + 3, hy + headerHeight,
-                0xFFD4A840, 0xFF6A4020);
+                MedievalColors.BORDER_GOLD_BRIGHT, MedievalColors.BORDER_GOLD_DARK);
 
         int currentX = hx + titleXOffset;
         if (titleBarText != null) {
@@ -748,11 +754,11 @@ public abstract class MedievalScreen extends Screen implements ReplayProtectedSc
 
     /** 建筑状态徽标配色；容器屏（仓库）也复用，故为 public。 */
     public static int getStatusBadgeColor(BuildingDebugResponsePacket data) {
-        if (data.demolishing()) return 0xFFFF6666;
+        if (data.demolishing()) return 0xFFEF5350;
         if (data.underConstruction()) {
-            return data.constructionStarted() ? 0xFF88AAFF : 0xFFFFCC66;
+            return data.constructionStarted() ? 0xFF42A5F5 : 0xFFFFA726;
         }
-        return 0xFF88CC88;
+        return 0xFF66BB6A;
     }
 
     /** 建筑状态悬停提示；容器屏（仓库）也复用，故为 public。 */
@@ -858,10 +864,10 @@ public abstract class MedievalScreen extends Screen implements ReplayProtectedSc
             drawGlowBorder(g, x, y, w, h, MedievalColors.BORDER_GOLD);
         } else if (hovered) {
             g.fillGradient(x, y, x + w, y + h,
-                    MedievalColors.BUTTON_BG_HOVER, MedievalColors.PANEL_TITLE_BG);
-            drawGlowBorder(g, x, y, w, h, MedievalColors.BORDER_GOLD_DARK);
+                    MedievalColors.BUTTON_BG_HOVER, 0xF6181C28);
+            drawGlowBorder(g, x, y, w, h, MedievalColors.BORDER_GOLD_BRIGHT);
         } else {
-            g.fillGradient(x, y, x + w, y + h, 0x992A1E18, 0x991A0E08);
+            g.fillGradient(x, y, x + w, y + h, 0x99181C28, 0x9910121A);
             g.fill(x, y, x + w, y + 1, MedievalColors.BORDER_GOLD_DARK);
             g.fill(x, y + h - 1, x + w, y + h, MedievalColors.BORDER_GOLD_DARK);
             g.fill(x, y, x + 1, y + h, MedievalColors.BORDER_GOLD_DARK);
@@ -870,12 +876,17 @@ public abstract class MedievalScreen extends Screen implements ReplayProtectedSc
     }
 
     /** Inset dark field with subtle inner shadow. */
-    protected static void drawInsetField(GuiGraphics g, int x, int y, int w, int h) {
-        g.fillGradient(x, y, x + w, y + h, 0x44000000, 0x33000000);
-        g.fill(x, y, x + w, y + 1, 0x55000000);
-        g.fill(x, y, x + 1, y + h, 0x55000000);
-        g.fill(x, y + h - 1, x + w, y + h, 0x22FFFFFF);
-        g.fill(x + w - 1, y, x + w, y + h, 0x22FFFFFF);
+    public static void drawInsetField(GuiGraphics g, int x, int y, int w, int h) {
+        g.fillGradient(x, y, x + w, y + h, 0x66080A12, 0x7705070C);
+        g.fill(x, y, x + w, y + 1, 0x66000000);
+        g.fill(x, y, x + 1, y + h, 0x66000000);
+        g.fill(x, y + h - 1, x + w, y + h, 0x1AFFFFFF);
+        g.fill(x + w - 1, y, x + w, y + h, 0x1AFFFFFF);
+        // Outer 1px frame
+        g.fill(x, y, x + w, y + 1, 0x333A445C);
+        g.fill(x, y + h - 1, x + w, y + h, 0x333A445C);
+        g.fill(x, y, x + 1, y + h, 0x333A445C);
+        g.fill(x + w - 1, y, x + w, y + h, 0x333A445C);
     }
 
     protected static boolean isInRect(double mx, double my, int x, int y, int w, int h) {

@@ -36,14 +36,14 @@ public final class MedievalConfirmDialog {
     private static final int BTN_GAP = 14;
     /** 遮罩 75% 黑：压暗背景保留环境感；框体不透明，不会透出下层文字。 */
     private static final int DIM_COLOR = 0xC0000000;
-    // 标题栏：与各面板 header 同款紫色渐变
-    private static final int HEADER_TOP = 0xFF502870;
-    private static final int HEADER_BOTTOM = 0xFF1A0830;
-    private static final int HEADER_ACCENT_TOP = 0xFFD4A840;
-    private static final int HEADER_ACCENT_BOTTOM = 0xFF6A4020;
-    // 框体：全不透明深棕渐变（alpha 必须为 FF，杜绝下层文字透出叠字）
-    private static final int BOX_TOP = 0xFF2A1C12;
-    private static final int BOX_BOTTOM = 0xFF140A06;
+    // 标题栏：与各面板 header 同款星宵暮石渐变
+    private static final int HEADER_TOP = 0xFF1F2436;
+    private static final int HEADER_BOTTOM = 0xFF121520;
+    private static final int HEADER_ACCENT_TOP = MedievalColors.BORDER_GOLD_BRIGHT;
+    private static final int HEADER_ACCENT_BOTTOM = MedievalColors.BORDER_GOLD_DARK;
+    // 框体：全不透明深邃曜石渐变（alpha 必须为 FF，杜绝下层文字透出叠字）
+    private static final int BOX_TOP = 0xFF181B26;
+    private static final int BOX_BOTTOM = 0xFF10121A;
 
     private Component title;
     private Component message;

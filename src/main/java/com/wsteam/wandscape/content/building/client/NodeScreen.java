@@ -167,19 +167,18 @@ public class NodeScreen extends MedievalScreen {
         int y = topPos + headerHeight + 8;
         drawInfoLine(g, y, i18n("gui.wandscape.node.element", "Element"),
                 i18n("element.wandscape." + element, element));
-        y += INFO_ROW_H;
+        y += INFO_ROW_H + 4;
         drawInfoLine(g, y, i18n("gui.wandscape.node.per_harvest", "Per Harvest"), String.valueOf(amountPerHarvest));
-        y += INFO_ROW_H;
+        y += INFO_ROW_H + 4;
         drawInfoLine(g, y, i18n("gui.wandscape.node.channel", "Channel"),
                 i18n("gui.wandscape.node.channel_ticks", "%s ticks", channelTicks));
-        y += INFO_ROW_H;
 
         // Live totals below the stepper
         int n = stepper != null ? stepper.getValue() : 1;
         String totals = i18n("gui.wandscape.node.total_line", "Total %1$s",
                 amountPerHarvest * n);
         g.drawString(Minecraft.getInstance().font, totals,
-                contentX, controlY + 26, MedievalColors.TEXT_MUTED);
+                contentX + 2, controlY + 28, MedievalColors.ACCENT_GOLD);
     }
 
     @Override
@@ -195,8 +194,12 @@ public class NodeScreen extends MedievalScreen {
 
     private void drawInfoLine(GuiGraphics g, int y, String label, String value) {
         var font = Minecraft.getInstance().font;
-        g.drawString(font, label, contentX, y, MedievalColors.TEXT_WARM_WHITE);
-        g.drawString(font, value, contentX + 96, y, MedievalColors.TEXT_MUTED);
+        int cardW = LEFT_PW - 20;
+        int cardH = 14;
+        g.fill(contentX, y - 1, contentX + cardW, y - 1 + cardH, 0x1A141A28);
+        g.fill(contentX, y - 1, contentX + 2, y - 1 + cardH, MedievalColors.BORDER_GOLD);
+        g.drawString(font, label, contentX + 6, y + 2, MedievalColors.TEXT_WARM_WHITE);
+        g.drawString(font, value, contentX + cardW - font.width(value) - 6, y + 2, MedievalColors.ACCENT_GOLD);
     }
 
     private void onSubmit() {

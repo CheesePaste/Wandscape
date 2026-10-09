@@ -163,11 +163,22 @@ public class ShopScreen extends MedievalScreen {
 
         for (int i = 0; i < itemIds.length; i++) {
             int cy = rowCenterY(i);
-            if (firstRowY() + (i + 1) * ROW_H > topPos + PH - 40) break;
+            int rowTop = firstRowY() + i * ROW_H;
+            if (rowTop + ROW_H > topPos + PH - 40) break;
 
             String itemId = itemIds[i];
             int max = maxStocks.getOrDefault(itemId, 0);
             int cur = stock.getOrDefault(itemId, 0);
+
+            int cardX = leftPos + 14;
+            int cardW = PW - 28;
+            int cardH = ROW_H - 2;
+            boolean rowHover = mouseX >= cardX && mouseX < cardX + cardW && mouseY >= rowTop && mouseY < rowTop + cardH;
+
+            // Row card background with left accent indicator
+            g.fill(cardX, rowTop, cardX + cardW, rowTop + cardH, rowHover ? 0x44283550 : 0x22121724);
+            g.fill(cardX, rowTop, cardX + 2, rowTop + cardH, cur > 0 ? MedievalColors.ACCENT_GOLD : 0x444A5A74);
+
             int textColor = cur > 0 ? MedievalColors.TEXT_WARM_WHITE : MedievalColors.TEXT_MUTED;
 
             // Item icon
@@ -178,20 +189,20 @@ public class ShopScreen extends MedievalScreen {
             // Item display name
             Component name = (i < displayNames.length) ? displayNames[i]
                     : Component.literal(itemId);
-            g.drawString(font, name, x + 20, cy - font.lineHeight / 2, textColor);
+            g.drawString(font, name, x + 20, cy - font.lineHeight / 2, rowHover ? MedievalColors.ACCENT_GOLD : textColor);
 
             // ×cur/max to the right of [+]
             int rightX = leftPos + SLIDER_X + SLIDER_W + BTN_W + 6;
             String count = "×" + cur + "/" + max;
-            g.drawString(font, count, rightX, cy - font.lineHeight / 2, textColor);
+            g.drawString(font, count, rightX, cy - font.lineHeight / 2, cur > 0 ? MedievalColors.TEXT_WARM_WHITE : MedievalColors.TEXT_MUTED);
 
             // 配方未解锁：该货物没有任何补货途径，贴行右缘说明原因。
             // 译文过长放不下时宁可整条不画，也不压到库存数字上。
             if (lockedGoods.contains(itemId)) {
                 Component hint = I18n.name("gui.wandscape.shop.recipe_locked", "Locked");
                 int hintX = leftPos + PW - ROW_RIGHT_MARGIN - font.width(hint);
-                if (hintX >= rightX + font.width(count) + 2) {
-                    g.drawString(font, hint, hintX, cy - font.lineHeight / 2, MedievalColors.TEXT_DIM);
+                if (hintX >= rightX + font.width(count) + 4) {
+                    g.drawString(font, hint, hintX, cy - font.lineHeight / 2, 0xFFE5A93C);
                 }
             }
         }
@@ -201,6 +212,22 @@ public class ShopScreen extends MedievalScreen {
         g.drawString(font, I18n.name("gui.wandscape.shop.craft_hint",
                         "Goods can be crafted at the workstation"),
                 leftPos + 16, topPos + PH - 36, MedievalColors.TEXT_DIM);
+    }
+
+    @Override
+    protected void renderForeground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        super.renderForeground(g, mouseX, mouseY, partialTick);
+        int x = leftPos + 16;
+        for (int i = 0; i < itemIds.length; i++) {
+            int cy = rowCenterY(i);
+            if (firstRowY() + (i + 1) * ROW_H > topPos + PH - 40) break;
+            if (i < icons.length && !icons[i].isEmpty()) {
+                if (mouseX >= x && mouseX < x + ICON_SIZE && mouseY >= cy - ICON_SIZE / 2 && mouseY < cy + ICON_SIZE / 2) {
+                    g.renderTooltip(font, icons[i], mouseX, mouseY);
+                    break;
+                }
+            }
+        }
     }
 
     private void adjustMaxStock(String itemId, int newMax) {

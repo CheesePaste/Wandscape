@@ -26,7 +26,7 @@ public class AltarScreen extends MedievalScreen {
 
     private static final int PW = 320;
     private static final int PH = 240;
-    private static final int ROW_H = 20;
+    private static final int ROW_H = 24;
 
     private final UUID buildingId;
     private final List<AltarSpellInfo> spells;
@@ -61,8 +61,8 @@ public class AltarScreen extends MedievalScreen {
                 I18n.name("gui.wandscape.common.submit", "Submit"), this::onSubmit);
         addRenderableWidget(submitBtn);
 
-        list = new SpellList(leftPos + 12, topPos + headerHeight + 16,
-                PW - 24, PH - headerHeight - 58, ROW_H);
+        list = new SpellList(leftPos + 12, topPos + headerHeight + 14,
+                PW - 24, PH - headerHeight - 56, ROW_H);
         list.setItems(spells);
         list.setOnSelect(index -> updateSubmit());
         addRenderableWidget(list);
@@ -106,13 +106,13 @@ public class AltarScreen extends MedievalScreen {
                                  int index, boolean selected, boolean hovered) {
             var font = Minecraft.getInstance().font;
             String name = I18n.name("magic.wandscape." + spell.magicId(), spell.magicId()).getString();
-            g.drawString(font, name, x + 2, y + 2, MedievalColors.TEXT_WARM_WHITE);
+            g.drawString(font, name, x + 4, y + 2, selected ? MedievalColors.ACCENT_GOLD : MedievalColors.TEXT_WARM_WHITE);
 
             String info = I18n.name("gui.wandscape.altar.cost_duration",
                     "蓝 %d · CD %s · 时长 %s",
                     spell.manaCost(), formatSeconds(spell.cooldownTicks()),
                     formatSeconds(spell.durationTicks())).getString();
-            g.drawString(font, info, x + 110, y + 2, MedievalColors.TEXT_DIM);
+            g.drawString(font, info, x + 100, y + 2, MedievalColors.TEXT_MUTED);
 
             String status;
             int statusColor;
@@ -130,7 +130,15 @@ public class AltarScreen extends MedievalScreen {
                 status = I18n.name("gui.wandscape.altar.ready", "可施放").getString();
                 statusColor = MedievalColors.MANA_BLUE;
             }
-            g.drawString(font, status, x + 2, y + 11, statusColor);
+            int badgeW = font.width(status) + 6;
+            int badgeH = 9;
+            int badgeBg = switch (statusColor) {
+                case MedievalColors.DANGER_RED -> 0x33EF5350;
+                case MedievalColors.MANA_BLUE -> 0x3342A5F5;
+                default -> 0x33FFD54F;
+            };
+            g.fill(x + 4, y + 13, x + 4 + badgeW, y + 13 + badgeH, badgeBg);
+            g.drawString(font, status, x + 7, y + 13, statusColor);
         }
     }
 

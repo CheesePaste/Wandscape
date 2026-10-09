@@ -76,32 +76,37 @@ public class BuildingInfoScreen extends MedievalScreen {
     private void renderService(GuiGraphics g, Font font, int x, int y) {
         g.drawString(font, i18n("gui.wandscape.info.element_output", "Element Output"),
                 x, y, MedievalColors.ACCENT_GOLD);
-        y += 12;
+        y += 14;
 
         for (ElementType type : ElementType.values()) {
             Integer amount = elementOutput.get(type.getId());
             if (amount == null || amount <= 0) continue;
 
+            int rowCardX = leftPos + 14;
+            int rowCardW = PW - 28;
+            g.fill(rowCardX, y, rowCardX + rowCardW, y + ROW_H - 2, 0x22121724);
+            g.fill(rowCardX, y, rowCardX + 2, y + ROW_H - 2, WandscapeTheme.elementColor(type.getId()));
+
             // Same element icon texture + tint as the warehouse panel
             WandscapeTheme.drawIcon(g, WandscapeTheme.elementIcon(type.getId()),
-                    x, y + 1, ICON_SIZE, ICON_SIZE, WandscapeTheme.elementColor(type.getId()));
+                    x + 2, y + 1, ICON_SIZE, ICON_SIZE, WandscapeTheme.elementColor(type.getId()));
 
             Component name = I18n.name("element.wandscape." + type.getId(), capitalize(type.getId()));
-            g.drawString(font, name, x + ICON_SIZE + 4, y + 4, MedievalColors.TEXT_WARM_WHITE);
+            g.drawString(font, name, x + ICON_SIZE + 6, y + 4, MedievalColors.TEXT_WARM_WHITE);
 
-            String amountStr = String.valueOf(amount);
+            String amountStr = "+" + amount;
             int amountWidth = font.width(amountStr);
-            g.drawString(font, amountStr, leftPos + PW - 32 - amountWidth, y + 4,
-                    MedievalColors.TEXT_WARM_WHITE);
+            g.drawString(font, amountStr, leftPos + PW - 22 - amountWidth, y + 4,
+                    MedievalColors.ACCENT_GOLD);
 
             y += ROW_H;
             if (y > topPos + PH - 58) break; // keep room for the two stat lines + creator
         }
 
-        y += 4;
+        y += 6;
         drawInfoLine(g, font, x, y, i18n("gui.wandscape.info.energy_cost", "Energy Cost"),
                 String.valueOf(energyPerUse));
-        y += 12;
+        y += 20;
         drawInfoLine(g, font, x, y, i18n("gui.wandscape.info.duration", "Duration"),
                 formatDuration(interactionDurationTicks));
     }
@@ -109,7 +114,7 @@ public class BuildingInfoScreen extends MedievalScreen {
     private void renderRelax(GuiGraphics g, Font font, int x, int y) {
         drawInfoLine(g, font, x, y, i18n("gui.wandscape.info.energy_restore", "Energy Restore"),
                 String.valueOf(energyRestore));
-        y += 12;
+        y += 20;
         drawInfoLine(g, font, x, y, i18n("gui.wandscape.info.duration", "Duration"),
                 formatDuration(interactionDurationTicks));
     }
@@ -125,8 +130,13 @@ public class BuildingInfoScreen extends MedievalScreen {
     }
 
     private void drawInfoLine(GuiGraphics g, Font font, int x, int y, String label, String value) {
-        g.drawString(font, label, x, y, MedievalColors.TEXT_WARM_WHITE);
-        g.drawString(font, value, x + 140, y, MedievalColors.TEXT_MUTED);
+        int cardX = leftPos + 14;
+        int cardW = PW - 28;
+        int cardH = 16;
+        g.fill(cardX, y - 2, cardX + cardW, y - 2 + cardH, 0x1A141A28);
+        g.fill(cardX, y - 2, cardX + 2, y - 2 + cardH, MedievalColors.BORDER_GOLD);
+        g.drawString(font, label, cardX + 8, y + 2, MedievalColors.TEXT_WARM_WHITE);
+        g.drawString(font, value, cardX + cardW - font.width(value) - 8, y + 2, MedievalColors.ACCENT_GOLD);
     }
 
     private static String i18n(String key, String fallback, Object... args) {

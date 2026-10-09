@@ -57,22 +57,32 @@ public class ElementPanel extends AbstractWidget {
         for (ElementType type : ElementType.values()) {
             int rowY = getY() + idx * ROW_HEIGHT;
             long amount = elements.getOrDefault(type, 0L);
+            boolean hovered = mouseX >= getX() && mouseX < getX() + width
+                    && mouseY >= rowY && mouseY < rowY + ROW_HEIGHT;
+
+            // Row card background
+            if (hovered) {
+                g.fill(getX(), rowY, getX() + width, rowY + ROW_HEIGHT - 2, 0x44283550);
+                g.fill(getX(), rowY, getX() + 2, rowY + ROW_HEIGHT - 2, WandscapeTheme.elementColor(type.getId()));
+            } else {
+                g.fill(getX(), rowY, getX() + width, rowY + ROW_HEIGHT - 2, 0x22121724);
+            }
 
             // PNG element icon tinted per element (same look as V-key panel top bar)
             WandscapeTheme.drawIcon(g, WandscapeTheme.elementIcon(type.getId()),
-                    getX() + 1, rowY + 1, ICON_SIZE, ICON_SIZE,
+                    getX() + 3, rowY + (ROW_HEIGHT - 2 - ICON_SIZE) / 2, ICON_SIZE, ICON_SIZE,
                     WandscapeTheme.elementColor(type.getId()));
 
             // Name
             int nameColor = NAME_COLORS.getOrDefault(type, MedievalColors.TEXT_WARM_WHITE);
             Component displayName = I18n.name("element.wandscape." + type.getId(), capitalize(type.getId()));
-            g.drawString(font, displayName, getX() + ICON_SIZE + 4, rowY + 4, nameColor);
+            g.drawString(font, displayName, getX() + ICON_SIZE + 6, rowY + 3, nameColor);
 
             // Amount (right-aligned)
             String amountStr = amount == 0 ? "0" : formatAmount(amount);
-            int amountColor = amount > 0 ? MedievalColors.TEXT_WARM_WHITE : MedievalColors.TEXT_DIM;
+            int amountColor = amount > 0 ? (hovered ? MedievalColors.ACCENT_GOLD : MedievalColors.TEXT_WARM_WHITE) : MedievalColors.TEXT_DIM;
             int amountWidth = font.width(amountStr);
-            g.drawString(font, amountStr, getX() + width - amountWidth - 2, rowY + 4, amountColor);
+            g.drawString(font, amountStr, getX() + width - amountWidth - 4, rowY + 3, amountColor);
 
             idx++;
         }
