@@ -1,5 +1,6 @@
 package com.wsteam.wandscape.foundation.ui.tutorial;
 import com.wsteam.wandscape.content.tutorial.service.TutorialProgressService;
+import com.wsteam.wandscape.foundation.log.Log;
 
 import java.util.List;
 
@@ -149,6 +150,17 @@ public final class TutorialRegistry {
 
     public static final List<TutorialStep> STEPS = List.of(
             TOWN_HALL, WAREHOUSE, DEPOSIT, WORKSTATION, SYNTHESIZE);
+
+    static {
+        // 步骤内容与判定条数必须同长：一旦分叉，客户端就会把「第 N 步的文案」配在「第 M 步的判据」上，
+        // 表现是照着引导做也过不去。这里不崩（禁崩溃），但要在日志里吼一声。
+        if (STEPS.size() != TutorialProgressService.STEP_COUNT) {
+            Log.warn("TutorialRegistry",
+                    "Step content ({}) out of sync with TutorialProgressService.STEP_COUNT ({})"
+                            + " — 引导文案与判定步骤错位，必须同步",
+                    STEPS.size(), TutorialProgressService.STEP_COUNT);
+        }
+    }
 
     public static TutorialStep step(int index) {
         return STEPS.get(index);

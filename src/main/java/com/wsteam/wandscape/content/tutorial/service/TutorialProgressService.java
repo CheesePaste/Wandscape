@@ -28,6 +28,13 @@ public final class TutorialProgressService implements TutorialApi {
 
     private static final String TAG = "TutorialProgressService";
 
+    /**
+     * 步骤总数 = {@link #computeStep} 的检查条数。步骤**内容**在
+     * {@code TutorialRegistry.STEPS}，两处必须等长（那边启动时会校验并 warn）。这个数只用于
+     * 一件事：判断「整段引导走完过没有」。
+     */
+    public static final int STEP_COUNT = 5;
+
     @Override
     public void sendToPlayer(ServerPlayer player, @Nullable UUID colonyId) {
         ServerLevel level = player.serverLevel();
@@ -35,12 +42,18 @@ public final class TutorialProgressService implements TutorialApi {
         TutorialProgressSavedData.TutorialProgress saved = sd.get(player.getUUID());
         int step = saved.stepIndex();
         if (colonyId != null) {
-            step = Math.max(step, computeStep(new ServerContext(level, colonyId)));
+            int current = computeStep(new ServerContext(level, colonyId));
+            // 送出去的是**现值**（现在该做第几步），不是历史最高值。旧版逐条累加会把值写大，
+            // 一旦沿用 Math.max 把它当下限，引导就永远停在一个已经做完的步骤上（工坊已建好，
+            // 框里还在让你建工坊，再建多少座计数也不变）——玩家侧就是「建了完不成」。
+            // 只有「整段走完过」才不回落：建筑被拆或切到另一座镇，不该把新手框重新叫回来。
+            step = saved.stepIndex() >= STEP_COUNT ? saved.stepIndex() : current;
         }
-        sd.set(player.getUUID(), step, saved.dismissed());
+        // 存档仍记历史最高值：它只在「无当前镇」时回放，并充当上面那个「走完过」的闩。
+        sd.set(player.getUUID(), Math.max(saved.stepIndex(), step), saved.dismissed());
         Net.toPlayer(player, new TutorialProgressSyncPacket(step, saved.dismissed()));
-        Log.info(TAG, "[Guide] {} step={} dismissed={}",
-                player.getGameProfile().getName(), step, saved.dismissed());
+        Log.info(TAG, "[Guide] {} step={} saved={} dismissed={}",
+                player.getGameProfile().getName(), step, saved.stepIndex(), saved.dismissed());
     }
 
     /**
