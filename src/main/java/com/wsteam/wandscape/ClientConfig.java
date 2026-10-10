@@ -22,14 +22,16 @@ public final class ClientConfig {
             .defineInRange("panel.flySpeed", 15.0, 1.0, 200.0);
 
     public static final ModConfigSpec.IntValue PREVIEW_RESOLUTION = BUILDER
-            .comment("建筑预览图烘焙分辨率（像素/边，清晰度）：越高越清晰但每栋占的内存/显存越多。"
+            .comment("建筑预览图烘焙分辨率（像素/边，清晰度），设置中心里是 128/256/512/1024 四档：越高越清晰，"
+                    + "但显存按边长²涨——每栋 256 档 256 KB、512 档 1 MB、1024 档 4 MB，全部建筑常驻时分别约 14 / 56 / 224 MB。"
                     + "每栋只有一张固定 3/4 视角的静图；施工屏那格按 108 GUI 像素显示（GUI 缩放 3 时约 324 设备像素），"
-                    + "256 基本贴合，128 会被放大 2.5 倍发糊。改后需重启游戏重新烘焙。")
-            .comment("Building-preview bake resolution (pixels per side): higher is sharper but each building uses more memory/VRAM. "
-                    + "One static 3/4-view image per building; the construction screen shows it in a 108-GUI-pixel square "
-                    + "(~324 device pixels at GUI scale 3), so 256 roughly matches it while 128 is upscaled 2.5x and looks soft. "
-                    + "Restart the game after changing to re-bake.")
-            .defineInRange("preview.resolution", 256, 48, 256);
+                    + "256 已基本贴合，512/1024 只有把图放大看时才有意义。改后需重启游戏重新烘焙。")
+            .comment("Building-preview bake resolution (pixels per side), offered as four tiers (128/256/512/1024): higher is sharper, "
+                    + "but VRAM grows with the square of the edge — 256 KB / 1 MB / 4 MB per building at 256 / 512 / 1024, "
+                    + "i.e. about 14 / 56 / 224 MB with the whole catalog resident. One static 3/4-view image per building; "
+                    + "the construction screen shows it in a 108-GUI-pixel square (~324 device pixels at GUI scale 3), so 256 already "
+                    + "matches it and 512/1024 only pay off when the image is viewed enlarged. Restart the game after changing to re-bake.")
+            .defineInRange("preview.resolution", 256, 128, 1024);
 
     public static final ModConfigSpec.BooleanValue ROAD_GRID = BUILDER
             .comment("道路放置/样条编辑模式下，相机周围地面是否显示半透明灰色 1×1 方块网格辅助线。"

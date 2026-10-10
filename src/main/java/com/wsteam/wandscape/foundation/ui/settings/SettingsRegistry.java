@@ -149,14 +149,14 @@ public final class SettingsRegistry {
             }
         });
 
-        register(new SettingItem.IntSetting(
+        register(new SettingItem.IntOptionsSetting(
                 "preview.resolution",
                 title("preview.resolution", "建筑预览清晰度"),
                 SettingTab.VISUAL,
                 true, false,
                 ClientConfig.PREVIEW_RESOLUTION,
-                16, 32,
-                val -> val + " px"
+                List.of(128, 256, 512, 1024),
+                List.of("128 px", "256 px", "512 px", "1024 px")
         ));
 
         register(new SettingItem.BooleanSetting(

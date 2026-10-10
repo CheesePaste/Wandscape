@@ -117,6 +117,15 @@ public interface SettingItem {
         }
     }
 
+    /**
+     * 「{@code <}> 循环切换」这一类取值项：{@link OptionsSetting} 的字符串表、{@link IntOptionsSetting} 的整数档位表。
+     * UI 只认这一条契约——左右箭头 = {@link #cycle(boolean)}，显示 = {@link #formatValue()}，
+     * 所以再加一种离散取值项不必往 {@code SettingsOverlay} 的 switch 里塞分支，报 {@link Type#OPTIONS} 就够。
+     */
+    interface CyclicSetting extends SettingItem {
+        void cycle(boolean forward);
+    }
+
     // ── Concrete implementations ──
 
     class BooleanSetting implements SettingItem {
@@ -376,7 +385,7 @@ public interface SettingItem {
         }
     }
 
-    class OptionsSetting implements SettingItem {
+    class OptionsSetting implements CyclicSetting {
         private final String key;
         private final String title;
         private final SettingTab tab;
@@ -439,7 +448,7 @@ public interface SettingItem {
             onModified(value);
         }
 
-        public void cycle(boolean forward) {
+        @Override public void cycle(boolean forward) {
             int idx = options.indexOf(get());
             if (idx < 0) idx = 0;
             int next = forward ? (idx + 1) % options.size() : (idx - 1 + options.size()) % options.size();
@@ -470,6 +479,107 @@ public interface SettingItem {
 
         @Override public void resetToDefault() {
             set(defaultValue);
+        }
+    }
+
+    /**
+     * 离散**整数**档位（例：建筑预览分辨率 128/256/512/1024）。与 {@link OptionsSetting} 共用同一套 UI
+     * （`{@code <}` {@code >} 循环切换），所以 {@link #type()} 也报 {@link Type#OPTIONS}，UI 侧零分支。
+     *
+     * <p>只用于「本来就该是几档」的项；连续可调的项请用 {@link IntSetting}（那才是加减步进 + 手填）。
+     */
+    class IntOptionsSetting implements CyclicSetting {
+        private final String key;
+        private final String title;
+        private final SettingTab tab;
+        private final boolean clientOnly;
+        private final boolean hotReloadable;
+        private final ModConfigSpec.IntValue configValue;
+        private final int min;
+        private final int max;
+        private final List<Integer> options;
+        private final List<String> optionLabels;
+
+        public IntOptionsSetting(String key, String title, SettingTab tab,
+                                 boolean clientOnly, boolean hotReloadable,
+                                 ModConfigSpec.IntValue configValue,
+                                 List<Integer> options, List<String> optionLabels) {
+            this.key = key;
+            this.title = title;
+            this.tab = tab;
+            this.clientOnly = clientOnly;
+            this.hotReloadable = hotReloadable;
+            this.configValue = configValue;
+            ModConfigSpec.Range<Integer> range = SettingItem.declaredRange(configValue);
+            this.min = range != null ? range.getMin() : Integer.MIN_VALUE;
+            this.max = range != null ? range.getMax() : Integer.MAX_VALUE;
+            this.options = options;
+            this.optionLabels = optionLabels;
+        }
+
+        @Override public String key() { return key; }
+        @Override public String title() { return title; }
+        @Override public SettingTab tab() { return tab; }
+        @Override public Type type() { return Type.OPTIONS; }
+        @Override public boolean isClientOnly() { return clientOnly; }
+        @Override public boolean isHotReloadable() { return hotReloadable; }
+
+        public int get() { return configValue.get(); }
+
+        public void set(int value) {
+            if (!canModify()) return;
+            int clamped = Math.max(min, Math.min(max, value));
+            configValue.set(clamped);
+            onModified(String.valueOf(clamped));
+        }
+
+        @Override public void cycle(boolean forward) {
+            int idx = options.indexOf(get());
+            if (idx < 0) {
+                // 只有手改 TOML 才可能落在表外：向前取第一个更大的档，向后取第一个更小的档，
+                // 都没命中就绕回表头 / 表尾。
+                int value = get();
+                idx = forward ? options.size() : -1;
+                for (int i = 0; i < options.size(); i++) {
+                    if (forward ? options.get(i) > value : options.get(i) < value) {
+                        idx = forward ? i - 1 : i + 1;
+                        break;
+                    }
+                }
+            }
+            int next = forward ? (idx + 1) % options.size() : (idx - 1 + options.size()) % options.size();
+            set(options.get(next));
+        }
+
+        @Override public String rawValue() { return String.valueOf(get()); }
+
+        @Override public boolean applyFromString(String raw) {
+            try {
+                configValue.set(Math.max(min, Math.min(max, Integer.parseInt(raw))));
+                return true;
+            } catch (NumberFormatException e) {
+                return false;
+            }
+        }
+
+        @Override public String formatValue() {
+            int idx = options.indexOf(get());
+            return (idx >= 0 && idx < optionLabels.size()) ? optionLabels.get(idx) : get() + " px";
+        }
+
+        @Override public String defaultHint() {
+            int defIdx = options.indexOf(configValue.getDefault());
+            String defLabel = (defIdx >= 0 && defIdx < optionLabels.size())
+                    ? optionLabels.get(defIdx) : String.valueOf(configValue.getDefault());
+            return I18n.string("gui.wandscape.settings.default_hint", "默认: %s", defLabel);
+        }
+
+        @Override public boolean isDefault() {
+            return get() == configValue.getDefault();
+        }
+
+        @Override public void resetToDefault() {
+            set(configValue.getDefault());
         }
     }
 }

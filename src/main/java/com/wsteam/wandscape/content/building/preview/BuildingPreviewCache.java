@@ -104,7 +104,7 @@ public final class BuildingPreviewCache {
 
     /** Apply config values before any baking; also kicks off the stale-cache purge. */
     public static void configure(int resolution) {
-        RES = Math.max(48, resolution);
+        RES = Math.max(128, resolution);
         if (purgeStarted) {
             return;
         }
@@ -168,9 +168,17 @@ public final class BuildingPreviewCache {
      */
     private static final double LOD_CELLS_PER_PIXEL = 12_000.0 / (128.0 * 128.0);
 
-    /** 当前分辨率下的格子预算，见 {@link #LOD_CELLS_PER_PIXEL}。 */
+    /**
+     * 单栋一次烘焙的格子硬上限。按面积换算的预算在 512/1024 档会推到 19 万 / 77 万格 ——
+     * 那栋 37.9 万方块的建筑就得在**一帧里**烤 1–3 秒（`warmAll` 逐栋烤，中间没有可抢占的点）。
+     * 所以 256 档以上把预算钉在 48,000：普通建筑（≤48,000 方块）照旧逐方块渲染，
+     * 只有超大建筑会重新出现归并。要让高分辨率一点都不归并，把这个上限调成 1024²×比值即可（代价就是那段卡顿）。
+     */
+    private static final int LOD_CELL_BUDGET_MAX = 48_000;
+
+    /** 当前分辨率下的格子预算，见 {@link #LOD_CELLS_PER_PIXEL} 与 {@link #LOD_CELL_BUDGET_MAX}。 */
     private static int lodCellBudget() {
-        return (int) (RES * (double) RES * LOD_CELLS_PER_PIXEL);
+        return (int) Math.min(LOD_CELL_BUDGET_MAX, RES * (double) RES * LOD_CELLS_PER_PIXEL);
     }
 
     private static TextureTarget target;

@@ -736,7 +736,7 @@ public final class SettingsOverlay {
                             }
                         }
                         case OPTIONS -> {
-                            SettingItem.OptionsSetting os = (SettingItem.OptionsSetting) item;
+                            SettingItem.CyclicSetting os = (SettingItem.CyclicSetting) item;
                             int btnSize = 22;
                             int valBoxW = 100;
                             int nextX = controlAreaRight - btnSize;
