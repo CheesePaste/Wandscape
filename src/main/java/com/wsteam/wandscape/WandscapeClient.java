@@ -158,6 +158,8 @@ public class WandscapeClient {
         WandscapePanelController.register();
         // Register the preview bake pump BEFORE the panel overlay so blits see fresh frames
         com.wsteam.wandscape.content.building.preview.BuildingPreviewCache.register();
+        NeoForge.EVENT_BUS.addListener(RegisterClientCommandsEvent.class,
+                e -> com.wsteam.wandscape.content.building.preview.PreviewBenchCommand.register(e.getDispatcher()));
         WandscapePanelOverlay.register();
         com.wsteam.wandscape.foundation.ui.util.WandscapeHighlightRenderer.register();
 

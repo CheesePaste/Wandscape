@@ -24,6 +24,7 @@ import net.minecraft.client.renderer.texture.AbstractTexture;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.renderer.texture.TextureManager;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.client.event.RenderGuiEvent;
@@ -251,7 +252,7 @@ public final class BuildingPreviewCache {
             }
             BuildingPreview preview = entry.preview;
             if (!preview.ready) {
-                preview.texture = materialize(entry.source);
+                preview.texture = materialize(entry.source, Source.AUTO);
                 // 单帧：一次尝试即定论。烤失败也标 ready，否则每帧都会重试同一栋。
                 preview.ready = true;
                 pendingCount--;
@@ -284,8 +285,16 @@ public final class BuildingPreviewCache {
             return;
         }
         registered = true;
-        NeoForge.EVENT_BUS.addListener(RenderGuiEvent.Post.class,
-                e -> pumpQueue());
+        NeoForge.EVENT_BUS.addListener(RenderGuiEvent.Post.class, e -> tick());
+    }
+
+    /** 每帧入口：基准测试在跑就推进它，否则推进正常烘焙队列。 */
+    private static void tick() {
+        if (benchMode != null) {
+            pumpBenchmark();
+        } else {
+            pumpQueue();
+        }
     }
 
     /**
@@ -347,16 +356,27 @@ public final class BuildingPreviewCache {
     // ── Frame materialization: load from disk cache, else off-screen bake ──
     // ═══════════════════════════════════════════════════════════════
 
-    private static ResourceLocation materialize(BuildingConfig config) {
+    private static ResourceLocation materialize(BuildingConfig config, Source source) {
         try {
             Path file = frameFile(config);
-            NativeImage image = file != null ? readFromDisk(file) : null;
-            if (image != null && isFullyTransparent(image)) {
-                // Stale cache from a broken bake — discard and re-bake (overwrites below).
-                image.close();
-                image = null;
+            NativeImage image = null;
+            if (source != Source.FORCE_BAKE && file != null) {
+                image = readFromDisk(file);
+                if (image != null) {
+                    try (Timing ignored = time(Phase.POST)) {
+                        // Stale cache from a broken bake — discard and re-bake (overwrites below).
+                        if (isFullyTransparent(image)) {
+                            image.close();
+                            image = null;
+                        }
+                    }
+                }
             }
             if (image == null) {
+                if (source == Source.DISK_ONLY) {
+                    // 只读模式没有缓存文件就是 miss：绝不回退去烤，否则读取趟的数字会被烘焙污染。
+                    return null;
+                }
                 image = bakeFrame(config);
                 if (image == null) {
                     return null;
@@ -365,9 +385,11 @@ public final class BuildingPreviewCache {
                     writeToDisk(file, image);
                 }
             }
-            DynamicTexture tex = new DynamicTexture(image);
-            tex.setFilter(true, false);
-            return Minecraft.getInstance().getTextureManager().register(TEX_NAME, tex);
+            try (Timing ignored = time(Phase.UPLOAD)) {
+                DynamicTexture tex = new DynamicTexture(image);
+                tex.setFilter(true, false);
+                return Minecraft.getInstance().getTextureManager().register(TEX_NAME, tex);
+            }
         } catch (RuntimeException e) {
             Log.warn(TAG, "Failed to materialize preview {}: {}", config.id(), e.getMessage());
             return null;
@@ -378,7 +400,8 @@ public final class BuildingPreviewCache {
         if (!Files.isRegularFile(file)) {
             return null;
         }
-        try (InputStream in = Files.newInputStream(file)) {
+        try (Timing ignored = time(Phase.READ);
+             InputStream in = Files.newInputStream(file)) {
             return NativeImage.read(in);
         } catch (IOException e) {
             Log.warn(TAG, "Failed to read preview cache {} (will re-bake): {}", file, e.getMessage());
@@ -387,7 +410,7 @@ public final class BuildingPreviewCache {
     }
 
     private static void writeToDisk(Path file, NativeImage image) {
-        try {
+        try (Timing ignored = time(Phase.ENCODE)) {
             Files.createDirectories(file.getParent());
             image.writeToFile(file.toFile());
             deleteStaleSiblings(file);
@@ -515,10 +538,219 @@ public final class BuildingPreviewCache {
     }
 
     // ═══════════════════════════════════════════════════════════════
+    // ── Benchmark: per-phase timing for bake vs disk read ──
+    // ═══════════════════════════════════════════════════════════════
+
+    /**
+     * 计时阶段。{@code META/DRAW/READBACK/POST/ENCODE} 只出现在烘焙趟，{@code READ} 只出现在读取趟，
+     * {@code POST}（透明校验）与 {@code UPLOAD}（建纹理 + GL 上传）两趟都有。
+     */
+    private enum Phase { META, DRAW, READBACK, POST, ENCODE, READ, UPLOAD }
+
+    private static final int PHASE_COUNT = Phase.values().length;
+
+    /** 取图来源。{@link #DISK_ONLY} 下没有缓存文件就算 miss，绝不回退去烤——否则两趟的数字会混在一起。 */
+    private enum Source { AUTO, FORCE_BAKE, DISK_ONLY }
+
+    /** {@code /wsbench} 的三种模式。 */
+    public enum BenchMode { BAKE, LOAD, BOTH }
+
+    private static BenchMode benchMode;
+    private static List<BuildingConfig> benchConfigs = List.of();
+    private static boolean benchReadPass;
+    private static int benchCursor;
+    private static BenchPass benchBakePass;
+    private static BenchPass benchLoadPass;
+    private static BenchStats benchInFlight;
+
+    private static final class BenchStats {
+        final long startNs = System.nanoTime();
+        final long[] phases = new long[PHASE_COUNT];
+    }
+
+    private static final class BenchPass {
+        int measured;
+        int misses;
+        long totalNs;
+        long maxNs;
+        final long[] phases = new long[PHASE_COUNT];
+        final List<Long> walls = new ArrayList<>();
+    }
+
+    /**
+     * 开始一次烘焙 / 读取基准测试，入口是客户端命令 {@code /wsbench}。必须在渲染线程上调用。
+     *
+     * <p>先把纹理与逐配置缓存全清掉（冷启动），再**每帧只推进一座**，记录整座墙钟与分阶段耗时；
+     * 跑完把汇总同时打进日志和聊天栏。返回 false 表示已经有一次在跑。
+     */
+    public static boolean startBenchmark(BenchMode mode) {
+        if (benchMode != null) {
+            return false;
+        }
+        List<BuildingConfig> configs =
+                new ArrayList<>(BuildingConfigLoader.getInstance().getAll().values());
+        if (configs.isEmpty()) {
+            return false;
+        }
+        configs.sort(java.util.Comparator.comparingInt(c -> c.pattern().size()));
+        closeAll();                                  // 清纹理 + CACHE + LOD/包围盒/缩放
+        BuildingPreviewRenderer.clearMetaCache();     // 连元数据也重算，否则第一座白捡便宜
+        benchConfigs = List.copyOf(configs);
+        benchBakePass = mode == BenchMode.LOAD ? null : new BenchPass();
+        benchLoadPass = mode == BenchMode.BAKE ? null : new BenchPass();
+        benchReadPass = benchBakePass == null;
+        benchCursor = 0;
+        benchMode = mode;
+        Log.info(TAG, "[Bench] start mode={} res={} buildings={}", mode, RES, benchConfigs.size());
+        notifyPlayer("预览基准开始：" + mode.name().toLowerCase() + " · " + benchConfigs.size()
+                + " 座 · " + RES + "px（跑完自动出结果）");
+        return true;
+    }
+
+    /** 一帧一座地推进基准测试，跑完自动汇报。 */
+    private static void pumpBenchmark() {
+        if (benchCursor >= benchConfigs.size()) {
+            if (!benchReadPass && benchLoadPass != null) {
+                benchReadPass = true;
+                benchCursor = 0;
+                Log.info(TAG, "[Bench] bake 趟完成，接着测读取趟");
+                return;
+            }
+            finishBenchmark();
+            return;
+        }
+        BuildingConfig config = benchConfigs.get(benchCursor++);
+        request(config);
+        PreviewEntry entry = CACHE.get(config.id());
+        if (entry == null) {
+            return;
+        }
+        if (benchReadPass) {
+            // 读取趟先把上一趟留下的纹理扔掉，否则测到的是「已经上传好了」的假象。
+            closePreview(Minecraft.getInstance().getTextureManager(), entry.preview);
+        }
+        benchInFlight = new BenchStats();
+        ResourceLocation loc = materialize(config, benchReadPass ? Source.DISK_ONLY : Source.FORCE_BAKE);
+        BenchStats stats = benchInFlight;
+        benchInFlight = null;
+        BenchPass pass = benchReadPass ? benchLoadPass : benchBakePass;
+        if (loc == null) {
+            pass.misses++;
+            return;
+        }
+        entry.preview.texture = loc;
+        entry.preview.ready = true;
+        long wall = System.nanoTime() - stats.startNs;
+        pass.measured++;
+        pass.totalNs += wall;
+        pass.maxNs = Math.max(pass.maxNs, wall);
+        pass.walls.add(wall);
+        for (int i = 0; i < PHASE_COUNT; i++) {
+            pass.phases[i] += stats.phases[i];
+        }
+    }
+
+    private static void finishBenchmark() {
+        List<String> lines = new ArrayList<>();
+        lines.add("[Bench] res=" + RES + " buildings=" + benchConfigs.size()
+                + " mode=" + benchMode + "（每趟一帧一座）");
+        reportPass(lines, benchBakePass, "bake");
+        reportPass(lines, benchLoadPass, "load");
+        for (String line : lines) {
+            Log.info(TAG, line);
+        }
+        // 命令是玩家主动跑的，结论直接上屏；每帧的常态输出仍然只走日志。
+        for (String line : lines) {
+            notifyPlayer(line.replace("[Bench] ", ""));
+        }
+        recountPending();
+        benchMode = null;
+        benchConfigs = List.of();
+        benchBakePass = null;
+        benchLoadPass = null;
+        benchCursor = 0;
+    }
+
+    private static void reportPass(List<String> out, BenchPass pass, String label) {
+        if (pass == null) {
+            return;
+        }
+        if (pass.measured == 0) {
+            out.add("[Bench] " + label + "：无可测样本（miss=" + pass.misses + "）");
+            return;
+        }
+        List<Long> walls = new ArrayList<>(pass.walls);
+        walls.sort(null);
+        out.add(String.format("[Bench] %-4s n=%d miss=%d 总计 %.1f ms 均值 %.2f ms p50 %.2f ms 最大 %.2f ms",
+                label, pass.measured, pass.misses, pass.totalNs / 1e6, pass.totalNs / 1e6 / pass.measured,
+                walls.get(walls.size() / 2) / 1e6, pass.maxNs / 1e6));
+        StringBuilder sb = new StringBuilder("[Bench]   分阶段：");
+        for (Phase phase : Phase.values()) {
+            long ns = pass.phases[phase.ordinal()];
+            if (ns <= 0) {
+                continue;
+            }
+            sb.append(phase).append(' ')
+                    .append(String.format("%.1f", ns / 1e6)).append(" ms(均 ")
+                    .append(String.format("%.2f", ns / 1e6 / pass.measured)).append(")  ");
+        }
+        out.add(sb.toString().trim());
+    }
+
+    /** 基准测试直接往 CACHE 里写结果，跑完按实际状态重算待烤数，免得 pendingCount 被算歪。 */
+    private static void recountPending() {
+        int pending = 0;
+        for (PreviewEntry entry : CACHE.values()) {
+            if (!entry.preview.ready) {
+                pending++;
+            }
+        }
+        pendingCount = pending;
+    }
+
+    private static void notifyPlayer(String message) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc != null && mc.player != null) {
+            mc.player.displayClientMessage(Component.literal("[wandscape] " + message), false);
+        }
+    }
+
+    /** 计时开关：不在基准里时返回 0，{@link #lap} 随之什么都不做——正常游玩零开销。 */
+    private static long mark() {
+        return benchInFlight != null ? System.nanoTime() : 0L;
+    }
+
+    private static void lap(Phase phase, long startNs) {
+        if (benchInFlight != null && startNs != 0L) {
+            benchInFlight.phases[phase.ordinal()] += System.nanoTime() - startNs;
+        }
+    }
+
+    /** {@code try (Timing ignored = time(Phase.READ)) { ... }} —— 作用域结束即记一笔。 */
+    private static Timing time(Phase phase) {
+        return new Timing(phase);
+    }
+
+    private static final class Timing implements AutoCloseable {
+        private final Phase phase;
+        private final long startNs;
+
+        Timing(Phase phase) {
+            this.phase = phase;
+            this.startNs = mark();
+        }
+
+        @Override public void close() {
+            lap(phase, startNs);
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
     // ── Off-screen bake ──
     // ═══════════════════════════════════════════════════════════════
 
     private static NativeImage bakeFrame(BuildingConfig config) {
+        long tMeta = mark();
         BuildingPreviewRenderer.ConfigPreviewMeta meta = BuildingPreviewRenderer.getPreviewMeta(config);
         if (meta.resolvedMap.isEmpty()) {
             return null;
@@ -528,8 +760,10 @@ public final class BuildingPreviewCache {
         if (entries.isEmpty()) {
             return null;
         }
+        lap(Phase.META, tMeta);
         ensureTarget();
 
+        long tDraw = mark();
         Minecraft mc = Minecraft.getInstance();
         BlockRenderDispatcher blockRenderer = mc.getBlockRenderer();
 
@@ -571,15 +805,21 @@ public final class BuildingPreviewCache {
                 pose.popPose();
             }
             BAKE_SRC.endBatch();
+            lap(Phase.DRAW, tDraw);
 
             NativeImage image = new NativeImage(RES, RES, false);
+            long tReadback = mark();
             RenderSystem.bindTexture(target.getColorTextureId());
             image.downloadTexture(0, false);
+            lap(Phase.READBACK, tReadback);
+
+            long tPost = mark();
             image.flipY();
             if (isFullyTransparent(image)) {
                 Log.warn(TAG, "Preview bake {} came out fully transparent (projection/camera issue)", config.id());
                 return null;
             }
+            lap(Phase.POST, tPost);
             return image;
         } catch (RuntimeException e) {
             Log.warn(TAG, "Failed to bake preview {}: {}", config.id(), e.getMessage());
